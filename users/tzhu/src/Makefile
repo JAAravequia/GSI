@@ -519,6 +519,7 @@ clean:
 	timermod.f90 \
 	tintrp2a.f90 \
 	tintrp3.f90 \
+        thin_cstrot.f90 \
 	tpause.f90 \
 	tpause_t.F90 \
         tune_pbl_height.f90 \

@@ -283,7 +283,7 @@ read_NASA_LaRC_cloud.o : read_NASA_LaRC_cloud.f90 gridmod.o constants.o kinds.o
 read_nasa_larc.o : read_nasa_larc.f90 mod_wrfmass_to_a.o gridmod.o gsi_4dvar.o convinfo.o constants.o kinds.o 
 read_nsstbufr.o : read_nsstbufr.f90 gsi_nstcouplermod.o deter_sfc_mod.o gsi_4dvar.o insitu_info.o radinfo.o obsmod.o convinfo.o gridmod.o constants.o mpimod.o kinds.o 
 read_obsdiags.o : read_obsdiags.F90 mytrace.H radinfo.o pcpinfo.o gridmod.o aircraftinfo.o m_obdiag.o lag_traj.o jfunc.o constants.o mpimod.o gsi_4dvar.o obs_sensitivity.o obsmod.o kinds.o timermod.o mpeu_util.o 
-read_obs.o : read_obs.F90 m_extOzone.o rapidrefresh_cldsurf_mod.o gsi_io.o gsi_nstcouplermod.o aircraftinfo.o pcpinfo.o ozinfo.o aeroinfo.o insitu_info.o radinfo.o guess_grids.o converr.o constants.o mpimod.o satthin.o general_commvars_mod.o gridmod.o chemmod.o convinfo.o obsmod.o gsi_4dvar.o kinds.o 
+read_obs.o : read_obs.F90 thin_cstrot.o m_extOzone.o rapidrefresh_cldsurf_mod.o gsi_io.o gsi_nstcouplermod.o aircraftinfo.o pcpinfo.o ozinfo.o aeroinfo.o insitu_info.o radinfo.o guess_grids.o converr.o constants.o mpimod.o satthin.o general_commvars_mod.o gridmod.o chemmod.o convinfo.o obsmod.o gsi_4dvar.o kinds.o 
 read_ozone.o : read_ozone.f90 mpeu_util.o ozinfo.o qcmod.o gsi_4dvar.o convinfo.o obsmod.o constants.o gridmod.o satthin.o kinds.o 
 read_pblh.o : read_pblh.f90 deter_sfc_mod.o obsmod.o gsi_4dvar.o convinfo.o gridmod.o constants.o kinds.o 
 read_pcp.o : read_pcp.f90 obsmod.o deter_sfc_mod.o gsi_4dvar.o constants.o gridmod.o kinds.o 
@@ -405,6 +405,7 @@ support_2dvar.o : support_2dvar.f90 convinfo.o anisofilter.o jfunc.o derivsmod.o
 tcv_mod.o : tcv_mod.f90 constants.o kinds.o 
 tendsmod.o : tendsmod.f90 mpeu_util.o gsi_chemguess_mod.o gsi_metguess_mod.o gsi_bundlemod.o mpimod.o gridmod.o kinds.o 
 test_obsens.o : test_obsens.f90 control_vectors.o obs_sensitivity.o mpimod.o obsmod.o jfunc.o constants.o kinds.o 
+thin_cstrot.o : thin_cstrot.f90 constants.o kinds.o 
 timermod.o : timermod.f90 kinds.o 
 tintrp2a.o : tintrp2a.f90 constants.o gridmod.o kinds.o 
 tintrp3.o : tintrp3.f90 constants.o gridmod.o kinds.o 

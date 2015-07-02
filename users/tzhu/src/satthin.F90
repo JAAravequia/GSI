@@ -310,7 +310,8 @@ contains
 !   If there is to be no thinning, simply return to calling routine
     use_all=.false.
     itx_all=0
-    if(abs(rmesh) <= one .or. ithin <= 0)then
+   !if(abs(rmesh) <= one .or. ithin <= 0)then
+    if(abs(rmesh) <= one .or. ithin <= 0 .or. ithin == 3)then    !for CSTROT thinning
       use_all=.true.
       itxmax=1e7
       allocate(icount(itxmax))

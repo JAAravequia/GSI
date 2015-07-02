@@ -546,6 +546,8 @@ subroutine read_obs(ndata,mype)
 
     use m_extOzone, only: is_extOzone
     use m_extOzone, only: extOzone_read
+    use thin_cstrot, only: thinning_params
+
     implicit none
 
 !   Declare passed variables
@@ -584,6 +586,7 @@ subroutine read_obs(ndata,mype)
     real(r_kind) gstime,val_dat,rmesh,twind,rseed
     real(r_kind),allocatable,dimension(:) :: prslsm,hgtlsm,work1
     real(r_kind),allocatable,dimension(:,:,:):: prsl_full,hgtl_full
+    logical :: init_cstrot
 
     data lunout / 81 /
     data lunsave  / 82 /
@@ -593,6 +596,13 @@ subroutine read_obs(ndata,mype)
 !   Set analysis time and allocate/initialize arrays and variables
     call w3fs21(iadate,nmind)
     gstime=real(nmind,r_kind)
+
+       init_cstrot=.false.
+       do i=1,ndat
+          if(dthin(i).eq.3.or.dthin(i).eq.4) init_cstrot=.true.
+       end do
+       init_cstrot=.true.
+       if(init_cstrot) call thinning_params
 
     call makegvals
     do ii=1,ndat
@@ -1052,6 +1062,7 @@ subroutine read_obs(ndata,mype)
           ithin=dthin(i)                     !     ithin    - flags to thin data
           ithinx=max(1,abs(ithin))
           rmesh=dmesh(ithinx)                !     rmesh    - thinning mesh sizes (km)
+          if(ithinx == 4) rmesh = 20.0       !     for iasi/cris/airs 20km grid + CSTROT thinning
           twind=time_window(i)               !     time window (hours) for input group
           isfcalc=dsfcalc(i)                 !     method to calculate surface fields within fov
           nread=0

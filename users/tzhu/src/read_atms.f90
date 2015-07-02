@@ -62,6 +62,10 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
   use kinds, only: r_kind,r_double,i_kind
   use satthin, only: super_val,itxmax,makegrids,destroygrids,checkob, &
       finalcheck,map2tgrid,score_crit
+  use thin_cstrot, only: thinning_params,thinning_std,random_pts,distancell, &
+      thin_method,represent,thin_reso1,thin_reso2,thin_skip1,thin_skip2,npts,coast_ice, &
+      ntarget,ndomain,slonc,slatc,sradius,lonw,lone,lats,latn, &
+      std1all,std2ratio,stdang_all,nthband_all,thbandx_all
   use radinfo, only: iuse_rad,newchn,cbias,predx,nusis,jpch_rad,air_rad,ang_rad, &
       use_edges,radedge1,radedge2,nusis,radstart,radstep,newpc4pred,maxscan
   use radinfo, only: nst_gsi,nstinfo
@@ -75,6 +79,8 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
   use deter_sfc_mod, only: deter_sfc_fov,deter_sfc
   use atms_spatial_average_mod, only : atms_spatial_average
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth,gsi_nstcoupler_deter
+
+  use file_utility, only : get_lun      !ZT 04/16/2014
 
   implicit none
 
@@ -168,6 +174,17 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
   real(r_double),dimension(n2bhdr):: bfr2bhdr
 
   real(r_kind) cdist,disterr,disterrmax,dlon00,dlat00
+
+  real(r_kind),allocatable,dimension(:,:):: thin_std     !std.&mean for thinning ZT 20140508
+  integer(i_kind),allocatable,dimension(:,:):: thin_use  !index of thinning, <=0-not use, >=1-use
+  integer(i_kind),allocatable,dimension(:):: lndsea_flg  !save isflg:0-4 to lndsea_flg ZT 20140609
+  integer(i_kind),allocatable,dimension(:):: thbandx     !thinning bands to use
+  integer(i_kind) lu, nct,nct1,nct2,nct3,nct4,nct5       !ZT 4/16/2014
+  integer(i_kind) ndata_new
+  character(128) sensor_latlon
+  integer(i_kind) mx, nthband, m
+  logical  :: thin_use_true
+
 !**************************************************************************
 ! Initialize variables
 
@@ -459,6 +476,8 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
   nreal = maxinfo + nstinfo
   nele  = nreal   + nchanl
   allocate(data_all(nele,itxmax),nrec(itxmax))
+  allocate(thin_std(nchanl,itxmax),thin_use(nchanl,itxmax))
+  allocate(thbandx(nchanl))
 
   nrec=999999
   ObsLoop: do iob = 1, num_obs  
@@ -482,8 +501,10 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
 
 ! Just use every fifth scan position and scanline (and make sure that we have
 ! position 48 as we need it for scan bias)
+   if (ithin /= 3 .and. ithin /= 4) then
      if (5*NINT(REAL(IScan(Iob))/5_r_kind) /= IScan(IOb) .OR. &
           5*NINT(REAL(IFov-3)/5_r_kind) /= IFOV -3 ) CYCLE ObsLoop 
+   end if
 
 !    Regional case
      if(regional)then
@@ -720,6 +741,64 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
 
 ! 
   if(mype_sub==mype_root)then
+
+!vvvvvvvvvvvv !ZT 05/02/2014 ---------------------------------
+       thin_std(:,:) = 0.0
+       thin_use(:,:) = -99
+
+       allocate(lndsea_flg(ndata))
+
+       if (ithin == 3 .or. ithin == 4) then
+
+       do n=1,ndata
+          sfcpct(0) = data_all(11,n)       ! sea percentage of
+          sfcpct(1) = data_all(12,n)       ! land percentage
+          sfcpct(2) = data_all(13,n)       ! sea ice percentage
+          sfcpct(3) = data_all(14,n)       ! snow percentage
+
+          lndsea_flg(n) = 0
+          if(sfcpct(0) > 0.99_r_kind)then
+             lndsea_flg(n) = 0
+          else if(sfcpct(1) > 0.99_r_kind)then
+             lndsea_flg(n) = 1
+          else if(sfcpct(2) > 0.99_r_kind)then
+             lndsea_flg(n) = 2
+          else if(sfcpct(3) > 0.99_r_kind)then
+             lndsea_flg(n) = 3
+          else
+             lndsea_flg(n) = 4
+          end if
+       end do
+
+       call thinning_std(sis,obstype,ndata,nchanl,nreal,nele,itxmax,data_all, &
+                         thin_std,thin_use,nthband,thbandx)
+
+      !----- select data_all using above thinning_std reslut ----------
+       ndata_new=0
+       do n=1,ndata
+          thin_use_true = .false.
+          do mx = 1, nthband
+
+             if(nthband.lt.nchanl) m=thbandx(mx)           !channel used for thinning
+             if(nthband.eq.nchanl) m = mx
+             if ( thin_use(m,n) .ge. 1 ) thin_use_true = .true.
+
+          end do
+          if(thin_use_true) then
+             ndata_new = ndata_new + 1
+             data_all(:,ndata_new) = data_all(:,n)
+             thin_std(:,ndata_new) = thin_std(:,n)
+             thin_use(:,ndata_new) = thin_use(:,n)
+          endif
+       end do
+       write(6,*) '-----zt5b sis,ndata# before and after new thinning:', &
+                   sis,ndata,ndata_new
+       ndata = ndata_new
+
+       endif
+
+!^^^^^^^^^^^^ !ZT 05/02/2014 ---------------------------------
+
      do n=1,ndata
         do i=1,nchanl
            if(data_all(i+nreal,n) > tbmin .and. &
@@ -733,10 +812,19 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
 !    Write final set of "best" observations to output file
      write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
      write(lunout) ((data_all(k,n),k=1,nele),n=1,ndata)
+
+!vvvvvvvvvvvv !ZT 05/02/2014 ---------------------------------
+    write(6,*) '...ZT5 mype_root: read_atms.f90, obstype,sis,&
+                jsatid,nread,ndata,nodata:',&
+                obstype,sis,jsatid,nread,ndata,nodata,mype_root
+!^^^^^^^^^^^^ !ZT 05/02/2014 ---------------------------------
+
   end if
      
 ! Deallocate local arrays
   deallocate(data_all,nrec)
+  deallocate(thin_std,thin_use)
+  deallocate(thbandx,lndsea_flg)
 
 ! Deallocate satthin arrays
   call destroygrids
