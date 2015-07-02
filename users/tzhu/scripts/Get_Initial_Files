@@ -1,3 +1,5 @@
+#!/bin/sh
+#
 # 
 # A utility to get the required files from HPSS to run a standalone GSI job.
 # This is loosely based on R. Treadon's hpssget_gdas.sh
@@ -18,8 +20,8 @@ fi
 
 set -ax
 
-#machine="Zeus"
-machine="WCOSS"
+machine="Zeus"
+#machine="WCOSS"
 
 if [[ "$machine" = "Zeus" ]]; then
    nwprod=/scratch2/portfolios/NCEPDEV/global/save/Shrinivas.Moorthi/para 
@@ -60,12 +62,12 @@ DFILESA="$DFILESA gome.tm00.bufr_d omi.tm00.bufr_d syndata.tcvitals.tm00"
 DFILESA="$DFILESA atms.tm00.bufr_d"
 
 # These come from the previous cycle
-DFILESG="$DFILESG abias satang radstat"
+DFILESG="$DFILESG abias satang radstat abias_pc"           
 DFILESG="$DFILESG bf03 bf06 bf09"
 
 
 # Make $tmpdir and $savdir.  Change directory to $tmpdir
-rm -rf $tmpdir
+#rm -rf $tmpdir
 mkdir -p $tmpdir
 cd $tmpdir
 
@@ -152,8 +154,8 @@ echo ${gdate}:  File types NOT copied: $cpn
 
 #Remove temporary directory
 cd $tmpdir
-rm -rf ./*
+#rm -rf ./*
 cd ../
-rm -rf $tmpdir
+#rm -rf $tmpdir
 
 exit

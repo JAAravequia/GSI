@@ -18,10 +18,14 @@
 #PBS -o gsi_global.e${jobid} 
 #PBS -N gsi_global
 #PBS -q batch
-#PBS -l walltime=00:30:00 
-#PBS -l nodes=2:ppn=12
+#PBS -l walltime=03:30:00 
+##PBS -l nodes=2:ppn=12
+##PBS -l nodes=16:ppn=3
+#PBS -l nodes=8:ppn=12
+##PBS -l nodes=32:ppn=12
 #PBS -j eo                
-#PBS -A ada
+##PBS -A drt
+#PBS -A h-sandy
 #PBS -V
 #=======================================================
 
@@ -33,8 +37,9 @@ echo "Time starting the job is `date` "
 if [ -d /da ]; then
   TOPDIR=/da   # This would be the WCOSS
   MACHINE=WCOSS
-elif [ -d /scratch1/portfolios/NCEPDEV/da ]; then
-  TOPDIR=/scratch1/portfolios/NCEPDEV/da     #This is zeus 
+elif [ -d /scratch2/portfolios/NESDIS/drt ]; then
+# TOPDIR=/scratch1/portfolios/NCEPDEV/da     #This is zeus 
+  TOPDIR=/scratch2/portfolios/NESDIS/drt     #This is zeus 
   MACHINE=ZEUS
 else 
   echo CANNOT FIND A VALID TOP-LEVEL DIRECTORY
@@ -46,20 +51,26 @@ fi
 #=================================================================================================
 
 # Set experiment name and analysis date
-adate=2013090100
+adate=2015012500
 expnm=globalprod    
 exp=globalprod.$adate
-expid=${expnm}.$adate.wcoss
+#expid=${expnm}.$adate.wcoss
+expid=${expnm}.$adate
 
 # Set path/file for gsi executable
-gsiexec=/da/save/$USER/trunk/src/global_gsi
+#gsiexec=/da/save/$USER/trunk/src/global_gsi
+ gsiexec=${TOPDIR}/save/$USER/gsi_svn/src/global_gsi
 
 # Specify GSI fixed field
-fixgsi=/da/save/$USER/trunk/fix
+#fixgsi=/da/save/$USER/trunk/fix
+fixgsi=${TOPDIR}/save/$USER/gsi_svn/fix
 
 # Set the JCAP resolution which you want.
 # All resolutions use LEVS=64
-export JCAP=62
+ export JCAP=62
+#export JCAP=126
+#export JCAP=382
+#export JCAP=574
 export LEVS=64
 export JCAP_B=$JCAP
 export lrun_subdirs=.true.
@@ -81,7 +92,8 @@ elif [ $MACHINE = ZEUS ]; then
    datdir=/scratch2/portfolios/NCEPDEV/ptmp/$USER/data_sigmap/${exp}
    tmpdir=/scratch2/portfolios/NCEPDEV/ptmp/$USER/tmp${JCAP}_sigmap/${expid}  
    savdir=/scratch2/portfolios/NCEPDEV/ptmp/$USER/out${JCAP}/sigmap/${expid} 
-   fixcrtm=/scratch1/portfolios/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/sorc/CRTM_REL-2.1.3/Big_Endian
+#  fixcrtm=/scratch1/portfolios/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/sorc/CRTM_REL-2.1.3/Big_Endian
+   fixcrtm=/scratch2/portfolios/NESDIS/drt/save/Tong.Zhu/CRTM/nwprod/lib/CRTM_REL-2.2.1/Big_Endian
    endianness=Big_Endian
 #  endianness=Little_Endian - once all background fields are available in little endian format, uncomment this option and remove Big_Endian
    COMPRESS=gzip
@@ -473,7 +485,7 @@ OBS_INPUT::
    mhsbufr        mhs         metop-b     mhs_metop-b          0.0     1      0
    iasibufr       iasi        metop-b     iasi616_metop-b      0.0     1      0
    gomebufr       gome        metop-b     gome_metop-b         0.0     2      0
-   atmsbufr       atms        npp         atms_npp             0.0     1      0
+   atmsbufr       atms        npp         atms_npp             0.0     3      0
    crisbufr       cris        npp         cris_npp             0.0     1      0
 ::
  &SUPEROB_RADAR
@@ -549,6 +561,9 @@ bftab_sst=$fixgsi/bufrtab.012
 
 # Copy executable and fixed files to $tmpdir
 $ncp $gsiexec ./gsi.x
+
+$ncp /scratch2/portfolios/NESDIS/drt/save/Tong.Zhu/gsi_svn/fix/thinning_param.txt ./thinning_param.txt
+$ncp /scratch2/portfolios/NESDIS/drt/save/Tong.Zhu/gsi_svn/fix/thinning_std.txt ./thinning_std.txt
 
 $ncp $anavinfo ./anavinfo
 $ncp $berror   ./berror_stats
@@ -628,10 +643,10 @@ $ncp $datges/${prefix_tbc}.abias              ./satbias_in
 $ncp $datges/${prefix_tbc}.satang             ./satbias_angle
 $ncp $datges/${prefix_tbc}.radstat            ./radstat.gdas
 
-/da/save/$USER/trunk/util/Radiance_bias_correction_Utilities/write_biascr_option.x -newpc4pred -adp_anglebc 4
+#/da/save/$USER/trunk/util/Radiance_bias_correction_Utilities/write_biascr_option.x -newpc4pred -adp_anglebc 4
 
-cp satbias_in satbias_in.orig
-cp satbias_in.new satbias_in
+#cp satbias_in satbias_in.orig
+#cp satbias_in.new satbias_in
 
 listdiag=`tar xvf radstat.gdas | cut -d' ' -f2 | grep _ges`
 for type in $listdiag; do
@@ -734,7 +749,7 @@ if [  $MACHINE = ZEUS  ]; then
    export MPI_BUFS_PER_PROC=256
    export MPI_BUFS_PER_HOST=256
    export MPI_GROUP_MAX=256
-   #export OMP_NUM_THREADS=1
+#  export OMP_NUM_THREADS=1
 
    /bin/ksh --login
    module load intel
