@@ -20,7 +20,9 @@ module gsi_4dvar
 !			  and gsi_4dcoupler_final_traj() from gsimain_finalize(),
 !   2011-07-10 guo/zhang- add liauon
 !   2012-02-08 kleist   - add new features for 4dvar with ensemble/hybrid.
-!   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - introduced ladtest_obs         
+!   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - introduced ladtest_obs 
+!   2015-02-23 Rancic/Thomas - iwinbgn changed from hours to mins, added thin4d
+!                         option to remove thinning in time       
 !
 ! Subroutines Included:
 !   sub init_4dvar    -
@@ -49,7 +51,7 @@ module gsi_4dvar
 !   iedate            - Date and time at  end  of 4dvar window
 !   iadateend         - Date and time at  end  of 4dvar window
 !
-!   iwinbgn           - Time since ref at start of 4dvar window (hours)
+!   iwinbgn           - Time since ref at start of 4dvar window (mins)
 !   winlen            - Length of 4dvar window (hours)
 !   winoff            - Main analysis time within 4dvar window (hours)
 !
@@ -79,6 +81,8 @@ module gsi_4dvar
 !                       will be set to center of window for 4D-ens mode
 !   lwrite4danl       - logical to turn on writing out of 4D analysis state for 4D analysis modes
 !                       ** currently only set up for write_gfs in ncepgfs_io module
+!   thin4d            - When .t., removes thinning of observations due to
+!                       location in the time window
 !
 ! attributes:
 !   language: f90
@@ -107,7 +111,7 @@ module gsi_4dvar
   public :: ladtest,ladtest_obs,lgrtest,lcongrad,nhr_obsbin,nhr_subwin,nwrvecs
   public :: jsiga,ltcost,iorthomax,liauon,lnested_loops
   public :: l4densvar,ens4d_nhr,ens4d_fhrlevs,ens4d_nstarthr,ibin_anl
-  public :: lwrite4danl
+  public :: lwrite4danl,thin4d
 
   logical         :: l4dvar
   logical         :: lsqrtb
@@ -125,6 +129,7 @@ module gsi_4dvar
   logical         :: l4densvar
   logical         :: lnested_loops
   logical         :: lwrite4danl
+  logical         :: thin4d
 
   integer(i_kind) :: iwrtinc
   integer(i_kind) :: iadatebgn, iadateend
@@ -202,6 +207,7 @@ ens4d_nstarthr=3
 ibin_anl=1
 
 lwrite4danl = .false.
+thin4d = .false.
 
 end subroutine init_4dvar
 ! --------------------------------------------------------------------
@@ -396,6 +402,7 @@ integer(i_kind),intent(in   ) :: idate   ! Date (yyyymmddhh)
 real(r_kind)   ,intent(  out) :: step4d  ! Time since start of 4D-Var window (hours)
 
 integer(i_kind) iyr,imo,idy,ihr,nmin_obs,nhrobs,nhrbgn,nhroff
+integer(i_kind),dimension(5) :: idate5
 
 ihr=idate
 iyr=ihr/1000000
@@ -404,7 +411,12 @@ imo=ihr/10000
 ihr=ihr-10000*imo
 idy=ihr/100
 ihr=ihr-100*idy
-call w3fs21((/iyr,imo,idy,ihr,0/),nmin_obs)
+idate5(1)=iyr
+idate5(2)=imo
+idate5(3)=idy
+idate5(4)=ihr
+idate5(5)=0
+call w3fs21(idate5,nmin_obs)
 if (MOD(nmin_obs,60)/=0) then
    write(6,*)'time_4dvar: minutes should be 0',nmin_obs
    call stop2(136)

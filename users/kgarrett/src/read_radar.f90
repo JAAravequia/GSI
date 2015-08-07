@@ -54,6 +54,7 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
 !   2013-05-07  tong   -  add reading tdr superobs data 
 !   2013-05-22  tong   -  Modified the criteria of seperating fore and aft sweeps for TDR NOAA/FRENCH antenna
+!   2015-02-23  Rancic/Thomas - add thin4d to time window logical
 !
 !
 !   input argument list:
@@ -81,7 +82,7 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
       semi_major_axis,flattening,two
   use qcmod, only: erradar_inflate,vadfile,newvad
   use obsmod, only: iadate,l_foreaft_thin
-  use gsi_4dvar, only: l4dvar,iwinbgn,winlen,time_4dvar
+  use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,time_4dvar,thin4d
   use gridmod, only: regional,nlat,nlon,tll2xy,rlats,rlons,rotate_wind_ll2xy,nsig
   use gridmod, only: wrf_nmm_regional,nems_nmmb_regional,cmaq_regional,wrf_mass_regional
   use convinfo, only: nconvtype,ctwind, &
@@ -224,13 +225,6 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
   real(r_kind),allocatable,dimension(:):: zl_thin
   real(r_kind),parameter:: r16000 = 16000.0_r_kind
   real(r_kind) diffuu,diffvv
-
-! check data (P3 track)
-  integer :: NLEV, NFLAG
-  real :: obs
-  real :: RLAT, RLON, TIM
-  character(8) :: STID
-  logical check
 
 ! following variables are for fore/aft separation
   real(r_kind) tdrele1,tdrele2,tdrele3
@@ -377,7 +371,7 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
 
 ! Time check
   t4dv=toff+hdr(4)
-  if (l4dvar) then
+  if (l4dvar.or.l4densvar) then
      if (t4dv<zero .OR. t4dv>winlen) go to 10 ! outside time window
   else
      timeb=hdr(4)
@@ -622,7 +616,7 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
      timemin=min(timemin,t4dvo)
 
 !    Exclude data if it does not fall within time window
-     if (l4dvar) then
+     if (l4dvar.or.l4densvar) then
         if (t4dvo<zero .OR. t4dvo>winlen) cycle
      else
         timeo=thistime
@@ -984,7 +978,7 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
      if(ikx==0) go to 50
      call w3fs21(idate5,minobs)
      t4dv=real(minobs-iwinbgn,r_kind)*r60inv
-     if (l4dvar) then
+     if (l4dvar.or.l4densvar) then
         if (t4dv<zero .OR. t4dv>winlen) goto 50
      else
         timeb = real(minobs-mincy,r_kind)*r60inv
@@ -1018,7 +1012,7 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
         end if
 
 !       Exclude data if it does not fall within time window
-        if (l4dvar) then
+        if (l4dvar.or.l4densvar) then
            if (t4dvo<zero .OR. t4dvo>winlen) cycle
            timeo=t4dv
         else
@@ -1280,15 +1274,6 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
 
 65 continue
 
-  if(check)then
-     open(300,file='track',form='unformatted')
-
-     STID = '        '
-     TIM = 0.0
-     NLEV = 1
-     NFLAG = 1
-     obs=1.0
-  end if
 
 
   erad = rearth
@@ -1376,6 +1361,8 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
   if(trim(infile) == 'tldplrso') goto 75
 
   nswptype=0
+  nmrecs=0
+  irec=0
   if(l_foreaft_thin)then
 ! read the first 500 records to deterine which criterion
 ! should be used to seperate fore/aft sweep
@@ -1389,8 +1376,6 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
        go to 1100
     end if
 
-    nmrecs=0
-    irec=0
 !   Big loop over bufr file
 
 700   call readsb(lnbufr,iret)
@@ -1530,7 +1515,7 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
   call w3fs21(idate5,minobs)
 
   t4dv=real(minobs-iwinbgn,r_kind)*r60inv
-  if (l4dvar) then
+  if (l4dvar.or.l4densvar) then
      if (t4dv<zero .OR. t4dv>winlen) then
         ntimeout=ntimeout+1
         goto 70
@@ -1549,13 +1534,6 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
 
   this_stalat=hdr(8)
   this_stalon=hdr(9)
-
-  if(check)then
-     RLAT=this_stalat
-     RLON=this_stalon
-     WRITE (200) STID,RLAT,RLON,TIM,NLEV,NFLAG  
-     WRITE (200) obs
-  end if
 
   rlon0=deg2rad*this_stalon
   this_stalatr=this_stalat*deg2rad
@@ -1817,7 +1795,7 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
               zobs = height
 
               ntmp=ndata  ! counting moved to map3gridS
-              if (l4dvar) then
+              if (thin4d) then
                  timedif = zero
               else
                  timedif=abs(t4dv-toff)
@@ -1920,17 +1898,6 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
 ! Close unit to bufr file
   close(lnbufr)
 
-  if(check)then
-     STID = '        '
-     NLEV = 0
-     NFLAG = 0
-     RLAT = 0.0
-     RLON = 0.0
-
-     WRITE (200) STID,RLAT,RLON,TIM,NLEV,NFLAG
-     close(200)
-  end if
-  
   go to 1200
 
 75 continue
@@ -1967,7 +1934,7 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
         call w3fs21(idate5,minobs)
    
         t4dv=real(minobs-iwinbgn,r_kind)*r60inv
-        if (l4dvar) then
+        if (l4dvar.or.l4densvar) then
            if (t4dv<zero .OR. t4dv>winlen) goto 90
            timeo=t4dv
         else
@@ -2145,7 +2112,7 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
               zobs = height
 
               ntmp=ndata  ! counting moved to map3gridS
-              if (l4dvar) then
+              if (thin4d) then
                  timedif = zero
               else
                  timedif=abs(t4dv-toff)

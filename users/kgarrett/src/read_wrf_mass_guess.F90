@@ -54,6 +54,7 @@ subroutine read_wrf_mass_binary_guess(mype)
 !   2014-03-12  hu     - add code to read ges_q2 (2m Q), 
 !                               Qnr(rain number concentration), 
 !                               and nsoil (number of soil levels)
+!   2014-12-12  hu     - change l_use_2mq4b to i_use_2mq4b
 !
 !   input argument list:
 !     mype     - pe number
@@ -87,7 +88,7 @@ subroutine read_wrf_mass_binary_guess(mype)
   use constants, only: zero,one,grav,fv,zero_single,rd_over_cp_mass,one_tenth,h300,r10,r100
   use constants, only: r0_01
   use gsi_io, only: lendian_in
-  use rapidrefresh_cldsurf_mod, only: l_cloud_analysis,l_gsd_soilTQ_nudge,l_use_2mQ4B
+  use rapidrefresh_cldsurf_mod, only: l_cloud_analysis,l_gsd_soilTQ_nudge,i_use_2mq4b
   use wrf_mass_guess_mod, only: soil_temp_cld,isli_cld,ges_xlon,ges_xlat,ges_tten,create_cld_grids
   use gsi_bundlemod, only: GSI_BundleGetPointer
   use gsi_metguess_mod, only: gsi_metguess_get,GSI_MetGuess_Bundle
@@ -197,6 +198,7 @@ subroutine read_wrf_mass_binary_guess(mype)
      call gsi_metguess_get('clouds::3d',n_actual_clouds,istatus)
      if (n_actual_clouds>0) then
 !       Get pointer for each of the hydrometeors from guess at time index "it"
+        ier=0
         it=ntguessig
         call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql', ges_qc, istatus );ier=ier+istatus
         call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qi', ges_qi, istatus );ier=ier+istatus
@@ -263,7 +265,7 @@ subroutine read_wrf_mass_binary_guess(mype)
            call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tsoil',ges_soilt1_it,istatus );ier=ier+istatus
            if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields, ier =',ier)
         endif
-        if (l_use_2mQ4B) then
+        if (i_use_2mq4b>0) then
            call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q2m'  ,ges_q2_it,istatus);ier=ier+istatus
            if (ier/=0) call die(trim(myname),'cannot get pointers for q2m, ier =',ier)
         endif
@@ -307,7 +309,8 @@ subroutine read_wrf_mass_binary_guess(mype)
         endif
         read(lendian_in) wrfges
         read(lendian_in) ! n_position          !  offset for START_DATE record
-        if(mype == 0) write(6,*)'READ_WRF_MASS_BINARY_GUESS:  read wrfges,n_position= ',wrfges,' ',n_position
+!       if(mype == 0) write(6,*)'READ_WRF_MASS_BINARY_GUESS:  read wrfges,n_position= ',wrfges,' ',n_position
+        if(mype == 0) write(6,*)'READ_WRF_MASS_BINARY_GUESS:  read wrfges= ',wrfges
         
         i=i+1 ; i_mub=i                                                ! mub
         read(lendian_in) n_position
@@ -1078,7 +1081,7 @@ subroutine read_wrf_mass_binary_guess(mype)
                  ges_tsk_it(j,i)=all_loc(j,i,i_tsk)
                  ges_soilt1_it(j,i)=all_loc(j,i,i_soilt1)
               endif
-              if(l_use_2mQ4B) then
+              if(i_use_2mq4b>0) then
                 ges_q2_it(j,i)=all_loc(j,i,i_q2)
 ! Convert 2m guess mixing ratio to specific humidity
                 ges_q2_it(j,i) = ges_q2_it(j,i)/(one+ges_q2_it(j,i))
@@ -1234,7 +1237,7 @@ subroutine read_wrf_mass_netcdf_guess(mype)
   use constants, only: r0_01, tiny_r_kind
   use gsi_io, only: lendian_in
   use chemmod, only: laeroana_gocart
-  use rapidrefresh_cldsurf_mod, only: l_cloud_analysis,l_gsd_soilTQ_nudge,l_use_2mQ4B
+  use rapidrefresh_cldsurf_mod, only: l_cloud_analysis,l_gsd_soilTQ_nudge,i_use_2mq4b
   use wrf_mass_guess_mod, only: soil_temp_cld,isli_cld,ges_xlon,ges_xlat,ges_tten,create_cld_grids
   use gsi_bundlemod, only: GSI_BundleGetPointer
   use gsi_metguess_mod, only: gsi_metguess_get,GSI_MetGuess_Bundle
@@ -1577,7 +1580,6 @@ subroutine read_wrf_mass_netcdf_guess(mype)
               i_chem(iv)=i+1
               do k=1,lm
                 i=i+1
-!mhu                write(identity(i),'("record ",i3,"--"//trim(cvar(iv))//"(",i2,")")')i,k
                 jsig_skip(i)=0 ; igtype(i)=1
               end do
            end do
@@ -1680,7 +1682,7 @@ subroutine read_wrf_mass_netcdf_guess(mype)
         call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tv',ges_tv_it,istatus );ier=ier+istatus
         call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q' ,ges_q_it, istatus );ier=ier+istatus
         if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields, ier =',ier)
-        if(l_use_2mQ4B) then
+        if(i_use_2mq4b>0) then
            call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it),'q2m',ges_q2_it,istatus ); ier=ier+istatus
            if (ier/=0) call die(trim(myname),'cannot get pointers for q2m, ier =',ier)
         endif
@@ -1898,7 +1900,7 @@ subroutine read_wrf_mass_netcdf_guess(mype)
                  ges_soilt1_it(j,i)=all_loc(j,i,i_0+i_soilt1)
               endif
 ! Convert 2m guess mixing ratio to specific humidity
-              if(l_use_2mQ4B) then
+              if(i_use_2mq4b>0) then
                  ges_q2_it(j,i)=all_loc(j,i,i_0+i_q2)
                  ges_q2_it(j,i)=ges_q2_it(j,i)/(one+ges_q2_it(j,i))
               endif
@@ -1988,58 +1990,6 @@ subroutine read_wrf_mass_netcdf_guess(mype)
 
      return
 end subroutine read_wrf_mass_netcdf_guess
-#else /* Start no WRF-library block */
-subroutine read_wrf_mass_binary_guess(mype)
-!$$$  subprogram documentation block
-!                .      .    .                                       .
-! subprogram:    read_wrf_mass_binary_guess
-!   prgmmr:
-!
-! abstract:
-!
-! program history log:
-!   2009-12-07  lueken - added subprogram doc block and implicit none
-!
-!   input argument list:
-!
-!   output argument list:
-!
-! attributes:
-!   language: f90
-!   machine:  ibm RS/6000 SP
-!
-!$$$ end documentation block
-  use kinds,only: i_kind
-  implicit none
-  integer(i_kind),intent(in)::mype
-  write(6,*)'READ_WRF_MASS_BINARY_GUESS:  dummy routine, does nothing!'
-end subroutine read_wrf_mass_binary_guess
-subroutine read_wrf_mass_netcdf_guess(mype)
-!$$$  subprogram documentation block
-!                .      .    .                                       .
-! subprogram:    read_wrf_mass_netcdf_guess
-!   prgmmr:
-!
-! abstract:
-!
-! program history log:
-!   2009-12-07  lueken - added subprogram doc block and implicit none
-!
-!   input argument list:
-!
-!   output argument list:
-!
-! attributes:
-!   language: f90
-!   machine:  ibm RS/6000 SP
-!
-!$$$ end documentation block
-  use kinds,only: i_kind
-  implicit none
-  integer(i_kind),intent(in)::mype
-  write(6,*)'READ_WRF_MASS_NETCDF_GUESS:  dummy routine, does nothing!'
-end subroutine read_wrf_mass_netcdf_guess
-#endif /* End no WRF-library block */
 
 subroutine generic_grid2sub(tempa,all_loc,kbegin_loc,kend_loc,kbegin,kend,mype,num_fields)
 !$$$  subprogram documentation block
@@ -2457,3 +2407,55 @@ subroutine move_ibuf_ihg(ibuf,temp1,im_buf,jm_buf,im_out,jm_out)
   end do
   
 end subroutine move_ibuf_ihg
+#else /* Start no WRF-library block */
+subroutine read_wrf_mass_binary_guess(mype)
+!$$$  subprogram documentation block
+!                .      .    .                                       .
+! subprogram:    read_wrf_mass_binary_guess
+!   prgmmr:
+!
+! abstract:
+!
+! program history log:
+!   2009-12-07  lueken - added subprogram doc block and implicit none
+!
+!   input argument list:
+!
+!   output argument list:
+!
+! attributes:
+!   language: f90
+!   machine:  ibm RS/6000 SP
+!
+!$$$ end documentation block
+  use kinds,only: i_kind
+  implicit none
+  integer(i_kind),intent(in)::mype
+  write(6,*)'READ_WRF_MASS_BINARY_GUESS:  dummy routine, does nothing!'
+end subroutine read_wrf_mass_binary_guess
+subroutine read_wrf_mass_netcdf_guess(mype)
+!$$$  subprogram documentation block
+!                .      .    .                                       .
+! subprogram:    read_wrf_mass_netcdf_guess
+!   prgmmr:
+!
+! abstract:
+!
+! program history log:
+!   2009-12-07  lueken - added subprogram doc block and implicit none
+!
+!   input argument list:
+!
+!   output argument list:
+!
+! attributes:
+!   language: f90
+!   machine:  ibm RS/6000 SP
+!
+!$$$ end documentation block
+  use kinds,only: i_kind
+  implicit none
+  integer(i_kind),intent(in)::mype
+  write(6,*)'READ_WRF_MASS_NETCDF_GUESS:  dummy routine, does nothing!'
+end subroutine read_wrf_mass_netcdf_guess
+#endif /* End no WRF-library block */

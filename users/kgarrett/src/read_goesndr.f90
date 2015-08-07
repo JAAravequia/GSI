@@ -56,6 +56,7 @@ subroutine read_goesndr(mype,val_goes,ithin,rmesh,jsatid,infile,&
 !                           code tests for bmiss==1e9, but a lot of hdr(15) values = 1e11, which
 !                          causes integer overflow with current logic.  Made quick fix, but needs review.
 !   2013-12-30  sienkiewicz - use BUFR library function 'ibfms' to check for missing value of hdr(15)
+!   2015-02-23  Rancic/Thomas - add thin4d to time window logical
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -92,7 +93,7 @@ subroutine read_goesndr(mype,val_goes,ithin,rmesh,jsatid,infile,&
       newpc4pred,nst_gsi,nstinfo
   use gridmod, only: diagnostic_reg,nlat,nlon,regional,tll2xy,txy2ll,rlats,rlons
   use constants, only: deg2rad,zero,rad2deg, r60inv,one,two,tiny_r_kind
-  use gsi_4dvar, only: l4dvar,time_4dvar,iwinbgn,winlen
+  use gsi_4dvar, only: l4dvar,l4densvar,time_4dvar,iwinbgn,winlen,thin4d
   use deter_sfc_mod, only: deter_sfc
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
 
@@ -145,7 +146,7 @@ subroutine read_goesndr(mype,val_goes,ithin,rmesh,jsatid,infile,&
   real(r_kind) dlon_earth,dlat_earth
   real(r_kind) ch8,sstime
   real(r_kind) pred,crit1,tdiff,dist1,toff,t4dv
-  real(r_kind) disterr,disterrmax,dlon00,dlat00,r01
+  real(r_kind) cdist,disterr,disterrmax,dlon00,dlat00,r01
 
   real(r_kind),dimension(0:4):: rlndsea
   real(r_kind),dimension(0:3):: sfcpct
@@ -275,7 +276,7 @@ subroutine read_goesndr(mype,val_goes,ithin,rmesh,jsatid,infile,&
 
            ksatid=nint(hdr(7))
 !          if not proper satellite read next bufr record
-           if (ksatid /= lsatid) cycle read_loop
+           if (ksatid /= lsatid) cycle read_subset
 
 !          Extract number of averaged FOVS
            ifov = hdr(9) ! number of averaged FOVS 
@@ -318,7 +319,7 @@ subroutine read_goesndr(mype,val_goes,ithin,rmesh,jsatid,infile,&
         end if
 
 !       If not within analysis window, skip obs
-        if (l4dvar) then
+        if (l4dvar.or.l4densvar) then
            if (t4dv<zero .OR. t4dv>winlen) cycle read_loop
         else
            if (abs(tdiff)>twind) cycle read_loop
@@ -330,15 +331,16 @@ subroutine read_goesndr(mype,val_goes,ithin,rmesh,jsatid,infile,&
         if (hdr(1)< zero) hdr(1)=hdr(1)+r360
 
         dlon_earth = hdr(1)*deg2rad   !convert degrees to radians
-        dlat_earth = hdr(2)*deg2rad
-
+        dlat_earth = hdr(2)*deg2rad 
         if(regional)then
            call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
            if(diagnostic_reg) then
               call txy2ll(dlon,dlat,dlon00,dlat00)
               ntest=ntest+1
-              disterr=acos(sin(dlat_earth)*sin(dlat00)+cos(dlat_earth)*cos(dlat00)* &
-                   (sin(dlon_earth)*sin(dlon00)+cos(dlon_earth)*cos(dlon00)))*rad2deg
+              cdist=sin(dlat_earth)*sin(dlat00)+cos(dlat_earth)*cos(dlat00)* &
+                   (sin(dlon_earth)*sin(dlon00)+cos(dlon_earth)*cos(dlon00))
+              cdist=max(-one,min(cdist,one))
+              disterr=acos(cdist)*rad2deg
               disterrmax=max(disterrmax,disterr)
            end if
       
@@ -355,7 +357,7 @@ subroutine read_goesndr(mype,val_goes,ithin,rmesh,jsatid,infile,&
 
 !       Set common predictor parameters
 
-        if (l4dvar) then
+        if (thin4d) then
            timedif = zero
         else
            timedif = 6.0_r_kind*abs(tdiff)        ! range:  0 to 18

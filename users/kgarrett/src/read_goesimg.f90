@@ -42,6 +42,7 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
 !   2011-08-01  lueken  - added module use deter_sfc_mod, fix indentation
 !   2012-03-05  akella  - nst now controlled via coupler
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
+!   2015-02-23  Rancic/Thomas - add thin4d to time window logical
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -72,7 +73,7 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
   use gridmod, only: diagnostic_reg,regional,nlat,nlon,txy2ll,tll2xy,rlats,rlons
   use constants, only: deg2rad,zero,one,rad2deg,r60inv,r60
   use radinfo, only: iuse_rad,jpch_rad,nusis,nst_gsi,nstinfo
-  use gsi_4dvar, only: l4dvar,iwinbgn,winlen
+  use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,thin4d
   use deter_sfc_mod, only: deter_sfc
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
   implicit none
@@ -93,7 +94,6 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
 ! Declare local parameters
   integer(i_kind),parameter:: nimghdr=13
   integer(i_kind),parameter:: maxinfo=37
-  integer(i_kind),parameter:: maxchanl=4
   real(r_kind),parameter:: r360=360.0_r_kind
   real(r_kind),parameter:: tbmin=50.0_r_kind
   real(r_kind),parameter:: tbmax=550.0_r_kind
@@ -126,7 +126,7 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
   real(r_double),dimension(nimghdr) :: hdrgoesarr       !  goes imager header
   real(r_double),dimension(3,6) :: dataimg              !  goes imager data
 
-  real(r_kind) disterr,disterrmax,dlon00,dlat00
+  real(r_kind) cdist,disterr,disterrmax,dlon00,dlat00
   integer(i_kind) ntest
 
 
@@ -228,11 +228,12 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
         idate5(5) = hdrgoesarr(6)     ! minutes
         call w3fs21(idate5,nmind)
         t4dv = (real((nmind-iwinbgn),r_kind) + real(hdrgoesarr(7),r_kind)*r60inv)*r60inv
-        if (l4dvar) then
+        sstime = real(nmind,r_kind) + real(hdrgoesarr(7),r_kind)*r60inv
+        tdiff=(sstime-gstime)*r60inv
+
+        if (l4dvar.or.l4densvar) then
            if (t4dv<zero .OR. t4dv>winlen) cycle read_loop
         else
-           sstime = real(nmind,r_kind) + real(hdrgoesarr(7),r_kind)*r60inv
-           tdiff=(sstime-gstime)*r60inv
            if (abs(tdiff)>twind) cycle read_loop
         endif
 
@@ -253,8 +254,10 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
            if(diagnostic_reg) then
               call txy2ll(dlon,dlat,dlon00,dlat00)
               ntest=ntest+1
-              disterr=acos(sin(dlat_earth)*sin(dlat00)+cos(dlat_earth)*cos(dlat00)* &
-                   (sin(dlon_earth)*sin(dlon00)+cos(dlon_earth)*cos(dlon00)))*rad2deg
+              cdist=sin(dlat_earth)*sin(dlat00)+cos(dlat_earth)*cos(dlat00)* &
+                   (sin(dlon_earth)*sin(dlon00)+cos(dlon_earth)*cos(dlon00))
+              cdist=max(-one,min(cdist,one))
+              disterr=acos(cdist)*rad2deg
               disterrmax=max(disterrmax,disterr)
            end if
 
@@ -270,7 +273,7 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
            call grdcrd1(dlon,rlons,nlon,1)
         endif
 
-        if (l4dvar) then
+        if (thin4d) then
            crit1=0.01_r_kind
         else
            timedif = 6.0_r_kind*abs(tdiff)        ! range:  0 to 18
