@@ -1,5 +1,5 @@
 subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis,&
-     prsl_full)
+     prsl_full,nobs)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_satwnd                    read satellite winds  
@@ -53,6 +53,10 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 !   2013-09-20  Su      - set satellite ID as satellite wind subtype
 !   2014-07-16  Su      - read VIIRS winds 
 !   2014-11-13  su      - add super observation option
+!   2014-10-16  Su      -add optione for 4d thinning and option to keep thinned data  
+!   2015-02-23  Rancic/Thomas - add thin4d to time window logical
+!   2015-03-23  Su      -fix array size with maximum message and subset number from fixed number to
+!                        dynamic allocated array 
 !
 !   input argument list:
 !     ithin    - flag to thin data
@@ -68,6 +72,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 !     nread    - number of satellite winds read 
 !     ndata    - number of satellite winds retained for further processing
 !     nodata   - number of satellite winds retained for further processing
+!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -92,8 +97,9 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
        ncmiter,ncgroup,ncnumgrp,icuse,ictype,icsubtype,ioctype, &
        ithin_conv,rmesh_conv,pmesh_conv,isup_conv,pmot_conv,ptime_conv,isup_conv, &
        id_bias_ps,id_bias_t,conv_bias_ps,conv_bias_t,use_prepb_satwnd
-  use gsi_4dvar, only: l4dvar,iwinbgn,winlen,time_4dvar
+  use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,time_4dvar,thin4d
   use deter_sfc_mod, only: deter_sfc_type,deter_sfc2
+  use mpimod, only: npe
   implicit none
 
 ! Declare passed variables
@@ -101,13 +107,12 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   character(len=20)                     ,intent(in   ) :: sis
   integer(i_kind)                       ,intent(in   ) :: lunout
   integer(i_kind)                       ,intent(inout) :: nread,ndata,nodata
+  integer(i_kind),dimension(npe)        ,intent(inout) :: nobs
   real(r_kind)                          ,intent(in   ) :: twind
   real(r_kind),dimension(nlat,nlon,nsig),intent(in   ) :: prsl_full
 
 ! Declare local parameters
 
-  integer(i_kind),parameter:: mxtb=5000000
-  integer(i_kind),parameter:: nmsgmax=15000 ! max message count
   real(r_kind),parameter:: r1_2= 1.2_r_kind
   real(r_kind),parameter:: r3_33= 3.33_r_kind
   real(r_kind),parameter:: r6= 6.0_r_kind
@@ -122,6 +127,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   real(r_kind),parameter:: r360 = 360.0_r_kind
   real(r_kind),parameter:: r600=600.0_r_kind
   real(r_kind),parameter:: r700=700.0_r_kind
+  real(r_kind),parameter:: r850=850.0_r_kind
   real(r_kind),parameter:: r199=199.0_r_kind
   real(r_kind),parameter:: r299=299.0_r_kind
   real(r_kind),parameter:: r799=799.0_r_kind
@@ -142,6 +148,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   character(8) c_prvstg,c_sprvstg
   character(8) c_station_id,stationid
 
+  integer(i_kind) mxtb,nmsgmax 
   integer(i_kind) ireadmg,ireadsb,iuse
   integer(i_kind) i,maxobs,idomsfc,nsattype
   integer(i_kind) nc,nx,isflg,itx,j,nchanl
@@ -156,7 +163,6 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   integer(i_kind) ntest,nvtest
   integer(i_kind) kl,k1,k2
   integer(i_kind) nmsg                ! message index
-  integer(i_kind) tab(mxtb,3)
   
   
  
@@ -166,7 +172,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   integer(i_kind),dimension(5):: idate5 
   integer(i_kind),dimension(nmsgmax):: nrep
   integer(i_kind),allocatable,dimension(:):: isort,iloc,icount_obs
-
+  integer(i_kind),allocatable,dimension(:,:):: tab
   integer(i_kind) ietabl,itypex,lcount,iflag,m,ntime,itime
 
   real(r_single),allocatable,dimension(:,:,:) :: etabl
@@ -190,6 +196,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   real(r_double),dimension(3,12) :: qcdat
   real(r_double),dimension(1,1):: r_prvstg,r_sprvstg
   real(r_kind),allocatable,dimension(:):: presl_thin
+  real(r_kind),allocatable,dimension(:):: rusage 
   real(r_kind),allocatable,dimension(:,:):: cdata_all,cdata_out
   real(r_kind),allocatable,dimension(:):: spd,ssuob,ssvob,std_spd,std_dirct,pobb,rlat_sup,rlon_sup,rusage,rtime 
 
@@ -259,7 +266,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   ntx(ntread)=0
   ntxall=0
   do nc=1,nconvtype
-     if(trim(ioctype(nc)) == 'uv' .and. ictype(nc) >=240 &
+     if( (trim(ioctype(nc)) == 'uv' .or. trim(ioctype(nc)) == 'wspd10m') .and.  ictype(nc) >=240 &
              .and. ictype(nc) <=265) then
         ntmatch=ntmatch+1
         ntxall(ntmatch)=nc
@@ -278,7 +285,13 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
       
 !!  go through the satedump to find out how many subset to process
 
-  allocate(lmsg(nmsgmax,ntread))
+!! get message and subset counts
+
+  call getcount_bufr(infile,nmsgmax,mxtb)
+
+  allocate(lmsg(nmsgmax,ntread),tab(mxtb,3),nrep(nmsgmax))
+
+ 
   lmsg = .false.
   maxobs=0
   tab=0
@@ -431,8 +444,12 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   enddo msg_report
 
 
+<<<<<<< .working
   allocate(cdata_all(nreal,maxobs),isort(maxobs),spd(maxobs),ssuob(maxobs),ssvob(maxobs),std_spd(maxobs),std_dirct(maxobs),icount_obs(maxobs),pobb(maxobs),rtime(maxobs))
   allocate(rlat_sup(maxobs),rlon_sup(maxobs),rusage(maxobs))
+=======
+  allocate(cdata_all(nreal,maxobs),isort(maxobs),rusage(maxobs))
+>>>>>>> .merge-right.r61969
   isort = 0
   cdata_all=zero
   nread=0
@@ -441,6 +458,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   nchanl=0
   ilon=2
   ilat=3
+<<<<<<< .working
   spd=zero
   ssuob=zero
   ssvob=zero
@@ -452,15 +470,22 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
  std_dirct=zero
  icount_obs=0
  rtime=zero
+=======
+  rusage=101.0_r_kind
+>>>>>>> .merge-right.r61969
 
 ! Open, then read date from bufr data
 !!  read satellite winds one type a time
 
   loop_convinfo: do nx=1,ntread 
      use_all = .true.
+<<<<<<< .working
      use_all_tm = .true.
      use_all_wind_s = .true.
      use_all_wind_tm_s = .true.
+=======
+     use_all_tm = .true.
+>>>>>>> .merge-right.r61969
      ithin=0
      isup=0
      if(nx >1) then
@@ -480,6 +505,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
               nlevp=nsig
            endif
            xmesh=rmesh
+<<<<<<< .working
            if(ithin >0) then
               if( ptime >zero ) then
                  use_all_tm = .false.
@@ -500,6 +526,17 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
               endif
            endif 
            if (.not.use_all .or. .not.use_all_wind_s .or. .not.use_all_tm .or. .not.use_all_wind_tm_s) then
+=======
+           if( ptime >zero) then
+              use_all_tm = .false.
+              ntime=6.0_r_kind/ptime                   !!  6 hour winddow
+              call make3grids_tm(xmesh,nlevp,ntime)
+           else
+              use_all = .false.
+              call make3grids(xmesh,nlevp)
+           endif
+           if (.not.use_all .or. .not.use_all_tm) then
+>>>>>>> .merge-right.r61969
               allocate(presl_thin(nlevp))
               if (pflag==1) then
                  do k=1,nlevp
@@ -508,7 +545,11 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
               endif
            endif
            write(6,*)'READ_SATWND: ictype(nc),rmesh,pflag,nlevp,pmesh,nc ',&
+<<<<<<< .working
                    ioctype(nc),ictype(nc),rmesh,pflag,nlevp,pmesh,pmot,ptime,isup,nc
+=======
+                   ioctype(nc),ictype(nc),rmesh,pflag,nlevp,pmesh,nc,pmot,ptime
+>>>>>>> .merge-right.r61969
         endif
      endif
 
@@ -546,7 +587,6 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
            vob1=bmiss
            ee=r110
            qifn=r110
-           qify=r110
            call ufbint(lunin,hdrdat,13,1,iret,hdrtr) 
            call ufbint(lunin,obsdat,4,1,iret,obstr)
            ppb=obsdat(2)
@@ -554,7 +594,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
             .or. obsdat(4) > 100000000.0_r_kind) cycle loop_readsb
            if(ppb >r10000) ppb=ppb/r100
            if (ppb <r125) cycle loop_readsb    !  reject data above 125mb
-           if (twodvar_regional .and. ppb <r600) cycle loop_readsb
+           if (twodvar_regional .and. ppb <r850) cycle loop_readsb
 !   reject the data with bad quality mark from SDM
            if(hdrdat(13) == 12.0_r_kind .or. hdrdat(13) == 14.0_r_kind) cycle loop_readsb      
 !       Compare relative obs time with window.  If obs 
@@ -566,11 +606,11 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
            idate5(5) = hdrdat(8)     ! minutes
            call w3fs21(idate5,nmind)
            t4dv = real((nmind-iwinbgn),r_kind)*r60inv
-           if (l4dvar) then
+           sstime = real(nmind,r_kind) 
+           tdiff=(sstime-gstime)*r60inv
+           if (l4dvar.or.l4densvar) then
               if (t4dv<zero .OR. t4dv>winlen) cycle loop_readsb 
            else
-              sstime = real(nmind,r_kind) 
-              tdiff=(sstime-gstime)*r60inv
               if (abs(tdiff)>twind) cycle loop_readsb 
            endif
            iobsub=0
@@ -962,7 +1002,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
            if (ithin > 0 .and. iuse >=0 .and. qm <4) then
               ntmp=ndata  ! counting moved to map3gridS
  !         Set data quality index for thinning
-              if (l4dvar) then
+              if (thin4d) then
                  timedif = zero
               else
                  timedif=abs(t4dv-toff)
@@ -988,9 +1028,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
                  end do
               endif
               if (ptime >zero ) then
-                    itime=int((tdiff+three)/ptime)
-!                   write(6,*) 'READ_SATWND:itype,itime',itype,itime,tdiff,ptime
-                    if (itime  == 0) itime =1
+                    itime=int((tdiff+three)/ptime)+1
                  if(pmot <one) then
                     call map3grids_tm(-1,pflag,presl_thin,nlevp,ntime,dlat_earth,dlon_earth,&
                                         ppb,itime,crit1,ndata,iout,ntb,iiout,luse,.false.,.false.)
@@ -1206,12 +1244,10 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
         deallocate(presl_thin)
         call del3grids_wind_s
      endif
-
-
 ! Normal exit
 
   enddo loop_convinfo! loops over convinfo entry matches
-  deallocate(lmsg)
+  deallocate(lmsg,tab,nrep)
  
 
   ! Write header record and data to output file for further processing
@@ -1241,8 +1277,14 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
      end do
 1000 format(12f9.2)
   deallocate(iloc,isort,cdata_all,spd,std_spd,std_dirct,pobb,rlat_sup,rlon_sup,rtime,ssuob,ssvob)
-  deallocate(etabl)
+     cdata_out(14,i)=rusage(itx)
+     do k=15,nreal
+        cdata_out(k,i)=cdata_all(k,itx)
+     end do
+  end do
+  deallocate(iloc,isort,cdata_all,rusage)
   
+  call count_obs(ndata,nreal,ilat,ilon,cdata_out,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
   write(lunout) cdata_out
 

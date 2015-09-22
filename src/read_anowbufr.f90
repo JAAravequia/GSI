@@ -1,5 +1,5 @@
 subroutine read_anowbufr(nread,ndata,nodata,gstime,&
-      infile,obstype,lunout,twindin,sis)
+      infile,obstype,lunout,twindin,sis,nobs)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:  read_anowbufr                read pm2_5 obs from AIRNow prepbufr file (based on other bufr readers)
@@ -16,6 +16,7 @@ subroutine read_anowbufr(nread,ndata,nodata,gstime,&
 !   2010-09-13  pagowski adopted prepbufr reader code for 
 !  AIRNow bufr for pm2_5
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
+!   2015-02-23  Rancic/Thomas - add l4densvar to time window logical
 !
 !   input argument list:
 !     infile   - unit from which to read BUFR data
@@ -28,6 +29,7 @@ subroutine read_anowbufr(nread,ndata,nodata,gstime,&
 !     ndata    - number of type "obstype" observations retained for further processing
 !     nodata   - number of individual "obstype" observations retained for !further processing
 !     sis      - satellite/instrument/sensor indicator
+!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -41,11 +43,12 @@ subroutine read_anowbufr(nread,ndata,nodata,gstime,&
        tll2xy,txy2ll,rlats,rlons,region_dx
   use convinfo, only: nconvtype,ctwind, &
        icuse,ioctype,ictype,cermin,cermax
-  use gsi_4dvar, only: l4dvar, iwinbgn, winlen
+  use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen
   use chemmod, only : obs2model_anowbufr_pm2_5,&
         iconc,ierror,ilat,ilon,itime,iid,ielev,isite,iikx,ilate,ilone,&
         elev_missing,site_scale,tunable_error,&
         code_pm25_bufr,code_pm25_prepbufr
+  use mpimod, only: npe
 
   implicit none
   
@@ -53,6 +56,7 @@ subroutine read_anowbufr(nread,ndata,nodata,gstime,&
   character(len=*),intent(in   ) :: infile,obstype
   integer(i_kind) ,intent(in   ) :: lunout
   integer(i_kind) ,intent(inout) :: nread,ndata,nodata
+  integer(i_kind),dimension(npe) ,intent(inout) :: nobs
   real(r_kind)    ,intent(in   ) :: gstime,twindin
   character(len=20),intent(in  ) :: sis
   
@@ -240,12 +244,12 @@ subroutine read_anowbufr(nread,ndata,nodata,gstime,&
            
            call w3fs21(idate5,nmind)
            t4dv=real((nmind-iwinbgn),r_kind)*r60inv
+           obstime=real(nmind,r_kind)
+           tdiff=(obstime-gstime)*r60inv
 
-           if (l4dvar) then
+           if (l4dvar.or.l4densvar) then
               if (t4dv < zero .or. t4dv > winlen) cycle
            else
-              obstime=real(nmind,r_kind)
-              tdiff=(obstime-gstime)*r60inv
               if(abs(tdiff) > twindin .or. &
                     abs(tdiff) > ctwind(ikx)) cycle  ! outside time window
            endif
@@ -312,6 +316,7 @@ subroutine read_anowbufr(nread,ndata,nodata,gstime,&
 
   
 ! write header record and data to output file for further processing
+  call count_obs(ndata,nreal,ilat,ilon,cdata_all,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
   write(lunout) ((cdata_all(k,i),k=1,nreal),i=1,ndata)
 

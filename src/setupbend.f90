@@ -81,6 +81,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
 !                          tintrp3 to tintrp31 (to allow successful debug compile on WCOSS)
 !   2013-10-19  todling - metguess now holds background
 !   2014-04-10  todling - 4dvar fix: obs must be in current time bi
+!   2014-12-30  derber - Modify for possibility of not using obsdiag
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -102,7 +103,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
       gps_allhead,gps_alltail,i_gps_ob_type,obsdiags,lobsdiagsave,nobskeep,&
       time_offset
   use obsmod, only: gps_ob_type
-  use obsmod, only: obs_diag
+  use obsmod, only: obs_diag,luse_obsdiag
 
   use gsi_4dvar, only: nobs_bins,hr_obsbin
   use guess_grids, only: ges_lnprsi,hrdifsig,geop_hgti,geop_hgtl,nfldsig
@@ -184,16 +185,16 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   integer(i_kind) ier,ilon,ilat,ihgt,igps,itime,ikx,iuse, &
                   iprof,ipctc,iroc,isatid,iptid,ilate,ilone,ioff,igeoid
   integer(i_kind) i,j,k,kk,mreal,nreal,jj,ikxx,ibin
-  integer(i_kind) mm1,nsig_up,ihob,istatus
+  integer(i_kind) mm1,nsig_up,ihob,istatus,nsigstart
   integer(i_kind) kprof,istat,k1,k2,nobs_out,top_layer_SR,bot_layer_SR,count_SR
   integer(i_kind),dimension(4) :: gps_ij
   integer(i_kind):: satellite_id,transmitter_id
 
   real(r_kind),dimension(3,nsig+nsig_ext) :: q_w,q_w_tl
-  real(r_kind),dimension(nsig) :: hges,irefges,zges
+  real(r_kind),dimension(nsig) :: hges,irefges,zges,dhdt,dhdp
   real(r_kind),dimension(nsig+1) :: prsltmp
-  real(r_kind),dimension(nsig,nsig)::dhdp,dndp,dxidp
-  real(r_kind),dimension(nsig,nsig)::dhdt,dndt,dxidt,dndq,dxidq
+  real(r_kind),dimension(nsig,nsig)::dndp,dxidp
+  real(r_kind),dimension(nsig,nsig)::dndt,dxidt,dndq,dxidq
   real(r_kind),dimension(nsig+nsig_ext) :: n_TL
   real(r_kind),dimension(0:nsig+nsig_ext+1) :: ref_rad,xi_TL
   real(r_kind),dimension(nsig+nsig_ext+20) :: ref_rad_out
@@ -272,6 +273,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   nobs_out=0
   hob_s_top=one
   mm1=mype+1
+  nsigstart=min(23,nsig) 
 
 
 ! Allocate arrays for output to diagnostic file
@@ -317,6 +319,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   do j=0,grids_dim-1
      grid_s(j+1)=j*ds
   enddo
+  k4=n_c-n_a
 
 ! A loop over all obs.
   call dtime_setup()
@@ -376,7 +379,8 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
      bot_layer_SR=0
 
      alt=(tpdpres(i)-rocprof)*r1em3
-     do k=nsig,1,-1 
+!$omp parallel do  schedule(dynamic,1) private(k,qmean,tmean,fact,pw,pressure,nrefges1,nrefges2,nrefges3)
+     do k=1,nsig 
         zges(k) = (termr*hges(k)) / (termrg-hges(k))  ! eq (23) at interface (topo corrected)
         gp2gm(k,i)= termr/(termrg-hges(k))+((termr*hges(k))/(termrg-hges(k))**2)
         rges(k,i) = zges(k) + zsges + unprof + rocprof   ! radius r_i
@@ -392,7 +396,6 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
         qges_o(k)=qmean
         fact=(one+fv*qmean)
         pw=eps+qmean*(one-eps)
-        k4=n_c-n_a
         pressure=ten*exp(prsltmp(k)) ! pressure of interface level in mb
         nrefges1=n_a*(pressure/tmean)*fact
         nrefges2=n_b*qmean*pressure*fact**2/(tmean**2*pw)
@@ -417,8 +420,11 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
            (pressure/(tmean**3*pw))-&
            (k4/(tmean**2*pw))*fact*qmean*pressure
 
+     end do
+     alt=(tpdpres(i)-rocprof)*r1em3
+     if (alt<= six) then 
+        do k=nsigstart,1,-1 
 !       check for model SR layer at obs location
-        if ((k<=23) .and. (alt<= six)) then 
            grad_mod=1000.0_r_kind*(nrefges(k+1,i)-nrefges(k,i))/(rges(k+1,i)-rges(k,i))
            if (abs(grad_mod)>= half*crit_grad) then  ! SR - likely, to be used in obs SR qc
               qc_layer_SR=.true.   !SR-likely layer detected
@@ -435,8 +441,8 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
                  bot_layer_SR=top_layer_SR
               endif
            endif
-        endif 
-     end do 
+        end do 
+     endif 
 
 !    locate observation in model vertical grid
      hob=tpdpres(i)
@@ -821,56 +827,65 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
      endif
      IF (ibin<1.OR.ibin>nobs_bins) write(6,*)mype,'Error nobs_bins, ibin=',nobs_bins,ibin
 
+     if(luse_obsdiag)then
 !    Link obs to diagnostics structure
-     if (.not.lobsdiag_allocated) then
-        if (.not.associated(obsdiags(i_gps_ob_type,ibin)%head)) then
-           allocate(obsdiags(i_gps_ob_type,ibin)%head,stat=istat)
-           if (istat/=0) then
-              write(6,*)'setupbend: failure to allocate obsdiags',istat
-              call stop2(250)
+        if (.not.lobsdiag_allocated) then
+           if (.not.associated(obsdiags(i_gps_ob_type,ibin)%head)) then
+              allocate(obsdiags(i_gps_ob_type,ibin)%head,stat=istat)
+              if (istat/=0) then
+                 write(6,*)'setupbend: failure to allocate obsdiags',istat
+                 call stop2(250)
+              end if
+              obsdiags(i_gps_ob_type,ibin)%tail => obsdiags(i_gps_ob_type,ibin)%head
+           else
+              allocate(obsdiags(i_gps_ob_type,ibin)%tail%next,stat=istat)
+              if (istat/=0) then
+                 write(6,*)'setupbend: failure to allocate obsdiags',istat
+                 call stop2(251)
+              end if
+              obsdiags(i_gps_ob_type,ibin)%tail => obsdiags(i_gps_ob_type,ibin)%tail%next
            end if
-           obsdiags(i_gps_ob_type,ibin)%tail => obsdiags(i_gps_ob_type,ibin)%head
+           allocate(obsdiags(i_gps_ob_type,ibin)%tail%muse(miter+1))
+           allocate(obsdiags(i_gps_ob_type,ibin)%tail%nldepart(miter+1))
+           allocate(obsdiags(i_gps_ob_type,ibin)%tail%tldepart(miter))
+           allocate(obsdiags(i_gps_ob_type,ibin)%tail%obssen(miter))
+           obsdiags(i_gps_ob_type,ibin)%tail%indxglb=i
+           obsdiags(i_gps_ob_type,ibin)%tail%nchnperobs=-99999
+           obsdiags(i_gps_ob_type,ibin)%tail%luse=.false.
+           obsdiags(i_gps_ob_type,ibin)%tail%muse(:)=.false.
+           obsdiags(i_gps_ob_type,ibin)%tail%nldepart(:)=-huge(zero)
+           obsdiags(i_gps_ob_type,ibin)%tail%tldepart(:)=zero
+           obsdiags(i_gps_ob_type,ibin)%tail%wgtjo=-huge(zero)
+           obsdiags(i_gps_ob_type,ibin)%tail%obssen(:)=zero
+
+           n_alloc(ibin) = n_alloc(ibin) +1
+           my_diag => obsdiags(i_gps_ob_type,ibin)%tail
+           my_diag%idv = is
+           my_diag%iob = i
+           my_diag%ich = 1
+
         else
-           allocate(obsdiags(i_gps_ob_type,ibin)%tail%next,stat=istat)
-           if (istat/=0) then
-              write(6,*)'setupbend: failure to allocate obsdiags',istat
-              call stop2(251)
+           if (.not.associated(obsdiags(i_gps_ob_type,ibin)%tail)) then
+              obsdiags(i_gps_ob_type,ibin)%tail => obsdiags(i_gps_ob_type,ibin)%head
+           else
+              obsdiags(i_gps_ob_type,ibin)%tail => obsdiags(i_gps_ob_type,ibin)%tail%next
            end if
-           obsdiags(i_gps_ob_type,ibin)%tail => obsdiags(i_gps_ob_type,ibin)%tail%next
-        end if
-        allocate(obsdiags(i_gps_ob_type,ibin)%tail%muse(miter+1))
-        allocate(obsdiags(i_gps_ob_type,ibin)%tail%nldepart(miter+1))
-        allocate(obsdiags(i_gps_ob_type,ibin)%tail%tldepart(miter))
-        allocate(obsdiags(i_gps_ob_type,ibin)%tail%obssen(miter))
-        obsdiags(i_gps_ob_type,ibin)%tail%indxglb=i
-        obsdiags(i_gps_ob_type,ibin)%tail%nchnperobs=-99999
-        obsdiags(i_gps_ob_type,ibin)%tail%luse=.false.
-        obsdiags(i_gps_ob_type,ibin)%tail%muse(:)=.false.
-        obsdiags(i_gps_ob_type,ibin)%tail%nldepart(:)=-huge(zero)
-        obsdiags(i_gps_ob_type,ibin)%tail%tldepart(:)=zero
-        obsdiags(i_gps_ob_type,ibin)%tail%wgtjo=-huge(zero)
-        obsdiags(i_gps_ob_type,ibin)%tail%obssen(:)=zero
+           if (obsdiags(i_gps_ob_type,ibin)%tail%indxglb/=i) then
+              write(6,*)'setupbend: index error'
+              call stop2(252)
+           end if
+        endif
 
-        n_alloc(ibin) = n_alloc(ibin) +1
-        my_diag => obsdiags(i_gps_ob_type,ibin)%tail
-        my_diag%idv = is
-        my_diag%iob = i
-        my_diag%ich = 1
-
-     else
-        if (.not.associated(obsdiags(i_gps_ob_type,ibin)%tail)) then
-           obsdiags(i_gps_ob_type,ibin)%tail => obsdiags(i_gps_ob_type,ibin)%head
-        else
-           obsdiags(i_gps_ob_type,ibin)%tail => obsdiags(i_gps_ob_type,ibin)%tail%next
-        end if
-        if (obsdiags(i_gps_ob_type,ibin)%tail%indxglb/=i) then
-           write(6,*)'setupbend: index error'
-           call stop2(252)
-        end if
-     endif
+        if (nobskeep>0 .and. last_pass) muse(i)=obsdiags(i_gps_ob_type,ibin)%tail%muse(nobskeep)
+!       Fill obs diagnostics structure
+        obsdiags(i_gps_ob_type,ibin)%tail%luse=luse(i)
+        obsdiags(i_gps_ob_type,ibin)%tail%muse(jiter)=muse(i)
+        obsdiags(i_gps_ob_type,ibin)%tail%nldepart(jiter)=data(igps,i)
+        obsdiags(i_gps_ob_type,ibin)%tail%wgtjo=(data(ier,i)*ratio_errors(i))**2
+     end if
 
      if(last_pass) then
-        if (nobskeep>0) muse(i)=obsdiags(i_gps_ob_type,ibin)%tail%muse(nobskeep)
+      
 
 !       Save values needed for generate of statistics for all observations
         if(.not. associated(gps_allhead(ibin)%head))then
@@ -900,11 +915,6 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
         gps_alltail(ibin)%head%muse     = muse(i) ! logical
         gps_alltail(ibin)%head%cdiag    = cdiagbuf(i)
 
-!       Fill obs diagnostics structure
-        obsdiags(i_gps_ob_type,ibin)%tail%luse=luse(i)
-        obsdiags(i_gps_ob_type,ibin)%tail%muse(jiter)=muse(i)
-        obsdiags(i_gps_ob_type,ibin)%tail%nldepart(jiter)=data(igps,i)
-        obsdiags(i_gps_ob_type,ibin)%tail%wgtjo=(data(ier,i)*ratio_errors(i))**2
 
 !       Load additional obs diagnostic structure
         if (lobsdiagsave) then
@@ -963,12 +973,12 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
  
 !          Inizialize some variables
            dxidt=zero; dxidp=zero; dxidq=zero
-           dhdp=zero; dhdt=zero       
            dndt=zero; dndq=zero; dndp=zero
 
 !          Set (i,j) indices of guess gridpoint that bound obs location
            call get_ij(mm1,data(ilat,i),data(ilon,i),gps_ij,gpstail(ibin)%head%wij)
  
+!$omp parallel do  schedule(dynamic,1) private(k,j,dhdt,dhdp)
            do k=1,nsig
  
               gpstail(ibin)%head%ij(1,k)=gps_ij(1)+(k-1)*latlon11
@@ -976,11 +986,12 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
               gpstail(ibin)%head%ij(3,k)=gps_ij(3)+(k-1)*latlon11
               gpstail(ibin)%head%ij(4,k)=gps_ij(4)+(k-1)*latlon11
  
+              dhdp=zero; dhdt=zero       
               if(k > 1) then
                  do j=2,k
-                    dhdt(k,j-1)= rdog*(prsltmp_o(j-1,i)-prsltmp_o(j,i))
-                    dhdp(k,j)= dhdp(k,j)-rdog*(tges_o(j-1,i)/exp(prsltmp_o(j,i)))
-                    dhdp(k,j-1)=dhdp(k,j-1)+rdog*(tges_o(j-1,i)/exp(prsltmp_o(j-1,i)))
+                    dhdt(j-1)= rdog*(prsltmp_o(j-1,i)-prsltmp_o(j,i))
+                    dhdp(j)= dhdp(j)-rdog*(tges_o(j-1,i)/exp(prsltmp_o(j,i)))
+                    dhdp(j-1)=dhdp(j-1)+rdog*(tges_o(j-1,i)/exp(prsltmp_o(j-1,i)))
                  end do
               end if
               if(k == 1)then
@@ -994,15 +1005,12 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
                  dndq(k,k-1)=dndq(k,k-1)+half*n_q(k,i)
                  dndp(k,k)=n_p(k,i)
               end if
-           end do
-
-           do k=1,nsig
               irefges(k)=one+r1em6*nrefges(k,i)
               ref_rad(k)=irefges(k)*rges(k,i)
               do j=1,nsig
-                 dxidt(k,j)=r1em6*rges(k,i)*dndt(k,j)+irefges(k)*gp2gm(k,i)*dhdt(k,j)
+                 dxidt(k,j)=r1em6*rges(k,i)*dndt(k,j)+irefges(k)*gp2gm(k,i)*dhdt(j)
                  dxidq(k,j)=r1em6*rges(k,i)*dndq(k,j)
-                 dxidp(k,j)=r1em6*rges(k,i)*dndp(k,j)+irefges(k)*gp2gm(k,i)*dhdp(k,j)
+                 dxidp(k,j)=r1em6*rges(k,i)*dndp(k,j)+irefges(k)*gp2gm(k,i)*dhdp(j)
               end do
            end do
            d_ref_rad=ref_rad(nsig)-ref_rad(nsig-1)
@@ -1011,6 +1019,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
            end do
            ref_rad(0)=ref_rad(3)
            ref_rad(nsig_up+1)=ref_rad(nsig_up-2)
+!$omp parallel do  schedule(dynamic,1) private(kk,k,j,xi_TL,n_TL,q_w,q_w_tl,d_ref_rad_TL,ihob,dw4,dw4_TL,dbetaxi,dbetan)
            do kk=1,nsig
               xi_TL=zero
               xi_TL(kk)=one
@@ -1058,11 +1067,10 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
                     dbenddn(kk)=dbenddn(kk)+two*dbetan
                  end if
               end do intloop2
+              dbenddxi(kk)=-dbenddxi(kk)*ds*tpdpres(i)
+              dbenddn(kk)=-dbenddn(kk)*ds*tpdpres(i)
            end do
-           do k=1,nsig
-              dbenddxi(k)=-dbenddxi(k)*ds*tpdpres(i)
-              dbenddn(k)=-dbenddn(k)*ds*tpdpres(i)
-           end do
+!$omp parallel do  schedule(dynamic,1) private(k,j)
            do k=1,nsig
               gpstail(ibin)%head%jac_t(k)=zero
               gpstail(ibin)%head%jac_q(k)=zero
@@ -1086,18 +1094,20 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
            gpstail(ibin)%head%pg     = cvar_pg(ikx)
            gpstail(ibin)%head%luse   = luse(i)
 
-           gpstail(ibin)%head%diags => obsdiags(i_gps_ob_type,ibin)%tail
+           if(luse_obsdiag)then
+              gpstail(ibin)%head%diags => obsdiags(i_gps_ob_type,ibin)%tail
 
-           my_head => gpstail(ibin)%head
-           my_diag => gpstail(ibin)%head%diags
-           if(my_head%idv /= my_diag%idv .or. &
-              my_head%iob /= my_diag%iob ) then
-              call perr(myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
-                    (/is,i,ibin/))
-              call perr(myname,'my_head%(idv,iob) =',(/my_head%idv,my_head%iob/))
-              call perr(myname,'my_diag%(idv,iob) =',(/my_diag%idv,my_diag%iob/))
-              call die(myname)
-           endif
+              my_head => gpstail(ibin)%head
+              my_diag => gpstail(ibin)%head%diags
+              if(my_head%idv /= my_diag%idv .or. &
+                 my_head%iob /= my_diag%iob ) then
+                 call perr(myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
+                       (/is,i,ibin/))
+                 call perr(myname,'my_head%(idv,iob) =',(/my_head%idv,my_head%iob/))
+                 call perr(myname,'my_diag%(idv,iob) =',(/my_diag%idv,my_diag%iob/))
+                 call die(myname)
+              endif
+           end if
 
         end if ! (in_curbin .and. muse=1)
      endif ! (last_pass)

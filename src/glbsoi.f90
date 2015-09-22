@@ -90,6 +90,8 @@ subroutine glbsoi(mype)
 !   2014-02-03  todling - move cost function create/destroy from observer to this routine;
 !                         reposition load of ens due to init of sqrt(ens) dims dependences
 !   2014-02-05  todling - update interface to prebal
+!   2014-06-19  carley/zhu - Modify for R_option: optional variable correlation length twodvar_regional
+!                            lcbas analysis variable
 !
 !   input argument list:
 !     mype - mpi task id
@@ -106,7 +108,7 @@ subroutine glbsoi(mype)
   use mpimod, only: npe
   use adjtest_obs, only: adtest_obs
   use jfunc, only: miter,jiter,jiterstart,jiterend,iguess,&
-      write_guess_solution,&
+      write_guess_solution,R_option,&
       tendsflag,xhatsave,yhatsave,create_jfunc,destroy_jfunc
   use anberror, only: anisotropic, &
       create_anberror_vars_reg,destroy_anberror_vars_reg,&
@@ -114,8 +116,8 @@ subroutine glbsoi(mype)
   use anisofilter, only: anprewgt_reg
   use anisofilter_glb, only: anprewgt
   use berror, only: create_berror_vars_reg,create_berror_vars,&
-      set_predictors_var,destroy_berror_vars_reg,&
-      destroy_berror_vars,bkgv_flowdep,pcinfo,fut2ps,cwcoveqqcov
+      set_predictors_var,destroy_berror_vars_reg,destroy_berror_vars,& 
+      bkgv_flowdep,pcinfo,fut2ps,cwcoveqqcov
   use balmod, only: create_balance_vars_reg,create_balance_vars, &
       destroy_balance_vars_reg,destroy_balance_vars,prebal,prebal_reg
   use compact_diffs, only: create_cdiff_coefs,inisph
@@ -145,6 +147,7 @@ subroutine glbsoi(mype)
 
   implicit none
 
+
 ! Declare passed variables
   integer(i_kind),intent(in   ) :: mype
 
@@ -155,12 +158,14 @@ subroutine glbsoi(mype)
   real(r_kind) :: zgg,zxy
   character(len=12) :: clfile
 
+
 !*******************************************************************************************
 !
 ! Initialize timer for this procedure
   call timer_ini('glbsoi')
 
   if(mype==0) write(6,*) 'glbsoi: starting ...'
+
 
 ! If l_hyb_ens is true, then initialize machinery for hybrid ensemble 3dvar
   if(l_hyb_ens) then
@@ -198,11 +203,13 @@ subroutine glbsoi(mype)
      else
         call create_berror_vars_reg
      end if
-     call prebal_reg
-     if(anisotropic) then
-        call anprewgt_reg(mype)
-     else
-        call prewgt_reg(mype)
+     call prebal_reg(cwcoveqqcov)
+     if (.not. R_option) then
+        if(anisotropic) then
+           call anprewgt_reg(mype)
+        else
+           call prewgt_reg(mype)
+        end if
      end if
   else
      call create_balance_vars
@@ -267,6 +274,19 @@ subroutine glbsoi(mype)
 
 !    Set up right hand side of analysis equation
      call setuprhsall(ndata,mype,.true.,.true.)
+
+!    Estimate correlation length for lcbas if R_option==.true.
+!      For this to work we need to have run setuplcbas first to get the weights.
+!      Note that R_option is only applicable for lcbas and not for any
+!      another twodvar_regional variables.  All other variables are handled
+!      as they would have been otherwise.
+     if (R_option .and. twodvar_regional .and. jiter==jiterstart) then
+        if(anisotropic) then
+           call anprewgt_reg(mype)
+        else
+           call prewgt_reg(mype)
+        end if
+     end if
 
 ! implement obs adjoint test and return  
      if( ladtest_obs) then
@@ -401,10 +421,11 @@ subroutine glbsoi(mype)
     call destroy_ensemble
   endif
 
- if(mype==0) write(6,*) 'glbsoi: complete'
+  if(mype==0) write(6,*) 'glbsoi: complete'
 
 ! Finalize timer for this procedure
   call timer_fnl('glbsoi')
 
 ! End of routine
+
 end subroutine glbsoi

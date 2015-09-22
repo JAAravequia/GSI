@@ -16,6 +16,8 @@ module convinfo
 !   2010-09-10  pagowski - add pm2_5
 !   2013-11-20        su - add ptime as time dimension 
 !   2014-11-14        su - add  supob option 
+!   2013-11-20        su - add ptime_conv as time dimension,and pmot_conv as
+!                           parameter tfor the option to keep thinned data as monitored
 !
 ! Subroutines Included:
 !   sub init_convinfo    - initialize conventional obs related variables
@@ -49,7 +51,6 @@ module convinfo
 !   def pmot_conv      - option to keep thinned data out
 !   def ptime_conv     - option to add time dimension 
 !   def isup_conv      - option to do super observation 
-
 !
 !
 !   def predx_conv     - conv obs bias correction coefficients: t,uv,q,ps,spd,sst,pw,pm2_5
@@ -180,6 +181,7 @@ contains
 !   2008-09-05  lueken - merged ed's changes into q1fy09 code
 !   2009-01-22  todling - protect against non-initialized destroy call
 !   2010-05-29  todling - interface consistent w/ similar routines
+!   2014-07-10  carley  - add check to bypass blank lines in convinfo file
 !
 !   input argument list:
 !     mype - mpi task id
@@ -209,11 +211,17 @@ contains
     nconvtype=0
     nlines=0
     read1: do
+       cflg=' '
+       iotype='       '
        read(lunin,1030,iostat=istat,end=1130)cflg,iotype,crecord
 1030   format(a1,a7,2x,a130)
        if (istat /= 0) exit
        nlines=nlines+1
        if(cflg == '!')cycle
+       if (cflg==' '.and.iotype=='       ') then
+         write(6,*) 'Encountered a blank line in convinfo file at line number: ',nlines,' skipping!'
+         cycle
+       end if
        read(crecord,*)ictypet,icsubtypet,icuset
        if (icuset < use_limit) cycle
        nconvtype=nconvtype+1
@@ -274,7 +282,13 @@ contains
     endif
 
     do i=1,nlines
+       cflg=' '
+       iotype='       '
        read(lunin,1030)cflg,iotype,crecord
+       if (cflg==' '.and.iotype=='       ') then
+         write(6,*) 'Encountered a blank line in convinfo file at line number: ',i,' skipping!'
+         cycle
+       end if
        if(cflg == '!')cycle
        read(crecord,*)ictypet,icsubtypet,icuset
        if (mype==0 .and. icuset < use_limit) write(6, *) &
@@ -282,7 +296,7 @@ contains
        if(icuset < use_limit)cycle
        nc=nc+1
        ioctype(nc)=iotype
-           !otype   type isub iuse twindow numgrp ngroup nmiter gross ermax ermin var_b var_pg ithin rmesh pmesh npred
+           !otype   type isub iuse twindow numgrp ngroup nmiter gross ermax ermin var_b var_pg ithin rmesh pmesh npred pmot ptime
            !ps       120    0    1     3.0      0      0      0   5.0   3.0   1.0  10.0  0.000 0 99999.    5
            !ioctype(nc),
            !  ictype(nc),

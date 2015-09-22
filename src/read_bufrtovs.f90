@@ -2,7 +2,8 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
      rmesh,jsatid,gstime,infile,lunout,obstype,&
      nread,ndata,nodata,twind,sis, &
      mype_root,mype_sub,npe_sub,mpi_comm_sub, &
-     llb,lll)
+     llb,lll,nobs, &
+     nrec_start,nrec_start_ears,dval_use)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_bufrtovs                  read bufr tovs 1b data
@@ -81,7 +82,10 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
 !   2011-12-14  collard Remove ATMS
 !   2012-03-05  akella  - nst now controlled via coupler
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
+!   2013-12-20  zhu - change icw4crtm>0 to icw4crtm>10  (bug fix)
 !   2014-01-31  mkim - added iql4crtm for all-sky mw radiance data assimilation 
+!   2014-04-27  eliu/zhu - add thinning options for AMSU-A under allsky condition 
+!   2015-02-23  Rancic/Thomas - add thin4d to time window logical
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -104,11 +108,15 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
 !     mpi_comm_sub - sub-communicator for data read
 !     llb
 !     lll
+!     dval_use - logical for using dval
+!     nrec_start - first subset with useful information
+!     nrec_start_ears - first ears subset with useful information
 !
 !   output argument list:
 !     nread    - number of BUFR TOVS 1b observations read
 !     ndata    - number of BUFR TOVS 1b profiles retained for further processing
 !     nodata   - number of BUFR TOVS 1b observations retained for further processing
+!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -129,21 +137,24 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
       MAX_SENSOR_ZENITH_ANGLE
   use crtm_spccoeff, only: sc,crtm_spccoeff_load,crtm_spccoeff_destroy
   use calc_fov_crosstrk, only : instrument_init, fov_cleanup, fov_check
-  use gsi_4dvar, only: l4dvar,iwinbgn,winlen
+  use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,thin4d
   use antcorr_application, only: remove_antcorr
   use control_vectors, only: cvars3d
   use mpeu_util, only: getindex
   use gsi_metguess_mod, only: gsi_metguess_get
   use deter_sfc_mod, only: deter_sfc_fov,deter_sfc
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
+  use mpimod, only: npe
   implicit none
 
 ! Declare passed variables
   character(len=*),intent(in   ) :: infile,obstype,jsatid
   character(len=20),intent(in  ) :: sis
   integer(i_kind) ,intent(in   ) :: mype,lunout,ithin
+  integer(i_kind) ,intent(in   ) :: nrec_start,nrec_start_ears
   integer(i_kind) ,intent(inout) :: isfcalc
   integer(i_kind) ,intent(inout) :: nread
+  integer(i_kind),dimension(npe) ,intent(inout) :: nobs
   integer(i_kind) ,intent(  out) :: ndata,nodata
   real(r_kind)    ,intent(in   ) :: rmesh,gstime,twind
   real(r_kind)    ,intent(inout) :: val_tovs
@@ -152,13 +163,13 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
   integer(i_kind) ,intent(in   ) :: npe_sub
   integer(i_kind) ,intent(in   ) :: mpi_comm_sub
   integer(i_kind) ,intent(in   ) :: lll,llb
+  logical,         intent(in   ) :: dval_use
 
 ! Declare local parameters
 
   character(8),parameter:: fov_flag="crosstrk"
   integer(i_kind),parameter:: n1bhdr=13
   integer(i_kind),parameter:: n2bhdr=4
-  integer(i_kind),parameter:: maxinfo=33
   real(r_kind),parameter:: r360=360.0_r_kind
   real(r_kind),parameter:: tbmin=50.0_r_kind
   real(r_kind),parameter:: tbmax=550.0_r_kind
@@ -171,18 +182,18 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
   character(8) subset
   character(80) hdr1b,hdr2b
 
-  integer(i_kind) ireadsb,ireadmg,irec,next
+  integer(i_kind) ireadsb,ireadmg,irec,next,nrec_startx
   integer(i_kind) i,j,k,ifov,ntest,llll
   integer(i_kind) iret,idate,nchanl,n,idomsfc(1)
   integer(i_kind) ich1,ich2,ich8,ich15,ich16,ich17
-  integer(i_kind) kidsat,instrument
+  integer(i_kind) kidsat,instrument,maxinfo
   integer(i_kind) nmind,itx,nreal,nele,itt,ninstruments
   integer(i_kind) iskip,ichan2,ichan1,ichan15
   integer(i_kind) lnbufr,ksatid,ichan8,isflg,ichan3,ich3,ich4,ich6
   integer(i_kind) ilat,ilon,ifovmod
   integer(i_kind),dimension(5):: idate5
-  integer(i_kind) instr,ichan,icw4crtm,iql4crtm
-  integer(i_kind) error_status,ier
+  integer(i_kind) instr,ichan,icw4crtm
+  integer(i_kind) error_status,ier,irecx
   integer(i_kind) radedge_min, radedge_max
   integer(i_kind),allocatable,dimension(:)::nrec
   character(len=20),dimension(1):: sensorlist
@@ -214,6 +225,7 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
 !**************************************************************************
 ! Initialize variables
 
+  maxinfo=31
   lnbufr = 15
   disterrmax=zero
   ntest=0
@@ -229,8 +241,7 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
   endif
 
 ! Determine whether CW used in CRTM
-  call gsi_metguess_get ( 'i4crtm::cw', icw4crtm, ier )
-  call gsi_metguess_get ( 'i4crtm::ql', iql4crtm, ier )
+  call gsi_metguess_get ( 'i4crtm::ql', icw4crtm, ier )
 
 ! Make thinning grids
   call makegrids(rmesh,ithin)
@@ -445,6 +456,7 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
   endif
 
 ! Allocate arrays to hold all data for given satellite
+  if(dval_use) maxinfo=maxinfo+2
   nreal = maxinfo + nstinfo
   nele  = nreal   + nchanl
   hdr1b ='SAID FOVN YEAR MNTH DAYS HOUR MINU SECO CLAT CLON CLATH CLONH HOLS'
@@ -452,11 +464,18 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
   allocate(data_all(nele,itxmax),data1b8(nchanl),data1b4(nchanl),nrec(itxmax))
 
 
+  next=0
   irec=0
 ! Big loop over standard data feed and possible ears data
   do llll=llb,lll
 
 
+     if(llll == 1)then
+        nrec_startx=nrec_start
+     end if
+     if(llll == 2) then
+        nrec_startx=nrec_start_ears
+     end if
 !    Set bufr subset names based on type of data to read
 
 !    Open unit to satellite bufr file
@@ -501,12 +520,14 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
 
    
 !    Loop to read bufr file
-     next=0
+     irecx=0
      read_subset: do while(ireadmg(lnbufr,subset,idate)>=0)
+        irecx=irecx+1
+        if(irecx < nrec_startx) cycle read_subset
         irec=irec+1
         next=next+1
         if(next == npe_sub)next=0
-        if(next/=mype_sub)cycle
+        if(next/=mype_sub)cycle read_subset
         read_loop: do while (ireadsb(lnbufr)==0)
 
 !          Read header record.  (llll=1 is normal feed, 2=EARS data)
@@ -577,21 +598,22 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
            idate5(5) = bfr1bhdr(7) !minute
            call w3fs21(idate5,nmind)
            t4dv= (real((nmind-iwinbgn),r_kind) + bfr1bhdr(8)*r60inv)*r60inv    ! add in seconds
-           if (l4dvar) then
+           sstime= real(nmind,r_kind) + bfr1bhdr(8)*r60inv    ! add in seconds
+           tdiff=(sstime-gstime)*r60inv
+           if (l4dvar.or.l4densvar) then
               if (t4dv<zero .OR. t4dv>winlen) cycle read_loop
            else
-              sstime= real(nmind,r_kind) + bfr1bhdr(8)*r60inv    ! add in seconds
-              tdiff=(sstime-gstime)*r60inv
               if(abs(tdiff) > twind) cycle read_loop
            endif
 
            nread=nread+nchanl
 
-           if (l4dvar) then
+           if (thin4d) then
               timedif = zero
            else
               timedif = two*abs(tdiff)        ! range:  0 to 6
            endif
+
            terrain = 50._r_kind
            if(llll == 1)terrain = 0.01_r_kind*abs(bfr1bhdr(13))                   
            crit1 = 0.01_r_kind+terrain + (llll-1)*500.0_r_kind + timedif 
@@ -742,19 +764,38 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
               if (adp_anglebc .and. newpc4pred) then
                  ch1 = data1b8(ich1)-ang_rad(ichan1)*cbias(ifov,ichan1) 
                  ch2 = data1b8(ich2)-ang_rad(ichan2)*cbias(ifov,ichan2) 
+                 ch15= data1b8(ich15)-ang_rad(ichan15)*cbias(ifov,ichan15)
               else
                  ch1 = data1b8(ich1)-ang_rad(ichan1)*cbias(ifov,ichan1)+ &
                        air_rad(ichan1)*cbias(15,ichan1)
                  ch2 = data1b8(ich2)-ang_rad(ichan2)*cbias(ifov,ichan2)+ &
                        air_rad(ichan2)*cbias(15,ichan2)   
+                 ch15= data1b8(ich15)-ang_rad(ichan15)*cbias(ifov,ichan15)
               end if
               if (isflg == 0 .and. ch1<285.0_r_kind .and. ch2<285.0_r_kind) then
                  cosza = cos(lza)
-                 d0    = 8.24_r_kind - 2.622_r_kind*cosza + 1.846_r_kind*cosza*cosza
-                 if (icw4crtm>10 .or. iql4crtm>10) then
-                    qval=zero
-                 else
-                    qval=cosza*(d0+d1*log(285.0_r_kind-ch1)+d2*log(285.0_r_kind-ch2))
+                 d0    = 8.24_r_kind - 2.622_r_kind*cosza + 1.846_r_kind*cosza*cosza                                 
+                 qval=cosza*(d0+d1*log(285.0_r_kind-ch1)+d2*log(285.0_r_kind-ch2))
+                 if (icw4crtm>10) then
+                  ! no preference in selecting clouds/precipitation
+                  ! qval=zero 
+                  ! favor non-precipitating clouds                                                   
+                    qval=-113.2_r_kind+(2.41_r_kind-0.0049_r_kind*ch1)*ch1 +  &         
+                                        0.454_r_kind*ch2-ch15   
+                    if (qval>=9.0_r_kind) then
+                       qval=1000.0_r_kind*qval
+                    else
+                       qval=zero
+                    end if
+                  ! favor thinner clouds
+                  ! cosza = cos(lza)
+                  ! d0= 8.24_r_kind - 2.622_r_kind*cosza + 1.846_r_kind*cosza*cosza
+                  ! qval=cosza*(d0+d1*log(285.0_r_kind-ch1)+d2*log(285.0_r_kind-ch2))
+                  ! if (qval>0.2_r_kind) then
+                  !    qval=1000.0_r_kind*qval
+                  ! else
+                  !    qval=zero
+                  ! end if
                  end if
                  pred  = max(zero,qval)*100.0_r_kind
               else
@@ -860,8 +901,10 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
            data_all(30,itx) = dlon_earth_deg           ! earth relative longitude (deg)
            data_all(31,itx) = dlat_earth_deg           ! earth relative latitude (deg)
 
-           data_all(32,itx)= val_tovs
-           data_all(33,itx)= itt
+           if(dval_use) then
+              data_all(32,itx)= val_tovs
+              data_all(33,itx)= itt
+           end if
 
            if(nst_gsi>0) then
               data_all(maxinfo+1,itx) = tref            ! foundation temperature
@@ -907,12 +950,16 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
            if(data_all(i+nreal,n) > tbmin .and. &
               data_all(i+nreal,n) < tbmax)nodata=nodata+1
         end do
-        itt=nint(data_all(maxinfo,n))
-        super_val(itt)=super_val(itt)+val_tovs
-
      end do
+     if(dval_use .and. assim)then
+        do n=1,ndata
+           itt=nint(data_all(33,n))
+           super_val(itt)=super_val(itt)+val_tovs
+        end do
+     end if
 
 !    Write final set of "best" observations to output file
+     call count_obs(ndata,nele,ilat,ilon,data_all,nobs)
      write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
      write(lunout) ((data_all(k,n),k=1,nele),n=1,ndata)
   end if
