@@ -17,6 +17,7 @@ module convinfo
 !   2013-08-20  s.liu - add reflectivity
 !   2013-11-20        su - add ptime_conv as time dimension,and pmot_conv as
 !                           parameter tfor the option to keep thinned data as monitored
+!   2015-09-23        su - add index_sub as counter how many subtypes for a type 
 !
 ! Subroutines Included:
 !   sub init_convinfo    - initialize conventional obs related variables
@@ -49,6 +50,8 @@ module convinfo
 !   def pmesh_conv     - size of vertical thinning mesh 
 !   def pmot_conv      - option to keep thinned data out
 !   def ptime_conv     - option to add time dimension
+!   def index_sub     - index to count how many subtypes in a type and the
+!                       position in the bufr error table
 !
 !
 !   def predx_conv     - conv obs bias correction coefficients: t,uv,q,ps,spd,sst,pw,pm2_5
@@ -84,6 +87,7 @@ module convinfo
   public :: ncgroup,ncnumgrp,ncmiter,ctwind,cermax,pmesh_conv,rmesh_conv,ithin_conv,cvar_b,cvar_pg,pmot_conv,ptime_conv
   public :: cermin,cgross
   public :: use_prepb_satwnd
+  public :: index_sub
 
   logical diag_conv
   logical :: ihave_pm2_5
@@ -92,7 +96,7 @@ module convinfo
   real(r_kind),allocatable,dimension(:)::ctwind,cgross,cermax,cermin,cvar_b,cvar_pg, &
 		                          rmesh_conv,pmesh_conv,stndev_conv,pmot_conv,ptime_conv
   integer(i_kind),allocatable,dimension(:):: ncmiter,ncgroup,ncnumgrp,icuse,ictype,icsubtype,&
-                                             ithin_conv,npred_conv
+                                             ithin_conv,npred_conv,index_sub
   character(len=16),allocatable,dimension(:)::ioctype
 
   real(r_kind),allocatable,dimension(:,:) :: predx_conv
@@ -242,7 +246,7 @@ contains
     allocate(ctwind(nconvtype),cgross(nconvtype),cermax(nconvtype),cermin(nconvtype), &
              cvar_b(nconvtype),cvar_pg(nconvtype),ncmiter(nconvtype),ncgroup(nconvtype), &
              ncnumgrp(nconvtype),icuse(nconvtype),ictype(nconvtype),icsubtype(nconvtype), &
-             ioctype(nconvtype), & 
+             ioctype(nconvtype),index_sub(nconvtype), & 
              ithin_conv(nconvtype),rmesh_conv(nconvtype),pmesh_conv(nconvtype),&
              npred_conv(nconvtype),pmot_conv(nconvtype),ptime_conv(nconvtype),  &
              stndev_conv(nconvtype), &
@@ -259,6 +263,7 @@ contains
        stndev_conv(i)=one
        pmot_conv(i)=zero
        ptime_conv(i)=zero
+       index_sub(i)=2
     enddo
     nc=zero
 
@@ -306,6 +311,9 @@ contains
        read(crecord,*)ictype(nc),icsubtype(nc),icuse(nc),ctwind(nc),ncnumgrp(nc), &
             ncgroup(nc),ncmiter(nc),cgross(nc),cermax(nc),cermin(nc),cvar_b(nc),cvar_pg(nc) &
             ,ithin_conv(nc),rmesh_conv(nc),pmesh_conv(nc),npred_conv(nc),pmot_conv(nc),ptime_conv(nc)
+       if(nc >=2 .and. trim(ioctype(nc)) == trim(ioctype(nc-1)) .and.  ictype(nc) == ictype(nc-1)) then
+             index_sub(nc)=index_sub(nc-1)+1
+         endif
        if(mype == 0)write(6,1031)ioctype(nc),ictype(nc),icsubtype(nc),icuse(nc),ctwind(nc),ncnumgrp(nc), &
             ncgroup(nc),ncmiter(nc),cgross(nc),cermax(nc),cermin(nc),cvar_b(nc),cvar_pg(nc) &
             ,ithin_conv(nc),rmesh_conv(nc),pmesh_conv(nc),npred_conv(nc),pmot_conv(nc),ptime_conv(nc)
@@ -463,7 +471,7 @@ contains
     deallocate(ctwind,cgross,cermax,cermin, &
              cvar_b,cvar_pg,ncmiter,ncgroup, &
              ncnumgrp,icuse,ictype,icsubtype, &
-             ioctype, & 
+             ioctype,index_sub, & 
              ithin_conv,rmesh_conv,pmesh_conv, &
              npred_conv,pmot_conv,ptime_conv, &
              stndev_conv, &

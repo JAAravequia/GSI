@@ -56,6 +56,8 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 !   2015-02-23  Rancic/Thomas - add thin4d to time window logical
 !   2015-03-23  Su      -fix array size with maximum message and subset number from fixed number to
 !                        dynamic allocated array 
+!   2015-09-22  Su      - add oberrflg2 for new format error table
+!   2015-09-22  Su      - read new format error table
 !
 !   input argument list:
 !     ithin    - flag to thin data
@@ -88,11 +90,12 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   use constants, only: deg2rad,zero,rad2deg,one_tenth,&
         tiny_r_kind,huge_r_kind,r60inv,one_tenth,&
         one,two,three,four,five,half,quarter,r60inv,r100,r2000
-!  use converr,only: etabl
-  use obsmod, only: iadate,oberrflg,perturb_obs,perturb_fact,ran01dom,bmiss
+  use converr,only: etabl
+  use converr_uv,only: etabl_uv,ptabl_uv,isuble_uv,maxsub_uv
+  use obsmod, only: iadate,oberrflg2,perturb_obs,perturb_fact,ran01dom,bmiss
   use convinfo, only: nconvtype,ctwind, &
        ncmiter,ncgroup,ncnumgrp,icuse,ictype,icsubtype,ioctype, &
-       ithin_conv,rmesh_conv,pmesh_conv,pmot_conv,ptime_conv, &
+       ithin_conv,rmesh_conv,pmesh_conv,pmot_conv,ptime_conv,index_sub, &
        id_bias_ps,id_bias_t,conv_bias_ps,conv_bias_t,use_prepb_satwnd
   use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,time_4dvar,thin4d
   use deter_sfc_mod, only: deter_sfc_type,deter_sfc2
@@ -153,7 +156,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   integer(i_kind) kk,klon1,klat1,klonp1,klatp1
   integer(i_kind) nmind,lunin,idate,ilat,ilon,iret,k
   integer(i_kind) nreal,ithin,iout,ntmp,icount,iiout,ii
-  integer(i_kind) itype,iosub,ixsub,isubsub,iobsub 
+  integer(i_kind) itype,iosub,ixsub,isubsub,iobsub,ierr,ierr2 
   integer(i_kind) qm
   integer(i_kind) nlevp         ! vertical level for thinning
   integer(i_kind) pflag
@@ -171,9 +174,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   integer(i_kind),allocatable,dimension(:,:):: tab
  
 
-  integer(i_kind) ietabl,itypex,lcount,iflag,m,ntime,itime
-
-  real(r_single),allocatable,dimension(:,:,:) :: etabl
+  integer(i_kind) itypex,lcount,iflag,m,ntime,itime,itypey
 
   real(r_kind) toff,t4dv
   real(r_kind) rmesh,ediff,usage,tdiff
@@ -225,32 +226,6 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 
   disterrmax=zero
   vdisterrmax=zero
-  allocate(etabl(300,33,6))
-  etabl=1.e9_r_kind
-  ietabl=19
-  open(ietabl,file='errtable',form='formatted')
-  rewind ietabl
-  etabl=1.e9_r_kind
-  lcount=0
-  pflag=0
-  loopd : do
-     read(ietabl,100,IOSTAT=iflag) itypex
-     if( iflag /= 0 ) exit loopd
-     lcount=lcount+1
-     do k=1,33
-        read(ietabl,110)(etabl(itypex,k,m),m=1,6)
-     end do
-  end do   loopd
-100     format(1x,i3)
-110        format(1x,6e12.5)
-  if(lcount<=0 ) then
-     write(6,*)'READ_SATWND:obs error table not available to 3dvar. the program will stop'
-     call stop2(49) 
-  else
-     write(6,*)'READ_SATWND:  observation errors provided by local file errtable'
-  endif
-
-  close(ietabl)
 
 ! Set lower limits for observation errors
   werrmin=one
@@ -861,26 +836,58 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 !          endif
 
 !!  first to get observation error from PREPBUFR observation error table
-           ppb=max(zero,min(ppb,r2000))
-           if(ppb>=etabl(itype,1,1)) k1=1          
-           do kl=1,32
-              if(ppb>=etabl(itype,kl+1,1).and.ppb<=etabl(itype,kl,1)) k1=kl
-           end do
-           if(ppb<=etabl(itype,33,1)) k1=33
-           k2=k1+1
-           ediff = etabl(itype,k2,1)-etabl(itype,k1,1)
-           if (abs(ediff) > tiny_r_kind) then
-              del = (ppb-etabl(itype,k1,1))/ediff
+           ppb=max(zero,min(ppb,r2000)) 
+           if (oberrflg2 == .true.) then
+              itypey=itype-199
+              ierr=index_sub(nc)
+              ierr2=ierr-1
+              if (ierr >maxsub_uv) ierr=2
+!              write(6,*) 'READ_SATWND:itypey,ierr2=',itypey,ierr2,ierr,index_sub(nc),isuble_uv(itypey,ierr2)
+              if( iobsub /= isuble_uv(itypey,ierr2)) then
+                 write(6,*) ' READ_SATWND: the subtypes do not match subtype in the errortable,&
+                            iobsub=',iobsub,isuble_uv(itypey,ierr2),isuble_uv(itypey,ierr2),itype,itypey,nc,ierr
+                 call stop2(49)
+              endif
+              if(ppb>=etabl_uv(itypey,1,1)) k1=1
+              do kl=1,32
+                 if(ppb>=etabl_uv(itypey,kl+1,1).and.ppb<=etabl_uv(itypey,kl,1)) then
+                    k1=kl
+                    exit
+                 endif
+              end do
+              k2=k1+1
+              if(ppb<=etabl_uv(itypey,33,1)) then
+                 k1=33
+                 k2=33
+              endif
+              ediff = etabl_uv(itypey,k2,1)-etabl_uv(itypey,k1,1)
+              if (abs(ediff) > tiny_r_kind) then
+                 del = (ppb-etabl_uv(itypey,k1,1))/ediff
+              else
+                 del = huge_r_kind
+              endif
+              del=max(zero,min(del,one))
+              obserr=(one-del)*etabl_uv(itypey,k1,ierr)+del*etabl_uv(itypey,k2,ierr)
+              obserr=max(obserr,werrmin)
            else
-              del = huge_r_kind
+              if(ppb>=etabl(itype,1,1)) k1=1          
+              do kl=1,32
+                 if(ppb>=etabl(itype,kl+1,1).and.ppb<=etabl(itype,kl,1)) k1=kl
+              end do
+              if(ppb<=etabl(itype,33,1)) k1=33
+              k2=k1+1
+              ediff = etabl(itype,k2,1)-etabl(itype,k1,1)
+              if (abs(ediff) > tiny_r_kind) then
+                 del = (ppb-etabl(itype,k1,1))/ediff
+              else
+                 del = huge_r_kind
+              endif
+              del=max(zero,min(del,one))
+              obserr=(one-del)*etabl(itype,k1,4)+del*etabl(itype,k2,4)
+              obserr=max(obserr,werrmin)
            endif
-           del=max(zero,min(del,one))
-           obserr=(one-del)*etabl(itype,k1,4)+del*etabl(itype,k2,4)
-           obserr=max(obserr,werrmin)
-!  for GOES hourly winds, set error doubled
-            if(itype==245 .or. itype==246) then
-!               obserr=obserr*two
 !  using  Santek quality control method,calculate the original ee value
+            if(itype==245 .or. itype==246) then
                if(ee <r105) then
                   ree=(ee-r100)/(-10.0_r_kind)
                   if(obsdat(4) >zero) then

@@ -9,6 +9,7 @@ module read_obsmod
 ! program history log:
 !   2009-01-05  todling - add gsi_inquire
 !   2015-05-01  Liu Ling - Add call to read_rapidscat 
+!   2015-09-21  su       -  Add oberrflg2 for new format error table 
 !
 ! subroutines included:
 !   sub gsi_inquire   -  inquire statement supporting fortran earlier than 2003
@@ -576,7 +577,7 @@ subroutine read_obs(ndata,mype)
     use general_commvars_mod, only: ltosi,ltosj
     use obsmod, only: iadate,ndat,time_window,dplat,dsfcalc,dfile,dthin, &
            dtype,dval,dmesh,obsfile_all,ref_obs,nprof_gps,dsis,ditype,&
-           oberrflg,perturb_obs,lobserver,lread_obs_save,obs_input_common, &
+           oberrflg,oberrflg2,perturb_obs,lobserver,lread_obs_save,obs_input_common, &
            reduce_diag,nobs_sub,dval_use
     use gsi_4dvar, only: l4dvar
     use satthin, only: super_val,super_val1,superp,makegvals,getsfc,destroy_sfc
@@ -584,6 +585,11 @@ subroutine read_obs(ndata,mype)
          setcomm
     use constants, only: one,zero
     use converr, only: converr_read
+    use converr_ps, only: converr_ps_read
+    use converr_q, only: converr_q_read
+    use converr_t, only: converr_t_read
+    use converr_uv, only: converr_uv_read
+    use converr_pw, only: converr_pw_read
     use guess_grids, only: ges_prsl,geop_hgtl,ntguessig
     use radinfo, only: nusis,iuse_rad,jpch_rad,diag_rad,nst_gsi
     use insitu_info, only: mbuoy_info,read_ship_info
@@ -663,8 +669,18 @@ subroutine read_obs(ndata,mype)
     nprof_gps1=0
 
 !    if(oberrflg .or. perturb_obs) then
-       call converr_read(mype)
+!       call converr_read(mype)
 !    endif
+     if( oberrflg2 == .true.) then
+       call converr_ps_read(mype)
+       call converr_q_read(mype)
+       call converr_t_read(mype)
+       call converr_uv_read(mype)
+       call converr_pw_read(mype)
+    else
+       call converr_read(mype)
+    endif
+
 
 
 !   Optionally set random seed to perturb observations

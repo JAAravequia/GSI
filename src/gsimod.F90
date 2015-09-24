@@ -14,7 +14,7 @@
 
   use kinds, only: i_kind,r_kind
   use obsmod, only: dmesh,dval,dthin,dtype,dfile,dplat,dsfcalc,ndat,&
-     init_obsmod_dflts,create_obsmod_vars,write_diag,reduce_diag,oberrflg,&
+     init_obsmod_dflts,create_obsmod_vars,write_diag,reduce_diag,oberrflg,oberrflg2,&
      time_window,perturb_obs,perturb_fact,sfcmodel,destroy_obsmod_vars,dsis,&
      dtbduv_on,time_window_max,offtime_data,init_directories,oberror_tune,ext_sonde, &
      blacklst,init_obsmod_vars,lobsdiagsave,lobskeep,lobserver,hilbert_curve,&
@@ -304,6 +304,7 @@
 !                              i_gsdsfc_uselist,i_lightpcp,i_sfct_gross under
 !                              rapidrefresh_cldsurf
 !  05-13-2015 wu        remove check to turn off regional 4densvar
+!  09-21-2015 su        add oberrflg2 for new format error table 
 !
 !EOP
 !-------------------------------------------------------------------------
@@ -670,6 +671,7 @@
 !     tdrerr_inflate - logical for tdr obs error inflation
 !     tdrgross_fact - factor applies to tdr gross error
 !     oberrflg - logical for reading in new obs error table (if set to true)
+!     oberrflg2 - logical for reading in new format obs error table (if set to true)
 !     vadfile  - character(10) variable holding name of vadwnd bufr file
 !     noiqc    - logical flag to bypass OIQC (if set to true)
 !     c_varqc - constant number to control var. qc turnning on speed
@@ -690,7 +692,7 @@
 !     buddydiag_save - When true, output files containing buddy check QC info for all
 !                      obs run through the buddy check
 
-  namelist/obsqc/ dfact,dfact1,erradar_inflate,tdrerr_inflate,tdrgross_fact,oberrflg,&
+  namelist/obsqc/ dfact,dfact1,erradar_inflate,tdrerr_inflate,tdrgross_fact,oberrflg,oberrflg2,&
        vadfile,noiqc,c_varqc,blacklst,use_poq7,hilbert_curve,tcp_refps,tcp_width,&
        tcp_ermin,tcp_ermax,qc_noirjaco3,qc_noirjaco3_pole,qc_satwnds,&
        aircraft_t_bc_pof,aircraft_t_bc,aircraft_t_bc_ext,biaspredt,upd_aircraft,cleanup_tail,&
