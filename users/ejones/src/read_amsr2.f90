@@ -14,6 +14,8 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
 !
 ! program history log:
 !   2014-03-15  ejones   - read amsr2
+!   2015-09-30  ejones   - modify solar angle info passed for calculating
+!                          sunglint in QC routine
 ! 
 !
 ! input argument list:
@@ -431,11 +433,16 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
 
 !    Check observational info 
 
-        if( soel < -180._r_kind .or. soel > 180._r_kind )then
+        if( soel < -90._r_kind .or. soel > 90._r_kind )then
            write(6,*)'READ_AMSR2:  ### ERROR IN READING BUFR DATA:', &
               ' STRANGE OBS INFO(FOV,SOLAZI,SOEL):', fovn, solazi, soel
            cycle read_loop       
         endif
+!    make solar azimuth angles from -180 to 180 degrees
+        if (solazi > 180.0_r_kind) then
+           solazi=solazi-360.0_r_kind
+        endif
+
 
 
 ! Work on this:
@@ -456,7 +463,10 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
         real(idate5(4),r_kind)+real(idate5(5),r_kind)*r60inv+real(amsrspot_d(7),r_kind)*r60inv*r60inv   
 
         call zensun(doy,date5_4_sun_glint_calc,clath_sun_glint_calc,clonh_sun_glint_calc,sun_zenith,sun_azimuth)
-
+!       check to make sure sun zenith is between 0 and 180
+        if (sun_zenith < 0.0_r_kind) then
+          sun_zenith=90.0_r_kind-sun_zenith
+        endif
         saz = amsrspot_d(11)*deg2rad    ! satellite zenith/incidence angle(rad)
 
 !       interpolate NSST variables to Obs. location and get dtw, dtc, tz_tr
@@ -479,7 +489,8 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
         data_all(7,itx) = zero                       ! look angle (rad)
         data_all(8,itx) = ifov                       ! fov number    1-243
         data_all(9,itx) = sun_zenith                 ! solar zenith angle (deg)
-        data_all(10,itx)= sun_azimuth                ! solar azimuth angle (deg)
+!        data_all(10,itx)= sun_azimuth                ! solar azimuth angle (deg)
+        data_all(10,itx)= solazi                     ! solar azimuth angle from bufr file (deg)
         data_all(11,itx) = sfcpct(0)                 ! sea percentage of
         data_all(12,itx) = sfcpct(1)                 ! land percentage
         data_all(13,itx) = sfcpct(2)                 ! sea ice percentage
