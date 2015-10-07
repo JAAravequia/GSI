@@ -176,7 +176,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   integer(i_kind),allocatable,dimension(:,:):: tab
  
 
-  integer(i_kind) itypex,lcount,iflag,m,ntime,itime,itypey
+  integer(i_kind) ntime,itime,itypey
 
   real(r_kind) toff,t4dv
   real(r_kind) rmesh,ediff,usage,tdiff
@@ -248,7 +248,6 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 ! Return when SATWND are coming from prepbufr file
   if(use_prepb_satwnd) return
 
-! read observation error table
 
   disterrmax=zero
   vdisterrmax=zero
@@ -402,21 +401,6 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
         !GOES-R section of the 'if' statement over 'subsets' 
         else if(trim(subset) == 'NC005030' .or. trim(subset) == 'NC005031' .or. trim(subset) == 'NC005032' .or. &
                 trim(subset) == 'NC005034' .or. trim(subset) == 'NC005039') then
-! Commented out, because we need clarification for SWCM/hdrdat(9) from Yi Song
-! NOTE: Once it is confirmed that SWCM values are sensible, apply this logic and replace lines 685-702
-!                 if(hdrdat(9) == one)  then
-!                    if(hdrdat(12) <50000000000000.0_r_kind) then
-!                     itype=245                                      ! GOES-R IR(LW) winds
-!                    else
-!                     itype=240                                      ! GOES-R IR(SW) winds
-!                    endif
-!                 else if(hdrdat(9) == two  ) then
-!                    itype=251                                       !  GOES-R VIS    winds
-!                 else if(hdrdat(9) == three ) then
-!                    itype=246                                       !  GOES-R CT WV  winds
-!                 else if(hdrdat(9) >= four ) then 
-!                    itype=247                                       !  GOES-R CS WV  winds
-!                 endif
 
 !Temporary solution replacing the commented code above
                  if(trim(subset) == 'NC005030')  then                 ! IR LW winds
@@ -507,7 +491,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
               nlevp=r1200/pmesh
            else
               pflag=0
-              nlevp=nsig
+              nlevp=nsig+1
            endif
            xmesh=rmesh
            if( ptime >zero) then
@@ -999,7 +983,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 !              write(6,*) 'READ_SATWND:itypey,ierr2=',itypey,ierr2,ierr,index_sub(nc),isuble_uv(itypey,ierr2)
               if( iobsub /= isuble_uv(itypey,ierr2)) then
                  write(6,*) ' READ_SATWND: the subtypes do not match subtype in the errortable,&
-                            iobsub=',iobsub,isuble_uv(itypey,ierr2),isuble_uv(itypey,ierr2),itype,itypey,nc,ierr
+                            iobsub=',iobsub,isuble_uv(itypey,ierr2),itype,itypey,nc,ierr
                  call stop2(49)
               endif
               if(ppb>=etabl_uv(itypey,1,1)) k1=1
@@ -1040,9 +1024,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
               obserr=(one-del)*etabl(itype,k1,4)+del*etabl(itype,k2,4)
               obserr=max(obserr,werrmin)
            endif
-           del=max(zero,min(del,one))
-           obserr=(one-del)*etabl(itype,k1,4)+del*etabl(itype,k2,4)
-           obserr=max(obserr,werrmin)
+
            if((itype==245 .or. itype==246) &
               .and. (trim(subset) == 'NC005010' .or. trim(subset) == 'NC005011' .or. trim(subset) == 'NC005012' )) then !only applies to AMVs from legacy algorithm (pre GOES-R)
 !  using Santek quality control method,calculate the original ee value:
@@ -1101,9 +1083,11 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 !!    process the thining procedure
                 
            ithin=ithin_conv(nc)
-           ithinp = ithin > 0 .and. pflag /= 0
+!           pflag = 0
+!           ithinp = ithin > 0 .and. pflag /= 0
+!           ithinp = ithin > 0 
 !          if(ithinp  .and. iuse >=0 )then
-           if(ithinp   )then
+           if(ithin >0 .and. pflag /= 0   )then
 !          Interpolate guess pressure profile to observation location
               klon1= int(dlon);  klat1= int(dlat)
               dx   = dlon-klon1; dy   = dlat-klat1
@@ -1293,7 +1277,6 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
      end do
   end do
   deallocate(iloc,isort,cdata_all,rusage)
-  deallocate(etabl)
   
   call count_obs(ndata,nreal,ilat,ilon,cdata_out,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon

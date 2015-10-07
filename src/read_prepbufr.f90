@@ -127,7 +127,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !   2014-10-01  Xue    - add gsd surface observation uselist
 !   2015-02-23  Rancic/Thomas - add thin4d to time window logical
 !   2015-03-23  Su      -fix array size with maximum message and subset  number from fixed number to
-!                        dynamic allocated array
+!   2015-09-23  Su      - Add oberrflg2 for new error table and read new format of error table
 !
 !   input argument list:
 !     infile   - unit from which to read BUFR data
@@ -689,7 +689,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
      end do loop_report
   enddo msg_report
   if (nmsg==0) goto 900
-  write(6,*)'READ_PREPBUFR: messages/reports = ',nmsg,'/',ntb,' ntread = ',ntread
+  write(6,*)'READ_PREPBUFR first part: messages/reports = ',nmsg,'/',ntb,' ntread = ',ntread
 
 
 
@@ -961,9 +961,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
               perrmin=half
               qerrmin=one_tenth
               pwerrmin=one
-
+              itypex=kx
               do k=1,levs
-                 itypex=kx
                  ppb=obsdat(1,k)
                  if(kx==153)ppb=obsdat(11,k)*0.01_r_kind
                  ppb=max(zero,min(ppb,r2000))
@@ -1000,6 +999,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
               perrmin=0.3_r_kind
               qerrmin=0.05_r_kind
               pwerrmin=one
+              itypey=kx
               if (psob)  then
                  itypex=itypey-99
                  ierr_ps=index_sub(nc)
@@ -1027,13 +1027,13 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                        del_ps = huge_r_kind
                     endif
                     del_ps=max(zero,min(del_ps,one))
-!                   write(6,*)   'READ_PREPBUFR_PS:',itypex,k1_ps,ierr_ps,k2_ps,ierr_ps
+!                    write(6,*)   'READ_PREPBUFR_PS:',itypex,k1_ps,ierr_ps,k2_ps,ierr_ps
                     obserr(1,k)=(one-del_ps)*etabl_ps(itypex,k1_ps,ierr_ps)+del_ps*etabl_ps(itypex,k2_ps,ierr_ps)
 ! Surface pressure error
                     obserr(1,k)=max(obserr(1,k),perrmin)
 !                   if(itypey==180 .and. ierr_ps == 0 ) then
 !                      write(6,*) 'READ_PREPBUFR:180_ps,obserr,var_jb=',obserr(1,k),var_jb(1,k),ppb,k,hdr(2),hdr(3)
-!                      endif
+!                   endif
                  enddo
               endif
               if (tob) then
@@ -1098,7 +1098,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                     endif
                     del_q=max(zero,min(del_q,one))
 ! Humidity error
-!                   write(6,*) 'READ_PREPBUFR_Q:',itypex,k1_q,itypey,k2_q,ierr_q,nc,kx,ppb
+                   write(6,*) 'READ_PREPBUFR_Q:',itypex,k1_q,itypey,k2_q,ierr_q,nc,kx,ppb
                     obserr(2,k)=(one-del_q)*etabl_q(itypex,k1_q,ierr_q)+del_q*etabl_q(itypex,k2_q,ierr_q)
                     obserr(2,k)=max(obserr(2,k),qerrmin)
 !                   if(itypey==120  ) then
@@ -1134,7 +1134,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                     endif
                     del_uv=max(zero,min(del_uv,one))
 ! Wind error
-!                   write(6,*)  'READ_PREPBUFR_UV:',itypex,k1_uv,itypey,k2_uv,ierr_uv,nc,kx,ppb
+                   write(6,*)  'READ_PREPBUFR_UV:',itypex,k1_uv,itypey,k2_uv,ierr_uv,nc,kx,ppb
                     obserr(5,k)=(one-del_uv)*etabl_uv(itypex,k1_uv,ierr_uv)+del_uv*etabl_uv(itypex,k2_uv,ierr_uv)
                     obserr(5,k)=max(obserr(5,k),werrmin)
 !                   if(itypey==220) then
@@ -1143,6 +1143,37 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !                   endif
                  enddo
               endif
+              if (pwob)  then
+                   itypex=itypey-149
+                   ierr_pw=index_sub(nc)
+                   if(ierr_pw >maxsub_pw) ierr_pw=2
+                   if( icsubtype(nc) /= isuble_pw(itypex,ierr_pw-1)) then
+                      write(6,*) ' READ_PREPBUFR_PW: the subtypes do not match subtype &
+                            in the errortable,iobsub=',icsubtype(nc),nc,ierr_pw,isuble_pw(itypex,ierr_pw-1),itypey,itypex
+                      call stop2(49)
+                   endif
+                   do k=1,levs
+                      ppb=obsdat(1,k)
+                      if(kx==153)ppb=obsdat(11,k)*0.01_r_kind
+                      ppb=max(zero,min(ppb,r2000))
+                      if(ppb>=etabl_pw(itypex,1,1)) k1_pw=1
+                      do kl=1,32
+                         if(ppb>=etabl_pw(itypex,kl+1,1).and.ppb<=etabl_pw(itypex,kl,1)) k1_pw=kl
+                      end do
+                      if(ppb<=etabl_pw(itypex,33,1)) k1_pw=5
+                      k2_pw=k1_pw+1
+                      ediff_pw = etabl_pw(itypex,k2_pw,1)-etabl_pw(itypex,k1_pw,1)
+                      if (abs(ediff_pw) > tiny_r_kind) then
+                         del_pw = (ppb-etabl_pw(itypex,k1_pw,1))/ediff_pw
+                      else
+                         del_pw = huge_r_kind
+                      endif
+                      del_pw=max(zero,min(del_pw,one))
+!                     write(6,*) 'READ_PREPBUFR_Pw:',itypex,itypey,ierr_pw,k2_pw,ierr_pw,nc,kx,ppb
+                      obserr(7,k)=(one-del_pw)*etabl_pw(itypex,k1_pw,ierr_pw)+del_pw*etabl_pw(itypex,k2_pw,ierr_pw)
+                      obserr(7,k)=max(obserr(7,k),pwerrmin)
+                   enddo
+                endif
            endif
 !          If data with drift position, get drift information
            if(driftl)call ufbint(lunin,drfdat,8,255,iret,drift)

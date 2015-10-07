@@ -17,7 +17,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use obsmod, only: ttail,thead,sfcmodel,perturb_obs,oberror_tune,&
        i_t_ob_type,obsdiags,lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset
   use obsmod, only: t_ob_type
-  use obsmod, only: obs_diag,luse_obsdiag
+  use obsmod, only: obs_diag,luse_obsdiag,oberrflg2
   use gsi_4dvar, only: nobs_bins,hr_obsbin
 
   use qcmod, only: npres_print,dfact,dfact1,ptop,pbot,buddycheck_t
@@ -39,6 +39,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use constants, only: one_quad
   use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype,icsubtype
   use converr, only: ptabl 
+  use converr_t, only: ptabl_t
   use rapidrefresh_cldsurf_mod, only: l_gsd_terrain_match_surftobs,l_sfcobserror_ramp_t
   use rapidrefresh_cldsurf_mod, only: l_pbl_pseudo_surfobst, pblh_ration,pps_press_incr
   use rapidrefresh_cldsurf_mod, only: i_use_2mt4b,i_sfct_gross
@@ -151,7 +152,8 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2014-12-30  derber - Modify for possibility of not using obsdiag
 !   2011-10-14  Hu      - add code for using 2-m temperature as background to
 !                            calculate surface temperauture observation
-!                            innovation
+!                              innovation
+!   2015-09-23  Su      - add oberrflg2 for new observation format
 !
 ! !REMARKS:
 !   language: f90
@@ -221,6 +223,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   character(8),allocatable,dimension(:):: cprvstg,csprvstg
   character(8) c_prvstg,c_sprvstg
   real(r_double) r_prvstg,r_sprvstg
+  real(r_kind),dimension(34) :: ptablt
 
   logical,dimension(nobs):: luse,muse
   logical sfctype
@@ -853,13 +856,19 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         if(oberror_tune) then
            ttail(ibin)%head%kx=ikx
            ttail(ibin)%head%tpertb=data(iptrb,i)/error/ratio_errors
+           if (oberrflg2 == .true.) then
+              ptablt=ptabl_t
+           else
+             ptablt=ptabl
+           endif
+
            if(prest > ptabl(2))then
               ttail(ibin)%head%k1=1
-           else if( prest <= ptabl(33)) then
+           else if( prest <= ptablt(33)) then
               ttail(ibin)%head%k1=33
            else
               k_loop: do k=2,32
-                 if(prest > ptabl(k+1) .and. prest <= ptabl(k)) then
+                 if(prest > ptablt(k+1) .and. prest <= ptablt(k)) then
                     ttail(ibin)%head%k1=k
                     exit k_loop
                  endif

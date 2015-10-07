@@ -124,7 +124,7 @@ subroutine glbsoi(mype)
   use gridmod, only: nlat,nlon,nsig,rlats,regional,&
       twodvar_regional,wgtlats
   use guess_grids, only: nfldsig
-  use obsmod, only: write_diag,perturb_obs,ditype,iadate
+  use obsmod, only: write_diag,perturb_obs,ditype,iadate,oberrflg2
   use turblmod, only: create_turblvars,destroy_turblvars
   use obs_sensitivity, only: lobsensfc, iobsconv, lsensrecompute, &
       init_fc_sens, save_fc_sens, lobsensincr, lobsensjb
@@ -136,6 +136,11 @@ subroutine glbsoi(mype)
   use radinfo, only: radinfo_write,passive_bc,newpc4pred
   use pcpinfo, only: pcpinfo_write
   use converr, only: converr_destroy
+  use converr_ps, only: converr_ps_destroy
+  use converr_q, only: converr_q_destroy
+  use converr_t, only: converr_t_destroy
+  use converr_uv, only: converr_uv_destroy
+  use converr_pw, only: converr_pw_destroy
   use zrnmi_mod, only: zrnmi_initialize
   use observermod, only: observer_init,observer_set,observer_finalize,ndata
   use timermod, only: timer_ini, timer_fnl
@@ -374,6 +379,14 @@ subroutine glbsoi(mype)
   endif
 
 ! Deallocate arrays
+  if (oberrflg2 == .true.) then
+     call converr_ps_destroy
+     call converr_q_destroy
+     call converr_t_destroy
+     call converr_uv_destroy
+     call converr_pw_destroy
+  endif
+
   if(perturb_obs) call converr_destroy
   if (regional) then
      if(anisotropic) then

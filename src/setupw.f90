@@ -18,7 +18,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
        i_w_ob_type,obsdiags,obsptr,lobsdiagsave,nobskeep,lobsdiag_allocated,&
        time_offset,bmiss
   use obsmod, only: w_ob_type
-  use obsmod, only: obs_diag,luse_obsdiag
+  use obsmod, only: obs_diag,luse_obsdiag,oberrflg2
   use gsi_4dvar, only: nobs_bins,hr_obsbin
   use qcmod, only: npres_print,ptop,pbot,dfact,dfact1,qc_satwnds
   use oneobmod, only: oneobtest,oneob_type,magoberr,maginnov 
@@ -34,6 +34,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype
   use convinfo, only: icsubtype
   use converr, only: ptabl
+  use converr_uv, only: ptabl_uv
   use rapidrefresh_cldsurf_mod, only: l_PBL_pseudo_SurfobsUV, pblH_ration,pps_press_incr
 
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
@@ -141,6 +142,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2014-01-28  todling - write sensitivity slot indicator (ioff) to header of diagfile
 !   2014-12-30  derber - Modify for possibility of not using obsdiag
 !   2015-05-01  Liu Ling - Added ISS Rapidscat wind (u,v) qc 
+!   2015-09-23  Su      - add oberrflg2 for new observation format
 !
 ! REMARKS:
 !   language: f90
@@ -195,6 +197,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),dimension(nsig)::prsltmp,tges,zges
   real(r_kind) wdirob,wdirgesin,wdirdiffmax
   real(r_single),allocatable,dimension(:,:)::rdiagbuf
+  real(r_kind),dimension(34):: ptabluv
 
 ! Variables needed for new polar winds QC based on Log Normalized Vector Departure (LNVD)
   real(r_kind) LNVD_wspd
@@ -1066,13 +1069,19 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            wtail(ibin)%head%upertb=data(iptrbu,i)/error/ratio_errors
            wtail(ibin)%head%vpertb=data(iptrbv,i)/error/ratio_errors
            wtail(ibin)%head%kx=ikx
+           if (oberrflg2 == .true.) then
+              ptabluv=ptabl_uv
+           else
+             ptabluv=ptabl
+           endif
+
            if(presw > ptabl(2))then
               wtail(ibin)%head%k1=1
-           else if( presw <= ptabl(33)) then
+           else if( presw <= ptabluv(33)) then
               wtail(ibin)%head%k1=33
            else
               k_loop: do k=2,32
-                 if(presw > ptabl(k+1) .and. presw <= ptabl(k)) then
+                 if(presw > ptabluv(k+1) .and. presw <= ptabluv(k)) then
                     wtail(ibin)%head%k1=k
                     exit k_loop
                  endif

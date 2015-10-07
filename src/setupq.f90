@@ -96,7 +96,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use obsmod, only: qtail,qhead,rmiss_single,perturb_obs,oberror_tune,&
        i_q_ob_type,obsdiags,lobsdiagsave,nobskeep,lobsdiag_allocated,&
        time_offset
-  use obsmod, only: q_ob_type
+  use obsmod, only: q_ob_type,oberrflg2 
   use obsmod, only: obs_diag,luse_obsdiag
   use gsi_4dvar, only: nobs_bins,hr_obsbin
   use oneobmod, only: oneobtest,maginnov,magoberr
@@ -109,6 +109,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use jfunc, only: jiter,last,jiterstart,miter
   use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype
   use convinfo, only: icsubtype
+  use converr_q, only: ptabl_q
   use converr, only: ptabl 
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
   use rapidrefresh_cldsurf_mod, only: l_sfcobserror_ramp_q
@@ -161,6 +162,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),dimension(lat2,lon2,nfldsig):: qg2m
   real(r_kind),dimension(nsig):: prsltmp
   real(r_single),allocatable,dimension(:,:)::rdiagbuf
+  real(r_kind),dimension(34) :: ptablq
 
   integer(i_kind) i,nchar,nreal,ii,l,jj,mm1,itemp
   integer(i_kind) jsig,itype,k,nn,ikxx,iptrb,ibin,ioff,ioff0,icat
@@ -623,13 +625,19 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         if(oberror_tune) then
            qtail(ibin)%head%qpertb=data(iptrb,i)/error/ratio_errors
            qtail(ibin)%head%kx=ikx
-           if(presq > ptabl(2))then
+           if (oberrflg2 == .true.) then
+              ptablq=ptabl_q
+           else
+             ptablq=ptabl
+           endif
+
+           if(presq > ptablq(2))then
               qtail(ibin)%head%k1=1
-           else if( presq <= ptabl(33)) then
+           else if( presq <= ptablq(33)) then
               qtail(ibin)%head%k1=33
            else
               k_loop: do k=2,32
-                 if(presq > ptabl(k+1) .and. presq <= ptabl(k)) then
+                 if(presq > ptablq(k+1) .and. presq <= ptablq(k)) then
                     qtail(ibin)%head%k1=k
                     exit k_loop
                  endif

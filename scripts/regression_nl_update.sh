@@ -26,7 +26,17 @@ if [[ `expr substr $exp 1 6` = "global" ]]; then
       export STRONGOPTS_update=""
    fi
 fi
-export OBSQC_update=""
+if [[ `expr substr $exp $((${#exp}-4)) ${#exp}` = "updat" ]]; then
+-------------------------
+#for default observation error flg 
+#-------------------------
+    export OBSQC_update="oberrflg2=.true.,"
+
+else
+   export OBSQC_update=""
+fi
+
+#export OBSQC_update=""
 export OBSINPUT_update=""
 export SUPERRAD_update=""
 export SINGLEOB_update=""
