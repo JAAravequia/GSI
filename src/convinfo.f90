@@ -100,7 +100,7 @@ module convinfo
   character(len=16),allocatable,dimension(:)::ioctype
 
   real(r_kind),allocatable,dimension(:,:) :: predx_conv
-  integer(i_kind)  npred_conv_max
+  integer(i_kind)  npred_conv_max,nc1
   integer(i_kind)  nconvtype_ps,nconvtype_t,nconvtype_spd,nconvtype_pm2_5
   integer(i_kind)  id_bias_ps,id_bias_t,id_bias_spd,id_bias_pm2_5
   real(r_kind)     conv_bias_ps,conv_bias_t,conv_bias_spd, &
@@ -265,7 +265,7 @@ contains
        ptime_conv(i)=zero
        index_sub(i)=2
     enddo
-    nc=zero
+    nc=0
 
     if(nconvtype*npred_conv_max>0) then
        allocate(predx_conv (nconvtype,npred_conv_max))
@@ -311,9 +311,11 @@ contains
        read(crecord,*)ictype(nc),icsubtype(nc),icuse(nc),ctwind(nc),ncnumgrp(nc), &
             ncgroup(nc),ncmiter(nc),cgross(nc),cermax(nc),cermin(nc),cvar_b(nc),cvar_pg(nc) &
             ,ithin_conv(nc),rmesh_conv(nc),pmesh_conv(nc),npred_conv(nc),pmot_conv(nc),ptime_conv(nc)
-       if(nc >=2 .and. trim(ioctype(nc)) == trim(ioctype(nc-1)) .and.  ictype(nc) == ictype(nc-1)) then
+       if(nc >=2 ) then
+          if( trim(ioctype(nc)) == trim(ioctype(nc-1)) .and.  ictype(nc) == ictype(nc-1)) then
              index_sub(nc)=index_sub(nc-1)+1
-         endif
+          endif
+       endif
        if(mype == 0)write(6,1031)ioctype(nc),ictype(nc),icsubtype(nc),icuse(nc),ctwind(nc),ncnumgrp(nc), &
             ncgroup(nc),ncmiter(nc),cgross(nc),cermax(nc),cermin(nc),cvar_b(nc),cvar_pg(nc) &
             ,ithin_conv(nc),rmesh_conv(nc),pmesh_conv(nc),npred_conv(nc),pmot_conv(nc),ptime_conv(nc)

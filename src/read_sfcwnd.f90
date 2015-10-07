@@ -512,6 +512,7 @@ subroutine read_sfcwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 !   only need read the 4th column for type 291 from the right
  
            ppb=max(zero,min(ppb,r2000))
+            itypey=itype-199
            if ( oberrflg2 == .true.) then
               if(ppb>=etabl_uv(itypey,1,1)) k1=1
               do kl=1,32
