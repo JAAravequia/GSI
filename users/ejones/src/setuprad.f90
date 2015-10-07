@@ -166,6 +166,8 @@
 !   2015-03-23  zaizhong ma - add Himawari-8 ahi
 !   2015-03-31  zhu     - move cloudy AMSUA radiance observation error adjustment to qcmod.f90;
 !                         change quality control interface for AMSUA and ATMS.
+!   2015-09-30  ejones  - Pull AMSR2 sun azimuth and sun zenith angles for passing to quality control,
+!                         modify qc_amsr2 function call
 !
 !  input argument list:
 !     lunin   - unit from which to read radiance (brightness temperature, tb) obs
@@ -1232,9 +1234,12 @@
 !       AMSR2 Q C
 
         else if (amsr2) then
+  
+           sun_azimuth=data_s(isazi_ang,n)
+           sun_zenith=data_s(iszen_ang,n)
 
            call qc_amsr2(nchanl,zsges,luse(n),sea, &
-              kraintype,clw_obs,amsr2,varinv,aivals(1,is),id_qc)
+              kraintype,clw_obs,tsavg5,tb_obs,sun_azimuth,sun_zenith,amsr2,varinv,aivals(1,is),id_qc)
 
 
 !  ---------- GMI  -------------------
@@ -1272,6 +1277,8 @@
            if (varinv(i) > tiny_r_kind ) then
               m=ich(i)
               if(lcw4crtm .and. sea) then 
+!                 if(gmi) then
+!                    errf(i) = ermax_rad(m)     ! use ermax for GMI gross check
                  if (i <= 3 .or. i==15) then         
                     errf(i) = 3.00_r_kind*errf(i)    
                  else if (i == 4) then                     
@@ -1283,6 +1290,8 @@
                  endif
               else if (ssmis) then
                  errf(i) = min(1.5_r_kind*errf(i),ermax_rad(m))  ! tighten up gross check for SSMIS
+              else if (gmi .or. saphir) then
+                 errf(i) = ermax_rad(m)     ! use ermax for GMI gross check
               else
                  errf(i) = min(three*errf(i),ermax_rad(m))
               endif
