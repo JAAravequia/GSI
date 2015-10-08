@@ -87,7 +87,7 @@ contains
      ietabl=19
      open(ietabl,file='errtable_ps',form='formatted',status='old',iostat=ier)
      if(ier/=0) then
-        write(6,*)'CONVERR_ps:  ***WARNING*** obs error table ("errtable") not available to 3dvar.'
+        write(6,*)'CONVERR_ps:  ***WARNING*** obs error table ("errtable_ps") not available to 3dvar.'
         lcount=0
         oberrflg2=.false.
         return

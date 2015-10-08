@@ -1098,7 +1098,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                     endif
                     del_q=max(zero,min(del_q,one))
 ! Humidity error
-                   write(6,*) 'READ_PREPBUFR_Q:',itypex,k1_q,itypey,k2_q,ierr_q,nc,kx,ppb
+!                   write(6,*) 'READ_PREPBUFR_Q:',itypex,k1_q,itypey,k2_q,ierr_q,nc,kx,ppb
                     obserr(2,k)=(one-del_q)*etabl_q(itypex,k1_q,ierr_q)+del_q*etabl_q(itypex,k2_q,ierr_q)
                     obserr(2,k)=max(obserr(2,k),qerrmin)
 !                   if(itypey==120  ) then
@@ -1134,7 +1134,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                     endif
                     del_uv=max(zero,min(del_uv,one))
 ! Wind error
-                   write(6,*)  'READ_PREPBUFR_UV:',itypex,k1_uv,itypey,k2_uv,ierr_uv,nc,kx,ppb
+!                   write(6,*)  'READ_PREPBUFR_UV:',itypex,k1_uv,itypey,k2_uv,ierr_uv,nc,kx,ppb
                     obserr(5,k)=(one-del_uv)*etabl_uv(itypex,k1_uv,ierr_uv)+del_uv*etabl_uv(itypex,k2_uv,ierr_uv)
                     obserr(5,k)=max(obserr(5,k),werrmin)
 !                   if(itypey==220) then
