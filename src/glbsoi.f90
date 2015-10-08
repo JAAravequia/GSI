@@ -386,8 +386,8 @@ subroutine glbsoi(mype)
      call converr_uv_destroy
      call converr_pw_destroy
   endif
-
-  if(perturb_obs) call converr_destroy
+!  call converr_destroy
+!  if(perturb_obs .or. oberrflg) call converr_destroy
   if (regional) then
      if(anisotropic) then
         call destroy_anberror_vars_reg

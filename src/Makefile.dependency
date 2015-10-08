@@ -108,7 +108,7 @@ getvvel.o : getvvel.f90 mpeu_util.o gsi_bundlemod.o gsi_metguess_mod.o guess_gri
 get_wrf_mass_ensperts_netcdf.o : get_wrf_mass_ensperts_netcdf.F90 general_sub2grid_mod.o gsi_bundlemod.o control_vectors.o hybrid_ensemble_parameters.o mpimod.o constants.o hybrid_ensemble_isotropic.o gridmod.o kinds.o 
 get_wrf_nmm_ensperts.o : get_wrf_nmm_ensperts.F90 blendmod.o aniso_ens_util.o gfs_stratosphere.o gsi_4dvar.o gsi_bundlemod.o egrid2agrid_mod.o general_tll2xy_mod.o general_sub2grid_mod.o gsi_io.o mpeu_util.o control_vectors.o hybrid_ensemble_parameters.o mpimod.o constants.o hybrid_ensemble_isotropic.o gridmod.o kinds.o 
 gfs_stratosphere.o : gfs_stratosphere.f90 mpimod.o gridmod.o guess_grids.o blendmod.o constants.o kinds.o 
-glbsoi.o : glbsoi.f90 aircraftinfo.o gfs_stratosphere.o hybrid_ensemble_isotropic.o hybrid_ensemble_parameters.o timermod.o observer.o zrnmi_mod.o converr.o pcpinfo.o radinfo.o control_vectors.o pcgsoi.o gsi_4dvar.o jcmod.o smooth_polcarf.o obs_sensitivity.o turblmod.o obsmod.o guess_grids.o gridmod.o compact_diffs.o balmod.o berror.o anisofilter_glb.o anisofilter.o anberror.o jfunc.o adjtest_obs.o mpimod.o constants.o kinds.o 
+glbsoi.o : glbsoi.f90 aircraftinfo.o gfs_stratosphere.o hybrid_ensemble_isotropic.o hybrid_ensemble_parameters.o timermod.o observer.o zrnmi_mod.o converr.o converr_ps.o converr_pw.o converr_q.o converr_t.o converr_uv.o pcpinfo.o radinfo.o control_vectors.o pcgsoi.o gsi_4dvar.o jcmod.o smooth_polcarf.o obs_sensitivity.o turblmod.o obsmod.o guess_grids.o gridmod.o compact_diffs.o balmod.o berror.o anisofilter_glb.o anisofilter.o anberror.o jfunc.o adjtest_obs.o mpimod.o constants.o kinds.o 
 grdcrd.o : grdcrd.f90 constants.o kinds.o 
 gridmod.o : gridmod.F90 mpimod.o mod_wrfmass_to_a.o mod_nmmb_to_a.o constants.o mpeu_util.o general_sub2grid_mod.o general_specmod.o kinds.o 
 grtest.o : grtest.f90 control_vectors.o mpimod.o constants.o kinds.o 
@@ -300,7 +300,7 @@ read_radar.o : read_radar.f90 mpimod.o deter_sfc_mod.o convthin.o guess_grids.o 
 read_radarref_mosaic.o : read_radarref_mosaic.f90 mpimod.o mod_wrfmass_to_a.o gridmod.o gsi_4dvar.o convinfo.o constants.o kinds.o 
 read_rapidscat.o : read_rapidscat.f90 mpimod.o deter_sfc_mod.o gsi_4dvar.o convinfo.o obsmod.o constants.o convthin.o qcmod.o gridmod.o kinds.o 
 read_saphir.o : read_saphir.f90 mpimod.o gsi_nstcouplermod.o deter_sfc_mod.o gsi_metguess_mod.o gsi_4dvar.o calc_fov_crosstrk.o constants.o gridmod.o radinfo.o satthin.o kinds.o 
-read_satwnd.o : read_satwnd.f90 mpimod.o deter_sfc_mod.o gsi_4dvar.o convinfo.o obsmod.o constants.o convthin_time.o convthin.o qcmod.o gridmod.o kinds.o converr_uv.o converr.o 
+read_satwnd.o : read_satwnd.f90 mpimod.o deter_sfc_mod.o gsi_4dvar.o convinfo.o obsmod.o constants.o convthin_time.o convthin.o qcmod.o gridmod.o kinds.o converr.o converr_uv.o 
 read_seviri.o : read_seviri.f90 mpimod.o gsi_nstcouplermod.o deter_sfc_mod.o gsi_4dvar.o radinfo.o obsmod.o constants.o gridmod.o satthin.o kinds.o 
 read_sfcwnd.o : read_sfcwnd.f90 mpimod.o deter_sfc_mod.o gsi_4dvar.o convinfo.o obsmod.o constants.o convthin.o qcmod.o gridmod.o kinds.o converr_uv.o converr.o 
 read_ssmi.o : read_ssmi.f90 mpimod.o gsi_nstcouplermod.o deter_sfc_mod.o gsi_4dvar.o constants.o gridmod.o radinfo.o obsmod.o satthin.o kinds.o 

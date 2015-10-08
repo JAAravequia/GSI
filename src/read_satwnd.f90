@@ -92,7 +92,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   use constants, only: deg2rad,zero,rad2deg,one_tenth,&
         tiny_r_kind,huge_r_kind,r60inv,one_tenth,&
         one,two,three,four,five,half,quarter,r60inv,r100,r2000
-  use converr,only: etabl
+!  use converr,only: etabl
   use converr_uv,only: etabl_uv,ptabl_uv,isuble_uv,maxsub_uv
   use obsmod, only: iadate,oberrflg2,perturb_obs,perturb_fact,ran01dom,bmiss
   use convinfo, only: nconvtype,ctwind, &
@@ -176,7 +176,8 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   integer(i_kind),allocatable,dimension(:,:):: tab
  
 
-  integer(i_kind) ntime,itime,itypey
+  integer(i_kind) ntime,itime,itypey,itypex,ietabl,m,lcount,iflag
+  real(r_single),allocatable,dimension(:,:,:) :: etabl
 
   real(r_kind) toff,t4dv
   real(r_kind) rmesh,ediff,usage,tdiff
@@ -251,6 +252,33 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 
   disterrmax=zero
   vdisterrmax=zero
+allocate(etabl(300,33,6))
+etabl=1.e9_r_kind
+  ietabl=19
+  open(ietabl,file='errtable',form='formatted')
+  rewind ietabl
+  etabl=1.e9_r_kind
+  lcount=0
+  pflag=0
+  loopd : do
+     read(ietabl,100,IOSTAT=iflag) itypex
+     if( iflag /= 0 ) exit loopd
+     lcount=lcount+1
+     do k=1,33
+        read(ietabl,110)(etabl(itypex,k,m),m=1,6)
+     end do
+  end do   loopd
+100     format(1x,i3)
+110        format(1x,6e12.5)
+  if(lcount<=0 ) then
+     write(6,*)'READ_SATWND:obs error table not available to 3dvar. the program will stop'
+     call stop2(49)
+  else
+     write(6,*)'READ_SATWND:  observation errors provided by local file errtable'
+  endif
+
+  close(ietabl)
+
 ! Set lower limits for observation errors
   werrmin=one
   nsattype=0
@@ -557,6 +585,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
            ee=r110
            qifn=r110
            qify=r110
+           obserr=bmiss
 
            call ufbint(lunin,hdrdat,13,1,iret,hdrtr) 
            call ufbint(lunin,obsdat,4,1,iret,obstr)
@@ -1007,17 +1036,18 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
               del=max(zero,min(del,one))
               obserr=(one-del)*etabl_uv(itypey,k1,ierr)+del*etabl_uv(itypey,k2,ierr)
               obserr=max(obserr,werrmin)
+!            endif
            else
               if(ppb>=etabl(itype,1,1)) k1=1          
               do kl=1,32
                  if(ppb>=etabl(itype,kl+1,1).and.ppb<=etabl(itype,kl,1)) k1=kl
               end do
-              if(ppb<=etabl(itype,33,1)) k1=33
+             if(ppb<=etabl(itype,33,1)) k1=33
               k2=k1+1
               ediff = etabl(itype,k2,1)-etabl(itype,k1,1)
               if (abs(ediff) > tiny_r_kind) then
                  del = (ppb-etabl(itype,k1,1))/ediff
-              else
+             else
                  del = huge_r_kind
               endif
               del=max(zero,min(del,one))
@@ -1083,11 +1113,9 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 !!    process the thining procedure
                 
            ithin=ithin_conv(nc)
-!           pflag = 0
 !           ithinp = ithin > 0 .and. pflag /= 0
-!           ithinp = ithin > 0 
 !          if(ithinp  .and. iuse >=0 )then
-           if(ithin >0 .and. pflag /= 0   )then
+           if(ithin >0 .and. pflag /= 0  .and. iuse >=0  )then
 !          Interpolate guess pressure profile to observation location
               klon1= int(dlon);  klat1= int(dlat)
               dx   = dlon-klon1; dy   = dlat-klat1
@@ -1277,7 +1305,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
      end do
   end do
   deallocate(iloc,isort,cdata_all,rusage)
-  
+  deallocate(etabl)  
   call count_obs(ndata,nreal,ilat,ilon,cdata_out,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
   write(lunout) cdata_out
