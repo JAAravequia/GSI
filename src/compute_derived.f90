@@ -45,7 +45,7 @@ subroutine compute_derived(mype,init_pass)
 !   2008-11-03  sato - add anisotropic mode procedures
 !   2008-12-08  todling - move 3dprs/geop-hght calculation from here into setuprhsall
 !   2009-08-19  guo     - add verifications of drv_initialized and tnd_initialized
-!			  before the use of related module variables.
+!                         before the use of related module variables.
 !   2009-10-15  parrish - add rescale of ensemble rh perturbations
 !                           (currently for internal generated ensemble only)
 !   2010-03-11  derber/zhu - add qvar3d to prewgt and prewgt_reg, remove rescale_ensemble_rh_perturbations
@@ -63,7 +63,15 @@ subroutine compute_derived(mype,init_pass)
 !                       - efr_q vars move to cloud_efr
 !                       - unlike original code, now all derivates available at all time slots
 !   2013-10-30  jung    - add test and removal of supersaturation
+!   2013-02-26  m.kim   - applying qcmin to  ges_cwmr_it
+!   2013-03-04  m.kim   - saving starting ges_cwmr_it(with negative values) as cwgues_original                          
+!   
 !   2014-04-18  todling - revisit interface to q_diag
+!   2014-03-19  pondeca - add "load wspd10m guess"
+!   2014-05-07  pondeca - add "load howv guess"
+!   2014-06-19  carley/zhu - add lgues and dlcbasdlog
+!   2014-11-28  zhu     - move cwgues0 to cloud_efr
+!   2014-11-28  zhu     - re-compute ges_cwmr & cwgues the same way as in the regional when cw is not state variable
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -79,7 +87,7 @@ subroutine compute_derived(mype,init_pass)
   use kinds, only: r_kind,i_kind
   use jfunc, only: jiter,jiterstart,&
        qoption,switch_on_derivatives,&
-       tendsflag,clip_supersaturation
+       tendsflag,varq,clip_supersaturation
   use control_vectors, only: cvars3d,cvars2d
   use control_vectors, only: nrf_var
   use control_vectors, only: an_amp0
@@ -91,11 +99,11 @@ subroutine compute_derived(mype,init_pass)
   use derivsmod, only: drv_initialized
   use derivsmod, only: gsi_xderivative_bundle
   use derivsmod, only: gsi_yderivative_bundle
-  use derivsmod, only: qsatg,qgues,ggues,vgues,pgues,&
-       dvisdlog,cwgues
+  use derivsmod, only: qsatg,qgues,ggues,vgues,pgues,lgues,dlcbasdlog,&
+       dvisdlog,w10mgues,howvgues,cwgues
   use tendsmod, only: tnd_initialized
   use tendsmod, only: gsi_tendency_bundle
-  use gridmod, only: lat2,lon2,nsig,nnnn1o,aeta2_ll,nsig1o
+  use gridmod, only: lat2,lon2,nsig,nnnn1o,aeta2_ll,nsig1o  
   use gridmod, only: regional
   use gridmod, only: twodvar_regional
   use gridmod, only: wrf_nmm_regional,wrf_mass_regional
@@ -108,7 +116,7 @@ subroutine compute_derived(mype,init_pass)
   use gsi_metguess_mod, only: gsi_metguess_get,gsi_metguess_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
 
-  use constants, only: zero,one,one_tenth,half,fv,qmin,ten,t0c,five,r0_05
+  use constants, only: zero,one,one_tenth,half,fv,qmin,qcmin,ten,t0c,five,r0_05 
 
 ! for anisotropic mode
   use sub2fslab_mod, only: setup_sub2fslab, sub2fslab, sub2fslab_glb, destroy_sub2fslab
@@ -135,7 +143,7 @@ subroutine compute_derived(mype,init_pass)
   logical ice,fullfield
   integer(i_kind) i,j,k,ii,it,l,l2,iderivative,nrf3_q,istatus,ier
   integer(i_kind) nt,n_actual_clouds
-  
+
   real(r_kind) dl1,dl2
   real(r_kind) tem4,indexw
   real(r_kind),dimension(lat2,lon2,nsig+1):: ges_3dp
@@ -162,7 +170,8 @@ subroutine compute_derived(mype,init_pass)
   real(r_kind):: factor,factk,hswgtsum
 
   if(init_pass .and. (ntguessig<1 .or. ntguessig>nfldsig)) &
-	call die(myname,'invalid init_pass, ntguessig =',ntguessig)
+     call die(myname,'invalid init_pass, ntguessig =',ntguessig)
+
 
 ! Get required indexes from control vector names
   nrf3_q=getindex(cvars3d,'q')
@@ -196,52 +205,59 @@ subroutine compute_derived(mype,init_pass)
 ! Load guess cw for use in inner loop
 ! Get pointer to cloud water mixing ratio
   it=ntguessig
-  if (regional) then
-     call gsi_metguess_get('clouds::3d',n_actual_clouds,ier)
-     if (n_actual_clouds>0) then
-        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql,istatus);ier=istatus
-        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi,istatus);ier=ier+istatus
-        if (ier==0) then
+  call gsi_metguess_get('clouds::3d',n_actual_clouds,ier)
+  if (n_actual_clouds>0) then
+     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql,istatus);ier=istatus
+     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi,istatus);ier=ier+istatus
+     if (ier==0) then
+        do k=1,nsig
+           do j=1,lon2
+              do i=1,lat2
+                 cwgues(i,j,k)=max(ges_ql(i,j,k)+ges_qi(i,j,k),qcmin)
+              end do
+           end do
+        end do
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ges_cwmr,istatus)
+        if (istatus==0) then  ! temporarily, revise after moist physics is ready
            do k=1,nsig
               do j=1,lon2
                  do i=1,lat2
-                    cwgues(i,j,k)=ges_ql(i,j,k)+ges_qi(i,j,k)
+                    ges_cwmr(i,j,k)=cwgues(i,j,k)
                  end do
               end do
            end do
         end if
+     else
         call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ges_cwmr,istatus)
-        if (istatus/=0) ges_cwmr => cwgues    ! temporarily, revise after moist physics is ready 
+        if (istatus==0) then
+           do k=1,nsig
+              do j=1,lon2
+                 do i=1,lat2
+                    ges_cwmr(i,j,k)=max(ges_cwmr(i,j,k),qcmin)
+                    cwgues(i,j,k)=ges_cwmr(i,j,k)
+                 end do
+              end do
+           end do
+        endif
+     end if  ! end of ier==0
 
-!       update efr_ql
-        if(regional .and. (.not. wrf_mass_regional) .and. jiter>jiterstart) then
-          do ii=1,nfldsig
-             do k=1,nsig
-                do j=1,lon2
-                   do i=1,lat2
-                      tem4=max(zero,(t0c-ges_tsen(i,j,k,ii))*r0_05)
-                      indexw=five + five * min(one, tem4) 
-                      efr_ql(i,j,k,ii)=1.5_r_kind*indexw
-                   end do
+!    update efr_ql
+     if(regional .and. (.not. wrf_mass_regional) .and. jiter>jiterstart) then
+       do ii=1,nfldsig
+          do k=1,nsig
+             do j=1,lon2
+                do i=1,lat2
+                   tem4=max(zero,(t0c-ges_tsen(i,j,k,ii))*r0_05)
+                   indexw=five + five * min(one, tem4) 
+                   efr_ql(i,j,k,ii)=1.5_r_kind*indexw
                 end do
              end do
           end do
-        end if  ! jiter
-     else
-        if(associated(ges_cwmr)) ges_cwmr => cwgues
-     end if  ! end of n_actual_clouds
+       end do
+     end if  ! jiter
   else
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ges_cwmr,istatus)
-     if (istatus==0) then
-        do k=1,nsig
-           do j=1,lon2
-              do i=1,lat2
-                 cwgues(i,j,k)=ges_cwmr(i,j,k)
-              end do
-           end do
-        end do
-     endif
-  end if
+     if(associated(ges_cwmr)) ges_cwmr => cwgues
+  end if  ! end of n_actual_clouds
 
 ! RTodling: The following call is in a completely undesirable place
 ! -----------------------------------------------------------------
@@ -259,7 +275,7 @@ subroutine compute_derived(mype,init_pass)
 
      if (switch_on_derivatives) then
         if(.not.drv_initialized) &
-		call die(myname,'unexpected drv_initialized =',drv_initialized)
+          call die(myname,'unexpected drv_initialized =',drv_initialized)
 
 !       Instead, update gradients of all guess fields.  these will
 !       be used for forward models that need gradient of background field,
@@ -274,11 +290,11 @@ subroutine compute_derived(mype,init_pass)
 
         if(.not. wrf_mass_regional .and. tendsflag)then
           if(.not.tnd_initialized) &
-		call die(myname,'unexpected tnd_initialized =',tnd_initialized)
+            call die(myname,'unexpected tnd_initialized =',tnd_initialized)
 
 
 ! now that we have derivs, get time tendencies if necessary
-	  if(init_pass) then
+          if(init_pass) then
 
            if(allocated(ges_ps)) call getprs(ges_ps,ges_3dp)
 
@@ -297,7 +313,7 @@ subroutine compute_derived(mype,init_pass)
 
               call final_vars_('tendency')
            end if
-          end if	! (init_pass)
+          end if       ! (init_pass)
         end if
      end if
 
@@ -312,9 +328,9 @@ subroutine compute_derived(mype,init_pass)
 
        if(regional)then
           call tpause(mype,'temp')
-       else	! (regional)
+       else     ! (regional)
           call tpause(mype,'pvoz')
-       end if	! (regional)
+       end if   ! (regional)
   
      endif       ! (init_pass)
 
@@ -335,7 +351,7 @@ subroutine compute_derived(mype,init_pass)
      end do
   end if
 
-! Load guess gust, vis & pblh for use in limg, limv & limp.
+! Load guess gust, vis, pblh, & lcbas for use in limg, limv, limp, & liml.
   call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),'gust',ptr2d,istatus)
   if (istatus==0) then
      do j=1,lon2
@@ -361,7 +377,31 @@ subroutine compute_derived(mype,init_pass)
         end do
      end do
   end if
-
+  call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),'wspd10m',ptr2d,istatus)
+  if (istatus==0) then
+     do j=1,lon2
+        do i=1,lat2
+           w10mgues(i,j)=max(one,ptr2d(i,j))
+        end do
+     end do
+  end if
+  call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),'howv',ptr2d,istatus)
+  if (istatus==0) then
+     do j=1,lon2
+        do i=1,lat2
+           howvgues(i,j)=max(one,ptr2d(i,j))
+        end do
+     end do
+  end if
+  call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),'lcbas',ptr2d,istatus)
+  if (istatus==0) then
+     do j=1,lon2
+        do i=1,lat2
+           lgues(i,j)=max(100.0_r_kind,ptr2d(i,j))
+           dlcbasdlog(i,j)=log(ten)*ptr2d(i,j)  !d(lcbas)/d(log(lcbas))
+        end do
+     end do
+  end if
 
   if(allocated(ges_tv).and.allocated(ges_ps)) then
 
@@ -383,7 +423,6 @@ subroutine compute_derived(mype,init_pass)
       call genqsat(ges_qsat(1,1,1,ii),ges_tsen(1,1,1,ii),ges_prsl(1,1,1,ii),lat2,lon2, &
              nsig,ice,iderivative)
     end do
-
   endif
 
   call final_vars_('guess')

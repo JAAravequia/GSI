@@ -184,7 +184,7 @@ contains
   end subroutine init_chem
 
   subroutine oneobschem(nread,ndata,nodata,gstime,&
-        infile,obstype,lunout,sis)
+        infile,obstype,lunout,sis,nobs)
 
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -204,6 +204,7 @@ contains
 !     ndata    - number of type "obstype" observations retained for further processing
 !     nodata   - number of individual "obstype" observations retained for !further processing
 !     sis      - satellite/instrument/sensor indicator
+!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -215,6 +216,7 @@ contains
     use gridmod, only: diagnostic_reg,regional,nlon,nlat,&
          tll2xy,txy2ll,rlats,rlons
     use convinfo, only: nconvtype,icuse,ioctype
+    use mpimod, only: npe
     
     implicit none
     
@@ -223,19 +225,17 @@ contains
     character(len=*),intent(out) :: infile
     integer(i_kind) ,intent(in   ) :: lunout
     integer(i_kind) ,intent(inout) :: nread,ndata,nodata
+    integer(i_kind),dimension(npe) ,intent(inout) :: nobs
     real(r_kind)    ,intent(in   ) :: gstime
     character(len=*),intent(in   ) :: sis
     
     
 ! declare local parameters
     
-    integer(i_kind), parameter :: nsid=1,nxob=2,&
-          nyob=3,ndhr=4,ntyp=5,ncopopm=6
 !see headr input format below
     
     integer(i_kind), parameter:: nchanl=0,nreal=ilone
     
-    real(r_kind),parameter :: r100 = 100.0_r_kind
     real(r_kind),parameter :: r360 = 360.0_r_kind
     
 ! declare local variables
@@ -323,6 +323,7 @@ contains
     
     
 ! write header record and data to output file for further processing
+    call count_obs(ndata,nreal,ilat,ilon,cdata_all,nobs)
     write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
     write(lunout) ((cdata_all(k,i),k=1,nreal),i=1,ndata)
     

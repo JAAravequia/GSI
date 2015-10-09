@@ -1,6 +1,7 @@
 subroutine read_avhrr_navy(mype,val_avhrr,ithin,rmesh,jsatid,&
      gstime,infile,lunout,obstype,nread,ndata,nodata,twind,sis, &
-     mype_root,mype_sub,npe_sub,mpi_comm_sub)
+     mype_root,mype_sub,npe_sub,mpi_comm_sub,nobs,& 
+     nrec_start,dval_use)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_avhrr_navy                  read navy avhrr data
@@ -47,6 +48,7 @@ subroutine read_avhrr_navy(mype,val_avhrr,ithin,rmesh,jsatid,&
 !   2011-08-01  lueken  - added module use deter_sfc_mod  
 !   2012-03-05  akella  - nst now controlled via coupler
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
+!   2015-02-23  Rancic/Thomas - add thin4d to time window logical
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -60,11 +62,13 @@ subroutine read_avhrr_navy(mype,val_avhrr,ithin,rmesh,jsatid,&
 !     obstype  - observation type to process
 !     twind    - input group time window (hours)
 !     sis      - satellite/instrument/sensor indicator
+!     nrec_start - first subset with useful information
 !
 !   output argument list:
 !     nread    - number of BUFR NAVY AVHRR observations read
 !     ndata    - number of BUFR NAVY AVHRR profiles retained for further processing
 !     nodata   - number of BUFR NAVY AVHRR observations retained for further processing
+!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -77,18 +81,20 @@ subroutine read_avhrr_navy(mype,val_avhrr,ithin,rmesh,jsatid,&
   use gridmod, only: diagnostic_reg,regional,nlat,nlon,tll2xy,txy2ll,rlats,rlons
   use constants, only: deg2rad, zero, one, rad2deg, r60inv
   use radinfo, only: retrieval,iuse_rad,jpch_rad,nusis,nst_gsi,nstinfo
-  use gsi_4dvar, only: l4dvar, iwinbgn, winlen
+  use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,thin4d
   use deter_sfc_mod, only: deter_sfc
   use obsmod, only: bmiss
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
+  use mpimod, only: npe
   implicit none
 
 
 ! Declare passed variables
   character(len=*),intent(in   ) :: infile,obstype,jsatid
   character(len=20),intent(in  ) :: sis
-  integer(i_kind) ,intent(in   ) :: mype,lunout,ithin
+  integer(i_kind) ,intent(in   ) :: mype,lunout,ithin,nrec_start
   integer(i_kind) ,intent(inout) :: nread
+  integer(i_kind),dimension(npe) ,intent(inout) :: nobs
   integer(i_kind) ,intent(inout) :: ndata,nodata
   real(r_kind)    ,intent(in   ) :: rmesh,gstime,twind
   real(r_kind)    ,intent(inout) :: val_avhrr
@@ -96,11 +102,11 @@ subroutine read_avhrr_navy(mype,val_avhrr,ithin,rmesh,jsatid,&
   integer(i_kind) ,intent(in   ) :: mype_sub
   integer(i_kind) ,intent(in   ) :: npe_sub
   integer(i_kind) ,intent(in   ) :: mpi_comm_sub
+  logical         ,intent(in   ) :: dval_use
 
 
 ! Declare local parameters
   character(6),parameter:: file_sst='SST_AN'
-  integer(i_kind),parameter:: maxinfo = 35
   integer(i_kind),parameter:: mlat_sst = 3000
   integer(i_kind),parameter:: mlon_sst = 5000
   real(r_kind),parameter:: r6=6.0_r_kind
@@ -116,7 +122,7 @@ subroutine read_avhrr_navy(mype,val_avhrr,ithin,rmesh,jsatid,&
 
   integer(i_kind) klon1,klatp1,klonp1,klat1
   integer(i_kind) lnbufr,nchanl,iret
-  integer(i_kind) idate,n
+  integer(i_kind) idate,n,maxinfo
   integer(i_kind) ilat,ilon,iskip
   integer(i_kind) idummy1,idummy2,lun
   integer(i_kind),dimension(5):: idate5
@@ -147,12 +153,13 @@ subroutine read_avhrr_navy(mype,val_avhrr,ithin,rmesh,jsatid,&
 
   real(r_double),dimension(100):: bufrf                 ! array to store the read bufr record
 
-  real(r_kind) disterr,disterrmax,dlon00,dlat00
+  real(r_kind) cdist,disterr,disterrmax,dlon00,dlat00
   integer(i_kind) ntest
 
 
 !**************************************************************************
 ! Start routine here.  Set constants.  Initialize variables
+  maxinfo = 33
   disterrmax=zero
   lnbufr = 10
   ntest=0
@@ -212,6 +219,7 @@ subroutine read_avhrr_navy(mype,val_avhrr,ithin,rmesh,jsatid,&
 
 
 ! Allocate arrays to hold all data for given satellite
+  if(dval_use) maxinfo = maxinfo + 2
   nreal = maxinfo + nstinfo
   nele  = nreal   + nchanl
   allocate(data_all(nele,itxmax),nrec(itxmax))
@@ -234,8 +242,9 @@ subroutine read_avhrr_navy(mype,val_avhrr,ithin,rmesh,jsatid,&
 
 ! Read BUFR Navy data
   irec=0
-  do while (ireadmg(lnbufr,subset,idate) >= 0)
+  read_msg: do while (ireadmg(lnbufr,subset,idate) >= 0)
      irec=irec+1
+     if(irec < nrec_start)cycle read_msg
      next=next+1
      if(next == npe_sub)next=0
      if(next /= mype_sub)cycle
@@ -268,12 +277,12 @@ subroutine read_avhrr_navy(mype,val_avhrr,ithin,rmesh,jsatid,&
 
         call w3fs21(idate5,nmind)
         t4dv=(real(nmind-iwinbgn,r_kind) + real(bufrf(6),r_kind)*r60inv)*r60inv
+        sstime=real(nmind,r_kind) + real(bufrf(6),r_kind)*r60inv
+        tdiff=(sstime-gstime)*r60inv
 
-        if (l4dvar) then
+        if (l4dvar.or.l4densvar) then
            if (t4dv<zero .OR. t4dv>winlen) cycle read_loop
         else
-           sstime=real(nmind,r_kind) + real(bufrf(6),r_kind)*r60inv
-           tdiff=(sstime-gstime)*r60inv
            if(abs(tdiff) > twind) cycle read_loop
         endif
 
@@ -290,8 +299,10 @@ subroutine read_avhrr_navy(mype,val_avhrr,ithin,rmesh,jsatid,&
            if(diagnostic_reg) then
               call txy2ll(dlon,dlat,dlon00,dlat00)
               ntest=ntest+1
-              disterr=acos(sin(dlat_earth)*sin(dlat00)+cos(dlat_earth)*cos(dlat00)* &
-                   (sin(dlon_earth)*sin(dlon00)+cos(dlon_earth)*cos(dlon00)))*rad2deg
+              cdist=sin(dlat_earth)*sin(dlat00)+cos(dlat_earth)*cos(dlat00)* &
+                   (sin(dlon_earth)*sin(dlon00)+cos(dlon_earth)*cos(dlon00))
+              cdist=max(-one,min(cdist,one))
+              disterr=acos(cdist)*rad2deg
               disterrmax=max(disterrmax,disterr)
            end if
            if(outside) cycle read_loop
@@ -306,7 +317,7 @@ subroutine read_avhrr_navy(mype,val_avhrr,ithin,rmesh,jsatid,&
 
 !       Set common predictor parameters
 
-        if (l4dvar) then
+        if (thin4d) then
            crit1 = 0.01_r_kind
         else
            timedif = r6*abs(tdiff)        ! range:  0 to 18
@@ -416,8 +427,10 @@ subroutine read_avhrr_navy(mype,val_avhrr,ithin,rmesh,jsatid,&
         data_all(31,itx) = dlat_earth             ! earth relative latitude (rad)
         data_all(32,itx) = bufrf(13)              ! Data type: 151=day,152=night,159=cloud problem
         data_all(33,itx) = sst_hires              ! interpolated hires SST (deg K)
-        data_all(34,itx) = val_avhrr
-        data_all(35,itx) = itt
+        if(dval_use)then
+           data_all(34,itx) = val_avhrr
+           data_all(35,itx) = itt
+        end if
 
         if(nst_gsi>0) then
            data_all(maxinfo+1,itx) = tref          ! foundation temperature
@@ -435,7 +448,7 @@ subroutine read_avhrr_navy(mype,val_avhrr,ithin,rmesh,jsatid,&
 
      end do read_loop
 
-  end do                      ! if ( ierrmg == 0 ) then
+  end do read_msg             ! if ( ierrmg == 0 ) then
 
   write(6,*) 'READ_AVHRR_NAVY:  total number of obs, nread,ndata : ',nread,ndata
 
@@ -454,12 +467,16 @@ subroutine read_avhrr_navy(mype,val_avhrr,ithin,rmesh,jsatid,&
         if(data_all(k+nreal,n) > tbmin .and. &
            data_all(k+nreal,n) < tbmax)nodata=nodata+1
      end do
-     itt=nint(data_all(maxinfo,n))
-     super_val(itt)=super_val(itt)+val_avhrr
-
   end do
+  if(dval_use .and. assim)then
+     do n=1,ndata
+        itt=nint(data_all(35,n))
+        super_val(itt)=super_val(itt)+val_avhrr
+     end do
+  end if
 
 ! Write retained data to local file
+  call count_obs(ndata,nele,ilat,ilon,data_all,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
   write(lunout) ((data_all(k,n),k=1,nele),n=1,ndata)
 

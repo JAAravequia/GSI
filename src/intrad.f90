@@ -14,6 +14,8 @@ module intradmod
 !   2009-08-13  lueken - update documentation
 !   2011-05-17  todling - add internal routine set_
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - implemented obs adjoint test  
+!   2014-12-03  derber  - modify so that use of obsdiags can be turned off and
+!                         add threading
 !
 ! subroutines included:
 !   sub intrad_
@@ -30,7 +32,10 @@ use kinds, only: i_kind
 implicit none
 
 PRIVATE
-PUBLIC intrad
+PUBLIC intrad,setrad
+PUBLIC itv,iqv,ioz,icw,ius,ivs,isst,iqg,iqh,iqi,iql,iqr,iqs,lgoback
+PUBLIC luseu,lusev,luset,luseq,lusecw,luseoz,luseqg,luseqh,luseqi,luseql, &
+       luseqr,luseqs,lusesst
 
 interface intrad; module procedure &
           intrad_
@@ -40,10 +45,12 @@ integer(i_kind) :: itv,iqv,ioz,icw,ius,ivs,isst
 integer(i_kind) :: iqg,iqh,iqi,iql,iqr,iqs
 logical :: done_setting = .false.
 logical :: lgoback
+logical luseu,lusev,luset,luseq,lusecw,luseoz,luseqg,luseqh,luseqi,luseql, &
+        luseqr,luseqs,lusesst
 
 contains
 
-subroutine set_(sval)
+subroutine setrad(sval)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    set_  sat radiance operator setting
@@ -171,10 +178,24 @@ subroutine set_(sval)
   iqs=-1
   if(look) iqs =radjacindxs(indx)
 
+  luseu=ius>=0
+  lusev=ivs>=0
+  luset=itv>=0
+  luseq=iqv>=0
+  luseoz=ioz>=0
+  lusecw=icw>=0
+  luseql=iql>=0
+  luseqi=iqi>=0
+  luseqh=iqh>=0
+  luseqg=iqg>=0
+  luseqr=iqr>=0
+  luseqs=iqs>=0
+  lusesst=isst>=0
+
   done_setting = .true.
 
   return
-end subroutine set_
+end subroutine setrad
 
 subroutine intrad_(radhead,rval,sval,rpred,spred)
 !$$$  subprogram documentation block
@@ -256,7 +277,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
   use kinds, only: r_kind,i_kind,r_quad
   use radinfo, only: npred,jpch_rad,pg_rad,b_rad
   use radinfo, only: radjacnames,radjacindxs,nsigradjac
-  use obsmod, only: rad_ob_type,lsaveobsens,l_do_adjoint
+  use obsmod, only: rad_ob_type,lsaveobsens,l_do_adjoint,luse_obsdiag
   use jfunc, only: jiter,l_foto,xhat_dt,dhat_dt
   use gridmod, only: latlon11,latlon1n,nsig
   use qcmod, only: nlnqc_iter,varqc_iter
@@ -279,13 +300,11 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
   integer(i_kind) j1,j2,j3,j4,i1,i2,i3,i4,n,k,ic,ix,nn,mm
   integer(i_kind) ier,istatus
   integer(i_kind),dimension(nsig) :: i1n,i2n,i3n,i4n
-  real(r_kind) val
+  real(r_kind),allocatable,dimension(:):: val
   real(r_kind) w1,w2,w3,w4
   real(r_kind),dimension(nsigradjac):: tval,tdir
   real(r_kind) cg_rad,p0,wnotgross,wgross,time_rad
   type(rad_ob_type), pointer :: radptr
-  logical luseu,lusev,luset,luseq,lusecw,luseoz,luseqg,luseqh,luseqi,luseql, &
-          luseqr,luseqs,lusesst
 
   real(r_kind),pointer,dimension(:) :: st,sq,scw,soz,su,sv,sqg,sqh,sqi,sql,sqr,sqs
   real(r_kind),pointer,dimension(:) :: sst
@@ -297,22 +316,8 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
 !  If no rad observations return
   if(.not.associated(radhead)) return
 ! Set required parameters
-  call set_(sval)
   if(lgoback) return
 
-  luseu=ius>=0
-  lusev=ivs>=0
-  luset=itv>=0
-  luseq=iqv>=0
-  luseoz=ioz>=0
-  lusecw=icw>=0
-  luseql=iql>=0
-  luseqi=iqi>=0
-  luseqh=iqh>=0
-  luseqg=iqg>=0
-  luseqr=iqr>=0
-  luseqs=iqs>=0
-  lusesst=isst>=0
 
 ! Retrieve pointers; return when not found (except in case of non-essentials)
   ier=0
@@ -406,10 +411,6 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
      w3=radptr%wij(3)
      w4=radptr%wij(4)
 
-     do k=1,nsigradjac
-        tval(k)=zero
-     end do
-
 !  Begin Forward model
 !  calculate temperature, q, ozone, sst vector at observation location
      i1n(1) = j1
@@ -469,7 +470,6 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
                        w3* sqs(i3)+w4* sqs(i4)
         end if
      end do
-
      if(luseu)then
         tdir(ius+1)=   w1* su(j1) +w2* su(j2)+ &
                        w3* su(j3) +w4* su(j4)
@@ -480,8 +480,9 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
      endif
      if(lusesst)then
         tdir(isst+1)=w1*sst(j1) +w2*sst(j2)+ &
-                     w3*sst(j3) +w4*sst(j4)
+                           w3*sst(j3) +w4*sst(j4)
      end if
+
 
 
      if (l_foto) then
@@ -522,37 +523,38 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
 
 !  For all other configurations
 !  begin channel specific calculations
+     allocate(val(radptr%nchan))
      do nn=1,radptr%nchan
         ic=radptr%icx(nn)
         ix=(ic-1)*npred
 
 !       include observation increment and lapse rate contributions to bias correction
-        val=zero
+        val(nn)=zero
 
 !       Include contributions from atmospheric jacobian
         do k=1,nsigradjac
-           val=val+tdir(k)*radptr%dtb_dvar(k,nn)
+           val(nn)=val(nn)+tdir(k)*radptr%dtb_dvar(k,nn)
         end do
 
 !       Include contributions from remaining bias correction terms
         if( .not. ladtest_obs) then
            do n=1,npred
-              val=val+spred(ix+n)*radptr%pred(n,nn)
+              val(nn)=val(nn)+spred(ix+n)*radptr%pred(n,nn)
            end do
         end if
 
-        if (lsaveobsens) then
-           radptr%diags(nn)%ptr%obssen(jiter) = val*radptr%err2(nn)*radptr%raterr2(nn)
-        else
-           if (radptr%luse) radptr%diags(nn)%ptr%tldepart(jiter) = val
+        if(luse_obsdiag)then
+           if (lsaveobsens) then
+              val(nn) = val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
+              radptr%diags(nn)%ptr%obssen(jiter) = val(nn)
+           else
+              if (radptr%luse) radptr%diags(nn)%ptr%tldepart(jiter) = val(nn)
+           endif
         endif
 
         if (l_do_adjoint) then
-           if (lsaveobsens) then
-              val=radptr%diags(nn)%ptr%obssen(jiter)
-
-           else
-              if( .not. ladtest_obs)   val=val-radptr%res(nn)
+           if (.not. lsaveobsens) then
+              if( .not. ladtest_obs)   val(nn)=val(nn)-radptr%res(nn)
 
 !             Multiply by variance.
               if (nlnqc_iter .and. pg_rad(ic) > tiny_r_kind .and. &
@@ -560,34 +562,39 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
                  cg_rad=cg_term/b_rad(ic)
                  wnotgross= one-pg_rad(ic)*varqc_iter
                  wgross = varqc_iter*pg_rad(ic)*cg_rad/wnotgross
-                 p0   = wgross/(wgross+exp(-half*radptr%err2(nn)*val*val))
-                 val = val*(one-p0)
+                 p0   = wgross/(wgross+exp(-half*radptr%err2(nn)*val(nn)*val(nn)))
+                 val(nn) = val(nn)*(one-p0)
               endif
 
-              if(.not. ladtest_obs )val = val*radptr%err2(nn)*radptr%raterr2(nn)
+              if(.not. ladtest_obs )val(nn) = val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
            endif
-
-!          Begin adjoint
-
-!          Extract contributions from atmospheric jacobian
-           do k=1,nsigradjac
-              tval(k)=tval(k)+radptr%dtb_dvar(k,nn)*val
-           end do
 
 !          Extract contributions from bias correction terms
 !          use compensated summation
            if( .not. ladtest_obs) then
               if(radptr%luse)then
                  do n=1,npred
-                    rpred(ix+n)=rpred(ix+n)+radptr%pred(n,nn)*val
+                    rpred(ix+n)=rpred(ix+n)+radptr%pred(n,nn)*val(nn)
                  end do
               end if
            end if ! not ladtest_obs
-        endif
+        end if
      end do
+!          Begin adjoint
 
      if (l_do_adjoint) then
+        do k=1,nsigradjac
+           tval(k)=zero
+
+           do nn=1,radptr%nchan
+!          Extract contributions from atmospheric jacobian
+              tval(k)=tval(k)+radptr%dtb_dvar(k,nn)*val(nn)
+           end do
+
+        end do
+
 !    Distribute adjoint contributions over surrounding grid points
+ 
         if(luseu) then
            ru(j1)=ru(j1)+w1*tval(ius+1)
            ru(j2)=ru(j2)+w2*tval(ius+1)
@@ -607,13 +614,13 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
            rst(j3)=rst(j3)+w3*tval(isst+1)
            rst(j4)=rst(j4)+w4*tval(isst+1)
         end if
- 
         do k=1,nsig
            i1 = i1n(k)
            i2 = i2n(k)
            i3 = i3n(k)
            i4 = i4n(k)
 
+ 
            if(luset)then
               mm=itv+k
               rt(i1)=rt(i1)+w1*tval(mm)
@@ -728,6 +735,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
         endif
 
      endif ! < l_do_adjoint >
+     deallocate(val)
 
      radptr => radptr%llpoint
   end do

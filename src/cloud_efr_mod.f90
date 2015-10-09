@@ -59,9 +59,9 @@ module cloud_efr_mod
                              XMImin=1.e6_r_kind*DMImin, XMImax=1.e6_r_kind*DMImax
   integer(i_kind), parameter :: MDImin=XMImin, MDImax=XMImax
 !     Mean rain drop diameters vary from 50 microns to 450 microns
-  real(r_kind), parameter :: DMRmin=.05E-3_r_kind, DMRmax=.45E-3_r_kind, DelDMR=1.E-6_r_kind,   &
+  real(r_kind), parameter :: DMRmin=.05E-3_r_kind, DMRmax=.45E-3_r_kind,   &
                              XMRmin=1.E6_r_kind*DMRmin, XMRmax=1.E6_r_kind*DMRmax,              &
-			     N0r0=8.E6_r_kind, N0rmin=1.e4_r_kind
+                             N0r0=8.E6_r_kind, N0rmin=1.e4_r_kind
   integer(i_kind), parameter :: MDRmin=XMRmin, MDRmax=XMRmax
 !     Mean mass of precpitation ice particles as functions of their mean
 !     size (in microns)
@@ -258,7 +258,7 @@ subroutine cloud_calc(p0d,q1d,t1d,clwmr,fice,frain,frimef,&
   return
 end subroutine cloud_calc
 
-subroutine cloud_calc_gfs(g_ql,g_qi,g_cwmr,g_q,g_tv) 
+subroutine cloud_calc_gfs(g_ql,g_qi,g_cwmr,g_q,g_tv,cwgues0) 
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    cloud_calc_gfs     calculate cloud mixing ratio
@@ -269,21 +269,35 @@ subroutine cloud_calc_gfs(g_ql,g_qi,g_cwmr,g_q,g_tv)
 ! program history log:
 !   2011-11-01 eliu   move the calculation of hydrometeors from ncepgfs_io to cloud_efr module 
 !                     (rearranged from Min-Jeong's code)  
+!   2014-11-28 zhu  - assign cwgues0 in this subroutine;
+!                   - set lower bound to cloud after assigning cwgues0,change atrribute of g_cwmr
 
 
   use gridmod, only: lat2,lon2,nsig
+  use constants, only: qcmin
   implicit none
 
 ! Declare passed variables
   real(r_kind),dimension(lat2,lon2,nsig),intent(inout):: g_ql   ! mixing ratio of cloud liquid water [Kg/Kg]
   real(r_kind),dimension(lat2,lon2,nsig),intent(inout):: g_qi   ! mixing ratio of cloud ice [Kg/Kg]
-  real(r_kind),dimension(lat2,lon2,nsig),intent(in   ):: g_cwmr ! mixing ratio of total condensates [Kg/Kg]
+  real(r_kind),dimension(lat2,lon2,nsig),intent(inout):: g_cwmr ! mixing ratio of total condensates [Kg/Kg]
   real(r_kind),dimension(lat2,lon2,nsig),intent(in   ):: g_q    ! specific humidity [Kg/Kg]
   real(r_kind),dimension(lat2,lon2,nsig),intent(in   ):: g_tv   ! virtual temperature [K]
+  real(r_kind),dimension(lat2,lon2,nsig),intent(inout):: cwgues0
 
 ! Declare local variables
   integer(i_kind):: i,j,k
   real(r_kind)   :: work
+
+! Assign cwgues0 and set lower bound to cloud
+  do k=1,nsig
+     do j=1,lon2
+        do i=1,lat2
+           cwgues0(i,j,k)=g_cwmr(i,j,k)
+           g_cwmr(i,j,k) =max(qcmin,g_cwmr(i,j,k))
+        end do
+     end do
+  end do
 
 ! Initialize
   g_ql(:,:,:) = zero 
@@ -293,7 +307,7 @@ subroutine cloud_calc_gfs(g_ql,g_qi,g_cwmr,g_q,g_tv)
   do k = 1, nsig
      do j = 1, lon2
         do i = 1, lat2
-           work        = -r0_05*(g_tv(i,j,k)/(one+fv*g_q(j,i,k))-t0c)
+           work        = -r0_05*(g_tv(i,j,k)/(one+fv*g_q(i,j,k))-t0c)
            work        = max(zero,work)
            work        = min(one,work)    ! 0<=work<=1 
            g_ql(i,j,k) = g_cwmr(i,j,k)*(one-work)

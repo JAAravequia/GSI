@@ -1,4 +1,5 @@
-      subroutine read_pblh(nread,ndata,nodata,infile,obstype,lunout,twindin,sis)
+      subroutine read_pblh(nread,ndata,nodata,infile,obstype,lunout,twindin,&
+         sis,nobs)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:  read_pblh     read obs from msgs in PREPFITS files (rpf == read aircraft)
@@ -8,6 +9,7 @@
 !   2009-10-20    zhu   - modify rpf for reading in pblh data in GSI
 !   2009-10-21  whiting - modify cnem & pblhob for reading Caterina's files
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
+!   2015-02-23  Rancic/Thomas - add l4densvar to time window logical
 !
 !   input argument list:
 !     infile   - unit from which to read BUFR data
@@ -21,6 +23,7 @@
 !     ndata    - number of type "obstype" observations retained for further processing
 !     twindin  - input group time window (hours)
 !     sis      - satellite/instrument/sensor indicator
+!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -37,9 +40,10 @@
            ncmiter,ncgroup,ncnumgrp,icuse,ictype,icsubtype,ioctype, &
            ithin_conv,rmesh_conv,pmesh_conv, &
            id_bias_ps,id_bias_t,conv_bias_ps,conv_bias_t
-      use gsi_4dvar, only: l4dvar,time_4dvar,winlen
+      use gsi_4dvar, only: l4dvar,l4densvar,time_4dvar,winlen
       use obsmod, only: iadate,offtime_data,bmiss
       use deter_sfc_mod, only: deter_sfc2
+      use mpimod, only: npe
       implicit none
 
 !     Declare passed variables
@@ -47,6 +51,7 @@
       character(20),intent(in):: sis
       integer(i_kind),intent(in):: lunout
       integer(i_kind),intent(inout):: nread,ndata,nodata
+      integer(i_kind),dimension(npe),intent(inout):: nobs
       real(r_kind),intent(in):: twindin
 
 !     Declare local parameters
@@ -91,7 +96,7 @@
       data lunin /50/
 
 !     Initialize variables
-      nreal=17
+      nreal=14
       ntest=0
       nrtmax=0                       ! # rpts to print per msg type (0=all)
 
@@ -350,7 +355,7 @@
       if (t4dv>winlen.and.t4dv<winlen+zeps) t4dv=winlen
       t4dv=t4dv + time_correction
       nc=ikx
-      if (l4dvar) then
+      if (l4dvar.or.l4densvar) then
            if (t4dv<zero.OR.t4dv>winlen) cycle
       else
            if((real(abs(time)) > real(ctwind(nc)) .or. real(abs(time)) > real(twindin))) cycle 
@@ -461,12 +466,9 @@
       cdata_all(9,iout)=pblhoe*three            ! max error
       cdata_all(10,iout)=pblhqm                 ! quality mark
       cdata_all(11,iout)=usage                  ! usage parameter
-      cdata_all(12,iout)=idomsfc                ! dominate surface type
-      cdata_all(13,iout)=tsavg                  ! skin temperature
-      cdata_all(14,iout)=sfcr                   ! surface roughness
-      cdata_all(15,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
-      cdata_all(16,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
-      cdata_all(17,iout)=stnelev                ! station elevation (m)
+      cdata_all(12,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
+      cdata_all(13,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
+      cdata_all(14,iout)=stnelev                ! station elevation (m)
 
       end do ! while ireadsb
 
@@ -477,14 +479,15 @@
 !   Normal exit
 
 !   Write observation to scratch file
-    write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
-    write(lunout) ((cdata_all(j,i),j=1,nreal),i=1,ndata)
-    deallocate(cdata_all)
-
-    if (ndata == 0) then
+     call count_obs(ndata,nreal,ilat,ilon,cdata_all,nobs)
+     write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
+     write(lunout) ((cdata_all(j,i),j=1,nreal),i=1,ndata)
+     deallocate(cdata_all)
+ 
+     if (ndata == 0) then
         call closbf(lunin)
         write(6,*)'READ_PREPFITS:  closbf(',lunin,')'
-    endif
+     endif
 
-    close(lunin)
-    end subroutine read_pblh
+     close(lunin)
+     end subroutine read_pblh

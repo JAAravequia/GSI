@@ -1,5 +1,5 @@
 subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis,&
-     prsl_full)
+     prsl_full,nobs)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_satwnd                    read satellite winds  
@@ -17,6 +17,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 !            250: JMA WV deep layer. 251:GOES visible, 252: JMA IR winds
 !            253: EUMETSAT IR winds, 254: EUMETSAT WV deep layer winds
 !            257,258,259: MODIS IR,WV cloud top, WV deep layer winds
+!            260: VIIR IR winds
 !            respectively
 !            For satellite subtype: 50-70 from EUMETSAT geostationary satellites(METEOSAT) 
 !                                   100-199 from JMA geostationary satellites(MTSAT)
@@ -50,7 +51,13 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 !   2013-02-13  parrish - set pflag=0 outside loopd to prevent runtime fatal error in debug mode.
 !   2013-08-26 McCarty -modified to remove automatic rejection of AVHRR winds
 !   2013-09-20  Su      - set satellite ID as satellite wind subtype
-
+!   2014-07-16  Su      - read VIIRS winds 
+!   2014-10-16  Su      -add optione for 4d thinning and option to keep thinned data  
+!   2015-02-23  Rancic/Thomas - add thin4d to time window logical
+!   2015-03-23  Su      -fix array size with maximum message and subset number from fixed number to
+!                        dynamic allocated array 
+!   2015-02-26  Genkova - read GOES-R like winds from ASCII files & apply Sharon Nebuda's changes for GOES-R
+!   2015-05-12  Genkova - reading from ASCII files removed, read GOES-R from new BUFR, keep Nebuda's GOES-R related changes 
 !
 !   input argument list:
 !     ithin    - flag to thin data
@@ -66,6 +73,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 !     nread    - number of satellite winds read 
 !     ndata    - number of satellite winds retained for further processing
 !     nodata   - number of satellite winds retained for further processing
+!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -77,7 +85,8 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
        tll2xy,txy2ll,rotate_wind_ll2xy,rotate_wind_xy2ll,&
        rlats,rlons,twodvar_regional
   use qcmod, only: errormod,noiqc
-  use convthin, only: make3grids,map3grids,del3grids,use_all
+  use convthin, only: make3grids,map3grids,map3grids_m,del3grids,use_all
+  use convthin_time, only: make3grids_tm,map3grids_tm,map3grids_m_tm,del3grids_tm,use_all_tm
   use constants, only: deg2rad,zero,rad2deg,one_tenth,&
         tiny_r_kind,huge_r_kind,r60inv,one_tenth,&
         one,two,three,four,five,half,quarter,r60inv,r100,r2000
@@ -85,10 +94,11 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   use obsmod, only: iadate,oberrflg,perturb_obs,perturb_fact,ran01dom,bmiss
   use convinfo, only: nconvtype,ctwind, &
        ncmiter,ncgroup,ncnumgrp,icuse,ictype,icsubtype,ioctype, &
-       ithin_conv,rmesh_conv,pmesh_conv, &
+       ithin_conv,rmesh_conv,pmesh_conv,pmot_conv,ptime_conv, &
        id_bias_ps,id_bias_t,conv_bias_ps,conv_bias_t,use_prepb_satwnd
-  use gsi_4dvar, only: l4dvar,iwinbgn,winlen,time_4dvar
+  use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,time_4dvar,thin4d
   use deter_sfc_mod, only: deter_sfc_type,deter_sfc2
+  use mpimod, only: npe
   implicit none
 
 ! Declare passed variables
@@ -96,13 +106,12 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   character(len=20)                     ,intent(in   ) :: sis
   integer(i_kind)                       ,intent(in   ) :: lunout
   integer(i_kind)                       ,intent(inout) :: nread,ndata,nodata
+  integer(i_kind),dimension(npe)        ,intent(inout) :: nobs
   real(r_kind)                          ,intent(in   ) :: twind
   real(r_kind),dimension(nlat,nlon,nsig),intent(in   ) :: prsl_full
 
 ! Declare local parameters
 
-  integer(i_kind),parameter:: mxtb=5000000
-  integer(i_kind),parameter:: nmsgmax=15000 ! max message count
   real(r_kind),parameter:: r1_2= 1.2_r_kind
   real(r_kind),parameter:: r3_33= 3.33_r_kind
   real(r_kind),parameter:: r6= 6.0_r_kind
@@ -117,6 +126,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   real(r_kind),parameter:: r360 = 360.0_r_kind
   real(r_kind),parameter:: r600=600.0_r_kind
   real(r_kind),parameter:: r700=700.0_r_kind
+  real(r_kind),parameter:: r850=850.0_r_kind
   real(r_kind),parameter:: r199=199.0_r_kind
   real(r_kind),parameter:: r299=299.0_r_kind
   real(r_kind),parameter:: r799=799.0_r_kind
@@ -137,6 +147,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   character(8) c_prvstg,c_sprvstg
   character(8) c_station_id,stationid
 
+  integer(i_kind) mxtb,nmsgmax 
   integer(i_kind) ireadmg,ireadsb,iuse
   integer(i_kind) i,maxobs,idomsfc,nsattype
   integer(i_kind) nc,nx,isflg,itx,j,nchanl
@@ -151,7 +162,6 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   integer(i_kind) ntest,nvtest
   integer(i_kind) kl,k1,k2
   integer(i_kind) nmsg                ! message index
-  integer(i_kind) tab(mxtb,3)
   
   
  
@@ -159,10 +169,11 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   integer(i_kind),dimension(nconvtype+1) :: ntx  
   
   integer(i_kind),dimension(5):: idate5 
-  integer(i_kind),dimension(nmsgmax):: nrep
-  integer(i_kind),allocatable,dimension(:):: isort,iloc
+  integer(i_kind),allocatable,dimension(:):: nrep,isort,iloc
+  integer(i_kind),allocatable,dimension(:,:):: tab
+ 
 
-  integer(i_kind) ietabl,itypex,lcount,iflag,m
+  integer(i_kind) ietabl,itypex,lcount,iflag,m,ntime,itime
 
   real(r_single),allocatable,dimension(:,:,:) :: etabl
 
@@ -175,17 +186,30 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   real(r_kind) vdisterrmax,u00,v00,uob1,vob1
   real(r_kind) del,werrmin,obserr,ppb1
   real(r_kind) tsavg,ff10,sfcr,sstime,gstime,zz
-  real(r_kind) crit1,timedif,xmesh,pmesh
+  real(r_kind) crit1,timedif,xmesh,pmesh,pmot,ptime
   real(r_kind),dimension(nsig):: presl
   
   real(r_double),dimension(13):: hdrdat
-  real(r_double),dimension(4):: obsdat,satqc
+  real(r_double),dimension(4):: obsdat
   real(r_double),dimension(3,5) :: heightdat
   real(r_double),dimension(6,4) :: derdwdat
   real(r_double),dimension(3,12) :: qcdat
   real(r_double),dimension(1,1):: r_prvstg,r_sprvstg
   real(r_kind),allocatable,dimension(:):: presl_thin
+  real(r_kind),allocatable,dimension(:):: rusage 
   real(r_kind),allocatable,dimension(:,:):: cdata_all,cdata_out
+
+! GOES-R new BUFR related variables
+  character(70)               :: goesr_str,eham_str,prlc_str,wdir_str,wspd_str,pccf_str,solc_str,cvwd_str,cloud1_str,cloud2_str
+  real(r_double),dimension(4) :: eham_dat 
+  real(r_double),dimension(4) :: prlc_dat 
+  real(r_double),dimension(4) :: wspd_dat 
+  real(r_double),dimension(3) :: wdir_dat 
+  real(r_double),dimension(2) :: pccf_dat 
+  real(r_double),dimension(2) :: solc_dat,cvwd_dat
+  real(r_double),dimension(4) :: cloud1_dat
+  real(r_double),dimension(2,3)::cloud2_dat
+  real(r_double)                 experr_norm,pct1
 
   real(r_double) rstation_id
 
@@ -194,13 +218,25 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   equivalence(r_sprvstg(1,1),c_sprvstg)
   equivalence(rstation_id,c_station_id)
 
-  data hdrtr /'SAID CLAT CLON YEAR MNTH DAYS HOUR MINU SWCM SAZA GCLONG SCCF SWQM'/ 
+  data hdrtr /'SAID CLAT CLON YEAR MNTH DAYS HOUR MINU SWCM SAZA OGCE SCCF SWQM'/ ! OGCE replaces GCLONG, OGCE exists in old and new BUFR
+                                                                                  ! SWQM doesn't exist in new BUFR, so qm is initialized to '2' manually
   data obstr/'HAMD PRLC WDIR WSPD'/ 
 ! data heightr/'MDPT '/ 
 ! data derdwtr/'TWIND'/
   data qcstr /' OGCE GNAP PCCF'/
 
-  
+! GOES-R new BUFR related variables
+  data cloud1_str/'SSNX SSNY CLDP COPT'/
+  data cloud2_str/'CLDMNT CLDT'/
+! substitute for obstr
+  data eham_str /'EHAM'/ 
+  data prlc_str /'PRLC'/
+  data wdir_str /'WDIR'/
+  data wspd_str /'WSPD'/
+! no substitute for qcstr: 1)OGCE is already in goesr_str 2)GNAP not provided in new BUFR 3)PCCF is read directly
+  data pccf_str /'PCCF'/
+  data solc_str /'SOLC'/
+  data cvwd_str /'CVWD'/  
   
   data ithin / -9 /
   data lunin / 11 /
@@ -213,7 +249,11 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 
 ! read observation error table
 
+  disterrmax=zero
+  vdisterrmax=zero
   allocate(etabl(300,33,6))
+! allocate(etabl(302,33,6)) ! add 2 ObsErr profiles for GOES-R IR(itype=301) and WV(itype=300) (not used yet, 2015-07-08, Genkova) 
+  
   etabl=1.e9_r_kind
   ietabl=19
   open(ietabl,file='errtable',form='formatted')
@@ -250,8 +290,8 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   ntx(ntread)=0
   ntxall=0
   do nc=1,nconvtype
-     if(trim(ioctype(nc)) == 'uv' .and. ictype(nc) >=240 &
-             .and. ictype(nc) <=260) then
+     if( (trim(ioctype(nc)) == 'uv' .or. trim(ioctype(nc)) == 'wspd10m') .and.  ictype(nc) >=240 &
+             .and. ictype(nc) <=265) then
         ntmatch=ntmatch+1
         ntxall(ntmatch)=nc
         ithin=ithin_conv(nc)
@@ -268,7 +308,13 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
       
 !!  go through the satedump to find out how many subset to process
 
-  allocate(lmsg(nmsgmax,ntread))
+!! get message and subset counts
+
+  call getcount_bufr(infile,nmsgmax,mxtb)
+
+  allocate(lmsg(nmsgmax,ntread),tab(mxtb,3),nrep(nmsgmax))
+
+ 
   lmsg = .false.
   maxobs=0
   tab=0
@@ -298,8 +344,12 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
            write(6,*)'READ_SATWND: reports exceed maximum ',mxtb   
            call stop2(49)
         endif
-!       Extract type information
-        call ufbint(lunin,hdrdat,13,1,iret,hdrtr)
+
+            
+           call ufbint(lunin,hdrdat,13,1,iret,hdrtr) 
+          ! SWQM doesn't exist for GOES-R/new BUFR/ hence hdrdat(13)=MISSING.
+          ! qm=2, instead of using hdrdat(13)(2015-07-16, Genkova)
+
         iobsub=0
         itype=-1
         iobsub=int(hdrdat(1))
@@ -371,7 +421,46 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
                  itype=240
               endif
            endif
+        else if( trim(subset) == 'NC005090') then                   ! VIIRS winds 
+           if(hdrdat(1) >=r200 .and. hdrdat(1) <=r250 ) then   ! The range of satellite IDS
+              if(hdrdat(9) == one)  then                            ! VIIRS IR winds
+                 itype=260
+              endif
+           endif
+        !GOES-R section of the 'if' statement over 'subsets' 
+        else if(trim(subset) == 'NC005030' .or. trim(subset) == 'NC005031' .or. trim(subset) == 'NC005032' .or. &
+                trim(subset) == 'NC005034' .or. trim(subset) == 'NC005039') then
+! Commented out, because we need clarification for SWCM/hdrdat(9) from Yi Song
+! NOTE: Once it is confirmed that SWCM values are sensible, apply this logic and replace lines 685-702
+!                 if(hdrdat(9) == one)  then
+!                    if(hdrdat(12) <50000000000000.0_r_kind) then
+!                     itype=245                                      ! GOES-R IR(LW) winds
+!                    else
+!                     itype=240                                      ! GOES-R IR(SW) winds
+!                    endif
+!                 else if(hdrdat(9) == two  ) then
+!                    itype=251                                       !  GOES-R VIS    winds
+!                 else if(hdrdat(9) == three ) then
+!                    itype=246                                       !  GOES-R CT WV  winds
+!                 else if(hdrdat(9) >= four ) then 
+!                    itype=247                                       !  GOES-R CS WV  winds
+!                 endif
+
+!Temporary solution replacing the commented code above
+                 if(trim(subset) == 'NC005030')  then                 ! IR LW winds
+                    itype=245
+                 else if(trim(subset) == 'NC005039')  then            ! IR SW winds
+                    itype=240                                      
+                 else if(trim(subset) == 'NC005032')  then            ! VIS winds
+                    itype=251
+                 else if(trim(subset) == 'NC005034')  then            ! WV cloud top
+                    itype=246
+                 else if(trim(subset) == 'NC005031')  then            ! WV clear sky/deep layer
+                    itype=247
+                 endif
+
          endif
+
 !  Match ob to proper convinfo type
         ncsave=0
         matchloop:do ncx=1,ntmatch
@@ -415,7 +504,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   enddo msg_report
 
 
-  allocate(cdata_all(nreal,maxobs),isort(maxobs))
+  allocate(cdata_all(nreal,maxobs),isort(maxobs),rusage(maxobs))
   isort = 0
   cdata_all=zero
   nread=0
@@ -424,12 +513,14 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   nchanl=0
   ilon=2
   ilat=3
+  rusage=101.0_r_kind
 
 ! Open, then read date from bufr data
 !!  read satellite winds one type a time
 
   loop_convinfo: do nx=1,ntread 
      use_all = .true.
+     use_all_tm = .true.
      ithin=0
      if(nx >1) then
         nc=ntx(nx)
@@ -437,7 +528,8 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
         if (ithin > 0 ) then
            rmesh=rmesh_conv(nc)
            pmesh=pmesh_conv(nc)
-           use_all = .false.
+           pmot=pmot_conv(nc)
+           ptime=ptime_conv(nc)
            if(pmesh > zero) then
               pflag=1
               nlevp=r1200/pmesh
@@ -446,8 +538,15 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
               nlevp=nsig
            endif
            xmesh=rmesh
-           call make3grids(xmesh,nlevp)
-           if (.not.use_all) then
+           if( ptime >zero) then
+              use_all_tm = .false.
+              ntime=6.0_r_kind/ptime                   !!  6 hour winddow
+              call make3grids_tm(xmesh,nlevp,ntime)
+           else
+              use_all = .false.
+              call make3grids(xmesh,nlevp)
+           endif
+           if (.not.use_all .or. .not.use_all_tm) then
               allocate(presl_thin(nlevp))
               if (pflag==1) then
                  do k=1,nlevp
@@ -456,7 +555,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
               endif
            endif
            write(6,*)'READ_SATWND: ictype(nc),rmesh,pflag,nlevp,pmesh,nc ',&
-                   ioctype(nc),ictype(nc),rmesh,pflag,nlevp,pmesh,nc
+                   ioctype(nc),ictype(nc),rmesh,pflag,nlevp,pmesh,nc,pmot,ptime
         endif
      endif
 
@@ -478,10 +577,18 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
            if(nc <= 0 .or. tab(ntb,2) /= nx) cycle loop_readsb
            hdrdat=bmiss
            obsdat=bmiss
-           satqc=bmiss
            heightdat=bmiss
            derdwdat=bmiss
            qcdat=bmiss
+           eham_dat=bmiss
+           prlc_dat=bmiss
+           wspd_dat=bmiss
+           wdir_dat=bmiss
+           pccf_dat=bmiss
+           solc_dat=bmiss
+           cvwd_dat=bmiss
+           cloud1_dat=bmiss
+           cloud2_dat=bmiss
            iobsub=0
            itype=-1
            uob=bmiss
@@ -494,18 +601,20 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
            ee=r110
            qifn=r110
            qify=r110
+
            call ufbint(lunin,hdrdat,13,1,iret,hdrtr) 
            call ufbint(lunin,obsdat,4,1,iret,obstr)
+        
            ppb=obsdat(2)
            if (ppb > 100000000.0_r_kind .or. hdrdat(3) >100000000.0_r_kind &
             .or. obsdat(4) > 100000000.0_r_kind) cycle loop_readsb
            if(ppb >r10000) ppb=ppb/r100
            if (ppb <r125) cycle loop_readsb    !  reject data above 125mb
-           if (twodvar_regional .and. ppb <r600) cycle loop_readsb
+           if (twodvar_regional .and. ppb <r850) cycle loop_readsb
 !   reject the data with bad quality mark from SDM
            if(hdrdat(13) == 12.0_r_kind .or. hdrdat(13) == 14.0_r_kind) cycle loop_readsb      
-!       Compare relative obs time with window.  If obs 
-!       falls outside of window, don't use this obs
+!   Compare relative obs time with window.  If obs 
+!   falls outside of window, don't use this obs
            idate5(1) = hdrdat(4)     !year
            idate5(2) = hdrdat(5)     ! month
            idate5(3) = hdrdat(6)     ! day
@@ -513,11 +622,11 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
            idate5(5) = hdrdat(8)     ! minutes
            call w3fs21(idate5,nmind)
            t4dv = real((nmind-iwinbgn),r_kind)*r60inv
-           if (l4dvar) then
+           sstime = real(nmind,r_kind) 
+           tdiff=(sstime-gstime)*r60inv
+           if (l4dvar.or.l4densvar) then
               if (t4dv<zero .OR. t4dv>winlen) cycle loop_readsb 
            else
-              sstime = real(nmind,r_kind) 
-              tdiff=(sstime-gstime)*r60inv
               if (abs(tdiff)>twind) cycle loop_readsb 
            endif
            iosub=0
@@ -528,6 +637,8 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
            qm=2
            iobsub=int(hdrdat(1))
            write(stationid,'(i3)') iobsub
+
+           ! assign types and get quality info : start
            if(trim(subset) == 'NC005064' .or. trim(subset) == 'NC005065' .or. &  
               trim(subset) == 'NC005066') then
               if( hdrdat(1) <r70 .and. hdrdat(1) >= r50) then    ! the range of EUMETSAT satellite IDs      
@@ -617,12 +728,12 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
                  c_prvstg='NESDIS'
                  if(hdrdat(10) >68.0_r_kind) cycle loop_readsb   !   reject data zenith angle >68.0 degree 
                  if(hdrdat(9) == one)  then                            ! IR winds
-                    if(hdrdat(12) <50000000000000.0_r_kind) then        ! for channel 4
+                    if(hdrdat(12) <50000000000000.0_r_kind) then       ! for channel 4
                        itype=245
                        c_station_id='IR'//stationid
                        c_sprvstg='IR'
                     else
-                       itype=240                                      !short wave winds
+                       itype=240                                       ! short wave winds
                        c_station_id='IR'//stationid
                        c_sprvstg='IR'
                     endif
@@ -694,11 +805,6 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
                  c_prvstg='AVHRR'
                  if(hdrdat(9) == one)  then                            ! IR winds
                     itype=244
-!                   The following two lines have been commented out because they 
-!                   automatically disallow the AVHRR observations and we don't 
-!                   want that - should be controlled at satinfo level.
-!                   qm=15
-!                   pqm=15
                  else
                     write(6,*) 'READ_SATWND: wrong derived method value'
                  endif
@@ -709,21 +815,20 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
                     if(qcdat(2,j) <= r10000 .and. qcdat(3,j) <r10000 ) then
                        if(qcdat(2,j) ==  one  .and. qifn >r105) then
                           qifn=qcdat(3,j)
-                       else if(qcdat(2,j) ==  three .and. qify >105) then
+                       else if(qcdat(2,j) ==  three .and. qify >r105) then
                           qify=qcdat(3,j)
-                       else if( qcdat(2,j) == four .and. ee >105) then
+                       else if( qcdat(2,j) == four .and. ee >r105) then
                           ee=qcdat(3,j)
                        endif 
                     endif
                  enddo
               endif
            else if( trim(subset) == 'NC005019') then                   ! GOES shortwave winds 
-               if(hdrdat(1) >=r250 .and. hdrdat(1) <=r299 ) then   ! The range of NESDIS satellite IDS
+              if(hdrdat(1) >=r250 .and. hdrdat(1) <=r299 ) then   ! The range of NESDIS satellite IDS
                  c_prvstg='NESDIS'
                  if(hdrdat(10) >68.0_r_kind) cycle loop_readsb   !   reject data zenith angle >68.0 degree 
                  if(hdrdat(9) == one)  then                            ! short wave IR winds
                     itype=240
-                    qm=15
                     c_station_id='IR'//stationid
                     c_sprvstg='IR'
                  endif
@@ -734,18 +839,120 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
                     if(qcdat(2,j) <= r10000 .and. qcdat(3,j) <r10000 ) then
                        if(qcdat(2,j) ==  one  .and. qifn >r105) then
                           qifn=qcdat(3,j)
-                       else if(qcdat(2,j) ==  three .and. qify >105) then
+                       else if(qcdat(2,j) ==  three .and. qify >r105) then
                           qify=qcdat(3,j)
-                       else if( qcdat(2,j) == four .and. ee >105) then
+                       else if( qcdat(2,j) == four .and. ee >r105) then
                           ee=qcdat(3,j)
                        endif
                     endif
                  enddo
               endif
+           else if( trim(subset) == 'NC005090') then                   ! VIIRS IR winds 
+               if(hdrdat(1) >=r200 .and. hdrdat(1) <=r250 ) then   ! The range of satellite IDS
+                 c_prvstg='VIIRS'
+                 if(hdrdat(9) == one)  then                            ! VIIRS IR winds
+                    itype=260
+                    c_station_id='IR'//stationid
+                    c_sprvstg='IR'
+                 endif
+! get quality information
+                 call ufbrep(lunin,qcdat,3,8,iret,qcstr)
+                 do j=1,6
+                    if( qify <=r105 .and. qifn <r105 .and. ee <r105) exit
+                    if(qcdat(2,j) <= r10000 .and. qcdat(3,j) <r10000 ) then
+                       if(qcdat(2,j) ==  one  .and. qifn >r105) then
+                          qifn=qcdat(3,j)
+                       else if(qcdat(2,j) ==  three .and. qify >r105) then
+                          qify=qcdat(3,j)
+                       else if( qcdat(2,j) == four .and. ee >r105) then
+                          ee=qcdat(3,j)
+                       endif
+                    endif
+                 enddo
+               endif
+! Extra block for GOES-R winds: Start
+           else if(trim(subset) == 'NC005030' .or. trim(subset) == 'NC005031' .or. trim(subset) == 'NC005032' .or. &  !IR(LW) / CS WV / VIS  GOES-R like winds        
+                   trim(subset) == 'NC005034' .or. trim(subset) == 'NC005039' ) then                                  !CT WV  / IR(SW) GOES-R like winds        
+              !read additional variables from new BUFR
+              call ufbint(lunin,cloud1_dat,4,1,iret,cloud1_str)
+              call ufbrep(lunin,cloud2_dat,2,3,iret,cloud2_str)
+              call ufbrep(lunin,eham_dat,1,4,iret,eham_str)
+              call ufbrep(lunin,prlc_dat,1,6,iret,prlc_str)
+              call ufbrep(lunin,wdir_dat,1,6,iret,wdir_str)
+              call ufbrep(lunin,wspd_dat,1,4,iret,wspd_str)
+              call ufbrep(lunin,pccf_dat,1,2,iret,pccf_str)
+              call ufbrep(lunin,solc_dat,1,2,iret,solc_str)
+              call ufbrep(lunin,cvwd_dat,1,2,iret,cvwd_str)
+              !fix obstr/'HAMD PRLC WDIR WSPD'/ (EHAM in new BUFR replaces HAMD in old BUFR)
+              obsdat(1)=eham_dat(1)
+              if(hdrdat(1) >=r250 .and. hdrdat(1) <=r299 ) then  ! the range of NESDIS satellite IDs
+                                                                 ! The sample newBUFR has SAID=259 (GOES-15)
+                                                                 ! When GOES-R SAID is assigned, pls check
+                                                                 ! if this range is still valid (Genkova)) 
+                 c_prvstg='NESDIS'
+                 if(hdrdat(10) >68.0_r_kind) cycle loop_readsb   !   reject data zenith angle >68.0 degree 
+                 if(trim(subset) == 'NC005030')  then                 ! IR LW winds
+                    itype=245
+                    c_station_id='IR'//stationid
+                    c_sprvstg='IR'
+                    !write(6,*)'itype= ',itype
+                 else if(trim(subset) == 'NC005039')  then            ! IR SW winds
+                    itype=240                                      
+                    c_station_id='IR'//stationid
+                    c_sprvstg='IR'
+                    !write(6,*)'itype= ',itype
+                 else if(trim(subset) == 'NC005032')  then            ! VIS winds
+                    itype=251
+                    c_station_id='VI'//stationid
+                    c_sprvstg='VI'
+                    !write(6,*)'itype= ',itype
+                 else if(trim(subset) == 'NC005034')  then            ! WV cloud top
+                    itype=246
+                    c_station_id='WV'//stationid
+                    c_sprvstg='WV'
+                    !write(6,*)'itype= ',itype
+                 else if(trim(subset) == 'NC005031')  then            ! WV clear sky/deep layer
+                    itype=247
+                    c_station_id='WV'//stationid
+                    c_sprvstg='WV'
+                    !write(6,*)'itype= ',itype
+                 endif
+! get quality information
+                 qify=pccf_dat(1)
+                 ee=wspd_dat(2) ! NOTE: GOES-R's ee is in [m/s]
+! Additional QC introduced by Sharon Nebuda (for GOES-R winds from MSG proxy images)
+                 if (qifn < 80_r_kind)   qm=15 !reject data with low QI
+                 if (ppb < 12500_r_kind) qm=15 !reject data above 125hPa: Trop check in setup.f90
+                 experr_norm = 10.0_r_double - 0.1_r_double*ee   ! introduced by Santek/Nebuda 
+                 if (wspd_dat(1) > 0.1_r_double) then  ! wspd_dat(1) is the AMV speed
+                    experr_norm = experr_norm/wspd_dat(1)
+                 else
+                    experr_norm = 100.0_r_double
+                 end if
+                 if (experr_norm > 0.9_r_double) qm=15 ! reject data with EE/SPD>0.9
+                 pct1=cvwd_dat(1)             ! use of pct1 (a new variable in the BUFR) is introduced by Nebuda/Genkova
+                 if(itype==240 .or. itype==245 .or. itype==246 .or. itype==247 .or. itype==251) then 
+                ! types 245 and 246 have been used to determine the acceptable pct1 range, but that pct1 range is applied to all GOES-R winds
+           	    if (pct1 < 0.04_r_double) qm=15  
+		    if (pct1 > 0.50_r_double) qm=15
+		 endif
+                ! winds rejected by qc dont get used
+                if (qm == 15) usage=r100
+                if (qm == 3 .or. qm ==7) woe=woe*r1_2
+                ! set strings for diagnostic output
+                if(itype==240 )  then;  c_prvstg='GOESR' ; c_sprvstg='IRSW'  ; endif
+                if(itype==245 )  then;  c_prvstg='GOESR' ; c_sprvstg='IR'  ; endif
+                if(itype==246 )  then;  c_prvstg='GOESR' ; c_sprvstg='WVCT'  ; endif
+                if(itype==247 )  then;  c_prvstg='GOESR' ; c_sprvstg='WVCS'  ; endif
+                if(itype==251 )  then;  c_prvstg='GOESR' ; c_sprvstg='VIS'  ; endif
+              endif
+! Extra block for GOES-R winds: End
            endif
+           ! assign types and get quality info : end
+
            if ( qify == zero) qify=r110
            if ( qifn == zero) qifn=r110
-           if (  ee == zero) ee=r110
+           if ( ee == zero)   ee=r110
 
            nread=nread+1
            dlon_earth=hdrdat(3)*deg2rad
@@ -827,25 +1034,34 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
            del=max(zero,min(del,one))
            obserr=(one-del)*etabl(itype,k1,4)+del*etabl(itype,k2,4)
            obserr=max(obserr,werrmin)
-!  for GOES hourly winds, set error doubled
-            if(itype==245 .or. itype==246) then
-!               obserr=obserr*two
-!  using  Santek quality control method,calculate the original ee value
-               if(ee <105.0_r_kind) then
-                  ree=(ee-r100)/(-10.0_r_kind)
-                  if(obsdat(4) >zero) then
+           if((itype==245 .or. itype==246) &
+              .and. (trim(subset) == 'NC005010' .or. trim(subset) == 'NC005011' .or. trim(subset) == 'NC005012' )) then !only applies to AMVs from legacy algorithm (pre GOES-R)
+!  using Santek quality control method,calculate the original ee value:
+!  NOTE: Up until GOES-R winds algorithm, EE (expected error, ee) is reported as percent 0-100% (the higher the ee, the better the wind quality)
+!  NOTE: In the new GOES-R BUFR, EE (expected error, ee) is reported in m/s (the smaller the ee, the better the wind quality)
+              if(ee <r105) then
+                 ree=(ee-r100)/(-10.0_r_kind)
+                 if(obsdat(4) >zero) then
                     ree=ree/obsdat(4)
-                  else
+                 else
                     ree=two
-                  endif
-               else
-                  ree=0.2_r_kind
-               endif
-               if( ppb >= 800.0_r_kind .and. ree >0.55_r_kind) then
+                 endif
+              else
+                 ree=0.2_r_kind
+              endif
+              if( ppb >= 800.0_r_kind .and. ree >0.55_r_kind) then
                   qm=15
-                else if (ree >0.8_r_kind) then
+              else if (ree >0.8_r_kind) then
                   qm=15
-               endif
+              endif
+           endif
+
+! Reduce OE for the GOES-R winds by half following Sharon Nebuda's work
+! GOES-R wind are identified/recognised here by subset, but it could be done by itype or SAID
+! After completing the evaluation of GOES-R winds, REVISE this section!!!
+            if(trim(subset) == 'NC005030' .or. trim(subset) == 'NC005031' .or. trim(subset) == 'NC005032' .or. &  
+               trim(subset) == 'NC005034' .or. trim(subset) == 'NC005039' ) then  
+               obserr=obserr/two
             endif
 
 !         Set usage variable
@@ -895,15 +1111,15 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
                            w11*prsl_full(klatp1,klonp1,kk)
               end do
  
- !          Compute depth of guess pressure layersat observation location
+ !         Compute depth of guess pressure layersat observation location
            end if
            dlnpob=log(one_tenth*ppb)  ! ln(pressure in cb)
            ppb=one_tenth*ppb         ! from mb to cb
  !         Special block for data thinning - if requested
-           if (ithin > 0 .and. iuse >=0) then
+           if (ithin > 0 .and. iuse >=0 .and. qm <4) then
               ntmp=ndata  ! counting moved to map3gridS
  !         Set data quality index for thinning
-              if (l4dvar) then
+              if (thin4d) then
                  timedif = zero
               else
                  timedif=abs(t4dv-toff)
@@ -928,21 +1144,54 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
                     presl_thin(kk)=presl(kk)
                  end do
               endif
- 
-              call map3grids(-1,pflag,presl_thin,nlevp,dlat_earth,dlon_earth,&
-                              ppb,crit1,ndata,iout,ntb,iiout,luse,.false.,.false.)
-              if (.not. luse) cycle loop_readsb
-              if(iiout > 0) isort(iiout)=0
-              if (ndata > ntmp) then
-                 nodata=nodata+1
+              if (ptime >zero ) then
+                 itime=int((tdiff+three)/ptime)+1
+                 if(pmot <one) then
+!                    call map3grids_tm(-1,pflag,presl_thin,nlevp,ntime,dlat_earth,dlon_earth,&
+                    call map3grids_tm(-1,pflag,presl_thin,nlevp,dlat_earth,dlon_earth,&
+                                        ppb,itime,crit1,ndata,iout,ntb,iiout,luse,.false.,.false.)
+                    if (.not. luse) cycle loop_readsb
+                    if(iiout > 0) isort(iiout)=0
+                    if (ndata > ntmp) then
+                       nodata=nodata+2
+                    endif
+                    rusage(iout)=usage
+                    isort(ntb)=iout
+                 else
+!                    call map3grids_m_tm(-1,pflag,presl_thin,nlevp,ntime,dlat_earth,dlon_earth,&
+                    call map3grids_m_tm(-1,pflag,presl_thin,nlevp,dlat_earth,dlon_earth,&
+                              ppb,itime,crit1,ndata,iout,ntb,iiout,luse,maxobs,usage,rusage,.false.,.false.)
+                    if (ndata > ntmp) then
+                       nodata=nodata+2
+                    endif
+                    isort(ntb)=iout
+                 endif
+              else 
+                 if(pmot <one) then
+                    call map3grids(-1,pflag,presl_thin,nlevp,dlat_earth,dlon_earth,&
+                                 ppb,crit1,ndata,iout,ntb,iiout,luse,.false.,.false.)
+                    if (.not. luse) cycle loop_readsb
+                    if(iiout > 0) isort(iiout)=0
+                    if (ndata > ntmp) then
+                       nodata=nodata+2
+                    endif
+                    isort(ntb)=iout
+                    rusage(iout)=usage
+                 else
+                    call map3grids_m(-1,pflag,presl_thin,nlevp,dlat_earth,dlon_earth,&
+                              ppb,crit1,ndata,iout,ntb,iiout,luse,maxobs,usage,rusage,.false.,.false.)
+                    if (ndata > ntmp) then
+                       nodata=nodata+2
+                    endif
+                    isort(ntb)=iout
+                 endif
               endif
-              isort(ntb)=iout
            else
- !            write(6,*) 'READ_SATWND,ndata=',ndata,iout
               ndata=ndata+1
-              nodata=nodata+1
+              nodata=nodata+2
               iout=ndata
               isort(ntb)=iout
+              rusage(iout)=usage
            endif
            inflate_error=.false.
            if (qm==3 .or. qm==7) inflate_error=.true.
@@ -998,10 +1247,15 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
         deallocate(presl_thin)
         call del3grids
      endif
+     if (.not.use_all_tm) then
+       deallocate(presl_thin)
+        call del3grids_tm
+     endif
+
 ! Normal exit
 
   enddo loop_convinfo! loops over convinfo entry matches
-  deallocate(lmsg)
+  deallocate(lmsg,tab,nrep)
  
 
   ! Write header record and data to output file for further processing
@@ -1021,13 +1275,18 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   allocate(cdata_out(nreal,ndata))
   do i=1,ndata
      itx=iloc(i)
-     do k=1,nreal
+     do k=1,13
+        cdata_out(k,i)=cdata_all(k,itx)
+     end do
+     cdata_out(14,i)=rusage(itx)
+     do k=15,nreal
         cdata_out(k,i)=cdata_all(k,itx)
      end do
   end do
-  deallocate(iloc,isort,cdata_all)
+  deallocate(iloc,isort,cdata_all,rusage)
   deallocate(etabl)
   
+  call count_obs(ndata,nreal,ilat,ilon,cdata_out,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
   write(lunout) cdata_out
 

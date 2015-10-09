@@ -1,5 +1,5 @@
 subroutine read_modsbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
-          twindin,sis)
+          twindin,sis,nobs)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:  read_modsbufr                read sst obs from modsbufr file (based on MODS)
@@ -28,6 +28,8 @@ subroutine read_modsbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
 !                       - (2) use t4dv rather than tdiff in calls to deter_sfc
 !                       - (3) use tsavg that is computed at observation depth
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
+!   2014-1-28   xli     - modify NSST related tz
+!   2015-02-23  Rancic/Thomas - add l4densvar to time window logical
 !
 !   input argument list:
 !     infile   - unit from which to read BUFR data
@@ -40,6 +42,7 @@ subroutine read_modsbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
 !     ndata    - number of type "obstype" observations retained for further processing
 !     nodata   - number of individual "obstype" observations retained for further processing
 !     sis      - satellite/instrument/sensor indicator
+!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -57,9 +60,10 @@ subroutine read_modsbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
   use obsmod, only: oberrflg,bmiss
   use radinfo, only: nst_gsi,nstinfo
   use insitu_info, only: n_comps,n_scripps,n_triton,n_3mdiscus,cid_mbuoy,n_ship,ship
-  use gsi_4dvar, only: l4dvar, iwinbgn, winlen
+  use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen
   use deter_sfc_mod, only: deter_sfc
   use gsi_nstcouplermod, only: gsi_nstcoupler_deter
+  use mpimod, only: npe
   implicit none
 
 ! Declare passed variables
@@ -67,22 +71,18 @@ subroutine read_modsbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
   character(len=20),intent(in):: sis
   integer(i_kind),intent(in):: lunout
   integer(i_kind),intent(inout):: nread,ndata,nodata
+  integer(i_kind),dimension(npe),intent(inout):: nobs
   real(r_kind),intent(in):: gstime,twindin
 
 ! Declare local parameters
-  integer(i_kind),parameter:: maxinfo = 20
+  integer(i_kind),parameter:: maxinfo = 18
   real(r_double),parameter:: d250 = 250.0_r_double
   real(r_double),parameter:: d350 = 350.0_r_double
-  real(r_kind),parameter:: r0_1  = 0.10_r_kind
-  real(r_kind),parameter:: r0_15 = 0.15_r_kind
   real(r_kind),parameter:: r0_2  = 0.20_r_kind
-  real(r_kind),parameter:: r0_4  = 0.40_r_kind
   real(r_kind),parameter:: r0_45 = 0.45_r_kind
   real(r_kind),parameter:: r0_6  = 0.60_r_kind
   real(r_kind),parameter:: r1_2  = 1.20_r_kind
   real(r_kind),parameter:: r1_5  = 1.50_r_kind
-  real(r_kind),parameter:: r24   = 24.0_r_kind
-  real(r_kind),parameter:: r60   = 60.0_r_kind
   real(r_kind),parameter:: r360 = 360.0_r_kind
 
 ! Declare local variables
@@ -111,7 +111,7 @@ subroutine read_modsbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
   real(r_kind) :: tdiff,sstime,usage,sfcr,tsavg,ff10,t4dv
   real(r_kind) :: vty,vfr,sty,stp,sm,sn,zz
   real(r_kind) :: dlat,dlon,sstoe,dlat_earth,dlon_earth
-  real(r_kind) :: zob,tref,dtw,dtc,tz_tr
+  real(r_kind) :: zob,tz,tref,dtw,dtc,tz_tr
 
   real(r_kind) cdist,disterr,disterrmax,rlon00,rlat00
   integer(i_kind) ntest
@@ -450,7 +450,7 @@ subroutine read_modsbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
            call w3fs21(idate5,nmind)
            t4dv=real((nmind-iwinbgn),r_kind)*r60inv  ! no information in obs bufr file about seconds.
 !
-           if (l4dvar) then
+           if (l4dvar.or.l4densvar) then
               if (t4dv<zero .OR. t4dv>winlen) cycle read_loop
            else
               sstime=real(nmind,r_kind)
@@ -483,7 +483,15 @@ subroutine read_modsbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
 
            call deter_sfc(dlat,dlon,dlat_earth,dlon_earth,t4dv,isflg,idomsfc,sfcpct, &
                           ts,tsavg,vty,vfr,sty,stp,sm,sn,zz,ff10,sfcr)
-           if(isflg /= zero)  cycle read_loop                            ! use data over water only
+
+           if( idomsfc /= zero)  cycle read_loop                         ! use data over water only
+
+           nodata = nodata + 1
+           ndata = ndata + 1
+           if(ndata > maxobs) then
+              write(6,*)'READ_MODSBUFR:  ***WARNING*** ndata > maxobs for ',obstype
+              ndata = maxobs
+           end if
 
 !
 !          interpolate NSST variables to Obs. location and get dtw, dtc, tz_tr
@@ -495,7 +503,12 @@ subroutine read_modsbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
               tz_tr = one
               if(isflg == zero) then
                  call gsi_nstcoupler_deter(dlat_earth,dlon_earth,t4dv,zob,tref,dtw,dtc,tz_tr)
+                 tz = tref
+                 if ( nst_gsi > 2 ) then
+                    tz = tref+dtw-dtc            ! Tz: Background temperature at depth of zob
+                 endif
               endif
+
            endif
 
            nodata = nodata + 1
@@ -519,13 +532,10 @@ subroutine read_modsbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
            data_all(12,ndata) = sstoe                   ! original obs error
            data_all(13,ndata) = usage                   ! usage parameter
            data_all(14,ndata) = idomsfc+0.001_r_kind    ! dominate surface type
-           data_all(15,ndata) = tsavg                   ! Tz: Background temperature at depth of zob
-           data_all(16,ndata) = ff10                    ! 10 meter wind factor
-           data_all(17,ndata) = sfcr                    ! surface roughness
-           data_all(18,ndata) = dlon_earth*rad2deg      ! earth relative longitude (degrees)
-           data_all(19,ndata) = dlat_earth*rad2deg      ! earth relative latitude (degrees)
-           data_all(20,ndata) = hdr(8)                  ! station elevation
- 
+           data_all(15,ndata) = tz                      ! Tz: Background temperature at depth of zob
+           data_all(16,ndata) = dlon_earth*rad2deg      ! earth relative longitude (degrees)
+           data_all(17,ndata) = dlat_earth*rad2deg      ! earth relative latitude (degrees)
+           data_all(18,ndata) = hdr(8)                  ! station elevation
 
            if(nst_gsi>0) then
               data_all(maxinfo+1,ndata) = tref           ! foundation temperature
@@ -545,6 +555,7 @@ subroutine read_modsbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
 
   if ( ndata > 0 ) then 
     ! Write header record and data to output file for further processing
+    call count_obs(ndata,nreal,ilat,ilon,data_all,nobs)
     write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
     write(lunout) ((data_all(k,i),k=1,nreal),i=1,ndata)
   endif

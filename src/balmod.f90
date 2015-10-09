@@ -16,7 +16,7 @@ module balmod
 !   2008-10-08  derber include routines strong_bk and strong_bk_ad
 !   2009-06-15  parrish - add logical l_hyb_ens to balance, tbalance so strong constraint
 !                          can be turned off in these routines when running in hybrid ensemble mode
-!                         (strong constraint gets moved to control2state and state2control routines
+!                         (strong constraint gets moved to control2state and control2state_ad routines
 !                            when l_hyb_ens=.true.)
 !   2010-03-04  zhu  - add horizontally interpolated agvk,wgvk,bvk for regional
 !   2011-09-07  todling - note that implementation of hybrid in sqrt-B case
@@ -320,7 +320,7 @@ contains
     return
   end subroutine prebal
   
-  subroutine prebal_reg
+  subroutine prebal_reg(cwcoveqqcov)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    prebal_reg  setup balance vars
@@ -344,6 +344,7 @@ contains
 !   2008-11-13  zhu - add changes for generalized control variables
 !                   - change the structure of covariance error file
 !                   - move horizontal interpolation into this subroutine
+!   2014-10-08  zhu - add cwcoveqqco in the interface 
 !
 !   input argument list:
 !
@@ -360,11 +361,12 @@ contains
     use gridmod, only: lat2,lon2,nsig,twodvar_regional
     use guess_grids, only: ges_prslavg,ges_psfcavg
     use mpimod, only: mype
-    use m_berror_stats_reg, only: berror_get_dims_reg,berror_read_bal_reg
+    use m_berror_stats_reg, only: berror_set_reg,berror_get_dims_reg,berror_read_bal_reg
     use constants, only: zero,half,one
     implicit none
 
 !   Declare passed variables
+    logical,intent(in   ) :: cwcoveqqcov
 
 !   Declare local parameters
     real(r_kind),parameter:: r08 = 0.8_r_kind
@@ -380,6 +382,8 @@ contains
     real(r_kind),allocatable,dimension(:,:):: wgvi ,bvi
     real(r_kind),allocatable,dimension(:,:,:):: agvi
 
+!   Set internal parameters to m_berror_stats
+    call berror_set_reg('cwcoveqqcov',cwcoveqqcov)
 
 !   Read dimension of stats file
     inerr=22
@@ -695,7 +699,7 @@ contains
 !   2008-12-29  todling - remove q from arg list
 !   2009-06-15  parrish - add logical l_hyb_ens to balance, t_balance so strong constraint
 !                          can be turned off in these routines when running in hybrid ensemble mode
-!                         (strong constraint gets moved to control2state and state2control routines
+!                         (strong constraint gets moved to control2state and control2state_ad routines
 !                            when l_hyb_ens=.true.)
 !   2010-03-09  zhu     - move the interpolation for regional to prebal_reg
 !   2011-09-07  todling - in sqrt-b case, always apply balance (even in hyb mode) 
@@ -743,9 +747,9 @@ contains
 !  pass uvflag=.false.
     if(lsqrtb) then
        call strong_bk_ad(st,vp,p,t,.false.)
-     else
+    else
        if(tlnmc_option==1 .or. tlnmc_option==4) call strong_bk_ad(st,vp,p,t,.false.)
-     endif
+    endif
 
 !   REGIONAL BRANCH
     if (regional) then

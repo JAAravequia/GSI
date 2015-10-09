@@ -1,6 +1,7 @@
 subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
      infile,lunout,obstype,nread,ndata,nodata,twind,sis, &
-     mype_root,mype_sub,npe_sub,mpi_comm_sub)
+     mype_root,mype_sub,npe_sub,mpi_comm_sub,nobs, &
+     nrec_start,dval_use)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_goesimg                    read goes imager data
@@ -42,6 +43,7 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
 !   2011-08-01  lueken  - added module use deter_sfc_mod, fix indentation
 !   2012-03-05  akella  - nst now controlled via coupler
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
+!   2015-02-23  Rancic/Thomas - add thin4d to time window logical
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -55,11 +57,13 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
 !     obstype  - observation type to process
 !     twind    - input group time window (hours)
 !     sis      - satellite/instrument/sensor indicator
+!     nrec_start - first subset with useful information
 !
 !   output argument list:
 !     nread    - number of BUFR GOES imager observations read
 !     ndata    - number of BUFR GOES imager profiles retained for further processing
 !     nodata   - number of BUFR GOES imager observations retained for further processing
+!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -72,28 +76,29 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
   use gridmod, only: diagnostic_reg,regional,nlat,nlon,txy2ll,tll2xy,rlats,rlons
   use constants, only: deg2rad,zero,one,rad2deg,r60inv,r60
   use radinfo, only: iuse_rad,jpch_rad,nusis,nst_gsi,nstinfo
-  use gsi_4dvar, only: l4dvar,iwinbgn,winlen
+  use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,thin4d
   use deter_sfc_mod, only: deter_sfc
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
+  use mpimod, only: npe
   implicit none
 
 ! Declare passed variables
   character(len=*),intent(in   ) :: infile,obstype,jsatid
   character(len=20),intent(in  ) :: sis
-  integer(i_kind) ,intent(in   ) :: mype,lunout,ithin
+  integer(i_kind) ,intent(in   ) :: mype,lunout,ithin,nrec_start
   integer(i_kind) ,intent(inout) :: ndata,nodata
   integer(i_kind) ,intent(inout) :: nread
+  integer(i_kind),dimension(npe) ,intent(inout) :: nobs
   real(r_kind)    ,intent(in   ) :: rmesh,gstime,twind
   real(r_kind)    ,intent(inout) :: val_img
   integer(i_kind) ,intent(in   ) :: mype_root
   integer(i_kind) ,intent(in   ) :: mype_sub
   integer(i_kind) ,intent(in   ) :: npe_sub
   integer(i_kind) ,intent(in   ) :: mpi_comm_sub
+  logical         ,intent(in   ) :: dval_use
 
 ! Declare local parameters
   integer(i_kind),parameter:: nimghdr=13
-  integer(i_kind),parameter:: maxinfo=37
-  integer(i_kind),parameter:: maxchanl=4
   real(r_kind),parameter:: r360=360.0_r_kind
   real(r_kind),parameter:: tbmin=50.0_r_kind
   real(r_kind),parameter:: tbmax=550.0_r_kind
@@ -106,7 +111,7 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
   character(8) subset
 
   integer(i_kind) nchanl,ilath,ilonh,ilzah,iszah,irec,next
-  integer(i_kind) nmind,lnbufr,idate,ilat,ilon
+  integer(i_kind) nmind,lnbufr,idate,ilat,ilon,maxinfo
   integer(i_kind) ireadmg,ireadsb,iret,nreal,nele,itt
   integer(i_kind) itx,i,k,isflg,kidsat,n,iscan,idomsfc
   integer(i_kind) idate5(5)
@@ -126,12 +131,13 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
   real(r_double),dimension(nimghdr) :: hdrgoesarr       !  goes imager header
   real(r_double),dimension(3,6) :: dataimg              !  goes imager data
 
-  real(r_kind) disterr,disterrmax,dlon00,dlat00
+  real(r_kind) cdist,disterr,disterrmax,dlon00,dlat00
   integer(i_kind) ntest
 
 
 !**************************************************************************
 ! Initialize variables
+  maxinfo=35
   lnbufr = 10
   disterrmax=zero
   ntest=0
@@ -192,6 +198,7 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
   if(jsatid == 'g15') kidsat = 259
 
 ! Allocate arrays to hold all data for given satellite
+  if(dval_use) maxinfo = maxinfo + 2
   nreal = maxinfo + nstinfo
   nele  = nreal   + nchanl
   allocate(data_all(nele,itxmax),nrec(itxmax))
@@ -201,8 +208,9 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
   irec=0
 
 ! Big loop over bufr file
-  do while(IREADMG(lnbufr,subset,idate) >= 0)
+  read_msg: do while(IREADMG(lnbufr,subset,idate) >= 0)
      irec=irec+1
+     if(irec < nrec_start)cycle read_msg
      next=next+1
      if(next == npe_sub)next=0
      if(next /= mype_sub)cycle
@@ -228,11 +236,12 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
         idate5(5) = hdrgoesarr(6)     ! minutes
         call w3fs21(idate5,nmind)
         t4dv = (real((nmind-iwinbgn),r_kind) + real(hdrgoesarr(7),r_kind)*r60inv)*r60inv
-        if (l4dvar) then
+        sstime = real(nmind,r_kind) + real(hdrgoesarr(7),r_kind)*r60inv
+        tdiff=(sstime-gstime)*r60inv
+
+        if (l4dvar.or.l4densvar) then
            if (t4dv<zero .OR. t4dv>winlen) cycle read_loop
         else
-           sstime = real(nmind,r_kind) + real(hdrgoesarr(7),r_kind)*r60inv
-           tdiff=(sstime-gstime)*r60inv
            if (abs(tdiff)>twind) cycle read_loop
         endif
 
@@ -253,8 +262,10 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
            if(diagnostic_reg) then
               call txy2ll(dlon,dlat,dlon00,dlat00)
               ntest=ntest+1
-              disterr=acos(sin(dlat_earth)*sin(dlat00)+cos(dlat_earth)*cos(dlat00)* &
-                   (sin(dlon_earth)*sin(dlon00)+cos(dlon_earth)*cos(dlon00)))*rad2deg
+              cdist=sin(dlat_earth)*sin(dlat00)+cos(dlat_earth)*cos(dlat00)* &
+                   (sin(dlon_earth)*sin(dlon00)+cos(dlon_earth)*cos(dlon00))
+              cdist=max(-one,min(cdist,one))
+              disterr=acos(cdist)*rad2deg
               disterrmax=max(disterrmax,disterr)
            end if
 
@@ -270,7 +281,7 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
            call grdcrd1(dlon,rlons,nlon,1)
         endif
 
-        if (l4dvar) then
+        if (thin4d) then
            crit1=0.01_r_kind
         else
            timedif = 6.0_r_kind*abs(tdiff)        ! range:  0 to 18
@@ -363,8 +374,10 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
         data_all(30,itx)= dlon_earth*rad2deg          ! earth relative longitude (degrees)
         data_all(31,itx)= dlat_earth*rad2deg          ! earth relative latitude (degrees)
 
-        data_all(36,itx) = val_img
-        data_all(37,itx) = itt
+        if(dval_use)then
+           data_all(36,itx) = val_img
+           data_all(37,itx) = itt
+        end if
 
         if ( nst_gsi > 0 ) then
            data_all(maxinfo+1,itx) = tref         ! foundation temperature
@@ -382,7 +395,7 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
         nrec(itx)=irec
 
      enddo read_loop
-  enddo
+  enddo read_msg
 
   call combine_radobs(mype_sub,mype_root,npe_sub,mpi_comm_sub,&
      nele,itxmax,nread,ndata,data_all,score_crit,nrec)
@@ -394,11 +407,16 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
         if(data_all(k+nreal,n) > tbmin .and. &
            data_all(k+nreal,n) < tbmax)nodata=nodata+1
     end do
-    itt=nint(data_all(maxinfo,n))
-    super_val(itt)=super_val(itt)+val_img
   end do
+  if(dval_use .and. assim)then
+     do n=1,ndata
+       itt=nint(data_all(37,n))
+       super_val(itt)=super_val(itt)+val_img
+     end do
+  end if
 
 ! Write final set of "best" observations to output file
+  call count_obs(ndata,nele,ilat,ilon,data_all,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
   write(lunout) ((data_all(k,n),k=1,nele),n=1,ndata)
 
