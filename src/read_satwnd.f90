@@ -177,7 +177,6 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
  
 
   integer(i_kind) ntime,itime,itypey,itypex,ietabl,m,lcount,iflag
-!  real(r_single),allocatable,dimension(:,:,:) :: etabl
 
   real(r_kind) toff,t4dv
   real(r_kind) rmesh,ediff,usage,tdiff
@@ -252,32 +251,6 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 
   disterrmax=zero
   vdisterrmax=zero
-!allocate(etabl(300,33,6))
-!etabl=1.e9_r_kind
-!  ietabl=19
-!  open(ietabl,file='errtable',form='formatted')
-!  rewind ietabl
-!  etabl=1.e9_r_kind
-!  lcount=0
-!  pflag=0
-!  loopd : do
-!     read(ietabl,100,IOSTAT=iflag) itypex
-!     if( iflag /= 0 ) exit loopd
-!     lcount=lcount+1
-!     do k=1,33
-!        read(ietabl,110)(etabl(itypex,k,m),m=1,6)
-!     end do
-!  end do   loopd
-!100     format(1x,i3)
-!110        format(1x,6e12.5)
-!  if(lcount<=0 ) then
-!     write(6,*)'READ_SATWND:obs error table not available to 3dvar. the program will stop'
-!     call stop2(49)
-!  else
-!     write(6,*)'READ_SATWND:  observation errors provided by local file errtable'
-!  endif
-
-!  close(ietabl)
 
 ! Set lower limits for observation errors
   werrmin=one
@@ -1307,7 +1280,6 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
      end do
   end do
   deallocate(iloc,isort,cdata_all,rusage)
-!  deallocate(etabl)  
   call count_obs(ndata,nreal,ilat,ilon,cdata_out,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
   write(lunout) cdata_out

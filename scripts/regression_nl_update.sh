@@ -30,8 +30,8 @@ if [[ `expr substr $exp $((${#exp}-4)) ${#exp}` = "updat" ]]; then
 -------------------------
 #for default observation error flg 
 #-------------------------
-    export OBSQC_update="oberrflg2=.true.,"
-#    export OBSQC_update="oberrflg2=.false.,"
+#    export OBSQC_update="oberrflg2=.true.,"
+    export OBSQC_update="oberrflg2=.false.,"
 
 else
    export OBSQC_update=""
