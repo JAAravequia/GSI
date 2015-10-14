@@ -11,18 +11,8 @@
 #BSUB -R span[ptile=8]
 #BSUB -R affinity[core(2):distribute=balance]
 #BSUB -x
-#BSUB -W 00:20
+#BSUB -W 00:15
 #BSUB -P GFS-T2O
-#=======================================================
-## Below are PBS (Linux queueing system) commands
-#PBS -o gsi_global.e${jobid} 
-#PBS -N gsi_global
-#PBS -q batch
-#PBS -l walltime=00:30:00 
-#PBS -l nodes=2:ppn=12
-#PBS -j eo                
-#PBS -A ada
-#PBS -V
 #=======================================================
 
 set -x
@@ -30,16 +20,7 @@ set -x
 arch="`uname -s | awk '{print $1}'`"        
 echo "Time starting the job is `date` "
 # Set default top-level directory
-if [ -d /da ]; then
-  TOPDIR=/da   # This would be the WCOSS
-  MACHINE=WCOSS
-elif [ -d /scratch1/portfolios/NCEPDEV/da ]; then
-  TOPDIR=/scratch1/portfolios/NCEPDEV/da     #This is zeus 
-  MACHINE=ZEUS
-else 
-  echo CANNOT FIND A VALID TOP-LEVEL DIRECTORY
-  exit 1
-fi
+MACHINE=WCOSS
 
 #=================================================================================================
 #  Most commom parameters to edit:
@@ -77,18 +58,6 @@ if [ $MACHINE = WCOSS ]; then
    DIAG_COMPRESS=YES 
    DIAG_SUFFIX="" 
    DIAG_TARBALL=YES 
-elif [ $MACHINE = ZEUS ]; then
-   datdir=/scratch2/portfolios/NCEPDEV/ptmp/$USER/data_sigmap/${exp}
-   tmpdir=/scratch2/portfolios/NCEPDEV/ptmp/$USER/tmp${JCAP}_sigmap/${expid}  
-   savdir=/scratch2/portfolios/NCEPDEV/ptmp/$USER/out${JCAP}/sigmap/${expid} 
-   fixcrtm=/scratch1/portfolios/NCEPDEV/da/save/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix
-   endianness=Big_Endian
-#  endianness=Little_Endian - once all background fields are available in little endian format, uncomment this option and remove Big_Endian
-   COMPRESS=gzip
-   UNCOMPRESS=gunzip
-   DIAG_COMPRESS=YES 
-   DIAG_SUFFIX="" 
-   DIAG_TARBALL=YES
 else
   echo "Unsupported machine $MACHINE (not sure how you got to here)"
   exit 1
@@ -99,14 +68,6 @@ if [ $MACHINE = WCOSS ]; then
    export SIGHDR=/nwprod/exec/global_sighdr
    export CHGRESSH=/nwprod/ush/global_chgres.sh
    export ndate=/nwprod/util/exec/ndate
-   export ncp=/bin/cp
-   export wc=/usr/bin/wc
-elif [ $MACHINE = ZEUS ]; then
-   export SIGHDR=/scratch2/portfolios/NCEPDEV/global/save/Shrinivas.Moorthi/para/exec/global_sighdr
-   export FIXGLOBAL=/scratch2/portfolios/NCEPDEV/global/save/Shrinivas.Moorthi/para/fix/fix_am 
-   export CHGRESEXEC=/scratch2/portfolios/NCEPDEV/global/save/Shrinivas.Moorthi/para/exec/global_chgres
-   export CHGRESSH=/scratch2/portfolios/NCEPDEV/global/save/Shrinivas.Moorthi/para/ush/global_chgres_uf_gaea.sh 
-   export ndate=/scratch1/portfolios/NCEPDEV/da/save/Michael.Lueken/nwprod/util/exec/ndate
    export ncp=/bin/cp
    export wc=/usr/bin/wc
 else
@@ -192,67 +153,10 @@ export NLON_A=$LONA
 # first guess comes.  Extract cycle and set prefix and suffix
 # for guess and observation data files
 gdate=`$ndate -06 $adate`
-hha=`echo $adate | cut -c9-10`
-hhg=`echo $gdate | cut -c9-10`
-prefix_obs=gdas1.t${hha}z.
-prefix_prep=$prefix_obs
-prefix_tbc=gdas1.t${hhg}z
-prefix_sfc=gdas${resol}.t${hhg}z
-prefix_atm=gdas${resol}.t${hha}z
-suffix=tm00.bufr_d
 
-adate0=`echo $adate | cut -c1-8`
-gdate0=`echo $gdate | cut -c1-8`
 dumpobs=gdas
 dumpges=gdas
-datobs=/com/gfs/prod/gdas.$adate0
-datges=/com/gfs/prod/gdas.$gdate0
 
-# Look for required input files in ${datdir}
-# if ${datdir}/gdas1.t${hha}z.sgm3prep is present assume we have 
-# everything we need, else look elsewhere.
-
-if [ $MACHINE = WCOSS ]; then
-  if [ -s ${datdir}/gdas1.t${hha}z.sgm3prep ]; then 
-    datobs=${datdir}
-    datges=${datdir}
-    datprep=${datobs}
-  elif [ -s /com/gfs/prod/gdas.${gdate0}/gdas1.t${hha}z.sgm3prep ]; then
-    datges=/com/gfs/prod/gdas.$gdate0
-    datobs=/com/gfs/prod/gdas.$adate0
-    datprep=${datobs}
-  else
-    echo Initital files are missing from disk.  
-    echo Use Get_Initial_Files.sh to get them
-    exit 1
-  fi
-elif  [ $MACHINE = ZEUS ]; then    
-  if [ -s ${datdir}/gdas1.t${hha}z.sgm3prep ]; then 
-    datobs=${datdir}
-    datges=${datdir}
-    datprep=${datobs}
-  elif [ -s /NCEPPROD/com/gfs/prod/gdas.${gdate0}/gdas1.t${hha}z.sgm3prep ]; then   # Not all data files are stored on /com
-    datges=/NCEPPROD/com/gfs/prod/gdas.$gdate0
-    if [ -s /scratch2/portfolios/NCEPDEV/global/noscrub/dump/${gdate}/gdas -a \
-         -s /scratch2/portfolios/NCEPDEV/global/noscrub/dump/${adate}/gdas ]; then
-      datobs=/scratch2/portfolios/NCEPDEV/global/noscrub/dump/${adate}/gdas
-      datprep=/NCEPPROD/com/gfs/prod/gdas.${adate0}
-      prefix_obs=
-      suffix=gdas.$adate 
-    else
-      echo Initital files are missing from disk.  
-      echo Use Get_Initial_Files.sh to get them
-      exit 1
-    fi
-  else
-    echo Initital files are missing from disk.  
-    echo Use Get_Initial_Files.sh to get them
-    exit 1
-  fi
-else
-  echo "Unsupported machine $MACHINE (not sure how you got to here)"
-  exit 1
-fi
 
 # Set up $tmpdir
  
@@ -261,6 +165,7 @@ mkdir -p $tmpdir
 cd $tmpdir
 rm -rf core*
 
+cp /global/noscrub/George.Gayno/goes_fov/globalprod.2015101200.wcoss/*  .
 
 # Make gsi namelist
 
@@ -502,264 +407,13 @@ OBS_INPUT::
  /
 EOF
 
-# Set fixed files
-#   berror   = forecast model background error statistics
-#   specoef  = CRTM spectral coefficients
-#   trncoef  = CRTM transmittance coefficients
-#   emiscoef = CRTM coefficients for IR sea surface emissivity model
-#   aerocoef = CRTM coefficients for aerosol effects
-#   cldcoef  = CRTM coefficients for cloud effects
-#   satinfo  = text file with information about assimilation of brightness temperatures
-#   satangl  = angle dependent bias correction file (fixed in time)
-#   pcpinfo  = text file with information about assimilation of prepcipitation rates
-#   ozinfo   = text file with information about assimilation of ozone data
-#   errtable = text file with obs error for conventional data (optional)
-#   convinfo = text file with information about assimilation of conventional data
-#   bufrtable= text file ONLY needed for single obs test (oneobstest=.true.)
-#   bftab_sst= bufr table for sst ONLY needed for sst retrieval (retrieval=.true.)
-
-anavinfo=$fixgsi/global_anavinfo.l64.txt
-berror=$fixgsi/$endianness/global_berror.l${LEVS}y${NLAT_A}.f77
-emiscoef_IRwater=$fixcrtm/Nalli.IRwater.EmisCoeff.bin   
-emiscoef_IRice=$fixcrtm/NPOESS.IRice.EmisCoeff.bin               
-emiscoef_IRland=$fixcrtm/NPOESS.IRland.EmisCoeff.bin             
-emiscoef_IRsnow=$fixcrtm/NPOESS.IRsnow.EmisCoeff.bin             
-emiscoef_VISice=$fixcrtm/NPOESS.VISice.EmisCoeff.bin             
-emiscoef_VISland=$fixcrtm/NPOESS.VISland.EmisCoeff.bin                   
-emiscoef_VISsnow=$fixcrtm/NPOESS.VISsnow.EmisCoeff.bin                   
-emiscoef_VISwater=$fixcrtm/NPOESS.VISwater.EmisCoeff.bin                 
-emiscoef_MWwater=$fixcrtm/FASTEM6.MWwater.EmisCoeff.bin
-aercoef=$fixcrtm/AerosolCoeff.bin
-cldcoef=$fixcrtm/CloudCoeff.bin
-satinfo=$fixgsi/global_satinfo.txt.2015070218
-scaninfo=$fixgsi/global_scaninfo.txt
-#satangl=$fixgsi/global_satangbias.txt
-pcpinfo=$fixgsi/global_pcpinfo.txt
-ozinfo=$fixgsi/global_ozinfo.txt
-convinfo=$fixgsi/global_convinfo.txt
-atmsbeamdat=$fixgsi/atms_beamwidth.txt
-
-errtable=$fixgsi/prepobs_errtable.global
-
-
-# Only need this file for single obs test
-bufrtable=$fixgsi/prepobs_prep.bufrtable
-
-# Only need this file for sst retrieval
-bftab_sst=$fixgsi/bufrtab.012
-
-
 # Copy executable and fixed files to $tmpdir
 $ncp $gsiexec ./gsi.x
 
-$ncp $anavinfo ./anavinfo
-$ncp $berror   ./berror_stats
-$ncp $emiscoef_IRwater ./Nalli.IRwater.EmisCoeff.bin
-$ncp $emiscoef_IRice ./NPOESS.IRice.EmisCoeff.bin               
-$ncp $emiscoef_IRsnow ./NPOESS.IRsnow.EmisCoeff.bin             
-$ncp $emiscoef_IRland ./NPOESS.IRland.EmisCoeff.bin             
-$ncp $emiscoef_VISice ./NPOESS.VISice.EmisCoeff.bin             
-$ncp $emiscoef_VISland ./NPOESS.VISland.EmisCoeff.bin           
-$ncp $emiscoef_VISsnow ./NPOESS.VISsnow.EmisCoeff.bin           
-$ncp $emiscoef_VISwater ./NPOESS.VISwater.EmisCoeff.bin                 
-$ncp $emiscoef_MWwater ./FASTEM6.MWwater.EmisCoeff.bin
-$ncp $aercoef  ./AerosolCoeff.bin
-$ncp $cldcoef  ./CloudCoeff.bin
-#$ncp $satangl  ./satbias_angle
-$ncp $satinfo  ./satinfo
-$ncp $scaninfo ./scaninfo
-$ncp $pcpinfo  ./pcpinfo
-$ncp $ozinfo   ./ozinfo
-$ncp $convinfo ./convinfo
-$ncp $atmsbeamdat ./atms_beamwidth.txt
-$ncp $errtable ./errtable
-
-$ncp $bufrtable ./prepobs_prep.bufrtable
-$ncp $bftab_sst ./bftab_sstphr
-
-
-# Copy CRTM coefficient files based on entries in satinfo file
-for file in `awk '{if($1!~"!"){print $1}}' ./satinfo | sort | uniq` ;do
-   $ncp $fixcrtm/${file}.SpcCoeff.bin ./
-   $ncp $fixcrtm/${file}.TauCoeff.bin ./
-done
-
-
-# Copy observational data to $tmpdir
-if [ -r $datprep/${prefix_prep}prepbufr ]; then
-  $ncp $datprep/${prefix_prep}prepbufr           ./prepbufr
-elif [ -r $datprep/${prefix_prep}prepbufr.nr ]; then    # Look for this file if you do not have restricted data access
-  $ncp $datprep/${prefix_prep}prepbufr.nr        ./prepbufr
-else
-  echo You do not have access to a readable prepbufr file
-  exit 1
-fi
-
-$ncp $datobs/${prefix_obs}satwnd.${suffix}   ./satwndbufr
-$ncp $datobs/${prefix_obs}gpsro.${suffix}    ./gpsrobufr
-$ncp $datobs/${prefix_obs}spssmi.${suffix}   ./ssmirrbufr
-$ncp $datobs/${prefix_obs}sptrmm.${suffix}   ./tmirrbufr
-$ncp $datobs/${prefix_obs}gome.${suffix}     ./gomebufr
-$ncp $datobs/${prefix_obs}omi.${suffix}      ./omibufr
-$ncp $datobs/${prefix_obs}osbuv8.${suffix}   ./sbuvbufr
-$ncp $datobs/${prefix_obs}goesfv.${suffix}   ./gsnd1bufr
-$ncp $datobs/${prefix_obs}1bamua.${suffix}   ./amsuabufr
-$ncp $datobs/${prefix_obs}1bamub.${suffix}   ./amsubbufr
-$ncp $datobs/${prefix_obs}1bhrs2.${suffix}   ./hirs2bufr
-$ncp $datobs/${prefix_obs}1bhrs3.${suffix}   ./hirs3bufr
-$ncp $datobs/${prefix_obs}1bhrs4.${suffix}   ./hirs4bufr
-$ncp $datobs/${prefix_obs}1bmhs.${suffix}    ./mhsbufr
-$ncp $datobs/${prefix_obs}1bmsu.${suffix}    ./msubufr
-$ncp $datobs/${prefix_obs}airsev.${suffix}   ./airsbufr
-$ncp $datobs/${prefix_obs}sevcsr.${suffix}   ./seviribufr
-$ncp $datobs/${prefix_obs}mtiasi.${suffix}   ./iasibufr
-$ncp $datobs/${prefix_obs}esamua.${suffix}   ./amsuabufrears
-$ncp $datobs/${prefix_obs}esamub.${suffix}   ./amsubbufrears
-$ncp $datobs/${prefix_obs}eshrs3.${suffix}   ./hirs3bufrears
-$ncp $datobs/${prefix_obs}ssmit.${suffix}    ./ssmitbufr
-$ncp $datobs/${prefix_obs}amsre.${suffix}    ./amsrebufr
-$ncp $datobs/${prefix_obs}ssmisu.${suffix}   ./ssmisbufr   
-$ncp $datobs/${prefix_obs}atms.${suffix}     ./atmsbufr
-$ncp $datobs/${prefix_obs}cris.${suffix}     ./crisbufr
-$ncp $datobs/${prefix_obs}syndata.tcvitals.tm00 ./tcvitl
-
-
-#  # For data before Feb 2015 
-#  # Copy bias correction, atmospheric and surface files
-#  $ncp $datges/${prefix_tbc}.abias              ./satbias_in
-#  $ncp $datges/${prefix_tbc}.satang             ./satbias_angle
-#  #$ncp $datges/${prefix_tbc}.abias_pc          ./satbias_pc
-#  #$ncp $datges/${prefix_tbc}.radstat           ./radstat.gdas
-
- # For data after Feb 2015 
- # Copy bias correction, atmospheric and surface files
- $ncp $datges/${prefix_tbc}.abias               ./satbias_in
- #$ncp $datges/${prefix_tbc}.satang             ./satbias_angle
- $ncp $datges/${prefix_tbc}.abias_pc            ./satbias_pc
- $ncp $datges/${prefix_tbc}.radstat             ./radstat.gdas
-
-/global/save/$USER/gsi_branches/fov_util_goes/util/Radiance_bias_correction_Utilities/write_biascr_option.x -newpc4pred -adp_anglebc 4
-
-cp satbias_in satbias_in.orig
-cp satbias_in.new satbias_in
-
-listdiag=`tar xvf radstat.gdas | cut -d' ' -f2 | grep _ges`
-for type in $listdiag; do
-   diag_file=`echo $type | cut -d',' -f1`
-   fname=`echo $diag_file | cut -d'.' -f1`
-   date=`echo $diag_file | cut -d'.' -f2`
-   $UNCOMPRESS $diag_file
-   fnameanl=$(echo $fname|sed 's/_ges//g')
-   mv $fname.$date $fnameanl
-done
-
-
-# Determine resolution of the guess files
-JCAP_GUESS=`$SIGHDR $datprep/${prefix_atm}.sgesprep JCAP`
-
-# Change resolution of input files with chgres if $JCAP is 
-# inconsistent with $JCAP_GUESS 
-if [[ "$JCAP" = "$JCAP_GUESS" ]]; then
-   ln -s -f $datges/${prefix_sfc}.bf03               ./sfcf03
-   ln -s -f $datges/${prefix_sfc}.bf06               ./sfcf06
-   ln -s -f $datges/${prefix_sfc}.bf09               ./sfcf09
-
-   ln -s -f $datprep/${prefix_atm}.sgm3prep           ./sigf03
-   ln -s -f $datprep/${prefix_atm}.sgesprep           ./sigf06
-   ln -s -f $datprep/${prefix_atm}.sgp3prep           ./sigf09
-else
-# first copy required files to working directory
-
-   ln -s -f $datges/gdas1.t${hhg}z.bf03               ./gdas1.t${hhg}z.bf03
-   ln -s -f $datges/gdas1.t${hhg}z.bf06               ./gdas1.t${hhg}z.bf06
-   ln -s -f $datges/gdas1.t${hhg}z.bf09               ./gdas1.t${hhg}z.bf09
-
-   ln -s -f $datprep/gdas1.t${hha}z.sgm3prep           ./gdas1.t${hha}z.sgm3prep
-   ln -s -f $datprep/gdas1.t${hha}z.sgesprep           ./gdas1.t${hha}z.sgesprep
-   ln -s -f $datprep/gdas1.t${hha}z.sgp3prep           ./gdas1.t${hha}z.sgp3prep
-
-   #emily
-   if [  $MACHINE = WCOSS  ]; then
-      export SIGLEVEL=/NCEPDEV/rstprod/nwprod/fix/global_hyblev.l64.txt
-   elif [  $MACHINE = ZEUS  ]; then
-      export SIGLEVEL=/NCEPPROD/nwprod/fix/global_hyblev.l64.txt
-   fi
-
-   export JCAP=$JCAP
-   export LEVS=$LEVS
-   export LONB=$LONA
-   export LATB=$LATA
-
-   export VERBOSE="YES"
-
-   # Operational chgres for operational sigio
-   export DATA=$tmpdir
-
-   export SIGINP=$tmpdir/gdas1.t${hha}z.sgm3prep
-   export SFCINP=$tmpdir/gdas1.t${hhg}z.bf03
-   export SIGOUT=$tmpdir/gdas2.t${hha}z.sgm3prep
-   export SFCOUT=$tmpdir/gdas2.t${hhg}z.bf03
-   $CHGRESSH
-
-   export SIGINP=$tmpdir/gdas1.t${hha}z.sgesprep
-   export SFCINP=$tmpdir/gdas1.t${hhg}z.bf06
-   export SIGOUT=$tmpdir/gdas2.t${hha}z.sgesprep
-   export SFCOUT=$tmpdir/gdas2.t${hhg}z.bf06
-   $CHGRESSH
-
-   export SIGINP=$tmpdir/gdas1.t${hha}z.sgp3prep
-   export SFCINP=$tmpdir/gdas1.t${hhg}z.bf09
-   export SIGOUT=$tmpdir/gdas2.t${hha}z.sgp3prep
-   export SFCOUT=$tmpdir/gdas2.t${hhg}z.bf09
-   $CHGRESSH
-
-   mv gdas2.t${hhg}z.bf03       sfcf03
-   mv gdas2.t${hhg}z.bf06       sfcf06
-   mv gdas2.t${hhg}z.bf09       sfcf09
-
-   mv gdas2.t${hha}z.sgm3prep   sigf03
-   mv gdas2.t${hha}z.sgesprep   sigf06
-   mv gdas2.t${hha}z.sgp3prep   sigf09
-
-   rm -f gdas1.t${hhg}z.bf03
-   rm -f gdas1.t${hhg}z.bf06
-   rm -f gdas1.t${hhg}z.bf09
-
-   rm -f gdas1.t${hha}z.sgm3prep
-   rm -f gdas1.t${hha}z.sgesprep
-   rm -f gdas1.t${hha}z.sgp3prep
-
-   rm -f chgres.out.grd
-   rm -f fort.11
-   rm -f fort.51
-
-fi
-
 # Run gsi under Parallel Operating Environment (poe) on NCEP IBM
-if [  $MACHINE = ZEUS  ]; then
 
-   cd $tmpdir/
-   echo "run gsi now"
-
-   export MPI_BUFS_PER_PROC=256
-   export MPI_BUFS_PER_HOST=256
-   export MPI_GROUP_MAX=256
-   #export OMP_NUM_THREADS=1
-
-   /bin/ksh --login
-   module load intel
-   module load mpt
-
-   echo "JOB ID : $PBS_JOBID"
-   eval "mpiexec_mpt -v -np $PBS_NP $tmpdir/gsi.x > stdout"
-   rc=$?
-
-elif [  $MACHINE = WCOSS  ]; then
-
-   # Run gsi under Parallel Operating Environment (poe) on NCEP IBM
-   mpirun.lsf $tmpdir/gsi.x < gsiparm.anl > stdout
-   rc=$?
-fi
+mpirun.lsf $tmpdir/gsi.x < gsiparm.anl > stdout
+rc=$?
 
 # Save output
 mkdir -p $savdir
@@ -770,21 +424,6 @@ $ncp sfcanl.gsi      $savdir/sfcanl_gsi.$dumpobs.$adate
 $ncp satbias_out     $savdir/biascr.$dumpobs.$adate
 $ncp sfcf06          $savdir/sfcf06.$dumpges.$gdate
 $ncp sigf06          $savdir/sigf06.$dumpges.$gdate
-
-##ss2gg=${TOPDIR}/save/wx20mi/bin/ss2gg
-##$ss2gg siganl siganl.bin siganl.ctl 4 $NLON_A $NLAT_A
-##$ss2gg sigf06 sigges.bin sigges.ctl 4 $NLON_A $NLAT_A
-
-##exit
-
-##sfc2gg=/u/wx20mi/bin/sfc2gg
-##$sfc2gg sfcanl.gsi sfcanl.bin sfcanl.ctl
-##$sfc2gg sfcf06     sfcges.bin sfcges.ctl
-
-##$ncp s*anl.bin $savdir/
-##$ncp s*anl.ctl $savdir/
-##$ncp s*ges.bin $savdir/
-##$ncp s*ges.ctl $savdir/
 
 CNVSTAT=$savdir/cnvstat.$dumpobs.$adate
 PCPSTAT=$savdir/pcpstat.$dumpobs.$adate

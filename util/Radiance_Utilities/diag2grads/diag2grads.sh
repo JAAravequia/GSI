@@ -31,22 +31,20 @@ else
   exit 1
 fi
 
-
 #--- Set directories
 #     HOME     = directory containing diag2grads
 #     DIAG_DIR = input directory containing diagnostic file(s)
 #     GRADSDIR = output directory for GrADS station files
 
-HOME=$TOPDIR/save/$USER/svn/EXP-port-r20613/util/Radiance_Utilities/diag2grads
-DIAG_DIR=/scratch2/portfolios/NCEPDEV/ptmp/$USER/tmp574_sigmap/globalprod.2012012212.zeus
-GRADSDIR=/scratch2/portfolios/NCEPDEV/ptmp/$USER/map
-
+HOME=$TOPDIR/save/$USER/gsi_branches/fov_util_goes/util/Radiance_Utilities/diag2grads
+DIAG_DIR=/ptmpp1/George.Gayno/out62/sigmap/globalprod.2015101200.wcoss
+GRADSDIR=/ptmpp1/George.Gayno/grads
 
 #=== parameters ======================================================
 
 #--- time
 
-  TIME_TOP=2012012212
+  TIME_TOP=2015101200
   TIME_INT=06
   TIME_NUM=1
 
@@ -86,8 +84,8 @@ CASE=new	; COMMENT='TEST RUN'
 
 #--- clean up working directory after the processing
 
-  CLEAN=YES
-# CLEAN=NO
+#  CLEAN=YES
+ CLEAN=NO
 
 #--- totalview
 
@@ -95,8 +93,6 @@ CASE=new	; COMMENT='TEST RUN'
 # TOTALVIEW=totalview
 
 #=====================================================================
-
-
 
 #--- dirs and files
 WORK=${GRADSDIR}/WORK
@@ -241,7 +237,6 @@ fi
 
 SATSEN=${SATNAME}${SENNAME}
 
-
 #--- print
 
 echo
@@ -277,12 +272,6 @@ if [ $CASE = 'org' -o $CASE = 'new' -o $CASE = 'prx' ]; then
   }
 fi
 
-echo " "
-echo "look at variables below"
-echo $ZIPFIL
-echo $UNZIPFIL
-echo $DATFIL
-echo " "
 
 #-- pro ### under construction ###
 
@@ -293,6 +282,13 @@ if [ $CASE = 'pro' ]; then
     DATFIL=${DATDIR}/radstat.$TIME
   }
 fi
+
+echo " "
+echo "look at variables below"
+echo $ZIPFIL
+echo $UNZIPFIL
+echo $DATFIL
+echo " "
 
 #--- diagnostic files
 

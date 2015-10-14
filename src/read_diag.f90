@@ -46,7 +46,7 @@ module read_diag
   public :: diag_data_extra_list
   public :: read_radiag_header
   public :: read_radiag_data
-! public :: iversion_radiag
+  public :: iversion_radiag
 ! public :: iversion_radiag_1
 ! public :: iversion_radiag_2
 ! public :: iversion_radiag_3
