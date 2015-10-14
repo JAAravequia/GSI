@@ -1,4 +1,4 @@
-subroutine read_goesndr(mype,val_goes,ithin,rmesh,jsatid,infile,&
+subroutine read_goesndr(mype,val_goes,ithin,isfcalc,rmesh,jsatid,infile,&
      lunout,obstype,nread,ndata,nodata,twind,gstime,sis,&
      mype_root,mype_sub,npe_sub,mpi_comm_sub,nobs, &
      nrec_start,dval_use)
@@ -100,13 +100,14 @@ subroutine read_goesndr(mype,val_goes,ithin,rmesh,jsatid,infile,&
   use deter_sfc_mod, only: deter_sfc
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
   use mpimod, only: npe
+  use calc_fov_geo, only : instrument_init
 
   implicit none
 
 ! Declare passed variables
   character(len=*),intent(in   ) :: infile,obstype,jsatid
   character(len=20),intent(in  ) :: sis
-  integer(i_kind) ,intent(in   ) :: mype,lunout,ithin,nrec_start
+  integer(i_kind) ,intent(in   ) :: mype,lunout,ithin,nrec_start,isfcalc
   integer(i_kind) ,intent(inout) :: ndata,nodata,nread
   integer(i_kind),dimension(npe) ,intent(inout) :: nobs
   real(r_kind)    ,intent(in   ) :: rmesh,twind,gstime
@@ -131,13 +132,13 @@ subroutine read_goesndr(mype,val_goes,ithin,rmesh,jsatid,infile,&
   character(80),parameter:: rbstr = 'TMBR'
 
 ! Declare local variables
-  logical outside,iuse,g5x5,assim
+  logical outside,iuse,g5x5,assim,valid
 
   character(8)  subset
 
   integer(i_kind) kx,levs,ldetect
   integer(i_kind) lnbufr,nchanl,nreal,iret,ksatid,lsatid
-  integer(i_kind) idate,maxinfo
+  integer(i_kind) idate,maxinfo,instr
   integer(i_kind) ilat,ilon,isflg,idomsfc
   integer(i_kind) itx,k,i,itt,iskip,l,ifov,n
   integer(i_kind) ichan8,ich8
@@ -149,7 +150,9 @@ subroutine read_goesndr(mype,val_goes,ithin,rmesh,jsatid,infile,&
 
   real(r_kind) dlon,dlat,timedif,emiss,sfcr
   real(r_kind) dlon_earth,dlat_earth
-  real(r_kind) ch8,sstime
+  real(r_kind) dlon_earth_deg,dlat_earth_deg
+  real(r_kind) expansion
+  real(r_kind) ch8,sstime,sublat,sublon
   real(r_kind) pred,crit1,tdiff,dist1,toff,t4dv
   real(r_kind) cdist,disterr,disterrmax,dlon00,dlat00,r01
 
@@ -168,6 +171,8 @@ subroutine read_goesndr(mype,val_goes,ithin,rmesh,jsatid,infile,&
 !**************************************************************************
 
 ! Start routine here.  Set constants.  Initialize variables
+  instr=32
+  expansion=1.0_r_kind
   maxinfo=31
   lnbufr = 10
   disterrmax=zero
@@ -239,6 +244,16 @@ subroutine read_goesndr(mype,val_goes,ithin,rmesh,jsatid,infile,&
        if(obstype == 'sndrd3')ldetect = 3
        if(obstype == 'sndrd4')ldetect = 4
   end if
+
+  sublat = 0.0_r_kind
+  if (lsatid==257) then
+    sublon=-75.0_r_kind
+  elseif (lsatid==259) then
+    sublon=-135.0_r_kind
+  else
+    print*,'unknown satellite'
+    call stop2(44)
+  endif
 
 ! Set array index for surface-sensing channels
   ichan8  = newchn(sis, ich8)
@@ -337,6 +352,8 @@ subroutine read_goesndr(mype,val_goes,ithin,rmesh,jsatid,infile,&
         if (hdr(1)==r360) hdr(1)=zero
         if (hdr(1)< zero) hdr(1)=hdr(1)+r360
 
+        dlon_earth_deg = hdr(1)
+        dlat_earth_deg = hdr(2)
         dlon_earth = hdr(1)*deg2rad   !convert degrees to radians
         dlat_earth = hdr(2)*deg2rad 
         if(regional)then
@@ -407,8 +424,15 @@ subroutine read_goesndr(mype,val_goes,ithin,rmesh,jsatid,infile,&
 !                3 snow
 !                4 mixed 
 
-        call deter_sfc(dlat,dlon,dlat_earth,dlon_earth,t4dv,isflg,idomsfc,sfcpct, &
-           ts,tsavg,vty,vfr,sty,stp,sm,sn,zz,ff10,sfcr)
+          call instrument_init(instr,dlat_earth_deg,dlon_earth_deg,sublat, &
+            sublon, expansion, valid)
+          if (.not.valid) then
+            print*,'bad goes fov ',instr,dlat_earth_deg,dlon_earth_deg,sublat, &
+               sublon, expansion
+          endif
+
+          call deter_sfc(dlat,dlon,dlat_earth,dlon_earth,t4dv,isflg,idomsfc,sfcpct, &
+             ts,tsavg,vty,vfr,sty,stp,sm,sn,zz,ff10,sfcr)
 
 
 !       If not goes data over ocean , read next bufr record

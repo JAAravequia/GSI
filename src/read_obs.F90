@@ -1366,7 +1366,7 @@ subroutine read_obs(ndata,mype)
              else if (obstype == 'sndr' .or.                            &
                       obstype == 'sndrd1' .or. obstype == 'sndrd2' .or. &
                       obstype == 'sndrd3' .or. obstype == 'sndrd4') then
-                call read_goesndr(mype,val_dat,ithin,rmesh,platid,&
+                call read_goesndr(mype,val_dat,ithin,isfcalc,rmesh,platid,&
                      infile,lunout,obstype,nread,npuse,nouse,twind,gstime,sis,&
                      mype_root,mype_sub(mm1,i),npe_sub(i),mpi_comm_sub(i), &
                      nobs_sub1(1,i),read_rec(i),dval_use)

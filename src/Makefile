@@ -218,6 +218,7 @@ clean:
 	blendmod.f90 \
 	calc_fov_conical.f90 \
 	calc_fov_crosstrk.f90 \
+	calc_fov_geo.f90 \
 	calctends.f90 \
 	calctends_ad.f90 \
 	calctends_tl.f90 \

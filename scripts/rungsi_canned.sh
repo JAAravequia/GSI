@@ -11,7 +11,7 @@
 #BSUB -R span[ptile=8]
 #BSUB -R affinity[core(2):distribute=balance]
 #BSUB -x
-#BSUB -W 00:15
+#BSUB -W 00:09
 #BSUB -P GFS-T2O
 #=======================================================
 
