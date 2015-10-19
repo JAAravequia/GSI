@@ -11,7 +11,7 @@
 #BSUB -R span[ptile=8]
 #BSUB -R affinity[core(2):distribute=balance]
 #BSUB -x
-#BSUB -W 00:09
+#BSUB -W 00:25
 #BSUB -P GFS-T2O
 #=======================================================
 
@@ -33,7 +33,9 @@ exp=globalprod.$adate
 expid=${expnm}.$adate.wcoss
 
 # Set path/file for gsi executable
-gsiexec=/global/save/$USER/gsi_branches/fov_util_goes/src/global_gsi
+version="r62854"
+#version="r63277"
+gsiexec=/global/save/$USER/gsi_branches/fov_util_goes/src/global_gsi.${version}
 
 # Specify GSI fixed field
 fixgsi=/global/save/$USER/gsi_branches/fov_util_goes/fix
@@ -49,8 +51,8 @@ export lrun_subdirs=.true.
 # Set data, runtime and save directories
 if [ $MACHINE = WCOSS ]; then
    datdir=/ptmpp1/$USER/data_sigmap/${exp}
-   tmpdir=/ptmpp1/$USER/tmp${JCAP}_sigmap/${expid}  
-   savdir=/ptmpp1/$USER/out${JCAP}/sigmap/${expid}  
+   tmpdir=/ptmpp1/$USER/tmp${JCAP}_sigmap.${version}/${expid}  
+   savdir=/ptmpp1/$USER/out${JCAP}.${version}/sigmap/${expid}  
    fixcrtm=/da/save/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix
    endianness=Big_Endian
    COMPRESS=gzip 
@@ -265,7 +267,7 @@ SINGLEOB=""
 
 cat << EOF > gsiparm.anl
  &SETUP
-   miter=1,niter(1)=10,niter(2)=10,
+   miter=2,niter(1)=10,niter(2)=10,
    niter_no_qc(1)=50,niter_no_qc(2)=0,
    write_diag(1)=.true.,write_diag(2)=.false.,write_diag(3)=.true.,
    qoption=2,
