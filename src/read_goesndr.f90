@@ -97,7 +97,7 @@ subroutine read_goesndr(mype,val_goes,ithin,isfcalc,rmesh,jsatid,infile,&
   use gridmod, only: diagnostic_reg,nlat,nlon,regional,tll2xy,txy2ll,rlats,rlons
   use constants, only: deg2rad,zero,rad2deg, r60inv,one,two,tiny_r_kind
   use gsi_4dvar, only: l4dvar,l4densvar,time_4dvar,iwinbgn,winlen,thin4d
-  use deter_sfc_mod, only: deter_sfc
+  use deter_sfc_mod, only: deter_sfc, deter_sfc_fov
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
   use mpimod, only: npe
   use calc_fov_geo, only : instrument_init
@@ -135,10 +135,11 @@ subroutine read_goesndr(mype,val_goes,ithin,isfcalc,rmesh,jsatid,infile,&
   logical outside,iuse,g5x5,assim,valid
 
   character(8)  subset
+  character(3)  fov_flag
 
   integer(i_kind) kx,levs,ldetect
   integer(i_kind) lnbufr,nchanl,nreal,iret,ksatid,lsatid
-  integer(i_kind) idate,maxinfo,instr
+  integer(i_kind) idate,maxinfo,instr,idum,idum2(1),ichan_fov
   integer(i_kind) ilat,ilon,isflg,idomsfc
   integer(i_kind) itx,k,i,itt,iskip,l,ifov,n
   integer(i_kind) ichan8,ich8
@@ -150,7 +151,7 @@ subroutine read_goesndr(mype,val_goes,ithin,isfcalc,rmesh,jsatid,infile,&
 
   real(r_kind) dlon,dlat,timedif,emiss,sfcr
   real(r_kind) dlon_earth,dlat_earth
-  real(r_kind) dlon_earth_deg,dlat_earth_deg
+  real(r_kind) dlon_earth_deg,dlat_earth_deg,rdum
   real(r_kind) expansion
   real(r_kind) ch8,sstime,sublat,sublon
   real(r_kind) pred,crit1,tdiff,dist1,toff,t4dv
@@ -172,7 +173,14 @@ subroutine read_goesndr(mype,val_goes,ithin,isfcalc,rmesh,jsatid,infile,&
 
 ! Start routine here.  Set constants.  Initialize variables
   instr=32
+  fov_flag="geo"
   expansion=1.0_r_kind
+  ichan_fov=1
+  idum=-999
+  rdum=-999._r_kind
+
+
+
   maxinfo=31
   lnbufr = 10
   disterrmax=zero
@@ -426,13 +434,20 @@ subroutine read_goesndr(mype,val_goes,ithin,isfcalc,rmesh,jsatid,infile,&
 
           call instrument_init(instr,dlat_earth_deg,dlon_earth_deg,sublat, &
             sublon, expansion, valid)
+
           if (.not.valid) then
             print*,'bad goes fov ',instr,dlat_earth_deg,dlon_earth_deg,sublat, &
                sublon, expansion
+            cycle read_loop
           endif
 
-          call deter_sfc(dlat,dlon,dlat_earth,dlon_earth,t4dv,isflg,idomsfc,sfcpct, &
-             ts,tsavg,vty,vfr,sty,stp,sm,sn,zz,ff10,sfcr)
+          call deter_sfc_fov(fov_flag,idum,instr,ichan_fov,rdum,dlat_earth_deg, &
+                             dlon_earth_deg,expansion,t4dv,isflg,idum2,sfcpct,  &
+                             vfr,sty,vty,stp,sm,ff10,sfcr,zz,sn,ts,tsavg)
+          idomsfc=idum2(1)
+
+!         call deter_sfc(dlat,dlon,dlat_earth,dlon_earth,t4dv,isflg,idomsfc,sfcpct, &
+!            ts,tsavg,vty,vfr,sty,stp,sm,sn,zz,ff10,sfcr)
 
 
 !       If not goes data over ocean , read next bufr record

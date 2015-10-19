@@ -38,6 +38,8 @@ module deter_sfc_mod
   use guess_grids, only: nfldsfc,hrdifsfc,ntguessfc
   use calc_fov_crosstrk, only: npoly, fov_ellipse_crosstrk, inside_fov_crosstrk
   use calc_fov_conical, only: fov_ellipse_conical, inside_fov_conical
+  use calc_fov_geo, only: fov_ellipse_geo, inside_fov_geo
+
   implicit none
 
 ! Set default to private
@@ -881,6 +883,8 @@ subroutine deter_sfc_fov(fov_flag,ifov,instr,ichan,sat_aziang,dlat_earth_deg,&
   elseif(fov_flag=="conical")then
      call fov_ellipse_conical(ichan,sat_aziang,dlat_earth_deg,dlon_earth_deg, &
                               lats_edge_fov,lons_edge_fov)
+  elseif(fov_flag=="geo")then
+     call fov_ellipse_geo(ichan,dlat_earth_deg,dlon_earth_deg,lats_edge_fov,lons_edge_fov)
   endif
 
   if (regional) then
@@ -1095,6 +1099,11 @@ subroutine deter_sfc_fov(fov_flag,ifov,instr,ichan,sat_aziang,dlat_earth_deg,&
                                            dlat_earth_deg,dlon_earth_deg,&
                                            lat_mdl,    lon_mdl,  &
                                            expansion, power )
+                 elseif (fov_flag=="geo")then
+                    call inside_fov_geo(instr,ichan, &
+                                        dlat_earth_deg,dlon_earth_deg,&
+                                        lat_mdl,    lon_mdl,  &
+                                        expansion, power )
                  endif
                  call accum_sfc(i,j,power,sfc_mdl,sfc_sum)
               enddo
@@ -1133,6 +1142,11 @@ subroutine deter_sfc_fov(fov_flag,ifov,instr,ichan,sat_aziang,dlat_earth_deg,&
                                            dlat_earth_deg,dlon_earth_deg,&
                                            lat_mdl,    lon_mdl,  &
                                            expansion, powerx(iii,jjj) )
+                 elseif (fov_flag=="geo")then
+                    call inside_fov_geo(instr,ichan, &
+                                        dlat_earth_deg,dlon_earth_deg,&
+                                        lat_mdl,    lon_mdl,  &
+                                        expansion, powerx(iii,jjj) )
                  endif
               enddo
            enddo

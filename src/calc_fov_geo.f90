@@ -39,12 +39,13 @@
 !$$$ end documentation block
 
  use kinds, only : i_kind, r_kind
+ use calc_fov_crosstrk, only : npoly
 
  implicit none
  
  private
 
- integer(i_kind), parameter, public :: npoly = 120 
+!integer(i_kind), parameter, public :: npoly = 120 
 
  real(r_kind), parameter            :: earth = 6371.22_r_kind   
  real(r_kind), parameter            :: height = 35786.0_r_kind 
