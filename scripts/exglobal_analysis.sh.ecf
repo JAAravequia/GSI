@@ -606,6 +606,11 @@ export AEROINFO=${AEROINFO:-${FIXgsi}/global_aeroinfo.txt}
 export SCANINFO=${SCANINFO:-${FIXgsi}/global_scaninfo.txt}
 export HYBENSINFO=${HYBENSINFO:-${FIXgsi}/global_hybens_locinfo.l${LEVS}.txt}
 export OBERROR=${OBERROR:-${FIXgsi}/prepobs_errtable.global}
+export errtable_ps=${errtable_ps:-${FIXGLOBAL}/prepobs_errtable_ps.global}
+export errtable_pw=${errtable_pw:-${FIXGLOBAL}/prepobs_errtable_pw.global}
+export errtable_q=${errtable_q:-${FIXGLOBAL}/prepobs_errtable_q.global}
+export errtable_t=${errtable_t:-${FIXGLOBAL}/prepobs_errtable_t.global}
+export errtable_uv=${errtable_uv:-${FIXGLOBAL}/prepobs_errtable_uv.global}
 export PREPQC=${PREPQC:-${COMIN}/${PREINP}prepbufr${SUFINP}}
 export PREPQCPF=${PREPQCPF:-${COMIN}/${PREINP}prepbufr.acft_profiles${SUFINP}}
 export SATWND=${SATWND:-${COMIN}/${PREINP}satwnd.tm00.bufr_d${SUFINP}}
@@ -871,6 +876,11 @@ $FCPLN $AEROINFO aeroinfo
 $FCPLN $SCANINFO scaninfo
 $FCPLN $HYBENSINFO hybens_locinfo
 $FCPLN $OBERROR  errtable
+$FCPLN $errtable_ps errtable_ps
+$FCPLN $errtable_pw errtable_pw
+$FCPLN $errtable_q errtable_q
+$FCPLN $errtable_t errtable_t
+$FCPLN $errtable_uv errtable_uv
 
 # CRTM Spectral and Transmittance coefficients
 mkdir -p crtm_coeffs

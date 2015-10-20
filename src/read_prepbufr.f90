@@ -620,9 +620,25 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 
 ! temporary specify iobsub until put in bufr file
         iobsub = 0                                                  
-        if(kx == 280 .or. kx == 180 ) iobsub=hdr(3)                                            
+!        if(kx == 280 .or. kx == 180 ) iobsub=hdr(3)                                            
+        if(kx == 280 .or. kx ==180) then
+          if ( hdr(3) >555.0_r_kind .and. hdr(3) <565.0_r_kind ) then
+            iobsub=00
+          else
+            iobsub=01
+          endif
+        endif
+
         if(kx == 290) iobsub=hdr(2)
         if(use_prepb_satwnd .and. (kx >= 240 .and. kx <=260 )) iobsub = hdr(2)
+        if(kx == 280 .or. kx ==180) then
+           if ( hdr(8) >555.0_r_kind .and. hdr(8) <565.0_r_kind ) then
+              iobsub=00
+           else
+              iobsub=01
+           endif
+        endif
+
 
 !       For the satellite wind to get quality information and check if it will be used
         if(use_prepb_satwnd .and. (kx == 243 .or. kx == 253 .or. kx ==254) ) then
