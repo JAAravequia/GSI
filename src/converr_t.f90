@@ -126,7 +126,7 @@ contains
         ptabl_t=zero
         ptabl_t(1)=etabl_t(20,1,1)
         do k=2,33
-           ptabl_t(k)=half*(etabl_t(120,k-1,1)+etabl_t(120,k,1))
+           ptabl_t(k)=half*(etabl_t(20,k-1,1)+etabl_t(20,k,1))
         enddo
         ptabl_t(34)=etabl_t(20,33,1)
      endif
