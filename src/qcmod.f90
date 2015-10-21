@@ -52,7 +52,6 @@ module qcmod
 !                         speed for AMSUA/ATMS cloudy radiance assimilation
 !   2015-05-01  ejones  - modify emissivity regression and check in qc_gmi
 !   2015-05-29  ejones  - tighten clw threshold for qc_gmi 
->>>>>>> .merge-right.r63544
 !
 ! subroutines included:
 !   sub init_qcvars
