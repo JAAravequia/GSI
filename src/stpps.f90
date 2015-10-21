@@ -15,7 +15,8 @@ module stppsmod
 !   2010-05-13  todling - uniform interface across stp routines
 !   2013-10-28  todling - reame p3d to prse
 !   2014-04-12       su - add non linear qc from Purser's scheme
-!   2015-02-26       su - add njqc as an option to chose new non linear qc
+!   2015-02-26       su - add njqc as an option to chose new non linear qc and
+!                         vqc for EU variational qc
 !
 ! subroutines included:
 !   sub stpps
@@ -60,6 +61,9 @@ subroutine stpps(pshead,rval,sval,out,sges,nstep)
 !   2008-12-03  todling - changed handling of ptr%time
 !   2010-01-04  zhang,b - bug fix: accumulate penalty for multiple obs bins
 !   2010-05-13  todling  - update to use gsi_bundlemod
+!   2014-04-12       su - add non linear qc from Purser's scheme
+!   2015-02-26       su - add njqc as an option to chose new non linear qc,vqc
+!                         for EU variational qc method
 !
 !   input argument list:
 !     pshead
@@ -78,7 +82,7 @@ subroutine stpps(pshead,rval,sval,out,sges,nstep)
 !$$$
   use kinds, only: r_kind,i_kind,r_quad
   use obsmod, only: ps_ob_type
-  use qcmod, only: nlnqc_iter,varqc_iter,njqc
+  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc
   use constants, only: half,one,two,tiny_r_kind,cg_term,zero_quad,r3600
   use gridmod, only: latlon1n1
   use jfunc, only: l_foto,xhat_dt,dhat_dt
@@ -150,7 +154,7 @@ subroutine stpps(pshead,rval,sval,out,sges,nstep)
 
 !  Modify penalty term if nonlinear QC
 
-        if (nlnqc_iter .and. psptr%pg > tiny_r_kind .and.  &
+        if (vqc ==.true. .and. nlnqc_iter .and. psptr%pg > tiny_r_kind .and.  &
                              psptr%b  > tiny_r_kind) then
            ps_pg=psptr%pg*varqc_iter
            cg_ps=cg_term/psptr%b

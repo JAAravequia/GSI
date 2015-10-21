@@ -14,7 +14,8 @@ module inttmod
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - implemented obs adjoint test  
 !   2013-10-28  todling - rename p3d to prse
 !   2014-04-09      Su  - add non linear qc from Purser's scheme
-!   2015-02-26       su - add njqc as an option to chose new non linear qc
+!   2015-02-26      su  - add njqc as an option to chose new non linear qc, vqc
+!                         EU variational qc
 !
 ! subroutines included:
 !   sub intt_
@@ -112,7 +113,7 @@ subroutine intt_(thead,rval,sval,rpred,spred)
   use kinds, only: r_kind,i_kind,r_quad
   use constants, only: half,one,zero,tiny_r_kind,cg_term,r3600,two
   use obsmod, only: t_ob_type,lsaveobsens,l_do_adjoint,luse_obsdiag
-  use qcmod, only: nlnqc_iter,varqc_iter,njqc
+  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc
   use gridmod, only: latlon1n,latlon11,latlon1n1
   use jfunc, only: jiter,l_foto,xhat_dt,dhat_dt
   use gsi_bundlemod, only: gsi_bundle
@@ -303,7 +304,7 @@ subroutine intt_(thead,rval,sval,rpred,spred)
  
 !          gradient of nonlinear operator
 
-           if (nlnqc_iter .and. tptr%pg > tiny_r_kind .and.  &
+           if (vqc ==.true. .and. nlnqc_iter .and. tptr%pg > tiny_r_kind .and.  &
                                 tptr%b  > tiny_r_kind) then
               t_pg=tptr%pg*varqc_iter
               cg_t=cg_term/tptr%b

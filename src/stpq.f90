@@ -14,7 +14,8 @@ module stpqmod
 !   2009-08-12  lueken - update documentation
 !   2010-05-13  todling - uniform interface across stp routines
 !   2014-04-12       su - add non linear qc from Purser's scheme
-!   2015-02-26       su - add njqc as an option to chose new non linear qc
+!   2015-02-26       su - add njqc as an option to chose new non linear qc vqc
+!                         for EU variational qc method
 !
 ! subroutines included:
 !   sub stpq
@@ -77,7 +78,7 @@ subroutine stpq(qhead,rval,sval,out,sges,nstep)
 !$$$
   use kinds, only: r_kind,i_kind,r_quad
   use obsmod, only: q_ob_type
-  use qcmod, only: nlnqc_iter,varqc_iter,njqc
+  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc
   use gridmod, only: latlon1n
   use constants, only: half,one,two,tiny_r_kind,cg_term,zero_quad,r3600
   use jfunc, only: l_foto,dhat_dt,xhat_dt
@@ -164,7 +165,7 @@ subroutine stpq(qhead,rval,sval,out,sges,nstep)
 
 !  Modify penalty term if nonlinear QC
 
-        if (nlnqc_iter .and. qptr%pg > tiny_r_kind .and. &
+        if (vqc ==.true. .and. nlnqc_iter .and. qptr%pg > tiny_r_kind .and. &
                              qptr%b  > tiny_r_kind) then
            q_pg=qptr%pg*varqc_iter
            cg_q=cg_term/qptr%b
