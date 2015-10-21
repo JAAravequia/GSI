@@ -1,5 +1,5 @@
 subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis,&
-                        prsl_full)
+                        prsl_full,nobs)
 
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -17,6 +17,7 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 
 ! program history log:
 !   2013-02-05  eliu     - initial coding
+!   2015-02-23  Rancic/Thomas - add thin4d to time window logical
 !
 !   input argument list:
 !     infile    - unit from which to read BUFR data
@@ -31,6 +32,7 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 !     nread     - number of type "obstype" observations read
 !     nodata    - number of individual "obstype" observations read
 !     ndata     - number of type "obstype" observations retained for further processing
+!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -60,13 +62,13 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
      use convb_q,only: btabl_q
      use convb_t,only: btabl_t
      use convb_uv,only: btabl_uv
-
-     use gsi_4dvar, only: l4dvar,iwinbgn,time_4dvar,winlen
+     use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,time_4dvar,winlen,thin4d
      use qcmod, only: errormod,njqc
      use convthin, only: make3grids,map3grids,del3grids,use_all
      use ndfdgrids,only: init_ndfdgrid,destroy_ndfdgrid,relocsfcob,adjust_error
      use jfunc, only: tsensible
      use deter_sfc_mod, only: deter_sfc_type,deter_sfc2
+     use mpimod, only: npe
                                                                                                       
      implicit none
 
@@ -74,6 +76,7 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
      character(len=*), intent(in   ) :: infile,obstype
      character(len=20),intent(in   ) :: sis
      integer(i_kind) , intent(in   ) :: lunout
+     integer(i_kind) , dimension(npe), intent(inout) :: nobs
      integer(i_kind) , intent(inout) :: nread,ndata,nodata
      real(r_kind)    , intent(in   ) :: twind
      real(r_kind)    , intent(in   ) :: gstime 
@@ -406,11 +409,12 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 
            call w3fs21(idate5,nmind)
            t4dv = real((nmind-iwinbgn),r_kind)*r60inv
-           if (l4dvar) then
+           sstime = real(nmind,r_kind)
+           tdiff  = (sstime-gstime)*r60inv
+
+           if (l4dvar.or.l4densvar) then
               if (t4dv < zero .OR. t4dv > winlen) cycle loop_readsb2
            else
-              sstime = real(nmind,r_kind)
-              tdiff  = (sstime-gstime)*r60inv
               if (abs(tdiff)>twind) cycle loop_readsb2
            endif
            nread = nread+1 
@@ -832,7 +836,7 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
               ntmp = ndata          ! counting moved into map3grids
 
 !             Set data quality index for thinning
-              if (l4dvar) then
+              if (thin4d) then
                  timedif = zero
               else
                  timedif = abs(t4dv-toff)
@@ -1077,6 +1081,7 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
      deallocate(cdata_all)
 !     deallocate(etabl)
 
+     call count_obs(ndata,nreal,ilat,ilon,cdata_out,nobs)
      write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
      write(lunout) cdata_out
      deallocate(cdata_out)

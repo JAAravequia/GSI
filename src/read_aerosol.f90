@@ -1,6 +1,6 @@
 subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
            obstype,twind,sis,ithin,rmesh, &
-           mype,mype_root,mype_sub,npe_sub,mpi_comm_sub)
+           mype,mype_root,mype_sub,npe_sub,mpi_comm_sub,nobs)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_aerosol                    read aerosol data
@@ -21,6 +21,7 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 !   2011-01-05  hclin   - added three more BUFR records (STYP DBCF QAOD)
 !   2011-08-01  lueken  - changed F90 to f90 (no machine logic)
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
+!   2015-02-23  Rancic/Thomas - add thin4d to time window logical
 !
 !   input argument list:
 !     obstype  - observation type to process
@@ -43,6 +44,7 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 !     nread    - number of modis aerosol observations read
 !     ndata    - number of modis aerosol profiles retained for further processing
 !     nodata   - number of modis aerosol observations retained for further processing
+!     nobs     - array of observations on each subdomain for each processor
 !
 ! remarks:
 !
@@ -56,9 +58,10 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   use chemmod,   only: aod_qa_limit, luse_deepblue
   use constants, only: deg2rad, zero, two, three, four, rad2deg, r60inv
   use obsmod,    only: iadate, rmiss_single
-  use gsi_4dvar, only: l4dvar,iwinbgn,winlen
+  use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,thin4d
   use satthin,   only: itxmax,makegrids,destroygrids,checkob, &
       finalcheck,map2tgrid,score_crit
+  use mpimod, only: npe
   implicit none
 !
 ! Declare local parameters
@@ -70,6 +73,7 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   character(len=20),intent(in)   :: sis
   integer(i_kind), intent(in)    :: lunout, ithin
   integer(i_kind), intent(inout) :: nread
+  integer(i_kind),dimension(npe), intent(inout) :: nobs
   integer(i_kind), intent(inout) :: ndata, nodata
   integer(i_kind) ,intent(in)    :: mype
   integer(i_kind) ,intent(in)    :: mype_root
@@ -246,17 +250,17 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 
               call w3fs21(idate5,nmind)
               t4dv=real((nmind-iwinbgn),r_kind)*r60inv
-              if (l4dvar) then
+              sstime=real(nmind,r_kind)
+              tdiff=(sstime-gstime)*r60inv
+              if (l4dvar.or.l4densvar) then
                  if(t4dv<zero .OR. t4dv>winlen) cycle read_modis
               else
-                 sstime=real(nmind,r_kind)
-                 tdiff=(sstime-gstime)*r60inv
                  if ( abs(tdiff) > twind ) cycle read_modis
               end if
 
               nread = nread + 1   !nread = nread + nchanl
 
-              if (l4dvar) then
+              if (thin4d) then
                  timedif = zero
               else
                  timedif = two*abs(tdiff)        ! range:  0 to 6
@@ -329,6 +333,7 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
                  end do
               end do
               ! Write final set of "best" observations to output file
+              call count_obs(ndata,naerodat,ilat,ilon,aeroout,nobs)
               write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
               write(lunout) ((aeroout(k,n),k=1,naerodat),n=1,ndata)
            end if

@@ -49,6 +49,7 @@ module general_sub2grid_mod
 !   2012-06-25  parrish  - add subroutine general_sub2grid_destroy_info.
 !   2013-08-03  todling  - protect write-out with verbose (set to false)
 !   2013-10-25  todling  - nullify work pointers
+!   2014-12-03  derber   - optimization changes
 !
 ! subroutines included:
 !   sub general_sub2grid_r_single  - convert from subdomains to grid for real single precision (4 byte)
@@ -64,7 +65,7 @@ module general_sub2grid_mod
 !
 !$$$ end documentation block
 
-   use kinds, only: r_double,i_kind,i_long,r_single
+   use kinds, only: r_double,i_kind,i_long,r_single,r_kind
 
    implicit none
 
@@ -501,51 +502,43 @@ module general_sub2grid_mod
 
 subroutine get_iuse_pe(npe,nz,iuse_pe)
 
-  use constants, only: one
+  use constants, only: one,zero
+  use mpimod, only: mype
   implicit none
 
   integer(i_kind),intent(in) ::npe,nz
   integer(i_kind),intent(out)::iuse_pe(0:npe-1)
 
-  integer(i_kind) iskip_start,iskip,iskiptest,i,icount,left,iright
+  integer(i_kind) i,icount,nskip,ipoint
+  real(r_kind) :: point,skip2
 
 
-     iskip_start= nint((npe-one)/nz)
-     iskip=0
-     do iskiptest=iskip_start+1,1,-1
-        icount=0
-        do i=1,npe,iskiptest
-           icount=icount+1
-        end do
-        if(icount>=nz) then
-           iskip=iskiptest
-           exit
+     iuse_pe=1
+     if(npe <= nz) then
+        write(6,*)' nz,npe=',nz,npe,' ---- no iskip found, all processors used'
+     else                    
+        nskip=npe-nz
+        if(nskip > 0)then
+          skip2=float(npe)/float(nskip)
+          point=zero
+          do i=1,nskip
+            ipoint=min(max(0,nint(point)),npe) 
+            iuse_pe(ipoint)=0
+            point=point+skip2
+          end do
         end if
-     end do
-     if(iskip==0) then
-        write(6,*)' nz,npe=',nz,npe,' ---- no iskip found, program stops'
-        call stop2(999)
+        icount=0
+        do i=0,npe-1
+           if(iuse_pe(i) > 0)icount = icount+1
+        end do
+        if(icount /= nz) then
+           write(6,*)' get_pe2 - inconsistent icount,nz ',nz,icount,'program stops',npe,skip2
+           call stop2(999)
+        end if
+        if(mype == 0)write(6,*) ' in get_pe2 ',nz,icount,npe,skip2
+   
      end if
-     icount=0
-     iuse_pe(:)=0
-     do i=npe-1,0,-iskip
-        icount=icount+1
-        iuse_pe(i)=1
-        if(icount==nz) exit
-     end do
-     left=0
-     do i=0,npe-1
-        if(iuse_pe(i)==1) exit
-        left=left+1
-     end do
-     iright=left/2
-     iuse_pe(:)=0
-     icount=0
-     do i=npe-1-iright,0,-iskip
-        icount=icount+1
-        iuse_pe(i)=1
-        if(icount==nz) exit
-     end do
+     return
      
 end subroutine get_iuse_pe
 
@@ -890,7 +883,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_kind,i_kind
       implicit none
 
 !     Declare passed variables
@@ -978,6 +970,8 @@ end subroutine get_iuse_pe
 ! program history log:
 !   2010-02-11  parrish, initial documentation
 !   2011-07-26  todling, rank-1 interface
+!   2014-12-03  derber - make similar optimization changes already in code for
+!                      double precision.
 !
 !   input argument list:
 !     s          - structure variable, contains all necessary information for
@@ -993,7 +987,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -1038,7 +1031,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -1100,10 +1092,11 @@ end subroutine get_iuse_pe
 
       real(r_single) :: sub_vars0(s%inner_vars,s%lat1,s%lon1,s%num_fields)
       real(r_single) :: work(s%inner_vars,s%itotsub*(s%kend_alloc-s%kbegin_loc+1)) 
-      integer(i_kind) iloc,iskip,i,i0,ii,j,j0,k,n,k_in,ilat,jlon,ierror
+      integer(i_kind) iloc,iskip,i,i0,ii,j,j0,k,n,k_in,ilat,jlon,ierror,ioffset
       integer(i_long) mpi_string
 
 !    remove halo row
+!$omp parallel do  schedule(dynamic,1) private(k,j,j0,i0,i,ii)
       do k=1,s%num_fields
          do j=2,s%lon2-1
             j0=j-1
@@ -1125,8 +1118,8 @@ end subroutine get_iuse_pe
 
       k_in=s%kend_loc-s%kbegin_loc+1
 
-
-! Load temp array in desired order
+! Load grid_vars array in desired order
+!$omp parallel do  schedule(dynamic,1) private(k,iskip,iloc,n,i,ilat,jlon,ii,ioffset)
       do k=s%kbegin_loc,s%kend_loc
          iskip=0
          iloc=0
@@ -1134,12 +1127,13 @@ end subroutine get_iuse_pe
             if (n/=1) then
                iskip=iskip+s%ijn(n-1)*k_in
             end if
+            ioffset=iskip+(k-s%kbegin_loc)*s%ijn(n)
             do i=1,s%ijn(n)
                iloc=iloc+1
                ilat=s%ltosi(iloc)
                jlon=s%ltosj(iloc)
                do ii=1,s%inner_vars
-                  grid_vars(ii,ilat,jlon,k)=work(ii,i + iskip + (k-s%kbegin_loc)*s%ijn(n))
+                  grid_vars(ii,ilat,jlon,k)=work(ii,i + ioffset)
                end do
             end do
          end do
@@ -1173,7 +1167,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -1218,7 +1211,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -1257,6 +1249,8 @@ end subroutine get_iuse_pe
 ! program history log:
 !   2010-02-11  parrish, initial documentation
 !   2010-03-02  parrish - remove setting halo to zero in output
+!   2014-12-03  derber - make similar optimization changes already in code for
+!                      double precision.
 !
 !   input argument list:
 !     s          - structure variable, contains all necessary information for
@@ -1280,59 +1274,39 @@ end subroutine get_iuse_pe
       real(r_single), intent(in   )     :: grid_vars(s%inner_vars,s%nlat,s%nlon,s%kbegin_loc:s%kend_alloc)
       real(r_single),     intent(  out) :: sub_vars(s%inner_vars,s%lat2,s%lon2,s%num_fields)
 
-      real(r_single),allocatable :: temp(:,:),work(:,:,:)
-      integer(i_kind) iloc,iskip,i,ii,k,n,ilat,jlon,ierror
+      real(r_single) :: temp(s%inner_vars,s%itotsub*(s%kend_loc-s%kbegin_loc+1))
+      integer(i_kind) iloc,i,ii,k,n,ilat,jlon,ierror,icount
+      integer(i_kind),dimension(s%npe) ::iskip
       integer(i_long) mpi_string
 
-      allocate(temp(s%inner_vars,s%itotsub*(s%kend_alloc-s%kbegin_loc+1)))
-      allocate(work(s%inner_vars,s%itotsub,s%kbegin_loc:s%kend_alloc))
 !     reorganize for eventual distribution to local domains
-      do k=s%kbegin_loc,s%kend_loc
-         do i=1,s%itotsub
-            ilat=s%ltosi_s(i)
-            jlon=s%ltosj_s(i)
-            do ii=1,s%inner_vars
-               work(ii,i,k)=grid_vars(ii,ilat,jlon,k)
-            end do
-         end do
+      iskip(1)=0
+      do n=2,s%npe
+        iskip(n)=iskip(n-1)+s%ijn_s(n-1)*(s%kend_loc-s%kbegin_loc+1)
       end do
-
-!     load temp array in order of subdomains
-      iloc=0
-      iskip=0
-      do n=1,s%npe
-         if (n/=1) then
-            iskip=iskip+s%ijn_s(n-1)
-         end if
-
-         do k=s%kbegin_loc,s%kend_loc
+!$omp parallel do  schedule(dynamic,1) private(n,k,i,jlon,ii,ilat,iloc,icount)
+      do k=s%kbegin_loc,s%kend_loc
+         icount=0
+         do n=1,s%npe
+            iloc=iskip(n)+(k-s%kbegin_loc)*s%ijn_s(n)
             do i=1,s%ijn_s(n)
                iloc=iloc+1
+               icount=icount+1
+               ilat=s%ltosi_s(icount)
+               jlon=s%ltosj_s(icount)
                do ii=1,s%inner_vars
-                  temp(ii,iloc)=work(ii,iskip+i,k)
+                  temp(ii,iloc)=grid_vars(ii,ilat,jlon,k)
                end do
             end do
          end do
       end do
 
-!     Now load the temp array back into work
-      iloc=0
-      do k=s%kbegin_loc,s%kend_loc
-         do i=1,s%itotsub
-            iloc=iloc+1
-            do ii=1,s%inner_vars
-               work(ii,i,k)=temp(ii,iloc)
-            end do
-         end do
-      end do
-      deallocate(temp)
 
       call mpi_type_contiguous(s%inner_vars,mpi_real4,mpi_string,ierror)
       call mpi_type_commit(mpi_string,ierror)
 
-      call mpi_alltoallv(work,s%sendcounts_s,s%sdispls_s,mpi_string, &
+      call mpi_alltoallv(temp,s%sendcounts_s,s%sdispls_s,mpi_string, &
                         sub_vars,s%recvcounts_s,s%rdispls_s,mpi_string,mpi_comm_world,ierror)
-      deallocate(work)
       call mpi_type_free(mpi_string,ierror)
 
    end subroutine general_grid2sub_r_single_rank4
@@ -1363,7 +1337,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -1408,7 +1381,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -1497,7 +1469,7 @@ end subroutine get_iuse_pe
       k_in=s%kend_loc-s%kbegin_loc+1
 
 
-! Load temp array in desired order
+! Load grid_vars array in desired order
 !$omp parallel do  schedule(dynamic,1) private(k,iskip,iloc,n,i,ilat,jlon,ii,ioffset)
       do k=s%kbegin_loc,s%kend_loc
          iskip=0
@@ -1589,7 +1561,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -1713,7 +1684,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -1765,7 +1735,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -1898,7 +1867,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -1944,7 +1912,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -2083,7 +2050,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -2129,7 +2095,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -2240,7 +2205,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -2286,7 +2250,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -2399,7 +2362,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_single,i_kind
       use egrid2agrid_mod, only: g_egrid2agrid,egrid2agrid_parm
       use m_rerank, only: rerank
       implicit none
@@ -2512,7 +2474,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_single,i_kind
       use egrid2agrid_mod, only: g_egrid2agrid,egrid2agrid_parm
       use m_rerank, only: rerank
       implicit none
@@ -2624,7 +2585,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_single,i_kind
       use egrid2agrid_mod, only: g_egrid2agrid_ad,egrid2agrid_parm
       use m_rerank, only: rerank
       implicit none
@@ -2734,7 +2694,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_single,i_kind
       use egrid2agrid_mod, only: g_egrid2agrid_ad,egrid2agrid_parm
       use m_rerank, only: rerank
       implicit none
@@ -2844,7 +2803,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_single,i_kind
       use egrid2agrid_mod, only: g_agrid2egrid,egrid2agrid_parm
       use m_rerank, only: rerank
       implicit none
@@ -2956,7 +2914,6 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use kinds, only: r_double,i_kind
       use egrid2agrid_mod, only: g_agrid2egrid,egrid2agrid_parm
       use m_rerank, only: rerank
       implicit none

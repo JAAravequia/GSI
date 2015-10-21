@@ -1,5 +1,5 @@
 subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
-             nprof_gps,sis)
+             nprof_gps,sis,nobs)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram: read_gps                   read in and reformat gps data
@@ -56,6 +56,7 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
 !   2011-08-24 cucurull - add preliminaty qc flags for C/NOFS, SAC-C, Oceansat-2, METOP-B, SAC-D, and M-T
 !   2012-10-25 cucurull - add qc flag for bnd=0 case
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
+!   2015-02-23  Rancic/Thomas - add l4densvar to time window logical
 !
 !   input argument list:
 !     infile   - unit from which to read BUFR data
@@ -68,6 +69,7 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
 !     nread    - number of gps observations read
 !     ndata    - number of gps profiles retained for further processing
 !     nodata   - number of gps observations retained for further processing
+!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -78,10 +80,11 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
   use kinds, only: r_kind,i_kind,r_double
   use constants, only: deg2rad,zero,rad2deg,r60inv,r100
   use obsmod, only: iadate,ref_obs
-  use gsi_4dvar, only: l4dvar,iwinbgn,winlen
+  use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen
   use convinfo, only: nconvtype,ctwind,cermax, &
         ncmiter,ncgroup,ncnumgrp,icuse,ictype,ioctype
   use gridmod, only: regional,nlon,nlat,tll2xy,rlats,rlons
+  use mpimod, only: npe
   implicit none
 
 ! Declare passed variables
@@ -90,6 +93,7 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
   real(r_kind)    ,intent(in   ) :: twind
   integer(i_kind) ,intent(in   ) :: lunout
   integer(i_kind) ,intent(inout) :: nread,ndata,nodata
+  integer(i_kind),dimension(npe) ,intent(inout) :: nobs
   integer(i_kind) ,intent(inout) :: nprof_gps
 
 ! Declare local parameters  
@@ -227,7 +231,7 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
    
 ! check time window in subset
         t4dv=real((minobs-iwinbgn),r_kind)*r60inv
-        if (l4dvar) then
+        if (l4dvar.or.l4densvar) then
            if (t4dv<zero .OR. t4dv>winlen) then
               write(6,*)'READ_GPS:      time outside window ',&
                    t4dv,' skip this report'
@@ -434,6 +438,7 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
   enddo                     ! messages
 
 ! Write observation to scratch file
+  call count_obs(ndata,nreal,ilat,ilon,cdata_all,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon,nmrecs
   write(lunout) ((cdata_all(k,i),k=1,nreal),i=1,ndata)
   deallocate(cdata_all)
