@@ -228,15 +228,16 @@ elif [[ "$machine" = "WCOSS" ]]; then
 #  fix, ptmp, and CRTM coefficient files.
 
    export group=dev
-   export queue=dev
+   export queue=debug
+#   export queue=dev
    export basedir=/da/save/$LOGNAME
    export gsisrc=$basedir/trunk/src
-   export gsiexec_updat=$basedir/trunk/src/global_gsi
-   export gsiexec_contrl=$basedir/svn1/src/global_gsi
-   export enkfexec_updat=$basedir/trunk/src/enkf/global_enkf
-   export enkfexec_contrl=$basedir/svn1/src/enkf/global_enkf
-   export fixgsi=$basedir/trunk/fix
-   export scripts=$basedir/trunk/scripts
+   export gsiexec_updat=$basedir/gsi/xsu_nqc/src/global_gsi
+   export gsiexec_contrl=$basedir/gsi/xsu_obr/src/global_gsi
+   export enkfexec_updat=$basedir/gsi/xsu_nqc/src/enkf/global_enkf
+   export enkfexec_contrl=$basedir/gsi/xsu_obr/src/enkf/global_enkf
+   export fixgsi=$basedir/gsi/xsu_nqc/fix
+   export scripts=$basedir/gsi/xsu_nqc/scripts
    export fixcrtm=/da/save/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix
    export tmpdir=/ptmpp1/$LOGNAME
    export savdir=/ptmpp1/$LOGNAME
@@ -340,7 +341,7 @@ export control_hwrf_nmm_d3="$noscrub/tmpreg_${hwrf_nmm_d3}/$exp1_hwrf_nmm_d3_cnt
 export control_hwrf_nmm_d32="$noscrub/tmpreg_${hwrf_nmm_d3}/$exp2_hwrf_nmm_d3_cntrl"
 
 # Define debug variable - If you want to run the debug tests, set this variable to .true.  Default is .false.
-export debug=".false."   # Set debug to .true. to run the debug tests.  Otherwise, keep this set to .false.
+export debug=".true."   # Set debug to .true. to run the debug tests.  Otherwise, keep this set to .false.
 
 # Define parameters for global_T62_3d4dvar and global_T62_4dvar
 export minimization="lanczos"  # If "lanczos", use sqrtb lanczos minimization algorithm.  Otherwise use "pcgsoi".

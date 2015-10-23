@@ -243,6 +243,15 @@ ozinfo=$fixgsi/global_ozinfo.txt
 pcpinfo=$fixgsi/global_pcpinfo.txt
 hybens_locinfo=$fixgsi/global_hybens_locinfo.l64.txt
 errtable=$fixgsi/prepobs_errtable.global
+errtable_ps=$fixgsi/prepobs_errtable_ps.global_nqci
+errtable_pw=$fixgsi/prepobs_errtable_pw.global
+errtable_q=$fixgsi/prepobs_errtable_q.global_nqci
+errtable_t=$fixgsi/prepobs_errtable_t.global_nqci
+errtable_uv=$fixgsi/prepobs_errtable_uv.global_nqci
+btable_uv=$fixgsi/nqc_b_uv.global_nqci
+btable_ps=$fixgsi/nqc_b_ps.global_nqci
+btable_q=$fixgsi/nqc_b_q.global_nqci
+btable_t=$fixgsi/nqc_b_t.global_nqci
 atmsbeaminfo=$fixgsi/atms_beamwidth.txt
 
 # Only need this file for single obs test
@@ -281,6 +290,15 @@ $ncp $pcpinfo  ./pcpinfo
 $ncp $ozinfo   ./ozinfo
 $ncp $convinfo ./convinfo
 $ncp $errtable ./errtable
+$ncp $errtable_ps ./errtable_ps
+$ncp $errtable_pw ./errtable_pw
+$ncp $errtable_q ./errtable_q
+$ncp $errtable_t ./errtable_t
+$ncp $errtable_uv ./errtable_uv
+$ncp $btable_ps ./btable_ps
+$ncp $btable_q ./btable_q
+$ncp $btable_t ./btable_t
+$ncp $btable_uv ./btable_uv
 $ncp $anavinfo ./anavinfo
 $ncp $hybens_locinfo ./hybens_locinfo
 $ncp $atmsbeaminfo ./atms_beamwidth.txt

@@ -1022,7 +1022,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 !              write(6,*) 'READ_SATWND:itypey,ierr2=',itypey,ierr2,ierr,index_sub(nc),isuble_uv(itypey,ierr2)
               if( iobsub /= isuble_uv(itypey,ierr2)) then
                  write(6,*) ' READ_SATWND: the subtypes do not match subtype &
-                            in the errortable,iobsub=',iobsub,isuble_uv(itypey,ierr2),isuble_uv(itypey,ierr2),itype,itypey,nc,ierr
+                            in the errortable,iobsub=',iobsub,isuble_uv(itypey,ierr2),itype,itypey,nc,ierr
                  call stop2(49)
               endif
               if(ppb>=etabl_uv(itypey,1,1)) k1=1
