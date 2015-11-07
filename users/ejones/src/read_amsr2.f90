@@ -126,8 +126,8 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
   integer(i_kind) :: ichan, instr, idum
 
   logical :: valid
-  real(r_kind) :: clath_sun_glint_calc , clonh_sun_glint_calc 
-  real(r_kind) :: date5_4_sun_glint_calc
+!  real(r_kind) :: clath_sun_glint_calc , clonh_sun_glint_calc 
+!  real(r_kind) :: date5_4_sun_glint_calc
 
   real(r_kind) :: expansion, dlat_earth_deg, dlon_earth_deg
 
@@ -154,10 +154,11 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
   real(r_double),dimension(3,14):: amsrchan_d             
 
 ! ---- sun glint ----
-  integer(i_kind) doy,mlen(12),mday(12),mon,m
-  real(r_kind) sun_azimuth,sun_zenith
-  data  mlen/31,28,31,30,31,30, &
-             31,31,30,31,30,31/ 
+!  integer(i_kind) doy,mlen(12),mday(12),mon,m
+!  real(r_kind) sun_azimuth,sun_zenith
+  real(r_kind) :: sun_zenith
+!  data  mlen/31,28,31,30,31,30, &
+!             31,31,30,31,30,31/ 
 
   integer(i_kind) :: ireadsb, ireadmg 
   real(r_kind),parameter:: one_minute=0.01666667_r_kind
@@ -173,11 +174,11 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
      call gsi_nstcoupler_skindepth(obstype, zob)         ! get penetration depth (zob) for the obstype
   endif
 
-  m = 0
-  do mon=1,12 
-     mday(mon) = m 
-     m = m + mlen(mon) 
-  end do 
+!  m = 0
+!  do mon=1,12 
+!     mday(mon) = m 
+!     m = m + mlen(mon) 
+!  end do 
   ntest = 0
   nreal = maxinfo+nstinfo
   ndata = 0
@@ -443,26 +444,22 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
            solazi=solazi-360.0_r_kind
         endif
 
-
-
-! Work on this:
-! Sun glint and solar zenith code from AMSR-E, use this while no sun glint angle
-! is present in the AMSR2 data stream.
-!  -------- Retreive Sun glint angle -----------
-        doy = mday( int(idate5(2)) ) + int(idate5(3))
-        if ((mod( int(idate5(1)),4)==0).and.( int(idate5(2)) > 2))  then 
-           doy = doy + 1
-        end if 
-
-        ifov = nint(fovn)
-
-        clath_sun_glint_calc = clath
-        clonh_sun_glint_calc = clonh
-        if(clonh>180_r_kind) clonh_sun_glint_calc = clonh -360.0_r_kind
-        date5_4_sun_glint_calc =  &                                                                                                
-        real(idate5(4),r_kind)+real(idate5(5),r_kind)*r60inv+real(amsrspot_d(7),r_kind)*r60inv*r60inv   
-
-        call zensun(doy,date5_4_sun_glint_calc,clath_sun_glint_calc,clonh_sun_glint_calc,sun_zenith,sun_azimuth)
+!    calculate solar zenith angle (used in QC for sun glint)
+        sun_zenith = 90.0_r_kind - soel
+!        doy = mday( int(idate5(2)) ) + int(idate5(3))
+!        if ((mod( int(idate5(1)),4)==0).and.( int(idate5(2)) > 2))  then 
+!           doy = doy + 1
+!        end if 
+!
+!        ifov = nint(fovn)
+!
+!        clath_sun_glint_calc = clath
+!        clonh_sun_glint_calc = clonh
+!        if(clonh>180_r_kind) clonh_sun_glint_calc = clonh -360.0_r_kind
+!        date5_4_sun_glint_calc =  &                                                                                                
+!        real(idate5(4),r_kind)+real(idate5(5),r_kind)*r60inv+real(amsrspot_d(7),r_kind)*r60inv*r60inv   
+!
+!        call zensun(doy,date5_4_sun_glint_calc,clath_sun_glint_calc,clonh_sun_glint_calc,sun_zenith,sun_azimuth)
 !       check to make sure sun zenith is between 0 and 180
         if (sun_zenith < 0.0_r_kind) then
           sun_zenith=90.0_r_kind-sun_zenith
