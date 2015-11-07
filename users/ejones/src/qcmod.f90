@@ -1392,6 +1392,9 @@ subroutine qc_amsr2(nchanl,sfchgt,luse,sea, &
          (/ 0.050_r_kind, 0.050_r_kind, 0.050_r_kind, 0.050_r_kind, 0.050_r_kind, &
             0.050_r_kind, 0.050_r_kind, 0.050_r_kind, 0.050_r_kind, 0.050_r_kind, &
             0.050_r_kind, 0.050_r_kind, 0.050_r_kind, 0.050_r_kind /)
+!         (/ 0.100_r_kind, 0.100_r_kind, 0.100_r_kind, 0.100_r_kind, 0.100_r_kind, &
+!            0.100_r_kind, 0.100_r_kind, 0.100_r_kind, 0.100_r_kind, 0.100_r_kind, &
+!            0.100_r_kind, 0.100_r_kind, 0.100_r_kind, 0.100_r_kind /)
   endif
 
 ! Loop over observations.
@@ -1443,8 +1446,10 @@ subroutine qc_amsr2(nchanl,sfchgt,luse,sea, &
     ang_a = ( (solazi*cos(ang)) - (solel*sin(ang)) )
     ang_b = ( (solazi*sin(ang)) + (solel*cos(ang)) )
     ang_ab = sqrt(ang_a**2 + ang_b**2)
-    
-    do l=1,nchanl
+
+! only flag first 6 channels for sun glint    
+!    do l=1,nchanl
+    do l=1,6             
        if (ang_ab < 26.0_r_kind) then
          varinv(l)=zero
          if(luse) then
@@ -1517,7 +1522,9 @@ subroutine qc_amsr2(nchanl,sfchgt,luse,sea, &
 
     ! check emissivity difference values against thresholds and assign flag if
     ! needed
-    if ( (diff_em_36h > 0.015_r_kind) .or. (diff_em_89h > 0.015_r_kind) ) then
+!    if ( (diff_em_36h > 0.015_r_kind) .or. (diff_em_89h > 0.015_r_kind) ) then
+    if ( (diff_em_36h > 0.008_r_kind) .or. (diff_em_89h > 0.008_r_kind) .or. &
+         (diff_em_36h < -0.030_r_kind) .or. (diff_em_89h < -0.030_r_kind) ) then
        do i=1,14
           varinv(1:14)=zero
           if (id_qc(i) == igood_qc) id_qc(i)=ifail_emiss_qc
