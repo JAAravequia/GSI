@@ -238,7 +238,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   if(conv_diagsave)then
      nchar=1
-     ioff0=19
+     ioff0=23
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
@@ -491,7 +491,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            valqc = -two*rat_err2*term
         else
            term = exp_arg
-           wgt  = wgtlim
+           wgt  = one 
            rwgt = wgt/wgtlim
            valqc = -two*rat_err2*term
         endif
@@ -636,6 +636,10 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(17,ii) = pob                ! surface pressure observation (hPa)
         rdiagbuf(18,ii) = pob-pges           ! obs-ges used in analysis (coverted to hPa)
         rdiagbuf(19,ii) = pob-pgesorig       ! obs-ges w/o adjustment to guess surface pressure (hPa)
+        rdiagbuf(20,ii)=rdelz                ! difference between model height and observation height
+        rdiagbuf(21,ii)=drbx                 ! error adjust facter vertically 
+        rdiagbuf(22,ii)=drdp                 ! error adjust facter vertically 
+        rdiagbuf(23,ii)=dup(i)                 ! error adjust facter vertically 
 
         ioff=ioff0
         if (lobsdiagsave) then

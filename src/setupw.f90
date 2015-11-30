@@ -301,7 +301,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=23
+     ioff0=28
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+7*miter+2
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
@@ -1154,6 +1154,11 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(20,ii) = data(ivob,i)       ! v wind component observation (m/s)
         rdiagbuf(21,ii) = dvdiff             ! v obs-ges used in analysis (m/s)
         rdiagbuf(22,ii) = vob-vgesin         ! v obs-ges w/o bias correction (m/s) (future slot)
+        rdiagbuf(24,ii) =psges
+        rdiagbuf(25,ii) =drpx
+        rdiagbuf(26,ii) =rhgh
+        rdiagbuf(27,ii) =rlow
+        rdiagbuf(28,ii) =dup(i)
 
         if(regional) then
 

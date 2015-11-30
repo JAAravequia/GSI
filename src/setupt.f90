@@ -335,7 +335,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     nreal=19
+     nreal=24
     if (aircraft_t_bc_pof .or. aircraft_t_bc .or. aircraft_t_bc_ext) &
           nreal=nreal+npredt+2
      idia0=nreal
@@ -969,12 +969,18 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(17,ii) = data(itob,i)       ! temperature observation (K)
         rdiagbuf(18,ii) = ddiff              ! obs-ges used in analysis (K)
         rdiagbuf(19,ii) = tob-tges           ! obs-ges w/o bias correction (K) (future slot)
+        rdiagbuf(20,ii) = psges
+        rdiagbuf(21,ii) = drpx
+        rdiagbuf(22,ii) = ramp 
+        rdiagbuf(23,ii) =  rhgh 
+        rdiagbuf(24,ii) =  dup(i) 
         if (aircraft_t_bc_pof .or. aircraft_t_bc .or. aircraft_t_bc_ext) then
-           rdiagbuf(20,ii) = data(ipof,i)       ! data pof
-           rdiagbuf(21,ii) = data(ivvlc,i)      ! data vertical velocity
+           rdiagbuf(25,ii) = data(ipof,i)       ! data pof
+           rdiagbuf(26,ii) = data(ivvlc,i)      ! data vertical velocity
            do j=1,npredt
-              rdiagbuf(21+j,ii) = predbias(j)
+              rdiagbuf(27+j,ii) = predbias(j)
            end do
+      
         end if
         idia=idia0
         if (lobsdiagsave) then

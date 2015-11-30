@@ -266,7 +266,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=20
+     ioff0=25
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
@@ -730,6 +730,11 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(19,ii) = qob-qges           ! obs-ges w/o bias correction (future slot)
 
         rdiagbuf(20,ii) = qsges              ! guess saturation specific humidity
+        rdiagbuf(21,ii) =psges               ! guess pressure
+        rdiagbuf(22,ii) =dprpx               ! vertical error adjustment factor
+        rdiagbuf(23,ii) =ramp                ! vertical error adjustment factor
+        rdiagbuf(24,ii) =rhgh                ! vertical error adjustment factor
+        rdiagbuf(25,ii) =dup(i)              ! duplicate for time 
 
         ioff=ioff0
         if (lobsdiagsave) then

@@ -46,16 +46,16 @@ fi
 #=================================================================================================
 
 # Set experiment name and analysis date
-adate=2015060100
-expnm=globalprod    
-exp=globalprod.$adate
+adate=2015111612
+expnm=error   
+exp=error.$adate
 expid=${expnm}.$adate.wcoss
 
 # Set path/file for gsi executable
-gsiexec=/da/save/$USER/trunk/src/global_gsi
+gsiexec=/da/save/$USER/gsi/xsu_error/src/global_gsi
 
 # Specify GSI fixed field
-fixgsi=/da/save/$USER/trunk/fix
+fixgsi=/da/save/$USER/gsi/xsu_error/fix
 
 # Set the JCAP resolution which you want.
 # All resolutions use LEVS=64
@@ -67,9 +67,9 @@ export lrun_subdirs=.true.
 
 # Set data, runtime and save directories
 if [ $MACHINE = WCOSS ]; then
-   datdir=/ptmp/$USER/data_sigmap/${exp}
-   tmpdir=/ptmp/$USER/tmp${JCAP}_sigmap/${expid}  
-   savdir=/ptmp/$USER/out${JCAP}/sigmap/${expid}  
+   datdir=/ptmpp1/$USER/data_sigmap/${exp}
+   tmpdir=/ptmpp1/$USER/tmp${JCAP}_sigmap/${expid}  
+   savdir=/ptmpp1/$USER/out${JCAP}/sigmap/${expid}  
    fixcrtm=/da/save/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix
    endianness=Big_Endian
    COMPRESS=gzip 
@@ -213,11 +213,12 @@ datges=/com/gfs/prod/gdas.$gdate0
 # everything we need, else look elsewhere.
 
 if [ $MACHINE = WCOSS ]; then
-  if [ -s ${datdir}/gdas1.t${hha}z.sgm3prep ]; then 
-    datobs=${datdir}
-    datges=${datdir}
-    datprep=${datobs}
-  elif [ -s /com/gfs/prod/gdas.${gdate0}/gdas1.t${hha}z.sgm3prep ]; then
+#  if [ -s ${datdir}/gdas1.t${hha}z.sgm3prep ]; then 
+#    datobs=${datdir}
+#    datges=${datdir}
+#    datprep=${datobs}
+#  elif [ -s /com/gfs/prod/gdas.${gdate0}/gdas1.t${hha}z.sgm3prep ]; then
+  if [ -s /com/gfs/prod/gdas.${gdate0}/gdas1.t${hha}z.sgm3prep ]; then
     datges=/com/gfs/prod/gdas.$gdate0
     datobs=/com/gfs/prod/gdas.$adate0
     datprep=${datobs}
@@ -360,7 +361,7 @@ SINGLEOB=""
 
 cat << EOF > gsiparm.anl
  &SETUP
-   miter=2,niter(1)=100,niter(2)=100,
+   miter=2,niter(1)=10,niter(2)=0,
    niter_no_qc(1)=50,niter_no_qc(2)=0,
    write_diag(1)=.true.,write_diag(2)=.false.,write_diag(3)=.true.,
    qoption=2,
@@ -403,7 +404,7 @@ cat << EOF > gsiparm.anl
    $STRONGOPTS
  /
  &OBSQC
-   dfact=0.75,dfact1=3.0,noiqc=.true.,oberrflg=.false.,c_varqc=0.02,
+   dfact=0.75,dfact1=3.0,noiqc=.true.,oberrflg=.false.,c_varqc=0.02,vqc=.true.
    use_poq7=.true.,qc_noirjaco3_pole=.true.,
    $OBSQC
  /
@@ -638,7 +639,7 @@ $ncp $datobs/${prefix_obs}syndata.tcvitals.tm00 ./tcvitl
  $ncp $datges/${prefix_tbc}.abias_pc            ./satbias_pc
  $ncp $datges/${prefix_tbc}.radstat             ./radstat.gdas
 
-/da/save/$USER/trunk/util/Radiance_bias_correction_Utilities/write_biascr_option.x -newpc4pred -adp_anglebc 4
+/da/save/$USER/xsu_error/util/Radiance_bias_correction_Utilities/write_biascr_option.x -newpc4pred -adp_anglebc 4
 
 cp satbias_in satbias_in.orig
 cp satbias_in.new satbias_in
