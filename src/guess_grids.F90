@@ -104,6 +104,7 @@ module guess_grids
 !   2013-10-19  todling - metguess now holds background
 !                         all tendencies now in a bundle (see tendsmod)
 !                         all derivaties now in a bundle (see derivsmod)
+!   2015-01-15  Hu      - Add coast_prox to hold coast proximity
 !
 ! !AUTHOR: 
 !   kleist           org: np20                date: 2003-12-01
@@ -134,13 +135,14 @@ module guess_grids
   public :: destroy_chemges_grids
 ! set passed variables to public
   public :: ntguessig,ges_prsi,ges_psfcavg,ges_prslavg
-  public :: isli2,ges_prsl,nfldsig
+  public :: isli2,fice2,ges_prsl,nfldsig
   public :: ges_teta
   public :: fact_tv,tropprs,sfct
   public :: ntguessfc,ntguesnst,dsfct,ifilesig,veg_frac,soil_type,veg_type
-  public :: sno2,ifilesfc,ifilenst,sfc_rough,fact10,sno,isli,soil_temp,soil_moi
+  public :: sno2,ifilesfc,ifilenst,sfc_rough,fact10,sno,isli,fice,soil_temp,soil_moi,coast_prox 
   public :: nfldsfc,nfldnst,hrdifsig,ges_tsen,sfcmod_mm5,sfcmod_gfs,ifact10,hrdifsfc,hrdifnst
   public :: geop_hgti,ges_lnprsi,ges_lnprsl,geop_hgtl,pt_ll,pbl_height
+  public :: wgt_lcbas
   public :: ges_qsat
   public :: use_compress,nsig_ext,gpstop
 
@@ -204,6 +206,11 @@ module guess_grids
   integer(i_kind),allocatable,dimension(:,:,:):: isli    ! snow/land/ice mask
   integer(i_kind),allocatable,dimension(:,:,:):: isli_g  ! isli on horiz/global grid
   integer(i_kind),allocatable,dimension(:,:):: isli2     ! snow/land/ice mask at analysis time
+  real(r_kind),allocatable,dimension(:,:):: coast_prox   ! coast proximity mask
+
+  integer(i_kind),allocatable,dimension(:,:,:):: fice    ! sea ice fraction
+  integer(i_kind),allocatable,dimension(:,:,:):: fice_g  ! sea ice fraction on horiz/global grid
+  real(r_kind),allocatable,dimension(:,:):: fice2        ! sea ice concentration/fraction on subdomain
 
   real(r_kind),allocatable,dimension(:,:,:):: sno2  ! sno depth on subdomain
 
@@ -233,6 +240,7 @@ module guess_grids
 
   real(r_kind),allocatable,dimension(:,:,:):: pbl_height  !  GSD PBL height in hPa
                                                           ! Guess Fields ...
+  real(r_kind),allocatable,dimension(:,:):: wgt_lcbas     ! weight given to base height of lowest cloud seen
   real(r_kind),allocatable,dimension(:,:,:,:):: ges_prsi  ! interface pressure
   real(r_kind),allocatable,dimension(:,:,:,:):: ges_prsl  ! layer midpoint pressure
   real(r_kind),allocatable,dimension(:,:,:,:):: ges_lnprsl! log(layer midpoint pressure)
@@ -296,6 +304,7 @@ contains
 !   2008-12-5   todling - add time dimension to dsfct
 !   2009-01-23  todling - zero out arrays
 !   2012-03-06  akella  - add call to initialize arrays for NST analysis
+!   2014-12-01  li      - add fice2, fice & fice_g  (sea ice fraction)
 !
 ! !REMARKS:
 !   language: f90
@@ -311,19 +320,19 @@ contains
     if(sfc_grids_allocated_) call die('create_sfc_grids','alread allocated')
     sfc_grids_allocated_=.true.
 
-    allocate( isli_g(nlat,nlon,nfldsfc),&
-         isli2(lat2,lon2),sno2(lat2,lon2,nfldsfc),&
+    allocate( isli_g(nlat,nlon,nfldsfc),fice_g(nlat,nlon,nfldsfc), &
+         isli2(lat2,lon2),fice2(lat2,lon2),sno2(lat2,lon2,nfldsfc), &
          stat=istatus)
     if (istatus/=0) write(6,*)'CREATE_SFC_GRIDS(1):  allocate error, istatus=',&
          istatus,lat2,lon2,nlat,nlon,nfldsfc
 
 #ifndef HAVE_ESMF
-    allocate( isli(lat2,lon2,nfldsfc),fact10(lat2,lon2,nfldsfc),&
+    allocate( isli(lat2,lon2,nfldsfc),fice(lat2,lon2,nfldsfc),fact10(lat2,lon2,nfldsfc),&
          dsfct(lat2,lon2,nfldsfc),sfct(lat2,lon2,nfldsfc),sno(lat2,lon2,nfldsfc),&
          veg_type(lat2,lon2,nfldsfc),veg_frac(lat2,lon2,nfldsfc),&
          sfc_rough(lat2,lon2,nfldsfc),&
          soil_type(lat2,lon2,nfldsfc),soil_temp(lat2,lon2,nfldsfc),&
-         soil_moi(lat2,lon2,nfldsfc), &
+         soil_moi(lat2,lon2,nfldsfc), coast_prox(lat2,lon2),&
          stat=istatus)
     if (istatus/=0) write(6,*)'CREATE_SFC_GRIDS(2):  allocate error, istatus=',&
          istatus,lat2,lon2,nlat,nlon,nfldsfc
@@ -333,6 +342,7 @@ contains
        do j=1,nlon
           do i=1,nlat
              isli_g(i,j,it)=0
+             fice_g(i,j,it)=zero
           end do
        end do
     end do
@@ -342,6 +352,8 @@ contains
        do j=1,lon2
           do i=1,lat2
              isli(i,j,it)=0
+             fice(i,j,it)=zero
+             coast_prox(i,j)=zero
              fact10(i,j,it)=zero
              sfct(i,j,it)=zero
              dsfct(i,j,it)=zero
@@ -367,6 +379,7 @@ contains
     do j=1,lon2
        do i=1,lat2
           isli2(i,j)=0
+          fice2(i,j)=zero
        end do
     end do
 
@@ -419,6 +432,7 @@ contains
 !   2011-02-09  zhu     - add ges_gust,ges_vis,ges_pblh
 !   2012-05-14  todling - revisit cw check to check also on some hydrometeors
 !   2013-10-19  todling - revisit initialization of certain vars wrt ESMF
+!   2014-06-09  carley/zhu - add wgt_lcbas
 !
 ! !REMARKS:
 !   language: f90
@@ -454,7 +468,7 @@ contains
             geop_hgtl(lat2,lon2,nsig,nfldsig), &
             geop_hgti(lat2,lon2,nsig+1,nfldsig),ges_prslavg(nsig),&
             tropprs(lat2,lon2),fact_tv(lat2,lon2,nsig),&
-            pbl_height(lat2,lon2,nfldsig),&
+            pbl_height(lat2,lon2,nfldsig),wgt_lcbas(lat2,lon2), &
             ges_qsat(lat2,lon2,nsig,nfldsig),stat=istatus)
        if (istatus/=0) write(6,*)'CREATE_GES_GRIDS(ges_prsi,..):  allocate error, istatus=',&
             istatus,lat2,lon2,nsig,nfldsig
@@ -509,6 +523,12 @@ contains
                    geop_hgti(i,j,k,n)=zero
                 end do
              end do
+          end do
+       end do
+
+       do j=1,lon2
+          do i=1,lat2
+             wgt_lcbas(i,j)=0.01_r_kind
           end do
        end do
 
@@ -788,7 +808,7 @@ contains
 !
     deallocate(ges_prsi,ges_prsl,ges_lnprsl,ges_lnprsi,&
          ges_tsen,ges_teta,geop_hgtl,geop_hgti,ges_prslavg,&
-         tropprs,fact_tv,pbl_height,ges_qsat,stat=istatus)
+         tropprs,fact_tv,pbl_height,wgt_lcbas,ges_qsat,stat=istatus)
     if (istatus/=0) &
          write(6,*)'DESTROY_GES_GRIDS(ges_prsi,..):  deallocate error, istatus=',&
          istatus
@@ -843,11 +863,12 @@ contains
     if(.not.sfc_grids_allocated_) call die('destroy_sfc_grids_','not allocated')
     sfc_grids_allocated_=.false.
 
-    deallocate(isli_g,isli2,sno2,stat=istatus)
+    deallocate(isli_g,isli2,fice_g,fice2,sno2,stat=istatus)
     if (istatus/=0) &
          write(6,*)'DESTROY_SFC_GRIDS:  deallocate error, istatus=',&
          istatus
     if(allocated(isli))deallocate(isli)
+    if(allocated(fice))deallocate(fice)
     if(allocated(fact10))deallocate(fact10)
     if(allocated(sfct))deallocate(sfct)
     if(allocated(sno))deallocate(sno)
@@ -858,6 +879,7 @@ contains
     if(allocated(soil_temp))deallocate(soil_temp)
     if(allocated(soil_moi))deallocate(soil_moi)
     if(allocated(dsfct))deallocate(dsfct)
+    if(allocated(coast_prox))deallocate(coast_prox)
 
     return
   end subroutine destroy_sfc_grids

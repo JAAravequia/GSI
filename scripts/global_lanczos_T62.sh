@@ -203,16 +203,27 @@ emiscoef_VISice=$fixcrtm/NPOESS.VISice.EmisCoeff.bin
 emiscoef_VISland=$fixcrtm/NPOESS.VISland.EmisCoeff.bin
 emiscoef_VISsnow=$fixcrtm/NPOESS.VISsnow.EmisCoeff.bin
 emiscoef_VISwater=$fixcrtm/NPOESS.VISwater.EmisCoeff.bin
-emiscoef_MWwater=$fixcrtm/FASTEM5.MWwater.EmisCoeff.bin
+emiscoef_MWwater=$fixcrtm/FASTEM6.MWwater.EmisCoeff.bin
 aercoef=$fixcrtm/AerosolCoeff.bin
 cldcoef=$fixcrtm/CloudCoeff.bin
-satinfo=$fixgsi/global_satinfo_reg_test.txt
+satinfo=$fixgsi/global_satinfo_clrsky.txt
 scaninfo=$fixgsi/global_scaninfo.txt
 satangl=$fixgsi/global_satangbias.txt
 atmsbeamdat=$fixgsi/atms_beamwidth.txt
 pcpinfo=$fixgsi/global_pcpinfo.txt
 ozinfo=$fixgsi/global_ozinfo.txt
 convinfo=$fixgsi/global_convinfo_reg_test.txt
+### add 9 tables
+errtable_pw=$fixgsi/prepobs_errtable_pw.global
+errtable_ps=$fixgsi/prepobs_errtable_ps.global_nqcf
+errtable_t=$fixgsi/prepobs_errtable_t.global_nqcf
+errtable_q=$fixgsi/prepobs_errtable_q.global_nqcf
+errtable_uv=$fixgsi/prepobs_errtable_uv.global_nqcf
+btable_ps=$fixgsi/nqc_b_ps.global_nqcf
+btable_t=$fixgsi/nqc_b_t.global_nqcf
+btable_q=$fixgsi/nqc_b_q.global_nqcf
+btable_uv=$fixgsi/nqc_b_uv.global_nqcf
+
 errtable=$fixgsi/prepobs_errtable.global
 
 # Only need this file for single obs test
@@ -242,7 +253,7 @@ $ncp $emiscoef_VISice ./NPOESS.VISice.EmisCoeff.bin
 $ncp $emiscoef_VISland ./NPOESS.VISland.EmisCoeff.bin
 $ncp $emiscoef_VISsnow ./NPOESS.VISsnow.EmisCoeff.bin
 $ncp $emiscoef_VISwater ./NPOESS.VISwater.EmisCoeff.bin
-$ncp $emiscoef_MWwater ./FASTEM5.MWwater.EmisCoeff.bin
+$ncp $emiscoef_MWwater ./FASTEM6.MWwater.EmisCoeff.bin
 $ncp $aercoef  ./AerosolCoeff.bin
 $ncp $cldcoef  ./CloudCoeff.bin
 $ncp $satangl  ./satbias_angle
@@ -253,6 +264,17 @@ $ncp $pcpinfo  ./pcpinfo
 $ncp $ozinfo   ./ozinfo
 $ncp $convinfo ./convinfo
 $ncp $errtable ./errtable
+#add 9 tables for new varqc
+$ncp $errtable_pw           ./errtable_pw
+$ncp $errtable_ps           ./errtable_ps
+$ncp $errtable_t           ./errtable_t
+$ncp $errtable_q           ./errtable_q
+$ncp $errtable_uv           ./errtable_uv
+$ncp $btable_ps           ./btable_ps
+$ncp $btable_t           ./btable_t
+$ncp $btable_q           ./btable_q
+$ncp $btable_uv           ./btable_uv
+
 
 $ncp $bufrtable ./prepobs_prep.bufrtable
 $ncp $bftab_sst ./bftab_sstphr
@@ -317,7 +339,7 @@ elif [[ "$endianness" = "Little_Endian" ]]; then
 fi
 
 # Run gsi under Parallel Operating Environment (poe) on NCEP IBM
-if [[ "$machine" = "Zeus" ]]; then
+if [[ "$machine" = "Theia" ]]; then
 
    cd $tmpdir/
    echo "run gsi now"
@@ -327,11 +349,11 @@ if [[ "$machine" = "Zeus" ]]; then
    export MPI_GROUP_MAX=256
    #export OMP_NUM_THREADS=1
 
-   module load intel
-   module load mpt
+#  module load intel
+#  module load mpt
 
    echo "JOB ID : $PBS_JOBID"
-   eval "mpiexec_mpt -v -np $PBS_NP $tmpdir/gsi.x > stdout"
+   eval "$launcher -v -np $PBS_NP $tmpdir/gsi.x > stdout"
 
 elif [[ "$machine" = "WCOSS" ]]; then
 

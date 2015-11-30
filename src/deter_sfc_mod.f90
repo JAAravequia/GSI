@@ -102,7 +102,7 @@ subroutine deter_sfc(alat,alon,dlat_earth,dlon_earth,obstime,isflg, &
      implicit none
 
      real(r_kind)               ,intent(in   ) :: dlat_earth,dlon_earth,obstime,alat,alon
-     integer(i_kind)            ,intent(  out) :: isflg,idomsfc
+     integer(i_kind)            ,intent(  out) :: isflg,idomsfc(1)
      real(r_kind),dimension(0:3),intent(  out) :: sfcpct
      real(r_kind),dimension(0:3),intent(  out) :: ts
      real(r_kind)               ,intent(  out) :: tsavg,sfcr
@@ -186,6 +186,11 @@ subroutine deter_sfc(alat,alon,dlat_earth,dlon_earth,obstime,isflg, &
      istyp01 = isli_full(ix ,iyp)
      istyp11 = isli_full(ixp,iyp)
 
+     fice00= fice_full(ix ,iy )
+     fice01= fice_full(ix ,iyp)
+     fice10= fice_full(ixp,iy )
+     fice11= fice_full(ixp,iyp)
+
      sno00= sno_full(ix ,iy ,itsfc)*dtsfc+sno_full(ix ,iy ,itsfcp)*dtsfcp
      sno01= sno_full(ix ,iyp,itsfc)*dtsfc+sno_full(ix ,iyp,itsfcp)*dtsfcp
      sno10= sno_full(ixp,iy ,itsfc)*dtsfc+sno_full(ixp,iy ,itsfcp)*dtsfcp
@@ -195,11 +200,6 @@ subroutine deter_sfc(alat,alon,dlat_earth,dlon_earth,obstime,isflg, &
      sst01= sst_full(ix ,iyp,itsfc)*dtsfc+sst_full(ix ,iyp,itsfcp)*dtsfcp
      sst10= sst_full(ixp,iy ,itsfc)*dtsfc+sst_full(ixp,iy ,itsfcp)*dtsfcp
      sst11= sst_full(ixp,iyp,itsfc)*dtsfc+sst_full(ixp,iyp,itsfcp)*dtsfcp
-
-     fice00= fice_full(ix ,iy ,itsfc)*dtsfc+fice_full(ix ,iy ,itsfcp)*dtsfcp
-     fice01= fice_full(ix ,iyp,itsfc)*dtsfc+fice_full(ix ,iyp,itsfcp)*dtsfcp
-     fice10= fice_full(ixp,iy ,itsfc)*dtsfc+fice_full(ixp,iy ,itsfcp)*dtsfcp
-     fice11= fice_full(ixp,iyp,itsfc)*dtsfc+fice_full(ixp,iyp,itsfcp)*dtsfcp
 
 !    Interpolate sst to obs location
 
@@ -505,156 +505,6 @@ subroutine deter_sfc(alat,alon,dlat_earth,dlon_earth,obstime,isflg, &
      return
 end subroutine deter_sfc
 
-subroutine deter_sfcpct(dlat_earth,dlon_earth,obstime,sfcpct)
-!$$$  subprogram documentation block
-!                .      .    .                                       .
-! subprogram:    deter_sfcpct       determine surface type in fraction (0 ~ 1)
-! 
-!   prgmmr: Xu Li           org: np2                date: 2014-11-26
-!
-! abstract:  determines surface type fraction based on surrounding surface types
-!
-! program history log:
-!   2014-11-26 li      - based of deter_sfc_type and add to handle ice concentration
-!
-!   input argument list:
-!     dlat
-!     dlon
-!     obstime
-!
-!   output argument list:
-!     sfcpct    - surface type fraction
-!                0 sea
-!                1 land
-!                2 sea ice
-!                3 snow
-!                4 mixed
-!
-! attributes:
-!   language: f90
-!   machine:  ibm RS/6000 SP
-!
-!$$$
-
-     implicit none
-
-     real(r_kind), intent(in   ) :: dlat_earth,dlon_earth,obstime
-
-     integer(i_kind), dimension(0:3), intent(  out) :: sfcpct
-
-     logical outside
-     integer(i_kind) istyp00,istyp01,istyp10,istyp11
-     integer(i_kind):: ix,iy,ixp,iyp,j,itsfc,itsfcp
-     real(r_kind):: dx,dy,dx1,dy1,w00,w10,w01,w11,dtsfc
-     real(r_kind):: dtsfcp,dlat,dlon
-     real(r_kind):: sno00,sno01,sno10,sno11
-     real(r_kind):: fice00,fice01,fice10,fice11
-
-     if(regional)then
-        call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
-     else
-        dlat=dlat_earth
-        dlon=dlon_earth
-        call grdcrd1(dlat,rlats_sfc,nlat_sfc,1)
-        call grdcrd1(dlon,rlons_sfc,nlon_sfc,1)
-     end if
-
-     iy=int(dlon); ix=int(dlat)
-     dy  =dlon-iy; dx  =dlat-ix
-     dx1 =one-dx;    dy1 =one-dy
-     w00=dx1*dy1; w10=dx*dy1; w01=dx1*dy; w11=one-w00-w10-w01
-
-     ix=min(max(1,ix),nlat_sfc); iy=min(max(0,iy),nlon_sfc)
-     ixp=min(nlat_sfc,ix+1); iyp=iy+1
-     if(iy==0) iy=nlon_sfc
-     if(iyp==nlon_sfc+1) iyp=1
-
-!    Get time interpolation factors for surface files
-     if(obstime > hrdifsfc(1) .and. obstime <= hrdifsfc(nfldsfc))then
-        do j=1,nfldsfc-1
-           if(obstime > hrdifsfc(j) .and. obstime <= hrdifsfc(j+1))then
-              itsfc=j
-              itsfcp=j+1
-              dtsfc=(hrdifsfc(j+1)-obstime)/(hrdifsfc(j+1)-hrdifsfc(j))
-           end if
-        end do
-     else if(obstime <=hrdifsfc(1))then
-        itsfc=1
-        itsfcp=1
-        dtsfc=one
-     else
-        itsfc=nfldsfc
-        itsfcp=nfldsfc
-        dtsfc=one
-     end if
-     dtsfcp=one-dtsfc
-
-!    Set surface type flag.  Begin by assuming obs over ice-free water
-
-     istyp00 = isli_full(ix ,iy )
-     istyp10 = isli_full(ixp,iy )
-     istyp01 = isli_full(ix ,iyp)
-     istyp11 = isli_full(ixp,iyp)
-
-     sno00= sno_full(ix ,iy ,itsfc)*dtsfc+sno_full(ix ,iy ,itsfcp)*dtsfcp
-     sno01= sno_full(ix ,iyp,itsfc)*dtsfc+sno_full(ix ,iyp,itsfcp)*dtsfcp
-     sno10= sno_full(ixp,iy ,itsfc)*dtsfc+sno_full(ixp,iy ,itsfcp)*dtsfcp
-     sno11= sno_full(ixp,iyp,itsfc)*dtsfc+sno_full(ixp,iyp,itsfcp)*dtsfcp
-
-     fice00= fice_full(ix ,iy ,itsfc)*dtsfc+fice_full(ix ,iy ,itsfcp)*dtsfcp
-     fice01= fice_full(ix ,iyp,itsfc)*dtsfc+fice_full(ix ,iyp,itsfcp)*dtsfcp
-     fice10= fice_full(ixp,iy ,itsfc)*dtsfc+fice_full(ixp,iy ,itsfcp)*dtsfcp
-     fice11= fice_full(ixp,iyp,itsfc)*dtsfc+fice_full(ixp,iyp,itsfcp)*dtsfcp
-
-     if(istyp00 >=1 .and. sno00 > minsnow)istyp00 = 3
-     if(istyp01 >=1 .and. sno01 > minsnow)istyp01 = 3
-     if(istyp10 >=1 .and. sno10 > minsnow)istyp10 = 3
-     if(istyp11 >=1 .and. sno11 > minsnow)istyp11 = 3
-
-     sfcpct = zero
-
-     if ( istyp00 == 2 .and. fice00 < one ) then
-       sfcpct(2)=sfcpct(2)+w00*fice00
-       sfcpct(0)=sfcpct(0)+w00*(one-fice00)
-     elseif ( istyp00 == 3 .and. (fice00 > zero .and. fice00 < one) ) then
-       sfcpct(3)=sfcpct(3)+w00*fice00
-       sfcpct(0)=sfcpct(0)+w00*(one-fice00)
-     else
-       sfcpct(istyp00)=sfcpct(istyp00)+w00
-     endif
-
-     if ( istyp01 == 2 .and. fice01 < one ) then
-       sfcpct(2)=sfcpct(2)+w01*fice01
-       sfcpct(0)=sfcpct(0)+w01*(one-fice01)
-     elseif ( istyp01 == 3 .and. (fice01 > zero .and. fice01 < one) ) then
-       sfcpct(3)=sfcpct(3)+w01*fice01
-       sfcpct(0)=sfcpct(0)+w01*(one-fice01)
-     else
-       sfcpct(istyp01)=sfcpct(istyp01)+w01
-     endif
-
-     if ( istyp10 == 2 .and. fice10 < one ) then
-       sfcpct(2)=sfcpct(2)+w10*fice10
-       sfcpct(0)=sfcpct(0)+w10*(one-fice10)
-     elseif ( istyp10 == 3 .and. (fice10 > zero .and. fice10 < one) ) then
-       sfcpct(3)=sfcpct(3)+w10*fice10
-       sfcpct(0)=sfcpct(0)+w10*(one-fice10)
-     else
-       sfcpct(istyp10)=sfcpct(istyp10)+w10
-     endif
-
-     if ( istyp11 == 2 .and. fice11 < one ) then
-       sfcpct(2)=sfcpct(2)+w11*fice11
-       sfcpct(0)=sfcpct(0)+w11*(one-fice11)
-     elseif ( istyp11 == 3 .and. (fice11 > zero .and. fice11 < one) ) then
-       sfcpct(3)=sfcpct(3)+w10*fice11
-       sfcpct(0)=sfcpct(0)+w10*(one-fice11)
-     else
-       sfcpct(istyp11)=sfcpct(istyp11)+w11
-     endif
-
-end subroutine deter_sfcpct
-
 subroutine deter_sfc_type(dlat_earth,dlon_earth,obstime,isflg,tsavg)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -756,6 +606,11 @@ subroutine deter_sfc_type(dlat_earth,dlon_earth,obstime,isflg,tsavg)
      istyp01 = isli_full(ix ,iyp)
      istyp11 = isli_full(ixp,iyp)
 
+     fice00= fice_full(ix ,iy )
+     fice01= fice_full(ix ,iyp)
+     fice10= fice_full(ixp,iy )
+     fice11= fice_full(ixp,iyp)
+
      sno00= sno_full(ix ,iy ,itsfc)*dtsfc+sno_full(ix ,iy ,itsfcp)*dtsfcp
      sno01= sno_full(ix ,iyp,itsfc)*dtsfc+sno_full(ix ,iyp,itsfcp)*dtsfcp
      sno10= sno_full(ixp,iy ,itsfc)*dtsfc+sno_full(ixp,iy ,itsfcp)*dtsfcp
@@ -765,11 +620,6 @@ subroutine deter_sfc_type(dlat_earth,dlon_earth,obstime,isflg,tsavg)
      sst01= sst_full(ix ,iyp,itsfc)*dtsfc+sst_full(ix ,iyp,itsfcp)*dtsfcp
      sst10= sst_full(ixp,iy ,itsfc)*dtsfc+sst_full(ixp,iy ,itsfcp)*dtsfcp
      sst11= sst_full(ixp,iyp,itsfc)*dtsfc+sst_full(ixp,iyp,itsfcp)*dtsfcp
-
-     fice00= fice_full(ix ,iy ,itsfc)*dtsfc+fice_full(ix ,iy ,itsfcp)*dtsfcp
-     fice01= fice_full(ix ,iyp,itsfc)*dtsfc+fice_full(ix ,iyp,itsfcp)*dtsfcp
-     fice10= fice_full(ixp,iy ,itsfc)*dtsfc+fice_full(ixp,iy ,itsfcp)*dtsfcp
-     fice11= fice_full(ixp,iyp,itsfc)*dtsfc+fice_full(ixp,iyp,itsfcp)*dtsfcp
 
 !    Interpolate sst to obs location
 
@@ -877,18 +727,22 @@ subroutine deter_sfc2(dlat_earth,dlon_earth,obstime,idomsfc,tsavg,ff10,sfcr,zz)
 
      implicit none
 
+     real(r_kind),parameter:: minsnow=one_tenth
      real(r_kind)   ,intent(in   ) :: dlat_earth,dlon_earth,obstime
 
-     integer(i_kind),intent(  out) :: idomsfc
+     integer(i_kind),intent(  out) :: idomsfc(1)
      real(r_kind)   ,intent(  out) :: tsavg,sfcr
      real(r_kind)   ,intent(  out) :: ff10
      real(r_kind),optional,intent(  out) :: zz
 
      integer(i_kind):: itsfc,itsfcp
+     integer(i_kind) istyp00,istyp01,istyp10,istyp11
      integer(i_kind):: ix,iy,ixp,iyp,j
      real(r_kind):: dx,dy,dx1,dy1,w00,w10,w01,w11,dtsfc,dtsfcp,wgtmin
      real(r_kind):: sst00,sst01,sst10,sst11,dlat,dlon
+     real(r_kind):: sno00,sno01,sno10,sno11
      real(r_kind):: fice00,fice01,fice10,fice11
+     real(r_kind),dimension(0:3):: sfcpct
      logical outside
 
      if(regional)then
@@ -936,6 +790,11 @@ subroutine deter_sfc2(dlat_earth,dlon_earth,obstime,idomsfc,tsavg,ff10,sfcr,zz)
      istyp01 = isli_full(ix ,iyp)
      istyp11 = isli_full(ixp,iyp)
 
+     fice00= fice_full(ix ,iy )
+     fice01= fice_full(ix ,iyp)
+     fice10= fice_full(ixp,iy )
+     fice11= fice_full(ixp,iyp)
+
      sno00= sno_full(ix ,iy ,itsfc)*dtsfc+sno_full(ix ,iy ,itsfcp)*dtsfcp
      sno01= sno_full(ix ,iyp,itsfc)*dtsfc+sno_full(ix ,iyp,itsfcp)*dtsfcp
      sno10= sno_full(ixp,iy ,itsfc)*dtsfc+sno_full(ixp,iy ,itsfcp)*dtsfcp
@@ -945,11 +804,6 @@ subroutine deter_sfc2(dlat_earth,dlon_earth,obstime,idomsfc,tsavg,ff10,sfcr,zz)
      sst01= sst_full(ix ,iyp,itsfc)*dtsfc+sst_full(ix ,iyp,itsfcp)*dtsfcp
      sst10= sst_full(ixp,iy ,itsfc)*dtsfc+sst_full(ixp,iy ,itsfcp)*dtsfcp
      sst11= sst_full(ixp,iyp,itsfc)*dtsfc+sst_full(ixp,iyp,itsfcp)*dtsfcp
-
-     fice00= fice_full(ix ,iy ,itsfc)*dtsfc+fice_full(ix ,iy ,itsfcp)*dtsfcp
-     fice01= fice_full(ix ,iyp,itsfc)*dtsfc+fice_full(ix ,iyp,itsfcp)*dtsfcp
-     fice10= fice_full(ixp,iy ,itsfc)*dtsfc+fice_full(ixp,iy ,itsfcp)*dtsfcp
-     fice11= fice_full(ixp,iyp,itsfc)*dtsfc+fice_full(ixp,iyp,itsfcp)*dtsfcp
 
 !    Interpolate sst to obs location
 
@@ -1146,7 +1000,7 @@ subroutine deter_sfc_fov(fov_flag,ifov,instr,ichan,sat_aziang,dlat_earth_deg,&
   real(r_kind)                 :: x, xstart, xend, y, ystart, yend
   real(r_kind)                 :: dx_fov, dx_fov_max, dy_fov, power
   real(r_kind)                 :: del, mid, rlon1, rlon2
-  real(r_kind), allocatable    :: y_off(:), x_off(:)
+  real(r_kind), allocatable    :: y_off(:), x_off(:), powerx(:,:)
 
   type surface2
      sequence
@@ -1461,12 +1315,14 @@ subroutine deter_sfc_fov(fov_flag,ifov,instr,ichan,sat_aziang,dlat_earth_deg,&
         enddo
      enddo
   else
+     allocate(powerx(subgrid_lengths_x,subgrid_lengths_y))
      do j = jstart, jend
         jj = j
         if (j > nlat_sfc/2) jj = nlat_sfc - j + 1
         do i = min_i(j), max_i(j)
            call reduce2full(i,j,ifull)
            call time_int_sfc(ifull,j,itsfc,itsfcp,dtsfc,dtsfcp,sfc_mdl)
+!$omp parallel do  schedule(dynamic,1)private(jjj,iii,lat_mdl,lon_mdl)
            do jjj = 1, subgrid_lengths_y
               if (y_off(jjj) >= zero) then
                  lat_mdl = (one-y_off(jjj))*rlats_sfc(j)+y_off(jjj)*rlats_sfc(j+1)
@@ -1484,18 +1340,23 @@ subroutine deter_sfc_fov(fov_flag,ifov,instr,ichan,sat_aziang,dlat_earth_deg,&
                     call inside_fov_crosstrk(instr,ifov,sat_aziang, &
                                             dlat_earth_deg,dlon_earth_deg, &
                                             lat_mdl,    lon_mdl,  &
-                                            expansion, ichan, power )
+                                            expansion, ichan, powerx(iii,jjj) )
                  elseif (fov_flag=="conical")then
                     call inside_fov_conical(instr,ichan,sat_aziang, &
                                            dlat_earth_deg,dlon_earth_deg,&
                                            lat_mdl,    lon_mdl,  &
-                                           expansion, power )
+                                           expansion, powerx(iii,jjj) )
                  endif
-                 call accum_sfc(ifull,j,power,sfc_mdl,sfc_sum)
+              enddo
+           enddo
+           do jjj = 1, subgrid_lengths_y
+              do iii = 1, subgrid_lengths_x
+                 call accum_sfc(ifull,j,powerx(iii,jjj),sfc_mdl,sfc_sum)
               enddo
            enddo
         enddo
      enddo
+     deallocate(powerx)
   endif  ! regional or global
   deallocate (x_off, y_off)
 
@@ -1977,10 +1838,12 @@ subroutine accum_sfc(i,j,power,sfc_mdl,sfc_sum)
 
 ! Declare local variables.
   integer(i_kind)             :: mask, sty, vty
+  real(r_kind)                :: fice,tice
 
   if (power == zero) return
 
   mask=isli_full(j,i)
+  fice=fice_full(j,i)
   if (mask>=1.and.sfc_mdl%sn>minsnow) mask=3
 
   if (mask==1) then  ! bare (non-snow covered) land
@@ -1992,7 +1855,11 @@ subroutine accum_sfc(i,j,power,sfc_mdl,sfc_sum)
      sfc_sum%sm=sfc_sum%sm + (power*sfc_mdl%sm)
      sfc_sum%stp=sfc_sum%stp + (power*sfc_mdl%stp)
   elseif (mask==3) then  ! snow cover land or sea ice
-     sfc_sum%sn=sfc_sum%sn + (power*sfc_mdl%sn)
+    if ( fice > zero .and. fice < one ) then
+      sfc_sum%sn=sfc_sum%sn + (power*fice*sfc_mdl%sn)
+    else
+      sfc_sum%sn=sfc_sum%sn + (power*sfc_mdl%sn)
+    endif
   endif
 
 ! wind factor, roughness length and terrain are summed
@@ -2006,9 +1873,23 @@ subroutine accum_sfc(i,j,power,sfc_mdl,sfc_sum)
   endif
 
 ! keep track of skin temperature for each surface type
-  sfc_sum%ts(mask)=sfc_sum%ts(mask) + (power*sfc_mdl%ts)
 ! keep count of each surface type
-  sfc_sum%count(mask) = power + sfc_sum%count(mask)
+  if ( mask == 2 .and. fice < one ) then
+    sfc_sum%count(2) = sfc_sum%count(2) + power*fice
+    sfc_sum%count(0) = sfc_sum%count(0) + power*(one-fice)
+    tice=(sfc_mdl%ts-tfrozen*(one-fice))/fice
+    sfc_sum%ts(2)=sfc_sum%ts(2) + (power*tice*fice)
+    sfc_sum%ts(0)=sfc_sum%ts(0) + (power*tfrozen*(one-fice))
+  elseif ( mask == 3 .and. (fice > zero .and. fice < one) ) then
+    sfc_sum%count(3) = sfc_sum%count(3) + power*fice 
+    sfc_sum%count(0) = sfc_sum%count(0) + power*(one-fice) 
+    tice=(sfc_mdl%ts-tfrozen*(one-fice))/fice
+    sfc_sum%ts(3)=sfc_sum%ts(3) + (power*tice*fice)
+    sfc_sum%ts(0)=sfc_sum%ts(0) + (power*tfrozen*(one-fice))
+  else
+    sfc_sum%count(mask) = power + sfc_sum%count(mask)
+    sfc_sum%ts(mask)=sfc_sum%ts(mask) + (power*sfc_mdl%ts)
+  endif
 
   return
 end subroutine accum_sfc

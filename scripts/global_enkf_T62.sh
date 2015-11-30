@@ -104,6 +104,17 @@ satinfo=$fixgsi/global_satinfo.txt
 convinfo=$fixgsi/global_convinfo_reg_test.txt
 ozinfo=$fixgsi/global_ozinfo.txt
 hybens_locinfo=$fixgsi/global_hybens_locinfo.l64.txt
+### add 9 tables
+errtable_pw=$fixgsi/prepobs_errtable_pw.global
+errtable_ps=$fixgsi/prepobs_errtable_ps.global_nqcf
+errtable_t=$fixgsi/prepobs_errtable_t.global_nqcf
+errtable_q=$fixgsi/prepobs_errtable_q.global_nqcf
+errtable_uv=$fixgsi/prepobs_errtable_uv.global_nqcf
+btable_ps=$fixgsi/nqc_b_ps.global_nqcf
+btable_t=$fixgsi/nqc_b_t.global_nqcf
+btable_q=$fixgsi/nqc_b_q.global_nqcf
+btable_uv=$fixgsi/nqc_b_uv.global_nqcf
+
 
 
 # Copy executable and fixed files to $tmpdir
@@ -123,6 +134,17 @@ $ncp $satinfo  ./satinfo
 $ncp $ozinfo   ./ozinfo
 $ncp $convinfo ./convinfo
 $ncp $hybens_locinfo ./hybens_locinfo
+#add 9 tables for new varqc
+$ncp $errtable_pw           ./errtable_pw
+$ncp $errtable_ps           ./errtable_ps
+$ncp $errtable_t           ./errtable_t
+$ncp $errtable_q           ./errtable_q
+$ncp $errtable_uv           ./errtable_uv
+$ncp $btable_ps           ./btable_ps
+$ncp $btable_t           ./btable_t
+$ncp $btable_q           ./btable_q
+$ncp $btable_uv           ./btable_uv
+
 
 
 # Copy ensemble data to $tmpdir
@@ -146,20 +168,15 @@ done
 
 
 # Copy bias correction, atmospheric and surface files
-if [[ "$machine" = "Zeus" ]]; then
-   $ncp $global_enkf_T62_datges/biascr.gdas.$gdate.orig     ./satbias_in
-   $ncp $global_enkf_T62_datges/satang.gdas.$gdate.orig     ./satbias_ang.in
-else
-   $ncp $global_enkf_T62_datges/biascr_int_${gdate}_ensmean ./satbias_in
-   $ncp $global_enkf_T62_datges/satang.gdas.$gdate          ./satbias_ang.in
-fi
+$ncp $global_enkf_T62_datges/biascr_int_${gdate}_ensmean ./satbias_in
+$ncp $global_enkf_T62_datges/satang.gdas.$gdate          ./satbias_ang.in
 
 $ncp $global_enkf_T62_datges/sfg_${gdate}_fhr06_ensmean ./sfg_${global_enkf_T62_adate}_fhr06_ensmean
 $ncp $global_enkf_T62_datges/bfg_${gdate}_fhr06_ensmean ./bfg_${global_enkf_T62_adate}_fhr06_ensmean
 
 
 # Run enkf under Parallel Operating Environment (poe) on NCEP IBM
-if [[ "$machine" = "Zeus" ]]; then
+if [[ "$machine" = "Theia" ]]; then
    cd $tmpdir/
    echo "run enkf now"
 
@@ -172,10 +189,10 @@ if [[ "$machine" = "Zeus" ]]; then
    export MPI_GROUP_MAX=256
    export OMP_NUM_THREADS=1
 
-   module load intel
-   module load mpt
+#  module load intel
+#  module load mpt
    echo "JOB ID : $PBS_JOBID"
-   eval "mpiexec_mpt -v -np $PBS_NP $tmpdir/enkf.x > stdout"
+   eval "$launcher -v -np $PBS_NP $tmpdir/enkf.x > stdout"
 
 elif [[ "$machine" = "WCOSS" ]]; then
 

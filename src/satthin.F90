@@ -77,7 +77,7 @@ module satthin
 !   def sst_full       - skin temperature
 !   def sno_full       - snow-ice mask
 !   def zs_full        - model terrain elevation
-!   def fice_full      - ice concentration/fraction (0 to 1)
+!   def fice_full      - ice concentration/fraction (0 to 1), no time variation at present
 !   def score_crit     - "best" quality obs score in thinning grid box
 !   def use_all        - parameter for turning satellite thinning algorithm off
 !
@@ -104,8 +104,8 @@ module satthin
 ! set passed variables to public
   public :: rlat_min,rlon_min,dlat_grid,dlon_grid,superp,super_val1,super_val
   public :: veg_type_full,soil_type_full,sfc_rough_full,sno_full,sst_full
-  public :: fact10_full,isli_full,soil_moi_full,veg_frac_full,soil_temp_full
-  public :: checkob,score_crit,itxmax,finalcheck,zs_full_gfs,zs_full,fice_full
+  public :: fact10_full,isli_full,fice_full,soil_moi_full,veg_frac_full,soil_temp_full
+  public :: checkob,score_crit,itxmax,finalcheck,zs_full_gfs,zs_full
 
   integer(i_kind) mlat,superp,maxthin,itxmax
   integer(i_kind), save:: itx_all
@@ -113,6 +113,7 @@ module satthin
   
   integer(i_kind),allocatable,dimension(:):: mlon
   integer(i_kind),allocatable,dimension(:,:):: isli_full
+  real(r_kind),allocatable,dimension(:,:):: fice_full
   logical,allocatable,dimension(:)::icount
 
   real(r_kind) rlat_min,rlat_max,rlon_min,rlon_max,dlat_grid,dlon_grid
@@ -123,7 +124,6 @@ module satthin
   real(r_kind),allocatable,dimension(:,:,:):: veg_frac_full,soil_temp_full
   real(r_kind),allocatable,dimension(:,:,:):: soil_moi_full,sfc_rough_full
   real(r_kind),allocatable,dimension(:,:,:):: sst_full,sno_full,fact10_full
-  real(r_kind),allocatable,dimension(:,:,:):: fice_full
 
   logical use_all
 
@@ -281,6 +281,7 @@ contains
 !   2004-12-09  treadon - allocate thinning grids consistent with analysis domain
 !   2008-05-23  safford - rm unused vars
 !   2008-09-08  lueken  - merged ed's changes into q1fy09 code
+!   2015-03-23  zaizhong ma - changed itxmax=1e9 for Himawari-8 ahi read in
 !
 !   input argument list:
 !     rmesh - mesh size (km) of thinning grid.  If (rmesh <= one), 
@@ -315,7 +316,7 @@ contains
     itx_all=0
     if(abs(rmesh) <= one .or. ithin <= 0)then
       use_all=.true.
-      itxmax=1e7
+      itxmax=1e9
       allocate(icount(itxmax))
       allocate(score_crit(itxmax))
       do j=1,itxmax
@@ -386,7 +387,7 @@ contains
     return
   end subroutine makegrids
 
-  subroutine getsfc(mype,use_sfc)
+  subroutine getsfc(mype,mype_io,use_sfc,use_sfc_any)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    getsfc
@@ -403,8 +404,13 @@ contains
 !   2010-04-01  treadon - move strip to gridmod
 !   2013-10-19  todling - metguess now holds background
 !   2013-10-25  todling - reposition ltosi and others to commvars
+!   2014-12-03  derber  - modify reading of surface fields
 !
 !   input argument list:
+!      mype        - current processor
+!      mype_io     - surface IO processor
+!      use_sfc     - true if processor uses extra surface fields
+!      use_sfc_any - true if any processor uses extra surface fields
 !
 !   output argument list:
 !
@@ -418,26 +424,24 @@ contains
        iglobal,itotsub,ijn,displs_g,regional,istart, &
        rlats,rlons,nlat_sfc,nlon_sfc,rlats_sfc,rlons_sfc,strip, use_gfs_nemsio
     use general_commvars_mod, only: ltosi,ltosj
-    use guess_grids, only: ntguessig,isli,sfct,sno,fact10, &
+    use guess_grids, only: ntguessig,isli,fice,sfct,sno,fact10, &
        nfldsfc,ntguessfc,soil_moi,soil_temp,veg_type,soil_type, &
-       veg_frac,sfc_rough,ifilesfc,nfldsig,isli2,sno2
+       veg_frac,sfc_rough,ifilesfc,nfldsig,isli2,fice2,sno2
     use m_gsiBiases, only: bias_tskin,compress_bias,bias_hour
     use jfunc, only: biascor
 
     use mpimod, only: mpi_comm_world,ierror,mpi_rtype
     use constants, only: zero,half,pi,two,one
-    use ncepgfs_io, only: read_gfssfc,sfc_interpolate
-    use ncepnems_io, only: read_nemssfc
+    use ncepgfs_io, only: read_gfssfc
+    use ncepnems_io, only: read_nemssfc,sfc_interpolate
     use sfcio_module, only: sfcio_realfill
-    use gsi_io, only: mype_io
 
     use gsi_metguess_mod, only: gsi_metguess_bundle
     use gsi_bundlemod, only: gsi_bundlegetpointer
     implicit none
 
-    integer(i_kind),intent(in   ) :: mype
-    logical        ,intent(inout) :: use_sfc
-
+    integer(i_kind),intent(in   ) :: mype,mype_io
+    logical        ,intent(in   ) :: use_sfc,use_sfc_any
 
 ! Local variables
     real(r_kind),dimension(lat1*lon1):: zsm
@@ -473,14 +477,12 @@ contains
     allocate(rlats_sfc(nlat_sfc),rlons_sfc(nlon_sfc))
 
     allocate(isli_full(nlat_sfc,nlon_sfc),fact10_full(nlat_sfc,nlon_sfc,nfldsfc))
+    allocate(fice_full(nlat_sfc,nlon_sfc))
     allocate(sst_full(nlat_sfc,nlon_sfc,nfldsfc),sno_full(nlat_sfc,nlon_sfc,nfldsfc))
     allocate(zs_full(nlat,nlon))
     allocate(sfc_rough_full(nlat_sfc,nlon_sfc,nfldsfc))
-    allocate(fice_full(nlat_sfc,nlon_sfc,nfldsfc))
 
-!  Necessary to make read_sfc routine to work properly
-    if(mype == mype_io .and. .not. use_gfs_nemsio)use_sfc=.true.
-    if(use_sfc)then
+    if(use_sfc_any .or. mype_io)then
        allocate(soil_moi_full(nlat_sfc,nlon_sfc,nfldsfc),soil_temp_full(nlat_sfc,nlon_sfc,nfldsfc))
        allocate(veg_frac_full(nlat_sfc,nlon_sfc,nfldsfc),soil_type_full(nlat_sfc,nlon_sfc))
        allocate(veg_type_full(nlat_sfc,nlon_sfc))
@@ -516,43 +518,39 @@ contains
 
 
        allocate(zs_full_gfs(nlat_sfc,nlon_sfc))
-       if(use_sfc)then
-          do it=1,nfldsfc
-             write(filename,200)ifilesfc(it)
-200          format('sfcf',i2.2)
-             if ( use_gfs_nemsio ) then
+       if ( use_gfs_nemsio ) then
+          if(use_sfc)then
+             do it=1,nfldsfc
+                write(filename,200)ifilesfc(it)
+200             format('sfcf',i2.2)
                 call read_nemssfc(filename,mype,&
                    fact10_full(:,:,it),sst_full(:,:,it),sno_full(:,:,it), &
                    veg_type_full,veg_frac_full(:,:,it), &
                    soil_type_full,soil_temp_full(:,:,it),&
                    soil_moi_full(:,:,it),isli_full,sfc_rough_full(:,:,it),&
                    zs_full_gfs)
-             else
-                call read_gfssfc(filename,mype_io,mype,&
-                   fact10_full(1,1,it),sst_full(1,1,it),sno_full(1,1,it), &
-                   veg_type_full(1,1),veg_frac_full(1,1,it), &
-                   soil_type_full(1,1),soil_temp_full(1,1,it),&
-                   soil_moi_full(1,1,it),isli_full(1,1),sfc_rough_full(1,1,it),&
-                   zs_full_gfs,fice_full(1,1,it))
-             end if
-          end do
-       else
-          allocate(dum(nlat_sfc,nlon_sfc))
-          do it=1,nfldsfc
-             write(filename,200)ifilesfc(it)
-             if ( use_gfs_nemsio ) then
+             end do
+          else
+             allocate(dum(nlat_sfc,nlon_sfc))
+             do it=1,nfldsfc
+                write(filename,200)ifilesfc(it)
                 call read_nemssfc(filename,mype,&
                    fact10_full(:,:,it),sst_full(:,:,it),sno_full(:,:,it), &
                    dum,dum,dum,dum,dum,isli_full,sfc_rough_full(:,:,it),&
                    zs_full_gfs)
-             else
-                call read_gfssfc(filename,mype_io,mype,&
-                   fact10_full(1,1,it),sst_full(1,1,it),sno_full(1,1,it), &
-                   dum,dum,dum,dum,dum,isli_full(1,1),sfc_rough_full(1,1,it),&
-                   zs_full_gfs,fice_full(1,1,it))
-             end if
-          end do
-          deallocate(dum)
+             end do
+             deallocate(dum)
+          end if
+       else
+          call read_gfssfc(mype_io,mype, &
+             fact10_full,sst_full,sno_full, &
+             veg_type_full,veg_frac_full,soil_type_full,soil_temp_full,&
+             soil_moi_full,isli_full,fice_full,sfc_rough_full,zs_full_gfs,use_sfc_any)
+          if(.not. use_sfc .and. (use_sfc_any .or. mype_io))then
+             deallocate(soil_moi_full,soil_temp_full)
+             deallocate(veg_frac_full,soil_type_full)
+             deallocate(veg_type_full)
+          end if
        end if
  
        if (biascor > zero) then
@@ -610,6 +608,21 @@ contains
        do k=1,iglobal
           i=ltosi(k) ; j=ltosj(k)
           isli_full(i,j)=nint(work1(k))
+       end do
+
+! fice_full
+       do j=1,lon2
+          do i=1,lat2
+             work2(i,j)=fice(i,j,it)
+          end do
+       end do
+       call strip(work2,zsm)
+       call mpi_allgatherv(zsm,ijn(mm1),mpi_rtype,&
+          work1,ijn,displs_g,mpi_rtype,&
+          mpi_comm_world,ierror)
+       do k=1,iglobal
+          i=ltosi(k) ; j=ltosj(k)
+          fice_full(i,j)=work1(k)
        end do
 
 ! Fields with multiple time levels
@@ -720,15 +733,6 @@ contains
           end do
        end if
 
-! fice_full
-          call strip(fice(:,:,it),zsm)
-          call mpi_allgatherv(zsm,ijn(mm1),mpi_rtype,&
-             work1,ijn,displs_g,mpi_rtype,&
-             mpi_comm_world,ierror)
-          do k=1,iglobal
-             i=ltosi(k) ; j=ltosj(k)
-             fice_full(i,j,it)=work1(k)
-          end do
 
 #ifndef HAVE_ESMF
     end if
@@ -766,7 +770,7 @@ contains
        endif
     endif
 
-!   find subdomain for isli2
+!   find subdomain for isli2, fice2 & sno2
     if (nlon == nlon_sfc .and. nlat == nlat_sfc) then
        do j=1,lon2
           jl=j+jstart(mm1)-2
@@ -775,6 +779,7 @@ contains
              il=i+istart(mm1)-2
              il=min0(max0(1,il),nlat)
              isli2(i,j)=isli_full(il,jl)
+             fice2(i,j)=fice_full(il,jl)
              do k=1,nfldsfc
                 sno2(i,j,k)=sno_full(il,jl,k)
              end do
@@ -796,8 +801,9 @@ contains
              il=nint(ailoc(il))
              il=min0(max0(1,il),nlat_sfc)
              isli2(i,j)=isli_full(il,jl)
+             fice2(i,j)=fice_full(il,jl)
              do k=1,nfldsfc
-                sno2(i,j,k) =sno_full(il,jl,k)
+                sno2(i,j,k)  = sno_full(il,jl,k)
              end do
           end do
        end do
@@ -1063,6 +1069,7 @@ contains
     if(allocated(sno_full))deallocate(sno_full)
     if(allocated(fact10_full))deallocate(fact10_full)
     if(allocated(isli_full))deallocate(isli_full)
+    if(allocated(fice_full))deallocate(fice_full)
     if(allocated(veg_type_full))deallocate(veg_type_full)
     if(allocated(soil_type_full))deallocate(soil_type_full)
     if(allocated(veg_frac_full))deallocate(veg_frac_full)
@@ -1071,7 +1078,6 @@ contains
     if(allocated(zs_full))deallocate(zs_full)
     if(allocated(sfc_rough_full))deallocate(sfc_rough_full)
     if(allocated(zs_full_gfs)) deallocate(zs_full_gfs)
-    if(allocated(fice_full))deallocate(fice_full)
 
     return
   end subroutine destroy_sfc

@@ -1,5 +1,5 @@
 subroutine read_superwinds(nread,ndata,nodata,infile,obstype,lunout, &
-            twind,sis)
+            twind,sis,nobs)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_superwinds   read in and reformat wind superobs
@@ -32,6 +32,7 @@ subroutine read_superwinds(nread,ndata,nodata,infile,obstype,lunout, &
 !                           beta_ref field with cos_beta_ref, sin_beta_ref.
 !   2011-08-01  lueken  - add module use deter_sfc_mod
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
+!   2015-02-23  Rancic/Thomas - add l4densvar to time window logical
 !
 !   input argument list:
 !     nread    - counter for all data on this pe
@@ -45,6 +46,7 @@ subroutine read_superwinds(nread,ndata,nodata,infile,obstype,lunout, &
 !     ndata    - number of observation records
 !     nodata   - number of observation data
 !     sis      - satellite/instrument/sensor indicator
+!     nobs     - array of observations on each subdomain for each processor
 !
 !   remarks: 
 !   input file format: 
@@ -87,8 +89,9 @@ subroutine read_superwinds(nread,ndata,nodata,infile,obstype,lunout, &
   use convinfo, only: nconvtype,ctwind, &
       ncmiter,ncgroup,ncnumgrp,icuse,ioctype
   use obsmod, only: iadate,offtime_data
-  use gsi_4dvar, only: l4dvar,winlen,time_4dvar
+  use gsi_4dvar, only: l4dvar,l4densvar,winlen,time_4dvar
   use deter_sfc_mod, only: deter_sfc2
+  use mpimod, only: npe
   implicit none
 
 ! Declare passed variables
@@ -97,6 +100,7 @@ subroutine read_superwinds(nread,ndata,nodata,infile,obstype,lunout, &
   real(r_kind)    ,intent(in   ) :: twind
   integer(i_kind) ,intent(in   ) :: lunout
   integer(i_kind) ,intent(inout) :: nread,ndata,nodata
+  integer(i_kind),dimension(npe) ,intent(inout) :: nobs
 
 ! Declare local parameters
   real(r_kind),parameter:: r360=360.0_r_kind
@@ -111,7 +115,7 @@ subroutine read_superwinds(nread,ndata,nodata,infile,obstype,lunout, &
   equivalence(supid(1),supid8)
   real(r_kind) rstation_id,usage
   real(r_kind),allocatable,dimension(:,:):: cdata_all
-  integer(i_kind) lnbufr,i,maxobs,ikx,idomsfc
+  integer(i_kind) lnbufr,i,maxobs,ikx,idomsfc(1)
   integer(i_kind) ilon,ilat,k,icount,nchanl,nreal
 
   real(r_kind) dlat,dlon,dlat_earth,dlon_earth,sfcr,skint,ff10,t4dv,toff
@@ -184,7 +188,7 @@ subroutine read_superwinds(nread,ndata,nodata,infile,obstype,lunout, &
      read(lnbufr)suplon0,suplat0,suphgt,suptime0,supyhat,suprhat,supbigu,supid
 
      t4dv = toff + suptime0
-     if (l4dvar) then
+     if (l4dvar.or.l4densvar) then
         if (t4dv<zero .OR. t4dv>winlen) cycle
      else
         suptime=suptime0 + time_correction
@@ -251,7 +255,7 @@ subroutine read_superwinds(nread,ndata,nodata,infile,obstype,lunout, &
         if(mod(ndata,ncnumgrp(ikx))== ncgroup(ikx)-1)usage=ncmiter(ikx)
      end if
 
-     call deter_sfc2(dlat_earth,dlon_earth,t4dv,idomsfc,skint,ff10,sfcr)
+     call deter_sfc2(dlat_earth,dlon_earth,t4dv,idomsfc(1),skint,ff10,sfcr)
 
 !    Load superobs wind data into output array
      cdata_all(1,ndata)=dlon     ! grid relative longitude
@@ -268,7 +272,7 @@ subroutine read_superwinds(nread,ndata,nodata,infile,obstype,lunout, &
      cdata_all(12,ndata)=ikx            !  type number--later change for different radar sources
      cdata_all(13,ndata)=rstation_id    ! station id
      cdata_all(14,ndata)=usage          ! usage parameter
-     cdata_all(15,ndata)= idomsfc       ! dominate surface type
+     cdata_all(15,ndata)= idomsfc(1)    ! dominate surface type
      cdata_all(16,ndata)= skint         ! skin temperature
      cdata_all(17,ndata)= ff10          ! 10 meter wind factor
      cdata_all(18,ndata)= sfcr          ! surface roughness
@@ -285,6 +289,8 @@ subroutine read_superwinds(nread,ndata,nodata,infile,obstype,lunout, &
 
 
 ! Write observations to scratch file
+
+  call count_obs(ndata,nreal,ilat,ilon,cdata_all,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
   write(lunout) ((cdata_all(k,i),k=1,nreal),i=1,ndata)
 

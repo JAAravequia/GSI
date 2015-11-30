@@ -25,7 +25,7 @@ savdir=$savdir/out${JCAP}/${exp}
 
 # Specify GSI fixed field and data directories.
 #fixgsi=$gsipath/trunk/fix
-#fixcrtm=$gsipath/EXP-port410/lib/CRTM_REL-2.1.3/fix
+#fixcrtm=$gsipath/EXP-port410/lib/CRTM_REL-2.2.3/fix
 
 #datobs=/scratch1/portfolios/NCEPDEV/da/noscrub/Daryl.Kleist/CASES/$adate/obs
 #datges=/scratch1/portfolios/NCEPDEV/da/noscrub/Daryl.Kleist/CASES/$adate/ges
@@ -218,13 +218,24 @@ emiscoef_VISice=$fixcrtm/NPOESS.VISice.EmisCoeff.bin
 emiscoef_VISland=$fixcrtm/NPOESS.VISland.EmisCoeff.bin
 emiscoef_VISsnow=$fixcrtm/NPOESS.VISsnow.EmisCoeff.bin
 emiscoef_VISwater=$fixcrtm/NPOESS.VISwater.EmisCoeff.bin
-emiscoef_MWwater=$fixcrtm/FASTEM5.MWwater.EmisCoeff.bin
+emiscoef_MWwater=$fixcrtm/FASTEM6.MWwater.EmisCoeff.bin
 aercoef=$fixcrtm/AerosolCoeff.bin
 cldcoef=$fixcrtm/CloudCoeff.bin
 satangl=$fixgsi/global_satangbias.txt
 scaninfo=$fixgsi/global_scaninfo.txt
 satinfo=$fixgsi/global_satinfo.txt
 convinfo=$fixgsi/global_convinfo_reg_test.txt
+### add 9 tables
+errtable_pw=$fixgsi/prepobs_errtable_pw.global
+errtable_ps=$fixgsi/prepobs_errtable_ps.global_nqcf
+errtable_t=$fixgsi/prepobs_errtable_t.global_nqcf
+errtable_q=$fixgsi/prepobs_errtable_q.global_nqcf
+errtable_uv=$fixgsi/prepobs_errtable_uv.global_nqcf
+btable_ps=$fixgsi/nqc_b_ps.global_nqcf
+btable_t=$fixgsi/nqc_b_t.global_nqcf
+btable_q=$fixgsi/nqc_b_q.global_nqcf
+btable_uv=$fixgsi/nqc_b_uv.global_nqcf
+
 anavinfo=$fixgsi/global_anavinfo.l64.txt
 ozinfo=$fixgsi/global_ozinfo.txt
 pcpinfo=$fixgsi/global_pcpinfo.txt
@@ -257,7 +268,7 @@ $ncp $emiscoef_VISice ./NPOESS.VISice.EmisCoeff.bin
 $ncp $emiscoef_VISland ./NPOESS.VISland.EmisCoeff.bin
 $ncp $emiscoef_VISsnow ./NPOESS.VISsnow.EmisCoeff.bin
 $ncp $emiscoef_VISwater ./NPOESS.VISwater.EmisCoeff.bin
-$ncp $emiscoef_MWwater ./FASTEM5.MWwater.EmisCoeff.bin
+$ncp $emiscoef_MWwater ./FASTEM6.MWwater.EmisCoeff.bin
 $ncp $aercoef  ./AerosolCoeff.bin
 $ncp $cldcoef  ./CloudCoeff.bin
 $ncp $satangl  ./satbias_angle
@@ -269,6 +280,17 @@ $ncp $convinfo ./convinfo
 $ncp $errtable ./errtable
 $ncp $anavinfo ./anavinfo
 $ncp $hybens_locinfo ./hybens_locinfo
+#add 9 tables for new varqc
+$ncp $errtable_pw           ./errtable_pw
+$ncp $errtable_ps           ./errtable_ps
+$ncp $errtable_t           ./errtable_t
+$ncp $errtable_q           ./errtable_q
+$ncp $errtable_uv           ./errtable_uv
+$ncp $btable_ps           ./btable_ps
+$ncp $btable_t           ./btable_t
+$ncp $btable_q           ./btable_q
+$ncp $btable_uv           ./btable_uv
+
 
 $ncp $bufrtable ./prepobs_prep.bufrtable
 $ncp $bftab_sst ./bftab_sstphr
@@ -301,24 +323,19 @@ $ncp $global_hybrid_T126_datobs/esamub.gdas.$global_hybrid_T126_adate   ./amsubb
 $ncp $global_hybrid_T126_datobs/eshrs3.gdas.$global_hybrid_T126_adate   ./hirs3bufrears
 
 # Copy bias correction, atmospheric and surface files
-if [[ "$machine" = "Zeus" ]]; then
-   $ncp $global_hybrid_T126_datges/biascr.gdas.${gdate}.orig   ./satbias_in
-   $ncp $global_hybrid_T126_datges/satang.gdas.$gdate.orig     ./satbias_angle
-else
-   $ncp $global_hybrid_T126_datges/biascr.gdas.$gdate          ./satbias_in
-   $ncp $global_hybrid_T126_datges/biascr_pc.gdas.${gdate}     ./satbias_pc
-   $ncp $global_hybrid_T126_datges/radstat.gdas.$gdate         ./radstat.gdas
+$ncp $global_hybrid_T126_datges/biascr.gdas.$gdate          ./satbias_in
+$ncp $global_hybrid_T126_datges/biascr_pc.gdas.${gdate}     ./satbias_pc
+$ncp $global_hybrid_T126_datges/radstat.gdas.$gdate         ./radstat.gdas
 
-   listdiag=`tar xvf radstat.gdas | cut -d' ' -f2 | grep _ges`
-   for type in $listdiag; do
-      diag_file=`echo $type | cut -d',' -f1`
-      fname=`echo $diag_file | cut -d'.' -f1`
-      date=`echo $diag_file | cut -d'.' -f2`
-      $UNCOMPRESS $diag_file
-      fnameanl=$(echo $fname|sed 's/_ges//g')
-      mv $fname.$date $fnameanl
-   done
-fi
+listdiag=`tar xvf radstat.gdas | cut -d' ' -f2 | grep _ges`
+for type in $listdiag; do
+   diag_file=`echo $type | cut -d',' -f1`
+   fname=`echo $diag_file | cut -d'.' -f1`
+   date=`echo $diag_file | cut -d'.' -f2`
+   $UNCOMPRESS $diag_file
+   fnameanl=$(echo $fname|sed 's/_ges//g')
+   mv $fname.$date $fnameanl
+done
 
 $ncp $global_hybrid_T126_datges/sfcf03.gdas.$gdate  ./sfcf03
 $ncp $global_hybrid_T126_datges/sfcf06.gdas.$gdate  ./sfcf06
@@ -336,7 +353,7 @@ for file in $list; do
 done
 
 # Run gsi under Parallel Operating Environment (poe) on NCEP IBM
-if [[ "$machine" = "Zeus" ]]; then
+if [[ "$machine" = "Theia" ]]; then
    cd $tmpdir/
    echo "run gsi now"
 
@@ -347,12 +364,12 @@ if [[ "$machine" = "Zeus" ]]; then
    export MPI_BUFS_PER_PROC=256
    export MPI_BUFS_PER_HOST=256
    export MPI_GROUP_MAX=256
-   export OMP_NUM_THREADS=2
+   #export OMP_NUM_THREADS=2
 
-   module load intel
-   module load mpt
+#  module load intel
+#  module load mpt
    echo "JOB ID : $PBS_JOBID"
-   eval "mpiexec_mpt -v -np $PBS_NP $tmpdir/gsi.x > stdout"
+   eval "$launcher -v -np $PBS_NP $tmpdir/gsi.x > stdout"
 
 elif [[ "$machine" = "WCOSS" ]]; then
 

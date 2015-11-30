@@ -1,5 +1,5 @@
 subroutine read_co(nread,ndata,nodata,infile,gstime,lunout, &
-           obstype,sis)
+           obstype,sis,nobs)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_co                    read co data
@@ -12,8 +12,8 @@ subroutine read_co(nread,ndata,nodata,infile,gstime,lunout, &
 
 !    2010-03-30  Tangborn, initial code.
 !    2011-08-01  Lueken  - replaced F90 with f90 (no machine logic), fixed indentation
-!   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
-
+!    2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
+!
 !   input argument list:
 !     obstype  - observation type to process
 !     infile   - unit from which to read co data
@@ -26,6 +26,7 @@ subroutine read_co(nread,ndata,nodata,infile,gstime,lunout, &
 !     nread    - number of co observations read
 !     ndata    - number of co profiles retained for further processing
 !     nodata   - number of co observations retained for further processing
+!     nobs     - array of observations on each subdomain for each processor
 
   use kinds, only: r_kind,r_double,i_kind
   use satthin, only: makegrids,map2tgrid,finalcheck,itxmax
@@ -34,8 +35,9 @@ subroutine read_co(nread,ndata,nodata,infile,gstime,lunout, &
   use obsmod, only: iadate,nlco
   use convinfo, only: nconvtype, &
       icuse,ictype,ioctype
-  use gsi_4dvar, only: l4dvar,iwinbgn,winlen
+  use gsi_4dvar, only: iwinbgn
   use qcmod, only: use_poq7
+  use mpimod, only: npe
   implicit none
 
 ! Declare passed variables
@@ -43,6 +45,7 @@ subroutine read_co(nread,ndata,nodata,infile,gstime,lunout, &
   character(len=20),intent(in  ) :: sis
   integer(i_kind) ,intent(in   ) :: lunout
   integer(i_kind) ,intent(inout) :: nread
+  integer(i_kind),dimension(npe) ,intent(inout) :: nobs
   integer(i_kind) ,intent(inout) :: ndata,nodata
   real(r_kind)    ,intent(in   ) :: gstime
 
@@ -163,7 +166,6 @@ subroutine read_co(nread,ndata,nodata,infile,gstime,lunout, &
      t4dv=real((nmind-iwinbgn),r_kind)*r60inv
      sstime=real(nmind,r_kind)
      tdiff=(sstime-gstime)*r60inv
-     
 
 !    Check co layer values.  If any layer value is bad, toss entire profile
 !     do k=1,nlco
@@ -204,6 +206,7 @@ subroutine read_co(nread,ndata,nodata,infile,gstime,lunout, &
 
 
 ! Write header record and data to output file for further processing
+  call count_obs(ndata,ncodat+nchanl,ilat,ilon,coout,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
   write(lunout) ((coout(k,i),k=1,ncodat+nchanl),i=1,ndata)
   nread=ndata ! nmrecs

@@ -45,6 +45,8 @@ module hybrid_ensemble_isotropic
 !   2013-04-17  wu      - bug fix in normalizing the recursive filter
 !   2014-05-22  wu      - increase dimension of variables used in the recursive filter 
 !                         for vertically varying ability
+!   2014-12-02  derber  - many optimization changes
+!   2015-04-07  carley  - bug fix to allow grd_loc%nlat=grd_loc%nlon
 !
 ! subroutines included:
 !   sub init_rf_z                         - initialize localization recursive filter (z direction)
@@ -990,7 +992,7 @@ subroutine normal_new_factorization_rf_y
 
   ynorm_new=one
 
-  if(grd_loc%nlat < grd_loc%nlon)then
+  if(grd_loc%nlat <= grd_loc%nlon)then
     lend=1
     iend=grd_loc%nlat 
   else
@@ -1136,6 +1138,8 @@ end subroutine normal_new_factorization_rf_y
 !   2011-12-07  tong    - add the option to read wrf_nmm ensemble
 !   2012-01-30  parrish - remove wrf_nmm_regional,wrf_mass_regional,netcdf,nems_nmmb_regional
 !   2013-10-25  todling - nullify work pointer
+!   2015-01-22  Hu      - add namelist (i_en_perts_io) and functions to save and 
+!                         read ensemble perturbations in ensemble grid.
 !
 !   input argument list:
 !
@@ -1149,7 +1153,8 @@ end subroutine normal_new_factorization_rf_y
     use gridmod, only: regional
     use constants, only: zero,one
     use hybrid_ensemble_parameters, only: n_ens,generate_ens,grd_ens,grd_anl,ntlevs_ens, &
-                                          pseudo_hybens,regional_ensemble_option
+                                          pseudo_hybens,regional_ensemble_option,&
+                                          i_en_perts_io
     use gsi_enscouplermod, only: gsi_enscoupler_put_gsi_ens
     use mpimod, only: mype,ierror
     implicit none
@@ -1298,7 +1303,11 @@ end subroutine normal_new_factorization_rf_y
 
 !     regional_ensemble_option = 1: use GEFS internally interpolated to ensemble grid.
 
-                call get_gefs_for_regional
+                if(i_en_perts_io==2) then ! get en_perts from save files
+                   call en_perts_get_from_save
+                else
+                   call get_gefs_for_regional
+                endif
 
 !     pseudo_hybens = .true.: pseudo ensemble hybrid option for hwrf
 !                             GEFS ensemble perturbations in TC vortex area
@@ -1715,8 +1724,9 @@ end subroutine normal_new_factorization_rf_y
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-    use hybrid_ensemble_parameters, only: n_ens,grd_ens,grd_anl
+    use hybrid_ensemble_parameters, only: n_ens
     use hybrid_ensemble_parameters, only: pwgt,pwgtflg
+    use constants, only: zero
 
     implicit none
     type(gsi_bundle),intent(inout) :: cvec
@@ -1726,12 +1736,14 @@ end subroutine normal_new_factorization_rf_y
     character(len=*),parameter::myname_=trim(myname)//'*ensemble_forward_model'
     logical nogood
     integer(i_kind) i,j,k,n,im,jm,km,ic2,ic3,ipic,ipx
-    integer(i_kind) ipc3d(nc3d),ipc2d(nc2d),ipe(1),istatus
+    integer(i_kind) ipc3d(nc3d),ipc2d(nc2d),istatus
+
+    im=cvec%grid%im
+    jm=cvec%grid%jm
+    km=cvec%grid%km
 
 !   Check resolution consistency between static and ensemble components
-    nogood=.not.(cvec%grid%im==a_en(1)%grid%im.and.&
-                 cvec%grid%jm==a_en(1)%grid%jm.and.&
-                 cvec%grid%km==a_en(1)%grid%km)
+    nogood=im/=a_en(1)%grid%im.or.jm/=a_en(1)%grid%jm.or.km/=a_en(1)%grid%km
     if (nogood) then
        write(6,*) myname_,': static&ensemble vectors have inconsistent dims'
        call stop2(999)
@@ -1751,57 +1763,77 @@ end subroutine normal_new_factorization_rf_y
       call stop2(999)
     endif
  
-    im=cvec%grid%im
-    jm=cvec%grid%jm
-    km=cvec%grid%km
-    ipe(1)=1
-    ipx=ipe(1)
-!$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ic2,ipic)
-    do j=1,jm
-       do n=1,n_ens
-          do ic3=1,nc3d
-             ipic=ipc3d(ic3)
-             do k=1,km
+    ipx=1
+
+!$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ipic)
+    do k=1,km
+       do ic3=1,nc3d
+          ipic=ipc3d(ic3)
+          do j=1,jm
+             do i=1,im
+                cvec%r3(ipic)%q(i,j,k)=zero
+             end do
+          end do
+          do n=1,n_ens
+             do j=1,jm
                 do i=1,im
                    cvec%r3(ipic)%q(i,j,k)=cvec%r3(ipic)%q(i,j,k) &
                          +a_en(n)%r3(ipx)%q(i,j,k)*en_perts(n,ibin)%r3(ipic)%qr4(i,j,k)
                 end do
              end do
           end do
+       end do
+    end do
 
-          do ic2=1,nc2d
-             ipic=ipc2d(ic2)
+!$omp parallel do schedule(dynamic,1) private(j,n,k,i,ic2,ipic)
+    do ic2=1,nc2d
+       ipic=ipc2d(ic2)
+       do j=1,jm
+          do i=1,im
+             cvec%r2(ipic)%q(i,j)=zero
+          end do
+       end do
 
-             select case (trim(cvars2d(ic2)))
+       select case (trim(cvars2d(ic2)))
  
-                case('ps','PS')
+          case('ps','PS')
     
-                   if(pwgtflg)then
+             if(pwgtflg)then
+                do n=1,n_ens
+                   do j=1,jm
                       do k=1,km
                          do i=1,im
                          cvec%r2(ipic)%q(i,j)=cvec%r2(ipic)%q(i,j) &
                             +a_en(n)%r3(ipx)%q(i,j,k)*pwgt(i,j,k)*en_perts(n,ibin)%r2(ipic)%qr4(i,j)
                          end do
                       end do
-                    else
+                   end do
+                end do !end do n_ens
+             else
+                do n=1,n_ens
+                   do j=1,jm
                       do i=1,im
                          cvec%r2(ipic)%q(i,j)=cvec%r2(ipic)%q(i,j) &
                             +a_en(n)%r3(ipx)%q(i,j,1)*en_perts(n,ibin)%r2(ipic)%qr4(i,j)
                       end do
-                    endif
+                   end do
+                end do !end do n_ens
+             endif
  
-                case('sst','SST')
+          case('sst','SST')
  
+             do n=1,n_ens
+                do j=1,jm
                    do i=1,im
                       cvec%r2(ipic)%q(i,j)=cvec%r2(ipic)%q(i,j) &
                          +a_en(n)%r3(ipx)%q(i,j,1)*en_perts(n,ibin)%r2(ipic)%qr4(i,j)
                    end do
+                end do
+             end do !end do n_ens
  
-             end select
+       end select
 
-          end do
-       end do
-    end do !end do n_ens
+    end do
     return
 
   end subroutine ensemble_forward_model
@@ -1861,7 +1893,7 @@ end subroutine normal_new_factorization_rf_y
     integer(i_kind) i,j,k,n,im,jm,km,ic2,ic3,ipic,ipx
     type(gsi_grid)  :: grid_ens,grid_anl
     type(gsi_bundle)  :: work_ens,work_anl
-    integer(i_kind) ipc2d(nc2d),ipc3d(nc3d),ipe(1),istatus
+    integer(i_kind) ipc2d(nc2d),ipc3d(nc3d),istatus
 
 !   Request ensemble-corresponding fields from control vector
 !    NOTE:  because ensemble perturbation bundle structure is same as control vector, use same ipc3d and
@@ -1893,57 +1925,78 @@ end subroutine normal_new_factorization_rf_y
     endif
 
 
-    ipe(1)=1
-    ipx=ipe(1)
-    work_ens%values(:)=zero
+    ipx=1
     im=work_ens%grid%im
     jm=work_ens%grid%jm
     km=work_ens%grid%km
-!$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ic2,ipic)
-    do j=1,jm
-       do n=1,n_ens
-          do ic3=1,nc3d
-             ipic=ipc3d(ic3)
-             do k=1,km
+!$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ipic)
+    do k=1,km
+       do ic3=1,nc3d
+          ipic=ipc3d(ic3)
+          do j=1,jm
+             do i=1,im
+                work_ens%r3(ipic)%q(i,j,k)=zero
+             end do
+          end do
+          do n=1,n_ens
+             do j=1,jm
                 do i=1,im
                    work_ens%r3(ipic)%q(i,j,k)=work_ens%r3(ipic)%q(i,j,k) &
                       +a_en(n)%r3(ipx)%q(i,j,k)*en_perts(n,ibin)%r3(ipic)%qr4(i,j,k)
                 end do
              end do
           end do
-          do ic2=1,nc2d
-             ipic=ipc2d(ic2)
+       end do
+    end do
+!$omp parallel do schedule(dynamic,1) private(j,n,k,i,ic2,ipic)
+    do ic2=1,nc2d
+       ipic=ipc2d(ic2)
+       do j=1,jm
+          do i=1,im
+             work_ens%r2(ipic)%q(i,j)=zero
+          end do
+       end do
 
-             select case (trim(cvars2d(ic2)))
+       select case (trim(cvars2d(ic2)))
 
-                case('ps','PS')
+          case('ps','PS')
 
-                  if(pwgtflg)then
-                      do k=1,km
+            if(pwgtflg)then
+               do n=1,n_ens
+                   do k=1,km
+                      do j=1,jm
                          do i=1,im
                          work_ens%r2(ipic)%q(i,j)=work_ens%r2(ipic)%q(i,j) &
                             +a_en(n)%r3(ipx)%q(i,j,k)*pwgt(i,j,k)*en_perts(n,ibin)%r2(ipic)%qr4(i,j)
                          end do
                       end do
-                  else
+                  end do
+               end do !n_ens
+            else
+               do n=1,n_ens
+                   do j=1,jm
                       do i=1,im
                          work_ens%r2(ipic)%q(i,j)=work_ens%r2(ipic)%q(i,j) &
                             +a_en(n)%r3(ipx)%q(i,j,1)*en_perts(n,ibin)%r2(ipic)%qr4(i,j)
                       end do
-                  endif
+                   end do
+               end do !n_ens
+            endif
 
-                case('sst','SST')
+          case('sst','SST')
 
+             do n=1,n_ens
+                do j=1,jm
                    do i=1,im
                       work_ens%r2(ipic)%q(i,j)=work_ens%r2(ipic)%q(i,j) &
                          +a_en(n)%r3(ipx)%q(i,j,1)*en_perts(n,ibin)%r2(ipic)%qr4(i,j)
                    end do
+                end do
+             end do !n_ens
 
-             end select
+       end select
 
-          end do
-       end do
-    end do !n_ens
+    end do
 
     call general_sube2suba(grd_ens,grd_anl,p_e2a,work_ens%values,work_anl%values,regional)
     call gsi_bundledestroy(work_ens,istatus)
@@ -1952,10 +2005,10 @@ end subroutine normal_new_factorization_rf_y
        call stop2(999)
     endif
     do ic3=1,nc3d
-       cvec%r3(ipc3d(ic3))%q=cvec%r3(ipc3d(ic3))%q+work_anl%r3(ipc3d(ic3))%q
+       cvec%r3(ipc3d(ic3))%q=work_anl%r3(ipc3d(ic3))%q
     end do
     do ic2=1,nc2d
-       cvec%r2(ipc2d(ic2))%q=cvec%r2(ipc2d(ic2))%q+work_anl%r2(ipc2d(ic2))%q
+       cvec%r2(ipc2d(ic2))%q=work_anl%r2(ipc2d(ic2))%q
     end do
     call gsi_bundledestroy(work_anl,istatus)
     if(istatus/=0) then
@@ -2003,7 +2056,7 @@ end subroutine normal_new_factorization_rf_y
 !
 !$$$
 
-    use hybrid_ensemble_parameters, only: n_ens,grd_ens,grd_anl
+    use hybrid_ensemble_parameters, only: n_ens
     use hybrid_ensemble_parameters, only: pwgt,pwgtflg
     implicit none
 
@@ -2014,12 +2067,13 @@ end subroutine normal_new_factorization_rf_y
     character(len=*),parameter::myname_=trim(myname)//'*ensemble_forward_model_ad'
     logical nogood
     integer(i_kind) i,j,k,n,im,jm,km,ic2,ic3,ipx,ipic
-    integer(i_kind) ipc3d(nc3d),ipc2d(nc2d),ipe(1),istatus
+    integer(i_kind) ipc3d(nc3d),ipc2d(nc2d),istatus
 
+    im=cvec%grid%im
+    jm=cvec%grid%jm
+    km=cvec%grid%km
 !   Check resolution consistency between static and ensemble components
-    nogood=.not.(cvec%grid%im==a_en(1)%grid%im.and.&
-                 cvec%grid%jm==a_en(1)%grid%jm.and.&
-                 cvec%grid%km==a_en(1)%grid%km)
+    nogood=im/=a_en(1)%grid%im.or.jm/=a_en(1)%grid%jm.or.km/=a_en(1)%grid%km
     if (nogood) then
        write(6,*) myname_,': static/ensemble vectors have inconsistent dims'
        call stop2(999)
@@ -2039,53 +2093,55 @@ end subroutine normal_new_factorization_rf_y
       call stop2(999)
     endif
 
-    im=cvec%grid%im
-    jm=cvec%grid%jm
-    km=cvec%grid%km
-    ipe(1)=1
-    ipx=ipe(1)
+    ipx=1
 !$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ic2,ipic)
-    do j=1,jm
-       do n=1,n_ens
-          do ic3=1,nc3d
-             ipic=ipc3d(ic3)
-             do k=1,km
+    do n=1,n_ens
+       do ic3=1,nc3d
+          ipic=ipc3d(ic3)
+          do k=1,km
+             do j=1,jm
                 do i=1,im
                       a_en(n)%r3(ipx)%q(i,j,k)=a_en(n)%r3(ipx)%q(i,j,k) &
                             +cvec%r3(ipic)%q(i,j,k)*en_perts(n,ibin)%r3(ipic)%qr4(i,j,k)
                 end do
              end do
           end do
-          do ic2=1,nc2d
+       end do
+       do ic2=1,nc2d
 
-             ipic=ipc2d(ic2)
-             select case (trim(cvars2d(ic2)))
+          ipic=ipc2d(ic2)
+          select case (trim(cvars2d(ic2)))
  
-                case('ps','PS')
+             case('ps','PS')
  
-                 if(pwgtflg)then
-                   do k=1,km
+              if(pwgtflg)then
+                do k=1,km
+                   do j=1,jm
                       do i=1,im
                          a_en(n)%r3(ipx)%q(i,j,k)=a_en(n)%r3(ipx)%q(i,j,k) &
                             +cvec%r2(ipic)%q(i,j)*en_perts(n,ibin)%r2(ipic)%qr4(i,j)*pwgt(i,j,k)
                       end do
                    end do
-                 else
+                end do
+              else
+                do j=1,jm
                    do i=1,im
                       a_en(n)%r3(ipx)%q(i,j,1)=a_en(n)%r3(ipx)%q(i,j,1) &
                          +cvec%r2(ipic)%q(i,j)*en_perts(n,ibin)%r2(ipic)%qr4(i,j)
                    end do
-                 endif
+                end do
+              endif
   
-                case('sst','SST')
+             case('sst','SST')
   
+                do j=1,jm
                    do i=1,im
                       a_en(n)%r3(ipx)%q(i,j,1)=a_en(n)%r3(ipx)%q(i,j,1) &
                          +cvec%r2(ipic)%q(i,j)*en_perts(n,ibin)%r2(ipic)%qr4(i,j)
                    end do
+                end do
  
-             end select
-          end do
+          end select
        end do
     end do !n_ens
     return
@@ -2147,7 +2203,7 @@ end subroutine normal_new_factorization_rf_y
     integer(i_kind) i,j,k,n,im,jm,km,ic2,ic3,ipx,ipic
     type(gsi_grid)  :: grid_ens,grid_anl
     type(gsi_bundle)  :: work_ens,work_anl
-    integer(i_kind) ipc2d(nc2d),ipc3d(nc3d),ipe(1),istatus
+    integer(i_kind) ipc2d(nc2d),ipc3d(nc3d),istatus
 
 !   Request ensemble-corresponding fields from control vector
 !    NOTE:  because ensemble perturbation bundle structure is same as control vector, use same ipc3d and
@@ -2192,53 +2248,58 @@ end subroutine normal_new_factorization_rf_y
        call stop2(999)
     endif
 
-    ipe(1)=1
-    ipx=ipe(1)
+    ipx=1
     im=a_en(1)%grid%im
     jm=a_en(1)%grid%jm
     km=a_en(1)%grid%km
 !$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ic2,ipic)
-    do j=1,jm
-       do n=1,n_ens
-          do ic3=1,nc3d
-             ipic=ipc3d(ic3)
-             do k=1,km
+    do n=1,n_ens
+       do ic3=1,nc3d
+          ipic=ipc3d(ic3)
+          do k=1,km
+             do j=1,jm
                 do i=1,im
                    a_en(n)%r3(ipx)%q(i,j,k)=a_en(n)%r3(ipx)%q(i,j,k) &
                             +work_ens%r3(ipic)%q(i,j,k)*en_perts(n,ibin)%r3(ipic)%qr4(i,j,k)
                 end do
              end do
           end do
-          do ic2=1,nc2d
+       end do
+       do ic2=1,nc2d
 
-             ipic=ipc2d(ic2)
-             select case (trim(cvars2d(ic2)))
+          ipic=ipc2d(ic2)
+          select case (trim(cvars2d(ic2)))
 
-                case('ps','PS')
+             case('ps','PS')
 
-                 if(pwgtflg)then
-                   do k=1,km
+              if(pwgtflg)then
+                do k=1,km
+                   do j=1,jm
                       do i=1,im
                          a_en(n)%r3(ipx)%q(i,j,k)=a_en(n)%r3(ipx)%q(i,j,k) &
                             +work_ens%r2(ipic)%q(i,j)*en_perts(n,ibin)%r2(ipic)%qr4(i,j)*pwgt(i,j,k)
                       end do
                    end do
-                 else
+                end do
+              else
+                 do j=1,jm
                    do i=1,im
                       a_en(n)%r3(ipx)%q(i,j,1)=a_en(n)%r3(ipx)%q(i,j,1) &
                          +work_ens%r2(ipic)%q(i,j)*en_perts(n,ibin)%r2(ipic)%qr4(i,j)
                    end do
-                 endif
+                 end do
+              endif
 
-                case('sst','SST')
+             case('sst','SST')
 
+                do j=1,jm
                    do i=1,im
                       a_en(n)%r3(ipx)%q(i,j,1)=a_en(n)%r3(ipx)%q(i,j,1) &
                          +work_ens%r2(ipic)%q(i,j)*en_perts(n,ibin)%r2(ipic)%qr4(i,j)
                    end do
+                end do
 
-             end select
-          end do
+          end select
        end do
     end do !n_ens
     call gsi_bundledestroy(work_ens,istatus)
@@ -2581,7 +2642,7 @@ subroutine beta12mult(grady)
        write(6,*) myname_,': cannot proceed, CV does not contain ens-required 2d fields'
        call stop2(999)
     endif
-!$omp parallel do schedule(dynamic,1) private(ii,ic3,ic2,nn,k,j,i)
+!$omp parallel do schedule(dynamic,1) private(ii,ic3,ic2,k,j,i)
     do j=1,lon2
        do ii=1,nsubwin
   
@@ -2797,7 +2858,7 @@ subroutine init_sf_xy(jcap_in)
 
   integer(i_kind),intent(in   ) :: jcap_in
 
-  integer(i_kind) i,ii,j,k,l,n,jcap
+  integer(i_kind) i,ii,j,k,l,n,jcap,kk,nsigend
   real(r_kind),allocatable::g(:),gsave(:)
   real(r_kind) factor
   real(r_kind),allocatable::rkm(:),f(:,:),f0(:,:)
@@ -2809,6 +2870,7 @@ subroutine init_sf_xy(jcap_in)
   real(r_kind) rlons_ens_local(grd_ens%nlon)
   character(5) mapname
   logical make_test_maps
+  logical,allocatable,dimension(:)::ksame
   integer(i_kind) nord_sploc2ens
   integer(i_kind) nlon_sploc0,nlon_sploc,nlat_sploc,num_fields
 
@@ -2859,24 +2921,28 @@ subroutine init_sf_xy(jcap_in)
 
   call general_init_spec_vars(sp_loc,jcap,jcap,nlat_sploc,nlon_sploc,eqspace=use_sp_eqspace)
   if(mype==0) then
-     do j=1,grd_ens%nlon
-        if(j.le.nlon_sploc) then
-           write(6,'(" j,rlon_sploc(j),rlon_ens(j)=",i4,2f12.3)') &
-               j,rad2deg*sp_loc%rlons(j),rad2deg*sp_ens%rlons(j)
-        else
-           write(6,'(" j,              rlon_ens(j)=",i4,12x,f12.3)') &
-               j,rad2deg*sp_ens%rlons(j)
-        end if
-     end do
-     do i=1,grd_ens%nlat
-        if(i.le.nlat_sploc) then
-           write(6,'(" i,rlat_sploc(i),rlat_ens(i)=",i4,2f12.3)') &
-               i,rad2deg*sp_loc%rlats(i),rad2deg*sp_ens%rlats(i)
-        else
-           write(6,'(" i,              rlat_ens(i)=",i4,12x,f12.3)') &
-               i,rad2deg*sp_ens%rlats(i)
-        end if
-     end do
+     if( grd_ens%nlon == nlon_sploc .and. grd_ens%nlat == nlat_sploc)then
+        write(6,*)' ensemble and analysis nlat,nlon are the same '
+     else
+        do j=1,grd_ens%nlon
+           if(j.le.nlon_sploc) then
+              write(6,'(" j,rlon_sploc(j),rlon_ens(j)=",i4,2f12.3)') &
+                  j,rad2deg*sp_loc%rlons(j),rad2deg*sp_ens%rlons(j)
+           else
+              write(6,'(" j,              rlon_ens(j)=",i4,12x,f12.3)') &
+                  j,rad2deg*sp_ens%rlons(j)
+           end if
+        end do
+        do i=1,grd_ens%nlat
+           if(i.le.nlat_sploc) then
+              write(6,'(" i,rlat_sploc(i),rlat_ens(i)=",i4,2f12.3)') &
+                  i,rad2deg*sp_loc%rlats(i),rad2deg*sp_ens%rlats(i)
+           else
+              write(6,'(" i,              rlat_ens(i)=",i4,12x,f12.3)') &
+                  i,rad2deg*sp_ens%rlats(i)
+           end if
+        end do
+     end if
   end if
 
 !   regardless of whether or not nlat_sploc=grd_ens%nlat and nlon_sploc=grd_ens%nlon, compute
@@ -2884,7 +2950,7 @@ subroutine init_sf_xy(jcap_in)
 !   if they are identical, then the interpolation is just an identity op.
   call g_create_egrid2agrid(grd_ens%nlat,rlats_ens_local,grd_ens%nlon,rlons_ens_local,&
                             nlat_sploc,sp_loc%rlats,nlon_sploc,sp_loc%rlons, &
-                            nord_sploc2ens,p_sploc2ens,eqspace=use_sp_eqspace)
+                            nord_sploc2ens,p_sploc2ens,.true.,eqspace=use_sp_eqspace)
 
 !    the following code is used to compute the desired spectrum to get a
 !     gaussian localization of desired length-scale.
@@ -2953,64 +3019,87 @@ subroutine init_sf_xy(jcap_in)
   allocate(sqrt_spectral_filter(sp_loc%nc,grd_sploc%nsig))
   allocate(g(sp_loc%nc),gsave(sp_loc%nc))
   allocate(pn0_npole(0:sp_loc%jcap))
+  allocate(ksame(grd_sploc%nsig))
+  ksame=.false.
+  do k=2,grd_sploc%nsig
+     if(s_ens_hv(k) == s_ens_hv(k-1))ksame(k)=.true.
+  end do
   do k=1,grd_sploc%nsig
-     do i=1,grd_sploc%nlat
-        f0(i,1)=exp(-half*(rkm(i)/s_ens_hv(k))**2)
-     end do
-
-     do j=2,grd_sploc%nlon
+     if(ksame(k))then
+        spectral_filter(:,k)=spectral_filter(:,k-1)
+     else
         do i=1,grd_sploc%nlat
-           f0(i,j)=f0(i,1)
+           f0(i,1)=exp(-half*(rkm(i)/s_ens_hv(k))**2)
         end do
-     end do
 
-     call general_g2s0(grd_sploc,sp_loc,g,f0)
+        do j=2,grd_sploc%nlon
+           do i=1,grd_sploc%nlat
+              f0(i,j)=f0(i,1)
+           end do
+        end do
 
-     call general_s2g0(grd_sploc,sp_loc,g,f)
+        call general_g2s0(grd_sploc,sp_loc,g,f0)
 
-!    adjust so value at np = 1
-     f=f/f(grd_sploc%nlat,1)
-     call general_g2s0(grd_sploc,sp_loc,g,f)
-     call general_s2g0(grd_sploc,sp_loc,g,f)
-     if(mype == 0) write(6,*)' in init_sf_xy, jcap,s_ens_hv(',k,'), max diff(f0-f)=', &
-                                        sp_loc%jcap,s_ens_hv(k),maxval(abs(f0-f))
+        call general_s2g0(grd_sploc,sp_loc,g,f)
+
+!       adjust so value at np = 1
+        f=f/f(grd_sploc%nlat,1)
+        f0=f
+        call general_g2s0(grd_sploc,sp_loc,g,f)
+        call general_s2g0(grd_sploc,sp_loc,g,f)
+        if(mype == 0)then
+           nsigend=k
+           do kk=k+1,grd_sploc%nsig
+              if(s_ens_hv(kk) /= s_ens_hv(k))exit
+              nsigend=nsigend+1
+           end do
+           write(6,900)k,nsigend,sp_loc%jcap,s_ens_hv(k),maxval(abs(f0-f))
+  900      format(' in init_sf_xy, jcap,s_ens_hv(',i5,1x,'-',i5,'), max diff(f0-f)=', &
+                                        i10,f10.2,e20.10)
+        end if
 
 !            correct spectrum by dividing by pn0_npole
-     gsave=g
+        gsave=g
 
-!    obtain pn0_npole
-     do n=0,sp_loc%jcap
-        g=zero
-        g(2*n+1)=one
-        call general_s2g0(grd_sploc,sp_loc,g,f)
-        pn0_npole(n)=f(grd_sploc%nlat,1)
-     end do
-
-     g=zero
-     do n=0,sp_loc%jcap
-        g(2*n+1)=gsave(2*n+1)/pn0_npole(n)
-     end do
-
-!    obtain spectral_filter
-
-     ii=0
-     do l=0,sp_loc%jcap
-        factor=one
-        if(l >  0) factor=half
-        do n=l,sp_loc%jcap
-           ii=ii+1
-           spectral_filter(ii,k)=factor*g(2*n+1)
-           ii=ii+1
-           if(l == 0) then
-              spectral_filter(ii,k)=zero
-           else
-              spectral_filter(ii,k)=factor*g(2*n+1)
-           end if
+!       obtain pn0_npole
+        do n=0,sp_loc%jcap
+           g=zero
+           g(2*n+1)=one
+           call general_s2g0(grd_sploc,sp_loc,g,f)
+           pn0_npole(n)=f(grd_sploc%nlat,1)
         end do
-     end do
+   
+        g=zero
+        do n=0,sp_loc%jcap
+           g(2*n+1)=gsave(2*n+1)/pn0_npole(n)
+        end do
+
+!       obtain spectral_filter
+
+        ii=0
+        do l=0,sp_loc%jcap
+           factor=one
+           if(l >  0) factor=half
+           do n=l,sp_loc%jcap
+              ii=ii+1
+              if(sp_loc%factsml(ii)) then
+                 spectral_filter(ii,k)=zero
+              else
+                 spectral_filter(ii,k)=factor*g(2*n+1)
+              end if
+              ii=ii+1
+              if(l == 0 .or. sp_loc%factsml(ii)) then
+                 spectral_filter(ii,k)=zero
+              else
+                 spectral_filter(ii,k)=factor*g(2*n+1)
+              end if
+           end do
+        end do
+     end if
   end do
+  deallocate(g,gsave,pn0_npole,ksame)
+
   sqrt_spectral_filter=sqrt(spectral_filter)
-  deallocate(g,gsave,pn0_npole)
 
 !  assign array k_index for each processor, based on grd_loc%kbegin_loc,grd_loc%kend_loc
 
@@ -3082,29 +3171,24 @@ subroutine sf_xy(f,k_start,k_end)
   integer(i_kind),intent(in   ) :: k_start,k_end
   real(r_kind)   ,intent(inout) :: f(grd_ens%nlat,grd_ens%nlon,k_start:max(k_start,k_end))
 
-  real(r_kind) g(sp_loc%nc)
   real(r_kind) work(grd_sploc%nlat,grd_sploc%nlon,1)
   integer(i_kind) k
   logical vector(k_start:max(k_start,k_end))
 
   if(.not.use_localization_grid) then
 
-!$omp parallel do schedule(dynamic,1) private(k,g)
+!$omp parallel do schedule(dynamic,1) private(k)
     do k=k_start,k_end
-       call general_s2g0_ad(grd_ens,sp_loc,g,f(1,1,k))
-       g(:)=g(:)*spectral_filter(:,k_index(k))
-       call general_s2g0(grd_ens,sp_loc,g,f(1,1,k))
+       call sfilter(grd_ens,sp_loc,spectral_filter(1,k_index(k)),f(1,1,k))
     end do
 
   else
 
     vector=.false.
-!$omp parallel do schedule(dynamic,1) private(k,g,work)
+!$omp parallel do schedule(dynamic,1) private(k,work)
     do k=k_start,k_end
        call g_egrid2agrid_ad(p_sploc2ens,work,f(:,:,k:k),k,k,vector(k:k))
-       call general_s2g0_ad(grd_sploc,sp_loc,g,work)
-       g(:)=g(:)*spectral_filter(:,k_index(k))
-       call general_s2g0(grd_sploc,sp_loc,g,work)
+       call sfilter(grd_ens,sp_loc,spectral_filter(:,k_index(k)),f(1,1,k))
        call g_egrid2agrid(p_sploc2ens,work,f(:,:,k:k),k,k,vector(k:k))
     end do
 
@@ -3826,7 +3910,7 @@ subroutine hybens_grid_setup
   if(.not.regional) then
      call general_init_spec_vars(sp_ens,jcap_ens,jcap_ens_test,grd_ens%nlat,grd_ens%nlon,eqspace=use_sp_eqspace)
      call g_create_egrid2agrid(nlat,rlats,nlon,rlons,grd_ens%nlat,sp_ens%rlats,grd_ens%nlon,sp_ens%rlons, &
-                               nord_e2a,p_e2a,eqspace=use_sp_eqspace)
+                               nord_e2a,p_e2a,.true.,eqspace=use_sp_eqspace)
   else
      if(dual_res) then
         call get_region_dx_dy_ens(region_dx_ens,region_dy_ens)
@@ -3868,10 +3952,12 @@ subroutine hybens_localization_setup
   use hybrid_ensemble_parameters, only: grd_ens,s_ens_v,jcap_ens,s_ens_vv,&
          n_ens,vvlocal,&
          s_ens_h,s_ens_hv,create_hybens_localization_parameters,grd_loc,sp_loc,&
-         readin_localization,nval_lenz_en,readin_beta,betas_inv,betae_inv,beta1_inv
+         readin_localization,nval_lenz_en,readin_beta,betas_inv,betae_inv,beta1_inv,&
+         regional_ensemble_option
   use gridmod,only: regional
   use constants, only: one,zero
   use mpimod, only: mype
+  use gfs_stratosphere, only: use_gfs_stratosphere,blend_rm
   implicit none
 
   character(len=40)  :: fname = 'hybens_locinfo'
@@ -3912,6 +3998,16 @@ subroutine hybens_localization_setup
         betae_inv(k) = one - beta1_inv
      enddo
   endif 
+
+  if(regional_ensemble_option == 2 .and. use_gfs_stratosphere)then
+     do k=1,grd_ens%nsig
+        betae_inv(k) = betae_inv(k) * blend_rm(k)
+        betas_inv(k) = one - betae_inv(k)
+        if(mype == 0)write(6,*)'betas_inv, betae_inv=', &
+                     k,betas_inv(k),betae_inv(k)
+     end do
+  end if
+
 ! Set up localization parameters as function of level
 
 ! if horizontal parameter is set <= 0, read in k-levels of localization parameters

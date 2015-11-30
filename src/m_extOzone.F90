@@ -26,6 +26,7 @@ module m_extOzone
 !                       - removed "text" option of "o3lev", for it is not been
 !                         used anymore.
 !                       - Moved history log messages here from read_ozone.
+!   2015-09-17  Thomas  - add l4densvar and thin4d to data selection procedure
 !
 !   input argument list: see Fortran 90 style document below
 !
@@ -176,12 +177,14 @@ end function is_extOzone_
 
 subroutine read_(dfile,dtype,dplat,dsis, &      ! intent(in), keys for type managing
   nread,npuse,nouse, &                          ! intent(out), beside other implicit output variables
-  jsatid,gstime,lunout,twind,ithin,rmesh)       ! intent(in), beside other implicit input variables
+  jsatid,gstime,lunout,twind,ithin,rmesh,nobs)       ! intent(in), beside other implicit input variables
 
   use obsmod   , only: dfile_format
   use constants, only: zero
   use mpeu_util, only: die,perr,tell
+  use mpimod, only: npe
 !  use mpeu_util, only: mprefix,stdout
+!     nobs     - array of observations on each subdomain for each processor
 
   implicit none
   character(len=*), intent(in):: dfile   ! obs_input filename
@@ -198,6 +201,7 @@ subroutine read_(dfile,dtype,dplat,dsis, &      ! intent(in), keys for type mana
   character(len=*), parameter:: myname_=myname//'::read_'
 
   integer(kind=i_kind), intent(out):: nread     ! number of obs record reads in this call
+  integer(kind=i_kind),dimension(npe), intent(inout):: nobs     ! number of obs record reads in this call
   integer(kind=i_kind), intent(out):: npuse     ! nnmber of "preofiles" retained in this call
   integer(kind=i_kind), intent(out):: nouse     ! nnmber of obs retained in this call
 
@@ -328,6 +332,7 @@ subroutine read_(dfile,dtype,dplat,dsis, &      ! intent(in), keys for type mana
         ! obviously a bad idea that n_out has been missing from the header for
         ! its second dimension.
 
+  call count_obs(npuse,nreal,ilat,ilon,p_out,nobs)
   write(lunout) dtype, dsis, nreal, nchan, ilat, ilon
   write(lunout) p_out(:,1:npuse)
 
@@ -388,7 +393,7 @@ subroutine oztot_ncread_(dfile,dtype,dplat,dsis, ozout,nmrecs,ndata,nodata, &
   use satthin, only: satthin_destroygrids => destroygrids
 
   use gridmod, only: nlat,nlon,regional,tll2xy,rlats,rlons
-  use gsi_4dvar, only: l4dvar,iwinbgn,winlen
+  use gsi_4dvar, only: l4dvar,iwinbgn,winlen,l4densvar,thin4d
   use obsmod, only: nloz_omi
 
   use constants, only: deg2rad,zero,rad2deg,r60inv
@@ -593,11 +598,11 @@ subroutine oztot_ncread_(dfile,dtype,dplat,dsis, ozout,nmrecs,ndata,nodata, &
         call w3fs21(idate5,nmind)
 
         t4dv=real((nmind-iwinbgn),r_kind)*r60inv
-        if (l4dvar) then
+        sstime=real(nmind,r_kind)
+        tdiff=(sstime-gstime)*r60inv
+        if (l4dvar.or.l4densvar) then
            if (t4dv<zero .OR. t4dv>winlen) go to 135
         else
-           sstime=real(nmind,r_kind)
-           tdiff=(sstime-gstime)*r60inv
            if(abs(tdiff) > twind) go to 135
         end if
 
@@ -636,7 +641,7 @@ subroutine oztot_ncread_(dfile,dtype,dplat,dsis, ozout,nmrecs,ndata,nodata, &
 
 !       thin OMI/TOMS data
 
-        if (l4dvar) then 
+        if (thin4d) then 
            timedif = zero 
         else 
            timedif = r6*abs(tdiff)        ! range:  0 to 18 
@@ -742,7 +747,7 @@ subroutine ozlev_ncread_(dfile,dtype,dplat,dsis, ozout,nmrecs,ndata,nodata, gsti
   use netcdf, only: nf90_close
 
   use gridmod, only: nlat,nlon,regional,tll2xy,rlats,rlons
-  use gsi_4dvar, only: l4dvar,iwinbgn,winlen
+  use gsi_4dvar, only: l4dvar,iwinbgn,winlen,l4densvar
 
   use constants, only: deg2rad,zero,rad2deg,one_tenth,r60inv
   use ozinfo, only: jpch_oz,nusis_oz,iuse_oz
@@ -949,7 +954,7 @@ subroutine ozlev_ncread_(dfile,dtype,dplat,dsis, ozout,nmrecs,ndata,nodata, gsti
            idate5(5) = imina(iprof) !minute
            call w3fs21(idate5,nmind)
            t4dv=real((nmind-iwinbgn),r_kind)*r60inv
-           if (l4dvar) then
+           if (l4dvar.or.l4densvar) then
               if (t4dv<zero .OR. t4dv>winlen) then
                  write(6,*)'read_ozone: mls obs time idate5=',idate5,', t4dv=',&
                       t4dv,' is outside time window, sstime=',sstime*r60inv
@@ -1040,7 +1045,7 @@ subroutine ozlev_bufrread_(dfile,dtype,dplat,dsis, ozout,nmrecs,ndata,nodata, &
                            jsatid, gstime,twind, nreal,nchan,ilat,ilon)
 
   use gridmod, only: nlat,nlon,regional,tll2xy,rlats,rlons
-  use gsi_4dvar, only: l4dvar,iwinbgn,winlen
+  use gsi_4dvar, only: l4dvar,iwinbgn,winlen,l4densvar
 
   use constants, only: deg2rad,zero,rad2deg,r60inv
   use ozinfo, only: jpch_oz,nusis_oz,iuse_oz
@@ -1215,7 +1220,7 @@ subroutine ozlev_bufrread_(dfile,dtype,dplat,dsis, ozout,nmrecs,ndata,nodata, &
      call w3fs21(idate5,nmind)
 
      t4dv=real((nmind-iwinbgn),r_kind)*r60inv
-     if (l4dvar) then
+     if (l4dvar.or.l4densvar) then
         if (t4dv<zero .OR. t4dv>winlen) then
            write(6,*)'read_ozone: mls obs time idate5=',idate5,', t4dv=',&
               t4dv,' is outside time window, sstime=',sstime*r60inv

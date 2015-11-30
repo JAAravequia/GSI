@@ -1,5 +1,5 @@
   subroutine read_pcp(nread,ndata,nodata,gstime,infile,lunout,obstype, &
-              twind,sis)
+              twind,sis,nobs)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_pcp                           read pcp rate data
@@ -43,6 +43,7 @@
 !   2011-04-01  li      - update argument list to deter_sfc
 !   2011-08-01  lueken  - added module use deter_sfc_mod 
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
+!   2015-02-23  Rancic/Thomas - add l4densvar to time window logical
 !
 !   input argument list:
 !     infile   - unit from which to read BUFR data
@@ -55,6 +56,7 @@
 !     nread    - number of precipitation rate observations read
 !     ndata    - number of precipitation rate profiles retained for further processing
 !     nodata   - number of precipitation rate observations retained for further processing
+!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -64,9 +66,10 @@
   use kinds, only: r_kind,r_double,i_kind
   use gridmod, only: nlat,nlon,regional,tll2xy,rlats,rlons
   use constants, only: zero,deg2rad,tiny_r_kind,rad2deg,r60inv,r3600,r100
-  use gsi_4dvar, only: l4dvar,iwinbgn,winlen
+  use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen
   use deter_sfc_mod, only: deter_sfc_type
   use obsmod, only: bmiss
+  use mpimod, only: npe
 
   implicit none
 
@@ -75,6 +78,7 @@
   character(len=20),intent(in  ) :: sis
   integer(i_kind) ,intent(in   ) :: lunout
   integer(i_kind) ,intent(inout) :: nread
+  integer(i_kind),dimension(npe) ,intent(inout) :: nobs
   integer(i_kind) ,intent(inout) :: ndata,nodata
   real(r_kind)    ,intent(in   ) :: gstime
   real(r_kind)    ,intent(in   ) :: twind
@@ -153,7 +157,6 @@
 ! Write header record to pcp obs output file
   ilon=3
   ilat=4
-  write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
 
   allocate(pcpdata(ndatout,maxobs))
   pcpdata=zero
@@ -183,7 +186,7 @@
   idate5(5) = imn
   call w3fs21(idate5,minobs)
   t4dv=real(minobs-iwinbgn,r_kind)*r60inv
-  if (l4dvar) then
+  if (l4dvar.or.l4densvar) then
      if (t4dv<zero .OR. t4dv>winlen) goto 10
   else
      sstime=real(minobs,r_kind)
@@ -336,6 +339,8 @@
 
 
 ! Write retained data to local file
+  call count_obs(ndata,ndatout,ilat,ilon,pcpdata,nobs)
+  write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
   write(lunout) ((pcpdata(k,i),k=1,ndatout),i=1,ndata)
   deallocate(pcpdata)
 

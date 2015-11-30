@@ -1,4 +1,4 @@
-subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis)
+subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_lidar                   read doppler lidar winds
@@ -38,6 +38,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis)
 !   2011-05-26  mccarty - remove dwlerror logic (moved to setupdw) 
 !   2011-08-01  lueken  - added module use deter_sfc_mod
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
+!   2015-02-23  Rancic/Thomas - add l4densvar to time window logical
 !
 !   input argument list:
 !     infile   - unit from which to read BUFR data
@@ -50,6 +51,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis)
 !     ndata    - number of doppler lidar wind profiles retained for further processing
 !     nodata   - number of doppler lidar wind observations retained for further processing
 !     sis      - satellite/instrument/sensor indicator
+!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -62,8 +64,9 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis)
       ncmiter,ncgroup,ncnumgrp,icuse,ictype,icsubtype,ioctype  !mccarty
   use constants, only: deg2rad,rad2deg,zero,r60inv ! check the usage   msq
   use obsmod, only: iadate,offtime_data
-  use gsi_4dvar, only: l4dvar,time_4dvar,winlen
+  use gsi_4dvar, only: l4dvar,l4densvar,time_4dvar,winlen
   use deter_sfc_mod, only: deter_sfc2
+  use mpimod, only: npe
   implicit none
 
 ! Declare passed variables
@@ -71,6 +74,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis)
   character(len=20),intent(in  ) :: sis
   integer(i_kind) ,intent(in   ) :: lunout
   integer(i_kind) ,intent(inout) :: nread,ndata,nodata
+  integer(i_kind),dimension(npe),intent(inout) :: nobs
   real(r_kind)    ,intent(in   ) :: twind
 
 ! Declare local parameters
@@ -87,7 +91,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis)
   character(10) date
   character(8) subset
 
-  integer(i_kind) lunin,i,kx,ilat,ikx,idomsfc
+  integer(i_kind) lunin,i,kx,ilat,ikx,idomsfc(1)
   integer(i_kind) jdate,ihh,idd,idate,iret,im,iy,k,levs
   integer(i_kind) nmrecs,ilon,nreal,nchanl
 
@@ -214,7 +218,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis)
   nread=nread+1
 
   t4dv = toff + hdr(4)
-  if (l4dvar) then
+  if (l4dvar.or.l4densvar) then
      if (t4dv<zero .OR. t4dv>winlen) go to 10
   else
      time=hdr(4) + time_correction
@@ -259,7 +263,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis)
 
 
      hloswind=dwld(7,ilev)/(cos(dwld(2,ilev)*deg2rad))    ! obs wind (line of sight component)
-     call deter_sfc2(dlat_earth,dlon_earth,t4dv,idomsfc,tsavg,ff10,sfcr)
+     call deter_sfc2(dlat_earth,dlon_earth,t4dv,idomsfc(1),tsavg,ff10,sfcr)
 
      cdata_all(1,ndata)=ikx                    ! obs type
      cdata_all(2,ndata)=dlon                   ! grid relative longitude
@@ -275,7 +279,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis)
      cdata_all(12,ndata)=dwld(8,ilev)          ! standard deviation (obs error) msq
      cdata_all(13,ndata)=rstation_id           ! station id
      cdata_all(14,ndata)=usage                 ! usage parameter
-     cdata_all(15,ndata)=idomsfc+0.001_r_kind  ! dominate surface type
+     cdata_all(15,ndata)=idomsfc(1)+0.001_r_kind  ! dominate surface type
      cdata_all(16,ndata)=tsavg                 ! skin temperature      
      cdata_all(17,ndata)=ff10                  ! 10 meter wind factor  
      cdata_all(18,ndata)=sfcr                  ! surface roughness     
@@ -293,6 +297,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis)
 
 
 ! Write observations to scratch file
+  call count_obs(ndata,maxdat,ilat,ilon,cdata_all,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
   write(lunout) ((cdata_all(k,i),k=1,maxdat),i=1,ndata)
 
