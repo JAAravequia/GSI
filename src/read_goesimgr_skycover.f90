@@ -86,7 +86,7 @@ subroutine  read_goesimgr_skycover(nread,ndata,nodata,infile,obstype,lunout,gsti
 
 
   integer(i_kind) :: nmsub,ireadmg,ireadsb,nreal,nc,i,lunin,nmsg,ntb
-  integer(i_kind) :: iret,kx,pflag,nlevp,nmind,levs,idomsfc
+  integer(i_kind) :: iret,kx,pflag,nlevp,nmind,levs,idomsfc(1)
   integer(i_kind) :: low_cldamt_qc,mid_cldamt_qc,hig_cldamt_qc,tcamt_qc
   integer(i_kind) :: ithin,klat1,klon1,klonp1,klatp1,kk,k,ilat,ilon,nchanl
   integer(i_kind) :: iout,ntmp,iiout,maxobs,icount,itx,iuse,idate,ierr
@@ -330,7 +330,7 @@ subroutine  read_goesimgr_skycover(nread,ndata,nodata,infile,obstype,lunout,gsti
          call deter_sfc2(dlat_earth,dlon_earth,t4dv,idomsfc(1),tsavg,ff10,sfcr,zz)
 
          ! - Obtain the ob and tune the QC marks for ob error tuning a bit later
-         call adjust_goescldobs(goescld(3),tdiff,idomsfc(1),dlat_earth,dlon_earth, &
+         call adjust_goescldobs(goescld(3),tdiff,dlat_earth,dlon_earth, &
                                 low_cldamt,low_cldamt_qc,mid_cldamt,mid_cldamt_qc, &
                                 hig_cldamt,hig_cldamt_qc,tcamt,tcamt_qc)
 

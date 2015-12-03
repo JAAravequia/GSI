@@ -75,7 +75,7 @@ subroutine read_mitm_mxtm(nread,ndata,nodata,infile,obstype,lunout,gstime,sis,no
 
   integer(i_kind) :: nreal,i,lunin
   integer(i_kind) cat,mxtmqm,mitmqm
-  integer(i_kind) :: kx,idomsfc
+  integer(i_kind) :: kx,idomsfc(1)
   integer(i_kind) :: nc,k,ilat,ilon,nchanl
   integer(i_kind) :: idate,iout,maxobs,icount,ierr
   real(r_kind) :: dlat,dlon,dlat_earth,dlon_earth,toff,t4dv
@@ -311,7 +311,7 @@ subroutine read_mitm_mxtm(nread,ndata,nodata,infile,obstype,lunout,gstime,sis,no
 
 
 ! Get information from surface file necessary for conventional data here
-      call deter_sfc2(dlat_earth,dlon_earth,t4dv,idomsfc,tsavg,ff10,sfcr,zz)
+      call deter_sfc2(dlat_earth,dlon_earth,t4dv,idomsfc(1),tsavg,ff10,sfcr,zz)
 
       if(lhilbert) &
       call accum_hilbertcurve(usage,c_station_id,c_prvstg,c_sprvstg, &
@@ -337,7 +337,7 @@ subroutine read_mitm_mxtm(nread,ndata,nodata,infile,obstype,lunout,gstime,sis,no
          cdata_all(11,iout)=oberr                  ! original obs error
          cdata_all(12,iout)=usage                  ! usage parameter
          if (lhilbert) thisobtype_usage=12         ! save INDEX of where usage is stored for hilbertcurve cross validation (if requested)
-         cdata_all(13,iout)=idomsfc                ! dominate surface type
+         cdata_all(13,iout)=idomsfc(1)             ! dominate surface type
          cdata_all(14,iout)=tsavg                  ! skin temperature
          cdata_all(15,iout)=ff10                   ! 10 meter wind factor
          cdata_all(16,iout)=sfcr                   ! surface roughness
@@ -367,7 +367,7 @@ subroutine read_mitm_mxtm(nread,ndata,nodata,infile,obstype,lunout,gstime,sis,no
          cdata_all(11,iout)=oberr                  ! original obs error
          cdata_all(12,iout)=usage                  ! usage parameter
          if (lhilbert) thisobtype_usage=12         ! save INDEX of where usage is stored for hilbertcurve cross validation (if requested)
-         cdata_all(13,iout)=idomsfc                ! dominate surface type
+         cdata_all(13,iout)=idomsfc(1)             ! dominate surface type
          cdata_all(14,iout)=tsavg                  ! skin temperature
          cdata_all(15,iout)=ff10                   ! 10 meter wind factor
          cdata_all(16,iout)=sfcr                   ! surface roughness

@@ -105,7 +105,7 @@ subroutine read_rapidscat(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,
   character(8) c_prvstg,c_sprvstg
 
   integer(i_kind) ireadmg,ireadsb,iuse,mxtb,nmsgmax
-  integer(i_kind) i,maxobs,idomsfc,nsattype
+  integer(i_kind) i,maxobs,idomsfc(1),nsattype
   integer(i_kind) nc,nx,isflg,itx,nchanl
   integer(i_kind) ntb,ntmatch,ncx,ncsave,ntread
   integer(i_kind) kk,klon1,klat1,klonp1,klatp1
@@ -549,7 +549,7 @@ loopd : do
 
 ! Get information from surface file necessary for conventional data here
 ! This is different from the previous sfc_type call
-           call deter_sfc2(dlat_earth,dlon_earth,t4dv,idomsfc,tsavg,ff10,sfcr,zz)
+           call deter_sfc2(dlat_earth,dlon_earth,t4dv,idomsfc(1),tsavg,ff10,sfcr,zz)
  
 !!    process the thining procedure
                 
@@ -646,8 +646,8 @@ loopd : do
            cdata_all(12,iout)=qc1                 ! index of quality mark
            cdata_all(13,iout)=obserr              ! original obs error
            cdata_all(14,iout)=usage               ! usage parameter
-           cdata_all(15,iout)=idomsfc             ! dominate surface type
-           cdata_all(16,iout)=9999999               ! tsavg skin temperature
+           cdata_all(15,iout)=idomsfc(1)          ! dominate surface type
+           cdata_all(16,iout)=9999999             ! tsavg skin temperature
            cdata_all(17,iout)=ff10                ! 10 meter wind factor
            cdata_all(18,iout)=sfcr                ! surface roughness
            cdata_all(19,iout)=dlon_earth*rad2deg  ! earth relative longitude (degrees)

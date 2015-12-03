@@ -133,7 +133,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 
   integer(i_kind):: i,k,ntest,ireadsb,ireadmg,irec,next,j
   integer(i_kind):: iret,idate,nchanl,nchanla
-  integer(i_kind):: isflg,nreal,idomsfc
+  integer(i_kind):: isflg,nreal,idomsfc(1)
   integer(i_kind):: nmind,itx,nele,itt
   integer(i_kind):: iskip
   integer(i_kind):: lnbufr
@@ -461,7 +461,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 !                  3 snow
 !                  4 mixed                     
 
-           call deter_sfc(dlat,dlon,dlat_earth,dlon_earth,t4dv,isflg,idomsfc,sfcpct, &
+           call deter_sfc(dlat,dlon,dlat_earth,dlon_earth,t4dv,isflg,idomsfc(1),sfcpct, &
               ts,tsavg,vty,vfr,sty,stp,sm,sn,zz,ff10,sfcr)
 
 !          Only keep obs over ocean    - ej
@@ -519,7 +519,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
            data_all(24,itx)= sm                   ! soil moisture
            data_all(25,itx)= sn                   ! snow depth
            data_all(26,itx)= zz                   ! surface height
-           data_all(27,itx)= idomsfc + 0.001_r_kind ! dominate surface type
+           data_all(27,itx)= idomsfc(1) + 0.001_r_kind ! dominate surface type
            data_all(28,itx)= sfcr                 ! surface roughness
            data_all(29,itx)= ff10                 ! ten meter wind factor
            data_all(30,itx)= dlon_earth*rad2deg   ! earth relative longitude (degrees)

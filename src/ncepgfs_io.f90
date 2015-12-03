@@ -610,20 +610,6 @@ end subroutine write_ghg_grid
        call sfcio_sclose(lunges,iret)
 !         End of loop over time levels
     end do
-    deallocate(&
-       sfc_data%tsea,&
-       sfc_data%smc,&
-       sfc_data%sheleg,&
-       sfc_data%stc,&
-       sfc_data%slmsk,&
-       sfc_data%zorl,&
-       sfc_data%vfrac,&
-       sfc_data%f10m,&
-       sfc_data%vtype,&
-       sfc_data%stype,&
-       sfc_data%orog,&
-       sfc_data%fice)
-    call sfcio_axdata(sfc_data,iret)
 
   end subroutine read_sfc
 
