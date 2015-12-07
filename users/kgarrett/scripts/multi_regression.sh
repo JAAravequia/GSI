@@ -7,13 +7,9 @@ machine=$REMOTEHOST
 if [ -d /da ]; then
 #For WCOSS
    echo "/da/save/$LOGNAME/trunk/scripts/regression_var.sh" > regression_var.out
-elif [ -d /scratch1/portfolios/NCEPDEV/da ]; then
-#For Zeus/Theia
-   if [ `expr substr $machine 1 4` = "zeus" ]; then
-      echo "/scratch1/portfolios/NCEPDEV/da/save/$LOGNAME/EXP-testCRTM_R2.2/scripts/regression_var.sh" > regression_var.out
-   elif [ `expr substr $machine 1 5` = "theia" ]; then
-      echo "/scratch4/NCEPDEV/da/save/$LOGNAME/EXP-testCRTM_R2.2/scripts/regression_var.sh" > regression_var.out
-   fi
+elif [ -d /scratch4/NCEPDEV/da ]; then
+#For Theia
+   echo "/scratch4/NCEPDEV/da/save/$LOGNAME/trunk/scripts/regression_var.sh" > regression_var.out
 fi
 
 /bin/sh global_T62_regression.sh > global_T62.out &
@@ -36,7 +32,7 @@ fi
 
 /bin/sh nmm_netcdf_regression.sh > nmm_netcdf.out &
 
-/bin/sh nmmb_nems_regression.sh > nmmb_nems.out &
+/bin/sh nmmb_nems_4denvar_regression.sh > nmmb_nems_4denvar.out &
 
 /bin/sh rtma_regression.sh > rtma.out &
 
