@@ -116,8 +116,8 @@ subroutine glbsoi(mype)
   use anisofilter, only: anprewgt_reg
   use anisofilter_glb, only: anprewgt
   use berror, only: create_berror_vars_reg,create_berror_vars,&
-      set_predictors_var,destroy_berror_vars_reg,&
-      destroy_berror_vars,bkgv_flowdep,pcinfo,fut2ps,cwcoveqqcov
+      set_predictors_var,destroy_berror_vars_reg,destroy_berror_vars,& 
+      bkgv_flowdep,pcinfo,fut2ps,cwcoveqqcov
   use balmod, only: create_balance_vars_reg,create_balance_vars, &
       destroy_balance_vars_reg,destroy_balance_vars,prebal,prebal_reg
   use compact_diffs, only: create_cdiff_coefs,inisph
@@ -147,6 +147,7 @@ subroutine glbsoi(mype)
 
   implicit none
 
+
 ! Declare passed variables
   integer(i_kind),intent(in   ) :: mype
 
@@ -156,6 +157,7 @@ subroutine glbsoi(mype)
   integer(i_kind) jiterlast
   real(r_kind) :: zgg,zxy
   character(len=12) :: clfile
+
 
 !*******************************************************************************************
 !
@@ -201,7 +203,7 @@ subroutine glbsoi(mype)
      else
         call create_berror_vars_reg
      end if
-     call prebal_reg
+     call prebal_reg(cwcoveqqcov)
      if (.not. R_option) then
         if(anisotropic) then
            call anprewgt_reg(mype)
@@ -419,7 +421,7 @@ subroutine glbsoi(mype)
     call destroy_ensemble
   endif
 
- if(mype==0) write(6,*) 'glbsoi: complete'
+  if(mype==0) write(6,*) 'glbsoi: complete'
 
 ! Finalize timer for this procedure
   call timer_fnl('glbsoi')

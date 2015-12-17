@@ -1,4 +1,4 @@
-subroutine read_nasa_larc(nread,ndata,infile,obstype,lunout,twind,sis)
+subroutine read_nasa_larc(nread,ndata,infile,obstype,lunout,twind,sis,nobs)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:  read_nasa_larc          Reading in NASA LaRC cloud   
@@ -13,6 +13,10 @@ subroutine read_nasa_larc(nread,ndata,infile,obstype,lunout,twind,sis)
 !    2009-09-21  Hu  initial
 !    2010-04-09  Hu  make changes based on current trunk style
 !    2013-03-27  Hu  add code to map obs from WRF mass H grid to analysis grid
+!    2015-02-23  Rancic/Thomas - add l4densvar to time window logical
+!    2015-03-23  Su  fix array size with maximum message and subset number
+!                    from fixed number to dynamic allocated array
+!    
 !
 !
 !   input argument list:
@@ -25,6 +29,7 @@ subroutine read_nasa_larc(nread,ndata,infile,obstype,lunout,twind,sis)
 !   output argument list:
 !     nread    - number of type "obstype" observations read
 !     ndata    - number of type "obstype" observations retained for further processing
+!     nobs     - array of observations on each subdomain for each processor
 !
 ! USAGE:
 !   INPUT FILES:  NASALaRCCloudInGSI.bufr
@@ -45,9 +50,10 @@ subroutine read_nasa_larc(nread,ndata,infile,obstype,lunout,twind,sis)
   use constants, only: zero,one
   use convinfo, only: nconvtype,ctwind,cgross,cermax,cermin,cvar_b,cvar_pg, &
         ncmiter,ncgroup,ncnumgrp,icuse,ictype,icsubtype,ioctype
-  use gsi_4dvar, only: l4dvar,winlen
+  use gsi_4dvar, only: l4dvar,l4densvar,winlen
   use gridmod, only: nlon,nlat,nlon_regional,nlat_regional
   use mod_wrfmass_to_a, only: wrfmass_obs_to_a8
+  use mpimod, only: npe
 
   implicit none
 !
@@ -55,6 +61,7 @@ subroutine read_nasa_larc(nread,ndata,infile,obstype,lunout,twind,sis)
   character(10),    intent(in)   :: infile,obstype
   integer(i_kind),  intent(in)   :: lunout
   integer(i_kind),  intent(inout):: nread,ndata
+  integer(i_kind),dimension(npe) ,intent(inout) :: nobs
   real(r_kind),     intent(in   ):: twind
   character(20),    intent(in)   :: sis
 !
@@ -78,12 +85,9 @@ subroutine read_nasa_larc(nread,ndata,infile,obstype,lunout,twind,sis)
     integer(i_kind)  :: ireadmg,ireadsb
 
     integer(i_kind)  ::  maxlvl
-    integer(i_kind)  ::  numlvl,numlarc,numobsa
+    integer(i_kind)  ::  numlvl,numlarc,numobsa,maxobs,nmsgmax
     integer(i_kind)  ::  k,iret
-    integer(i_kind),parameter  ::  nmsgmax=100000
     integer(i_kind)  ::  nmsg,ntb
-    integer(i_kind)  ::  nrep(nmsgmax)
-    integer(i_kind),parameter  ::  maxobs=4500000 
 
     real(r_kind),allocatable :: larccld_in(:,:)   ! 3D reflectivity in column
 
@@ -110,6 +114,10 @@ subroutine read_nasa_larc(nread,ndata,infile,obstype,lunout,twind,sis)
    ifn = 15
 !
    if(larcobs) then
+!! get message and subset counts
+
+      call getcount_bufr(infile,nmsgmax,maxobs)
+
       lunin = 10            
       maxlvl= 5
       allocate(larccld_in(maxlvl+2,maxobs))
@@ -119,7 +127,6 @@ subroutine read_nasa_larc(nread,ndata,infile,obstype,lunout,twind,sis)
       call datelen  ( 10 )
 
       nmsg=0
-      nrep=0
       ntb = 0
       msg_report: do while (ireadmg(lunin,subset,idate) == 0)
          nmsg=nmsg+1
@@ -129,7 +136,6 @@ subroutine read_nasa_larc(nread,ndata,infile,obstype,lunout,twind,sis)
          endif
          loop_report: do while (ireadsb(lunin) == 0)
             ntb = ntb+1
-            nrep(nmsg)=nrep(nmsg)+1
             if (ntb>maxobs) then
                 write(6,*)'read_nasa_larc: reports exceed maximum ',maxobs
                 call stop2(50)
@@ -138,7 +144,7 @@ subroutine read_nasa_larc(nread,ndata,infile,obstype,lunout,twind,sis)
 !    Extract type, date, and location information
             call ufbint(lunin,hdr,5,1,iret,hdrstr)
 ! check time window in subset
-            if (l4dvar) then
+            if (l4dvar.or.l4densvar) then
                t4dv=hdr(4)
                if (t4dv<zero .OR. t4dv>winlen) then
                   write(6,*)'read_nasalarc:      time outside window ',&
@@ -178,12 +184,14 @@ subroutine read_nasa_larc(nread,ndata,infile,obstype,lunout,twind,sis)
       nreal=maxlvl+2
       if(numlarc > 0 ) then
           if(nlon==nlon_regional .and. nlat==nlat_regional) then
+             call count_obs(numlarc,maxlvl+2,ilat,ilon,larccld_in,nobs)
              write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
              write(lunout) ((larccld_in(k,i),k=1,maxlvl+2),i=1,numlarc)
           else
              call wrfmass_obs_to_a8(larccld_in,nreal,numlarc,ilat,ilon,numobsa)
              nread=numobsa
              ndata=numobsa
+             call count_obs(numobsa,maxlvl+2,ilat,ilon,larccld_in,nobs)
              write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
              write(lunout) ((larccld_in(k,i),k=1,maxlvl+2),i=1,numobsa)
           endif

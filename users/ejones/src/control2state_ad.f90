@@ -63,7 +63,7 @@ use gsi_bundlemod, only: gsi_bundledestroy
 use gsi_chemguess_mod, only: gsi_chemguess_get
 use gsi_metguess_mod, only: gsi_metguess_get
 use mpeu_util, only: getindex
-use constants, only: max_varname_length
+use constants, only: max_varname_length,zero
 
 implicit none
 
@@ -188,7 +188,7 @@ do jj=1,nsubwin
       call stop2(999)
    endif
 
-!$omp parallel sections private(istatus)
+!$omp parallel sections private(istatus,ii,ic,id,istatus_oz)
 
 !$omp section
 
@@ -196,14 +196,14 @@ do jj=1,nsubwin
    call gsi_bundlegetpointer (wbundle,'vp' ,cv_vp ,istatus)
    call gsi_bundlegetpointer (rval(jj),'u'   ,rv_u,   istatus)
    call gsi_bundlegetpointer (rval(jj),'v'   ,rv_v,   istatus)
-   if (icsfwter >0) call gsi_bundlegetpointer (wbundle,'sfwter', cv_sfwter,istatus)
-   if (icvpwter >0) call gsi_bundlegetpointer (wbundle,'vpwter', cv_vpwter,istatus)
    call gsi_bundleputvar ( wbundle, 'sf',  zero,   istatus )
    call gsi_bundleputvar ( wbundle, 'vp',  zero,   istatus )
 !  Convert RHS calculations for u,v to st/vp for application of
 !  background error
    if (do_getuv) then
        if (twodvar_regional .and. icsfwter>0 .and. icvpwter>0) then
+           call gsi_bundlegetpointer (wbundle,'sfwter', cv_sfwter,istatus)
+           call gsi_bundlegetpointer (wbundle,'vpwter', cv_vpwter,istatus)
            allocate(uland(lat2,lon2,nsig),vland(lat2,lon2,nsig), &
                     uwter(lat2,lon2,nsig),vwter(lat2,lon2,nsig))
 
@@ -255,12 +255,7 @@ do jj=1,nsubwin
    if (do_cw_to_hydro_ad) then
 !     Case when cloud-vars do not map one-to-one
 !     e.g. cw-to-ql&qi
-      if(.not. do_tv_to_tsen_ad) allocate(rv_tsen(lat2,lon2,nsig))
-      call cw2hydro_ad(rval(jj),wbundle,rv_tsen,clouds,nclouds)
-      if(.not. do_tv_to_tsen_ad) then
-         call tv_to_tsen_ad(cv_t,rv_q,rv_tsen)
-         deallocate(rv_tsen)
-      end if
+      call cw2hydro_ad(rval(jj),wbundle,clouds,nclouds)
    else
 !     Case when cloud-vars map one-to-one, take care of them together
 !     e.g. cw-to-cw
@@ -277,7 +272,10 @@ do jj=1,nsubwin
 
 !  Adjoint of convert input normalized RH to q to add contribution of moisture
 !  to t, p , and normalized rh
-   if(do_normal_rh_to_q_ad) call normal_rh_to_q_ad(cv_rh,cv_t,rv_prse,rv_q)
+   if(do_normal_rh_to_q_ad) then
+     call normal_rh_to_q_ad(cv_rh,cv_t,rv_prse,rv_q)
+     rv_q=zero
+   end if
 
 !  Adjoint to convert ps to 3-d pressure
    if(do_getprs_ad) call getprs_ad(cv_ps,cv_t,rv_prse)

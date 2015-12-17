@@ -1,4 +1,4 @@
-subroutine read_radarref_mosaic(nread,ndata,infile,obstype,lunout,twind,sis)
+subroutine read_radarref_mosaic(nread,ndata,infile,obstype,lunout,twind,sis,nobs)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:  read_radarref_mosaic     Reading in reflectivity mosaic in RR grid
@@ -13,6 +13,9 @@ subroutine read_radarref_mosaic(nread,ndata,infile,obstype,lunout,twind,sis)
 !    2008-12-20  Hu  make it read in BUFR form reflectivity  data
 !    2010-04-09  Hu  make changes based on current trunk style
 !    2013-03-27  Hu  add code to map obs from WRF mass H grid to analysis grid
+!    2015-02-23  Rancic/Thomas - add l4densvar to time window logical
+!    2015-03-23  Su  -fix array size with maximum message and subset number from
+!                        fixed number to dynamic allocated array
 !
 !   input argument list:
 !     infile   - unit from which to read mosaic information file
@@ -24,6 +27,7 @@ subroutine read_radarref_mosaic(nread,ndata,infile,obstype,lunout,twind,sis)
 !   output argument list:
 !     nread    - number of type "obstype" observations read
 !     ndata    - number of type "obstype" observations retained for further processing
+!     nobs     - array of observations on each subdomain for each processor
 !
 ! USAGE:
 !   INPUT FILES:  refInGSI
@@ -44,9 +48,10 @@ subroutine read_radarref_mosaic(nread,ndata,infile,obstype,lunout,twind,sis)
   use constants, only: zero,one
   use convinfo, only: nconvtype,ctwind,cgross,cermax,cermin,cvar_b,cvar_pg, &
         ncmiter,ncgroup,ncnumgrp,icuse,ictype,icsubtype,ioctype
-  use gsi_4dvar, only: l4dvar,winlen
+  use gsi_4dvar, only: l4dvar,l4densvar,winlen
   use gridmod, only: nlon,nlat,nlon_regional,nlat_regional
   use mod_wrfmass_to_a, only: wrfmass_obs_to_a8
+  use mpimod, only: npe
 
   implicit none
 !
@@ -54,6 +59,7 @@ subroutine read_radarref_mosaic(nread,ndata,infile,obstype,lunout,twind,sis)
   character(10),    intent(in)    :: infile,obstype
   integer(i_kind),  intent(in)    :: lunout
   integer(i_kind),  intent(inout) :: nread,ndata
+  integer(i_kind),dimension(npe) ,intent(inout) :: nobs
   real(r_kind),     intent(in   ) :: twind
   character(20),    intent(in)    :: sis
 !
@@ -78,12 +84,9 @@ subroutine read_radarref_mosaic(nread,ndata,infile,obstype,lunout,twind,sis)
     integer(i_kind)  :: ireadmg,ireadsb
 
     integer(i_kind)  ::  maxlvl
-    integer(i_kind)  ::  numlvl,numref,numobsa
+    integer(i_kind)  ::  numlvl,numref,numobsa,nmsgmax,maxobs
     integer(i_kind)  ::  k,iret
-    integer(i_kind),parameter  ::  nmsgmax=100000
     integer(i_kind)  ::  nmsg,ntb
-    integer(i_kind)  ::  nrep(nmsgmax)
-    integer(i_kind),parameter  ::  maxobs=2000000
 
     real(r_kind),allocatable :: ref3d_column(:,:)   ! 3D reflectivity in column
 
@@ -110,6 +113,11 @@ subroutine read_radarref_mosaic(nread,ndata,infile,obstype,lunout,twind,sis)
    ifn = 15
 
    if(nsslrefobs) then
+ !! get message and subset counts
+
+      call getcount_bufr(infile,nmsgmax,maxobs)
+
+
       lunin = 10            
       maxlvl= 31
       allocate(ref3d_column(maxlvl+2,maxobs))
@@ -119,7 +127,6 @@ subroutine read_radarref_mosaic(nread,ndata,infile,obstype,lunout,twind,sis)
       call datelen  ( 10 )
 
       nmsg=0
-      nrep=0
       ntb = 0
       msg_report: do while (ireadmg(lunin,subset,idate) == 0)
          nmsg=nmsg+1
@@ -129,7 +136,6 @@ subroutine read_radarref_mosaic(nread,ndata,infile,obstype,lunout,twind,sis)
          endif
          loop_report: do while (ireadsb(lunin) == 0)
             ntb = ntb+1
-            nrep(nmsg)=nrep(nmsg)+1
             if (ntb>maxobs) then
                 write(6,*)'read_radarref_mosaic: reports exceed maximum ',maxobs
                 call stop2(50)
@@ -139,7 +145,7 @@ subroutine read_radarref_mosaic(nread,ndata,infile,obstype,lunout,twind,sis)
             call ufbint(lunin,hdr,5,1,iret,hdrstr)
 
 ! check time window in subset
-            if (l4dvar) then
+            if (l4dvar.or.l4densvar) then
                t4dv=hdr(4)
                if (t4dv<zero .OR. t4dv>winlen) then
                   write(6,*)'read_radarref_mosaic:      time outside window ',&
@@ -191,12 +197,14 @@ subroutine read_radarref_mosaic(nread,ndata,infile,obstype,lunout,twind,sis)
       nreal=maxlvl+2
       if(numref > 0 ) then
          if(nlon==nlon_regional .and. nlat==nlat_regional) then
+            call count_obs(numref,maxlvl+2,ilat,ilon,ref3d_column,nobs)
             write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
             write(lunout) ((ref3d_column(k,i),k=1,maxlvl+2),i=1,numref)
          else
             call wrfmass_obs_to_a8(ref3d_column,nreal,numref,ilat,ilon,numobsa)
             nread=numobsa
             ndata=numobsa
+            call count_obs(numobsa,maxlvl+2,ilat,ilon,ref3d_column,nobs)
             write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
             write(lunout) ((ref3d_column(k,i),k=1,maxlvl+2),i=1,numobsa)
          endif

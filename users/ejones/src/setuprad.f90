@@ -206,7 +206,7 @@
       i_rad_ob_type,obsdiags,obsptr,lobsdiagsave,nobskeep,lobsdiag_allocated,&
       dirname,time_offset,lwrite_predterms,lwrite_peakwt,reduce_diag
   use obsmod, only: rad_ob_type
-  use obsmod, only: obs_diag,luse_obsdiag
+  use obsmod, only: obs_diag,luse_obsdiag,dval_use
   use gsi_4dvar, only: nobs_bins,hr_obsbin,l4dvar
   use gridmod, only: nsig,regional,get_ij
   use satthin, only: super_val1
@@ -759,9 +759,11 @@
 
 !       Set relative weight value
         val_obs=one
-        ixx=nint(data_s(nreal-nstinfo,n))
-        if (ixx > 0 .and. super_val1(ixx) >= one) then
-           val_obs=data_s(nreal-nstinfo-1,n)/super_val1(ixx)
+        if(dval_use)then
+           ixx=nint(data_s(nreal-nstinfo,n))
+           if (ixx > 0 .and. super_val1(ixx) >= one) then
+              val_obs=data_s(nreal-nstinfo-1,n)/super_val1(ixx)
+           endif
         endif
 
 !       Load channel data into work array.
@@ -1238,9 +1240,8 @@
            sun_azimuth=data_s(isazi_ang,n)
            sun_zenith=data_s(iszen_ang,n)
 
-           call qc_amsr2(nchanl,zsges,luse(n),sea, &
+          call qc_amsr2(nchanl,zsges,luse(n),sea, &
               kraintype,clw_obs,tsavg5,tb_obs,sun_azimuth,sun_zenith,amsr2,varinv,aivals(1,is),id_qc)
-
 
 !  ---------- GMI  -------------------
 !       GMI Q C
@@ -1277,8 +1278,6 @@
            if (varinv(i) > tiny_r_kind ) then
               m=ich(i)
               if(lcw4crtm .and. sea) then 
-!                 if(gmi) then
-!                    errf(i) = ermax_rad(m)     ! use ermax for GMI gross check
                  if (i <= 3 .or. i==15) then         
                     errf(i) = 3.00_r_kind*errf(i)    
                  else if (i == 4) then                     
@@ -1290,7 +1289,7 @@
                  endif
               else if (ssmis) then
                  errf(i) = min(1.5_r_kind*errf(i),ermax_rad(m))  ! tighten up gross check for SSMIS
-              else if (gmi .or. saphir) then
+              else if (gmi .or. saphir .or. amsr2) then
                  errf(i) = ermax_rad(m)     ! use ermax for GMI gross check
               else
                  errf(i) = min(three*errf(i),ermax_rad(m))

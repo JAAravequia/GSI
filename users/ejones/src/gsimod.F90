@@ -29,7 +29,7 @@
                        l4dvar,nhr_obsbin,nhr_subwin,nwrvecs,iorthomax,&
                        lbicg,lsqrtb,lcongrad,lbfgsmin,ltlint,ladtest,ladtest_obs, lgrtest,&
                        idmodel,clean_4dvar,iwrtinc,lanczosave,jsiga,ltcost,liauon, &
-		       l4densvar,ens4d_nstarthr,lnested_loops,lwrite4danl
+		       l4densvar,ens4d_nstarthr,lnested_loops,lwrite4danl,thin4d
   use obs_ferrscale, only: lferrscale
   use mpimod, only: npe,mpi_comm_world,ierror,mype
   use radinfo, only: retrieval,diag_rad,init_rad,init_rad_vars,adp_anglebc,angord,upd_pred,&
@@ -56,9 +56,9 @@
       init_qcvars,vadfile,noiqc,c_varqc,qc_noirjaco3,qc_noirjaco3_pole,&
       buddycheck_t,buddydiag_save
   use pcpinfo, only: npredp,diag_pcp,dtphys,deltim,init_pcp
-  use jfunc, only: iout_iter,iguess,miter,factqmin,factqmax,&
+  use jfunc, only: iout_iter,iguess,miter,factqmin,factqmax, &
      factv,factl,factp,factg,factw10m,facthowv,niter,niter_no_qc,biascor,&
-     init_jfunc,qoption,switch_on_derivatives,tendsflag,l_foto,jiterstart,jiterend,R_option,&
+     init_jfunc,qoption,cwoption,switch_on_derivatives,tendsflag,l_foto,jiterstart,jiterend,R_option,&
      bcoption,diurnalbc,print_diag_pcg,tsensible,lgschmidt,diag_precon,step_start,pseudo_q2,&
      clip_supersaturation
   use state_vectors, only: init_anasv,final_anasv
@@ -287,6 +287,7 @@
 !  12-03-2013 wu        add parameter coef_bw for option:betaflg
 !  12-03-2013 Hu        add parameter grid_ratio_wrfmass for analysis on larger
 !                              grid than mass background grid
+!  12-10-2013 zhu       add cwoption
 !  02-05-2014 todling   add parameter cwcoveqqcov (cw_cov=q_cov)
 !  02-24-2014 sienkiewicz added aircraft_t_bc_ext for GMAO external aircraft temperature bias correction
 !  05-29-2014 Thomas    add lsingleradob logical for single radiance ob test
@@ -302,6 +303,7 @@
 !  01-15-2015 Hu        added options i_use_2mq4b,i_use_2mt4b, i_gsdcldanal_type
 !                              i_gsdsfc_uselist,i_lightpcp,i_sfct_gross under
 !                              rapidrefresh_cldsurf
+!  05-13-2015 wu        remove check to turn off regional 4densvar
 !
 !EOP
 !-------------------------------------------------------------------------
@@ -465,7 +467,8 @@
 !     ssmis_precond - weighting factor for SSMIS preconditioning (if not using newpc4pred)
 !     R_option   - Option to use variable correlation length for lcbas based on data
 !                    density - follows Hayden and Purser (1995) (twodvar_regional only)
-!
+!     thin4d - if true, removes thinning of observations due to the location in
+!              the time window
 !
 !     NOTE:  for now, if in regional mode, then iguess=-1 is forced internally.
 !            add use of guess file later for regional mode.
@@ -473,7 +476,7 @@
   namelist/setup/gencode,factqmin,factqmax,clip_supersaturation, &
        factv,factl,factp,factg,factw10m,facthowv,R_option,deltim,dtphys,&
        biascor,bcoption,diurnalbc,&
-       niter,niter_no_qc,miter,qoption,nhr_assimilation,&
+       niter,niter_no_qc,miter,qoption,cwoption,nhr_assimilation,&
        min_offset,pseudo_q2,&
        iout_iter,npredp,retrieval,&
        nst_gsi,nst_tzr,nstinfo,fac_dtl,fac_tsl,tzr_bufrsave,&
@@ -495,9 +498,9 @@
        idmodel,iwrtinc,lwrite4danl,jiterstart,jiterend,lobserver,lanczosave,llancdone, &
        lferrscale,print_diag_pcg,tsensible,lgschmidt,lread_obs_save,lread_obs_skip, &
        use_gfs_ozone,check_gfs_ozone_date,regional_ozone,lwrite_predterms,&
-       lwrite_peakwt, use_gfs_nemsio,liauon,use_prepb_satwnd,l4densvar,ens4d_nstarthr,&
+       lwrite_peakwt, use_gfs_nemsio,liauon,use_prepb_satwnd,l4densvar,ens4d_nstarthr, &
        use_gfs_stratosphere,pblend0,pblend1,step_start,diag_precon,lrun_subdirs,&
-       use_sp_eqspace,lnested_loops,use_reflectivity,lsingleradob
+       use_sp_eqspace,lnested_loops,use_reflectivity,lsingleradob,thin4d
 
 ! GRIDOPTS (grid setup variables,including regional specific variables):
 !     jcap     - spectral resolution
@@ -1097,7 +1100,6 @@
 
 ! Check user input for consistency among parameters for given setups.
 
-
 ! Set regional parameters
   if(filled_grid.and.half_grid) filled_grid=.false.
   regional=wrf_nmm_regional.or.wrf_mass_regional.or.twodvar_regional.or.nems_nmmb_regional .or. cmaq_regional
@@ -1264,10 +1266,6 @@
      call stop2(329)
   endif
 
-! Only allow 4d-ensemble-var in global mode, for now
-  if (l4densvar .and. regional) then
-     call die(myname_,'4d-ensemble-var not yet available for regional applications',99)
-  end if
 
   if (l4densvar .and. (.not.ljc4tlevs) ) then
      if( ljcpdry .or. (factqmin>zero) .or. (factqmax>zero) )  then

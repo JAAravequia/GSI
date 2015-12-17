@@ -29,6 +29,7 @@ subroutine get_gefs_ensperts_dualres
 !                         call genqsat(qs,tsen,prsl,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig,ice,iderivative)
 !   2014-12-03  derber - Simplify code and optimize routine - turn off reading
 !                        of vort/div and surface height since not needed
+!   2014-12-05 zhu      - set lower bound for cwmr
 !
 !   input argument list:
 !
@@ -40,11 +41,11 @@ subroutine get_gefs_ensperts_dualres
 !
 !$$$ end documentation block
 
-  use gridmod, only: idsl5
+  use gridmod, only: idsl5,use_gfs_nemsio,regional
   use hybrid_ensemble_parameters, only: n_ens,write_ens_sprd,oz_univ_static,ntlevs_ens,enspreproc
   use hybrid_ensemble_parameters, only: use_gfs_ens,s_ens_v
   use hybrid_ensemble_isotropic, only: en_perts,ps_bar,nelen
-  use constants,only: zero,half,fv,rd_over_cp,one,zero_single
+  use constants,only: zero,half,fv,rd_over_cp,one,zero_single,qcmin
   use mpimod, only: mpi_comm_world,ierror,mype,npe
   use kinds, only: r_kind,i_kind,r_single
   use hybrid_ensemble_parameters, only: grd_ens,nlat_ens,nlon_ens,sp_ens,uv_hyb_ens,beta1_inv,q_hyb_ens
@@ -58,6 +59,7 @@ subroutine get_gefs_ensperts_dualres
   use gsi_bundlemod, only: gsi_bundledestroy
   use gsi_bundlemod, only: gsi_gridcreate
   use gsi_enscouplermod, only: gsi_enscoupler_get_user_ens
+  use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sub2grid_destroy_info
   implicit none
 
   real(r_single),dimension(grd_ens%lat2,grd_ens%lon2):: scr2
@@ -72,12 +74,13 @@ subroutine get_gefs_ensperts_dualres
 
 ! integer(i_kind),dimension(grd_ens%nlat,grd_ens%nlon):: idum
   integer(i_kind) istatus,iret,i,ic2,ic3,j,k,n,mm1,iderivative,im,jm,km,m,ipic
-  integer(i_kind) ipicps
+  integer(i_kind) ipicps,inner_vars,num_fields
   integer(i_kind) ipc3d(nc3d),ipc2d(nc2d)
 ! integer(i_kind) il,jl
   character(70) filename
-  logical ice,zflag
+  logical ice,zflag,inithead
   integer(i_kind) :: lunges=11
+  type(sub2grid_info) :: grd_t
 
   allocate(en_bar(ntlevs_ens))
   call gsi_gridcreate(grid_ens,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)
@@ -101,9 +104,14 @@ subroutine get_gefs_ensperts_dualres
   kap1=rd_over_cp+one
   kapr=one/rd_over_cp
 
+  inner_vars=1
   im=grd_ens%lat2
   jm=grd_ens%lon2
   km=grd_ens%nsig
+  num_fields=min(6*km+1,npe)
+!  Create temporary communication information fore read routines
+  call general_sub2grid_create_info(grd_t,inner_vars,grd_ens%nlat,grd_ens%nlon, &
+            km,num_fields,regional)
 
   do m=1,ntlevs_ens
      call gsi_bundlecreate(en_bar(m),grid_ens,'ensemble',istatus,names2d=cvars2d,names3d=cvars3d)
@@ -114,11 +122,13 @@ subroutine get_gefs_ensperts_dualres
   end do
 
   zflag=.false.
+  inithead = .true.
   do m=1,ntlevs_ens
      en_bar(m)%values=zero
      do n=1,n_ens
 
        en_perts(n,m)%valuesr4=zero_single
+       iret=0
        if (enspreproc) then
           ! read pre-processed ensemble data (one file for each bin that has all
           ! the ensemble members for a subdomain).
@@ -158,8 +168,28 @@ subroutine get_gefs_ensperts_dualres
           endif
           if (use_gfs_ens) then
              if (mype==npe)write(6,*) 'CALL READ_GFSATM FOR ENS FILE : ',trim(filename)
-             call general_read_gfsatm(grd_ens,sp_ens,sp_ens,filename,mype,uv_hyb_ens,.false., &
-                 zflag,z,ps,vor,div,u,v,tv,q,cwmr,oz,iret)
+             if(use_gfs_nemsio) then
+                call general_read_gfsatm_nems(grd_t,sp_ens,filename,mype,uv_hyb_ens,.false., &
+                    zflag,z,ps,vor,div,u,v,tv,q,cwmr,oz,.true.,iret)
+!               do j=1,jm
+!                  do i=1,im
+!                      write(mype+300,*)i,j,ps(i,j)
+!                  end do
+!               end do
+!               do k=1,km
+!                  do j=1,jm
+!                     do i=1,im
+!                         write(mype+300,*)i,j,k,u(i,j,k),v(i,j,k),tv(i,j,k),q(i,j,k),cwmr(i,j,k),oz(i,j,k)
+!                     end do
+!                  end do
+!               end do
+!               stop
+                     
+             else
+                call general_read_gfsatm(grd_t,sp_ens,sp_ens,filename,mype,uv_hyb_ens,.false., &
+                    zflag,z,ps,vor,div,u,v,tv,q,cwmr,oz,inithead,iret)
+             end if
+             inithead=.false.
           else
              call gsi_enscoupler_get_user_ens(grd_ens,n,m,z,ps,vor,div,u,v,tv,q,cwmr,oz,iret)
           endif
@@ -297,8 +327,8 @@ subroutine get_gefs_ensperts_dualres
                 do k=1,km
                    do j=1,jm
                       do i=1,im
-                         en_perts(n,m)%r3(ipic)%qr4(i,j,k) = cwmr(i,j,k)
-                         en_bar(m)%r3(ipic)%q(i,j,k)=en_bar(m)%r3(ipic)%q(i,j,k)+cwmr(i,j,k)
+                         en_perts(n,m)%r3(ipic)%qr4(i,j,k) = max(cwmr(i,j,k),qcmin)
+                         en_bar(m)%r3(ipic)%q(i,j,k)=en_bar(m)%r3(ipic)%q(i,j,k)+max(cwmr(i,j,k),qcmin)
                       end do
                    end do
                 end do
@@ -335,6 +365,7 @@ subroutine get_gefs_ensperts_dualres
     end do ! end do over ensemble
   end do !end do over bins
 
+  call general_sub2grid_destroy_info(grd_t)
 ! Copy pbar to module array.  ps_bar may be needed for vertical localization
 ! in terms of scale heights/normalized p/p 
 ! Convert to mean

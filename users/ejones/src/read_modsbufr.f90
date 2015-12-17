@@ -1,5 +1,5 @@
 subroutine read_modsbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
-          twindin,sis)
+          twindin,sis,nobs)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:  read_modsbufr                read sst obs from modsbufr file (based on MODS)
@@ -29,6 +29,7 @@ subroutine read_modsbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
 !                       - (3) use tsavg that is computed at observation depth
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
 !   2014-1-28   xli     - modify NSST related tz
+!   2015-02-23  Rancic/Thomas - add l4densvar to time window logical
 !
 !   input argument list:
 !     infile   - unit from which to read BUFR data
@@ -41,6 +42,7 @@ subroutine read_modsbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
 !     ndata    - number of type "obstype" observations retained for further processing
 !     nodata   - number of individual "obstype" observations retained for further processing
 !     sis      - satellite/instrument/sensor indicator
+!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -58,9 +60,10 @@ subroutine read_modsbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
   use obsmod, only: oberrflg,bmiss
   use radinfo, only: nst_gsi,nstinfo
   use insitu_info, only: n_comps,n_scripps,n_triton,n_3mdiscus,cid_mbuoy,n_ship,ship
-  use gsi_4dvar, only: l4dvar, iwinbgn, winlen
+  use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen
   use deter_sfc_mod, only: deter_sfc
   use gsi_nstcouplermod, only: gsi_nstcoupler_deter
+  use mpimod, only: npe
   implicit none
 
 ! Declare passed variables
@@ -68,6 +71,7 @@ subroutine read_modsbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
   character(len=20),intent(in):: sis
   integer(i_kind),intent(in):: lunout
   integer(i_kind),intent(inout):: nread,ndata,nodata
+  integer(i_kind),dimension(npe),intent(inout):: nobs
   real(r_kind),intent(in):: gstime,twindin
 
 ! Declare local parameters
@@ -446,7 +450,7 @@ subroutine read_modsbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
            call w3fs21(idate5,nmind)
            t4dv=real((nmind-iwinbgn),r_kind)*r60inv  ! no information in obs bufr file about seconds.
 !
-           if (l4dvar) then
+           if (l4dvar.or.l4densvar) then
               if (t4dv<zero .OR. t4dv>winlen) cycle read_loop
            else
               sstime=real(nmind,r_kind)
@@ -551,6 +555,7 @@ subroutine read_modsbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
 
   if ( ndata > 0 ) then 
     ! Write header record and data to output file for further processing
+    call count_obs(ndata,nreal,ilat,ilon,data_all,nobs)
     write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
     write(lunout) ((data_all(k,i),k=1,nreal),i=1,ndata)
   endif

@@ -1,5 +1,5 @@
 subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
-     prsl_full)
+     prsl_full,nobs,nrec_start)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:  read_prepbuf                read obs from prepbufr file
@@ -125,12 +125,16 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !   2014-06-26  carley - simplify call to apply_hilbertcurve 
 !   2014-11-20  zhu  - added code for aircraft temperature kx=130
 !   2014-10-01  Xue    - add gsd surface observation uselist
+!   2015-02-23  Rancic/Thomas - add thin4d to time window logical
+!   2015-03-23  Su      -fix array size with maximum message and subset  number from fixed number to
+!                        dynamic allocated array
 !
 !   input argument list:
 !     infile   - unit from which to read BUFR data
 !     obstype  - observation type to process
 !     lunout   - unit to which to write data for further processing
 !     prsl_full- 3d pressure on full domain grid
+!     nrec_start - number of subsets without useful information
 !
 !   output argument list:
 !     nread    - number of type "obstype" observations read
@@ -138,6 +142,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !     ndata    - number of type "obstype" observations retained for further processing
 !     twindin  - input group time window (hours)
 !     sis      - satellite/instrument/sensor indicator
+!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -162,7 +167,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   use aircraftinfo, only: aircraft_t_bc,aircraft_t_bc_pof,ntail,taillist,idx_tail,npredt,predt, &
       aircraft_t_bc_ext,ntail_update,max_tail,nsort,itail_sort,idx_sort,timelist
   use converr,only: etabl
-  use gsi_4dvar, only: l4dvar,time_4dvar,winlen
+  use gsi_4dvar, only: l4dvar,l4densvar,time_4dvar,winlen,thin4d
   use qcmod, only: errormod,noiqc,newvad
   use convthin, only: make3grids,map3grids,del3grids,use_all
   use blacklist, only : blacklist_read,blacklist_destroy
@@ -178,6 +183,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   use aircraftobsqc, only: init_aircraft_rjlists,get_aircraft_usagerj,&
                            destroy_aircraft_rjlists
   use adjust_cloudobs_mod, only: adjust_convcldobs,adjust_goescldobs
+  use mpimod, only: npe
   use rapidrefresh_cldsurf_mod, only: i_gsdsfc_uselist
 
   implicit none
@@ -185,8 +191,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 ! Declare passed variables
   character(len=*)                      ,intent(in   ) :: infile,obstype
   character(len=20)                     ,intent(in   ) :: sis
-  integer(i_kind)                       ,intent(in   ) :: lunout
+  integer(i_kind)                       ,intent(in   ) :: lunout,nrec_start
   integer(i_kind)                       ,intent(inout) :: nread,ndata,nodata
+  integer(i_kind),dimension(npe)        ,intent(inout) :: nobs
   real(r_kind)                          ,intent(in   ) :: twindin
   real(r_kind),dimension(nlat,nlon,nsig),intent(in   ) :: prsl_full
 
@@ -210,9 +217,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   real(r_kind),parameter:: r0_01_bmiss=r0_01*bmiss
   character(80),parameter:: cspval= '88888888'
 
-  integer(i_kind),parameter:: mxtb=5000000
-  integer(i_kind),parameter:: nmsgmax=100000 ! max message count
-! integer(i_kind),parameter:: nmsgmax=10000 ! max message count
 
 ! Declare local variables
   logical tob,qob,uvob,spdob,sstob,pwob,psob,gustob,visob,tdob,mxtmob,mitmob,pmob,howvob
@@ -242,7 +246,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   logical lhilbert
 
   integer(i_kind) ireadmg,ireadsb,icntpnt,icntpnt2,icount,iiout
-  integer(i_kind) lunin,i,maxobs,j,idomsfc,it29
+  integer(i_kind) lunin,i,maxobs,j,idomsfc,it29,nmsgmax,mxtb
   integer(i_kind) kk,klon1,klat1,klonp1,klatp1
   integer(i_kind) nc,nx,isflg,ntread,itx,ii,ncsave
   integer(i_kind) ihh,idd,idate,iret,im,iy,k,levs
@@ -252,7 +256,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   integer(i_kind) lim_tqm,lim_qqm
   integer(i_kind) nlevp         ! vertical level for thinning
   integer(i_kind) ntmp,iout
-  integer(i_kind) pflag
+  integer(i_kind) pflag,irec
   integer(i_kind) ntest,nvtest,iosub,ixsub,isubsub,iobsub
   integer(i_kind) kl,k1,k2
   integer(i_kind) itypex
@@ -264,13 +268,12 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   integer(i_kind) low_cldamt_qc,mid_cldamt_qc,hig_cldamt_qc
   integer(i_kind) iyyyymm
   integer(i_kind) jj,start,next
-  integer(i_kind) tab(mxtb,3)
   integer(i_kind),dimension(5):: idate5
-  integer(i_kind),dimension(nmsgmax):: nrep
   integer(i_kind),dimension(255):: pqm,qqm,tqm,wqm,pmq
   integer(i_kind),dimension(nconvtype)::ntxall
   integer(i_kind),dimension(nconvtype+1)::ntx
-  integer(i_kind),allocatable,dimension(:):: isort,iloc
+  integer(i_kind),allocatable,dimension(:):: isort,iloc,nrep
+  integer(i_kind),allocatable,dimension(:,:):: tab 
   integer(i_kind) ibfms,thisobtype_usage
 
   real(r_kind) time,timex,time_drift,timeobs,toff,t4dv,zeps
@@ -442,21 +445,21 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   else if(lcbasob) then
      nreal=23
   else 
-     write(6,*) ' illegal obs type in READ_PREPBUFR '
+     write(6,*) ' illegal obs type in READ_PREPBUFR ',obstype
      call stop2(94)
   end if
 
 !  Set qc limits based on noiqc flag
   if (noiqc) then
      lim_qm=8
-     if (psob) lim_zqm=7
-     if (qob)  lim_tqm=7
-     if (tob)  lim_qqm=8
+     if (psob)         lim_zqm=7
+     if (qob.or.tdob)  lim_tqm=7
+     if (tob)          lim_qqm=8
   else
      lim_qm=4
-     if (psob) lim_zqm=4
-     if (qob)  lim_tqm=4
-     if (tob)  lim_qqm=4
+     if (psob)         lim_zqm=4
+     if (qob.or.tdob)  lim_tqm=4
+     if (tob)          lim_qqm=4
   endif
 
   if (tob .and. (aircraft_t_bc_pof .or. aircraft_t_bc .or.&
@@ -519,14 +522,22 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
      return
   end if
 
-  allocate(lmsg(nmsgmax,ntread))
+!! get message and subset counts
+
+  call getcount_bufr(infile,nmsgmax,mxtb)
+
+  allocate(lmsg(nmsgmax,ntread),tab(mxtb,3),nrep(nmsgmax))
+
   lmsg = .false.
   maxobs=0
   tab=0
   nmsg=0
   nrep=0
   ntb = 0
+  irec = 0
   msg_report: do while (ireadmg(lunin,subset,idate) == 0)
+     irec = irec + 1
+     if(irec < nrec_start) cycle msg_report
      if(.not.use_prepb_satwnd .and. trim(subset) == 'SATWND') cycle msg_report
      if (aircraft_t_bc) then
         aircraftset = trim(subset)=='AIRCFT' .or. trim(subset)=='AIRCAR'
@@ -751,7 +762,10 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
      icntpnt=0
      icntpnt2=0
      disterrmax=-9999.0_r_kind
+     irec = 0
      loop_msg: do while (ireadmg(lunin,subset,idate)== 0)
+        irec = irec + 1
+        if(irec < nrec_start) cycle loop_msg
         if(.not.use_prepb_satwnd .and. trim(subset) =='SATWND') cycle loop_msg
         if (aircraft_t_bc) then
            aircraftset = trim(subset)=='AIRCFT' .or. trim(subset)=='AIRCAR'
@@ -883,14 +897,14 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
               t4dv=t4dv + time_correction
               time=timeobs + time_correction
            end if
-           if(use_prepb_satwnd .and. (kx >= 240 .or. kx <= 260)) iobsub = hdr(7)
+           if(use_prepb_satwnd .and. (kx >= 240 .and. kx <= 260)) iobsub = hdr(7)
 
  
 !          Balloon drift information available for these data
            driftl=kx==120.or.kx==220.or.kx==221
 
            if (.not. (aircraft_t_bc .and. acft_profl_file)) then
-              if (l4dvar) then
+              if (l4dvar.or.l4densvar) then
                  if ((t4dv<zero.OR.t4dv>winlen) .and. .not.driftl) cycle loop_readsb ! outside time window
               else
                  if((real(abs(time)) > real(ctwind(nc)) .or. real(abs(time)) > real(twindin)) &
@@ -1316,7 +1330,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  if (t4dv>winlen.and.t4dv<winlen+zeps) t4dv=winlen
                  t4dv=t4dv + time_correction
                  time=timeobs + time_correction
-                 if (l4dvar) then
+                 if (l4dvar.or.l4densvar) then
                     if (t4dv<zero.OR.t4dv>winlen) cycle LOOP_K_LEVS
                  else
                     if (real(abs(time))>real(ctwind(nc)) .or.  real(abs(time))>real(twindin)) cycle LOOP_K_LEVS
@@ -1345,7 +1359,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  if (abs(time_drift-time)>four) time_drift = time
  
 !                Check to see if the time is outside range
-                 if (l4dvar) then
+                 if (l4dvar.or.l4densvar) then
                     t4dv=toff+time_drift
                     if (t4dv<zero .or. t4dv>winlen) then
                        t4dv=toff+timex
@@ -1405,7 +1419,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  ntmp=ndata  ! counting moved to map3gridS
            
 !                Set data quality index for thinning
-                 if (l4dvar) then
+                 if (thin4d) then
                     timedif = zero
                  else
                     timedif=abs(t4dv-toff)
@@ -2165,7 +2179,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  if (k==1) then
 !                   adjust quality mark/usage parameter
                     if (trim(subset) == 'GOESND') then
-                       call adjust_goescldobs(goescld(2,1),timeobs,idomsfc,dlat_earth,dlon_earth, &
+                       call adjust_goescldobs(goescld(2,1),timeobs,dlat_earth,dlon_earth, &
                                   low_cldamt,low_cldamt_qc,mid_cldamt,mid_cldamt_qc, &
                                   hig_cldamt,hig_cldamt_qc,tcamt,tcamt_qc)
                     else
@@ -2269,7 +2283,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 ! Normal exit
 
   enddo loop_convinfo! loops over convinfo entry matches
-  deallocate(lmsg)
+  deallocate(lmsg,tab,nrep)
 
 ! Apply hilbert curve for cross validation if requested
 
@@ -2305,13 +2319,18 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
      allocate(cdata_all(nreal,maxobs))
      call reorg_metar_cloud(cdata_out,nreal,ndata,cdata_all,maxobs,iout)
      ndata=iout
-     write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
-     write(lunout) ((cdata_all(i,j),i=1,nreal),j=1,ndata)
+     deallocate(cdata_out)
+     allocate(cdata_out(nreal,ndata))
+     do i=1,nreal
+        do j=1,ndata
+          cdata_out(i,j)=cdata_all(i,j)
+        end do
+     end do
      deallocate(cdata_all)
-  else
-     write(lunout) obstype,sis,nreal,nchanl,ilat,ilon,ndata
-     write(lunout) cdata_out
   endif
+  call count_obs(ndata,nreal,ilat,ilon,cdata_out,nobs)
+  write(lunout) obstype,sis,nreal,nchanl,ilat,ilon,ndata
+  write(lunout) cdata_out
 
   deallocate(cdata_out)
   call destroy_rjlists

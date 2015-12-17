@@ -68,21 +68,18 @@ subroutine combine_radobs(mype_sub,mype_root,&
 !    Determine total number of data read and retained.
      ncounts=nread
      call mpi_allreduce(ncounts,ncounts1,1,mpi_itype,mpi_sum,mpi_comm_sub,ierror)
-
 !    Set total number of observations summed over all tasks and
 !    construct starting location of subset in reduction array
 
      nread=0
      if (mype_sub==mype_root) nread = ncounts1
      if (ncounts1 == 0)return
-
 !    Allocate arrays to hold data
 
      allocate(data_crit_min(itxmax))
 !    gather arrays over all tasks in mpi_comm_sub.  Reduction result
 !    is only needed on task mype_root
      call mpi_allreduce(data_crit,data_crit_min,itxmax,mpi_rtype,mpi_min,mpi_comm_sub,ierror)
-
      allocate(nloc(min(ncounts1,itxmax)),icrit(min(ncounts1,itxmax)))
      icrit=1e9
      ndata=0
@@ -99,15 +96,12 @@ subroutine combine_radobs(mype_sub,mype_root,&
         end if
      end do
      deallocate(data_crit_min)
-
      call mpi_allreduce(ndata1,ndata2,1,mpi_itype,mpi_sum,mpi_comm_sub,ierror)
-
 !    Following code only in the circumstance that multiple min crit's in one 
 !       grid box are identical on different processors
      if(ndata /= ndata2)then
         allocate(icrit_min(ndata))
         call mpi_allreduce(icrit,icrit_min,ndata,mpi_itype,mpi_min,mpi_comm_sub,ierror)
-
         do k=1,ndata
            if(nloc(k) /=0 .and. icrit_min(k) /= icrit(k)) nloc(k) = 0
         end do
@@ -131,7 +125,6 @@ subroutine combine_radobs(mype_sub,mype_root,&
         
      end do
      deallocate(nloc)
-
 !    get all data on process mype_root
 !    data_all(:,:) = zero
      call mpi_reduce(data_all_in,data_all,nele*ndata,mpi_rtype,mpi_sum,&
@@ -142,13 +135,14 @@ subroutine combine_radobs(mype_sub,mype_root,&
      do k=1,itxmax
         if(data_crit(k) < 1.e9_r_kind)then
            ndata=ndata+1
-           do l=1,nele
-              data_all(l,ndata)=data_all(l,k)
-           end do
+           if( k /= ndata)then
+              do l=1,nele
+                 data_all(l,ndata)=data_all(l,k)
+              end do
+           end if
         end if
      end do
   end if
-
 ! End of routine
   return
 end subroutine combine_radobs
