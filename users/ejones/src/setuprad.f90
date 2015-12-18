@@ -1290,7 +1290,7 @@
               else if (ssmis) then
                  errf(i) = min(1.5_r_kind*errf(i),ermax_rad(m))  ! tighten up gross check for SSMIS
               else if (gmi .or. saphir .or. amsr2) then
-                 errf(i) = ermax_rad(m)     ! use ermax for GMI gross check
+                 errf(i) = ermax_rad(m)     ! use ermax for GMI, SAPHIR, and AMSR2 gross check
               else
                  errf(i) = min(three*errf(i),ermax_rad(m))
               endif
