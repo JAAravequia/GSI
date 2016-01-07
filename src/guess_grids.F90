@@ -208,8 +208,8 @@ module guess_grids
   integer(i_kind),allocatable,dimension(:,:):: isli2     ! snow/land/ice mask at analysis time
   real(r_kind),allocatable,dimension(:,:):: coast_prox   ! coast proximity mask
 
-  integer(i_kind),allocatable,dimension(:,:,:):: fice    ! sea ice fraction
-  integer(i_kind),allocatable,dimension(:,:,:):: fice_g  ! sea ice fraction on horiz/global grid
+  real(r_kind),allocatable,dimension(:,:,:):: fice    ! sea ice fraction
+  real(r_kind),allocatable,dimension(:,:,:):: fice_g  ! sea ice fraction on horiz/global grid
   real(r_kind),allocatable,dimension(:,:):: fice2        ! sea ice concentration/fraction on subdomain
 
   real(r_kind),allocatable,dimension(:,:,:):: sno2  ! sno depth on subdomain

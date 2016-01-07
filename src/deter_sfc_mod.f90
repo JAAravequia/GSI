@@ -9,6 +9,8 @@ module deter_sfc_mod
 ! program history log:
 !   2011-08-01  lueken - Moved all land surface type subroutines to new module
 !   2013-01-23  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
+!   2015-12-18  xuli    - modify to account for ice concentration in
+!                         deter_sfc, deter_sfc2, deter_sfc_fov, deter_sfc_type
 !
 ! subroutines included:
 !   sub deter_sfc
@@ -213,43 +215,43 @@ subroutine deter_sfc(alat,alon,dlat_earth,dlon_earth,obstime,isflg, &
      sfcpct = zero
 
      if ( istyp00 == 2 .and. fice00 < one ) then
-       sfcpct(2)=sfcpct(2)+w00*fice00
-       sfcpct(0)=sfcpct(0)+w00*(one-fice00)
+       sfcpct(2) = sfcpct(2) + w00*fice00
+       sfcpct(0) = sfcpct(0) + w00*(one-fice00)
      elseif ( istyp00 == 3 .and. (fice00 > zero .and. fice00 < one) ) then
-       sfcpct(3)=sfcpct(3)+w00*fice00
-       sfcpct(0)=sfcpct(0)+w00*(one-fice00)
+       sfcpct(3) = sfcpct(3) + w00*fice00
+       sfcpct(0) = sfcpct(0) + w00*(one-fice00)
      else
-       sfcpct(istyp00)=sfcpct(istyp00)+w00
+       sfcpct(istyp00) = sfcpct(istyp00) + w00
      endif
 
      if ( istyp01 == 2 .and. fice01 < one ) then
-       sfcpct(2)=sfcpct(2)+w01*fice01
-       sfcpct(0)=sfcpct(0)+w01*(one-fice01)
+       sfcpct(2) = sfcpct(2) + w01*fice01
+       sfcpct(0) = sfcpct(0) + w01*(one-fice01)
      elseif ( istyp01 == 3 .and. (fice01 > zero .and. fice01 < one) ) then
-       sfcpct(3)=sfcpct(3)+w01*fice01
-       sfcpct(0)=sfcpct(0)+w01*(one-fice01)
+       sfcpct(3) = sfcpct(3) + w01*fice01
+       sfcpct(0) = sfcpct(0) + w01*(one-fice01)
      else
-       sfcpct(istyp01)=sfcpct(istyp01)+w01
+       sfcpct(istyp01) = sfcpct(istyp01) + w01
      endif
 
      if ( istyp10 == 2 .and. fice10 < one ) then
-       sfcpct(2)=sfcpct(2)+w10*fice10
-       sfcpct(0)=sfcpct(0)+w10*(one-fice10)
+       sfcpct(2) = sfcpct(2) + w10*fice10
+       sfcpct(0) = sfcpct(0) + w10*(one-fice10)
      elseif ( istyp10 == 3 .and. (fice10 > zero .and. fice10 < one) ) then
-       sfcpct(3)=sfcpct(3)+w10*fice10
-       sfcpct(0)=sfcpct(0)+w10*(one-fice10)
+       sfcpct(3) = sfcpct(3) + w10*fice10
+       sfcpct(0) = sfcpct(0) + w10*(one-fice10)
      else
-       sfcpct(istyp10)=sfcpct(istyp10)+w10
+       sfcpct(istyp10) = sfcpct(istyp10) + w10
      endif
 
      if ( istyp11 == 2 .and. fice11 < one ) then
-       sfcpct(2)=sfcpct(2)+w11*fice11
-       sfcpct(0)=sfcpct(0)+w11*(one-fice11)
+       sfcpct(2) = sfcpct(2) + w11*fice11
+       sfcpct(0) = sfcpct(0) + w11*(one-fice11)
      elseif ( istyp11 == 3 .and. (fice11 > zero .and. fice11 < one) ) then
-       sfcpct(3)=sfcpct(3)+w10*fice11
-       sfcpct(0)=sfcpct(0)+w10*(one-fice11)
+       sfcpct(3) = sfcpct(3) + w11*fice11
+       sfcpct(0) = sfcpct(0) + w11*(one-fice11)
      else
-       sfcpct(istyp11)=sfcpct(istyp11)+w11
+       sfcpct(istyp11) = sfcpct(istyp11) + w11
      endif
 !
 !    get the dominant surface type with sfcpct
@@ -1855,7 +1857,7 @@ subroutine accum_sfc(i,j,power,sfc_mdl,sfc_sum)
      sfc_sum%sm=sfc_sum%sm + (power*sfc_mdl%sm)
      sfc_sum%stp=sfc_sum%stp + (power*sfc_mdl%stp)
   elseif (mask==3) then  ! snow cover land or sea ice
-    if ( fice > zero .and. fice < one ) then
+    if ( fice > 0.001_r_kind .and. fice < one ) then
       sfc_sum%sn=sfc_sum%sn + (power*fice*sfc_mdl%sn)
     else
       sfc_sum%sn=sfc_sum%sn + (power*sfc_mdl%sn)
@@ -1874,13 +1876,13 @@ subroutine accum_sfc(i,j,power,sfc_mdl,sfc_sum)
 
 ! keep track of skin temperature for each surface type
 ! keep count of each surface type
-  if ( mask == 2 .and. fice < one ) then
+  if ( mask == 2 .and. ( fice > 0.001_r_kind .and. fice < one) ) then
     sfc_sum%count(2) = sfc_sum%count(2) + power*fice
     sfc_sum%count(0) = sfc_sum%count(0) + power*(one-fice)
     tice=(sfc_mdl%ts-tfrozen*(one-fice))/fice
     sfc_sum%ts(2)=sfc_sum%ts(2) + (power*tice*fice)
     sfc_sum%ts(0)=sfc_sum%ts(0) + (power*tfrozen*(one-fice))
-  elseif ( mask == 3 .and. (fice > zero .and. fice < one) ) then
+  elseif ( mask == 3 .and. (fice > 0.001_r_kind .and. fice < one) ) then
     sfc_sum%count(3) = sfc_sum%count(3) + power*fice 
     sfc_sum%count(0) = sfc_sum%count(0) + power*(one-fice) 
     tice=(sfc_mdl%ts-tfrozen*(one-fice))/fice

@@ -113,7 +113,7 @@ module satthin
   integer(i_kind),dimension(0:51):: istart_val
   
   integer(i_kind),allocatable,dimension(:):: mlon
-  real(r_kind),allocatable,dimension(:,:):: fice_full
+  real(r_single),allocatable,dimension(:,:):: fice_full
   logical,allocatable,dimension(:)::icount
 
   real(r_kind) rlat_min,rlat_max,rlon_min,rlon_max,dlat_grid,dlon_grid

@@ -699,6 +699,8 @@ subroutine read_iasi(mype,val_iasi,ithin,isfcalc,rmesh,jsatid,gstime,&
 
         nrec(itx)=irec
 
+!    write(*,'(a,I5,a10,13F9.3)') 'read_iasi : ',mype,obstype,dlat_earth_deg,dlon_earth_deg,sfcpct(0),sfcpct(1),sfcpct(2),sfcpct(3),ts(0),ts(1),ts(2),ts(3),idomsfc(1),tsavg,sn
+
      enddo read_loop
   enddo read_subset
   call closbf(lnbufr)

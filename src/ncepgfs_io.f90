@@ -518,7 +518,7 @@ end subroutine write_ghg_grid
     character(24) :: filename
 !   Declare local parameters
     integer(sfcio_intkind):: lunges = 11
-    integer(i_kind),parameter:: nsfc_all = 11
+    integer(i_kind),parameter:: nsfc_all = 12
 
     do it=1,nfldsfc
 ! read a surface file on the task
@@ -707,9 +707,9 @@ end subroutine write_ghg_grid
     else
        sfc_rough = zero
     end if
-    call mpi_bcast(terrain,   npts,   mpi_rtype4,iope,mpi_comm_world,iret)
-    call mpi_bcast(isli,      npts,   mpi_itype,iope,mpi_comm_world,iret)
-    call mpi_bcast(fice,npts,mpi_rtype,iope,mpi_comm_world,iret)
+    call mpi_bcast(terrain,   npts,  mpi_rtype4,iope,mpi_comm_world,iret)
+    call mpi_bcast(isli,      npts,  mpi_itype, iope,mpi_comm_world,iret)
+    call mpi_bcast(fice,      npts,  mpi_rtype4,iope,mpi_comm_world,iret)
     if(use_sfc_any)then
        call mpi_bcast(veg_frac, nptsall,mpi_rtype4,iope,mpi_comm_world,iret)
        call mpi_bcast(soil_temp,nptsall,mpi_rtype4,iope,mpi_comm_world,iret)
