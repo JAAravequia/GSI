@@ -833,7 +833,7 @@ contains
 
 
   subroutine read_sfc_ (filename,mype,fact10,sfct,sno,veg_type,&
-       veg_frac,soil_type,soil_temp,soil_moi,isli,sfc_rough,terrain)
+       veg_frac,soil_type,soil_temp,soil_moi,isli,fice,sfc_rough,terrain)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_nemssfc     read nems surface file
@@ -845,6 +845,7 @@ contains
 !   2010-02-22  Huang    Initial version.  Based on read_gfssfc
 !   2011-02-14  Huang    Re-arrange the read sequence to be same as model
 !                        write sequence.  Also remove unused array.
+!   2014-12-04  li       add to read fice (sea ice concentration/fraction)
 !
 !   input argument list:
 !     filename - name of surface guess file
@@ -863,6 +864,7 @@ contains
 !     isli_g    - global sea/land/ice mask
 !     sfc_rough - surface roughness
 !     terrain   - terrain height
+!     fice      - ice concentration
 !
 ! attributes:
 !   language: f90
@@ -881,10 +883,10 @@ contains
     integer(i_kind)                             ,intent(in   ) :: mype
     integer(i_kind),dimension(nlat_sfc,nlon_sfc),intent(  out) :: isli
     real(r_single)   ,dimension(nlat_sfc,nlon_sfc),intent(  out) :: fact10,sfct,sno,&
-         veg_type,veg_frac,soil_type,soil_temp,soil_moi,sfc_rough,terrain
+         veg_type,veg_frac,soil_type,soil_temp,soil_moi,sfc_rough,terrain,fice
 
 !   Declare local parameters
-    integer(i_kind),parameter:: nsfc=11
+    integer(i_kind),parameter:: nsfc=12
     integer(i_kind),dimension(7):: idate
     integer(i_kind),dimension(4):: odate
 
@@ -988,6 +990,9 @@ contains
 !   stc
     call nemsio_readrecv(gfile, 'stc',  'soil layer', 1, rwork2d(:,11), iret=iret)
     if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'stc','read',istop,iret)
+!   fice
+    call nemsio_readrecv(gfile, 'fice',  'sfc', 1, rwork2d(:,12), iret=iret)
+    if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'fice','read',istop,iret)
 
 !   Fill surface guess array
     do k=1,nsfc
@@ -1034,6 +1039,7 @@ contains
           terrain(i,j)   = sfcges(i,j,9)
           soil_moi(i,j)  = sfcges(i,j,10)
           soil_temp(i,j) = sfcges(i,j,11)
+          fice(i,j)      = sfcges(i,j,12)
        end do
     end do
     deallocate(sfcges)

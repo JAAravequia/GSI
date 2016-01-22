@@ -537,7 +537,7 @@ contains
                    fact10_full(:,:,it),sst_full(:,:,it),sno_full(:,:,it), &
                    veg_type_full,veg_frac_full(:,:,it), &
                    soil_type_full,soil_temp_full(:,:,it),&
-                   soil_moi_full(:,:,it),isli_full,sfc_rough_full(:,:,it),&
+                   soil_moi_full(:,:,it),isli_full,fice_full,sfc_rough_full(:,:,it),&
                    zs_full_gfs)
              end do
           else
@@ -546,7 +546,7 @@ contains
                 write(filename,200)ifilesfc(it)
                 call read_nemssfc(filename,mype,&
                    fact10_full(:,:,it),sst_full(:,:,it),sno_full(:,:,it), &
-                   dum,dum,dum,dum,dum,isli_full,sfc_rough_full(:,:,it),&
+                   dum,dum,dum,dum,dum,isli_full,fice_full,sfc_rough_full(:,:,it),&
                    zs_full_gfs)
              end do
              deallocate(dum)
@@ -620,20 +620,17 @@ contains
           isli_full(i,j)=nint(work1(k))
        end do
 
-! fice_full
-       do j=1,lon2
-          do i=1,lat2
-             work2(i,j)=fice(i,j,it)
-          end do
-       end do
-       call strip(work2,zsm)
-       call mpi_allgatherv(zsm,ijn(mm1),mpi_rtype,&
-          work1,ijn,displs_g,mpi_rtype,&
-          mpi_comm_world,ierror)
-       do k=1,iglobal
-          i=ltosi(k) ; j=ltosj(k)
-          fice_full(i,j)=work1(k)
-       end do
+! fice_full: assigned  to be 0 or 1 based on surface mask since no sea ice
+!            concentration infrmation available for resgional model 
+       do j = 1, nlon_sfc
+          do i = 1, nlat_sfc
+             if ( isli_full(i,j) == 2 ) then
+                fice_full(i,j) = one
+             else
+                fice_full(i,j) = zero
+             endif
+          enddo
+       enddo
 
 ! Fields with multiple time levels
        do it=1,nfldsfc
