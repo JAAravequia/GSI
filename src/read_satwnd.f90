@@ -52,10 +52,9 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 !   2013-08-26 McCarty -modified to remove automatic rejection of AVHRR winds
 !   2013-09-20  Su      - set satellite ID as satellite wind subtype
 !   2014-07-16  Su      - read VIIRS winds 
-!   2014-04-15  Su      -read errtable and non linear qc b table
-!   2015-02-26  su      - add njqc as an option to chose new non linear qc
 !   2014-10-16  Su      -add optione for 4d thinning and option to keep thinned data  
 !   2015-02-23  Rancic/Thomas - add thin4d to time window logical
+!   2015-02-26  su      - add njqc as an option to choose new non linear qc 
 !   2015-03-23  Su      -fix array size with maximum message and subset number from fixed number to
 !                        dynamic allocated array 
 !   2015-02-26  Genkova - read GOES-R like winds from ASCII files & apply Sharon Nebuda's changes for GOES-R
@@ -100,6 +99,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
        ncmiter,ncgroup,ncnumgrp,icuse,ictype,icsubtype,ioctype, &
        ithin_conv,rmesh_conv,pmesh_conv,pmot_conv,ptime_conv, index_sub,&
        id_bias_ps,id_bias_t,conv_bias_ps,conv_bias_t,use_prepb_satwnd
+
   use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,time_4dvar,thin4d
   use deter_sfc_mod, only: deter_sfc_type,deter_sfc2
   use mpimod, only: npe
@@ -115,7 +115,6 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   real(r_kind),dimension(nlat,nlon,nsig),intent(in   ) :: prsl_full
 
 ! Declare local parameters
-
   real(r_kind),parameter:: r1_2= 1.2_r_kind
   real(r_kind),parameter:: r3_33= 3.33_r_kind
   real(r_kind),parameter:: r6= 6.0_r_kind
@@ -150,8 +149,8 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 ! character(20) derdwtr,heightr
   character(8) c_prvstg,c_sprvstg
   character(8) c_station_id,stationid
-
-  integer(i_kind) mxtb,nmsgmax 
+  
+  integer(i_kind) mxtb,nmsgmax
   integer(i_kind) ireadmg,ireadsb,iuse
   integer(i_kind) i,maxobs,idomsfc,nsattype
   integer(i_kind) nc,nx,isflg,itx,j,nchanl
@@ -159,15 +158,13 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   integer(i_kind) kk,klon1,klat1,klonp1,klatp1
   integer(i_kind) nmind,lunin,idate,ilat,ilon,iret,k
   integer(i_kind) nreal,ithin,iout,ntmp,icount,iiout,ii
-  integer(i_kind) itype,iosub,ixsub,isubsub,iobsub,itypey,ierr,ierr2 
+  integer(i_kind) itype,iosub,ixsub,isubsub,iobsub,itypey,ierr,ierr2
   integer(i_kind) qm
   integer(i_kind) nlevp         ! vertical level for thinning
   integer(i_kind) pflag
   integer(i_kind) ntest,nvtest
   integer(i_kind) kl,k1,k2
   integer(i_kind) nmsg                ! message index
-  
-  
  
   integer(i_kind),dimension(nconvtype) :: ntxall 
   integer(i_kind),dimension(nconvtype+1) :: ntx  
@@ -175,7 +172,10 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   integer(i_kind),dimension(5):: idate5 
   integer(i_kind),allocatable,dimension(:):: nrep,isort,iloc
   integer(i_kind),allocatable,dimension(:,:):: tab
-  integer(i_kind) itypex,lcount,iflag,m,ntime,itime
+
+
+  integer(i_kind) ntime,itime
+
   real(r_kind) toff,t4dv
   real(r_kind) rmesh,ediff,usage,tdiff
   real(r_kind) u0,v0,uob,vob,dx,dy,dx1,dy1,w00,w10,w01,w11
@@ -199,7 +199,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   real(r_kind),allocatable,dimension(:,:):: cdata_all,cdata_out
 
 ! GOES-R new BUFR related variables
-  character(70)               :: goesr_str,eham_str,prlc_str,wdir_str,wspd_str,pccf_str,solc_str,cvwd_str,cloud1_str,cloud2_str
+  character(70)               :: eham_str,prlc_str,wdir_str,wspd_str,pccf_str,solc_str,cvwd_str,cloud1_str,cloud2_str
   real(r_double),dimension(4) :: eham_dat 
   real(r_double),dimension(4) :: prlc_dat 
   real(r_double),dimension(4) :: wspd_dat 
@@ -252,7 +252,11 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   vdisterrmax=zero
   wjbmin=zero
   wjbmax=5.0_r_kind
+  pflag=0
+  var_jb=zero
 
+! allocate(etabl(302,33,6)) ! add 2 ObsErr profiles for GOES-R IR(itype=301) and WV(itype=300) (not used yet, 2015-07-08, Genkova) 
+  
 ! Set lower limits for observation errors
   werrmin=one
   nsattype=0
@@ -740,28 +744,6 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
                  if(qifn <85.0_r_kind )  then
                     qm=15
                  endif
-                 !  using Santek quality control method,calculate the original ee value:
-!  NOTE: Up until GOES-R winds algorithm, EE (expected error, ee) is reported as
-!  percent 0-100% (the higher the ee, the better the wind quality)
-!  NOTE: In the new GOES-R BUFR, EE (expected error, ee) is reported in m/s (the
-!  smaller the ee, the better the wind quality)
-                 if(itype==245 .or. itype==246) then
-                    if(ee <r105) then
-                       ree=(ee-r100)/(-10.0_r_kind)
-                       if(obsdat(4) >zero) then
-                          ree=ree/obsdat(4)
-                       else
-                          ree=two
-                       endif
-                    else
-                       ree=0.2_r_kind
-                    endif
-                    if( ppb >= 800.0_r_kind .and. ree >0.55_r_kind) then
-                        qm=15
-                    else if (ree >0.8_r_kind) then
-                        qm=15
-                    endif
-                 endif
               endif
            else if(trim(subset) == 'NC005070' .or. trim(subset) == 'NC005071') then  ! MODIS  
               if(hdrdat(1) >=r700 .and. hdrdat(1) <= r799 ) then
@@ -1014,15 +996,19 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 
 !  first to get observation error from PREPBUFR observation error table
            ppb=max(zero,min(ppb,r2000))
-           if (njqc == .true.) then
-              itypey=itype-199
+           if (njqc) then
+              itypey=itype
               ierr=index_sub(nc)
               ierr2=ierr-1
               if (ierr >maxsub_uv) ierr=2
-!              write(6,*) 'READ_SATWND:itypey,ierr2=',itypey,ierr2,ierr,index_sub(nc),isuble_uv(itypey,ierr2)
+!                 write(6,*) '**********************READ_SATWND:'
+!                 write(6,*) 'READ_SATWND:itypey,nc,ierr=index_sub(nc), ierr2=,iobsub,isuble_uv(itypey,ierr2)'
+!                 write(6,*) itypey,nc,index_sub(nc), iobsub,isuble_uv(itypey,ierr2)
+!                 write(6,*) '**********************READ_SATWND:'
               if( iobsub /= isuble_uv(itypey,ierr2)) then
                  write(6,*) ' READ_SATWND: the subtypes do not match subtype &
-                            in the errortable,iobsub=',iobsub,isuble_uv(itypey,ierr2),itype,itypey,nc,ierr
+                            in errortable,iobsub NE isuble_uv(itypey,ierr2)',iobsub,isuble_uv(itypey,ierr2), &
+                            isuble_uv(itypey,ierr2),itype,itypey,nc,ierr
                  call stop2(49)
               endif
               if(ppb>=etabl_uv(itypey,1,1)) k1=1
@@ -1055,7 +1041,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 !                'READ_SATWND:obserr,var_jb,ppb,del,one,etabl_uv,btabl_uv=',&
 !                obserr,var_jb,ppb,del,one,etabl_uv(itypey,k1,ierr),btabl_uv(itypey,k1,ierr),wjbmin,werrmin
 !           endif
-           else
+           else                         ! else use the ONE error table
               if(ppb>=etabl(itype,1,1)) k1=1
               do kl=1,32
                  if(ppb>=etabl(itype,kl+1,1).and.ppb<=etabl(itype,kl,1)) k1=kl
@@ -1071,6 +1057,28 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
               del=max(zero,min(del,one))
               obserr=(one-del)*etabl(itype,k1,4)+del*etabl(itype,k2,4)
               obserr=max(obserr,werrmin)
+           endif                    ! end of njqc
+
+           if((itype==245 .or. itype==246) &
+              .and. (trim(subset) == 'NC005010' .or. trim(subset) == 'NC005011' .or. trim(subset) == 'NC005012' )) then !only applies to AMVs from legacy algorithm (pre GOES-R)
+!  using Santek quality control method,calculate the original ee value:
+!  NOTE: Up until GOES-R winds algorithm, EE (expected error, ee) is reported as percent 0-100% (the higher the ee, the better the wind quality)
+!  NOTE: In the new GOES-R BUFR, EE (expected error, ee) is reported in m/s (the smaller the ee, the better the wind quality)
+              if(ee <r105) then
+                 ree=(ee-r100)/(-10.0_r_kind)
+                 if(obsdat(4) >zero) then
+                    ree=ree/obsdat(4)
+                 else
+                    ree=two
+                 endif
+              else
+                 ree=0.2_r_kind
+              endif
+              if( ppb >= 800.0_r_kind .and. ree >0.55_r_kind) then
+                  qm=15
+              else if (ree >0.8_r_kind) then
+                  qm=15
+              endif
            endif
 
 ! Reduce OE for the GOES-R winds by half following Sharon Nebuda's work
@@ -1080,6 +1088,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
                trim(subset) == 'NC005034' .or. trim(subset) == 'NC005039' ) then  
                obserr=obserr/two
             endif
+
 !         Set usage variable
            usage = 0 
            iuse=icuse(nc)
@@ -1272,7 +1281,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 ! Normal exit
 
   enddo loop_convinfo! loops over convinfo entry matches
-  deallocate(lmsg,tab,nrep)
+  deallocate(lmsg)
  
 
   ! Write header record and data to output file for further processing

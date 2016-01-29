@@ -1494,7 +1494,7 @@ module obsmod
 
   logical, save :: obs_instr_initialized_=.false.
 
-  logical oberrflg,oberror_tune,perturb_obs,ref_obs,sfcmodel,dtbduv_on,dval_use,bflag
+  logical oberrflg,bflag,oberror_tune,perturb_obs,ref_obs,sfcmodel,dtbduv_on,dval_use
   logical blacklst,lobsdiagsave,lobsdiag_allocated,lobskeep,lsaveobsens
   logical lobserver,l_do_adjoint
   logical,dimension(0:50):: write_diag
@@ -1571,7 +1571,7 @@ contains
     lsaveobsens=.false.
     l_do_adjoint=.true.     ! .true. = apply H^T when in int routines
     oberrflg  = .false.
-    bflag  = .false.         !
+    bflag     = .false.     ! 
     sfcmodel  = .false.     ! .false. = do not use boundary layer model 
     dtbduv_on = .true.      ! .true. = use microwave dTb/duv in inner loop
     offtime_data = .false.  ! .false. = code fails if data files contain ref time

@@ -141,7 +141,6 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2013-10-19  todling - metguess now holds background
 !   2014-01-28  todling - write sensitivity slot indicator (ioff) to header of diagfile
 !   2014-04-12       su - add non linear qc from Purser's scheme
-!   2015-02-26       su - add njqc as an option to chose new non linear qc
 !   2014-12-30  derber - Modify for possibility of not using obsdiag
 !   2015-05-01  Liu Ling - Added ISS Rapidscat wind (u,v) qc 
 !
@@ -197,8 +196,8 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),dimension(nobs):: dup
   real(r_kind),dimension(nsig)::prsltmp,tges,zges
   real(r_kind) wdirob,wdirgesin,wdirdiffmax
+  real(r_kind),dimension(34)::ptabluv
   real(r_single),allocatable,dimension(:,:)::rdiagbuf
-  real(r_kind),dimension(34):: ptabluv
 
   integer(i_kind) i,nchar,nreal,k,j,l,ii,itype,ijb
 ! Variables needed for new polar winds QC based on Log Normalized Vector Departure (LNVD)
@@ -206,6 +205,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) LNVD_omb
   real(r_kind) LNVD_ratio
   real(r_kind) LNVD_threshold
+
   integer(i_kind) jsig,mm1,iptrbu,iptrbv,jj,icat
   integer(i_kind) k1,k2,ikxx,nn,isli,ibin,ioff,ioff0
   integer(i_kind) ier,ilon,ilat,ipres,iuob,ivob,id,itime,ikx,ielev,iqc
@@ -283,7 +283,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   iprvd=22    ! index of observation provider
   isprvd=23   ! index of observation subprovider
   icat=24     ! index of data level category
-  ijb=25      ! index of  non linear qc parameter
+  ijb=25      ! index of non linear qc parameter
   iptrbu=26   ! index of u perturbation
   iptrbv=27   ! index of v perturbation
 
@@ -296,6 +296,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   rsigp=rsig+one
   goverrd=grav/rd
   var_jb=zero
+
 ! If requested, save select data for output to diagnostic file
   if(conv_diagsave)then
      ii=0
@@ -311,14 +312,15 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      muse(i)=nint(data(iuse,i)) <= jiter
   end do
 
+!  handle multiple-report observations at a station
   dup=one
   do k=1,nobs
      do l=k+1,nobs
         if(data(ilat,k) == data(ilat,l) .and.  &
            data(ilon,k) == data(ilon,l) .and.  &
-           data(ipres,k)== data(ipres,l) .and. &
+           data(ipres,k) == data(ipres,l) .and. &
            data(ier,k) < r1000 .and. data(ier,l) < r1000 .and. &
-           muse(l) .and. muse(k))then
+           muse(k) .and. muse(l))then
 
            tfact=min(one,abs(data(itime,k)-data(itime,l))/dfact1)
            dup(k)=dup(k)+one-tfact*tfact*(one-dfact)
@@ -885,7 +887,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         error = zero
         ratio_errors = zero
      else
-        ratio_errors =ratio_errors/sqrt(dup(i)) 
+        ratio_errors = ratio_errors/sqrt(dup(i))
      end if
 
      if (lowlevelsat .and. twodvar_regional) then
@@ -938,20 +940,17 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         val      = valu*valu+valv*valv
         exp_arg  = -half*val
         rat_err2 = ratio_errors**2
-        if(njqc == .true. .and. var_jb >tiny_r_kind .and.  var_jb <10.0_r_kind .and. error >tiny_r_kind) then
+        if(njqc .and. var_jb>tiny_r_kind .and. var_jb<10.0_r_kind .and. error >tiny_r_kind) then
            if(exp_arg  == zero) then
               wgt=one
            else
-!              wgt=sqrt(dudiff*dudiff+dvdiff*dvdiff)*error*ratio_errors/sqrt(two*var_jb)
               wgt=sqrt(dudiff*dudiff+dvdiff*dvdiff)*error/sqrt(two*var_jb)
               wgt=tanh(wgt)/wgt
            endif
-!           term=-two*var_jb*log(cosh((sqrt(val)*ratio_errors)/sqrt(two*var_jb)))
            term=-two*var_jb*ratio_errors*log(cosh((sqrt(val))/sqrt(two*var_jb)))
-!           term=-two*var_jb*rat_err2*log(cosh((sqrt(val))/sqrt(two*var_jb)))
            rwgt = wgt/wgtlim
            valqc = -two*term
-        else if (vqc ==.true. .and. cvar_pg(ikx) > tiny_r_kind .and. error > tiny_r_kind) then
+        else if (vqc==.true. .and. cvar_pg(ikx) > tiny_r_kind .and. error > tiny_r_kind) then
            arg  = exp(exp_arg)
            wnotgross= one-cvar_pg(ikx)
            cg_w=cvar_b(ikx)
@@ -1042,7 +1041,6 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         do j=1,8
            wtail(ibin)%head%wij(j)=factw*wtail(ibin)%head%wij(j)
         end do
- 
         wtail(ibin)%head%ures=dudiff
         wtail(ibin)%head%vres=dvdiff
         wtail(ibin)%head%err2=error**2
@@ -1054,7 +1052,6 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         wtail(ibin)%head%luse=luse(i)
         if(luse_obsdiag)then
            wtail(ibin)%head%diagu => obsptr
-
            my_head => wtail(ibin)%head
            my_diag => wtail(ibin)%head%diagu
            if(my_head%idv/=my_diag%idv .or. &
@@ -1085,7 +1082,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            wtail(ibin)%head%upertb=data(iptrbu,i)/error/ratio_errors
            wtail(ibin)%head%vpertb=data(iptrbv,i)/error/ratio_errors
            wtail(ibin)%head%kx=ikx
-           if (njqc == .true.) then
+           if (njqc) then
               ptabluv=ptabl_uv
            else
              ptabluv=ptabl
@@ -1103,8 +1100,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               enddo k_loop
            endif
         endif
- 
-     end if
+     endif
 
 !    Save select output for diagnostic file
      if (conv_diagsave .and. luse(i)) then
@@ -1123,7 +1119,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(8,ii)  = dtime-time_offset  ! obs time (hours relative to analysis time)
 
         rdiagbuf(9,ii)  = data(iqc,i)        ! input prepbufr qc or event mark
-        rdiagbuf(10,ii) = var_jb             ! non linear qc parameter 
+        rdiagbuf(10,ii) = var_jb             ! non linear qc parameter
         rdiagbuf(11,ii) = data(iuse,i)       ! read_prepbufr data usage flag
         if(muse(i)) then
            rdiagbuf(12,ii) = one             ! analysis usage flag (1=use, -1=not used)

@@ -143,37 +143,37 @@ subroutine read_modsbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
   data_all = zero
 
 
-!  if(oberrflg)then
-!     allocate(etabl(300,33,6))
-!     ietabl=19
-!     open(ietabl,file='errtable',form='formatted')
-!     rewind ietabl
-!     etabl=1.e9_r_kind
-!     lcount=0
-!     do l=1,300
-!        read(ietabl,100,end=120,err=120)itypex
-!100     format(1x,i3)
-!        lcount=lcount+1
-!        do k=1,33
-!           read(ietabl,110)(etabl(itypex,k,m),m=1,6)
-!110        format(1x,6e12.5)
-!        end do
-!     end do
-!120  continue
-!     if(lcount<=0) then
-!        write(6,*)'READ_MODSBUFR:  ***WARNING*** obs error table not available to 3dvar.'
-!        oberrflg=.false.
-!     end if
-!     close(ietabl)
-!
-!!!    Set lower limits for observation errors
+  if(oberrflg)then
+     allocate(etabl(300,33,6))
+     ietabl=19
+     open(ietabl,file='errtable',form='formatted')
+     rewind ietabl
+     etabl=1.e9_r_kind
+     lcount=0
+     do l=1,300
+        read(ietabl,100,end=120,err=120)itypex
+100     format(1x,i3)
+        lcount=lcount+1
+        do k=1,33
+           read(ietabl,110)(etabl(itypex,k,m),m=1,6)
+110        format(1x,6e12.5)
+        end do
+     end do
+120  continue
+     if(lcount<=0) then
+        write(6,*)'READ_MODSBUFR:  ***WARNING*** obs error table not available to 3dvar.'
+        oberrflg=.false.
+     end if
+     close(ietabl)
+
+!    Set lower limits for observation errors
      terrmin=half
      werrmin=one
      perrmin=half
      qerrmin=one_tenth
      pwerrmin=one
      
-!  endif
+  endif
 
 ! Open, then read date from bufr data
   open(lunin,file=trim(infile),form='unformatted')

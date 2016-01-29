@@ -62,6 +62,12 @@ contains
 !   2013-05-14  guo     -- add status and iostat in open, to correctly
 !                          handle the b case of "obs b table not
 !                          available to 3dvar".
+
+!   2015-03-06  yang    -- minor modification: add ld to denote the size of nlqc_b table, then
+!                          eliminate the hard wired values and subtraction in
+!                          order to get error table array index.
+!                          ld=300 is sufficient for current conventional observing systems. 
+
 !
 !   input argument list:
 !
@@ -75,11 +81,11 @@ contains
      use constants, only: half
      implicit none
 
+     integer(i_kind),parameter :: ld=300
      integer(i_kind),intent(in   ) :: mype
-
      integer(i_kind):: ier
 
-     allocate(btabl_t(100,33,6),isuble_bt(100,5))
+     allocate(btabl_t(ld,33,6),isuble_bt(ld,5))
         allocate(bptabl_t(34))
 
      btabl_t=1.e9_r_kind
@@ -101,7 +107,7 @@ contains
         if( iflag /= 0 ) exit loopd
 100     format(1x,i3)
         lcount=lcount+1
-        itypex=itypey-99
+        itypex=itypey
         read(ibtabl_t,105,IOSTAT=iflag,end=120) (isuble_bt(itypex,n),n=1,5)
 105     format(8x,5i12)
         do k=1,33
@@ -115,19 +121,23 @@ contains
         write(6,*)'CONVB_T:  ***WARNING*** obs b table not available to 3dvar.'
         bflag=.false.
      else
-        if(mype == 0) then
-           write(6,*)'CONVB_T:  using observation b from user provided table'
-           write(6,105) (isuble_bt(21,m),m=1,5)
-           do k=1,33
-              write(6,110) (btabl_t(21,k,m),m=1,6)
+         if(mype == 0) then
+! check T188
+!           write(6,*)'CONVB_T: parameter b from the provided table'
+!           write(6,105) (isuble_bt(188,m),m=1,5)
+         endif
+! use the pressure values of last obs. type, itypex
+        if (itypex > 0 ) then
+           bptabl_t=zero
+           bptabl_t(1)=btabl_t(itypex,1,1)
+           do k=2,33
+              bptabl_t(k)=half*(btabl_t(itypex,k-1,1)+btabl_t(itypex,k,1))
            enddo
+           bptabl_t(34)=btabl_t(itypex,33,1)
+        else
+            write(6,*)'ERROR IN CONVB_T: NO OBSERVATION TYPE READ IN'
+            return
         endif
-        bptabl_t=zero
-        bptabl_t(1)=btabl_t(20,1,1)
-        do k=2,33
-           bptabl_t(k)=half*(btabl_t(120,k-1,1)+btabl_t(120,k,1))
-        enddo
-        bptabl_t(34)=btabl_t(20,33,1)
      endif
 
      close(ibtabl_t)

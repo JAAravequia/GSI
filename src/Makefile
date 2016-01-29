@@ -121,7 +121,10 @@ include $(MAKE_CONF)
 # Load module
 # -----------
 
-  EXE_FILE = global_gsi
+#
+#  EXE_FILE_OLD  = global_gsi
+#  EXE_FILE = ../../exec/urma2p5_gsianl
+   EXE_FILE = global_gsi
 
 
 # --------------------
@@ -446,6 +449,7 @@ clean:
 	read_files.f90 \
 	read_gfs_ozone_for_regional.f90 \
 	read_guess.F90 \
+        read_mitm_mxtm.f90 \
 	read_obsdiags.F90 \
 	read_wrf_mass_files.F90 \
 	read_wrf_mass_guess.F90 \

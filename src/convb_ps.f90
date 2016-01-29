@@ -52,6 +52,13 @@ contains
 !     prgmmr:    su    org: np2                date: 2014-03-28
 !
 ! abstract:  This routine reads the conventional b table file
+!   2015-03-06  yang    -- minor modification: add ld to denote the size of nlqc_b table, then
+!                          eliminate the hard wired values and subtraction in
+!                          order to get error table array index.
+!                          ld=300 is sufficient for current conventional
+!                          observing systems.
+
+
 !
 !
 !   input argument list:
@@ -65,13 +72,13 @@ contains
 !$$$ end documentation block
      use constants, only: half
      implicit none
-
+     integer(i_kind),parameter     :: ld=300
      integer(i_kind),intent(in   ) :: mype
 
      integer(i_kind):: ier
 
-     allocate(btabl_ps(100,33,6))
-     allocate(isuble_bps(100,5))
+     allocate(btabl_ps(ld,33,6))
+     allocate(isuble_bps(ld,5))
      allocate(bptabl_ps(34))
 
      btabl_ps=1.e9_r_kind
@@ -89,15 +96,16 @@ contains
      btabl_ps=1.e9_r_kind
      lcount=0
      loopd : do 
-        read(ibtabl,100,IOSTAT=iflag,end=120) itypex
+        read(ibtabl,100,IOSTAT=iflag,end=120) itypey
         if( iflag /= 0 ) exit loopd
 100     format(1x,i3)
         lcount=lcount+1
-        itypey=itypex-99
-        read(ibtabl,105,IOSTAT=iflag,end=120) (isuble_bps(itypey,n),n=1,5)
+        itypex=itypey
+        read(ibtabl,105,IOSTAT=iflag,end=120) (isuble_bps(itypex,n),n=1,5)
 105     format(8x,5i12)
+!        write(6,*)'CONVB_PS:  read in nlqc b table', itypex, (isuble_bps(itypex,n),n=1,5) 
         do k=1,33
-           read(ibtabl,110)(btabl_ps(itypey,k,m),m=1,6)
+           read(ibtabl,110)(btabl_ps(itypex,k,m),m=1,6)
 110        format(1x,6e12.5)
         end do
      end do   loopd
@@ -108,18 +116,20 @@ contains
         bflag=.false.
      else
         if(mype == 0) then
-           write(6,*)'CONVB_PS:  using observation b from user provided table'
-           write(6,105) (isuble_bps(21,m),m=1,5)
-           do k=1,33
-              write(6,110) (btabl_ps(21,k,m),m=1,6)
-           enddo
+           write(6,*)'CONVB_PS:  using nlqc b from user provided table'
         endif
-        bptabl_ps=zero
-        bptabl_ps(1)=btabl_ps(20,1,1)
-        do k=2,33
-           bptabl_ps(k)=half*(btabl_ps(20,k-1,1)+btabl_ps(20,k,1))
-        enddo
-        bptabl_ps(34)=btabl_ps(20,33,1)
+! use the pressure of last obs. type, itypex
+        if (itypex > 0 ) then
+           bptabl_ps=zero
+           bptabl_ps(1)=btabl_ps(itypex,1,1)
+           do k=2,33
+              bptabl_ps(k)=half*(btabl_ps(itypex,k-1,1)+btabl_ps(itypex,k,1))
+           enddo
+           bptabl_ps(34)=btabl_ps(itypex,33,1)
+        else
+            write(6,*)'ERROR IN CONVB_PS: NO OBSERVATION TYPE READ IN'
+            return
+        endif
      endif
 
      close(ibtabl)

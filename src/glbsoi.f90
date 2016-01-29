@@ -384,19 +384,26 @@ subroutine glbsoi(mype)
   endif
 
 ! Deallocate arrays
-! if( njqc == .true.) then
-!     call converr_ps_destroy
-!     call converr_q_destroy
-!     call converr_t_destroy
-!    call converr_uv_destroy
-!     call converr_pw_destroy
-!     call convb_ps_destroy
-!     call convb_q_destroy
-!     call convb_t_destroy
-!     call convb_uv_destroy
-!  else
-!     call converr_destroy
-!  endif
+!RY:  in trunk 
+!RY: Q: Is this destroy at the end of the entire analysisi?
+!  if(perturb_obs) call converr_destroy
+!RY:  need to understand the following things
+
+  if(perturb_obs) then
+     if(njqc) then
+        call converr_ps_destroy
+        call converr_q_destroy
+        call converr_t_destroy
+        call converr_uv_destroy
+        call converr_pw_destroy
+        call convb_ps_destroy
+        call convb_q_destroy
+        call convb_t_destroy
+        call convb_uv_destroy
+     else
+        call converr_destroy
+     endif  
+  endif
 
   if (regional) then
      if(anisotropic) then

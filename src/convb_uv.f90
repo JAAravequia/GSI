@@ -61,6 +61,13 @@ contains
 !   2013-05-14  guo     -- add status and iostat in open, to correctly
 !                          handle the b case of "obs b table not
 !                          available to 3dvar".
+!   2015-03-06  yang    -- minor modification: add ld to denote the size of nlqc_b table, then
+!                          eliminate the hard wired values and subtraction in
+!                          order to get error table array index.
+!                          ld=300 is sufficient for current conventional
+!                          observing systems.
+
+
 !
 !   input argument list:
 !
@@ -73,12 +80,11 @@ contains
 !$$$ end documentation block
      use constants, only: half
      implicit none
-
+     integer(i_kind),parameter     :: ld=300
      integer(i_kind),intent(in   ) :: mype
-
      integer(i_kind):: ier
 
-     allocate(btabl_uv(100,33,8),isuble_buv(100,7))
+     allocate(btabl_uv(ld,33,8),isuble_buv(ld,7))
         allocate(bptabl_uv(34))
 
      btabl_uv=1.e9_r_kind
@@ -100,7 +106,7 @@ contains
         if( iflag /= 0 ) exit loopd
 100     format(1x,i3)
         lcount=lcount+1
-        itypex=itypey-199
+        itypex=itypey
         read(ibtabl_uv,105,IOSTAT=iflag,end=120) (isuble_buv(itypex,n),n=1,7)
 105     format(8x,7i12)
         do k=1,33
@@ -110,28 +116,31 @@ contains
      end do   loopd
 120  continue
 
+! use the pressure of last obs. type, itypex
      if(lcount<=0 .and. mype==0) then
         write(6,*)'CONVB_UV:  ***WARNING*** obs b table not available to 3dvar.'
         bflag=.false.
      else
-        if(mype == 0) write(6,*)'CONVB_UV:  using observation b from user provided table'
-        bptabl_uv=zero
-        bptabl_uv(1)=btabl_uv(20,1,1)
-        do k=2,33
-           bptabl_uv(k)=half*(btabl_uv(20,k-1,1)+btabl_uv(20,k,1))
-        enddo
-        bptabl_uv(34)=btabl_uv(20,33,1)
+        if (itypex > 0 ) then
+           bptabl_uv=zero
+           bptabl_uv(1)=btabl_uv(itypex,1,1)
+           do k=2,33
+              bptabl_uv(k)=half*(btabl_uv(itypex,k-1,1)+btabl_uv(itypex,k,1))
+           enddo
+           bptabl_uv(34)=btabl_uv(itypex,33,1)
+         else
+            write(6,*)'ERROR IN CONVB_UV: NO OBSERVATION TYPE READ IN'
+            return
+         endif
+        if (mype == 0) then
+          write(6,*) 'CONVB_UV: nlqc b from user provided table' 
+!          write(6,105) (isuble_buv(288,n),n=1,7)
+        endif
+!        do k=1,33
+!          write(6,110) (btabl_uv(288,k,m),m=1,8)
+!        enddo
      endif
-     if (mype == 0) then
-        write(6,*) 'CONVB_UV:  using observation b from user provided table'
-        write(6,105) (isuble_buv(46,n),n=1,7)
-        do k=1,33
-          write(6,110) (btabl_uv(46,k,m),m=1,8)
-        enddo
-     endif
-
      close(ibtabl_uv)
-
      return
   end subroutine convb_uv_read
 

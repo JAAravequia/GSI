@@ -14,8 +14,7 @@ module intqmod
 !   2009-08-13  lueken - update documentation
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - implemented obs adjoint test  
 !   2014-04-14      Su   -  add another non linear qc(purser's scheme) 
-!   2015-02-26      su   - add njqc as an option to chose new non linear qc and
-!                         vqc for EU variational qc 
+!   2015-02-26      Su   -  add njqc as an option to choose Purser's varqc
 !
 ! subroutines included:
 !   sub intq_
@@ -88,7 +87,7 @@ subroutine intq_(qhead,rval,sval)
   use kinds, only: r_kind,i_kind
   use constants, only: half,one,tiny_r_kind,cg_term,r3600,two
   use obsmod, only: q_ob_type,lsaveobsens,l_do_adjoint,luse_obsdiag
-  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc
+  use qcmod, only: nlnqc_iter,varqc_iter,njqc
   use gridmod, only: latlon1n
   use jfunc, only: jiter,l_foto,xhat_dt,dhat_dt
   use gsi_bundlemod, only: gsi_bundle
@@ -171,7 +170,7 @@ subroutine intq_(qhead,rval,sval)
  
 !          gradient of nonlinear operator
  
-           if (vqc == .true. .and. nlnqc_iter .and. qptr%pg > tiny_r_kind .and.  &
+           if (nlnqc_iter .and. qptr%pg > tiny_r_kind .and.  &
                                 qptr%b  > tiny_r_kind) then
               q_pg=qptr%pg*varqc_iter
               cg_q=cg_term/qptr%b
@@ -180,13 +179,10 @@ subroutine intq_(qhead,rval,sval)
               p0=wgross/(wgross+exp(-half*qptr%err2*val**2))  ! p0 is P in the reference by Enderson
               val=val*(one-p0)                         ! term is Wqc in the referenc by Enderson
            endif
-           if ( njqc ==.true. .and. qptr%jb  > tiny_r_kind .and. qptr%jb <10.0_r_kind) then
-!              val=sqrt(two*qptr%jb)*tanh(sqrt(qptr%err2*qptr%raterr2)*val/sqrt(two*qptr%jb))
+
+           if (njqc .and. qptr%jb > tiny_r_kind .and. qptr%jb <10.0_r_kind) then
               val=sqrt(two*qptr%jb)*tanh(sqrt(qptr%err2)*val/sqrt(two*qptr%jb))
-           endif
-           if ( njqc ==.true. .and. qptr%jb  > tiny_r_kind .and. qptr%jb <10.0_r_kind) then
               grad = val*sqrt(qptr%raterr2*qptr%err2)
-!              grad = val*qptr%raterr2*qptr%err2
            else
               grad = val*qptr%raterr2*qptr%err2
            endif

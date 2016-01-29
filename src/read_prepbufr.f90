@@ -118,9 +118,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !   2013-09-08  s.liu  - increase nmsgmax to 100000 to read NESDIS cloud product
 !   2013-12-08  s.liu  - identify VAD wind based on sub type
 !   2014-02-28  sienkiewicz - added code for option aircraft_t_bc_ext for external aircraft bias table
-!   2014-04-15  Su      -read errtable and non linear qc b table
 !   2014-03-19  pondeca - add 10m wind speed
 !   2014-04-10  pondeca - add td2m,mxtm,mitm,pmsl
+!   2014-04-15  Su      - read errtable and non linear qc b table
 !   2014-05-07  pondeca - add significant wave height (howv)
 !   2014-06-16  carley/zhu - add tcamt and lcbas
 !   2014-06-26  carley - simplify call to apply_hilbertcurve 
@@ -129,6 +129,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !   2015-02-23  Rancic/Thomas - add thin4d to time window logical
 !   2015-03-23  Su      -fix array size with maximum message and subset  number from fixed number to
 !                        dynamic allocated array
+!
 !   input argument list:
 !     infile   - unit from which to read BUFR data
 !     obstype  - observation type to process
@@ -226,6 +227,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   real(r_kind),parameter:: r0_01_bmiss=r0_01*bmiss
   character(80),parameter:: cspval= '88888888'
 
+!  integer(i_kind),parameter:: mxtb=5000000
+!  integer(i_kind),parameter:: nmsgmax=100000 ! max message count
 
 ! Declare local variables
   logical tob,qob,uvob,spdob,sstob,pwob,psob,gustob,visob,tdob,mxtmob,mitmob,pmob,howvob
@@ -282,10 +285,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   integer(i_kind),dimension(nconvtype)::ntxall
   integer(i_kind),dimension(nconvtype+1)::ntx
   integer(i_kind),allocatable,dimension(:):: isort,iloc,nrep
-  integer(i_kind),allocatable,dimension(:,:):: tab 
+  integer(i_kind),allocatable,dimension(:,:):: tab
   integer(i_kind) ibfms,thisobtype_usage
   integer(i_kind) ierr_ps,ierr_q,ierr_t,ierr_uv,ierr2_uv,ierr_pw !  the position of error table collum
-
   real(r_kind) time,timex,time_drift,timeobs,toff,t4dv,zeps
   real(r_kind) qtflg,tdry,rmesh,ediff,usage,ediff_ps,ediff_q,ediff_t,ediff_uv,ediff_pw
   real(r_kind) u0,v0,uob,vob,dx,dy,dx1,dy1,w00,w10,w01,w11
@@ -297,7 +299,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   real(r_kind) vdisterrmax,u00,v00
   real(r_kind) del,terrmin,werrmin,perrmin,qerrmin,pwerrmin,del_ps,del_q,del_t,del_uv,del_pw
   real(r_kind) pjbmin,qjbmin,tjbmin,wjbmin
-
   real(r_kind) tsavg,ff10,sfcr,zz
   real(r_kind) crit1,timedif,xmesh,pmesh
   real(r_kind) time_correction
@@ -425,9 +426,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   else if(psob) then
      nreal=20
   else if(qob) then
-     nreal=23
+     nreal=26
   else if(pwob) then
-     nreal=16
+     nreal=20
   else if(sstob) then
      if (nst_gsi > 0) then
         nreal=18 + nstinfo
@@ -465,7 +466,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   if (noiqc) then
      lim_qm=8
      if (psob)         lim_zqm=7
-     if (qob.or.tdob)  lim_tqm=7
+     if (qob .or.tdob) lim_tqm=7
      if (tob)          lim_qqm=8
   else
      lim_qm=4
@@ -494,8 +495,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   qjbmin=zero
   wjbmin=zero
   pjbmin=zero
- 
-
 !------------------------------------------------------------------------
 ! Open, then read date from bufr data
   call closbf(lunin)
@@ -549,8 +548,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !! get message and subset counts
 
   call getcount_bufr(infile,nmsgmax,mxtb)
-
   allocate(lmsg(nmsgmax,ntread),tab(mxtb,3),nrep(nmsgmax))
+
 
   lmsg = .false.
   maxobs=0
@@ -638,7 +637,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 
 ! temporary specify iobsub until put in bufr file
         iobsub = 0                                                  
-!        if(kx == 280 .or. kx == 180 ) iobsub=hdr(3)                                            
+        if(kx == 280 .or. kx == 180 ) iobsub=hdr(3)                                            
         if(kx == 280 .or. kx ==180) then
           if ( hdr(3) >555.0_r_kind .and. hdr(3) <565.0_r_kind ) then
             iobsub=00
@@ -646,6 +645,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
             iobsub=01
           endif
         endif
+! Su suggested to keep both 289 and 290.  But trunk only keep 290
+! ???       if(kx == 289 .or. kx == 290) iobsub=hdr(2)
+
         if(kx == 290) iobsub=hdr(2)
         if(use_prepb_satwnd .and. (kx >= 240 .and. kx <=260 )) iobsub = hdr(2)
 
@@ -774,7 +776,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
               endif
            endif
      
-           write(6,*)'READ_PREPBUFR: obstype,ictype(nc),rmesh,pflag,nlevp,pmesh=',&
+           write(6,*)'READ_PREPBUFR: at line 779: obstype,ictype(nc),rmesh,pflag,nlevp,pmesh=',&
               trim(ioctype(nc)),ictype(nc),rmesh,pflag,nlevp,pmesh
         endif
      endif
@@ -978,6 +980,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
            call ufbevn(lunin,tpc,1,255,20,levs,'TPC')
 
 !          If available, get obs errors from error table
+           
            if(oberrflg)then
 
 !             Set lower limits for observation errors
@@ -991,9 +994,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
               wjbmin=zero
               pjbmin=zero
               itypey=kx
-             if( njqc == .true. ) then
+              if( njqc) then
                  if (psob)  then
-                    itypex=itypey-99
+                    itypex=itypey
                     ierr_ps=index_sub(nc)
                     if(ierr_ps >maxsub_ps) ierr_ps=2
                     if( icsubtype(nc) /= isuble_ps(itypex,ierr_ps-1)) then
@@ -1019,10 +1022,12 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                          del_ps = huge_r_kind
                        endif
                        del_ps=max(zero,min(del_ps,one))
+                       if(oberrflg)then
 !                         write(6,*) 'READ_PREPBUFR_PS:',itypex,k1_ps,ierr_ps,k2_ps,ierr_ps
                           obserr(1,k)=(one-del_ps)*etabl_ps(itypex,k1_ps,ierr_ps)+del_ps*etabl_ps(itypex,k2_ps,ierr_ps)
 ! Surface pressure error
                           obserr(1,k)=max(obserr(1,k),perrmin)
+                       endif
 ! Surface pressure b
                       var_jb(1,k)=(one-del_ps)*btabl_ps(itypex,k1_ps,ierr_ps)+del_ps*btabl_ps(itypex,k2_ps,ierr_ps)
                        var_jb(1,k)=max(var_jb(1,k),pjbmin)
@@ -1033,7 +1038,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                     enddo
                  endif
                 if (tob) then
-                    itypex=itypey-99
+                    itypex=itypey
                     ierr_t=index_sub(nc)
                     if(ierr_t >maxsub_t) ierr_t=2
                     if( icsubtype(nc) /= isuble_t(itypex,ierr_t-1)) then
@@ -1074,7 +1079,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                     enddo
                  endif
                  if (qob) then
-                    itypex=itypey-99
+                    itypex=itypey
                     ierr_q=index_sub(nc)
                     if(ierr_q >maxsub_q) ierr_q=2
                     if( icsubtype(nc) /= isuble_q(itypex,ierr_q-1)) then
@@ -1115,7 +1120,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                     enddo
                 endif
                 if (uvob) then
-                   itypex=itypey-199
+                   itypex=itypey
                    ierr_uv=index_sub(nc)
                    ierr2_uv=ierr_uv-1
                    if(ierr_uv >maxsub_uv) ierr_uv=2
@@ -1142,11 +1147,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                       endif
                       del_uv=max(zero,min(del_uv,one))
 ! Wind error
-                      if(oberrflg)then
-!                        write(6,*) 'READ_PREPBUFR_UV:',itypex,k1_uv,itypey,k2_uv,ierr_uv,nc,kx,ppb
+!                         write(6,*) 'READ_PREPBUFR_UV:',itypex,k1_uv,itypey,k2_uv,ierr_uv,nc,kx,ppb
                          obserr(5,k)=(one-del_uv)*etabl_uv(itypex,k1_uv,ierr_uv)+del_uv*etabl_uv(itypex,k2_uv,ierr_uv)
                          obserr(5,k)=max(obserr(5,k),werrmin)
-                      endif
 !Wind b
                       var_jb(5,k)=(one-del_uv)*btabl_uv(itypex,k1_uv,ierr_uv)+del_uv*btabl_uv(itypex,k2_uv,ierr_uv)
                       var_jb(5,k)=max(var_jb(5,k),wjbmin)
@@ -1157,7 +1160,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                    enddo
                 endif
                 if (pwob)  then
-                   itypex=itypey-149
+                   itypex=itypey
                    ierr_pw=index_sub(nc)
                    if(ierr_pw >maxsub_pw) ierr_pw=2
                    if( icsubtype(nc) /= isuble_pw(itypex,ierr_pw-1)) then
@@ -1221,9 +1224,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                    obserr(1,k)=max(obserr(1,k),perrmin)
                    obserr(7,k)=max(obserr(7,k),pwerrmin)
                 enddo
-             endif
-           endif
-
+             endif      ! endif for njqc
+           endif        ! endif for oberrflg
 
 !          If data with drift position, get drift information
            if(driftl)call ufbint(lunin,drfdat,8,255,iret,drift)
@@ -1487,6 +1489,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
               else if(visob) then
                  visqm=0    ! need to fix this later
                  qm=visqm
+!! RY: check this late when using tdob??
               else if(tdob) then
                  if(obsdat(12,k) > r0_01_bmiss)cycle loop_k_levs !you have a similar statement further down / MPondeca
                  tdqm=qqm(k)
@@ -1806,8 +1809,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(21,iout)=zz                     ! terrain height at ob location
                  cdata_all(22,iout)=r_prvstg(1,1)          ! provider name
                  cdata_all(23,iout)=r_sprvstg(1,1)         ! subprovider name
-                 cdata_all(24,iout)=obsdat(10,k)            ! cat
-                 cdata_all(25,iout)=var_jb(3,k)            !  non linear qc parameter
+                 cdata_all(24,iout)=obsdat(10,k)           ! cat
+                 cdata_all(25,iout)=var_jb(3,k)            ! non linear qc for T
                  if (aircraft_t_bc_pof .or. aircraft_t_bc .or.aircraft_t_bc_ext) then
                     cdata_all(26,iout)=aircraftwk(1,k)     ! phase of flight
                     cdata_all(27,iout)=aircraftwk(2,k)     ! vertical velocity
@@ -1919,7 +1922,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(12,iout)=wqm(k)                 ! quality mark
                  cdata_all(13,iout)=obserr(5,k)            ! original obs error
                  cdata_all(14,iout)=usage                  ! usage parameter
-                 if (lhilbert) thisobtype_usage=14         ! save INDEX of where usage is stored for hilbertcurve cross validation (if requested)
+                 if (lhilbert) thisobtype_usage=14         ! save INDEX of where usage 
+                                                           ! is stored for hilbertcurve cross validation (if requested)
                  cdata_all(15,iout)=idomsfc                ! dominate surface type
                  cdata_all(16,iout)=tsavg                  ! skin temperature
                  cdata_all(17,iout)=ff10                   ! 10 meter wind factor
@@ -1929,7 +1933,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(21,iout)=zz                     ! terrain height at ob location
                  cdata_all(22,iout)=r_prvstg(1,1)          ! provider name
                  cdata_all(23,iout)=r_sprvstg(1,1)         ! subprovider name
-                 cdata_all(24,iout)=obsdat(10,k)            ! cat
+                 cdata_all(24,iout)=obsdat(10,k)           ! cat
                  cdata_all(25,iout)=var_jb(5,k)            ! non linear qc parameter
                  if(perturb_obs)then
                     cdata_all(26,iout)=ran01dom()*perturb_fact ! u perturbation
@@ -1988,7 +1992,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(10,iout)=pqm(k)                 ! quality mark
                  cdata_all(11,iout)=obserr(1,k)*one_tenth  ! original obs error (cb)
                  cdata_all(12,iout)=usage                  ! usage parameter
-                 if (lhilbert) thisobtype_usage=12         ! save INDEX of where usage is stored for hilbertcurve cross validation (if requested)
+                 if (lhilbert) thisobtype_usage=12         ! save INDEX of where usage is stored 
+                                                           ! for hilbertcurve cross validation (if requested)
                  cdata_all(13,iout)=idomsfc                ! dominate surface type
                  cdata_all(14,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
                  cdata_all(15,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
@@ -1996,14 +2001,11 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(17,iout)=zz                     ! terrain height at ob location
                  cdata_all(18,iout)=r_prvstg(1,1)          ! provider name
                  cdata_all(19,iout)=r_sprvstg(1,1)         ! subprovider name
-                 cdata_all(20,iout)=var_jb(1,k)            ! non linear qc b parameter
+                 cdata_all(20,iout)=var_jb(1,k)            ! non linear qc b parameter 
                  if(perturb_obs)cdata_all(21,iout)=ran01dom()*perturb_fact ! ps perturbation
                  if (twodvar_regional) &
                     call adjust_error(cdata_all(14,iout),cdata_all(15,iout),cdata_all(11,iout),cdata_all(1,iout))
-!                 if(kx ==180) then
-!                    write(6,100) var_jb(1,k),cdata_all(4,iout),obserr(1,k),cdata_all(14,iout),cdata_all(15,iout),k,index_sub(nc)
-!                 endif
-!100     format('READ_PREPBUFR:var_jb,pob,error,error2=',5f10.2,2i6) 
+
 !             Specific humidity 
               else if(qob) then
                  qmaxerr=emerr
@@ -2037,7 +2039,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(19,iout)=zz                     ! terrain height at ob location
                  cdata_all(20,iout)=r_prvstg(1,1)          ! provider name
                  cdata_all(21,iout)=r_sprvstg(1,1)         ! subprovider name
-                 cdata_all(22,iout)=obsdat(10,k)            ! cat
+                 cdata_all(22,iout)=obsdat(10,k)           ! cat
                  cdata_all(23,iout)=var_jb(2,k)            ! non linear qc b parameter
                  if(perturb_obs)cdata_all(24,iout)=ran01dom()*perturb_fact ! q perturbation
                  if (twodvar_regional) &
@@ -2527,7 +2529,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 ! Normal exit
 
   enddo loop_convinfo! loops over convinfo entry matches
-  deallocate(lmsg,tab,nrep)
+  deallocate(lmsg)
 
 ! Apply hilbert curve for cross validation if requested
 
@@ -2712,7 +2714,7 @@ subroutine sonde_ext(obsdat,tpc,qcmark,obserr,drfdat,levsio,kx,vtcd)
                  ll=ll+1
                  if(ll>255)then
                     write(6,*)'error in SONDE_EXT levs > 255'
-                    stop
+                    return
                  endif
                  obsdat(1,ll)=dpmdl(k)
                  qcmark(1,ll)  =max (qcmark(1,i),qcmark(1,im)) !PQM
@@ -2775,7 +2777,7 @@ subroutine sonde_ext(obsdat,tpc,qcmark,obserr,drfdat,levsio,kx,vtcd)
               ll=ll+1
               if(ll>255)then
                  write(6,*)'error in SONDE_EXT levs > 255'
-                 stop
+                 return
               endif
               obsdat(1,ll)=dpmdl(k)
               qcmark(1,ll)  =max (qcmark(1,i),qcmark(1,im)) !PQM

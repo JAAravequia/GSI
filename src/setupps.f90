@@ -61,8 +61,6 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2013-10-19  todling - metguess now holds background 
 !   2014-01-28  todling - write sensitivity slot indicator (ioff) to header of diagfile
 !   2014-04-12       su - add non linear qc from Purser's scheme
-!   2015-02-26       su - add njqc as an option to chose new non linear qc,vqc
-!                         as previous variational qc 
 !   2014-12-30  derber - Modify for possibility of not using obsdiag
 !
 !   input argument list:
@@ -194,7 +192,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   izz=17      ! index of surface height
   iprvd=18    ! index of observation provider
   isprvd=19   ! index of observation subprovider
-  ijb=20      !  index of non linear qc parameter
+  ijb=20      ! index of non linear qc parameter
   iptrb=21    ! index of ps perturbation
 
 ! Declare local constants
@@ -207,7 +205,6 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   half_tlapse=0.00325_r_kind  ! half of 6.5K/1km
   mm1=mype+1
   var_jb=zero
-
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
@@ -223,9 +220,8 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      muse(i)=nint(data(iuse,i)) <= jiter
   end do
 
-!  Check for duplicate observations at same location
-
   dup=one
+!  handle multiple reported data at a station
   do k=1,nobs
      do l=k+1,nobs
         if(data(ilat,k) == data(ilat,l) .and. &
@@ -238,8 +234,6 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         end if
      end do
   end do
-
-
 ! If requested, save select data for output to diagnostic file
 
   if(conv_diagsave)then
@@ -251,7 +245,6 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
      ii=0
   end if
-
   call dtime_setup()
   do i = 1,nobs
      dtime=data(itime,i)
@@ -268,10 +261,6 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         dtemp=data(itemp,i)
         ikx  = nint(data(ikxx,i))
         var_jb=data(ijb,i)
-!        if( ictype(ikx) ==120) then
-!          write(6,100),data(ier2,i),var_jb,pob
-!        endif
-!100    format('SETUPPS:error,var_jb,pob',3f10.3)
      endif
  
 !    Link observation to appropriate observation bin
@@ -446,9 +435,17 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      else
         ratio_errors = ratio_errors/sqrt(dup(i))
      end if
+! yang: 07/2015: 
+! When variable's pdf follows super-logistic model (Jim's ON468),
+! the current way to use dup is questionable provided that the number of multiple-reports is large. 
+! Currently, the penalty is divided by the dup, which is close to the number of multiple-reports,
+! when variable's pdf is of Gaussian or Gaussian+ uniform distribution. 
+! Say the multiple-reported data is 12 within the observation time window at a
+! station, the dup is close to 12. 
+! The better way is to add an element to store dup in the type X_ob_type, X is
+! the observation type.
 
      if (ratio_errors*error <= tiny_r_kind) muse(i)=.false.
-
 
 ! If requested, setup for single obs test.
 
@@ -465,28 +462,25 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 ! Compute penalty terms, and accumulate statistics.
 
-
      val      = error*ddiff
+
      if(luse(i))then
 
 !    Compute penalty terms (linear & nonlinear qc).
         val2     = val*val
         exp_arg  = -half*val2
         rat_err2 = ratio_errors**2
-        if(njqc == .true. .and. var_jb >tiny_r_kind .and.  error >tiny_r_kind .and. var_jb < 10.0_r_kind)  then
+        if(njqc .and. var_jb>tiny_r_kind .and. var_jb < 10.0_r_kind .and. error >tiny_r_kind)  then
            if(exp_arg  == zero) then
               wgt=one
-            else
-!              wgt=ddiff*error*ratio_errors/sqrt(two*var_jb)
+           else
               wgt=ddiff*error/sqrt(two*var_jb)
               wgt=tanh(wgt)/wgt
            endif
-!           term=-two*var_jb*log(cosh((val*ratio_errors)/sqrt(two*var_jb)))
            term=-two*var_jb*ratio_errors*log(cosh((val)/sqrt(two*var_jb)))
-!           term=-two*var_jb*rat_err2*log(cosh((val)/sqrt(two*var_jb)))
            rwgt = wgt/wgtlim
            valqc = -two*term
-        else if ( vqc == .true. .and. cvar_pg(ikx) > tiny_r_kind .and. error >tiny_r_kind) then
+        else if (vqc == .true. .and. cvar_pg(ikx)> tiny_r_kind .and. error >tiny_r_kind) then
            arg  = exp(exp_arg)
            wnotgross= one-cvar_pg(ikx)
            cg_ps=cvar_b(ikx)
@@ -501,7 +495,6 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            rwgt = wgt/wgtlim
            valqc = -two*rat_err2*term
         endif
-
         if (muse(i)) then
 !       Accumulate statistics for obs used belonging to this task        
            if(rwgt < one) awork(21) = awork(21)+one
@@ -567,7 +560,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         pstail(ibin)%head%time     = dtime
         pstail(ibin)%head%b        = cvar_b(ikx)
         pstail(ibin)%head%pg       = cvar_pg(ikx)
-        pstail(ibin)%head%jb        = var_jb
+        pstail(ibin)%head%jb       = var_jb
         pstail(ibin)%head%luse     = luse(i)
         if(oberror_tune) then
            pstail(ibin)%head%kx    = ikx        ! data type for oberror tuning
@@ -608,7 +601,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(8,ii)  = dtime-time_offset  ! obs time (hours relative to analysis time)
 
         rdiagbuf(9,ii)  = data(iqc,i)        ! input prepbufr qc or event mark
-        rdiagbuf(10,ii) =  var_jb            ! non linear qc parameter 
+        rdiagbuf(10,ii) = var_jb             ! non linear qc parameter
         rdiagbuf(11,ii) = data(iuse,i)       ! read_prepbufr data usage flag
         if(muse(i)) then
            rdiagbuf(12,ii) = one             ! analysis usage flag (1=use, -1=not used)

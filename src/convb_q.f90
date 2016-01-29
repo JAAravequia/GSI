@@ -60,6 +60,13 @@ contains
 !   2013-05-14  guo     -- add status and iostat in open, to correctly
 !                          handle the error case of "obs error table not
 !                          available to 3dvar".
+!   2015-03-06  yang    -- minor modification: add ld to denote the size of nlqc_b table, then
+!                          eliminate the hard wired values and subtraction in
+!                          order to get error table array index.
+!                          ld=300 is sufficient for current conventional
+!                          observing systems.
+
+
 !
 !   input argument list:
 !
@@ -73,11 +80,12 @@ contains
      use constants, only: half
      implicit none
 
+     integer(i_kind),parameter :: ld=300
      integer(i_kind),intent(in   ) :: mype
 
      integer(i_kind):: ier
 
-     allocate(btabl_q(100,33,6),isuble_bq(100,5))
+     allocate(btabl_q(ld,33,6),isuble_bq(ld,5))
         allocate(bptabl_q(34))
      
 
@@ -100,7 +108,7 @@ contains
         if( iflag /= 0 ) exit loopd
 100     format(1x,i3,2x,i3)
         lcount=lcount+1
-        itypex=itypey-99
+        itypex=itypey
         read(ibtabl_q,105,IOSTAT=iflag,end=120) (isuble_bq(itypex,n),n=1,5)
 105     format(8x,5i12)
         do k=1,33
@@ -114,19 +122,22 @@ contains
         write(6,*)'CONVB_Q:  ***WARNING*** obs b table not available to 3dvar.'
         bflag=.false.
      else
+! use the pressure values of last obs. type, itypey
         if(mype == 0) then
-           write(6,*)'CONVB_Q:  using observation b from user provided table'
-           write(6,105) (isuble_bq(21,m),m=1,5)
-           do k=1,33
-              write(6,110) (btabl_q(21,k,m),m=1,6)
-           enddo
+           write(6,*)'CONVB_Q: NLQC b from user provided table'
+!           write(6,105) (isuble_bq(itypex,m),m=1,5)
         endif
-        bptabl_q=zero
-        bptabl_q(1)=btabl_q(20,1,1)
-        do k=2,33
-           bptabl_q(k)=half*(btabl_q(20,k-1,1)+btabl_q(20,k,1))
-        enddo
-        bptabl_q(34)=btabl_q(20,33,1)
+        if (itypex > 0 ) then
+           bptabl_q=zero
+           bptabl_q(1)=btabl_q(itypex,1,1)
+           do k=2,33
+              bptabl_q(k)=half*(btabl_q(itypex,k-1,1)+btabl_q(itypex,k,1))
+           enddo
+           bptabl_q(34)=btabl_q(itypex,33,1)
+        else
+           write(6,*)'ERROR IN CONVERR_Q: NO OBSERVATION TYPE READ IN'
+           return
+        endif
      endif
 
      close(ibtabl_q)

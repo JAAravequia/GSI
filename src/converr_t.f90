@@ -40,6 +40,8 @@ implicit none
 ! set passed variables as public
   public :: etabl_t,ptabl_t,isuble_t,maxsub_t
 
+!RY: I think both itypex and itypey should be local variables
+
   integer(i_kind),save:: ietabl_t,itypex,itypey,lcount,iflag,k,m,n,maxsub_t
   real(r_single),save,allocatable,dimension(:,:,:) :: etabl_t
   real(r_kind),save,allocatable,dimension(:)  :: ptabl_t
@@ -62,6 +64,10 @@ contains
 !   2013-05-14  guo     -- add status and iostat in open, to correctly
 !                          handle the error case of "obs error table not
 !                          available to 3dvar".
+!   2015-03-06  yang    -- add ld, the size of error table. 
+!                          ld=300 is sufficient for current conventional
+!                          observing systems.  No need to do the subtraction to get error 
+!                          table array index.
 !
 !   input argument list:
 !
@@ -74,13 +80,12 @@ contains
 !$$$ end documentation block
      use constants, only: half
      implicit none
-
+     integer(i_kind),    parameter :: ld=300  ! max number of convent. observing systems
      integer(i_kind),intent(in   ) :: mype
-
      integer(i_kind):: ier
 
      maxsub_t=5
-     allocate(etabl_t(100,33,6),isuble_t(100,5))
+     allocate(etabl_t(ld,33,6),isuble_t(ld,5))
 
      etabl_t=1.e9_r_kind
       
@@ -98,10 +103,11 @@ contains
      lcount=0
      loopd : do 
         read(ietabl_t,100,IOSTAT=iflag,end=120) itypey
+!        write(6,*) 'READ_T_TABLE iflag=, itypey=', iflag,itypey
         if( iflag /= 0 ) exit loopd
 100     format(1x,i3)
         lcount=lcount+1
-        itypex=itypey-99
+        itypex=itypey
         read(ietabl_t,105,IOSTAT=iflag,end=120) (isuble_t(itypex,n),n=1,5)
 105     format(8x,5i12)
         do k=1,33
@@ -117,18 +123,20 @@ contains
      else
         if(mype == 0) then
            write(6,*)'CONVERR_T:  using observation errors from user provided table'
-           write(6,105) (isuble_t(21,m),m=1,5)
-           do k=1,33
-              write(6,110) (etabl_t(21,k,m),m=1,6)
-           enddo
         endif
         allocate(ptabl_t(34))
-        ptabl_t=zero
-        ptabl_t(1)=etabl_t(20,1,1)
-        do k=2,33
-           ptabl_t(k)=half*(etabl_t(20,k-1,1)+etabl_t(20,k,1))
-        enddo
-        ptabl_t(34)=etabl_t(20,33,1)
+! use itypex pressure values.  itypex is the last valid observation type
+        if (itypex > 0 ) then
+           ptabl_t=zero
+           ptabl_t(1)=etabl_t(itypex,1,1)
+           do k=2,33
+              ptabl_t(k)=half*(etabl_t(itypex,k-1,1)+etabl_t(itypex,k,1))
+           enddo
+           ptabl_t(34)=etabl_t(itypex,33,1)
+         else
+            write(6,*)'ERROR IN CONVERR_T: NO OBSERVATION TYPE READ IN'
+            return
+         endif
      endif
 
      close(ietabl_t)

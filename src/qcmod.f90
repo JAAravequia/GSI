@@ -38,7 +38,6 @@ module qcmod
 !   2013-07-19  zhu     - tighten quality control for amsua surface sensitive channels when emiss_bc=.t.
 !   2013-10-27  todling - add create/destroy
 !   2014-01-09  mccarty - do not apply qc to wv channels for amsub (lower quality than mhs)
-!   2014-04-09   Su     -  add Dr. Purser non linear qc njqc,previous vqc
 !   2014-04-27  eliu    - add two qc flags for AMSUA/ATMS precipitation screening 
 !   2014-05-29  thomas  - add lsingleradob functionality rejection flag
 !                         (originally of mccarty)
@@ -90,8 +89,7 @@ module qcmod
 !    following used for nonlinear qc:
 !
 !   def nlnqc_iter   - logical flag (T=nonlinear qc on, F=nonlinear qc off) for iteration
-!   def njqc  - logical flag (T=nonlinear qc on, F=nonlinear qc (purser's scheme) off) for iteration
-
+!   def njqc -  logical flag (T=Purse's nonlinear qc on, F=off)
 !
 !   def noiqc        - logic flag for oiqc, noiqc='false' with oiqc on
 !
@@ -141,9 +139,9 @@ module qcmod
   public :: igood_qc,ifail_crtm_qc,ifail_satinfo_qc,ifail_interchan_qc,&
             ifail_gross_qc,ifail_cloud_qc,ifail_outside_range,ifail_scanedge_qc
 
-  logical nlnqc_iter,njqc,vqc
   public :: buddycheck_t,buddydiag_save
 
+  logical nlnqc_iter,njqc,vqc
   logical noiqc
   logical use_poq7
   logical qc_noirjaco3
@@ -317,8 +315,8 @@ contains
 
     nlnqc_iter= .false.
     noiqc = .false.
-    njqc= .false.
-    vqc= .false.
+    njqc=.false.
+    vqc=.false.
     c_varqc=one
 
     vadfile='none'
