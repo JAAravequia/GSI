@@ -11,6 +11,8 @@ module converr_q
 !                                     from read_prepbufr to here so all the 
 !                                     processor can have the new error information 
 !
+!   2015-03-05  yang - to assign ptabl_q by using the pressure values of the last observation type
+!                      read in, rather than to using obs. type 120, explicitly in the code.
 ! Subroutines Included:
 !   sub converr_q_read      - allocate arrays for and read in conventional error table 
 !   sub converr_q_destroy   - destroy conventional error arrays
@@ -28,7 +30,7 @@ module converr_q
 
 use kinds, only:r_kind,i_kind,r_single
 use constants, only: zero
-use obsmod, only : oberrflg2 
+use obsmod, only : oberrflg 
 implicit none
 
 ! set default as private
@@ -61,6 +63,11 @@ contains
 !   2013-05-14  guo     -- add status and iostat in open, to correctly
 !                          handle the error case of "obs error table not
 !                          available to 3dvar".
+!   2015-03-06  yang    -- add ld, the size of error table.
+!                          ld=300 is sufficient for current conventional
+!                          observing systems.  No need to do the subtraction to get error
+!                          table array index.
+
 !
 !   input argument list:
 !
@@ -73,13 +80,13 @@ contains
 !$$$ end documentation block
      use constants, only: half
      implicit none
-
+     integer(i_kind), parameter    :: ld=300
      integer(i_kind),intent(in   ) :: mype
 
      integer(i_kind):: ier
 
      maxsub_q=5
-     allocate(etabl_q(100,33,6),isuble_q(100,5))
+     allocate(etabl_q(ld,33,6),isuble_q(ld,5))
 
      etabl_q=1.e9_r_kind
       
@@ -88,7 +95,7 @@ contains
      if(ier/=0) then
         write(6,*)'CONVERR_q:  ***WARNING*** obs error table ("errtable") not available to 3dvar.'
         lcount=0
-        oberrflg2=.false.
+        oberrflg=.false.
         return
      endif
 
@@ -100,7 +107,7 @@ contains
         if( iflag /= 0 ) exit loopd
 100     format(1x,i3,2x,i3)
         lcount=lcount+1
-        itypex=itypey-99
+        itypex=itypey
         read(ietabl_q,105,IOSTAT=iflag,end=120) (isuble_q(itypex,n),n=1,5)
 105     format(8x,5i12)
         do k=1,33
@@ -112,26 +119,26 @@ contains
 
      if(lcount<=0 .and. mype==0) then
         write(6,*)'CONVERR_Q:  ***WARNING*** obs error table not available to 3dvar.'
-        oberrflg2=.false.
+        oberrflg=.false.
      else
         if(mype == 0) then
            write(6,*)'CONVERR_Q:  using observation errors from user provided table'
-           write(6,105) (isuble_q(21,m),m=1,5)
-           do k=1,33
-              write(6,110) (etabl_q(21,k,m),m=1,6)
-           enddo
         endif
         allocate(ptabl_q(34))
-        ptabl_q=zero
-        ptabl_q(1)=etabl_q(20,1,1)
-        do k=2,33
-           ptabl_q(k)=half*(etabl_q(20,k-1,1)+etabl_q(20,k,1))
-        enddo
-        ptabl_q(34)=etabl_q(20,33,1)
+! use the pressure values of itypex, which is the last valid obs. type
+        if (itypex > 0 ) then
+           ptabl_q=zero
+           ptabl_q(1)=etabl_q(itypex,1,1)
+           do k=2,33
+              ptabl_q(k)=half*(etabl_q(itypex,k-1,1)+etabl_q(itypex,k,1))
+           enddo
+           ptabl_q(34)=etabl_q(itypex,33,1)
+         else
+            write(6,*)'ERROR IN CONVERR_Q: NO OBSERVATION TYPE READ IN'
+            return
+         endif
      endif
-
      close(ietabl_q)
-
      return
   end subroutine converr_q_read
 
@@ -163,6 +170,4 @@ subroutine converr_q_destroy
   end subroutine converr_q_destroy
 
 end module converr_q
-
-
 

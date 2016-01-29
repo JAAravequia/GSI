@@ -124,7 +124,8 @@ subroutine glbsoi(mype)
   use gridmod, only: nlat,nlon,nsig,rlats,regional,&
       twodvar_regional,wgtlats
   use guess_grids, only: nfldsig
-  use obsmod, only: write_diag,perturb_obs,ditype,iadate,oberrflg2
+  use obsmod, only: write_diag,perturb_obs,ditype,iadate
+  use qcmod,only: njqc
   use turblmod, only: create_turblvars,destroy_turblvars
   use obs_sensitivity, only: lobsensfc, iobsconv, lsensrecompute, &
       init_fc_sens, save_fc_sens, lobsensincr, lobsensjb
@@ -141,6 +142,10 @@ subroutine glbsoi(mype)
   use converr_t, only: converr_t_destroy
   use converr_uv, only: converr_uv_destroy
   use converr_pw, only: converr_pw_destroy
+  use convb_ps, only: convb_ps_destroy
+  use convb_q, only: convb_q_destroy
+  use convb_t, only: convb_t_destroy
+  use convb_uv, only: convb_uv_destroy
   use zrnmi_mod, only: zrnmi_initialize
   use observermod, only: observer_init,observer_set,observer_finalize,ndata
   use timermod, only: timer_ini, timer_fnl
@@ -379,15 +384,27 @@ subroutine glbsoi(mype)
   endif
 
 ! Deallocate arrays
-  if (oberrflg2 == .true.) then
-     call converr_ps_destroy
-     call converr_q_destroy
-     call converr_t_destroy
-     call converr_uv_destroy
-     call converr_pw_destroy
+!RY:  in trunk 
+!RY: Q: Is this destroy at the end of the entire analysisi?
+!  if(perturb_obs) call converr_destroy
+!RY:  need to understand the following things
+
+  if(perturb_obs) then
+     if(njqc) then
+        call converr_ps_destroy
+        call converr_q_destroy
+        call converr_t_destroy
+        call converr_uv_destroy
+        call converr_pw_destroy
+        call convb_ps_destroy
+        call convb_q_destroy
+        call convb_t_destroy
+        call convb_uv_destroy
+     else
+        call converr_destroy
+     endif  
   endif
-!  call converr_destroy
-!  if(perturb_obs .or. oberrflg) call converr_destroy
+
   if (regional) then
      if(anisotropic) then
         call destroy_anberror_vars_reg

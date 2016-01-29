@@ -21,7 +21,7 @@
 #PBS -l walltime=00:30:00 
 #PBS -l nodes=2:ppn=12
 #PBS -j eo                
-#PBS -A cloud 
+#PBS -A ada
 #PBS -V
 #=======================================================
 
@@ -34,7 +34,7 @@ if [ -d /da ]; then
   TOPDIR=/da   # This would be the WCOSS
   MACHINE=WCOSS
 elif [ -d /scratch4/NCEPDEV/da ]; then
-  TOPDIR=/scratch4/NCEPDEV/da     #This is theia 
+  TOPDIR=/scratch4/NCEPDEV/da     #This is zeus 
   MACHINE=THEIA
 else 
   echo CANNOT FIND A VALID TOP-LEVEL DIRECTORY
@@ -46,16 +46,16 @@ fi
 #=================================================================================================
 
 # Set experiment name and analysis date
-adate=2015092712
+adate=2015060100
 expnm=globalprod    
 exp=globalprod.$adate
-expid=${expnm}.$adate.theia
+expid=${expnm}.$adate.wcoss
 
 # Set path/file for gsi executable
-gsiexec=/home/Xiujuan.Su/home/gsi/xsu_obr/src/global_gsi
+gsiexec=/da/save/$USER/trunk/src/global_gsi
 
 # Specify GSI fixed field
-fixgsi=/home/Xiujuan.Su/home/gsi/xsu_obr/fix
+fixgsi=/da/save/$USER/trunk/fix
 
 # Set the JCAP resolution which you want.
 # All resolutions use LEVS=64
@@ -78,7 +78,7 @@ if [ $MACHINE = WCOSS ]; then
    DIAG_SUFFIX="" 
    DIAG_TARBALL=YES 
 elif [ $MACHINE = THEIA ]; then
-   datdir=/scratch4/NCEPDEV/rstprod/com/gfs/prod
+   datdir=/scratch4/NCEPDEV/stmp3/$USER/data_sigmap/${exp}
    tmpdir=/scratch4/NCEPDEV/stmp3/$USER/tmp${JCAP}_sigmap/${expid}  
    savdir=/scratch4/NCEPDEV/stmp3/$USER/out${JCAP}/sigmap/${expid} 
    fixcrtm=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix
@@ -227,16 +227,16 @@ if [ $MACHINE = WCOSS ]; then
     exit 1
   fi
 elif  [ $MACHINE = THEIA ]; then    
-  if [ -s ${datdir}/gdas.${adate0}/gdas1.t${hha}z.sgm3prep ]; then 
-    datobs=${datdir}/gdas.${adate0}
-    datges=${datdir}/gdas.${gdate0}
+  if [ -s ${datdir}/gdas1.t${hha}z.sgm3prep ]; then 
+    datobs=${datdir}
+    datges=${datdir}
     datprep=${datobs}
-  elif [ -s /scratch4/NCEPDEV/rstprod/com/gfs/prod/gdas.${gdate0}/gdas1.t${hha}z.sgm3prep ]; then   # Not all data files are stored on /com
-    datges=/scratch4/NCEPDEV/rstprod/com/gfs/prod/gdas.$gdate0
-    if [ -s /scratch4/NCEPDEV/global/noscrub/dump/${gdate}/gdas -a \
-         -s /scratch4/NCEPDEV/global/noscrub/dump/${adate}/gdas ]; then
-      datobs=/scratch4/NCEPDEV/global/noscrub/dump/${adate}/gdas
-      datprep=/scratch4/NCEPDEV/rstprod/com/gfs/prod/gdas.${adate0}
+  elif [ -s /NCEPPROD/com/gfs/prod/gdas.${gdate0}/gdas1.t${hha}z.sgm3prep ]; then   # Not all data files are stored on /com
+    datges=/NCEPPROD/com/gfs/prod/gdas.$gdate0
+    if [ -s /scratch2/portfolios/NCEPDEV/global/noscrub/dump/${gdate}/gdas -a \
+         -s /scratch2/portfolios/NCEPDEV/global/noscrub/dump/${adate}/gdas ]; then
+      datobs=/scratch2/portfolios/NCEPDEV/global/noscrub/dump/${adate}/gdas
+      datprep=/NCEPPROD/com/gfs/prod/gdas.${adate0}
       prefix_obs=
       suffix=gdas.$adate 
     else
@@ -364,7 +364,7 @@ cat << EOF > gsiparm.anl
    niter_no_qc(1)=50,niter_no_qc(2)=0,
    write_diag(1)=.true.,write_diag(2)=.false.,write_diag(3)=.true.,
    qoption=2,
-   gencode=$IGEN,factqmin=5.0,factqmax=0.005.0,deltim=$DELTIM,
+   gencode=82,factqmin=5.0,factqmax=0.005,deltim=$DELTIM,
    iguess=-1,
    oneobtest=.false.,retrieval=.false.,l_foto=.false.,
    use_pbl=.false.,use_compress=.true.,nsig_ext=12,gpstop=50.,
@@ -403,7 +403,7 @@ cat << EOF > gsiparm.anl
    $STRONGOPTS
  /
  &OBSQC
-   dfact=0.75,dfact1=3.0,noiqc=.true.,oberrflg=.false.,oberrflg2=.true.,c_varqc=0.02,
+   dfact=0.75,dfact1=3.0,noiqc=.true.,oberrflg=.false.,c_varqc=0.02,
    use_poq7=.true.,qc_noirjaco3_pole=.true.,
    $OBSQC
  /
@@ -678,7 +678,12 @@ else
    ln -s -f $datprep/gdas1.t${hha}z.sgesprep           ./gdas1.t${hha}z.sgesprep
    ln -s -f $datprep/gdas1.t${hha}z.sgp3prep           ./gdas1.t${hha}z.sgp3prep
 
+   #emily
+   if [  $MACHINE = WCOSS  ]; then
+      export SIGLEVEL=/NCEPDEV/rstprod/nwprod/fix/global_hyblev.l64.txt
+   elif [  $MACHINE = THEIA  ]; then
       export SIGLEVEL=/scratch4/NCEPDEV/rstprod/nwprod/fix/global_hyblev.l64.txt
+   fi
 
    export JCAP=$JCAP
    export LEVS=$LEVS
@@ -731,7 +736,7 @@ else
 fi
 
 # Run gsi under Parallel Operating Environment (poe) on NCEP IBM
-if [  $MACHINE =THEIA  ]; then
+if [  $MACHINE = THEIA  ]; then
 
    cd $tmpdir/
    echo "run gsi now"
@@ -739,20 +744,15 @@ if [  $MACHINE =THEIA  ]; then
    export MPI_BUFS_PER_PROC=256
    export MPI_BUFS_PER_HOST=256
    export MPI_GROUP_MAX=256
-   export APRUN="mpirun -np $PBS_NP"
    #export OMP_NUM_THREADS=1
+   export OMP_STACKSIZE=512M
 
    /bin/ksh --login
-   module load intel
-   module load mpt
-
-   
+   #module load intel
+   #module load mpt
 
    echo "JOB ID : $PBS_JOBID"
-
-   env > stdout.env
-   $APRUN $tmpdir/gsi.x < gsiparm.anl > stdout
-
+   eval "mpirun -v -np $PBS_NP $tmpdir/gsi.x > stdout"
    rc=$?
 
 elif [  $MACHINE = WCOSS  ]; then

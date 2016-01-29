@@ -15,9 +15,10 @@ module convinfo
 !   2009-01-22  todling - add convinfo_initialized
 !   2010-09-10  pagowski - add pm2_5
 !   2013-08-20  s.liu - add reflectivity
-!   2013-11-20        su - add ptime_conv as time dimension,and pmot_conv as
-!                           parameter tfor the option to keep thinned data as monitored
-!   2015-09-23        su - add index_sub as counter how many subtypes for a type 
+!   2013-11-20     su - add ptime_conv as time dimension,and pmot_conv as
+!                           parameter for the option to keep thinned data as
+!                           monitored
+
 !
 ! Subroutines Included:
 !   sub init_convinfo    - initialize conventional obs related variables
@@ -50,14 +51,13 @@ module convinfo
 !   def pmesh_conv     - size of vertical thinning mesh 
 !   def pmot_conv      - option to keep thinned data out
 !   def ptime_conv     - option to add time dimension
-!   def index_sub     - index to count how many subtypes in a type and the
-!                       position in the bufr error table
 !
 !
 !   def predx_conv     - conv obs bias correction coefficients: t,uv,q,ps,spd,sst,pw,pm2_5
 !                        count,max # of coefs
 !   def npred_conv_max - maximum number of conv ob bias correction coefs 
 !   def npred_conv     - conv ob bias coef count
+!   def index_sub      - index to count subtypes of a type and the position in the bufr error table 
 
 ! attributes:
 !   language: f90
@@ -100,7 +100,7 @@ module convinfo
   character(len=16),allocatable,dimension(:)::ioctype
 
   real(r_kind),allocatable,dimension(:,:) :: predx_conv
-  integer(i_kind)  npred_conv_max,nc1
+  integer(i_kind)  npred_conv_max
   integer(i_kind)  nconvtype_ps,nconvtype_t,nconvtype_spd,nconvtype_pm2_5
   integer(i_kind)  id_bias_ps,id_bias_t,id_bias_spd,id_bias_pm2_5
   real(r_kind)     conv_bias_ps,conv_bias_t,conv_bias_spd, &
@@ -246,7 +246,7 @@ contains
     allocate(ctwind(nconvtype),cgross(nconvtype),cermax(nconvtype),cermin(nconvtype), &
              cvar_b(nconvtype),cvar_pg(nconvtype),ncmiter(nconvtype),ncgroup(nconvtype), &
              ncnumgrp(nconvtype),icuse(nconvtype),ictype(nconvtype),icsubtype(nconvtype), &
-             ioctype(nconvtype),index_sub(nconvtype), & 
+             ioctype(nconvtype), index_sub(nconvtype),& 
              ithin_conv(nconvtype),rmesh_conv(nconvtype),pmesh_conv(nconvtype),&
              npred_conv(nconvtype),pmot_conv(nconvtype),ptime_conv(nconvtype),  &
              stndev_conv(nconvtype), &
@@ -261,9 +261,9 @@ contains
        rmesh_conv(i)=99999.0_r_kind
        pmesh_conv(i)=zero
        stndev_conv(i)=one
+       index_sub(i)=2
        pmot_conv(i)=zero
        ptime_conv(i)=zero
-       index_sub(i)=2
     enddo
     nc=0
 
@@ -309,17 +309,17 @@ contains
            !                         ncnumgrp(nc),
 
        read(crecord,*)ictype(nc),icsubtype(nc),icuse(nc),ctwind(nc),ncnumgrp(nc), &
-            ncgroup(nc),ncmiter(nc),cgross(nc),cermax(nc),cermin(nc),cvar_b(nc),cvar_pg(nc) &
-            ,ithin_conv(nc),rmesh_conv(nc),pmesh_conv(nc),npred_conv(nc),pmot_conv(nc),ptime_conv(nc)
-       if(nc >=2 ) then
-          if( trim(ioctype(nc)) == trim(ioctype(nc-1)) .and.  ictype(nc) == ictype(nc-1)) then
-             index_sub(nc)=index_sub(nc-1)+1
+          ncgroup(nc),ncmiter(nc),cgross(nc),cermax(nc),cermin(nc),cvar_b(nc),cvar_pg(nc), &
+          ithin_conv(nc),rmesh_conv(nc),pmesh_conv(nc),npred_conv(nc),pmot_conv(nc),ptime_conv(nc)
+          if(nc >=2 )then
+            if(trim(ioctype(nc))==trim(ioctype(nc-1)) .and. ictype(nc)==ictype(nc-1)) then
+               index_sub(nc)=index_sub(nc-1)+1
+            endif
           endif
-       endif
        if(mype == 0)write(6,1031)ioctype(nc),ictype(nc),icsubtype(nc),icuse(nc),ctwind(nc),ncnumgrp(nc), &
-            ncgroup(nc),ncmiter(nc),cgross(nc),cermax(nc),cermin(nc),cvar_b(nc),cvar_pg(nc) &
-            ,ithin_conv(nc),rmesh_conv(nc),pmesh_conv(nc),npred_conv(nc),pmot_conv(nc),ptime_conv(nc)
-1031   format('READ_CONVINFO: ',a7,1x,i3,1x,i4,1x,i2,1x,g13.6,1x,3(I3,1x),5g13.6,i5,2g13.6,i5,2g13.6)
+          ncgroup(nc),ncmiter(nc),cgross(nc),cermax(nc),cermin(nc),cvar_b(nc),cvar_pg(nc), &
+          ithin_conv(nc),rmesh_conv(nc),pmesh_conv(nc),npred_conv(nc),pmot_conv(nc),ptime_conv(nc),index_sub(nc)
+1031   format('READ_CONVINFO: ',a7,1x,i3,1x,i4,1x,i2,1x,g13.6,1x,3(I3,1x),5g13.6,i5,2g13.6,i5,2g13.6,i5)
        if (npred_conv_max > 0 ) then
           read(iunit,*,iostat=ier) cob,iob,isub,np,(predx_conv(nc,n),n=1,np)
           if (ier /= 0 ) then

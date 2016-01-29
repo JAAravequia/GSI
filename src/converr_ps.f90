@@ -29,7 +29,7 @@ module converr_ps
 
 use kinds, only:r_kind,i_kind,r_single
 use constants, only: zero
-use obsmod, only : oberrflg2 
+use obsmod, only : oberrflg 
 implicit none
 
 ! set default as private
@@ -62,6 +62,11 @@ contains
 !   2013-05-14  guo     -- add status and iostat in open, to correctly
 !                          handle the error case of "obs error table not
 !                          available to 3dvar".
+!   2015-03-06  yang    -- add ld, the size of error table.
+!                          ld=300 is sufficient for current conventional
+!                          observing systems.  No need to do the subtraction to get error
+!                          table array index.
+
 !
 !   input argument list:
 !
@@ -74,22 +79,22 @@ contains
 !$$$ end documentation block
      use constants, only: half
      implicit none
-
+     integer(i_kind),    parameter :: ld=300
      integer(i_kind),intent(in   ) :: mype
-
      integer(i_kind):: ier
+
      maxsub_ps=5
-     allocate(etabl_ps(100,33,6))
-     allocate(isuble_ps(100,5))
+     allocate(etabl_ps(ld,33,6))
+     allocate(isuble_ps(ld,5))
 
      etabl_ps=1.e9_r_kind
       
      ietabl=19
      open(ietabl,file='errtable_ps',form='formatted',status='old',iostat=ier)
      if(ier/=0) then
-        write(6,*)'CONVERR_ps:  ***WARNING*** obs error table ("errtable_ps") not available to 3dvar.'
+        write(6,*)'CONVERR_ps:  ***WARNING*** obs error table ("errtable") not available to 3dvar.'
         lcount=0
-        oberrflg2=.false.
+        oberrflg=.false.
         return
      endif
 
@@ -97,15 +102,17 @@ contains
      etabl_ps=1.e9_r_kind
      lcount=0
      loopd : do 
-        read(ietabl,100,IOSTAT=iflag,end=120) itypex
+        read(ietabl,100,IOSTAT=iflag,end=120) itypey
         if( iflag /= 0 ) exit loopd
 100     format(1x,i3)
         lcount=lcount+1
-        itypey=itypex-99
-        read(ietabl,105,IOSTAT=iflag,end=120) (isuble_ps(itypey,n),n=1,5)  
+        itypex=itypey
+        read(ietabl,105,IOSTAT=iflag,end=120) (isuble_ps(itypex,n),n=1,5)  
+        if(mype==0) write(6,*) 'READIN ERROR _PS', itypex, (isuble_ps(itypex,n),n=1,5)
+
 105     format(8x,5i12)
         do k=1,33
-           read(ietabl,110)(etabl_ps(itypey,k,m),m=1,6)
+           read(ietabl,110)(etabl_ps(itypex,k,m),m=1,6)
 110        format(1x,6e12.5)
         end do
      end do   loopd
@@ -113,27 +120,28 @@ contains
 
      if(lcount<=0 .and. mype==0) then
         write(6,*)'CONVERR_PS:  ***WARNING*** obs error table not available to 3dvar.'
-        oberrflg2=.false.
+        oberrflg=.false.
      else
         if(mype == 0)  then
            write(6,*)'CONVERR_PS:  using observation errors from user provided table'
-           write(6,105) (isuble_ps(21,m),m=1,5)
-           do k=1,33
-              write(6,110) (etabl_ps(21,k,m),m=1,6)
-           enddo
         endif
         allocate(ptabl_ps(34))
-        ptabl_ps=zero
-        ptabl_ps(1)=etabl_ps(20,1,1)
-        do k=2,33
-           ptabl_ps(k)=half*(etabl_ps(20,k-1,1)+etabl_ps(20,k,1))
-        enddo
-        ptabl_ps(34)=etabl_ps(20,33,1)
-       
+
+!use the pressure values of itypex, which is the last observation type. 
+        if (itypex > 0 ) then
+           ptabl_ps=zero
+           ptabl_ps(1)=etabl_ps(itypex,1,1)
+           do k=2,33
+              ptabl_ps(k)=half*(etabl_ps(itypex,k-1,1)+etabl_ps(itypex,k,1))
+           enddo
+           ptabl_ps(34)=etabl_ps(itypex,33,1)
+        else
+            write(6,*)'ERROR IN CONVERR_PS: NO OBSERVATION READ IN itypex', itypex
+            return
+        endif
      endif
 
      close(ietabl)
-
      return
   end subroutine converr_ps_read
 
@@ -165,6 +173,4 @@ subroutine converr_ps_destroy
   end subroutine converr_ps_destroy
 
 end module converr_ps
-
-
 

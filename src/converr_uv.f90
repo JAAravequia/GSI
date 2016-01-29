@@ -27,7 +27,7 @@ module converr_uv
 
 use kinds, only:r_kind,i_kind,r_single
 use constants, only: zero
-use obsmod, only : oberrflg2 
+use obsmod, only : oberrflg 
 implicit none
 
 ! set default as private
@@ -38,6 +38,7 @@ implicit none
 ! set passed variables as public
   public :: etabl_uv,ptabl_uv,isuble_uv,maxsub_uv
 
+!RY: itypex and itypey should not be save variable
   integer(i_kind),save:: ietabl_uv,itypex,itypey,lcount,iflag,k,m,n,maxsub_uv
   real(r_single),save,allocatable,dimension(:,:,:) :: etabl_uv
   real(r_kind),save,allocatable,dimension(:)  :: ptabl_uv
@@ -60,6 +61,10 @@ contains
 !   2013-05-14  guo     -- add status and iostat in open, to correctly
 !                          handle the error case of "obs error table not
 !                          available to 3dvar".
+!   2015-03-06  yang    -- add ld, the size of error table.
+!                          ld=300 is sufficient for current conventional
+!                          observing systems.  No need to do the subtraction to get error
+!                          table array index.
 !
 !   input argument list:
 !
@@ -72,12 +77,11 @@ contains
 !$$$ end documentation block
      use constants, only: half
      implicit none
-
+     integer(i_kind),parameter    :: ld=300
      integer(i_kind),intent(in   ) :: mype
-
      integer(i_kind):: ier
 
-     allocate(etabl_uv(100,33,8),isuble_uv(100,7))
+     allocate(etabl_uv(ld,33,8),isuble_uv(ld,7))
 
      etabl_uv=1.e9_r_kind
      maxsub_uv=7
@@ -87,7 +91,7 @@ contains
      if(ier/=0) then
         write(6,*)'CONVERR_uv:  ***WARNING*** obs error table ("errtable") not available to 3dvar.'
         lcount=0
-        oberrflg2=.false.
+        oberrflg=.false.
         return
      endif
 
@@ -100,9 +104,9 @@ contains
 !        if (mype == 0) write(6,*)'CONVERR_UV:itypey=',itypey
 100     format(1x,i3)
         lcount=lcount+1
-        itypex=itypey-199
+        itypex=itypey
         read(ietabl_uv,105,IOSTAT=iflag,end=120) (isuble_uv(itypex,n),n=1,7)
-        if (mype == 0) write(6,*)'CONVERR_UV:itypex,itypey=',itypex,itypey
+         if (mype == 0) write(6,*)'CONVERR_UV:itypex,itypex=',itypex,itypex
 105     format(8x,7i12)
         do k=1,33
            read(ietabl_uv,110)(etabl_uv(itypex,k,m),m=1,8)
@@ -114,22 +118,25 @@ contains
 
      if(lcount<=0 .and. mype==0) then
         write(6,*)'CONVERR_UV:  ***WARNING*** obs error table not available to 3dvar.'
-        oberrflg2=.false.
+        oberrflg=.false.
      else
         if(mype == 0) then
            write(6,*)'CONVERR_UV:  using observation errors from user provided table'
-           write(6,105) (isuble_uv(46,m),m=1,7)
-           do k=1,33
-              write(6,110) (etabl_uv(46,k,m),m=1,8)
-           enddo
         endif
         allocate(ptabl_uv(34))
-        ptabl_uv=zero
-        ptabl_uv(1)=etabl_uv(20,1,1)
-        do k=2,33
-           ptabl_uv(k)=half*(etabl_uv(20,k-1,1)+etabl_uv(20,k,1))
-        enddo
-        ptabl_uv(34)=etabl_uv(20,33,1)
+
+! use the pressure values of itypex, which is the last valid observation type.
+        if (itypex > 0 ) then
+           ptabl_uv=zero
+           ptabl_uv(1)=etabl_uv(itypex,1,1)
+           do k=2,33
+              ptabl_uv(k)=half*(etabl_uv(itypex,k-1,1)+etabl_uv(itypex,k,1))
+           enddo
+           ptabl_uv(34)=etabl_uv(itypex,33,1)
+         else
+            write(6,*)'ERROR IN CONVERR_UV: NO OBSERVATION TYPE READ IN'
+            return
+         endif
      endif
 
      close(ietabl_uv)
