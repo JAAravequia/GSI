@@ -20,6 +20,7 @@ W3NCO_VER = v2.0.6
 CORELIB  = /nwprod/lib
 
 #CRTM_INC=$(CORELIB)/crtm/$(CRTM_VER)/incmod/crtm_$(CRTM_VER)
+#CRTM_INC=/da/save/Michael.Lueken/CRTM_REL-2.2.3/crtm_${CRTM_VER}/include
 CRTM_INC=/da/save/Michael.Lueken/CRTM_REL-2.2.3/crtm_${CRTM_VER}/include
 NEMSIO_INC=$(CORELIB)/nemsio/$(NEMSIO_VER)/incmod/nemsio_$(NEMSIO_VER)
 SFCIO_INC4=$(CORELIB)/sfcio/$(SFCIO_VER)/incmod/sfcio_$(SFCIO_VER)_4

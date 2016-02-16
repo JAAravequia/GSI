@@ -1,2 +1,6 @@
-getsfcnstensupdp.o : getsfcnstensupdp.f90 nstio_module.o
+constants.o      : constants.f90 kinds.o
+getnstensmeanp.o : getnstensmeanp.f90 nstio_module.o kinds.o constants.o intrp_msk.o
+grdcrd.o         : grdcrd.f90 kinds.o constants.o
+intrp_msk.o      : intrp_msk.f90 kinds.o constants.o
+kinds.o          : kinds.F90
 nstio_module.o   : nstio_module.f90 

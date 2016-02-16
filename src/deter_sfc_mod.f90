@@ -214,40 +214,40 @@ subroutine deter_sfc(alat,alon,dlat_earth,dlon_earth,obstime,isflg, &
 
      sfcpct = zero
 
-     if ( istyp00 == 2 .and. fice00 < one ) then
+     if ( istyp00 == 2 .and. (fice00 > 0.001_r_kind .and. fice00 < one) ) then
        sfcpct(2) = sfcpct(2) + w00*fice00
        sfcpct(0) = sfcpct(0) + w00*(one-fice00)
-     elseif ( istyp00 == 3 .and. (fice00 > zero .and. fice00 < one) ) then
+     elseif ( istyp00 == 3 .and. (fice00 > 0.001_r_kind .and. fice00 < one) ) then
        sfcpct(3) = sfcpct(3) + w00*fice00
        sfcpct(0) = sfcpct(0) + w00*(one-fice00)
      else
        sfcpct(istyp00) = sfcpct(istyp00) + w00
      endif
 
-     if ( istyp01 == 2 .and. fice01 < one ) then
+     if ( istyp01 == 2 .and. (fice01 > 0.001_r_kind .and. fice01 < one) ) then
        sfcpct(2) = sfcpct(2) + w01*fice01
        sfcpct(0) = sfcpct(0) + w01*(one-fice01)
-     elseif ( istyp01 == 3 .and. (fice01 > zero .and. fice01 < one) ) then
+     elseif ( istyp01 == 3 .and. (fice01 > 0.001_r_kind .and. fice01 < one) ) then
        sfcpct(3) = sfcpct(3) + w01*fice01
        sfcpct(0) = sfcpct(0) + w01*(one-fice01)
      else
        sfcpct(istyp01) = sfcpct(istyp01) + w01
      endif
 
-     if ( istyp10 == 2 .and. fice10 < one ) then
+     if ( istyp10 == 2 .and. (fice10 > 0.001_r_kind .and. fice10 < one) ) then
        sfcpct(2) = sfcpct(2) + w10*fice10
        sfcpct(0) = sfcpct(0) + w10*(one-fice10)
-     elseif ( istyp10 == 3 .and. (fice10 > zero .and. fice10 < one) ) then
+     elseif ( istyp10 == 3 .and. (fice10 > 0.001_r_kind .and. fice10 < one) ) then
        sfcpct(3) = sfcpct(3) + w10*fice10
        sfcpct(0) = sfcpct(0) + w10*(one-fice10)
      else
        sfcpct(istyp10) = sfcpct(istyp10) + w10
      endif
 
-     if ( istyp11 == 2 .and. fice11 < one ) then
+     if ( istyp11 == 2 .and. (fice11 > 0.001_r_kind .and. fice11 < one) ) then
        sfcpct(2) = sfcpct(2) + w11*fice11
        sfcpct(0) = sfcpct(0) + w11*(one-fice11)
-     elseif ( istyp11 == 3 .and. (fice11 > zero .and. fice11 < one) ) then
+     elseif ( istyp11 == 3 .and. (fice11 > 0.001_r_kind .and. fice11 < one) ) then
        sfcpct(3) = sfcpct(3) + w11*fice11
        sfcpct(0) = sfcpct(0) + w11*(one-fice11)
      else
@@ -295,7 +295,7 @@ subroutine deter_sfc(alat,alon,dlat_earth,dlon_earth,obstime,isflg, &
         sm   =sm   +w00*(soil_moi_full(ix ,iy ,itsfc ) *dtsfc+   &
                          soil_moi_full(ix ,iy ,itsfcp) *dtsfcp)
      else if(istyp00 == 2)then
-        if ( fice00 < one ) then
+        if ( fice00 > 0.001_r_kind .and. fice00 < one ) then
           wgtavg(2) = wgtavg(2) + w00*fice00
           wgtavg(0) = wgtavg(0) + w00*(one-fice00)
           tice00=(sst00-tfrozen*(one-fice00))/fice00
@@ -306,7 +306,7 @@ subroutine deter_sfc(alat,alon,dlat_earth,dlon_earth,obstime,isflg, &
           ts(2)=ts(2)+w00*sst00
         endif
      else if(istyp00 == 3)then
-        if ( fice00 > zero .and. fice00 < one ) then
+        if ( fice00 > 0.001_r_kind .and. fice00 < one ) then
           wgtavg(3) = wgtavg(3) + w00*fice00
           wgtavg(0) = wgtavg(0) + w00*(one-fice00)
           tice00=(sst00-tfrozen*(one-fice00))/fice00
@@ -336,7 +336,7 @@ subroutine deter_sfc(alat,alon,dlat_earth,dlon_earth,obstime,isflg, &
         sm   =sm   +w01*(soil_moi_full(ix ,iyp,itsfc ) *dtsfc+   &
                          soil_moi_full(ix ,iyp,itsfcp) *dtsfcp)
      else if(istyp01 == 2)then
-        if ( fice01 < one ) then
+        if ( fice01 >0.001_r_kind .and. fice01 < one ) then
           wgtavg(2) = wgtavg(2) + w01*fice01
           wgtavg(0) = wgtavg(0) + w01*(one-fice01)
           tice01=(sst01-tfrozen*(one-fice01))/fice01
@@ -347,7 +347,7 @@ subroutine deter_sfc(alat,alon,dlat_earth,dlon_earth,obstime,isflg, &
           ts(2)=ts(2)+w01*sst01
         endif
      else if(istyp01 == 3)then
-       if ( fice01 > zero .and. fice01 < one ) then
+       if ( fice01 > 0.001_r_kind .and. fice01 < one ) then
          wgtavg(3) = wgtavg(3) + w01*fice01
          wgtavg(0) = wgtavg(0) + w01*(one-fice01)
          tice01=(sst01-tfrozen*(one-fice01))/fice01
@@ -380,7 +380,7 @@ subroutine deter_sfc(alat,alon,dlat_earth,dlon_earth,obstime,isflg, &
         sm   =sm   +w10*(soil_moi_full(ixp,iy ,itsfc ) *dtsfc+   &
                          soil_moi_full(ixp,iy ,itsfcp) *dtsfcp)
      else if(istyp10 == 2)then
-       if ( fice10 < one ) then
+       if ( fice10 > 0.001_r_kind .and. fice10 < one ) then
          wgtavg(2) = wgtavg(2) + w10*fice10
          wgtavg(0) = wgtavg(0) + w10*(one-fice10)
          tice10=(sst10-tfrozen*(one-fice10))/fice10
@@ -391,7 +391,7 @@ subroutine deter_sfc(alat,alon,dlat_earth,dlon_earth,obstime,isflg, &
          ts(2)=ts(2)+w10*sst10
        endif
      else if(istyp10 == 3)then
-       if ( fice10 > zero .and. fice10 < one ) then
+       if ( fice10 > 0.001_r_kind .and. fice10 < one ) then
          wgtavg(3) = wgtavg(3) + w10*fice10
          wgtavg(0) = wgtavg(0) + w10*(one-fice10)
          tice10=(sst10-tfrozen*(one-fice10))/fice10
@@ -424,7 +424,7 @@ subroutine deter_sfc(alat,alon,dlat_earth,dlon_earth,obstime,isflg, &
         sm   =sm   +w11*(soil_moi_full(ixp,iyp,itsfc ) *dtsfc+   &
                          soil_moi_full(ixp,iyp,itsfcp) *dtsfcp)
      else if(istyp11 == 2)then
-       if ( fice11 < one ) then
+       if ( fice11 > 0.001_r_kind .and. fice11 < one ) then
          wgtavg(2) = wgtavg(2) + w11*fice11
          wgtavg(0) = wgtavg(0) + w11*(one-fice11)
          tice11=(sst11-tfrozen*(one-fice11))/fice11
@@ -435,7 +435,7 @@ subroutine deter_sfc(alat,alon,dlat_earth,dlon_earth,obstime,isflg, &
          ts(2)=ts(2)+w11*sst11
        endif
      else if(istyp11 == 3)then
-       if ( fice11 > zero .and. fice11 < one ) then
+       if ( fice11 > 0.001_r_kind .and. fice11 < one ) then
          wgtavg(3) = wgtavg(3) + w11*fice11
          wgtavg(0) = wgtavg(0) + w11*(one-fice11)
          tice11=(sst11-tfrozen*(one-fice11))/fice11
@@ -634,40 +634,40 @@ subroutine deter_sfc_type(dlat_earth,dlon_earth,obstime,isflg,tsavg)
 
      sfcpct = zero
 
-     if ( istyp00 == 2 .and. fice00 < one ) then
+     if ( istyp00 == 2 .and. (fice00 > 0.001_r_kind .and. fice00 < one) ) then
        sfcpct(2)=sfcpct(2)+w00*fice00
        sfcpct(0)=sfcpct(0)+w00*(one-fice00)
-     elseif ( istyp00 == 3 .and. (fice00 > zero .and. fice00 < one) ) then
+     elseif ( istyp00 == 3 .and. (fice00 > 0.001_r_kind .and. fice00 < one) ) then
        sfcpct(3)=sfcpct(3)+w00*fice00
        sfcpct(0)=sfcpct(0)+w00*(one-fice00)
      else
        sfcpct(istyp00)=sfcpct(istyp00)+w00
      endif
 
-     if ( istyp01 == 2 .and. fice01 < one ) then
+     if ( istyp01 == 2 .and. (fice01 > 0.001_r_kind .and. fice01 < one) ) then
        sfcpct(2)=sfcpct(2)+w01*fice01
        sfcpct(0)=sfcpct(0)+w01*(one-fice01)
-     elseif ( istyp01 == 3 .and. (fice01 > zero .and. fice01 < one) ) then
+     elseif ( istyp01 == 3 .and. (fice01 > 0.001_r_kind .and. fice01 < one) ) then
        sfcpct(3)=sfcpct(3)+w01*fice01
        sfcpct(0)=sfcpct(0)+w01*(one-fice01)
      else
        sfcpct(istyp01)=sfcpct(istyp01)+w01
      endif
 
-     if ( istyp10 == 2 .and. fice10 < one ) then
+     if ( istyp10 == 2 .and. (fice10 > 0.001_r_kind .and. fice10 < one) ) then
        sfcpct(2)=sfcpct(2)+w10*fice10
        sfcpct(0)=sfcpct(0)+w10*(one-fice10)
-     elseif ( istyp10 == 3 .and. (fice10 > zero .and. fice10 < one) ) then
+     elseif ( istyp10 == 3 .and. (fice10 > 0.001_r_kind .and. fice10 < one) ) then
        sfcpct(3)=sfcpct(3)+w10*fice10
        sfcpct(0)=sfcpct(0)+w10*(one-fice10)
      else
        sfcpct(istyp10)=sfcpct(istyp10)+w10
      endif
 
-     if ( istyp11 == 2 .and. fice11 < one ) then
+     if ( istyp11 == 2 .and. (fice11 > 0.001_r_kind .and. fice11 < one) ) then
        sfcpct(2)=sfcpct(2)+w11*fice11
        sfcpct(0)=sfcpct(0)+w11*(one-fice11)
-     elseif ( istyp11 == 3 .and. (fice11 > zero .and. fice11 < one) ) then
+     elseif ( istyp11 == 3 .and. (fice11 > 0.001_r_kind .and. fice11 < one) ) then
        sfcpct(3)=sfcpct(3)+w10*fice11
        sfcpct(0)=sfcpct(0)+w10*(one-fice11)
      else
@@ -820,10 +820,10 @@ subroutine deter_sfc2(dlat_earth,dlon_earth,obstime,idomsfc,tsavg,ff10,sfcr,zz)
 
      sfcpct = zero
 
-     if ( istyp00 == 2 .and. fice00 < one ) then
+     if ( istyp00 == 2 .and. (fice00 > 0.001_r_kind .and. fice00 < one) ) then
        sfcpct(2)=sfcpct(2)+w00*fice00
        sfcpct(0)=sfcpct(0)+w00*(one-fice00)
-     elseif ( istyp00 == 3 .and. (fice00 > zero .and. fice00 < one) ) then
+     elseif ( istyp00 == 3 .and. (fice00 > 0.001_r_kind .and. fice00 < one) ) then
        sfcpct(3)=sfcpct(3)+w00*fice00
        sfcpct(0)=sfcpct(0)+w00*(one-fice00)
      else
@@ -833,27 +833,27 @@ subroutine deter_sfc2(dlat_earth,dlon_earth,obstime,idomsfc,tsavg,ff10,sfcr,zz)
      if ( istyp01 == 2 .and. fice01 < one ) then
        sfcpct(2)=sfcpct(2)+w01*fice01
        sfcpct(0)=sfcpct(0)+w01*(one-fice01)
-     elseif ( istyp01 == 3 .and. (fice01 > zero .and. fice01 < one) ) then
+     elseif ( istyp01 == 3 .and. (fice01 > 0.001_r_kind .and. fice01 < one) ) then
        sfcpct(3)=sfcpct(3)+w01*fice01
        sfcpct(0)=sfcpct(0)+w01*(one-fice01)
      else
        sfcpct(istyp01)=sfcpct(istyp01)+w01
      endif
 
-     if ( istyp10 == 2 .and. fice10 < one ) then
+     if ( istyp10 == 2 .and. (fice10 > 0.001_r_kind .and. fice10 < one) ) then
        sfcpct(2)=sfcpct(2)+w10*fice10
        sfcpct(0)=sfcpct(0)+w10*(one-fice10)
-     elseif ( istyp10 == 3 .and. (fice10 > zero .and. fice10 < one) ) then
+     elseif ( istyp10 == 3 .and. (fice10 > 0.001_r_kind .and. fice10 < one) ) then
        sfcpct(3)=sfcpct(3)+w10*fice10
        sfcpct(0)=sfcpct(0)+w10*(one-fice10)
      else
        sfcpct(istyp10)=sfcpct(istyp10)+w10
      endif
 
-     if ( istyp11 == 2 .and. fice11 < one ) then
+     if ( istyp11 == 2 .and. (fice11 > 0.001_r_kind .and. fice11 < one) ) then
        sfcpct(2)=sfcpct(2)+w11*fice11
        sfcpct(0)=sfcpct(0)+w11*(one-fice11)
-     elseif ( istyp11 == 3 .and. (fice11 > zero .and. fice11 < one) ) then
+     elseif ( istyp11 == 3 .and. (fice11 > 0.001_r_kind .and. fice11 < one) ) then
        sfcpct(3)=sfcpct(3)+w10*fice11
        sfcpct(0)=sfcpct(0)+w10*(one-fice11)
      else
@@ -1876,7 +1876,7 @@ subroutine accum_sfc(i,j,power,sfc_mdl,sfc_sum)
 
 ! keep track of skin temperature for each surface type
 ! keep count of each surface type
-  if ( mask == 2 .and. ( fice > 0.001_r_kind .and. fice < one) ) then
+  if ( mask == 2 .and. (fice > 0.001_r_kind .and. fice < one) ) then
     sfc_sum%count(2) = sfc_sum%count(2) + power*fice
     sfc_sum%count(0) = sfc_sum%count(0) + power*(one-fice)
     tice=(sfc_mdl%ts-tfrozen*(one-fice))/fice

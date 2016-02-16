@@ -124,7 +124,7 @@ include $(MAKE_CONF)
 #
 #  EXE_FILE_OLD  = global_gsi
 #  EXE_FILE = ../../exec/urma2p5_gsianl
-   EXE_FILE = global_gsi
+   EXE_FILE = global_gsi_crtm_trunk
 
 
 # --------------------

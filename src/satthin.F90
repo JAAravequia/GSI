@@ -36,7 +36,9 @@ module satthin
 !   2012-01-31  hchuang - add read_nemsnst in sub getnst
 !   2012-03-05  akella  - remove create_nst,getnst and destroy_nst; nst fields now handled by gsi_nstcoupler
 !   2015-05-01  li      - modify to use single precision for the variables read from sfc files
-!   2015-11-25  Li      - add to read fice from sfc file to GSI
+!   2015-11-25  Li      - add to read fice from sfc file (in both sfcio & nemsio
+!                         format) to GSI
+!   2015-11-25  Li      - assign fice_full based on isli_full for regional analysis
 !
 ! Subroutines Included:
 !   sub makegvals      - set up for superob weighting
@@ -621,7 +623,7 @@ contains
        end do
 
 ! fice_full: assigned  to be 0 or 1 based on surface mask since no sea ice
-!            concentration infrmation available for resgional model 
+!            concentration information available for resgional model 
        do j = 1, nlon_sfc
           do i = 1, nlat_sfc
              if ( isli_full(i,j) == 2 ) then
