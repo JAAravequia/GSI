@@ -5,12 +5,13 @@
 
 # Specify machine that is being used (Zeus or WCOSS)
 
+platform=$REMOTEHOST
 if [ -d /da ]; then
 #For WCOSS
    export machine="WCOSS"
-elif [ -d /scratch1/portfolios/NCEPDEV/da ]; then
-#For Zeus
-   export machine="Zeus"
+elif [ -d /scratch4/NCEPDEV/da ]; then
+#For Theia
+   export machine="Theia"
 fi
 
 # Variables with the same values are defined below.
@@ -21,19 +22,19 @@ export global_hybrid_T126_adate=2014092912
 export global_enkf_T62_adate=2014092912
 export global_lanczos_T62_adate=2014080400
 export global_nemsio_T62_adate=2013011400
-export nmmb_nems_adate=2009031600
+export nmmb_nems_adate=2015061000
 export arw_binary_adate=2010072412
 export arw_netcdf_adate=2008051112
 export nmm_binary_adate=2010021600
 export nmm_netcdf_adate=2007122000
-export rtma_adate=2011083112
+export rtma_adate=2015030712
 export hwrf_nmm_adate=2012102812
 export JCAP=62
 
 # Set predefined paths and variables here.
 # Note that experiment name is same as that entered in -j option below.
 
-if [[ "$machine" = "Zeus" ]]; then
+if [[ "$machine" = "Theia" ]]; then
 
 #  First, experiment names.
 
@@ -65,10 +66,10 @@ if [[ "$machine" = "Zeus" ]]; then
    export global_nemsio_T62_updat_exp2=global_nemsio_T${JCAP}_hiproc_updat
    export global_nemsio_T62_contrl_exp1=global_nemsio_T${JCAP}_loproc_contrl
    export global_nemsio_T62_contrl_exp2=global_nemsio_T${JCAP}_hiproc_contrl
-   export nmmb_nems_updat_exp1=nmmb_nems_loproc_updat
-   export nmmb_nems_updat_exp2=nmmb_nems_hiproc_updat
-   export nmmb_nems_contrl_exp1=nmmb_nems_loproc_contrl
-   export nmmb_nems_contrl_exp2=nmmb_nems_hiproc_contrl
+   export nmmb_nems_4denvar_updat_exp1=nmmb_nems_4denvar_loproc_updat
+   export nmmb_nems_4denvar_updat_exp2=nmmb_nems_4denvar_hiproc_updat
+   export nmmb_nems_4denvar_contrl_exp1=nmmb_nems_4denvar_loproc_contrl
+   export nmmb_nems_4denvar_contrl_exp2=nmmb_nems_4denvar_hiproc_contrl
    export arw_binary_updat_exp1=arw_binary_loproc_updat
    export arw_binary_updat_exp2=arw_binary_hiproc_updat
    export arw_binary_contrl_exp1=arw_binary_loproc_contrl
@@ -103,54 +104,60 @@ if [[ "$machine" = "Zeus" ]]; then
 
    export group=global
    export queue=batch
-   export basedir=/scratch1/portfolios/NCEPDEV/da/save/$LOGNAME
-   export gsisrc=$basedir/EXP-meta_data-read_files/src
-   export gsiexec_updat=$basedir/EXP-meta_data-read_files/src/global_gsi
+   export basedir=/scratch4/NCEPDEV/da/save/$LOGNAME
+   export gsisrc=$basedir/trunk/src
+   export gsiexec_updat=$basedir/trunk/src/global_gsi
    export gsiexec_contrl=$basedir/svn1/src/global_gsi
-   export enkfexec_updat=$basedir/EXP-meta_data-read_files/src/enkf/global_enkf
+   export enkfexec_updat=$basedir/trunk/src/enkf/global_enkf
    export enkfexec_contrl=$basedir/svn1/src/enkf/global_enkf
-   export fixgsi=$basedir/EXP-meta_data-read_files/fix
-   export scripts=$basedir/EXP-meta_data-read_files/scripts
-   export fixcrtm=/contrib/nceplibs/nwprod/lib/fix/crtm_v2.1.3
-   export tmpdir=/scratch2/portfolios/NCEPDEV/ptmp/$LOGNAME
-   export savdir=/scratch2/portfolios/NCEPDEV/ptmp/$LOGNAME
+   export fixgsi=$basedir/trunk/fix
+   export scripts=$basedir/trunk/scripts
+   export fixcrtm=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix
+   export tmpdir=/scratch4/NCEPDEV/stmp3/$LOGNAME
+   export savdir=/scratch4/NCEPDEV/stmp3/$LOGNAME
+
+#  On Theia, there are no scrubbers to remove old contents from stmp* directories.
+#  After completion of regression tests, will remove the regression test subdirecories
+
+   export clean=.true.
 
 #  Next, paths for canned case data.
 
-   export global_T62_obs=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/$global_T62_adate
-   export global_T62_ges=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/$global_T62_adate
-   export global_4dvar_T62_obs=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/$global_4dvar_T62_adate
-   export global_4dvar_T62_ges=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/$global_4dvar_T62_adate
-   export global_hybrid_T126_datobs=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/$global_hybrid_T126_adate/obs
-   export global_hybrid_T126_datges=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/$global_hybrid_T126_adate/ges
-   export global_enkf_T62_datobs=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/$global_enkf_T62_adate/obs
-   export global_enkf_T62_datges=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/$global_enkf_T62_adate/ges
-   export global_lanczos_T62_obs=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/$global_lanczos_T62_adate
-   export global_lanczos_T62_ges=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/$global_lanczos_T62_adate
-   export global_nemsio_T62_obs=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/$global_nemsio_T62_adate
-   export global_nemsio_T62_ges=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap_nemsio/$global_nemsio_T62_adate
-   export nmmb_nems_obs=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/$nmmb_nems_adate
-   export nmmb_nems_ges=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/$nmmb_nems_adate
-   export arw_binary_obs=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/arw_binary/$arw_binary_adate
-   export arw_binary_ges=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/arw_binary/$arw_binary_adate
-   export arw_netcdf_obs=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/arw_netcdf/$arw_netcdf_adate
-   export arw_netcdf_ges=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/arw_netcdf/$arw_netcdf_adate
-   export nmm_binary_obs=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmm_binary/$nmm_binary_adate
-   export nmm_binary_ges=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmm_binary/$nmm_binary_adate
-   export nmm_netcdf_obs=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmm_netcdf/$nmm_netcdf_adate
-   export nmm_netcdf_ges=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmm_netcdf/$nmm_netcdf_adate
-   export rtma_obs=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/rtma/$rtma_adate
-   export rtma_ges=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/rtma/$rtma_adate
-   export hwrf_nmm_obs=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/hwrf_nmm/$hwrf_nmm_adate
-   export hwrf_nmm_ges=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/hwrf_nmm/$hwrf_nmm_adate
+   export global_T62_obs=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/${global_T62_adate}
+   export global_T62_ges=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/${global_T62_adate}
+   export global_4dvar_T62_obs=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/${global_4dvar_T62_adate}
+   export global_4dvar_T62_ges=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/${global_4dvar_T62_adate}
+   export global_hybrid_T126_datobs=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/${global_hybrid_T126_adate}/obs
+   export global_hybrid_T126_datges=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/${global_hybrid_T126_adate}/ges
+   export global_enkf_T62_datobs=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/${global_enkf_T62_adate}/obs
+   export global_enkf_T62_datges=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/${global_enkf_T62_adate}/ges
+   export global_lanczos_T62_obs=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/${global_lanczos_T62_adate}
+   export global_lanczos_T62_ges=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/${global_lanczos_T62_adate}
+   export global_nemsio_T62_obs=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap/${global_nemsio_T62_adate}
+   export global_nemsio_T62_ges=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/sigmap_nemsio/$global_nemsio_T62_adate
+   export nmmb_nems_4denvar_obs=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/$nmmb_nems_adate
+   export nmmb_nems_4denvar_ges=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/$nmmb_nems_adate
+   export arw_binary_obs=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/arw_binary/$arw_binary_adate
+   export arw_binary_ges=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/arw_binary/$arw_binary_adate
+   export arw_netcdf_obs=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/arw_netcdf/$arw_netcdf_adate
+   export arw_netcdf_ges=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/arw_netcdf/$arw_netcdf_adate
+   export nmm_binary_obs=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmm_binary/$nmm_binary_adate
+   export nmm_binary_ges=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmm_binary/$nmm_binary_adate
+   export nmm_netcdf_obs=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmm_netcdf/$nmm_netcdf_adate
+   export nmm_netcdf_ges=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmm_netcdf/$nmm_netcdf_adate
+   export rtma_obs=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/rtma/$rtma_adate
+   export rtma_ges=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/rtma/$rtma_adate
+   export hwrf_nmm_obs=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/hwrf_nmm/$hwrf_nmm_adate
+   export hwrf_nmm_ges=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/hwrf_nmm/$hwrf_nmm_adate
 
 #  Location of ndate utility, noscrub directory, and account name (accnt = ada by default).
 
-   export ndate=/scratch1/portfolios/NCEPDEV/da/save/Michael.Lueken/nwprod/util/exec/ndate
-   export noscrub=/scratch1/portfolios/NCEPDEV/da/noscrub/$LOGNAME
+   export ndate=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/util/exec/ndate
+   export noscrub=/scratch4/NCEPDEV/da/noscrub/$LOGNAME
    export endianness=Big_Endian
 #  export endianness=Little_Endian - to be used once convert big_endian is removed from Makefile.conf
    export accnt=hybrid
+   export launcher=mpirun
 
 elif [[ "$machine" = "WCOSS" ]]; then
 
@@ -184,10 +191,10 @@ elif [[ "$machine" = "WCOSS" ]]; then
    export global_nemsio_T62_updat_exp2=global_nemsio_T${JCAP}_hiproc_updat
    export global_nemsio_T62_contrl_exp1=global_nemsio_T${JCAP}_loproc_contrl
    export global_nemsio_T62_contrl_exp2=global_nemsio_T${JCAP}_hiproc_contrl
-   export nmmb_nems_updat_exp1=nmmb_nems_loproc_updat
-   export nmmb_nems_updat_exp2=nmmb_nems_hiproc_updat
-   export nmmb_nems_contrl_exp1=nmmb_nems_loproc_contrl
-   export nmmb_nems_contrl_exp2=nmmb_nems_hiproc_contrl
+   export nmmb_nems_4denvar_updat_exp1=nmmb_nems_4denvar_loproc_updat
+   export nmmb_nems_4denvar_updat_exp2=nmmb_nems_4denvar_hiproc_updat
+   export nmmb_nems_4denvar_contrl_exp1=nmmb_nems_4denvar_loproc_contrl
+   export nmmb_nems_4denvar_contrl_exp2=nmmb_nems_4denvar_hiproc_contrl
    export arw_binary_updat_exp1=arw_binary_loproc_updat
    export arw_binary_updat_exp2=arw_binary_hiproc_updat
    export arw_binary_contrl_exp1=arw_binary_loproc_contrl
@@ -230,7 +237,7 @@ elif [[ "$machine" = "WCOSS" ]]; then
    export enkfexec_contrl=$basedir/svn1/src/enkf/global_enkf
    export fixgsi=$basedir/trunk/fix
    export scripts=$basedir/trunk/scripts
-   export fixcrtm=/nwprod/fix/crtm_v2.1.3
+   export fixcrtm=/da/save/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix
    export tmpdir=/ptmpp1/$LOGNAME
    export savdir=/ptmpp1/$LOGNAME
 
@@ -248,8 +255,8 @@ elif [[ "$machine" = "WCOSS" ]]; then
    export global_lanczos_T62_ges=/da/noscrub/Michael.Lueken/CASES/global/sigmap/$global_lanczos_T62_adate
    export global_nemsio_T62_obs=/da/noscrub/Michael.Lueken/CASES/global/sigmap/$global_nemsio_T62_adate
    export global_nemsio_T62_ges=/da/noscrub/Michael.Lueken/CASES/global/sigmap_nemsio/$global_nemsio_T62_adate
-   export nmmb_nems_obs=/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/$nmmb_nems_adate
-   export nmmb_nems_ges=/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/$nmmb_nems_adate
+   export nmmb_nems_4denvar_obs=/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/$nmmb_nems_adate
+   export nmmb_nems_4denvar_ges=/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/$nmmb_nems_adate
    export arw_binary_obs=/da/noscrub/Michael.Lueken/CASES/regional/arw_binary/$arw_binary_adate
    export arw_binary_ges=/da/noscrub/Michael.Lueken/CASES/regional/arw_binary/$arw_binary_adate
    export arw_netcdf_obs=/da/noscrub/Michael.Lueken/CASES/regional/arw_netcdf/$arw_netcdf_adate
@@ -295,7 +302,7 @@ export nmm_binary_regression="nmm_binary_regression_results.$gps_dtype.txt"
 export nmm_netcdf_regression="nmm_netcdf_regression_results.$gps_dtype.txt"
 export arw_binary_regression="arw_binary_regression_results.$gps_dtype.txt"
 export arw_netcdf_regression="arw_netcdf_regression_results.$gps_dtype.txt"
-export nems_nmmb_regression="nems_nmmb_regression_results.$gps_dtype.txt"
+export nems_nmmb_4denvar_regression="nems_nmmb_4denvar_regression_results.$gps_dtype.txt"
 export hwrf_nmm_d2_regression="hwrf_nmm_d2_regression_results.$gps_dtype.txt"
 export hwrf_nmm_d3_regression="hwrf_nmm_d3_regression_results.$gps_dtype.txt"
 

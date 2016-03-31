@@ -27,7 +27,7 @@ savdir=$savdir/out${JCAP}_ozonly/${exp}
 #fixgsi=$fixgsi
 #fixgsi=$basedir/EXP-port/fix
 #fixcrtm=$fixcrtm
-#fixcrtm=$basedir/nwprod/lib/sorc/CRTM_REL-2.1.3/Big_Endian
+#fixcrtm=$basedir/nwprod/lib/sorc/CRTM_REL-2.2.3/Big_Endian
 
 #datobs=$datobs
 #datobs=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/sigmap/$adate
@@ -227,7 +227,7 @@ emiscoef_VISice=$fixcrtm/NPOESS.VISice.EmisCoeff.bin
 emiscoef_VISland=$fixcrtm/NPOESS.VISland.EmisCoeff.bin
 emiscoef_VISsnow=$fixcrtm/NPOESS.VISsnow.EmisCoeff.bin
 emiscoef_VISwater=$fixcrtm/NPOESS.VISwater.EmisCoeff.bin
-emiscoef_MWwater=$fixcrtm/FASTEM5.MWwater.EmisCoeff.bin
+emiscoef_MWwater=$fixcrtm/FASTEM6.MWwater.EmisCoeff.bin
 aercoef=$fixcrtm/AerosolCoeff.bin
 cldcoef=$fixcrtm/CloudCoeff.bin
 satangl=$fixgsi/global_satangbias.txt
@@ -240,6 +240,17 @@ pcpinfo=$fixgsi/global_pcpinfo.txt
 hybens_locinfo=$fixgsi/global_hybens_locinfo.l64.txt
 errtable=$fixgsi/prepobs_errtable.global
 atmsbeaminfo=$fixgsi/atms_beamwidth.txt
+
+### add 9 tables
+errtable_pw=$fixgsi/prepobs_errtable_pw.global
+errtable_ps=$fixgsi/prepobs_errtable_ps.global_nqcf
+errtable_t=$fixgsi/prepobs_errtable_t.global_nqcf
+errtable_q=$fixgsi/prepobs_errtable_q.global_nqcf
+errtable_uv=$fixgsi/prepobs_errtable_uv.global_nqcf
+btable_ps=$fixgsi/nqc_b_ps.global_nqcf
+btable_t=$fixgsi/nqc_b_t.global_nqcf
+btable_q=$fixgsi/nqc_b_q.global_nqcf
+btable_uv=$fixgsi/nqc_b_uv.global_nqcf
 
 # Only need this file for single obs test
 bufrtable=$fixgsi/prepobs_prep.bufrtable
@@ -267,7 +278,7 @@ $ncp $emiscoef_VISice ./NPOESS.VISice.EmisCoeff.bin
 $ncp $emiscoef_VISland ./NPOESS.VISland.EmisCoeff.bin
 $ncp $emiscoef_VISsnow ./NPOESS.VISsnow.EmisCoeff.bin
 $ncp $emiscoef_VISwater ./NPOESS.VISwater.EmisCoeff.bin
-$ncp $emiscoef_MWwater ./FASTEM5.MWwater.EmisCoeff.bin
+$ncp $emiscoef_MWwater ./FASTEM6.MWwater.EmisCoeff.bin
 $ncp $aercoef  ./AerosolCoeff.bin
 $ncp $cldcoef  ./CloudCoeff.bin
 $ncp $satangl  ./satbias_angle
@@ -280,6 +291,17 @@ $ncp $errtable ./errtable
 $ncp $anavinfo ./anavinfo
 $ncp $hybens_locinfo ./hybens_locinfo
 $ncp $atmsbeaminfo ./atms_beamwidth.txt
+#add 9 tables for new varqc
+$ncp $errtable_pw           ./errtable_pw
+$ncp $errtable_ps           ./errtable_ps
+$ncp $errtable_t           ./errtable_t
+$ncp $errtable_q           ./errtable_q
+$ncp $errtable_uv           ./errtable_uv
+$ncp $btable_ps           ./btable_ps
+$ncp $btable_t           ./btable_t
+$ncp $btable_q           ./btable_q
+$ncp $btable_uv           ./btable_uv
+
 
 $ncp $bufrtable ./prepobs_prep.bufrtable
 $ncp $bftab_sst ./bftab_sstphr
@@ -322,25 +344,20 @@ ln -s -f $global_T62_obs/${prefix_obs}osbuv8.${suffix}   ./sbuvbufr
 
 
 # Copy bias correction, atmospheric and surface files
-if [[ "$machine" = "Zeus" ]]; then
-   ln -s -f $global_T62_ges/${prefix_tbc}.abias.orig         ./satbias_in
-   ln -s -f $global_T62_ges/${prefix_tbc}.satang.orig        ./satbias_angle
-else
-   ln -s -f $global_T62_ges/${prefix_tbc}.abias              ./satbias_in
-   ln -s -f $global_T62_ges/${prefix_tbc}.abias_pc           ./satbias_pc
-   ln -s -f $global_T62_ges/${prefix_tbc}.satang             ./satbias_angle
-   ln -s -f $global_T62_ges/${prefix_tbc}.radstat            ./radstat.gdas
+ln -s -f $global_T62_ges/${prefix_tbc}.abias              ./satbias_in
+ln -s -f $global_T62_ges/${prefix_tbc}.abias_pc           ./satbias_pc
+ln -s -f $global_T62_ges/${prefix_tbc}.satang             ./satbias_angle
+ln -s -f $global_T62_ges/${prefix_tbc}.radstat            ./radstat.gdas
 
-   listdiag=`tar xvf radstat.gdas | cut -d' ' -f2 | grep _ges`
-   for type in $listdiag; do
-      diag_file=`echo $type | cut -d',' -f1`
-      fname=`echo $diag_file | cut -d'.' -f1`
-      date=`echo $diag_file | cut -d'.' -f2`
-      $UNCOMPRESS $diag_file
-      fnameanl=$(echo $fname|sed 's/_ges//g')
-      mv $fname.$date $fnameanl
-   done
-fi
+listdiag=`tar xvf radstat.gdas | cut -d' ' -f2 | grep _ges`
+for type in $listdiag; do
+   diag_file=`echo $type | cut -d',' -f1`
+   fname=`echo $diag_file | cut -d'.' -f1`
+   date=`echo $diag_file | cut -d'.' -f2`
+   $UNCOMPRESS $diag_file
+   fnameanl=$(echo $fname|sed 's/_ges//g')
+   mv $fname.$date $fnameanl
+done
 
 if [[ "$endianness" = "Big_Endian" ]]; then
 #  ln -s -f $global_T62_ges/${prefix_sfc}.bf03            ./sfcf03
@@ -363,7 +380,7 @@ elif [[ "$endianness" = "Little_Endian" ]]; then
 fi
 
 # Run gsi under Parallel Operating Environment (poe) on NCEP IBM
-if [[ "$machine" = "Zeus" ]]; then
+if [[ "$machine" = "Theia" ]]; then
 
    cd $tmpdir/
    echo "run gsi now"
@@ -373,11 +390,11 @@ if [[ "$machine" = "Zeus" ]]; then
    export MPI_GROUP_MAX=256
    #export OMP_NUM_THREADS=1
 
-   module load intel
-   module load mpt
+#  module load intel
+#  module load mpt
 
    echo "JOB ID : $PBS_JOBID"
-   eval "mpiexec_mpt -v -np $PBS_NP $tmpdir/gsi.x > stdout"
+   eval "$launcher -v -np $PBS_NP $tmpdir/gsi.x > stdout"
 
 elif [[ "$machine" = "WCOSS" ]]; then
 

@@ -18,13 +18,13 @@
 #   Input script positional parameters:
 #
 #   Imported Shell Variables:
-#     FIXGLOBAL     Directory for global fixed files
+#     FIXgsm        Directory for global fixed files
 #                   defaults to /nwprod/fix
 #     PERTURBDIR    Directory for global enkf perturbation database
 #                   defaults to /nwprod/fix/enkf_gfs
-#     EXECGLOBAL    Directory for global executables
+#     EXECgsm       Directory for global executables
 #                   defaults to /nwprod/exec
-#     USHGLOBAL     Directory for global scripts
+#     USHgsm        Directory for global scripts
 #                   defaults to /nwprod/ush
 #     DATA          working directory
 #                   (if nonexistent will be made, used and deleted)
@@ -43,11 +43,11 @@
 #     NCP           Copy command
 #                   defaults to cp
 #     GETATMENSMEANEXEC   Compute ensemble mean sigma (optonally smoothed)
-#                         defaults to ${EXECGLOBAL}/getsigensmean_smooth$XC
+#                         defaults to ${EXECgsm}/getsigensmean_smooth$XC
 #     ADDERRSPECEXEC Perturb sigma files
-#                    defaults to ${EXECGLOBAL}/adderrspec_nmcmeth_spec$XC
+#                    defaults to ${EXECgsm}/adderrspec_nmcmeth_spec$XC
 #     RECENATMPEXEC  Recenter sigma files
-#                    defaults to ${EXECGLOBAL}/recentersigp$XC
+#                    defaults to ${EXECgsm}/recentersigp$XC
 #     INISCRIPT     Preprocessing script
 #                   defaults to none
 #     LOGSCRIPT     Log posting script
@@ -146,24 +146,25 @@ export machine=$(echo $machine|tr '[a-z]' '[A-Z]')
 #  Command line arguments.
 
 #  Directories.
-export HOMEDIR=${HOMEDIR:-/nwprod}
+export HOMEDIR=${HOMEDIR:-$NWROOT}
 export NWPROD=${NWPROD:-$HOMEDIR}
-export FIXGLOBAL=${FIXGLOBAL:-$NWPROD/fix}
-export EXECGLOBAL=${EXECGLOBAL:-$NWPROD/exec}
-export PERTURBDIR=${PERTURBDIR:-$FIXGLOBAL/enkf_gfs}
-export USHGLOBAL=${USHGLOBAL:-$NWPROD/ush}
+export FIXgsm=${FIXgsm:-$NWPROD/gsm.${gsm_ver}/fix/fix_am}
+export EXECgsm=${EXECgsm:-$NWPROD/gsm.${gsm_ver}/exec}
+export USHgsm=${USHgsm:-$NWPROD/gsm.${gsm_ver}/ush}
+export PERTURBDIR=${PERTURBDIR:-$FIXgsm/enkf_gfs}
 
-export EXECENKF=${EXECENKF:-$NWPROD/enkf.${enkf_ver}/exec} 
+export FIXGLOBAL=$FIXgsm    # $CHGRESSH still references GLOBAL variables
+export EXECGLOBAL=$EXECgsm  # $CHGRESSH still references GLOBAL variables
+export USHGLOBAL=$USHgsm    # $CHGRESSH still references GLOBAL variables
 
-export FIXGSM=${FIXGSM:-$NWPROD/gsm.${gsm_ver}/fix/fix_am} 
-export EXECGSM=${EXECGSM:-$NWPROD/gsm.${gsm_ver}/exec} 
-export USHGSM=${USHGSM:-$NWPROD/gsm.${gsm_ver}/ush} 
-
+export EXECGDAS=${EXECGDAS:-$NWPROD/gdas.${gdas_ver}/exec} 
 
 export utilscript=${utilscript:-$NWPROD/util/ush}
 export DATA=${DATA:-$(pwd)}
 export COMIN=${COMIN:-$(pwd)}
 export COMOUT=${COMOUT:-$(pwd)}
+#  Set script control parameters
+export use_gfs_nemsio=${use_gfs_nemsio:-".false."}   # run script with NEMSIO input/output
 #  Filenames.
 export XC=${XC}
 export PREINP=${PREINP}
@@ -172,20 +173,25 @@ export JCAP_ENKF=${JCAP_ENKF:-254}
 export LEVS_ENKF=${LEVS_ENKF:-64}
 export LONB_ENKF=${LONB_ENKF:-768}
 export LATB_ENKF=${LATB_ENKF:-384}
-export GETATMENSMEANEXEC=${GETATMENSMEANEXEC:-${EXECENKF}/getsigensmean_smooth$XC}
-export ADDERRSPECEXEC=${ADDERRSPECEXEC:-${EXECENKF}/adderrspec_nmcmeth_spec$XC}
-export RECENATMPEXEC=${RECENATMPEXEC:-${EXECENKF}/recentersigp$XC}
-export CHGRESSH=${CHGRESSH:-${USHGSM}/global_chgres.sh}
-export CHGRESEXEC=${CHGRESEXEC-${EXECGSM}/global_chgres}
+export SFCHDR=${SFCHDR:-${EXECgsm}/global_sfchdr$XC}
+export GETATMENSMEANEXEC=${GETATMENSMEANEXEC:-${EXECgdas}/getsigensmean_smooth$XC}
+export ADDERRSPECEXEC=${ADDERRSPECEXEC:-${EXECgdas}/adderrspec_nmcmeth_spec$XC}
+export RECENATMPEXEC=${RECENATMPEXEC:-${EXECgdas}/recentersigp$XC}
+export CHGRESSH=${CHGRESSH:-${USHgsm}/global_chgres.sh}
+export CHGRESEXEC=${CHGRESEXEC-${EXECgsm}/global_chgres}
 export CHGRESVARS_ENKF=${CHGRESVARS_ENKF:-""}
 export NMEM_ENKF=${NMEM_ENKF:-0}
-export SCALEFACT=${SCALEFACT:-05}
+export SCALEFACT=${SCALEFACT:-00}
 export INISCRIPT=${INISCRIPT}
 export ERRSCRIPT=${ERRSCRIPT:-'eval [[ $err = 0 ]]'}
 export LOGSCRIPT=${LOGSCRIPT}
 export ENDSCRIPT=${ENDSCRIPT}
 #  Other variables.
-export CDATE=${CDATE:-$($SFCHDR $SFCGES VDATE||echo 0)}
+if [ $use_gfs_nemsio = .true. ]; then
+  export CDATE=${CDATE:-$($SFCHDR $SFCGES idate | grep -i "idate" |awk -F= '{print $2}')}
+else
+  export CDATE=${CDATE:-$($SFCHDR $SFCGES VDATE||echo 0)}
+fi
 export NDATE=${NDATE:-$NWPROD/util/exec/ndate}
 export GDATE=${GDATE:-($NDATE -06 $CDATE)}
 export NDAYS=${NDAYS:-60}
@@ -213,6 +219,9 @@ export NCP=${NCP:-cp}
 export POE=${POE:-NO}
 export APRUN=${APRUN:-""}
 export NST_GSI=${NST_GSI:-0}
+export use_gfs_nemsio=${use_gfs_nemsio:-".false."}
+export SIGISUF=${SIGISUF:-'siganl'}
+export SFCISUF=${SFCISUF:-'sfcanl'}
 
 if [ $machine = IBMP6 ] ; then
   typeset -L1 l=$PGMOUT
@@ -243,8 +252,8 @@ cd $DATA||exit 99
 ################################################################################
 # Copy input files
 
-export SIGANL_HI=${SIGANL_HI:-siganl.$CDUMP.$CDATE}
-export SFCANL_HI=${SFCANL_HI:-sfcanl.$CDUMP.$CDATE}
+export SIGANL_HI=${SIGANL_HI:-$SIGISUF.$CDUMP.$CDATE}
+export SFCANL_HI=${SFCANL_HI:-$SFCISUF.$CDUMP.$CDATE}
 export SIGGES=${SIGGES:-sfg_${GDATE}_fhr06_ensmean}
 
 if [[ $FILESTYLE = 'C' ]]; then
@@ -349,23 +358,22 @@ if [[ $SCALEFACT -gt 0 ]]; then
     $NCP dates_ran.dat $PERTDATES
  fi
 
-fi
-
-################################################################################
 # Compute mean for perturbed and recentered ensemble analysis members
-export DATAPATH2=./
-export FILENAMEOUT=sanlpr_${CDATE}_ensmean
-export FILEPREFIX=sanlpr_${CDATE}
-export NANALS=$NMEM_ENKF
-rm stdout.sanlpr_ensmean
-eval "$APRUN $GETATMENSMEANEXEC $DATAPATH2 $FILENAMEOUT $FILEPREFIX $NANALS > stdout.sanlpr_ensmean"
-rc=$?
+ export DATAPATH2=./
+ export FILENAMEOUT=sanlpr_${CDATE}_ensmean
+ export FILEPREFIX=sanlpr_${CDATE}
+ export NANALS=$NMEM_ENKF
+ rm stdout.sanlpr_ensmean
+ eval "$APRUN $GETATMENSMEANEXEC $DATAPATH2 $FILENAMEOUT $FILEPREFIX $NANALS > stdout.sanlpr_ensmean"
+ rc=$?
 
-export ERR=$rc
-export err=$ERR
-$ERRSCRIPT||exit 2
+ export ERR=$rc
+ export err=$ERR
+ $ERRSCRIPT||exit 2
 
-cat stdout.sanlpr_ensmean
+ cat stdout.sanlpr_ensmean
+
+fi
 
 
 ################################################################################
@@ -376,6 +384,9 @@ export SIGI=sanl_${CDATE}_highres
 export SFCI=sfcanl_${CDATE}_highres
 export SIGO=sanl_${CDATE}_hybrid_lores
 export SFCO=sfcanl_${CDATE}_hybrid_lores
+if [ $use_gfs_nemsio = .true. ]; then
+   export GFSOUT=$SIGO
+fi
 rm -f $SIGO
 rm -f $SFCO
 
@@ -383,7 +394,7 @@ export JCAP_ens=$JCAP_ENKF
 export LEVS_ens=$LEVS_ENKF
 export LONB_ens=$LONB_ENKF
 export LATB_ens=$LATB_ENKF
-export OUTTYP=2
+export OUTTYP=${OUTTYP:-2}
 export PGMOUT=stdout.chgres
 export PGMERR=stderr.chgres
 
@@ -479,7 +490,7 @@ fi
 ################################################################################
 if [ $NST_GSI -gt 0 ]; then
 
-   export DTSINC_ENS=${DTSINC_ENS:-${COMIN}/dtsinc_ens_${CDATE}}
+   export DTFANL=${DTFANL:-${COMIN}/dtfanl_${CDUMP}_${CDATE}}
    export NSTGES_ENS=${NSTGES_ENS:-${COMIN}/nfg_${GDATE}_fhr06}
    export SFCGES_ENS=${SFCGES_ENS:-${COMIN}/bfg_${GDATE}_fhr06}
    export SFCGCY_ENS=${SFCGCY_ENS:-${COMIN}/sfcgcy_${CDATE}}
@@ -487,7 +498,7 @@ if [ $NST_GSI -gt 0 ]; then
    export SFCANL_ENS=${SFCANL_ENS:-${COMOUT}/sfcanl_${CDATE}}
 
 
-   $FCPLN $DTSINC_ENS dtsinc_ens
+   $FCPLN $DTFANL dtfanl
    imem=1
    while [[ $imem -le $NMEM_ENKF ]]; do
      member="_mem"`printf %03i $imem`
@@ -513,12 +524,14 @@ if [ $NST_GSI -gt 0 ]; then
       done
    fi
 
+   echo 'ZSEA1, ZSEA1 : ' $ZSEA1, $ZSEA2
+
    rm stdout_recenter_sfcnstupd
    if [[ "$POE" = "YES" ]]; then
-      poe $GETSFCNSTENSUPDEXEC $NANALS $NST_GSI > stdout_recenter_sfcnstupd
+      poe $GETSFCNSTENSUPDEXEC $NANALS $NST_GSI $ZSEA1 $ZSEA2 > stdout_recenter_sfcnstupd
       rc=$?
    else
-      eval "$APRUN $GETSFCNSTENSUPDEXEC $NANALS $NST_GSI > stdout_recenter_sfcnstupd"
+      eval "$APRUN $GETSFCNSTENSUPDEXEC $NANALS $NST_GSI $ZSEA1 $ZSEA2 > stdout_recenter_sfcnstupd"
       rc=$?
    fi
 
