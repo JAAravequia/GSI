@@ -90,6 +90,7 @@ module qcmod
 !    following used for nonlinear qc:
 !
 !   def nlnqc_iter   - logical flag (T=nonlinear qc on, F=nonlinear qc off) for iteration
+!   def njqc -  logical flag (T=Purse's nonlinear qc on, F=off)
 !
 !   def noiqc        - logic flag for oiqc, noiqc='false' with oiqc on
 !
@@ -133,7 +134,7 @@ module qcmod
   public :: qc_amsr2
   public :: qc_saphir
 ! set passed variables to public
-  public :: npres_print,nlnqc_iter,varqc_iter,pbot,ptop,c_varqc
+  public :: npres_print,nlnqc_iter,varqc_iter,pbot,ptop,c_varqc,njqc,vqc
   public :: use_poq7,noiqc,vadfile,dfact1,dfact,erradar_inflate,tdrgross_fact
   public :: pboto3,ptopo3,pbotq,ptopq,newvad,tdrerr_inflate
   public :: igood_qc,ifail_crtm_qc,ifail_satinfo_qc,ifail_interchan_qc,&
@@ -141,7 +142,7 @@ module qcmod
 
   public :: buddycheck_t,buddydiag_save
 
-  logical nlnqc_iter
+  logical nlnqc_iter,njqc,vqc
   logical noiqc
   logical use_poq7
   logical qc_noirjaco3
@@ -317,6 +318,8 @@ contains
 
     nlnqc_iter= .false.
     noiqc = .false.
+    njqc=.false.
+    vqc=.false.
     c_varqc=one
 
     vadfile='none'
@@ -1483,6 +1486,14 @@ subroutine qc_amsr2(nchanl,sfchgt,luse,sea, &
 !   Calculations for ch 3,4,5
     nch_emrgr = 14
     idxch_emrgr = (/1,2,3,4,5,6,7,8,9,10,11,12,13,14/)
+
+    ! Brightness temperatures used for training emissivity retrievals were
+    ! simulated from ECMWF fields collocated with AMSR2 observations. The
+    ! retrievals
+    ! here use actual GMI brightness temperatures, so for best results, a
+    ! "systematic bias" (i.e. an average difference between AMSR2 brightness
+    ! temperatures and those simulated from ECMWF fields) is removed from AMSR2
+    ! brightness temperatures prior to performing retrievals
 
     ! systematic bias
     sys_bias= (/ 0.4800_r_kind, 3.0737_r_kind, 0.7433_r_kind, 3.6430_r_kind,&

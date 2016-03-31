@@ -747,6 +747,13 @@ subroutine retrieval_gmi(tb,nchanl,clw,gwp,kraintype,ierr)
   kraintype = 0
   ierr = 0
 
+  ! Brightness temperatures used for training CLW and GWP retrievals were
+  ! simulated from ECMWF fields collocated with GMI observations. The retrievals
+  ! here use actual GMI brightness temperatures, so for best results, a
+  ! "systematic bias" (i.e. an average difference between GMI brightness
+  ! temperatures and those simulated from ECMWF fields) is removed from GMI
+  ! brightness temperatures prior to performing retrievals
+
   ! systematic bias
   sys_bias= (/ 1.7942_r_kind, 1.7793_r_kind, 3.7619_r_kind, 2.9459_r_kind,&
                1.8344_r_kind, 0.5227_r_kind, 0.1192_r_kind, 1.2375_r_kind,&
@@ -927,6 +934,13 @@ subroutine retrieval_amsr2(tb,nchanl,clw,kraintype,ierr)
   tb6v=tb(1); tb6h=tb(2); tb7v=tb(3); tb7h=tb(4); tb10v=tb(5); tb10h=tb(6)
   tb18v=tb(7); tb18h=tb(8); tb23v=tb(9); tb23h=tb(10); tb36v=tb(11)
   tb36h=tb(12); tb89v=tb(13); tb89h=tb(14)
+
+  ! Brightness temperatures used for training CLW retrievals were
+  ! simulated from ECMWF fields collocated with AMSR2 observations. The retrievals
+  ! here use actual AMSR2 brightness temperatures, so for best results, a
+  ! "systematic bias" (i.e. an average difference between AMSR2 brightness
+  ! temperatures and those simulated from ECMWF fields) is removed from AMSR2
+  ! brightness temperatures prior to performing retrievals
 
   ! systematic bias
   sys_bias= (/ 0.4800_r_kind, 3.0737_r_kind, 0.7433_r_kind, 3.6430_r_kind,&

@@ -1,0 +1,10 @@
+        !COMPILER-GENERATED INTERFACE MODULE: Thu Mar 31 19:35:36 2016
+        MODULE FFTPACK_RFFTF__genmod
+          INTERFACE 
+            SUBROUTINE FFTPACK_RFFTF(N,R,WSAVE)
+              INTEGER(KIND=4) :: N
+              REAL(KIND=4) :: R(N)
+              REAL(KIND=4) :: WSAVE(2*N+15)
+            END SUBROUTINE FFTPACK_RFFTF
+          END INTERFACE 
+        END MODULE FFTPACK_RFFTF__genmod

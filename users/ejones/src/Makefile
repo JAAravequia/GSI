@@ -121,7 +121,10 @@ include $(MAKE_CONF)
 # Load module
 # -----------
 
-  EXE_FILE = global_gsi
+#
+#  EXE_FILE_OLD  = global_gsi
+#  EXE_FILE = ../../exec/urma2p5_gsianl
+   EXE_FILE = global_gsi
 
 
 # --------------------
@@ -238,7 +241,16 @@ clean:
 	control2model.f90 \
 	control2state.f90 \
 	control_vectors.f90 \
-	converr.f90 \
+        converr.f90 \
+        converr_ps.f90 \
+        converr_q.f90 \
+        converr_t.f90 \
+        converr_uv.f90 \
+        converr_pw.f90 \
+        convb_ps.f90 \
+        convb_q.f90 \
+        convb_t.f90 \
+        convb_uv.f90 \
 	convinfo.f90 \
 	convthin.f90 \
 	convthin_time.f90 \
@@ -334,6 +346,7 @@ clean:
 	intpblh.f90 \
 	intpcp.f90 \
 	intpm2_5.f90 \
+        intpm10.f90 \
 	intpmsl.f90 \
 	intps.f90 \
 	intpw.f90 \
@@ -437,6 +450,7 @@ clean:
 	read_files.f90 \
 	read_gfs_ozone_for_regional.f90 \
 	read_guess.F90 \
+        read_mitm_mxtm.f90 \
 	read_obsdiags.F90 \
 	read_wrf_mass_files.F90 \
 	read_wrf_mass_guess.F90 \
@@ -451,6 +465,7 @@ clean:
 	set_crtm_aerosolmod.f90 \
 	set_crtm_cloudmod.f90 \
         setupaod.f90 \
+        setuppm10.f90 \
 	setupyobs.f90 \
 	sfc_model.f90 \
 	sfcobsqc.f90 \
@@ -472,6 +487,7 @@ clean:
 	statsrad.f90 \
 	stop1.f90 \
 	stp3dvar.f90 \
+        stpaod.f90 \
 	stpcalc.f90 \
 	stpco.f90 \
 	stpdw.f90 \
@@ -485,6 +501,7 @@ clean:
 	stppblh.f90 \
 	stppcp.f90 \
 	stppm2_5.f90 \
+	stppm10.f90 \
 	stppmsl.f90 \
 	stpmitm.f90 \
 	stpmxtm.f90 \
