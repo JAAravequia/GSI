@@ -34,7 +34,7 @@
   use mpimod, only: npe,mpi_comm_world,ierror,mype
   use radinfo, only: retrieval,diag_rad,init_rad,init_rad_vars,adp_anglebc,angord,upd_pred,&
                        biaspredvar,use_edges,passive_bc,newpc4pred,final_rad_vars,emiss_bc,&
-                       ssmis_method,ssmis_precond
+                       ssmis_method,ssmis_precond,gmi_method,amsr2_method
   use radinfo, only: nst_gsi,nstinfo,zsea1,zsea2,fac_dtl,fac_tsl,nst_tzr,tzr_bufrsave
   use radinfo, only: crtm_coeffs_path
   use ozinfo, only: diag_ozone,init_oz
@@ -307,6 +307,8 @@
 !                              rapidrefresh_cldsurf
 !  03-01-2015 Li        add zsea1 & zsea2 to namelist for vertical mean temperature based on NSST T-Profile
 !  05-13-2015 wu        remove check to turn off regional 4densvar
+!  03-10-2016 ejones    add control for gmi noise reduction
+!  03-25-2016 ejones    add control for amsr2 noise reduction
 !
 !EOP
 !-------------------------------------------------------------------------
@@ -470,6 +472,8 @@
 !
 !     ssmis_method - choose method for SSMIS noise reduction 0=no smoothing 1=default
 !     ssmis_precond - weighting factor for SSMIS preconditioning (if not using newpc4pred)
+!     gmi_method - choose method for GMI noise reduction. 0=no smoothing, 4=default
+!     amsr2_method - choose method for AMSR2 noise reduction. 0=no smoothing, 5=default
 !     R_option   - Option to use variable correlation length for lcbas based on data
 !                    density - follows Hayden and Purser (1995) (twodvar_regional only)
 !     thin4d - if true, removes thinning of observations due to the location in
@@ -496,7 +500,7 @@
        perturb_obs,perturb_fact,oberror_tune,preserve_restart_date, &
        crtm_coeffs_path,berror_stats, &
        newpc4pred,adp_anglebc,angord,passive_bc,use_edges,emiss_bc,upd_pred, &
-       ssmis_method, ssmis_precond, &
+       ssmis_method, ssmis_precond, gmi_method, amsr2_method, &
        lobsdiagsave, &
        l4dvar,lbicg,lsqrtb,lcongrad,lbfgsmin,ltlint,nhr_obsbin,nhr_subwin,&
        nwrvecs,iorthomax,ladtest,ladtest_obs, lgrtest,lobskeep,lsensrecompute,jsiga,ltcost, &
