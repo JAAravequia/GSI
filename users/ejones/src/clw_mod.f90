@@ -698,6 +698,8 @@ subroutine retrieval_gmi(tb,nchanl,clw,gwp,kraintype,ierr)
 !   2014-11-15  ejones
 !   2015-02-13  ejones - set clw high over swath1 edges so these points can be
 !                        reliably filtered out in QC
+!   2015-07-15  ejones - add systematic "bias correction" to GMI TBs prior to
+!                        retrievals
 !
 !   input argument list:
 !     tb      - Observed brightness temperature [K]
