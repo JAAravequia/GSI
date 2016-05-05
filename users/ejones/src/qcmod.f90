@@ -216,6 +216,8 @@ module qcmod
   integer(i_kind),parameter:: ifail_scanedge_qc=51
 !  Reject S1 swath edges
   integer(i_kind),parameter:: ifail_gmi_swathedge_qc=52
+!  Reject if latitude is outside of 55N - 55S
+  integer(i_kind),parameter:: ifail_lat_qc=53
 
 ! QC_AMSR2 failures
 !  Reject due to krain type not equal to 0 in subroutine qc_amsr2
@@ -1097,7 +1099,7 @@ subroutine qc_ssmi(nchanl,nsig,ich,sfchgt,luse,sea,mixed, &
   return
 end subroutine qc_ssmi
 
-subroutine qc_gmi(nchanl,sfchgt,luse,sea, &
+subroutine qc_gmi(nchanl,sfchgt,luse,sea,slats, &
      kraintype,clw,tsavg5,tbobs,gmi,varinv,aivals,id_qc)
 !$$$ subprogram documentation block
 !               .      .    .
@@ -1113,12 +1115,14 @@ subroutine qc_gmi(nchanl,sfchgt,luse,sea, &
 !     2015-01-16  ejones  - copied and modified qc_ssmi
 !     2015-02-13  ejones  - added swath edge check
 !     2015-02-17  ejones  - added emissivity regression and check
+!     2016-05-05  ejones  - added check for latitudes above/below 55N/S
 !
 ! input argument list:
 !     nchanl       - number of channels per obs
 !     sfchgt  - surface height (not use now)
 !     luse    - logical use flag
 !     sea     - logical, sea flag
+!     slats   - latitude of observation
 !     kraintype - [0]no rain, [others]rain ; see retrieval_mi
 !     clw     - retrieve clw [kg/m2]
 !     tsavg5       - surface skin temperature
@@ -1148,6 +1152,7 @@ subroutine qc_gmi(nchanl,sfchgt,luse,sea, &
   logical                          ,intent(in   ) :: gmi
 
   real(r_kind)                     ,intent(in   ) :: sfchgt,clw,tsavg5
+  real(r_kind)                     ,intent(in   ) :: slats
   real(r_kind)   ,dimension(nchanl),intent(in   ) :: tbobs
 
   real(r_kind)   ,dimension(nchanl),intent(inout) :: varinv
@@ -1284,6 +1289,14 @@ subroutine qc_gmi(nchanl,sfchgt,luse,sea, &
        end do
     end if
 
+    ! check latitude. If obs is south of 55S or north of 55N, don't use it; it
+    ! may be affected by sea ice.
+    if (abs(slats)>55.0_r_kind) then
+       do i=1,13
+          varinv(1:13)=zero
+          if (id_qc(i) == igood_qc) id_qc(i)=ifail_lat_qc
+       end do
+    end if
 
 !    Use data not over over sea
   else  !land,sea ice,mixed
@@ -1486,10 +1499,9 @@ subroutine qc_amsr2(nchanl,sfchgt,luse,sea, &
 !   Calculations for ch 3,4,5
     nch_emrgr = 14
     idxch_emrgr = (/1,2,3,4,5,6,7,8,9,10,11,12,13,14/)
-
+ 
     ! Brightness temperatures used for training emissivity retrievals were
-    ! simulated from ECMWF fields collocated with AMSR2 observations. The
-    ! retrievals
+    ! simulated from ECMWF fields collocated with AMSR2 observations. The retrievals
     ! here use actual GMI brightness temperatures, so for best results, a
     ! "systematic bias" (i.e. an average difference between AMSR2 brightness
     ! temperatures and those simulated from ECMWF fields) is removed from AMSR2

@@ -18,8 +18,8 @@ subroutine read_amsr2(mype,val_amsr2,ithin,rmesh,gstime,&
 !   2015-09-30  ejones   - modify solar angle info passed for calculating
 !                          sunglint in QC routine, get rid of old sun glint calc
 !   2016-03-21  ejones   - add spatial averaging capability (use SSMI/S spatial averaging)
-!   2016-04-29  ejones   - remove isfcalc; no procedure exists for AMSR2.
-! 
+!   2016-05-05  ejones   - remove isfcalc; no procedure exists for this for
+!                          AMSR2
 ! 
 !
 ! input argument list:
@@ -103,20 +103,21 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   integer(i_kind)   :: idate
   integer(i_kind)   :: idate5(5)
   integer(i_kind)   :: nmind
-  real(r_kind)      :: sstime, tdiff   
+  real(r_kind)      :: sstime, tdiff   !t4dv
 
 ! Other work variables
   logical           :: outside,iuse,assim
   logical           :: do_noise_reduction
   integer(i_kind)   :: nreal, kidsat
   integer(i_kind)   :: itx, nele, itt, k
-  integer(i_kind)   :: ilat, ilon   
+  integer(i_kind)   :: ilat, ilon   !ifov
   integer(i_kind)   :: i, l, n
   integer(i_kind),dimension(n_amsrch) :: kchamsr2
   integer(i_kind)   :: npos_bin
   real(r_kind)     :: sfcr
   real(r_kind)     :: dlon, dlat
-  real(r_kind)     :: timedif, pred, dist1   
+!  real(r_kind)     :: dlon_earth,dlat_earth
+  real(r_kind)     :: timedif, pred, dist1   !crit1
   real(r_kind),allocatable,dimension(:,:):: data_all
   integer(i_kind),allocatable,dimension(:)::nrec
   integer(i_kind):: irec,next
@@ -135,7 +136,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
 
   logical :: valid
 
-  real(r_kind) :: expansion  
+  real(r_kind) :: expansion   
 
   real(r_kind),allocatable        :: relative_time_in_seconds(:)
 
@@ -366,12 +367,12 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
         endif
       
 !    If regional, map obs lat,lon to rotated grid.
-        dlat_earth = clath 
-        dlon_earth = clonh
+        dlat_earth = clath !* deg2rad
+        dlon_earth = clonh !* deg2rad
 
         crit1 = 0.01_r_kind+timedif
 
-!       Retrieve bufr 3/4 : get amsrchan (chnm,tbb)
+!!       Retrieve bufr 3/4 : get amsrchan (chnm,tbb)
         call ufbrep(lnbufr,amsrchan_d,3,14,iret,'SCCF ACQF TMBR')   
 
 !       Set check for TBs outside of limits
@@ -415,6 +416,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
 !    Check observational info 
 
         if( sun_el_ang < -180._r_kind .or. sun_el_ang > 180._r_kind )then
+!        if( sun_el_ang < -90._r_kind .or. sun_el_ang > 90._r_kind )then
            write(6,*)'READ_AMSR2:  ### ERROR IN READING BUFR DATA:', &
               ' STRANGE OBS INFO(FOV,SOLAZI,SOEL):', ifov, sun_az_ang, sun_el_ang
            cycle read_loop       
