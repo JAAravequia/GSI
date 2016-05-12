@@ -1099,7 +1099,7 @@ subroutine qc_ssmi(nchanl,nsig,ich,sfchgt,luse,sea,mixed, &
   return
 end subroutine qc_ssmi
 
-subroutine qc_gmi(nchanl,sfchgt,luse,sea,slats, &
+subroutine qc_gmi(nchanl,sfchgt,luse,sea,cenlat, &
      kraintype,clw,tsavg5,tbobs,gmi,varinv,aivals,id_qc)
 !$$$ subprogram documentation block
 !               .      .    .
@@ -1122,7 +1122,7 @@ subroutine qc_gmi(nchanl,sfchgt,luse,sea,slats, &
 !     sfchgt  - surface height (not use now)
 !     luse    - logical use flag
 !     sea     - logical, sea flag
-!     slats   - latitude of observation
+!     cenlat   - latitude of observation
 !     kraintype - [0]no rain, [others]rain ; see retrieval_mi
 !     clw     - retrieve clw [kg/m2]
 !     tsavg5       - surface skin temperature
@@ -1152,7 +1152,7 @@ subroutine qc_gmi(nchanl,sfchgt,luse,sea,slats, &
   logical                          ,intent(in   ) :: gmi
 
   real(r_kind)                     ,intent(in   ) :: sfchgt,clw,tsavg5
-  real(r_kind)                     ,intent(in   ) :: slats
+  real(r_kind)                     ,intent(in   ) :: cenlat
   real(r_kind)   ,dimension(nchanl),intent(in   ) :: tbobs
 
   real(r_kind)   ,dimension(nchanl),intent(inout) :: varinv
@@ -1291,7 +1291,7 @@ subroutine qc_gmi(nchanl,sfchgt,luse,sea,slats, &
 
     ! check latitude. If obs is south of 55S or north of 55N, don't use it; it
     ! may be affected by sea ice.
-    if (abs(slats)>55.0_r_kind) then
+    if (abs(cenlat)>55.0_r_kind) then
        do i=1,13
           varinv(1:13)=zero
           if (id_qc(i) == igood_qc) id_qc(i)=ifail_lat_qc

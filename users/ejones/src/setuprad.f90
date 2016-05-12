@@ -1250,7 +1250,7 @@
 ! remove some data near the scan edge
            if(data_s(32,n) > 0_i_kind) id_qc(1:nchanl) = ifail_scanedge_qc
 
-           call qc_gmi(nchanl,zsges,luse(n),sea,slats, &
+           call qc_gmi(nchanl,zsges,luse(n),sea,cenlat, &
               kraintype,clw_obs,tsavg5,tb_obs,gmi,varinv,aivals(1,is),id_qc)
 
 !  ---------- SAPHIR -----------------
