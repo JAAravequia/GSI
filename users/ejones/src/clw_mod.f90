@@ -700,6 +700,7 @@ subroutine retrieval_gmi(tb,nchanl,clw,gwp,kraintype,ierr)
 !                        reliably filtered out in QC
 !   2015-07-15  ejones - add systematic "bias correction" to GMI TBs prior to
 !                        retrievals
+!   2016-06-06  ejones - remove unused pred_var_gwp value
 !
 !   input argument list:
 !     tb      - Observed brightness temperature [K]
@@ -738,7 +739,7 @@ subroutine retrieval_gmi(tb,nchanl,clw,gwp,kraintype,ierr)
   integer(i_kind)::tb_index(9)
   integer(i_kind)::nchan_reg,nvar_clw,nvar_gwp
   real(r_kind)::regr_coeff_clw(11),pred_var_clw(2)
-  real(r_kind)::regr_coeff_gwp(10),pred_var_gwp(2)
+  real(r_kind)::regr_coeff_gwp(10),pred_var_gwp
   real(r_kind)::sys_bias(13),tb_use(13)
   real(r_kind)::a0_clw,a0_gwp
 !  real(r_kind)::tb10v,tb10h,tb18v,tb18h,tb23v,tb37v,tb37h,tb89v,tb89h,tb166v,tb166h,tb183v,tb183h
@@ -794,8 +795,7 @@ subroutine retrieval_gmi(tb,nchanl,clw,gwp,kraintype,ierr)
   pred_var_clw(1) = log(tb_use(3)-tb_use(4))  !(tb18v - tb18h)
   pred_var_clw(2) = log(tb_use(6)-tb_use(7))   !(tb37v - tb37h)
 
-  pred_var_gwp(1) = 300.0_r_kind-log(tb_use(10))   !(tb166v)
-  pred_var_gwp(2) = 300.0_r_kind-log(tb_use(12))   !(tb183v)
+  pred_var_gwp = 300.0_r_kind-log(tb_use(12))   !(tb183v)
 
 ! ---------- Gross check ------------------------------------
 ! Gross error check on all channels.  If there are any
@@ -856,7 +856,7 @@ subroutine retrieval_gmi(tb,nchanl,clw,gwp,kraintype,ierr)
   ! weight by non-spectral independent variables
   if ( nvar_gwp > nchan_reg ) then
     do i=1,diff_var
-      gwp = gwp + ( pred_var_gwp(i) * regr_coeff_gwp(i+nchan_reg) )
+      gwp = gwp + ( pred_var_gwp * regr_coeff_gwp(i+nchan_reg) )
     enddo
   endif
 
