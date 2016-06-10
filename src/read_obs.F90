@@ -598,6 +598,7 @@ subroutine read_obs(ndata,mype)
 !                        surface fields (use_sfc = .true. for data type of sst),
 !                        to use deter_sfc in read_nsstbufr.f90)
 !   2015-08-12  pondeca - add capability to read min/maxT obs from ascii file
+!   2015-10-21  lippi   - Add call to read l2rw processed  
 !   
 !
 !   input argument list:
@@ -649,6 +650,7 @@ subroutine read_obs(ndata,mype)
     use gsi_nstcouplermod, only: gsi_nstcoupler_set,gsi_nstcoupler_final
     use gsi_io, only: mype_io
     use rapidrefresh_cldsurf_mod, only: i_gsdcldanal_type
+    use read_l2bufr_mod, only: read_l2rw_processed
 
     use m_extOzone, only: is_extOzone
     use m_extOzone, only: extOzone_read
@@ -1336,10 +1338,16 @@ subroutine read_obs(ndata,mype)
 
 !            Process radar winds
              else if (obstype == 'rw') then
-                call read_radar(nread,npuse,nouse,infile,lunout,obstype,twind,sis,&
-                                hgtl_full,nobs_sub1(1,i))
-                string='READ_RADAR'
-
+                if (dsis(i) == 'rw') then
+                   call read_radar(nread,npuse,nouse,infile,lunout,obstype,twind,sis,&
+                                   hgtl_full,nobs_sub1(1,i))
+                   string='READ_RADAR'
+!            Process level 2 radar wind only without vad qc checks.
+                else if (dsis(i) == 'l2rw') then
+                   call read_l2rw_processed(nread,npuse,nouse,infile,lunout,obstype,& 
+                                            twind,sis,hgtl_full,nobs_sub1(1,i)) 
+                   string='READ_L2RW_PROCESSED'
+                end if
 !            Process lagrangian data
              else if (obstype == 'lag') then
                 call read_lag(nread,npuse,nouse,infile,lunout,obstype,&
