@@ -636,6 +636,8 @@ contains
 	  this_staid=master_stn_table(krad)
 	  this_stahgt=master_hgt_table(krad)
 	  do iii=1,nthisrad
+          ! single radar location ob test
+          if(this_staid=='KGRK') then
 	     if(ibins2(iii,krad) < minnum) cycle
 
 	     thiscount=one_quad/real(ibins2(iii,krad),r_quad)
@@ -718,11 +720,39 @@ contains
                   abs(corrected_azimuth-thisazimuth     ),&
                   abs(corrected_azimuth-thisazimuth+r360),&
                   abs(corrected_azimuth-thisazimuth+r720)),delazmmax)
+             !!lippi single radar ob test
+             if(nsuper < 1 .and. .true.) then
+                this_staid='KGRK'
+                this_stalat=30.7200000000000
+                this_stalon=-97.3800000000000
+                this_stahgt=179.000000000000
+                thistime=9.074074074074078E-003
+                thislat=31.1513910032159
+                thislon=-97.4782013414109
+                thishgt=1070.20676506144
+                thisvr=23.77+2.
+                corrected_azimuth=101.073817562754
+                thiserr=1.0
+                corrected_tilt=1.20962249451990
+                gamma=48866.6718242868
+        !         if(corrected_tilt > 0 .and. corrected_tilt < 1.1 .and.
+        !         corrected_azimuth > 100.0 &
+        !            .and. corrected_azimuth < 105.0) then
 
-             write(inbufr) this_staid,this_stalat,this_stalon,this_stahgt, &
-                  thistime,thislat,thislon,thishgt,thisvr,corrected_azimuth,&
-                  thiserr,corrected_tilt
-             nsuper=nsuper+1
+                write(inbufr) this_staid,this_stalat,this_stalon,this_stahgt, &
+                     thistime,thislat,thislon,thishgt,thisvr,corrected_azimuth,&
+                     thiserr,corrected_tilt
+                    if(.true.) then ! if true, print the value of the single ob.
+                       write(6,*) 'single radar observation test values of observation.'
+                       write(6,*) this_staid,this_stalat,this_stalon,this_stahgt, &
+                                  thistime,thislat,thislon,thishgt,thisvr,&
+                                  corrected_azimuth,thiserr,corrected_tilt,gamma 
+                       write(6,*)'-----------------------------------------------'
+                    end if
+                nsuper=nsuper+1
+        !        end if
+             end if ! end of single observation test from a single radar.
+          end if ! end of single radar location test.
           end do
           if(nsuper > 0)then
             write(6,*)' for radar ',this_staid,' nsuper=',nsuper,' delazmmax=',delazmmax
