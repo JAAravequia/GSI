@@ -166,6 +166,8 @@
 !   2015-03-23  zaizhong ma - add Himawari-8 ahi
 !   2015-03-31  zhu     - move cloudy AMSUA radiance observation error adjustment to qcmod.f90;
 !                         change quality control interface for AMSUA and ATMS.
+!   2015-09-30  ejones  - Pull AMSR2 sun azimuth and sun zenith angles for passing to quality control,
+!                         modify qc_amsr2 function call
 !
 !  input argument list:
 !     lunin   - unit from which to read radiance (brightness temperature, tb) obs
@@ -205,7 +207,7 @@
       dirname,time_offset,lwrite_predterms,lwrite_peakwt,reduce_diag
   use obsmod, only: rad_ob_type
   use obsmod, only: obs_diag,luse_obsdiag,dval_use
-  use gsi_4dvar, only: nobs_bins,hr_obsbin
+  use gsi_4dvar, only: nobs_bins,hr_obsbin,l4dvar
   use gridmod, only: nsig,regional,get_ij
   use satthin, only: super_val1
   use constants, only: quarter,half,tiny_r_kind,zero,one,deg2rad,rad2deg,one_tenth, &
@@ -777,7 +779,7 @@
                 tvp,qvp,clw_guess,prsltmp,prsitmp, &
                 trop5,tzbgr,dtsavg,sfc_speed, &
                 tsim,emissivity,ptau5,ts,emissivity_k, &
-                temp,wmix,jacobian,error_status,tsim_clr)
+                temp,wmix,jacobian,error_status,tsim_clr=tsim_clr)
         else
            call call_crtm(obstype,dtime,data_s(1,n),nchanl,nreal,ich, &
                 tvp,qvp,clw_guess,prsltmp,prsitmp, &
@@ -1234,10 +1236,12 @@
 !       AMSR2 Q C
 
         else if (amsr2) then
+  
+           sun_azimuth=data_s(isazi_ang,n)
+           sun_zenith=data_s(iszen_ang,n)
 
-           call qc_amsr2(nchanl,zsges,luse(n),sea, &
-              kraintype,clw_obs,amsr2,varinv,aivals(1,is),id_qc)
-
+          call qc_amsr2(nchanl,zsges,luse(n),sea, &
+              kraintype,clw_obs,tsavg5,tb_obs,sun_azimuth,sun_zenith,amsr2,varinv,aivals(1,is),id_qc)
 
 !  ---------- GMI  -------------------
 !       GMI Q C
@@ -1246,7 +1250,7 @@
 ! remove some data near the scan edge
            if(data_s(32,n) > 0_i_kind) id_qc(1:nchanl) = ifail_scanedge_qc
 
-           call qc_gmi(nchanl,zsges,luse(n),sea, &
+           call qc_gmi(nchanl,zsges,luse(n),sea,cenlat, &
               kraintype,clw_obs,tsavg5,tb_obs,gmi,varinv,aivals(1,is),id_qc)
 
 !  ---------- SAPHIR -----------------
@@ -1285,6 +1289,8 @@
                  endif
               else if (ssmis) then
                  errf(i) = min(1.5_r_kind*errf(i),ermax_rad(m))  ! tighten up gross check for SSMIS
+              else if (gmi .or. saphir .or. amsr2) then
+                 errf(i) = ermax_rad(m)     ! use ermax for GMI, SAPHIR, and AMSR2 gross check
               else
                  errf(i) = min(three*errf(i),ermax_rad(m))
               endif
