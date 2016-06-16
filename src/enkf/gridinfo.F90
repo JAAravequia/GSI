@@ -24,9 +24,6 @@ module gridinfo
 !   nlevs: number of analysis vertical levels (from module params).
 !   ntrac: number of 'tracer' model state variables (3 for GFS,
 !    specific humidity, ozone and cloud condensate).
-!   nvars: number of 'non-tracer' model state variables (usually 4 
-!    for hydrostatic models).  See grdinfo in gridio for a description
-!    of how these variables must be laid out in input/output files.
 !   ptop: (real scalar) pressure (hPa) at top model layer interface.
 !   lonsgrd(npts): real array of analysis grid longitudes (radians).
 !   latsgrd(npts): real array of analysis grid latitudes (radians).
@@ -38,6 +35,8 @@ module gridinfo
 !
 ! program history log:
 !   2009-02-23  Initial version.
+!   2016-05-02:  Modification for reading state vector from table
+!                (Anna Shlyaeva)
 !
 ! attributes:
 !   language: f95
@@ -45,8 +44,8 @@ module gridinfo
 !$$$
 
 use mpisetup, only: nproc, mpi_integer, mpi_real4, mpi_comm_world
-use params, only: datapath,nlevs,nvars,ndim,datestring,charfhr_anal,&
-                  nlons,nlats,nbackgrounds,reducedgrid,massbal_adjust,use_gfs_nemsio,&
+use params, only: datapath,nlevs,datestring,charfhr_anal,&
+                  nlons,nlats,nbackgrounds,reducedgrid,use_gfs_nemsio,&
                   fgfileprefixes
 use kinds, only: r_kind, i_kind, r_double, r_single
 use constants, only: one,zero,pi,cp,rd,grav,rearth
@@ -58,7 +57,6 @@ implicit none
 private
 public :: getgridinfo, gridinfo_cleanup
 integer(i_kind),public :: nlevs_pres
-integer(i_kind),public, allocatable,dimension(:):: index_pres
 real(r_single),public :: ptop
 real(r_single),public, allocatable, dimension(:) :: lonsgrd, latsgrd
 ! arrays passed to kdtree2 routines must be single
@@ -66,8 +64,6 @@ real(r_single),public, allocatable, dimension(:,:) :: gridloc
 real(r_single),public, allocatable, dimension(:,:) :: logp
 integer,public :: npts
 integer,public :: ntrunc
-integer,public :: nvarhumid ! spec hum is the nvarhumid'th var
-integer,public :: nvarozone ! ozone is the nvarozone'th var
 contains
 
 subroutine getgridinfo()
@@ -80,7 +76,7 @@ use nemsio_module, only: nemsio_gfile,nemsio_open,nemsio_close,&
                          nemsio_readrecv,nemsio_init, nemsio_realkind
 implicit none
 
-integer(i_kind) nlevsin, ierr, iunit, nvar, k, nn
+integer(i_kind) nlevsin, ierr, iunit, k, nn
 character(len=500) filename
 integer(i_kind) iret,i,j,nlonsin,nlatsin
 real(r_kind), allocatable, dimension(:) :: ak,bk,spressmn,tmpspec
@@ -96,8 +92,6 @@ kap = rd/cp
 kapr = cp/rd
 kap1 = kap + one
 nlevs_pres=nlevs+1
-nvarhumid = 4
-nvarozone = 5
 if (nproc .eq. 0) then
 if (use_gfs_nemsio) then
      filename = trim(adjustl(datapath))//trim(adjustl(fgfileprefixes(nbackgrounds/2+1)))//"ensmean"
@@ -287,19 +281,6 @@ enddo
 call mpi_bcast(lonsgrd,npts,mpi_real4,0,MPI_COMM_WORLD,ierr)
 call mpi_bcast(latsgrd,npts,mpi_real4,0,MPI_COMM_WORLD,ierr)
 call mpi_bcast(ptop,1,mpi_real4,0,MPI_COMM_WORLD,ierr)
-
-allocate(index_pres(ndim))
-
-nn=0
-do nvar=1,nvars
-  do k=1,nlevs
-    nn = nn + 1
-    index_pres(nn)=k
-  end do
-end do
-
-if (massbal_adjust) index_pres(ndim-1)=nlevs+1 ! ps tend
-index_pres(ndim)=nlevs+1 ! ps
   
 !==> precompute cartesian coords of analysis grid points.
 do nn=1,npts
@@ -315,7 +296,6 @@ if (allocated(lonsgrd)) deallocate(lonsgrd)
 if (allocated(latsgrd)) deallocate(latsgrd)
 if (allocated(logp)) deallocate(logp)
 if (allocated(gridloc)) deallocate(gridloc)
-if (allocated(index_pres)) deallocate(index_pres)
 end subroutine gridinfo_cleanup
 
 end module gridinfo
@@ -357,7 +337,7 @@ module gridinfo
                        rearth
   use kinds,     only: i_kind, r_kind, r_single, i_long, r_double
   use enkf_obsmod,    only: obloc, obloclat, obloclon, nobstot
-  use params,    only: datapath, nlevs, nvars, ndim, nlons, nlats,           &
+  use params,    only: datapath, nlevs, ndim, nlons, nlats,           &
                        arw, nmm, nbackgrounds, fgfileprefixes
   use mpisetup
   use netcdf_io
@@ -386,24 +366,12 @@ module gridinfo
   real(r_single),      dimension(:),   allocatable, public     :: lonsgrd
   real(r_single),      dimension(:),   allocatable, public     :: latsgrd
   real(r_single),                                   public     :: ptop
-  integer(i_kind),     dimension(:),   allocatable, public     :: index_pres
   integer(i_long),                                  public     :: npts
-  integer(i_kind),                                  public     :: nvarhumid ! specific hum is the nvarhumid'th var
-  integer(i_kind),                                  public     :: nvarozone=0 ! ozone is the nvarhumid'th var
   integer(i_kind),                                  public     :: nlevs_pres
-
-  ! Define variables indicating analysis variables to be updated
-  ! during EnKF experiments (eventually the logical variables will be
-  ! collected from the namelist (i.e., params module)
-
-  character(len=12),   dimension(:),   allocatable, public     :: gridvarstring
-
-  !-------------------------------------------------------------------------
 
   ! Define all public subroutines within this module
 
   private
-  public :: definegridvariables
   public :: getgridinfo
   public :: gridinfo_cleanup
   public :: cross2dot
@@ -419,263 +387,6 @@ contains
     end if
   end subroutine getgridinfo
 
-  !=========================================================================
-
-  ! definegridvariables.f90: This subroutine will define all analysis
-  ! variables to be updated for the respective EnKF experiments; this
-  ! subroutine can handle either ARW or NMM dynamical core input
-  ! files; the respective dynamical core is the determined by the
-  ! logical variables defined above
-
-  !-------------------------------------------------------------------------
- 
-  ! *USER*: Edit the following subroutines to correspond to the
-  ! 3-dimensional variables to be updated during the data assimilation
-
-  ! *NOTE (for ARW)*: the dry surface pressure prognostic variable
-  ! (MU) **MUST** be the last variable; the total number of variables
-  ! is nvars+1
-
-  ! *NOTE (for NMM)*: the dry surface pressure prognostic variable
-  ! (PD) **MUST** be the last variable; the total number of variables
-  ! is nvars+1
-
-  !-------------------------------------------------------------------------
-  
-  subroutine definegridvariables()
-
-    !-----------------------------------------------------------------------
-    
-    ! Define the total number of analysis variables to be updated for
-    ! the respective EnKF experiments
-
-    if(.not. allocated(gridvarstring)) allocate(gridvarstring(nvars+1))
-
-    !-----------------------------------------------------------------------
-
-    ! Define netcdf variable strings corresponding to variables to be
-    ! updated for the WRF ARW dynamical core
-
-    if(arw) then
-
-       if (nvars .eq. 3) then
-
-          if (nproc .eq. 0) then
-
-             ! Print message to user
-
-             write(6,*) 'Updating U, V, T, and MU for WRF-ARW...'
-
-          endif ! if (nproc .eq. 0) then
-
-          ! *USER*: The following variables will be updated using the
-          ! innovations and increments produced by the data
-          ! assimilation
-
-          gridvarstring(1) = "U"
-          gridvarstring(2) = "V"
-          gridvarstring(3) = "T"
-          gridvarstring(4) = "MU"
-          nvarhumid = 0
-
-       else if (nvars .eq. 4) then
-
-          if (nproc .eq. 0) then
-
-             ! Print message to user
-
-             write(6,*) 'Updating U, V, T, QVAPOR, and MU for WRF-ARW...'
-
-          endif ! if (nproc .eq. 0) then
-
-          ! *USER*: The following variables will be updated using the
-          ! innovations and increments produced by the data
-          ! assimilation
-
-          gridvarstring(1) = "U"
-          gridvarstring(2) = "V"
-          gridvarstring(3) = "T"
-          gridvarstring(4) = "QVAPOR"
-          gridvarstring(5) = "MU"
-          nvarhumid = 4
-
-       else if (nvars .eq. 5) then
-
-          if (nproc .eq. 0) then
-
-             ! Print message to user
-
-             print *,'Updating U, V, T, QVAPOR, PH, and MU for WRF-ARW...'
-
-          endif ! if (nproc .eq. 0) then
-
-          ! *USER*: The following variables will be updated using the
-          ! innovations and increments produced by the data
-          ! assimilation
-
-          gridvarstring(1) = "U"
-          gridvarstring(2) = "V"
-          gridvarstring(3) = "T"
-          gridvarstring(4) = "QVAPOR"
-          gridvarstring(5) = "PH"
-          gridvarstring(6) = "MU"
-          nvarhumid = 4
-
-       else if (nvars .eq. 6) then
-
-          if (nproc .eq. 0) then
-
-             ! Print message to user
-
-             write(6,*) 'Updating U, V, T, QVAPOR, W, PH, and MU for WRF-ARW...'
-
-          endif ! if (nproc .eq. 0) then
-
-          ! *USER*: The following variables will be updated using the
-          ! innovations and increments produced by the data
-          ! assimilation
-
-          gridvarstring(1) = "U"
-          gridvarstring(2) = "V"
-          gridvarstring(3) = "T"
-          gridvarstring(4) = "QVAPOR"
-          gridvarstring(5) = "W"
-          gridvarstring(6) = "PH"
-          gridvarstring(7) = "MU"
-          nvarhumid = 4
-
-       else 
-
-          if (nproc .eq. 0) then
-
-             ! Print message to user
-
-             write(6,*) '!!! USER !!! You need to specify ',nvars,' 3d variables to update, plus MU!'
-             write(6,*) '!!! USER !!! Edit subroutine definegridvariables in gridinfo.F90 and recompile'
-
-          endif ! if (nproc .eq. 0) then
-
-          ! Exit routine
-
-          call stop2(22)
-
-       endif ! if (nvars .eq. 3) then
-
-    end if ! if(arw) then
-
-    !-----------------------------------------------------------------------
-
-    ! Define netcdf variable strings corresponding to variables to be
-    ! updated for the WRF NMM dynamical core
-
-    if(nmm) then
-
-       if (nvars .eq. 3) then
-
-          if (nproc .eq. 0) then
-
-             ! Print message to user
-
-             write(6,*) 'Updating U, V, T, and PD for WRF-NMM...'
-
-          endif ! if (nproc .eq. 0) then
-
-          ! *USER*: The following variables will be updated using the
-          ! innovations and increments produced by the data
-          ! assimilation
-
-          gridvarstring(1) = "U"
-          gridvarstring(2) = "V"
-          gridvarstring(3) = "T"
-          gridvarstring(4) = "PD"
-          nvarhumid = 0
-
-       else if (nvars .eq. 4) then
-
-          if (nproc .eq. 0) then
-
-             ! Print message to user
-
-             write(6,*) 'Updating U, V, T, Q, and PD for WRF-NMM...'
-
-          endif ! if (nproc .eq. 0) then
-
-          ! *USER*: The following variables will be updated using the
-          ! innovations and increments produced by the data
-          ! assimilation
-
-          gridvarstring(1) = "U"
-          gridvarstring(2) = "V"
-          gridvarstring(3) = "T"
-          gridvarstring(4) = "Q"
-          gridvarstring(5) = "PD"
-          nvarhumid = 4
-
-       else if (nvars .eq. 5) then
-
-          if (nproc .eq. 0) then
-
-             ! Print message to user
-
-             write(6,*) 'Updating U, V, T, Q, CWM, and PD for WRF-NMM...'
-
-          endif ! if (nproc .eq. 0) then
-
-          ! *USER*: The following variables will be updated using the
-          ! innovations and increments produced by the data
-          ! assimilation
-
-          gridvarstring(1) = "U"
-          gridvarstring(2) = "V"
-          gridvarstring(3) = "T"
-          gridvarstring(4) = "Q"
-          gridvarstring(5) = "CWM"
-          gridvarstring(6) = "PD"
-          nvarhumid = 4
-
-       else 
-
-          if (nproc .eq. 0) then
-
-             ! Print message to user
-
-             write(6,*) '!!! USER !!! You need to specify ',nvars,' 3d variables to update, plus MU!'
-             write(6,*) '!!! USER !!! Edit subroutine definegridvariables in gridinfo.F90 and recompile'
-
-          endif ! if (nproc .eq. 0) then
-
-          ! Exit routine
-
-          call stop2(22)
-
-       endif ! if (nvars .eq. 3) then
-
-    end if ! if(nmm) then
-
-  !-------------------------------------------------------------------------
-
-    ! Provide error checking to make sure that the user has choosen
-    ! one of the available dynamical core options via the namelist
-    ! variables
-
-    if(.not. arw .and. .not. nmm) then
-
-       ! Print message to user
-
-       write(6,*) '!!! USER !!! You have not defined the logical variables appropriately which '
-       write(6,*) '             state that you are using the WRF ARW or NMM dynamical cores    '
-       write(6,*) '             within the namelist. Aborting routine.'
-
-       ! Exit routine
-
-       call stop2(22)
-
-    end if ! if(.not. arw .and. .not. nmm)
-
-  !-------------------------------------------------------------------------
-
-  end subroutine definegridvariables
-    
   !=========================================================================
 
   ! getgridinfo_arw.f90: This subroutine will define, compute, and
@@ -739,9 +450,18 @@ contains
 
     !======================================================================
 
-    ! Define prognostic model variable structure type
+    if(.not. arw .and. .not. nmm) then
+       ! Print message to user
+       write(6,*) '!!! USER !!! You have not defined the logical variables appropriately which '
+       write(6,*) '             state that you are using the WRF ARW or NMM dynamical cores    '
+       write(6,*) '             within the namelist. Aborting routine.'
 
-    call definegridvariables()
+       ! Exit routine
+
+       call stop2(22)
+ 
+    end if ! if(.not. arw .and. .not. nmm)
+
 
     ! Define local values and prepare for array dimension definitions
 
@@ -946,32 +666,6 @@ contains
        if(allocated(workgrid)) deallocate(workgrid)
 
     !----------------------------------------------------------------------
-
-
-       ! Ingest surface pressure grid from external file
-
-       varstringname = gridvarstring(nvars+1)
-
-       ! Check that the last variable element in array is (at least
-       ! analogous) to surface pressure
-
-       if(trim(varstringname) .ne. 'MU' .and. trim(varstringname) .ne.      &
-            & 'PSFC') then
-
-          ! Print message to user
-
-          write(6,*) 'The last variable must be MU or PSFC. However, the ', &
-               & 'character string is ', trim(varstringname), '. ',         &
-               & 'Aborting!'
-          
-          ! Exit routine
-          
-          call stop2(22)
-
-       endif ! if(trim(varstringname) .ne. 'MU' .and. trim(varstringname)   &
-             ! .ne. 'PSFC') 
-
-    !----------------------------------------------------------------------
        
        ! Ingest the model vertical (eta) levels from the external file
 
@@ -1119,41 +813,6 @@ contains
 
     !----------------------------------------------------------------------
 
-    ! Define index_pres which is an index array to determine pressure
-    ! value for given analysis variable
- 
-    if(.not. allocated(index_pres)) allocate(index_pres(ndim))
-
-    ! Initialize counting variable
-
-    nn = 0
-
-    ! Loop through total number of analysis variables
-
-    do nvar = 1, nvars
-       
-       ! Loop through vertical levels
-
-      do k = 1, dimensions%zdim
-
-         ! Update counting variable
-
-        nn = nn + 1
-
-        ! Update global variable array
-
-        index_pres(nn) = k
-
-      end do ! do k = 1, dimensions%zdim
-
-    end do ! do nvar = 1, nvars
-
-    ! Update global variable array
-
-    index_pres(ndim) = nlevs+1
-
-    !----------------------------------------------------------------------
-
     ! End: Ingest all grid variables required for EnKF routines and
     ! perform necessary conversions; the data is only ingested on the
     ! master node and then subsequently passed to the slave nodes
@@ -1246,9 +905,15 @@ contains
 
     !======================================================================
 
-    ! Define prognostic model variable structure type
+    if(.not. arw .and. .not. nmm) then
+       ! Print message to user
+       write(6,*) '!!! USER !!! You have not defined the logical variables appropriately which '
+       write(6,*) '             state that you are using the WRF ARW or NMM dynamical cores    '
+       write(6,*) '             within the namelist. Aborting routine.'
+       ! Exit routine
+       call stop2(22)
+    end if ! if(.not. arw .and. .not. nmm)
 
-    call definegridvariables()
 
     ! Define local values and prepare for array dimension definitions
 
@@ -1459,29 +1124,6 @@ contains
 
     !----------------------------------------------------------------------
 
-       ! Ingest surface pressure grid from external file
-
-       varstringname = gridvarstring(nvars+1)
-
-       ! Check that the last variable element in array is (at least
-       ! analogous) to surface pressure
-
-       if(trim(varstringname) .ne. 'PD' .and. trim(varstringname) .ne.      &
-            & 'PSFC') then
-
-          ! Print message to user
-
-          write(6,*) 'The last variable must be PD or PSFC. However, the ', &
-               & 'character string is ', trim(varstringname), '. ',         &
-               & 'Aborting!'
-          
-          ! Exit routine
-          
-          call stop2(22)
-
-       endif ! if(trim(varstringname) .ne. 'PD' .and. trim(varstringname)   &
-             ! .ne. 'PSFC') 
-
        ! Ingest variable from external file
 
        varstringname = 'PD'
@@ -1619,41 +1261,6 @@ contains
     !----------------------------------------------------------------------
 
     end if ! nproc == 0
-
-    !----------------------------------------------------------------------
-
-    ! Define index_pres which is an index array to determine pressure
-    ! value for given analysis variable
- 
-    if(.not. allocated(index_pres)) allocate(index_pres(ndim))
-
-    ! Initialize counting variable
-
-    nn = 0
-
-    ! Loop through total number of analysis variables
-
-    do nvar = 1, nvars
-       
-       ! Loop through vertical levels
-
-      do k = 1, dimensions%zdim
-
-         ! Update counting variable
-
-        nn = nn + 1
-
-        ! Update global variable array
-
-        index_pres(nn) = k
-
-      end do ! do k = 1, dimensions%zdim
-
-    end do ! do nvar = 1, nvars
-
-    ! Update global variable array
-
-    index_pres(ndim) = nlevs+1
 
     !----------------------------------------------------------------------
 
@@ -1821,12 +1428,10 @@ contains
   !=========================================================================
 
   subroutine gridinfo_cleanup()
-    if (allocated(index_pres))    deallocate(index_pres)
     if (allocated(lonsgrd))       deallocate(lonsgrd)
     if (allocated(latsgrd))       deallocate(latsgrd)
     if (allocated(logp))          deallocate(logp)
     if (allocated(gridloc))       deallocate(gridloc)
-    if (allocated(gridvarstring)) deallocate(gridvarstring)
   end subroutine gridinfo_cleanup
 
   !=========================================================================
@@ -1838,7 +1443,7 @@ end module gridinfo
 module gridinfo
 
 use mpisetup
-use params, only: datapath,nlevs,nvars,ndim,datestring,&
+use params, only: datapath,nlevs,ndim,datestring,&
                   nmmb,regional,nlons,nlats,nbackgrounds,fgfileprefixes
 use kinds, only: r_kind, i_kind, r_double, r_single
 use constants, only: one,zero,pi,cp,rd,grav,rearth
@@ -1847,15 +1452,12 @@ implicit none
 private
 public :: getgridinfo, gridinfo_cleanup, wind2mass, mass2wind
 integer(i_kind),public :: nlevs_pres
-integer(i_kind),public, allocatable,dimension(:):: index_pres
 real(r_single),public :: ptop
 real(r_single),public, allocatable, dimension(:) :: lonsgrd, latsgrd
 ! arrays passed to kdtree2 routines must be single
 real(r_single),public, allocatable, dimension(:,:) :: gridloc
 real(r_single),public, allocatable, dimension(:,:) :: logp
 integer,public :: npts
-integer,public :: nvarhumid ! spec hum is the nvarhumid'th var
-integer,public :: nvarozone ! ozone is the nvarozone'th var
 contains
 
 subroutine getgridinfo()
@@ -2004,18 +1606,6 @@ call mpi_bcast(lonsgrd,npts,mpi_real4,0,MPI_COMM_WORLD,ierr)
 call mpi_bcast(latsgrd,npts,mpi_real4,0,MPI_COMM_WORLD,ierr)
 call mpi_bcast(ptop,1,mpi_real4,0,MPI_COMM_WORLD,ierr)
 
-allocate(index_pres(ndim))
-
-nn=0
-do nvar=1,nvars
-  do k=1,nlevs
-    nn = nn + 1
-    index_pres(nn)=k
-  end do
-end do
-
-index_pres(ndim)=nlevs+1 ! ps
-  
 !==> precompute cartesian coords of analysis grid points.
 do nn=1,npts
    gridloc(1,nn) = cos(latsgrd(nn))*cos(lonsgrd(nn))
@@ -2030,7 +1620,6 @@ if (allocated(lonsgrd)) deallocate(lonsgrd)
 if (allocated(latsgrd)) deallocate(latsgrd)
 if (allocated(logp)) deallocate(logp)
 if (allocated(gridloc)) deallocate(gridloc)
-if (allocated(index_pres)) deallocate(index_pres)
 end subroutine gridinfo_cleanup
 
 subroutine wind2mass(dat,nlons,nlats)

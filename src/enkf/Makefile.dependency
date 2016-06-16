@@ -25,5 +25,5 @@ reducedgrid.o : reducedgrid.f90
 rnorm.o : rnorm.f90 
 smooth.o : smooth.F90 gridinfo.o params.o mpisetup.o 
 specmod.o : specmod.f90 
-statevec.o : statevec.f90 enkf_obsmod.o gridinfo.o gridio.o loadbal.o params.o mpisetup.o 
+statevec.o : statevec.F90 enkf_obsmod.o gridinfo.o gridio.o loadbal.o params.o mpisetup.o 
 write_logfile.o : write_logfile.f90 params.o 

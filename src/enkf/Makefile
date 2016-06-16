@@ -211,7 +211,7 @@ clean:
 	rnorm.f90 \
 	smooth.F90 \
 	specmod.f90 \
-	statevec.f90 \
+	statevec.F90 \
 	write_logfile.f90
 
   SRCSF90C_NOSWAP =

@@ -71,6 +71,7 @@ module letkf
 !               footprint by only allocated observation prior ensemble
 !               array on one MPI task per node. Also ensure posterior
 !               perturbation mean is zero.
+!   2016-05-02  shlyaeva: Modification for reading state vector from table
 !
 ! attributes:
 !   language: f95
@@ -86,7 +87,7 @@ use kinds, only: r_double,i_kind,r_kind,r_single,num_bytes_for_r_single
 use loadbal, only: numptsperproc, npts_max, &
                    indxproc, lnp_chunk, &
                    grdloc_chunk, kdtree_obs2
-use statevec, only: ensmean_chunk, anal_chunk
+use statevec, only: ensmean_chunk, anal_chunk, ndim, index_pres
 use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, oblnp, &
                   nobstot, nobs_conv, nobs_oz, nobs_sat,&
                   obfit_prior, obfit_post, obsprd_prior, obsprd_post,&
@@ -94,14 +95,14 @@ use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, oblnp, &
                   biasprednorm, probgrosserr, prpgerr, obtype, obpress,&
                   lnsigl, anal_ob, obloclat, obloclon, stattype
 use constants, only: pi, one, zero, rad2deg, deg2rad
-use params, only: sprd_tol, ndim, datapath, nanals, iseed_perturbed_obs,&
-                  iassim_order,sortinc,deterministic,numiter,nlevs,nvars,&
+use params, only: sprd_tol, datapath, nanals, iseed_perturbed_obs,&
+                  iassim_order,sortinc,deterministic,numiter,nlevs,&
                   zhuberleft,zhuberright,varqc,lupd_satbiasc,huber,letkf_novlocal,&
                   lupd_obspace_serial,corrlengthnh,corrlengthtr,corrlengthsh,&
                   nbackgrounds,nobsl_max
 use radinfo, only: npred,nusis,nuchan,jpch_rad,predx
 use radbias, only: apply_biascorr, update_biascorr
-use gridinfo, only: nlevs_pres,index_pres,lonsgrd,latsgrd,logp,npts,gridloc
+use gridinfo, only: nlevs_pres,lonsgrd,latsgrd,logp,npts,gridloc
 use kdtree2_module, only: kdtree2, kdtree2_create, kdtree2_destroy, &
                           kdtree2_result, kdtree2_n_nearest, kdtree2_r_nearest
 
