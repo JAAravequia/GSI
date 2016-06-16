@@ -73,7 +73,7 @@ LIBhdf    = #-L$(BASEDIR)/$(ARCH)/lib  -lmfhdf -ldf -lhdfjpeg -lhdfz -lsz
 
   FFLAGS_F90    = -DGFS
   #FFLAGS_F90    = -DGFS -DMPI3 # use this if MPI-3 is available (saves memory for LETKF)
-  EXE_FILE = global_enkf_tst2
+  EXE_FILE = global_enkf
 
   FFLAGS_COM_N  = -I ./ -I ../ -I $(INCsfcio) -I $(INCsigio) -I $(INCnemsio) \
                 -I $(INCnetcdf) -O3 -xHOST -warn all -implicitnone -traceback -fp-model strict -convert big_endian $(OMP)
