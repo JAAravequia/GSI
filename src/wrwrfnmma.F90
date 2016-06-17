@@ -1127,7 +1127,7 @@ subroutine wrnemsnmma_binary(mype,cold_start)
   real(r_kind) pd,psfc_this,pd_to_ps,wmag
   real(r_kind),dimension(lat2,lon2):: work_sub,pd_new,delu10,delv10,u10this,v10this,fact10_local
   real(r_kind),dimension(lat2,lon2):: delt2,delq2,t2this,q2this,fact2t_local,fact2q_local
-  real(r_kind),dimension(lat2,lon2,6):: delu,delv,delt,delq,pott
+  real(r_kind),dimension(lat2,lon2,6):: delu,delv,delw,delt,delq,pott
   real(r_kind) hmin,hmax,hmin0,hmax0,ten,wgt1,wgt2
   logical use_fact10,use_fact2
   logical good_u10,good_v10,good_tshltr,good_qshltr,good_o3mr
@@ -1141,6 +1141,7 @@ subroutine wrnemsnmma_binary(mype,cold_start)
   real(r_kind),pointer,dimension(:,:  ):: ges_ps  =>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_u   =>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_v   =>NULL()
+  real(r_kind),pointer,dimension(:,:,:):: ges_w   =>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_q   =>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_oz  =>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_ql  =>NULL()
@@ -1286,6 +1287,25 @@ subroutine wrnemsnmma_binary(mype,cold_start)
            end do
         end if
         call gsi_nemsio_write('vgrd','mid layer','V',kr,work_sub(:,:),mype,mype_input,add_saved)
+     endif
+
+                                   !   w
+     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'w',ges_w,iret)
+     if (iret==0) then
+        call gsi_nemsio_read('w_tot','mid layer','H',kr,work_sub(:,:),mype,mype_input)
+        do i=1,lon2
+           do j=1,lat2
+              work_sub(j,i)=ges_w(j,i,k)-work_sub(j,i)
+           end do
+        end do
+        if(k <= near_sfc) then
+           do i=1,lon2
+              do j=1,lat2
+                 delw(j,i,k)=work_sub(j,i)
+              end do
+           end do
+        end if
+        call gsi_nemsio_write('w_tot','mid layer','H',kr,work_sub(:,:),mype,mype_input,add_saved)
      endif
 
                                    !   q

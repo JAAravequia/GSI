@@ -1705,6 +1705,7 @@ subroutine read_nems_nmmb_guess(mype)
   real(r_kind),pointer,dimension(:,:  ):: ges_z   =>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_u   =>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_v   =>NULL()
+  real(r_kind),pointer,dimension(:,:,:):: ges_w   =>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_tv  =>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_pint=>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_q   =>NULL()
@@ -1757,6 +1758,7 @@ subroutine read_nems_nmmb_guess(mype)
      call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'z' , ges_z  ,istatus );ier=ier+istatus
      call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'u' , ges_u  ,istatus );ier=ier+istatus
      call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'v' , ges_v  ,istatus );ier=ier+istatus
+     call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'w' , ges_w  ,istatus );ier=ier+istatus
      call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tv' ,ges_tv ,istatus );ier=ier+istatus
      call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q'  ,ges_q  ,istatus );ier=ier+istatus
      call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'oz' ,ges_oz ,istatus );ier=ier+istatus
@@ -1787,10 +1789,11 @@ subroutine read_nems_nmmb_guess(mype)
 
      call gsi_nemsio_read('hgt','sfc','H',1,ges_z(:,:),mype,mype_input)
 
-!                          !   u,v,q,tsen,tv
+!                          !   u,v,w,q,tsen,tv
      do k=nsig_read+1,nsig
         ges_u(:,:,k)=zero
         ges_v(:,:,k)=zero
+        ges_w(:,:,k)=zero
         ges_q(:,:,k)=zero
         ges_tsen(:,:,k,it)=zero
         ges_oz(:,:,k)=zero
@@ -1799,6 +1802,7 @@ subroutine read_nems_nmmb_guess(mype)
         k=nsig_read+1-kr
         call gsi_nemsio_read('ugrd','mid layer','V',kr,ges_u(:,:,k),   mype,mype_input)
         call gsi_nemsio_read('vgrd','mid layer','V',kr,ges_v(:,:,k),   mype,mype_input)
+        call gsi_nemsio_read('w_tot','mid layer','H',kr,ges_w(:,:,k),   mype,mype_input)
         call gsi_nemsio_read('spfh','mid layer','H',kr,ges_q(:,:,k),   mype,mype_input)
         call gsi_nemsio_read('tmp' ,'mid layer','H',kr,ges_tsen(:,:,k,it),mype,mype_input)
         do i=1,lon2

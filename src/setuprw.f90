@@ -178,13 +178,10 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
-  write(6,*) 'here 6 :',proceed
   if(.not.proceed) return  ! not all vars available, simply return
 
-  write(6,*) 'here 7' 
 ! If require guess vars available, extract from bundle ...
   call init_vars_
-  write(6,*) 'here 8' 
 
   n_alloc(:)=0
   m_alloc(:)=0
@@ -492,10 +489,10 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      if(dpres < zero .or. dpres > rsig)ratio_errors = zero
 
 !    Interpolate guess u, v, and w to observation location and time.
-     call tintrp31(ges_u,ugesin,dlat,dlon,dpres,dtime,&
-          hrdifsig,mype,nfldsig)
-     call tintrp31(ges_v,vgesin,dlat,dlon,dpres,dtime,&
-          hrdifsig,mype,nfldsig)
+     !call tintrp31(ges_u,ugesin,dlat,dlon,dpres,dtime,&
+     !     hrdifsig,mype,nfldsig)
+     !call tintrp31(ges_v,vgesin,dlat,dlon,dpres,dtime,&
+     !     hrdifsig,mype,nfldsig)
      !call tintrp31(ges_w,wgesin,dlat,dlon,dpres,dtime,&
      !     hrdifsig,mype,nfldsig)
 
@@ -503,8 +500,8 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
           nsig,mype,nfldsig)
      call tintrp2a1(ges_v,vgesprofile,dlat,dlon,dtime,hrdifsig,&
           nsig,mype,nfldsig)
-     !call tintrp2a1(ges_w,wgesprofile,dlat,dlon,dtime,hrdifsig,&
-     !     nsig,mype,nfldsig) 
+     call tintrp2a1(ges_w,wgesprofile,dlat,dlon,dtime,hrdifsig,&
+          nsig,mype,nfldsig) 
 
 
 !    Convert guess u,v wind components to radial value consident with obs
@@ -519,9 +516,10 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      kminmin=kbeambot
      kmaxmax=kbeamtop
      do k=kbeambot,kbeamtop
-        rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt
-        !rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt &
-        !             +(wgesprofile(k)-w_tvgesprofile(k))*sintilt
+        !rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt
+        rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt &
+                     +(wgesprofile(k))*sintilt
+                     !+(wgesprofile(k)-w_tvgesprofile(k))*sintilt
         if(umaxmax<rwwindprofile) then
            umaxmax=rwwindprofile
            kmaxmax=k
@@ -796,6 +794,8 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   proceed=proceed.and.ivar>0
   call gsi_metguess_get ('var::v' , ivar, istatus )
   proceed=proceed.and.ivar>0
+  call gsi_metguess_get ('var::w' , ivar, istatus )
+  proceed=proceed.and.ivar>0
 !  call gsi_metguess_get ('var::w' , ivar, istatus )
 !  proceed=proceed.and.ivar>0
   end subroutine check_vars_ 
@@ -882,23 +882,23 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
          call stop2(999)
      endif
 !    get w ...
-!     varname='w'
-!     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-!     if (istatus==0) then
-!         if(allocated(ges_w))then
-!            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-!            call stop2(999)
-!         endif
-!         allocate(ges_w(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-!         ges_w(:,:,:,1)=rank3
-!         do ifld=2,nfldsig
-!            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-!            ges_w(:,:,:,ifld)=rank3
-!         enddo
-!     else
-!         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle,ier= ',istatus
-!         call stop2(999)
-!     endif
+     varname='w'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+     if (istatus==0) then
+         if(allocated(ges_w))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_w(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         ges_w(:,:,:,1)=rank3
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+            ges_w(:,:,:,ifld)=rank3
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle,ier= ',istatus
+         call stop2(999)
+     endif
   else
      write(6,*) trim(myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
                  nfldsig,size(gsi_metguess_bundle)
@@ -907,7 +907,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   end subroutine init_vars_
 
   subroutine final_vars_
-!    if(allocated(ges_w )) deallocate(ges_w )
+    if(allocated(ges_w )) deallocate(ges_w )
     if(allocated(ges_v )) deallocate(ges_v )
     if(allocated(ges_u )) deallocate(ges_u )
     if(allocated(ges_z )) deallocate(ges_z )

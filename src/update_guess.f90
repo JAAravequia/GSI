@@ -248,6 +248,13 @@ subroutine update_guess(sval,sbias)
                call upd_positive_fldr3_(ptr3dges,ptr3dinc,tgmin)
                cycle
            endif
+           if (trim(guess(ic))=='w') then
+               write(6,*) 'UPDATE_GUESS w'
+               call gsi_bundlegetpointer (sval(ii),               guess(ic),ptr3dinc,istatus)
+               call gsi_bundlegetpointer (gsi_metguess_bundle(it),guess(ic),ptr3dges,istatus)
+               ptr3dges = ptr3dges + ptr3dinc
+               cycle
+           endif
            if (trim(guess(ic))=='tv') then
               cycle ! updating tv is trick since it relates to tsen and therefore q
                     ! since we don't know which comes first in met-guess, we
