@@ -489,12 +489,12 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      if(dpres < zero .or. dpres > rsig)ratio_errors = zero
 
 !    Interpolate guess u, v, and w to observation location and time.
-     !call tintrp31(ges_u,ugesin,dlat,dlon,dpres,dtime,&
-     !     hrdifsig,mype,nfldsig)
-     !call tintrp31(ges_v,vgesin,dlat,dlon,dpres,dtime,&
-     !     hrdifsig,mype,nfldsig)
-     !call tintrp31(ges_w,wgesin,dlat,dlon,dpres,dtime,&
-     !     hrdifsig,mype,nfldsig)
+     call tintrp31(ges_u,ugesin,dlat,dlon,dpres,dtime,&
+          hrdifsig,mype,nfldsig)
+     call tintrp31(ges_v,vgesin,dlat,dlon,dpres,dtime,&
+          hrdifsig,mype,nfldsig)
+     call tintrp31(ges_w,wgesin,dlat,dlon,dpres,dtime,&
+          hrdifsig,mype,nfldsig)
 
      call tintrp2a1(ges_u,ugesprofile,dlat,dlon,dtime,hrdifsig,&
           nsig,mype,nfldsig)
@@ -657,10 +657,12 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
         do j=1,8
            rwtail(ibin)%head%wij(j)=factw*costilt*rwtail(ibin)%head%wij(j)  
+           rwtail(ibin)%head%wwij(j)=factw*sintilt*rwtail(ibin)%head%wwij(j)
         end do
         rwtail(ibin)%head%raterr2 = ratio_errors**2  
         rwtail(ibin)%head%cosazm  = cosazm
         rwtail(ibin)%head%sinazm  = sinazm
+        !rwtail(ibin)%head%sintilt = sintilt
         rwtail(ibin)%head%res     = ddiff
         rwtail(ibin)%head%err2    = error**2
         rwtail(ibin)%head%time    = dtime
@@ -796,8 +798,6 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   proceed=proceed.and.ivar>0
   call gsi_metguess_get ('var::w' , ivar, istatus )
   proceed=proceed.and.ivar>0
-!  call gsi_metguess_get ('var::w' , ivar, istatus )
-!  proceed=proceed.and.ivar>0
   end subroutine check_vars_ 
 
   subroutine init_vars_

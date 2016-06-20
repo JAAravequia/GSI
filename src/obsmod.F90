@@ -688,7 +688,9 @@ module obsmod
      real(r_kind)    :: pg            !  variational quality control parameter
      real(r_kind)    :: cosazm        !  v factor
      real(r_kind)    :: sinazm        !  u factor
+     !real(r_kind)    :: sintilt       !  w factor
      real(r_kind)    :: wij(8)        !  horizontal interpolation weights
+     real(r_kind)    :: wwij(8)       !  horizontal interpolation weights for w
      integer(i_kind) :: ij(8)         !  horizontal locations
      integer(i_kind) :: idv,iob       ! device id and obs index for sorting
      logical         :: luse          !  flag indicating if ob is used in pen.

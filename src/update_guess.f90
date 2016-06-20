@@ -249,7 +249,6 @@ subroutine update_guess(sval,sbias)
                cycle
            endif
            if (trim(guess(ic))=='w') then
-               write(6,*) 'UPDATE_GUESS w'
                call gsi_bundlegetpointer (sval(ii),               guess(ic),ptr3dinc,istatus)
                call gsi_bundlegetpointer (gsi_metguess_bundle(it),guess(ic),ptr3dges,istatus)
                ptr3dges = ptr3dges + ptr3dinc

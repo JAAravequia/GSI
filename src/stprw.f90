@@ -95,13 +95,14 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
   integer(i_kind) ier,istatus
   integer(i_kind) j1,j2,j3,j4,j5,j6,j7,j8,kk
   real(r_kind) valrw,facrw,w1,w2,w3,w4,w5,w6,w7,w8,time_rw
+  real(r_kind) ww1,ww2,ww3,ww4,ww5,ww6,ww7,ww8
   real(r_kind) cg_rw,rw,wgross,wnotgross
   real(r_kind),dimension(max(1,nstep))::pen
   real(r_kind) pg_rw
   real(r_kind),pointer,dimension(:) :: xhat_dt_u,xhat_dt_v
   real(r_kind),pointer,dimension(:) :: dhat_dt_u,dhat_dt_v
-  real(r_kind),pointer,dimension(:) :: su,sv
-  real(r_kind),pointer,dimension(:) :: ru,rv
+  real(r_kind),pointer,dimension(:) :: su,sv,sw_tot
+  real(r_kind),pointer,dimension(:) :: ru,rv,rw_tot
   type(rw_ob_type), pointer :: rwptr
 
   out=zero_quad
@@ -114,13 +115,17 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
   ier=0
   call gsi_bundlegetpointer(sval,'u',su,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(sval,'v',sv,istatus);ier=istatus+ier
+  call gsi_bundlegetpointer(sval,'w',sw_tot,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(rval,'u',ru,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(rval,'v',rv,istatus);ier=istatus+ier
+  call gsi_bundlegetpointer(rval,'w',rw_tot,istatus);ier=istatus+ier
   if(l_foto) then
      call gsi_bundlegetpointer(xhat_dt,'u',xhat_dt_u,istatus);ier=istatus+ier
      call gsi_bundlegetpointer(xhat_dt,'v',xhat_dt_v,istatus);ier=istatus+ier
+     !call gsi_bundlegetpointer(xhat_dt,'w',xhat_dt_w,istatus);ier=istatus+ier
      call gsi_bundlegetpointer(dhat_dt,'u',dhat_dt_u,istatus);ier=istatus+ier
      call gsi_bundlegetpointer(dhat_dt,'v',dhat_dt_v,istatus);ier=istatus+ier
+     !call gsi_bundlegetpointer(dhat_dt,'w',dhat_dt_w,istatus);ier=istatus+ier
   endif
   if(ier/=0)return
 
@@ -144,15 +149,30 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
            w6=rwptr%wij(6)
            w7=rwptr%wij(7)
            w8=rwptr%wij(8)
+           ww1=rwptr%wwij(1)
+           ww2=rwptr%wwij(2)
+           ww3=rwptr%wwij(3)
+           ww4=rwptr%wwij(4)
+           ww5=rwptr%wwij(5)
+           ww6=rwptr%wwij(6)
+           ww7=rwptr%wwij(7)
+           ww8=rwptr%wwij(8)
+
            valrw=(w1* ru(j1)+w2* ru(j2)+w3* ru(j3)+w4* ru(j4)+              &
                   w5* ru(j5)+w6* ru(j6)+w7* ru(j7)+w8* ru(j8))*rwptr%cosazm+&
                  (w1* rv(j1)+w2* rv(j2)+w3* rv(j3)+w4* rv(j4)+              &
-                  w5* rv(j5)+w6* rv(j6)+w7* rv(j7)+w8* rv(j8))*rwptr%sinazm
+                  w5* rv(j5)+w6* rv(j6)+w7* rv(j7)+w8* rv(j8))*rwptr%sinazm+&
+                 (ww1* rw_tot(j1)+ww2* rw_tot(j2)+ww3* rw_tot(j3)+ww4* rw_tot(j4)+  &
+                  ww5* rw_tot(j5)+ww6* rw_tot(j6)+ww7* rw_tot(j7)+ww8* rw_tot(j8))
+
            facrw=(w1* su(j1)+w2* su(j2)+w3* su(j3)+w4* su(j4)+              &
                   w5* su(j5)+w6* su(j6)+w7* su(j7)+w8* su(j8))*rwptr%cosazm+&
                  (w1* sv(j1)+w2* sv(j2)+w3* sv(j3)+w4* sv(j4)+              &
-                  w5* sv(j5)+w6* sv(j6)+w7* sv(j7)+w8* sv(j8))*rwptr%sinazm-&
-                  rwptr%res
+                  w5* sv(j5)+w6* sv(j6)+w7* sv(j7)+w8* sv(j8))*rwptr%sinazm+&
+                 (ww1* sw_tot(j1)+ww2* sw_tot(j2)+ww3* sw_tot(j3)+ww4* sw_tot(j4)+ &
+                  ww5* sw_tot(j5)+ww6* sw_tot(j6)+ww7* sw_tot(j7)+ww8* sw_tot(j8))*&
+                  - rwptr%res
+
            if(l_foto) then
               time_rw=rwptr%time*r3600
               valrw=valrw+((w1*dhat_dt_u(j1)+w2*dhat_dt_u(j2)+ &
