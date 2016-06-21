@@ -772,10 +772,9 @@
         ug = 0.
         if (u_ind > 0) then
           call copyfromgrdin(grdin(:,(u_ind-1)*nlevs + k,nb),ug)
-          ug = grdin(:,k,nb)
         endif
         ug =  nems_wrk + ug
-        if (pst_ind > 0) then
+        if (pst_ind < 0) then
            nems_wrk = ug
            call nemsio_writerecv(gfileout,'ugrd','mid layer',k,nems_wrk,iret=iret)
            if (iret/=0) then

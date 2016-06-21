@@ -337,7 +337,7 @@ module gridinfo
                        rearth
   use kinds,     only: i_kind, r_kind, r_single, i_long, r_double
   use enkf_obsmod,    only: obloc, obloclat, obloclon, nobstot
-  use params,    only: datapath, nlevs, ndim, nlons, nlats,           &
+  use params,    only: datapath, nlevs, nlons, nlats,           &
                        arw, nmm, nbackgrounds, fgfileprefixes
   use mpisetup
   use netcdf_io
@@ -1443,7 +1443,7 @@ end module gridinfo
 module gridinfo
 
 use mpisetup
-use params, only: datapath,nlevs,ndim,datestring,&
+use params, only: datapath,nlevs,datestring,&
                   nmmb,regional,nlons,nlats,nbackgrounds,fgfileprefixes
 use kinds, only: r_kind, i_kind, r_double, r_single
 use constants, only: one,zero,pi,cp,rd,grav,rearth
@@ -1479,8 +1479,6 @@ real(nemsio_realkind) aeta1(nlevs),aeta2(nlevs),lats(nlats*nlons),lons(nlons*nla
 type(nemsio_gfile) :: gfile
 
 nlevs_pres=nlevs+1
-nvarhumid = 4
-nvarozone = 5 ! nmmb does not have ozone?
 
 if (nproc .eq. 0) then
 
