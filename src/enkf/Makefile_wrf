@@ -56,48 +56,6 @@ COREETC  = $(COREROOT)/etc
 
 CP              = /bin/cp -p
 RM              = /bin/rm -f
-MKDIR           = /bin/mkdir -p
-AR              = ar cq
-PROTEX          = protex -f # -l
-ProTexMake      = protex -S # -l
-LATEX           = pdflatex
-DVIPS           = dvips
-
-# Preprocessing
-# -------------
-_DDEBUG =
-_D      = $(_DDEBUG)
-
-# ---------
-# Libraries
-# ---------
-LIBmpeu   = -L$(CORELIB) -lmpeu
-LIBbfr    = -L$(CORELIB) -lbfr
-LIBw3     = -L$(CORELIB) -lw3
-LIBsp     = -L$(CORELIB) -lsp
-LIBbacio  = -L$(CORELIB) -lbacio
-LIBsfcio  = -L$(CORELIB) -lsfcio
-LIBsigio  = -L$(CORELIB) -lsigio
-LIBtransf = -L$(CORELIB) -ltransf
-LIBhermes = -L$(CORELIB) -lhermes
-LIBgfio   = -L$(CORELIB) -lgfio
-
-# --------------------------
-# Default Baselibs Libraries
-# --------------------------
-INChdf          = -I$(BASEDIR)/$(ARCH)/include/hdf
-LIBhdf          = -L$(BASEDIR)/$(ARCH)/lib  -lmfhdf -ldf -lhdfjpeg -lhdfz -lsz
-LIBnetcdf       = -L$(BASEDIR)/$(ARCH)/lib -lnetcdf -lnetcdff
-LIBwrf          = -L$(BASEDIR)/$(ARCH)/lib -lwrflib
-LIBwrfio_int    = -L$(BASEDIR)/$(ARCH)/lib -lwrfio_int
-LIBwrfio_netcdf = -L$(BASEDIR)/$(ARCH)/lib -lwrfio_nf
-
-# ------------------------
-# Default System Libraries
-# ------------------------
-LIBmpi          = -lmpi
-LIBsys          = 
-
 
 #------------
 # Include machine dependent compile & load options
@@ -110,7 +68,7 @@ include $(MAKE_CONF)
 # This makefile
 # -------------
 
-  MAKE_FILE = Makefile_gfs
+  MAKE_FILE = Makefile_wrf
 
 
 # --------------------
@@ -124,7 +82,7 @@ include $(MAKE_CONF)
 # Log file
 # --------
 
-  LOG_FILE = log.make.global_enkf
+  LOG_FILE = log.make.wrf_enkf
 
 
 # ---------------
@@ -152,8 +110,8 @@ install:
 	  echo "	mkdir -p $(INSTALL_DIR)" ;\
 	  mkdir -p $(INSTALL_DIR) ;\
 	fi
-	cp global_enkf $(INSTALL_DIR)
-	@cd $(INSTALL_DIR) ; ls -l `pwd`/global_enkf
+	cp wrf_enkf $(INSTALL_DIR)
+	@cd $(INSTALL_DIR) ; ls -l `pwd`/wrf_enkf
 
 
 # ----------
@@ -163,8 +121,8 @@ install:
 clean:
 	@echo
 	@echo '==== CLEAN ==================================================='
-	- $(RM) global_enkf *.o *.mod *.MOD *.lst *.a *.x
-	- $(RM) loadmap.txt log.make.global_enkf
+	- $(RM) wrf_enkf *.o *.mod *.MOD *.lst *.a *.x
+	- $(RM) loadmap.txt log.make.wrf_enkf
 	- $(MAKE) -f ${MAKE_FILE} doclean
 
 
@@ -182,8 +140,8 @@ clean:
 	enkf_main.f90 \
 	fftpack.f90 \
 	genqsat1.f90 \
-	gridinfo_gfs.f90 \
-	gridio_gfs.f90 \
+	gridinfo_wrf.f90 \
+	gridio_wrf.f90 \
 	inflation.f90 \
 	innovstats.f90 \
 	kdtree2.f90 \
@@ -202,7 +160,7 @@ clean:
 	readsatobs.f90 \
 	reducedgrid.f90 \
 	rnorm.f90 \
-	smooth_gfs.f90 \
+	smooth_wrf.f90 \
 	specmod.f90 \
 	statevec.f90 \
 	write_logfile.f90
@@ -267,12 +225,12 @@ $(OBJS_NOSWAP) :
 # ------------
 # Dependencies
 # ------------
-  MAKE_DEPEND = Makefile.dependency.gfs
+  MAKE_DEPEND = Makefile.dependency.wrf
 include $(MAKE_DEPEND)
 
 # ----
 
-global_enkf :  $(OBJS) $(OBJS_NOSWAP) $(GSIOBJS)
+wrf_enkf :  $(OBJS) $(OBJS_NOSWAP) $(GSIOBJS)
 	$(LD) -o $@ $(OBJS) $(OBJS_NOSWAP) $(GSIOBJS) $(LIBS) $(LDFLAGS)
 
 
@@ -293,7 +251,7 @@ all :
 	@echo '==== LINK ===================================================='
 	@$(MAKE) -f $(MAKE_FILE) \
 		"LIBS=$(LIBS_N)" "LDFLAGS=$(LDFLAGS_N)" \
-		global_enkf
+		wrf_enkf
 
 debug :
 	@$(MAKE) -f $(MAKE_FILE) "COMP_MODE=$@" check_mode
@@ -308,7 +266,7 @@ debug :
 	@echo '==== LINK ===================================================='
 	@$(MAKE) -f $(MAKE_FILE) \
 		"LIBS=$(LIBS_D)" "LDFLAGS=$(LDFLAGS_D)" \
-		global_enkf
+		wrf_enkf
 
 check_mode :
 	@if [ -e $(LOG_FILE) ]; then \
@@ -323,51 +281,3 @@ check_mode :
 	  $(MAKE) -f $(MAKE_FILE) clean ;\
 	fi
 	@echo $(COMP_MODE) > $(LOG_FILE)
-
-# -------------------------
-# GMAO Nomenclature/targets
-# -------------------------
-LIB =   libenkf.a
-
-lib: $(LIB)
-
-enkf.x:  $(OBJS) $(OBJS_NOSWAP) $(LIB)
-	$(FC) $(LDFLAGS) -o enkf.x enkf_main.o libenkf.a $(LIBsfcio) $(LIBsigio) $(LIBw3) $(LIBbacio) $(LIBbfr) $(LIBsp) $(LIBtransf) $(LIBhermes) $(LIBmpeu) $(LIBgfio) $(LIBhdf) $(LIBmpi) $(LIBsys)
-
-$(LIB): $(OBJS) $(OBJS_NOSWAP)
-	$(RM) $(LIB)
-	$(AR) $@ $(OBJS) $(OBJS_NOSWAP)
-
-export: libenkf.a enkf.x prepbykx.x
-	$(MKDIR)               $(COREBIN)
-	$(CP) $(LIB)           $(CORELIB)
-	$(CP) enkf.x            $(COREBIN)
-	$(CP) enkf.rc.sample    $(COREETC)/enkf.rc
-	$(CP) tlmadj_parameter.rc.sample $(COREETC)/tlmadj_parameter.rc
-	$(CP) gmao_airs_bufr.tbl       $(COREETC)/gmao_airs_bufr.tbl
-	$(CP) gmao_global_pcpinfo.txt  $(COREETC)/gmao_global_pcpinfo.rc
-	$(CP) gmao_global_satinfo.txt  $(COREETC)/gmao_global_satinfo.rc
-	$(CP) gmao_global_ozinfo.txt   $(COREETC)/gmao_global_ozinfo.rc
-	$(CP) gmao_global_convinfo.txt $(COREETC)/gmao_global_convinfo.rc
-	$(SED) -e "s^@DASPERL^$(DASPERL)^" < analyzer > $(COREBIN)/analyzer
-	chmod 755 $(COREBIN)/analyzer
-
-doc:              AnIntro $(DOCSRC)
-	$(PROTEX) AnIntro *.f90 *.F90 >  enkf.tex
-	$(LATEX) enkf.tex
-	$(LATEX) enkf.tex
-
-doclean:
-	- $(RM) *.tex *.dvi *.aux *.toc *.log *.ps *.pdf
-
-help:
-	@ echo "Available targets:"
-	@ echo "NCEP:  make             creates enkf executable        "
-	@ echo "NPEP:  make debug       created enkf exec for debugging purposes"
-	@ echo "NCEP:  make install     creates enkf exec & places it in bin"
-	@ echo "GMAO:  make lib         creates enkf library"
-	@ echo "GMAO:  make export      creates lib, exec, & copies all to bin/inc/etc"
-	@ echo "       make clean       cleans objects, exec, and alien files"  
-	@ echo "       make doc         creates documentation"
-	@ echo "       make doclean     clean doc-related temporary files"
-
