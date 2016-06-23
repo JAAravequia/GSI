@@ -101,13 +101,12 @@ subroutine intrw_(rwhead,rval,sval)
 ! Declare local varibles
   integer(i_kind) j1,j2,j3,j4,j5,j6,j7,j8,ier,istatus
 ! real(r_kind) penalty
-  real(r_kind),pointer,dimension(:) :: xhat_dt_u,xhat_dt_v!,xhat_dt_w
-  real(r_kind),pointer,dimension(:) :: dhat_dt_u,dhat_dt_v!,dhat_dt_w
+  real(r_kind),pointer,dimension(:) :: xhat_dt_u,xhat_dt_v
+  real(r_kind),pointer,dimension(:) :: dhat_dt_u,dhat_dt_v
   real(r_kind) val,valu,valv,valw,w1,w2,w3,w4,w5,w6,w7,w8
-  real(r_kind) ww1,ww2,ww3,ww4,ww5,ww6,ww7,ww8
   real(r_kind) cg_rw,p0,grad,wnotgross,wgross,time_rw,pg_rw
-  real(r_kind),pointer,dimension(:) :: su,sv,sw_tot
-  real(r_kind),pointer,dimension(:) :: ru,rv,rw_tot
+  real(r_kind),pointer,dimension(:) :: su,sv,sw
+  real(r_kind),pointer,dimension(:) :: ru,rv,rw
   type(rw_ob_type), pointer :: rwptr
 
 !  If no rw data return
@@ -118,17 +117,15 @@ subroutine intrw_(rwhead,rval,sval)
   ier=0
   call gsi_bundlegetpointer(sval,'u',su,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(sval,'v',sv,istatus);ier=istatus+ier
-  call gsi_bundlegetpointer(sval,'w',sw_tot,istatus);ier=istatus+ier
+  call gsi_bundlegetpointer(sval,'w',sw,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(rval,'u',ru,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(rval,'v',rv,istatus);ier=istatus+ier
-  call gsi_bundlegetpointer(rval,'w',rw_tot,istatus);ier=istatus+ier
+  call gsi_bundlegetpointer(rval,'w',rw,istatus);ier=istatus+ier
   if(l_foto) then
      call gsi_bundlegetpointer(xhat_dt,'u',xhat_dt_u,istatus);ier=istatus+ier
      call gsi_bundlegetpointer(xhat_dt,'v',xhat_dt_v,istatus);ier=istatus+ier
-     !call gsi_bundlegetpointer(xhat_dt,'w',xhat_dt_w,istatus);ier=istatus+ier
      call gsi_bundlegetpointer(dhat_dt,'u',dhat_dt_u,istatus);ier=istatus+ier
      call gsi_bundlegetpointer(dhat_dt,'v',dhat_dt_v,istatus);ier=istatus+ier
-     !call gsi_bundlegetpointer(dhat_dt,'w',dhat_dt_w,istatus);ier=istatus+ier
   endif
   if(ier/=0)return
 
@@ -151,22 +148,16 @@ subroutine intrw_(rwhead,rval,sval)
      w6=rwptr%wij(6)
      w7=rwptr%wij(7)
      w8=rwptr%wij(8)
-     ww1=rwptr%wwij(1)
-     ww2=rwptr%wwij(2)
-     ww3=rwptr%wwij(3)
-     ww4=rwptr%wwij(4)
-     ww5=rwptr%wwij(5)
-     ww6=rwptr%wwij(6)
-     ww7=rwptr%wwij(7)
-     ww8=rwptr%wwij(8)
 
-!    Forward model
-     val=(w1* su(j1)+w2* su(j2)+w3* su(j3)+w4* su(j4)+                       &
-          w5* su(j5)+w6* su(j6)+w7* su(j7)+w8* su(j8))*rwptr%cosazm+         &
-         (w1* sv(j1)+w2* sv(j2)+w3* sv(j3)+w4* sv(j4)+                       &
-          w5* sv(j5)+w6* sv(j6)+w7* sv(j7)+w8* sv(j8))*rwptr%sinazm+         &
-         (ww1* sw_tot(j1)+ww2* sw_tot(j2)+ww3* sw_tot(j3)+ww4* sw_tot(j4)+   &
-          ww5* sw_tot(j5)+ww6* sw_tot(j6)+ww7* sw_tot(j7)+ww8* sw_tot(j8))
+!    Forward model (Tangent Linear; TL)
+!    TLVr  =  TLu*costilt*cosazm  +  TLv*costilt*sinazm  +  TLw*sintilt
+     val=(w1*su(j1)+ w2*su(j2)+ w3*su(j3)+ w4*su(j4)+ w5*su(j5)+          &
+          w6*su(j6)+ w7*su(j7)+ w8*su(j8))*rwptr%costilt*rwptr%cosazm+    &
+         (w1*sv(j1)+ w2*sv(j2)+ w3*sv(j3)+ w4*sv(j4)+ w5*sv(j5)+          &
+          w6*sv(j6)+ w7*sv(j7)+ w8*sv(j8))*rwptr%costilt*rwptr%sinazm+    &
+         (w1*sw(j1)+ w2*sw(j2)+ w3*sw(j3)+ w4*sw(j4)+ w5*sw(j5)+          &
+          w6*sw(j6)+ w7*sw(j7)+ w8*sw(j8))*rwptr%sintilt
+
 
      if ( l_foto ) then
         time_rw=rwptr%time*r3600
@@ -213,12 +204,11 @@ subroutine intrw_(rwhead,rval,sval)
 
         endif
 
-!       Adjoint
-        valu=rwptr%cosazm*grad
-        valv=rwptr%sinazm*grad
-        !valw=rwptr%sintilt*grad 
-        valw=grad 
-        ru(j1)=ru(j1)+w1*valu
+!       Adjoint (AD)
+        valu=rwptr%costilt*rwptr%cosazm*grad  ! ADVr_u = costilt*cosazm*ADVr
+        valv=rwptr%costilt*rwptr%sinazm*grad  ! ADVr_v = costilt*sinazm*ADVr
+        valw=rwptr%sintilt*grad               ! ADVr_w = sintilt*ADVr
+        ru(j1)=ru(j1)+w1*valu                 ! ADu = ADu + ADVr_u
         ru(j2)=ru(j2)+w2*valu
         ru(j3)=ru(j3)+w3*valu
         ru(j4)=ru(j4)+w4*valu
@@ -226,7 +216,7 @@ subroutine intrw_(rwhead,rval,sval)
         ru(j6)=ru(j6)+w6*valu
         ru(j7)=ru(j7)+w7*valu
         ru(j8)=ru(j8)+w8*valu
-        rv(j1)=rv(j1)+w1*valv
+        rv(j1)=rv(j1)+w1*valv                 ! ADv = ADv + ADVr_v
         rv(j2)=rv(j2)+w2*valv
         rv(j3)=rv(j3)+w3*valv
         rv(j4)=rv(j4)+w4*valv
@@ -234,14 +224,14 @@ subroutine intrw_(rwhead,rval,sval)
         rv(j6)=rv(j6)+w6*valv
         rv(j7)=rv(j7)+w7*valv
         rv(j8)=rv(j8)+w8*valv
-        rw_tot(j1)=rw_tot(j1)+ww1*valw
-        rw_tot(j2)=rw_tot(j2)+ww2*valw
-        rw_tot(j3)=rw_tot(j3)+ww3*valw
-        rw_tot(j4)=rw_tot(j4)+ww4*valw
-        rw_tot(j5)=rw_tot(j5)+ww5*valw
-        rw_tot(j6)=rw_tot(j6)+ww6*valw
-        rw_tot(j7)=rw_tot(j7)+ww7*valw
-        rw_tot(j8)=rw_tot(j8)+ww8*valw
+        rw(j1)=rw(j1)+w1*valw                 ! ADw = ADw + ADVr_w
+        rw(j2)=rw(j2)+w2*valw
+        rw(j3)=rw(j3)+w3*valw
+        rw(j4)=rw(j4)+w4*valw
+        rw(j5)=rw(j5)+w5*valw
+        rw(j6)=rw(j6)+w6*valw
+        rw(j7)=rw(j7)+w7*valw
+        rw(j8)=rw(j8)+w8*valw
  
         if ( l_foto ) then
            valu=valu*time_rw

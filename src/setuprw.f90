@@ -656,13 +656,14 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         call get_ijk(mm1,dlat,dlon,dpres,rwtail(ibin)%head%ij(1),rwtail(ibin)%head%wij(1))
 
         do j=1,8
-           rwtail(ibin)%head%wij(j)=factw*costilt*rwtail(ibin)%head%wij(j)  
-           rwtail(ibin)%head%wwij(j)=factw*sintilt*rwtail(ibin)%head%wwij(j)
+           !rwtail(ibin)%head%wij(j)=factw*costilt*rwtail(ibin)%head%wij(j)  
+           rwtail(ibin)%head%wij(j)=factw*rwtail(ibin)%head%wij(j)  
         end do
         rwtail(ibin)%head%raterr2 = ratio_errors**2  
         rwtail(ibin)%head%cosazm  = cosazm
         rwtail(ibin)%head%sinazm  = sinazm
-        !rwtail(ibin)%head%sintilt = sintilt
+        rwtail(ibin)%head%costilt = costilt
+        rwtail(ibin)%head%sintilt = sintilt
         rwtail(ibin)%head%res     = ddiff
         rwtail(ibin)%head%err2    = error**2
         rwtail(ibin)%head%time    = dtime
