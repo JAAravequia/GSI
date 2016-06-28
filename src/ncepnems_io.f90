@@ -1046,7 +1046,7 @@ contains
     call nemsio_readrecv(gfile, 'stc',  'soil layer', 1, rwork2d(:,11), iret=iret)
     if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'stc','read',istop,iret)
 !   fice
-    call nemsio_readrecv(gfile, 'fice',  'sfc', 1, rwork2d(:,12), iret=iret)
+    call nemsio_readrecv(gfile, 'icec',  'sfc', 1, rwork2d(:,12), iret=iret)
     if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'fice','read',istop,iret)
 
 !   Fill surface guess array
