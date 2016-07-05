@@ -311,7 +311,7 @@ latboundmm=-latbound-p5delat
 delatinv=1.0_r_single/delat
 
 ! have to do ob space update for serial filter (not for LETKF).
-if (.not. letkf_flag .and. numiter < 1) numiter = 1
+if ((.not. letkf_flag .or. lupd_obspace_serial) .and. numiter < 1) numiter = 1
 
 if (nproc == 0) then
 
@@ -431,6 +431,16 @@ if (.not. letkf_flag .and. lupd_obspace_serial) then
    print *,'setting lupd_obspace_serial to .false., since letkf_flag is .false.'
   endif
 endif
+
+! set lupd_obspace_serial to .true. if letkf_flag is true
+! and numiter > 0.
+if (letkf_flag .and. .not. lupd_obspace_serial .and. numiter > 0) then
+  lupd_obspace_serial = .true.
+  if (nproc == 0) then
+   print *,'setting lupd_obspace_serial to .true., since letkf_flag is .true. and numiter > 0'
+  endif
+endif
+
 end subroutine read_namelist
 
 end module params
