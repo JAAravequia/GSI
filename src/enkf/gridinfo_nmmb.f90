@@ -50,7 +50,7 @@ if (nproc .eq. 0) then
 
    ! Build the ensemble mean filename expected by routine
   
-   filename = trim(adjustl(datapath))//trim(adjustl(fgfileprefixes(nbackgrounds/2+1)))//"_ensmean"
+   filename = trim(adjustl(datapath))//trim(adjustl(fgfileprefixes(nbackgrounds/2+1)))//"ensmean"
   
    call nemsio_init(iret=iret)
    if(iret/=0) then
