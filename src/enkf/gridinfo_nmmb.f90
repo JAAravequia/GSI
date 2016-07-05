@@ -30,7 +30,7 @@ use nemsio_module, only: nemsio_gfile,nemsio_open,nemsio_close,&
 implicit none
 character(len=500) filename
 integer(i_kind) iret,nlatsin,nlonsin,nlevsin,nlon_test,&
- ierr,nlon_test_with_halo,nlat_test_with_halo,nlat_test,nvar,k,nn
+ ierr,nlon_test_with_halo,nlat_test_with_halo,nlat_test,k,nn
 real(nemsio_realkind) pt,pdtop
 real(r_kind), allocatable, dimension(:) :: spressmn
 real(r_kind), allocatable, dimension(:,:) :: presslmn
