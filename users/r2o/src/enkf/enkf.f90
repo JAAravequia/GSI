@@ -83,7 +83,8 @@ module enkf
 !               kdtree2_module, enkf_obsmod, radinfo, radbias, gridinfo
 !
 ! program history log:
-!   2009-02-23  Initial version.
+!   2009-02-23:  Initial version.
+!   2016-02-01:  Ensure posterior perturbation mean remains zero.
 !
 ! attributes:
 !   language: f95
@@ -110,11 +111,13 @@ use constants, only: pi, one, zero
 use params, only: sprd_tol, paoverpb_thresh, ndim, datapath, nanals,&
                   iassim_order,sortinc,deterministic,numiter,nlevs,nvars,&
                   zhuberleft,zhuberright,varqc,lupd_satbiasc,huber,univaroz,&
-                  covl_minfact,covl_efold,nbackgrounds,nhr_anal,fhr_assim
+                  covl_minfact,covl_efold,nbackgrounds,nhr_anal,fhr_assim,&
+                  iseed_perturbed_obs,lupd_obspace_serial
 use radinfo, only: npred,nusis,nuchan,jpch_rad,predx
 use radbias, only: apply_biascorr, update_biascorr
 use gridinfo, only: nlevs_pres,index_pres,nvarozone
 use sorting, only: quicksort, isort
+!use innovstats, only: print_innovstats
 
 implicit none
 
@@ -176,12 +179,24 @@ do nob=1,nobstot
    indxassim(nob) = nob
 end do
 
+! set random seed if random number generator is to be used.
+if (iassim_order == 1 .or. .not. deterministic) then
+   if (deterministic .and. nproc == 0) then
+      ! random numbers only generated on root task.
+      call set_random_seed(iseed_perturbed_obs, nproc)
+   else
+      ! random numbers generated for perturbed obs
+      ! on all tasks - set random seed identically
+      ! on all tasks to get same random sequence.
+      call set_random_seed(iseed_perturbed_obs, nproc)
+   endif
+endif
+
 if (iassim_order == 1) then
   ! create random index array so obs are assimilated in random order.
   if (nproc == 0) then
       print *,'assimilate obs in random order'
       allocate(rannum(nobstot))
-      call set_random_seed(0, nproc)
       call random_number(rannum)
       call quicksort(nobstot,rannum,indxassim)
       deallocate(rannum)
@@ -463,7 +478,7 @@ do niter=1,numiter
        nobm=nob
        ! determine localization length scales based on latitude of ob.
        nf2=0
-       if (lastiter) then
+       if (lastiter .and. .not. lupd_obspace_serial) then
         ! search analysis grid points for those within corrlength of 
         ! ob being assimilated (using a kd-tree for speed).
         if (kdgrid) then
@@ -607,6 +622,27 @@ do niter=1,numiter
 
   end do obsloop ! loop over obs to assimilate
 
+  ! make sure posterior perturbations still have zero mean.
+  ! (roundoff errors can accumulate)
+  if (lastiter .and. .not. lupd_obspace_serial) then
+     !$omp parallel do schedule(dynamic) private(npt,nb,i)
+     do npt=1,npts_max
+        do nb=1,nbackgrounds
+           do i=1,ndim
+              anal_chunk(1:nanals,npt,i,nb) = anal_chunk(1:nanals,npt,i,nb)-&
+              sum(anal_chunk(1:nanals,npt,i,nb),1)*r_nanals
+           end do
+        end do
+     enddo
+     !$omp end parallel do
+  endif
+  !$omp parallel do schedule(dynamic) private(nob)
+  do nob=1,nobs_max
+     anal_obchunk(1:nanals,nob) = anal_obchunk(1:nanals,nob)-&
+     sum(anal_obchunk(1:nanals,nob),1)*r_nanals
+  enddo
+  !$omp end parallel do
+
   tend = mpi_wtime()
   if (nproc .eq. 0) then
       write(6,8003) niter,'timing on proc',nproc,' = ',tend-tbegin,t2,t3,t4,t5,t6,nrej
@@ -630,7 +666,7 @@ do niter=1,numiter
   8003  format(i2,1x,a14,1x,i5,1x,a3,6(f7.2,1x),i4)
 
   t1 = mpi_wtime()
-! distribute the O-A stats to all processors.
+! distribute the O-A, HPaHT stats to all processors.
   buffertmp=zero
   do nob1=1,numobsperproc(nproc+1)
     nob2=indxproc_obs(nproc+1,nob1)
@@ -639,6 +675,17 @@ do niter=1,numiter
   call mpi_allreduce(buffertmp,obfit_post,nobstot,mpi_real4,mpi_sum,mpi_comm_world,ierr)
   obfit_post = ob - obfit_post
   if (nproc == 0) print *,'time to broadcast obfit_post = ',mpi_wtime()-t1,' secs, niter =',niter
+! buffertmp=zero
+! do nob1=1,numobsperproc(nproc+1)
+!   nob2=indxproc_obs(nproc+1,nob1)
+!   buffertmp(nob2) = sum(anal_obchunk(:,nob1)**2)*r_nanalsm1
+! end do
+! call mpi_allreduce(buffertmp,obsprd_post,nobstot,mpi_real4,mpi_sum,mpi_comm_world,ierr)
+! if (nproc == 0) print *,'time to broadcast obfit_post,obsprd_post = ',mpi_wtime()-t1,' secs, niter =',niter
+! if (nproc == 0) then
+!    print *,'innovation statistics for posterior:'
+!    call print_innovstats(obfit_post, obsprd_post)
+! end if
 
   ! satellite bias correction update.
   if (nobs_sat > 0 .and. lupd_satbiasc) call update_biascorr(niter)
@@ -656,6 +703,7 @@ call mpi_allreduce(buffertmp,obsprd_post,nobstot,mpi_real4,mpi_sum,mpi_comm_worl
 if (nproc == 0) print *,'time to broadcast obsprd_post = ',mpi_wtime()-t1
 
 predx = predx + deltapredx ! add increment to bias coeffs.
+deltapredx = 0.0 
 
 ! free local temporary arrays.
 deallocate(taper_disob,taper_disgrd)
