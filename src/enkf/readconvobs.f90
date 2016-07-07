@@ -927,7 +927,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
           endif
           x_err(nob) = (one/rdiagbuf(16,n))**2
           x_obs(nob) = rdiagbuf(17,n)
-          h_x_ensmean(nob) = rdiagbuf(17,n)-rdiagbuf2(18,n)
+          h_x_ensmean(nob) = rdiagbuf(17,n)-rdiagbuf(18,n)
           h_xnobc(nob) = rdiagbuf(17,n)-rdiagbuf2(19,n)
           x_type(nob) = obtype
        enddo
@@ -999,7 +999,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
           endif
           x_err(nob) = (one/rdiagbuf(16,n))**2
           x_obs(nob) = rdiagbuf(17,n)
-          h_x_ensmean(nob) = rdiagbuf(17,n)-rdiagbuf2(18,n)
+          h_x_ensmean(nob) = rdiagbuf(17,n)-rdiagbuf(18,n)
           h_xnobc(nob) = rdiagbuf(17,n)-rdiagbuf2(19,n)
           x_type(nob) = '  u'
        enddo
@@ -1017,7 +1017,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
           endif
           x_err(nob) = (one/rdiagbuf(16,n))**2
           x_obs(nob) = rdiagbuf(20,n)
-          h_x_ensmean(nob) = rdiagbuf(20,n)-rdiagbuf2(21,n)
+          h_x_ensmean(nob) = rdiagbuf(20,n)-rdiagbuf(21,n)
           h_xnobc(nob) = rdiagbuf(20,n)-rdiagbuf2(22,n)
           x_type(nob) = '  v'
        enddo
