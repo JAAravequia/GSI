@@ -1824,7 +1824,7 @@ subroutine read_nems_nmmb_guess(mype)
         end if
      end do
    
-     write(6,*) 'printing w_tot after read:',ges_w(1:5,1:6,1:7)
+!     write(6,*) 'printing w_tot after read:',ges_w(1:5,1:6,1:7)
 
 !                          !  cloud liquid water,ice,snow,graupel,hail,rain for cloudy radiance
      if (n_actual_clouds>0 .and. (.not.use_reflectivity)) then

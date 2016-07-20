@@ -637,7 +637,7 @@ contains
 	  this_stahgt=master_hgt_table(krad)
 	  do iii=1,nthisrad
           ! single radar location ob test
-          if(this_staid=='KGRK') then
+          if(this_staid=='KGRK') then 
 	     if(ibins2(iii,krad) < minnum) cycle
 
 	     thiscount=one_quad/real(ibins2(iii,krad),r_quad)
@@ -720,36 +720,121 @@ contains
                   abs(corrected_azimuth-thisazimuth     ),&
                   abs(corrected_azimuth-thisazimuth+r360),&
                   abs(corrected_azimuth-thisazimuth+r720)),delazmmax)
+             if(.false. .and. &  ! trying to isolate bad observations.
+                corrected_azimuth > 65.0 .and. corrected_azimuth < 70.0 .and. &
+                gamma > 55000 .and. gamma < 65000) then 
+                     write(inbufr) this_staid,this_stalat,this_stalon,this_stahgt, &
+                          thistime,thislat,thislon,thishgt,thisvr,corrected_azimuth,&
+                          thiserr,corrected_tilt                   
+                     write(6,*) this_staid,this_stalat,this_stalon,this_stahgt, &
+                                thistime,thislat,thislon,thishgt,thisvr,&
+                                corrected_azimuth,thiserr,corrected_tilt,gamma
+                     write(6,*)'-----------------------------------------------'
+                     nsuper=nsuper+1
+             end if
              !!lippi single radar ob test
-             !if(nsuper < 1) then
-                !if(.true.) then
-                   !this_staid='KGRK'
-                   !this_stalat=30.7200000000000
-                   !this_stalon=-97.3800000000000
-                   !this_stahgt=179.000000000000
-                   !thistime=9.074074074074078E-003
-                   !thislat=31.1513910032159
-                   !thislon=-97.4782013414109
-                   !thishgt=1070.20676506144
-                   !thisvr=23.77+2.
-                   !corrected_azimuth=101.073817562754
-                   !thiserr=1.0
-                   !corrected_tilt=1.20962249451990
-                   !gamma=48866.6718242868
-                !end if
+             if(.true. .and. nsuper < 1) then
+                   if(.false.) then          ! bad ob test.
+                      this_staid='KGRK'
+                      this_stalat=30.7200000000000
+                      this_stalon=-97.3800000000000
+                      this_stahgt=179.000000000000
+                      thistime=-4.444444444444444E-002
+                      thislat=31.2059217792812
+                      thislon=-97.1388029867027
+                      thishgt=4529.81679341488 
+                      thisvr=11.4250000000000
+                      corrected_azimuth=66.8809040374042
+                      thiserr=0.884236959191361
+                      corrected_tilt=4.43593743925352
+                      gamma=56221.1567198312 
 
+                   else if(.true.) then                    ! far single ob test.
+                      this_staid='KGRK'
+                      this_stalat=30.7200000000000
+                      this_stalon=-97.3800000000000
+                      this_stahgt=179.000000000000
+                      thistime=-0.232816893424036
+                      thislat=30.5989917585869
+                      thislon=-96.7411791452217
+                      thishgt=4780.35921778006
+                      thisvr=10.00000000000                 !1.90918367346939
+                      corrected_azimuth=-12.5812498078067
+                      thiserr=0.1                           ! 4.82789696757598
+                      corrected_tilt=90.000                 ! radar looking straight up 
+                      gamma=62558.1331455193
+
+                      !corrected_tilt=0.0000 ! radar looking straight out
+
+                   else if(.false.) then   ! close single ob test.
+                      this_staid='KGRK'
+                      this_stalat=30.7200000000000
+                      this_stalon=-97.3800000000000
+                      this_stahgt=179.000000000000
+                      thistime=-4.212100366876310E-002
+                      thislat=30.7292499218964
+                      thislon=-97.4613819003352
+                      thishgt=248.351601218044
+                      thisvr=9.29952830188679
+                      corrected_azimuth=172.488831387925
+                      thiserr=1.0 !3.99275874790981
+                      corrected_tilt=0.532923788999991
+                      gamma=7845.50632625533
+
+                   else ! default single ob test.
+                      this_staid='KGRK'
+                      this_stalat=30.7200000000000
+                      this_stalon=-97.3800000000000
+                      this_stahgt=179.000000000000
+                      thistime=9.074074074074078E-003
+                      thislat=31.1513910032159
+                      thislon=-97.4782013414109
+                      thishgt=1070.20676506144
+                      thisvr=23.77+6.
+                      corrected_azimuth=101.073817562754
+                      thiserr=1.0
+                      corrected_tilt=1.20962249451990
+                      gamma=48866.6718242868
+                   end if
                 write(inbufr) this_staid,this_stalat,this_stalon,this_stahgt, &
                      thistime,thislat,thislon,thishgt,thisvr,corrected_azimuth,&
                      thiserr,corrected_tilt
-                !    if(.false.) then ! if true, print the value of the single ob.
-                !       write(6,*) 'single radar observation test values of observation.'
-                !       write(6,*) this_staid,this_stalat,this_stalon,this_stahgt, &
-                !                  thistime,thislat,thislon,thishgt,thisvr,&
-                !                  corrected_azimuth,thiserr,corrected_tilt,gamma 
-                !       write(6,*)'-----------------------------------------------'
-                !    end if
+                write(6,*) 'single radar observation test values of observation.'
+                write(6,*) this_staid,this_stalat,this_stalon,this_stahgt, &
+                           thistime,thislat,thislon,thishgt,thisvr,&
+                           corrected_azimuth,thiserr,corrected_tilt,gamma 
+                write(6,*)'-----------------------------------------------'
                 nsuper=nsuper+1
-             !end if ! end of single observation test from a single radar.
+
+             else if(.false.) then  ! let's get some realistic observations.
+               if(thislat >=  30.73-0.03 .and. thislat <=  30.73+0.03 .and.   &
+                  thislon >= -97.47-0.03 .and. thislon <= -97.47+0.03      ) then
+                  write(6,*) this_staid,this_stalat,this_stalon,this_stahgt, &
+                           thistime,thislat,thislon,thishgt,thisvr,&
+                           corrected_azimuth,thiserr,corrected_tilt,gamma
+                  write(6,*)'-----------------------------------------------'
+                  write(inbufr) this_staid,this_stalat,this_stalon,this_stahgt, &
+                       thistime,thislat,thislon,thishgt,thisvr,corrected_azimuth,&
+                       thiserr,corrected_tilt
+                  nsuper=nsuper+1
+               end if
+
+             else if(.false.) then ! single radar tilt. 
+                if(corrected_tilt >= 3.75 .and. corrected_tilt <= 4.25) then
+                   write(inbufr) this_staid,this_stalat,this_stalon,this_stahgt, &
+                        thistime,thislat,thislon,thishgt,thisvr,corrected_azimuth,&
+                        thiserr,corrected_tilt
+                   nsuper=nsuper+1
+                endif
+
+             else if(.false.) then ! if not a single observation test just do as normal.
+                write(inbufr) this_staid,this_stalat,this_stalon,this_stahgt, &
+                     thistime,thislat,thislon,thishgt,thisvr,corrected_azimuth,&
+                     thiserr,corrected_tilt
+                nsuper=nsuper+1
+             end if ! end of single observation test from a single radar.             
+
+
           end if ! end of single radar location test.
           end do
           if(nsuper > 0)then
@@ -1241,7 +1326,7 @@ sis,hgtl_full,nobs)
 !********************************************************************************
      end if
 !15.
-!     good=.true. !lippi
+     !good=.true. !lippi
 
 !    If data is good, load into output array
      if(good) then

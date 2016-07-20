@@ -125,7 +125,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) sin2,termg,termr,termrg
   real(r_kind) psges,zsges,zsges0
   real(r_kind),dimension(nsig):: zges,hges,ugesprofile,vgesprofile
-  real(r_kind),dimension(nsig):: wgesprofile,w_tvgesprofile
+  real(r_kind),dimension(nsig):: wgesprofile,vTgesprofile
   real(r_kind) prsltmp(nsig)
   real(r_kind) sfcchk  
   real(r_kind) residual,obserrlm,obserror,ratio,scale,val2
@@ -509,7 +509,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      sinazm  = sin(data(iazm,i))  ! sin(azimuth angle)
      costilt = cos(data(itilt,i)) ! cos(tilt angle)
      sintilt = sin(data(itilt,i)) ! sin(tilt angle)
-     w_tvgesprofile= 0. ! zero for now
+     vTgesprofile= -5.0 ! I believe this must be a negative number.
 !    rwwind = (ugesin*cosazm+vgesin*sinazm)*costilt*factw
      umaxmax=-huge(umaxmax)
      uminmin=huge(uminmin)
@@ -519,7 +519,8 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         !rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt
         rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt &
                      +(wgesprofile(k))*sintilt
-                     !+(wgesprofile(k)-w_tvgesprofile(k))*sintilt
+                     !+(wgesprofile(k)+4.85)*sintilt
+                     !+(wgesprofile(k)-vTgesprofile(k))*sintilt
         if(umaxmax<rwwindprofile) then
            umaxmax=rwwindprofile
            kmaxmax=k
