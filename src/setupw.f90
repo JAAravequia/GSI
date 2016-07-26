@@ -143,6 +143,8 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2014-04-12       su - add non linear qc from Purser's scheme
 !   2014-12-30  derber - Modify for possibility of not using obsdiag
 !   2015-05-01  Liu Ling - Added ISS Rapidscat wind (u,v) qc 
+!   2015-03-14  Nebuda  - add departure check and near surface check for clear air WV AMV (WVCS) from GOES type 247
+!   2015-12-21  yang    - Parrish's correction to the previous code in new varqc.
 !
 ! REMARKS:
 !   language: f90
@@ -301,7 +303,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=28
+     ioff0=23
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+7*miter+2
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
@@ -726,6 +728,32 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         if(itype ==259 .and. presw >600.0_r_kind) error=zero
         if(itype ==259 .and. presw <249.0_r_kind) error=zero
      endif ! qc_satwnds
+
+!    QC GOES CAWV - some checks above as well
+     if (itype==247) then
+        prsfc = r10*psges       ! surface pressure in hPa
+
+!       Compute observed and guess wind speeds (m/s).  
+        spdges = sqrt(ugesin* ugesin +vgesin* vgesin )
+
+!       Set and compute GOES CAWV specific departure parameters
+        LNVD_wspd = spdob
+        LNVD_omb = sqrt(dudiff*dudiff + dvdiff*dvdiff)
+        LNVD_ratio = LNVD_omb / log(LNVD_wspd)
+        LNVD_threshold = 3.0_r_kind
+        if(LNVD_ratio >= LNVD_threshold .or. &      ! LNVD check
+            (presw > prsfc-110.0_r_kind .and. isli /= 0))then ! near surface check 110 ~1km
+           error = zero
+        endif
+! check for direction departure gt 50 deg 
+        wdirdiffmax=50._r_kind
+        call getwdir(uob,vob,wdirob)
+        call getwdir(ugesin,vgesin,wdirgesin)
+        if ( min(abs(wdirob-wdirgesin),abs(wdirob-wdirgesin+r360), &
+                 abs(wdirob-wdirgesin-r360)) > wdirdiffmax ) then
+           error = zero
+        endif
+     endif
    
 !    QC MODIS winds
      if (itype==257 .or. itype==258 .or. itype==259 .or. itype ==260) then
@@ -745,7 +773,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
             (presw > prsfc-r200 .and. isli /= 0))then ! near surface check
            error = zero
         endif
-       endif ! ???
+     endif ! ???
 
 !    QC AVHRR winds
      if (itype==244) then
@@ -940,17 +968,17 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         val      = valu*valu+valv*valv
         exp_arg  = -half*val
         rat_err2 = ratio_errors**2
-        if(njqc .and. var_jb>tiny_r_kind .and. var_jb<10.0_r_kind .and. error >tiny_r_kind) then
+        if(njqc  .and. var_jb>tiny_r_kind .and. var_jb<10.0_r_kind .and. error >tiny_r_kind) then
            if(exp_arg  == zero) then
               wgt=one
            else
               wgt=sqrt(dudiff*dudiff+dvdiff*dvdiff)*error/sqrt(two*var_jb)
               wgt=tanh(wgt)/wgt
            endif
-           term=-two*var_jb*ratio_errors*log(cosh((sqrt(val))/sqrt(two*var_jb)))
+           term=-two*var_jb*rat_err2*log(cosh((sqrt(val))/sqrt(two*var_jb)))
            rwgt = wgt/wgtlim
            valqc = -two*term
-        else if (vqc==.true. .and. cvar_pg(ikx) > tiny_r_kind .and. error > tiny_r_kind) then
+        else if (vqc .and. cvar_pg(ikx) > tiny_r_kind .and. error > tiny_r_kind) then
            arg  = exp(exp_arg)
            wnotgross= one-cvar_pg(ikx)
            cg_w=cvar_b(ikx)
@@ -961,7 +989,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            valqc = -two*rat_err2*term
         else
            term = exp_arg
-           wgt  = wgtlim
+           wgt  = one 
            rwgt = wgt/wgtlim
            valqc = -two*rat_err2*term
         endif
@@ -1154,11 +1182,6 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(20,ii) = data(ivob,i)       ! v wind component observation (m/s)
         rdiagbuf(21,ii) = dvdiff             ! v obs-ges used in analysis (m/s)
         rdiagbuf(22,ii) = vob-vgesin         ! v obs-ges w/o bias correction (m/s) (future slot)
-        rdiagbuf(24,ii) =psges
-        rdiagbuf(25,ii) =drpx
-        rdiagbuf(26,ii) =rhgh
-        rdiagbuf(27,ii) =rlow
-        rdiagbuf(28,ii) =dup(i)
 
         if(regional) then
 

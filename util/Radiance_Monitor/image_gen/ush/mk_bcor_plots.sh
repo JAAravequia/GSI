@@ -124,7 +124,7 @@ ${COMPRESS} ${imgndir}/*.ctl
 
   plot_list="count total fixang lapse lapse2 const scangl clw cos sin emiss ordang4 ordang3 ordang2 ordang1"
 
-  export PLOT_WORK_DIR=${PLOT_WORK_DIR}/plotbcor_${SUFFIX}
+  export PLOT_WORK_DIR=${PLOT_WORK_DIR}/plotbcor_${RADMON_SUFFIX}
   if [[ -d ${PLOT_WORK_DIR} ]]; then 
      rm -f ${PLOT_WORK_DIR}
   fi
@@ -136,10 +136,10 @@ ${COMPRESS} ${imgndir}/*.ctl
   # Loop over satellite/instruments.  Submit poe job to make plots.  Each task handles
   # a single satellite/insrument.
 
-  if [[ $MY_MACHINE = "wcoss" ]]; then	
+  if [[ $MY_MACHINE = "wcoss" || $MY_MACHINE = "cray" ]]; then	
      suffix=a
      cmdfile=cmdfile_pbcor_${suffix}
-     jobname=plot_${SUFFIX}_bcor_${suffix}
+     jobname=plot_${RADMON_SUFFIX}_bcor_${suffix}
      logfile=${LOGdir}/plot_bcor_${suffix}.log
 
      rm -f ${cmdfile}
@@ -159,13 +159,16 @@ ${COMPRESS} ${imgndir}/*.ctl
         wall_tm="0:45"
      fi
 
-     $SUB -q $JOB_QUEUE -P $PROJECT -M 80 -R affinity[core] -o ${logfile} -W ${wall_tm} -J ${jobname} ./$cmdfile
-
+     if [[ $MY_MACHINE = "wcoss" ]]; then
+        $SUB -q $JOB_QUEUE -P $PROJECT -M 80 -R affinity[core] -o ${logfile} -W ${wall_tm} -J ${jobname} ./$cmdfile
+     else
+        $SUB -q $JOB_QUEUE -P $PROJECT -M 80 -o ${logfile} -W ${wall_tm} -J ${jobname} ./$cmdfile
+     fi
   else					#Zeus/linux
      for sat in ${SATLIST}; do
         suffix=${sat}
         cmdfile=cmdfile_pbcor_${sat}
-        jobname=plot_${SUFFIX}_bcor_${sat}
+        jobname=plot_${RADMON_SUFFIX}_bcor_${sat}
         logfile=${LOGdir}/plot_bcor_${sat}.log
 
         rm -f $cmdfile
@@ -193,10 +196,10 @@ ${COMPRESS} ${imgndir}/*.ctl
   for sat in ${bigSATLIST}; do
      suffix=$sat
 
-     if [[ $MY_MACHINE = "wcoss" ]]; then
+     if [[ $MY_MACHINE = "wcoss" || $MY_MACHINE = "cray" ]]; then
 
         cmdfile=cmdfile_pbcor_${suffix}
-        jobname=plot_${SUFFIX}_bcor_${suffix}
+        jobname=plot_${RADMON_SUFFIX}_bcor_${suffix}
         logfile=${LOGdir}/plot_bcor_${suffix}.log
 
         rm -f $cmdfile
@@ -215,12 +218,15 @@ ${COMPRESS} ${imgndir}/*.ctl
            wall_tm="1:00"
         fi
 
-        $SUB -q $JOB_QUEUE -P $PROJECT -M 80 -R affinity[core] -o ${logfile} -W ${wall_tm} -J ${jobname} ./$cmdfile
-        
+        if [[ $MY_MACHINE = "wcoss" ]]; then
+           $SUB -q $JOB_QUEUE -P $PROJECT -M 80 -R affinity[core] -o ${logfile} -W ${wall_tm} -J ${jobname} ./$cmdfile
+        else      
+           $SUB -q $JOB_QUEUE -P $PROJECT -M 80 -o ${logfile} -W ${wall_tm} -J ${jobname} ./$cmdfile
+        fi
      else					# zeus/linux
         for var in $plot_list; do
            cmdfile=cmdfile_pbcor_${suffix}_${var}
-           jobname=plot_${SUFFIX}_bcor_${suffix}_${var}
+           jobname=plot_${RADMON_SUFFIX}_bcor_${suffix}_${var}
            logfile=${LOGdir}/plot_bcor_${suffix}_${var}.log
 
            rm -f ${cmdfile}

@@ -15,7 +15,7 @@ echo "Start plot_summary.sh"
 
 #------------------------------------------------------------------
 # Set environment variables.
-tmpdir=${PLOT_WORK_DIR}/../plot_summary_${SUFFIX}
+tmpdir=${PLOT_WORK_DIR}/../plot_summary_${RADMON_SUFFIX}
 rm -rf $tmpdir
 mkdir -p $tmpdir
 cd $tmpdir
@@ -179,7 +179,14 @@ if [[ ! -d ${IMGNDIR}/summary ]]; then
    mkdir -p ${IMGNDIR}/summary
 fi
 $NCP *summary.png ${IMGNDIR}/summary/.
-$NCP *.sum.txt ${IMGNDIR}/summary/.
+
+#if [[ $RADMON_SUFFIX = "4devb" || $RADMON_SUFFIX = "pr4dev" || $RADMON_SUFFIX = "wopr" ]]; then
+   for type in ${SATYPE2}; do
+      $NCP ${type}.sum.txt ${IMGNDIR}/summary/${type}.${PDATE}.sum.txt
+   done
+#else
+  $NCP *.sum.txt ${IMGNDIR}/summary/.
+#fi
 
 #rm -f *.summary.png
 

@@ -62,6 +62,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2014-01-28  todling - write sensitivity slot indicator (ioff) to header of diagfile
 !   2014-04-12       su - add non linear qc from Purser's scheme
 !   2014-12-30  derber - Modify for possibility of not using obsdiag
+!   2015-12-21  yang    - Parrish's correction to the previous code in new varqc.
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -116,7 +117,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 ! Declare external calls for code analysis
   external:: intrp2a
-  external:: tintrp2a
+  external:: tintrp2a1
   external:: tintrp3
   external:: grdcrd1
   external:: stop2
@@ -238,7 +239,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   if(conv_diagsave)then
      nchar=1
-     ioff0=23
+     ioff0=19
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
@@ -435,15 +436,6 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      else
         ratio_errors = ratio_errors/sqrt(dup(i))
      end if
-! yang: 07/2015: 
-! When variable's pdf follows super-logistic model (Jim's ON468),
-! the current way to use dup is questionable provided that the number of multiple-reports is large. 
-! Currently, the penalty is divided by the dup, which is close to the number of multiple-reports,
-! when variable's pdf is of Gaussian or Gaussian+ uniform distribution. 
-! Say the multiple-reported data is 12 within the observation time window at a
-! station, the dup is close to 12. 
-! The better way is to add an element to store dup in the type X_ob_type, X is
-! the observation type.
 
      if (ratio_errors*error <= tiny_r_kind) muse(i)=.false.
 
@@ -470,17 +462,17 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         val2     = val*val
         exp_arg  = -half*val2
         rat_err2 = ratio_errors**2
-        if(njqc .and. var_jb>tiny_r_kind .and. var_jb < 10.0_r_kind .and. error >tiny_r_kind)  then
+        if(njqc  .and. var_jb>tiny_r_kind .and. var_jb < 10.0_r_kind .and. error >tiny_r_kind)  then
            if(exp_arg  == zero) then
               wgt=one
            else
               wgt=ddiff*error/sqrt(two*var_jb)
               wgt=tanh(wgt)/wgt
            endif
-           term=-two*var_jb*ratio_errors*log(cosh((val)/sqrt(two*var_jb)))
+           term=-two*var_jb*rat_err2*log(cosh((val)/sqrt(two*var_jb)))
            rwgt = wgt/wgtlim
            valqc = -two*term
-        else if (vqc == .true. .and. cvar_pg(ikx)> tiny_r_kind .and. error >tiny_r_kind) then
+        else if (vqc  .and. (cvar_pg(ikx)> tiny_r_kind) .and. (error >tiny_r_kind)) then
            arg  = exp(exp_arg)
            wnotgross= one-cvar_pg(ikx)
            cg_ps=cvar_b(ikx)
@@ -636,10 +628,6 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(17,ii) = pob                ! surface pressure observation (hPa)
         rdiagbuf(18,ii) = pob-pges           ! obs-ges used in analysis (coverted to hPa)
         rdiagbuf(19,ii) = pob-pgesorig       ! obs-ges w/o adjustment to guess surface pressure (hPa)
-        rdiagbuf(20,ii)=rdelz                ! difference between model height and observation height
-        rdiagbuf(21,ii)=drbx                 ! error adjust facter vertically 
-        rdiagbuf(22,ii)=drdp                 ! error adjust facter vertically 
-        rdiagbuf(23,ii)=dup(i)                 ! error adjust facter vertically 
 
         ioff=ioff0
         if (lobsdiagsave) then

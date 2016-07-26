@@ -105,7 +105,7 @@ ${COMPRESS} -f ${imgndir}/*.ctl
 #-------------------------------------------------------------------
 #   Rename PLOT_WORK_DIR to angle subdir.
 #
-export PLOT_WORK_DIR="${PLOT_WORK_DIR}/plotangle_${SUFFIX}"
+export PLOT_WORK_DIR="${PLOT_WORK_DIR}/plotangle_${RADMON_SUFFIX}"
 
 if [[ -d $PLOT_WORK_DIR ]]; then
    rm -f $PLOT_WORK_DIR
@@ -120,21 +120,22 @@ cd $PLOT_WORK_DIR
 
 list="count penalty omgnbc total omgbc fixang lapse lapse2 const scangl clw cos sin emiss ordang4 ordang3 ordang2 ordang1"
 
-  if [[ ${MY_MACHINE} = "wcoss" ]]; then
+  if [[ ${MY_MACHINE} = "wcoss" || ${MY_MACHINE} = "cray" ]]; then
      suffix=a
      cmdfile=${PLOT_WORK_DIR}/cmdfile_pangle_${suffix}
-     jobname=plot_${SUFFIX}_ang_${suffix}
+     jobname=plot_${RADMON_SUFFIX}_ang_${suffix}
      logfile=$LOGdir/plot_angle_${suffix}.log
 
      rm -f $cmdfile
      rm -f $logfile
 
      rm $LOGdir/plot_angle_${suffix}.log
-#>$cmdfile
+
      for type in ${SATLIST}; do
        echo "$IG_SCRIPTS/plot_angle.sh $type $suffix '$list'" >> $cmdfile
      done
      chmod 755 $cmdfile
+     echo "CMDFILE:  $cmdfile"
 
      ntasks=`cat $cmdfile|wc -l `
 
@@ -144,13 +145,16 @@ list="count penalty omgnbc total omgbc fixang lapse lapse2 const scangl clw cos 
         wall_tm="1:45"
      fi
 
-     $SUB -q $JOB_QUEUE -P $PROJECT -o ${logfile} -M 10000 -W ${wall_tm} -R affinity[core] -J ${jobname} $cmdfile
-
-  else				# Zeus/linux platform
+     if [[ ${MY_MACHINE} = "wcoss" ]]; then
+        $SUB -q $JOB_QUEUE -P $PROJECT -o ${logfile} -M 20000 -W ${wall_tm} -R affinity[core] -J ${jobname} $cmdfile
+     else	# cray
+        $SUB -q $JOB_QUEUE -P $PROJECT -o ${logfile} -M 20000 -W ${wall_tm} -J ${jobname} $cmdfile
+     fi
+  else				# Zeus/theia platform
      for sat in ${SATLIST}; do
         suffix=${sat} 
         cmdfile=${PLOT_WORK_DIR}/cmdfile_pangle_${suffix}
-        jobname=plot_${SUFFIX}_ang_${suffix}
+        jobname=plot_${RADMON_SUFFIX}_ang_${suffix}
         logfile=${LOGdir}/plot_angle_${suffix}.log
 
         rm -f $cmdfile
@@ -185,16 +189,16 @@ for sat in ${bigSATLIST}; do
    echo processing $sat in $bigSATLIST
 
    #
-   #  CCS submit 4 jobs for each $sat
+   #  wcoss submit 4 jobs for each $sat
    #
-   if [[ $MY_MACHINE = "wcoss" ]]; then 	
+   if [[ $MY_MACHINE = "wcoss" || $MY_MACHINE = "cray" ]]; then 	
       batch=1
       ii=0
 
       suffix="${sat}_${batch}"
       cmdfile=${PLOT_WORK_DIR}/cmdfile_pangle_${suffix}
       rm -f $cmdfile
-      jobname=plot_${SUFFIX}_ang_${suffix}
+      jobname=plot_${RADMON_SUFFIX}_ang_${suffix}
       logfile=${LOGdir}/plot_angle_${suffix}.log
 
       while [[ $ii -le ${#list[@]}-1 ]]; do
@@ -210,19 +214,23 @@ for sat in ${bigSATLIST}; do
          fi
 
         
-         mem="6000"
-         if [[ $batch -eq 1 ]]; then
-            mem="100000"
-         fi
+#         mem="6000"
+#         if [[ $batch -eq 1 ]]; then
+            mem="24000"
+#         fi
 
-         $SUB -q $JOB_QUEUE -P $PROJECT -o ${logfile} -M ${mem} -W ${wall_tm} -R affinity[core] -J ${jobname} $cmdfile
+         if [[ $MY_MACHINE = "wcoss" ]]; then
+            $SUB -q $JOB_QUEUE -P $PROJECT -o ${logfile} -M ${mem} -W ${wall_tm} -R affinity[core] -J ${jobname} $cmdfile
+         else
+            $SUB -q $JOB_QUEUE -P $PROJECT -o ${logfile} -M ${mem} -W ${wall_tm} -J ${jobname} $cmdfile
+         fi
 
          (( batch=batch+1 ))
 
          suffix="${sat}_${batch}"
          cmdfile=${PLOT_WORK_DIR}/cmdfile_pangle_${suffix}
          rm -f $cmdfile
-         jobname=plot_${SUFFIX}_ang_${suffix}
+         jobname=plot_${RADMON_SUFFIX}_ang_${suffix}
          logfile=${LOGdir}/plot_angle_${suffix}.log
 
          (( ii=ii+1 ))
@@ -237,7 +245,7 @@ for sat in ${bigSATLIST}; do
          cmdfile=${PLOT_WORK_DIR}/cmdfile_pangle_${suffix}_${list[$ii]}
          rm -f $cmdfile
          logfile=${LOGdir}/plot_angle_${suffix}_${list[$ii]}.log
-         jobname=plot_${SUFFIX}_ang_${suffix}_${list[$ii]}
+         jobname=plot_${RADMON_SUFFIX}_ang_${suffix}_${list[$ii]}
 
          echo "${IG_SCRIPTS}/plot_angle.sh $sat $suffix ${list[$ii]}" >> $cmdfile
 
