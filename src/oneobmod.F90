@@ -15,11 +15,17 @@ module oneobmod
 !   2012-07-14  todling - only do it once (in observer mode)
 !   2014-05-29  thomas - add lsingleradob parameter for single radiance
 !                        assimilation (originally of mccarty)
+!   2016-07-28  lippi - add namelist parameters (anel_rw,anaz_rw,range_rw,
+!                       sstnlat,sstnlon) for single radial wind assimilation.
+!                       added oneobmakebufr and invtllv subroutines to make 
+!                       the radial wind superobs.
 !
 ! subroutines included:
 !   sub init_oneobmod
 !   sub oneobmakebufr
+!   sub oneobmakerwsupob
 !   sub oneobo3lv
+!   sub invtllv   
 !
 ! variable definitions:
 !   def maginnov   - magnitude of innovation for one ob exp
@@ -45,14 +51,15 @@ module oneobmod
 ! set subroutines to public
   public :: init_oneobmod
   public :: oneobmakebufr
+  public :: oneobmakerwsupob
   public :: oneobo3lv
 ! set passed variables to public
   public :: oneobtest,oneob_type,magoberr,pctswitch,maginnov
-  public :: oblat,oblon,obpres,obdattim,obhourset
-  public :: lsingleradob, obchan
+  public :: oblat,oblon,obpres,obdattim,obhourset,anel_rw,anaz_rw,range_rw
+  public :: lsingleradob, obchan, sstnlat, sstnlon
 
   real(r_kind) maginnov, magoberr, oblat, oblon,&
-    obhourset, obpres
+    obhourset, obpres,anel_rw,anaz_rw,range_rw,sstnlat,sstnlon
   integer(i_kind) obdattim
   character(10) oneob_type
   logical oneobtest
@@ -100,7 +107,11 @@ contains
     pctswitch=.false.
     lsingleradob=.false.
     obchan=zero
-
+    sstnlat=30.72
+    sstnlon=-97.38 
+    anel_rw=zero
+    anaz_rw=zero
+    range_rw=r1000
     oneobmade=.false.
     return
   end subroutine init_oneobmod
@@ -316,6 +327,144 @@ contains
     return
   end subroutine oneobmakebufr
 
+  subroutine oneobmakerwsupob
+!   parts borrowed from subroutine radar_bufr_read_all.
+    use kinds, only: r_kind,i_kind
+    use constants, only: zero,half,one,two,zero_quad,one_quad
+
+    implicit none    
+    
+    character(4) :: this_staid
+
+    real(r_kind),parameter:: four_thirds = 4.0_r_kind / 3.0_r_kind
+    real(r_kind),parameter:: r8          = 8.0_r_kind
+    real(r_kind),parameter:: r360        = 360.0_r_kind
+    real(r_kind),parameter:: r720        = 720.0_r_kind
+    real(r_kind),parameter:: r89_5       = 89.5_r_kind
+    real(r_kind) :: erad,aactual,a43,thistilt,pi,deg2rad,rad2deg
+    real(r_kind) :: reradius,rearth
+    real(r_kind) :: selev0,celev0,b,c,ha,epsh,h,celev,selev
+    real(r_kind) :: thisazimuth,deltiltmax,deltiltmin
+    real(r_kind) :: deldistmax,deldistmin
+    real(r_kind) :: this_stalat,this_stalon,this_stahgt,thistime,&
+                    thislat,thislon,thishgt,thisvr,corrected_azimuth,&
+                    thiserr,corrected_tilt,gamma,thisrange,thistiltr,&
+                    this_stalatr
+    real(r_kind) :: thisazimuthr,rlonloc,rad_per_meter,rlatloc,rlon0
+    real(r_kind) :: clat0,slat0,rlonglob,rlatglob,clat1,caz0,saz0
+    real(r_kind) :: cdlon,sdlon,caz1,saz1,delazmmax
+    real(r_kind),parameter :: r85 = 85._r_kind
+
+    integer(i_kind) :: iret,i,num_supob_boxes
+
+    write(6,*) '*******************************************'
+    reradius=one/6370.e03_r_kind
+    rearth=one/reradius
+    rad_per_meter=one/rearth
+    erad=rearth
+    pi  = acos(-one)
+    deg2rad = pi/180.0_r_kind
+    rad2deg = one/deg2rad
+
+    this_stahgt=0._r_kind
+    this_staid='AAAA'
+    thisazimuth=anaz_rw
+    thistilt=anel_rw
+    thisrange=range_rw
+    thisvr=10.0_r_kind
+    thiserr=magoberr
+    thistime=zero
+    this_stalat=sstnlat
+    this_stalon=sstnlon
+
+    rlon0=deg2rad*this_stalon
+    this_stalatr=this_stalat*deg2rad
+    clat0=cos(this_stalatr) ; slat0=sin(this_stalatr)
+
+    aactual=erad+this_stahgt
+    a43=four_thirds*aactual
+    thistiltr=thistilt*deg2rad
+    selev0=sin(thistiltr)
+    celev0=cos(thistiltr)
+    b=thisrange*(thisrange+two*aactual*selev0)
+    c=sqrt(aactual*aactual+b)
+    ha=b/(aactual+c)
+    epsh=(thisrange*thisrange-ha*ha)/(r8*aactual)
+    h=ha-epsh
+    thishgt=this_stahgt+h
+
+!     Get corrected tilt angle
+    celev=celev0
+    selev=selev0
+    if(thisrange>=one) then
+       celev=a43*celev0/(a43+h)
+       selev=(thisrange*thisrange+h*h+two*a43*h)/(two*thisrange*(a43+h))
+    end if
+    corrected_tilt=atan2(selev,celev)*rad2deg
+    deltiltmax=max(corrected_tilt-thistilt,deltiltmax)
+    deltiltmin=min(corrected_tilt-thistilt,deltiltmin)
+    gamma=half*thisrange*(celev0+celev)
+    deldistmax=max(gamma-thisrange,deldistmax)
+    deldistmin=min(gamma-thisrange,deldistmin)
+
+
+!     Get earth lat lon of superob
+    thisazimuthr=thisazimuth*deg2rad
+    rlonloc=rad_per_meter*gamma*cos(thisazimuthr)
+    rlatloc=rad_per_meter*gamma*sin(thisazimuthr)
+    call invtllv(rlonloc,rlatloc,rlon0,clat0,slat0,rlonglob,rlatglob)
+    thislat=rlatglob*rad2deg
+    thislon=rlonglob*rad2deg
+
+
+!     Get corrected azimuth
+    clat1=cos(rlatglob)
+    caz0=cos(thisazimuthr)
+    saz0=sin(thisazimuthr)
+    cdlon=cos(rlonglob-rlon0)
+    sdlon=sin(rlonglob-rlon0)
+    caz1=clat0*caz0/clat1
+    saz1=saz0*cdlon-caz0*sdlon*slat0
+    corrected_azimuth=atan2(saz1,caz1)*rad2deg
+    delazmmax=max(min(abs(corrected_azimuth-thisazimuth-r720),&
+         abs(corrected_azimuth-thisazimuth-r360),&
+         abs(corrected_azimuth-thisazimuth     ),&
+         abs(corrected_azimuth-thisazimuth+r360),&
+         abs(corrected_azimuth-thisazimuth+r720)),delazmmax)
+
+!   This avoids irrr problems with a 90-deg test. The ob must have some
+!   horizontal distance from the radar location, so use oblat/lon from namelist
+    if(anel_rw >= r85) then
+       thislat=oblat
+       thislon=oblon
+    end if
+
+    write(6,*) 'Single radial wind observation.'
+    write(6,*) '*******************************************'
+    write(6,*) 'this_staid  = ',this_staid
+    write(6,*) 'this_stalat = ',this_stalat
+    write(6,*) 'this_stalon = ',this_stalon
+    write(6,*) 'this_stahgt = ',this_stahgt
+    write(6,*) 'thistime    = ',thistime
+    write(6,*) 'thislat     = ',thislat
+    write(6,*) 'thislon     = ',thislon
+    write(6,*) 'thishgt     = ',thishgt
+    write(6,*) 'thisvr      = ',thisvr
+    write(6,*) 'corrected_az= ',corrected_azimuth
+    write(6,*) 'corrected_tl= ',corrected_tilt
+    write(6,*) 'thiserr     = ',thiserr
+
+    open(10,file='radar_supobs_from_level2',form='unformatted',iostat=iret)
+    write(10) this_staid,this_stalat,this_stalon,this_stahgt, &
+         thistime,thislat,thislon,thishgt,thisvr,corrected_azimuth,&
+         thiserr,corrected_tilt
+    close(10)
+
+    write(6,*) '*******************************************'
+    write(6,*) '*******************************************'
+    return
+  end subroutine oneobmakerwsupob
+
   subroutine oneobo3lv
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -378,5 +527,28 @@ contains
     return
 
   end subroutine oneobo3lv
+
+      SUBROUTINE invtllv(ALM,APH,TLMO,CTPH0,STPH0,TLM,TPH)
+!     borrowed from read_radar
+      use kinds, only:  r_kind
+      implicit none
+
+      real(r_kind),intent(in   ) :: alm,aph,tlmo,ctph0,stph0
+      real(r_kind),intent(  out) :: tlm,tph
+
+      real(r_kind):: relm,srlm,crlm,sph,cph,cc,anum,denom
+
+      RELM=ALM
+      SRLM=SIN(RELM)
+      CRLM=COS(RELM)
+      SPH=SIN(APH)
+      CPH=COS(APH)
+      CC=CPH*CRLM
+      ANUM=CPH*SRLM
+      DENOM=CTPH0*CC-STPH0*SPH
+      TLM=tlmo+ATAN2(ANUM,DENOM)
+      TPH=ASIN(CTPH0*SPH+STPH0*CC)
+      END SUBROUTINE invtllv
+
 
 end module oneobmod

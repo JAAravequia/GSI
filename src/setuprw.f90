@@ -59,6 +59,9 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2013-10-19  todling - metguess now holds background
 !   2014-01-28  todling - write sensitivity slot indicator (ioff) to header of diagfile
 !   2014-12-30  derber - Modify for possibility of not using obsdiag
+!   2016-07-20  lippi  - add vertical velocity to observation operator.
+!   2016-07-28  lippi  - add a conditional to use maginnov and magoberr
+!                        parameters from single ob namelist   
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -83,6 +86,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use obsmod, only: rw_ob_type
   use obsmod, only: obs_diag,luse_obsdiag
   use gsi_4dvar, only: nobs_bins,hr_obsbin
+  use oneobmod, only: magoberr,maginnov,oneobtest
   use qcmod, only: npres_print,ptop,pbot,tdrerr_inflate,tdrgross_fact
   use guess_grids, only: hrdifsig,geop_hgtl,nfldsig,&
        ges_lnprsl,sfcmod_gfs,sfcmod_mm5,comp_fact10
@@ -546,6 +550,14 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      end if
      
      ddiff = data(irwob,i) - rwwind
+
+!    If requested, setup for single obs test.
+     if(oneobtest) then
+        ddiff=maginnov
+        error=one/magoberr
+        ratio_errors=one
+     end if
+
 
 !    adjust obs error for TDR data
      if(data(iobs_type,i) > three .and. ratio_errors*error > tiny_r_kind &

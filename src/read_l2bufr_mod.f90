@@ -733,7 +733,7 @@ contains
                      nsuper=nsuper+1
              end if
              !!lippi single radar ob test
-             if(.true. .and. nsuper < 1) then
+             if(.false. .and. nsuper < 1) then
                    if(.false.) then          ! bad ob test.
                       this_staid='KGRK'
                       this_stalat=30.7200000000000
@@ -749,7 +749,7 @@ contains
                       corrected_tilt=4.43593743925352
                       gamma=56221.1567198312 
 
-                   else if(.true.) then                    ! far single ob test.
+                   else if(.false.) then                    ! far single ob test.
                       this_staid='KGRK'
                       this_stalat=30.7200000000000
                       this_stalon=-97.3800000000000
@@ -1066,9 +1066,9 @@ sis,hgtl_full,nobs)
 ! Initialize variables
 ! vad_leash=.1_r_kind
 !  vad_leash=.3_r_kind
- !xscale=5000._r_kind
+ xscale=1000._r_kind
  !xscale=10000._r_kind
-  xscale=20000._r_kind
+ ! xscale=20000._r_kind
 !  write(6,*)'READ_L2RW_PROCESSED:  set vad_leash,xscale=',vad_leash,xscale
 !  write(6,*)'READ_L2RW_PROCESSED:  set
 !  maxvadbins,maxbadbins*dzvad=',maxvadbins,&

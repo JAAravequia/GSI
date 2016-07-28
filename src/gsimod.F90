@@ -49,7 +49,8 @@
                       use_prepb_satwnd
 
   use oneobmod, only: oblon,oblat,obpres,obhourset,obdattim,oneob_type,&
-     oneobtest,magoberr,maginnov,init_oneobmod,pctswitch,lsingleradob,obchan
+     oneobtest,magoberr,maginnov,init_oneobmod,pctswitch,lsingleradob,obchan,&
+     anaz_rw,anel_rw,range_rw,sstnlat,sstnlon
   use balmod, only: fstat
   use turblmod, only: use_pbl,init_turbl
   use qcmod, only: dfact,dfact1,create_qcvars,destroy_qcvars,&
@@ -307,7 +308,8 @@
 !                              rapidrefresh_cldsurf
 !  03-01-2015 Li        add zsea1 & zsea2 to namelist for vertical mean temperature based on NSST T-Profile
 !  05-13-2015 wu        remove check to turn off regional 4densvar
-!
+!  07-28-2016 lippi     add radial wind namelist parameters anel/anaz_rw and sstnlat/lon.
+!                       reinitialize dfile,dplat,dsis,dtype according to l2rw observation type.
 !EOP
 !-------------------------------------------------------------------------
 
@@ -728,7 +730,7 @@
 
   namelist/singleob_test/maginnov,magoberr,oneob_type,&
        oblat,oblon,obpres,obdattim,obhourset,pctswitch,&
-       obchan
+       obchan,anel_rw,anaz_rw,range_rw,sstnlat,sstnlon
 
 ! SUPEROB_RADAR (level 2 bufr file to radar wind superobs):
 !      del_azimuth     - azimuth range for superob box  (default 5 degrees)
@@ -1310,6 +1312,11 @@
      dtype(1)=oneob_type
      if(dtype(1)=='u' .or. dtype(1)=='v')dtype(1)='uv'
      dsis(1)=dtype(1)
+     if(trim(dtype(1))=='rw') then ! Reset some values for radial wind single ob.
+        dfile(1)='donnies_l2rw'
+        dplat='null'
+        dsis(1)='l2rw'
+     endif
   endif
 
 ! Single radiance assimilation case

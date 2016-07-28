@@ -56,6 +56,7 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
 !   2008-12-03  todling - changed handling of ptr%time
 !   2010-01-04  zhang,b - bug fix: accumulate penalty for multiple obs bins
 !   2010-05-13  todling - update to use gsi_bundle
+!   2016-06-23  lippi   - add terms for vertical velocity
 !
 !   input argument list:
 !     rwhead

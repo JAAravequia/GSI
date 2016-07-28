@@ -100,6 +100,7 @@ module obsmod
 !   2014-10-06  carley - add obs_sub_comm
 !   2014-12-03  derber  - ensure obsdiag used for 4dvar and non-pcgsoi
 !                         minimizations
+!   2016-06-23  lippi  - add sintilt and costilt for radial wind obs. operator.
 ! 
 ! Subroutines Included:
 !   sub init_obsmod_dflts   - initialize obs related variables to default values
