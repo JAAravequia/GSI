@@ -20,6 +20,7 @@ subroutine read_amsr2(mype,val_amsr2,ithin,rmesh,gstime,&
 !   2016-03-21  ejones   - add spatial averaging capability (use SSMI/S spatial averaging)
 !   2016-05-05  ejones   - remove isfcalc; no procedure exists for this for
 !                          AMSR2
+!   2016-07-25  ejones   - made most allocatable arrays static
 ! 
 !
 ! input argument list:
@@ -98,30 +99,30 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   integer(i_kind)   :: lnbufr = 10
   integer(i_kind)   :: nchanl
   integer(i_kind)   :: iret,isflg,idomsfc(1)
+  integer(i_kind),parameter  :: kchanl=14
 
 ! Work variables for time
   integer(i_kind)   :: idate
   integer(i_kind)   :: idate5(5)
   integer(i_kind)   :: nmind
-  real(r_kind)      :: sstime, tdiff   !t4dv
+  real(r_kind)      :: sstime, tdiff   
 
 ! Other work variables
   logical           :: outside,iuse,assim
   logical           :: do_noise_reduction
   integer(i_kind)   :: nreal, kidsat
   integer(i_kind)   :: itx, nele, itt, k
-  integer(i_kind)   :: ilat, ilon   !ifov
+  integer(i_kind)   :: ilat, ilon   
   integer(i_kind)   :: i, l, n
   integer(i_kind),dimension(n_amsrch) :: kchamsr2
-  integer(i_kind)   :: npos_bin
   real(r_kind)     :: sfcr
   real(r_kind)     :: dlon, dlat
-!  real(r_kind)     :: dlon_earth,dlat_earth
-  real(r_kind)     :: timedif, pred, dist1   !crit1
+  real(r_kind)     :: timedif, pred, dist1   
   real(r_kind),allocatable,dimension(:,:):: data_all
   integer(i_kind),allocatable,dimension(:)::nrec
   integer(i_kind):: irec,next
-  integer(i_kind):: maxobs,method, iobs, num_obs
+  integer(i_kind):: method,iobs,num_obs   
+  integer(i_kind),parameter  :: maxobs=4000000
 
   real(r_kind),dimension(0:3):: sfcpct
   real(r_kind),dimension(0:4):: rlndsea
@@ -145,25 +146,24 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   real(r_kind),pointer :: sun_zen_ang,sun_az_ang
   real(r_kind),pointer :: tbob(:)
 
-  integer(i_kind),pointer :: ifov,iscan,iorbn,inode,npos
+  integer(i_kind),pointer :: ifov,iscan,iorbn,inode    
 
   integer(i_kind),allocatable        :: sorted_index(:)
-  integer(i_kind),allocatable,target :: ifov_save(:)
-  integer(i_kind),allocatable,target :: iscan_save(:)
-  integer(i_kind),allocatable,target :: iorbn_save(:)
-  integer(i_kind),allocatable,target :: inode_save(:)
-  integer(i_kind),allocatable,target :: npos_save(:)
-  real(r_kind),allocatable,target :: dlon_earth_save(:)
-  real(r_kind),allocatable,target :: dlat_earth_save(:)
-  real(r_kind),allocatable,target :: sat_zen_ang_save(:),sat_az_ang_save(:)
-  real(r_kind),allocatable,target :: sun_zen_ang_save(:),sun_az_ang_save(:)
-  real(r_kind),allocatable,target :: t4dv_save(:)
-  real(r_kind),allocatable,target :: crit1_save(:)
-  real(r_kind),allocatable,target :: tbob_save(:,:)
+  integer(i_kind),target,dimension(maxobs) :: ifov_save
+  integer(i_kind),target,dimension(maxobs) :: iscan_save
+  integer(i_kind),target,dimension(maxobs) :: iorbn_save
+  integer(i_kind),target,dimension(maxobs) :: inode_save
+  real(r_kind),target,dimension(maxobs) :: dlon_earth_save
+  real(r_kind),target,dimension(maxobs) :: dlat_earth_save
+  real(r_kind),target,dimension(maxobs) :: sat_zen_ang_save,sat_az_ang_save
+  real(r_kind),target,dimension(maxobs) :: sun_zen_ang_save,sun_az_ang_save
+  real(r_kind),target,dimension(maxobs) :: t4dv_save
+  real(r_kind),target,dimension(maxobs) :: crit1_save
+  real(r_kind),target,dimension(kchanl,maxobs) :: tbob_save
 
 ! Set standard parameters
   integer(i_kind) ntest
-  integer(i_kind) :: nscan,iskip,kskip,kch,kchanl
+  integer(i_kind) :: nscan,iskip,kskip,kch  
   real(r_kind),parameter :: R90      =  90._r_kind
   real(r_kind),parameter :: R360     = 360._r_kind
   real(r_kind),parameter :: tbmin    = 3._r_kind           
@@ -190,7 +190,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
 ! Initialize variables
 
   do_noise_reduction = .true.
-  if (amsr2_method .eq. 0) do_noise_reduction = .false.
+  if (amsr2_method == 0) do_noise_reduction = .false.
 
   ilon = 3
   ilat = 4
@@ -205,7 +205,6 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   nodata = 0
   nread = 0
   sstime = zero
-  kchanl=14
   kchamsr2(1:14)=(/1,2,3,4,5,6,7,8,9,10,11,12,13,14/)
 
   senname = 'AMSR'
@@ -217,8 +216,6 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   rlndsea(2) = 10._r_kind
   rlndsea(3) = 15._r_kind
   rlndsea(4) = 100._r_kind
-
-  npos_bin = 3  ! group obs positions b/c of scan angle bias correction limitations
 
 ! If all channels of a given sensor are set to monitor or not
 ! assimilate mode (iuse_rad<1), reset relative weight to zero.
@@ -237,26 +234,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
 ! Make thinning grids
   call makegrids(rmesh,ithin)
 
-! Allocate arrays for BUFR I/O
-
-  maxobs = 4000000
-  allocate(ifov_save(maxobs))
-  allocate(iscan_save(maxobs))
-  allocate(iorbn_save(maxobs))
-  allocate(inode_save(maxobs))
-  allocate(npos_save(maxobs))
-  allocate(t4dv_save(maxobs))
-  allocate(dlon_earth_save(maxobs))
-  allocate(dlat_earth_save(maxobs))
-  allocate(crit1_save(maxobs))
-  allocate(sat_zen_ang_save(maxobs))
-  allocate(sat_az_ang_save(maxobs))
-  allocate(sun_zen_ang_save(maxobs))
-  allocate(sun_az_ang_save(maxobs))
-  allocate(tbob_save(kchanl,maxobs))
-
   inode_save = 0
-
 
 ! Open BUFR file
   open(lnbufr,file=infile,form='unformatted')
@@ -283,14 +261,13 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
         iscan       => iscan_save(iobs)
         iorbn       => iorbn_save(iobs)
         inode       => inode_save(iobs)
-        npos        => npos_save(iobs)
         sat_zen_ang         => sat_zen_ang_save(iobs)
         sat_az_ang          => sat_az_ang_save(iobs)
         sun_zen_ang         => sun_zen_ang_save(iobs)
         sun_az_ang          => sun_az_ang_save(iobs)
 
 !    Retrieve bufr 1/4 :get gcomspot (said,orbn,sun_az_ang,sun_el_ang)
-        call ufbint(lnbufr,gcomspot_d,4,1,iret,'SAID ORBN SOLAZI SOEL')    !???
+        call ufbint(lnbufr,gcomspot_d,4,1,iret,'SAID ORBN SOLAZI SOEL')    
 
         said = nint(gcomspot_d(1))
         if(said /= bufsat)    cycle read_loop
@@ -298,9 +275,9 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
         iorbn = nint(gcomspot_d(2))
         sun_az_ang = gcomspot_d(3)
 
-!       Retrieve bufr 2/4 :get amsrspot (siid,ymdhs,lat,lon,fov,scanl)
+!       Retrieve bufr 2/4 :get amsrspot (siid,ymdhs,lat,lon,angles,fov,scanl)
         call ufbrep(lnbufr,amsrspot_d,N_AMSRSPOT_LIST,1,iret, &
-           'SIID YEAR MNTH DAYS HOUR MINU SECO CLATH CLONH AANG IANG FOVN SLNM')!???
+           'SIID YEAR MNTH DAYS HOUR MINU SECO CLATH CLONH AANG IANG FOVN SLNM')
 
         siid = nint(amsrspot_d(1)) 
         if(siid /= AMSR2_SIID)   cycle read_loop
@@ -309,7 +286,6 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
         iscan = amsrspot_d(13)
         
         ifov = nint(fovn)
-        npos = ifov/npos_bin +1
         sat_az_ang = amsrspot_d(10)
         sat_zen_ang = 55.0_r_kind*deg2rad
 
@@ -372,7 +348,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
 
         crit1 = 0.01_r_kind+timedif
 
-!!       Retrieve bufr 3/4 : get amsrchan (chnm,tbb)
+!!       Retrieve bufr 3/4 : get amsrchan 
         call ufbrep(lnbufr,amsrchan_d,3,14,iret,'SCCF ACQF TMBR')   
 
 !       Set check for TBs outside of limits
@@ -416,7 +392,6 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
 !    Check observational info 
 
         if( sun_el_ang < -180._r_kind .or. sun_el_ang > 180._r_kind )then
-!        if( sun_el_ang < -90._r_kind .or. sun_el_ang > 90._r_kind )then
            write(6,*)'READ_AMSR2:  ### ERROR IN READING BUFR DATA:', &
               ' STRANGE OBS INFO(FOV,SOLAZI,SOEL):', ifov, sun_az_ang, sun_el_ang
            cycle read_loop       
@@ -462,7 +437,6 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
      ifov_save(1:num_obs)                = ifov_save(sorted_index)
      iscan_save(1:num_obs)               = iscan_save(sorted_index)
      iorbn_save(1:num_obs)               = iorbn_save(sorted_index)
-     npos_save(1:num_obs)                = npos_save(sorted_index)
      sat_zen_ang_save(1:num_obs)         = sat_zen_ang_save(sorted_index)
      sat_az_ang_save(1:num_obs)          = sat_az_ang_save(sorted_index)
      sun_zen_ang_save(1:num_obs)         = sun_zen_ang_save(sorted_index)
@@ -511,7 +485,6 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
      iscan       => iscan_save(iobs)
      iorbn       => iorbn_save(iobs)
      inode       => inode_save(iobs)
-     npos        => npos_save(iobs)
      sat_zen_ang         => sat_zen_ang_save(iobs)
      sat_az_ang          => sat_az_ang_save(iobs)
      sun_zen_ang             => sun_zen_ang_save(iobs)
@@ -626,7 +599,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
         data_all(5,itx) = sat_zen_ang                ! satellite zenith angle (rad)
         data_all(6,itx) = sat_az_ang                 ! satellite azimuth angle
         data_all(7,itx) = zero                       ! look angle (rad)
-        data_all(8,itx) = npos                       ! binned fov number (must be .LT. 90)
+        data_all(8,itx) = ifov                       ! scan position
         data_all(9,itx) = sun_zen_ang                ! solar zenith angle (deg)
         data_all(10,itx)= sun_az_ang                 ! solar azimuth angle (deg)
         data_all(11,itx) = sfcpct(0)                 ! sea percentage of
@@ -667,22 +640,6 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
         nrec(itx)=irec
 
      enddo obsloop
-
-! Deallocate I/O arrays
-  deallocate(ifov_save)
-  deallocate(iscan_save)
-  deallocate(inode_save)
-  deallocate(iorbn_save)
-  deallocate(npos_save)
-  deallocate(t4dv_save)
-  deallocate(dlon_earth_save)
-  deallocate(dlat_earth_save)
-  deallocate(crit1_save)
-  deallocate(sat_zen_ang_save)
-  deallocate(sat_az_ang_save)
-  deallocate(sun_zen_ang_save)
-  deallocate(sun_az_ang_save)
-  deallocate(tbob_save)
 
 ! If multiple tasks read input bufr file, allow each tasks to write out
 ! information it retained and then let single task merge files together

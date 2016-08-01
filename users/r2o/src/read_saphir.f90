@@ -18,6 +18,7 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
 !  2015-09-17  Thomas  - add l4densvar and thin4d to data selection procedure
 !  2016-03-09  ejones  - update mnemonics for operational SAPHIR bufr
 !  2016-04-01  ejones  - add binning of fovs for scan angle bias correction 
+!  2016-07-25  ejones  - remove binning of fovs
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -118,8 +119,7 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
   integer(i_kind)       :: instr,ichan,icw4crtm,iql4crtm
   integer(i_kind)       :: ier
   integer(i_kind)       :: radedge_min, radedge_max
-  integer(i_kind)       :: npos_bin
-  integer(i_kind), POINTER :: ifov,npos
+  integer(i_kind), POINTER :: ifov  
 
   real(r_kind)          :: sfcr 
   real(r_kind)          :: expansion
@@ -137,7 +137,6 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
   real(r_kind), POINTER :: dlon_earth,dlat_earth,satazi, lza
 
   integer(i_kind), ALLOCATABLE, TARGET  :: ifov_save(:)
-  integer(i_kind), ALLOCATABLE, TARGET  :: npos_save(:)
   real(r_kind), ALLOCATABLE, TARGET :: rsat_save(:)
   real(r_kind), ALLOCATABLE, TARGET :: t4dv_save(:)
   real(r_kind), ALLOCATABLE, TARGET :: dlon_earth_save(:)
@@ -227,8 +226,6 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
   rlndsea(3) = 15._r_kind
   rlndsea(4) = 100._r_kind
      
-  npos_bin = 3  ! group obs positions b/c of scan angle bias correction limitations
-
 ! If all channels of a given sensor are set to monitor or not
 ! assimilate mode (iuse_rad<1), reset relative weight to zero.
 ! We do not want such observations affecting the relative
@@ -264,7 +261,6 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
   ALLOCATE(rsat_save(maxobs))
   ALLOCATE(t4dv_save(maxobs))
   ALLOCATE(ifov_save(maxobs))
-  ALLOCATE(npos_save(maxobs))
   ALLOCATE(dlon_earth_save(maxobs))
   ALLOCATE(dlat_earth_save(maxobs))
   ALLOCATE(crit1_save(maxobs))
@@ -297,7 +293,6 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
         dlat_earth => dlat_earth_save(iob)
         crit1      => crit1_save(iob)
         ifov       => ifov_save(iob)
-        npos       => npos_save(iob)
         lza        => lza_save(iob)
         satazi     => satazi_save(iob)
         solzen     => solzen_save(iob)
@@ -352,7 +347,6 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
         endif
 
         ifov = nint(bfr1bhdr(2))
-        npos = ifov/npos_bin +1
         lza = bfr2bhdr(1)*deg2rad      ! local zenith angle
         if(ifov <= 65)    lza=-lza
 
@@ -374,9 +368,8 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
 !       Read data record.  Increment data counter
         call ufbrep(lnbufr,data1b8,1,nchanl,iret,'TMBRST')
 
-!       Nonoperational SAPHIR bufr:
+!       non-operational SAPHIR bufr:
 !        call ufbrep(lnbufr,data1b8,1,nchanl,iret,'TMBR')
-
 
         bt_save(1:nchanl,iob) = data1b8(1:nchanl)
 
@@ -409,7 +402,6 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
      dlat_earth => dlat_earth_save(iob)
      crit1      => crit1_save(iob)
      ifov       => ifov_save(iob)
-     npos       => npos_save(iob)
      lza        => lza_save(iob)
      satazi     => satazi_save(iob)
      solzen     => solzen_save(iob)
@@ -540,7 +532,7 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
      data_all(5 ,itx)= lza                       ! local zenith angle
      data_all(6 ,itx)= satazi                    ! local azimuth angle
      data_all(7 ,itx)= panglr                    ! look angle
-     data_all(8 ,itx)= npos                      ! "binned" scan position
+     data_all(8 ,itx)= ifov                      ! scan position
      data_all(9 ,itx)= solzen                    ! solar zenith angle
      data_all(10,itx)= solazi                    ! solar azimuth angle
      data_all(11,itx) = sfcpct(0)                ! sea percentage of
@@ -586,7 +578,6 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
   DEALLOCATE(rsat_save)
   DEALLOCATE(t4dv_save)
   DEALLOCATE(ifov_save)
-  DEALLOCATE(npos_save)
   DEALLOCATE(dlon_earth_save)
   DEALLOCATE(dlat_earth_save)
   DEALLOCATE(crit1_save)
