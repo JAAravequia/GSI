@@ -105,10 +105,13 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 ! Declare local parameters
   logical                   :: use_swath_edge
   integer(i_kind)           :: maxinfo
-  integer(i_kind)           :: maxchanl,ngs
+!  integer(i_kind)           :: maxchanl,ngs
+  integer(i_kind),parameter   :: maxchanl=13, ngs=2
 
-  integer(i_kind),allocatable,dimension(:) :: tbmin     ! different tbmin for the channels.
-  real(r_double), allocatable,dimension(:) :: mirad, gmichq, gmirfi   ! TBB from strtmbr
+!  integer(i_kind),allocatable,dimension(:) :: tbmin     ! different tbmin for the channels.
+!  real(r_double), allocatable,dimension(:) :: mirad, gmichq, gmirfi   ! TBB from strtmbr
+  integer(i_kind),dimension(maxchanl)    :: tbmin                 ! different tbmin for the channels.
+  real(r_double),dimension(maxchanl)     :: mirad,gmichq,gmirfi   ! TBB from strtmbr
   real(r_double)            :: fovn,slnm      ! FOVN 
   real(r_kind),parameter    :: r360=360.0_r_kind
   character(80),parameter   :: satinfo='SAID SIID OGCE GSES SACV'          !use for ufbint()
@@ -129,10 +132,12 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   real(r_kind), parameter   :: bmiss=990_r_kind   ! miss values are 999 in bufr
                                                   ! undefined value is 1.0e+11 in bufr data files.
 
-!  character(40),parameter   :: str_angls='SAMA SZA SMA SGA'  ! non-operational bufr
-  character(40),parameter   :: str_angls='SOLAZI SOZA SMA SSGA' 
+  character(40),parameter   :: str_angls='SAMA SZA SMA SGA'  ! non-operational bufr
+!  character(40),parameter   :: str_angls='SOLAZI SOZA SMA SSGA' 
   integer(i_kind),parameter :: n_angls=4
-  real(r_double),allocatable:: val_angls(:,:),pixelsaza(:)
+!  real(r_double),allocatable:: val_angls(:,:),pixelsaza(:)
+  real(r_double),dimension(n_angls,ngs)  :: val_angls
+  real(r_double),dimension(ngs)          :: pixelsaza
 
 ! Declare local variables
   logical        :: assim,outside,iuse,gmi
@@ -155,9 +160,11 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 
   real(r_kind) :: disterr,disterrmax,dlon00,dlat00
 
-  integer(i_kind) :: nscan,jc,bufsat,n,npos_bin 
+  integer(i_kind) :: jc,bufsat,n   !,nscan,npos_bin 
   integer(i_kind),dimension(5):: iobsdate
-  integer(i_kind):: maxobs,method, iobs, num_obs
+  integer(i_kind):: method,iobs,num_obs
+  integer(i_kind),parameter   :: maxobs=4000000
+  integer(i_kind),parameter   :: nscan=221
 
   real(r_kind):: flgch
   real(r_kind),dimension(0:3):: sfcpct
@@ -173,34 +180,50 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   real(r_kind),pointer :: sat_zen_ang,sat_zen_ang2,sat_azimuth_ang,sat_azimuth_ang2
   real(r_kind),pointer :: sat_scan_ang,sat_scan_ang2
   real(r_kind),pointer :: tbob(:)
-  integer(i_kind),pointer :: ifov,iscan,iorbn,inode,npos
+  integer(i_kind),pointer :: ifov,iscan,iorbn,inode   !,npos
 
   integer(i_kind),allocatable        :: sorted_index(:)
-  integer(i_kind),allocatable,target :: ifov_save(:)
-  integer(i_kind),allocatable,target :: iscan_save(:)
-  integer(i_kind),allocatable,target :: iorbn_save(:)
-  integer(i_kind),allocatable,target :: inode_save(:)
-  integer(i_kind),allocatable,target :: npos_save(:)
-  real(r_kind),allocatable,target :: dlon_earth_save(:)
-  real(r_kind),allocatable,target :: dlat_earth_save(:)
-  real(r_kind),allocatable,target :: sat_zen_ang_save(:),sat_azimuth_ang_save(:),sat_scan_ang_save(:)
-  real(r_kind),allocatable,target :: sat_zen_ang2_save(:),sat_azimuth_ang2_save(:),sat_scan_ang2_save(:)
-  real(r_kind),allocatable,target :: t4dv_save(:)
-  real(r_kind),allocatable,target :: crit1_save(:)
-  real(r_kind),allocatable,target :: tbob_save(:,:)
+
+!  integer(i_kind),allocatable,target :: ifov_save(:)
+!  integer(i_kind),allocatable,target :: iscan_save(:)
+!  integer(i_kind),allocatable,target :: iorbn_save(:)
+!  integer(i_kind),allocatable,target :: inode_save(:)
+!  integer(i_kind),allocatable,target :: npos_save(:)
+!  real(r_kind),allocatable,target :: dlon_earth_save(:)
+!  real(r_kind),allocatable,target :: dlat_earth_save(:)
+!  real(r_kind),allocatable,target :: sat_zen_ang_save(:),sat_azimuth_ang_save(:),sat_scan_ang_save(:)
+!  real(r_kind),allocatable,target :: sat_zen_ang2_save(:),sat_azimuth_ang2_save(:),sat_scan_ang2_save(:)
+!  real(r_kind),allocatable,target :: t4dv_save(:)
+!  real(r_kind),allocatable,target :: crit1_save(:)
+!  real(r_kind),allocatable,target :: tbob_save(:,:)
+  integer(i_kind),target,dimension(maxobs) :: ifov_save
+  integer(i_kind),target,dimension(maxobs) :: iscan_save
+  integer(i_kind),target,dimension(maxobs) :: iorbn_save
+  integer(i_kind),target,dimension(maxobs) :: inode_save
+!  integer(i_kind),target,dimension(maxobs) :: npos_save
+  real(r_kind),target,dimension(maxobs)    :: dlon_earth_save
+  real(r_kind),target,dimension(maxobs)    :: dlat_earth_save
+  real(r_kind),target,dimension(maxobs)    :: sat_zen_ang_save,sat_azimuth_ang_save,sat_scan_ang_save
+  real(r_kind),target,dimension(maxobs)    :: sat_zen_ang2_save,sat_azimuth_ang2_save,sat_scan_ang2_save
+  real(r_kind),target,dimension(maxobs)    :: t4dv_save
+  real(r_kind),target,dimension(maxobs)    :: crit1_save
+  real(r_kind),target,dimension(maxchanl,maxobs) :: tbob_save
 
 
 ! ---- sun glint ----
-  integer(i_kind):: doy,mlen(12),mday(12),mon,m
+  integer(i_kind):: doy,mday(12),mon,m,mlen(12)
   real(r_kind)   :: time_4_sun_glint_calc,clath_sun_glint_calc,clonh_sun_glint_calc
   real(r_kind),pointer :: sun_zenith,sun_azimuth_ang
-  real(r_kind),allocatable,target ::sun_zenith_save(:),sun_azimuth_ang_save(:)
+!  real(r_kind),allocatable,target ::sun_zenith_save(:),sun_azimuth_ang_save(:)
+  real(r_kind),target,dimension(maxobs)    :: sun_zenith_save,sun_azimuth_ang_save
 
-  data  mlen/31,28,31,30,31,30, &
-             31,31,30,31,30,31/
+!  data  mlen/31,28,31,30,31,30, &
+!             31,31,30,31,30,31/
 
-  integer(i_kind) :: ang_nn, pos_max 
-  integer(i_kind),allocatable :: pos_statis(:), npos_all(:,:)
+  integer(i_kind) :: pos_max      !,ang_nn
+  integer(i_kind),dimension(nscan)  :: pos_statis
+  integer(i_kind),allocatable       :: npos_all(:,:)
+!  integer(i_kind),allocatable :: pos_statis(:), npos_all(:,:)
 
 ! ---- skip some obs at the beginning and end of a scan ----
   integer(i_kind):: radedge_min,radedge_max,iscan_pos,iedge_log,j2
@@ -211,7 +234,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   use_swath_edge = .false.
 
   do_noise_reduction = .true.
-  if (gmi_method .eq. 0) do_noise_reduction = .false.
+  if (gmi_method == 0) do_noise_reduction = .false.
 
   lnbufr = 15
   disterrmax=zero
@@ -241,29 +264,30 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 
   gmi      = obstype  == 'gmi'
 
-     nscan  = 221                          ! number of pixels 
-     npos_bin = 3                          ! max number of high resolution pixels at a position 
+!  nscan  = 221                          ! number of pixels 
+!  npos_bin = 3                          ! max number of high resolution pixels at a position 
                                            !     (for grouping the obs at a position)
-     if(jsatid == 'gpm')bufsat=288         ! Satellite ID (WMO as of 03Jun2014)
-     tbmax = 320.0_r_kind                  ! one value for all tmi channels (see data document).
+  if(jsatid == 'gpm')bufsat=288         ! Satellite ID (WMO as of 03Jun2014)
+  tbmax = 320.0_r_kind                  ! one value for all tmi channels (see data document).
 
-     if (gmi) then
-       maxinfo=39
-       maxchanl = 13                       ! number of channels
-       nchanl = 13                         ! 13 channls
-       nchanla = 9                         ! first 9 channels
-       ngs=2
-       allocate (tbmin(maxchanl))
-       tbmin = (/50,50,50,50,50,50,50,50,50,70,70,70,70/)             !
-     endif
-     ang_nn=nscan/npos_bin+1
-     allocate (mirad(maxchanl),gmichq(maxchanl),gmirfi(maxchanl))
-     allocate (val_angls(n_angls,ngs), pixelsaza(ngs))
-     rlndsea(0) = zero
-     rlndsea(1) = 30._r_kind
-     rlndsea(2) = 30._r_kind
-     rlndsea(3) = 30._r_kind
-     rlndsea(4) = 100._r_kind
+  if (gmi) then
+    maxinfo=39
+!    maxchanl = 13                       ! number of channels
+    nchanl = 13                         ! 13 channls
+    nchanla = 9                         ! first 9 channels
+!    ngs=2
+!    allocate (tbmin(maxchanl))
+    tbmin = (/50,50,50,50,50,50,50,50,50,70,70,70,70/)             !
+  endif
+!  ang_nn=nscan/npos_bin+1
+
+!  allocate (mirad(maxchanl),gmichq(maxchanl),gmirfi(maxchanl))
+!  allocate (val_angls(n_angls,ngs), pixelsaza(ngs))
+  rlndsea(0) = zero
+  rlndsea(1) = 30._r_kind
+  rlndsea(2) = 30._r_kind
+  rlndsea(3) = 30._r_kind
+  rlndsea(4) = 100._r_kind
 
 ! If all channels of a given sensor are set to monitor or not
 ! assimilate mode (iuse_rad<1), reset relative weight to zero.
@@ -287,26 +311,28 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   end do search
   if (.not.assim) val_gmi=zero
 
+!print*,'RD_GMI1'
+
 ! Make thinning grids
   call makegrids(rmesh,ithin)
 
 ! Allocate arrays for BUFR I/O
-  maxobs = 2090000
-  allocate(ifov_save(maxobs))
-  allocate(iscan_save(maxobs))
-  allocate(iorbn_save(maxobs))
-  allocate(inode_save(maxobs))
-  allocate(npos_save(maxobs))
-  allocate(t4dv_save(maxobs))
-  allocate(dlon_earth_save(maxobs))
-  allocate(dlat_earth_save(maxobs))
-  allocate(crit1_save(maxobs))
-  allocate(sat_zen_ang_save(maxobs),sat_zen_ang2_save(maxobs))
-  allocate(sat_azimuth_ang_save(maxobs),sat_azimuth_ang2_save(maxobs))
-  allocate(sat_scan_ang_save(maxobs),sat_scan_ang2_save(maxobs))
-  allocate(sun_zenith_save(maxobs))
-  allocate(sun_azimuth_ang_save(maxobs))
-  allocate(tbob_save(maxchanl,maxobs))
+!  maxobs = 2090000
+!  allocate(ifov_save(maxobs))
+!  allocate(iscan_save(maxobs))
+!  allocate(iorbn_save(maxobs))
+!  allocate(inode_save(maxobs))
+!  allocate(npos_save(maxobs))
+!  allocate(t4dv_save(maxobs))
+!  allocate(dlon_earth_save(maxobs))
+!  allocate(dlat_earth_save(maxobs))
+!  allocate(crit1_save(maxobs))
+!  allocate(sat_zen_ang_save(maxobs),sat_zen_ang2_save(maxobs))
+!  allocate(sat_azimuth_ang_save(maxobs),sat_azimuth_ang2_save(maxobs))
+!  allocate(sat_scan_ang_save(maxobs),sat_scan_ang2_save(maxobs))
+!  allocate(sun_zenith_save(maxobs))
+!  allocate(sun_azimuth_ang_save(maxobs))
+!  allocate(tbob_save(maxchanl,maxobs))
 
   inode_save = 0
 
@@ -332,6 +358,9 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   iobs=1
   nrec=999999
 
+!print*,'RD_GMI2'
+
+
   read_subset: do while(ireadmg(lnbufr,subset,idate)>=0) ! GMI scans
      irec=irec+1
      next=next+1
@@ -347,7 +376,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
         iscan       => iscan_save(iobs)
         iorbn       => iorbn_save(iobs)
         inode       => inode_save(iobs)
-        npos        => npos_save(iobs)
+!        npos        => npos_save(iobs)
         sat_zen_ang         => sat_zen_ang_save(iobs)
         sat_zen_ang2        => sat_zen_ang2_save(iobs)
         sat_azimuth_ang     => sat_azimuth_ang_save(iobs)
@@ -362,9 +391,10 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
         iscan = nint(slnm)
         ! npos must .LE. 90 because nstep=90 in bias_angle correction code
         !   ../../../../Applications/NCEP_Etc/NCEP_bias/main.f90
-        npos = ifov/npos_bin + 1  ! always group scan positions according channel-9's positions. 
+!        npos = ifov/npos_bin + 1  ! always group scan positions according channel-9's positions. 
         if (.not. use_edges .and. &
-             (npos < radedge_min .OR. npos > radedge_max )) then 
+!             (npos < radedge_min .OR. npos > radedge_max )) then 
+             (ifov < radedge_min .OR. ifov > radedge_max )) then
              cycle read_loop             
         endif                            
 
@@ -385,14 +415,17 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
            endif                        
 
         endif
+
+!print*,'RD_GMI3'
+
 ! ----- Read header record to extract obs location information  
         if (gmi) then
           call ufbint(lnbufr,midat(2:4),nloc,1,iret,'SCLAT SCLON HMSL')
-          call ufbrep(lnbufr,gmichq,1,nchanl,iret,'TPQC2')
-          call ufbrep(lnbufr,gmirfi,1,nchanl,iret,'VIIRSQ')
+!          call ufbrep(lnbufr,gmichq,1,nchanl,iret,'TPQC2')
+!          call ufbrep(lnbufr,gmirfi,1,nchanl,iret,'VIIRSQ')
 !          non-operational bufr:
-!          call ufbrep(lnbufr,gmichq,1,nchanl,iret,'GMICHQ')
-!          call ufbrep(lnbufr,gmirfi,1,nchanl,iret,'GMIRFI')
+          call ufbrep(lnbufr,gmichq,1,nchanl,iret,'GMICHQ')
+          call ufbrep(lnbufr,gmirfi,1,nchanl,iret,'GMIRFI')
           call ufbrep(lnbufr,pixelsaza,1,ngs,iret,strsaza)
           call ufbrep(lnbufr,val_angls,n_angls,ngs,iret,str_angls)
         endif
@@ -402,6 +435,9 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 !---    Extract brightness temperature data.  Apply gross check to data. 
 !       If obs fails gross check, reset to missing obs value.
         call ufbrep(lnbufr,mirad,1,nchanl,iret,strtmbr)
+
+
+!print*,'RD_GMI4'
 
            dlat_earth = pixelloc(1)  !deg
            dlon_earth = pixelloc(2)  !deg
@@ -448,6 +484,8 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 !          can be tossed in gross check while ch1-9 TBs go through. If
 !          use_swath_edge is false, skip these obs 
 
+!print*,'RD_GMI5'
+
            do jc=10,nchanl
               if(mirad(jc)>1000.0_r_kind) then         
                  if(use_swath_edge) then
@@ -469,11 +507,14 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
               end if
            enddo
 
+!print*,'RD_GMI6'
+
            if(iskip == nchanla) then 
              cycle read_loop             
            endif                        
            tbob_save(1:maxchanl,iobs) = mirad 
            nread=nread + (nchanl - nchanla)
+!print*,'RD_GMI nread=',nread
 
            flgch = 0
            if (thin4d) then
@@ -485,12 +526,16 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 
            iobs=iobs+1
 
+!print*,'RD_GMI7'
+
      end do read_loop
   end do read_subset
 690 continue
   call closbf(lnbufr)
   
   num_obs=iobs-1
+
+!print*,'RD_GMI8'
 
   if (do_noise_reduction) then
 
@@ -511,7 +556,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
      ifov_save(1:num_obs)                = ifov_save(sorted_index)
      iscan_save(1:num_obs)               = iscan_save(sorted_index)
      iorbn_save(1:num_obs)               = iorbn_save(sorted_index)
-     npos_save(1:num_obs)                = npos_save(sorted_index)
+!     npos_save(1:num_obs)                = npos_save(sorted_index)
      sat_zen_ang_save(1:num_obs)         = sat_zen_ang_save(sorted_index)
      sat_zen_ang2_save(1:num_obs)        = sat_zen_ang2_save(sorted_index)
      sat_azimuth_ang_save(1:num_obs)     = sat_azimuth_ang_save(sorted_index)
@@ -561,7 +606,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
      iscan       => iscan_save(iobs)
      iorbn       => iorbn_save(iobs)
      inode       => inode_save(iobs)
-     npos        => npos_save(iobs)
+!     npos        => npos_save(iobs)
      sat_zen_ang         => sat_zen_ang_save(iobs)
      sat_zen_ang2        => sat_zen_ang2_save(iobs)
      sat_azimuth_ang     => sat_azimuth_ang_save(iobs)
@@ -682,9 +727,10 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
     data_all( 5,itx) = sat_zen_ang         ! local (satellite) zenith angle (radians)
     data_all( 6,itx) = sat_azimuth_ang     ! local (satellite) azimuth_ang angle (degrees)
     data_all( 7,itx) = sat_scan_ang        ! scan(look) angle (rad)
-    data_all( 8,itx) = npos                ! scan position,  .le. 90
+!    data_all( 8,itx) = npos                ! scan position,  .le. 90
+    data_all( 8,itx) = ifov                ! scan position
     data_all( 9,itx) = sun_zenith          ! solar zenith angle (deg)
-    data_all(10,itx) = sun_azimuth_ang         ! solar azimuth_ang angle (deg)
+    data_all(10,itx) = sun_azimuth_ang     ! solar azimuth_ang angle (deg)
     data_all(11,itx) = sfcpct(0)           ! sea percentage of
     data_all(12,itx) = sfcpct(1)           ! land percentage
     data_all(13,itx) = sfcpct(2)           ! sea ice percentage
@@ -730,23 +776,23 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   end do obsloop
 
 ! Deallocate I/O arrays
-  deallocate(ifov_save)
-  deallocate(iscan_save)
-  deallocate(inode_save)
-  deallocate(iorbn_save)
-  deallocate(t4dv_save)
-  deallocate(dlon_earth_save)
-  deallocate(dlat_earth_save)
-  deallocate(crit1_save)
-  deallocate(sat_zen_ang_save)
-  deallocate(sat_zen_ang2_save)
-  deallocate(sat_azimuth_ang_save)
-  deallocate(sat_azimuth_ang2_save)
-  deallocate(sat_scan_ang_save)
-  deallocate(sat_scan_ang2_save)
-  deallocate(sun_zenith_save)
-  deallocate(sun_azimuth_ang_save)
-  deallocate(tbob_save)
+!  deallocate(ifov_save)
+!  deallocate(iscan_save)
+!  deallocate(inode_save)
+!  deallocate(iorbn_save)
+!  deallocate(t4dv_save)
+!  deallocate(dlon_earth_save)
+!  deallocate(dlat_earth_save)
+!  deallocate(crit1_save)
+!  deallocate(sat_zen_ang_save)
+!  deallocate(sat_zen_ang2_save)
+!  deallocate(sat_azimuth_ang_save)
+!  deallocate(sat_azimuth_ang2_save)
+!  deallocate(sat_scan_ang_save)
+!  deallocate(sat_scan_ang2_save)
+!  deallocate(sun_zenith_save)
+!  deallocate(sun_azimuth_ang_save)
+!  deallocate(tbob_save)
 
 ! If multiple tasks read input bufr file, allow each tasks to write out
 ! information it retained and then let single task merge files together
@@ -755,7 +801,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   write(6,*) 'READ_GMI: after combine_obs, nread,ndata is ',nread,ndata
 
 !=========================================================================================================
-  if( use_edges .and. (radedge_min > 1 .or. radedge_max < ang_nn).and. mype_sub==mype_root )then
+  if( use_edges .and. (radedge_min > 1 .or. radedge_max < nscan).and. mype_sub==mype_root )then !nscan instead of ang_nn
     ! Obsolete some obs at the beginning and end positions of a scan by flagging
     !       obs at these positions with negative NPOS values.
     ! Note: This is an arbitary process. Just want to phase out part of these obs
@@ -763,8 +809,9 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
     !       However, there is not a known quality issue at the edge of scans.
     !       JJJ, 2/12/2014
      pos_max=ndata  
-     allocate(pos_statis(ang_nn))
-     allocate(npos_all(pos_max,ang_nn))
+!     allocate(pos_statis(ang_nn))
+!     allocate(npos_all(pos_max,ang_nn))
+     allocate(npos_all(pos_max,nscan))
      npos_all = 0
      pos_statis = 0
      do n=1,ndata
@@ -795,9 +842,11 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
        enddo
      endif
 
-     if( radedge_max < ang_nn )then
+!     if( radedge_max < ang_nn )then
+     if( radedge_max < nscan )then
        pos_max = sum(pos_statis((radedge_max-1) : radedge_max))/2 
-       do i=radedge_max+1,ang_nn
+!       do i=radedge_max+1,ang_nn
+       do i=radedge_max+1,nscan
          if(pos_max==0) then
            j2=1
          else
@@ -819,7 +868,8 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
         pos_statis(i) = pos_statis(i) + 1
      enddo
      write(6,*) 'READ_', trim(obstype), ': after obsolete_obs near edges, ndata ', sum(pos_statis)
-     deallocate(pos_statis, npos_all)
+!     deallocate(pos_statis, npos_all)
+     deallocate(npos_all)
   endif ! use_edges, but flag part of obs at the scan edges with negative FOV values.
 !=========================================================================================================
 
@@ -857,8 +907,9 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
      write(6,*)'READ_GMI:  mype,ntest,disterrmax=',&
         mype,ntest,disterrmax
 
-  deallocate(tbmin, mirad, gmichq, gmirfi)
-  deallocate(val_angls, pixelsaza)
+!  deallocate(tbmin, mirad, gmichq, gmirfi)
+!  deallocate(val_angls, pixelsaza)
+
 ! End of routine
  return
 end subroutine read_gmi
