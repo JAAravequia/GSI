@@ -196,7 +196,7 @@ covl_minfact = 1.0
 ! factor of 1-1/e ~ 0.632. When paoverpb==>1, localization scales go to zero.
 ! When paoverpb==>1, localization scales not reduced.
 covl_efold = 1.e-10
-! path to data directory (include trailing slash)
+! path to data directory
 datapath = " " ! mandatory
 ! tolerance for background check.
 ! obs are not used if they are more than sqrt(S+R) from mean,
@@ -439,6 +439,12 @@ if (letkf_flag .and. .not. lupd_obspace_serial .and. numiter > 0) then
   if (nproc == 0) then
    print *,'setting lupd_obspace_serial to .true., since letkf_flag is .true. and numiter > 0'
   endif
+endif
+
+if (datapath(len_trim(datapath):len_trim(datapath)) .ne. '/') then
+   ! add trailing slash if needed
+   if (nproc .eq. 0) print *,'adding trailing slash to datapath..'
+   datapath = trim(datapath)//'/'
 endif
 
 end subroutine read_namelist
