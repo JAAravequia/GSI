@@ -117,7 +117,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   integer(i_kind),dimension(n_amsrch) :: kchamsr2
   real(r_kind)     :: sfcr
   real(r_kind)     :: dlon, dlat
-  real(r_kind)     :: timedif, pred, dist1   
+  real(r_kind)     :: timedif, dist1   
   real(r_kind),allocatable,dimension(:,:):: data_all
   integer(i_kind),allocatable,dimension(:)::nrec
   integer(i_kind):: irec,next
@@ -131,14 +131,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   real(r_kind) :: zob,tref,dtw,dtc,tz_tr
 
   character(len=7),parameter:: fov_flag="conical"
-  character(len=3) :: fov_satid
   
-  integer(i_kind) :: ichan, instr, idum
-
-  logical :: valid
-
-  real(r_kind) :: expansion   
-
   real(r_kind),allocatable        :: relative_time_in_seconds(:)
 
   real(r_kind),pointer :: t4dv,dlon_earth,dlat_earth,crit1
@@ -179,7 +172,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
 
 ! Variables for BUFR IO
   real(r_double),dimension(4):: gcomspot_d
-  real(r_double),dimension(12):: amsrspot_d               
+  real(r_double),dimension(13):: amsrspot_d               
   real(r_double),dimension(3,14):: amsrchan_d             
 
   integer(i_kind) :: ireadsb, ireadmg 
