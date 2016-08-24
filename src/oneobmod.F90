@@ -19,6 +19,9 @@ module oneobmod
 !                       sstnlat,sstnlon) for single radial wind assimilation.
 !                       added oneobmakebufr and invtllv subroutines to make 
 !                       the radial wind superobs.
+!   2016-08-12  lippi - changed namelist sstnlat/lon to just use sstn by using
+!                       a look up table of radars. add namelist parameters
+!                       for a "single radar" (all obs from one radar test).
 !
 ! subroutines included:
 !   sub init_oneobmod
@@ -56,15 +59,17 @@ module oneobmod
 ! set passed variables to public
   public :: oneobtest,oneob_type,magoberr,pctswitch,maginnov
   public :: oblat,oblon,obpres,obdattim,obhourset,anel_rw,anaz_rw,range_rw
-  public :: lsingleradob, obchan, sstnlat, sstnlon
+  public :: lsingleradob, obchan, sstn
+  public :: lsingleradar, singleradar
 
   real(r_kind) maginnov, magoberr, oblat, oblon,&
-    obhourset, obpres,anel_rw,anaz_rw,range_rw,sstnlat,sstnlon
+    obhourset, obpres,anel_rw,anaz_rw,range_rw
   integer(i_kind) obdattim
   character(10) oneob_type
+  character(4) sstn, singleradar
   logical oneobtest
   logical pctswitch
-  logical lsingleradob
+  logical lsingleradob, lsingleradar
   integer(i_kind) obchan
 
   logical :: oneobmade
@@ -107,12 +112,13 @@ contains
     pctswitch=.false.
     lsingleradob=.false.
     obchan=zero
-    sstnlat=30.72
-    sstnlon=-97.38 
+    sstn='KOUN'
     anel_rw=zero
     anaz_rw=zero
     range_rw=r1000
     oneobmade=.false.
+    lsingleradar=.false.
+    singleradar='KOUN'
     return
   end subroutine init_oneobmod
 
@@ -342,7 +348,7 @@ contains
 
     implicit none    
     
-    character(4) :: this_staid
+    character(4) :: this_staid,isstn
 
     real(r_kind),parameter:: four_thirds = 4.0_r_kind / 3.0_r_kind
     real(r_kind),parameter:: r8          = 8.0_r_kind
@@ -361,6 +367,7 @@ contains
     real(r_kind) :: thisazimuthr,rlonloc,rad_per_meter,rlatloc,rlon0
     real(r_kind) :: clat0,slat0,rlonglob,rlatglob,clat1,caz0,saz0
     real(r_kind) :: cdlon,sdlon,caz1,saz1,delazmmax
+    real(r_kind) :: ilat,ilon,ihgt
     real(r_kind),parameter :: r85 = 85._r_kind
 
     integer(i_kind) :: iret,i,num_supob_boxes
@@ -374,16 +381,26 @@ contains
     deg2rad = pi/180.0_r_kind
     rad2deg = one/deg2rad
 
-    this_stahgt=0._r_kind
-    this_staid='AAAA'
     thisazimuth=anaz_rw
     thistilt=anel_rw
     thisrange=range_rw
-    thisvr=10.0_r_kind
+    thisvr=1.0_r_kind
     thiserr=magoberr
-    thistime=zero
-    this_stalat=sstnlat
-    this_stalon=sstnlon
+    thistime=obhourset
+
+    ! Get station lat/lon/hgt from namelist station ID and radar list file.
+    open(unit=333,file="radar_list",status="old",action="read")
+    do
+       read(333,*,iostat=iret) isstn,ilat,ilon,ihgt
+       if(iret/=0) exit
+       if(isstn==sstn) then
+         this_staid=isstn
+         this_stalat=ilat
+         this_stalon=ilon
+         this_stahgt=ihgt
+       end if
+    end do
+    close(333)
 
     rlon0=deg2rad*this_stalon
     this_stalatr=this_stalat*deg2rad
@@ -440,12 +457,8 @@ contains
          abs(corrected_azimuth-thisazimuth+r360),&
          abs(corrected_azimuth-thisazimuth+r720)),delazmmax)
 
-!   This avoids irrr problems with a 90-deg test. The ob must have some
-!   horizontal distance from the radar location, so use oblat/lon from namelist
-    if(anel_rw >= r85) then
-       thislat=oblat
-       thislon=oblon
-    end if
+    corrected_azimuth=90.0000000000000000000000000
+    corrected_tilt=zero
 
     write(6,*) 'Single radial wind observation.'
     write(6,*) '*******************************************'

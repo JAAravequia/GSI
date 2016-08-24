@@ -20,6 +20,7 @@ module read_l2bufr_mod
 !   2009-11-24  parrish  change time variable from regional_time (passed from gridmod) to
 !                          iadate (passed from obsmod), to prevent all radar data being tossed.
 !   2011-07-04  todling  - fixes to run either single or double precision
+!   2016-08-12  lippi    logic for running single radar test
 !
 ! subroutines included:
 !   sub initialize_superob_radar - initialize superob parameters to defaults
@@ -124,6 +125,7 @@ contains
     use mpimod, only: mpi_comm_world,mpi_min,mpi_sum,mpi_real8,ierror,mpi_real16
     use mpimod, only: mpi_max,mpi_integer4
     use obsmod,only: iadate,ndat,dsis,dfile,dtype
+    use oneobmod, only: lsingleradar,singleradar
     use mpeu_util, only: IndexSet, IndexSort
     implicit none
 
@@ -220,6 +222,7 @@ contains
     equivalence (chdr2,hdr2(1))
 
     logical rite
+    logical lradar
 
     ! define infile if using either option for radial winds.
     do i=1,ndat
@@ -636,8 +639,13 @@ contains
 	  this_staid=master_stn_table(krad)
 	  this_stahgt=master_hgt_table(krad)
 	  do iii=1,nthisrad
-          ! single radar location ob test
-          if(this_staid=='KGRK') then 
+! If single radar exp, set lradar false if not the specified radar.
+           lradar=.true.
+           if(lsingleradar) then
+             if(this_staid /= singleradar) lradar=.false.
+           end if
+
+           if(lradar) then ! Logical for when running single radar exp.
 	     if(ibins2(iii,krad) < minnum) cycle
 
 	     thiscount=one_quad/real(ibins2(iii,krad),r_quad)
@@ -720,122 +728,12 @@ contains
                   abs(corrected_azimuth-thisazimuth     ),&
                   abs(corrected_azimuth-thisazimuth+r360),&
                   abs(corrected_azimuth-thisazimuth+r720)),delazmmax)
-             if(.false. .and. &  ! trying to isolate bad observations.
-                corrected_azimuth > 65.0 .and. corrected_azimuth < 70.0 .and. &
-                gamma > 55000 .and. gamma < 65000) then 
-                     write(inbufr) this_staid,this_stalat,this_stalon,this_stahgt, &
-                          thistime,thislat,thislon,thishgt,thisvr,corrected_azimuth,&
-                          thiserr,corrected_tilt                   
-                     write(6,*) this_staid,this_stalat,this_stalon,this_stahgt, &
-                                thistime,thislat,thislon,thishgt,thisvr,&
-                                corrected_azimuth,thiserr,corrected_tilt,gamma
-                     write(6,*)'-----------------------------------------------'
-                     nsuper=nsuper+1
-             end if
-             !!lippi single radar ob test
-             if(.false. .and. nsuper < 1) then
-                   if(.false.) then          ! bad ob test.
-                      this_staid='KGRK'
-                      this_stalat=30.7200000000000
-                      this_stalon=-97.3800000000000
-                      this_stahgt=179.000000000000
-                      thistime=-4.444444444444444E-002
-                      thislat=31.2059217792812
-                      thislon=-97.1388029867027
-                      thishgt=4529.81679341488 
-                      thisvr=11.4250000000000
-                      corrected_azimuth=66.8809040374042
-                      thiserr=0.884236959191361
-                      corrected_tilt=4.43593743925352
-                      gamma=56221.1567198312 
 
-                   else if(.false.) then                    ! far single ob test.
-                      this_staid='KGRK'
-                      this_stalat=30.7200000000000
-                      this_stalon=-97.3800000000000
-                      this_stahgt=179.000000000000
-                      thistime=-0.232816893424036
-                      thislat=30.5989917585869
-                      thislon=-96.7411791452217
-                      thishgt=4780.35921778006
-                      thisvr=10.00000000000                 !1.90918367346939
-                      corrected_azimuth=-12.5812498078067
-                      thiserr=0.1                           ! 4.82789696757598
-                      corrected_tilt=90.000                 ! radar looking straight up 
-                      gamma=62558.1331455193
-
-                      !corrected_tilt=0.0000 ! radar looking straight out
-
-                   else if(.false.) then   ! close single ob test.
-                      this_staid='KGRK'
-                      this_stalat=30.7200000000000
-                      this_stalon=-97.3800000000000
-                      this_stahgt=179.000000000000
-                      thistime=-4.212100366876310E-002
-                      thislat=30.7292499218964
-                      thislon=-97.4613819003352
-                      thishgt=248.351601218044
-                      thisvr=9.29952830188679
-                      corrected_azimuth=172.488831387925
-                      thiserr=1.0 !3.99275874790981
-                      corrected_tilt=0.532923788999991
-                      gamma=7845.50632625533
-
-                   else ! default single ob test.
-                      this_staid='KGRK'
-                      this_stalat=30.7200000000000
-                      this_stalon=-97.3800000000000
-                      this_stahgt=179.000000000000
-                      thistime=9.074074074074078E-003
-                      thislat=31.1513910032159
-                      thislon=-97.4782013414109
-                      thishgt=1070.20676506144
-                      thisvr=23.77+6.
-                      corrected_azimuth=101.073817562754
-                      thiserr=1.0
-                      corrected_tilt=1.20962249451990
-                      gamma=48866.6718242868
-                   end if
-                write(inbufr) this_staid,this_stalat,this_stalon,this_stahgt, &
-                     thistime,thislat,thislon,thishgt,thisvr,corrected_azimuth,&
-                     thiserr,corrected_tilt
-                write(6,*) 'single radar observation test values of observation.'
-                write(6,*) this_staid,this_stalat,this_stalon,this_stahgt, &
-                           thistime,thislat,thislon,thishgt,thisvr,&
-                           corrected_azimuth,thiserr,corrected_tilt,gamma 
-                write(6,*)'-----------------------------------------------'
-                nsuper=nsuper+1
-
-             else if(.false.) then  ! let's get some realistic observations.
-               if(thislat >=  30.73-0.03 .and. thislat <=  30.73+0.03 .and.   &
-                  thislon >= -97.47-0.03 .and. thislon <= -97.47+0.03      ) then
-                  write(6,*) this_staid,this_stalat,this_stalon,this_stahgt, &
-                           thistime,thislat,thislon,thishgt,thisvr,&
-                           corrected_azimuth,thiserr,corrected_tilt,gamma
-                  write(6,*)'-----------------------------------------------'
-                  write(inbufr) this_staid,this_stalat,this_stalon,this_stahgt, &
-                       thistime,thislat,thislon,thishgt,thisvr,corrected_azimuth,&
-                       thiserr,corrected_tilt
-                  nsuper=nsuper+1
-               end if
-
-             else if(.false.) then ! single radar tilt. 
-                if(corrected_tilt >= 3.75 .and. corrected_tilt <= 4.25) then
-                   write(inbufr) this_staid,this_stalat,this_stalon,this_stahgt, &
-                        thistime,thislat,thislon,thishgt,thisvr,corrected_azimuth,&
-                        thiserr,corrected_tilt
-                   nsuper=nsuper+1
-                endif
-
-             else if(.false.) then ! if not a single observation test just do as normal.
-                write(inbufr) this_staid,this_stalat,this_stalon,this_stahgt, &
-                     thistime,thislat,thislon,thishgt,thisvr,corrected_azimuth,&
-                     thiserr,corrected_tilt
-                nsuper=nsuper+1
-             end if ! end of single observation test from a single radar.             
-
-
-          end if ! end of single radar location test.
+             write(inbufr) this_staid,this_stalat,this_stalon,this_stahgt, &
+                 thistime,thislat,thislon,thishgt,thisvr,corrected_azimuth,&
+                 thiserr,corrected_tilt
+             nsuper=nsuper+1
+           end if
           end do
           if(nsuper > 0)then
             write(6,*)' for radar ',this_staid,' nsuper=',nsuper,' delazmmax=',delazmmax
@@ -913,6 +811,7 @@ sis,hgtl_full,nobs)
       semi_major_axis,flattening,two
   use qcmod, only: erradar_inflate,vadfile,newvad
   use obsmod, only: iadate,l_foreaft_thin
+  use oneobmod, only: oneobtest
   use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,time_4dvar,thin4d
   use gridmod, only: regional,nlat,nlon,tll2xy,rlats,rlons,rotate_wind_ll2xy,nsig
   use gridmod, only: wrf_nmm_regional,nems_nmmb_regional,cmaq_regional,wrf_mass_regional
@@ -1259,9 +1158,10 @@ sis,hgtl_full,nobs)
      cdist=slat*slath+clat*clath*(slon*slonh+clon*clonh)
      cdist=max(-one,min(cdist,one))
      dist=eradkm*acos(cdist)
-     irrr=nint(dist*1000*xscalei)
-     if(irrr<=0 .or. irrr>max_rrr) cycle
-
+     if(.not. oneobtest) then
+        irrr=nint(dist*1000*xscalei)
+        if(irrr<=0 .or. irrr>max_rrr) cycle
+     end if !90degtest
 !    Extract radial wind data
      height= thishgt
      rwnd  = thisvr
@@ -1276,12 +1176,14 @@ sis,hgtl_full,nobs)
         azm=azm_earth
      end if
 !11.
-     iaaa=azm/(r360/(r8*irrr))
-     iaaa=mod(iaaa,8*irrr)
-     if(iaaa<0) iaaa=iaaa+8*irrr
-     iaaa=iaaa+1
-     iaaamax=max(iaaamax,iaaa)
-     iaaamin=min(iaaamin,iaaa)
+     if(.not. oneobtest) then
+        iaaa=azm/(r360/(r8*irrr))
+        iaaa=mod(iaaa,8*irrr)
+        if(iaaa<0) iaaa=iaaa+8*irrr
+        iaaa=iaaa+1
+        iaaamax=max(iaaamax,iaaa)
+        iaaamin=min(iaaamin,iaaa)
+     end if !90degtest
 !12.
      error = erradar_inflate*thiserr
      errmax=max(error,errmax)

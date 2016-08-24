@@ -50,8 +50,8 @@
 
   use oneobmod, only: oblon,oblat,obpres,obhourset,obdattim,oneob_type,&
      oneobtest,magoberr,maginnov,init_oneobmod,pctswitch,lsingleradob,obchan,&
-     anaz_rw,anel_rw,range_rw,sstnlat,sstnlon
-  use balmod, only: fstat
+     anaz_rw,anel_rw,range_rw,sstn,lsingleradar,singleradar
+  use balmod, only: init_balmod,fstat,lnobalance
   use turblmod, only: use_pbl,init_turbl
   use qcmod, only: dfact,dfact1,create_qcvars,destroy_qcvars,&
       erradar_inflate,tdrerr_inflate,tdrgross_fact,use_poq7,qc_satwnds,&
@@ -312,7 +312,12 @@
 !  05-13-2015 wu        remove check to turn off regional 4densvar
 !  02-29-2015 S.Liu     added option l_use_hydroretrieval_all
 !  03-02-2016 s.liu/carley - remove use_reflectivity and use i_gsdcldanal_type
-!
+!  07-28-1016 lippi     added namelist parameters for single radial wind experiment
+!                       (anel_rw, anaz_rw,range_rw,sstnlat,sstnlon)
+!  08-12-2016 lippi     replaced sstnlat and sstnlon with sstn and radar station
+!                       look up table.
+!  08-24-2016 lippi     added lnobalance to zero out all balance correlation
+!                       matricies for univariate analysis.
 !EOP
 !-------------------------------------------------------------------------
 
@@ -511,7 +516,8 @@
        use_gfs_ozone,check_gfs_ozone_date,regional_ozone,lwrite_predterms,&
        lwrite_peakwt, use_gfs_nemsio,liauon,use_prepb_satwnd,l4densvar,ens4d_nstarthr, &
        use_gfs_stratosphere,pblend0,pblend1,step_start,diag_precon,lrun_subdirs,&
-       use_sp_eqspace,lnested_loops,lsingleradob,thin4d
+       use_sp_eqspace,lnested_loops,lsingleradob,thin4d,lsingleradar,singleradar, &
+       lnobalance
 
 ! GRIDOPTS (grid setup variables,including regional specific variables):
 !     jcap     - spectral resolution
@@ -734,7 +740,7 @@
 
   namelist/singleob_test/maginnov,magoberr,oneob_type,&
        oblat,oblon,obpres,obdattim,obhourset,pctswitch,&
-       obchan,anel_rw,anaz_rw,range_rw,sstnlat,sstnlon
+       obchan,anel_rw,anaz_rw,range_rw,sstn
 
 ! SUPEROB_RADAR (level 2 bufr file to radar wind superobs):
 !      del_azimuth     - azimuth range for superob box  (default 5 degrees)
@@ -990,6 +996,7 @@
   call init_co
   call init_convinfo
   call init_jfunc
+  call init_balmod
   call init_berror
   call init_anberror  ! RTodling: alloc vectors should move to create
   call init_grid

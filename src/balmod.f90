@@ -64,6 +64,7 @@ module balmod
 ! set default to private
   private
 ! set subroutines to public
+  public :: init_balmod
   public :: create_balance_vars
   public :: destroy_balance_vars
   public :: create_balance_vars_reg
@@ -78,6 +79,7 @@ module balmod
 ! set passed variables to public
   public :: fstat,llmax,llmin,rllat,rllat1,ke_vp,f1,bvz,agvz,wgvz,bvk,agvk,wgvk,agvk_lm
   public :: pput
+  public :: lnobalance
 
   real(r_kind),allocatable,dimension(:,:,:):: agvz
   real(r_kind),allocatable,dimension(:,:):: wgvz
@@ -91,9 +93,16 @@ module balmod
 
   integer(i_kind) ke_vp
   integer(i_kind) llmin,llmax
-  logical fstat
+  logical fstat,lnobalance
 
 contains
+
+  subroutine init_balmod
+  implicit none
+  lnobalance=.false.
+  end subroutine init_balmod
+
+
   subroutine create_balance_vars
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -319,7 +328,7 @@ contains
 
     return
   end subroutine prebal
-  
+
   subroutine prebal_reg(cwcoveqqcov)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -464,9 +473,10 @@ contains
 
 !   Alternatively, zero out all balance correlation matrices
 !   for univariate surface analysis
-    if (twodvar_regional) then
+    if (twodvar_regional .or. lnobalance) then
        bvk(:,:,:)=zero
        agvk(:,:,:,:)=zero
+       agvk_lm(:,:)=zero
        wgvk(:,:,:)=zero
     endif
     

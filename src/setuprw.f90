@@ -523,7 +523,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         !rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt
         rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt &
                      +(wgesprofile(k))*sintilt
-                     !+(wgesprofile(k)+4.85)*sintilt
+                     !+(wgesprofile(k)-4.85)*sintilt
                      !+(wgesprofile(k)-vTgesprofile(k))*sintilt
         if(umaxmax<rwwindprofile) then
            umaxmax=rwwindprofile
