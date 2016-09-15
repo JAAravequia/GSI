@@ -37,6 +37,7 @@ module anisofilter
 !   2014-05-07  pondeca - add howv
 !   2014-06-09  carley/zhu - add ceiling
 !   2015-07-10  pondeca - add cldch
+!   2016-03-07  pondeca  - add uwnd10m,vwnd10m
 !
 !
 ! subroutines included:
@@ -272,14 +273,15 @@ module anisofilter
   real(r_kind),allocatable,dimension(:,:,:)::rsliglb      !sea-land-ice mask on analysis grid. type real
   real(r_kind):: rltop,rltop_wind,rltop_temp,rltop_q,rltop_psfc,rltop_gust,rltop_vis,rltop_pblh, &
                  rltop_wspd10m,rltop_td2m,rltop_mxtm,rltop_mitm,rltop_pmsl,rltop_howv,rltop_tcamt,rltop_lcbas, & 
-                 rltop_cldch
+                 rltop_cldch,rltop_uwnd10m,rltop_vwnd10m
 
   integer(i_kind):: nrf3_oz,nrf3_t,nrf3_sf,nrf3_vp,nrf3_q,nrf3_cw
   integer(i_kind):: nrf2_ps,nrf2_sst,nrf2_gust,nrf2_vis,nrf2_pblh,nrf2_stl,nrf2_sti, &
-                    nrf2_wspd10m,nrf2_td2m,nrf2_mxtm,nrf2_mitm,nrf2_pmsl,nrf2_howv
+                    nrf2_wspd10m,nrf2_td2m,nrf2_mxtm,nrf2_mitm,nrf2_pmsl,nrf2_howv, &
+                    nrf2_uwnd10m,nrf2_vwnd10m
   integer(i_kind):: nrf3_sfwter,nrf3_vpwter,nrf2_twter,nrf2_qwter,nrf2_pswter,nrf2_gustwter, &
                     nrf2_wspd10mwter,nrf2_td2mwter,nrf2_mxtmwter,nrf2_mitmwter
-  integer(i_kind):: nrf2_tcamt,nrf2_lcbas,nrf2_cldch
+  integer(i_kind):: nrf2_tcamt,nrf2_lcbas,nrf2_cldch,nrf2_uwnd10mwter,nrf2_vwnd10mwter
 
   character(20), allocatable, dimension(:):: cvarstype    !static3d, static2d, motley
 
@@ -385,6 +387,8 @@ subroutine anprewgt_reg(mype)
   nrf2_tcamt = getindex(cvars2d,'tcamt')
   nrf2_lcbas = getindex(cvars2d,'lcbas')
   nrf2_cldch = getindex(cvars2d,'cldch')
+  nrf2_uwnd10m = getindex(cvars2d,'uwnd10m')
+  nrf2_vwnd10m = getindex(cvars2d,'vwnd10m')
   nrf3_sfwter = getindex(cvars3d,'sfwter')
   nrf3_vpwter = getindex(cvars3d,'vpwter')
   nrf2_twter = getindex(cvarsmd,'twter')
@@ -395,6 +399,8 @@ subroutine anprewgt_reg(mype)
   nrf2_td2mwter = getindex(cvarsmd,'td2mwter')
   nrf2_mxtmwter = getindex(cvarsmd,'mxtmwter')
   nrf2_mitmwter = getindex(cvarsmd,'mitmwter')
+  nrf2_uwnd10mwter = getindex(cvarsmd,'uwnd10mwter')
+  nrf2_vwnd10mwter = getindex(cvarsmd,'vwnd10mwter')
 
   call init_anisofilter_reg(mype)
   call read_bckgstats(mype)
@@ -770,6 +776,12 @@ subroutine get_aspect_reg_2d
               no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='wspd10m' .or. nrf_var(ivar)=='WSPD10M')
               no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='wspd10mwter' .or. nrf_var(ivar)=='WSPD10MWTER')
 !          endif
+!          if (nrf2_uwnd10m>0 .and. nrf2_uwnd10mwter>0 .and. nrf2_vwnd10m>0 .and. nrf2_vwnd10mwter>0) then
+              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='uwnd10m' .or. nrf_var(ivar)=='UWND10M')
+              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='uwnd10mwter' .or. nrf_var(ivar)=='UWND10MWTER')
+              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='vwnd10m' .or. nrf_var(ivar)=='VWND10M')
+              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='vwnd10mwter' .or. nrf_var(ivar)=='VWND10MWTER')
+!          endif
 !          if (nrf2_gust>0 .and. nrf2_gustwter>0) then
               no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='gust' .or. nrf_var(ivar)=='GUST')
               no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='gustwter' .or. nrf_var(ivar)=='GUSTWTER')
@@ -807,6 +819,8 @@ subroutine get_aspect_reg_2d
               case('tcamt','TCAMT'); rltop=rltop_tcamt
               case('lcbas','LCBAS'); rltop=rltop_lcbas
               case('cldch','CLDCH'); rltop=rltop_cldch
+              case('uwnd10m','UWND10M'); rltop=rltop_uwnd10m
+              case('vwnd10m','VWND10M'); rltop=rltop_vwnd10m
               case('sfwter','SFWTER'); rltop=rltop_wind
               case('vpwter','VPWTER'); rltop=rltop_wind
               case('pswter','PSWTER'); rltop=rltop_psfc
@@ -819,6 +833,8 @@ subroutine get_aspect_reg_2d
               case('mitmwter','MITMWTER'); rltop=rltop_mitm
               case('tcamtwter','TCAMTWTER'); rltop=rltop_tcamt
               case('lcbaswter','LCBASWTER'); rltop=rltop_lcbas
+              case('uwnd10mwter','UWND10MWTER'); rltop=rltop_uwnd10m
+              case('vwnd10mwter','VWND10MWTER'); rltop=rltop_vwnd10m
            end select
            afact=afact0(ivar)
            if (cvar=='pblh' .or. cvar=='PBLH') afact=zero    ! for now, Geoff preferrs this due to lacking of obs
@@ -1136,6 +1152,8 @@ end subroutine fact_qopt2
   if (nrf2_tcamt>0.and.ivar==nrf2_loc(max(1,nrf2_tcamt))) fvarname='tcamt'
   if (nrf2_lcbas>0.and.ivar==nrf2_loc(max(1,nrf2_lcbas))) fvarname='lcbas'
   if (nrf2_cldch>0.and.ivar==nrf2_loc(max(1,nrf2_cldch))) fvarname='cldch'
+  if (nrf2_uwnd10m>0.and.ivar==nrf2_loc(max(1,nrf2_uwnd10m))) fvarname='uwnd10m'
+  if (nrf2_vwnd10m>0.and.ivar==nrf2_loc(max(1,nrf2_vwnd10m))) fvarname='vwnd10m'
   if (nrf2_sst>0.and.ivar==nrf+1) fvarname='lst'   ! _RTod this is a disaster!
   if (nrf2_sst>0.and.ivar==nrf+2) fvarname='ist'   ! _RTod this is a disaster!
   if (nrf3_sfwter>0.and.ivar==nrf3_loc(max(1,nrf3_sfwter))) fvarname='sfwter'
@@ -1148,6 +1166,8 @@ end subroutine fact_qopt2
   if (nrf2_td2mwter>0.and.ivar==nmotl_loc(max(1,nrf2_td2mwter))) fvarname='td2mwter'
   if (nrf2_mxtmwter>0.and.ivar==nmotl_loc(max(1,nrf2_mxtmwter))) fvarname='mxtmwter'
   if (nrf2_mitmwter>0.and.ivar==nmotl_loc(max(1,nrf2_mitmwter))) fvarname='mitmwter'
+  if (nrf2_uwnd10mwter>0.and.ivar==nmotl_loc(max(1,nrf2_uwnd10mwter))) fvarname='uwnd10mwter'
+  if (nrf2_vwnd10mwter>0.and.ivar==nmotl_loc(max(1,nrf2_vwnd10mwter))) fvarname='vwnd10mwter'
 
   return
 end function fvarname
@@ -1198,16 +1218,21 @@ subroutine init_anisofilter_reg(mype)
 
   real(r_double) svpsi,svchi,svpsfc,svtemp,svshum,svgust,svvis,svpblh,svwspd10m, &
                  svtd2m,svmxtm,svmitm,svpmsl,svhowv,svtcamt,svlcbas,svcldch, &
+                 svuwnd10m,svvwnd10m, &
                  svpsi_w,svchi_w,svpsfc_w,svtemp_w,svshum_w,svgust_w,svwspd10m_w, &
-                 svtd2m_w,svmxtm_w,svmitm_w,svtcamt_w,svlcbas_w
+                 svtd2m_w,svmxtm_w,svmitm_w,svtcamt_w,svlcbas_w, & 
+                 svuwnd10m_w,svvwnd10m_w
   real(r_kind) sclpsi,sclchi,sclpsfc,scltemp,sclhum,sclgust,sclvis,sclpblh,sclwspd10m, &
                scltd2m,sclmxtm,sclmitm,sclpmsl,sclhowv,scltcamt,scllcbas,sclcldch, &
+               scluwnd10m,sclvwnd10m, &
                sclpsi_w,sclchi_w,sclpsfc_w,scltemp_w,sclhum_w,sclgust_w,sclwspd10m_w, &
-               scltd2m_w,sclmxtm_w,sclmitm_w,scltcamt_w,scllcbas_w
+               scltd2m_w,sclmxtm_w,sclmitm_w,scltcamt_w,scllcbas_w, & 
+               scluwnd10m_w,sclvwnd10m_w
   real(r_kind) water_scalefactpsi,water_scalefactchi,water_scalefacttemp, &
                water_scalefactq,water_scalefactpsfc,water_scalefactgust, &
                water_scalefactpblh,water_scalefactvis,water_scalefactwspd10m,water_scalefacttcamt, &
-               water_scalefactlcbas,water_scalefacttd2m,water_scalefactmxtm,water_scalefactmitm,water_scalefactpmsl
+               water_scalefactlcbas,water_scalefacttd2m,water_scalefactmxtm,water_scalefactmitm,water_scalefactpmsl, & 
+               water_scalefactuwnd10m,water_scalefactvwnd10m
 
   namelist/parmcardanisof/latdepend,scalex1,scalex2,scalex3,afact0,hsteep, &
           lsmoothterrain,hsmooth_len,hsmooth_len_lcbas,R_f,volpreserve, &
@@ -1215,19 +1240,25 @@ subroutine init_anisofilter_reg(mype)
           water_scalefacttemp,water_scalefactq,water_scalefactpsfc, &
           water_scalefactgust,water_scalefactvis,water_scalefactpblh, &
           water_scalefactwspd10m,water_scalefacttd2m, &
+          water_scalefactuwnd10m,water_scalefactvwnd10m, &
           water_scalefactmxtm,water_scalefactmitm,water_scalefactpmsl,&
           water_scalefacttcamt,water_scalefactlcbas,nhscale_pass, &
           rltop_wind,rltop_temp,rltop_q,rltop_psfc, &
           rltop_gust,rltop_vis,rltop_pblh,rltop_wspd10m,rltop_tcamt,rltop_lcbas, &
           rltop_td2m,rltop_mxtm,rltop_mitm,rltop_pmsl,rltop_howv,rltop_cldch, &
+          rltop_uwnd10m,rltop_vwnd10m, &
           svpsi,svchi,svpsfc,svtemp,svshum,svgust,svvis,svpblh,svwspd10m, &
           svtd2m,svmxtm,svmitm,svpmsl,svhowv,svtcamt,svlcbas,svcldch, &
+          svuwnd10m,svvwnd10m, &
           svpsi_w,svchi_w,svpsfc_w,svtemp_w,svshum_w,svgust_w,svwspd10m_w, &
           svtd2m_w,svmxtm_w,svmitm_w,svtcamt_w,svlcbas_w, &
+          svuwnd10m_w,svvwnd10m_w, &
           sclpsi,sclchi,sclpsfc,scltemp,sclhum,sclgust,sclvis,sclpblh, &
           sclwspd10m,scltd2m,sclmxtm,sclmitm,sclpmsl,sclhowv,scltcamt,scllcbas,sclcldch, &
+          scluwnd10m,sclvwnd10m, &
           sclpsi_w,sclchi_w,sclpsfc_w,scltemp_w,sclhum_w,sclgust_w, &
-          sclwspd10m_w,scltd2m_w,sclmxtm_w,sclmitm_w,scltcamt_w,scllcbas_w
+          sclwspd10m_w,scltd2m_w,sclmxtm_w,sclmitm_w,scltcamt_w,scllcbas_w, & 
+          scluwnd10m_w,sclvwnd10m_w
 !*******************************************************************
 
   nlatf=pf2aP1%nlatf
@@ -1304,6 +1335,8 @@ subroutine init_anisofilter_reg(mype)
            case('tcamt','TCAMT');             rfact0h(n)=one    ; rfact0v(n)=r1_5
            case('lcbas','LCBAS');             rfact0h(n)=one    ; rfact0v(n)=r1_5
            case('cldch','CLDCH')  ;           rfact0h(n)=one    ; rfact0v(n)=r1_5
+           case('uwnd10m','UWND10M');         rfact0h(n)=one    ; rfact0v(n)=r1_5
+           case('vwnd10m','VWND10M');         rfact0h(n)=one    ; rfact0v(n)=r1_5
            case('sfwter','SFWTER')  ;         rfact0h(n)=one    ; rfact0v(n)=r1_5
            case('vpwter','VPWTER')  ;         rfact0h(n)=one    ; rfact0v(n)=r1_5
            case('twter','TWTER')    ;         rfact0h(n)=one    ; rfact0v(n)=r1_5
@@ -1316,6 +1349,8 @@ subroutine init_anisofilter_reg(mype)
            case('mitmwter','MITMWTER');       rfact0h(n)=one    ; rfact0v(n)=r1_5
            case('tcamtwter','TCAMTWTER');     rfact0h(n)=one    ; rfact0v(n)=r1_5
            case('lcbaswter','LCBASWTER');     rfact0h(n)=one    ; rfact0v(n)=r1_5
+           case('uwnd10mwter','UWND10MWTER'); rfact0h(n)=one    ; rfact0v(n)=r1_5
+           case('vwnd10mwter','VWND10MWTER'); rfact0h(n)=one    ; rfact0v(n)=r1_5
 
 
         end select
@@ -1343,6 +1378,8 @@ subroutine init_anisofilter_reg(mype)
      water_scalefactpmsl=one
      water_scalefacttcamt=one
      water_scalefactlcbas=one
+     water_scalefactuwnd10m=one
+     water_scalefactvwnd10m=one
 
      nhscale_pass=0
 
@@ -1362,6 +1399,8 @@ subroutine init_anisofilter_reg(mype)
      rltop_tcamt=huge_single
      rltop_lcbas=huge_single
      rltop_cldch=huge_single
+     rltop_uwnd10m=huge_single
+     rltop_vwnd10m=huge_single
 
      svpsi =0.35_r_double
      svchi =0.35_r_double*2.063_r_double
@@ -1380,6 +1419,8 @@ subroutine init_anisofilter_reg(mype)
      svtcamt=one
      svlcbas=one
      svcldch=one
+     svuwnd10m=one
+     svvwnd10m=one
      svpsi_w =svpsi
      svchi_w =svchi
      svpsfc_w =svpsfc
@@ -1392,6 +1433,8 @@ subroutine init_anisofilter_reg(mype)
      svmitm_w =svmitm
      svtcamt_w=one
      svlcbas_w=one
+     svuwnd10m_w=svuwnd10m
+     svvwnd10m_w=svvwnd10m
 
 
      sclpsi =r0_27
@@ -1411,6 +1454,8 @@ subroutine init_anisofilter_reg(mype)
      scltcamt=r0_36
      scllcbas=r0_36
      sclcldch=r0_36
+     scluwnd10m=r0_36
+     sclvwnd10m=r0_36
      sclpsi_w =sclpsi
      sclchi_w =sclchi
      sclpsfc_w =sclpsfc
@@ -1423,6 +1468,8 @@ subroutine init_anisofilter_reg(mype)
      sclmitm_w =sclmitm
      scltcamt_w=scltcamt
      scllcbas_w=scllcbas
+     scluwnd10m_w=scluwnd10m
+     sclvwnd10m_w=sclvwnd10m
 
      allocate(water_scalefact(nvars))
 
@@ -1515,6 +1562,14 @@ subroutine init_anisofilter_reg(mype)
               an_amp(:,n) =svcldch
               rfact0h(n)=sclcldch
               water_scalefact(n)=one
+           case('uwnd10m','UWND10M')
+              an_amp(:,n) =svuwnd10m
+              rfact0h(n)=scluwnd10m
+              water_scalefact(n)=water_scalefactuwnd10m
+           case('vwnd10m','VWND10M')
+              an_amp(:,n) =svvwnd10m
+              rfact0h(n)=sclvwnd10m
+              water_scalefact(n)=water_scalefactvwnd10m
            case('sfwter','SFWTER')
               an_amp(:,n) =svpsi_w
               rfact0h(n)=sclpsi_w
@@ -1563,6 +1618,14 @@ subroutine init_anisofilter_reg(mype)
               an_amp(:,n) =svlcbas_w
               rfact0h(n)=scllcbas_w
               water_scalefact(n)=one
+           case('uwnd10mwter','UWND10MWTER')
+              an_amp(:,n) =svuwnd10m_w
+              rfact0h(n)=scluwnd10m_w
+              water_scalefact(n)=one
+           case('vwnd10mwter','VWND10MWTER')
+              an_amp(:,n) =svvwnd10m_w
+              rfact0h(n)=sclvwnd10m_w
+              water_scalefact(n)=one
         end select
      end do
 
@@ -1588,6 +1651,8 @@ subroutine init_anisofilter_reg(mype)
         print*,'in init_anisofilter_reg: water_scalefactpmsl=',water_scalefactpmsl
         print*,'in init_anisofilter_reg: water_scalefacttcamt=',water_scalefacttcamt
         print*,'in init_anisofilter_reg: water_scalefactlcbas=',water_scalefactlcbas
+        print*,'in init_anisofilter_reg: water_scalefactuwnd10m=',water_scalefactuwnd10m
+        print*,'in init_anisofilter_reg: water_scalefactvwnd10m=',water_scalefactvwnd10m
 
         print*,'in init_anisofilter_reg: latdepend=',latdepend
         print*,'in init_anisofilter_reg: scalex1=',scalex1
@@ -1610,6 +1675,8 @@ subroutine init_anisofilter_reg(mype)
         print*,'in init_anisofilter_reg: rltop_tcamt=',rltop_tcamt
         print*,'in init_anisofilter_reg: rltop_lcbas=',rltop_lcbas
         print*,'in init_anisofilter_reg: rltop_cldch=',rltop_cldch
+        print*,'in init_anisofilter_reg: rltop_uwnd10m=',rltop_uwnd10m
+        print*,'in init_anisofilter_reg: rltop_vwnd10m=',rltop_vwnd10m
 
         print*,'in init_anisofilter_reg: svpsi=',svpsi
         print*,'in init_anisofilter_reg: svchi=',svchi
@@ -1628,6 +1695,8 @@ subroutine init_anisofilter_reg(mype)
         print*,'in init_anisofilter_reg: svtcamt=',svtcamt
         print*,'in init_anisofilter_reg: svlcbas=',svlcbas
         print*,'in init_anisofilter_reg: svcldch=',svcldch
+        print*,'in init_anisofilter_reg: svuwnd10m=',svuwnd10m
+        print*,'in init_anisofilter_reg: svvwnd10m=',svvwnd10m
         print*,'in init_anisofilter_reg: svpsi_w=',svpsi_w
         print*,'in init_anisofilter_reg: svchi_w=',svchi_w
         print*,'in init_anisofilter_reg: svpsfc_w=',svpsfc_w
@@ -1640,6 +1709,8 @@ subroutine init_anisofilter_reg(mype)
         print*,'in init_anisofilter_reg: svmitm_w=',svmitm_w
         print*,'in init_anisofilter_reg: svtcamt=_w',svtcamt_w
         print*,'in init_anisofilter_reg: svlcbas=_w',svlcbas_w
+        print*,'in init_anisofilter_reg: svuwnd10m_w=',svuwnd10m_w
+        print*,'in init_anisofilter_reg: svvwnd10m_w=',svvwnd10m_w
 
 
         print*,'in init_anisofilter_reg: sclpsi=',sclpsi
@@ -1659,6 +1730,8 @@ subroutine init_anisofilter_reg(mype)
         print*,'in init_anisofilter_reg: scltcamt=',scltcamt
         print*,'in init_anisofilter_reg: scllcbas=',scllcbas
         print*,'in init_anisofilter_reg: sclcldch=',sclcldch
+        print*,'in init_anisofilter_reg: scluwnd10m=',scluwnd10m
+        print*,'in init_anisofilter_reg: sclvwnd10m=',sclvwnd10m
         print*,'in init_anisofilter_reg: sclpsi_w=',sclpsi_w
         print*,'in init_anisofilter_reg: sclchi_w=',sclchi_w
         print*,'in init_anisofilter_reg: sclsfc_w=',sclpsfc_w
@@ -1671,6 +1744,8 @@ subroutine init_anisofilter_reg(mype)
         print*,'in init_anisofilter_reg: sclmitm_w=',sclmitm_w
         print*,'in init_anisofilter_reg: scltcamt_w=',scltcamt_w
         print*,'in init_anisofilter_reg: scllcbas_w=',scllcbas_w
+        print*,'in init_anisofilter_reg: scluwnd10m_w=',scluwnd10m_w
+        print*,'in init_anisofilter_reg: sclvwnd10m_w=',sclvwnd10m_w
 
 
         print*,'in init_anisofilter_reg: nhscale_pass=',nhscale_pass
@@ -4515,6 +4590,12 @@ subroutine get2berr_reg_subdomain_option(mype)
               no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='wspd10m' .or.  nrf_var(ivar)=='WSPD10M')
               no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='wspd10mwter' .or.  nrf_var(ivar)=='WSPD10MWTER')
 !          endif
+!          if (nrf2_uwnd10m>0 .and. nrf2_uwnd10mwter>0 .and. nrf2_vwnd10m>0 .and. nrf2_vwnd10mwter>0) then
+              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='uwnd10m' .or. nrf_var(ivar)=='UWND10M')
+              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='uwnd10mwter' .or. nrf_var(ivar)=='UWND10MWTER')
+              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='vwnd10m' .or. nrf_var(ivar)=='VWND10M')
+              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='vwnd10mwter' .or. nrf_var(ivar)=='VWND10MWTER')
+!          endif
 !          if (nrf2_gust>0 .and. nrf2_gustwter>0) then
               no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='gust' .or.  nrf_var(ivar)=='GUST')
               no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='gustwter' .or.  nrf_var(ivar)=='GUSTWTER')
@@ -4552,6 +4633,8 @@ subroutine get2berr_reg_subdomain_option(mype)
               case('tcamt','TCAMT'); rltop=rltop_tcamt
               case('lcbas','LCBAS'); rltop=rltop_lcbas
               case('cldch','CLDCH'); rltop=rltop_cldch
+              case('uwnd10m','UWND10M'); rltop=rltop_uwnd10m
+              case('vwnd10m','VWND10M'); rltop=rltop_vwnd10m
               case('sfwter','SFWTER'); rltop=rltop_wind
               case('vpwter','VPWTER'); rltop=rltop_wind
               case('pswter','PSWTER'); rltop=rltop_psfc
@@ -4564,6 +4647,8 @@ subroutine get2berr_reg_subdomain_option(mype)
               case('mitmwter','MITMWTER'); rltop=rltop_mitm
               case('tcamtwter','TCAMTWTER'); rltop=rltop_tcamt
               case('lcbaswter','LCBASWTER'); rltop=rltop_lcbas
+              case('uwnd10mwter','UWND10MWTER'); rltop=rltop_uwnd10m
+              case('vwnd10mwter','VWND10MWTER'); rltop=rltop_vwnd10m
            end select
            afact=afact0(ivar)  !(use "zero" for isotropic computations)
            if (cvar=='pblh' .or. cvar=='PBLH') afact=zero
@@ -4642,9 +4727,11 @@ subroutine get2berr_reg_subdomain_option(mype)
   end if
 
   if(mype==0) write(6,*)'rltop_wind,rltop_temp,rltop_q,rltop_psfc,rltop_gust,rltop_vis,rltop_pblh, &
-                         &rltop_wspd10m,rltop_td2m,rltop_mxtm,rltop_mitm,rltop_pmsl,rltop_howv,rltop_tcamt,rltop_lcbas,rltop_cldch=',&
+                         &rltop_wspd10m,rltop_td2m,rltop_mxtm,rltop_mitm,rltop_pmsl,rltop_howv,rltop_tcamt,rltop_lcbas,rltop_cldch, & 
+                         &rltop_uwnd10m,rltop_vwnd10m=',&
                          rltop_wind,rltop_temp,rltop_q,rltop_psfc,rltop_gust,rltop_vis,rltop_pblh, &
-                         &rltop_wspd10m,rltop_td2m,rltop_mxtm,rltop_mitm,rltop_pmsl,rltop_howv,rltop_tcamt,rltop_lcbas,rltop_cldch
+                         &rltop_wspd10m,rltop_td2m,rltop_mxtm,rltop_mitm,rltop_pmsl,rltop_howv,rltop_tcamt,rltop_lcbas,rltop_cldch, &
+                         &rltop_uwnd10m,rltop_vwnd10m
 
   if(lreadnorm) normal=0
 

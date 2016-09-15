@@ -151,7 +151,7 @@ intgps.o : intgps.f90 gsi_4dvar.o gsi_bundlemod.o jfunc.o constants.o gridmod.o 
 intgust.o : intgust.f90 gsi_4dvar.o gsi_bundlemod.o jfunc.o gridmod.o qcmod.o obsmod.o constants.o kinds.o 
 inthowv.o : inthowv.f90 gsi_4dvar.o gsi_bundlemod.o jfunc.o gridmod.o qcmod.o obsmod.o constants.o kinds.o 
 intjcmod.o : intjcmod.f90 state_vectors.o gsi_4dvar.o jcmod.o mpl_allreduce.o mpimod.o guess_grids.o gsi_metguess_mod.o derivsmod.o jfunc.o gridmod.o gsi_bundlemod.o constants.o kinds.o 
-intjo.o : intjo.f90 gsi_bundlemod.o intcldch.o intlcbas.o inttcamt.o inthowv.o intpmsl.o intmitm.o intmxtm.o inttd2m.o intwspd10m.o intpblh.o intvis.o intgust.o intlag.o intpm10.o intpm2_5.o intco.o intoz.o intpcp.o intdw.o intsst.o intsrw.o intspd.o intrw.o intgps.o inttcp.o intrad.o intq.o intpw.o intps.o intw.o intt.o intaod.o bias_predictors.o jfunc.o obsmod.o kinds.o mpl_allreduce.o 
+intjo.o : intjo.f90 gsi_bundlemod.o intvwnd10m.o intuwnd10m.o intcldch.o intlcbas.o inttcamt.o inthowv.o intpmsl.o intmitm.o intmxtm.o inttd2m.o intwspd10m.o intpblh.o intvis.o intgust.o intlag.o intpm10.o intpm2_5.o intco.o intoz.o intpcp.o intdw.o intsst.o intsrw.o intspd.o intrw.o intgps.o inttcp.o intrad.o intq.o intpw.o intps.o intw.o intt.o intaod.o bias_predictors.o jfunc.o obsmod.o kinds.o mpl_allreduce.o 
 intlag.o : intlag.f90 mpimod.o lag_traj.o lag_fields.o gsi_bundlemod.o jfunc.o gridmod.o qcmod.o obsmod.o constants.o kinds.o 
 intlcbas.o : intlcbas.f90 gsi_bundlemod.o jfunc.o gridmod.o qcmod.o obsmod.o constants.o kinds.o 
 intmitm.o : intmitm.f90 gsi_4dvar.o gsi_bundlemod.o jfunc.o gridmod.o qcmod.o obsmod.o constants.o kinds.o 
@@ -177,7 +177,9 @@ inttcamt.o : inttcamt.f90 gsi_bundlemod.o jfunc.o gridmod.o qcmod.o obsmod.o con
 inttcp.o : inttcp.f90 gsi_4dvar.o gsi_bundlemod.o jfunc.o gridmod.o qcmod.o obsmod.o constants.o kinds.o 
 inttd2m.o : inttd2m.f90 gsi_4dvar.o gsi_bundlemod.o jfunc.o gridmod.o qcmod.o obsmod.o constants.o kinds.o 
 intt.o : intt.f90 aircraftinfo.o gsi_4dvar.o gsi_bundlemod.o jfunc.o gridmod.o qcmod.o obsmod.o constants.o kinds.o 
+intuwnd10m.o : intuwnd10m.f90 gsi_4dvar.o gsi_bundlemod.o jfunc.o gridmod.o qcmod.o obsmod.o constants.o kinds.o
 intvis.o : intvis.f90 gsi_4dvar.o gsi_bundlemod.o jfunc.o gridmod.o qcmod.o obsmod.o constants.o kinds.o 
+intvwnd10m.o : intvwnd10m.f90 gsi_4dvar.o gsi_bundlemod.o jfunc.o gridmod.o qcmod.o obsmod.o constants.o kinds.o
 intw.o : intw.f90 gsi_4dvar.o gsi_bundlemod.o jfunc.o gridmod.o qcmod.o obsmod.o constants.o kinds.o 
 intwspd10m.o : intwspd10m.f90 gsi_4dvar.o gsi_bundlemod.o jfunc.o gridmod.o qcmod.o obsmod.o constants.o kinds.o 
 jcmod.o : jcmod.f90 constants.o kinds.o 
@@ -357,7 +359,10 @@ setuptcamt.o : setuptcamt.f90 gsi_metguess_mod.o gsi_bundlemod.o m_dtime.o convi
 setuptcp.o : setuptcp.f90 gsi_metguess_mod.o gsi_bundlemod.o m_dtime.o jfunc.o convinfo.o constants.o gridmod.o guess_grids.o qcmod.o gsi_4dvar.o obsmod.o kinds.o mpeu_util.o 
 setuptd2m.o : setuptd2m.f90 gsi_metguess_mod.o gsi_bundlemod.o m_dtime.o convinfo.o qcmod.o jfunc.o constants.o gridmod.o oneobmod.o gsi_4dvar.o obsmod.o guess_grids.o kinds.o mpeu_util.o 
 setupt.o : setupt.f90 buddycheck_mod.o gsi_metguess_mod.o gsi_bundlemod.o m_dtime.o aircraftinfo.o rapidrefresh_cldsurf_mod.o converr.o converr_t.o convinfo.o constants.o guess_grids.o jfunc.o gridmod.o oneobmod.o qcmod.o gsi_4dvar.o obsmod.o kinds.o mpeu_util.o 
+setupuwnd10m.o : setupuwnd10m.f90 gsi_metguess_mod.o gsi_bundlemod.o m_dtime.o convinfo.o qcmod.o jfunc.o constants.o gridmod.o oneobmod.o gsi_4dvar.o obsmod.o guess_grids.o kinds.o mpeu_util.o
 setupvis.o : setupvis.f90 gsi_metguess_mod.o gsi_bundlemod.o m_dtime.o convinfo.o qcmod.o jfunc.o constants.o gridmod.o oneobmod.o gsi_4dvar.o obsmod.o guess_grids.o kinds.o mpeu_util.o 
+setupvwnd10m.o : setupvwnd10m.f90 gsi_metguess_mod.o gsi_bundlemod.o m_dtime.o convinfo.o qcmod.o jfunc.o constants.o gridmod.o oneobmod.o gsi_4dvar.o obsmod.o guess_grids.o kinds.o mpeu_util.o
+setupvwnd10m.o : setupvwnd10m.f90 gsi_metguess_mod.o gsi_bundlemod.o m_dtime.o convinfo.o qcmod.o jfunc.o constants.o gridmod.o oneobmod.o gsi_4dvar.o obsmod.o guess_grids.o kinds.o mpeu_util.o
 setupw.o : setupw.f90 gsi_metguess_mod.o gsi_bundlemod.o m_dtime.o rapidrefresh_cldsurf_mod.o converr.o converr_uv.o convinfo.o jfunc.o constants.o guess_grids.o gridmod.o oneobmod.o qcmod.o gsi_4dvar.o obsmod.o kinds.o mpeu_util.o 
 setupwspd10m.o : setupwspd10m.f90 gsi_metguess_mod.o gsi_bundlemod.o m_dtime.o convinfo.o qcmod.o jfunc.o constants.o gridmod.o oneobmod.o gsi_4dvar.o obsmod.o guess_grids.o kinds.o mpeu_util.o 
 setupyobs.o : setupyobs.f90 gsi_4dvar.o obsmod.o kinds.o 
@@ -389,7 +394,7 @@ stpgps.o : stpgps.f90 gsi_bundlemod.o jfunc.o gridmod.o constants.o qcmod.o obsm
 stpgust.o : stpgust.f90 gsi_bundlemod.o gridmod.o constants.o qcmod.o obsmod.o kinds.o 
 stphowv.o : stphowv.f90 gsi_bundlemod.o gridmod.o constants.o qcmod.o obsmod.o kinds.o 
 stpjcmod.o : stpjcmod.f90 state_vectors.o gsi_4dvar.o jcmod.o mpl_allreduce.o mpimod.o derivsmod.o guess_grids.o jfunc.o gridmod.o gsi_metguess_mod.o gsi_bundlemod.o constants.o kinds.o 
-stpjo.o : stpjo.f90 mpeu_util.o control_vectors.o gsi_bundlemod.o aircraftinfo.o bias_predictors.o stpcldch.o stplcbas.o stptcamt.o stphowv.o stppmsl.o stpmitm.o stpmxtm.o stptd2m.o stpwspd10m.o stppblh.o stpvis.o stpgust.o stpaod.o stppm10.o stppm2_5.o stpco.o stpoz.o stppcp.o stpdw.o stptcp.o stpsst.o stpsrw.o stpspd.o stprw.o stpgps.o stprad.o stpq.o stppw.o stpps.o stpw.o stpt.o obsmod.o kinds.o 
+stpjo.o : stpjo.f90 mpeu_util.o control_vectors.o gsi_bundlemod.o aircraftinfo.o bias_predictors.o stpcldch.o stplcbas.o stptcamt.o stphowv.o stppmsl.o stpmitm.o stpmxtm.o stptd2m.o stpuwnd10m.o stpvwnd10m.o stpwspd10m.o stppblh.o stpvis.o stpgust.o stpaod.o stppm10.o stppm2_5.o stpco.o stpoz.o stppcp.o stpdw.o stptcp.o stpsst.o stpsrw.o stpspd.o stprw.o stpgps.o stprad.o stpq.o stppw.o stpps.o stpw.o stpt.o obsmod.o kinds.o 
 stplcbas.o : stplcbas.f90 gsi_bundlemod.o gridmod.o constants.o qcmod.o obsmod.o kinds.o 
 stpmitm.o : stpmitm.f90 gsi_bundlemod.o gridmod.o constants.o qcmod.o obsmod.o kinds.o 
 stpmxtm.o : stpmxtm.f90 gsi_bundlemod.o gridmod.o constants.o qcmod.o obsmod.o kinds.o 
@@ -411,7 +416,9 @@ stptcamt.o : stptcamt.f90 gsi_bundlemod.o gridmod.o constants.o qcmod.o obsmod.o
 stptcp.o : stptcp.f90 gsi_bundlemod.o jfunc.o gridmod.o constants.o qcmod.o obsmod.o kinds.o 
 stptd2m.o : stptd2m.f90 gsi_bundlemod.o gridmod.o constants.o qcmod.o obsmod.o kinds.o 
 stpt.o : stpt.f90 gsi_bundlemod.o aircraftinfo.o jfunc.o gridmod.o constants.o qcmod.o obsmod.o kinds.o 
+stpuwnd10m.o : stpuwnd10m.f90 gsi_bundlemod.o gridmod.o constants.o qcmod.o obsmod.o kinds.o
 stpvis.o : stpvis.f90 gsi_bundlemod.o gridmod.o constants.o qcmod.o obsmod.o kinds.o 
+stpvwnd10m.o : stpvwnd10m.f90 gsi_bundlemod.o gridmod.o constants.o qcmod.o obsmod.o kinds.o
 stpw.o : stpw.f90 gsi_bundlemod.o jfunc.o gridmod.o constants.o qcmod.o obsmod.o kinds.o 
 stpwspd10m.o : stpwspd10m.f90 gsi_bundlemod.o gridmod.o constants.o qcmod.o obsmod.o kinds.o 
 strong_bal_correction.o : strong_bal_correction.f90 gridmod.o strong_fast_global_mod.o zrnmi_mod.o mod_strong.o kinds.o 

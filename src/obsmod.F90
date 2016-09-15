@@ -101,6 +101,7 @@ module obsmod
 !   2014-12-03  derber  - ensure obsdiag used for 4dvar and non-pcgsoi
 !                         minimizations
 !   2015-07-10  pondeca  - add could ceiling height (cldch)
+!   2016-03-07  pondeca  - add uwnd10m,vwnd10m
 !   2016-05-18  collard  - Added code to allow for historical naming conventions
 !                          for satellite instruments
 ! 
@@ -217,6 +218,10 @@ module obsmod
 !   def howvtail     - significant wave height linked list tail
 !   def cldchhead    - cloud ceiling height linked list head
 !   def cldchtail    - cloud ceiling height linked list tail
+!   def uwnd10mhead  - 10m-uwind linked list head
+!   def uwnd10mtail  - 10m-uwind linked list tail
+!   def vwnd10mhead  - 10m-vwind linked list head
+!   def vwnd10mtail  - 10m-vwind linked list tail
 !   def lunobs_obs   - unit to save satellite observation
 !   def iout_rad     - output unit for satellite stats
 !   def iout_pcp     - output unit for precipitation stats
@@ -246,6 +251,8 @@ module obsmod
 !   def iout_pmsl    - output unit for conventional pressure at mean sea level
 !   def iout_howv    - output unit for conventional significant wave height stats
 !   def iout_cldch   - output unit for conventional cldch stats
+!   def iout_uwnd10m - output unit for conventional 10-m uwind stats
+!   def iout_vwnd10m - output unit for conventional 10-m vwind stats
 !   def iout_pm2_5   - output unit for pm2_5 stats
 !   def iout_pm10    - output unit for pm10 stats
 !   def mype_t       - task to handle temperature stats
@@ -271,6 +278,8 @@ module obsmod
 !   def mype_pmsl    - task to handle conventional pressure at mean seal level
 !   def mype_howv    - task to handle conventional significant wave height stats
 !   def mype_cldch   - task to handle conventional cloud ceiling height stats
+!   def mype_uwnd10m - task to handle conventional 10-m uwind stats
+!   def mype_vwnd10m - task to handle conventional 10-m vwind stats
 !   def mype_aero    - task to handle aerosol stats
 !   def mype_pm2_5   - task to handle pm2_5
 !   def mype_pm10    - task to handle pm10
@@ -353,11 +362,13 @@ module obsmod
   public :: sst_ob_type,srw_ob_type,spd_ob_type,rw_ob_type,gps_ob_type,gps_all_ob_type,tcp_ob_type
   public :: gust_ob_type,vis_ob_type,pblh_ob_type,wspd10m_ob_type,td2m_ob_type
   public :: mxtm_ob_type,mitm_ob_type,pmsl_ob_type,howv_ob_type,tcamt_ob_type,lcbas_ob_type,cldch_ob_type
+  public :: uwnd10m_ob_type,vwnd10m_ob_type
   public :: rad_ob_type,q_ob_type,pw_ob_type,ps_ob_type,w_ob_type,t_ob_type
   public :: obs_handle,yobs,i_ps_ob_type,i_t_ob_type,i_w_ob_type,i_q_ob_type
   public :: i_spd_ob_type,i_srw_ob_type,i_rw_ob_type,i_dw_ob_type,i_sst_ob_type
   public :: i_gust_ob_type,i_vis_ob_type,i_pblh_ob_type,i_wspd10m_ob_type,i_td2m_ob_type
   public :: i_mxtm_ob_type,i_mitm_ob_type,i_pmsl_ob_type,i_howv_ob_type,i_tcamt_ob_type,i_lcbas_ob_type,i_cldch_ob_type
+  public :: i_uwnd10m_ob_type,i_vwnd10m_ob_type
   public :: i_pw_ob_type,i_pcp_ob_type,i_oz_ob_type,i_o3l_ob_type,i_colvk_ob_type,i_gps_ob_type
   public :: i_rad_ob_type,i_tcp_ob_type,i_lag_ob_type,obscounts,obsptr,nobs_type,obsdiags
   public :: cobstype,gpsptr,obs_diag,nprof_gps,gps_allhead,gps_allptr,time_offset,ianldate
@@ -370,7 +381,7 @@ module obsmod
   public :: pwhead,oztail,ozhead,o3ltail,o3lhead,colvktail,colvkhead,pcptail,pcphead,gpstail,gpshead
   public :: gusttail,gusthead,vistail,vishead,pblhtail,pblhhead,wspd10mtail,wspd10mhead,td2mtail,td2mhead
   public :: mxtmtail,mxtmhead,mitmtail,mitmhead,pmsltail,pmslhead,howvtail,howvhead,tcamttail,tcamthead,lcbastail,lcbashead
-  public :: cldchtail,cldchhead
+  public :: cldchtail,cldchhead,uwnd10mtail,uwnd10mhead,vwnd10mtail,vwnd10mhead
   public :: aero_ob_head,aero_ob_type,aerohead,aerotail,i_aero_ob_type
   public :: aerol_ob_head,aerol_ob_type,aerolhead,aeroltail,i_aerol_ob_type
   public :: pm2_5_ob_head,pm2_5_ob_type,i_pm2_5_ob_type,pm2_5head,pm2_5tail
@@ -388,7 +399,7 @@ module obsmod
   public :: mype_wspd10m,mype_td2m,iout_wspd10m,iout_td2m,wspd10mptr,td2mptr
   public :: mype_mxtm,mype_mitm,iout_mxtm,iout_mitm,mxtmptr,mitmptr
   public :: mype_pmsl,mype_howv,iout_pmsl,iout_howv,pmslptr,howvptr
-  public :: mype_cldch,iout_cldch,cldchptr
+  public :: mype_cldch,iout_cldch,cldchptr,mype_uwnd10m,iout_uwnd10m,uwnd10mptr,mype_vwnd10m,iout_vwnd10m,vwnd10mptr
   public :: ndat_times,lwrite_predterms,lwrite_peakwt
   public :: bmiss
 !
@@ -399,7 +410,7 @@ module obsmod
   public :: mitm_ob_head,pmsl_ob_head,howv_ob_head
   public :: pcp_ob_head,o3l_ob_head,gps_ob_head
   public :: lag_ob_head,srw_ob_head,pw_ob_head,oz_ob_head,rad_ob_head
-  public :: tcamt_ob_head,lcbas_ob_head,cldch_ob_head
+  public :: tcamt_ob_head,lcbas_ob_head,cldch_ob_head,uwnd10m_ob_head,vwnd10m_ob_head
   public :: tcp_ob_head,colvk_ob_head
   public :: mype_aero,iout_aero,nlaero
   public :: mype_pm2_5,iout_pm2_5
@@ -466,8 +477,10 @@ module obsmod
   integer(i_kind),parameter:: i_lcbas_ob_type=32  ! lcbas_ob_type  
   integer(i_kind),parameter:: i_pm10_ob_type=33   ! pm10_ob_type
   integer(i_kind),parameter:: i_cldch_ob_type=34  ! cldch_ob_type
+  integer(i_kind),parameter:: i_uwnd10m_ob_type=35! uwnd10m_ob_type
+  integer(i_kind),parameter:: i_vwnd10m_ob_type=36! vwnd10m_ob_type
 
-  integer(i_kind),parameter:: nobs_type = 34      ! number of observation types
+  integer(i_kind),parameter:: nobs_type = 36      ! number of observation types
 
 ! Structure for diagnostics
 
@@ -1228,6 +1241,48 @@ module obsmod
      type(cldch_ob_type),pointer :: head => NULL()
   end type cldch_ob_head
   
+  type uwnd10m_ob_type
+     type(uwnd10m_ob_type),pointer :: llpoint => NULL()
+     type(obs_diag), pointer :: diags => NULL()
+     real(r_kind)    :: res           !  uwnd10m residual
+     real(r_kind)    :: err2          !  uwnd10m error squared
+     real(r_kind)    :: raterr2       !  square of ratio of final obs error
+                                      !  to original obs error
+     real(r_kind)    :: time          !  observation time in sec
+     real(r_kind)    :: b             !  variational quality control parameter
+     real(r_kind)    :: pg            !  variational quality control parameter
+     real(r_kind)    :: wij(4)        !  horizontal interpolation weights
+     integer(i_kind) :: ij(4)         !  horizontal locations
+     integer(i_kind) :: idv,iob       ! device id and obs index for sorting
+     logical         :: luse          !  flag indicating if ob is used in pen.
+  end type uwnd10m_ob_type
+
+  type uwnd10m_ob_head
+     integer(i_kind):: n_alloc=0
+     type(uwnd10m_ob_type),pointer :: head => NULL()
+  end type uwnd10m_ob_head
+
+  type vwnd10m_ob_type
+     type(vwnd10m_ob_type),pointer :: llpoint => NULL()
+     type(obs_diag), pointer :: diags => NULL()
+     real(r_kind)    :: res           !  vwnd10m residual
+     real(r_kind)    :: err2          !  vwnd10m error squared
+     real(r_kind)    :: raterr2       !  square of ratio of final obs error
+                                      !  to original obs error
+     real(r_kind)    :: time          !  observation time in sec
+     real(r_kind)    :: b             !  variational quality control parameter
+     real(r_kind)    :: pg            !  variational quality control parameter
+     real(r_kind)    :: wij(4)        !  horizontal interpolation weights
+     integer(i_kind) :: ij(4)         !  horizontal locations
+     integer(i_kind) :: idv,iob       ! device id and obs index for sorting
+     logical         :: luse          !  flag indicating if ob is used in pen.
+  end type vwnd10m_ob_type
+
+  type vwnd10m_ob_head
+     integer(i_kind):: n_alloc=0
+     type(vwnd10m_ob_type),pointer :: head => NULL()
+  end type vwnd10m_ob_head
+  
   type gps_ob_type
      type(gps_ob_type),pointer :: llpoint => NULL()
      type(obs_diag), pointer :: diags => NULL()
@@ -1404,6 +1459,8 @@ module obsmod
      type(tcamt_ob_type),pointer :: tcamt => NULL()
      type(lcbas_ob_type),pointer :: lcbas => NULL()
      type(cldch_ob_type),pointer::  cldch => NULL()
+     type(uwnd10m_ob_type),pointer :: uwnd10m => NULL()
+     type(vwnd10m_ob_type),pointer :: vwnd10m => NULL()
 
 
   end type obs_handle
@@ -1518,7 +1575,12 @@ module obsmod
   type(cldch_ob_head),dimension(:),pointer :: cldchhead
   type(cldch_ob_head),dimension(:),pointer :: cldchtail
   type(cldch_ob_type),pointer :: cldchptr => NULL()
-
+  type(uwnd10m_ob_head),dimension(:),pointer :: uwnd10mhead
+  type(uwnd10m_ob_head),dimension(:),pointer :: uwnd10mtail
+  type(uwnd10m_ob_type),pointer :: uwnd10mptr => NULL()
+  type(vwnd10m_ob_head),dimension(:),pointer :: vwnd10mhead
+  type(vwnd10m_ob_head),dimension(:),pointer :: vwnd10mtail
+  type(vwnd10m_ob_type),pointer :: vwnd10mptr => NULL()
 
   type(obs_handle),dimension(:),pointer :: yobs
 
@@ -1541,12 +1603,12 @@ module obsmod
                   iout_oz,iout_ps,iout_pw,iout_rw
   integer(i_kind) iout_dw,iout_srw,iout_gps,iout_sst,iout_tcp,iout_lag
   integer(i_kind) iout_co,iout_gust,iout_vis,iout_pblh,iout_tcamt,iout_lcbas,iout_cldch
-  integer(i_kind) iout_wspd10m,iout_td2m,iout_mxtm,iout_mitm,iout_pmsl,iout_howv
+  integer(i_kind) iout_wspd10m,iout_td2m,iout_mxtm,iout_mitm,iout_pmsl,iout_howv,iout_uwnd10m,iout_vwnd10m
   integer(i_kind) mype_t,mype_q,mype_uv,mype_ps,mype_pw, &
                   mype_rw,mype_dw,mype_srw,mype_gps,mype_sst, &
                   mype_tcp,mype_lag,mype_co,mype_gust,mype_vis,mype_pblh, &
                   mype_wspd10m,mype_td2m,mype_mxtm,mype_mitm,mype_pmsl,mype_howv,&
-                  mype_tcamt,mype_lcbas,mype_cldch
+                  mype_tcamt,mype_lcbas,mype_cldch,mype_uwnd10m,mype_vwnd10m
   integer(i_kind) nlaero, iout_aero, mype_aero
   integer(i_kind) iout_pm2_5, mype_pm2_5
   integer(i_kind) iout_pm10, mype_pm10
@@ -1617,6 +1679,7 @@ contains
 !   2014-05-07  pondeca - add howv
 !   2014-06-16  carley/zhu - add tcamt and lcbas
 !   2015-07-10  pondeca - add cldch
+!   2016-03-07  pondeca - add uwnd10m,vwnd10m
 !
 !   input argument list:
 !
@@ -1696,6 +1759,8 @@ contains
     iout_lcbas=230 ! base height of lowest cloud
     iout_pm10=231  ! pm10
     iout_cldch=232 ! cloud ceiling height
+    iout_uwnd10m=233  ! 10-m uwind
+    iout_vwnd10m=234  ! 10-m vwind
 
     mype_ps = npe-1          ! surface pressure
     mype_uv = max(0,npe-2)   ! u,v wind components
@@ -1724,6 +1789,8 @@ contains
     mype_lcbas=max(0,npe-25) ! base height of lowest cloud
     mype_pm10= max(0,npe-26) ! pm10
     mype_cldch=max(0,npe-27) ! cloud ceiling height
+    mype_uwnd10m= max(0,npe-28)! uwnd10m
+    mype_vwnd10m= max(0,npe-29)! vwnd10m
 
 !   Initialize arrays used in namelist obs_input 
     time_window_max = three ! set maximum time window to +/-three hours
@@ -1778,6 +1845,8 @@ contains
     cobstype(i_tcamt_ob_type)="tcamt               " ! tcamt_ob_type
     cobstype(i_lcbas_ob_type)="lcbas               " ! lcbas_ob_type
     cobstype(i_cldch_ob_type)="cldch               " ! cldch_ob_type
+    cobstype(i_uwnd10m_ob_type) ="uwnd10m             " ! uwnd10m_ob_type
+    cobstype(i_vwnd10m_ob_type) ="vwnd10m             " ! vwnd10m_ob_type
 
 
     hilbert_curve=.false.
@@ -1952,6 +2021,10 @@ contains
     ALLOCATE(lcbastail(nobs_bins))
     ALLOCATE(cldchhead(nobs_bins))
     ALLOCATE(cldchtail(nobs_bins))
+    ALLOCATE(uwnd10mhead(nobs_bins))
+    ALLOCATE(uwnd10mtail(nobs_bins))
+    ALLOCATE(vwnd10mhead(nobs_bins))
+    ALLOCATE(vwnd10mtail(nobs_bins))
 
     ALLOCATE(yobs(nobs_bins))
     allocate(ll_jo(nobs_bins*nobs_type),ib_jo(nobs_bins*nobs_type))
@@ -2429,6 +2502,26 @@ contains
           deallocate(cldchtail(ii)%head,stat=istatus)
           if (istatus/=0) write(6,*)'DESTROYOBS:  deallocate error for cldch, istatus=',istatus
           cldchtail(ii)%head => cldchhead(ii)%head
+       end do
+    end do
+
+    do ii=1,nobs_bins
+       uwnd10mtail(ii)%head => uwnd10mhead(ii)%head
+       do while (associated(uwnd10mtail(ii)%head))
+          uwnd10mhead(ii)%head => uwnd10mtail(ii)%head%llpoint
+          deallocate(uwnd10mtail(ii)%head,stat=istatus)
+          if (istatus/=0) write(6,*)'DESTROYOBS:  deallocate error for uwnd10m, istatus=',istatus
+          uwnd10mtail(ii)%head => uwnd10mhead(ii)%head
+       end do
+    end do
+
+    do ii=1,nobs_bins
+       vwnd10mtail(ii)%head => vwnd10mhead(ii)%head
+       do while (associated(vwnd10mtail(ii)%head))
+          vwnd10mhead(ii)%head => vwnd10mtail(ii)%head%llpoint
+          deallocate(vwnd10mtail(ii)%head,stat=istatus)
+          if (istatus/=0) write(6,*)'DESTROYOBS:  deallocate error for vwnd10m, istatus=',istatus
+          vwnd10mtail(ii)%head => vwnd10mhead(ii)%head
        end do
     end do
 

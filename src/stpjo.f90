@@ -140,6 +140,7 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins)
 !   2014-05-07  pondeca - add howv
 !   2014-06-17  carley/zhu - add lcbas and tcamt
 !   2015-07-10  pondeca - add cldch
+!   2016-05-05  pondeca - add uwnd10m, vwnd10m
 !
 !   input argument list:
 !     yobs
@@ -179,7 +180,8 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins)
                   & i_pm10_ob_type, &
                   & i_wspd10m_ob_type,i_td2m_ob_type,i_mxtm_ob_type,i_mitm_ob_type, &
                     i_pmsl_ob_type,i_howv_ob_type,i_tcamt_ob_type,i_lcbas_ob_type,  &
-                    i_aero_ob_type,i_cldch_ob_type,nobs_type,stpcnt,ll_jo,ib_jo
+                    i_aero_ob_type,i_cldch_ob_type,i_uwnd10m_ob_type,i_vwnd10m_ob_type, &
+                    nobs_type,stpcnt,ll_jo,ib_jo
   use stptmod, only: stpt
   use stpwmod, only: stpw
   use stppsmod, only: stpps
@@ -211,6 +213,8 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins)
   use stptcamtmod, only: stptcamt
   use stplcbasmod, only: stplcbas
   use stpcldchmod, only: stpcldch
+  use stpuwnd10mmod, only: stpuwnd10m
+  use stpvwnd10mmod, only: stpvwnd10m
   use bias_predictors, only: predictors
   use aircraftinfo, only: aircraft_t_bc_pof,aircraft_t_bc
   use gsi_bundlemod, only: gsi_bundle
@@ -377,6 +381,16 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins)
        else if(ll == 31) then
           if (getindex(cvars2d,'cldch')>0) &
           call stpcldch(yobs(ib)%cldch,dval(ib),xval(ib),pbcjo(1,i_cldch_ob_type,ib),sges,nstep)
+
+!   penalty, b, and c for conventional uwnd10m
+       else if(ll == 32) then
+          if (getindex(cvars2d,'uwnd10m')>0) &
+          call stpuwnd10m(yobs(ib)%uwnd10m,dval(ib),xval(ib),pbcjo(1,i_uwnd10m_ob_type,ib),sges,nstep)
+
+!   penalty, b, and c for conventional vwnd10m
+       else if(ll == 33) then
+          if (getindex(cvars2d,'vwnd10m')>0) &
+          call stpvwnd10m(yobs(ib)%vwnd10m,dval(ib),xval(ib),pbcjo(1,i_vwnd10m_ob_type,ib),sges,nstep)
        end if
     end do
 
@@ -579,56 +593,56 @@ subroutine stpjo_setup(yobs,nobs_bins)
           end if
 
        else if (ll == 21)then
-!         penalty, b, and c for conventional pblh
+!         penalty, b, and c for conventional wspd10m
           if(associated(yobs(ib)%wspd10m)) then
              stpcnt = stpcnt +1
              ll_jo(stpcnt) = ll
              ib_jo(stpcnt) = ib
           end if
        else if (ll == 22)then
-!         penalty, b, and c for conventional pblh
+!         penalty, b, and c for conventional td2m
           if(associated(yobs(ib)%td2m)) then
              stpcnt = stpcnt +1
              ll_jo(stpcnt) = ll
              ib_jo(stpcnt) = ib
           end if
        else if (ll == 23)then
-!         penalty, b, and c for conventional pblh
+!         penalty, b, and c for conventional mxtm
           if(associated(yobs(ib)%mxtm)) then
              stpcnt = stpcnt +1
              ll_jo(stpcnt) = ll
              ib_jo(stpcnt) = ib
           end if
        else if (ll == 24)then
-!         penalty, b, and c for conventional pblh
+!         penalty, b, and c for conventional mitm
           if(associated(yobs(ib)%mitm)) then
              stpcnt = stpcnt +1
              ll_jo(stpcnt) = ll
              ib_jo(stpcnt) = ib
           end if
        else if (ll == 25)then
-!         penalty, b, and c for conventional pblh
+!         penalty, b, and c for conventional pmsl
           if(associated(yobs(ib)%pmsl)) then
              stpcnt = stpcnt +1
              ll_jo(stpcnt) = ll
              ib_jo(stpcnt) = ib
           end if
        else if (ll == 26)then
-!         penalty, b, and c for conventional pblh
+!         penalty, b, and c for conventional howv
           if(associated(yobs(ib)%howv)) then
              stpcnt = stpcnt +1
              ll_jo(stpcnt) = ll
              ib_jo(stpcnt) = ib
           end if
        else if (ll == 27)then
-!         penalty, b, and c for conventional pblh
+!         penalty, b, and c for conventional tcamt
           if(associated(yobs(ib)%tcamt)) then
              stpcnt = stpcnt +1
              ll_jo(stpcnt) = ll
              ib_jo(stpcnt) = ib
           end if
        else if (ll == 28)then
-!         penalty, b, and c for conventional pblh
+!         penalty, b, and c for conventional lcbas
           if(associated(yobs(ib)%lcbas)) then
              stpcnt = stpcnt +1
              ll_jo(stpcnt) = ll
@@ -651,6 +665,20 @@ subroutine stpjo_setup(yobs,nobs_bins)
        else if (ll == 31)then
 !         penalty, b, and c for conventional cldch
           if(associated(yobs(ib)%cldch)) then
+             stpcnt = stpcnt +1
+             ll_jo(stpcnt) = ll
+             ib_jo(stpcnt) = ib
+          end if
+       else if (ll == 32)then
+!         penalty, b, and c for conventional uwnd10m
+          if(associated(yobs(ib)%uwnd10m)) then
+             stpcnt = stpcnt +1
+             ll_jo(stpcnt) = ll
+             ib_jo(stpcnt) = ib
+          end if
+       else if (ll == 33)then
+!         penalty, b, and c for conventional vwnd10m
+          if(associated(yobs(ib)%vwnd10m)) then
              stpcnt = stpcnt +1
              ll_jo(stpcnt) = ll
              ib_jo(stpcnt) = ib

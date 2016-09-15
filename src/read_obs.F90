@@ -602,6 +602,7 @@ subroutine read_obs(ndata,mype)
 !   2015-09-04  J. Jung - Added mods for CrIS full spectral resolution (FSR)
 !   2016-03-02  s.liu/carley - remove use_reflectivity and use i_gsdcldanal_type
 !   2016-04-28  J. Jung - added logic for RARS and direct broadcast data from NESDIS/UW.
+!   2016-05-05  pondeca - add 10-m u-wind and v-wind (uwnd10m, vwnd10m)
 !   
 !
 !   input argument list:
@@ -790,7 +791,8 @@ subroutine read_obs(ndata,mype)
            obstype == 'td2m' .or. obstype=='mxtm' .or. &
            obstype == 'mitm' .or. obstype=='pmsl' .or. &
            obstype == 'howv' .or. obstype=='tcamt' .or. &
-           obstype=='lcbas' .or. obstype=='cldch') then
+           obstype=='lcbas' .or. obstype=='cldch' .or. &
+           obstype=='uwnd10m' .or. obstype=='vwnd10m') then
           ditype(i) = 'conv'
        else if( hirs   .or. sndr      .or.  seviri .or. &
                obstype == 'airs'      .or. obstype == 'amsua'     .or.  &
@@ -1119,7 +1121,8 @@ subroutine read_obs(ndata,mype)
        if(ditype(i) =='conv')then
           obstype=dtype(i)
           if (obstype == 't' .or. obstype == 'q'  .or. &
-              obstype == 'uv' .or. obstype == 'wspd10m') then
+              obstype == 'uv' .or. obstype == 'wspd10m' .or. &
+              obstype == 'uwnd10m' .or. obstype == 'vwnd10m') then
               use_prsl_full=.true.
               if(belong(i))use_prsl_full_proc=.true.
           else
@@ -1306,7 +1309,8 @@ subroutine read_obs(ndata,mype)
                 end if
 
 !             Process winds in the prepbufr
-            else if(obstype == 'uv' .or. obstype == 'wspd10m') then
+            else if(obstype == 'uv' .or. obstype == 'wspd10m' .or. &
+                    obstype == 'uwnd10m' .or. obstype == 'vwnd10m') then
 !             Process satellite winds which seperate from prepbufr
                 if ( index(infile,'satwnd') /=0 ) then
                   call read_satwnd(nread,npuse,nouse,infile,obstype,lunout,gstime,twind,sis,&

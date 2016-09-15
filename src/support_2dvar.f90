@@ -27,6 +27,7 @@ subroutine convert_binary_2d
 !   2014-05-07  pondeca - add howv
 !   2014-06-16  carley/zhu - add tcamt and ceiling
 !   2015-07-10  pondeca - add cloud ceiling height (cldch)
+!   2016-05-03  pondeca - add uwnd10m, vwnd10m
 !
 !   input argument list:
 !
@@ -320,6 +321,16 @@ subroutine convert_binary_2d
      write(6,*)' convert_binary_2d: mid LCBAS=',field2(nlon_regional/2,nlat_regional/2)
      write(lendian_out)field2
 
+     read(in_unit)field2             !  UWND10M
+     write(6,*)' convert_binary_2d: max,min UWND10M=',maxval(field2),minval(field2)
+     write(6,*)' convert_binary_2d: mid UWND10M=',field2(nlon_regional/2,nlat_regional/2)
+     write(lendian_out)field2
+
+     read(in_unit)field2             !  VWND10M
+     write(6,*)' convert_binary_2d: max,min VWND10M=',maxval(field2),minval(field2)
+     write(6,*)' convert_binary_2d: mid VWND10M=',field2(nlon_regional/2,nlat_regional/2)
+     write(lendian_out)field2
+
      close(in_unit)
      close(lendian_out)
 
@@ -532,6 +543,7 @@ subroutine read_2d_guess(mype)
 !   2014-05-07  pondeca - add howv
 !   2014-06-16  carley/zhu - add tcamt and ceiling
 !   2015-07-10  pondeca - add cloud ceiling height
+!   2016-05-03  pondeca - add uwnd10m, vwnd10m
 !
 !   input argument list:
 !     mype     - pe number
@@ -583,12 +595,13 @@ subroutine read_2d_guess(mype)
   integer(i_kind) i_0,i_psfc,i_fis,i_t,i_q,i_u,i_v,i_sno,i_smois,i_tslb
   integer(i_kind) i_sm,i_xice,i_sst,i_tsk,i_ivgtyp,i_isltyp,i_vegfrac,i_gust,i_vis,i_pblh
   integer(i_kind) i_wspd10m,i_td2m,i_mxtm,i_mitm,i_pmsl,i_howv,i_tcamt,i_lcbas,i_cldch
+  integer(i_kind) i_uwnd10m,i_vwnd10m
   integer(i_kind) isli_this
   real(r_kind) psfc_this,sm_this,xice_this
   integer(i_kind) icwmr,ier,istatus
   logical ihave_gust,ihave_pblh,ihave_vis,ihave_tcamt,ihave_lcbas
   logical ihave_wspd10m,ihave_td2m,ihave_mxtm,ihave_mitm,ihave_pmsl,ihave_howv
-  logical ihave_cldch
+  logical ihave_cldch,ihave_uwnd10m,ihave_vwnd10m
 
   real(r_kind),pointer,dimension(:,:  )::ges_gust   =>NULL()
   real(r_kind),pointer,dimension(:,:  )::ges_vis    =>NULL()
@@ -602,6 +615,8 @@ subroutine read_2d_guess(mype)
   real(r_kind),pointer,dimension(:,:  )::ges_tcamt  =>NULL()
   real(r_kind),pointer,dimension(:,:  )::ges_lcbas  =>NULL()
   real(r_kind),pointer,dimension(:,:  )::ges_cldch  =>NULL()
+  real(r_kind),pointer,dimension(:,:  )::ges_uwnd10m=>NULL()
+  real(r_kind),pointer,dimension(:,:  )::ges_vwnd10m=>NULL()
   real(r_kind),pointer,dimension(:,:  )::ges_ps_it  =>NULL()
   real(r_kind),pointer,dimension(:,:  )::ges_z_it   =>NULL()
   real(r_kind),pointer,dimension(:,:,:)::ges_u_it   =>NULL()
@@ -632,7 +647,7 @@ subroutine read_2d_guess(mype)
   lm=nsig
 
 ! Following is for convenient 2D input
-  num_2d_fields=28! Adjust according to content of RTMA restart file ---- should this number be in a namelist or anavinfo file at some point?
+  num_2d_fields=30! Adjust according to content of RTMA restart file ---- should this number be in a namelist or anavinfo file at some point?
   num_all_fields=num_2d_fields*nfldsig
   num_loc_groups=num_all_fields/npe
 ! if(mype==0) write(6,'(" at 1 in read_2d_guess, lm            =",i6)')lm
@@ -784,6 +799,14 @@ subroutine read_2d_guess(mype)
 
   i=i+1 ; i_lcbas=i                                           ! lcbas
   write(identity(i),'("record ",i3,"--lcbas")')i
+  jsig_skip(i)=0 ; igtype(i)=1
+
+  i=i+1 ; i_uwnd10m=i                                         ! uwnd10m
+  write(identity(i),'("record ",i3,"--uwnd10m")')i
+  jsig_skip(i)=0 ; igtype(i)=1
+
+  i=i+1 ; i_vwnd10m=i                                         ! vwnd10m
+  write(identity(i),'("record ",i3,"--vwnd10m")')i
   jsig_skip(i)=0 ; igtype(i)=1
 
   if (mype==0) then
@@ -970,6 +993,11 @@ subroutine read_2d_guess(mype)
         call gsi_bundlegetpointer(gsi_metguess_bundle(it),'lcbas',ges_lcbas,ier)
         ihave_lcbas =ier==0
 
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'uwnd10m',ges_uwnd10m,ier)
+        ihave_uwnd10m=ier==0
+
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'vwnd10m',ges_vwnd10m,ier)
+        ihave_vwnd10m=ier==0
 
         i_0=(it-1)*num_2d_fields
         do i=1,lon1+2
@@ -1030,11 +1058,17 @@ subroutine read_2d_guess(mype)
               if (ihave_lcbas) & 
                  ges_lcbas(j,i)=max(min(all_loc(j,i,i_0+i_lcbas),20000.0_r_kind),one_tenth) !Enforce upper and lower bounds on lowest cloud base
 
+              if (ihave_uwnd10m) & 
+                 ges_uwnd10m(j,i)=all_loc(j,i,i_0+i_uwnd10m)
+
+              if (ihave_vwnd10m) & 
+                 ges_vwnd10m(j,i)=all_loc(j,i,i_0+i_vwnd10m)
+
            end do
         end do
      end do
 
-     deallocate(all_loc,jsig_skip,igtype,identity)
+     deallocate(all_loc,jsig_skip,igtype,identity,temp1)
 
 
      return
@@ -1070,6 +1104,7 @@ subroutine wr2d_binary(mype)
 !   2014-06-16  carley/zhu - add tcamt and ceiling
 !   2014-06-27  carley - slight change to specification of num_2d_fields
 !   2015-07-10  pondeca - add cloud ceiling height
+!   2016-05-03  pondeca - add uwnd10m, vwnd10m
 !
 !   input argument list:
 !     mype     - pe number
@@ -1108,6 +1143,7 @@ subroutine wr2d_binary(mype)
 
   character(len=*),parameter::myname='wr2d_binary'
   integer(i_kind) im,jm,lm
+  integer(i_kind),allocatable::itemp1(:)
   real(r_single),allocatable::temp1(:),tempa(:),tempb(:)
   real(r_single),allocatable::all_loc(:,:,:)
   real(r_single),allocatable::strp(:)
@@ -1115,7 +1151,7 @@ subroutine wr2d_binary(mype)
   character(2) ch2
   integer(i_kind) iog,ioan,i,j,k,kt,kq,ku,kv,it,i_psfc,i_t,i_q,i_u,i_v
   integer(i_kind) i_sst,i_skt,i_gust,i_vis,i_pblh,ier,istatus,i_tcamt,i_lcbas,i_cldch
-  integer(i_kind) i_wspd10m,i_td2m,i_mxtm,i_mitm,i_pmsl,i_howv
+  integer(i_kind) i_wspd10m,i_td2m,i_mxtm,i_mitm,i_pmsl,i_howv,i_uwnd10m,i_vwnd10m
   integer(i_kind) num_2d_fields,num_all_fields,num_all_pad
   integer(i_kind) regional_time0(6),nlon_regional0,nlat_regional0,nsig0
   real(r_kind) psfc_this
@@ -1155,8 +1191,10 @@ subroutine wr2d_binary(mype)
   i_howv= i_pmsl+1
   i_tcamt=i_howv+1
   i_lcbas=i_tcamt+1
+  i_uwnd10m=i_lcbas+1
+  i_vwnd10m=i_uwnd10m+1
 
-  num_2d_fields=i_lcbas        ! - should always equal the last integer from the
+  num_2d_fields=i_vwnd10m      ! - should always equal the last integer from the
                                ! -   preceding list
   num_all_fields=num_2d_fields
   num_all_pad=num_all_fields
@@ -1167,6 +1205,7 @@ subroutine wr2d_binary(mype)
 
 
 
+  allocate(itemp1(im*jm))
   allocate(temp1(im*jm))
   allocate(temp1_prh(im*jm))
 
@@ -1361,8 +1400,13 @@ subroutine wr2d_binary(mype)
 
   if (mype == 0) then
      do k=7,16 ! SM,SICE,SST,IVGTYP,ISLTYP,VEGFRA,SNOW,SMOIS,TSLB,TSK
-        read(iog)temp1
-        write(ioan)temp1
+        if (k==10 .or. k==11) then
+           read(iog)itemp1
+           write(ioan)itemp1
+         else
+           read(iog)temp1
+           write(ioan)temp1
+        endif
      end do
   end if
 
@@ -1378,8 +1422,10 @@ subroutine wr2d_binary(mype)
   caux(10)='howv'   ; iaux(10)=i_howv
   caux(11)='tcamt'  ; iaux(11)=i_tcamt
   caux(12)='lcbas'  ; iaux(12)=i_lcbas
+  caux(13)='uwnd10m'; iaux(13)=i_uwnd10m
+  caux(14)='vwnd10m'; iaux(14)=i_vwnd10m
 
-  kaux=12  !Adjust as you add variables
+  kaux=14  !Adjust as you add variables
 
   do k=1,kaux
      call gsi_bundlegetpointer (gsi_metguess_bundle(it),trim(caux(k)),ptr2d, ier)
@@ -1434,6 +1480,7 @@ subroutine wr2d_binary(mype)
   end do
 
   deallocate(all_loc)
+  deallocate(itemp1)
   deallocate(temp1)
   deallocate(tempa)
   deallocate(tempb)
@@ -2256,6 +2303,7 @@ module hilbertcurve
 !                         tobs,qobs,vobs,etc., wih obstype
 !   2014-04-10  pondeca - add cross-validation for td2m,mxtm,mitm,pmsl
 !   2014-05-07  pondeca - add cross-validation for howv
+!   2016-05-03  pondeca - add cross-validtaion for uwnd10m, vwnd10m
 !                        
 !
 ! subroutines included:
@@ -2317,6 +2365,8 @@ module hilbertcurve
   integer(i_kind) ngrps_tcamtob
   integer(i_kind) ngrps_lcbasob
   integer(i_kind) ngrps_cldchob
+  integer(i_kind) ngrps_uwnd10mob
+  integer(i_kind) ngrps_vwnd10mob
 
   logical random_cvgrp
   real(r_kind) usagecv
@@ -2360,7 +2410,8 @@ subroutine init_hilbertcurve(maxobs)
                     ngrps_pwob,ngrps_sstob,ngrps_gustob,ngrps_visob, &
                     ngrps_td2mob, ngrps_mxtmob,ngrps_mitmob, &
                     ngrps_pmslob, ngrps_howvob, &
-                    ngrps_tcamtob,ngrps_lcbasob,ngrps_cldchob
+                    ngrps_tcamtob,ngrps_lcbasob,ngrps_cldchob, & 
+                    ngrps_uwnd10mob,ngrps_vwnd10mob
 
   random_cvgrp=.false.
   usagecv=3._r_kind
@@ -2392,6 +2443,8 @@ subroutine init_hilbertcurve(maxobs)
   endif
 
   ngrps_wspd10mob=ngrps_uvob
+  ngrps_uwnd10mob=ngrps_uvob
+  ngrps_vwnd10mob=ngrps_uvob
 
   if(mype == 0)then
     print*,'in init_hilbertcurve: random_cvgrp=',random_cvgrp
@@ -2414,6 +2467,8 @@ subroutine init_hilbertcurve(maxobs)
     print*,'in init_hilbertcurve: ngrps_tcamtob=',ngrps_tcamtob
     print*,'in init_hilbertcurve: ngrps_lcbasob=',ngrps_lcbasob
     print*,'in init_hilbertcurve: ngrps_cldchob=',ngrps_cldchob
+    print*,'in init_hilbertcurve: ngrps_uwnd10mob=',ngrps_uwnd10mob
+    print*,'in init_hilbertcurve: ngrps_vwnd10mob=',ngrps_vwnd10mob
   end if
 
 
@@ -2647,6 +2702,8 @@ subroutine apply_hilbertcurve(maxobs,obstype,cdata_usage)
             if(obstype == 'tcamt'  ) ncnumgrp0=ngrps_tcamtob
             if(obstype == 'lcbas'  ) ncnumgrp0=ngrps_lcbasob
             if(obstype == 'cldch'  ) ncnumgrp0=ngrps_cldchob
+            if(obstype == 'uwnd10m') ncnumgrp0=ngrps_uwnd10mob
+            if(obstype == 'vwnd10m') ncnumgrp0=ngrps_vwnd10mob
           else
             ncnumgrp0=ncnumgrp(hilikx(ncross)) ! number of cross-validating datasets is
                                                ! chosen to be the last "number of groups" 
@@ -2720,6 +2777,8 @@ subroutine apply_hilbertcurve(maxobs,obstype,cdata_usage)
         if(obstype=='tcamt')   outfile='tcamtobs_allcv_groups'
         if(obstype=='lcbas')   outfile='lcbasobs_allcv_groups'
         if(obstype=='cldch')   outfile='cldchobs_allcv_groups'
+        if(obstype=='uwnd10m') outfile='uwnd10mobs_allcv_groups'
+        if(obstype=='vwnd10m') outfile='vwnd10mobs_allcv_groups'
         open (92,file=trim(outfile),form='unformatted')
 
         write(92) ncross,ncnumgrp0,ncgroup0

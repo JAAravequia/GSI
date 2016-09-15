@@ -59,6 +59,7 @@ module m_gsiBiases
 !   2014-05-07  pondeca - add howv
 !   2014-06-19  carley/zhu - add tcamt and lcbas
 !   2015-07-10  pondeca - add cldch
+!   2016-05-05  pondeca - add uwnd10m,vwnd10m
 !
 ! !AUTHOR:
 !   guo           org: gmao                date: 2006-10-01
@@ -98,6 +99,8 @@ module m_gsiBiases
   public :: bias_tcamt
   public :: bias_lcbas
   public :: bias_cldch
+  public :: bias_uwnd10m
+  public :: bias_vwnd10m
 
   integer(i_kind),save :: bias_hour = -1
   integer(i_kind),save :: nbc       = -1
@@ -125,6 +128,8 @@ module m_gsiBiases
   real(r_kind),allocatable,dimension(:,:,:)   :: bias_tcamt
   real(r_kind),allocatable,dimension(:,:,:)   :: bias_lcbas
   real(r_kind),allocatable,dimension(:,:,:)   :: bias_cldch
+  real(r_kind),allocatable,dimension(:,:,:)   :: bias_uwnd10m
+  real(r_kind),allocatable,dimension(:,:,:)   :: bias_vwnd10m
   real(r_kind),allocatable,dimension(:,:,:,:) :: bias_vor
   real(r_kind),allocatable,dimension(:,:,:,:) :: bias_div
   real(r_kind),allocatable,dimension(:,:,:,:) :: bias_cwmr
@@ -151,6 +156,7 @@ subroutine init_()
 !   2009-08-06  lueken - added subprogram doc block
 !   2014-06-19  carley/zhu - add tcamt and lcbas
 !   2015-07-10  pondeca - add cldch
+!   2016-05-05  pondeca - add uwnd10m, vwnd10m
 !
 !   input argument list:
 !
@@ -180,6 +186,7 @@ subroutine init_()
            bias_td2m(lat2,lon2,nbc),bias_mxtm(lat2,lon2,nbc), &
            bias_mitm(lat2,lon2,nbc),bias_pmsl(lat2,lon2,nbc),&
            bias_howv(lat2,lon2,nbc),bias_cldch(lat2,lon2,nbc),&
+           bias_uwnd10m(lat2,lon2,nbc),bias_vwnd10m(lat2,lon2,nbc),&
            bias_vor(lat2,lon2,nsig,nbc),&
            bias_tcamt(lat2,lon2,nbc),bias_lcbas(lat2,lon2,nbc),&
            bias_div(lat2,lon2,nsig,nbc),bias_cwmr(lat2,lon2,nsig,nbc),&
@@ -208,6 +215,8 @@ subroutine init_()
            bias_tcamt (i,j,n)=zero
            bias_lcbas (i,j,n)=zero
            bias_cldch (i,j,n)=zero
+           bias_uwnd10m (i,j,n)=zero
+           bias_vwnd10m (i,j,n)=zero
         end do
      end do
   end do
@@ -244,6 +253,7 @@ subroutine clean_()
 !   2009-08-06  lueken - added subprogram doc block
 !   2014-06-19  carley/zhu - add tcamt and lcbas
 !   2015-07-10  pondeca - add cldch
+!   2016-05-05  pondeca - add uwnd10m, vwnd10m
 !
 !   input argument list:
 !
@@ -262,7 +272,7 @@ subroutine clean_()
    if (.not.initialized_) return 
    if ( nbc < 0 ) return
    deallocate(bias_ps,bias_tskin,bias_gust,bias_vis,bias_pblh,bias_wspd10m, &
-              bias_td2m,bias_mxtm,bias_mitm,bias_pmsl,bias_howv,bias_cldch,bias_vor,bias_div,&
+              bias_td2m,bias_mxtm,bias_mitm,bias_pmsl,bias_howv,bias_cldch,bias_uwnd10m,bias_vwnd10m,bias_vor,bias_div,&
               bias_tv,bias_q,bias_oz,bias_cwmr,bias_u,bias_v,bias_tcamt,bias_lcbas,stat=istatus)
    write(6,*)'CREATE_BIAS_GRIDS:  deallocate error5, istatus=',istatus
 end subroutine clean_
@@ -727,6 +737,7 @@ subroutine update_st(xhat,xhat_div,xhat_vor,hour)
 !   2014-05-07  pondeca - add howv
 !   2014-06-19  carley/zhu - add tcamt and lcbas
 !   2015-07-10  pondeca - add cldch
+!   2016-05-05  pondeca - add uwnd10m,vwnd10m
 !
 ! !REMARKS:
 !   language: f90
@@ -738,8 +749,10 @@ subroutine update_st(xhat,xhat_div,xhat_vor,hour)
    character(len=*),parameter::myname_='update_st'
    integer(i_kind) ier,istatus
    integer(i_kind) i_gust,i_vis,i_pblh,i_wspd10m,i_td2m,i_mxtm,i_mitm,i_pmsl,i_howv,i_tcamt,i_lcbas,i_cldch
+   integer(i_kind) i_uwnd10m,i_vwnd10m
    real(r_kind),pointer,dimension(:,:)   :: sv_ps,sv_sst,sv_gust,sv_vis,sv_pblh,sv_wspd10m, &
-                                            sv_td2m,sv_mxtm,sv_mitm,sv_pmsl,sv_howv,sv_tcamt,sv_lcbas,sv_cldch
+                                            sv_td2m,sv_mxtm,sv_mitm,sv_pmsl,sv_howv,sv_tcamt,sv_lcbas,sv_cldch, &
+                                            sv_uwnd10m,sv_vwnd10m
    real(r_kind),pointer,dimension(:,:,:) :: sv_u,sv_v,sv_q,sv_tv,sv_oz,sv_cw
 !  real(r_kind),pointer,dimension(:,:,:) :: sv_prse,sv_tsen
 
@@ -816,6 +829,16 @@ subroutine update_st(xhat,xhat_div,xhat_vor,hour)
          call gsi_bundlegetpointer (xhat,'cldch' ,sv_cldch, istatus); ier=istatus+ier
       end if
 
+      call gsi_bundlegetpointer (xhat,'uwnd10m' ,i_uwnd10m, istatus)
+      if (i_uwnd10m>0) then
+         call gsi_bundlegetpointer (xhat,'uwnd10m' ,sv_uwnd10m, istatus); ier=istatus+ier
+      end if
+
+      call gsi_bundlegetpointer (xhat,'vwnd10m' ,i_vwnd10m, istatus)
+      if (i_vwnd10m>0) then
+         call gsi_bundlegetpointer (xhat,'vwnd10m' ,sv_vwnd10m, istatus); ier=istatus+ier
+      end if
+
    end if
    if(ier/=0) then
       write(6,*) trim(myname_), ': trouble getting SV pointers, ier=',ier
@@ -846,6 +869,8 @@ subroutine update_st(xhat,xhat_div,xhat_vor,hour)
      if (i_tcamt>0) call update2d_ (bias_tcamt,lat2,lon2,sv_tcamt,hour)
      if (i_lcbas>0) call update2d_ (bias_lcbas,lat2,lon2,sv_lcbas,hour)
      if (i_cldch>0) call update2d_ (bias_cldch,lat2,lon2,sv_cldch,hour)
+     if (i_uwnd10m>0) call update2d_  (bias_uwnd10m,lat2,lon2,sv_uwnd10m,hour)
+     if (i_vwnd10m>0) call update2d_  (bias_vwnd10m,lat2,lon2,sv_vwnd10m,hour)
   end if
 
 end subroutine update_st
@@ -891,6 +916,7 @@ subroutine correct_()
 !   2014-05-07  pondeca - add howv
 !   2014-06-19  carley/zhu - add tcamt and lcbas
 !   2015-07-10  pondeca - add cldch
+!   2016-05-05  pondeca - add uwnd10m,vwnd10m
 !
 ! !TO DO:
 !
@@ -938,6 +964,8 @@ subroutine correct_()
   real(r_kind),allocatable,dimension(:,:)  :: b_tcamt
   real(r_kind),allocatable,dimension(:,:)  :: b_lcbas
   real(r_kind),allocatable,dimension(:,:)  :: b_cldch
+  real(r_kind),allocatable,dimension(:,:)  :: b_uwnd10m
+  real(r_kind),allocatable,dimension(:,:)  :: b_vwnd10m
   real(r_kind),allocatable,dimension(:,:,:):: b_vor
   real(r_kind),allocatable,dimension(:,:,:):: b_div
   real(r_kind),allocatable,dimension(:,:,:):: b_cwmr
@@ -960,7 +988,7 @@ subroutine correct_()
            b_div(lat2,lon2,nsig),b_cwmr(lat2,lon2,nsig),b_tcamt(lat2,lon2),&
            b_lcbas(lat2,lon2),b_oz(lat2,lon2,nsig),b_q(lat2,lon2,nsig),&
            b_tv(lat2,lon2,nsig),b_u(lat2,lon2,nsig),b_v(lat2,lon2,nsig),&
-           b_cldch(lat2,lon2))
+           b_cldch(lat2,lon2),b_uwnd10m(lat2,lon2),b_vwnd10m(lat2,lon2))
  
 
   do it=1,nfldsig
@@ -1023,6 +1051,10 @@ subroutine correct_()
         call comp2d_(b_lcbas,bias_lcbas,hours(it))
         if (getindex(svars2d,'cldch')>0) &
         call comp2d_(b_cldch,bias_cldch,hours(it))
+        if (getindex(svars2d,'uwnd10m')>0) &
+        call comp2d_(b_uwnd10m,bias_uwnd10m,hours(it))
+        if (getindex(svars2d,'vwnd10m')>0) &
+        call comp2d_(b_vwnd10m,bias_vwnd10m,hours(it))
      end if
 
      bias_hour=hours(ntguessig)
@@ -1101,6 +1133,14 @@ subroutine correct_()
         if (ier==0.and.getindex(svars2d,'cldch')>0) then
            ptr2dges = ptr2dges + b_cldch
         end if
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'uwnd10m',ptr2dges,ier)
+        if (ier==0.and.getindex(svars2d,'uwnd10m')>0) then
+           ptr2dges = ptr2dges + b_uwnd10m
+        end if
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'vwnd10m',ptr2dges,ier)
+        if (ier==0.and.getindex(svars2d,'vwnd10m')>0) then
+           ptr2dges = ptr2dges + b_vwnd10m
+        end if
      end if
   end do
 
@@ -1108,7 +1148,7 @@ subroutine correct_()
 
   deallocate(hours)
   deallocate(b_ps,b_tskin,b_gust,b_vis,b_pblh,b_wspd10m,b_td2m,b_mxtm,b_mitm,b_pmsl,b_howv, &
-             b_vor,b_div,b_cwmr,b_oz,b_q,b_tv,b_u,b_v,b_tcamt,b_lcbas,b_cldch)
+             b_vor,b_div,b_cwmr,b_oz,b_q,b_tv,b_u,b_v,b_tcamt,b_lcbas,b_cldch,b_uwnd10m,b_vwnd10m)
 
 end subroutine correct_
 

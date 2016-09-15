@@ -30,7 +30,7 @@ module adjtest_obs
            pm10_ob_type, aero_ob_type, &
            gust_ob_type,vis_ob_type,pblh_ob_type, & 
            wspd10m_ob_type,td2m_ob_type,mxtm_ob_type,mitm_ob_type,pmsl_ob_type, & 
-           howv_ob_type,tcamt_ob_type,lcbas_ob_type,cldch_ob_type
+           howv_ob_type,tcamt_ob_type,lcbas_ob_type,cldch_ob_type,uwnd10m_ob_type,vwnd10m_ob_type
 
   use jfunc, only: jiter
   use constants, only: zero, two
@@ -242,6 +242,8 @@ subroutine get_lhs(yobs, lhs)
   type(cldch_ob_type), pointer :: cldchptr  ! 28. Conventional cloud ceiling height
   type(pm10_ob_type),  pointer  :: pm10ptr  ! 29. pm10
   type(aero_ob_type),  pointer  :: aeroptr  ! 30. aero aod
+  type(uwnd10m_ob_type),pointer :: uwnd10mptr ! 31. Conventional 10m-uwnd
+  type(vwnd10m_ob_type),pointer :: vwnd10mptr ! 32. Conventional 10m-vwnd
 
 
 ! ----------------------------------------------------------------------
@@ -722,6 +724,36 @@ subroutine get_lhs(yobs, lhs)
         nob = nob + 1
      end if
      cldchptr => cldchptr%llpoint
+  end do
+  call mpi_allreduce(nob,nobs,1,mpi_integer4,mpi_sum,mpi_comm_world,ierror)
+
+!--------------------------------------------------------------------------
+! Do uwnd10m obs
+  nob = 0
+!-------------------------------------------------------------------------
+  uwnd10mptr => yobs%uwnd10m
+  do while (associated(uwnd10mptr))
+
+     if (uwnd10mptr%luse) then
+        lhs = lhs + uwnd10mptr%diags%tldepart(jiter) * uwnd10mptr%diags%tldepart(jiter)
+        nob = nob + 1
+     end if
+     uwnd10mptr => uwnd10mptr%llpoint
+  end do
+  call mpi_allreduce(nob,nobs,1,mpi_integer4,mpi_sum,mpi_comm_world,ierror)
+
+!--------------------------------------------------------------------------
+! Do vwnd10m obs
+  nob = 0
+!-------------------------------------------------------------------------
+  vwnd10mptr => yobs%vwnd10m
+  do while (associated(vwnd10mptr))
+
+     if (vwnd10mptr%luse) then
+        lhs = lhs + vwnd10mptr%diags%tldepart(jiter) * vwnd10mptr%diags%tldepart(jiter)
+        nob = nob + 1
+     end if
+     vwnd10mptr => vwnd10mptr%llpoint
   end do
   call mpi_allreduce(nob,nobs,1,mpi_integer4,mpi_sum,mpi_comm_world,ierror)
 

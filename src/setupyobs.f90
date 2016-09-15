@@ -22,6 +22,7 @@ subroutine setupyobs()
 !   2014-05-07  pondeca  - add howv
 !   2014-06-20  carley/zhu - add tcamt and lcbas pointers
 !   2015-07-10  pondeca  - add cldch
+!   2016-05-05  pondeca  - add uwnd10m, vwnd10m
 !
 !   input argument list:
 !
@@ -38,7 +39,7 @@ use obsmod, only: pshead, thead, whead, qhead, spdhead, srwhead, rwhead, &
                   ozhead, o3lhead, tcphead, laghead, colvkhead, aerohead, &
                   aerolhead, pm2_5head, pm10head, gusthead, vishead, pblhhead, wspd10mhead, & 
                   td2mhead, mxtmhead, mitmhead, pmslhead, howvhead, tcamthead, &
-                  lcbashead,cldchhead, yobs
+                  lcbashead, cldchhead, uwnd10mhead, vwnd10mhead, yobs
 use gsi_4dvar, only: nobs_bins
 implicit none
 
@@ -82,6 +83,8 @@ do ii=1,nobs_bins
    yobs(ii)%tcamt=>tcamthead(ii)%head
    yobs(ii)%lcbas=>lcbashead(ii)%head
    yobs(ii)%cldch=>cldchhead(ii)%head
+   yobs(ii)%uwnd10m=>uwnd10mhead(ii)%head
+   yobs(ii)%vwnd10m=>vwnd10mhead(ii)%head
 end do
 
 return

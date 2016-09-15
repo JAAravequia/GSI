@@ -360,7 +360,9 @@ clean:
 	inttcamt.f90 \
 	inttcp.f90 \
 	inttd2m.f90 \
+	intuwnd10m.f90 \
 	intvis.f90 \
+	intvwnd10m.f90 \
 	intw.f90 \
 	intwspd10m.f90 \
 	jcmod.f90 \
@@ -516,7 +518,9 @@ clean:
 	stptcamt.f90 \
 	stptcp.f90 \
 	stptd2m.f90 \
+	stpuwnd10m.f90 \
 	stpvis.f90 \
+	stpvwnd10m.f90 \
 	stpw.f90 \
 	stpwspd10m.f90 \
 	strong_bal_correction.f90 \
@@ -641,7 +645,9 @@ clean:
 	setuptcamt.f90 \
 	setuptcp.f90 \
 	setuptd2m.f90 \
+	setupuwnd10m.f90 \
 	setupvis.f90 \
+	setupvwnd10m.f90 \
 	setupw.f90 \
 	setupwspd10m.f90 \
 	sst_retrieval.f90 \

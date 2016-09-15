@@ -1,10 +1,10 @@
-subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
+subroutine setupuwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:    setupwspd10m    compute rhs for conventional 10 m wind speed
-!   prgmmr: pondeca           org: np23                date: 2014-03-19
+! subprogram:    setupuwnd10m    compute rhs for conventional 10 m uwind 
+!   prgmmr: pondeca           org: np23                date: 2016-03-07
 !
-! abstract: For 10-m wind speed observations
+! abstract: For 10-m uwind observations
 !              a) reads obs assigned to given mpi task (geographic region),
 !              b) simulates obs from guess,
 !              c) apply some quality control to obs,
@@ -13,9 +13,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !              f) writes additional diagnostic information to output file
 !
 ! program history log:
-!   2014-03-19  pondeca
-!   2014-09-16  carley - remove unused vars
-!   2015-03-11  pondeca - Modify for possibility of not using obsdiag
+!   2016-03-07  pondeca
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -37,10 +35,10 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   use guess_grids, only: hrdifsig,nfldsig,ges_lnprsl,fact10,nfldsfc, &
                hrdifsfc,geop_hgtl,sfcmod_gfs,sfcmod_mm5,comp_fact10,pt_ll     
-  use obsmod, only: wspd10mhead,wspd10mtail,rmiss_single,i_wspd10m_ob_type,obsdiags,&
+  use obsmod, only: uwnd10mhead,uwnd10mtail,rmiss_single,i_uwnd10m_ob_type,obsdiags,&
                     lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset
-  use obsmod, only: wspd10m_ob_type
-  use obsmod, only: obs_diag,luse_obsdiag
+  use obsmod, only: uwnd10m_ob_type
+  use obsmod, only: obs_diag,bmiss,luse_obsdiag
   use gsi_4dvar, only: nobs_bins,hr_obsbin
   use oneobmod, only: magoberr,maginnov,oneobtest
   use gridmod, only: nlat,nlon,istart,jstart,lon1,nsig
@@ -74,7 +72,8 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),parameter:: r6=6.0_r_kind
   real(r_kind),parameter:: r20=20.0_r_kind
   real(r_kind),parameter:: r360=360.0_r_kind
-  character(len=*),parameter:: myname='setupwspd10m'
+  real(r_kind),parameter:: r0_1_bmiss=one_tenth*bmiss
+  character(len=*),parameter:: myname='setupuwnd10m'
 
 ! Declare local variables
   
@@ -86,7 +85,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) scale,val2,rsig,rsigp,ratio,ressw2,ress,residual,dudiff,dvdiff
   real(r_kind) obserrlm,obserror,val,valqc,dx10,rlow,rhgh,drpx,prsfc
   real(r_kind) term,rwgt
-  real(r_kind) cg_wspd10m,wgross,wnotgross,wgt,arg,exp_arg,rat_err2,qcgross
+  real(r_kind) cg_uwnd10m,wgross,wnotgross,wgt,arg,exp_arg,rat_err2,qcgross
   real(r_kind) presw,factw,dpres,sfcchk,ugesin,vgesin,dpressave
   real(r_kind) ugesin_scaled,vgesin_scaled
   real(r_kind) qcu,qcv
@@ -124,7 +123,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   logical:: in_curbin, in_anybin
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
-  type(wspd10m_ob_type),pointer:: my_head
+  type(uwnd10m_ob_type),pointer:: my_head
   type(obs_diag),pointer:: my_diag
 
 
@@ -134,8 +133,8 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z         !will probably need at some point
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_u
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_uwnd10m
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_vwnd10m
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_wspd10m
 
@@ -191,6 +190,17 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      muse(i)=nint(data(iuse,i)) <= jiter
   end do
 
+! Check for missing data
+  if (.not. oneobtest) then
+  do i=1,nobs
+    if (data(iuob,i) > r0_1_bmiss .or. data(ivob,i) > r0_1_bmiss)  then
+       muse(i)=.false.
+       data(iuob,i)=rmiss_single   ! for diag output
+       data(ivob,i)=rmiss_single   ! for diag output
+    end if
+  end do
+  end if
+
 ! Check for duplicate observations at same location
   dup=one
   do k=1,nobs
@@ -234,7 +244,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         ikx  = nint(data(ikxx,i))
         if(ikx < 1 .or. ikx > nconvtype) then
            num_bad_ikx=num_bad_ikx+1
-           if(num_bad_ikx<=10) write(6,*)' in setupwspd10m, bad ikx, ikx,i,nconvtype=',ikx,i,nconvtype
+           if(num_bad_ikx<=10) write(6,*)' in setupuwnd10m, bad ikx, ikx,i,nconvtype=',ikx,i,nconvtype
            cycle
         end if
 
@@ -253,47 +263,47 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !    Link obs to diagnostics structure
      if(luse_obsdiag)then
         if (.not.lobsdiag_allocated) then
-           if (.not.associated(obsdiags(i_wspd10m_ob_type,ibin)%head)) then
-              allocate(obsdiags(i_wspd10m_ob_type,ibin)%head,stat=istat)
+           if (.not.associated(obsdiags(i_uwnd10m_ob_type,ibin)%head)) then
+              allocate(obsdiags(i_uwnd10m_ob_type,ibin)%head,stat=istat)
               if (istat/=0) then
-                 write(6,*)'setupwspd10m: failure to allocate obsdiags',istat
+                 write(6,*)'setupuwnd10m: failure to allocate obsdiags',istat
                  call stop2(295)
               end if
-              obsdiags(i_wspd10m_ob_type,ibin)%tail => obsdiags(i_wspd10m_ob_type,ibin)%head
+              obsdiags(i_uwnd10m_ob_type,ibin)%tail => obsdiags(i_uwnd10m_ob_type,ibin)%head
            else
-              allocate(obsdiags(i_wspd10m_ob_type,ibin)%tail%next,stat=istat)
+              allocate(obsdiags(i_uwnd10m_ob_type,ibin)%tail%next,stat=istat)
               if (istat/=0) then
-                 write(6,*)'setupwspd10m: failure to allocate obsdiags',istat
+                 write(6,*)'setupuwnd10m: failure to allocate obsdiags',istat
                  call stop2(295)
               end if
-              obsdiags(i_wspd10m_ob_type,ibin)%tail => obsdiags(i_wspd10m_ob_type,ibin)%tail%next
+              obsdiags(i_uwnd10m_ob_type,ibin)%tail => obsdiags(i_uwnd10m_ob_type,ibin)%tail%next
            end if
-           allocate(obsdiags(i_wspd10m_ob_type,ibin)%tail%muse(miter+1))
-           allocate(obsdiags(i_wspd10m_ob_type,ibin)%tail%nldepart(miter+1))
-           allocate(obsdiags(i_wspd10m_ob_type,ibin)%tail%tldepart(miter))
-           allocate(obsdiags(i_wspd10m_ob_type,ibin)%tail%obssen(miter))
-           obsdiags(i_wspd10m_ob_type,ibin)%tail%indxglb=i
-           obsdiags(i_wspd10m_ob_type,ibin)%tail%nchnperobs=-99999
-           obsdiags(i_wspd10m_ob_type,ibin)%tail%luse=.false.
-           obsdiags(i_wspd10m_ob_type,ibin)%tail%muse(:)=.false.
-           obsdiags(i_wspd10m_ob_type,ibin)%tail%nldepart(:)=-huge(zero)
-           obsdiags(i_wspd10m_ob_type,ibin)%tail%tldepart(:)=zero
-           obsdiags(i_wspd10m_ob_type,ibin)%tail%wgtjo=-huge(zero)
-           obsdiags(i_wspd10m_ob_type,ibin)%tail%obssen(:)=zero
+           allocate(obsdiags(i_uwnd10m_ob_type,ibin)%tail%muse(miter+1))
+           allocate(obsdiags(i_uwnd10m_ob_type,ibin)%tail%nldepart(miter+1))
+           allocate(obsdiags(i_uwnd10m_ob_type,ibin)%tail%tldepart(miter))
+           allocate(obsdiags(i_uwnd10m_ob_type,ibin)%tail%obssen(miter))
+           obsdiags(i_uwnd10m_ob_type,ibin)%tail%indxglb=i
+           obsdiags(i_uwnd10m_ob_type,ibin)%tail%nchnperobs=-99999
+           obsdiags(i_uwnd10m_ob_type,ibin)%tail%luse=.false.
+           obsdiags(i_uwnd10m_ob_type,ibin)%tail%muse(:)=.false.
+           obsdiags(i_uwnd10m_ob_type,ibin)%tail%nldepart(:)=-huge(zero)
+           obsdiags(i_uwnd10m_ob_type,ibin)%tail%tldepart(:)=zero
+           obsdiags(i_uwnd10m_ob_type,ibin)%tail%wgtjo=-huge(zero)
+           obsdiags(i_uwnd10m_ob_type,ibin)%tail%obssen(:)=zero
 
            n_alloc(ibin) = n_alloc(ibin) +1
-           my_diag => obsdiags(i_wspd10m_ob_type,ibin)%tail
+           my_diag => obsdiags(i_uwnd10m_ob_type,ibin)%tail
            my_diag%idv = is
            my_diag%iob = i
            my_diag%ich = 1
         else
-           if (.not.associated(obsdiags(i_wspd10m_ob_type,ibin)%tail)) then
-              obsdiags(i_wspd10m_ob_type,ibin)%tail => obsdiags(i_wspd10m_ob_type,ibin)%head
+           if (.not.associated(obsdiags(i_uwnd10m_ob_type,ibin)%tail)) then
+              obsdiags(i_uwnd10m_ob_type,ibin)%tail => obsdiags(i_uwnd10m_ob_type,ibin)%head
            else
-              obsdiags(i_wspd10m_ob_type,ibin)%tail => obsdiags(i_wspd10m_ob_type,ibin)%tail%next
+              obsdiags(i_uwnd10m_ob_type,ibin)%tail => obsdiags(i_uwnd10m_ob_type,ibin)%tail%next
            end if
-           if (obsdiags(i_wspd10m_ob_type,ibin)%tail%indxglb/=i) then
-              write(6,*)'setupwspd10m: index error'
+           if (obsdiags(i_uwnd10m_ob_type,ibin)%tail%indxglb/=i) then
+              write(6,*)'setupuwnd10m: index error'
               call stop2(297)
            end if
         end if
@@ -321,7 +331,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         presw = ten*exp(dpres)
         dpres = dpres-log(psges)
         drpx=zero
-
+      
         prsfc=psges
         prsln2=log(exp(prsltmp(1))/prsfc)
         dpressave=dpres
@@ -332,10 +342,11 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
  
 !       Interpolate guess u and v to observation location and time.
  
-        call tintrp31(ges_u,ugesin,dlat,dlon,dpres,dtime, &
-           hrdifsig,mype,nfldsig)
-        call tintrp31(ges_v,vgesin,dlat,dlon,dpres,dtime, &
-           hrdifsig,mype,nfldsig)
+        call tintrp2a11(ges_uwnd10m,ugesin,dlat,dlon,dtime,hrdifsig,&
+             mype,nfldsig)
+        call tintrp2a11(ges_vwnd10m,vgesin,dlat,dlon,dtime,hrdifsig,&
+             mype,nfldsig)
+
         if(dpressave <= prsln2)then
            factw=one
         else
@@ -410,7 +421,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      dvdiff=vob-vgesin
      spdb=sqrt(uob**2+vob**2)-sqrt(ugesin**2+vgesin**2)
 
-     ddiff=spdob-spdges
+     ddiff=uob-ugesin
 
      if ( qc_satwnds ) then
         if(itype >=240 .and. itype <=260) then
@@ -463,14 +474,20 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !    Gross check using innovation normalized by error
      obserror = one/max(ratio_errors*error,tiny_r_kind)
      obserrlm = max(cermin(ikx),min(cermax(ikx),obserror))
-!!   residual = abs(ddiff)
-     if ( abs(ugesin)>zero .or. abs(vgesin)>zero ) then
-        ugesin_scaled=(ugesin/sqrt(ugesin**2+vgesin**2))*spdges
-        vgesin_scaled=(vgesin/sqrt(ugesin**2+vgesin**2))*spdges
-        residual = sqrt((uob-ugesin_scaled)**2+(vob-vgesin_scaled)**2)
-      else
-        residual = sqrt(dudiff**2+dvdiff**2)
-     endif
+     residual = abs(ddiff)
+
+!    it's probably more robust to evalute gross-error in
+!    terms of magnitude of full-vector difference
+
+!!   if ( abs(ugesin)>zero .or. abs(vgesin)>zero ) then
+!!      ugesin_scaled=(ugesin/sqrt(ugesin**2+vgesin**2))*spdges
+!!      vgesin_scaled=(vgesin/sqrt(ugesin**2+vgesin**2))*spdges
+!!      residual = sqrt((uob-ugesin_scaled)**2+(vob-vgesin_scaled)**2)
+!!    else
+!!      residual = sqrt(dudiff**2+dvdiff**2)
+!!   endif
+
+!!   residual = sqrt(dudiff**2+dvdiff**2)
      ratio    = residual/obserrlm
 
 !!   modify cgross depending on the quality mark, qcmark=3, cgross=0.7*cgross
@@ -521,7 +538,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
      if (ratio_errors*error <=tiny_r_kind) muse(i)=.false.
 
-     if (nobskeep>0 .and. luse_obsdiag) muse(i)=obsdiags(i_wspd10m_ob_type,ibin)%tail%muse(nobskeep)
+     if (nobskeep>0 .and. luse_obsdiag) muse(i)=obsdiags(i_uwnd10m_ob_type,ibin)%tail%muse(nobskeep)
 
 !    Compute penalty terms (linear & nonlinear qc).
      val      = error*ddiff
@@ -532,8 +549,8 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         if (cvar_pg(ikx) > tiny_r_kind .and. error > tiny_r_kind) then
            arg  = exp(exp_arg)
            wnotgross= one-cvar_pg(ikx)
-           cg_wspd10m=cvar_b(ikx)
-           wgross = cg_term*cvar_pg(ikx)/(cg_wspd10m*wnotgross)
+           cg_uwnd10m=cvar_b(ikx)
+           wgross = cg_term*cvar_pg(ikx)/(cg_uwnd10m*wnotgross)
            term = log((arg+wgross)/(one+wgross))
            wgt  = one-wgross/(arg+wgross)
            rwgt = wgt/wgtlim
@@ -560,7 +577,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            nn=2
            if(ratio_errors*error >=tiny_r_kind)nn=3
         end if
-        if (abs(spdob-rmiss_single) >=tiny_r_kind) then
+        if (abs(data(iuob,i)-rmiss_single) >=tiny_r_kind) then
            bwork(1,ikx,1,nn)  = bwork(1,ikx,1,nn)+one           ! count
            bwork(1,ikx,2,nn)  = bwork(1,ikx,2,nn)+ress          ! (o-g)
            bwork(1,ikx,3,nn)  = bwork(1,ikx,3,nn)+ressw2        ! (o-g)**2
@@ -571,46 +588,46 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      endif
 
      if(luse_obsdiag)then
-        obsdiags(i_wspd10m_ob_type,ibin)%tail%luse=luse(i)
-        obsdiags(i_wspd10m_ob_type,ibin)%tail%muse(jiter)=muse(i)
-        obsdiags(i_wspd10m_ob_type,ibin)%tail%nldepart(jiter)=ddiff
-        obsdiags(i_wspd10m_ob_type,ibin)%tail%wgtjo= (error*ratio_errors)**2
+        obsdiags(i_uwnd10m_ob_type,ibin)%tail%luse=luse(i)
+        obsdiags(i_uwnd10m_ob_type,ibin)%tail%muse(jiter)=muse(i)
+        obsdiags(i_uwnd10m_ob_type,ibin)%tail%nldepart(jiter)=ddiff
+        obsdiags(i_uwnd10m_ob_type,ibin)%tail%wgtjo= (error*ratio_errors)**2
      end if
 
 !    If obs is "acceptable", load array with obs info for use
 !    in inner loop minimization (int* and stp* routines)
      if (.not. last .and. muse(i)) then
 
-        if(.not. associated(wspd10mhead(ibin)%head))then
-           allocate(wspd10mhead(ibin)%head,stat=istat)
-           if(istat /= 0)write(6,*)' failure to write wspd10mhead '
-           wspd10mtail(ibin)%head => wspd10mhead(ibin)%head
+        if(.not. associated(uwnd10mhead(ibin)%head))then
+           allocate(uwnd10mhead(ibin)%head,stat=istat)
+           if(istat /= 0)write(6,*)' failure to write uwnd10mhead '
+           uwnd10mtail(ibin)%head => uwnd10mhead(ibin)%head
         else
-           allocate(wspd10mtail(ibin)%head%llpoint,stat=istat)
-           if(istat /= 0)write(6,*)' failure to write wspd10mtail%llpoint '
-           wspd10mtail(ibin)%head => wspd10mtail(ibin)%head%llpoint
+           allocate(uwnd10mtail(ibin)%head%llpoint,stat=istat)
+           if(istat /= 0)write(6,*)' failure to write uwnd10mtail%llpoint '
+           uwnd10mtail(ibin)%head => uwnd10mtail(ibin)%head%llpoint
         end if
 
 	m_alloc(ibin) = m_alloc(ibin) + 1
-	my_head => wspd10mtail(ibin)%head
+	my_head => uwnd10mtail(ibin)%head
 	my_head%idv = is
 	my_head%iob = i
 
 !       Set (i,j) indices of guess gridpoint that bound obs location
-        call get_ij(mm1,dlat,dlon,wspd10mtail(ibin)%head%ij(1),wspd10mtail(ibin)%head%wij(1))
+        call get_ij(mm1,dlat,dlon,uwnd10mtail(ibin)%head%ij(1),uwnd10mtail(ibin)%head%wij(1))
 
-        wspd10mtail(ibin)%head%res     = ddiff
-        wspd10mtail(ibin)%head%err2    = error**2
-        wspd10mtail(ibin)%head%raterr2 = ratio_errors**2    
-        wspd10mtail(ibin)%head%time    = dtime
-        wspd10mtail(ibin)%head%b       = cvar_b(ikx)
-        wspd10mtail(ibin)%head%pg      = cvar_pg(ikx)
-        wspd10mtail(ibin)%head%luse    = luse(i)
+        uwnd10mtail(ibin)%head%res     = ddiff
+        uwnd10mtail(ibin)%head%err2    = error**2
+        uwnd10mtail(ibin)%head%raterr2 = ratio_errors**2    
+        uwnd10mtail(ibin)%head%time    = dtime
+        uwnd10mtail(ibin)%head%b       = cvar_b(ikx)
+        uwnd10mtail(ibin)%head%pg      = cvar_pg(ikx)
+        uwnd10mtail(ibin)%head%luse    = luse(i)
         if(luse_obsdiag)then
-           wspd10mtail(ibin)%head%diags => obsdiags(i_wspd10m_ob_type,ibin)%tail
+           uwnd10mtail(ibin)%head%diags => obsdiags(i_uwnd10m_ob_type,ibin)%tail
  
-           my_head => wspd10mtail(ibin)%head
-           my_diag => wspd10mtail(ibin)%head%diags
+           my_head => uwnd10mtail(ibin)%head
+           my_diag => uwnd10mtail(ibin)%head%diags
            if(my_head%idv /= my_diag%idv .or. &
               my_head%iob /= my_diag%iob ) then
               call perr(myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
@@ -664,13 +681,13 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         if (err_final>tiny_r_kind) errinv_final = one/err_final
 
         rdiagbuf(13,ii) = rwgt               ! nonlinear qc relative weight
-        rdiagbuf(14,ii) = errinv_input       ! prepbufr inverse obs error (ms*-1)
+        rdiagbuf(14,ii) = errinv_input       ! prepbufr inverse obs error (ms**-1)
         rdiagbuf(15,ii) = errinv_adjst       ! read_prepbufr inverse obs error (ms**-1)
         rdiagbuf(16,ii) = errinv_final       ! final inverse observation error (ms**-1)
  
-        rdiagbuf(17,ii) = spdob              ! 10m wind speed observation (ms**-1)
+        rdiagbuf(17,ii) = data(iuob,i)       ! 10m uwind observation (ms**-1)
         rdiagbuf(18,ii) = ddiff              ! obs-ges used in analysis (ms**-1)
-        rdiagbuf(19,ii) = spdob-spdges       ! obs-ges w/o bias correction (ms**-1) (future slot)
+        rdiagbuf(19,ii) = data(iuob,i)-ugesin! obs-ges w/o bias correction (ms**-1) (future slot)
  
         rdiagbuf(20,ii) = factw              ! 10m wind reduction factor
 
@@ -679,7 +696,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         if (lobsdiagsave) then
            do jj=1,miter 
               ioff=ioff+1 
-              if (obsdiags(i_wspd10m_ob_type,ibin)%tail%muse(jj)) then
+              if (obsdiags(i_uwnd10m_ob_type,ibin)%tail%muse(jj)) then
                  rdiagbuf(ioff,ii) = one
               else
                  rdiagbuf(ioff,ii) = -one
@@ -687,15 +704,15 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            enddo
            do jj=1,miter+1
               ioff=ioff+1
-              rdiagbuf(ioff,ii) = obsdiags(i_wspd10m_ob_type,ibin)%tail%nldepart(jj)
+              rdiagbuf(ioff,ii) = obsdiags(i_uwnd10m_ob_type,ibin)%tail%nldepart(jj)
            enddo
            do jj=1,miter
               ioff=ioff+1
-              rdiagbuf(ioff,ii) = obsdiags(i_wspd10m_ob_type,ibin)%tail%tldepart(jj)
+              rdiagbuf(ioff,ii) = obsdiags(i_uwnd10m_ob_type,ibin)%tail%tldepart(jj)
            enddo
            do jj=1,miter
               ioff=ioff+1
-              rdiagbuf(ioff,ii) = obsdiags(i_wspd10m_ob_type,ibin)%tail%obssen(jj)
+              rdiagbuf(ioff,ii) = obsdiags(i_uwnd10m_ob_type,ibin)%tail%obssen(jj)
            enddo
         endif
 
@@ -718,8 +735,8 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 ! Write information to diagnostic file
   if(conv_diagsave .and. ii>0)then
-     call dtime_show(myname,'diagsave:wspd10m',i_wspd10m_ob_type)
-     write(7)'wst',nchar,nreal,ii,mype,ioff0
+     call dtime_show(myname,'diagsave:uwnd10m',i_uwnd10m_ob_type)
+     write(7)'uwn',nchar,nreal,ii,mype,ioff0
      write(7)cdiagbuf(1:ii),rdiagbuf(:,1:ii)
      deallocate(cdiagbuf,rdiagbuf)
 
@@ -742,13 +759,13 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   proceed=ivar>0
   call gsi_metguess_get ('var::z' , ivar, istatus )
   proceed=proceed.and.ivar>0
-  call gsi_metguess_get ('var::u' , ivar, istatus )
+  call gsi_metguess_get ('var::uwnd10m' , ivar, istatus )
   proceed=proceed.and.ivar>0
-  call gsi_metguess_get ('var::v' , ivar, istatus )
-  proceed=proceed.and.ivar>0
-  call gsi_metguess_get ('var::tv', ivar, istatus )
+  call gsi_metguess_get ('var::vwnd10m' , ivar, istatus )
   proceed=proceed.and.ivar>0
   call gsi_metguess_get ('var::wspd10m', ivar, istatus )
+  proceed=proceed.and.ivar>0
+  call gsi_metguess_get ('var::tv', ivar, istatus )
   proceed=proceed.and.ivar>0
   end subroutine check_vars_ 
 
@@ -761,6 +778,42 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 ! If require guess vars available, extract from bundle ...
   if(size(gsi_metguess_bundle)==nfldsig) then
+!    get uwnd10m ...
+     varname='uwnd10m'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
+     if (istatus==0) then
+         if(allocated(ges_uwnd10m))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_uwnd10m(size(rank2,1),size(rank2,2),nfldsig))
+         ges_uwnd10m(:,:,1)=rank2
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
+            ges_uwnd10m(:,:,ifld)=rank2
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
+!    get vwnd10m ...
+     varname='vwnd10m'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
+     if (istatus==0) then
+         if(allocated(ges_vwnd10m))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_vwnd10m(size(rank2,1),size(rank2,2),nfldsig))
+         ges_vwnd10m(:,:,1)=rank2
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
+            ges_vwnd10m(:,:,ifld)=rank2
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
 !    get wspd10m ...
      varname='wspd10m'
      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
@@ -815,42 +868,6 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
          write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
-!    get u ...
-     varname='u'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-     if (istatus==0) then
-         if(allocated(ges_u))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-         endif
-         allocate(ges_u(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         ges_u(:,:,:,1)=rank3
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_u(:,:,:,ifld)=rank3
-         enddo
-     else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-         call stop2(999)
-     endif
-!    get v ...
-     varname='v'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-     if (istatus==0) then
-         if(allocated(ges_v))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-         endif
-         allocate(ges_v(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         ges_v(:,:,:,1)=rank3
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_v(:,:,:,ifld)=rank3
-         enddo
-     else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-         call stop2(999)
-     endif
 !    get tv ...
      varname='tv'
      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
@@ -880,10 +897,10 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
     if(allocated(ges_z   )) deallocate(ges_z   )
     if(allocated(ges_ps  )) deallocate(ges_ps  )
     if(allocated(ges_tv  )) deallocate(ges_tv  )
-    if(allocated(ges_u   )) deallocate(ges_u   )
-    if(allocated(ges_v   )) deallocate(ges_v   )
+    if(allocated(ges_uwnd10m)) deallocate(ges_uwnd10m)
+    if(allocated(ges_vwnd10m)) deallocate(ges_vwnd10m)
     if(allocated(ges_wspd10m)) deallocate(ges_wspd10m)
   end subroutine final_vars_
 
-end subroutine setupwspd10m
+end subroutine setupuwnd10m
 

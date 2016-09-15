@@ -343,7 +343,10 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
 !    pbc(*,42) contribution from howv observation  term (Jo)
 !    pbc(*,43) contribution from tcamt observation  term (Jo)
 !    pbc(*,44) contribution from lcbas observation  term (Jo)
-!    pbc(*,45) contribution from cldch observation  term (Jo)
+!    pbc(*,45) contribution from pm10 observation  term (Jo)
+!    pbc(*,46) contribution from cldch observation  term (Jo)
+!    pbc(*,47) contribution from uwnd10m observation  term (Jo)
+!    pbc(*,48) contribution from vwnd10m observation  term (Jo)
 !
 
 

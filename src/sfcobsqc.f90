@@ -852,7 +852,7 @@ subroutine get_usagerj(kx,obstype,c_station_id,c_prvstg,c_sprvstg, &
         endif
      endif
 
-     if( (obstype=='uv' .or. obstype=='wspd10m') .and. wlistexist ) then
+     if( (obstype=='uv' .or. obstype=='wspd10m' .or. obstype=='uwnd10m' .or.  obstype=='vwnd10m') .and. wlistexist ) then
         do m=1,nwrjs
            ch8(1:8)=w_rjlist(m)(1:8)
            nlen=len_trim(ch8)

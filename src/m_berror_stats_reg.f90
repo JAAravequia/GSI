@@ -316,6 +316,7 @@ end subroutine berror_read_bal_reg
 !                     all-sky radiance assimilation
 !       19Jun14 carley/zhu - add tcamt and lcbas
 !       10Jul15 pondeca - add cldch
+!       05May16 pondeca - add uwnd10m, vuwn10m
 !
 !EOP ___________________________________________________________________
 
@@ -343,6 +344,7 @@ end subroutine berror_read_bal_reg
   integer(i_kind) :: nrf3_oz,nrf3_q,nrf3_cw,nrf3_sf,nrf3_vp,nrf2_sst
   integer(i_kind) :: nrf3_t,nrf2_gust,nrf2_vis,nrf2_pblh,nrf2_ps,nrf2_wspd10m
   integer(i_kind) :: nrf2_td2m,nrf2_mxtm,nrf2_mitm,nrf2_pmsl,nrf2_howv,nrf2_tcamt,nrf2_lcbas,nrf2_cldch
+  integer(i_kind) :: nrf2_uwnd10m,nrf2_vwnd10m
   integer(i_kind) :: nrf3_sfwter,nrf3_vpwter
   integer(i_kind) :: inerr,istat
   integer(i_kind) :: nsigstat,nlatstat,isig
@@ -544,6 +546,8 @@ end subroutine berror_read_bal_reg
   nrf2_tcamt=getindex(cvars2d,'tcamt')
   nrf2_lcbas=getindex(cvars2d,'lcbas')
   nrf2_cldch=getindex(cvars2d,'cldch')
+  nrf2_uwnd10m=getindex(cvars2d,'uwnd10m')
+  nrf2_vwnd10m=getindex(cvars2d,'vwnd10m')
 
   if(nrf3_q>0 .and. qoption==2)then
      do k=1,nsig
@@ -717,6 +721,22 @@ end subroutine berror_read_bal_reg
         end do
         print*, 'm_berror_reg: maxhwllp_cldch=',maxval(hwllp(:,n))
      end if
+     if (n==nrf2_uwnd10m) then
+        do i=1,mlat
+           corp(i,n)=three
+        end do
+        do i=0,mlat+1
+           hwllp(i,n)=hwll(i,1,nrf3_q)
+        end do
+     end if
+     if (n==nrf2_vwnd10m) then
+        do i=1,mlat
+           corp(i,n)=three
+        end do
+        do i=0,mlat+1
+           hwllp(i,n)=hwll(i,1,nrf3_q)
+        end do
+     end if
 
   enddo
 
@@ -796,6 +816,24 @@ end subroutine berror_read_bal_reg
         end do
         do i=0,mlat+1
            hwllp(i,n0+n)=hwllp(i,nrf2_mitm)
+        end do
+     endif
+
+     if (cvarsmd(n)=='uwnd10mwter') then
+        do i=1,mlat
+           corp(i,n0+n)=corp(i,nrf2_uwnd10m)
+        end do
+        do i=0,mlat+1
+           hwllp(i,n0+n)=hwllp(i,nrf2_uwnd10m)
+        end do
+     endif
+
+     if (cvarsmd(n)=='vwnd10mwter') then
+        do i=1,mlat
+           corp(i,n0+n)=corp(i,nrf2_vwnd10m)
+        end do
+        do i=0,mlat+1
+           hwllp(i,n0+n)=hwllp(i,nrf2_vwnd10m)
         end do
      endif
   enddo
