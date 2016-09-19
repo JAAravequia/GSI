@@ -384,7 +384,7 @@ contains
     thisazimuth=anaz_rw
     thistilt=anel_rw
     thisrange=range_rw
-    thisvr=1.0_r_kind
+    thisvr=5.0_r_kind
     thiserr=magoberr
     thistime=obhourset
 
@@ -457,8 +457,11 @@ contains
          abs(corrected_azimuth-thisazimuth+r360),&
          abs(corrected_azimuth-thisazimuth+r720)),delazmmax)
 
-    corrected_azimuth=90.0000000000000000000000000
-    corrected_tilt=zero
+    ! Ensure elevation angle is exactly 90 or 0 degress for these one ob tests.
+    if ( anel_rw == 90.0_r_kind .or. anel_rw == 0.0_r_kind ); then
+       corrected_azimuth=anaz_rw
+       corrected_tilt=anel_rw
+    end if
 
     write(6,*) 'Single radial wind observation.'
     write(6,*) '*******************************************'

@@ -226,14 +226,24 @@ contains
 
     ! define infile if using either option for radial winds.
     do i=1,ndat
+       !if (mype==0) write(6,*) 'i/ndat,dtype(i),dsis(i)',i,'/',ndat,dtype(i),dsis(i)
        if (trim(dtype(i))=='rw' .and. trim(dsis(i))=='rw')then
           infile=trim(dfile(i))
+          exit
        else if (trim(dtype(i))=='rw' .and. trim(dsis(i))=='l2rw')then
           infile=trim(dfile(i))
-       else 
-          return ! Go back to gsisub if nothing to do.
+          exit
+       else
+          infile=''
        end if 
-    end do    
+    end do
+
+    write(6,*) ''
+
+    if (infile=='') then
+       write(6,*) '***WARNING*** NOT USING ANY RADIAL WIND OBSERVATIONS!!!' 
+       return ! Go back to gsisub if nothing to do.    
+    end if
  
     rad_per_meter= one/rearth
     erad = rearth
