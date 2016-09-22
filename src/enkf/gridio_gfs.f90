@@ -26,6 +26,8 @@
 !   2015-06-29  Add ability to read/write multiple time levels
 !   2016-05-02  Modification for reading state vector from table
 !               (Anna Shlyaeva)
+!   2016-04-20  Modify to handle the updated nemsio sig file (P, DP, DPDT
+!               removed)
 !
 ! attributes:
 !   language: f95
@@ -51,7 +53,7 @@
   use sigio_module, only: sigio_head, sigio_data, sigio_sclose, sigio_sropen, &
                           sigio_srohdc, sigio_sclose, sigio_aldata, sigio_axdata
   use nemsio_module, only: nemsio_gfile,nemsio_open,nemsio_close,&
-                           nemsio_getheadvar,nemsio_realkind,&
+                           nemsio_getfilehead,nemsio_getheadvar,nemsio_realkind,&
                            nemsio_readrecv,nemsio_init,nemsio_setheadvar,nemsio_writerecv
   implicit none
 
@@ -71,6 +73,7 @@
   real(r_kind), dimension(nlons*nlats) :: ug,vg
   real(r_kind), dimension(ndimspec) :: vrtspec,divspec
   real(r_kind), allocatable, dimension(:) :: psg,pstend,ak,bk
+  real(r_single),allocatable,dimension(:,:,:) :: nems_vcoord
   real(nemsio_realkind), dimension(nlons*nlats) :: nems_wrk,nems_wrk2
   type(sigio_head) sighead
   type(sigio_data) sigdata
@@ -80,7 +83,7 @@
   integer :: ps_ind, pst_ind
 
 
-  integer(i_kind) k,nt,iunitsig,iret,nb
+  integer(i_kind) k,nt,iunitsig,iret,nb,idvc,nlonsin,nlatsin,nlevsin
   logical ice
 
   backgroundloop: do nb=1,nbackgrounds
@@ -99,6 +102,14 @@
         write(6,*)'gridio/readgriddata: gfs model: problem with nemsio_open, iret=',iret
         call stop2(23)
      endif
+     call nemsio_getfilehead(gfile,iret=iret, dimx=nlonsin, dimy=nlatsin,&
+                             dimz=nlevsin,idvc=idvc)
+     if (nlons /= nlonsin .or. nlats /= nlatsin .or. nlevs /= nlevsin) then
+       print *,'incorrect dims in nemsio file'
+       print *,'expected',nlons,nlats,nlevs
+       print *,'got',nlonsin,nlatsin,nlevsin
+       call stop2(23)
+     end if
   else
      call sigio_srohdc(iunitsig,trim(filename), &
                        sighead,sigdata,iret)
@@ -144,19 +155,41 @@
          call stop2(23)
      endif
      psg = 0.01_r_kind*nems_wrk ! convert ps to millibars.
-     !print *,'min/max ps',minval(psg),maxval(psg),' nanal=',nanal
+
+     if (allocated(nems_vcoord))     deallocate(nems_vcoord)
+     allocate(nems_vcoord(nlevs+1,3,2))
+     call nemsio_getfilehead(gfile,iret=iret,vcoord=nems_vcoord)
+     if ( iret /= 0 ) then
+        write(6,*)' gridio:  ***ERROR*** problem reading header ', &
+           'vcoord, Status = ',iret
+        call stop2(99)
+     endif
+
+     allocate(ak(nlevs+1),bk(nlevs+1))
+
+     if ( idvc == 0 ) then                         ! sigma coordinate, old file format.
+        ak = zero
+        bk = nems_vcoord(1:nlevs+1,1,1)
+     elseif ( idvc == 1 ) then                     ! sigma coordinate
+        ak = zero
+        bk = nems_vcoord(1:nlevs+1,2,1)
+     elseif ( idvc == 2 .or. idvc == 3 ) then      ! hybrid coordinate
+        ak = 0.01_r_kind*nems_vcoord(1:nlevs+1,1,1) ! convert to mb
+        bk = nems_vcoord(1:nlevs+1,2,1)
+     else
+        write(6,*)'gridio:  ***ERROR*** INVALID value for idvc=',idvc
+        call stop2(85)
+     endif
+     if (nanal .eq. 1) then
+        print *,'time level ',nb
+        print *,'---------------'
+     endif
      ! pressure at interfaces
-     pressi(:,1) = psg
-     do k=1,nlevs
-        call nemsio_readrecv(gfile,'dpres','mid layer',k,nems_wrk,iret=iret)
-        if (iret/=0) then
-            write(6,*)'gridio/readgriddata: gfs model: problem with nemsio_readrecv(dpres), iret=',iret
-            call stop2(23)
-        endif
-        pressi(:,k+1) = pressi(:,k) - 0.01_r_kind*nems_wrk
-        !if (nanal .eq. 1) print *,'min/max pressi',k,minval(pressi(:,k+1)),maxval(pressi(:,k+1))
+     do k=1,nlevs+1
+        pressi(:,k)=ak(k)+bk(k)*psg
+        if (nanal .eq. 1) print *,'sigio, min/max pressi',k,minval(pressi(:,k)),maxval(pressi(:,k))
      enddo
-     pressi(:,nlevs+1) = ptop
+     deallocate(ak,bk)
   else
      vrtspec = sigdata%ps
      call sptez_s(vrtspec,psg,1)
@@ -183,7 +216,7 @@
      endif
      do k=1,nlevs+1
         pressi(:,k)=ak(k)+bk(k)*psg
-        if (nanal .eq. 1) print *,'min/max pressi',k,minval(pressi(:,k)),maxval(pressi(:,k))
+        if (nanal .eq. 1) print *,'sigio, min/max pressi',k,minval(pressi(:,k)),maxval(pressi(:,k))
      enddo
      deallocate(ak,bk)
   endif
@@ -654,36 +687,6 @@
         write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(pres), iret=',iret
         call stop2(23)
      endif
-     ! analysis pressure at interfaces.
-     pressi(:,1) = psg
-     do k=1,nlevs
-        call nemsio_readrecv(gfilein,'dpres','mid layer',k,nems_wrk,iret=iret)
-        dpfg(:,k) = 0.01_r_kind*nems_wrk
-        pressi(:,k+1) = ak(k+1) + bk(k+1)*psg
-        dpanl(:,k) = pressi(:,k) - pressi(:,k+1)
-        nems_wrk2 = 100.*dpanl(:,k)
-        call nemsio_writerecv(gfileout,'dpres','mid layer',k,nems_wrk2,iret=iret)
-        if (iret/=0) then
-           write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(pres), iret=',iret
-           call stop2(23)
-        endif
-        !if (nanal .eq. 1) print *,'k,dpanl,dpfg',minval(dpanl(:,k)),&
-        !maxval(dpanl(:,k)),minval(dpfg(:,k)),maxval(dpfg(:,k))
-     enddo
-     pressi(:,nlevs+1) = ptop
-     ! model layer pressures.
-     do k=1,nlevs
-        ! layer pressure from Phillips vertical interpolation.
-        nems_wrk    = ((pressi(:,k)**kap1-pressi(:,k+1)**kap1)/&
-                      (kap1*(pressi(:,k)-pressi(:,k+1))))**kapr
-        nems_wrk = 100.*nems_wrk ! hPa to Pa
-        call nemsio_writerecv(gfileout,'pres','mid layer',k,nems_wrk,iret=iret)
-        if (iret/=0) then
-           write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(model layer pres), iret=',iret
-           call stop2(23)
-        endif
-     enddo
-
   endif
 
   if (pst_ind > 0) then
