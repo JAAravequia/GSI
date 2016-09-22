@@ -28,11 +28,12 @@ character(len=max_varname_length), dimension(ns3d), intent(in) :: svars3d
 real(r_double), dimension(npts,nlevs,nbackgrounds), intent(out) :: qsat
 real(r_single), dimension(npts,ns3d*nlevs+ns2d,nbackgrounds), intent(out) :: grdin
 real(r_single), allocatable, dimension(:,:) :: pslg
-real(r_kind), allocatable, dimension(:) :: psg
 real(r_kind) clip
 
-real(nemsio_realkind) nems_wrk(nlons*nlats), nems_wrk2(nlons*nlats), field1(nlevs)
-real(r_single) aeta1(nlevs),aeta2(nlevs),pt,pdtop
+real(nemsio_realkind) nems_wrk(nlons*nlats), nems_wrk2(nlons*nlats)
+real(r_single) :: ak(nlevs),bk(nlevs)
+real(r_single),allocatable,dimension(nlevs+1,3,2) :: nems_vcoord
+real(r_single), dimension(nlons*nlats) :: nems_wrk,psg
 type(nemsio_gfile) :: gfile
 logical ice
 integer(i_kind) iret,k,kk,nb
@@ -55,43 +56,61 @@ filename = trim(adjustl(datapath))//trim(adjustl(fgfileprefixes(nb)))//"mem"//ch
 
 call nemsio_init(iret=iret)
 if(iret/=0) then
-   write(6,*)'gridio/readgriddata: nmmb model: problem with nemsio_init, iret=',iret
+   write(6,*)'NMMB gridio/readgriddata: nmmb model: problem with nemsio_init, iret=',iret
    call stop2(23)
 end if
 call nemsio_open(gfile,filename,'READ',iret=iret)
 if (iret/=0) then
-   write(6,*)'gridio/readgriddata: nmmb model: problem with nemsio_open, iret=',iret
+   write(6,*)'NMMB gridio/readgriddata: nmmb model: problem with nemsio_open, iret=',iret
    call stop2(23)
 end if
 
 ! get surface pressure and pressure on model levels
-call nemsio_getheadvar(gfile,'PT',pt,iret)
-pt = 0.01*pt
-call nemsio_getheadvar(gfile,'PDTOP',pdtop,iret)
-pdtop = 0.01*pdtop
-call nemsio_getheadvar(gfile,'SGML1',field1,iret)
-do k=1,nlevs
-  aeta1(k)=field1(nlevs+1-k)
-enddo
-call nemsio_getheadvar(gfile,'SGML2',field1,iret)
-do k=1,nlevs
-  aeta2(k)=field1(nlevs+1-k)
-  aeta1(k) = aeta1(k) + aeta2(k)
-enddo
-call nemsio_readrecv(gfile,'dpres','hybrid sig lev',1,nems_wrk,iret=iret)
+call nemsio_readrecv(gfile,'pres','sfc',1,nems_wrk,iret=iret)
 if (iret/=0) then
-   write(6,*)'gridio/readgriddata: nmmb model: problem with nemsio_readrecv(dpres), iret=',iret
+   write(6,*)'NMMB gridio/readgriddata: NMMB model: problem with nemsio_readrecv(ps), iret=',iret
    call stop2(23)
 endif
 allocate(psg(nlons*nlats),pslg(nlons*nlats,nlevs))
 psg = 0.01*nems_wrk + pt ! surface pressure, units of hPa
+
+psg = 0.01_r_kind*nems_wrk ! convert ps to millibars.
+
+call nemsio_getfilehead(gfile,iret=iret,vcoord=nems_vcoord)
+if ( iret /= 0 ) then
+   write(6,*)' NMMB gridio:  ***ERROR*** problem reading header ', &
+      'vcoord, Status = ',iret
+   call stop2(99)
+endif
+
+allocate(ak(nlevs),bk(nlevs))
+
+if ( idvc == 0 ) then                         ! sigma coordinate, old file format.
+   ak = zero
+   bk = nems_vcoord(1:nlevs,1,1)
+elseif ( idvc == 1 ) then                     ! sigma coordinate
+   ak = zero
+   bk = nems_vcoord(1:nlevs,2,1)
+elseif ( idvc == 2 .or. idvc == 3 ) then      ! hybrid coordinate
+   ak = 0.01_r_kind*nems_vcoord(1:nlevs,1,1) ! convert to mb
+   bk = nems_vcoord(1:nlevs,2,1)
+else
+   write(6,*)'gridio:  ***ERROR*** INVALID value for idvc=',idvc
+   call stop2(85)
+endif
+if (nanal .eq. 1) then
+   print *,'time level ',nb
+   print *,'---------------'
+endif
 if (ps_ind > 0) then
   grdin(:,ns3d*nlevs+ps_ind,nb) = psg
 endif
 ! pressure on model levels
 do k=1,nlevs
-   pslg(:,k) = aeta1(k)*pdtop + aeta2(k)*(psg - pdtop - pt) + pt
+   pslg(:,k)=ak(k)+bk(k)*psg
+   if (nanal .eq. 1) print *,'nemsio, min/max pressi',k,minval(pslg(:,k)),maxval(pslg(:,k))
 enddo
+deallocate(ak,bk)
 ! get u,v
 do k=1,nlevs
    kk = nlevs+1-k ! grids ordered from top to bottom in NMMB
@@ -308,25 +327,6 @@ if (iret/=0) then
    call stop2(23)
 end if
 
-! update pd
-call nemsio_getheadvar(gfile,'PT',pt,iret)
-pt = 0.01*pt
-call nemsio_getheadvar(gfile,'PDTOP',pdtop,iret)
-pdtop = 0.01*pdtop
-call nemsio_readrecv(gfile,'dpres','hybrid sig lev',1,nems_wrk,iret=iret)
-if (iret/=0) then
-   write(6,*)'gridio/writegriddata: nmmb model: problem with nemsio_readrecv(dpres), iret=',iret
-   call stop2(23)
-endif
-psg = 0.01*nems_wrk + pt ! surface pressure, units of hPa
-if (ps_ind > 0) then
-  psg = psg + grdin(:,ns3d*nlevs + ps_ind,nb) ! add increment
-endif
-nems_wrk = 100.*(psg - pt)
-call nemsio_writerecv(gfile,'dpres','hybrid sig lev',1,nems_wrk,iret=iret)
-if (iret/=0) then
-   write(6,*)'gridio/writegriddata: nmmb model: problem with nemsio_writerecv(dpres), iret=',iret
-   call stop2(23)
 endif
 
 ! update u,v
