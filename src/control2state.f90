@@ -99,8 +99,8 @@ integer(i_kind) :: ictd2m,icmxtm,icmitm,icpmsl,ichowv
 integer(i_kind) :: icsfwter,icvpwter,ictcamt,iclcbas
 integer(i_kind) :: iccldch
 character(len=3), parameter :: mycvars(ncvars) = (/  &  ! vars from CV needed here
-                               'sf ', 'vp ', 'w  ', 'ps ', 't  ',    &
-                               'q  ', 'cw ', 'ql ', 'qi ' /)
+                               'sf ', 'vp ', 'ps ', 't  ',    &
+                               'q  ', 'cw ', 'ql ', 'qi ', 'w  ' /)
 logical :: lc_sf,lc_vp,lc_w,lc_ps,lc_t,lc_rh,lc_cw,lc_ql,lc_qi
 real(r_kind),pointer,dimension(:,:)   :: cv_ps=>NULL()
 real(r_kind),pointer,dimension(:,:)   :: cv_vis=>NULL()
@@ -118,8 +118,8 @@ real(r_kind),pointer,dimension(:,:)   :: cv_cldch=>NULL()
 integer(i_kind), parameter :: nsvars = 8
 integer(i_kind) :: isps(nsvars)
 character(len=4), parameter :: mysvars(nsvars) = (/  &  ! vars from ST needed here
-                               'u   ', 'v   ', 'w   ', 'prse', &
-                               'q   ', 'tsen', 'ql  ', 'qi  ' /)
+                               'u   ', 'v   ', 'prse', 'q   ', &
+                               'tsen', 'ql  ', 'qi  ', 'w   ' /)
 logical :: ls_u,ls_v,ls_w,ls_prse,ls_q,ls_tsen,ls_ql,ls_qi
 real(r_kind),pointer,dimension(:,:)   :: sv_ps,sv_sst
 real(r_kind),pointer,dimension(:,:)   :: sv_gust,sv_vis,sv_pblh,sv_wspd10m,sv_tcamt,sv_lcbas
