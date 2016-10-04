@@ -88,7 +88,7 @@ subroutine intrw_(rwhead,rval,sval)
   use constants, only: half,one,tiny_r_kind,cg_term,r3600
   use obsmod, only: rw_ob_type,lsaveobsens,l_do_adjoint,luse_obsdiag
   use qcmod, only: nlnqc_iter,varqc_iter
-  use gridmod, only: latlon1n
+  use gridmod, only: latlon1n,regional_w
   use jfunc, only: jiter,l_foto,xhat_dt,dhat_dt
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -119,10 +119,10 @@ subroutine intrw_(rwhead,rval,sval)
   ier=0
   call gsi_bundlegetpointer(sval,'u',su,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(sval,'v',sv,istatus);ier=istatus+ier
-  call gsi_bundlegetpointer(sval,'w',sw,istatus);ier=istatus+ier
+  if(regional_w) call gsi_bundlegetpointer(sval,'w',sw,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(rval,'u',ru,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(rval,'v',rv,istatus);ier=istatus+ier
-  call gsi_bundlegetpointer(rval,'w',rw,istatus);ier=istatus+ier
+  if(regional_w) call gsi_bundlegetpointer(rval,'w',rw,istatus);ier=istatus+ier
   if(l_foto) then
      call gsi_bundlegetpointer(xhat_dt,'u',xhat_dt_u,istatus);ier=istatus+ier
      call gsi_bundlegetpointer(xhat_dt,'v',xhat_dt_v,istatus);ier=istatus+ier
@@ -153,13 +153,20 @@ subroutine intrw_(rwhead,rval,sval)
 
 !    Forward model (Tangent Linear; TL)
 !    TLVr  =  TLu*costilt*cosazm  +  TLv*costilt*sinazm  +  TLw*sintilt
-     val=(w1*su(j1)+ w2*su(j2)+ w3*su(j3)+ w4*su(j4)+ w5*su(j5)+          &
-          w6*su(j6)+ w7*su(j7)+ w8*su(j8))*rwptr%costilt*rwptr%cosazm+    &
-         (w1*sv(j1)+ w2*sv(j2)+ w3*sv(j3)+ w4*sv(j4)+ w5*sv(j5)+          &
-          w6*sv(j6)+ w7*sv(j7)+ w8*sv(j8))*rwptr%costilt*rwptr%sinazm+    &
-         (w1*sw(j1)+ w2*sw(j2)+ w3*sw(j3)+ w4*sw(j4)+ w5*sw(j5)+          &
-          w6*sw(j6)+ w7*sw(j7)+ w8*sw(j8))*rwptr%sintilt
-
+     if(regional_w) then
+        val=(w1*su(j1)+ w2*su(j2)+ w3*su(j3)+ w4*su(j4)+ w5*su(j5)+          &
+             w6*su(j6)+ w7*su(j7)+ w8*su(j8))*rwptr%costilt*rwptr%cosazm+    &
+            (w1*sv(j1)+ w2*sv(j2)+ w3*sv(j3)+ w4*sv(j4)+ w5*sv(j5)+          &
+             w6*sv(j6)+ w7*sv(j7)+ w8*sv(j8))*rwptr%costilt*rwptr%sinazm+    &
+            (w1*sw(j1)+ w2*sw(j2)+ w3*sw(j3)+ w4*sw(j4)+ w5*sw(j5)+          &
+             w6*sw(j6)+ w7*sw(j7)+ w8*sw(j8))*rwptr%sintilt
+!    TLVr  =  TLu*costilt*cosazm  +  TLv*costilt*sinazm
+     else
+         val=(w1*su(j1)+ w2*su(j2)+ w3*su(j3)+ w4*su(j4)+ w5*su(j5)+          &
+              w6*su(j6)+ w7*su(j7)+ w8*su(j8))*rwptr%costilt*rwptr%cosazm+    &
+             (w1*sv(j1)+ w2*sv(j2)+ w3*sv(j3)+ w4*sv(j4)+ w5*sv(j5)+          &
+              w6*sv(j6)+ w7*sv(j7)+ w8*sv(j8))*rwptr%costilt*rwptr%sinazm 
+     end if
 
      if ( l_foto ) then
         time_rw=rwptr%time*r3600
@@ -209,7 +216,7 @@ subroutine intrw_(rwhead,rval,sval)
 !       Adjoint (AD)
         valu=rwptr%costilt*rwptr%cosazm*grad  ! ADVr_u = costilt*cosazm*ADVr
         valv=rwptr%costilt*rwptr%sinazm*grad  ! ADVr_v = costilt*sinazm*ADVr
-        valw=rwptr%sintilt*grad               ! ADVr_w = sintilt*ADVr
+        if(regional_w) valw=rwptr%sintilt*grad! ADVr_w = sintilt*ADVr
         ru(j1)=ru(j1)+w1*valu                 ! ADu = ADu + ADVr_u
         ru(j2)=ru(j2)+w2*valu
         ru(j3)=ru(j3)+w3*valu
@@ -226,14 +233,16 @@ subroutine intrw_(rwhead,rval,sval)
         rv(j6)=rv(j6)+w6*valv
         rv(j7)=rv(j7)+w7*valv
         rv(j8)=rv(j8)+w8*valv
-        rw(j1)=rw(j1)+w1*valw                 ! ADw = ADw + ADVr_w
-        rw(j2)=rw(j2)+w2*valw
-        rw(j3)=rw(j3)+w3*valw
-        rw(j4)=rw(j4)+w4*valw
-        rw(j5)=rw(j5)+w5*valw
-        rw(j6)=rw(j6)+w6*valw
-        rw(j7)=rw(j7)+w7*valw
-        rw(j8)=rw(j8)+w8*valw
+        if(regional_w) then 
+           rw(j1)=rw(j1)+w1*valw              ! ADw = ADw + ADVr_w
+           rw(j2)=rw(j2)+w2*valw
+           rw(j3)=rw(j3)+w3*valw
+           rw(j4)=rw(j4)+w4*valw
+           rw(j5)=rw(j5)+w5*valw
+           rw(j6)=rw(j6)+w6*valw
+           rw(j7)=rw(j7)+w7*valw
+           rw(j8)=rw(j8)+w8*valw
+        end if
  
         if ( l_foto ) then
            valu=valu*time_rw

@@ -1768,9 +1768,7 @@ subroutine read_nems_nmmb_guess(mype)
      call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q'  ,ges_q  ,istatus );ier=ier+istatus
      call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'oz' ,ges_oz ,istatus );ier=ier+istatus
      call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'pd' ,ges_pd,istatus );ier=ier+istatus
-     if(regional_w) then
-        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'w' , ges_w  ,istatus );ier=ier+istatus
-     end if
+     if(regional_w) call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'w' , ges_w  ,istatus );ier=ier+istatus
      if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields, ier =',ier)
 
      if(mype==mype_input) then
@@ -1812,9 +1810,7 @@ subroutine read_nems_nmmb_guess(mype)
         call gsi_nemsio_read('vgrd','mid layer','V',kr,ges_v(:,:,k),   mype,mype_input)
         call gsi_nemsio_read('spfh','mid layer','H',kr,ges_q(:,:,k),   mype,mype_input)
         call gsi_nemsio_read('tmp' ,'mid layer','H',kr,ges_tsen(:,:,k,it),mype,mype_input)
-        if(regional_w) then 
-           call gsi_nemsio_read('w_tot','mid layer','H',kr,ges_w(:,:,k),   mype,mype_input)
-        end if
+        if(regional_w) call gsi_nemsio_read('w_tot','mid layer','H',kr,ges_w(:,:,k),   mype,mype_input)
         do i=1,lon2
            do j=1,lat2
               ges_tv(j,i,k) = ges_tsen(j,i,k,it) * (one+fv*ges_q(j,i,k))
@@ -1834,9 +1830,8 @@ subroutine read_nems_nmmb_guess(mype)
         end if
      end do
    
-!     write(6,*) 'printing w_tot after read:',ges_w(1:5,1:6,1:7)
 
-!                          !  cloud liquid water,ice,snow,graupel,hail,rain for cloudy radiance
+!    !  cloud liquid water,ice,snow,graupel,hail,rain for cloudy radiance
      if (n_actual_clouds>0 .and. (i_gsdcldanal_type/=2)) then
 
 !       Get pointer to cloud water mixing ratio

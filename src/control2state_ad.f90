@@ -51,7 +51,8 @@ use control_vectors, only: control_vector
 use control_vectors, only: cvars3d,cvars2d
 use bias_predictors, only: predictors
 use gsi_4dvar, only: nsubwin, lsqrtb
-use gridmod, only: latlon1n,latlon11,regional,lat2,lon2,nsig,twodvar_regional
+use gridmod, only: latlon1n,latlon11,regional,lat2,lon2,nsig
+use gridmod, only: twodvar_regional,regional_w
 use jfunc, only: nsclen,npclen,ntclen
 use cwhydromod, only: cw2hydro_ad
 use gsi_bundlemod, only: gsi_bundlecreate
@@ -182,7 +183,7 @@ call gsi_bundlegetpointer (grad%step(1),'pmsl',icpmsl,istatus)
 call gsi_bundlegetpointer (grad%step(1),'howv',ichowv,istatus)
 call gsi_bundlegetpointer (grad%step(1),'sfwter',icsfwter,istatus)
 call gsi_bundlegetpointer (grad%step(1),'vpwter',icvpwter,istatus)
-call gsi_bundlegetpointer (grad%step(1),'w',icw,istatus)
+if(regional_w) call gsi_bundlegetpointer (grad%step(1),'w',icw,istatus)
 call gsi_bundlegetpointer (grad%step(1),'tcamt',ictcamt,istatus)
 call gsi_bundlegetpointer (grad%step(1),'lcbas',iclcbas,istatus)
 call gsi_bundlegetpointer (grad%step(1),'cldch',iccldch,istatus)
@@ -249,7 +250,7 @@ do jj=1,nsubwin
    call gsi_bundlegetpointer (wbundle,'ps' ,cv_ps ,istatus)
    call gsi_bundlegetpointer (wbundle,'t'  ,cv_t,  istatus)
    call gsi_bundlegetpointer (wbundle,'q'  ,cv_rh ,istatus)
-   call gsi_bundlegetpointer (wbundle,'w'  ,cv_w ,istatus)
+   if(regional_w) call gsi_bundlegetpointer (wbundle,'w'  ,cv_w ,istatus)
 
 !  Get pointers to this subwin require state variables
    call gsi_bundlegetpointer (rval(jj),'ps'  ,rv_ps,  istatus)
@@ -257,13 +258,13 @@ do jj=1,nsubwin
    call gsi_bundlegetpointer (rval(jj),'tv'  ,rv_tv,  istatus)
    call gsi_bundlegetpointer (rval(jj),'tsen',rv_tsen,istatus)
    call gsi_bundlegetpointer (rval(jj),'q'   ,rv_q ,  istatus)
-   call gsi_bundlegetpointer (rval(jj),'w'   ,rv_w ,  istatus)
+   if(regional_w) call gsi_bundlegetpointer (rval(jj),'w'   ,rv_w ,  istatus)
 
 !  Adjoint of control to initial state
    call gsi_bundleputvar ( wbundle, 't' ,  rv_tv,  istatus )
    call gsi_bundleputvar ( wbundle, 'q' ,  zero,   istatus )
    call gsi_bundleputvar ( wbundle, 'ps',  rv_ps,  istatus )
-   call gsi_bundleputvar ( wbundle, 'w',   rv_w,  istatus )
+   if(regional_w) call gsi_bundleputvar ( wbundle, 'w',   rv_w,  istatus )
    if (do_cw_to_hydro_ad) then
 !     Case when cloud-vars do not map one-to-one
 !     e.g. cw-to-ql&qi
@@ -357,7 +358,7 @@ do jj=1,nsubwin
       call gsi_bundlegetpointer (rval(jj),'howv' ,rv_howv, istatus)
       call gsi_bundleputvar ( wbundle, 'howv', rv_howv, istatus )
    end if
-   if (icw>0) then
+   if (icw>0 .and. regional_w) then
       call gsi_bundlegetpointer (rval(jj),'w' ,rv_w, istatus)
       call gsi_bundleputvar ( wbundle, 'w', rv_w, istatus )
    end if

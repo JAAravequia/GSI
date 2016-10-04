@@ -90,7 +90,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use qcmod, only: npres_print,ptop,pbot,tdrerr_inflate,tdrgross_fact
   use guess_grids, only: hrdifsig,geop_hgtl,nfldsig,&
        ges_lnprsl,sfcmod_gfs,sfcmod_mm5,comp_fact10
-  use gridmod, only: nsig,get_ijk
+  use gridmod, only: nsig,get_ijk,regional_w
   use constants, only: flattening,semi_major_axis,grav_ratio,zero,grav,wgtlim,&
        half,one,two,grav_equator,eccentricity,somigliana,rad2deg,deg2rad
   use constants, only: tiny_r_kind,cg_term,huge_single,r2000,three,one
@@ -220,6 +220,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   numequal=0
   numnotequal=0
+
 
 ! If requested, save select data for output to diagnostic file
   if(conv_diagsave)then
@@ -497,14 +498,14 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
           hrdifsig,mype,nfldsig)
      call tintrp31(ges_v,vgesin,dlat,dlon,dpres,dtime,&
           hrdifsig,mype,nfldsig)
-     call tintrp31(ges_w,wgesin,dlat,dlon,dpres,dtime,&
+     if(regional_w) call tintrp31(ges_w,wgesin,dlat,dlon,dpres,dtime,&
           hrdifsig,mype,nfldsig)
 
      call tintrp2a1(ges_u,ugesprofile,dlat,dlon,dtime,hrdifsig,&
           nsig,mype,nfldsig)
      call tintrp2a1(ges_v,vgesprofile,dlat,dlon,dtime,hrdifsig,&
           nsig,mype,nfldsig)
-     call tintrp2a1(ges_w,wgesprofile,dlat,dlon,dtime,hrdifsig,&
+     if(regional_w) call tintrp2a1(ges_w,wgesprofile,dlat,dlon,dtime,hrdifsig,&
           nsig,mype,nfldsig) 
 
 
@@ -520,9 +521,14 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      kminmin=kbeambot
      kmaxmax=kbeamtop
      do k=kbeambot,kbeamtop
-        !rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt
-        rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt &
-                     +(wgesprofile(k))*sintilt
+        ! Two different ob operators on purpose!
+        ! The first one is for cycles with w_tot field.
+        if(regional_w) then
+           rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt &
+                        +(wgesprofile(k))*sintilt
+        else 
+           rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt
+        end if
                      !+(wgesprofile(k)-4.85)*sintilt
                      !+(wgesprofile(k)-vTgesprofile(k))*sintilt
         if(umaxmax<rwwindprofile) then
@@ -810,8 +816,10 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   proceed=proceed.and.ivar>0
   call gsi_metguess_get ('var::v' , ivar, istatus )
   proceed=proceed.and.ivar>0
-  call gsi_metguess_get ('var::w' , ivar, istatus )
-  proceed=proceed.and.ivar>0
+  if(regional_w) then
+     call gsi_metguess_get ('var::w' , ivar, istatus )
+     proceed=proceed.and.ivar>0
+  end if
   end subroutine check_vars_ 
 
   subroutine init_vars_
@@ -896,23 +904,25 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
          call stop2(999)
      endif
 !    get w ...
-     varname='w'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-     if (istatus==0) then
-         if(allocated(ges_w))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+     if(regional_w) then
+        varname='w'
+        call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+        if (istatus==0) then
+            if(allocated(ges_w))then
+               write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+               call stop2(999)
+            endif
+            allocate(ges_w(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+            ges_w(:,:,:,1)=rank3
+            do ifld=2,nfldsig
+               call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+               ges_w(:,:,:,ifld)=rank3
+            enddo
+        else
+            write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle,ier= ',istatus
             call stop2(999)
-         endif
-         allocate(ges_w(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         ges_w(:,:,:,1)=rank3
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_w(:,:,:,ifld)=rank3
-         enddo
-     else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle,ier= ',istatus
-         call stop2(999)
-     endif
+        endif
+     end if
   else
      write(6,*) trim(myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
                  nfldsig,size(gsi_metguess_bundle)

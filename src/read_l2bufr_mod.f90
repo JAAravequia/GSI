@@ -328,7 +328,7 @@ contains
           idate5(1)=nint(hdr2(7)) ; idate5(2)=nint(hdr2(8)) ; idate5(3)=nint(hdr2(9))
           idate5(4)=nint(hdr2(10)) ; idate5(5)=nint(hdr2(11))
           call w3fs21(idate5,nminthis)
-	  t=(real(nminthis-nminref,r_kind)+real(nint(hdr2(12)),r_kind)*rinv60)*rinv60
+          t=(real(nminthis-nminref,r_kind)+real(nint(hdr2(12)),r_kind)*rinv60)*rinv60
           if(abs(t)>del_time) cycle
           nobs_in=nobs_in+n_gates
           stn_id=chdr2 

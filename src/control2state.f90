@@ -57,7 +57,8 @@ use control_vectors, only: control_vector
 use control_vectors, only: cvars3d,cvars2d
 use bias_predictors, only: predictors
 use gsi_4dvar, only: nsubwin, nobs_bins, l4dvar, lsqrtb, ladtest_obs
-use gridmod, only: latlon1n,latlon11,regional,lat2,lon2,nsig, nlat, nlon, twodvar_regional            
+use gridmod, only: latlon1n,latlon11,regional,lat2,lon2,nsig, nlat, nlon
+use gridmod, only: twodvar_regional, regional_w            
 use jfunc, only: nsclen,npclen,ntclen,nrclen
 use cwhydromod, only: cw2hydro_tl
 use gsi_bundlemod, only: gsi_bundlecreate
@@ -196,7 +197,7 @@ call gsi_bundlegetpointer (xhat%step(1),'pmsl',icpmsl,istatus)
 call gsi_bundlegetpointer (xhat%step(1),'howv',ichowv,istatus)
 call gsi_bundlegetpointer (xhat%step(1),'sfwter',icsfwter,istatus)
 call gsi_bundlegetpointer (xhat%step(1),'vpwter',icvpwter,istatus)
-call gsi_bundlegetpointer (xhat%step(1),'w',icw,istatus)
+if(regional_w) call gsi_bundlegetpointer (xhat%step(1),'w',icw,istatus)
 call gsi_bundlegetpointer (xhat%step(1),'tcamt',ictcamt,istatus)
 call gsi_bundlegetpointer (xhat%step(1),'lcbas',iclcbas,istatus)
 call gsi_bundlegetpointer (xhat%step(1),'cldch',iccldch,istatus)
@@ -269,12 +270,12 @@ do jj=1,nsubwin
    call gsi_bundlegetpointer (sval(jj),'tv'  ,sv_tv,  istatus)
    call gsi_bundlegetpointer (sval(jj),'tsen',sv_tsen,istatus)
    call gsi_bundlegetpointer (sval(jj),'q'   ,sv_q ,  istatus)
-   call gsi_bundlegetpointer (sval(jj),'w'   ,sv_w ,  istatus)
+   if(regional_w) call gsi_bundlegetpointer (sval(jj),'w'   ,sv_w ,  istatus)
 
    call gsi_bundlegetpointer (wbundle,'ps' ,cv_ps ,istatus)
    call gsi_bundlegetpointer (wbundle,'t'  ,cv_t,  istatus)
    call gsi_bundlegetpointer (wbundle,'q'  ,cv_rh ,istatus)
-   call gsi_bundlegetpointer (wbundle,'w'  ,cv_w ,istatus)
+   if(regional_w) call gsi_bundlegetpointer (wbundle,'w'  ,cv_w ,istatus)
 
 !  Get 3d pressure
    if(do_getprs_tl) call getprs_tl(cv_ps,cv_t,sv_prse)
@@ -353,7 +354,7 @@ do jj=1,nsubwin
       call gsi_bundlegetpointer (sval(jj),'howv' ,sv_howv, istatus)
       call gsi_bundlegetvar ( wbundle, 'howv', sv_howv, istatus )
    end if
-   if (icw>0) then
+   if (icw>0 .and. regional_w) then
       call gsi_bundlegetpointer (sval(jj),'w' ,sv_w, istatus)
       call gsi_bundlegetvar ( wbundle, 'w', sv_w, istatus )
    end if
