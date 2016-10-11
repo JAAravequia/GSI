@@ -14,6 +14,8 @@ subroutine setupcldch(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !
 ! program history log:
 !   2015-07-10  pondeca
+!   2016-10-07  pondeca - if(.not.proceed) advance through input file first
+!                          before retuning to setuprhsall.f90
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -118,7 +120,10 @@ subroutine setupcldch(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
-  if(.not.proceed) return  ! not all vars available, simply return
+  if(.not.proceed) then
+     read(lunin)data,luse   !advance through input file
+     return  ! not all vars available, simply return
+  endif
 
 ! If require guess vars available, extract from bundle ...
   call init_vars_
@@ -517,6 +522,8 @@ subroutine setupcldch(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   call gsi_metguess_get ('var::ps', ivar, istatus )
   proceed=ivar>0
   call gsi_metguess_get ('var::z' , ivar, istatus )
+  proceed=proceed.and.ivar>0
+  call gsi_metguess_get ('var::cldch' , ivar, istatus )
   proceed=proceed.and.ivar>0
   end subroutine check_vars_ 
 
