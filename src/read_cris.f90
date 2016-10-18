@@ -66,7 +66,7 @@ subroutine read_cris(mype,val_cris,ithin,isfcalc,rmesh,jsatid,gstime,&
   use satthin, only: super_val,itxmax,makegrids,map2tgrid,destroygrids, &
       finalcheck,checkob,score_crit
   use radinfo, only:iuse_rad,nusis,jpch_rad,crtm_coeffs_path,use_edges, &
-               radedge1,radedge2,radstart,radstep
+               radedge1,radedge2,radstart,radstep,nstinfo, nst_gsi
   use crtm_module, only: success, &
       crtm_kind => fp,  max_sensor_zenith_angle
   use crtm_spccoeff, only: sc,crtm_spccoeff_load,crtm_spccoeff_destroy
@@ -77,7 +77,6 @@ subroutine read_cris(mype,val_cris,ithin,isfcalc,rmesh,jsatid,gstime,&
   use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,thin4d
   use calc_fov_crosstrk, only: instrument_init, fov_check, fov_cleanup
   use deter_sfc_mod, only: deter_sfc_fov,deter_sfc
-  use gsi_nstcouplermod, only: nst_gsi,nstinfo
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth,gsi_nstcoupler_deter
   use mpimod, only: npe
 
@@ -165,7 +164,7 @@ subroutine read_cris(mype,val_cris,ithin,isfcalc,rmesh,jsatid,gstime,&
   integer(i_kind)  :: itx, k, nele, itt, n
   integer(i_kind):: idomsfc(1)
   integer(i_kind):: ntest
-  integer(i_kind):: error_status, irecx,ierr
+  integer(i_kind):: error_status
   integer(i_kind):: radedge_min, radedge_max
   character(len=20),dimension(1):: sensorlist
 
@@ -327,64 +326,12 @@ subroutine read_cris(mype,val_cris,ithin,isfcalc,rmesh,jsatid,gstime,&
      if(next /= mype_sub)cycle message_loop
      read_loop: do while (ireadsb(lnbufr)==0)
 
-     if(llll == 1)then
-        nrec_startx=nrec_start
-        infile2=trim(infile)         ! Set bufr subset names based on type of data to read
-     elseif(llll == 2) then
-        nrec_startx=nrec_start_ears
-        infile2=trim(infile)//'ears' ! Set bufr subset names based on type of data to read
-     elseif(llll == 3) then
-        nrec_startx=nrec_start_db
-        infile2=trim(infile)//'_db'  ! Set bufr subset names based on type of data to read
-     end if
+!    Read CRIS FOV information
+        call ufbint(lnbufr,linele,5,1,iret,'FOVN SLNM QMRKH FORN  (CRCHN)')
 
-!    Open BUFR file
-     call closbf(lnbufr)
-     open(lnbufr,file=trim(infile2),form='unformatted',iostat=ierr)
-     if(ierr /= 0) cycle ears_db_loop
-
-!    Open BUFR table
-     call openbf(lnbufr,'IN',lnbufr)
-     call datelen(10)
-
-     irecx = 0
-     read_subset: do while(ireadmg(lnbufr,subset,idate)>=0)
-        irecx = irecx + 1
-        if(irecx < nrec_startx) cycle read_subset
-        irec = irec + 1
-        next=next+1
-        if(next == npe_sub)next=0
-        if(next /= mype_sub)cycle read_subset
-
-        read_loop: do while (ireadsb(lnbufr)==0)
-
-!          Check for data / sensor resolution mis-match 
-           call ufbint(lnbufr,rchar_mtyp,1,1,iret,'MTYP')
-           char_mtyp = transfer(rchar_mtyp,char_mtyp)
-           if ( char_mtyp == 'FSR' .and. sis(1:8) /= 'cris-fsr') cycle read_subset
-           if ( char_mtyp /= 'FSR' .and. sis(1:8) == 'cris-fsr') cycle read_subset
-
-!          Get the size of the channels and radiance (allchan) array and
-!          Read FOV information
-           if (char_mtyp == 'FSR') then
-              call ufbint(lnbufr,linele,5,1,iret,'FOVN SLNM QMRKH FORN  (CRCHNM)')
-           else
-              call ufbint(lnbufr,linele,5,1,iret,'FOVN SLNM QMRKH FORN  (CRCHN)')
-           endif
-           bufr_nchan = int(linele(5))
-
-           bufr_size = size(temperature,1)
-           if ( bufr_size /= bufr_nchan ) then    ! allocation if
-!             Allocate the arrays needed for the channel and radiance array
-              deallocate(temperature, allchan, bufr_chan_test)
-              allocate(temperature(bufr_nchan))   ! dependent on # of channels in the bufr file
-              allocate(allchan(2,bufr_nchan))
-              allocate(bufr_chan_test(bufr_nchan))
-           endif    ! allocation if
-
-!          CRIS field-of-view ranges from 1 to 9, corresponding to the 9 sensors measured
-!          per field-of-regard.  The field-of-regard ranges from 1 to 30.  For reference, FOV 
-!          pattern within the FOR is :
+!  CRIS field-of-view ranges from 1 to 9, corresponding to the 9 sensors measured
+!  per field-of-regard.  The field-of-regard ranges from 1 to 30.  For reference, FOV 
+!  pattern within the FOR is :
 !                FOV#      7 8 9|7 8 9
 !                FOV#      4 5 6|4 5 6
 !                FOV#      1 2 3|1 2 3 (spacecraft velocity up the screen)

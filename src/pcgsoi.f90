@@ -120,7 +120,7 @@ subroutine pcgsoi()
 !
 !$$$
   use kinds, only: r_kind,i_kind,r_double,r_quad
-  use qcmod, only: nlnqc_iter,varqc_iter,c_varqc,vqc
+  use qcmod, only: nlnqc_iter,varqc_iter,c_varqc
   use obsmod, only: destroyobs,oberror_tune,luse_obsdiag,yobs
   use jfunc, only: iter,jiter,jiterstart,niter,miter,iout_iter,&
        nclen,penorig,gnormorig,xhatsave,yhatsave,&
@@ -242,22 +242,20 @@ subroutine pcgsoi()
   lanlerr=.false.
   if ( twodvar_regional .and. jiter==1 ) lanlerr=.true.
   if ( lanlerr .and. lgschmidt ) call init_mgram_schmidt
-  nlnqc_iter=.false.
+  if ( ltlint ) nlnqc_iter=.false.
   call stpjo_setup(yobs,nobs_bins)
 
 ! Perform inner iteration
   inner_iteration: do iter=0,niter(jiter)
 
 ! Gradually turn on variational qc to avoid possible convergence problems
-     if(vqc) then
-        nlnqc_iter = iter >= niter_no_qc(jiter)
-        if(jiter == jiterstart) then
-           varqc_iter=c_varqc*(iter-niter_no_qc(1)+one)
-           if(varqc_iter >=one) varqc_iter= one
-        else
-           varqc_iter=one
-        endif
-     end if
+     nlnqc_iter = iter >= niter_no_qc(jiter)
+     if(jiter == jiterstart) then
+        varqc_iter=c_varqc*(iter-niter_no_qc(1)+one)
+        if(varqc_iter >=one) varqc_iter= one
+     else
+        varqc_iter=one
+     endif
 
      do ii=1,nobs_bins
         rval(ii)=zero
@@ -795,18 +793,18 @@ subroutine pcgsoi()
   if(.not.l4dvar) call prt_guess('analysis')
   call prt_state_norms(sval(1),'increment')
   if (twodvar_regional) then
-      call write_all(-1)
+      call write_all(-1,mype)
     else
       if(jiter == miter) then
          call clean_
-         call write_all(-1)
+         call write_all(-1,mype)
       endif
   endif
 
 ! Overwrite guess with increment (4d-var only, for now)
   if (iwrtinc>0) then
      call inc2guess(sval)
-     call write_all(iwrtinc)
+     call write_all(iwrtinc,mype)
      call prt_guess('increment')
      ! NOTE: presently in 4dvar, we handle the biases in a slightly inconsistent way
      ! as when in 3dvar - that is, the state is not updated, but the biases are.

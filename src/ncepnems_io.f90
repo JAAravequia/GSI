@@ -165,7 +165,7 @@ module ncepnems_io
 
 contains
 
-  subroutine read_
+  subroutine read_ (mype)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    read_nems
@@ -184,6 +184,7 @@ contains
 !                         ticket #239, comment 18) 
 !
 !   input argument list:
+!     mype              - mpi task id
 !
 !   output argument list:
 !
@@ -204,9 +205,11 @@ contains
     use gsi_bundlemod, only: gsi_bundle
     use gsi_bundlemod, only: gsi_bundledestroy
     use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sub2grid_destroy_info
-    use mpimod, only: npe,mype
+    use mpimod, only: npe
     use cloud_efr_mod, only: cloud_calc_gfs,set_cloud_lower_bound
     implicit none
+
+    integer(i_kind),intent(in   ) :: mype
 
     character(len=*),parameter::myname_=myname//'*read_'
     character(24) filename
@@ -262,7 +265,7 @@ contains
        write(filename,'(''sigf'',i2.2)') ifilesig(it)
        
 !      Read background fields into bundle
-       call general_read_gfsatm_nems(grd_t,sp_a,filename,.true.,.true.,.true.,&
+       call general_read_gfsatm_nems(grd_t,sp_a,filename,mype,.true.,.true.,.true.,&
             atm_bundle,.true.,istatus)
 
        inithead=.false.
@@ -431,7 +434,7 @@ contains
 
   end subroutine read_chem_
 
-  subroutine read_atm_ (grd,filename,sp_a,uvflag,vordivflag,zflag, &
+  subroutine read_atm_ (grd,filename,mype,sp_a,uvflag,vordivflag,zflag, &
        g_z,g_ps,g_vor,g_div,g_u,g_v,&
        g_tv,g_q,g_cwmr,g_oz)
 !$$$  subprogram documentation block
@@ -460,6 +463,7 @@ contains
 !     sp_a     - structure variable containing spectral information for analysis
 !                    (initialized by general_init_spec_vars, located in
 !                    general_specmod.f90)
+!     mype     - mpi task id
 !     uvflag   - logical to use u,v (.true.) or st,vp (.false.) perturbations
 !     vordivflag - logical to determine if routine should output vorticity and
 !                  divergence
@@ -478,7 +482,7 @@ contains
     use general_commvars_mod, only: fill_ns,filluv_ns,fill2_ns,filluv2_ns,ltosj_s,ltosi_s
     use general_specmod, only: spec_vars
     use general_sub2grid_mod, only: sub2grid_info
-    use mpimod, only: npe,mpi_comm_world,ierror,mpi_rtype,mype
+    use mpimod, only: npe,mpi_comm_world,ierror,mpi_rtype
     use nemsio_module, only: nemsio_init,nemsio_open,nemsio_close
     use nemsio_module, only: nemsio_gfile,nemsio_getfilehead,nemsio_readrecv
     use egrid2agrid_mod,only: g_egrid2agrid,g_create_egrid2agrid,egrid2agrid_parm,destroy_egrid2agrid
@@ -491,6 +495,7 @@ contains
 !   Declare passed variables
     type(sub2grid_info)                   ,intent(in   ) :: grd
     character(len=24)                     ,intent(in   ) :: filename
+    integer(i_kind)                       ,intent(in   ) :: mype
     logical                               ,intent(in   ) :: uvflag,vordivflag,zflag
     real(r_kind),dimension(grd%lat2,grd%lon2)     ,intent(  out) :: g_z,g_ps
     real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),intent(  out) :: g_u,g_v,&
@@ -546,10 +551,10 @@ contains
     if(mype < nflds)then
 
       call nemsio_init(iret=iret)
-      if (iret /= 0) call error_msg(trim(my_name),trim(filename),null,'init',istop,iret)
+      if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),null,'init',istop,iret)
 
       call nemsio_open(gfile,filename,'READ',iret=iret)
-      if (iret /= 0) call error_msg(trim(my_name),trim(filename),null,'open',istop+1,iret)
+      if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),null,'open',istop+1,iret)
 
       call nemsio_getfilehead(gfile,iret=iret, nframe=nframe, &
            nfhour=nfhour, nfminute=nfminute, nfsecondn=nfsecondn, nfsecondd=nfsecondd, &
@@ -630,7 +635,7 @@ contains
     if(zflag)then
        if (mype==mype_hs) then
           call nemsio_readrecv(gfile,'hgt', 'sfc',1,rwork1d0,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'hgt','read',istop+2,iret)
+          if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'hgt','read',istop+2,iret)
           if(diff_res)then
              grid_b=reshape(rwork1d0,(/size(grid_b,1),size(grid_b,2)/))
              vector(1)=.false.
@@ -654,7 +659,7 @@ contains
 !
     if (mype==mype_ps) then
        call nemsio_readrecv(gfile,'pres','sfc',1,rwork1d0,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),'pres','read',istop+3,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'pres','read',istop+3,iret)
        rwork1d1 = r0_001*rwork1d0
        if(diff_res)then
           vector(1)=.false.
@@ -687,9 +692,9 @@ contains
        if (mype==mod(icount-1,npe)) then
           ! Convert grid u,v to div and vor
           call nemsio_readrecv(gfile,'ugrd','mid layer',k,rwork1d0,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ugrd','read',istop+4,iret)
+          if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'ugrd','read',istop+4,iret)
           call nemsio_readrecv(gfile,'vgrd','mid layer',k,rwork1d1,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'vgrd','read',istop+5,iret)
+          if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'vgrd','read',istop+5,iret)
           if(diff_res)then
              grid_b=reshape(rwork1d0,(/size(grid_b,1),size(grid_b,2)/))
              grid_b2=reshape(rwork1d1,(/size(grid_b,1),size(grid_b,2)/))
@@ -776,7 +781,7 @@ contains
        if (mype==mod(icount-1,npe)) then
 
           call nemsio_readrecv(gfile,'spfh','mid layer',k,rwork1d0,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'spfh','read',istop+6,iret)
+          if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'spfh','read',istop+6,iret)
           if(diff_res)then
              grid_b=reshape(rwork1d0,(/size(grid_b,1),size(grid_b,2)/))
              vector(1)=.false.
@@ -793,7 +798,7 @@ contains
           end if
 
           call nemsio_readrecv(gfile,'tmp','mid layer',k,rwork1d1,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'tmp','read',istop+7,iret)
+          if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'tmp','read',istop+7,iret)
           allocate(rwork1d2(latb*lonb))
           rwork1d2 = rwork1d1*(one+fv*rwork1d0)
           if(diff_res)then
@@ -835,7 +840,7 @@ contains
        icount=icount+1
        if (mype==mod(icount-1,npe)) then
           call nemsio_readrecv(gfile,'o3mr','mid layer',k,rwork1d0,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'o3mr','read',istop+8,iret)
+          if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'o3mr','read',istop+8,iret)
           if(diff_res)then
              grid_b=reshape(rwork1d0,(/size(grid_b,1),size(grid_b,2)/))
              vector(1)=.false.
@@ -870,7 +875,7 @@ contains
           icount=icount+1
           if (mype==mod(icount-1,npe)) then
              call nemsio_readrecv(gfile,'clwmr','mid layer',k,rwork1d0,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'clwmr','read',istop+9,iret)
+             if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'clwmr','read',istop+9,iret)
              if(diff_res)then
                 grid_b=reshape(rwork1d0,(/size(grid_b,1),size(grid_b,2)/))
                 vector(1)=.false.
@@ -905,7 +910,7 @@ contains
        deallocate(rwork1d0)
        deallocate(grid,grid_v)
        call nemsio_close(gfile,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),null,'close',istop+9,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),null,'close',istop+9,iret)
     end if
     deallocate(work,sub)
 
@@ -916,7 +921,7 @@ contains
 
   end subroutine read_atm_
 
-  subroutine read_sfc_(sfct,soil_moi,sno,soil_temp,veg_frac,fact10,sfc_rough, &
+  subroutine read_sfc_(mype,sfct,soil_moi,sno,soil_temp,veg_frac,fact10,sfc_rough, &
                        veg_type,soil_type,terrain,isli,use_sfc_any)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -932,6 +937,7 @@ contains
 !   2016-03-13  xuli     Modify to follow read_sfc in ncepgfs_io for more effective I/O
 !  
 !   input argument list:
+!     mype        - mpi task id
 !     use_sfc_any - true if any processor uses extra surface fields
 !
 !   output argument list:
@@ -952,7 +958,6 @@ contains
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-    use mpimod, only: mype
     use kinds, only: r_kind,i_kind,r_single
     use gridmod, only: nlat_sfc,nlon_sfc
     use guess_grids, only: nfldsfc,ifilesfc
@@ -962,6 +967,7 @@ contains
     implicit none
 
 !   Declare passed variables
+    integer(i_kind),                                       intent(in   ) :: mype
     logical,                                               intent(in   ) :: use_sfc_any
     real(r_single),  dimension(nlat_sfc,nlon_sfc,nfldsfc), intent(  out) :: sfct,soil_moi,sno,soil_temp,veg_frac,fact10,sfc_rough
     real(r_single),  dimension(nlat_sfc,nlon_sfc),         intent(  out) :: veg_type,soil_type,terrain
@@ -992,7 +998,7 @@ contains
 !-----------------------------------------------------------------------------
 
     call nemsio_init(iret=iret)
-    if (iret /= 0) call error_msg(trim(my_name),null,null,'init',istop,iret)
+    if (iret /= 0) call error_msg(mype,trim(my_name),null,null,'init',istop,iret)
 
     do it = 1, nfldsfc
 ! read a surface file on the task
@@ -1000,7 +1006,7 @@ contains
 200    format('sfcf',i2.2)
 
        call nemsio_open(gfile,filename,'READ',iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),null,'open',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),null,'open',istop,iret)
 
        call nemsio_getfilehead(gfile, idate=idate, iret=iret, nframe=nframe,   &
           nfhour=nfhour, nfminute=nfminute, nfsecondn=nfsecondn, nfsecondd=nfsecondd, &
@@ -1045,7 +1051,7 @@ contains
 
 !            Tsea
              call nemsio_readrecv(gfile, 'tmp', 'sfc', 1, rwork2d, iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'tmp','read',istop,iret)
+             if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'tmp','read',istop,iret)
              work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
              call tran_gfssfc(work,sfct(1,1,it),lonb,latb)
 
@@ -1053,7 +1059,7 @@ contains
 
 !            smc
              call nemsio_readrecv(gfile, 'smc', 'soil layer', 1, rwork2d, iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'smc','read',istop,iret)
+             if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'smc','read',istop,iret)
              work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
              call tran_gfssfc(work,soil_moi(1,1,it),lonb,latb)
 
@@ -1061,7 +1067,7 @@ contains
 
 !            sheleg
              call nemsio_readrecv(gfile, 'weasd','sfc', 1, rwork2d, iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'weasd','read',istop,iret)
+             if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'weasd','read',istop,iret)
              work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
              call tran_gfssfc(work,sno(1,1,it),lonb,latb)
 
@@ -1069,7 +1075,7 @@ contains
 
 !            stc
              call nemsio_readrecv(gfile, 'stc', 'soil layer', 1, rwork2d, iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'stc','read',istop,iret)
+             if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'stc','read',istop,iret)
              work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
              call tran_gfssfc(work,soil_temp(1,1,it),lonb,latb)
 
@@ -1077,7 +1083,7 @@ contains
 
 !            vfrac
              call nemsio_readrecv(gfile, 'veg',  'sfc', 1, rwork2d, iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'veg','read',istop,iret)
+             if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'veg','read',istop,iret)
              work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
              call tran_gfssfc(work,veg_frac(1,1,it),lonb,latb)
 
@@ -1085,7 +1091,7 @@ contains
 
 !            f10m
              call nemsio_readrecv(gfile, 'f10m', '10 m above gnd', 1, rwork2d, iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'f10m','read',istop,iret)
+             if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'f10m','read',istop,iret)
              work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
              call tran_gfssfc(work,fact10(1,1,it),lonb,latb)
 
@@ -1093,7 +1099,7 @@ contains
 
 !            zorl
              call nemsio_readrecv(gfile, 'sfcr', 'sfc', 1, rwork2d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'sfcr','read',istop,iret)
+             if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'sfcr','read',istop,iret)
              work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
              call tran_gfssfc(work,sfc_rough(1,1,it),lonb,latb)
 
@@ -1101,7 +1107,7 @@ contains
 
 !            vtype
              call nemsio_readrecv(gfile, 'vtype','sfc', 1, rwork2d, iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'vtype','read',istop,iret)
+             if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'vtype','read',istop,iret)
              work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
              call tran_gfssfc(work,veg_type,lonb,latb)
 
@@ -1109,7 +1115,7 @@ contains
 
 !            stype
              call nemsio_readrecv(gfile, 'sotyp','sfc', 1, rwork2d, iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'sotyp','read',istop,iret)
+             if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'sotyp','read',istop,iret)
              work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
              call tran_gfssfc(work,soil_type,lonb,latb)
 
@@ -1117,7 +1123,7 @@ contains
 
 !            orog
              call nemsio_readrecv(gfile, 'orog', 'sfc', 1, rwork2d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'orog','read',istop,iret)
+             if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'orog','read',istop,iret)
              work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
              call tran_gfssfc(work,terrain,lonb,latb)
 
@@ -1125,7 +1131,7 @@ contains
 
 !            slmsk
              call nemsio_readrecv(gfile, 'land', 'sfc', 1, rwork2d, iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'land','read',istop,iret)
+             if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'land','read',istop,iret)
              work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
              allocate(outtmp(latb+2,lonb))
              call tran_gfssfc(work,outtmp,lonb,latb)
@@ -1145,7 +1151,7 @@ contains
        deallocate(work,rwork2d)
 
        call nemsio_close(gfile,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),null,'close',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),null,'close',istop,iret)
 !
 !      Print date/time stamp
        if ( mype == 0 ) write(6, &
@@ -1155,7 +1161,7 @@ contains
     end do
   end subroutine read_sfc_
 
-  subroutine read_nemssfc_(iope,sfct,soil_moi,sno,soil_temp,veg_frac,fact10,sfc_rough, &
+  subroutine read_nemssfc_(iope,mype,sfct,soil_moi,sno,soil_temp,veg_frac,fact10,sfc_rough, &
                            veg_type,soil_type,terrain,isli,use_sfc_any)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -1169,6 +1175,7 @@ contains
 !
 !   input argument list:
 !     iope        - mpi task handling i/o
+!     mype        - mpi task id
 !     use_sfc_any - true if any processor uses extra surface fields
 !
 !   output argument list:
@@ -1192,12 +1199,12 @@ contains
     use kinds, only: r_kind,i_kind,r_single
     use gridmod, only: nlat_sfc,nlon_sfc
     use guess_grids, only: nfldsfc,sfcmod_mm5,sfcmod_gfs
-    use mpimod, only: mpi_itype,mpi_rtype4,mpi_comm_world,mype
+    use mpimod, only: mpi_itype,mpi_rtype4,mpi_comm_world
     use constants, only: zero
     implicit none
 
 !   Declare passed variables
-    integer(i_kind),                                       intent(in   ) :: iope
+    integer(i_kind),                                       intent(in   ) :: iope,mype
     logical,                                               intent(in   ) :: use_sfc_any
     real(r_single),  dimension(nlat_sfc,nlon_sfc,nfldsfc), intent(  out) :: sfct,soil_moi,sno,soil_temp,veg_frac,fact10,sfc_rough
     real(r_single),  dimension(nlat_sfc,nlon_sfc),         intent(  out) :: veg_type,soil_type,terrain
@@ -1210,7 +1217,7 @@ contains
 !   Read surface file on processor iope
     if(mype == iope)then
        write(*,*) 'read_sfc nemsio'
-       call read_sfc_(sfct,soil_moi,sno,soil_temp,veg_frac,fact10,sfc_rough, &
+       call read_sfc_(mype,sfct,soil_moi,sno,soil_temp,veg_frac,fact10,sfc_rough, &
                       veg_type,soil_type,terrain,isli,use_sfc_any)
     end if
 
@@ -1238,177 +1245,7 @@ contains
 
   end subroutine read_nemssfc_
 
-
-  subroutine read_sfc_anl_(isli_anl)
-!$$$  subprogram documentation block
-!                .      .    .                                       .
-! subprogram:    read_sfc_anl_     read nems surface file with analysis resolution
-!
-!   prgmmr: li            org: np23                date: 2016-08-18
-!
-! abstract: read nems surface file at analysis grids when nlon /= nlon_sfc or nlat /= nlat_sfc
-!
-! program history log:
-!  
-!   input argument list:
-!
-!   output argument list:
-!     isli      - sea/land/ice mask
-!
-! attributes:
-!   language: f90
-!   machine:  ibm RS/6000 SP
-!
-!$$$
-    use mpimod, only: mype
-    use kinds, only: r_kind,i_kind,r_single
-    use gridmod, only: nlat,nlon
-    use guess_grids, only: nfldsfc,ifilesfc
-    use constants, only: zero
-    use nemsio_module, only:  nemsio_init,nemsio_open,nemsio_close
-    use nemsio_module, only:  nemsio_gfile,nemsio_getfilehead,nemsio_readrecv
-    implicit none
-
-!   Declare passed variables
-    integer(i_kind), dimension(nlat,nlon),   intent(  out) :: isli_anl
-
-!   Declare local parameters
-    integer(i_kind),dimension(7):: idate
-    integer(i_kind),dimension(4):: odate
-
-
-!   Declare local variables
-    character(len=24)  :: filename
-    character(len=120) :: my_name = 'READ_NEMSSFC_ANL'
-    character(len=1)   :: null = ' '
-    integer(i_kind) :: i,j
-    integer(i_kind) :: iret, nframe, lonb, latb
-    integer(i_kind) :: nfhour, nfminute, nfsecondn, nfsecondd
-    real(r_single) :: fhour
-    integer(i_kind) :: istop = 102
-    real(r_single), allocatable, dimension(:)   :: rwork2d
-    real(r_single), allocatable, dimension(:,:) :: work,outtmp
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!  Define read variable property   !!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!
-    type(nemsio_gfile) :: gfile
-!-----------------------------------------------------------------------------
-
-    call nemsio_init(iret=iret)
-    if (iret /= 0) call error_msg(trim(my_name),null,null,'init',istop,iret)
-
-
-    filename='sfcf06_anlgrid'
-    call nemsio_open(gfile,trim(filename),'READ',iret=iret)
-    if (iret /= 0) call error_msg(trim(my_name),trim(filename),null,'open',istop,iret)
-
-    call nemsio_getfilehead(gfile, idate=idate, iret=iret, nframe=nframe,   &
-       nfhour=nfhour, nfminute=nfminute, nfsecondn=nfsecondn, nfsecondd=nfsecondd, &
-       dimx=lonb, dimy=latb )
-
-    if( nframe /= 0 ) then
-       if ( mype == 0 ) &
-       write(6,*)trim(my_name),': ***ERROR***  nframe /= 0 for global model read, nframe = ', nframe
-       call stop2(102)
-    end if
-
-    fhour = float(nfhour) + float(nfminute)/r60 + float(nfsecondn)/float(nfsecondd)/r3600
-    odate(1) = idate(4)  !hour
-    odate(2) = idate(2)  !month
-    odate(3) = idate(3)  !day
-    odate(4) = idate(1)  !year
-
-    if ( (latb /= nlat-2) .or. (lonb /= nlon) ) then
-       if ( mype == 0 ) write(6, &
-          '(a,'': inconsistent spatial dimension '',''nlon,nlatm2 = '',2(i4,tr1),''-vs- sfc file lonb,latb = '',i4)') &
-          trim(my_name),nlon,nlat-2,lonb,latb
-       call stop2(102)
-    endif
-!
-!   Read the surface records (lonb, latb)  and convert to GSI array pattern (nlat,nlon)
-!   Follow the read order sfcio in ncepgfs_io
-!
-    allocate(work(lonb,latb))
-    allocate(rwork2d(size(work,1)*size(work,2)))
-    work    = zero
-    rwork2d = zero
-
-!   slmsk
-    call nemsio_readrecv(gfile, 'land', 'sfc', 1, rwork2d, iret=iret)
-    if (iret /= 0) call error_msg(trim(my_name),trim(filename),'land','read',istop,iret)
-    work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
-    allocate(outtmp(latb+2,lonb))
-    call tran_gfssfc(work,outtmp,lonb,latb)
-    do j=1,lonb
-       do i=1,latb+2
-          isli_anl(i,j) = nint(outtmp(i,j))
-       end do
-    end do
-    deallocate(outtmp)
-
-!   Deallocate local work arrays
-    deallocate(work,rwork2d)
-
-    call nemsio_close(gfile,iret=iret)
-    if (iret /= 0) call error_msg(trim(my_name),trim(filename),null,'close',istop,iret)
-!
-!   Print date/time stamp
-    if ( mype == 0 ) write(6, &
-       '(a,'': read_sfc_anl_ ,nlon,nlat= '',2i6,'',hour= '',f4.1,'',idate= '',4i5)') &
-       trim(my_name),lonb,latb,fhour,odate
-  end subroutine read_sfc_anl_
-
-  subroutine read_nemssfc_anl_(iope,isli_anl)
-!$$$  subprogram documentation block
-!                .      .    .                                       .
-! subprogram:    read_nemssfc_anl     read nems surface guess file with analysis resolution
-!
-!   prgmmr: xuli          org: np23                date: 2016-08-18
-!
-! abstract: read nems surface file at analysis grids
-!
-! program history log:
-!
-!   input argument list:
-!     iope        - mpi task handling i/o
-!
-!   output argument list:
-!     isli      - sea/land/ice mask
-!
-! attributes:
-!   language: f90
-!   machine:  ibm RS/6000 SP
-!
-!$$$
-    use kinds, only: r_kind,i_kind,r_single
-    use gridmod, only: nlat,nlon
-    use mpimod, only: mpi_itype,mpi_comm_world,mype
-    implicit none
-
-!   Declare passed variables
-    integer(i_kind),                               intent(in   ) :: iope
-    integer(i_kind), dimension(nlat,nlon),         intent(  out) :: isli_anl
-
-
-!   Declare local variables
-    integer(i_kind):: iret,npts
-
-!-----------------------------------------------------------------------------
-!   Read surface file on processor iope
-    if(mype == iope)then
-       call read_sfc_anl_(isli_anl)
-       write(*,*) 'read_sfc nemsio'
-    end if
-
-!   Load onto all processors
-    npts=nlat*nlon
-    call mpi_bcast(isli_anl,npts,mpi_itype,iope,mpi_comm_world,iret)
-
-  end subroutine read_nemssfc_anl_
-
-  subroutine read_nst_ (tref,dt_cool,z_c,dt_warm,z_w,c_0,c_d,w_0,w_d)
+  subroutine read_nst_ (mype,tref,dt_cool,z_c,dt_warm,z_w,c_0,c_d,w_0,w_d)
 
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -1423,6 +1260,7 @@ contains
 !   2016-03-13  Li       Modify for more effective I/O
 !
 !   input argument list:
+!     mype     - mpi task id
 !
 !   output argument list:
 !   tref     (:,:)                ! oceanic foundation temperature
@@ -1441,7 +1279,6 @@ contains
 !
 !$$$
     use kinds, only: r_kind,i_kind,r_single
-    use mpimod, only: mype
     use gridmod, only: nlat_sfc,nlon_sfc
     use constants, only: zero,two
     use guess_grids, only: nfldnst,ifilenst
@@ -1450,6 +1287,7 @@ contains
     implicit none
 
 !   Declare passed variables
+    integer(i_kind),                                       intent(in   ) :: mype
     real(r_single) , dimension(nlat_sfc,nlon_sfc,nfldnst), intent(  out) ::  &
          tref,dt_cool,z_c,dt_warm,z_w,c_0,c_d,w_0,w_d
 !   Declare local parameters
@@ -1478,7 +1316,7 @@ contains
 !-----------------------------------------------------------------------------
 
     call nemsio_init(iret=iret)
-    if (iret /= 0) call error_msg(trim(my_name),null,null,'init',istop,iret)
+    if (iret /= 0) call error_msg(mype,trim(my_name),null,null,'init',istop,iret)
 
 
     do it=1,nfldnst
@@ -1486,7 +1324,7 @@ contains
        write(filename,200)ifilenst(it)
 200    format('nstf',i2.2)
        call nemsio_open(gfile,trim(filename),'READ',iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),null,'open',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),null,'open',istop,iret)
 
        call nemsio_getfilehead(gfile, idate=idate, iret=iret, nframe=nframe,   &
           nfhour=nfhour, nfminute=nfminute, nfsecondn=nfsecondn, nfsecondd=nfsecondd, &
@@ -1521,55 +1359,55 @@ contains
 
 !      Tref
        call nemsio_readrecv(gfile, 'tref', 'sfc', 1, rwork2d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),'tref','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'tref','read',istop,iret)
        work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
        call tran_gfssfc(work,tref(1,1,it),lonb,latb)
 
 !      dt_cool
        call nemsio_readrecv(gfile, 'dtcool','sfc', 1, rwork2d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),'dt_cool','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'dt_cool','read',istop,iret)
        work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
        call tran_gfssfc(work,dt_cool(1,1,it),lonb,latb)
 
 !      z_c
        call nemsio_readrecv(gfile, 'zc',  'sfc', 1, rwork2d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),'z_c','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'z_c','read',istop,iret)
        work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
        call tran_gfssfc(work,z_c(1,1,it),lonb,latb)
 
 !      xt
        call nemsio_readrecv(gfile, 'xt',   'sfc', 1, rwork2d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),'xt','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'xt','read',istop,iret)
        work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
        call tran_gfssfc(work,xt(1,1,it),lonb,latb)
 
 !      xz
        call nemsio_readrecv(gfile, 'xz',   'sfc', 1, rwork2d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),'xz','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'xz','read',istop,iret)
        work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
        call tran_gfssfc(work,z_w(1,1,it),lonb,latb)
 !
 !      c_0
        call nemsio_readrecv(gfile, 'c0',  'sfc', 1, rwork2d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),'c_0','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'c_0','read',istop,iret)
        work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
        call tran_gfssfc(work,c_0(1,1,it),lonb,latb)
 
 !      c_d
        call nemsio_readrecv(gfile, 'cd',  'sfc', 1, rwork2d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),'c_d','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'c_d','read',istop,iret)
        work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
        call tran_gfssfc(work,c_d(1,1,it),lonb,latb)
 
 !      w_0
        call nemsio_readrecv(gfile, 'w0',  'sfc', 1, rwork2d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),'w_0','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'w_0','read',istop,iret)
        work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
        call tran_gfssfc(work,w_0(1,1,it),lonb,latb)
 
 !      w_d
        call nemsio_readrecv(gfile, 'wd',  'sfc', 1, rwork2d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),'w_d','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'w_d','read',istop,iret)
        work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
        call tran_gfssfc(work,w_d(1,1,it),lonb,latb)
 
@@ -1582,13 +1420,13 @@ contains
        deallocate(work,rwork2d)
 
        call nemsio_close(gfile,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),null,'close',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),null,'close',istop,iret)
 !   End of loop over time levels
     end do
   end subroutine read_nst_
 
 
-  subroutine read_nemsnst_ (iope,tref,dt_cool,z_c,dt_warm,z_w,c_0,c_d,w_0,w_d)
+  subroutine read_nemsnst_ (iope,mype,tref,dt_cool,z_c,dt_warm,z_w,c_0,c_d,w_0,w_d)
 
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -1599,6 +1437,7 @@ contains
 !
 !   input argument list:
 !     iope     - mpi task handling i/o
+!     mype     - mpi task id
 !
 !   output argument list:
 !   tref     (:,:)                        ! oceanic foundation temperature
@@ -1620,12 +1459,11 @@ contains
     use gridmod, only: nlat_sfc,nlon_sfc
     use guess_grids, only: nfldnst
     use mpimod, only: mpi_itype,mpi_rtype4,mpi_comm_world
-    use mpimod, only: mype
     use constants, only: zero
     implicit none
 
 !   Declare passed variables
-    integer(i_kind),                                      intent(in   ) :: iope
+    integer(i_kind),                                      intent(in   ) :: iope,mype
     real(r_single), dimension(nlat_sfc,nlon_sfc,nfldnst), intent(  out) :: &
                     tref,dt_cool,z_c,dt_warm,z_w,c_0,c_d,w_0,w_d
 
@@ -1636,7 +1474,7 @@ contains
 !   Read nst file on processor iope
     if(mype == iope)then
        write(*,*) 'read_nst nemsio'
-       call read_nst_(tref,dt_cool,z_c,dt_warm,z_w,c_0,c_d,w_0,w_d)
+       call read_nst_(mype,tref,dt_cool,z_c,dt_warm,z_w,c_0,c_d,w_0,w_d)
     end if
 
 !   Load onto all processors
@@ -1656,8 +1494,9 @@ contains
 
   end subroutine read_nemsnst_
 
-
-  subroutine write_atm_ (grd,sp_a,filename,mype_out,gfs_bundle,ibin)
+  subroutine write_atm_ (grd,sp_a,filename,mype,mype_out,sub_ps,&
+       sub_tv,sub_q,sub_oz,sub_cwmr,sub_prsl,&
+       sub_u,sub_v,sub_prsi,ibin)
 
 !$$$  subprogram documentation block
 !                .      .    .
@@ -1675,12 +1514,20 @@ contains
 !   2011-02-14  Huang    Re-arrange the write sequence to be same as model
 !                        read/rite sequence.
 !   2013-10-25  todling  reposition load_grid to commvars
-!   2016-07-28  mahajan  update with bundling ability
 !
 !   input argument list:
 !     filename  - file to open and write to
+!     mype      - mpi task number
 !     mype_out  - mpi task to write output file
-!    gfs_bundle - bundle containing fields on subdomains
+!     sub_ps    - surface pressure on subdomains
+!     sub_tv    - virtual temperature on subdomains
+!     sub_q     - specific humidity on subdomains
+!     sub_oz    - ozone on subdomains
+!     sub_cwmr  - cloud condensate mixing ratio on subdomains
+!     sub_prsl  - layer midpoint pressure
+!     sub_u     - zonal wind
+!     sub_v     - meridional wind
+!     sub_prsi  - interface  pressure
 !     ibin      - time bin
 !
 !   output argument list:
@@ -1699,10 +1546,9 @@ contains
     use mpimod, only: mpi_rtype
     use mpimod, only: mpi_comm_world
     use mpimod, only: ierror
-    use mpimod, only: npe,mype
+    use mpimod, only: npe
     
     use guess_grids, only: ifilesig
-    use guess_grids, only: ges_prsl,ges_prsi
     
     use gridmod, only: ntracer
     use gridmod, only: ncloud
@@ -1719,44 +1565,46 @@ contains
     use general_sub2grid_mod, only: sub2grid_info
     use egrid2agrid_mod,only: g_egrid2agrid,g_create_egrid2agrid,egrid2agrid_parm,destroy_egrid2agrid
     use constants, only: two,pi,half,deg2rad
-    use gsi_bundlemod, only: gsi_bundle
-    use gsi_bundlemod, only: gsi_bundlegetpointer
   
     implicit none
 
 ! !INPUT PARAMETERS:
 
-    type(sub2grid_info), intent(in) :: grd
-    type(spec_vars),     intent(in) :: sp_a
-    character(len=24),   intent(in) :: filename  ! file to open and write to
-    integer(i_kind),     intent(in) :: mype_out  ! mpi task to write output file
-    type(gsi_bundle),    intent(in) :: gfs_bundle
-    integer(i_kind),     intent(in) :: ibin      ! time bin
+    character(len=24)                          ,intent(in   ) :: filename     ! file to open and write to
+
+    integer(i_kind)                            ,intent(in   ) :: mype      ! mpi task number
+    integer(i_kind)                            ,intent(in   ) :: mype_out  ! mpi task to write output file
+    integer(i_kind)                            ,intent(in   ) :: ibin      ! time bin
+    
+    real(r_kind),parameter:: r0_001 = 0.001_r_kind
+    type(sub2grid_info)                    ,intent(in   ) :: grd
+    real(r_kind),dimension(grd%lat2,grd%lon2)          ,intent(in   ) :: sub_ps   ! surface pressure on subdomains
+    real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig)     ,intent(in   ) :: sub_tv   ! virtual temperature on subdomains
+    real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig)     ,intent(in   ) :: sub_q    ! specific humidity on subdomains
+    real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig)     ,intent(in   ) :: sub_oz   ! ozone on subdomains
+    real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig)     ,intent(in   ) :: sub_cwmr ! cloud condensate mixing ratio on subdomains
+    real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig)     ,intent(in   ) :: sub_prsl ! layer midpoint pressure
+    real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig)     ,intent(in   ) :: sub_u    ! zonal wind
+    real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig)     ,intent(in   ) :: sub_v    ! meridional wind
+    real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig+1)   ,intent(in   ) :: sub_prsi ! interface  pressure
+    type(spec_vars)                        ,intent(in   ) :: sp_a
 
 !-------------------------------------------------------------------------
 
-    real(r_kind),parameter:: r0_001 = 0.001_r_kind
     character(6):: fname_ges
     character(len=120) :: my_name = 'WRITE_NEMSATM'
     character(len=1)   :: null = ' '
     integer(i_kind),dimension(7):: idate, jdate
     integer(i_kind),dimension(4):: odate
     integer(i_kind) :: k, mm1, nlatm2, nord_int, i, j, kk
-    integer(i_kind) :: iret, lonb, latb, levs, istatus
+    integer(i_kind) :: iret, lonb, latb, levs
     integer(i_kind) :: nfhour, nfminute, nfsecondn, nfsecondd
     integer(i_kind) :: istop = 104
     integer(i_kind),dimension(5):: mydate
     integer(i_kind),dimension(8) :: ida,jda
     real(r_kind),dimension(5)    :: fha
     real(r_kind)    :: fhour
-
-    real(r_kind),pointer,dimension(:,:) :: sub_ps
-    real(r_kind),pointer,dimension(:,:,:) :: sub_u,sub_v,sub_tv
-    real(r_kind),pointer,dimension(:,:,:) :: sub_q,sub_oz,sub_cwmr
     
-    real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig) :: sub_prsl
-    real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig+1) :: sub_prsi
-
     real(r_kind),dimension(grd%lat1*grd%lon1)     :: psm
     real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig):: sub_dp
     real(r_kind),dimension(grd%lat1*grd%lon1,grd%nsig):: tvsm,prslm, usm, vsm
@@ -1779,58 +1627,41 @@ contains
     nlatm2=grd%nlat-2
     diff_res=.false.
 
-    istatus=0
-    call gsi_bundlegetpointer(gfs_bundle,'ps', sub_ps,  iret); istatus=istatus+iret
-    call gsi_bundlegetpointer(gfs_bundle,'u',  sub_u,   iret); istatus=istatus+iret
-    call gsi_bundlegetpointer(gfs_bundle,'v',  sub_v,   iret); istatus=istatus+iret
-    call gsi_bundlegetpointer(gfs_bundle,'tv', sub_tv,  iret); istatus=istatus+iret
-    call gsi_bundlegetpointer(gfs_bundle,'q',  sub_q,   iret); istatus=istatus+iret
-    call gsi_bundlegetpointer(gfs_bundle,'oz', sub_oz,  iret); istatus=istatus+iret
-    call gsi_bundlegetpointer(gfs_bundle,'cw', sub_cwmr,iret); istatus=istatus+iret
-    if ( istatus /= 0 ) then
-       if ( mype == 0 ) then
-         write(6,*) 'write_atm_: ERROR'
-         write(6,*) 'Missing some of the required fields'
-         write(6,*) 'Aborting ... '
-      endif
-      call stop2(999)
-    endif
-
-    if ( sp_a%jcap /= jcap_b ) then
-        if ( mype == 0 ) write(6, &
-            '('' dual resolution for nems sp_a%jcap,jcap_b = '',2i6)') &
-            sp_a%jcap,jcap_b
-        diff_res = .true.
-    endif
+    if(sp_a%jcap /= jcap_b) then
+       if ( mype == 0 ) write(6, &
+          '('' dual resolution for nems sp_a%jcap,jcap_b = '',2i6)') &
+          sp_a%jcap,jcap_b
+        diff_res=.true.
+    end if
 
 
-    ! Single task writes analysis data to analysis file
-    if ( mype == mype_out ) then
+!   Single task writes analysis data to analysis file
+    if (mype==mype_out) then
        write(fname_ges,'(''sigf'',i2.2)') ifilesig(ibin)
-
-       ! Read header information from first guess file.
+!
+!      Read header information from first guess file.
        call nemsio_init(iret)
-       if ( iret /= 0 ) call error_msg(trim(my_name),null,null,'init',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),null,null,'init',istop,iret)
 
        call nemsio_open(gfile,trim(fname_ges),'read',iret)
-       if ( iret /= 0 ) call error_msg(trim(my_name),trim(fname_ges),null,'open',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_ges),null,'open',istop,iret)
 
-       call nemsio_getfilehead(gfile, iret=iret, nfhour=nfhour, &
-            nfminute=nfminute, nfsecondn=nfsecondn, nfsecondd=nfsecondd, &
-            idate=idate, dimx=lonb, dimy=latb, dimz=levs)
-       if ( iret /= 0 ) then
-          write(6,*) trim(my_name),': problem with nemsio_getfilehead, Status = ',iret
+       call nemsio_getfilehead(gfile, iret=iret, nfhour=nfhour,        &
+          nfminute=nfminute, nfsecondn=nfsecondn, nfsecondd=nfsecondd, &
+          idate=idate, dimx=lonb, dimy=latb, dimz=levs )
+       if ( iret/=0 ) then
+          write(6,*)trim(my_name),': problem with nemsio_getfilehead, Status = ',iret
           call stop2(103)
-       endif
-       if ( levs /= grd%nsig ) then
-          write(6,*) trim(my_name),': problem in data dimension background levs = ',levs,' nsig = ',grd%nsig
+       end if
+       if(levs/=grd%nsig) then
+          write(6,*)trim(my_name),': problem in data dimension background levs = ',levs,' nsig = ',grd%nsig
           call stop2(103)
-       endif
+       end if
 
-       ! copy input header info to output header info
+!      copy input header info to output header info
        gfileo=gfile
  
-       ! Update header information (with ibdate) and write it to analysis file (w/ _open statement).
+!      Update header information (with ibdate) and write it to analysis file (w/ _open statement).
        mydate=ibdate
        fha(:)=zero ; ida=0; jda=0
        fha(2)=real(nhr_obsbin*(ibin-1))  ! relative time interval in hours
@@ -1840,7 +1671,7 @@ contains
        ida(4)=0         ! time zone
        ida(5)=mydate(4) ! hour
 
-       ! Move date-time forward by nhr_assimilation hours
+   ! Move date-time forward by nhr_assimilation hours
        call w3movdat(fha,ida,jda)
 
        jdate(1) = jda(1)     ! analysis year
@@ -1861,18 +1692,18 @@ contains
        odate(2) = jdate(2)  !month
        odate(3) = jdate(3)  !day
        odate(4) = jdate(1)  !year
-
-       ! open new output file with new header gfileo with "write" access. 
-       ! Use this call to update header as well
-
+!
+!      open new output file with new header gfileo with "write" access. 
+!      Use this call to update header as well
+!
        call nemsio_open(gfileo,trim(filename),'write',iret=iret, &
           idate=jdate, nfhour=nfhour, nfminute=nfminute, &
           nfsecondn=nfsecondn, nfsecondd=nfsecondd)
-       if ( iret /= 0 ) call error_msg(trim(my_name),trim(filename),null,'open',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(filename),null,'open',istop,iret)
 
-       ! Allocate structure arrays to hold data
+!      Allocate structure arrays to hold data
        allocate(rwork1d(latb*lonb),rwork1d1(latb*lonb))
-       if ( diff_res ) then
+       if(diff_res)then
           allocate( grid_b(lonb,latb),grid_c(latb+2,lonb,1),grid3(grd%nlat,grd%nlon,1))
           allocate( grid_b2(lonb,latb),grid_c2(latb+2,lonb,1))
           allocate( rlats(latb+2),rlons(lonb),clons(lonb),slons(lonb),r4lats(lonb*latb),r4lons(lonb*latb))
@@ -1880,16 +1711,16 @@ contains
           call nemsio_getfilehead(gfile,lon=r4lons,iret=iret)
           do j=1,latb
             rlats(latb+2-j)=deg2rad*r4lats(lonb/2+(j-1)*lonb)
-          enddo
+          end do
           rlats(1)=-half*pi
           rlats(latb+2)=half*pi
           do j=1,lonb
             rlons(j)=deg2rad*r4lons(j)
-          enddo
+          end do
           do j=1,lonb
              clons(j)=cos(rlons(j))
              slons(j)=sin(rlons(j))
-          enddo
+          end do
 
           nord_int=4
           eqspace=.false.
@@ -1901,25 +1732,22 @@ contains
                                 nord_int,p_high,.false.,eqspace=eqspace)
 
           deallocate(rlats,rlons,r4lats,r4lons)
-       endif ! if ( diff_res )
+       end if
 
-       !   Terrain
-       !   Write out input file surface height
+!   Terrain
+!   Write out input file surface height
 
        call nemsio_readrecv(gfile,'hgt', 'sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),'hgt','writeread',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(filename),'hgt','writeread',istop,iret)
        call nemsio_writerecv(gfileo,'hgt','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),'hgt','write',istop,iret)
-    endif ! if ( mype == mype_out )
-
-    sub_prsl = ges_prsl(:,:,:,ibin)
-    sub_prsi = ges_prsi(:,:,:,ibin)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(filename),'hgt','write',istop,iret)
+    end if
 
     do k=1,grd%nsig
-       sub_dp(:,:,k) = sub_prsi(:,:,k) - sub_prsi(:,:,k+1)
+       sub_dp(:,:,k) = sub_prsi(:,:,k)-sub_prsi(:,:,k+1)
     end do
 
-    ! Strip off boundary points from subdomains
+!   Strip off boundary points from subdomains
     call strip(sub_ps  ,psm)
     call strip(sub_tv  ,tvsm  ,grd%nsig)
     call strip(sub_q   ,qsm   ,grd%nsig)
@@ -1929,24 +1757,23 @@ contains
     call strip(sub_prsl,prslm ,grd%nsig)
     call strip(sub_u   ,usm   ,grd%nsig)
     call strip(sub_v   ,vsm   ,grd%nsig)
-
-    ! Thermodynamic variable
-    ! The GSI analysis variable is virtual temperature (Tv).   For NEMSIO
-    ! output we need the sensible temperature.
-
-    ! Convert Tv to T
+!
+!   Thermodynamic variable
+!   The GSI analysis variable is virtual temperature (Tv).   For NEMSIO
+!   output we need the sensible temperature.
+!
+!   Convert Tv to T
     tvsm = tvsm/(one+fv*qsm)
+!   Generate and write analysis fields
 
-    ! Generate and write analysis fields
-
-    ! Surface pressure.  
+!   Surface pressure.  
     call mpi_gatherv(psm,grd%ijn(mm1),mpi_rtype,&
          work1,grd%ijn,grd%displs_g,mpi_rtype,&
          mype_out,mpi_comm_world,ierror)
     if (mype==mype_out) then
        if(diff_res)then
           call nemsio_readrecv(gfile,'pres','sfc',1,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'pres','read',istop,iret)
+          if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'pres','read',istop,iret)
           rwork1d1 = r0_001*rwork1d
           grid_b=reshape(rwork1d1,(/size(grid_b,1),size(grid_b,2)/))
           vector(1)=.false.
@@ -1971,7 +1798,7 @@ contains
           rwork1d = reshape(grid,(/size(rwork1d)/))
        end if
        call nemsio_writerecv(gfileo,'pres','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),'psfc','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(filename),'psfc','write',istop,iret)
     endif
 
 !   u, v
@@ -2024,12 +1851,12 @@ contains
              rwork1d1 = reshape(grid,(/size(rwork1d1)/))
           end if
 
-          ! Zonal wind
+!   Zonal wind
           call nemsio_writerecv(gfileo,'ugrd','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ugrd','write',istop,iret)
-          ! Meridional wind
+          if (iret /= 0) call error_msg(0,trim(my_name),trim(filename),'ugrd','write',istop,iret)
+!   Meridional wind
           call nemsio_writerecv(gfileo,'vgrd','mid layer',k,rwork1d1,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'vgrd','write',istop,iret)
+          if (iret /= 0) call error_msg(0,trim(my_name),trim(filename),'vgrd','write',istop,iret)
        endif
     end do
 
@@ -2041,7 +1868,7 @@ contains
        if (mype == mype_out) then
           if(diff_res)then
              call nemsio_readrecv(gfile,'tmp','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'pres','read',istop,iret)
+             if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'pres','read',istop,iret)
              grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
              vector(1)=.false.
              call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
@@ -2063,7 +1890,7 @@ contains
              rwork1d = reshape(grid,(/size(rwork1d)/))
           end if
           call nemsio_writerecv(gfileo,'tmp','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'tmp','write',istop,iret)
+          if (iret /= 0) call error_msg(0,trim(my_name),trim(filename),'tmp','write',istop,iret)
        endif
     end do
 
@@ -2075,7 +1902,7 @@ contains
        if (mype == mype_out) then
           if(diff_res)then
              call nemsio_readrecv(gfile,'spfh','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'pres','read',istop,iret)
+             if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'pres','read',istop,iret)
              grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
              vector(1)=.false.
              call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
@@ -2097,7 +1924,7 @@ contains
              rwork1d = reshape(grid,(/size(rwork1d)/))
           end if
           call nemsio_writerecv(gfileo,'spfh','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'spfh','write',istop,iret)
+          if (iret /= 0) call error_msg(0,trim(my_name),trim(filename),'spfh','write',istop,iret)
        endif
     end do
 
@@ -2109,7 +1936,7 @@ contains
        if (mype == mype_out) then
           if(diff_res)then
              call nemsio_readrecv(gfile,'o3mr','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'pres','read',istop,iret)
+             if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'pres','read',istop,iret)
              grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
              vector(1)=.false.
              call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
@@ -2131,7 +1958,7 @@ contains
              rwork1d = reshape(grid,(/size(rwork1d)/))
           end if
           call nemsio_writerecv(gfileo,'o3mr','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'o3mr','write',istop,iret)
+          if (iret /= 0) call error_msg(0,trim(my_name),trim(filename),'o3mr','write',istop,iret)
        endif
     end do
        
@@ -2144,7 +1971,7 @@ contains
           if (mype == mype_out) then
              if(diff_res)then
                 call nemsio_readrecv(gfile,'clwmr','mid layer',k,rwork1d,iret=iret)
-                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'pres','read',istop,iret)
+                if (iret /= 0) call error_msg(mype,trim(my_name),trim(filename),'pres','read',istop,iret)
                 grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
                 vector(1)=.false.
                 call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
@@ -2166,7 +1993,7 @@ contains
                 rwork1d = reshape(grid,(/size(rwork1d)/))
              endif
              call nemsio_writerecv(gfileo,'clwmr','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'clwmr','write',istop,iret)
+             if (iret /= 0) call error_msg(0,trim(my_name),trim(filename),'clwmr','write',istop,iret)
           end if
        end do
     endif
@@ -2176,10 +2003,10 @@ contains
     if (mype==mype_out) then
        if(diff_res) deallocate(grid_b,grid_b2,grid_c,grid_c2,grid3,clons,slons)
        call nemsio_close(gfile,iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_ges),null,'close',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_ges),null,'close',istop,iret)
 
        call nemsio_close(gfileo,iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),null,'close',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(filename),null,'close',istop,iret)
 !
 ! Deallocate local array
 !
@@ -2191,7 +2018,7 @@ contains
 
   end subroutine write_atm_
 
-  subroutine write_sfc_ (filename,mype_sfc,dsfct)
+  subroutine write_sfc_ (filename,mype,mype_sfc,dsfct)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    write_nemssfc --- Write surface analysis to file
@@ -2221,6 +2048,7 @@ contains
 !   input argument list:
 !     filename  - file to open and write to
 !     dsfct     - delta skin temperature
+!     mype      - mpi task number
 !     mype_sfc  - mpi task to write output file
 !
 !   output argument list:
@@ -2237,7 +2065,6 @@ contains
     use mpimod, only: mpi_rtype
     use mpimod, only: mpi_comm_world
     use mpimod, only: ierror
-    use mpimod, only: mype
     
     use gridmod, only: nlat,nlon
     use gridmod, only: lat1,lon1
@@ -2264,6 +2091,7 @@ contains
 
     real(r_kind),dimension(lat2,lon2),intent(in   ) :: dsfct   ! delta skin temperature
 
+    integer(i_kind)                  ,intent(in   ) :: mype     ! mpi task number
     integer(i_kind)                  ,intent(in   ) :: mype_sfc ! mpi task to write output file
 
 ! !OUTPUT PARAMETERS:
@@ -2328,10 +2156,10 @@ contains
 
 !      Read surface guess file
        call nemsio_init(iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),null,null,'init',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),null,null,'init',istop,iret)
 
        call nemsio_open(gfile,fname_ges,'read',iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_ges),null,'open',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_ges),null,'open',istop,iret)
 !
        call nemsio_getfilehead(gfile, nrec=nrec, idate=idate, dimx=lonb, &
           dimy=latb, nfhour=nfhour, nfminute=nfminute, nfsecondn=nfsecondn, &
@@ -2368,7 +2196,7 @@ contains
                          ! need to do this before nemsio_close(gfile)
        call nemsio_open(gfileo,filename,'write',iret=iret, idate=jdate, nfhour=nfhour,&
           nfminute=nfminute, nfsecondn=nfsecondn, nfsecondd=nfsecondd )
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),null,'open',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(filename),null,'open',istop,iret)
 !
 !      First copy entire data from fname_ges to filename, then do selective update
 !
@@ -2388,7 +2216,7 @@ contains
 !
 
        call nemsio_readrecv(gfile,'tmp','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_ges),'tmp','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_ges),'tmp','read',istop,iret)
        tsea=reshape(rwork1d,(/size(tsea,1),size(tsea,2)/))
 
        if ( (latb /= nlatm2) .or. (lonb /= nlon) ) then
@@ -2411,21 +2239,21 @@ contains
 
 !      update tsea record
        call nemsio_writerecv(gfileo,'tmp','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),'tmp','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(filename),'tmp','write',istop,iret)
        deallocate(rwork1d)
 
        call nemsio_close(gfile, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_ges),null,'close',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_ges),null,'close',istop,iret)
 
        call nemsio_close(gfileo,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),null,'close',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(filename),null,'close',istop,iret)
 
        write(6,'(a,'': sfc anal written for lonb,latb= '',2i6,'',valid hour= '',f4.1,'',idate= '',4i5)') &
           trim(my_name),lonb,latb,fhour,odate
     endif
   end subroutine write_sfc_
 
-  subroutine write_sfc_nst_ (mype_so,dsfct)
+  subroutine write_sfc_nst_ (mype,mype_so,dsfct)
 
 !$$$  subprogram documentation block
 !                .      .    .
@@ -2453,6 +2281,7 @@ contains
 !
 !   input argument list:
 !     dsfct     - delta skin temperature
+!     mype      - mpi task number
 !     mype_so   - mpi task to write output file
 !
 !   output argument list:
@@ -2469,7 +2298,6 @@ contains
     use mpimod, only: mpi_rtype,mpi_itype
     use mpimod, only: mpi_comm_world
     use mpimod, only: ierror
-    use mpimod, only: mype
     
     use gridmod, only: nlat,nlon
     use gridmod, only: lat1,lon1
@@ -2488,7 +2316,7 @@ contains
     use constants, only: zero_single
     
     use guess_grids, only: isli2
-    use gsi_nstcouplermod, only: nst_gsi,zsea1,zsea2
+    use radinfo, only: nst_gsi,zsea1,zsea2
     use gridmod, only: rlats,rlons,rlats_sfc,rlons_sfc
 
     use nemsio_module, only:  nemsio_init,nemsio_open,nemsio_close,nemsio_readrecv
@@ -2500,6 +2328,7 @@ contains
 ! !INPUT PARAMETERS:
 
     real(r_kind),dimension(lat2,lon2),intent(in   ) :: dsfct     ! delta skin temperature
+    integer(i_kind)                  ,intent(in   ) :: mype      ! mpi task number
     integer(i_kind)                  ,intent(in   ) :: mype_so   ! mpi task to write output file
 
 ! !OUTPUT PARAMETERS:
@@ -2604,17 +2433,17 @@ contains
 
 !      Initiate nemsio
        call nemsio_init(iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),null,null,'init',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),null,null,'init',istop,iret)
 
 !      open nsst guess file
        call nemsio_open(gfile_nstges,trim(fname_nstges),'read',iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstges),null,'open',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstges),null,'open',istop,iret)
 !      open surface guess file
        call nemsio_open(gfile_sfcges,trim(fname_sfcges),'read',iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_sfcges),null,'open',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_sfcges),null,'open',istop,iret)
 !      open surface gcycle file
        call nemsio_open(gfile_sfcgcy,trim(fname_sfcgcy),'read',iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_sfcgcy),null,'open',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_sfcgcy),null,'open',istop,iret)
 
 !      read a few surface guess file header records
        call nemsio_getfilehead(gfile_sfcges, nrec=nrec_sfc, idate=idate, &
@@ -2644,12 +2473,12 @@ contains
 
 !      read slmsk in fname_sfcges to get slmsk_ges
        call nemsio_readrecv(gfile_sfcges, 'land', 'sfc', 1, rwork1d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_sfcges),'land','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_sfcges),'land','read',istop,iret)
        slmsk_ges=reshape(rwork1d,(/size(slmsk_ges,1),size(slmsk_ges,2)/))
 
 !      read slmsk in fname_sfcgcy to get slmsk_anl
        call nemsio_readrecv(gfile_sfcgcy, 'land', 'sfc', 1, rwork1d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_sfcgcy),'land','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_sfcgcy),'land','read',istop,iret)
        slmsk_anl=reshape(rwork1d,(/size(slmsk_anl,1),size(slmsk_anl,2)/))
 !
 !      Replace header record date with analysis time from iadate
@@ -2728,13 +2557,13 @@ contains
 !      open nemsio sfcanl                                        
        call nemsio_open(gfile_sfcanl,trim(fname_sfcanl),'write',iret=iret, idate=jdate, nfhour=nfhour,&
           nfminute=nfminute, nfsecondn=nfsecondn, nfsecondd=nfsecondd )
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_sfcanl),null,'open',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_sfcanl),null,'open',istop,iret)
 
        gfile_sfctsk=gfile_sfcgcy         
 !      open nemsio sfctsk                                        
        call nemsio_open(gfile_sfctsk,trim(fname_sfctsk),'write',iret=iret, idate=jdate, nfhour=nfhour,&
           nfminute=nfminute, nfsecondn=nfsecondn, nfsecondd=nfsecondd )
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_sfctsk),null,'open',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_sfctsk),null,'open',istop,iret)
 !
 !      copy input header info to output header info for nstanl, need to do this before nemsio_close(gfile)
 ! 
@@ -2742,7 +2571,7 @@ contains
 !      open nemsio nstanl                                        
        call nemsio_open(gfile_nstanl,trim(fname_nstanl),'write',iret=iret, idate=jdate, nfhour=nfhour,&
           nfminute=nfminute, nfsecondn=nfsecondn, nfsecondd=nfsecondd )
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),null,'open',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),null,'open',istop,iret)
 ! Allocate work array (rwork1d) and tsea in sfc file
        allocate(tsea(lonb,latb))
 
@@ -2785,7 +2614,7 @@ contains
 !                  Need values from nstges for tref update
 !      read tsea from sfcges
        call nemsio_readrecv(gfile_sfcges,'tmp','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_sfcges),'tmp','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_sfcges),'tmp','read',istop,iret)
        tsea=reshape(rwork1d,(/size(tsea,1),size(tsea,2)/))
 
 !      For nstanl, Only tref (foundation temperature) is updated by analysis
@@ -2793,75 +2622,75 @@ contains
 !      read 18 nsst variables from nstges
 ! xt
        call nemsio_readrecv(gfile_nstges, 'xt',    'sfc', 1, rwork1d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstges),'xt','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_nstges),'xt','read',istop,iret)
        xt=reshape(rwork1d,(/size(xt,1),size(xt,2)/))
 ! xs 
        call nemsio_readrecv(gfile_nstges, 'xs',    'sfc', 1, rwork1d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstges),'xs','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_nstges),'xs','read',istop,iret)
        xs=reshape(rwork1d,(/size(xs,1),size(xs,2)/))
 ! xu
        call nemsio_readrecv(gfile_nstges, 'xu',    'sfc', 1, rwork1d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstges),'xu','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_nstges),'xu','read',istop,iret)
        xu=reshape(rwork1d,(/size(xu,1),size(xu,2)/))
 ! xv
        call nemsio_readrecv(gfile_nstges, 'xv',    'sfc', 1, rwork1d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstges),'xv','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_nstges),'xv','read',istop,iret)
        xv=reshape(rwork1d,(/size(xv,1),size(xv,2)/))
 ! xz
        call nemsio_readrecv(gfile_nstges, 'xz',    'sfc', 1, rwork1d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstges),'xz','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_nstges),'xz','read',istop,iret)
        xz=reshape(rwork1d,(/size(xz,1),size(xz,2)/))
 ! zm
        call nemsio_readrecv(gfile_nstges, 'zm',    'sfc', 1, rwork1d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstges),'zm','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_nstges),'zm','read',istop,iret)
        zm=reshape(rwork1d,(/size(zm,1),size(zm,2)/))
 ! xtts
        call nemsio_readrecv(gfile_nstges, 'xtts',    'sfc', 1, rwork1d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstges),'xtts','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_nstges),'xtts','read',istop,iret)
        xtts=reshape(rwork1d,(/size(xtts,1),size(xtts,2)/))
 ! xzts
        call nemsio_readrecv(gfile_nstges, 'xzts',    'sfc', 1, rwork1d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstges),'xzts','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_nstges),'xzts','read',istop,iret)
        xzts=reshape(rwork1d,(/size(xzts,1),size(xzts,2)/))
 ! dt_cool
        call nemsio_readrecv(gfile_nstges, 'dtcool','sfc', 1, rwork1d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstges),'dt_cool','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_nstges),'dt_cool','read',istop,iret)
        dt_cool=reshape(rwork1d,(/size(dt_cool,1),size(dt_cool,2)/))
 ! z_c
        call nemsio_readrecv(gfile_nstges, 'zc','sfc', 1, rwork1d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstges),'zc','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_nstges),'zc','read',istop,iret)
        z_c=reshape(rwork1d,(/size(z_c,1),size(z_c,2)/))
 ! c_0
        call nemsio_readrecv(gfile_nstges, 'c0','sfc', 1, rwork1d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstges),'c0','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_nstges),'c0','read',istop,iret)
        c_0=reshape(rwork1d,(/size(c_0,1),size(c_0,2)/))
 ! c_d
        call nemsio_readrecv(gfile_nstges, 'cd','sfc', 1, rwork1d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstges),'cd','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_nstges),'cd','read',istop,iret)
        c_d=reshape(rwork1d,(/size(c_d,1),size(c_d,2)/))
 ! w_0
        call nemsio_readrecv(gfile_nstges, 'w0','sfc', 1, rwork1d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstges),'w0','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_nstges),'w0','read',istop,iret)
        w_0=reshape(rwork1d,(/size(w_0,1),size(w_0,2)/))
 ! w_d
        call nemsio_readrecv(gfile_nstges, 'wd','sfc', 1, rwork1d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstges),'wd','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_nstges),'wd','read',istop,iret)
        w_d=reshape(rwork1d,(/size(w_d,1),size(w_d,2)/))
 ! tref
        call nemsio_readrecv(gfile_nstges, 'tref',  'sfc', 1, rwork1d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstges),'tref','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_nstges),'tref','read',istop,iret)
        tref=reshape(rwork1d,(/size(tref,1),size(tref,2)/))
 ! d_conv
        call nemsio_readrecv(gfile_nstges, 'dconv',  'sfc', 1, rwork1d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstges),'dconv','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_nstges),'dconv','read',istop,iret)
        d_conv=reshape(rwork1d,(/size(d_conv,1),size(d_conv,2)/))
 ! ifd
        call nemsio_readrecv(gfile_nstges, 'ifd',  'sfc', 1, rwork1d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstges),'ifd','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_nstges),'ifd','read',istop,iret)
        ifd=reshape(rwork1d,(/size(ifd,1),size(ifd,2)/))
 ! qrain
        call nemsio_readrecv(gfile_nstges, 'qrain',  'sfc', 1, rwork1d, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstges),'qrain','read',istop,iret)
+       if (iret /= 0) call error_msg(mype,trim(my_name),trim(fname_nstges),'qrain','read',istop,iret)
        qrain=reshape(rwork1d,(/size(qrain,1),size(qrain,2)/))
 !
 !      update tref (in nst file) & tsea (in the surface file) when Tr analysis is on
@@ -2962,7 +2791,7 @@ contains
 !
        rwork1d = reshape(tsea, (/size(rwork1d)/) )
        call nemsio_writerecv(gfile_sfcanl,'tmp','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_sfcanl),'tmp','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_sfcanl),'tmp','write',istop,iret)
        write(6,100) fname_sfcanl,lonb,latb,houra,iadate(1:4),iret
 100    format(' WRITE_NEMSIO_SFC_NST:  update tsea in ',a6,2i6,1x,f4.1,4(i4,1x),' with iret=',i2)
 !
@@ -2970,7 +2799,7 @@ contains
 !
        rwork1d = reshape(tsea, (/size(rwork1d)/) )
        call nemsio_writerecv(gfile_sfctsk,'tmp','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_sfctsk),'tmp','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_sfctsk),'tmp','write',istop,iret)
        write(6,101) fname_sfctsk,lonb,latb,houra,iadate(1:4),iret
 101    format(' WRITE_NEMSIO_SFC_NST:  update tsea in ',a6,2i6,1x,f4.1,4(i4,1x),' with iret=',i2)
 !
@@ -2979,79 +2808,79 @@ contains
 ! slmsk
        rwork1d = reshape( slmsk_anl,(/size(rwork1d)/) )
        call nemsio_writerecv(gfile_nstanl,'slmsk','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),'slmsk','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),'slmsk','write',istop,iret)
 ! xt
        rwork1d = reshape( xt,(/size(rwork1d)/) )
        call nemsio_writerecv(gfile_nstanl,'xt','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),'xt','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),'xt','write',istop,iret)
 ! xs
        rwork1d = reshape( xs,(/size(rwork1d)/) )
        call nemsio_writerecv(gfile_nstanl,'xs','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),'xs','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),'xs','write',istop,iret)
 ! xu
        rwork1d = reshape( xu,(/size(rwork1d)/) )
        call nemsio_writerecv(gfile_nstanl,'xu','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),'xu','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),'xu','write',istop,iret)
 ! xv
        rwork1d = reshape( xv,(/size(rwork1d)/) )
        call nemsio_writerecv(gfile_nstanl,'xv','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),'xv','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),'xv','write',istop,iret)
 ! xz
        rwork1d = reshape( xz,(/size(rwork1d)/) )
        call nemsio_writerecv(gfile_nstanl,'xz','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),'xz','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),'xz','write',istop,iret)
 ! zm
        rwork1d = reshape( zm,(/size(rwork1d)/) )
        call nemsio_writerecv(gfile_nstanl,'zm','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),'zm','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),'zm','write',istop,iret)
 ! xtts
        rwork1d = reshape( xtts,(/size(rwork1d)/) )
        call nemsio_writerecv(gfile_nstanl,'xtts','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),'xtts','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),'xtts','write',istop,iret)
 ! xzts
        rwork1d = reshape( xzts,(/size(rwork1d)/) )
        call nemsio_writerecv(gfile_nstanl,'xzts','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),'xzts','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),'xzts','write',istop,iret)
 ! z_0
        rwork1d = reshape( dt_cool,(/size(rwork1d)/) )
        call nemsio_writerecv(gfile_nstanl,'dtcool','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),'dtcool','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),'dtcool','write',istop,iret)
 ! z_c
        rwork1d = reshape( z_c,(/size(rwork1d)/) )
        call nemsio_writerecv(gfile_nstanl,'zc','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),'zc','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),'zc','write',istop,iret)
 ! c_0
        rwork1d = reshape( c_0,(/size(rwork1d)/) )
        call nemsio_writerecv(gfile_nstanl,'c0','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),'c0','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),'c0','write',istop,iret)
 ! c_d
        rwork1d = reshape( c_d,(/size(rwork1d)/) )
        call nemsio_writerecv(gfile_nstanl,'cd','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),'cd','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),'cd','write',istop,iret)
 ! w_0
        rwork1d = reshape( w_0,(/size(rwork1d)/) )
        call nemsio_writerecv(gfile_nstanl,'w0','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),'w0','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),'w0','write',istop,iret)
 ! w_d
        rwork1d = reshape( w_d,(/size(rwork1d)/) )
        call nemsio_writerecv(gfile_nstanl,'wd','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),'wd','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),'wd','write',istop,iret)
 ! d_conv
        rwork1d = reshape( d_conv,(/size(rwork1d)/) )
        call nemsio_writerecv(gfile_nstanl,'dconv','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),'dconv','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),'dconv','write',istop,iret)
 ! ifd
        rwork1d = reshape( ifd,(/size(rwork1d)/) )
        call nemsio_writerecv(gfile_nstanl,'ifd','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),'ifd','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),'ifd','write',istop,iret)
 ! tref
        rwork1d = reshape( tref,(/size(rwork1d)/) )
        call nemsio_writerecv(gfile_nstanl,'tref','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),'tref','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),'tref','write',istop,iret)
 ! qrain
        rwork1d = reshape( qrain,(/size(rwork1d)/) )
        call nemsio_writerecv(gfile_nstanl,'qrain','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),'qrain','write',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),'qrain','write',istop,iret)
 
        write(6,200) fname_nstanl,lonb,latb,houra,iadate(1:4),iret
 200    format(' WRITE_NEMSIO_SFC_NST:  update variables in ',a6,2i6,1x,f4.1,4(i4,1x),' with iret=',i2)
@@ -3060,35 +2889,34 @@ contains
        deallocate(rwork1d)
 
        call nemsio_close(gfile_sfcges, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_sfcges),null,'close',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_sfcges),null,'close',istop,iret)
 
        call nemsio_close(gfile_sfcgcy, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_sfcgcy),null,'close',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_sfcgcy),null,'close',istop,iret)
 
        call nemsio_close(gfile_nstges, iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstges),null,'close',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstges),null,'close',istop,iret)
 
        call nemsio_close(gfile_sfcanl,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_sfcanl),null,'close',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_sfcanl),null,'close',istop,iret)
 
        call nemsio_close(gfile_nstanl,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_nstanl),null,'close',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_nstanl),null,'close',istop,iret)
 
        call nemsio_close(gfile_sfctsk,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(fname_sfctsk),null,'close',istop,iret)
+       if (iret /= 0) call error_msg(0,trim(my_name),trim(fname_sfctsk),null,'close',istop,iret)
 
        write(6,'(a,'': nemsio sfc_nst anal written for lonb,latb= '',2i6,'',valid hour= '',f4.1,'',idate= '',4i5)') &
           trim(my_name),lonb,latb,fhour,odate
     endif
   end subroutine write_sfc_nst_
 
-  subroutine error_msg_(sub_name,file_name,var_name,action,stop_code,error_code)
-    use mpimod, only: mype
+  subroutine error_msg_(mype,sub_name,file_name,var_name,action,stop_code,error_code)
     use kinds, only: i_kind
     implicit none
 
     character(len=*), intent(in) :: sub_name,file_name,var_name,action
-    integer(i_kind),  intent(in) :: stop_code, error_code
+    integer(i_kind),  intent(in) :: mype, stop_code, error_code
 
     if ( mype == 0 ) then
        select case (trim(action))

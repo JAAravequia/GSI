@@ -612,7 +612,7 @@ SUBROUTINE MODIFY_BEAMWIDTH ( nx, ny, image, sampling_distx, sampling_disty, &
      Error)
      
 !-----------------------------------------
-! Name: $Id$
+! Name: $Id: ssmis_spatial_average_mod.f90 83260 2016-10-18 18:40:02Z jeffrey.s.whitaker@noaa.gov $
 !
 ! Purpose:
 !   Manipulate the effective beam width of an image. For example, convert ATMS

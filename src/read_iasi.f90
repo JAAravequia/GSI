@@ -102,7 +102,7 @@ subroutine read_iasi(mype,val_iasi,ithin,isfcalc,rmesh,jsatid,gstime,&
   use kinds, only: r_kind,r_double,i_kind
   use satthin, only: super_val,itxmax,makegrids,map2tgrid,destroygrids, &
       finalcheck,checkob,score_crit
-  use radinfo, only:iuse_rad,nuchan,nusis,jpch_rad,crtm_coeffs_path,use_edges, &
+  use radinfo, only:iuse_rad,nusis,jpch_rad,crtm_coeffs_path,use_edges,nst_gsi,nstinfo, &
       radedge1,radedge2,radstart,radstep
   use crtm_module, only: success, &
       crtm_kind => fp
@@ -114,7 +114,6 @@ subroutine read_iasi(mype,val_iasi,ithin,isfcalc,rmesh,jsatid,gstime,&
   use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,thin4d
   use calc_fov_crosstrk, only: instrument_init, fov_check, fov_cleanup
   use deter_sfc_mod, only: deter_sfc,deter_sfc_fov
-  use gsi_nstcouplermod, only:nst_gsi,nstinfo
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
   use mpimod, only: npe
 
@@ -207,7 +206,7 @@ subroutine read_iasi(mype,val_iasi,ithin,isfcalc,rmesh,jsatid,gstime,&
   integer(i_kind):: iexponent,maxinfo
   integer(i_kind):: idomsfc(1)
   integer(i_kind):: ntest
-  integer(i_kind):: error_status, irecx,ierr
+  integer(i_kind):: error_status
   integer(i_kind):: radedge_min, radedge_max
   character(len=20),dimension(1):: sensorlist
 
@@ -367,25 +366,14 @@ subroutine read_iasi(mype,val_iasi,ithin,isfcalc,rmesh,jsatid,gstime,&
      if(next /= mype_sub)cycle read_subset
      read_loop: do while (ireadsb(lnbufr)==0)
 
-     if(llll == 1)then
-        nrec_startx=nrec_start
-        infile2=trim(infile)         ! Set bufr subset names based on type of data to read
-     elseif(llll == 2) then
-        nrec_startx=nrec_start_ears
-        infile2=trim(infile)//'ears' ! Set bufr subset names based on type of data to read
-     elseif(llll == 3) then
-        nrec_startx=nrec_start_db
-        infile2=trim(infile)//'_db'  ! Set bufr subset names based on type of data to read
-     end if
+!    Read IASI FOV information
+        call ufbint(lnbufr,linele,5,1,iret,'FOVN SLNM QGFQ SELV SAID')
 
-!    Open BUFR file
-     call closbf(lnbufr)
-     open(lnbufr,file=trim(infile2),form='unformatted',iostat=ierr)
+!  Extract satellite id.  If not the one we want, read next subset
+        ksatid=nint(linele(5))
+        if(ksatid /= kidsat) cycle read_subset
 
-     if(ierr /= 0) cycle ears_db_loop
-!    Open BUFR table
-     call openbf(lnbufr,'IN',lnbufr)
-     call datelen(10)
+        if ( linele(3) /= zero) cycle read_loop  ! problem with profile (QGFQ)
 
         if ( bad_line == nint(linele(2))) then
 !        zenith angle/scan spot mismatch, reject entire line

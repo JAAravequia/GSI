@@ -156,10 +156,7 @@ OBS_INPUT::
    oblat=45.,oblon=180.,obpres=1000.,obdattim=${adate},
    obhourset=0.,
    $SINGLEOB
- /
- &NST
- /
-"
+ /"
 ;;
 
     global_T62_ozonly)
@@ -233,10 +230,7 @@ OBS_INPUT::
  /
  &SINGLEOB_TEST
    $SINGLEOB
- /
- &NST
- /
-"
+ /"
 ;;
 
     global_lanczos_T62)
@@ -383,10 +377,7 @@ OBS_INPUT::
    oblat=45.,oblon=180.,obpres=1000.,obdattim=${adate},
    obhourset=0.,
    $SINGLEOB
- /
- &NST
- /
-"
+ /"
 ;;
 
     global_hybrid_T126)
@@ -547,10 +538,7 @@ OBS_INPUT::
    oblat=45.,oblon=180.,obpres=1000.,obdattim=${global_hybrid_T126_adate},
    obhourset=0.,
    $SINGLEOB
- /
- &NST
- /
-"
+ /"
 ;;
 
     RTMA)
@@ -563,7 +551,7 @@ export gsi_namelist="
    miter=2,niter(1)=10,niter(2)=10,
    write_diag(1)=.true.,write_diag(2)=.true.,write_diag(3)=.true.,
    gencode=78,qoption=1,tsensible=.true.
-   factqmin=1.0,factqmax=1.0,factv=0.1,factcldch=0.1,factw10m=1.0,deltim=$DELTIM,
+   factqmin=1.0,factqmax=1.0,factv=0.1,factcldch=0.1,deltim=$DELTIM,
    iguess=-1,
    oneobtest=.false.,retrieval=.false.,
    diag_rad=.false.,diag_pcp=.false.,diag_ozone=.false.,diag_aero=.false.,
@@ -639,10 +627,7 @@ OBS_INPUT::
    maginnov=0.1,magoberr=0.1,oneob_type='t',
    oblat=36.,oblon=260.,obpres=1000.,obdattim=${adate},
    obhourset=0.,
- /
- &NST
- /
-"
+ /"
 ;;
 
     arw_binary)
@@ -783,10 +768,7 @@ OBS_INPUT::
    maginnov=0.1,magoberr=0.1,oneob_type='t',
    oblat=45.,oblon=270.,obpres=850.,obdattim=${adate},
    obhourset=0.,
- /
- &NST
- /
-"
+ /"
 ;;
 
     arw_netcdf)
@@ -927,10 +909,7 @@ OBS_INPUT::
    maginnov=0.1,magoberr=0.1,oneob_type='t',
    oblat=45.,oblon=270.,obpres=850.,obdattim=${adate},
    obhourset=0.,
- /
- &NST
- /
-"
+ /"
 ;;
 
     nmm_binary)
@@ -1071,10 +1050,7 @@ OBS_INPUT::
    maginnov=0.1,magoberr=0.1,oneob_type='t',
    oblat=45.,oblon=270.,obpres=850.,obdattim=${adate},
    obhourset=0.,
- /
- &NST
- /
-"
+ /"
 ;;
 
     nmm_netcdf)
@@ -1215,10 +1191,7 @@ OBS_INPUT::
    maginnov=0.1,magoberr=0.1,oneob_type='t',
    oblat=45.,oblon=270.,obpres=850.,obdattim=${adate},
    obhourset=0.,
- /
- &NST
- /
-"
+ /"
 ;;
 
     nems_nmmb)
@@ -1366,10 +1339,7 @@ OBS_INPUT::
    maginnov=0.1,magoberr=0.1,oneob_type='t',
    oblat=45.,oblon=270.,obpres=850.,obdattim=${adate},
    obhourset=0.,
- /
- &NST
- /
-"
+ /"
 ;;
 
     nems_nmmb_4denvar)
@@ -1391,7 +1361,7 @@ export gsi_namelist="
    newpc4pred=.true., adp_anglebc=.true., angord=4,
    passive_bc=.false., use_edges=.false., emiss_bc=.true.,
    diag_precon=.true., step_start=1.e-3,
-   l4densvar=.true.,nhr_obsbin=3,ens_nstarthr=3,
+   l4densvar=.true.,nhr_obsbin=3,
    $SETUP
  /
  &GRIDOPTS
@@ -1534,10 +1504,7 @@ OBS_INPUT::
    oblat=45.,oblon=270.,obpres=850.,obdattim=2015031300,
    obhourset=0.,
    $SINGLEOB_TEST
- /
- &NST
- /
-"
+ /"
 ;;
 
     cmaq_binary)
@@ -1617,10 +1584,7 @@ OBS_INPUT::
    maginnov=5,magoberr=0.1,oneob_type='t',
    oblat=45.,oblon=270.,obpres=1000.,obdattim=${adate},
    obhourset=0.,
- /
- &NST
- /
-"
+ /"
 ;;
 
     hwrf_nmm_d2)
@@ -1779,10 +1743,7 @@ OBS_INPUT::
    maginnov=1.0,magoberr=0.8,oneob_type='t',
    oblat=38.,oblon=279.,obpres=500.,obdattim=${adate},
    obhourset=0.,
- /
- &NST
- /
-"
+ /"
 ;;
 
     hwrf_nmm_d3)
@@ -1941,10 +1902,7 @@ OBS_INPUT::
    maginnov=1.0,magoberr=0.8,oneob_type='t',
    oblat=38.,oblon=279.,obpres=500.,obdattim=${adate},
    obhourset=0.,
- /
- &NST
- /
-"
+ /"
 ;;
 
     global_enkf_T62)

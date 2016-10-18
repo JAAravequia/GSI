@@ -407,7 +407,6 @@ clean:
 	mpl_allreduce.F90 \
 	mpl_bcast.f90 \
         native_endianness.f90 \
-	netcdf_mod.f90 \
 	ncepgfs_ghg.f90 \
 	ncepgfs_io.f90 \
 	ncepnems_io.f90 \
@@ -525,8 +524,8 @@ clean:
 	strong_fast_global_mod.f90 \
 	sub2fslab_mod.f90 \
 	support_2dvar.f90 \
-	cplr_gfs_ensmod.f90 \
-	cplr_gfs_nstmod.f90 \
+        stub_ensmod.f90 \
+        stub_nstmod.f90 \
 	stub_pertmod.F90 \
 	stub_set_crtm_aerosol.f90 \
 	stub_timermod.f90 \

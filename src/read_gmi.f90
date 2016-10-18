@@ -1,6 +1,6 @@
 subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
      infile,lunout,obstype,nread,ndata,nodata,twind,sis,&
-     mype_root,mype_sub,npe_sub,mpi_comm_sub,nobs,dval_use)
+     mype_root,mype_sub,npe_sub,mpi_comm_sub,nobs)
 
 !$$$  subprogram documentation block
 ! subprogram:    read_gmi           read  GMI  bufr data
@@ -34,7 +34,6 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 !                         through. If the logical is set to false, the swath
 !                         edge obs are skipped in the read loop. 
 !   2015-09-17  Thomas  - add l4densvar and thin4d to data selection procedure
-!   2016-10-05  acollard -Fix interaction with NSST.
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -72,14 +71,12 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   use kinds, only: r_kind,r_double,i_kind
   use satthin, only: super_val,itxmax,makegrids,map2tgrid,destroygrids, &
       checkob,finalcheck,score_crit
-  use radinfo, only: iuse_rad,jpch_rad,nusis,nuchan,use_edges, &
-                     radedge1,radedge2,gmi_method
+  use radinfo, only: iuse_rad,jpch_rad,nusis,nuchan,nst_gsi,nstinfo,use_edges,radedge1,radedge2
   use gridmod, only: diagnostic_reg,regional,rlats,rlons,nlat,nlon,&
       tll2xy,txy2ll
   use constants, only: deg2rad,rad2deg,zero,one,two,three,four,r60inv,rearth
   use gsi_4dvar, only: l4dvar,iwinbgn,winlen,l4densvar,thin4d
   use deter_sfc_mod, only: deter_sfc
-  use gsi_nstcouplermod, only: nst_gsi,nstinfo
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
   use mpimod, only: npe
 
@@ -98,7 +95,6 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   integer(i_kind),intent(inout)  :: nread
   integer(i_kind),intent(inout)  :: ndata,nodata
   integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
-  logical         ,intent(in   ) :: dval_use
 
 ! Declare local parameters
   logical                   :: use_swath_edge
@@ -133,7 +129,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   real(r_double),allocatable:: val_angls(:,:),pixelsaza(:)
 
 ! Declare local variables
-  logical        :: assim,outside,iuse
+  logical        :: assim,outside,iuse,gmi
 
   integer(i_kind):: i,k,ntest,ireadsb,ireadmg,irec,next,j
   integer(i_kind):: iret,idate,nchanl,nchanla
@@ -208,16 +204,33 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   end do
 
 ! Set various variables depending on type of data to be read
-                                        !     (for grouping the obs at a position)
+
+  gmi      = obstype  == 'gmi'
+
+     nscan  = 221                          ! number of pixels 
+     npos_bin = 3                          ! max number of high resolution pixels at a position 
+                                           !     (for grouping the obs at a position)
      if(jsatid == 'gpm')bufsat=288         ! Satellite ID (WMO as of 03Jun2014)
      tbmax = 320.0_r_kind                  ! one value for all tmi channels (see data document).
      strscan='GMISQ SCLAT SCLON HMSL' 
 
-  maxinfo=31
-  if(dval_use) maxinfo = maxinfo+2
-  nchanl = 13                         ! 13 channls
-  nchanla = 9                         ! first 9 channels
-  tbmin = (/50,50,50,50,50,50,50,50,50,70,70,70,70/)             !
+     if (gmi) then
+       maxinfo=39
+       maxchanl = 13                       ! number of channels
+       nchanl = 13                         ! 13 channls
+       nchanla = 9                         ! first 9 channels
+       ngs=2
+       allocate (tbmin(maxchanl))
+       tbmin = (/50,50,50,50,50,50,50,50,50,70,70,70,70/)             !
+     endif
+     ang_nn=nscan/npos_bin+1
+     allocate (tbob(maxchanl), mirad(maxchanl),gmichq(maxchanl),gmirfi(maxchanl))
+     allocate (val_angls(n_angls,ngs), pixelsaza(ngs))
+     rlndsea(0) = zero
+     rlndsea(1) = 30._r_kind
+     rlndsea(2) = 30._r_kind
+     rlndsea(3) = 30._r_kind
+     rlndsea(4) = 100._r_kind
 
 ! If all channels of a given sensor are set to monitor or not
 ! assimilate mode (iuse_rad<1), reset relative weight to zero.
@@ -303,11 +316,14 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
         endif
 
 ! ----- Read header record to extract obs location information  
-        call ufbint(lnbufr,midat(2:4),nloc,1,iret,'SCLAT SCLON HMSL')
-        call ufbrep(lnbufr,gmichq,1,nchanl,iret,'TPQC2')
-        call ufbrep(lnbufr,gmirfi,1,nchanl,iret,'VIIRSQ')
-        call ufbrep(lnbufr,pixelsaza,1,ngs,iret,strsaza)
-        call ufbrep(lnbufr,val_angls,n_angls,ngs,iret,str_angls)
+        if (gmi) then
+          call ufbint(lnbufr,midat(2:4),nloc,1,iret,'SCLAT SCLON HMSL')
+          call ufbrep(lnbufr,gmichq,1,nchanl,iret,'GMICHQ')
+          call ufbrep(lnbufr,gmirfi,1,nchanl,iret,'GMIRFI')
+          call ufbrep(lnbufr,pixelsaza,1,ngs,iret,strsaza)
+          call ufbrep(lnbufr,val_angls,n_angls,ngs,iret,str_angls)
+        endif
+
         call ufbint(lnbufr,pixelloc,2, 1,iret,strloc)
 
 !---    Extract brightness temperature data.  Apply gross check to data. 
@@ -476,43 +492,49 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
               endif
            endif
 
-!   Transfer observation parameters to output array.
-    data_all( 1,itx) = bufsat              ! satellite id
-    data_all( 2,itx) = t4dv                ! time diff between obs and anal (min)
-    data_all( 3,itx) = dlon                ! grid relative longitude
-    data_all( 4,itx) = dlat                ! grid relative latitude
-    data_all( 5,itx) = sat_zen_ang         ! local (satellite) zenith angle (radians)
-    data_all( 6,itx) = sat_azimuth_ang     ! local (satellite) azimuth_ang angle (degrees)
-    data_all( 7,itx) = sat_scan_ang        ! scan(look) angle (rad)
-    data_all( 8,itx) = ifov                ! scan position
-    data_all( 9,itx) = sun_zenith          ! solar zenith angle (deg)
-    data_all(10,itx) = sun_azimuth_ang     ! solar azimuth_ang angle (deg)
-    data_all(11,itx) = sfcpct(0)           ! sea percentage of
-    data_all(12,itx) = sfcpct(1)           ! land percentage
-    data_all(13,itx) = sfcpct(2)           ! sea ice percentage
-    data_all(14,itx) = sfcpct(3)           ! snow percentage
-    data_all(15,itx)= ts(0)                ! ocean skin temperature
-    data_all(16,itx)= ts(1)                ! land skin temperature
-    data_all(17,itx)= ts(2)                ! ice skin temperature
-    data_all(18,itx)= ts(3)                ! snow skin temperature
-    data_all(19,itx)= tsavg                ! average skin temperature
-    data_all(20,itx)= vty                  ! vegetation type
-    data_all(21,itx)= vfr                  ! vegetation fraction
-    data_all(22,itx)= sty                  ! soil type
-    data_all(23,itx)= stp                  ! soil temperature
-    data_all(24,itx)= sm                   ! soil moisture
-    data_all(25,itx)= sn                   ! snow depth
-    data_all(26,itx)= zz                   ! surface height
-    data_all(27,itx)= idomsfc + 0.001_r_kind ! dominate surface type
-    data_all(28,itx)= sfcr                 ! surface roughness
-    data_all(29,itx)= ff10                 ! ten meter wind factor
-    data_all(30,itx)= dlon_earth*rad2deg   ! earth relative longitude (degrees)
-    data_all(31,itx)= dlat_earth*rad2deg   ! earth relative latitude (degrees)
+!          Transfer observation parameters to output array.  
+           data_all( 1,itx) = bufsat              ! satellite id
+           data_all( 2,itx) = t4dv                ! time diff between obs and anal (min)
+           data_all( 3,itx) = dlon                ! grid relative longitude
+           data_all( 4,itx) = dlat                ! grid relative latitude
+           data_all( 5,itx) = sat_zen_ang         ! local (satellite) zenith angle (radians)
+           data_all( 6,itx) = sat_azimuth_ang     ! local (satellite) azimuth_ang angle (degrees)
+           data_all( 7,itx) = sat_scan_ang        ! scan(look) angle (rad)
+           data_all( 8,itx) = npos                ! scan position,  .le. 90
+           data_all( 9,itx) = sun_zenith          ! solar zenith angle (deg)
+           data_all(10,itx) = sun_azimuth_ang         ! solar azimuth_ang angle (deg)
+           data_all(11,itx) = sfcpct(0)           ! sea percentage of
+           data_all(12,itx) = sfcpct(1)           ! land percentage
+           data_all(13,itx) = sfcpct(2)           ! sea ice percentage
+           data_all(14,itx) = sfcpct(3)           ! snow percentage
+           data_all(15,itx)= ts(0)                ! ocean skin temperature
+           data_all(16,itx)= ts(1)                ! land skin temperature
+           data_all(17,itx)= ts(2)                ! ice skin temperature
+           data_all(18,itx)= ts(3)                ! snow skin temperature
+           data_all(19,itx)= tsavg                ! average skin temperature
+           data_all(20,itx)= vty                  ! vegetation type
+           data_all(21,itx)= vfr                  ! vegetation fraction
+           data_all(22,itx)= sty                  ! soil type
+           data_all(23,itx)= stp                  ! soil temperature
+           data_all(24,itx)= sm                   ! soil moisture
+           data_all(25,itx)= sn                   ! snow depth
+           data_all(26,itx)= zz                   ! surface height
+           data_all(27,itx)= idomsfc + 0.001_r_kind ! dominate surface type
+           data_all(28,itx)= sfcr                 ! surface roughness
+           data_all(29,itx)= ff10                 ! ten meter wind factor
+           data_all(30,itx)= dlon_earth*rad2deg   ! earth relative longitude (degrees)
+           data_all(31,itx)= dlat_earth*rad2deg   ! earth relative latitude (degrees)
+           data_all(iedge_log,itx) = 0            ! =0, not to be obsoleted as at scan edges
+           data_all(33,itx) = sat_zen_ang2      ! local (satellite) zenith angle (radians)
+           data_all(34,itx) = sat_azimuth_ang2  ! local (satellite) azimuth_ang angle (degrees)
+           data_all(35,itx) = sat_scan_ang2     ! scan(look) angle (rad)
+!           data_all(36,itx) = val_angls(2,ngs)  ! solar zenith angle (deg)
+!           data_all(37,itx) = val_angls(3,ngs)  ! solar azimuth_ang angle (deg)
+           data_all(36,itx) = sun_zenith        ! solar zenith angle (deg)
+           data_all(37,itx) = sun_azimuth_ang   ! solar azimuth_ang angle (deg)
 
-    if(dval_use) then
-       data_all(32,itx)= val_gmi
-       data_all(33,itx)= itt
-    end if
+           data_all(maxinfo-1,itx)= val_gmi
+           data_all(maxinfo,itx)= itt
 
            if(nst_gsi>0) then
               data_all(maxinfo+1,itx) = tref       ! foundation temperature
@@ -621,15 +643,9 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
            if(data_all(i+nreal,n) > tbmin(i) .and. &
               data_all(i+nreal,n) < tbmax)nodata=nodata+1
         end do
+        itt=nint(data_all(maxinfo,n))
+        super_val(itt)=super_val(itt)+val_gmi
      end do
-
-     if(dval_use .and. assim)then
-        do n=1,ndata
-           itt=nint(data_all(maxinfo,n))
-           super_val(itt)=super_val(itt)+val_gmi 
-        end do
-     endif
-
 !    Write final set of "best" observations to output file
      call count_obs(ndata,nele,ilat,ilon,data_all,nobs)
      write(lunout) obstype,sis,nreal,nchanl,ilat,ilon

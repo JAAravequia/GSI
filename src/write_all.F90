@@ -8,13 +8,13 @@
 ! !INTERFACE:
 !
 
-subroutine write_all(increment)
+subroutine write_all(increment,mype)
 
 ! !USES:
 
   use kinds, only: i_kind,r_kind
   
-  use mpimod, only: npe,mype
+  use mpimod, only: npe
 
   use constants, only: zero
   
@@ -44,6 +44,7 @@ subroutine write_all(increment)
 ! !INPUT PARAMETERS:
 
   integer(i_kind), intent(in   ) :: increment  ! when >0 write out w/ increment
+  integer(i_kind), intent(in   ) :: mype       ! task number
 
 ! !OUTPUT PARAMETERS:
 
@@ -111,7 +112,7 @@ subroutine write_all(increment)
 
 
 ! Regional output
-  if (regional) call write_regional_analysis
+  if (regional) call write_regional_analysis(mype)
 
 
 ! Global output
@@ -122,7 +123,7 @@ subroutine write_all(increment)
 !    Write atmospheric and surface analysis
      mype_atm=0
      mype_sfc=npe/2
-     call write_gfs(increment,mype_atm,mype_sfc)
+     call write_gfs(increment,mype,mype_atm,mype_sfc)
 
 !    Write file bias correction     
      if(biascor >= zero)then
@@ -130,7 +131,7 @@ subroutine write_all(increment)
         if(ier/=0)  call die('write_all',': missing require guess, aborting ',ier)
         filename='biascor_out'
         mype_bias=npe-1
-        call write_bias(filename,mype_bias,nbc,&
+        call write_bias(filename,mype,mype_bias,nbc,&
              ges_z,bias_ps,bias_tskin,&
              bias_vor,bias_div,bias_u,bias_v,bias_tv,&
              bias_q,bias_cwmr,bias_oz,iret_bias)

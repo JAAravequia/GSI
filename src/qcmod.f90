@@ -26,7 +26,7 @@ module qcmod
 !   2007-04-16       su - add c_varqc for determining the spped to turn on var. qc
 !   2008-06-03  treadon - add use_poq7
 !   2011-04-03  li      - (1) Add setup_tzr_qc, tz_retrieval for Tz retrieval.  Add QC with Tzr to some QC subroutines
-!                       - (2) Introduce tzr_qc to control QC with Tz retrieval
+!                       - (2) Introduce nst_tzr to control QC with Tz retrieval
 !                       - (3) Modify QC subroutines by adding a few dummy variables for Tz retrieval
 !   2011-02-17  todling - add parameter to control O3 Jacobian from IR instruments
 !   2011-05-05  mccarty - removed declaration and assignment of repe_dw
@@ -105,8 +105,7 @@ module qcmod
   use constants, only: r0_01,r0_02,r0_03,r0_04,r0_05,r10,r60,r100,h300,r400,r1000,r2000,r2400,r4000
   use constants, only: deg2rad,rad2deg,t0c,one_tenth
   use obsmod, only: rmiss_single
-  use radinfo, only: iuse_rad,passive_bc
-  use radinfo, only: tzr_qc
+  use radinfo, only: iuse_rad,nst_tzr,passive_bc
   implicit none
 
 ! set default to private
@@ -256,7 +255,7 @@ module qcmod
 ! QC_seviri          
 
 ! QC_avhrr          
-!  Reject because of too large surface temperature physical retrieval in qc routine: tz_retrieval (see tzr_qc)
+!  Reject because of too large surface temperature physical retrieval in qc routine: tz_retrieval (see nst_tzr)
   integer(i_kind),parameter:: ifail_tzr_qc=10
 ! Also used (shared w/ other qc-codes):
 !  ifail_2400_qc=50
@@ -1050,7 +1049,7 @@ subroutine qc_ssmi(nchanl,nsig,ich,sfchgt,luse,sea,mixed, &
 !
 !    Apply Tz retrieval
 !
-     if(tzr_qc > 0)then
+     if(nst_tzr > 0)then
         dtz = rmiss_single
         if (luse .and. sea ) then
            call tz_retrieval(nchanl,nsig,ich,irday,temp,wmix,tnoise,varinv,ts,tbc,tzbgr,1,0,dtz,ts_ave) 
@@ -1839,7 +1838,7 @@ subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,   &
 !
 ! Apply Tz retrieval
 !
-  if(tzr_qc > 0)then
+  if(nst_tzr > 0)then
      dtz = rmiss_single
      if (luse .and. sea ) then
         call tz_retrieval(nchanl,nsig,ich,irday,temp,wmix,tnoise,varinv,ts,tbc,tzbgr,1,0,dtz,ts_ave) 
@@ -2130,7 +2129,7 @@ subroutine qc_avhrr(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,   &
 !
 ! Apply Tz retrieval
 !
-  if(tzr_qc > 0)then
+  if(nst_tzr > 0)then
      dtz = rmiss_single
      if (luse .and. sea ) then
         call tz_retrieval(nchanl,nsig,ich,irday,temp,wmix,tnoise,varinv,ts,tbc,tzbgr,1,0,dtz,ts_ave) 
@@ -3325,7 +3324,7 @@ subroutine qc_seviri(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,   &
 !
 !    Apply Tz retrieval
 !
-     if(tzr_qc > 0)then
+     if(nst_tzr > 0)then
         dtz = rmiss_single
         if (luse .and. sea ) then
            call tz_retrieval(nchanl,nsig,ich,irday,temp,wmix,tnoise,varinv,ts,tbc,tzbgr,1,0,dtz,ts_ave) 
@@ -3562,7 +3561,7 @@ subroutine qc_goesimg(nchanl,is,ndat,nsig,ich,dplat,sea,land,ice,snow,luse,   &
 !
 !    Apply Tz retrieval
 !
-     if(tzr_qc > 0)then
+     if(nst_tzr > 0)then
         dtz = rmiss_single
         if (luse .and. sea ) then
            call tz_retrieval(nchanl,nsig,ich,irday,temp,wmix,tnoise,varinv,ts,tbc,tzbgr,1,0,dtz,ts_ave) 
