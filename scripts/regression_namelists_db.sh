@@ -156,7 +156,10 @@ OBS_INPUT::
    oblat=45.,oblon=180.,obpres=1000.,obdattim=${adate},
    obhourset=0.,
    $SINGLEOB
- /"
+ /
+ &NST
+ /
+"
 ;;
 
 global_lanczos_T62)
@@ -317,7 +320,10 @@ OBS_INPUT::
    obhourset=0.,
    $SINGLEOB
 
- /"
+ 
+ &NST
+ /
+"
 ;;
 
 global_hybrid_T126)
@@ -478,7 +484,10 @@ OBS_INPUT::
    oblat=45.,oblon=180.,obpres=1000.,obdattim=${global_hybrid_T126_adate},
    obhourset=0.,
    $SINGLEOB
- /"
+ 
+ &NST
+ /
+"
 ;;
 
 RTMA)
@@ -561,7 +570,10 @@ OBS_INPUT::
    maginnov=0.1,magoberr=0.1,oneob_type='t',
    oblat=36.,oblon=260.,obpres=1000.,obdattim=${adate},
    obhourset=0.,
- /"
+ 
+ &NST
+ /
+"
 ;;
 
 arw_binary)
@@ -701,7 +713,10 @@ OBS_INPUT::
    maginnov=0.1,magoberr=0.1,oneob_type='t',
    oblat=45.,oblon=270.,obpres=850.,obdattim=${adate},
    obhourset=0.,
- /"
+ 
+ &NST
+ /
+"
 ;;
 
 arw_netcdf)
@@ -841,7 +856,10 @@ OBS_INPUT::
    maginnov=0.1,magoberr=0.1,oneob_type='t',
    oblat=45.,oblon=270.,obpres=850.,obdattim=${adate},
    obhourset=0.,
- /"
+ 
+ &NST
+ /
+"
 ;;
 
 nmm_binary)
@@ -981,7 +999,10 @@ OBS_INPUT::
    maginnov=0.1,magoberr=0.1,oneob_type='t',
    oblat=45.,oblon=270.,obpres=850.,obdattim=${adate},
    obhourset=0.,
- /"
+ 
+ &NST
+ /
+"
 ;;
 
 nmm_netcdf)
@@ -1121,7 +1142,10 @@ OBS_INPUT::
    maginnov=0.1,magoberr=0.1,oneob_type='t',
    oblat=45.,oblon=270.,obpres=850.,obdattim=${adate},
    obhourset=0.,
- /"
+ 
+ &NST
+ /
+"
 ;;
 
 nems_nmmb)
@@ -1268,7 +1292,10 @@ OBS_INPUT::
    maginnov=0.1,magoberr=0.1,oneob_type='t',
    oblat=45.,oblon=270.,obpres=850.,obdattim=${adate},
    obhourset=0.,
- /"
+ 
+ &NST
+ /
+"
 ;;
 
 nems_nmmb_4denvar)
@@ -1433,7 +1460,10 @@ OBS_INPUT::
    oblat=45.,oblon=270.,obpres=850.,obdattim=2015031300,
    obhourset=0.,
    $SINGLEOB_TEST
- /"
+ /
+ &NST
+ /
+"
 ;;
 
 cmaq_binary)
@@ -1513,7 +1543,10 @@ OBS_INPUT::
    maginnov=5,magoberr=0.1,oneob_type='t',
    oblat=45.,oblon=270.,obpres=1000.,obdattim=${adate},
    obhourset=0.,
- /"
+ /
+ &NST
+ /
+"
 ;;
 
 hwrf_nmm_d2)
@@ -1670,7 +1703,10 @@ OBS_INPUT::
    maginnov=1.0,magoberr=0.8,oneob_type='t',
    oblat=38.,oblon=279.,obpres=500.,obdattim=${adate},
    obhourset=0.,
- /"
+ /
+ &NST
+ /
+"
 ;;
 
 hwrf_nmm_d3)
@@ -1769,7 +1805,10 @@ OBS_INPUT::
    maginnov=1.0,magoberr=0.8,oneob_type='t',
    oblat=38.,oblon=279.,obpres=500.,obdattim=${adate},
    obhourset=0.,
- /"
+ /
+ &NST
+ /
+"
 ;;
 
 *)
