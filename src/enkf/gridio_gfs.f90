@@ -49,7 +49,7 @@
  public :: readgriddata, writegriddata
  contains
 
- subroutine readgriddata(nanal,svars3d,svars2d,ns3d,ns2d,grdin,qsat)
+ subroutine readgriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,grdin,qsat)
   use sigio_module, only: sigio_head, sigio_data, sigio_sclose, sigio_sropen, &
                           sigio_srohdc, sigio_sclose, sigio_aldata, sigio_axdata
   use nemsio_module, only: nemsio_gfile,nemsio_open,nemsio_close,&
@@ -60,11 +60,11 @@
   character(len=500) :: filename
   character(len=3) charnanal
   integer, intent(in) :: nanal
-  integer, intent(in) :: ns2d,ns3d
-  character(len=max_varname_length), dimension(ns2d), intent(in) :: svars2d
-  character(len=max_varname_length), dimension(ns3d), intent(in) :: svars3d
+  integer, intent(in) :: nc2d,nc3d
+  character(len=max_varname_length), dimension(nc2d), intent(in) :: cvars2d
+  character(len=max_varname_length), dimension(nc3d), intent(in) :: cvars3d
   real(r_double), dimension(npts,nlevs,nbackgrounds), intent(out) :: qsat
-  real(r_single), dimension(npts,ns3d*nlevs+ns2d,nbackgrounds), intent(out) :: grdin
+  real(r_single), dimension(npts,nc3d*nlevs+nc2d,nbackgrounds), intent(out) :: grdin
 
   real(r_kind) kap,kapr,kap1,clip
 
@@ -123,15 +123,15 @@
   kapr = cp/rd
   kap1 = kap+one
 
-  u_ind   = getindex(svars3d, 'u')   !< indices in the state var arrays
-  v_ind   = getindex(svars3d, 'v')   ! U and V (3D)
-  t_ind   = getindex(svars3d, 'tv')  ! Tv (3D)
-  q_ind   = getindex(svars3d, 'q')   ! Q (3D)
-  oz_ind  = getindex(svars3d, 'oz')  ! Oz (3D)
-  cw_ind  = getindex(svars3d, 'cw')  ! CW (3D)
+  u_ind   = getindex(cvars3d, 'u')   !< indices in the state var arrays
+  v_ind   = getindex(cvars3d, 'v')   ! U and V (3D)
+  t_ind   = getindex(cvars3d, 'tv')  ! Tv (3D)
+  q_ind   = getindex(cvars3d, 'q')   ! Q (3D)
+  oz_ind  = getindex(cvars3d, 'oz')  ! Oz (3D)
+  cw_ind  = getindex(cvars3d, 'cw')  ! CW (3D)
 
-  ps_ind  = getindex(svars2d, 'ps')  ! Ps (2D)
-  pst_ind = getindex(svars2d, 'pst') ! Ps tendency (2D)   // equivalent of
+  ps_ind  = getindex(cvars2d, 'ps')  ! Ps (2D)
+  pst_ind = getindex(cvars2d, 'pst') ! Ps tendency (2D)   // equivalent of
                                      ! old logical massbal_adjust, if non-zero
 
   if (nproc == 0) then
@@ -337,7 +337,7 @@
 
   ! surface pressure
   if (ps_ind > 0) then
-    call copytogrdin(psg,grdin(:,nlevs*ns3d + ps_ind,nb))
+    call copytogrdin(psg,grdin(:,nlevs*nc3d + ps_ind,nb))
   endif
   if (.not. use_gfs_nemsio) call sigio_axdata(sigdata,iret)
 
@@ -346,7 +346,7 @@
      pstend = sum(vmassdiv,2)
      if (nanal .eq. 1) &
      print *,nanal,'min/max first-guess ps tend',minval(pstend),maxval(pstend)
-     call copytogrdin(pstend,grdin(:,nlevs*ns3d + pst_ind,nb))
+     call copytogrdin(pstend,grdin(:,nlevs*nc3d + pst_ind,nb))
   endif
 
   ! compute saturation q.
@@ -371,7 +371,7 @@
 
  end subroutine readgriddata
 
- subroutine writegriddata(nanal,svars3d,svars2d,ns3d,ns2d,grdin)
+ subroutine writegriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,grdin)
   use sigio_module, only: sigio_head, sigio_data, sigio_sclose, sigio_sropen, &
                           sigio_srohdc, sigio_sclose, sigio_axdata, &
                           sigio_aldata, sigio_swohdc
@@ -383,10 +383,10 @@
 
   character(len=500):: filenamein, filenameout
   integer, intent(in) :: nanal
-  integer, intent(in) :: ns2d,ns3d
-  character(len=max_varname_length), dimension(ns2d), intent(in) :: svars2d
-  character(len=max_varname_length), dimension(ns3d), intent(in) :: svars3d
-  real(r_single), dimension(npts,ns3d*nlevs+ns2d,nbackgrounds), intent(inout) :: grdin
+  integer, intent(in) :: nc2d,nc3d
+  character(len=max_varname_length), dimension(nc2d), intent(in) :: cvars2d
+  character(len=max_varname_length), dimension(nc3d), intent(in) :: cvars3d
+  real(r_single), dimension(npts,nc3d*nlevs+nc2d,nbackgrounds), intent(inout) :: grdin
   real(r_kind), allocatable, dimension(:,:) :: vmassdiv,dpanl,dpfg,pressi
   real(r_kind), allocatable, dimension(:,:) :: vmassdivinc
   real(r_kind), allocatable, dimension(:,:) :: ugtmp,vgtmp
@@ -466,15 +466,15 @@
                        sighead,sigdata,ierr)
   endif
 
-  u_ind   = getindex(svars3d, 'u')   !< indices in the state var arrays
-  v_ind   = getindex(svars3d, 'v')   ! U and V (3D)
-  t_ind   = getindex(svars3d, 'tv')  ! Tv (3D)
-  q_ind   = getindex(svars3d, 'q')   ! Q (3D)
-  oz_ind  = getindex(svars3d, 'oz')  ! Oz (3D)
-  cw_ind  = getindex(svars3d, 'cw')  ! CW (3D)
+  u_ind   = getindex(cvars3d, 'u')   !< indices in the state var arrays
+  v_ind   = getindex(cvars3d, 'v')   ! U and V (3D)
+  t_ind   = getindex(cvars3d, 'tv')  ! Tv (3D)
+  q_ind   = getindex(cvars3d, 'q')   ! Q (3D)
+  oz_ind  = getindex(cvars3d, 'oz')  ! Oz (3D)
+  cw_ind  = getindex(cvars3d, 'cw')  ! CW (3D)
 
-  ps_ind  = getindex(svars2d, 'ps')  ! Ps (2D)
-  pst_ind = getindex(svars2d, 'pst') ! Ps tendency (2D)   // equivalent of
+  ps_ind  = getindex(cvars2d, 'ps')  ! Ps (2D)
+  pst_ind = getindex(cvars2d, 'pst') ! Ps tendency (2D)   // equivalent of
                                      ! old logical massbal_adjust, if non-zero
 
   if (nproc == 0) then
@@ -598,7 +598,7 @@
      ! increment (in hPa) to reg grid.
      ug = 0.
      if (ps_ind > 0) then
-       call copyfromgrdin(grdin(:,nlevs*ns3d + ps_ind,nb),ug)
+       call copyfromgrdin(grdin(:,nlevs*nc3d + ps_ind,nb),ug)
      endif
      psfg = 10._r_kind*exp(vg)
      vg = psfg + ug ! first guess + increment
@@ -677,7 +677,7 @@
      ! increment (in hPa) to reg grid.
      ug = 0.
      if (ps_ind > 0) then
-       call copyfromgrdin(grdin(:,nlevs*ns3d + ps_ind,nb),ug)
+       call copyfromgrdin(grdin(:,nlevs*nc3d + ps_ind,nb),ug)
      endif
      !print *,'nanal,min/max psfg,min/max inc',nanal,minval(psfg),maxval(psfg),minval(ug),maxval(ug)
      psg = psfg + ug ! first guess + increment
@@ -719,7 +719,7 @@
 !$omp end parallel do
 
      ! analyzed ps tend increment
-     call copyfromgrdin(grdin(:,nlevs*ns3d + pst_ind,nb),pstend2)
+     call copyfromgrdin(grdin(:,nlevs*nc3d + pst_ind,nb),pstend2)
      pstendfg = sum(vmassdiv,2)
      vmassdivinc = vmassdiv
      if (nanal .eq. 1) then

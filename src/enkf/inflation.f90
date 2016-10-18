@@ -54,7 +54,7 @@ use params, only: analpertwtnh,analpertwtsh,analpertwttr,nanals,nlevs,&
 use kinds, only: r_single, i_kind
 use constants, only: one, zero, rad2deg, deg2rad
 use covlocal, only: latval
-use statevec, only: anal_chunk, anal_chunk_prior, ndim, svars3d, svars2d, ns3d, ns2d
+use statevec, only: anal_chunk, anal_chunk_prior, ndim, cvars3d, cvars2d, nc3d, nc2d
 use gridinfo, only: latsgrd, logp, npts
 use loadbal, only: indxproc, numptsperproc, npts_max
 use smooth_mod, only: smooth
@@ -193,11 +193,11 @@ if (smoothparm .gt. zero) then
       tmp_chunk2(i,:) = covinfglobal(indxproc(nproc+1,i),:)
    end do
    if(nproc == 0)then
-      do i=1,ns3d
-        print *,'min/max ',svars3d(i),' inflation = ',minval(covinfglobal(:,(i-1)*nlevs+1:i*nlevs)),maxval(covinfglobal(:,(i-1)*nlevs+1:i*nlevs))
+      do i=1,nc3d
+        print *,'min/max ',cvars3d(i),' inflation = ',minval(covinfglobal(:,(i-1)*nlevs+1:i*nlevs)),maxval(covinfglobal(:,(i-1)*nlevs+1:i*nlevs))
       enddo
-      do i=1,ns2d
-        print *,'min/max ',svars2d(i),' inflation = ',minval(covinfglobal(:,ns3d*nlevs+i)),maxval(covinfglobal(:,ns3d*nlevs+i))
+      do i=1,nc2d
+        print *,'min/max ',cvars2d(i),' inflation = ',minval(covinfglobal(:,nc3d*nlevs+i)),maxval(covinfglobal(:,nc3d*nlevs+i))
       enddo
       ! write out inflation.
       if (save_inflation) then

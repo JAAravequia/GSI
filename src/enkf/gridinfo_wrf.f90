@@ -74,8 +74,8 @@ module gridinfo
   public :: cross2dot
   public :: dot2cross
   ! supported variable names in anavinfo
-  character(len=max_varname_length),public, dimension(7) :: svars3d_supported = (/'u', 'v', 'tv', 'q', 'cw', 'w', 'ph' /)
-  character(len=max_varname_length),public, dimension(2) :: svars2d_supported = (/ 'pd', 'mu' /)
+  character(len=max_varname_length),public, dimension(7) :: cvars3d_supported = (/'u', 'v', 'tv', 'q', 'cw', 'w', 'ph' /)
+  character(len=max_varname_length),public, dimension(2) :: cvars2d_supported = (/ 'pd', 'mu' /)
 
 contains
 

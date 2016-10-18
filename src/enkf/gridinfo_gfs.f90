@@ -65,8 +65,8 @@ real(r_single),public, allocatable, dimension(:,:) :: logp
 integer,public :: npts
 integer,public :: ntrunc
 ! supported variable names in anavinfo
-character(len=max_varname_length),public, dimension(6) :: svars3d_supported = (/ 'u', 'v', 'tv', 'q', 'oz', 'cw'/)
-character(len=max_varname_length),public, dimension(2) :: svars2d_supported = (/ 'ps', 'pst' /)
+character(len=max_varname_length),public, dimension(6) :: cvars3d_supported = (/ 'u', 'v', 'tv', 'q', 'oz', 'cw'/)
+character(len=max_varname_length),public, dimension(2) :: cvars2d_supported = (/ 'ps', 'pst' /)
 contains
 
 subroutine getgridinfo()

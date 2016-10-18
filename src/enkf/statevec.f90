@@ -20,11 +20,11 @@ module statevec
 !  nanals: (integer scalar) number of ensemble members (from module params)
 !  npts_max: (integer scalar) maximum number of grid points assigned to a task.
 !  nlevs: number of analysis vertical levels (from module params).
-!  ns3d: number of 3D variables
-!  ns2d: number of 2D variables
-!  svars3d: names of 3D variables
-!  svars2d: names of 2D variables
-!  ndim: total number of 2D fields to update (ns3d*nlevs+ns2d)
+!  nc3d: number of 3D variables
+!  nc2d: number of 2D variables
+!  cvars3d: names of 3D variables
+!  cvars2d: names of 2D variables
+!  ndim: total number of 2D fields to update (nc3d*nlevs+nc2d)
 !  index_pres: an index array with pressure value for given state variable
 !  nbackgrounds:  number of time levels in background
 !  anal_chunk(nanals,npts_max,ndim,nbackgrounds): real array of ensemble perturbations 
@@ -55,7 +55,7 @@ module statevec
 use gridio, only: readgriddata, writegriddata
 use mpisetup
 use gridinfo, only: lonsgrd, latsgrd, ptop, npts, &
-                    svars3d_supported, svars2d_supported
+                    cvars3d_supported, cvars2d_supported
 use params, only: nlevs,nbackgrounds,&
                   nanals,pseudo_rh,use_qsatensmean
 use kinds, only: r_kind, i_kind, r_double, r_single
@@ -72,9 +72,9 @@ real(r_single),public, allocatable, dimension(:,:,:) :: grdin
 real(r_double),public, allocatable, dimension(:,:,:) :: qsat
 integer(i_kind), allocatable, dimension(:) :: scounts, displs, rcounts
 
-integer(i_kind), public :: ns2d, ns3d, ndim
-character(len=max_varname_length), allocatable, dimension(:), public :: svars3d
-character(len=max_varname_length), allocatable, dimension(:), public :: svars2d
+integer(i_kind), public :: nc2d, nc3d, ndim
+character(len=max_varname_length), allocatable, dimension(:), public :: cvars3d
+character(len=max_varname_length), allocatable, dimension(:), public :: cvars2d
 integer(i_kind), allocatable, dimension(:), public:: index_pres
 
 contains
@@ -85,7 +85,7 @@ subroutine init_statevec()
 !  by Anna Shlyaeva, April 18, 2016)
 implicit none
 character(len=*),parameter:: rcname='anavinfo'
-character(len=*),parameter:: tbname='state_vector::'
+character(len=*),parameter:: tbname='control_vector_enkf::'
 character(len=256),allocatable,dimension(:):: utable
 character(len=20) var,source,funcof
 integer(i_kind) luin,ii,i,ntot, k, nvars
@@ -110,30 +110,30 @@ close(luin)
 ! variables participating in state vector
 
 ! Count variables first
-ns3d=0; ns2d=0; ndim=0;
+nc3d=0; nc2d=0; ndim=0;
 do ii=1,nvars
    read(utable(ii),*) var, ilev, itracer, source, funcof
    if(ilev==1) then
-       ns2d=ns2d+1
+       nc2d=nc2d+1
        ndim=ndim+1
    else
-       ns3d=ns3d+1
+       nc3d=nc3d+1
        ndim=ndim+nlevs
    endif
 enddo
 
-allocate(svars3d(ns3d),svars2d(ns2d))
+allocate(cvars3d(nc3d),cvars2d(nc2d))
 
 ! Now load information from table
-ns3d=0;ns2d=0
+nc3d=0;nc2d=0
 do ii=1,nvars
    read(utable(ii),*) var, ilev, itracer, source, funcof
    if(ilev==1) then
-      ns2d=ns2d+1
-      svars2d(ns2d)=trim(adjustl(var))
+      nc2d=nc2d+1
+      cvars2d(nc2d)=trim(adjustl(var))
    else if (ilev==nlevs) then
-      ns3d=ns3d+1
-      svars3d(ns3d)=trim(adjustl(var))
+      nc3d=nc3d+1
+      cvars3d(nc3d)=trim(adjustl(var))
    else 
       if (nproc .eq. 0) print *,'Error: only ', nlevs, ' number of levels is supported in current version.'
       call stop2(503)
@@ -144,13 +144,13 @@ deallocate(utable)
 
 allocate(index_pres(ndim))
 ii=0
-do i=1,ns3d
+do i=1,nc3d
   do k=1,nlevs
     ii = ii + 1
     index_pres(ii)=k
   end do
 end do
-do i = 1,ns2d
+do i = 1,nc2d
   ii = ii + 1
   index_pres(ii) = nlevs+1
 enddo
@@ -161,30 +161,30 @@ if (ndim == 0) then
   call stop2(501)
 endif
 
-do i = 1, ns2d
-  if (getindex(svars2d_supported, svars2d(i))<0) then
+do i = 1, nc2d
+  if (getindex(cvars2d_supported, cvars2d(i))<0) then
     if (nproc .eq. 0) then
-      print *,'Error: 2D variable ', svars2d(i), ' is not supported in current version.'
-      print *,'Supported variables: ', svars2d_supported
+      print *,'Error: 2D variable ', cvars2d(i), ' is not supported in current version.'
+      print *,'Supported variables: ', cvars2d_supported
     endif
     call stop2(502)
   endif
 enddo
-do i = 1, ns3d
-  if (getindex(svars3d_supported, svars3d(i))<0) then
+do i = 1, nc3d
+  if (getindex(cvars3d_supported, cvars3d(i))<0) then
     if (nproc .eq. 0) then 
-       print *,'Error: 3D variable ', svars3d(i), ' is not supported in current version.'
-       print *,'Supported variables: ', svars3d_supported
+       print *,'Error: 3D variable ', cvars3d(i), ' is not supported in current version.'
+       print *,'Supported variables: ', cvars3d_supported
     endif
     call stop2(502)
   endif
 enddo
 
 if (nproc == 0) then 
-  print *, '2D state variables: ', svars2d
-  print *, '3D state variables: ', svars3d
+  print *, '2D control variables: ', cvars2d
+  print *, '3D control variables: ', cvars3d
 
-  print *, 'ns3d: ', ns3d, ', ns2d: ', ns2d, ', ndim: ', ndim
+  print *, 'nc3d: ', nc3d, ', nc2d: ', nc2d, ', ndim: ', ndim
 endif
 
 end subroutine init_statevec
@@ -250,7 +250,7 @@ if (nproc <= nanals-1) then
    allocate(qsat(npts,nlevs,nbackgrounds))
    nanal = nproc + 1
    t1 = mpi_wtime()
-   call readgriddata(nanal,svars3d,svars2d,ns3d,ns2d,grdin,qsat)
+   call readgriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,grdin,qsat)
    !print *,'min/max qsat',nanal,'=',minval(qsat),maxval(qsat)
    if (use_qsatensmean) then
        ! convert qsat to ensemble mean.
@@ -269,7 +269,7 @@ if (nproc <= nanals-1) then
    end if
    !print *,'min/max ps ens mem',nanal,'=',&
    !         minval(grdin(:,ndim,nbackgrounds/2+1)),maxval(grdin(:,ndim,nbackgrounds/2+1))
-   q_ind = getindex(svars3d, 'q')
+   q_ind = getindex(cvars3d, 'q')
    if (pseudo_rh .and. q_ind > 0) then
       do nb=1,nbackgrounds
          ! create normalized humidity analysis variable.
@@ -439,13 +439,13 @@ do nb=1,nbackgrounds
          enddo
         enddo
       enddo
-      do nvar=1,ns3d
-         print *,'ens. mean anal. increment min/max ', svars3d(nvar),        &
+      do nvar=1,nc3d
+         print *,'ens. mean anal. increment min/max ', cvars3d(nvar),        &
              minval(ensmean(:,(nvar-1)*nlevs+1:nvar*nlevs,nb)),maxval(ensmean(:,(nvar-1)*nlevs+1:nvar*nlevs,nb))
       enddo
-      do nvar=1,ns2d
-         print *,'ens. mean anal. increment min/max ', svars2d(nvar),        &
-             minval(ensmean(:,ns3d*nlevs + nvar,nb)),maxval(ensmean(:,ns3d*nlevs + nvar,nb))
+      do nvar=1,nc2d
+         print *,'ens. mean anal. increment min/max ', cvars2d(nvar),        &
+             minval(ensmean(:,nc3d*nlevs + nvar,nb)),maxval(ensmean(:,nc3d*nlevs + nvar,nb))
       enddo
    end if
 enddo ! end loop over time levels in background
@@ -461,7 +461,7 @@ if (nproc == 0) deallocate(ensmean)
 if (nproc <= nanals-1) then
    nanal = nproc + 1
    t1 = mpi_wtime()
-   q_ind = getindex(svars3d, 'q')
+   q_ind = getindex(cvars3d, 'q')
    if (pseudo_rh .and. q_ind > 0) then
       do nb=1,nbackgrounds
          ! re-scale normalized spfh with sat. sphf of first guess
@@ -469,7 +469,7 @@ if (nproc <= nanals-1) then
          grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb)*qsat(:,:,nb)
       enddo
    end if
-   call writegriddata(nanal,svars3d,svars2d,ns3d,ns2d,grdin)
+   call writegriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,grdin)
    if (nproc == 0) then
      t2 = mpi_wtime()
      print *,'time in writegriddata on root',t2-t1,'secs'
@@ -484,8 +484,8 @@ if (allocated(anal_chunk)) deallocate(anal_chunk)
 if (allocated(anal_chunk_prior)) deallocate(anal_chunk_prior)
 if (allocated(ensmean_chunk)) deallocate(ensmean_chunk)
 if (allocated(ensmean_chunk_prior)) deallocate(ensmean_chunk_prior)
-if (allocated(svars3d)) deallocate(svars3d)
-if (allocated(svars2d)) deallocate(svars2d)
+if (allocated(cvars3d)) deallocate(cvars3d)
+if (allocated(cvars2d)) deallocate(cvars2d)
 if (allocated(index_pres)) deallocate(index_pres)
 if (nproc <= nanals-1 .and. allocated(grdin)) deallocate(grdin)
 if (nproc <= nanals-1 .and. allocated(qsat)) deallocate(qsat)

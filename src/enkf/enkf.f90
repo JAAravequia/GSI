@@ -102,7 +102,7 @@ use loadbal, only: numobsperproc, numptsperproc, indxproc_obs, iprocob, &
                    ensmean_obchunk, indxob_chunk, oblnp_chunk, nobs_max, &
                    obtime_chunk, grdloc_chunk, obloc_chunk, &
                    npts_max, anal_obchunk_prior
-use statevec, only: ensmean_chunk, anal_chunk, ensmean_chunk_prior, svars3d, &
+use statevec, only: ensmean_chunk, anal_chunk, ensmean_chunk_prior, cvars3d, &
                     ndim, index_pres
 use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, oblnp, &
                   nobstot, nobs_conv, nobs_oz, nobs_sat,&
@@ -542,7 +542,7 @@ do niter=1,numiter
       t1 = mpi_wtime()
 
       ! only need to update state variables on last iteration.
-      oz_ind = getindex(svars3d, 'oz')
+      oz_ind = getindex(cvars3d, 'oz')
       if (univaroz .and. obtype(nob)(1:3) .eq. ' oz' .and. oz_ind > 0) then ! ozone obs only affect ozone
           nn1 = (oz_ind-1)*nlevs+1
           nn2 = oz_ind*nlevs
