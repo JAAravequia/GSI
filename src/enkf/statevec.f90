@@ -85,7 +85,7 @@ subroutine init_statevec()
 !  by Anna Shlyaeva, April 18, 2016)
 implicit none
 character(len=*),parameter:: rcname='anavinfo'
-character(len=*),parameter:: tbname='state_vector::'
+character(len=*),parameter:: tbname='control_vector_enkf::'
 character(len=256),allocatable,dimension(:):: utable
 character(len=20) var,source,funcof
 integer(i_kind) luin,ii,i,ntot, k, nvars
