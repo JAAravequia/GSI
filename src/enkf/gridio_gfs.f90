@@ -145,8 +145,8 @@
 
   allocate(pressi(nlons*nlats,nlevs+1))
   allocate(pslg(npts,nlevs))
-  allocate(psg(nlons*nlats),pstend(nlons*nlats))
-  if (pst_ind > 0) allocate(vmassdiv(nlons*nlats,nlevs))
+  allocate(psg(nlons*nlats))
+  if (pst_ind > 0) allocate(vmassdiv(nlons*nlats,nlevs),pstend(nlons*nlats))
 
   if (use_gfs_nemsio) then
      call nemsio_readrecv(gfile,'pres','sfc',1,nems_wrk,iret=iret)
@@ -363,8 +363,8 @@
   end if
   
   deallocate(pressi,pslg)
-  deallocate(psg,pstend)
-  if (pst_ind > 0) deallocate(vmassdiv)
+  deallocate(psg)
+  if (pst_ind > 0) deallocate(vmassdiv,pstend)
   if (use_gfs_nemsio) call nemsio_close(gfile,iret=iret)
 
   end do backgroundloop ! loop over backgrounds to read in
@@ -390,8 +390,8 @@
   real(r_kind), allocatable, dimension(:,:) :: vmassdiv,dpanl,dpfg,pressi
   real(r_kind), allocatable, dimension(:,:) :: vmassdivinc
   real(r_kind), allocatable, dimension(:,:) :: ugtmp,vgtmp
-  real(r_kind), allocatable,dimension(:) :: psg,pstend1,pstend2,pstendfg,vmass
-  real(r_kind), dimension(nlons*nlats) :: ug,vg,uginc,vginc,psfg
+  real(r_kind), allocatable,dimension(:) :: pstend1,pstend2,pstendfg,vmass
+  real(r_kind), dimension(nlons*nlats) :: ug,vg,uginc,vginc,psfg,psg
   real(r_kind), dimension(ndimspec) :: vrtspec,divspec
   integer iadate(4),idate(4),nfhour,idat(7),iret,nrecs,jdate(7)
   integer:: nfminute, nfsecondn, nfsecondd
@@ -487,13 +487,13 @@
   if (pst_ind > 0) then
      allocate(vmassdiv(nlons*nlats,nlevs))
      allocate(vmassdivinc(nlons*nlats,nlevs))
+     allocate(dpfg(nlons*nlats,nlevs))
+     allocate(dpanl(nlons*nlats,nlevs))
+     allocate(pressi(nlons*nlats,nlevs+1))
+     allocate(pstendfg(nlons*nlats))
+     allocate(pstend1(nlons*nlats))
+     allocate(pstend2(nlons*nlats),vmass(nlons*nlats))
   endif
-  allocate(psg(nlons*nlats),pstend1(nlons*nlats))
-  allocate(pstend2(nlons*nlats),vmass(nlons*nlats))
-  allocate(dpfg(nlons*nlats,nlevs))
-  allocate(dpanl(nlons*nlats,nlevs))
-  allocate(pressi(nlons*nlats,nlevs+1))
-  allocate(pstendfg(nlons*nlats))
 
 ! Compute analysis time from guess date and forecast length.
   if (.not. use_gfs_nemsio) then
@@ -536,7 +536,7 @@
      print *,'iadate = ',iadate
   end if
 
-  if (.not. use_gfs_nemsio) then
+  if (.not. use_gfs_nemsio) then ! spectral sigio 
      sighead%idate = iadate
      sighead%fhour = zero
      ! ensemble info
@@ -620,24 +620,7 @@
          print *,'unknown vertical coordinate type',sighead%idvc
          call stop2(23)
      end if
-     !==> first guess pressure at interfaces.
-     do k=1,nlevs+1
-        pressi(:,k)=ak(k)+bk(k)*psfg
-     enddo
-     do k=1,nlevs
-        dpfg(:,k) = pressi(:,k)-pressi(:,k+1)
-     enddo
-     !==> analysis pressure at interfaces.
-     do k=1,nlevs+1
-        pressi(:,k)=ak(k)+bk(k)*psg
-     enddo
-     do k=1,nlevs
-        dpanl(:,k) = pressi(:,k)-pressi(:,k+1)
-        !if (nanal .eq. 1) print *,'k,dpanl,dpfg',minval(dpanl(:,k)),&
-        !maxval(dpanl(:,k)),minval(dpfg(:,k)),maxval(dpfg(:,k))
-     enddo
-
-  else
+  else ! nemsio
      gfileout = gfilein
 
      nfhour    = 0        !  new forecast hour, zero at analysis time
@@ -682,6 +665,7 @@
      !print *,'nanal,min/max psfg,min/max inc',nanal,minval(psfg),maxval(psfg),minval(ug),maxval(ug)
      psg = psfg + ug ! first guess + increment
      nems_wrk = 100.*psg
+     ! write out updated surface pressure.
      call nemsio_writerecv(gfileout,'pres','sfc',1,nems_wrk,iret=iret)
      if (iret/=0) then
         write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(pres), iret=',iret
@@ -690,8 +674,22 @@
   endif
 
   if (pst_ind > 0) then
-
-!$omp parallel do private(k,nt,ug,vg,vrtspec,divspec) shared(sigdata,dpfg,vmassdiv)
+     ! pressure at interfaces
+     do k=1,nlevs+1
+        pressi(:,k)=ak(k)+bk(k)*psfg
+     enddo
+     do k=1,nlevs
+        dpfg(:,k) = pressi(:,k)-pressi(:,k+1)
+     enddo
+     !==> analysis pressure at interfaces.
+     do k=1,nlevs+1
+        pressi(:,k)=ak(k)+bk(k)*psg
+     enddo
+     do k=1,nlevs
+        dpanl(:,k) = pressi(:,k)-pressi(:,k+1)
+        !if (nanal .eq. 1) print *,'k,dpanl,dpfg',minval(dpanl(:,k)),&
+        !maxval(dpanl(:,k)),minval(dpfg(:,k)),maxval(dpfg(:,k))
+     enddo
      do k=1,nlevs
 !       re-calculate vertical integral of mass flux div for first-guess
         if (use_gfs_nemsio) then
@@ -716,7 +714,6 @@
         call sptezv_s(divspec,vrtspec,ug,vg,-1) ! u,v to div,vrt
         call sptez_s(divspec,vmassdiv(:,k),1) ! divspec to divgrd
      enddo
-!$omp end parallel do
 
      ! analyzed ps tend increment
      call copyfromgrdin(grdin(:,nlevs*nc3d + pst_ind,nb),pstend2)
@@ -1027,9 +1024,9 @@
       call nemsio_close(gfileout,iret=iret)
   endif
 
-  deallocate(pressi,dpanl,dpfg)
-  deallocate(psg,pstend1,pstend2,pstendfg,vmass)
   if (pst_ind > 0) then
+     deallocate(pressi,dpanl,dpfg)
+     deallocate(pstend1,pstend2,pstendfg,vmass)
      deallocate(vmassdiv)
      deallocate(vmassdivinc)
   endif
