@@ -461,6 +461,7 @@ contains
     if ( anel_rw == 90.0_r_kind .or. anel_rw == 0.0_r_kind ) then
        corrected_azimuth=anaz_rw
        corrected_tilt=anel_rw
+       thishgt=range_rw
     end if
 
     write(6,*) 'Single radial wind observation.'
@@ -473,7 +474,8 @@ contains
     write(6,*) 'thislat     = ',thislat
     write(6,*) 'thislon     = ',thislon
     write(6,*) 'thishgt     = ',thishgt
-    write(6,*) 'thisvr      = ',thisvr
+    write(6,*) 'maginnov    = ',maginnov
+    !write(6,*) 'thisvr      = ',thisvr ! This quantity is not used for SOT.
     write(6,*) 'corrected_az= ',corrected_azimuth
     write(6,*) 'corrected_tl= ',corrected_tilt
     write(6,*) 'thiserr     = ',thiserr

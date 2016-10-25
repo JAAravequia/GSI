@@ -351,7 +351,9 @@ end subroutine berror_read_bal_reg
   real(r_kind) :: factoz
   real(r_kind) :: raux
 
-  real(r_kind), parameter :: corz_default=one*0.10,hwll_default=500.00000000,&!100000_r_kind,&
+  !real(r_kind), parameter :: corz_default=one*0.10,hwll_default=500.00000000,&!100000_r_kind,&
+  !                           vz_default=one*60.00
+  real(r_kind), parameter :: corz_default=one*10,hwll_default=500.00000000,&!100000_r_kind,&
                              vz_default=one*60.00
 
   allocate ( clat_avn(mlat) )
