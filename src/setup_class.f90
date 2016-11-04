@@ -1,6 +1,6 @@
 module abstract_setup_mod
-  type,abstract :: abstract_setup_class
   use kinds, only: r_kind
+  type,abstract :: abstract_setup_class
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_u
@@ -11,9 +11,13 @@ module abstract_setup_mod
     procedure, pass(this) :: check_vars_
     procedure, pass(this) :: final_vars_
   end type abstract_setup_class
+
   abstract interface 
     subroutine setup(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
       use kinds, only: r_kind,r_single,r_double,i_kind       
+      use gridmod, only: nsig
+      use qcmod, only: npres_print
+      use convinfo, only: nconvtype
       import abstract_setup_class
       class(abstract_setup_class)                      ,intent(inout) :: this
       integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
@@ -29,9 +33,8 @@ module abstract_setup_mod
       class(abstract_setup_class)                      ,intent(inout) :: this
     end subroutine init_vars_
   end interface
-    
+contains    
   subroutine final_vars_(this)
-      import abstract_setup_class
       class(abstract_setup_class)                      ,intent(inout) :: this
       if(allocated(this%ges_v )) deallocate(this%ges_v )
       if(allocated(this%ges_u )) deallocate(this%ges_u )
@@ -39,7 +42,7 @@ module abstract_setup_mod
       if(allocated(this%ges_ps)) deallocate(this%ges_ps)
   end subroutine final_vars_
   subroutine check_vars_ (this,proceed)
-      import abstract_setup_class
+      use kinds, only: i_kind       
       class(abstract_setup_class)                      ,intent(inout) :: this
       logical                                          ,intent(inout) :: proceed
       integer(i_kind) ivar, istatus
