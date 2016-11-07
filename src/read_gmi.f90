@@ -39,6 +39,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 !                         tanks
 !   2016-07-25  ejones  - increase maxobs, remove fov binning, make most arrays
 !                         static
+!   2016-10-05  acollard -Fix interaction with NSST.
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -76,13 +77,14 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   use kinds, only: r_kind,r_double,i_kind
   use satthin, only: super_val,itxmax,makegrids,map2tgrid,destroygrids, &
       checkob,finalcheck,score_crit
-  use radinfo, only: iuse_rad,jpch_rad,nusis,nuchan,nst_gsi,nstinfo,use_edges,  &
-      radedge1,radedge2,gmi_method
+  use radinfo, only: iuse_rad,jpch_rad,nusis,nuchan,use_edges, &
+                     radedge1,radedge2,gmi_method
   use gridmod, only: diagnostic_reg,regional,rlats,rlons,nlat,nlon,&
       tll2xy,txy2ll
   use constants, only: deg2rad,rad2deg,zero,one,two,three,four,r60inv,rearth
   use gsi_4dvar, only: l4dvar,iwinbgn,winlen,l4densvar,thin4d
   use deter_sfc_mod, only: deter_sfc
+  use gsi_nstcouplermod, only: nst_gsi,nstinfo
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
   use ssmis_spatial_average_mod, only : ssmis_spatial_average
   use m_sortind
@@ -245,7 +247,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   end do
 
 ! Set various variables depending on type of data to be read
-
+                                        !     (for grouping the obs at a position)
   if(jsatid == 'gpm')bufsat=288         ! Satellite ID (WMO as of 03Jun2014)
   tbmax = 320.0_r_kind                  ! one value for all tmi channels (see data document).
 
@@ -368,7 +370,6 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
         call ufbrep(lnbufr,gmirfi,1,nchanl,iret,'VIIRSQ')
         call ufbrep(lnbufr,pixelsaza,1,ngs,iret,strsaza)
         call ufbrep(lnbufr,val_angls,n_angls,ngs,iret,str_angls)
-
         call ufbint(lnbufr,pixelloc,2, 1,iret,strloc)
 
 !---    Extract brightness temperature data.  Apply gross check to data. 
@@ -780,9 +781,15 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
            if(data_all(i+nreal,n) > tbmin(i) .and. &
               data_all(i+nreal,n) < tbmax)nodata=nodata+1
         end do
-        itt=nint(data_all(maxinfo,n))
-        super_val(itt)=super_val(itt)+val_gmi
      end do
+
+     if(dval_use .and. assim)then
+        do n=1,ndata
+           itt=nint(data_all(maxinfo,n))
+           super_val(itt)=super_val(itt)+val_gmi 
+        end do
+     endif
+
 !    Write final set of "best" observations to output file
      call count_obs(ndata,nele,ilat,ilon,data_all,nobs)
      write(lunout) obstype,sis,nreal,nchanl,ilat,ilon

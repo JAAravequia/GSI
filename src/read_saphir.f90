@@ -19,6 +19,7 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
 !  2016-03-09  ejones  - update mnemonics for operational SAPHIR bufr
 !  2016-04-01  ejones  - add binning of fovs for scan angle bias correction 
 !  2016-07-25  ejones  - remove binning of fovs
+!  2016-10-05  acollard -Fix interaction with NSST and missing zenith angle issue.
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -56,7 +57,6 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
       finalcheck,map2tgrid,score_crit
   use radinfo, only: iuse_rad,nusis,jpch_rad, &
       use_edges,radedge1,radedge2,radstart,radstep
-  use radinfo, only: nst_gsi,nstinfo
   use radinfo, only: crtm_coeffs_path,adp_anglebc
   use gridmod, only: diagnostic_reg,regional,nlat,nlon,tll2xy,txy2ll,rlats,rlons
   use constants, only: deg2rad,zero,one,two,three,rad2deg,r60inv
@@ -65,6 +65,7 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
   use gsi_4dvar, only: l4dvar,iwinbgn,winlen,l4densvar,thin4d
   use gsi_metguess_mod, only: gsi_metguess_get
   use deter_sfc_mod, only: deter_sfc_fov,deter_sfc
+  use gsi_nstcouplermod, only: nst_gsi,nstinfo
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth,gsi_nstcoupler_deter
   use mpimod, only: npe
 
@@ -216,7 +217,7 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
 
 ! IFSCALC setup
   nchanl=6
-  if(dval_use) maxinfo = maxinfo+2
+  if (dval_use) maxinfo = maxinfo+2 
   if (isfcalc==1) then
      instr=19                    ! This section isn't really updated.
      expansion=2.9_r_kind        ! use almost three for microwave sensors.
@@ -609,8 +610,7 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
            super_val(itt)=super_val(itt)+val_tovs
         end do
      endif
-        
-     
+             
 !    Write final set of "best" observations to output file
      call count_obs(ndata,nele,ilat,ilon,data_all,nobs)
      write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
