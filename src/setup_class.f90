@@ -43,6 +43,7 @@ contains
   end subroutine final_vars_
   subroutine check_vars_ (this,proceed)
       use kinds, only: i_kind       
+      use gsi_metguess_mod, only : gsi_metguess_get
       class(abstract_setup_class)                      ,intent(inout) :: this
       logical                                          ,intent(inout) :: proceed
       integer(i_kind) ivar, istatus

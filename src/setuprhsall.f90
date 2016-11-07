@@ -150,6 +150,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   use m_rhs, only: stats_co => rhs_stats_co
   use m_rhs, only: stats_oz => rhs_stats_oz
   use m_rhs, only: toss_gps_sub => rhs_toss_gps
+  use setupdw_mod, only: setupdw_class
 
   use gsi_bundlemod, only: GSI_BundleGetPointer
   use gsi_metguess_mod, only: GSI_MetGuess_Bundle
@@ -161,7 +162,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   integer(i_kind)                  ,intent(in   ) :: mype
   integer(i_kind),dimension(ndat,3),intent(in   ) :: ndata
   logical                          ,intent(in   ) :: init_pass, last_pass   ! state of "setup" processing
-
+  type(setupdw_class) :: dw
 
 ! Declare external calls for code analysis
   external:: compute_derived
@@ -173,7 +174,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   external:: read_obsdiags
   external:: setupaod
   external:: setupbend
-  external:: setupdw
+! external:: setupdw
   external:: setuplag
   external:: setupozlay
   external:: setupozlev
@@ -474,7 +475,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
 !             Set up lidar wind data
               else if(obstype=='dw')then
-                 call setupdw(lunin,mype,bwork,awork(1,i_dw),nele,nobs,is,conv_diagsave)
+                 write(6,*) 'HEY!!! calling dw setup'
+                 call dw%setup(lunin,mype,bwork,awork(1,i_dw),nele,nobs,is,conv_diagsave)
 
 !             Set up radar wind data
               else if(obstype=='rw')then
