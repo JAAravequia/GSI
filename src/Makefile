@@ -332,6 +332,7 @@ clean:
 	intgps.f90 \
 	intgust.f90 \
 	inthowv.f90 \
+	intcldch.f90 \
         intjcmod.f90 \
 	intjo.f90 \
 	intlag.f90 \
@@ -371,6 +372,7 @@ clean:
 	lag_traj.f90 \
 	lagmod.f90 \
 	lanczos.F90 \
+	logcldch_to_cldch.f90 \
 	loglcbas_to_lcbas.f90 \
 	logvis_to_vis.f90 \
 	looplimits.f90 \
@@ -405,6 +407,7 @@ clean:
 	mpl_allreduce.F90 \
 	mpl_bcast.f90 \
         native_endianness.f90 \
+	netcdf_mod.f90 \
 	ncepgfs_ghg.f90 \
 	ncepgfs_io.f90 \
 	ncepnems_io.f90 \
@@ -490,6 +493,7 @@ clean:
 	stpgps.f90 \
 	stpgust.f90 \
 	stphowv.f90 \
+	stpcldch.f90 \
 	stpjo.f90 \
         stpjcmod.f90 \
 	stplcbas.f90 \
@@ -521,8 +525,8 @@ clean:
 	strong_fast_global_mod.f90 \
 	sub2fslab_mod.f90 \
 	support_2dvar.f90 \
-        stub_ensmod.f90 \
-        stub_nstmod.f90 \
+	cplr_gfs_ensmod.f90 \
+	cplr_gfs_nstmod.f90 \
 	stub_pertmod.F90 \
 	stub_set_crtm_aerosol.f90 \
 	stub_timermod.f90 \
@@ -614,6 +618,7 @@ clean:
 	setupdw.f90 \
 	setupgust.f90 \
 	setuphowv.f90 \
+	setupcldch.f90 \
 	setuplag.f90 \
 	setuplcbas.f90 \
 	setupmitm.f90 \

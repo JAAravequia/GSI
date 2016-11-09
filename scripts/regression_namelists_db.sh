@@ -77,7 +77,7 @@ OBS_INPUT::
    hirs4bufr_skip   hirs4       metop-a   hirs4_metop-a       0.0     1     1
    gimgrbufr        goes_img    g11       imgr_g11            0.0     1     0
    gimgrbufr        goes_img    g12       imgr_g12            0.0     1     0
-   airsbufr         airs        aqua      airs281SUBSET_aqua  0.0     1     1
+   airsbufr         airs        aqua      airs_aqua           0.0     1     1
    amsuabufr_skip   amsua       n15       amsua_n15           0.0     1     1
    amsuabufr_skip   amsua       n18       amsua_n18           0.0     1     1
    amsuabufr_skip   amsua       metop-a   amsua_metop-a       0.0     1     1
@@ -85,7 +85,6 @@ OBS_INPUT::
    amsubbufr        amsub       n17       amsub_n17           0.0     1     1
    mhsbufr_skip     mhs         n18       mhs_n18             0.0     1     1
    mhsbufr_skip     mhs         metop-a   mhs_metop-a         0.0     1     1
-   ssmitbufr        ssmi        f14       ssmi_f14            0.0     1     0
    ssmitbufr        ssmi        f15       ssmi_f15            0.0     1     0
    amsrebufr        amsre_low   aqua      amsre_aqua          0.0     1     0
    amsrebufr        amsre_mid   aqua      amsre_aqua          0.0     1     0
@@ -106,7 +105,7 @@ OBS_INPUT::
    gsnd1bufr_skip   sndrd2      g13       sndrD2_g13          0.0     1     0
    gsnd1bufr_skip   sndrd3      g13       sndrD3_g13          0.0     1     0
    gsnd1bufr_skip   sndrd4      g13       sndrD4_g13          0.0     1     0
-   iasibufr         iasi        metop-a   iasi616_metop-a     0.0     1     1
+   iasibufr         iasi        metop-a   iasi_metop-a        0.0     1     1
    gomebufr         gome        metop-a   gome_metop-a        0.0     2     0
    omibufr          omi         aura      omi_aura            0.0     2     0
    sbuvbufr         sbuv2       n19       sbuv8_n19           0.0     0     0
@@ -121,10 +120,11 @@ OBS_INPUT::
    hirs4bufr        hirs4       metop-b   hirs4_metop-b       0.0     1     0
    amsuabufr        amsua       metop-b   amsua_metop-b       0.0     1     0
    mhsbufr          mhs         metop-b   mhs_metop-b         0.0     1     0
-   iasibufr         iasi        metop-b   iasi616_metop-b     0.0     1     0
+   iasibufr         iasi        metop-b   iasi_metop-b        0.0     1     0
    gomebufr         gome        metop-b   gome_metop-b        0.0     2     0
    atmsbufr         atms        npp       atms_npp            0.0     1     0
    crisbufr         cris        npp       cris_npp            0.0     1     0
+   crisfsbufr       cris-fsr    npp       cris-fsr_npp        0.0     1     0
 ::
  /
   &SUPEROB_RADAR
@@ -156,7 +156,10 @@ OBS_INPUT::
    oblat=45.,oblon=180.,obpres=1000.,obdattim=${adate},
    obhourset=0.,
    $SINGLEOB
- /"
+ /
+ &NST
+ /
+"
 ;;
 
 global_lanczos_T62)
@@ -240,7 +243,7 @@ OBS_INPUT::
    gsndrbufr        sndr        g12       sndr_g12            0.0      1      0
    gimgrbufr        goes_img    g11       imgr_g11            0.0      1      0
    gimgrbufr        goes_img    g12       imgr_g12            0.0      1      0
-   airsbufr         airs        aqua      airs281SUBSET_aqua  0.0      3      1
+   airsbufr         airs        aqua      airs_aqua           0.0      3      1
    msubufr          msu         n14       msu_n14             0.0      1      1
    amsuabufr_skip   amsua       n15       amsua_n15           0.0      1      1
    amsuabufr_skip   amsua       n16       amsua_n16           0.0      1      1
@@ -254,7 +257,6 @@ OBS_INPUT::
    mhsbufr_skip     mhs         n18       mhs_n18             0.0      1      1
    mhsbufr_skip     mhs         metop-a   mhs_metop-a         0.0      1      1
    ssmitbufr        ssmi        f13       ssmi_f13            0.0      1      0
-   ssmitbufr        ssmi        f14       ssmi_f14            0.0      1      0
    ssmitbufr        ssmi        f15       ssmi_f15            0.0      1      0
    amsrebufr        amsre_low   aqua      amsre_aqua          0.0      1      1
    amsrebufr        amsre_mid   aqua      amsre_aqua          0.0      1      1
@@ -272,7 +274,7 @@ OBS_INPUT::
    gsnd1bufr_skip   sndrd2      g13       sndrD2_g13          0.0      1      0
    gsnd1bufr_skip   sndrd3      g13       sndrD3_g13          0.0      1      0
    gsnd1bufr_skip   sndrd4      g13       sndrD4_g13          0.0      1      0
-   iasibufr         iasi        metop-a   iasi616_metop-a     0.0      4      1
+   iasibufr         iasi        metop-a   iasi_metop-a        0.0      4      1
    gomebufr         gome        metop-a   gome_metop-a        0.0      2      0
    omibufr          omi         aura      omi_aura            0.0      2      0
    sbuvbufr         sbuv2       n19       sbuv8_n19           0.0      0      0
@@ -317,7 +319,10 @@ OBS_INPUT::
    obhourset=0.,
    $SINGLEOB
 
- /"
+ 
+ &NST
+ /
+"
 ;;
 
 global_hybrid_T126)
@@ -399,7 +404,7 @@ OBS_INPUT::
    hirs4bufr_skip hirs4       metop-a   hirs4_metop-a       0.0      1     1
    gimgrbufr      goes_img    g11       imgr_g11            0.0      1     0
    gimgrbufr      goes_img    g12       imgr_g12            0.0      1     0
-   airsbufr       airs        aqua      airs281SUBSET_aqua  0.0      1     1
+   airsbufr       airs        aqua      airs_aqua           0.0      1     1
    amsuabufr_skip amsua       n15       amsua_n15           0.0      1     1
    amsuabufr_skip amsua       n18       amsua_n18           0.0      1     1
    amsuabufr_skip amsua       metop-a   amsua_metop-a       0.0      1     1
@@ -407,7 +412,6 @@ OBS_INPUT::
    amsubbufr      amsub       n17       amsub_n17           0.0      1     1
    mhsbufr_skip   mhs         n18       mhs_n18             0.0      1     1
    mhsbufr_skip   mhs         metop-a   mhs_metop-a         0.0      1     1
-   ssmitbufr      ssmi        f14       ssmi_f14            0.0      1     0
    ssmitbufr      ssmi        f15       ssmi_f15            0.0      1     0
    amsrebufr      amsre_low   aqua      amsre_aqua          0.0      1     0
    amsrebufr      amsre_mid   aqua      amsre_aqua          0.0      1     0
@@ -428,7 +432,7 @@ OBS_INPUT::
    gsnd1bufr_skip sndrd2      g13       sndrD2_g13          0.0      1     0
    gsnd1bufr_skip sndrd3      g13       sndrD3_g13          0.0      1     0
    gsnd1bufr_skip sndrd4      g13       sndrD4_g13          0.0      1     0
-   iasibufr       iasi        metop-a   iasi616_metop-a     0.0      1     1
+   iasibufr       iasi        metop-a   iasi_metop-a        0.0      1     1
    gomebufr       gome        metop-a   gome_metop-a        0.0      2     0
    omibufr        omi         aura      omi_aura            0.0      2     0
    sbuvbufr       sbuv2       n19       sbuv8_n19           0.0      0     0
@@ -442,10 +446,11 @@ OBS_INPUT::
    hirs4bufr      hirs4       metop-b   hirs4_metop-b       0.0      1     0
    amsuabufr      amsua       metop-b   amsua_metop-b       0.0      1     0
    mhsbufr        mhs         metop-b   mhs_metop-b         0.0      1     0
-   iasibufr       iasi        metop-b   iasi616_metop-b     0.0      1     0
+   iasibufr       iasi        metop-b   iasi_metop-b        0.0      1     0
    gomebufr       gome        metop-b   gome_metop-b        0.0      2     0
    atmsbufr       atms        npp       atms_npp            0.0      1     0
    crisbufr       cris        npp       cris_npp            0.0      1     0
+   crisfsbufr     cris-fsr    npp       cris-fsr_npp        0.0      1     0
    gsnd1bufr      sndrd1      g14       sndrD1_g14          0.0      1     0
    gsnd1bufr      sndrd2      g14       sndrD2_g14          0.0      1     0
    gsnd1bufr      sndrd3      g14       sndrD3_g14          0.0      1     0
@@ -478,7 +483,10 @@ OBS_INPUT::
    oblat=45.,oblon=180.,obpres=1000.,obdattim=${global_hybrid_T126_adate},
    obhourset=0.,
    $SINGLEOB
- /"
+ 
+ &NST
+ /
+"
 ;;
 
 RTMA)
@@ -561,7 +569,10 @@ OBS_INPUT::
    maginnov=0.1,magoberr=0.1,oneob_type='t',
    oblat=36.,oblon=260.,obpres=1000.,obdattim=${adate},
    obhourset=0.,
- /"
+ 
+ &NST
+ /
+"
 ;;
 
 arw_binary)
@@ -636,7 +647,7 @@ OBS_INPUT::
    gsndrbufr        sndr        g12         sndr_g12              0.0     1     0
    gimgrbufr        goes_img    g11         imgr_g11              0.0     1     0
    gimgrbufr        goes_img    g12         imgr_g12              0.0     1     0
-   airsbufr         airs        aqua        airs281SUBSET_aqua    0.0     2     1
+   airsbufr         airs        aqua        airs_aqua             0.0     2     1
    msubufr          msu         n14         msu_n14               0.0     1     1
    amsuabufr        amsua       n15         amsua_n15             0.0     1     1
    amsuabufr        amsua       n16         amsua_n16             0.0     1     1
@@ -650,7 +661,6 @@ OBS_INPUT::
    mhsbufr          mhs         n18         mhs_n18               0.0     1     1
    mhsbufr          mhs         metop-a     mhs_metop-a           0.0     1     1
    ssmitbufr        ssmi        f13         ssmi_f13              0.0     1     0
-   ssmitbufr        ssmi        f14         ssmi_f14              0.0     1     0
    ssmitbufr        ssmi        f15         ssmi_f15              0.0     1     0
    amsrebufr        amsre_low   aqua        amsre_aqua            0.0     1     1
    amsrebufr        amsre_mid   aqua        amsre_aqua            0.0     1     1
@@ -668,7 +678,7 @@ OBS_INPUT::
    gsnd1bufr_skip   sndrd2      g13         sndrD2_g13            0.0     1     0
    gsnd1bufr_skip   sndrd3      g13         sndrD3_g13            0.0     1     0
    gsnd1bufr_skip   sndrd4      g13         sndrD4_g13            0.0     1     0
-   iasibufr         iasi        metop-a     iasi616_metop-a       0.0     3     1
+   iasibufr         iasi        metop-a     iasi_metop-a          0.0     3     1
    gomebufr         gome        metop-a     gome_metop-a          0.0     4     0
    mlsbufr          mls30       aura        mls30_aura            1.0     0     0
 ::
@@ -701,7 +711,10 @@ OBS_INPUT::
    maginnov=0.1,magoberr=0.1,oneob_type='t',
    oblat=45.,oblon=270.,obpres=850.,obdattim=${adate},
    obhourset=0.,
- /"
+ 
+ &NST
+ /
+"
 ;;
 
 arw_netcdf)
@@ -776,7 +789,7 @@ OBS_INPUT::
    gsndrbufr        sndr        g12         sndr_g12              0.0     1     0
    gimgrbufr        goes_img    g11         imgr_g11              0.0     1     0
    gimgrbufr        goes_img    g12         imgr_g12              0.0     1     0
-   airsbufr         airs        aqua        airs281SUBSET_aqua    0.0     2     1
+   airsbufr         airs        aqua        airs_aqua             0.0     2     1
    msubufr          msu         n14         msu_n14               0.0     1     1
    amsuabufr_skip   amsua       n15         amsua_n15             0.0     1     1
    amsuabufr        amsua       n16         amsua_n16             0.0     1     1
@@ -790,7 +803,6 @@ OBS_INPUT::
    mhsbufr_skip     mhs         n18         mhs_n18               0.0     1     1
    mhsbufr          mhs         metop-a     mhs_metop-a           0.0     1     1
    ssmitbufr        ssmi        f13         ssmi_f13              0.0     1     0
-   ssmitbufr        ssmi        f14         ssmi_f14              0.0     1     0
    ssmitbufr        ssmi        f15         ssmi_f15              0.0     1     0
    amsrebufr        amsre_low   aqua        amsre_aqua            0.0     1     1
    amsrebufr        amsre_mid   aqua        amsre_aqua            0.0     1     1
@@ -808,7 +820,7 @@ OBS_INPUT::
    gsnd1bufr_skip   sndrd2      g13         sndrD2_g13            0.0     1     0
    gsnd1bufr_skip   sndrd3      g13         sndrD3_g13            0.0     1     0
    gsnd1bufr_skip   sndrd4      g13         sndrD4_g13            0.0     1     0
-   iasibufr         iasi        metop-a     iasi616_metop-a       0.0     3     1
+   iasibufr         iasi        metop-a     iasi_metop-a          0.0     3     1
    gomebufr         gome        metop-a     gome_metop-a          0.0     4     0
    mlsbufr          mls30       aura        mls30_aura            1.0     0     0
 ::
@@ -841,7 +853,10 @@ OBS_INPUT::
    maginnov=0.1,magoberr=0.1,oneob_type='t',
    oblat=45.,oblon=270.,obpres=850.,obdattim=${adate},
    obhourset=0.,
- /"
+ 
+ &NST
+ /
+"
 ;;
 
 nmm_binary)
@@ -916,7 +931,7 @@ OBS_INPUT::
    gsndrbufr        sndr        g12         sndr_g12              0.0     1     0
    gimgrbufr        goes_img    g11         imgr_g11              0.0     1     0
    gimgrbufr        goes_img    g12         imgr_g12              0.0     1     0
-   airsbufr         airs        aqua        airs281SUBSET_aqua    0.0     2     1
+   airsbufr         airs        aqua        airs_aqua             0.0     2     1
    msubufr          msu         n14         msu_n14               0.0     1     1
    amsuabufr_skip   amsua       n15         amsua_n15             0.0     1     1
    amsuabufr        amsua       n16         amsua_n16             0.0     1     1
@@ -930,7 +945,6 @@ OBS_INPUT::
    mhsbufr_skip     mhs         n18         mhs_n18               0.0     1     1
    mhsbufr          mhs         metop-a     mhs_metop-a           0.0     1     1
    ssmitbufr        ssmi        f13         ssmi_f13              0.0     1     0
-   ssmitbufr        ssmi        f14         ssmi_f14              0.0     1     0
    ssmitbufr        ssmi        f15         ssmi_f15              0.0     1     0
    amsrebufr        amsre_low   aqua        amsre_aqua            0.0     1     1
    amsrebufr        amsre_mid   aqua        amsre_aqua            0.0     1     1
@@ -948,7 +962,7 @@ OBS_INPUT::
    gsnd1bufr_skip   sndrd2      g13         sndrD2_g13            0.0     1     0
    gsnd1bufr_skip   sndrd3      g13         sndrD3_g13            0.0     1     0
    gsnd1bufr_skip   sndrd4      g13         sndrD4_g13            0.0     1     0
-   iasibufr         iasi        metop-a     iasi616_metop-a       0.0     3     1
+   iasibufr         iasi        metop-a     iasi_metop-a          0.0     3     1
    gomebufr         gome        metop-a     gome_metop-a          0.0     4     0
    mlsbufr          mls30       aura        mls30_aura            1.0     0     0
 ::
@@ -981,7 +995,10 @@ OBS_INPUT::
    maginnov=0.1,magoberr=0.1,oneob_type='t',
    oblat=45.,oblon=270.,obpres=850.,obdattim=${adate},
    obhourset=0.,
- /"
+ 
+ &NST
+ /
+"
 ;;
 
 nmm_netcdf)
@@ -1056,7 +1073,7 @@ OBS_INPUT::
    gsndrbufr        sndr        g12         sndr_g12              0.0     1     0
    gimgrbufr        goes_img    g11         imgr_g11              0.0     1     0
    gimgrbufr        goes_img    g12         imgr_g12              0.0     1     0
-   airsbufr         airs        aqua        airs281SUBSET_aqua    0.0     2     1
+   airsbufr         airs        aqua        airs_aqua             0.0     2     1
    msubufr          msu         n14         msu_n14               0.0     1     1
    amsuabufr        amsua       n15         amsua_n15             0.0     1     1
    amsuabufr        amsua       n16         amsua_n16             0.0     1     1
@@ -1070,7 +1087,6 @@ OBS_INPUT::
    mhsbufr          mhs         n18         mhs_n18               0.0     1     1
    mhsbufr          mhs         metop-a     mhs_metop-a           0.0     1     1
    ssmitbufr        ssmi        f13         ssmi_f13              0.0     1     0
-   ssmitbufr        ssmi        f14         ssmi_f14              0.0     1     0
    ssmitbufr        ssmi        f15         ssmi_f15              0.0     1     0
    amsrebufr        amsre_low   aqua        amsre_aqua            0.0     1     1
    amsrebufr        amsre_mid   aqua        amsre_aqua            0.0     1     1
@@ -1088,7 +1104,7 @@ OBS_INPUT::
    gsnd1bufr_skip   sndrd2      g13         sndrD2_g13            0.0     1     0
    gsnd1bufr_skip   sndrd3      g13         sndrD3_g13            0.0     1     0
    gsnd1bufr_skip   sndrd4      g13         sndrD4_g13            0.0     1     0
-   iasibufr         iasi        metop-a     iasi616_metop-a       0.0     3     1
+   iasibufr         iasi        metop-a     iasi_metop-a          0.0     3     1
    gomebufr         gome        metop-a     gome_metop-a          0.0     4     0
    mlsbufr          mls30       aura        mls30_aura            1.0     0     0
 ::
@@ -1121,7 +1137,10 @@ OBS_INPUT::
    maginnov=0.1,magoberr=0.1,oneob_type='t',
    oblat=45.,oblon=270.,obpres=850.,obdattim=${adate},
    obhourset=0.,
- /"
+ 
+ &NST
+ /
+"
 ;;
 
 nems_nmmb)
@@ -1196,7 +1215,7 @@ OBS_INPUT::
    gsndrbufr        sndr        g12       sndr_g12            0.0     1     0
    gimgrbufr        goes_img    g11       imgr_g11            0.0     1     0
    gimgrbufr        goes_img    g12       imgr_g12            0.0     1     0
-   airsbufr         airs        aqua      airs281SUBSET_aqua  0.0     2     1
+   airsbufr         airs        aqua      airs_aqua           0.0     2     1
    msubufr          msu         n14       msu_n14             0.0     1     1
    amsuabufr_skip   amsua       n15       amsua_n15           0.0     1     1
    amsuabufr_skip   amsua       n16       amsua_n16           0.0     1     1
@@ -1210,7 +1229,6 @@ OBS_INPUT::
    mhsbufr_skip     mhs         n18       mhs_n18             0.0     1     1
    mhsbufr          mhs         metop-a   mhs_metop-a         0.0     1     1
    ssmitbufr        ssmi        f13       ssmi_f13            0.0     1     0
-   ssmitbufr        ssmi        f14       ssmi_f14            0.0     1     0
    ssmitbufr        ssmi        f15       ssmi_f15            0.0     1     0
    amsrebufr        amsre_low   aqua      amsre_aqua          0.0     1     1
    amsrebufr        amsre_mid   aqua      amsre_aqua          0.0     1     1
@@ -1228,7 +1246,7 @@ OBS_INPUT::
    gsnd1bufr_skip   sndrd2      g13       sndrD2_g13          0.0     1     0
    gsnd1bufr_skip   sndrd3      g13       sndrD3_g13          0.0     1     0
    gsnd1bufr_skip   sndrd4      g13       sndrD4_g13          0.0     1     0
-   iasibufr         iasi        metop-a   iasi616_metop-a     0.0     3     1
+   iasibufr         iasi        metop-a   iasi_metop-a        0.0     3     1
    gomebufr         gome        metop-a   gome_metop-a        0.0     4     0
    omibufr          omi         aura      omi_aura            0.0     4     0
    sbuvbufr         sbuv2       n19       sbuv8_n19           0.0     0     0
@@ -1268,7 +1286,10 @@ OBS_INPUT::
    maginnov=0.1,magoberr=0.1,oneob_type='t',
    oblat=45.,oblon=270.,obpres=850.,obdattim=${adate},
    obhourset=0.,
- /"
+ 
+ &NST
+ /
+"
 ;;
 
 nems_nmmb_4denvar)
@@ -1296,7 +1317,7 @@ export gsi_namelist="
  &GRIDOPTS
    wrf_nmm_regional=.false.,wrf_mass_regional=.false.,nems_nmmb_regional=.true.,diagnostic_reg=.false.,
    nmmb_reference_grid='H',grid_ratio_nmmb=3.0,
-   filled_grid=.false.,half_grid=.false.,netcdf=.false.,nvege_type=20,
+   filled_grid=.false.,half_grid=.false.,netcdf=.false.,
    $GRIDOPTS
  /
  &BKGERR
@@ -1351,7 +1372,7 @@ OBS_INPUT::
    gsndrbufr      sndr        g12         sndr_g12              0.0      1      0
    gimgrbufr      goes_img    g11         imgr_g11              0.0      1      0
    gimgrbufr      goes_img    g12         imgr_g12              0.0      1      0
-   airsbufr       airs        aqua        airs281SUBSET_aqua    0.0      1      0
+   airsbufr       airs        aqua        airs_aqua             0.0      1      0
    msubufr        msu         n14         msu_n14               0.0      1      0
    amsuabufr_skip amsua       n15         amsua_n15             0.0      1      0
    amsuabufr_skip amsua       n16         amsua_n16             0.0      1      0
@@ -1365,7 +1386,6 @@ OBS_INPUT::
    mhsbufr_skip   mhs         n18         mhs_n18               0.0      1      0
    mhsbufr        mhs         metop-a     mhs_metop-a           0.0      1      0
    ssmitbufr      ssmi        f13         ssmi_f13              0.0      1      0
-   ssmitbufr      ssmi        f14         ssmi_f14              0.0      1      0
    ssmitbufr      ssmi        f15         ssmi_f15              0.0      1      0
    amsrebufr      amsre_low   aqua        amsre_aqua            0.0      1      0
    amsrebufr      amsre_mid   aqua        amsre_aqua            0.0      1      0
@@ -1383,7 +1403,7 @@ OBS_INPUT::
    gsnd1bufr_skip sndrd2      g13         sndrD2_g13            0.0      1      0
    gsnd1bufr_skip sndrd3      g13         sndrD3_g13            0.0      1      0
    gsnd1bufr_skip sndrd4      g13         sndrD4_g13            0.0      1      0
-   iasibufr       iasi        metop-a     iasi616_metop-a       0.0      1      0
+   iasibufr       iasi        metop-a     iasi_metop-a          0.0      1      0
    gomebufr       gome        metop-a     gome_metop-a          0.0      1      0
    omibufr        omi         aura        omi_aura              0.0      1      0
    sbuvbufr       sbuv2       n19         sbuv8_n19             0.0      1      0
@@ -1433,7 +1453,10 @@ OBS_INPUT::
    oblat=45.,oblon=270.,obpres=850.,obdattim=2015031300,
    obhourset=0.,
    $SINGLEOB_TEST
- /"
+ /
+ &NST
+ /
+"
 ;;
 
 cmaq_binary)
@@ -1513,7 +1536,10 @@ OBS_INPUT::
    maginnov=5,magoberr=0.1,oneob_type='t',
    oblat=45.,oblon=270.,obpres=1000.,obdattim=${adate},
    obhourset=0.,
- /"
+ /
+ &NST
+ /
+"
 ;;
 
 hwrf_nmm_d2)
@@ -1592,7 +1618,7 @@ OBS_INPUT::
    hirs4bufr      hirs4       metop-a   hirs4_metop-a       0.0      1     1
    gimgrbufr      goes_img    g11       imgr_g11            0.0      1     0
    gimgrbufr      goes_img    g12       imgr_g12            0.0      1     0
-   airsbufr       airs        aqua      airs281SUBSET_aqua  0.0      1     1
+   airsbufr       airs        aqua      airs_aqua           0.0      1     1
    amsuabufr_skip amsua       n15       amsua_n15           0.0      2     1
    amsuabufr_skip amsua       n18       amsua_n18           0.0      2     1
    amsuabufr      amsua       metop-a   amsua_metop-a       0.0      2     1
@@ -1600,7 +1626,6 @@ OBS_INPUT::
    amsubbufr      amsub       n17       amsub_n17           0.0      3     1
    mhsbufr_skip   mhs         n18       mhs_n18             0.0      3     1
    mhsbufr        mhs         metop-a   mhs_metop-a         0.0      3     1
-   ssmitbufr      ssmi        f14       ssmi_f14            0.0      1     0
    ssmitbufr      ssmi        f15       ssmi_f15            0.0      1     0
    amsrebufr      amsre_low   aqua      amsre_aqua          0.0      4     0
    amsrebufr      amsre_mid   aqua      amsre_aqua          0.0      4     0
@@ -1621,7 +1646,7 @@ OBS_INPUT::
    gsnd1bufr_skip sndrd2      g13       sndrD2_g13          0.0      5     0
    gsnd1bufr_skip sndrd3      g13       sndrD3_g13          0.0      5     0
    gsnd1bufr_skip sndrd4      g13       sndrD4_g13          0.0      5     0
-   iasibufr       iasi        metop-a   iasi616_metop-a     0.0      1     1
+   iasibufr       iasi        metop-a   iasi_metop-a        0.0      1     1
    gomebufr       gome        metop-a   gome_metop-a        0.0      2     0
    omibufr        omi         aura      omi_aura            0.0      2     0
    sbuvbufr       sbuv2       n19       sbuv8_n19           0.0      0     0
@@ -1634,10 +1659,11 @@ OBS_INPUT::
    hirs4bufr      hirs4       metop-b   hirs4_metop-b       0.0      1     0
    amsuabufr      amsua       metop-b   amsua_metop-b       0.0      2     0
    mhsbufr        mhs         metop-b   mhs_metop-b         0.0      3     0
-   iasibufr       iasi        metop-b   iasi616_metop-b     0.0      1     0
+   iasibufr       iasi        metop-b   iasi_metop-b        0.0      1     0
    gomebufr       gome        metop-b   gome_metop-b        0.0      2     0
    atmsbufr       atms        npp       atms_npp            0.0      2     0
    crisbufr       cris        npp       cris_npp            0.0      1     0
+   crisfsbufr     cris-fsr    npp       cris-fsr_npp        0.0      1     0
    gsnd1bufr      sndrd1      g14       sndrD1_g14          0.0      5     0
    gsnd1bufr      sndrd2      g14       sndrD2_g14          0.0      5     0
    gsnd1bufr      sndrd3      g14       sndrD3_g14          0.0      5     0
@@ -1670,7 +1696,10 @@ OBS_INPUT::
    maginnov=1.0,magoberr=0.8,oneob_type='t',
    oblat=38.,oblon=279.,obpres=500.,obdattim=${adate},
    obhourset=0.,
- /"
+ /
+ &NST
+ /
+"
 ;;
 
 hwrf_nmm_d3)
@@ -1769,7 +1798,10 @@ OBS_INPUT::
    maginnov=1.0,magoberr=0.8,oneob_type='t',
    oblat=38.,oblon=279.,obpres=500.,obdattim=${adate},
    obhourset=0.,
- /"
+ /
+ &NST
+ /
+"
 ;;
 
 *)

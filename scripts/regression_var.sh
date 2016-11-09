@@ -11,7 +11,8 @@ elif [ -d /scratch4/NCEPDEV/da ]; then # Theia
 fi
 
 # Name of the branch being tested
-updat="trunk"
+updat="XXXXXXXX"
+contrl="XXXXXXXX"
 
 #  Handle machine specific paths for:
 #  experiment and control executables, fix, ptmp, and CRTM coefficient files.
@@ -26,7 +27,7 @@ if [[ "$machine" = "Theia" ]]; then
    export ptmp="/scratch4/NCEPDEV/stmp3/$LOGNAME"
    export noscrub="/scratch4/NCEPDEV/da/noscrub/$LOGNAME"
 
-   export fixcrtm="/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix"
+   export fixcrtm="/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update"
    export casesdir="/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES"
    export ndate="/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/util/exec/ndate"
 
@@ -48,7 +49,7 @@ elif [[ "$machine" = "WCOSS" ]]; then
    export ptmp="/ptmpp1/$LOGNAME"
    export noscrub="/da/noscrub/$LOGNAME"
 
-   export fixcrtm="/da/save/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix"
+   export fixcrtm="/da/save/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix_update"
    export casesdir="/da/noscrub/Michael.Lueken/CASES"
    export ndate="/nwprod/util/exec/ndate"
 
@@ -62,9 +63,9 @@ fi
 
 export gsisrc="$basedir/$updat/src"
 export gsiexec_updat="$basedir/$updat/src/global_gsi"
-export gsiexec_contrl="$basedir/svn1/src/global_gsi"
+export gsiexec_contrl="$basedir/$contrl/src/global_gsi"
 export enkfexec_updat="$basedir/$updat/src/enkf/global_enkf"
-export enkfexec_contrl="$basedir/svn1/src/enkf/global_enkf"
+export enkfexec_contrl="$basedir/$contrl/src/enkf/global_enkf"
 export fixgsi="$basedir/$updat/fix"
 export scripts="$basedir/$updat/scripts"
 
@@ -92,7 +93,7 @@ export arw_binary_adate="2010072412"
 export arw_netcdf_adate="2008051112"
 export nmm_binary_adate="2010021600"
 export nmm_netcdf_adate="2007122000"
-export rtma_adate="2015030712"
+export rtma_adate="2016021003"
 export hwrf_nmm_adate="2012102812"
 
 # Paths for canned case data.
