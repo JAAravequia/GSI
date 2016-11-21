@@ -81,7 +81,7 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
   use obsmod, only: rw_ob_type
   use qcmod, only: nlnqc_iter,varqc_iter
   use constants, only: half,one,two,tiny_r_kind,cg_term,zero_quad,r3600
-  use gridmod, only: latlon1n,regional_w
+  use gridmod, only: latlon1n
   use jfunc, only: l_foto,xhat_dt,dhat_dt
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -95,6 +95,7 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
   real(r_kind),dimension(max(1,nstep)),intent(in   ) :: sges
 
 ! Declare local variables
+  logical include_w
   integer(i_kind) ier,istatus
   integer(i_kind) j1,j2,j3,j4,j5,j6,j7,j8,kk
   real(r_kind) valrw,facrw,w1,w2,w3,w4,w5,w6,w7,w8,time_rw
@@ -117,10 +118,25 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
   ier=0
   call gsi_bundlegetpointer(sval,'u',su,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(sval,'v',sv,istatus);ier=istatus+ier
-  if(regional_w) call gsi_bundlegetpointer(sval,'w',sw,istatus);ier=istatus+ier
+  call gsi_bundlegetpointer(sval,'w',sw,istatus)
+  if (istatus==0) then
+     include_w=.true.
+     write(6,*)'STPRW: Using vertical velocity.'
+  else
+     include_w=.false.
+     write(6,*)'STPRW: NOT using vertical velocity.'
+  end if
   call gsi_bundlegetpointer(rval,'u',ru,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(rval,'v',rv,istatus);ier=istatus+ier
-  if(regional_w) call gsi_bundlegetpointer(rval,'w',rw,istatus);ier=istatus+ier
+  call gsi_bundlegetpointer(rval,'w',rw,istatus)
+  if (istatus==0) then
+     include_w=.true.
+     write(6,*)'STPRW: Using vertical velocity.'
+  else
+     include_w=.false.
+     write(6,*)'STPRW: NOT using vertical velocity.'
+  end if
+
   if(l_foto) then
      call gsi_bundlegetpointer(xhat_dt,'u',xhat_dt_u,istatus);ier=istatus+ier
      call gsi_bundlegetpointer(xhat_dt,'v',xhat_dt_v,istatus);ier=istatus+ier
@@ -151,7 +167,7 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
            w8=rwptr%wij(8)
 
 !          Gradient?? -- For two different obs operators.
-           if(regional_w) then
+           if(include_w) then
               valrw=(w1*ru(j1)+ w2*ru(j2)+ w3*ru(j3)+ w4*ru(j4)+ w5*ru(j5)+      &
                      w6*ru(j6)+ w7*ru(j7)+ w8*ru(j8))*rwptr%costilt*rwptr%cosazm+&
                     (w1*rv(j1)+ w2*rv(j2)+ w3*rv(j3)+ w4*rv(j4)+ w5*rv(j5)+      &
@@ -166,7 +182,7 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
            end if
 
 !          Gradient - residual?? -- For two different obs operators.
-           if(regional_w) then
+           if(include_w) then
               facrw=(w1*su(j1)+ w2*su(j2)+ w3*su(j3)+ w4*su(j4)+ w5*su(j5)+      &
                      w6*su(j6)+ w7*su(j7)+ w8*su(j8))*rwptr%costilt*rwptr%cosazm+&
                     (w1*sv(j1)+ w2*sv(j2)+ w3*sv(j3)+ w4*sv(j4)+ w5*sv(j5)+      &

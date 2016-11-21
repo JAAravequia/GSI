@@ -88,7 +88,7 @@ subroutine intrw_(rwhead,rval,sval)
   use constants, only: half,one,tiny_r_kind,cg_term,r3600
   use obsmod, only: rw_ob_type,lsaveobsens,l_do_adjoint,luse_obsdiag
   use qcmod, only: nlnqc_iter,varqc_iter
-  use gridmod, only: latlon1n,regional_w
+  use gridmod, only: latlon1n
   use jfunc, only: jiter,l_foto,xhat_dt,dhat_dt
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -101,6 +101,7 @@ subroutine intrw_(rwhead,rval,sval)
   type(gsi_bundle),        intent(inout) :: rval
 
 ! Declare local varibles
+  logical include_w
   integer(i_kind) j1,j2,j3,j4,j5,j6,j7,j8,ier,istatus
 ! real(r_kind) penalty
   real(r_kind),pointer,dimension(:) :: xhat_dt_u,xhat_dt_v
@@ -119,10 +120,25 @@ subroutine intrw_(rwhead,rval,sval)
   ier=0
   call gsi_bundlegetpointer(sval,'u',su,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(sval,'v',sv,istatus);ier=istatus+ier
-  if(regional_w) call gsi_bundlegetpointer(sval,'w',sw,istatus);ier=istatus+ier
+  call gsi_bundlegetpointer(sval,'w',sw,istatus)
+  if (istatus==0) then
+     include_w=.true.
+     write(6,*)'INTRW: Using vertical velocity.'
+  else
+     include_w=.false.
+     write(6,*)'INTRW: NOT using vertical velocity.'
+  end if
   call gsi_bundlegetpointer(rval,'u',ru,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(rval,'v',rv,istatus);ier=istatus+ier
-  if(regional_w) call gsi_bundlegetpointer(rval,'w',rw,istatus);ier=istatus+ier
+  call gsi_bundlegetpointer(rval,'w',rw,istatus)
+  if (istatus==0) then
+     include_w=.true.
+     write(6,*)'INTRW: Using vertical velocity.'
+  else
+     include_w=.false.
+     write(6,*)'INTRW: NOT using vertical velocity.'
+  end if
+
   if(l_foto) then
      call gsi_bundlegetpointer(xhat_dt,'u',xhat_dt_u,istatus);ier=istatus+ier
      call gsi_bundlegetpointer(xhat_dt,'v',xhat_dt_v,istatus);ier=istatus+ier
@@ -153,13 +169,28 @@ subroutine intrw_(rwhead,rval,sval)
 
 !    Forward model (Tangent Linear; TL)
 !    TLVr  =  TLu*costilt*cosazm  +  TLv*costilt*sinazm  +  TLw*sintilt
-     if(regional_w) then
+     if(include_w) then
         val=(w1*su(j1)+ w2*su(j2)+ w3*su(j3)+ w4*su(j4)+ w5*su(j5)+          &
              w6*su(j6)+ w7*su(j7)+ w8*su(j8))*rwptr%costilt*rwptr%cosazm+    &
             (w1*sv(j1)+ w2*sv(j2)+ w3*sv(j3)+ w4*sv(j4)+ w5*sv(j5)+          &
              w6*sv(j6)+ w7*sv(j7)+ w8*sv(j8))*rwptr%costilt*rwptr%sinazm+    &
             (w1*sw(j1)+ w2*sw(j2)+ w3*sw(j3)+ w4*sw(j4)+ w5*sw(j5)+          &
              w6*sw(j6)+ w7*sw(j7)+ w8*sw(j8))*rwptr%sintilt
+!        write(6,*) "weights 1-8: ",w1,w2,w3,w4,w5,w6,w7,w8
+!        write(6,*) "su(j8)  = ",su(j8),w8*su(j8)
+!        write(6,*) "costilt = ",rwptr%costilt
+!        write(6,*) "cosazm  = ",rwptr%cosazm
+!        write(6,*) "sinazm  = ",rwptr%sinazm
+!        write(6,*) "sintilt = ",rwptr%sintilt
+!        write(6,*) "ADu   (su)   = ",w1*su(j1)+ w2*su(j2)+ w3*su(j3)+ w4*su(j4)+w5*su(j5)+w6*su(j6)+ w7*su(j7)+ w8*su(j8)
+!        write(6,*) "ADv   (sv)   = ",w1*sv(j1)+ w2*sv(j2)+ w3*sv(j3)+ w4*sv(j4)+w5*sv(j5)+w6*sv(j6)+ w7*sv(j7)+ w8*sv(j8)
+!        write(6,*) "ADw   (sw)   = ",w1*sw(j1)+ w2*sw(j2)+ w3*sw(j3)+w4*sw(j4)+w5*sw(j5)+w6*sw(j6)+ w7*sw(j7)+ w8*sw(j8)
+
+
+!        write(6,*) "ADu*cos*cos= ",(w1*su(j1)+ w2*su(j2)+ w3*su(j3)+ w4*su(j4)+w5*su(j5)+w6*su(j6)+ w7*su(j7)+ w8*su(j8))*rwptr%costilt*rwptr%cosazm
+!        write(6,*) "ADv*cos*sin= ",(w1*sv(j1)+ w2*sv(j2)+ w3*sv(j3)+ w4*sv(j4)+ w5*sv(j5)+w6*sv(j6)+ w7*sv(j7)+ w8*sv(j8))*rwptr%costilt*rwptr%sinazm
+!        write(6,*) "ADw*sin    = ",(w1*sw(j1)+ w2*sw(j2)+ w3*sw(j3)+ w4*sw(j4)+w5*sw(j5)+w6*sw(j6)+ w7*sw(j7)+ w8*sw(j8))*rwptr%sintilt
+!        write(6,*) "TLVr       = ",val
 !    TLVr  =  TLu*costilt*cosazm  +  TLv*costilt*sinazm
      else
          val=(w1*su(j1)+ w2*su(j2)+ w3*su(j3)+ w4*su(j4)+ w5*su(j5)+          &
@@ -216,7 +247,15 @@ subroutine intrw_(rwhead,rval,sval)
 !       Adjoint (AD)
         valu=rwptr%costilt*rwptr%cosazm*grad  ! ADVr_u = costilt*cosazm*ADVr
         valv=rwptr%costilt*rwptr%sinazm*grad  ! ADVr_v = costilt*sinazm*ADVr
-        if(regional_w) valw=rwptr%sintilt*grad! ADVr_w = sintilt*ADVr
+        if(include_w) valw=rwptr%sintilt*grad! ADVr_w = sintilt*ADVr
+!        write(6,*) "ADVr    (grad)      = ",grad
+!        write(6,*) "costilt*cosazm*ADVr = ",valu
+!        write(6,*) "costilt*sinazm*ADVr = ",valv
+!        write(6,*) "sintilt*ADVr        = ",valw
+!        write(6,*) "BEFORE ADJ"
+!        write(6,*) "ADu    (ru)         = ",ru(j1)+ru(j2)+ru(j3)+ru(j4)+ru(j5)+ru(j6)+ru(j7)+ru(j8)
+!        write(6,*) "ADv    (rv)         = ",rv(j1)+rv(j2)+rv(j3)+rv(j4)+rv(j5)+rv(j6)+rv(j7)+rv(j8)
+!        write(6,*) "ADw    (rw)         = ",rw(j1)+rw(j2)+rw(j3)+rw(j4)+rw(j5)+rw(j6)+rw(j7)+rw(j8)
         ru(j1)=ru(j1)+w1*valu                 ! ADu = ADu + ADVr_u
         ru(j2)=ru(j2)+w2*valu
         ru(j3)=ru(j3)+w3*valu
@@ -233,7 +272,7 @@ subroutine intrw_(rwhead,rval,sval)
         rv(j6)=rv(j6)+w6*valv
         rv(j7)=rv(j7)+w7*valv
         rv(j8)=rv(j8)+w8*valv
-        if(regional_w) then 
+        if(include_w) then 
            rw(j1)=rw(j1)+w1*valw              ! ADw = ADw + ADVr_w
            rw(j2)=rw(j2)+w2*valw
            rw(j3)=rw(j3)+w3*valw
@@ -243,7 +282,12 @@ subroutine intrw_(rwhead,rval,sval)
            rw(j7)=rw(j7)+w7*valw
            rw(j8)=rw(j8)+w8*valw
         end if
- 
+!        write(6,*) "AFTER ADJ"
+!        write(6,*) "ADu    (ru)         = ",ru(j1)+ru(j2)+ru(j3)+ru(j4)+ru(j5)+ru(j6)+ru(j7)+ru(j8)
+!        write(6,*) "ADv    (rv)         = ",rv(j1)+rv(j2)+rv(j3)+rv(j4)+rv(j5)+rv(j6)+rv(j7)+rv(j8)
+!        write(6,*) "ADw    (rw)         = ",rw(j1)+rw(j2)+rw(j3)+rw(j4)+rw(j5)+rw(j6)+rw(j7)+rw(j8)
+
+
         if ( l_foto ) then
            valu=valu*time_rw
            valv=valv*time_rw

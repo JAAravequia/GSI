@@ -1673,7 +1673,7 @@ subroutine read_nems_nmmb_guess(mype)
   use cloud_efr_mod, only: efr_ql,efr_qi,efr_qr,efr_qs,efr_qg,efr_qh
   use guess_grids, only: ges_prsi,ges_prsl,ges_prslavg
   use gridmod, only: lat2,lon2,pdtop_ll,pt_ll,nsig,nmmb_verttype,use_gfs_ozone,regional_ozone,& 
-       aeta1_ll,aeta2_ll,regional_w
+       aeta1_ll,aeta2_ll
   use rapidrefresh_cldsurf_mod, only: i_gsdcldanal_type  
   use constants, only: zero,one_tenth,half,one,fv,rd_over_cp,r100,r0_01,ten
   use regional_io, only: update_pint, cold_start
@@ -1692,7 +1692,8 @@ subroutine read_nems_nmmb_guess(mype)
 ! Declare local parameters
 
 ! Declare local variables
-
+  logical include_w
+ 
 ! other internal variables
   character(255) wrfges
   character(len=*),parameter :: myname='read_nems_nmmb_guess:: '
@@ -1768,7 +1769,15 @@ subroutine read_nems_nmmb_guess(mype)
      call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q'  ,ges_q  ,istatus );ier=ier+istatus
      call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'oz' ,ges_oz ,istatus );ier=ier+istatus
      call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'pd' ,ges_pd,istatus );ier=ier+istatus
-     if(regional_w) call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'w' , ges_w  ,istatus );ier=ier+istatus
+     call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'w'  ,ges_w  ,istatus )
+     if (istatus/=0) then
+        include_w=.true.
+        write(6,*)'READ_WRF_NMM_GUESS: Using vertical velocity.'
+     else
+        include_w=.false.
+        write(6,*)'READ_WRF_NMM_GUESS: NOT using vertical velocity.'
+     end if
+     !end if
      if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields, ier =',ier)
 
      if(mype==mype_input) then
@@ -1810,7 +1819,9 @@ subroutine read_nems_nmmb_guess(mype)
         call gsi_nemsio_read('vgrd','mid layer','V',kr,ges_v(:,:,k),   mype,mype_input)
         call gsi_nemsio_read('spfh','mid layer','H',kr,ges_q(:,:,k),   mype,mype_input)
         call gsi_nemsio_read('tmp' ,'mid layer','H',kr,ges_tsen(:,:,k,it),mype,mype_input)
-        if(regional_w) call gsi_nemsio_read('w_tot','mid layer','H',kr,ges_w(:,:,k),   mype,mype_input)
+        if(include_w) then
+          call gsi_nemsio_read('w_tot'  ,'mid layer','H',kr,ges_w(:,:,k)  , mype,mype_input)
+        end if
         do i=1,lon2
            do j=1,lat2
               ges_tv(j,i,k) = ges_tsen(j,i,k,it) * (one+fv*ges_q(j,i,k))

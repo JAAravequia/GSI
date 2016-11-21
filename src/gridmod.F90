@@ -138,7 +138,7 @@ module gridmod
   public :: diagnostic_reg,nmmb_reference_grid,filled_grid
   public :: grid_ratio_nmmb,isd_g,isc_g,dx_gfs,lpl_gfs,nsig5,nmmb_verttype
   public :: nsig3,nsig4,grid_ratio_wrfmass
-  public :: use_gfs_ozone,check_gfs_ozone_date,regional_ozone,nvege_type,regional_w
+  public :: use_gfs_ozone,check_gfs_ozone_date,regional_ozone,nvege_type
   public :: jcap,jcap_b,hires_b,sp_a,grd_a
   public :: jtstart,jtstop,nthreads
   public :: use_gfs_nemsio
@@ -168,7 +168,6 @@ module gridmod
   logical check_gfs_ozone_date ! .t. to date check gfs ozone against regional
   logical regional_ozone    !    .t. to turn on ozone for regional analysis
   logical netcdf            ! .t. for regional netcdf i/o
-  logical regional_w        ! .t. for regional analysis with w (vert. vel.)
 
   logical filled_grid       ! 
   logical half_grid         !
@@ -425,7 +424,6 @@ contains
     use_gfs_ozone = .false.
     check_gfs_ozone_date = .false.
     regional_ozone = .false.
-    regional_w = .false.
     netcdf = .false.
     filled_grid = .false.
     half_grid = .false.

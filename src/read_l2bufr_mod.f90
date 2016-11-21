@@ -819,9 +819,9 @@ sis,hgtl_full,nobs)
       one_tenth,r10,r1000,r60inv,r100,r400,grav_equator, &
       eccentricity,somigliana,grav_ratio,grav, &
       semi_major_axis,flattening,two
-  use qcmod, only: erradar_inflate,vadfile,newvad
+  use qcmod, only: erradar_inflate
   use obsmod, only: iadate,l_foreaft_thin
-  use oneobmod, only: oneobtest
+  use oneobmod, only: oneobtest,learthrel_rw
   use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,time_4dvar,thin4d
   use gridmod, only: regional,nlat,nlon,tll2xy,rlats,rlons,rotate_wind_ll2xy,nsig
   use gridmod, only: wrf_nmm_regional,nems_nmmb_regional,cmaq_regional,wrf_mass_regional
@@ -846,53 +846,38 @@ sis,hgtl_full,nobs)
 ! Declare local parameters
   integer(i_kind),parameter:: maxlevs=1500
   integer(i_kind),parameter:: maxdat=22
-  integer(i_kind),parameter:: maxvad=500
-! integer(i_kind),parameter:: maxvadbins=20
-  integer(i_kind),parameter:: maxvadbins=15
   real(r_kind),parameter:: r4_r_kind = 4.0_r_kind
 
 
-  real(r_kind),parameter:: dzvad=304.8_r_kind  !  vad reports are every 1000 ft=304.8 meters
-  real(r_kind),parameter:: r3_5 = 3.5_r_kind
   real(r_kind),parameter:: r6 = 6.0_r_kind
   real(r_kind),parameter:: r8 = 8.0_r_kind
   real(r_kind),parameter:: r90 = 90.0_r_kind
   real(r_kind),parameter:: r200 = 200.0_r_kind
   real(r_kind),parameter:: r150 = 150.0_r_kind
-  real(r_kind),parameter:: r360=360.0_r_kind
+  real(r_kind),parameter:: r360 = 360.0_r_kind
   real(r_kind),parameter:: r50000 = 50000.0_r_kind
-  real(r_kind),parameter:: r60 = 60.0_r_kind
-  real(r_kind),parameter:: r75 = 75.0_r_kind
-  real(r_kind),parameter:: r92 = 92.6e03_r_kind
   real(r_kind),parameter:: r89_5  = 89.5_r_kind
-  real(r_kind),parameter:: r2 = 2.0_r_kind
-  real(r_kind),parameter:: r71 = 71.0_r_kind
   real(r_kind),parameter:: four_thirds = 4.0_r_kind / 3.0_r_kind
 
 ! Declare local variables
-  logical good,outside,good0,lexist1,lexist2
+  logical good,outside,good0
 
-  character(10) date
   character(80) hdrstr(2),datstr(2)
-  character(8) subset,subset_check(3)
   character(30) outmessage
-  character(255) filename
-
-  integer(i_kind) lnbufr,i,j,k,maxobs,icntpnt,iiout,n,istop
-  integer(i_kind) nmrecs,ibadazm,ibadtilt,ibadrange,ibadwnd,ibaddist,ibadheight,ibadvad,kthin
-  integer(i_kind) iyr,imo,idy,ihr,imn,isc,ithin
-  integer(i_kind) ibadstaheight,ibaderror,notgood,idate,iheightbelowsta,ibadfit
+ 
+  integer(i_kind) lnbufr,i,k,maxobs
+  integer(i_kind) nmrecs,ibadazm,ibadwnd,ibaddist,ibadheight,kthin
+  integer(i_kind) ibadstaheight,ibaderror,notgood,iheightbelowsta,ibadfit
+  integer(i_kind) ithin
   integer(i_kind) notgood0
-  integer(i_kind) novadmatch,ioutofvadrange
-  integer(i_kind) iy,im,idd,ihh,iret,levs,mincy,minobs,kx0,kxadd,kx
+  integer(i_kind) iret,kx0
   integer(i_kind) nreal,nchanl,ilat,ilon,ikx
-  integer(i_kind),dimension(5):: idate5
-  integer(i_kind) ivad,ivadz,nvad,idomsfc
+  integer(i_kind) idomsfc
   real(r_kind) timeb,rmesh,usage,ff10,sfcr,skint,t4dv,t4dvo,toff
   real(r_kind) eradkm,dlat_earth,dlon_earth
   real(r_kind) dlat,dlon,staheight,tiltangle,clon,slon,clat,slat
   real(r_kind) timeo,clonh,slonh,clath,slath,cdist,dist
-  real(r_kind) rwnd,azm,height,error,wqm
+  real(r_kind) rwnd,azm,height,error
   real(r_kind) azm_earth,cosazm_earth,sinazm_earth,cosazm,sinazm
   real(r_kind):: zsges
 
@@ -900,47 +885,27 @@ sis,hgtl_full,nobs)
   real(r_kind),allocatable,dimension(:,:):: cdata_all
 
   real(r_double) rstation_id
-  real(r_double),dimension(12):: hdr
   character(8) cstaid
   character(4) this_staid
   equivalence (this_staid,cstaid)
   equivalence (cstaid,rstation_id)
-  real(r_double),dimension(7,maxlevs):: radar_obs
-!  real(r_double),dimension(4,maxlevs):: vad_obs
 
-  real(r_double),dimension(2,maxlevs):: fcst_obs
 
-!  character(8) vadid(maxvad)
-!  real(r_kind) vadlat(maxvad),vadlon(maxvad),vadqm(maxvad,maxvadbins)
-!  real(r_kind) vadu(maxvad,maxvadbins),vadv(maxvad,maxvadbins)
-!  real(r_kind) vadcount(maxvad,maxvadbins)
-!  real(r_kind),dimension(maxvad,maxvadbins)::vadfit2,vadcount2,vadwgt2
-!  real(r_kind),dimension(maxvad,maxvadbins)::vadfit2_5,vadcount2_5,vadwgt2_5
-!  real(r_kind),dimension(maxvad,maxvadbins)::vadfit3,vadcount3,vadwgt3
-  real(r_kind) zob,vadqmmin,vadqmmax
-  integer(i_kind) level2(maxvad),level2_5(maxvad),level3(maxvad),level3_tossed_by_2_5(maxvad)
-  integer(i_kind) loop,numcut
-  integer(i_kind) numhits(0:maxvad)
+  integer(i_kind) loop
   real(r_kind) timemax,timemin,errmax,errmin
   real(r_kind) dlatmax,dlonmax,dlatmin,dlonmin
   real(r_kind) xscale,xscalei
   integer(i_kind) max_rrr,nboxmax
   integer(i_kind) irrr,iaaa,iaaamax,iaaamin
-  integer(i_byte),allocatable::nobs_box(:,:,:,:)
-  real(r_kind) dlonvad,dlatvad,vadlon_earth,vadlat_earth
   real(r_kind) this_stalat,this_stalon,this_stahgt,thistime,thislat,thislon
-  real(r_kind) azm0,elev0,range0,rotang
   real(r_kind) thishgt,thisvr,corrected_azimuth,thiserr,corrected_tilt
   integer(i_kind) nsuper2_in,nsuper2_kept
   real(r_kind) errzmax
-  real(r_kind) thisfit,thisvadspd,thisfit2,uob,vob,thiswgt
 
   integer(i_kind),allocatable,dimension(:):: isort
 
 ! following variables are for fore/aft separation
-  real(r_kind) tdrele1,tdrele2,tdrele3
-  integer(i_kind) nswp,firstbeam,nforeswp,naftswp,nfore,naft,nswptype,irec
-  logical foreswp,aftswp
+  integer(i_kind) irec
 
   data lnbufr/10/
   data hdrstr(1) / 'CLAT CLON SELV ANEL YEAR MNTH DAYS HOUR MINU MGPT' /
@@ -971,17 +936,8 @@ sis,hgtl_full,nobs)
   isort = 0
   cdata_all=zero
 
-!2.
 ! Initialize variables
-! vad_leash=.1_r_kind
-!  vad_leash=.3_r_kind
- xscale=1000._r_kind
- !xscale=10000._r_kind
- ! xscale=20000._r_kind
-!  write(6,*)'READ_L2RW_PROCESSED:  set vad_leash,xscale=',vad_leash,xscale
-!  write(6,*)'READ_L2RW_PROCESSED:  set
-!  maxvadbins,maxbadbins*dzvad=',maxvadbins,&
-!     maxvadbins*dzvad
+  xscale=1000._r_kind
   xscalei=one/xscale
   max_rrr=nint(100000.0_r_kind*xscalei)
   nboxmax=1
@@ -992,56 +948,7 @@ sis,hgtl_full,nobs)
   irec=0
 
   errzmax=zero
-!  nvad=0
-!  vadlon=zero
-!  vadlat=zero
-! First read in all vad winds so can use vad wind quality marks to decide
-! which radar data to keep
-! Open, then read bufr data
-!********************************************************************************
-!if(1==0)then !lippi
-!!end if !lippi
-!6.
-!!if(1==0)then !lippi
-!! Update vadqm table
-!!end if !lippi
-!7.
-!!if(1==0)then !lippi
-!! Print vadwnd table
-!end if !lippi
-!********************************************************************************
 
-!  Allocate thinning grids around each radar
-!  space needed is nvad*max_rrr*max_rrr*8*max_zzz
-!
-!      max_rrr=20
-!      maxvadbins=20
-!      nvad=150
-!      space=150*20*20*8*20 = 64000*150=9600000  peanuts
-
-  allocate(nobs_box(max_rrr,8*max_rrr,maxvadbins,nvad))
-  nobs_box=0
-! Set level2_5 to 0.  Then loop over routine twice, first looking for
-! level 2.5 data, and setting level2_5=count of 2.5 data for any 2.5 data
-! available that passes the vad tests.  The second pass puts in level 3
-! data where it is available and no level 2.5 data was saved/available
-! (level2_5=0)
-
-!  vadfit2=zero
-!  vadfit2_5=zero
-!  vadfit3=zero
-!  vadwgt2=zero
-!  vadwgt2_5=zero
-!  vadwgt3=zero
-!  vadcount2=zero
-!  vadcount2_5=zero
-!  vadcount3=zero
-  level2=0
-  level2_5=0
-  level3=0
-  level3_tossed_by_2_5=0
-  subset_check(1)='NC006002'
-  subset_check(2)='NC006001'
 
 ! First process any level 2 superobs.
 ! Initialize variables.
@@ -1056,7 +963,6 @@ sis,hgtl_full,nobs)
   errmin=huge(errmin)
   loop=0
 
-  numhits=0
   ibadazm=0
   ibadwnd=0
   ibaddist=0
@@ -1065,11 +971,8 @@ sis,hgtl_full,nobs)
   iheightbelowsta=0
   iheightbelowsta=0
   ibaderror=0
-  ibadvad=0
   ibadfit=0
-  ioutofvadrange=0
   kthin=0
-  novadmatch=0
   notgood=0
   notgood0=0
   nsuper2_in=0
@@ -1082,19 +985,12 @@ sis,hgtl_full,nobs)
 !  open(lnbufr,file='l2rwbufr_out',form='unformatted')
   rewind lnbufr
 
- ! dist2max=-huge(dist2max)
- ! dist2min=huge(dist2min)
-
 ! Loop to read superobs data file
   do
      read(lnbufr,iostat=iret)this_staid,this_stalat,this_stalon,this_stahgt, &
         thistime,thislat,thislon,thishgt,thisvr,corrected_azimuth,thiserr,corrected_tilt
      if(iret/=0) exit
      nsuper2_in=nsuper2_in+1
-
-     !write(6,*) this_staid,this_stalat,this_stalon,this_stahgt, &
-     !           thistime,thislat,thislon,thishgt,thisvr,&
-     !           corrected_azimuth,thiserr,corrected_tilt
 
      dlat_earth=this_stalat    !station lat (degrees)
      dlon_earth=this_stalon    !station lon (degrees)
@@ -1124,13 +1020,7 @@ sis,hgtl_full,nobs)
      staheight=this_stahgt    !station elevation
      tiltangle=corrected_tilt*deg2rad
 
-!********************************************************************************
 !9.
-!if(1==0) then !lippi
-!!    Find vad wind match
-!end if !lippi
-!********************************************************************************
-
      t4dvo=toff+thistime
      timemax=max(timemax,t4dvo)
      timemin=min(timemin,t4dvo)
@@ -1178,10 +1068,17 @@ sis,hgtl_full,nobs)
      azm_earth = corrected_azimuth
 !10.
      if(regional) then
-        cosazm_earth=cos(azm_earth*deg2rad)
-        sinazm_earth=sin(azm_earth*deg2rad)
-        call rotate_wind_ll2xy(cosazm_earth,sinazm_earth,cosazm,sinazm,dlon_earth,dlon,dlat)
-        azm=atan2(sinazm,cosazm)*rad2deg
+        if(oneobtest .and. learthrel_rw) then ! for non rotated winds!!!
+           cosazm=cos(azm_earth*deg2rad)
+           sinazm=sin(azm_earth*deg2rad)
+           azm=atan2(sinazm,cosazm)*rad2deg
+        else
+           cosazm_earth=cos(azm_earth*deg2rad)
+           sinazm_earth=sin(azm_earth*deg2rad)
+           call rotate_wind_ll2xy(cosazm_earth,sinazm_earth,cosazm,sinazm,dlon_earth,dlon,dlat)
+           azm=atan2(sinazm,cosazm)*rad2deg
+        end if 
+
      else
         azm=azm_earth
      end if
@@ -1194,14 +1091,14 @@ sis,hgtl_full,nobs)
         iaaamax=max(iaaamax,iaaa)
         iaaamin=min(iaaamin,iaaa)
      end if !90degtest
-!12.
+
      error = erradar_inflate*thiserr
      errmax=max(error,errmax)
-!13.
+
      if(thiserr>zero) errmin=min(error,errmin)
 !    Perform limited qc based on azimuth angle, radial wind
 !    speed, distance from radar site, elevation of radar,
-!    height of observation, observation error, and goodness of fit to vad wind
+!    height of observation, and observation error
      good0=.true.
      if(abs(azm)>r400) then
         ibadazm=ibadazm+1; good0=.false.
@@ -1230,22 +1127,13 @@ sis,hgtl_full,nobs)
         cycle
      else
 
-!********************************************************************************
 !14.
-!if(1==0) then !lippi
-!!       Check fit to vad wind and vad wind quality mark
-!  end if !lippi
-!********************************************************************************
      end if
 !15.
-     !good=.true. !lippi
 
 !    If data is good, load into output array
      if(good) then
         nsuper2_kept=nsuper2_kept+1
-        level2(ivad)=level2(ivad)+1
-!lippi
-!        nobs_box(irrr,iaaa,ivadz,ivad)=nobs_box(irrr,iaaa,ivadz,ivad)+1
         ndata    =min(ndata+1,maxobs)
         nodata   =min(nodata+1,maxobs)  !number of obs not used (no meaninghere)
         usage = zero
@@ -1279,11 +1167,6 @@ sis,hgtl_full,nobs)
         cdata(21)=thiserr
         cdata(22)=two
 
-!       if(vadid(ivad)=='0303LWX') then
-!          dist2max=max(dist2max,dist)
-!          dist2min=min(dist2min,dist)
-!       end if
-
         do i=1,maxdat
            cdata_all(i,ndata)=cdata(i)
         end do
@@ -1298,15 +1181,12 @@ sis,hgtl_full,nobs)
   write(6,*)'READ_L2RW_PROCESSED:  ',trim(outmessage),' reached eof on 2 superob radar file'
 !16.
   write(6,*)'READ_L2RW_PROCESSED: nsuper2_in,nsuper2_kept=',nsuper2_in,nsuper2_kept
-  write(6,*)'READ_L2RW_PROCESSED: # no vad match   =',novadmatch
-  write(6,*)'READ_L2RW_PROCESSED: # out of vadrange=',ioutofvadrange
   write(6,*)'READ_L2RW_PROCESSED: # bad azimuths=',ibadazm
   write(6,*)'READ_L2RW_PROCESSED: # bad winds   =',ibadwnd
   write(6,*)'READ_L2RW_PROCESSED: # bad dists   =',ibaddist
   write(6,*)'READ_L2RW_PROCESSED: # bad stahgts =',ibadstaheight
   write(6,*)'READ_L2RW_PROCESSED: # bad obshgts =',ibadheight
   write(6,*)'READ_L2RW_PROCESSED: # bad errors  =',ibaderror
-  write(6,*)'READ_L2RW_PROCESSED: # bad vadwnd  =',ibadvad
   write(6,*)'READ_L2RW_PROCESSED: # bad fit     =',ibadfit
   write(6,*)'READ_L2RW_PROCESSED: # num thinned =',kthin
   write(6,*)'READ_L2RW_PROCESSED: # notgood0    =',notgood0
@@ -1317,19 +1197,6 @@ sis,hgtl_full,nobs)
   write(6,*)'READ_L2RW_PROCESSED: dlatmin,max,dlonmin,max=',dlatmin,dlatmax,dlonmin,dlonmax
   write(6,*)'READ_L2RW_PROCESSED: iaaamin,max,8*max_rrr=',iaaamin,iaaamax,8*max_rrr
 
-!********************************************************************************
-!if(1==0) then !lippi
-!!  Next process level 2.5 and 3 superobs
-!!  Bigger loop over first level 2.5 data, and then level3 data
-!end if !lippi started on line 822
-
-!if(1==0) then !lippi
-!! Write out vad statistics
-!end if !lippi
-
-!if(1==0) then !lippi tail doppler
-!end if !lippi tail doppler
-!********************************************************************************
 ! Write observation to scratch file
   call count_obs(ndata,maxdat,ilat,ilon,cdata_all,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon

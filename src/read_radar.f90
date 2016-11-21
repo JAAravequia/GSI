@@ -245,11 +245,6 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
   
 !***********************************************************************************
 
-! Check to see if radar wind files exist.  If none exist, exit this routine.
-!  inquire(file='radar_supobs_from_level2',exist=lexist1)
-!  inquire(file=trim(infile),exist=lexist2)
-!  if (.not.lexist1 .and. .not.lexist2) goto 900
-
   eradkm=rearth*0.001_r_kind
   maxobs=2e6
   nreal=maxdat

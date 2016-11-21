@@ -90,7 +90,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use qcmod, only: npres_print,ptop,pbot,tdrerr_inflate,tdrgross_fact
   use guess_grids, only: hrdifsig,geop_hgtl,nfldsig,&
        ges_lnprsl,sfcmod_gfs,sfcmod_mm5,comp_fact10
-  use gridmod, only: nsig,get_ijk,regional_w
+  use gridmod, only: nsig,get_ijk
   use constants, only: flattening,semi_major_axis,grav_ratio,zero,grav,wgtlim,&
        half,one,two,grav_equator,eccentricity,somigliana,rad2deg,deg2rad
   use constants, only: tiny_r_kind,cg_term,huge_single,r2000,three,one
@@ -129,7 +129,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) sin2,termg,termr,termrg
   real(r_kind) psges,zsges,zsges0
   real(r_kind),dimension(nsig):: zges,hges,ugesprofile,vgesprofile
-  real(r_kind),dimension(nsig):: wgesprofile,vTgesprofile
+  real(r_kind),dimension(nsig):: wgesprofile,vTgesprofile,refgesprofile
   real(r_kind) prsltmp(nsig)
   real(r_kind) sfcchk  
   real(r_kind) residual,obserrlm,obserror,ratio,scale,val2
@@ -141,7 +141,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) sinazm,cosazm,sintilt,costilt
   real(r_kind) ratio_errors,qcgross
   real(r_kind) ugesin,vgesin,wgesin,factw,skint,sfcr
-  real(r_kind) rwwind,presw
+  real(r_kind) rwwind,presw,Vr
   real(r_kind) errinv_input,errinv_adjst,errinv_final
   real(r_kind) err_input,err_adjst,err_final
   real(r_kind),dimension(nele,nobs):: data
@@ -159,6 +159,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   logical,dimension(nobs):: luse,muse
   logical proceed
+  logical include_w
 
   equivalence(rstation_id,station_id)
   real(r_kind) addelev,wrange,beamdepth,elevtop,elevbot
@@ -179,9 +180,10 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_u
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_w
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_ref
 
 ! Check to see if required guess fields are available
-  call check_vars_(proceed)
+  call check_vars_(proceed,include_w)
   if(.not.proceed) return  ! not all vars available, simply return
 
 ! If require guess vars available, extract from bundle ...
@@ -498,23 +500,34 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
           hrdifsig,mype,nfldsig)
      call tintrp31(ges_v,vgesin,dlat,dlon,dpres,dtime,&
           hrdifsig,mype,nfldsig)
-     if(regional_w) call tintrp31(ges_w,wgesin,dlat,dlon,dpres,dtime,&
+     if(include_w) then
+          call tintrp31(ges_w,wgesin,dlat,dlon,dpres,dtime,&
           hrdifsig,mype,nfldsig)
+          !call tintrp31(ges_ref,refgesin,dlat,dlon,dpres,dtime,&
+          !hrdifsig,mype,nfldsig)
+     end if
 
      call tintrp2a1(ges_u,ugesprofile,dlat,dlon,dtime,hrdifsig,&
           nsig,mype,nfldsig)
      call tintrp2a1(ges_v,vgesprofile,dlat,dlon,dtime,hrdifsig,&
           nsig,mype,nfldsig)
-     if(regional_w) call tintrp2a1(ges_w,wgesprofile,dlat,dlon,dtime,hrdifsig,&
+     if(include_w) then 
+          call tintrp2a1(ges_w,wgesprofile,dlat,dlon,dtime,hrdifsig,&
           nsig,mype,nfldsig) 
-
+          !call tintrp2a1(ges_ref,refgesprofile,dlat,dlon,dtime,hrdifsig,&
+          !nsig,mype,nfldsig) 
+     end if
 
 !    Convert guess u,v wind components to radial value consident with obs
      cosazm  = cos(data(iazm,i))  ! cos(azimuth angle)
      sinazm  = sin(data(iazm,i))  ! sin(azimuth angle)
      costilt = cos(data(itilt,i)) ! cos(tilt angle)
      sintilt = sin(data(itilt,i)) ! sin(tilt angle)
+!     write(6,*) "check"
+!     write(6,*) "cosazm,sinazm,costilt,sintilt=",cosazm,sinazm,costilt,sintilt
+!     write(6,*) "azm,tilt",data(iazm,i)*rad2deg,data(itilt,i)*rad2deg
      vTgesprofile= -5.0 ! I believe this must be a negative number.
+     !vTgesprofile= 5.40_r_kind*(exp((refgesprofile -43.1_r_kind)/17.5_r_kind)) 
 !    rwwind = (ugesin*cosazm+vgesin*sinazm)*costilt*factw
      umaxmax=-huge(umaxmax)
      uminmin=huge(uminmin)
@@ -523,14 +536,19 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      do k=kbeambot,kbeamtop
         ! Two different ob operators on purpose!
         ! The first one is for cycles with w_tot field.
-        if(regional_w) then
+        !if(oneobtest) then
+        !   ugesprofile=8.54_r_kind
+        !   vgesprofile=0.0_r_kind
+        !   wgesprofile=3.0_r_kind
+        !end if
+        if(include_w) then
            rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt &
                         +(wgesprofile(k))*sintilt
+                        !+(wgesprofile(k)-vTgesprofile(k))*sintilt
         else 
            rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt
         end if
-                     !+(wgesprofile(k)-4.85)*sintilt
-                     !+(wgesprofile(k)-vTgesprofile(k))*sintilt
+        
         if(umaxmax<rwwindprofile) then
            umaxmax=rwwindprofile
            kmaxmax=k
@@ -560,8 +578,18 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !    If requested, setup for single obs test.
      if(oneobtest) then
         ddiff=maginnov
+        Vr=ddiff+rwwind
         error=one/magoberr
         ratio_errors=one
+!        write(6,*) "setuprw *************************"
+!        write(6,*) "Vr_o          = ",Vr
+!        write(6,*) "Vr_b (rwwind) = ",rwwind
+!        write(6,*) "Vr_o - Vr_b   = ",ddiff
+!        write(6,*) "rwwindprofile = ",rwwindprofile
+!        write(6,*) "ugesprofile   = ",ugesprofile(k)
+!        write(6,*) "vgesprofile   = ",vgesprofile(k)
+!        write(6,*) "wgesprofile   = ",wgesprofile(k)
+!        write(6,*) "setuprw *************************"
      end if
 
 
@@ -804,8 +832,9 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   return
   contains
 
-  subroutine check_vars_ (proceed)
+  subroutine check_vars_ (proceed, include_w)
   logical,intent(inout) :: proceed
+  logical,intent(inout) :: include_w
   integer(i_kind) ivar, istatus
 ! Check to see if required guess fields are available
   call gsi_metguess_get ('var::ps', ivar, istatus )
@@ -816,10 +845,14 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   proceed=proceed.and.ivar>0
   call gsi_metguess_get ('var::v' , ivar, istatus )
   proceed=proceed.and.ivar>0
-  if(regional_w) then
-     call gsi_metguess_get ('var::w' , ivar, istatus )
-     proceed=proceed.and.ivar>0
-  end if
+  call gsi_metguess_get ('var::w' , ivar, istatus )
+  if (ivar>0) then
+     write(6,*)'SETUPRW: Using vertical velocity in forward operator.'
+     include_w=.true.
+  else
+     write(6,*)'SETUPRW: NOT using vertical velocity in forward operator.'
+     include_w=.false.
+  endif
   end subroutine check_vars_ 
 
   subroutine init_vars_
@@ -904,7 +937,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
          call stop2(999)
      endif
 !    get w ...
-     if(regional_w) then
+     if(include_w) then
         varname='w'
         call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
         if (istatus==0) then

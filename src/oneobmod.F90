@@ -61,6 +61,7 @@ module oneobmod
   public :: oblat,oblon,obpres,obdattim,obhourset,anel_rw,anaz_rw,range_rw
   public :: lsingleradob, obchan, sstn
   public :: lsingleradar, singleradar
+  public :: learthrel_rw
 
   real(r_kind) maginnov, magoberr, oblat, oblon,&
     obhourset, obpres,anel_rw,anaz_rw,range_rw
@@ -69,7 +70,7 @@ module oneobmod
   character(4) sstn, singleradar
   logical oneobtest
   logical pctswitch
-  logical lsingleradob, lsingleradar
+  logical lsingleradob, lsingleradar, learthrel_rw
   integer(i_kind) obchan
 
   logical :: oneobmade
@@ -118,6 +119,7 @@ contains
     range_rw=r1000
     oneobmade=.false.
     lsingleradar=.false.
+    learthrel_rw=.false.
     singleradar='KOUN'
     return
   end subroutine init_oneobmod
@@ -458,11 +460,12 @@ contains
          abs(corrected_azimuth-thisazimuth+r720)),delazmmax)
 
     ! Ensure elevation angle is exactly 90 or 0 degress for these one ob tests.
-    if ( anel_rw == 90.0_r_kind .or. anel_rw == 0.0_r_kind ) then
+    !if ( anel_rw == 90.0_r_kind .or. anel_rw == 0.0_r_kind ) then
        corrected_azimuth=anaz_rw
        corrected_tilt=anel_rw
        thishgt=range_rw
-    end if
+    !end if
+     
 
     write(6,*) 'Single radial wind observation.'
     write(6,*) '*******************************************'

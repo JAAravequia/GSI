@@ -63,7 +63,7 @@ LIBhdf    = #-L$(BASEDIR)/$(ARCH)/lib  -lmfhdf -ldf -lhdfjpeg -lhdfz -lsz
 # Fortran compiler and options
 # ----------------------------
 
-  CF            = mpif90 -f90=ifort
+  CF            = mpif90 -f90=ifort -warn unused
   FC            = $(CF)
 
 #--- Normal mode options

@@ -1100,7 +1100,7 @@ subroutine wrnemsnmma_binary(mype,cold_start)
   use guess_grids, only: &
         ntguessfc,ntguessig,ges_tsen,dsfct,isli,geop_hgtl,ges_prsl
   use gridmod, only: pt_ll,update_regsfc,pdtop_ll,nsig,lat2,lon2,eta2_ll,nmmb_verttype,&
-        use_gfs_ozone,regional_ozone,regional_w
+        use_gfs_ozone,regional_ozone
   use rapidrefresh_cldsurf_mod, only: i_gsdcldanal_type
   use constants, only: zero,half,one,two,rd_over_cp,r10,r100,qcmin
   use gsi_nemsio_mod, only: gsi_nemsio_open,gsi_nemsio_close,gsi_nemsio_read,gsi_nemsio_write
@@ -1295,25 +1295,23 @@ subroutine wrnemsnmma_binary(mype,cold_start)
      endif
 
                                    !   w
-     if(regional_w) then
-        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'w',ges_w,iret)
-        if (iret==0) then
-           call gsi_nemsio_read('w_tot','mid layer','H',kr,work_sub(:,:),mype,mype_input)
+     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'w',ges_w,iret)
+     if (iret==0) then
+        call gsi_nemsio_read('w_tot','mid layer','H',kr,work_sub(:,:),mype,mype_input)
+        do i=1,lon2
+           do j=1,lat2
+              work_sub(j,i)=ges_w(j,i,k)-work_sub(j,i)
+           end do
+        end do
+        if(k <= near_sfc) then
            do i=1,lon2
               do j=1,lat2
-                 work_sub(j,i)=ges_w(j,i,k)-work_sub(j,i)
+                 delw(j,i,k)=work_sub(j,i)
               end do
            end do
-           if(k <= near_sfc) then
-              do i=1,lon2
-                 do j=1,lat2
-                    delw(j,i,k)=work_sub(j,i)
-                 end do
-              end do
-           end if
-           call gsi_nemsio_write('w_tot','mid layer','H',kr,work_sub(:,:),mype,mype_input,add_saved)
-        endif
-     end if
+        end if
+        call gsi_nemsio_write('w_tot','mid layer','H',kr,work_sub(:,:),mype,mype_input,add_saved)
+     endif
                                    !   q
 
      call gsi_bundlegetpointer (gsi_metguess_bundle(it),'q',ges_q,iret)
