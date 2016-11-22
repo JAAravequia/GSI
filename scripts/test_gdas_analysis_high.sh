@@ -1,20 +1,29 @@
-#!/bin/ksh
+#!/bin/sh --login
 
+#BSUB -L /bin/sh
+#BSUB -P GFS-T2O
 #BSUB -o gdas_analysis_high.o%J
 #BSUB -e gdas_analysis_high.o%J
 #BSUB -J gdas_analysis_high
-#BSUB -n 480
-#BSUB -x
-#BSUB -R span[ptile=2]
-#BSUB -R affinity[core(12)]
+#BSUB -q devmax
+#BSUB -M 3072
+#BSUB -extsched 'CRAYLINUX[]'
 #BSUB -W 01:00
-#BSUB -q devmax2
-#BSUB -a poe
-#BSUB -P GFS-T2O
+#BSUB -cwd /gpfs/hps/emc/global/noscrub/emc.glopara/svn/gfs/work/gdas.v14.1.0/driver
 
 set -x
 
-export CDATE=2016030212
+export NODES=60
+export ntasks=360
+export ptile=6
+export threads=4
+
+##export NODES=240
+##export ntasks=480
+##export ptile=2
+##export threads=12
+
+export CDATE=2016112106
 
 
 #############################################################
@@ -27,63 +36,53 @@ export job=gdas_analysis_high_${cyc}
 export pid=${pid:-$$}
 export jobid=${job}.${pid}
 export envir=para
-export DATAROOT=/stmpd3/$LOGNAME/test
-export COMROOT=/ptmpd3/$LOGNAME/com
+export DATAROOT=/gpfs/hps/stmp/$LOGNAME/test
 
 
 #############################################################
 # Specify versions
 #############################################################
-export gdas_ver=v13.0.0
-export global_shared_ver=v13.0.0
-export crtm_ver=v2.2.3
-export grib_util_ver=v1.0.1
-export prod_util_ver=v1.0.2
-export util_shared_ver=v1.0.2
+export gdas_ver=v14.1.0
+export global_shared_ver=v14.1.0
+export crtm_ver=2.2.4
+export prod_envir_ver=1.0.1
+export grib_util_ver=1.0.3
+export prod_util_ver=1.0.5
+export util_shared_ver=1.0.3
 
 
 #############################################################
 # Load modules
 #############################################################
-. /usrx/local/Modules/3.2.9/init/ksh
-module use /nwprod2/lib/modulefiles
-module load crtm/${crtm_ver}
-
-module use /nwprod2/modulefiles
+. $MODULESHOME/init/sh
+module load crtm-intel/${crtm_ver}
+module load prod_envir/$prod_envir_ver
 module load grib_util/$grib_util_ver
 module load prod_util/$prod_util_ver
 module load util_shared/$util_shared_ver
-
-module unload ics/12.1
-module load ics/15.0.3
+module load cfp-intel-sandybridge
 
 module list
 
 
 #############################################################
-# WCOSS environment settings
+# WCOSS_C environment settings
 #############################################################
-export MP_EAGER_LIMIT=65536
-export MP_LABELIO=yes
-export MP_USE_BULK_XFER=yes
-export MP_SINGLE_THREAD=yes
-export MP_MPILIB=mpich2
-export MP_SHARED_MEMORY=yes
-export MP_USE_TOKEN_FLOW_CONTROL=yes
+export KMP_AFFINITY=disabled
+export OMP_STACKSIZE=2G
+export OMP_NUM_THREADS=$threads
 export FORT_BUFFERED=true
-export KMP_STACKSIZE=2048m
-export MPICH_ALLTOALL_THROTTLE=0
 
 export OMP_NUM_THREADS_CY=24
 export NTHREADS=$OMP_NUM_THREADS_CY
-export NTHREADS_GSI=12
+export NTHREADS_GSI=$threads
 export NTHSTACK=1024000000
 
 
 #############################################################
 # Set user specific variables
 #############################################################
-export NWTEST=/global/save/$LOGNAME/svn/gfs/branches
+export NWTEST=/gpfs/hps/emc/global/noscrub/emc.glopara/svn/gfs/work
 export PARA_CONFIG=$NWTEST/gdas.${gdas_ver}/driver/para_config.gdas_analysis_high
 export JOBGLOBAL=$NWTEST/gdas.${gdas_ver}/jobs
 

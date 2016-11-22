@@ -150,24 +150,32 @@ export LOGSCRIPT=${LOGSCRIPT}
 export ENDSCRIPT=${ENDSCRIPT}
 export HYBENSMOOTH=${HYBENSMOOTH:-$FIXgsi/global_hybens_smoothinfo.l${LEVS}.txt}
 export SFCHDR=${SFCHDR:-${EXECgsm}/global_sfchdr$XC}
-#  I/O filenames.
-if [ $use_gfs_nemsio = .true. ]; then
-  export CDATE=${CDATE:-$($SFCHDR $SFCGES fcstdate | grep -i "fcstdate_ymdh" |awk -F= '{print $2}')}
-else
-  export CDATE=${CDATE:-$($SFCHDR $SFCGES VDATE||echo 0)}
-fi
+
+# I/O filenames
 export SIGENS_IN=${SIGENS_IN:-$COMIN/sfg_${CDATE}_fhr}
 export SFCENS=${SFCENS:-$COMIN/bfg_${CDATE}_fhr}
+export NSTENS=${NSTENS:-$COMIN/nfg_${CDATE}_fhr}
 export ENSSTAT=${ENSSTAT:-$COMOUT/ensstat_${CDATE}_all}
 export SIGENSMEAN=${SIGENSMEAN:-$COMOUT/sfg_${CDATE}_fhr}
 export SFCENSMEAN=${SFCENSMEAN:-$COMOUT/bfg_${CDATE}_fhr}
-export SIGENS_OUT=${SIGENS_OUT:-${COMOUT}/sfg_${CDATE}_fhr}
+export NSTENSMEAN=${NSTENSMEAN:-$COMOUT/nfg_${CDATE}_fhr}
+export SIGENS_OUT=${SIGENS_OUT:-$COMOUT/sfg_${CDATE}_fhr}
+export MEMBER_PREFIX=${MEMBER_PREFIX:-"_"}
+export MEMBER_SUFFIX=${MEMBER_SUFFIX:-""}
+
+# Set variables
+if [ $use_gfs_nemsio = .true. ]; then
+  export CDATE=${CDATE:-$($SFCHDR $SFCGES fcstdate | grep -i "fcstdate_ymdh" |awk -F= '{print $2}')}
+  export MEMBER_SUFFIX=${MEMBER_SUFFIX:-".nemsio"}
+else
+  export CDATE=${CDATE:-$($SFCHDR $SFCGES VDATE||echo 0)}
+  export MEMBER_SUFFIX=${MEMBER_SUFFIX:-""}
+fi
+
 #  Executables.
 export GETATMENSMEANEXEC=${GETATMENSMEANEXEC:-$EXECgdas/getsigensmean_smoothp$XC}
 export GETSFCENSMEANEXEC=${GETSFCENSMEANEXEC:-$EXECgdas/getsfcensmeanp$XC}
 export GETATMENSSTATEXEC=${GETATMENSSTATEXEC:-$EXECgdas/getsigensstatp$XC}
-export NSTENS=${NSTENS:-$COMIN/nfg_${CDATE}_fhr}
-export NSTENSMEAN=${NSTENSMEAN:-$COMOUT/nfg_${CDATE}_fhr}
 export GETNSTENSMEANEXEC=${GETNSTENSMEANEXEC:-$EXECgdas/getnstensmeanp$XC}
 #  Other variables.
 export FHOUTEFCS=${FHOUT_ENKF:-3}
@@ -244,6 +252,7 @@ fi
 
 if [[ $FILESTYLE = 'C' ]]
 then
+  if [[ "$MEMBER_PREFIX" = "." ]]; then
    # Forecast fields
 
    FHOUT=$FHOUTEFCS
@@ -251,37 +260,125 @@ then
    FHMAX=$FHMAXEFCS
    imem=1
    while [[ $imem -le $NMEM_ENKF ]]; do
-      member="_mem"`printf %03i $imem`
+      member=${MEMBER_PREFIX}"mem"`printf %03i $imem`
+      member_tmp="_mem"`printf %03i $imem`
       FHBEG=$FHMIN
       FHEND=$FHMAX
       FH=$FHBEG
       until [[ $FH -gt $FHEND ]];do
          [[ $FH -lt 10 ]]&&FH=0$FH
-         $NCP ${SFCENS}${FH}${member} bfg_${CDATE}_fhr${FH}$member
-         $NCP ${SIGENS_IN}${FH}${member} sfg_${CDATE}_fhr${FH}$member
+         FH3=0$FH
+         $NCP ${SFCENS}${FH3}${member}${MEMBER_SUFFIX}    bfg_${CDATE}_fhr${FH}$member_tmp
+         $NCP ${SIGENS_IN}${FH3}${member}${MEMBER_SUFFIX} sfg_${CDATE}_fhr${FH}$member_tmp
          if [ $NST_GSI -gt 0 ]; then
-            $NCP ${NSTENS}${FH}${member} nfg_${CDATE}_fhr${FH}$member
+            $NCP ${NSTENS}${FH3}${member}${MEMBER_SUFFIX} nfg_${CDATE}_fhr${FH}$member_tmp
+         fi
+         FH=`expr $FH + $FHOUT`
+      done
+      (( imem = $imem + 1 ))
+   done
+  else
+   # Forecast fields
+
+   FHOUT=$FHOUTEFCS
+   FHMIN=$FHMINEFCS
+   FHMAX=$FHMAXEFCS
+   imem=1
+   while [[ $imem -le $NMEM_ENKF ]]; do
+      member=${MEMBER_PREFIX}"mem"`printf %03i $imem`
+      member_tmp="_mem"`printf %03i $imem`
+      FHBEG=$FHMIN
+      FHEND=$FHMAX
+      FH=$FHBEG
+      until [[ $FH -gt $FHEND ]];do
+         [[ $FH -lt 10 ]]&&FH=0$FH
+         $NCP ${SFCENS}${FH}${member}    bfg_${CDATE}_fhr${FH}$member_tmp
+         $NCP ${SIGENS_IN}${FH}${member} sfg_${CDATE}_fhr${FH}$member_tmp
+         if [ $NST_GSI -gt 0 ]; then
+            $NCP ${NSTENS}${FH}${member} nfg_${CDATE}_fhr${FH}$member_tmp
+         fi
+         FH=`expr $FH + $FHOUT`
+      done
+      (( imem = $imem + 1 ))
+   done
+  fi
+
+# Set up links
+else
+  if [[ "$MEMBER_PREFIX" = "." ]]; then
+
+   # Forecast fields
+   FHOUT=$FHOUTEFCS
+   FHMIN=$FHMINEFCS
+   FHMAX=$FHMAXEFCS
+   imem=1
+   while [[ $imem -le $NMEM_ENKF ]]; do
+      member=${MEMBER_PREFIX}"mem"`printf %03i $imem`
+      member_tmp="_mem"`printf %03i $imem`
+      FHBEG=$FHMIN
+      FHEND=$FHMAX
+      FH=$FHBEG
+      until [[ $FH -gt $FHEND ]];do
+         [[ $FH -lt 10 ]]&&FH=0$FH
+         FH3=0$FH   
+         ln -fs ${SFCENS}${FH3}${member}${MEMBER_SUFFIX}    bfg_${CDATE}_fhr${FH}$member_tmp
+         ln -fs ${SIGENS_IN}${FH3}${member}${MEMBER_SUFFIX} sfg_${CDATE}_fhr${FH}$member_tmp
+         if [ $NST_GSI -gt 0 ]; then
+            ln -fs ${NSTENS}${FH3}${member}${MEMBER_SUFFIX} nfg_${CDATE}_fhr${FH}$member_tmp
          fi
          FH=`expr $FH + $FHOUT`
       done
       (( imem = $imem + 1 ))
    done
 
-else
+   # Output files
+   FHBEG=$FHMIN
+   FHEND=$FHMAX
+   FH=$FHBEG
+   until [[ $FH -gt $FHEND ]];do
+      [[ $FH -lt 10 ]]&&FH=0$FH
+      FH3=0$FH
+      ln -fs ${SIGENSMEAN}${FH3}${MEMBER_PREFIX}ensmean${MEMBER_SUFFIX}    sfg_${CDATE}_fhr${FH}_ensmean
+      ln -fs ${SFCENSMEAN}${FH3}${MEMBER_PREFIX}ensmean${MEMBER_SUFFIX}    bfg_${CDATE}_fhr${FH}_ensmean
+      ln -fs ${SIGENSMEAN}${FH3}${MEMBER_PREFIX}ensmean.nc4                sfg_${CDATE}_fhr${FH}_ensmean.nc4
+      ln -fs ${SIGENSMEAN}${FH3}${MEMBER_PREFIX}ensspread.nc4              sfg_${CDATE}_fhr${FH}_ensspread.nc4
+      if [ $NST_GSI -gt 0 ]; then
+         ln -fs ${NSTENSMEAN}${FH3}${MEMBER_PREFIX}ensmean${MEMBER_SUFFIX} nfg_${CDATE}_fhr${FH}_ensmean
+      fi
+      FH=`expr $FH + $FHOUT`
+   done
+   if [[ "$SMOOTH_ENKF" = "YES" ]]; then
+     imem=1
+     while [[ $imem -le $NMEM_ENKF ]]; do
+        member=${MEMBER_PREFIX}"mem"`printf %03i $imem`
+        member_tmp="_mem"`printf %03i $imem`
+        FHBEG=$FHMIN
+        FHEND=$FHMAX
+        FH=$FHBEG
+        until [[ $FH -gt $FHEND ]];do
+           [[ $FH -lt 10 ]]&&FH=0$FH
+           FH3=0$FH
+           ln -fs ${SIGENS_OUT}${FH3}${ENKF_SUFFIX}${member}${MEMBER_SUFFIX} sfg_${CDATE}_fhr${FH}${ENKF_SUFFIX}$member_tmp
+           FH=`expr $FH + $FHOUT`
+        done
+        (( imem = $imem + 1 ))
+     done
+   fi
+
+  else
    # Forecast fields
    FHOUT=$FHOUTEFCS
    FHMIN=$FHMINEFCS
    FHMAX=$FHMAXEFCS
-
    imem=1
    while [[ $imem -le $NMEM_ENKF ]]; do
-      member="_mem"`printf %03i $imem`
+      member=${MEMBER_PREFIX}"mem"`printf %03i $imem`
       FHBEG=$FHMIN
       FHEND=$FHMAX
       FH=$FHBEG
       until [[ $FH -gt $FHEND ]];do
          [[ $FH -lt 10 ]]&&FH=0$FH
-         ln -fs ${SFCENS}${FH}${member} bfg_${CDATE}_fhr${FH}$member
+         ln -fs ${SFCENS}${FH}${member}    bfg_${CDATE}_fhr${FH}$member
          ln -fs ${SIGENS_IN}${FH}${member} sfg_${CDATE}_fhr${FH}$member
          if [ $NST_GSI -gt 0 ]; then
             ln -fs ${NSTENS}${FH}${member} nfg_${CDATE}_fhr${FH}$member
@@ -297,19 +394,19 @@ else
    FH=$FHBEG
    until [[ $FH -gt $FHEND ]];do
       [[ $FH -lt 10 ]]&&FH=0$FH
-      ln -fs ${SIGENSMEAN}${FH}_ensmean sfg_${CDATE}_fhr${FH}_ensmean
-      ln -fs ${SFCENSMEAN}${FH}_ensmean bfg_${CDATE}_fhr${FH}_ensmean
+      ln -fs ${SIGENSMEAN}${FH}_ensmean       sfg_${CDATE}_fhr${FH}_ensmean
+      ln -fs ${SFCENSMEAN}${FH}_ensmean       bfg_${CDATE}_fhr${FH}_ensmean
       ln -fs ${SIGENSMEAN}${FH}_ensmean.nc4   sfg_${CDATE}_fhr${FH}_ensmean.nc4
       ln -fs ${SIGENSMEAN}${FH}_ensspread.nc4 sfg_${CDATE}_fhr${FH}_ensspread.nc4
       if [ $NST_GSI -gt 0 ]; then
-         ln -fs ${NSTENSMEAN}${FH}_ensmean nfg_${CDATE}_fhr${FH}_ensmean
+         ln -fs ${NSTENSMEAN}${FH}_ensmean    nfg_${CDATE}_fhr${FH}_ensmean
       fi
       FH=`expr $FH + $FHOUT`
    done
    if [[ "$SMOOTH_ENKF" = "YES" ]]; then
      imem=1
      while [[ $imem -le $NMEM_ENKF ]]; do
-        member="_mem"`printf %03i $imem`
+        member=${MEMBER_PREFIX}"mem"`printf %03i $imem`
         FHBEG=$FHMIN
         FHEND=$FHMAX
         FH=$FHBEG
@@ -321,11 +418,12 @@ else
         (( imem = $imem + 1 ))
      done
    fi
+  fi
 fi
 
 ################################################################################
 # Set output data
-ENSSTAT=$COMOUT/ensstat_${CDATE}_all
+ENSSTAT=${ENSSTAT:-$COMOUT/ensstat_${CDATE}_all}
 rm -f $ENSSTAT
 
 
@@ -413,13 +511,9 @@ export err=$ERR
 $ERRSCRIPT||exit 2
 
 ################################################################################
-# If smoothing on but no smoothing output, copy smoothed enkf atmospheric files
+# If smoothing on but no smoothing output, link unsmoothed files to smoothed files
 if [[ "$SMOOTH_ENKF" = "YES" ]]; then
  if [[ ! -s sfg_${CDATE}_fhr06s_mem001 ]]; then
-   FILEPREFIX=sfg_${CDATE}_fhr
-   if [[ $FILESTYLE = 'L' ]] then
-      FILEPREFIX=${SIGENS_OUT}
-   fi
    imem=1
    while [[ $imem -le $NMEM_ENKF ]]; do
       member="_mem"`printf %03i $imem`
@@ -428,7 +522,7 @@ if [[ "$SMOOTH_ENKF" = "YES" ]]; then
       FH=$FHBEG
       until [[ $FH -gt $FHEND ]];do
          [[ $FH -lt 10 ]]&&FH=0$FH
-         cp sfg_${CDATE}_fhr${FH}$member ${FILEPREFIX}${FH}${ENKF_SUFFIX}$member
+         ln -fs sfg_${CDATE}_fhr${FH}${ENKF_SUFFIX}$member sfg_${CDATE}_fhr${FH}$member
          FH=`expr $FH + $FHOUT`
       done
       (( imem = $imem + 1 ))
@@ -440,6 +534,40 @@ fi
 # Copy output files
 if [[ $FILESTYLE = 'C' ]]
 then
+ if [[ "$MEMBER_PREFIX" = "." ]]; then
+   FHBEG=$FHMIN
+   FHEND=$FHMAX
+   FH=$FHBEG
+   until [[ $FH -gt $FHEND ]];do
+      [[ $FH -lt 10 ]]&&FH=0$FH
+      FH3=0$FH
+      cp sfg_${CDATE}_fhr${FH}_ensmean       ${SIGENSMEAN}${FH3}${MEMBER_PREFIX}ensmean${MEMBER_SUFFIX}
+      cp bfg_${CDATE}_fhr${FH}_ensmean       ${SFCENSMEAN}${FH3}${MEMBER_PREFIX}ensmean${MEMBER_SUFFIX}
+      cp sfg_${CDATE}_fhr${FH}_ensmean.nc4   ${SIGENSMEAN}${FH3}${MEMBER_PREFIX}ensmean.nc4
+      cp sfg_${CDATE}_fhr${FH}_ensspread.nc4 ${SIGENSMEAN}${FH3}${MEMBER_PREFIX}ensspread.nc4
+      if [ $NST_GSI -gt 0 ]; then
+         cp nfg_${CDATE}_fhr${FH}_ensmean    ${NSTENSMEAN}${FH3}${MEMBER_PREFIX}ensmean${MEMBER_SUFFIX}
+      fi
+      FH=`expr $FH + $FHOUT`
+   done
+
+   imem=1
+   while [[ $imem -le $NMEM_ENKF ]]; do
+      member=${MEMBER_PREFIX}"mem"`printf %03i $imem`
+      member_tmp="_mem"`printf %03i $imem`
+      FHBEG=$FHMIN
+      FHEND=$FHMAX
+      FH=$FHBEG
+      until [[ $FH -gt $FHEND ]];do
+         [[ $FH -lt 10 ]]&&FH=0$FH
+         FH3=0$FH
+         cp sfg_${CDATE}_fhr${FH}${ENKF_SUFFIX}$member_tmp ${SIGENS_OUT}${FH3}${ENKF_SUFFIX}${MEMBER_PREFIX}${member}${MEMBER_SUFFIX}
+         FH=`expr $FH + $FHOUT`
+      done
+      (( imem = $imem + 1 ))
+   done
+
+ else
    FHBEG=$FHMIN
    FHEND=$FHMAX
    FH=$FHBEG
@@ -468,58 +596,63 @@ then
       done
       (( imem = $imem + 1 ))
    done
+ fi
 fi
 
 ################################################################################
 # If requested, generate low resolution fhr06 ensemble mean and ensemble member
 # files
+#
+# NOTE:  This option only works for sigio EnKF forecast files.  This option
+#        does NOT work for for nemsio EnKF forecast files.  Hence the
+#        check on $use_gfs_nemsio.  Only enter when use_gfs_nemsio=.false.
 
-export JCAP_ENKF=${JCAP_ENKF:-574}
-export JCAP_LORES=${JCAP_LORES:-254}
-export LATB_LORES=${LATB_LORES:-384}
-export LONB_LORES=${LONB_LORES:-768}
-export LEVS_LORES=${LEVS_LORES:-64}
+if [ $use_gfs_nemsio = .false.. ]; then
+ export JCAP_ENKF=${JCAP_ENKF:-574}
+ export JCAP_LORES=${JCAP_LORES:-254}
+ export LATB_LORES=${LATB_LORES:-384}
+ export LONB_LORES=${LONB_LORES:-768}
+ export LEVS_LORES=${LEVS_LORES:-64}
 
-export OROGRAPHY_LORES=$FIXgsm/global_orography.t$JCAP_LORES.$LONB_LORES.$LATB_LORES.grb
-export OROGRAPHY_UF_LORES=$FIXgsm/global_orography_uf.t$JCAP_LORES.$LONB_LORES.$LATB_LORES.grb
-export LONSPERLAT_LORES=$FIXgsm/global_lonsperlat.t${JCAP_LORES}.$LONB_LORES.$LATB_LORES.txt
-export SLMASK_LORES=$FIXgsm/global_slmask.t$JCAP_LORES.$LONB_LORES.$LATB_LORES.grb
-export MTNVAR_LORES=$FIXgsm/global_mtnvar.t$JCAP_LORES.$LONB_LORES.$LATB_LORES.f77
-export SIGLEVEL_LORES=$FIXgsm/global_hyblev.l${LEVS_LORES}.txt
+ export OROGRAPHY_LORES=$FIXgsm/global_orography.t$JCAP_LORES.$LONB_LORES.$LATB_LORES.grb
+ export OROGRAPHY_UF_LORES=$FIXgsm/global_orography_uf.t$JCAP_LORES.$LONB_LORES.$LATB_LORES.grb
+ export LONSPERLAT_LORES=$FIXgsm/global_lonsperlat.t${JCAP_LORES}.$LONB_LORES.$LATB_LORES.txt
+ export SLMASK_LORES=$FIXgsm/global_slmask.t$JCAP_LORES.$LONB_LORES.$LATB_LORES.grb
+ export MTNVAR_LORES=$FIXgsm/global_mtnvar.t$JCAP_LORES.$LONB_LORES.$LATB_LORES.f77
+ export SIGLEVEL_LORES=$FIXgsm/global_hyblev.l${LEVS_LORES}.txt
 
-
-if [[ "$JCAP_LORES" -lt "$JCAP_ENKF" ]]; then
-   fhrlist="06"
-   if [ $l4densvar = .true. ]; then
-      fhrlist="03 06 09"
-   fi
-   for fhr in $fhrlist; do
-      rm -rf $DATA/poescript.$fhr
-      member="ensmean"
-      export SIGINP=${SIGENS_OUT}${fhr}_${member}
-      export SIGOUT=${SIGENS_OUT}${fhr}_${member}_t${JCAP_LORES}
-      echo "$USHgdas/gfs_truncate_enkf.sh $member $SIGINP $SIGOUT $JCAP_LORES $LATB_LORES $LONB_LORES" >> $DATA/poescript.$fhr
-      imem=1
-      while [[ $imem -le $NMEM_ENKF ]]; do
-         member="mem"`printf %03i $imem`
-         export SIGINP=${SIGENS_OUT}${fhr}${ENKF_SUFFIX}_${member}
-         export SIGOUT=${SIGENS_OUT}${fhr}${ENKF_SUFFIX}_${member}_t${JCAP_LORES}
-         echo "$USHgdas/gfs_truncate_enkf.sh $member $SIGINP $SIGOUT $JCAP_LORES $LATB_LORES $LONB_LORES" >> $DATA/poescript.$fhr
-         (( imem = $imem + 1 ))
-      done
-      chmod 755 poescript.$fhr
-      if [ $machine = WCOSS ] ; then
-         export MP_PGMMODEL=mpmd
-         export MP_CMDFILE=$DATA/poescript.$fhr
-         mpirun.lsf
-         export err=$?; err_chk
-      else
-         $DATA/poescript.$fhr
-         export err=$?
-      fi
-   done
+ if [[ "$JCAP_LORES" -lt "$JCAP_ENKF" ]]; then
+    fhrlist="06"
+    if [ $l4densvar = .true. ]; then
+       fhrlist="03 06 09"
+    fi
+    for fhr in $fhrlist; do
+       rm -rf $DATA/poescript.$fhr
+       member="ensmean"
+       export SIGINP=${SIGENS_OUT}${fhr}_${member}
+       export SIGOUT=${SIGENS_OUT}${fhr}_${member}_t${JCAP_LORES}
+       echo "$USHgdas/gfs_truncate_enkf.sh $member $SIGINP $SIGOUT $JCAP_LORES $LATB_LORES $LONB_LORES" >> $DATA/poescript.$fhr
+       imem=1
+       while [[ $imem -le $NMEM_ENKF ]]; do
+          member="mem"`printf %03i $imem`
+          export SIGINP=${SIGENS_OUT}${fhr}${ENKF_SUFFIX}_${member}
+          export SIGOUT=${SIGENS_OUT}${fhr}${ENKF_SUFFIX}_${member}_t${JCAP_LORES}
+          echo "$USHgdas/gfs_truncate_enkf.sh $member $SIGINP $SIGOUT $JCAP_LORES $LATB_LORES $LONB_LORES" >> $DATA/poescript.$fhr
+          (( imem = $imem + 1 ))
+       done
+       chmod 755 poescript.$fhr
+       if [ $machine = WCOSS ] ; then
+          export MP_PGMMODEL=mpmd
+          export MP_CMDFILE=$DATA/poescript.$fhr
+          mpirun.lsf
+          export err=$?; err_chk
+       else
+          $DATA/poescript.$fhr
+          export err=$?
+       fi
+    done
+ fi
 fi
-
 
 
 ################################################################################

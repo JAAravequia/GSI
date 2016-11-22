@@ -232,6 +232,7 @@ export SIGOSUF=${SIGOSUF:-'sig'}
 export SFCOSUF=${SFCOSUF:-'sfc'}
 export FLXOSUF=${FLXOSUF:-'flx'}
 export NSTOSUF=${NSTOSUF:-'nst'}
+export MEMBER_PREFIX=${MEMBER_PREFIX:-"_"}
 
 if [ $machine = IBMP6 ] ; then
   typeset -L1 l=$PGMOUT
@@ -281,7 +282,7 @@ while [[ $imem -le $ENSEND ]]; do
    export DATA=$DATATOP/$member
    export pgmoutm=$DATA/${pgmout:-pgmout.$member}
 
-   export SUFOUT="_${member}"
+   export SUFOUT="${MEMBER_PREFIX}${member}"
 
    export COMOUTSAVE=$COMOUT
    export COMOUT=$DATATOP
@@ -329,19 +330,36 @@ while [[ $imem -le $ENSEND ]]; do
      export GDATE=$($NDATE -$FHBAK $CDATE)
      export GDATE=$($NDATE -$FHBAK $GDATE)
      [[ $FHBAK -lt 10 ]]&&FHBAK=0$FHBAK
-     export SIGI=$COMIN/sfg_${GDATE}_fhr$FHBAK$SUFOUT
-     export GRDI=$SIGI
-     export SFCI=$COMIN/sfca${FHBAK}_$CDATE$SUFOUT
-     export NSTI=$COMIN/nsta${FHBAK}_$CDATE$SUFOUT
-     iaufiles_fg=\'$COMIN/sfg_${GDATE}_fhr06$SUFOUT\'
-     iaufiles_anl=\'$COMIN/siganl_$CDATE$SUFOUT\'
+     if [[ "$MEMBER_PREFIX" = "." ]]; then
+      FH3=0$FHBAK
+      export SIGI=$COMINg/${PREINPg}atmf${FH3}${SUFOUT}.nemsio
+      export GRDI=$SIGI
+      export SFCI=$COMIN/${PREINP}sfca${FH3}${SUFOUT}.nemsio
+      export NSTI=$COMIN/${PREINP}nsta${FH3}${SUFOUT}.nemsio
+      iaufiles_fg=\'$COMINg/${PREINPg}atmf006s${SUFOUT}.nemsio\'
+      iaufiles_anl=\'$COMIN/${PREINP}ratmanl${SUFOUT}.nemsio\'
+     else
+      export SIGI=$COMIN/sfg_${GDATE}_fhr$FHBAK$SUFOUT
+      export GRDI=$SIGI
+      export SFCI=$COMIN/sfca${FHBAK}_$CDATE$SUFOUT
+      export NSTI=$COMIN/nsta${FHBAK}_$CDATE$SUFOUT
+      iaufiles_fg=\'$COMIN/sfg_${GDATE}_fhr06$SUFOUT\'
+      iaufiles_anl=\'$COMIN/siganl_$CDATE$SUFOUT\'
+     fi
      export PHYVARS_TMP="iau=.true.,iau_delthrs=6,iaufhrs=6,iaufiles_fg=$iaufiles_fg,iaufiles_anl=$iaufiles_anl,$PHYVARS_TMP"
      FHSTART=`expr 6 + $FHOUT`
    else
-     export SIGI=$COMIN/siganl_$CDATE$SUFOUT
-     export GRDI=$SIGI
-     export SFCI=$COMIN/sfcanl_$CDATE$SUFOUT
-     export NSTI=$COMIN/nstanl_$CDATE$SUFOUT
+     if [[ "$MEMBER_PREFIX" = "." ]]; then
+      export SIGI=$COMIN/${PREINP}ratmanl${SUFOUT}.nemsio
+      export GRDI=$SIGI
+      export SFCI=$COMIN/${PREINP}sfcanl${SUFOUT}.nemsio
+      export NSTI=$COMIN/${PREINP}nstanl${SUFOUT}.nemsio
+     else
+      export SIGI=$COMIN/siganl_$CDATE$SUFOUT
+      export GRDI=$SIGI
+      export SFCI=$COMIN/sfcanl_$CDATE$SUFOUT
+      export NSTI=$COMIN/nstanl_$CDATE$SUFOUT
+     fi
      export FHINI=0
      FHSTART=$FHOUT
    fi
@@ -363,11 +381,21 @@ while [[ $imem -le $ENSEND ]]; do
          [[ $FHIAU -lt 10 ]]&&FHIAU=0$FHIAU
        fi
        [[ $FH -lt 10 ]]&&FH=0$FH
-       ln -fs $COMOUTSAVE/sfg_${CDATE}_fhr$FHIAU$SUFOUT ${SIGOSUF}f$FH$SUFOUT
-       ln -fs $COMOUTSAVE/bfg_${CDATE}_fhr$FHIAU$SUFOUT ${SFCOSUF}f$FH$SUFOUT
-       ln -fs $COMOUTSAVE/flg_${CDATE}_fhr$FHIAU$SUFOUT ${FLXOSUF}f$FH$SUFOUT
-       if [ $NST_GSI -gt 0 ]; then
-          ln -fs $COMOUTSAVE/nfg_${CDATE}_fhr$FHIAU$SUFOUT ${NSTOSUF}f$FH$SUFOUT
+       if [[ "$MEMBER_PREFIX" = "." ]]; then
+        FH3=0$FHIAU
+        ln -fs $COMOUTSAVE/${PREINP}atmf${FH3}${SUFOUT}.nemsio ${SIGOSUF}f$FH$SUFOUT
+        ln -fs $COMOUTSAVE/${PREINP}sfcf${FH3}${SUFOUT}.nemsio ${SFCOSUF}f$FH$SUFOUT
+        ln -fs $COMOUTSAVE/${PREINP}flxf${FH3}${SUFOUT}.nemsio ${FLXOSUF}f$FH$SUFOUT
+        if [ $NST_GSI -gt 0 ]; then
+           ln -fs $COMOUTSAVE/${PREINP}nstf${FH3}${SUFOUT}.nemsio ${NSTOSUF}f$FH$SUFOUT
+        fi
+       else
+        ln -fs $COMOUTSAVE/sfg_${CDATE}_fhr$FHIAU$SUFOUT ${SIGOSUF}f$FH$SUFOUT
+        ln -fs $COMOUTSAVE/bfg_${CDATE}_fhr$FHIAU$SUFOUT ${SFCOSUF}f$FH$SUFOUT
+        ln -fs $COMOUTSAVE/flg_${CDATE}_fhr$FHIAU$SUFOUT ${FLXOSUF}f$FH$SUFOUT
+        if [ $NST_GSI -gt 0 ]; then
+           ln -fs $COMOUTSAVE/nfg_${CDATE}_fhr$FHIAU$SUFOUT ${NSTOSUF}f$FH$SUFOUT
+        fi
        fi
        FH=$((10#$FH))
        FH=`expr $FH + $FHOUT`
@@ -403,12 +431,22 @@ while [[ $imem -le $ENSEND ]]; do
          [[ $FHIAU -lt 10 ]]&&FHIAU=0$FHIAU
        fi
        [[ $FH -lt 10 ]]&&FH=0$FH
-       $NCP ${SIGOSUF}f$FH$SUFOUT $COMOUT/sfg_${CDATE}_fhr$FHIAU$SUFOUT
-       $NCP ${SFCOSUF}f$FH$SUFOUT $COMOUT/bfg_${CDATE}_fhr$FHIAU$SUFOUT
-       $NCP ${FLXOSUF}f$FH$SUFOUT $COMOUT/flg_${CDATE}_fhr$FHIAU$SUFOUT
-        if [ $NST_GSI -gt 0 ]; then
-           $NCP ${NSTOSUF}f$FH$SUFOUT $COMOUT/nfg_${CDATE}_fhr$FHIAU$SUFOUT
-        fi
+       if [[ "$MEMBER_PREFIX" = "." ]]; then
+        FH3=0$FHIAU
+        $NCP ${SIGOSUF}f$FH$SUFOUT $COMOUT/${PREINP}atmf${FH3}${SUFOUT}.nemsio
+        $NCP ${SFCOSUF}f$FH$SUFOUT $COMOUT/${PREINP}sfcf${FH3}${SUFOUT}.nemsio
+        $NCP ${FLXOSUF}f$FH$SUFOUT $COMOUT/${PREINP}flxf${FH3}${SUFOUT}.nemsio
+         if [ $NST_GSI -gt 0 ]; then
+            $NCP ${NSTOSUF}f$FH$SUFOUT $COMOUT/${PREINP}nstf${FH3}${SUFOUT}.nemsio
+         fi
+       else
+        $NCP ${SIGOSUF}f$FH$SUFOUT $COMOUT/sfg_${CDATE}_fhr$FHIAU$SUFOUT
+        $NCP ${SFCOSUF}f$FH$SUFOUT $COMOUT/bfg_${CDATE}_fhr$FHIAU$SUFOUT
+        $NCP ${FLXOSUF}f$FH$SUFOUT $COMOUT/flg_${CDATE}_fhr$FHIAU$SUFOUT
+         if [ $NST_GSI -gt 0 ]; then
+            $NCP ${NSTOSUF}f$FH$SUFOUT $COMOUT/nfg_${CDATE}_fhr$FHIAU$SUFOUT
+         fi
+       fi
        FH=$((10#$FH))
        FH=`expr $FH + $FHOUT`
      done
@@ -420,7 +458,7 @@ while [[ $imem -le $ENSEND ]]; do
        [[ $FH -lt 10 ]]&&FH=0$FH
        if [[ `expr $FH % 3` -eq 0 ]]
        then
-         $DBNROOT/bin/dbn_alert MODEL GFS_ENKF $job $COMOUT/bfg_${CDATE}_fhr$FH$SUFOUT
+         $DBNROOT/bin/dbn_alert MODEL GFS_ENKF $job $COMOUT/${PREINP}sfcf${FH3}${SUFOUT}.nemsio
        fi
        FH=$((FH+FHOUT))
      done

@@ -1,7 +1,12 @@
 ####################################
-# Specify Special Fcst Vars
+# Specify Special Vars
 ####################################
 #
+# Set executable and script
+export SIGHDR=${SIGHDR:-${EXECgsm}/nemsio_get$XC}
+export SFCHDR=${SFCHDR:-${EXECgsm}/nemsio_get$XC}
+
+
 #Set hybrid and ensemble resolution parameters
 export NTHREADS_ENKF=${NTHREADS_ENKF:-4}
 export JCAP_ENKF=${JCAP_ENKF:-574}
@@ -44,14 +49,18 @@ export OZINFO=${OZINFO:-${FIXgsi}/global_ozinfo.txt}
 export HYBENSINFO=${HYBENSINFO:-${FIXgsi}/global_hybens_locinfo.l${LEVS}.txt}
 
 # EnKF ensemble files
-export GBIASE=${GBIASE:-$COMIN/biascr_int_${CDATE}_ensmean}
-export CNVSTAT=${CNVSTAT:-$COMIN/cnvstat_$CDATE}
-export OZNSTAT=${OZNSTAT:-$COMIN/oznstat_$CDATE}
-export RADSTAT=${RADSTAT:-$COMIN/radstat_$CDATE}
-export SIGGESENS=${SIGGESENS:-${COMINGES}/sfg_${GDATE}_fhr06s}
+export PREINP=${PREINP:-${RUN}.${cycle}.}
+export PREINPg=${PREINPg:-${RUN}.${cycleg}.}
 
-export SIGGES=${SIGGES:-${COMINGES}/sfg_${GDATE}_fhr06_ensmean}
-export SFCGES=${SFCGES:-${COMINGES}/bfg_${GDATE}_fhr06_ensmean}
+export MEMBER_PREFIX=${MEMBER_PREFIX:-"."}
+export GBIASE=${GBIASE:-$COMIN/${PREINP}biascr_int.ensmean}
+export CNVSTAT=${CNVSTAT:-$COMIN/${PREINP}cnvstat}
+export OZNSTAT=${OZNSTAT:-$COMIN/${PREINP}oznstat}
+export RADSTAT=${RADSTAT:-$COMIN/${PREINP}radstat}
+export SIGGESENS_TMP=${SIGGESENS_TMP:-${COMINg}/${PREINPg}atmf006s}
+
+export SIGGES=${SIGGES:-${COMINg}/${PREINPg}atmf006.ensmean.nemsio}
+export SFCGES=${SFCGES:-${COMINg}/${PREINPg}sfcf006.ensmean.nemsio}
 
 # Specify smoothed EnKF forecasts
 export SMOOTH_ENKF=${SMOOTH_ENKF:-"YES"}
@@ -61,8 +70,8 @@ export SMOOTH_ENKF=${SMOOTH_ENKF:-"YES"}
 #
 # Output File Names
 
-export ENKFSTAT=${ENKFSTAT:-$COMOUT/enkfstat_$CDATE}
-export SIGANLENS=${SIGANLENS:-${COMOUT}/sanl_${CDATE}}
+export ENKFSTAT=${ENKFSTAT:-$COMOUT/${PREINP}enkfstat}
+export SIGANLENS_TMP=${SIGANLENS_TMP:-${COMOUT}/${PREINP}atmanl}
 
 
 ####################################
@@ -96,3 +105,7 @@ fi
 
 # Set namelist variables for enhanced radiance bias correction scheme
 export USE_NEWRADBC=${USE_NEWRADBC:-YES}
+
+# NEMSIO setup
+export use_gfs_nemsio=.true.
+

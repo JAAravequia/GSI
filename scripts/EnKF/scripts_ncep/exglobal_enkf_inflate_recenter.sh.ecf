@@ -216,6 +216,14 @@ export APRUN=${APRUN:-""}
 export NST_GSI=${NST_GSI:-0}
 export SIGISUF=${SIGISUF:-'siganl'}
 export SFCISUF=${SFCISUF:-'sfcanl'}
+export SIGANLENS_IN_TMP=${SIGANLENS_IN_TMP:-""}
+export SIGANLENS_OUT_TMP=${SIGANLENS_OUT_TMP:-""}
+export NSTGES_ENS_TMP=${NSTGES_ENS_TMP:-""}
+export SFCGES_ENS_TMP=${SFCGES_ENS_TMP:-""}
+export SFCGCY_ENS_TMP=${SFCGCY_ENS_TMP:-""}
+export SFCANL_ENS_TMP=${SFCANL_ENS_TMP:-""}
+export NSTANL_ENS_TMP=${NSTANL_ENS_TMP:-""}
+export MEMBER_PREFIX=${MEMBER_PREFIX:-"_"}
 
 if [ $machine = IBMP6 ] ; then
   typeset -L1 l=$PGMOUT
@@ -258,8 +266,11 @@ fi
 
 imem=1
 while [[ $imem -le $NMEM_ENKF ]]; do
-   member="_mem"`printf %03i $imem`
-   $FCPLN ${SIGANLENS_IN}${member} ./sanl_${CDATE}${member}
+   member=${MEMBER_PREFIX}"mem"`printf %03i $imem`
+   member_tmp="_mem"`printf %03i $imem`
+   sanl=${SIGANLENS_IN}${member}
+   [[ -n ${SIGANLENS_IN_TMP:-""} ]]&&eval export sanl=${SIGANLENS_IN_TMP}${member}.nemsio
+   $FCPLN $sanl ./sanl_${CDATE}${member_tmp}
    (( imem = $imem + 1 ))
 done
 
@@ -388,7 +399,7 @@ export JCAP_ens=$JCAP_ENKF
 export LEVS_ens=$LEVS_ENKF
 export LONB_ens=$LONB_ENKF
 export LATB_ens=$LATB_ENKF
-export OUTTYP=${OUTTYP:-2}
+export OUTTYP=${OUTTYP:-1}
 export PGMOUT=stdout.chgres
 export PGMERR=stderr.chgres
 
@@ -437,8 +448,11 @@ export FILENAMEOUT=sanlprc_${CDATE}
 if [[ $FILESTYLE = 'L' ]]; then
    imem=1
    while [[ $imem -le $NMEM_ENKF ]]; do
-      member="_mem"`printf %03i $imem`
-      ln -fs ${SIGANLENS_OUT}${member} sanlprc_${CDATE}${member}
+      member=${MEMBER_PREFIX}"mem"`printf %03i $imem`
+      member_tmp="_mem"`printf %03i $imem`
+      siganl=${SIGANLENS_OUT}${member}
+      [[ -n ${SIGANLENS_OUT_TMP:-""} ]]&&eval export siganl=${SIGANLENS_OUT_TMP}${member}.nemsio
+      ln -fs $siganl sanlprc_${CDATE}${member_tmp}
       (( imem = $imem + 1 ))
    done
 fi
@@ -461,8 +475,11 @@ cat stdout_recenter_hires
 if [[ $FILESTYLE = 'C' ]]; then
    imem=1
    while [[ $imem -le $NMEM_ENKF ]]; do
-      member="_mem"`printf %03i $imem`
-      $NCP sanlprc_${CDATE}${member} ${SIGANLENS_OUT}${member}
+      member=${MEMBER_PREFIX}"mem"`printf %03i $imem`
+      member_tmp="_mem"`printf %03i $imem`
+      siganl=${SIGANLENS_OUT}${member}
+      [[ -n ${SIGANLENS_OUT_TMP:-""} ]]&&eval export siganl=${SIGANLENS_OUT_TMP}${member}.nemsio
+      $NCP sanlprc_${CDATE}${member_tmp} $siganl
       (( imem = $imem + 1 ))
    done
 fi
@@ -471,9 +488,12 @@ fi
 if [ $SENDDBN = YES ]; then 
   imem=1 
   while [[ $imem -le $NMEM_ENKF ]]; do 
-    member="_mem"`printf %03i $imem` 
+    member=${MEMBER_PREFIX}"mem"`printf %03i $imem` 
+    member_tmp="_mem"`printf %03i $imem`
+    siganl=${SIGANLENS_OUT}${member}
+    [[ -n ${SIGANLENS_OUT_TMP:-""} ]]&&eval export siganl=${SIGANLENS_OUT_TMP}${member}.nemsio
     if [ $SENDDBN = YES ]; then 
-      $DBNROOT/bin/dbn_alert MODEL GFS_ENKF $job ${SIGANLENS_OUT}${member} 
+      $DBNROOT/bin/dbn_alert MODEL GFS_ENKF $job $siganl
     fi 
     (( imem = $imem + 1 )) 
   done 
@@ -495,13 +515,25 @@ if [ $NST_GSI -gt 0 ]; then
    $FCPLN $DTFANL dtfanl
    imem=1
    while [[ $imem -le $NMEM_ENKF ]]; do
-     member="_mem"`printf %03i $imem`
-     $FCPLN ${NSTGES_ENS}${member} nstf06${member}
-     $FCPLN ${SFCGES_ENS}${member} sfcf06${member}
+     member=${MEMBER_PREFIX}"mem"`printf %03i $imem`
+     member_tmp="_mem"`printf %03i $imem`
+
+     nstges=${NSTGES_ENS}${member}
+     [[ -n ${NSTGES_ENS_TMP:-""} ]]&&eval export nstges=${NSTGES_ENS_TMP}${member}.nemsio
+     $FCPLN $nstges nstf06${member_tmp}
+
+     sfcges=${SFCGES_ENS}${member}
+     [[ -n ${SFCGES_ENS_TMP:-""} ]]&&eval export sfcges=${SFCGES_ENS_TMP}${member}.nemsio
+     $FCPLN $sfcges sfcf06${member_tmp}
+
      if [ $NST_GSI -eq 3 ]; then
-        $FCPLN ${SFCGCY_ENS}${member} sfcgcy${member}
+        sfcgcy=${SFCGCY_ENS}${member}
+        [[ -n ${SFCGCY_ENS_TMP:-""} ]]&&eval export sfcgcy=${SFCGCY_ENS_TMP}${member}.nemsio
+        $FCPLN $sfcgcy sfcgcy${member_tmp}
      else
-        $FCPLN ${SFCANL_ENS}${member} sfcgcy${member}
+        sfcanl=${SFCANL_ENS}${member}
+        [[ -n ${SFCANL_ENS_TMP:-""} ]]&&eval export sfcanl=${SFCANL_ENS_TMP}${member}.nemsio
+        $FCPLN $sfcanl sfcgcy${member_tmp}
      fi
      (( imem = $imem + 1 ))
    done
@@ -509,10 +541,15 @@ if [ $NST_GSI -gt 0 ]; then
    if [[ $FILESTYLE = 'L' ]]; then
       imem=1
       while [[ $imem -le $NMEM_ENKF ]]; do
-         member="_mem"`printf %03i $imem`
-         ln -fs ${NSTANL_ENS}${member} nstanl${member}
+         member=${MEMBER_PREFIX}"mem"`printf %03i $imem`
+         member_tmp="_mem"`printf %03i $imem`
+         nstanl=${NSTANL_ENS}${member}
+         [[ -n ${NSTANL_ENS_TMP:-""} ]]&&eval export nstanl=${NSTANL_ENS_TMP}${member}.nemsio
+         ln -fs $nstanl nstanl${member_tmp}
          if [ $NST_GSI -eq 3 ]; then
-            ln -fs ${SFCANL_ENS}${member} sfcanl${member}
+            sfcanl=${SFCANL_ENS}${member}
+            [[ -n ${SFCANL_ENS_TMP:-""} ]]&&eval export sfcanl=${SFCANL_ENS_TMP}${member}.nemsio
+            ln -fs $sfcanl sfcanl${member_tmp}
          fi
          (( imem = $imem + 1 ))
       done
@@ -534,9 +571,17 @@ if [ $NST_GSI -gt 0 ]; then
    if [[ $FILESTYLE = 'C' ]]; then
       imem=1
       while [[ $imem -le $NMEM_ENKF ]]; do
-         member="_mem"`printf %03i $imem`
-         $NCP nstanl${member} ${NSTANL_ENS}${member} 
-         $NCP sfcanl${member} ${SFCANL_ENS}${member} 
+         member=${MEMBER_PREFIX}"mem"`printf %03i $imem`
+         member_tmp="_mem"`printf %03i $imem`
+
+         nstanl=${NSTANL_ENS}${member}
+         [[ -n ${NSTANL_ENS_TMP:-""} ]]&&eval export nstanl=${NSTANL_ENS_TMP}${member}.nemsio
+         $NCP nstanl${member_tmp} $nstanl
+
+         sfcanl=${SFCANL_ENS}${member}
+         [[ -n ${SFCANL_ENS_TMP:-""} ]]&&eval export sfcanl=${SFCANL_ENS_TMP}${member}.nemsio
+         $NCP sfcanl${member_tmp} $sfcanl
+
          (( imem = $imem + 1 ))
       done
    fi

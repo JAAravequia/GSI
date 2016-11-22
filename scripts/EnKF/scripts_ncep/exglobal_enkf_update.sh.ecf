@@ -239,7 +239,10 @@ export SCANINFO=${SCANINFO:-${FIXgsi}/global_scaninfo.txt}
 export HYBENSINFO=${HYBENSINFO:-${FIXgsi}/global_hybens_locinfo.l${LEVS}.txt}
 export SIGGESENS=${SIGGESENS:-${COMIN}/sigf06_ens}
 export SIGANLENS=${SIGANLENS:-${COMOUT}/sanl}
+export SIGGESENS_TMP=${SIGGESENS_TMP:-""}
+export SIGANLENS_TMP=${SIGANLENS_TMP:-""}
 export USE_NEWRADBC=${USE_NEWRADBC:-"NO"}
+export MEMBER_PREFIX=${MEMBER_PREFIX:-"_"}
 export NMEM_ENKF=${NMEM_ENKF:-0}
 export ENKFSTAT=${ENKFSTAT:-${COMOUT}/${PREINP}enkfstat}
 export CNVSTAT=${CNVSTAT:-${COMIN}/${PREINP}cnvstat}
@@ -347,17 +350,18 @@ then
 
    # Ensemble observational and guess data
    if [[ $USE_CFP = YES ]]; then
-      echo "$DATA/untar.sh _ensmean" | tee -a $DATA/mp_untar.sh
+      echo "$DATA/untar.sh ${MEMBER_PREFIX}ensmean" | tee -a $DATA/mp_untar.sh
    else
       list="$CNVSTAT $OZNSTAT $RADSTAT"
       for type in $list; do
-         $NCP ${type}_ensmean ./
-         tar -xvf ${type}_ensmean
+         $NCP ${type}${MEMBER_PREFIX}ensmean ./
+         tar -xvf ${type}${MEMBER_PREFIX}ensmean
       done
    fi
    imem=1
    while [[ $imem -le $NMEM_ENKF ]]; do
-      member="_mem"`printf %03i $imem`
+      member=${MEMBER_PREFIX}"mem"`printf %03i $imem`
+      member_tmp="_mem"`printf %03i $imem`
       if [[ $USE_CFP = YES ]]; then
          echo "$DATA/untar.sh $member" | tee -a $DATA/mp_untar.sh
       else
@@ -368,7 +372,8 @@ then
          done
       fi
       sigens=${SIGGESENS}${member}
-      $NCP $sigens sfg_${CDATE}_fhr06${member}
+      [[ -n ${SIGGESENS_TMP:-""} ]]&&eval export sigens=${SIGGESENS_TMP}${member}.nemsio
+      $NCP $sigens sfg_${CDATE}_fhr06${member_tmp}
       (( imem = $imem + 1 ))
    done
 
@@ -393,16 +398,17 @@ else
 
    # Ensemble observational and guess data
    if [[ $USE_CFP = YES ]]; then
-      echo "$DATA/untar.sh _ensmean" | tee -a $DATA/mp_untar.sh
+      echo "$DATA/untar.sh ${MEMBER_PREFIX}ensmean" | tee -a $DATA/mp_untar.sh
    else
       list="$CNVSTAT $OZNSTAT $RADSTAT"
       for type in $list; do
-         tar -xvf ${type}_ensmean
+         tar -xvf ${type}${MEMBER_PREFIX}ensmean
       done
    fi
    imem=1
    while [[ $imem -le $NMEM_ENKF ]]; do
-      member="_mem"`printf %03i $imem`
+      member=${MEMBER_PREFIX}"mem"`printf %03i $imem`
+      member_tmp="_mem"`printf %03i $imem`
       if [[ $USE_CFP = YES ]]; then
          echo "$DATA/untar.sh $member" | tee -a $DATA/mp_untar.sh
       else
@@ -412,7 +418,8 @@ else
          done
       fi
       sigens=${SIGGESENS}${member}
-      ln -fs $sigens sfg_${CDATE}_fhr06${member}
+      [[ -n ${SIGGESENS_TMP:-""} ]]&&eval export sigens=${SIGGESENS_TMP}${member}.nemsio
+      ln -fs $sigens sfg_${CDATE}_fhr06${member_tmp}
       (( imem = $imem + 1 ))
    done
 
@@ -429,8 +436,11 @@ else
    # Output files
    imem=1
    while [[ $imem -le $NMEM_ENKF ]]; do
-      member="_mem"`printf %03i $imem`
-      ln -fs ${SIGANLENS}${member} sanl_${CDATE}${member}
+      member=${MEMBER_PREFIX}"mem"`printf %03i $imem`
+      member_tmp="_mem"`printf %03i $imem`
+      siganl=${SIGANLENS}${member}
+      [[ -n ${SIGANLENS_TMP:-""} ]]&&eval export siganl=${SIGANLENS_TMP}${member}.nemsio
+      ln -fs $siganl sanl_${CDATE}${member_tmp}
       (( imem = $imem + 1 ))
    done
 
@@ -558,8 +568,11 @@ if [[ $FILESTYLE = 'C' ]]
 then
    imem=1
    while [[ $imem -le $NMEM_ENKF ]]; do
-      member="_mem"`printf %03i $imem`
-      $NCP sanl_${CDATE}${member} ${SIGANLENS}${member}
+      member=${MEMBER_PREFIX}"mem"`printf %03i $imem`
+      member_tmp="_mem"`printf %03i $imem`
+      siganl=${SIGANLENS}${member}
+      [[ -n ${SIGANLENS_TMP:-""} ]]&&eval export siganl=${SIGANLENS_TMP}${member}.nemsio
+      $NCP sanl_${CDATE}${member_tmp} $siganl
       (( imem = $imem + 1 ))
    done
 fi

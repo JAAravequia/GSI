@@ -1,28 +1,32 @@
 # Set variables
-export NWROOT=/nwprod
-export COM_IN=/global/noscrub/$LOGNAME/com/gfs/para
+export NWROOT=$NWTEST
+export COM_IN=/gpfs/hps/ptmp/emc.glopara/com2/gfs/para
+export COM_OUT=/gpfs/hps/ptmp/emc.glopara/com2/gfs/test
 export SENDDBN=NO
 export SAVEGES=NO
 export SENDCOM=YES
-export GETGES_NWG=/global/noscrub/$LOGNAME
+export GETGES_NWG=/gpfs/hps/ptmp/emc.glopara/com2/gfs/nwges2
 export gesenvir=para
-export GETGES_COM=/global/noscrub/$LOGNAME/com
-export GESROOT=/ptmpd3/$LOGNAME/nwges
+export GETGES_COM=/gpfs/hps/ptmp/emc.glopara/com2
+export GESROOT=/gpfs/hps/ptmp/emc.glopara/com2/gfs/nwges2
 export KEEPDATA=YES
 
 
 # Set paths
-export HOMEgsi=$NWTEST/global_shared.${global_shared_ver}
 export HOMEgsm=$NWTEST/global_shared.${global_shared_ver}
-export HOMEgdas=$NWTEST/gdas.${gdas_ver}
 
 
 # Set fix files
 
 
-# Set scripts and executables
+# Set scripts
+##export GETGESSH=$HOMEgsm/ush/getges.sh
+
+
+# Set executables
+export SIGHDR=/gpfs/hps/emc/global/noscrub/emc.glopara/bin/nemsio_get
+export SFCHDR=/gpfs/hps/emc/global/noscrub/emc.glopara/bin/nemsio_get
 
 
 # Dev para jobs
-export PEND=/global/save/emc.glopara/svn/gfs/trunk/para/bin/pend
 export ERRSCRIPT='eval [[ $err = 0 ]]'

@@ -1,6 +1,11 @@
 ####################################
 # Specify Special Fcst Vars
 ####################################
+#
+# Set executable and script
+export SIGHDR=${SIGHDR:-${EXECgsm}/nemsio_get$XC}
+export SFCHDR=${SFCHDR:-${EXECgsm}/nemsio_get$XC}
+
 
 #Set hybrid and ensemble resolution parameters
 export JCAP_ENKF=${JCAP_ENKF:-574}
@@ -23,26 +28,56 @@ export ENKFCENSH=${ENKFCENSH:-$SCRgdas/exglobal_enkf_inflate_recenter.sh.ecf}
 export PERTURBDIR=${PERTURBDIR:-/nwprod/fix/enkf_gfs}
 
 # Chgres fix files
-export OROGRAPHY_ENKF=${OROGRAPHY_ENKF:-$FIXgsm/global_orography.t$JCAP_ENKF.$LONB_ENKF.$LATB_ENKF.grb}
-export OROGRAPHY_UF_ENKF=${OROGRAPHY_UF_ENKF:-$FIXgsm/global_orography_uf.t$JCAP_ENKF.$LONB_ENKF.$LATB_ENKF.grb}
+export SUFORG="rg."
+export OROGRAPHY_ENKF=${OROGRAPHY_ENKF:-${FIXgsm}/global_orography.t$JCAP_ENKF.$LONB_ENKF.$LATB_ENKF.${SUFORG}grb}
+export OROGRAPHY_UF_ENKF=${OROGRAPHY_UF_ENKF:-${FIXgsm}/global_orography_uf.t$JCAP_ENKF.$LONB_ENKF.$LATB_ENKF.${SUFORG}grb}
 export LONSPERLAT_ENKF=${LONSPERLAT_ENKF:-$FIXgsm/global_lonsperlat.t${JCAP_ENKF}.$LONB_ENKF.$LATB_ENKF.txt}
-export SLMASK_ENKF=${SLMASK_ENKF:-$FIXgsm/global_slmask.t$JCAP_ENKF.$LONB_ENKF.$LATB_ENKF.grb}
+export SLMASK_ENKF=${SLMASK_ENKF:-$FIXgsm/global_slmask.t$JCAP_ENKF.$LONB_ENKF.$LATB_ENKF.${SUFORG}grb}
 export MTNVAR_ENKF=${MTNVAR_ENKF:-$FIXgsm/global_mtnvar.t$JCAP_ENKF.$LONB_ENKF.$LATB_ENKF.f77}
 
-use_ufo=.true.
-LATCH=8; IDSL=1 ;  idvt=21
+# Chgres settings
+export use_gfs_nemsio=.true.
+export idvc=2
+export use_ufo=.true.
+export rdgrid=.true.
+export LATCH=8
+export IDSL=1
+export idvt=21
 export CHGRESTHREAD=${CHGRESTHREAD:-24}
-IDVM=0
-export CHGRESVARS_ENKF="use_ufo=$use_ufo,IALB=$ialb,ntrac=3,idvc=$idvc_a,idvt=$idvt,idsl=$IDSL,IDVM=$IDVM,"
+export nopdpvv=.true.
+export IDVM=0
+export ialb=1
+export SOILTYPE_INP="statsgo"
+export SOILTYPE_OUT="statsgo"
+export VEGTYPE_INP="igbp"
+export VEGTYPE_OUT="igbp"
+export OUTTYP=1
+export NST_ANL=.true.
+export CHGRESVARS_ENKF="use_ufo=$use_ufo,nst_anl=$NST_ANL,rdgrid=$rdgrid,idvc=$idvc,idvt=$idvt,idsl=$IDSL,IDVM=$IDVM,OUTTYP=$OUTTYP,nopdpvv=$nopdpvv"
+
 
 # Input files
-export SIGANL_HI=${SIGANL_HI:-$COMINGDAS/${PREFIXGDAS}sanl}
-export SFCANL_HI=${SFCANL_HI:-$COMINGDAS/${PREFIXGDAS}sfcanl}
+export PREINPgdas=${PREINPgdas:-gdas.${cycle}.}
+export PREINPgdasg=${PREINPgdasg:-gdas.${cycleg}.}
+export PREINP=${PREINP:-gdas.${cycle}.}
+export PREINPg=${PREINPg:-gdas.${cycleg}.}
 
-export SIGGES=${SIGGES:-${COMINGES}/sfg_${GDATE}_fhr06_ensmean}
-export SIGANLENS_IN=${SIGANLENS_IN:-${COMIN}/sanl_${CDATE}}
+export MEMBER_PREFIX=${MEMBER_PREFIX:-"."}
+export SIGANL_HI=${SIGANL_HI:-$COMINgdas/${PREINPgdas}atmanl.nemsio}
+export SFCANL_HI=${SFCANL_HI:-$COMINgdas/${PREINPgdas}sfcanl.nemsio}
+
+export SIGGES=${SIGGES:-${COMINg}/${PREINP}atmf006.ensmean.nemsio}
+export SIGANLENS_IN_TMP=${SIGANLENS_IN_TMP:-${COMIN}/${PREINP}atmanl}
+
+export DTFANL=${DTFANL:-${COMINgdas}/${PREINPg}dtfanl.bin4}
+export NSTGES_ENS_TMP=${NSTGES_ENS_TMP:-${COMINg}/nstf006}
+export SFCGES_ENS_TMP=${SFCGES_ENS_TMP:-${COMINg}/sfcf006}
+export SFCGCY_ENS_TMP=${SFCGCY_ENS_TMP:-${COMIN}/sfcgcy}
+export NSTANL_ENS_TMP=${NSTANL_ENS_TMP:-${COMOUT}/nstanl}
+export SFCANL_ENS_TMP=${SFCANL_ENS_TMP:-${COMOUT}/sfcanl}
+
 
 # Output files
-export PERTDATES=${PERTDATES:-$COMOUT/pertdates_$CDATE}
-export SANLENSMEAN=${SANLENSMEAN:-$COMOUT/sanl_${CDATE}_ensmean}
-export SIGANLENS_OUT=${SIGANLENS_OUT:-${COMOUT}/siganl_${CDATE}}
+export PERTDATES=${PERTDATES:-$COMOUT/${PREINP}pertdates}
+export SANLENSMEAN=${SANLENSMEAN:-$COMOUT/${PREINP}atmanl.ensmean.nemsio}
+export SIGANLENS_OUT_TMP=${SIGANLENS_OUT_TMP:-${COMOUT}/${PREINP}ratmanl}

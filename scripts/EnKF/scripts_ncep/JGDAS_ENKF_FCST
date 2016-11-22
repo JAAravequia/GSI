@@ -16,7 +16,7 @@ fi
 # Specify NET and RUN Name and model
 ##############################################
 export NET=${NET:-gfs}
-export RUN=${RUN:-enkf}
+export RUN=${RUN:-gdas}
 
 ##############################################
 # Obtain unique process id (pid) and make temp directory
@@ -62,6 +62,7 @@ export HOMEgsm=${HOMEgsm:-$NWROOT/global_shared.$global_shared_ver}
 export EXECgsm=${EXECgsm:-$HOMEgsm/exec}
 export FIXgsm=${FIXgsm:-$HOMEgsm/fix/fix_am}
 export SCRgsm=${SCRgsm:-$HOMEgsm/scripts}
+export PARMgsm=${PARMgsm:-$HOMEgsm/parm/parm_am}
 
 export HOMEgdas=${HOMEgdas:-$NWROOT/gdas.$gdas_ver}
 export SCRgdas=${SCRgdas:-$HOMEgdas/scripts}
@@ -88,9 +89,9 @@ setpdy.sh
 ##############################################
 export COM_IN=${COM_IN:-$COMROOT/${NET}/${envir}}
 export COM_OUT=${COM_OUT:-$COMROOT/${NET}/${envir}}
-export COMIN=$COM_IN/${RUN}.${PDY}/$cyc
-export COMOUT=$COM_OUT/${RUN}.${PDY}/$cyc
-export COMINGDAS=${COMINGDAS:-$COM_IN/gdas.${PDY}}
+export COMIN=$COM_IN/enkf.${PDY}/$cyc
+export COMOUT=$COM_OUT/enkf.${PDY}/$cyc
+##export COMINGDAS=${COMINGDAS:-$COM_IN/gdas.${PDY}}
 mkdir -m 775 -p $COMOUT
 
 ##############################################
@@ -99,10 +100,15 @@ mkdir -m 775 -p $COMOUT
 . ${PARMENKF_FCST:-$PARMgdas/gdas_enkf_fcst.parm}
 
 ##############################################
-# WCOSS environment settings
+# WCOSS_C environment settings
 ##############################################
-export machine=${machine:-WCOSS}
-export APRUN=${APRUN:-'mpirun.lsf'}
+export machine=${machine:-WCOSS_C}
+export MKL_NUM_THREADS=1
+export MKL_CBWR=AVX
+export MP_MPILIB=mpich2
+export USEBULKXFER=NO
+export MPICH_GNI_COLL_OPT_OFF=MPI_Alltoallv
+export APRUN=${APRUN:-"aprun -j1 -n $ntasks -N $ptile -d $threads -cc depth"}
 
 env
 
@@ -115,7 +121,7 @@ ${ENKFFCSSH:-$SCRgdas/exglobal_enkf_fcst.sh.ecf}
 # Final processing
 ##############################################
 if [ $SENDDBN = YES ] ; then
-   $DBNROOT/bin/dbn_alert MODEL ENKF1_MSC_fcsstat $job $COMOUT/fcsstat_${CDATE}_grp${ENSGRP}
+   $DBNROOT/bin/dbn_alert MODEL ENKF1_MSC_fcsstat $job $COMOUT/${RUN}.$cycle}.fcsstat.grp${ENSGRP}
 fi
 
 cat $pgmout

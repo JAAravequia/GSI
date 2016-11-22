@@ -1,20 +1,25 @@
-#!/bin/ksh
+#!/bin/sh --login
 
-#BSUB -o gdas_enkf_update.o%J
-#BSUB -e gdas_enkf_update.o%J
-#BSUB -J gdas_enkf_update
-#BSUB -n 240
-#BSUB -x
-#BSUB -R span[ptile=6]
-#BSUB -R affinity[core(4)]
-#BSUB -W 01:00
-#BSUB -q devmax2
-#BSUB -a poe
+#BSUB -L /bin/sh
 #BSUB -P GFS-T2O
+#BSUB -o gdas_enkf_update_obs.o%J
+#BSUB -e gdas_enkf_update_obs.o%J
+#BSUB -J gdas_enkf_update_obs
+#BSUB -q devmax
+#BSUB -M 3072
+#BSUB -extsched 'CRAYLINUX[]'
+#BSUB -W 01:00
+#BSUB -cwd /gpfs/hps/emc/global/noscrub/emc.glopara/svn/gfs/work/gdas.v14.1.0/driver
 
 set -x
 
-export CDATE=2016030212
+export NODES=40
+export ntasks=240
+export ptile=6
+export threads=4
+
+export CDATE=2016112106
+
 
 #############################################################
 # Specify whether the run is production or development
@@ -26,55 +31,46 @@ export job=gdas_enkf_update_${cyc}
 export pid=${pid:-$$}
 export jobid=${job}.${pid}
 export envir=para
-export DATAROOT=/stmpd3/$LOGNAME/test
-export COMROOT=/ptmpd3/$LOGNAME/com
+export DATAROOT=/gpfs/hps/stmp/$LOGNAME/test
 
 
 #############################################################
 # Specify versions
 #############################################################
-export gdas_ver=v13.0.0
-export global_shared_ver=v13.0.0
-export grib_util_ver=v1.0.1
-export prod_util_ver=v1.0.2
-export util_shared_ver=v1.0.2
+export gdas_ver=v14.1.0
+export global_shared_ver=v14.1.0
+export grib_util_ver=1.0.3
+export prod_util_ver=1.0.5
+export util_shared_ver=1.0.3
 
 
 #############################################################
 # Load modules
 #############################################################
-. /usrx/local/Modules/3.2.9/init/ksh
-module use /nwprod2/modulefiles
+. $MODULESHOME/init/sh
 module load grib_util/$grib_util_ver
 module load prod_util/$prod_util_ver
 module load util_shared/$util_shared_ver
-
-module unload ics/12.1
-module load ics/15.0.3
+module load cfp-intel-sandybridge
 
 module list
 
 
 #############################################################
-# WCOSS environment settings
+# WCOSS_C environment settings
 #############################################################
-export MP_EAGER_LIMIT=65536
-export MP_EUIDEVELOP=min
-export MP_MPILIB=mpich2
-export MP_LABELIO=yes
-export MP_USE_BULK_XFER=yes
-export MP_SHARED_MEMORY=yes
-export MP_SINGLE_THREAD=yes
-export MPICH_ALLTOALL_THROTTLE=0
-export KMP_STACKSIZE=2048m
+export KMP_AFFINITY=disabled
+export OMP_STACKSIZE=2G
+export OMP_NUM_THREADS=$threads
+export FORT_BUFFERED=true
 
-export NTHREADS_ENKF=4
+export NTHREADS_ENKF=$nthreads
 
 
 #############################################################
 # Set user specific variables
 #############################################################
-export NWTEST=/global/save/$LOGNAME/svn/gfs/branches
+export NWTEST=/gpfs/hps/emc/global/noscrub/emc.glopara/svn/gfs/work
 export PARA_CONFIG=$NWTEST/gdas.${gdas_ver}/driver/para_config.gdas_enkf_update
 export JOBGLOBAL=$NWTEST/gdas.${gdas_ver}/jobs
 
