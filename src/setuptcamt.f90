@@ -526,6 +526,7 @@ contains
 end subroutine setuptcamt
  
    subroutine check_vars_tcamt(this,proceed)
+   use gsi_metguess_mod, only : gsi_metguess_get
       implicit none
       class(setuptcamt_class)                              , intent(inout) :: this
    logical,intent(inout) :: proceed
@@ -537,6 +538,7 @@ end subroutine setuptcamt
  
    subroutine init_vars_tcamt(this)
    use guess_grids, only: nfldsig
+   use gsi_bundlemod, only : gsi_bundlegetpointer
    use gsi_metguess_mod, only : gsi_metguess_bundle
       implicit none
       class(setuptcamt_class)                              , intent(inout) :: this

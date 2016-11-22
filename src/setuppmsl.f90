@@ -522,6 +522,7 @@ contains
 end subroutine setuppmsl
  
    subroutine check_vars_pmsl(this,proceed)
+   use gsi_metguess_mod, only : gsi_metguess_get
       implicit none
       class(setuppmsl_class)                              , intent(inout) :: this
    logical,intent(inout) :: proceed
@@ -535,6 +536,7 @@ end subroutine setuppmsl
  
    subroutine init_vars_pmsl(this)
    use gsi_metguess_mod, only : gsi_metguess_bundle
+   use gsi_bundlemod, only : gsi_bundlegetpointer
    use guess_grids, only: nfldsig
       implicit none
       class(setuppmsl_class)                              , intent(inout) :: this

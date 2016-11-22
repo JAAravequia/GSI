@@ -521,6 +521,7 @@ contains
 end subroutine setuptcp
  
    subroutine check_vars_tcp(this,proceed)
+   use gsi_metguess_mod, only : gsi_metguess_get
       implicit none
       class(setuptcp_class)                              , intent(inout) :: this
    logical,intent(inout) :: proceed
@@ -537,6 +538,7 @@ end subroutine setuptcp
    subroutine init_vars_tcp(this)
    use gsi_metguess_mod, only : gsi_metguess_bundle
    use guess_grids, only: nfldsig
+   use gsi_bundlemod, only : gsi_bundlegetpointer
       implicit none
       class(setuptcp_class)                              , intent(inout) :: this
  

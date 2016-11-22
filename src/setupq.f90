@@ -872,6 +872,7 @@ contains
 end subroutine setupq
  
    subroutine check_vars_q(this,proceed)
+   use gsi_metguess_mod, only : gsi_metguess_get
       implicit none
       class(setupq_class)                              , intent(inout) :: this
    logical,intent(inout) :: proceed
@@ -890,6 +891,7 @@ end subroutine setupq
    end subroutine check_vars_q
  
    subroutine init_vars_q(this)
+   use gsi_bundlemod, only : gsi_bundlegetpointer
    use gsi_metguess_mod, only : gsi_metguess_bundle
    use guess_grids, only: nfldsig
    use rapidrefresh_cldsurf_mod, only: i_use_2mq4b

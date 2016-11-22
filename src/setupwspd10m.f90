@@ -870,6 +870,7 @@ contains
 end subroutine setupwspd10m
  
    subroutine check_vars_wspd10m(this,proceed)
+   use gsi_metguess_mod, only : gsi_metguess_get
       implicit none
       class(setupwspd10m_class)                              , intent(inout) :: this
    logical,intent(inout) :: proceed
@@ -890,6 +891,7 @@ end subroutine setupwspd10m
    subroutine init_vars_wspd10m(this)
    use guess_grids, only: nfldsig
    use gsi_metguess_mod, only : gsi_metguess_bundle
+   use gsi_bundlemod, only : gsi_bundlegetpointer
       implicit none
       class(setupwspd10m_class)                              , intent(inout) :: this
  

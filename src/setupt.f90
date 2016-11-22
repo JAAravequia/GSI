@@ -1139,6 +1139,9 @@ end subroutine setupt
  
    subroutine check_vars_t(this,proceed)
    use rapidrefresh_cldsurf_mod, only: i_use_2mt4b
+   use gsi_bundlemod, only : gsi_bundlegetpointer
+   use gsi_metguess_mod, only : gsi_metguess_bundle
+   use gsi_metguess_mod, only : gsi_metguess_get
       implicit none
       class(setupt_class)                              , intent(inout) :: this
    logical,intent(inout) :: proceed
@@ -1160,6 +1163,7 @@ end subroutine setupt
    use guess_grids, only: nfldsig
    use gsi_metguess_mod, only : gsi_metguess_bundle
    use rapidrefresh_cldsurf_mod, only: i_use_2mt4b
+   use gsi_bundlemod, only : gsi_bundlegetpointer
       implicit none
       class(setupt_class)                              , intent(inout) :: this
  

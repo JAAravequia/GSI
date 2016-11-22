@@ -498,6 +498,7 @@ contains
 end subroutine setuppblh
  
    subroutine check_vars_pblh(this,proceed)
+   use gsi_metguess_mod, only : gsi_metguess_get
       implicit none
       class(setuppblh_class)                              , intent(inout) :: this
    logical,intent(inout) :: proceed
@@ -510,6 +511,7 @@ end subroutine setuppblh
    end subroutine check_vars_pblh 
  
    subroutine init_vars_pblh(this)
+   use gsi_bundlemod, only : gsi_bundlegetpointer
    use gsi_metguess_mod, only : gsi_metguess_bundle
    use guess_grids, only: nfldsig
       implicit none

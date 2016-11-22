@@ -527,6 +527,7 @@ contains
 end subroutine setupmitm
  
    subroutine check_vars_mitm(this,proceed)
+   use gsi_metguess_mod, only : gsi_metguess_get
       implicit none
       class(setupmitm_class)                              , intent(inout) :: this
    logical,intent(inout) :: proceed
@@ -539,6 +540,7 @@ end subroutine setupmitm
    end subroutine check_vars_mitm 
  
    subroutine init_vars_mitm(this)
+   use gsi_bundlemod, only : gsi_bundlegetpointer
    use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
   use guess_grids, only: nfldsig
    implicit none

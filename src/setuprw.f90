@@ -778,6 +778,7 @@ contains
 end subroutine setuprw
  
    subroutine check_vars_rw(this,proceed)
+   use gsi_metguess_mod, only : gsi_metguess_get
       implicit none
       class(setuprw_class)                              , intent(inout) :: this
    logical,intent(inout) :: proceed
@@ -796,6 +797,7 @@ end subroutine setuprw
    subroutine init_vars_rw(this)
    use guess_grids, only: nfldsig
    use gsi_metguess_mod, only : gsi_metguess_bundle
+   use gsi_bundlemod, only : gsi_bundlegetpointer
       implicit none
       class(setuprw_class)                              , intent(inout) :: this
  

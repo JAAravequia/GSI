@@ -132,7 +132,7 @@ contains
     if(.not.proceed) return  ! not all vars available, simply return
   
   ! If require guess vars available, extract from bundle ...
-    call init_vars_
+    call this%init_vars_derived
   
     n_alloc(:)=0
     m_alloc(:)=0
@@ -522,6 +522,7 @@ contains
 end subroutine setupcldch
  
    subroutine check_vars_cldch(this,proceed)
+   use gsi_metguess_mod, only : gsi_metguess_get
       implicit none
       class(setupcldch_class)                              , intent(inout) :: this
    logical,intent(inout) :: proceed

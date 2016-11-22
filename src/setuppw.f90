@@ -574,6 +574,7 @@ contains
 end subroutine setuppw
  
    subroutine check_vars_pw(this,proceed)
+   use gsi_metguess_mod, only : gsi_metguess_get
       implicit none
       class(setuppw_class)                              , intent(inout) :: this
    logical,intent(inout) :: proceed
@@ -588,6 +589,7 @@ end subroutine setuppw
    end subroutine check_vars_pw
  
    subroutine init_vars_pw(this)
+   use gsi_bundlemod, only : gsi_bundlegetpointer
    use guess_grids, only: nfldsig
    use gsi_metguess_mod, only : gsi_metguess_bundle
       implicit none

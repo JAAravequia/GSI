@@ -689,6 +689,7 @@ contains
 end subroutine setupgust
  
    subroutine check_vars_gust(this,proceed)
+   use gsi_metguess_mod, only : gsi_metguess_get
       implicit none
       class(setupgust_class)                              , intent(inout) :: this
    logical,intent(inout) :: proceed
@@ -701,6 +702,7 @@ end subroutine setupgust
    end subroutine check_vars_gust 
  
    subroutine init_vars_gust(this)
+    use gsi_bundlemod, only : gsi_bundlegetpointer
     use guess_grids, only: nfldsig
     use gsi_metguess_mod, only : gsi_metguess_bundle
       implicit none

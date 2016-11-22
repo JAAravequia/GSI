@@ -755,6 +755,8 @@ end subroutine setuppm10
    subroutine check_vars_pm10(this,proceed)
    use gridmod, only : cmaq_regional,wrf_mass_regional
    use chemmod, only: naero_gocart_wrf,aeronames_gocart_wrf,laeroana_gocart,upper2lower
+   use gsi_chemguess_mod, only : gsi_chemguess_get,gsi_chemguess_bundle
+   use gsi_metguess_mod, only : gsi_metguess_get
    implicit none
    class(setuppm10_class)                              , intent(inout) :: this
    logical,intent(inout) :: proceed
@@ -779,6 +781,7 @@ end subroutine setuppm10
  
    subroutine init_vars_pm10(this)
    use gsi_metguess_mod, only : gsi_metguess_bundle
+   use gsi_bundlemod, only : gsi_bundlegetpointer
    use guess_grids, only: nfldsig
       implicit none
       class(setuppm10_class)                              , intent(inout) :: this

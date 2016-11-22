@@ -680,7 +680,7 @@ contains
     end do
   
   ! Release memory of local guess arrays
-    call this$final_vars_
+    call this%final_vars_srw
   
   ! Write information to diagnostic file
     if(conv_diagsave .and. ii>0)then
@@ -696,6 +696,7 @@ contains
 end subroutine setupsrw
  
    subroutine check_vars_srw(this,proceed)
+   use gsi_metguess_mod, only : gsi_metguess_get
       implicit none
       class(setupsrw_class)                              , intent(inout) :: this
    logical,intent(inout) :: proceed
@@ -712,6 +713,7 @@ end subroutine setupsrw
    subroutine init_vars_srw(this)
    use gsi_metguess_mod, only : gsi_metguess_bundle
    use guess_grids, only: nfldsig
+   use gsi_bundlemod, only : gsi_bundlegetpointer
       implicit none
       class(setupsrw_class)                              , intent(inout) :: this
  

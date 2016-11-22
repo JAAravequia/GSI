@@ -6,7 +6,7 @@ use abstract_setup_mod
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
   character(len=max_varname_length) :: aeroname
   contains
-    procedure, pass(this) :: setuppm2_5
+    procedure, pass(this) :: setuppm2_5 
     procedure, pass(this) :: init_vars_derived => init_vars_pm2_5
     procedure, pass(this) :: final_vars_pm2_5
     procedure, pass(this) :: check_vars_pm2_5
@@ -756,6 +756,8 @@ contains
 end subroutine setuppm2_5
  
    subroutine check_vars_pm2_5(this,proceed)
+   use gsi_chemguess_mod, only : gsi_chemguess_get,gsi_chemguess_bundle
+   use gsi_metguess_mod, only : gsi_metguess_get
    use gridmod, only : cmaq_regional,wrf_mass_regional
    use chemmod, only: naero_gocart_wrf,aeronames_gocart_wrf,wrf_pm2_5,laeroana_gocart
    use chemmod, only: upper2lower
@@ -784,6 +786,7 @@ end subroutine setuppm2_5
    end subroutine check_vars_pm2_5
  
    subroutine init_vars_pm2_5(this)
+   use gsi_bundlemod, only : gsi_bundlegetpointer
    use guess_grids, only : nfldsig
    use gsi_metguess_mod, only : gsi_metguess_bundle
       implicit none

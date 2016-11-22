@@ -505,7 +505,7 @@ contains
     end do
   
   ! Release memory of local guess arrays
-    call this$final_vars_
+    call this%final_vars_
   
   ! Write information to diagnostic file
     if(conv_diagsave .and. ii>0)then
@@ -526,6 +526,7 @@ contains
 end subroutine setuptd2m
  
    subroutine check_vars_td2m(this,proceed)
+   use gsi_metguess_mod, only : gsi_metguess_get
       implicit none
       class(setuptd2m_class)                              , intent(inout) :: this
    logical,intent(inout) :: proceed
@@ -538,7 +539,9 @@ end subroutine setuptd2m
    end subroutine check_vars_td2m
  
    subroutine init_vars_td2m(this)
+   use gsi_metguess_mod, only : gsi_metguess_get
    use gsi_metguess_mod, only : gsi_metguess_bundle
+   use gsi_bundlemod, only : gsi_bundlegetpointer
    use guess_grids, only: nfldsig
       implicit none
       class(setuptd2m_class)                              , intent(inout) :: this

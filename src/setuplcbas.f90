@@ -139,7 +139,7 @@ contains
     end if
   
   ! If require guess vars available, extract from bundle ...
-    call init_vars_
+    call this%init_vars_derived
   
     n_alloc(:)=0
     m_alloc(:)=0
@@ -551,7 +551,7 @@ contains
 end subroutine setuplcbas
  
    subroutine check_vars_lcbas(this,proceed)
-    use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
+   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
       implicit none
       class(setuplcbas_class)                              , intent(inout) :: this
    logical,intent(inout) :: proceed
@@ -564,8 +564,10 @@ end subroutine setuplcbas
    end subroutine check_vars_lcbas 
  
    subroutine init_vars_lcbas(this)
-    use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
-    use guess_grids, only: nfldsig
+   use gsi_bundlemod, only : gsi_bundlegetpointer
+   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
+   use guess_grids, only: nfldsig
+   use gsi_metguess_mod, only : gsi_metguess_get
       implicit none
       class(setuplcbas_class)                              , intent(inout) :: this
  
