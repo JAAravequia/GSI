@@ -523,10 +523,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      sinazm  = sin(data(iazm,i))  ! sin(azimuth angle)
      costilt = cos(data(itilt,i)) ! cos(tilt angle)
      sintilt = sin(data(itilt,i)) ! sin(tilt angle)
-!     write(6,*) "check"
-!     write(6,*) "cosazm,sinazm,costilt,sintilt=",cosazm,sinazm,costilt,sintilt
-!     write(6,*) "azm,tilt",data(iazm,i)*rad2deg,data(itilt,i)*rad2deg
-     vTgesprofile= -5.0 ! I believe this must be a negative number.
+     vTgesprofile= -5.0 
      !vTgesprofile= 5.40_r_kind*(exp((refgesprofile -43.1_r_kind)/17.5_r_kind)) 
 !    rwwind = (ugesin*cosazm+vgesin*sinazm)*costilt*factw
      umaxmax=-huge(umaxmax)
@@ -534,13 +531,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      kminmin=kbeambot
      kmaxmax=kbeamtop
      do k=kbeambot,kbeamtop
-        ! Two different ob operators on purpose!
-        ! The first one is for cycles with w_tot field.
-        !if(oneobtest) then
-        !   ugesprofile=8.54_r_kind
-        !   vgesprofile=0.0_r_kind
-        !   wgesprofile=3.0_r_kind
-        !end if
+        ! Two different radial wind forward operators. Sometimes w_tot wont be available. 
         if(include_w) then
            rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt &
                         +(wgesprofile(k))*sintilt

@@ -1768,16 +1768,16 @@ subroutine read_nems_nmmb_guess(mype)
      call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tv' ,ges_tv ,istatus );ier=ier+istatus
      call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q'  ,ges_q  ,istatus );ier=ier+istatus
      call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'oz' ,ges_oz ,istatus );ier=ier+istatus
-     call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'pd' ,ges_pd,istatus );ier=ier+istatus
+     call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'pd' ,ges_pd ,istatus );ier=ier+istatus
      call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'w'  ,ges_w  ,istatus )
-     if (istatus/=0) then
+     if (istatus==0) then
         include_w=.true.
         write(6,*)'READ_WRF_NMM_GUESS: Using vertical velocity.'
      else
         include_w=.false.
         write(6,*)'READ_WRF_NMM_GUESS: NOT using vertical velocity.'
      end if
-     !end if
+
      if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields, ier =',ier)
 
      if(mype==mype_input) then
