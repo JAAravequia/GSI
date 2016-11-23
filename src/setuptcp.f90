@@ -1,12 +1,10 @@
 module setuptcp_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setuptcp_class
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
+! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
   contains
     procedure, pass(this) :: setup => setuptcp
     procedure, pass(this) :: init_vars_derived => init_vars_tcp
-    procedure, pass(this) :: final_vars_tcp
-    procedure, pass(this) :: check_vars_tcp
   end type setuptcp_class
 contains
   subroutine setuptcp(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -112,6 +110,9 @@ contains
   
   
     this%myname='setuptcp'
+    this%numvars = 3
+    allocate(this%varnames(this%numvars))
+    this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::tv' /)
     n_alloc(:)=0
     m_alloc(:)=0
   
@@ -520,21 +521,6 @@ contains
     return
 end subroutine setuptcp
  
-   subroutine check_vars_tcp(this,proceed)
-   use gsi_metguess_mod, only : gsi_metguess_get
-      implicit none
-      class(setuptcp_class)                              , intent(inout) :: this
-   logical,intent(inout) :: proceed
-   integer(i_kind) ivar, istatus
- ! Check to see if required guess fields are available
-   call gsi_metguess_get ('var::ps', ivar, istatus )
-   proceed=ivar>0
-   call gsi_metguess_get ('var::z' , ivar, istatus )
-   proceed=proceed.and.ivar>0
-   call gsi_metguess_get ('var::tv', ivar, istatus )
-   proceed=proceed.and.ivar>0
-   end subroutine check_vars_tcp
- 
    subroutine init_vars_tcp(this)
    use gsi_metguess_mod, only : gsi_metguess_bundle
    use guess_grids, only: nfldsig
@@ -609,13 +595,5 @@ end subroutine setuptcp
       call stop2(999)
    endif
    end subroutine init_vars_tcp
- 
-   subroutine final_vars_tcp(this)
-      implicit none
-      class(setuptcp_class)                              , intent(inout) :: this
-     if(allocated(this%ges_tv)) deallocate(this%ges_tv)
-     if(allocated(this%ges_z )) deallocate(this%ges_z )
-     if(allocated(this%ges_ps)) deallocate(this%ges_ps)
-   end subroutine final_vars_tcp
  
 end module setuptcp_mod

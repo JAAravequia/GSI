@@ -1,12 +1,10 @@
 module setuplcbas_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setuplcbas_class
-  real(r_kind),allocatable,dimension(:,:,:) :: ges_lcbas
+! real(r_kind),allocatable,dimension(:,:,:) :: ges_lcbas
   contains
     procedure, pass(this) :: setup => setuplcbas
     procedure, pass(this) :: init_vars_derived => init_vars_lcbas
-    procedure, pass(this) :: final_vars_lcbas
-    procedure, pass(this) :: check_vars_ => check_vars_lcbas
   end type setuplcbas_class
 contains
   subroutine setuplcbas(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -122,14 +120,15 @@ contains
     type(lcbas_ob_type),pointer:: my_head
     type(obs_diag),pointer:: my_diag
   
-!   real(r_kind),allocatable,dimension(:,:,:) :: ges_lcbas
-!   real(r_kind),allocatable,dimension(:,:,:) :: ges_z
   
     equivalence(rstation_id,station_id)
     equivalence(r_prvstg,c_prvstg)
     equivalence(r_sprvstg,c_sprvstg)
     
   ! Check to see if required guess fields are available
+    this%numvars = 2
+    allocate(this%varnames(this%numvars))
+    this%varnames(1:this%numvars) = (/ 'var::lcbas', 'var::z' /)
     this%myname='setuplcbas'
     call this%check_vars_(proceed)
    if(.not.proceed) then
@@ -550,19 +549,6 @@ contains
     return
 end subroutine setuplcbas
  
-   subroutine check_vars_lcbas(this,proceed)
-   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
-      implicit none
-      class(setuplcbas_class)                              , intent(inout) :: this
-   logical,intent(inout) :: proceed
-   integer(i_kind) ivar, istatus
- ! Check to see if required guess fields are available
-   call gsi_metguess_get ('var::lcbas', ivar, istatus )
-   proceed=ivar>0
-   call gsi_metguess_get ('var::z' , ivar, istatus )
-   proceed=proceed.and.ivar>0
-   end subroutine check_vars_lcbas 
- 
    subroutine init_vars_lcbas(this)
    use gsi_bundlemod, only : gsi_bundlegetpointer
    use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
@@ -620,10 +606,4 @@ end subroutine setuplcbas
    endif
    end subroutine init_vars_lcbas
  
-   subroutine final_vars_lcbas(this)
-      implicit none
-      class(setuplcbas_class)                              , intent(inout) :: this
-     if(allocated(this%ges_z  )) deallocate(this%ges_z  )
-     if(allocated(this%ges_lcbas)) deallocate(this%ges_lcbas)
-   end subroutine final_vars_lcbas
 end module setuplcbas_mod

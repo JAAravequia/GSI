@@ -1,12 +1,9 @@
 module setupcldch_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setupcldch_class
-  real(r_kind),allocatable,dimension(:,:,:) :: ges_cldch
   contains
     procedure, pass(this) :: setup => setupcldch
     procedure, pass(this) :: init_vars_derived => init_vars_cldch
-    procedure, pass(this) :: final_vars_cldch
-    procedure, pass(this) :: check_vars_ => check_vars_cldch
   end type setupcldch_class
 contains
   subroutine setupcldch(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -124,9 +121,9 @@ contains
     equivalence(r_prvstg,c_prvstg)
     equivalence(r_sprvstg,c_sprvstg)
     
-!   real(r_kind),allocatable,dimension(:,:,:) :: ges_ps
-!   real(r_kind),allocatable,dimension(:,:,:) :: ges_z
-  
+    this%numvars = 3
+    allocate(this%varnames(this%numvars))
+    this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::cldch' /)
   ! Check to see if required guess fields are available
     call this%check_vars_(proceed)
     if(.not.proceed) return  ! not all vars available, simply return
@@ -521,19 +518,6 @@ contains
     return
 end subroutine setupcldch
  
-   subroutine check_vars_cldch(this,proceed)
-   use gsi_metguess_mod, only : gsi_metguess_get
-      implicit none
-      class(setupcldch_class)                              , intent(inout) :: this
-   logical,intent(inout) :: proceed
-   integer(i_kind) ivar, istatus
- ! Check to see if required guess fields are available
-   call gsi_metguess_get ('var::ps', ivar, istatus )
-   proceed=ivar>0
-   call gsi_metguess_get ('var::z' , ivar, istatus )
-   proceed=proceed.and.ivar>0
-   end subroutine check_vars_cldch 
- 
    subroutine init_vars_cldch(this)
    use gsi_bundlemod, only : gsi_bundlegetpointer
    use gsi_metguess_mod, only : gsi_metguess_bundle
@@ -607,13 +591,5 @@ end subroutine setupcldch
       call stop2(999)
    endif
    end subroutine init_vars_cldch
- 
-   subroutine final_vars_cldch(this)
-      implicit none
-      class(setupcldch_class)                              , intent(inout) :: this
-     if(allocated(this%ges_z  )) deallocate(this%ges_z  )
-     if(allocated(this%ges_cldch)) deallocate(this%ges_cldch)
-     if(allocated(this%ges_ps )) deallocate(this%ges_ps )
-   end subroutine final_vars_cldch
  
 end module setupcldch_mod

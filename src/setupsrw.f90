@@ -4,8 +4,6 @@ use abstract_setup_mod
   contains
     procedure, pass(this) :: setup => setupsrw
     procedure, pass(this) :: init_vars_derived => init_vars_srw
-    procedure, pass(this) :: final_vars_srw
-    procedure, pass(this) :: check_vars_srw
   end type setupsrw_class
 contains
   subroutine setupsrw(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -165,6 +163,9 @@ contains
     equivalence(rstation_id,station_id)
     
     this%myname='setupsrw'
+    this%numvars = 3
+    allocate(this%varnames(this%numvars))
+    this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::ps' /)
   ! Check to see if required guess fields are available
     call this%check_vars_(proceed)
     if(.not.proceed) return  ! not all vars available, simply return
@@ -680,7 +681,7 @@ contains
     end do
   
   ! Release memory of local guess arrays
-    call this%final_vars_srw
+    call this%final_vars_
   
   ! Write information to diagnostic file
     if(conv_diagsave .and. ii>0)then
@@ -694,21 +695,6 @@ contains
   
     return
 end subroutine setupsrw
- 
-   subroutine check_vars_srw(this,proceed)
-   use gsi_metguess_mod, only : gsi_metguess_get
-      implicit none
-      class(setupsrw_class)                              , intent(inout) :: this
-   logical,intent(inout) :: proceed
-   integer(i_kind) ivar, istatus
- ! Check to see if required guess fields are available
-   call gsi_metguess_get ('var::ps', ivar, istatus )
-   proceed=ivar>0
-   call gsi_metguess_get ('var::u' , ivar, istatus )
-   proceed=proceed.and.ivar>0
-   call gsi_metguess_get ('var::v' , ivar, istatus )
-   proceed=proceed.and.ivar>0
-   end subroutine check_vars_srw
  
    subroutine init_vars_srw(this)
    use gsi_metguess_mod, only : gsi_metguess_bundle
@@ -784,13 +770,5 @@ end subroutine setupsrw
       call stop2(999)
    endif
    end subroutine init_vars_srw
- 
-   subroutine final_vars_srw(this)
-      implicit none
-      class(setupsrw_class)                              , intent(inout) :: this
-     if(allocated(this%ges_v )) deallocate(this%ges_v )
-     if(allocated(this%ges_u )) deallocate(this%ges_u )
-     if(allocated(this%ges_ps)) deallocate(this%ges_ps)
-   end subroutine final_vars_srw
  
 end module setupsrw_mod

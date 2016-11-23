@@ -1,12 +1,10 @@
 module setuppmsl_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setuppmsl_class
-  real(r_kind),allocatable,dimension(:,:,:) :: ges_pmsl
+! real(r_kind),allocatable,dimension(:,:,:) :: ges_pmsl
   contains
     procedure, pass(this) :: setup => setuppmsl
     procedure, pass(this) :: init_vars_derived => init_vars_pmsl
-    procedure, pass(this) :: final_vars_pmsl
-    procedure, pass(this) :: check_vars_pmsl
   end type setuppmsl_class
 contains
   subroutine setuppmsl(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -127,6 +125,9 @@ contains
 !   real(r_kind),allocatable,dimension(:,:,:) :: ges_z    !will probably need at some point
   
     this%myname='setuppmsl'
+    this%numvars = 3
+    allocate(this%varnames(this%numvars))
+    this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::pmsl' /)
   ! Check to see if required guess fields are available
     call this%check_vars_(proceed)
     if(.not.proceed) return  ! not all vars available, simply return
@@ -521,19 +522,6 @@ contains
     return
 end subroutine setuppmsl
  
-   subroutine check_vars_pmsl(this,proceed)
-   use gsi_metguess_mod, only : gsi_metguess_get
-      implicit none
-      class(setuppmsl_class)                              , intent(inout) :: this
-   logical,intent(inout) :: proceed
-   integer(i_kind) ivar, istatus
- ! Check to see if required guess fields are available
-   call gsi_metguess_get ('var::ps', ivar, istatus )
-   proceed=ivar>0
-   call gsi_metguess_get ('var::z' , ivar, istatus )
-   proceed=proceed.and.ivar>0
-   end subroutine check_vars_pmsl
- 
    subroutine init_vars_pmsl(this)
    use gsi_metguess_mod, only : gsi_metguess_bundle
    use gsi_bundlemod, only : gsi_bundlegetpointer
@@ -607,13 +595,5 @@ end subroutine setuppmsl
       call stop2(999)
    endif
    end subroutine init_vars_pmsl
- 
-   subroutine final_vars_pmsl(this)
-      implicit none
-      class(setuppmsl_class)                              , intent(inout) :: this
-     if(allocated(this%ges_z   )) deallocate(this%ges_z   )
-     if(allocated(this%ges_ps  )) deallocate(this%ges_ps  )
-     if(allocated(this%ges_pmsl)) deallocate(this%ges_pmsl)
-   end subroutine final_vars_pmsl
  
 end module setuppmsl_mod

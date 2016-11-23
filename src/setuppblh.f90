@@ -1,12 +1,10 @@
 module setuppblh_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setuppblh_class
-  real(r_kind),allocatable,dimension(:,:,:) :: ges_pblh
+! real(r_kind),allocatable,dimension(:,:,:) :: ges_pblh
   contains
     procedure, pass(this) :: setup => setuppblh
     procedure, pass(this) :: init_vars_derived => init_vars_pblh
-    procedure, pass(this) :: final_vars_pblh
-    procedure, pass(this) :: check_vars_pblh
   end type setuppblh_class
 contains
   subroutine setuppblh(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -120,7 +118,12 @@ contains
     equivalence(rstation_id,station_id)
     
   ! Check to see if required guess fields are available
+
     this%myname='setuppblh'
+    this%numvars = 2
+    allocate(this%varnames(this%numvars))
+    this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z' /)
+
     call this%check_vars_(proceed)
     if(.not.proceed) return  ! not all vars available, simply return
   
@@ -497,19 +500,6 @@ contains
     return
 end subroutine setuppblh
  
-   subroutine check_vars_pblh(this,proceed)
-   use gsi_metguess_mod, only : gsi_metguess_get
-      implicit none
-      class(setuppblh_class)                              , intent(inout) :: this
-   logical,intent(inout) :: proceed
-   integer(i_kind) ivar, istatus
- ! Check to see if required guess fields are available
-   call gsi_metguess_get ('var::ps', ivar, istatus )
-   proceed=ivar>0
-   call gsi_metguess_get ('var::z' , ivar, istatus )
-   proceed=proceed.and.ivar>0
-   end subroutine check_vars_pblh 
- 
    subroutine init_vars_pblh(this)
    use gsi_bundlemod, only : gsi_bundlegetpointer
    use gsi_metguess_mod, only : gsi_metguess_bundle
@@ -583,13 +573,5 @@ end subroutine setuppblh
       call stop2(999)
    endif
    end subroutine init_vars_pblh
- 
-   subroutine final_vars_pblh(this)
-      implicit none
-      class(setuppblh_class)                              , intent(inout) :: this
-     if(allocated(this%ges_z   )) deallocate(this%ges_z   )
-     if(allocated(this%ges_ps  )) deallocate(this%ges_ps  )
-     if(allocated(this%ges_pblh)) deallocate(this%ges_pblh)
-   end subroutine final_vars_pblh
  
 end module setuppblh_mod

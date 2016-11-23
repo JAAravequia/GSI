@@ -1,12 +1,10 @@
 module setupw_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setupw_class
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
+! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
   contains
     procedure, pass(this) :: setup => setupw
     procedure, pass(this) :: init_vars_derived => init_vars_w
-    procedure, pass(this) :: final_vars_w
-    procedure, pass(this) :: check_vars_w 
   end type setupw_class
 contains
   !-------------------------------------------------------------------------
@@ -179,7 +177,6 @@ contains
     real(r_kind),parameter:: r360=360.0_r_kind
     real(r_kind),parameter:: r0_1_bmiss=0.1_r_kind*bmiss
   
-    character(len=*),parameter:: myname='setupw'
   
   ! Declare external calls for code analysis
     external:: intrp2a11,tintrp2a1,tintrp2a11
@@ -250,9 +247,16 @@ contains
     equivalence(rstation_id,station_id)
     equivalence(r_prvstg,c_prvstg)
     equivalence(r_sprvstg,c_sprvstg)
-  
+ 
+     
+    this%numvars = 5
+    this%myname="setupw"
+    if(.not.allocated(this%varnames)) then
+      allocate(this%varnames(this%numvars))
+      this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::z', 'var::ps', 'var::tv' /)
+    endif
   ! Check to see if required guess fields are available
-    call this%check_vars_w(proceed)
+    call this%check_vars_(proceed)
     if(.not.proceed) return  ! not all vars available, simply return
   
   ! If require guess vars available, extract from bundle ...
@@ -1091,11 +1095,11 @@ contains
              if(my_head%idv/=my_diag%idv .or. &
                 my_head%iob/=my_diag%iob .or. &
                           1/=my_diag%ich ) then
-                call perr(myname,'mismatched %[head,diag], (idv,iob,ich,ibin) =',&
+                call perr(this%myname,'mismatched %[head,diag], (idv,iob,ich,ibin) =',&
                       (/is,i,1,ibin/))
-                call perr(myname,'head%(idv,iob,ich) =',(/my_head%idv,my_head%iob,1/))
-                call perr(myname,'diag%(idv,iob,ich) =',(/my_diag%idv,my_diag%iob,my_diag%ich/))
-                call die(myname)
+                call perr(this%myname,'head%(idv,iob,ich) =',(/my_head%idv,my_head%iob,1/))
+                call perr(this%myname,'diag%(idv,iob,ich) =',(/my_diag%idv,my_diag%iob,my_diag%ich/))
+                call die(this%myname)
              endif
   
              wtail(ibin)%head%diagv => obsdiags(i_w_ob_type,ibin)%tail
@@ -1105,11 +1109,11 @@ contains
              if(my_head%idv/=my_diag%idv .or. &
                 my_head%iob/=my_diag%iob .or. &
                           2/=my_diag%ich ) then
-                call perr(myname,'mismatched %[head,diag], (idv,iob,ich,ibin) =',&
+                call perr(this%myname,'mismatched %[head,diag], (idv,iob,ich,ibin) =',&
                       (/is,i,2,ibin/))
-                call perr(myname,'head%(idv,iob,ich) =',(/my_head%idv,my_head%iob,2/))
-                call perr(myname,'diag%(idv,iob,ich) =',(/my_diag%idv,my_diag%iob,my_diag%ich/))
-                call die(myname)
+                call perr(this%myname,'head%(idv,iob,ich) =',(/my_head%idv,my_head%iob,2/))
+                call perr(this%myname,'diag%(idv,iob,ich) =',(/my_diag%idv,my_diag%iob,my_diag%ich/))
+                call die(this%myname)
              endif
           endif
           if(oberror_tune) then
@@ -1314,11 +1318,11 @@ contains
                 if(my_head%idv/=my_diag%idv .or. &
                    my_head%iob/=my_diag%iob .or. &
                              1/=my_diag%ich ) then
-                   call perr(myname,'mismatched %[head,diag], (idv,iob,ich,ibin) =',&
+                   call perr(this%myname,'mismatched %[head,diag], (idv,iob,ich,ibin) =',&
                          (/is,i,1,ibin/))
-                   call perr(myname,'head%(idv,iob,ich) =',(/my_head%idv,my_head%iob,1/))
-                   call perr(myname,'diag%(idv,iob,ich) =',(/my_diag%idv,my_diag%iob,my_diag%ich/))
-                   call die(myname)
+                   call perr(this%myname,'head%(idv,iob,ich) =',(/my_head%idv,my_head%iob,1/))
+                   call perr(this%myname,'diag%(idv,iob,ich) =',(/my_diag%idv,my_diag%iob,my_diag%ich/))
+                   call die(this%myname)
                 endif
   
                 wtail(ibin)%head%diagv => obsdiags(i_w_ob_type,ibin)%tail
@@ -1328,11 +1332,11 @@ contains
                 if(my_head%idv/=my_diag%idv .or. &
                    my_head%iob/=my_diag%iob .or. &
                              2/=my_diag%ich ) then
-                   call perr(myname,'mismatched %[head,diag], (idv,iob,ich,ibin) =',&
+                   call perr(this%myname,'mismatched %[head,diag], (idv,iob,ich,ibin) =',&
                          (/is,i,2,ibin/))
-                   call perr(myname,'head%(idv,iob,ich) =',(/my_head%idv,my_head%iob,2/))
-                   call perr(myname,'diag%(idv,iob,ich) =',(/my_diag%idv,my_diag%iob,my_diag%ich/))
-                   call die(myname)
+                   call perr(this%myname,'head%(idv,iob,ich) =',(/my_head%idv,my_head%iob,2/))
+                   call perr(this%myname,'diag%(idv,iob,ich) =',(/my_diag%idv,my_diag%iob,my_diag%ich/))
+                   call die(this%myname)
                 endif
              endif
   
@@ -1348,11 +1352,11 @@ contains
     if(num_bad_ikx > 0) write(6,*)' in setupw, num_bad_ikx ( ikx<1 or ikx>nconvtype ) = ',num_bad_ikx
   
   ! Release memory of local guess arrays
-    call this%final_vars_w
+    call this%final_vars_
   
   ! Write information to diagnostic file
     if(conv_diagsave .and. ii>0)then
-       call dtime_show(myname,'diagsave:w',i_w_ob_type)
+       call dtime_show(this%myname,'diagsave:w',i_w_ob_type)
        write(7)' uv',nchar,nreal,ii,mype,ioff0
        write(7)cdiagbuf(1:ii),rdiagbuf(:,1:ii)
        deallocate(cdiagbuf,rdiagbuf)
@@ -1369,24 +1373,6 @@ contains
     return
   end subroutine setupw
 
-  subroutine final_vars_w(this)
-      implicit none 
-      class(setupw_class)                              , intent(inout) :: this 
-      call this%final_vars_
-      if(allocated(this%ges_tv)) deallocate(this%ges_tv)
-  end subroutine final_vars_w
-
-  subroutine check_vars_w (this,proceed)
-  use gsi_metguess_mod, only : gsi_metguess_get
-  implicit none 
-  class(setupw_class)                              , intent(inout) :: this 
-  logical,intent(inout) :: proceed
-
-  call this%check_vars_(proceed)
-  call gsi_metguess_get ('var::tv', this%ivar, this%istatus )
-  proceed=proceed.and.this%ivar>0
-  end subroutine check_vars_w
-
   subroutine init_vars_w(this)
 
   use kinds, only: r_kind,i_kind
@@ -1402,7 +1388,6 @@ contains
   character(len=5) :: varname
   integer(i_kind) ifld, istatus
 
-  this%myname="setupw"
   call this%init_vars_base
   if(.true.) then
 ! get tv ...

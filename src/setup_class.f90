@@ -5,8 +5,26 @@ module abstract_setup_mod
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_u
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_gust
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_wspd10m
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_cldch
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_lcbas
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_mitm
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_pblh
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_th2 
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_pm10
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_pm2_5
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_pmsl
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_q2m
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_q2
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_tcamt
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_td2m
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_vis
   character(len=10) :: myname
-  integer(i_kind) ivar, istatus
+  character(len=10),allocatable,dimension(:) :: varnames
+  integer(i_kind) numvars
   contains
     procedure(init_vars_derived), deferred, pass(this) :: init_vars_derived
     procedure, pass(this) :: setup
@@ -41,21 +59,46 @@ contains
       if(allocated(this%ges_u )) deallocate(this%ges_u )
       if(allocated(this%ges_z )) deallocate(this%ges_z )
       if(allocated(this%ges_ps)) deallocate(this%ges_ps)
+      if(allocated(this%ges_tv)) deallocate(this%ges_tv)
+      if(allocated(this%ges_gust)) deallocate(this%ges_gust)
+      if(allocated(this%ges_wspd10m)) deallocate(this%ges_wspd10m)
+      if(allocated(this%ges_cldch)) deallocate(this%ges_cldch)
+      if(allocated(this%ges_lcbas)) deallocate(this%ges_lcbas)
+      if(allocated(this%ges_pm10)) deallocate(this%ges_pm10)
+      if(allocated(this%ges_pm2_5)) deallocate(this%ges_pm2_5)
+      if(allocated(this%ges_pmsl)) deallocate(this%ges_pmsl)
+      if(allocated(this%ges_q2m)) deallocate(this%ges_q2m)
+      if(allocated(this%ges_q)) deallocate(this%ges_q)
+      if(allocated(this%ges_q)) deallocate(this%ges_q2)
+      if(allocated(this%ges_tcamt)) deallocate(this%ges_tcamt)
+      if(allocated(this%ges_td2m)) deallocate(this%ges_td2m)
+      if(allocated(this%ges_pblh)) deallocate(this%ges_pblh)
+      if(allocated(this%ges_th2)) deallocate(this%ges_th2)
+      if(allocated(this%ges_mitm)) deallocate(this%ges_mitm)
+      if(allocated(this%ges_vis)) deallocate(this%ges_vis)
   end subroutine final_vars_
-  subroutine check_vars_ (this,proceed)
+
+  subroutine check_vars_(this,proceed)
       use kinds, only: i_kind       
+      use gsi_bundlemod, only : gsi_bundlegetpointer
+      use gsi_metguess_mod, only : gsi_metguess_bundle
       use gsi_metguess_mod, only : gsi_metguess_get
+      implicit none
       class(abstract_setup_class)                      ,intent(inout) :: this
       logical                                          ,intent(inout) :: proceed
-    ! Check to see if required guess fields are available
-      call gsi_metguess_get ('var::ps', this%ivar, this%istatus )
-      proceed=this%ivar>0
-      call gsi_metguess_get ('var::z' , this%ivar, this%istatus )
-      proceed=proceed.and.this%ivar>0
-      call gsi_metguess_get ('var::u' , this%ivar, this%istatus )
-      proceed=proceed.and.this%ivar>0
-      call gsi_metguess_get ('var::v' , this%ivar, this%istatus )
-      proceed=proceed.and.this%ivar>0
+      integer(i_kind) ivar, istatus, i
+
+      write(6,*) 'in checkvars for ',this%myname,' with proceed = ',proceed
+      do i = 1,size(this%varnames)
+         call gsi_metguess_get (this%varnames(i), ivar, istatus )
+         write(6,*) 'checked ',this%varnames(i),' and ivar = ',ivar 
+         if( i == 1 ) then
+           proceed=ivar>0
+         else
+           proceed=proceed.and.ivar>0
+         endif
+      enddo
+      write(6,*) 'after checkvars proceed = ',proceed
   end subroutine check_vars_ 
   subroutine init_vars_base(this)
  

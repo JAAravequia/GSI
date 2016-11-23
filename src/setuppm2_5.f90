@@ -2,13 +2,12 @@ module setuppm2_5_mod
 use abstract_setup_mod
   use constants, only: max_varname_length
   type, extends(abstract_setup_class) :: setuppm2_5_class
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_pm2_5
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
+! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_pm2_5
+! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
   character(len=max_varname_length) :: aeroname
   contains
     procedure, pass(this) :: setuppm2_5 
     procedure, pass(this) :: init_vars_derived => init_vars_pm2_5
-    procedure, pass(this) :: final_vars_pm2_5
     procedure, pass(this) :: check_vars_pm2_5
   end type setuppm2_5_class
 contains
@@ -157,6 +156,9 @@ contains
   
   
     this%myname="setuppm2_5"
+    this%numvars = 4
+    allocate(this%varnames(this%numvars))
+    this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::tv', 'var::pm2_5' /)
   ! Check to see if required guess fields are available
     call this%check_vars_(proceed)
     if(.not.proceed) return  ! not all vars available, simply return
@@ -766,11 +768,7 @@ end subroutine setuppm2_5
    logical,intent(inout) :: proceed
    integer(i_kind) ivar, istatus, i
  ! Check to see if required guess fields are available
-   call gsi_metguess_get ('var::ps', ivar, istatus )
-   proceed=ivar>0
-   call gsi_metguess_get ('var::z' , ivar, istatus )
-   proceed=proceed.and.ivar>0
- !
+   call this%check_vars_(proceed)
    if ( cmaq_regional .or. (wrf_mass_regional .and. wrf_pm2_5) ) then
       call gsi_chemguess_get ('var::pm2_5', ivar, istatus )
    else if (wrf_mass_regional .and. laeroana_gocart) then
@@ -859,14 +857,5 @@ end subroutine setuppm2_5
       call stop2(999)
    endif
    end subroutine init_vars_pm2_5
- 
-   subroutine final_vars_pm2_5(this)
-      implicit none
-      class(setuppm2_5_class)                              , intent(inout) :: this
-     if(allocated(this%ges_tv)) deallocate(this%ges_tv)
-     if(allocated(this%ges_pm2_5)) deallocate(this%ges_pm2_5)
-     if(allocated(this%ges_z )) deallocate(this%ges_z )
-     if(allocated(this%ges_ps)) deallocate(this%ges_ps)
-   end subroutine final_vars_pm2_5
  
 end module setuppm2_5_mod

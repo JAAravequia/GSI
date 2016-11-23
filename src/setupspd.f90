@@ -1,12 +1,10 @@
 module setupspd_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setupspd_class
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
+! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
   contains
     procedure, pass(this) :: setup => setupspd
     procedure, pass(this) :: init_vars_derived => init_vars_spd
-    procedure, pass(this) :: final_vars_spd
-    procedure, pass(this) :: check_vars_spd
   end type setupspd_class
 contains
   subroutine setupspd(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -178,6 +176,9 @@ contains
   
   
     this%myname='setupspd'
+    this%numvars = 5
+    allocate(this%varnames(this%numvars))
+    this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::z', 'var::ps', 'var::tv' /)
     n_alloc(:)=0
     m_alloc(:)=0
   !******************************************************************************
@@ -710,25 +711,6 @@ contains
     return
 end subroutine setupspd
  
-   subroutine check_vars_spd(this,proceed)
-   use gsi_metguess_mod, only : gsi_metguess_get
-      implicit none
-      class(setupspd_class)                              , intent(inout) :: this
-   logical,intent(inout) :: proceed
-   integer(i_kind) ivar, istatus
- ! Check to see if required guess fields are available
-   call gsi_metguess_get ('var::ps', ivar, istatus )
-   proceed=ivar>0
-   call gsi_metguess_get ('var::z' , ivar, istatus )
-   proceed=proceed.and.ivar>0
-   call gsi_metguess_get ('var::u' , ivar, istatus )
-   proceed=proceed.and.ivar>0
-   call gsi_metguess_get ('var::v' , ivar, istatus )
-   proceed=proceed.and.ivar>0
-   call gsi_metguess_get ('var::tv', ivar, istatus )
-   proceed=proceed.and.ivar>0
-   end subroutine check_vars_spd
- 
    subroutine init_vars_spd(this)
    use gsi_metguess_mod, only : gsi_metguess_bundle
    use gsi_bundlemod, only : gsi_bundlegetpointer
@@ -839,15 +821,5 @@ end subroutine setupspd
       call stop2(999)
    endif
    end subroutine init_vars_spd
- 
-   subroutine final_vars_spd(this)
-      implicit none
-      class(setupspd_class)                              , intent(inout) :: this
-     if(allocated(this%ges_tv)) deallocate(this%ges_tv)
-     if(allocated(this%ges_v )) deallocate(this%ges_v )
-     if(allocated(this%ges_u )) deallocate(this%ges_u )
-     if(allocated(this%ges_z )) deallocate(this%ges_z )
-     if(allocated(this%ges_ps)) deallocate(this%ges_ps)
-   end subroutine final_vars_spd
  
 end module setupspd_mod

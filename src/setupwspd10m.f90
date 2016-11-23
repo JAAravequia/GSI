@@ -1,13 +1,9 @@
 module setupwspd10m_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setupwspd10m_class
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
-  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_wspd10m
   contains
     procedure, pass(this) :: setup => setupwspd10m
     procedure, pass(this) :: init_vars_derived => init_vars_wspd10m
-    procedure, pass(this) :: final_vars_wspd10m
-    procedure, pass(this) :: check_vars_wspd10m
   end type setupwspd10m_class
 contains
   subroutine setupwspd10m(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -146,6 +142,9 @@ contains
     
   
     this%myname='setupwspd10m'
+    this%numvars = 6
+    allocate(this%varnames(this%numvars))
+    this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::z', 'var::ps', 'var::tv', 'var::wspd10m' /)
   ! Check to see if required guess fields are available
     call this%check_vars_(proceed)
     if(.not.proceed) return  ! not all vars available, simply return
@@ -869,25 +868,6 @@ contains
     return
 end subroutine setupwspd10m
  
-   subroutine check_vars_wspd10m(this,proceed)
-   use gsi_metguess_mod, only : gsi_metguess_get
-      implicit none
-      class(setupwspd10m_class)                              , intent(inout) :: this
-   logical,intent(inout) :: proceed
-   integer(i_kind) ivar, istatus
- ! Check to see if required guess fields are available
-   call gsi_metguess_get ('var::ps', ivar, istatus )
-   proceed=ivar>0
-   call gsi_metguess_get ('var::z' , ivar, istatus )
-   proceed=proceed.and.ivar>0
-   call gsi_metguess_get ('var::u' , ivar, istatus )
-   proceed=proceed.and.ivar>0
-   call gsi_metguess_get ('var::v' , ivar, istatus )
-   proceed=proceed.and.ivar>0
-   call gsi_metguess_get ('var::tv', ivar, istatus )
-   proceed=proceed.and.ivar>0
-   end subroutine check_vars_wspd10m 
- 
    subroutine init_vars_wspd10m(this)
    use guess_grids, only: nfldsig
    use gsi_metguess_mod, only : gsi_metguess_bundle
@@ -1016,13 +996,5 @@ end subroutine setupwspd10m
       call stop2(999)
    endif
    end subroutine init_vars_wspd10m
- 
-   subroutine final_vars_wspd10m(this)
-      implicit none
-      class(setupwspd10m_class)                              , intent(inout) :: this
-     if(allocated(this%ges_z   )) deallocate(this%ges_z   )
-     if(allocated(this%ges_ps  )) deallocate(this%ges_ps  )
-     if(allocated(this%ges_wspd10m)) deallocate(this%ges_wspd10m)
-   end subroutine final_vars_wspd10m
  
 end module setupwspd10m_mod

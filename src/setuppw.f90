@@ -1,13 +1,11 @@
 module setuppw_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setuppw_class
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
+! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
+! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
   contains
     procedure, pass(this) :: setup => setuppw
     procedure, pass(this) :: init_vars_derived => init_vars_pw
-    procedure, pass(this) :: final_vars_pw
-    procedure, pass(this) :: check_vars_pw
   end type setuppw_class
 contains
   subroutine setuppw(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -154,6 +152,9 @@ contains
   
   
     this%myname='setuppw'
+    this%numvars = 3
+    allocate(this%varnames(this%numvars))
+    this%varnames(1:this%numvars) = (/ 'var::q', 'var::z', 'var::tv' /)
     n_alloc(:)=0
     m_alloc(:)=0
   
@@ -573,21 +574,6 @@ contains
     return
 end subroutine setuppw
  
-   subroutine check_vars_pw(this,proceed)
-   use gsi_metguess_mod, only : gsi_metguess_get
-      implicit none
-      class(setuppw_class)                              , intent(inout) :: this
-   logical,intent(inout) :: proceed
-   integer(i_kind) ivar, istatus
- ! Check to see if required guess fields are available
-   call gsi_metguess_get ('var::q', ivar, istatus )
-   proceed=ivar>0
-   call gsi_metguess_get ('var::z' , ivar, istatus )
-   proceed=proceed.and.ivar>0
-   call gsi_metguess_get ('var::tv', ivar, istatus )
-   proceed=proceed.and.ivar>0
-   end subroutine check_vars_pw
- 
    subroutine init_vars_pw(this)
    use gsi_bundlemod, only : gsi_bundlegetpointer
    use guess_grids, only: nfldsig
@@ -662,13 +648,5 @@ end subroutine setuppw
       call stop2(999)
    endif
    end subroutine init_vars_pw
- 
-   subroutine final_vars_pw(this)
-      implicit none
-      class(setuppw_class)                              , intent(inout) :: this
-     if(allocated(this%ges_q )) deallocate(this%ges_q )
-     if(allocated(this%ges_tv)) deallocate(this%ges_tv)
-     if(allocated(this%ges_z )) deallocate(this%ges_z )
-   end subroutine final_vars_pw
  
 end module setuppw_mod

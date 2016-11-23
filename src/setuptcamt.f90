@@ -1,12 +1,10 @@
 module setuptcamt_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setuptcamt_class
-  real(r_kind),allocatable,dimension(:,:,:) :: ges_tcamt
+! real(r_kind),allocatable,dimension(:,:,:) :: ges_tcamt
   contains
     procedure, pass(this) :: setup => setuptcamt
     procedure, pass(this) :: init_vars_derived => init_vars_tcamt
-    procedure, pass(this) :: final_vars_tcamt
-    procedure, pass(this) :: check_vars_tcamt
   end type setuptcamt_class
 contains
   subroutine setuptcamt(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -125,6 +123,9 @@ contains
     equivalence(r_sprvstg,c_sprvstg)
   
     this%myname='setuptcamt'
+    this%numvars = 1
+    allocate(this%varnames(this%numvars))
+    this%varnames(1:this%numvars) = (/ 'var::tcamt' /)
   ! Check to see if required guess fields are available
     call this%check_vars_(proceed)
    if(.not.proceed) then
@@ -525,17 +526,6 @@ contains
     return
 end subroutine setuptcamt
  
-   subroutine check_vars_tcamt(this,proceed)
-   use gsi_metguess_mod, only : gsi_metguess_get
-      implicit none
-      class(setuptcamt_class)                              , intent(inout) :: this
-   logical,intent(inout) :: proceed
-   integer(i_kind) ivar, istatus
- ! Check to see if required guess fields are available
-   call gsi_metguess_get ('var::tcamt' , ivar, istatus )
-   proceed=ivar>0
-   end subroutine check_vars_tcamt
- 
    subroutine init_vars_tcamt(this)
    use guess_grids, only: nfldsig
    use gsi_bundlemod, only : gsi_bundlegetpointer
@@ -573,11 +563,5 @@ end subroutine setuptcamt
       call stop2(999)
    endif
    end subroutine init_vars_tcamt
- 
-   subroutine final_vars_tcamt(this)
-      implicit none
-      class(setuptcamt_class)                              , intent(inout) :: this
-     if(allocated(this%ges_tcamt)) deallocate(this%ges_tcamt)
-   end subroutine final_vars_tcamt
  
 end module setuptcamt_mod

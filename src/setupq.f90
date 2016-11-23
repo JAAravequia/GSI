@@ -1,13 +1,11 @@
 module setupq_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setupq_class
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
-  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_q2m
+! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
+! real(r_kind),allocatable,dimension(:,:,:  ) :: ges_q2m
   contains
     procedure, pass(this) :: setup => setupq
     procedure, pass(this) :: init_vars_derived => init_vars_q
-    procedure, pass(this) :: final_vars_q
-    procedure, pass(this) :: check_vars_q
   end type setupq_class
 contains
   subroutine setupq(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -211,6 +209,15 @@ contains
   
   
     this%myname='setupq'
+    if(i_use_2mq4b>0) then
+      this%numvars = 3
+      allocate(this%varnames(this%numvars))
+      this%varnames(1:this%numvars) = (/ 'var::q2m', 'var::q', 'var::ps' /)
+    else 
+      this%numvars = 2
+      allocate(this%varnames(this%numvars))
+      this%varnames(1:this%numvars) = (/ 'var::q', 'var::ps' /)
+    endif
   ! Check to see if required guess fields are available
     call this%check_vars_(proceed)
     if(.not.proceed) return  ! not all vars available, simply return
@@ -871,25 +878,6 @@ contains
     return
 end subroutine setupq
  
-   subroutine check_vars_q(this,proceed)
-   use gsi_metguess_mod, only : gsi_metguess_get
-      implicit none
-      class(setupq_class)                              , intent(inout) :: this
-   logical,intent(inout) :: proceed
-   integer(i_kind) ivar, istatus
- ! Check to see if required guess fields are available
-   call gsi_metguess_get ('var::ps', ivar, istatus )
-   proceed=ivar>0
-   call gsi_metguess_get ('var::z' , ivar, istatus )
-   proceed=proceed.and.ivar>0
-   call gsi_metguess_get ('var::u' , ivar, istatus )
-   proceed=proceed.and.ivar>0
-   call gsi_metguess_get ('var::v' , ivar, istatus )
-   proceed=proceed.and.ivar>0
-   call gsi_metguess_get ('var::tv', ivar, istatus )
-   proceed=proceed.and.ivar>0
-   end subroutine check_vars_q
- 
    subroutine init_vars_q(this)
    use gsi_bundlemod, only : gsi_bundlegetpointer
    use gsi_metguess_mod, only : gsi_metguess_bundle
@@ -926,7 +914,9 @@ end subroutine setupq
  !    get q2m ...
       if (i_use_2mq4b>0) then
          varname='q2m'
+         write(6,*) 'HEYY, getting q2m'
          call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
+         write(6,*) 'HEYY, q2m status ',istatus
          if (istatus==0) then
              if(allocated(this%ges_q2m))then
                 write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
@@ -936,6 +926,7 @@ end subroutine setupq
              this%ges_q2m(:,:,1)=rank2
              do ifld=2,nfldsig
                 call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
+         write(6,*) 'HEYY, ifld and status ',ifld,istatus
                 this%ges_q2m(:,:,ifld)=rank2
              enddo
          else
@@ -967,13 +958,5 @@ end subroutine setupq
       call stop2(999)
    endif
    end subroutine init_vars_q
- 
-   subroutine final_vars_q(this)
-      implicit none
-      class(setupq_class)                              , intent(inout) :: this
-     if(allocated(this%ges_q2m)) deallocate(this%ges_q2m)
-     if(allocated(this%ges_q )) deallocate(this%ges_q )
-     if(allocated(this%ges_ps)) deallocate(this%ges_ps)
-   end subroutine final_vars_q
  
 end module setupq_mod

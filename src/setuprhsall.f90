@@ -222,16 +222,16 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   external:: setupozlev
   external:: setuppcp
 ! external:: setupps
-  external:: setuppw
-  external:: setupq
+! external:: setuppw
+! external:: setupq
   external:: setuprad
   external:: setupref
-  external:: setuprw
-  external:: setupspd
+! external:: setuprw
+! external:: setupspd
 ! external:: setupsrw
   external:: setupsst
 ! external:: setupt
-  external:: setuptcp
+! external:: setuptcp
 ! external:: setupw
 ! external:: setupgust
 ! external:: setupvis
@@ -242,9 +242,9 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 ! external:: setupmitm
 ! external:: setuppmsl
   external:: setuphowv
-  external:: setuptcamt
-  external:: setuplcbas
-  external:: setupcldch
+! external:: setuptcamt
+! external:: setuplcbas
+! external:: setupcldch
   external:: statsconv
   external:: statsoz
   external:: statspcp
@@ -462,7 +462,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
         nobs=nsat1(is)
  
         if(nobs > 0)then
-
+           if(mype == mype_diaghdr(is)) write(6,*) 'reading new data type--',ditype(is)
            read(lunin,iostat=ier) obstype,isis,nreal,nchanl
            if(mype == mype_diaghdr(is)) then
               write(6,300) obstype,isis,nreal,nchanl

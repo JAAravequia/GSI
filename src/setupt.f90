@@ -1,15 +1,13 @@
 module setupt_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setupt_class
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
-  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_q2
-  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_th2
+! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
+! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
+! real(r_kind),allocatable,dimension(:,:,:  ) :: ges_q2
+! real(r_kind),allocatable,dimension(:,:,:  ) :: ges_th2
   contains
     procedure, pass(this) :: setup => setupt
     procedure, pass(this) :: init_vars_derived => init_vars_t
-    procedure, pass(this) :: final_vars_t
-    procedure, pass(this) :: check_vars_t
   end type setupt_class
 contains
   !-------------------------------------------------------------------------
@@ -266,6 +264,9 @@ contains
     m_alloc(:)=0
   
     this%myname='setupt'
+    this%numvars = 5
+    allocate(this%varnames(this%numvars))
+    this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::q', 'var::ps', 'var::tv' /)
   ! Check to see if required guess fields are available
     call this%check_vars_(proceed)
     if(.not.proceed) return  ! not all vars available, simply return
@@ -1137,28 +1138,6 @@ contains
     return
 end subroutine setupt
  
-   subroutine check_vars_t(this,proceed)
-   use rapidrefresh_cldsurf_mod, only: i_use_2mt4b
-   use gsi_bundlemod, only : gsi_bundlegetpointer
-   use gsi_metguess_mod, only : gsi_metguess_bundle
-   use gsi_metguess_mod, only : gsi_metguess_get
-      implicit none
-      class(setupt_class)                              , intent(inout) :: this
-   logical,intent(inout) :: proceed
-   integer(i_kind) ivar, istatus
- ! Check to see if required guess fields are available
-   call gsi_metguess_get ('var::ps', ivar, istatus )
-   proceed=ivar>0
-   call gsi_metguess_get ('var::u' , ivar, istatus )
-   proceed=proceed.and.ivar>0
-   call gsi_metguess_get ('var::v' , ivar, istatus )
-   proceed=proceed.and.ivar>0
-   call gsi_metguess_get ('var::tv', ivar, istatus )
-   proceed=proceed.and.ivar>0
-   call gsi_metguess_get ('var::q', ivar, istatus )
-   proceed=proceed.and.ivar>0
-   end subroutine check_vars_t
- 
    subroutine init_vars_t(this)
    use guess_grids, only: nfldsig
    use gsi_metguess_mod, only : gsi_metguess_bundle
@@ -1308,16 +1287,6 @@ end subroutine setupt
       call stop2(999)
    endif
    end subroutine init_vars_t
- 
-   subroutine final_vars_t(this)
-      implicit none
-      class(setupt_class)                              , intent(inout) :: this
-     if(allocated(this%ges_q )) deallocate(this%ges_q )
-     if(allocated(this%ges_tv)) deallocate(this%ges_tv)
-     if(allocated(this%ges_v )) deallocate(this%ges_v )
-     if(allocated(this%ges_u )) deallocate(this%ges_u )
-     if(allocated(this%ges_ps)) deallocate(this%ges_ps)
-   end subroutine final_vars_t
  
 end module setupt_mod
  

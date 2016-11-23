@@ -1,12 +1,10 @@
 module setupmitm_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setupmitm_class
-  real(r_kind),allocatable,dimension(:,:,:) :: ges_mitm
+! real(r_kind),allocatable,dimension(:,:,:) :: ges_mitm
   contains
     procedure, pass(this) :: setup => setupmitm
     procedure, pass(this) :: init_vars_derived => init_vars_mitm
-    procedure, pass(this) :: final_vars_mitm
-    procedure, pass(this) :: check_vars_mitm
   end type setupmitm_class
 contains
   subroutine setupmitm(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -126,6 +124,9 @@ contains
 !   real(r_kind),allocatable,dimension(:,:,:) :: ges_ps     !will need at some point
 !   real(r_kind),allocatable,dimension(:,:,:) :: ges_z      !will probably need at some point
   
+    this%numvars = 2
+    allocate(this%varnames(this%numvars))
+    this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z' /)
     this%myname='setupmitm'
   ! Check to see if required guess fields are available
     call this%check_vars_(proceed)
@@ -526,19 +527,6 @@ contains
     return
 end subroutine setupmitm
  
-   subroutine check_vars_mitm(this,proceed)
-   use gsi_metguess_mod, only : gsi_metguess_get
-      implicit none
-      class(setupmitm_class)                              , intent(inout) :: this
-   logical,intent(inout) :: proceed
-   integer(i_kind) ivar, istatus
- ! Check to see if required guess fields are available
-   call gsi_metguess_get ('var::ps', ivar, istatus )
-   proceed=ivar>0
-   call gsi_metguess_get ('var::z' , ivar, istatus )
-   proceed=proceed.and.ivar>0
-   end subroutine check_vars_mitm 
- 
    subroutine init_vars_mitm(this)
    use gsi_bundlemod, only : gsi_bundlegetpointer
    use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
@@ -612,13 +600,5 @@ end subroutine setupmitm
       call stop2(999)
    endif
    end subroutine init_vars_mitm
- 
-   subroutine final_vars_mitm(this)
-      implicit none
-      class(setupmitm_class)                              , intent(inout) :: this
-     if(allocated(this%ges_z   )) deallocate(this%ges_z   )
-     if(allocated(this%ges_ps  )) deallocate(this%ges_ps  )
-     if(allocated(this%ges_mitm)) deallocate(this%ges_mitm)
-   end subroutine final_vars_mitm
  
 end module setupmitm_mod
