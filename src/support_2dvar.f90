@@ -2724,7 +2724,7 @@ subroutine apply_hilbertcurve(maxobs,obstype,cdata_usage)
                                                                 !is the same group element for all ob subtypes 
                                                                 !of a given ob type 
 
-           if (i==1) print*,'in apply_hilbertcurve: ncnumgrp0,ncgroup0=',ncnumgrp0,ncgroup0 
+           if (i==1) print*,'in apply_hilbertcurve: obstype,ncnumgrp0,ncgroup0=',trim(obstype),ncnumgrp0,ncgroup0 
 
            if (test_set(i).eq.ncgroup0) then
               if (     random_cvgrp) usage=usagecv           !3.

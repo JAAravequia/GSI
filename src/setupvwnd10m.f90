@@ -44,7 +44,7 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use gsi_4dvar, only: nobs_bins,hr_obsbin
   use oneobmod, only: magoberr,maginnov,oneobtest
   use gridmod, only: nlat,nlon,istart,jstart,lon1,nsig
-  use gridmod, only: get_ij,twodvar_regional,regional
+  use gridmod, only: get_ij,twodvar_regional,regional,rotate_wind_xy2ll
   use constants, only: zero,tiny_r_kind,one,one_tenth,half,wgtlim,rd,grav,&
             two,cg_term,three,four,five,ten,huge_single,r1000,rad2deg,r3600,&
             grav_ratio,flattening,grav,deg2rad,grav_equator,somigliana, &
@@ -98,6 +98,7 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) ascat_vec
   real(r_kind) errinv_input,errinv_adjst,errinv_final
   real(r_kind) err_input,err_adjst,err_final,skint,sfcr
+  real(r_kind) uob_reg,vob_reg,uob_e,vob_e,dlon_e,uges_e,vges_e,dudiff_e,dvdiff_e
   real(r_kind),dimension(nobs):: dup
   real(r_kind),dimension(nsig)::prsltmp,zges,tges
   real(r_kind) wdirob,wdirgesin,wdirdiffmax
@@ -229,7 +230,7 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=20
+     ioff0=23
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
@@ -426,7 +427,7 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      dvdiff=vob-vgesin
      spdb=sqrt(uob**2+vob**2)-sqrt(ugesin**2+vgesin**2)
 
-     ddiff=vob-vgesin
+     ddiff=dvdiff
 
      if ( qc_satwnds ) then
         if(itype >=240 .and. itype <=260) then
@@ -693,8 +694,31 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(17,ii) = data(ivob,i)       ! 10m vwind observation (ms**-1)
         rdiagbuf(18,ii) = ddiff              ! obs-ges used in analysis (ms**-1)
         rdiagbuf(19,ii) = data(ivob,i)-vgesin! obs-ges w/o bias correction (ms**-1) (future slot)
- 
-        rdiagbuf(20,ii) = factw              ! 10m wind reduction factor
+
+        rdiagbuf(20,ii) = data(iuob,i)       ! 10m uwind observation (ms**-1)
+        rdiagbuf(21,ii) = dudiff             ! uob-ges (ms**-1)
+        rdiagbuf(22,ii) = data(iuob,i)-ugesin! uob-ges w/o bias correction (ms**-1) (future slot)
+
+        if(regional) then
+
+!           replace positions 17-22 with earth relative wind component information
+
+           uob_reg=data(iuob,i)
+           vob_reg=data(ivob,i)
+           dlon_e=data(ilone,i)*deg2rad
+           call rotate_wind_xy2ll(uob_reg,vob_reg,uob_e,vob_e,dlon_e,dlon,dlat)
+           call rotate_wind_xy2ll(ugesin,vgesin,uges_e,vges_e,dlon_e,dlon,dlat)
+           call rotate_wind_xy2ll(dudiff,ddiff,dudiff_e,dvdiff_e,dlon_e,dlon,dlat)
+           rdiagbuf(17,ii) = vob_e         ! earth relative v wind component observation (m/s)
+           rdiagbuf(18,ii) = dvdiff_e      ! earth relative v obs-ges used in analysis (m/s)
+           rdiagbuf(19,ii) = vob_e-vges_e  ! earth relative v obs-ges w/o bias correction (m/s) (future slot)
+
+           rdiagbuf(20,ii) = uob_e         ! earth relative u wind component observation (m/s)
+           rdiagbuf(21,ii) = dudiff_e      ! earth relative u obs-ges used in analysis (m/s)
+           rdiagbuf(22,ii) = uob_e-uges_e  ! earth relative u obs-ges w/o bias correction (m/s) (future slot)
+        end if
+
+        rdiagbuf(23,ii) = factw              ! 10m wind reduction factor
 
 
         ioff=ioff0

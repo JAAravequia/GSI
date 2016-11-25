@@ -2597,7 +2597,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !             Cloud ceiling height
               else if(cldchob) then
 
-                 cldchoe=4000.0  ! temporarily
+                 cldchoe=3000.0  ! temporarily
                  if (inflate_error) cldchoe=cldchoe*r1_2
 
                  cdata_all(1,iout)=cldchoe                 ! cloud ceiling height error (m)

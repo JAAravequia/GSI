@@ -486,7 +486,29 @@ subroutine writeout_gradients(dx,dy,nv,alpha,gamma,mype)
                                   'vpwter' /)  
   character(2) clun1
   character(3) clun2
+
+  integer(i_kind),save:: indexmax_of_gradvectors
+  logical fexist
+
+  namelist /gradvectors_writeout/indexmax_of_gradvectors
 !*************************************************************************
+  if (iter==0) then
+     lun=19
+     inquire(file='parmcard_input',exist=fexist)
+     if (fexist) then
+        open(lun,file='parmcard_input',form='formatted')
+        read(lun,gradvectors_writeout)
+        close(lun)
+      else
+        indexmax_of_gradvectors=nv
+     endif
+
+     if (mype==0) print*,'in writeout_gradients: indexmax_of_gradvectors=', &
+                                                 indexmax_of_gradvectors
+  endif
+
+  if (iter > indexmax_of_gradvectors) return
+
 ! Get control variable indices
   if (iter==0) then
      nrf3_sf   = getindex(cvars3d,'sf')
