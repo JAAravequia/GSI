@@ -31,6 +31,7 @@ module abstract_setup_mod
     procedure, pass(this) :: final_vars_
     procedure, pass(this) :: init_vars_base
     procedure, pass(this) :: check_vars_
+    procedure, pass(this) ::  init_ges
   end type abstract_setup_class
 
   abstract interface 
@@ -100,8 +101,94 @@ contains
       enddo
       write(6,*) 'after checkvars proceed = ',proceed
   end subroutine check_vars_ 
-  subroutine init_vars_base(this)
+  subroutine init_ges(this, varname, rank)
+
+    use kinds, only: r_kind,i_kind
+    use gsi_bundlemod, only : gsi_bundlegetpointer
+    use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
+    use guess_grids, only: hrdifsig,geop_hgtl,ges_lnprsl,&
+         nfldsig,sfcmod_gfs,sfcmod_mm5,comp_fact10
+    implicit none 
+    class(abstract_setup_class)                              , intent(inout) :: this 
+    character(len=5)                                         , intent(in) :: varname
+    integer(i_kind)                                          , intent(in) :: rank
+    real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
+    real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
+    real(r_kind),dimension(:,:,:  ),pointer:: ges=>NULL()
+    real(r_kind),dimension(:,:,:,: ),pointer:: ges3=>NULL()
+    integer(i_kind) ifld, istatus
+    select case (varname)
+      case ('ps')
+        ges = this%ges_ps
+      case ('z')
+        ges = this%ges_z
+      case ('gust')
+        ges = this%ges_gust
+      case ('wspd10m')
+        ges = this%ges_wspd10m
+      case ('cldch')
+        ges = this%ges_cldch
+      case ('lcbas')
+        ges = this%ges_lcbas
+      case ('mitm')
+        ges = this%ges_mitm
+      case ('pblh')
+        ges = this%ges_pblh
+      case ('th2')
+        ges = this%ges_th2
+      case ('pmsl')
+        ges = this%ges_pmsl
+      case ('q2m')
+        ges = this%ges_q2m
+      case ('q2')
+        ges = this%ges_q2
+      case ('tcamt')
+        ges = this%ges_tcamt
+      case ('td2m')
+        ges = this%ges_td2m
+      case ('vis')
+        ges = this%ges_vis
+    end select
+
+    if(rank == 3) then
+    call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
+    if (istatus==0) then
+         if(allocated(ges))then
+            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges(size(rank2,1),size(rank2,2),nfldsig))
+         ges(:,:,1)=rank2
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
+            ges(:,:,ifld)=rank2
+         enddo
+    else
+         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+    endif
+    else
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+     if (istatus==0) then
+         if(allocated(ges3))then
+            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges3(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         ges3(:,:,:,1)=rank3
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+            ges3(:,:,:,ifld)=rank3
+         enddo
+     else
+         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
+    endif
+
+  end subroutine init_ges
  
+  subroutine init_vars_base(this)
   use kinds, only: r_kind,i_kind
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
@@ -117,42 +204,10 @@ contains
 
 ! If require guess vars available, extract from bundle ...
   if(size(gsi_metguess_bundle)==nfldsig) then
-!    get ps ...
      varname='ps'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-     if (istatus==0) then
-         if(allocated(this%ges_ps))then
-            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-         endif
-         allocate(this%ges_ps(size(rank2,1),size(rank2,2),nfldsig))
-         this%ges_ps(:,:,1)=rank2
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-            this%ges_ps(:,:,ifld)=rank2
-         enddo
-     else
-         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-         call stop2(999)
-     endif
-!    get z ...
+     call this%init_ges(varname,2)
      varname='z'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-     if (istatus==0) then
-         if(allocated(this%ges_z))then
-            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-         endif
-         allocate(this%ges_z(size(rank2,1),size(rank2,2),nfldsig))
-         this%ges_z(:,:,1)=rank2
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-            this%ges_z(:,:,ifld)=rank2
-         enddo
-     else
-         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-         call stop2(999)
-     endif
+     call this%init_ges(varname,3)
 !    get u ...
      varname='u'
      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)

@@ -64,6 +64,8 @@ cmake_minimum_required(VERSION 2.8)
   set_source_files_properties( ${CMAKE_CURRENT_SOURCE_DIR}/blockIO.c  PROPERTIES COMPILE_FLAGS ${GSI_CFLAGS} )
 
   include_directories( ${CORE_INCS} ${NETCDF_INCLUDES} ${MPI_Fortran_INCLUDE_PATH} "./" )
+  add_library(gsilib_shrd${debug_suffix} STATIC ${GSI_SRC} )
+
   if(USE_WRF) 
     add_library(gsilib_wrf${debug_suffix} STATIC ${REGIONAL_SRC} )
   endif()
@@ -76,7 +78,6 @@ cmake_minimum_required(VERSION 2.8)
     add_dependencies(gsilib_global${debug_suffix} gsilib_shrd${debug_suffix} )
   endif()
 
-  add_library(gsilib_shrd${debug_suffix} STATIC ${GSI_SRC} )
 
 
   if(USE_WRF) 
@@ -95,7 +96,7 @@ cmake_minimum_required(VERSION 2.8)
       add_dependencies(gsilib_wrf${debug_suffix} MODS gsilib_shrd${debug_suffix} ${bacio} ${crtm} ${bufr} ${nemsio} ${sigio} ${sfcio} ${sp} ${w3emc} ${w3nco} )
     endif()
     if(BUILD_GLOBAL)
-      add_library(gsilib_global${debug_suffix} STATIC ${GLOBAL_SRC} )
+#     add_library(gsilib_global${debug_suffix} STATIC ${GLOBAL_SRC} )
       add_dependencies(gsilib_global${debug_suffix} gsilib_shrd${debug_suffix} ${bacio} ${crtm} ${bufr} ${nemsio} ${sigio} ${sfcio} ${sp} ${w3emc} ${w3nco} )
     endif()
     add_dependencies(gsilib_shrd${debug_suffix} ${bacio} ${crtm} ${bufr} ${nemsio} ${sigio} ${sfcio} ${sp} ${w3emc} ${w3nco} )
