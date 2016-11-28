@@ -129,7 +129,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) sin2,termg,termr,termrg
   real(r_kind) psges,zsges,zsges0
   real(r_kind),dimension(nsig):: zges,hges,ugesprofile,vgesprofile
-  real(r_kind),dimension(nsig):: wgesprofile,vTgesprofile,refgesprofile
+  real(r_kind),dimension(nsig):: wgesprofile!,vTgesprofile,refgesprofile
   real(r_kind) prsltmp(nsig)
   real(r_kind) sfcchk  
   real(r_kind) residual,obserrlm,obserror,ratio,scale,val2
@@ -180,7 +180,6 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_u
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_w
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_ref
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed,include_w)
@@ -503,8 +502,6 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      if(include_w) then
           call tintrp31(ges_w,wgesin,dlat,dlon,dpres,dtime,&
           hrdifsig,mype,nfldsig)
-          !call tintrp31(ges_ref,refgesin,dlat,dlon,dpres,dtime,&
-          !hrdifsig,mype,nfldsig)
      end if
 
      call tintrp2a1(ges_u,ugesprofile,dlat,dlon,dtime,hrdifsig,&
@@ -514,8 +511,6 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      if(include_w) then 
           call tintrp2a1(ges_w,wgesprofile,dlat,dlon,dtime,hrdifsig,&
           nsig,mype,nfldsig) 
-          !call tintrp2a1(ges_ref,refgesprofile,dlat,dlon,dtime,hrdifsig,&
-          !nsig,mype,nfldsig) 
      end if
 
 !    Convert guess u,v wind components to radial value consident with obs
@@ -523,7 +518,6 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      sinazm  = sin(data(iazm,i))  ! sin(azimuth angle)
      costilt = cos(data(itilt,i)) ! cos(tilt angle)
      sintilt = sin(data(itilt,i)) ! sin(tilt angle)
-     vTgesprofile= -5.0 
      !vTgesprofile= 5.40_r_kind*(exp((refgesprofile -43.1_r_kind)/17.5_r_kind)) 
 !    rwwind = (ugesin*cosazm+vgesin*sinazm)*costilt*factw
      umaxmax=-huge(umaxmax)
@@ -534,8 +528,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         ! Two different radial wind forward operators. Sometimes w_tot wont be available. 
         if(include_w) then
            rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt &
-                        +(wgesprofile(k))*sintilt
-                        !+(wgesprofile(k)-vTgesprofile(k))*sintilt
+                        +(wgesprofile(k))*sintilt ! - (vTgesprofile(k))*sintilt
         else 
            rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt
         end if

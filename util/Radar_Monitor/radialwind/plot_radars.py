@@ -68,6 +68,12 @@ for i in range(numradars):
     tmpi,tmpj=nio.ll_to_ij(tmplat,tmplon)
     m.scatter(nio.lons[tmpi,tmpj],nio.lats[tmpi,tmpj],s=175,color=tmpcolor,marker='*',latlon=True)
 
+#plot a green and red star outside the domain for label. Probably not the best way to do this.
+m.scatter(0,0,s=175,color='red',marker='*',latlon=True,label='0 observations')
+m.scatter(0,0,s=175,color='green',marker='*',latlon=True,label='1+ observations')
+m.scatter(0,0,s=175,color='black',marker='*',latlon=True,label='missing')
+
+
 # PLOT BLACK FOR RADARS THAT ARE COMPLETELY MISSING
 print('\n PLOT BLACK FOR RADARS THAT ARE COMPLETELY MISSING')
 count=0
@@ -88,9 +94,10 @@ for j in range(total_radars):
         tmpi,tmpj=nio.ll_to_ij(tmplat,tmplon)
         m.scatter(nio.lons[tmpi,tmpj],nio.lats[tmpi,tmpj],s=175,color=tmpcolor,marker='*',latlon=True)
         ltmp=False
-    
+
+plt.legend(loc='lower left',numpoints=1, ncol=3, fontsize=8, bbox_to_anchor=(0, 0))    
 plt.show()
 plt.title('Radars (not) used in assimilation for '+str(anal_time)+'\n' \
          +'Green = '+str(numGreen)+', Red = '+str(numRed)+', Black = '+str(numBlack)\
          +', Total = '+str(numGreen+numRed+numBlack))
-plt.savefig(str(anal_time)+'_rwMon'+'.png')
+plt.savefig(str(anal_time)+'_rwMon'+'.png',bbox_inches='tight')

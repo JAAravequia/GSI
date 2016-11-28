@@ -4,23 +4,35 @@
 
 ###### USER INPUT ##########################################################
 #Use any wrf_inout3 file. It's just used to help make the baseplot.
-ANALFILE=/scratch4/NCEPDEV/stmp4/Donald.E.Lippi/2015103018/test03/wrf_inout03
+ANALFILE=/scratch4/NCEPDEV/stmp4/Donald.E.Lippi/2015103018/test10_90deg_w/wrf_inout03
 #Location of stdout file from GSI -- this is the most important!
 STDOUT=./sample_input/stdout
 STDOUT=/scratch4/NCEPDEV/meso/noscrub/Donald.E.Lippi/tmpnwprd/rw_999/namrr_12_conusnest_tm00_rw_999/OUTPUT.188132
 STDOUT=/scratch4/NCEPDEV/meso/noscrub/Donald.E.Lippi/tmpnwprd/rw_999/namrr_13_conusnest_tm00_rw_999/OUTPUT.118385
+STDOUT=/scratch4/NCEPDEV/stmp4/Donald.E.Lippi/2015103018/test10_90deg_w/stdout
 ############################################################################
+
+# CHECK IF FILES EXIST.
+if [ ! -s ${ANALFILE} ]; then
+   echo "Analysis file does not exist: $ANALFILE"
+   echo "exiting..."
+   exit
+fi
+if [ ! -s ${STDOUT} ]; then
+   echo "Stdout file does not exist: $STDOUT"
+   echo "exiting..."
+   exit
+fi
 
 #  FIND THE ANALYSIS TIME.
 Date=`awk '/GESINFO:  Analysis date is/' $STDOUT`
-YYYY=`echo $Date | cut -f 6 -d ' '`
-MM=`echo $Date | cut -f 7 -d ' '`
-DD=`echo $Date | cut -f 8 -d ' '`
-HH=`echo $Date | cut -f 9 -d ' '`
+YYYY=`echo $Date | cut -f 5 -d ' '`
+MM=`echo $Date | cut -f 6 -d ' '`
+DD=`echo $Date | cut -f 7 -d ' '`
+HH=`echo $Date | cut -f 8 -d ' '`
 ANAL_TIME=${YYYY}${MM}${DD}${HH}
 echo $Date
 echo $ANAL_TIME
-
 
 #  INITIALIZE AN EMPTY ARRAY.
 RADARLIST=""
@@ -87,7 +99,13 @@ echo $numradars
 python plot_radars.py $ANAL_TIME $ANALFILE $numradars $total_radars ${sid[*]} ${lat[*]} ${lon[*]} ${hgt[*]} ${nob[*]} ${fsid[*]} ${flat[*]} ${flon[*]} ${fhgt[*]}
 
 #  MOVE MOST RECENT FIGURE TO A SAFE LOCATION.
+final=`ls -t *.png | head -1` 
 mkdir -p ./${ANAL_TIME}
-mv `ls -t *.png | head -1` ./${ANAL_TIME}/.
+#mv `ls -t *.png | head -1` ./${ANAL_TIME}/.
+mv $final ./${ANAL_TIME}/.
+
+PWD=`pwd`
+
+echo "Your finished product is located: ${PWD}/${ANAL_TIME}/${final}"
 
 

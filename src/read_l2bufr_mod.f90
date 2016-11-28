@@ -815,21 +815,13 @@ sis,hgtl_full,nobs)
 
 
   use kinds, only: r_kind,r_single,r_double,i_kind,i_byte
-  use constants, only: zero,zero_single,half,one,two,three,deg2rad,rearth,rad2deg, &
-      one_tenth,r10,r1000,r60inv,r100,r400,grav_equator, &
-      eccentricity,somigliana,grav_ratio,grav, &
-      semi_major_axis,flattening,two
+  use constants, only: zero,half,one,two,deg2rad,rearth,rad2deg,r1000,r100,r400
   use qcmod, only: erradar_inflate
-  use obsmod, only: iadate,l_foreaft_thin
   use oneobmod, only: oneobtest,learthrel_rw
   use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,time_4dvar,thin4d
   use gridmod, only: regional,nlat,nlon,tll2xy,rlats,rlons,rotate_wind_ll2xy,nsig
-  use gridmod, only: wrf_nmm_regional,nems_nmmb_regional,cmaq_regional,wrf_mass_regional
-  use convinfo, only: nconvtype,ctwind, &
-      ncmiter,ncgroup,ncnumgrp,icuse,ictype,ioctype,ithin_conv,rmesh_conv,pmesh_conv
-  use guess_grids, only: hrdifsig,geop_hgtl,nfldsig,ges_prslavg
-  use convthin, only: make3grids,map3grids,del3grids,use_all
-  use deter_sfc_mod, only: deter_sfc2,deter_zsfc_model
+  use convinfo, only: nconvtype,ncmiter,ncgroup,ncnumgrp,icuse,ioctype
+  use deter_sfc_mod, only: deter_sfc2
   use mpimod, only: npe
 
   implicit none
@@ -862,18 +854,16 @@ sis,hgtl_full,nobs)
 ! Declare local variables
   logical good,outside,good0
 
-  character(80) hdrstr(2),datstr(2)
   character(30) outmessage
  
   integer(i_kind) lnbufr,i,k,maxobs
   integer(i_kind) nmrecs,ibadazm,ibadwnd,ibaddist,ibadheight,kthin
   integer(i_kind) ibadstaheight,ibaderror,notgood,iheightbelowsta,ibadfit
-  integer(i_kind) ithin
   integer(i_kind) notgood0
   integer(i_kind) iret,kx0
   integer(i_kind) nreal,nchanl,ilat,ilon,ikx
   integer(i_kind) idomsfc
-  real(r_kind) timeb,rmesh,usage,ff10,sfcr,skint,t4dv,t4dvo,toff
+  real(r_kind) usage,ff10,sfcr,skint,t4dv,t4dvo,toff
   real(r_kind) eradkm,dlat_earth,dlon_earth
   real(r_kind) dlat,dlon,staheight,tiltangle,clon,slon,clat,slat
   real(r_kind) timeo,clonh,slonh,clath,slath,cdist,dist
@@ -908,13 +898,6 @@ sis,hgtl_full,nobs)
   integer(i_kind) irec
 
   data lnbufr/10/
-  data hdrstr(1) / 'CLAT CLON SELV ANEL YEAR MNTH DAYS HOUR MINU MGPT' /
-  data hdrstr(2) / 'PTID YEAR MNTH DAYS HOUR MINU SECO CLAT CLON HSMSL ANAZ ANEL' /
-  data datstr(1) / 'STDM SUPLAT SUPLON HEIT RWND RWAZ RSTD' /
-  data datstr(2) / 'DIST HREF DMVR DVSW' /
-
-  data ithin / -9 /
-  data rmesh / -99.999_r_kind /
 
 !***********************************************************************************
 
@@ -979,10 +962,9 @@ sis,hgtl_full,nobs)
   nsuper2_kept=0
 
   if(loop==0) outmessage='level 2 superobs:'
-!8.
+
 ! Open sequential file containing superobs
   open(lnbufr,file='radar_supobs_from_level2',form='unformatted')
-!  open(lnbufr,file='l2rwbufr_out',form='unformatted')
   rewind lnbufr
 
 ! Loop to read superobs data file
@@ -1020,7 +1002,6 @@ sis,hgtl_full,nobs)
      staheight=this_stahgt    !station elevation
      tiltangle=corrected_tilt*deg2rad
 
-!9.
      t4dvo=toff+thistime
      timemax=max(timemax,t4dvo)
      timemin=min(timemin,t4dvo)
@@ -1061,12 +1042,12 @@ sis,hgtl_full,nobs)
      if(.not. oneobtest) then
         irrr=nint(dist*1000*xscalei)
         if(irrr<=0 .or. irrr>max_rrr) cycle
-     end if !90degtest
+     end if 
 !    Extract radial wind data
      height= thishgt
      rwnd  = thisvr
      azm_earth = corrected_azimuth
-!10.
+
      if(regional) then
         if(oneobtest .and. learthrel_rw) then ! for non rotated winds!!!
            cosazm=cos(azm_earth*deg2rad)
@@ -1082,7 +1063,7 @@ sis,hgtl_full,nobs)
      else
         azm=azm_earth
      end if
-!11.
+
      if(.not. oneobtest) then
         iaaa=azm/(r360/(r8*irrr))
         iaaa=mod(iaaa,8*irrr)
@@ -1090,7 +1071,7 @@ sis,hgtl_full,nobs)
         iaaa=iaaa+1
         iaaamax=max(iaaamax,iaaa)
         iaaamin=min(iaaamin,iaaa)
-     end if !90degtest
+     end if 
 
      error = erradar_inflate*thiserr
      errmax=max(error,errmax)
@@ -1127,9 +1108,7 @@ sis,hgtl_full,nobs)
         cycle
      else
 
-!14.
      end if
-!15.
 
 !    If data is good, load into output array
      if(good) then
@@ -1179,7 +1158,6 @@ sis,hgtl_full,nobs)
 
   close(lnbufr) ! A simple unformatted fortran file should not be mixed with bufr I/O
   write(6,*)'READ_L2RW_PROCESSED:  ',trim(outmessage),' reached eof on 2 superob radar file'
-!16.
   write(6,*)'READ_L2RW_PROCESSED: nsuper2_in,nsuper2_kept=',nsuper2_in,nsuper2_kept
   write(6,*)'READ_L2RW_PROCESSED: # bad azimuths=',ibadazm
   write(6,*)'READ_L2RW_PROCESSED: # bad winds   =',ibadwnd
