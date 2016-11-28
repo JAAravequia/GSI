@@ -101,7 +101,7 @@ contains
       enddo
       write(6,*) 'after checkvars proceed = ',proceed
   end subroutine check_vars_ 
-  subroutine init_ges(this, varname, rank)
+  subroutine init_ges(this)
 
     use kinds, only: r_kind,i_kind
     use gsi_bundlemod, only : gsi_bundlegetpointer
@@ -110,44 +110,80 @@ contains
          nfldsig,sfcmod_gfs,sfcmod_mm5,comp_fact10
     implicit none 
     class(abstract_setup_class)                              , intent(inout) :: this 
-    character(len=5)                                         , intent(in) :: varname
-    integer(i_kind)                                          , intent(in) :: rank
+    character(len=5) :: varname, delimiter, fullname
     real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
     real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
     real(r_kind),dimension(:,:,:  ),pointer:: ges=>NULL()
-    real(r_kind),dimension(:,:,:,: ),pointer:: ges3=>NULL()
-    integer(i_kind) ifld, istatus
+    real(r_kind),dimension(:,:,:,: ),pointer:: ges4=>NULL()
+    integer(i_kind) ifld, istatus, i, idx, rank
+    rank = 3
+    delimiter = "::"
+    do i = 1,this%numvars
+    fullname = this%varnames(i)
+    idx =scan(fullname,delimiter) + 1
+    varname = fullname(idx:)
+    write(6,*) 'varname is ', varname
     select case (varname)
       case ('ps')
         ges = this%ges_ps
+        rank = 3
       case ('z')
         ges = this%ges_z
+        rank = 3
       case ('gust')
         ges = this%ges_gust
+        rank = 3
       case ('wspd10m')
         ges = this%ges_wspd10m
+        rank = 3
       case ('cldch')
         ges = this%ges_cldch
+        rank = 3
       case ('lcbas')
         ges = this%ges_lcbas
+        rank = 3
       case ('mitm')
         ges = this%ges_mitm
+        rank = 3
       case ('pblh')
         ges = this%ges_pblh
+        rank = 3
       case ('th2')
         ges = this%ges_th2
+        rank = 3
       case ('pmsl')
         ges = this%ges_pmsl
+        rank = 3
       case ('q2m')
         ges = this%ges_q2m
+        rank = 3
       case ('q2')
         ges = this%ges_q2
+        rank = 3
       case ('tcamt')
         ges = this%ges_tcamt
+        rank = 3
       case ('td2m')
         ges = this%ges_td2m
+        rank = 3
       case ('vis')
         ges = this%ges_vis
+        rank = 3
+      case ('u')
+        ges4 = this%ges_u
+        rank = 4
+      case ('v')
+        ges4 = this%ges_v
+        rank = 4
+      case ('tv')
+        ges4 = this%ges_tv
+        rank = 4
+      case ('pm10')
+        ges4 = this%ges_pm10
+        rank = 4
+      case ('pm2_5')
+        ges4 = this%ges_pm2_5
+        rank = 4
     end select
 
     if(rank == 3) then
@@ -170,22 +206,22 @@ contains
     else
      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
      if (istatus==0) then
-         if(allocated(ges3))then
+         if(allocated(ges4))then
             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
             call stop2(999)
          endif
-         allocate(ges3(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         ges3(:,:,:,1)=rank3
+         allocate(ges4(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         ges4(:,:,:,1)=rank3
          do ifld=2,nfldsig
             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges3(:,:,:,ifld)=rank3
+            ges4(:,:,:,ifld)=rank3
          enddo
      else
          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
     endif
-
+    enddo
   end subroutine init_ges
  
   subroutine init_vars_base(this)
@@ -205,9 +241,9 @@ contains
 ! If require guess vars available, extract from bundle ...
   if(size(gsi_metguess_bundle)==nfldsig) then
      varname='ps'
-     call this%init_ges(varname,2)
+     call this%init_ges
      varname='z'
-     call this%init_ges(varname,3)
+     call this%init_ges
 !    get u ...
      varname='u'
      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)

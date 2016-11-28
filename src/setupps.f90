@@ -714,13 +714,7 @@ end subroutine setupps
  
  ! If require guess vars available, extract from bundle ...
    if(size(gsi_metguess_bundle)==nfldsig) then
- !    get ps ...
-      varname='ps'
-      call this%init_ges(varname,2)
-      varname='z'
-      call this%init_ges(varname,2)
-      varname='tv'
-      call this%init_ges(varname,3)
+      call this%init_ges
    endif
    end subroutine init_vars_ps
  
