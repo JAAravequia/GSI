@@ -1,7 +1,7 @@
 #%Module######################################################################
 ##                                                       Russ.Treadon@noaa.gov
 ##                                                           NOAA/NWS/NCEP/EMC
-## GDAS_ENKF v6.2.3
+## GDAS_ENKF v14.1.0
 ##_____________________________________________________
 proc ModulesHelp { } {
 puts stderr "Set environment veriables for GDAS_ENKF"
@@ -10,7 +10,7 @@ puts stderr "for the Intel Compiler Suite $version\n"
 }
 module-whatis " GDAS_ENKF whatis description"
 
-set ver v6.2.3
+set ver v14.1.0
 
 setenv COMP ftn
 setenv COMP_MP ftn

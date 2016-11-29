@@ -1,10 +1,10 @@
 #%Module######################################################################
 ##                                                       Russ.Treadon@noaa.gov
 ##                                                           NOAA/NWS/NCEP/EMC
-## GLOBAL_GSI v6.2.3
+## GLOBAL_GSI v14.1.0
 ##_____________________________________________________
 
-set ver v6.2.3
+set ver v14.1.0
 
 set COMP ifort
 set COMP_MP mpfort

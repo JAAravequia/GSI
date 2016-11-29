@@ -1,9 +1,9 @@
 #%Module######################################################################
 ##                                                       Russ.Treadon@noaa.gov
 ##                                                           NOAA/NWS/NCEP/EMC
-## GDAS_ENKF v6.2.3
+## GDAS_ENKF v14.1.0
 ##_____________________________________________________
-#set ver v6.2.3
+#set ver v14.1.0
 
 set COMP ifort
 set COMP_MP mpfort
