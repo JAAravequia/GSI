@@ -154,7 +154,7 @@ contains
     this%myname='setuppw'
     this%numvars = 3
     allocate(this%varnames(this%numvars))
-    this%varnames(1:this%numvars) = (/ 'var::q', 'var::z', 'var::tv' /)
+    this%varnames(1:this%numvars) = (/ 'var::z', 'var::tv', 'var::q' /)
     n_alloc(:)=0
     m_alloc(:)=0
   
@@ -167,7 +167,8 @@ contains
     if(.not.proceed) return  ! not all vars available, simply return
   
   ! If require guess vars available, extract from bundle ...
-    call this%init_vars_derived
+  ! call this%init_vars_derived
+    call this%init_ges
   
   !******************************************************************************
   ! Read and reformat observations in work arrays.

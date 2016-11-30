@@ -135,7 +135,7 @@ contains
     end if
   
   ! If require guess vars available, extract from bundle ...
-    call this%init_vars_derived
+    call this%init_ges
   
     n_alloc(:)=0
     m_alloc(:)=0

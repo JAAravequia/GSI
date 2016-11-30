@@ -197,7 +197,7 @@ contains
     if(.not.proceed) return  ! not all vars available, simply return
   
   ! If require guess vars available, extract from bundle ...
-    call this%init_vars_derived
+    call this%init_ges
   
     n_alloc(:)=0
     m_alloc(:)=0
@@ -731,7 +731,7 @@ contains
   class(setupdw_class)                              , intent(inout) :: this 
 
   this%myname="setupdw"
-  call this%init_vars_base
+  call this%init_ges
 
   end subroutine init_vars_dw
   

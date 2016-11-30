@@ -222,7 +222,7 @@ contains
     if(.not.proceed) return  ! not all vars available, simply return
   
   ! If require guess vars available, extract from bundle ...
-    call this%init_vars_derived
+    call this%init_ges
   
   ! If requested, save select data for output to diagnostic file
     if(conv_diagsave)then

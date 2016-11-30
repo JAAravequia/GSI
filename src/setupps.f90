@@ -176,7 +176,7 @@ contains
     this%numvars = 3
     allocate(this%varnames(this%numvars))
     this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::tv' /)
-
+    write(6,*) 'HEY!!! in setupps, varnames are ',this%varnames(1),this%varnames(2),this%varnames(3)
     n_alloc(:)=0
     m_alloc(:)=0
   !*******************************************************************************
@@ -223,7 +223,7 @@ contains
     if(.not.proceed) return  ! not all vars available, simply return
   
   ! If require guess vars available, extract from bundle ...
-    call this%init_vars_derived
+    call this%init_ges
   
   !  Check to see if observation should be used or monitored
   !  muse = true  then used
@@ -702,18 +702,13 @@ end subroutine setupps
  
    subroutine init_vars_ps(this)
    use gsi_metguess_mod, only : gsi_metguess_bundle
-   use gsi_bundlemod, only : gsi_bundlegetpointer
    use guess_grids, only: nfldsig
       implicit none
       class(setupps_class)                              , intent(inout) :: this
  
-   real(r_kind),dimension(:,:  ),pointer:: rank2
-   real(r_kind),dimension(:,:,:),pointer:: rank3
-   character(len=5) :: varname
-   integer(i_kind) ifld, istatus
- 
  ! If require guess vars available, extract from bundle ...
    if(size(gsi_metguess_bundle)==nfldsig) then
+    write(6,*) 'HEY!!! in init_vars_ps setupps, varnames are ',this%varnames(1),this%varnames(2),this%varnames(3)
       call this%init_ges
    endif
    end subroutine init_vars_ps

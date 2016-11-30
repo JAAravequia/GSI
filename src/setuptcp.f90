@@ -121,7 +121,7 @@ contains
     if(.not.proceed) return  ! not all vars available, simply return
   
   ! If require guess vars available, extract from bundle ...
-    call this%init_vars_derived
+    call this%init_ges
   
   !******************************************************************************
   ! Read and reformat observations in work arrays.
