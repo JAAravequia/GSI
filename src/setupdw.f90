@@ -3,7 +3,6 @@ use abstract_setup_mod
   type, extends(abstract_setup_class) :: setupdw_class
   contains
     procedure, pass(this) :: setup => setupdw
-    procedure, pass(this) :: init_vars_derived => init_vars_dw
   end type setupdw_class
 contains
   
@@ -724,15 +723,5 @@ contains
   
     return
   end subroutine setupdw
-  
-  subroutine init_vars_dw(this)
- 
-  implicit none 
-  class(setupdw_class)                              , intent(inout) :: this 
-
-  this%myname="setupdw"
-  call this%init_ges
-
-  end subroutine init_vars_dw
   
 end module setupdw_mod

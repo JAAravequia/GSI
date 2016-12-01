@@ -2,12 +2,9 @@ module setuppm10_mod
 use abstract_setup_mod
 use constants, only: max_varname_length
   type, extends(abstract_setup_class) :: setuppm10_class
-! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_pm10
-! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
   character(len=max_varname_length) :: aeroname
   contains
     procedure, pass(this) :: setuppm10
-    procedure, pass(this) :: init_vars_derived => init_vars_pm10
     procedure, pass(this) :: check_vars_pm10
   end type setuppm10_class
 contains
@@ -755,7 +752,7 @@ contains
     return
 end subroutine setuppm10
  
-   subroutine check_vars_pm10(this,proceed)
+subroutine check_vars_pm10(this,proceed)
    use gridmod, only : cmaq_regional,wrf_mass_regional
    use chemmod, only: naero_gocart_wrf,aeronames_gocart_wrf,laeroana_gocart,upper2lower
    use gsi_chemguess_mod, only : gsi_chemguess_get,gsi_chemguess_bundle
@@ -776,81 +773,6 @@ end subroutine setuppm10
  
    proceed=proceed.and.ivar>0
  
-   end subroutine check_vars_pm10 
- 
-   subroutine init_vars_pm10(this)
-   use gsi_metguess_mod, only : gsi_metguess_bundle
-   use gsi_bundlemod, only : gsi_bundlegetpointer
-   use guess_grids, only: nfldsig
-      implicit none
-      class(setuppm10_class)                              , intent(inout) :: this
- 
-   real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
-   real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
-   character(len=5) :: varname
-   integer(i_kind) ifld, istatus
- 
- ! If require guess vars available, extract from bundle ...
-   if(size(gsi_metguess_bundle)==nfldsig) then
- !    get ps ...
-      varname='ps'
-      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-      if (istatus==0) then
-          if(allocated(this%ges_ps))then
-             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-             call stop2(999)
-          endif
-          allocate(this%ges_ps(size(rank2,1),size(rank2,2),nfldsig))
-          this%ges_ps(:,:,1)=rank2
-          do ifld=2,nfldsig
-             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-             this%ges_ps(:,:,ifld)=rank2
-          enddo
-      else
-          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-      endif
- !    get z ...
-      varname='z'
-      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-      if (istatus==0) then
-          if(allocated(this%ges_z))then
-             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-             call stop2(999)
-          endif
-          allocate(this%ges_z(size(rank2,1),size(rank2,2),nfldsig))
-          this%ges_z(:,:,1)=rank2
-          do ifld=2,nfldsig
-             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-             this%ges_z(:,:,ifld)=rank2
-          enddo
-      else
-          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-      endif
- !    get tv ...
-      varname='tv'
-      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)                   
-      if (istatus==0) then
-          if(allocated(this%ges_tv))then
-             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '      
-             call stop2(999)
-          endif
-          allocate(this%ges_tv(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-          this%ges_tv(:,:,:,1)=rank3
-          do ifld=2,nfldsig
-             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)       
-             this%ges_tv(:,:,:,ifld)=rank3
-          enddo
-      else
-          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus    
-          call stop2(999)
-      endif
-   else
-      write(6,*) trim(this%myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
-                  nfldsig,size(gsi_metguess_bundle)
-      call stop2(999)
-   endif
-   end subroutine init_vars_pm10
+end subroutine check_vars_pm10 
  
 end module setuppm10_mod

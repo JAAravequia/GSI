@@ -1,10 +1,8 @@
 module setuptcamt_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setuptcamt_class
-! real(r_kind),allocatable,dimension(:,:,:) :: ges_tcamt
   contains
     procedure, pass(this) :: setup => setuptcamt
-    procedure, pass(this) :: init_vars_derived => init_vars_tcamt
   end type setuptcamt_class
 contains
   subroutine setuptcamt(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -525,43 +523,5 @@ contains
   
     return
 end subroutine setuptcamt
- 
-   subroutine init_vars_tcamt(this)
-   use guess_grids, only: nfldsig
-   use gsi_bundlemod, only : gsi_bundlegetpointer
-   use gsi_metguess_mod, only : gsi_metguess_bundle
-      implicit none
-      class(setuptcamt_class)                              , intent(inout) :: this
-   real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
-   character(len=5) :: varname
-   integer(i_kind) ifld, istatus
- 
- ! If require guess vars available, extract from bundle ...
-   if(size(gsi_metguess_bundle)==nfldsig) then
- !    get tcamt ...
-      varname='tcamt'
-      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-      if (istatus==0) then
-          if(allocated(this%ges_tcamt))then
-             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-             call stop2(999)
-          endif
-          allocate(this%ges_tcamt(size(rank2,1),size(rank2,2),nfldsig))
-          this%ges_tcamt(:,:,1)=rank2
-          do ifld=2,nfldsig
-             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-             this%ges_tcamt(:,:,ifld)=rank2
-          enddo
-      else
-          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-      endif
- 
-   else
-      write(6,*) trim(this%myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
-                  nfldsig,size(gsi_metguess_bundle)
-      call stop2(999)
-   endif
-   end subroutine init_vars_tcamt
  
 end module setuptcamt_mod

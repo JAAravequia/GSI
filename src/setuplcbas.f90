@@ -4,7 +4,6 @@ use abstract_setup_mod
 ! real(r_kind),allocatable,dimension(:,:,:) :: ges_lcbas
   contains
     procedure, pass(this) :: setup => setuplcbas
-    procedure, pass(this) :: init_vars_derived => init_vars_lcbas
   end type setuplcbas_class
 contains
   subroutine setuplcbas(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -548,62 +547,5 @@ contains
   
     return
 end subroutine setuplcbas
- 
-   subroutine init_vars_lcbas(this)
-   use gsi_bundlemod, only : gsi_bundlegetpointer
-   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
-   use guess_grids, only: nfldsig
-   use gsi_metguess_mod, only : gsi_metguess_get
-      implicit none
-      class(setuplcbas_class)                              , intent(inout) :: this
- 
-   real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
-   character(len=5) :: varname
-   integer(i_kind) ifld, istatus
- 
- ! If require guess vars available, extract from bundle ...
-   if(size(gsi_metguess_bundle)==nfldsig) then
- !    get lcbas ...
-      varname='lcbas'
-      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-      if (istatus==0) then
-          if(allocated(this%ges_lcbas))then
-             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-             call stop2(999)
-          endif
-          allocate(this%ges_lcbas(size(rank2,1),size(rank2,2),nfldsig))
-          this%ges_lcbas(:,:,1)=rank2
-          do ifld=2,nfldsig
-             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-             this%ges_lcbas(:,:,ifld)=rank2
-          enddo
-      else
-          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-      endif
- !    get z ...
-      varname='z'
-      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-      if (istatus==0) then
-          if(allocated(this%ges_z))then
-             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-             call stop2(999)
-          endif
-          allocate(this%ges_z(size(rank2,1),size(rank2,2),nfldsig))
-          this%ges_z(:,:,1)=rank2
-          do ifld=2,nfldsig
-             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-             this%ges_z(:,:,ifld)=rank2
-          enddo
-      else
-          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-      endif
-   else
-      write(6,*) trim(this%myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
-                  nfldsig,size(gsi_metguess_bundle)
-      call stop2(999)
-   endif
-   end subroutine init_vars_lcbas
  
 end module setuplcbas_mod

@@ -1,10 +1,8 @@
 module setupw_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setupw_class
-! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
   contains
     procedure, pass(this) :: setup => setupw
-    procedure, pass(this) :: init_vars_derived => init_vars_w
   end type setupw_class
 contains
   !-------------------------------------------------------------------------
@@ -1372,42 +1370,5 @@ contains
   
     return
   end subroutine setupw
-
-  subroutine init_vars_w(this)
-
-  use kinds, only: r_kind,i_kind
-  use gsi_bundlemod, only : gsi_bundlegetpointer
-  use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
-  use guess_grids, only: hrdifsig,geop_hgtl,ges_lnprsl,&
-         nfldsig,sfcmod_gfs,sfcmod_mm5,comp_fact10
-  implicit none 
-  class(setupw_class)                              , intent(inout) :: this 
-
-  real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
-  real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
-  character(len=5) :: varname
-  integer(i_kind) ifld, istatus
-
-  if(.true.) then
-! get tv ...
-  varname='tv'
-  call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-  if (istatus==0) then
-    if(allocated(this%ges_tv))then
-            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-    endif
-    allocate(this%ges_tv(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         this%ges_tv(:,:,:,1)=rank3
-    do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            this%ges_tv(:,:,:,ifld)=rank3
-    enddo
-  else
-         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-         call stop2(999)
-  endif
-  endif
-  end subroutine init_vars_w
 
 end module setupw_mod

@@ -1,10 +1,8 @@
 module setuppmsl_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setuppmsl_class
-! real(r_kind),allocatable,dimension(:,:,:) :: ges_pmsl
   contains
     procedure, pass(this) :: setup => setuppmsl
-    procedure, pass(this) :: init_vars_derived => init_vars_pmsl
   end type setuppmsl_class
 contains
   subroutine setuppmsl(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -521,79 +519,5 @@ contains
   
     return
 end subroutine setuppmsl
- 
-   subroutine init_vars_pmsl(this)
-   use gsi_metguess_mod, only : gsi_metguess_bundle
-   use gsi_bundlemod, only : gsi_bundlegetpointer
-   use guess_grids, only: nfldsig
-      implicit none
-      class(setuppmsl_class)                              , intent(inout) :: this
- 
-   real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
-   character(len=5) :: varname
-   integer(i_kind) ifld, istatus
- 
- ! If require guess vars available, extract from bundle ...
-   if(size(gsi_metguess_bundle)==nfldsig) then
- !    get pmsl ...
-      varname='pmsl'
-      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-      if (istatus==0) then
-          if(allocated(this%ges_pmsl))then
-             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-             call stop2(999)
-          endif
-          allocate(this%ges_pmsl(size(rank2,1),size(rank2,2),nfldsig))
-          this%ges_pmsl(:,:,1)=rank2
-          do ifld=2,nfldsig
-             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-             this%ges_pmsl(:,:,ifld)=rank2
-          enddo
-      else
-          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-      endif
- !    get ps ...
-      varname='ps'
-      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-      if (istatus==0) then
-          if(allocated(this%ges_ps))then
-             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-             call stop2(999)
-          endif
-          allocate(this%ges_ps(size(rank2,1),size(rank2,2),nfldsig))
-          this%ges_ps(:,:,1)=rank2
-          do ifld=2,nfldsig
-             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-             this%ges_ps(:,:,ifld)=rank2
-          enddo
-      else
-          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-      endif
- !    get z ...
-      varname='z'
-      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-      if (istatus==0) then
-          if(allocated(this%ges_z))then
-             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-             call stop2(999)
-          endif
-          allocate(this%ges_z(size(rank2,1),size(rank2,2),nfldsig))
-          this%ges_z(:,:,1)=rank2
-          do ifld=2,nfldsig
-             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-             this%ges_z(:,:,ifld)=rank2
-          enddo
-      else
-          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-      endif
-   else
-      write(6,*) trim(this%myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
-                  nfldsig,size(gsi_metguess_bundle)
-      call stop2(999)
-   endif
-   end subroutine init_vars_pmsl
  
 end module setuppmsl_mod

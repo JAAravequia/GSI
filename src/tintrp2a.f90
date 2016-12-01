@@ -189,6 +189,7 @@ subroutine tintrp2a11(f,g,dx,dy,obstime,gridtime, &
   end if
   deltp=one-delt
   delxp=one-delx; delyp=one-dely
+  write(6,*) 'ix, iy, itime',ix,iy,itime,ixp,iyp,itimep
   g=(f(ix,iy,itime)*delxp*delyp+f(ixp,iy,itime)*delx*delyp &
         +  f(ix,iyp,itime)*delxp*dely+f(ixp,iyp,itime)*delx*dely)*delt &
         +(f(ix,iy,itimep)*delxp*delyp+f(ixp,iy,itimep)*delx*delyp &

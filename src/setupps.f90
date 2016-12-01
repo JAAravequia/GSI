@@ -1,10 +1,8 @@
 module setupps_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setupps_class
-! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
   contains
     procedure, pass(this) :: setup => setupps
-    procedure, pass(this) :: init_vars_derived => init_vars_ps
   end type setupps_class
 contains
   subroutine setupps(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -699,18 +697,5 @@ contains
     return 
   
 end subroutine setupps
- 
-   subroutine init_vars_ps(this)
-   use gsi_metguess_mod, only : gsi_metguess_bundle
-   use guess_grids, only: nfldsig
-      implicit none
-      class(setupps_class)                              , intent(inout) :: this
- 
- ! If require guess vars available, extract from bundle ...
-   if(size(gsi_metguess_bundle)==nfldsig) then
-    write(6,*) 'HEY!!! in init_vars_ps setupps, varnames are ',this%varnames(1),this%varnames(2),this%varnames(3)
-      call this%init_ges
-   endif
-   end subroutine init_vars_ps
  
 end module setupps_mod

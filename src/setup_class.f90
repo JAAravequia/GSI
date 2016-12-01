@@ -22,11 +22,10 @@ module abstract_setup_mod
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_tcamt
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_td2m
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_vis
-  character(len=10) :: myname
-  character(len=10),allocatable,dimension(:) :: varnames
+  character(len=12) :: myname
+  character(len=14),allocatable,dimension(:) :: varnames
   integer(i_kind) numvars
   contains
-    procedure(init_vars_derived), deferred, pass(this) :: init_vars_derived
     procedure, pass(this) :: setup
     procedure, pass(this) :: final_vars_
     procedure, pass(this) :: check_vars_
@@ -35,12 +34,6 @@ module abstract_setup_mod
     procedure, pass(this) ::  allocate_ges4
   end type abstract_setup_class
 
-  abstract interface 
-    subroutine init_vars_derived(this)
-      import abstract_setup_class
-      class(abstract_setup_class)                      ,intent(inout) :: this
-    end subroutine init_vars_derived
-  end interface
 contains    
   subroutine setup(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
       use kinds, only: r_kind,r_single,r_double,i_kind       
@@ -62,11 +55,12 @@ contains
     implicit none
     class(abstract_setup_class)                              , intent(inout) :: this
     real(r_kind),allocatable,dimension(:,:,:  ), intent(inout) :: ges
-    character(len=5),                            intent(in   ) :: varname
+    character(len=9),                            intent(in   ) :: varname
     real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
     integer(i_kind) ifld, istatus
     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
 
+    write(6,*) 'HEYYYY, allocating ',varname,trim(varname)
     if (istatus==0) then
           if(allocated(ges))then
              write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
@@ -92,7 +86,7 @@ contains
     implicit none
     class(abstract_setup_class)                              , intent(inout) :: this
     real(r_kind),allocatable,dimension(:,:,:,:), intent(inout) :: ges
-    character(len=5),                            intent(in   ) :: varname
+    character(len=9),                            intent(in   ) :: varname
     real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
     integer(i_kind) ifld, istatus
 
@@ -170,8 +164,8 @@ contains
          nfldsig,sfcmod_gfs,sfcmod_mm5,comp_fact10
     implicit none 
     class(abstract_setup_class)                              , intent(inout) :: this 
-    character(len=10) :: fullname
-    character(len=5) :: varname
+    character(len=14) :: fullname
+    character(len=9) :: varname
     real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
     real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
     real(r_kind),dimension(:,:,:  ),pointer :: ges
@@ -179,7 +173,7 @@ contains
     integer(i_kind) ifld, istatus, i, idx, rank
     do i = 1,this%numvars
       fullname = this%varnames(i)
-      varname = fullname(6:10)
+      varname = fullname(6:14)
       select case (varname)
         case ('ps')
           call this%allocate_ges3(this%ges_ps,varname)

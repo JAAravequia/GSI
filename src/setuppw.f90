@@ -1,11 +1,8 @@
 module setuppw_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setuppw_class
-! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
-! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
   contains
     procedure, pass(this) :: setup => setuppw
-    procedure, pass(this) :: init_vars_derived => init_vars_pw
   end type setuppw_class
 contains
   subroutine setuppw(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -167,7 +164,6 @@ contains
     if(.not.proceed) return  ! not all vars available, simply return
   
   ! If require guess vars available, extract from bundle ...
-  ! call this%init_vars_derived
     call this%init_ges
   
   !******************************************************************************
@@ -574,80 +570,5 @@ contains
   
     return
 end subroutine setuppw
- 
-   subroutine init_vars_pw(this)
-   use gsi_bundlemod, only : gsi_bundlegetpointer
-   use guess_grids, only: nfldsig
-   use gsi_metguess_mod, only : gsi_metguess_bundle
-      implicit none
-      class(setuppw_class)                              , intent(inout) :: this
- 
-   real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
-   real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
-   character(len=5) :: varname
-   integer(i_kind) ifld, istatus
- 
- ! If require guess vars available, extract from bundle ...
-   if(size(gsi_metguess_bundle)==nfldsig) then
- !    get z ...
-      varname='z'
-      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-      if (istatus==0) then
-          if(allocated(this%ges_z))then
-             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-             call stop2(999)
-          endif
-          allocate(this%ges_z(size(rank2,1),size(rank2,2),nfldsig))
-          this%ges_z(:,:,1)=rank2
-          do ifld=2,nfldsig
-             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-             this%ges_z(:,:,ifld)=rank2
-          enddo
-      else
-          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-      endif
- !    get tv ...
-      varname='tv'
-      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-      if (istatus==0) then
-          if(allocated(this%ges_tv))then
-             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-             call stop2(999)
-          endif
-          allocate(this%ges_tv(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-          this%ges_tv(:,:,:,1)=rank3
-          do ifld=2,nfldsig
-             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-             this%ges_tv(:,:,:,ifld)=rank3
-          enddo
-      else
-          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-      endif
- !    get q ...
-      varname='q'
-      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-      if (istatus==0) then
-          if(allocated(this%ges_q))then
-             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-             call stop2(999)
-          endif
-          allocate(this%ges_q(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-          this%ges_q(:,:,:,1)=rank3
-          do ifld=2,nfldsig
-             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-             this%ges_q(:,:,:,ifld)=rank3
-          enddo
-      else
-          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-      endif
-   else
-      write(6,*) trim(this%myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
-                  nfldsig,size(gsi_metguess_bundle)
-      call stop2(999)
-   endif
-   end subroutine init_vars_pw
  
 end module setuppw_mod

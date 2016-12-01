@@ -1,11 +1,8 @@
 module setupq_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setupq_class
-! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
-! real(r_kind),allocatable,dimension(:,:,:  ) :: ges_q2m
   contains
     procedure, pass(this) :: setup => setupq
-    procedure, pass(this) :: init_vars_derived => init_vars_q
   end type setupq_class
 contains
   subroutine setupq(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -223,7 +220,6 @@ contains
     if(.not.proceed) return  ! not all vars available, simply return
   
   ! If require guess vars available, extract from bundle ...
-!   call this%init_vars_derived
     call this%init_ges
   
     n_alloc(:)=0
@@ -878,86 +874,5 @@ contains
   ! End of routine
     return
 end subroutine setupq
- 
-   subroutine init_vars_q(this)
-   use gsi_bundlemod, only : gsi_bundlegetpointer
-   use gsi_metguess_mod, only : gsi_metguess_bundle
-   use guess_grids, only: nfldsig
-   use rapidrefresh_cldsurf_mod, only: i_use_2mq4b
-      implicit none
-      class(setupq_class)                              , intent(inout) :: this
- 
-   real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
-   real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
-   character(len=5) :: varname
-   integer(i_kind) ifld, istatus
- 
- ! If require guess vars available, extract from bundle ...
-   if(size(gsi_metguess_bundle)==nfldsig) then
- !    get ps ...
-      varname='ps'
-      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-      if (istatus==0) then
-          if(allocated(this%ges_ps))then
-             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-             call stop2(999)
-          endif
-          allocate(this%ges_ps(size(rank2,1),size(rank2,2),nfldsig))
-          this%ges_ps(:,:,1)=rank2
-          do ifld=2,nfldsig
-             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-             this%ges_ps(:,:,ifld)=rank2
-          enddo
-      else
-          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-      endif
- !    get q2m ...
-      if (i_use_2mq4b>0) then
-         varname='q2m'
-         write(6,*) 'HEYY, getting q2m'
-         call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-         write(6,*) 'HEYY, q2m status ',istatus
-         if (istatus==0) then
-             if(allocated(this%ges_q2m))then
-                write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-                call stop2(999)
-             endif
-             allocate(this%ges_q2m(size(rank2,1),size(rank2,2),nfldsig))
-             this%ges_q2m(:,:,1)=rank2
-             do ifld=2,nfldsig
-                call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-         write(6,*) 'HEYY, ifld and status ',ifld,istatus
-                this%ges_q2m(:,:,ifld)=rank2
-             enddo
-         else
-             write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-             call stop2(999)
-         endif
-      endif ! i_use_2mq4b
- !    get q ...
-      varname='q'
-      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-      if (istatus==0) then
-          if(allocated(this%ges_q))then
-             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-             call stop2(999)
-          endif
-          allocate(this%ges_q(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-          this%ges_q(:,:,:,1)=rank3
-          do ifld=2,nfldsig
-             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-             this%ges_q(:,:,:,ifld)=rank3
-          enddo
-      else
-          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-      endif
-   else
-      write(6,*) trim(this%myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
-                  nfldsig,size(gsi_metguess_bundle)
-      call stop2(999)
-   endif
-   end subroutine init_vars_q
  
 end module setupq_mod

@@ -3,7 +3,6 @@ use abstract_setup_mod
   type, extends(abstract_setup_class) :: setupwspd10m_class
   contains
     procedure, pass(this) :: setup => setupwspd10m
-    procedure, pass(this) :: init_vars_derived => init_vars_wspd10m
   end type setupwspd10m_class
 contains
   subroutine setupwspd10m(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -313,6 +312,7 @@ contains
        spdob=sqrt(uob*uob+vob*vob)
   
   ! Interpolate to get wspd10m at obs location/time
+       write(6,*) 'HEY!!!! size of ges_wspd is ',size(this%ges_wspd10m)
        call tintrp2a11(this%ges_wspd10m,spdges,dlat,dlon,dtime,hrdifsig,&
             mype,nfldsig)
   
@@ -867,134 +867,5 @@ contains
   
     return
 end subroutine setupwspd10m
- 
-   subroutine init_vars_wspd10m(this)
-   use guess_grids, only: nfldsig
-   use gsi_metguess_mod, only : gsi_metguess_bundle
-   use gsi_bundlemod, only : gsi_bundlegetpointer
-      implicit none
-      class(setupwspd10m_class)                              , intent(inout) :: this
- 
-   real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
-   real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
-   character(len=10) :: varname
-   integer(i_kind) ifld, istatus
- 
- ! If require guess vars available, extract from bundle ...
-   if(size(gsi_metguess_bundle)==nfldsig) then
- !    get wspd10m ...
-      varname='wspd10m'
-      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-      if (istatus==0) then
-          if(allocated(this%ges_wspd10m))then
-             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-             call stop2(999)
-          endif
-          allocate(this%ges_wspd10m(size(rank2,1),size(rank2,2),nfldsig))
-          this%ges_wspd10m(:,:,1)=rank2
-          do ifld=2,nfldsig
-             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-             this%ges_wspd10m(:,:,ifld)=rank2
-          enddo
-      else
-          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-      endif
- !    get ps ...
-      varname='ps'
-      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-      if (istatus==0) then
-          if(allocated(this%ges_ps))then
-             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-             call stop2(999)
-          endif
-          allocate(this%ges_ps(size(rank2,1),size(rank2,2),nfldsig))
-          this%ges_ps(:,:,1)=rank2
-          do ifld=2,nfldsig
-             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-             this%ges_ps(:,:,ifld)=rank2
-          enddo
-      else
-          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-      endif
- !    get z ...
-      varname='z'
-      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-      if (istatus==0) then
-          if(allocated(this%ges_z))then
-             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-             call stop2(999)
-          endif
-          allocate(this%ges_z(size(rank2,1),size(rank2,2),nfldsig))
-          this%ges_z(:,:,1)=rank2
-          do ifld=2,nfldsig
-             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-             this%ges_z(:,:,ifld)=rank2
-          enddo
-      else
-          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-      endif
- !    get u ...
-      varname='u'
-      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-      if (istatus==0) then
-          if(allocated(this%ges_u))then
-             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-             call stop2(999)
-          endif
-          allocate(this%ges_u(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-          this%ges_u(:,:,:,1)=rank3
-          do ifld=2,nfldsig
-             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-             this%ges_u(:,:,:,ifld)=rank3
-          enddo
-      else
-          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-      endif
- !    get v ...
-      varname='v'
-      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-      if (istatus==0) then
-          if(allocated(this%ges_v))then
-             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-             call stop2(999)
-          endif
-          allocate(this%ges_v(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-          this%ges_v(:,:,:,1)=rank3
-          do ifld=2,nfldsig
-             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-             this%ges_v(:,:,:,ifld)=rank3
-          enddo
-      else
-          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-      endif
- !    get tv ...
-      varname='tv'
-      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-      if (istatus==0) then
-          if(allocated(this%ges_tv))then
-             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-             call stop2(999)
-          endif
-          allocate(this%ges_tv(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-          this%ges_tv(:,:,:,1)=rank3
-          do ifld=2,nfldsig
-             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-             this%ges_tv(:,:,:,ifld)=rank3
-          enddo
-      else
-          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-      endif
-   else
-      write(6,*) trim(this%myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
-                  nfldsig,size(gsi_metguess_bundle)
-      call stop2(999)
-   endif
-   end subroutine init_vars_wspd10m
  
 end module setupwspd10m_mod
