@@ -176,21 +176,6 @@ subroutine intrw_(rwhead,rval,sval)
              w6*sv(j6)+ w7*sv(j7)+ w8*sv(j8))*rwptr%costilt*rwptr%sinazm+    &
             (w1*sw(j1)+ w2*sw(j2)+ w3*sw(j3)+ w4*sw(j4)+ w5*sw(j5)+          &
              w6*sw(j6)+ w7*sw(j7)+ w8*sw(j8))*rwptr%sintilt
-!        write(6,*) "weights 1-8: ",w1,w2,w3,w4,w5,w6,w7,w8
-!        write(6,*) "su(j8)  = ",su(j8),w8*su(j8)
-!        write(6,*) "costilt = ",rwptr%costilt
-!        write(6,*) "cosazm  = ",rwptr%cosazm
-!        write(6,*) "sinazm  = ",rwptr%sinazm
-!        write(6,*) "sintilt = ",rwptr%sintilt
-!        write(6,*) "ADu   (su)   = ",w1*su(j1)+ w2*su(j2)+ w3*su(j3)+ w4*su(j4)+w5*su(j5)+w6*su(j6)+ w7*su(j7)+ w8*su(j8)
-!        write(6,*) "ADv   (sv)   = ",w1*sv(j1)+ w2*sv(j2)+ w3*sv(j3)+ w4*sv(j4)+w5*sv(j5)+w6*sv(j6)+ w7*sv(j7)+ w8*sv(j8)
-!        write(6,*) "ADw   (sw)   = ",w1*sw(j1)+ w2*sw(j2)+ w3*sw(j3)+w4*sw(j4)+w5*sw(j5)+w6*sw(j6)+ w7*sw(j7)+ w8*sw(j8)
-
-
-!        write(6,*) "ADu*cos*cos= ",(w1*su(j1)+ w2*su(j2)+ w3*su(j3)+ w4*su(j4)+w5*su(j5)+w6*su(j6)+ w7*su(j7)+ w8*su(j8))*rwptr%costilt*rwptr%cosazm
-!        write(6,*) "ADv*cos*sin= ",(w1*sv(j1)+ w2*sv(j2)+ w3*sv(j3)+ w4*sv(j4)+ w5*sv(j5)+w6*sv(j6)+ w7*sv(j7)+ w8*sv(j8))*rwptr%costilt*rwptr%sinazm
-!        write(6,*) "ADw*sin    = ",(w1*sw(j1)+ w2*sw(j2)+ w3*sw(j3)+ w4*sw(j4)+w5*sw(j5)+w6*sw(j6)+ w7*sw(j7)+ w8*sw(j8))*rwptr%sintilt
-!        write(6,*) "TLVr       = ",val
 !    TLVr  =  TLu*costilt*cosazm  +  TLv*costilt*sinazm
      else
          val=(w1*su(j1)+ w2*su(j2)+ w3*su(j3)+ w4*su(j4)+ w5*su(j5)+          &
@@ -248,14 +233,6 @@ subroutine intrw_(rwhead,rval,sval)
         valu=rwptr%costilt*rwptr%cosazm*grad  ! ADVr_u = costilt*cosazm*ADVr
         valv=rwptr%costilt*rwptr%sinazm*grad  ! ADVr_v = costilt*sinazm*ADVr
         if(include_w) valw=rwptr%sintilt*grad! ADVr_w = sintilt*ADVr
-!        write(6,*) "ADVr    (grad)      = ",grad
-!        write(6,*) "costilt*cosazm*ADVr = ",valu
-!        write(6,*) "costilt*sinazm*ADVr = ",valv
-!        write(6,*) "sintilt*ADVr        = ",valw
-!        write(6,*) "BEFORE ADJ"
-!        write(6,*) "ADu    (ru)         = ",ru(j1)+ru(j2)+ru(j3)+ru(j4)+ru(j5)+ru(j6)+ru(j7)+ru(j8)
-!        write(6,*) "ADv    (rv)         = ",rv(j1)+rv(j2)+rv(j3)+rv(j4)+rv(j5)+rv(j6)+rv(j7)+rv(j8)
-!        write(6,*) "ADw    (rw)         = ",rw(j1)+rw(j2)+rw(j3)+rw(j4)+rw(j5)+rw(j6)+rw(j7)+rw(j8)
         ru(j1)=ru(j1)+w1*valu                 ! ADu = ADu + ADVr_u
         ru(j2)=ru(j2)+w2*valu
         ru(j3)=ru(j3)+w3*valu
@@ -282,10 +259,6 @@ subroutine intrw_(rwhead,rval,sval)
            rw(j7)=rw(j7)+w7*valw
            rw(j8)=rw(j8)+w8*valw
         end if
-!        write(6,*) "AFTER ADJ"
-!        write(6,*) "ADu    (ru)         = ",ru(j1)+ru(j2)+ru(j3)+ru(j4)+ru(j5)+ru(j6)+ru(j7)+ru(j8)
-!        write(6,*) "ADv    (rv)         = ",rv(j1)+rv(j2)+rv(j3)+rv(j4)+rv(j5)+rv(j6)+rv(j7)+rv(j8)
-!        write(6,*) "ADw    (rw)         = ",rw(j1)+rw(j2)+rw(j3)+rw(j4)+rw(j5)+rw(j6)+rw(j7)+rw(j8)
 
 
         if ( l_foto ) then

@@ -565,15 +565,6 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         Vr=ddiff+rwwind
         error=one/magoberr
         ratio_errors=one
-!        write(6,*) "setuprw *************************"
-!        write(6,*) "Vr_o          = ",Vr
-!        write(6,*) "Vr_b (rwwind) = ",rwwind
-!        write(6,*) "Vr_o - Vr_b   = ",ddiff
-!        write(6,*) "rwwindprofile = ",rwwindprofile
-!        write(6,*) "ugesprofile   = ",ugesprofile(k)
-!        write(6,*) "vgesprofile   = ",vgesprofile(k)
-!        write(6,*) "wgesprofile   = ",wgesprofile(k)
-!        write(6,*) "setuprw *************************"
      end if
 
 
