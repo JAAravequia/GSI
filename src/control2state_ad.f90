@@ -51,8 +51,7 @@ use control_vectors, only: control_vector
 use control_vectors, only: cvars3d,cvars2d
 use bias_predictors, only: predictors
 use gsi_4dvar, only: nsubwin, lsqrtb
-use gridmod, only: latlon1n,latlon11,regional,lat2,lon2,nsig
-use gridmod, only: twodvar_regional
+use gridmod, only: latlon1n,latlon11,regional,lat2,lon2,nsig,twodvar_regional
 use jfunc, only: nsclen,npclen,ntclen
 use cwhydromod, only: cw2hydro_ad
 use gsi_bundlemod, only: gsi_bundlecreate
@@ -90,8 +89,7 @@ integer(i_kind) :: ictd2m,icmxtm,icmitm,icpmsl,ichowv
 integer(i_kind) :: ictcamt,iclcbas,icsfwter,icvpwter
 integer(i_kind) :: iccldch
 character(len=3), parameter :: mycvars(ncvars) = (/  &
-                               'sf ', 'vp ', 'w  ', 'ps ', 't  ', &
-                               'q  ', 'cw ', 'ql ', 'qi '/)
+                'sf ', 'vp ', 'ps ', 't  ', 'q  ', 'cw ', 'ql ', 'qi ', 'w  ' /)
 logical :: lc_sf,lc_vp,lc_w,lc_ps,lc_t,lc_rh,lc_cw,lc_ql,lc_qi
 real(r_kind),pointer,dimension(:,:)   :: cv_ps=>NULL()
 real(r_kind),pointer,dimension(:,:)   :: cv_vis=>NULL()
@@ -109,8 +107,7 @@ real(r_kind),pointer,dimension(:,:)   :: cv_cldch=>NULL()
 integer(i_kind), parameter :: nsvars = 8
 integer(i_kind) :: isps(nsvars)
 character(len=4), parameter :: mysvars(nsvars) = (/  &  ! vars from ST needed here
-                               'u   ', 'v   ', 'w   ', 'prse', &
-                               'q   ', 'tsen', 'ql  ', 'qi  ' /)
+                'u   ', 'v   ', 'prse', 'q   ', 'tsen', 'ql  ', 'qi  ', 'w   ' /)
 logical :: ls_u,ls_v,ls_w,ls_prse,ls_q,ls_tsen,ls_ql,ls_qi
 real(r_kind),pointer,dimension(:,:)   :: rv_ps,rv_sst
 real(r_kind),pointer,dimension(:,:)   :: rv_gust,rv_vis,rv_pblh,rv_wspd10m,rv_tcamt,rv_lcbas
@@ -359,7 +356,7 @@ do jj=1,nsubwin
       call gsi_bundlegetpointer (rval(jj),'howv' ,rv_howv, istatus)
       call gsi_bundleputvar ( wbundle, 'howv', rv_howv, istatus )
    end if
-   if (icw>0) then 
+   if (icw>0) then
       call gsi_bundlegetpointer (rval(jj),'w' ,rv_w, istatus)
       call gsi_bundleputvar ( wbundle, 'w', rv_w, istatus )
    end if
