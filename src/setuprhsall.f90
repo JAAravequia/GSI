@@ -151,27 +151,27 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   use m_rhs, only: stats_oz => rhs_stats_oz
   use m_rhs, only: toss_gps_sub => rhs_toss_gps
   use setupdw_mod, only: setupdw_class
-  use setupw_mod, only: setupw_class
-  use setupsrw_mod, only: setupsrw_class
-  use setuppm10_mod, only: setuppm10_class
-  use setupgust_mod, only: setupgust_class
-  use setupvis_mod, only: setupvis_class
-  use setuppblh_mod, only: setuppblh_class
-  use setupwspd10m_mod, only: setupwspd10m_class
-  use setuptd2m_mod, only: setuptd2m_class
-  use setupmitm_mod, only: setupmitm_class
-  use setuppmsl_mod, only: setuppmsl_class
-  use setuptcamt_mod, only: setuptcamt_class
-  use setuplcbas_mod, only: setuplcbas_class
   use setupcldch_mod, only: setupcldch_class
+  use setupgust_mod, only: setupgust_class
+  use setuplcbas_mod, only: setuplcbas_class
+  use setupmitm_mod, only: setupmitm_class
+  use setuppblh_mod, only: setuppblh_class
+  use setuppmsl_mod, only: setuppmsl_class
+  use setuppm10_mod, only: setuppm10_class
   use setuppm2_5_mod, only: setuppm2_5_class
+  use setupps_mod, only: setupps_class
   use setuppw_mod, only: setuppw_class
   use setuprw_mod, only: setuprw_class
-  use setupq_mod, only: setupq_class
-  use setuptcp_mod, only: setuptcp_class
-  use setupps_mod, only: setupps_class
   use setupspd_mod, only: setupspd_class
+  use setupsrw_mod, only: setupsrw_class
+! use setupq_mod, only: setupq_class
   use setupt_mod, only: setupt_class
+  use setuptcamt_mod, only: setuptcamt_class
+  use setuptd2m_mod, only: setuptd2m_class
+  use setuptcp_mod, only: setuptcp_class
+  use setupvis_mod, only: setupvis_class
+  use setupw_mod, only: setupw_class
+  use setupwspd10m_mod, only: setupwspd10m_class
 
   use gsi_bundlemod, only: GSI_BundleGetPointer
   use gsi_metguess_mod, only: GSI_MetGuess_Bundle
@@ -183,28 +183,28 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   integer(i_kind)                  ,intent(in   ) :: mype
   integer(i_kind),dimension(ndat,3),intent(in   ) :: ndata
   logical                          ,intent(in   ) :: init_pass, last_pass   ! state of "setup" processing
-  type(setupdw_class) :: dw
-  type(setupw_class) :: w
-  type(setupsrw_class) :: srw
-  type(setuppm10_class) :: pm10
-  type(setupgust_class) :: gust
-  type(setupvis_class) :: vis
-  type(setuppblh_class) :: pblh
-  type(setupwspd10m_class) :: wspd10m
-  type(setuptd2m_class) :: td2m
-  type(setupmitm_class) :: mitm
-  type(setuppmsl_class) :: pmsl
-  type(setuptcamt_class) :: tcamt
-  type(setuplcbas_class) :: lcbas
   type(setupcldch_class) :: cldch
+  type(setupdw_class) :: dw
+  type(setupgust_class) :: gust
+  type(setuplcbas_class) :: lcbas
+  type(setupmitm_class) :: mitm
+  type(setuppblh_class) :: pblh
+  type(setuppm10_class) :: pm10
   type(setuppm2_5_class) :: pm2_5
-  type(setuppw_class) :: pw
-  type(setuprw_class) :: rw
-  type(setupq_class) :: q
-  type(setuptcp_class) :: tcp
+  type(setuppmsl_class) :: pmsl
   type(setupps_class) :: ps
+  type(setuppw_class) :: pw
+! type(setupq_class) :: q
+  type(setuprw_class) :: rw
   type(setupspd_class) :: spd
+  type(setupsrw_class) :: srw
   type(setupt_class) :: t
+  type(setuptcamt_class) :: tcamt
+  type(setuptcp_class) :: tcp
+  type(setuptd2m_class) :: td2m
+  type(setupvis_class) :: vis
+  type(setupw_class) :: w
+  type(setupwspd10m_class) :: wspd10m
 
 ! Declare external calls for code analysis
   external:: compute_derived
@@ -494,26 +494,32 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up temperature data
               if(obstype=='t')then
                  call t%setup(lunin,mype,bwork,awork(1,i_t),nele,nobs,is,conv_diagsave)
+!                call setupt(lunin,mype,bwork,awork(1,i_t),nele,nobs,is,conv_diagsave)
 
 !             Set up uv wind data
               else if(obstype=='uv')then
                  call w%setup(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
+!                call setupw(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
 
 !             Set up wind speed data
               else if(obstype=='spd')then
                  call spd%setup(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
+!                call setupspd(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
 
 !             Set up surface pressure data
               else if(obstype=='ps')then
                  call ps%setup(lunin,mype,bwork,awork(1,i_ps),nele,nobs,is,conv_diagsave)
+!                call setupps(lunin,mype,bwork,awork(1,i_ps),nele,nobs,is,conv_diagsave)
  
 !             Set up tc-mslp data
               else if(obstype=='tcp')then
                  call tcp%setup(lunin,mype,bwork,awork(1,i_tcp),nele,nobs,is,conv_diagsave)
+!                call setuptcp(lunin,mype,bwork,awork(1,i_tcp),nele,nobs,is,conv_diagsave)
 
 !             Set up moisture data
               else if(obstype=='q') then
-                 call q%setup(lunin,mype,bwork,awork(1,i_q),nele,nobs,is,conv_diagsave)
+!                call q%setup(lunin,mype,bwork,awork(1,i_q),nele,nobs,is,conv_diagsave)
+                 call setupq(lunin,mype,bwork,awork(1,i_q),nele,nobs,is,conv_diagsave)
 
 !             Set up lidar wind data
               else if(obstype=='dw')then
@@ -522,14 +528,17 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up radar wind data
               else if(obstype=='rw')then
                  call rw%setup(lunin,mype,bwork,awork(1,i_rw),nele,nobs,is,conv_diagsave)
+!                call setuprw(lunin,mype,bwork,awork(1,i_rw),nele,nobs,is,conv_diagsave)
 
 !             Set up total precipitable water (total column water) data
               else if(obstype=='pw')then
                  call pw%setup(lunin,mype,bwork,awork(1,i_pw),nele,nobs,is,conv_diagsave)
+!                call setuppw(lunin,mype,bwork,awork(1,i_pw),nele,nobs,is,conv_diagsave)
 
 !             Set up superob radar wind data
               else if(obstype=='srw')then
                  call srw%setup(lunin,mype,bwork,awork(1,i_srw),nele,nobs,is,conv_diagsave)
+!                call setupsrw(lunin,mype,bwork,awork(1,i_srw),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional sst data
               else if(obstype=='sst' .and. getindex(svars2d,'sst')>0) then 
@@ -540,9 +549,11 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
                  call setuplag(lunin,mype,bwork,awork(1,i_lag),nele,nobs,is,conv_diagsave)
               else if(obstype == 'pm2_5')then 
                  call pm2_5%setuppm2_5(lunin,mype,nele,nobs,isis,is,conv_diagsave)
+!                call setuppm2_5(lunin,mype,nele,nobs,isis,is,conv_diagsave)
 
               else if(obstype == 'pm10')then 
                  call pm10%setuppm10(lunin,mype,nele,nobs,isis,is,conv_diagsave)
+!                call setuppm10(lunin,mype,nele,nobs,isis,is,conv_diagsave)
 
 !             Set up conventional wind gust data
               else if(obstype=='gust' .and. getindex(svars2d,'gust')>0) then
@@ -551,18 +562,22 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up conventional visibility data
               else if(obstype=='vis' .and. getindex(svars2d,'vis')>0) then
                  call vis%setup(lunin,mype,bwork,awork(1,i_vis),nele,nobs,is,conv_diagsave)
+!                call setupvis(lunin,mype,bwork,awork(1,i_vis),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional pbl height data
               else if(obstype=='pblh' .and. getindex(svars2d,'pblh')>0) then
                  call pblh%setup(lunin,mype,bwork,awork(1,i_pblh),nele,nobs,is,conv_diagsave)
+!                call setuppblh(lunin,mype,bwork,awork(1,i_pblh),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional wspd10m data
               else if(obstype=='wspd10m' .and. getindex(svars2d,'wspd10m')>0) then
                  call wspd10m%setup(lunin,mype,bwork,awork(1,i_wspd10m),nele,nobs,is,conv_diagsave)
+!                call setupwspd10m(lunin,mype,bwork,awork(1,i_wspd10m),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional td2m data
               else if(obstype=='td2m' .and. getindex(svars2d,'td2m')>0) then
                  call td2m%setup(lunin,mype,bwork,awork(1,i_td2m),nele,nobs,is,conv_diagsave)
+!                call setuptd2m(lunin,mype,bwork,awork(1,i_td2m),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional mxtm data
               else if(obstype=='mxtm' .and. getindex(svars2d,'mxtm')>0) then
@@ -575,6 +590,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up conventional pmsl data
               else if(obstype=='pmsl' .and. getindex(svars2d,'pmsl')>0) then
                  call pmsl%setup(lunin,mype,bwork,awork(1,i_pmsl),nele,nobs,is,conv_diagsave)
+!                call setuppmsl(lunin,mype,bwork,awork(1,i_pmsl),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional howv data
               else if(obstype=='howv' .and. getindex(svars2d,'howv')>0) then
@@ -583,6 +599,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up total cloud amount data
               else if(obstype=='tcamt' .and. getindex(svars2d,'tcamt')>0) then
                  call tcamt%setup(lunin,mype,bwork,awork(1,i_tcamt),nele,nobs,is,conv_diagsave)
+!                call setuptcamt(lunin,mype,bwork,awork(1,i_tcamt),nele,nobs,is,conv_diagsave)
 
 !             Set up base height of lowest cloud seen
               else if(obstype=='lcbas' .and. getindex(svars2d,'lcbas')>0) then
