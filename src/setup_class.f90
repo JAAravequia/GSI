@@ -60,7 +60,6 @@ contains
     integer(i_kind) ifld, istatus
     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
 
-    write(6,*) 'HEYYYY, allocating ',varname,trim(varname)
     if (istatus==0) then
           if(allocated(ges))then
              write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
@@ -129,8 +128,10 @@ contains
       if(allocated(this%ges_td2m)) deallocate(this%ges_td2m)
       if(allocated(this%ges_pblh)) deallocate(this%ges_pblh)
       if(allocated(this%ges_th2)) deallocate(this%ges_th2)
-      if(allocated(this%ges_mitm)) deallocate(this%ges_mitm)
+      if(allocated(this%ges_mitm)) deallocate(this%ges_mitm) 
       if(allocated(this%ges_vis)) deallocate(this%ges_vis)
+      deallocate(this%varnames)
+
   end subroutine final_vars_
 
   subroutine check_vars_(this,proceed)
@@ -143,17 +144,17 @@ contains
       logical                                          ,intent(inout) :: proceed
       integer(i_kind) ivar, istatus, i
 
-      write(6,*) 'in checkvars for ',this%myname,' with proceed = ',proceed
+!     write(6,*) 'in checkvars for ',this%myname,' with proceed = ',proceed
       do i = 1,this%numvars
          call gsi_metguess_get (this%varnames(i), ivar, istatus )
-         write(6,*) 'checked ',this%varnames(i),' and ivar = ',ivar 
+!        write(6,*) 'checked ',this%varnames(i),' and ivar = ',ivar 
          if( i == 1 ) then
            proceed=ivar>0
          else
            proceed=proceed.and.ivar>0
          endif
       enddo
-      write(6,*) 'after checkvars proceed = ',proceed
+!     write(6,*) 'after checkvars proceed = ',proceed
   end subroutine check_vars_ 
   subroutine init_ges(this)
 

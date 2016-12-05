@@ -312,7 +312,6 @@ contains
        spdob=sqrt(uob*uob+vob*vob)
   
   ! Interpolate to get wspd10m at obs location/time
-       write(6,*) 'HEY!!!! size of ges_wspd is ',size(this%ges_wspd10m)
        call tintrp2a11(this%ges_wspd10m,spdges,dlat,dlon,dtime,hrdifsig,&
             mype,nfldsig)
   

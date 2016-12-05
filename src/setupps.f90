@@ -174,7 +174,6 @@ contains
     this%numvars = 3
     allocate(this%varnames(this%numvars))
     this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::tv' /)
-    write(6,*) 'HEY!!! in setupps, varnames are ',this%varnames(1),this%varnames(2),this%varnames(3)
     n_alloc(:)=0
     m_alloc(:)=0
   !*******************************************************************************

@@ -119,12 +119,9 @@ contains
     equivalence(r_prvstg,c_prvstg)
     equivalence(r_sprvstg,c_sprvstg)
   
-!   real(r_kind),allocatable,dimension(:,:,:) :: ges_ps     !will need at some point
-!   real(r_kind),allocatable,dimension(:,:,:) :: ges_z      !will probably need at some point
-  
-    this%numvars = 2
+    this%numvars = 3
     allocate(this%varnames(this%numvars))
-    this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z' /)
+    this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::mitm' /)
     this%myname='setupmitm'
   ! Check to see if required guess fields are available
     call this%check_vars_(proceed)
