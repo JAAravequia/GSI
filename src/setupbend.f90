@@ -1,4 +1,11 @@
-subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pass)
+module setupbend_mod
+use abstract_setup_mod
+  type, extends(abstract_setup_class) :: setupbend_class
+  contains
+    procedure, pass(this) :: setupbend
+  end type setupbend_class
+contains
+subroutine setupbend(this,lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pass)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    setupbend    compute rhs of oi for gps bending angle
@@ -138,6 +145,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
 
   implicit none
+  class(setupbend_class)                              , intent(inout) :: this
 
 ! Declare passed variables
   integer(i_kind)                         ,intent(in   ) :: lunin,mype,nele,nobs
@@ -162,7 +170,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   real(r_kind),parameter:: r40=40.0_r_kind
   real(r_kind),parameter:: r1em3 = 1.0e-3_r_kind
   real(r_kind),parameter:: r1em6 = 1.0e-6_r_kind
-  character(len=*),parameter :: myname='setupbend'
+! character(len=*),parameter :: myname='setupbend'
   real(r_kind),parameter:: crit_grad = 157.0_r_kind
 
 ! Declare local variables
@@ -212,9 +220,6 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   type(gps_ob_type),pointer:: my_head
   type(obs_diag),pointer:: my_diag
 
-  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
 
 !*******************************************************************************
 ! List of GPS RO satellites and corresponding BUFR id
@@ -240,12 +245,19 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
 !750-755 => COSMIC-2 Equatorial
 !724-729 => COSMIC-2 Polar
 
+! real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
+! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
+! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
+   this%myname='setupbend'
+   this%numvars = 3
+    allocate(this%varnames(this%numvars))
+    this%varnames(1:this%numvars) = (/ 'var::z', 'var::tv', 'var::q' /)
 ! Check to see if required guess fields are available
-  call check_vars_(proceed)
+  call this%check_vars_(proceed)
   if(.not.proceed) return  ! not all vars available, simply return
 
 ! If require guess vars available, extract from bundle ...
-  call init_vars_
+  call this%init_ges
 
 ! Read and reformat observations in work arrays.
   read(lunin)data,luse
@@ -287,10 +299,10 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   if(init_pass) call gpsrhs_alloc(is,'bend',nobs,nsig,nreal,grids_dim,nsig_ext)
   call gpsrhs_aliases(is)
   if(nreal/=size(rdiagbuf,1)) then
-     call perr(myname,'unexpected dimension')
-     call perr(myname,'nreal =',nreal)
-     call perr(myname,'size(rdiagbuf,1) =',size(rdiagbuf,1))
-     call die(myname)
+     call perr(this%myname,'unexpected dimension')
+     call perr(this%myname,'nreal =',nreal)
+     call perr(this%myname,'size(rdiagbuf,1) =',size(rdiagbuf,1))
+     call die(this%myname)
   endif
 
   if(init_pass) then
@@ -348,13 +360,13 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
 !    corrected geopotential heights and topography to obs location
      call tintrp2a1(ges_lnprsi,prsltmp,dlat,dlon,dtime,hrdifsig,&
           nsig+1,mype,nfldsig)
-     call tintrp2a1(ges_tv,tges,dlat,dlon,dtime,hrdifsig,&
+     call tintrp2a1(this%ges_tv,tges,dlat,dlon,dtime,hrdifsig,&
           nsig,mype,nfldsig)
-     call tintrp2a1(ges_q,qges,dlat,dlon,dtime,hrdifsig,&
+     call tintrp2a1(this%ges_q,qges,dlat,dlon,dtime,hrdifsig,&
           nsig,mype,nfldsig)
      call tintrp2a1(geop_hgti,hges,dlat,dlon,dtime,hrdifsig,&
           nsig+1,mype,nfldsig)
-     call tintrp2a11(ges_z,zsges,dlat,dlon,dtime,hrdifsig,&
+     call tintrp2a11(this%ges_z,zsges,dlat,dlon,dtime,hrdifsig,&
           mype,nfldsig)
 
      prsltmp_o(1:nsig,i)=prsltmp(1:nsig) ! needed in minimization
@@ -1103,11 +1115,11 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
               my_diag => gpstail(ibin)%head%diags
               if(my_head%idv /= my_diag%idv .or. &
                  my_head%iob /= my_diag%iob ) then
-                 call perr(myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
+                 call perr(this%myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
                        (/is,i,ibin/))
-                 call perr(myname,'my_head%(idv,iob) =',(/my_head%idv,my_head%iob/))
-                 call perr(myname,'my_diag%(idv,iob) =',(/my_diag%idv,my_diag%iob/))
-                 call die(myname)
+                 call perr(this%myname,'my_head%(idv,iob) =',(/my_head%idv,my_head%iob/))
+                 call perr(this%myname,'my_diag%(idv,iob) =',(/my_diag%idv,my_diag%iob/))
+                 call die(this%myname)
               endif
            end if
 
@@ -1116,14 +1128,14 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   end do ! i=1,nobs
 
   ! Release memory of local guess arrays
-  call final_vars_
+  call this%final_vars_
 
   ! Save these arrays for later passes
   data_ier (:)=data(ier ,:)
   data_ihgt(:)=data(ihgt,:)
   data_igps(:)=data(igps,:)
 
-  call dtime_show(myname,'diagsave:bend',i_gps_ob_type)
+  call dtime_show(this%myname,'diagsave:bend',i_gps_ob_type)
   call gpsrhs_unaliases(is)
   if(last_pass) call gpsrhs_dealloc(is)
 
@@ -1155,67 +1167,68 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
      varname='z'
      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
      if (istatus==0) then
-         if(allocated(ges_z))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+         if(allocated(this%ges_z))then
+            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
             call stop2(999)
          endif
-         allocate(ges_z(size(rank2,1),size(rank2,2),nfldsig))
-         ges_z(:,:,1)=rank2
+         allocate(this%ges_z(size(rank2,1),size(rank2,2),nfldsig))
+         this%ges_z(:,:,1)=rank2
          do ifld=2,nfldsig
             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-            ges_z(:,:,ifld)=rank2
+            this%ges_z(:,:,ifld)=rank2
          enddo
      else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
 !    get tv ...
      varname='tv'
      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
      if (istatus==0) then
-         if(allocated(ges_tv))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+         if(allocated(this%ges_tv))then
+            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
             call stop2(999)
          endif
-         allocate(ges_tv(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         ges_tv(:,:,:,1)=rank3
+         allocate(this%ges_tv(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         this%ges_tv(:,:,:,1)=rank3
          do ifld=2,nfldsig
             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_tv(:,:,:,ifld)=rank3
+            this%ges_tv(:,:,:,ifld)=rank3
          enddo
      else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
 !    get q ...
      varname='q'
      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
      if (istatus==0) then
-         if(allocated(ges_q))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+         if(allocated(this%ges_q))then
+            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
             call stop2(999)
          endif
-         allocate(ges_q(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         ges_q(:,:,:,1)=rank3
+         allocate(this%ges_q(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         this%ges_q(:,:,:,1)=rank3
          do ifld=2,nfldsig
             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_q(:,:,:,ifld)=rank3
+            this%ges_q(:,:,:,ifld)=rank3
          enddo
      else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
   else
-     write(6,*) trim(myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
+     write(6,*) trim(this%myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
                  nfldsig,size(gsi_metguess_bundle)
      call stop2(999)
   endif
   end subroutine init_vars_
 
   subroutine final_vars_
-    if(allocated(ges_q )) deallocate(ges_q )
-    if(allocated(ges_tv)) deallocate(ges_tv)
-    if(allocated(ges_z )) deallocate(ges_z )
+    if(allocated(this%ges_q )) deallocate(this%ges_q )
+    if(allocated(this%ges_tv)) deallocate(this%ges_tv)
+    if(allocated(this%ges_z )) deallocate(this%ges_z )
   end subroutine final_vars_
 
 end subroutine setupbend
+end module setupbend_mod

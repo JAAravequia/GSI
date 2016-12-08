@@ -1,4 +1,11 @@
-subroutine setupco(lunin,mype,stats_co,nlevs,nreal,nobs,&
+module setupco_mod
+use abstract_setup_mod
+  type, extends(abstract_setup_class) :: setupco_class
+  contains
+    procedure, pass(this) :: setupco
+  end type setupco_class
+contains
+subroutine setupco(this,lunin,mype,stats_co,nlevs,nreal,nobs,&
      obstype,isis,is,co_diagsave,init_pass)
 
 !$$$  subprogram documentation block
@@ -82,6 +89,7 @@ subroutine setupco(lunin,mype,stats_co,nlevs,nreal,nobs,&
   
 ! !INPUT PARAMETERS:
 
+  class(setupco_class)             , intent(inout) :: this
   integer(i_kind)                  , intent(in   ) :: lunin  ! unit from which to read observations
   integer(i_kind)                  , intent(in   ) :: mype   ! mpi task id
   integer(i_kind)                  , intent(in   ) :: nlevs  ! number of levels (layer amounts + total column) per obs   
@@ -105,7 +113,7 @@ subroutine setupco(lunin,mype,stats_co,nlevs,nreal,nobs,&
   integer(i_kind),parameter:: iint=1
   integer(i_kind),parameter:: ireal=3
   real(r_kind),parameter:: r10=10.0_r_kind
-  character(len=*),parameter:: myname="setupco"
+! character(len=*),parameter:: myname="setupco"
 
 ! Declare local variables  
   
@@ -126,7 +134,6 @@ subroutine setupco(lunin,mype,stats_co,nlevs,nreal,nobs,&
   real(r_single),dimension(nlevs):: pob4,grs4,err4
   real(r_single),dimension(ireal,nobs):: diagbuf
   real(r_single),allocatable,dimension(:,:,:)::rdiagbuf
-  real(r_kind),allocatable,dimension(:,:,:,:):: ges_co
   
 
   integer(i_kind) i,nlev,ii,jj,iextra,istat,ibin
@@ -154,12 +161,18 @@ subroutine setupco(lunin,mype,stats_co,nlevs,nreal,nobs,&
   type(colvk_ob_type),pointer:: my_head
   type(obs_diag),pointer:: my_diag
 
+! real(r_kind),allocatable,dimension(:,:,:,:):: ges_co
+  this%myname='setupco'
+  this%numvars = 1
+  allocate(this%varnames(this%numvars))
+  this%varnames(1:this%numvars) = (/ 'var::co' /)
+
 ! Check to see if required guess fields are available
-  call check_vars_(proceed)
+  call this%check_vars_(proceed)
   if(.not.proceed) return  ! not all vars available, simply return
 
 ! If require guess vars available, extract from bundle ...
-  call init_vars_
+  call this%init_ges
 
   n_alloc(:)=0
   m_alloc(:)=0
@@ -271,7 +284,7 @@ subroutine setupco(lunin,mype,stats_co,nlevs,nreal,nobs,&
 
      call dtime_check(dtime, in_curbin, in_anybin)
      if(.not.in_anybin) then
-        deallocate(ges_co)
+        deallocate(this%ges_co)
         return
      endif
 
@@ -330,7 +343,7 @@ if(in_curbin) then
 !  interpolation output at ave ker levels is called coakl
 
      do k=1,nlev
-        call tintrp3(ges_co,coakl(k),dlat,dlon,cop(k),dtime, &
+        call tintrp3(this%ges_co,coakl(k),dlat,dlon,cop(k),dtime, &
            hrdifsig,1,mype,nfldsig)
      enddo
 
@@ -606,11 +619,11 @@ if(in_curbin) then
                  if(my_head%idv /= my_diag%idv .or. &
                     my_head%iob /= my_diag%iob .or. &
                               k /= my_diag%ich ) then
-                   call perr(myname,'mismatching %[head,diags]%(idv,iob,ich,ibin) =', &
+                   call perr(this%myname,'mismatching %[head,diags]%(idv,iob,ich,ibin) =', &
                          (/is,i,k,ibin/))
-                   call perr(myname,'my_head%(idv,iob,ich) =',(/my_head%idv,my_head%iob,k/))
-                   call perr(myname,'my_diag%(idv,iob,ich) =',(/my_diag%idv,my_diag%iob,my_diag%ich/))
-                   call die(myname)
+                   call perr(this%myname,'my_head%(idv,iob,ich) =',(/my_head%idv,my_head%iob,k/))
+                   call perr(this%myname,'my_diag%(idv,iob,ich) =',(/my_diag%idv,my_diag%iob,my_diag%ich/))
+                   call die(this%myname)
                  endif
               endif
            endif
@@ -689,7 +702,7 @@ endif   ! (in_curbin)
   call final_vars_
 
 ! clean up
-  if(allocated(ges_co)) deallocate(ges_co)
+  if(allocated(this%ges_co)) deallocate(this%ges_co)
   call dtime_show('setupco','diagsave:co',i_colvk_ob_type)
   if(co_diagsave) deallocate(rdiagbuf)
 
@@ -714,15 +727,15 @@ endif   ! (in_curbin)
   if(size(gsi_chemguess_bundle)==nfldsig) then
      call gsi_bundlegetpointer(gsi_chemguess_bundle(1),'co',rank3,ier)
      if (ier==0) then
-         if(allocated(ges_co))then
+         if(allocated(this%ges_co))then
             write(6,*) 'setupco: ges_co already incorrectly alloc '
             call stop2(999)
          endif
-         allocate(ges_co(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         ges_co(:,:,:,1)=rank3
+         allocate(this%ges_co(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         this%ges_co(:,:,:,1)=rank3
          do ifld=2,nfldsig
             call gsi_bundlegetpointer(gsi_chemguess_bundle(ifld),'co',rank3,ier)
-            ges_co(:,:,:,ifld)=rank3
+            this%ges_co(:,:,:,ifld)=rank3
          enddo
      else
          write(6,*) 'setupco: CO not found in chem bundle, ier= ',ier
@@ -736,7 +749,8 @@ endif   ! (in_curbin)
   end subroutine init_vars_
 
   subroutine final_vars_
-    if(allocated(ges_co)) deallocate(ges_co)
+    if(allocated(this%ges_co)) deallocate(this%ges_co)
   end subroutine final_vars_
 
 end subroutine setupco
+end module setupco_mod

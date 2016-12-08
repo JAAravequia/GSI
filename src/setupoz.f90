@@ -1,5 +1,12 @@
-
-subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
+module setupoz_mod
+use abstract_setup_mod
+  type, extends(abstract_setup_class) :: setupoz_class
+  contains
+    procedure, pass(this) :: setupozlev
+    procedure, pass(this) :: setupozlay
+  end type setupoz_class
+contains
+subroutine setupozlay(this,lunin,mype,stats_oz,nlevs,nreal,nobs,&
      obstype,isis,is,ozone_diagsave,init_pass)
 
 !$$$  subprogram documentation block
@@ -121,6 +128,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   
 ! !INPUT PARAMETERS:
 
+  class(setupoz_class)             , intent(inout) :: this
   integer(i_kind)                  , intent(in   ) :: lunin  ! unit from which to read observations
   integer(i_kind)                  , intent(in   ) :: mype   ! mpi task id
   integer(i_kind)                  , intent(in   ) :: nlevs  ! number of levels (layer amounts + total column) per obs   
@@ -143,7 +151,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   integer(i_kind),parameter:: iint=1
   integer(i_kind),parameter:: ireal=3
   real(r_kind),parameter:: rmiss = -9999.9_r_kind
-  character(len=*),parameter:: myname="setupozlay"
+!  character(len=*),parameter:: myname="setupozlay"
 
 ! Declare external calls for code analysis
   external:: intrp2a1
@@ -195,14 +203,18 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   type(oz_ob_type),pointer:: my_head
   type(obs_diag),pointer:: my_diag
 
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_oz
+! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_oz
+  this%myname='setupozlay'
+  this%numvars = 1
+  allocate(this%varnames(this%numvars))
+  this%varnames(1:this%numvars) = (/ 'var::oz' /)
 
 ! Check to see if required guess fields are available
-  call check_vars_(proceed)
+  call this%check_vars_(proceed)
   if(.not.proceed) return  ! not all vars available, simply return
 
 ! If require guess vars available, extract from bundle ...
-  call init_vars_
+  call this%init_ges
 
   n_alloc(:)=0
   m_alloc(:)=0
@@ -356,7 +368,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
         end if
         
         if (obstype /= 'omieff' .and. obstype /= 'tomseff') then
-           call intrp3oz1(ges_oz,ozges,dlat,dlon,ozp,dtime,&
+           call intrp3oz1(this%ges_oz,ozges,dlat,dlon,ozp,dtime,&
                 nlevs,mype)
         endif
 
@@ -392,7 +404,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
               ioff = ioff + nloz_omi
               efficiency(1:nloz_omi) = data(ioff:ioff+nloz_omi -1, i)
               ! Compute ozges
-              call intrp3oz1(ges_oz,ozges1,dlat,dlon,ozp_omi,dtime,&
+              call intrp3oz1(this%ges_oz,ozges1,dlat,dlon,ozp_omi,dtime,&
                 nlayers,mype)
               ozges(k) = zero
               do kk = 1, nloz_omi
@@ -652,11 +664,11 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
                     if(my_head%idv /= my_diag%idv .or. &
                        my_head%iob /= my_diag%iob .or. &
                                  k /= my_diag%ich ) then
-                       call perr(myname,'mismatching %[head,diags]%(idv,iob,ich,ibin) =', &
+                       call perr(this%myname,'mismatching %[head,diags]%(idv,iob,ich,ibin) =', &
                              (/is,i,k,ibin/))
-                       call perr(myname,'my_head%(idv,iob,ich) =',(/my_head%idv,my_head%iob,k/))
-                       call perr(myname,'my_diag%(idv,iob,ich) =',(/my_diag%idv,my_diag%iob,my_diag%ich/))
-                       call die(myname)
+                       call perr(this%myname,'my_head%(idv,iob,ich) =',(/my_head%idv,my_head%iob,k/))
+                       call perr(this%myname,'my_diag%(idv,iob,ich) =',(/my_diag%idv,my_diag%iob,my_diag%ich/))
+                       call die(this%myname)
                     endif
                  end if
               endif
@@ -738,7 +750,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 135 continue        
 
 ! Release memory of local guess arrays
-  call final_vars_
+  call this%final_vars_
 
 ! clean up
   call dtime_show('setupozlay','diagsave:oz',i_oz_ob_type)
@@ -770,35 +782,35 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
      varname='oz'
      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
      if (istatus==0) then
-         if(allocated(ges_oz))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+         if(allocated(this%ges_oz))then
+            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
             call stop2(999)
          endif
-         allocate(ges_oz(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         ges_oz(:,:,:,1)=rank3
+         allocate(this%ges_oz(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         this%ges_oz(:,:,:,1)=rank3
          do ifld=2,nfldsig
             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_oz(:,:,:,ifld)=rank3
+            this%ges_oz(:,:,:,ifld)=rank3
          enddo
      else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
   else
-     write(6,*) trim(myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
+     write(6,*) trim(this%myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
                  nfldsig,size(gsi_metguess_bundle)
      call stop2(999)
   endif
   end subroutine init_vars_
 
   subroutine final_vars_
-    if(allocated(ges_oz)) deallocate(ges_oz)
+    if(allocated(this%ges_oz)) deallocate(this%ges_oz)
   end subroutine final_vars_
 
 end subroutine setupozlay
 
 
-subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
+subroutine setupozlev(this,lunin,mype,stats_oz,nlevs,nreal,nobs,&
      obstype,isis,is,ozone_diagsave,init_pass)
 
 !$$$  subprogram documentation block
@@ -875,6 +887,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   
 ! !INPUT PARAMETERS:
 
+  class(setupoz_class)             , intent(inout) :: this
   integer(i_kind)                  , intent(in   ) :: lunin  ! unit from which to read observations
   integer(i_kind)                  , intent(in   ) :: mype   ! mpi task id
   integer(i_kind)                  , intent(in   ) :: nlevs  ! number of levels (layer amounts + total column) per obs   
@@ -897,7 +910,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   integer(i_kind),parameter:: iint=1
   integer(i_kind),parameter:: ireal=3
   real(r_kind),parameter:: rmiss = -9999.9_r_kind
-  character(len=*),parameter:: myname="setupozlev"
+! character(len=*),parameter:: myname="setupozlev"
 
 ! Declare external calls for code analysis
   external:: tintrp2a1,tintrp2a11
@@ -940,17 +953,22 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   type(o3l_ob_type),pointer:: my_head
   type(obs_diag),pointer:: my_diag
 
-  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_oz
+! real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
+! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_oz
 
 ! Check to see if required guess fields are available
 ! Question: Should a message be produced before return, to inform the
 ! system what has been going on?
-  call check_vars_(proceed)
+  
+  this%myname='setupozlev'
+  this%numvars = 2
+  allocate(this%varnames(this%numvars))
+  this%varnames(1:this%numvars) = (/ 'var::ps', 'var::oz' /)
+  call this%check_vars_(proceed)
   if(.not.proceed) return  ! not all vars available, simply return
 
 ! If require guess vars available, extract from bundle ...
-  call init_vars_
+  call this%init_ges
 
   n_alloc(:)=0
   m_alloc(:)=0
@@ -1077,7 +1095,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
      if(.not.in_curbin) cycle
 
 !    Interpolate ps to obs locations/times
-     call tintrp2a11(ges_ps,psges,dlat,dlon,dtime,hrdifsig, &
+     call tintrp2a11(this%ges_ps,psges,dlat,dlon,dtime,hrdifsig, &
           mype,nfldsig)
 
 !    Interpolate log(pres) at mid-layers to obs locations/times
@@ -1118,7 +1136,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
      end if
 
 !    Interpolate guess ozone to observation location and time
-     call tintrp31(ges_oz,o3ges,dlat,dlon,dpres,dtime, &
+     call tintrp31(this%ges_oz,o3ges,dlat,dlon,dpres,dtime, &
        hrdifsig,mype,nfldsig)
 
 !    Compute innovations - background o3ges in g/g so adjust units
@@ -1244,11 +1262,11 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
            my_diag => o3ltail(ibin)%head%diags
            if(my_head%idv /= my_diag%idv .or. &
               my_head%iob /= my_diag%iob ) then
-              call perr(myname,'mismatching %[head,diags]%(idv,iob,ich,ibin) =', &
+              call perr(this%myname,'mismatching %[head,diags]%(idv,iob,ich,ibin) =', &
                     (/is,i,k,ibin/))
-              call perr(myname,'my_head%(idv,iob,ich) =',(/my_head%idv,my_head%iob,k/))
-              call perr(myname,'my_diag%(idv,iob,ich) =',(/my_diag%idv,my_diag%iob,my_diag%ich/))
-              call die(myname)
+              call perr(this%myname,'my_head%(idv,iob,ich) =',(/my_head%idv,my_head%iob,k/))
+              call perr(this%myname,'my_diag%(idv,iob,ich) =',(/my_diag%idv,my_diag%iob,my_diag%ich/))
+              call die(this%myname)
            endif
         endif
 
@@ -1314,7 +1332,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   endif
 
 ! Release memory of local guess arrays
-  call final_vars_
+  call this%final_vars_
 
 ! clean up
   call dtime_show('setupozlev','diagsave:ozlv',i_o3l_ob_type)
@@ -1347,48 +1365,49 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
      varname='ps'
      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
      if (istatus==0) then
-         if(allocated(ges_ps))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+         if(allocated(this%ges_ps))then
+            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
             call stop2(999)
          endif
-         allocate(ges_ps(size(rank2,1),size(rank2,2),nfldsig))
-         ges_ps(:,:,1)=rank2
+         allocate(this%ges_ps(size(rank2,1),size(rank2,2),nfldsig))
+         this%ges_ps(:,:,1)=rank2
          do ifld=2,nfldsig
             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-            ges_ps(:,:,ifld)=rank2
+            this%ges_ps(:,:,ifld)=rank2
          enddo
      else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
 !    get oz ...
      varname='oz'
      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
      if (istatus==0) then
-         if(allocated(ges_oz))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+         if(allocated(this%ges_oz))then
+            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
             call stop2(999)
          endif
-         allocate(ges_oz(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         ges_oz(:,:,:,1)=rank3
+         allocate(this%ges_oz(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         this%ges_oz(:,:,:,1)=rank3
          do ifld=2,nfldsig
             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_oz(:,:,:,ifld)=rank3
+            this%ges_oz(:,:,:,ifld)=rank3
          enddo
      else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
   else
-     write(6,*) trim(myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
+     write(6,*) trim(this%myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
                  nfldsig,size(gsi_metguess_bundle)
      call stop2(999)
   endif
   end subroutine init_vars_
 
   subroutine final_vars_
-    if(allocated(ges_oz)) deallocate(ges_oz)
-    if(allocated(ges_ps)) deallocate(ges_ps)
+    if(allocated(this%ges_oz)) deallocate(this%ges_oz)
+    if(allocated(this%ges_ps)) deallocate(this%ges_ps)
   end subroutine final_vars_
 
 end subroutine setupozlev
+end module setupoz_mod

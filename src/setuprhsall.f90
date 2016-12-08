@@ -172,6 +172,13 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   use setupvis_mod, only: setupvis_class
   use setupw_mod, only: setupw_class
   use setupwspd10m_mod, only: setupwspd10m_class
+  use setupref_mod, only: setupref_class
+  use setuphowv_mod, only: setuphowv_class
+  use setupoz_mod, only: setupoz_class
+  use setuppcp_mod, only: setuppcp_class
+  use setupco_mod, only: setupco_class
+  use setupmxtm_mod, only: setupmxtm_class
+  use setupbend_mod, only: setupbend_class
 
   use gsi_bundlemod, only: GSI_BundleGetPointer
   use gsi_metguess_mod, only: GSI_MetGuess_Bundle
@@ -205,6 +212,13 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   type(setupvis_class) :: vis
   type(setupw_class) :: w
   type(setupwspd10m_class) :: wspd10m
+  type(setupoz_class) :: oz
+  type(setuphowv_class) :: howv
+  type(setuppcp_class) :: pcp
+  type(setupmxtm_class) :: mxtm
+  type(setupco_class) :: co  
+  type(setupbend_class) :: bend
+  type(setupref_class) :: ref
 
 ! Declare external calls for code analysis
   external:: compute_derived
@@ -486,7 +500,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
 !          Set up for precipitation data
            else if(ditype(is) == 'pcp')then
-              call setuppcp(lunin,mype,&
+!             call setuppcp(lunin,mype,&
+              call pcp%setuppcp(lunin,mype,&
                  aivals,nele,nobs,obstype,isis,is,pcp_diagsave,init_pass)
  
 !          Set up conventional data
@@ -598,7 +613,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
 !             Set up conventional mxtm data
               else if(obstype=='mxtm' .and. getindex(svars2d,'mxtm')>0) then
-                 call setupmxtm(lunin,mype,bwork,awork(1,i_mxtm),nele,nobs,is,conv_diagsave)
+!                call setupmxtm(lunin,mype,bwork,awork(1,i_mxtm),nele,nobs,is,conv_diagsave)
+                 call mxtm%setup(lunin,mype,bwork,awork(1,i_mxtm),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional mitm data
               else if(obstype=='mitm' .and. getindex(svars2d,'mitm')>0) then
@@ -613,7 +629,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
 !             Set up conventional howv data
               else if(obstype=='howv' .and. getindex(svars2d,'howv')>0) then
-                 call setuphowv(lunin,mype,bwork,awork(1,i_howv),nele,nobs,is,conv_diagsave)
+!                call setuphowv(lunin,mype,bwork,awork(1,i_howv),nele,nobs,is,conv_diagsave)
+                 call howv%setup(lunin,mype,bwork,awork(1,i_howv),nele,nobs,is,conv_diagsave)
 
 !             Set up total cloud amount data
               else if(obstype=='tcamt' .and. getindex(svars2d,'tcamt')>0) then
@@ -647,26 +664,31 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !          set up ozone (sbuv/omi/mls) data
            else if(ditype(is) == 'ozone' .and. ihave_oz)then
               if (obstype == 'o3lev' .or. index(obstype,'mls')/=0 ) then
-                 call setupozlev(lunin,mype,stats_oz,nchanl,nreal,nobs,&
+!                call setupozlev(lunin,mype,stats_oz,nchanl,nreal,nobs,&
+                 call oz%setupozlev(lunin,mype,stats_oz,nchanl,nreal,nobs,&
                       obstype,isis,is,ozone_diagsave,init_pass)
               else
-                 call setupozlay(lunin,mype,stats_oz,nchanl,nreal,nobs,&
+!                call setupozlay(lunin,mype,stats_oz,nchanl,nreal,nobs,&
+                 call oz%setupozlay(lunin,mype,stats_oz,nchanl,nreal,nobs,&
                       obstype,isis,is,ozone_diagsave,init_pass)
               end if
 
 !          Set up co (mopitt) data
            else if(ditype(is) == 'co')then 
-              call setupco(lunin,mype,stats_co,nchanl,nreal,nobs,&
+!             call setupco(lunin,mype,stats_co,nchanl,nreal,nobs,&
+              call co%setupco(lunin,mype,stats_co,nchanl,nreal,nobs,&
                    obstype,isis,is,co_diagsave,init_pass)
 
 !          Set up GPS local refractivity data
            else if(ditype(is) == 'gps')then
               if(obstype=='gps_ref')then
-                 call setupref(lunin,mype,awork(1,i_gps),nele,nobs,toss_gps_sub,is,init_pass,last_pass)
+!                call setupref(lunin,mype,awork(1,i_gps),nele,nobs,toss_gps_sub,is,init_pass,last_pass)
+                 call ref%setupref(lunin,mype,awork(1,i_gps),nele,nobs,toss_gps_sub,is,init_pass,last_pass)
 
 !             Set up GPS local bending angle data
               else if(obstype=='gps_bnd')then
-                 call setupbend(lunin,mype,awork(1,i_gps),nele,nobs,toss_gps_sub,is,init_pass,last_pass)
+!                call setupbend(lunin,mype,awork(1,i_gps),nele,nobs,toss_gps_sub,is,init_pass,last_pass)
+                 call bend%setupbend(lunin,mype,awork(1,i_gps),nele,nobs,toss_gps_sub,is,init_pass,last_pass)
               end if
            end if
 

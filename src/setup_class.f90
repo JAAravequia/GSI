@@ -3,6 +3,11 @@ module abstract_setup_mod
   type,abstract :: abstract_setup_class
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_howv
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_mxtm
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_co
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_oz
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_div
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_u
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
@@ -131,6 +136,11 @@ contains
       if(allocated(this%ges_th2)) deallocate(this%ges_th2)
       if(allocated(this%ges_mitm)) deallocate(this%ges_mitm) 
       if(allocated(this%ges_vis)) deallocate(this%ges_vis)
+      if(allocated(this%ges_howv)) deallocate(this%ges_howv)
+      if(allocated(this%ges_mxtm)) deallocate(this%ges_mxtm)
+      if(allocated(this%ges_co)) deallocate(this%ges_co)
+      if(allocated(this%ges_div)) deallocate(this%ges_div)
+      if(allocated(this%ges_oz)) deallocate(this%ges_oz)
       deallocate(this%varnames)
 
   end subroutine final_vars_
@@ -227,6 +237,16 @@ contains
           call this%allocate_ges4(this%ges_q,varname)
         case ('pm2_5')
           call this%allocate_ges4(this%ges_pm2_5,varname)
+        case ('mxtm')
+          call this%allocate_ges3(this%ges_mxtm,varname)
+        case ('howv')
+          call this%allocate_ges3(this%ges_howv,varname)
+        case ('co')
+          call this%allocate_ges4(this%ges_co,varname)
+        case ('oz')
+          call this%allocate_ges4(this%ges_oz,varname)
+        case ('div')
+          call this%allocate_ges4(this%ges_div,varname)
       end select
 
     enddo

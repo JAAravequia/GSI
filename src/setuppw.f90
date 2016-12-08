@@ -97,7 +97,7 @@ contains
     implicit none
   
   ! Declare passed variables
-      class(setuppw_class)                              , intent(inout) :: this
+    class(setuppw_class)                              , intent(inout) :: this
     logical                                          ,intent(in   ) :: conv_diagsave
     integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
     real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
@@ -146,7 +146,6 @@ contains
     type(obs_diag),pointer:: my_diag
   
     equivalence(rstation_id,station_id)
-  
   
     this%myname='setuppw'
     this%numvars = 3

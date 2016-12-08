@@ -1,4 +1,11 @@
-subroutine setupmxtm(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
+module setupmxtm_mod
+use abstract_setup_mod
+  type, extends(abstract_setup_class) :: setupmxtm_class
+  contains
+    procedure, pass(this) :: setup => setupmxtm
+  end type setupmxtm_class
+contains
+subroutine setupmxtm(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    setupmxtm    compute rhs of oi for conventional daily maximum temperature
@@ -53,6 +60,7 @@ subroutine setupmxtm(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   implicit none
 
 ! Declare passed variables
+  class(setupmxtm_class)                           , intent(inout) :: this
   logical                                          ,intent(in   ) :: conv_diagsave
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
   real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
@@ -66,7 +74,7 @@ subroutine setupmxtm(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! Declare local parameters
   real(r_kind),parameter:: r0_7=0.7_r_kind
 
-  character(len=*),parameter:: myname='setupmxtm'
+! character(len=*),parameter:: myname='setupmxtm'
 
 ! Declare local variables
   
@@ -112,16 +120,20 @@ subroutine setupmxtm(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   equivalence(r_prvstg,c_prvstg)
   equivalence(r_sprvstg,c_sprvstg)
 
-  real(r_kind),allocatable,dimension(:,:,:) :: ges_ps     !will need at some point
-  real(r_kind),allocatable,dimension(:,:,:) :: ges_z      !will probably need at some point
-  real(r_kind),allocatable,dimension(:,:,:) :: ges_mxtm
+! real(r_kind),allocatable,dimension(:,:,:) :: ges_ps     !will need at some point
+! real(r_kind),allocatable,dimension(:,:,:) :: ges_z      !will probably need at some point
+! real(r_kind),allocatable,dimension(:,:,:) :: ges_mxtm
 
 ! Check to see if required guess fields are available
-  call check_vars_(proceed)
+  this%myname='setupmxtm'
+  this%numvars = 3
+  allocate(this%varnames(this%numvars))
+  this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::mxtm' /)
+  call this%check_vars_(proceed)
   if(.not.proceed) return  ! not all vars available, simply return
 
 ! If require guess vars available, extract from bundle ...
-  call init_vars_
+  call this%init_ges
 
   n_alloc(:)=0
   m_alloc(:)=0
@@ -263,7 +275,7 @@ subroutine setupmxtm(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      if(.not.in_curbin) cycle
 
 ! Interpolate guess mxtm to observation location and time
-     call tintrp2a11(ges_mxtm,mxtmges,dlat,dlon,dtime,hrdifsig,&
+     call tintrp2a11(this%ges_mxtm,mxtmges,dlat,dlon,dtime,hrdifsig,&
         mype,nfldsig)
 
      ddiff=data(imxtm,i)-mxtmges
@@ -398,11 +410,11 @@ subroutine setupmxtm(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            my_diag => mxtmtail(ibin)%head%diags
            if(my_head%idv /= my_diag%idv .or. &
               my_head%iob /= my_diag%iob ) then
-              call perr(myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
+              call perr(this%myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
                     (/is,i,ibin/))
-              call perr(myname,'my_head%(idv,iob) =',(/my_head%idv,my_head%iob/))
-              call perr(myname,'my_diag%(idv,iob) =',(/my_diag%idv,my_diag%iob/))
-              call die(myname)
+              call perr(this%myname,'my_head%(idv,iob) =',(/my_head%idv,my_head%iob/))
+              call perr(this%myname,'my_diag%(idv,iob) =',(/my_diag%idv,my_diag%iob/))
+              call die(this%myname)
            endif
         end if
      endif
@@ -495,11 +507,11 @@ subroutine setupmxtm(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   end do
 
 ! Release memory of local guess arrays
-  call final_vars_
+  call this%final_vars_
 
 ! Write information to diagnostic file
   if(conv_diagsave .and. ii>0)then
-     call dtime_show(myname,'diagsave:mxtm',i_mxtm_ob_type)
+     call dtime_show(this%myname,'diagsave:mxtm',i_mxtm_ob_type)
      write(7)'mxt',nchar,nreal,ii,mype,ioff0
      write(7)cdiagbuf(1:ii),rdiagbuf(:,1:ii)
      deallocate(cdiagbuf,rdiagbuf)
@@ -537,68 +549,69 @@ subroutine setupmxtm(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      varname='mxtm'
      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
      if (istatus==0) then
-         if(allocated(ges_mxtm))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+         if(allocated(this%ges_mxtm))then
+            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
             call stop2(999)
          endif
-         allocate(ges_mxtm(size(rank2,1),size(rank2,2),nfldsig))
-         ges_mxtm(:,:,1)=rank2
+         allocate(this%ges_mxtm(size(rank2,1),size(rank2,2),nfldsig))
+         this%ges_mxtm(:,:,1)=rank2
          do ifld=2,nfldsig
             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-            ges_mxtm(:,:,ifld)=rank2
+            this%ges_mxtm(:,:,ifld)=rank2
          enddo
      else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
 !    get ps ...
      varname='ps'
      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
      if (istatus==0) then
-         if(allocated(ges_ps))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+         if(allocated(this%ges_ps))then
+            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
             call stop2(999)
          endif
-         allocate(ges_ps(size(rank2,1),size(rank2,2),nfldsig))
-         ges_ps(:,:,1)=rank2
+         allocate(this%ges_ps(size(rank2,1),size(rank2,2),nfldsig))
+         this%ges_ps(:,:,1)=rank2
          do ifld=2,nfldsig
             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-            ges_ps(:,:,ifld)=rank2
+            this%ges_ps(:,:,ifld)=rank2
          enddo
      else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
 !    get z ...
      varname='z'
      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
      if (istatus==0) then
-         if(allocated(ges_z))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+         if(allocated(this%ges_z))then
+            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
             call stop2(999)
          endif
-         allocate(ges_z(size(rank2,1),size(rank2,2),nfldsig))
-         ges_z(:,:,1)=rank2
+         allocate(this%ges_z(size(rank2,1),size(rank2,2),nfldsig))
+         this%ges_z(:,:,1)=rank2
          do ifld=2,nfldsig
             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-            ges_z(:,:,ifld)=rank2
+            this%ges_z(:,:,ifld)=rank2
          enddo
      else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
   else
-     write(6,*) trim(myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
+     write(6,*) trim(this%myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
                  nfldsig,size(gsi_metguess_bundle)
      call stop2(999)
   endif
   end subroutine init_vars_
 
   subroutine final_vars_
-    if(allocated(ges_z   )) deallocate(ges_z   )
-    if(allocated(ges_ps  )) deallocate(ges_ps  )
-    if(allocated(ges_mxtm)) deallocate(ges_mxtm)
+    if(allocated(this%ges_z   )) deallocate(this%ges_z   )
+    if(allocated(this%ges_ps  )) deallocate(this%ges_ps  )
+    if(allocated(this%ges_mxtm)) deallocate(this%ges_mxtm)
   end subroutine final_vars_
 
 end subroutine setupmxtm
 
+end module setupmxtm_mod
