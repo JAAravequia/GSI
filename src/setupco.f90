@@ -699,7 +699,7 @@ endif   ! (in_curbin)
 135 continue        
 
 ! Release memory of local guess arrays
-  call final_vars_
+  call this%final_vars_
 
 ! clean up
   if(allocated(this%ges_co)) deallocate(this%ges_co)
@@ -708,49 +708,5 @@ endif   ! (in_curbin)
 
 ! End of routine
   return
-  contains
-
-  subroutine check_vars_ (proceed)
-  logical,intent(inout) :: proceed
-  integer(i_kind) ivar,istatus
-! Check to see if required guess fields are available
-  call gsi_chemguess_get ('var::co', ivar, istatus )
-  proceed=ivar>0
-  end subroutine check_vars_ 
-
-  subroutine init_vars_
-
-  real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
-  integer(i_kind) ifld
-
-! If require guess vars available, extract from bundle ...
-  if(size(gsi_chemguess_bundle)==nfldsig) then
-     call gsi_bundlegetpointer(gsi_chemguess_bundle(1),'co',rank3,ier)
-     if (ier==0) then
-         if(allocated(this%ges_co))then
-            write(6,*) 'setupco: ges_co already incorrectly alloc '
-            call stop2(999)
-         endif
-         allocate(this%ges_co(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         this%ges_co(:,:,:,1)=rank3
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_chemguess_bundle(ifld),'co',rank3,ier)
-            this%ges_co(:,:,:,ifld)=rank3
-         enddo
-     else
-         write(6,*) 'setupco: CO not found in chem bundle, ier= ',ier
-         call stop2(999)
-     endif
-  else
-     write(6,*) 'setupco: inconsistent vector sizes (nfldsig,size(chemguess_bundle) ',&
-                 nfldsig,size(gsi_chemguess_bundle)
-     call stop2(999)
-  endif
-  end subroutine init_vars_
-
-  subroutine final_vars_
-    if(allocated(this%ges_co)) deallocate(this%ges_co)
-  end subroutine final_vars_
-
 end subroutine setupco
 end module setupco_mod
