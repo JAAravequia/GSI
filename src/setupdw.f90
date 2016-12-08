@@ -141,7 +141,6 @@ contains
     real(r_kind),parameter:: r0_001 = 0.001_r_kind
     real(r_kind),parameter:: r8 = 8.0_r_kind
     real(r_kind),parameter:: ten = 10.0_r_kind
-!   character(len=*),parameter:: myname="setupdw"
     real(r_kind),parameter:: dmiss = 9.0e+10_r_kind !missing value for msq error adj - wm
   
   ! Declare local variables
@@ -190,7 +189,11 @@ contains
 !   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
 !   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_u
 !   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
-  
+ 
+    this%myname='setupdw'
+    this%numvars = 4 
+    allocate(this%varnames(this%numvars))
+    this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::u', 'var::v' /)
   ! Check to see if required guess fields are available
     call this%check_vars_(proceed)
     if(.not.proceed) return  ! not all vars available, simply return

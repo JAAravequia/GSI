@@ -74,7 +74,6 @@ contains
   
   ! Declare local parameters
     real(r_kind),parameter:: r0_1_bmiss=one_tenth*bmiss
-    character(len=*),parameter:: myname='setupcldch'
   
   ! Declare local variables
     
@@ -121,6 +120,7 @@ contains
     equivalence(r_sprvstg,c_sprvstg)
     
     this%numvars = 3
+    this%myname='setupcldch'
     allocate(this%varnames(this%numvars))
     this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::cldch' /)
   ! Check to see if required guess fields are available
@@ -401,11 +401,11 @@ contains
              my_diag => cldchtail(ibin)%head%diags
              if(my_head%idv /= my_diag%idv .or. &
                 my_head%iob /= my_diag%iob ) then
-                call perr(myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
+                call perr(this%myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
                        (/is,i,ibin/))
-               call perr(myname,'my_head%(idv,iob) =',(/my_head%idv,my_head%iob/))
-               call perr(myname,'my_diag%(idv,iob) =',(/my_diag%idv,my_diag%iob/))
-               call die(myname)
+               call perr(this%myname,'my_head%(idv,iob) =',(/my_head%idv,my_head%iob/))
+               call perr(this%myname,'my_diag%(idv,iob) =',(/my_diag%idv,my_diag%iob/))
+               call die(this%myname)
              endif
           endif
        endif
@@ -503,7 +503,7 @@ contains
   
   ! Write information to diagnostic file
     if(conv_diagsave .and. ii>0)then
-       call dtime_show(myname,'diagsave:cldch',i_cldch_ob_type)
+       call dtime_show(this%myname,'diagsave:cldch',i_cldch_ob_type)
        write(7)'cei',nchar,nreal,ii,mype,ioff0
        write(7)cdiagbuf(1:ii),rdiagbuf(:,1:ii)
        deallocate(cdiagbuf,rdiagbuf)

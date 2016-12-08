@@ -22,7 +22,7 @@ module abstract_setup_mod
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_tcamt
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_td2m
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_vis
-  character(len=12) :: myname
+  character(len=16) :: myname
   character(len=14),allocatable,dimension(:) :: varnames
   integer(i_kind) numvars
   contains
@@ -55,16 +55,17 @@ contains
     implicit none
     class(abstract_setup_class)                              , intent(inout) :: this
     real(r_kind),allocatable,dimension(:,:,:  ), intent(inout) :: ges
-    character(len=9),                            intent(in   ) :: varname
+    character(len=*),                            intent(in   ) :: varname
     real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
     integer(i_kind) ifld, istatus
-    call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
 
+    call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
     if (istatus==0) then
           if(allocated(ges))then
              write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
              call stop2(999)
           endif
+          write(6,*) 'in ges3, ',this%myname,' allocating ',varname
           allocate(ges(size(rank2,1),size(rank2,2),nfldsig))
           ges(:,:,1)=rank2
           do ifld=2,nfldsig
@@ -172,17 +173,22 @@ contains
     real(r_kind),dimension(:,:,:  ),pointer :: ges
     real(r_kind),dimension(:,:,:,: ),pointer :: ges4
     integer(i_kind) ifld, istatus, i, idx, rank
+    write(6,*) 'HEY, setting up ges in ',this%myname
     do i = 1,this%numvars
       fullname = this%varnames(i)
       varname = fullname(6:14)
+      write(6,*) 'HEY working on ',varname,' for ',this%myname
       select case (varname)
         case ('ps')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges3(this%ges_ps,varname)
         case ('z')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges3(this%ges_z,varname)
         case ('gust')
           call this%allocate_ges3(this%ges_gust,varname)
         case ('wspd10m')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges3(this%ges_wspd10m,varname)
         case ('cldch')
           call this%allocate_ges3(this%ges_cldch,varname)
@@ -207,10 +213,13 @@ contains
         case ('vis')
           call this%allocate_ges3(this%ges_vis,varname)
         case ('u')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges4(this%ges_u,varname)
         case ('v')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges4(this%ges_v,varname)
         case ('tv')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges4(this%ges_tv,varname)
         case ('pm10')
           call this%allocate_ges4(this%ges_pm10,varname)

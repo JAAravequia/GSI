@@ -866,8 +866,10 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   logical,intent(inout) :: proceed
   integer(i_kind) ivar, istatus
 ! Check to see if required guess fields are available
-  call gsi_metguess_get ('var::ps', ivar, istatus )
+  call gsi_metguess_get ('var::wspd10m', ivar, istatus )
   proceed=ivar>0
+  call gsi_metguess_get ('var::ps' , ivar, istatus )
+  proceed=proceed.and.ivar>0
   call gsi_metguess_get ('var::z' , ivar, istatus )
   proceed=proceed.and.ivar>0
   call gsi_metguess_get ('var::u' , ivar, istatus )
