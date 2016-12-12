@@ -591,7 +591,6 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
               cycle loop_readsb    ! Pa expected, reject data above 1 hpa or if units were in hPa
            endif
            if (ppb <r125) cycle loop_readsb    !  reject data above 125mb
-!Agnes: HWRF should be regional not twodvar_regional (RTMA)
            if (twodvar_regional .and. ppb <r850) cycle loop_readsb
 !   reject the data with bad quality mark from SDM
            if(hdrdat(13) == 12.0_r_kind .or. hdrdat(13) == 14.0_r_kind) cycle loop_readsb      
@@ -751,9 +750,28 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
                  if(qifn <85.0_r_kind .and. itype .ne. 247)  then
                     qm=15
                  endif
-! Minimum speed requirement for CAWV of 10m/s
-                 if(itype .eq. 247 .and. obsdat(4) < 10.0_r_kind)  then
-                    qm=15
+! Minimum speed requirement for CAWV of 8m/s for HWRF
+                 if(wrf_nmm_regional) then 
+                    if(itype .eq. 247 .and. obsdat(4) < 8.0_r_kind)  then
+                       qm=15
+                    endif
+! Tighten QC for 247 winds. Remove winds below 450hPa
+                    if(itype .eq. 247 .and. ppb > 450.0_r_kind) then
+                       qm=15
+                    endif
+! Tighten QC for 240 winds, Remove winds above 700hPa
+                    if(itype .eq. 240 .and. ppb < 700.0_r_kind) then
+                       qm=15
+                    endif
+! Tighten QC for 251 winds Remove winds above 750hPa
+                    if(itype .eq. 251 .and. ppb < 750.0_r_kind) then
+                       qm=15
+                    endif
+                 else 
+! Minimum speed requirement for CAWV of 10m/s for global
+                    if(itype .eq. 247 .and. obsdat(4) < 10.0_r_kind)  then
+                      qm=15
+                    endif
                  endif
               endif
            else if(trim(subset) == 'NC005070' .or. trim(subset) == 'NC005071') then  ! MODIS  
@@ -834,6 +852,12 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
                        endif
                     endif
                  enddo
+! Tighten QC for 240 winds, Remove winds above 700hPa
+                 if(wrf_nmm_regional) then
+                    if(itype .eq. 240 .and. ppb < 700.0_r_kind) then
+                       qm=15
+                    endif
+                 endif
               endif
            else if( trim(subset) == 'NC005090') then                   ! VIIRS IR winds 
                if(hdrdat(1) >=r200 .and. hdrdat(1) <=r250 ) then   ! The range of satellite IDS
@@ -947,10 +971,11 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
                     pct1=cvwd_dat(1)             ! use of pct1 (new variable in the BUFR) introduced by Nebuda/Genkova
                                                  ! types 245 have been used to determine the acceptable pct1 range 
                                                  ! but that pct1 range is applied to all GOES-R winds except CAWV
+! Remove PCT1 lower bound check for HWRF
                     if(wrf_nmm_regional) then
-                        if(itype==240 .or. itype==245 .or. itype==246) then
-                                if (pct1 < 0.04_r_double) qm=15
-                        end if
+                       if(itype==240 .or. itype==245 .or. itype==246) then
+                          if (pct1 < 0.04_r_double) qm=15
+                       end if
                     else
                         if (pct1 < 0.04_r_double) qm=15
                     end if
