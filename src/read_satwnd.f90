@@ -61,6 +61,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 !   2015-05-12  Genkova - reading from ASCII files removed, read GOES-R from new BUFR, keep Nebuda's GOES-R related changes 
 !   2016-03-15  Su      - modified the code so that the program won't stop when
 !                         no subtype is found in non linear qc error table and b table !                         table
+!   2016-12-13  Lim     - Addition of GOES SWIR, CAWV and VIS winds into HWRF
 !
 !   input argument list:
 !     ithin    - flag to thin data
@@ -753,21 +754,16 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
                  if(qifn <85.0_r_kind .and. itype .ne. 247)  then
                     qm=15
                  endif
-! Minimum speed requirement for CAWV of 8m/s for HWRF
                  if(wrf_nmm_regional) then 
-                    if(itype .eq. 247 .and. obsdat(4) < 8.0_r_kind)  then
+! Minimum speed requirement for CAWV of 8m/s for HWRF. 
+! Tighten QC for 247 winds by removing winds below 450hPa
+                    if(itype == 247 .and. obsdat(4) < 8.0_r_kind .and. ppb > 450.0_r_kind) then 
                        qm=15
-                    endif
-! Tighten QC for 247 winds. Remove winds below 450hPa
-                    if(itype .eq. 247 .and. ppb > 450.0_r_kind) then
+! Tighten QC for 240 winds by remove winds above 700hPa
+                    elseif(itype == 240 .and. ppb < 700.0_r_kind) then
                        qm=15
-                    endif
-! Tighten QC for 240 winds, Remove winds above 700hPa
-                    if(itype .eq. 240 .and. ppb < 700.0_r_kind) then
-                       qm=15
-                    endif
-! Tighten QC for 251 winds Remove winds above 750hPa
-                    if(itype .eq. 251 .and. ppb < 750.0_r_kind) then
+! Tighten QC for 251 winds by remove winds above 750hPa
+                    elseif(itype == 251 .and. ppb < 750.0_r_kind) then
                        qm=15
                     endif
                  else 
@@ -855,11 +851,9 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
                        endif
                     endif
                  enddo
-! Tighten QC for 240 winds, Remove winds above 700hPa
+! Tighten QC for 240 winds by removing winds above 700hPa
                  if(wrf_nmm_regional) then
-                    if(itype .eq. 240 .and. ppb < 700.0_r_kind) then
-                       qm=15
-                    endif
+                    if(itype == 240 .and. ppb < 700.0_r_kind) qm=15
                  endif
               endif
            else if( trim(subset) == 'NC005090') then                   ! VIIRS IR winds 
