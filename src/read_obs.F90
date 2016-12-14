@@ -630,7 +630,7 @@ subroutine read_obs(ndata,mype)
            dtype,dval,dmesh,obsfile_all,ref_obs,nprof_gps,dsis,ditype,&
            oberrflg,perturb_obs,lobserver,lread_obs_save,obs_input_common, &
            reduce_diag,nobs_sub,dval_use
-    use qcmod, only: njqc
+    use qcmod, only: njqc,vadwnd_l2rw_qc
     use gsi_4dvar, only: l4dvar
     use satthin, only: super_val,super_val1,superp,makegvals,getsfc,destroy_sfc
     use mpimod, only: ierror,mpi_comm_world,mpi_sum,mpi_rtype,mpi_integer,npe,&
@@ -659,7 +659,7 @@ subroutine read_obs(ndata,mype)
     use gsi_nstcouplermod, only: gsi_nstcoupler_set,gsi_nstcoupler_final
     use gsi_io, only: mype_io
     use rapidrefresh_cldsurf_mod, only: i_gsdcldanal_type
-    use read_l2bufr_mod, only: read_l2rw_processed
+    use read_l2bufr_mod, only: read_l2rw_novadqc
 
     use m_extOzone, only: is_extOzone
     use m_extOzone, only: extOzone_read
@@ -673,6 +673,7 @@ subroutine read_obs(ndata,mype)
     integer(i_llong),parameter:: lenbuf=8388608_i_llong  ! lenbuf=8*1024*1024
 
 !   Declare local variables
+    logical :: lexist1,lexist2,lexist3
     logical :: lexist,ssmis,amsre,sndr,hirs,avhrr,lexistears,lexistdb,use_prsl_full,use_hgtl_full
     logical :: use_sfc,nuse,use_prsl_full_proc,use_hgtl_full_proc,seviri,mls
     logical,dimension(ndat):: belong,parallel_read,ears_possible,db_possible
@@ -1394,15 +1395,16 @@ subroutine read_obs(ndata,mype)
 
 !            Process radar winds
              else if (obstype == 'rw') then
-                if (dsis(i) == 'rw') then
+                if (dsis(i) == 'l2rw' .and..not. vadwnd_l2rw_qc) then
+                   write(6,*)'READ_OBS: radial wind,read_l2rw_novadqc,dfile=l2rwbufr,dsis=l2rw_novqc'
+                   call read_l2rw_novadqc(nread,npuse,nouse,infile,lunout,obstype,& 
+                                            twind,sis,hgtl_full,nobs_sub1(1,i)) 
+                   string='READ_L2RW_NOVADQC'
+                else if (dsis(i) == 'l3rw' .and. vadwnd_l2rw_qc) then
+                   write(6,*)'READ_OBS: radial wind,read_radar,dfile=radarbufr,dsis=l3rw'
                    call read_radar(nread,npuse,nouse,infile,lunout,obstype,twind,sis,&
                                    hgtl_full,nobs_sub1(1,i))
                    string='READ_RADAR'
-!            Process level 2 radar wind only without vad qc checks.
-                else if (dsis(i) == 'l2rw') then
-                   call read_l2rw_processed(nread,npuse,nouse,infile,lunout,obstype,& 
-                                            twind,sis,hgtl_full,nobs_sub1(1,i)) 
-                   string='READ_L2RW_PROCESSED'
                 end if
 !            Process lagrangian data
              else if (obstype == 'lag') then

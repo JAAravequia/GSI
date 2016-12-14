@@ -123,20 +123,16 @@ subroutine intrw_(rwhead,rval,sval)
   call gsi_bundlegetpointer(sval,'w',sw,istatus)
   if (istatus==0) then
      include_w=.true.
-     write(6,*)'INTRW: Using vertical velocity.'
   else
      include_w=.false.
-     write(6,*)'INTRW: NOT using vertical velocity.'
   end if
   call gsi_bundlegetpointer(rval,'u',ru,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(rval,'v',rv,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(rval,'w',rw,istatus)
   if (istatus==0) then
      include_w=.true.
-     write(6,*)'INTRW: Using vertical velocity.'
   else
      include_w=.false.
-     write(6,*)'INTRW: NOT using vertical velocity.'
   end if
 
   if(l_foto) then
@@ -169,19 +165,13 @@ subroutine intrw_(rwhead,rval,sval)
 
 !    Forward model (Tangent Linear; TL)
 !    TLVr  =  TLu*costilt*cosazm  +  TLv*costilt*sinazm  +  TLw*sintilt
+     val=(w1*su(j1)+ w2*su(j2)+ w3*su(j3)+ w4*su(j4)+ w5*su(j5)+          &
+          w6*su(j6)+ w7*su(j7)+ w8*su(j8))*rwptr%costilt*rwptr%cosazm+    &
+         (w1*sv(j1)+ w2*sv(j2)+ w3*sv(j3)+ w4*sv(j4)+ w5*sv(j5)+          &
+          w6*sv(j6)+ w7*sv(j7)+ w8*sv(j8))*rwptr%costilt*rwptr%sinazm
      if(include_w) then
-        val=(w1*su(j1)+ w2*su(j2)+ w3*su(j3)+ w4*su(j4)+ w5*su(j5)+          &
-             w6*su(j6)+ w7*su(j7)+ w8*su(j8))*rwptr%costilt*rwptr%cosazm+    &
-            (w1*sv(j1)+ w2*sv(j2)+ w3*sv(j3)+ w4*sv(j4)+ w5*sv(j5)+          &
-             w6*sv(j6)+ w7*sv(j7)+ w8*sv(j8))*rwptr%costilt*rwptr%sinazm+    &
-            (w1*sw(j1)+ w2*sw(j2)+ w3*sw(j3)+ w4*sw(j4)+ w5*sw(j5)+          &
-             w6*sw(j6)+ w7*sw(j7)+ w8*sw(j8))*rwptr%sintilt
-!    TLVr  =  TLu*costilt*cosazm  +  TLv*costilt*sinazm
-     else
-         val=(w1*su(j1)+ w2*su(j2)+ w3*su(j3)+ w4*su(j4)+ w5*su(j5)+          &
-              w6*su(j6)+ w7*su(j7)+ w8*su(j8))*rwptr%costilt*rwptr%cosazm+    &
-             (w1*sv(j1)+ w2*sv(j2)+ w3*sv(j3)+ w4*sv(j4)+ w5*sv(j5)+          &
-              w6*sv(j6)+ w7*sv(j7)+ w8*sv(j8))*rwptr%costilt*rwptr%sinazm 
+        val=val+(w1*sw(j1)+ w2*sw(j2)+ w3*sw(j3)+ w4*sw(j4)+ w5*sw(j5)+   &
+                 w6*sw(j6)+ w7*sw(j7)+ w8*sw(j8))*rwptr%sintilt
      end if
 
      if ( l_foto ) then
@@ -232,7 +222,7 @@ subroutine intrw_(rwhead,rval,sval)
 !       Adjoint (AD)
         valu=rwptr%costilt*rwptr%cosazm*grad  ! ADVr_u = costilt*cosazm*ADVr
         valv=rwptr%costilt*rwptr%sinazm*grad  ! ADVr_v = costilt*sinazm*ADVr
-        if(include_w) valw=rwptr%sintilt*grad! ADVr_w = sintilt*ADVr
+        if(include_w) valw=rwptr%sintilt*grad ! ADVr_w = sintilt*ADVr
         ru(j1)=ru(j1)+w1*valu                 ! ADu = ADu + ADVr_u
         ru(j2)=ru(j2)+w2*valu
         ru(j3)=ru(j3)+w3*valu

@@ -245,6 +245,11 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
   
 !***********************************************************************************
 
+! Check to see if radar wind files exist.  If none exist, exit this routine.
+  inquire(file='radar_supobs_from_level2',exist=lexist1)
+  inquire(file=trim(infile),exist=lexist2)
+  if (.not.lexist1 .and. .not.lexist2) goto 900
+
   eradkm=rearth*0.001_r_kind
   maxobs=2e6
   nreal=maxdat
@@ -528,7 +533,7 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
   nsuper2_kept=0
 
   if(loop==0) outmessage='level 2 superobs:'
-
+  
 ! Open sequential file containing superobs
   open(lnbufr,file='radar_supobs_from_level2',form='unformatted')
   rewind lnbufr
@@ -805,11 +810,9 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
   write(6,*)'READ_RADAR: dlatmin,max,dlonmin,max=',dlatmin,dlatmax,dlonmin,dlonmax
   write(6,*)'READ_RADAR: iaaamin,max,8*max_rrr  =',iaaamin,iaaamax,8*max_rrr
 
-
 !  Next process level 2.5 and 3 superobs
-
 !  Bigger loop over first level 2.5 data, and then level3 data
-
+ 
   timemax=-huge(timemax)
   timemin=huge(timemin)
   errmax=-huge(errmax)
@@ -1239,7 +1242,6 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
      write(6,*)'READ_RADAR: iaaamin,max,8*max_rrr  =',iaaamin,iaaamax,8*max_rrr
 
   end do       !   end bigger loop over first level 2.5, then level 3 radar data
-
 
 ! Write out vad statistics
   do ivad=1,nvad

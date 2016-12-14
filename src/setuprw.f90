@@ -525,12 +525,9 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      kminmin=kbeambot
      kmaxmax=kbeamtop
      do k=kbeambot,kbeamtop
-        ! Two different radial wind forward operators. Sometimes w_tot wont be available. 
+        rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt
         if(include_w) then
-           rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt &
-                        +(wgesprofile(k))*sintilt ! - (vTgesprofile(k))*sintilt
-        else 
-           rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt
+           rwwindprofile=rwwindprofile+(wgesprofile(k))*sintilt 
         end if
         
         if(umaxmax<rwwindprofile) then
@@ -678,7 +675,6 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         call get_ijk(mm1,dlat,dlon,dpres,rwtail(ibin)%head%ij(1),rwtail(ibin)%head%wij(1))
 
         do j=1,8
-           !rwtail(ibin)%head%wij(j)=factw*costilt*rwtail(ibin)%head%wij(j)  
            rwtail(ibin)%head%wij(j)=factw*rwtail(ibin)%head%wij(j)  
         end do
         rwtail(ibin)%head%raterr2 = ratio_errors**2  
@@ -822,10 +818,8 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   proceed=proceed.and.ivar>0
   call gsi_metguess_get ('var::w' , ivar, istatus )
   if (ivar>0) then
-     write(6,*)'SETUPRW: Using vertical velocity in forward operator.'
      include_w=.true.
   else
-     write(6,*)'SETUPRW: NOT using vertical velocity in forward operator.'
      include_w=.false.
   endif
   end subroutine check_vars_ 

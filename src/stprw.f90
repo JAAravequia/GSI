@@ -121,20 +121,16 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
   call gsi_bundlegetpointer(sval,'w',sw,istatus)
   if (istatus==0) then
      include_w=.true.
-     write(6,*)'STPRW: Using vertical velocity.'
   else
      include_w=.false.
-     write(6,*)'STPRW: NOT using vertical velocity.'
   end if
   call gsi_bundlegetpointer(rval,'u',ru,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(rval,'v',rv,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(rval,'w',rw,istatus)
   if (istatus==0) then
      include_w=.true.
-     write(6,*)'STPRW: Using vertical velocity.'
   else
      include_w=.false.
-     write(6,*)'STPRW: NOT using vertical velocity.'
   end if
 
   if(l_foto) then
@@ -166,36 +162,29 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
            w7=rwptr%wij(7)
            w8=rwptr%wij(8)
 
-!          Gradient?? -- For two different obs operators.
+!          Gradient
+           valrw=(w1*ru(j1)+ w2*ru(j2)+ w3*ru(j3)+ &
+                  w4*ru(j4)+ w5*ru(j5)+ w6*ru(j6)+ &
+                  w7*ru(j7)+ w8*ru(j8))*rwptr%costilt*rwptr%cosazm+ &
+                 (w1*rv(j1)+ w2*rv(j2)+ w3*rv(j3)+ &
+                  w4*rv(j4)+ w5*rv(j5)+ w6*rv(j6)+ &
+                  w7*rv(j7)+ w8*rv(j8))*rwptr%costilt*rwptr%sinazm
            if(include_w) then
-              valrw=(w1*ru(j1)+ w2*ru(j2)+ w3*ru(j3)+ w4*ru(j4)+ w5*ru(j5)+      &
-                     w6*ru(j6)+ w7*ru(j7)+ w8*ru(j8))*rwptr%costilt*rwptr%cosazm+&
-                    (w1*rv(j1)+ w2*rv(j2)+ w3*rv(j3)+ w4*rv(j4)+ w5*rv(j5)+      &
-                     w6*rv(j6)+ w7*rv(j7)+ w8*rv(j8))*rwptr%costilt*rwptr%sinazm+&
-                    (w1*rw(j1)+ w2*rw(j2)+ w3*rw(j3)+ w4*rw(j4)+ w5*rw(j5)+      &
-                     w6*rw(j6)+ w7*rw(j7)+ w8*rw(j8))*rwptr%sintilt
-           else
-              valrw=(w1*ru(j1)+ w2*ru(j2)+ w3*ru(j3)+ w4*ru(j4)+ w5*ru(j5)+     &
-                     w6*ru(j6)+ w7*ru(j7)+w8*ru(j8))*rwptr%costilt*rwptr%cosazm+&
-                    (w1*rv(j1)+ w2*rv(j2)+ w3*rv(j3)+ w4*rv(j4)+ w5*rv(j5)+     &
-                     w6*rv(j6)+ w7*rv(j7)+ w8*rv(j8))*rwptr%costilt*rwptr%sinazm
+              valrw=valrw+(w1*rw(j1)+ w2*rw(j2)+ w3*rw(j3)+ &
+                           w4*rw(j4)+ w5*rw(j5)+ w6*rw(j6)+ &
+                           w7*rw(j7)+w8*rw(j8))*rwptr%sintilt
            end if
 
-!          Gradient - residual?? -- For two different obs operators.
+!          Gradient - residual
+            facrw=(w1* su(j1)+w2* su(j2)+w3* su(j3)+w4* su(j4)+w5* su(j5)+      &
+                   w6* su(j6)+w7* su(j7)+w8* su(j8))*rwptr%costilt*rwptr%cosazm+&
+                  (w1* sv(j1)+w2* sv(j2)+w3* sv(j3)+w4* sv(j4)+w5* sv(j5)+      &
+                   w6* sv(j6)+w7* sv(j7)+w8* sv(j8))*rwptr%costilt*rwptr%sinazm
            if(include_w) then
-              facrw=(w1*su(j1)+ w2*su(j2)+ w3*su(j3)+ w4*su(j4)+ w5*su(j5)+      &
-                     w6*su(j6)+ w7*su(j7)+ w8*su(j8))*rwptr%costilt*rwptr%cosazm+&
-                    (w1*sv(j1)+ w2*sv(j2)+ w3*sv(j3)+ w4*sv(j4)+ w5*sv(j5)+      &
-                     w6*sv(j6)+ w7*sv(j7)+ w8*sv(j8))*rwptr%costilt*rwptr%sinazm+&
-                    (w1*sw(j1)+ w2*sw(j2)+ w3*sw(j3)+ w4*sw(j4)+ w5*sw(j5)+      &
-                     w6*sw(j6)+ w7*sw(j7)+ w8*sw(j8))*rwptr%sintilt- rwptr%res         
-           else
-              facrw=(w1*su(j1)+ w2*su(j2)+ w3*su(j3)+ w4*su(j4)+ w5*su(j5)+      &
-                     w6*su(j6)+ w7*su(j7)+ w8*su(j8))*rwptr%costilt*rwptr%cosazm+&
-                    (w1*sv(j1)+ w2*sv(j2)+ w3*sv(j3)+ w4*sv(j4)+ w5*sv(j5)+      &
-                     w6*sv(j6)+ w7*sv(j7)+ w8*sv(j8))*rwptr%costilt*rwptr%sinazm &
-                     - rwptr%res
+              facrw=facrw+(w1*sw(j1)+ w2*sw(j2)+ w3*sw(j3)+ w4*sw(j4)+w5*sw(j5)+&
+                           w6*sw(j6)+ w7*sw(j7)+ w8*sw(j8))*rwptr%sintilt
            end if
+           facrw=facrw-rwptr%res
 
            if(l_foto) then
               time_rw=rwptr%time*r3600

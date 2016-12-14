@@ -474,10 +474,11 @@ contains
 !   Alternatively, zero out all balance correlation matrices
 !   for univariate surface analysis
     if (twodvar_regional .or. lnobalance) then
+       if(mype==0) write(6,*)"***WARNING*** running univariate analysis." 
        bvk(:,:,:)=zero
        agvk(:,:,:,:)=zero
-       agvk_lm(:,:)=zero
        wgvk(:,:,:)=zero
+       if(lnobalance) agvk_lm(:,:)=zero
     endif
     
     deallocate (agvi,bvi,wgvi)

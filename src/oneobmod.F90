@@ -460,11 +460,9 @@ contains
          abs(corrected_azimuth-thisazimuth+r720)),delazmmax)
 
     ! Ensure elevation angle is exactly 90 or 0 degress for these one ob tests.
-    !if ( anel_rw == 90.0_r_kind .or. anel_rw == 0.0_r_kind ) then
-       corrected_azimuth=anaz_rw
-       corrected_tilt=anel_rw
-       thishgt=range_rw
-    !end if
+    corrected_azimuth=anaz_rw
+    corrected_tilt=anel_rw
+    thishgt=range_rw
      
 
     write(6,*) 'Single radial wind observation.'

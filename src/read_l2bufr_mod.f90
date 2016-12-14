@@ -50,7 +50,7 @@ module read_l2bufr_mod
   public :: initialize_superob_radar
   public :: radar_bufr_read_all
 ! set passed variables to public
-  public :: read_l2rw_processed
+  public :: read_l2rw_novadqc
   public :: range_max,del_time,l2superob_only,elev_angle_max,del_azimuth
   public :: minnum,del_range,del_elev
 
@@ -125,6 +125,7 @@ contains
     use mpimod, only: mpi_comm_world,mpi_min,mpi_sum,mpi_real8,ierror,mpi_real16
     use mpimod, only: mpi_max,mpi_integer4
     use obsmod,only: iadate,ndat,dsis,dfile,dtype
+    use qcmod, only: vadwnd_l2rw_qc
     use oneobmod, only: lsingleradar,singleradar
     use mpeu_util, only: IndexSet, IndexSort
     implicit none
@@ -223,25 +224,23 @@ contains
 
     logical rite
     logical lradar
+    logical lexist1,lexist2
 
     ! define infile if using either option for radial winds.
     do i=1,ndat
-       !if (mype==0) write(6,*) 'i/ndat,dtype(i),dsis(i)',i,'/',ndat,dtype(i),dsis(i)
-       if (trim(dtype(i))=='rw' .and. trim(dsis(i))=='rw')then
-          infile=trim(dfile(i))
+       if(trim(dtype(i))=='rw'.and.trim(dsis(i))=='l2rw'.and.vadwnd_l2rw_qc)then
+          infile=trim(dfile(i)) !l2rwbufr
           exit
-       else if (trim(dtype(i))=='rw' .and. trim(dsis(i))=='l2rw')then
-          infile=trim(dfile(i))
+       else if(trim(dtype(i))=='rw'.and.trim(dsis(i))=='l2rw'.and..not.vadwnd_l2rw_qc)then
+          infile=trim(dfile(i)) !l2rwbufr with no VAD QC
           exit
        else
           infile=''
-       end if 
+       end if
     end do
-
-    write(6,*) ''
-
+    if(mype==0) write(6,*)'RADAR_BUFR_READ_ALL:  radial wind infile for superobbing = ',infile
     if (infile=='') then
-       write(6,*) '***WARNING*** NOT USING ANY RADIAL WIND OBSERVATIONS!!!' 
+       if(mype==0) write(6,*) '***WARNING*** NOT USING ANY RADIAL WIND OBSERVATIONS!!!' 
        return ! Go back to gsisub if nothing to do.    
     end if
  
@@ -740,8 +739,8 @@ contains
                   abs(corrected_azimuth-thisazimuth+r720)),delazmmax)
 
              write(inbufr) this_staid,this_stalat,this_stalon,this_stahgt, &
-                 thistime,thislat,thislon,thishgt,thisvr,corrected_azimuth,&
-                 thiserr,corrected_tilt
+                  thistime,thislat,thislon,thishgt,thisvr,corrected_azimuth,&
+                  thiserr,corrected_tilt
              nsuper=nsuper+1
            end if
           end do
@@ -780,7 +779,7 @@ contains
 
 end subroutine radar_bufr_read_all
 
-subroutine read_l2rw_processed(nread,ndata,nodata,infile,lunout,obstype,twind, &
+subroutine read_l2rw_novadqc(nread,ndata,nodata,infile,lunout,obstype,twind, &
 sis,hgtl_full,nobs)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -1157,23 +1156,23 @@ sis,hgtl_full,nobs)
   end do
 
   close(lnbufr) ! A simple unformatted fortran file should not be mixed with bufr I/O
-  write(6,*)'READ_L2RW_PROCESSED:  ',trim(outmessage),' reached eof on 2 superob radar file'
-  write(6,*)'READ_L2RW_PROCESSED: nsuper2_in,nsuper2_kept=',nsuper2_in,nsuper2_kept
-  write(6,*)'READ_L2RW_PROCESSED: # bad azimuths=',ibadazm
-  write(6,*)'READ_L2RW_PROCESSED: # bad winds   =',ibadwnd
-  write(6,*)'READ_L2RW_PROCESSED: # bad dists   =',ibaddist
-  write(6,*)'READ_L2RW_PROCESSED: # bad stahgts =',ibadstaheight
-  write(6,*)'READ_L2RW_PROCESSED: # bad obshgts =',ibadheight
-  write(6,*)'READ_L2RW_PROCESSED: # bad errors  =',ibaderror
-  write(6,*)'READ_L2RW_PROCESSED: # bad fit     =',ibadfit
-  write(6,*)'READ_L2RW_PROCESSED: # num thinned =',kthin
-  write(6,*)'READ_L2RW_PROCESSED: # notgood0    =',notgood0
-  write(6,*)'READ_L2RW_PROCESSED: # notgood     =',notgood
-  write(6,*)'READ_L2RW_PROCESSED: # hgt belowsta=',iheightbelowsta
-  write(6,*)'READ_L2RW_PROCESSED: timemin,max   =',timemin,timemax
-  write(6,*)'READ_L2RW_PROCESSED: errmin,max    =',errmin,errmax
-  write(6,*)'READ_L2RW_PROCESSED: dlatmin,max,dlonmin,max=',dlatmin,dlatmax,dlonmin,dlonmax
-  write(6,*)'READ_L2RW_PROCESSED: iaaamin,max,8*max_rrr=',iaaamin,iaaamax,8*max_rrr
+  write(6,*)'READ_L2RW_NOVADQC:  ',trim(outmessage),' reached eof on 2 superob radar file'
+  write(6,*)'READ_L2RW_NOVADQC: nsuper2_in,nsuper2_kept=',nsuper2_in,nsuper2_kept
+  write(6,*)'READ_L2RW_NOVADQC: # bad azimuths=',ibadazm
+  write(6,*)'READ_L2RW_NOVADQC: # bad winds   =',ibadwnd
+  write(6,*)'READ_L2RW_NOVADQC: # bad dists   =',ibaddist
+  write(6,*)'READ_L2RW_NOVADQC: # bad stahgts =',ibadstaheight
+  write(6,*)'READ_L2RW_NOVADQC: # bad obshgts =',ibadheight
+  write(6,*)'READ_L2RW_NOVADQC: # bad errors  =',ibaderror
+  write(6,*)'READ_L2RW_NOVADQC: # bad fit     =',ibadfit
+  write(6,*)'READ_L2RW_NOVADQC: # num thinned =',kthin
+  write(6,*)'READ_L2RW_NOVADQC: # notgood0    =',notgood0
+  write(6,*)'READ_L2RW_NOVADQC: # notgood     =',notgood
+  write(6,*)'READ_L2RW_NOVADQC: # hgt belowsta=',iheightbelowsta
+  write(6,*)'READ_L2RW_NOVADQC: timemin,max   =',timemin,timemax
+  write(6,*)'READ_L2RW_NOVADQC: errmin,max    =',errmin,errmax
+  write(6,*)'READ_L2RW_NOVADQC: dlatmin,max,dlonmin,max=',dlatmin,dlatmax,dlonmin,dlonmax
+  write(6,*)'READ_L2RW_NOVADQC: iaaamin,max,8*max_rrr=',iaaamin,iaaamax,8*max_rrr
 
 ! Write observation to scratch file
   call count_obs(ndata,maxdat,ilat,ilon,cdata_all,nobs)
@@ -1185,7 +1184,7 @@ sis,hgtl_full,nobs)
 
   return
 
-end subroutine read_l2rw_processed
+end subroutine read_l2rw_novadqc
 
 end module read_l2bufr_mod
 

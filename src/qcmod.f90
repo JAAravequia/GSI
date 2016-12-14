@@ -145,6 +145,7 @@ module qcmod
             ifail_gross_qc,ifail_cloud_qc,ifail_outside_range,ifail_scanedge_qc
 
   public :: buddycheck_t,buddydiag_save
+  public :: vadwnd_l2rw_qc
 
   logical nlnqc_iter,njqc,vqc
   logical noiqc
@@ -156,6 +157,7 @@ module qcmod
   logical qc_satwnds
   logical buddycheck_t
   logical buddydiag_save
+  logical vadwnd_l2rw_qc
 
   character(10):: vadfile
   integer(i_kind) npres_print
@@ -340,7 +342,8 @@ contains
     buddycheck_t=.false.   ! When true, run buddy check algorithm on temperature observations
     buddydiag_save=.false. ! When true, output files containing buddy check QC info for all
                            !  obs run through the buddy check
-
+    vadwnd_l2rw_qc=.true.  ! When false, DO NOT run the vadwnd qc on level 2 radial wind obs.
+   
     return
   end subroutine init_qcvars
 
