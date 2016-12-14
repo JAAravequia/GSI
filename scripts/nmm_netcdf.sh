@@ -109,10 +109,15 @@ SUPERRAD="$SUPERRAD_update"
 SINGLEOB="$SINGLEOB_update"
 
 if [ "$debug" = ".false." ]; then
-   . $scripts/regression_namelists.sh nmm_netcdf
+   if [[ $exp == *"updat"* ]]; then
+     . $scripts/regression_namelists_updat.sh nmm_netcdf
+   elif [[ $exp == *"contrl"* ]]; then
+     . $scripts/regression_namelists.sh nmm_netcdf
+   fi
 else
    . $scripts/regression_namelists_db.sh nmm_netcdf
 fi
+
 cat << EOF > gsiparm.anl
 
 $gsi_namelist

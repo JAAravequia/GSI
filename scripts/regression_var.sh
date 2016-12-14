@@ -11,15 +11,15 @@ elif [ -d /scratch4/NCEPDEV/da ]; then # Theia
 fi
 
 # Name of the branch being tested
+dl2rw="dl2rw_2"
 updat="dl2rw_2"
-contrl="XXXXXXXX"
+contrl="trunk"
 
 #  Handle machine specific paths for:
 #  experiment and control executables, fix, ptmp, and CRTM coefficient files.
 #  Location of ndate utility, noscrub directory, and account name (accnt = ada by default).
 if [[ "$machine" = "Theia" ]]; then
 
-   #export basedir="/scratch4/NCEPDEV/da/save/$LOGNAME"
    export basedir="/scratch4/NCEPDEV/meso/save/$LOGNAME/gsi"
 
    export group="meso"
@@ -38,7 +38,7 @@ if [[ "$machine" = "Theia" ]]; then
 
    #  On Theia, there are no scrubbers to remove old contents from stmp* directories.
    #  After completion of regression tests, will remove the regression test subdirecories
-   export clean=".true."
+   export clean=".false."
 
 elif [[ "$machine" = "WCOSS" ]]; then
 
@@ -67,8 +67,8 @@ export gsiexec_updat="$basedir/$updat/src/global_gsi"
 export gsiexec_contrl="$basedir/$contrl/src/global_gsi"
 export enkfexec_updat="$basedir/$updat/src/enkf/global_enkf"
 export enkfexec_contrl="$basedir/$contrl/src/enkf/global_enkf"
-export fixgsi="$basedir/$updat/fix"
-export scripts="$basedir/$updat/scripts"
+export fixgsi="$basedir/$dl2rw/fix"
+export scripts="$basedir/$dl2rw/scripts"
 
 # Paths to tmpdir and savedir base on ptmp
 export tmpdir="$ptmp"
