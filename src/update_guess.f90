@@ -84,6 +84,7 @@ subroutine update_guess(sval,sbias)
 !                         state variable for all-sky radiance assimilation
 !   2015-07-10  pondeca  - add cldch
 !   2016-04-28  eliu    - revise update for cloud water 
+!   2016-06-23  lippi   - Add update for vertical velocity (w).
 !
 !   input argument list:
 !    sval

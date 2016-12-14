@@ -20,7 +20,9 @@ module read_l2bufr_mod
 !   2009-11-24  parrish  change time variable from regional_time (passed from gridmod) to
 !                          iadate (passed from obsmod), to prevent all radar data being tossed.
 !   2011-07-04  todling  - fixes to run either single or double precision
-!   2016-08-12  lippi    logic for running single radar test
+!   2015-10-19  lippi    - Added subroutine read_l2rw_novadqc (modified from read_radar)
+!                          to only process level 2 radial winds without VAD QC checks.
+!   2016-08-12  lippi    - logic for running single radar test
 !
 ! subroutines included:
 !   sub initialize_superob_radar - initialize superob parameters to defaults
@@ -107,6 +109,9 @@ contains
 ! program history log:
 !   2008-04-21  safford -- add subprogram doc block, rm unused uses
 !   2010-08-30  treadon - changes for reproducibile results
+!   2016-12-14  lippi   - read 'l2rwbufr' from the OBS_INPUT table rather than
+!                         hardcoding that name into the code. Logic to exit code
+!                         if the infile (l2rwbufr) is not present.
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -224,7 +229,6 @@ contains
 
     logical rite
     logical lradar
-    logical lexist1,lexist2
 
     ! define infile if using either option for radial winds.
     do i=1,ndat

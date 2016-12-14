@@ -59,9 +59,10 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2013-10-19  todling - metguess now holds background
 !   2014-01-28  todling - write sensitivity slot indicator (ioff) to header of diagfile
 !   2014-12-30  derber - Modify for possibility of not using obsdiag
-!   2016-07-20  lippi  - add vertical velocity to observation operator.
-!   2016-07-28  lippi  - add a conditional to use maginnov and magoberr
-!                        parameters from single ob namelist   
+!   2016-06-23  lippi  - Add vertical velocity to observation operator. Now,
+!                        costilt is multiplied here instead of factored into wij.
+!                        nml option include_w is used. Add a conditional to use 
+!                        maginnov and magoberr parameters from single ob namelist.   
 !
 !   input argument list:
 !     lunin    - unit from which to read observations

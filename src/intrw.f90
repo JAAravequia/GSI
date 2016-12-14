@@ -64,8 +64,10 @@ subroutine intrw_(rwhead,rval,sval)
 !   2010-05-13  todlng   - update to use gsi_bundle; update interface
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - introduced ladtest_obs         
 !   2014-12-03  derber  - modify so that use of obsdiags can be turned off
-!   2016-06-23  lippi   - add terms for vertical velocity in forward operator
-!                         and adjoint code.
+!   2016-06-23  lippi   - add terms for vertical velocity (w) in forward operator
+!                         and adjoint code (uses include_w to check if w is
+!                         being used). Now, the multiplications of costilt
+!                         is done in this code rather than factored in wij.
 !
 ! usage: call intw(ru,rv,su,sv)
 !   input argument list:

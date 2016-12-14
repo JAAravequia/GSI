@@ -605,9 +605,14 @@ subroutine read_obs(ndata,mype)
 !   2015-07-10  pondeca - add cloud ceiling height (cldch)
 !   2015-08-12  pondeca - add capability to read min/maxT obs from ascii file
 !   2015-09-04  J. Jung - Added mods for CrIS full spectral resolution (FSR)
+!   2015-10-19  lippi   - Added logic to read l2rw or rw radial winds.
 !   2016-03-02  s.liu/carley - remove use_reflectivity and use i_gsdcldanal_type
 !   2016-04-28  J. Jung - added logic for RARS and direct broadcast data from NESDIS/UW.
-!   
+!   2016-12-14  lippi   - Fixed bug of using observations twice when both
+!                         l2rwbufr and radarbufr are in the OBS_INPUT table.
+!                         Changed the dsis entries for l2rwbufr and radarbufr to
+!                         l2rw and l3rw respectively. Also make use of nml
+!                         option vadwnd_l2rw_qc. 
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -673,7 +678,6 @@ subroutine read_obs(ndata,mype)
     integer(i_llong),parameter:: lenbuf=8388608_i_llong  ! lenbuf=8*1024*1024
 
 !   Declare local variables
-    logical :: lexist1,lexist2,lexist3
     logical :: lexist,ssmis,amsre,sndr,hirs,avhrr,lexistears,lexistdb,use_prsl_full,use_hgtl_full
     logical :: use_sfc,nuse,use_prsl_full_proc,use_hgtl_full_proc,seviri,mls
     logical,dimension(ndat):: belong,parallel_read,ears_possible,db_possible

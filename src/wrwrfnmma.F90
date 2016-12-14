@@ -29,6 +29,7 @@ subroutine wrwrfnmma_binary(mype)
 !                           before every call to mpi_file_write_at (to handle cases of big-endian
 !                           file/little-endian machine and vice-versa)
 !   2013-10-19  todling - metguess now holds background
+!   2016-06-23  lippi   - add read of vertical velocity (w).
 !
 !   input argument list:
 !     mype     - pe number

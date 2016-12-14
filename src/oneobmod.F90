@@ -15,13 +15,15 @@ module oneobmod
 !   2012-07-14  todling - only do it once (in observer mode)
 !   2014-05-29  thomas - add lsingleradob parameter for single radiance
 !                        assimilation (originally of mccarty)
-!   2016-07-28  lippi - add namelist parameters (anel_rw,anaz_rw,range_rw,
-!                       sstnlat,sstnlon) for single radial wind assimilation.
-!                       added oneobmakebufr and invtllv subroutines to make 
-!                       the radial wind superobs.
-!   2016-08-12  lippi - changed namelist sstnlat/lon to just use sstn by using
-!                       a look up table of radars. add namelist parameters
-!                       for a "single radar" (all obs from one radar test).
+!   2016-08-12  lippi - added nml parameters for single radial wind
+!                       experiment (anaz_rw,anel_rw,range_rw,sstn,lsingleradar,
+!                       singleradar,learthrel_rw). Added use of radar look-up
+!                       table. Added oneobmakebufr and invtllv subroutines to make
+!                       the radial wind superobs. Added nml options for a
+!                       "single radar" observation test (all obs from one
+!                       radar). 
+!   2016-12-14  lippi - added nml option learthrel_rw to not rotate the winds
+!                       from lat lon to xy.
 !
 ! subroutines included:
 !   sub init_oneobmod

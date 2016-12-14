@@ -106,6 +106,7 @@ module obsmod
 !   2015-03-31  wgu      - add isis(sensor/instrument/satellite id) in rad_ob_type to handle
 !                          instruments id in intrad inter-channel correlation
 !                          implementation.
+!   2016-06-23  lippi    - add costilt and sintilt for radial wind calculations. 
 !   2016-07-19  wgu      - add isfctype - mask for surface type - to radiance obtype
 !   2016-07-19  kbathmann - add rsqrtinv and use_corr_obs to rad_ob_type
 ! 

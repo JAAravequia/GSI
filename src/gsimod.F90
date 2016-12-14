@@ -316,17 +316,19 @@
 !  03-02-2016 s.liu/carley - remove use_reflectivity and use i_gsdcldanal_type
 !  03-10-2016 ejones    add control for gmi noise reduction
 !  03-25-2016 ejones    add control for amsr2 noise reduction
-!  07-28-1016 lippi     added namelist parameters for single radial wind
-!                       experiment
-!                       (anel_rw, anaz_rw,range_rw,sstnlat,sstnlon)
-!  08-12-2016 lippi     replaced sstnlat and sstnlon with sstn and radar station
-!                       look up table.
+!  08-12-2016 lippi     added namelist parameters for single radial wind
+!                       experiment (anaz_rw,anel_rw,range_rw,sstn,lsingleradar,
+!                       singleradar,learthrel_rw). added a radar station look-up
+!                       table.
 !  08-12-2016 Mahajan   NST stuff belongs in NST module, Adding a NST namelist
 !                       option
-!  08-24-2016 lippi     added lnobalance to zero out all balance correlation
+!  08-24-2016 lippi     added nml option lnobalance to zero out all balance correlation
 !                       matricies for univariate analysis.
 !  08-28-2016 li - tic591: add use_readin_anl_sfcmask for consistent sfcmask
 !                          between analysis grids and others
+!  12-14-2016 lippi     added nml variable learthrel_rw for single radial
+!                       wind observation test, and nml option for VAD QC
+!                       vadwnd_l2rw_qc of level 2 winds.
 !
 !EOP
 !-------------------------------------------------------------------------

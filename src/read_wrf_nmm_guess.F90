@@ -1643,6 +1643,7 @@ subroutine read_nems_nmmb_guess(mype)
 !   2016_03_02  s.liu/carley   - remove use_reflectivity and use i_gsdcldanal_type
 !   2016_06_21  s.liu   - delete unused variable qhtmp
 !   2016_06_30  s.liu   - delete unused variable gridtype in read fraction
+!   2016-08-12  lippi   - add include_w. If true, reads in guess vertical velocity (w) profile. 
 !
 !   input argument list:
 !     mype     - pe number

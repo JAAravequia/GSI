@@ -41,6 +41,7 @@ subroutine control2state(xhat,sval,bval)
 !   2014-06-16  carley/zhu - add tcamt and lcbas
 !   2014-12-03  derber   - introduce parallel regions for optimization
 !   2015-07-10  pondeca  - add cldch
+!   2016-08-12  lippi    - add vertical velocity (w) to mycvars and mysvars.
 !
 !   input argument list:
 !     xhat - Control variable

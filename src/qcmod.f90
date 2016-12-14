@@ -55,6 +55,7 @@ module qcmod
 !   2015-09-30  ejones  - add sun glint check in qc_amsr2 
 !   2016-10-20  acollard- Ensure AMSU-A channels 1-6,15 are not assimilated if
 !                         any of these are missing.
+!   2016-12-14  lippi   - add nml option vadwnd_l2rw_qc.
 !
 ! subroutines included:
 !   sub init_qcvars

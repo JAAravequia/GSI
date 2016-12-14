@@ -25,6 +25,8 @@ module balmod
 !                          and strong_bk_ad.  add new parameter tlnmc_option.
 !   2012-02-08  parrish - replace nn_i_kind with nn, for nn any integer.
 !   2012-10-09  Gu - add fut2ps to project unbalanced temp to surface pressure in static B modeling
+!   2016-08-24  lippi - Add namelist variable lnobalance to run univariate 
+!                       analysis and init_balmod to initialize the variable. 
 !
 ! subroutines included:
 !   sub create_balance_vars      - create arrays for balance vars
