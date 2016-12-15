@@ -1404,7 +1404,7 @@ subroutine read_obs(ndata,mype)
                    call read_l2rw_novadqc(nread,npuse,nouse,infile,lunout,obstype,& 
                                             twind,sis,hgtl_full,nobs_sub1(1,i)) 
                    string='READ_L2RW_NOVADQC'
-                else if (dsis(i) == 'l3rw' .and. vadwnd_l2rw_qc) then
+                else if (dsis(i) == 'l3rw' .and. vadwnd_l2rw_qc .or. dsis(i) == 'rw') then
                    write(6,*)'READ_OBS: radial wind,read_radar,dfile=radarbufr,dsis=l3rw'
                    call read_radar(nread,npuse,nouse,infile,lunout,obstype,twind,sis,&
                                    hgtl_full,nobs_sub1(1,i))
