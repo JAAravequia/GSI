@@ -45,15 +45,17 @@ public :: mpi_getobs
 contains
 
 subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_tot, &
+                      nobs_convdiag, nobs_ozdiag, nobs_satdiag, nobs_totdiag, &
                       sprd_ob, ensmean_ob, ensmean_obbc, ob, &
                       oberr, oblon, oblat, obpress, &
                       obtime, oberrorig, obcode, obtype, &
-                      biaspreds, anal_ob, indxsat, nanals)
+                      biaspreds, diagused,  anal_ob, indxsat, nanals)
     character*500, intent(in) :: obspath
     character*10, intent(in) :: datestring
     character(len=10) :: id,id2
     real(r_single), allocatable, dimension(:) :: ensmean_ob,ob,oberr,oblon,oblat,obpress,obtime,oberrorig,ensmean_obbc,sprd_ob
     integer(i_kind), allocatable, dimension(:) :: obcode,indxsat
+    integer(i_kind), allocatable, dimension(:) :: diagused
     real(r_single), allocatable, dimension(:,:) :: biaspreds
     real(r_single), allocatable, dimension(:,:) :: anal_ob
     !real(r_single), allocatable, dimension(:,:) :: anal_obtmp
@@ -63,19 +65,25 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     character(len=20), allocatable,  dimension(:) ::  obtype
     integer(i_kind) nob, ierr, iozproc, isatproc, &
             nobs_conv, nobs_oz, nobs_sat, nobs_tot, nanal
+    integer(i_kind) :: nobs_convdiag, nobs_ozdiag, nobs_satdiag, nobs_totdiag
     integer(i_kind), intent(in) :: nanals
     iozproc=max(0,min(1,numproc-1))
     isatproc=max(0,min(2,numproc-2))
 ! get total number of conventional and sat obs for ensmean.
     id = 'ensmean'
-    if(nproc == 0)call get_num_convobs(obspath,datestring,nobs_conv,id)
-    if(nproc == iozproc)call get_num_ozobs(obspath,datestring,nobs_oz,id)
-    if(nproc == isatproc)call get_num_satobs(obspath,datestring,nobs_sat,id)
+    if(nproc == 0)call get_num_convobs(obspath,datestring,nobs_conv,nobs_convdiag,id)
+    if(nproc == iozproc)call get_num_ozobs(obspath,datestring,nobs_oz,nobs_ozdiag, id)
+    if(nproc == isatproc)call get_num_satobs(obspath,datestring,nobs_sat,nobs_satdiag, id)
     call mpi_bcast(nobs_conv,1,mpi_integer,0,mpi_comm_world,ierr)
+    call mpi_bcast(nobs_convdiag,1,mpi_integer,0,mpi_comm_world,ierr)
     call mpi_bcast(nobs_oz,1,mpi_integer,iozproc,mpi_comm_world,ierr)
+    call mpi_bcast(nobs_ozdiag,1,mpi_integer,iozproc,mpi_comm_world,ierr)
     call mpi_bcast(nobs_sat,1,mpi_integer,isatproc,mpi_comm_world,ierr)
+    call mpi_bcast(nobs_satdiag,1,mpi_integer,isatproc,mpi_comm_world,ierr)
     if(nproc == 0)print *,'nobs_conv, nobs_oz, nobs_sat = ',nobs_conv,nobs_oz,nobs_sat
+    if(nproc == 0)print *,'total diag nobs_conv, nobs_oz, nobs_sat = ', nobs_convdiag, nobs_ozdiag, nobs_satdiag
     nobs_tot = nobs_conv + nobs_oz + nobs_sat
+    nobs_totdiag = nobs_convdiag + nobs_ozdiag + nobs_satdiag
 ! if nobs_tot != 0 (there were some obs to read)
     if (nobs_tot > 0) then
        if (nproc == 0) then
@@ -87,7 +95,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
        allocate(sprd_ob(nobs_tot),ob(nobs_tot),oberr(nobs_tot),oblon(nobs_tot),&
        oblat(nobs_tot),obpress(nobs_tot),obtime(nobs_tot),oberrorig(nobs_tot),obcode(nobs_tot),&
        obtype(nobs_tot),ensmean_ob(nobs_tot),ensmean_obbc(nobs_tot),&
-       biaspreds(npred+1, nobs_sat),indxsat(nobs_sat))
+       biaspreds(npred+1, nobs_sat),indxsat(nobs_sat), diagused(nobs_totdiag))
     else
 ! stop if no obs found (must be an error somewhere).
        print *,'no obs found!'
@@ -107,15 +115,15 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
 ! individual members read on 1st nanals tasks, ens mean read on all tasks.
     if (nobs_conv > 0) then
 ! first nobs_conv are conventional obs.
-      call get_convobs_data(obspath, datestring, nobs_conv,               &
+      call get_convobs_data(obspath, datestring, nobs_conv, nobs_convdiag, &
         ensmean_obbc(1:nobs_conv), h_xnobc(1:nobs_conv), ob(1:nobs_conv), &
         oberr(1:nobs_conv), oblon(1:nobs_conv), oblat(1:nobs_conv),       &
         obpress(1:nobs_conv), obtime(1:nobs_conv), obcode(1:nobs_conv),   &
-        oberrorig(1:nobs_conv), obtype(1:nobs_conv), id,id2)
+        oberrorig(1:nobs_conv), obtype(1:nobs_conv), diagused(1:nobs_convdiag), id,id2)
     end if
     if (nobs_oz > 0) then
 ! second nobs_oz are conventional obs.
-      call get_ozobs_data(obspath, datestring, nobs_oz,  &
+      call get_ozobs_data(obspath, datestring, nobs_oz, nobs_ozdiag,  &
         ensmean_obbc(nobs_conv+1:nobs_conv+nobs_oz),     &
         h_xnobc(nobs_conv+1:nobs_conv+nobs_oz),          &
         ob(nobs_conv+1:nobs_conv+nobs_oz),               &
@@ -126,13 +134,14 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
         obtime(nobs_conv+1:nobs_conv+nobs_oz),           &
         obcode(nobs_conv+1:nobs_conv+nobs_oz),           &
         oberrorig(nobs_conv+1:nobs_conv+nobs_oz),        &
-        obtype(nobs_conv+1:nobs_conv+nobs_oz), id,id2)
+        obtype(nobs_conv+1:nobs_conv+nobs_oz),           &
+        diagused(nobs_convdiag+1:nobs_convdiag+nobs_ozdiag),id,id2)
     end if
     if (nobs_sat > 0) then
       biaspreds = 0. ! initialize bias predictor array to zero.
 ! last nobs_sat are satellite radiance obs.
       !print *,nproc,id,id2,'read sat obs'
-      call get_satobs_data(obspath, datestring, nobs_sat, &
+      call get_satobs_data(obspath, datestring, nobs_sat, nobs_satdiag, &
         ensmean_obbc(nobs_conv+nobs_oz+1:nobs_tot),       &
         h_xnobc(nobs_conv+nobs_oz+1:nobs_tot),            &
         ob(nobs_conv+nobs_oz+1:nobs_tot),                 &
@@ -143,7 +152,8 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
         obtime(nobs_conv+nobs_oz+1:nobs_tot),             &
         obcode(nobs_conv+nobs_oz+1:nobs_tot),             &
         oberrorig(nobs_conv+nobs_oz+1:nobs_tot),          &
-        obtype(nobs_conv+nobs_oz+1:nobs_tot), biaspreds,indxsat,id,id2)
+        obtype(nobs_conv+nobs_oz+1:nobs_tot), biaspreds,indxsat, &
+        diagused(nobs_convdiag+nobs_ozdiag+1:nobs_totdiag),id,id2)
     end if ! read obs.
 
     call mpi_barrier(mpi_comm_world,ierr)  ! synch tasks.

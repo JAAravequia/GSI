@@ -27,11 +27,11 @@ use params, only: npefiles
 implicit none
 
 private
-public :: get_num_convobs, get_convobs_data
+public :: get_num_convobs, get_convobs_data, write_convobs_data
 
 contains
 
-subroutine get_num_convobs(obspath,datestring,num_obs_tot,id)
+subroutine get_num_convobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     character (len=500), intent(in) :: obspath
     character (len=10), intent(in) :: datestring
     character(len=500) obsfile
@@ -39,7 +39,7 @@ subroutine get_num_convobs(obspath,datestring,num_obs_tot,id)
     character(len=4) pe_name
     character(len=3) :: obtype
     integer(i_kind) iunit, nchar, nreal, ii, mype,ios, idate, i, ipe
-    integer(i_kind), intent(out) :: num_obs_tot
+    integer(i_kind),intent(out) :: num_obs_tot, num_obs_totdiag
     integer(i_kind),dimension(2):: nn,nobst, nobsps, nobsq, nobsuv, nobsgps, &
          nobstcp,nobstcx,nobstcy,nobstcz,nobssst, nobsspd, nobsdw, nobsrw, nobspw, nobssrw
     character(8),allocatable,dimension(:):: cdiagbuf
@@ -54,6 +54,7 @@ subroutine get_num_convobs(obspath,datestring,num_obs_tot,id)
     errorlimit2_obs = 1._r_kind/sqrt(1.e-6_r_kind)
     errorlimit2_bnd = 1.e3_r_kind*errorlimit2_obs
     num_obs_tot = 0
+    num_obs_totdiag = 0
     nobst = 0
     nobsq = 0
     nobsps = 0
@@ -81,13 +82,11 @@ subroutine get_num_convobs(obspath,datestring,num_obs_tot,id)
        endif
        inquire(file=obsfile,exist=fexist)
        if (.not. fexist) cycle peloop
-       !print *,'obsfile=',obsfile
        open(iunit,form="unformatted",file=obsfile,iostat=ios)
        if (init_pass) then
           read(iunit) idate
           init_pass = .false.
        endif
-       !print *,idate
 10     continue
        read(iunit,err=20,end=30) obtype,nchar,nreal,ii,mype
        errorlimit2=errorlimit2_obs
@@ -175,13 +174,14 @@ subroutine get_num_convobs(obspath,datestring,num_obs_tot,id)
        else
            print *,'unknown obtype ',trim(obtype)
        end if
+       num_obs_totdiag = num_obs_totdiag + ii
        deallocate(cdiagbuf,rdiagbuf)
        go to 10
 20     continue
        print *,'error reading diag_conv file',obtype
 30     continue
        if (ipe .eq. npefiles) then
-          print *,num_obs_tot,' obs in diag_conv_ges file'
+          print *,num_obs_tot,' obs in diag_conv_ges file, ', num_obs_totdiag, ' total obs in diag_conv_ges file'
           write(6,*)'columns below obtype,nread, nkeep'
           write(6,100) 't',nobst(1),nobst(2)
           write(6,100) 'q',nobsq(1),nobsq(2)
@@ -206,8 +206,8 @@ subroutine get_num_convobs(obspath,datestring,num_obs_tot,id)
     enddo peloop ! ipe loop
 end subroutine get_num_convobs
 
-subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc, x_obs, x_err, &
-     x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, id, id2)
+subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x_ensmean, h_xnobc, x_obs, x_err, &
+     x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, id2)
 
   character*500, intent(in) :: obspath
   character*500 obsfile,obsfile2
@@ -218,10 +218,11 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
   real(r_single), dimension(nobs_max) :: h_x_ensmean,h_xnobc,x_obs,x_err,x_lon,&
                                x_lat,x_press,x_time,x_errorig
   integer(i_kind), dimension(nobs_max) :: x_code
+  integer(i_kind), dimension(nobs_maxdiag) :: x_used
   character(len=20), dimension(nobs_max) ::  x_type
 
   character(len=3) :: obtype,obtype2
-  integer(i_kind) iunit, iunit2,nobs_max, nob, n, nchar,nchar2, nreal, ii, ipe, ios, idate
+  integer(i_kind) iunit, iunit2,nobs_max, nobs_maxdiag, nob, nobdiag, n, nchar,nchar2, nreal, ii, ipe, ios, idate
   integer(i_kind) nreal2,ii2,mype2,i,iqc,mype
   character(8),allocatable,dimension(:):: cdiagbuf,cdiagbuf2
   real(r_single),allocatable,dimension(:,:)::rdiagbuf,rdiagbuf2
@@ -239,6 +240,9 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
   iqc=1
 
   nob  = 0
+  nobdiag = 0
+  x_used = 0
+
   init_pass = .true.
   init_pass2 = .true.
 
@@ -259,15 +263,12 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
   inquire(file=obsfile,exist=fexist)
   if (.not. fexist) cycle peloop
 
-  !print *,obsfile
-
   open(iunit,form="unformatted",file=obsfile,iostat=ios)
   rewind(iunit)
   if (init_pass) then
       read(iunit) idate
       init_pass = .false.
   endif
-  !print *,idate
   if(twofiles) then
      if (npefiles .eq. 0) then
          ! read diag file (concatenated pe* files)
@@ -301,7 +302,6 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
     end if
   end if
       
-  !print *,obtype,nchar,nreal,ii,mype
     if (obtype == '  t') then
        allocate(cdiagbuf(ii),rdiagbuf(nreal,ii),rdiagbuf2(nreal,ii))
        read(iunit) cdiagbuf(1:ii),rdiagbuf(:,1:ii)
@@ -311,12 +311,14 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
        end if
 
        do n=1,ii
+          nobdiag = nobdiag + 1
           if(rdiagbuf(12,n) < zero .or. rdiagbuf(16,n) < errorlimit .or. &
              rdiagbuf(16,n) > errorlimit2)cycle
           if(abs(rdiagbuf(17,n)) > 1.e9_r_kind  .or. &
                rdiagbuf(6,n) < 0.001_r_kind .or. &
                rdiagbuf(6,n) > 1200._r_kind) cycle
           nob = nob + 1
+          x_used(nobdiag) = 1
           if(twofiles)then
             if(rdiagbuf(1,n) /= rdiagbuf2(1,n) .or. abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5 .or. &
                abs(rdiagbuf(4,n)-rdiagbuf2(4,n)) .gt. 1.e-5 .or. abs(rdiagbuf(8,n)-rdiagbuf2(8,n)) .gt. 1.e-5)then
@@ -375,6 +377,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
          read(iunit2)cdiagbuf2(1:ii),rdiagbuf2(:,1:ii)
        end if
        do n=1,ii
+          nobdiag = nobdiag + 1
           if(rdiagbuf(12,n) < zero .or. rdiagbuf(16,n) < errorlimit .or. &
              rdiagbuf(16,n) > errorlimit2)cycle
           if(abs(rdiagbuf(17,n)) > 1.e9_r_kind .or. &
@@ -382,6 +385,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
              rdiagbuf(6,n) > 1200._r_kind .or. &
              abs(rdiagbuf(20,n)) > 1.e9_r_kind) cycle
           nob = nob + 1
+          x_used(nobdiag) = 1
           if(twofiles)then
             if(rdiagbuf(1,n) /= rdiagbuf2(1,n) .or. abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5 .or. &
                abs(rdiagbuf(4,n)-rdiagbuf2(4,n)) .gt. 1.e-5 .or. abs(rdiagbuf(8,n)-rdiagbuf2(8,n)) .gt. 1.e-5)then
@@ -462,11 +466,13 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
          read(iunit2)cdiagbuf2(1:ii),rdiagbuf2(:,1:ii)
        end if
        do n=1,ii
+          nobdiag = nobdiag + 1
           if(rdiagbuf(12,n) < zero .or. rdiagbuf(16,n) < errorlimit .or. &
              rdiagbuf(16,n) > errorlimit2)cycle
           if(rdiagbuf(17,n) < 0.001_r_kind .or. &
              rdiagbuf(17,n) > 1200._r_kind) cycle
           nob = nob + 1
+          x_used(nobdiag) = 1
           if(twofiles)then
             if(rdiagbuf(1,n) /= rdiagbuf2(1,n) .or. abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5 .or. &
                abs(rdiagbuf(4,n)-rdiagbuf2(4,n)) .gt. 1.e-5 .or. abs(rdiagbuf(8,n)-rdiagbuf2(8,n)) .gt. 1.e-5)then
@@ -531,11 +537,13 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
          read(iunit2)cdiagbuf2(1:ii),rdiagbuf2(:,1:ii)
        end if
        do n=1,ii
+          nobdiag = nobdiag + 1
           if(rdiagbuf(12,n) < zero .or. rdiagbuf(16,n) < errorlimit .or. &
              rdiagbuf(16,n) > errorlimit2)cycle
           if(rdiagbuf(17,n) < 0.001_r_kind .or. &
              rdiagbuf(17,n) > 1200._r_kind) cycle
           nob = nob + 1
+          x_used(nobdiag) = 1
           if(twofiles)then
             if(rdiagbuf(1,n) /= rdiagbuf2(1,n) .or. abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5 .or. &
                abs(rdiagbuf(17,n)-rdiagbuf2(17,n)) .gt. 1.e-5 .or. &
@@ -583,12 +591,14 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
        end if
        !print*,'tcx',rdiagbuf(1,1:7),nob,ii
        do n=1,ii
+          nobdiag = nobdiag + 1
           if(rdiagbuf(6,n) < errorlimit .or. &
              rdiagbuf(6,n) > errorlimit2)cycle
           if(abs(rdiagbuf(7,n)) > 1.e9_r_kind  .or. &
                rdiagbuf(4,n) < 0.001_r_kind .or. &
                rdiagbuf(4,n) > 1200._r_kind) cycle
           nob = nob + 1
+          x_used(nobdiag) = 1
           if(twofiles)then
             if(abs(rdiagbuf(2,n)-rdiagbuf2(2,n)) .gt. 1.e-5 .or. &
                abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5)then
@@ -622,12 +632,14 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
        end if
        !print*,'tcy',rdiagbuf(1,1:7),nob,ii
        do n=1,ii
+          nobdiag = nobdiag + 1
           if(rdiagbuf(6,n) < errorlimit .or. &
              rdiagbuf(6,n) > errorlimit2)cycle
           if(abs(rdiagbuf(7,n)) > 1.e9_r_kind  .or. &
                rdiagbuf(4,n) < 0.001_r_kind .or. &
                rdiagbuf(4,n) > 1200._r_kind) cycle
           nob = nob + 1
+          x_used(nobdiag) = 1
           if(twofiles)then
             if(abs(rdiagbuf(2,n)-rdiagbuf2(2,n)) .gt. 1.e-5 .or. &
                abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5)then
@@ -661,12 +673,14 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
        end if
        !print*,'tcz',rdiagbuf(1,1:7),nob,ii
        do n=1,ii
+          nobdiag = nobdiag + 1
           if(rdiagbuf(6,n) < errorlimit .or. &
              rdiagbuf(6,n) > errorlimit2)cycle
           if(abs(rdiagbuf(7,n)) > 1.e9_r_kind  .or. &
                rdiagbuf(4,n) < 0.001_r_kind .or. &
                rdiagbuf(4,n) > 1200._r_kind) cycle
           nob = nob + 1
+          x_used(nobdiag) = 1
           if(twofiles)then
             if(abs(rdiagbuf(2,n)-rdiagbuf2(2,n)) .gt. 1.e-5 .or. &
                abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5)then
@@ -698,6 +712,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
          read(iunit2)cdiagbuf2(1:ii),rdiagbuf2(:,1:ii)
        end if
        do n=1,ii
+          nobdiag = nobdiag + 1
           error=rdiagbuf(16,n)*rdiagbuf(20,n)
           if(rdiagbuf(12,n) < zero .or. error < errorlimit .or. &
              error > errorlimit2)cycle
@@ -705,6 +720,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
                rdiagbuf(6,n) < 0.001_r_kind .or. &
                rdiagbuf(6,n) > 1200._r_kind) cycle
           nob = nob + 1
+          x_used(nobdiag) = 1
           if(twofiles)then
             if(rdiagbuf(1,n) /= rdiagbuf2(1,n) .or. abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5 .or. &
                abs(rdiagbuf(4,n)-rdiagbuf2(4,n)) .gt. 1.e-5 .or. abs(rdiagbuf(8,n)-rdiagbuf2(8,n)) .gt. 1.e-5)then
@@ -768,12 +784,14 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
          read(iunit2)cdiagbuf2(1:ii),rdiagbuf2(:,1:ii)
        end if
        do n=1,ii
+          nobdiag = nobdiag + 1
           if(rdiagbuf(12,n) < zero .or. rdiagbuf(16,n) < errorlimit .or. &
              rdiagbuf(16,n) > errorlimit2)cycle
           if(abs(rdiagbuf(17,n)) > 1.e9_r_kind  .or. &
                rdiagbuf(6,n) < 0.001_r_kind .or. &
                rdiagbuf(6,n) > 1200._r_kind) cycle
           nob = nob + 1
+          x_used(nobdiag) = 1
           if(twofiles)then
             if(rdiagbuf(1,n) /= rdiagbuf2(1,n) .or. abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5 .or. &
                abs(rdiagbuf(4,n)-rdiagbuf2(4,n)) .gt. 1.e-5 .or. abs(rdiagbuf(8,n)-rdiagbuf2(8,n)) .gt. 1.e-5)then
@@ -833,7 +851,8 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
          allocate(cdiagbuf2(ii))
          read(iunit2)cdiagbuf2(1:ii),rdiagbuf2(:,1:ii)
        end if
-    !   do n=1,ii
+       do n=1,ii
+          nobdiag = nobdiag + 1
     !      if(rdiagbuf(12,n) < zero .or. rdiagbuf(16,n) < errorlimit .or. &
     !         rdiagbuf(16,n) > errorlimit2)cycle
     !      if(abs(rdiagbuf(17,n)) > 1.e9_r_kind  .or. &
@@ -865,8 +884,8 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
     !      x_obs(nob) = rdiagbuf(17,n)
     !      h_x_ensmean(nob) = rdiagbuf(17,n)-rdiagbuf2(18,n)
     !      x_type(nob) = obtype
-    !   enddo
-        deallocate(cdiagbuf,rdiagbuf,rdiagbuf2)
+       enddo
+       deallocate(cdiagbuf,rdiagbuf,rdiagbuf2)
        if(twofiles)deallocate(cdiagbuf2)
 !        cdiagbuf(ii)    = station_id         ! station id
 !        rdiagbuf(1,ii)  = ictype(ikx)        ! observation type
@@ -897,12 +916,14 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
          read(iunit2)cdiagbuf2(1:ii),rdiagbuf2(:,1:ii)
        end if
        do n=1,ii
+          nobdiag = nobdiag + 1
           if(rdiagbuf(12,n) < zero .or. rdiagbuf(16,n) < errorlimit .or. &
              rdiagbuf(16,n) > errorlimit2)cycle
           if(abs(rdiagbuf(17,n)) > 1.e9_r_kind  .or. &
                rdiagbuf(6,n) < 0.001_r_kind .or. &
                rdiagbuf(6,n) > 1200._r_kind) cycle
           nob = nob + 1
+          x_used(nobdiag) = 1
           if(twofiles)then
            if(rdiagbuf(1,n) /= rdiagbuf2(1,n) .or. abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5 .or. &
               abs(rdiagbuf(4,n)-rdiagbuf2(4,n)) .gt. 1.e-5 .or. abs(rdiagbuf(8,n)-rdiagbuf2(8,n)) .gt. 1.e-5)then
@@ -967,12 +988,14 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
          read(iunit2)cdiagbuf2(1:ii),rdiagbuf2(:,1:ii)
        end if
        do n=1,ii
+          nobdiag = nobdiag + 1
           if(rdiagbuf(12,n) < zero .or. rdiagbuf(16,n) < errorlimit .or. &
              rdiagbuf(16,n) > errorlimit2)cycle
           if(abs(rdiagbuf(17,n)) > 1.e9_r_kind  .or. &
                rdiagbuf(6,n) < 0.001_r_kind .or. &
                rdiagbuf(6,n) > 1200._r_kind) cycle
           nob = nob + 1
+          x_used(nobdiag) = 1
           if(twofiles)then
            if(rdiagbuf(1,n) /= rdiagbuf2(1,n) .or. abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5 .or. &
               abs(rdiagbuf(4,n)-rdiagbuf2(4,n)) .gt. 1.e-5 .or. abs(rdiagbuf(8,n)-rdiagbuf2(8,n)) .gt. 1.e-5)then
@@ -1057,12 +1080,14 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
          read(iunit2)cdiagbuf2(1:ii),rdiagbuf2(:,1:ii)
        end if
        do n=1,ii
+          nobdiag = nobdiag + 1
           if(rdiagbuf(12,n) < zero .or. rdiagbuf(16,n) < errorlimit .or. &
              rdiagbuf(16,n) > errorlimit2)cycle
           if(abs(rdiagbuf(17,n)) > 1.e9_r_kind  .or. &
                rdiagbuf(6,n) < 0.001_r_kind .or. &
                rdiagbuf(6,n) > 1200._r_kind) cycle
           nob = nob + 1
+          x_used(nobdiag) = 1
           if(twofiles)then
             if(rdiagbuf(1,n) /= rdiagbuf2(1,n) .or. abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5 .or. &
                abs(rdiagbuf(4,n)-rdiagbuf2(4,n)) .gt. 1.e-5 .or. abs(rdiagbuf(8,n)-rdiagbuf2(8,n)) .gt. 1.e-5)then
@@ -1168,12 +1193,14 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
          read(iunit2)cdiagbuf2(1:ii),rdiagbuf2(:,1:ii)
        end if
        do n=1,ii
+          nobdiag = nobdiag + 1
           if(rdiagbuf(12,n) < zero .or. rdiagbuf(16,n) < errorlimit .or. &
              rdiagbuf(16,n) > errorlimit2)cycle
           if(abs(rdiagbuf(17,n)) > 1.e9_r_kind  .or. &
                rdiagbuf(6,n) < 0.001_r_kind .or. &
                rdiagbuf(6,n) > 1200._r_kind) cycle
           nob = nob + 1
+          x_used(nobdiag) = 1
           if(twofiles)then
             if(rdiagbuf(1,n) /= rdiagbuf2(1,n) .or. abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5 .or. &
                abs(rdiagbuf(4,n)-rdiagbuf2(4,n)) .gt. 1.e-5 .or. abs(rdiagbuf(8,n)-rdiagbuf2(8,n)) .gt. 1.e-5)then
@@ -1242,12 +1269,14 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
          read(iunit2)cdiagbuf2(1:ii),rdiagbuf2(:,1:ii)
        end if
        do n=1,ii
+          nobdiag = nobdiag + 1
           if(rdiagbuf(12,n) < zero .or. rdiagbuf(16,n) < errorlimit .or. &
              rdiagbuf(16,n) > errorlimit2)cycle
           if(abs(rdiagbuf(17,n)) > 1.e9_r_kind  .or. &
                rdiagbuf(6,n) < 0.001_r_kind .or. &
                rdiagbuf(6,n) > 1200._r_kind) cycle
           nob = nob + 1
+          x_used(nobdiag) = 1
           if(twofiles)then
             if(rdiagbuf(1,n) /= rdiagbuf2(1,n) .or. abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5 .or. &
                abs(rdiagbuf(4,n)-rdiagbuf2(4,n)) .gt. 1.e-5 .or. abs(rdiagbuf(8,n)-rdiagbuf2(8,n)) .gt. 1.e-5)then
@@ -1315,7 +1344,165 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
       print *,'number of obs not what expected in get_convobs_data',nob,nobs_max
       call stop2(94)
   end if
+  if (nobdiag /= nobs_maxdiag) then
+      print *,'number of total obs in diag not what expected in get_convobs_data',nobdiag, nobs_maxdiag
+      call stop2(94)
+  endif
+
 
  end subroutine get_convobs_data
+
+! writing spread diagnostics
+subroutine write_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
+
+  character*500, intent(in) :: obspath
+  character*500 obsfile,obsfile2
+  character*10, intent(in) :: datestring
+  character(len=10), intent(in) :: id, id2, gesid2
+  character(len=4) pe_name
+
+  real(r_single), dimension(nobs_max)  :: x_fit, x_sprd
+  integer(i_kind), dimension(nobs_maxdiag) :: x_used
+
+  character(len=3) :: obtype
+  integer(i_kind) iunit, iunit2,nobs_max, nobs_maxdiag, nob, nobdiag, n, nchar, nreal, ii, ipe, ios, idate, mype
+  character(8),allocatable,dimension(:):: cdiagbuf
+  real(r_single),allocatable,dimension(:,:)::rdiagbuf
+  logical fexist, init_pass
+
+  iunit = 7
+  iunit2 = 17
+
+  nob  = 0
+  nobdiag = 0
+  init_pass = .true.
+
+  obsfile2 = trim(adjustl(obspath))//"diag_conv_"//trim(adjustl(gesid2))//"."//datestring//'_'//trim(adjustl(id2))
+
+  peloop: do ipe=0,npefiles
+
+  write(pe_name,'(i4.4)') ipe
+  if (npefiles .eq. 0) then
+     ! diag file (concatenated pe* files)
+     obsfile = trim(adjustl(obspath))//"diag_conv_ges."//datestring//'_'//trim(adjustl(id))
+     inquire(file=obsfile,exist=fexist)
+     if (.not. fexist .or. datestring .eq. '0000000000') then
+        obsfile = trim(adjustl(obspath))//"diag_conv_ges."//trim(adjustl(id))
+     endif
+  else ! read raw, unconcatenated pe* files.
+     obsfile = trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.conv_01'
+  endif
+
+  inquire(file=obsfile,exist=fexist)
+  if (.not. fexist) cycle peloop
+
+  open(iunit,form="unformatted",file=obsfile,iostat=ios)
+  rewind(iunit)
+  if (init_pass) then
+     open(iunit2,form="unformatted",file=obsfile2,iostat=ios)
+     read(iunit) idate
+     write(iunit2) idate
+     init_pass = .false.
+  endif
+10 continue
+  read(iunit,err=20,end=30) obtype,nchar,nreal,ii,mype
+  write(iunit2,err=20) obtype,nchar,nreal,ii,mype
+
+  allocate(cdiagbuf(ii),rdiagbuf(nreal,ii))
+  read(iunit,err=20) cdiagbuf(1:ii),rdiagbuf(1:nreal,1:ii)
+
+  if ((obtype == '  t') .or. (obtype == ' ps') .or. (obtype == 'tcp') .or. &
+      (obtype == '  q') .or. (obtype == 'spd') .or. (obtype == ' dw') .or. &
+      (obtype == ' pw')) then
+
+     if (obtype == 'tcp') then   !dealing with tcp being saved with x_type = 'ps'
+       obtype = ' ps'
+     endif
+
+     ! defaults for not used in EnKF
+     rdiagbuf(18,:) = -1.e10
+     rdiagbuf(19,:) = 1.e10
+     rdiagbuf(12,:) = -1        ! not used in EnKF
+     ! only process if this record was used in EnKF
+     do n=1,ii
+        nobdiag = nobdiag + 1
+        ! skip if not used in EnKF
+        if (x_used(nobdiag) == 1) then
+           ! update if it is used in EnKF
+           nob = nob + 1
+           rdiagbuf(12,n) = 1
+           rdiagbuf(18,n) = x_fit(nob)
+           rdiagbuf(19,n) = x_sprd(nob)
+        endif
+     enddo
+  ! don't know what to do with gps
+  else if (obtype == 'gps') then
+     rdiagbuf(18,:) = -1.e10
+     do n=1,ii
+        nobdiag = nobdiag + 1
+        ! skip if not used in EnKF
+        if (x_used(nobdiag) == 1) then
+           nob = nob + 1
+        endif
+     enddo
+  ! special processing for u and v
+  else if (obtype == ' uv') then
+     ! defaults for not used in EnKF
+     rdiagbuf(18,:) = -1.e10
+     rdiagbuf(19,:) = 1.e10
+     rdiagbuf(21,:) = -1.e10
+     rdiagbuf(22,:) = 1.e10
+     rdiagbuf(12,:) = -1
+     do n=1,ii
+        nobdiag = nobdiag + 1
+        if (x_used(nobdiag) == 1) then
+           nob = nob + 1
+           rdiagbuf(12,n) = 1
+           ! u should be saved first
+           rdiagbuf(18,n) = x_fit(nob)
+           rdiagbuf(19,n) = x_sprd(nob)
+           nob = nob + 1
+           rdiagbuf(21,n) = x_fit(nob)
+           rdiagbuf(22,n) = x_sprd(nob)
+        endif
+     enddo
+  ! tcx, tcy, tcz have guess in different field from the rest
+  else if ((obtype == 'tcx') .or. (obtype == 'tcy') .or. (obtype == 'tcz')) then
+     if (obtype == 'tcy') then   !dealing with tcy being saved with x_type = 'tcx'
+       obtype = 'tcx'
+     endif
+     rdiagbuf(5,:) = 1.e10
+     do n=1,ii
+        nobdiag = nobdiag + 1
+        if (x_used(nobdiag) == 1) then
+           nob = nob + 1
+           rdiagbuf(5,n) = x_fit(nob)
+        endif
+     enddo
+  else
+     nobdiag = nobdiag + ii
+  endif
+  ! write the updated rdiagbuf
+  write(iunit2) cdiagbuf(1:ii),rdiagbuf(1:nreal,1:ii)
+  deallocate(cdiagbuf,rdiagbuf)
+
+    go to 10
+20  continue
+    print *,'error reading diag_conv file'
+30  continue
+    close(iunit)
+  enddo peloop ! ipe loop
+  close(iunit2)
+
+  if (nob .ne. nobs_max) then
+      print *,'number of obs not what expected in get_convobs_data',nob,nobs_max
+      call stop2(94)
+  end if
+  if (nobdiag /= nobs_maxdiag) then
+      print *,'number of total obs in diag not what expected in get_convobs_data',nobdiag, nobs_maxdiag
+      call stop2(94)
+  endif
+
+ end subroutine write_convobs_data
 
 end module readconvobs

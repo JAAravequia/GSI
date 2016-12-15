@@ -71,12 +71,12 @@ program enkf_main
  use kinds, only: r_kind,r_double,i_kind
  ! reads namelist parameters.
  use params, only : read_namelist,letkf_flag,readin_localization,lupd_satbiasc,&
-                    numiter, nanals, lupd_obspace_serial
+                    numiter, nanals, lupd_obspace_serial, write_spread_diag
  ! mpi functions and variables.
  use mpisetup, only:  mpi_initialize, mpi_initialize_io, mpi_cleanup, nproc, &
-                       mpi_wtime
+                       mpi_wtime, mpi_comm_world
  ! obs and ob priors, associated metadata.
- use enkf_obsmod, only : readobs, obfit_prior, obsprd_prior, &
+ use enkf_obsmod, only : readobs, write_obsstats, obfit_prior, obsprd_prior, &
                     nobs_sat, obfit_post, obsprd_post, &
                     obsmod_cleanup, biasprednorminv
  ! innovation statistics.
@@ -101,7 +101,7 @@ program enkf_main
  use omp_lib, only: omp_get_max_threads
 
  implicit none
- integer(i_kind) j,n,nth
+ integer(i_kind) j,n,nth,ierr
  real(r_double) t1,t2
 
  ! initialize MPI.
@@ -176,6 +176,14 @@ program enkf_main
  call inflate_ens()
  t2 = mpi_wtime()
  if (nproc == 0) print *,'time in inflate_ens =',t2-t1,'on proc',nproc
+
+ if (write_spread_diag) then
+    t1 = mpi_wtime()
+    call write_obsstats()
+    call mpi_barrier(mpi_comm_world, ierr)
+    t2 = mpi_wtime()
+    if (nproc == 0) print *,'time in write_obsstats =',t2-t1,'on proc',nproc
+  endif
 
  ! print innovation statistics for posterior on root task.
  if (nproc == 0 .and. numiter > 0) then

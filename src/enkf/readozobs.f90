@@ -28,11 +28,11 @@ use params, only: nsats_oz,sattypes_oz,npefiles
 implicit none
 
 private
-public :: get_num_ozobs, get_ozobs_data
+public :: get_num_ozobs, get_ozobs_data, write_ozobs_data
 
 contains
 
-subroutine get_num_ozobs(obspath,datestring,num_obs_tot,id)
+subroutine get_num_ozobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     character (len=500), intent(in) :: obspath
     character (len=10), intent(in) :: datestring
     character(len=500) obsfile
@@ -48,12 +48,13 @@ subroutine get_num_ozobs(obspath,datestring,num_obs_tot,id)
     real(r_kind) :: errorlimit,errorlimit2
     integer(i_kind),allocatable,dimension(:,:)::idiagbuf
     integer(i_kind) iunit,jiter,ii,ireal,iint,iextra,idate,ios,nsat,n,k,ipe
-    integer(i_kind), intent(out) :: num_obs_tot
+    integer(i_kind), intent(out) :: num_obs_tot, num_obs_totdiag
     integer(i_kind), allocatable, dimension(:) :: iouse
     integer(i_kind):: nread,nkeep
     logical :: fexist, init_pass
     iunit = 7
     num_obs_tot = 0
+    num_obs_totdiag = 0
 !   make consistent with screenobs
     errorlimit=1._r_kind/sqrt(1.e9_r_kind)
     errorlimit2=1._r_kind/sqrt(1.e-6_r_kind)
@@ -92,6 +93,7 @@ subroutine get_num_ozobs(obspath,datestring,num_obs_tot,id)
            read(iunit,err=20,end=30) idiagbuf,diagbuf,rdiagbuf
            do k=1,nlevs
              nread=nread+ii
+             num_obs_totdiag = num_obs_totdiag + ii
              if (iouse(k) < 0 .or. pob(k) <= 0.001 .or. &
                  pob(k) > 1200._r_kind) cycle
              do n=1,ii
@@ -115,11 +117,12 @@ subroutine get_num_ozobs(obspath,datestring,num_obs_tot,id)
         enddo peloop ! ipe
     enddo ! satellite
     print *,num_obs_tot,' ozone obs'
+    print *,num_obs_totdiag, ' total ozone obs in diag file'
     if(allocated(pob))deallocate(pob,grs,err,iouse)
 end subroutine get_num_ozobs
 
-subroutine get_ozobs_data(obspath, datestring, nobs_max, h_x, h_xnobc, x_obs, x_err, &
-           x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, id,id2)
+subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_xnobc, x_obs, x_err, &
+           x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id,id2)
 
   character*500, intent(in) :: obspath
   character*500 obsfile,obsfile2
@@ -131,12 +134,13 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, h_x, h_xnobc, x_obs, x_
   character(20) :: isis,isis2     ! sensor/instrument/satellite id
   character(10) :: obstype,obstype2  !  type of ozone obs
   character(10) :: dplat,dplat2    ! sat sensor
-  integer(i_kind) iunit,jiter,ii,ireal,iint,iextra,idate,nob,n,ios,nobs_max,nsat,k
+  integer(i_kind) iunit,jiter,ii,ireal,iint,iextra,idate,nob,nobdiag,n,ios,nobs_max,nobs_maxdiag,nsat,k
   integer(i_kind) iunit2,jiter2,nlevs2,idate2,iint2,ireal2,iextra2,ii2,ipe
 
   real(r_single), dimension(nobs_max) :: h_x,h_xnobc,x_obs,x_err,x_lon,&
                                x_lat,x_press,x_time,x_errorig
   integer(i_kind), dimension(nobs_max) :: x_code
+  integer(i_kind), dimension(nobs_maxdiag) :: x_used
   character(len=20), dimension(nobs_max) ::  x_type
 
   real(r_single),allocatable,dimension(:,:)::diagbuf,diagbuf2
@@ -156,6 +160,8 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, h_x, h_xnobc, x_obs, x_
   iunit = 7
   iunit2 = 17
   nob = 0
+  nobdiag = 0
+  x_used = 0
 
   do nsat=1,nsats_oz
       init_pass = .true.
@@ -255,7 +261,10 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, h_x, h_xnobc, x_obs, x_
          end if
          do k=1,nlevs
            if (iouse(k) < 0 .or. pob(k) <= 0.001 .or. &
-               pob(k) > 1200._r_kind) cycle
+               pob(k) > 1200._r_kind) then
+              nobdiag = nobdiag + ii
+              cycle
+           endif
            do n=1,ii
              if(twofiles)then
                if(diagbuf(1,n) /= diagbuf2(1,n) .or. diagbuf(2,n) /= diagbuf2(2,n))then
@@ -264,10 +273,12 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, h_x, h_xnobc, x_obs, x_
                  write(6,*) 'lon',diagbuf(2,n),diagbuf2(2,n)
                end if
              end if
+             nobdiag = nobdiag + 1
              if (rdiagbuf(3,k,n) <= errorlimit .or.  &
                  rdiagbuf(3,k,n) >= errorlimit2 .or.  &
                  abs(rdiagbuf(1,k,n)) > 1.e9_r_kind) cycle
              nob = nob + 1
+             x_used(nobdiag) = 1
              x_code(nob) = 700 + k ! made up code for ozone level k
              x_lat(nob) = diagbuf(1,n)
              x_lon(nob) = diagbuf(2,n)
@@ -297,10 +308,114 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, h_x, h_xnobc, x_obs, x_
       print *,'number of obs not what expected in get_ozobs_data',nob,nobs_max
       call stop2(93)
   end if
+  if (nobdiag /= nobs_maxdiag) then
+      print *,'number of total diag obs not what expected in get_ozobs_data',nobdiag,nobs_maxdiag
+      call stop2(93)
+  end if
+
 
   if(allocated(pob))deallocate(pob,grs,err,iouse)
   if(allocated(pob2))deallocate(pob2,grs2,err2,iouse2)
 
  end subroutine get_ozobs_data
+
+subroutine write_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
+
+  character*500, intent(in) :: obspath
+  character*500 obsfile,obsfile2
+  character*10, intent(in) :: datestring
+  character(len=8), intent(in) :: id,id2,gesid2
+  character(len=4) pe_name
+
+  integer(i_kind) :: nlevs  ! number of levels (layer amounts + total column) per obs
+  character(20) :: isis     ! sensor/instrument/satellite id
+  character(10) :: obstype  !  type of ozone obs
+  character(10) :: dplat    ! sat sensor
+  integer(i_kind) iunit,jiter,ii,ireal,iint,iextra,idate,nob,nobdiag,n,ios,nobs_max,nobs_maxdiag,nsat,k,ipe
+  integer(i_kind) iunit2
+  real(r_single), dimension(nobs_max) :: x_fit, x_sprd
+  integer(i_kind), dimension(nobs_maxdiag) :: x_used
+
+  real(r_single),allocatable,dimension(:,:)::diagbuf
+  real(r_single),allocatable,dimension(:,:,:)::rdiagbuf
+  integer(i_kind),allocatable,dimension(:,:)::idiagbuf
+  real(r_single), allocatable, dimension(:) :: err,grs,pob
+  integer(i_kind), allocatable, dimension(:) :: iouse
+  logical fexist, init_pass
+
+  iunit = 7
+  iunit2 = 17
+  nob = 0
+  nobdiag = 0
+
+  do nsat=1,nsats_oz
+      init_pass = .true.
+      obsfile2 = trim(adjustl(obspath))//"diag_"//trim(sattypes_oz(nsat))//"_"//trim(adjustl(gesid2))//"."//datestring//'_'//trim(adjustl(id2))
+      peloop: do ipe=0,npefiles
+         write(pe_name,'(i4.4)') ipe
+         if (npefiles .eq. 0) then
+            ! diag file (concatenated pe* files)
+            obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_oz(nsat))//"_ges."//datestring//'_'//trim(adjustl(id))
+            inquire(file=obsfile,exist=fexist)
+            if (.not. fexist .or. datestring .eq. '0000000000') then
+               obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_oz(nsat))//"_ges."//trim(adjustl(id))
+            endif
+         else ! raw, unconcatenated pe* files.
+            obsfile = trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_oz(nsat))//'_01'
+         endif
+         inquire(file=obsfile,exist=fexist)
+         if (.not. fexist) cycle peloop
+         open(iunit,form="unformatted",file=obsfile,iostat=ios)
+         rewind(iunit)
+         if (init_pass) then
+            open(iunit2,form="unformatted",file=obsfile2,iostat=ios)
+            read(iunit,err=20,end=30) isis,dplat,obstype,jiter,nlevs,idate,iint,ireal,iextra
+            write(iunit2,err=20) isis,dplat,obstype,jiter,nlevs,idate,iint,ireal,iextra
+            if(allocated(pob))deallocate(pob,grs,err,iouse)
+            allocate(pob(nlevs),grs(nlevs),err(nlevs),iouse(nlevs))
+            read(iunit,err=20,end=30) pob,grs,err,iouse
+            write(iunit2,err=20) pob,grs,err,iouse
+            init_pass = .false.
+         endif
+10       continue
+         read(iunit,err=20,end=30) ii
+         allocate(idiagbuf(iint,ii))
+         allocate(diagbuf(ireal,ii))
+         allocate(rdiagbuf(6,nlevs,ii))
+         read(iunit,err=20,end=30) idiagbuf,diagbuf,rdiagbuf
+         rdiagbuf(2,:,:) = 1.e10
+         do k=1,nlevs
+            do n=1,ii
+               nobdiag = nobdiag + 1
+               if (x_used(nobdiag) == 1) then
+                  nob = nob + 1
+                  rdiagbuf(2,k,n) = x_fit(nob)
+               endif
+            enddo 
+         enddo
+         write(iunit2) ii
+         write(iunit2) idiagbuf,diagbuf,rdiagbuf
+         deallocate(idiagbuf,diagbuf,rdiagbuf)
+         go to 10
+20       continue
+         print *,'error reading diag_oz file'
+30       continue
+         close(iunit)
+      enddo peloop ! ipe
+    close(iunit2)
+  enddo ! satellite
+
+  if (nob /= nobs_max) then
+      print *,'number of obs not what expected in get_ozobs_data',nob,nobs_max
+      call stop2(93)
+  end if
+  if (nobdiag /= nobs_maxdiag) then
+      print *,'number of total diag obs not what expected in get_ozobs_data',nobdiag,nobs_maxdiag
+      call stop2(93)
+  end if
+
+  if(allocated(pob))deallocate(pob,grs,err,iouse)
+
+end subroutine write_ozobs_data
 
 end module readozobs
