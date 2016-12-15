@@ -61,12 +61,12 @@ SINGLEOB="$SINGLEOB_update"
 
 if [ "$debug" = ".false." ]; then
    if [[ $exp == *"updat"* ]]; then
-     . $scripts/regression_namelists_updat.sh nmmb_nems_4denvar
+     . $scripts/regression_namelists_updat.sh nems_nmmb_4denvar
    elif [[ $exp == *"contrl"* ]]; then
-     . $scripts/regression_namelists.sh nmmb_nems_4denvar
+     . $scripts/regression_namelists.sh nems_nmmb_4denvar
    fi
 else
-   . $scripts/regression_namelists_db.sh nmmb_nems_4denvar
+   . $scripts/regression_namelists_db.sh nems_nmmb_4denvar 
 fi
 
 
