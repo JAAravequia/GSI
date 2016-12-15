@@ -197,8 +197,7 @@ program main
       useMpi = .false. ! override build
 #ifdef BUILD_ROBUST
 #ifdef USE_MPI
-!     fullExecutable = 'mpirun -np 4 ' // executable
-      fullExecutable = 'poe ' // executable
+      fullExecutable = 'mpirun -np 4 ' // executable
 #else
       fullExecutable = executable
 #endif

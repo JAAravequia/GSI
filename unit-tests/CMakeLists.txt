@@ -15,8 +15,8 @@ include_directories(
       ${PFUNIT_DIR}/mod
 )
 
-foreach(_test 
-         test_read_wrf_nmm test_read_wrf_mass test_adjoint)
+foreach(_test test_read_wrf_nmm test_read_wrf_mass test_adjoint test_setupps)
+#foreach(_test test_read_wrf_mass test_adjoint)
     file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/${_test}/generated)
     file(WRITE ${PROJECT_BINARY_DIR}/generated/${_test}/testSuites.inc "")
     message("working on test ${_test}")
@@ -38,6 +38,7 @@ foreach(_test
   set_target_properties(${_test}.x PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include/wrf")
 
   add_dependencies(${_test}.x gsilib_shrd${debug_suffix} gsilib_wrf${debug_suffix} gsilib_shrd${debug_suffix} )
+  message("HEYYY corelibs are ${CORE_LIBRARIES}|${WRF_LIBRARIES}")
   target_link_libraries(
     ${_test}.x
     ${PFUNIT_DIR}/lib/libpfunit.a 

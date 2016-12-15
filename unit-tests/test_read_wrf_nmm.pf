@@ -49,7 +49,7 @@ contains
 
       class (Test_read_wrf_nmm), intent(inout) :: this
 
-      call this%reader%read_wrf_nmm_files(0,test=.true.)
+      call this%reader%read_wrf_nmm_files(0)
 
       @assertEqual(1, ntguessfc)
       @assertEqual(3, ifilesfc(1))
