@@ -841,6 +841,7 @@ subroutine get_usagerj(kx,obstype,c_station_id,c_prvstg,c_sprvstg, &
         endif
         if(wbinlistexist .and. usage_rj/=usage_rj0) then
           call get_wbinid(udbl,vdbl,nbins,ibin)
+          if (ibin <= nbins ) then
           do m=1,nwbaccpts(ibin)
              ch8(1:8)=csta_windbin(m,ibin)(1:8)
              nlen=len_trim(ch8)
@@ -849,6 +850,7 @@ subroutine get_usagerj(kx,obstype,c_station_id,c_prvstg,c_sprvstg, &
                 exit
              endif
           enddo
+          endif
         endif
      endif
 
@@ -1093,7 +1095,7 @@ end subroutine get_sunangle
 
 subroutine get_wbinid(udbl,vdbl,nbins,ibin)
 
-  use constants, only: zero
+  use constants, only: zero, tiny_r_kind
 
   implicit none
 
@@ -1115,8 +1117,12 @@ subroutine get_wbinid(udbl,vdbl,nbins,ibin)
 
   call getwdir(ue,ve,wdir)
 
-  if (wdir==zero .or. wdir==r360) then  
-     ibin=nbins
+  if (abs(wdir)<=tiny_r_kind .or. abs(wdir-r360)<=tiny_r_kind) then  
+     if (abs(ue)<=tiny_r_kind .and. abs(ve)<=tiny_r_kind) then
+        ibin=nbins+1 !don't use if wind ob is calm
+     else
+        ibin=nbins
+     endif
    else
      do n=1,nbins
         if ( wdir >= float(n-1)*binwidth .and. wdir < float(n)*binwidth ) then 

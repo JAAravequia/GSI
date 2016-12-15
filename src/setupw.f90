@@ -145,6 +145,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2015-05-01  Liu Ling - Added ISS Rapidscat wind (u,v) qc 
 !   2015-03-14  Nebuda  - add departure check and near surface check for clear air WV AMV (WVCS) from GOES type 247
 !   2015-12-21  yang    - Parrish's correction to the previous code in new varqc.
+!   2016-12-13  pondeca - add Tyndall & Horel QC for mesonet winds (WAF 2013, Vol. 8, pg. 285) to GSI's 2dvar option
 !
 ! REMARKS:
 !   language: f90
@@ -936,6 +937,12 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            call getwdir(ugesin,vgesin,wdirgesin)
            if ( min(abs(wdirob-wdirgesin),abs(wdirob-wdirgesin+r360), &
                           abs(wdirob-wdirgesin-r360)) > wdirdiffmax ) then
+               error = zero
+               ratio_errors = zero
+           endif
+        endif
+        if (itype==288 .or. itype==295) then !Tyndall & Horel QC for mesonet winds /(WAF 2013, Vol. 28, pg. 285)
+           if (spdob < one .and. (spdob-spdb) > five) then
                error = zero
                ratio_errors = zero
            endif

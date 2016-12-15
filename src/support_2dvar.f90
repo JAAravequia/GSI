@@ -1589,7 +1589,7 @@ subroutine init_ndfdgrid
 !   machine:  ibm RS/6000 SP
 !
 !$$$ end documentation block
-  use constants, only: five
+  use constants, only: five,zero_single
   use mpimod, only: mype
   implicit none
 
@@ -1640,6 +1640,9 @@ subroutine init_ndfdgrid
   open (55,file='rtma_terrain.dat',form='unformatted')
   read(55) terrain
   close(55)
+
+  terrain(:,:)=max(zero_single,terrain(:,:))
+  print*,'in init_ndfdgrid: terrain,min,max=',minval(terrain),maxval(terrain)
 
   allocate(valleys(nx,ny))
 
