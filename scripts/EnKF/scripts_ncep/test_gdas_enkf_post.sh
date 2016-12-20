@@ -14,9 +14,9 @@
 set -x
 
 export NODES=14
-export ntasks=81
+export ntasks=80
 export ptile=6
-export threads=1
+export threads=4
 
 export CDATE=2016112106
 
@@ -49,6 +49,7 @@ export prod_util_ver=1.0.5
 . $MODULESHOME/init/sh
 module load grib_util/$grib_util_ver
 module load prod_util/$prod_util_ver
+module load craype-hugepages4M
 
 module list
 
@@ -59,6 +60,7 @@ module list
 export KMP_AFFINITY=disabled
 export OMP_STACKSIZE=2G
 export OMP_NUM_THREADS=$threads
+export NTHREADS_EPOS=$threads
 export FORT_BUFFERED=true
 
 

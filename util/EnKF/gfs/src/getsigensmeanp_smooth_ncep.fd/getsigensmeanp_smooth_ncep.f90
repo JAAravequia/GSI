@@ -333,6 +333,7 @@ program getsigensmeanp_smooth
            idrt = 4
 
 !          Smoothing loop over fields (first do scalar fields only)
+!$omp parallel do schedule(dynamic,1) private(n,rwork_lev,rwork_spc)
            do n = 1,nrec
               if ( notuv(n) .and. smoothparm(reclev(n)) > 0 ) then
                  rwork_lev = rwork_mem(:,n) - rwork_avg(:,n)
@@ -344,6 +345,7 @@ program getsigensmeanp_smooth
            enddo
 
 !          Smoothing loop over vector fields u and v
+!$omp parallel do schedule(dynamic,1) private(k,rwork_lev,rwork_lev2,rwork_spc,rwork_spc2)
            do k = 1,nlevs
               if ( smoothparm(k) > 0 ) then
                  rwork_lev  = rwork_mem(:,krecu(k)) - rwork_avg(:,krecu(k))

@@ -13,10 +13,10 @@
 
 set -x
 
-export NODES=12
-export ntasks=144
-export ptile=12
-export threads=2
+export NODES=19    # 16 compute nodes + 3 i/o nodes
+export ntasks=96
+export ptile=6
+export threads=4
 
 export CDATE=2016112112
 export ENSGRP=1
@@ -55,7 +55,7 @@ export prod_util_ver=1.0.5
 . $MODULESHOME/init/sh
 module load grib_util/$grib_util_ver
 module load prod_util/$prod_util_ver
-module load craype-hugepages16M
+module load craype-hugepages4M
 
 module list
 

@@ -242,10 +242,10 @@ rm sfg*fhr03* sfg*fhr04* sfg*fhr05* sfg*fhr06* sfg*fhr07* sfg*fhr08* sfg*fhr09*
 rm bfg*fhr03* bfg*fhr04* bfg*fhr05* bfg*fhr06* bfg*fhr07* bfg*fhr08* bfg*fhr09*
 rm nfg*fhr03* nfg*fhr04* nfg*fhr05* nfg*fhr06* nfg*fhr07* nfg*fhr08* nfg*fhr09*
 
-
 $NCP $GETSFCENSMEANEXEC $DATA
 $NCP $GETATMENSMEANEXEC $DATA
 $NCP $GETATMENSSTATEXEC $DATA
+
 if [ $NST_GSI -gt 0 ]; then
    $NCP $GETNSTENSMEANEXEC $DATA
 fi
@@ -311,25 +311,6 @@ else
    FHOUT=$FHOUTEFCS
    FHMIN=$FHMINEFCS
    FHMAX=$FHMAXEFCS
-   imem=1
-   while [[ $imem -le $NMEM_ENKF ]]; do
-      member=${MEMBER_PREFIX}"mem"`printf %03i $imem`
-      member_tmp="_mem"`printf %03i $imem`
-      FHBEG=$FHMIN
-      FHEND=$FHMAX
-      FH=$FHBEG
-      until [[ $FH -gt $FHEND ]];do
-         [[ $FH -lt 10 ]]&&FH=0$FH
-         FH3=0$FH   
-         ln -fs ${SFCENS}${FH3}${member}${MEMBER_SUFFIX}    bfg_${CDATE}_fhr${FH}$member_tmp
-         ln -fs ${SIGENS_IN}${FH3}${member}${MEMBER_SUFFIX} sfg_${CDATE}_fhr${FH}$member_tmp
-         if [ $NST_GSI -gt 0 ]; then
-            ln -fs ${NSTENS}${FH3}${member}${MEMBER_SUFFIX} nfg_${CDATE}_fhr${FH}$member_tmp
-         fi
-         FH=`expr $FH + $FHOUT`
-      done
-      (( imem = $imem + 1 ))
-   done
 
    # Output files
    FHBEG=$FHMIN
@@ -345,27 +326,27 @@ else
       if [ $NST_GSI -gt 0 ]; then
          ln -fs ${NSTENSMEAN}${FH3}${MEMBER_PREFIX}ensmean${MEMBER_SUFFIX} nfg_${CDATE}_fhr${FH}_ensmean
       fi
+
+      imem=1
+      while [[ $imem -le $NMEM_ENKF ]]; do
+         member=${MEMBER_PREFIX}"mem"`printf %03i $imem`
+         member_tmp="_mem"`printf %03i $imem`
+         ln -fs ${SFCENS}${FH3}${member}${MEMBER_SUFFIX}    bfg_${CDATE}_fhr${FH}$member_tmp
+         ln -fs ${SIGENS_IN}${FH3}${member}${MEMBER_SUFFIX} sfg_${CDATE}_fhr${FH}$member_tmp
+         if [ $NST_GSI -gt 0 ]; then
+            ln -fs ${NSTENS}${FH3}${member}${MEMBER_SUFFIX} nfg_${CDATE}_fhr${FH}$member_tmp
+         fi
+         if [[ "$SMOOTH_ENKF" = "YES" ]]; then
+            ln -fs ${SIGENS_OUT}${FH3}${ENKF_SUFFIX}${member}${MEMBER_SUFFIX} sfg_${CDATE}_fhr${FH}${ENKF_SUFFIX}$member_tmp
+         fi
+         (( imem = $imem + 1 ))
+      done
+
       FH=`expr $FH + $FHOUT`
    done
-   if [[ "$SMOOTH_ENKF" = "YES" ]]; then
-     imem=1
-     while [[ $imem -le $NMEM_ENKF ]]; do
-        member=${MEMBER_PREFIX}"mem"`printf %03i $imem`
-        member_tmp="_mem"`printf %03i $imem`
-        FHBEG=$FHMIN
-        FHEND=$FHMAX
-        FH=$FHBEG
-        until [[ $FH -gt $FHEND ]];do
-           [[ $FH -lt 10 ]]&&FH=0$FH
-           FH3=0$FH
-           ln -fs ${SIGENS_OUT}${FH3}${ENKF_SUFFIX}${member}${MEMBER_SUFFIX} sfg_${CDATE}_fhr${FH}${ENKF_SUFFIX}$member_tmp
-           FH=`expr $FH + $FHOUT`
-        done
-        (( imem = $imem + 1 ))
-     done
-   fi
 
   else
+
    # Forecast fields
    FHOUT=$FHOUTEFCS
    FHMIN=$FHMINEFCS
@@ -420,6 +401,7 @@ else
    fi
   fi
 fi
+
 
 ################################################################################
 # Set output data
@@ -487,7 +469,6 @@ if [[ "$MPMD" = "YES" ]]; then
    fi
 else
 # Run serially instead
-
    FHBEG=$FHMINEFCS 
    FHEND=$FHMAXEFCS 
    FHOUT=$FHOUTEFCS 
@@ -666,39 +647,26 @@ FH=$FHBEG
 until [[ $FH -gt $FHEND ]];do
   [[ $FH -lt 10 ]]&&FH=0$FH
   if [[ `expr $FH % 3` -eq 0 ]]; then
-
     if [[ -s ${datapath}/bfg_${analdate}_fhr${FH}_ensmean ]]; then
       if [ $SENDDBN = YES ]; then 
         $DBNROOT/bin/dbn_alert MODEL GFS_ENKF $job ${SFCENSMEAN}${FH}_ensmean 
       fi 
-       string="DONE bfg fhr $FH"
+      string="DONE bfg fhr $FH"
     else
-       string="MISS bfg fhr $FH"
+      string="MISS bfg fhr $FH"
     fi
   fi
-  rm log log_old log_new
-  cp log_allsfc ./log_old
-  echo $string > log
-  cat log_old log > log_new
-  cp log_new log_allsfc
+  echo $string | tee -a $ENSSTAT
 
   if [[ -s ${datapath}/sfg_${analdate}_fhr${FH}_ensmean ]]; then
      string="DONE sfg fhr $FH"
   else
      string="MISS sfg fhr $FH"
   fi
-  rm log log_old log_new
-  cp log_allatm ./log_old
-  echo $string > log
-  cat log_old log > log_new
-  cp log_new log_allatm
+  echo $string | tee -a $ENSSTAT
 
   FH=`expr $FH + $FHOUT`
 done
-
-rm log_all
-cat log_allsfc log_allatm > log_all
-cp log_all $ENSSTAT
 
 if [ $SENDDBN = YES ] ; then 
 imem=1 
@@ -718,7 +686,6 @@ while [[ $imem -le $NMEM_ENKF ]]; do
    (( imem = $imem + 1 )) 
 done 
 fi 
-
 ################################################################################
 #  Postprocessing
 cd $pwd

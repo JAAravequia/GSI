@@ -13,8 +13,8 @@
 
 set -x
 
-export NODES=24
-export ntasks=144
+export NODES=16
+export ntasks=96
 export ptile=6
 export threads=4
 

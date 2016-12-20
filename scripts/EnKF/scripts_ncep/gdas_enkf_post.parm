@@ -3,8 +3,8 @@
 ####################################
 #
 # Set executable and script
-export SIGHDR=${SIGHDR:-${EXECgsm}/nemsio_get$XC}
-export SFCHDR=${SFCHDR:-${EXECgsm}/nemsio_get$XC}
+export SIGHDR=${SIGHDR:-${EXECgsm}/nemsio_get}
+export SFCHDR=${SFCHDR:-${EXECgsm}/nemsio_get}
 
 # Set date to process
 export CDATE=${CDATE:-${PDY}${cyc}}

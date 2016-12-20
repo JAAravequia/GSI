@@ -8,9 +8,9 @@ export PARMGLOBAL=$PARMgsm
 
 
 #Set executables
-export SIGHDR=${SIGHDR:-${EXECgsm}/nemsio_get$XC}
-export SFCHDR=${SFCHDR:-${EXECgsm}/nemsio_get$XC}
-export nemsioget=${nemsioget:-${EXECgsm}/nemsio_get$XC}
+export SIGHDR=${SIGHDR:-${EXECgsm}/nemsio_get}
+export SFCHDR=${SFCHDR:-${EXECgsm}/nemsio_get}
+export nemsioget=${nemsioget:-${EXECgsm}/nemsio_get}
 
 #Set hybrid and ensemble resolution parameters
 export DOHYBVAR=${DOHYBVAR:-YES}
@@ -353,8 +353,8 @@ ENS_NUM=1
 MEMBER_NAMES=c00
 SPECTRAL_LOOP=2
 QUILTING=.true.
-WRT_GROUP=2
-WRTPE_PER_GROUP=4
+WRT_GROUP=3
+WRTPE_PER_GROUP=6
 WRITE_DOPOST=.false.
 POST_GRIBVERSION="grib1"
 GOCART_AER2POST=.false.

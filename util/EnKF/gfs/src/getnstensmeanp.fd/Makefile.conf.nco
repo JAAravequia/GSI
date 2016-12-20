@@ -22,11 +22,11 @@
 
 #--- Normal mode options
   PROF= 
-  OMP = 
+  OMP = -openmp
 
   FFLAGS_F90    = 
   FFLAGS_COM_N  = -I ./ -I $(NEMSIO_INC) -O3 -fp-model strict -convert big_endian -assume byterecl \
-  		-implicitnone
+  		-implicitnone $(OMP)
   FFLAGS_N      = $(FFLAGS_F90) $(FFLAGS_COM_N)
 
 #--- Debug mode options
@@ -43,7 +43,7 @@
 
 #--- Normal mode options
 
-  CFLAGS_N      = -DLINUX -Dfunder -I ./ -DFortranByte=char -DFortranInt=int -DFortranLlong='long long' -O3 $(PROF)
+  CFLAGS_N      = -DLINUX -Dfunder -I ./ -DFortranByte=char -DFortranInt=int -DFortranLlong='long long' -O3 $(OMP)
 
 #--- Debug mode options
 
@@ -59,7 +59,7 @@
 #--- Normal mode options
   LIBS_N        = $(NEMSIO_LIB) $(BACIO_LIB4) $(W3NCO_LIB4)
 
-  LDFLAGS_N     = -Wl,-Map,loadmap.txt
+  LDFLAGS_N     = -Wl,-Map,loadmap.txt $(OMP)
 
   LDFLAGS       = $(LDFLAGS_N)
 
@@ -67,7 +67,7 @@
 
   LIBS_D        = $(LIBS_N)
 
-  LDFLAGS_D     = $(LDFLAGS_N)
+  LDFLAGS_D     = -Wl,-Map,loadmap.txt
 
 #--- Empty out mpi library definition: embedded in compiler
 

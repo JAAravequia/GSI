@@ -6,16 +6,18 @@
 export GSIEXEC=${GSIEXEC:-$EXECgsi/global_gsi}
 export ENKFOMGSH=${ENKFOMGSH:-$SCRgdas/exglobal_enkf_innovate_obs.sh.ecf}
 export ANALYSISSH=${ANALYSISSH:-$SCRgsi/exglobal_analysis.sh.ecf}
-export SIGHDR=${SIGHDR:-${EXECgsm}/nemsio_get$XC}
-export SFCHDR=${SFCHDR:-${EXECgsm}/nemsio_get$XC}
+export SIGHDR=${SIGHDR:-${EXECgsm}/nemsio_get}
+export SFCHDR=${SFCHDR:-${EXECgsm}/nemsio_get}
 export COMPRESS=${COMPRESS:-/bin/gzip}
 export UNCOMPRESS=${UNCOMPRESS:-'/bin/gunzip -f'}
 
 #Set hybrid and ensemble resolution parameters
-export DOHYBVAR=${DOHYBVAR:-YES}
+export DOHYBVAR=${DOHYBVAR:-NO}
 export DIAG_SUFFIX=${DIAG_SUFFIX:-"_ensmean"}
 export DIAG_COMPRESS=${DIAG_COMPRESS:-NO}
 export DIAG_TARBALL=${DIAG_TARBALL:-YES}
+export DIAG_LOOPS=${DIAG_LOOPS:-"01"}
+export GENDIAG=YES
 export RUN_SELECT=${RUN_SELECT:-YES}
 export USE_SELECT=${USE_SELECT:-NO}
 
@@ -260,6 +262,7 @@ fi
 
 # Set namelist jobs for ensemble data selection
 export USE_NEWRADBC=${USE_NEWRADBC:-YES}
+export USE_CFP=${USE_CFP:-YES}
 export SETUP="miter=0,niter=1,lread_obs_save=.false.,lread_obs_skip=.true.,lwrite_predterms=.true.,lwrite_peakwt=.true.,reduce_diag=.true.,passive_bc=.false.,"
 export BKGVERR="bkgv_flowdep=.false.,"
 export STRONGOPTS="tlnmc_option=0,nstrong=0,nvmodes_keep=0,baldiag_full=.false.,baldiag_inc=.false.,"

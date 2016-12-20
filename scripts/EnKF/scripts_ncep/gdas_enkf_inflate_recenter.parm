@@ -3,8 +3,8 @@
 ####################################
 #
 # Set executable and script
-export SIGHDR=${SIGHDR:-${EXECgsm}/nemsio_get$XC}
-export SFCHDR=${SFCHDR:-${EXECgsm}/nemsio_get$XC}
+export SIGHDR=${SIGHDR:-${EXECgsm}/nemsio_get}
+export SFCHDR=${SFCHDR:-${EXECgsm}/nemsio_get}
 
 
 #Set hybrid and ensemble resolution parameters
@@ -17,6 +17,7 @@ export NMEM_ENKF=${NMEM_ENKF:-80}
 
 # EnKF executable
 export GETATMENSMEANEXEC=${GETATMENSMEANEXEC:-${EXECgdas}/getsigensmeanp_smooth.x}
+export GETSFCNSTENSUPDEXEC=${GETSFCNSTENSUPDEXEC:-${EXECgdas}/getsfcnstensupdp.x}
 export ADDERRSPECEXEC=${ADDERRSPECEXEC:-${EXECgdas}/adderrspec_nmcmeth_spec.x}
 export RECENATMPEXEC=${RECENATMPEXEC:-${EXECgdas}/recentersigp.x}
 
@@ -56,6 +57,15 @@ export NST_ANL=.true.
 export CHGRESVARS_ENKF="use_ufo=$use_ufo,nst_anl=$NST_ANL,rdgrid=$rdgrid,idvc=$idvc,idvt=$idvt,idsl=$IDSL,IDVM=$IDVM,OUTTYP=$OUTTYP,nopdpvv=$nopdpvv"
 
 
+# GETSFCNSTENSUPDEXEC settings
+export NST_GSI=3         # default 0: No NST info at all;
+                         #         1: Input NST info but not used in GSI;
+                         #         2: Input NST info, used in CRTM simulation, no Tr analysis
+                         #         3: Input NST info, used in both CRTM simulation and Tr analysis
+export ZSEA1=0           #  the upper depth (in mm) to do vertical mean of T-Profile (0 = default)
+export ZSEA2=5           #  the lower depth (in mm) to do vertical mean of T-Profile (0 = default)
+
+
 # Input files
 export PREINPgdas=${PREINPgdas:-gdas.${cycle}.}
 export PREINPgdasg=${PREINPgdasg:-gdas.${cycleg}.}
@@ -69,15 +79,15 @@ export SFCANL_HI=${SFCANL_HI:-$COMINgdas/${PREINPgdas}sfcanl.nemsio}
 export SIGGES=${SIGGES:-${COMINg}/${PREINP}atmf006.ensmean.nemsio}
 export SIGANLENS_IN_TMP=${SIGANLENS_IN_TMP:-${COMIN}/${PREINP}atmanl}
 
-export DTFANL=${DTFANL:-${COMINgdas}/${PREINPg}dtfanl.bin4}
-export NSTGES_ENS_TMP=${NSTGES_ENS_TMP:-${COMINg}/nstf006}
-export SFCGES_ENS_TMP=${SFCGES_ENS_TMP:-${COMINg}/sfcf006}
-export SFCGCY_ENS_TMP=${SFCGCY_ENS_TMP:-${COMIN}/sfcgcy}
-export NSTANL_ENS_TMP=${NSTANL_ENS_TMP:-${COMOUT}/nstanl}
-export SFCANL_ENS_TMP=${SFCANL_ENS_TMP:-${COMOUT}/sfcanl}
+export DTFANL=${DTFANL:-${COMINgdas}/${PREINPgdas}dtfanl.bin4}
+export SFCGCY_ENS_TMP=${SFCGCY_ENS_TMP:-${COMINenkf}/${PREINPgdas}gcyanl}
+export NSTGES_ENS_TMP=${NSTGES_ENS_TMP:-${COMINenkfg}/${PREINPgdasg}nstf006}
+export SFCGES_ENS_TMP=${SFCGES_ENS_TMP:-${COMINenkfg}/${PREINPgdasg}sfcf006}
 
 
 # Output files
 export PERTDATES=${PERTDATES:-$COMOUT/${PREINP}pertdates}
 export SANLENSMEAN=${SANLENSMEAN:-$COMOUT/${PREINP}atmanl.ensmean.nemsio}
 export SIGANLENS_OUT_TMP=${SIGANLENS_OUT_TMP:-${COMOUT}/${PREINP}ratmanl}
+export NSTANL_ENS_TMP=${NSTANL_ENS_TMP:-${COMOUT}/${PREINP}nstanl}
+export SFCANL_ENS_TMP=${SFCANL_ENS_TMP:-${COMOUT}/${PREINP}sfcanl}

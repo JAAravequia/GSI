@@ -14,9 +14,9 @@
 set -x
 
 export NODES=24
-export ntasks=144
-export ptile=6
-export threads=4
+export ntasks=96
+export ptile=4
+export threads=6
 
 export CDATE=2016112106
 

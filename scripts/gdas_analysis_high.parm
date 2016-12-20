@@ -5,8 +5,8 @@
 # Set executable, script, and fix
 export GSIEXEC=${GSIEXEC:-$EXECgsi/global_gsi}
 export ANALYSISSH=${ANALYSISSH:-$SCRgsi/exglobal_analysis.sh.ecf}
-export SIGHDR=${SIGHDR:-${EXECgsm}/nemsio_get$XC}
-export SFCHDR=${SFCHDR:-${EXECgsm}/nemsio_get$XC}
+export SIGHDR=${SIGHDR:-${EXECgsm}/nemsio_get}
+export SFCHDR=${SFCHDR:-${EXECgsm}/nemsio_get}
 export COMPRESS=${COMPRESS:-/bin/gzip}
 export UNCOMPRESS=${UNCOMPRESS:-'/bin/gunzip -f'}
 
@@ -369,9 +369,11 @@ export use_gfs_nemsio=.true.
 ################################################################################
 # Do not produce RAD, PCP, OZN, CNV diagnostic (STAT) files for GFS early analysis.
 export USE_NEWRADBC=${USE_NEWRADBC:-YES}
+export USE_CFP=${USE_CFP:-YES}
 
 SETUPGFS=""
 if [[ "${RUN}" = 'gfs' ]]; then
   export SETUPGFS='diag_rad=.false.,diag_pcp=.false.,diag_conv=.false.,diag_ozone=.false.,write_diag(3)=.false.,'
 fi 
 export SETUP="$SETUP_4DVAR $SETUPGFS"
+export GENDIAG=YES

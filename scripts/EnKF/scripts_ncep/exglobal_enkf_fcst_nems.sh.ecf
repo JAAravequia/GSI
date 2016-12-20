@@ -464,26 +464,16 @@ while [[ $imem -le $ENSEND ]]; do
      done
    fi
 
-   rm log
-   $NCP $DATATOP/log_all ./log_old
+   status="PASS"
    if [ $ra -ne 0 ]; then
-      echo "MEMBER $imem : FAIL" > log
-   else
-      echo "MEMBER $imem : PASS" > log
+      status="FAIL"
    fi
-   cat log_old log > log_new
-   $NCP log_new $DATATOP/log_all
+   echo "MEMBER $imem : $status" | tee -a $EFCSGRP
+
 
    (( imem = $imem + 1 ))
 
 done
-
-################################################################################
-# Save log
-#---------
-
-cd $DATATOP
-$NCP log_all $EFCSGRP
 
 ################################################################################
 # If any members failed, error out

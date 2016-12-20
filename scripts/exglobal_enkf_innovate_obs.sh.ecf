@@ -496,6 +496,7 @@ rm -f $EOMGGRP
 
 ################################################################################
 # Generate ensemble innovations
+rc=0
 imem=$ENSBEG
 while [[ $imem -le $ENSEND ]]; do
    export RUN_SELECT=NO
@@ -638,19 +639,16 @@ while [[ $imem -le $ENSEND ]]; do
 
 
    $ANALYSISSH
-   rc=$?
+   ra=$?
+   ((rc+=ra))
 
    cat $pgmoutm
 
-   export ERR=$rc
-   export err=$ERR
-   $ERRSCRIPT||exit 2
-
-   rm log
-   cp $DATATOP/log_all ./log_old
-   echo "Process member $imem" > log
-   cat log_old log > log_new
-   cp log_new $DATATOP/log_all
+   status="PASS"
+   if [ $ra -ne 0 ]; then
+      status="FAIL"
+   fi
+   echo "MEMBER $imem : $status" | tee -a $EOMGGRP
 
    if [ $SENDDBN = YES ]; then
       $DBNROOT/bin/dbn_alert MODEL GFS_ENKF $job $SFCANL
@@ -659,13 +657,6 @@ while [[ $imem -le $ENSEND ]]; do
    (( imem = $imem + 1 ))
 
 done
-
-
-################################################################################
-# Save log
-
-cd $DATATOP
-cp log_all $EOMGGRP
 
 
 ################################################################################

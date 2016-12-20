@@ -48,7 +48,7 @@ program getsfcnstensupdp
   character(len=60) :: my_name = 'getsfcnstensupdp'
   character(len=1)  :: null = ' '
 
-  integer(i_kind) :: mype,mype1,npe,nproc,iret
+  integer(i_kind) :: mype,mype1,npe,iret
   integer nrec_sfc, lonb, latb, n, npts
   integer(i_kind) :: nfhour, nfminute, nfsecondn, nfsecondd
   integer,dimension(7):: idate
@@ -704,10 +704,10 @@ program getsfcnstensupdp
 
   call MPI_Barrier(MPI_COMM_WORLD,iret)
 
-  if ( nproc == 0 ) call w3tage('GETSFCNSTENSUPDP')
+  if ( mype == 0 ) call w3tage('GETSFCNSTENSUPDP')
 
   call MPI_Finalize(iret)
-  if ( nproc == 0 .and. iret /= 0 ) &
+  if ( mype == 0 .and. iret /= 0 ) &
      write(6,'(a,i5)'), 'MPI_Finalize error status, iret = ',iret
 
   contains

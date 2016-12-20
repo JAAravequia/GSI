@@ -102,6 +102,8 @@ export COM_OUT=${COM_OUT:-$COMROOT/${NET}/${envir}}
 export COMIN=$COM_IN/enkf.${PDY}/$cyc
 export COMOUT=$COM_OUT/enkf.${PDY}/$cyc
 export COMINgdas=${COMINgdas:-$COM_IN/gdas.${PDY}}
+export COMINenkf=${COMINenkf:-$COM_IN/enkf.${PDY}/$cyc}
+export COMINenkfg=${COMINenkfg:-$COM_IN/enkf.${PDYges}/$CYCges}
 export COMINg=$COM_IN/enkf.${PDYges}/$CYCges
 mkdir -m 775 -p $COMOUT
 

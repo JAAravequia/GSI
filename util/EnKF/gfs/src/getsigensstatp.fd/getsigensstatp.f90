@@ -43,13 +43,13 @@ program getsigensstatp
     character(len=3)   :: charnanal
     character(len=500) :: filenamein,datapath,filepref
     integer :: nanals,nlevs,ntrac,ntrunc,latb,lonb,iret
-    integer :: k,krecu,krecv,krect,krecq,krecoz,kreccwmr
+    integer :: k,krecu,krecv,krect,krecq,krecoz,kreccwmr,n,kk
     integer :: nsize,npts,nrec,nflds
     real(r_double) :: rnanals,rnanalsm1
     character(len=16),allocatable,dimension(:) :: recnam
     integer :: mype,mype1,npe,orig_group,new_group,new_comm
     integer,dimension(:),allocatable :: new_group_members,reclev
-    real(r_single),allocatable,dimension(:,:) :: rwork_mem,rwork_avg
+    real(r_single),allocatable,dimension(:,:) :: rwork_mem,rwork_avg,rwork_tmp
     real(r_single),allocatable,dimension(:) :: glats,gwts
     logical :: sigio,nemsio
 
@@ -180,9 +180,11 @@ program getsigensstatp
 
         allocate(rwork_mem(npts,nflds))
         allocate(rwork_avg(npts,nflds))
+        allocate(rwork_tmp(npts,nrec))
 
         rwork_mem = 0.0_r_single
         rwork_avg = 0.0_r_single
+        rwork_tmp = 0.0_r_single
 
         if ( sigio ) then
 
@@ -208,24 +210,38 @@ program getsigensstatp
         elseif ( nemsio ) then
 
             call nemsio_readrecv(gfile,'pres','sfc',1,rwork_mem(:,1),iret)
-            do k = 1,nlevs
-                krecu    = 1 + 0*nlevs + k
-                krecv    = 1 + 1*nlevs + k
-                krect    = 1 + 2*nlevs + k
-                krecq    = 1 + 3*nlevs + k
-                krecoz   = 1 + 4*nlevs + k
-                kreccwmr = 1 + 5*nlevs + k
-                call nemsio_readrecv(gfile,'ugrd', 'mid layer',k,rwork_mem(:,krecu),   iret)
-                call nemsio_readrecv(gfile,'vgrd', 'mid layer',k,rwork_mem(:,krecv),   iret)
-                call nemsio_readrecv(gfile,'tmp',  'mid layer',k,rwork_mem(:,krect),   iret)
-                call nemsio_readrecv(gfile,'spfh', 'mid layer',k,rwork_mem(:,krecq),   iret)
-                call nemsio_readrecv(gfile,'o3mr', 'mid layer',k,rwork_mem(:,krecoz),  iret)
-                call nemsio_readrecv(gfile,'clwmr','mid layer',k,rwork_mem(:,kreccwmr),iret)
-            enddo
+            do n=1,nrec
+               call nemsio_readrec(gfile,n,rwork_tmp(:,n),iret)
+            end do
             call nemsio_close(gfile,iret)
 
-        endif
+            krecu    = 1 + 0*nlevs
+            krecv    = 1 + 1*nlevs
+            krect    = 1 + 2*nlevs
+            krecq    = 1 + 3*nlevs
+            krecoz   = 1 + 4*nlevs
+            kreccwmr = 1 + 5*nlevs
+!$omp parallel do schedule(dynamic,1) private(n,kk)
+            do n=1,nrec
+               kk=-99
+               if (index(recnam(n),'ugrd')/=0) then
+                  kk = krecu + reclev(n)
+               elseif (index(recnam(n),'vgrd')/=0) then
+                  kk = krecv + reclev(n)
+               elseif (index(recnam(n),'tmp')/=0) then
+                  kk = krect + reclev(n)
+               elseif (index(recnam(n),'spfh')/=0) then
+                  kk = krecq + reclev(n)
+               elseif (index(recnam(n),'o3mr')/=0) then
+                  kk = krecoz + reclev(n)
+               elseif (index(recnam(n),'clwmr')/=0) then
+                  kk = kreccwmr + reclev(n)
+               endif
+               if (kk>0) rwork_mem(:,kk) = rwork_tmp(:,n)
+            enddo
 
+        endif
+        
         call mpi_allreduce(rwork_mem,rwork_avg,nsize,mpi_real4,mpi_sum,new_comm,iret)
 
         rwork_avg = rwork_avg * rnanals
@@ -240,7 +256,7 @@ program getsigensstatp
 
         if ( mype == 0 ) call write_to_disk('spread')
 
-        deallocate(rwork_mem,rwork_avg)
+        deallocate(rwork_mem,rwork_avg,rwork_tmp)
 
     ! Jump here if more mpi processors than files to process
     else
