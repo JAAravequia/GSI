@@ -55,6 +55,9 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
 !   2013-05-07  tong   -  add reading tdr superobs data 
 !   2013-05-22  tong   -  Modified the criteria of seperating fore and aft sweeps for TDR NOAA/FRENCH antenna
 !   2015-02-23  Rancic/Thomas - add thin4d to time window logical
+!   2016-12-21  lippi/carley - add logic to run l2rw loop (==0) or run loop for l3rw and l2_5rw (==1,2) 
+!                              to help fix a multiple data read bug (when l2rwbufr and radarbufr were both 
+!                              listed in the OBS_INPUT table) and for added flexibility for experimental setups.
 !
 !
 !   input argument list:
@@ -532,7 +535,8 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
   nsuper2_in=0
   nsuper2_kept=0
 
-  if(loop==0) outmessage='level 2 superobs:'
+  LEVEL_TWO_READ: if(loop==0 .and. sis=='l2rw') then
+    outmessage='level 2 superobs:'
 
 ! Open sequential file containing superobs
   open(lnbufr,file='radar_supobs_from_level2',form='unformatted')
@@ -810,7 +814,9 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
   write(6,*)'READ_RADAR: dlatmin,max,dlonmin,max=',dlatmin,dlatmax,dlonmin,dlonmax
   write(6,*)'READ_RADAR: iaaamin,max,8*max_rrr  =',iaaamin,iaaamax,8*max_rrr
 
+  END IF LEVEL_TWO_READ
 
+  if(sis=='l3rw' .or. sis=='rw') then
 !  Next process level 2.5 and 3 superobs
 
 !  Bigger loop over first level 2.5 data, and then level3 data
@@ -1244,7 +1250,7 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
      write(6,*)'READ_RADAR: iaaamin,max,8*max_rrr  =',iaaamin,iaaamax,8*max_rrr
 
   end do       !   end bigger loop over first level 2.5, then level 3 radar data
-
+  end if
 
 ! Write out vad statistics
   do ivad=1,nvad

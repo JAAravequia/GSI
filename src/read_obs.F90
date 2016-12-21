@@ -1399,17 +1399,18 @@ subroutine read_obs(ndata,mype)
 
 !            Process radar winds
              else if (obstype == 'rw') then
-                if (dsis(i) == 'l2rw' .and..not. vadwnd_l2rw_qc) then
-                   write(6,*)'READ_OBS: radial wind,read_l2rw_novadqc,dfile=l2rwbufr,dsis=l2rw_novqc'
-                   call read_l2rw_novadqc(nread,npuse,nouse,infile,lunout,obstype,& 
-                                            twind,sis,hgtl_full,nobs_sub1(1,i)) 
-                   string='READ_L2RW_NOVADQC'
-                else if (dsis(i) == 'l3rw' .and. vadwnd_l2rw_qc .or. dsis(i) == 'rw') then
-                   write(6,*)'READ_OBS: radial wind,read_radar,dfile=radarbufr,dsis=l3rw'
+                if (vadwnd_l2rw_qc) then
+                    write(6,*)'READ_OBS: radial wind,read_radar,dfile=',infile,',dsis=',sis
                    call read_radar(nread,npuse,nouse,infile,lunout,obstype,twind,sis,&
                                    hgtl_full,nobs_sub1(1,i))
                    string='READ_RADAR'
+                else if (sis == 'l2rw') then
+                    write(6,*)'READ_OBS: radial wind,read_l2rw_novadqc,dfile=',infile,',dsis=',sis
+                   call read_l2rw_novadqc(nread,npuse,nouse,infile,lunout,obstype,&
+                                            twind,sis,hgtl_full,nobs_sub1(1,i))
+                   string='READ_L2RW_NOVADQC'
                 end if
+
 !            Process lagrangian data
              else if (obstype == 'lag') then
                 call read_lag(nread,npuse,nouse,infile,lunout,obstype,&
