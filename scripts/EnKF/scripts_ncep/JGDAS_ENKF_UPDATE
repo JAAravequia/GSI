@@ -126,7 +126,7 @@ ${ENKFUPDSH:-$SCRgdas/exglobal_enkf_update.sh.ecf}
 # Final processing
 ##############################################
 if [ $SENDDBN = YES ] ; then
-   $DBNROOT/bin/dbn_alert MODEL ENKF1_MSC_enkfstat $job $COMOUT/${RUN}.${cycle}.enkfstat}
+   $DBNROOT/bin/dbn_alert MODEL ENKF1_MSC_enkfstat $job $COMOUT/${PREINP}enkfstat
 fi
 
 cat $pgmout
