@@ -1,170 +1,125 @@
-      module specmod
+module specmod
+!$$$   module documentation block
+!                .      .    .                                       .
+! module:    specmod
+!   prgmmr: treadon          org: np23                date: 2003-11-24
+!
+! abstract: module containing spectral related variables
+!
+! program history log:   
+!   2003-11-24  treadon
+!   2004-04-28  d. kokron, updated SGI's fft to use scsl
+!   2004-05-18  kleist, documentation
+!   2004-08-27  treadon - add/initialize variables/arrays needed by 
+!                         splib routines for grid <---> spectral 
+!                         transforms
+!   2008-02-01  whitaker - modifications for use in ensemble kalman filter.
+!   2010-10-27  whitaker - made thread safe (can now be called within OMP parallel regions).
+!
+! remarks: variable definitions below
+!   def jcap         - spectral (assumed triangular) truncation
+!   def nc           - (N+1)*(N+2); N=truncation
+!   def ncd2         - [(N+1)*(N+2)]/2; N=truncation
+!   def idrt         - integer grid identifier
+!                      (idrt=4 for gaussian grid,
+!                       idrt=0 for equally-spaced grid including poles,
+!                       idrt=256 for equally-spaced grid excluding poles)
+!   def imax         - integer even number of longitudes for transform
+!   def jmax         - integer number of latitudes for transform
+!   def jn           - integer skip number between n.h. latitudes from north
+!   def js           - integer skip number between s.h. latitudes from south
+!   def kw           - integer skip number between wave fields
+!   def jb           - integer latitude index (from pole) to begin transform
+!   def je           - integer latitude index (from pole) to end transform
+!   def gaulats      - sin of latitudes on grid.
+!   def gauwts       - gaussian weights.
+!
+! attributes:
+!   language: f90
+!   machine:  ibm RS/6000 SP
+!
+! this version is thread safe (can be called within an OMP parallel region)
+!
+!$$$
+  use kinds, only: r_kind,i_kind
+  implicit none
 
-! drop-in replacement specmod.f90 that uses shtns insted of sp library (shtns is
-! *much* faster). All transform calcs done in double precision,
-! regardless of precision of input arrays.
+  integer(i_kind) jcap
+  integer(i_kind) idrt,imax,jmax,jn,js,jb,je,ioffset,nc,ncd2,ijmax
+  integer(i_kind) :: iromb=0 ! only triangular truncation used
+  real(8),allocatable,dimension(:):: eps,epstop,enn1,elonn1,eon,eontop
+  real(8),allocatable,dimension(:):: clat,slat,wlat,glats,gwts
+  real(r_kind), allocatable, dimension(:) :: gaulats,gauwts,asin_gaulats
+  real(8),allocatable,dimension(:,:):: pln,plntop
+  real(8),allocatable,dimension(:):: afft_save
+  logical :: isinitialized=.false.
 
-! public subroutines:
-!    init_spec_vars
-!    destroy_spec_vars
-!    sptez_s
-!    sptezv_s
+contains
+  
+  subroutine init_spec_vars(nlon,nlat,jcapin,idrtin)
 
-! public variable definitions below
-!   def jcap          - spectral (assumed triangular) truncation
-!   def nc            - (N+1)*(N+2); N=truncation==jcap
-!   def ncd2          - [(N+1)*(N+2)]/2; N=truncation==jcap
-!   def idrt          - integer grid identifier
-!                       (idrt=4 for gaussian grid,
-!                        idrt=0 for equally-spaced grid including poles,
-!                        idrt=256 for equally-spaced grid excluding poles)
-!   def imax          - integer even number of longitudes for transform
-!   def jmax          - integer number of latitudes for transform
-!   def gaulats       - sin of latitudes on grid.
-!   def gauwts        - gaussian weights (only relevant for idrt=4). 
-!                       if idrt !=. 4, set to cos(sin(gaulats)).
-!   def rerth         - radius of earth used in sptezv_s
-!   def isinitialized - true if module has been initialized by a call to init_spec_vars.
+!   Declare passed variables
+    integer(i_kind),intent(in):: nlat,nlon,jcapin,idrtin
 
-      use kinds, only: r_kind, r_double
-      implicit none 
-      private 
-      public :: init_spec_vars,sptez_s,sptezv_s,destroy_spec_vars
-      public :: gaulats, gauwts, nc, ncd2, asin_gaulats,&
-                isinitialized, imax, jmax, jcap, rerth
-      INTEGER, PARAMETER :: SHT_NATIVE_LAYOUT=0
-      INTEGER, PARAMETER :: SHT_THETA_CONTIGUOUS=256
-      INTEGER, PARAMETER :: SHT_PHI_CONTIGUOUS=512
-      INTEGER, PARAMETER :: SHT_NO_CS_PHASE=1024
-      INTEGER, PARAMETER :: SHT_REAL_NORM=2048
-      INTEGER, PARAMETER :: SHT_ORTHONORMAL=0
-      INTEGER, PARAMETER :: SHT_FOURPI=1
-      INTEGER, PARAMETER :: SHT_SCHMIDT=2
-      INTEGER, PARAMETER :: SHT_GAUSS=0
-      INTEGER, PARAMETER :: SHT_AUTO=1
-      INTEGER, PARAMETER :: SHT_REG_FAST=2
-      INTEGER, PARAMETER :: SHT_REG_DCT=3
-      INTEGER, PARAMETER :: SHT_QUICK_INIT=4
-      INTEGER, PARAMETER :: SHT_REG_POLES=5
-      INTEGER, PARAMETER :: SHT_GAUSS_FLY=6
-      REAL(r_double), PARAMETER :: SHT_DEFAULT_POLAR_OPT=1.d-10
-      REAL(r_double), parameter :: rerth=6.3712E6
-      REAL(r_double), parameter :: sqrt2=1.41421356237309504880
-      INTEGER            :: imax   
-      INTEGER            :: jmax   
-      INTEGER            :: ijmax   
-      INTEGER            :: jcap
-      INTEGER            :: nc
-      INTEGER            :: ncd2
-      INTEGER            :: idrt
-      LOGICAL            :: isinitialized=.false.
-      REAL(r_kind), DIMENSION(:), ALLOCATABLE :: gauwts, gaulats, &
-         asin_gaulats
-      REAL(r_double), DIMENSION(:), ALLOCATABLE :: lap, invlap
+!   Set constants
+    jcap = jcapin
+    idrt = idrtin
+    imax = nlon
+    jmax = nlat
+    ijmax = imax*jmax
+    ioffset=imax*(jmax-1)
+    jn=imax
+    js=-jn
+    jb=1
+    je=(jmax+1)/2
+    nc=(jcap+1)*(jcap+2)
+    ncd2=nc/2
 
-      contains
+!   Allocate arrays
+    if (isinitialized) then
+       call destroy_spec_vars()
+    end if
+    allocate( eps(ncd2) )
+    allocate( epstop(jcap+1) )
+    allocate( enn1(ncd2) )
+    allocate( elonn1(ncd2) )
+    allocate( eon(ncd2) )
+    allocate( eontop(jcap+1) )
+    allocate( afft_save(50000+4*imax) )
+    allocate( gaulats(jmax) )
+    allocate( asin_gaulats(jmax) )
+    allocate( gauwts(jmax) )
+    allocate( glats(jmax) )
+    allocate( gwts(jmax) )
+    allocate( clat(jb:je) )
+    allocate( slat(jb:je) ) 
+    allocate( wlat(jb:je) ) 
+    allocate( pln(ncd2,jb:je) )
+    allocate( plntop(jcap+1,jb:je) )
 
-      subroutine init_spec_vars(nlons,nlats,mtrunc,igrid)
+!   Initialize arrays used in transforms
+    call sptranf0(iromb,jcap,idrt,imax,jmax,jb,je, &
+       eps,epstop,enn1,elonn1,eon,eontop, &
+       afft_save,clat,slat,wlat,pln,plntop)
+    call splat(idrt,jmax,glats,gwts)
+    gaulats = glats
+    gauwts = gwts
+    asin_gaulats=asin(gaulats)
+    
+    isinitialized = .true.
 
-! initialize library, allocate arrays.
-! nlons: number of longitude points.
-! nlats: number of latitude points.
-! ntrunc: spectral truncation wavenumber.
-! idir: grid (4=gaussian,0=reg including poles,256=reg not including
-! poles
+  end subroutine init_spec_vars
 
-      integer, intent(in) :: nlons,nlats,mtrunc
-      integer, intent(in):: igrid
-      real(r_double), dimension(:), allocatable :: gauwts1,gaulats1
-      integer m,n,j,nlm
+  subroutine destroy_spec_vars
+    deallocate(eps,epstop,enn1,elonn1,eon,eontop,&
+       glats,gwts,clat,slat,wlat,pln,plntop,gaulats,asin_gaulats,gauwts,afft_save)
+  end subroutine destroy_spec_vars
 
-      call destroy_spec_vars()
-      call shtns_use_threads(1) ! number of openmp threads.
-      call shtns_set_size(mtrunc,mtrunc,1,SHT_FOURPI+SHT_NO_CS_PHASE)
-
-      if (igrid .eq. 4) then ! gaussian grid
-         call shtns_precompute(SHT_GAUSS_FLY,SHT_PHI_CONTIGUOUS,SHT_DEFAULT_POLAR_OPT,nlats,nlons)
-      else if (igrid .eq. 0) then ! reg grid including poles
-         call shtns_precompute(SHT_REG_POLES,SHT_PHI_CONTIGUOUS,SHT_DEFAULT_POLAR_OPT,nlats,nlons)
-      else if (igrid .eq. 256) then ! reg grid not including poles
-         call shtns_precompute(SHT_REG_DCT,SHT_PHI_CONTIGUOUS,SHT_DEFAULT_POLAR_OPT,nlats,nlons)
-      else
-         print *,'igrid must be 4,0 or 256'
-         call stop2(-99)
-      end if
-
-      idrt = igrid; jmax = nlats; imax = nlons; jcap = mtrunc
-      ijmax = imax*jmax
-
-      call shtns_calc_nlm(nlm,jcap,jcap,1)
-      nc = 2*nlm
-      ncd2 = nlm
-      if (ncd2 .ne. (jcap+1)*(jcap+2)/2) then
-         print *,'error: ncd2 not what expected',ncd2,jcap
-         call stop2(-99)
-      endif
-
-      allocate(gaulats(jmax))
-      allocate(asin_gaulats(jmax))
-      allocate(gauwts(jmax))
-
-      allocate(gaulats1(jmax))
-      call shtns_cos_array(gaulats1)
-      gaulats = gaulats1
-      asin_gaulats = asin(gaulats)
-      deallocate(gaulats1)
-
-      if (idrt .eq. 4) then
-         allocate(gauwts1(jmax/2))
-         call shtns_gauss_wts(gauwts1)
-         do j=1,jmax/2
-            gauwts(j) = gauwts1(j)
-            gauwts(jmax-j+1) = gauwts1(j)
-         enddo
-         deallocate(gauwts1)
-      else
-         gauwts = cos(asin(gaulats))
-      endif
-
-      allocate(lap(nlm))
-      allocate(invlap(nlm))
-      ! laplacian operator * sqrt2 * rerth
-      j = 1
-      do m=0,jcap
-         do n=m,jcap
-            lap(j) = real(n)
-            j = j + 1
-         enddo
-      enddo
-      lap = -sqrt2*lap*(lap+1.0)/rerth
-      invlap = 0
-      invlap(2:) = 1./lap(2:)
-
-      isinitialized = .true.
-
-      end subroutine init_spec_vars
-
-      subroutine destroy_spec_vars()
-
-! deallocate arrays.
-
-      call shtns_reset()
-
-      if (allocated(gaulats)) deallocate(gaulats)
-      if (allocated(asin_gaulats)) deallocate(asin_gaulats)
-      if (allocated(gauwts)) deallocate(gauwts)
-      if (allocated(lap)) deallocate(lap)
-      if (allocated(invlap)) deallocate(invlap)
-
-      isinitialized = .false.
-
-      end subroutine destroy_spec_vars
-
-      subroutine sptez_s(dataspec,datagrid,idir)
-
+subroutine sptez_s(wave,grid,idir)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:  sptez_s       perform a simple scalar spherical transform
+!   prgmmr: iredell          org: np23                date: 1996-02-29
 !
 ! absract: this subprogram performs a spherical transform
 !           between spectral coefficients of a scalar quantity
@@ -174,81 +129,222 @@
 !           (with or without pole points) or a gaussian grid.
 !           the wave field is in sequential 'ibm order'.
 !           the grid field is indexed east to west, then north to south.
+!           for more flexibility and efficiency, call sptran.
+!           subprogram can be called from a multiprocessing environment.
+!
+!           This routine differs from splib routine sptez in that
+!              1) the calling list only contains the in/out arrays and 
+!                 flag for the direction in which to transform
+!              2) it calls a version of sptranf that does not invoke 
+!                 initialization routines on each entry
+!              3) some generality built into the splib version is
+!                 removed in the code below
+!
+! program history log:
+!   1996-02-29  iredell
+!   2004-08-23  treadon - adapt splib routine sptez for gsi use
+!   2008-02-01  whitaker - modifications for use in ensemble kalman filter.
 !
 !   input arguments:
-!     dataspec - real (2*mx) wave field if idir>0
+!     wave     - real (2*mx) wave field if idir>0
 !                where mx=(jcap+1)*(jcap+2)/2
-!     datagrid - real (imax,jmax) grid field (e->w,n->s) if idir<0
+!     grid     - real (imax,jmax) grid field (e->w,n->s) if idir<0
 !     idir     - integer transform flag
 !                (idir>0 for wave to grid, idir<0 for grid to wave)
 !
 !   output arguments:
-!     dataspec - real (2*mx) wave field if idir<0
+!     wave     - real (2*mx) wave field if idir<0
 !                where mx=(maxwv+1)*(maxwv+2)/2
-!     datagrid - real (imax,jmax) grid field (e->w,n->s) if idir>0
+!     grid     - real (imax,jmax) grid field (e->w,n->s) if idir>0
+!
+! subprograms called:
+!   sptranf_s  -  perform a scalar spherical transform
+!
+! remarks: minimum grid dimensions for unaliased transforms to spectral:
+!   dimension                    linear              quadratic
+!   -----------------------      ---------           -------------
+!   imax                         2*maxwv+2           3*maxwv/2*2+2
+!   jmax (idrt=4)                1*maxwv+1           3*maxwv/2+1
+!   jmax (idrt=0)                2*maxwv+3           3*maxwv/2*2+3
+!   jmax (idrt=256)              2*maxwv+1           3*maxwv/2*2+1
+!   -----------------------      ---------           -------------
+!
+! attributes:
+!   language: fortran 77
 !
 !$$$
+  implicit none
 
-      real(r_kind), dimension(ijmax), intent(inout)  :: datagrid
-      real(r_kind), dimension(nc), intent(inout)     :: dataspec
-      real(r_double), dimension(:,:),  allocatable   :: datagrid_tmp
-      complex(r_double), dimension(:), allocatable   :: dataspec_tmp
+! Declare passed variables
+  integer(i_kind),intent(in):: idir
+  real(r_kind),dimension(nc),intent(inout):: wave
+  real(r_kind),dimension(ijmax),intent(inout):: grid
 
-      integer, intent(in) :: idir
-      integer nm,nn,i,j
-      allocate(datagrid_tmp(imax,jmax))
-      allocate(dataspec_tmp(ncd2))
+! Declare local variables
+  integer(i_kind) i
 
-      if (idir .eq. -1) then ! grid to spec
+  if (.not. isinitialized) then
+     print *,'call init_spec_vars first to initialize'
+     stop
+  end if
+! Zero appropriate output array based on direction of transform
+  if (idir > 0) then
+     do i=1,ijmax
+        grid(i)=0._r_kind
+     end do
+  endif
 
-         nn = 0
-         do j=1,jmax
-         do i=1,imax
-            nn = nn + 1
-            datagrid_tmp(i,j) = datagrid(nn)
-         enddo
-         enddo
-         call shtns_spat_to_sh(datagrid_tmp, dataspec_tmp)
-         nn = 1
-         do nm=1,ncd2
-            dataspec(nn) = real(dataspec_tmp(nm))
-            dataspec(nn+1) = imag(dataspec_tmp(nm))
-            nn = nn + 2
-         enddo
-         dataspec = sqrt2*dataspec
+! Call spectral <--> grid transform
+  call sptranf_s(wave,grid,grid,idir)
 
-      else if (idir .eq. 1) then ! spec to grid
+  return
+end subroutine sptez_s
 
-         nn = 1
-         do nm=1,ncd2
-            dataspec_tmp(nm) = cmplx(dataspec(nn),dataspec(nn+1))
-            nn = nn + 2
-         enddo
-         dataspec_tmp = dataspec_tmp/sqrt2
-         call shtns_sh_to_spat(dataspec_tmp, datagrid_tmp)
-         nn = 0
-         do j=1,jmax
-         do i=1,imax
-            nn = nn + 1
-            datagrid(nn) = datagrid_tmp(i,j)
-         enddo
-         enddo
-
-      else
-         print *,'idir must be 1 or -1'
-         call stop2(-99)
-
-      endif
-
-      deallocate(datagrid_tmp,dataspec_tmp)
-
-      end subroutine sptez_s
-
-      subroutine sptezv_s(divspec,vrtspec,ugrid,vgrid,idir)
-
+subroutine sptranf_s(wave,gridn,grids,idir)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:  sptez_v       perform a simple vector spherical transform
+! subprogram:  sptranf_s     perform a scalar spherical transform
+!   prgmmr: iredell          org: np23                date: 1996-02-29
+!
+! abstract: this subprogram performs a spherical transform
+!           between spectral coefficients of scalar quantities
+!           and fields on a global cylindrical grid.
+!           the wave-space is triangular.
+!           the grid-space can be either an equally-spaced grid
+!           (with or without pole points) or a gaussian grid.
+!           the wave and grid fields may have general indexing,
+!           but each wave field is in sequential 'ibm order',
+!           i.e. with zonal wavenumber as the slower index.
+!           transforms are done in latitude pairs for efficiency;
+!           thus grid arrays for each hemisphere must be passed.
+!           if so requested, just a subset of the latitude pairs
+!           may be transformed in each invocation of the subprogram.
+!           the transforms are all multiprocessed over latitude except
+!           the transform from fourier to spectral is multiprocessed
+!           over zonal wavenumber to ensure reproducibility.
+!           transform several fields at a time to improve vectorization.
+!           subprogram can be called from a multiprocessing environment.
+!
+!           This routine differs from splib routine sptranf in that
+!           it does not call sptranf0 (an initialization routine).
+!
+! program history log:
+!   1996-02-29  iredell
+!   1998-12-15  iredell  generic fft used
+!   2004-08-23  treadon - adapt splib routine sptranf for gsi use
+!   2006-05-03  treadon - remove jc from specmod list since not used
+!   2008-02-01  whitaker - modifications for use in ensemble kalman filter.
+!
+!   input arguments:
+!     wave     - real (*) wave fields if idir>0
+!     gridn    - real (*) n.h. grid fields (starting at jb) if idir<0
+!     grids    - real (*) s.h. grid fields (starting at jb) if idir<0
+!     idir     - integer transform flag
+!                (idir>0 for wave to grid, idir<0 for grid to wave)
+!
+!   output arguments:
+!     wave     - real (*) wave fields if idir<0
+!     gridn    - real (*) n.h. grid fields (starting at jb) if idir>0
+!     grids    - real (*) s.h. grid fields (starting at jb) if idir>0
+!
+! subprograms called:
+!   sptranf1     sptranf spectral transform
+!   
+! remarks: 
+!   This routine assumes that splib routine sptranf0 has been 
+!   previously called.  sptranf0 initializes arrays needed in
+!   the transforms.
+!
+!   minimum grid dimensions for unaliased transforms to spectral:
+!   dimension                    linear              quadratic
+!   -----------------------      ---------           -------------
+!   imax                         2*maxwv+2           3*maxwv/2*2+2
+!   jmax (idrt=4)                1*maxwv+1           3*maxwv/2+1
+!   jmax (idrt=0)                2*maxwv+3           3*maxwv/2*2+3
+!   jmax (idrt=256)              2*maxwv+1           3*maxwv/2*2+1
+!   -----------------------      ---------           -------------
+!
+! attributes:
+!   language: fortran 77
+!
+!$$$
+  implicit none
+
+! Declare passed variables
+  integer(i_kind),intent(in):: idir
+  real(r_kind),dimension(nc),intent(inout):: wave
+  real(r_kind),dimension(ijmax),intent(inout):: gridn
+  real(r_kind),dimension(ijmax),intent(inout):: grids
+
+! Declare local variables
+  integer(i_kind) i,j,jj,ijn,ijs,mp
+  real(8) wavetmp(nc)
+  real(8),dimension(2*(jcap+1)):: wtop
+  real(8),dimension(imax,2):: g
+  real(8),dimension(50000+4*imax):: afft
+
+  if (.not. isinitialized) then
+     print *,'call init_spec_vars first to initialize'
+     stop
+  end if
+
+! this is needed for thread safety.
+  afft = afft_save
+
+! Initialize local variables
+  mp=0
+
+  do i=1,2*(jcap+1)
+     wtop(i)=0._r_kind
+  end do
+
+! Transform wave to grid
+  if(idir > 0) then
+     wavetmp = wave
+     do j=jb,je
+        call sptranf1(iromb,jcap,idrt,imax,jmax,j,j, &
+             eps,epstop,enn1,elonn1,eon,eontop, &
+             afft,clat(j),slat(j),wlat(j), &
+             pln(1,j),plntop(1,j),mp, &
+             wavetmp,wtop,g,idir)
+        do i=1,imax
+           jj  = j-jb
+           ijn = i + jj*jn
+           ijs = i + jj*js + ioffset
+           gridn(ijn)=g(i,1)
+           grids(ijs)=g(i,2)
+        enddo
+     enddo
+
+! Transform grid to wave
+  else
+     wavetmp = 0.d0
+     do j=jb,je
+        if(wlat(j) > 0._r_kind) then
+           do i=1,imax
+              jj  = j-jb
+              ijn = i + jj*jn
+              ijs = i + jj*js + ioffset
+              g(i,1)=gridn(ijn)
+              g(i,2)=grids(ijs)
+           enddo
+           call sptranf1(iromb,jcap,idrt,imax,jmax,j,j, &
+                eps,epstop,enn1,elonn1,eon,eontop, &
+                afft,clat(j),slat(j),wlat(j), &
+                pln(1,j),plntop(1,j),mp, &
+                wavetmp,wtop,g,idir)
+        endif
+     enddo
+     wave=wavetmp
+  endif
+end subroutine sptranf_s
+
+
+subroutine sptezv_s(waved,wavez,gridu,gridv,idir)
+!$$$  subprogram documentation block
+!                .      .    .                                       .
+! subprogram:  sptezv_s       perform a simple vector spherical transform
+!   prgmmr: iredell          org: np23                date: 1996-02-29
 !
 ! abstract: this subprogram performs a spherical transform
 !           between spectral coefficients of divergence and curl
@@ -257,89 +353,245 @@
 !           the grid-space can be either an equally-spaced grid
 !           (with or without pole points) or a gaussian grid.
 !           the wave field is in sequential 'ibm order'.
-!           the grid field is indexed east to west, then north to south.
+!           the grid fiels is indexed east to west, then north to south.
+!           for more flexibility and efficiency, call sptran.
+!           subprogram can be called from a multiprocessing environment.
+!
+!           This routine differs from splib routine sptezv in that
+!              1) the calling list only contains the in/out arrays and
+!                 flag for the direction in which to transform
+!              2) it calls a version of sptranfv that does not invoke
+!                 initialization routines on each entry
+!              3) some generality built into the splib version is
+!                 removed in the code below
+!
+! program history log:
+!   1996-02-29  iredell
+!   2004-08-23  treadon - adapt splib routine sptezv for gsi use
+!   2008-02-01  whitaker - modifications for use in ensemble kalman filter.
 !
 !   input arguments:
-!     vrtspec  - real (2*mx) wave divergence field if idir>0
+!     waved    - real (2*mx) wave divergence field if idir>0
 !                where mx=(maxwv+1)*(maxwv+2)/2
-!     divspec  - real (2*mx) wave vorticity field if idir>0
+!     wavez    - real (2*mx) wave vorticity field if idir>0
 !                where mx=(maxwv+1)*(maxwv+2)/2
-!     ugrid    - real (imax*jmax) grid u-wind (e->w,n->s) if idir<0
-!     vgrid    - real (imax*jmax) grid v-wind (e->w,n->s) if idir<0
+!     gridu    - real (imax,jmax) grid u-wind (e->w,n->s) if idir<0
+!     gridv    - real (imax,jmax) grid v-wind (e->w,n->s) if idir<0
 !     idir     - integer transform flag
 !                (idir>0 for wave to grid, idir<0 for grid to wave)
 !
 !   output arguments:
-!     divspec  - real (2*mx) wave divergence field if idir<0
+!     waved    - real (2*mx) wave divergence field if idir<0
 !                where mx=(maxwv+1)*(maxwv+2)/2
-!     vrtspec  - real (2*mx) wave vorticity field if idir>0
+!     wavez    - real (2*mx) wave vorticity field if idir>0
 !                where mx=(maxwv+1)*(maxwv+2)/2
-!     ugrid    - real (imax*jmax) grid u-wind (e->w,n->s) if idir>0
-!     vgrid    - real (imax*jmax) grid v-wind (e->w,n->s) if idir>0
+!     gridu    - real (imax,jmax) grid u-wind (e->w,n->s) if idir>0
+!     gridv    - real (imax,jmax) grid v-wind (e->w,n->s) if idir>0
+!
+! subprograms called:
+!   sptranf_v  - perform a vector spherical transform
+!
+! remarks: minimum grid dimensions for unaliased transforms to spectral:
+!   dimension                    linear              quadratic
+!   -----------------------      ---------           -------------
+!   imax                         2*maxwv+2           3*maxwv/2*2+2
+!   jmax (idrt=4)                1*maxwv+1           3*maxwv/2+1
+!   jmax (idrt=0)                2*maxwv+3           3*maxwv/2*2+3
+!   jmax (idrt=256)              2*maxwv+1           3*maxwv/2*2+1
+!   -----------------------      ---------           -------------
+!
+! attributes:
+!   language: fortran 77
 !
 !$$$
-      integer, intent(in) :: idir
-      real(r_kind), dimension(ijmax), intent(inout) :: ugrid,vgrid
-      real(r_kind), dimension(nc), intent(inout)    :: vrtspec,divspec
-      complex(r_double), allocatable, dimension(:)  :: vrtspec_tmp,divspec_tmp
-      real(r_double), allocatable, dimension(:,:)   :: ugrid_tmp,vgrid_tmp
-      integer i,j,nn,nm
+  implicit none
 
-      allocate(ugrid_tmp(imax,jmax))
-      allocate(vgrid_tmp(imax,jmax))
-      allocate(vrtspec_tmp(ncd2))
-      allocate(divspec_tmp(ncd2))
+! Declare passed variables
+  integer(i_kind),intent(in):: idir
+  real(r_kind),dimension(nc),intent(inout):: waved,wavez
+  real(r_kind),dimension(ijmax),intent(inout):: gridu,gridv
 
-      if (idir .eq. -1) then ! grid to spec
+! Declare local variables
+  integer(i_kind) i
 
-         nn = 0
-         do j=1,jmax
-         do i=1,imax
-            nn = nn + 1
-            ugrid_tmp(i,j) = ugrid(nn)
-            vgrid_tmp(i,j) = vgrid(nn)
-         enddo
-         enddo
-         call shtns_spat_to_sphtor(ugrid_tmp, vgrid_tmp, vrtspec_tmp, divspec_tmp)
-         vrtspec_tmp = lap*vrtspec_tmp; divspec_tmp = lap*divspec_tmp
-         nn = 1
-         do nm=1,ncd2
-            vrtspec(nn) = real(vrtspec_tmp(nm))
-            vrtspec(nn+1) = imag(vrtspec_tmp(nm))
-            divspec(nn) = real(divspec_tmp(nm))
-            divspec(nn+1) = imag(divspec_tmp(nm))
-            nn = nn + 2
-         enddo
+! Zero appropriate output array based on direction of transform
+  if (idir > 0) then
+     do i=1,ijmax
+        gridu(i)=0._r_kind
+        gridv(i)=0._r_kind
+     end do
+  endif
 
-      else if (idir .eq. 1) then ! spec to grid
+! Call spectral <--> grid transform
+  call sptranf_v(waved,wavez,gridu,gridu,gridv,gridv,idir)
 
-         nn = 1
-         do nm=1,ncd2
-            vrtspec_tmp(nm) = cmplx(vrtspec(nn),vrtspec(nn+1))
-            divspec_tmp(nm) = cmplx(divspec(nn),divspec(nn+1))
-            nn = nn + 2
-         enddo
-         vrtspec_tmp = invlap*vrtspec_tmp
-         divspec_tmp = invlap*divspec_tmp
-         call shtns_sphtor_to_spat(vrtspec_tmp,divspec_tmp,ugrid_tmp,vgrid_tmp)
-         nn = 0
-         do j=1,jmax
-         do i=1,imax
-            nn = nn + 1
-            ugrid(nn) = ugrid_tmp(i,j)
-            vgrid(nn) = vgrid_tmp(i,j)
-         enddo
-         enddo
+end subroutine sptezv_s
 
-      else
+subroutine sptranf_v(waved,wavez,gridun,gridus,gridvn,gridvs,idir)
+!$$$  subprogram documentation block
+!                .      .    .                                       .
+! subprogram:  sptranf_v     perform a vecor spherical transform
+!   prgmmr: iredell          org: np23                date: 1996-02-29
+!
+! abstract: this subprogram performs a spherical transform
+!           between spectral coefficients of divergences and curls
+!           and vector fields on a global cylindrical grid.
+!           the wave-space is triangular.
+!           the grid-space can be either an equally-spaced grid
+!           (with or without pole points) or a gaussian grid.
+!           the wave and grid fields may have general indexing,
+!           but each wave field is in sequential 'ibm order',
+!           i.e. with zonal wavenumber as the slower index.
+!           transforms are done in latitude pairs for efficiency;
+!           thus grid arrays for each hemisphere must be passed.
+!           if so requested, just a subset of the latitude pairs
+!           may be transformed in each invocation of the subprogram.
+!           the transforms are all multiprocessed over latitude except
+!           the transform from fourier to spectral is multiprocessed
+!           over zonal wavenumber to ensure reproducibility.
+!           transform several fields at a time to improve vectorization.
+!           subprogram can be called from a multiprocessing environment.
+!
+!           This routine differs from splib routine sptranfv in that
+!           it does not call sptranf0 (an initialization routine).
+!
+! program history log:
+!   1996-02-29  iredell
+!   1998-12-15  iredell  generic fft used
+!   2004-08-23  treadon - adapt splib routine sptranfv for gsi use
+!   2006-05-03  treadon - remove jc from specmod list since not used
+!   2006-07-07  kleist - correct bug in indexing of j=1,2*ncd2 loop
+!   2008-02-01  whitaker - modifications for use in ensemble kalman filter.
+!
+!   input arguments:
+!     waved    - real (*) wave divergence fields if idir>0
+!     wavez    - real (*) wave vorticity fields if idir>0
+!     gridun   - real (*) n.h. grid u-winds (starting at jb) if idir<0
+!     gridus   - real (*) s.h. grid u-winds (starting at jb) if idir<0
+!     gridvn   - real (*) n.h. grid v-winds (starting at jb) if idir<0
+!     gridvs   - real (*) s.h. grid v-winds (starting at jb) if idir<0
+!     idir     - integer transform flag
+!                (idir>0 for wave to grid, idir<0 for grid to wave)
+!
+!   output arguments:
+!     waved    - real (*) wave divergence fields if idir<0
+!                [waved=(d(gridu)/dlam+d(clat*gridv)/dphi)/(clat*rerth)]
+!     wavez    - real (*) wave vorticity fields if idir<0
+!                [wavez=(d(gridv)/dlam-d(clat*gridu)/dphi)/(clat*rerth)]
+!     gridun   - real (*) n.h. grid u-winds (starting at jb) if idir>0
+!     gridus   - real (*) s.h. grid u-winds (starting at jb) if idir>0
+!     gridvn   - real (*) n.h. grid v-winds (starting at jb) if idir>0
+!     gridvs   - real (*) s.h. grid v-winds (starting at jb) if idir>0
+!
+! subprograms called:
+!   sptranf1     sptranf spectral transform
+!   spdz2uv      compute winds from divergence and vorticity
+!   spuv2dz      compute divergence and vorticity from winds
+!
+! remarks: 
+!   This routine assumes that splib routine sptranf0 has been
+!   previously called.  sptranf0 initializes arrays needed in
+!   the transforms.
+!
+!   minimum grid dimensions for unaliased transforms to spectral:
+!   dimension                    linear              quadratic
+!   -----------------------      ---------           -------------
+!   imax                         2*maxwv+2           3*maxwv/2*2+2
+!   jmax (idrt=4)                1*maxwv+1           3*maxwv/2+1
+!   jmax (idrt=0)                2*maxwv+3           3*maxwv/2*2+3
+!   jmax (idrt=256)              2*maxwv+1           3*maxwv/2*2+1
+!   -----------------------      ---------           -------------
+!
+! attributes:
+!   language: fortran 77
+!
+!$$$
+  implicit none
 
-         print *,'idir must be 1 or -1'
-         call stop2(-99)
+! Declare passed variables
+  integer(i_kind),intent(in):: idir
+  real(r_kind),dimension(nc):: waved,wavez
+  real(r_kind),dimension(ijmax):: gridun,gridus,gridvn,gridvs
 
-      endif
 
-      deallocate(ugrid_tmp,vgrid_tmp,vrtspec_tmp,divspec_tmp)
+! Declare local variables
+  integer(i_kind) i,j,jj,ijn,ijs
+  integer(i_kind),dimension(2):: mp
+  real(8) wavedtmp(nc),waveztmp(nc)
+  real(8),dimension(ncd2*2,2):: w
+  real(8),dimension(2*(jcap+1),2):: wtop
+  real(8),dimension(imax,2,2):: g
+  real(8),dimension(50000+4*imax):: afft
 
-      end subroutine sptezv_s
+! Set parameters
+  mp=1
+! this is needed for thread safety.
+  afft = afft_save
 
-      end module specmod
+! Transform wave to grid
+  if(idir > 0) then
+     waveztmp = wavez; wavedtmp = waved
+     call spdz2uv(iromb,jcap,enn1,elonn1,eon,eontop, &
+          wavedtmp,waveztmp, &
+          w(1,1),w(1,2),wtop(1,1),wtop(1,2))
+     do j=jb,je
+        call sptranf1(iromb,jcap,idrt,imax,jmax,j,j, &
+             eps,epstop,enn1,elonn1,eon,eontop, &
+             afft,clat(j),slat(j),wlat(j), &
+             pln(1,j),plntop(1,j),mp, &
+             w(1,1),wtop(1,1),g(1,1,1),idir)
+        call sptranf1(iromb,jcap,idrt,imax,jmax,j,j, &
+             eps,epstop,enn1,elonn1,eon,eontop, &
+             afft,clat(j),slat(j),wlat(j), &
+             pln(1,j),plntop(1,j),mp, &
+             w(1,2),wtop(1,2),g(1,1,2),idir)
+        do i=1,imax
+           jj   = j-jb
+           ijn = i + jj*jn
+           ijs = i + jj*js + ioffset
+           gridun(ijn)=g(i,1,1)
+           gridus(ijs)=g(i,2,1)
+           gridvn(ijn)=g(i,1,2)
+           gridvs(ijs)=g(i,2,2)
+           
+        enddo
+     enddo
+
+!  Transform grid to wave
+  else
+     waveztmp=0.d0; wavedtmp=0.d0
+     w=0
+     wtop=0
+     do j=jb,je
+        if(wlat(j) > 0._r_kind) then
+           do i=1,imax
+              jj   = j-jb
+              ijn = i + jj*jn
+              ijs = i + jj*js + ioffset
+
+              g(i,1,1)=gridun(ijn)/clat(j)**2
+              g(i,2,1)=gridus(ijs)/clat(j)**2
+              g(i,1,2)=gridvn(ijn)/clat(j)**2
+              g(i,2,2)=gridvs(ijs)/clat(j)**2
+           enddo
+           call sptranf1(iromb,jcap,idrt,imax,jmax,j,j, &
+                eps,epstop,enn1,elonn1,eon,eontop, &
+                afft,clat(j),slat(j),wlat(j), &
+                pln(1,j),plntop(1,j),mp, &
+                w(1,1),wtop(1,1),g(1,1,1),idir)
+           call sptranf1(iromb,jcap,idrt,imax,jmax,j,j, &
+                eps,epstop,enn1,elonn1,eon,eontop, &
+                afft,clat(j),slat(j),wlat(j), &
+                pln(1,j),plntop(1,j),mp, &
+                w(1,2),wtop(1,2),g(1,1,2),idir)
+        endif
+     enddo
+     call spuv2dz(iromb,jcap,enn1,elonn1,eon,eontop, &
+          w(1,1),w(1,2),wtop(1,1),wtop(1,2), &
+          wavedtmp(1),waveztmp(1))
+     waved = wavedtmp; wavez=waveztmp
+  endif
+
+ end subroutine sptranf_v
+
+end module specmod
