@@ -11,10 +11,10 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 ! !USES:
 
-  use mpeu_util, only: die,perr
+  use mpeu_util, only: die,perr,getindex
   use kinds, only: r_kind,r_single,r_double,i_kind
 
-  use obsmod, only: ttail,thead,sfcmodel,perturb_obs,oberror_tune,&
+  use obsmod, only: ttail,thead,sfcmodel,perturb_obs,oberror_tune,lobsdiag_forenkf, &
        i_t_ob_type,obsdiags,lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset
   use obsmod, only: t_ob_type
   use obsmod, only: obs_diag,luse_obsdiag
@@ -33,6 +33,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   use guess_grids, only: nfldsig, hrdifsig,ges_lnprsl,&
        geop_hgtl,ges_tsen,pt_ll,pbl_height
+  use state_vectors, only: svars3d, levels
 
   use constants, only: zero, one, four,t0c,rd_over_cp,three,rd_over_cp_mass,ten
   use constants, only: tiny_r_kind,half,two,cg_term
@@ -53,6 +54,8 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
   use buddycheck_mod, only: buddy_check_t
+
+  use sparsearr, only: sparr2
 
   implicit none
 
@@ -156,6 +159,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2014-10-06  carley  - add call to buddy check for twodvar_regional option
 !   2014-12-30  derber  - Modify for possibility of not using obsdiag
 !   2015-12-21  yang    - Parrish's correction to the previous code in new
+!   2016-11-29  shlyaeva - save linearized H(x) for EnKF
 !   
 !
 ! !REMARKS:
@@ -185,6 +189,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 ! Declare local variables
 
+  real(r_kind) :: delz
   
   real(r_double) rstation_id
   real(r_kind) rsig,drpx,rsigp
@@ -222,7 +227,8 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   integer(i_kind),dimension(nobs):: buddyuse
 
-  
+  type(sparr2) :: dhx_dx
+  integer(i_kind) :: iz, t_ind  
   character(8) station_id
   character(8),allocatable,dimension(:):: cdiagbuf
   character(8),allocatable,dimension(:):: cprvstg,csprvstg
@@ -343,6 +349,12 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      idia0=nreal
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
+     if (lobsdiag_forenkf) then
+       dhx_dx%nnz   = 2                   ! number of non-zero elements in dH(x)/dx profile
+       dhx_dx%nind   = 1
+       nreal = nreal + 2*dhx_dx%nind + dhx_dx%nnz + 2    ! non-zero elements, their indices and number of indices
+       allocate(dhx_dx%val(dhx_dx%nnz), dhx_dx%st_ind(dhx_dx%nind), dhx_dx%end_ind(dhx_dx%nind))
+     endif
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
      rdiagbuf=zero
   end if
@@ -565,10 +577,31 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            call tintrp31(ges_tv,tges,dlat,dlon,dpres,dtime, &
                 hrdifsig,mype,nfldsig)
 
+           iz = max(1, min( int(dpres), nsig))
+           delz = max(zero, min(dpres - float(iz), one))
+
+           t_ind =getindex(svars3d,'tv')
+           
+           dhx_dx%st_ind(1)  = iz               + sum(levels(1:t_ind-1))
+           dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:t_ind-1))
+
+           dhx_dx%val(1) = one - delz         ! weight for iz's level
+           dhx_dx%val(2) = delz               ! weight for iz+1's level
         else
 !          Interpolate guess tsen to observation location and time
            call tintrp31(ges_tsen,tges,dlat,dlon,dpres,dtime, &
                 hrdifsig,mype,nfldsig)
+
+           iz = max(1, min( int(dpres), nsig))
+           delz = max(zero, min(dpres - float(iz), one))
+
+           t_ind =getindex(svars3d,'tsen')
+
+           dhx_dx%st_ind(1)  = iz               + sum(levels(1:t_ind-1))
+           dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:t_ind-1))
+
+           dhx_dx%val(1) = one - delz         ! weight for iz's level
+           dhx_dx%val(2) = delz               ! weight for iz+1's level
         end if
 
         if(i_use_2mt4b>0 .and. sfctype) then
@@ -1003,13 +1036,29 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         endif
 
         if (twodvar_regional) then
-           rdiagbuf(idia+1,ii) = data(idomsfc,i) ! dominate surface type
-           rdiagbuf(idia+2,ii) = data(izz,i)     ! model terrain at observation location
+           idia = idia + 1
+           rdiagbuf(idia,ii) = data(idomsfc,i) ! dominate surface type
+           idia = idia + 1
+           rdiagbuf(idia,ii) = data(izz,i)     ! model terrain at observation location
            r_prvstg            = data(iprvd,i)
            cprvstg(ii)         = c_prvstg        ! provider name
            r_sprvstg           = data(isprvd,i)
            csprvstg(ii)        = c_sprvstg       ! subprovider name
         endif
+        if (lobsdiag_forenkf) then
+           idia = idia + 1
+           rdiagbuf(idia,ii) = dhx_dx%nnz
+           idia = idia + 1
+           rdiagbuf(idia,ii) = dhx_dx%nind
+           idia = idia + 1
+           rdiagbuf(idia:idia+dhx_dx%nind-1,ii) = dhx_dx%st_ind
+           idia = idia + dhx_dx%nind
+           rdiagbuf(idia:idia+dhx_dx%nind-1,ii) = dhx_dx%end_ind
+           idia = idia + dhx_dx%nind
+           rdiagbuf(idia:idia+dhx_dx%nnz-1,ii) = dhx_dx%val
+           idia = idia + dhx_dx%nnz - 1
+        endif
+
 
      end if
 

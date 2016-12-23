@@ -86,6 +86,7 @@ module enkf_obsmod
 !   2009-02-23  Initial version.
 !   2011-06-20  Added the option of observation box for LETKF.
 !   2015=07-25  Removed observation boxes for LETKF (use kdtree instead)
+!   2016-11-29  shlyaeva: Added the option of writing out ensemble spread in diag files
 !
 ! attributes:
 !   language: f95
@@ -115,7 +116,7 @@ real(r_single), public, allocatable, dimension(:) :: obsprd_prior, ensmean_obnob
  oblnp, obfit_prior, prpgerr, oberrvarmean, probgrosserr, &
  lnsigl,corrlengthsq,obtimel
 integer(i_kind), public, allocatable, dimension(:) :: numobspersat
-integer(i_kind), allocatable, dimension(:)     :: diagused
+integer(i_kind), allocatable, dimension(:)         :: diagused
 ! posterior stats computed in enkf_update
 real(r_single), public, allocatable, dimension(:) :: obfit_post, obsprd_post
 real(r_single), public, allocatable, dimension(:,:) :: biaspreds
@@ -190,12 +191,13 @@ enddo
 allocate(deltapredx(npred,jpch_rad))
 deltapredx = zero
 t1 = mpi_wtime()
-call mpi_getobs(datapath, datestring, nobs_conv, nobs_oz, nobs_sat, nobstot, &
-                nobs_convdiag,nobs_ozdiag, nobs_satdiag, nobstotdiag, &
-                obsprd_prior, ensmean_obnobc, ensmean_ob, ob, &
-                oberrvar, obloclon, obloclat, obpress, &
+call mpi_getobs(datapath, datestring, nobs_conv, nobs_oz, nobs_sat, nobstot,  &
+                nobs_convdiag,nobs_ozdiag, nobs_satdiag, nobstotdiag,         &
+                obsprd_prior, ensmean_obnobc, ensmean_ob, ob,                 &
+                oberrvar, obloclon, obloclat, obpress,                        &
                 obtime, oberrvar_orig, stattype, obtype, biaspreds, diagused, &
                 anal_ob,indxsat,nanals)
+
 tdiff = mpi_wtime()-t1
 call mpi_reduce(tdiff,tdiffmax,1,mpi_real4,mpi_max,0,mpi_comm_world,ierr)
 if (nproc == 0) then
@@ -284,8 +286,8 @@ end subroutine readobs
 
 subroutine write_obsstats()
 use readconvobs, only: write_convobs_data
-use readozobs, only: write_ozobs_data
-use readsatobs, only: write_satobs_data
+use readozobs,   only: write_ozobs_data
+use readsatobs,  only: write_satobs_data
 character(len=10) :: id,id2,gesid2
 
   id = 'ensmean'
@@ -310,7 +312,7 @@ character(len=10) :: id,id2,gesid2
               maxval(obsprd_prior(nobs_conv+1:nobs_conv+nobs_oz))
        gesid2 = 'ges'
        call write_ozobs_data(datapath, datestring, nobs_oz, nobs_ozdiag,  &
-             obfit_prior(nobs_conv+1:nobs_conv+nobs_oz),                  & 
+             obfit_prior(nobs_conv+1:nobs_conv+nobs_oz),                  &
              obsprd_prior(nobs_conv+1:nobs_conv+nobs_oz),                 &
              diagused(nobs_convdiag+1:nobs_convdiag+nobs_ozdiag),         &
              id, id2, gesid2)
@@ -322,7 +324,7 @@ character(len=10) :: id,id2,gesid2
              id, id2, gesid2)
     end if
     if (nobs_sat > 0) then
-       print *, 'obsprd, sat: ', minval(obsprd_prior(nobs_conv+nobs_oz+1:nobstot)),    &
+       print *, 'obsprd, sat: ', minval(obsprd_prior(nobs_conv+nobs_oz+1:nobstot)), &
               maxval(obsprd_prior(nobs_conv+nobs_oz+1:nobstot))
        gesid2 = 'ges'
        call write_satobs_data(datapath, datestring, nobs_sat, nobs_satdiag, &
@@ -337,7 +339,6 @@ character(len=10) :: id,id2,gesid2
              diagused(nobs_convdiag+nobs_ozdiag+1:nobstotdiag),             &
              id, id2, gesid2)
     end if
-
   endif
 
 

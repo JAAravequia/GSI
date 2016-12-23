@@ -172,6 +172,7 @@
 !   2016-07-19  W. Gu   - add isis to obs type
 !   2016-07-19  W. Gu   - include the dependence of the correlated obs errors on the surface types
 !   2016-07-19  kbathmann -move eigendecomposition for correlated obs here
+!   2016-11-29  shlyaeva - save linearized H(x) for EnKF
 !
 !  input argument list:
 !     lunin   - unit from which to read radiance (brightness temperature, tb) obs
@@ -200,12 +201,12 @@
   use radinfo, only: nuchan,tlapmean,predx,cbias,ermax_rad,tzr_qc,&
       npred,jpch_rad,varch,varch_cld,iuse_rad,icld_det,nusis,fbias,retrieval,b_rad,pg_rad,&
       air_rad,ang_rad,adp_anglebc,angord,ssmis_precond,emiss_bc,upd_pred, &
-      passive_bc,ostats,rstats,newpc4pred,radjacnames,radjacindxs,nsigradjac
+      passive_bc,ostats,rstats,newpc4pred,radjacnames,radjacindxs,nsigradjac,nvarjac
   use gsi_nstcouplermod, only: nstinfo
   use read_diag, only: get_radiag,ireal_radiag,ipchan_radiag
   use guess_grids, only: sfcmod_gfs,sfcmod_mm5,comp_fact10
   use obsmod, only: ianldate,ndat,mype_diaghdr,nchan_total, &
-      dplat,dtbduv_on,radhead,radtail,radheadm,radtailm,&
+      dplat,dtbduv_on,radhead,radtail,radheadm,radtailm,lobsdiag_forenkf,&
       i_rad_ob_type,obsdiags,obsptr,lobsdiagsave,nobskeep,lobsdiag_allocated,&
       dirname,time_offset,lwrite_predterms,lwrite_peakwt,reduce_diag
   use obsmod, only: rad_ob_type
@@ -230,8 +231,10 @@
   use qcmod, only: setup_tzr_qc,ifail_outside_range,ifail_scanedge_qc
   use gsi_metguess_mod, only: gsi_metguess_get
   use control_vectors, only: cvars3d
+  use state_vectors, only: svars3d, levels, svars2d, ns3d
   use oneobmod, only: lsingleradob,obchan,oblat,oblon,oneob_type
   use radinfo, only: radinfo_adjust_jacobian,radinfo_get_rsqrtinv 
+  use sparsearr, only: sparr2
 
 
 
@@ -290,6 +293,7 @@
   real(r_kind) factch6    
 
   logical hirs2,msu,goessndr,hirs3,hirs4,hirs,amsua,amsub,airs,hsb,goes_img,ahi,mhs
+  type(sparr2) :: dhx_dx
   logical avhrr,avhrr_navy,lextra,ssu,iasi,cris,seviri,atms
   logical ssmi,ssmis,amsre,amsre_low,amsre_mid,amsre_hig,amsr2,gmi,saphir
   logical ssmis_las,ssmis_uas,ssmis_env,ssmis_img
@@ -339,6 +343,7 @@
   integer(i_kind):: iinstr
   integer(i_kind) :: chan_count
   integer(i_kind),allocatable,dimension(:) :: sc_index
+  integer(i_kind)  :: state_ind
 
   logical channel_passive
   logical,dimension(nobs):: luse
@@ -660,6 +665,13 @@
 
 ! Allocate array to hold channel information for diagnostic file and/or lobsdiagsave option
   idiag=ipchan_radiag+npred+2
+
+  if (lobsdiag_forenkf) then
+    dhx_dx%nnz   = nsigradjac
+    dhx_dx%nind  = nvarjac
+    idiag = idiag + 2*dhx_dx%nind + dhx_dx%nnz + 2
+    allocate(dhx_dx%val(dhx_dx%nnz),dhx_dx%st_ind(dhx_dx%nind),dhx_dx%end_ind(dhx_dx%nind))
+  endif
   ioff0=idiag
   if (lobsdiagsave) idiag=idiag+4*miter+1
   allocate(diagbufchan(idiag,nchanl_diag))
@@ -1964,6 +1976,52 @@
                     diagbufchan(ipchan_radiag+j,i)=predbias(j,ich_diag(i)) ! Tb bias correction terms (K)
                  end do
               end if
+
+              j = 1
+              do ii = 1, nvarjac
+                 state_ind = getindex(svars3d, radjacnames(ii))
+                 if (state_ind < 0)     state_ind = getindex(svars2d, radjacnames(ii))
+                 if (state_ind < 0) then
+                    print *, 'Error: no variable ', radjacnames(ii), ' in state vector. Exiting.'
+                    call stop2(1300)
+                 endif
+                 if ( radjacnames(ii) == 'u' .or. radjacnames(ii) == 'v') then
+                    dhx_dx%st_ind(ii)  = sum(levels(1:state_ind-1)) + 1
+                    dhx_dx%end_ind(ii) = sum(levels(1:state_ind-1)) + 1
+                    dhx_dx%val(j) = jacobian( radjacindxs(ii) + 1, ich_diag(i))
+                    j = j + 1
+                 else if (radjacnames(ii) == 'sst') then
+                    dhx_dx%st_ind(ii)  = sum(levels(1:ns3d)) + state_ind
+                    dhx_dx%end_ind(ii) = sum(levels(1:ns3d)) + state_ind
+                    dhx_dx%val(j) = jacobian( radjacindxs(ii) + 1, ich_diag(i))
+                    j = j + 1
+                 else
+                    dhx_dx%st_ind(ii)  = sum(levels(1:state_ind-1)) + 1
+                    dhx_dx%end_ind(ii) = sum(levels(1:state_ind-1)) + nsig
+                    do jj = 1, nsig
+                       dhx_dx%val(j) = jacobian( radjacindxs(ii) + jj, ich_diag(i))
+                       j = j + 1
+                    enddo
+                 endif
+              enddo
+
+
+              ioff = ipchan_radiag+npred+2
+              if (lobsdiag_forenkf) then
+                 ioff = ioff+1
+                 diagbufchan(ioff,i) = dhx_dx%nnz
+                 ioff = ioff+1
+                 diagbufchan(ioff,i) = dhx_dx%nind
+                 ioff = ioff+1
+                 diagbufchan(ioff:ioff+dhx_dx%nind-1,i) = dhx_dx%st_ind(:)
+                 ioff = ioff+dhx_dx%nind
+                 diagbufchan(ioff:ioff+dhx_dx%nind-1,i) = dhx_dx%end_ind(:)
+                 ioff = ioff+dhx_dx%nind
+                 diagbufchan(ioff:ioff+dhx_dx%nnz-1,i) = dhx_dx%val
+                 ioff = ioff+dhx_dx%nnz-1
+              endif
+
+
            end do
 
            if (lobsdiagsave) then
@@ -1978,7 +2036,6 @@
                        call stop2(281)
                     end if
  
-                    ioff=ipchan_radiag+npred+2
                     do jj=1,miter
                        ioff=ioff+1
                        if (obsptr%muse(jj)) then
@@ -2003,7 +2060,6 @@
                     obsptr => obsptr%next
                  enddo
               else
-                 ioff=ipchan_radiag+npred+2
                  diagbufchan(ioff+1:ioff+4*miter+1,1:nchanl_diag) = zero
               endif
            endif

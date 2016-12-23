@@ -44,6 +44,7 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
 !   2014-01-28  todling - write sensitivity slot indicator (ioff) to header of diagfile
 !   2014-12-13 derber   - minor optimization modifications
 !   2015-07-28 cucurull - add QC for regional bending angle assimilation
+!   2016-11-29 shlyaeva - increase the size of nreal for saving linearized Hx for EnKF
 !
 !   input argument list:
 !     toss_gps_sub  - array of qc'd profile heights
@@ -60,7 +61,7 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
 !
 !$$$
   use kinds, only: r_kind,i_kind,r_single
-  use obsmod, only: gps_allhead,gps_allptr,nprof_gps,&
+  use obsmod, only: gps_allhead,gps_allptr,nprof_gps,lobsdiag_forenkf,&
        destroy_genstats_gps,gpsptr,obs_diag,lobsdiagsave,luse_obsdiag
   use gridmod, only: nsig,regional
   use constants, only: tiny_r_kind,half,wgtlim,one,two,zero,five,four
@@ -101,6 +102,8 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
   character(8),allocatable,dimension(:):: cdiag
   
   type(obs_diag), pointer :: obsptr => NULL()
+
+  integer(i_kind) :: nnz, nind
   
 
 !*******************************************************************************
@@ -232,6 +235,11 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
         nreal =21
         ioff  =nreal
         if (lobsdiagsave) nreal=nreal+4*miter+1
+        if (lobsdiag_forenkf) then
+          nnz   = 3*nsig
+          nind  = 3
+          nreal = nreal + 2*nind + nnz + 2
+        endif
         allocate(cdiag(icnt),sdiag(nreal,icnt))
      end if
   endif

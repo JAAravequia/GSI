@@ -22,8 +22,9 @@ module params
 !
 ! program history log:
 !   2009-02-23  Initial version.
-!   2016-05-02  Modification for reading state vector from table
-!                (Anna Shlyaeva)
+!   2016-05-02  shlyaeva - Modification for reading state vector from table
+!   2016-11-29  shlyaeva - added nhr_state (hours for state fields to 
+!                          calculate Hx; nhr_anal is for IAU)
 !
 ! attributes:
 !   language: f95
@@ -50,11 +51,13 @@ integer(i_kind), public, parameter :: nsatmax_oz = 100
 character(len=20), public, dimension(nsatmax_rad) ::sattypes_rad, dsis
 character(len=20), public, dimension(nsatmax_oz) ::sattypes_oz
 ! forecast times for first-guess forecasts to be updated (in hours)
-integer,dimension(7),public ::  nhr_anal = (/6,-1,-1,-1,-1,-1,-1/)
+integer,dimension(7),public ::  nhr_anal  = (/6,-1,-1,-1,-1,-1,-1/)
+integer,dimension(7),public ::  nhr_state = (/6,-1,-1,-1,-1,-1,-1/)
 ! forecast hour at middle of assimilation window
 real(r_single),public :: fhr_assim=6.0
 ! character string version of nhr_anal with leading zeros.
 character(len=2),dimension(7),public :: charfhr_anal
+character(len=2),dimension(7),public :: charfhr_state
 ! prefix for background and analysis file names (mem### appended)
 ! For global, default is "sfg_"//datestring//"_fhr##_" and
 ! "sanl_"//datestring//"_fhr##_". If only one time level
@@ -63,6 +66,7 @@ character(len=2),dimension(7),public :: charfhr_anal
 ! "analysis_fhr##." If only one time level
 ! in background, default is "firstguess." and "analysis.".
 character(len=120),dimension(7),public :: fgfileprefixes
+character(len=120),dimension(7),public :: statefileprefixes
 character(len=120),dimension(7),public :: anlfileprefixes
 ! analysis date string (YYYYMMDDHH)
 character(len=10), public ::  datestring
@@ -74,7 +78,7 @@ character(len=500),public :: datapath
 logical, public :: deterministic, sortinc, pseudo_rh, &
                    varqc, huber, cliptracers, readin_localization
 integer(i_kind),public ::  iassim_order,nlevs,nanals,numiter,&
-                           nlons,nlats,nbackgrounds
+                           nlons,nlats,nbackgrounds,nstatefields
 integer(i_kind),public :: nsats_rad,nsats_oz
 ! random seed for perturbed obs (deterministic=.false.)
 ! if zero, system clock is used.  Also used when
@@ -148,7 +152,8 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    nlevs,nanals,saterrfact,univaroz,regional,use_gfs_nemsio,&
                    paoverpb_thresh,latbound,delat,pseudo_rh,numiter,biasvar,&
                    lupd_satbiasc,cliptracers,simple_partition,adp_anglebc,angord,&
-                   newpc4pred,nmmb,nhr_anal,fhr_assim,nbackgrounds,save_inflation,nobsl_max,&
+                   newpc4pred,nmmb,nhr_anal,nhr_state, fhr_assim,nbackgrounds,nstatefields, &
+                   save_inflation,nobsl_max,&
                    letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
                    write_spread_diag
 namelist /nam_wrf/arw,nmm
@@ -268,7 +273,7 @@ dsis=' '
 
 ! Initialize first-guess and analysis file name prefixes.
 ! (blank means use default names)
-fgfileprefixes = ''; anlfileprefixes=''
+fgfileprefixes = ''; anlfileprefixes=''; statefileprefixes=''
 
 ! read from namelist file, doesn't seem to work from stdin with mpich
 open(912,file='enkf.nml',form="formatted")
@@ -381,6 +386,26 @@ do while (nhr_anal(nbackgrounds+1) > 0)
    endif
    nbackgrounds = nbackgrounds+1
 end do
+
+! state fields
+nstatefields=0
+do while (nhr_state(nstatefields+1) > 0)
+   write(charfhr_state(nstatefields+1),'(i2.2)') nhr_state(nstatefields+1)
+   if (trim(statefileprefixes(nstatefields+1)) .eq. "") then
+     ! default first-guess file prefix
+     if (regional) then
+      if (nstatefields > 1) then
+        statefileprefixes(nstatefields+1)="firstguess_fhr"//charfhr_state(nstatefields+1)//"."
+      else
+        statefileprefixes(nstatefields+1)="firstguess."
+      endif
+     else  ! global
+      statefileprefixes(nstatefields+1)="sfg_"//datestring//"_fhr"//charfhr_state(nstatefields+1)//"_"
+     endif
+   endif
+   nstatefields = nstatefields+1
+end do
+
 do nb=1,nbackgrounds
    if (trim(anlfileprefixes(nb)) .eq. "") then
      ! default analysis file prefix
@@ -399,6 +424,13 @@ do nb=1,nbackgrounds
      endif
    endif
 enddo
+
+if (nproc .eq. 0) then
+  print *,'number of background forecast times to be used for H(x) = ',nstatefields
+  print *,'first-guess forecast hours for observation operator = ',&
+  charfhr_state(1:nstatefields)
+endif
+
 if (nproc .eq. 0) then
   print *,'number of background forecast times to be updated = ',nbackgrounds
   print *,'first-guess forecast hours for analysis = ',&

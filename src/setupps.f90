@@ -63,6 +63,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2014-04-12       su - add non linear qc from Purser's scheme
 !   2014-12-30  derber - Modify for possibility of not using obsdiag
 !   2015-12-21  yang    - Parrish's correction to the previous code in new varqc.
+!   2016-11-29  shlyaeva - save linearized H(x) for EnKF
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -79,11 +80,12 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-  use mpeu_util, only: die,perr
+  use mpeu_util, only: die,perr,getindex
+  use state_vectors, only: svars2d, levels, ns3d
   use kinds, only: r_kind,r_single,r_double,i_kind
   use obsmod, only: rmiss_single,pstail,pshead,perturb_obs,oberror_tune,&
                     i_ps_ob_type,obsdiags,lobsdiagsave,nobskeep,lobsdiag_allocated,&
-                    time_offset
+                    time_offset,lobsdiag_forenkf
   use obsmod, only: ps_ob_type
   use obsmod, only: obs_diag,luse_obsdiag
   use gsi_4dvar, only: nobs_bins,hr_obsbin
@@ -101,6 +103,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
+  use sparsearr, only: sparr2 
 
   implicit none
 
@@ -165,6 +168,9 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
+
+  type(sparr2) :: dhx_dx
+  integer :: ps_ind
 
   n_alloc(:)=0
   m_alloc(:)=0
@@ -243,6 +249,12 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
+     if (lobsdiag_forenkf) then
+       dhx_dx%nnz   = 1                   ! number of non-zero elements in dH(x)/dx profile
+       dhx_dx%nind   = 1
+       nreal = nreal + 2*dhx_dx%nind + dhx_dx%nnz + 2    ! non-zero elements, their indices and number of indices
+       allocate(dhx_dx%val(dhx_dx%nnz),dhx_dx%st_ind(dhx_dx%nind),dhx_dx%end_ind(dhx_dx%nind))
+     endif
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
      ii=0
   end if
@@ -389,6 +401,10 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! Subtract off dlnp correction, then convert to pressure (cb)
      pges = exp(log(pgesorig) - rdp)
 
+     ps_ind = getindex(svars2d,'ps')
+     dhx_dx%st_ind(1) = sum(levels(1:ns3d)) + ps_ind
+     dhx_dx%end_ind(1) = sum(levels(1:ns3d)) + ps_ind
+     dhx_dx%val(1) = one
 
 ! observational error adjustment 
 
@@ -654,12 +670,27 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         endif
 
         if (twodvar_regional) then
-           rdiagbuf(ioff+1,ii) = data(idomsfc,i) ! dominate surface type
-           rdiagbuf(ioff+2,ii) = data(izz,i)     ! model terrain at ob location
+           ioff = ioff + 1
+           rdiagbuf(ioff,ii) = data(idomsfc,i) ! dominate surface type
+           ioff = ioff + 1
+           rdiagbuf(ioff,ii) = data(izz,i)     ! model terrain at ob location
            r_prvstg            = data(iprvd,i)
            cprvstg(ii)         = c_prvstg        ! provider name
            r_sprvstg           = data(isprvd,i)
            csprvstg(ii)        = c_sprvstg       ! subprovider name
+        endif
+        if (lobsdiag_forenkf) then
+           ioff = ioff + 1
+           rdiagbuf(ioff,ii) = dhx_dx%nnz
+           ioff = ioff + 1
+           rdiagbuf(ioff,ii) = dhx_dx%nind
+           ioff = ioff + 1
+           rdiagbuf(ioff:ioff+dhx_dx%nind-1,ii) = dhx_dx%st_ind
+           ioff = ioff + dhx_dx%nind
+           rdiagbuf(ioff:ioff+dhx_dx%nind-1,ii) = dhx_dx%end_ind
+           ioff = ioff + dhx_dx%nind
+           rdiagbuf(ioff:ioff+dhx_dx%nnz-1,ii) = dhx_dx%val
+           ioff = ioff + dhx_dx%nnz - 1
         endif
 
      end if

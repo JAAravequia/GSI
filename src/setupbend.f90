@@ -82,6 +82,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
 !   2013-10-19  todling - metguess now holds background
 !   2014-04-10  todling - 4dvar fix: obs must be in current time bi
 !   2014-12-30  derber - Modify for possibility of not using obsdiag
+!   2016-11-29  shlyaeva - save linearized H(x) for EnKF
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -97,11 +98,11 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-  use mpeu_util, only: die,perr,tell
+  use mpeu_util, only: die,perr,tell,getindex
   use kinds, only: r_kind,i_kind
   use obsmod, only: gpshead,nprof_gps,grids_dim,gpstail,lobsdiag_allocated,&
       gps_allhead,gps_alltail,i_gps_ob_type,obsdiags,lobsdiagsave,nobskeep,&
-      time_offset
+      time_offset,lobsdiag_forenkf
   use obsmod, only: gps_ob_type
   use obsmod, only: obs_diag,luse_obsdiag
 
@@ -134,9 +135,10 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   use m_gpsrhs, only: gpsrhs_aliases
   use m_gpsrhs, only: gpsrhs_unaliases
 
+  use state_vectors, only: levels, svars3d
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
-
+  use sparsearr, only: sparr2
   implicit none
 
 ! Declare passed variables
@@ -189,6 +191,9 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   integer(i_kind) kprof,istat,k1,k2,nobs_out,top_layer_SR,bot_layer_SR,count_SR
   integer(i_kind),dimension(4) :: gps_ij
   integer(i_kind):: satellite_id,transmitter_id
+
+  type(sparr2) :: dhx_dx
+  integer(i_kind) :: iz, t_ind, q_ind, p_ind
 
   real(r_kind),dimension(3,nsig+nsig_ext) :: q_w,q_w_tl
   real(r_kind),dimension(nsig) :: hges,irefges,zges,dhdt,dhdp
@@ -283,7 +288,12 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   mreal=21
   nreal=mreal
   if (lobsdiagsave) nreal=nreal+4*miter+1
-
+  if (lobsdiag_forenkf) then
+    dhx_dx%nnz = nsig * 3         ! number of non-zero elements in dH(x)/dx profile
+    dhx_dx%nind   = 3             ! number of dense subarrays 
+    nreal = nreal + 2*dhx_dx%nind + dhx_dx%nnz + 2 
+    allocate(dhx_dx%val(dhx_dx%nnz), dhx_dx%st_ind(dhx_dx%nind), dhx_dx%end_ind(dhx_dx%nind))
+  endif
   if(init_pass) call gpsrhs_alloc(is,'bend',nobs,nsig,nreal,grids_dim,nsig_ext)
   call gpsrhs_aliases(is)
   if(nreal/=size(rdiagbuf,1)) then
@@ -919,8 +929,8 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
 
 
 !       Load additional obs diagnostic structure
+        ioff = mreal
         if (lobsdiagsave) then
-           ioff=mreal
            do jj=1,miter
               ioff=ioff+1
               if (obsdiags(i_gps_ob_type,ibin)%tail%muse(jj)) then
@@ -1088,6 +1098,41 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
            end do
 
            gpstail(ibin)%head%jac_p(nsig+1) = zero
+
+           t_ind = getindex(svars3d, 'tv')
+           q_ind = getindex(svars3d, 'q')
+           p_ind = getindex(svars3d, 'prse')
+           dhx_dx%st_ind(1)  = sum(levels(1:t_ind-1)) + 1
+           dhx_dx%end_ind(1) = sum(levels(1:t_ind-1)) + nsig
+           dhx_dx%st_ind(2)  = sum(levels(1:q_ind-1)) + 1
+           dhx_dx%end_ind(2) = sum(levels(1:q_ind-1)) + nsig
+           dhx_dx%st_ind(3)  = sum(levels(1:p_ind-1)) + 1
+           dhx_dx%end_ind(3) = sum(levels(1:p_ind-1)) + nsig
+
+           do iz = 1, nsig
+              dhx_dx%val(iz)        = gpstail(ibin)%head%jac_t(iz)
+              dhx_dx%val(iz+nsig)   = gpstail(ibin)%head%jac_q(iz)
+              dhx_dx%val(iz+2*nsig) = gpstail(ibin)%head%jac_p(iz)
+           enddo
+
+           if (lobsdiag_forenkf) then
+              ioff = ioff + 1
+              rdiagbuf(ioff,i) = dhx_dx%nnz
+              ioff = ioff + 1
+              rdiagbuf(ioff,i) = dhx_dx%nind 
+              ioff = ioff + 1
+              rdiagbuf(ioff:ioff+dhx_dx%nind-1,i) = dhx_dx%st_ind
+              ioff = ioff + dhx_dx%nind
+              rdiagbuf(ioff:ioff+dhx_dx%nind-1,i) = dhx_dx%end_ind
+              ioff = ioff + dhx_dx%nind
+              rdiagbuf(ioff:ioff+dhx_dx%nnz-1,i) = dhx_dx%val
+              ioff = ioff + dhx_dx%nnz - 1
+           endif
+
+           do j=1,nreal
+              gps_alltail(ibin)%head%rdiag(j)= rdiagbuf(j,i)
+           end do
+
            gpstail(ibin)%head%raterr2= ratio_errors(i)**2     
            gpstail(ibin)%head%res    = data(igps,i)
            gpstail(ibin)%head%err2   = data(ier,i)**2

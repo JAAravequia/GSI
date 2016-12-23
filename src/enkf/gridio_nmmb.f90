@@ -17,16 +17,16 @@ private
 public :: readgriddata, writegriddata
 contains
 
-subroutine readgriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,grdin,qsat)
+subroutine readgriddata(nanal,vars3d,vars2d,n3d,n2d,grdin,qsat)
 implicit none
 character(len=500) :: filename
 character(len=3) charnanal
 integer, intent(in) :: nanal
-integer, intent(in) :: nc2d,nc3d
-character(len=max_varname_length), dimension(nc2d), intent(in) :: cvars2d
-character(len=max_varname_length), dimension(nc3d), intent(in) :: cvars3d
+integer, intent(in) :: n2d,n3d
+character(len=max_varname_length), dimension(n2d), intent(in) :: vars2d
+character(len=max_varname_length), dimension(n3d), intent(in) :: vars3d
 real(r_double), dimension(npts,nlevs,nbackgrounds), intent(out) :: qsat
-real(r_single), dimension(npts,nc3d*nlevs+nc2d,nbackgrounds), intent(out) :: grdin
+real(r_single), dimension(npts,n3d*nlevs+n2d,nbackgrounds), intent(out) :: grdin
 real(r_single), allocatable, dimension(:,:) :: pslg
 real(r_kind) clip
 
@@ -40,14 +40,14 @@ integer(i_kind) iret,k,kk,nb
 integer :: u_ind, v_ind, t_ind, q_ind, oz_ind, cw_ind
 integer :: ps_ind
 
-u_ind   = getindex(cvars3d, 'u')   !< indices in the state var arrays
-v_ind   = getindex(cvars3d, 'v')   ! U and V (3D)
-t_ind   = getindex(cvars3d, 'tv')  ! Tv (3D)
-q_ind   = getindex(cvars3d, 'q')   ! Q (3D)
-oz_ind  = getindex(cvars3d, 'oz')  ! Oz (3D)
-cw_ind  = getindex(cvars3d, 'cw')  ! CW (3D)
+u_ind   = getindex(vars3d, 'u')   !< indices in the state var arrays
+v_ind   = getindex(vars3d, 'v')   ! U and V (3D)
+t_ind   = getindex(vars3d, 'tv')  ! Tv (3D)
+q_ind   = getindex(vars3d, 'q')   ! Q (3D)
+oz_ind  = getindex(vars3d, 'oz')  ! Oz (3D)
+cw_ind  = getindex(vars3d, 'cw')  ! CW (3D)
 
-ps_ind  = getindex(cvars2d, 'ps')  ! Ps (2D)
+ps_ind  = getindex(vars2d, 'ps')  ! Ps (2D)
 
 backgroundloop: do nb=1,nbackgrounds
 
@@ -103,7 +103,7 @@ if (nanal .eq. 1) then
    print *,'---------------'
 endif
 if (ps_ind > 0) then
-  grdin(:,nc3d*nlevs+ps_ind,nb) = psg
+  grdin(:,n3d*nlevs+ps_ind,nb) = psg
 endif
 ! pressure on model levels
 do k=1,nlevs
@@ -195,17 +195,17 @@ end do backgroundloop ! loop over backgrounds to read in
 
 end subroutine readgriddata
 
-subroutine writegriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,grdin)
+subroutine writegriddata(nanal,vars3d,vars2d,n3d,n2d,grdin)
 
 implicit none
 
 character(len=500):: filename
 integer, intent(in) :: nanal
-integer, intent(in) :: nc2d,nc3d
-character(len=max_varname_length), dimension(nc2d), intent(in) :: cvars2d
-character(len=max_varname_length), dimension(nc3d), intent(in) :: cvars3d
+integer, intent(in) :: n2d,n3d
+character(len=max_varname_length), dimension(n2d), intent(in) :: vars2d
+character(len=max_varname_length), dimension(n3d), intent(in) :: vars3d
 
-real(r_single), dimension(npts,nc3d*nlevs+nc2d,nbackgrounds), intent(inout) :: grdin
+real(r_single), dimension(npts,n3d*nlevs+n2d,nbackgrounds), intent(inout) :: grdin
 character(len=3) charnanal
 integer(nemsio_intkind) iret,nfhour,jdate(7),idat(3),ihrst,nfminute,ntimestep,nfsecond
 integer iadate(4),idate(4),k,kk,nb
@@ -219,14 +219,14 @@ real(r_kind) clip
 type(nemsio_gfile) :: gfile
 
 
-u_ind   = getindex(cvars3d, 'u')   !< indices in the state var arrays
-v_ind   = getindex(cvars3d, 'v')   ! U and V (3D)
-t_ind   = getindex(cvars3d, 'tv')  ! Tv (3D)
-q_ind   = getindex(cvars3d, 'q')   ! Q (3D)
-oz_ind  = getindex(cvars3d, 'oz')  ! Oz (3D)
-cw_ind  = getindex(cvars3d, 'cw')  ! CW (3D)
+u_ind   = getindex(vars3d, 'u')   !< indices in the state var arrays
+v_ind   = getindex(vars3d, 'v')   ! U and V (3D)
+t_ind   = getindex(vars3d, 'tv')  ! Tv (3D)
+q_ind   = getindex(vars3d, 'q')   ! Q (3D)
+oz_ind  = getindex(vars3d, 'oz')  ! Oz (3D)
+cw_ind  = getindex(vars3d, 'cw')  ! CW (3D)
 
-ps_ind  = getindex(cvars2d, 'ps')  ! Ps (2D)
+ps_ind  = getindex(vars2d, 'ps')  ! Ps (2D)
 
 clip = tiny(grdin(1,1,1))
 

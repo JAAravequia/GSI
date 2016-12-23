@@ -67,7 +67,9 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 !   2013-10-19  todling - metguess now holds background
 !   2013-11-26  guo     - removed nkeep==0 escaping to allow more than one obstype sources.
 !   2014-12-30  derber - Modify for possibility of not using obsdiag
-!
+!   2016-11-29  shlyaeva - save linearized H(x) for EnKF. output length of rdiagbuf to 
+!                          diag files (irdim1) in place of iextra (set to 0
+!                          always previously).
 !   input argument list:
 !     lunin          - unit from which to read observations
 !     mype           - mpi task id
@@ -91,15 +93,17 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
      
 ! !USES:
 
-  use mpeu_util, only: die,perr
+  use mpeu_util, only: die,perr,getindex
   use kinds, only: r_kind,r_single,i_kind
+
+  use state_vectors, only: svars3d, levels
 
   use constants, only : zero,half,one,two,tiny_r_kind
   use constants, only : rozcon,cg_term,wgtlim,h300,r10
 
   use obsmod, only : ozhead,oztail,i_oz_ob_type,dplat,nobskeep
   use obsmod, only : mype_diaghdr,dirname,time_offset,ianldate
-  use obsmod, only : obsdiags,lobsdiag_allocated,lobsdiagsave
+  use obsmod, only : obsdiags,lobsdiag_allocated,lobsdiagsave,lobsdiag_forenkf
   use obsmod, only : oz_ob_type,nloz_omi
   use obsmod, only : obs_diag,luse_obsdiag
 
@@ -113,6 +117,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   use ozinfo, only : iuse_oz,b_oz,pg_oz
 
   use jfunc, only : jiter,last,miter
+  use sparsearr, only: sparr2
   
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
   use gsi_bundlemod, only : gsi_bundlegetpointer
@@ -170,6 +175,11 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   real(r_kind),dimension(nloz_omi):: apriori, efficiency,pob_oz_omi
   real(r_kind),dimension(nloz_omi+1):: ozges1
 
+  real(r_kind),dimension(nsig,nlevs) :: doz_dz
+  real(r_kind),dimension(nsig,nloz_omi+1):: doz_dz1
+  integer(i_kind) :: oz_ind
+  type(sparr2) :: dhx_dx
+
   integer(i_kind) i,nlev,ii,jj,iextra,istat,ibin, kk
   integer(i_kind) k,j,nz,jc,idia,irdim1,istatus
   integer(i_kind) ioff,itoss,ikeep,ierror_toq,ierror_poq
@@ -224,6 +234,13 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   if(ozone_diagsave)then
      irdim1=6
      if(lobsdiagsave) irdim1=irdim1+4*miter+1
+     if (lobsdiag_forenkf) then
+       dhx_dx%nnz   = nsig                   ! number of non-zero elements in dH(x)/dx profile
+       dhx_dx%nind   = 1
+       irdim1 = irdim1 + 2*dhx_dx%nind + dhx_dx%nnz + 2    ! non-zero elements, their indices and number of indices
+       allocate(dhx_dx%val(dhx_dx%nnz), dhx_dx%st_ind(dhx_dx%nind), dhx_dx%end_ind(dhx_dx%nind))
+     endif
+
      allocate(rdiagbuf(irdim1,nlevs,nobs))
   end if
 
@@ -357,7 +374,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
         
         if (obstype /= 'omieff' .and. obstype /= 'tomseff') then
            call intrp3oz1(ges_oz,ozges,dlat,dlon,ozp,dtime,&
-                nlevs,mype)
+                nlevs,mype,doz_dz)
         endif
 
         
@@ -393,10 +410,12 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
               efficiency(1:nloz_omi) = data(ioff:ioff+nloz_omi -1, i)
               ! Compute ozges
               call intrp3oz1(ges_oz,ozges1,dlat,dlon,ozp_omi,dtime,&
-                nlayers,mype)
+                nlayers,mype,doz_dz1)
               ozges(k) = zero
+              doz_dz(:,k) = zero
               do kk = 1, nloz_omi
                  ozges(k) = ozges(k) + apriori(kk) + efficiency(kk)*(ozges1(kk)-apriori(kk))
+                 doz_dz(:,k) = doz_dz(:,k) + efficiency(kk)*doz_dz1(:,kk)
               end do
               ioff = 37_i_kind
               ozobs = data(ioff,i)
@@ -484,6 +503,27 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
               else
                  rdiagbuf(6,k,ii) = rmiss                
               endif
+
+              idia = 6
+              if (lobsdiag_forenkf) then
+                 oz_ind = getindex(svars3d, 'oz')
+                 dhx_dx%st_ind(1)  = sum(levels(1:oz_ind-1)) + 1
+                 dhx_dx%end_ind(1) = sum(levels(1:oz_ind-1)) + nsig
+                 dhx_dx%val = doz_dz(:,k)
+
+                 idia = idia+1
+                 rdiagbuf(idia,k,ii) = dhx_dx%nnz
+                 idia = idia+1
+                 rdiagbuf(idia,k,ii) = dhx_dx%nind            
+                 idia = idia+1
+                 rdiagbuf(idia:idia+dhx_dx%nind-1,k,ii) = dhx_dx%st_ind
+                 idia = idia+dhx_dx%nind
+                 rdiagbuf(idia:idia+dhx_dx%nind-1,k,ii) = dhx_dx%end_ind
+                 idia = idia+dhx_dx%nind
+                 rdiagbuf(idia:idia+dhx_dx%nnz-1,k,ii) = dhx_dx%val
+                 idia = idia+dhx_dx%nnz-1
+              endif
+
            endif
 
         end do
@@ -719,9 +759,9 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
      endif
      iextra=0
      if (init_pass .and. mype==mype_diaghdr(is)) then
-        write(4) isis,dplat(is),obstype,jiter,nlevs,ianldate,iint,ireal,iextra
+        write(4) isis,dplat(is),obstype,jiter,nlevs,ianldate,iint,ireal,irdim1 !iextra
         write(6,*)'SETUPOZ:   write header record for ',&
-             isis,iint,ireal,iextra,' to file ',trim(diag_ozone_file),' ',ianldate
+             isis,iint,ireal,irdim1,' to file ',trim(diag_ozone_file),' ',ianldate
         do i=1,nlevs
            pob4(i)=pobs(i)
            grs4(i)=gross(i)
@@ -844,8 +884,11 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
      
 ! !USES:
 
-  use mpeu_util, only: die,perr
+  use mpeu_util, only: die,perr,getindex
   use kinds, only: r_kind,r_single,i_kind
+
+  use state_vectors, only: svars3d, levels
+  use sparsearr, only : sparr2
 
   use obsmod, only : o3lhead,o3ltail,i_o3l_ob_type,dplat,nobskeep
   use obsmod, only : mype_diaghdr,dirname,time_offset,ianldate
@@ -906,6 +949,9 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   external:: stop2
 
 ! Declare local variables  
+  real(r_kind) :: dt, delz
+  integer(i_kind) :: iz, oz_ind
+  type(sparr2) :: dhx_dx
   
   real(r_kind) o3ges, o3ppmv
   real(r_kind) rlow,rhgh,sfcchk
@@ -933,6 +979,8 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 
   logical,dimension(nobs):: luse,muse
   logical proceed
+
+  logical :: lobsdiag_forenkf
 
   logical:: in_curbin, in_anybin
   integer(i_kind),dimension(nobs_bins) :: n_alloc
@@ -965,6 +1013,13 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   if(ozone_diagsave)then
      irdim1=6
      if(lobsdiagsave) irdim1=irdim1+4*miter+1
+     lobsdiag_forenkf = .true.
+     if (lobsdiag_forenkf) then
+       dhx_dx%nnz   = 2                   ! number of non-zero elements in dH(x)/dx profile
+       dhx_dx%nind   = 1
+       irdim1 = irdim1 + 2*dhx_dx%nind + dhx_dx%nnz + 2    ! non-zero elements, their indices and number of indices
+       allocate(dhx_dx%val(dhx_dx%nnz), dhx_dx%st_ind(dhx_dx%nind),dhx_dx%end_ind(dhx_dx%nind))
+     endif
      allocate(rdiagbuf(irdim1,1,nobs))
      rdiagbuf=0._r_single
   end if
@@ -1120,6 +1175,15 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 !    Interpolate guess ozone to observation location and time
      call tintrp31(ges_oz,o3ges,dlat,dlon,dpres,dtime, &
        hrdifsig,mype,nfldsig)
+     iz = max(1, min( int(dpres), nsig))
+     delz = max(zero, min(dpres - float(iz), one))
+     oz_ind = getindex(svars3d, 'oz')
+     dhx_dx%st_ind(1)  = iz  + sum(levels(1:oz_ind-1))         
+     dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:oz_ind-1))
+
+     dhx_dx%val(1) = constoz * (one - delz)         ! weight for iz's level
+     dhx_dx%val(2) = constoz * delz               ! weight for iz+1's level
+
 
 !    Compute innovations - background o3ges in g/g so adjust units
 !    Leave increment in ppmv for gross checks,  etc.
@@ -1264,8 +1328,8 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
         rdiagbuf(5,1,ii) = rmiss               ! fovn
         rdiagbuf(6,1,ii) = obserror               ! ozone mixing ratio precision
 
+        idia = 6
         if (lobsdiagsave) then
-           idia=6
            do jj=1,miter
               idia=idia+1
               if (obsdiags(i_o3l_ob_type,ibin)%tail%muse(jj)) then
@@ -1287,6 +1351,21 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
               rdiagbuf(idia,1,ii) = obsdiags(i_o3l_ob_type,ibin)%tail%obssen(jj)
            enddo
         endif
+
+        if (lobsdiag_forenkf) then
+           idia = idia + 1
+           rdiagbuf(idia,1,ii) = dhx_dx%nnz
+           idia = idia + 1
+           rdiagbuf(idia,1,ii) = dhx_dx%nind               ! number of non-zero
+           idia = idia + 1
+           rdiagbuf(idia:idia+dhx_dx%nind-1,1,ii) = dhx_dx%st_ind
+           idia = idia + dhx_dx%nind
+           rdiagbuf(idia:idia+dhx_dx%nind-1,1,ii) = dhx_dx%end_ind
+           idia = idia + dhx_dx%nind
+           rdiagbuf(idia:idia+dhx_dx%nnz-1,1,ii) = dhx_dx%val
+           idia = idia + dhx_dx%nnz - 1
+        endif
+
      end if   !end if(ozone_diagsave )
 
   end do   ! end do i=1,nobs
@@ -1304,9 +1383,9 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
      endif
      iextra=0
      if (init_pass .and. mype==mype_diaghdr(is)) then
-        write(4) isis,dplat(is),obstype,jiter,nlevs,ianldate,iint,ireal,iextra
+        write(4) isis,dplat(is),obstype,jiter,nlevs,ianldate,iint,ireal,irdim1 !iextra
         write(6,*)'SETUPOZLV:   write header record for ',&
-             isis,iint,ireal,iextra,' to file ',trim(diag_ozone_file),' ',ianldate
+             isis,iint,ireal,irdim1,' to file ',trim(diag_ozone_file),' ',ianldate
      endif
      write(4) ii
      write(4) idiagbuf(:,1:ii),diagbuf(:,1:ii),rdiagbuf(:,1,1:ii)

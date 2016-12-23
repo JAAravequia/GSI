@@ -33,8 +33,10 @@ program enkf_main
 !   2009-02-23  Initial version.
 !   2011-06-03  Added the option for LETKF.
 !   2016-02-01  Initialize mpi communicator for IO tasks (1st nanals tasks).
-!   2016-05-02  Modification for reading state vector from table
-!               (Anna Shlyaeva)
+!   2016-05-02  shlyaeva: Modification for reading state vector from table
+!   2016-11-29  shlyaeva: Initialize state vector separately from control; 
+!               separate routines for scatter and gather chunks; write out diag files
+!               with spread
 !
 ! usage:
 !   input files:
@@ -60,8 +62,8 @@ program enkf_main
 !                         
 ! comments:
 !
-! This program is run after the forward operator code is run on each ensemble
-! member to create the diag*mem* input files.
+! This program is run after the forward operator code (with saving linearized H) 
+! is run on the ensemble mean to create the diag*ensmean input file.
 !
 ! attributes:
 !   language: f95
@@ -81,13 +83,13 @@ program enkf_main
                     obsmod_cleanup, biasprednorminv
  ! innovation statistics.
  use innovstats, only: print_innovstats
- ! grid information
- use gridinfo, only: getgridinfo, gridinfo_cleanup
- ! model state vector 
- use statevec, only: read_ensemble, write_ensemble, statevec_cleanup, &
-                     init_statevec
+ ! model control vector 
+ use controlvec, only: read_control, write_control, controlvec_cleanup, &
+                     init_controlvec
+ ! model state vector
+ use statevec, only: read_state, statevec_cleanup, init_statevec
  ! load balancing
- use loadbal, only: load_balance, loadbal_cleanup
+ use loadbal, only: load_balance, loadbal_cleanup, scatter_chunks, gather_chunks
  ! enkf update
  use enkf, only: enkf_update
  ! letkf update
@@ -123,12 +125,14 @@ program enkf_main
  nth= omp_get_max_threads()
  if(nproc== 0)write(6,*) 'enkf_main:  number of threads ',nth
 
- ! read horizontal grid information and pressure fields from
- ! 6-h forecast ensemble mean file.
- call getgridinfo()
-
  ! read state/control vector info from anavinfo
  call init_statevec()
+
+ ! read in ensemble members
+ t1 = mpi_wtime()
+ call read_state()
+ t2 = mpi_wtime()
+ if (nproc == 0) print *,'time in read_state =',t2-t1,'on proc',nproc
 
  ! read obs, initial screening.
  t1 = mpi_wtime()
@@ -136,11 +140,25 @@ program enkf_main
  t2 = mpi_wtime()
  if (nproc == 0) print *,'time in read_obs =',t2-t1,'on proc',nproc
 
+ call mpi_barrier(mpi_comm_world, ierr)
+
+ ! cleanup state vectors after observation operator is done
+ call statevec_cleanup()
+
  ! print innovation statistics for prior on root task.
  if (nproc == 0) then
     print *,'innovation statistics for prior:'
     call print_innovstats(obfit_prior, obsprd_prior)
  end if
+
+ ! read state/control vector info from anavinfo
+ call init_controlvec()
+
+ ! read in ensemble members
+ t1 = mpi_wtime()
+ call read_control()
+ t2 = mpi_wtime()
+ if (nproc == 0) print *,'time in read_control =',t2-t1,'on proc',nproc
 
  ! read in vertical profile of horizontal and vertical localization length
  ! scales, set values for each ob.
@@ -153,11 +171,11 @@ program enkf_main
  t2 = mpi_wtime()
  if (nproc == 0) print *,'time in load_balance =',t2-t1,'on proc',nproc
 
- ! read in ensemble members, distribute pieces to each task.
+ ! distribute pieces to each task.
  t1 = mpi_wtime()
- call read_ensemble()
+ call scatter_chunks()
  t2 = mpi_wtime()
- if (nproc == 0) print *,'time in read_ensemble =',t2-t1,'on proc',nproc
+ if (nproc == 0) print *,'time in scatter_chunks = ',t2-t1,'on proc',nproc
 
  t1 = mpi_wtime()
  ! state and bias correction coefficient update iteration.
@@ -206,12 +224,16 @@ program enkf_main
  call obsmod_cleanup()
 
  t1 = mpi_wtime()
- call write_ensemble()
+ call gather_chunks()
  t2 = mpi_wtime()
- if (nproc == 0) print *,'time in write_ensemble =',t2-t1,'on proc',nproc
+ if (nproc == 0) print *,'time in gather_chunks =',t2-t1,'on proc',nproc
 
- call gridinfo_cleanup()
- call statevec_cleanup()
+ t1 = mpi_wtime()
+ call write_control()
+ t2 = mpi_wtime()
+ if (nproc == 0) print *,'time in write_control =',t2-t1,'on proc',nproc
+
+ call controlvec_cleanup()
  call loadbal_cleanup()
 
  ! write log file (which script can check to verify completion).

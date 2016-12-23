@@ -19,6 +19,7 @@
 !   2011-07-24 safford - make structure size for reading data_fix data version dependent 
 !   2013-11-21 todling - revisit how versions are set (add set/get_radiag)
 !   2014-01-27 todling - add ob sensitivity index
+!   2016-11-12 shlyaeva - add H(x) jacobian for EnKF
 !
 ! contains
 !   read_radiag_header - read radiance diagnostic file header
@@ -33,6 +34,7 @@
 module read_diag
 
   use kinds, only:  i_kind,r_single
+  use sparsearr, only: sparr2
   implicit none
 
 ! Declare public and private
@@ -141,6 +143,7 @@ module read_diag
      real(r_single) :: tbobs              ! Tb (obs) (K)
      real(r_single) :: omgbc              ! Tb_(obs) - Tb_(simulated w/ bc)  (K)
      real(r_single) :: omgnbc             ! Tb_(obs) - Tb_(simulated_w/o bc) (K)
+     type(sparr2)   :: dhx_dx             ! profile of dH(x) / dx
      real(r_single) :: errinv             ! inverse error (K**(-1))
      real(r_single) :: qcmark             ! quality control mark
      real(r_single) :: emiss              ! surface emissivity
@@ -476,7 +479,7 @@ subroutine read_radiag_data(ftin,header_fix,retrieval,data_fix,data_chan,data_ex
   type(diag_data_extra_list) ,allocatable :: data_extra(:,:)
   integer(i_kind),intent(out)            :: iflag
     
-  integer(i_kind) :: ich,iang,i,j
+  integer(i_kind) :: ich,iang,i,j,nnz,nind,ind
   real(r_single),dimension(:,:),allocatable :: data_tmp
   real(r_single),dimension(:),allocatable   :: fix_tmp
   real(r_single),dimension(:,:),allocatable :: extra_tmp
@@ -513,6 +516,7 @@ subroutine read_radiag_data(ftin,header_fix,retrieval,data_fix,data_chan,data_ex
      read(ftin,IOSTAT=iflag) fix_tmp, data_tmp, extra_tmp
   endif
 
+  if (iflag /= 0) return
 
 ! Transfer fix_tmp record to output structure
   data_fix%lat = fix_tmp(1)
@@ -641,6 +645,29 @@ subroutine read_radiag_data(ftin,header_fix,retrieval,data_fix,data_chan,data_ex
         end do
         data_chan(ich)%bisst = data_tmp(16+header_fix%angord+2,ich)  
      end do
+
+     do ich=1,header_fix%nchan
+        ind = header_fix%ipchan + header_fix%npred + 2
+        ind = ind + 1
+        data_chan(ich)%dhx_dx%nnz = data_tmp(ind,ich)
+        ind = ind + 1
+        data_chan(ich)%dhx_dx%nind = data_tmp(ind,ich)
+        ind = ind + 1
+        nnz = data_chan(ich)%dhx_dx%nnz
+        nind = data_chan(ich)%dhx_dx%nind
+        if (allocated(data_chan(ich)%dhx_dx%val))     deallocate(data_chan(ich)%dhx_dx%val)
+        if (allocated(data_chan(ich)%dhx_dx%st_ind))  deallocate(data_chan(ich)%dhx_dx%st_ind)
+        if (allocated(data_chan(ich)%dhx_dx%end_ind)) deallocate(data_chan(ich)%dhx_dx%end_ind)
+        allocate(data_chan(ich)%dhx_dx%val(nnz))
+        allocate(data_chan(ich)%dhx_dx%st_ind(nind))
+        allocate(data_chan(ich)%dhx_dx%end_ind(nind))
+
+        data_chan(ich)%dhx_dx%st_ind  = data_tmp(ind:ind+nind-1,ich)
+        ind = ind + nind
+        data_chan(ich)%dhx_dx%end_ind = data_tmp(ind:ind+nind-1,ich)
+        ind = ind + nind
+        data_chan(ich)%dhx_dx%val     = data_tmp(ind:ind+nnz-1,ich)
+     enddo
   endif
 
   if (header_fix%iextra > 0) then

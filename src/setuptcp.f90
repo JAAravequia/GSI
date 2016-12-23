@@ -16,6 +16,7 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2013-10-19  todling - metguess now holds background
 !   2014-01-28  todling - write sensitivity slot indicator (idia) to header of diagfile
 !   2014-12-30  derber - Modify for possibility of not using obsdiag
+!   2016-11-29  shlyaeva - save linearized H(x) for EnKF
 !
 !   input argument list:
 !
@@ -26,11 +27,13 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-  use mpeu_util, only: die,perr
+  use mpeu_util, only: die,perr,getindex
+  use state_vectors, only: ns3d, svars2d, levels
+  use sparsearr, only: sparr2
   use kinds, only: r_kind,i_kind,r_single,r_double
   use obsmod, only: tcptail,tcphead,obsdiags,i_tcp_ob_type, &
              nobskeep,lobsdiag_allocated,oberror_tune,perturb_obs, &
-             time_offset,rmiss_single,lobsdiagsave
+             time_offset,rmiss_single,lobsdiagsave,lobsdiag_forenkf
   use obsmod, only: tcp_ob_type
   use obsmod, only: obs_diag,luse_obsdiag
   use gsi_4dvar, only: nobs_bins,hr_obsbin
@@ -82,6 +85,9 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   real(r_kind),dimension(nele,nobs):: data
   real(r_kind),dimension(nsig)::prsltmp
+
+  type(sparr2) :: dhx_dx
+  integer(i_kind) :: ps_ind
 
   integer(i_kind) i,jj
   integer(i_kind) mm1,idia,idia0
@@ -148,6 +154,12 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      idia0=19
      nreal=idia0
      if (lobsdiagsave) nreal=nreal+4*miter+1
+     if (lobsdiag_forenkf) then
+       dhx_dx%nnz   = 1
+       dhx_dx%nind   = 1
+       nreal = nreal + 2*dhx_dx%nind + dhx_dx%nnz + 2
+       allocate(dhx_dx%val(dhx_dx%nnz),dhx_dx%st_ind(dhx_dx%nind),dhx_dx%end_ind(dhx_dx%nind))
+     endif
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
      ii=0
   end if
@@ -271,6 +283,11 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 ! Subtract off dlnp correction, then convert to pressure (cb)
      pges = exp(log(pgesorig) - rdp)
+
+     ps_ind = getindex(svars2d,'ps')
+     dhx_dx%st_ind(1) = sum(levels(1:ns3d)) + ps_ind
+     dhx_dx%end_ind(1) = sum(levels(1:ns3d)) + ps_ind
+     dhx_dx%val(1) = one
 
 ! Compute innovations
      ddiff=pob-pges  ! in cb
@@ -489,6 +506,22 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               rdiagbuf(idia,ii) = obsdiags(i_tcp_ob_type,ibin)%tail%obssen(jj)
            enddo
         endif
+
+        if (lobsdiag_forenkf) then
+           idia = idia + 1
+           rdiagbuf(idia,ii) = dhx_dx%nnz
+           idia = idia + 1
+           rdiagbuf(idia,ii) = dhx_dx%nind               ! number of non-zero
+           idia = idia + 1
+           rdiagbuf(idia:idia+dhx_dx%nind-1,ii) = dhx_dx%st_ind
+           idia = idia + dhx_dx%nind
+           rdiagbuf(idia:idia+dhx_dx%nind-1,ii) = dhx_dx%end_ind
+           idia = idia + dhx_dx%nind
+           rdiagbuf(idia:idia+dhx_dx%nnz-1,ii) = dhx_dx%val
+           idia = idia + dhx_dx%nnz - 1
+        endif
+
+
 
     end if ! conv_diagsave .true. and luse .true.
 

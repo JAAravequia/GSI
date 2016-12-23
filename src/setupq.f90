@@ -76,7 +76,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2014-12-30  derber - Modify for possibility of not using obsdiag
 !   2014-11-30  Hu      - more option on use 2-m Q as background
 !   2015-12-21  yang    - Parrish's correction to the previous code in new varqc.
-
+!   2016-11-29  shlyaeva - save linearized H(x) for EnKF
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -93,12 +93,12 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-  use mpeu_util, only: die,perr
+  use mpeu_util, only: die,perr,getindex
   use kinds, only: r_kind,r_single,r_double,i_kind
 
   use obsmod, only: qtail,qhead,rmiss_single,perturb_obs,oberror_tune,&
        i_q_ob_type,obsdiags,lobsdiagsave,nobskeep,lobsdiag_allocated,&
-       time_offset
+       time_offset,lobsdiag_forenkf
   use obsmod, only: q_ob_type
   use obsmod, only: obs_diag,luse_obsdiag
   use gsi_4dvar, only: nobs_bins,hr_obsbin
@@ -120,6 +120,8 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                                       i_use_2mq4b
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
+  use sparsearr, only: sparr2
+  use state_vectors, only: svars3d, levels
 
   implicit none
 
@@ -173,6 +175,9 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) ier,ilon,ilat,ipres,iqob,id,itime,ikx,iqmax,iqc
   integer(i_kind) ier2,iuse,ilate,ilone,istnelv,iobshgt,istat,izz,iprvd,isprvd
   integer(i_kind) idomsfc,iderivative
+  real(r_kind) :: delz
+  type(sparr2) :: dhx_dx
+  integer(i_kind) :: iz, q_ind
 
   character(8) station_id
   character(8),allocatable,dimension(:):: cdiagbuf
@@ -272,6 +277,12 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
+     if (lobsdiag_forenkf) then
+       dhx_dx%nnz   = 2                   ! number of non-zero elements in dH(x)/dx profile
+       dhx_dx%nind   = 1
+       nreal = nreal + 2*dhx_dx%nind + dhx_dx%nnz + 2
+       allocate(dhx_dx%val(dhx_dx%nnz), dhx_dx%st_ind(dhx_dx%nind),dhx_dx%end_ind(dhx_dx%nind))
+     endif
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
   end if
   rsig=nsig
@@ -445,6 +456,17 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! Interpolate guess moisture to observation location and time
      call tintrp31(ges_q,qges,dlat,dlon,dpres,dtime, &
         hrdifsig,mype,nfldsig)
+
+     iz = max(1, min( int(dpres), nsig))
+     delz = max(zero, min(dpres - float(iz), one))
+
+     q_ind =getindex(svars3d,'q')
+
+     dhx_dx%st_ind(1)  = iz + sum(levels(1:q_ind-1))
+     dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:q_ind-1))
+
+     dhx_dx%val(1) = one - delz         ! weight for iz's level
+     dhx_dx%val(2) = delz               ! weight for iz+1's level
 
 ! Interpolate 2-m q to obs locations/times
      if(i_use_2mq4b>0 .and. itype > 179 .and. itype < 190 .and.  .not.twodvar_regional)then
@@ -758,13 +780,30 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         endif
         
         if (twodvar_regional) then
-           rdiagbuf(ioff+1,ii) = data(idomsfc,i) ! dominate surface type
-           rdiagbuf(ioff+2,ii) = data(izz,i)     ! model terrain at ob location
+           ioff = ioff + 1
+           rdiagbuf(ioff,ii) = data(idomsfc,i) ! dominate surface type
+           ioff = ioff + 1
+           rdiagbuf(ioff,ii) = data(izz,i)     ! model terrain at ob location
            r_prvstg            = data(iprvd,i)
            cprvstg(ii)         = c_prvstg        ! provider name
            r_sprvstg           = data(isprvd,i)
            csprvstg(ii)        = c_sprvstg       ! subprovider name
         endif
+
+        if (lobsdiag_forenkf) then
+           ioff = ioff + 1
+           rdiagbuf(ioff,ii) = dhx_dx%nnz
+           ioff = ioff + 1
+           rdiagbuf(ioff,ii) = dhx_dx%nind               ! number of non-zero
+           ioff = ioff + 1
+           rdiagbuf(ioff:ioff+dhx_dx%nind-1,ii) = dhx_dx%st_ind
+           ioff = ioff + dhx_dx%nind
+           rdiagbuf(ioff:ioff+dhx_dx%nind-1,ii) = dhx_dx%end_ind
+           ioff = ioff + dhx_dx%nind
+           rdiagbuf(ioff:ioff+dhx_dx%nnz-1,ii) = dhx_dx%val
+           ioff = ioff + dhx_dx%nnz - 1
+        endif
+
 
      end if
 

@@ -39,7 +39,7 @@ module enkf
 !  coefficient update using the latest estimate of the observation increment
 !  (observation minus ensemble mean observation variable).  The model state
 !  variables are only updated during the last iteration.  After the update is
-!  complete, the variables anal_chunk and ensmean_chunk (from module statevec)
+!  complete, the variables anal_chunk and ensmean_chunk (from module controlvec)
 !  contain the updated model state ensemble perturbations and ensemble mean,
 !  and predx (from module radinfo) contains the updated bias coefficients.
 !  obfit_post and obsprd_post contain the observation increments and observation
@@ -79,14 +79,15 @@ module enkf
 !
 ! Public Variables: None
 !
-! Modules Used: kinds, constants, params, covlocal, mpisetup, loadbal, statevec,
+! Modules Used: kinds, constants, params, covlocal, mpisetup, loadbal, controlvec,
 !               kdtree2_module, enkf_obsmod, radinfo, radbias, gridinfo
 !
 ! program history log:
 !   2009-02-23:  Initial version.
 !   2016-02-01:  Ensure posterior perturbation mean remains zero.
-!   2016-05-02:  Modification for reading state vector from table
-!                (Anna Shlyaeva).
+!   2016-05-02:  shlyaeva: Modification for reading state vector from table
+!   2016-11-29:  shlyaeva: Modification for using control vector (control and state 
+!                used to be the same) and the "chunks" come from loadbal
 !
 ! attributes:
 !   language: f95
@@ -101,9 +102,9 @@ use loadbal, only: numobsperproc, numptsperproc, indxproc_obs, iprocob, &
                    indxproc, lnp_chunk, kdtree_obs, kdtree_grid, &
                    ensmean_obchunk, indxob_chunk, oblnp_chunk, nobs_max, &
                    obtime_chunk, grdloc_chunk, obloc_chunk, &
-                   npts_max, anal_obchunk_prior
-use statevec, only: ensmean_chunk, anal_chunk, ensmean_chunk_prior, cvars3d, &
-                    ndim, index_pres
+                   npts_max, anal_obchunk_prior, ensmean_chunk, anal_chunk, &
+                   ensmean_chunk_prior
+use controlvec, only: cvars3d,  ncdim, index_pres
 use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, oblnp, &
                   nobstot, nobs_conv, nobs_oz, nobs_sat,&
                   obfit_prior, obfit_post, obsprd_prior, obsprd_post, obtime,&
@@ -548,7 +549,7 @@ do niter=1,numiter
           nn2 = oz_ind*nlevs
       else
           nn1 = 1
-          nn2 = ndim
+          nn2 = ncdim
       end if
       if (nf2 > 0) then
 !$omp parallel do schedule(dynamic,1) private(ii,i,nb,obt,nn,nnn,lnsig,kfgain,taper1,taper3,taperv)
@@ -634,7 +635,7 @@ do niter=1,numiter
      !$omp parallel do schedule(dynamic) private(npt,nb,i)
      do npt=1,npts_max
         do nb=1,nbackgrounds
-           do i=1,ndim
+           do i=1,ncdim
               anal_chunk(1:nanals,npt,i,nb) = anal_chunk(1:nanals,npt,i,nb)-&
               sum(anal_chunk(1:nanals,npt,i,nb),1)*r_nanals
            end do

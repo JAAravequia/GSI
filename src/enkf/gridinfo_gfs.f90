@@ -34,8 +34,7 @@ module gridinfo
 !
 ! program history log:
 !   2009-02-23  Initial version.
-!   2016-05-02:  Modification for reading state vector from table
-!                (Anna Shlyaeva)
+!   2016-05-02: shlyaeva: Modification for reading state vector from table
 !   2016-04-20  Modify to handle the updated nemsio sig file (P, DP & DPDT removed)
 !
 ! attributes:
@@ -44,9 +43,7 @@ module gridinfo
 !$$$
 
 use mpisetup, only: nproc, mpi_integer, mpi_real4, mpi_comm_world
-use params, only: datapath,nlevs,datestring,charfhr_anal,&
-                  nlons,nlats,nbackgrounds,reducedgrid,use_gfs_nemsio,&
-                  fgfileprefixes
+use params, only: datapath,nlevs,nlons,nlats,use_gfs_nemsio, fgfileprefixes
 use kinds, only: r_kind, i_kind, r_double, r_single
 use constants, only: one,zero,pi,cp,rd,grav,rearth,max_varname_length
 use specmod, only: sptezv_s, sptez_s, init_spec_vars, isinitialized, asin_gaulats, &
@@ -65,11 +62,12 @@ real(r_single),public, allocatable, dimension(:,:) :: logp
 integer,public :: npts
 integer,public :: ntrunc
 ! supported variable names in anavinfo
-character(len=max_varname_length),public, dimension(6) :: cvars3d_supported = (/ 'u', 'v', 'tv', 'q', 'oz', 'cw'/)
-character(len=max_varname_length),public, dimension(2) :: cvars2d_supported = (/ 'ps', 'pst' /)
+character(len=max_varname_length),public, dimension(10) :: vars3d_supported = (/'u', 'v', 'tv', 'q', 'oz', 'cw', 'tsen', 'prse', 'ql', 'qi'/)
+character(len=max_varname_length),public, dimension(3)  :: vars2d_supported = (/'ps', 'pst', 'sst' /)
+! supported variable names in anavinfo
 contains
 
-subroutine getgridinfo()
+subroutine getgridinfo(fileprefix, reducedgrid)
 ! read latitudes, longitudes and pressures for analysis grid,
 ! broadcast to each task.
 use sigio_module, only: sigio_head, sigio_data, sigio_sclose, sigio_sropen, &
@@ -78,6 +76,9 @@ use nemsio_module, only: nemsio_gfile,nemsio_open,nemsio_close,&
                          nemsio_getfilehead,nemsio_getheadvar,&
                          nemsio_readrecv,nemsio_init, nemsio_realkind
 implicit none
+
+character(len=120), intent(in) :: fileprefix
+logical, intent(in)            :: reducedgrid
 
 integer(i_kind) nlevsin, ierr, iunit, k, nn, idvc 
 character(len=500) filename
@@ -98,21 +99,21 @@ kap1 = kap + one
 nlevs_pres=nlevs+1
 if (nproc .eq. 0) then
 if (use_gfs_nemsio) then
-     filename = trim(adjustl(datapath))//trim(adjustl(fgfileprefixes(nbackgrounds/2+1)))//"ensmean"
+     filename = trim(adjustl(datapath))//trim(adjustl(fileprefix))//"ensmean"
      call nemsio_init(iret=iret)
      if(iret/=0) then
-        write(6,*)'grdinfo: gfs model: problem with nemsio_init, iret=',iret
+        write(6,*)'grdinfo: gfs model: problem with nemsio_init, iret=',iret, ', file: ', trim(filename)
         call stop2(23)
      end if
      call nemsio_open(gfile,filename,'READ',iret=iret)
      if (iret/=0) then
-        write(6,*)'grdinfo: gfs model: problem with nemsio_open, iret=',iret
+        write(6,*)'grdinfo: gfs model: problem with nemsio_open, iret=',iret, ', file: ', trim(filename)
         call stop2(23)
      endif
      call nemsio_getfilehead(gfile,iret=iret, dimx=nlonsin, dimy=nlatsin,&
                              dimz=nlevsin,jcap=ntrunc,idvc=idvc)
      if (iret/=0) then
-        write(6,*)'grdinfo: gfs model: problem with nemsio_getfilehead, iret=',iret
+        write(6,*)'grdinfo: gfs model: problem with nemsio_getfilehead, iret=',iret, ', file: ', trim(filename)
         call stop2(23)
      endif
      print *,'ntrunc = ',ntrunc
@@ -123,7 +124,7 @@ if (use_gfs_nemsio) then
        call stop2(23)
      end if
 else
-     filename = trim(adjustl(datapath))//trim(adjustl(fgfileprefixes(nbackgrounds/2+1)))//"ensmean"
+     filename = trim(adjustl(datapath))//trim(adjustl(fileprefix))//"ensmean"
      ! define sighead on all tasks.
      call sigio_sropen(iunit,trim(filename),iret)
      if (iret /= 0) then
@@ -171,7 +172,7 @@ if (nproc .eq. 0) then
             'vcoord, Status = ',iret
          call stop2(99)
       endif
- 
+
       spressmn = 0.01_r_kind*nems_wrk ! convert ps to millibars.
       !print *,'min/max spressmn = ',minval(spressmn),maxval(spressmn)
 
@@ -255,11 +256,11 @@ if (nproc .eq. 0) then
    else
       nn = 0
       do j=1,nlats
-      do i=1,nlons
-         nn = nn + 1
-         lonsgrd(nn) = 2._r_single*pi*float(i-1)/nlons
-         latsgrd(nn) = asin_gaulats(j)
-      enddo
+         do i=1,nlons
+            nn = nn + 1
+            lonsgrd(nn) = 2._r_single*pi*float(i-1)/nlons
+            latsgrd(nn) = asin_gaulats(j)
+         enddo
       enddo
    endif
    do k=1,nlevs

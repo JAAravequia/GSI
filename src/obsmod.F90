@@ -108,6 +108,8 @@ module obsmod
 !                          implementation.
 !   2016-07-19  wgu      - add isfctype - mask for surface type - to radiance obtype
 !   2016-07-19  kbathmann - add rsqrtinv and use_corr_obs to rad_ob_type
+!   2016-11-29 shlyaeva  - add lobsdiag_forenkf option for writing out linearized
+!                           H(x) for EnKF
 ! 
 ! Subroutines Included:
 !   sub init_obsmod_dflts   - initialize obs related variables to default values
@@ -368,7 +370,7 @@ module obsmod
   public :: cobstype,gpsptr,obs_diag,nprof_gps,gps_allhead,gps_allptr,time_offset,ianldate
   public :: iout_oz,iout_co,dsis,ref_obs,obsfile_all,lobserver,perturb_obs,ditype,dsfcalc,dplat
   public :: time_window,dval,dtype,dfile,dirname,obs_setup,oberror_tune,offtime_data
-  public :: lobsdiagsave,blacklst,hilbert_curve,lobskeep,time_window_max,sfcmodel,ext_sonde
+  public :: lobsdiagsave,lobsdiag_forenkf,blacklst,hilbert_curve,lobskeep,time_window_max,sfcmodel,ext_sonde
   public :: perturb_fact,dtbduv_on,nsat1,obs_sub_comm,mype_diaghdr,wptr,whead,psptr,pshead
   public :: qptr,qhead,tptr,thead,lobsdiag_allocated,pstail,ttail,wtail,qtail,spdtail
   public :: spdhead,srwtail,srwhead,rwtail,rwhead,dwtail,dwhead,ssttail,ssthead,pwtail
@@ -1584,7 +1586,7 @@ module obsmod
 
   logical oberrflg,bflag,oberror_tune,perturb_obs,ref_obs,sfcmodel,dtbduv_on,dval_use
   logical blacklst,lobsdiagsave,lobsdiag_allocated,lobskeep,lsaveobsens
-  logical lobserver,l_do_adjoint
+  logical lobserver,l_do_adjoint, lobsdiag_forenkf
   logical,dimension(0:50):: write_diag
   logical reduce_diag
   logical offtime_data
@@ -1655,6 +1657,7 @@ contains
     use_limit = -1
     lobsdiagsave=.false.
     lobsdiag_allocated=.false.
+    lobsdiag_forenkf = .false.
     lobskeep=.false.
     nobskeep=0
     lsaveobsens=.false.

@@ -12,9 +12,10 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 ! !USES:
 
-  use mpeu_util, only: die,perr
+  use mpeu_util, only: die,perr,getindex
+  use state_vectors, only: svars3d, levels
   use kinds, only: r_kind,r_single,r_double,i_kind
-  use obsmod, only: wtail,whead,rmiss_single,perturb_obs,oberror_tune,&
+  use obsmod, only: wtail,whead,rmiss_single,perturb_obs,oberror_tune,lobsdiag_forenkf, &
        i_w_ob_type,obsdiags,obsptr,lobsdiagsave,nobskeep,lobsdiag_allocated,&
        time_offset,bmiss
   use obsmod, only: w_ob_type
@@ -41,6 +42,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
+  use sparsearr, only: sparr2
 
   implicit none
   
@@ -145,6 +147,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2015-05-01  Liu Ling - Added ISS Rapidscat wind (u,v) qc 
 !   2015-03-14  Nebuda  - add departure check and near surface check for clear air WV AMV (WVCS) from GOES type 247
 !   2015-12-21  yang    - Parrish's correction to the previous code in new varqc.
+!   2016-11-29  shlyaeva - save linearized H(x) for EnKF
 !
 ! REMARKS:
 !   language: f90
@@ -223,6 +226,9 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   character(8) c_prvstg,c_sprvstg
   real(r_double) r_prvstg,r_sprvstg
 
+  type(sparr2) :: dhx_dx_u, dhx_dx_v
+  integer(i_kind) :: iz, u_ind, v_ind
+  real(r_kind) :: delz
   logical z_height,sfc_data
   logical,dimension(nobs):: luse,muse
   logical lowlevelsat
@@ -307,6 +313,17 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+7*miter+2
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
+     if (lobsdiag_forenkf) then
+       dhx_dx_u%nnz   = 2                   ! number of non-zero elements in dH(x)/dx profile
+       dhx_dx_u%nind   = 1
+       nreal = nreal + 2*dhx_dx_u%nind + dhx_dx_u%nnz + 2    ! non-zero elements, their indices and number of indices
+       allocate(dhx_dx_u%val(dhx_dx_u%nnz), dhx_dx_u%st_ind(dhx_dx_u%nind), dhx_dx_u%end_ind(dhx_dx_u%nind))
+       dhx_dx_v%nnz   = 2                   ! number of non-zero elements in dH(x)/dx profile
+       dhx_dx_v%nind   = 1
+       nreal = nreal + 2*dhx_dx_v%nind + dhx_dx_v%nnz + 2    ! non-zero elements, their indices and number of indices
+       allocate(dhx_dx_v%val(dhx_dx_v%nnz), dhx_dx_v%st_ind(dhx_dx_v%nind), dhx_dx_v%end_ind(dhx_dx_v%nind))
+     endif
+
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
   end if
 
@@ -525,6 +542,22 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         call tintrp31(ges_v,vgesin,dlat,dlon,dpres,dtime, &
            hrdifsig,mype,nfldsig)
 
+        iz = max(1, min( int(dpres), nsig))
+        delz = max(zero, min(dpres - float(iz), one))
+
+        u_ind =getindex(svars3d,'u')
+        v_ind =getindex(svars3d,'v')
+
+        dhx_dx_u%st_ind(1)  = iz               + sum(levels(1:u_ind-1))
+        dhx_dx_u%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:u_ind-1))
+        dhx_dx_v%st_ind(1)  = iz               + sum(levels(1:v_ind-1))
+        dhx_dx_v%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:v_ind-1))
+
+        dhx_dx_u%val(1) = one - delz
+        dhx_dx_u%val(2) = delz
+        dhx_dx_v%val = dhx_dx_u%val
+
+
         if (zob > zges(1)) then
            factw=one
         else
@@ -548,6 +581,8 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            ugesin=factw*ugesin
            vgesin=factw*vgesin
 
+           dhx_dx_u%val = factw * dhx_dx_u%val
+           dhx_dx_v%val = factw * dhx_dx_v%val
         endif
 
         if(sfc_data .or. dpres < one) then
@@ -605,6 +640,22 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            hrdifsig,mype,nfldsig)
         call tintrp31(ges_v,vgesin,dlat,dlon,dpres,dtime, &
            hrdifsig,mype,nfldsig)
+
+        iz = max(1, min( int(dpres), nsig))
+        delz = max(zero, min(dpres - float(iz), one))
+
+        u_ind =getindex(svars3d,'u')
+        v_ind =getindex(svars3d,'v')
+
+        dhx_dx_u%st_ind(1)  = iz               + sum(levels(1:u_ind-1))
+        dhx_dx_u%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:u_ind-1))
+        dhx_dx_v%st_ind(1)  = iz               + sum(levels(1:v_ind-1))
+        dhx_dx_v%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:v_ind-1))
+
+        dhx_dx_u%val(1) = one - delz
+        dhx_dx_u%val(2) = delz
+        dhx_dx_v%val = dhx_dx_u%val
+
         if(dpressave <= prsln2)then
            factw=one
         else
@@ -625,7 +676,9 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            end if
            ugesin=factw*ugesin   
            vgesin=factw*vgesin
- 
+
+           dhx_dx_u%val = factw * dhx_dx_u%val
+           dhx_dx_v%val = factw * dhx_dx_v%val 
         end if
        
 !       Get approx k value of sfc by using surface pressure
@@ -1235,13 +1288,40 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         endif
 
         if (twodvar_regional) then
-           rdiagbuf(ioff+1,ii) = data(idomsfc,i) ! dominate surface type
-           rdiagbuf(ioff+2,ii) = data(izz,i)     ! model terrain at ob location
+           ioff = ioff + 1
+           rdiagbuf(ioff,ii) = data(idomsfc,i) ! dominate surface type
+           ioff = ioff + 1
+           rdiagbuf(ioff,ii) = data(izz,i)     ! model terrain at ob location
            r_prvstg            = data(iprvd,i)
            cprvstg(ii)         = c_prvstg        ! provider name
            r_sprvstg           = data(isprvd,i)
            csprvstg(ii)        = c_sprvstg       ! subprovider name
         endif
+
+        if (lobsdiag_forenkf) then
+           ioff = ioff + 1
+           rdiagbuf(ioff,ii) = dhx_dx_u%nnz
+           ioff = ioff + 1
+           rdiagbuf(ioff,ii) = dhx_dx_u%nind               ! number of non-zero
+           ioff = ioff + 1
+           rdiagbuf(ioff:ioff+dhx_dx_u%nind-1,ii) = dhx_dx_u%st_ind
+           ioff = ioff + dhx_dx_u%nind
+           rdiagbuf(ioff:ioff+dhx_dx_u%nind-1,ii) = dhx_dx_u%end_ind
+           ioff = ioff + dhx_dx_u%nind
+           rdiagbuf(ioff:ioff+dhx_dx_u%nnz-1,ii) = dhx_dx_u%val
+           ioff = ioff + dhx_dx_u%nnz
+           rdiagbuf(ioff,ii) = dhx_dx_v%nnz
+           ioff = ioff + 1
+           rdiagbuf(ioff,ii) = dhx_dx_v%nind               ! number of non-zero
+           ioff = ioff + 1
+           rdiagbuf(ioff:ioff+dhx_dx_v%nind-1,ii) = dhx_dx_v%st_ind
+           ioff = ioff + dhx_dx_v%nind
+           rdiagbuf(ioff:ioff+dhx_dx_v%nind-1,ii) = dhx_dx_v%end_ind
+           ioff = ioff + dhx_dx_v%nind
+           rdiagbuf(ioff:ioff+dhx_dx_v%nnz-1,ii) = dhx_dx_v%val
+           ioff = ioff + dhx_dx_v%nnz -1
+        endif
+
 
      endif
 
