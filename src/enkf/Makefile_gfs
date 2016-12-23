@@ -177,9 +177,11 @@ clean:
 # ------------
 
   SRCSF90C = \
+        controlvec.f90 \
 	covlocal.f90 \
 	enkf.f90 \
 	enkf_main.f90 \
+        enkf_obsmod.f90 \
 	fftpack.f90 \
 	genqsat1.f90 \
 	gridinfo_gfs.f90 \
@@ -192,7 +194,7 @@ clean:
 	mpi_readobs.f90 \
 	mpisetup.F90 \
 	netcdf_io_wrf.f90 \
-	enkf_obsmod.f90 \
+        observer.f90 \
 	params.f90 \
 	sorting.f90 \
 	radbias.f90 \

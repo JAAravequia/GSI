@@ -478,6 +478,7 @@ clean:
 	ssmis_spatial_average_mod.f90 \
 	control2state_ad.f90 \
 	ensctl2state_ad.f90 \
+        sparsearr.f90 \
 	state_vectors.f90 \
 	statsco.f90 \
 	statsconv.f90 \
