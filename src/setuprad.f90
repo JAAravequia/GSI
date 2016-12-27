@@ -300,7 +300,7 @@
   logical sea,mixed,land,ice,snow,toss,l_may_be_passive
   logical microwave, microwave_low
   logical no85GHz
-  logical in_curbin, in_anybin
+  logical in_curbin, in_anybin, save_jacobian
   logical lcw4crtm
   logical account_for_corr_obs
   logical,dimension(nobs):: zero_irjaco3_pole
@@ -353,6 +353,8 @@
 
   type(rad_ob_type),pointer:: my_head,my_headm
   type(obs_diag),pointer:: my_diag
+
+  save_jacobian = rad_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
   n_alloc(:)=0
   m_alloc(:)=0
@@ -666,7 +668,7 @@
 ! Allocate array to hold channel information for diagnostic file and/or lobsdiagsave option
   idiag=ipchan_radiag+npred+2
 
-  if (lobsdiag_forenkf) then
+  if (save_jacobian) then
     dhx_dx%nnz   = nsigradjac
     dhx_dx%nind  = nvarjac
     idiag = idiag + 2*dhx_dx%nind + dhx_dx%nnz + 2
@@ -1977,7 +1979,7 @@
                  end do
               end if
 
-              if (lobsdiag_forenkf) then
+              if (save_jacobian) then
               j = 1
               do ii = 1, nvarjac
                  state_ind = getindex(svars3d, radjacnames(ii))
@@ -2009,7 +2011,7 @@
 
 
               ioff = ipchan_radiag+npred+2
-              if (lobsdiag_forenkf) then
+              if (save_jacobian) then
                  ioff = ioff+1
                  diagbufchan(ioff,i) = dhx_dx%nnz
                  ioff = ioff+1

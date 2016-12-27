@@ -240,7 +240,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   logical iqtflg
   logical aircraftobst
 
-  logical:: in_curbin, in_anybin
+  logical:: in_curbin, in_anybin, save_jacobian
   logical proceed
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
@@ -261,6 +261,8 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_q2
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_th2
+
+  save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
   n_alloc(:)=0
   m_alloc(:)=0
@@ -349,7 +351,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      idia0=nreal
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
-     if (lobsdiag_forenkf) then
+     if (save_jacobian) then
        dhx_dx%nnz   = 2                   ! number of non-zero elements in dH(x)/dx profile
        dhx_dx%nind   = 1
        nreal = nreal + 2*dhx_dx%nind + dhx_dx%nnz + 2    ! non-zero elements, their indices and number of indices
@@ -582,7 +584,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
            t_ind =getindex(svars3d,'tv')
            
-           if (lobsdiag_forenkf) then
+           if (save_jacobian) then
               dhx_dx%st_ind(1)  = iz               + sum(levels(1:t_ind-1))
               dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:t_ind-1))
 
@@ -599,7 +601,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
            t_ind =getindex(svars3d,'tsen')
 
-           if (lobsdiag_forenkf) then
+           if (save_jacobian) then
               dhx_dx%st_ind(1)  = iz               + sum(levels(1:t_ind-1))
               dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:t_ind-1))
 
@@ -1049,7 +1051,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            r_sprvstg           = data(isprvd,i)
            csprvstg(ii)        = c_sprvstg       ! subprovider name
         endif
-        if (lobsdiag_forenkf) then
+        if (save_jacobian) then
            idia = idia + 1
            rdiagbuf(idia,ii) = dhx_dx%nnz
            idia = idia + 1

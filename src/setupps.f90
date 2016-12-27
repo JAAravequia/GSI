@@ -155,7 +155,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   character(8) c_prvstg,c_sprvstg
   real(r_double) r_prvstg,r_sprvstg
 
-  logical:: in_curbin, in_anybin
+  logical:: in_curbin, in_anybin, save_jacobian
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
   type(ps_ob_type),pointer:: my_head
@@ -172,6 +172,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   type(sparr2) :: dhx_dx
   integer :: ps_ind
 
+  save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
   n_alloc(:)=0
   m_alloc(:)=0
 !*******************************************************************************
@@ -249,7 +250,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
-     if (lobsdiag_forenkf) then
+     if (save_jacobian) then
        dhx_dx%nnz   = 1                   ! number of non-zero elements in dH(x)/dx profile
        dhx_dx%nind   = 1
        nreal = nreal + 2*dhx_dx%nind + dhx_dx%nnz + 2    ! non-zero elements, their indices and number of indices
@@ -402,7 +403,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      pges = exp(log(pgesorig) - rdp)
 
      ps_ind = getindex(svars2d,'ps')
-     if (lobsdiag_forenkf) then
+     if (save_jacobian) then
         dhx_dx%st_ind(1) = sum(levels(1:ns3d)) + ps_ind
         dhx_dx%end_ind(1) = sum(levels(1:ns3d)) + ps_ind
         dhx_dx%val(1) = one
@@ -681,7 +682,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            r_sprvstg           = data(isprvd,i)
            csprvstg(ii)        = c_sprvstg       ! subprovider name
         endif
-        if (lobsdiag_forenkf) then
+        if (save_jacobian) then
            ioff = ioff + 1
            rdiagbuf(ioff,ii) = dhx_dx%nnz
            ioff = ioff + 1

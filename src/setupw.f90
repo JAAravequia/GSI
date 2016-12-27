@@ -234,7 +234,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   logical lowlevelsat
   logical proceed
 
-  logical:: in_curbin, in_anybin
+  logical:: in_curbin, in_anybin, save_jacobian
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
   type(w_ob_type),pointer :: my_head
@@ -250,6 +250,8 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_u
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
+
+  save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
@@ -313,7 +315,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+7*miter+2
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
-     if (lobsdiag_forenkf) then
+     if (save_jacobian) then
        dhx_dx_u%nnz   = 2                   ! number of non-zero elements in dH(x)/dx profile
        dhx_dx_u%nind   = 1
        nreal = nreal + 2*dhx_dx_u%nind + dhx_dx_u%nnz + 2    ! non-zero elements, their indices and number of indices
@@ -548,7 +550,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         u_ind =getindex(svars3d,'u')
         v_ind =getindex(svars3d,'v')
 
-        if (lobsdiag_forenkf) then
+        if (save_jacobian) then
            dhx_dx_u%st_ind(1)  = iz               + sum(levels(1:u_ind-1))
            dhx_dx_u%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:u_ind-1))
            dhx_dx_v%st_ind(1)  = iz               + sum(levels(1:v_ind-1))
@@ -583,7 +585,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            ugesin=factw*ugesin
            vgesin=factw*vgesin
 
-           if (lobsdiag_forenkf) then
+           if (save_jacobian) then
               dhx_dx_u%val = factw * dhx_dx_u%val
               dhx_dx_v%val = factw * dhx_dx_v%val
            endif
@@ -651,7 +653,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         u_ind =getindex(svars3d,'u')
         v_ind =getindex(svars3d,'v')
 
-        if (lobsdiag_forenkf) then
+        if (save_jacobian) then
             dhx_dx_u%st_ind(1)  = iz               + sum(levels(1:u_ind-1))
             dhx_dx_u%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:u_ind-1))
             dhx_dx_v%st_ind(1)  = iz               + sum(levels(1:v_ind-1))
@@ -683,7 +685,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            ugesin=factw*ugesin   
            vgesin=factw*vgesin
 
-           if (lobsdiag_forenkf) then
+           if (save_jacobian) then
               dhx_dx_u%val = factw * dhx_dx_u%val
               dhx_dx_v%val = factw * dhx_dx_v%val 
            endif
@@ -1306,7 +1308,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            csprvstg(ii)        = c_sprvstg       ! subprovider name
         endif
 
-        if (lobsdiag_forenkf) then
+        if (save_jacobian) then
            ioff = ioff + 1
            rdiagbuf(ioff,ii) = dhx_dx_u%nnz
            ioff = ioff + 1

@@ -116,7 +116,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   use ozinfo, only : jpch_oz,error_oz,pob_oz,gross_oz,nusis_oz
   use ozinfo, only : iuse_oz,b_oz,pg_oz
 
-  use jfunc, only : jiter,last,miter
+  use jfunc, only : jiter,last,miter,jiterstart
   use sparsearr, only: sparr2
   
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
@@ -199,13 +199,15 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   logical,dimension(nobs):: luse
   logical:: l_may_be_passive, proceed
 
-  logical:: in_curbin, in_anybin
+  logical:: in_curbin, in_anybin, save_jacobian
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
   type(oz_ob_type),pointer:: my_head
   type(obs_diag),pointer:: my_diag
 
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_oz
+
+  save_jacobian = ozone_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
@@ -234,7 +236,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   if(ozone_diagsave)then
      irdim1=6
      if(lobsdiagsave) irdim1=irdim1+4*miter+1
-     if (lobsdiag_forenkf) then
+     if (save_jacobian) then
        dhx_dx%nnz   = nsig                   ! number of non-zero elements in dH(x)/dx profile
        dhx_dx%nind   = 1
        irdim1 = irdim1 + 2*dhx_dx%nind + dhx_dx%nnz + 2    ! non-zero elements, their indices and number of indices
@@ -505,7 +507,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
               endif
 
               idia = 6
-              if (lobsdiag_forenkf) then
+              if (save_jacobian) then
                  oz_ind = getindex(svars3d, 'oz')
                  dhx_dx%st_ind(1)  = sum(levels(1:oz_ind-1)) + 1
                  dhx_dx%end_ind(1) = sum(levels(1:oz_ind-1)) + nsig
@@ -908,7 +910,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   use ozinfo, only : jpch_oz
   use ozinfo, only : b_oz,pg_oz
 
-  use jfunc, only : jiter,last,miter
+  use jfunc, only : jiter,last,miter,jiterstart
   
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
 
@@ -982,7 +984,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 
   logical :: lobsdiag_forenkf
 
-  logical:: in_curbin, in_anybin
+  logical:: in_curbin, in_anybin, save_jacobian
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
   type(o3l_ob_type),pointer:: my_head
@@ -990,6 +992,8 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_oz
+
+  save_jacobian = ozone_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
 ! Check to see if required guess fields are available
 ! Question: Should a message be produced before return, to inform the
@@ -1013,8 +1017,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   if(ozone_diagsave)then
      irdim1=6
      if(lobsdiagsave) irdim1=irdim1+4*miter+1
-     lobsdiag_forenkf = .true.
-     if (lobsdiag_forenkf) then
+     if (save_jacobian) then
        dhx_dx%nnz   = 2                   ! number of non-zero elements in dH(x)/dx profile
        dhx_dx%nind   = 1
        irdim1 = irdim1 + 2*dhx_dx%nind + dhx_dx%nnz + 2    ! non-zero elements, their indices and number of indices
@@ -1178,7 +1181,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
      iz = max(1, min( int(dpres), nsig))
      delz = max(zero, min(dpres - float(iz), one))
      oz_ind = getindex(svars3d, 'oz')
-     if (lobsdiag_forenkf) then
+     if (save_jacobian) then
         dhx_dx%st_ind(1)  = iz  + sum(levels(1:oz_ind-1))         
         dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:oz_ind-1))
 
@@ -1354,7 +1357,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
            enddo
         endif
 
-        if (lobsdiag_forenkf) then
+        if (save_jacobian) then
            idia = idia + 1
            rdiagbuf(idia,1,ii) = dhx_dx%nnz
            idia = idia + 1

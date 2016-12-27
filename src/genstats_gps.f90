@@ -67,7 +67,7 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
   use constants, only: tiny_r_kind,half,wgtlim,one,two,zero,five,four
   use qcmod, only: npres_print,ptop,pbot
   use mpimod, only: ierror,mpi_comm_world,mpi_rtype,mpi_sum,mpi_max
-  use jfunc, only: jiter,miter
+  use jfunc, only: jiter,miter,jiterstart
   use gsi_4dvar, only: nobs_bins
   use convinfo, only: nconvtype
   implicit none
@@ -87,7 +87,7 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
   real(r_kind),parameter:: scale = 100.0_r_kind
 
 ! Declare local variables
-  logical:: luse,muse,toss
+  logical:: luse,muse,toss,save_jacobian
   integer(i_kind):: k,jsig,icnt,khgt,kprof,ikx,nn,j,nchar,nreal,mreal,ii,ioff
   real(r_kind):: pressure,arg,wgross,wgt,term,cg_gps,valqc,elev,satid,dtype,dobs
   real(r_kind):: ress,val,ratio_errors,val2
@@ -105,6 +105,7 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
 
   integer(i_kind) :: nnz, nind
   
+  save_jacobian = lobsdiagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
 !*******************************************************************************
 ! Check to see if there are any profiles to process.  If none, return.
@@ -235,7 +236,7 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
         nreal =21
         ioff  =nreal
         if (lobsdiagsave) nreal=nreal+4*miter+1
-        if (lobsdiag_forenkf) then
+        if (save_jacobian) then
           nnz   = 3*nsig
           nind  = 3
           nreal = nreal + 2*nind + nnz + 2

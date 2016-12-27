@@ -94,7 +94,7 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) ikxx,nn,istat,iuse,ibin,iptrb,id
   integer(i_kind) ier,ilon,ilat,ipres,itime,ikx,ilate,ilone
 
-  logical:: in_curbin, in_anybin
+  logical:: in_curbin, in_anybin, save_jacobian
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
   type(tcp_ob_type),pointer:: my_head
@@ -108,6 +108,8 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
+
+  save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
   n_alloc(:)=0
   m_alloc(:)=0
@@ -154,7 +156,7 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      idia0=19
      nreal=idia0
      if (lobsdiagsave) nreal=nreal+4*miter+1
-     if (lobsdiag_forenkf) then
+     if (save_jacobian) then
        dhx_dx%nnz   = 1
        dhx_dx%nind   = 1
        nreal = nreal + 2*dhx_dx%nind + dhx_dx%nnz + 2
@@ -285,7 +287,7 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      pges = exp(log(pgesorig) - rdp)
 
      ps_ind = getindex(svars2d,'ps')
-     if (lobsdiag_forenkf) then
+     if (save_jacobian) then
         dhx_dx%st_ind(1) = sum(levels(1:ns3d)) + ps_ind
         dhx_dx%end_ind(1) = sum(levels(1:ns3d)) + ps_ind
         dhx_dx%val(1) = one
@@ -509,7 +511,7 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            enddo
         endif
 
-        if (lobsdiag_forenkf) then
+        if (save_jacobian) then
            idia = idia + 1
            rdiagbuf(idia,ii) = dhx_dx%nnz
            idia = idia + 1

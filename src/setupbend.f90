@@ -116,7 +116,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
       grav_equator,somigliana,flattening,grav_ratio,grav,rd,eps,three,four,five
   use lagmod, only: setq, setq_TL
   use lagmod, only: slagdw, slagdw_TL
-  use jfunc, only: jiter,miter,iter
+  use jfunc, only: jiter,miter,iter,jiterstart
   use convinfo, only: cermin,cermax,cgross,cvar_b,cvar_pg,ictype
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
 
@@ -211,7 +211,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   logical,dimension(nobs):: luse
   logical proceed
 
-  logical:: in_curbin, in_anybin, obs_check,qc_layer_SR
+  logical:: in_curbin, in_anybin, obs_check,qc_layer_SR, save_jacobian
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
   type(gps_ob_type),pointer:: my_head
@@ -220,6 +220,8 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
+
+  save_jacobian = lobsdiagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
 !*******************************************************************************
 ! List of GPS RO satellites and corresponding BUFR id
@@ -288,7 +290,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   mreal=21
   nreal=mreal
   if (lobsdiagsave) nreal=nreal+4*miter+1
-  if (lobsdiag_forenkf) then
+  if (save_jacobian) then
     dhx_dx%nnz = nsig * 3         ! number of non-zero elements in dH(x)/dx profile
     dhx_dx%nind   = 3             ! number of dense subarrays 
     nreal = nreal + 2*dhx_dx%nind + dhx_dx%nnz + 2 
@@ -1102,7 +1104,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
            t_ind = getindex(svars3d, 'tv')
            q_ind = getindex(svars3d, 'q')
            p_ind = getindex(svars3d, 'prse')
-           if (lobsdiag_forenkf) then
+           if (save_jacobian) then
               dhx_dx%st_ind(1)  = sum(levels(1:t_ind-1)) + 1
               dhx_dx%end_ind(1) = sum(levels(1:t_ind-1)) + nsig
               dhx_dx%st_ind(2)  = sum(levels(1:q_ind-1)) + 1
