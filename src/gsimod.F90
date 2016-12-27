@@ -482,6 +482,9 @@
 !                    density - follows Hayden and Purser (1995) (twodvar_regional only)
 !     thin4d - if true, removes thinning of observations due to the location in
 !              the time window
+!     lobsdiag_forenkf - if true, save linearized H operator (jacobian) in
+!     diagnostic file on 1st outer iteration.  The Jacobian can then be used by
+!     the EnKF to compute ensemble perturbations in observation space.
 !
 !     NOTE:  for now, if in regional mode, then iguess=-1 is forced internally.
 !            add use of guess file later for regional mode.
