@@ -1178,11 +1178,13 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
      iz = max(1, min( int(dpres), nsig))
      delz = max(zero, min(dpres - float(iz), one))
      oz_ind = getindex(svars3d, 'oz')
-     dhx_dx%st_ind(1)  = iz  + sum(levels(1:oz_ind-1))         
-     dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:oz_ind-1))
+     if (lobsdiag_forenkf) then
+        dhx_dx%st_ind(1)  = iz  + sum(levels(1:oz_ind-1))         
+        dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:oz_ind-1))
 
-     dhx_dx%val(1) = constoz * (one - delz)         ! weight for iz's level
-     dhx_dx%val(2) = constoz * delz               ! weight for iz+1's level
+        dhx_dx%val(1) = constoz * (one - delz)         ! weight for iz's level
+        dhx_dx%val(2) = constoz * delz               ! weight for iz+1's level
+     endif
 
 
 !    Compute innovations - background o3ges in g/g so adjust units

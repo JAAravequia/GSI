@@ -285,9 +285,11 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      pges = exp(log(pgesorig) - rdp)
 
      ps_ind = getindex(svars2d,'ps')
-     dhx_dx%st_ind(1) = sum(levels(1:ns3d)) + ps_ind
-     dhx_dx%end_ind(1) = sum(levels(1:ns3d)) + ps_ind
-     dhx_dx%val(1) = one
+     if (lobsdiag_forenkf) then
+        dhx_dx%st_ind(1) = sum(levels(1:ns3d)) + ps_ind
+        dhx_dx%end_ind(1) = sum(levels(1:ns3d)) + ps_ind
+        dhx_dx%val(1) = one
+     endif
 
 ! Compute innovations
      ddiff=pob-pges  ! in cb

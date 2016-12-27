@@ -462,11 +462,13 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
      q_ind =getindex(svars3d,'q')
 
-     dhx_dx%st_ind(1)  = iz + sum(levels(1:q_ind-1))
-     dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:q_ind-1))
+     if (lobsdiag_forenkf) then
+        dhx_dx%st_ind(1)  = iz + sum(levels(1:q_ind-1))
+        dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:q_ind-1))
 
-     dhx_dx%val(1) = one - delz         ! weight for iz's level
-     dhx_dx%val(2) = delz               ! weight for iz+1's level
+        dhx_dx%val(1) = one - delz         ! weight for iz's level
+        dhx_dx%val(2) = delz               ! weight for iz+1's level
+     endif
 
 ! Interpolate 2-m q to obs locations/times
      if(i_use_2mq4b>0 .and. itype > 179 .and. itype < 190 .and.  .not.twodvar_regional)then

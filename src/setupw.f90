@@ -548,14 +548,16 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         u_ind =getindex(svars3d,'u')
         v_ind =getindex(svars3d,'v')
 
-        dhx_dx_u%st_ind(1)  = iz               + sum(levels(1:u_ind-1))
-        dhx_dx_u%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:u_ind-1))
-        dhx_dx_v%st_ind(1)  = iz               + sum(levels(1:v_ind-1))
-        dhx_dx_v%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:v_ind-1))
+        if (lobsdiag_forenkf) then
+           dhx_dx_u%st_ind(1)  = iz               + sum(levels(1:u_ind-1))
+           dhx_dx_u%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:u_ind-1))
+           dhx_dx_v%st_ind(1)  = iz               + sum(levels(1:v_ind-1))
+           dhx_dx_v%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:v_ind-1))
 
-        dhx_dx_u%val(1) = one - delz
-        dhx_dx_u%val(2) = delz
-        dhx_dx_v%val = dhx_dx_u%val
+           dhx_dx_u%val(1) = one - delz
+           dhx_dx_u%val(2) = delz
+           dhx_dx_v%val = dhx_dx_u%val
+        endif
 
 
         if (zob > zges(1)) then
@@ -581,8 +583,10 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            ugesin=factw*ugesin
            vgesin=factw*vgesin
 
-           dhx_dx_u%val = factw * dhx_dx_u%val
-           dhx_dx_v%val = factw * dhx_dx_v%val
+           if (lobsdiag_forenkf) then
+              dhx_dx_u%val = factw * dhx_dx_u%val
+              dhx_dx_v%val = factw * dhx_dx_v%val
+           endif
         endif
 
         if(sfc_data .or. dpres < one) then
@@ -647,14 +651,16 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         u_ind =getindex(svars3d,'u')
         v_ind =getindex(svars3d,'v')
 
-        dhx_dx_u%st_ind(1)  = iz               + sum(levels(1:u_ind-1))
-        dhx_dx_u%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:u_ind-1))
-        dhx_dx_v%st_ind(1)  = iz               + sum(levels(1:v_ind-1))
-        dhx_dx_v%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:v_ind-1))
+        if (lobsdiag_forenkf) then
+            dhx_dx_u%st_ind(1)  = iz               + sum(levels(1:u_ind-1))
+            dhx_dx_u%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:u_ind-1))
+            dhx_dx_v%st_ind(1)  = iz               + sum(levels(1:v_ind-1))
+            dhx_dx_v%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:v_ind-1))
 
-        dhx_dx_u%val(1) = one - delz
-        dhx_dx_u%val(2) = delz
-        dhx_dx_v%val = dhx_dx_u%val
+            dhx_dx_u%val(1) = one - delz
+            dhx_dx_u%val(2) = delz
+            dhx_dx_v%val = dhx_dx_u%val
+        endif
 
         if(dpressave <= prsln2)then
            factw=one
@@ -677,8 +683,10 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            ugesin=factw*ugesin   
            vgesin=factw*vgesin
 
-           dhx_dx_u%val = factw * dhx_dx_u%val
-           dhx_dx_v%val = factw * dhx_dx_v%val 
+           if (lobsdiag_forenkf) then
+              dhx_dx_u%val = factw * dhx_dx_u%val
+              dhx_dx_v%val = factw * dhx_dx_v%val 
+           endif
         end if
        
 !       Get approx k value of sfc by using surface pressure

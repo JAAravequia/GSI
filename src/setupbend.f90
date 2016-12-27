@@ -1102,20 +1102,20 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
            t_ind = getindex(svars3d, 'tv')
            q_ind = getindex(svars3d, 'q')
            p_ind = getindex(svars3d, 'prse')
-           dhx_dx%st_ind(1)  = sum(levels(1:t_ind-1)) + 1
-           dhx_dx%end_ind(1) = sum(levels(1:t_ind-1)) + nsig
-           dhx_dx%st_ind(2)  = sum(levels(1:q_ind-1)) + 1
-           dhx_dx%end_ind(2) = sum(levels(1:q_ind-1)) + nsig
-           dhx_dx%st_ind(3)  = sum(levels(1:p_ind-1)) + 1
-           dhx_dx%end_ind(3) = sum(levels(1:p_ind-1)) + nsig
-
-           do iz = 1, nsig
-              dhx_dx%val(iz)        = gpstail(ibin)%head%jac_t(iz)
-              dhx_dx%val(iz+nsig)   = gpstail(ibin)%head%jac_q(iz)
-              dhx_dx%val(iz+2*nsig) = gpstail(ibin)%head%jac_p(iz)
-           enddo
-
            if (lobsdiag_forenkf) then
+              dhx_dx%st_ind(1)  = sum(levels(1:t_ind-1)) + 1
+              dhx_dx%end_ind(1) = sum(levels(1:t_ind-1)) + nsig
+              dhx_dx%st_ind(2)  = sum(levels(1:q_ind-1)) + 1
+              dhx_dx%end_ind(2) = sum(levels(1:q_ind-1)) + nsig
+              dhx_dx%st_ind(3)  = sum(levels(1:p_ind-1)) + 1
+              dhx_dx%end_ind(3) = sum(levels(1:p_ind-1)) + nsig
+
+              do iz = 1, nsig
+                 dhx_dx%val(iz)        = gpstail(ibin)%head%jac_t(iz)
+                 dhx_dx%val(iz+nsig)   = gpstail(ibin)%head%jac_q(iz)
+                 dhx_dx%val(iz+2*nsig) = gpstail(ibin)%head%jac_p(iz)
+              enddo
+
               ioff = ioff + 1
               rdiagbuf(ioff,i) = dhx_dx%nnz
               ioff = ioff + 1

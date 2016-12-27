@@ -1977,6 +1977,7 @@
                  end do
               end if
 
+              if (lobsdiag_forenkf) then
               j = 1
               do ii = 1, nvarjac
                  state_ind = getindex(svars3d, radjacnames(ii))
@@ -2004,6 +2005,7 @@
                     enddo
                  endif
               enddo
+              endif
 
 
               ioff = ipchan_radiag+npred+2

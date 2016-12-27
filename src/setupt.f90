@@ -582,11 +582,13 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
            t_ind =getindex(svars3d,'tv')
            
-           dhx_dx%st_ind(1)  = iz               + sum(levels(1:t_ind-1))
-           dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:t_ind-1))
+           if (lobsdiag_forenkf) then
+              dhx_dx%st_ind(1)  = iz               + sum(levels(1:t_ind-1))
+              dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:t_ind-1))
 
-           dhx_dx%val(1) = one - delz         ! weight for iz's level
-           dhx_dx%val(2) = delz               ! weight for iz+1's level
+              dhx_dx%val(1) = one - delz         ! weight for iz's level
+              dhx_dx%val(2) = delz               ! weight for iz+1's level
+           endif
         else
 !          Interpolate guess tsen to observation location and time
            call tintrp31(ges_tsen,tges,dlat,dlon,dpres,dtime, &
@@ -597,11 +599,13 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
            t_ind =getindex(svars3d,'tsen')
 
-           dhx_dx%st_ind(1)  = iz               + sum(levels(1:t_ind-1))
-           dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:t_ind-1))
+           if (lobsdiag_forenkf) then
+              dhx_dx%st_ind(1)  = iz               + sum(levels(1:t_ind-1))
+              dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:t_ind-1))
 
-           dhx_dx%val(1) = one - delz         ! weight for iz's level
-           dhx_dx%val(2) = delz               ! weight for iz+1's level
+              dhx_dx%val(1) = one - delz         ! weight for iz's level
+              dhx_dx%val(2) = delz               ! weight for iz+1's level
+           endif
         end if
 
         if(i_use_2mt4b>0 .and. sfctype) then
