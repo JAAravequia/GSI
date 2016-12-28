@@ -1,4 +1,4 @@
-subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pass)
+subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pass,conv_diagsave)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    setupbend    compute rhs of oi for gps bending angle
@@ -149,6 +149,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   integer, intent(in):: is		! index to GPSbend buffer variables
   logical, intent(in):: init_pass	! flag the pass for the first background bin
   logical, intent(in):: last_pass	! flag the pass for the last background bin
+  logical, intent(in):: conv_diagsave   ! save diagnostics file
 
 ! Declare local parameters
   real(r_kind),parameter::  r240 = 240.0_r_kind
@@ -221,7 +222,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
 
-  save_jacobian = lobsdiagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
+  save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
 !*******************************************************************************
 ! List of GPS RO satellites and corresponding BUFR id
@@ -780,6 +781,9 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
      end do
   endif ! (last_pass)
 
+  t_ind = getindex(svars3d, 'tv')
+  q_ind = getindex(svars3d, 'q')
+  p_ind = getindex(svars3d, 'prse')
 
 ! Loop to load arrays used in statistics output
   n_alloc(:)=0
@@ -1101,9 +1105,6 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
 
            gpstail(ibin)%head%jac_p(nsig+1) = zero
 
-           t_ind = getindex(svars3d, 'tv')
-           q_ind = getindex(svars3d, 'q')
-           p_ind = getindex(svars3d, 'prse')
            if (save_jacobian) then
               dhx_dx%st_ind(1)  = sum(levels(1:t_ind-1)) + 1
               dhx_dx%end_ind(1) = sum(levels(1:t_ind-1)) + nsig

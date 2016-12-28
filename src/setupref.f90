@@ -1,4 +1,4 @@
-subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pass)
+subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pass,conv_diagsave)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    setupref    compute rhs of oi for gps refractivity
@@ -113,11 +113,11 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-  use mpeu_util, only: die,perr
+  use mpeu_util, only: die,perr,getindex
   use kinds, only: r_kind,i_kind
   use obsmod, only: nprof_gps,gpshead,gpstail,gps_allhead,gps_alltail,&
        i_gps_ob_type,obsdiags,lobsdiagsave,nobskeep,lobsdiag_allocated,&
-       time_offset
+       time_offset,lobsdiag_forenkf
   use obsmod, only: gps_ob_type
   use obsmod, only: obs_diag,luse_obsdiag
   use gsi_4dvar, only: nobs_bins,hr_obsbin
@@ -129,7 +129,7 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
   use constants, only: zero,one,two,eccentricity,semi_major_axis,&
        grav_equator,somigliana,flattening,grav_ratio,grav,rd,eps,&
        three,four,five,half,r0_01
-  use jfunc, only: jiter,miter
+  use jfunc, only: jiter,miter,jiterstart
   use convinfo, only: cermin,cermax,cgross,cvar_b,cvar_pg,ictype
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
   use m_gpsrhs, only: muse
@@ -147,8 +147,10 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
   use m_gpsrhs, only: gpsrhs_aliases
   use m_gpsrhs, only: gpsrhs_unaliases
 
+  use state_vectors, only: levels, svars3d
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
+  use sparsearr, only: sparr2
 
   implicit none
 
@@ -174,6 +176,7 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
   integer(i_kind)                            ,intent(in   ) :: is	! ndat index
   logical                                    ,intent(in   ) :: init_pass	! the pass with the first set of background bins
   logical                                    ,intent(in   ) :: last_pass	! the pass with all background bins processed
+  logical, intent(in):: conv_diagsave   ! save diagnostics file
 
 ! Declare external calls for code analysis
   external:: tintrp2a1,tintrp2a11
@@ -203,8 +206,11 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
   integer(i_kind),dimension(4):: gps_ij
   integer(i_kind):: satellite_id,transmitter_id
 
+  type(sparr2) :: dhx_dx
+  integer(i_kind) :: iz, t_ind, q_ind, p_ind
+
   logical,dimension(nobs):: luse
-  logical proceed
+  logical proceed, save_jacobian
 
   logical:: in_curbin, in_anybin
   integer(i_kind),dimension(nobs_bins) :: n_alloc
@@ -215,6 +221,8 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
+
+  save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
   n_alloc(:)=0
   m_alloc(:)=0
@@ -278,6 +286,12 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
   mreal=21
   nreal=mreal
   if (lobsdiagsave) nreal=nreal+4*miter+1
+  if (save_jacobian) then
+    dhx_dx%nnz = nsig * 3         ! number of non-zero elements in dH(x)/dx profile
+    dhx_dx%nind   = 3             ! number of dense subarrays 
+    nreal = nreal + 2*dhx_dx%nind + dhx_dx%nnz + 2 
+    allocate(dhx_dx%val(dhx_dx%nnz), dhx_dx%st_ind(dhx_dx%nind), dhx_dx%end_ind(dhx_dx%nind))
+  endif
 
   if(init_pass) call gpsrhs_alloc(is,'ref',nobs,nsig,nreal,-1,-1)
   call gpsrhs_aliases(is)
@@ -717,6 +731,9 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
      end do
   endif ! (last_pass)
 
+  t_ind = getindex(svars3d, 'tv')
+  q_ind = getindex(svars3d, 'q')
+  p_ind = getindex(svars3d, 'prse')
 
 ! Loop to load arrays used in statistics output
   call dtime_setup()
@@ -729,6 +746,7 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
         if (ratio_errors(i)*data(ier,i) <= tiny_r_kind) muse(i) = .false.
         ikx=nint(data(ikxx,i))
         dtime=data(itime,i)
+
  
         ! flags for observations that failed qc checks
         ! zero = observation is good
@@ -952,6 +970,7 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
                  gpstail(ibin)%head%jac_p(j)=gpstail(ibin)%head%jac_p(j)-termpl2(j,i)
               end do
            end if
+
 !          delz=dpres-float(k1)
            kl=dpresl(i)
            k1l=min(max(1,kl),nsig)
@@ -969,6 +988,33 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
            gpstail(ibin)%head%b         = cvar_b(ikx)
            gpstail(ibin)%head%pg        = cvar_pg(ikx)
            gpstail(ibin)%head%luse      = luse(i)
+
+           if (save_jacobian) then
+              dhx_dx%st_ind(1)  = sum(levels(1:t_ind-1)) + 1
+              dhx_dx%end_ind(1) = sum(levels(1:t_ind-1)) + nsig
+              dhx_dx%st_ind(2)  = sum(levels(1:q_ind-1)) + 1
+              dhx_dx%end_ind(2) = sum(levels(1:q_ind-1)) + nsig
+              dhx_dx%st_ind(3)  = sum(levels(1:p_ind-1)) + 1
+              dhx_dx%end_ind(3) = sum(levels(1:p_ind-1)) + nsig
+
+              do iz = 1, nsig
+                 dhx_dx%val(iz)        = gpstail(ibin)%head%jac_t(iz)
+                 dhx_dx%val(iz+nsig)   = gpstail(ibin)%head%jac_q(iz)
+                 dhx_dx%val(iz+2*nsig) = gpstail(ibin)%head%jac_p(iz)
+              enddo
+
+              ioff = ioff + 1
+              rdiagbuf(ioff,i) = dhx_dx%nnz
+              ioff = ioff + 1
+              rdiagbuf(ioff,i) = dhx_dx%nind 
+              ioff = ioff + 1
+              rdiagbuf(ioff:ioff+dhx_dx%nind-1,i) = dhx_dx%st_ind
+              ioff = ioff + dhx_dx%nind
+              rdiagbuf(ioff:ioff+dhx_dx%nind-1,i) = dhx_dx%end_ind
+              ioff = ioff + dhx_dx%nind
+              rdiagbuf(ioff:ioff+dhx_dx%nnz-1,i) = dhx_dx%val
+              ioff = ioff + dhx_dx%nnz - 1
+           endif
 
            if(luse_obsdiag)then
               gpstail(ibin)%head%diags     => obsdiags(i_gps_ob_type,ibin)%tail

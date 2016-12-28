@@ -584,7 +584,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
 !             Set up GPS local bending angle data
               else if(obstype=='gps_bnd')then
-                 call setupbend(lunin,mype,awork(1,i_gps),nele,nobs,toss_gps_sub,is,init_pass,last_pass)
+                 call setupbend(lunin,mype,awork(1,i_gps),nele,nobs,toss_gps_sub,is,init_pass,last_pass,conv_diagsave)
               end if
            end if
 
