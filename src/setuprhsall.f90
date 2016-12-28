@@ -580,7 +580,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !          Set up GPS local refractivity data
            else if(ditype(is) == 'gps')then
               if(obstype=='gps_ref')then
-                 call setupref(lunin,mype,awork(1,i_gps),nele,nobs,toss_gps_sub,is,init_pass,last_pass)
+                 call setupref(lunin,mype,awork(1,i_gps),nele,nobs,toss_gps_sub,is,init_pass,last_pass,conv_diagsave)
 
 !             Set up GPS local bending angle data
               else if(obstype=='gps_bnd')then
