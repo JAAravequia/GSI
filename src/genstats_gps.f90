@@ -105,7 +105,7 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
 
   integer(i_kind) :: nnz, nind
   
-  save_jacobian = lobsdiagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
+  save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
 !*******************************************************************************
 ! Check to see if there are any profiles to process.  If none, return.
