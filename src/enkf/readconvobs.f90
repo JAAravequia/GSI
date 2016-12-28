@@ -26,7 +26,7 @@ module readconvobs
 !$$$
 use kinds, only: r_kind,i_kind,r_single
 use constants, only: one,zero,deg2rad
-use params, only: npefiles
+use params, only: npefiles, npredt_aircraft_bc
 implicit none
 
 private
@@ -287,6 +287,7 @@ implicit none
   endif
 10 continue
   read(iunit,err=20,end=30) obtype,nchar,nreal,ii,mype
+  !print *,obtype,nchar,nreal,ii,mype
   errorlimit2=errorlimit2_obs
       
     if (obtype == '  t') then
@@ -320,6 +321,9 @@ implicit none
 
           if (nanal <= nanals) then
             ind = 20
+            if (npredt_aircraft_bc > 0) then
+               ind = ind + npredt_aircraft_bc + 2
+            endif
             nnz = rdiagbuf(ind,n)
             dhx_dx%nnz = nnz
             ind = ind + 1
@@ -328,6 +332,7 @@ implicit none
             ind = ind + 1
 
             allocate(dhx_dx%val(nnz), dhx_dx%st_ind(nind), dhx_dx%end_ind(nind))
+            !print *,'obtype,nreal,ind,nind',obtype,nreal,ind,nind
             dhx_dx%st_ind = rdiagbuf(ind:ind+nind-1, n)
             ind = ind + nind
             dhx_dx%end_ind = rdiagbuf(ind:ind+nind-1,n)

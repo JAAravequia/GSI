@@ -136,6 +136,9 @@ logical,public :: nvars = -1
 ! is ignored.
 logical,public :: use_qsatensmean = .false.
 logical,public :: write_spread_diag = .false.
+! # of predictors used in aircraft T bias correction (0 for no
+! aircraft bias correction) - only used to read Jacobian from diag file.
+logical,public :: npredt_aircraft_bc = 0
 
 namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    covinflatemax,covinflatemin,deterministic,sortinc,&
@@ -153,7 +156,7 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    paoverpb_thresh,latbound,delat,pseudo_rh,numiter,biasvar,&
                    lupd_satbiasc,cliptracers,simple_partition,adp_anglebc,angord,&
                    newpc4pred,nmmb,nhr_anal,nhr_state, fhr_assim,nbackgrounds,nstatefields, &
-                   save_inflation,nobsl_max,&
+                   save_inflation,nobsl_max,npredt_aircraft_bc,&
                    letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
                    write_spread_diag
 namelist /nam_wrf/arw,nmm
