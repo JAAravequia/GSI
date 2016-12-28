@@ -124,7 +124,8 @@ do ii=1,nvars
       cvars3d(nc3d) = trim(adjustl(var))
       clevels(nc3d) = ilev + clevels(nc3d-1)
    else 
-      if (nproc .eq. 0) print *,'Error: only ', nlevs, ' number of levels is supported in current version.'
+      if (nproc .eq. 0) print *,'Error: only ', nlevs, ' and ', nlevs+1,' number of levels is supported in current version, got ',ilev
+      call stop2(503)
       call stop2(503)
    endif
 enddo

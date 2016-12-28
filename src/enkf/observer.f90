@@ -41,8 +41,9 @@ subroutine observer(hx, dens, rlat, rlon, time, dhx_dx, hx_ens)
 
   ! find interplation indices and deltas
   ix = 0
-  do while (ix < nlats .and. latsgrd(ix*nlons+1) >= rlat)
+  do while (latsgrd(ix*nlons+1) >= rlat)
     ix = ix + 1
+    if (ix == nlats-1) exit
   enddo
   ix  = min(ix,   nlats-1)
   ixp = max(ix-1, 0)

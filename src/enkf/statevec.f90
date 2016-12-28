@@ -117,7 +117,7 @@ do ii=1,nvars
       svars3d(ns3d)=trim(adjustl(var))
       slevels(ns3d)=ilev + slevels(ns3d-1)
    else 
-      if (nproc .eq. 0) print *,'Error: only ', nlevs, ' and ', nlevs+1,' number of levels is supported in current version.'
+      if (nproc .eq. 0) print *,'Error: only ', nlevs, ' and ', nlevs+1,' number of levels is supported in current version, got ',ilev
       call stop2(503)
    endif
 enddo
