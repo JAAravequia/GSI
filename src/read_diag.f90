@@ -87,6 +87,7 @@ module read_diag
      integer(i_kind) :: angord           ! order of polynomial for adp_anglebc option
      integer(i_kind) :: iversion         ! radiance diagnostic file version number
      integer(i_kind) :: inewpc           ! indicator of newpc4pred (1 on, 0 off)
+     integer(i_kind) :: ijacob        ! indicates whether jacobian included (1 yes, 0 no)
      integer(i_kind) :: isens            ! sensitivity index
   end type diag_header_fix_list
 
@@ -243,7 +244,7 @@ subroutine read_radiag_header(ftin,npred_radiag,retrieval,header_fix,header_chan
   character(len=20):: sensat
   integer(i_kind) :: i,ich
   integer(i_kind):: jiter,nchanl,npred,ianldate,ireal,ipchan,iextra,jextra
-  integer(i_kind):: idiag,angord,iversion,inewpc,isens
+  integer(i_kind):: idiag,angord,iversion,inewpc,isens,ijacob
   integer(i_kind):: iuse_tmp,nuchan_tmp,iochan_tmp
   real(r_single) :: freq_tmp,polar_tmp,wave_tmp,varch_tmp,tlapmean_tmp
   logical loutall
@@ -253,12 +254,22 @@ subroutine read_radiag_header(ftin,npred_radiag,retrieval,header_fix,header_chan
 
 ! Read header (fixed_part).
   read(ftin,IOSTAT=iflag)  sensat,satid,sentype,jiter,nchanl,npred,ianldate,&
-          ireal,ipchan,iextra,jextra,idiag,angord,iversion,inewpc,isens
+          ireal,ipchan,iextra,jextra,idiag,angord,iversion,inewpc,isens,ijacob
   if (iflag/=0) then
      rewind(ftin)
      read(ftin,IOSTAT=iflag) sensat,satid,sentype,jiter,nchanl,npred,ianldate,&
-          ireal,ipchan,iextra,jextra,idiag,angord,iversion,inewpc
-     isens=0
+          ireal,ipchan,iextra,jextra,idiag,angord,iversion,inewpc,isens
+     ijacob=0
+     if (iflag/=0) then
+        read(ftin,IOSTAT=iflag)  sensat,satid,sentype,jiter,nchanl,npred,ianldate,&
+                ireal,ipchan,iextra,jextra,idiag,angord,iversion,inewpc,isens
+        if (iflag/=0) then
+           rewind(ftin)
+           read(ftin,IOSTAT=iflag) sensat,satid,sentype,jiter,nchanl,npred,ianldate,&
+                ireal,ipchan,iextra,jextra,idiag,angord,iversion,inewpc
+           isens=0
+        end if
+     end if
   end if
 
   if (iflag/=0) then
@@ -288,6 +299,7 @@ subroutine read_radiag_header(ftin,npred_radiag,retrieval,header_fix,header_chan
   header_fix%iextra  = iextra
   header_fix%jextra  = jextra
   header_fix%idiag   = idiag
+  header_fix%ijacob  = ijacob
   header_fix%angord  = angord
   header_fix%iversion= iversion
   header_fix%inewpc  = inewpc
@@ -301,7 +313,8 @@ subroutine read_radiag_header(ftin,npred_radiag,retrieval,header_fix,header_chan
           ' idiag=',header_fix%idiag,&
           ' iversion=',header_fix%iversion,&
           ' inewpc=',header_fix%inewpc,&
-          ' isens=',header_fix%isens
+          ' isens=',header_fix%isens,&
+          ' ijacob=',header_fix%ijacob
      
      if ( header_fix%iextra /= 0) &
           write(6,*)'READ_RADIAG_HEADER:  extra diagnostic information available, ',&
@@ -648,25 +661,27 @@ subroutine read_radiag_data(ftin,header_fix,retrieval,data_fix,data_chan,data_ex
 
      do ich=1,header_fix%nchan
         ind = header_fix%ipchan + header_fix%npred + 2
-        ind = ind + 1
-        data_chan(ich)%dhx_dx%nnz = data_tmp(ind,ich)
-        ind = ind + 1
-        data_chan(ich)%dhx_dx%nind = data_tmp(ind,ich)
-        ind = ind + 1
-        nnz = data_chan(ich)%dhx_dx%nnz
-        nind = data_chan(ich)%dhx_dx%nind
-        if (allocated(data_chan(ich)%dhx_dx%val))     deallocate(data_chan(ich)%dhx_dx%val)
-        if (allocated(data_chan(ich)%dhx_dx%st_ind))  deallocate(data_chan(ich)%dhx_dx%st_ind)
-        if (allocated(data_chan(ich)%dhx_dx%end_ind)) deallocate(data_chan(ich)%dhx_dx%end_ind)
-        allocate(data_chan(ich)%dhx_dx%val(nnz))
-        allocate(data_chan(ich)%dhx_dx%st_ind(nind))
-        allocate(data_chan(ich)%dhx_dx%end_ind(nind))
+        if (header_fix%ijacob==1) then
+           ind = ind + 1
+           data_chan(ich)%dhx_dx%nnz = data_tmp(ind,ich)
+           ind = ind + 1
+           data_chan(ich)%dhx_dx%nind = data_tmp(ind,ich)
+           ind = ind + 1
+           nnz = data_chan(ich)%dhx_dx%nnz
+           nind = data_chan(ich)%dhx_dx%nind
+           if (allocated(data_chan(ich)%dhx_dx%val))     deallocate(data_chan(ich)%dhx_dx%val)
+           if (allocated(data_chan(ich)%dhx_dx%st_ind))  deallocate(data_chan(ich)%dhx_dx%st_ind)
+           if (allocated(data_chan(ich)%dhx_dx%end_ind)) deallocate(data_chan(ich)%dhx_dx%end_ind)
+           allocate(data_chan(ich)%dhx_dx%val(nnz))
+           allocate(data_chan(ich)%dhx_dx%st_ind(nind))
+           allocate(data_chan(ich)%dhx_dx%end_ind(nind))
 
-        data_chan(ich)%dhx_dx%st_ind  = data_tmp(ind:ind+nind-1,ich)
-        ind = ind + nind
-        data_chan(ich)%dhx_dx%end_ind = data_tmp(ind:ind+nind-1,ich)
-        ind = ind + nind
-        data_chan(ich)%dhx_dx%val     = data_tmp(ind:ind+nnz-1,ich)
+           data_chan(ich)%dhx_dx%st_ind  = data_tmp(ind:ind+nind-1,ich)
+           ind = ind + nind
+           data_chan(ich)%dhx_dx%end_ind = data_tmp(ind:ind+nind-1,ich)
+           ind = ind + nind
+           data_chan(ich)%dhx_dx%val     = data_tmp(ind:ind+nnz-1,ich)
+        endif
      enddo
   endif
 

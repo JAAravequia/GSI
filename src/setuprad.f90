@@ -266,7 +266,7 @@
   integer(i_kind) iextra,jextra,error_status,istat
   integer(i_kind) ich9,isli,icc,iccm,mm1,ixx
   integer(i_kind) m,mm,jc,j,k,i,icw4crtm,ier,nguess
-  integer(i_kind) n,nlev,kval,ibin,ioff,ioff0,iii
+  integer(i_kind) n,nlev,kval,ibin,ioff,iii,ijacob,isens
   integer(i_kind) ii,jj,idiag,inewpc,nchanl_diag
   integer(i_kind) nadir,kraintype,ierrret
   integer(i_kind) ioz,ius,ivs,iwrmype
@@ -355,6 +355,12 @@
   type(obs_diag),pointer:: my_diag
 
   save_jacobian = rad_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
+  isens = 0 ! sensitivity index, not used
+  if (save_jacobian) then
+     ijacob = 1 ! flag to indicate jacobian saved in diagnostic file
+  else
+     ijacob = 0
+  endif
 
   n_alloc(:)=0
   m_alloc(:)=0
@@ -674,7 +680,6 @@
     idiag = idiag + 2*dhx_dx%nind + dhx_dx%nnz + 2
     allocate(dhx_dx%val(dhx_dx%nnz),dhx_dx%st_ind(dhx_dx%nind),dhx_dx%end_ind(dhx_dx%nind))
   endif
-  ioff0=idiag
   if (lobsdiagsave) idiag=idiag+4*miter+1
   allocate(diagbufchan(idiag,nchanl_diag))
 
@@ -713,7 +718,7 @@
         inewpc=0
         if (newpc4pred) inewpc=1
         write(4) isis,dplat(is),obstype,jiter,nchanl_diag,npred,ianldate,ireal_radiag,ipchan_radiag,iextra,jextra,&
-           idiag,angord,iversion_radiag,inewpc,ioff0
+           idiag,angord,iversion_radiag,inewpc,isens,ijacob
         write(6,*)'SETUPRAD:  write header record for ',&
            isis,npred,ireal_radiag,ipchan_radiag,iextra,jextra,idiag,angord,iversion_radiag,&
                       ' to file ',trim(diag_rad_file),' ',ianldate
