@@ -25,7 +25,7 @@ module readozobs
 !
 !$$$
 
-use kinds, only: r_single,i_kind,r_kind
+use kinds, only: r_single,i_kind,r_kind,r_double
 use params, only: nsats_oz,sattypes_oz,npefiles
 use constants, only: deg2rad  
 implicit none
@@ -126,9 +126,10 @@ end subroutine get_num_ozobs
 subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_xnobc, dhx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
 
-use sparsearr,only:sparr2
-use params,only: nanals
-use statevec, only: state_d
+  use sparsearr,only:sparr2
+  use params,only: nanals
+  use statevec, only: state_d
+  use mpisetup, only: mpi_wtime, nproc
 
   character*500, intent(in) :: obspath
   character*500 obsfile
@@ -146,6 +147,7 @@ use statevec, only: state_d
 
   real(r_single), dimension(nobs_max) :: h_x,h_xnobc,x_obs,x_err,x_lon,&
                                x_lat,x_press,x_time,x_errorig,dhx
+  real(r_double) t1,t2,tsum
   type(sparr2)         :: dhx_dx
   integer(i_kind), dimension(nobs_maxdiag) :: x_used
   integer(i_kind), dimension(nobs_max) :: x_code
@@ -164,6 +166,7 @@ use statevec, only: state_d
   errorlimit=1._r_kind/sqrt(1.e9_r_kind)
   errorlimit2=1._r_kind/sqrt(1.e-6_r_kind)
 
+  tsum = 0
   iunit = 7
   nob = 0
   nobdiag = 0
@@ -241,9 +244,14 @@ use statevec, only: state_d
                ind = ind + nind
                dhx_dx%val = rdiagbuf(ind:ind+nnz-1,k,n)
 
+               t1 = mpi_wtime()
                call observer(h_xnobc(nob), state_d,                  &
-                          real(x_lat(nob)*deg2rad,r_single), real(x_lon(nob)*deg2rad,r_single), x_time(nob), &
+                          real(x_lat(nob)*deg2rad,r_single),         & 
+                          real(x_lon(nob)*deg2rad,r_single),         &
+                          x_time(nob),                               &
                           dhx_dx, dhx(nob))
+               t2 = mpi_wtime()
+               tsum = tsum + t2-t1
 
                deallocate(dhx_dx%val, dhx_dx%st_ind, dhx_dx%end_ind)
              endif
@@ -258,6 +266,7 @@ use statevec, only: state_d
          close(iunit)
       enddo peloop ! ipe
   enddo ! satellite
+  if (nanal <= nanals) print *,'time in observer for oz obs on proc',nproc,' = ',tsum
 
   if (nob /= nobs_max) then
       print *,'number of obs not what expected in get_ozobs_data',nob,nobs_max

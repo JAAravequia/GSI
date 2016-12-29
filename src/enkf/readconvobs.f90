@@ -24,7 +24,7 @@ module readconvobs
 !   language: f95
 !
 !$$$
-use kinds, only: r_kind,i_kind,r_single
+use kinds, only: r_kind,i_kind,r_single,r_double
 use constants, only: one,zero,deg2rad
 use params, only: npefiles
 implicit none
@@ -210,10 +210,11 @@ end subroutine get_num_convobs
 
 subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_xnobc, dhx, x_obs, x_err, &
      x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
-use sparsearr
-use params, only: nanals
-use statevec, only: state_d
-implicit none
+  use sparsearr
+  use params, only: nanals
+  use statevec, only: state_d
+  use mpisetup, only: nproc, mpi_wtime
+  implicit none
 
   character*500,   intent(in) :: obspath
   character*10,    intent(in) :: datestring
@@ -231,6 +232,7 @@ implicit none
 
   character(len=10), intent(in) :: id
   integer, intent(in) :: nanal
+  real(r_double) t1,t2,tsum
 
   character(len=4) pe_name
   character*500 obsfile
@@ -254,6 +256,7 @@ implicit none
   errorlimit2_obs = 1._r_kind/sqrt(1.e-6_r_kind)
   errorlimit2_bnd = 1.e3_r_kind*errorlimit2_obs
   iunit = 7
+  tsum = 0
 
   nob  = 0
   nobdiag = 0
@@ -336,9 +339,12 @@ implicit none
             ind = ind + nind
             dhx_dx%val = rdiagbuf(ind:ind+nnz-1,n)
 
+            t1 = mpi_wtime()
             call observer(h_xnobc(nob), state_d,                  &
                           real(x_lat(nob)*deg2rad,r_single),real(x_lon(nob)*deg2rad,r_single),x_time(nob),&
                           dhx_dx, dhx(nob))
+            t2 = mpi_wtime()
+            tsum = tsum + t2-t1
 
             deallocate(dhx_dx%val, dhx_dx%st_ind, dhx_dx%end_ind)
           endif
@@ -1062,7 +1068,9 @@ implicit none
             dhx_dx%val = rdiagbuf(ind:ind+nnz-1,n)
 
             call observer(h_xnobc(nob), state_d,                  &
-                          real(x_lat(nob)*deg2rad,r_single),real(x_lon(nob)*deg2rad,r_single), x_time(nob), &
+                          real(x_lat(nob)*deg2rad,r_single),      &
+                          real(x_lon(nob)*deg2rad,r_single),      & 
+                          x_time(nob),                            &
                           dhx_dx, dhx(nob))
 
             deallocate(dhx_dx%val, dhx_dx%st_ind, dhx_dx%end_ind)
@@ -1253,6 +1261,7 @@ implicit none
 30  continue
     close(iunit)
   enddo peloop ! ipe loop
+  if (nanal <= nanals) print *,'time in observer for conv obs on proc',nproc,' = ',tsum
   if (nob .ne. nobs_max) then
       print *,'number of obs not what expected in get_convobs_data',nob,nobs_max
       call stop2(94)

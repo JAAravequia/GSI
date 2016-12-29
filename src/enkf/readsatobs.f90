@@ -29,7 +29,7 @@ module readsatobs
 !
 !$$$
 
-use kinds, only: r_kind,i_kind,r_single
+use kinds, only: r_kind,i_kind,r_single,r_double
 use read_diag, only: diag_data_fix_list,diag_header_fix_list,diag_header_chan_list, &
     diag_data_chan_list,diag_data_extra_list,read_radiag_data,read_radiag_header, &
     diag_data_name_list
@@ -154,6 +154,7 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_x
   use params, only: nanals
   use statevec, only: state_d
   use constants, only: deg2rad
+  use mpisetup, only: nproc, mpi_wtime
 
   character*500, intent(in) :: obspath
   character*500 obsfile
@@ -177,6 +178,7 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_x
   integer(i_kind) npred_radiag
   logical fexist,lretrieval,lverbose,init_pass
   real(r_kind) :: errorlimit,errorlimit2
+  real(r_double) t1,t2,tsum
 
   type(diag_header_fix_list )         :: header_fix
   type(diag_header_chan_list),allocatable :: header_chan(:)
@@ -189,6 +191,7 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_x
   errorlimit=1._r_kind/sqrt(1.e9_r_kind)
   errorlimit2=1._r_kind/sqrt(1.e-6_r_kind)
 
+  tsum = 0
   iunit = 7
   lretrieval=.false.
   npred_radiag=npred
@@ -280,9 +283,14 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_x
          h_xnobc(nobs) = x_obs(nobs) - data_chan(n)%omgnbc
 
          if (nanal <= nanals) then
-            call observer(h_xnobc(nobs), state_d,                  &
-                          real(x_lat(nobs)*deg2rad,r_single),real(x_lon(nobs)*deg2rad,r_single), x_time(nobs), &
+            t1 = mpi_wtime()
+            call observer(h_xnobc(nobs), state_d,              &
+                          real(x_lat(nobs)*deg2rad,r_single),  &
+                          real(x_lon(nobs)*deg2rad,r_single),  &
+                          x_time(nobs),                        &
                           data_chan(n)%dhx_dx, dhx(nobs))
+            t2 = mpi_wtime()
+            tsum = tsum + t2-t1
             if (dhx(nobs) > 1000.) then 
                print *, nanal, ' DHX: ', dhx(nobs), ', h(x)=', h_xnobc(nobs), sattypes_rad(nsat), trim(adjustl(id))
             endif
@@ -330,6 +338,7 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_x
 
      enddo peloop ! ipe
  enddo ! satellite
+ if (nanal <= nanals) print *,'time in observer for sat obs on proc',nproc,' = ',tsum
 
   if (nobs /= nobs_max) then
       print *,'number of obs not what expected in get_satobs_data',nobs,nobs_max
