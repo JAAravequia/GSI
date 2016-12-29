@@ -142,7 +142,7 @@ use statevec, only: state_d
   character(10) :: obstype  !  type of ozone obs
   character(10) :: dplat    ! sat sensor
   integer(i_kind) iunit,jiter,ii,ireal,iint,nreal,idate,nob,nobdiag,n,ios,nobs_max,nobs_maxdiag,nsat,k
-  integer(i_kind) ipe,ind,nnz,nind
+  integer(i_kind) ipe,ind,nnz,nind,ioff0
 
   real(r_single), dimension(nobs_max) :: h_x,h_xnobc,x_obs,x_err,x_lon,&
                                x_lat,x_press,x_time,x_errorig,dhx
@@ -188,7 +188,7 @@ use statevec, only: state_d
          open(iunit,form="unformatted",file=obsfile,iostat=ios)
          rewind(iunit)
          if (init_pass) then
-            read(iunit,err=20,end=30) isis,dplat,obstype,jiter,nlevs,idate,iint,ireal,nreal
+            read(iunit,err=20,end=30) isis,dplat,obstype,jiter,nlevs,idate,iint,ireal,nreal,ioff0
             if(allocated(pob))deallocate(pob,grs,err,iouse)
             allocate(pob(nlevs),grs(nlevs),err(nlevs),iouse(nlevs))
             read(iunit,err=20,end=30) pob,grs,err,iouse
@@ -225,7 +225,7 @@ use statevec, only: state_d
              h_xnobc(nob) = rdiagbuf(1,k,n)-rdiagbuf(2,k,n)
              x_type(nob) = ' oz                 '
              if (nanal <= nanals) then
-               ind = 7
+               ind = ioff0
                ! read dHx/dx profile
                nnz = rdiagbuf(ind,k,n)
                dhx_dx%nnz = nnz

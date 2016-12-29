@@ -26,7 +26,7 @@ module readconvobs
 !$$$
 use kinds, only: r_kind,i_kind,r_single
 use constants, only: one,zero,deg2rad
-use params, only: npefiles, npredt_aircraft_bc
+use params, only: npefiles
 implicit none
 
 private
@@ -41,7 +41,7 @@ subroutine get_num_convobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     character(len=10), intent(in) :: id
     character(len=4) pe_name
     character(len=3) :: obtype
-    integer(i_kind) iunit, nchar, nreal, ii, mype,ios, idate, i, ipe
+    integer(i_kind) iunit, nchar, nreal, ii, mype,ios, idate, i, ipe, ioff0
     integer(i_kind),intent(out) :: num_obs_tot, num_obs_totdiag
     integer(i_kind),dimension(2):: nn,nobst, nobsps, nobsq, nobsuv, nobsgps, &
          nobstcp,nobstcx,nobstcy,nobstcz,nobssst, nobsspd, nobsdw, nobsrw, nobspw, nobssrw
@@ -90,11 +90,11 @@ subroutine get_num_convobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
           init_pass = .false.
        endif
 10     continue
-       read(iunit,err=20,end=30) obtype,nchar,nreal,ii,mype
+       read(iunit,err=20,end=30) obtype,nchar,nreal,ii,mype,ioff0
        errorlimit2=errorlimit2_obs
        allocate(cdiagbuf(ii),rdiagbuf(nreal,ii))
        read(iunit) cdiagbuf(1:ii),rdiagbuf(:,1:ii)
-       !print *,obtype,nchar,nreal,ii,mype
+       !print *,obtype,nchar,nreal,ii,mype,ioff0
        if (obtype=='gps') then
           if (rdiagbuf(20,1)==1) errorlimit2=errorlimit2_bnd
        end if
@@ -240,7 +240,7 @@ implicit none
   character(len=3) :: obtype
   integer(i_kind) :: iunit
   integer(i_kind) :: nob, nobdiag, n
-  integer(i_kind) :: nchar, nreal, ii, mype
+  integer(i_kind) :: nchar, nreal, ii, mype, ioff0
   integer(i_kind) :: ipe, ios, idate
   integer(i_kind) :: nnz, ind, nind
   character(8),allocatable,dimension(:)     :: cdiagbuf
@@ -286,8 +286,8 @@ implicit none
       init_pass = .false.
   endif
 10 continue
-  read(iunit,err=20,end=30) obtype,nchar,nreal,ii,mype
-  !print *,obtype,nchar,nreal,ii,mype
+  read(iunit,err=20,end=30) obtype,nchar,nreal,ii,mype,ioff0
+  !if (mype .eq. 0) print *,obtype,nchar,nreal,ii,mype,ioff0,ioff0
   errorlimit2=errorlimit2_obs
       
     if (obtype == '  t') then
@@ -320,10 +320,7 @@ implicit none
           x_type(nob)  = obtype
 
           if (nanal <= nanals) then
-            ind = 20
-            if (npredt_aircraft_bc > 0) then
-               ind = ind + npredt_aircraft_bc + 2
-            endif
+            ind = ioff0 + 1
             nnz = rdiagbuf(ind,n)
             dhx_dx%nnz = nnz
             ind = ind + 1
@@ -399,7 +396,7 @@ implicit none
 
           if (nanal <= nanals) then
             ! interpolate x horizontally and in time to obs location
-            ind = 24
+            ind = ioff0 + 1
 
             nnz = rdiagbuf(ind,n)
             dhx_dx%nnz = nnz
@@ -521,7 +518,7 @@ implicit none
           h_xnobc(nob) = rdiagbuf(17,n)-rdiagbuf(19,n)
 
           if (nanal <= nanals) then
-            ind = 20
+            ind = ioff0 + 1
 
             ! read dHx/dx profile
             nnz = rdiagbuf(ind,n)
@@ -602,7 +599,7 @@ implicit none
           h_xnobc(nob) = rdiagbuf(17,n)-rdiagbuf(19,n)
 
           if (nanal <= nanals) then
-            ind = 20
+            ind = ioff0 + 1
 
             ! read dHx/dx profile
             nnz = rdiagbuf(ind,n)
@@ -736,7 +733,7 @@ implicit none
           x_type(nob) = obtype 
 
           if (nanal <= nanals) then
-            ind = 21
+            ind = ioff0 + 1
 
             ! read dHx/dx profile
             nnz = rdiagbuf(ind,n)
@@ -1047,7 +1044,7 @@ implicit none
 
           x_type(nob) = obtype
           if (nanal <= nanals) then
-            ind = 22
+            ind = ioff0 + 1
 
             ! read dHx/dx profile
             nnz = rdiagbuf(ind,n)
@@ -1280,7 +1277,7 @@ subroutine write_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit
   integer(i_kind), dimension(nobs_maxdiag) :: x_used
 
   character(len=3) :: obtype
-  integer(i_kind) iunit, iunit2,nobs_max, nobs_maxdiag, nob, nobdiag, n, nchar, nreal, nreal_new, ii, ipe, ios, idate, mype
+  integer(i_kind) iunit, iunit2,nobs_max, nobs_maxdiag, nob, nobdiag, n, nchar, nreal, nreal_new, ii, ipe, ios, idate, mype, ioff0
   character(8),allocatable,dimension(:):: cdiagbuf
   real(r_single),allocatable,dimension(:,:)::rdiagbuf
   logical fexist, init_pass
@@ -1320,7 +1317,7 @@ subroutine write_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit
      init_pass = .false.
   endif
 10 continue
-  read(iunit,err=20,end=30) obtype,nchar,nreal,ii,mype
+  read(iunit,err=20,end=30) obtype,nchar,nreal,ii,mype,ioff0
   nreal_new = nreal
   allocate(cdiagbuf(ii),rdiagbuf(nreal,ii))
   read(iunit,err=20) cdiagbuf(1:ii),rdiagbuf(1:nreal,1:ii)
@@ -1401,7 +1398,7 @@ subroutine write_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit
      nobdiag = nobdiag + ii
   endif
   ! write the updated rdiagbuf
-  write(iunit2,err=20) obtype,nchar,nreal_new,ii,mype
+  write(iunit2,err=20) obtype,nchar,nreal_new,ii,mype,ioff0
   write(iunit2) cdiagbuf(1:ii),rdiagbuf(1:nreal_new,1:ii)
   deallocate(cdiagbuf,rdiagbuf)
 
