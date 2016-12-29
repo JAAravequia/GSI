@@ -261,14 +261,10 @@ subroutine read_radiag_header(ftin,npred_radiag,retrieval,header_fix,header_chan
           ireal,ipchan,iextra,jextra,idiag,angord,iversion,inewpc,isens
      ijacob=0
      if (iflag/=0) then
-        read(ftin,IOSTAT=iflag)  sensat,satid,sentype,jiter,nchanl,npred,ianldate,&
-                ireal,ipchan,iextra,jextra,idiag,angord,iversion,inewpc,isens
-        if (iflag/=0) then
-           rewind(ftin)
-           read(ftin,IOSTAT=iflag) sensat,satid,sentype,jiter,nchanl,npred,ianldate,&
-                ireal,ipchan,iextra,jextra,idiag,angord,iversion,inewpc
-           isens=0
-        end if
+        rewind(ftin)
+        read(ftin,IOSTAT=iflag) sensat,satid,sentype,jiter,nchanl,npred,ianldate,&
+             ireal,ipchan,iextra,jextra,idiag,angord,iversion,inewpc
+        isens=0
      end if
   end if
 
