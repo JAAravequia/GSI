@@ -205,7 +205,7 @@
      ! pressure at interfaces
      do k=1,nlevs+1
         pressi(:,k)=ak(k)+bk(k)*psg
-        if (nanal .eq. 1) print *,'sigio, min/max pressi',k,minval(pressi(:,k)),maxval(pressi(:,k))
+        if (nanal .eq. 1) print *,'nemsio, min/max pressi',k,minval(pressi(:,k)),maxval(pressi(:,k))
      enddo
      deallocate(ak,bk)
   else

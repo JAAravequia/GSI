@@ -178,7 +178,7 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_x
   integer(i_kind) npred_radiag
   logical fexist,lretrieval,lverbose,init_pass
   real(r_kind) :: errorlimit,errorlimit2
-  real(r_double) t1,t2,tsum
+  real(r_double) t1,t2,tsum,tsum2
 
   type(diag_header_fix_list )         :: header_fix
   type(diag_header_chan_list),allocatable :: header_chan(:)
@@ -191,7 +191,7 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_x
   errorlimit=1._r_kind/sqrt(1.e9_r_kind)
   errorlimit2=1._r_kind/sqrt(1.e-6_r_kind)
 
-  tsum = 0
+  tsum = 0; tsum2 = 0
   iunit = 7
   lretrieval=.false.
   npred_radiag=npred
@@ -246,7 +246,10 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_x
      endif
 
      do
+      t1 = mpi_wtime()
       call read_radiag_data(iunit,header_fix,lretrieval,data_fix,data_chan,data_extra,iflag )
+      t2 = mpi_wtime()
+      tsum2 = tsum2 + t2-t1
       if( iflag /= 0 ) then
        exit
       end if
@@ -338,7 +341,8 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_x
 
      enddo peloop ! ipe
  enddo ! satellite
- if (nanal <= nanals) print *,'time in observer for sat obs on proc',nproc,' = ',tsum
+ if (nanal == nanals) print *,'time in observer for sat obs on proc',nproc,' = ',tsum
+ if (nanal == nanals) print *,'time in read_raddiag_data for sat obs on proc',nproc,' = ',tsum2
 
   if (nobs /= nobs_max) then
       print *,'number of obs not what expected in get_satobs_data',nobs,nobs_max

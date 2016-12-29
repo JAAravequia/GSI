@@ -50,7 +50,7 @@ subroutine get_num_ozobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     real(r_single),allocatable,dimension(:,:,:)::rdiagbuf
     real(r_kind) :: errorlimit,errorlimit2
     integer(i_kind),allocatable,dimension(:,:)::idiagbuf
-    integer(i_kind) iunit,jiter,ii,ireal,iint,nreal,idate,ios,nsat,n,k,ipe
+    integer(i_kind) iunit,jiter,ii,ireal,irdim1,ioff0,iint,idate,ios,nsat,n,k,ipe
     integer(i_kind), intent(out) :: num_obs_tot, num_obs_totdiag
     integer(i_kind), allocatable, dimension(:) :: iouse
     integer(i_kind):: nread,nkeep
@@ -81,7 +81,7 @@ subroutine get_num_ozobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
            if (.not. fexist) cycle peloop
            open(iunit,form="unformatted",file=obsfile,iostat=ios)
            if (init_pass) then
-              read(iunit,err=20,end=30) isis,dplat,obstype,jiter,nlevs,idate,iint,ireal,nreal
+              read(iunit,err=20,end=30) isis,dplat,obstype,jiter,nlevs,idate,iint,ireal,irdim1,ioff0
               if(allocated(pob))deallocate(pob,grs,err,iouse)
               allocate(pob(nlevs),grs(nlevs),err(nlevs),iouse(nlevs))
               read(iunit,err=20,end=30) pob,grs,err,iouse
@@ -91,7 +91,7 @@ subroutine get_num_ozobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
            read(iunit,err=20,end=30) ii
            allocate(idiagbuf(iint,ii))
            allocate(diagbuf(ireal,ii))
-           allocate(rdiagbuf(nreal,nlevs,ii))
+           allocate(rdiagbuf(irdim1,nlevs,ii))
            read(iunit,err=20,end=30) idiagbuf,diagbuf,rdiagbuf
            do k=1,nlevs
              nread=nread+ii
@@ -142,7 +142,7 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_xn
   character(20) :: isis     ! sensor/instrument/satellite id
   character(10) :: obstype  !  type of ozone obs
   character(10) :: dplat    ! sat sensor
-  integer(i_kind) iunit,jiter,ii,ireal,iint,nreal,idate,nob,nobdiag,n,ios,nobs_max,nobs_maxdiag,nsat,k
+  integer(i_kind) iunit,jiter,ii,ireal,iint,irdim1,idate,nob,nobdiag,n,ios,nobs_max,nobs_maxdiag,nsat,k
   integer(i_kind) ipe,ind,nnz,nind,ioff0
 
   real(r_single), dimension(nobs_max) :: h_x,h_xnobc,x_obs,x_err,x_lon,&
@@ -187,11 +187,13 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_xn
              trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_oz(nsat))//'_01'
          endif
          inquire(file=obsfile,exist=fexist)
-         if (.not. fexist) cycle peloop
+         if (.not. fexist) then 
+            cycle peloop
+         endif
          open(iunit,form="unformatted",file=obsfile,iostat=ios)
          rewind(iunit)
          if (init_pass) then
-            read(iunit,err=20,end=30) isis,dplat,obstype,jiter,nlevs,idate,iint,ireal,nreal,ioff0
+            read(iunit,err=20,end=30) isis,dplat,obstype,jiter,nlevs,idate,iint,ireal,irdim1,ioff0
             if(allocated(pob))deallocate(pob,grs,err,iouse)
             allocate(pob(nlevs),grs(nlevs),err(nlevs),iouse(nlevs))
             read(iunit,err=20,end=30) pob,grs,err,iouse
@@ -201,7 +203,7 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_xn
          read(iunit,err=20,end=30) ii
          allocate(idiagbuf(iint,ii))
          allocate(diagbuf(ireal,ii))
-         allocate(rdiagbuf(nreal,nlevs,ii))
+         allocate(rdiagbuf(irdim1,nlevs,ii))
          read(iunit,err=20,end=30) idiagbuf,diagbuf,rdiagbuf
          do k=1,nlevs
            if (iouse(k) < 0 .or. pob(k) <= 0.001 .or. &
@@ -228,7 +230,7 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_xn
              h_xnobc(nob) = rdiagbuf(1,k,n)-rdiagbuf(2,k,n)
              x_type(nob) = ' oz                 '
              if (nanal <= nanals) then
-               ind = ioff0
+               ind = ioff0 + 1
                ! read dHx/dx profile
                nnz = rdiagbuf(ind,k,n)
                dhx_dx%nnz = nnz
@@ -266,7 +268,7 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_xn
          close(iunit)
       enddo peloop ! ipe
   enddo ! satellite
-  if (nanal <= nanals) print *,'time in observer for oz obs on proc',nproc,' = ',tsum
+  if (nanal == nanals) print *,'time in observer for oz obs on proc',nproc,' = ',tsum
 
   if (nob /= nobs_max) then
       print *,'number of obs not what expected in get_ozobs_data',nob,nobs_max
@@ -293,7 +295,7 @@ subroutine write_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, 
   character(20) :: isis     ! sensor/instrument/satellite id
   character(10) :: obstype  !  type of ozone obs
   character(10) :: dplat    ! sat sensor
-  integer(i_kind) iunit,jiter,ii,ireal,iint,nreal,idate,nob,nobdiag,n,ios,nobs_max,nobs_maxdiag,nsat,k,ipe
+  integer(i_kind) iunit,jiter,ii,ireal,iint,irdim1,idate,nob,nobdiag,n,ios,nobs_max,nobs_maxdiag,nsat,k,ipe,ioff0
   integer(i_kind) iunit2
   real(r_single), dimension(nobs_max) :: x_fit, x_sprd
   integer(i_kind), dimension(nobs_maxdiag) :: x_used
@@ -332,8 +334,8 @@ subroutine write_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, 
          rewind(iunit)
          if (init_pass) then
             open(iunit2,form="unformatted",file=obsfile2,iostat=ios)
-            read(iunit,err=20,end=30) isis,dplat,obstype,jiter,nlevs,idate,iint,ireal,nreal
-            write(iunit2,err=20) isis,dplat,obstype,jiter,nlevs,idate,iint,ireal,nreal
+            read(iunit,err=20,end=30) isis,dplat,obstype,jiter,nlevs,idate,iint,ireal,irdim1,ioff0
+            write(iunit2,err=20)      isis,dplat,obstype,jiter,nlevs,idate,iint,ireal,irdim1,ioff0
             if(allocated(pob))deallocate(pob,grs,err,iouse)
             allocate(pob(nlevs),grs(nlevs),err(nlevs),iouse(nlevs))
             read(iunit,err=20,end=30) pob,grs,err,iouse
@@ -344,7 +346,7 @@ subroutine write_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, 
          read(iunit,err=20,end=30) ii
          allocate(idiagbuf(iint,ii))
          allocate(diagbuf(ireal,ii))
-         allocate(rdiagbuf(6,nlevs,ii))
+         allocate(rdiagbuf(irdim1,nlevs,ii))
          read(iunit,err=20,end=30) idiagbuf,diagbuf,rdiagbuf
          rdiagbuf(2,:,:) = 1.e10
          do k=1,nlevs

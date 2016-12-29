@@ -341,7 +341,9 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_
 
             t1 = mpi_wtime()
             call observer(h_xnobc(nob), state_d,                  &
-                          real(x_lat(nob)*deg2rad,r_single),real(x_lon(nob)*deg2rad,r_single),x_time(nob),&
+                          real(x_lat(nob)*deg2rad,r_single),      &
+                          real(x_lon(nob)*deg2rad,r_single),      & 
+                          x_time(nob),                            &
                           dhx_dx, dhx(nob))
             t2 = mpi_wtime()
             tsum = tsum + t2-t1
@@ -403,7 +405,6 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_
           if (nanal <= nanals) then
             ! interpolate x horizontally and in time to obs location
             ind = ioff0 + 1
-
             nnz = rdiagbuf(ind,n)
             dhx_dx%nnz = nnz
             ind = ind + 1
@@ -419,9 +420,14 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_
             dhx_dx%val = rdiagbuf(ind:ind+nnz-1,n)
             ind = ind + nnz
 
+            t1 = mpi_wtime()
             call observer(h_xnobc(nob), state_d,                  &
-                          real(x_lat(nob)*deg2rad,r_single),real(x_lon(nob)*deg2rad,r_single),x_time(nob),&
+                          real(x_lat(nob)*deg2rad,r_single),      &
+                          real(x_lon(nob)*deg2rad,r_single),      & 
+                          x_time(nob),                            &
                           dhx_dx, dhx(nob))
+            t2 = mpi_wtime()
+            tsum = tsum + t2-t1
 
             deallocate(dhx_dx%val, dhx_dx%st_ind, dhx_dx%end_ind)
           endif
@@ -458,9 +464,14 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_
             ind = ind + nind
             dhx_dx%val = rdiagbuf(ind:ind+nnz-1,n)
 
+            t1 = mpi_wtime()
             call observer(h_xnobc(nob), state_d,                  &
-                          real(x_lat(nob)*deg2rad,r_single),real(x_lon(nob)*deg2rad,r_single),x_time(nob), &
+                          real(x_lat(nob)*deg2rad,r_single),      &
+                          real(x_lon(nob)*deg2rad,r_single),      & 
+                          x_time(nob),                            &
                           dhx_dx, dhx(nob))
+            t2 = mpi_wtime()
+            tsum = tsum + t2-t1
 
             deallocate(dhx_dx%val, dhx_dx%st_ind, dhx_dx%end_ind)
           endif
@@ -541,9 +552,14 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_
             ind = ind + nind
             dhx_dx%val = rdiagbuf(ind:ind+nnz-1,n)
 
+            t1 = mpi_wtime()
             call observer(h_xnobc(nob), state_d,                  &
-                          real(x_lat(nob)*deg2rad,r_single),real(x_lon(nob)*deg2rad,r_single),x_time(nob), &
+                          real(x_lat(nob)*deg2rad,r_single),      &
+                          real(x_lon(nob)*deg2rad,r_single),      & 
+                          x_time(nob),                            &
                           dhx_dx, dhx(nob))
+            t2 = mpi_wtime()
+            tsum = tsum + t2-t1
 
             deallocate(dhx_dx%val, dhx_dx%st_ind, dhx_dx%end_ind)
 
@@ -622,9 +638,14 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_
             ind = ind + nind
             dhx_dx%val = rdiagbuf(ind:ind+nnz-1,n)
 
+            t1 = mpi_wtime()
             call observer(h_xnobc(nob), state_d,                  &
-                          real(x_lat(nob)*deg2rad,r_single),real(x_lon(nob)*deg2rad,r_single),x_time(nob),&
+                          real(x_lat(nob)*deg2rad,r_single),      &
+                          real(x_lon(nob)*deg2rad,r_single),      & 
+                          x_time(nob),                            &
                           dhx_dx, dhx(nob))
+            t2 = mpi_wtime()
+            tsum = tsum + t2-t1
 
             deallocate(dhx_dx%val, dhx_dx%st_ind, dhx_dx%end_ind)
 
@@ -756,9 +777,14 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_
             ind = ind + nind
             dhx_dx%val = rdiagbuf(ind:ind+nnz-1,n)
 
+            t1 = mpi_wtime()
             call observer(h_xnobc(nob), state_d,                  &
-                          real(x_lat(nob)*deg2rad,r_single),real(x_lon(nob)*deg2rad,r_single),x_time(nob),&
+                          real(x_lat(nob)*deg2rad,r_single),      &
+                          real(x_lon(nob)*deg2rad,r_single),      & 
+                          x_time(nob),                            &
                           dhx_dx, dhx(nob))
+            t2 = mpi_wtime()
+            tsum = tsum + t2-t1
 
             x_obs(nob)   = x_obs(nob) /rdiagbuf(20,n)
             h_x(nob)     = h_x(nob) /rdiagbuf(20,n)
@@ -1067,11 +1093,14 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_
             ind = ind + nind
             dhx_dx%val = rdiagbuf(ind:ind+nnz-1,n)
 
+            t1 = mpi_wtime()
             call observer(h_xnobc(nob), state_d,                  &
                           real(x_lat(nob)*deg2rad,r_single),      &
                           real(x_lon(nob)*deg2rad,r_single),      & 
                           x_time(nob),                            &
                           dhx_dx, dhx(nob))
+            t2 = mpi_wtime()
+            tsum = tsum + t2-t1
 
             deallocate(dhx_dx%val, dhx_dx%st_ind, dhx_dx%end_ind)
           endif
@@ -1261,7 +1290,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_
 30  continue
     close(iunit)
   enddo peloop ! ipe loop
-  if (nanal <= nanals) print *,'time in observer for conv obs on proc',nproc,' = ',tsum
+  if (nanal == nanals) print *,'time in observer for conv obs on proc',nproc,' = ',tsum
   if (nob .ne. nobs_max) then
       print *,'number of obs not what expected in get_convobs_data',nob,nobs_max
       call stop2(94)

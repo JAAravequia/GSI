@@ -67,9 +67,8 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 !   2013-10-19  todling - metguess now holds background
 !   2013-11-26  guo     - removed nkeep==0 escaping to allow more than one obstype sources.
 !   2014-12-30  derber - Modify for possibility of not using obsdiag
-!   2016-11-29  shlyaeva - save linearized H(x) for EnKF. output length of rdiagbuf to 
-!                          diag files (irdim1) in place of iextra (set to 0
-!                          always previously).
+!   2016-11-29  shlyaeva - save linearized H(x) for EnKF.
+
 !   input argument list:
 !     lunin          - unit from which to read observations
 !     mype           - mpi task id
@@ -181,7 +180,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   type(sparr2) :: dhx_dx
 
   integer(i_kind) i,nlev,ii,jj,iextra,istat,ibin, kk
-  integer(i_kind) k,j,nz,jc,idia,irdim1,istatus
+  integer(i_kind) k,j,nz,jc,idia,irdim1,istatus,ioff0
   integer(i_kind) ioff,itoss,ikeep,ierror_toq,ierror_poq
   integer(i_kind) isolz,ifovn,itoqf
   integer(i_kind) mm1,itime,ilat,ilon,ilate,ilone,itoq,ipoq
@@ -235,6 +234,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 
   if(ozone_diagsave)then
      irdim1=6
+     ioff0=irdim1
      if(lobsdiagsave) irdim1=irdim1+4*miter+1
      if (save_jacobian) then
        dhx_dx%nnz   = nsig                   ! number of non-zero elements in dH(x)/dx profile
@@ -506,7 +506,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
                  rdiagbuf(6,k,ii) = rmiss                
               endif
 
-              idia = 6
+              idia = ioff0
               if (save_jacobian) then
                  oz_ind = getindex(svars3d, 'oz')
                  dhx_dx%st_ind(1)  = sum(levels(1:oz_ind-1)) + 1
@@ -761,7 +761,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
      endif
      iextra=0
      if (init_pass .and. mype==mype_diaghdr(is)) then
-        write(4) isis,dplat(is),obstype,jiter,nlevs,ianldate,iint,ireal,irdim1 !iextra
+        write(4) isis,dplat(is),obstype,jiter,nlevs,ianldate,iint,ireal,irdim1,ioff0 !iextra
         write(6,*)'SETUPOZ:   write header record for ',&
              isis,iint,ireal,irdim1,' to file ',trim(diag_ozone_file),' ',ianldate
         do i=1,nlevs
@@ -970,7 +970,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   real(r_single),allocatable,dimension(:,:,:)::rdiagbuf
 
   integer(i_kind) i,ii,jj,iextra,istat,ibin
-  integer(i_kind) k,j,idia,irdim1
+  integer(i_kind) k,j,idia,irdim1,ioff0
   integer(i_kind) isolz,iuse
   integer(i_kind) mm1,itime,ilat,ilon,ilate,ilone,iozmr,ilev,ipres,iprcs,imls_levs
   integer(i_kind),dimension(iint,nobs):: idiagbuf
@@ -1016,6 +1016,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 
   if(ozone_diagsave)then
      irdim1=6
+     ioff0 = irdim1
      if(lobsdiagsave) irdim1=irdim1+4*miter+1
      if (save_jacobian) then
        dhx_dx%nnz   = 2                   ! number of non-zero elements in dH(x)/dx profile
@@ -1333,7 +1334,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
         rdiagbuf(5,1,ii) = rmiss               ! fovn
         rdiagbuf(6,1,ii) = obserror               ! ozone mixing ratio precision
 
-        idia = 6
+        idia = ioff0
         if (lobsdiagsave) then
            do jj=1,miter
               idia=idia+1
@@ -1388,7 +1389,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
      endif
      iextra=0
      if (init_pass .and. mype==mype_diaghdr(is)) then
-        write(4) isis,dplat(is),obstype,jiter,nlevs,ianldate,iint,ireal,irdim1 !iextra
+        write(4) isis,dplat(is),obstype,jiter,nlevs,ianldate,iint,ireal,irdim1,ioff0 !iextra
         write(6,*)'SETUPOZLV:   write header record for ',&
              isis,iint,ireal,irdim1,' to file ',trim(diag_ozone_file),' ',ianldate
      endif
