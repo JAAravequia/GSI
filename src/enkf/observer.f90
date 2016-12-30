@@ -18,7 +18,7 @@ subroutine observer(hx, dens, rlat, rlon, time, dhx_dx, hx_ens)
 !
 !$$$
   use kinds, only: r_kind,i_kind,r_single
-  use params, only: nstatefields, nlons, nlats, nlevs, nhr_state
+  use params, only: nstatefields, nlons, nlats, nlevs, nhr_state, fhr_assim
   use gridinfo, only: npts, latsgrd, lonsgrd
   use statevec, only: nsdim
   use constants, only: zero,one,pi
@@ -71,13 +71,13 @@ subroutine observer(hx, dens, rlat, rlon, time, dhx_dx, hx_ens)
   endif
 
   it = 1
-  do while (time + 6 > nhr_state(it) .and. it < nstatefields)
+  do while (time + fhr_assim > nhr_state(it) .and. it < nstatefields)
     it = it + 1
   enddo
   itp = it
   it = max(1,itp-1)
   if (it /= itp) then
-     delt = (time + 6 - nhr_state(it)) / (nhr_state(itp) - nhr_state(it))
+     delt = (time + fhr_assim - nhr_state(it)) / (nhr_state(itp) - nhr_state(it))
   else
      delt = one
   endif
