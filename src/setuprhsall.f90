@@ -165,17 +165,17 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   use setuppmsl_mod, only: setuppmsl_class
   use setuppm10_mod, only: setuppm10_class
   use setuppm2_5_mod, only: setuppm2_5_class
-  use setupps_mod, only: setupps_class
-  use setuppw_mod, only: setuppw_class
-  use setupq_mod, only: setupq_class
+! use setupps_mod, only: setupps_class
+! use setuppw_mod, only: setuppw_class
+! use setupq_mod, only: setupq_class
   use setupref_mod, only: setupref_class
   use setuprw_mod, only: setuprw_class
   use setupspd_mod, only: setupspd_class
   use setupsrw_mod, only: setupsrw_class
-! use setupt_mod, only: setupt_class
-! use setuptcamt_mod, only: setuptcamt_class
-! use setuptcp_mod, only: setuptcp_class
-! use setuptd2m_mod, only: setuptd2m_class
+  use setupt_mod, only: setupt_class
+  use setuptcamt_mod, only: setuptcamt_class
+  use setuptcp_mod, only: setuptcp_class
+  use setuptd2m_mod, only: setuptd2m_class
 ! use setupvis_mod, only: setupvis_class
 ! use setupw_mod, only: setupw_class
 ! use setupwspd10m_mod, only: setupwspd10m_class
@@ -208,14 +208,14 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 ! type(setupps_class) :: ps
 ! type(setuppw_class) :: pw
 ! type(setupq_class) :: q
-! type(setupref_class) :: ref
-! type(setuprw_class) :: rw
-! type(setupspd_class) :: spd
-! type(setupsrw_class) :: srw
-! type(setupt_class) :: t
-! type(setuptcamt_class) :: tcamt
-! type(setuptcp_class) :: tcp
-! type(setuptd2m_class) :: td2m
+  type(setupref_class) :: ref
+  type(setuprw_class) :: rw
+  type(setupspd_class) :: spd
+  type(setupsrw_class) :: srw
+  type(setupt_class) :: t
+  type(setuptcamt_class) :: tcamt
+  type(setuptcp_class) :: tcp
+  type(setuptd2m_class) :: td2m
 ! type(setupvis_class) :: vis
 ! type(setupw_class) :: w
 ! type(setupwspd10m_class) :: wspd10m
@@ -509,8 +509,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up temperature data
               if(obstype=='t')then
                  write(6,*) 'setting up t'
-!                call t%setup(lunin,mype,bwork,awork(1,i_t),nele,nobs,is,conv_diagsave)
-                 call setupt(lunin,mype,bwork,awork(1,i_t),nele,nobs,is,conv_diagsave)
+                 call t%setup(lunin,mype,bwork,awork(1,i_t),nele,nobs,is,conv_diagsave)
+!                call setupt(lunin,mype,bwork,awork(1,i_t),nele,nobs,is,conv_diagsave)
 
 !             Set up uv wind data
               else if(obstype=='uv')then
@@ -527,20 +527,20 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up surface pressure data
               else if(obstype=='ps')then
                  write(6,*) 'setting up ps'
-                 call ps%setup(lunin,mype,bwork,awork(1,i_ps),nele,nobs,is,conv_diagsave)
-!                call setupps(lunin,mype,bwork,awork(1,i_ps),nele,nobs,is,conv_diagsave)
+!                call ps%setup(lunin,mype,bwork,awork(1,i_ps),nele,nobs,is,conv_diagsave)
+                 call setupps(lunin,mype,bwork,awork(1,i_ps),nele,nobs,is,conv_diagsave)
  
 !             Set up tc-mslp data
               else if(obstype=='tcp')then
                  write(6,*) 'setting up tcp'
-!                call tcp%setup(lunin,mype,bwork,awork(1,i_tcp),nele,nobs,is,conv_diagsave)
-                 call setuptcp(lunin,mype,bwork,awork(1,i_tcp),nele,nobs,is,conv_diagsave)
+                 call tcp%setup(lunin,mype,bwork,awork(1,i_tcp),nele,nobs,is,conv_diagsave)
+!                call setuptcp(lunin,mype,bwork,awork(1,i_tcp),nele,nobs,is,conv_diagsave)
 
 !             Set up moisture data
               else if(obstype=='q') then
                  write(6,*) 'setting up q'
-                 call q%setup(lunin,mype,bwork,awork(1,i_q),nele,nobs,is,conv_diagsave)
-!                call setupq(lunin,mype,bwork,awork(1,i_q),nele,nobs,is,conv_diagsave)
+!                call q%setup(lunin,mype,bwork,awork(1,i_q),nele,nobs,is,conv_diagsave)
+                 call setupq(lunin,mype,bwork,awork(1,i_q),nele,nobs,is,conv_diagsave)
 
 !             Set up lidar wind data
               else if(obstype=='dw')then
@@ -556,8 +556,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up total precipitable water (total column water) data
               else if(obstype=='pw')then
                  write(6,*) 'setting up pw'
-                 call pw%setup(lunin,mype,bwork,awork(1,i_pw),nele,nobs,is,conv_diagsave)
-!                call setuppw(lunin,mype,bwork,awork(1,i_pw),nele,nobs,is,conv_diagsave)
+!                call pw%setup(lunin,mype,bwork,awork(1,i_pw),nele,nobs,is,conv_diagsave)
+                 call setuppw(lunin,mype,bwork,awork(1,i_pw),nele,nobs,is,conv_diagsave)
 
 !             Set up superob radar wind data
               else if(obstype=='srw')then
@@ -608,8 +608,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up conventional td2m data
               else if(obstype=='td2m' .and. getindex(svars2d,'td2m')>0) then
                  write(6,*) 'setting up td2m'
-!                call td2m%setup(lunin,mype,bwork,awork(1,i_td2m),nele,nobs,is,conv_diagsave)
-                 call setuptd2m(lunin,mype,bwork,awork(1,i_td2m),nele,nobs,is,conv_diagsave)
+                 call td2m%setup(lunin,mype,bwork,awork(1,i_td2m),nele,nobs,is,conv_diagsave)
+!                call setuptd2m(lunin,mype,bwork,awork(1,i_td2m),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional mxtm data
               else if(obstype=='mxtm' .and. getindex(svars2d,'mxtm')>0) then
@@ -635,8 +635,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up total cloud amount data
               else if(obstype=='tcamt' .and. getindex(svars2d,'tcamt')>0) then
                  write(6,*) 'setting up tcamt'
-!                call tcamt%setup(lunin,mype,bwork,awork(1,i_tcamt),nele,nobs,is,conv_diagsave)
-                 call setuptcamt(lunin,mype,bwork,awork(1,i_tcamt),nele,nobs,is,conv_diagsave)
+                 call tcamt%setup(lunin,mype,bwork,awork(1,i_tcamt),nele,nobs,is,conv_diagsave)
+!                call setuptcamt(lunin,mype,bwork,awork(1,i_tcamt),nele,nobs,is,conv_diagsave)
 
 !             Set up base height of lowest cloud seen
               else if(obstype=='lcbas' .and. getindex(svars2d,'lcbas')>0) then
