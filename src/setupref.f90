@@ -1,11 +1,4 @@
-module setupref_mod
-use abstract_setup_mod
-  type, extends(abstract_setup_class) :: setupref_class
-  contains
-    procedure, pass(this) :: setupref
-  end type setupref_class
-contains
-subroutine setupref(this,lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pass)
+subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pass)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    setupref    compute rhs of oi for gps refractivity
@@ -175,7 +168,6 @@ subroutine setupref(this,lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,la
   real(r_kind),parameter:: crit_grad = 157.0_r_kind
 
 ! Declare passed variables
-  class(setupref_class)                      , intent(inout) :: this
   integer(i_kind)                            ,intent(in   ) :: lunin,mype,nele,nobs
   real(r_kind),dimension(100+7*nsig)  ,intent(inout) :: awork
   real(r_kind),dimension(max(1,nprof_gps)),intent(inout) :: toss_gps_sub
@@ -220,14 +212,10 @@ subroutine setupref(this,lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,la
   type(gps_ob_type),pointer:: my_head
   type(obs_diag),pointer:: my_diag
 
-! real(r_kind),allocatable,dimension(:,:,:  ) :: this%ges_z
-! real(r_kind),allocatable,dimension(:,:,:,:) :: this%ges_tv
-! real(r_kind),allocatable,dimension(:,:,:,:) :: this%ges_q
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
 
-  this%myname='setupref'
-  this%numvars = 3
-  allocate(this%varnames(this%numvars))
-  this%varnames(1:this%numvars) = (/ 'var::z', 'var::tv', 'var::q' /)
   n_alloc(:)=0
   m_alloc(:)=0
 !*******************************************************************************
@@ -280,11 +268,11 @@ subroutine setupref(this,lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,la
   mm1=mype+1
 
 ! Check to see if required guess fields are available
-  call this%check_vars_(proceed)
+  call check_vars_(proceed)
   if(.not.proceed) return  ! not all vars available, simply return
 
 ! If require guess vars available, extract from bundle ...
-  call this%init_ges
+  call init_vars_
 
 ! Allocate arrays for output to diagnostic file
   mreal=21
@@ -294,10 +282,10 @@ subroutine setupref(this,lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,la
   if(init_pass) call gpsrhs_alloc(is,'ref',nobs,nsig,nreal,-1,-1)
   call gpsrhs_aliases(is)
   if(nreal/=size(rdiagbuf,1)) then
-     call perr(this%myname,'nreal/=size(rdiagbuf,1)')
-     call perr(this%myname,'nreal=',nreal)
-     call perr(this%myname,'size(rdiagbuf,1)=',size(rdiagbuf,1))
-     call die(this%myname)
+     call perr(myname,'nreal/=size(rdiagbuf,1)')
+     call perr(myname,'nreal=',nreal)
+     call perr(myname,'size(rdiagbuf,1)=',size(rdiagbuf,1))
+     call die(myname)
   endif
   nreal=size(rdiagbuf,1)
 
@@ -349,13 +337,13 @@ subroutine setupref(this,lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,la
 !       Interpolate log(pres), terrain, and geop heights to obs location
         call tintrp2a1(ges_lnprsi,prsltmp,dlat,dlon,dtime,hrdifsig,&
              nsig+1,mype,nfldsig)
-        call tintrp2a1(this%ges_tv,tges,dlat,dlon,dtime,hrdifsig,&
+        call tintrp2a1(ges_tv,tges,dlat,dlon,dtime,hrdifsig,&
              nsig,mype,nfldsig)
         call tintrp2a1(geop_hgti,hges,dlat,dlon,dtime,hrdifsig,&
              nsig+1,mype,nfldsig)
         call tintrp2a1(geop_hgtl,hgesl,dlat,dlon,dtime,hrdifsig,&
              nsig,mype,nfldsig)
-        call tintrp2a11(this%ges_z,zsges,dlat,dlon,dtime,hrdifsig,&
+        call tintrp2a11(ges_z,zsges,dlat,dlon,dtime,hrdifsig,&
              mype,nfldsig)
 
 !       Convert geometric height at observation to geopotential height using
@@ -386,7 +374,7 @@ subroutine setupref(this,lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,la
         data(ihgt,i)=dpres
  
 !       Get temperature at observation location
-        call tintrp31(this%ges_tv,trefges,dlat,dlon,hobl,&
+        call tintrp31(ges_tv,trefges,dlat,dlon,hobl,&
              dtime,hrdifsig,mype,nfldsig)
  
 !       Set indices of model levels below (k1) and above (k2) observation.
@@ -500,7 +488,7 @@ subroutine setupref(this,lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,la
 !          Compute guess local refractivity at obs location.
 !          Also compute terms needed in minimization
 
-           call tintrp31(this%ges_q,qrefges,dlat,dlon,hobl,dtime,&
+           call tintrp31(ges_q,qrefges,dlat,dlon,hobl,dtime,&
                  hrdifsig,mype,nfldsig)
 
 !          Compute guess local refractivity
@@ -989,11 +977,11 @@ subroutine setupref(this,lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,la
               my_diag => gpstail(ibin)%head%diags
               if(my_head%idv /= my_diag%idv .or. &
                  my_head%iob /= my_diag%iob ) then
-                 call perr(this%myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
+                 call perr(myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
                        (/is,i,ibin/))
-                 call perr(this%myname,'my_head%(idv,iob) =',(/my_head%idv,my_head%iob/))
-                 call perr(this%myname,'my_diag%(idv,iob) =',(/my_diag%idv,my_diag%iob/))
-                 call die(this%myname)
+                 call perr(myname,'my_head%(idv,iob) =',(/my_head%idv,my_head%iob/))
+                 call perr(myname,'my_diag%(idv,iob) =',(/my_diag%idv,my_diag%iob/))
+                 call die(myname)
               endif
            endif
 
@@ -1002,19 +990,108 @@ subroutine setupref(this,lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,la
   end do
 
   ! Release memory of local guess arrays
-  call this%final_vars_
+  call final_vars_
 
   ! Save these arrays for later passes
   data_ier (:)=data(ier ,:)
   data_ihgt(:)=data(ihgt,:)
   data_igps(:)=data(igps,:)
 
-  call dtime_show(this%myname,'diagsave:ref',i_gps_ob_type)
+  call dtime_show(myname,'diagsave:ref',i_gps_ob_type)
   call gpsrhs_unaliases(is)
   if(last_pass) call gpsrhs_dealloc(is)
 
 ! End of routine
 
   return
+  contains
+
+  subroutine check_vars_ (proceed)
+  logical,intent(inout) :: proceed
+  integer(i_kind) ivar, istatus
+! Check to see if required guess fields are available
+  call gsi_metguess_get ('var::q', ivar, istatus )
+  proceed=ivar>0
+  call gsi_metguess_get ('var::z' , ivar, istatus )
+  proceed=proceed.and.ivar>0
+  call gsi_metguess_get ('var::tv', ivar, istatus )
+  proceed=proceed.and.ivar>0
+  end subroutine check_vars_ 
+
+  subroutine init_vars_
+
+  real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
+  real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
+  character(len=5) :: varname
+  integer(i_kind) ifld, istatus
+
+! If require guess vars available, extract from bundle ...
+  if(size(gsi_metguess_bundle)==nfldsig) then
+!    get z ...
+     varname='z'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
+     if (istatus==0) then
+         if(allocated(ges_z))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_z(size(rank2,1),size(rank2,2),nfldsig))
+         ges_z(:,:,1)=rank2
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
+            ges_z(:,:,ifld)=rank2
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
+!    get tv ...
+     varname='tv'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+     if (istatus==0) then
+         if(allocated(ges_tv))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_tv(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         ges_tv(:,:,:,1)=rank3
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+            ges_tv(:,:,:,ifld)=rank3
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
+!    get q ...
+     varname='q'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+     if (istatus==0) then
+         if(allocated(ges_q))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_q(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         ges_q(:,:,:,1)=rank3
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+            ges_q(:,:,:,ifld)=rank3
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
+  else
+     write(6,*) trim(myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
+                 nfldsig,size(gsi_metguess_bundle)
+     call stop2(999)
+  endif
+  end subroutine init_vars_
+
+  subroutine final_vars_
+    if(allocated(ges_q )) deallocate(ges_q )
+    if(allocated(ges_tv)) deallocate(ges_tv)
+    if(allocated(ges_z )) deallocate(ges_z )
+  end subroutine final_vars_
+
 end subroutine setupref
-end module setupref_mod
