@@ -1,4 +1,11 @@
-subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
+module setupwspd10m_mod
+use abstract_setup_mod
+  type, extends(abstract_setup_class) :: setupwspd10m_class
+  contains
+    procedure, pass(this) :: setup => setupwspd10m
+  end type setupwspd10m_class
+contains
+subroutine setupwspd10m(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    setupwspd10m    compute rhs for conventional 10 m wind speed
@@ -59,6 +66,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   implicit none
 
 ! Declare passed variables
+  class(setupwspd10m_class)                              , intent(inout) :: this
   logical                                          ,intent(in   ) :: conv_diagsave
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
   real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
@@ -74,7 +82,6 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),parameter:: r6=6.0_r_kind
   real(r_kind),parameter:: r20=20.0_r_kind
   real(r_kind),parameter:: r360=360.0_r_kind
-  character(len=*),parameter:: myname='setupwspd10m'
 
 ! Declare local variables
   
@@ -132,19 +139,17 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   equivalence(r_prvstg,c_prvstg)
   equivalence(r_sprvstg,c_sprvstg)
   
-  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
-  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z         !will probably need at some point
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_u
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
-  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_wspd10m
+  this%myname='setupwspd10m'
+  this%numvars = 6
+  allocate(this%varnames(this%numvars))
+  this%varnames(1:this%numvars) = (/ 'var::wspd10m', 'var::ps', 'var::z', 'var::u', 'var::v', 'var::tv' /)
 
 ! Check to see if required guess fields are available
-  call check_vars_(proceed)
+  call this%check_vars_(proceed)
   if(.not.proceed) return  ! not all vars available, simply return
 
 ! If require guess vars available, extract from bundle ...
-  call init_vars_
+  call this%init_ges
 
   n_alloc(:)=0
   m_alloc(:)=0
@@ -307,7 +312,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      spdob=sqrt(uob*uob+vob*vob)
 
 ! Interpolate to get wspd10m at obs location/time
-     call tintrp2a11(ges_wspd10m,spdges,dlat,dlon,dtime,hrdifsig,&
+     call tintrp2a11(this%ges_wspd10m,spdges,dlat,dlon,dtime,hrdifsig,&
           mype,nfldsig)
 
      itype=ictype(ikx)
@@ -320,7 +325,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 !   Get guess surface elevation and geopotential height profile
 !   at observation location.
-    call tintrp2a11(ges_z,zsges,dlat,dlon,dtime,hrdifsig,&
+    call tintrp2a11(this%ges_z,zsges,dlat,dlon,dtime,hrdifsig,&
             mype,nfldsig)
 !   Subtract off combination of surface station elevation and
 !   model elevation depending on how close to surface
@@ -408,7 +413,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   Get guess surface pressure and mid layer pressure
 !   at observation location.
     if (ictype(ikx)>=280 .and. ictype(ikx)<290) then
-       call tintrp2a11(ges_ps,psges,dlat,dlon,dtime,hrdifsig,&
+       call tintrp2a11(this%ges_ps,psges,dlat,dlon,dtime,hrdifsig,&
             mype,nfldsig)
        call tintrp2a1(ges_lnprsl,prsltmp,dlat,dlon,dtime,hrdifsig,&
             nsig,mype,nfldsig)
@@ -460,9 +465,9 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
  
 !       Interpolate guess u and v to observation location and time.
  
-        call tintrp31(ges_u,ugesin,dlat,dlon,dpres,dtime, &
+        call tintrp31(this%ges_u,ugesin,dlat,dlon,dpres,dtime, &
            hrdifsig,mype,nfldsig)
-        call tintrp31(ges_v,vgesin,dlat,dlon,dpres,dtime, &
+        call tintrp31(this%ges_v,vgesin,dlat,dlon,dpres,dtime, &
            hrdifsig,mype,nfldsig)
         if(dpressave <= prsln2)then
            factw=one
@@ -474,7 +479,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               call comp_fact10(dlat,dlon,dtime,skint,sfcr,isli,mype,factw)
            end if
  
-           call tintrp2a1(ges_tv,tges,dlat,dlon,dtime,hrdifsig,&
+           call tintrp2a1(this%ges_tv,tges,dlat,dlon,dtime,hrdifsig,&
               nsig,mype,nfldsig)
 !          Apply 10-meter wind reduction factor to guess winds
            dx10=-goverrd*ten/tges(1)
@@ -741,11 +746,11 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            my_diag => wspd10mtail(ibin)%head%diags
            if(my_head%idv /= my_diag%idv .or. &
               my_head%iob /= my_diag%iob ) then
-              call perr(myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
+              call perr(this%myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
                     (/is,i,ibin/))
-              call perr(myname,'my_head%(idv,iob) =',(/my_head%idv,my_head%iob/))
-              call perr(myname,'my_diag%(idv,iob) =',(/my_diag%idv,my_diag%iob/))
-              call die(myname)
+              call perr(this%myname,'my_head%(idv,iob) =',(/my_head%idv,my_head%iob/))
+              call perr(this%myname,'my_diag%(idv,iob) =',(/my_diag%idv,my_diag%iob/))
+              call die(this%myname)
            endif
         end if
      endif
@@ -842,11 +847,11 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   end do
 
 ! Release memory of local guess arrays
-  call final_vars_
+  call this%final_vars_
 
 ! Write information to diagnostic file
   if(conv_diagsave .and. ii>0)then
-     call dtime_show(myname,'diagsave:wspd10m',i_wspd10m_ob_type)
+     call dtime_show(this%myname,'diagsave:wspd10m',i_wspd10m_ob_type)
      write(7)'wst',nchar,nreal,ii,mype,ioff0
      write(7)cdiagbuf(1:ii),rdiagbuf(:,1:ii)
      deallocate(cdiagbuf,rdiagbuf)
@@ -858,157 +863,8 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   end if
 
 ! End of routine
-
+  
   return
-  contains
-
-  subroutine check_vars_ (proceed)
-  logical,intent(inout) :: proceed
-  integer(i_kind) ivar, istatus
-! Check to see if required guess fields are available
-  call gsi_metguess_get ('var::wspd10m', ivar, istatus )
-  proceed=ivar>0
-  call gsi_metguess_get ('var::ps' , ivar, istatus )
-  proceed=proceed.and.ivar>0
-  call gsi_metguess_get ('var::z' , ivar, istatus )
-  proceed=proceed.and.ivar>0
-  call gsi_metguess_get ('var::u' , ivar, istatus )
-  proceed=proceed.and.ivar>0
-  call gsi_metguess_get ('var::v' , ivar, istatus )
-  proceed=proceed.and.ivar>0
-  call gsi_metguess_get ('var::tv', ivar, istatus )
-  proceed=proceed.and.ivar>0
-  end subroutine check_vars_ 
-
-  subroutine init_vars_
-
-  real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
-  real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
-  character(len=10) :: varname
-  integer(i_kind) ifld, istatus
-
-! If require guess vars available, extract from bundle ...
-  if(size(gsi_metguess_bundle)==nfldsig) then
-!    get wspd10m ...
-     varname='wspd10m'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-     if (istatus==0) then
-         if(allocated(ges_wspd10m))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-         endif
-         allocate(ges_wspd10m(size(rank2,1),size(rank2,2),nfldsig))
-         ges_wspd10m(:,:,1)=rank2
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-            ges_wspd10m(:,:,ifld)=rank2
-         enddo
-     else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-         call stop2(999)
-     endif
-!    get ps ...
-     varname='ps'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-     if (istatus==0) then
-         if(allocated(ges_ps))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-         endif
-         allocate(ges_ps(size(rank2,1),size(rank2,2),nfldsig))
-         ges_ps(:,:,1)=rank2
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-            ges_ps(:,:,ifld)=rank2
-         enddo
-     else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-         call stop2(999)
-     endif
-!    get z ...
-     varname='z'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-     if (istatus==0) then
-         if(allocated(ges_z))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-         endif
-         allocate(ges_z(size(rank2,1),size(rank2,2),nfldsig))
-         ges_z(:,:,1)=rank2
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-            ges_z(:,:,ifld)=rank2
-         enddo
-     else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-         call stop2(999)
-     endif
-!    get u ...
-     varname='u'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-     if (istatus==0) then
-         if(allocated(ges_u))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-         endif
-         allocate(ges_u(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         ges_u(:,:,:,1)=rank3
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_u(:,:,:,ifld)=rank3
-         enddo
-     else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-         call stop2(999)
-     endif
-!    get v ...
-     varname='v'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-     if (istatus==0) then
-         if(allocated(ges_v))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-         endif
-         allocate(ges_v(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         ges_v(:,:,:,1)=rank3
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_v(:,:,:,ifld)=rank3
-         enddo
-     else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-         call stop2(999)
-     endif
-!    get tv ...
-     varname='tv'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-     if (istatus==0) then
-         if(allocated(ges_tv))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-         endif
-         allocate(ges_tv(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         ges_tv(:,:,:,1)=rank3
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_tv(:,:,:,ifld)=rank3
-         enddo
-     else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-         call stop2(999)
-     endif
-  else
-     write(6,*) trim(myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
-                 nfldsig,size(gsi_metguess_bundle)
-     call stop2(999)
-  endif
-  end subroutine init_vars_
-
-  subroutine final_vars_
-    if(allocated(ges_z   )) deallocate(ges_z   )
-    if(allocated(ges_ps  )) deallocate(ges_ps  )
-    if(allocated(ges_wspd10m)) deallocate(ges_wspd10m)
-  end subroutine final_vars_
-
 end subroutine setupwspd10m
-
+ 
+end module setupwspd10m_mod

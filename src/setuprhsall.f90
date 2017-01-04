@@ -165,9 +165,9 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   use setuppmsl_mod, only: setuppmsl_class
   use setuppm10_mod, only: setuppm10_class
   use setuppm2_5_mod, only: setuppm2_5_class
-! use setupps_mod, only: setupps_class
-! use setuppw_mod, only: setuppw_class
-! use setupq_mod, only: setupq_class
+  use setupps_mod, only: setupps_class
+  use setuppw_mod, only: setuppw_class
+  use setupq_mod, only: setupq_class
   use setupref_mod, only: setupref_class
   use setuprw_mod, only: setuprw_class
   use setupspd_mod, only: setupspd_class
@@ -176,9 +176,9 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   use setuptcamt_mod, only: setuptcamt_class
   use setuptcp_mod, only: setuptcp_class
   use setuptd2m_mod, only: setuptd2m_class
-! use setupvis_mod, only: setupvis_class
-! use setupw_mod, only: setupw_class
-! use setupwspd10m_mod, only: setupwspd10m_class
+  use setupvis_mod, only: setupvis_class
+  use setupw_mod, only: setupw_class
+  use setupwspd10m_mod, only: setupwspd10m_class
 
   use gsi_bundlemod, only: GSI_BundleGetPointer
   use gsi_metguess_mod, only: GSI_MetGuess_Bundle
@@ -205,9 +205,9 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   type(setuppm10_class) :: pm10
   type(setuppm2_5_class) :: pm2_5
   type(setuppmsl_class) :: pmsl
-! type(setupps_class) :: ps
-! type(setuppw_class) :: pw
-! type(setupq_class) :: q
+  type(setupps_class) :: ps
+  type(setuppw_class) :: pw
+  type(setupq_class) :: q
   type(setupref_class) :: ref
   type(setuprw_class) :: rw
   type(setupspd_class) :: spd
@@ -216,9 +216,9 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   type(setuptcamt_class) :: tcamt
   type(setuptcp_class) :: tcp
   type(setuptd2m_class) :: td2m
-! type(setupvis_class) :: vis
-! type(setupw_class) :: w
-! type(setupwspd10m_class) :: wspd10m
+  type(setupvis_class) :: vis
+  type(setupw_class) :: w
+  type(setupwspd10m_class) :: wspd10m
 
 ! Declare external calls for code analysis
   external:: compute_derived
@@ -515,8 +515,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up uv wind data
               else if(obstype=='uv')then
                  write(6,*) 'setting up uv'
-!                call w%setup(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
-                 call setupw(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
+                 call w%setup(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
+!                call setupw(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
 
 !             Set up wind speed data
               else if(obstype=='spd')then
@@ -527,8 +527,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up surface pressure data
               else if(obstype=='ps')then
                  write(6,*) 'setting up ps'
-!                call ps%setup(lunin,mype,bwork,awork(1,i_ps),nele,nobs,is,conv_diagsave)
-                 call setupps(lunin,mype,bwork,awork(1,i_ps),nele,nobs,is,conv_diagsave)
+                 call ps%setup(lunin,mype,bwork,awork(1,i_ps),nele,nobs,is,conv_diagsave)
+!                call setupps(lunin,mype,bwork,awork(1,i_ps),nele,nobs,is,conv_diagsave)
  
 !             Set up tc-mslp data
               else if(obstype=='tcp')then
@@ -539,8 +539,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up moisture data
               else if(obstype=='q') then
                  write(6,*) 'setting up q'
-!                call q%setup(lunin,mype,bwork,awork(1,i_q),nele,nobs,is,conv_diagsave)
-                 call setupq(lunin,mype,bwork,awork(1,i_q),nele,nobs,is,conv_diagsave)
+                 call q%setup(lunin,mype,bwork,awork(1,i_q),nele,nobs,is,conv_diagsave)
+!                call setupq(lunin,mype,bwork,awork(1,i_q),nele,nobs,is,conv_diagsave)
 
 !             Set up lidar wind data
               else if(obstype=='dw')then
@@ -556,8 +556,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up total precipitable water (total column water) data
               else if(obstype=='pw')then
                  write(6,*) 'setting up pw'
-!                call pw%setup(lunin,mype,bwork,awork(1,i_pw),nele,nobs,is,conv_diagsave)
-                 call setuppw(lunin,mype,bwork,awork(1,i_pw),nele,nobs,is,conv_diagsave)
+                 call pw%setup(lunin,mype,bwork,awork(1,i_pw),nele,nobs,is,conv_diagsave)
+!                call setuppw(lunin,mype,bwork,awork(1,i_pw),nele,nobs,is,conv_diagsave)
 
 !             Set up superob radar wind data
               else if(obstype=='srw')then
@@ -590,8 +590,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up conventional visibility data
               else if(obstype=='vis' .and. getindex(svars2d,'vis')>0) then
                  write(6,*) 'setting up vis'
-!                call vis%setup(lunin,mype,bwork,awork(1,i_vis),nele,nobs,is,conv_diagsave)
-                 call setupvis(lunin,mype,bwork,awork(1,i_vis),nele,nobs,is,conv_diagsave)
+                 call vis%setup(lunin,mype,bwork,awork(1,i_vis),nele,nobs,is,conv_diagsave)
+!                call setupvis(lunin,mype,bwork,awork(1,i_vis),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional pbl height data
               else if(obstype=='pblh' .and. getindex(svars2d,'pblh')>0) then
@@ -602,8 +602,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up conventional wspd10m data
               else if(obstype=='wspd10m' .and. getindex(svars2d,'wspd10m')>0) then
                  write(6,*) 'setting up wspd10m'
-!                call wspd10m%setup(lunin,mype,bwork,awork(1,i_wspd10m),nele,nobs,is,conv_diagsave)
-                 call setupwspd10m(lunin,mype,bwork,awork(1,i_wspd10m),nele,nobs,is,conv_diagsave)
+                 call wspd10m%setup(lunin,mype,bwork,awork(1,i_wspd10m),nele,nobs,is,conv_diagsave)
+!                call setupwspd10m(lunin,mype,bwork,awork(1,i_wspd10m),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional td2m data
               else if(obstype=='td2m' .and. getindex(svars2d,'td2m')>0) then
