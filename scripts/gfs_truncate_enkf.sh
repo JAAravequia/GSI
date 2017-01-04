@@ -40,7 +40,7 @@ export CHGRESVARS="use_ufo=$use_ufo,IALB=$ialb,ntrac=$NTRAC,idvc=$idvc_a,idvt=$i
 
 export DATA=$DATATMP
 
-export APRUNC=""
+export APRUNC=${APRUNC:-""}
 export VERBOSE=YES
 
 echo "execute $CHGRESSH for $member"

@@ -804,7 +804,6 @@ fi
 export wc=${wc:-/usr/bin/wc}
 export APRUN=${APRUN:-""}
 export APRUNCFP=${APRUNCFP:-""}
-export APRUNCFP_TAR=${APRUNCFP_TAR:-""}
 export USE_CFP=${USE_CFP:-"NO"}
 
 # Set 4D-EnVar specific variables
@@ -1202,6 +1201,9 @@ if [[ $USE_CFP = YES ]] ; then
    chmod 755 $DATA/mp_unzip.sh
    ncmd=`cat $DATA/mp_unzip.sh | wc -l`
    if [ $ncmd -gt 0 ]; then
+      if [ $npe_node_cfp -gt $ncmd ]; then
+         npe_node_cfp=$ncmd
+      fi
       export APRUNCFP_UNZIP=$(eval echo $APRUNCFP)
       $APRUNCFP_UNZIP $DATA/mp_unzip.sh
    fi
@@ -1624,6 +1626,9 @@ if [[ $USE_CFP = YES ]] ; then
    chmod 755 $DATA/mp_diag.sh
    ncmd=`cat $DATA/mp_diag.sh | wc -l`
    if [ $ncmd -gt 0 ]; then
+      if [ $npe_node_cfp -gt $ncmd ]; then
+         npe_node_cfp=$ncmd
+      fi
       export APRUNCFP_DIAG=$(eval echo $APRUNCFP)
       $APRUNCFP_DIAG $DATA/mp_diag.sh
    fi
@@ -1651,7 +1656,10 @@ if [[ $DIAG_TARBALL = YES ]]; then
       chmod 755 $DATA/mp_tar.sh      
       ncmd=`cat $DATA/mp_tar.sh | wc -l`
       if [ $ncmd -gt 0 ]; then
-         export APRUNCFP_TAR=$(eval echo $APRUNCFP_TAR)
+         if [ $npe_node_cfp -gt $ncmd ]; then
+            npe_node_cfp=$ncmd
+         fi
+         export APRUNCFP_TAR=$(eval echo $APRUNCFP)
          $APRUNCFP_TAR $DATA/mp_tar.sh
       fi
    fi
