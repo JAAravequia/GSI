@@ -204,32 +204,24 @@ contains
     equivalence(r_prvstg,c_prvstg)
     equivalence(r_sprvstg,c_sprvstg)
   
-! real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
-  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_q2m
   
     this%myname='setupq'
-    
-!   if(i_use_2mq4b>0) then
-!     this%numvars = 3
-!     write(6,*) 'HEY!!! allocating 3 vars in setupq ',i_use_2mq4b
-!     allocate(this%varnames(this%numvars))
-!     this%varnames(1:this%numvars) = (/ 'var::ps', 'var::q2m', 'var::q' /)
-!   else 
-!     this%numvars = 2
-!     write(6,*) 'HEY!!! allocating 2 vars in setupq ',i_use_2mq4b
-!     allocate(this%varnames(this%numvars))
-!     this%varnames(1:this%numvars) = (/ 'var::ps', 'var::q' /)
-!   endif
-
+    if(i_use_2mq4b>0) then
+      this%numvars = 3
+      allocate(this%varnames(this%numvars))
+      this%varnames(1:this%numvars) = (/ 'var::ps', 'var::q2m', 'var::q' /)
+    else 
+      this%numvars = 2
+      allocate(this%varnames(this%numvars))
+      this%varnames(1:this%numvars) = (/ 'var::ps', 'var::q' /)
+    endif
   ! Check to see if required guess fields are available
-!   call this%check_vars_(proceed)
-    call check_vars(proceed)
+    call this%check_vars_(proceed)
     if(.not.proceed) return  ! not all vars available, simply return
   
   ! If require guess vars available, extract from bundle ...
-!   call this%init_ges
-    call init_vars_
+    call this%init_ges
+  
     n_alloc(:)=0
     m_alloc(:)=0
   !*******************************************************************************
@@ -465,12 +457,12 @@ contains
   
   
   ! Interpolate guess moisture to observation location and time
-       call tintrp31(ges_q,qges,dlat,dlon,dpres,dtime, &
+       call tintrp31(this%ges_q,qges,dlat,dlon,dpres,dtime, &
           hrdifsig,mype,nfldsig)
   
   ! Interpolate 2-m q to obs locations/times
        if(i_use_2mq4b>0 .and. itype > 179 .and. itype < 190 .and.  .not.twodvar_regional)then
-          call tintrp2a11(ges_q2m,q2mges,dlat,dlon,dtime,hrdifsig,mype,nfldsig)
+          call tintrp2a11(this%ges_q2m,q2mges,dlat,dlon,dtime,hrdifsig,mype,nfldsig)
           if(i_use_2mq4b==1)then
              qges=0.33_r_single*qges+0.67_r_single*q2mges
           elseif(i_use_2mq4b==2) then
@@ -816,7 +808,7 @@ contains
   
   
   ! Interpolate guess moisture to observation location and time
-             call tintrp31(ges_q,qges,dlat,dlon,dpres,dtime, &
+             call tintrp31(this%ges_q,qges,dlat,dlon,dpres,dtime, &
                                hrdifsig,mype,nfldsig)
              call tintrp31(qg,qsges,dlat,dlon,dpres,dtime,hrdifsig,&
                          mype,nfldsig)
@@ -864,8 +856,7 @@ contains
     end do
     
   ! Release memory of local guess arrays
-!   call this%final_vars_
-    call final_vars
+    call this%final_vars_
   
   ! Write information to diagnostic file
     if(conv_diagsave .and. ii>0)then
@@ -882,102 +873,6 @@ contains
   
   ! End of routine
     return
-contains
-  subroutine init_vars_
-
-  real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
-  real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
-  character(len=5) :: varname
-  integer(i_kind) ifld, istatus
-
-! If require guess vars available, extract from bundle ...
-  if(size(gsi_metguess_bundle)==nfldsig) then
-!    get ps ...
-     varname='ps'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-     if (istatus==0) then
-         if(allocated(this%ges_ps))then
-            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-         endif
-         allocate(this%ges_ps(size(rank2,1),size(rank2,2),nfldsig))
-         this%ges_ps(:,:,1)=rank2
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-            this%ges_ps(:,:,ifld)=rank2
-         enddo
-     else
-         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-         call stop2(999)
-     endif
-!    get q2m ...
-     write(6,*) 'HEY!!! in setupq i_use_2mq4b is ',i_use_2mq4b
-     if (i_use_2mq4b>0) then
-        write(6,*) 'HEY!!! allocating 3 vars in setupq ',i_use_2mq4b
-        varname='q2m'
-        call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-        if (istatus==0) then
-            if(allocated(ges_q2m))then
-               write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-               call stop2(999)
-            endif
-            allocate(ges_q2m(size(rank2,1),size(rank2,2),nfldsig))
-            ges_q2m(:,:,1)=rank2
-            do ifld=2,nfldsig
-               call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-               ges_q2m(:,:,ifld)=rank2
-            enddo
-        else
-            write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-            call stop2(999)
-        endif
-     endif ! i_use_2mq4b
-!    get q ...
-     varname='q'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-     if (istatus==0) then
-         if(allocated(ges_q))then
-            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-         endif
-         allocate(ges_q(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         ges_q(:,:,:,1)=rank3
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_q(:,:,:,ifld)=rank3
-         enddo
-     else
-         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-         call stop2(999)
-     endif
-  else
-     write(6,*) trim(this%myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
-                 nfldsig,size(gsi_metguess_bundle)
-     call stop2(999)
-  endif
-  end subroutine init_vars_
-
-  subroutine check_vars(proceed)
-  logical,intent(inout) :: proceed
-  integer(i_kind) ivar, istatus
-! Check to see if required guess fields are available
-  call gsi_metguess_get ('var::ps', ivar, istatus )
-  proceed=ivar>0
-  call gsi_metguess_get ('var::z' , ivar, istatus )
-  proceed=proceed.and.ivar>0
-  call gsi_metguess_get ('var::u' , ivar, istatus )
-  proceed=proceed.and.ivar>0
-  call gsi_metguess_get ('var::v' , ivar, istatus )
-  proceed=proceed.and.ivar>0
-  call gsi_metguess_get ('var::tv', ivar, istatus )
-  proceed=proceed.and.ivar>0
-  end subroutine check_vars 
-  subroutine final_vars
-    if(allocated(ges_q2m)) deallocate(ges_q2m)
-    if(allocated(ges_q )) deallocate(ges_q )
-    if(allocated(this%ges_ps)) deallocate(this%ges_ps)
-!   deallocate(this%varnames)
-  end subroutine final_vars
- 
 end subroutine setupq
+ 
 end module setupq_mod

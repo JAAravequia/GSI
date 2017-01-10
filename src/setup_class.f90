@@ -1,31 +1,32 @@
 module abstract_setup_mod
   use kinds, only: r_kind, i_kind
   type,abstract :: abstract_setup_class
-  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_cldch
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_co
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_div
-  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_gust
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_howv
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_mxtm
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_co
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_oz
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_div
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_u
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_gust
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_wspd10m
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_cldch
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_lcbas
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_mitm
-  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_mxtm
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_oz
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_pblh
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_th2 
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_pm10
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_pm2_5
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_pmsl
-  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_q2m
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_q2
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_tcamt
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_td2m
-  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_th2 
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_u
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_vis
-  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_wspd10m
-  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
   character(len=16) :: myname
   character(len=14),allocatable,dimension(:) :: varnames
   integer(i_kind) numvars
@@ -114,34 +115,32 @@ contains
   end subroutine allocate_ges4
   subroutine final_vars_(this)
       class(abstract_setup_class)                      ,intent(inout) :: this
-      if(allocated(this%ges_cldch)) deallocate(this%ges_cldch)
-      if(allocated(this%ges_co)) deallocate(this%ges_co)
-      if(allocated(this%ges_div)) deallocate(this%ges_div)
+      if(allocated(this%ges_v )) deallocate(this%ges_v )
+      if(allocated(this%ges_u )) deallocate(this%ges_u )
+      if(allocated(this%ges_z )) deallocate(this%ges_z )
+      if(allocated(this%ges_ps)) deallocate(this%ges_ps)
+      if(allocated(this%ges_tv)) deallocate(this%ges_tv)
       if(allocated(this%ges_gust)) deallocate(this%ges_gust)
-      if(allocated(this%ges_howv)) deallocate(this%ges_howv)
+      if(allocated(this%ges_wspd10m)) deallocate(this%ges_wspd10m)
+      if(allocated(this%ges_cldch)) deallocate(this%ges_cldch)
       if(allocated(this%ges_lcbas)) deallocate(this%ges_lcbas)
-      if(allocated(this%ges_mitm)) deallocate(this%ges_mitm) 
-      if(allocated(this%ges_mxtm)) deallocate(this%ges_mxtm)
-      if(allocated(this%ges_oz)) deallocate(this%ges_oz)
-      if(allocated(this%ges_pblh)) deallocate(this%ges_pblh)
       if(allocated(this%ges_pm10)) deallocate(this%ges_pm10)
       if(allocated(this%ges_pm2_5)) deallocate(this%ges_pm2_5)
       if(allocated(this%ges_pmsl)) deallocate(this%ges_pmsl)
-      if(allocated(this%ges_ps)) deallocate(this%ges_ps)
       if(allocated(this%ges_q2m)) deallocate(this%ges_q2m)
-      if(allocated(this%ges_q)) then
-         write(6,*) 'deallocating ges_q'
-         deallocate(this%ges_q)
-      endif
+      if(allocated(this%ges_q)) deallocate(this%ges_q)
+      if(allocated(this%ges_q)) deallocate(this%ges_q2)
       if(allocated(this%ges_tcamt)) deallocate(this%ges_tcamt)
       if(allocated(this%ges_td2m)) deallocate(this%ges_td2m)
+      if(allocated(this%ges_pblh)) deallocate(this%ges_pblh)
       if(allocated(this%ges_th2)) deallocate(this%ges_th2)
-      if(allocated(this%ges_tv)) deallocate(this%ges_tv)
-      if(allocated(this%ges_u )) deallocate(this%ges_u )
-      if(allocated(this%ges_v )) deallocate(this%ges_v )
+      if(allocated(this%ges_mitm)) deallocate(this%ges_mitm) 
       if(allocated(this%ges_vis)) deallocate(this%ges_vis)
-      if(allocated(this%ges_wspd10m)) deallocate(this%ges_wspd10m)
-      if(allocated(this%ges_z )) deallocate(this%ges_z )
+      if(allocated(this%ges_howv)) deallocate(this%ges_howv)
+      if(allocated(this%ges_mxtm)) deallocate(this%ges_mxtm)
+      if(allocated(this%ges_co)) deallocate(this%ges_co)
+      if(allocated(this%ges_div)) deallocate(this%ges_div)
+      if(allocated(this%ges_oz)) deallocate(this%ges_oz)
       deallocate(this%varnames)
 
   end subroutine final_vars_
@@ -215,6 +214,8 @@ contains
           call this%allocate_ges3(this%ges_pmsl,varname)
         case ('q2m')
           call this%allocate_ges3(this%ges_q2m,varname)
+        case ('q2')
+          call this%allocate_ges3(this%ges_q2,varname)
         case ('tcamt')
           call this%allocate_ges3(this%ges_tcamt,varname)
         case ('td2m')
@@ -233,7 +234,6 @@ contains
         case ('pm10')
           call this%allocate_ges4(this%ges_pm10,varname)
         case ('q')
-          write(6,*) 'allocating ',varname,fullname
           call this%allocate_ges4(this%ges_q,varname)
         case ('pm2_5')
           call this%allocate_ges4(this%ges_pm2_5,varname)

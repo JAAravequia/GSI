@@ -177,7 +177,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   use setuptcp_mod, only: setuptcp_class
   use setuptd2m_mod, only: setuptd2m_class
   use setupvis_mod, only: setupvis_class
-! use setupw_mod, only: setupw_class
+  use setupw_mod, only: setupw_class
   use setupwspd10m_mod, only: setupwspd10m_class
 
   use gsi_bundlemod, only: GSI_BundleGetPointer
@@ -217,8 +217,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   type(setuptcp_class) :: tcp
   type(setuptd2m_class) :: td2m
   type(setupvis_class) :: vis
-! type(setupw_class) :: w
-  type(setupwspd10m_class) :: wspd10m 
+  type(setupw_class) :: w
+  type(setupwspd10m_class) :: wspd10m
 
 ! Declare external calls for code analysis
   external:: compute_derived
@@ -515,8 +515,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up uv wind data
               else if(obstype=='uv')then
                  write(6,*) 'setting up uv'
-!                call w%setup(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
-                 call setupw(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
+                 call w%setup(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
+!                call setupw(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
 
 !             Set up wind speed data
               else if(obstype=='spd')then

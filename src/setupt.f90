@@ -259,16 +259,9 @@ contains
     m_alloc(:)=0
   
     this%myname='setupt'
-    
-   if(i_use_2mt4b>0) then
-      this%numvars = 7
-      allocate(this%varnames(this%numvars))
-      this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::q', 'var::ps', 'var::tv', 'var::q2m', 'var::th2m' /)
-    else
-      this%numvars = 5
-      allocate(this%varnames(this%numvars))
-      this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::q', 'var::ps', 'var::tv' /)
-    endif
+    this%numvars = 5
+    allocate(this%varnames(this%numvars))
+    this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::q', 'var::ps', 'var::tv' /)
   ! Check to see if required guess fields are available
     call this%check_vars_(proceed)
     if(.not.proceed) return  ! not all vars available, simply return
@@ -587,7 +580,7 @@ contains
                mype,nfldsig)
              tges2m=tges2m*(r10*psges/r1000)**rd_over_cp_mass  ! convert to sensible T         
              if(iqtflg)then
-                call tintrp2a11(this%ges_q2m,qges2m,dlat,dlon,dtime,hrdifsig,&
+                call tintrp2a11(this%ges_q2,qges2m,dlat,dlon,dtime,hrdifsig,&
                        mype,nfldsig)
                 tges2m=tges2m*(one+fv*qges2m)  ! convert to virtual T
              endif
