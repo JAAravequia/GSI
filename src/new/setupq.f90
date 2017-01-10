@@ -206,17 +206,21 @@ contains
   
   
     this%myname='setupq'
+    
     if(i_use_2mq4b>0) then
       this%numvars = 3
+      write(6,*) 'HEY!!! allocating 3 vars in setupq ',i_use_2mq4b
       allocate(this%varnames(this%numvars))
       this%varnames(1:this%numvars) = (/ 'var::ps', 'var::q2m', 'var::q' /)
     else 
       this%numvars = 2
+      write(6,*) 'HEY!!! allocating 2 vars in setupq ',i_use_2mq4b
       allocate(this%varnames(this%numvars))
       this%varnames(1:this%numvars) = (/ 'var::ps', 'var::q' /)
     endif
   ! Check to see if required guess fields are available
-    call this%check_vars_(proceed)
+!   call this%check_vars_(proceed)
+    call check_vars_(proceed)
     if(.not.proceed) return  ! not all vars available, simply return
   
   ! If require guess vars available, extract from bundle ...
@@ -856,7 +860,8 @@ contains
     end do
     
   ! Release memory of local guess arrays
-    call this%final_vars_
+!   call this%final_vars_
+    call final_vars_
   
   ! Write information to diagnostic file
     if(conv_diagsave .and. ii>0)then
@@ -874,5 +879,26 @@ contains
   ! End of routine
     return
 end subroutine setupq
+
+  subroutine check_vars_ (proceed)
+  logical,intent(inout) :: proceed
+  integer(i_kind) ivar, istatus
+! Check to see if required guess fields are available
+  call gsi_metguess_get ('var::ps', ivar, istatus )
+  proceed=ivar>0
+  call gsi_metguess_get ('var::z' , ivar, istatus )
+  proceed=proceed.and.ivar>0
+  call gsi_metguess_get ('var::u' , ivar, istatus )
+  proceed=proceed.and.ivar>0
+  call gsi_metguess_get ('var::v' , ivar, istatus )
+  proceed=proceed.and.ivar>0
+  call gsi_metguess_get ('var::tv', ivar, istatus )
+  proceed=proceed.and.ivar>0
+  end subroutine check_vars_ 
+  subroutine final_vars_
+    if(allocated(ges_q2m)) deallocate(ges_q2m)
+    if(allocated(ges_q )) deallocate(ges_q )
+    if(allocated(ges_ps)) deallocate(ges_ps)
+  end subroutine final_vars_
  
 end module setupq_mod

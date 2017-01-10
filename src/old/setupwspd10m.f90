@@ -1008,6 +1008,9 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
     if(allocated(ges_z   )) deallocate(ges_z   )
     if(allocated(ges_ps  )) deallocate(ges_ps  )
     if(allocated(ges_wspd10m)) deallocate(ges_wspd10m)
+    if(allocated(ges_tv   )) deallocate(ges_tv   )
+    if(allocated(ges_u   )) deallocate(ges_u   )
+    if(allocated(ges_v   )) deallocate(ges_v   )
   end subroutine final_vars_
 
 end subroutine setupwspd10m

@@ -905,7 +905,9 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
          call stop2(999)
      endif
 !    get q2m ...
+     write(6,*) 'HEY!!! in setupq i_use_2mq4b is ',i_use_2mq4b
      if (i_use_2mq4b>0) then
+        write(6,*) 'HEY!!! allocating 3 vars in setupq ',i_use_2mq4b
         varname='q2m'
         call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
         if (istatus==0) then

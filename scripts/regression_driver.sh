@@ -14,15 +14,8 @@ export scripts=${scripts_updat:-$scripts}
 if [ "$debug" = ".false." ]; then
 
    # Launch the individual control and update runs, one-after-another
-   for jn in `seq 1 2`; do
-      if [ $jn -le 2 ]; then
-         export scripts=${scripts_updat:-$scripts}
-         export fixgsi=${fixgsi_updat:-$fixgsi}
-      else
-         export scripts=${scripts_cntrl:-$scripts}
-         export fixgsi=${fixgsi_cntrl:-$fixgsi}
-      fi
-
+   for jn in `seq 3 3`; do
+    if [ $jn -ne 5 ]; then
       if [ $jn -le 2 ]; then
          export scripts=${scripts_updat:-$scripts}
          export fixgsi=${fixgsi_updat:-$fixgsi}
@@ -40,6 +33,7 @@ if [ "$debug" = ".false." ]; then
          rm -f ${rcname}
          exit 1
       fi
+    fi
    done
    # When all done, test the results of the regression test
    if [ $regtest = 'global_enkf_T62' ]; then

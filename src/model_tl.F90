@@ -43,12 +43,12 @@ implicit none
 
 ! !INPUT PARAMETERS:
 
-type(gsi_bundle), target, intent(in   ) :: xini(nsubwin)   ! State variable at control times
+type(gsi_bundle), intent(in   ) :: xini(nsubwin)   ! State variable at control times
 logical         , intent(in   ) :: ldprt           ! Print-out flag 
 
 ! !OUTPUT PARAMETERS:
 
-type(gsi_bundle), target, intent(inout) :: xobs(nobs_bins) ! State variable at observations times
+type(gsi_bundle), intent(inout) :: xobs(nobs_bins) ! State variable at observations times
 
 ! !DESCRIPTION: Run AGCM tangent linear model.
 !

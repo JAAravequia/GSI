@@ -249,10 +249,8 @@ contains
      
     this%numvars = 5
     this%myname="setupw"
-    if(.not.allocated(this%varnames)) then
-      allocate(this%varnames(this%numvars))
-      this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::z', 'var::ps', 'var::tv' /)
-    endif
+    allocate(this%varnames(this%numvars))
+    this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::z', 'var::ps', 'var::tv' /)
   ! Check to see if required guess fields are available
     call this%check_vars_(proceed)
     if(.not.proceed) return  ! not all vars available, simply return
