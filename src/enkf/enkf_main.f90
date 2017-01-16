@@ -73,7 +73,8 @@ program enkf_main
  use kinds, only: r_kind,r_double,i_kind
  ! reads namelist parameters.
  use params, only : read_namelist,letkf_flag,readin_localization,lupd_satbiasc,&
-                    numiter, nanals, lupd_obspace_serial, write_spread_diag
+                    numiter, nanals, lupd_obspace_serial, write_spread_diag,   &
+                    lobsdiag_forenkf
  ! mpi functions and variables.
  use mpisetup, only:  mpi_initialize, mpi_initialize_io, mpi_cleanup, nproc, &
                        mpi_wtime, mpi_comm_world
@@ -125,14 +126,17 @@ program enkf_main
  nth= omp_get_max_threads()
  if(nproc== 0)write(6,*) 'enkf_main:  number of threads ',nth
 
- ! read state/control vector info from anavinfo
- call init_statevec()
+ ! Init and read state vector only if needed for linearized Hx
+ if (lobsdiag_forenkf) then
+    ! read state/control vector info from anavinfo
+    call init_statevec()
 
- ! read in ensemble members
- t1 = mpi_wtime()
- call read_state()
- t2 = mpi_wtime()
- if (nproc == 0) print *,'time in read_state =',t2-t1,'on proc',nproc
+    ! read in ensemble members
+    t1 = mpi_wtime()
+    call read_state()
+    t2 = mpi_wtime()
+    if (nproc == 0) print *,'time in read_state =',t2-t1,'on proc',nproc
+ endif
 
  ! read obs, initial screening.
  t1 = mpi_wtime()
@@ -142,8 +146,10 @@ program enkf_main
 
  call mpi_barrier(mpi_comm_world, ierr)
 
- ! cleanup state vectors after observation operator is done
- call statevec_cleanup()
+ ! cleanup state vectors after observation operator is done if lin Hx
+ if (lobsdiag_forenkf) then
+    call statevec_cleanup()
+ endif
 
  ! print innovation statistics for prior on root task.
  if (nproc == 0) then

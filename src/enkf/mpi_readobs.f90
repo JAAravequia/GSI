@@ -60,7 +60,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     integer(i_kind), allocatable, dimension(:) :: diagused
     real(r_single), allocatable, dimension(:,:) :: biaspreds
     real(r_single), allocatable, dimension(:,:) :: anal_ob
-    real(r_single), allocatable, dimension(:)      :: dhx 
+    real(r_single), allocatable, dimension(:)      :: mem_ob 
     real(r_single) :: analsi,analsim1
     real(r_double) t1,t2
     character(len=20), allocatable,  dimension(:) ::  obtype
@@ -92,7 +92,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
           allocate(anal_ob(nanals,nobs_tot))
        end if
        ! these arrays needed on all processors.
-       allocate(dhx(nobs_tot)) 
+       allocate(mem_ob(nobs_tot)) 
        allocate(sprd_ob(nobs_tot),ob(nobs_tot),oberr(nobs_tot),oblon(nobs_tot),&
        oblat(nobs_tot),obpress(nobs_tot),obtime(nobs_tot),oberrorig(nobs_tot),obcode(nobs_tot),&
        obtype(nobs_tot),ensmean_ob(nobs_tot),ensmean_obbc(nobs_tot),&
@@ -111,14 +111,14 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
        write(id2,'(a3,(i3.3))') 'mem',nanal
     endif
 ! read obs.
-! only thing that is different on each task is dhx.  All other
+! only thing that is different on each task is mem_ob.  All other
 ! fields are defined from ensemble mean.
 ! individual members read on 1st nanals tasks, ens mean read on all tasks.
     if (nobs_conv > 0) then
 ! first nobs_conv are conventional obs.
       call get_convobs_data(obspath, datestring, nobs_conv, nobs_convdiag, &
         ensmean_obbc(1:nobs_conv), ensmean_ob(1:nobs_conv),                &
-        dhx(1:nobs_conv), ob(1:nobs_conv),                                 &
+        mem_ob(1:nobs_conv), ob(1:nobs_conv),                                 &
         oberr(1:nobs_conv), oblon(1:nobs_conv), oblat(1:nobs_conv),       &
         obpress(1:nobs_conv), obtime(1:nobs_conv), obcode(1:nobs_conv),   &
         oberrorig(1:nobs_conv), obtype(1:nobs_conv),                      &
@@ -129,7 +129,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
       call get_ozobs_data(obspath, datestring, nobs_oz, nobs_ozdiag,  &
         ensmean_obbc(nobs_conv+1:nobs_conv+nobs_oz),     &
         ensmean_ob(nobs_conv+1:nobs_conv+nobs_oz),       &
-        dhx(nobs_conv+1:nobs_conv+nobs_oz),              &
+        mem_ob(nobs_conv+1:nobs_conv+nobs_oz),              &
         ob(nobs_conv+1:nobs_conv+nobs_oz),               &
         oberr(nobs_conv+1:nobs_conv+nobs_oz),            &
         oblon(nobs_conv+1:nobs_conv+nobs_oz),            &
@@ -148,7 +148,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
       call get_satobs_data(obspath, datestring, nobs_sat, nobs_satdiag, &
         ensmean_obbc(nobs_conv+nobs_oz+1:nobs_tot),       &
         ensmean_ob(nobs_conv+nobs_oz+1:nobs_tot),         &
-        dhx(nobs_conv+nobs_oz+1:nobs_tot),                &
+        mem_ob(nobs_conv+nobs_oz+1:nobs_tot),                &
         ob(nobs_conv+nobs_oz+1:nobs_tot),                 &
         oberr(nobs_conv+nobs_oz+1:nobs_tot),              &
         oblon(nobs_conv+nobs_oz+1:nobs_tot),              &
@@ -186,18 +186,18 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     if (nproc <= nanals-1) then
      if (nproc == 0) then
         t1 = mpi_wtime()
-        anal_ob(1,:) = dhx(:)
+        anal_ob(1,:) = mem_ob(:)
         do nanal=2,nanals
-           call mpi_recv(dhx,nobs_tot,mpi_real4,nanal-1, &
+           call mpi_recv(mem_ob,nobs_tot,mpi_real4,nanal-1, &
                          1,mpi_comm_io,mpi_status,ierr)
-           anal_ob(nanal,:) = dhx(:)
+           anal_ob(nanal,:) = mem_ob(:)
         enddo
         t2 = mpi_wtime()
         print *,'time to gather ob prior ensemble on root = ',t2-t1
 
      else ! nproc != 0
         ! send to root.
-        call mpi_send(dhx,nobs_tot,mpi_real4,0,1,mpi_comm_io,ierr)
+        call mpi_send(mem_ob,nobs_tot,mpi_real4,0,1,mpi_comm_io,ierr)
      end if 
     end if ! nanal <= nanals
 
@@ -221,7 +221,8 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
                                      maxval(sprd_ob(nobs_conv+nobs_oz+1:nobs_tot))
        do nob =nobs_conv+nobs_oz+1 , nobs_tot
           if (sprd_ob(nob) > 1000.) then 
-             print *, nob, ' sat spread: ', sprd_ob(nob), ', ensmean_ob: ', ensmean_ob(nob), ', anal_ob: ', anal_ob(:,nob), ', dhx: ', dhx(nob)
+             print *, nob, ' sat spread: ', sprd_ob(nob), ', ensmean_ob: ', ensmean_ob(nob), &
+                           ', anal_ob: ', anal_ob(:,nob), ', mem_ob: ', mem_ob(nob)
           endif
        enddo
     endif
@@ -235,7 +236,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
         print *,'time to broadcast ob prior ensemble mean and spread = ',t2-t1
     endif
 
-    deallocate(dhx)
+    deallocate(mem_ob)
 
  end subroutine mpi_getobs
 

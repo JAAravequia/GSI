@@ -119,7 +119,7 @@ subroutine get_num_satobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
            endif
 
            do
-              call read_radiag_data(iunit,header_fix0,lretrieval,data_fix0,data_chan0,data_extra0,iflag )
+              call read_radiag_data(iunit,header_fix0,lretrieval,data_fix0,data_chan0,data_extra0,iflag)
               if( iflag /= 0 )exit
               chan: do n=1,header_fix0%nchan
                 num_obs_totdiag = num_obs_totdiag + 1
@@ -148,44 +148,53 @@ subroutine get_num_satobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     enddo ! satellite
 end subroutine get_num_satobs
 
-subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_xnobc, dhx, x_obs, x_err, &
+subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
   use radinfo, only: iuse_rad,nusis,jpch_rad,npred,adp_anglebc,emiss_bc
-  use params, only: nanals
+  use params, only: nanals, lobsdiag_forenkf
   use statevec, only: state_d
-  use constants, only: deg2rad
+  use constants, only: deg2rad, zero
   use mpisetup, only: nproc, mpi_wtime
 
-  character*500, intent(in) :: obspath
-  character*500 obsfile
-  character(len=10), intent(in) :: id
-  character(len=4) pe_name
-
-  integer(i_kind) :: nanal
-
-  real(r_single), dimension(nobs_max) :: h_x,h_xnobc,x_obs,x_err,x_lon,&
-                               x_lat,x_press,x_time,x_errorig,dhx
-
-  real(r_single), dimension(npred+1,nobs_max) :: x_biaspred
-  integer(i_kind), dimension(nobs_max) ::  x_channum,x_indx
-  integer(i_kind), dimension(nobs_maxdiag) :: x_used
-  character(len=20), dimension(nobs_max) ::  x_type
-  character(len=20) ::  sat_type
+  character*500, intent(in)     :: obspath
   character(len=10), intent(in) ::  datestring
 
+  integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
 
-  integer(i_kind) nobs_max, nobs_maxdiag, iunit, iflag,nobs,nobsdiag, n,nsat,ipe,i,jpchstart,indxsat
+  real(r_single), dimension(nobs_max), intent(out) :: hx_mean,hx_mean_nobc, hx
+  real(r_single), dimension(nobs_max), intent(out) :: x_obs
+  real(r_single), dimension(nobs_max), intent(out) :: x_err, x_errorig
+  real(r_single), dimension(nobs_max), intent(out) :: x_lon, x_lat
+  real(r_single), dimension(nobs_max), intent(out) :: x_press, x_time
+  integer(i_kind), dimension(nobs_max), intent(out) :: x_channum, x_indx
+  character(len=20), dimension(nobs_max), intent(out) :: x_type
+  real(r_single), dimension(npred+1,nobs_max), intent(out) :: x_biaspred
+  integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
+
+
+  character(len=10), intent(in) :: id
+  integer(i_kind), intent(in)   :: nanal
+
+  character*500 obsfile, obsfile2
+  character(len=10) :: id2
+  character(len=4) pe_name
+
+  character(len=20) ::  sat_type
+
+  integer(i_kind) iunit, iflag,nobs,nobsdiag, n,nsat,ipe,i,jpchstart,indxsat
+  integer(i_kind) iunit2, iflag2
   integer(i_kind) npred_radiag
   logical fexist,lretrieval,lverbose,init_pass
+  logical twofiles,fexist2,init_pass2
   real(r_kind) :: errorlimit,errorlimit2
   real(r_double) t1,t2,tsum,tsum2
 
-  type(diag_header_fix_list )         :: header_fix
-  type(diag_header_chan_list),allocatable :: header_chan(:)
-  type(diag_data_fix_list   )         :: data_fix
-  type(diag_data_chan_list  ),allocatable :: data_chan(:)
-  type(diag_data_extra_list) ,allocatable :: data_extra(:,:)
-  type(diag_data_name_list)           :: data_name
+  type(diag_header_fix_list )         :: header_fix, header_fix2
+  type(diag_header_chan_list),allocatable :: header_chan(:), header_chan2(:)
+  type(diag_data_fix_list   )         :: data_fix, data_fix2
+  type(diag_data_chan_list  ),allocatable :: data_chan(:), data_chan2(:)
+  type(diag_data_extra_list) ,allocatable :: data_extra(:,:), data_extra2(:,:)
+  type(diag_data_name_list)           :: data_name, data_name2
 
 ! make consistent with screenobs
   errorlimit=1._r_kind/sqrt(1.e9_r_kind)
@@ -193,10 +202,18 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_x
 
   tsum = 0; tsum2 = 0
   iunit = 7
+  iunit2 = 17
   lretrieval=.false.
   npred_radiag=npred
   lverbose=.false.
 
+  twofiles = (.not. lobsdiag_forenkf) .and. (nanal <= nanals)
+  id2 = 'ensmean'
+  if (nanal <= nanals) then
+     write(id2,'(a3,(i3.3))') 'mem',nanal
+  endif
+
+  hx = zero
   nobs = 0
   nobsdiag = 0
   x_used = 0
@@ -221,7 +238,7 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_x
        end if
      end do
      if(jpchstart == 0) cycle
-     init_pass = .true.
+     init_pass = .true.; init_pass2 = .true.
      peloop: do ipe=0,npefiles
      write(pe_name,'(i4.4)') ipe
      if (npefiles .eq. 0) then
@@ -245,6 +262,25 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_x
         init_pass = .false.
      endif
 
+     if(twofiles)then
+        if (npefiles .eq. 0)  then
+          ! read diag file (concatenated pe* files)
+          obsfile2 = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//datestring//'_'//trim(adjustl(id2))
+          inquire(file=obsfile2,exist=fexist2)
+          if (.not. fexist2 .or. datestring .eq. '0000000000') &
+          obsfile2 = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//trim(adjustl(id2))
+       else ! read raw, unconcatenated pe* files.
+          obsfile2 =&
+          trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id2))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'
+       endif
+
+       open(iunit2,form="unformatted",file=obsfile2)
+       rewind(iunit2)
+       if (init_pass2) then
+          call read_radiag_header(iunit2,npred_radiag,lretrieval,header_fix2,header_chan2,data_name2,iflag2,lverbose)
+          init_pass2 = .false.
+       endif
+     end if
      do
       t1 = mpi_wtime()
       call read_radiag_data(iunit,header_fix,lretrieval,data_fix,data_chan,data_extra,iflag )
@@ -252,6 +288,18 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_x
       tsum2 = tsum2 + t2-t1
       if( iflag /= 0 ) then
        exit
+      end if
+      if(twofiles)then
+         call read_radiag_data(iunit2,header_fix2,lretrieval,data_fix2,data_chan2,data_extra2,iflag2 )
+         if( header_fix%nchan /= header_fix2%nchan .or. abs(data_fix%lat-data_fix2%lat) .gt. 1.e-5 .or.  &
+            abs(data_fix%lon-data_fix2%lon) .gt. 1.e-5 .or. abs(data_fix%obstime-data_fix2%obstime) .gt. 1.e-5) then
+           write(6,*) 'inconsistent files',trim(obsfile2)
+           write(6,*) 'nchan',header_fix%nchan,header_fix2%nchan
+           write(6,*) 'lat',data_fix%lat,data_fix2%lat
+           write(6,*) 'lon',data_fix%lon,data_fix2%lon
+           write(6,*) 'obstim',data_fix%obstime,data_fix2%obstime
+           call stop2(-99)
+        end if
       end if
       chan:do n=1,header_fix%nchan
          nobsdiag = nobsdiag + 1
@@ -281,21 +329,27 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_x
          x_time(nobs) = data_fix%obstime
          x_obs(nobs) = data_chan(n)%tbobs 
          ! bias corrected Hx
-         h_x(nobs) = x_obs(nobs) - data_chan(n)%omgbc 
+         hx_mean(nobs) = x_obs(nobs) - data_chan(n)%omgbc 
          ! un-bias corrected Hx
-         h_xnobc(nobs) = x_obs(nobs) - data_chan(n)%omgnbc
+         hx_mean_nobc(nobs) = x_obs(nobs) - data_chan(n)%omgnbc
 
          if (nanal <= nanals) then
-            t1 = mpi_wtime()
-            call observer(h_xnobc(nobs), state_d,              &
-                          real(x_lat(nobs)*deg2rad,r_single),  &
-                          real(x_lon(nobs)*deg2rad,r_single),  &
-                          x_time(nobs),                        &
-                          data_chan(n)%dhx_dx, dhx(nobs))
-            t2 = mpi_wtime()
-            tsum = tsum + t2-t1
-            if (dhx(nobs) > 1000.) then 
-               print *, nanal, ' DHX: ', dhx(nobs), ', h(x)=', h_xnobc(nobs), sattypes_rad(nsat), trim(adjustl(id))
+            ! read full Hx
+            if (.not. lobsdiag_forenkf) then
+               hx(nobs) = x_obs(nobs) - data_chan2(n)%omgnbc
+            ! run linearized Hx
+            else
+               t1 = mpi_wtime()
+               call observer(hx_mean_nobc(nobs), state_d,              &
+                             real(x_lat(nobs)*deg2rad,r_single),  &
+                             real(x_lon(nobs)*deg2rad,r_single),  &
+                             x_time(nobs),                        &
+                             data_chan(n)%dhx_dx, hx(nobs))
+               t2 = mpi_wtime()
+               tsum = tsum + t2-t1
+               if (hx(nobs) > 1000.) then 
+                  print *, nanal, ' HX: ', hx(nobs), ', h(x)=', hx_mean_nobc(nobs), sattypes_rad(nsat), trim(adjustl(id))
+               endif
             endif
          endif
 
@@ -338,6 +392,7 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, h_x, h_x
 
 
      close(iunit)
+     if (twofiles) close(iunit2)
 
      enddo peloop ! ipe
  enddo ! satellite
