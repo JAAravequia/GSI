@@ -108,7 +108,7 @@ real(r_kind),pointer,dimension(:,:)   :: cv_vis=>NULL()
 real(r_kind),pointer,dimension(:,:)   :: cv_lcbas=>NULL()
 real(r_kind),pointer,dimension(:,:,:) :: cv_sf=>NULL()
 real(r_kind),pointer,dimension(:,:,:) :: cv_vp=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: cv_w=>NULL()
+!real(r_kind),pointer,dimension(:,:,:) :: cv_w=>NULL()
 real(r_kind),pointer,dimension(:,:,:) :: cv_t=>NULL()
 real(r_kind),pointer,dimension(:,:,:) :: cv_rh=>NULL()
 real(r_kind),pointer,dimension(:,:,:) :: cv_sfwter=>NULL()
@@ -269,12 +269,10 @@ do jj=1,nsubwin
    call gsi_bundlegetpointer (sval(jj),'tv'  ,sv_tv,  istatus)
    call gsi_bundlegetpointer (sval(jj),'tsen',sv_tsen,istatus)
    call gsi_bundlegetpointer (sval(jj),'q'   ,sv_q ,  istatus)
-   call gsi_bundlegetpointer (sval(jj),'w'   ,sv_w ,  istatus)
 
    call gsi_bundlegetpointer (wbundle,'ps' ,cv_ps ,istatus)
    call gsi_bundlegetpointer (wbundle,'t'  ,cv_t,  istatus)
    call gsi_bundlegetpointer (wbundle,'q'  ,cv_rh ,istatus)
-   call gsi_bundlegetpointer (wbundle,'w'  ,cv_w ,istatus)
 
 !  Get 3d pressure
    if(do_getprs_tl) call getprs_tl(cv_ps,cv_t,sv_prse)

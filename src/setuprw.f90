@@ -139,7 +139,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) cg_w,wgross,wnotgross,wgt,arg,exp_arg,term,rat_err2
   real(r_double) rstation_id
   real(r_kind) dlat,dlon,dtime,dpres,ddiff,error,slat
-  real(r_kind) sinazm,cosazm,sintilt,costilt
+  real(r_kind) sinazm,cosazm,sintilt,costilt,cosazm_costilt,sinazm_costilt
   real(r_kind) ratio_errors,qcgross
   real(r_kind) ugesin,vgesin,wgesin,factw,skint,sfcr
   real(r_kind) rwwind,presw,Vr
@@ -519,6 +519,8 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      sinazm  = sin(data(iazm,i))  ! sin(azimuth angle)
      costilt = cos(data(itilt,i)) ! cos(tilt angle)
      sintilt = sin(data(itilt,i)) ! sin(tilt angle)
+     cosazm_costilt = cosazm*costilt
+     sinazm_costilt = sinazm*costilt
      !vTgesprofile= 5.40_r_kind*(exp((refgesprofile -43.1_r_kind)/17.5_r_kind)) 
 !    rwwind = (ugesin*cosazm+vgesin*sinazm)*costilt*factw
      umaxmax=-huge(umaxmax)
@@ -526,9 +528,9 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      kminmin=kbeambot
      kmaxmax=kbeamtop
      do k=kbeambot,kbeamtop
-        rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt
+        rwwindprofile=ugesprofile(k)*cosazm_costilt+vgesprofile(k)*sinazm_costilt
         if(include_w) then
-           rwwindprofile=rwwindprofile+(wgesprofile(k))*sintilt 
+           rwwindprofile=rwwindprofile+wgesprofile(k)*sintilt 
         end if
         
         if(umaxmax<rwwindprofile) then
@@ -679,9 +681,8 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            rwtail(ibin)%head%wij(j)=factw*rwtail(ibin)%head%wij(j)  
         end do
         rwtail(ibin)%head%raterr2 = ratio_errors**2  
-        rwtail(ibin)%head%cosazm  = cosazm
-        rwtail(ibin)%head%sinazm  = sinazm
-        rwtail(ibin)%head%costilt = costilt
+        rwtail(ibin)%head%cosazm_costilt  = cosazm_costilt
+        rwtail(ibin)%head%sinazm_costilt  = sinazm_costilt
         rwtail(ibin)%head%sintilt = sintilt
         rwtail(ibin)%head%res     = ddiff
         rwtail(ibin)%head%err2    = error**2

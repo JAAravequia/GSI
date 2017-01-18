@@ -97,7 +97,7 @@ real(r_kind),pointer,dimension(:,:)   :: cv_vis=>NULL()
 real(r_kind),pointer,dimension(:,:)   :: cv_lcbas=>NULL()
 real(r_kind),pointer,dimension(:,:,:) :: cv_sf=>NULL()
 real(r_kind),pointer,dimension(:,:,:) :: cv_vp=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: cv_w=>NULL()
+!real(r_kind),pointer,dimension(:,:,:) :: cv_w=>NULL()
 real(r_kind),pointer,dimension(:,:,:) :: cv_t=>NULL()
 real(r_kind),pointer,dimension(:,:,:) :: cv_rh=>NULL()
 real(r_kind),pointer,dimension(:,:,:) :: cv_sfwter=>NULL()
@@ -248,7 +248,6 @@ do jj=1,nsubwin
    call gsi_bundlegetpointer (wbundle,'ps' ,cv_ps ,istatus)
    call gsi_bundlegetpointer (wbundle,'t'  ,cv_t,  istatus)
    call gsi_bundlegetpointer (wbundle,'q'  ,cv_rh ,istatus)
-   call gsi_bundlegetpointer (wbundle,'w'  ,cv_w ,istatus)
 
 !  Get pointers to this subwin require state variables
    call gsi_bundlegetpointer (rval(jj),'ps'  ,rv_ps,  istatus)
@@ -256,13 +255,11 @@ do jj=1,nsubwin
    call gsi_bundlegetpointer (rval(jj),'tv'  ,rv_tv,  istatus)
    call gsi_bundlegetpointer (rval(jj),'tsen',rv_tsen,istatus)
    call gsi_bundlegetpointer (rval(jj),'q'   ,rv_q ,  istatus)
-   call gsi_bundlegetpointer (rval(jj),'w'   ,rv_w ,  istatus)
 
 !  Adjoint of control to initial state
    call gsi_bundleputvar ( wbundle, 't' ,  rv_tv,  istatus )
    call gsi_bundleputvar ( wbundle, 'q' ,  zero,   istatus )
    call gsi_bundleputvar ( wbundle, 'ps',  rv_ps,  istatus )
-   call gsi_bundleputvar ( wbundle, 'w',   rv_w,  istatus )
 
    if (do_cw_to_hydro_ad) then
 !     Case when cloud-vars do not map one-to-one
