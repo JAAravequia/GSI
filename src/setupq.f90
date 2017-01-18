@@ -120,7 +120,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                                       i_use_2mq4b
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
-  use sparsearr, only: sparr2
+  use sparsearr, only: sparr2, new, size, writearray
   use state_vectors, only: svars3d, levels
 
   implicit none
@@ -177,7 +177,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) idomsfc,iderivative
   real(r_kind) :: delz
   type(sparr2) :: dhx_dx
-  integer(i_kind) :: iz, q_ind
+  integer(i_kind) :: iz, q_ind, nind, nnz
 
   character(8) station_id
   character(8),allocatable,dimension(:):: cdiagbuf
@@ -275,15 +275,15 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=20
+     ioff0=21
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
      if (save_jacobian) then
-       dhx_dx%nnz   = 2                   ! number of non-zero elements in dH(x)/dx profile
-       dhx_dx%nind   = 1
-       nreal = nreal + 2*dhx_dx%nind + dhx_dx%nnz + 2
-       allocate(dhx_dx%val(dhx_dx%nnz), dhx_dx%st_ind(dhx_dx%nind),dhx_dx%end_ind(dhx_dx%nind))
+       nnz   = 2                   ! number of non-zero elements in dH(x)/dx profile
+       nind   = 1
+       call new(dhx_dx, nnz, nind)
+       nreal = nreal + size(dhx_dx)
      endif
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
   end if
@@ -758,6 +758,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(19,ii) = qob-qges           ! obs-ges w/o bias correction (future slot)
 
         rdiagbuf(20,ii) = qsges              ! guess saturation specific humidity
+        rdiagbuf(21,ii) = 1e+10              ! spread (filled in by EnKF)
 
         ioff=ioff0
         if (lobsdiagsave) then
@@ -795,17 +796,8 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         endif
 
         if (save_jacobian) then
-           ioff = ioff + 1
-           rdiagbuf(ioff,ii) = dhx_dx%nnz
-           ioff = ioff + 1
-           rdiagbuf(ioff,ii) = dhx_dx%nind               ! number of non-zero
-           ioff = ioff + 1
-           rdiagbuf(ioff:ioff+dhx_dx%nind-1,ii) = dhx_dx%st_ind
-           ioff = ioff + dhx_dx%nind
-           rdiagbuf(ioff:ioff+dhx_dx%nind-1,ii) = dhx_dx%end_ind
-           ioff = ioff + dhx_dx%nind
-           rdiagbuf(ioff:ioff+dhx_dx%nnz-1,ii) = dhx_dx%val
-           ioff = ioff + dhx_dx%nnz - 1
+           call writearray(dhx_dx, rdiagbuf(ioff+1:nreal,ii))
+           ioff = ioff + size(dhx_dx)
         endif
 
 

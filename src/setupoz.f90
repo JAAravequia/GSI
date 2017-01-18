@@ -116,7 +116,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   use ozinfo, only : iuse_oz,b_oz,pg_oz
 
   use jfunc, only : jiter,last,miter,jiterstart
-  use sparsearr, only: sparr2
+  use sparsearr, only: sparr2, new, size, writearray
   
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
   use gsi_bundlemod, only : gsi_bundlegetpointer
@@ -176,7 +176,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 
   real(r_kind),dimension(nsig,nlevs) :: doz_dz
   real(r_kind),dimension(nsig,nloz_omi+1):: doz_dz1
-  integer(i_kind) :: oz_ind
+  integer(i_kind) :: oz_ind, nind, nnz
   type(sparr2) :: dhx_dx
 
   integer(i_kind) i,nlev,ii,jj,iextra,istat,ibin, kk
@@ -233,14 +233,14 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   end do
 
   if(ozone_diagsave)then
-     irdim1=6
+     irdim1=7
      ioff0=irdim1
      if(lobsdiagsave) irdim1=irdim1+4*miter+1
      if (save_jacobian) then
-       dhx_dx%nnz   = nsig                   ! number of non-zero elements in dH(x)/dx profile
-       dhx_dx%nind   = 1
-       irdim1 = irdim1 + 2*dhx_dx%nind + dhx_dx%nnz + 2    ! non-zero elements, their indices and number of indices
-       allocate(dhx_dx%val(dhx_dx%nnz), dhx_dx%st_ind(dhx_dx%nind), dhx_dx%end_ind(dhx_dx%nind))
+       nnz   = nsig                   ! number of non-zero elements in dH(x)/dx profile
+       nind   = 1
+       call new(dhx_dx, nnz, nind)
+       irdim1 = irdim1 + size(dhx_dx)
      endif
 
      allocate(rdiagbuf(irdim1,nlevs,nobs))
@@ -505,6 +505,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
               else
                  rdiagbuf(6,k,ii) = rmiss                
               endif
+              rdiagbuf(7,k,ii) = 1.e+10             ! spread (filled in by EnKF)
 
               idia = ioff0
               if (save_jacobian) then
@@ -513,17 +514,9 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
                  dhx_dx%end_ind(1) = sum(levels(1:oz_ind-1)) + nsig
                  dhx_dx%val = doz_dz(:,k)
 
-                 idia = idia+1
-                 rdiagbuf(idia,k,ii) = dhx_dx%nnz
-                 idia = idia+1
-                 rdiagbuf(idia,k,ii) = dhx_dx%nind            
-                 idia = idia+1
-                 rdiagbuf(idia:idia+dhx_dx%nind-1,k,ii) = dhx_dx%st_ind
-                 idia = idia+dhx_dx%nind
-                 rdiagbuf(idia:idia+dhx_dx%nind-1,k,ii) = dhx_dx%end_ind
-                 idia = idia+dhx_dx%nind
-                 rdiagbuf(idia:idia+dhx_dx%nnz-1,k,ii) = dhx_dx%val
-                 idia = idia+dhx_dx%nnz-1
+                 call writearray(dhx_dx, rdiagbuf(idia+1:irdim1,k,ii))
+
+                 idia = idia+size(dhx_dx)
               endif
 
            endif
@@ -890,7 +883,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   use kinds, only: r_kind,r_single,i_kind
 
   use state_vectors, only: svars3d, levels
-  use sparsearr, only : sparr2
+  use sparsearr, only : sparr2, new, size, writearray
 
   use obsmod, only : o3lhead,o3ltail,i_o3l_ob_type,dplat,nobskeep
   use obsmod, only : mype_diaghdr,dirname,time_offset,ianldate
@@ -952,7 +945,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 
 ! Declare local variables  
   real(r_kind) :: dt, delz
-  integer(i_kind) :: iz, oz_ind
+  integer(i_kind) :: iz, oz_ind, nind, nnz
   type(sparr2) :: dhx_dx
   
   real(r_kind) o3ges, o3ppmv
@@ -1015,14 +1008,14 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 ! Initialize arrays
 
   if(ozone_diagsave)then
-     irdim1=6
+     irdim1=7
      ioff0 = irdim1
      if(lobsdiagsave) irdim1=irdim1+4*miter+1
      if (save_jacobian) then
-       dhx_dx%nnz   = 2                   ! number of non-zero elements in dH(x)/dx profile
-       dhx_dx%nind   = 1
-       irdim1 = irdim1 + 2*dhx_dx%nind + dhx_dx%nnz + 2    ! non-zero elements, their indices and number of indices
-       allocate(dhx_dx%val(dhx_dx%nnz), dhx_dx%st_ind(dhx_dx%nind),dhx_dx%end_ind(dhx_dx%nind))
+       nnz   = 2                   ! number of non-zero elements in dH(x)/dx profile
+       nind  = 1
+       call new(dhx_dx, nnz, nind)
+       irdim1 = irdim1 + size(dhx_dx)
      endif
      allocate(rdiagbuf(irdim1,1,nobs))
      rdiagbuf=0._r_single
@@ -1333,6 +1326,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
         rdiagbuf(4,1,ii) = preso3l             ! override solar zenith angle with a reference pressure (in hPa)
         rdiagbuf(5,1,ii) = rmiss               ! fovn
         rdiagbuf(6,1,ii) = obserror               ! ozone mixing ratio precision
+        rdiagbuf(7,1,ii) = 1.e+10              ! spread (filled in by EnKF)
 
         idia = ioff0
         if (lobsdiagsave) then
@@ -1359,17 +1353,8 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
         endif
 
         if (save_jacobian) then
-           idia = idia + 1
-           rdiagbuf(idia,1,ii) = dhx_dx%nnz
-           idia = idia + 1
-           rdiagbuf(idia,1,ii) = dhx_dx%nind               ! number of non-zero
-           idia = idia + 1
-           rdiagbuf(idia:idia+dhx_dx%nind-1,1,ii) = dhx_dx%st_ind
-           idia = idia + dhx_dx%nind
-           rdiagbuf(idia:idia+dhx_dx%nind-1,1,ii) = dhx_dx%end_ind
-           idia = idia + dhx_dx%nind
-           rdiagbuf(idia:idia+dhx_dx%nnz-1,1,ii) = dhx_dx%val
-           idia = idia + dhx_dx%nnz - 1
+           call writearray(dhx_dx, rdiagbuf(idia+1:irdim1,1,ii))
+           idia = idia + size(dhx_dx)
         endif
 
      end if   !end if(ozone_diagsave )

@@ -55,7 +55,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
   use buddycheck_mod, only: buddy_check_t
 
-  use sparsearr, only: sparr2
+  use sparsearr, only: sparr2, new, size, writearray
 
   implicit none
 
@@ -228,7 +228,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind),dimension(nobs):: buddyuse
 
   type(sparr2) :: dhx_dx
-  integer(i_kind) :: iz, t_ind  
+  integer(i_kind) :: iz, t_ind, nind, nnz
   character(8) station_id
   character(8),allocatable,dimension(:):: cdiagbuf
   character(8),allocatable,dimension(:):: cprvstg,csprvstg
@@ -345,17 +345,17 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     nreal=19
+     nreal=20
     if (aircraft_t_bc_pof .or. aircraft_t_bc .or. aircraft_t_bc_ext) &
           nreal=nreal+npredt+2
      idia0=nreal
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
      if (save_jacobian) then
-       dhx_dx%nnz   = 2                   ! number of non-zero elements in dH(x)/dx profile
-       dhx_dx%nind   = 1
-       nreal = nreal + 2*dhx_dx%nind + dhx_dx%nnz + 2    ! non-zero elements, their indices and number of indices
-       allocate(dhx_dx%val(dhx_dx%nnz), dhx_dx%st_ind(dhx_dx%nind), dhx_dx%end_ind(dhx_dx%nind))
+       nnz   = 2                   ! number of non-zero elements in dH(x)/dx profile
+       nind   = 1
+       call new(dhx_dx, nnz, nind)
+       nreal = nreal + size(dhx_dx)
      endif
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
      rdiagbuf=zero
@@ -1010,6 +1010,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(17,ii) = data(itob,i)       ! temperature observation (K)
         rdiagbuf(18,ii) = ddiff              ! obs-ges used in analysis (K)
         rdiagbuf(19,ii) = tob-tges           ! obs-ges w/o bias correction (K) (future slot)
+        rdiagbuf(20,ii) = 1.e10              ! spread (filled in by EnKF)
         if (aircraft_t_bc_pof .or. aircraft_t_bc .or. aircraft_t_bc_ext) then
            rdiagbuf(20,ii) = data(ipof,i)       ! data pof
            rdiagbuf(21,ii) = data(ivvlc,i)      ! data vertical velocity
@@ -1052,17 +1053,8 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            csprvstg(ii)        = c_sprvstg       ! subprovider name
         endif
         if (save_jacobian) then
-           idia = idia + 1
-           rdiagbuf(idia,ii) = dhx_dx%nnz
-           idia = idia + 1
-           rdiagbuf(idia,ii) = dhx_dx%nind
-           idia = idia + 1
-           rdiagbuf(idia:idia+dhx_dx%nind-1,ii) = dhx_dx%st_ind
-           idia = idia + dhx_dx%nind
-           rdiagbuf(idia:idia+dhx_dx%nind-1,ii) = dhx_dx%end_ind
-           idia = idia + dhx_dx%nind
-           rdiagbuf(idia:idia+dhx_dx%nnz-1,ii) = dhx_dx%val
-           idia = idia + dhx_dx%nnz - 1
+           call writearray(dhx_dx, rdiagbuf(idia+1:nreal,ii))
+           idia = idia + size(dhx_dx)
         endif
 
 

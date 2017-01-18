@@ -58,6 +58,7 @@ subroutine setupspd(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !                                    tintrp3 to tintrp31 (so debug compile works on WCOSS)
 !   2013-10-19  todling - metguess now holds background
 !   2014-01-28  todling - write sensitivity slot indicator (ioff) to header of diagfile
+!   2016-11-29  shlyaeva - save linearized H(x) for EnKF
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -74,10 +75,11 @@ subroutine setupspd(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-  use mpeu_util, only: die,perr
+  use mpeu_util, only: die,perr,getindex
   use kinds, only: r_kind,r_single,r_double,i_kind
   use obsmod, only: spdhead,spdtail,rmiss_single,i_spd_ob_type,obsdiags,&
-                    lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset
+                    lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset,&
+                    lobsdiag_forenkf
   use obsmod, only: spd_ob_type
   use obsmod, only: obs_diag,luse_obsdiag
   use gsi_4dvar, only: nobs_bins,hr_obsbin
@@ -88,13 +90,15 @@ subroutine setupspd(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use qcmod, only: npres_print,ptop,pbot
   use constants, only: one,grav,rd,zero,four,tiny_r_kind, &
        half,two,cg_term,huge_single,r1000,wgtlim
-  use jfunc, only: jiter,last,miter
+  use jfunc, only: jiter,last,miter,jiterstart
+  use state_vectors, only: svars3d, levels
   use qcmod, only: dfact,dfact1
   use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype
   use convinfo, only: icsubtype
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
+  use sparsearr, only: sparr2, new, size, writearray
   implicit none
 
 ! Declare passed variables
@@ -139,6 +143,9 @@ subroutine setupspd(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) ihgt,iqc,ier2,iuse,ilate,ilone,istnelv,istat,izz,iprvd,isprvd
   integer(i_kind) idomsfc,iskint,iff10,isfcr,isli
 
+  type(sparr2) :: dhx_dx
+  integer(i_kind) :: iz, u_ind, v_ind, nnz, nind
+  real(r_kind) :: delz
   
   logical,dimension(nobs):: luse,muse
   logical proceed
@@ -149,7 +156,7 @@ subroutine setupspd(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   character(8) c_prvstg,c_sprvstg
   real(r_double) r_prvstg,r_sprvstg
 
-  logical:: in_curbin, in_anybin
+  logical:: in_curbin, in_anybin, save_jacobian
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
   type(spd_ob_type),pointer:: my_head
@@ -209,6 +216,8 @@ subroutine setupspd(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   r0_001=0.001_r_kind
   goverrd=grav/rd
   
+  save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
+
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
   if(.not.proceed) return  ! not all vars available, simply return
@@ -220,10 +229,16 @@ subroutine setupspd(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=20
+     ioff0=21
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
+     if (save_jacobian) then
+       nnz    = 4                   ! number of non-zero elements in dH(x)/dx profile
+       nind   = 2
+       call new(dhx_dx, nnz, nind)
+       nreal = nreal + size(dhx_dx)
+     endif
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
   end if
 
@@ -467,6 +482,28 @@ subroutine setupspd(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      ugesin=factw*ugesin
      vgesin=factw*vgesin
      spdges=sqrt(ugesin*ugesin+vgesin*vgesin)
+
+     iz = max(1, min( int(dpres), nsig))
+     delz = max(zero, min(dpres - float(iz), one))
+
+     u_ind = getindex(svars3d,'u')
+     v_ind = getindex(svars3d,'v')
+     
+     if (save_jacobian) then
+        dhx_dx%st_ind(1)  = iz               + sum(levels(1:u_ind-1))
+        dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:u_ind-1))
+
+        dhx_dx%val(1) = (one - delz) * two * ugesin
+        dhx_dx%val(2) = delz * two * ugesin
+
+        dhx_dx%st_ind(2)  = iz               + sum(levels(1:v_ind-1))
+        dhx_dx%end_ind(2) = min(iz + 1,nsig) + sum(levels(1:v_ind-1))
+
+        dhx_dx%val(3) = (one - delz) * two * vgesin
+        dhx_dx%val(4) = delz * two * ugesin
+     endif
+
+
      ddiff = spdob-spdges
 
 !    Gross error checks
@@ -644,6 +681,8 @@ subroutine setupspd(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
         rdiagbuf(20,ii) = factw              ! 10m wind reduction factor
 
+        rdiagbuf(21,ii) = 1.e+10             ! ges ensemble spread (filled in by EnKF)
+
         ioff=ioff0
         if (lobsdiagsave) then
            do jj=1,miter 
@@ -669,13 +708,21 @@ subroutine setupspd(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         endif
 
         if (twodvar_regional) then
-           rdiagbuf(ioff+1,ii) = data(idomsfc,i) ! dominate surface type
-           rdiagbuf(ioff+2,ii) = data(izz,i)     ! model terrain at ob location
-           r_prvstg            = data(iprvd,i)
-           cprvstg(ii)         = c_prvstg        ! provider name
-           r_sprvstg           = data(isprvd,i)
-           csprvstg(ii)        = c_sprvstg       ! subprovider name
+           ioff = ioff + 1
+           rdiagbuf(ioff,ii) = data(idomsfc,i) ! dominate surface type
+           ioff = ioff + 1
+           rdiagbuf(ioff,ii) = data(izz,i)     ! model terrain at ob location
+           r_prvstg          = data(iprvd,i)
+           cprvstg(ii)       = c_prvstg        ! provider name
+           r_sprvstg         = data(isprvd,i)
+           csprvstg(ii)      = c_sprvstg       ! subprovider name
         endif
+
+        if (save_jacobian) then
+           call writearray(dhx_dx, rdiagbuf(ioff+1:nreal,ii))
+           ioff = ioff + size(dhx_dx)
+        endif
+
 
      end if
 

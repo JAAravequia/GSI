@@ -29,7 +29,7 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !$$$
   use mpeu_util, only: die,perr,getindex
   use state_vectors, only: ns3d, svars2d, levels
-  use sparsearr, only: sparr2
+  use sparsearr, only: sparr2, new, size, writearray
   use kinds, only: r_kind,i_kind,r_single,r_double
   use obsmod, only: tcptail,tcphead,obsdiags,i_tcp_ob_type, &
              nobskeep,lobsdiag_allocated,oberror_tune,perturb_obs, &
@@ -87,7 +87,7 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),dimension(nsig)::prsltmp
 
   type(sparr2) :: dhx_dx
-  integer(i_kind) :: ps_ind
+  integer(i_kind) :: ps_ind, nind, nnz
 
   integer(i_kind) i,jj
   integer(i_kind) mm1,idia,idia0
@@ -153,14 +153,14 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   if(conv_diagsave)then
      nchar=1
-     idia0=19
+     idia0=20
      nreal=idia0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (save_jacobian) then
-       dhx_dx%nnz   = 1
-       dhx_dx%nind   = 1
-       nreal = nreal + 2*dhx_dx%nind + dhx_dx%nnz + 2
-       allocate(dhx_dx%val(dhx_dx%nnz),dhx_dx%st_ind(dhx_dx%nind),dhx_dx%end_ind(dhx_dx%nind))
+       nnz   = 1
+       nind   = 1
+       call new(dhx_dx, nnz, nind)
+       nreal = nreal + size(dhx_dx)
      endif
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
      ii=0
@@ -487,6 +487,8 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(18,ii) = pob-pges           ! obs-ges used in analysis (coverted to hPa)
         rdiagbuf(19,ii) = pob-pgesorig       ! obs-ges w/o adjustment to guess surface pressure (hPa)
 
+        rdiagbuf(20,ii) = 1.e+10             ! spread (filled in by EnKF)
+
         idia=idia0
         if (lobsdiagsave) then
            do jj=1,miter
@@ -512,17 +514,8 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         endif
 
         if (save_jacobian) then
-           idia = idia + 1
-           rdiagbuf(idia,ii) = dhx_dx%nnz
-           idia = idia + 1
-           rdiagbuf(idia,ii) = dhx_dx%nind               ! number of non-zero
-           idia = idia + 1
-           rdiagbuf(idia:idia+dhx_dx%nind-1,ii) = dhx_dx%st_ind
-           idia = idia + dhx_dx%nind
-           rdiagbuf(idia:idia+dhx_dx%nind-1,ii) = dhx_dx%end_ind
-           idia = idia + dhx_dx%nind
-           rdiagbuf(idia:idia+dhx_dx%nnz-1,ii) = dhx_dx%val
-           idia = idia + dhx_dx%nnz - 1
+           call writearray(dhx_dx, rdiagbuf(idia+1:nreal,ii))
+           idia = idia + size(dhx_dx)
         endif
 
 

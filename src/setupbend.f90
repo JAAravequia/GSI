@@ -138,7 +138,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   use state_vectors, only: levels, svars3d
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
-  use sparsearr, only: sparr2
+  use sparsearr, only: sparr2, new, size, writearray
   implicit none
 
 ! Declare passed variables
@@ -194,7 +194,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   integer(i_kind):: satellite_id,transmitter_id
 
   type(sparr2) :: dhx_dx
-  integer(i_kind) :: iz, t_ind, q_ind, p_ind
+  integer(i_kind) :: iz, t_ind, q_ind, p_ind, nnz, nind
 
   real(r_kind),dimension(3,nsig+nsig_ext) :: q_w,q_w_tl
   real(r_kind),dimension(nsig) :: hges,irefges,zges,dhdt,dhdp
@@ -288,14 +288,14 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
 
 
 ! Allocate arrays for output to diagnostic file
-  mreal=21
+  mreal=22
   nreal=mreal
   if (lobsdiagsave) nreal=nreal+4*miter+1
   if (save_jacobian) then
-    dhx_dx%nnz = nsig * 3         ! number of non-zero elements in dH(x)/dx profile
-    dhx_dx%nind   = 3             ! number of dense subarrays 
-    nreal = nreal + 2*dhx_dx%nind + dhx_dx%nnz + 2 
-    allocate(dhx_dx%val(dhx_dx%nnz), dhx_dx%st_ind(dhx_dx%nind), dhx_dx%end_ind(dhx_dx%nind))
+    nnz = nsig * 3         ! number of non-zero elements in dH(x)/dx profile
+    nind   = 3             ! number of dense subarrays 
+    call new(dhx_dx, nnz, nind)
+    nreal = nreal + size(dhx_dx)
   endif
   if(init_pass) call gpsrhs_alloc(is,'bend',nobs,nsig,nreal,grids_dim,nsig_ext)
   call gpsrhs_aliases(is)
@@ -504,6 +504,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
      rdiagbuf(11,i)        = data(iuse,i)       ! data usage flag
      rdiagbuf(17,i)        = data(igps,i)       ! bending angle observation (radians)
      rdiagbuf(19,i)        = hob                ! model vertical grid (interface) if monotone grid
+     rdiagbuf(22,i)        = 1.e+10             ! spread (filled in by EnKF)
 
      if(ratio_errors(i) > tiny_r_kind)  then ! obs inside model grid
 
@@ -1119,17 +1120,8 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
                  dhx_dx%val(iz+2*nsig) = gpstail(ibin)%head%jac_p(iz)
               enddo
 
-              ioff = ioff + 1
-              rdiagbuf(ioff,i) = dhx_dx%nnz
-              ioff = ioff + 1
-              rdiagbuf(ioff,i) = dhx_dx%nind 
-              ioff = ioff + 1
-              rdiagbuf(ioff:ioff+dhx_dx%nind-1,i) = dhx_dx%st_ind
-              ioff = ioff + dhx_dx%nind
-              rdiagbuf(ioff:ioff+dhx_dx%nind-1,i) = dhx_dx%end_ind
-              ioff = ioff + dhx_dx%nind
-              rdiagbuf(ioff:ioff+dhx_dx%nnz-1,i) = dhx_dx%val
-              ioff = ioff + dhx_dx%nnz - 1
+              call writearray(dhx_dx, rdiagbuf(ioff+1:nreal,i))
+              ioff = ioff + size(dhx_dx)
            endif
 
            do j=1,nreal

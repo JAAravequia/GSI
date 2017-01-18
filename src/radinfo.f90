@@ -311,11 +311,13 @@ contains
        if (angord/=0) angord=0
     end if
 
-    call set_radiag ('version',30303,ier)
+!    call set_radiag ('version',30303,ier)
+    call set_radiag ('version',40000,ier)
     if (adp_anglebc) npred=npred+angord
     if (emiss_bc) then
         npred=npred+1
-        call set_radiag ('version',30303,ier)
+!        call set_radiag ('version',30303,ier)
+        call set_radiag ('version',40000,ier)
     endif
     
 !   inquire about variables in guess

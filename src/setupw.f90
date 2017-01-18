@@ -42,7 +42,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
-  use sparsearr, only: sparr2
+  use sparsearr, only: sparr2, new, size, writearray
 
   implicit none
   
@@ -227,7 +227,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_double) r_prvstg,r_sprvstg
 
   type(sparr2) :: dhx_dx_u, dhx_dx_v
-  integer(i_kind) :: iz, u_ind, v_ind
+  integer(i_kind) :: iz, u_ind, v_ind, nnz, nind
   real(r_kind) :: delz
   logical z_height,sfc_data
   logical,dimension(nobs):: luse,muse
@@ -311,19 +311,16 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=23
+     ioff0=25
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+7*miter+2
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
      if (save_jacobian) then
-       dhx_dx_u%nnz   = 2                   ! number of non-zero elements in dH(x)/dx profile
-       dhx_dx_u%nind   = 1
-       nreal = nreal + 2*dhx_dx_u%nind + dhx_dx_u%nnz + 2    ! non-zero elements, their indices and number of indices
-       allocate(dhx_dx_u%val(dhx_dx_u%nnz), dhx_dx_u%st_ind(dhx_dx_u%nind), dhx_dx_u%end_ind(dhx_dx_u%nind))
-       dhx_dx_v%nnz   = 2                   ! number of non-zero elements in dH(x)/dx profile
-       dhx_dx_v%nind   = 1
-       nreal = nreal + 2*dhx_dx_v%nind + dhx_dx_v%nnz + 2    ! non-zero elements, their indices and number of indices
-       allocate(dhx_dx_v%val(dhx_dx_v%nnz), dhx_dx_v%st_ind(dhx_dx_v%nind), dhx_dx_v%end_ind(dhx_dx_v%nind))
+       nnz   = 2                   ! number of non-zero elements in dH(x)/dx profile
+       nind   = 1
+       call new(dhx_dx_u, nnz, nind)
+       call new(dhx_dx_v, nnz, nind)
+       nreal = nreal + 2*size(dhx_dx_u)
      endif
 
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
@@ -1267,6 +1264,9 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
         rdiagbuf(23,ii) = factw              ! 10m wind reduction factor
 
+        rdiagbuf(24,ii) = 1.e+10             ! u spread (filled in by EnKF)
+        rdiagbuf(25,ii) = 1.e+10             ! v spread (filled in by EnKF)
+
         ioff=ioff0
         if (lobsdiagsave) then
            do jj=1,miter
@@ -1309,27 +1309,10 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         endif
 
         if (save_jacobian) then
-           ioff = ioff + 1
-           rdiagbuf(ioff,ii) = dhx_dx_u%nnz
-           ioff = ioff + 1
-           rdiagbuf(ioff,ii) = dhx_dx_u%nind               ! number of non-zero
-           ioff = ioff + 1
-           rdiagbuf(ioff:ioff+dhx_dx_u%nind-1,ii) = dhx_dx_u%st_ind
-           ioff = ioff + dhx_dx_u%nind
-           rdiagbuf(ioff:ioff+dhx_dx_u%nind-1,ii) = dhx_dx_u%end_ind
-           ioff = ioff + dhx_dx_u%nind
-           rdiagbuf(ioff:ioff+dhx_dx_u%nnz-1,ii) = dhx_dx_u%val
-           ioff = ioff + dhx_dx_u%nnz
-           rdiagbuf(ioff,ii) = dhx_dx_v%nnz
-           ioff = ioff + 1
-           rdiagbuf(ioff,ii) = dhx_dx_v%nind               ! number of non-zero
-           ioff = ioff + 1
-           rdiagbuf(ioff:ioff+dhx_dx_v%nind-1,ii) = dhx_dx_v%st_ind
-           ioff = ioff + dhx_dx_v%nind
-           rdiagbuf(ioff:ioff+dhx_dx_v%nind-1,ii) = dhx_dx_v%end_ind
-           ioff = ioff + dhx_dx_v%nind
-           rdiagbuf(ioff:ioff+dhx_dx_v%nnz-1,ii) = dhx_dx_v%val
-           ioff = ioff + dhx_dx_v%nnz -1
+           call writearray(dhx_dx_u, rdiagbuf(ioff+1:nreal,ii))
+           ioff = ioff + size(dhx_dx_u)
+           call writearray(dhx_dx_v, rdiagbuf(ioff+1:nreal,ii))
+           ioff = ioff + size(dhx_dx_v)
         endif
 
 

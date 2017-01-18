@@ -11,7 +11,7 @@ subroutine setupdw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 ! !USES:
 
-  use mpeu_util, only: die,perr
+  use mpeu_util, only: die,perr,getindex
   use kinds, only: r_kind,r_single,r_double,i_kind
 
 
@@ -27,13 +27,14 @@ subroutine setupdw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
        wgtlim
   use constants, only: tiny_r_kind,half,cg_term,huge_single
 
-  use obsmod, only: rmiss_single,dwtail,dwhead,i_dw_ob_type,obsdiags,&
+  use obsmod, only: rmiss_single,dwtail,dwhead,i_dw_ob_type,obsdiags,lobsdiag_forenkf,&
                     lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset
   use obsmod, only: dw_ob_type
   use obsmod, only: obs_diag,luse_obsdiag
   use gsi_4dvar, only: nobs_bins,hr_obsbin
+  use state_vectors, only: svars3d, levels
 
-  use jfunc, only: last, jiter, miter
+  use jfunc, only: last, jiter, miter, jiterstart
   use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype
   use convinfo, only: icsubtype
 
@@ -41,6 +42,7 @@ subroutine setupdw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
+  use sparsearr, only: sparr2, new, size, writearray
 
   implicit none
 
@@ -113,6 +115,7 @@ subroutine setupdw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2013-10-19  todling - metguess now holds background
 !   2014-01-28  todling - write sensitivity slot indicator (ioff) to header of diagfile
 !   2014-12-30  derber - Modify for possibility of not using obsdiag
+!   2016-11-29  shlyaeva - save linearized H(x) for EnKF
 !
 ! !REMARKS:
 !   language: f90
@@ -163,6 +166,9 @@ subroutine setupdw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) iazm,ielva,iuse,ilate,ilone,istat
   integer(i_kind) idomsfc,isfcr,iff10,iskint
 
+  real(r_kind) :: delz
+  type(sparr2) :: dhx_dx
+  integer(i_kind) :: iz, u_ind, v_ind, nind, nnz
 
   character(8) station_id
   character(8),allocatable,dimension(:):: cdiagbuf
@@ -170,7 +176,7 @@ subroutine setupdw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   logical,dimension(nobs):: luse,muse
   logical proceed
 
-  logical:: in_curbin,in_anybin
+  logical:: in_curbin,in_anybin, save_jacobian
   integer(i_kind),dimension(nobs_bins):: n_alloc
   integer(i_kind),dimension(nobs_bins):: m_alloc
   type(dw_ob_type),pointer:: my_head
@@ -182,6 +188,8 @@ subroutine setupdw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_u
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
+
+  save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
@@ -245,9 +253,15 @@ subroutine setupdw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=26
+     ioff0=27
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
+     if (save_jacobian) then
+       nnz   = 2                   ! number of non-zero elements in dH(x)/dx profile
+       nind   = 1
+       call new(dhx_dx, nnz, nind)
+       nreal = nreal + size(dhx_dx)
+     endif
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
   end if
 
@@ -480,6 +494,26 @@ subroutine setupdw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
      dwwind=(ugesindw*sinazm+vgesindw*cosazm)*factw
 
+     iz = max(1, min( int(dpres), nsig))
+     delz = max(zero, min(dpres - float(iz), one))
+
+     u_ind = getindex(svars3d, 'u')
+     v_ind = getindex(svars3d, 'v')
+
+     if (save_jacobian) then
+        dhx_dx%st_ind(1)  = iz               + sum(levels(1:u_ind-1))
+        dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:u_ind-1))
+
+        dhx_dx%val(1) = (one - delz) * sinazm * factw
+        dhx_dx%val(2) = delz * sinazm * factw
+
+        dhx_dx%st_ind(2)  = iz               + sum(levels(1:v_ind-1))
+        dhx_dx%end_ind(2) = min(iz + 1,nsig) + sum(levels(1:v_ind-1))
+
+        dhx_dx%val(3) = (one - delz) * cosazm * factw
+        dhx_dx%val(4) = delz * cosazm * factw
+     endif
+
      ddiff = data(ilob,i) - dwwind
 
 !    Gross check using innovation normalized by error
@@ -672,6 +706,8 @@ subroutine setupdw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(25,ii) = data(iatd,i)         ! atmospheric depth
         rdiagbuf(26,ii) = data(ilob,i)         ! line of sight component of wind orig.
 
+        rdiagbuf(27,ii) = 1.e+10               ! ges ensemble spread (filled in by EnKF)
+
         ioff=ioff0
         if (lobsdiagsave) then
            do jj=1,miter 
@@ -695,6 +731,12 @@ subroutine setupdw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               rdiagbuf(ioff,ii) = obsdiags(i_dw_ob_type,ibin)%tail%obssen(jj)
            enddo
         endif
+
+        if (save_jacobian) then
+           call writearray(dhx_dx, rdiagbuf(ioff+1:nreal,ii))
+           ioff = ioff + size(dhx_dx)
+        endif
+
 
      end if
 

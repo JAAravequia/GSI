@@ -219,7 +219,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=22
+     ioff0=24
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
@@ -727,6 +727,9 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(20,ii)=data(iazm,i)*rad2deg ! azimuth angle
         rdiagbuf(21,ii)=data(itilt,i)*rad2deg! tilt angle
         rdiagbuf(22,ii) = factw              ! 10m wind reduction factor
+
+        rdiagbuf(23,ii) = 1.e+10             ! ges ensemble spread (filled in EnKF)
+        rdiagbuf(24,ii) = 1.e+10             ! ges ensemble spread (filled in EnKF)
 
         ioff=ioff0
         if (lobsdiagsave) then

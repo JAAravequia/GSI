@@ -34,7 +34,7 @@
 module read_diag
 
   use kinds, only:  i_kind,r_single
-  use sparsearr, only: sparr2
+  use sparsearr, only: sparr2, readarray
   implicit none
 
 ! Declare public and private
@@ -53,6 +53,7 @@ module read_diag
   public :: iversion_radiag_2
   public :: iversion_radiag_3
   public :: iversion_radiag_4
+  public :: iversion_radiag_5
   public :: ireal_old_radiag
   public :: ireal_radiag
   public :: ipchan_radiag
@@ -145,6 +146,7 @@ module read_diag
      real(r_single) :: omgbc              ! Tb_(obs) - Tb_(simulated w/ bc)  (K)
      real(r_single) :: omgnbc             ! Tb_(obs) - Tb_(simulated_w/o bc) (K)
      type(sparr2)   :: dhx_dx             ! profile of dH(x) / dx
+     real(r_single) :: sprd               ! ensemble spread
      real(r_single) :: errinv             ! inverse error (K**(-1))
      real(r_single) :: qcmark             ! quality control mark
      real(r_single) :: emiss              ! surface emissivity
@@ -171,6 +173,7 @@ module read_diag
   integer(i_kind),parameter:: iversion_radiag_2 = 13784   ! Version when NSST entries were added 
   integer(i_kind),parameter:: iversion_radiag_3 = 19180   ! Version when SSMIS added
   integer(i_kind),parameter:: iversion_radiag_4 = 30303   ! Version when emissivity predictor added
+  integer(i_kind),parameter:: iversion_radiag_5 = 40000   ! Version when ensemble spread (and optional jacobian) added
 
   real(r_single),parameter::  rmiss_radiag    = -9.9e11_r_single
 
@@ -637,7 +640,7 @@ subroutine read_radiag_data(ftin,header_fix,retrieval,data_fix,data_chan,data_ex
         end do
         data_chan(ich)%bisst = data_tmp(15+header_fix%angord+2,ich)
      end do
-  else
+  elseif ( header_fix%iversion < iversion_radiag_5 .and. header_fix%iversion >= iversion_radiag_4 ) then
      do ich=1,header_fix%nchan
         data_chan(ich)%bicons=data_tmp(9,ich)
         data_chan(ich)%biang =data_tmp(10,ich)
@@ -652,31 +655,31 @@ subroutine read_radiag_data(ftin,header_fix,retrieval,data_fix,data_chan,data_ex
         do iang=1,header_fix%angord+1
            data_chan(ich)%bifix(iang)=data_tmp(16+iang,ich)
         end do
+        data_chan(ich)%bisst = data_tmp(16+header_fix%angord+2,ich)
+     end do
+  else
+     do ich=1,header_fix%nchan
+        data_chan(ich)%bicons=data_tmp(9,ich)
+        data_chan(ich)%biang =data_tmp(10,ich)
+        data_chan(ich)%biclw =data_tmp(11,ich)
+        data_chan(ich)%bilap2=data_tmp(12,ich)
+        data_chan(ich)%bilap =data_tmp(13,ich)
+        data_chan(ich)%bicos =data_tmp(14,ich)
+        data_chan(ich)%bisin =data_tmp(15,ich)
+        data_chan(ich)%biemis=data_tmp(16,ich)
+     end do
+     do ich=1,header_fix%nchan
+        do iang=1,header_fix%angord+1
+           data_chan(ich)%bifix(iang)=data_tmp(16+iang,ich)
+        end do
         data_chan(ich)%bisst = data_tmp(16+header_fix%angord+2,ich)  
+        data_chan(ich)%sprd  = data_tmp(16+header_fix%angord+3,ich)
      end do
 
      do ich=1,header_fix%nchan
-        ind = header_fix%ipchan + header_fix%npred + 2
         if (header_fix%ijacob==1) then
-           ind = ind + 1
-           data_chan(ich)%dhx_dx%nnz = data_tmp(ind,ich)
-           ind = ind + 1
-           data_chan(ich)%dhx_dx%nind = data_tmp(ind,ich)
-           ind = ind + 1
-           nnz = data_chan(ich)%dhx_dx%nnz
-           nind = data_chan(ich)%dhx_dx%nind
-           if (allocated(data_chan(ich)%dhx_dx%val))     deallocate(data_chan(ich)%dhx_dx%val)
-           if (allocated(data_chan(ich)%dhx_dx%st_ind))  deallocate(data_chan(ich)%dhx_dx%st_ind)
-           if (allocated(data_chan(ich)%dhx_dx%end_ind)) deallocate(data_chan(ich)%dhx_dx%end_ind)
-           allocate(data_chan(ich)%dhx_dx%val(nnz))
-           allocate(data_chan(ich)%dhx_dx%st_ind(nind))
-           allocate(data_chan(ich)%dhx_dx%end_ind(nind))
-
-           data_chan(ich)%dhx_dx%st_ind  = data_tmp(ind:ind+nind-1,ich)
-           ind = ind + nind
-           data_chan(ich)%dhx_dx%end_ind = data_tmp(ind:ind+nind-1,ich)
-           ind = ind + nind
-           data_chan(ich)%dhx_dx%val     = data_tmp(ind:ind+nnz-1,ich)
+           call readarray(data_chan(ich)%dhx_dx,                        &
+                          data_tmp(16+header_fix%angord+4:header_fix%idiag,ich))
         endif
      enddo
   endif

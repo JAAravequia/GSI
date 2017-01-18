@@ -67,11 +67,11 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-  use mpeu_util, only: die,perr
+  use mpeu_util, only: die,perr,getindex
   use kinds, only: r_kind,r_single,r_double,i_kind
   use guess_grids, only: ges_prsi,hrdifsig,nfldsig
   use gridmod, only: lat2,lon2,nsig,get_ij
-  use obsmod, only: pwhead,pwtail,rmiss_single,i_pw_ob_type,obsdiags,&
+  use obsmod, only: pwhead,pwtail,rmiss_single,i_pw_ob_type,obsdiags,lobsdiag_forenkf,&
                     lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset
   use obsmod, only: pw_ob_type
   use obsmod, only: obs_diag,luse_obsdiag
@@ -79,7 +79,7 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use constants, only: zero,one,tpwcon,r1000,r10, &
        tiny_r_kind,three,half,two,cg_term,huge_single,&
        wgtlim, rd
-  use jfunc, only: jiter,last,miter
+  use jfunc, only: jiter,last,miter,jiterstart
   use qcmod, only: dfact,dfact1,npres_print
   use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype
   use convinfo, only: icsubtype
@@ -87,6 +87,8 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use rapidrefresh_cldsurf_mod, only: l_pw_hgt_adjust, l_limit_pw_innov, max_innov_pct
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
+  use state_vectors, only: svars3d, levels
+  use sparsearr, only: sparr2, new, size, writearray
   implicit none
 
 ! Declare passed variables
@@ -132,7 +134,10 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   character(8) station_id
   character(8),allocatable,dimension(:):: cdiagbuf
 
-  logical:: in_curbin, in_anybin
+  type(sparr2) :: dhx_dx
+  integer(i_kind) :: q_ind, nnz, nind
+
+  logical:: in_curbin, in_anybin, save_jacobian
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
   type(pw_ob_type),pointer:: my_head
@@ -143,6 +148,9 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
+
+
+  save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
   n_alloc(:)=0
   m_alloc(:)=0
@@ -214,9 +222,15 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! If requested, save select data for output to diagnostic file
   if(conv_diagsave)then
      nchar=1
-     ioff0=19
+     ioff0=20
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
+     if (save_jacobian) then
+       nnz   = nsig                   ! number of non-zero elements in dH(x)/dx profile
+       nind   = 1
+       call new(dhx_dx, nnz, nind)
+       nreal = nreal + size(dhx_dx)
+     endif
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
      ii=0
   end if
@@ -309,6 +323,19 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! Interpolate pressure at interface values to obs location
      call tintrp2a1(ges_prsi,prsitmp,dlat,dlon,dtime, &
          hrdifsig,nsig+1,mype,nfldsig)
+
+
+     q_ind =getindex(svars3d,'q')
+
+     if (save_jacobian) then
+        dhx_dx%st_ind(1)  = 1    + sum(levels(1:q_ind-1))
+        dhx_dx%end_ind(1) = nsig + sum(levels(1:q_ind-1))
+
+        do k = 1, nsig
+           dhx_dx%val(k) = tpwcon*r10*(prsitmp(k)-prsitmp(k+1))
+        enddo
+     endif
+
 
      if(.not.l_pw_hgt_adjust) then
         ! Compute innovation
@@ -518,6 +545,8 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(18,ii) = ddiff              ! obs-ges used in analysis (kg/m**2)
         rdiagbuf(19,ii) = dpw-pwges          ! obs-ges w/o bias correction (kg/m**2) (future slot)
 
+        rdiagbuf(20,ii) = 1.e+10             ! ensemble ges spread (filled in by EnKF)
+
         ioff=ioff0
         if (lobsdiagsave) then
            do jj=1,miter 
@@ -540,6 +569,11 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               ioff=ioff+1
               rdiagbuf(ioff,ii) = obsdiags(i_pw_ob_type,ibin)%tail%obssen(jj)
            enddo
+        endif
+
+        if (save_jacobian) then
+           call writearray(dhx_dx, rdiagbuf(ioff+1:nreal,ii))
+           ioff = ioff + size(dhx_dx)
         endif
 
      end if

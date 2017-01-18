@@ -233,7 +233,7 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
         end do
      END DO
      if(icnt > 0)then
-        nreal =21
+        nreal =22
         ioff  =nreal
         if (lobsdiagsave) nreal=nreal+4*miter+1
         if (save_jacobian) then
@@ -313,7 +313,7 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
 !       zero (effectively tossing the obs).
  
         rhgt = gps_allptr%loc
-        mreal = 21
+        mreal = 22
         if(dtype == zero) then !refractivity
           if (rhgt<=toss_gps(kprof)) then
              if(ratio_errors*data_ier > tiny_r_kind) then ! obs was good

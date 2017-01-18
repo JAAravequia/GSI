@@ -52,6 +52,7 @@ subroutine setupsrw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !                                  tintrp3 to tintrp31 (so debug compile works on WCOSS)
 !   2013-10-19  todling - metguess now holds background
 !   2014-01-28  todling - write sensitivity slot indicator (ioff) to header of diagfile
+!   2016-11-29  shlyaeva - save linearized H(x) for EnKF
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -72,9 +73,10 @@ subroutine setupsrw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-  use mpeu_util, only: die,perr
+  use mpeu_util, only: die,perr,getindex
+  use state_vectors, only: svars3d, levels
   use kinds, only: r_kind,r_single,r_double,i_kind
-  use obsmod, only: srwhead,srwtail,rmiss_single,i_srw_ob_type,obsdiags,&
+  use obsmod, only: srwhead,srwtail,rmiss_single,i_srw_ob_type,obsdiags,lobsdiag_forenkf,&
                     obsptr,lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset
   use obsmod, only: srw_ob_type
   use obsmod, only: obs_diag,luse_obsdiag
@@ -87,12 +89,13 @@ subroutine setupsrw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use constants, only: flattening,semi_major_axis,grav_ratio,wgtlim,&
        zero,two,grav,grav_equator,one,eccentricity,somigliana,deg2rad,&
        tiny_r_kind,half,cg_term,huge_single
-  use jfunc, only: jiter,last,miter
+  use jfunc, only: jiter,last,miter,jiterstart
   use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype
   use convinfo, only: icsubtype
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
+  use sparsearr, only: sparr2, new, size, writearray
   implicit none
 
 ! Declare passed variables
@@ -139,13 +142,17 @@ subroutine setupsrw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) ier,ilon,ilat,ihgt,ihat1,ihat2,id,itime,ikx,ilate,ilone
   integer(i_kind) ibigu11,ibigu21,ibigu12,ibigu22,iuse,irange,istat
 
+  type(sparr2) :: dhx_dx_u, dhx_dx_v
+  integer(i_kind) :: iz, u_ind, v_ind, nnz, nind
+  real(r_kind) :: delz
+
   character(8) station_id
   character(8),allocatable,dimension(:):: cdiagbuf
 
   logical,dimension(nobs):: luse,muse
   logical proceed
 
-  logical:: in_curbin, in_anybin
+  logical:: in_curbin, in_anybin, save_jacobian
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
   type(srw_ob_type),pointer:: my_head
@@ -157,6 +164,8 @@ subroutine setupsrw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_u
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
+
+  save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
@@ -218,9 +227,16 @@ subroutine setupsrw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=24
+     ioff0=25
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+7*miter+2
+     if (save_jacobian) then
+       nnz   = 4                   ! number of non-zero elements in dH(x)/dx profile
+       nind  = 2
+       call new(dhx_dx_u, nnz, nind)
+       call new(dhx_dx_v, nnz, nind)
+       nreal = nreal + 2*size(dhx_dx_u)
+     endif
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
   end if
   scale=one
@@ -418,6 +434,32 @@ subroutine setupsrw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
      srw1gesin=factw*srw1gesin
      srw2gesin=factw*srw2gesin
+
+     iz = max(1, min( int(dpres), nsig))
+     delz = max(zero, min(dpres - float(iz), one))
+
+     u_ind =getindex(svars3d,'u')
+     v_ind =getindex(svars3d,'v')
+
+     if (save_jacobian) then
+        dhx_dx_u%st_ind(1)  = iz               + sum(levels(1:u_ind-1))
+        dhx_dx_u%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:u_ind-1))
+        dhx_dx_u%st_ind(2)  = iz               + sum(levels(1:v_ind-1))
+        dhx_dx_u%end_ind(2) = min(iz + 1,nsig) + sum(levels(1:v_ind-1))
+
+        dhx_dx_v%st_ind  = dhx_dx_u%st_ind
+        dhx_dx_v%end_ind = dhx_dx_u%end_ind
+
+        dhx_dx_u%val(1) = (one - delz) * data(ibigu11,i) * factw
+        dhx_dx_u%val(2) = delz * data(ibigu11,i) * factw
+        dhx_dx_u%val(3) = (one - delz) * data(ibigu12,i) * factw
+        dhx_dx_u%val(4) = delz * data(ibigu12,i) * factw
+
+        dhx_dx_v%val(1) = (one - delz) * data(ibigu21,i) * factw
+        dhx_dx_v%val(2) = delz * data(ibigu21,i) * factw
+        dhx_dx_v%val(3) = (one - delz) * data(ibigu22,i) * factw
+        dhx_dx_v%val(4) = delz * data(ibigu22,i) * factw
+     endif
 
      d1diff=data(ihat1,i)-srw1gesin
      d2diff=data(ihat2,i)-srw2gesin
@@ -638,6 +680,8 @@ subroutine setupsrw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(23,ii) = factw              ! 10m wind reduction factor
         rdiagbuf(24,ii) = data(irange,i)      ! superob mean range from radar (m)
 
+        rdiagbuf(25,ii) = 1.e+10             ! ensemble ges spread (filled in by EnKF)
+
         ioff=ioff0
         if (lobsdiagsave) then
            do jj=1,miter
@@ -667,6 +711,14 @@ subroutine setupsrw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               rdiagbuf(ioff,ii) = obsdiags(i_srw_ob_type,ibin)%tail%obssen(jj)
            enddo
         endif
+
+        if (save_jacobian) then
+           call writearray(dhx_dx_u, rdiagbuf(ioff+1:nreal,ii))
+           ioff = ioff + size(dhx_dx_u)
+           call writearray(dhx_dx_v, rdiagbuf(ioff+1:nreal,ii))
+           ioff = ioff + size(dhx_dx_v)
+        endif
+
 
      end if
 

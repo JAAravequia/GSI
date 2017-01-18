@@ -234,7 +234,7 @@
   use state_vectors, only: svars3d, levels, svars2d, ns3d
   use oneobmod, only: lsingleradob,obchan,oblat,oblon,oneob_type
   use radinfo, only: radinfo_adjust_jacobian,radinfo_get_rsqrtinv 
-  use sparsearr, only: sparr2
+  use sparsearr, only: sparr2, new, writearray, size
 
 
 
@@ -343,7 +343,7 @@
   integer(i_kind):: iinstr
   integer(i_kind) :: chan_count
   integer(i_kind),allocatable,dimension(:) :: sc_index
-  integer(i_kind)  :: state_ind
+  integer(i_kind)  :: state_ind, nind, nnz
 
   logical channel_passive
   logical,dimension(nobs):: luse
@@ -672,13 +672,13 @@
 
 
 ! Allocate array to hold channel information for diagnostic file and/or lobsdiagsave option
-  idiag=ipchan_radiag+npred+2
+  idiag=ipchan_radiag+npred+3
 
   if (save_jacobian) then
-    dhx_dx%nnz   = nsigradjac
-    dhx_dx%nind  = nvarjac
-    idiag = idiag + 2*dhx_dx%nind + dhx_dx%nnz + 2
-    allocate(dhx_dx%val(dhx_dx%nnz),dhx_dx%st_ind(dhx_dx%nind),dhx_dx%end_ind(dhx_dx%nind))
+    nnz   = nsigradjac
+    nind  = nvarjac
+    call new(dhx_dx, nnz, nind)
+    idiag = idiag + size(dhx_dx)
   endif
   if (lobsdiagsave) idiag=idiag+4*miter+1
   allocate(diagbufchan(idiag,nchanl_diag))
@@ -1983,6 +1983,7 @@
                     diagbufchan(ipchan_radiag+j,i)=predbias(j,ich_diag(i)) ! Tb bias correction terms (K)
                  end do
               end if
+              diagbufchan(ipchan_radiag+npred+3,i) = 1.e+10   ! spread (filled in by EnKF)
 
               if (save_jacobian) then
               j = 1
@@ -2015,19 +2016,10 @@
               endif
 
 
-              ioff = ipchan_radiag+npred+2
+              ioff = ipchan_radiag+npred+3
               if (save_jacobian) then
-                 ioff = ioff+1
-                 diagbufchan(ioff,i) = dhx_dx%nnz
-                 ioff = ioff+1
-                 diagbufchan(ioff,i) = dhx_dx%nind
-                 ioff = ioff+1
-                 diagbufchan(ioff:ioff+dhx_dx%nind-1,i) = dhx_dx%st_ind(:)
-                 ioff = ioff+dhx_dx%nind
-                 diagbufchan(ioff:ioff+dhx_dx%nind-1,i) = dhx_dx%end_ind(:)
-                 ioff = ioff+dhx_dx%nind
-                 diagbufchan(ioff:ioff+dhx_dx%nnz-1,i) = dhx_dx%val
-                 ioff = ioff+dhx_dx%nnz-1
+                 call writearray(dhx_dx, diagbufchan(ioff+1:idiag,i))
+                 ioff = ioff+size(dhx_dx)
               endif
 
 
