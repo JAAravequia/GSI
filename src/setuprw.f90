@@ -78,7 +78,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use mpeu_util, only: die,perr
   use kinds, only: r_kind,r_single,r_double,i_kind
 
-  use obsmod, only: rwhead,rwtail,rmiss_single,i_rw_ob_type,obsdiags,&
+  use obsmod, only:rwhead,rwtail,rmiss_single,i_rw_ob_type,obsdiags,lobsdiag_forenkf,&
                     lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset
   use obsmod, only: rw_ob_type
   use obsmod, only: obs_diag,luse_obsdiag
@@ -90,12 +90,13 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use constants, only: flattening,semi_major_axis,grav_ratio,zero,grav,wgtlim,&
        half,one,two,grav_equator,eccentricity,somigliana,rad2deg,deg2rad
   use constants, only: tiny_r_kind,cg_term,huge_single,r2000,three,one
-  use jfunc, only: jiter,last,miter
+  use jfunc, only: jiter,last,miter,jiterstart
   use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype
   use convinfo, only: icsubtype
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
+  use sparsearr, only: sparr2, new, size, writearray
   implicit none
 
 ! Declare passed variables
@@ -162,7 +163,10 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) numequal,numnotequal,kminmin,kmaxmax,istat
   real(r_kind) rwwindprofile
 
-  logical:: in_curbin, in_anybin
+  type(sparr2) :: dhx_dx
+  integer(i_kind) :: nnz, nind
+
+  logical:: in_curbin, in_anybin, save_jacobian
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
   type(rw_ob_type),pointer:: my_head
@@ -174,6 +178,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_u
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
 
+  save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
   if(.not.proceed) return  ! not all vars available, simply return
@@ -222,6 +227,12 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      ioff0=24
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
+     if (save_jacobian) then
+        nnz = 0
+        nind = 0
+        call new(dhx_dx, nnz, nind)
+        nreal = nreal + size(dhx_dx)
+     endif
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
   end if
 
@@ -753,6 +764,11 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               ioff=ioff+1
               rdiagbuf(ioff,ii) = obsdiags(i_rw_ob_type,ibin)%tail%obssen(jj)
            enddo
+        endif
+
+        if (save_jacobian) then
+           call writearray(dhx_dx, rdiagbuf(ioff+1:nreal,ii))
+           ioff = ioff + size(dhx_dx)
         endif
 
      end if

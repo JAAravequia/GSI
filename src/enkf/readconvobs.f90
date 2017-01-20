@@ -213,7 +213,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
                             x_lon, x_lat, x_press, x_time, x_code,         &
                             x_errorig, x_type, x_used, id, nanal)
-  use sparsearr
+  use sparsearr, only: sparr2, readarray, delete
   use params, only: nanals, lobsdiag_forenkf
   use statevec, only: state_d
   use mpisetup, only: nproc, mpi_wtime
@@ -250,7 +250,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
   integer(i_kind) :: nchar, nreal, ii, mype, ioff0
   integer(i_kind) :: nchar2, nreal2, ii2, mype2, ioff02, idate2
   integer(i_kind) :: ipe, ios, idate
-  integer(i_kind) :: nnz, ind, nind
+  integer(i_kind) :: ind
   character(8),allocatable,dimension(:)     :: cdiagbuf, cdiagbuf2
   real(r_single),allocatable,dimension(:,:) :: rdiagbuf, rdiagbuf2
   real(r_kind) :: errorlimit,errorlimit2,error,errororig
@@ -458,23 +458,10 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
                 endif
 
              ! run the linearized Hx 
-              elseif (obtype /= 'spd' .and. obtype /= 'srw' .and. &
-                     obtype /= ' rw' .and. obtype /= ' dw' .and. obtype /= ' pw') then
+             else
                 ind = ioff0 + 1
-                nnz = rdiagbuf(ind,n)
-                dhx_dx%nnz = nnz
-                ind = ind + 1
-                nind = rdiagbuf(ind,n)
-                dhx_dx%nind = nind
-                ind = ind + 1
-
-                allocate(dhx_dx%val(nnz), dhx_dx%st_ind(nind), dhx_dx%end_ind(nind))
-                dhx_dx%st_ind = rdiagbuf(ind:ind+nind-1, n)
-                ind = ind + nind
-                dhx_dx%end_ind = rdiagbuf(ind:ind+nind-1,n)
-                ind = ind + nind
-                dhx_dx%val = rdiagbuf(ind:ind+nnz-1,n)
-                ind = ind + nnz
+                call readarray(dhx_dx, rdiagbuf(ind:nreal,n))
+                ind = ind + dhx_dx%nnz + dhx_dx%nind*2 + 2
 
                 t1 = mpi_wtime()
                 call observer(hx_mean_nobc(nob), state_d,             &
@@ -485,7 +472,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
                 t2 = mpi_wtime()
                 tsum = tsum + t2-t1
 
-                deallocate(dhx_dx%val, dhx_dx%st_ind, dhx_dx%end_ind)
+                call delete(dhx_dx)
              endif
 
              ! normalize q by qsatges
@@ -536,20 +523,8 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
                 if (.not. lobsdiag_forenkf) then
                    hx(nob) = rdiagbuf(20,n)-rdiagbuf2(22,n)
                 ! run linearized Hx
-                elseif (obtype /= ' rw') then
-                   nnz = rdiagbuf(ind,n)
-                   dhx_dx%nnz = nnz
-                   ind = ind + 1
-                   nind = rdiagbuf(ind,n)
-                   dhx_dx%nind = nind
-                   ind = ind + 1
-
-                   allocate(dhx_dx%val(nnz), dhx_dx%st_ind(nind), dhx_dx%end_ind(nind))
-                   dhx_dx%st_ind = rdiagbuf(ind:ind+nind-1, n)
-                   ind = ind + nind
-                   dhx_dx%end_ind = rdiagbuf(ind:ind+nind-1,n)
-                   ind = ind + nind
-                   dhx_dx%val = rdiagbuf(ind:ind+nnz-1,n)
+                else
+                   call readarray(dhx_dx, rdiagbuf(ind:nreal,n))
   
                    t1 = mpi_wtime()
                    call observer(hx_mean_nobc(nob), state_d,                  &
@@ -560,7 +535,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
                    t2 = mpi_wtime()
                    tsum = tsum + t2-t1
 
-                   deallocate(dhx_dx%val, dhx_dx%st_ind, dhx_dx%end_ind)
+                   call delete(dhx_dx)
                 endif
              endif
           endif
@@ -656,7 +631,7 @@ subroutine write_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, &
 
   character(len=3) :: obtype
   integer(i_kind) :: iunit, iunit2
-  integer(i_kind) :: nob, nobdiag, n
+  integer(i_kind) :: nob, nobdiag, n, ind_sprd
   integer(i_kind) :: nchar, nreal, ii, ipe, ios, idate, mype, ioff0
   character(8),allocatable,dimension(:)     :: cdiagbuf
   real(r_single),allocatable,dimension(:,:) :: rdiagbuf
@@ -701,12 +676,24 @@ subroutine write_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, &
     allocate(cdiagbuf(ii),rdiagbuf(nreal,ii))
     read(iunit,err=20) cdiagbuf(1:ii),rdiagbuf(1:nreal,1:ii)
 
-    if ((obtype == '  t') .or. (obtype == ' ps') .or. (obtype == 'tcp') .or. &
-        (obtype == '  q') .or. (obtype == 'spd') .or. (obtype == ' dw') .or. &
-        (obtype == ' pw') .or. (obtype == 'srw') .or. (obtype == ' dw')) then
+    ind_sprd = -1
+    if (obtype == '  t' .or. obtype == ' ps' .or. obtype == 'tcp' .or. &
+        obtype == ' pw') then
+       ind_sprd = 20
+    elseif (obtype == '  q' .or. obtype == 'spd') then
+       ind_sprd = 21
+    elseif (obtype == 'gps') then
+       ind_sprd = 22
+    elseif (obtype == ' dw') then
+       ind_sprd = 27
+    elseif (obtype == 'srw') then
+       ind_sprd = 25
+    endif
+
+    if (obtype == '  t' .or. obtype == ' ps' .or. obtype == 'tcp' .or. &
+        obtype == '  q' .or. obtype == ' dw' .or. obtype == ' pw' .or. &
+        obtype == 'srw' .or. obtype == 'spd' .or. obtype == 'gps') then
        ! defaults for not used in EnKF
-       rdiagbuf(18,:) = -1.e10
-       rdiagbuf(19,:) = 1.e10
        rdiagbuf(12,:) = -1        ! not used in EnKF
        ! only process if this record was used in EnKF
        do n=1,ii
@@ -716,27 +703,24 @@ subroutine write_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, &
              ! update if it is used in EnKF
              nob = nob + 1
              rdiagbuf(12,n) = 1
-             rdiagbuf(18,n) = x_fit(nob)
-             rdiagbuf(19,n) = x_sprd(nob)
-          endif
-       enddo
-    ! don't know what to do with gps
-    else if (obtype == 'gps') then
-       rdiagbuf(18,:) = -1.e10
-       do n=1,ii
-          nobdiag = nobdiag + 1
-          ! skip if not used in EnKF
-          if (x_used(nobdiag) == 1) then
-             nob = nob + 1
+             if (obtype == 'gps') then
+                rdiagbuf(5,n)  = x_fit(nob) / rdiagbuf(17,n)
+             else if (obtype == '  q') then
+                rdiagbuf(19,n) = (x_fit(nob) + rdiagbuf(19,n) - rdiagbuf(18,n)) * rdiagbuf(20,n)
+                rdiagbuf(18,n) = x_fit(nob) * rdiagbuf(20,n)
+             else
+                rdiagbuf(19,n) = x_fit(nob) + rdiagbuf(19,n) - rdiagbuf(18,n)
+                rdiagbuf(18,n) = x_fit(nob)
+             endif
+             rdiagbuf(ind_sprd,n) = x_sprd(nob)
+             if (obtype == '  q') then
+                rdiagbuf(ind_sprd,n) = x_sprd(nob) * rdiagbuf(20,n)*rdiagbuf(20,n)
+             endif
           endif
        enddo
     ! special processing for u and v
     else if (obtype == ' uv') then
        ! defaults for not used in EnKF
-       rdiagbuf(18,:) = -1.e10
-       rdiagbuf(19,:) = 1.e10
-       rdiagbuf(21,:) = -1.e10
-       rdiagbuf(22,:) = 1.e10
        rdiagbuf(12,:) = -1
        do n=1,ii
           nobdiag = nobdiag + 1
@@ -744,11 +728,13 @@ subroutine write_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, &
              nob = nob + 1
              rdiagbuf(12,n) = 1
              ! u should be saved first
+             rdiagbuf(19,n) = x_fit(nob) + rdiagbuf(19,n) - rdiagbuf(18,n)
              rdiagbuf(18,n) = x_fit(nob)
-             rdiagbuf(19,n) = x_sprd(nob)
+             rdiagbuf(24,n) = x_sprd(nob)
              nob = nob + 1
+             rdiagbuf(22,n) = x_fit(nob) + rdiagbuf(22,n) - rdiagbuf(21,n)
              rdiagbuf(21,n) = x_fit(nob)
-             rdiagbuf(22,n) = x_sprd(nob)
+             rdiagbuf(25,n) = x_sprd(nob)
           endif
        enddo
     ! tcx, tcy, tcz have guess in different field from the rest
@@ -765,8 +751,8 @@ subroutine write_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, &
        nobdiag = nobdiag + ii
     endif
     ! write the updated rdiagbuf
-    write(iunit2,err=20) obtype,nchar,ioff0,ii,mype,ioff0
-    write(iunit2) cdiagbuf(1:ii),rdiagbuf(1:ioff0,1:ii)
+    write(iunit2,err=20) obtype,nchar,nreal,ii,mype,ioff0
+    write(iunit2) cdiagbuf(1:ii),rdiagbuf(:,1:ii)
     deallocate(cdiagbuf,rdiagbuf)
 
     go to 10

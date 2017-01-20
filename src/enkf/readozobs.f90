@@ -126,7 +126,7 @@ end subroutine get_num_ozobs
 subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
 
-  use sparsearr,only:sparr2
+  use sparsearr,only:sparr2, readarray, delete
   use params,only: nanals, lobsdiag_forenkf
   use statevec, only: state_d
   use mpisetup, only: mpi_wtime, nproc
@@ -158,7 +158,7 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
   integer(i_kind) nob, nobdiag, n, ios, nsat, k
   integer(i_kind) iunit,jiter,ii,ireal,iint,irdim1,idate,ioff0
   integer(i_kind) iunit2,jiter2,ii2,ireal2,iint2,irdim12,idate2,ioff02,nlevs2
-  integer(i_kind) ipe,ind,nnz,nind
+  integer(i_kind) ipe,ind
 
   real(r_double) t1,t2,tsum
   type(sparr2)         :: dhx_dx
@@ -321,19 +321,7 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
                else
                   ind = ioff0 + 1
                   ! read dHx/dx profile
-                  nnz = rdiagbuf(ind,k,n)
-                  dhx_dx%nnz = nnz
-                  ind = ind + 1
-                  nind = rdiagbuf(ind,k,n)
-                  dhx_dx%nind = nind
-                  ind = ind + 1
-
-                  allocate(dhx_dx%val(nnz), dhx_dx%st_ind(nind), dhx_dx%end_ind(nind))
-                  dhx_dx%st_ind = rdiagbuf(ind:ind+nind-1,k,n)
-                  ind = ind + nind
-                  dhx_dx%end_ind = rdiagbuf(ind:ind+nind-1,k,n)
-                  ind = ind + nind
-                  dhx_dx%val = rdiagbuf(ind:ind+nnz-1,k,n)
+                  call readarray(dhx_dx, rdiagbuf(ind:irdim1,k,n))
    
                   t1 = mpi_wtime()
                   call observer(hx_mean_nobc(nob), state_d,                  &
@@ -343,7 +331,8 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
                              dhx_dx, hx(nob))
                   t2 = mpi_wtime()
                   tsum = tsum + t2-t1
-                  deallocate(dhx_dx%val, dhx_dx%st_ind, dhx_dx%end_ind)
+
+                  call delete(dhx_dx)
                endif
              endif
 
@@ -446,6 +435,7 @@ subroutine write_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, 
                if (x_used(nobdiag) == 1) then
                   nob = nob + 1
                   rdiagbuf(2,k,n) = x_fit(nob)
+                  rdiagbuf(7,k,n) = x_sprd(nob)
                endif
             enddo 
          enddo

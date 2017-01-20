@@ -432,7 +432,7 @@ subroutine write_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit,
   character(len=20):: sensat
 
   integer(i_kind):: jiter,nchanl,npred,ianldate,ireal,ipchan,iextra,jextra
-  integer(i_kind):: idiag,idiag_new,angord,iversion,inewpc,isens
+  integer(i_kind):: idiag,angord,iversion,inewpc,isens,ijacob
   integer(i_kind):: iuse_tmp,nuchan_tmp,iochan_tmp
   real(r_single) :: freq_tmp,polar_tmp,wave_tmp,varch_tmp,tlapmean_tmp
 
@@ -488,31 +488,37 @@ subroutine write_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit,
      if (init_pass) then
         open(iunit2,form="unformatted",file=obsfile2)
         ! Read header (fixed_part).
-        read(iunit,IOSTAT=iflag) sensat,satid,sentype,jiter,nchanl,npred,ianldate,      &
-               ireal,ipchan,iextra,jextra,idiag,angord,iversion,inewpc,isens
-        if (iflag==0) then
-           idiag_new = ipchan + npred + 2
-           write(iunit2) sensat,satid,sentype,jiter,nchanl,npred,ianldate, &
-                  ireal,ipchan,iextra,jextra,idiag_new,angord,iversion,inewpc,isens
-        else
-           rewind(iunit)
-           read(iunit,IOSTAT=iflag) sensat,satid,sentype,jiter,nchanl,npred,ianldate,    &
-                 ireal,ipchan,iextra,jextra,idiag,angord,iversion,inewpc
-           if (iflag==0) then
-              idiag_new = ipchan + npred + 2
-              write(iunit2) sensat,satid,sentype,jiter,nchanl,npred,ianldate, &
-                     ireal,ipchan,iextra,jextra,idiag_new,angord,iversion,inewpc
-           else
-              rewind(iunit)
-              read(iunit,IOSTAT=iflag) sensat,satid,sentype,jiter,nchanl,npred,ianldate, &
-                     ireal,ipchan,iextra,jextra
-              if (iflag==0) then
-                 idiag_new = ipchan + npred + 2
-                 write(iunit2) sensat,satid,sentype,jiter,nchanl,npred,ianldate, &
-                       ireal,ipchan,iextra,jextra
-              else
-                 write(6,*)'READ_RADIAG_HEADER:  ***ERROR*** Unknown file format.Cannot read'
-                 call stop2(5555)
+         read(iunit,IOSTAT=iflag)  sensat,satid,sentype,jiter,nchanl,npred,ianldate,&
+               ireal,ipchan,iextra,jextra,idiag,angord,iversion,inewpc,isens,ijacob
+         if (iflag == 0) then
+            write(iunit2) sensat,satid,sentype,jiter,nchanl,npred,ianldate,&
+               ireal,ipchan,iextra,jextra,idiag,angord,iversion,inewpc,isens,ijacob
+         else
+            rewind(iunit)
+            read(iunit,IOSTAT=iflag) sensat,satid,sentype,jiter,nchanl,npred,ianldate,&
+                 ireal,ipchan,iextra,jextra,idiag,angord,iversion,inewpc,isens
+            ijacob=0
+            if (iflag==0) then
+               write(iunit2) sensat,satid,sentype,jiter,nchanl,npred,ianldate, &
+                     ireal,ipchan,iextra,jextra,idiag,angord,iversion,inewpc,isens
+            else
+               rewind(iunit)
+               read(iunit,IOSTAT=iflag) sensat,satid,sentype,jiter,nchanl,npred,ianldate,    &
+                    ireal,ipchan,iextra,jextra,idiag,angord,iversion,inewpc
+               if (iflag==0) then
+                  write(iunit2) sensat,satid,sentype,jiter,nchanl,npred,ianldate, &
+                       ireal,ipchan,iextra,jextra,idiag,angord,iversion,inewpc
+               else
+                  rewind(iunit)
+                  read(iunit,IOSTAT=iflag) sensat,satid,sentype,jiter,nchanl,npred,ianldate, &
+                         ireal,ipchan,iextra,jextra
+                  if (iflag==0) then
+                     write(iunit2) sensat,satid,sentype,jiter,nchanl,npred,ianldate, &
+                          ireal,ipchan,iextra,jextra
+                  else
+                     write(6,*)'READ_RADIAG_HEADER:  ***ERROR*** Unknown file format.Cannot read'
+                     call stop2(5555)
+                  endif
               endif
            endif
         endif
@@ -545,21 +551,21 @@ subroutine write_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit,
         if( iflag /= 0 ) then
            exit
         end if
-        data_tmp(2,:) = -1.e10
-        data_tmp(3,:) = 1.e10
         chan:do n=1,nchanl
-           ! skip channel if it's not used
+           if (data_tmp(5,n) == 0)  data_tmp(5,n) = 100 ! qcmark: not used in EnKF
            nobsdiag = nobsdiag + 1
            if (x_used(nobsdiag) == 1) then
               nobs = nobs + 1
+              data_tmp(5,n) = 0
+              data_tmp(3,n) = x_fit(nobs) + data_tmp(3,n)-data_tmp(2,n)
               data_tmp(2,n) = x_fit(nobs)
-              data_tmp(3,n) = x_sprd(nobs)
+              data_tmp(16+angord+3,n) = x_sprd(nobs)
            endif
         enddo chan
         if (iextra == 0) then
-           write(iunit2) fix_tmp, data_tmp(1:idiag_new,:)
+           write(iunit2) fix_tmp, data_tmp
         else
-           write(iunit2) fix_tmp, data_tmp(1:idiag_new,:), extra_tmp
+           write(iunit2) fix_tmp, data_tmp, extra_tmp
         endif
      enddo
      if (allocated(data_tmp)) deallocate(data_tmp)
