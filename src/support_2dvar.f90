@@ -360,6 +360,7 @@ subroutine read_2d_files(mype)
 !                         obs changed. Adjust guess times accordingly by using time_offset
 !                         and thus ensure that fgat works properly
 !   2010-04-20  jing    - set hrdifsig_all and hrdifsfc_all for non-ESMF cases.
+!   2016-06-07  yang    - add iadatemn
 !
 !   input argument list:
 !     mype     - pe number
@@ -379,7 +380,7 @@ subroutine read_2d_files(mype)
   use guess_grids, only: hrdifsig_all,hrdifsfc_all
   use gsi_4dvar, only: nhr_assimilation
   use constants, only: zero,one,r60inv
-  use obsmod, only: iadate,time_offset
+  use obsmod, only: iadate,time_offset,iadatemn
   implicit none
 
 ! Declare passed variables
@@ -395,7 +396,9 @@ subroutine read_2d_files(mype)
   integer(i_kind) i,j,iwan,npem1
   integer(i_kind) nhr_half
   integer(i_kind) nminanl,nmings,nming2,ndiff
+  integer(i_kind) datewminute
   integer(i_kind),dimension(5):: idate5
+  integer(i_kind),dimension(5):: iadatecopy
   real(r_kind) hourg,temp
   real(r_kind),dimension(202):: time_ges
 
@@ -417,8 +420,10 @@ subroutine read_2d_files(mype)
   if(mype==npem1) then
 
 !    Convert analysis time to minutes relative to fixed date
-     call w3fs21(iadate,nminanl)
-     write(6,*)'READ_2d_ FILES:  analysis date,minutes ',iadate,nminanl
+!    use iadatemn to get nminal--confirm with Manuel: for hourly RTMA, the
+!    minutes value is alway hardcoded as 0, right?
+     call w3fs21(iadatemn,nminanl)
+     write(6,*)'READ_2d_FILES:  analysis date,minutes ',iadatemn,nminanl
 
 !    Check for consistency of times from sigma guess files.
      in_unit=15
@@ -430,13 +435,12 @@ subroutine read_2d_files(mype)
         if(fexist)then
            open(in_unit,file=filename,form='unformatted')
            read(in_unit) idate5
+           write(6,*) 'READ_2D_FILES: input file name and idate(1-5)',filename,idate5
            close(in_unit)
-           idate5(5)=0
            call w3fs21(idate5,nmings)
-           hourg=zero
-           nming2=nmings+60*hourg
-           write(6,*)' READ_2d_FILES:  sigma guess file, nming2 ',hourg,idate5,nming2
+           nming2=nmings
            ndiff=nming2-nminanl
+           write(6,*)'READ_2d_FILES: sigma guess file time in minutes',nming2
            if(abs(ndiff) > 60*nhr_half ) go to 110
            iwan=iwan+1
            time_ges(iwan) = (nming2-nminanl)*r60inv + time_offset
@@ -444,6 +448,7 @@ subroutine read_2d_files(mype)
         end if
 110     continue
      end do
+     write(6,*)'READ_2d_FILES:iwan=',iwan,(time_ges(i),i=1,iwan)
      time_ges(201)=one
      time_ges(202)=one
      if(iwan > 1)then

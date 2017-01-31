@@ -148,6 +148,7 @@ module obsmod
 !   def ndat         - total number of data types
 !   def ipoint       - pointer to input namelist for particular processor
 !   def iadate       - analysis date and time array
+!   def iadatemn     - similar to iadate, but with non-zero minute information
 !   def ianldate     - analysis date in YYYYMMDDHH variable
 !   def time_offset  - analysis relative time offset
 !   def dplat        - satellite (platform) id
@@ -362,7 +363,7 @@ module obsmod
   public :: inquire_obsdiags
   public :: dfile_format
 ! set passed variables to public
-  public :: iout_pcp,iout_rad,iadate,write_diag,reduce_diag,oberrflg,bflag,ndat,dthin,dmesh,l_do_adjoint
+  public :: iout_pcp,iout_rad,iadate,write_diag,reduce_diag,oberrflg,bflag,ndat,dthin,dmesh,l_do_adjoint,iadatemn
   public :: lsaveobsens,lag_ob_type,o3l_ob_type,oz_ob_type,colvk_ob_type,pcp_ob_type,dw_ob_type
   public :: sst_ob_type,srw_ob_type,spd_ob_type,rw_ob_type,gps_ob_type,gps_all_ob_type,tcp_ob_type
   public :: gust_ob_type,vis_ob_type,pblh_ob_type,wspd10m_ob_type,td2m_ob_type
@@ -1624,6 +1625,7 @@ module obsmod
   integer(i_kind) iout_pm2_5, mype_pm2_5
   integer(i_kind) iout_pm10, mype_pm10
   integer(i_kind),dimension(5):: iadate
+  integer(i_kind),dimension(5):: iadatemn
   integer(i_kind),allocatable,dimension(:):: dsfcalc,dthin,ipoint
   integer(i_kind),allocatable,dimension(:)::  nsat1,mype_diaghdr
   integer(i_kind),allocatable :: nobs_sub(:,:)

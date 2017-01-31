@@ -53,6 +53,8 @@ module qcmod
 !   2015-09-04  J.Jung  - Added mods for CrIS full spectral resolution (FSR)
 !   2015-05-29  ejones  - tighten clw threshold for qc_gmi 
 !   2015-09-30  ejones  - add sun glint check in qc_amsr2 
+!   2016-04-18  yang    - add logical closest_obs for choosing the obs. timely
+!                         closest to the analysis time from multiple surface obs. at a station.
 !   2016-10-20  acollard- Ensure AMSU-A channels 1-6,15 are not assimilated if
 !                         any of these are missing.
 !
@@ -144,7 +146,7 @@ module qcmod
   public :: igood_qc,ifail_crtm_qc,ifail_satinfo_qc,ifail_interchan_qc,&
             ifail_gross_qc,ifail_cloud_qc,ifail_outside_range,ifail_scanedge_qc
 
-  public :: buddycheck_t,buddydiag_save
+  public :: buddycheck_t,buddydiag_save,closest_obs
 
   logical nlnqc_iter,njqc,vqc
   logical noiqc
@@ -156,6 +158,7 @@ module qcmod
   logical qc_satwnds
   logical buddycheck_t
   logical buddydiag_save
+  logical closest_obs
 
   character(10):: vadfile
   integer(i_kind) npres_print
@@ -340,6 +343,7 @@ contains
     buddycheck_t=.false.   ! When true, run buddy check algorithm on temperature observations
     buddydiag_save=.false. ! When true, output files containing buddy check QC info for all
                            !  obs run through the buddy check
+    closest_obs=.false.    ! When true, select timely nearest obs.
 
     return
   end subroutine init_qcvars
