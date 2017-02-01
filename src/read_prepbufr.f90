@@ -1740,6 +1740,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  endif
               end if
 
+!             Missing Values ==>  Cycling! In this case for howv only.  #ww3 
+              if (howvob  .and. owave(1,k) > r0_1_bmiss) cycle LOOP_K_LEVS
+
 !             Special block for data thinning - if requested
               if (ithin > 0) then
                  ntmp=ndata  ! counting moved to map3gridS
@@ -2423,6 +2426,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 
 !             Significant wave height
               else if(howvob) then
+                 zz=0_r_kind                               ! #ww3
 
                  howvoe=0.3_r_kind                         ! use temporarily
                  cdata_all(1,iout)=howvoe                  ! significant wave height error (m)

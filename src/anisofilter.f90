@@ -37,7 +37,8 @@ module anisofilter
 !   2014-05-07  pondeca - add howv
 !   2014-06-09  carley/zhu - add ceiling
 !   2015-07-10  pondeca - add cldch
-!   2016-03-07  pondeca  - add uwnd10m,vwnd10m
+!   2016-03-07  pondeca - add uwnd10m,vwnd10m
+!   2016-12-08  stelios - Lon/Lat dependency of CorrLng and Variance for #howv
 !
 !
 ! subroutines included:
@@ -4486,6 +4487,7 @@ subroutine get2berr_reg_subdomain_option(mype)
   real(r_single),allocatable,dimension(:,:,:,:):: ampsub(:,:,:,:)
   real(r_kind),allocatable,dimension(:,:,:):: bckgvar0f
   real(r_single),allocatable,dimension(:,:)::bckgvar4,zsmooth4,zsmooth4a,hwllp_lcbas4,hwllp_lcbas4a
+  real(r_kind),allocatable,dimension(:,:):: howv_var_arr,howv_CorLngX,howv_CorLngY  !#howv
   real(r_single),allocatable,dimension(:,:)::bckgvar4f,bckgvar4t
   real(r_kind),allocatable,dimension(:,:)::bckgvar8f,bckgvar8a
   real(r_single),allocatable,dimension(:,:)::region_dx4,region_dy4,psg4,psg4a
@@ -4498,6 +4500,7 @@ subroutine get2berr_reg_subdomain_option(mype)
   integer(i_kind):: idsf,idef,jdsf,jdef,ipsf,ipef,jpsf,jpef
   integer(i_kind):: imsf,imef,jmsf,jmef
   integer(i_kind):: nlata,nlona,nlatf,nlonf,inner_vars
+  character(30),parameter :: myname='get2berr_reg_subdomain_option'
 
   nlata=s2g_raf%nlat
   nlona=s2g_raf%nlon
@@ -4526,6 +4529,10 @@ subroutine get2berr_reg_subdomain_option(mype)
   imef=s2g_rff%istart(s2g_rff%mype+1)+s2g_rff%lat1
   jmsf=s2g_rff%jstart(s2g_rff%mype+1)-1
   jmef=s2g_rff%jstart(s2g_rff%mype+1)+s2g_rff%lon1
+
+  allocate(howv_var_arr(lat2,lon2))       !#howv
+  allocate(howv_CorLngX(lat2,lon2))       !#howv
+  allocate(howv_CorLngY(lat2,lon2))       !#howv
 
   allocate(asp10f(lat2,lon2))
   allocate(asp20f(lat2,lon2))
@@ -4557,6 +4564,14 @@ subroutine get2berr_reg_subdomain_option(mype)
      ivar=jdvar(k)
      k1=levs_jdvar(k)
      call isotropic_scales_subdomain_option(asp10f,asp20f,asp30f,k,mype)
+
+!     if (nrf_var(ivar)=='howv' .or.  nrf_var(ivar)=='HOWV') then                 !howv
+!       print*,myname, ' Before Get_Wghts_Frm_Ext_File '                          !howv
+!       call Get_Wghts_Frm_Ext_File (howv_var_arr,howv_CorLngX,howv_CorLngY,mype) !howv
+!       asp10f=howv_CorLngX                                                       !howv
+!       asp20f=howv_CorLngY                                                       !howv
+!       print*,myname, ' After Get_Wghts_Frm_Ext_File '                           !howv
+!     end if                                                                      !howv
 
      do j=jps,jpe
         jloc=j-jstart(mm1)+2
@@ -5007,6 +5022,7 @@ subroutine get2berr_reg_subdomain_option(mype)
   deallocate(zsmooth4,psg4)
   deallocate(fltvals0)
   deallocate(fltvals)
+  deallocate(howv_var_arr, howv_CorLngX,howv_CorLngY)
 
 end subroutine get2berr_reg_subdomain_option
 !=======================================================================
@@ -5602,6 +5618,260 @@ subroutine isotropic_scales_subdomain_option(scale1,scale2,scale3,k,mype)
   endif
   return
 end subroutine isotropic_scales_subdomain_option
+!=======================================================================
+!=======================================================================
+!subroutine Get_Wghts_Frm_Ext_File (var_arr,CorLngX,CorLngY, mype)       !#howv
+!!$$$  subprogram documentation block
+!!                .      .    .                                       .
+!! subprogram:   Get_Wghts_Frm_Ext_File
+!! prgmmr: stelios          org: ???                date: 2016-08-29
+!!
+!! abstract: imports the the isotropic scales of autocorrelation and the variance
+!! for each grid point. 
+!! To use it: 1. the data files (eg variance, correlation lengths have
+!! to be located at the tmpreg path. So the driving scripts have to
+!! copy the file of interest to the tmp dir used for e.g.:  
+!!
+!!  cp [...]/fix/urma2p5/whatever_file_w_variance howv_var_berr
+!!  cp [...]/fix/urma2p5/whatever_file_w_ howv_CorLngth_X CorLngth_X_berr
+!!  cp [...]/fix/urma2p5/whatever_file_w_ howv_CorLngth_Y CorLngth_Y_berr
+!!
+!! program history log:
+!!   2016-08-29  stelios 
+!!
+!!   input argument list:
+!!    mype     - mpi task id
+!!    k        - level number of field in subdomain mode
+!!
+!!   output argument list:
+!!    scale1     - 2d field of correlations lengths in the x-direction
+!!    scale2     - 2d field of correlations lengths in the y-direction
+!!
+!! attributes:
+!!   language: f90
+!!   machine: ??? 
+!!
+!!$$$ end documentation block
+!!
+!!  use gridmod,only:istart,jstart
+!!  use guess_grids, only: isli2
+!   implicit none
+!
+!! Declare passed variables
+!   integer(i_kind),intent(in   ) :: mype
+!!  integer(i_kind),intent(in   ) :: k, mype
+!
+!   real(r_kind)   ,intent(  out) :: var_arr(lat2,lon2)
+!   real(r_kind)   ,intent(  out) :: CorLngX(lat2,lon2)
+!   real(r_kind)   ,intent(  out) :: CorLngY(lat2,lon2)
+!
+!! Declare local variables
+!   integer(i_kind)                              :: i
+!   integer(i_kind)                  , parameter :: nfiles=3_i_kind 
+!   character(25)                    , parameter :: myname='Get_Wghts_Frm_Ext_File : ' 
+!   character(64), dimension(nfiles)             :: filename
+!   real(r_kind) , dimension(lat2,lon2)          :: arrout
+!!
+!!   if (mype==0) write(6,*), myname, 'Starts'
+!!
+!   filename(1:3) = (/'howv_var_berr.bin'            &
+!                    ,'howv_CorLngth_X_berr'     &
+!                    ,'howv_CorLngth_Y_berr'/)
+!!
+!   do i=1,nfiles
+!      call read_howv_stats(filename(i),arrout,mype)
+!      if (index(trim(filename(i)),'var')>0)  var_arr=arrout ! Variance
+!      if (index(trim(filename(i)),'X'  )>0)  CorLngX=arrout ! Correlation Length in X
+!      if (index(trim(filename(i)),'Y'  )>0)  CorLngY=arrout ! Correlation Length in Y
+!
+!! The arrout is larger by two in each dimension
+!!      arrout(1       ,1:lon2  ) = arrout(2      ,1:lon2  )
+!!      arrout(lat2    ,1:lon2  ) = arrout(lat2-1 ,1:lon2  )
+!!      arrout(1:lat2  ,1       ) = arrout(1:lat2 ,2       )
+!!      arrout(1:lat2  ,lon2    ) = arrout(1:lat2,lon2-1   )
+!   end do
+!!   call stop2(333)
+!!
+!   if (mype==0) write(6,*), myname, 'Done'
+!
+!end subroutine Get_Wghts_Frm_Ext_File                             !#howv 
+!!=======================================================================
+!!=======================================================================
+!subroutine read_howv_stats(filename,arrout,mype)                  !#howv
+!!subroutine read_howv_stats(filename,nlat,nlon,arrout)
+!!$$$  subprogram documentation block
+!!                .      .    .                                       .
+!! subprogram: read_howv_stats   
+!! prgmmr: stelios          org: ???                date: 2016-08-03
+!!
+!! abstract: improrts the bkerror stats for howv (variance, correlation lengths,
+!!           etc). Each quantity has been calculated externaly, it is interpolated at
+!!           the grid of URMA and it is saved as binary file. The exact format 
+!!           is shown in the code. 
+!!           The imported arrays can be 2d or 1d, aka can be lon/lat dependent or
+!!           two one of the two (most probably on lat)
+!!
+!!           For cross reference the MATLAB code is provided
+!!           Export ::
+!!              fid = fopen(['URMA_variance_Q',num2str(i1),'.bin'],'w');
+!!              dum =squeeze(variance(i1,:,:));
+!!              fwrite(fid,dum,'double');
+!!              fclose(fid);
+!!
+!!           Import :: 
+!!              fid = fopen(['URMA_variance_Q',num2str(i1),'1.bin'],'r');
+!!              dum = fread(fid, 'double');
+!!              A(:,:,i1) = reshape(dum,1597,2345);
+!!              fclose(fid);
+!!
+!!     
+!! program history log:
+!!   2016-08-03  stelios
+!!   2016-08-26  stelios : Compatible with GSI.
+!!   input argument list:
+!!     filename -  The name of the file 
+!!   output argument list:
+!!     arr_out   -  One or Two dimensional field of quantity of interest 
+!!
+!! attributes:
+!!   language: f90
+!!   machine: theia/gyre 
+!!
+!!$$$ end documentation block
+!!
+!   use kinds,only : r_kind, i_kind
+!   use gridmod,only:istart,jstart
+!   use constants,only:zero
+!   use mpimod, only: ierror,mpi_comm_world
+!!
+!   implicit none
+!! Declare passed variables
+!   character(64) ,                          intent(in   )::filename
+!!   integer(i_kind),                          intent(in   )::nlat,nlon
+!   real(r_kind)   ,  dimension(lat2 ,lon2),  intent(  out)::arrout
+!   integer, parameter :: dp = kind(1D0)
+!
+!   integer(i_kind),intent(in   ) :: mype
+!! Declare local variables
+!!   real(r_kind)   ,  dimension(1597,2145)::dumarr
+!!   real(dp)   ,  dimension(nlat,nlon)::dumarr
+!!   real(r_kind)   ,  dimension(nlatf+2 ,nlof+2)::dumarr
+!   real(dp)   ,  dimension(nlat,nlon)::dumarr
+!   integer :: reclength,i,j, mm1,iglob,jglob
+!   character(64) ,  parameter :: myname='read_howv_stats : '
+!   logical :: file_exists
+!   integer, parameter :: lun34=34
+!   integer :: nolat,nolon, il_ios
+!
+!!
+!   real(r_kind),dimension(pf2aP1%nlatf,pf2aP1%nlonf):: &
+!               scaleaux1,scaleauxa, &
+!               scaleaux2,scaleauxb
+!
+!   integer(i_kind):: nlatf,nlonf
+!    
+!   reclength=nlat*r_kind
+!!   nolat=1597
+!!   nolon=2145
+!!   nlatf=nolat
+!!   nlonf=nolon
+!   nlatf=pf2aP1%nlatf
+!   nlonf=pf2aP1%nlonf
+! print*, 'nlon: ',nlon,' nlat: ' ,nlat,&
+!                    ' nlonf: ',nlonf, ' nlatf: ', nlatf, &
+!                    'dp: ',dp
+!
+!   arrout = zero
+!   mm1=mype+1
+!   
+!    print*, myname, 'starts now!'
+!   dumarr=0.0
+!!
+!!   if (mype==0)then 
+!      inquire(file=trim(filename), exist=file_exists)
+!      if (file_exists)then
+! print*, trim(myname),'...in'
+!         open (unit=lun34  ,file=trim(filename)  ,status='old'    &
+!              ,form='unformatted'   ,access='direct'              &
+!              ,recl=reclength, action='read'  )
+! print*, trim(myname),'...opened', reclength 
+!         do j = 1,nlonf
+!            read(unit=lun34 ,rec=j) (dumarr(i,j), i=1,nlatf)
+!         end do
+! print*, trim(myname),'...read'
+!         close(unit=lun34)
+! print*, trim(myname),'...closed'
+!!  end if
+!         if (mype==33)print*,'Dumarr(1:10,1) = ', dumarr(1:10,1)
+!         
+!!         print*,myname, 'Processor',mype, 'just read : ',trim(filename)
+!!         call mpi_allreduce(dumarr,scaleaux1,nlatf*nlonf,mpi_rtype,mpi_sum,mpi_comm_world,ierror)
+!!
+!         do j=1,lon2
+!            jglob=j+jstart(mm1)-2
+!            if(jglob<1.or.jglob>nlonf) cycle
+!            do i=1,lat2
+!               iglob=i+istart(mm1)-2
+!               if(iglob<1.or.iglob>nlatf) cycle
+!               arrout(i,j)=dumarr(iglob,jglob)
+!!               arrout(i,j)=scaleaux1(iglob,jglob)
+!            enddo
+!         enddo
+!
+!
+!!   if (mype==33) then
+!!         open( unit = 666, file = 'proc33_arrout.txt', status = 'replace'    &
+!!             , form = 'formatted', iostat = il_ios)
+!!         do j = 1, size(arrout,2)
+!!            do i = 1, size(arrout,1)
+!!               write(unit=666, fmt='(ES18.8E3, $)') arrout(i,j)!
+!!            end do
+!!            write( unit=666, fmt=* )''
+!!         end do
+!!         close(unit=666)
+!!   end if
+!
+!
+!      else
+!         print*,myname,'The ', trim(filename) // ' does not exist! the default values will be used. &
+!         Check the subroutine berror_read_wgt_reg!'
+!      end if
+!   
+!!     call stop2(333)
+!
+!!   end if
+!!!!
+!!         if (mype==0) then
+!!            open( unit = 666, file = 'ALL_from_0.txt', status = 'replace'    &
+!!               , form = 'formatted', iostat = il_ios)
+!!               do j = 1, size(dumarr,2)
+!!                  do i = 1, size(dumarr,1)
+!!                     write(unit=666, fmt='(ES18.8E3, $)') dumarr(i,j)!
+!!                  end do
+!!               write( unit=666, fmt=* )''
+!!            end do
+!!            close(unit=666)
+!!         end if
+!     
+!
+!!print*,myname, 'Processor',mype, 'just read : ',trim(filename)
+!!      call mpi_allreduce(dumarr,scaleaux1,nlatf*nlonf,mpi_rtype,mpi_sum,mpi_comm_world,ierror)
+!!
+!!      do j=1,lon2
+!!         jglob=j+jstart(mm1)-2
+!!         if(jglob<1.or.jglob>nlonf) cycle
+!!         do i=1,lat2
+!!            iglob=i+istart(mm1)-2
+!!            if(iglob<1.or.iglob>nlatf) cycle
+!!
+!!            arrout(i,j)=scaleaux1(iglob,jglob)
+!!
+!!        enddo
+!!      enddo
+!!call mpi_bcast(, nelements, MPI_DBL, root_pe, MPI_COMM_OCN, ierr) 
+!!call mpi_barrier(mpi_comm_world,ierror)
+!
+!end subroutine read_howv_stats                           !#howv
 
 end module anisofilter
 
@@ -6326,3 +6596,6 @@ subroutine eigen_interpy(dfx,df,nlat,nlatf,nlonf)
    end do
 
 end subroutine eigen_interpy
+!=======================================================================
+!=======================================================================
+

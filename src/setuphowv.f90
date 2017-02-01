@@ -17,6 +17,7 @@ subroutine setuphowv(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2015-03-11  pondeca - Modify for possibility of not using obsdiag
 !   2016-10-07  pondeca - if(.not.proceed) advance through input file first
 !                          before retuning to setuprhsall.f90
+!   2016-08-24  stelios - Added check for errors/=0.0
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -59,7 +60,7 @@ subroutine setuphowv(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
   real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
   real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
-  integer(i_kind)                                  ,intent(in   ) :: is	! ndat index
+  integer(i_kind)                                  ,intent(in   ) :: is ! ndat index
 
 ! Declare external calls for code analysis
   external:: tintrp2a11
@@ -273,6 +274,7 @@ subroutine setuphowv(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      ddiff=data(ihowv,i)-howvges
 
 ! Adjust observation error
+     if (error<=tiny_r_kind.and.data(ier,i)<=tiny_r_kind) cycle   !#ww3
      ratio_errors=error/data(ier,i)
      error=one/error
 

@@ -1273,8 +1273,9 @@ subroutine read_obs(ndata,mype)
                  obstype == 'pw' .or. obstype == 'spd'.or. & 
                  obstype == 'gust' .or. obstype == 'vis'.or. &
                  obstype == 'td2m' .or. &
-!                obstype=='mxtm' .or. obstype == 'mitm' .or. &
-                 obstype=='howv' .or. obstype=='pmsl' .or. &
+!                 obstype=='mxtm' .or. obstype == 'mitm' .or. &
+!                 obstype=='howv' .or. obstype=='pmsl' .or. &    #howv #ww3 
+                 obstype=='pmsl' .or. &
                  obstype == 'mta_cld' .or. obstype == 'gos_ctp' .or. &
                  obstype == 'lcbas' .or. obstype == 'cldch' ) then
 
@@ -1289,7 +1290,19 @@ subroutine read_obs(ndata,mype)
                    string='READ_PREPBUFR'
 
                 endif
+             else if(obstype == 'howv') then
+                if ( index(infile,'satmar') /=0) then
+                   
+                   call read_satmar (nread, npuse, nouse                                  &
+                                    , infile, obstype, lunout, gstime, twind, sis         &
+                                    , nobs_sub1(1,i))
+                   string='READ_SATMAR'
+                else 
+                   call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
+                        prsl_full,nobs_sub1(1,i),read_rec(i))
+                   string='READ_PREPBUFR'
 
+                endif
              else if(obstype == 'mitm') then
                 if ( index(infile,'mitmdat') /=0) then
                    call read_mitm_mxtm(nread,npuse,nouse,infile,obstype,lunout,gstime,sis, & 

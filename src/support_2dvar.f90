@@ -396,9 +396,7 @@ subroutine read_2d_files(mype)
   integer(i_kind) i,j,iwan,npem1
   integer(i_kind) nhr_half
   integer(i_kind) nminanl,nmings,nming2,ndiff
-  integer(i_kind) datewminute
   integer(i_kind),dimension(5):: idate5
-  integer(i_kind),dimension(5):: iadatecopy
   real(r_kind) hourg,temp
   real(r_kind),dimension(202):: time_ges
 
