@@ -155,6 +155,7 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
   use statevec, only: state_d
   use constants, only: deg2rad, zero
   use mpisetup, only: nproc, mpi_wtime
+  use observer_enkf, only: calc_linhx
 
   character*500, intent(in)     :: obspath
   character(len=10), intent(in) ::  datestring
@@ -340,7 +341,7 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
             ! run linearized Hx
             else
                t1 = mpi_wtime()
-               call observer(hx_mean_nobc(nobs), state_d,              &
+               call calc_linhx(hx_mean_nobc(nobs), state_d,              &
                              real(x_lat(nobs)*deg2rad,r_single),  &
                              real(x_lon(nobs)*deg2rad,r_single),  &
                              x_time(nobs),                        &
@@ -396,7 +397,7 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
 
      enddo peloop ! ipe
  enddo ! satellite
- if (nanal == nanals) print *,'time in observer for sat obs on proc',nproc,' = ',tsum
+ if (nanal == nanals) print *,'time in calc_linhx for sat obs on proc',nproc,' = ',tsum
  if (nanal == nanals) print *,'time in read_raddiag_data for sat obs on proc',nproc,' = ',tsum2
 
   if (nobs /= nobs_max) then
@@ -467,7 +468,11 @@ subroutine write_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit,
      end do
      if(jpchstart == 0) cycle
      init_pass = .true.
-     obsfile2 = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_"//trim(adjustl(gesid2))//"."//datestring//'_'//trim(adjustl(id2))
+     if (datestring .eq. '0000000000') then
+        obsfile2 = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_"//trim(adjustl(gesid2))//"."//trim(adjustl(id2))
+     else 
+        obsfile2 = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_"//trim(adjustl(gesid2))//"."//datestring//'_'//trim(adjustl(id2))
+     endif
      peloop: do ipe=0,npefiles
      write(pe_name,'(i4.4)') ipe
      if (npefiles .eq. 0) then

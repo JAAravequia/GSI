@@ -135,6 +135,7 @@ clean:
 # ------------
 
   SRCSF90C = \
+        controlvec.f90 \
 	covlocal.f90 \
 	enkf.f90 \
 	enkf_main.f90 \
@@ -150,6 +151,7 @@ clean:
 	mpi_readobs.f90 \
 	mpisetup.F90 \
 	netcdf_io_wrf.f90 \
+        observer_reg.f90 \
 	enkf_obsmod.f90 \
 	params.f90 \
 	sorting.f90 \

@@ -95,7 +95,6 @@ subroutine get_num_convobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
        errorlimit2=errorlimit2_obs
        allocate(cdiagbuf(ii),rdiagbuf(nreal,ii))
        read(iunit) cdiagbuf(1:ii),rdiagbuf(:,1:ii)
-       !print *,obtype,nchar,nreal,ii,mype,ioff0
        if (obtype=='gps') then
           if (rdiagbuf(20,1)==1) errorlimit2=errorlimit2_bnd
        end if
@@ -217,6 +216,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
   use params, only: nanals, lobsdiag_forenkf
   use statevec, only: state_d
   use mpisetup, only: nproc, mpi_wtime
+  use observer_enkf, only: calc_linhx
   implicit none
 
   character*500,   intent(in) :: obspath
@@ -319,7 +319,6 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
       endif
   
       inquire(file=obsfile2,exist=fexist2)
-
       open(iunit2,form="unformatted",file=obsfile2,iostat=ios)
       rewind(iunit2)
       if (init_pass2) then
@@ -337,6 +336,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
        read(iunit2,err=20,end=30) obtype2,nchar2,nreal2,ii2,mype2,ioff02
        if(obtype /= obtype2 .or. nchar /= nchar2 .or. nreal /= nreal2 .or. ii /= ii2)then
           write(6,*) ' conv obs mismatch '
+
           write(6,*) ' obtype ',obtype,obtype2
           write(6,*) ' nchar ',nchar,nchar2
           write(6,*) ' nreal ',nreal,nreal2
@@ -464,7 +464,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
                 ind = ind + dhx_dx%nnz + dhx_dx%nind*2 + 2
 
                 t1 = mpi_wtime()
-                call observer(hx_mean_nobc(nob), state_d,             &
+                call calc_linhx(hx_mean_nobc(nob), state_d,             &
                               real(x_lat(nob)*deg2rad,r_single),      &
                               real(x_lon(nob)*deg2rad,r_single),      &
                               x_time(nob),                            &
@@ -475,10 +475,14 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
                 call delete(dhx_dx)
              endif
 
+!             if (nanal == 2) print *, nob, x_type(nob), x_obs(nob), hx_mean_nobc(nob), hx(nob)
+
+
              ! normalize q by qsatges
              if (obtype == '  q') then
                 hx(nob) = hx(nob) /rdiagbuf(20,n)
              endif
+
           endif
 
           ! normalize q by qsatges
@@ -527,7 +531,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
                    call readarray(dhx_dx, rdiagbuf(ind:nreal,n))
   
                    t1 = mpi_wtime()
-                   call observer(hx_mean_nobc(nob), state_d,                  &
+                   call calc_linhx(hx_mean_nobc(nob), state_d,                  &
                                  real(x_lat(nob)*deg2rad,r_single),      &
                                  real(x_lon(nob)*deg2rad,r_single),      &
                                  x_time(nob),                            &
@@ -537,6 +541,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
                    call delete(dhx_dx)
                 endif
+!                if (nanal == 2) print *, nob, x_type(nob), x_obs(nob), hx_mean_nobc(nob), hx(nob)
              endif
           endif
        enddo
@@ -599,7 +604,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
   
   enddo peloop ! ipe loop
 
-  if (nanal == nanals) print *,'time in observer for conv obs on proc',nproc,' =',tsum
+  if (nanal == nanals) print *,'time in calc_linhx for conv obs on proc',nproc,' =',tsum
   if (nob .ne. nobs_max) then
       print *,'number of obs not what expected in get_convobs_data',nob,nobs_max
       call stop2(94)
@@ -644,8 +649,12 @@ subroutine write_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, &
   nobdiag = 0
   init_pass = .true.
 
-  obsfile2 = trim(adjustl(obspath))//"diag_conv_"//trim(adjustl(gesid2))//"."//datestring//'_'//trim(adjustl(id2))
 
+  if (datestring .eq. '0000000000') then
+     obsfile2 = trim(adjustl(obspath))//"diag_conv_"//trim(adjustl(gesid2))//"."//trim(adjustl(id2))
+  else
+     obsfile2 = trim(adjustl(obspath))//"diag_conv_"//trim(adjustl(gesid2))//"."//datestring//'_'//trim(adjustl(id2))
+  endif
   peloop: do ipe=0,npefiles
 
     write(pe_name,'(i4.4)') ipe

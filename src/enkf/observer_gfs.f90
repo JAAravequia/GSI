@@ -1,7 +1,18 @@
-subroutine observer(hx, dens, rlat, rlon, time, dhx_dx, hx_ens)
+module observer_enkf
+
+private
+public init_observer_enkf, calc_linhx
+
+contains
+
+subroutine init_observer_enkf
+   return
+end subroutine init_observer_enkf
+
+subroutine calc_linhx(hx, dens, rlat, rlon, time, dhx_dx, hx_ens)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:    observer
+! subprogram:    calc_linhx
 !   prgmmr: shlyaeva         org: esrl/psd            date: 2016-11-29
 !
 ! abstract: 
@@ -108,5 +119,6 @@ subroutine observer(hx, dens, rlat, rlon, time, dhx_dx, hx_ens)
    enddo
 
   return
-end subroutine observer
+end subroutine calc_linhx
 
+end module observer_enkf

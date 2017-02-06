@@ -90,6 +90,8 @@ program enkf_main
                      init_controlvec
  ! model state vector
  use statevec, only: read_state, statevec_cleanup, init_statevec
+ ! EnKF linhx observer
+ use observer_enkf, only: init_observer_enkf
  ! load balancing
  use loadbal, only: load_balance, loadbal_cleanup, scatter_chunks, gather_chunks
  ! enkf update
@@ -131,6 +133,9 @@ program enkf_main
  if (lobsdiag_forenkf) then
     ! read state/control vector info from anavinfo
     call init_statevec()
+
+    ! initialize observer
+    call init_observer_enkf()
 
     ! read in ensemble members
     t1 = mpi_wtime()

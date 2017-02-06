@@ -130,6 +130,7 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
   use params,only: nanals, lobsdiag_forenkf
   use statevec, only: state_d
   use mpisetup, only: mpi_wtime, nproc
+  use observer_enkf, only: calc_linhx
 
   character*500, intent(in) :: obspath
   character*10, intent(in)  :: datestring
@@ -324,7 +325,7 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
                   call readarray(dhx_dx, rdiagbuf(ind:irdim1,k,n))
    
                   t1 = mpi_wtime()
-                  call observer(hx_mean_nobc(nob), state_d,                  &
+                  call calc_linhx(hx_mean_nobc(nob), state_d,                  &
                              real(x_lat(nob)*deg2rad,r_single),         & 
                              real(x_lon(nob)*deg2rad,r_single),         &
                              x_time(nob),                               &
@@ -348,7 +349,7 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
          if(twofiles) close(iunit2)
       enddo peloop ! ipe
   enddo ! satellite
-  if (nanal == nanals) print *,'time in observer for oz obs on proc',nproc,' = ',tsum
+  if (nanal == nanals) print *,'time in calc_linhx for oz obs on proc',nproc,' = ',tsum
 
   if (nob /= nobs_max) then
       print *,'number of obs not what expected in get_ozobs_data',nob,nobs_max
@@ -395,7 +396,11 @@ subroutine write_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, 
 
   do nsat=1,nsats_oz
       init_pass = .true.
-      obsfile2 = trim(adjustl(obspath))//"diag_"//trim(sattypes_oz(nsat))//"_"//trim(adjustl(gesid2))//"."//datestring//'_'//trim(adjustl(id2))
+      if (datestring .eq. '0000000000') then
+         obsfile2 = trim(adjustl(obspath))//"diag_"//trim(sattypes_oz(nsat))//"_"//trim(adjustl(gesid2))//"."//trim(adjustl(id2))
+      else 
+         obsfile2 = trim(adjustl(obspath))//"diag_"//trim(sattypes_oz(nsat))//"_"//trim(adjustl(gesid2))//"."//datestring//'_'//trim(adjustl(id2))
+      endif
       peloop: do ipe=0,npefiles
          write(pe_name,'(i4.4)') ipe
          if (npefiles .eq. 0) then

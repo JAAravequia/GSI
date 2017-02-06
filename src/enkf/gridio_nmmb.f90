@@ -1,11 +1,9 @@
 module gridio
 
-use nemsio_module, only: nemsio_gfile,nemsio_open,nemsio_close,&
+use nemsio_module, only: nemsio_gfile,nemsio_open,nemsio_close,nemsio_getfilehead,&
                          nemsio_getheadvar,nemsio_realkind,nemsio_intkind,&
                          nemsio_readrecv,nemsio_init,nemsio_setheadvar,nemsio_writerecv
-use params, only: nlons,nlats,reducedgrid,nlevs,pseudo_rh, &
-                  cliptracers,nlons,nlats,datestring,datapath, &
-                  nbackgrounds,fgfileprefixes,anlfileprefixes
+use params, only: nlons,nlats,nlevs,pseudo_rh,cliptracers,datapath
 use kinds, only: i_kind,r_double,r_kind,r_single
 use constants, only: zero,one,cp,fv,rd,grav,zero,max_varname_length
 use gridinfo, only: npts,wind2mass,mass2wind
@@ -17,42 +15,57 @@ private
 public :: readgriddata, writegriddata
 contains
 
-subroutine readgriddata(nanal,vars3d,vars2d,n3d,n2d,grdin,qsat)
+subroutine readgriddata(nanal,vars3d,vars2d,n3d,n2d,levels,ndim,ntimes,fileprefixes,reducedgrid,grdin,qsat)
 implicit none
-character(len=500) :: filename
-character(len=3) charnanal
 integer, intent(in) :: nanal
-integer, intent(in) :: n2d,n3d
 character(len=max_varname_length), dimension(n2d), intent(in) :: vars2d
 character(len=max_varname_length), dimension(n3d), intent(in) :: vars3d
-real(r_double), dimension(npts,nlevs,nbackgrounds), intent(out) :: qsat
-real(r_single), dimension(npts,n3d*nlevs+n2d,nbackgrounds), intent(out) :: grdin
+integer, intent(in) :: n2d,n3d
+integer, dimension(0:n3d), intent(in) :: levels
+integer, intent(in) :: ndim, ntimes
+character(len=120), dimension(7), intent(in)  :: fileprefixes
+logical, intent(in) :: reducedgrid
+real(r_single), dimension(npts,ndim,ntimes), intent(out) :: grdin
+real(r_double), dimension(npts,nlevs,ntimes), intent(out) :: qsat
+real(nemsio_realkind) nems_wrk(nlons*nlats), nems_wrk2(nlons*nlats), field1(nlevs)
+real(r_single) aeta1(nlevs),aeta2(nlevs),pt,pdtop
+
+character(len=500) :: filename
+character(len=7) charnanal
+
 real(r_single), allocatable, dimension(:,:) :: pslg
 real(r_kind) clip
-
-real(nemsio_realkind) nems_wrk(nlons*nlats), nems_wrk2(nlons*nlats)
-real(r_single) :: ak(nlevs),bk(nlevs)
-real(r_single),allocatable,dimension(nlevs+1,3,2) :: nems_vcoord
-real(r_single), dimension(nlons*nlats) :: nems_wrk,psg
+!real(r_single) :: ak(nlevs),bk(nlevs)
+real(r_single), dimension(nlevs+1,3,2) :: nems_vcoord
+real(r_single), dimension(nlons*nlats) :: psg
 type(nemsio_gfile) :: gfile
 logical ice
 integer(i_kind) iret,k,kk,nb
-integer :: u_ind, v_ind, t_ind, q_ind, oz_ind, cw_ind
-integer :: ps_ind
+integer :: u_ind, v_ind, t_ind, tsen_ind, q_ind, oz_ind, cw_ind, prse_ind
+integer :: ps_ind, sst_ind
+!integer(nemsio_intkind) :: idvc
 
-u_ind   = getindex(vars3d, 'u')   !< indices in the state var arrays
-v_ind   = getindex(vars3d, 'v')   ! U and V (3D)
-t_ind   = getindex(vars3d, 'tv')  ! Tv (3D)
-q_ind   = getindex(vars3d, 'q')   ! Q (3D)
-oz_ind  = getindex(vars3d, 'oz')  ! Oz (3D)
-cw_ind  = getindex(vars3d, 'cw')  ! CW (3D)
+u_ind    = getindex(vars3d, 'u')   !< indices in the state var arrays
+v_ind    = getindex(vars3d, 'v')   ! U and V (3D)
+t_ind    = getindex(vars3d, 'tv')  ! Tv (3D)
+tsen_ind = getindex(vars3d, 'tsen') ! T sensible (3D)
+q_ind    = getindex(vars3d, 'q')   ! Q (3D)
+oz_ind   = getindex(vars3d, 'oz')  ! Oz (3D)
+cw_ind   = getindex(vars3d, 'cw')  ! CW (3D)
+prse_ind = getindex(vars3d, 'prse')
 
-ps_ind  = getindex(vars2d, 'ps')  ! Ps (2D)
+ps_ind   = getindex(vars2d, 'ps')  ! Ps (2D)
+sst_ind  = getindex(vars2d, 'sst')
 
-backgroundloop: do nb=1,nbackgrounds
+backgroundloop: do nb=1,ntimes
 
-write(charnanal,'(i3.3)') nanal
-filename = trim(adjustl(datapath))//trim(adjustl(fgfileprefixes(nb)))//"mem"//charnanal
+if (nanal > 0) then
+  write(charnanal,'(a3, i3.3)') 'mem', nanal
+else
+  charnanal = 'ensmean'
+endif
+
+filename = trim(adjustl(datapath))//trim(adjustl(fileprefixes(nb)))//trim(charnanal)
 
 call nemsio_init(iret=iret)
 if(iret/=0) then
@@ -61,56 +74,82 @@ if(iret/=0) then
 end if
 call nemsio_open(gfile,filename,'READ',iret=iret)
 if (iret/=0) then
-   write(6,*)'NMMB gridio/readgriddata: nmmb model: problem with nemsio_open, iret=',iret
+   write(6,*)'NMMB gridio/readgriddata: nmmb model: problem with nemsio_open, iret=',iret, trim(filename)
    call stop2(23)
 end if
 
-! get surface pressure and pressure on model levels
-call nemsio_readrecv(gfile,'pres','sfc',1,nems_wrk,iret=iret)
+
+call nemsio_getheadvar(gfile,'PT',pt,iret)
+pt = 0.01*pt
+call nemsio_getheadvar(gfile,'PDTOP',pdtop,iret)
+pdtop = 0.01*pdtop
+call nemsio_getheadvar(gfile,'SGML1',field1,iret)
+do k=1,nlevs
+  aeta1(k)=field1(nlevs+1-k)
+enddo
+call nemsio_getheadvar(gfile,'SGML2',field1,iret)
+do k=1,nlevs
+  aeta2(k)=field1(nlevs+1-k)
+  aeta1(k) = aeta1(k) + aeta2(k)
+enddo
+call nemsio_readrecv(gfile,'dpres','hybrid sig lev',1,nems_wrk,iret=iret)
 if (iret/=0) then
-   write(6,*)'NMMB gridio/readgriddata: NMMB model: problem with nemsio_readrecv(ps), iret=',iret
+   write(6,*)'gridio/readgriddata: nmmb model: problem with nemsio_readrecv(dpres), iret=',iret
    call stop2(23)
 endif
-allocate(psg(nlons*nlats),pslg(nlons*nlats,nlevs))
 psg = 0.01*nems_wrk + pt ! surface pressure, units of hPa
+! pressure on model levels
+allocate(pslg(nlons*nlats,nlevs))
+do k=1,nlevs
+   pslg(:,k) = aeta1(k)*pdtop + aeta2(k)*(psg - pdtop - pt) + pt
+   if (nanal .eq. 1) print *,'nemsio, min/max pressi',k,minval(pslg(:,k)),maxval(pslg(:,k))
+   if (prse_ind > 0)   grdin(:,levels(prse_ind-1)+k,nb) = pslg(:,k)
+enddo
 
-psg = 0.01_r_kind*nems_wrk ! convert ps to millibars.
 
-call nemsio_getfilehead(gfile,iret=iret,vcoord=nems_vcoord)
-if ( iret /= 0 ) then
-   write(6,*)' NMMB gridio:  ***ERROR*** problem reading header ', &
-      'vcoord, Status = ',iret
-   call stop2(99)
-endif
+! get surface pressure and pressure on model levels
+!call nemsio_readrecv(gfile,'pres','sfc',1,nems_wrk,iret=iret)
+!if (iret/=0) then
+!   write(6,*)'NMMB gridio/readgriddata: NMMB model: problem with nemsio_readrecv(ps), iret=',iret
+!   call stop2(23)
+!endif
+!psg = 0.01_r_kind*nems_wrk ! convert ps to millibars.
+!print *, 'read pres sfc: ', minval(psg), maxval(psg)
 
-allocate(ak(nlevs),bk(nlevs))
-
-if ( idvc == 0 ) then                         ! sigma coordinate, old file format.
-   ak = zero
-   bk = nems_vcoord(1:nlevs,1,1)
-elseif ( idvc == 1 ) then                     ! sigma coordinate
-   ak = zero
-   bk = nems_vcoord(1:nlevs,2,1)
-elseif ( idvc == 2 .or. idvc == 3 ) then      ! hybrid coordinate
-   ak = 0.01_r_kind*nems_vcoord(1:nlevs,1,1) ! convert to mb
-   bk = nems_vcoord(1:nlevs,2,1)
-else
-   write(6,*)'gridio:  ***ERROR*** INVALID value for idvc=',idvc
-   call stop2(85)
-endif
+!call nemsio_getfilehead(gfile,iret=iret,vcoord=nems_vcoord,idvc=idvc)
+!if ( iret /= 0 ) then
+!   write(6,*)' NMMB gridio:  ***ERROR*** problem reading header ', &
+!      'vcoord, Status = ',iret
+!   call stop2(99)
+!endif
+!print *, 'idvc: ', idvc
+!if ( idvc == 0 ) then                         ! sigma coordinate, old file format.
+!   ak = zero
+!   bk = nems_vcoord(1:nlevs,1,1)
+!elseif ( idvc == 1 ) then                     ! sigma coordinate
+!   ak = zero
+!   bk = nems_vcoord(1:nlevs,2,1)
+!elseif ( idvc == 2 .or. idvc == 3 ) then      ! hybrid coordinate
+!   ak = 0.01_r_kind*nems_vcoord(1:nlevs,1,1) ! convert to mb
+!   bk = nems_vcoord(1:nlevs,2,1)
+!else
+!   write(6,*)'gridio:  ***ERROR*** INVALID value for idvc=',idvc
+!   call stop2(85)
+!endif
 if (nanal .eq. 1) then
    print *,'time level ',nb
    print *,'---------------'
 endif
 if (ps_ind > 0) then
-  grdin(:,n3d*nlevs+ps_ind,nb) = psg
+  grdin(:,levels(n3d)+ps_ind,nb) = psg
 endif
+
 ! pressure on model levels
-do k=1,nlevs
-   pslg(:,k)=ak(k)+bk(k)*psg
-   if (nanal .eq. 1) print *,'nemsio, min/max pressi',k,minval(pslg(:,k)),maxval(pslg(:,k))
-enddo
-deallocate(ak,bk)
+!allocate(pslg(nlons*nlats,nlevs))
+!do k=1,nlevs
+!   pslg(:,k)=ak(k)+bk(k)*psg
+!   if (nanal .eq. 1) print *,'nemsio, min/max pressi',k,minval(pslg(:,k)),maxval(pslg(:,k))
+!enddo
 ! get u,v
 do k=1,nlevs
    kk = nlevs+1-k ! grids ordered from top to bottom in NMMB
@@ -121,7 +160,7 @@ do k=1,nlevs
       call stop2(23)
    endif
    if (u_ind > 0) then
-     grdin(:,nlevs*(u_ind-1)+k,nb) = nems_wrk
+     grdin(:,levels(u_ind-1)+k,nb) = nems_wrk
    endif
    call nemsio_readrecv(gfile,'vgrd','mid layer',kk,nems_wrk,iret=iret)
    call wind2mass(nems_wrk,nlons,nlats)
@@ -130,7 +169,7 @@ do k=1,nlevs
       call stop2(23)
    endif
    if (v_ind > 0) then
-     grdin(:,nlevs*(v_ind-1)+k,nb) = nems_wrk
+     grdin(:,levels(v_ind-1)+k,nb) = nems_wrk
    endif
 enddo
 ice = .false. ! calculate qsat w/resp to ice?
@@ -149,16 +188,20 @@ do k=1,nlevs
       call stop2(23)
    endif
    if (cliptracers)  where (nems_wrk2 < clip) nems_wrk2 = clip
+   if (tsen_ind > 0) then
+     grdin(:,levels(tsen_ind-1)+k,nb) = nems_wrk
+   endif
    if (t_ind > 0) then
-     grdin(:,nlevs*(t_ind-1)+k,nb) = nems_wrk*(1. + fv*nems_wrk2)
+     grdin(:,levels(t_ind-1)+k,nb) = nems_wrk*(1. + fv*nems_wrk2)
    endif
    if (q_ind > 0) then
-     grdin(:,nlevs*(q_ind-1)+k,nb) = nems_wrk2
+     grdin(:,levels(q_ind-1)+k,nb) = nems_wrk2
    endif
 enddo
 ! compute qsat
 if (pseudo_rh) then
-   call genqsat1(grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb),qsat(:,:,nb),pslg,grdin(:,(t_ind-1)*nlevs+1:t_ind*nlevs,nb),ice,npts,nlevs)
+   call genqsat1(grdin(:,levels(q_ind-1)+1:levels(q_ind-1)+nlevs,nb),qsat(:,:,nb),pslg,&
+                 grdin(:,levels(t_ind-1)+1:levels(t_ind-1)+nlevs,nb),ice,npts,nlevs)
 else
    qsat(:,:,nb) = 1._r_double
 end if
@@ -172,7 +215,7 @@ if (oz_ind > 0) then
           call stop2(23)
        endif
        if (cliptracers)  where (nems_wrk < clip) nems_wrk = clip
-       grdin(:,(oz_ind-1)*nlevs+k,nb) = nems_wrk
+       grdin(:,levels(oz_ind-1)+k,nb) = nems_wrk
     enddo
 endif
 if (cw_ind > 0) then
@@ -184,28 +227,35 @@ if (cw_ind > 0) then
           call stop2(23)
        endif
        if (cliptracers)  where (nems_wrk < clip) nems_wrk = clip
-       grdin(:,(cw_ind-1)*nlevs+k,nb) = nems_wrk
+       grdin(:,levels(cw_ind-1)+k,nb) = nems_wrk
     enddo
 endif
-  
-deallocate(psg,pslg)
+
+if (sst_ind > 0) then
+   grdin(:,levels(n3d)+sst_ind, nb) = zero
+endif
+
+deallocate(pslg)
 call nemsio_close(gfile, iret=iret)
 
 end do backgroundloop ! loop over backgrounds to read in
 
 end subroutine readgriddata
 
-subroutine writegriddata(nanal,vars3d,vars2d,n3d,n2d,grdin)
+subroutine writegriddata(nanal,vars3d,vars2d,n3d,n2d,levels,ndim,grdin)
+use params, only: nbackgrounds, anlfileprefixes,fgfileprefixes
 
 implicit none
 
-character(len=500):: filename
 integer, intent(in) :: nanal
-integer, intent(in) :: n2d,n3d
 character(len=max_varname_length), dimension(n2d), intent(in) :: vars2d
 character(len=max_varname_length), dimension(n3d), intent(in) :: vars3d
+integer, intent(in) :: n2d,n3d,ndim
+integer, dimension(0:n3d), intent(in) :: levels
+real(r_single), dimension(npts,ndim,nbackgrounds), intent(inout) :: grdin
 
-real(r_single), dimension(npts,n3d*nlevs+n2d,nbackgrounds), intent(inout) :: grdin
+character(len=500):: filename
+
 character(len=3) charnanal
 integer(nemsio_intkind) iret,nfhour,jdate(7),idat(3),ihrst,nfminute,ntimestep,nfsecond
 integer iadate(4),idate(4),k,kk,nb
@@ -213,8 +263,7 @@ integer,dimension(8):: ida,jda
 integer :: u_ind, v_ind, t_ind, q_ind, oz_ind, cw_ind
 integer :: ps_ind
 real(r_double),dimension(5):: fha
-real(nemsio_realkind), dimension(nlons*nlats) :: nems_wrk,nems_wrk2,psg
-real(r_single) pdtop,pt
+real(nemsio_realkind), dimension(nlons*nlats) :: nems_wrk,nems_wrk2
 real(r_kind) clip
 type(nemsio_gfile) :: gfile
 
@@ -327,7 +376,6 @@ if (iret/=0) then
    call stop2(23)
 end if
 
-endif
 
 ! update u,v
 do k=1,nlevs
@@ -338,7 +386,7 @@ do k=1,nlevs
       call stop2(23)
    endif
    if (u_ind > 0) then
-     nems_wrk2 = grdin(:,(u_ind-1)*nlevs + k,nb)
+     nems_wrk2 = grdin(:,levels(u_ind-1) + k,nb)
      call mass2wind(nems_wrk2,nlons,nlats)
      nems_wrk = nems_wrk + nems_wrk2
    endif
@@ -354,7 +402,7 @@ do k=1,nlevs
       call stop2(23)
    endif
    if (v_ind > 0) then
-     nems_wrk2 = grdin(:,(v_ind-1)*nlevs + k,nb)
+     nems_wrk2 = grdin(:,levels(v_ind-1) + k,nb)
      call mass2wind(nems_wrk2,nlons,nlats)
      nems_wrk = nems_wrk + nems_wrk2
    endif
@@ -381,10 +429,10 @@ do k=1,nlevs
    endif
    nems_wrk = nems_wrk*(1. + fv*nems_wrk2) 
    if (t_ind > 0) then 
-      nems_wrk = nems_wrk + grdin(:,(t_ind-1)*nlevs+k,nb)
+      nems_wrk = nems_wrk + grdin(:,levels(t_ind-1)+k,nb)
    endif
    if (q_ind > 0) then
-      nems_wrk2 = nems_wrk2 + grdin(:,(q_ind-1)*nlevs+k,nb)
+      nems_wrk2 = nems_wrk2 + grdin(:,levels(q_ind-1)+k,nb)
    endif
    if (cliptracers)  where (nems_wrk2 < clip) nems_wrk2 = clip
    ! nems_wrk is now updated Tv, convert back to T
@@ -409,7 +457,7 @@ if (oz_ind > 0) then
           write(6,*)'gridio/writegriddata: nmmb model: problem with nemsio_readrecv(o3mr), iret=',iret
           call stop2(23)
        endif
-       nems_wrk = nems_wrk + grdin(:,(oz_ind-1)*nlevs+k,nb)
+       nems_wrk = nems_wrk + grdin(:,levels(oz_ind-1)+k,nb)
        if (cliptracers)  where (nems_wrk < clip) nems_wrk = clip
        call nemsio_writerecv(gfile,'o3mr','mid layer',kk,nems_wrk,iret=iret)
        if (iret/=0) then
@@ -426,7 +474,7 @@ if (cw_ind > 0) then
           write(6,*)'gridio/writegriddata: nmmb model: problem with nemsio_readrecv(clwmr), iret=',iret
           call stop2(23)
        endif
-       nems_wrk = nems_wrk + grdin(:,(cw_ind-1)*nlevs+k,nb)
+       nems_wrk = nems_wrk + grdin(:,levels(cw_ind-1)+k,nb)
        if (cliptracers)  where (nems_wrk < clip) nems_wrk = clip
        call nemsio_writerecv(gfile,'clwmr','mid layer',kk,nems_wrk,iret=iret)
        if (iret/=0) then
