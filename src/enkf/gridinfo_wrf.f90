@@ -74,7 +74,7 @@ module gridinfo
   public :: dot2cross
   ! supported variable names in anavinfo
   character(len=max_varname_length),public, dimension(10) :: vars3d_supported = (/'u', 'v', 'tv', 'q', 'cw', 'w', 'ph', 'oz', 'tsen', 'prse' /)
-  character(len=max_varname_length),public, dimension(4)  :: vars2d_supported = (/ 'pd', 'mu', 'ps', 'sst' /)
+  character(len=max_varname_length),public, dimension(2)  :: vars2d_supported = (/ 'ps', 'sst' /)
 
 contains
 
@@ -119,32 +119,20 @@ contains
     ! Define variables computed within subroutine
     character(len=500)                                :: filename
     real,      dimension(:,:,:),  allocatable :: workgrid
-    real(r_kind)                                      :: radlon
-    real(r_kind)                                      :: radlat
-    real(r_kind)                                      :: dlon
-    real(r_kind)                                      :: dlat
-    real(r_kind)                                      :: recenter_xlat
-    real                                              :: recenter_dx
-    real(r_kind)                                      :: lonsgrdmin
-    real(r_kind)                                      :: lonsgrdmax
-    real(r_kind)                                      :: latsgrdmin
-    real(r_kind)                                      :: latsgrdmax
     integer                                           :: nlevsin
     integer                                           :: nlonsin
     integer                                           :: nlatsin
     integer                                           :: nn
     integer                                           :: ierr
-    integer                                           :: nvar
 
     ! Define variables required for netcdf I/O
     character(len=12)                                 :: varstringname
-    character(len=50)                                 :: attstringname
     character(len=20), dimension(3)                   :: dimstring
     integer,           dimension(3)                   :: dims
 
     ! Define counting variables 
     integer                                           :: i, j, k
-    integer                                           :: count, nob
+    integer                                           :: count
 
     !======================================================================
     if(.not. arw .and. .not. nmm) then
@@ -456,7 +444,6 @@ contains
     integer                                           :: nlatsin
     integer                                           :: nn
     integer                                           :: ierr
-    integer                                           :: nvar
 
     ! Define variables required for netcdf I/O
     character(len=12)                                 :: varstringname

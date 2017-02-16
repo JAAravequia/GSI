@@ -72,6 +72,7 @@ subroutine get_num_satobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
 
     num_obs_tot = 0
     num_obs_totdiag = 0
+
     do nsat=1,nsats_rad
         jpchstart=0
         do i=1,jpch_rad
@@ -348,9 +349,6 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
                              data_chan(n)%dhx_dx, hx(nobs))
                t2 = mpi_wtime()
                tsum = tsum + t2-t1
-               if (hx(nobs) > 1000.) then 
-                  print *, nanal, ' HX: ', hx(nobs), ', h(x)=', hx_mean_nobc(nobs), sattypes_rad(nsat), trim(adjustl(id))
-               endif
             endif
          endif
 

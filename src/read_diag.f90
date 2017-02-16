@@ -34,7 +34,7 @@
 module read_diag
 
   use kinds, only:  i_kind,r_single
-  use sparsearr, only: sparr2, readarray
+  use sparsearr, only: sparr, sparr2, readarray, assignment(=), delete
   implicit none
 
 ! Declare public and private
@@ -145,7 +145,7 @@ module read_diag
      real(r_single) :: tbobs              ! Tb (obs) (K)
      real(r_single) :: omgbc              ! Tb_(obs) - Tb_(simulated w/ bc)  (K)
      real(r_single) :: omgnbc             ! Tb_(obs) - Tb_(simulated_w/o bc) (K)
-     type(sparr2)   :: dhx_dx             ! profile of dH(x) / dx
+     type(sparr)    :: dhx_dx             ! profile of dH(x) / dx
      real(r_single) :: sprd               ! ensemble spread
      real(r_single) :: errinv             ! inverse error (K**(-1))
      real(r_single) :: qcmark             ! quality control mark
@@ -496,6 +496,8 @@ subroutine read_radiag_data(ftin,header_fix,retrieval,data_fix,data_chan,data_ex
   real(r_single),dimension(:),allocatable   :: fix_tmp
   real(r_single),dimension(:,:),allocatable :: extra_tmp
 
+  type(sparr2) :: dhx_dx
+
 ! Allocate arrays as needed
   if (allocated(data_chan)) deallocate(data_chan)
   allocate(data_chan(header_fix%nchan))
@@ -678,8 +680,10 @@ subroutine read_radiag_data(ftin,header_fix,retrieval,data_fix,data_chan,data_ex
 
      do ich=1,header_fix%nchan
         if (header_fix%ijacob==1) then
-           call readarray(data_chan(ich)%dhx_dx,                        &
+           call readarray(dhx_dx, & !data_chan(ich)%dhx_dx,                        &
                           data_tmp(16+header_fix%angord+4:header_fix%idiag,ich))
+           data_chan(ich)%dhx_dx = dhx_dx
+           call delete(dhx_dx)
         endif
      enddo
   endif

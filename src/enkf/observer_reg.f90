@@ -54,7 +54,7 @@ subroutine calc_linhx(hx, dens, rlat, rlon, time, dhx_dx, hx_ens)
   use gridinfo, only: npts, latsgrd, lonsgrd
   use statevec, only: nsdim
   use constants, only: zero,one,pi
-  use sparsearr, only: sparr2
+  use sparsearr, only: sparr
   use general_tll2xy_mod, only: general_tll2xy
   use mpisetup
   implicit none
@@ -64,14 +64,13 @@ subroutine calc_linhx(hx, dens, rlat, rlon, time, dhx_dx, hx_ens)
   real(r_single),dimension(npts,nsdim,nstatefields),intent(in   ) :: dens         ! x_ens - x_mean, state vector space
   real(r_single)                                   ,intent(in   ) :: rlat, rlon   ! observation lat and lon in radians
   real(r_single)                                   ,intent(in   ) :: time         ! observation time relative to middle of window
-  type(sparr2)                                     ,intent(in   ) :: dhx_dx       ! dH(x)/dx |x_mean profiles
+  type(sparr)                                      ,intent(in   ) :: dhx_dx       ! dH(x)/dx |x_mean profiles
   real(r_single)                                   ,intent(  out) :: hx_ens       ! H (x_ens)
 
 ! Declare local variables
   integer(i_kind) :: ix, iy, it, ixp, iyp, itp
-  real(r_kind)    :: dx, dy !, delx2, dely2, delxp2, delyp2
-!  integer(i_kind) :: ix2, iy2, ixp2, iyp2
-  integer(i_kind) :: inz, i,j 
+  real(r_kind)    :: dx, dy
+  integer(i_kind) :: i,j 
   real(r_kind)    :: delx, dely, delxp, delyp, delt, deltp
   logical :: outside
 
@@ -90,15 +89,6 @@ subroutine calc_linhx(hx, dens, rlat, rlon, time, dhx_dx, hx_ens)
   iyp = min(iy + 1, nlats)
 
   iy = iy - 1; iyp = iyp - 1
-
-!  if (nproc == 1) then
-!    if (outside) print *, 'OUTSIDE!'
-!     write (*, '(A, 2I4, F10.5)') 'lat: tll2xy: ', iy, iyp, dy
-!     write (*, '(A,F10.5, A,2F10.5,2F10.5)')     'obslat: ', rlat, ', tll2xy: ', latsgrd(iy*nlons+ix), latsgrd(iyp*nlons+ixp), delyp, dely
-!     write (*, '(A, 2I4, F10.5)') 'lon: tll2xy: ', ix, ixp, dx
-!     write (*, '(A,F10.5, A,2F10.5,2F10.5)')     'obslon: ', rlon, ', tll2xy: ', lonsgrd(iy*nlons+ix), lonsgrd(iyp*nlons+ixp), delxp, delx
-!     write (*, '(A,F10.5, A,2F10.5,2F10.5)')     'obslon: ', rlon, ', tll2xy: ', lonsgrd(iy*nlons+ix)+2*pi,lonsgrd(iyp*nlons+ixp)+2*pi, delxp, delx
-!  endif
 
   it = 1
   do while (time + fhr_assim > nhr_state(it) .and. it < nstatefields)
@@ -121,10 +111,9 @@ subroutine calc_linhx(hx, dens, rlat, rlon, time, dhx_dx, hx_ens)
   ! saves from calculating interpolated x_ens for each state variable
 
   hx_ens = hx
-  inz = 1
-  do i = 1, dhx_dx%nind
-     do j = dhx_dx%st_ind(i), dhx_dx%end_ind(i)
-        hx_ens = hx_ens + dhx_dx%val(inz) *                         &
+  do i = 1, dhx_dx%nnz
+     j = dhx_dx%ind(i)
+     hx_ens = hx_ens + dhx_dx%val(i) *                              &
              (( dens( iy*nlons  + ix , j, it) *delyp*delxp          &
               + dens( iyp*nlons + ix , j, it) *dely *delxp          &
               + dens( iy*nlons  + ixp, j, it) *delyp*delx           &
@@ -133,9 +122,7 @@ subroutine calc_linhx(hx, dens, rlat, rlon, time, dhx_dx, hx_ens)
               + dens( iyp*nlons + ix , j, itp)*dely *delxp          &
               + dens( iy*nlons  + ixp, j, itp)*delyp*delx           &
               + dens( iyp*nlons + ixp, j, itp)*dely *delx )*delt)
-        inz = inz + 1
-     enddo
-   enddo
+  enddo
 
   return
 end subroutine calc_linhx

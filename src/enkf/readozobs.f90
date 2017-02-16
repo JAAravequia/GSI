@@ -126,7 +126,7 @@ end subroutine get_num_ozobs
 subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
 
-  use sparsearr,only:sparr2, readarray, delete
+  use sparsearr,only:sparr, sparr2, readarray, delete, assignment(=)
   use params,only: nanals, lobsdiag_forenkf
   use statevec, only: state_d
   use mpisetup, only: mpi_wtime, nproc
@@ -162,7 +162,8 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
   integer(i_kind) ipe,ind
 
   real(r_double) t1,t2,tsum
-  type(sparr2)         :: dhx_dx
+  type(sparr)   :: dhx_dx
+  type(sparr2)  :: dhx_dx_read
 
   real(r_single),allocatable,dimension(:,:)::diagbuf,diagbuf2
   real(r_single),allocatable,dimension(:,:,:)::rdiagbuf,rdiagbuf2
@@ -322,7 +323,8 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
                else
                   ind = ioff0 + 1
                   ! read dHx/dx profile
-                  call readarray(dhx_dx, rdiagbuf(ind:irdim1,k,n))
+                  call readarray(dhx_dx_read, rdiagbuf(ind:irdim1,k,n))
+                  dhx_dx = dhx_dx_read
    
                   t1 = mpi_wtime()
                   call calc_linhx(hx_mean_nobc(nob), state_d,                  &
@@ -334,6 +336,7 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
                   tsum = tsum + t2-t1
 
                   call delete(dhx_dx)
+                  call delete(dhx_dx_read)
                endif
              endif
 

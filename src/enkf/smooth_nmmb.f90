@@ -14,7 +14,7 @@ public :: smooth
 contains
 
 subroutine smooth(grids)
-real(r_single), intent(inout) :: grids(npts,ncdim) ! there are ncdim 2d grids.
+real(r_single), intent(inout) :: grids(npts,ncdim) ! there are ndim 2d grids.
 ! stub - not yet implemented.
 if (nproc .eq. 0) print *,'nmmb inflation smoothing not yet implemented!'
 end subroutine smooth

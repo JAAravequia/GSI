@@ -33,7 +33,8 @@ subroutine calc_linhx(hx, dens, rlat, rlon, time, dhx_dx, hx_ens)
   use gridinfo, only: npts, latsgrd, lonsgrd
   use statevec, only: nsdim
   use constants, only: zero,one,pi
-  use sparsearr, only: sparr2
+  use sparsearr, only: sparr
+  use mpisetup
   implicit none
 
 ! Declare passed variables
@@ -41,14 +42,13 @@ subroutine calc_linhx(hx, dens, rlat, rlon, time, dhx_dx, hx_ens)
   real(r_single),dimension(npts,nsdim,nstatefields),intent(in   ) :: dens         ! x_ens - x_mean, state vector space
   real(r_single)                                   ,intent(in   ) :: rlat, rlon   ! observation lat and lon in radians
   real(r_single)                                   ,intent(in   ) :: time         ! observation time relative to middle of window
-  type(sparr2)                                     ,intent(in   ) :: dhx_dx       ! dH(x)/dx |x_mean profiles
+  type(sparr)                                      ,intent(in   ) :: dhx_dx       ! dH(x)/dx |x_mean profiles
   real(r_single)                                   ,intent(  out) :: hx_ens       ! H (x_ens)
 
 ! Declare local variables
   integer(i_kind) :: ix, iy, it, ixp, iyp, itp
   integer(i_kind) :: inz, i,j 
   real(r_kind)    :: delx, dely, delxp, delyp, delt, deltp
-
 
   ! find interplation indices and deltas
   ix = 0
@@ -97,15 +97,12 @@ subroutine calc_linhx(hx, dens, rlat, rlon, time, dhx_dx, hx_ens)
   delxp = one - delx
   delyp = one - dely
 
-
   ! interpolate state horizontally and in time and do  dot product with dHx/dx profile
   ! saves from calculating interpolated x_ens for each state variable
-
   hx_ens = hx
-  inz = 1
-  do i = 1, dhx_dx%nind
-     do j = dhx_dx%st_ind(i), dhx_dx%end_ind(i)
-        hx_ens = hx_ens + dhx_dx%val(inz) *                         &
+  do i = 1, dhx_dx%nnz
+     j = dhx_dx%ind(i)
+     hx_ens = hx_ens + dhx_dx%val(i) *                              &
              (( dens( ix*nlons  + iy , j, it) *delxp*delyp          &
               + dens( ixp*nlons + iy , j, it) *delx *delyp          &
               + dens( ix*nlons  + iyp, j, it) *delxp*dely           &
@@ -114,9 +111,7 @@ subroutine calc_linhx(hx, dens, rlat, rlon, time, dhx_dx, hx_ens)
               + dens( ixp*nlons + iy , j, itp)*delx *delyp          &
               + dens( ix*nlons  + iyp, j, itp)*delxp*dely           &
               + dens( ixp*nlons + iyp, j, itp)*delx *dely )*delt)
-        inz = inz + 1
-     enddo
-   enddo
+  enddo
 
   return
 end subroutine calc_linhx

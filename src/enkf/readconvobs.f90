@@ -212,7 +212,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
                             x_lon, x_lat, x_press, x_time, x_code,         &
                             x_errorig, x_type, x_used, id, nanal)
-  use sparsearr, only: sparr2, readarray, delete
+  use sparsearr, only: sparr2, sparr, readarray, delete, assignment(=), size
   use params, only: nanals, lobsdiag_forenkf
   use statevec, only: state_d
   use mpisetup, only: nproc, mpi_wtime
@@ -242,7 +242,8 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
   character*500 obsfile, obsfile2
   character(len=10) :: id2
 
-  type(sparr2)         :: dhx_dx
+  type(sparr2)    :: dhx_dx_read
+  type(sparr)     :: dhx_dx
 
   character(len=3) :: obtype, obtype2
   integer(i_kind) :: iunit, iunit2
@@ -460,8 +461,9 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
              ! run the linearized Hx 
              else
                 ind = ioff0 + 1
-                call readarray(dhx_dx, rdiagbuf(ind:nreal,n))
-                ind = ind + dhx_dx%nnz + dhx_dx%nind*2 + 2
+                call readarray(dhx_dx_read, rdiagbuf(ind:nreal,n))
+                ind = ind + size(dhx_dx_read)
+                dhx_dx = dhx_dx_read
 
                 t1 = mpi_wtime()
                 call calc_linhx(hx_mean_nobc(nob), state_d,             &
@@ -473,10 +475,10 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
                 tsum = tsum + t2-t1
 
                 call delete(dhx_dx)
+                call delete(dhx_dx_read)
              endif
 
 !             if (nanal == 2) print *, nob, x_type(nob), x_obs(nob), hx_mean_nobc(nob), hx(nob)
-
 
              ! normalize q by qsatges
              if (obtype == '  q') then
@@ -528,7 +530,8 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
                    hx(nob) = rdiagbuf(20,n)-rdiagbuf2(22,n)
                 ! run linearized Hx
                 else
-                   call readarray(dhx_dx, rdiagbuf(ind:nreal,n))
+                   call readarray(dhx_dx_read, rdiagbuf(ind:nreal,n))
+                   dhx_dx = dhx_dx_read
   
                    t1 = mpi_wtime()
                    call calc_linhx(hx_mean_nobc(nob), state_d,                  &
@@ -540,6 +543,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
                    tsum = tsum + t2-t1
 
                    call delete(dhx_dx)
+                   call delete(dhx_dx_read)
                 endif
 !                if (nanal == 2) print *, nob, x_type(nob), x_obs(nob), hx_mean_nobc(nob), hx(nob)
              endif

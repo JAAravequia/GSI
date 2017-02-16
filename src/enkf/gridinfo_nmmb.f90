@@ -68,7 +68,6 @@ if (nproc .eq. 0) then
    end if
    call nemsio_getfilehead(gfile,iret=iret,dimx=nlonsin,dimy=nlatsin, &
                            dimz=nlevsin,lat=lats,lon=lons) 
-  print *, 'filehead: ', nlonsin, nlatsin, nlevsin   !,lat=lats,lon=lons)
    if (iret/=0) then
       write(6,*)'gridinfo: nmmb model: problem with nemsio_getfilehead, iret=',iret
       call stop2(24)

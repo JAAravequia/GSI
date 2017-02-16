@@ -31,6 +31,7 @@ private
 public sparr, sparr2
 public new, delete, size
 public writearray, readarray
+public assignment(=)
 
 ! general sparse array type
 ! saves all non-zero elements and their indices
@@ -62,11 +63,17 @@ end type sparr2
 ! constructor
 interface new
   module procedure init_sparr2
+  module procedure init_sparr
+end interface
+
+interface assignment(=)
+  module procedure sparr2_to_sparr
 end interface
 
 ! destructor
 interface delete
   module procedure cleanup_sparr2
+  module procedure cleanup_sparr
 end interface
 
 ! writing out sparse array to array
@@ -82,6 +89,7 @@ end interface
 
 interface size
   module procedure size_sparr2
+  module procedure size_sparr
 end interface
 
 
@@ -104,6 +112,50 @@ subroutine init_sparr2(this, nnz, nind)
 
 end subroutine init_sparr2
 
+! constructor for sparr
+subroutine init_sparr(this, nnz)
+  type(sparr), intent(out) :: this
+  integer, intent(in) :: nnz
+
+  this%nnz  = nnz
+  if (allocated(this%ind))   deallocate(this%ind)
+  if (allocated(this%val))   deallocate(this%val)
+
+  allocate(this%ind(nnz), this%val(nnz))
+
+end subroutine init_sparr
+
+! copying constructor for sparr (from sparr2)
+subroutine sparr2_to_sparr(this, sp2)
+  type(sparr), intent(out) :: this
+  type(sparr2), intent(in) :: sp2
+
+  integer(i_kind) :: inz, nnz
+  integer(i_kind) :: i, j
+  real(r_kind), dimension(:), allocatable    :: nzval  ! values of non-zero elements
+  integer(i_kind), dimension(:), allocatable :: nzind  ! indices of non-zero elements
+
+  allocate(nzval(sp2%nnz), nzind(sp2%nnz))
+  nnz = 0
+  inz = 1
+  do i = 1, sp2%nind
+     do j = sp2%st_ind(i), sp2%end_ind(i)
+        if (sp2%val(inz) /= 0) then
+           nnz = nnz + 1
+           nzval(nnz) = sp2%val(inz)
+           nzind(nnz) = j
+        endif
+        inz = inz + 1
+     enddo
+  enddo
+  call init_sparr(this,nnz)
+  this%ind = nzind
+  this%val = nzval
+  deallocate(nzval, nzind)
+
+end subroutine sparr2_to_sparr
+
+
 ! destructor for sparr2
 subroutine cleanup_sparr2(this)
   type(sparr2), intent(inout) :: this
@@ -115,12 +167,30 @@ subroutine cleanup_sparr2(this)
   this%nind = 0
 end subroutine cleanup_sparr2
 
+! destructor for sparr
+subroutine cleanup_sparr(this)
+  type(sparr), intent(inout) :: this
+
+  if (allocated(this%ind))   deallocate(this%ind)
+  if (allocated(this%val))   deallocate(this%val)
+  this%nnz  = 0
+end subroutine cleanup_sparr
+
+
 ! returns "size" (2 + 2*nind + nnz) of sparr2
 integer function size_sparr2(this)
   type(sparr2), intent(in) :: this
 
   size_sparr2 = 2 + this%nnz + 2*this%nind
 end function size_sparr2
+
+! returns "size" (1 + 2*nnz) of sparr
+integer function size_sparr(this)
+  type(sparr), intent(in) :: this
+
+  size_sparr = 1 + 2*this%nnz
+end function size_sparr
+
 
 ! writing out sparse array to array
 subroutine writearray_sparr2(this, array, ierr)
@@ -199,6 +269,5 @@ subroutine readarray_sparr2(this, array)
   this%val = array(ind:ind+nnz-1)
 
 end subroutine readarray_sparr2
-
 
 end module sparsearr
