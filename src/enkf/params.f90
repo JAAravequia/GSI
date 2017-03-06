@@ -89,6 +89,7 @@ real(r_single),public :: analpertwtnh,analpertwtsh,analpertwttr,sprd_tol,saterrf
 real(r_single),public ::  paoverpb_thresh,latbound,delat,p5delat,delatinv
 real(r_single),public ::  latboundpp,latboundpm,latboundmp,latboundmm
 real(r_single),public :: covl_minfact, covl_efold
+
 ! if npefiles=0, diag files are read (concatenated pe* files written by gsi)
 ! if npefiles>0, npefiles+1 pe* files read directly
 ! the pe* files are assumed to be located in <obspath>/gsitmp_mem###
@@ -120,6 +121,14 @@ logical,public :: arw = .false.
 logical,public :: nmm = .true.
 logical,public :: nmmb = .false.
 logical,public :: letkf_flag = .false.
+
+! if true generate additional input files
+! required for EFSO calculations
+logical,public :: fso_cycling = .false.
+
+! if true perform efso calculations 
+logical,public :: fso_calculate = .false.
+
 logical,public :: massbal_adjust = .false.
 ! if true, use ensemble mean qsat in definition of
 ! normalized humidity analysis variable (instead of
@@ -144,7 +153,8 @@ namelist /nam_enkf/datestring,datapath,iassim_order,&
                    paoverpb_thresh,latbound,delat,pseudo_rh,numiter,biasvar,&
                    lupd_satbiasc,cliptracers,simple_partition,adp_anglebc,angord,&
                    newpc4pred,nmmb,nhr_anal,fhr_assim,nbackgrounds,save_inflation,nobsl_max,&
-                   letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles
+                   letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
+                   fso_cycling,fso_calculate
 namelist /nam_wrf/arw,nmm
 namelist /satobs_enkf/sattypes_rad,dsis
 namelist /ozobs_enkf/sattypes_oz

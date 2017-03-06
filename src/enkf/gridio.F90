@@ -27,12 +27,13 @@
 !   2015-06-29  Add ability to read/write multiple time levels
 !   2016-04-20  Modify to handle the updated nemsio sig file (P, DP, DPDT removed)
 !               For GFS and NMMB
-!
+!   2016-03-06  Adding functionality to optionally write non-inflated ensembles, 
+!               a required input for EFSO calculations
 ! attributes:
 !   language: f95
 !
 !$$$
- use constants, only: zero,one,cp,fv,rd,grav,zero
+ use constants, only: zero,one,cp,fv,rd,grav
  use params, only: nlons,nlats,ndim,reducedgrid,nvars,nlevs,use_gfs_nemsio,pseudo_rh, &
                    cliptracers,nlons,nlats,datestring,datapath,massbal_adjust,&
                    nbackgrounds,fgfileprefixes,anlfileprefixes
@@ -227,7 +228,7 @@
            vg = vg*(pressi(:,k)-pressi(:,k+1))
            call sptezv_s(divspec,vrtspec,ug,vg,-1) ! u,v to div,vrt
            call sptez_s(divspec,vmassdiv(:,k),1) ! divspec to divgrd
-        endif
+        endif   
         call nemsio_readrecv(gfile,'tmp','mid layer',k,nems_wrk,iret=iret)
         if (iret/=0) then
            write(6,*)'gridio/readgriddata: gfs model: problem with nemsio_readrecv(tmp), iret=',iret
@@ -368,7 +369,7 @@
 
  end subroutine readgriddata
 
- subroutine writegriddata(nanal,grdin)
+ subroutine writegriddata(nanal,grdin,no_inflate_flag)
   use sigio_module, only: sigio_head, sigio_data, sigio_sclose, sigio_sropen, &
                           sigio_srohdc, sigio_sclose, sigio_axdata, &
                           sigio_aldata, sigio_swohdc
@@ -381,6 +382,7 @@
   character(len=500):: filenamein, filenameout
   integer, intent(in) :: nanal
   real(r_single), dimension(npts,ndim,nbackgrounds), intent(inout) :: grdin
+  logical, intent(in) :: no_inflate_flag
   real(r_kind), allocatable, dimension(:,:) :: vmassdiv,dpanl,dpfg,pressi
   real(r_kind), allocatable, dimension(:,:) :: vmassdivinc
   real(r_kind), allocatable, dimension(:,:) :: ugtmp,vgtmp
@@ -411,6 +413,12 @@
   kap = rd/cp
   kap1 = kap+one
   write(charnanal,'(i3.3)') nanal
+  if(no_inflate_flag) then
+    filenameout = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"nimem"//charnanal
+  else
+    filenameout = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"mem"//charnanal
+  end if
+  filenamein = trim(adjustl(datapath))//trim(adjustl(fgfileprefixes(nb)))//"mem"//charnanal
 
   backgroundloop: do nb=1,nbackgrounds
 
