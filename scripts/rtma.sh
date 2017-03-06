@@ -170,6 +170,10 @@ flt_pmsl=$fixgsi/$endianness/rtma_fltnorm.dat_pmsl
 flt_howv=$fixgsi/$endianness/rtma_fltnorm.dat_howv
 flt_tcamt=$fixgsi/$endianness/rtma_fltnorm.dat_tcamt
 flt_cldch=$fixgsi/$endianness/rtma_fltnorm.dat_cldch
+flt_uwnd10m=$fixgsi/$endianness/rtma_fltnorm.dat_uwnd10m
+flt_vwnd10m=$fixgsi/$endianness/rtma_fltnorm.dat_vwnd10m
+flt_uwnd10mwter=$fixgsi/$endianness/rtma_fltnorm.dat_uwnd10mwter
+flt_vwnd10mwter=$fixgsi/$endianness/rtma_fltnorm.dat_vwnd10mwter
 
 prmcard=$fixgsi/rtma_parmcard_input
 
@@ -240,6 +244,12 @@ $ncp $flt_mxtmwter       ./fltnorm.dat_mxtmwter
 $ncp $flt_pmsl           ./fltnorm.dat_pmsl
 $ncp $flt_howv           ./fltnorm.dat_howv
 $ncp $flt_tcamt          ./fltnorm.dat_tcamt
+#ADD four
+$ncp $flt_uwnd10m         ./fltnorm.dat_uwnd10m
+$ncp $flt_vwnd10m         ./fltnorm.dat_vwnd10m
+$ncp $flt_uwnd10mwter      ./fltnorm.dat_uwnd10mwter
+$ncp $flt_vwnd10mwter     ./fltnorm.dat_vwnd10mwter
+
 
 $ncp $prmcard            ./parmcard_input
 

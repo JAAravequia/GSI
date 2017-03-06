@@ -609,6 +609,10 @@ OBS_INPUT::
    prepbufr       spd       null      spd      1.0     0      0
    prepbufr       wspd10m   null      wspd10m  1.0     0      0
    satwnd         wspd10m   null      wspd10m  1.0     0      0
+   prepbufr       uwnd10m   null      uwnd10m  1.0     0      0
+   satwnd         uwnd10m   null      uwnd10m  1.0     0      0
+   prepbufr       vwnd10m   null      vwnd10m  1.0     0      0
+   satwnd         vwnd10m   null      vwnd10m  1.0     0      0
    prepbufr       gust      null      gust     1.0     0      0
    prepbufr       vis       null      vis      1.0     0      0
    prepbufr       td2m      null      td2m     1.0     0      0
@@ -618,6 +622,7 @@ OBS_INPUT::
    prepbufr       mitm      null      mitm      1.0     0      0
    prepbufr       pmsl      null      pmsl     1.0     0      0
    prepbufr       howv      null      howv     1.0     0      0
+   satmar         howv      null      howv     1.0     0      0
    prepbufr       tcamt     null      tcamt    1.0     0      0
    goessky        tcamt     null      tcamt    1.0     0      0
    prepbufr       cldch     null      cldch    1.0     0      0
