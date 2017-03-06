@@ -111,6 +111,8 @@ EOF
 
 anavinfo=$fixgsi/anavinfo_rtma
 berror=$fixgsi/$endianness/rtma_regional_nmm_berror.f77.gcv
+howvvar_berr=$fixgsi/urma2p5_howv_var_lat.bin                #ww3
+howvlng_berr=$fixgsi/urma2p5_howv_lng_lat.bin                #ww3
 errtable=$fixgsi/rtma_errtable.r3dv
 convinfo=$fixgsi/rtma_convinfo.txt
 mesonetuselist=$fixgsi/rtma_mesonet_uselist.txt
@@ -244,15 +246,17 @@ $ncp $flt_mxtmwter       ./fltnorm.dat_mxtmwter
 $ncp $flt_pmsl           ./fltnorm.dat_pmsl
 $ncp $flt_howv           ./fltnorm.dat_howv
 $ncp $flt_tcamt          ./fltnorm.dat_tcamt
-#ADD four
+#ADD four flt_norm
 $ncp $flt_uwnd10m         ./fltnorm.dat_uwnd10m
 $ncp $flt_vwnd10m         ./fltnorm.dat_vwnd10m
 $ncp $flt_uwnd10mwter      ./fltnorm.dat_uwnd10mwter
 $ncp $flt_vwnd10mwter     ./fltnorm.dat_vwnd10mwter
+#ADD two files of howv error stats
+$ncp howvvar_berr         ./howv_var_berr.bin             
+$ncp howvlng_berr         ./howv_lng_berr.bin           
 
 
 $ncp $prmcard            ./parmcard_input
-
 # Copy CRTM coefficient files based on entries in satinfo file
 #RY:  we do not need satinfo
 #for file in `awk '{if($1!~"!"){print $1}}' ./satinfo | sort | uniq` ;do
