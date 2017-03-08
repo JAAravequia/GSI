@@ -14,7 +14,7 @@
 
   use kinds, only: i_kind,r_kind
   use obsmod, only: dmesh,dval,dthin,dtype,dfile,dplat,dsfcalc,ndat,&
-     init_obsmod_dflts,create_obsmod_vars,write_diag,reduce_diag,oberrflg,&
+     init_obsmod_dflts,create_obsmod_vars,write_diag,reduce_diag,oberrflg,oberrflg_raw,&
      time_window,perturb_obs,perturb_fact,sfcmodel,destroy_obsmod_vars,dsis,&
      dtbduv_on,time_window_max,offtime_data,init_directories,oberror_tune,ext_sonde, &
      blacklst,init_obsmod_vars,lobsdiagsave,lobskeep,lobserver,hilbert_curve,&
@@ -318,7 +318,7 @@
 !                       option
 !  08-28-2016 li - tic591: add use_readin_anl_sfcmask for consistent sfcmask
 !                          between analysis grids and others
-!
+!  03-07-2017 Su - add oberrflg_raw for rawinsonde observation error table
 !EOP
 !-------------------------------------------------------------------------
 
@@ -682,6 +682,7 @@
 !     tdrerr_inflate - logical for tdr obs error inflation
 !     tdrgross_fact - factor applies to tdr gross error
 !     oberrflg - logical for reading in new obs error table (if set to true)
+!     oberrflg_raw - logical for reading in new raw obs error table (if set to true)
 !     vadfile  - character(10) variable holding name of vadwnd bufr file
 !     noiqc    - logical flag to bypass OIQC (if set to true)
 !     c_varqc - constant number to control var. qc turnning on speed
@@ -703,7 +704,7 @@
 !                      obs run through the buddy check
 !     njqc  -  When true, use Purser's non linear QC
 
-  namelist/obsqc/ dfact,dfact1,erradar_inflate,tdrerr_inflate,tdrgross_fact,oberrflg,&
+  namelist/obsqc/ dfact,dfact1,erradar_inflate,tdrerr_inflate,tdrgross_fact,oberrflg,oberrflg_raw,&
        vadfile,noiqc,c_varqc,blacklst,use_poq7,hilbert_curve,tcp_refps,tcp_width,&
        tcp_ermin,tcp_ermax,qc_noirjaco3,qc_noirjaco3_pole,qc_satwnds,njqc,vqc,&
        aircraft_t_bc_pof,aircraft_t_bc,aircraft_t_bc_ext,biaspredt,upd_aircraft,cleanup_tail,&

@@ -108,6 +108,8 @@ module obsmod
 !                          implementation.
 !   2016-07-19  wgu      - add isfctype - mask for surface type - to radiance obtype
 !   2016-07-19  kbathmann - add rsqrtinv and use_corr_obs to rad_ob_type
+!   2017-03-07  Su       - Add oberrflg_raw for rawinsonde observation error
+!                          based on its instrument type
 ! 
 ! Subroutines Included:
 !   sub init_obsmod_dflts   - initialize obs related variables to default values
@@ -282,6 +284,9 @@ module obsmod
 !   def oberrflg     - logical for reading in new observation error table
 !                      .true.  will read in obs errors from file 'errtable'
 !                      .false. will not read in new obs errors
+!   def oberrflg_raw - logical for reading in new rawinsonde observation error table
+!                      .true.  will read in obs errors from file 'errtable_raw'
+!                      .false. will not read in new obs errors
 !   def blacklst     - logical for reading in station blacklist table
 !                      .true.  will read in blacklist from file 'blacklist'
 !                      .false. will not read in blacklist
@@ -353,7 +358,7 @@ module obsmod
   public :: inquire_obsdiags
   public :: dfile_format
 ! set passed variables to public
-  public :: iout_pcp,iout_rad,iadate,write_diag,reduce_diag,oberrflg,bflag,ndat,dthin,dmesh,l_do_adjoint
+  public :: iout_pcp,iout_rad,iadate,write_diag,reduce_diag,oberrflg,oberrflg_raw,bflag,ndat,dthin,dmesh,l_do_adjoint
   public :: lsaveobsens,lag_ob_type,o3l_ob_type,oz_ob_type,colvk_ob_type,pcp_ob_type,dw_ob_type
   public :: sst_ob_type,srw_ob_type,spd_ob_type,rw_ob_type,gps_ob_type,gps_all_ob_type,tcp_ob_type
   public :: gust_ob_type,vis_ob_type,pblh_ob_type,wspd10m_ob_type,td2m_ob_type
@@ -1582,7 +1587,7 @@ module obsmod
 
   logical, save :: obs_instr_initialized_=.false.
 
-  logical oberrflg,bflag,oberror_tune,perturb_obs,ref_obs,sfcmodel,dtbduv_on,dval_use
+  logical oberrflg,oberrflg_raw,bflag,oberror_tune,perturb_obs,ref_obs,sfcmodel,dtbduv_on,dval_use
   logical blacklst,lobsdiagsave,lobsdiag_allocated,lobskeep,lsaveobsens
   logical lobserver,l_do_adjoint
   logical,dimension(0:50):: write_diag
@@ -1628,6 +1633,8 @@ contains
 !   2014-05-07  pondeca - add howv
 !   2014-06-16  carley/zhu - add tcamt and lcbas
 !   2015-07-10  pondeca - add cldch
+!   2017-03-07  Su      - add oberrflg_raw for rawinsond observation error based
+!                         on its types 
 !
 !   input argument list:
 !
@@ -1660,6 +1667,7 @@ contains
     lsaveobsens=.false.
     l_do_adjoint=.true.     ! .true. = apply H^T when in int routines
     oberrflg  = .false.
+    oberrflg_raw  = .false.
     bflag     = .false.     ! 
     sfcmodel  = .false.     ! .false. = do not use boundary layer model 
     dtbduv_on = .true.      ! .true. = use microwave dTb/duv in inner loop

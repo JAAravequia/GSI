@@ -124,7 +124,7 @@ subroutine glbsoi(mype)
   use gridmod, only: nlat,nlon,nsig,rlats,regional,&
       twodvar_regional,wgtlats
   use guess_grids, only: nfldsig
-  use obsmod, only: write_diag,perturb_obs,ditype,iadate
+  use obsmod, only: write_diag,perturb_obs,ditype,iadate,oberrflg_raw
   use qcmod,only: njqc
   use turblmod, only: create_turblvars,destroy_turblvars
   use obs_sensitivity, only: lobsensfc, iobsconv, lsensrecompute, &
@@ -137,6 +137,7 @@ subroutine glbsoi(mype)
   use radinfo, only: radinfo_write,passive_bc,newpc4pred
   use pcpinfo, only: pcpinfo_write
   use converr, only: converr_destroy
+  use converr_raw, only: converr_raw_destroy
   use converr_ps, only: converr_ps_destroy
   use converr_q, only: converr_q_destroy
   use converr_t, only: converr_t_destroy
@@ -399,6 +400,7 @@ subroutine glbsoi(mype)
         call converr_destroy
      endif  
   endif
+  if(oberrflg_raw) call converr_raw_destroy
 
   if (regional) then
      if(anisotropic) then

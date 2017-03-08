@@ -133,7 +133,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !   2016-02-10  s.liu  - thin new VAD wind in time level
 !   2016-03-15  Su      - modified the code so that the program won't stop when no subtype
 !                         is found in non linear qc error tables and b table
-!
+!  2017-03-06  Su       -modify to read rawinsonde observation error based on
+!                        instrument type
 
 !   input argument list:
 !     infile   - unit from which to read BUFR data
@@ -320,7 +321,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 
   real(r_double) rstation_id,qcmark_huge
   real(r_double) vtcd
-  real(r_double),dimension(8):: hdr,hdrtsb
+  real(r_double),dimension(9):: hdr,hdrtsb
   real(r_double),dimension(3,255):: hdr3
   real(r_double),dimension(8,255):: drfdat,qcmark,obserr,var_jb
   real(r_double),dimension(13,255):: obsdat
@@ -348,8 +349,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   equivalence(rstation_id,sidchr)
 
 !  data statements
-  data hdstr  /'SID XOB YOB DHR TYP ELV SAID T29'/
-  data hdstr2 /'TYP SAID T29 SID'/
+  data hdstr  /'SID XOB YOB DHR TYP ELV SAID T29 ITP'/
+  data hdstr2 /'TYP SAID T29 SID ITP'/
   data obstr  /'POB QOB TOB ZOB UOB VOB PWO MXGS HOVI CAT PRSS TDO PMO' /
   data drift  /'XDR YDR HRDR                    '/
   data sststr /'MSST DBSS SST1 SSTQM SSTOE           '/
@@ -598,7 +599,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
         endif
 
 !       Extract type information
-        call ufbint(lunin,hdr,4,1,iret,hdstr2)
+        call ufbint(lunin,hdr,5,1,iret,hdstr2)
         kx=hdr(1)
         if (aircraft_t_bc .and. acft_profl_file) then
            kx0=kx
@@ -839,7 +840,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
            if(nc <= 0 .or. tab(ntb,2) /= nx) cycle loop_readsb
                  
 !          Extract type, date, and location information
-           call ufbint(lunin,hdr,8,1,iret,hdstr)
+           call ufbint(lunin,hdr,9,1,iret,hdstr)
            kx=hdr(5)
 
            if (.not.(aircraft_t_bc .and. acft_profl_file)) then
