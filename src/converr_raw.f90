@@ -127,7 +127,7 @@ subroutine converr_raw_destroy
 
      deallocate(etabl_raw)
      return
-  end subroutine converr_destroy
+  end subroutine converr_raw_destroy
 
 end module converr_raw
 

@@ -170,7 +170,7 @@ BKGVERR="$BKGVERR_update"
 ANBKGERR="$ANBKERR_update"
 JCOPTS="$JCOPTS_update"
 STRONGOPTS="$STRONGOPTS_update"
-OBSQC="$OBSQC_update"
+OBSQC="oberrflg_raw=.true.,$OBSQC_update"
 OBSINPUT="$OBSINPUT_update"
 SUPERRAD="$SUPERRAD_update"
 SINGLEOB="$SINGLEOB_update"
@@ -230,6 +230,7 @@ btable_ps=$fixgsi/nqc_b_ps.global_nqcf
 btable_t=$fixgsi/nqc_b_t.global_nqcf
 btable_q=$fixgsi/nqc_b_q.global_nqcf
 btable_uv=$fixgsi/nqc_b_uv.global_nqcf
+errtable_raw=$fixgsi/rawinsonde_err.table
 
 anavinfo=$fixgsi/global_anavinfo.l64.txt
 ozinfo=$fixgsi/global_ozinfo.txt
@@ -269,6 +270,7 @@ $ncp $pcpinfo  ./pcpinfo
 $ncp $ozinfo   ./ozinfo
 $ncp $convinfo ./convinfo
 $ncp $errtable ./errtable
+$ncp $errtable_raw ./errtable_raw
 $ncp $anavinfo ./anavinfo
 $ncp $hybens_info ./hybens_info
 #add 9 tables for new varqc

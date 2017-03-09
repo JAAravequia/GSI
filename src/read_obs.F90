@@ -637,6 +637,7 @@ subroutine read_obs(ndata,mype)
          setcomm
     use constants, only: one,zero
     use converr, only: converr_read
+    use converr_raw, only: converr_raw_read
     use converr_ps, only: converr_ps_read
     use converr_q, only: converr_q_read
     use converr_t, only: converr_t_read
