@@ -592,8 +592,8 @@ export gsi_namelist="
    baldiag_full=.true.,baldiag_inc=.true.,
  /
  &OBSQC
-   dfact=0.75,dfact1=3.0,noiqc=.true.,c_varqc=0.02,vadfile='prepbufr',
-   hilbert_curve=.true.,buddycheck_t=.false.,buddydiag_save=.true.,oberrflg=.true.,njqc=.true.,vqc=.false.,
+   dfact=0.75,dfact1=3.0,noiqc=.true.,c_varqc=0.02,vadfile='prepbufr',hilbert_curve=.true.,
+   buddycheck_t=.false.,buddydiag_save=.true.,oberrflg=.true.,njqc=.true.,vqc=.false.,
    $OBSQC
  /
  &OBS_INPUT
