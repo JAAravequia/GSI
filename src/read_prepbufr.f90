@@ -1062,7 +1062,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                           del = huge_r_kind
                        endif
                        del=max(zero,min(del,one))
-                       obserr(3,k)=(one-del)*etabl_raw(inst,k1,2)+del*etabl(inst,k2,2)
+                       obserr(3,k)=(one-del)*etabl_raw(inst,k1,2)+del*etabl_raw(inst,k2,2)
                        obserr(2,k)=(one-del)*etabl_raw(inst,k1,3)+del*etabl_raw(inst,k2,3)
                        obserr(5,k)=(one-del)*etabl_raw(inst,k1,4)+del*etabl_raw(inst,k2,4)
                        obserr(1,k)=(one-del)*etabl_raw(inst,k1,5)+del*etabl_raw(inst,k2,5)
@@ -1070,6 +1070,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                        obserr(2,k)=max(obserr(2,k),qerrmin)
                        obserr(5,k)=max(obserr(5,k),werrmin)
                        obserr(1,k)=max(obserr(1,k),perrmin)
+                       write(6,*) 'read_prepbufr:itypex,k1,k2,inst,obserr(3,k),obserr(2,k),obserr(5,k),obserr(5,k)=',&
+                                   itypex,k1,k2,inst,obserr(3,k),obserr(2,k),obserr(5,k),obserr(5,k)
                     enddo
                  endif
               else if( njqc) then

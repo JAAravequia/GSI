@@ -46,16 +46,16 @@ fi
 #=================================================================================================
 
 # Set experiment name and analysis date
-adate=2015060100
+adate=2017030900
 expnm=globalprod    
 exp=globalprod.$adate
 expid=${expnm}.$adate.wcoss
 
 # Set path/file for gsi executable
-gsiexec=/da/save/$USER/trunk/src/global_gsi
+gsiexec=/da/save/$USER/gsi/xsu_raw_inst/src/global_gsi
 
 # Specify GSI fixed field
-fixgsi=/da/save/$USER/trunk/fix
+fixgsi=/da/save/$USER/gsi/xsu_raw_inst/fix
 
 # Set the JCAP resolution which you want.
 # All resolutions use LEVS=64
@@ -67,9 +67,9 @@ export lrun_subdirs=.true.
 
 # Set data, runtime and save directories
 if [ $MACHINE = WCOSS ]; then
-   datdir=/ptmp/$USER/data_sigmap/${exp}
-   tmpdir=/ptmp/$USER/tmp${JCAP}_sigmap/${expid}  
-   savdir=/ptmp/$USER/out${JCAP}/sigmap/${expid}  
+   datdir=/ptmpp1/$USER/data_sigmap/${exp}
+   tmpdir=/ptmpp1/$USER/tmp${JCAP}_sigmap/${expid}  
+   savdir=/ptmpp1/$USER/out${JCAP}/sigmap/${expid}  
    fixcrtm=/da/save/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix_update
    endianness=Big_Endian
    COMPRESS=gzip 
@@ -205,8 +205,8 @@ adate0=`echo $adate | cut -c1-8`
 gdate0=`echo $gdate | cut -c1-8`
 dumpobs=gdas
 dumpges=gdas
-datobs=/com/gfs/prod/gdas.$adate0
-datges=/com/gfs/prod/gdas.$gdate0
+datobs=/com2/gfs/prod/gdas.$adate0
+datges=/com2/gfs/prod/gdas.$gdate0
 
 # Look for required input files in ${datdir}
 # if ${datdir}/gdas1.t${hha}z.sgm3prep is present assume we have 
@@ -217,9 +217,9 @@ if [ $MACHINE = WCOSS ]; then
     datobs=${datdir}
     datges=${datdir}
     datprep=${datobs}
-  elif [ -s /com/gfs/prod/gdas.${gdate0}/gdas1.t${hha}z.sgm3prep ]; then
-    datges=/com/gfs/prod/gdas.$gdate0
-    datobs=/com/gfs/prod/gdas.$adate0
+  elif [ -s /com2/gfs/prod/gdas.${gdate0}/gdas1.t${hha}z.sgm3prep ]; then
+    datges=/com2/gfs/prod/gdas.$gdate0
+    datobs=/com2/gfs/prod/gdas.$adate0
     datprep=${datobs}
   else
     echo Initital files are missing from disk.  
@@ -403,7 +403,7 @@ cat << EOF > gsiparm.anl
    $STRONGOPTS
  /
  &OBSQC
-   dfact=0.75,dfact1=3.0,noiqc=.true.,oberrflg=.false.,c_varqc=0.02,
+   dfact=0.75,dfact1=3.0,noiqc=.true.,oberrflg=.false.,oberrflg_raw=.true.,c_varqc=0.02,
    use_poq7=.true.,qc_noirjaco3_pole=.true.,vqc=.true.
    $OBSQC
  /
@@ -500,6 +500,7 @@ OBS_INPUT::
    oblat=45.,oblon=180.,obpres=1000.,obdattim=${adate},
    obhourset=0.,
    $SINGLEOB
+ &NST
  /
 EOF
 
@@ -541,6 +542,7 @@ convinfo=$fixgsi/global_convinfo.txt
 atmsbeamdat=$fixgsi/atms_beamwidth.txt
 
 errtable=$fixgsi/prepobs_errtable.global
+errtable_raw=$fixgsi/rawinsonde_err.table
 
 
 # Only need this file for single obs test
@@ -574,6 +576,7 @@ $ncp $ozinfo   ./ozinfo
 $ncp $convinfo ./convinfo
 $ncp $atmsbeamdat ./atms_beamwidth.txt
 $ncp $errtable ./errtable
+$ncp $errtable_raw ./errtable_raw
 
 $ncp $bufrtable ./prepobs_prep.bufrtable
 $ncp $bftab_sst ./bftab_sstphr
@@ -638,22 +641,24 @@ $ncp $datobs/${prefix_obs}syndata.tcvitals.tm00 ./tcvitl
  $ncp $datges/${prefix_tbc}.abias               ./satbias_in
  #$ncp $datges/${prefix_tbc}.satang             ./satbias_angle
  $ncp $datges/${prefix_tbc}.abias_pc            ./satbias_pc
+ $ncp $datges/${prefix_tbc}.abias            ./satbias
+ $ncp $datges/${prefix_tbc}.abias_air            ./satbias_air
  $ncp $datges/${prefix_tbc}.radstat             ./radstat.gdas
 
-/da/save/$USER/trunk/util/Radiance_bias_correction_Utilities/write_biascr_option.x -newpc4pred -adp_anglebc 4
+#/da/save/$USER/trunk/util/Radiance_bias_correction_Utilities/write_biascr_option.x -newpc4pred -adp_anglebc 4
 
-cp satbias_in satbias_in.orig
-cp satbias_in.new satbias_in
+#cp satbias_in satbias_in.orig
+#cp satbias_in.new satbias_in
 
-listdiag=`tar xvf radstat.gdas | cut -d' ' -f2 | grep _ges`
-for type in $listdiag; do
-   diag_file=`echo $type | cut -d',' -f1`
-   fname=`echo $diag_file | cut -d'.' -f1`
-   date=`echo $diag_file | cut -d'.' -f2`
-   $UNCOMPRESS $diag_file
-   fnameanl=$(echo $fname|sed 's/_ges//g')
-   mv $fname.$date $fnameanl
-done
+#listdiag=`tar xvf radstat.gdas | cut -d' ' -f2 | grep _ges`
+#for type in $listdiag; do
+#   diag_file=`echo $type | cut -d',' -f1`
+#   fname=`echo $diag_file | cut -d'.' -f1`
+#   date=`echo $diag_file | cut -d'.' -f2`
+#   $UNCOMPRESS $diag_file
+#   fnameanl=$(echo $fname|sed 's/_ges//g')
+#   mv $fname.$date $fnameanl
+#done
 
 
 # Determine resolution of the guess files

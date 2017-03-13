@@ -93,11 +93,13 @@ contains
 120  continue
 
      if(lcount<=0 .and. mype==0) then
-        write(6,*)'CONVERR:  ***WARNING*** raw obs error table not available in GSI'
+        write(6,*)'CONVERR_RAW:  ***WARNING*** raw obs error table not available in GSI'
         oberrflg_raw=.false.
-     endif
-
-     close(ietabl)
+     else if(mype==0) then
+      write(6,*) 'CONVERR_RAW' 
+      write(6,*) etabl_raw(8,4,2),etabl_raw(8,4,3),etabl_raw(8,4,4),etabl_raw(8,4,5)
+     endif                                                                                                                                      
+     close(ietabl)                                                                                                                               
 
      return
   end subroutine converr_raw_read
