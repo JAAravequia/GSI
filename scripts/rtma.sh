@@ -273,8 +273,8 @@ $ncp ${rtma_obs}/urma.t${cya}z.goessky.bufr_d  ./goessky
 echo "NEW MAX/MIN DATA $rtma_obs/rtma.maxt/mintobs.dat "
 ls -lt  $rtma_obs/*tobs.dat
 echo "$rtma_obs/urma*tobs.dat"
-$ncp ${rtma_obs}/urma.20170305.mintobs.dat ./mitmdat
-$ncp ${rtma_obs}/urma.20170305.maxtobs.dat ./mxtmdat 
+$ncp ${rtma_obs}/urma.20170312.mintobs.dat ./mitmdat
+$ncp ${rtma_obs}/urma.20170312.maxtobs.dat ./mxtmdat 
 echo "observation data: satmar for howv "
 $ncp ${rtma_obs}/satmar ./satmar
 
