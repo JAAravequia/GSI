@@ -12,6 +12,7 @@ module intrwmod
 !   2008-11-26  Todling - remove intrw_tl; add interface back
 !   2009-08-13  lueken - update documentation
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - implemented obs adjoint test  
+!   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !
 ! subroutines included:
 !   sub intrw_
@@ -24,6 +25,10 @@ module intrwmod
 !
 !$$$ end documentation block
 
+use m_obsNode, only: obsNode
+use m_rwNode, only: rwNode
+use m_rwNode, only: rwNode_typecast
+use m_rwNode, only: rwNode_nextcast
 implicit none
 
 PRIVATE
@@ -88,7 +93,7 @@ subroutine intrw_(rwhead,rval,sval)
 !$$$
   use kinds, only: r_kind,i_kind
   use constants, only: half,one,tiny_r_kind,cg_term,r3600
-  use obsmod, only: rw_ob_type,lsaveobsens,l_do_adjoint,luse_obsdiag
+  use obsmod, only: lsaveobsens,l_do_adjoint,luse_obsdiag
   use qcmod, only: nlnqc_iter,varqc_iter
   use gridmod, only: latlon1n
   use jfunc, only: jiter,l_foto,xhat_dt,dhat_dt
@@ -98,7 +103,7 @@ subroutine intrw_(rwhead,rval,sval)
   implicit none
 
 ! Declare passed variables
-  type(rw_ob_type),pointer,intent(in   ) :: rwhead
+  class(obsNode), pointer, intent(in   ) :: rwhead
   type(gsi_bundle),        intent(in   ) :: sval
   type(gsi_bundle),        intent(inout) :: rval
 
@@ -112,7 +117,7 @@ subroutine intrw_(rwhead,rval,sval)
   real(r_kind) cg_rw,p0,grad,wnotgross,wgross,time_rw,pg_rw
   real(r_kind),pointer,dimension(:) :: su,sv,sw
   real(r_kind),pointer,dimension(:) :: ru,rv,rw
-  type(rw_ob_type), pointer :: rwptr
+  type(rwNode), pointer :: rwptr
 
 !  If no rw data return
   if(.not. associated(rwhead))return
@@ -146,7 +151,8 @@ subroutine intrw_(rwhead,rval,sval)
   if(ier/=0)return
 
 
-  rwptr => rwhead
+  !rwptr => rwhead
+  rwptr => rwNode_typecast(rwhead)
   do while (associated(rwptr))
      j1=rwptr%ij(1)
      j2=rwptr%ij(2)
@@ -275,7 +281,8 @@ subroutine intrw_(rwhead,rval,sval)
         endif
      endif
 
-     rwptr => rwptr%llpoint
+     !rwptr => rwptr%llpoint
+     rwptr => rwNode_nextcast(rwptr)
   end do
   return
 end subroutine intrw_
