@@ -742,7 +742,7 @@ contains
 
              write(inbufr) this_staid,this_stalat,this_stalon,this_stahgt, &
                   thistime,thislat,thislon,thishgt,thisvr,corrected_azimuth,&
-                  thiserr,corrected_tilt
+                  thiserr,corrected_tilt,gamma
              nsuper=nsuper+1
            end if
           end do

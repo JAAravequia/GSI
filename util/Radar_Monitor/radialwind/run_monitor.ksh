@@ -4,12 +4,10 @@
 
 ###### USER INPUT ##########################################################
 #Use any wrf_inout3 file. It's just used to help make the baseplot.
-ANALFILE=/scratch4/NCEPDEV/stmp4/Donald.E.Lippi/2015103018/test10_90deg_w/wrf_inout03
+ANALFILE=/scratch4/NCEPDEV/stmp4/Donald.E.Lippi/2015103018/save_dl2rw_rwMon/wrf_inout03
 #Location of stdout file from GSI -- this is the most important!
 STDOUT=./sample_input/stdout
-STDOUT=/scratch4/NCEPDEV/meso/noscrub/Donald.E.Lippi/tmpnwprd/rw_999/namrr_12_conusnest_tm00_rw_999/OUTPUT.188132
-STDOUT=/scratch4/NCEPDEV/meso/noscrub/Donald.E.Lippi/tmpnwprd/rw_999/namrr_13_conusnest_tm00_rw_999/OUTPUT.118385
-STDOUT=/scratch4/NCEPDEV/stmp4/Donald.E.Lippi/2015103018/test10_90deg_w/stdout
+STDOUT=/scratch4/NCEPDEV/stmp4/Donald.E.Lippi/2015103018/save_dl2rw_rwMon/stdout
 ############################################################################
 
 # CHECK IF FILES EXIST.
