@@ -536,8 +536,8 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
   nsuper2_in=0
   nsuper2_kept=0
 
-  LEVEL_TWO_READ: if(loop==0 .and. sis=='l2rw') then
-    outmessage='level 2 superobs:'
+!  LEVEL_TWO_READ: if(loop==0 .and. sis=='l2rw') then
+   if(loop==0) outmessage='level 2 superobs:'
 
 ! Open sequential file containing superobs
   open(lnbufr,file='radar_supobs_from_level2',form='unformatted')
@@ -742,7 +742,7 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
            ibadvad=ibadvad+1 ; good=.false.
         end if
      end if
-     
+
 !    If data is good, load into output array
      if(good) then
         nsuper2_kept=nsuper2_kept+1
@@ -758,6 +758,7 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
 
         call deter_sfc2(dlat_earth,dlon_earth,t4dv,idomsfc,skint,ff10,sfcr)
 
+        LEVEL_TWO_READ: if(loop==0 .and. sis=='l2rw') then      
         cdata(1) = error             ! wind obs error (m/s)
         cdata(2) = dlon              ! grid relative longitude
         cdata(3) = dlat              ! grid relative latitude
@@ -789,14 +790,17 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
         do i=1,maxdat
            cdata_all(i,ndata)=cdata(i)
         end do
+        END IF LEVEL_TWO_READ
         
      else
         notgood = notgood + 1
      end if
-     
+
   end do
 
   close(lnbufr)	! A simple unformatted fortran file should not be mixed with a bufr I/O
+
+  LEVEL_TWO_READ_2: if(loop==0 .and. sis=='l2rw') then      
   write(6,*)'READ_RADAR:  ',trim(outmessage),' reached eof on 2/2.5/3 superob radar file'
 
   write(6,*)'READ_RADAR: nsuper2_in,nsuper2_kept=',nsuper2_in,nsuper2_kept
@@ -819,7 +823,7 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
   write(6,*)'READ_RADAR: dlatmin,max,dlonmin,max=',dlatmin,dlatmax,dlonmin,dlonmax
   write(6,*)'READ_RADAR: iaaamin,max,8*max_rrr  =',iaaamin,iaaamax,8*max_rrr
 
-  END IF LEVEL_TWO_READ
+  END IF LEVEL_TWO_READ_2
 
   if(sis=='l3rw' .or. sis=='rw') then
 !  Next process level 2.5 and 3 superobs

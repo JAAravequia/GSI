@@ -158,6 +158,10 @@ _ENTRY_(myname_)
                                 aNode%pg     , &
                                 aNode%cosazm , &
                                 aNode%sinazm , &
+                                aNode%sintilt , &
+                                aNode%costilt , &
+                                aNode%cosazm_costilt , &
+                                aNode%sinazm_costilt , &
                                 aNode%dlev   , &
                                 aNode%factw  , &
                                 aNode%wij    , &
@@ -196,6 +200,10 @@ _ENTRY_(myname_)
                                 aNode%pg     , &
                                 aNode%cosazm , &
                                 aNode%sinazm , &
+                                aNode%sintilt , &
+                                aNode%costilt , &
+                                aNode%cosazm_costilt , &
+                                aNode%sinazm_costilt , &
                                 aNode%dlev   , &
                                 aNode%factw  , &
                                 aNode%wij    , &
