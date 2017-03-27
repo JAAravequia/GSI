@@ -135,7 +135,7 @@ deallocate(utable)
 allocate(index_pres(ncdim))
 ii=0
 do i=1,nc3d
-  do k=1,nlevs
+  do k=1,clevels(i)-clevels(i-1)
     ii = ii + 1
     index_pres(ii)=k
   end do

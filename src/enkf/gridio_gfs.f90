@@ -376,8 +376,7 @@
   ! compute saturation q.
   do k=1,nlevs
     ! layer pressure from phillips vertical interolation
-    ug(:) = ((pressi(:,k)**kap1-pressi(:,k+1)**kap1)/&
-            (kap1*(pressi(:,k)-pressi(:,k+1))))**kapr
+    ug(:) = pressi(:,k)*0.1_r_kind
     call copytogrdin(ug,pslg(:,k))
     if (prse_ind > 0)     grdin(:,levels(prse_ind-1)+k,nb) = pslg(:,k)
   end do
