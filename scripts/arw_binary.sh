@@ -103,11 +103,7 @@ SUPERRAD="$SUPERRAD_update"
 SINGLEOB="$SINGLEOB_update"
 
 if [ "$debug" = ".false." ]; then
-   if [[ $exp == *"updat"* ]]; then
-     . $scripts/regression_namelists_updat.sh arw_binary
-   elif [[ $exp == *"contrl"* ]]; then
-     . $scripts/regression_namelists.sh arw_binary
-   fi
+   . $scripts/regression_namelists.sh arw_binary
 else
    . $scripts/regression_namelists_db.sh arw_binary
 fi

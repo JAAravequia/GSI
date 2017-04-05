@@ -13,7 +13,7 @@ fi
 # Name of the branch being tested
 dl2rw="dl2rw_2"
 updat="dl2rw_2"
-contrl="trunk"
+contrl="trunkr89611"
 
 #  Handle machine specific paths for:
 #  experiment and control executables, fix, ptmp, and CRTM coefficient files.
@@ -23,7 +23,7 @@ if [[ "$machine" = "Theia" ]]; then
    export basedir="/scratch4/NCEPDEV/meso/save/$LOGNAME/gsi"
 
    export group="meso"
-   export queue="batch"
+   export queue="debug"
 
    export ptmp="/scratch4/NCEPDEV/stmp3/$LOGNAME"
    export noscrub="/scratch4/NCEPDEV/meso/noscrub/$LOGNAME"

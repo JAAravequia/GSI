@@ -60,11 +60,7 @@ HYBRID_ENSEMBLE='ensemble_path="",'
 SINGLEOB="$SINGLEOB_update"
 
 if [ "$debug" = ".false." ]; then
-   if [[ $exp == *"updat"* ]]; then
-     . $scripts/regression_namelists_updat.sh nems_nmmb_4denvar
-   elif [[ $exp == *"contrl"* ]]; then
-     . $scripts/regression_namelists.sh nems_nmmb_4denvar
-   fi
+   . $scripts/regression_namelists.sh nems_nmmb_4denvar
 else
    . $scripts/regression_namelists_db.sh nems_nmmb_4denvar 
 fi
