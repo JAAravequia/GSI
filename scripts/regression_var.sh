@@ -14,6 +14,7 @@ fi
 dl2rw="dl2rw_2"
 updat="dl2rw_2"
 contrl="trunkr89611"
+contrl="dl2rw_regtest"
 
 #  Handle machine specific paths for:
 #  experiment and control executables, fix, ptmp, and CRTM coefficient files.
