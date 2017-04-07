@@ -3,7 +3,7 @@ subroutine read_satmar (nread, ndata, nodata,                                 &
                         nobs  )
 !
 !
-!subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
+!based on subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
 !     infile,lunout,obstype,nread,ndata,nodata,twind,sis, &
 !     mype_root,mype_sub,npe_sub,mpi_comm_sub,nobs, &
 !     nrec_start,dval_use)
@@ -51,11 +51,11 @@ subroutine read_satmar (nread, ndata, nodata,                                 &
    use kinds, only: r_kind,r_double,i_kind
    use gsi_4dvar, only: l4dvar,l4densvar,winlen,iwinbgn,thin4d,time_4dvar
    use constants, only: zero, deg2rad,rad2deg,one,two,three,four,ten,half, &
-       r60inv,r60,r3600,grav,tiny_r_kind !,init_constants_derived
+       r60inv,r60,r3600,grav,tiny_r_kind   !,init_constants_derived
    use gridmod, only: regional, diagnostic_reg,rlats,rlons,nlat,nlon,txy2ll,tll2xy, &
        twodvar_regional
    use satthin, only: map2tgrid,destroygrids,makegrids
-   use convinfo, only: ithin_conv,rmesh_conv,pmesh_conv,nconvtype,icuse,ictype,icsubtype,ioctype
+   use convinfo, only: ithin_conv,rmesh_conv,pmesh_conv,nconvtype,icuse,ictype,ioctype
    use convthin, only: make3grids,use_all,map3grids,del3grids
    use obsmod, only: bmiss,hilbert_curve
    use mpimod, only: npe

@@ -9,6 +9,7 @@ module stpvwnd10mmod
 !
 ! program history log:
 !   2016-05-05  pondeca
+!   2017-03-19  yang     - modify code to use polymorphic obsNode
 !
 ! subroutines included:
 !   sub stpvwnd10m
@@ -18,6 +19,11 @@ module stpvwnd10mmod
 !   machine:
 !
 !$$$ end documentation block
+
+use m_obsNode    , only: obsNode
+use m_vwnd10mNode, only: vwnd10mNode
+use m_vwnd10mNode, only: vwnd10mNode_typecast
+use m_vwnd10mNode, only: vwnd10mNode_nextcast
 
 implicit none
 
@@ -53,7 +59,6 @@ subroutine stpvwnd10m(vwnd10mhead,rval,sval,out,sges,nstep)
 !
 !$$$
   use kinds, only: r_kind,i_kind,r_quad
-  use obsmod, only: vwnd10m_ob_type
   use qcmod, only: nlnqc_iter,varqc_iter
   use constants, only: half,one,two,tiny_r_kind,cg_term,zero_quad
   use gridmod, only: latlon11
@@ -62,7 +67,7 @@ subroutine stpvwnd10m(vwnd10mhead,rval,sval,out,sges,nstep)
   implicit none
 
 ! Declare passed variables
-  type(vwnd10m_ob_type),pointer           ,intent(in   ) :: vwnd10mhead
+  class(obsNode),pointer              ,intent(in   ) :: vwnd10mhead
   integer(i_kind)                     ,intent(in   ) :: nstep
   real(r_quad),dimension(max(1,nstep)),intent(inout) :: out
   type(gsi_bundle)                    ,intent(in   ) :: rval,sval
@@ -77,7 +82,7 @@ subroutine stpvwnd10m(vwnd10mhead,rval,sval,out,sges,nstep)
   real(r_kind) pg_vwnd10m
   real(r_kind),pointer,dimension(:) :: svwnd10m
   real(r_kind),pointer,dimension(:) :: rvwnd10m
-  type(vwnd10m_ob_type), pointer :: vwnd10mptr
+  type(vwnd10mNode), pointer :: vwnd10mptr
 
   out=zero_quad
 
@@ -91,7 +96,8 @@ subroutine stpvwnd10m(vwnd10mhead,rval,sval,out,sges,nstep)
   call gsi_bundlegetpointer(rval,'vwnd10m',rvwnd10m,istatus);ier=istatus+ier
   if(ier/=0)return
 
-  vwnd10mptr => vwnd10mhead
+! vwnd10mptr => vwnd10mhead
+  vwnd10mptr => vwnd10mNode_typecast(vwnd10mhead)
   do while (associated(vwnd10mptr))
      if(vwnd10mptr%luse)then
         if(nstep > 0)then
@@ -133,7 +139,8 @@ subroutine stpvwnd10m(vwnd10mhead,rval,sval,out,sges,nstep)
         end do
      end if
 
-     vwnd10mptr => vwnd10mptr%llpoint
+!    vwnd10mptr => vwnd10mptr%llpoint
+     vwnd10mptr => vwnd10mNode_nextcast(vwnd10mptr)
 
   end do
   

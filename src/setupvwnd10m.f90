@@ -4,7 +4,7 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! subprogram:    setupvwnd10m    compute rhs for conventional 10 m vwind 
 !   prgmmr: pondeca           org: np23                date: 2016-03-07
 !
-! abstract: For 10-m vwind observations
+! abstract: For 10-m uwind observations
 !              a) reads obs assigned to given mpi task (geographic region),
 !              b) simulates obs from guess,
 !              c) apply some quality control to obs,
@@ -15,7 +15,10 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! program history log:
 !   2016-03-07  pondeca
 !   2016-10-07  pondeca - if(.not.proceed) advance through input file first
-!                          before retuning to setuprhsall.f90
+!                         before retuning to setuprhsall.f90
+!   2016-06-24  guo     - fixed the default value of obsdiags(:,:)%tail%luse to luse(i) 
+!                         . removed (%dlat,%dlon) debris.
+!   2017-03-15  Yang    - modify code to use polymorphic code.
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -37,13 +40,17 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   use guess_grids, only: hrdifsig,nfldsig,ges_lnprsl,fact10,nfldsfc, &
                hrdifsfc,geop_hgtl,sfcmod_gfs,sfcmod_mm5,comp_fact10,pt_ll     
-  use obsmod, only: vwnd10mhead,vwnd10mtail,rmiss_single,i_vwnd10m_ob_type,obsdiags,&
+  use m_obsdiags, only: vwnd10mhead
+  use obsmod, only: rmiss_single,i_vwnd10m_ob_type,obsdiags, bmiss, &
                     lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset
-  use obsmod, only: vwnd10m_ob_type
-  use obsmod, only: obs_diag,bmiss,luse_obsdiag
+  use m_obsNode    , only: obsNode
+  use m_vwnd10mNode, only: vwnd10mNode
+  use m_obsLList   , only: obsLList_appendNode
+  use obsmod, only: obs_diag,luse_obsdiag
   use gsi_4dvar, only: nobs_bins,hr_obsbin
   use oneobmod, only: magoberr,maginnov,oneobtest
-  use gridmod, only: nlat,nlon,istart,jstart,lon1,nsig
+
+  use gridmod, only: nsig
   use gridmod, only: get_ij,twodvar_regional,regional,rotate_wind_xy2ll
   use constants, only: zero,tiny_r_kind,one,one_tenth,half,wgtlim,rd,grav,&
             two,cg_term,three,four,five,ten,huge_single,r1000,rad2deg,r3600,&
@@ -114,6 +121,7 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) idomsfc,iskint,iff10,isfcr
   
   logical,dimension(nobs):: luse,muse
+  integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
   logical lowlevelsat
   logical proceed
 
@@ -126,8 +134,10 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   logical:: in_curbin, in_anybin
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
-  type(vwnd10m_ob_type),pointer:: my_head
-  type(obs_diag),pointer:: my_diag
+  class(obsNode   ), pointer:: my_node
+  type(vwnd10mNode), pointer:: my_head
+  type(obs_diag   ), pointer:: my_diag
+
 
 
   equivalence(rstation_id,station_id)
@@ -157,7 +167,7 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! Read and reformat observations in work arrays.
   spdb=zero
 
-  read(lunin)data,luse
+  read(lunin)data,luse,ioid
 
 !  index information for data array (see reading routine)
   ier=1       ! index of obs error
@@ -199,10 +209,10 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! Check for missing data
   if (.not. oneobtest) then
   do i=1,nobs
-    if (data(ivob,i) > r0_1_bmiss .or. data(iuob,i) > r0_1_bmiss)  then
+    if (data(iuob,i) > r0_1_bmiss .or. data(ivob,i) > r0_1_bmiss)  then
        muse(i)=.false.
-       data(ivob,i)=rmiss_single   ! for diag output
        data(iuob,i)=rmiss_single   ! for diag output
+       data(ivob,i)=rmiss_single   ! for diag output
     end if
   end do
   end if
@@ -270,6 +280,7 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      if(luse_obsdiag)then
         if (.not.lobsdiag_allocated) then
            if (.not.associated(obsdiags(i_vwnd10m_ob_type,ibin)%head)) then
+              obsdiags(i_vwnd10m_ob_type,ibin)%n_alloc = 0
               allocate(obsdiags(i_vwnd10m_ob_type,ibin)%head,stat=istat)
               if (istat/=0) then
                  write(6,*)'setupvwnd10m: failure to allocate obsdiags',istat
@@ -284,13 +295,15 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               end if
               obsdiags(i_vwnd10m_ob_type,ibin)%tail => obsdiags(i_vwnd10m_ob_type,ibin)%tail%next
            end if
+           obsdiags(i_vwnd10m_ob_type,ibin)%n_alloc = obsdiags(i_vwnd10m_ob_type,ibin)%n_alloc +1
+
            allocate(obsdiags(i_vwnd10m_ob_type,ibin)%tail%muse(miter+1))
            allocate(obsdiags(i_vwnd10m_ob_type,ibin)%tail%nldepart(miter+1))
            allocate(obsdiags(i_vwnd10m_ob_type,ibin)%tail%tldepart(miter))
            allocate(obsdiags(i_vwnd10m_ob_type,ibin)%tail%obssen(miter))
-           obsdiags(i_vwnd10m_ob_type,ibin)%tail%indxglb=i
+           obsdiags(i_vwnd10m_ob_type,ibin)%tail%indxglb=ioid(i)
            obsdiags(i_vwnd10m_ob_type,ibin)%tail%nchnperobs=-99999
-           obsdiags(i_vwnd10m_ob_type,ibin)%tail%luse=.false.
+           obsdiags(i_vwnd10m_ob_type,ibin)%tail%luse=luse(i)
            obsdiags(i_vwnd10m_ob_type,ibin)%tail%muse(:)=.false.
            obsdiags(i_vwnd10m_ob_type,ibin)%tail%nldepart(:)=-huge(zero)
            obsdiags(i_vwnd10m_ob_type,ibin)%tail%tldepart(:)=zero
@@ -300,7 +313,7 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            n_alloc(ibin) = n_alloc(ibin) +1
            my_diag => obsdiags(i_vwnd10m_ob_type,ibin)%tail
            my_diag%idv = is
-           my_diag%iob = i
+           my_diag%iob = ioid(i)
            my_diag%ich = 1
         else
            if (.not.associated(obsdiags(i_vwnd10m_ob_type,ibin)%tail)) then
@@ -308,7 +321,10 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            else
               obsdiags(i_vwnd10m_ob_type,ibin)%tail => obsdiags(i_vwnd10m_ob_type,ibin)%tail%next
            end if
-           if (obsdiags(i_vwnd10m_ob_type,ibin)%tail%indxglb/=i) then
+          if (.not.associated(obsdiags(i_vwnd10m_ob_type,ibin)%tail)) then
+              call die(myname,'.not.associated(obsdiags(i_vwnd10m_ob_type,ibin)%tail)')
+           end if
+           if (obsdiags(i_vwnd10m_ob_type,ibin)%tail%indxglb/=ioid(i)) then
               write(6,*)'setupvwnd10m: index error'
               call stop2(297)
            end if
@@ -337,7 +353,7 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         presw = ten*exp(dpres)
         dpres = dpres-log(psges)
         drpx=zero
-
+      
         prsfc=psges
         prsln2=log(exp(prsltmp(1))/prsfc)
         dpressave=dpres
@@ -348,7 +364,7 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
  
 !       Interpolate guess u and v to observation location and time.
  
-        call tintrp2a11(ges_uwnd10m,ugesin,dlat,dlon,dtime,hrdifsig,&
+        call tintrp2a11(ges_vwnd10m,ugesin,dlat,dlon,dtime,hrdifsig,&
              mype,nfldsig)
         call tintrp2a11(ges_vwnd10m,vgesin,dlat,dlon,dtime,hrdifsig,&
              mype,nfldsig)
@@ -594,7 +610,6 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      endif
 
      if(luse_obsdiag)then
-        obsdiags(i_vwnd10m_ob_type,ibin)%tail%luse=luse(i)
         obsdiags(i_vwnd10m_ob_type,ibin)%tail%muse(jiter)=muse(i)
         obsdiags(i_vwnd10m_ob_type,ibin)%tail%nldepart(jiter)=ddiff
         obsdiags(i_vwnd10m_ob_type,ibin)%tail%wgtjo= (error*ratio_errors)**2
@@ -603,46 +618,42 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !    If obs is "acceptable", load array with obs info for use
 !    in inner loop minimization (int* and stp* routines)
      if (.not. last .and. muse(i)) then
+        allocate(my_head)
+        m_alloc(ibin) = m_alloc(ibin) + 1
+        my_node => my_head
+        call obsLList_appendNode(vwnd10mhead(ibin),my_node)
+        my_node => null()
 
-        if(.not. associated(vwnd10mhead(ibin)%head))then
-           allocate(vwnd10mhead(ibin)%head,stat=istat)
-           if(istat /= 0)write(6,*)' failure to write vwnd10mhead '
-           vwnd10mtail(ibin)%head => vwnd10mhead(ibin)%head
-        else
-           allocate(vwnd10mtail(ibin)%head%llpoint,stat=istat)
-           if(istat /= 0)write(6,*)' failure to write vwnd10mtail%llpoint '
-           vwnd10mtail(ibin)%head => vwnd10mtail(ibin)%head%llpoint
-        end if
-
-	m_alloc(ibin) = m_alloc(ibin) + 1
-	my_head => vwnd10mtail(ibin)%head
-	my_head%idv = is
-	my_head%iob = i
+        my_head%idv = is
+        my_head%iob = ioid(i)
+        my_head%elat= data(ilate,i)
+        my_head%elon= data(ilone,i)
 
 !       Set (i,j) indices of guess gridpoint that bound obs location
-        call get_ij(mm1,dlat,dlon,vwnd10mtail(ibin)%head%ij(1),vwnd10mtail(ibin)%head%wij(1))
+        call get_ij(mm1,dlat,dlon,my_head%ij(1),my_head%wij(1))
 
-        vwnd10mtail(ibin)%head%res     = ddiff
-        vwnd10mtail(ibin)%head%err2    = error**2
-        vwnd10mtail(ibin)%head%raterr2 = ratio_errors**2    
-        vwnd10mtail(ibin)%head%time    = dtime
-        vwnd10mtail(ibin)%head%b       = cvar_b(ikx)
-        vwnd10mtail(ibin)%head%pg      = cvar_pg(ikx)
-        vwnd10mtail(ibin)%head%luse    = luse(i)
+
+
+        my_head%res     = ddiff
+        my_head%err2    = error**2
+        my_head%raterr2 = ratio_errors**2    
+        my_head%time    = dtime
+        my_head%b       = cvar_b(ikx)
+        my_head%pg      = cvar_pg(ikx)
+        my_head%luse    = luse(i)
         if(luse_obsdiag)then
-           vwnd10mtail(ibin)%head%diags => obsdiags(i_vwnd10m_ob_type,ibin)%tail
- 
-           my_head => vwnd10mtail(ibin)%head
-           my_diag => vwnd10mtail(ibin)%head%diags
-           if(my_head%idv /= my_diag%idv .or. &
+          my_head%diags => obsdiags(i_vwnd10m_ob_type,ibin)%tail
+          my_diag => my_head%diags
+          if(my_head%idv /= my_diag%idv .or. &
               my_head%iob /= my_diag%iob ) then
               call perr(myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
-                    (/is,i,ibin/))
+                    (/is,ioid(i),ibin/))
               call perr(myname,'my_head%(idv,iob) =',(/my_head%idv,my_head%iob/))
               call perr(myname,'my_diag%(idv,iob) =',(/my_diag%idv,my_diag%iob/))
               call die(myname)
            endif
         end if
+        my_head => null ()
      endif
 
 
@@ -695,10 +706,10 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(18,ii) = ddiff              ! obs-ges used in analysis (ms**-1)
         rdiagbuf(19,ii) = data(ivob,i)-vgesin! obs-ges w/o bias correction (ms**-1) (future slot)
 
-        rdiagbuf(20,ii) = data(iuob,i)       ! 10m uwind observation (ms**-1)
+        rdiagbuf(20,ii) = data(iuob,i)       ! 10m vwind observation (ms**-1)
         rdiagbuf(21,ii) = dudiff             ! uob-ges (ms**-1)
         rdiagbuf(22,ii) = data(iuob,i)-ugesin! uob-ges w/o bias correction (ms**-1) (future slot)
-
+ 
         if(regional) then
 
 !           replace positions 17-22 with earth relative wind component information
@@ -708,14 +719,14 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            dlon_e=data(ilone,i)*deg2rad
            call rotate_wind_xy2ll(uob_reg,vob_reg,uob_e,vob_e,dlon_e,dlon,dlat)
            call rotate_wind_xy2ll(ugesin,vgesin,uges_e,vges_e,dlon_e,dlon,dlat)
-           call rotate_wind_xy2ll(dudiff,ddiff,dudiff_e,dvdiff_e,dlon_e,dlon,dlat)
-           rdiagbuf(17,ii) = vob_e         ! earth relative v wind component observation (m/s)
-           rdiagbuf(18,ii) = dvdiff_e      ! earth relative v obs-ges used in analysis (m/s)
-           rdiagbuf(19,ii) = vob_e-vges_e  ! earth relative v obs-ges w/o bias correction (m/s) (future slot)
+           call rotate_wind_xy2ll(ddiff,dvdiff,dudiff_e,dvdiff_e,dlon_e,dlon,dlat)
+           rdiagbuf(17,ii) = uob_e         ! earth relative u wind component observation (m/s)
+           rdiagbuf(18,ii) = dudiff_e      ! earth relative u obs-ges used in analysis (m/s)
+           rdiagbuf(19,ii) = uob_e-uges_e  ! earth relative u obs-ges w/o bias correction (m/s) (future slot)
 
-           rdiagbuf(20,ii) = uob_e         ! earth relative u wind component observation (m/s)
-           rdiagbuf(21,ii) = dudiff_e      ! earth relative u obs-ges used in analysis (m/s)
-           rdiagbuf(22,ii) = uob_e-uges_e  ! earth relative u obs-ges w/o bias correction (m/s) (future slot)
+           rdiagbuf(20,ii) = vob_e         ! earth relative v wind component observation (m/s)
+           rdiagbuf(21,ii) = dvdiff_e      ! earth relative v obs-ges used in analysis (m/s)
+           rdiagbuf(22,ii) = vob_e-vges_e  ! earth relative v obs-ges w/o bias correction (m/s) (future slot)
         end if
 
         rdiagbuf(23,ii) = factw              ! 10m wind reduction factor
@@ -765,7 +776,7 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! Write information to diagnostic file
   if(conv_diagsave .and. ii>0)then
      call dtime_show(myname,'diagsave:vwnd10m',i_vwnd10m_ob_type)
-     write(7)'vwn',nchar,nreal,ii,mype,ioff0
+     write(7)'uwn',nchar,nreal,ii,mype,ioff0
      write(7)cdiagbuf(1:ii),rdiagbuf(:,1:ii)
      deallocate(cdiagbuf,rdiagbuf)
 
@@ -788,14 +799,15 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   proceed=ivar>0
   call gsi_metguess_get ('var::z' , ivar, istatus )
   proceed=proceed.and.ivar>0
-  call gsi_metguess_get ('var::uwnd10m' , ivar, istatus )
+  call gsi_metguess_get ('var::uwnd10m', ivar, istatus )
   proceed=proceed.and.ivar>0
-  call gsi_metguess_get ('var::vwnd10m' , ivar, istatus )
+  call gsi_metguess_get ('var::vwnd10m', ivar, istatus )
   proceed=proceed.and.ivar>0
   call gsi_metguess_get ('var::wspd10m', ivar, istatus )
   proceed=proceed.and.ivar>0
   call gsi_metguess_get ('var::tv', ivar, istatus )
   proceed=proceed.and.ivar>0
+
   end subroutine check_vars_ 
 
   subroutine init_vars_

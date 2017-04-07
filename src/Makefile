@@ -261,6 +261,7 @@ clean:
 	enorm_state.f90 \
 	ensctl2state.f90 \
 	ensctl2model.f90 \
+        ens_spread_mod.f90 \
         en_perts_io.f90 \
 	evaljgrad.f90 \
 	evaljo.f90 \
@@ -360,11 +361,11 @@ clean:
 	inttcamt.f90 \
 	inttcp.f90 \
 	inttd2m.f90 \
-	intuwnd10m.f90 \
 	intvis.f90 \
-	intvwnd10m.f90 \
 	intw.f90 \
 	intwspd10m.f90 \
+	intuwnd10m.f90 \
+	intvwnd10m.f90 \
 	jcmod.f90 \
 	jfunc.f90 \
 	jgrad.f90 \
@@ -387,7 +388,6 @@ clean:
 	m_gpsrhs.F90 \
 	m_gsiBiases.f90 \
 	m_rerank.f90 \
-	m_obdiag.F90	\
 	m_rhs.F90	\
 	m_sortind.f90 \
 	m_stats.f90 \
@@ -403,6 +403,50 @@ clean:
 	model_tl.F90 \
 	control2model_ad.f90 \
 	ensctl2model_ad.f90 \
+        m_aeroNode.F90 \
+        m_aerolNode.F90 \
+	m_cldchNode.F90 \
+        m_colvkNode.F90 \
+	m_cvgridLookup.F90 \
+        m_dwNode.F90 \
+        m_gpsNode.F90 \
+        m_gustNode.F90 \
+	m_howvNode.F90 \
+        m_lagNode.F90 \
+	m_latlonRange.F90 \
+	m_lcbasNode.F90 \
+	m_mitmNode.F90 \
+	m_mxtmNode.F90 \
+        m_o3lNode.F90 \
+	m_obsHeadBundle.F90 \
+	m_obsLList.F90 \
+        m_obsNode.F90 \
+	m_obsNodeTypeManager.F90 \
+        m_obsdiagNode.F90 \
+        m_obsdiags.F90 \
+        m_ozNode.F90 \
+        m_pblhNode.F90 \
+        m_pcpNode.F90 \
+        m_pm10Node.F90 \
+        m_pm2_5Node.F90 \
+	m_pmslNode.F90 \
+        m_psNode.F90 \
+        m_pwNode.F90 \
+        m_qNode.F90 \
+        m_radNode.F90 \
+        m_rwNode.F90 \
+        m_spdNode.F90 \
+        m_srwNode.F90 \
+        m_sstNode.F90 \
+        m_tNode.F90 \
+	m_tcamtNode.F90 \
+        m_tcpNode.F90 \
+	m_td2mNode.F90 \
+        m_visNode.F90 \
+        m_wNode.F90 \
+	m_wspd10mNode.F90 \
+	m_uwnd10mNode.F90 \
+	m_vwnd10mNode.F90 \
 	mp_compact_diffs_mod1.f90 \
 	mp_compact_diffs_support.f90 \
 	mpimod.F90 \
@@ -452,7 +496,6 @@ clean:
 	read_gfs_ozone_for_regional.f90 \
 	read_guess.F90 \
         read_mitm_mxtm.f90 \
-	read_obsdiags.F90 \
 	read_wrf_mass_files.F90 \
 	read_wrf_mass_guess.F90 \
 	read_wrf_nmm_files.F90 \
@@ -467,7 +510,6 @@ clean:
 	set_crtm_cloudmod.f90 \
         setupaod.f90 \
         setuppm10.f90 \
-	setupyobs.f90 \
 	sfc_model.f90 \
 	sfcobsqc.f90 \
 	simpin1.f90 \
@@ -519,11 +561,11 @@ clean:
 	stptcamt.f90 \
 	stptcp.f90 \
 	stptd2m.f90 \
-	stpuwnd10m.f90 \
 	stpvis.f90 \
-	stpvwnd10m.f90 \
 	stpw.f90 \
 	stpwspd10m.f90 \
+	stpuwnd10m.f90 \
+	stpvwnd10m.f90 \
 	strong_bal_correction.f90 \
 	strong_baldiag_inc.f90 \
 	strong_fast_global_mod.f90 \
@@ -559,7 +601,6 @@ clean:
 	wrf_netcdf_interface.F90 \
 	write_all.F90 \
 	write_bkgvars_grid.f90 \
-	write_obsdiags.F90 \
 	wrwrfmassa.F90 \
 	wrwrfnmma.F90 \
 	xhat_vordivmod.f90 \
@@ -609,8 +650,8 @@ clean:
 	read_prepbufr.f90 \
 	read_radar.f90 \
 	read_saphir.f90 \
-	read_satwnd.f90 \
 	read_satmar.f90 \
+	read_satwnd.f90 \
 	read_sfcwnd.f90 \
 	read_rapidscat.f90 \
 	read_seviri.f90 \
@@ -647,11 +688,11 @@ clean:
 	setuptcamt.f90 \
 	setuptcp.f90 \
 	setuptd2m.f90 \
-	setupuwnd10m.f90 \
 	setupvis.f90 \
-	setupvwnd10m.f90 \
 	setupw.f90 \
 	setupwspd10m.f90 \
+	setupuwnd10m.f90 \
+	setupvwnd10m.f90 \
 	sst_retrieval.f90 \
         read_NASA_LaRC_cloud.f90
 
@@ -661,7 +702,9 @@ clean:
 
   SRCSC = blockIO.c
 
-  SRCS = $(SRCSF90C) $(GSIGC_SRCS) $(SRCSF77) $(SRCSC) $(XSRCSC)
+  SRCSNOC = $(SRCSF90C_NOSWAP) $(SRCSF90C) $(GSIGC_SRCS) $(SRCSF77)
+
+  SRCS = $(SRCSNOC) $(SRCSC) $(XSRCSC)
 
   DOCSRCS = *.f90 *.F90
 
@@ -782,6 +825,13 @@ check_mode :
 	fi
 	@echo $(COMP_MODE) > $(LOG_FILE)
 
+make_dep:
+	/bin/rm -f Makefile.dependency
+	sorted_SRCS=$$(for e in $(SRCSNOC); do echo $$e; done | env LC_ALL=C sort -u);\
+		bash make_depend.bash $$sorted_SRCS  > Makefile.dependency	
+	sorted_SRCS=$$(for e in $(SRCSC) $(XSRCSC); do echo $$e; done | env LC_ALL=C sort -u);\
+		bash make_depend.bash $$sorted_SRCS >> Makefile.dependency	
+
 # -------------------------
 # GMAO Nomenclature/targets
 # -------------------------
@@ -802,6 +852,8 @@ $(LIB): $(OBJS) $(OBJS_NOSWAP)
 	$(RM) $(LIB)
 	$(AR) $@ $(OBJS) $(OBJS_NOSWAP)
 
+# Targets for maintenance purposes
+#
 MAIN_OBJS = gsimain.o
 LIBS_OBJS = $(OBJS) $(OBJS_NOSWAP)
 
@@ -810,6 +862,15 @@ list-main_objs:
 
 list-libs_objs:
 	@ for f in $(LIBS_OBJS); do echo $$f; done | grep -v `for p in $(MAIN_OBJS); do echo "-e $$p"; done` | env LC_ALL=C sort -u
+
+list-libs_srcs:
+	@ for f in $(LIBS_OBJS); do echo $$(basename $$f .o).[Ff]90; done | grep -v $$(for p in $(MAIN_OBJS); do echo "-e $$(basename $$p .o)."; done) | env LC_ALL=C sort -u
+
+list-compare:
+	@ make --no-print-directory -f Makefile list-libs_srcs | grep -v -e blockIO.  > $@.__
+	@ ls -1 *.[Ff]90 | env LC_ALL=C sort -u | (diff $@.__ -||true)
+	@ rm -f $@.__
+#----------
 
 export: libgsi.a gsi.x prepbykx.x
 	$(MKDIR)               $(COREBIN)

@@ -8,6 +8,8 @@ module intuwnd10mmod
 !
 ! program history log:
 !   2016-05-03 -  pondeca
+!   2017-03-19 -  yang     - replaced ob_type with polymorphic obsNode through
+!   type casting (follow Guo's code)
 !
 ! subroutines included:
 !   sub intuwnd10m
@@ -19,6 +21,12 @@ module intuwnd10mmod
 !   machine:
 !
 !$$$ end documentation block
+
+use m_obsNode    , only: obsNode
+use m_uwnd10mNode, only: uwnd10mNode
+use m_uwnd10mNode, only: uwnd10mNode_typecast
+use m_uwnd10mNode, only: uwnd10mNode_nextcast
+
 
 implicit none
 
@@ -56,7 +64,7 @@ subroutine intuwnd10m(uwnd10mhead,rval,sval)
 !$$$
   use kinds, only: r_kind,i_kind
   use constants, only: half,one,tiny_r_kind,cg_term
-  use obsmod, only: uwnd10m_ob_type, lsaveobsens, l_do_adjoint, luse_obsdiag
+  use obsmod, only: lsaveobsens, l_do_adjoint, luse_obsdiag
   use qcmod, only: nlnqc_iter,varqc_iter
   use gridmod, only: latlon11
   use jfunc, only: jiter
@@ -66,7 +74,7 @@ subroutine intuwnd10m(uwnd10mhead,rval,sval)
   implicit none
 
 ! Declare passed variables
-  type(uwnd10m_ob_type),pointer,intent(in   ) :: uwnd10mhead
+  class(obsNode), pointer,intent(in   ) :: uwnd10mhead
   type(gsi_bundle),         intent(in   ) :: sval
   type(gsi_bundle),         intent(inout) :: rval
 
@@ -79,7 +87,7 @@ subroutine intuwnd10m(uwnd10mhead,rval,sval)
   real(r_kind) cg_uwnd10m,p0,grad,wnotgross,wgross,pg_uwnd10m
   real(r_kind),pointer,dimension(:) :: suwnd10m
   real(r_kind),pointer,dimension(:) :: ruwnd10m
-  type(uwnd10m_ob_type), pointer :: uwnd10mptr
+  type(uwnd10mNode), pointer :: uwnd10mptr
 
 ! Retrieve pointers
 ! Simply return if any pointer not found
@@ -88,7 +96,9 @@ subroutine intuwnd10m(uwnd10mhead,rval,sval)
   call gsi_bundlegetpointer(rval,'uwnd10m',ruwnd10m,istatus);ier=istatus+ier
   if(ier/=0)return
 
-  uwnd10mptr => uwnd10mhead
+!  uwnd10mptr => uwnd10mhead
+  uwnd10mptr => uwnd10mNode_typecast(uwnd10mhead)
+
   do while (associated(uwnd10mptr))
      j1=uwnd10mptr%ij(1)
      j2=uwnd10mptr%ij(2)
@@ -140,7 +150,9 @@ subroutine intuwnd10m(uwnd10mhead,rval,sval)
         ruwnd10m(j4)=ruwnd10m(j4)+w4*grad
      endif
 
-     uwnd10mptr => uwnd10mptr%llpoint
+!    uwnd10mptr => uwnd10mptr%llpoint
+     uwnd10mptr => uwnd10mNode_nextcast(uwnd10mptr)
+
 
   end do
 

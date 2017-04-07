@@ -8,6 +8,8 @@ module intvwnd10mmod
 !
 ! program history log:
 !   2016-05-03 -  pondeca
+!   2017-03-19 -  yang     - replaced ob_type with polymorphic obsNode through
+!   type casting (follow Guo's code)
 !
 ! subroutines included:
 !   sub intvwnd10m
@@ -19,6 +21,11 @@ module intvwnd10mmod
 !   machine:
 !
 !$$$ end documentation block
+use m_obsNode    , only: obsNode
+use m_vwnd10mNode, only: vwnd10mNode
+use m_vwnd10mNode, only: vwnd10mNode_typecast
+use m_vwnd10mNode, only: vwnd10mNode_nextcast
+
 
 implicit none
 
@@ -56,7 +63,7 @@ subroutine intvwnd10m(vwnd10mhead,rval,sval)
 !$$$
   use kinds, only: r_kind,i_kind
   use constants, only: half,one,tiny_r_kind,cg_term
-  use obsmod, only: vwnd10m_ob_type, lsaveobsens, l_do_adjoint, luse_obsdiag
+  use obsmod, only: lsaveobsens, l_do_adjoint, luse_obsdiag
   use qcmod, only: nlnqc_iter,varqc_iter
   use gridmod, only: latlon11
   use jfunc, only: jiter
@@ -66,7 +73,7 @@ subroutine intvwnd10m(vwnd10mhead,rval,sval)
   implicit none
 
 ! Declare passed variables
-  type(vwnd10m_ob_type),pointer,intent(in   ) :: vwnd10mhead
+  class(obsNode), pointer,intent(in   ) :: vwnd10mhead
   type(gsi_bundle),         intent(in   ) :: sval
   type(gsi_bundle),         intent(inout) :: rval
 
@@ -79,7 +86,7 @@ subroutine intvwnd10m(vwnd10mhead,rval,sval)
   real(r_kind) cg_vwnd10m,p0,grad,wnotgross,wgross,pg_vwnd10m
   real(r_kind),pointer,dimension(:) :: svwnd10m
   real(r_kind),pointer,dimension(:) :: rvwnd10m
-  type(vwnd10m_ob_type), pointer :: vwnd10mptr
+  type(vwnd10mNode), pointer :: vwnd10mptr
 
 ! Retrieve pointers
 ! Simply return if any pointer not found
@@ -88,7 +95,9 @@ subroutine intvwnd10m(vwnd10mhead,rval,sval)
   call gsi_bundlegetpointer(rval,'vwnd10m',rvwnd10m,istatus);ier=istatus+ier
   if(ier/=0)return
 
-  vwnd10mptr => vwnd10mhead
+!  vwnd10mptr => vwnd10mhead
+  vwnd10mptr => vwnd10mNode_typecast(vwnd10mhead)
+
   do while (associated(vwnd10mptr))
      j1=vwnd10mptr%ij(1)
      j2=vwnd10mptr%ij(2)
@@ -140,7 +149,8 @@ subroutine intvwnd10m(vwnd10mhead,rval,sval)
         rvwnd10m(j4)=rvwnd10m(j4)+w4*grad
      endif
 
-     vwnd10mptr => vwnd10mptr%llpoint
+!    vwnd10mptr => vwnd10mptr%llpoint
+     vwnd10mptr => vwnd10mNode_nextcast(vwnd10mptr) 
 
   end do
 
