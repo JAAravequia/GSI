@@ -412,6 +412,9 @@
   kapr = cp/rd
   kap = rd/cp
   kap1 = kap+one
+
+  backgroundloop: do nb=1,nbackgrounds
+
   write(charnanal,'(i3.3)') nanal
   if(no_inflate_flag) then
     filenameout = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"nimem"//charnanal
@@ -420,10 +423,7 @@
   end if
   filenamein = trim(adjustl(datapath))//trim(adjustl(fgfileprefixes(nb)))//"mem"//charnanal
 
-  backgroundloop: do nb=1,nbackgrounds
 
-  filenameout = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"mem"//charnanal
-  filenamein = trim(adjustl(datapath))//trim(adjustl(fgfileprefixes(nb)))//"mem"//charnanal
   ! for nemsio, analysis file must be copied from first guess at scripting
   ! level.  This file is read in and modified.
 
