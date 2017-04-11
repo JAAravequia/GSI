@@ -650,7 +650,6 @@ clean:
 	read_prepbufr.f90 \
 	read_radar.f90 \
 	read_saphir.f90 \
-	read_satmar.f90 \
 	read_satwnd.f90 \
 	read_sfcwnd.f90 \
 	read_rapidscat.f90 \

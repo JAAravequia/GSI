@@ -622,7 +622,6 @@ OBS_INPUT::
    prepbufr       mitm      null      mitm      1.0     0      0
    prepbufr       pmsl      null      pmsl     1.0     0      0
    prepbufr       howv      null      howv     1.0     0      0
-   satmar         howv      null      howv     1.0     0      0
    prepbufr       tcamt     null      tcamt    1.0     0      0
    goessky        tcamt     null      tcamt    1.0     0      0
    prepbufr       cldch     null      cldch    1.0     0      0

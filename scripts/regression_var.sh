@@ -12,7 +12,7 @@ fi
 
 # Name of the branch being tested
 updat="spring2017_RTMA.v2.6.0"
-contrl="trunk"
+contrl="trunk89611"
 
 #  Handle machine specific paths for:
 #  experiment and control executables, fix, ptmp, and CRTM coefficient files.
@@ -51,7 +51,11 @@ elif [[ "$machine" = "WCOSS" ]]; then
 
    export fixcrtm="/da/save/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix_update"
 
-   export casesdir="/meso/noscrub/Runhua.Yang/IC_spring2017_RTMA.v2.6.0"
+   export casesdir="/da/noscrub/Michael.Lueken/CASES"
+
+#FOR RTMA: need new input files
+#  export casesdir="/meso/noscrub/Runhua.Yang/IC_spring2017_RTMA.v2.6.0"
+
    export ndate="/nwprod/util/exec/ndate"
 
    export check_resource="yes"
