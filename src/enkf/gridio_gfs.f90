@@ -833,6 +833,7 @@
         ! ug is Tv increment, nems_wrk is background T, nems_wrk2 is background spfh
         ug = ug + nems_wrk * ( 1.0 + fv*nems_wrk2 )
         vg = vg + nems_wrk2 
+        clip = tiny(vg(1))
         if (cliptracers)  where (vg < clip) vg = clip
         ! convert Tv back to T
         nems_wrk = ug/(1. + fv*vg)
