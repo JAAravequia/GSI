@@ -495,6 +495,7 @@
   ! level.  This file is read in and modified.
 
   if (use_gfs_nemsio) then
+     clip = tiny(vg(1))
      call nemsio_init(iret=iret)
      if(iret/=0) then
         write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_init, iret=',iret
