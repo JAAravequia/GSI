@@ -364,7 +364,7 @@ subroutine setupvwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
  
 !       Interpolate guess u and v to observation location and time.
  
-        call tintrp2a11(ges_vwnd10m,ugesin,dlat,dlon,dtime,hrdifsig,&
+        call tintrp2a11(ges_uwnd10m,ugesin,dlat,dlon,dtime,hrdifsig,&
              mype,nfldsig)
         call tintrp2a11(ges_vwnd10m,vgesin,dlat,dlon,dtime,hrdifsig,&
              mype,nfldsig)
