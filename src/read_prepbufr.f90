@@ -136,6 +136,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !   2016-03-15  Su      - modified the code so that the program won't stop when no subtype
 !                         is found in non linear qc error tables and b table
 !
+!   2017-03-21  Su      - add option to thin conventional data in 4 dimension 
 
 !   input argument list:
 !     infile   - unit from which to read BUFR data
@@ -166,7 +167,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
       rlats,rlons,twodvar_regional
   use convinfo, only: nconvtype,ctwind, &
       ncmiter,ncgroup,ncnumgrp,icuse,ictype,icsubtype,ioctype, &
-      ithin_conv,rmesh_conv,pmesh_conv, &
+      ithin_conv,rmesh_conv,pmesh_conv,pmot_conv,ptime_conv, &
       id_bias_ps,id_bias_t,conv_bias_ps,conv_bias_t,use_prepb_satwnd
   use convinfo, only: id_drifter
 
@@ -186,7 +187,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   use convb_uv,only: btabl_uv
   use gsi_4dvar, only: l4dvar,l4densvar,time_4dvar,winlen,thin4d
   use qcmod, only: errormod,noiqc,newvad,njqc
-  use convthin, only: make3grids,map3grids,del3grids,use_all
+  use convthin, only: make3grids,map3grids,map3grids_m,del3grids,use_all
+  use convthin_time, only: make3grids_tm,map3grids_tm,map3grids_m_tm,del3grids_tm,use_all_tm
+!  use convthin, only: make3grids,map3grids,del3grids,use_all
   use blacklist, only : blacklist_read,blacklist_destroy
   use blacklist, only : blkstns,blkkx,ibcnt
   use sfcobsqc,only: init_rjlists,get_usagerj,get_gustqm,destroy_rjlists
@@ -276,7 +279,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   integer(i_kind) lim_tqm,lim_qqm
   integer(i_kind) nlevp         ! vertical level for thinning
   integer(i_kind) ntmp,iout
-  integer(i_kind) pflag,irec
+  integer(i_kind) pflag,irec,zflag
   integer(i_kind) ntest,nvtest,iosub,ixsub,isubsub,iobsub
   integer(i_kind) kl,k1,k2,k1_ps,k1_q,k1_t,k1_uv,k1_pw,k2_q,k2_t,k2_uv,k2_pw,k2_ps
   integer(i_kind) itypex,itypey
@@ -296,6 +299,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   integer(i_kind),allocatable,dimension(:,:):: tab
   integer(i_kind) ibfms,thisobtype_usage
   integer(i_kind) iwmo,ios
+  integer(i_kind) ntime,itime 
   integer(i_kind) ierr_ps,ierr_q,ierr_t,ierr_uv,ierr_pw !  the position of error table collum
   real(r_kind) time,timex,time_drift,timeobs,toff,t4dv,zeps
   real(r_kind) qtflg,tdry,rmesh,ediff,usage,ediff_ps,ediff_q,ediff_t,ediff_uv,ediff_pw
@@ -310,7 +314,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   real(r_kind) del,terrmin,werrmin,perrmin,qerrmin,pwerrmin,del_ps,del_q,del_t,del_uv,del_pw
   real(r_kind) pjbmin,qjbmin,tjbmin,wjbmin
   real(r_kind) tsavg,ff10,sfcr,zz
-  real(r_kind) crit1,timedif,xmesh,pmesh
+  real(r_kind) crit1,timedif,xmesh,pmesh,pmot,ptime             ! thinning parameter
   real(r_kind) time_correction
   real(r_kind) tcamt,lcbas,ceiling
   real(r_kind) tcamt_oe,lcbas_oe
@@ -403,7 +407,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 ! Initialize variables
 
   vdisterrmax=zero
-  pflag=0                  !  dparrish debug compile run flags pflag as not defined ???????????
+!  pflag=0                  !  dparrish debug compile run flags pflag as not defined ???????????
+  zflag=0
   nreal=0
   satqc=zero
   tob = obstype == 't'
@@ -776,8 +781,14 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   nchanl=0
   ilon=2
   ilat=3
+  rmesh=zero
+  pmot=zero
+  pmesh=zero
+  ptime=zero
+  xmesh=zero
+  pflag=0
   loop_convinfo: do nx=1, ntread
-
+    use_all_tm = .true. 
      use_all = .true.
      ithin=0
      if(nx > 1) then
@@ -786,29 +797,52 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
         if (ithin > 0 ) then
            rmesh=rmesh_conv(nc)
            pmesh=pmesh_conv(nc)
-           use_all = .false.
-           if(pmesh > zero) then
+           pmot=pmot_conv(nc)
+           ptime=ptime_conv(nc)
+           if(pmesh > zero .and. ithin ==1) then
               pflag=1
+              zflag=-1
               nlevp=r1200/pmesh
+           else if(pmesh > zero .and. ithin ==2) then
+              pflag=1
+              zflag=1
+              nlevp=25000.00_r_kind/pmesh
            else
+              zflag=-1
               pflag=0
               nlevp=nsig
            endif
            xmesh=rmesh
-
-           call make3grids(xmesh,nlevp)
-
-           if (.not.use_all) then
+           if( ptime >zero) then
+              use_all_tm = .false.
+              ntime=6.0_r_kind/ptime                   !!  6 hour winddow
+              call make3grids_tm(xmesh,nlevp,ntime)
               allocate(presl_thin(nlevp))
-              if (pflag==1) then
+              if (zflag==-1 ) then
                  do k=1,nlevp
                     presl_thin(k)=(r1200-(k-1)*pmesh)*one_tenth
                  enddo
+              else if(zflag==1 ) then
+                 do k=1,nlevp
+                    presl_thin(k)=k*pmesh
+                 enddo
+              endif
+           else
+              use_all = .false.
+              call make3grids(xmesh,nlevp)
+              allocate(presl_thin(nlevp))
+              if (zflag==-1 ) then
+                 do k=1,nlevp
+                    presl_thin(k)=(r1200-(k-1)*pmesh)*one_tenth
+                 enddo
+              else if(zflag==1 ) then
+                 do k=1,nlevp
+                    presl_thin(k)=k*pmesh
+                 enddo
               endif
            endif
-     
-           write(6,*)'READ_PREPBUFR: at line 779: obstype,ictype(nc),rmesh,pflag,nlevp,pmesh=',&
-              trim(ioctype(nc)),ictype(nc),rmesh,pflag,nlevp,pmesh
+           write(6,*)'READ_PREPBUFR: at line 779: obstype,ictype(nc),rmesh,pflag,nlevp,pmesh,pmot,ptime=',&
+              trim(ioctype(nc)),ictype(nc),rmesh,pflag,nlevp,pmesh,pmot,ptime,ithin
         endif
      endif
        
@@ -1093,9 +1127,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                       var_jb(1,k)=(one-del_ps)*btabl_ps(itypex,k1_ps,ierr_ps)+del_ps*btabl_ps(itypex,k2_ps,ierr_ps)
                        var_jb(1,k)=max(var_jb(1,k),pjbmin)
                        if (var_jb(1,k) >=10.0_r_kind) var_jb(1,k)=zero
-                       if(itypey==180 .and. ierr_ps == 0 ) then
-                          write(6,*) 'READ_PREPBUFR:180_ps,obserr,var_jb=',obserr(1,k),var_jb(1,k),ppb,k,hdr(2),hdr(3)
-                       endif
+!                       if(itypey==180 .and. ierr_ps == 0 ) then
+!                          write(6,*) 'READ_PREPBUFR:180_ps,obserr,var_jb=',obserr(1,k),var_jb(1,k),ppb,k,hdr(2),hdr(3)
+!                       endif
                     enddo
                  endif
                 if (tob) then
@@ -1147,9 +1181,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                        var_jb(3,k)=(one-del_t)*btabl_t(itypex,k1_t,ierr_t)+del_t*btabl_t(itypex,k2_t,ierr_t)
                        var_jb(3,k)=max(var_jb(3,k),tjbmin)
                        if (var_jb(3,k) >=10.0_r_kind) var_jb(3,k)=zero
-                        if(itypey==180) then
-                          write(6,*) 'READ_PREPBUFR:180_t,obserr,var_jb=',obserr(3,k),var_jb(3,k),ppb
-                        endif
+!                        if(itypey==180) then
+!                          write(6,*) 'READ_PREPBUFR:180_t,obserr,var_jb=',obserr(3,k),var_jb(3,k),ppb
+!                        endif
                     enddo
                  endif
                  if (qob) then
@@ -1568,6 +1602,11 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
               endif
            end if
            LOOP_K_LEVS: do k=1,levs
+                 if( zflag ==-1) then
+                    ppb=obsdat(1,k)*one_tenth
+                 else if(zflag ==1) then
+                    ppb=obsdat(4,k)
+                 endif
                  if(kx==224 .and. newvad)then
                     if(mod(k,6)/=0) cycle LOOP_K_LEVS
                  end if
@@ -1774,63 +1813,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  endif
               end if
 
-!             Special block for data thinning - if requested
-              if (ithin > 0) then
-                 ntmp=ndata  ! counting moved to map3gridS
-           
-!                Set data quality index for thinning
-                 if (thin4d) then
-                    timedif = zero
-                 else
-                    timedif=abs(t4dv-toff)
-                 endif
-                 if(kx == 243 .or. kx == 253 .or. kx ==254) then
-                    call ufbint(lunin,satqc,1,1,iret,satqcstr)
-                    crit1 = timedif/r6+half + four*(one-satqc(1)/r100)*r3_33
-                 else
-                    crit1 = timedif/r6+half
-                 endif
-
-                 if (pflag==0) then
-                    do kk=1,nsig
-                       presl_thin(kk)=presl(kk)
-                    end do
-                 endif
-
-                 call map3grids(-1,pflag,presl_thin,nlevp,dlat_earth,dlon_earth,&
-                    plevs(k),crit1,ndata,iout,icntpnt,iiout,luse,.false.,.false.)
-
-                 if (.not. luse) then
-                    if(k==levs) then
-                       cycle loop_readsb
-                    else
-                       cycle LOOP_K_LEVS
-                    endif
-                 endif
-                 if(iiout > 0) isort(iiout)=0
-                 if(ndata >  ntmp)then
-                    nodata=nodata+1
-                    if(uvob)nodata=nodata+1
-                 end if
-                 isort(icntpnt)=iout
-
-              else
-                 ndata=ndata+1
-                 nodata=nodata+1
-                 if(uvob)nodata=nodata+1
-                 iout=ndata
-                 isort(icntpnt)=iout
-              endif
-
-              if(ndata > maxobs) then
-                 write(6,*)'READ_PREPBUFR:  ***WARNING*** ndata > maxobs for ',obstype
-                 ndata = maxobs
-              end if
 
 !             Set usage variable              
               usage = zero
-
-
               if(icuse(nc) <= 0)usage=100._r_kind
               if(qm == 15 .or. qm == 12 .or. qm == 9)usage=100._r_kind
               if(qm >=lim_qm )usage=101._r_kind
@@ -1877,10 +1862,83 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 
 
 ! Get information from surface file necessary for conventional data here
+
+!             Special block for data thinning - if requested
+!              if (ithin > 0 .and. usage <100.0_r_kind) then
+              if (ithin > 0 ) then
+                 ntmp=ndata  ! counting moved to map3gridS
+           
+!                Set data quality index for thinning
+                 if (thin4d) then
+                    timedif = zero
+                 else
+                    timedif=abs(t4dv-toff)
+                 endif
+                 if(kx == 243 .or. kx == 253 .or. kx ==254) then
+                    call ufbint(lunin,satqc,1,1,iret,satqcstr)
+                    crit1 = timedif/r6+half + four*(one-satqc(1)/r100)*r3_33
+                 else
+                    crit1 = timedif/r6+half
+                 endif
+
+                 if (pflag==0) then
+                    do kk=1,nsig
+                       presl_thin(kk)=presl(kk)
+                    end do
+                 endif
+
+                 if (ptime >zero ) then
+                    itime=int((abs(timedif)+three)/ptime)+1
+                     if(itime >ntime) itime=ntime
+                       call map3grids_tm(zflag,pflag,presl_thin,nlevp,dlat_earth,dlon_earth,&
+                                       ppb,itime,crit1,ndata,iout,icntpnt,iiout,luse,.false.,.false.)
+                       if (.not. luse) then
+                          if(k==levs) then
+                             cycle loop_readsb
+                          else
+                             cycle LOOP_K_LEVS
+                          endif
+                       endif
+                       if(iiout > 0) isort(iiout)=0
+                       if (ndata > ntmp) then
+                          nodata=nodata+1
+                          if(uvob)nodata=nodata+1
+                       endif
+                       isort(icntpnt)=iout
+                 else
+                    call map3grids(zflag,pflag,presl_thin,nlevp,dlat_earth,dlon_earth,&
+                                  ppb,crit1,ndata,iout,icntpnt,iiout,luse,.false.,.false.)
+                    if (.not. luse) then
+                       if(k==levs) then
+                          cycle loop_readsb
+                       else
+                          cycle LOOP_K_LEVS
+                       endif
+                    endif
+                    if(iiout > 0) isort(iiout)=0
+                    if (ndata > ntmp) then
+                       nodata=nodata+1
+                       if(uvob)nodata=nodata+1
+                    endif
+                    isort(icntpnt)=iout
+                 endif
+              else
+                 ndata=ndata+1
+                 nodata=nodata+1
+                 if(uvob)nodata=nodata+1
+                 iout=ndata
+                 isort(icntpnt)=iout
+              endif
+
+              if(ndata > maxobs) then
+                 write(6,*)'READ_PREPBUFR:  ***WARNING*** ndata > maxobs for ',obstype
+                 ndata = maxobs
+              end if
+
               call deter_sfc2(dlat_earth,dlon_earth,t4dv,idomsfc,tsavg,ff10,sfcr,zz)
 
               if(lhilbert) & 
-                  call accum_hilbertcurve(usage,c_station_id,c_prvstg,c_sprvstg, &
+                       call accum_hilbertcurve(usage,c_station_id,c_prvstg,c_sprvstg, &
                        dlat_earth,dlon_earth,dlat,dlon,t4dv,toff,nc,kx,iout)
 
 
@@ -2673,6 +2731,11 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
         deallocate(presl_thin)
         call del3grids
      endif
+    if (.not.use_all_tm) then
+       deallocate(presl_thin)
+        call del3grids_tm
+     endif
+
 
 ! Normal exit
 

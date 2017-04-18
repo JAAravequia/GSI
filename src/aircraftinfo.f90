@@ -222,8 +222,8 @@ contains
        j=j+1
        read(crecord,*) taillist(j),idx_tail(j),(predr(ip),ip=1,npredt),(ostatsx(ip),ip=1,npredt), &
                        (varx(ip),ip=1,npredt),timelist(j)
-       if (mype==0) write(6,110) taillist(j),idx_tail(j),(predr(ip),ip=1,npredt), &
-                    (ostatsx(ip),ip=1,npredt),(varx(ip),ip=1,npredt),timelist(j)
+!       if (mype==0) write(6,110) taillist(j),idx_tail(j),(predr(ip),ip=1,npredt), &
+!                    (ostatsx(ip),ip=1,npredt),(varx(ip),ip=1,npredt),timelist(j)
        do ip=1,npredt
           ostats_t(ip,j)=ostatsx(ip)
           predt(ip,j)=predr(ip)
