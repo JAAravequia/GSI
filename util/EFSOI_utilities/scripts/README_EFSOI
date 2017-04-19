@@ -60,6 +60,12 @@ sandbox project are provided by instruction
       vii)  Turn off stochastic physics, set sppt, shum, skeb and vcamp to zero.
       viii) Set BASEGFS to the directory relevant to the global_fcst version of your choice.
       ix)   Set HOMEDIR, PTMP to directories with adequate disk space (etc.).
+      ---List of changes for advance_ensemble.j ---
+      i)    All instances of setting SUFOUT need to be with the following conventions:
+            setenv SUFOUT _nimem.
+      ii)   Add  the following to the top of the script.
+            set end_date   = $2 
+            set begin_date = $2    
    -  Copy over job_monitor.py and advance_time from Dave Groff's
       $HOME/bin to your $HOME/bin.
    # --------------------------------------------------------------------#
