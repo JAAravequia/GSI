@@ -46,10 +46,20 @@ sandbox project are provided by instruction
       svn checkout -r60977 https://svnemc.ncep.noaa.gov:/projects/sandbox/Rahul.Mahajan/trunk/GDAS/scripts
    -  Modify param_EFSO.j and advance_ensemble.j as necessary.
       To see an example for the changes needed to make the scripts functional,
-      compare param_EFSO.j and advance_ensemble.j from 
+      compare param_EFSO.j and advance_ensemble.j from
       /scratch4/NCEPDEV/da/save/David.Groff/EFSOI/shared_scripts
-      with param_template.j and advance_ensemble.j in your checkout 
+      with param_template.j and advance_ensemble.j in your checkout
       of the relevant scripts.
+      ---List of changes for param_template.j ---
+      i)    Comment out start_date and end_date
+      ii)   Set PSLOT and ROTDIR
+      iii)  Set FHOUT to 6 (i.e 6 hour output forecast intervals)
+      iv)   Set FHMAX to 30 (i.e each cycle we need 30 hour forecasts)
+      v)    Set FHCYC to 30.
+      vi)   Set FHDFI and FHDFI_ENKF to 0.
+      vii)  Turn off stochastic physics, set sppt, shum, skeb and vcamp to zero.
+      viii) Set BASEGFS to the directory relevant to the global_fcst version of your choice.
+      ix)   Set HOMEDIR, PTMP to directories with adequate disk space (etc.).
    -  Copy over job_monitor.py and advance_time from Dave Groff's
       $HOME/bin to your $HOME/bin.
    # --------------------------------------------------------------------#
