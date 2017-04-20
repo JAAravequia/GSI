@@ -21,8 +21,8 @@ if [ "$#" = 8 ] ; then
   echo $ptmpName
 else
 # Name of the branch being tested
-  updat="XXXXXXXX"
-  contrl="XXXXXXXX"
+  updat="gsi/xsu_aithin"
+  contrl="gsi/trunk"
   export cmaketest="false"
   export clean="false"
   export ptmpName=""
@@ -59,7 +59,7 @@ if [[ "$machine" = "Theia" ]]; then
    export group="global"
    export queue="batch"
    if [[ "$cmaketest" = "false" ]]; then
-     export basedir="/scratch4/home/$LOGNAME/gsi"
+     export basedir="/scratch4/home/$LOGNAME"
    fi 
 
    export ptmp="/scratch4/NCEPDEV/stmp3/$LOGNAME/$ptmpName"
@@ -79,7 +79,7 @@ if [[ "$machine" = "Theia" ]]; then
 elif [[ "$machine" = "WCOSS" ]]; then
 
    if [[ "$cmaketest" = "false" ]]; then
-     export basedir="/global/save/$LOGNAME/gsi"
+     export basedir="/da/save/$LOGNAME"
    fi 
    export group="dev"
    export queue="dev"
@@ -97,7 +97,7 @@ elif [[ "$machine" = "WCOSS" ]]; then
 elif [[ "$machine" = "LUNA" ]]; then
 
    if [[ "$cmaketest" = "false" ]]; then
-     export basedir="/gpfs/hps/emc/global/noscrub/$LOGNAME/gsi"
+     export basedir="/gpfs/hps/emc/global/noscrub/$LOGNAME/"
    fi 
    export group="dev"
    export queue="dev"

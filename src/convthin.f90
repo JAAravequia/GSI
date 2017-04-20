@@ -287,7 +287,7 @@ contains
     itx=hll(ix,iy)
 
 !   Compute distance metric (smaller is closer to center of cube)
-    dist1=(dxx*dxx+dyy*dyy+dpp*dpp)*two/three+half
+!    dist1=(dxx*dxx+dyy*dyy+dpp*dpp)*two/three+half
 
 
 !   Examine various cases regarding what to do with current obs.
@@ -295,7 +295,8 @@ contains
     iuse=.true.
 
 !   Determine "score" for observation.  Lower score is better.
-    crit = crit1*dist1
+!    crit = crit1*dist1
+    crit = crit1
 
     if(foreswp .or. aftswp) goto 65
 
@@ -528,7 +529,7 @@ contains
     itx=hll(ix,iy)
 
 !   Compute distance metric (smaller is closer to center of cube)
-    dist1=(dxx*dxx+dyy*dyy+dpp*dpp)*two/three+half
+!    dist1=(dxx*dxx+dyy*dyy+dpp*dpp)*two/three+half
 
 
 !   Examine various cases regarding what to do with current obs.
@@ -536,7 +537,8 @@ contains
     iuse=.true.
 
 !   Determine "score" for observation.  Lower score is better.
-    crit = crit1*dist1
+!    crit = crit1*dist1
+    crit = crit1
 
     if(foreswp .or. aftswp) goto 65
 

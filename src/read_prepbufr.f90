@@ -1864,8 +1864,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 ! Get information from surface file necessary for conventional data here
 
 !             Special block for data thinning - if requested
-!              if (ithin > 0 .and. usage <100.0_r_kind) then
-              if (ithin > 0 ) then
+              if (ithin > 0 .and. usage <100.0_r_kind) then
+!              if (ithin > 0 ) then
                  ntmp=ndata  ! counting moved to map3gridS
            
 !                Set data quality index for thinning
