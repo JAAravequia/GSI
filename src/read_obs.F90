@@ -1298,20 +1298,18 @@ subroutine read_obs(ndata,mype)
 
                 endif
              else if(obstype == 'howv') then
-!RY 03/22/17: do not use satmar
-!                if ( index(infile,'satmar') /=0) then
+                 if ( index(infile,'satmar') /=0) then
                    
-!                   call read_satmar (nread, npuse, nouse                                  &
-!                                    , infile, obstype, lunout, gstime, twind, sis         &
-!                                    , nobs_sub1(1,i))
-!                   string='READ_SATMAR'
-!                else 
-!RY end
+                    call read_satmar (nread, npuse, nouse                                  &
+                                     , infile, obstype, lunout, gstime, twind, sis         &
+                                     , nobs_sub1(1,i))
+                    string='READ_SATMAR'
+                 else 
                    call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
                         prsl_full,nobs_sub1(1,i),read_rec(i))
                    string='READ_PREPBUFR'
 
-!                endif
+                 endif
              else if(obstype == 'mitm') then
                 if ( index(infile,'mitmdat') /=0) then
                    call read_mitm_mxtm(nread,npuse,nouse,infile,obstype,lunout,gstime,sis, & 

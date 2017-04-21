@@ -51,11 +51,11 @@ elif [[ "$machine" = "WCOSS" ]]; then
 
    export fixcrtm="/da/save/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix_update"
 
-   export casesdir="/da/noscrub/Michael.Lueken/CASES"
+#ORIGINAL
+#  export casesdir="/da/noscrub/Michael.Lueken/CASES"
 
-#FOR RTMA: need new input files
-#  export casesdir="/meso/noscrub/Runhua.Yang/IC_spring2017_RTMA.v2.6.0"
-
+#FOR RTMA   
+   export casesdir="/meso/noscrub/Runhua.Yang/IC_spring2017_RTMA.v2.6.0"
    export ndate="/nwprod/util/exec/ndate"
 
    export check_resource="yes"
@@ -66,6 +66,7 @@ fi
 
 # GSI paths based on basedir
 export gsisrc="$basedir/$updat/src"
+
 export gsiexec_updat="$basedir/$updat/src/global_gsi"
 export gsiexec_contrl="$basedir/$contrl/src/global_gsi"
 export enkfexec_updat="$basedir/$updat/src/enkf/global_enkf"
