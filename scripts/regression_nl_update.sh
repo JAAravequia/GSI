@@ -16,7 +16,8 @@ if [[ `expr substr $exp 1 6` = "global" ]]; then
    fi
 fi
 if [[ `expr substr $exp $((${#exp}-4)) ${#exp}` = "updat" ]]; then
-   export OBSQC_update="closest_obs=.false.,"
+   export OBSQC_update="closest_obs=.false."
+   export SETUP_update="offtime_data=.true."
 else
    export OBSQC_update=""
 fi

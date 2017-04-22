@@ -566,7 +566,7 @@ export gsi_namelist="
    oneobtest=.false.,retrieval=.false.,
    diag_rad=.false.,diag_pcp=.false.,diag_ozone=.false.,diag_aero=.false.,
    nhr_assimilation=6,min_offset=180,use_compress=.false.,lrun_subdirs=.true.,
-   use_prepb_satwnd=.false.
+   use_prepb_satwnd=.false.,
    $SETUP
  /
  &GRIDOPTS
