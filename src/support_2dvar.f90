@@ -2188,6 +2188,12 @@ subroutine mkvalley_file
   enddo
   enddo
 
+  if (mype==0) then 
+    open (55,file='valley_map_unsmoothed.dat',form='unformatted')
+    write(55) valleys
+    close(55)
+  endif
+
   call smther_one(valleys,1,nx,1,ny,npassvalley)
 
   print*,'in mkvalley_file: valleys,min,max=',minval(valleys),maxval(valleys)
@@ -3250,7 +3256,7 @@ subroutine landlake_uvmerge(u,v,uland,vland,uwter,vwter,iflg)
               flat=region_lat(iglob,jglob)*rad2deg
               flon=region_lon(iglob,jglob)*rad2deg
               glerlarea=(flat>=flat1.and.flat<=flat2).and.(flon>=flon1.and.flon<=flon2)
-              glerlarea=glerlarea.or.((flat>=slat1.and.flat<=slat2).and.(flon>=slon1.and.flon<=slon2))
+              !glerlarea=glerlarea.or.((flat>=slat1.and.flat<=slat2).and.(flon>=slon1.and.flon<=slon2))
 
               if(isli2(i,j) == 1 .or. .not.glerlarea) then
                  do k=1,nsig                           !note: this subroutine is always called with nsig=1
@@ -3275,7 +3281,7 @@ subroutine landlake_uvmerge(u,v,uland,vland,uwter,vwter,iflg)
               flat=region_lat(iglob,jglob)*rad2deg
               flon=region_lon(iglob,jglob)*rad2deg
               glerlarea=(flat>=flat1.and.flat<=flat2).and.(flon>=flon1.and.flon<=flon2)
-              glerlarea=glerlarea.or.((flat>=slat1.and.flat<=slat2).and.(flon>=slon1.and.flon<=slon2))
+              !glerlarea=glerlarea.or.((flat>=slat1.and.flat<=slat2).and.(flon>=slon1.and.flon<=slon2))
 
               if(isli2(i,j) == 1 .or. .not.glerlarea) then
                  do k=1,nsig
@@ -3292,3 +3298,104 @@ subroutine landlake_uvmerge(u,v,uland,vland,uwter,vwter,iflg)
         enddo
   endif
 end subroutine landlake_uvmerge
+!===========================================================================
+!===========================================================================
+subroutine get_fldstd(field,i1,i2,j1,j2,k1,k2,radius,npass,mype)
+!$$$  subprogram documentation block
+!                .      .    .                                       
+! subprogram:    get_fldstd
+!   prgmmr: pondeca          org: np22                date: 2017-04-17
+!
+! abstract:
+! 
+!
+! program history log:
+!   2017-04-17 pondeca
+!
+!   input argument list:
+!     field     - input field
+!     i1,i2     - i-dimensions of field (south->north direction)
+!     j1,j2     - j-dimensions of field (west->east direction)
+!     k1,k2     - k-dimensions of field
+!     radius    - radius in meters for variance estimation
+!
+!   output argument list:
+!     field     - output variance
+!
+! attributes:
+!   language: f90
+!   machine:  ibm RS/6000 SP
+!
+!$$$
+
+  use kinds, only: r_single,r_kind,r_double,i_kind
+  use gridmod, only: region_dx,region_dy,nlon,nlat
+  use anisofilter, only: smther_one
+  implicit none
+
+! Declare passed variables
+  integer(i_kind) ,intent(in) :: i1,i2,j1,j2,k1,k2,npass
+  integer(i_kind) ,intent(in) :: mype
+  real(r_kind)  ,intent(in) :: radius
+  real(r_single),dimension(i1:i2,j1:j2,k1:k2),intent(inout) :: field
+
+! Declare local variables
+  integer(i_kind) i,j,k
+  integer(i_kind) ijdel,m,n,ncount
+  real(r_double) f0,var,stdmean
+  real(r_kind) ds
+  real(r_single), allocatable, dimension(:,:,:):: fieldaux
+
+  allocate (fieldaux(i1:i2,j1:j2,k1:k2))
+
+  ds=min(minval(region_dx),minval(region_dy))
+  ijdel=nint(radius/ds)
+  if (mype==0) print*,'in get_fldstd: radius,ds,ijdel=',radius,ds,ijdel
+
+  do k=k1,k2
+     do j=j1,j2
+     do i=i1,i2
+        fieldaux(i,j,k)=field(i,j,k)
+     enddo
+     enddo
+  enddo
+
+  do k=k1,k2
+     do j=j1,j2
+     do i=i1,i2
+        f0=real(fieldaux(i,j,k),kind=r_double)
+        var=0._r_double
+        ncount=0
+        do n=max(j1,j-ijdel),min(j2,j+ijdel)
+        do m=max(i1,i-ijdel),min(i2,i+ijdel)
+           ncount=ncount+1
+           var=var+(real(fieldaux(m,n,k),kind=r_double)-f0)* &
+                   (real(fieldaux(m,n,k),kind=r_double)-f0)
+        enddo
+        enddo
+        field(i,j,k)=sqrt(var/real(ncount,kind=r_double))
+     enddo
+     enddo
+     call smther_one(field(:,:,k),i1,i2,j1,j2,npass)
+  enddo
+
+!==> for convenience, renormalize by mean std and take log (1+std)
+
+  ncount=(j2-j1+1)*(i2-i1+1)
+
+  do k=k1,k2
+     stdmean=0._r_double
+     do j=j1,j2
+     do i=i1,i2
+        stdmean=stdmean+real(field(i,j,k),kind=r_double)
+     enddo
+     enddo
+     stdmean=stdmean/real(ncount,kind=r_double)
+     if (stdmean > 0._r_double) field(:,:,k)=field(:,:,k)/stdmean
+     field(:,:,k)=log(1._r_single+field(:,:,k))
+  enddo
+  
+  deallocate (fieldaux)
+end subroutine get_fldstd
+!===========================================================================
+!===========================================================================
