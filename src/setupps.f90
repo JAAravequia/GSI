@@ -68,6 +68,9 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2016-06-24  guo     - fixed the default value of obsdiags(:,:)%tail%luse to luse(i)
 !                       . removed (%dlat,%dlon) debris.
 !   2016-11-29  shlyaeva - save linearized H(x) for EnKF
+!   2017-03-31  Hu      -  addd option l_closeobs to use closest obs to analysis
+!                                     time in analysis
+!
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -95,7 +98,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use m_psNode, only: psNode
   use m_obsLList, only: obsLList_appendNode
   use obsmod, only: obs_diag,luse_obsdiag
-  use gsi_4dvar, only: nobs_bins,hr_obsbin
+  use gsi_4dvar, only: nobs_bins,hr_obsbin,min_offset
   use oneobmod, only: magoberr,maginnov,oneobtest
   use gridmod, only: nsig,get_ij,twodvar_regional
   use constants, only: zero,one_tenth,one,half,pi,g_over_rd, &
@@ -111,6 +114,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
   use sparsearr, only: sparr2, new, size, writearray
+  use rapidrefresh_cldsurf_mod, only: l_closeobs
 
   implicit none
 
@@ -162,6 +166,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   character(8),allocatable,dimension(:):: cprvstg,csprvstg
   character(8) c_prvstg,c_sprvstg
   real(r_double) r_prvstg,r_sprvstg
+  real(r_kind) :: hr_offset
 
   logical:: in_curbin, in_anybin, save_jacobian
   integer(i_kind),dimension(nobs_bins) :: n_alloc
@@ -237,8 +242,8 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      muse(i)=nint(data(iuse,i)) <= jiter
   end do
 
+  hr_offset=min_offset/60.0_r_kind
 !  Check for duplicate observations at same location
-
   dup=one
   do k=1,nobs
      do l=k+1,nobs
@@ -246,9 +251,17 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            data(ilon,k) == data(ilon,l) .and. &
            data(ier,k) < r1000 .and. data(ier,l) < r1000 .and. &
            muse(k) .and. muse(l))then
-           tfact=min(one,abs(data(itime,k)-data(itime,l))/dfact1)
-           dup(k)=dup(k)+one-tfact*tfact*(one-dfact)
-           dup(l)=dup(l)+one-tfact*tfact*(one-dfact)
+           if(l_closeobs) then
+              if(abs(data(itime,k)-hr_offset)<abs(data(itime,l)-hr_offset)) then
+                  muse(l)=.false.
+              else
+                  muse(k)=.false.
+              endif
+           else
+              tfact=min(one,abs(data(itime,k)-data(itime,l))/dfact1)
+              dup(k)=dup(k)+one-tfact*tfact*(one-dfact)
+              dup(l)=dup(l)+one-tfact*tfact*(one-dfact)
+           endif
         end if
      end do
   end do
