@@ -185,7 +185,7 @@ module anisofilter
   public :: z0f_std
   public :: bckg0f_stdz,bckg0f_stdp
   public :: bckg_stdmax_z,bckg_stdbump_z,bckg_stdmax_p,bckg_stdbump_p
-  public :: qltv_wind,qlth_wind,qltv_temp,eampmax,pgesmax,pgesmin,eampmin,asp10f,rh0f,z0f,z0f2,asp20f,qlth_temp,psg,asp30f
+  public :: qltv_wind,qlth_wind,qltv_temp,eampmax,pgesmax,pgesmin,eampmin,asp10f,rh0f,z0f,z0f2,z0f3,asp20f,qlth_temp,psg,asp30f
   public :: qlth_wind0,qltv_temp0,qlth_temp0,qltv_wind0,scalex3,scalex2,scalex1,lreadnorm
   public :: r015,corp,corz,rfact0v,hwll,aspect,vz,hwllp,hwllp_lcbas,stpcode_ensdata,stpcode_namelist,stpcode_alloc
   public :: stpcode_statdata,rfact0h,ks,mlat,rllatf,ensamp
@@ -232,7 +232,7 @@ module anisofilter
   real(r_kind)  ,allocatable,dimension(:,:)    :: dxf,dyf,rllatf,hfilter
   real(r_kind)  ,allocatable,dimension(:,:,:)  :: hfine
   real(r_single),allocatable,dimension(:,:,:,:):: aspect
-  real(r_single),allocatable,dimension(:,:,:)  :: theta0f,theta0zf,u0f,u0zf,v0f,v0zf,z0f,z0f2,rh0f ! for regional / zonal patch
+  real(r_single),allocatable,dimension(:,:,:)  :: theta0f,theta0zf,u0f,u0zf,v0f,v0zf,z0f,z0f2,z0f3,rh0f ! for regional / zonal patch
   real(r_single),allocatable,dimension(:,:,:)  :: vis0f,cldch0f,valleys0f
   real(r_single),allocatable,dimension(:,:,:)  :: z0f_std
   real(r_single),allocatable,dimension(:,:,:,:):: bckg0f_stdz,bckg0f_stdp
@@ -272,7 +272,7 @@ module anisofilter
   integer(i_kind) :: llamp_levtop
   real   (r_kind) :: llamp_coeff
 
-  real(r_kind) hsteep
+  real(r_kind) hsteep, hsteep_wind
   logical volpreserve
   logical lsmoothterrain
   logical lwater_scaleinfl
@@ -1515,7 +1515,7 @@ subroutine init_anisofilter_reg(mype)
           sclpsi_w,sclchi_w,sclpsfc_w,scltemp_w,sclhum_w,sclgust_w, &
           sclwspd10m_w,scltd2m_w,sclmxtm_w,sclmitm_w,scltcamt_w,scllcbas_w, & 
           scluwnd10m_w,sclvwnd10m_w, & 
-          glerl_on,glerl_scalefact,n_valley_pass
+          glerl_on,glerl_scalefact,hsteep_wind,n_valley_pass
 
   namelist/bckg_std_errormodel/ &
                  turnoff_all_stdmodels, stdmodel_z_based,& 
@@ -1638,6 +1638,7 @@ subroutine init_anisofilter_reg(mype)
 
      afact0=one     !(use "zero" for isotropic computations)
      hsteep=zero
+     hsteep_wind=zero
      hsmooth_len=10._r_kind
      hsmooth_len_lcbas=10._r_kind
      lsmoothterrain=.false.
@@ -2033,6 +2034,7 @@ subroutine init_anisofilter_reg(mype)
         print*,'in init_anisofilter_reg: sclvwnd10m_w=',sclvwnd10m_w
         print*,'in init_anisofilter_reg: glerl_on=',glerl_on
         print*,'in init_anisofilter_reg: glerl_scalefact=',glerl_scalefact
+        print*,'in init_anisofilter_reg: hsteep_wind=',hsteep_wind
 
         print*,'in init_anisofilter_reg: nhscale_pass=',nhscale_pass
         print*,'in init_anisofilter_reg: n_valley_pass=',n_valley_pass
@@ -4902,6 +4904,7 @@ subroutine get2berr_reg_subdomain_option(mype)
   do k=kds,kde
      ivar=jdvar(k)
      k1=levs_jdvar(k)
+     chvarname=fvarname(ivar)
      call isotropic_scales_subdomain_option(asp10f,asp20f,asp30f,k,mype)
 
      do j=jps,jpe
@@ -4955,6 +4958,12 @@ subroutine get2berr_reg_subdomain_option(mype)
            if (no_elev_grad) then !no land/water elev gradient artifact
               fx1= dyi*(z0f2(iploc,jloc,k1)-z0f2(imloc,jloc,k1))
               fx2= dxi*(z0f2(iloc,jploc,k1)-z0f2(iloc,jmloc,k1))
+           endif
+
+           if (glerl_on .and. (trim(chvarname)=='wspd10m' .or. trim(chvarname)=='uwnd10m' .or. & 
+                               trim(chvarname)=='vwnd10m' ) ) then 
+              fx1= dyi*(z0f3(iploc,jloc,k1)-z0f3(imloc,jloc,k1))
+              fx2= dxi*(z0f3(iloc,jploc,k1)-z0f3(iloc,jmloc,k1))
            endif
 
            rltop=rltop_wind
@@ -5369,30 +5378,30 @@ subroutine get2berr_reg_subdomain_option(mype)
 
 !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 !simple diagnostic output 
- allocate(slab00(nlat,nlon),slab11(nlat,nlon))
- do n=1,14
-     slab00=zero_single
-     slab11=zero_single
-     do j=2,lon2-1
-        jglob=j+jstart(mm1)-2
-        do i=2,lat2-1
-           iglob=i+istart(mm1)-2
-           if (n<=4) slab00(iglob,jglob)=bckg0f_stdz(i,j,1,N)
-           if (n>4 .and. n<13) slab00(iglob,jglob)=bckg0f_stdp(i,j,1,N-4)
-           if (n==13) slab00(iglob,jglob)=z0f_std(i,j,1)
-           if (n==14) slab00(iglob,jglob)=valleys0f(i,j,1)
-        end do
-     end do
-     call mpi_reduce(slab00,slab11,nlat*nlon,mpi_real4,mpi_sum,0,mpi_comm_world,ierror)
-     if (mype==0) print*,'3D-n:slab11,min,max=',n,minval(slab11),maxval(slab11)
-     if (mype==0) then
-        write(clun,'(i2.2)') n
-        open (54,file='FLD_STD_'//clun//'.dat',form='unformatted')
-        write(54) slab11
-        close(54)
-     endif
- enddo
- deallocate(slab00,slab11)
+!allocate(slab00(nlat,nlon),slab11(nlat,nlon))
+!do n=1,14
+!    slab00=zero_single
+!    slab11=zero_single
+!    do j=2,lon2-1
+!       jglob=j+jstart(mm1)-2
+!       do i=2,lat2-1
+!          iglob=i+istart(mm1)-2
+!          if (n<=4) slab00(iglob,jglob)=bckg0f_stdz(i,j,1,N)
+!          if (n>4 .and. n<13) slab00(iglob,jglob)=bckg0f_stdp(i,j,1,N-4)
+!          if (n==13) slab00(iglob,jglob)=z0f_std(i,j,1)
+!          if (n==14) slab00(iglob,jglob)=valleys0f(i,j,1)
+!       end do
+!    end do
+!    call mpi_reduce(slab00,slab11,nlat*nlon,mpi_real4,mpi_sum,0,mpi_comm_world,ierror)
+!    if (mype==0) print*,'3D-n:slab11,min,max=',n,minval(slab11),maxval(slab11)
+!    if (mype==0) then
+!       write(clun,'(i2.2)') n
+!       open (54,file='FLD_STD_'//clun//'.dat',form='unformatted')
+!       write(54) slab11
+!       close(54)
+!    endif
+!enddo
+!deallocate(slab00,slab11)
 !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
   deallocate(region_dy4,region_dx4)
@@ -5402,7 +5411,7 @@ subroutine get2berr_reg_subdomain_option(mype)
   deallocate(water_scalefact)
   deallocate(cvarstype)
   deallocate(dxf,dyf,rllatf,theta0f)
-  deallocate(u0f,v0f,z0f,z0f2)
+  deallocate(u0f,v0f,z0f,z0f2,z0f3)
   deallocate(vis0f,cldch0f,valleys0f)
   deallocate(z0f_std)
   deallocate(bckg0f_stdz,bckg0f_stdp)
@@ -5445,15 +5454,28 @@ subroutine get_background_subdomain_option(mype)
 !
 !$$$ end documentation block
   use raflib, only: init_raf4,raf_sm4,raf_sm4_ad
-  use gridmod, only: istart,jstart
+  use gridmod, only: istart,jstart,region_lat,region_lon
   use anberror, only: halo_update_reg
   use guess_grids, only: isli2
   use general_commvars_mod, only: s2g_raf
-  use constants, only: fv
+  use constants, only: fv, rad2deg
   implicit none
 
 ! Declare passed variables
   integer(i_kind),intent(in   ) :: mype
+
+! Declare local parameters
+!    Great Lakes
+  real(r_kind),parameter::flon1=-93._r_kind
+  real(r_kind),parameter::flon2=-75._r_kind
+  real(r_kind),parameter::flat1=40.5_r_kind
+  real(r_kind),parameter::flat2=49.5_r_kind
+
+!    Great Salt Lake
+  real(r_kind),parameter::slon1=-113._r_kind
+  real(r_kind),parameter::slon2=-112._r_kind
+  real(r_kind),parameter::slat1=40.6_r_kind
+  real(r_kind),parameter::slat2=41.7_r_kind
 
 ! Declare local variables
   character(len=*),parameter::myname_=myname//'*get_background_subdomain_option'
@@ -5464,8 +5486,8 @@ subroutine get_background_subdomain_option(mype)
   integer(i_kind),allocatable::idvar0(:),kvar_start0(:),kvar_end0(:)
   character(80),allocatable::var_names0(:)
 
-  real(r_kind),allocatable,dimension(:,:,:)::field2,field3
-  real(r_single),allocatable,dimension(:,:,:)::field,fieldaux
+  real(r_kind),allocatable,dimension(:,:,:)::field2,field3,gfield2
+  real(r_single),allocatable,dimension(:,:,:)::field,fieldaux,gfield
   real(r_single),allocatable,dimension(:,:):: valleys
   real(r_single),allocatable,dimension(:,:,:):: slab0,slab1
 
@@ -5495,6 +5517,9 @@ subroutine get_background_subdomain_option(mype)
   real(r_kind) :: fstdmax0
 
   logical fexist
+
+  real(r_kind) flon,flat
+  logical glerlarea
 
   ids=1 ; ide=s2g_raf%nlat
   jds=1 ; jde=s2g_raf%nlon
@@ -5584,15 +5609,18 @@ subroutine get_background_subdomain_option(mype)
 
   allocate(field(ips:ipe,jps:jpe,kps0:kpe0),field2(lat2,lon2,nsig))
   allocate(fieldaux(ips:ipe,jps:jpe,kps0:kpe0),field3(lat2,lon2,nsig))
+  allocate(gfield(ips:ipe,jps:jpe,kps0:kpe0),gfield2(lat2,lon2,nsig))
   allocate(theta0f(lat2,lon2,nsig))
   allocate(    u0f(lat2,lon2,nsig))
   allocate(    v0f(lat2,lon2,nsig))
   allocate(    z0f(lat2,lon2,nsig))
   allocate(    z0f2(lat2,lon2,nsig))
+  allocate(    z0f3(lat2,lon2,nsig))
   allocate(    vis0f(lat2,lon2,nsig))
   allocate(    cldch0f(lat2,lon2,nsig))
   field=zero_single ; field2=zero ; fieldaux=zero_single ; field3=zero ; theta0f=zero_single
   u0f=zero_single ; v0f=zero_single ; z0f=zero_single ; z0f2=zero_single ; vis0f=zero_single ; cldch0f=zero_single
+  z0f3=zero_single ; gfield=zero_single ; gfield2=zero
   do n=1,4
  
      do k=kps0,kpe0
@@ -5609,6 +5637,18 @@ subroutine get_background_subdomain_option(mype)
                  else
                     field(i,j,k)=ges_z_it(iloc,jloc)
                  end if
+
+                 flat=region_lat(i,j)*rad2deg
+                 flon=region_lon(i,j)*rad2deg
+                 glerlarea=(flat>=flat1.and.flat<=flat2).and.(flon>=flon1.and.flon<=flon2)
+                 !glerlarea=glerlarea.or.((flat>=slat1.and.flat<=slat2).and.(flon>=slon1.and.flon<=slon2))
+
+                 if ( glerlarea .and. min(max(isli2(iloc,jloc),0),1)==0 ) then
+                     gfield(i,j,k)=ges_z_it(iloc,jloc)-hsteep_wind
+                   else
+                     gfield(i,j,k)=ges_z_it(iloc,jloc)
+                 endif
+
                  fieldaux(i,j,k)=ges_z_it(iloc,jloc)
               endif
            end do
@@ -5620,6 +5660,9 @@ subroutine get_background_subdomain_option(mype)
         if (n==4) then
            call raf_sm4(fieldaux,filter_all,ngauss_smooth,ips,ipe,jps,jpe,kps0,kpe0,npe)
            call raf_sm4_ad(fieldaux,filter_all,ngauss_smooth,ips,ipe,jps,jpe,kps0,kpe0,npe)
+
+           call raf_sm4(gfield,filter_all,ngauss_smooth,ips,ipe,jps,jpe,kps0,kpe0,npe)
+           call raf_sm4_ad(gfield,filter_all,ngauss_smooth,ips,ipe,jps,jpe,kps0,kpe0,npe)
         endif
      endif
      do k=kps0,kpe0
@@ -5628,12 +5671,18 @@ subroutine get_background_subdomain_option(mype)
            do i=ips,ipe
               iloc=i-istart(mm1)+2
               field2(iloc,jloc,k)=field(i,j,k)
-              if (n==4) field3(iloc,jloc,k)=fieldaux(i,j,k)
+              if (n==4) then 
+                 field3(iloc,jloc,k)=fieldaux(i,j,k)
+                 gfield2(iloc,jloc,k)=gfield(i,j,k)
+              end if
            end do
         end do
      end do
      call halo_update_reg(field2,nsig)
-     if (n==4) call halo_update_reg(field3,nsig)
+     if (n==4) then
+         call halo_update_reg(field3,nsig)
+         call halo_update_reg(gfield2,nsig)
+     end if
      do k=1,nsig
         do j=1,lon2
            do i=1,lat2
@@ -5643,6 +5692,7 @@ subroutine get_background_subdomain_option(mype)
               if (n==4) then
                   z0f(i,j,k)=field2(i,j,k)
                   z0f2(i,j,k)=field3(i,j,k)
+                  z0f3(i,j,k)=gfield2(i,j,k)
               endif
            end do
         end do
@@ -5914,8 +5964,8 @@ subroutine get_background_subdomain_option(mype)
   endif
 
 
- deallocate(field,fieldaux)
- deallocate(field2,field3)
+ deallocate(field,fieldaux,gfield)
+ deallocate(field2,field3,gfield2)
  deallocate(aspect)
  deallocate(idvar0,kvar_start0,kvar_end0,var_names0)
 
