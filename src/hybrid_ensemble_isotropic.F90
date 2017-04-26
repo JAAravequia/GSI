@@ -208,6 +208,8 @@ subroutine init_rf_z(z_len)
 !                             by Jeff Whitaker for his distance in which the Gaspari-Cohn function 1st = 0.
 !   2011-07-19  tong    - add the calculation of pressure vertical profile for regional model,
 !                             when vertical localization length scale is in units of ln(p)
+!   2017-03-23  Hu      - add code to use hybrid vertical coodinate in WRF MASS
+!                             core
 !
 !   input argument list:
 !     z_len    - filter length scale in grid units
@@ -294,8 +296,12 @@ subroutine init_rf_z(z_len)
                            eta2_ll(k)*(ten*ps_bar(ii,jj,1)-pdtop_ll-pt_ll) + &
                            pt_ll)
                  endif
-                 if (wrf_mass_regional .or. twodvar_regional) then
+                 if (twodvar_regional) then
                     p_interface(k)=one_tenth*(eta1_ll(k)*(ten*ps_bar(ii,jj,1)-pt_ll)+pt_ll)
+                 endif
+                 if (wrf_mass_regional) then
+                    p_interface(k)=one_tenth*(eta1_ll(k)*(ten*ps_bar(ii,jj,1)-pt_ll)+&
+                                              eta2_ll(k) + pt_ll)
                  endif
                  ln_p_int(k)=log(max(p_interface(k),0.0001_r_kind))
               enddo
@@ -967,7 +973,6 @@ subroutine normal_new_factorization_rf_y
   use kinds, only: r_kind,i_kind
   use hybrid_ensemble_parameters, only: grd_loc,vvlocal
   use constants, only: zero,one
-  use mpimod, only: mype
   implicit none
 
   integer(i_kind) i,k,lend,lcount,iadvance,iback,kl,loop,ll,iend
@@ -1160,9 +1165,17 @@ end subroutine normal_new_factorization_rf_y
                                           i_en_perts_io
     use hybrid_ensemble_parameters, only: nelen,en_perts,ps_bar
     use gsi_enscouplermod, only: gsi_enscoupler_put_gsi_ens
-    use mpimod, only: mype,ierror
+    use mpimod, only: mype
+    use get_pseudo_ensperts_mod, only: get_pseudo_ensperts_class
+    use get_wrf_mass_ensperts_mod, only: get_wrf_mass_ensperts_class
+    use get_wrf_nmm_ensperts_mod, only: get_wrf_nmm_ensperts_class
+  use hybrid_ensemble_parameters, only: region_lat_ens,region_lon_ens
+
     implicit none
 
+   type(get_pseudo_ensperts_class) :: pseudo_enspert
+   type(get_wrf_mass_ensperts_class) :: wrf_mass_enspert
+   type(get_wrf_nmm_ensperts_class) :: wrf_nmm_enspert
     type(gsi_bundle),allocatable:: en_bar(:)
     type(gsi_bundle):: bundle_anl,bundle_ens
     type(gsi_grid)  :: grid_anl,grid_ens
@@ -1276,7 +1289,6 @@ end subroutine normal_new_factorization_rf_y
     else
 
 !            read in ensembles
-
        if (.not.regional) then
 
           call get_gefs_ensperts_dualres
@@ -1316,23 +1328,20 @@ end subroutine normal_new_factorization_rf_y
 !     pseudo_hybens = .true.: pseudo ensemble hybrid option for hwrf
 !                             GEFS ensemble perturbations in TC vortex area
 !                             are replaced with TC vortex library perturbations
-#ifdef WRF
                 if (pseudo_hybens) then
-                   call get_pseudo_ensperts
+                   call pseudo_enspert%get_pseudo_ensperts(en_perts,nelen)
                 end if
-#endif /* end NO WRF-library block */
-
              case(2)
 
 !     regional_ensemble_option = 2: ensembles are WRF NMM (HWRF) format
 
-                call get_wrf_nmm_ensperts
+                call wrf_nmm_enspert%get_wrf_nmm_ensperts(en_perts,nelen,region_lat_ens,region_lon_ens,ps_bar)
 
              case(3)
 
 !     regional_ensemble_option = 3: ensembles are ARW netcdf format.
 
-                call get_wrf_mass_ensperts_netcdf
+                call wrf_mass_enspert%get_wrf_mass_ensperts(en_perts,nelen,ps_bar)
 
              case(4)
 
@@ -1542,7 +1551,7 @@ end subroutine normal_new_factorization_rf_y
 
     use kinds, only: r_kind,i_kind
     use gridmod, only: nnnn1o
-    use berror, only: nx,ny,nf
+    use berror, only: nx,ny
     use hybrid_ensemble_parameters, only: grd_ens
     implicit none
 
@@ -1880,7 +1889,7 @@ end subroutine normal_new_factorization_rf_y
 !
 !$$$
     use hybrid_ensemble_parameters, only: n_ens,pwgtflg,pwgt
-    use hybrid_ensemble_parameters, only: grd_ens,grd_anl,p_e2a,uv_hyb_ens
+    use hybrid_ensemble_parameters, only: grd_ens,grd_anl,p_e2a
     use hybrid_ensemble_parameters, only: en_perts
     use general_sub2grid_mod, only: general_sube2suba
     use gridmod,only: regional
@@ -2183,7 +2192,7 @@ end subroutine normal_new_factorization_rf_y
 !
 !$$$
     use hybrid_ensemble_parameters, only: n_ens,pwgtflg,pwgt
-    use hybrid_ensemble_parameters, only: n_ens,grd_ens,grd_anl,p_e2a,uv_hyb_ens
+    use hybrid_ensemble_parameters, only: n_ens,grd_ens,grd_anl,p_e2a
     use hybrid_ensemble_parameters, only: en_perts
     use general_sub2grid_mod, only: general_sube2suba_ad
     use gridmod,only: regional
@@ -2328,7 +2337,7 @@ end subroutine normal_new_factorization_rf_y
 
     use kinds, only: r_kind,i_kind
     use mpimod, only: npe,mype,mpi_comm_world,ierror,mpi_rtype
-    use gridmod, only: nlat,nlon,nsig,nnnn1o,regional,vlevs
+    use gridmod, only: nlat,nlon,nnnn1o,regional,vlevs
     use berror, only: nx,ny,nf
     implicit none
 
@@ -2472,9 +2481,9 @@ end subroutine normal_new_factorization_rf_y
 !$$$
 
   use kinds, only: r_kind,i_kind
-  use gridmod, only: nnnn1o,nsig,vlevs
+  use gridmod, only: vlevs
   use constants, only: zero
-  use mpimod, only: mype,mpi_rtype,ierror,mpi_comm_world
+  use mpimod, only: mpi_rtype,ierror,mpi_comm_world
   implicit none
 
   real(r_kind),dimension(nh_0:nh_1,vlevs,nscl),intent(in   ) :: zsub
@@ -2542,7 +2551,7 @@ subroutine sqrt_beta_s_mult_cvec(grady)
   use control_vectors,only: control_vector
   use timermod, only: timer_ini,timer_fnl
 
-  use gridmod, only: nsig,regional,lat2,lon2
+  use gridmod, only: nsig,lat2,lon2
 
   implicit none
 
@@ -2632,7 +2641,7 @@ subroutine sqrt_beta_s_mult_bundle(grady)
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use timermod, only: timer_ini,timer_fnl
 
-  use gridmod, only: nsig,regional,lat2,lon2
+  use gridmod, only: nsig,lat2,lon2
 
   implicit none
 
@@ -2841,7 +2850,6 @@ subroutine init_sf_xy(jcap_in)
 
   use kinds, only: r_kind,i_kind,r_single
   use hybrid_ensemble_parameters,only: s_ens_hv,sp_loc,grd_ens,grd_loc,sp_ens,n_ens,p_sploc2ens,grd_sploc
-  use hybrid_ensemble_parameters,only: generate_ens
   use hybrid_ensemble_parameters,only: use_localization_grid
   use gridmod,only: use_sp_eqspace
   use general_specmod, only: general_init_spec_vars
@@ -3163,7 +3171,6 @@ subroutine sf_xy(f,k_start,k_end)
   use hybrid_ensemble_parameters, only: grd_ens,sp_loc,grd_loc,p_sploc2ens,grd_sploc
   use hybrid_ensemble_parameters,only: use_localization_grid
   use egrid2agrid_mod,only: g_egrid2agrid,g_egrid2agrid_ad  
-  use mpimod, only: mype
   implicit none
 
   integer(i_kind),intent(in   ) :: k_start,k_end
@@ -3288,7 +3295,7 @@ subroutine sqrt_sf_xy_ad(z,f,k_start,k_end)
 !$$$ end documentation block
 
   use kinds, only: r_kind,i_kind
-  use hybrid_ensemble_parameters, only: grd_ens,sp_loc,grd_loc,p_sploc2ens,grd_sploc
+  use hybrid_ensemble_parameters, only: grd_ens,sp_loc,p_sploc2ens,grd_sploc
 
   use hybrid_ensemble_parameters,only: use_localization_grid
   use egrid2agrid_mod,only: g_egrid2agrid_ad
@@ -3411,7 +3418,6 @@ subroutine bkerror_a_en(gradx,grady)
   use control_vectors, only: control_vector
   use timermod, only: timer_ini,timer_fnl
   use hybrid_ensemble_parameters, only: n_ens
-  use hybrid_ensemble_parameters, only: nval_lenz_en
   use gsi_bundlemod,only: gsi_bundlegetpointer
   implicit none
 
@@ -3812,8 +3818,8 @@ subroutine hybens_grid_setup
 !
 !$$$
   use kinds, only: r_kind,i_kind
-  use hybrid_ensemble_parameters, only: aniso_a_en,generate_ens,n_ens,&
-                      s_ens_h,nlon_ens,nlat_ens,jcap_ens,jcap_ens_test,&
+  use hybrid_ensemble_parameters, only: aniso_a_en,n_ens,&
+                      nlon_ens,nlat_ens,jcap_ens,jcap_ens_test,&
                       grd_ens,grd_loc,grd_a1,grd_e1,grd_anl,sp_ens,p_e2a,&
                       dual_res,uv_hyb_ens,grid_ratio_ens
   use hybrid_ensemble_parameters, only: region_lat_ens,region_lon_ens,&
@@ -3822,7 +3828,7 @@ subroutine hybens_grid_setup
   use general_sub2grid_mod, only: general_sub2grid_create_info
   use general_specmod, only: general_init_spec_vars
   use egrid2agrid_mod,only: g_create_egrid2agrid,create_egrid2agrid
-  use mpimod, only: mype,ierror,npe
+  use mpimod, only: mype
   use constants, only: zero,one
   use control_vectors, only: cvars3d,nc2d,nc3d
   use gridmod, only: region_lat,region_lon,region_dx,region_dy
@@ -4887,7 +4893,6 @@ subroutine get_regional_dual_res_grid(eps,r_e,n_a,n_e,x_a,x_e)
 
   use kinds, only: r_kind,i_kind,r_single
   use constants, only: half,one,two
-                               use mpimod, only: mype
   implicit none
 
   real(r_kind),intent(in):: eps      !  width of halo zone that ensemble grid extends beyond analysis grid
@@ -5028,7 +5033,7 @@ subroutine setup_pwgt
 
    use kinds, only: r_kind,i_kind
    use constants,only: zero,one
-   use mpimod, only: mype,npe,mpi_comm_world,ierror,mpi_rtype,mpi_sum
+   use mpimod, only: mype,mpi_comm_world,mpi_rtype,mpi_sum
    use gridmod, only: lat2,lon2,nsig,regional
    use general_sub2grid_mod, only: general_suba2sube
    use balmod, only: wgvk

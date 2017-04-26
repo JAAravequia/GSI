@@ -491,7 +491,7 @@ subroutine read_radiag_data(ftin,header_fix,retrieval,data_fix,data_chan,data_ex
   type(diag_data_extra_list) ,allocatable :: data_extra(:,:)
   integer(i_kind),intent(out)            :: iflag
     
-  integer(i_kind) :: ich,iang,i,j,nnz,nind,ind
+  integer(i_kind) :: ich,iang,i,j
   real(r_single),dimension(:,:),allocatable :: data_tmp
   real(r_single),dimension(:),allocatable   :: fix_tmp
   real(r_single),dimension(:,:),allocatable :: extra_tmp
