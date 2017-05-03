@@ -11,7 +11,6 @@ regtests_all="global_T62
                  nmm_netcdf
                  nmmb_nems_4denvar
                  hwrf_nmm_d2
-                 rtma
                  hwrf_nmm_d3"
 
 regtests_debug="global_T62
