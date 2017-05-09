@@ -2099,6 +2099,44 @@ subroutine init_anisofilter_reg(mype)
   endif
 
   if (mype==0) then
+     print*,'in init_anisofilter_reg: turnoff_all_stdmodels=',turnoff_all_stdmodels
+     print*,'in init_anisofilter_reg: stdmodel_z_based=',stdmodel_z_based
+     print*,'in init_anisofilter_reg: lstdmodel_st=',lstdmodel_st
+     print*,'in init_anisofilter_reg: lstdmodel_vp=',lstdmodel_vp
+     print*,'in init_anisofilter_reg: lstdmodel_t=',lstdmodel_t
+     print*,'in init_anisofilter_reg: lstdmodel_q=',lstdmodel_q
+     print*,'in init_anisofilter_reg: lstdmodel_oz=',lstdmodel_oz
+     print*,'in init_anisofilter_reg: lstdmodel_qw=',lstdmodel_qw
+     print*,'in init_anisofilter_reg: lstdmodel_ps=',lstdmodel_ps
+     print*,'in init_anisofilter_reg: lstdmodel_sst=',lstdmodel_sst 
+     print*,'in init_anisofilter_reg: lstdmodel_gust=',lstdmodel_gust
+     print*,'in init_anisofilter_reg: lstdmodel_vis=',lstdmodel_vis
+     print*,'in init_anisofilter_reg: lstdmodel_pblh=',lstdmodel_pblh
+     print*,'in init_anisofilter_reg: lstdmodel_wspd10m=',lstdmodel_wspd10m
+     print*,'in init_anisofilter_reg: lstdmodel_td2m=',lstdmodel_td2m
+     print*,'in init_anisofilter_reg: lstdmodel_mxtm=',lstdmodel_mxtm
+     print*,'in init_anisofilter_reg: lstdmodel_mitm=',lstdmodel_mitm
+     print*,'in init_anisofilter_reg: lstdmodel_pmsl=',lstdmodel_pmsl
+     print*,'in init_anisofilter_reg: lstdmodel_howv=',lstdmodel_howv
+     print*,'in init_anisofilter_reg: lstdmodel_tcamt=',lstdmodel_tcamt
+     print*,'in init_anisofilter_reg: lstdmodel_lcbas=',lstdmodel_lcbas
+     print*,'in init_anisofilter_reg: lstdmodel_cldch=',lstdmodel_cldch
+     print*,'in init_anisofilter_reg: lstdmodel_uwnd10m=',lstdmodel_uwnd10m
+     print*,'in init_anisofilter_reg: lstdmodel_vwnd10m=',lstdmodel_vwnd10m
+     print*,'in init_anisofilter_reg: lstdmodel_lst=',lstdmodel_lst 
+     print*,'in init_anisofilter_reg: lstdmodel_ist=',lstdmodel_ist
+     print*,'in init_anisofilter_reg: lstdmodel_sfwter=',lstdmodel_sfwter
+     print*,'in init_anisofilter_reg: lstdmodel_vpwter=',lstdmodel_vpwter
+     print*,'in init_anisofilter_reg: lstdmodel_twter=',lstdmodel_twter
+     print*,'in init_anisofilter_reg: lstdmodel_qwter=',lstdmodel_qwter
+     print*,'in init_anisofilter_reg: lstdmodel_pswter=',lstdmodel_pswter
+     print*,'in init_anisofilter_reg: lstdmodel_gustwter=',lstdmodel_gustwter
+     print*,'in init_anisofilter_reg: lstdmodel_wspd10mwter=',lstdmodel_wspd10mwter
+     print*,'in init_anisofilter_reg: lstdmodel_td2mwter=',lstdmodel_td2mwter
+     print*,'in init_anisofilter_reg: lstdmodel_mxtmwter=',lstdmodel_mxtmwter
+     print*,'in init_anisofilter_reg: lstdmodel_mitmwter=',lstdmodel_mitmwter
+     print*,'in init_anisofilter_reg: lstdmodel_uwnd10mwter=',lstdmodel_uwnd10mwter
+     print*,'in init_anisofilter_reg: lstdmodel_vwnd10mwter=',lstdmodel_vwnd10mwter
      print*,'in init_anisofilter_reg: std_radius=',std_radius
      print*,'in init_anisofilter_reg: npass_for_std=',npass_for_std
   endif
@@ -5477,6 +5515,9 @@ subroutine get_background_subdomain_option(mype)
   real(r_kind),parameter::slat1=40.6_r_kind
   real(r_kind),parameter::slat2=41.7_r_kind
 
+!
+  real(r_single),parameter:: sone=1._r_single
+
 ! Declare local variables
   character(len=*),parameter::myname_=myname//'*get_background_subdomain_option'
   integer(i_kind) i,j,k,mm1,ier,istatus
@@ -5514,6 +5555,7 @@ subroutine get_background_subdomain_option(mype)
   integer(i_kind):: kk,ivar,kvar,nn
   character(len=12):: chvarname
   logical l_nostd
+  logical lstdmodel0
   real(r_kind) :: fstdmax0
 
   logical fexist
@@ -5741,11 +5783,20 @@ subroutine get_background_subdomain_option(mype)
   allocate(slab0(ids:ide , jds:jde , 1:nsig))
   allocate(slab1(ids:ide , jds:jde , 1:nsig))
 
+  z0f_std=sone
+  bckg0f_stdz=sone
+  bckg0f_stdp=sone
+  bckg_stdbump_z=one
+  bckg_stdmax_z=one
+  bckg_stdbump_p=one
+  bckg_stdmax_p=one
+
   do kk=kps,kpe!    Looping through analysis variables
 
      ivar=jdvar(kk)
      kvar=levs_jdvar(kk)
      chvarname=fvarname(ivar)
+     lstdmodel0=lstdmodel(chvarname)
 
      l_nostd=trim(chvarname)=='psi'.or.trim(chvarname)=='chi'.or. & 
              trim(chvarname)=='sfwter'.or.trim(chvarname)=='vpwter'
@@ -5756,6 +5807,7 @@ subroutine get_background_subdomain_option(mype)
      if (trim(cvarstype(ivar))=='static3d') then
         do n=1,nrf3
            if (nrf3_loc(n)==ivar) then
+             if (.not.stdmodel_z_based) then
 
              if (l_nostd) then 
                  bckg0f_stdz(:,:,:,n) = 1._r_single
@@ -5788,14 +5840,18 @@ subroutine get_background_subdomain_option(mype)
                     end do
                  end do
              end if
-             bckg_stdbump_z(n)=stdbump(chvarname)
-             fstdmax0=fstdmax(chvarname)
-             bckg_stdmax_z(n)=maxval(corz(:,kvar,n))*an_amp(1,ivar)*fstdmax0
-             if (mype==0) print*,'kk,n,bckg_stdbump_z(n),bckg_stdmax_z(n)=',kk,n,bckg_stdbump_z(n),bckg_stdmax_z(n)
-             if (mype==0) print*,'kk,n,ivar,an_amp(1,ivar)=',kk,n,ivar,an_amp(1,ivar)
-             if (mype==0) print*,'kk,slab1,min,max=',kk,minval(slab1),maxval(slab1)
-             if (mype==0) print*,'================================='
-             if (mype==0) print*,'================================='
+             end if !stdmodel_z_based condition
+             if (lstdmodel0) then
+                bckg_stdbump_z(n)=stdbump(chvarname)
+                fstdmax0=fstdmax(chvarname)
+                bckg_stdmax_z(n)=maxval(corz(:,kvar,n))*an_amp(1,ivar)*fstdmax0
+                if (mype==0) print*,'chvarname=',trim(chvarname)
+                if (mype==0) print*,'kk,n,bckg_stdbump_z(n),bckg_stdmax_z(n)=',kk,n,bckg_stdbump_z(n),bckg_stdmax_z(n)
+                if (mype==0) print*,'kk,n,ivar,an_amp(1,ivar)=',kk,n,ivar,an_amp(1,ivar)
+                if (mype==0) print*,'kk,slab1,min,max=',kk,minval(slab1),maxval(slab1)
+                if (mype==0) print*,'================================='
+                if (mype==0) print*,'================================='
+             end if
              exit
            end if
         end do
@@ -5803,6 +5859,7 @@ subroutine get_background_subdomain_option(mype)
       else if (trim(cvarstype(ivar))=='static2d') then
         do n=1,nrf2
            if (nrf2_loc(n)==ivar) then
+              if (.not.stdmodel_z_based) then
               call gsi_bundlegetpointer (gsi_metguess_bundle(it),trim(chvarname), ges_wrk2d, istatus)
 
               do k=1,nsig
@@ -5832,14 +5889,18 @@ subroutine get_background_subdomain_option(mype)
                     end do
                  end do
               end do
-              bckg_stdbump_p(n)=stdbump(chvarname)
-              fstdmax0=fstdmax(chvarname)
-              bckg_stdmax_p(n)=maxval(corp(:,n))*an_amp(1,ivar)*fstdmax0
-              if (mype==0) print*,'kk,n,bckg_stdbump_p(n),bckg_stdmax_p(n)=',kk,n,bckg_stdbump_p(n),bckg_stdmax_p(n)
-              if (mype==0) print*,'kk,n,ivar,an_amp(1,ivar)=',kk,n,ivar,an_amp(1,ivar)
-              if (mype==0) print*,'kk,slab1,min,max=',kk,minval(slab1),maxval(slab1)
-              if (mype==0) print*,'================================='
-              if (mype==0) print*,'================================='
+              end if!stdmodel_z_based condition
+              if (lstdmodel0) then
+                 bckg_stdbump_p(n)=stdbump(chvarname)
+                 fstdmax0=fstdmax(chvarname)
+                 bckg_stdmax_p(n)=maxval(corp(:,n))*an_amp(1,ivar)*fstdmax0
+                 if (mype==0) print*,'chvarname=',trim(chvarname)
+                 if (mype==0) print*,'kk,n,bckg_stdbump_p(n),bckg_stdmax_p(n)=',kk,n,bckg_stdbump_p(n),bckg_stdmax_p(n)
+                 if (mype==0) print*,'kk,n,ivar,an_amp(1,ivar)=',kk,n,ivar,an_amp(1,ivar)
+                 if (mype==0) print*,'kk,slab1,min,max=',kk,minval(slab1),maxval(slab1)
+                 if (mype==0) print*,'================================='
+                 if (mype==0) print*,'================================='
+              end if
               exit
            end if
         end do
@@ -5850,6 +5911,7 @@ subroutine get_background_subdomain_option(mype)
      ivar=jdvar(kk)
      kvar=levs_jdvar(kk)
      chvarname=fvarname(ivar)
+     lstdmodel0=lstdmodel(chvarname)
 
      if (trim(cvarstype(ivar))=='motley') then
         do n=1,mvars
@@ -5871,20 +5933,24 @@ subroutine get_background_subdomain_option(mype)
                     end do
                  end do
               end do
-              bckg_stdbump_p(nn)=stdbump(chvarname)
-              fstdmax0=fstdmax(chvarname)
-              bckg_stdmax_p(nn)=maxval(corp(:,nn))*an_amp(1,ivar)*fstdmax0
-              if (mype==0) print*,'kk,nn,bckg_stdbump_p(nn),bckg_stdmax_p(nn)=',kk,n,bckg_stdbump_p(nn),bckg_stdmax_p(nn)
-              if (mype==0) print*,'kk,nn,ivar,an_amp(1,ivar)=',kk,nn,ivar,an_amp(1,ivar)
-              if (mype==0) print*,'kk,slab1,min,max=',kk,minval(slab1),maxval(slab1)
-              if (mype==0) print*,'================================='
-              if (mype==0) print*,'================================='
+              if (lstdmodel0) then
+                 bckg_stdbump_p(nn)=stdbump(chvarname)
+                 fstdmax0=fstdmax(chvarname)
+                 bckg_stdmax_p(nn)=maxval(corp(:,nn))*an_amp(1,ivar)*fstdmax0
+                 if (mype==0) print*,'chvarname=',trim(chvarname)
+                 if (mype==0) print*,'kk,nn,bckg_stdbump_p(nn),bckg_stdmax_p(nn)=',kk,n,bckg_stdbump_p(nn),bckg_stdmax_p(nn)
+                 if (mype==0) print*,'kk,nn,ivar,an_amp(1,ivar)=',kk,nn,ivar,an_amp(1,ivar)
+                 if (mype==0) print*,'kk,slab1,min,max=',kk,minval(slab1),maxval(slab1)
+                 if (mype==0) print*,'================================='
+                 if (mype==0) print*,'================================='
+              end if
               exit
            end if
         end do
      end if
   end do 
 
+  if (stdmodel_z_based) then
   slab0=zero_single
   do k=1,nsig
      do j=2,lon2-1
@@ -5914,6 +5980,7 @@ subroutine get_background_subdomain_option(mype)
      end do
   end do
   if (mype==0) print*,'for z0f_std:slab1,min,max=',minval(slab1),maxval(slab1)
+  end if!stdmodel_z_based condition
 
   deallocate(slab0)
   deallocate(slab1)

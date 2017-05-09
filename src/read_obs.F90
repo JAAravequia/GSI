@@ -174,6 +174,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
 #endif
   if(trim(dtype) == 'tcp' .or. trim(filename) == 'tldplrso')return
   if(trim(filename) == 'mitmdat' .or. trim(filename) == 'mxtmdat')return
+  if(trim(filename) == 'satmar')return
 
 ! Use routine as usual
   if(lexist)then
