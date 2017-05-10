@@ -191,11 +191,11 @@ subroutine isubdom_index_(elat,elon,ilat,ilon)
         ! indexed with (ilat,ilon) in [1:nlat,1:nlon], either periodic
         ! (longitudes) or not.
 
-  ASSERT(ilat>=1)
-  ASSERT(ilat<=nlat)
+  ASSERT(ilat >= 1)
+  ASSERT(ilat <= nlat)
 
-  ASSERT(ilon>=0)
-  ASSERT(ilon<=nlon)
+  ASSERT(ilon >= 0)
+  ASSERT(ilon <= nlon)
 
 end subroutine isubdom_index_
 
