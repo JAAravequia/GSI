@@ -15,7 +15,6 @@ regtests_all="global_T62
               hwrf_nmm_d3
               rtma
               global_enkf_T62"
-regtests_all="arw_netcdf"
 
 regtests_debug="global_T62
                 global_4dvar_T62
