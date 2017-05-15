@@ -337,7 +337,7 @@ use covlocal, only:  latval
 
 implicit none
 integer(i_kind), dimension(:), intent(inout) :: numobs
-real(r_single) :: deglat,corrlength,corrsq
+real(r_single) :: deglat,corrlength,corrsq,dist
 type(kdtree2_result),dimension(:),allocatable :: sresults
 
 integer nob,n1,n2,i,ideln
@@ -356,8 +356,20 @@ obsloop: do i=n1,n2
        deglat = latsgrd(i)*rad2deg
        corrlength=latval(deglat,corrlengthnh,corrlengthtr,corrlengthsh)
        corrsq = corrlength**2
-       call kdtree2_r_nearest(tp=kdtree_obs2,qv=gridloc(:,i),r2=corrsq,&
-                              nfound=numobs(i),nalloc=nobstot,results=sresults)
+       if (nobstot < 3) then
+          numobs(i) = 0
+          do nob=1,nobstot
+             dist = sum( (obloc(:,nob)-grdloc(:,i)**2, 1 )
+             if (dist < corrsq) then
+                 numobs(i) = numobs(i) + 1
+                 sresults(numobs(i))%idx = nob
+                 sresults(numobs(i))%dis = dist
+             end if     
+          end do
+       else 
+          call kdtree2_r_nearest(tp=kdtree_obs2,qv=gridloc(:,i),r2=corrsq,&
+                                 nfound=numobs(i),nalloc=nobstot,results=sresults)
+       endif                    
     else
        do nob=1,nobstot
           if (sum((obloc(1:3,nob)-gridloc(1:3,i))**2,1) < corrlengthsq(nob)) &

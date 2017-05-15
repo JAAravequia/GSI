@@ -370,15 +370,32 @@ grdloop: do npt=1,numptsperproc(nproc+1)
        nobsl = nobsl_max
    else ! find all obs within localization radius (sorted by distance).
        allocate(sresults(nobstot))
-       call kdtree2_r_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),r2=corrsq,&
-            nfound=nobsl,nalloc=nobstot,results=sresults)
+       ! use brute force search (for debugging and for single ob test).
+       ! (kdtree does not work for less than 3 obs)
+       if (nobstot < 3) then
+          nobsl = 0
+          do nob=1,nobstot
+             dist = sum( (obloc(:,nob)-grdloc_chunk(:,npt))**2, 1 )
+             if (dist < corrsq) then
+                 nobsl = nobsl + 1
+                 sresults(nobsl)%idx = nob
+                 sresults(nobsl)%dis = dist
+             end if     
+          end do
+       else 
+          call kdtree2_r_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),r2=corrsq,&
+               nfound=nobsl,nalloc=nobstot,results=sresults)
+       endif
    endif
 
    t2 = t2 + mpi_wtime() - t1
    t1 = mpi_wtime()
 
    ! Skip when no observations in local area
-   if(nobsl == 0) cycle grdloop
+   if(nobsl == 0) then
+      deallocate(sresults)      
+      cycle grdloop
+   endif
 
    ! Loop through vertical levels (nnmax=1 if no vertical localization)
    verloop: do nn=1,nnmax
