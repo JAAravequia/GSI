@@ -1090,8 +1090,8 @@ subroutine read_obs(ndata,mype)
        mype_root_sub(ilarge)=npestart
        npestart=npestart+npe_sub3(ilarge)
        mmdat=mmdat+1
-       if(npestart == npe)npestart=0
        npe_sub3(ilarge)=0
+       if(npestart + minval(npe_sub3, mask=npe_sub3>0)>= npe) npestart=0
     end do loopx
 
 !   Define sub-communicators for each data file
