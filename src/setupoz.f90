@@ -522,6 +522,11 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
               idia = ioff0
               if (save_jacobian) then
                  oz_ind = getindex(svars3d, 'oz')
+                 if (oz_ind < 0) then
+                    print *, 'Error: no variable oz in state vector. Exiting.'
+                    call stop2(1300)
+                 endif
+
                  dhx_dx%st_ind(1)  = sum(levels(1:oz_ind-1)) + 1
                  dhx_dx%end_ind(1) = sum(levels(1:oz_ind-1)) + nsig
                  dhx_dx%val = doz_dz(:,k)
@@ -1220,8 +1225,13 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
        hrdifsig,mype,nfldsig)
      iz = max(1, min( int(dpres), nsig))
      delz = max(zero, min(dpres - float(iz), one))
-     oz_ind = getindex(svars3d, 'oz')
      if (save_jacobian) then
+        oz_ind = getindex(svars3d, 'oz')
+        if (oz_ind < 0) then
+           print *, 'Error: no variable oz in state vector. Exiting.'
+           call stop2(1300)
+        endif
+
         dhx_dx%st_ind(1)  = iz  + sum(levels(1:oz_ind-1))         
         dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:oz_ind-1))
 

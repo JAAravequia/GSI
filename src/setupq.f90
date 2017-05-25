@@ -500,9 +500,14 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      iz = max(1, min( int(dpres), nsig))
      delz = max(zero, min(dpres - float(iz), one))
 
-     q_ind =getindex(svars3d,'q')
 
      if (save_jacobian) then
+        q_ind =getindex(svars3d,'q')
+        if (q_ind < 0) then
+           print *, 'Error: no variable q in state vector. Exiting.'
+           call stop2(1300)
+        endif
+
         dhx_dx%st_ind(1)  = iz + sum(levels(1:q_ind-1))
         dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:q_ind-1))
 

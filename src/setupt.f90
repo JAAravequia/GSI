@@ -620,9 +620,13 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            iz = max(1, min( int(dpres), nsig))
            delz = max(zero, min(dpres - float(iz), one))
 
-           t_ind =getindex(svars3d,'tv')
-           
            if (save_jacobian) then
+              t_ind = getindex(svars3d, 'tv')
+              if (t_ind < 0) then
+                 print *, 'Error: no variable tv in state vector. Exiting.'
+                 call stop2(1300)
+              endif
+
               dhx_dx%st_ind(1)  = iz               + sum(levels(1:t_ind-1))
               dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:t_ind-1))
 
@@ -637,9 +641,13 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            iz = max(1, min( int(dpres), nsig))
            delz = max(zero, min(dpres - float(iz), one))
 
-           t_ind =getindex(svars3d,'tsen')
-
            if (save_jacobian) then
+              t_ind = getindex(svars3d, 'tsen')
+              if (t_ind < 0) then
+                 print *, 'Error: no variable tsen in state vector. Exiting.'
+                 call stop2(1300)
+              endif
+
               dhx_dx%st_ind(1)  = iz               + sum(levels(1:t_ind-1))
               dhx_dx%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:t_ind-1))
 

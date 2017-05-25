@@ -436,8 +436,13 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! Subtract off dlnp correction, then convert to pressure (cb)
      pges = exp(log(pgesorig) - rdp)
 
-     ps_ind = getindex(svars2d,'ps')
      if (save_jacobian) then
+        ps_ind = getindex(svars2d,'ps')
+        if (ps_ind < 0) then
+           print *, 'Error: no variable ps in state vector. Exiting.'
+           call stop2(1300)
+        endif
+
         dhx_dx%st_ind(1) = sum(levels(1:ns3d)) + ps_ind
         dhx_dx%end_ind(1) = sum(levels(1:ns3d)) + ps_ind
         dhx_dx%val(1) = one

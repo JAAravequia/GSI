@@ -456,10 +456,19 @@ subroutine setupsrw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      iz = max(1, min( int(dpres), nsig))
      delz = max(zero, min(dpres - float(iz), one))
 
-     u_ind =getindex(svars3d,'u')
-     v_ind =getindex(svars3d,'v')
-
      if (save_jacobian) then
+
+        u_ind = getindex(svars3d, 'u')
+        if (u_ind < 0) then
+           print *, 'Error: no variable u in state vector. Exiting.'
+           call stop2(1300)
+        endif
+        v_ind = getindex(svars3d, 'v')
+        if (v_ind < 0) then
+           print *, 'Error: no variable v in state vector. Exiting.'
+           call stop2(1300)
+        endif
+
         dhx_dx_u%st_ind(1)  = iz               + sum(levels(1:u_ind-1))
         dhx_dx_u%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:u_ind-1))
         dhx_dx_u%st_ind(2)  = iz               + sum(levels(1:v_ind-1))

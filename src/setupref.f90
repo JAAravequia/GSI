@@ -742,10 +742,6 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
      end do
   endif ! (last_pass)
 
-  t_ind = getindex(svars3d, 'tv')
-  q_ind = getindex(svars3d, 'q')
-  p_ind = getindex(svars3d, 'prse')
-
 ! Loop to load arrays used in statistics output
   call dtime_setup()
   do i=1,nobs
@@ -1010,6 +1006,23 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
            my_head%luse      = luse(i)
 
            if (save_jacobian) then
+
+              t_ind = getindex(svars3d, 'tv')
+              q_ind = getindex(svars3d, 'q')
+              p_ind = getindex(svars3d, 'prse')
+              if (t_ind < 0) then
+                 print *, 'Error: no variable tv in state vector. Exiting.'
+                 call stop2(1300)
+              endif
+              if (q_ind < 0) then
+                 print *, 'Error: no variable q in state vector. Exiting.'
+                 call stop2(1300)
+              endif
+              if (p_ind < 0) then
+                 print *, 'Error: no variable prse in state vector. Exiting.'
+                 call stop2(1300)
+              endif
+
               dhx_dx%st_ind(1)  = sum(levels(1:t_ind-1)) + 1
               dhx_dx%end_ind(1) = sum(levels(1:t_ind-1)) + nsig
               dhx_dx%st_ind(2)  = sum(levels(1:q_ind-1)) + 1

@@ -342,9 +342,13 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
          hrdifsig,nsig+1,mype,nfldsig)
 
 
-     q_ind =getindex(svars3d,'q')
-
      if (save_jacobian) then
+        q_ind =getindex(svars3d,'q')
+        if (q_ind < 0) then
+           print *, 'Error: no variable q in state vector. Exiting.'
+           call stop2(1300)
+        endif
+
         dhx_dx%st_ind(1)  = 1    + sum(levels(1:q_ind-1))
         dhx_dx%end_ind(1) = nsig + sum(levels(1:q_ind-1))
 
