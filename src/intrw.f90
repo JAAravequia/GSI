@@ -96,6 +96,8 @@ subroutine intrw_(rwhead,rval,sval)
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gsi_4dvar, only: ladtest_obs
+
+  use control_vectors, only : w_exist
   implicit none
 
 ! Declare passed variables
@@ -108,10 +110,10 @@ subroutine intrw_(rwhead,rval,sval)
 ! real(r_kind) penalty
   real(r_kind),pointer,dimension(:) :: xhat_dt_u,xhat_dt_v
   real(r_kind),pointer,dimension(:) :: dhat_dt_u,dhat_dt_v
-  real(r_kind) val,valu,valv,w1,w2,w3,w4,w5,w6,w7,w8
+  real(r_kind) val,valu,valv,w1,w2,w3,w4,w5,w6,w7,w8,valw
   real(r_kind) cg_rw,p0,grad,wnotgross,wgross,time_rw,pg_rw
-  real(r_kind),pointer,dimension(:) :: su,sv
-  real(r_kind),pointer,dimension(:) :: ru,rv
+  real(r_kind),pointer,dimension(:) :: su,sv,sw
+  real(r_kind),pointer,dimension(:) :: ru,rv,rw
   type(rwNode), pointer :: rwptr
 
 !  If no rw data return
@@ -124,6 +126,10 @@ subroutine intrw_(rwhead,rval,sval)
   call gsi_bundlegetpointer(sval,'v',sv,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(rval,'u',ru,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(rval,'v',rv,istatus);ier=istatus+ier
+  if( w_exist )then
+    call gsi_bundlegetpointer(sval,'w',sw,istatus);ier=istatus+ier
+    call gsi_bundlegetpointer(rval,'w',rw,istatus);ier=istatus+ier
+  end if
   if(l_foto) then
      call gsi_bundlegetpointer(xhat_dt,'u',xhat_dt_u,istatus);ier=istatus+ier
      call gsi_bundlegetpointer(xhat_dt,'v',xhat_dt_v,istatus);ier=istatus+ier
@@ -159,6 +165,12 @@ subroutine intrw_(rwhead,rval,sval)
           w5* su(j5)+w6* su(j6)+w7* su(j7)+w8* su(j8))*rwptr%cosazm+         &
          (w1* sv(j1)+w2* sv(j2)+w3* sv(j3)+w4* sv(j4)+                       &
           w5* sv(j5)+w6* sv(j6)+w7* sv(j7)+w8* sv(j8))*rwptr%sinazm
+
+     if( w_exist )then
+        val = val + (w1* sw(j1)+w2* sw(j2)+w3* sw(j3)+w4* sw(j4)+            &
+                     w5* sw(j5)+w6* sw(j6)+w7* sw(j7)+w8* sw(j8))*rwptr%sintilt
+     end if
+
      if ( l_foto ) then
         time_rw=rwptr%time*r3600
         val=val+                                                    &
@@ -207,6 +219,7 @@ subroutine intrw_(rwhead,rval,sval)
 !       Adjoint
         valu=rwptr%cosazm*grad
         valv=rwptr%sinazm*grad
+        if(w_exist) valw=rwptr%sintilt*grad
         ru(j1)=ru(j1)+w1*valu
         ru(j2)=ru(j2)+w2*valu
         ru(j3)=ru(j3)+w3*valu
@@ -223,6 +236,16 @@ subroutine intrw_(rwhead,rval,sval)
         rv(j6)=rv(j6)+w6*valv
         rv(j7)=rv(j7)+w7*valv
         rv(j8)=rv(j8)+w8*valv
+        if(w_exist)then
+           rw(j1)=rw(j1)+w1*valw
+           rw(j2)=rw(j2)+w2*valw
+           rw(j3)=rw(j3)+w3*valw
+           rw(j4)=rw(j4)+w4*valw
+           rw(j5)=rw(j5)+w5*valw
+           rw(j6)=rw(j6)+w6*valw
+           rw(j7)=rw(j7)+w7*valw
+           rw(j8)=rw(j8)+w8*valw
+        end if
  
         if ( l_foto ) then
            valu=valu*time_rw

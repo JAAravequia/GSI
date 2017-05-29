@@ -73,6 +73,8 @@ use mpeu_util, only: getindex
 use constants, only : max_varname_length, zero
 use general_sub2grid_mod, only: general_sub2grid,general_grid2sub
 use general_commvars_mod, only: s2g_cv
+use control_vectors, only : w_exist
+use gridmod, only: wrf_mass_regional,nems_nmmb_regional
 implicit none
   
 ! Declare passed variables  
@@ -122,7 +124,7 @@ logical :: ls_u,ls_v,ls_prse,ls_q,ls_tsen,ls_ql,ls_qi
 real(r_kind),pointer,dimension(:,:)   :: sv_ps,sv_sst
 real(r_kind),pointer,dimension(:,:)   :: sv_gust,sv_vis,sv_pblh,sv_wspd10m,sv_tcamt,sv_lcbas
 real(r_kind),pointer,dimension(:,:)   :: sv_td2m,sv_mxtm,sv_mitm,sv_pmsl,sv_howv,sv_cldch
-real(r_kind),pointer,dimension(:,:,:) :: sv_u,sv_v,sv_prse,sv_q,sv_tsen,sv_tv,sv_oz
+real(r_kind),pointer,dimension(:,:,:) :: sv_u,sv_v,sv_prse,sv_q,sv_tsen,sv_tv,sv_oz,sv_w,sv_dw
 real(r_kind),pointer,dimension(:,:,:) :: sv_rank3
 real(r_kind),pointer,dimension(:,:)   :: sv_rank2
 
@@ -308,6 +310,14 @@ do jj=1,nsubwin
       call gsi_bundlegetvar ( wbundle, 'oz' , sv_oz,  istatus )
    else
       if(istatus_oz==0) sv_oz=zero   
+   end if
+   if(w_exist)then
+      call gsi_bundlegetpointer (sval(jj),'w'  ,sv_w,  istatus)
+      call gsi_bundlegetvar ( wbundle, 'w' , sv_w,  istatus )
+      if(nems_nmmb_regional)then
+         call gsi_bundlegetpointer (sval(jj),'dw'  ,sv_dw,  istatus)
+         call gsi_bundlegetvar ( wbundle, 'dw' , sv_dw,  istatus )
+      end if
    end if
    if (icgust>0) then
       call gsi_bundlegetpointer (sval(jj),'gust' ,sv_gust, istatus)

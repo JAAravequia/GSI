@@ -188,7 +188,7 @@ subroutine setuptd2m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=19
+     ioff0=19+2
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
@@ -472,6 +472,9 @@ subroutine setuptd2m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(17,ii) = data(itd2m,i)       ! TD2M observation (K)
         rdiagbuf(18,ii) = ddiff              ! obs-ges used in analysis (K)
         rdiagbuf(19,ii) = data(itd2m,i)-td2mges! obs-ges w/o bias correction (K) (future slot)
+
+        rdiagbuf(20,ii) = data(26,i)
+        rdiagbuf(21,ii) = data(27,i)
  
 
         ioff=ioff0

@@ -300,8 +300,8 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   isprvd=23   ! index of observation subprovider
   icat=24     ! index of data level category
   ijb=25      ! index of non linear qc parameter
-  iptrbu=26   ! index of u perturbation
-  iptrbv=27   ! index of v perturbation
+  iptrbu=28   ! index of u perturbation
+  iptrbv=29   ! index of v perturbation
 
   mm1=mype+1
   scale=one
@@ -317,7 +317,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=23
+     ioff0=23+2
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+7*miter+2
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
@@ -1244,6 +1244,8 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         end if
 
         rdiagbuf(23,ii) = factw              ! 10m wind reduction factor
+        rdiagbuf(24,ii) = data(26,i)
+        rdiagbuf(25,ii) = data(27,i)
 
         ioff=ioff0
         if (lobsdiagsave) then

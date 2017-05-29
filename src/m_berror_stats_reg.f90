@@ -350,6 +350,7 @@ end subroutine berror_read_bal_reg
   integer(i_kind) :: nrf3_t,nrf2_gust,nrf2_vis,nrf2_pblh,nrf2_ps,nrf2_wspd10m
   integer(i_kind) :: nrf2_td2m,nrf2_mxtm,nrf2_mitm,nrf2_pmsl,nrf2_howv,nrf2_tcamt,nrf2_lcbas,nrf2_cldch
   integer(i_kind) :: nrf3_sfwter,nrf3_vpwter
+  integer(i_kind) :: nrf3_dbz
   integer(i_kind) :: inerr,istat
   integer(i_kind) :: nsigstat,nlatstat,isig
   integer(i_kind) :: loc,m1,m,i,n,j,k,n0
@@ -534,6 +535,7 @@ end subroutine berror_read_bal_reg
   nrf3_cw =getindex(cvars3d,'cw')
   nrf3_sf =getindex(cvars3d,'sf')
   nrf3_vp =getindex(cvars3d,'vp')
+  nrf3_dbz=getindex(cvars3d,'dbz')
   nrf2_sst=getindex(cvars2d,'sst')
   nrf2_gust=getindex(cvars2d,'gust')
   nrf2_vis=getindex(cvars2d,'vis')
@@ -558,6 +560,16 @@ end subroutine berror_read_bal_reg
            corz(j,k,nrf3_q)=one
         enddo
      enddo
+  endif
+
+  if( nrf3_dbz>0 )then
+    if(.not. nrf3_t>0) then
+      write(6,*)'not as expect,stop'
+      stop
+    endif
+    corz(:,:,nrf3_dbz)=10.0
+    hwll(:,:,nrf3_dbz)=hwll(:,:,nrf3_t)
+    vz(:,:,nrf3_dbz)=vz(:,:,nrf3_t)
   endif
 
   if (nrf3_oz>0) then 

@@ -101,7 +101,8 @@ use params, only: &
       corrlengthtr, corrlengthsh, obtimelnh, obtimeltr, obtimelsh,&
       lnsigcutoffsatnh, lnsigcutoffsatsh, lnsigcutoffsattr,&
       varqc, huber, zhuberleft, zhuberright,&
-      lnsigcutoffpsnh, lnsigcutoffpssh, lnsigcutoffpstr
+      lnsigcutoffpsnh, lnsigcutoffpssh, lnsigcutoffpstr,&
+      locvertopt,lochoropt
 
 use mpi_readobs, only:  mpi_getobs
 
@@ -126,6 +127,8 @@ real(r_single), public, allocatable, dimension(:) :: biasprednorm,biasprednormin
 character(len=20), public, allocatable, dimension(:) :: obtype
 integer(i_kind), public ::  nobs_sat, nobs_oz, nobs_conv, nobstot
 
+real(r_single), public, allocatable, dimension(:) :: hlocal,vlocal
+
 ! for serial enkf, anal_ob is only used here and in loadbal. It is deallocated in loadbal.
 ! for letkf, anal_ob used on all tasks in letkf_update (bcast from root in loadbal), deallocated
 ! in letkf_update.
@@ -139,14 +142,16 @@ subroutine readobs()
 ! all tasks.  Ob prior perturbations for each ensemble member
 ! are written to a temp file, since the entire array can be 
 ! very large.
-use radinfo, only: npred,nusis,nuchan,jpch_rad,iuse_rad,radinfo_read,predx,pg_rad
+use radinfo, only: npred,jpch_rad,radinfo_read,predx,pg_rad
 use convinfo, only: convinfo_read, init_convinfo, cvar_pg, nconvtype, ictype,&
                     ioctype
 use ozinfo, only: init_oz, ozinfo_read, pg_oz, jpch_oz, nusis_oz, nulev
-use covlocal, only: latval
+use covlocal, only: latval,taper
+use constants, only: rearth
 integer nob,n,j,ierr
 real(r_double) t1
 real(r_single) tdiff,tdiffmax,deglat,radlat,radlon
+real(r_kind) rhor,rvert
 ! read in conv data info
 call init_convinfo()
 call convinfo_read()
@@ -173,8 +178,8 @@ allocate(biasprednorm(npred),biasprednorminv(npred))
 !biasprednorm(4) = 1.1e-3_r_single
 !biasprednorm(4) = zero   ! don't use this predictor (too co-linear)?
 ! what the heck, just scale them all by 0.01!
-!biasprednorm = 0.01_r_single
-biasprednorm=one
+biasprednorm = 0.01_r_single
+!biasprednorm=one
 biasprednorminv=zero
 do n=1,npred
    if (nproc == 0) print *,n,'biasprednorm = ',biasprednorm(n)
@@ -190,7 +195,7 @@ deltapredx = zero
 t1 = mpi_wtime()
 call mpi_getobs(datapath, datestring, nobs_conv, nobs_oz, nobs_sat, nobstot, &
                 obsprd_prior, ensmean_obnobc, ensmean_ob, ob, &
-                oberrvar, obloclon, obloclat, obpress, &
+                oberrvar, obloclon, obloclat, obpress,hlocal,vlocal,&
                 obtime, oberrvar_orig, stattype, obtype, biaspreds,&
                 anal_ob,indxsat,nanals)
 tdiff = mpi_wtime()-t1
@@ -261,14 +266,50 @@ do nob=1,nobstot
    obloc(3,nob) = sin(radlat)
    deglat = obloclat(nob)
 !  get limits on corrlength,lnsig,and obtime
-   if (nob > nobs_conv+nobs_oz) then
-      lnsigl(nob) = latval(deglat,lnsigcutoffsatnh,lnsigcutoffsattr,lnsigcutoffsatsh)
-   else if (obtype(nob)(1:3) == ' ps') then
-      lnsigl(nob) = latval(deglat,lnsigcutoffpsnh,lnsigcutoffpstr,lnsigcutoffpssh)
-   else
-      lnsigl(nob)=latval(deglat,lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh)
-   end if
-   corrlengthsq(nob)=latval(deglat,corrlengthnh,corrlengthtr,corrlengthsh)**2
+   if ( locvertopt == 1 ) then
+      if (nob > nobs_conv+nobs_oz) then
+         lnsigl(nob) = latval(deglat,lnsigcutoffsatnh,lnsigcutoffsattr,lnsigcutoffsatsh)
+      else if (obtype(nob)(1:3) == ' ps') then
+         if(lnsigcutoffpsnh .gt. 0) then
+           lnsigl(nob) = latval(deglat,lnsigcutoffpsnh,lnsigcutoffpstr,lnsigcutoffpssh)
+         else
+           lnsigl(nob)=vlocal(nob)
+         end if
+      else
+         if(lnsigcutoffnh .gt. 0) then
+           lnsigl(nob)=latval(deglat,lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh)
+         else
+           lnsigl(nob)=vlocal(nob)
+         end if
+      end if
+   elseif ( locvertopt == 3 ) then
+      if (nob > nobs_conv+nobs_oz) then
+          ! here, notice there is negaitive sign before oblnp
+          rvert = 0.5 -0.25*taper( abs(-oblnp(nob)-log(1020.))/2. ) !exp21=0.5
+          lnsigl(nob) = rvert*latval(deglat,lnsigcutoffsatnh,lnsigcutoffsattr,lnsigcutoffsatsh)
+      else if ( obtype(nob)(1:3) == ' pw') then
+          lnsigl(nob) = 0.4*latval(deglat,lnsigcutoffpsnh,lnsigcutoffpstr,lnsigcutoffpssh)
+      else if (obtype(nob)(1:3) == ' ps' ) then
+          lnsigl(nob) = latval(deglat,lnsigcutoffpsnh,lnsigcutoffpstr,lnsigcutoffpssh)
+      else if (obtype(nob)(1:3) == '  u' .or. obtype(nob)(1:3) == '  v' ) then
+          rvert = 1.0-0.5*taper( abs(-oblnp(nob)-log(1020.))/2. )
+          lnsigl(nob)=rvert*latval(deglat,lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh)
+      else
+          rvert = 0.5-0.25*taper( abs(-oblnp(nob)-log(1020.))/2. )
+          lnsigl(nob)=rvert*latval(deglat,lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh)
+      endif
+   endif
+   if (lochoropt == 1 ) then ! constant
+       if(corrlengthnh .gt. 0) then
+          corrlengthsq(nob)=latval(deglat,corrlengthnh,corrlengthtr,corrlengthsh)**2
+       else
+          corrlengthsq(nob)=hlocal(nob)*(1.e3_r_single/rearth)*hlocal(nob)*(1.e3_r_single/rearth)
+       end if
+   elseif ( lochoropt == 3 ) then
+      rhor = 1.5-0.5*taper( abs(-oblnp(nob)-log(1020.))/2. )
+      corrlengthsq(nob)=(latval(deglat,corrlengthnh,corrlengthtr,corrlengthsh)*rhor)**2
+   endif
+
    obtimel(nob)=latval(deglat,obtimelnh,obtimeltr,obtimelsh)
 end do
 
@@ -283,7 +324,6 @@ subroutine screenobs()
 ! screen out obs with large observation errors or 
 ! that fail background check.  For screened obs oberrvar is set to 1.e31_r_single
 !use radbias, only: apply_biascorr
-use radinfo, only: iuse_rad,nuchan,nusis,jpch_rad
 real(r_single) fail,failm
 integer nn,nob
 fail=1.e31_r_single
@@ -342,7 +382,7 @@ end if ! nproc=0
 end subroutine screenobs
 
 subroutine channelstats
-use radinfo, only: npred,nusis,nuchan,jpch_rad
+use radinfo, only: jpch_rad
 implicit none
 integer(i_kind) nob,nob2,i
 ! count number of obs per channel/sensor.

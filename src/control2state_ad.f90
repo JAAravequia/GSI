@@ -64,6 +64,8 @@ use gsi_chemguess_mod, only: gsi_chemguess_get
 use gsi_metguess_mod, only: gsi_metguess_get
 use mpeu_util, only: getindex
 use constants, only: max_varname_length,zero
+use control_vectors, only : w_exist
+use gridmod, only: wrf_mass_regional,nems_nmmb_regional
 
 implicit none
 
@@ -111,7 +113,7 @@ logical :: ls_u,ls_v,ls_prse,ls_q,ls_tsen,ls_ql,ls_qi
 real(r_kind),pointer,dimension(:,:)   :: rv_ps,rv_sst
 real(r_kind),pointer,dimension(:,:)   :: rv_gust,rv_vis,rv_pblh,rv_wspd10m,rv_tcamt,rv_lcbas
 real(r_kind),pointer,dimension(:,:)   :: rv_td2m,rv_mxtm,rv_mitm,rv_pmsl,rv_howv,rv_cldch
-real(r_kind),pointer,dimension(:,:,:) :: rv_u,rv_v,rv_prse,rv_q,rv_tsen,rv_tv,rv_oz
+real(r_kind),pointer,dimension(:,:,:) :: rv_u,rv_v,rv_prse,rv_q,rv_tsen,rv_tv,rv_oz,rv_w,rv_dw
 real(r_kind),pointer,dimension(:,:,:) :: rv_rank3
 real(r_kind),pointer,dimension(:,:)   :: rv_rank2
 
@@ -293,6 +295,15 @@ do jj=1,nsubwin
       call gsi_bundleputvar ( wbundle, 'oz',  rv_oz,  istatus )
    else
       if(istatus_oz==0) rv_oz=zero 
+   end if
+
+   if(w_exist)then
+     call gsi_bundlegetpointer (rval(jj),'w' ,rv_w, istatus)
+     call gsi_bundleputvar ( wbundle, 'w', rv_w, istatus )
+     if(nems_nmmb_regional)then
+       call gsi_bundlegetpointer (rval(jj),'dw' ,rv_dw, istatus)
+       call gsi_bundleputvar ( wbundle, 'dw', rv_dw, istatus )
+     end if 
    end if
 
 !  Same one-to-one map for chemistry-vars; take care of them together

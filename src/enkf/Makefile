@@ -110,14 +110,7 @@ include $(MAKE_CONF)
 # This makefile
 # -------------
 
-  MAKE_FILE = Makefile
-
-
-# -----------
-# Load module
-# -----------
-
-  #EXE_FILE = global_enkf
+  MAKE_FILE = Makefile_gfs
 
 
 # --------------------
@@ -131,7 +124,7 @@ include $(MAKE_CONF)
 # Log file
 # --------
 
-  LOG_FILE = log.make.$(EXE_FILE)
+  LOG_FILE = log.make.global_enkf
 
 
 # ---------------
@@ -159,8 +152,8 @@ install:
 	  echo "	mkdir -p $(INSTALL_DIR)" ;\
 	  mkdir -p $(INSTALL_DIR) ;\
 	fi
-	cp $(EXE_FILE) $(INSTALL_DIR)
-	@cd $(INSTALL_DIR) ; ls -l `pwd`/$(EXE_FILE)
+	cp global_enkf $(INSTALL_DIR)
+	@cd $(INSTALL_DIR) ; ls -l `pwd`/global_enkf
 
 
 # ----------
@@ -170,8 +163,8 @@ install:
 clean:
 	@echo
 	@echo '==== CLEAN ==================================================='
-	- $(RM) $(EXE_FILE) *.o *.mod *.MOD *.lst *.a *.x
-	- $(RM) loadmap.txt log.make.$(EXE_FILE)
+	- $(RM) global_enkf *.o *.mod *.MOD *.lst *.a *.x
+	- $(RM) loadmap.txt log.make.global_enkf
 	- $(MAKE) -f ${MAKE_FILE} doclean
 
 
@@ -274,12 +267,12 @@ $(OBJS_NOSWAP) :
 # ------------
 # Dependencies
 # ------------
-  MAKE_DEPEND = Makefile.dependency
+  MAKE_DEPEND = Makefile.dependency.gfs
 include $(MAKE_DEPEND)
 
 # ----
 
-$(EXE_FILE) :  $(OBJS) $(OBJS_NOSWAP) $(GSIOBJS)
+global_enkf :  $(OBJS) $(OBJS_NOSWAP) $(GSIOBJS)
 	$(LD) -o $@ $(OBJS) $(OBJS_NOSWAP) $(GSIOBJS) $(LIBS) $(LDFLAGS)
 
 
@@ -300,7 +293,7 @@ all :
 	@echo '==== LINK ===================================================='
 	@$(MAKE) -f $(MAKE_FILE) \
 		"LIBS=$(LIBS_N)" "LDFLAGS=$(LDFLAGS_N)" \
-		$(EXE_FILE)
+		global_enkf
 
 debug :
 	@$(MAKE) -f $(MAKE_FILE) "COMP_MODE=$@" check_mode
@@ -315,7 +308,7 @@ debug :
 	@echo '==== LINK ===================================================='
 	@$(MAKE) -f $(MAKE_FILE) \
 		"LIBS=$(LIBS_D)" "LDFLAGS=$(LDFLAGS_D)" \
-		$(EXE_FILE)
+		global_enkf
 
 check_mode :
 	@if [ -e $(LOG_FILE) ]; then \

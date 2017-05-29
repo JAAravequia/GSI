@@ -43,6 +43,8 @@ use mod_strong, only: tlnmc_option
 use gridmod, only: regional,lat2,lon2,nsig
 use cwhydromod, only: cw2hydro_ad
 use timermod, only: timer_ini,timer_fnl
+use control_vectors, only : w_exist
+use gridmod, only: wrf_mass_regional,nems_nmmb_regional
 implicit none
 
 ! Declare passed variables
@@ -71,7 +73,7 @@ character(len=4), parameter :: mysvars(nsvars) = (/  &  ! vars from ST needed he
 logical :: ls_u,ls_v,ls_prse,ls_q,ls_tsen,ls_ql,ls_qi
 real(r_kind),pointer,dimension(:,:)   :: rv_ps,rv_sst
 real(r_kind),pointer,dimension(:,:,:) :: rv_u,rv_v,rv_prse,rv_q,rv_tsen,rv_tv,rv_oz
-real(r_kind),pointer,dimension(:,:,:) :: rv_rank3
+real(r_kind),pointer,dimension(:,:,:) :: rv_rank3,rv_w,rv_dw
 
 logical :: do_getuv,do_tv_to_tsen_ad,do_normal_rh_to_q_ad,do_getprs_ad,lstrong_bk_vars
 logical :: do_tlnmc,do_q_copy
@@ -182,6 +184,14 @@ do jj=1,ntlevs_ens
    call gsi_bundlegetpointer (eval(jj),'sst' ,rv_sst, istatus)
    call gsi_bundleputvar ( wbundle_c, 'oz',  rv_oz,  istatus )
    call gsi_bundleputvar ( wbundle_c, 'sst', rv_sst, istatus )
+   if(w_exist)then
+     call gsi_bundlegetpointer (eval(jj),'w' ,rv_w, istatus)
+     call gsi_bundleputvar ( wbundle_c, 'w', rv_w, istatus )
+     if(nems_nmmb_regional)then
+       call gsi_bundlegetpointer (eval(jj),'dw' ,rv_dw, istatus)
+       call gsi_bundleputvar ( wbundle_c, 'dw', rv_dw, istatus )
+     end if
+   end if
 
 !$omp section
 

@@ -166,6 +166,8 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   real(r_double) :: satid,rtype
   character(8) subset
 
+  character(len=256) filename2
+
   satid=1      ! debug executable wants default value ???
   idate=0
   nread=0; if(lexist) nread=1   ! in case of a quick return
@@ -176,7 +178,14 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   if(trim(filename) == 'mitmdat' .or. trim(filename) == 'mxtmdat')return
 
 ! Use routine as usual
-  if(lexist)then
+
+  filename2=trim(filename)
+  filename2=filename2(1:6)
+  if(dtype.eq.'rw'.or.dtype.eq.'dbz') then
+     filename2='dbzvol'
+  endif
+
+  if(lexist .and. trim(dtype) /= 'tcp' .and. trim(filename2) /= 'dbzvol' )then
       lnbufr = 15
       open(lnbufr,file=trim(filename),form='unformatted',status ='unknown')
       call openbf(lnbufr,'IN',lnbufr)
@@ -501,11 +510,18 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
 
       call closbf(lnbufr)
   end if
-  if(lexist)then
+  !if(lexist)then
+  !    write(6,*)'read_obs_check: bufr file date is ',idate,trim(filename),' ',dtype,jsatid
+  !else
+  !    write(6,*)'read_obs_check: bufr file ',dtype,jsatid,' not available ',trim(filename)
+  !end if
+
+  if(lexist .and. trim(dtype) /= 'tcp' .and. trim(filename2) /= 'dbzvol')then
       write(6,*)'read_obs_check: bufr file date is ',idate,trim(filename),' ',dtype,jsatid
   else
-      write(6,*)'read_obs_check: bufr file ',dtype,jsatid,' not available ',trim(filename)
+      if (trim(filename2) /= 'dbzvol') write(6,*)'read_obs_check: bufr file ',dtype,jsatid,' not available ',trim(filename)
   end if
+
   return
 end subroutine read_obs_check
 
@@ -611,6 +627,7 @@ subroutine read_obs(ndata,mype)
 !   2016-03-02  s.liu/carley - remove use_reflectivity and use i_gsdcldanal_type
 !   2016-04-28  J. Jung - added logic for RARS and direct broadcast data from NESDIS/UW.
 !   2016-09-19  Guo     - replaced open(obs_input_common) with "call unformatted_open(obs_input_common)"
+!   2017-05-12  Y. Wang and X. Wang - add interface to read in dBZ (nc) and radial velocity (ascii)
 !   
 !
 !   input argument list:
@@ -668,6 +685,9 @@ subroutine read_obs(ndata,mype)
     use m_extOzone, only: extOzone_read
     use mpeu_util, only: warn
     use gsi_unformatted, only: unformatted_open
+
+    use obsmod, only: hlocal,vlocal
+
     implicit none
 
 !   Declare passed variables
@@ -709,6 +729,8 @@ subroutine read_obs(ndata,mype)
     real(r_kind) gstime,val_dat,rmesh,twind,rseed
     real(r_kind),allocatable,dimension(:) :: prslsm,hgtlsm,work1
     real(r_kind),allocatable,dimension(:,:,:):: prsl_full,hgtl_full
+
+    character(256):: filename2
 
     data lunout / 81 /
     data lunsave  / 82 /
@@ -802,7 +824,8 @@ subroutine read_obs(ndata,mype)
            obstype == 'td2m' .or. obstype=='mxtm' .or. &
            obstype == 'mitm' .or. obstype=='pmsl' .or. &
            obstype == 'howv' .or. obstype=='tcamt' .or. &
-           obstype=='lcbas' .or. obstype=='cldch' .or. obstype == 'larcglb' ) then
+           obstype=='lcbas' .or. obstype=='cldch' .or. &
+           obstype == 'larcglb' .or. obstype=='dbz' ) then
           ditype(i) = 'conv'
        else if( hirs   .or. sndr      .or.  seviri .or. &
                obstype == 'airs'      .or. obstype == 'amsua'     .or.  &
@@ -1157,6 +1180,9 @@ subroutine read_obs(ndata,mype)
           if(obstype == 'rw')then
              use_hgtl_full=.true.
              if(belong(i))use_hgtl_full_proc=.true.
+           else if(obstype == 'dbz')then
+             use_hgtl_full=.true.
+             if(belong(i))use_hgtl_full_proc=.true.
           end if
           if(obstype == 'sst')then
             if(belong(i))use_sfc=.true.
@@ -1289,7 +1315,7 @@ subroutine read_obs(ndata,mype)
                   string='READ_FL_HDOB'
                 else
                    call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
-                        prsl_full,nobs_sub1(1,i),read_rec(i))
+                        prsl_full,nobs_sub1(1,i),read_rec(i),hlocal(i),vlocal(i))
                    string='READ_PREPBUFR'
 
                 endif
@@ -1301,7 +1327,7 @@ subroutine read_obs(ndata,mype)
                    string='READ_ASCII_MITM'
                  else
                    call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
-                        prsl_full,nobs_sub1(1,i),read_rec(i))
+                        prsl_full,nobs_sub1(1,i),read_rec(i),hlocal(i),vlocal(i))
                    string='READ_PREPBUFR'
                  endif
 
@@ -1312,7 +1338,7 @@ subroutine read_obs(ndata,mype)
                    string='READ_ASCII_MXTM'
                  else
                    call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
-                        prsl_full,nobs_sub1(1,i),read_rec(i))
+                        prsl_full,nobs_sub1(1,i),read_rec(i),hlocal(i),vlocal(i))
                    string='READ_PREPBUFR'
                  endif
 
@@ -1326,7 +1352,7 @@ subroutine read_obs(ndata,mype)
                 else
 !              else read from prepbufr
                    call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,prsl_full, &
-                         nobs_sub1(1,i),read_rec(i))
+                         nobs_sub1(1,i),read_rec(i),hlocal(i),vlocal(i))
                    string='READ_PREPBUFR'
                 end if
 
@@ -1353,7 +1379,7 @@ subroutine read_obs(ndata,mype)
                   string='READ_FL_HDOB'
                 else
                   call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
-                     prsl_full,nobs_sub1(1,i),read_rec(i))
+                     prsl_full,nobs_sub1(1,i),read_rec(i),hlocal(i),vlocal(i))
                   string='READ_PREPBUFR'
                 endif
 
@@ -1375,7 +1401,7 @@ subroutine read_obs(ndata,mype)
                    endif
 
                    call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
-                        prsl_full,nobs_sub1(1,i),read_rec(i))
+                        prsl_full,nobs_sub1(1,i),read_rec(i),hlocal(i),vlocal(i))
                    string='READ_PREPBUFR'
                 endif
 
@@ -1410,9 +1436,15 @@ subroutine read_obs(ndata,mype)
 
 !            Process radar winds
              else if (obstype == 'rw') then
-                call read_radar(nread,npuse,nouse,infile,lunout,obstype,twind,sis,&
-                                hgtl_full,nobs_sub1(1,i))
-                string='READ_RADAR'
+                call read_radar_wind_ascii(nread,npuse,nouse,infile,lunout,obstype,twind,sis,&
+                                hgtl_full,nobs_sub1(1,i),hlocal(i),vlocal(i))
+                string='READ_RADAR_WIND'
+
+!            Process radar reflectivity from MRMS
+             else if (obstype == 'dbz' ) then
+                print *, "calling read_dbz"
+                call read_dbz_nc(nread,npuse,nouse,infile,lunout,obstype,twind,sis,hgtl_full,nobs_sub1(1,i),hlocal(i),vlocal(i))
+                string='READ_dBZ'
 
 !            Process lagrangian data
              else if (obstype == 'lag') then

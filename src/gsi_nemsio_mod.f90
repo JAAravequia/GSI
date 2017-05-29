@@ -179,17 +179,19 @@ contains
        write(6,*)' in gsi_nemsio_update, guess yr,mn,dy,hr,fhr=',idate(1:4),nfhour
        fha=zero ; ida=0 ; jda=0
        fha(2)=nfhour
+       fha(3)=nfminute
        ida(1)=idate(1)    !  year
        ida(2)=idate(2)    !  month
        ida(3)=idate(3)    !  day
        ida(4)=0       !  time zone
        ida(5)=idate(4)    !  hour
+       ida(6)=idate(5)    ! minute
        call w3movdat(fha,ida,jda)
        jdate(1)=jda(1)    !  new year
        jdate(2)=jda(2)    !  new month
        jdate(3)=jda(3)    !  new day
        jdate(4)=jda(5)    !  new hour
-       jdate(5)=0     !  new minute
+       jdate(5)=jda(6)    !  new minute
        jdate(6)=0     !  new scaled seconds
        jdate(7)=idate(7)  !  new seconds multiplier
        nfhour=0       !  new forecast hour

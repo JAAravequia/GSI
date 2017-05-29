@@ -121,6 +121,8 @@ module obsmod
 !   2016-07-26  guo      - moved away most cldch_ob_type contents to a new module, m_cldchNode
 !   2016-08-20  guo      - moved (stpcnt,ll_jo,ib_jo) to stpjo.f90.
 !   2016-09-19  guo      - moved function dfile_format() to m_extOzone.F90
+!   2016-02-15 Johnson, Y. Wang, X. Wang - add dbz type for reflectivity DA.
+!                                          POC: xuguang.wang@ou.edu
 ! 
 ! Subroutines Included:
 !   sub init_obsmod_dflts   - initialize obs related variables to default values
@@ -399,9 +401,28 @@ module obsmod
   public :: use_limit,lrun_subdirs
   public :: l_foreaft_thin,luse_obsdiag
 
+  ! ==== DBZ DA ===
+  public :: ntilt_radarfiles
+  public :: whichradar
+  public :: i_dbz_ob_type
+  public :: vr_dealisingopt, if_vterminal, if_model_dbz
+
+  public :: doradaroneob,oneoblat,oneoblon
+  public :: oneobddiff,oneobvalue,oneobheight,oneobradid
+  public :: ens_hx_dbz_cut,static_gsi_nopcp_dbz,rmesh_dbz,zmesh_dbz,rmesh_vr,zmesh_vr
+  public :: radar_no_thinning
+  public :: mintiltvr,maxtiltvr,minobrangevr,maxobrangevr
+  public :: mintiltdbz,maxtiltdbz,minobrangedbz,maxobrangedbz
+  public :: debugmode
+  public :: missing_to_nopcp
+
+  public :: iout_dbz, mype_dbz
+  ! --- DBZ DA ---
+  
   public :: obsmod_init_instr_table
   public :: obsmod_final_instr_table
   public :: nobs_sub
+  public :: hlocal,vlocal
 
   interface obsmod_init_instr_table
           module procedure init_instr_table_
@@ -457,8 +478,9 @@ module obsmod
   integer(i_kind),parameter:: i_lcbas_ob_type=32  ! lcbas_ob_type  
   integer(i_kind),parameter:: i_pm10_ob_type=33   ! pm10_ob_type
   integer(i_kind),parameter:: i_cldch_ob_type=34  ! cldch_ob_type
+  integer(i_kind),parameter:: i_dbz_ob_type=35    ! dbz_ob_type
 
-  integer(i_kind),parameter:: nobs_type = 34      ! number of observation types
+  integer(i_kind),parameter:: nobs_type = 35      ! number of observation types
 
 ! Structure for diagnostics
 
@@ -503,7 +525,7 @@ module obsmod
   integer(i_kind) lunobs_obs,nloz_v6,nloz_v8,nobskeep,nloz_omi
   integer(i_kind) nlco,use_limit
   integer(i_kind) iout_rad,iout_pcp,iout_t,iout_q,iout_uv, &
-                  iout_oz,iout_ps,iout_pw,iout_rw
+                  iout_oz,iout_ps,iout_pw,iout_rw, iout_dbz
   integer(i_kind) iout_dw,iout_srw,iout_gps,iout_sst,iout_tcp,iout_lag
   integer(i_kind) iout_co,iout_gust,iout_vis,iout_pblh,iout_tcamt,iout_lcbas
   integer(i_kind) iout_cldch
@@ -512,7 +534,7 @@ module obsmod
                   mype_rw,mype_dw,mype_srw,mype_gps,mype_sst, &
                   mype_tcp,mype_lag,mype_co,mype_gust,mype_vis,mype_pblh, &
                   mype_wspd10m,mype_td2m,mype_mxtm,mype_mitm,mype_pmsl,mype_howv,&
-                  mype_tcamt,mype_lcbas
+                  mype_tcamt,mype_lcbas, mype_dbz
   integer(i_kind) mype_cldch
   integer(i_kind) nlaero, iout_aero, mype_aero
   integer(i_kind) iout_pm2_5, mype_pm2_5
@@ -534,6 +556,25 @@ module obsmod
   real(r_kind) ,allocatable,dimension(:):: dval
   real(r_kind) ,allocatable,dimension(:):: time_window
   character(len=20) :: cobstype(nobs_type)
+
+  real(r_kind) ,allocatable,dimension(:):: hlocal,vlocal
+
+  integer(i_kind) ntilt_radarfiles
+
+  logical ::  doradaroneob
+  logical :: vr_dealisingopt, if_vterminal, if_model_dbz
+  character(4) :: whichradar,oneobradid
+  real(r_kind) :: oneoblat,oneoblon,oneobddiff,oneobvalue,oneobheight
+  logical :: radar_no_thinning
+  logical :: ens_hx_dbz_cut
+  real(r_kind) ::static_gsi_nopcp_dbz
+  real(r_kind) ::rmesh_dbz,zmesh_dbz
+  real(r_kind) ::rmesh_vr,zmesh_vr
+
+  logical :: debugmode
+  real(r_kind) :: minobrangevr,maxobrangevr,mintiltvr,maxtiltvr
+  real(r_kind) :: minobrangedbz,maxobrangedbz,mintiltdbz,maxtiltdbz
+  logical         :: missing_to_nopcp
 
   logical, save :: obs_instr_initialized_=.false.
 
@@ -598,6 +639,37 @@ contains
 
     integer(i_kind) i
 
+    ntilt_radarfiles=1
+    vr_dealisingopt=.true.
+    if_vterminal=.true.
+    if_model_dbz=.true.
+    whichradar="KKKK"
+
+    oneobradid="KKKK"
+    doradaroneob=.false.
+    oneoblat=-999
+    oneoblon=-999
+    oneobddiff=-999
+    oneobvalue=-999
+    oneobheight=-999
+    radar_no_thinning=.false.
+    ens_hx_dbz_cut=.false.
+    static_gsi_nopcp_dbz=0.0
+    rmesh_dbz=2   !default
+    rmesh_vr=2   !default
+    zmesh_dbz=500.0   !default
+    zmesh_vr=500.0   !default
+    minobrangedbz=10000.0
+    maxobrangedbz=200000.0
+    debugmode=.false.
+
+    mintiltdbz=0.0
+    maxtiltdbz=20.0
+    minobrangevr=10000.0
+    maxobrangevr=200000.0
+    mintiltvr=0.0
+    maxtiltvr=20.0
+    missing_to_nopcp=.false.
 
 !   Set logical flag
     perturb_obs = .false.   ! .true. = perturb observations
@@ -663,6 +735,7 @@ contains
     iout_lcbas=230 ! base height of lowest cloud
     iout_pm10=231  ! pm10
     iout_cldch=232 ! cloud ceiling height
+    iout_dbz=233 ! radar reflectivity
 
     mype_ps = npe-1          ! surface pressure
     mype_uv = max(0,npe-2)   ! u,v wind components
@@ -691,6 +764,7 @@ contains
     mype_lcbas=max(0,npe-25) ! base height of lowest cloud
     mype_pm10= max(0,npe-26) ! pm10
     mype_cldch=max(0,npe-27) ! cloud ceiling height
+    mype_dbz=max(0,npe-28)   ! radar reflectivity
 
 !   Initialize arrays used in namelist obs_input 
     time_window_max = three ! set maximum time window to +/-three hours
@@ -745,6 +819,7 @@ contains
     cobstype(i_tcamt_ob_type)="tcamt               " ! tcamt_ob_type
     cobstype(i_lcbas_ob_type)="lcbas               " ! lcbas_ob_type
     cobstype(i_cldch_ob_type)="cldch               " ! cldch_ob_type
+    cobstype( i_dbz_ob_type)  ="radar reflectivity " ! dbz_ob_type
 
 
     hilbert_curve=.false.
@@ -928,6 +1003,9 @@ contains
              dsfcalc(ioff+jj)= dsfcalc(jj)
              obsfile_all(ioff+jj) = trim(obsfile_all(jj))//'.'//cind
              time_window(ioff+jj) = time_window(jj)
+          
+             hlocal(ioff+jj) = hlocal(jj)
+             vlocal(ioff+jj) = vlocal(jj)
           ENDDO
        ENDDO
 !      Then change name for first time slot
@@ -1143,6 +1221,9 @@ use mpeu_util, only: gettablesize
 use mpeu_util, only: gettable
 use mpeu_util, only: getindex
 use gridmod, only: twodvar_regional
+
+use mrmsmod,only: l_mrms_run,mrms_listfile
+use mrmsmod,only: load_mrms_data_info
 implicit none
 
 integer(i_kind),intent(in)  :: nhr_assim       ! number of assimilation hours
@@ -1152,12 +1233,16 @@ character(len=*),optional,intent(in) :: rcname ! optional input filename
 
 character(len=*),parameter::myname_=myname//'*init_instr_table_'
 character(len=*),parameter:: tbname='OBS_INPUT::'
-integer(i_kind) luin,ii,ntot,nrows
+integer(i_kind) luin,ii,ntot,nrows,luin_mrms
 character(len=256),allocatable,dimension(:):: utable
 logical iamroot_
+integer (i_kind)::nrows0
+integer(i_kind) ntot_mrms,nrows_mrms
 
 nall=0
 if(obs_instr_initialized_) return
+
+inquire(file=trim(mrms_listfile), exist=l_mrms_run)
 
 iamroot_=mype==0
 if(present(iamroot)) iamroot_=iamroot 
@@ -1175,7 +1260,17 @@ endif
 call gettablesize(tbname,luin,ntot,nrows)
 if(nrows==0) then
    if(luin/=5) close(luin)
-   return
+   if (.not.l_mrms_run) return
+endif
+
+nrows0=nrows
+if (l_mrms_run) then  ! a run with radar ref data from MRMS
+ luin_mrms=get_lun()
+ open(luin_mrms,file=trim(mrms_listfile),form='formatted')
+ call gettablesize(mrms_listfile,luin_mrms,ntot_mrms,nrows_mrms)
+ nrows0=nrows
+ nrows=nrows+nrows_mrms
+ if(luin_mrms/=5) close(luin_mrms )
 endif
 
 ! Get contents of table
@@ -1196,6 +1291,7 @@ allocate(dfile(nall),dtype(nall),dplat(nall),&
          dsis(nall),dval(nall),dthin(nall),dsfcalc(nall),&
          time_window(nall),obsfile_all(nall))
 
+allocate(hlocal(nall),vlocal(nall))
 ! things not in table, but dependent on nrows ... move somewhere else !_RTodling
 ! reality is that these things are not a function of nrows
 allocate(ditype(nall),ipoint(nall))
@@ -1210,7 +1306,9 @@ do ii=1,nrows
                       dsis(ii), & ! sensor/instrument/satellite identifier for info files
                       dval(ii), & ! 
                       dthin(ii),& ! thinning flag (1=thinning on; otherwise off)
-                      dsfcalc(ii) ! use orig bilinear FOV surface calculation (routine deter_sfc)
+                      dsfcalc(ii),& ! use orig bilinear FOV surface calculation (routine deter_sfc)
+                      hlocal(ii), & !horizontal covariance localization for this ob
+                      vlocal(ii) !vertical covariance localization for this ob
 
    ! The following is to sort out some historical naming conventions
    select case (dsis(ii)(1:4))
@@ -1233,6 +1331,14 @@ enddo
 
 deallocate(utable)
 
+if (l_mrms_run) then
+if(present(rcname)) then
+call load_mrms_data_info(mrms_listfile,nrows0,ntot_mrms,nrows_mrms,nrows,obsfile_all,dfile,dtype,ditype,dplat,dsis,dval,dthin,ipoint,dsfcalc,time_window,rcname)
+else
+call load_mrms_data_info(mrms_listfile,nrows0,ntot_mrms,nrows_mrms,nrows,obsfile_all,dfile,dtype,ditype,dplat,dsis,dval,dthin,ipoint,dsfcalc,time_window)
+endif
+endif
+
 obs_instr_initialized_=.true.
 
 end subroutine init_instr_table_
@@ -1248,6 +1354,8 @@ deallocate(ditype,ipoint)
 deallocate(dfile,dtype,dplat,&
            dsis,dval,dthin,dsfcalc,&
            time_window,obsfile_all)
+
+deallocate(hlocal,vlocal)
 
 obs_instr_initialized_ = .false.
 

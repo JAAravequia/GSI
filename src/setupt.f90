@@ -318,12 +318,12 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   icat=24     ! index of data level category
   ijb=25      ! index of non linear qc parameter
   if (aircraft_t_bc_pof .or. aircraft_t_bc .or. aircraft_t_bc_ext) then
-     ipof=26     ! index of data pof
-     ivvlc=27    ! index of data vertical velocity
-     idx=28      ! index of tail number
-     iptrb=29    ! index of t perturbation
+     ipof=28     ! index of data pof
+     ivvlc=29    ! index of data vertical velocity
+     idx=30      ! index of tail number
+     iptrb=31    ! index of t perturbation
   else
-     iptrb=26    ! index of t perturbation
+     iptrb=28    ! index of t perturbation
   end if
 
   do i=1,nobs
@@ -366,7 +366,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      ii=0
      iip=0
      nchar=1
-     nreal=19
+     nreal=19+2
      if (aircraft_t_bc_pof .or. aircraft_t_bc .or. aircraft_t_bc_ext) &
           nreal=nreal+npredt+2
      idia0=nreal
@@ -1023,11 +1023,15 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(17,ii) = data(itob,i)       ! temperature observation (K)
         rdiagbuf(18,ii) = ddiff              ! obs-ges used in analysis (K)
         rdiagbuf(19,ii) = tob-tges           ! obs-ges w/o bias correction (K) (future slot)
+
+        rdiagbuf(20,ii) = data(26,i)
+        rdiagbuf(21,ii) = data(27,i)
+
         if (aircraft_t_bc_pof .or. aircraft_t_bc .or. aircraft_t_bc_ext) then
-           rdiagbuf(20,ii) = data(ipof,i)       ! data pof
-           rdiagbuf(21,ii) = data(ivvlc,i)      ! data vertical velocity
+           rdiagbuf(22,ii) = data(ipof,i)       ! data pof
+           rdiagbuf(23,ii) = data(ivvlc,i)      ! data vertical velocity
            do j=1,npredt
-              rdiagbuf(21+j,ii) = predbias(j)
+              rdiagbuf(22+j,ii) = predbias(j)
            end do
         end if
         idia=idia0

@@ -46,16 +46,18 @@ contains
 
 subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_tot, &
                       sprd_ob, ensmean_ob, ensmean_obbc, ob, &
-                      oberr, oblon, oblat, obpress, &
+                      oberr, oblon, oblat, obpress, hloc,vloc,&
                       obtime, oberrorig, obcode, obtype, &
                       biaspreds, anal_ob, indxsat, nanals)
     character*500, intent(in) :: obspath
     character*10, intent(in) :: datestring
     character(len=10) :: id,id2
     real(r_single), allocatable, dimension(:) :: ensmean_ob,ob,oberr,oblon,oblat,obpress,obtime,oberrorig,ensmean_obbc,sprd_ob
+    real(r_single), allocatable, dimension(:) :: hloc,vloc
     integer(i_kind), allocatable, dimension(:) :: obcode,indxsat
     real(r_single), allocatable, dimension(:,:) :: biaspreds
-    real(r_single), allocatable, dimension(:,:) :: anal_ob,anal_obtmp
+    real(r_single), allocatable, dimension(:,:) :: anal_ob
+    !real(r_single), allocatable, dimension(:,:) :: anal_obtmp
     real(r_single), allocatable, dimension(:) :: h_xnobc
     real(r_single) :: analsi,analsim1
     real(r_double) t1,t2
@@ -87,6 +89,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
        oblat(nobs_tot),obpress(nobs_tot),obtime(nobs_tot),oberrorig(nobs_tot),obcode(nobs_tot),&
        obtype(nobs_tot),ensmean_ob(nobs_tot),ensmean_obbc(nobs_tot),&
        biaspreds(npred+1, nobs_sat),indxsat(nobs_sat))
+       allocate(hloc(nobs_tot),vloc(nobs_tot))
     else
 ! stop if no obs found (must be an error somewhere).
        print *,'no obs found!'
@@ -109,7 +112,8 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
       call get_convobs_data(obspath, datestring, nobs_conv,               &
         ensmean_obbc(1:nobs_conv), h_xnobc(1:nobs_conv), ob(1:nobs_conv), &
         oberr(1:nobs_conv), oblon(1:nobs_conv), oblat(1:nobs_conv),       &
-        obpress(1:nobs_conv), obtime(1:nobs_conv), obcode(1:nobs_conv),   &
+        obpress(1:nobs_conv), hloc(1:nobs_conv),vloc(1:nobs_conv),        &
+        obtime(1:nobs_conv), obcode(1:nobs_conv),                         &
         oberrorig(1:nobs_conv), obtype(1:nobs_conv), id,id2)
     end if
     if (nobs_oz > 0) then

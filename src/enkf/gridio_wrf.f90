@@ -26,14 +26,14 @@ module gridio
 
   ! Define associated modules
 
-  use gridinfo, only: dimensions, gridvarstring, npts, cross2dot, dot2cross
+  use gridinfo, only: dimensions, npts, cross2dot, dot2cross
   use kinds,    only: r_double, r_kind, r_single
   use mpisetup, only: nproc
   use netcdf_io
-  use params,   only: nlevs, nvars, nlons, nlats, cliptracers, datapath,     &
+  use params,   only: nlevs, nlons, nlats, cliptracers, datapath,            &
                       arw, nmm, datestring, pseudo_rh,                       &
                       nbackgrounds,fgfileprefixes,anlfileprefixes
-  use constants, only: zero,one,cp,fv,rd,grav,zero
+  use constants, only: zero,one,cp,fv,rd,grav,zero,max_varname_length
 
   implicit none
 
@@ -49,14 +49,18 @@ module gridio
 
 contains
 
-  subroutine readgriddata(nanal,vargrid,qsat)
-   integer,                                                   intent(in)  :: nanal
-   real(r_single), dimension(npts,nvars*nlevs+1,nbackgrounds), intent(out) :: vargrid
-   real(r_double), dimension(npts,nlevs,nbackgrounds),         intent(out) :: qsat
+  subroutine readgriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,vargrid,qsat)
+   integer, intent(in)  :: nanal, nc2d, nc3d
+   character(len=max_varname_length), dimension(nc2d), intent(in) :: cvars2d
+   character(len=max_varname_length), dimension(nc3d), intent(in) :: cvars3d
+
+   real(r_single), dimension(npts,nc3d*nlevs+nc2d,nbackgrounds),  intent(out) :: vargrid
+   real(r_double), dimension(npts,nlevs,nbackgrounds), intent(out)            :: qsat
+
    if (arw) then
-     call readgriddata_arw(nanal,vargrid,qsat)
+     call readgriddata_arw(nanal,cvars3d,cvars2d,nc3d,nc2d,vargrid,qsat)
    else
-     call readgriddata_nmm(nanal,vargrid,qsat)
+     call readgriddata_nmm(nanal,cvars3d,cvars2d,nc3d,nc2d,vargrid,qsat)
    endif
   end subroutine readgriddata
 
@@ -69,7 +73,7 @@ contains
 
   !-------------------------------------------------------------------------
 
-  subroutine readgriddata_arw(nanal,vargrid,qsat)
+  subroutine readgriddata_arw(nanal,cvars3d,cvars2d,nc3d,nc2d,vargrid,qsat)
 
     use constants
 
@@ -83,14 +87,20 @@ contains
 
     character(len=500)                                                           :: filename
     character(len=3)                                                             :: charnanal
-    integer,                                                         intent(in)  :: nanal
+    integer, intent(in)  :: nanal, nc2d, nc3d
+    character(len=max_varname_length), dimension(nc2d), intent(in) :: cvars2d
+    character(len=max_varname_length), dimension(nc3d), intent(in) :: cvars3d
+
 
     ! Define variables returned by subroutine
 
-    real(r_single), dimension(npts,nvars*nlevs+1,nbackgrounds), intent(out) :: vargrid
-    real(r_double), dimension(npts,nlevs,nbackgrounds),         intent(out) :: qsat
+    real(r_single), dimension(npts,nc3d*nlevs+nc3d,nbackgrounds),  intent(out) :: vargrid
+    real(r_double), dimension(npts,nlevs,nbackgrounds), intent(out) :: qsat
 
     ! Define variables computed within subroutine
+
+    integer  :: nvars
+    character(len=max_varname_length), dimension(:), allocatable :: cvars
 
     logical                                                                      :: ice
     real,       dimension(:,:,:),               allocatable              :: wrfarw_pert_pottemp
@@ -129,6 +139,53 @@ contains
     integer                                                                      :: count
 
     !======================================================================
+    ! Save all (3D and 2D) variables in cvars array
+    nvars = nc2d + nc3d
+    allocate(cvars(nvars))
+    do i = 1, nc3d
+       select case (cvars3d(i))
+         case ("u")
+           cvars(i) = "U"
+         case ("v")
+           cvars(i) = "V"
+         case ("tv")
+           cvars(i) = "T"
+         case ("q")
+           cvars(i) = "QVAPOR"
+         case ("w")
+           cvars(i) = "W"
+         case ("ph")
+           cvars(i) = "PH"
+         case ("cw")
+           cvars(i) = "QCLOUD"
+         case ("qr")
+           cvars(i) = "QRAIN"
+         case ("qs")
+           cvars(i) = "QSNOW"
+         case ("qg")
+           cvars(i) = "QGRAUP"
+         case ("qi")
+           cvars(i) = "QICE"
+         case ("dbz")
+           cvars(i) = "REFL_10CM"
+         case default
+           if (nproc .eq. 0) then
+             print *,'Error: 3D variable ', cvars3d(i), ' is not supported in current version.'
+           endif
+           call stop2(502)
+       end select
+    enddo
+    do i = 1, nc2d
+       select case (cvars2d(i))
+         case ("mu") 
+           cvars(nc3d+i) = "MU"
+         case default
+           if (nproc .eq. 0) then
+             print *,'Error: 2D variable ', cvars2d(i), ' is not supported in current version.'
+           endif
+           call stop2(502)
+       end select
+    enddo
 
     ! Initialize all constants required by routine
 
@@ -167,14 +224,14 @@ contains
 
     ! Loop through all variables to be update via the EnKF
 
-    do l = 1, nvars + 1
+    do l = 1, nvars
 
     !----------------------------------------------------------------------
 
        ! Define staggering attributes for variable grid
 
        attstr = 'stagger'
-       call variableattribute_char(filename,gridvarstring(l),attstr,        &
+       call variableattribute_char(filename,cvars(l),attstr,        &
             & varstagger)
 
        ! If variable grid is staggered in X-direction, assign array
@@ -230,7 +287,7 @@ contains
        ! Define memory attributes for variable grid
 
        attstr = 'MemoryOrder'
-       call variableattribute_char(filename,gridvarstring(l),attstr,       &
+       call variableattribute_char(filename,cvars(l),attstr,       &
             & varmemoryorder)
 
           ! If variable is a 2-dimensional field, rescale variables
@@ -266,8 +323,14 @@ contains
 
           ! Ingest variable from external netcdf formatted file
        
-          call readnetcdfdata(filename,vargrid_native,gridvarstring(l),     &
+          call readnetcdfdata(filename,vargrid_native,cvars(l),     &
                & xdim_native,ydim_native,zdim_native)
+
+
+          ! Force negative dbz to be zero
+          if ( cvars(l)(1:4) .eq. 'REFL' ) then
+             where (vargrid_native < 0.0) vargrid_native = 0.0
+          end if
        
           ! Interpolate variable from staggered (i.e., C-) grid to
           ! unstaggered (i.e., A-) grid. If variable is staggered in
@@ -310,8 +373,8 @@ contains
              ! Print message to user
 
              if (nproc .eq. 0)                                               &
-                  write(6,*) 'READGRIDDATA_ARW: ', trim(gridvarstring(l)),   &
-                  & countv, minval(vargrid(:,countv,nb)),                       &
+                  write(6,*) 'READGRIDDATA_ARW: ', trim(cvars(l)),           &
+                  & countv, minval(vargrid(:,countv,nb)),                    &
                   & maxval(vargrid(:,countv,nb))
 
              ! Update counting variable
@@ -501,6 +564,9 @@ contains
 
     end do backgroundloop ! loop over backgrounds to read in
 
+    ! Deallocate memory for cvars
+    if(allocated(cvars))               deallocate(cvars)
+
     !======================================================================
 
     ! Return calculated values
@@ -520,7 +586,7 @@ contains
 
   !-------------------------------------------------------------------------
 
-  subroutine readgriddata_nmm(nanal,vargrid,qsat)
+  subroutine readgriddata_nmm(nanal,cvars3d,cvars2d,nc3d,nc2d,vargrid,qsat)
 
     use constants
     !======================================================================
@@ -533,15 +599,19 @@ contains
 
     character(len=500)                                                           :: filename
     character(len=3)                                                             :: charnanal
-    integer,                                                         intent(in)  :: nanal
+    integer, intent(in)  :: nanal, nc2d, nc3d
+    character(len=max_varname_length), dimension(nc2d), intent(in) :: cvars2d
+    character(len=max_varname_length), dimension(nc3d), intent(in) :: cvars3d
 
     ! Define variables returned by subroutine
 
-    real(r_single),  dimension(npts,nvars*nlevs+1,nbackgrounds),  intent(out) :: vargrid
+    real(r_single),  dimension(npts,nc3d*nlevs+nc2d,nbackgrounds),  intent(out) :: vargrid
     real(r_double),  dimension(npts,nlevs,nbackgrounds),          intent(out) :: qsat
 
     ! Define variables computed within subroutine
 
+    integer  :: nvars
+    character(len=max_varname_length), dimension(:), allocatable :: cvars
     logical                                                                      :: ice
     real,       dimension(:,:,:),               allocatable              :: wrfnmm_temp
     real,       dimension(:,:,:),               allocatable              :: wrfnmm_pres
@@ -582,6 +652,40 @@ contains
 
     !======================================================================
 
+    ! Save all (3D and 2D) variables in cvars array
+    nvars = nc2d + nc3d
+    allocate(cvars(nvars))
+    do i = 1, nc3d
+       select case (cvars3d(i))
+         case ("u")
+           cvars(i) = "U"
+         case ("v")
+           cvars(i) = "V"
+         case ("tv")
+           cvars(i) = "T"
+         case ("q")
+           cvars(i) = "Q"
+         case ("cw")
+           cvars(i) = "CWM"
+         case default
+           if (nproc .eq. 0) then
+             print *,'Error: 3D variable ', cvars3d(i), ' is not supported in current version.'
+           endif
+           call stop2(502)
+       end select
+    enddo
+    do i = 1, nc2d
+       select case (cvars2d(i))
+         case ("pd")
+           cvars(nc3d+i) = "PD"
+         case default
+           if (nproc .eq. 0) then
+             print *,'Error: 2D variable ', cvars2d(i), ' is not supported in current version.'
+           endif
+           call stop2(502)
+       end select
+    enddo
+
     ! Initialize all constants required by routine
 
     call init_constants(.true.)
@@ -618,14 +722,14 @@ contains
 
     ! Loop through all variables to be update via the EnKF
 
-    do l = 1, nvars + 1
+    do l = 1, nvars
 
     !----------------------------------------------------------------------
 
        ! Define staggering attributes for variable grid
 
        attstr = 'stagger'
-       call variableattribute_char(filename,gridvarstring(l),attstr,        &
+       call variableattribute_char(filename,cvars(l),attstr,        &
             & varstagger)
 
        ! If variable grid is staggered in X-direction, assign array
@@ -681,7 +785,7 @@ contains
        ! Define memory attributes for variable grid
 
        attstr = 'MemoryOrder'
-       call variableattribute_char(filename,gridvarstring(l),attstr,       &
+       call variableattribute_char(filename,cvars(l),attstr,       &
             & varmemoryorder)
 
           ! If variable is a 2-dimensional field, rescale variables
@@ -717,7 +821,7 @@ contains
 
           ! Ingest variable from external netcdf formatted file
        
-          call readnetcdfdata(filename,vargrid_native,gridvarstring(l),     &
+          call readnetcdfdata(filename,vargrid_native,cvars(l),     &
                & xdim_native,ydim_native,zdim_native)
        
           ! Interpolate variable from staggered (i.e., E-) grid to
@@ -761,7 +865,7 @@ contains
              ! Print message to user
 
              if (nproc .eq. 0)                                               &
-                  write(6,*) 'READGRIDDATA_NMM: ', trim(gridvarstring(l)),   &
+                  write(6,*) 'READGRIDDATA_NMM: ', trim(cvars(l)),           &
                   & countv, minval(vargrid(:,countv,nb)),                    &
                   & maxval(vargrid(:,countv,nb))
 
@@ -1019,6 +1123,8 @@ contains
     !======================================================================
     end do backgroundloop ! loop over backgrounds to read in
 
+    ! Deallocate cvars
+    if(allocated(cvars))               deallocate(cvars)
     ! Return calculated values
 
     return
@@ -1036,26 +1142,26 @@ contains
 
   !-------------------------------------------------------------------------
 
-  subroutine writegriddata(nanal,vargrid)
+  subroutine writegriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,vargrid)
 
-    use netcdf, only: nf90_open,nf90_close
-    use netcdf, only: nf90_write
-    use netcdf, only: nf90_put_att
-    use netcdf, only: nf90_global
     use constants
-    use netcdf_mod, only: nc_check
+    include 'netcdf.inc'      
 
     !----------------------------------------------------------------------
 
     ! Define variables passed to subroutine
 
-    real(r_single),    dimension(npts,nvars*nlevs+1,nbackgrounds),               intent(in)    :: vargrid
-    integer,                                                                     intent(in)    :: nanal                                                
+    integer, intent(in)  :: nanal, nc2d, nc3d
+    character(len=max_varname_length), dimension(nc2d), intent(in) :: cvars2d
+    character(len=max_varname_length), dimension(nc3d), intent(in) :: cvars3d
+    real(r_single),    dimension(npts,nc3d*nlevs+nc2d,nbackgrounds), intent(in)    :: vargrid
 
     !----------------------------------------------------------------------
 
     ! Define variables computed within subroutine
 
+    integer  :: nvars
+    character(len=max_varname_length), dimension(:), allocatable :: cvars
     character(len=500)                                                                         :: filename
     character(len=3)                                                                           :: charnanal
     real,    dimension(:,:,:),                allocatable                            :: vargrid_native
@@ -1086,8 +1192,7 @@ contains
     character(len=50)                                                                          :: attstr
     character(len=12)                                                                          :: varstagger,varstrname
     character(len=12)                                                                          :: varmemoryorder
-    character(len=19)                                                                          :: DateStr
-    character(len=24),parameter                                                                :: myname_ = 'gridio'
+    character(len=19)  :: DateStr
 
     !----------------------------------------------------------------------
 
@@ -1097,6 +1202,64 @@ contains
     integer                                                                                    :: counth, countv
 
     !----------------------------------------------------------------------
+
+    ! Save all (3D and 2D) variables in cvars array
+    nvars = nc2d + nc3d
+    allocate(cvars(nvars))
+    do i = 1, nc3d
+       select case (cvars3d(i))
+         case ("u")
+           cvars(i) = "U"
+         case ("v")
+           cvars(i) = "V"
+         case ("tv")
+           cvars(i) = "T"
+         case ("q")
+           if (arw) then 
+             cvars(i) = "QVAPOR"
+           elseif (nmm) then
+             cvars(i) = "Q"
+           endif
+         case ("w")
+           cvars(i) = "W"
+         case ("ph")
+           cvars(i) = "PH"
+         case ("cw")
+           if (arw) then
+             cvars(i) = "QCLOUD"
+           elseif (nmm) then
+             cvars(i) = "CWM"
+           end if
+         case ("qr")
+           cvars(i) = "QRAIN"
+         case ("qs")
+           cvars(i) = "QSNOW"
+         case ("qg")
+           cvars(i) = "QGRAUP"
+         case ("qi")
+           cvars(i) = "QICE"
+         case ("dbz")
+           cvars(i) = "REFL_10CM"
+         case default
+           if (nproc .eq. 0) then
+             print *,'Error: 3D variable ', cvars3d(i), ' is not supported in current version.'
+           endif
+           call stop2(502)
+       end select
+    enddo
+    do i = 1, nc2d
+       select case (cvars2d(i))
+         case ("mu")
+           cvars(nc3d+i) = "MU"
+         case ("pd")
+           cvars(nc3d+i) = "PD"
+         case default
+           if (nproc .eq. 0) then
+             print *,'Error: 2D variable ', cvars2d(i), ' is not supported in current version.'
+           endif
+           call stop2(502)
+       end select
+    enddo
 
     ! Initialize constants required by routine
 
@@ -1150,7 +1313,7 @@ contains
 
     ! Loop through all analysis variables to be updated
 
-    do l = 1, nvars + 1
+    do l = 1, nvars
 
     !----------------------------------------------------------------------
 
@@ -1165,7 +1328,7 @@ contains
           ! Define staggering attributes for variable grid
        
           attstr = 'stagger'
-          call variableattribute_char(filename,gridvarstring(l),attstr,     &
+          call variableattribute_char(filename,cvars(l),attstr,     &
                & varstagger)
 
     !----------------------------------------------------------------------
@@ -1253,7 +1416,7 @@ contains
        if(arw) then
 
           attstr = 'MemoryOrder'
-          call variableattribute_char(filename,gridvarstring(l),attstr,     &
+          call variableattribute_char(filename,cvars(l),attstr,     &
                & varmemoryorder)
 
        end if ! if(arw)
@@ -1263,7 +1426,7 @@ contains
        ! If variable is a 2-dimensional field, rescale variables
        ! appropriately
 
-       if(gridvarstring(l) .eq. 'MU' .or. gridvarstring(l) .eq. 'PD') then
+       if(l > nc3d) then !if (cvars(l) .eq. 'MU' .or. cvars(l) .eq. 'PD') then
 
           ! Rescale grid dimension variables appropriately
 
@@ -1301,7 +1464,7 @@ contains
        ! Read in first-guess (i.e., analysis without current
        ! increments) and store in local array
 
-       call readnetcdfdata(filename,vargridin_native,gridvarstring(l),      &
+       call readnetcdfdata(filename,vargridin_native,cvars(l),      &
             & xdim_native,ydim_native,zdim_native)
 
     !----------------------------------------------------------------------
@@ -1384,12 +1547,16 @@ contains
 
        ! Clip all tracers (assume names start with 'Q')
 
-       if (cliptracers .and. gridvarstring(l)(1:1) .eq. 'Q') then
+       if (cliptracers .and. cvars(l)(1:1) .eq. 'Q') then   !AS: bad, bad, bad. should check the tracer flag (that I'm not saving right now!)
 
           clip = tiny(vargridin_native(1,1,1))
           where (vargridin_native < clip) vargridin_native = clip
 
        end if ! if (cliptracers .and. gridvarstring(l)(1:1) .eq. 'Q')
+
+       if ( cvars(l)(1:4) .eq. 'REFL' ) then
+         where (vargridin_native < 0.0) vargridin_native = 0.0
+       end if
 
     !----------------------------------------------------------------------
 
@@ -1401,7 +1568,7 @@ contains
 
        ! Write analysis variable.
 
-       call writenetcdfdata(filename,vargridin_native,gridvarstring(l),       &
+       call writenetcdfdata(filename,vargridin_native,cvars(l),       &
              xdim_native,ydim_native,zdim_native)
 
     end do ! do l = 1, nvars+1
@@ -1427,21 +1594,20 @@ contains
     !  global attributes.
     !
     write(DateStr,'(i4,"-",i2.2,"-",i2.2,"-",i2.2,"_",i2.2,":",i2.2)') iyear,imonth,iday,ihour,0,0
-
-    call nc_check( nf90_open(trim(filename),nf90_write,dh1),&
-        myname_,'open '//trim(filename) )
-    call nc_check( nf90_put_att(dh1,nf90_global,'START_DATE',trim(DateStr)),&
-        myname_,'put_att:  START_DATE '//trim(filename) )
-    call nc_check( nf90_put_att(dh1,nf90_global,'SIMULATION_START_DATE',trim(DateStr)),&
-        myname_,'put_att:  SIMULATION_START_DATE '//trim(filename) )
-    call nc_check( nf90_put_att(dh1,nf90_global,'GMT',float(ihour)),&
-        myname_,'put_att: GMT '//trim(filename) )
-    call nc_check( nf90_put_att(dh1,nf90_global,'JULYR',iyear),&
-        myname_,'put_att: JULYR'//trim(filename) )
-    call nc_check( nf90_put_att(dh1,nf90_global,'JULDAY',iw3jdn(iyear,imonth,iday)-iw3jdn(iyear,1,1)+1),&
-        myname_,'put_att: JULDAY'//trim(filename) )
-    call nc_check( nf90_close(dh1),&
-        myname_,'close: '//trim(filename) )
+    ierr = NF_OPEN(trim(filename), NF_WRITE, dh1)
+    IF (ierr .NE. NF_NOERR) print *, 'OPEN ',NF_STRERROR(ierr)
+    ierr = NF_PUT_ATT_TEXT(dh1,NF_GLOBAL,'START_DATE',len(trim(DateStr)),DateStr)
+    IF (ierr .NE. NF_NOERR) print *,'PUT START_DATE', NF_STRERROR(ierr)
+    ierr = NF_PUT_ATT_TEXT(dh1,NF_GLOBAL,'SIMULATION_START_DATE',len(trim(DateStr)),DateStr)
+    IF (ierr .NE. NF_NOERR) print *,'PUT SIMULATION_START_DATE', NF_STRERROR(ierr)
+    ierr = NF_PUT_ATT_REAL(dh1,NF_GLOBAL,'GMT',NF_FLOAT,1,float(ihour))
+    IF (ierr .NE. NF_NOERR) print *,'PUT GMT', NF_STRERROR(ierr)
+    ierr = NF_PUT_ATT_INT(dh1,NF_GLOBAL,'JULYR',NF_INT,1,iyear)
+    IF (ierr .NE. NF_NOERR) print *,'PUT JULYR', NF_STRERROR(ierr)
+    ierr=NF_PUT_ATT_INT(dh1,NF_GLOBAL,'JULDAY',NF_INT,1,iw3jdn(iyear,imonth,iday)-iw3jdn(iyear,1,1)+1)
+    IF (ierr .NE. NF_NOERR) print *,'PUT JULDAY', NF_STRERROR(ierr)
+    ierr = NF_CLOSE(dh1)
+    IF (ierr .NE. NF_NOERR) print *, 'CLOSE ',NF_STRERROR(ierr)
 
     !----------------------------------------------------------------------
 
@@ -1452,6 +1618,9 @@ contains
 
     !======================================================================
     end do backgroundloop ! loop over backgrounds to read in
+
+    ! Deallocate cvars
+    if(allocated(cvars))                     deallocate(cvars)
 
     ! Return calculated values
 

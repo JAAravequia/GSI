@@ -223,7 +223,7 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! If requested, save select data for output to diagnostic file
   if(conv_diagsave)then
      nchar=1
-     ioff0=19
+     ioff0=19+2
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
@@ -530,6 +530,8 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(17,ii) = dpw                ! total precipitable water obs (kg/m**2)
         rdiagbuf(18,ii) = ddiff              ! obs-ges used in analysis (kg/m**2)
         rdiagbuf(19,ii) = dpw-pwges          ! obs-ges w/o bias correction (kg/m**2) (future slot)
+        rdiagbuf(20,ii) = data(17,i)
+        rdiagbuf(21,ii) = data(18,i)
 
         ioff=ioff0
         if (lobsdiagsave) then

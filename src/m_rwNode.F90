@@ -45,6 +45,7 @@ module m_rwNode
      real(r_kind)    :: pg            !  variational quality control parameter
      real(r_kind)    :: cosazm        !  v factor
      real(r_kind)    :: sinazm        !  u factor
+     real(r_kind)    :: sintilt       !  w factor
      real(r_kind)    :: wij(8)        !  horizontal interpolation weights
      integer(i_kind) :: ij(8)         !  horizontal locations
      !logical         :: luse          !  flag indicating if ob is used in pen.

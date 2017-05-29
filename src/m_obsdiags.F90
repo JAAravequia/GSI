@@ -86,6 +86,7 @@ module m_obsdiags
 
   use m_pm10Node , only:  pm10Node ! 33
   use m_cldchNode, only:  cldchNode ! 34
+  use m_dbzNode, only:  dbzNode ! 35
 
   use m_obsNodeTypeManager, only: nobs_type
   use gsi_4dvar           , only: nobs_bins
@@ -173,6 +174,7 @@ module m_obsdiags
   public ::   spdhead
   public ::   srwhead
   public ::    rwhead
+  public ::   dbzhead
   public ::    dwhead
   public ::   ssthead
   public ::   pcphead
@@ -210,6 +212,7 @@ module m_obsdiags
   type(obsLList),dimension(:),pointer :: spdhead => null()
   type(obsLList),dimension(:),pointer :: srwhead => null()
   type(obsLList),dimension(:),pointer :: rwhead => null()
+  type(obsLList),dimension(:),pointer :: dbzhead => null()
   type(obsLList),dimension(:),pointer :: dwhead => null()
   type(obsLList),dimension(:),pointer :: ssthead => null()
   type(obsLList),dimension(:),pointer :: pcphead => null()
@@ -674,6 +677,7 @@ _ENTRY_(myname_)
      spdhead => ptr_obsbins_(obsllists,'spd')
      srwhead => ptr_obsbins_(obsllists,'srw')
       rwhead => ptr_obsbins_(obsllists,'rw')
+     dbzhead => ptr_obsbins_(obsllists,'dbz')
       dwhead => ptr_obsbins_(obsllists,'dw')
      ssthead => ptr_obsbins_(obsllists,'sst')
       pwhead => ptr_obsbins_(obsllists,'pw')
@@ -721,6 +725,7 @@ _ENTRY_(myname_)
      spdhead => null()
      srwhead => null()
       rwhead => null()
+     dbzhead => null()
       dwhead => null()
      ssthead => null()
       pwhead => null()

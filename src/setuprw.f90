@@ -64,6 +64,13 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2016-06-24  guo     - fixed the default value of obsdiags(:,:)%tail%luse to luse(i)
 !                       . removed (%dlat,%dlon) debris.
 !
+!   2016-02-15  Johnson, Y. Wang, X. Wang - Develop the radial velocity
+!                                           operator by including vetical velocity and
+!                                           considering the terminal velocity of
+!                                           target hydrometeors (Johnson et al.
+!                                           2015 MWR; Wang and Wang 2016 MWR)
+!                                           POC: xuguang.wang@ou.edu
+!
 !   input argument list:
 !     lunin    - unit from which to read observations
 !     mype     - mpi task id
@@ -84,7 +91,9 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   use m_obsdiags, only: rwhead
   use obsmod, only: rmiss_single,i_rw_ob_type,obsdiags,&
-                    lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset
+                    lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset, &
+                    if_vterminal, ens_hx_dbz_cut, if_model_dbz, &
+                    doradaroneob,oneobddiff,oneobvalue
   use m_obsNode, only: obsNode
   use m_rwNode, only: rwNode
   use m_obsLList, only: obsLList_appendNode
@@ -92,7 +101,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use gsi_4dvar, only: nobs_bins,hr_obsbin
   use qcmod, only: npres_print,ptop,pbot,tdrerr_inflate,tdrgross_fact
   use guess_grids, only: hrdifsig,geop_hgtl,nfldsig,&
-       ges_lnprsl,sfcmod_gfs,sfcmod_mm5,comp_fact10
+       ges_lnprsl,sfcmod_gfs,sfcmod_mm5,comp_fact10, ges_tsen, ges_rho
   use gridmod, only: nsig,get_ijk
   use constants, only: flattening,semi_major_axis,grav_ratio,zero,grav,wgtlim,&
        half,one,two,grav_equator,eccentricity,somigliana,rad2deg,deg2rad
@@ -103,6 +112,11 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
+
+  use obsmod, only: vr_dealisingopt
+  use control_vectors, only : w_exist, dbz_exist
+  use setupdbz_lib, only:hx_dart
+
   implicit none
 
 ! Declare passed variables
@@ -140,9 +154,11 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) cg_w,wgross,wnotgross,wgt,arg,exp_arg,term,rat_err2
   real(r_double) rstation_id
   real(r_kind) dlat,dlon,dtime,dpres,ddiff,error,slat
-  real(r_kind) sinazm,cosazm,costilt
+  real(r_kind) sinazm,cosazm,costilt, sintilt
   real(r_kind) ratio_errors,qcgross
   real(r_kind) ugesin,vgesin,factw,skint,sfcr
+  real(r_kind) qrgesin,qsgesin,qggesin,rhogesin,tempgesin, rhogesin0
+  real(r_kind) rdBZ, vterminal,dbzgesin, wgesin
   real(r_kind) rwwind,presw
   real(r_kind) errinv_input,errinv_adjst,errinv_final
   real(r_kind) err_input,err_adjst,err_final
@@ -153,7 +169,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) mm1,jj,k2,isli
   integer(i_kind) jsig,ikxx,nn,ibin,ioff,ioff0
   integer(i_kind) ier,ilat,ilon,ihgt,irwob,ikx,itime,iuse
-  integer(i_kind):: ielev,id,itilt,iazm,ilone,ilate,irange
+  integer(i_kind):: ielev,id,itilt,iazm,ilone,ilate,irange,idir3
   integer(i_kind):: izsges,ier2,idomsfc,isfcr,iskint,iff10,iobs_type
   
   character(8) station_id
@@ -161,7 +177,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   logical,dimension(nobs):: luse,muse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
-  logical proceed
+  logical proceed, debugging
 
   equivalence(rstation_id,station_id)
   real(r_kind) addelev,wrange,beamdepth,elevtop,elevbot
@@ -178,10 +194,23 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   type(obs_diag),pointer:: my_diag
   character(len=*),parameter:: myname='setuprw'
 
+  integer(i_kind) inyq_vel ! index of the nyq velocity
+  integer(i_kind) nobdealising !
+  integer(i_kind) d2n
+  real(r_kind) robvr
+  real(r_kind) rnyq_vel ! the nyq velocity
+  real(r_kind):: maxvrdiff=50.0
+
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_u
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
+
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_w
+  real(r_kind),allocatable,dimension(:,:,:,: ) :: ges_qr
+  real(r_kind),allocatable,dimension(:,:,:,: ) :: ges_qs
+  real(r_kind),allocatable,dimension(:,:,:,: ) :: ges_qg
+  real(r_kind),allocatable,dimension(:,:,:,: ) :: ges_dbz
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
@@ -219,6 +248,8 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   izsges=20   ! index of model (guess) elevation for radar associated with vad wind
   ier2=21     ! index of original-original obs error
   iobs_type=22
+  inyq_vel=23 ! index of the nyq velocity
+  idir3=24 ! index of the nyq velocity
 
   numequal=0
   numnotequal=0
@@ -227,7 +258,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=22
+     ioff0=24
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
@@ -261,6 +292,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         slat=data(ilate,i)*deg2rad
         wrange=data(irange,i)
         zsges0=data(izsges,i)
+        rnyq_vel=data(inyq_vel,i)
      endif
 
 !    Link observation to appropriate observation bin
@@ -512,37 +544,95 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      call tintrp2a1(ges_v,vgesprofile,dlat,dlon,dtime,hrdifsig,&
           nsig,mype,nfldsig)
      
+     if(w_exist)then
+       call tintrp31(ges_w,wgesin,dlat,dlon,dpres,dtime,&
+            hrdifsig,mype,nfldsig)
+     end if
+
+    if( if_vterminal )then
+
+     call tintrp31(ges_rho,rhogesin,dlat,dlon,dpres,dtime,&
+          hrdifsig,mype,nfldsig)
+     ! === In order to obtain the surface air density: rhogesin0
+     call tintrp31(ges_rho,rhogesin0,dlat,dlon,0.0,dtime,&
+          hrdifsig,mype,nfldsig)
+
+     if( if_model_dbz ) then
+       ! Interpolate guess reflectivity to observation location and time.
+       call tintrp31(ges_dbz,dbzgesin,dlat,dlon,dpres,dtime,&
+          hrdifsig,mype,nfldsig)
+       rdBZ = dbzgesin
+     else
+
+!    Interpolate guess qr, qs, qg, and rho to observation location and time.
+     call tintrp31(ges_qr,qrgesin,dlat,dlon,dpres,dtime,&
+          hrdifsig,mype,nfldsig)
+     call tintrp31(ges_qs,qsgesin,dlat,dlon,dpres,dtime,&
+          hrdifsig,mype,nfldsig)
+     call tintrp31(ges_qg,qggesin,dlat,dlon,dpres,dtime,&
+          hrdifsig,mype,nfldsig)
+     call tintrp31(ges_tsen,tempgesin,dlat,dlon,dpres,dtime,&
+          hrdifsig,mype,nfldsig)
+
+    qrgesin  = max(qrgesin,1.e-6_r_kind)
+    qsgesin  = max(qsgesin,1.e-8_r_kind)
+    qggesin  = max(qggesin,1.e-9_r_kind)
+    debugging = .false.
+
+    call hx_dart(qrgesin,qggesin,qsgesin,rhogesin,tempgesin,rdBZ,debugging)
+
+    end if ! end if-block if_model_dbz
+
+   if(miter .eq. 0) then !ie an enkf run
+     if(rDBZ .lt. 0.) rDBZ=0.0 ! should be the same as in the read_dbz when nopcp=.true.
+   endif
+   if(miter .eq. 0.and.ens_hx_dbz_cut) then !ie an enkf run
+     if(rDBZ .gt. 60.) rDBZ=60.
+   endif
+
+    ! === From (Atlas et al. 1973)
+    vterminal = 2.65*(rhogesin0/rhogesin)*rdBZ**0.114
+   else
+    vterminal = 0.0_r_kind
+   end if
 
 
 !    Convert guess u,v wind components to radial value consident with obs
      cosazm  = cos(data(iazm,i))  ! cos(azimuth angle)
      sinazm  = sin(data(iazm,i))  ! sin(azimuth angle)
-     costilt = cos(data(itilt,i))  ! cos(tilt angle)
+
+     call dhdrange(data(itilt,i),data(irange,i),sintilt)
+     costilt=sqrt(1.0-sintilt*sintilt)
+     if(w_exist) then
+       rwwind = (ugesin*cosazm+vgesin*sinazm)*costilt*factw+(wgesin-vterminal)*sintilt*factw
+     else
+       rwwind = (ugesin*cosazm+vgesin*sinazm)*costilt*factw
+     endif
 !    rwwind = (ugesin*cosazm+vgesin*sinazm)*costilt*factw
      umaxmax=-huge(umaxmax)
      uminmin=huge(uminmin)
      kminmin=kbeambot
      kmaxmax=kbeamtop
-     do k=kbeambot,kbeamtop
-        rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt
-        if(umaxmax<rwwindprofile) then
-           umaxmax=rwwindprofile
-           kmaxmax=k
-        end if
-        if(uminmin>rwwindprofile) then
-           uminmin=rwwindprofile
-           kminmin=k
-        end if
-     end do
-     rwwind=data(irwob,i)
-     if(data(irwob,i)<uminmin) then
-        rwwind=uminmin
-        dpres=kminmin
-     end if
-     if(data(irwob,i)>umaxmax) then
-        rwwind=umaxmax
-        dpres=kmaxmax
-     end if
+     !do k=kbeambot,kbeamtop
+     !   rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt
+     !   if(umaxmax<rwwindprofile) then
+     !      umaxmax=rwwindprofile
+     !      kmaxmax=k
+     !   end if
+     !   if(uminmin>rwwindprofile) then
+     !      uminmin=rwwindprofile
+     !      kminmin=k
+     !   end if
+     !end do
+     !rwwind=data(irwob,i)
+     !if(data(irwob,i)<uminmin) then
+     !   rwwind=uminmin
+     !   dpres=kminmin
+     !end if
+     !if(data(irwob,i)>umaxmax) then
+     !   rwwind=umaxmax
+     !   dpres=kmaxmax
+     !end if
      if(rwwind==data(irwob,i)) then
         numequal=numequal+1
      else
@@ -550,6 +640,24 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      end if
      
      ddiff = data(irwob,i) - rwwind
+
+     robvr=data(irwob,i)
+     if (abs(ddiff).gt.maxvrdiff.and.vr_dealisingopt.and.1.gt.2) then
+      d2n=int(ddiff/rnyq_vel)
+      robvr=robvr-d2n*rnyq_vel
+      ddiff=robvr-rwwind
+      nobdealising=nobdealising+1
+     endif
+
+     if (doradaroneob) then
+       if(oneobvalue .gt. -900) then
+         data(irwob,i) = oneobvalue
+         ddiff = data(irwob,i) - rwwind
+       else
+         ddiff = oneobddiff
+         data(irwob,i) = rwwind + ddiff
+       endif
+     endif
 
 !    adjust obs error for TDR data
      if(data(iobs_type,i) > three .and. ratio_errors*error > tiny_r_kind &
@@ -663,6 +771,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         my_head%raterr2 = ratio_errors**2  
         my_head%cosazm  = cosazm
         my_head%sinazm  = sinazm
+        my_head%sintilt = sintilt
         my_head%res     = ddiff
         my_head%err2    = error**2
         my_head%time    = dtime
@@ -741,6 +850,8 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(20,ii)=data(iazm,i)*rad2deg ! azimuth angle
         rdiagbuf(21,ii)=data(itilt,i)*rad2deg! tilt angle
         rdiagbuf(22,ii) = factw              ! 10m wind reduction factor
+        rdiagbuf(23,ii)=data(irange,i) ! the range in km
+        rdiagbuf(24,ii) = robvr ! after possible dealising in this step
 
         ioff=ioff0
         if (lobsdiagsave) then
@@ -797,6 +908,23 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   proceed=proceed.and.ivar>0
   call gsi_metguess_get ('var::v' , ivar, istatus )
   proceed=proceed.and.ivar>0
+  if(w_exist)then
+    call gsi_metguess_get ('var::w' , ivar, istatus )
+    proceed=proceed.and.ivar>0
+  endif
+  if(if_vterminal)then
+    if( .not. if_model_dbz ) then
+      call gsi_metguess_get ('var::qr', ivar, istatus )
+      proceed=proceed.and.ivar>0
+      call gsi_metguess_get ('var::qs', ivar, istatus )
+      proceed=proceed.and.ivar>0
+      call gsi_metguess_get ('var::qg', ivar, istatus )
+      proceed=proceed.and.ivar>0
+    else
+      call gsi_metguess_get ('var::dbz', ivar, istatus )
+      proceed=proceed.and.ivar>0
+    endif
+  endif
   end subroutine check_vars_ 
 
   subroutine init_vars_
@@ -880,6 +1008,110 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
          write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
+
+!    get w ...
+     if(w_exist)then
+     varname='w'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+     if (istatus==0) then
+         if(allocated(ges_w))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_w(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         ges_w(:,:,:,1)=rank3
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+            ges_w(:,:,:,ifld)=rank3
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle,ier= ',istatus
+         call stop2(999)
+     endif
+     endif
+
+     if(if_vterminal)then
+       if(if_model_dbz)then
+         !    get dbz ....
+         varname='dbz'
+         call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+         if (istatus==0) then
+           if(allocated(ges_dbz))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+           endif
+           allocate(ges_dbz(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+           ges_dbz(:,:,:,1)=rank3
+           do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+            ges_dbz(:,:,:,ifld)=rank3
+           enddo
+         else
+           write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+           call stop2(999)
+         endif
+       else
+!    get qr ...
+     varname='qr'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+     if (istatus==0) then
+         if(allocated(ges_qr))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_qr(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         ges_qr(:,:,:,1)=rank3
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+            ges_qr(:,:,:,ifld)=rank3
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
+
+!    get qs ...
+     varname='qs'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+     if (istatus==0) then
+         if(allocated(ges_qs))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_qs(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         ges_qs(:,:,:,1)=rank3
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+            ges_qs(:,:,:,ifld)=rank3
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
+!    get qg ...
+     varname='qg'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+     if (istatus==0) then
+         if(allocated(ges_qg))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_qg(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         ges_qg(:,:,:,1)=rank3
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+            ges_qg(:,:,:,ifld)=rank3
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
+
+
+     endif
+     endif
+
+
   else
      write(6,*) trim(myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
                  nfldsig,size(gsi_metguess_bundle)
@@ -892,6 +1124,39 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
     if(allocated(ges_u )) deallocate(ges_u )
     if(allocated(ges_z )) deallocate(ges_z )
     if(allocated(ges_ps)) deallocate(ges_ps)
+    if(allocated(ges_w )) deallocate(ges_w )
+    if(allocated(ges_ps)) deallocate(ges_ps)
+    if(allocated(ges_qs)) deallocate(ges_qs)
+    if(allocated(ges_qr)) deallocate(ges_qr)
+    if(allocated(ges_qg)) deallocate(ges_qg)
+    if(allocated(ges_dbz)) deallocate(ges_dbz)
   end subroutine final_vars_
+
+SUBROUTINE dhdrange(elvang,range,dhdr)
+  use kinds, only: r_kind,r_single,r_double,i_kind
+
+  IMPLICIT NONE
+  REAL(r_kind), INTENT(IN) :: range
+  REAL(r_kind), INTENT(IN) :: elvang
+  REAL(r_kind), INTENT(OUT) :: dhdr
+!
+  DOUBLE PRECISION :: eradius,frthrde,eighthre,fthsq,deg2rad
+  PARAMETER (eradius=6371.0,                                          &
+             frthrde=(4.*eradius/3.),                                   &
+             eighthre=(8.*eradius/3.),                                  &
+             fthsq=(frthrde*frthrde),                                   &
+             deg2rad=(3.14592654/180.))
+!
+  DOUBLE PRECISION :: sinelv,dhdrdb,drange
+!
+  drange=DBLE(range)
+  sinelv=SIN(DBLE(elvang))
+  dhdrdb = (drange+frthrde*sinelv)/                                     &
+         SQRT(drange*drange + fthsq + eighthre*drange*sinelv)
+  dhdr = dhdrdb
+!
+  RETURN
+END SUBROUTINE dhdrange
+
 
 end subroutine setuprw

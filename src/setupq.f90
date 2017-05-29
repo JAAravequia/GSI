@@ -250,7 +250,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   isprvd=21   ! index of observation subprovider
   icat =22    ! index of data level category
   ijb  =23    ! index of non linear qc parameter
-  iptrb=24    ! index of q perturbation
+  iptrb=26    ! index of q perturbation
 
   var_jb=zero
   do i=1,nobs
@@ -294,7 +294,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      ii=0
      iip=0
      nchar=1
-     ioff0=20
+     ioff0=20+2
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
@@ -756,6 +756,8 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(19,ii) = qob-qges           ! obs-ges w/o bias correction (future slot)
 
         rdiagbuf(20,ii) = qsges              ! guess saturation specific humidity
+        rdiagbuf(21,ii) = data(24,i)
+        rdiagbuf(22,ii) = data(25,i)
 
         ioff=ioff0
         if (lobsdiagsave) then

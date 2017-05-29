@@ -19,6 +19,14 @@
      dtbduv_on,time_window_max,offtime_data,init_directories,oberror_tune,ext_sonde, &
      blacklst,init_obsmod_vars,lobsdiagsave,lobskeep,lobserver,hilbert_curve,&
      lread_obs_save,lread_obs_skip
+
+  use obsmod, only: doradaroneob,oneoblat,oneoblon,oneobheight,oneobvalue,oneobddiff,oneobradid,&
+     radar_no_thinning,ens_hx_dbz_cut,static_gsi_nopcp_dbz,rmesh_dbz,&
+     rmesh_vr,zmesh_dbz,zmesh_vr,if_vterminal, if_model_dbz,&
+     minobrangedbz,maxobrangedbz,maxobrangevr,maxtiltvr,missing_to_nopcp,&
+     ntilt_radarfiles,whichradar,&
+     minobrangevr,maxtiltdbz,mintiltvr,mintiltdbz
+
   use obsmod, only: lwrite_predterms, &
      lwrite_peakwt,use_limit,lrun_subdirs,l_foreaft_thin,&
      obsmod_init_instr_table,obsmod_final_instr_table
@@ -335,6 +343,8 @@
 !                              operator for surface observations along the coastline area
 !  04-01-2017 Hu        added option i_gsdqc to turn on special observation qc
 !                              from GSD (for RAP/HRRR application)
+!  02-15-2016 Y. Wang, Johnson, X. Wang - added additional options if_vterminal, if_model_dbz,
+!                                         for radar DA, POC: xuguang.wang@ou.edu
 !
 !EOP
 !-------------------------------------------------------------------------
@@ -534,7 +544,15 @@
        lwrite_peakwt, use_gfs_nemsio,liauon,use_prepb_satwnd,l4densvar,ens_nstarthr,&
        use_gfs_stratosphere,pblend0,pblend1,step_start,diag_precon,lrun_subdirs,&
        use_sp_eqspace,lnested_loops,lsingleradob,thin4d,use_readin_anl_sfcmask,&
-       luse_obsdiag,id_drifter
+       luse_obsdiag,id_drifter, &
+
+       missing_to_nopcp,minobrangedbz,minobrangedbz,maxobrangedbz,&
+       maxobrangevr,maxtiltvr,whichradar,doradaroneob,oneoblat,&
+       oneoblon,oneobheight,oneobvalue,oneobddiff,oneobradid,&
+       rmesh_vr,zmesh_dbz,zmesh_vr, ntilt_radarfiles, whichradar,&
+       radar_no_thinning,ens_hx_dbz_cut,static_gsi_nopcp_dbz,rmesh_dbz,&
+       minobrangevr, maxtiltdbz, mintiltvr, mintiltdbz,if_vterminal,&
+       if_model_dbz
 
 ! GRIDOPTS (grid setup variables,including regional specific variables):
 !     jcap     - spectral resolution

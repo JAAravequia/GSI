@@ -82,10 +82,12 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
   use jfunc, only: l_foto,xhat_dt,dhat_dt
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
+  use control_vectors, only : w_exist
   use m_obsNode, only: obsNode
   use m_rwNode , only: rwNode
   use m_rwNode , only: rwNode_typecast
   use m_rwNode , only: rwNode_nextcast
+
   implicit none
 
 ! Declare passed variables
@@ -99,13 +101,13 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
   integer(i_kind) ier,istatus
   integer(i_kind) j1,j2,j3,j4,j5,j6,j7,j8,kk
   real(r_kind) valrw,facrw,w1,w2,w3,w4,w5,w6,w7,w8,time_rw
-  real(r_kind) cg_rw,rw,wgross,wnotgross
+  real(r_kind) cg_rw,wgross,wnotgross,rw
   real(r_kind),dimension(max(1,nstep))::pen
   real(r_kind) pg_rw
   real(r_kind),pointer,dimension(:) :: xhat_dt_u,xhat_dt_v
   real(r_kind),pointer,dimension(:) :: dhat_dt_u,dhat_dt_v
-  real(r_kind),pointer,dimension(:) :: su,sv
-  real(r_kind),pointer,dimension(:) :: ru,rv
+  real(r_kind),pointer,dimension(:) :: su,sv,sw
+  real(r_kind),pointer,dimension(:) :: ru,rv,r_w
   type(rwNode), pointer :: rwptr
 
   out=zero_quad
@@ -120,6 +122,10 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
   call gsi_bundlegetpointer(sval,'v',sv,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(rval,'u',ru,istatus);ier=istatus+ier
   call gsi_bundlegetpointer(rval,'v',rv,istatus);ier=istatus+ier
+  if(w_exist)then
+    call gsi_bundlegetpointer(sval,'w',sw,istatus);ier=istatus+ier
+    call gsi_bundlegetpointer(rval,'w',r_w,istatus);ier=istatus+ier
+  end if
   if(l_foto) then
      call gsi_bundlegetpointer(xhat_dt,'u',xhat_dt_u,istatus);ier=istatus+ier
      call gsi_bundlegetpointer(xhat_dt,'v',xhat_dt_v,istatus);ier=istatus+ier
@@ -157,6 +163,12 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
                  (w1* sv(j1)+w2* sv(j2)+w3* sv(j3)+w4* sv(j4)+              &
                   w5* sv(j5)+w6* sv(j6)+w7* sv(j7)+w8* sv(j8))*rwptr%sinazm-&
                   rwptr%res
+           if( w_exist )then
+              valrw = valrw + (w1*r_w(j1)+w2*r_w(j2)+w3*r_w(j3)+w4*r_w(j4)+ &
+                               w5*r_w(j5)+w6*r_w(j6)+w7*r_w(j7)+w8*r_w(j8))*rwptr%sintilt
+              facrw = facrw + (w1* sw(j1)+w2* sw(j2)+w3* sw(j3)+w4* sw(j4)+ &
+                               w5* sw(j5)+w6* sw(j6)+w7* sw(j7)+w8* sw(j8))*rwptr%sintilt
+           end if
            if(l_foto) then
               time_rw=rwptr%time*r3600
               valrw=valrw+((w1*dhat_dt_u(j1)+w2*dhat_dt_u(j2)+ &

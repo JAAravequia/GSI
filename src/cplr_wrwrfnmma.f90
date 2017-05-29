@@ -1126,6 +1126,7 @@ contains
     use mpimod, only: mpi_comm_world,ierror,mpi_rtype,mpi_integer4,mpi_min,mpi_max,mpi_sum
     use gsi_4dvar, only: nhr_assimilation
     use gsi_nemsio_mod, only: gsi_nemsio_update,gsi_nemsio_write_fraction 
+    use control_vectors, only : w_exist, dbz_exist
     implicit none
   
   ! Declare passed variables
@@ -1139,19 +1140,20 @@ contains
   
     integer(i_kind) i,it,j,k,kr,mype_input,nsig_write
     integer(i_kind) near_sfc,kp
-    integer(i_kind) icw4crtm,iqtotal
+    integer(i_kind) icw4crtm,iqtotal,i_radar_qr,i_radar_qli
     real(r_kind) pd,psfc_this,pd_to_ps,wmag
     real(r_kind),dimension(lat2,lon2):: work_sub,pd_new,delu10,delv10,u10this,v10this,fact10_local
     real(r_kind),dimension(lat2,lon2):: work_sub_t,work_sub_i,work_sub_r,work_sub_l
     real(r_kind),dimension(lat2,lon2):: delt2,delq2,t2this,q2this,fact2t_local,fact2q_local
     real(r_kind),dimension(lat2,lon2,6):: delu,delv,delt,delq,pott
+    real(r_kind),dimension(lat2,lon2,nsig)  :: clwmr,frain,fice
     real(r_kind) hmin,hmax,hmin0,hmax0,ten,wgt1,wgt2
     logical use_fact10,use_fact2
     logical good_u10,good_v10,good_tshltr,good_qshltr,good_o3mr
   
   ! variables for cloud info
-    integer(i_kind) iret,ier_cloud,n_actual_clouds,istatus,ierr
-    real(r_kind) total_ice
+    integer(i_kind) iret,ier_cloud,n_actual_clouds,istatus,ierr, temp_i, temp_j
+    real(r_kind) total_ice, temp
     real(r_kind),dimension(lat2,lon2):: work_clwmr,work_fice,work_frain
     real(r_kind),pointer,dimension(:,:,:):: ges_cw  =>NULL()
     real(r_kind),pointer,dimension(:,:  ):: ges_pd  =>NULL()
@@ -1168,6 +1170,10 @@ contains
     real(r_kind),pointer,dimension(:,:,:):: ges_qh  =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: dfi_tten=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_ref =>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_w   =>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_dw   =>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qli   =>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_dbz   =>NULL()
     
   !   if use_gfs_stratosphere is true, then convert ges fields from nmmb-gfs 
   !        extended vertical coordinate to nmmb vertical coordinate.
@@ -1216,6 +1222,8 @@ contains
     it=ntguessig
     mype_input=0
     add_saved=.true.
+    i_radar_qr = 0
+    i_radar_qli = 0
   
     call gsi_metguess_get('clouds::3d',n_actual_clouds,iret)
     if(mype == 0) write(6,*)' in wrnemsnmma_binary after gsi_metguess_get, nclouds,iret=',&
@@ -1227,6 +1235,10 @@ contains
   
   !    Determine whether or not total moisture (water vapor+total cloud condensate) is the control variable
        iqtotal=getindex(cvars3d,'qt')
+
+  !    Determine if qr and qli are control variables for radar data assimilation,
+       i_radar_qr=getindex(cvars3d,'qr')
+       i_radar_qli=getindex(cvars3d,'qli')
   
   !    Get pointer to cloud water mixing ratio
        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ges_cw,iret); ier_cloud=iret
@@ -1238,6 +1250,18 @@ contains
        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qh',ges_qh,iret); ier_cloud=ier_cloud+iret
   
        if ((icw4crtm<=0 .and. iqtotal<=0) .or. ier_cloud/=0) n_actual_clouds=0
+
+       if (i_radar_qr>0 .and. i_radar_qli>0) then
+   !    Get pointer to cloud water mixing ratio
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql,iret); ier_cloud=iret
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qr',ges_qr,iret); ier_cloud=ier_cloud+iret
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qli',ges_qli,iret); ier_cloud=ier_cloud+iret
+        if(dbz_exist)&
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'dbz',ges_dbz,iret); ier_cloud=ier_cloud+iret
+        if (ier_cloud/=0) n_actual_clouds=0
+       else
+         n_actual_clouds=0
+       end if
   
     else if (i_gsdcldanal_type==2)then
       
@@ -1306,6 +1330,46 @@ contains
           end if
           call gsi_nemsio_write('vgrd','mid layer','V',kr,work_sub(:,:),mype,mype_input,add_saved)
        endif
+
+                                   !   w
+
+     if( w_exist )then
+     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'w_tot',ges_w,iret)
+     if (iret==0) then
+        call gsi_nemsio_read('w_tot','mid layer','H',kr,work_sub(:,:),mype,mype_input)
+        do i=1,lon2
+           do j=1,lat2
+              work_sub(j,i)=ges_w(j,i,k)-work_sub(j,i)
+           end do
+        end do
+        if(k <= near_sfc) then
+           do i=1,lon2
+              do j=1,lat2
+                 delv(j,i,k)=work_sub(j,i)
+              end do
+           end do
+        end if
+        call gsi_nemsio_write('w_tot','mid layer','H',kr,work_sub(:,:),mype,mype_input,add_saved)
+     endif
+ 
+     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'dwdt',ges_dw,iret)
+     if (iret==0) then
+        call gsi_nemsio_read('dwdt','mid layer','H',kr,work_sub(:,:),mype,mype_input)
+        do i=1,lon2
+           do j=1,lat2
+              work_sub(j,i)=ges_dw(j,i,k)-work_sub(j,i)
+           end do
+        end do
+        if(k <= near_sfc) then
+           do i=1,lon2
+              do j=1,lat2
+                 delv(j,i,k)=work_sub(j,i)
+              end do
+           end do
+        end if
+        call gsi_nemsio_write('dwdt','mid layer','H',kr,work_sub(:,:),mype,mype_input,add_saved)
+     endif
+     end if ! w_exist
   
                                      !   q
   
@@ -1324,6 +1388,10 @@ contains
                 end do
              end do
           end if
+          where( ges_q < zero )
+            ges_q = zero
+          end where
+          work_sub(:,:)=ges_q(:,:,k)
           call gsi_nemsio_write('spfh','mid layer','H',kr,work_sub(:,:),mype,mype_input,add_saved)
        endif
   
@@ -1404,7 +1472,7 @@ contains
        end if
   
                                ! cloud
-       if (n_actual_clouds>0 .and. (i_gsdcldanal_type/=2)) then
+       if (n_actual_clouds>0 .and. (i_gsdcldanal_type/=2) .and. i_radar_qli <= 0) then
           call gsi_nemsio_read('clwmr','mid layer','H',kr,work_sub(:,:),mype,mype_input)
           if (cold_start) then
              do i=1,lon2
@@ -1448,6 +1516,65 @@ contains
              call gsi_nemsio_read('f_rimef','mid layer','H',kr,work_sub(:,:),mype,mype_input)
              call gsi_nemsio_write('f_rimef','mid layer','H',kr,work_sub(:,:),mype,mype_input,.false.)
           end if ! end of non-coldstart
+
+          if (i_radar_qr>0 .and. i_radar_qli>0)then
+
+           clwmr=zero
+           frain=zero
+           fice=zero
+           do i=1,lon2
+             do j = 1,lat2
+               ! Check for min value and set to zero if less than that
+               if ( ges_qr(j,i,k) <= (1.0e-6_r_kind)) ges_qr(j,i,k)   = zero
+               if ( ges_qli(j,i,k) <= (1.0e-8_r_kind)) ges_qli(j,i,k) = zero
+               if ( ges_ql(j,i,k) <= (1.0e-10_r_kind)) ges_ql(j,i,k) = zero
+               ! Now compute clwmr from mixing ratios and copy over analysis
+
+               clwmr(j,i,k)=ges_qr(j,i,k) + ges_ql(j,i,k) + ges_qli(j,i,k) 
+               work_sub(j,i)=clwmr(j,i,k)
+             end do
+           end do
+           call gsi_nemsio_write('clwmr','mid layer','H',kr,work_sub(:,:),mype,mype_input,.false.)
+           do i=1,lon2
+             do j=1,lat2
+              ! - Microphysics consistent method to obtain fice:
+              if (clwmr(j,i,k) .gt. zero) then
+                 fice(j,i,k)=ges_qli(j,i,k)/ clwmr(j,i,k)
+              else
+                 fice(j,i,k)=zero
+              end if
+              work_sub(j,i)=fice(j,i,k)
+             end do
+           end do
+           call gsi_nemsio_write('f_ice','mid layer','H',kr,work_sub(:,:),mype,mype_input,.false.)
+
+                                   !   frain - must compute from rain and cloud
+                                   !   water mixing ratios
+           do i=1,lon2
+             do j=1,lat2
+               if ( clwmr(j,i,k) .gt. ges_qli(j,i,k) .gt. zero .and. &
+                 clwmr(j,i,k) .gt. zero ) then
+                 frain(j,i,k)=ges_qr(j,i,k) / ( clwmr(j,i,k) - ges_qli(j,i,k) )
+               else
+                 frain(j,i,k)=zero
+               end if
+               work_sub(j,i)=frain(j,i,k)
+             end do
+           end do
+           call gsi_nemsio_write('f_rain','mid layer','H',kr,work_sub(:,:),mype,mype_input,.false.)
+
+           ! refl_10cm
+           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'dbz',ges_dbz,iret)
+           if (iret==0) then
+             where( ges_dbz < zero )
+              ges_dbz = zero
+             end where
+             work_sub(:,:)=ges_dbz(:,:,k)
+             call gsi_nemsio_write('refl_10cm','mid layer','H',kr,work_sub(:,:),mype,mype_input,.false.)
+           endif
+           
+          end if
+
        end if  ! end of nguess
   
     end do

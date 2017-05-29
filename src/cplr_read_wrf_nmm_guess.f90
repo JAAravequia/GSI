@@ -1657,6 +1657,8 @@ contains
   !   2016_03_02  s.liu/carley   - remove use_reflectivity and use i_gsdcldanal_type
   !   2016_06_21  s.liu   - delete unused variable qhtmp
   !   2016_06_30  s.liu   - delete unused variable gridtype in read fraction
+  !   2017-05-12  Y. Wang, X. Wang  - add code to read vertical velocity (W), hydrometeors and
+  !                                   Reflectivity (REFL_10CM) for direct radar DA, POC: xuguang.wang@ou.edu
   !
   !   input argument list:
   !     mype     - pe number
@@ -1699,6 +1701,8 @@ contains
     use mpeu_util, only: die,getindex
     use control_vectors, only: cvars3d
     use cloud_efr_mod, only: cloud_calc,cloud_calc_gfs
+    !use obsmod, only: logspace
+    use control_vectors, only : w_exist, dbz_exist
     implicit none
   
   ! Declare passed variables here
@@ -1714,13 +1718,14 @@ contains
     character(len=*),parameter :: myname='read_nems_nmmb_guess:: '
     integer(i_kind) i,it,j,k,kr,mype_input
     integer(i_kind) isli_this,nsig_read
-    real(r_kind) pd,psfc_this,wmag,pd_to_ps
+    real(r_kind) pd,psfc_this,wmag,pd_to_ps,q_liquid
     integer(i_kind) num_doubtful_sfct,num_doubtful_sfct_all
     real(r_kind),dimension(lat2,lon2):: smthis,sicethis,u10this,v10this,sstthis,tskthis
   
   ! variables for cloud info
     logical good_fice, good_frain, good_frimef
-    integer(i_kind) iqtotal,icw4crtm,ier,iret,n_actual_clouds,istatus,ierr
+    integer(i_kind) iqtotal,icw4crtm,ier,iret,n_actual_clouds,istatus,ierr, &
+                    i_radar_qr,i_radar_qli,i_radar_qh
     real(r_kind),dimension(lat2,lon2,nsig):: clwmr,fice,frain,frimef
     real(r_kind),pointer,dimension(:,:  ):: ges_pd  =>NULL()
     real(r_kind),pointer,dimension(:,:  ):: ges_ps  =>NULL()
@@ -1734,6 +1739,9 @@ contains
     real(r_kind),pointer,dimension(:,:,:):: ges_cwmr=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_ref =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: dfi_tten=>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_w   =>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_dw   =>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_dbz =>NULL()
   
     real(r_kind),pointer,dimension(:,:,:):: ges_ql=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_qi=>NULL()
@@ -1741,6 +1749,7 @@ contains
     real(r_kind),pointer,dimension(:,:,:):: ges_qs=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_qg=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_qh=>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qli=>NULL()
   
     associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
     end associate
@@ -1766,6 +1775,14 @@ contains
   
   ! Determine whether or not total moisture (water vapor+total cloud condensate) is the control variable
     iqtotal=getindex(cvars3d,'qt')
+
+  ! Determine if qr and qli are control variables for radar data assimilation,
+    i_radar_qr=0
+    i_radar_qli=0
+    i_radar_qh=0
+    i_radar_qr=getindex(cvars3d,'qr')
+    i_radar_qli=getindex(cvars3d,'qli')
+    i_radar_qh=getindex(cvars3d,'qh')
   
   ! Inquire about cloud guess fields
     call gsi_metguess_get('clouds::3d',n_actual_clouds,istatus)
@@ -1781,6 +1798,11 @@ contains
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'z' , ges_z  ,istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'u' , ges_u  ,istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'v' , ges_v  ,istatus );ier=ier+istatus
+       if(w_exist)then
+         call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'w' , ges_w  ,istatus );ier=ier+istatus
+         call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'dw' , ges_dw  ,istatus );ier=ier+istatus
+       end if
+       if(dbz_exist) call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'dbz' , ges_dbz  ,istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tv' ,ges_tv ,istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q'  ,ges_q  ,istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'oz' ,ges_oz ,istatus );ier=ier+istatus
@@ -1818,6 +1840,11 @@ contains
           ges_q(:,:,k)=zero
           ges_tsen(:,:,k,it)=zero
           ges_oz(:,:,k)=zero
+          if(w_exist) then
+            ges_w(:,:,k)=zero
+            ges_dw(:,:,k)=zero
+          end if
+          if(dbz_exist) ges_dbz(:,:,k)=zero
        end do
        do kr=1,nsig_read
           k=nsig_read+1-kr
@@ -1825,6 +1852,10 @@ contains
           call gsi_nemsio_read('vgrd','mid layer','V',kr,ges_v(:,:,k),   mype,mype_input)
           call gsi_nemsio_read('spfh','mid layer','H',kr,ges_q(:,:,k),   mype,mype_input)
           call gsi_nemsio_read('tmp' ,'mid layer','H',kr,ges_tsen(:,:,k,it),mype,mype_input)
+          if(w_exist) then
+             call gsi_nemsio_read('w_tot','mid layer','H',kr,ges_w(:,:,k),   mype,mype_input)
+             call gsi_nemsio_read('dwdt','mid layer','H',kr,ges_dw(:,:,k),   mype,mype_input)
+          end if
           do i=1,lon2
              do j=1,lat2
                 ges_tv(j,i,k) = ges_tsen(j,i,k,it) * (one+fv*ges_q(j,i,k))
@@ -1844,8 +1875,72 @@ contains
           end if
        end do
   
+       if( i_gsdcldanal_type == 0 .and. i_radar_qr>0 .and. i_radar_qli>0 )then 
+        ! For directly assimilating radar reflectivity rather than cloud analysis
+
+          ier = 0
+          call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql,iret); ier=iret
+          call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qr',ges_qr,iret); ier=ier+iret
+          call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qli',ges_qli,iret); ier=ier+iret
+          if(dbz_exist) call gsi_bundlegetpointer (gsi_metguess_bundle(it),'dbz',ges_dbz,iret); ier=ier+iret
+          if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields related to hydrometeor, ier =',ier)
+          
+          if (ier==0) then
+              frain=zero
+              fice=zero
+              clwmr=zero
+              do kr=1,nsig
+                 k=nsig+1-kr
+                 call gsi_nemsio_read('clwmr' ,'mid layer','H',kr,clwmr(:,:,k),mype,mype_input)      !read total condensate
+                 call gsi_nemsio_read('f_ice' ,'mid layer','H',kr,fice(:,:,k),mype,mype_input)       !read ice fraction
+                 call gsi_nemsio_read('f_rain' ,'mid layer','H',kr,frain(:,:,k),mype,mype_input)     !read rain fraction
+                 if( dbz_exist ) then
+                     call gsi_nemsio_read('refl_10cm' ,'mid layer','H',kr,ges_dbz(:,:,k),mype,mype_input)
+                     where( ges_dbz(:,:,k) < 0.0_r_kind )
+                          ges_dbz(:,:,k) = 0.0_r_kind
+                     end where
+                 end if
+                 do i=1,lon2
+                    do j=1,lat2
+                       !  Compute rain, cloud water/ice, and precipitation ice
+                       !  mixing ratios
+
+                       if (clwmr(j,i,k) < 1.e-12_r_kind) then    !According to B. Ferrier (personal comm. 2011)
+                          clwmr(j,i,k) = zero
+                       end if
+
+                       ges_qli(j,i,k) =  clwmr(j,i,k) * fice(j,i,k)
+                       q_liquid = clwmr(j,i,k) - ges_qli(j,i,k)
+                       ges_qr(j,i,k) = q_liquid * frain(j,i,k)
+                       ges_ql(j,i,k) = q_liquid - ges_qr(j,i,k)
+
+                       if (ges_qr(j,i,k) < 1.0e-6_r_kind) ges_qr(j,i,k) = 1.0e-6_r_kind
+                       if (ges_qli(j,i,k) < 1.0e-8_r_kind) ges_qli(j,i,k) = 1.0e-8_r_kind
+                       if (ges_ql(j,i,k) < 1.0e-10_r_kind) ges_ql(j,i,k) = 1.0e-10_r_kind
+
+                       !if( logspace )then
+                          ! Now convert variables to log
+                       !   ges_qr(j,i,k) = log(ges_qr(j,i,k))
+                       !   ges_qli(j,i,k)=log(ges_qli(j,i,k))
+                       !   ges_ql(j,i,k)=log(ges_ql(j,i,k))
+                       !end if
+                    end do
+                 end do
+              end do
+              if (mype==0) then
+                write(6,*)'QLI,max, min,',maxval(ges_qli),minval(ges_qli)
+                write(6,*)'QR,max, min,',maxval(ges_qr),minval(ges_qr)
+                write(6,*)'QL,max, min,',maxval(ges_ql),minval(ges_ql)
+                if( dbz_exist ) write(6,*)'DBZ,max, min,',maxval(ges_dbz),minval(ges_dbz)
+              end if
+          else
+              if (mype==0) write(6,*) 'ERROR GETTING POINTERS FOR HYDROMETEORS WITH RADAR DATA ASSIMILATION IN READ NMMB GUESS'
+          end if  ! ier==0
+
+       else ! i_radar_qli > 0
+
   !                          !  cloud liquid water,ice,snow,graupel,hail,rain for cloudy radiance
-       if (n_actual_clouds>0 .and. (i_gsdcldanal_type/=2)) then
+       if (n_actual_clouds>0 .and. (i_gsdcldanal_type/=2) .and. i_radar_qh > 0 ) then
   
   !       Get pointer to cloud water mixing ratio
           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql,iret); ier=iret
@@ -1885,6 +1980,8 @@ contains
              if (iret==0) ges_cwmr=clwmr 
           end if  ! icw4crtm>10 .or. iqtotal>0
        end if    ! end of (n_actual_clouds>0)
+
+       end if ! i_radar_qli > 0
   
   
   !    if (n_actual_clouds>0 .and. use_reflectivity) then

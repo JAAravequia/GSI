@@ -40,6 +40,10 @@ contains
   !   2017-03-23  Hu  - add code to read hybrid vertical coodinate in WRF MASS
   !                         core
   !
+  !   2016-02-14 Johnson, Y. Wang, X. Wang  - add code to read vertical velocity  (W) and
+  !                                           Reflectivity (REFL_10CM) for radar
+  !                                           DA, POC: xuguang.wang@ou.edu
+  !
   !   input argument list:
   !
   !   output argument list:
@@ -64,6 +68,10 @@ contains
     use gsi_chemguess_mod, only: gsi_chemguess_get
     use gridmod, only: wrf_mass_hybridcord
     use netcdf_mod, only: nc_check
+
+    use control_vectors, only : w_exist, dbz_exist
+    use constants, only: zero
+    use obsmod, only   : if_model_dbz
   
     implicit none
   
@@ -103,6 +111,9 @@ contains
     real(r_single) rdx,rdy
     real(r_single),allocatable::field3(:,:,:),field2(:,:),field1(:),field2b(:,:),field2c(:,:)
     real(r_single),allocatable::field3u(:,:,:),field3v(:,:,:),field1a(:)
+
+    real(r_single),allocatable::field3w(:,:,:)
+
     integer(i_kind),allocatable::ifield2(:,:)
     real(r_single) rad2deg_single
     integer(i_kind) wrf_real
@@ -201,6 +212,9 @@ contains
        allocate(ifield2(nlon_regional,nlat_regional))
        allocate(field1(max(nlon_regional,nlat_regional,nsig_regional)))
        allocate(field1a(max(nlon_regional,nlat_regional,nsig_regional)))
+       if(w_exist) then
+         allocate(field3w(nlon_regional,nlat_regional,nsig_regional+1))
+       end if
     
        rmse_var='P_TOP'
        call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
@@ -569,6 +583,32 @@ contains
                field3v(nlon_regional/2,nlat_regional/2,k)
           write(iunit)((field3v(i,j,k),i=1,nlon_regional),j=1,nlat_regional+1)   ! V
        end do
+
+     if(w_exist) then
+       rmse_var='W'
+       call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
+          start_index,end_index, WrfType, ierr    )
+       write(6,*)' rmse_var=',trim(rmse_var)
+       write(6,*)' ordering=',ordering
+       write(6,*)' WrfType,WRF_REAL=',WrfType,WRF_REAL
+       write(6,*)' ndim1=',ndim1
+       write(6,*)' staggering=',staggering
+       write(6,*)' start_index=',start_index
+       write(6,*)' end_index=',end_index
+       call ext_ncd_read_field(dh1,DateStr1,TRIM(rmse_var),              &
+          field3w,WRF_REAL,0,0,0,ordering,           &
+          staggering, dimnames ,               &
+          start_index,end_index,               & !dom
+          start_index,end_index,               & !mem
+          start_index,end_index,               & !pat
+          ierr                                 )
+       do k=1,nsig_regional+1
+         write(6,*)' k,max,min,mid W=',k,maxval(field3w(:,:,k)),minval(field3w(:,:,k)), &
+             field3w(nlon_regional/2,nlat_regional/2,k)
+         write(iunit)((field3w(i,j,k),i=1,nlon_regional),j=1,nlat_regional)   ! w
+       end do
+     endif
+
      
 !      rmse_var='LANDMASK'
        rmse_var='XLAND'
@@ -867,7 +907,7 @@ contains
           write(iunit)field2   !TH2
        endif
 
-       if(l_cloud_analysis .and. n_actual_clouds>0) then
+       if(l_cloud_analysis .or. n_actual_clouds>0) then
           rmse_var='QCLOUD'
           call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
                start_index,end_index, WrfType, ierr    )
@@ -1028,6 +1068,33 @@ contains
              write(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional) ! Qnc
           end do
 
+      if( dbz_exist .and. if_model_dbz ) then
+       rmse_var='REFL_10CM'
+       call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering,&
+            start_index,end_index, WrfType, ierr    )
+       write(6,*)' rmse_var = ',trim(rmse_var),' ndim1=',ndim1
+       write(6,*)' WrfType = ',WrfType,' WRF_REAL=',WRF_REAL,'ierr  = ',ierr !DEDE
+       write(6,*)' ordering = ',trim(ordering),' staggering = ',trim(staggering)
+       write(6,*)' start_index = ',start_index,' end_index = ',end_index
+       call ext_ncd_read_field(dh1,DateStr1,TRIM(rmse_var),              &
+            field3,WRF_REAL,0,0,0,ordering,           &
+            staggering, dimnames ,               &
+            start_index,end_index,               & !dom
+            start_index,end_index,               & !mem
+            start_index,end_index,               & !pat
+            ierr                                 )
+       do k=1,nsig_regional
+            do i=1,nlon_regional
+            do j=1,nlat_regional
+              field3(i,j,k) = (max(field3(i,j,k),zero))
+            enddo
+            enddo
+          write(6,*)' k,max,min,mid Dbz=',k,maxval(field3(:,:,k)),minval(field3(:,:,k)), &
+                     field3(nlon_regional/2,nlat_regional/2,k)
+          write(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional) !dBZ
+       end do
+      end if
+
           rmse_var='RAD_TTEN_DFI'
           call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
              start_index,end_index, WrfType, ierr    )
@@ -1142,6 +1209,7 @@ contains
 
 
        deallocate(field1,field2,field2b,field2c,ifield2,field3,field3u,field3v)
+       if(w_exist) deallocate(field3w)
        close(iunit)
        call ext_ncd_ioclose(dh1, Status)
    

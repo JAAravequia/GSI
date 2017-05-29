@@ -231,7 +231,7 @@ subroutine setupspd(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=20
+     ioff0=20+2
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
@@ -658,6 +658,8 @@ subroutine setupspd(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(19,ii) = spdob0-spdges      ! obs-ges w/o bias correction (m/s) (future slot)
 
         rdiagbuf(20,ii) = factw              ! 10m wind reduction factor
+        rdiagbuf(21,ii) = data(24,i)
+        rdiagbuf(22,ii) = data(25,i)
 
         ioff=ioff0
         if (lobsdiagsave) then

@@ -187,7 +187,7 @@ subroutine setuppmsl(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=19
+     ioff0=19+2
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
@@ -467,6 +467,8 @@ subroutine setuppmsl(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(18,ii) = ddiff              ! obs-ges used in analysis (K)
         rdiagbuf(19,ii) = data(ipmsl,i)-pmslges! obs-ges w/o bias correction (K) (future slot)
  
+        rdiagbuf(20,ii) = data(25,i)
+        rdiagbuf(21,ii) = data(26,i)
 
         ioff=ioff0
         if (lobsdiagsave) then

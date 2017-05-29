@@ -221,7 +221,7 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=22
+     ioff0=22+2
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
@@ -638,6 +638,9 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
         rdiagbuf(21,ii) = data(idomsfc,i)    ! dominate surface type
         rdiagbuf(22,ii) = zsges              ! model terrain at ob location
+        rdiagbuf(23,ii) = data(22,i)
+        rdiagbuf(24,ii) = data(23,i)
+
         r_prvstg        = data(iprvd,i)
         cprvstg(ii)     = c_prvstg           ! provider name
         r_sprvstg       = data(isprvd,i)

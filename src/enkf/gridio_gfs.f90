@@ -24,16 +24,18 @@
 ! program history log:
 !   2009-02-23  Initial version.
 !   2015-06-29  Add ability to read/write multiple time levels
-!   2016-04-20  Modify to handle the updated nemsio sig file (P, DP, DPDT removed)
-!               For GFS and NMMB
+!   2016-05-02  Modification for reading state vector from table
+!               (Anna Shlyaeva)
+!   2016-04-20  Modify to handle the updated nemsio sig file (P, DP, DPDT
+!               removed)
 !
 ! attributes:
 !   language: f95
 !
 !$$$
- use constants, only: zero,one,cp,fv,rd,grav,zero
- use params, only: nlons,nlats,ndim,reducedgrid,nvars,nlevs,use_gfs_nemsio,pseudo_rh, &
-                   cliptracers,nlons,nlats,datestring,datapath,massbal_adjust,&
+ use constants, only: zero,one,cp,fv,rd,grav,zero,max_varname_length
+ use params, only: nlons,nlats,reducedgrid,nlevs,use_gfs_nemsio,pseudo_rh, &
+                   cliptracers,nlons,nlats,datestring,datapath,&
                    nbackgrounds,fgfileprefixes,anlfileprefixes
  use kinds, only: i_kind,r_double,r_kind,r_single
  use gridinfo, only: ntrunc,npts,ptop  ! gridinfo must be called first!
@@ -41,12 +43,13 @@
                     isinitialized
  use reducedgrid_mod, only: regtoreduced, reducedtoreg
  use mpisetup, only: nproc
+ use mpeu_util, only: getindex
  implicit none
  private
  public :: readgriddata, writegriddata
  contains
 
- subroutine readgriddata(nanal,grdin,qsat)
+ subroutine readgriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,grdin,qsat)
   use sigio_module, only: sigio_head, sigio_data, sigio_sclose, sigio_sropen, &
                           sigio_srohdc, sigio_sclose, sigio_aldata, sigio_axdata
   use nemsio_module, only: nemsio_gfile,nemsio_open,nemsio_close,&
@@ -57,8 +60,11 @@
   character(len=500) :: filename
   character(len=3) charnanal
   integer, intent(in) :: nanal
+  integer, intent(in) :: nc2d,nc3d
+  character(len=max_varname_length), dimension(nc2d), intent(in) :: cvars2d
+  character(len=max_varname_length), dimension(nc3d), intent(in) :: cvars3d
   real(r_double), dimension(npts,nlevs,nbackgrounds), intent(out) :: qsat
-  real(r_single), dimension(npts,ndim,nbackgrounds), intent(out) :: grdin
+  real(r_single), dimension(npts,nc3d*nlevs+nc2d,nbackgrounds), intent(out) :: grdin
 
   real(r_kind) kap,kapr,kap1,clip
 
@@ -72,6 +78,9 @@
   type(sigio_head) sighead
   type(sigio_data) sigdata
   type(nemsio_gfile) :: gfile
+
+  integer :: u_ind, v_ind, t_ind, q_ind, oz_ind, cw_ind
+  integer :: ps_ind, pst_ind
 
 
   integer(i_kind) k,nt,iunitsig,iret,nb,idvc,nlonsin,nlatsin,nlevsin
@@ -101,7 +110,6 @@
        print *,'got',nlonsin,nlatsin,nlevsin
        call stop2(23)
      end if
-
   else
      call sigio_srohdc(iunitsig,trim(filename), &
                        sighead,sigdata,iret)
@@ -115,12 +123,30 @@
   kapr = cp/rd
   kap1 = kap+one
 
+  u_ind   = getindex(cvars3d, 'u')   !< indices in the state var arrays
+  v_ind   = getindex(cvars3d, 'v')   ! U and V (3D)
+  t_ind   = getindex(cvars3d, 'tv')  ! Tv (3D)
+  q_ind   = getindex(cvars3d, 'q')   ! Q (3D)
+  oz_ind  = getindex(cvars3d, 'oz')  ! Oz (3D)
+  cw_ind  = getindex(cvars3d, 'cw')  ! CW (3D)
+
+  ps_ind  = getindex(cvars2d, 'ps')  ! Ps (2D)
+  pst_ind = getindex(cvars2d, 'pst') ! Ps tendency (2D)   // equivalent of
+                                     ! old logical massbal_adjust, if non-zero
+
+  if (nproc == 0) then
+    print *, 'indices: '
+    print *, 'u: ', u_ind, ', v: ', v_ind, ', t: ', t_ind
+    print *, 'q: ', q_ind, ', oz: ', oz_ind, ', cw: ', cw_ind
+    print *, 'ps: ', ps_ind, ', pst: ', pst_ind
+  endif
+
   if (.not. isinitialized) call init_spec_vars(nlons,nlats,ntrunc,4)
 
   allocate(pressi(nlons*nlats,nlevs+1))
   allocate(pslg(npts,nlevs))
-  allocate(psg(nlons*nlats),pstend(nlons*nlats))
-  if (massbal_adjust) allocate(vmassdiv(nlons*nlats,nlevs))
+  allocate(psg(nlons*nlats))
+  if (pst_ind > 0) allocate(vmassdiv(nlons*nlats,nlevs),pstend(nlons*nlats))
 
   if (use_gfs_nemsio) then
      call nemsio_readrecv(gfile,'pres','sfc',1,nems_wrk,iret=iret)
@@ -161,7 +187,7 @@
      ! pressure at interfaces
      do k=1,nlevs+1
         pressi(:,k)=ak(k)+bk(k)*psg
-        if (nanal .eq. 1) print *,'nemsio, min/max pressi',k,minval(pressi(:,k)),maxval(pressi(:,k))
+        if (nanal .eq. 1) print *,'sigio, min/max pressi',k,minval(pressi(:,k)),maxval(pressi(:,k))
      enddo
      deallocate(ak,bk)
   else
@@ -212,16 +238,11 @@
             call stop2(23)
         endif
         vg = nems_wrk
-        if (reducedgrid) then
-           call regtoreduced(ug,grdin(:,k,nb))
-           call regtoreduced(vg,grdin(:,nlevs+k,nb))
-        else
-           grdin(:,k,nb) = ug
-           grdin(:,nlevs+k,nb) = vg
-        endif
+        if (u_ind > 0)       call copytogrdin(ug,grdin(:,nlevs*(u_ind-1) + k,nb))
+        if (v_ind > 0)       call copytogrdin(vg,grdin(:,nlevs*(v_ind-1) + k,nb))
         ! calculate vertical integral of mass flux div (ps tendency)
         ! this variable is analyzed in order to enforce mass balance in the analysis
-        if (massbal_adjust) then
+        if (pst_ind > 0) then
            ug = ug*(pressi(:,k)-pressi(:,k+1))
            vg = vg*(pressi(:,k)-pressi(:,k+1))
            call sptezv_s(divspec,vrtspec,ug,vg,-1) ! u,v to div,vrt
@@ -241,14 +262,9 @@
         nems_wrk = nems_wrk * ( 1.0 + fv*nems_wrk2 ) ! convert T to Tv
         ug = nems_wrk
         vg = nems_wrk2
-        if (reducedgrid) then
-           call regtoreduced(ug,grdin(:,2*nlevs+k,nb))
-           call regtoreduced(vg,grdin(:,3*nlevs+k,nb))
-        else
-           grdin(:,2*nlevs+k,nb) = ug
-           grdin(:,3*nlevs+k,nb) = vg
-        endif
-        if (nvars .eq. 5) then
+        if (t_ind > 0)       call copytogrdin(ug,grdin(:,nlevs*(t_ind-1)+k,nb))
+        if (q_ind > 0)       call copytogrdin(vg,grdin(:,nlevs*(q_ind-1)+k,nb))
+        if (oz_ind > 0) then
            call nemsio_readrecv(gfile,'o3mr','mid layer',k,nems_wrk2,iret=iret)
            if (iret/=0) then
               write(6,*)'gridio/readgriddata: gfs model: problem with nemsio_readrecv(o3mr), iret=',iret
@@ -256,13 +272,9 @@
            endif
            if (cliptracers)  where (nems_wrk2 < clip) nems_wrk2 = clip
            ug = nems_wrk2
-           if (reducedgrid) then
-              call regtoreduced(ug,grdin(:,4*nlevs+k,nb))
-           else
-              grdin(:,4*nlevs+k,nb) = ug
-           endif
+           call copytogrdin(ug,grdin(:,nlevs*(oz_ind-1)+k,nb))
         endif
-        if (nvars .eq. 6) then
+        if (cw_ind > 0) then
            call nemsio_readrecv(gfile,'clwmr','mid layer',k,nems_wrk2,iret=iret)
            if (iret/=0) then
               write(6,*)'gridio/readgriddata: gfs model: problem with nemsio_readrecv(clwmr), iret=',iret
@@ -270,11 +282,7 @@
            endif
            if (cliptracers)  where (nems_wrk2 < clip) nems_wrk2 = clip
            ug = nems_wrk2
-           if (reducedgrid) then
-              call regtoreduced(ug,grdin(:,5*nlevs+k,nb))
-           else
-              grdin(:,5*nlevs+k,nb) = ug
-           endif
+           call copytogrdin(ug,grdin(:,nlevs*(cw_ind-1)+k,nb))
         endif
      enddo
   else
@@ -283,62 +291,62 @@
    
         vrtspec = sigdata%z(:,k); divspec = sigdata%d(:,k)
         call sptezv_s(divspec,vrtspec,ug,vg,1)
-        if (reducedgrid) then
-           call regtoreduced(ug,grdin(:,k,nb))
-           call regtoreduced(vg,grdin(:,nlevs+k,nb))
-        else
-           grdin(:,k,nb) = ug; grdin(:,nlevs+k,nb) = vg
+        if (u_ind > 0) then
+           call copytogrdin(ug,grdin(:,nlevs*(u_ind-1)+k,nb))
+        endif
+        if (v_ind > 0) then
+           call copytogrdin(vg,grdin(:,nlevs*(v_ind-1)+k,nb))
         endif
 
 ! calculate vertical integral of mass flux div (ps tendency)
 ! this variable is analyzed in order to enforce mass balance in the analysis
-        if (massbal_adjust) then
+        if (pst_ind > 0) then
            ug = ug*(pressi(:,k)-pressi(:,k+1))
            vg = vg*(pressi(:,k)-pressi(:,k+1))
            call sptezv_s(divspec,vrtspec,ug,vg,-1) ! u,v to div,vrt
            call sptez_s(divspec,vmassdiv(:,k),1) ! divspec to divgrd
         endif
 
-        divspec = sigdata%t(:,k)
-        call sptez_s(divspec,ug,1)
-        if (reducedgrid) then
-           call regtoreduced(ug,grdin(:,2*nlevs+k,nb))
-        else
-           grdin(:,2*nlevs+k,nb) = ug
+        if (t_ind > 0) then
+          divspec = sigdata%t(:,k)
+          call sptez_s(divspec,ug,1)
+          call copytogrdin(ug,grdin(:,nlevs*(t_ind-1)+k,nb))
         endif
 
-        do nt=1,nvars-3
-           divspec = sigdata%q(:,k,nt)
+        if (q_ind > 0) then
+           divspec = sigdata%q(:,k,1)
            call sptez_s(divspec,ug,1)
-           if (reducedgrid) then
-              call regtoreduced(ug,grdin(:,(3+nt-1)*nlevs+k,nb))
-           else
-              grdin(:,(3+nt-1)*nlevs+k,nb) = ug
-           endif
-        enddo
+           call copytogrdin(ug,grdin(:,nlevs*(q_ind-1)+k,nb))
+        endif
+
+        if (oz_ind > 0) then
+           divspec = sigdata%q(:,k,2)
+           call sptez_s(divspec,ug,1)
+           call copytogrdin(ug,grdin(:,nlevs*(oz_ind-1)+k,nb))
+        endif
+
+        if (cw_ind > 0) then
+           divspec = sigdata%q(:,k,3)
+           call sptez_s(divspec,ug,1)
+           call copytogrdin(ug,grdin(:,nlevs*(cw_ind-1)+k,nb))
+        endif
 
      enddo
 !$omp end parallel do
   endif
 
-  ! surface pressure is last grid.
-  if (reducedgrid) then
-     call regtoreduced(psg,grdin(:,ndim,nb))
-  else
-     grdin(:,ndim,nb) = psg
+  ! surface pressure
+  if (ps_ind > 0) then
+    call copytogrdin(psg,grdin(:,nlevs*nc3d + ps_ind,nb))
   endif
   if (.not. use_gfs_nemsio) call sigio_axdata(sigdata,iret)
 
-  ! surface pressure tendency is next to last grid.
-  if (massbal_adjust) then
+  ! surface pressure tendency
+  if (pst_ind > 0) then
      pstend = sum(vmassdiv,2)
      if (nanal .eq. 1) &
      print *,nanal,'min/max first-guess ps tend',minval(pstend),maxval(pstend)
-     if (reducedgrid) then
-        call regtoreduced(pstend,grdin(:,ndim-1,nb))
-     else
-        grdin(:,ndim-1,nb) = pstend
-     endif
+     call copytogrdin(pstend,grdin(:,nlevs*nc3d + pst_ind,nb))
   endif
 
   ! compute saturation q.
@@ -346,28 +354,24 @@
     ! layer pressure from phillips vertical interolation
     ug(:) = ((pressi(:,k)**kap1-pressi(:,k+1)**kap1)/&
             (kap1*(pressi(:,k)-pressi(:,k+1))))**kapr
-    if (reducedgrid) then
-        call regtoreduced(ug,pslg(:,k))
-    else
-        pslg(:,k) = ug
-    endif
+    call copytogrdin(ug,pslg(:,k))
   end do
   if (pseudo_rh) then
-     call genqsat1(grdin(:,3*nlevs+1:4*nlevs,nb),qsat(:,:,nb),pslg,grdin(:,2*nlevs+1:3*nlevs,nb),ice,npts,nlevs)
+     call genqsat1(grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb),qsat(:,:,nb),pslg,grdin(:,(t_ind-1)*nlevs+1:t_ind*nlevs,nb),ice,npts,nlevs)
   else
      qsat(:,:,nb) = 1._r_double
   end if
   
   deallocate(pressi,pslg)
-  deallocate(psg,pstend)
-  if (massbal_adjust) deallocate(vmassdiv)
+  deallocate(psg)
+  if (pst_ind > 0) deallocate(vmassdiv,pstend)
   if (use_gfs_nemsio) call nemsio_close(gfile,iret=iret)
 
   end do backgroundloop ! loop over backgrounds to read in
 
  end subroutine readgriddata
 
- subroutine writegriddata(nanal,grdin)
+ subroutine writegriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,grdin)
   use sigio_module, only: sigio_head, sigio_data, sigio_sclose, sigio_sropen, &
                           sigio_srohdc, sigio_sclose, sigio_axdata, &
                           sigio_aldata, sigio_swohdc
@@ -379,12 +383,15 @@
 
   character(len=500):: filenamein, filenameout
   integer, intent(in) :: nanal
-  real(r_single), dimension(npts,ndim,nbackgrounds), intent(inout) :: grdin
+  integer, intent(in) :: nc2d,nc3d
+  character(len=max_varname_length), dimension(nc2d), intent(in) :: cvars2d
+  character(len=max_varname_length), dimension(nc3d), intent(in) :: cvars3d
+  real(r_single), dimension(npts,nc3d*nlevs+nc2d,nbackgrounds), intent(inout) :: grdin
   real(r_kind), allocatable, dimension(:,:) :: vmassdiv,dpanl,dpfg,pressi
   real(r_kind), allocatable, dimension(:,:) :: vmassdivinc
   real(r_kind), allocatable, dimension(:,:) :: ugtmp,vgtmp
-  real(r_kind), allocatable,dimension(:) :: psg,pstend1,pstend2,pstendfg,vmass
-  real(r_kind), dimension(nlons*nlats) :: ug,vg,uginc,vginc,psfg
+  real(r_kind), allocatable,dimension(:) :: pstend1,pstend2,pstendfg,vmass
+  real(r_kind), dimension(nlons*nlats) :: ug,vg,uginc,vginc,psfg,psg
   real(r_kind), dimension(ndimspec) :: vrtspec,divspec
   integer iadate(4),idate(4),nfhour,idat(7),iret,nrecs,jdate(7)
   integer:: nfminute, nfsecondn, nfsecondd
@@ -402,6 +409,9 @@
   integer(nemsio_intkind) :: nems_idvc
   type(sigio_data) sigdata
   type(nemsio_gfile) :: gfilein,gfileout
+
+  integer :: u_ind, v_ind, t_ind, q_ind, oz_ind, cw_ind
+  integer :: ps_ind, pst_ind
 
   integer k,nt,ierr,iunitsig,nb
 
@@ -456,16 +466,34 @@
                        sighead,sigdata,ierr)
   endif
 
-  if (massbal_adjust) then
+  u_ind   = getindex(cvars3d, 'u')   !< indices in the state var arrays
+  v_ind   = getindex(cvars3d, 'v')   ! U and V (3D)
+  t_ind   = getindex(cvars3d, 'tv')  ! Tv (3D)
+  q_ind   = getindex(cvars3d, 'q')   ! Q (3D)
+  oz_ind  = getindex(cvars3d, 'oz')  ! Oz (3D)
+  cw_ind  = getindex(cvars3d, 'cw')  ! CW (3D)
+
+  ps_ind  = getindex(cvars2d, 'ps')  ! Ps (2D)
+  pst_ind = getindex(cvars2d, 'pst') ! Ps tendency (2D)   // equivalent of
+                                     ! old logical massbal_adjust, if non-zero
+
+  if (nproc == 0) then
+    print *, 'indices: '
+    print *, 'u: ', u_ind, ', v: ', v_ind, ', t: ', t_ind
+    print *, 'q: ', q_ind, ', oz: ', oz_ind, ', cw: ', cw_ind
+    print *, 'ps: ', ps_ind, ', pst: ', pst_ind
+  endif
+
+  if (pst_ind > 0) then
      allocate(vmassdiv(nlons*nlats,nlevs))
      allocate(vmassdivinc(nlons*nlats,nlevs))
+     allocate(dpfg(nlons*nlats,nlevs))
+     allocate(dpanl(nlons*nlats,nlevs))
+     allocate(pressi(nlons*nlats,nlevs+1))
+     allocate(pstendfg(nlons*nlats))
+     allocate(pstend1(nlons*nlats))
+     allocate(pstend2(nlons*nlats),vmass(nlons*nlats))
   endif
-  allocate(psg(nlons*nlats),pstend1(nlons*nlats))
-  allocate(pstend2(nlons*nlats),vmass(nlons*nlats))
-  allocate(dpfg(nlons*nlats,nlevs))
-  allocate(dpanl(nlons*nlats,nlevs))
-  allocate(pressi(nlons*nlats,nlevs+1))
-  allocate(pstendfg(nlons*nlats))
 
 ! Compute analysis time from guess date and forecast length.
   if (.not. use_gfs_nemsio) then
@@ -508,7 +536,7 @@
      print *,'iadate = ',iadate
   end if
 
-  if (.not. use_gfs_nemsio) then
+  if (.not. use_gfs_nemsio) then ! spectral sigio 
      sighead%idate = iadate
      sighead%fhour = zero
      ! ensemble info
@@ -522,40 +550,55 @@
      ! convert to increment to spectral coefficients.
 !$omp parallel do private(k,nt,ug,vg,divspec,vrtspec)  shared(grdin,sigdata_inc)
      do k=1,nlevs
-        if (reducedgrid) then
-           call reducedtoreg(grdin(:,k,nb),ug)
-           call reducedtoreg(grdin(:,nlevs+k,nb),vg)
-        else
-           ug = grdin(:,k,nb); vg = grdin(:,nlevs+k,nb)
+        ug = 0.
+        if (u_ind > 0 ) then
+          call copyfromgrdin(grdin(:,nlevs*(u_ind-1) + k,nb),ug)
+        endif
+        vg = 0.
+        if (v_ind > 0) then
+          call copyfromgrdin(grdin(:,nlevs*(v_ind-1) + k,nb),vg)
         endif
         call sptezv_s(divspec,vrtspec,ug,vg,-1)
-        sigdata_inc%d(:,k) = divspec; sigdata_inc%z(:,k) = vrtspec
-        if (reducedgrid) then
-           call reducedtoreg(grdin(:,2*nlevs+k,nb),ug)
-        else
-           ug = grdin(:,2*nlevs+k,nb)
+        sigdata_inc%d(:,k) = divspec
+        sigdata_inc%z(:,k) = vrtspec
+
+        ug = 0.
+        if (t_ind > 0) then
+          call copyfromgrdin(grdin(:,nlevs*(t_ind-1)+k,nb),ug)
         endif
         call sptez_s(divspec,ug,-1)
         sigdata_inc%t(:,k) = divspec
-        do nt=1,nvars-3
-            if (reducedgrid) then
-               call reducedtoreg(grdin(:,(3+nt-1)*nlevs+k,nb),ug)
-            else
-               ug = grdin(:,(3+nt-1)*nlevs+k,nb)
-            endif
-            call sptez_s(divspec,ug,-1)
-            sigdata_inc%q(:,k,nt) = divspec
-        enddo
+
+        ug = 0.
+        if (q_ind > 0) then
+          call copyfromgrdin(grdin(:,nlevs*(q_ind-1)+k,nb),ug)
+        endif
+        call sptez_s(divspec,ug,-1)
+        sigdata_inc%q(:,k,1) = divspec
+
+        ug = 0.
+        if (oz_ind > 0) then
+          call copyfromgrdin(grdin(:,nlevs*(oz_ind-1)+k,nb),ug)
+        endif
+        call sptez_s(divspec,ug,-1)
+        sigdata_inc%q(:,k,2) = divspec
+
+        ug = 0.
+        if (cw_ind > 0) then
+          call copyfromgrdin(grdin(:,nlevs*(cw_ind-1)+k,nb),ug)
+        endif
+        call sptez_s(divspec,ug,-1)
+        sigdata_inc%q(:,k,3) = divspec
+ 
      enddo
 !$omp end parallel do
 
      divspec = sigdata%ps
      call sptez_s(divspec,vg,1)
      ! increment (in hPa) to reg grid.
-     if (reducedgrid) then
-       call reducedtoreg(grdin(:,ndim,nb),ug)
-     else
-       ug = grdin(:,ndim,nb)
+     ug = 0.
+     if (ps_ind > 0) then
+       call copyfromgrdin(grdin(:,nlevs*nc3d + ps_ind,nb),ug)
      endif
      psfg = 10._r_kind*exp(vg)
      vg = psfg + ug ! first guess + increment
@@ -577,24 +620,7 @@
          print *,'unknown vertical coordinate type',sighead%idvc
          call stop2(23)
      end if
-     !==> first guess pressure at interfaces.
-     do k=1,nlevs+1
-        pressi(:,k)=ak(k)+bk(k)*psfg
-     enddo
-     do k=1,nlevs
-        dpfg(:,k) = pressi(:,k)-pressi(:,k+1)
-     enddo
-     !==> analysis pressure at interfaces.
-     do k=1,nlevs+1
-        pressi(:,k)=ak(k)+bk(k)*psg
-     enddo
-     do k=1,nlevs
-        dpanl(:,k) = pressi(:,k)-pressi(:,k+1)
-        !if (nanal .eq. 1) print *,'k,dpanl,dpfg',minval(dpanl(:,k)),&
-        !maxval(dpanl(:,k)),minval(dpfg(:,k)),maxval(dpfg(:,k))
-     enddo
-
-  else
+  else ! nemsio
      gfileout = gfilein
 
      nfhour    = 0        !  new forecast hour, zero at analysis time
@@ -632,14 +658,14 @@
      call nemsio_readrecv(gfilein,'pres','sfc',1,nems_wrk,iret=iret)
      psfg = 0.01*nems_wrk ! convert ps to millibars.
      ! increment (in hPa) to reg grid.
-     if (reducedgrid) then
-       call reducedtoreg(grdin(:,ndim,nb),ug)
-     else
-       ug = grdin(:,ndim,nb)
+     ug = 0.
+     if (ps_ind > 0) then
+       call copyfromgrdin(grdin(:,nlevs*nc3d + ps_ind,nb),ug)
      endif
      !print *,'nanal,min/max psfg,min/max inc',nanal,minval(psfg),maxval(psfg),minval(ug),maxval(ug)
      psg = psfg + ug ! first guess + increment
      nems_wrk = 100.*psg
+     ! write out updated surface pressure.
      call nemsio_writerecv(gfileout,'pres','sfc',1,nems_wrk,iret=iret)
      if (iret/=0) then
         write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(pres), iret=',iret
@@ -647,9 +673,23 @@
      endif
   endif
 
-  if (massbal_adjust) then
-
-!$omp parallel do private(k,nt,ug,vg,vrtspec,divspec) shared(sigdata,dpfg,vmassdiv)
+  if (pst_ind > 0) then
+     ! pressure at interfaces
+     do k=1,nlevs+1
+        pressi(:,k)=ak(k)+bk(k)*psfg
+     enddo
+     do k=1,nlevs
+        dpfg(:,k) = pressi(:,k)-pressi(:,k+1)
+     enddo
+     !==> analysis pressure at interfaces.
+     do k=1,nlevs+1
+        pressi(:,k)=ak(k)+bk(k)*psg
+     enddo
+     do k=1,nlevs
+        dpanl(:,k) = pressi(:,k)-pressi(:,k+1)
+        !if (nanal .eq. 1) print *,'k,dpanl,dpfg',minval(dpanl(:,k)),&
+        !maxval(dpanl(:,k)),minval(dpfg(:,k)),maxval(dpfg(:,k))
+     enddo
      do k=1,nlevs
 !       re-calculate vertical integral of mass flux div for first-guess
         if (use_gfs_nemsio) then
@@ -674,14 +714,9 @@
         call sptezv_s(divspec,vrtspec,ug,vg,-1) ! u,v to div,vrt
         call sptez_s(divspec,vmassdiv(:,k),1) ! divspec to divgrd
      enddo
-!$omp end parallel do
 
      ! analyzed ps tend increment
-     if (reducedgrid) then
-        call reducedtoreg(grdin(:,ndim-1,nb),pstend2)
-     else
-        pstend2 = grdin(:,ndim-1,nb)
-     endif
+     call copyfromgrdin(grdin(:,nlevs*nc3d + pst_ind,nb),pstend2)
      pstendfg = sum(vmassdiv,2)
      vmassdivinc = vmassdiv
      if (nanal .eq. 1) then
@@ -692,7 +727,7 @@
      endif
      pstend2 = pstend2 + pstendfg ! add to background ps tend
 
-  endif ! if (massbal_adjust)
+  endif ! if pst_ind > 0
 
   if (.not. use_gfs_nemsio) then
   ! add increment to first guess in spectral space.
@@ -703,11 +738,11 @@
         sigdata%z(:,k) = sigdata%z(:,k) + sigdata_inc%z(:,k)
         sigdata%d(:,k) = sigdata%d(:,k) + sigdata_inc%d(:,k)
         sigdata%t(:,k) = sigdata%t(:,k) + sigdata_inc%t(:,k)
-        do nt=1,nvars-3
+        do nt=1,sighead%ntrac
            sigdata%q(:,k,nt) = sigdata%q(:,k,nt) + sigdata_inc%q(:,k,nt)
         enddo
 
-        if (massbal_adjust) then
+        if (pst_ind > 0) then
 !          calculate vertical integral of mass flux div for updated state
            divspec = sigdata%d(:,k); vrtspec = sigdata%z(:,k)
            call sptezv_s(divspec,vrtspec,ug,vg,1)
@@ -723,7 +758,7 @@
      ! don't need sigdata_inc anymore.
      call sigio_axdata(sigdata_inc,ierr)
   else
-     if (massbal_adjust) then
+     if (pst_ind > 0) then
         allocate(ugtmp(nlons*nlats,nlevs),vgtmp(nlons*nlats,nlevs))
      endif
      ! update u,v,Tv,q,oz,clwmr
@@ -733,13 +768,12 @@
            write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(ugrd), iret=',iret
            call stop2(23)
         endif
-        if (reducedgrid) then
-           call reducedtoreg(grdin(:,k,nb),ug)
-        else
-           ug = grdin(:,k,nb)
+        ug = 0.
+        if (u_ind > 0) then
+          call copyfromgrdin(grdin(:,(u_ind-1)*nlevs + k,nb),ug)
         endif
         ug =  nems_wrk + ug
-        if (.not. massbal_adjust) then
+        if (pst_ind < 0) then
            nems_wrk = ug
            call nemsio_writerecv(gfileout,'ugrd','mid layer',k,nems_wrk,iret=iret)
            if (iret/=0) then
@@ -755,13 +789,12 @@
            write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(vgrd), iret=',iret
            call stop2(23)
         endif
-        if (reducedgrid) then
-           call reducedtoreg(grdin(:,nlevs+k,nb),vg)
-        else
-           vg = grdin(:,nlevs+k,nb)
+        vg = 0.
+        if (v_ind > 0) then
+           call copyfromgrdin(grdin(:,(v_ind-1)*nlevs + k,nb),vg)
         endif
         vg =  nems_wrk + vg
-        if (.not. massbal_adjust) then
+        if (pst_ind < 0) then
            nems_wrk = vg
            call nemsio_writerecv(gfileout,'vgrd','mid layer',k,nems_wrk,iret=iret)
            if (iret/=0) then
@@ -772,7 +805,7 @@
            vgtmp(:,k) = vg
         endif
 
-        if (massbal_adjust) then
+        if (pst_ind > 0) then
            ug = ug*dpanl(:,k)
            vg = vg*dpanl(:,k)
            call sptezv_s(divspec,vrtspec,ug,vg,-1) ! u,v to div,vrt
@@ -789,16 +822,18 @@
            write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(spfh), iret=',iret
            call stop2(23)
         endif
-        if (reducedgrid) then
-           call reducedtoreg(grdin(:,2*nlevs+k,nb),ug)
-           call reducedtoreg(grdin(:,3*nlevs+k,nb),vg)
-        else
-           ug = grdin(:,2*nlevs+k,nb)
-           vg = grdin(:,3*nlevs+k,nb)
+        ug = 0.
+        if (t_ind > 0) then
+          call copyfromgrdin(grdin(:,nlevs*(t_ind-1)+k,nb),ug)
+        endif
+        vg = 0.
+        if (q_ind > 0) then
+          call copyfromgrdin(grdin(:,nlevs*(q_ind-1)+k,nb),vg)
         endif
         ! ug is Tv increment, nems_wrk is background T, nems_wrk2 is background spfh
         ug = ug + nems_wrk * ( 1.0 + fv*nems_wrk2 )
         vg = vg + nems_wrk2 
+        clip = tiny(vg(1))
         if (cliptracers)  where (vg < clip) vg = clip
         ! convert Tv back to T
         nems_wrk = ug/(1. + fv*vg)
@@ -819,14 +854,10 @@
            write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(o3mr), iret=',iret
            call stop2(23)
         endif
-        if (nvars .eq. 5) then
-           if (reducedgrid) then
-              call reducedtoreg(grdin(:,4*nlevs+k,nb),ug)
-           else
-              ug = grdin(:,4*nlevs+k,nb)
-           endif
-        else
-           ug = 0.
+
+        ug = 0.
+        if (oz_ind > 0) then
+           call copyfromgrdin(grdin(:,nlevs*(oz_ind-1)+k,nb),ug)
         endif
         nems_wrk = nems_wrk + ug
         if (cliptracers)  where (nems_wrk < clip) nems_wrk = clip
@@ -841,14 +872,9 @@
            write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(clwmr), iret=',iret
            call stop2(23)
         endif
-        if (nvars .eq. 6) then
-           if (reducedgrid) then
-              call reducedtoreg(grdin(:,5*nlevs+k,nb),ug)
-           else
-              ug = grdin(:,5*nlevs+k,nb)
-           endif
-        else
-           ug = 0.
+        ug = 0.
+        if (cw_ind > 0) then
+           call copyfromgrdin(grdin(:,nlevs*(cw_ind-1)+k,nb),ug)
         endif
         nems_wrk = nems_wrk + ug
         if (cliptracers)  where (nems_wrk < clip) nems_wrk = clip
@@ -861,7 +887,7 @@
     enddo
   endif
 
-  if (massbal_adjust) then
+  if (pst_ind > 0) then
 
      vmassdivinc = vmassdiv - vmassdivinc ! analyis - first guess VIMFD
      ! (VIMFD = vertically integrated mass flux divergence)
@@ -936,21 +962,35 @@
              minval(pstend2-psfg),maxval(pstend2-psfg)
      endif
 
-  endif ! if (massbal_adjust)
+  endif ! if pst_ind > 0
 
   if (.not. use_gfs_nemsio) then
   ! clip tracers.
-     if (cliptracers .and. nvars .gt. 3) then
+     if (cliptracers) then
         clip = tiny(vg(1))
 !$omp parallel do private(k,nt,vg,divspec)  shared(sigdata,clip)
         do k=1,nlevs
-        do nt=1,nvars-3
-           divspec = sigdata%q(:,k,nt) 
-           call sptez_s(divspec,vg,1)
-           where (vg < clip) vg = clip
-           call sptez_s(divspec,vg,-1)
-           sigdata%q(:,k,nt) = divspec
-        enddo
+           if (q_ind > 0) then
+             divspec = sigdata%q(:,k,1)
+             call sptez_s(divspec,vg,1)
+             where (vg < clip) vg = clip
+             call sptez_s(divspec,vg,-1)
+             sigdata%q(:,k,1) = divspec
+          endif
+          if (oz_ind > 0) then
+             divspec = sigdata%q(:,k,2)
+             call sptez_s(divspec,vg,1)
+             where (vg < clip) vg = clip
+             call sptez_s(divspec,vg,-1)
+             sigdata%q(:,k,2) = divspec
+          endif
+          if (cw_ind > 0) then
+             divspec = sigdata%q(:,k,3)
+             call sptez_s(divspec,vg,1)
+             where (vg < clip) vg = clip
+             call sptez_s(divspec,vg,-1)
+             sigdata%q(:,k,3) = divspec
+          endif
         enddo
 !$omp end parallel do
      end if
@@ -960,7 +1000,7 @@
      ! deallocate sigdata structure.
      call sigio_axdata(sigdata,ierr)
   else
-     if (massbal_adjust) then
+     if (pst_ind > 0) then
         ! update u,v
         do k=1,nlevs
            nems_wrk = ugtmp(:,k)
@@ -985,9 +1025,9 @@
       call nemsio_close(gfileout,iret=iret)
   endif
 
-  deallocate(pressi,dpanl,dpfg)
-  deallocate(psg,pstend1,pstend2,pstendfg,vmass)
-  if (massbal_adjust) then
+  if (pst_ind > 0) then
+     deallocate(pressi,dpanl,dpfg)
+     deallocate(pstend1,pstend2,pstendfg,vmass)
      deallocate(vmassdiv)
      deallocate(vmassdivinc)
   endif
@@ -995,5 +1035,35 @@
   end do backgroundloop ! loop over backgrounds to write out
 
  end subroutine writegriddata
+
+! copying to grdin (calling regtoreduced if reduced grid)
+ subroutine copytogrdin(field, grdin)
+ implicit none
+ 
+ real(r_kind), dimension(:), intent(in)      :: field
+ real(r_single), dimension(:), intent(inout) :: grdin
+ 
+ if (reducedgrid) then
+   call regtoreduced(field, grdin)
+ else
+   grdin = field
+ endif
+ 
+ end subroutine copytogrdin
+ 
+! copying to grdin (calling regtoreduced if reduced grid)
+ subroutine copyfromgrdin(grdin, field)
+ implicit none
+ 
+ real(r_single), dimension(:), intent(in)      :: grdin
+ real(r_kind), dimension(:), intent(inout) :: field
+ 
+ if (reducedgrid) then
+   call reducedtoreg(grdin, field)
+ else
+   field = grdin
+ endif
+ 
+ end subroutine copyfromgrdin
 
  end module gridio

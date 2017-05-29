@@ -206,6 +206,7 @@ use intradmod, only: intrad
 use inttcpmod, only: inttcp
 use intgpsmod, only: intgps
 use intrwmod, only: intrw
+use intdbzmod, only: intdbz
 use intspdmod, only: intspd
 use intsrwmod, only: intsrw
 use intsstmod, only: intsst
@@ -282,6 +283,9 @@ real(r_kind),pointer,dimension(:,:,:) :: xhat_dt_tsen,xhat_dt_q,xhat_dt_t
 
 ! RHS for radar winds
   call intrw(yobs%rw,rval,sval)
+
+! RHS for radar reflectivity
+  call intdbz(yobs%dbz,rval,sval)
 
 ! RHS for wind speed observations
   call intspd(yobs%spd,rval,sval)
