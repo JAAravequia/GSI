@@ -687,6 +687,7 @@ subroutine read_obs(ndata,mype)
     use gsi_unformatted, only: unformatted_open
 
     use obsmod, only: hlocal,vlocal
+    use mrmsmod,only: l_mrms_sparse_netcdf
 
     implicit none
 
@@ -1443,8 +1444,19 @@ subroutine read_obs(ndata,mype)
 !            Process radar reflectivity from MRMS
              else if (obstype == 'dbz' ) then
                 print *, "calling read_dbz"
-                call read_dbz_nc(nread,npuse,nouse,infile,lunout,obstype,twind,sis,hgtl_full,nobs_sub1(1,i),hlocal(i),vlocal(i))
-                string='READ_dBZ'
+                if(trim(infile)=='dbzobs.nc')then
+                  call read_dbz_nc(nread,npuse,nouse,infile,lunout,obstype,twind,sis,hgtl_full,nobs_sub1(1,i),hlocal(i),vlocal(i))
+                  string='READ_dBZ'
+                else
+                  call read_dbz_mrms_detect_format(infile,l_mrms_sparse_netcdf)
+                  if(l_mrms_sparse_netcdf) then
+                     call read_dbz_mrms_sparse_netcdf(nread,npuse,nouse,infile,obstype,lunout,twind,sis,nobs_sub1(1,i))
+                     string='READ_dbz_mrms_sparse_netcdf'
+                  else
+                     call read_dbz_mrms_netcdf(nread,npuse,nouse,infile,obstype,lunout,twind,sis,nobs_sub1(1,i))
+                     string='READ_dbz_mrms_netcdf'
+                  endif
+                end if
 
 !            Process lagrangian data
              else if (obstype == 'lag') then
