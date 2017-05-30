@@ -3,7 +3,7 @@ subroutine init_commvars(mype)
   use variables, only: displs_s,ird_s,istart,ltosj,&
        jstart,itotsub,iglobal,nsig,nlon,ltosi_s,ltosj_s,nlat,&
        ijn_s,irc_s,ijn,ilat1,jlon1,displs_g,&
-       ltosi,isc_g,isd_g,npe,izero
+       ltosi,isc_g,isd_g,npe,izero,nems
   use comm_mod, only: nsig1o,irdsp_g,isdsp_g,ircnt_g,&
        iscnt_g,ircnt_s,isdsp_s,irdsp_s,iscnt_s,&
        spec_send,disp_spec
@@ -122,9 +122,17 @@ subroutine init_commvars(mype)
 
   do n=1,npe
     if (n.le.kchk) then
-      spec_send(n) = ncin*nsig1o
+      if (nems) then
+        spec_send(n) = iglobal*nsig1o
+      else
+        spec_send(n) = ncin*nsig1o
+      endif
     else
-      spec_send(n) = ncin*(nsig1o-1)
+      if (nems) then
+        spec_send(n) = iglobal*(nsig1o-1)
+      else
+        spec_send(n) = ncin*(nsig1o-1)
+      endif
     end if
   end do
 

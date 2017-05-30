@@ -3,7 +3,7 @@ subroutine readpairs(npe,mype,numcases)
       na,nb,filename,hybrid,db_prec,zero,one,fv,&
       idpsfc5,idthrm5,cp5,ntrac5,idvc5,idvm5,lat1,lon1,&
       iglobal,ijn_s,displs_s,filunit1,filunit2,&
-      ird_s,irc_s,displs_g
+      ird_s,irc_s,displs_g,nems,nems,r0_001
   use specgrid, only: sptez_s,nc,ncin,factvml,&
       factsml,enn1,ncd2,jcaptrans,jcap,jcapin,unload_grid
   use sigio_module, only: sigio_intkind,sigio_head,sigio_data,&
@@ -11,6 +11,11 @@ subroutine readpairs(npe,mype,numcases)
   use comm_mod, only: levs_id,nvar_id,grid2sub,nsig1o,spec_send,&
       disp_spec
   use kinds, only: r_kind,r_single,r_double
+  use nemsio_module, only:nemsio_gfile,nemsio_open,&
+      nemsio_close,nemsio_readrecv
+  use general_specmod, only:spec_vars,general_init_spec_vars,&
+      general_destroy_spec_vars
+
   implicit none
   include 'mpif.h'
 
@@ -25,11 +30,16 @@ subroutine readpairs(npe,mype,numcases)
   real(r_kind),dimension(lat1,lon1,nsig,ntrac5):: trac1,trac2
 
   real(r_kind),dimension(nc):: z,z2
+  real(r_kind),dimension(nc):: spec_vor,spec_div
   real(r_single),dimension(ncin,nsig1o):: z41,z42
   real(r_single),dimension(ncin,6*nsig+1):: z4all
 
   real(r_kind),dimension(nlon,nlat-2):: grid1,grid2
+  real(r_kind),dimension(nlon,nlat):: grid_sf,grid_vp
   real(r_kind),dimension(iglobal,nsig1o):: work1,work2
+  real(r_kind),dimension(iglobal,6*nsig+1):: allnems
+  real(r_kind),dimension(nlon*(nlat-2)):: rwork1d0,rwork1d1
+  real(r_kind),dimension(iglobal):: temp
 
   real(r_kind),dimension(iglobal,ntrac5):: gridtrac1,gridtrac2
 
@@ -37,7 +47,10 @@ subroutine readpairs(npe,mype,numcases)
   type(sigio_head):: sighead1,sighead2
   type(sigio_data):: sigdata1,sigdata2
 
-  logical ice
+  logical ice,use_sp_eqspace
+  type(nemsio_gfile) :: gfile,gfile2
+  type(spec_vars) :: sp_a
+
   if (db_prec) then
     mpi_rtype=mpi_real8
   else
@@ -53,6 +66,8 @@ subroutine readpairs(npe,mype,numcases)
   filunit1=(10000+(mype+1))
   filunit2=(20000+(mype+1))
 
+
+
 ! Each mpi task will carry two files, which contains all variables, for each of the time levels
   open(filunit1,form='unformatted',action='write')
   rewind(filunit1)
@@ -62,6 +77,100 @@ subroutine readpairs(npe,mype,numcases)
   do n=1,numcases
     if (mype==0)  write(6,*)'opening=', inges,filename(na(n))
     if (mype==0)  write(6,*)'opening=', inge2,filename(nb(n))
+
+    if (nems) then
+      use_sp_eqspace=.false.
+      call general_init_spec_vars(sp_a,jcap,jcap,nlat,nlon,eqspace=use_sp_eqspace)
+
+      call nemsio_open(gfile,filename(na(n)),'READ',iret=iret)
+      call nemsio_open(gfile2,filename(nb(n)),'READ',iret=iret2)
+    do k=1,nsig
+      ! UV
+      if (mype==proc1) then
+           call nemsio_readrecv(gfile,'ugrd','mid layer',k,rwork1d0,iret=iret)
+           call nemsio_readrecv(gfile,'vgrd','mid layer',k,rwork1d1,iret=iret)
+      elseif (mype==proc2)then
+           call nemsio_readrecv(gfile2,'ugrd','mid layer',k,rwork1d0,iret=iret)
+           call nemsio_readrecv(gfile2,'vgrd','mid layer',k,rwork1d1,iret=iret)
+      endif
+      call mpi_barrier(mpi_comm_world,iret2)
+      if (mype==proc1 .or. mype==proc2) then
+         grid1=reshape(rwork1d0,(/size(grid1,1),size(grid1,2)/))
+         grid2=reshape(rwork1d1,(/size(grid2,1),size(grid2,2)/))
+
+         call general_sptez_v(sp_a,spec_div,spec_vor,grid1,grid2,-1)
+         call general_zds2pcg(sp_a,spec_vor,spec_div,grid_sf,grid_vp)
+         !call general_sptez_s_b(sp_a,sp_a,spec_vor,grid_vor,1)
+         !call general_sptez_s_b(sp_a,sp_a,spec_div,grid_div,1)
+
+         !call unload_grid(grid_sf,temp)
+         allnems(:,k)=reshape(grid_sf,(/(nlon*nlat)/))
+         !call unload_grid(grid_vp,temp)
+         allnems(:,nsig+k)=reshape(grid_vp,(/(nlon*nlat)/))
+      endif
+
+      ! read T/Tv/etc.
+      if (mype==proc1) then
+         call nemsio_readrecv(gfile,'tmp','mid layer',k,rwork1d0,iret=iret)
+         call nemsio_readrecv(gfile,'spfh','mid layer',k,rwork1d1,iret=iret)
+      elseif (mype==proc2) then
+         call nemsio_readrecv(gfile2,'tmp','mid layer',k,rwork1d0,iret=iret)
+         call nemsio_readrecv(gfile2,'spfh','mid layer',k,rwork1d1,iret=iret)
+      endif
+      call mpi_barrier(mpi_comm_world,iret2)
+      if (mype==proc1 .or. mype==proc2) then
+         rwork1d0=rwork1d0*(one+fv*rwork1d1)
+         grid1=reshape(rwork1d0,(/size(grid1,1),size(grid1,2)/))
+         call unload_grid(grid1,temp)
+         allnems(:,nsig*2+k)=temp
+
+         grid2=reshape(rwork1d1,(/size(grid2,1),size(grid2,2)/))
+         call unload_grid(grid2,temp)
+         allnems(:,nsig*3+k)=temp
+      endif
+
+      ! Ozone mixing ratio
+      if (mype==proc1) call nemsio_readrecv(gfile,'o3mr','mid layer',k,rwork1d0,iret=iret)
+      if (mype==proc2) call nemsio_readrecv(gfile2,'o3mr','mid layer',k,rwork1d0,iret=iret)
+      call mpi_barrier(mpi_comm_world,iret2)
+      if (mype==proc1 .or. mype==proc2) then
+         grid1=reshape(rwork1d0,(/size(grid1,1),size(grid1,2)/))
+         call unload_grid(grid1,temp)
+         allnems(:,nsig*4+k)=temp
+      endif
+
+    ! Cloud condensate mixing ratio.
+      if (mype==proc1) call nemsio_readrecv(gfile,'clwmr','mid layer',k,rwork1d0,iret=iret)
+      if (mype==proc2) call nemsio_readrecv(gfile2,'clwmr','mid layer',k,rwork1d0,iret=iret)
+      call mpi_barrier(mpi_comm_world,iret2)
+      if (mype==proc1 .or. mype==proc2) then
+         grid1=reshape(rwork1d0,(/size(grid1,1),size(grid1,2)/))
+         call unload_grid(grid1,temp)
+         allnems(:,nsig*5+k)=temp
+      endif
+    enddo !nsig
+
+      ! read ps
+      if (mype==proc1) call nemsio_readrecv(gfile,'pres','sfc',1,rwork1d0,iret=iret)
+      if (mype==proc2) call nemsio_readrecv(gfile2,'pres','sfc',1,rwork1d0,iret=iret)
+      call mpi_barrier(mpi_comm_world,iret2)
+      if (mype==proc1 .or. mype==proc2) then
+         rwork1d1 = r0_001*rwork1d0 ! convert Pa to cb
+         grid1=reshape(rwork1d1,(/size(grid1,1),size(grid1,2)/))
+         call unload_grid(grid1,temp)
+         allnems(:,nsig*6+1)=temp
+
+      endif
+      call general_destroy_spec_vars(sp_a)
+      call nemsio_close(gfile,iret=iret)
+      call nemsio_close(gfile2,iret=iret2)
+
+      call mpi_scatterv(allnems,spec_send,disp_spec,mpi_rtype,&
+         work1,spec_send(mm1),mpi_rtype,proc1,mpi_comm_world,ierror)
+      call mpi_scatterv(allnems,spec_send,disp_spec,mpi_rtype,&
+         work2,spec_send(mm1),mpi_rtype,proc2,mpi_comm_world,ierror)
+
+    else
 
 ! Get spectral information from 
     if (mype==proc1)   call sigio_srohdc(inges,filename(na(n)),sighead1,sigdata1,iret)
@@ -197,6 +306,8 @@ subroutine readpairs(npe,mype,numcases)
 !!        write(6,*) 'READPAIRS:  No Level to process, k,mype,levs_id,nvar_id = ',k,mype,levs_id(k),nvar_id(k)
       endif
     end do  !End do nsig1o levs
+
+    endif !nems
 
 ! CALL GRID2SUB HERE
     call grid2sub(work1,sf1,vp1,t1,q1,oz1,cw1,ps1)

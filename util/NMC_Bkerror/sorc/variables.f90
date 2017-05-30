@@ -6,6 +6,7 @@ module variables
 ! general
   integer maxcases,filunit1,filunit2
   real(r_kind) smoothdeg
+  logical nems    !true for nems forecast files
 
 ! forecast pair file variables
   character(100),allocatable,dimension(:):: filename
@@ -71,7 +72,7 @@ module variables
   integer izero
   real(r_kind) rd,rv,cvap,cliq,zero,one,hvap,&
                 psat,ttp,fv,pi,hfus,csol,deg2rad,grav,&
-                half,two,omega
+                half,two,three,omega,r60,r3600,r0_001
   real(r_double) rearth
   integer(i_kind) ione
 
@@ -93,8 +94,13 @@ module variables
   parameter(zero   = 0.0_r_kind)
   parameter(one    = 1.0_r_kind)
   parameter(two    = 2.0_r_kind)
+  parameter(three  = 3.0_r_kind)
   parameter(half   = one/two)
   parameter(ione   = 1_i_kind)
+  parameter(r60    = 60.0_r_kind)
+  parameter(r3600  = 3600.0_r_kind)
+  parameter(r0_001 = 0.001_r_kind)
+
 
 ! Derived constants
   parameter(fv = rv/rd-1._r_kind)       ! used in virtual temp. equation   ()
@@ -115,6 +121,7 @@ contains
     smoothdeg=4.0
     dimbig=5000
     noq=5
+    nems=.false.
 
   end subroutine init_defaults
 

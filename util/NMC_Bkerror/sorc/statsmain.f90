@@ -44,7 +44,7 @@ program statsmain
       smoothdeg,init_defaults,create_grids,destroy_grids,&
       destroy_variables,rearth,rlats,wgtlats,mype,npe,&
       create_mapping,destroy_mapping,biasrm,destroy_biasrm,&
-      vertavg
+      vertavg,nems
   use specgrid, only: jcap,jcapin,jcapsmooth,init_spec_vars,destroy_spec_vars
   use postmod, only: writefiles
   use comm_mod, only: init_mpi_vars,destroy_mpi_vars
@@ -66,7 +66,7 @@ program statsmain
 !   smoothdeg - degree of horizontal smoothing to apply in latitudinal direction
 
   namelist/namstat/jcap,jcapin,jcapsmooth,nsig,nlat,nlon,maxcases, &
-                   hybrid,smoothdeg,biasrm,vertavg
+                   hybrid,smoothdeg,biasrm,vertavg,nems
 
 ! MPI initial setup
   call mpi_init(ierror)

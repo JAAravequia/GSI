@@ -118,7 +118,10 @@ clean:
 
   SRCSF90C = \
     kinds.f90 \
+    variables.f90 \
     specgrid.f90 \
+    general_specmod.f90 \
+    general_transform.f90 \
     balprojs.f90 \
     biascor.f90 \
     comm_mod.f90 \
@@ -138,7 +141,6 @@ clean:
     smooth2d.f90 \
     sstmod.f90 \
     statsmain.f90 \
-    variables.f90 \
     variances.f90 \
     variances3d.f90 \
     vertsc.f90 \
@@ -190,6 +192,8 @@ biascor.o: variables.o kinds.o
 comm_mod.o: kinds.o variables.o
 delvars.o: kinds.o variables.o
 deter_subdomain.o: kinds.o variables.o
+general_specmod.o: kinds.o variables.o
+general_transform.o: kinds.o variables.o general_specmod.o
 genqsat.o: kinds.o variables.o
 getcases.o: kinds.o variables.o
 grdsphdp.o: kinds.o variables.o
