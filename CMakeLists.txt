@@ -1,5 +1,6 @@
 # disable in source builds to protect against overwriting other Makefiles
 #set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
+
 if( NOT DEFINED ENV{CC} )
   find_path( crayComp "ftn" )
   find_path( wcossIntel "mpfort" )
