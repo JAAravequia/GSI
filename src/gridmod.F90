@@ -82,7 +82,10 @@ module gridmod
 !   08-18-2014 tong      add jcap_gfs, nlon_gfs, nlat_gfs for regional analysis,
 !                        when running with use_gfs_ozone = .true. or use_gfs_stratosphere = .true.,
 !                        to allow spectral to grid transformation to a lower resolution grid
-!                      
+!   2015-02-03 todling - update max nlayers to 200
+!   2016-03-02  s.liu/carley - remove use_reflectivity and use i_gsdcldanal_type
+!   2017-03-23  Hu      - add code to get eta2_ll and aeta2_ll ready for hybrid vertical coodinate in WRF MASS CORE
+!
 !                        
 !
 !
@@ -141,9 +144,10 @@ module gridmod
   public :: jcap,jcap_b,hires_b,sp_a,grd_a
   public :: jtstart,jtstop,nthreads
   public :: use_gfs_nemsio
-  public :: use_reflectivity
+  public :: use_readin_anl_sfcmask
   public :: jcap_gfs,nlat_gfs,nlon_gfs
   public :: use_sp_eqspace,jcap_cut
+  public :: wrf_mass_hybridcord
 
   interface strip
      module procedure strip_single_rank33_
@@ -161,6 +165,7 @@ module gridmod
   logical wrf_nmm_regional  !
   logical nems_nmmb_regional! .t. to run with NEMS NMMB model
   logical wrf_mass_regional !
+  logical wrf_mass_hybridcord
   logical cmaq_regional     ! .t. to run with cmaq
   logical twodvar_regional  ! .t. to run code in regional 2D-var mode
   logical use_gfs_ozone     ! .t. to use gfs ozone in regional analysis
@@ -173,9 +178,9 @@ module gridmod
   logical update_regsfc     !
   logical hires_b           ! .t. when jcap_b requires double FFT
   logical use_gfs_nemsio    ! .t. for using NEMSIO to real global first guess
-  logical use_reflectivity  ! .t. for using reflectivity for NMMB
   logical use_sp_eqspace    ! .t. use equally-space grid in spectral transforms
 
+  logical use_readin_anl_sfcmask        ! .t. for using readin surface mask
   character(1) nmmb_reference_grid      ! ='H': use nmmb H grid as reference for analysis grid
                                         ! ='V': use nmmb V grid as reference for analysis grid
   real(r_kind) grid_ratio_nmmb ! ratio of analysis grid to nmmb model grid in nmmb model grid units.
@@ -257,7 +262,7 @@ module gridmod
   integer(i_kind),allocatable,dimension(:):: displs_s  !   displacement for send from subdomain
   integer(i_kind),allocatable,dimension(:):: displs_g  !   displacement for receive on global grid
 
-  integer(i_kind),dimension(100):: nlayers        ! number of RTM layers per model layer
+  integer(i_kind),dimension(200):: nlayers        ! number of RTM layers per model layer
                                                   ! (k=1 is near surface layer), default is 1
   integer(i_kind), allocatable, dimension(:)::  jtstart,jtstop ! starting and ending indicies for j threading
 
@@ -383,6 +388,8 @@ contains
 !   2010-10-14  pagowski- add CMAQ
 !   2010-10-18  hcHuang - add flag use_gfs_nemsio to determine whether to use NEMSIO to read global first guess field
 !   2011-09-14  todling - add use_sp_eqspace to better control lat/lon grid case
+!   2016-08-28       li - tic591: add use_readin_anl_sfcmask for consistent sfcmask
+!                         between analysis grids and others
 !
 ! !REMARKS:
 !   language: f90
@@ -415,6 +422,7 @@ contains
     periodic = .false.
     wrf_nmm_regional = .false.
     wrf_mass_regional = .false.
+    wrf_mass_hybridcord = .false.
     cmaq_regional=.false.
     nems_nmmb_regional = .false.
     twodvar_regional = .false. 
@@ -447,10 +455,15 @@ contains
     jcap=62
     jcap_b=62
     hires_b=.false.
-    nvege_type=24
+    ! -------------------------------------------------------!
+    ! nvege_type set to 20 (i.e. default vege type is IGBP)  !
+    ! Updated in EXP-crtm_sfc_intrface branch: June 16, 2016 !
+    ! -------------------------------------------------------!
+    nvege_type = 20
     nthreads = 1  ! initialize the number of threads
 
     use_gfs_nemsio = .false.
+    use_readin_anl_sfcmask = .false.
 
     use_sp_eqspace = .false.
 
@@ -931,10 +944,10 @@ contains
 
 ! !USES:
 
-    use constants, only: zero, one, three, deg2rad,pi,half, two,r0_01
+    use constants, only: zero, one, three, deg2rad,half, two,r0_01
     use mod_nmmb_to_a, only: init_nmmb_to_a,nxa,nya,nmmb_h_to_a8,ratio_x,ratio_y
     use mod_wrfmass_to_a, only: init_wrfmass_to_a,nxa_wrfmass,nya_wrfmass
-    use mod_wrfmass_to_a, only: wrfmass_h_to_a,ratio_x_wrfmass,ratio_y_wrfmass
+    use mod_wrfmass_to_a, only: wrfmass_h_to_a
     implicit none
 
 ! !INPUT PARAMETERS:
@@ -1250,20 +1263,22 @@ contains
 ! Get vertical info for wrf mass core
        allocate(aeta1_ll(nsig),eta1_ll(nsig+1))
        allocate(aeta1(nsig),eta1(nsig+1))
+       allocate(aeta2_ll(nsig),eta2_ll(nsig+1))
+       allocate(aeta2(nsig),eta2(nsig+1))
        allocate(glat(nlon_regional,nlat_regional),glon(nlon_regional,nlat_regional))
        allocate(dx_mc(nlon_regional,nlat_regional),dy_mc(nlon_regional,nlat_regional))
-       read(lendian_in) aeta1
-       read(lendian_in) eta1
+       read(lendian_in) aeta1,aeta2
+       read(lendian_in) eta1,eta2
  
        if(diagnostic_reg.and.mype==0) write(6,*)' in init_reg_glob_ll, pt=',pt
        if(diagnostic_reg.and.mype==0) then
-          write(6,*)' in init_reg_glob_ll, aeta1 follows:'
+          write(6,*)' in init_reg_glob_ll, aeta1,aeta2 follows:'
           do k=1,nsig
-             write(6,'(" k,aeta1=",i3,f10.4)') k,aeta1(k)
+             write(6,'(" k,aeta1=",i3,2f10.4)') k,aeta1(k),aeta2(k)
           end do
-          write(6,*)' in init_reg_glob_ll, eta1 follows:'
+          write(6,*)' in init_reg_glob_ll, eta1,eta2 follows:'
           do k=1,nsig+1
-             write(6,'(" k,eta1=",i3,f10.4)') k,eta1(k)
+             write(6,'(" k,eta1=",i3,2f10.4)') k,eta1(k),eta2(k)
           end do
        end if
 
@@ -1272,6 +1287,9 @@ contains
        if(diagnostic_reg.and.mype==0) write(6,*)' in init_reg_glob_ll, pt_ll=',pt_ll
        eta1_ll=eta1
        aeta1_ll=aeta1
+       eta2_ll=eta2*r0_01
+       aeta2_ll=aeta2*r0_01
+
        read(lendian_in) glat,dx_mc
        read(lendian_in) glon,dy_mc
        close(lendian_in)
@@ -2657,7 +2675,7 @@ end subroutine init_general_transform
 
 ! !USES:
 
-    use constants, only: one,two,pi,rad2deg,one_tenth
+    use constants, only: one,two,one_tenth
     implicit none
 
 ! !INPUT PARAMETERS:

@@ -12,6 +12,9 @@ module intwmod
 !   2008-11-26  Todling - remove intw_tl; add interface back
 !   2009-08-13  lueken - update documentation
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - implemented obs adjoint test  
+!   2014-04-12       su - add non linear qc from Purser's scheme
+!   2015-02-26       su - add njqc as an option to chose new non linear qc
+!   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !
 ! subroutines included:
 !   sub intw_
@@ -24,6 +27,10 @@ module intwmod
 !
 !$$$ end documentation block
 
+use m_obsNode, only: obsNode
+use m_wNode, only: wNode
+use m_wNode, only: wNode_typecast
+use m_wNode, only: wNode_nextcast
 implicit none
 
 PRIVATE
@@ -65,7 +72,9 @@ subroutine intw_(whead,rval,sval)
 !   2008-11-28  todling  - turn FOTO optional; changed ptr%time handle
 !   2010-03-13  todling  - update to use gsi_bundle; update interface
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - introduced ladtest_obs         
+!   2014-04-12       su - add non linear qc from Purser's scheme
 !   2014-12-03  derber  - modify so that use of obsdiags can be turned off
+!   2015-12-21  yang    - Parrish's correction to the previous code in new varqc.
 !
 !   input argument list:
 !     whead    - obs type pointer to obs structure
@@ -84,10 +93,9 @@ subroutine intw_(whead,rval,sval)
 !
 !$$$
   use kinds, only: r_kind,i_kind
-  use constants, only: half,one,tiny_r_kind,cg_term,r3600
-  use obsmod, only: w_ob_type,lsaveobsens,l_do_adjoint,luse_obsdiag
-  use qcmod, only: nlnqc_iter,varqc_iter
-  use gridmod, only: latlon1n
+  use constants, only: half,one,tiny_r_kind,cg_term,r3600,two
+  use obsmod, only: lsaveobsens,l_do_adjoint,luse_obsdiag
+  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc
   use jfunc, only: jiter,l_foto,xhat_dt,dhat_dt
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -95,7 +103,7 @@ subroutine intw_(whead,rval,sval)
   implicit none
 
 ! Declare passed variables
-  type(w_ob_type),pointer,intent(in   ) :: whead
+  class(obsNode), pointer,intent(in   ) :: whead
   type(gsi_bundle),       intent(in   ) :: sval
   type(gsi_bundle),       intent(inout) :: rval
 
@@ -108,7 +116,7 @@ subroutine intw_(whead,rval,sval)
   real(r_kind) cg_w,p0,gradu,gradv,wnotgross,wgross,term,w_pg
   real(r_kind),pointer,dimension(:) :: su,sv
   real(r_kind),pointer,dimension(:) :: ru,rv
-  type(w_ob_type), pointer :: wptr
+  type(wNode), pointer :: wptr
 
 !  If no w data return
   if(.not. associated(whead))return
@@ -127,7 +135,8 @@ subroutine intw_(whead,rval,sval)
   endif
   if(ier/=0)return
 
-  wptr => whead
+  !wptr => whead
+  wptr => wNode_typecast(whead)
   do while(associated(wptr))
      i1=wptr%ij(1)
      i2=wptr%ij(2)
@@ -188,7 +197,7 @@ subroutine intw_(whead,rval,sval)
 
 !          gradient of nonlinear operator
  
-           if (nlnqc_iter .and. wptr%pg > tiny_r_kind .and.  &
+           if (vqc .and. nlnqc_iter .and. wptr%pg > tiny_r_kind .and.  &
                                 wptr%b  > tiny_r_kind) then
               w_pg=wptr%pg*varqc_iter
               cg_w=cg_term/wptr%b
@@ -200,13 +209,18 @@ subroutine intw_(whead,rval,sval)
               valu = valu*term
               valv = valv*term
            endif
-
-           if( ladtest_obs) then
-              gradu = valu
-              gradv = valv
+           if (njqc .and. wptr%jb  > tiny_r_kind .and. wptr%jb <10.0_r_kind) then
+              valu=sqrt(two*wptr%jb)*tanh(sqrt(wptr%err2)*valu/sqrt(two*wptr%jb))
+              valv=sqrt(two*wptr%jb)*tanh(sqrt(wptr%err2)*valv/sqrt(two*wptr%jb))
+              gradu = valu*wptr%raterr2*sqrt(wptr%err2)
+              gradv = valv*wptr%raterr2*sqrt(wptr%err2)
            else
               gradu = valu*wptr%raterr2*wptr%err2
               gradv = valv*wptr%raterr2*wptr%err2
+           endif
+           if( ladtest_obs) then
+              gradu = valu
+              gradv = valv
            end if
         endif
 
@@ -252,7 +266,8 @@ subroutine intw_(whead,rval,sval)
         endif
      endif
 
-     wptr => wptr%llpoint
+     !wptr => wptr%llpoint
+     wptr => wNode_nextcast(wptr)
 
   end do
   return

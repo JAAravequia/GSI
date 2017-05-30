@@ -13,6 +13,9 @@ module stpcalcmod
 !   2008-12-02  Todling - remove stpcalc_tl
 !   2009-08-12  lueken  - updated documentation
 !   2012-02-08  kleist  - consolidate weak constaints into one module stpjcmod.
+!   2015-09-03  guo     - obsmod::yobs has been replaced with m_obsHeadBundle,
+!                         where yobs is created and destroyed when and where it
+!                         is needed.
 !
 ! subroutines included:
 !   sub stpcalc
@@ -170,6 +173,11 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
 !                         the correct observation type associated with each pbc(*,j) term
 !   2014-05-07  pondeca - add howv call
 !   2014-06-17  carley/zhu - add tcamt and lcbas
+!   2015-07-10  pondeca - add cldch
+!   2016-02-03  derber - add code to search through all of the possible stepsizes tried, to find the 
+!               one that minimizes the most and use that one.
+!   2016-08-08  j guo   - tried to edit some comments for a better description on pbc(*,:) elements
+!                         reflecting jo terms.
 !
 !   input argument list:
 !     stpinout - guess stepsize
@@ -210,9 +218,9 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
   use jfunc, only: iout_iter,nclen,xhatsave,yhatsave,&
        l_foto,xhat_dt,dhat_dt,nvals_len,iter
   use jcmod, only: ljcpdry,ljc4tlevs,ljcdfi
-  use obsmod, only: yobs,nobs_type
+  use obsmod, only: nobs_type
   use stpjcmod, only: stplimq,stplimg,stplimv,stplimp,stplimw10m,&
-       stplimhowv,stpjcdfi,stpjcpdry,stpliml
+       stplimhowv,stplimcldch,stpjcdfi,stpjcpdry,stpliml
   use bias_predictors, only: predictors
   use control_vectors, only: control_vector,qdot_prod_sub,cvars2d
   use state_vectors, only: allocate_state,deallocate_state
@@ -224,6 +232,10 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
   use mpeu_util, only: getindex
   use intradmod, only: setrad
   use timermod, only: timer_ini,timer_fnl
+  use stpjomod, only: stpjo
+  use m_obsHeadBundle, only: obsHeadBundle
+  use m_obsHeadBundle, only: obsHeadBundle_create
+  use m_obsHeadBundle, only: obsHeadBundle_destroy
   implicit none
 
 ! Declare passed variables
@@ -240,7 +252,7 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
 
 
 ! Declare local parameters
-  integer(i_kind),parameter:: n0 = 11
+  integer(i_kind),parameter:: n0 = 12
   integer(i_kind),parameter:: ipen = n0+nobs_type
   integer(i_kind),parameter:: istp_iter = 5
   integer(i_kind),parameter:: ipenlin = 3
@@ -266,9 +278,10 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
   real(r_kind),dimension(4)::sges
   real(r_kind),dimension(ioutpen):: outpen,outstp
   real(r_kind),pointer,dimension(:,:,:):: xhat_dt_t,xhat_dt_q,xhat_dt_tsen
-  logical :: cxterm,change_dels
+  logical :: cxterm,change_dels,ifound
 
 
+  type(obsHeadBundle),pointer,dimension(:):: yobs
 !************************************************************************************  
 ! Initialize timer
   call timer_ini('stpcalc')
@@ -298,7 +311,7 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
 !    pbc(*,2)  placeholder for future linear linear term
 !    pbc(*,3)  contribution from dry pressure constraint term (Jc)
 !
-!    nonlinear terms -> pbc(*,4:ipen)
+!    nonlinear terms -> pbc(*,4:n0)
 !    pbc(*,4)  contribution from negative moisture constraint term (Jl/Jq)
 !    pbc(*,5)  contribution from excess moisture term (Jl/Jq)
 !    pbc(*,6) contribution from negative gust constraint term (Jo)
@@ -307,39 +320,59 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
 !    pbc(*,9) contribution from negative wspd10m constraint term (Jo)
 !    pbc(*,10) contribution from negative howv constraint term (Jo)
 !    pbc(*,11) contribution from negative lcbas constraint term (Jo)
-!    pbc(*,12) contribution from ps observation  term (Jo)
-!    pbc(*,13) contribution from t observation  term (Jo)
-!    pbc(*,14) contribution from w observation  term (Jo)
-!    pbc(*,15) contribution from q observation  term (Jo)
-!    pbc(*,16) contribution from spd observation  term (Jo)
-!    pbc(*,17) contribution from srw observation  term (Jo)
-!    pbc(*,18) contribution from rw observation  term (Jo)
-!    pbc(*,19) contribution from dw observation  term (Jo)
-!    pbc(*,20) contribution from sst observation  term (Jo)
-!    pbc(*,21) contribution from pw observation  term (Jo)
-!    pbc(*,22) contribution from pcp observation  term (Jo)
-!    pbc(*,23) contribution from oz observation  term (Jo)
-!    pbc(*,24) contribution from o3l observation  term (Jo)(not used)
-!    pbc(*,25) contribution from gps observation  term (Jo)
-!    pbc(*,26) contribution from rad observation  term (Jo)
-!    pbc(*,27) contribution from tcp observation  term (Jo)
-!    pbc(*,28) contribution from lag observation  term (Jo)
-!    pbc(*,39) contribution from colvk observation  term (Jo)
-!    pbc(*,30) contribution from aero observation  term (Jo)
-!    pbc(*,31) contribution from aerol observation  term (Jo)
-!    pbc(*,32) contribution from pm2_5 observation  term (Jo)
-!    pbc(*,33) contribution from gust observation  term (Jo)
-!    pbc(*,34) contribution from vis observation  term (Jo)
-!    pbc(*,35) contribution from pblh observation  term (Jo)
-!    pbc(*,36) contribution from wspd10m observation  term (Jo)
-!    pbc(*,37) contribution from td2m observation  term (Jo)
-!    pbc(*,38) contribution from mxtm observation  term (Jo)
-!    pbc(*,39) contribution from mitm observation  term (Jo)
-!    pbc(*,40) contribution from pmsl observation  term (Jo)
-!    pbc(*,41) contribution from howv observation  term (Jo)
-!    pbc(*,42) contribution from tcamt observation  term (Jo)
-!    pbc(*,43) contribution from lcbas observation  term (Jo)
+!    pbc(*,12) contribution from negative cldch constraint term (Jo)
 !
+!    Under polymorphism the following is the contents of pbs:
+!    linear terms => pbcjo(*,n0+1:n0+nobs_type),
+!       pbc  (*,n0+j) := pbcjo(*,j); for j=1,nobs_type
+!    where,
+!       pbcjo(*,   j) := sum( pbcjoi(*,j,1:nobs_bins) )
+!
+!    The original (wired) implementation of obs-types has
+!    the extra contents of pbc defined as:
+!
+!    pbc(*,13) contribution from ps observation  term (Jo)
+!    pbc(*,14) contribution from t observation  term (Jo)
+!    pbc(*,15) contribution from w observation  term (Jo)
+!    pbc(*,16) contribution from q observation  term (Jo)
+!    pbc(*,17) contribution from spd observation  term (Jo)
+!    pbc(*,18) contribution from srw observation  term (Jo)
+!    pbc(*,19) contribution from rw observation  term (Jo)
+!    pbc(*,20) contribution from dw observation  term (Jo)
+!    pbc(*,21) contribution from sst observation  term (Jo)
+!    pbc(*,22) contribution from pw observation  term (Jo)
+!    pbc(*,23) contribution from pcp observation  term (Jo)
+!    pbc(*,24) contribution from oz observation  term (Jo)
+!    pbc(*,25) contribution from o3l observation  term (Jo)(not used)
+!    pbc(*,26) contribution from gps observation  term (Jo)
+!    pbc(*,27) contribution from rad observation  term (Jo)
+!    pbc(*,28) contribution from tcp observation  term (Jo)
+!    pbc(*,29) contribution from lag observation  term (Jo)
+!    pbc(*,30) contribution from colvk observation  term (Jo)
+!    pbc(*,31) contribution from aero observation  term (Jo)
+!    pbc(*,32) contribution from aerol observation  term (Jo)
+!    pbc(*,33) contribution from pm2_5 observation  term (Jo)
+!    pbc(*,34) contribution from gust observation  term (Jo)
+!    pbc(*,35) contribution from vis observation  term (Jo)
+!    pbc(*,36) contribution from pblh observation  term (Jo)
+!    pbc(*,37) contribution from wspd10m observation  term (Jo)
+!    pbc(*,38) contribution from td2m observation  term (Jo)
+!    pbc(*,39) contribution from mxtm observation  term (Jo)
+!    pbc(*,40) contribution from mitm observation  term (Jo)
+!    pbc(*,41) contribution from pmsl observation  term (Jo)
+!    pbc(*,42) contribution from howv observation  term (Jo)
+!    pbc(*,43) contribution from tcamt observation  term (Jo)
+!    pbc(*,44) contribution from lcbas observation  term (Jo)
+!    pbc(*,45) contribution from cldch observation  term (Jo)
+!
+!    However, users should be aware that under full polymorphism 
+!    the obs-types are defined on the fly, that is to say, e.g.,that 
+!    when running the global option the code won''t know at 
+!    all of the obs-types not used in the global; the simplest
+!    example would be an experiment only using AOD; only AOD would
+!    be in the obs-type - nothing else; unlike the original obsmod
+!    setting.
+
 
 
   pstart=zero_quad
@@ -479,17 +512,23 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
         if(getindex(cvars2d,'lcbas')>0) &
         call stpliml(dval(1),sval(1),sges,pbc(1,11),nstep) 
         if(ii == 1)pj(11,1)=pbc(1,11)+pbc(ipenloc,11)
-     end if
 
-!       penalties for gust constraint
+!       penalties for cldch constraint
+        if(getindex(cvars2d,'cldch')>0) &
+        call stplimcldch(dval(1),sval(1),sges,pbc(1,12),nstep)
+        if(ii == 1)pj(12,1)=pbc(1,12)+pbc(ipenloc,12)
+     end if
 
      call setrad(sval(1))
 
 !    penalties for Jo
      pbcjoi=zero_quad 
+     call obsHeadBundle_create(yobs,nobs_bins)
      call stpjo(yobs,dval,dbias,sval,sbias,sges,pbcjoi,nstep,nobs_bins) 
+     call obsHeadBundle_destroy(yobs)
+
      pbcjo=zero_quad
-     do ibin=1,nobs_bins
+     do ibin=1,size(yobs)       ! == obs_bins
         do j=1,nobs_type 
            do i=1,nstep 
               pbcjo(i,j)=pbcjo(i,j)+pbcjoi(i,j,ibin) 
@@ -654,6 +693,8 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
             ' iteration terminated - probable error',i2,3e25.18)
 140  format('***WARNING***  expected penalty reduction small ',/,  &
             ' inner iteration terminated - probable convergence',i2,4e25.18)
+141  format('***WARNING***  reduced penalty not found in search direction',/,  &
+            ' - probable error',(5e25.18))
 
 !    Check for convergence in stepsize estimation
      istp_use=ii
@@ -664,7 +705,26 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
      end if
      if(stprat(ii) < 1.e-4_r_kind) exit stepsize
      if(change_dels)dels = one_tenth_quad*dels
-
+     if( ii == istp_iter)then
+        stp(ii)=outstp(ipenloc)
+        outpensave=outpen(ipenloc)
+        ifound=.false.
+        do i=1,nsteptot
+           if(outpen(i) < outpensave)then
+              stp(ii)=outstp(i)
+              outpensave=outpen(i)
+              ifound=.true.
+           end if
+        end do
+        if(ifound)exit stepsize
+        if(mype == 0)then
+           write(iout_iter,141)(outpen(i),i=1,nsteptot)
+        end if
+        end_iter = .true.
+        stp(ii)=zero_quad
+        istp_use=ii
+        exit stepsize
+     end if
   end do stepsize
   kprt=3
   if(kprt >= 2 .and. iter == 0)then
@@ -802,8 +862,9 @@ subroutine prnt_j(pj,ipen,kprt)
   ctype(9)='negative 10m wind ssp'
   ctype(10)='negative howv       '
   ctype(11)='negative lcbas      '
+  ctype(12)='negative cldch      '
   do ii=1,nobs_type
-    ctype(11+ii)=cobstype(ii)
+    ctype(12+ii)=cobstype(ii)
   end do
 
   zjt=zero_quad

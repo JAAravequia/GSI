@@ -14,6 +14,9 @@ module intallmod
 !   2009-08-13  lueken - update documentation
 !   2012-02-08  kleist - changes related to 4d-ensemble-var additions and consolidation of 
 !                   int... individual modules to one intjcmod
+!   2015-09-03  guo     - obsmod::yobs has been replaced with m_obsHeadBundle,
+!                         where yobs is created and destroyed when and where it
+!                         is needed.
 !
 ! subroutines included:
 !   sub intall
@@ -148,6 +151,7 @@ subroutine intall(sval,sbias,rval,rbias)
 !   2014-03-19  pondeca -  Add RHS calculation for wspd10m constraint
 !   2014-05-07  pondeca -  Add RHS calculation for howv constraint
 !   2014-06-17  carley/zhu  - Add RHS calculation for lcbas constraint
+!   2015-07-10  pondeca - Add RHS calculation for cldch constraint
 !
 !   input argument list:
 !     sval     - solution on grid
@@ -174,21 +178,23 @@ subroutine intall(sval,sbias,rval,rbias)
   use jcmod, only: ljcpdry,ljc4tlevs,ljcdfi
   use jfunc, only: l_foto,dhat_dt
   use jfunc, only: nrclen,nsclen,npclen,ntclen
-  use obsmod, only: yobs
   use intradmod, only: setrad
   use intjomod, only: intjo
   use bias_predictors, only : predictors,assignment(=)
   use state_vectors, only: allocate_state,deallocate_state
-  use intjcmod, only: intlimq,intlimg,intlimv,intlimp,intlimw10m,intlimhowv,&
+  use intjcmod, only: intlimq,intlimg,intlimv,intlimp,intlimw10m,intlimhowv,intlimcldch,&
       intliml,intjcpdry1,intjcpdry2,intjcdfi
   use timermod, only: timer_ini,timer_fnl
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: assignment(=)
   use state_vectors, only: svars2d
   use mpeu_util, only: getindex
-  use mpimod, only: mype
   use guess_grids, only: ntguessig,nfldsig
   use mpl_allreducemod, only: mpl_allreduce
+
+  use m_obsHeadBundle, only: obsHeadBundle
+  use m_obsHeadBundle, only: obsHeadBundle_create
+  use m_obsHeadBundle, only: obsHeadBundle_destroy
   implicit none
 
 ! Declare passed variables
@@ -202,6 +208,8 @@ subroutine intall(sval,sbias,rval,rbias)
 
 ! Declare local variables
   integer(i_kind) :: ibin,ii,it,i
+
+  type(obsHeadBundle),pointer,dimension(:):: yobs
 
 !******************************************************************************
 ! Initialize timer
@@ -220,18 +228,19 @@ subroutine intall(sval,sbias,rval,rbias)
 ! Compute RHS in physical space
   call setrad(sval(1))
   qpred_bin=zero_quad
+  call obsHeadBundle_create(yobs,nobs_bins)
 ! RHS for Jo
 !$omp parallel do  schedule(dynamic,1) private(ibin)
-  do ibin=1,nobs_bins
+  do ibin=1,size(yobs)  ! == nobs_bins
      call intjo(yobs(ibin),rval(ibin),qpred_bin(:,ibin),sval(ibin),sbias,ibin)
   end do
   qpred=zero_quad
-  do ibin=1,nobs_bins
+  do ibin=1,size(yobs)  ! == nobs_bins
      do i=1,nrclen
         qpred(i)=qpred(i)+qpred_bin(i,ibin)
      end do
   end do
-
+  call obsHeadBundle_destroy(yobs)
 
   if(.not.ltlint)then
 ! RHS for moisture constraint
@@ -266,20 +275,25 @@ subroutine intall(sval,sbias,rval,rbias)
 ! RHS for lcbas constraint
      if (getindex(svars2d,'lcbas')>0) call intliml(rval(1),sval(1))
 
+! RHS for cldch constraint
+     if (getindex(svars2d,'cldch')>0) call intlimcldch(rval(1),sval(1))
+
   end if
 
 ! RHS for dry ps constraint: part 1
   if(ljcpdry)then
+
     if (.not.ljc4tlevs) then
       call intjcpdry1(sval(ibin_anl),1,mass)
     else 
       call intjcpdry1(sval,nobs_bins,mass)
     end if
-  end if
 
-! Put reduces together to minimize wait time
-! First, use MPI to get global mean increment
-  call mpl_allreduce(2*nobs_bins,qpvals=mass)
+!   Put reduces together to minimize wait time
+!   First, use MPI to get global mean increment
+    call mpl_allreduce(2*nobs_bins,qpvals=mass)
+
+  end if
 
 ! Take care of background error for bias correction terms
 

@@ -37,11 +37,10 @@ subroutine compute_qvar3d
   use jfunc, only: varq,qoption,varcw,cwoption,clip_supersaturation
   use derivsmod, only: qsatg,qgues
   use control_vectors, only: cvars3d
-  use gridmod, only: lat2,lon2,nsig,lat1,lon1,nlat,nlon,regional
+  use gridmod, only: lat2,lon2,nsig,nlat,nlon
   use constants, only: zero,one,fv,r100,qmin
   use guess_grids, only: fact_tv,ntguessig,nfldsig,ges_tsen,ges_prsl,ges_qsat
   use mpeu_util, only: getindex
-  use mpimod, only: mype
   use gsi_metguess_mod,  only: gsi_metguess_get,gsi_metguess_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use general_commvars_mod, only: g3
@@ -65,6 +64,7 @@ subroutine compute_qvar3d
   real(r_kind),pointer,dimension(:,:,:):: ges_ql=>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_qi=>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_q =>NULL()
+  integer(i_kind):: maxvarq1
 
 
   nrf3_q=getindex(cvars3d,'q')
@@ -129,6 +129,7 @@ subroutine compute_qvar3d
   end do
 
   if (qoption==2) then
+     maxvarq1=min(size(varq,1),25)
      do k=1,nsig
         do j=1,lon2
            do i=1,lat2
@@ -137,8 +138,8 @@ subroutine compute_qvar3d
               np=n+1
               dn2=d-float(n)
               dn1=one-dn2
-              n=min0(max(1,n),25)
-              np=min0(max(1,np),25)
+              n=min0(max(1,n),maxvarq1)
+              np=min0(max(1,np),maxvarq1)
               dssv(i,j,k,nrf3_q)=(varq(n,k)*dn1 + varq(np,k)*dn2)*dssv(i,j,k,nrf3_q)
            end do
         end do

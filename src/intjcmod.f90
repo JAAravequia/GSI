@@ -12,6 +12,7 @@ module intjcmod
 !   2014-03-19  pondeca - add weak constraint subroutine for wspd10m
 !   2014-05-07  pondeca - add weak constraint subroutine for howv
 !   2014-06-17  carley/zhu - add intliml for lcbas + some cleanup
+!   2015-07-10  pondeca - add weak constraint subroutine for cldch
 !
 ! subroutines included:
 !
@@ -27,7 +28,7 @@ use gsi_bundlemod, only: gsi_bundle,gsi_bundlegetpointer
 implicit none
 
 PRIVATE
-PUBLIC intlimq,intlimg,intlimp,intlimv,intlimw10m,intlimhowv,intliml,intjcdfi,intjcpdry,intjcpdry1,intjcpdry2
+PUBLIC intlimq,intlimg,intlimp,intlimv,intlimw10m,intlimhowv,intliml,intlimcldch,intjcdfi,intjcpdry,intjcpdry1,intjcpdry2
 
 contains
 
@@ -65,9 +66,8 @@ subroutine intlimq(rval,sval,itbin)
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-  use gridmod, only: lat2,lon2,nsig,lat1,lon1
+  use gridmod, only: nsig,lat1,lon1
   use jfunc, only: factqmin,factqmax
-  use derivsmod, only: qgues,qsatg
   use gsi_metguess_mod, only: gsi_metguess_bundle 
   use guess_grids, only: ges_qsat
   implicit none
@@ -143,7 +143,7 @@ subroutine intlimg(rval,sval)
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-  use gridmod, only: lat2,lon2,nsig,lat1,lon1
+  use gridmod, only: lat1,lon1
   use jfunc, only: factg
   use derivsmod, only: ggues
   implicit none
@@ -205,7 +205,7 @@ subroutine intlimp(rval,sval)
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-  use gridmod, only: lat2,lon2,nsig,lat1,lon1
+  use gridmod, only: lat1,lon1
   use jfunc, only: factp
   use derivsmod, only: pgues
   implicit none
@@ -267,7 +267,7 @@ subroutine intlimv(rval,sval)
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-  use gridmod, only: lat2,lon2,nsig,lat1,lon1
+  use gridmod, only: lat1,lon1
   use jfunc, only: factv
   use derivsmod, only: vgues
   implicit none
@@ -331,7 +331,7 @@ subroutine intlimw10m(rval,sval)
 !$$$
   use kinds, only: r_kind,i_kind
   use constants, only: zero
-  use gridmod, only: lat2,lon2,nsig,lat1,lon1
+  use gridmod, only: lat1,lon1
   use jfunc, only: factw10m
   use derivsmod, only: w10mgues
   use gsi_bundlemod, only: gsi_bundle
@@ -397,7 +397,7 @@ subroutine intlimhowv(rval,sval)
 !$$$
   use kinds, only: r_kind,i_kind
   use constants, only: zero
-  use gridmod, only: lat2,lon2,nsig,lat1,lon1
+  use gridmod, only: lat1,lon1
   use jfunc, only: facthowv
   use derivsmod, only: howvgues
   use gsi_bundlemod, only: gsi_bundle
@@ -461,7 +461,7 @@ subroutine intliml(rval,sval)
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-  use gridmod, only: lat2,lon2,nsig,lat1,lon1
+  use gridmod, only: lat1,lon1
   use jfunc, only: factl
   use derivsmod, only: lgues
   implicit none
@@ -498,6 +498,72 @@ subroutine intliml(rval,sval)
 
   return
 end subroutine intliml
+
+subroutine intlimcldch(rval,sval)
+!$$$  subprogram documentation block
+!                .      .    .                                       .
+! subprogram:    intlimcldch
+!   prgmmr: pondeca           org: np23                date: 2014-05-07
+!
+! abstract: limit negative cloud ceiling height as a weak constraint
+!
+! program history log:
+!   2015-07-10  pondeca
+!
+!   input argument list:
+!     sg       - increment in grid space
+!
+!   output argument list:
+!     rg       - results from limiting operator                 
+!
+! remarks: see modules used
+!
+! attributes:
+!   language: f90
+!   machine:  ibm RS/6000 SP
+!
+!$$$
+  use kinds, only: r_kind,i_kind
+  use constants, only: zero
+  use gridmod, only: lat1,lon1
+  use jfunc, only: factcldch
+  use derivsmod, only: cldchgues
+  use gsi_bundlemod, only: gsi_bundle
+  use gsi_bundlemod, only: gsi_bundlegetpointer
+  implicit none
+
+! Declare passed variables
+  type(gsi_bundle),intent(in   ) :: sval
+  type(gsi_bundle),intent(inout) :: rval
+
+! Declare local variables
+  integer(i_kind) i,j,ier,istatus
+  real(r_kind) cldch
+  real(r_kind),pointer,dimension(:,:) :: sg=>NULL()
+  real(r_kind),pointer,dimension(:,:) :: rg=>NULL()
+
+  if (factcldch==zero) return
+
+! Retrieve pointers
+! Simply return if any pointer not found
+  ier=0
+  call gsi_bundlegetpointer(sval,'cldch',sg,istatus);ier=istatus+ier
+  call gsi_bundlegetpointer(rval,'cldch',rg,istatus);ier=istatus+ier
+  if(ier/=0)return
+ 
+  do j = 2,lon1+1
+     do i = 2,lat1+1
+        cldch = cldchgues(i,j) + sg(i,j)
+           
+!       Lower constraint limit
+        if (cldch < zero) then
+           rg(i,j) = rg(i,j) + factcldch*cldch/(cldchgues(i,j)*cldchgues(i,j))
+        end if
+     end do
+  end do
+
+  return
+end subroutine intlimcldch
 
 subroutine intjcpdry(rval,sval,nbins,pjc)
 !$$$  subprogram documentation block
@@ -677,7 +743,6 @@ subroutine intjcpdry1(sval,nbins,mass)
 !   2009-07-07  kleist
 !   2010-05-13  todling - update to use gsi_bundle
 !   2010-05-25  derber  - modify to minimize number of communications
-!   2010-08-18  hu      - added qpvals= to mpl_allreduce call
 !   2010-11-03  treadon - correct i,j loop limits for rq,rc update
 !   2011-11-01  eliu    - add handling for ql & qi increments and search directions
 !   2013-05-05  todling - separate dry mass from the rest (zero-diff change)
@@ -700,7 +765,6 @@ subroutine intjcpdry1(sval,nbins,mass)
   use mpimod, only: mype
   use gridmod, only: lat2,lon2,nsig,wgtlats,nlon,istart
   use guess_grids, only: ges_prsi,ntguessig
-  use jcmod, only: bamp_jcpdry
   use gsi_metguess_mod,  only: gsi_metguess_get
   implicit none
 
@@ -785,7 +849,6 @@ subroutine intjcpdry2(rval,nbins,mass,pjc)
 !   2009-07-07  kleist
 !   2010-05-13  todling - update to use gsi_bundle
 !   2010-05-25  derber  - modify to minimize number of communications
-!   2010-08-18  hu      - added qpvals= to mpl_allreduce call
 !   2010-11-03  treadon - correct i,j loop limits for rq,rc update
 !   2011-11-01  eliu    - add handling for ql & qi increments and search directions
 !   2013-05-05  todling - separate dry mass from the rest (zero-diff change)

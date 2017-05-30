@@ -13,6 +13,9 @@ module stpwmod
 !   2008-12-01  Todling - remove stpw_tl; add interface back
 !   2009-08-12  lueken - update documentation
 !   2010-05-13  todling - uniform interface across stp routines
+!   2014-04-12       su - add non linear qc from Purser's scheme
+!   2015-02-26       su - add njqc as an option to chose new non linear qc
+!   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !
 ! subroutines included:
 !   sub stpw
@@ -59,6 +62,7 @@ subroutine stpw(whead,rval,sval,out,sges,nstep)
 !   2008-06-02  safford - rm unused var and uses
 !   2008-12-03  todling - changed handling of ptr%time
 !   2010-05-13  todling - update to use gsi_bundle
+!   2015-12-21  yang    - Parrish's correction to the previous code in new varqc.
 !
 !   input argument list:
 !     whead
@@ -78,17 +82,20 @@ subroutine stpw(whead,rval,sval,out,sges,nstep)
 !
 !$$$
   use kinds, only: r_kind,i_kind,r_quad
-  use obsmod, only: w_ob_type
-  use qcmod, only: nlnqc_iter,varqc_iter
+  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc
   use constants, only: one,half,two,tiny_r_kind,cg_term,zero_quad,r3600
   use gridmod, only: latlon1n
   use jfunc, only: l_foto,xhat_dt,dhat_dt
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
+  use m_obsNode, only: obsNode
+  use m_wNode  , only: wNode
+  use m_wNode  , only: wNode_typecast
+  use m_wNode  , only: wNode_nextcast
   implicit none
 
 ! Declare passed variables
-  type(w_ob_type),pointer             ,intent(in):: whead
+  class(obsNode), pointer             ,intent(in):: whead
   integer(i_kind)                     ,intent(in):: nstep
   real(r_quad),dimension(max(1,nstep)),intent(inout):: out
   type(gsi_bundle)                    ,intent(in):: rval,sval
@@ -104,7 +111,7 @@ subroutine stpw(whead,rval,sval,out,sges,nstep)
   real(r_kind) uu,vv
   real(r_kind),dimension(max(1,nstep))::pen
   real(r_kind),pointer,dimension(:):: ru,rv,su,sv
-  type(w_ob_type), pointer :: wptr
+  type(wNode), pointer :: wptr
 
   out=zero_quad
 
@@ -124,7 +131,7 @@ subroutine stpw(whead,rval,sval,out,sges,nstep)
   endif
   if(ier/=0) return
 
-  wptr => whead
+  wptr => wNode_typecast(whead)
   do while (associated(wptr))
      if(wptr%luse)then
         if(nstep > 0)then
@@ -187,7 +194,7 @@ subroutine stpw(whead,rval,sval,out,sges,nstep)
 
 !  Modify penalty term if nonlinear QC
 
-        if (nlnqc_iter .and. wptr%pg > tiny_r_kind .and.  &
+        if (vqc .and. nlnqc_iter .and. wptr%pg > tiny_r_kind .and.  &
                              wptr%b  > tiny_r_kind) then
            w_pg=wptr%pg*varqc_iter
            cg_w=cg_term/wptr%b
@@ -198,13 +205,24 @@ subroutine stpw(whead,rval,sval,out,sges,nstep)
            end do
         endif
 
-        out(1) = out(1)+pen(1)*wptr%raterr2
-        do kk=2,nstep
-           out(kk) = out(kk)+(pen(kk)-pen(1))*wptr%raterr2
-        end do
+! Purser's scheme
+        if(njqc .and. wptr%jb  > tiny_r_kind .and. wptr%jb <10.0_r_kind) then
+           do kk=1,max(1,nstep)
+              pen(kk) = two*two*wptr%jb*log(cosh(sqrt(pen(kk)/(two*wptr%jb))))
+           enddo
+           out(1) = out(1)+pen(1)*wptr%raterr2
+           do kk=2,nstep
+              out(kk) = out(kk)+(pen(kk)-pen(1))*wptr%raterr2
+           end do
+        else
+           out(1) = out(1)+pen(1)*wptr%raterr2
+           do kk=2,nstep
+              out(kk) = out(kk)+(pen(kk)-pen(1))*wptr%raterr2
+           end do
+        endif
      end if
 
-     wptr => wptr%llpoint
+     wptr => wNode_nextcast(wptr)
 
   end do
   return

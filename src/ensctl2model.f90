@@ -28,7 +28,7 @@ use gsi_4dvar, only: l4dvar,l4densvar,nobs_bins,ibin_anl
 use hybrid_ensemble_parameters, only: uv_hyb_ens,dual_res,ntlevs_ens
 use hybrid_ensemble_parameters, only: nval_lenz_en,n_ens,q_hyb_ens
 use hybrid_ensemble_isotropic, only: ensemble_forward_model,ensemble_forward_model_dual_res
-use hybrid_ensemble_isotropic, only: sqrt_beta1mult,sqrt_beta2mult, &
+use hybrid_ensemble_isotropic, only: sqrt_beta_s_mult,sqrt_beta_e_mult, &
         ckgcov_a_en_new_factorization
 use balmod, only: strong_bk
 use gsi_bundlemod, only: gsi_bundlecreate
@@ -128,7 +128,7 @@ do jj=1,ntlevs_ens
 
 !  Apply square-root of ensemble error covariance
    call ckgcov_a_en_new_factorization(xhat%aens(jj,1)%values(:),ebundle)
-   call sqrt_beta2mult(ebundle)
+   call sqrt_beta_e_mult(ebundle)
 
 ! Initialize ensemble contribution to zero
    eval(jj)%values=zero
@@ -162,7 +162,7 @@ do jj=1,ntlevs_ens
    call gsi_bundlegetpointer (eval(jj),'oz'  ,sv_oz , istatus)
    call gsi_bundlegetpointer (eval(jj),'sst' ,sv_sst, istatus)
 
-   call sqrt_beta1mult(wbundle_c)
+   call sqrt_beta_s_mult(wbundle_c)
    if(dual_res) then
       call ensemble_forward_model_dual_res(wbundle_c,ebundle,jj)
    else
@@ -170,8 +170,9 @@ do jj=1,ntlevs_ens
    end if
 
    sv_q=zero
-   if(do_q_copy) call gsi_bundlegetvar ( wbundle_c, 'q', sv_q, istatus )
-   if(.not. do_tlnmc)then
+   if(do_q_copy) then
+      call gsi_bundlegetvar ( wbundle_c, 'q', sv_q, istatus )
+   else
 !     Get 3d pressure
       if(do_getprs_tl) call getprs_tl(cv_ps,cv_tv,sv_prse)
 
@@ -179,9 +180,6 @@ do jj=1,ntlevs_ens
       if(do_normal_rh_to_q) then
          call normal_rh_to_q(cv_rh,cv_tv,sv_prse,sv_q)
       end if
-
-!     Calculate sensible temperature
-      if(do_tv_to_tsen) call tv_to_tsen(cv_tv,sv_q,sv_tsen)
    end if
 
 !  Convert streamfunction and velocity potential to u,v
@@ -221,14 +219,10 @@ do jj=1,ntlevs_ens
 !     Get 3d pressure
       if(do_getprs_tl) call getprs_tl(sv_ps,sv_tv,sv_prse)
   
-!     Convert input normalized RH to q
-      if(do_normal_rh_to_q) then
-         call normal_rh_to_q(cv_rh,sv_tv,sv_prse,sv_q)
-      end if
-
-!     Calculate sensible temperature 
-      if(do_tv_to_tsen) call tv_to_tsen(sv_tv,sv_q,sv_tsen)
    end if
+
+!  Calculate sensible temperature 
+   if(do_tv_to_tsen) call tv_to_tsen(sv_tv,sv_q,sv_tsen)
 
    call gsi_bundledestroy(wbundle_c,istatus)
    if(istatus/=0) then

@@ -14,6 +14,9 @@ module intpsmod
 !   2009-08-13  lueken - update documentation
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - implemented obs adjoint test  
 !   2013-10-28  todling - rename p3d to prse
+!   2014-04-12       su - add non linear qc from Purser's scheme
+!   2015-02-26       Su - add njqc as an option to choose Purser's varqc
+!   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !
 ! subroutines included:
 !   sub intps_
@@ -26,6 +29,10 @@ module intpsmod
 !
 !$$$ end documentation block
 
+use m_obsNode, only: obsNode
+use m_psNode , only: psNode
+use m_psNode , only: psNode_typecast
+use m_psNode , only: psNode_nextcast
 implicit none
 
 PRIVATE
@@ -68,6 +75,8 @@ subroutine intps_(pshead,rval,sval)
 !   2010-05-13  todling  - update to use gsi_bundlemod; update interface
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - introduced ladtest_obs         
 !   2014-12-03  derber  - modify so that use of obsdiags can be turned off
+!   2015-12-21  yang    - Parrish's correction to the previous code in new varqc.
+
 !
 !   input argument list:
 !     pshead  - obs type pointer to obs structure
@@ -83,10 +92,9 @@ subroutine intps_(pshead,rval,sval)
 !
 !$$$
   use kinds, only: r_kind,i_kind
-  use constants, only: half,one,tiny_r_kind,cg_term,r3600
-  use obsmod, only: ps_ob_type,lsaveobsens,l_do_adjoint,luse_obsdiag
-  use qcmod, only: nlnqc_iter,varqc_iter
-  use gridmod, only: latlon1n1
+  use constants, only: half,one,tiny_r_kind,cg_term,r3600,two
+  use obsmod, only: lsaveobsens,l_do_adjoint,luse_obsdiag
+  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc
   use jfunc, only: jiter,l_foto,xhat_dt,dhat_dt
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -94,7 +102,7 @@ subroutine intps_(pshead,rval,sval)
   implicit none
 
 ! Declare passed variables
-  type(ps_ob_type),pointer,intent(in   ) :: pshead
+  class(obsNode), pointer, intent(in   ) :: pshead
   type(gsi_bundle),        intent(in   ) :: sval
   type(gsi_bundle),        intent(inout) :: rval
 
@@ -108,7 +116,7 @@ subroutine intps_(pshead,rval,sval)
   real(r_kind),pointer,dimension(:) :: dhat_dt_prse
   real(r_kind),pointer,dimension(:) :: sp
   real(r_kind),pointer,dimension(:) :: rp
-  type(ps_ob_type), pointer :: psptr
+  type(psNode), pointer :: psptr
 
 !  If no ps data return
   if(.not. associated(pshead))return
@@ -123,7 +131,8 @@ subroutine intps_(pshead,rval,sval)
   endif
   if(ier/=0)return
 
-  psptr => pshead
+  !psptr => pshead
+  psptr => psNode_typecast(pshead)
   do while (associated(psptr))
      j1=psptr%ij(1)
      j2=psptr%ij(2)
@@ -157,7 +166,7 @@ subroutine intps_(pshead,rval,sval)
         if (.not. lsaveobsens) then
            if( .not. ladtest_obs)   val=val-psptr%res
 !          gradient of nonlinear operator
-           if (nlnqc_iter .and. psptr%pg > tiny_r_kind .and.  &
+           if (vqc .and. nlnqc_iter .and. psptr%pg > tiny_r_kind .and.  &
                                 psptr%b  > tiny_r_kind) then
               ps_pg=psptr%pg*varqc_iter
               cg_ps=cg_term/psptr%b                           ! b is d in Enderson
@@ -166,11 +175,15 @@ subroutine intps_(pshead,rval,sval)
               p0=wgross/(wgross+exp(-half*psptr%err2*val**2)) ! p0 is P in Enderson
               val=val*(one-p0)                                ! term is Wqc in Enderson
            endif
-           if( ladtest_obs) then
-              grad = val
+           if (njqc .and. psptr%jb  > tiny_r_kind .and. psptr%jb <10.0_r_kind) then
+              val=sqrt(two*psptr%jb)*tanh(sqrt(psptr%err2)*val/sqrt(two*psptr%jb))
+              grad = val*psptr%raterr2*sqrt(psptr%err2)
            else
               grad = val*psptr%raterr2*psptr%err2
-           end if
+           endif
+           if( ladtest_obs) then
+              grad = val
+           endif
         endif
 
 !       Adjoint
@@ -190,7 +203,8 @@ subroutine intps_(pshead,rval,sval)
 
      endif
 
-     psptr => psptr%llpoint
+     !psptr => psptr%llpoint
+     psptr => psNode_nextcast(psptr)
   end do
   return
 end subroutine intps_

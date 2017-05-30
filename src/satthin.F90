@@ -35,6 +35,13 @@ module satthin
 !   2011-05-26  todling - add create_nst
 !   2012-01-31  hchuang - add read_nemsnst in sub getnst
 !   2012-03-05  akella  - remove create_nst,getnst and destroy_nst; nst fields now handled by gsi_nstcoupler
+!   2015-05-01  li      - modify to use single precision for the variables read from sfc files
+!   2016-08-18  li      - tic591: when use_readin_anl_sfcmask is true, 
+!                                 add read sili_anl from analysis grid/resolution sfc file (sfcf06_anl) 
+!                                 modify to use isli_anl
+!                                 determine sno2 with interpolate, accordingly 
+!                                 use the modified 2d interpolation (sfc_interpolate to intrp22)
+
 !
 ! Subroutines Included:
 !   sub makegvals      - set up for superob weighting
@@ -75,6 +82,8 @@ module satthin
 !   def sli_full       - 0=sea/1=land/2=ice mask
 !   def sst_full       - skin temperature
 !   def sno_full       - snow-ice mask
+!   def isli_anl       - snow/land/ice mask mask at analysis grid resolution
+!   def sno_anl        - snow-ice mask at analysis grid resolution
 !   def zs_full        - model terrain elevation
 !   def score_crit     - "best" quality obs score in thinning grid box
 !   def use_all        - parameter for turning satellite thinning algorithm off
@@ -85,7 +94,7 @@ module satthin
 !
 !$$$ end documentation block
 
-  use kinds, only: r_kind,i_kind,r_quad
+  use kinds, only: r_kind,i_kind,r_quad,r_single
   use mpeu_util, only: die, perr
   implicit none
 
@@ -103,6 +112,7 @@ module satthin
   public :: rlat_min,rlon_min,dlat_grid,dlon_grid,superp,super_val1,super_val
   public :: veg_type_full,soil_type_full,sfc_rough_full,sno_full,sst_full
   public :: fact10_full,isli_full,soil_moi_full,veg_frac_full,soil_temp_full
+  public :: isli_anl,sno_anl
   public :: checkob,score_crit,itxmax,finalcheck,zs_full_gfs,zs_full
 
   integer(i_kind) mlat,superp,maxthin,itxmax
@@ -110,17 +120,28 @@ module satthin
   integer(i_kind),dimension(0:51):: istart_val
   
   integer(i_kind),allocatable,dimension(:):: mlon
-  integer(i_kind),allocatable,dimension(:,:):: isli_full
   logical,allocatable,dimension(:)::icount
 
   real(r_kind) rlat_min,rlat_max,rlon_min,rlon_max,dlat_grid,dlon_grid
-  real(r_kind),allocatable,dimension(:):: glat,score_crit
-  real(r_kind),allocatable,dimension(:):: super_val,super_val1
-  real(r_kind),allocatable,dimension(:,:):: glon,hll,zs_full,zs_full_gfs
-  real(r_kind),allocatable,dimension(:,:):: veg_type_full,soil_type_full
-  real(r_kind),allocatable,dimension(:,:,:):: veg_frac_full,soil_temp_full
-  real(r_kind),allocatable,dimension(:,:,:):: soil_moi_full,sfc_rough_full
-  real(r_kind),allocatable,dimension(:,:,:):: sst_full,sno_full,fact10_full
+
+  real(r_kind),   allocatable, dimension(:)     :: glat,score_crit
+  real(r_kind),   allocatable, dimension(:)     :: super_val,super_val1
+  real(r_kind),   allocatable, dimension(:,:)   :: glon,hll
+  real(r_kind),   allocatable, dimension(:,:)   :: zs_full
+
+! declare the dummy variables of routine read_gfssfc
+  real(r_single), allocatable, dimension(:,:,:) :: fact10_full,sst_full,sno_full
+  real(r_single), allocatable, dimension(:,:)   :: veg_type_full
+  real(r_single), allocatable, dimension(:,:,:) :: veg_frac_full
+  real(r_single), allocatable, dimension(:,:)   :: soil_type_full
+  real(r_single), allocatable, dimension(:,:,:) :: soil_temp_full,soil_moi_full
+  integer(i_kind),allocatable, dimension(:,:)   :: isli_full
+  real(r_single), allocatable, dimension(:,:,:) :: sfc_rough_full
+  real(r_single), allocatable, dimension(:,:)   :: zs_full_gfs
+! declare the dummy variables of routine read_gfssfc_anl
+  integer(i_kind),allocatable, dimension(:,:)   :: isli_anl
+! declare local array sno_anl 
+  real(r_single),allocatable, dimension(:,:,:)   :: sno_anl
 
   logical use_all
 
@@ -401,7 +422,10 @@ contains
 !   2010-04-01  treadon - move strip to gridmod
 !   2013-10-19  todling - metguess now holds background
 !   2013-10-25  todling - reposition ltosi and others to commvars
+!   2014-10-05  todling - revisit bkg bias-tskin; rename bkg-bias-related interface
 !   2014-12-03  derber  - modify reading of surface fields
+!   2015-05-01  li      - modify to handle the single precision sfc fields read from sfc file
+!  
 !
 !   input argument list:
 !      mype        - current processor
@@ -416,22 +440,24 @@ contains
 !   machine:  ibm rs/6000 sp
 !
 !$$$
-    use kinds, only: r_single
+    use kinds, only: r_kind,r_single
     use gridmod, only:  nlat,nlon,lat2,lon2,lat1,lon1,jstart,&
        iglobal,itotsub,ijn,displs_g,regional,istart, &
-       rlats,rlons,nlat_sfc,nlon_sfc,rlats_sfc,rlons_sfc,strip, use_gfs_nemsio
+       rlats,rlons,nlat_sfc,nlon_sfc,rlats_sfc,rlons_sfc,strip,&
+       use_gfs_nemsio,use_readin_anl_sfcmask
     use general_commvars_mod, only: ltosi,ltosj
     use guess_grids, only: ntguessig,isli,sfct,sno,fact10, &
        nfldsfc,ntguessfc,soil_moi,soil_temp,veg_type,soil_type, &
-       veg_frac,sfc_rough,ifilesfc,nfldsig,isli2,sno2
-    use m_gsiBiases, only: bias_tskin,compress_bias,bias_hour
-    use jfunc, only: biascor
+       veg_frac,sfc_rough,nfldsig,isli2,sno2
+    use m_gsiBiases, only: bkg_bias_model,bias_hour
+    use jfunc, only: bcoption
 
-    use mpimod, only: mpi_comm_world,ierror,mpi_rtype
+    use mpimod, only: mpi_comm_world,ierror,mpi_rtype,mpi_rtype4
     use constants, only: zero,half,pi,two,one
-    use ncepgfs_io, only: read_gfssfc
-    use ncepnems_io, only: read_nemssfc,sfc_interpolate
+    use ncepgfs_io, only: read_gfssfc,read_gfssfc_anl
+    use ncepnems_io, only: read_nemssfc,intrp22,read_nemssfc_anl
     use sfcio_module, only: sfcio_realfill
+    use obsmod, only: lobserver
 
     use gsi_metguess_mod, only: gsi_metguess_bundle
     use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -444,13 +470,12 @@ contains
     real(r_kind),dimension(lat1*lon1):: zsm
     real(r_kind),dimension(itotsub):: work1
     real(r_kind),dimension(lat2,lon2):: work2
-    real(r_kind),dimension(lat2,lon2):: b_tskin
     real(r_kind),dimension(nlat,nlon):: bias
     real(r_kind),dimension(nlat):: ailoc
     real(r_kind),dimension(nlon):: ajloc
     real(r_kind),allocatable,dimension(:)::wlatx,slatx
     real(r_kind) :: dlon, missing
-    real(r_kind),allocatable,dimension(:,:)::dum
+    real(r_single),allocatable,dimension(:,:)::dum,work
     integer(i_kind) mm1,i,j,k,it,il,jl,jmax,idrt,istatus
     character(24) filename
 
@@ -477,12 +502,13 @@ contains
     allocate(sst_full(nlat_sfc,nlon_sfc,nfldsfc),sno_full(nlat_sfc,nlon_sfc,nfldsfc))
     allocate(zs_full(nlat,nlon))
     allocate(sfc_rough_full(nlat_sfc,nlon_sfc,nfldsfc))
+    allocate(isli_anl(nlat,nlon))
+    allocate(sno_anl(nlat,nlon,nfldsfc))
 
-    if(use_sfc_any .or. mype_io)then
-       allocate(soil_moi_full(nlat_sfc,nlon_sfc,nfldsfc),soil_temp_full(nlat_sfc,nlon_sfc,nfldsfc))
-       allocate(veg_frac_full(nlat_sfc,nlon_sfc,nfldsfc),soil_type_full(nlat_sfc,nlon_sfc))
-       allocate(veg_type_full(nlat_sfc,nlon_sfc))
-    end if
+    allocate(soil_moi_full(nlat_sfc,nlon_sfc,nfldsfc),soil_temp_full(nlat_sfc,nlon_sfc,nfldsfc))
+    allocate(veg_frac_full(nlat_sfc,nlon_sfc,nfldsfc),soil_type_full(nlat_sfc,nlon_sfc))
+    allocate(veg_type_full(nlat_sfc,nlon_sfc))
+
     do j=1,lon1*lat1
        zsm(j)=zero
     end do
@@ -512,71 +538,59 @@ contains
           deallocate(slatx,wlatx)
        end if
 
-
        allocate(zs_full_gfs(nlat_sfc,nlon_sfc))
        if ( use_gfs_nemsio ) then
-          if(use_sfc)then
-             do it=1,nfldsfc
-                write(filename,200)ifilesfc(it)
-200             format('sfcf',i2.2)
-                call read_nemssfc(filename,mype,&
-                   fact10_full(:,:,it),sst_full(:,:,it),sno_full(:,:,it), &
-                   veg_type_full,veg_frac_full(:,:,it), &
-                   soil_type_full,soil_temp_full(:,:,it),&
-                   soil_moi_full(:,:,it),isli_full,sfc_rough_full(:,:,it),&
-                   zs_full_gfs)
-             end do
-          else
-             allocate(dum(nlat_sfc,nlon_sfc))
-             do it=1,nfldsfc
-                write(filename,200)ifilesfc(it)
-                call read_nemssfc(filename,mype,&
-                   fact10_full(:,:,it),sst_full(:,:,it),sno_full(:,:,it), &
-                   dum,dum,dum,dum,dum,isli_full,sfc_rough_full(:,:,it),&
-                   zs_full_gfs)
-             end do
-             deallocate(dum)
-          end if
+          call read_nemssfc(mype_io, &
+             sst_full,soil_moi_full,sno_full,soil_temp_full, &
+             veg_frac_full,fact10_full,sfc_rough_full, &
+             veg_type_full,soil_type_full,zs_full_gfs,isli_full,use_sfc_any)
+
+          if ( use_readin_anl_sfcmask ) then
+             call read_nemssfc_anl(mype_io,isli_anl)
+          endif
+
        else
-          call read_gfssfc(mype_io,mype, &
-             fact10_full,sst_full,sno_full, &
-             veg_type_full,veg_frac_full,soil_type_full,soil_temp_full,&
-             soil_moi_full,isli_full,sfc_rough_full,zs_full_gfs,use_sfc_any)
-          if(.not. use_sfc .and. (use_sfc_any .or. mype_io))then
-             deallocate(soil_moi_full,soil_temp_full)
-             deallocate(veg_frac_full,soil_type_full)
-             deallocate(veg_type_full)
-          end if
+          call read_gfssfc (mype_io, &
+             sst_full,soil_moi_full,sno_full,soil_temp_full, &
+             veg_frac_full,fact10_full,sfc_rough_full, &
+             veg_type_full,soil_type_full,zs_full_gfs,isli_full,use_sfc_any)
+
+          if ( use_readin_anl_sfcmask ) then
+             call read_gfssfc_anl(mype_io,isli_anl) 
+          endif
+
+       end if
+
+       if(.not. use_sfc)then
+          deallocate(soil_moi_full,soil_temp_full)
+          deallocate(veg_frac_full,soil_type_full)
+          deallocate(veg_type_full)
        end if
  
-       if (biascor > zero) then
-          if (mype==0) write(6,*)'GETSFC:   add bias correction to guess field ',&
-                                      filename
-          call compress_bias(b_tskin,bias_tskin,bias_hour)
-          do j=1,lon2
-             do i=1,lat2
-                work2(i,j)=b_tskin(i,j)
-             end do
-          end do
-          call strip(work2,zsm)
+       if (bcoption>0) then
+          if (mype==0) write(6,*)'GETSFC:   add bias correction to guess field ', trim(filename)
  
-          call mpi_allgatherv(zsm,ijn(mm1),mpi_rtype,&
-             work1,ijn,displs_g,mpi_rtype,&
-             mpi_comm_world,ierror)
- 
-          do k=1,iglobal
-             i=ltosi(k) ; j=ltosj(k)
-             bias(i,j)=nint(work1(k))
-          end do
-!  Need to add interpolation of bias to nlon_sfc, nlat_sfc grid if
+!         Correct Tskin over the full grid
           if(nlon == nlon_sfc .and. nlat == nlat_sfc)then
-             do it=1,nfldsfc
-                do j=1,nlon
-                   do i=1,nlat
-                      sst_full(i,j,it)=sst_full(i,j,it)+bias(i,j)
+             call bkg_bias_model(work2,'sst',bias_hour,ierror)
+             if (ierror==0) then ! successful application of bkg bias model ...
+                call strip(work2,zsm)
+                call mpi_allgatherv(zsm,ijn(mm1),mpi_rtype,&
+                   work1,ijn,displs_g,mpi_rtype,&
+                   mpi_comm_world,ierror)
+ 
+                do k=1,iglobal
+                   i=ltosi(k) ; j=ltosj(k)
+                   bias(i,j)=nint(work1(k))
+                end do
+                do it=1,nfldsfc
+                   do j=1,nlon
+                      do i=1,nlat
+                         sst_full(i,j,it)=sst_full(i,j,it)+bias(i,j)
+                      end do
                    end do
                 end do
-             end do
+             end if  ! check for successful application of bkg bias model
           else
              write(6,*)'satthin bias correction - incompatible surface resolution',&
                  nlon,nlon_sfc,nlat,nlat_sfc
@@ -584,7 +598,7 @@ contains
           end if
        end if
 
-    else
+    else                   ! for regional 
 #endif /* HAVE_ESMF */
 
        it=ntguessfc
@@ -715,7 +729,7 @@ contains
        end if
 
 #ifndef HAVE_ESMF
-    end if
+    end if                        ! if (.not. regional) then
 #endif /* HAVE_ESMF */
 
 ! Now stuff that isn't model dependent
@@ -723,6 +737,9 @@ contains
     it=ntguessig
     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'z',ges_z,istatus)
     if (istatus==0) then
+       do j=1,lon1*lat1
+          zsm(j)=zero
+       end do
        call strip(ges_z,zsm)
        call mpi_allgatherv(zsm,ijn(mm1),mpi_rtype,&
           work1,ijn,displs_g,mpi_rtype,&
@@ -743,12 +760,16 @@ contains
              zs_full_gfs = zs_full
           else
              allocate(dum(nlat_sfc,nlon_sfc))
-             call sfc_interpolate(zs_full,nlon,nlat,dum,nlon_sfc,nlat_sfc)
+             allocate(work(nlat,nlon))
+             work = zs_full
+             call intrp22(work,rlons,rlats,nlon,nlat, &
+                          dum, rlons_sfc,rlats_sfc,nlon_sfc,nlat_sfc)
              zs_full_gfs = dum
              deallocate(dum)
+             deallocate(work)
           endif
        endif
-    endif
+    endif                 
 
 !   find subdomain for isli2
     if (nlon == nlon_sfc .and. nlat == nlat_sfc) then
@@ -765,33 +786,60 @@ contains
           end do
        end do
     else
-       ailoc=rlats
-       ajloc=rlons
-       call grdcrd(ailoc,nlat,rlats_sfc,nlat_sfc,1)
-       call grdcrd(ajloc,nlon,rlons_sfc,nlon_sfc,1)
-       do j=1,lon2
-          jl=j+jstart(mm1)-2
-          jl=min0(max0(1,jl),nlon)
-          jl=nint(ajloc(jl))
-          jl=min0(max0(1,jl),nlon_sfc)
-          do i=1,lat2
-             il=i+istart(mm1)-2
-             il=min0(max0(1,il),nlat)
-             il=nint(ailoc(il))
-             il=min0(max0(1,il),nlat_sfc)
-             isli2(i,j)=isli_full(il,jl)
-             do k=1,nfldsfc
-                sno2(i,j,k) =sno_full(il,jl,k)
+
+       if ( use_readin_anl_sfcmask ) then
+          do k = 1, nfldsfc
+             call intrp22(sno_full(:,:,k),rlons_sfc,rlats_sfc,nlon_sfc,nlat_sfc, &
+                          sno_anl (:,:,k),rlons,rlats,nlon,nlat)
+          enddo
+          do j=1,lon2
+             jl=j+jstart(mm1)-2
+             jl=min0(max0(1,jl),nlon)
+             do i=1,lat2
+                il=i+istart(mm1)-2
+                il=min0(max0(1,il),nlat)
+                isli2(i,j)=isli_anl(il,jl)
+                do k=1,nfldsfc
+                   sno2(i,j,k)=sno_anl(il,jl,k)
+                   if ( isli2(i,j) == 0 ) then
+                      sno2(i,j,k) = zero
+                   endif
+                end do
              end do
           end do
-       end do
+
+       else
+
+          ailoc=rlats
+          ajloc=rlons
+          call grdcrd(ailoc,nlat,rlats_sfc,nlat_sfc,1)
+          call grdcrd(ajloc,nlon,rlons_sfc,nlon_sfc,1)
+          do j=1,lon2
+             jl=j+jstart(mm1)-2
+             jl=min0(max0(1,jl),nlon)
+             jl=nint(ajloc(jl))
+             jl=min0(max0(1,jl),nlon_sfc)
+             do i=1,lat2
+                il=i+istart(mm1)-2
+                il=min0(max0(1,il),nlat)
+                il=nint(ailoc(il))
+                il=min0(max0(1,il),nlat_sfc)
+                isli2(i,j)=isli_full(il,jl)
+                do k=1,nfldsfc
+                   sno2(i,j,k) =sno_full(il,jl,k)
+                end do
+             end do
+          end do
+       end if
 
     end if
-    if(allocated(veg_frac)) deallocate(veg_frac)
-    if(allocated(veg_type)) deallocate(veg_type)
-    if(allocated(soil_type)) deallocate(soil_type)
-    if(allocated(soil_moi)) deallocate(soil_moi)
-    if(allocated(sfc_rough)) deallocate(sfc_rough)
+    if (.not.lobserver) then
+       if(allocated(veg_frac)) deallocate(veg_frac)
+       if(allocated(veg_type)) deallocate(veg_type)
+       if(allocated(soil_type)) deallocate(soil_type)
+       if(allocated(soil_moi)) deallocate(soil_moi)
+       if(allocated(sfc_rough)) deallocate(sfc_rough)
+    endif
     return
 
   end subroutine getsfc

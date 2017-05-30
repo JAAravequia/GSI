@@ -27,7 +27,7 @@ use hybrid_ensemble_parameters, only: uv_hyb_ens,dual_res,nval_lenz_en,ntlevs_en
 use hybrid_ensemble_isotropic, only: ensemble_forward_model_ad
 use hybrid_ensemble_isotropic, only: ckgcov_a_en_new_factorization_ad
 use hybrid_ensemble_isotropic, only: ensemble_forward_model_ad_dual_res
-use hybrid_ensemble_isotropic, only: sqrt_beta1mult,sqrt_beta2mult
+use hybrid_ensemble_isotropic, only: sqrt_beta_s_mult,sqrt_beta_e_mult
 use balmod, only: strong_bk_ad
 use gsi_bundlemod, only: gsi_bundlecreate
 use gsi_bundlemod, only: gsi_bundle
@@ -157,29 +157,15 @@ do jj=1,ntlevs_ens
    call gsi_bundlegetpointer (eval(jj),'oz'  ,rv_oz , istatus)
    call gsi_bundlegetpointer (eval(jj),'sst' ,rv_sst, istatus)
 
-
-!  Calculate sensible temperature
+!  Adjoint of consistency for sensible temperature, calculate sensible temperature
    if(do_tv_to_tsen_ad) call tv_to_tsen_ad(rv_tv,rv_q,rv_tsen)
-
-!  Adjoint to convert ps to 3-d pressure
-   if(do_getprs_ad) call getprs_ad(rv_ps,rv_tv,rv_prse)
 
 !  If calling TLNMC, already have u,v (so set last argument to true)
    if(do_tlnmc) then
 
-!     Adjoint of consistency for 3d pressure and sensible temperature
-!     Calculate sensible temperature
-      if(do_tv_to_tsen_ad) call tv_to_tsen_ad(rv_tv,rv_q,rv_tsen)
-
-!     Adjoint of convert input normalized RH to q to add contribution of moisture
-!     to t, p , and normalized rh
-      if(do_normal_rh_to_q_ad) then
-         call normal_rh_to_q_ad(cv_rh,rv_tv,rv_prse,rv_q)
-      end if
-
-
 !     Adjoint to convert ps to 3-d pressure
       if(do_getprs_ad) call getprs_ad(rv_ps,rv_tv,rv_prse)
+      rv_prse=zero
 
 !     Adjoint of strong_bk
       call strong_bk_ad(rv_u,rv_v,rv_ps,rv_tv,.true.)
@@ -212,20 +198,17 @@ do jj=1,ntlevs_ens
       end if
    end if
 
-   if(.not. do_tlnmc)then
-!     Calculate sensible temperature
-      if(do_tv_to_tsen_ad) call tv_to_tsen_ad(cv_tv,rv_q,rv_tsen)
+   if(do_q_copy) then
+      call gsi_bundleputvar (wbundle_c, 'q', rv_q, istatus )
+   else
 
 !     Adjoint of convert input normalized RH to q to add contribution of moisture
 !     to t, p , and normalized rh
-      if(do_normal_rh_to_q_ad) then
-         call normal_rh_to_q_ad(cv_rh,cv_tv,rv_prse,rv_q)
-      end if
+      if(do_normal_rh_to_q_ad) call normal_rh_to_q_ad(cv_rh,cv_tv,rv_prse,rv_q)
 
 !     Adjoint to convert ps to 3-d pressure
       if(do_getprs_ad) call getprs_ad(cv_ps,cv_tv,rv_prse)
    end if
-   if(do_q_copy) call gsi_bundleputvar (wbundle_c, 'q', rv_q, istatus )
 
    do nn=1,n_ens
       ebundle(nn)%values=grad%aens(jj,nn)%values
@@ -235,10 +218,10 @@ do jj=1,ntlevs_ens
    else
       call ensemble_forward_model_ad(wbundle_c,ebundle,jj)
    end if
-   call sqrt_beta1mult(wbundle_c)
+   call sqrt_beta_s_mult(wbundle_c)
 
 !  Apply square-root of ensemble error covariance
-   call sqrt_beta2mult(ebundle)
+   call sqrt_beta_e_mult(ebundle)
    call ckgcov_a_en_new_factorization_ad(grade,ebundle)
 
    call gsi_bundledestroy(wbundle_c,istatus)

@@ -22,6 +22,8 @@ module buddycheck_mod
 !
 !$$$ end documentation block
 
+  use kinds, only: r_kind,i_kind,r_double
+
   implicit none
 
 ! set default to private
@@ -46,10 +48,7 @@ subroutine buddy_check_t(is,data,luse,mype,nele,nobs,muse,buddyuse)
 
 ! !USES:
 
-  use kinds, only: r_kind,i_kind
-  use gsi_4dvar, only: nobs_bins,hr_obsbin
-  use gridmod, only: nsig,twodvar_regional,regional
-  use jfunc, only: jiter
+  use gridmod, only: nsig,regional
   use guess_grids, only: nfldsig, hrdifsig,ges_lnprsl,&
        geop_hgtl,ges_tsen,pt_ll
   use constants, only: zero,one,r10
@@ -138,7 +137,6 @@ subroutine buddy_check_t(is,data,luse,mype,nele,nobs,muse,buddyuse)
 
   real(r_kind),dimension(nsig):: prsltmp2
 
-  integer(i_kind) ii
   integer(i_kind) mm1
   integer(i_kind) itype,msges,iqt,i
   integer(i_kind) ier,ilon,ilat,ipres,itob,id,itime,ikx,iqc,iptrb,icat,ipof,ivvlc,idx
@@ -314,7 +312,7 @@ subroutine buddy_check_t(is,data,luse,mype,nele,nobs,muse,buddyuse)
      vals(i,2)=data(ilate,i)
      vals(i,3)=data(ilone,i)
      vals(i,4)=data(iobshgt,i)
-     vals(i,5)=data(iuse,ii)
+     vals(i,5)=data(iuse,i)
      vals(i,6)=data(id,i)
      vals(i,7)=dtime-time_offset 
 ! End of loop over observations
@@ -323,13 +321,15 @@ subroutine buddy_check_t(is,data,luse,mype,nele,nobs,muse,buddyuse)
   call final_vars_
   ! - Now call buddy check routine
   range = 108000.0_r_kind ! Radius within which we check for an ob's buddies (units are m)
-  difmax= 8.0_r_kind      ! Max difference allowed relative to buddies
+!
+! 8/31/2015: adjust the difmax value based on case: 2/29/2015 03Z. 
+!  difmax= 7.0_r_kind      ! the final codeMax difference allowed relative to buddies
+!for being consistent, difmax=8, but late will be changed.
+   difmax= 8.0_r_kind      ! Max difference allowed relative to buddies
+
  
   call execute_buddy_check(mype,is,nobs,vals,range,difmax,buddyuse)
-
-
 ! End of routine
-
   return
   contains
 
@@ -470,10 +470,8 @@ end subroutine buddy_check_t
 subroutine execute_buddy_check(mype,is,numobs,pevals,range,difmax,pebuddyuse)
 
 ! !USES:
-  use jfunc, only: jiter,last,jiterstart
+  use jfunc, only: jiter
   use mpimod, only: ierror,mpi_rtype,mpi_itype,mpi_sum,mpi_comm_world
-  use kinds, only: r_kind,i_kind,r_double
-  use gridmod, only: nsig,twodvar_regional,regional
   use constants, only: zero, one,one_tenth,r100,tiny_r_kind
   use obsmod, only: obs_sub_comm,bmiss,dtype
   use qcmod, only: buddydiag_save
@@ -828,7 +826,6 @@ subroutine execute_buddy_check(mype,is,numobs,pevals,range,difmax,pebuddyuse)
   !$$$ end documentation block
 
   use constants, only: rearth,deg2rad,one,two
-  use kinds, only: r_kind
   implicit none
   real(r_kind),intent (in) :: inlat1,inlon1,inlat2,inlon2
   real(r_kind) :: lat1,lon1,lat2,lon2

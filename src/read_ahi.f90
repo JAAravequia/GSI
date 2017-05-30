@@ -19,7 +19,9 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
 !   2014-12-12 zaizhong done the first version of this subroutine
 !   2014-12-23 zaizhong cleaned up and finalized with the proxy data
 !   2015-03-23 zaizhong cleaned up and finalized with the real sample data
-
+!   2015-09-17 Thomas   add l4densvar and thin4d to data selection procedure
+!   2016-03-11 j. guo   Fixed {dlat,dlon}_earth_deg in the obs data stream
+!
 !   input argument list:
 !     mype     - mpi task id
 !     val_img  - weighting factor applied to super obs
@@ -49,9 +51,10 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
       checkob,finalcheck,score_crit
   use gridmod, only: diagnostic_reg,regional,nlat,nlon,txy2ll,tll2xy,rlats,rlons
   use constants, only: deg2rad,zero,one,rad2deg,r60inv,r60
-  use radinfo, only: iuse_rad,jpch_rad,nusis,nst_gsi,nstinfo,fac_dtl,fac_tsl
-  use gsi_4dvar, only: l4dvar,iwinbgn,winlen
+  use radinfo, only: iuse_rad,jpch_rad,nusis
+  use gsi_4dvar, only: l4dvar,iwinbgn,winlen,l4densvar,thin4d
   use deter_sfc_mod, only: deter_sfc
+  use gsi_nstcouplermod, only: nst_gsi,nstinfo
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
   use file_utility, only : get_lun     
   use mpimod, only: npe
@@ -97,6 +100,7 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
   real(r_kind) dg2ew,sstime,tdiff,t4dv,sfcr
   real(r_kind) dlon,dlat,timedif,crit1,dist1
   real(r_kind) dlon_earth,dlat_earth
+  real(r_kind) dlon_earth_deg,dlat_earth_deg
   real(r_kind) pred
   real(r_kind),dimension(0:3):: sfcpct
   real(r_kind),dimension(0:3):: ts
@@ -221,11 +225,11 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
         idate5(5) = hdrh8arr(6)     ! minutes
         call w3fs21(idate5,nmind)
         t4dv = (real((nmind-iwinbgn),r_kind) + real(hdrh8arr(7),r_kind)*r60inv)*r60inv
-        if (l4dvar) then
+        sstime = real(nmind,r_kind) + real(hdrh8arr(7),r_kind)*r60inv
+        tdiff=(sstime-gstime)*r60inv
+        if (l4dvar.or.l4densvar) then
            if (t4dv<zero .OR. t4dv>winlen) cycle read_loop
         else
-           sstime = real(nmind,r_kind) + real(hdrh8arr(7),r_kind)*r60inv
-           tdiff=(sstime-gstime)*r60inv
            if (abs(tdiff)>twind) cycle read_loop
         endif
 
@@ -233,6 +237,8 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
         if (hdrh8arr(ilonh)>=r360) hdrh8arr(ilonh)=hdrh8arr(ilonh)-r360
         if (hdrh8arr(ilonh)< zero) hdrh8arr(ilonh)=hdrh8arr(ilonh)+r360
 
+        dlon_earth_deg = hdrh8arr(ilonh)
+        dlat_earth_deg = hdrh8arr(ilath)
         dlon_earth=hdrh8arr(ilonh)*deg2rad
         dlat_earth=hdrh8arr(ilath)*deg2rad
 
@@ -263,7 +269,7 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
            call grdcrd1(dlon,rlons,nlon,1)
         endif
 
-        if (l4dvar) then
+        if (thin4d) then
            crit1=0.01_r_kind
         else
            timedif = 6.0_r_kind*abs(tdiff)        ! range:  0 to 18
@@ -386,8 +392,8 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
         data_all(27,itx)= idomsfc + 0.001_r_kind      ! dominate surface type
         data_all(28,itx)= sfcr                        ! surface roughness
         data_all(29,itx)= ff10                        ! ten meter wind factor
-        data_all(30,itx)= dlon_earth*rad2deg          ! earth relative longitude (degrees)
-        data_all(31,itx)= dlat_earth*rad2deg          ! earth relative latitude (degrees)
+        data_all(30,itx)= dlon_earth_deg              ! earth relative longitude (degrees)
+        data_all(31,itx)= dlat_earth_deg              ! earth relative latitude (degrees)
         data_all(32,itx) = val_img
         data_all(33,itx) = itt
 

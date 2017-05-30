@@ -120,6 +120,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !   2014-02-28  sienkiewicz - added code for option aircraft_t_bc_ext for external aircraft bias table
 !   2014-03-19  pondeca - add 10m wind speed
 !   2014-04-10  pondeca - add td2m,mxtm,mitm,pmsl
+!   2014-04-15  Su      - read errtable and non linear qc b table
 !   2014-05-07  pondeca - add significant wave height (howv)
 !   2014-06-16  carley/zhu - add tcamt and lcbas
 !   2014-06-26  carley - simplify call to apply_hilbertcurve 
@@ -128,7 +129,14 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !   2015-02-23  Rancic/Thomas - add thin4d to time window logical
 !   2015-03-23  Su      -fix array size with maximum message and subset  number from fixed number to
 !                        dynamic allocated array
+!   2015-07-10  pondeca - add cloud ceiling height (cldch)
+!   2015-10-01  guo     - consolidate use of ob location (in deg)
+!   2016-02-09  Sienkiewicz - explicit KX definition for drifting buoys (formerly ID'd by subtype 562)
+!   2016-02-10  s.liu  - thin new VAD wind in time level
+!   2016-03-15  Su      - modified the code so that the program won't stop when no subtype
+!                         is found in non linear qc error tables and b table
 !
+
 !   input argument list:
 !     infile   - unit from which to read BUFR data
 !     obstype  - observation type to process
@@ -160,15 +168,24 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
       ncmiter,ncgroup,ncnumgrp,icuse,ictype,icsubtype,ioctype, &
       ithin_conv,rmesh_conv,pmesh_conv, &
       id_bias_ps,id_bias_t,conv_bias_ps,conv_bias_t,use_prepb_satwnd
+  use convinfo, only: id_drifter
 
   use obsmod, only: iadate,oberrflg,perturb_obs,perturb_fact,ran01dom,hilbert_curve
   use obsmod, only: blacklst,offtime_data,bmiss,ext_sonde
-  use radinfo,only: nst_gsi,nstinfo
   use aircraftinfo, only: aircraft_t_bc,aircraft_t_bc_pof,ntail,taillist,idx_tail,npredt,predt, &
       aircraft_t_bc_ext,ntail_update,max_tail,nsort,itail_sort,idx_sort,timelist
   use converr,only: etabl
+  use converr_ps,only: etabl_ps,isuble_ps,maxsub_ps
+  use converr_q,only: etabl_q,isuble_q,maxsub_q
+  use converr_t,only: etabl_t,isuble_t,maxsub_t
+  use converr_uv,only: etabl_uv,isuble_uv,maxsub_uv
+  use converr_pw,only: etabl_pw,isuble_pw,maxsub_pw
+  use convb_ps,only: btabl_ps
+  use convb_q,only: btabl_q
+  use convb_t,only: btabl_t
+  use convb_uv,only: btabl_uv
   use gsi_4dvar, only: l4dvar,l4densvar,time_4dvar,winlen,thin4d
-  use qcmod, only: errormod,noiqc,newvad
+  use qcmod, only: errormod,noiqc,newvad,njqc
   use convthin, only: make3grids,map3grids,del3grids,use_all
   use blacklist, only : blacklist_read,blacklist_destroy
   use blacklist, only : blkstns,blkkx,ibcnt
@@ -179,12 +196,13 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   use ndfdgrids,only: init_ndfdgrid,destroy_ndfdgrid,relocsfcob,adjust_error
   use jfunc, only: tsensible
   use deter_sfc_mod, only: deter_sfc_type,deter_sfc2
+  use gsi_nstcouplermod, only: nst_gsi,nstinfo
   use gsi_nstcouplermod, only: gsi_nstcoupler_deter
   use aircraftobsqc, only: init_aircraft_rjlists,get_aircraft_usagerj,&
                            destroy_aircraft_rjlists
   use adjust_cloudobs_mod, only: adjust_convcldobs,adjust_goescldobs
   use mpimod, only: npe
-  use rapidrefresh_cldsurf_mod, only: i_gsdsfc_uselist
+  use rapidrefresh_cldsurf_mod, only: i_gsdsfc_uselist,i_gsdqc
 
   implicit none
 
@@ -217,9 +235,11 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   real(r_kind),parameter:: r0_01_bmiss=r0_01*bmiss
   character(80),parameter:: cspval= '88888888'
 
+!  integer(i_kind),parameter:: mxtb=5000000
+!  integer(i_kind),parameter:: nmsgmax=100000 ! max message count
 
 ! Declare local variables
-  logical tob,qob,uvob,spdob,sstob,pwob,psob,gustob,visob,tdob,mxtmob,mitmob,pmob,howvob
+  logical tob,qob,uvob,spdob,sstob,pwob,psob,gustob,visob,tdob,mxtmob,mitmob,pmob,howvob,cldchob
   logical metarcldobs,goesctpobs,tcamtob,lcbasob
   logical outside,driftl,convobs,inflate_error
   logical sfctype
@@ -230,7 +250,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   logical,allocatable,dimension(:,:):: lmsg           ! set true when convinfo entry id found in a message
 
   character(40) drift,hdstr,qcstr,oestr,sststr,satqcstr,levstr,hdstr2
-  character(40) metarcldstr,goescldstr,metarvisstr,metarwthstr,cldseqstr,cld2seqstr
+  character(40) metarcldstr,goescldstr,metarvisstr,metarwthstr,cldseqstr,cld2seqstr,cldceilhstr
   character(40) maxtmintstr,owavestr
   character(80) obstr
   character(10) date
@@ -252,14 +272,14 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   integer(i_kind) ihh,idd,idate,iret,im,iy,k,levs
   integer(i_kind) metarcldlevs,metarwthlevs,cldseqlevs,cld2seqlevs
   integer(i_kind) kx,kx0,nreal,nchanl,ilat,ilon,ithin
-  integer(i_kind) cat,zqm,pwq,sstq,qm,lim_qm,lim_zqm,gustqm,visqm,tdqm,mxtmqm,mitmqm,howvqm
+  integer(i_kind) cat,zqm,pwq,sstq,qm,lim_qm,lim_zqm,gustqm,visqm,tdqm,mxtmqm,mitmqm,howvqm,cldchqm
   integer(i_kind) lim_tqm,lim_qqm
   integer(i_kind) nlevp         ! vertical level for thinning
   integer(i_kind) ntmp,iout
   integer(i_kind) pflag,irec
   integer(i_kind) ntest,nvtest,iosub,ixsub,isubsub,iobsub
-  integer(i_kind) kl,k1,k2
-  integer(i_kind) itypex
+  integer(i_kind) kl,k1,k2,k1_ps,k1_q,k1_t,k1_uv,k1_pw,k2_q,k2_t,k2_uv,k2_pw,k2_ps
+  integer(i_kind) itypex,itypey
   integer(i_kind) minobs,minan
   integer(i_kind) ntb,ntmatch,ncx
   integer(i_kind) nmsg                ! message index
@@ -267,25 +287,28 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   integer(i_kind) tcamt_qc,lcbas_qc
   integer(i_kind) low_cldamt_qc,mid_cldamt_qc,hig_cldamt_qc
   integer(i_kind) iyyyymm
-  integer(i_kind) jj,start,next
+  integer(i_kind) jj,start,next,ncount_ps,ncount_q,ncount_uv,ncount_t,ncount_pw
   integer(i_kind),dimension(5):: idate5
   integer(i_kind),dimension(255):: pqm,qqm,tqm,wqm,pmq
   integer(i_kind),dimension(nconvtype)::ntxall
   integer(i_kind),dimension(nconvtype+1)::ntx
   integer(i_kind),allocatable,dimension(:):: isort,iloc,nrep
-  integer(i_kind),allocatable,dimension(:,:):: tab 
+  integer(i_kind),allocatable,dimension(:,:):: tab
   integer(i_kind) ibfms,thisobtype_usage
-
+  integer(i_kind) iwmo,ios
+  integer(i_kind) ierr_ps,ierr_q,ierr_t,ierr_uv,ierr_pw !  the position of error table collum
   real(r_kind) time,timex,time_drift,timeobs,toff,t4dv,zeps
-  real(r_kind) qtflg,tdry,rmesh,ediff,usage
+  real(r_kind) qtflg,tdry,rmesh,ediff,usage,ediff_ps,ediff_q,ediff_t,ediff_uv,ediff_pw
   real(r_kind) u0,v0,uob,vob,dx,dy,dx1,dy1,w00,w10,w01,w11
   real(r_kind) qoe,qobcon,pwoe,pwmerr,dlnpob,ppb,poe,gustoe,visoe,qmaxerr
   real(r_kind) toe,woe,errout,oelev,dlat,dlon,sstoe,dlat_earth,dlon_earth
-  real(r_kind) tdoe,mxtmoe,mitmoe,pmoe,howvoe
+  real(r_kind) tdoe,mxtmoe,mitmoe,pmoe,howvoe,cldchoe
+  real(r_kind) dlat_earth_deg,dlon_earth_deg
   real(r_kind) selev,elev,stnelev
   real(r_kind) cdist,disterr,disterrmax,rlon00,rlat00
   real(r_kind) vdisterrmax,u00,v00
-  real(r_kind) del,terrmin,werrmin,perrmin,qerrmin,pwerrmin
+  real(r_kind) del,terrmin,werrmin,perrmin,qerrmin,pwerrmin,del_ps,del_q,del_t,del_uv,del_pw
+  real(r_kind) pjbmin,qjbmin,tjbmin,wjbmin
   real(r_kind) tsavg,ff10,sfcr,zz
   real(r_kind) crit1,timedif,xmesh,pmesh
   real(r_kind) time_correction
@@ -304,7 +327,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   real(r_double) vtcd
   real(r_double),dimension(8):: hdr,hdrtsb
   real(r_double),dimension(3,255):: hdr3
-  real(r_double),dimension(8,255):: drfdat,qcmark,obserr
+  real(r_double),dimension(8,255):: drfdat,qcmark,obserr,var_jb
   real(r_double),dimension(13,255):: obsdat
   real(r_double),dimension(8,1):: sstdat
   real(r_double),dimension(2,1):: cld2seq
@@ -315,6 +338,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   real(r_double),dimension(4,1) :: goescld
   real(r_double),dimension(2,255):: maxtmint
   real(r_double),dimension(1,255):: owave
+  real(r_double),dimension(1,255):: cldceilh
   real(r_double),dimension(1):: satqc
   real(r_double),dimension(1,1):: r_prvstg,r_sprvstg 
   real(r_double),dimension(1,255):: levdat
@@ -351,6 +375,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   data aircraftstr /'POAF IALR'/      ! phase of aircraft flight and vertical velocity
   data maxtmintstr  /'MXTM MITM'/
   data owavestr  /'HOWV'/
+  data cldceilhstr /'CEILING'/
 
   data lunin / 13 /
   data ithin / -9 /
@@ -399,23 +424,24 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   goesctpobs = obstype == 'gos_ctp'
   tcamtob = obstype == 'tcamt'
   lcbasob = obstype == 'lcbas'
+  cldchob = obstype == 'cldch'
   newvad=.false.
   convobs = tob .or. uvob .or. spdob .or. qob .or. gustob .or. &
             tdob .or. mxtmob .or. mitmob .or. pmob .or. howvob .or. &
-            tcamtob .or. lcbasob
+            tcamtob .or. lcbasob .or. cldchob
   aircraftobst=.false.
   if(tob)then
      nreal=25
   else if(uvob) then 
-     nreal=24
+     nreal=25
   else if(spdob) then
-     nreal=23
+     nreal=24
   else if(psob) then
-     nreal=19
+     nreal=20
   else if(qob) then
-     nreal=22
+     nreal=26
   else if(pwob) then
-     nreal=16
+     nreal=20
   else if(sstob) then
      if (nst_gsi > 0) then
         nreal=18 + nstinfo
@@ -444,6 +470,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
      nreal=20
   else if(lcbasob) then
      nreal=23
+  else if(cldchob) then
+     nreal=18
   else 
      write(6,*) ' illegal obs type in READ_PREPBUFR ',obstype
      call stop2(94)
@@ -473,17 +501,21 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 
   if (blacklst) call blacklist_read(obstype)
 
+  terrmin=half
+  werrmin=one
+  perrmin=0.3_r_kind
+  qerrmin=0.05_r_kind
+  pwerrmin=one
+  tjbmin=zero
+  qjbmin=zero
+  wjbmin=zero
+  pjbmin=zero
 !------------------------------------------------------------------------
-! Open, then read date from bufr data
-  call closbf(lunin)
-  open(lunin,file=trim(infile),form='unformatted')
-  call openbf(lunin,'IN',lunin)
-  call datelen(10)
-
   ntread=1
   ntmatch=0
   ntx(ntread)=0
   ntxall=0
+  var_jb=zero
   do nc=1,nconvtype
      if(trim(ioctype(nc)) == trim(obstype))then
        if(.not.use_prepb_satwnd .and. (trim(ioctype(nc)) == 'uv' .or. trim(ioctype(nc)) == 'wspd10m') .and. ictype(nc) >=241 &
@@ -491,7 +523,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
           cycle
        else
           if (aircraft_t_bc) then
-             aircrafttype=(ictype(nc)>129 .and. ictype(nc)<140) .or.  (ictype(nc)>229 .and. ictype(nc)<240)
+             aircrafttype=(ictype(nc) == 130 .or. ictype(nc) == 131 .or. (ictype(nc) >= 133 .and. ictype(nc)<140) .or. &
+                           ictype(nc) == 230 .or. ictype(nc) == 231 .or. (ictype(nc) >= 233 .and. ictype(nc)<240))
              if (.not. acft_profl_file .and. aircrafttype) cycle    ! skip aircrafttype for prepbufr
              if (acft_profl_file .and. (.not. aircrafttype)) cycle  ! skip non-aircrafttype for prepbufr_profl
           end if
@@ -505,7 +538,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
             cycle
         else
            if (aircraft_t_bc) then
-              aircrafttype=(ictype(nc)>129 .and. ictype(nc)<140) .or.  (ictype(nc)>229 .and. ictype(nc)<240)
+             aircrafttype=(ictype(nc) == 130 .or. ictype(nc) == 131 .or. (ictype(nc) >= 133 .and. ictype(nc)<140).or. &
+                           ictype(nc) == 230 .or. ictype(nc) == 231 .or. (ictype(nc) >= 233 .and. ictype(nc)<240))
               if (.not. acft_profl_file .and. aircrafttype) cycle    ! skip aircrafttype for prepbufr
               if (acft_profl_file .and. (.not. aircrafttype)) cycle  ! skip non-aircrafttype for prepbufr_profl
            end if
@@ -525,7 +559,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !! get message and subset counts
 
   call getcount_bufr(infile,nmsgmax,mxtb)
-
   allocate(lmsg(nmsgmax,ntread),tab(mxtb,3),nrep(nmsgmax))
 
   lmsg = .false.
@@ -534,7 +567,16 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   nmsg=0
   nrep=0
   ntb = 0
+
   irec = 0
+  ncount_ps=0;ncount_q=0;ncount_t=0;ncount_uv=0;ncount_pw=0
+
+! Open, then read date from bufr data
+  call closbf(lunin)
+  open(lunin,file=trim(infile),form='unformatted')
+  call openbf(lunin,'IN',lunin)
+  call datelen(10)
+
   msg_report: do while (ireadmg(lunin,subset,idate) == 0)
      irec = irec + 1
      if(irec < nrec_start) cycle msg_report
@@ -602,6 +644,18 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
         end if
         !* END new vad wind
 
+! identify drifting buoys - TYP=180/280 T29=562 and last three digits of SID between 500 and 999
+!  (see https://www.wmo.int/pages/prog/amp/mmop/wmo-number-rules.html)  Set kx to 199/299
+        if (id_drifter .and. (kx==180 .or. kx==280) .and. nint(hdr(3))==562) then
+           rstation_id=hdr(4)
+           read(c_station_id,*,iostat=ios) iwmo
+           if (ios == 0 .and. iwmo > 0) then
+              if(mod(iwmo,1000) >=500) then
+                 kx = kx + 19
+              end if
+           end if
+        end if
+
         if(twodvar_regional)then
 !          If running in 2d-var (surface analysis) mode, check to see if observation
 !          is surface type or GOES cloud product(kx=151).  If not, read next observation report from bufr file
@@ -615,6 +669,16 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 ! temporary specify iobsub until put in bufr file
         iobsub = 0                                                  
         if(kx == 280 .or. kx == 180 ) iobsub=hdr(3)                                            
+        if(kx == 280 .or. kx ==180) then
+          if ( hdr(3) >555.0_r_kind .and. hdr(3) <565.0_r_kind ) then
+            iobsub=00
+          else
+            iobsub=01
+          endif
+        endif
+! Su suggested to keep both 289 and 290.  But trunk only keep 290
+! ???       if(kx == 289 .or. kx == 290) iobsub=hdr(2)
+
         if(kx == 290) iobsub=hdr(2)
         if(use_prepb_satwnd .and. (kx >= 240 .and. kx <=260 )) iobsub = hdr(2)
 
@@ -743,7 +807,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
               endif
            endif
      
-           write(6,*)'READ_PREPBUFR: obstype,ictype(nc),rmesh,pflag,nlevp,pmesh=',&
+           write(6,*)'READ_PREPBUFR: at line 779: obstype,ictype(nc),rmesh,pflag,nlevp,pmesh=',&
               trim(ioctype(nc)),ictype(nc),rmesh,pflag,nlevp,pmesh
         endif
      endif
@@ -799,8 +863,25 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
               if(abs(hdr(3))>r90 .or. abs(hdr(2))>r360) cycle loop_readsb
               if(hdr(2)== r360)hdr(2)=hdr(2)-r360
               if(hdr(2) < zero)hdr(2)=hdr(2)+r360
+              dlon_earth_deg=hdr(2)
+              dlat_earth_deg=hdr(3)
               dlon_earth=hdr(2)*deg2rad
               dlat_earth=hdr(3)*deg2rad
+
+
+!
+! identify drifting buoys - TYP=180/280 T29=562 and last three digits of SID between 500 and 999
+!  (see https://www.wmo.int/pages/prog/amp/mmop/wmo-number-rules.html)  Set kx to 199/299
+              if (id_drifter .and. (kx==180 .or. kx==280) .and.  nint(hdr(8))==562 ) then
+                 rstation_id=hdr(1)
+                 read(c_station_id,*,iostat=ios) iwmo
+                 if (ios == 0 .and. iwmo > 0) then
+                    if(mod(iwmo,1000) >=500) then
+                       kx = kx + 19
+                    end if
+                 end if
+              end if
+
 
 !             check VAD subtype. 1--old, 2--new, other--old 
               if(kx==224) then
@@ -811,13 +892,12 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
               !* thin new VAD in time level
               if(kx==224.and.newvad)then
                 icase=0
-                if(abs(hdr(4))>0.75_r_kind) icase=1
-!               if(abs(hdr(4))>0.17_r_kind.and.abs(hdr(4))<0.32_r_kind) icase=1
-!               if(abs(hdr(4))>0.67_r_kind.and.abs(hdr(4))<0.82_r_kind) icase=1
-!               if(abs(hdr(4))>1.17_r_kind.and.abs(hdr(4))<1.32_r_kind) icase=1
-!               if(abs(hdr(4))>1.67_r_kind.and.abs(hdr(4))<1.82_r_kind) icase=1
-!               if(abs(hdr(4))>2.17_r_kind.and.abs(hdr(4))<2.62_r_kind) icase=1
-!               if(abs(hdr(4))>2.67_r_kind.and.abs(hdr(4))<2.82_r_kind) icase=1
+                if(abs(hdr(4))>0.17_r_kind.and.abs(hdr(4))<0.32_r_kind) icase=1
+                if(abs(hdr(4))>0.67_r_kind.and.abs(hdr(4))<0.82_r_kind) icase=1
+                if(abs(hdr(4))>1.17_r_kind.and.abs(hdr(4))<1.32_r_kind) icase=1
+                if(abs(hdr(4))>1.67_r_kind.and.abs(hdr(4))<1.82_r_kind) icase=1
+                if(abs(hdr(4))>2.17_r_kind.and.abs(hdr(4))<2.62_r_kind) icase=1
+                if(abs(hdr(4))>2.67_r_kind.and.abs(hdr(4))<2.82_r_kind) icase=1
                 if(icase/=1) cycle
               end if
 
@@ -938,6 +1018,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
            if (twodvar_regional) then
               if (mxtmob .or. mitmob) call ufbint(lunin,maxtmint,2,255,levs,maxtmintstr)
               if (howvob)             call ufbint(lunin,owave,1,255,levs,owavestr)
+              if (cldchob)            call ufbint(lunin,cldceilh,1,255,levs,cldceilhstr)
            endif
            if(kx==224 .and. newvad) then
            call ufbint(lunin,fcstdat,3,255,levs,'UFC VFC TFC ')
@@ -947,46 +1028,316 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
            call ufbevn(lunin,tpc,1,255,20,levs,'TPC')
 
 !          If available, get obs errors from error table
-           if(oberrflg)then
+           
+           if(oberrflg .and. kx<= 300)then
 
 !             Set lower limits for observation errors
               terrmin=half
               werrmin=one
-              perrmin=half
-              qerrmin=one_tenth
+              perrmin=0.3_r_kind
+              qerrmin=0.05_r_kind
               pwerrmin=one
-
-              do k=1,levs
-                 itypex=kx
-                 ppb=obsdat(1,k)
-                 if(kx==153)ppb=obsdat(11,k)*0.01_r_kind
-                 ppb=max(zero,min(ppb,r2000))
-                 if(ppb>=etabl(itypex,1,1)) k1=1
-                 do kl=1,32
-                    if(ppb>=etabl(itypex,kl+1,1).and.ppb<=etabl(itypex,kl,1)) k1=kl
-                 end do
-                 if(ppb<=etabl(itypex,33,1)) k1=5
-                 k2=k1+1
-                 ediff = etabl(itypex,k2,1)-etabl(itypex,k1,1)
-                 if (abs(ediff) > tiny_r_kind) then
-                    del = (ppb-etabl(itypex,k1,1))/ediff
-                 else
-                    del = huge_r_kind
+              tjbmin=zero
+              qjbmin=zero
+              wjbmin=zero
+              pjbmin=zero
+              itypey=kx
+              if( njqc) then
+                 if (psob)  then
+                    itypex=itypey
+                    ierr_ps=0
+                    do i =1,maxsub_ps
+                       if(icsubtype(nc)==isuble_ps(itypex,i)) then
+                          ierr_ps=i+1
+                          exit
+                       else if(i== maxsub_ps .and. icsubtype(nc) /= isuble_ps(itypex,i)) then
+                          ncount_ps=ncount_ps+1
+                          do j=1,maxsub_ps
+                             if(isuble_ps(itypex,j) ==0 ) then
+                                ierr_ps=j+1
+                                exit
+                             endif
+                          enddo
+                          if (ncount_ps ==1) then
+                             write(6,*) 'READ_PREPBUFR: WARNING!!psob: cannot find subtyep in the &
+                                        error table,itype,iosub=',itypex,icsubtype(nc)
+                             write(6,*) 'read error table at colomn subtype as 0, error table column=',ierr_ps
+                          endif
+                       endif
+                    enddo
+                    do k=1,levs
+                       ppb=obsdat(1,k)
+                      cat=nint(min(obsdat(10,k),qcmark_huge))
+                       if ( cat /=0 ) cycle 
+                       ppb=max(zero,min(ppb,r2000))
+                       if(ppb>=etabl_ps(itypex,1,1)) k1_ps=1
+                       do kl=1,32
+                          if(ppb>=etabl_ps(itypex,kl+1,1).and.ppb<=etabl_ps(itypex,kl,1)) k1_ps=kl
+                       end do
+                       if(ppb<=etabl_ps(itypex,33,1)) k1_ps=5
+                       k2_ps=k1_ps+1
+                       ediff_ps = etabl_ps(itypex,k2_ps,1)-etabl_ps(itypex,k1_ps,1)
+                       if (abs(ediff_ps) > tiny_r_kind) then
+                          del_ps = (ppb-etabl_ps(itypex,k1_ps,1))/ediff_ps
+                       else
+                         del_ps = huge_r_kind
+                       endif
+                       del_ps=max(zero,min(del_ps,one))
+                       if(oberrflg)then
+!                         write(6,*) 'READ_PREPBUFR_PS:',itypex,k1_ps,ierr_ps,k2_ps,ierr_ps
+                          obserr(1,k)=(one-del_ps)*etabl_ps(itypex,k1_ps,ierr_ps)+del_ps*etabl_ps(itypex,k2_ps,ierr_ps)
+! Surface pressure error
+                          obserr(1,k)=max(obserr(1,k),perrmin)
+                       endif
+! Surface pressure b
+                      var_jb(1,k)=(one-del_ps)*btabl_ps(itypex,k1_ps,ierr_ps)+del_ps*btabl_ps(itypex,k2_ps,ierr_ps)
+                       var_jb(1,k)=max(var_jb(1,k),pjbmin)
+                       if (var_jb(1,k) >=10.0_r_kind) var_jb(1,k)=zero
+                       if(itypey==180 .and. ierr_ps == 0 ) then
+                          write(6,*) 'READ_PREPBUFR:180_ps,obserr,var_jb=',obserr(1,k),var_jb(1,k),ppb,k,hdr(2),hdr(3)
+                       endif
+                    enddo
                  endif
-                 del=max(zero,min(del,one))
-                 obserr(3,k)=(one-del)*etabl(itypex,k1,2)+del*etabl(itypex,k2,2)
-                 obserr(2,k)=(one-del)*etabl(itypex,k1,3)+del*etabl(itypex,k2,3)
-                 obserr(5,k)=(one-del)*etabl(itypex,k1,4)+del*etabl(itypex,k2,4)
-                 obserr(1,k)=(one-del)*etabl(itypex,k1,5)+del*etabl(itypex,k2,5)
-                 obserr(7,k)=(one-del)*etabl(itypex,k1,6)+del*etabl(itypex,k2,6)
+                if (tob) then
+                    itypex=itypey
+                    ierr_t=0
+                    do i =1,maxsub_t
+                       if( icsubtype(nc) == isuble_t(itypex,i) ) then
+                          ierr_t=i+1
+                          exit
+                       else if( i == maxsub_t .and. icsubtype(nc) /= isuble_t(itypex,i)) then
+                          ncount_t=ncount_t+1
+                          do j=1,maxsub_t
+                             if(isuble_t(itypex,j) ==0 ) then
+                                ierr_t=j+1
+                                exit
+                             endif
+                          enddo
+                          if( ncount_t ==1) then
+                             write(6,*) 'READ_PREPBUFR,WARNING!! tob:cannot find subtyep in the error,& 
+                                         table,itype,iosub=',itypex,icsubtype(nc)
+                             write(6,*) 'read error table at colomn subtype as 0,error table column=',ierr_t
+                          endif
+                       endif
+                    enddo
+                    do k=1,levs
+                       ppb=obsdat(1,k)
+                       if(kx==153)ppb=obsdat(11,k)*0.01_r_kind
+                       ppb=max(zero,min(ppb,r2000))
+                       if(ppb>=etabl_t(itypex,1,1)) k1_t=1
+                       do kl=1,32
+                          if(ppb>=etabl_t(itypex,kl+1,1).and.ppb<=etabl_t(itypex,kl,1)) k1_t=kl
+                       end do
+                       if(ppb<=etabl_t(itypex,33,1)) k1_t=5
+                       k2_t=k1_t+1
+                       ediff_t = etabl_t(itypex,k2_t,1)-etabl_t(itypex,k1_t,1)
+                       if (abs(ediff_t) > tiny_r_kind) then
+                          del_t = (ppb-etabl_t(itypex,k1_t,1))/ediff_t
+                       else
+                         del_t = huge_r_kind
+                       endif
+                       del_t=max(zero,min(del_t,one))
+! Temperature error
+                       if(oberrflg)then
+!                         write(6,*) 'READ_PREPBUFR_T:',itypex,k1_t,itypey,k2_t,ierr_t,nc,kx,ppb
+                          obserr(3,k)=(one-del_t)*etabl_t(itypex,k1_t,ierr_t)+del_t*etabl_t(itypex,k2_t,ierr_t)
+                          obserr(3,k)=max(obserr(3,k),terrmin)
+                       endif
+!Temperature b
+                       var_jb(3,k)=(one-del_t)*btabl_t(itypex,k1_t,ierr_t)+del_t*btabl_t(itypex,k2_t,ierr_t)
+                       var_jb(3,k)=max(var_jb(3,k),tjbmin)
+                       if (var_jb(3,k) >=10.0_r_kind) var_jb(3,k)=zero
+                        if(itypey==180) then
+                          write(6,*) 'READ_PREPBUFR:180_t,obserr,var_jb=',obserr(3,k),var_jb(3,k),ppb
+                        endif
+                    enddo
+                 endif
+                 if (qob) then
+                    itypex=itypey
+                    ierr_q=0
+                    do i =1,maxsub_q
+                       if( icsubtype(nc) == isuble_q(itypex,i) ) then
+                          ierr_q=i+1
+                          exit
+                       else if( i == maxsub_q .and. icsubtype(nc) /= isuble_q(itypex,i)) then
+                          ncount_q=ncount_q+1
+                          do j=1,maxsub_q
+                             if(isuble_q(itypex,j) ==0 ) then
+                                ierr_q=j+1
+                                exit
+                             endif
+                          enddo
+                          if(ncount_q ==1 ) then
+                             write(6,*) 'READ_PREPBUFR,WARNING!! qob:cannot find subtyep in the & 
+                                        error table,itype,iosub=',itypex,icsubtype(nc)
+                             write(6,*) 'read error table at colomn subtype as 0,error table column=',ierr_q
+                          endif
+                       endif
+                    enddo
+                    do k=1,levs
+                       ppb=obsdat(1,k)
+                       if(kx==153)ppb=obsdat(11,k)*0.01_r_kind
+                       ppb=max(zero,min(ppb,r2000))
+                       if(ppb>=etabl_q(itypex,1,1)) k1_q=1
+                       do kl=1,32
+                          if(ppb>=etabl_q(itypex,kl+1,1).and.ppb<=etabl_q(itypex,kl,1)) k1_q=kl
+                       end do
+                       if(ppb<=etabl_q(itypex,33,1)) k1_q=5
+                       k2_q=k1_q+1
+                       ediff_q = etabl_q(itypex,k2_q,1)-etabl_q(itypex,k1_q,1)
+                       if (abs(ediff_q) > tiny_r_kind) then
+                          del_q = (ppb-etabl_q(itypex,k1_q,1))/ediff_q
+                       else
+                         del_q = huge_r_kind
+                       endif
+                       del_q=max(zero,min(del_q,one))
+! Humidity error
+                       if(oberrflg)then
+!                          write(6,*) 'READ_PREPBUFR_Q:',itypex,k1_q,itypey,k2_q,ierr_q,nc,kx,ppb
+                          obserr(2,k)=(one-del_q)*etabl_q(itypex,k1_q,ierr_q)+del_q*etabl_q(itypex,k2_q,ierr_q)
+                          obserr(2,k)=max(obserr(2,k),qerrmin)
+                       endif
+!Humidity b
+                       var_jb(2,k)=(one-del_q)*btabl_q(itypex,k1_q,ierr_q)+del_q*btabl_q(itypex,k2_q,ierr_q)
+                       var_jb(2,k)=max(var_jb(2,k),qjbmin)
+                       if (var_jb(2,k) >=10.0_r_kind) var_jb(2,k)=zero
+!                      if(itypey==120  ) then
+!                        write(6,*) 'READ_PREPBUFR:120_q,obserr,var_jb=',obserr(2,k),var_jb(2,k),ppb
+!                      endif
+                    enddo
+                endif
+                if (uvob) then
+                   itypex=itypey
+                   ierr_uv=0
+                   do i =1,maxsub_uv
+                      if( icsubtype(nc) == isuble_uv(itypex,i) ) then
+                          ierr_uv=i+1
+                          exit
+                       else if( i == maxsub_uv .and. icsubtype(nc) /= isuble_uv(itypex,i)) then
+                          ncount_uv=ncount_uv+1
+                          do j=1,maxsub_uv
+                             if(isuble_uv(itypex,j) ==0 ) then
+                                ierr_uv=j+1
+                                exit
+                             endif
+                          enddo
+                          if( ncount_uv == 1) then
+                             write(6,*) 'READ_PREPBUFR,WARNING!! uvob:cannot find subtyep in the error,&
+                                         table,itype,iosub=',itypex,icsubtype(nc)
+                             write(6,*) 'read error table at colomn subtype as 0,error table column=',ierr_uv
+                          endif
+                       endif
+                    enddo
+                   do k=1,levs
+                      ppb=obsdat(1,k)
+                      if(kx==153)ppb=obsdat(11,k)*0.01_r_kind
+                      ppb=max(zero,min(ppb,r2000))
+                      if(ppb>=etabl_uv(itypex,1,1)) k1_uv=1
+                      do kl=1,32
+                         if(ppb>=etabl_uv(itypex,kl+1,1).and.ppb<=etabl_uv(itypex,kl,1)) k1_uv=kl
+                      end do
+                      if(ppb<=etabl_uv(itypex,33,1)) k1_uv=5
+                      k2_uv=k1_uv+1
+                      ediff_uv = etabl_uv(itypex,k2_uv,1)-etabl_uv(itypex,k1_uv,1)
+                      if (abs(ediff_uv) > tiny_r_kind) then
+                         del_uv = (ppb-etabl_uv(itypex,k1_uv,1))/ediff_uv
+                      else
+                        del_uv = huge_r_kind
+                      endif
+                      del_uv=max(zero,min(del_uv,one))
+! Wind error
+!                         write(6,*) 'READ_PREPBUFR_UV:',itypex,k1_uv,itypey,k2_uv,ierr_uv,nc,kx,ppb
+                         obserr(5,k)=(one-del_uv)*etabl_uv(itypex,k1_uv,ierr_uv)+del_uv*etabl_uv(itypex,k2_uv,ierr_uv)
+                         obserr(5,k)=max(obserr(5,k),werrmin)
+!Wind b
+                      var_jb(5,k)=(one-del_uv)*btabl_uv(itypex,k1_uv,ierr_uv)+del_uv*btabl_uv(itypex,k2_uv,ierr_uv)
+                      var_jb(5,k)=max(var_jb(5,k),wjbmin)
+                      if (var_jb(5,k) >=10.0_r_kind) var_jb(5,k)=zero
+!                      if(itypey==220) then
+!                         write(6,*) 'READ_PREPBUFR:220_uv,obserr,var_jb=',obserr(5,k),var_jb(5,k),ppb,k2_uv,del_uv
+!                      endif
+                   enddo
+                endif
+                if (pwob)  then
+                   itypex=itypey
+                   ierr_pw=0
+                   do i =1,maxsub_pw
+                      if(icsubtype(nc) == isuble_pw(itypex,i) ) then
+                         ierr_pw=i+1
+                         exit
+                      else if( i == maxsub_pw .and. icsubtype(nc) /= isuble_pw(itypex,i)) then
+                         ncount_pw=ncount_pw+1
+                         do j=1,maxsub_pw
+                            if(isuble_pw(itypex,j) ==0 ) then
+                               ierr_pw=j+1
+                               exit
+                            endif
+                         enddo
+                         if(ncount_pw ==1 ) then
+                            write(6,*) 'READ_PREPBUFR,WARNING!! pwob:cannot find subtyep in the error,&
+                                        table,itypex,iosub=',itypex,icsubtype(nc)
+                            write(6,*) 'read error table at colomn subtype as 0,error table column=',ierr_pw
+                         endif
+                      endif
+                   enddo
+                   do k=1,levs
+                      ppb=obsdat(1,k)
+                      if(kx==153)ppb=obsdat(11,k)*0.01_r_kind
+                      ppb=max(zero,min(ppb,r2000))
+                      if(ppb>=etabl_pw(itypex,1,1)) k1_pw=1
+                      do kl=1,32
+                         if(ppb>=etabl_pw(itypex,kl+1,1).and.ppb<=etabl_pw(itypex,kl,1)) k1_pw=kl
+                      end do
+                      if(ppb<=etabl_pw(itypex,33,1)) k1_pw=5
+                      k2_pw=k1_pw+1
+                      ediff_pw = etabl_pw(itypex,k2_pw,1)-etabl_pw(itypex,k1_pw,1)
+                      if (abs(ediff_pw) > tiny_r_kind) then
+                         del_pw = (ppb-etabl_pw(itypex,k1_pw,1))/ediff_pw
+                      else
+                         del_pw = huge_r_kind
+                      endif
+                      del_pw=max(zero,min(del_pw,one))
+                      if(oberrflg)then
+! Precip water error
+!                        write(6,*) 'READ_PREPBUFR_Pw:',itypex,itypey,ierr_pw,k2_pw,ierr_pw,nc,kx,ppb
+                         obserr(7,k)=(one-del_pw)*etabl_pw(itypex,k1_pw,ierr_pw)+del_pw*etabl_pw(itypex,k2_pw,ierr_pw)
+                         obserr(7,k)=max(obserr(7,k),pwerrmin)
+                      endif
+                   enddo
+                endif
+             else
+                do k=1,levs
+                   itypex=kx
+                   ppb=obsdat(1,k)
+                   if(kx==153)ppb=obsdat(11,k)*0.01_r_kind
+                   ppb=max(zero,min(ppb,r2000))
+                   if(ppb>=etabl(itypex,1,1)) k1=1
+                   do kl=1,32
+                      if(ppb>=etabl(itypex,kl+1,1).and.ppb<=etabl(itypex,kl,1)) k1=kl
+                   end do
+                   if(ppb<=etabl(itypex,33,1)) k1=5
+                   k2=k1+1
+                   ediff = etabl(itypex,k2,1)-etabl(itypex,k1,1)
+                   if (abs(ediff) > tiny_r_kind) then
+                      del = (ppb-etabl(itypex,k1,1))/ediff
+                   else
+                      del = huge_r_kind
+                   endif
+                   del=max(zero,min(del,one))
+                   obserr(3,k)=(one-del)*etabl(itypex,k1,2)+del*etabl(itypex,k2,2)
+                   obserr(2,k)=(one-del)*etabl(itypex,k1,3)+del*etabl(itypex,k2,3)
+                   obserr(5,k)=(one-del)*etabl(itypex,k1,4)+del*etabl(itypex,k2,4)
+                   obserr(1,k)=(one-del)*etabl(itypex,k1,5)+del*etabl(itypex,k2,5)
+                   obserr(7,k)=(one-del)*etabl(itypex,k1,6)+del*etabl(itypex,k2,6)
 
-                 obserr(3,k)=max(obserr(3,k),terrmin)
-                 obserr(2,k)=max(obserr(2,k),qerrmin)
-                 obserr(5,k)=max(obserr(5,k),werrmin)
-                 obserr(1,k)=max(obserr(1,k),perrmin)
-                 obserr(7,k)=max(obserr(7,k),pwerrmin)
-              enddo
-           endif
+                   obserr(3,k)=max(obserr(3,k),terrmin)
+                   obserr(2,k)=max(obserr(2,k),qerrmin)
+                   obserr(5,k)=max(obserr(5,k),werrmin)
+                   obserr(1,k)=max(obserr(1,k),perrmin)
+                   obserr(7,k)=max(obserr(7,k),pwerrmin)
+                enddo
+             endif      ! endif for njqc
+           endif        ! endif for oberrflg
 
 !          If data with drift position, get drift information
            if(driftl)call ufbint(lunin,drfdat,8,255,iret,drift)
@@ -1001,7 +1352,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
            else if(tob) then
 !             aircraft temperature data
 !             aircraftobst = kx>129.and.kx<140
-              aircraftobst = (kx==131) .or. (kx==133) .or. (kx==130)
+              aircraftobst = (kx==131) .or. (kx>=133 .and. kx<=135) .or. (kx==130) ! for currently known types
 
               aircraftwk = bmiss
               if (aircraftobst) then
@@ -1062,7 +1413,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
            end if
 
 !          Check for valid reported pressure (POB).  Set POB=bmiss if POB<tiny_r_kind
-           rstation_id=hdr(1)
            do k=1,levs
               if (obsdat(1,k)<tiny_r_kind) then
                  write(6,*)'READ_PREPBUFR:  ***WARNING*** invalid pressure pob=',&
@@ -1079,15 +1429,15 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
             if (aircraftobst .and. (aircraft_t_bc_pof .or. &
                 aircraft_t_bc .or. aircraft_t_bc_ext)) then
 !             Determine if the tail number is included in the taillist
-              do j=1,nsort
 !                special treatment since kx130 has only flight NO. info, no
 !                aircraft type info
-                 if (kx==130) then
-                    cc_station_id = 'KX130'
-                 else
-                    cc_station_id = c_station_id
-                 end if
-                 cb = cc_station_id(1:1)
+              if (kx==130) then
+                 cc_station_id = 'KX130'
+              else
+                 cc_station_id = c_station_id
+              end if
+              cb = cc_station_id(1:1)
+              do j=1,nsort
                  if (cb==itail_sort(j)) then
                     start = idx_sort(j)
                     if (j==nsort) then
@@ -1191,7 +1541,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
            stnelev=hdr(6)
            ithin=ithin_conv(nc)
            ithinp = ithin > 0 .and. pflag /= 0
-           if(.not. driftl .and. (((tob .or. qob .or. uvob).and. levs > 1) .or. ithinp))then
+           if(.not. (driftl .or. (aircraft_t_bc .and. acft_profl_file)) .and. &
+              (((tob .or. qob .or. uvob).and. levs > 1) .or. ithinp))then
 !             Interpolate guess pressure profile to observation location
               klon1= int(dlon);  klat1= int(dlat)
               dx   = dlon-klon1; dy   = dlat-klat1
@@ -1250,21 +1601,25 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
               else if(visob) then
                  visqm=0    ! need to fix this later
                  qm=visqm
+!! RY: check this late when using tdob??
               else if(tdob) then
-                 if(obsdat(12,k) > r0_01_bmiss)cycle loop_k_levs !you have a similar statement further down / MPondeca
+                 if(obsdat(12,k) > r0_01_bmiss)cycle loop_k_levs
                  tdqm=qqm(k)
                  qm=tdqm
               else if(mxtmob) then
-                 mxtmqm=0                    !fix this /not trivial to use value for T /MPondeca
+                 mxtmqm=0
                  qm=mxtmqm
               else if(mitmob) then
-                 mitmqm=0                    !fix this /not trivial to use value for T /MPondeca
+                 mitmqm=0
                  qm=mitmqm
               else if(pmob) then
-                 qm=pmq(k)                   !check this. see Dennis email/ MPondeca
+                 qm=pmq(k)
               else if(howvob) then
-                 howvqm=0                    !fix this / MPondeca
+                 howvqm=0
                  qm=howvqm
+              else if(cldchob) then
+                 cldchqm=0
+                 qm=cldchqm
               else if(metarcldobs) then
                  qm=0      
               else if(goesctpobs) then
@@ -1310,6 +1665,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  if(abs(hdr3(2,k))>r90 .or. abs(hdr3(1,k))>r360) cycle LOOP_K_LEVS
                  if(hdr3(1,k)== r360)hdr3(1,k)=hdr3(1,k)-r360
                  if(hdr3(1,k) < zero)hdr3(1,k)=hdr3(1,k)+r360
+                 dlon_earth_deg=hdr3(1,k)
+                 dlat_earth_deg=hdr3(2,k)
                  dlon_earth=hdr3(1,k)*deg2rad
                  dlat_earth=hdr3(2,k)*deg2rad
 
@@ -1373,6 +1730,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                     t4dv = toff + time_drift
                  endif
 
+                 dlat_earth_deg = drfdat(2,k)
+                 dlon_earth_deg = drfdat(1,k)
                  dlat_earth = drfdat(2,k) * deg2rad
                  dlon_earth = drfdat(1,k) * deg2rad
  
@@ -1385,33 +1744,34 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                     call grdcrd1(dlat,rlats,nlat,1)
                     call grdcrd1(dlon,rlons,nlon,1)
                  endif
+              end if
 
-                 if((tob.or. qob.or. uvob .and. levs > 1) .or. ithinp)then
-!                   Interpolate guess pressure profile to observation location
-                    klon1= int(dlon);  klat1= int(dlat)
-                    dx   = dlon-klon1; dy   = dlat-klat1
-                    dx1  = one-dx;     dy1  = one-dy
-                    w00=dx1*dy1; w10=dx1*dy; w01=dx*dy1; w11=dx*dy
+              if((driftl .or. (aircraft_t_bc .and. acft_profl_file))  &
+                 .and. ((tob.or. qob.or. uvob .and. levs > 1) .or. ithinp))then
+!                Interpolate guess pressure profile to observation location
+                 klon1= int(dlon);  klat1= int(dlat)
+                 dx   = dlon-klon1; dy   = dlat-klat1
+                 dx1  = one-dx;     dy1  = one-dy
+                 w00=dx1*dy1; w10=dx1*dy; w01=dx*dy1; w11=dx*dy
 
-                    klat1=min(max(1,klat1),nlat); klon1=min(max(0,klon1),nlon)
-                    if (klon1==0) klon1=nlon
-                    klatp1=min(nlat,klat1+1); klonp1=klon1+1
-                    if (klonp1==nlon+1) klonp1=1
+                 klat1=min(max(1,klat1),nlat); klon1=min(max(0,klon1),nlon)
+                 if (klon1==0) klon1=nlon
+                 klatp1=min(nlat,klat1+1); klonp1=klon1+1
+                 if (klonp1==nlon+1) klonp1=1
 
-                    do kk=1,nsig
-                       presl(kk)=w00*prsl_full(klat1 ,klon1 ,kk) +  &
-                                 w10*prsl_full(klatp1,klon1 ,kk) + &
-                                 w01*prsl_full(klat1 ,klonp1,kk) + &
-                                 w11*prsl_full(klatp1,klonp1,kk)
+                 do kk=1,nsig
+                    presl(kk)=w00*prsl_full(klat1 ,klon1 ,kk) +  &
+                              w10*prsl_full(klatp1,klon1 ,kk) + &
+                              w01*prsl_full(klat1 ,klonp1,kk) + &
+                              w11*prsl_full(klatp1,klonp1,kk)
+                 end do
+
+!                Compute depth of guess pressure layersat observation location
+                 if (.not.twodvar_regional .and. levs > 1) then
+                    do kk=1,nsig-1
+                       dpres(kk)=presl(kk)-presl(kk+1)
                     end do
-
-!                   Compute depth of guess pressure layersat observation location
-                    if (.not.twodvar_regional .and. levs > 1) then
-                       do kk=1,nsig-1
-                          dpres(kk)=presl(kk)-presl(kk+1)
-                       end do
-                    endif
-                 end if
+                 endif
               end if
 
 !             Special block for data thinning - if requested
@@ -1478,11 +1838,12 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
               if((kx>=192.and.kx<=195) .and. psob )usage=r100
               if (gustob .and. obsdat(8,k) > r0_1_bmiss) usage=103._r_kind
               if (visob  .and. obsdat(9,k) > r0_1_bmiss) usage=103._r_kind
-              if (tdob  .and. obsdat(12,k) > r0_1_bmiss) usage=103._r_kind     !do you need this ? / MPondeca
-              if (pmob  .and. obsdat(13,k) > r0_1_bmiss) usage=103._r_kind     !do you need this ? / MPondeca
-              if (mxtmob  .and. maxtmint(1,k) > r0_1_bmiss) usage=103._r_kind   !do you need this ? / MPondeca
-              if (mitmob  .and. maxtmint(2,k) > r0_1_bmiss) usage=103._r_kind   !do you need this ? / MPondeca
-              if (howvob  .and. owave(1,k) > r0_1_bmiss) usage=103._r_kind   !do you need this ? / MPondeca
+              if (tdob  .and. obsdat(12,k) > r0_1_bmiss) usage=103._r_kind
+              if (pmob  .and. obsdat(13,k) > r0_1_bmiss) usage=103._r_kind
+              if (mxtmob  .and. maxtmint(1,k) > r0_1_bmiss) usage=103._r_kind
+              if (mitmob  .and. maxtmint(2,k) > r0_1_bmiss) usage=103._r_kind
+              if (howvob  .and. owave(1,k) > r0_1_bmiss) usage=103._r_kind
+              if (cldchob  .and. cldceilh(1,k) > r0_1_bmiss) usage=103._r_kind
 
               if (sfctype) then 
                  if (i_gsdsfc_uselist==1 ) then
@@ -1493,6 +1854,16 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                     call get_usagerj(kx,obstype,c_station_id,c_prvstg,c_sprvstg, &
                                             dlon_earth,dlat_earth,idate,t4dv-toff,      &
                                             obsdat(5,k),obsdat(6,k),usage)
+                 endif
+              endif
+              if (sfctype .and. i_gsdqc==2) then  ! filter bad 2-m dew point and  0 mesonet wind obs
+                 if (kx==288) then ! for mesonet wind
+                    if(abs(obsdat(5,k))<0.01_r_kind .and. abs(obsdat(6,k))<0.01_r_kind) usage=115._r_kind
+                 endif
+                 if (qob .and. (kx >=180 .and. kx<=189) .and. obsdat(2,k) < 1.0e10_r_kind)  then ! for 2-m dew point
+                    if(obsdat(12,k) < min(-40.0_r_kind,obsdat(3,k)-10.0_r_kind)) usage=116._r_kind     ! < min(-40C or T-Td)                
+                    if((obsdat(3,k)-obsdat(12,k))  >  70.0_r_kind)  usage=117._r_kind ! <70C         
+                    if(obsdat(12,k) > 32.2_r_kind) usage=118._r_kind  ! > 90F
                  endif
               endif
 
@@ -1519,7 +1890,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
               call deter_sfc2(dlat_earth,dlon_earth,t4dv,idomsfc,tsavg,ff10,sfcr,zz)
 
               if(lhilbert) & 
-                  call accum_hilbertcurve(usage,c_station_id,c_prvstg,c_sprvstg, &  !no need for obstype ? /MPondeca
+                  call accum_hilbertcurve(usage,c_station_id,c_prvstg,c_sprvstg, &
                        dlat_earth,dlon_earth,dlat,dlon,t4dv,toff,nc,kx,iout)
 
 
@@ -1562,18 +1933,19 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(14,iout)=tsavg                  ! skin temperature
                  cdata_all(15,iout)=ff10                   ! 10 meter wind factor
                  cdata_all(16,iout)=sfcr                   ! surface roughness
-                 cdata_all(17,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
-                 cdata_all(18,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
+                 cdata_all(17,iout)=dlon_earth_deg         ! earth relative longitude (degrees)
+                 cdata_all(18,iout)=dlat_earth_deg         ! earth relative latitude (degrees)
                  cdata_all(19,iout)=stnelev                ! station elevation (m)
                  cdata_all(20,iout)=obsdat(4,k)            ! observation height (m)
                  cdata_all(21,iout)=zz                     ! terrain height at ob location
                  cdata_all(22,iout)=r_prvstg(1,1)          ! provider name
                  cdata_all(23,iout)=r_sprvstg(1,1)         ! subprovider name
-                 cdata_all(24,iout)=obsdat(10,k)            ! cat
+                 cdata_all(24,iout)=obsdat(10,k)           ! cat
+                 cdata_all(25,iout)=var_jb(3,k)            ! non linear qc for T
                  if (aircraft_t_bc_pof .or. aircraft_t_bc .or.aircraft_t_bc_ext) then
-                    cdata_all(25,iout)=aircraftwk(1,k)     ! phase of flight
-                    cdata_all(26,iout)=aircraftwk(2,k)     ! vertical velocity
-                    cdata_all(27,iout)=idx                 ! index of temperature bias
+                    cdata_all(26,iout)=aircraftwk(1,k)     ! phase of flight
+                    cdata_all(27,iout)=aircraftwk(2,k)     ! vertical velocity
+                    cdata_all(28,iout)=idx                 ! index of temperature bias
                  end if
                  if(perturb_obs)cdata_all(nreal,iout)=ran01dom()*perturb_fact ! t perturbation
                  if (twodvar_regional) &
@@ -1681,22 +2053,23 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(12,iout)=wqm(k)                 ! quality mark
                  cdata_all(13,iout)=obserr(5,k)            ! original obs error
                  cdata_all(14,iout)=usage                  ! usage parameter
-                 if (lhilbert) thisobtype_usage=14         ! save INDEX of where usage is stored for hilbertcurve cross validation (if requested)
+                 if (lhilbert) thisobtype_usage=14         ! save INDEX of where usage 
+                                                           ! is stored for hilbertcurve cross validation (if requested)
                  cdata_all(15,iout)=idomsfc                ! dominate surface type
                  cdata_all(16,iout)=tsavg                  ! skin temperature
                  cdata_all(17,iout)=ff10                   ! 10 meter wind factor
                  cdata_all(18,iout)=sfcr                   ! surface roughness
-                 cdata_all(19,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
-                 cdata_all(20,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
+                 cdata_all(19,iout)=dlon_earth_deg         ! earth relative longitude (degrees)
+                 cdata_all(20,iout)=dlat_earth_deg         ! earth relative latitude (degrees)
                  cdata_all(21,iout)=zz                     ! terrain height at ob location
                  cdata_all(22,iout)=r_prvstg(1,1)          ! provider name
                  cdata_all(23,iout)=r_sprvstg(1,1)         ! subprovider name
-                 cdata_all(24,iout)=obsdat(10,k)            ! cat
+                 cdata_all(24,iout)=obsdat(10,k)           ! cat
+                 cdata_all(25,iout)=var_jb(5,k)            ! non linear qc parameter
                  if(perturb_obs)then
-                    cdata_all(25,iout)=ran01dom()*perturb_fact ! u perturbation
-                    cdata_all(26,iout)=ran01dom()*perturb_fact ! v perturbation
+                    cdata_all(26,iout)=ran01dom()*perturb_fact ! u perturbation
+                    cdata_all(27,iout)=ran01dom()*perturb_fact ! v perturbation
                  endif
-                 if (obstype == 'wspd10m') cdata_all(7,iout)=sqrt(uob*uob+vob*vob)
  
               else if(spdob) then 
                  woe=obserr(5,k)
@@ -1723,8 +2096,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(15,iout)=tsavg                  ! skin temperature
                  cdata_all(16,iout)=ff10                   ! 10 meter wind factor
                  cdata_all(17,iout)=sfcr                   ! surface roughness
-                 cdata_all(18,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
-                 cdata_all(19,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
+                 cdata_all(18,iout)=dlon_earth_deg         ! earth relative longitude (degrees)
+                 cdata_all(19,iout)=dlat_earth_deg         ! earth relative latitude (degrees)
                  cdata_all(20,iout)=stnelev                ! station elevation (m)
                  cdata_all(21,iout)=zz                     ! terrain height at ob location
                  cdata_all(22,iout)=r_prvstg(1,1)          ! provider name
@@ -1749,15 +2122,17 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(10,iout)=pqm(k)                 ! quality mark
                  cdata_all(11,iout)=obserr(1,k)*one_tenth  ! original obs error (cb)
                  cdata_all(12,iout)=usage                  ! usage parameter
-                 if (lhilbert) thisobtype_usage=12         ! save INDEX of where usage is stored for hilbertcurve cross validation (if requested)
+                 if (lhilbert) thisobtype_usage=12         ! save INDEX of where usage is stored 
+                                                           ! for hilbertcurve cross validation (if requested)
                  cdata_all(13,iout)=idomsfc                ! dominate surface type
-                 cdata_all(14,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
-                 cdata_all(15,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
+                 cdata_all(14,iout)=dlon_earth_deg         ! earth relative longitude (degrees)
+                 cdata_all(15,iout)=dlat_earth_deg         ! earth relative latitude (degrees)
                  cdata_all(16,iout)=stnelev                ! station elevation (m)
                  cdata_all(17,iout)=zz                     ! terrain height at ob location
                  cdata_all(18,iout)=r_prvstg(1,1)          ! provider name
                  cdata_all(19,iout)=r_sprvstg(1,1)         ! subprovider name
-                 if(perturb_obs)cdata_all(20,iout)=ran01dom()*perturb_fact ! ps perturbation
+                 cdata_all(20,iout)=var_jb(1,k)            ! non linear qc b parameter 
+                 if(perturb_obs)cdata_all(21,iout)=ran01dom()*perturb_fact ! ps perturbation
                  if (twodvar_regional) &
                     call adjust_error(cdata_all(14,iout),cdata_all(15,iout),cdata_all(11,iout),cdata_all(1,iout))
 
@@ -1787,15 +2162,16 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(13,iout)=usage                  ! usage parameter
                  if (lhilbert) thisobtype_usage=13         ! save INDEX of where usage is stored for hilbertcurve cross validation (if requested)
                  cdata_all(14,iout)=idomsfc                ! dominate surface type
-                 cdata_all(15,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
-                 cdata_all(16,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
+                 cdata_all(15,iout)=dlon_earth_deg         ! earth relative longitude (degrees)
+                 cdata_all(16,iout)=dlat_earth_deg         ! earth relative latitude (degrees)
                  cdata_all(17,iout)=stnelev                ! station elevation (m)
                  cdata_all(18,iout)=obsdat(4,k)            ! observation height (m)
                  cdata_all(19,iout)=zz                     ! terrain height at ob location
                  cdata_all(20,iout)=r_prvstg(1,1)          ! provider name
                  cdata_all(21,iout)=r_sprvstg(1,1)         ! subprovider name
-                 cdata_all(22,iout)=obsdat(10,k)            ! cat
-                 if(perturb_obs)cdata_all(23,iout)=ran01dom()*perturb_fact ! q perturbation
+                 cdata_all(22,iout)=obsdat(10,k)           ! cat
+                 cdata_all(23,iout)=var_jb(2,k)            ! non linear qc b parameter
+                 if(perturb_obs)cdata_all(24,iout)=ran01dom()*perturb_fact ! q perturbation
                  if (twodvar_regional) &
                     call adjust_error(cdata_all(15,iout),cdata_all(16,iout),cdata_all(12,iout),cdata_all(1,iout))
  
@@ -1816,8 +2192,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(10,iout)=obserr(7,k)            ! original obs error
                  cdata_all(11,iout)=usage                  ! usage parameter
                  if (lhilbert) thisobtype_usage=11         ! save INDEX of where usage is stored for hilbertcurve cross validation (if requested)
-                 cdata_all(12,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
-                 cdata_all(13,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
+                 cdata_all(12,iout)=dlon_earth_deg         ! earth relative longitude (degrees)
+                 cdata_all(13,iout)=dlat_earth_deg         ! earth relative latitude (degrees)
                  cdata_all(14,iout)=stnelev                ! station elevation (m)
                  cdata_all(15,iout)=obsdat(1,k)            ! observation pressure (hPa)
                  cdata_all(16,iout)=obsdat(4,k)            ! observation height (m)
@@ -1847,8 +2223,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  if (lhilbert) thisobtype_usage=13         ! save INDEX of where usage is stored for hilbertcurve cross validation (if requested)
                  cdata_all(14,iout)=idomsfc                ! dominate surface type
                  cdata_all(15,iout)=tsavg                  ! skin temperature
-                 cdata_all(16,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
-                 cdata_all(17,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
+                 cdata_all(16,iout)=dlon_earth_deg         ! earth relative longitude (degrees)
+                 cdata_all(17,iout)=dlat_earth_deg         ! earth relative latitude (degrees)
                  cdata_all(18,iout)=stnelev                ! station elevation (m)
 
                  if( nst_gsi > 0) then
@@ -1894,6 +2270,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  if((kx >= 280 .and. kx < 300).or.(kx >= 180 .and. kx < 200))then
                    oelev=r10+selev
                    if ((kx==280).or.(kx==180)) oelev=r20+selev
+                   if ((kx==299).or.(kx==199)) oelev=r20+selev
                    if ((kx==282).or.(kx==182)) oelev=r20+selev
                    if ((kx==285).or.(kx==185)) then
                       oelev=selev
@@ -1930,8 +2307,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(14,iout)=tsavg                  ! skin temperature
                  cdata_all(15,iout)=ff10                   ! 10 meter wind factor
                  cdata_all(16,iout)=sfcr                   ! surface roughness
-                 cdata_all(17,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
-                 cdata_all(18,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
+                 cdata_all(17,iout)=dlon_earth_deg         ! earth relative longitude (degrees)
+                 cdata_all(18,iout)=dlat_earth_deg         ! earth relative latitude (degrees)
                  cdata_all(19,iout)=selev                  ! station elevation (m)
                  cdata_all(20,iout)=r_prvstg(1,1)          ! provider name
                  cdata_all(21,iout)=r_sprvstg(1,1)         ! subprovider name
@@ -1955,8 +2332,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(10,iout)=usage                  ! usage parameter
                  if (lhilbert) thisobtype_usage=10         ! save INDEX of where usage is stored for hilbertcurve cross validation (if requested)
                  cdata_all(11,iout)=idomsfc                ! dominate surface type
-                 cdata_all(12,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
-                 cdata_all(13,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
+                 cdata_all(12,iout)=dlon_earth_deg         ! earth relative longitude (degrees)
+                 cdata_all(13,iout)=dlat_earth_deg         ! earth relative latitude (degrees)
                  cdata_all(14,iout)=stnelev                ! station elevation (m)
                  cdata_all(15,iout)=obsdat(4,k)            ! observation height (m)
                  cdata_all(16,iout)=zz                     ! terrain height at ob location
@@ -1973,7 +2350,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(2,iout)=dlon                    ! grid relative longitude
                  cdata_all(3,iout)=dlat                    ! grid relative latitude
                  cdata_all(4,iout)=dlnpob                  ! ln(pressure in cb)
-                 cdata_all(5,iout)=obsdat(12,k)+t0c        ! td ob               !Do you need t0c ? /MPondeca
+                 cdata_all(5,iout)=obsdat(12,k)+t0c        ! td ob
                  cdata_all(6,iout)=rstation_id             ! station id
                  cdata_all(7,iout)=t4dv                    ! time
                  cdata_all(8,iout)=nc                      ! type
@@ -1987,8 +2364,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(15,iout)=tsavg                  ! skin temperature
                  cdata_all(16,iout)=ff10                   ! 10 meter wind factor
                  cdata_all(17,iout)=sfcr                   ! surface roughness
-                 cdata_all(18,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
-                 cdata_all(19,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
+                 cdata_all(18,iout)=dlon_earth_deg         ! earth relative longitude (degrees)
+                 cdata_all(19,iout)=dlat_earth_deg         ! earth relative latitude (degrees)
                  cdata_all(20,iout)=stnelev                ! station elevation (m)
                  cdata_all(21,iout)=obsdat(4,k)            ! observation height (m)
                  cdata_all(22,iout)=zz                     ! terrain height at ob location
@@ -2017,8 +2394,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(14,iout)=tsavg                  ! skin temperature
                  cdata_all(15,iout)=ff10                   ! 10 meter wind factor
                  cdata_all(16,iout)=sfcr                   ! surface roughness
-                 cdata_all(17,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
-                 cdata_all(18,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
+                 cdata_all(17,iout)=dlon_earth_deg         ! earth relative longitude (degrees)
+                 cdata_all(18,iout)=dlat_earth_deg         ! earth relative latitude (degrees)
                  cdata_all(19,iout)=stnelev                ! station elevation (m)
                  cdata_all(20,iout)=obsdat(4,k)            ! observation height (m)
                  cdata_all(21,iout)=zz                     ! terrain height at ob location
@@ -2047,8 +2424,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(14,iout)=tsavg                  ! skin temperature
                  cdata_all(15,iout)=ff10                   ! 10 meter wind factor
                  cdata_all(16,iout)=sfcr                   ! surface roughness
-                 cdata_all(17,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
-                 cdata_all(18,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
+                 cdata_all(17,iout)=dlon_earth_deg         ! earth relative longitude (degrees)
+                 cdata_all(18,iout)=dlat_earth_deg         ! earth relative latitude (degrees)
                  cdata_all(19,iout)=stnelev                ! station elevation (m)
                  cdata_all(20,iout)=obsdat(4,k)            ! observation height (m)
                  cdata_all(21,iout)=zz                     ! terrain height at ob location
@@ -2081,8 +2458,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(15,iout)=tsavg                  ! skin temperature
                  cdata_all(16,iout)=ff10                   ! 10 meter wind factor
                  cdata_all(17,iout)=sfcr                   ! surface roughness
-                 cdata_all(18,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
-                 cdata_all(19,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
+                 cdata_all(18,iout)=dlon_earth_deg         ! earth relative longitude (degrees)
+                 cdata_all(19,iout)=dlat_earth_deg         ! earth relative latitude (degrees)
                  cdata_all(20,iout)=stnelev                ! station elevation (m)
                  cdata_all(21,iout)=zz                     ! terrain height at ob location
                  cdata_all(22,iout)=r_prvstg(1,1)          ! provider name
@@ -2111,8 +2488,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(13,iout)=tsavg                  ! skin temperature
                  cdata_all(14,iout)=ff10                   ! 10 meter wind factor
                  cdata_all(15,iout)=sfcr                   ! surface roughness
-                 cdata_all(16,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
-                 cdata_all(17,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
+                 cdata_all(16,iout)=dlon_earth_deg         ! earth relative longitude (degrees)
+                 cdata_all(17,iout)=dlat_earth_deg         ! earth relative latitude (degrees)
                  cdata_all(18,iout)=stnelev                ! station elevation (m)
                  cdata_all(19,iout)=obsdat(4,k)            ! observation height (m)
                  cdata_all(20,iout)=zz                     ! terrain height at ob location
@@ -2208,8 +2585,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                     cdata_all(11,iout)=tsavg                  ! skin temperature
                     cdata_all(12,iout)=ff10                   ! 10 meter wind factor
                     cdata_all(13,iout)=sfcr                   ! surface roughness
-                    cdata_all(14,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
-                    cdata_all(15,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
+                    cdata_all(14,iout)=dlon_earth_deg         ! earth relative longitude (degrees)
+                    cdata_all(15,iout)=dlat_earth_deg         ! earth relative latitude (degrees)
                     cdata_all(16,iout)=stnelev                ! station elevation (m)
                     cdata_all(17,iout)=obsdat(4,k)            ! observation height (m)
                     cdata_all(18,iout)=zz                     ! terrain height at ob location
@@ -2244,8 +2621,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                     cdata_all(11,iout)=tsavg                  ! skin temperature
                     cdata_all(12,iout)=ff10                   ! 10 meter wind factor
                     cdata_all(13,iout)=sfcr                   ! surface roughness
-                    cdata_all(14,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
-                    cdata_all(15,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
+                    cdata_all(14,iout)=dlon_earth_deg         ! earth relative longitude (degrees)
+                    cdata_all(15,iout)=dlat_earth_deg         ! earth relative latitude (degrees)
                     cdata_all(16,iout)=stnelev                ! station elevation (m)
                     cdata_all(17,iout)=obsdat(4,k)            ! observation height (m)
                     cdata_all(18,iout)=zz                     ! terrain height at ob location
@@ -2261,6 +2638,33 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                     cdata_all(22,iout)=r_prvstg(1,1)          ! provider name
                     cdata_all(23,iout)=r_sprvstg(1,1)         ! subprovider name
                  end if
+
+!             Cloud ceiling height
+              else if(cldchob) then
+
+                 cldchoe=4000.0  ! temporarily
+                 if (inflate_error) cldchoe=cldchoe*r1_2
+
+                 cdata_all(1,iout)=cldchoe                 ! cloud ceiling height error (m)
+                 cdata_all(2,iout)=dlon                    ! grid relative longitude
+                 cdata_all(3,iout)=dlat                    ! grid relative latitude
+                 cdata_all(4,iout)=cldceilh(1,k)           ! cloud ceiling height obs
+                 cdata_all(5,iout)=rstation_id             ! station id
+                 cdata_all(6,iout)=t4dv                    ! time
+                 cdata_all(7,iout)=nc                      ! type
+                 cdata_all(8,iout)=cldchoe*three           ! max error
+                 cdata_all(9,iout)=cldchqm                 ! quality mark
+                 cdata_all(10,iout)=usage                  ! usage parameter
+                 if (lhilbert) thisobtype_usage=10         ! save INDEX of where usage is stored for hilbertcurve cross validation (if requested)
+                 cdata_all(11,iout)=idomsfc                ! dominate surface type
+                 cdata_all(12,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
+                 cdata_all(13,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
+                 cdata_all(14,iout)=stnelev                ! station elevation (m)
+                 cdata_all(15,iout)=obsdat(4,k)            ! observation height (m)
+                 cdata_all(16,iout)=zz                     ! terrain height at ob location
+                 cdata_all(17,iout)=r_prvstg(1,1)          ! provider name
+                 cdata_all(18,iout)=r_sprvstg(1,1)         ! subprovider name
+
               end if
 
 !
@@ -2468,7 +2872,7 @@ subroutine sonde_ext(obsdat,tpc,qcmark,obserr,drfdat,levsio,kx,vtcd)
                  ll=ll+1
                  if(ll>255)then
                     write(6,*)'error in SONDE_EXT levs > 255'
-                    stop
+                    return
                  endif
                  obsdat(1,ll)=dpmdl(k)
                  qcmark(1,ll)  =max (qcmark(1,i),qcmark(1,im)) !PQM
@@ -2531,7 +2935,7 @@ subroutine sonde_ext(obsdat,tpc,qcmark,obserr,drfdat,levsio,kx,vtcd)
               ll=ll+1
               if(ll>255)then
                  write(6,*)'error in SONDE_EXT levs > 255'
-                 stop
+                 return
               endif
               obsdat(1,ll)=dpmdl(k)
               qcmark(1,ll)  =max (qcmark(1,i),qcmark(1,im)) !PQM

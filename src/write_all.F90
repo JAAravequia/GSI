@@ -8,29 +8,29 @@
 ! !INTERFACE:
 !
 
-subroutine write_all(increment,mype)
+subroutine write_all(increment)
 
 ! !USES:
 
   use kinds, only: i_kind,r_kind
   
-  use mpimod, only: npe
+  use mpimod, only: npe,mype
 
   use constants, only: zero
   
-  use jfunc, only: biascor
+  use jfunc, only: bcoption
 
   use gridmod, only: regional
   
   use guess_grids, only: ntguessig
 
-  use m_gsibiases, only: bias_tv, bias_q, bias_oz, bias_cwmr, bias_tskin
-  use m_gsibiases, only: bias_ps, bias_vor, bias_div, bias_u, bias_v
-  use m_gsibiases ,only : nbc
+  use m_gsiBiases, only: gsi_bkgbias_bundle
+  use m_gsibiases ,only: nbc
 
   use gsi_io, only: write_bias
 
-  use regional_io, only: write_regional_analysis
+! use regional_io, only: write_regional_analysis
+  use regional_io_mod, only: regional_io_class
 
   use ncepgfs_io, only: write_gfs
 
@@ -44,7 +44,6 @@ subroutine write_all(increment,mype)
 ! !INPUT PARAMETERS:
 
   integer(i_kind), intent(in   ) :: increment  ! when >0 write out w/ increment
-  integer(i_kind), intent(in   ) :: mype       ! task number
 
 ! !OUTPUT PARAMETERS:
 
@@ -91,6 +90,7 @@ subroutine write_all(increment,mype)
 !                       - remove original GMAO interface
 !   2010-10-18  hcHuang - add flag use_gfs_nemsio and link to read_nems and read_nems_chem
 !   2013-10-19  todling - metguess holds ges fields now
+!   2014-10-05  todling - background biases now held in bundle
 !
 ! !REMARKS:
 !
@@ -102,17 +102,18 @@ subroutine write_all(increment,mype)
 !EOP
 !-------------------------------------------------------------------------
 
-#ifndef HAVE_ESMF
 ! Declare local variables
   character(24):: filename
   integer(i_kind) mype_atm,mype_bias,mype_sfc,iret_bias,ier
   real(r_kind),dimension(:,:),pointer::ges_z=>NULL()
-  
+  type(regional_io_class) :: io 
+
+#ifndef HAVE_ESMF
 !********************************************************************
 
 
 ! Regional output
-  if (regional) call write_regional_analysis(mype)
+  if (regional) call io%write_regional_analysis(mype)
 
 
 ! Global output
@@ -123,23 +124,32 @@ subroutine write_all(increment,mype)
 !    Write atmospheric and surface analysis
      mype_atm=0
      mype_sfc=npe/2
-     call write_gfs(increment,mype,mype_atm,mype_sfc)
+     call write_gfs(increment,mype_atm,mype_sfc)
 
 !    Write file bias correction     
-     if(biascor >= zero)then
+     if(abs(bcoption)>0)then
         call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),'z',ges_z,ier)
         if(ier/=0)  call die('write_all',': missing require guess, aborting ',ier)
         filename='biascor_out'
         mype_bias=npe-1
-        call write_bias(filename,mype,mype_bias,nbc,&
-             ges_z,bias_ps,bias_tskin,&
-             bias_vor,bias_div,bias_u,bias_v,bias_tv,&
-             bias_q,bias_cwmr,bias_oz,iret_bias)
+        call write_bias(filename,mype_bias,nbc,&
+             ges_z,gsi_bkgbias_bundle,iret_bias)
      endif
 
 ! End of global block
   end if
 
+#else /* HAVE_ESMF */
+
+!    Write file bias correction     
+     if(abs(bcoption)>0)then
+        call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),'z',ges_z,ier)
+        if(ier/=0)  call die('write_all',': missing require guess, aborting ',ier)
+        filename='biascor_out'
+        mype_bias=npe-1
+        call write_bias(filename,mype_bias,nbc,&
+             ges_z,gsi_bkgbias_bundle,iret_bias)
+     endif
 #endif /* HAVE_ESMF */
 
   return

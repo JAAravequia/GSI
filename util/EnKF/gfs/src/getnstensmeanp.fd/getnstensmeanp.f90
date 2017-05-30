@@ -9,96 +9,9 @@ program getnstensmeanp
 !
 ! program history log:
 !   2014-02-28  Initial version.
+!   2016-11-18  change nst mask name from slmsk to land
 !
 ! usage:
-!   input files:
-!
-!   output files:
-!
-! attributes:
-!   language: f95
-!
-!$$$
-
-! create ensemble mean NCEP GFS NSST file.
-  use nstio_module
-  implicit none
-
-  character*500 filenamein,filenameout,datapath,fileprefix
-  character*3 charnanal
-  integer lunin,lunout,iret,nanals,k
-  integer mype,mype1,npe,orig_group, new_group, new_comm
-  integer,dimension(:),allocatable:: new_group_members
-  real(8) rnanals
-
-  type(nstio_head):: nstheadi, nstheado
-  type(nstio_data):: nstdatai, nstdatao
-
-! mpi definitions.
-  include 'mpif.h'
-
-! Initialize mpi
-!  mype is process number, npe is total number of processes.
-  call mpi_init(iret)
-  call MPI_Comm_rank(MPI_COMM_WORLD,mype,iret)
-  call MPI_Comm_size(MPI_COMM_WORLD,npe,iret)
-  mype1=mype+1
-
-  if (mype==0) call w3tagb('GETNSTENSMEAN',2011,0319,0055,'NP25')
-
-! Get user input from command line
-  call getarg(1,datapath)
-  call getarg(2,filenameout)
-  call getarg(3,fileprefix)
-  call getarg(4,charnanal)
-  read(charnanal,'(i2)') nanals
-  rnanals=nanals
-  rnanals=1.0_8/rnanals
-  filenameout = trim(adjustl(datapath))//filenameout
-
-  if (mype==0) then
-     write(6,*)' '
-     write(6,*)'Command line input'
-     write(6,*)' datapath      = ',trim(datapath)
-     write(6,*)' filenameout   = ',trim(filenameout)
-     write(6,*)' fileprefix    = ',trim(fileprefix)
-     write(6,*)' nanals,rnanals= ',nanals,rnanals
-  endif
-
-  if (npe < nanals) then
-     write(6,*)'***ERROR***  npe too small.  npe=',npe,' < nanals=',nanals
-     call MPI_Abort(MPI_COMM_WORLD,99,iret)
-     stop
-  end if
-
-  lunin=21
-  lunout=61
-
-! Create sub-communicator to handle number of cases (nanals)
-  call mpi_comm_group(mpi_comm_world,orig_group,iret)
-
-  allocate(new_group_members(nanals))
-  do k=1,nanals
-     new_group_members(k)=k-1
-  end do
-  if (mype1 <= nanals) then
-     call mpi_group_incl(orig_group,nanals,new_group_members,new_group,iret)
-  endif
-  call mpi_comm_create(mpi_comm_world,new_group,new_comm,iret)
-  if (iret.ne.0) then
-     write(6,*)'***ERROR*** after mpi_comm_create with iret=',iret
-     call mpi_abort(mpi_comm_world,101,iret)
-  endif
-
-
-! Process input files (one file per task)
-  if (mype1 <= nanals) then
-
-     write(charnanal,'(i3.3)') mype1
-     filenamein = trim(adjustl(datapath))// &
-          trim(adjustl(fileprefix))//'_mem'//charnanal
-     call nstio_srohdc(lunin,filenamein,nstheadi,nstdatai,iret)
-     write(6,*)'Read ',trim(filenamein),' iret=',iret
 
 !   nstio_data        nst file data fields
 !     slmsk             Real(nstio_realkind)(:,:) pointer to lonb*latb
@@ -151,7 +64,126 @@ program getnstensmeanp
 !     Qrain             Real(nstio_realkind)(:,:) pointer to lonb*latb
 !                       sensible heat flux due to rainfall
 !                       (W*M^-2)
+!   input files:
 !
+!   output files:
+!
+! attributes:
+!   language: f95
+!
+!$$$
+
+! create ensemble mean NCEP GFS NSST file.
+  use nstio_module
+  use nemsio_module, only:  nemsio_init,nemsio_open,nemsio_close
+  use nemsio_module, only:  nemsio_gfile,nemsio_getfilehead,nemsio_readrec,&
+       nemsio_writerec,nemsio_readrecv,nemsio_writerecv
+  implicit none
+
+  real(4),parameter:: zero=0.0_4
+
+  logical:: nemsio, sfcio
+
+  character*500 filenamein,filenameout,datapath,fileprefix
+  character*3 charnanal
+  integer lunin,lunout,iret,nanals,k
+  integer mype,mype1,npe,orig_group, new_group, new_comm
+  integer nrec, lonb, latb, n, npts
+  integer,dimension(7):: idate
+  integer,dimension(:), allocatable:: new_group_members
+  real(8) rnanals
+  real,allocatable,dimension(:)   :: rwork1d,swork1d
+
+  type(nstio_head):: nstheadi, nstheado
+  type(nstio_data):: nstdatai, nstdatao
+
+  type(nemsio_gfile):: gfile, gfileo
+
+! mpi definitions.
+  include 'mpif.h'
+
+! Initialize mpi
+!  mype is process number, npe is total number of processes.
+  call mpi_init(iret)
+  call MPI_Comm_rank(MPI_COMM_WORLD,mype,iret)
+  call MPI_Comm_size(MPI_COMM_WORLD,npe,iret)
+  mype1=mype+1
+
+  if (mype==0) call w3tagb('GETNSTENSMEAN',2011,0319,0055,'NP25')
+
+! Get user input from command line
+  call getarg(1,datapath)
+  call getarg(2,filenameout)
+  call getarg(3,fileprefix)
+  call getarg(4,charnanal)
+  read(charnanal,'(i2)') nanals
+  rnanals=nanals
+  rnanals=1.0_8/rnanals
+  filenameout = trim(adjustl(datapath))//filenameout
+
+  if (mype==0) then
+     write(6,*)' '
+     write(6,*)'Command line input'
+     write(6,*)' datapath      = ',trim(datapath)
+     write(6,*)' filenameout   = ',trim(filenameout)
+     write(6,*)' fileprefix    = ',trim(fileprefix)
+     write(6,*)' nanals,rnanals= ',nanals,rnanals
+  endif
+
+  if (npe < nanals) then
+     write(6,*)'***ERROR***  npe too small.  npe=',npe,' < nanals=',nanals
+     call MPI_Abort(MPI_COMM_WORLD,99,iret)
+     stop
+  end if
+
+  lunin=21
+  lunout=61
+
+! Create sub-communicator to handle number of cases (nanals)
+  call mpi_comm_group(mpi_comm_world,orig_group,iret)
+
+  allocate(new_group_members(nanals))
+  do k=1,nanals
+     new_group_members(k)=k-1
+  end do
+  call mpi_group_incl(orig_group,nanals,new_group_members,new_group,iret)
+  call mpi_comm_create(mpi_comm_world,new_group,new_comm,iret)
+  if (iret.ne.0) then
+     write(6,*)'***ERROR*** after mpi_comm_create with iret=',iret
+     call mpi_abort(mpi_comm_world,101,iret)
+  endif
+
+  sfcio=.false.
+  nemsio=.false.
+
+! Process input files (one file per task)
+  if (mype1 <= nanals) then
+
+     call nemsio_init(iret)
+
+     write(charnanal,'(i3.3)') mype1
+     filenamein = trim(adjustl(datapath))// &
+          trim(adjustl(fileprefix))//'_mem'//charnanal
+     call nstio_sropen(lunin,filenamein,iret)
+     if ( iret /= 0 )  write(6,*)'***ERROR in open ',trim(filenamein)
+     call nstio_srhead(lunin,nstheadi,iret)
+     write(6,*)'Read header of ',trim(filenamein),' iret=',iret
+     if ( nstheadi%clabnst(1:8) == 'GFS NST ' ) then
+        sfcio = .true.
+        call nstio_srohdc(lunin,filenamein,nstheadi,nstdatai,iret)
+     else
+        call nemsio_open(gfile,trim(filenamein),'READ',iret)
+        if (iret == 0 ) then
+           nemsio = .true.
+        else
+           write(6,*)'***ERROR*** ',trim(filenamein),' contains unrecognized format.  ABORT'
+        endif
+     endif
+     if (.not.nemsio .and. .not. sfcio) goto 100
+     if (mype==0) write(6,*)'computing mean with nemsio=',nemsio,' sfcio=',sfcio
+
+!
+     if (sfcio) then
      call nstio_aldata(nstheadi,nstdatao,iret)
      nstheado = nstheadi
 
@@ -159,7 +191,7 @@ program getnstensmeanp
      nstdatao%slmsk = nstdatai%slmsk
      nstdatao%ifd   = nstdatai%ifd
 
-!    Use mpi_reduce to sum fields.  Compute mean
+!    For sfcio, Use mpi_reduce to sum fields.  Compute mean
      call mpi_allreduce(nstdatai%xt,     nstdatao%xt,     size(nstdatai%xt),     mpi_real,mpi_sum,new_comm,iret)
      call mpi_allreduce(nstdatai%xs,     nstdatao%xs,     size(nstdatai%xs),     mpi_real,mpi_sum,new_comm,iret)
      call mpi_allreduce(nstdatai%xu,     nstdatao%xu,     size(nstdatai%xu),     mpi_real,mpi_sum,new_comm,iret)
@@ -202,13 +234,71 @@ program getnstensmeanp
         call nstio_swohdc(lunout,filenameout,nstheado,nstdatao,iret)
         write(6,*)'Write ensemble mean ',trim(filenameout),' iret=',iret
      endif
+! For nemsio, Use mpi_reduce to sum fields.  Compute mean
+  elseif (nemsio) then
+     call nemsio_getfilehead(gfile, nrec=nrec, idate=idate, dimx=lonb,dimy=latb, iret=iret)
+
+     if (mype==0) then
+        gfileo=gfile         ! copy gfile header to gfileo header
+        call nemsio_open(gfileo,trim(filenameout),'WRITE',iret )
+     end if
+
+     npts=lonb*latb
+     if (.not.allocated(rwork1d)) allocate(rwork1d(npts))
+     if (.not.allocated(swork1d)) allocate(swork1d(npts))
+
+!
+!   get the average for all data records and then write to gfileo
+!
+     do n=1,nrec
+        rwork1d=zero
+        call nemsio_readrec (gfile, n,rwork1d,iret)
+        swork1d=zero
+        call mpi_allreduce(rwork1d,swork1d,npts,mpi_real,mpi_sum,new_comm,iret)
+        swork1d = swork1d * rnanals
+
+        if (mype==0) then
+           call nemsio_writerec(gfileo,n,swork1d,iret)
+        end if
+     end do
+
+!       Following fields are not averaged
+!         slmsk = surface mask sfc
+!         ifd   = ifd sfc
+
+        if (mype==0) then
+           rwork1d=zero
+           call nemsio_readrecv(gfile,'land','sfc',1,rwork1d,iret)
+           call nemsio_writerecv(gfileo,'land','sfc',1,rwork1d,iret)
+
+           rwork1d=zero
+           call nemsio_readrecv(gfile,'ifd','sfc',1,rwork1d,iret)
+           call nemsio_writerecv(gfileo,'ifd','sfc',1,rwork1d,iret)
+        end if
+
+        deallocate(rwork1d)
+        deallocate(swork1d)
+
+        call nemsio_close(gfile, iret)
+        if (mype==0) then
+           call nemsio_close(gfileo,iret)
+           write(6,*)'Write ensmemble mean ',trim(filenameout),' iret=',iret
+        endif
+     endif
 
 ! Jump here if more mpi processors than files to process
   else
      write(6,*) 'No files to process for mpi task = ',mype
   endif
 
+100 continue
   call mpi_barrier(mpi_comm_world,iret)
+
+  if (mype1 <= nanals .and. .not.nemsio .and. .not. sfcio) then
+     write(6,*)'***ERROR***  invalid surface file format'
+     call MPI_Abort(MPI_COMM_WORLD,98,iret)
+     stop
+  endif
 
   if (mype==0) then
      write(6,*) 'all done!'

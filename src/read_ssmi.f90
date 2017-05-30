@@ -53,6 +53,7 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
 !   2014-05-02  sienkiewicz- modify gross check screening to allow data to be used with bad ch6, if
 !                              ch6 data has been turned off - only toss if do85GHz is true
 !   2015-02-23  Rancic/Thomas - add thin4d to time window logical
+!   2015-10-01  guo     - consolidate use of ob location (in deg)
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -87,12 +88,13 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
   use satthin, only: super_val,itxmax,makegrids,map2tgrid,destroygrids, &
       checkob,finalcheck,score_crit
   use obsmod, only: bmiss
-  use radinfo, only: iuse_rad,jpch_rad,nusis,nuchan,nst_gsi,nstinfo
+  use radinfo, only: iuse_rad,jpch_rad,nusis,nuchan
   use gridmod, only: diagnostic_reg,regional,rlats,rlons,nlat,nlon,&
       tll2xy,txy2ll
   use constants, only: deg2rad,rad2deg,zero,one,two,three,four,r60inv
   use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,thin4d
   use deter_sfc_mod, only: deter_sfc
+  use gsi_nstcouplermod, only: nst_gsi,nstinfo
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
   use mpimod, only: npe
 
@@ -173,6 +175,7 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
   real(r_kind) :: zob,tref,dtw,dtc,tz_tr
 
   real(r_kind):: dlat,dlon,dlon_earth,dlat_earth
+  real(r_kind):: dlon_earth_deg,dlat_earth_deg
   real(r_kind):: ssmi_def_ang,ssmi_zen_ang  ! default and obs SSM/I zenith ang
   logical  do85GHz, ch6, ch7
 
@@ -307,6 +310,8 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
            if(abs(dlat_earth)>90.0_r_kind .or. abs(dlon_earth)>r360) cycle scan_loop
            if(dlon_earth< zero) dlon_earth = dlon_earth+r360
            if(dlon_earth==r360) dlon_earth = dlon_earth-r360
+           dlat_earth_deg = dlat_earth
+           dlon_earth_deg = dlon_earth
            dlat_earth = dlat_earth*deg2rad
            dlon_earth = dlon_earth*deg2rad
 
@@ -476,8 +481,8 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
            data_all(27,itx)= idomsfc + 0.001_r_kind ! dominate surface type
            data_all(28,itx)= sfcr                 ! surface roughness
            data_all(29,itx)= ff10                 ! ten meter wind factor
-           data_all(30,itx)= dlon_earth*rad2deg   ! earth relative longitude (degrees)
-           data_all(31,itx)= dlat_earth*rad2deg   ! earth relative latitude (degrees)
+           data_all(30,itx)= dlon_earth_deg       ! earth relative longitude (degrees)
+           data_all(31,itx)= dlat_earth_deg       ! earth relative latitude (degrees)
            if(dval_use)then
               data_all(32,itx)= val_ssmi
               data_all(33,itx)= itt

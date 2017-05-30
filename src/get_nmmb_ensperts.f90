@@ -23,10 +23,10 @@ subroutine get_nmmb_ensperts
 !$$$ end documentation block
    use kinds, only: r_kind,i_kind,r_single
    use gridmod, only: pt_ll,pdtop_ll,aeta2_ll,aeta1_ll
-   use hybrid_ensemble_isotropic, only: en_perts,ps_bar,nelen 
+   use hybrid_ensemble_parameters, only: en_perts,ps_bar,nelen 
    use constants,only: zero,one,one_tenth,ten
    use mpimod, only: mpi_comm_world,ierror,mype
-   use hybrid_ensemble_parameters, only: n_ens,grd_ens,nlat_ens,nlon_ens,uv_hyb_ens,q_hyb_ens
+   use hybrid_ensemble_parameters, only: n_ens,grd_ens,q_hyb_ens
    use control_vectors, only: cvars2d,cvars3d,nc2d,nc3d
    use gsi_bundlemod, only: gsi_bundlecreate,gsi_bundleset,gsi_grid,gsi_bundle, &
                             gsi_bundlegetpointer,gsi_bundledestroy,gsi_gridcreate

@@ -13,6 +13,7 @@ module guess_grids
 ! !USES:
  
   use kinds, only: r_single,r_kind,i_kind
+  use constants, only: max_varname_length
   use gridmod, only: regional
   use gridmod, only: wrf_nmm_regional,nems_nmmb_regional
   use gridmod, only: eta1_ll
@@ -284,7 +285,7 @@ contains
    use constants, only: zero
 
 
-   use radinfo, only: nst_gsi
+   use gsi_nstcouplermod, only: nst_gsi
    use gsi_nstcouplermod, only: gsi_nstcoupler_init
    implicit none
 
@@ -395,7 +396,7 @@ contains
 ! !USES:
 
     use constants,only: zero,one
-    use gridmod, only: lat2,lon2,nsig,regional,nsig_soil
+    use gridmod, only: lat2,lon2,nsig
     implicit none
 
 ! !INPUT PARAMETERS:
@@ -417,7 +418,6 @@ contains
 !   2005-07-27  kleist  - modified to include some shared arrays
 !   2006-01-10  treadon - remove mype from calling list (not used)
 !   2006-07-31  kleist  - use ges_ps arrays instead of ln(ps)
-!   2006-06-08  zhang,b - change "biascor>0" to "biascor>=0" for debug purposes
 !   2006-12-04  todling - remove bias initialization; rename routine
 !   2006-12-15  todling - protection to allow initializing ges/tnd/drv at will
 !   2007-03-15  todling - merged in da Silva/Cruz ESMF changes
@@ -575,7 +575,7 @@ contains
 !-------------------------------------------------------------------------
    character(len=*),parameter::myname_=myname//'*create_metguess_grids'
    integer(i_kind) :: nmguess                   ! number of meteorol. fields (namelist)
-   character(len=256),allocatable:: mguess(:)   ! names of meterol. fields
+   character(len=max_varname_length),allocatable:: mguess(:)   ! names of meterol. fields
 
    istatus=0
   
@@ -686,7 +686,7 @@ contains
 !-------------------------------------------------------------------------
   character(len=*),parameter::myname_=myname//'*create_chemges_grids'
    integer(i_kind) :: ntgases                   ! number of tracer gases (namelist)
-   character(len=256),allocatable:: tgases(:)   ! names of tracer gases
+   character(len=max_varname_length),allocatable:: tgases(:)   ! names of tracer gases
 
   istatus=0
   
@@ -821,7 +821,7 @@ contains
 
 ! !USES:
 
-   use radinfo, only: nst_gsi
+   use gsi_nstcouplermod, only: nst_gsi
    use gsi_nstcouplermod, only: gsi_nstcoupler_final
    implicit none
    
@@ -835,6 +835,7 @@ contains
 !   2007-03-15  todling - merged in da Silva/Cruz ESMF changes
 !   2008-06-30  derber - remove sfct deallocate to allow earlier call
 !   2009-01-17  todling - move isli2,sno2 into destroy_sfct
+!   2010-03-15  todling - esmf protection
 !   2012-03-06  akella  - add call to destroy NST analysis arrays
 !
 ! !REMARKS:
@@ -859,6 +860,7 @@ contains
     if (istatus/=0) &
          write(6,*)'DESTROY_SFC_GRIDS:  deallocate error, istatus=',&
          istatus
+#ifndef HAVE_ESMF
     if(allocated(isli))deallocate(isli)
     if(allocated(fact10))deallocate(fact10)
     if(allocated(sfct))deallocate(sfct)
@@ -871,6 +873,7 @@ contains
     if(allocated(soil_moi))deallocate(soil_moi)
     if(allocated(dsfct))deallocate(dsfct)
     if(allocated(coast_prox))deallocate(coast_prox)
+#endif
 
     return
   end subroutine destroy_sfc_grids
@@ -1019,6 +1022,8 @@ contains
 !   2006-07-31  kleist  - use ges_ps instead of ln(ps)
 !   2007-05-08  kleist  - add fully generalized coordinate for pressure calculation
 !   2011-07-07  todling - add cap for log(pressure) calculation
+!   2017-03-23  Hu      - add code to use hybrid vertical coodinate in WRF MASS
+!                         core
 !
 ! !REMARKS:
 !   language: f90
@@ -1056,15 +1061,18 @@ contains
           do j=1,lon2
              do i=1,lat2
                 if(regional) then
-                   if (wrf_nmm_regional.or.nems_nmmb_regional.or.&
-                        cmaq_regional ) &
+                   if (wrf_nmm_regional.or.nems_nmmb_regional) &
                       ges_prsi(i,j,k,jj)=one_tenth* &
                              (eta1_ll(k)*pdtop_ll + &
                               eta2_ll(k)*(ten*ges_ps(i,j)-pdtop_ll-pt_ll) + &
                               pt_ll)
 
-                   if (wrf_mass_regional .or. twodvar_regional) &
+                   if (twodvar_regional .or. cmaq_regional ) &
                       ges_prsi(i,j,k,jj)=one_tenth*(eta1_ll(k)*(ten*ges_ps(i,j)-pt_ll) + pt_ll)
+
+                   if (wrf_mass_regional) &      
+                      ges_prsi(i,j,k,jj)=one_tenth*(eta1_ll(k)*(ten*ges_ps(i,j)-pt_ll) + &
+                                                    eta2_ll(k) + pt_ll)
                 else
                    if (idvc5==1 .or. idvc5==2) then
                       ges_prsi(i,j,k,jj)=ak5(k)+(bk5(k)*ges_ps(i,j))
@@ -1088,7 +1096,7 @@ contains
     end do
 
     if(regional) then
-       if (wrf_nmm_regional.or.nems_nmmb_regional.or.cmaq_regional) then
+       if (wrf_nmm_regional.or.nems_nmmb_regional) then
 ! load using aeta coefficients
           do jj=1,nfldsig
              call gsi_bundlegetpointer(gsi_metguess_bundle(jj),'ps' ,ges_ps ,ips)
@@ -1106,7 +1114,7 @@ contains
              end do
           end do
        end if   ! end if wrf_nmm regional block
-       if (wrf_mass_regional .or. twodvar_regional) then
+       if (twodvar_regional .or. cmaq_regional) then
 ! load using aeta coefficients
           do jj=1,nfldsig
              call gsi_bundlegetpointer(gsi_metguess_bundle(jj),'ps' ,ges_ps ,ips)
@@ -1114,6 +1122,21 @@ contains
                 do j=1,lon2
                    do i=1,lat2
                       ges_prsl(i,j,k,jj)=one_tenth*(aeta1_ll(k)*(ten*ges_ps(i,j)-pt_ll)+pt_ll)
+                      ges_lnprsl(i,j,k,jj)=log(ges_prsl(i,j,k,jj))
+                   end do
+                end do
+             end do
+          end do
+       end if   ! end if twodvar_regional, cmaq_regional block
+       if (wrf_mass_regional) then
+! load using aeta coefficients
+          do jj=1,nfldsig
+             call gsi_bundlegetpointer(gsi_metguess_bundle(jj),'ps' ,ges_ps ,ips)
+             do k=1,nsig
+                do j=1,lon2
+                   do i=1,lat2
+                      ges_prsl(i,j,k,jj)=one_tenth*(aeta1_ll(k)*(ten*ges_ps(i,j)-pt_ll)+&
+                                                    aeta2_ll(k) + pt_ll)
                       ges_lnprsl(i,j,k,jj)=log(ges_prsl(i,j,k,jj))
                    end do
                 end do
@@ -1165,9 +1188,13 @@ contains
 ! surface pressure and pressure profile at the layer midpoints
     if (regional) then
        ges_psfcavg = r1013
-       if (wrf_nmm_regional.or.nems_nmmb_regional.or.cmaq_regional) then
+       if (wrf_nmm_regional.or.nems_nmmb_regional) then
           do k=1,nsig
              ges_prslavg(k)=aeta1_ll(k)*pdtop_ll+aeta2_ll(k)*(r1013-pdtop_ll-pt_ll)+pt_ll
+          end do
+       elseif (wrf_mass_regional) then
+          do k=1,nsig
+             ges_prslavg(k)=aeta1_ll(k)*(r1013-pt_ll)+aeta2_ll(k) + pt_ll
           end do
        else
           do k=1,nsig
@@ -1501,7 +1528,7 @@ contains
 
              do k=1,nsig
 
-                if (wrf_mass_regional)  pbk(k) = aeta1_ll(k)*(ges_ps_01(i,j)*ten-pt_ll)+pt_ll
+                if (wrf_mass_regional)  pbk(k) = aeta1_ll(k)*(ges_ps_01(i,j)*ten-pt_ll)+aeta2_ll(k)+pt_ll
 		if (nems_nmmb_regional) then
 		   pbk(k) = aeta1_ll(k)*pdtop_ll + aeta2_ll(k)*(ten*ges_ps(i,j) & 
 		            -pdtop_ll-pt_ll) + pt_ll   			    			    
@@ -1778,6 +1805,7 @@ contains
 ! !REVISION HISTORY:
 !   2006-09-26  treadon
 !   2008-12-05  todling - use dsfct(:,:,ntguessfc) for calculation
+!   2015-03-10  todling - assign missing ps pointers
 !
 ! !REMARKS:
 !   language: f90
@@ -1864,6 +1892,10 @@ contains
     dtsigp=one-dtsig
 
     ier=0
+    call gsi_bundlegetpointer(gsi_metguess_bundle(itsig) ,'ps' ,ges_ps_itsig ,istatus)
+    ier=ier+istatus
+    call gsi_bundlegetpointer(gsi_metguess_bundle(itsigp),'ps' ,ges_ps_itsigp,istatus)
+    ier=ier+istatus
     call gsi_bundlegetpointer(gsi_metguess_bundle(itsig) ,'u' ,ges_u_itsig ,istatus)
     ier=ier+istatus
     call gsi_bundlegetpointer(gsi_metguess_bundle(itsigp),'u' ,ges_u_itsigp,istatus)

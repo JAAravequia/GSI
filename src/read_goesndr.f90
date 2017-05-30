@@ -58,6 +58,7 @@ subroutine read_goesndr(mype,val_goes,ithin,isfcalc,rmesh,jsatid,infile,&
 !                          causes integer overflow with current logic.  Made quick fix, but needs review.
 !   2013-12-30  sienkiewicz - use BUFR library function 'ibfms' to check for missing value of hdr(15)
 !   2015-02-23  Rancic/Thomas - add thin4d to time window logical
+!   2015-10-01  guo     - consolidate use of ob location (in deg)
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -93,11 +94,12 @@ subroutine read_goesndr(mype,val_goes,ithin,isfcalc,rmesh,jsatid,infile,&
       checkob,finalcheck,score_crit
   use obsmod, only: bmiss
   use radinfo, only: cbias,newchn,predx,iuse_rad,jpch_rad,nusis,ang_rad,air_rad,&
-      newpc4pred,nst_gsi,nstinfo
+      newpc4pred
   use gridmod, only: diagnostic_reg,nlat,nlon,regional,tll2xy,txy2ll,rlats,rlons
-  use constants, only: deg2rad,zero,rad2deg, r60inv,one,two,tiny_r_kind
+  use constants, only: deg2rad,zero,rad2deg, r60inv,one,two
   use gsi_4dvar, only: l4dvar,l4densvar,time_4dvar,iwinbgn,winlen,thin4d
   use deter_sfc_mod, only: deter_sfc, deter_sfc_fov
+  use gsi_nstcouplermod, only: nst_gsi,nstinfo
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
   use mpimod, only: npe
   use calc_fov_geo, only : instrument_init
@@ -151,7 +153,7 @@ subroutine read_goesndr(mype,val_goes,ithin,isfcalc,rmesh,jsatid,infile,&
 
   real(r_kind) dlon,dlat,timedif,emiss,sfcr
   real(r_kind) dlon_earth,dlat_earth
-  real(r_kind) dlon_earth_deg,dlat_earth_deg,rdum
+  real(r_kind) dlon_earth_deg,dlat_earth_deg
   real(r_kind) expansion
   real(r_kind) ch8,sstime,sublat,sublon
   real(r_kind) pred,crit1,tdiff,dist1,toff,t4dv
@@ -519,8 +521,8 @@ subroutine read_goesndr(mype,val_goes,ithin,isfcalc,rmesh,jsatid,infile,&
         data_all(27,itx)= idomsfc + 0.001_r_kind       ! dominate surface type
         data_all(28,itx)= sfcr                         ! surface roughness
         data_all(29,itx)= ff10                         ! ten meter wind factor
-        data_all(30,itx)= dlon_earth*rad2deg           ! earth relative longitude (degrees)
-        data_all(31,itx)= dlat_earth*rad2deg           ! earth relative latitude (degrees)
+        data_all(30,itx)= dlon_earth_deg               ! earth relative longitude (degrees)
+        data_all(31,itx)= dlat_earth_deg               ! earth relative latitude (degrees)
 
 
         if(dval_use)then

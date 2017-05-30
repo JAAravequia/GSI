@@ -227,7 +227,7 @@ module egrid2agrid_mod
 
       if(.not.p%identity) then
 
-         e2a_only=.true.
+         e2a_only=.false.
          call get_3ops(p%e2a_lon,nlona,rlona,nlone,rlone,nord_e2a,e2a_only)
          call get_3ops(p%e2a_lat,nlata,rlata,nlate,rlate,nord_e2a,e2a_only)
 
@@ -1391,7 +1391,7 @@ module egrid2agrid_mod
 !
 !$$$ end documentation block
 
-      use constants, only: zero,half,one,two,pi,rad2deg
+      use constants, only: zero,half,one,two,pi
       implicit none
 
       integer(i_kind),intent(in) :: nlata,nlona,nlate,nlone,nord_e2a
@@ -1401,7 +1401,8 @@ module egrid2agrid_mod
       logical,intent(in),optional:: eqspace
 
       integer(i_kind) i,ilona,ilone,j,nextend,nlate_ex,nlone_ex,nlone_half
-      real(r_kind) half_pi,two_pi,dlona,dlone,errtest,diffmax,range_lat,range_lon
+      real(r_single) errtest
+      real(r_kind) half_pi,two_pi,dlona,dlone,diffmax,range_lat,range_lon
       real(r_kind),allocatable::rlate_ex(:),rlone_ex(:)
       logical fail_tests
 
@@ -1438,7 +1439,7 @@ module egrid2agrid_mod
 
 !   check that lats and lons satisfy requirements:
 
-      errtest=10._r_kind*pi*epsilon(one)
+      errtest=10._r_single*pi*epsilon(1._r_single)
       half_pi=half*pi
       two_pi=two*pi
       fail_tests=.false.
@@ -2513,7 +2514,7 @@ module egrid2agrid_mod
 !
 !$$$ end documentation block
 
-      use constants, only: zero,half,one,two,pi,rad2deg
+      use constants, only: zero,half,one,two,pi
       implicit none
 
       integer(i_kind),intent(in) :: na,nlate,nlone,nord_e2a

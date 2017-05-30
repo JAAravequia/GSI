@@ -12,7 +12,8 @@
       use kinds,only : i_kind,r_kind
       use constants, only: zero,one,max_varname_length
       use gridmod, only: nsig
-      use chemmod, only : berror_chem
+      use chemmod, only : berror_chem,upper2lower,lower2upper
+      use m_berror_stats, only: berror_stats
 
       implicit none
 
@@ -32,12 +33,18 @@
 !                     - extract from rdgstat_reg
 !                     - change sructure of error file
 !                     - make changes for generalized control variables
+!       24Jun16 - Guo - replaced the local berror_stats, with a global user
+!                       configurable m_berror_stats::berror_stats, for the
+!                       filename.  This ensure the consistency, as well as the
+!                       reconfigurability of this variable through the GSI.
 !EOP ___________________________________________________________________
 
   character(len=*),parameter :: myname='m_berror_stats_reg'
 
-     ! Reconfigurable parameters, vai NAMELISt/setup/
-  character(len=256),save :: berror_stats = "berror_stats"   ! filename
+        ! The same default filename is used as in m_berror_stats,  to take the
+        ! advantage of the same berror_stats= entry in the /setup/ namelist, to
+        ! override the default value.  Otherwise, a special entry would have to
+        ! be defined for this module in the /setup/ namelist.
 
   integer(i_kind),parameter :: default_unit_ = 22
   integer(i_kind),parameter :: ERRCODE=2
@@ -126,7 +133,6 @@ end subroutine berror_set_reg
 
     subroutine berror_read_bal_reg(msig,mlat,agvi,bvi,wgvi,mype,unit)
       use kinds,only : r_single
-      use gridmod,only : nlat,nlon
       use guess_grids, only:  ges_psfcavg,ges_prslavg
 
       implicit none
@@ -268,7 +274,7 @@ end subroutine berror_read_bal_reg
     subroutine berror_read_wgt_reg(msig,mlat,corz,corp,hwll,hwllp,vz,rlsig,varq,qoption,varcw,cwoption,mype,unit)
 
       use kinds,only : r_single,r_kind
-      use gridmod,only : nlat,nlon,nsig
+      use gridmod,only : nsig
       use control_vectors,only: nrf,nc2d,nc3d,mvars,nvars
       use control_vectors,only: cvars => nrf_var
       use control_vectors,only: cvars2d,cvars3d,cvarsmd
@@ -315,6 +321,7 @@ end subroutine berror_read_bal_reg
 !       10Jun14 Zhu - tune error variance and correlation lengths of cw for
 !                     all-sky radiance assimilation
 !       19Jun14 carley/zhu - add tcamt and lcbas
+!       10Jul15 pondeca - add cldch
 !
 !EOP ___________________________________________________________________
 
@@ -336,12 +343,12 @@ end subroutine berror_read_bal_reg
 
 
   character*5 :: varshort
-  character(len=max_varname_length) :: var_chem,var
+  character(len=max_varname_length) :: var
   logical,dimension(nrf):: nrf_err
 
   integer(i_kind) :: nrf3_oz,nrf3_q,nrf3_cw,nrf3_sf,nrf3_vp,nrf2_sst
   integer(i_kind) :: nrf3_t,nrf2_gust,nrf2_vis,nrf2_pblh,nrf2_ps,nrf2_wspd10m
-  integer(i_kind) :: nrf2_td2m,nrf2_mxtm,nrf2_mitm,nrf2_pmsl,nrf2_howv,nrf2_tcamt,nrf2_lcbas
+  integer(i_kind) :: nrf2_td2m,nrf2_mxtm,nrf2_mitm,nrf2_pmsl,nrf2_howv,nrf2_tcamt,nrf2_lcbas,nrf2_cldch
   integer(i_kind) :: nrf3_sfwter,nrf3_vpwter
   integer(i_kind) :: inerr,istat
   integer(i_kind) :: nsigstat,nlatstat,isig
@@ -399,9 +406,9 @@ end subroutine berror_read_bal_reg
   nrf_err=.false.
   read: do
      if (berror_chem) then
-        read(inerr,iostat=istat) var_chem,isig
-        var=var_chem
-!chem variable names can be longer than 5 chars
+        read(inerr,iostat=istat) varshort,isig
+        var=upper2lower(varshort)
+        if (var == 'pm25') var = 'pm2_5'
      else 
         read(inerr,iostat=istat) varshort, isig
         var=varshort
@@ -430,6 +437,8 @@ end subroutine berror_read_bal_reg
            nrf_err(n)=.true.
            loc=n
            exit
+        else
+           loc=-999
         end if
      end do
 
@@ -540,6 +549,7 @@ end subroutine berror_read_bal_reg
   nrf3_vpwter =getindex(cvars3d,'vpwter')
   nrf2_tcamt=getindex(cvars2d,'tcamt')
   nrf2_lcbas=getindex(cvars2d,'lcbas')
+  nrf2_cldch=getindex(cvars2d,'cldch')
 
   if(nrf3_q>0 .and. qoption==2)then
      do k=1,nsig
@@ -703,6 +713,15 @@ end subroutine berror_read_bal_reg
            hwllp(i,n)=hwll(i,1,nrf3_t)
         end do
         print*, 'm_berror_reg: maxhwllp_lcbas=',maxval(hwllp(:,n))
+     end if
+     if (n==nrf2_cldch) then
+        do i=1,mlat
+           corp(i,n)=40000.0_r_kind
+        end do
+        do i=0,mlat+1
+           hwllp(i,n)=hwll(i,1,nrf3_t)
+        end do
+        print*, 'm_berror_reg: maxhwllp_cldch=',maxval(hwllp(:,n))
      end if
 
   enddo

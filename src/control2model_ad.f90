@@ -37,13 +37,13 @@ use kinds, only: r_kind,i_kind
 use constants, only: zero,max_varname_length
 use control_vectors, only: control_vector
 use control_vectors, only: cvars3d,cvars2d,cvarsmd
-use control_vectors, only: nc2d,nc3d,mvars
+use control_vectors, only: nc2d,mvars
 use bias_predictors, only: predictors
 use gsi_4dvar, only: nsubwin, lsqrtb
 use gridmod, only: lat2,lon2,nsig
 use berror, only: varprd,fpsproj,fut2ps
 use balmod, only: tbalance
-use jfunc, only: nsclen,npclen,ntclen,nrclen,nval_lenz
+use jfunc, only: nsclen,npclen,ntclen,nval_lenz
 use cwhydromod, only: cw2hydro_ad
 use gsi_bundlemod, only: gsi_bundlecreate
 use gsi_bundlemod, only: gsi_gridcreate
@@ -175,10 +175,7 @@ do jj=1,nsubwin
 
 !  Adjoint of convert input normalized RH to q to add contribution of moisture
 !  to t, p , and normalized rh
-   if(do_normal_rh_to_q_ad) then
-      call normal_rh_to_q_ad(workrh,rv_tv,rv_prse,rv_q)
-      rv_q=zero
-   end if
+   if(do_normal_rh_to_q_ad) call normal_rh_to_q_ad(workrh,rv_tv,rv_prse,rv_q)
 
 !  Adjoint to convert ps to 3-d pressure
    if(do_getprs_ad) call getprs_ad(rv_ps,rv_tv,rv_prse)

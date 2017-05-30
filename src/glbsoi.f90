@@ -92,6 +92,8 @@ subroutine glbsoi(mype)
 !   2014-02-05  todling - update interface to prebal
 !   2014-06-19  carley/zhu - Modify for R_option: optional variable correlation length twodvar_regional
 !                            lcbas analysis variable
+!   2015-10-01  guo     - omb at full res; support via obsdiags 
+!   2015-12-08  el akkraoui - Y. Zhu sat-bias-corr now works with BiCG option
 !
 !   input argument list:
 !     mype - mpi task id
@@ -125,6 +127,7 @@ subroutine glbsoi(mype)
       twodvar_regional,wgtlats
   use guess_grids, only: nfldsig
   use obsmod, only: write_diag,perturb_obs,ditype,iadate
+  use qcmod,only: njqc
   use turblmod, only: create_turblvars,destroy_turblvars
   use obs_sensitivity, only: lobsensfc, iobsconv, lsensrecompute, &
       init_fc_sens, save_fc_sens, lobsensincr, lobsensjb
@@ -136,6 +139,15 @@ subroutine glbsoi(mype)
   use radinfo, only: radinfo_write,passive_bc,newpc4pred
   use pcpinfo, only: pcpinfo_write
   use converr, only: converr_destroy
+  use converr_ps, only: converr_ps_destroy
+  use converr_q, only: converr_q_destroy
+  use converr_t, only: converr_t_destroy
+  use converr_uv, only: converr_uv_destroy
+  use converr_pw, only: converr_pw_destroy
+  use convb_ps, only: convb_ps_destroy
+  use convb_q, only: convb_q_destroy
+  use convb_t, only: convb_t_destroy
+  use convb_uv, only: convb_uv_destroy
   use zrnmi_mod, only: zrnmi_initialize
   use observermod, only: observer_init,observer_set,observer_finalize,ndata
   use timermod, only: timer_ini, timer_fnl
@@ -145,8 +157,10 @@ subroutine glbsoi(mype)
   use gfs_stratosphere, only: destroy_nmmb_vcoords,use_gfs_stratosphere
   use aircraftinfo, only: aircraftinfo_write,aircraft_t_bc_pof,aircraft_t_bc,mype_airobst
 
-  implicit none
+  use m_prad, only: prad_updatePredx    ! was -- prad_bias()
+  use m_obsdiags, only: obsdiags_write
 
+  implicit none
 
 ! Declare passed variables
   integer(i_kind),intent(in   ) :: mype
@@ -302,16 +316,17 @@ subroutine glbsoi(mype)
  
 !       Call inner minimization loop
         if (laltmin) then
-           if (newpc4pred) then
-              if (mype==0) write(6,*)'GLBSOI: newpc4pred is not available for lsqrtb'
-              call stop2(334)
-           end if
            if (lsqrtb) then
+              if (newpc4pred) then
+                 if (mype==0) write(6,*)'GLBSOI: newpc4pred is not available for lsqrtb'
+                 call stop2(334)
+              end if
               if (mype==0) write(6,*)'GLBSOI: Using sqrt(B), jiter=',jiter
               call sqrtmin
            endif
            if (lbicg) then
               if (mype==0) write(6,*)'GLBSOI: Using bicg, jiter=',jiter
+              call pcinfo ! Set up additional preconditioning information
               call bicg
            endif
         else
@@ -327,16 +342,18 @@ subroutine glbsoi(mype)
         if (lobsensfc) then
            clfile='obsdiags.ZZZ'
            write(clfile(10:12),'(I3.3)') 100+jiter
-           call write_obsdiags(clfile)
+           call obsdiags_write(clfile)  ! replacing write_obsdiags()
            if (lobsensincr .or. lobsensjb) then
               clfile='xhatsave.ZZZ'
               write(clfile(10:12),'(I3.3)') jiter
               call view_cv(xhatsave,iadate,clfile,.not.lnested_loops)
            endif
         elseif (l4dvar.or.lanczosave) then
-           clfile='obsdiags.ZZZ'
-           write(clfile(10:12),'(I3.3)') jiter
-           call write_obsdiags(clfile)
+           if (l4dvar) then
+              clfile='obsdiags.ZZZ'
+              write(clfile(10:12),'(I3.3)') jiter
+              call obsdiags_write(clfile)  ! replacing write_obsdiags()
+           endif
            clfile='xhatsave.ZZZ'
            write(clfile(10:12),'(I3.3)') jiter
            call view_cv(xhatsave,iadate,clfile,.not.lnested_loops)
@@ -366,7 +383,7 @@ subroutine glbsoi(mype)
      if (write_diag(jiter)) then 
         call setuprhsall(ndata,mype,.true.,.true.)
         if (.not. lsqrtb) call pcinfo
-        if (any(ditype=='rad') .and. passive_bc) call prad_bias
+        if (any(ditype=='rad') .and. passive_bc) call prad_updatePredx() ! was -- call prad_bias
      end if
 
 !    Write xhat- and yhat-save for use as a guess for the solution
@@ -374,7 +391,22 @@ subroutine glbsoi(mype)
   endif
 
 ! Deallocate arrays
-  if(perturb_obs) call converr_destroy
+  if(perturb_obs) then
+     if(njqc) then
+        call converr_ps_destroy
+        call converr_q_destroy
+        call converr_t_destroy
+        call converr_uv_destroy
+        call converr_pw_destroy
+        call convb_ps_destroy
+        call convb_q_destroy
+        call convb_t_destroy
+        call convb_uv_destroy
+     else
+        call converr_destroy
+     endif  
+  endif
+
   if (regional) then
      if(anisotropic) then
         call destroy_anberror_vars_reg

@@ -9,6 +9,7 @@ module stpwspd10mmod
 !
 ! program history log:
 !   2014-03-19  pondeca
+!   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !
 ! subroutines included:
 !   sub stpwspd10m
@@ -19,6 +20,10 @@ module stpwspd10mmod
 !
 !$$$ end documentation block
 
+use m_obsNode    , only: obsNode
+use m_wspd10mNode, only: wspd10mNode
+use m_wspd10mNode, only: wspd10mNode_typecast
+use m_wspd10mNode, only: wspd10mNode_nextcast
 implicit none
 
 PRIVATE
@@ -36,6 +41,7 @@ subroutine stpwspd10m(wspd10mhead,rval,sval,out,sges,nstep)
 !
 ! program history log:
 !   2014-03-19  pondeca  - update
+!   2015-07-10  pondeca  - force return if no wspd10m data available
 !
 !   input argument list:
 !     wspd10mhead
@@ -53,7 +59,6 @@ subroutine stpwspd10m(wspd10mhead,rval,sval,out,sges,nstep)
 !
 !$$$
   use kinds, only: r_kind,i_kind,r_quad
-  use obsmod, only: wspd10m_ob_type
   use qcmod, only: nlnqc_iter,varqc_iter
   use constants, only: half,one,two,tiny_r_kind,cg_term,zero_quad
   use gridmod, only: latlon11
@@ -62,7 +67,7 @@ subroutine stpwspd10m(wspd10mhead,rval,sval,out,sges,nstep)
   implicit none
 
 ! Declare passed variables
-  type(wspd10m_ob_type),pointer           ,intent(in   ) :: wspd10mhead
+  class(obsNode),pointer              ,intent(in   ) :: wspd10mhead
   integer(i_kind)                     ,intent(in   ) :: nstep
   real(r_quad),dimension(max(1,nstep)),intent(inout) :: out
   type(gsi_bundle)                    ,intent(in   ) :: rval,sval
@@ -77,9 +82,12 @@ subroutine stpwspd10m(wspd10mhead,rval,sval,out,sges,nstep)
   real(r_kind) pg_wspd10m
   real(r_kind),pointer,dimension(:) :: swspd10m
   real(r_kind),pointer,dimension(:) :: rwspd10m
-  type(wspd10m_ob_type), pointer :: wspd10mptr
+  type(wspd10mNode), pointer :: wspd10mptr
 
   out=zero_quad
+
+! If no wspd10m data return
+  if(.not. associated(wspd10mhead))return
 
 ! Retrieve pointers
 ! Simply return if any pointer not found
@@ -88,7 +96,8 @@ subroutine stpwspd10m(wspd10mhead,rval,sval,out,sges,nstep)
   call gsi_bundlegetpointer(rval,'wspd10m',rwspd10m,istatus);ier=istatus+ier
   if(ier/=0)return
 
-  wspd10mptr => wspd10mhead
+  !wspd10mptr => wspd10mhead
+  wspd10mptr => wspd10mNode_typecast(wspd10mhead)
   do while (associated(wspd10mptr))
      if(wspd10mptr%luse)then
         if(nstep > 0)then
@@ -130,7 +139,8 @@ subroutine stpwspd10m(wspd10mhead,rval,sval,out,sges,nstep)
         end do
      end if
 
-     wspd10mptr => wspd10mptr%llpoint
+     !wspd10mptr => wspd10mptr%llpoint
+     wspd10mptr => wspd10mNode_nextcast(wspd10mptr)
 
   end do
   

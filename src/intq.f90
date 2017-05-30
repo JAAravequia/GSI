@@ -13,6 +13,9 @@ module intqmod
 !   2008-11-26  Todling - remove intq_tl; add interface back
 !   2009-08-13  lueken - update documentation
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - implemented obs adjoint test  
+!   2014-04-14      Su   -  add another non linear qc(purser's scheme) 
+!   2015-02-26      Su   -  add njqc as an option to choose Purser's varqc
+!   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !
 ! subroutines included:
 !   sub intq_
@@ -25,6 +28,10 @@ module intqmod
 !
 !$$$ end documentation block
 
+use m_obsNode, only: obsNode
+use m_qNode, only: qNode
+use m_qNode, only: qNode_typecast
+use m_qNode, only: qNode_nextcast
 implicit none
 
 PRIVATE
@@ -68,6 +75,7 @@ subroutine intq_(qhead,rval,sval)
 !   2010-05-13  todling  - update to use gsi_bundle; update interface 
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - introduced ladtest_obs         
 !   2014-12-03  derber  - modify so that use of obsdiags can be turned off
+!   2015-12-21  yang    - Parrish's correction to the previous code in new varqc.
 !
 !   input argument list:
 !     qhead    - obs type pointer to obs structure
@@ -83,9 +91,9 @@ subroutine intq_(qhead,rval,sval)
 !
 !$$$
   use kinds, only: r_kind,i_kind
-  use constants, only: half,one,tiny_r_kind,cg_term,r3600
-  use obsmod, only: q_ob_type,lsaveobsens,l_do_adjoint,luse_obsdiag
-  use qcmod, only: nlnqc_iter,varqc_iter
+  use constants, only: half,one,tiny_r_kind,cg_term,r3600,two
+  use obsmod, only: lsaveobsens,l_do_adjoint,luse_obsdiag
+  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc
   use gridmod, only: latlon1n
   use jfunc, only: jiter,l_foto,xhat_dt,dhat_dt
   use gsi_bundlemod, only: gsi_bundle
@@ -94,7 +102,7 @@ subroutine intq_(qhead,rval,sval)
   implicit none
 
 ! Declare passed variables
-  type(q_ob_type),pointer,intent(in   ) :: qhead
+  class(obsNode),pointer ,intent(in   ) :: qhead
   type(gsi_bundle)       ,intent(in   ) :: sval
   type(gsi_bundle)       ,intent(inout) :: rval
 
@@ -107,7 +115,7 @@ subroutine intq_(qhead,rval,sval)
   real(r_kind) cg_q,val,p0,grad,wnotgross,wgross,q_pg
   real(r_kind),pointer,dimension(:) :: sq
   real(r_kind),pointer,dimension(:) :: rq
-  type(q_ob_type), pointer :: qptr
+  type(qNode), pointer :: qptr
 
 !  If no q data return
   if(.not. associated(qhead))return
@@ -122,7 +130,8 @@ subroutine intq_(qhead,rval,sval)
   endif
   if(ier/=0) return
 
-  qptr => qhead
+  !qptr => qhead
+  qptr => qNode_typecast(qhead)
   do while (associated(qptr))
      j1=qptr%ij(1)
      j2=qptr%ij(2)
@@ -168,7 +177,7 @@ subroutine intq_(qhead,rval,sval)
  
 !          gradient of nonlinear operator
  
-           if (nlnqc_iter .and. qptr%pg > tiny_r_kind .and.  &
+           if (vqc .and. nlnqc_iter .and. qptr%pg > tiny_r_kind .and.  &
                                 qptr%b  > tiny_r_kind) then
               q_pg=qptr%pg*varqc_iter
               cg_q=cg_term/qptr%b
@@ -177,10 +186,15 @@ subroutine intq_(qhead,rval,sval)
               p0=wgross/(wgross+exp(-half*qptr%err2*val**2))  ! p0 is P in the reference by Enderson
               val=val*(one-p0)                         ! term is Wqc in the referenc by Enderson
            endif
+
+           if (njqc .and. qptr%jb > tiny_r_kind .and. qptr%jb <10.0_r_kind) then
+              val=sqrt(two*qptr%jb)*tanh(sqrt(qptr%err2)*val/sqrt(two*qptr%jb))
+              grad = val*qptr%raterr2*sqrt(qptr%err2)
+           else
+              grad = val*qptr%raterr2*qptr%err2
+           endif
            if( ladtest_obs) then
               grad = val
-           else
-              grad     = val*qptr%raterr2*qptr%err2
            end if
         endif
 
@@ -207,7 +221,8 @@ subroutine intq_(qhead,rval,sval)
         endif
      endif
 
-     qptr => qptr%llpoint
+     !qptr => qptr%llpoint
+     qptr => qNode_nextcast(qptr)
 
   end do
   return

@@ -1,5 +1,5 @@
 subroutine read_nsstbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
-          twindin,sis)
+          twindin,sis,nobs)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:  read_nsstbufr                read sst obs from nsstbufr file 
@@ -14,6 +14,9 @@ subroutine read_nsstbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
 ! program history log:
 !   2012-01-04  li      - modified based on read_nsstbufr.f90
 !   2015-03-06  Thomas  - added l4densvar logical to remove thinning in time
+!   2015-05-30  Li      - Modify to use deter_sfc instead of deter_sfc2
+!   2015-06-01  Li      - Modify to make it work when nst_gsi = 0 and nsstbufr data file exists
+!   2016-03-11  j. guo  - Fixed {dlat,dlon}_earth_deg in the obs data stream
 !
 !   input argument list:
 !     infile   - unit from which to read BUFR data
@@ -26,6 +29,7 @@ subroutine read_nsstbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
 !     ndata    - number of type "obstype" observations retained for further processing
 !     nodata   - number of individual "obstype" observations retained for further processing
 !     sis      - satellite/instrument/sensor indicator
+!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -41,11 +45,12 @@ subroutine read_nsstbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
   use convinfo, only: nconvtype,ctwind, &
       ncmiter,ncgroup,ncnumgrp,icuse,ictype
   use obsmod, only: oberrflg
-  use radinfo, only: nst_gsi,nstinfo,fac_dtl,fac_tsl
   use insitu_info, only: n_comps,n_scripps,n_triton,n_3mdiscus,cid_mbuoy,n_ship,ship
   use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen
   use deter_sfc_mod, only: deter_sfc,deter_sfc2
+  use gsi_nstcouplermod, only: nst_gsi,nstinfo,fac_dtl,fac_tsl
   use gsi_nstcouplermod, only: gsi_nstcoupler_deter
+  use mpimod, only: npe
   implicit none
 
 ! Declare passed variables
@@ -53,6 +58,7 @@ subroutine read_nsstbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
   character(len=*),intent(in):: sis
   integer(i_kind),intent(in):: lunout
   integer(i_kind),intent(inout):: nread,ndata,nodata
+  integer(i_kind),dimension(npe),intent(inout):: nobs
   real(r_kind),intent(in):: gstime,twindin
 
 ! Declare local parameters
@@ -79,8 +85,8 @@ subroutine read_nsstbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
   integer(i_kind) lunin,i,maxobs
   integer(i_kind) idate,iret,k
   integer(i_kind) kx,nreal,nchanl,ilat,ilon
-  integer(i_kind) sstq,nmind
-  integer(i_kind):: idomsfc
+  integer(i_kind) nmind
+  integer(i_kind):: idomsfc,isflg
 
   integer(i_kind) :: ireadmg,ireadsb,klev,msub,nmsub
   integer(i_kind), dimension(5) :: idate5
@@ -96,10 +102,12 @@ subroutine read_nsstbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
   equivalence (crpid,hdr(7))
 
   real(r_kind),dimension(0:3):: ts
+  real(r_kind),dimension(0:3):: sfcpct
 
-  real(r_kind) :: tdiff,sstime,usage,sfcr,tsavg,ff10,t4dv
-  real(r_kind) :: zz
+  real(r_kind) :: tdiff,sstime,usage,sfcr,t4dv,rsc
+  real(r_kind) :: tsavg,vty,vfr,sty,stp,sm,sn,zz,ff10
   real(r_kind) :: dlat,dlon,sstoe,dlat_earth,dlon_earth
+  real(r_kind) :: dlat_earth_deg,dlon_earth_deg
   real(r_kind) :: zob,tz,tref,dtw,dtc,tz_tr
 
   real(r_kind) cdist,disterr,disterrmax,rlon00,rlat00
@@ -222,8 +230,9 @@ subroutine read_nsstbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
         elseif ( trim(subset) == 'NC031001' ) then            ! BATHY
            msst = 13.0_r_kind                                 ! for BATHY, assign to be 13
            call ufbint(lunin,tpf2,2,65535,klev,'DBSS STMP')   ! read T_Profile
+
            if ( tpf2(1,1) < 5.0_r_kind ) then
-              sst = tpf(2,1)
+              sst = tpf2(2,1)
            else
               sst = bmiss
            endif
@@ -256,8 +265,8 @@ subroutine read_nsstbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
            if(clonh >= r360)  clonh = clonh - r360
            if(clonh <  zero)  clonh = clonh + r360
 
-!          write(*,'(a,1x,a9,1x,3F8.2)') 'subset,lon,lat,SST : ',subset,clonh,clath,sst
-
+           dlon_earth_deg = clonh
+           dlat_earth_deg = clath
            dlon_earth=clonh*deg2rad
            dlat_earth=clath*deg2rad
 
@@ -286,6 +295,7 @@ subroutine read_nsstbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
            idate5(3) = nint(hdr(3))    !day
            idate5(4) = nint(hdr(4))    !hour
            idate5(5) = nint(hdr(5))    !minute
+           rsc       = hdr(6)          !second in real
  
 
            call w3fs21(idate5,nmind)
@@ -461,7 +471,7 @@ subroutine read_nsstbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
            if(ikx == 0) cycle read_loop             ! not ob type used
 
            call w3fs21(idate5,nmind)
-           t4dv=real((nmind-iwinbgn),r_kind)*r60inv
+           t4dv=(real((nmind-iwinbgn),r_kind) + rsc*r60inv)*r60inv
 !
            if (l4dvar.or.l4densvar) then
               if (t4dv<zero .OR. t4dv>winlen) cycle read_loop
@@ -481,9 +491,9 @@ subroutine read_nsstbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
               if (mod(ndata+1,ncnumgrp(ikx))== ncgroup(ikx)-1) usage=ncmiter(ikx)
            end if
 
-           call deter_sfc2(dlat_earth,dlon_earth,t4dv,idomsfc,tsavg,ff10,sfcr,zz)
-
-           if( idomsfc /= zero)  cycle read_loop                            ! use data over water only
+           call deter_sfc(dlat,dlon,dlat_earth,dlon_earth,t4dv,isflg,idomsfc,sfcpct, &
+                          ts,tsavg,vty,vfr,sty,stp,sm,sn,zz,ff10,sfcr)
+           if(sfcpct(0) == zero)  cycle read_loop
 
            nodata = nodata + 1
            ndata = ndata + 1
@@ -495,15 +505,17 @@ subroutine read_nsstbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
 !          interpolate NSST variables to Obs. location and get dtw, dtc, tz_tr
 !
            if(nst_gsi > 0) then
-              tref  = ts(0)
-              dtw   = zero
-              dtc   = zero
-              tz_tr = one
               call gsi_nstcoupler_deter(dlat_earth,dlon_earth,t4dv,zob,tref,dtw,dtc,tz_tr)
               tz = tref
               if (nst_gsi > 2 ) then
                 tz = tref+dtw-dtc            ! Tz: Background temperature at depth of zob
               endif
+           else
+              tref  = ts(0)
+              dtw   = zero
+              dtc   = zero
+              tz_tr = one
+              tz    = ts(0)
            endif
 
            data_all(1,ndata)  = sstoe                   ! sst error
@@ -513,16 +525,16 @@ subroutine read_nsstbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
            data_all(5,ndata)  = hdr(7)                  ! station id
            data_all(6,ndata)  = t4dv                    ! time
            data_all(7,ndata)  = ikx                     ! type
-           data_all(8,ndata)  = sstoe*three             ! max error
+           data_all(8,ndata)  = ts(0)                   ! open water temperature
            data_all(9,ndata)  = zob                     ! depth of measurement
            data_all(10,ndata) = kx                      ! measurement type
-           data_all(11,ndata) = sstq                    ! quality mark
-           data_all(12,ndata) = sstoe                   ! original obs error
+           data_all(11,ndata) = sfcpct(0)               ! open water percentage
+           data_all(12,ndata) = sstoe                   ! original sst error
            data_all(13,ndata) = usage                   ! usage parameter
            data_all(14,ndata) = idomsfc+0.001_r_kind    ! dominate surface type
            data_all(15,ndata) = tz                      ! Tz: Background temperature at depth of zob
-           data_all(16,ndata) = dlon_earth*rad2deg      ! earth relative longitude (degrees)
-           data_all(17,ndata) = dlat_earth*rad2deg      ! earth relative latitude (degrees)
+           data_all(16,ndata) = dlon_earth_deg          ! earth relative longitude (degrees)
+           data_all(17,ndata) = dlat_earth_deg          ! earth relative latitude (degrees)
            data_all(18,ndata) = hdr(6)                  ! station elevation
  
 
@@ -543,6 +555,7 @@ subroutine read_nsstbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
 1000 continue
 
 ! Write header record and data to output file for further processing
+  call count_obs(ndata,nreal,ilat,ilon,data_all,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
   write(lunout) ((data_all(k,i),k=1,nreal),i=1,ndata)
 

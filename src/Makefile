@@ -189,7 +189,6 @@ clean:
 
   SRCSF90C = \
 	gfs_stratosphere.f90 \
-	add_gfs_stratosphere.f90 \
 	adjtest.f90 \
         adjtest_obs.f90 \
         adjust_cloudobs_mod.f90 \
@@ -227,6 +226,19 @@ clean:
 	chemmod.f90 \
 	clw_mod.f90 \
 	cloud_efr_mod.f90 \
+        class_get_pseudo_ensperts.f90 \
+        class_get_wrf_mass_ensperts.f90 \
+        class_get_wrf_nmm_ensperts.f90 \
+        class_gfs_ensmod.f90 \
+        class_read_wrf_mass_files.f90 \
+        class_read_wrf_mass_guess.f90 \
+        class_read_wrf_nmm_files.f90 \
+        class_read_wrf_nmm_guess.f90 \
+        class_regional_io.f90 \
+        class_wrf_binary_interface.f90 \
+        class_wrf_netcdf_interface.f90 \
+        class_wrwrfmassa.f90 \
+        class_wrwrfnmma.f90 \
 	cmaq_routines.f90 \
 	co_mop_ak.f90 \
 	coinfo.f90 \
@@ -240,10 +252,32 @@ clean:
 	control2state.f90 \
 	control_vectors.f90 \
 	converr.f90 \
+        converr_ps.f90 \
+        converr_q.f90 \
+        converr_t.f90 \
+        converr_uv.f90 \
+        converr_pw.f90 \
+        convb_ps.f90 \
+        convb_q.f90 \
+        convb_t.f90 \
+        convb_uv.f90 \
 	convinfo.f90 \
 	convthin.f90 \
 	convthin_time.f90 \
         correlated_obsmod.F90 \
+        cplr_get_pseudo_ensperts.f90 \
+        cplr_get_wrf_mass_ensperts.f90 \
+        cplr_get_wrf_nmm_ensperts.f90 \
+        cplr_read_wrf_mass_files.f90 \
+        cplr_read_wrf_mass_guess.f90 \
+	cplr_gfs_ensmod.f90 \
+        cplr_read_wrf_nmm_files.f90 \
+        cplr_read_wrf_nmm_guess.f90 \
+        cplr_regional_io.f90 \
+        cplr_wrf_binary_interface.f90 \
+        cplr_wrf_netcdf_interface.f90 \
+        cplr_wrwrfmassa.f90 \
+        cplr_wrwrfnmma.f90 \
 	crtm_interface.f90 \
 	cvsection.f90 \
 	cwhydromod.f90 \
@@ -254,6 +288,7 @@ clean:
 	enorm_state.f90 \
 	ensctl2state.f90 \
 	ensctl2model.f90 \
+        ens_spread_mod.f90 \
         en_perts_io.f90 \
 	evaljgrad.f90 \
 	evaljo.f90 \
@@ -280,9 +315,6 @@ clean:
 	get_derivatives2.f90 \
 	get_gefs_for_regional.f90 \
         get_nmmb_ensperts.f90 \
-        get_pseudo_ensperts.F90 \
-	get_wrf_mass_ensperts_netcdf.F90 \
-        get_wrf_nmm_ensperts.F90 \
 	get_semimp_mats.f90 \
 	getprs.f90 \
 	getsiga.f90 \
@@ -296,6 +328,7 @@ clean:
 	gsd_terrain_match_surfTobs.f90 \
 	gsdcloudanalysis.F90 \
 	gsdcloudanalysis4NMMB.F90 \
+	gsdcloudanalysis4gfs.F90 \
         gsd_update_mod.f90 \
 	gsi_4dvar.f90 \
 	gsi_4dcouplermod.f90 \
@@ -325,6 +358,7 @@ clean:
 	intgps.f90 \
 	intgust.f90 \
 	inthowv.f90 \
+	intcldch.f90 \
         intjcmod.f90 \
 	intjo.f90 \
 	intlag.f90 \
@@ -335,6 +369,7 @@ clean:
 	intpblh.f90 \
 	intpcp.f90 \
 	intpm2_5.f90 \
+        intpm10.f90 \
 	intpmsl.f90 \
 	intps.f90 \
 	intpw.f90 \
@@ -363,6 +398,7 @@ clean:
 	lag_traj.f90 \
 	lagmod.f90 \
 	lanczos.F90 \
+	logcldch_to_cldch.f90 \
 	loglcbas_to_lcbas.f90 \
 	logvis_to_vis.f90 \
 	looplimits.f90 \
@@ -375,7 +411,6 @@ clean:
 	m_gpsrhs.F90 \
 	m_gsiBiases.f90 \
 	m_rerank.f90 \
-	m_obdiag.F90	\
 	m_rhs.F90	\
 	m_sortind.f90 \
 	m_stats.f90 \
@@ -391,12 +426,55 @@ clean:
 	model_tl.F90 \
 	control2model_ad.f90 \
 	ensctl2model_ad.f90 \
+        m_aeroNode.F90 \
+        m_aerolNode.F90 \
+	m_cldchNode.F90 \
+        m_colvkNode.F90 \
+	m_cvgridLookup.F90 \
+        m_dwNode.F90 \
+        m_gpsNode.F90 \
+        m_gustNode.F90 \
+	m_howvNode.F90 \
+        m_lagNode.F90 \
+	m_latlonRange.F90 \
+	m_lcbasNode.F90 \
+	m_mitmNode.F90 \
+	m_mxtmNode.F90 \
+        m_o3lNode.F90 \
+	m_obsHeadBundle.F90 \
+	m_obsLList.F90 \
+        m_obsNode.F90 \
+	m_obsNodeTypeManager.F90 \
+        m_obsdiagNode.F90 \
+        m_obsdiags.F90 \
+        m_ozNode.F90 \
+        m_pblhNode.F90 \
+        m_pcpNode.F90 \
+        m_pm10Node.F90 \
+        m_pm2_5Node.F90 \
+	m_pmslNode.F90 \
+        m_psNode.F90 \
+        m_pwNode.F90 \
+        m_qNode.F90 \
+        m_radNode.F90 \
+        m_rwNode.F90 \
+        m_spdNode.F90 \
+        m_srwNode.F90 \
+        m_sstNode.F90 \
+        m_tNode.F90 \
+	m_tcamtNode.F90 \
+        m_tcpNode.F90 \
+	m_td2mNode.F90 \
+        m_visNode.F90 \
+        m_wNode.F90 \
+	m_wspd10mNode.F90 \
 	mp_compact_diffs_mod1.f90 \
 	mp_compact_diffs_support.f90 \
 	mpimod.F90 \
 	mpl_allreduce.F90 \
 	mpl_bcast.f90 \
         native_endianness.f90 \
+	netcdf_mod.f90 \
 	ncepgfs_ghg.f90 \
 	ncepgfs_io.f90 \
 	ncepnems_io.f90 \
@@ -438,12 +516,7 @@ clean:
 	read_files.f90 \
 	read_gfs_ozone_for_regional.f90 \
 	read_guess.F90 \
-	read_obsdiags.F90 \
-	read_wrf_mass_files.F90 \
-	read_wrf_mass_guess.F90 \
-	read_wrf_nmm_files.F90 \
-	read_wrf_nmm_guess.F90 \
-	regional_io.f90 \
+        read_mitm_mxtm.f90 \
 	reorg_metar_cloud.f90 \
 	rfdpar.f90 \
 	rsearch.F90 \
@@ -452,7 +525,7 @@ clean:
 	set_crtm_aerosolmod.f90 \
 	set_crtm_cloudmod.f90 \
         setupaod.f90 \
-	setupyobs.f90 \
+        setuppm10.f90 \
 	sfc_model.f90 \
 	sfcobsqc.f90 \
 	simpin1.f90 \
@@ -473,12 +546,14 @@ clean:
 	statsrad.f90 \
 	stop1.f90 \
 	stp3dvar.f90 \
+        stpaod.f90 \
 	stpcalc.f90 \
 	stpco.f90 \
 	stpdw.f90 \
 	stpgps.f90 \
 	stpgust.f90 \
 	stphowv.f90 \
+	stpcldch.f90 \
 	stpjo.f90 \
         stpjcmod.f90 \
 	stplcbas.f90 \
@@ -486,6 +561,7 @@ clean:
 	stppblh.f90 \
 	stppcp.f90 \
 	stppm2_5.f90 \
+	stppm10.f90 \
 	stppmsl.f90 \
 	stpmitm.f90 \
 	stpmxtm.f90 \
@@ -509,9 +585,9 @@ clean:
 	strong_fast_global_mod.f90 \
 	sub2fslab_mod.f90 \
 	support_2dvar.f90 \
-        stub_ensmod.f90 \
-        stub_nstmod.f90 \
+	cplr_gfs_nstmod.f90 \
 	stub_pertmod.F90 \
+	stub_ensmod.f90 \
 	stub_set_crtm_aerosol.f90 \
 	stub_timermod.f90 \
 	tendsmod.f90 \
@@ -534,14 +610,10 @@ clean:
 	update_guess.f90 \
 	update_geswtend.f90 \
 	wind_fft.f90 \
-	wrf_mass_guess_mod.f90 \
-	wrf_binary_interface.F90 \
-	wrf_netcdf_interface.F90 \
+        wrf_mass_guess_mod.f90 \
+        wrf_params_mod.f90 \
 	write_all.F90 \
 	write_bkgvars_grid.f90 \
-	write_obsdiags.F90 \
-	wrwrfmassa.F90 \
-	wrwrfnmma.F90 \
 	xhat_vordivmod.f90 \
 	zrnmi_mod.f90
 
@@ -602,6 +674,7 @@ clean:
 	setupdw.f90 \
 	setupgust.f90 \
 	setuphowv.f90 \
+	setupcldch.f90 \
 	setuplag.f90 \
 	setuplcbas.f90 \
 	setupmitm.f90 \
@@ -637,7 +710,9 @@ clean:
 
   SRCSC = blockIO.c
 
-  SRCS = $(SRCSF90C) $(GSIGC_SRCS) $(SRCSF77) $(SRCSC) $(XSRCSC)
+  SRCSNOC = $(SRCSF90C_NOSWAP) $(SRCSF90C) $(GSIGC_SRCS) $(SRCSF77)
+
+  SRCS = $(SRCSNOC) $(SRCSC) $(XSRCSC)
 
   DOCSRCS = *.f90 *.F90
 
@@ -758,6 +833,13 @@ check_mode :
 	fi
 	@echo $(COMP_MODE) > $(LOG_FILE)
 
+make_dep:
+	/bin/rm -f Makefile.dependency
+	sorted_SRCS=$$(for e in $(SRCSNOC); do echo $$e; done | env LC_ALL=C sort -u);\
+		bash make_depend.bash $$sorted_SRCS  > Makefile.dependency	
+	sorted_SRCS=$$(for e in $(SRCSC) $(XSRCSC); do echo $$e; done | env LC_ALL=C sort -u);\
+		bash make_depend.bash $$sorted_SRCS >> Makefile.dependency	
+
 # -------------------------
 # GMAO Nomenclature/targets
 # -------------------------
@@ -778,6 +860,8 @@ $(LIB): $(OBJS) $(OBJS_NOSWAP)
 	$(RM) $(LIB)
 	$(AR) $@ $(OBJS) $(OBJS_NOSWAP)
 
+# Targets for maintenance purposes
+#
 MAIN_OBJS = gsimain.o
 LIBS_OBJS = $(OBJS) $(OBJS_NOSWAP)
 
@@ -786,6 +870,15 @@ list-main_objs:
 
 list-libs_objs:
 	@ for f in $(LIBS_OBJS); do echo $$f; done | grep -v `for p in $(MAIN_OBJS); do echo "-e $$p"; done` | env LC_ALL=C sort -u
+
+list-libs_srcs:
+	@ for f in $(LIBS_OBJS); do echo $$(basename $$f .o).[Ff]90; done | grep -v $$(for p in $(MAIN_OBJS); do echo "-e $$(basename $$p .o)."; done) | env LC_ALL=C sort -u
+
+list-compare:
+	@ make --no-print-directory -f Makefile list-libs_srcs | grep -v -e blockIO.  > $@.__
+	@ ls -1 *.[Ff]90 | env LC_ALL=C sort -u | (diff $@.__ -||true)
+	@ rm -f $@.__
+#----------
 
 export: libgsi.a gsi.x prepbykx.x
 	$(MKDIR)               $(COREBIN)

@@ -221,6 +221,7 @@ module gsi_chemguess_mod
 ! !USES:
 
 use kinds, only: i_kind,r_kind
+use constants, only: max_varname_length
 use mpimod, only : mype
 use mpeu_util,only: die
 use file_utility, only : get_lun
@@ -291,7 +292,7 @@ type(GSI_Bundle),pointer :: GSI_ChemGuess_Bundle(:)   ! still a common for now
 ! !PRIVATE ROUTINES:
 !BOC
 
-integer(i_kind),parameter::MAXSTR=256
+integer(i_kind),parameter::MAXSTR=max_varname_length
 logical:: chem_grid_initialized_=.false.
 logical:: chem_initialized_=.false.
 character(len=*), parameter :: myname = 'gsi_chemguess_mod'
@@ -552,6 +553,7 @@ end subroutine final_
 !   2010-05-17  todling  update create interface to pass a grid
 !   2011-07-03  todling  allow running single or double precision
 !   2011-11-16  todling  allow 2d tracers (e.g., AOD)
+!   2017-02-22  todling  initialized only what needed(2d,3d,or both)
 !
 ! !AUTHOR:
 !   Ricardo Todling  org: gmao      date: 2010-04-10
@@ -575,8 +577,18 @@ end subroutine final_
     nbundles = lm
     allocate(GSI_ChemGuess_Bundle(nbundles))
     do nt=1,nbundles
-       call GSI_BundleCreate ( GSI_ChemGuess_Bundle(nt), grid, 'Trace Gases', istatus, &
-                               names2d=tgases2d,names3d=tgases3d,bundle_kind=r_kind )
+       if (ng2d>0.and.ng3d>0) then
+          call GSI_BundleCreate ( GSI_ChemGuess_Bundle(nt), grid, 'Trace Gases', istatus, &
+                                  names2d=tgases2d,names3d=tgases3d,bundle_kind=r_kind )
+       else if (ng2d>0) then
+          call GSI_BundleCreate ( GSI_ChemGuess_Bundle(nt), grid, 'Trace Gases', istatus, &
+                                  names2d=tgases2d,bundle_kind=r_kind )
+       else if (ng3d>0) then
+          call GSI_BundleCreate ( GSI_ChemGuess_Bundle(nt), grid, 'Trace Gases', istatus, &
+                                  names3d=tgases3d,bundle_kind=r_kind )
+       else
+          istatus=99
+       endif
     enddo
 
     if (istatus/=0) then

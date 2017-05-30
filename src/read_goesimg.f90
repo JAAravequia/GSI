@@ -44,6 +44,7 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
 !   2012-03-05  akella  - nst now controlled via coupler
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
 !   2015-02-23  Rancic/Thomas - add thin4d to time window logical
+!   2015-10-01  guo     - consolidate use of ob location (in deg)
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -75,9 +76,10 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
       checkob,finalcheck,score_crit
   use gridmod, only: diagnostic_reg,regional,nlat,nlon,txy2ll,tll2xy,rlats,rlons
   use constants, only: deg2rad,zero,one,rad2deg,r60inv,r60
-  use radinfo, only: iuse_rad,jpch_rad,nusis,nst_gsi,nstinfo
+  use radinfo, only: iuse_rad,jpch_rad,nusis
   use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,thin4d
   use deter_sfc_mod, only: deter_sfc
+  use gsi_nstcouplermod, only: nst_gsi,nstinfo
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
   use mpimod, only: npe
   implicit none
@@ -120,6 +122,7 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
   real(r_kind) dg2ew,sstime,tdiff,t4dv,sfcr
   real(r_kind) dlon,dlat,timedif,crit1,dist1
   real(r_kind) dlon_earth,dlat_earth
+  real(r_kind) dlon_earth_deg,dlat_earth_deg
   real(r_kind) pred
   real(r_kind),dimension(0:4):: rlndsea
   real(r_kind),dimension(0:3):: sfcpct
@@ -249,6 +252,8 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
         if (hdrgoesarr(ilonh)>=r360) hdrgoesarr(ilonh)=hdrgoesarr(ilonh)-r360
         if (hdrgoesarr(ilonh)< zero) hdrgoesarr(ilonh)=hdrgoesarr(ilonh)+r360
 
+        dlon_earth_deg=hdrgoesarr(ilonh)
+        dlat_earth_deg=hdrgoesarr(ilath)
         dlon_earth=hdrgoesarr(ilonh)*deg2rad
         dlat_earth=hdrgoesarr(ilath)*deg2rad
 
@@ -371,8 +376,8 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
         data_all(27,itx)= idomsfc + 0.001_r_kind      ! dominate surface type
         data_all(28,itx)= sfcr                        ! surface roughness
         data_all(29,itx)= ff10                        ! ten meter wind factor
-        data_all(30,itx)= dlon_earth*rad2deg          ! earth relative longitude (degrees)
-        data_all(31,itx)= dlat_earth*rad2deg          ! earth relative latitude (degrees)
+        data_all(30,itx)= dlon_earth_deg              ! earth relative longitude (degrees)
+        data_all(31,itx)= dlat_earth_deg              ! earth relative latitude (degrees)
 
         if(dval_use)then
            data_all(36,itx) = val_img
@@ -401,24 +406,27 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
      nele,itxmax,nread,ndata,data_all,score_crit,nrec)
 
 ! If no observations read, jump to end of routine.
+  if (mype_sub==mype_root.and.ndata>0) then
 
-  do n=1,ndata
-     do k=1,nchanl
-        if(data_all(k+nreal,n) > tbmin .and. &
-           data_all(k+nreal,n) < tbmax)nodata=nodata+1
-    end do
-  end do
-  if(dval_use .and. assim)then
      do n=1,ndata
-       itt=nint(data_all(37,n))
-       super_val(itt)=super_val(itt)+val_img
+        do k=1,nchanl
+           if(data_all(k+nreal,n) > tbmin .and. &
+              data_all(k+nreal,n) < tbmax)nodata=nodata+1
+       end do
      end do
-  end if
+     if(dval_use .and. assim)then
+        do n=1,ndata
+          itt=nint(data_all(37,n))
+          super_val(itt)=super_val(itt)+val_img
+        end do
+     end if
 
 ! Write final set of "best" observations to output file
-  call count_obs(ndata,nele,ilat,ilon,data_all,nobs)
-  write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
-  write(lunout) ((data_all(k,n),k=1,nele),n=1,ndata)
+     call count_obs(ndata,nele,ilat,ilon,data_all,nobs)
+     write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
+     write(lunout) ((data_all(k,n),k=1,nele),n=1,ndata)
+
+  endif
 
 ! Deallocate local arrays
   deallocate(data_all,nrec)

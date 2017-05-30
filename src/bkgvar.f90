@@ -65,11 +65,9 @@ subroutine bkgvar(cvec,iflg)
 !$$$
   use kinds, only: r_kind,i_kind
   use constants, only: zero,one
-  use balmod, only: rllat1,llmax
   use berror, only: dssv,dssvs
-  use gridmod, only: nsig,regional,lat2,lon2
+  use gridmod, only: nsig,lat2,lon2
   use guess_grids, only: isli2
-  use control_vectors, only: mvars, nc2d
   use gsi_bundlemod, only : gsi_bundle
   use gsi_bundlemod, only : gsi_bundlegetpointer
   implicit none
@@ -215,7 +213,6 @@ subroutine bkg_stddev(cvec,svec)
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gsi_bundlemod, only: assignment(=)
-  use gridmod, only: lat2,lon2,nsig
 
   implicit none
   
@@ -292,11 +289,7 @@ subroutine bkg_stddev(cvec,svec)
    if(do_getprs_tl) call getprs_tl(cv_ps,cv_t,sv_prse)
 
 !  Convert input normalized RH to q
-   
-   if(do_normal_rh_to_q) then
-      sv_q=zero
-      call normal_rh_to_q(cv_rh,cv_t,sv_prse,sv_q)
-   end if
+   if(do_normal_rh_to_q) call normal_rh_to_q(cv_rh,cv_t,sv_prse,sv_q)
    
 !  Calculate sensible temperature
    if(do_tv_to_tsen) call tv_to_tsen(cv_t,sv_q,sv_tsen)

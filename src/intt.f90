@@ -13,6 +13,9 @@ module inttmod
 !   2009-08-13  lueken - update documentation
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - implemented obs adjoint test  
 !   2013-10-28  todling - rename p3d to prse
+!   2014-04-09      Su  - add non linear qc from Purser's scheme
+!   2015-02-26      Su  - add njqc as an option to choose Purser varqc
+!   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !
 ! subroutines included:
 !   sub intt_
@@ -25,6 +28,10 @@ module inttmod
 !
 !$$$ end documentation block
 
+use m_obsNode, only: obsNode
+use m_tNode, only: tNode
+use m_tNode, only: tNode_typecast
+use m_tNode, only: tNode_nextcast
 implicit none
 
 PRIVATE
@@ -75,6 +82,7 @@ subroutine intt_(thead,rval,sval,rpred,spred)
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - introduced ladtest_obs         
 !   2013-05-26  zhu  - add aircraft temperature bias correction contribution
 !   2014-12-03  derber  - modify so that use of obsdiags can be turned off
+!   2015-12-21  yang    - Parrish's correction to the previous code in new varqc.
 !
 !   input argument list:
 !     thead    - obs type pointer to obs structure
@@ -108,10 +116,9 @@ subroutine intt_(thead,rval,sval,rpred,spred)
 !
 !$$$
   use kinds, only: r_kind,i_kind,r_quad
-  use constants, only: half,one,zero,tiny_r_kind,cg_term,r3600
-  use obsmod, only: t_ob_type,lsaveobsens,l_do_adjoint,luse_obsdiag
-  use qcmod, only: nlnqc_iter,varqc_iter
-  use gridmod, only: latlon1n,latlon11,latlon1n1
+  use constants, only: half,one,zero,tiny_r_kind,cg_term,r3600,two
+  use obsmod, only: lsaveobsens,l_do_adjoint,luse_obsdiag
+  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc
   use jfunc, only: jiter,l_foto,xhat_dt,dhat_dt
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -122,7 +129,7 @@ subroutine intt_(thead,rval,sval,rpred,spred)
   
 
 ! Declare passed variables
-  type(t_ob_type),pointer,intent(in   ) :: thead
+  class(obsNode), pointer,intent(in   ) :: thead
   type(gsi_bundle)       ,intent(in   ) :: sval
   type(gsi_bundle)       ,intent(inout) :: rval
   real(r_kind),optional,dimension(npredt*ntail),intent(in   ) :: spred
@@ -146,7 +153,7 @@ subroutine intt_(thead,rval,sval,rpred,spred)
   real(r_kind) ts_grad,us_grad,vs_grad,qs_grad
   real(r_kind) qs_prime0,tg_prime0,ts_prime0,psfc_prime0
   real(r_kind) us_prime0,vs_prime0
-  type(t_ob_type), pointer :: tptr
+  type(tNode), pointer :: tptr
 
 !  If no t data return
   if(.not. associated(thead))return
@@ -189,7 +196,8 @@ subroutine intt_(thead,rval,sval,rpred,spred)
   endif
 
   time_t=zero
-  tptr => thead
+  !tptr => thead
+  tptr => tNode_typecast(thead)
   do while (associated(tptr))
 
      j1=tptr%ij(1)
@@ -301,7 +309,7 @@ subroutine intt_(thead,rval,sval,rpred,spred)
  
 !          gradient of nonlinear operator
 
-           if (nlnqc_iter .and. tptr%pg > tiny_r_kind .and.  &
+           if (vqc .and. nlnqc_iter .and. tptr%pg > tiny_r_kind .and.  &
                                 tptr%b  > tiny_r_kind) then
               t_pg=tptr%pg*varqc_iter
               cg_t=cg_term/tptr%b
@@ -310,13 +318,16 @@ subroutine intt_(thead,rval,sval,rpred,spred)
               p0=wgross/(wgross+exp(-half*tptr%err2*val**2))
               val=val*(one-p0)                  
            endif
-           if( ladtest_obs) then
-              grad = val
+           if (njqc .and. tptr%jb > tiny_r_kind .and. tptr%jb <10.0_r_kind) then
+              val=sqrt(two*tptr%jb)*tanh(sqrt(tptr%err2)*val/sqrt(two*tptr%jb))
+              grad = val*tptr%raterr2*sqrt(tptr%err2)
            else
               grad = val*tptr%raterr2*tptr%err2
-           end if
+           endif
+           if(ladtest_obs) then
+              grad = val
+           endif
         endif
-
 !       Adjoint of interpolation
 !       Extract contributions from bias correction terms
         if (.not. ladtest_obs .and. (aircraft_t_bc_pof .or. aircraft_t_bc) .and. tptr%idx>0) then
@@ -459,7 +470,8 @@ subroutine intt_(thead,rval,sval,rpred,spred)
 
      end if
 
-     tptr => tptr%llpoint
+     !tptr => tptr%llpoint
+     tptr => tNode_nextcast(tptr)
   end do
   return
 end subroutine intt_

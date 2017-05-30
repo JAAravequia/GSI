@@ -87,7 +87,7 @@ LIBgfio   = -L$(CORELIB) -lgfio
 # --------------------------
 INChdf          = -I$(BASEDIR)/$(ARCH)/include/hdf
 LIBhdf          = -L$(BASEDIR)/$(ARCH)/lib  -lmfhdf -ldf -lhdfjpeg -lhdfz -lsz
-LIBnetcdf       = -L$(BASEDIR)/$(ARCH)/lib -lnetcdf
+LIBnetcdf       = -L$(BASEDIR)/$(ARCH)/lib -lnetcdf -lnetcdff
 LIBwrf          = -L$(BASEDIR)/$(ARCH)/lib -lwrflib
 LIBwrfio_int    = -L$(BASEDIR)/$(ARCH)/lib -lwrfio_int
 LIBwrfio_netcdf = -L$(BASEDIR)/$(ARCH)/lib -lwrfio_nf
@@ -185,19 +185,19 @@ clean:
 
   SRCSF90C = \
 	covlocal.f90 \
-	enkf.F90 \
+	enkf.f90 \
 	enkf_main.f90 \
 	fftpack.f90 \
 	genqsat1.f90 \
-	gridinfo.F90 \
-	gridio.F90 \
+	gridinfo_gfs.f90 \
+	gridio_gfs.f90 \
 	inflation.f90 \
 	innovstats.f90 \
 	kdtree2.f90 \
 	letkf.F90 \
 	loadbal.f90 \
 	mpi_readobs.f90 \
-	mpisetup.f90 \
+	mpisetup.F90 \
 	netcdf_io_wrf.f90 \
 	enkf_obsmod.f90 \
 	params.f90 \
@@ -209,7 +209,7 @@ clean:
 	readsatobs.f90 \
 	reducedgrid.f90 \
 	rnorm.f90 \
-	smooth.F90 \
+	smooth_gfs.f90 \
 	specmod.f90 \
 	statevec.f90 \
 	write_logfile.f90
@@ -280,7 +280,7 @@ include $(MAKE_DEPEND)
 # ----
 
 $(EXE_FILE) :  $(OBJS) $(OBJS_NOSWAP) $(GSIOBJS)
-	$(LD) $(LDFLAGS) -o $@ $(OBJS) $(OBJS_NOSWAP) $(GSIOBJS) $(LIBS)
+	$(LD) -o $@ $(OBJS) $(OBJS_NOSWAP) $(GSIOBJS) $(LIBS) $(LDFLAGS)
 
 
 # ------------------------

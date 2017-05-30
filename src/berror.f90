@@ -40,7 +40,7 @@ module berror
 !   sub create_berror_vars  - allocate global background error related variables
 !   sub destroy_berror_vars - deallocate global background error 
 !                                    related variables
-!   sub set_predictor_var   - set background variances for bias correction coefs
+!   sub set_predictors_var  - set background variances for bias correction coefs
 !   sub init_rftable        - load global/global pointers and tables for 
 !                                    recursive filters
 !   sub initable            - initialize tables/pointers for recursive filters
@@ -379,7 +379,7 @@ contains
 !$$$
     use constants, only:  zero,one,two,one_tenth,r10
     use radinfo, only: ostats,varA,jpch_rad,npred,inew_rad,newpc4pred,biaspredvar
-    use aircraftinfo, only: aircraft_t_bc_pof,aircraft_t_bc,biaspredt,ntail,npredt,ostats_t,rstats_t,varA_t
+    use aircraftinfo, only: aircraft_t_bc_pof,aircraft_t_bc,biaspredt,ntail,npredt,ostats_t,varA_t
     use gridmod, only: twodvar_regional
     use jfunc, only: nrclen, ntclen
     implicit none
@@ -551,6 +551,8 @@ contains
 !
 ! program history log:
 !   2009-11-29   zhu
+!   2016-01-07   derber - apply the same preconditioning formula (for obs_count>3 or 20) 
+!                         to the cases with obs_count<=3 or 20 as well
 !
 ! attributes:
 !   language: f90
@@ -561,7 +563,7 @@ contains
     use radinfo, only: ostats,rstats,varA,jpch_rad,npred,newpc4pred
     use aircraftinfo, only: aircraft_t_bc_pof,aircraft_t_bc,ntail,npredt,ostats_t,rstats_t,varA_t
     use jfunc, only: nclen,nrclen,diag_precon,step_start,ntclen
-    use constants, only:  zero,one,tiny_r_kind
+    use constants, only:  zero,one
     implicit none
 
 !   Declare local variables
@@ -571,7 +573,7 @@ contains
 
 
 !   Set up L=inverse(B)*M for preconditioning purpose
-!   Only diagonal elememts are considered
+!   Only diagonal elements are considered
 
 !   set a coeff. factor for variances of control variables
     if(diag_precon)then
@@ -585,15 +587,13 @@ contains
         do i=1,jpch_rad
            do j=1,npred
               ii=ii+1
+              if (ostats(i)>zero) vprecond(nclen1+ii)=one/(one+rstats(j,i)*varprd(ii))
               if (ostats(i)>20.0_r_kind) then
-                 vprecond(nclen1+ii)=one/(one+rstats(j,i)*varprd(ii))
                  if (rstats(j,i)>zero) then
                     varA(j,i)=one/(one/varprd(ii)+rstats(j,i))
                  else
                     varA(j,i)=10000.0_r_kind
                  end if
-              else
-                 vprecond(nclen1+ii)=one
               end if
            end do
         end do
@@ -611,11 +611,9 @@ contains
                 if (aircraft_t_bc_pof) obs_count = ostats_t(j,i)
                 if (aircraft_t_bc) obs_count = ostats_t(1,i)
 
+                if (obs_count>zero) vprecond(nclen1+ii)=one/(one+rstats_t(j,i)*varprd(jj))
                 if (obs_count>3.0_r_kind) then
-                   vprecond(nclen1+ii)=one/(one+rstats_t(j,i)*varprd(jj))
                    varA_t(j,i)=one/(one/varprd(jj)+rstats_t(j,i))
-                else
-                   vprecond(nclen1+ii)=one
                 end if
              end do
           end do

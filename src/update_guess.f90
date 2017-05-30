@@ -13,7 +13,7 @@ subroutine update_guess(sval,sbias)
 !            function and velocity potential are converted into 
 !            vorticity and divergence, the guess variables.
 !
-!            If the guess bias correction is turned on (biascor>=0.0),
+!            If the guess bias correction is turned on (abs(bcoption)>0.0),
 !            then use the analysis increment to adjust the bias 
 !            correction fields 
 !
@@ -80,8 +80,11 @@ subroutine update_guess(sval,sbias)
 !   2014-05-07  pondeca - constrain significant wave height (howv) to be >=0
 !   2014-06-16  carley/zhu - add tcamt and lcbas
 !   2014-06-17  carley  - remove setting nguess=0 when use_reflectivity==true
+!   2014-10-07  todling - redefined meanning of bcoption; rename interface to bkg-bias-upd
 !   2014-11-28  zhu     - move update of cw to compute_derived when cw is not 
 !                         state variable for all-sky radiance assimilation
+!   2015-07-10  pondeca  - add cldch
+!   2016-04-28  eliu    - revise update for cloud water 
 !
 !   input argument list:
 !    sval
@@ -102,7 +105,7 @@ subroutine update_guess(sval,sbias)
   use mpimod, only: mype
   use constants, only: zero,one,fv,max_varname_length,qmin,qcmin,tgmin,&
                        r100,one_tenth
-  use jfunc, only: iout_iter,biascor,tsensible,clip_supersaturation
+  use jfunc, only: iout_iter,bcoption,tsensible,clip_supersaturation
   use gridmod, only: lat2,lon2,nsig,&
        regional,twodvar_regional,regional_ozone
   use guess_grids, only: ges_tsen,ges_qsat,&
@@ -110,10 +113,7 @@ subroutine update_guess(sval,sbias)
   use state_vectors, only: svars3d,svars2d
   use xhat_vordivmod, only: xhat_vor,xhat_div
   use gsi_4dvar, only: nobs_bins, hr_obsbin
-  use radinfo, only: npred,jpch_rad,predx
-  use pcpinfo, only: npredp,npcptype,predxp
-  use aircraftinfo, only: aircraft_t_bc_pof,aircraft_t_bc,npredt,predt,ntail
-  use m_gsiBiases,only : bias_hour, update_bias
+  use m_gsiBiases,only : bias_hour, bkg_bias_update, bkg_bias_correction
   use bias_predictors, only: predictors,update_bias_preds
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -124,6 +124,7 @@ subroutine update_guess(sval,sbias)
   use gsi_chemguess_mod, only: gsi_chemguess_get
   use mpeu_util, only: getindex
   use rapidrefresh_cldsurf_mod, only: l_gsd_limit_ocean_q,l_gsd_soilTQ_nudge
+  use rapidrefresh_cldsurf_mod, only: i_use_2mq4b,i_use_2mt4b
   use gsd_update_mod, only: gsd_limit_ocean_q,gsd_update_soil_tq,&
        gsd_update_th2,gsd_update_q2
 
@@ -138,7 +139,7 @@ subroutine update_guess(sval,sbias)
   character(max_varname_length),allocatable,dimension(:) :: gases
   character(max_varname_length),allocatable,dimension(:) :: guess
   character(max_varname_length),allocatable,dimension(:) :: cloud
-  integer(i_kind) i,j,k,it,ij,ii,ic,id,ngases,nguess,istatus
+  integer(i_kind) i,j,k,it,ij,ii,ic,id,ngases,nguess,istatus,ier
   integer(i_kind) is_t,is_q,is_oz,is_cw,is_sst
   integer(i_kind) icloud,ncloud
   integer(i_kind) idq
@@ -150,6 +151,8 @@ subroutine update_guess(sval,sbias)
   real(r_kind),pointer,dimension(:,:,:) :: p_q      =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: p_tv     =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: ptr3daux =>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_ql   =>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_qi   =>NULL()
 
   real(r_kind),dimension(lat2,lon2)     :: tinc_1st,qinc_1st
 
@@ -229,7 +232,7 @@ subroutine update_guess(sval,sbias)
 ! GSD modification for moisture
      if(is_q>0) then
         if(l_gsd_limit_ocean_q) then
-           call gsd_limit_ocean_q(p_q)
+           call gsd_limit_ocean_q(p_q,it)
         endif
      endif
 
@@ -285,9 +288,19 @@ subroutine update_guess(sval,sbias)
            if (trim(guess(ic))=='howv')  ptr2dges = max(ptr2dges,zero)
            if (trim(guess(ic))=='tcamt') ptr2dges = max(min(ptr2dges,r100),zero) !Cannot have > 100% or < 0% cloud amount
            if (trim(guess(ic))=='lcbas') ptr2dges = max(min(ptr2dges,20000.0_r_kind),one_tenth)
+           if (trim(guess(ic))=='cldch') ptr2dges = max(min(ptr2dges,20000.0_r_kind),one_tenth)
            cycle
         endif
      enddo
+     if (getindex(svars3d,'ql')>0 .and. getindex(svars3d,'qi')>0) then
+        ier=0
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ptr3dges,istatus) ; ier=istatus                                                              
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql,  istatus) ; ier=ier+istatus                                        
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi,  istatus) ; ier=ier+istatus                                
+        if (ier==0) then
+           ptr3dges = ges_ql + ges_qi
+        endif
+     endif
 !    At this point, handle the Tv exception since by now Q has been updated 
 !    NOTE 1: This exceptions is unnecessary: all we need to do is put tsens in the
 !    state-vector instead of tv (but this will require changes elsewhere).
@@ -297,7 +310,7 @@ subroutine update_guess(sval,sbias)
      if (id>0) then
         call gsi_bundlegetpointer (sval(ii),               'tv',ptr3dinc,istatus)
         call gsi_bundlegetpointer (gsi_metguess_bundle(it),'tv',ptr3dges,istatus)
-        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'q ',ptr3daux,idq)
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'q', ptr3daux,idq)
         if (.not.twodvar_regional .or. .not.tsensible) then
 !           TV analyzed; Tsens diagnosed
             ptr3dges = ptr3dges + ptr3dinc
@@ -327,6 +340,7 @@ subroutine update_guess(sval,sbias)
      enddo
 ! update surface and soil    
      if (l_gsd_soilTQ_nudge ) then
+        qinc_1st=0_r_kind
         if(is_q>0) then
            do j=1,lon2
               do i=1,lat2
@@ -334,6 +348,7 @@ subroutine update_guess(sval,sbias)
               end do
            end do
         endif
+        tinc_1st=0_r_kind
         if(is_t > 0) then
            do j=1,lon2
               do i=1,lat2
@@ -341,23 +356,23 @@ subroutine update_guess(sval,sbias)
               end do
            end do
         endif
-        call  gsd_update_soil_tq(tinc_1st,is_t,qinc_1st,is_q)
+        call  gsd_update_soil_tq(tinc_1st,is_t,qinc_1st,is_q,it)
      endif  ! l_gsd_soilTQ_nudge
-     if (l_gsd_soilTQ_nudge .and. is_t>0) then
+     if (i_use_2mt4b > 0 .and. is_t>0) then
         do j=1,lon2
            do i=1,lat2
               tinc_1st(i,j)=p_tv(i,j,1)
            end do
         end do
-        call  gsd_update_th2(tinc_1st)
+        call  gsd_update_th2(tinc_1st,it)
      endif ! l_gsd_th2_adjust
-     if (l_gsd_soilTQ_nudge .and. is_q>0) then
+     if (i_use_2mq4b > 0 .and. is_q>0) then
         do j=1,lon2
            do i=1,lat2
               qinc_1st(i,j)=p_q(i,j,1)
            end do
         end do
-        call  gsd_update_q2(qinc_1st)
+        call  gsd_update_q2(qinc_1st,it)
      endif ! l_gsd_q2_adjust
 
   end do
@@ -401,13 +416,13 @@ subroutine update_guess(sval,sbias)
   endif
 
 ! If requested, update background bias correction
-  if (biascor >= zero) then
-     if (mype==0) write(iout_iter,*) &
-        'UPDATE_GUESS:  update background bias correction.  biascor=',biascor
+  if (abs(bcoption)>0) then
 
-!    Update bias correction field
+!    Update bias estimate field
+     if (mype==0) write(iout_iter,*) 'UPDATE_GUESS: update incremental background bias estimate'
+     call bkg_bias_update(sval(1),xhat_div(:,:,:,1),xhat_vor(:,:,:,1),hour=bias_hour)
 
-     call update_bias(sval(1),xhat_div(:,:,:,1),xhat_vor(:,:,:,1),hour=bias_hour)
+     if (bcoption==2) call bkg_bias_correction
 
   endif
 

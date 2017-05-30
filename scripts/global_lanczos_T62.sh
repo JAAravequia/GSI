@@ -11,7 +11,7 @@ export LEVS=64
 export JCAP_B=62
 
 # Set runtime and save directories
-tmpdir=$tmpdir/lanczos_tmp${JCAP}/${exp}
+tmpdir=$tmpdir/$tmpregdir/${exp}
 savdir=$savdir/lanczos_out${JCAP}/sigmap/${exp}
 
 # Specify GSI fixed field and data directories.
@@ -19,11 +19,9 @@ savdir=$savdir/lanczos_out${JCAP}/sigmap/${exp}
 
 # Set variables used in script
 #   CLEAN up $tmpdir when finished (YES=remove, NO=leave alone)
-#   ndate is a date manipulation utility
 #   ncp is cp replacement, currently keep as /bin/cp
 
 CLEAN=NO
-#ndate=/nwprod/util/exec/ndate
 ncp=/bin/cp
 
 # Given the requested resolution, set dependent resolution parameters
@@ -160,9 +158,9 @@ SUPERRAD="$SUPERRAD_update"
 SINGLEOB="$SINGLEOB_update"
 
 if [ "$debug" = ".false." ]; then
-   . $scripts/regression_namelists.sh
+   . $scripts/regression_namelists.sh global_lanczos_T62
 else
-   . $scripts/regression_namelists_db.sh
+   . $scripts/regression_namelists_db.sh global_lanczos_T62
 fi
 
 ##!   l4dvar=.false.,nhr_assimilation=6,nhr_obsbin=6,
@@ -171,7 +169,7 @@ fi
 
 cat << EOF > gsiparm.anl
 
-$global_lanczos_T62_namelist
+$gsi_namelist
 
 EOF
 
@@ -213,6 +211,17 @@ atmsbeamdat=$fixgsi/atms_beamwidth.txt
 pcpinfo=$fixgsi/global_pcpinfo.txt
 ozinfo=$fixgsi/global_ozinfo.txt
 convinfo=$fixgsi/global_convinfo_reg_test.txt
+### add 9 tables
+errtable_pw=$fixgsi/prepobs_errtable_pw.global
+errtable_ps=$fixgsi/prepobs_errtable_ps.global_nqcf
+errtable_t=$fixgsi/prepobs_errtable_t.global_nqcf
+errtable_q=$fixgsi/prepobs_errtable_q.global_nqcf
+errtable_uv=$fixgsi/prepobs_errtable_uv.global_nqcf
+btable_ps=$fixgsi/nqc_b_ps.global_nqcf
+btable_t=$fixgsi/nqc_b_t.global_nqcf
+btable_q=$fixgsi/nqc_b_q.global_nqcf
+btable_uv=$fixgsi/nqc_b_uv.global_nqcf
+
 errtable=$fixgsi/prepobs_errtable.global
 
 # Only need this file for single obs test
@@ -222,13 +231,9 @@ bufrtable=$fixgsi/prepobs_prep.bufrtable
 bftab_sst=$fixgsi/bufrtab.012
 
 # Copy executable and fixed files to $tmpdir
-if [[ $exp = $global_lanczos_T62_updat_exp1 ]]; then
-   $ncp $gsiexec_updat ./gsi.x
-elif [[ $exp = $global_lanczos_T62_updat_exp2 ]]; then
-   $ncp $gsiexec_updat ./gsi.x
-elif [[ $exp = $global_lanczos_T62_contrl_exp1 ]]; then
-   $ncp $gsiexec_contrl ./gsi.x
-elif [[ $exp = $global_lanczos_T62_contrl_exp2 ]]; then
+if [[ $exp == *"updat"* ]]; then
+   $ncp $gsiexec_updat  ./gsi.x
+elif [[ $exp == *"contrl"* ]]; then
    $ncp $gsiexec_contrl ./gsi.x
 fi
 
@@ -253,6 +258,17 @@ $ncp $pcpinfo  ./pcpinfo
 $ncp $ozinfo   ./ozinfo
 $ncp $convinfo ./convinfo
 $ncp $errtable ./errtable
+#add 9 tables for new varqc
+$ncp $errtable_pw           ./errtable_pw
+$ncp $errtable_ps           ./errtable_ps
+$ncp $errtable_t           ./errtable_t
+$ncp $errtable_q           ./errtable_q
+$ncp $errtable_uv           ./errtable_uv
+$ncp $btable_ps           ./btable_ps
+$ncp $btable_t           ./btable_t
+$ncp $btable_q           ./btable_q
+$ncp $btable_uv           ./btable_uv
+
 
 $ncp $bufrtable ./prepobs_prep.bufrtable
 $ncp $bftab_sst ./bftab_sstphr
@@ -316,32 +332,12 @@ elif [[ "$endianness" = "Little_Endian" ]]; then
    $ncp $global_lanczos_T62_obs/${prefix_atm}.sgp3prep.le          ./sigf09
 fi
 
-# Run gsi under Parallel Operating Environment (poe) on NCEP IBM
-if [[ "$machine" = "Theia" ]]; then
-
-   cd $tmpdir/
-   echo "run gsi now"
-
-   export MPI_BUFS_PER_PROC=256
-   export MPI_BUFS_PER_HOST=256
-   export MPI_GROUP_MAX=256
-   #export OMP_NUM_THREADS=1
-
-#  module load intel
-#  module load mpt
-
-   echo "JOB ID : $PBS_JOBID"
-   eval "$launcher -v -np $PBS_NP $tmpdir/gsi.x > stdout"
-
-elif [[ "$machine" = "WCOSS" ]]; then
-
-   mpirun.lsf $tmpdir/gsi.x < gsiparm.anl > stdout
-
-fi
-
+# Run GSI
+cd $tmpdir
+echo "run gsi now"
+eval "$APRUN $tmpdir/gsi.x > stdout 2>&1"
 rc=$?
-
-exit
+exit $rc
 
 # Save output
 mkdir -p $savdir
@@ -375,7 +371,7 @@ case $loop in
 esac
 
 #  Collect diagnostic files for obs types (groups) below
-   listall="hirs2_n14 msu_n14 sndr_g08 sndr_g11 sndr_g11 sndr_g12 sndr_g13 sndr_g08_prep sndr_g11_prep sndr_g12_prep sndr_g13_prep sndrd1_g11 sndrd2_g11 sndrd3_g11 sndrd4_g11 sndrd1_g12 sndrd2_g12 sndrd3_g12 sndrd4_g12 sndrd1_g13 sndrd2_g13 sndrd3_g13 sndrd4_g13 hirs3_n15 hirs3_n16 hirs3_n17 amsua_n15 amsua_n16 amsua_n17 amsub_n15 amsub_n16 amsub_n17 hsb_aqua airs_aqua amsua_aqua imgr_g08 imgr_g11 imgr_g12 pcp_ssmi_dmsp pcp_tmi_trmm conv sbuv2_n16 sbuv2_n17 sbuv2_n18 sbuv2_n19 gome_metop-a omi_aura ssmi_f13 ssmi_f14 ssmi_f15 hirs4_n18 hirs4_metop-a amsua_n18 amsua_metop-a mhs_n18 mhs_metop-a amsre_low_aqua amsre_mid_aqua amsre_hig_aqua ssmis_las_f16 ssmis_uas_f16 ssmis_img_f16 ssmis_env_f16 iasi_metop-a hirs4_n19 amsua_n19 mhs_n19 seviri_m08 seviri_m09 seviri_m10"
+   listall="hirs2_n14 msu_n14 sndr_g08 sndr_g11 sndr_g11 sndr_g12 sndr_g13 sndr_g08_prep sndr_g11_prep sndr_g12_prep sndr_g13_prep sndrd1_g11 sndrd2_g11 sndrd3_g11 sndrd4_g11 sndrd1_g12 sndrd2_g12 sndrd3_g12 sndrd4_g12 sndrd1_g13 sndrd2_g13 sndrd3_g13 sndrd4_g13 hirs3_n15 hirs3_n16 hirs3_n17 amsua_n15 amsua_n16 amsua_n17 amsub_n15 amsub_n16 amsub_n17 hsb_aqua airs_aqua amsua_aqua imgr_g08 imgr_g11 imgr_g12 pcp_ssmi_dmsp pcp_tmi_trmm conv sbuv2_n16 sbuv2_n17 sbuv2_n18 sbuv2_n19 gome_metop-a omi_aura ssmi_f13 ssmi_f15 hirs4_n18 hirs4_metop-a amsua_n18 amsua_metop-a mhs_n18 mhs_metop-a amsre_low_aqua amsre_mid_aqua amsre_hig_aqua ssmis_las_f16 ssmis_uas_f16 ssmis_img_f16 ssmis_env_f16 iasi_metop-a hirs4_n19 amsua_n19 mhs_n19 seviri_m08 seviri_m09 seviri_m10"
    for type in $listall; do
       count=`ls ${tmpdir}/dir.*/${type}_${loop}* | wc -l`
       if [[ $count -gt 0 ]]; then
