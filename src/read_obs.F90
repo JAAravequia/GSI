@@ -9,6 +9,8 @@ module read_obsmod
 ! program history log:
 !   2009-01-05  todling - add gsi_inquire
 !   2015-05-01  Liu Ling - Add call to read_rapidscat 
+!   2015-08-20  zhu  - add flexibility for enabling all-sky and using aerosol info in radiance 
+!                      assimilation. Use radiance_obstype_search from radiance_mod.  
 !
 ! subroutines included:
 !   sub gsi_inquire   -  inquire statement supporting fortran earlier than 2003
@@ -623,6 +625,8 @@ subroutine read_obs(ndata,mype)
 !                        to use deter_sfc in read_nsstbufr.f90)
 !   2015-07-10  pondeca - add cloud ceiling height (cldch)
 !   2015-08-12  pondeca - add capability to read min/maxT obs from ascii file
+!   2015-08-20  zhu     - use centralized radiance info from radiance_mod to specify
+!                         all-sky and aerosol usages in radiance assimilation
 !   2015-09-04  J. Jung - Added mods for CrIS full spectral resolution (FSR)
 !   2016-03-02  s.liu/carley - remove use_reflectivity and use i_gsdcldanal_type
 !   2016-04-28  J. Jung - added logic for RARS and direct broadcast data from NESDIS/UW.
@@ -680,6 +684,7 @@ subroutine read_obs(ndata,mype)
     use gsi_nstcouplermod, only: gsi_nstcoupler_set,gsi_nstcoupler_final
     use gsi_io, only: mype_io
     use rapidrefresh_cldsurf_mod, only: i_gsdcldanal_type
+    use radiance_mod, only: rad_obs_type,radiance_obstype_search
 
     use m_extOzone, only: is_extOzone
     use m_extOzone, only: extOzone_read
@@ -732,6 +737,7 @@ subroutine read_obs(ndata,mype)
     real(r_kind),allocatable,dimension(:,:,:):: prsl_full,hgtl_full
 
     character(256):: filename2
+    type(rad_obs_type) :: radmod
 
     data lunout / 81 /
     data lunsave  / 82 /
@@ -1503,6 +1509,7 @@ subroutine read_obs(ndata,mype)
 
           else if (ditype(i) == 'rad')then
 
+             call radiance_obstype_search(obstype,radmod)
 
 !            Process TOVS 1b data
              rad_obstype_select: &
@@ -1514,7 +1521,7 @@ subroutine read_obs(ndata,mype)
                 call read_bufrtovs(mype,val_dat,ithin,isfcalc,rmesh,platid,gstime,&
                      infile,lunout,obstype,nread,npuse,nouse,twind,sis, &
                      mype_root,mype_sub(mm1,i),npe_sub(i),mpi_comm_sub(i), nobs_sub1(1,i), &
-                     read_rec(i),read_ears_rec(i),read_db_rec(i),dval_use)
+                     read_rec(i),read_ears_rec(i),read_db_rec(i),dval_use,radmod)
                 string='READ_BUFRTOVS'
 
 !            Process atms data
@@ -1522,7 +1529,7 @@ subroutine read_obs(ndata,mype)
                 call read_atms(mype,val_dat,ithin,isfcalc,rmesh,platid,gstime,&
                      infile,lunout,obstype,nread,npuse,nouse,twind,sis, &
                      mype_root,mype_sub(mm1,i),npe_sub(i),mpi_comm_sub(i),nobs_sub1(1,i),&
-                     read_rec(i),read_ears_rec(i),read_db_rec(i),dval_use)
+                     read_rec(i),read_ears_rec(i),read_db_rec(i),dval_use,radmod)
                 string='READ_ATMS'
 
 !            Process saphir data
