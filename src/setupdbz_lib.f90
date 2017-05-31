@@ -32,8 +32,6 @@ param_wet_g=(7.2e20)/((((pi*rhog)**1.75)*(n0g**0.75))**0.95)
 param_wet_s=(7.2e20)/(((pi*rhos)**1.75)*(n0s**0.75))
 param_dry_s=dielectric*(rhos/rhor)*(rhos/rhor)*param_wet_s
 
-!if(debugging) print *, "Cr/rho:",param_r,param_wet_s,rhogesin,qsgesin
-!if(debugging) print *, "ZQS steps:",(rhogesin*qsgesin)**1.75,param_dry_s
 
 zqr=param_r*((rhogesin*qrgesin)**1.75)
 if (tempgesin .lt. 273.15) then
@@ -48,7 +46,6 @@ zqg=0
 zqs=0
 endif
 rDBZ=zqr+zqg+zqs
-!cltorg if (rdBZ .gt. 1.0e-3) then
 if (rdBZ .gt. 1.0e-3) then
 rdBZ=10*log10(rdBZ)
 else
@@ -56,7 +53,6 @@ rdBZ=-30
 endif
 if(rdBZ.lt.static_gsi_nopcp_dbz) rdBZ=static_gsi_nopcp_dbz !notice, static_gsi_nopcp_dbz should be larger than -30
 
-!if(rdBZ .lt. -25) rdBZ=-25
 if(debugging) print *, "ZQR=",zqr,zqs,zqg,tempgesin
 
 end subroutine hx_dart
@@ -250,8 +246,6 @@ else
 rdBZ=0
 endif
 
-!print *, "qrgesin,qggesin,qsgesin,rDBZ,zqr,zqg,zqs:"
-!print *, qrgesin,qggesin,qsgesin,rdBZ,zqr,zqg,zqs
 
 !reflectivity threshold for no-precip:
 if (rdBZ .lt. 5) rdBZ=5

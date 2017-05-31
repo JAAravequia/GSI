@@ -205,7 +205,6 @@ character(len=8) :: cpe
   if(conv_diagsave)then
      ii=izero
      nchar=1_i_kind
-!cltorg     nreal=21_i_kind                                                             
      ioff0=23
      nreal=23_i_kind                                                             
      if (lobsdiagsave) nreal=nreal+4*miter+1
@@ -231,22 +230,22 @@ character(len=8) :: cpe
  
 !  call dtime_setup()
   do i=1,nobs
-   debugging=.false.
-   if(doradaroneob) debugging=.true.
-      dtime=data(itime,i)
-        dlat=data(ilat,i)
-        dlon=data(ilon,i)
-        dbznoise=data(idbznoise,i)
-        dpres=data(ihgt,i)
-        ikx = nint(data(ikxx,i))
-        error=data(ier2,i)
-        slat=data(ilate,i)*deg2rad
-        wrange=data(irange,i)
-        if(debugging) then
-          print * , "============="
-          print *, dlat,dlon,dpres
-          print *, data(ilate,i),data(ilone,i)
-        endif
+     debugging=.false.
+     if(doradaroneob) debugging=.true.
+     dtime=data(itime,i)
+     dlat=data(ilat,i)
+     dlon=data(ilon,i)
+     dbznoise=data(idbznoise,i)
+     dpres=data(ihgt,i)
+     ikx = nint(data(ikxx,i))
+     error=data(ier2,i)
+     slat=data(ilate,i)*deg2rad
+     wrange=data(irange,i)
+     if(debugging) then
+       print * , "============="
+       print *, dlat,dlon,dpres
+       print *, data(ilate,i),data(ilone,i)
+     endif
 
 
 !    Link observation to appropriate observation bin
@@ -311,13 +310,7 @@ character(len=8) :: cpe
         end if
      endif
      endif
-!     if(.not.in_curbin) cycle
-!    Interpolate log(surface pressure), 
-!    log(pres) at mid-layers, and geopotenital height to
-!    observation location.
-!    Subtract off model elevation at obs location (need more information to come up with
-!                                    blend of model and station elevation, since observation is
-!                                    horizontally displaced from the radar.     
+
      call tintrp2a11(ges_z,zsges,dlat,dlon,dtime,hrdifsig,&
           mype,nfldsig)
      dpres=dpres-zsges
@@ -368,11 +361,10 @@ character(len=8) :: cpe
      pobl   = prsltmp(k1) + (dlnp/dz)*(zob-zges(k1))
 
 
-!if(k1 .eq. k2) cycle !!!when radar beam leaves top of domain we aren't interested
-!if((dlnp .lt. .001) .and. (dz .lt. .001) ) print *, "setupdbz ln 378 ",k,zob,k1,k2
 
      presw  = ten*exp(pobl)
-if( (k1 .eq. k2) .and. (k1 .eq. 1) ) presw=ten*exp(prsltmp(k1)) !solution to Nan in some members only for EnKF which causes problem?
+    if( (k1 .eq. k2) .and. (k1 .eq. 1) ) presw=ten*exp(prsltmp(k1)) 
+!    solution to Nan in some members only for EnKF which causes problem?
 !    Determine location in terms of grid units for midpoint of
 !    first layer above surface
      sfcchk=log(psges)
@@ -390,19 +382,11 @@ if( (k1 .eq. k2) .and. (k1 .eq. 1) ) presw=ten*exp(prsltmp(k1)) !solution to Nan
         if(rlow/=zero) awork(3)=awork(3)+one
      end if
      
-!    Adjust observation error.   
-!    Observation error currently assumed from convinfo file and is *not* adjusted
-   !  ratio_errors = error/(abs(data(ier,i) + 1.0e6_r_kind*rhgh +  &
-   !       r8*rlow))
-     
-     
      !Not adjusting obs error based upon ob vertical location relative to grid box
      ratio_errors = error/(abs(data(ier,i)))   
    
    
      error = one/error
-
-if(dpres < zero .or. dpres > rsig) print *,"SETUPDBZ",dpres,rsig 
 
      if(dpres < zero .or. dpres > rsig)ratio_errors = zero
 
@@ -415,82 +399,69 @@ if(dpres < zero .or. dpres > rsig) print *,"SETUPDBZ",dpres,rsig
 !    Interpolate guess qr, qli, and rho to observation location and time.
      call tintrp31(ges_qr,qrgesin,dlat,dlon,dpres,dtime,& !modified
           hrdifsig,mype,nfldsig)
-  if( wrf_mass_regional )then
-     call tintrp31(ges_qs,qsgesin,dlat,dlon,dpres,dtime,& 
-          hrdifsig,mype,nfldsig)
-     call tintrp31(ges_qg,qggesin,dlat,dlon,dpres,dtime,& 
-          hrdifsig,mype,nfldsig)
-  else if(nems_nmmb_regional) then
-     call tintrp31(ges_qli,qligesin,dlat,dlon,dpres,dtime,&
-          hrdifsig,mype,nfldsig)
-  endif
+     if( wrf_mass_regional )then
+       call tintrp31(ges_qs,qsgesin,dlat,dlon,dpres,dtime,& 
+            hrdifsig,mype,nfldsig)
+       call tintrp31(ges_qg,qggesin,dlat,dlon,dpres,dtime,& 
+            hrdifsig,mype,nfldsig)
+     else if(nems_nmmb_regional) then
+       call tintrp31(ges_qli,qligesin,dlat,dlon,dpres,dtime,&
+            hrdifsig,mype,nfldsig)
+     endif
      call tintrp31(ges_rho,rhogesin,dlat,dlon,dpres,dtime,&
           hrdifsig,mype,nfldsig)
      call tintrp31(ges_tsen,tempgesin,dlat,dlon,dpres,dtime,&
           hrdifsig,mype,nfldsig)
 
-if(debugging) print *, "QRGESIN=",qrgesin,qsgesin,qggesin
 
-if( nems_nmmb_regional ) then
-    qrgesin1  = max(qrgesin,1.e-6_r_kind)
-    qligesin1 = max(qligesin,1.e-6_r_kind)
-else if( wrf_mass_regional ) then
-    qrgesin1  = max(qrgesin,1.e-6_r_kind)
-    qsgesin1  = max(qsgesin,1.e-6_r_kind) 
-    qggesin1  = max(qggesin,1.e-5_r_kind) 
-end if
+     if( nems_nmmb_regional ) then
+       qrgesin1  = max(qrgesin,1.e-6_r_kind)
+       qligesin1 = max(qligesin,1.e-6_r_kind)
+     else if( wrf_mass_regional ) then
+       qrgesin1  = max(qrgesin,1.e-6_r_kind)
+       qsgesin1  = max(qsgesin,1.e-6_r_kind) 
+       qggesin1  = max(qggesin,1.e-5_r_kind) 
+     end if
 
-!modified ajohnson:
+     if(if_model_dbz) then
+       rDBZ=dbzgesin
+     else
+       if( wrf_mass_regional )then
+          call hx_dart(qrgesin,qggesin,qsgesin,rhogesin,tempgesin,rDBZ,debugging)
+       else if( nems_nmmb_regional ) then
+          Zer  = Cr * (rhogesin * qrgesin1)**(1.75_r_kind)
+          Zeli = Cli * (rhogesin * qligesin1)**(two)
+          Ze=Zer+Zeli
 
-!if(qrexp .gt. 0.1) print*, "LARGE Q ",qrgesin,qrexp,dlat,dlon,dpres
-
-
- if(if_model_dbz) then
-   rDBZ=dbzgesin
- else
- if( wrf_mass_regional )then
-   call hx_dart(qrgesin,qggesin,qsgesin,rhogesin,tempgesin,rDBZ,debugging)
- else if( nems_nmmb_regional ) then
- !    Convert guess qr, qli, and predicted rho to simulated *equivalent* radar
- !    reflectivity
-      Zer  = Cr * (rhogesin * qrgesin1)**(1.75_r_kind)
-      Zeli = Cli * (rhogesin * qligesin1)**(two)
-      Ze=Zer+Zeli
-    !Convert to simulated radar reflectivity in units of dBZ
-
-      rdBZ = ten * log10(Ze)
- endif
- endif !if_model_dbz
+         rdBZ = ten * log10(Ze)
+       endif
+     endif !if_model_dbz
 
 
-if(miter .eq. 0.or.l_hyb_ens) then !ie an enkf run
-!cltorg if(rDBZ .lt. 5) rDBZ=5
-if(rDBZ .lt. 0) rDBZ=0.0 ! should be the same as in the read_dbz when nopcp=.true.
-endif
-if(miter .eq. 0.and.ens_hx_dbz_cut) then !ie an enkf run
-if(rDBZ .gt. 60) rDBZ=60
-endif
+     if(miter .eq. 0.or.l_hyb_ens) then !ie an enkf run
+       if(rDBZ .lt. 0) rDBZ=0.0 ! should be the same as in the read_dbz when nopcp=.true.
+     endif
+     if(miter .eq. 0.and.ens_hx_dbz_cut) then !ie an enkf run
+       if(rDBZ .gt. 60) rDBZ=60
+     endif
 
 
-if( wrf_mass_regional ) then
- call jqr_dart(qrgesin1,qsgesin1,qggesin1,rhogesin,tempgesin,jqr)
- call jqs_dart(qrgesin1,qsgesin1,qggesin1,rhogesin,tempgesin,jqs)
- call jqg_dart(qrgesin1,qsgesin1,qggesin1,rhogesin,tempgesin,jqg)
-else if( nems_nmmb_regional ) then
-      Zer  = Cr * (rhogesin * qrgesin1)**(1.75_r_kind)
-      Zeli = Cli * (rhogesin * qligesin1)**(two)
-      Ze=Zer+Zeli
-    !Convert to simulated radar reflectivity in units of dBZ
+     if( wrf_mass_regional ) then
+         call jqr_dart(qrgesin1,qsgesin1,qggesin1,rhogesin,tempgesin,jqr)
+         call jqs_dart(qrgesin1,qsgesin1,qggesin1,rhogesin,tempgesin,jqs)
+         call jqg_dart(qrgesin1,qsgesin1,qggesin1,rhogesin,tempgesin,jqg)
+     else if( nems_nmmb_regional ) then
+         Zer  = Cr * (rhogesin * qrgesin1)**(1.75_r_kind)
+         Zeli = Cli * (rhogesin * qligesin1)**(two)
+         Ze=Zer+Zeli
 
-      !rdBZ = ten * log10(Ze)
-
-      denom=(log(ten))*Ze
-      jqr_num  = ten*Cr*((rhogesin)**1.75_r_kind)* &
-                  1.75_r_kind*((qrgesin1)**(0.75_r_kind))
-      jqli_num = ten*Cli*((rhogesin)**two)*two*qligesin1
-      jqr  = jqr_num/denom
-      jqli = jqli_num/denom
-endif
+         denom=(log(ten))*Ze
+         jqr_num  = ten*Cr*((rhogesin)**1.75_r_kind)* &
+                    1.75_r_kind*((qrgesin1)**(0.75_r_kind))
+         jqli_num = ten*Cli*((rhogesin)**two)*two*qligesin1
+         jqr  = jqr_num/denom
+         jqli = jqli_num/denom
+     endif
 
 
      if(rdBZ==data(idbzob,i)) then
@@ -534,32 +505,31 @@ endif
      
      residual = abs(ddiff)
      ratio    = residual/obserrlm
-     if(miter .eq. 0) then !keep all obs so we can add reflectivity where background is -120 DBZ(modified ajohnson)
+     if(miter .eq. 0) then !keep all obs so we can add reflectivity where background is -120 DBZ
       if (ratio > cgross(ikx) .or. ratio_errors < tiny_r_kind) then
-        if ( (ratio-cgross(ikx)) <= cgross(ikx) .and. ratio_errors >= tiny_r_kind) then      !commented before modified  
-          !Since radar reflectivity can be very different from the model background
+        if ( (ratio-cgross(ikx)) <= cgross(ikx) .and. ratio_errors >= tiny_r_kind) then 
+          ! Since radar reflectivity can be very different from the model background
           ! good observations may be rejected during this QC step.  However, if these observations
           ! are allowed through, they can yield problems with convergence.  Therefore the error
           ! is inflated here up to twice the observation error in a manner that is
           ! proportional to the residual.  If this IF-TEST for this inflation fails, the
           ! observation is subsequently rejected.
                     
-           obserror = residual/cgross(ikx)!commented before modified  
-           error = one/obserror!commented before modified  
+           obserror = residual/cgross(ikx)
+           error = one/obserror
            
-        else       !commented before modified  
+        else
            if (luse(i)) awork(4) = awork(4)+one 
            error = zero 
            ratio_errors = zero 
        
            if(rdBZ.le.5) irejrefsmlobs=irejrefsmlobs+1
-        end if!commented before modified  
+        end if
       end if
      endif
 
      if (ratio_errors*error <=tiny_r_kind) muse(i)=.false. 
      if (nobskeep>0 .and. luse_obsdiag) muse(i)=obsdiags(i_dbz_ob_type,ibin)%tail%muse(nobskeep)
-     !if (nobskeep>0 ) muse(i)=obsdiags(i_dbz_ob_type,ibin)%tail%muse(nobskeep)
      
      val     = error*ddiff
              
@@ -618,7 +588,6 @@ endif
      obsdiags(i_dbz_ob_type,ibin)%tail%wgtjo= (error*ratio_errors)**2
      end if
 
-!print *, "muse,luse (line 553): ",muse(i),luse(i)
      
 !    If obs is "acceptable", load array with obs info for use
 !    in inner loop minimization (int* and stp* routines)
@@ -720,10 +689,8 @@ endif
         rdiagbuf(22,ii)=data(irange,i) !clt the range in km
         rdiagbuf(23,ii)=data(idmiss2opt,i) !clt the range in km
         if (lobsdiagsave) then
-!clt this will be wrong for the correct size for ridagbuf was not given in the
-!previous part
-        write(6,*)'wrong here, stop in setupdbz.f90 '
-       stop
+            write(6,*)'wrong here, stop in setupdbz.f90 '
+            stop
            ioff=23
            do jj=1,miter
               ioff=ioff+1

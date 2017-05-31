@@ -91,7 +91,7 @@ contains
          en_perts(n,1)%valuesr4 = zero
       enddo
   
-  !    Determine if qr and qli are control variables for radar data assimilation,
+  !    Determine if qr and qg are control variables for radar data assimilation,
      i_radar_qr=0
      i_radar_qg=0
      i_radar_qr=getindex(cvars3d,'qr')

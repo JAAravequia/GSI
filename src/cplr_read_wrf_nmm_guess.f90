@@ -1694,7 +1694,7 @@ contains
     use constants, only: zero,one_tenth,half,one,fv,rd_over_cp,r100,r0_01,ten
     use wrf_params_mod, only: update_pint, cold_start
 
-    use gsi_nemsio_mod, only: gsi_nemsio_open,gsi_nemsio_close,gsi_nemsio_read,gsi_nemsio_read_fraction
+    use gsi_nemsio_mod, only: gsi_nemsio_open,gsi_nemsio_close,gsi_nemsio_read,gsi_nemsio_read_fraction, gsi_nemsio_read_fractionnew
     use gfs_stratosphere, only: use_gfs_stratosphere,nsig_save,good_o3mr,add_gfs_stratosphere  
     use gsi_metguess_mod, only: gsi_metguess_get,gsi_metguess_bundle
     use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -1881,6 +1881,7 @@ contains
           ier = 0
           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql,iret); ier=iret
           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qr',ges_qr,iret); ier=ier+iret
+          call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi,iret); ier=ier+iret
           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qli',ges_qli,iret); ier=ier+iret
           if(dbz_exist) call gsi_bundlegetpointer (gsi_metguess_bundle(it),'dbz',ges_dbz,iret); ier=ier+iret
           if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields related to hydrometeor, ier =',ier)
@@ -1891,41 +1892,14 @@ contains
               clwmr=zero
               do kr=1,nsig
                  k=nsig+1-kr
-                 call gsi_nemsio_read('clwmr' ,'mid layer','H',kr,clwmr(:,:,k),mype,mype_input)      !read total condensate
-                 call gsi_nemsio_read('f_ice' ,'mid layer','H',kr,fice(:,:,k),mype,mype_input)       !read ice fraction
-                 call gsi_nemsio_read('f_rain' ,'mid layer','H',kr,frain(:,:,k),mype,mype_input)     !read rain fraction
                  if( dbz_exist ) then
                      call gsi_nemsio_read('refl_10cm' ,'mid layer','H',kr,ges_dbz(:,:,k),mype,mype_input)
                      where( ges_dbz(:,:,k) < 0.0_r_kind )
                           ges_dbz(:,:,k) = 0.0_r_kind
                      end where
                  end if
-                 do i=1,lon2
-                    do j=1,lat2
-                       !  Compute rain, cloud water/ice, and precipitation ice
-                       !  mixing ratios
-
-                       if (clwmr(j,i,k) < 1.e-12_r_kind) then    !According to B. Ferrier (personal comm. 2011)
-                          clwmr(j,i,k) = zero
-                       end if
-
-                       ges_qli(j,i,k) =  clwmr(j,i,k) * fice(j,i,k)
-                       q_liquid = clwmr(j,i,k) - ges_qli(j,i,k)
-                       ges_qr(j,i,k) = q_liquid * frain(j,i,k)
-                       ges_ql(j,i,k) = q_liquid - ges_qr(j,i,k)
-
-                       if (ges_qr(j,i,k) < 1.0e-6_r_kind) ges_qr(j,i,k) = 1.0e-6_r_kind
-                       if (ges_qli(j,i,k) < 1.0e-8_r_kind) ges_qli(j,i,k) = 1.0e-8_r_kind
-                       if (ges_ql(j,i,k) < 1.0e-10_r_kind) ges_ql(j,i,k) = 1.0e-10_r_kind
-
-                       !if( logspace )then
-                          ! Now convert variables to log
-                       !   ges_qr(j,i,k) = log(ges_qr(j,i,k))
-                       !   ges_qli(j,i,k)=log(ges_qli(j,i,k))
-                       !   ges_ql(j,i,k)=log(ges_ql(j,i,k))
-                       !end if
-                    end do
-                 end do
+                 call gsi_nemsio_read_fractionnew('f_rain','f_ice','clwmr','f_rimef','mid layer',kr, &
+                      ges_qi(:,:,k),ges_qli(:,:,k),ges_qr(:,:,k),ges_ql(:,:,k), mype,mype_input)
               end do
               if (mype==0) then
                 write(6,*)'QLI,max, min,',maxval(ges_qli),minval(ges_qli)

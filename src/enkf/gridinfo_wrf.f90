@@ -20,6 +20,8 @@ module gridinfo
   !               pressure profile (i.e., presslmn) is computed as it is in  
   !               within the GSI subroutine get_wrf_nmm_ensperts.F90.
   !               Henry R. Winterbottom
+  !   2017-05-12 Y. Wang and X. Wang - add more state variables in
+  !   cvars3d_supported 
   !
   ! attributes:
   !   language:  f95

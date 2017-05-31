@@ -139,7 +139,6 @@ contains
     use nemsio_module, only: nemsio_init,nemsio_open,nemsio_getfilehead,nemsio_close,nemsio_setheadvar
     use nemsio_module, only: nemsio_getheadvar
     use constants, only: zero
-    use regional_io, only: preserve_restart_date
     implicit none
 
     character(*)   ,intent(in   ) :: file_name        !  input file name
@@ -201,7 +200,6 @@ contains
        nfsecondn=0
        ntimestep=0
 
-       if(.not.preserve_restart_date) then
 
           call nemsio_setheadvar(gfile,'idate',jdate,iret)
           write(6,*)' after setheadvar, jdate,iret=',jdate,iret
@@ -224,7 +222,6 @@ contains
           call nemsio_setheadvar(gfile,'ntimestep',ntimestep,iret)
           write(6,*)' after setheadvar, ntimestep,iret=',ntimestep,iret
  
-       end if
     
 
 !                        Following is diagnostic to check if date updated:
@@ -242,7 +239,6 @@ contains
        call nemsio_getheadvar(gfile,'ntimestep',ntimestep,iret)
        write(6,*)' check new ntimestep after getheadvar, ntimestep,iret=',ntimestep,iret
        call nemsio_close(gfile,iret=iret)
-       if(preserve_restart_date) write(6,*)' RESTART DATE PRESERVED FOR SHORT FORECASTS'
        if(iret/=0) then
           write(6,*)trim(message),'  problem closing file',trim(file_name),', Status = ',iret
           call stop2(74)
@@ -1333,9 +1329,7 @@ else
    if(wc > 0.0_r_single) then
      if(qs<epsq)then 
            f_ice=0.0_r_single
-!cltorg           if(t<tice) f_ice=1.0_r_single
      else 
-!cltorg           f_ice=0.0_r_single
            dum=qs/wc
            if(dum<1.0_r_single) then
              f_ice=dum

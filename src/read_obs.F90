@@ -631,7 +631,7 @@ subroutine read_obs(ndata,mype)
 !   2016-03-02  s.liu/carley - remove use_reflectivity and use i_gsdcldanal_type
 !   2016-04-28  J. Jung - added logic for RARS and direct broadcast data from NESDIS/UW.
 !   2016-09-19  Guo     - replaced open(obs_input_common) with "call unformatted_open(obs_input_common)"
-!   2017-05-12  Y. Wang and X. Wang - add interface to read in dBZ (nc) and radial velocity (ascii)
+!   2017-05-12  Y. Wang and X. Wang - add multi-interface to read in dBZ (nc) and radial velocity (ascii)
 !   
 !
 !   input argument list:

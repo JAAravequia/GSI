@@ -11,6 +11,8 @@ subroutine get_nmmb_ensperts
 ! program history log:
 !   2011-07-01 carley - initial adaptation for NMMB (not yet dual-res compat.)
 !   2011-09-19 carley - implement single precision bundle changes
+!   2017-05-12 Y. Wang and X. wang - add one option to read hydrometeors and W
+!                       for radar DA, POC: xuguang.wang@ou.edu
 !
 !   input argument list:
 !
@@ -35,7 +37,7 @@ subroutine get_nmmb_ensperts
    implicit none
 
    real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig):: u,v,tv,q,oz,qs,rh,tsen,prsl
-   real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig):: w, qr, qli, ql, dbz, dw
+   real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig):: w, qr, qli, ql, dbz, dw, qi
    real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2):: z,ps,sst2
    real(r_kind),pointer,dimension(:,:,:):: x3
    real(r_single),pointer,dimension(:,:,:) :: w3
@@ -77,7 +79,7 @@ subroutine get_nmmb_ensperts
 
       if (mype==0)write(6,*) 'CALL GENERAL_READ_NMMB FOR ENS FILE : ',filename  
       if( i_radar_qr > 0 .and. i_radar_qli > 0 )then
-         call general_read_nmmb_radar(grd_ens,filename,mype,z,ps,u,v,w,qr,qli,ql,dbz,dw,tv,tsen,q,oz)
+         call general_read_nmmb_radar(grd_ens,filename,mype,z,ps,u,v,w,qr,qli,ql,qi,dbz,dw,tv,tsen,q,oz)
       else
          call general_read_nmmb(grd_ens,filename,mype,z,ps,u,v,tv,tsen,q,oz)
       end if
@@ -221,6 +223,17 @@ subroutine get_nmmb_ensperts
                      do i=1,grd_ens%lat2
                         w3(i,j,k) = qli(i,j,k)
                         x3(i,j,k)=x3(i,j,k)+qli(i,j,k)
+                     end do
+                  end do
+               end do
+
+            case('qi','QI')
+
+               do k=1,grd_ens%nsig
+                  do j=1,grd_ens%lon2
+                     do i=1,grd_ens%lat2
+                        w3(i,j,k) = qi(i,j,k)
+                        x3(i,j,k)=x3(i,j,k)+qi(i,j,k)
                      end do
                   end do
                end do

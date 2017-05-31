@@ -7,12 +7,8 @@ module intdbzmod
 ! abstract: module for intdbz and its tangent linear intdbz_tl
 !
 ! program history log:
-!   2005-05-13  Yanqiu zhu - wrap intdbz and its tangent linear intdbz_tl into one module
-!   2005-11-16  Derber - remove interfaces
-!   2008-11-26  Todling - remove intdbz_tl; add interface back
-!   2009-08-13  lueken - update documentation
-!   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - implemented obs adjoint test  
-!   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
+! 2017-05-12 Y. Wang and X. Wang - add this to directly assimilate reflectivity
+!                                  for both ARW and NMMB models.
 !
 ! subroutines included:
 !   sub intdbz_

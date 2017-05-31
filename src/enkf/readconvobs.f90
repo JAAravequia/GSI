@@ -16,6 +16,8 @@ module readconvobs
 !
 ! program history log:
 !   2009-02-23  Initial version.
+!   2017-05-12  Y. Wang and X. Wang - add to read dbz and rw for radar
+!                       reflectivity and radial velocity assimilation.
 !
 ! attributes:
 !   language: f95

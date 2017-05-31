@@ -16,6 +16,7 @@ module gridio
   ! program history log:
   !   
   !   2011-11-30  Initial version.
+  !   2017-05-12 Y. Wang and X. Wang - add more state variables
   !
   ! attributes:
   !   language:  f95

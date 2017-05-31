@@ -6,7 +6,7 @@ public l_new_cldvar,l_ens_dbz_clip
 logical l_mrms_run
 logical l_mrms_sparse_netcdf
 logical,save::l_ens_dbz_clip=.false.
-logical,save::l_new_cldvar=.true.
+logical,save::l_new_cldvar=.false.
 character(len=*),parameter:: mrms_listfile='mrms_listfile'
 contains
 

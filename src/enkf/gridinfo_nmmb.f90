@@ -6,6 +6,9 @@ use params, only: datapath,nlevs,datestring,&
 use kinds, only: r_kind, i_kind, r_double, r_single
 use constants, only: one,zero,pi,cp,rd,grav,rearth,max_varname_length
 
+! history
+! 2017-05-12 Y. Wang and X. Wang - add more state variables in cvars3d_supported
+
 implicit none
 private
 public :: getgridinfo, gridinfo_cleanup, wind2mass, mass2wind

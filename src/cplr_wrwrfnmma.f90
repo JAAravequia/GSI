@@ -1095,6 +1095,9 @@ contains
   !   2015-05-12  S.Liu   - interpolate water content before converting to fraction
   !   2016-03-02  s.liu/carley - remove use_reflectivity and use i_gsdcldanal_type
   !   2016-06-30  s.liu - remove gridtype, add_saved in write_fraction
+  !   2017-05-12  Y. Wang and X. Wang - add write of hydrometeor-related
+  !                        variables (f_rain, f_ice, clwmr and refl_10cm) and W for radar DA, 
+  !                        POC: xuguang.wang@ou.edu
   !
   !   input argument list:
   !     mype     - pe number
@@ -1143,7 +1146,7 @@ contains
     integer(i_kind) icw4crtm,iqtotal,i_radar_qr,i_radar_qli
     real(r_kind) pd,psfc_this,pd_to_ps,wmag
     real(r_kind),dimension(lat2,lon2):: work_sub,pd_new,delu10,delv10,u10this,v10this,fact10_local
-    real(r_kind),dimension(lat2,lon2):: work_sub_t,work_sub_i,work_sub_r,work_sub_l
+    real(r_kind),dimension(lat2,lon2):: work_sub_t,work_sub_i,work_sub_r,work_sub_l, work_sub_s
     real(r_kind),dimension(lat2,lon2):: delt2,delq2,t2this,q2this,fact2t_local,fact2q_local
     real(r_kind),dimension(lat2,lon2,6):: delu,delv,delt,delq,pott
     real(r_kind),dimension(lat2,lon2,nsig)  :: clwmr,frain,fice
@@ -1254,6 +1257,7 @@ contains
        if (i_radar_qr>0 .and. i_radar_qli>0) then
    !    Get pointer to cloud water mixing ratio
         call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql,iret); ier_cloud=iret
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi,iret); ier_cloud=iret
         call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qr',ges_qr,iret); ier_cloud=ier_cloud+iret
         call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qli',ges_qli,iret); ier_cloud=ier_cloud+iret
         if(dbz_exist)&
@@ -1519,50 +1523,6 @@ contains
 
           if (i_radar_qr>0 .and. i_radar_qli>0)then
 
-           clwmr=zero
-           frain=zero
-           fice=zero
-           do i=1,lon2
-             do j = 1,lat2
-               ! Check for min value and set to zero if less than that
-               if ( ges_qr(j,i,k) <= (1.0e-6_r_kind)) ges_qr(j,i,k)   = zero
-               if ( ges_qli(j,i,k) <= (1.0e-8_r_kind)) ges_qli(j,i,k) = zero
-               if ( ges_ql(j,i,k) <= (1.0e-10_r_kind)) ges_ql(j,i,k) = zero
-               ! Now compute clwmr from mixing ratios and copy over analysis
-
-               clwmr(j,i,k)=ges_qr(j,i,k) + ges_ql(j,i,k) + ges_qli(j,i,k) 
-               work_sub(j,i)=clwmr(j,i,k)
-             end do
-           end do
-           call gsi_nemsio_write('clwmr','mid layer','H',kr,work_sub(:,:),mype,mype_input,.false.)
-           do i=1,lon2
-             do j=1,lat2
-              ! - Microphysics consistent method to obtain fice:
-              if (clwmr(j,i,k) .gt. zero) then
-                 fice(j,i,k)=ges_qli(j,i,k)/ clwmr(j,i,k)
-              else
-                 fice(j,i,k)=zero
-              end if
-              work_sub(j,i)=fice(j,i,k)
-             end do
-           end do
-           call gsi_nemsio_write('f_ice','mid layer','H',kr,work_sub(:,:),mype,mype_input,.false.)
-
-                                   !   frain - must compute from rain and cloud
-                                   !   water mixing ratios
-           do i=1,lon2
-             do j=1,lat2
-               if ( clwmr(j,i,k) .gt. ges_qli(j,i,k) .gt. zero .and. &
-                 clwmr(j,i,k) .gt. zero ) then
-                 frain(j,i,k)=ges_qr(j,i,k) / ( clwmr(j,i,k) - ges_qli(j,i,k) )
-               else
-                 frain(j,i,k)=zero
-               end if
-               work_sub(j,i)=frain(j,i,k)
-             end do
-           end do
-           call gsi_nemsio_write('f_rain','mid layer','H',kr,work_sub(:,:),mype,mype_input,.false.)
-
            ! refl_10cm
            call gsi_bundlegetpointer (gsi_metguess_bundle(it),'dbz',ges_dbz,iret)
            if (iret==0) then
@@ -1572,6 +1532,26 @@ contains
              work_sub(:,:)=ges_dbz(:,:,k)
              call gsi_nemsio_write('refl_10cm','mid layer','H',kr,work_sub(:,:),mype,mype_input,.false.)
            endif
+           do i=1,lon2
+           do j=1,lat2
+             work_sub_s(j,i)=ges_qli(j,i,k)
+             work_sub_r(j,i)=ges_qr(j,i,k)
+             work_sub_l(j,i)=ges_ql(j,i,k)
+             work_sub_i(j,i)=ges_qi(j,i,k)
+           end do
+           end do
+
+           add_saved=.false.
+           call gsi_nemsio_write_fractionnew('f_rain','f_ice','f_rimef','mid layer',kr,       &
+                work_sub_s(:,:),work_sub_i(:,:),work_sub_r(:,:),work_sub_l(:,:),mype,mype_input)
+           ges_qg=ges_ql+ges_qr+ges_qli
+
+           do i=1,lon2
+           do j=1,lat2
+              work_sub(j,i)=ges_qg(j,i,k)
+           end do
+           end do
+           call gsi_nemsio_write('clwmr','mid layer','H',kr,work_sub(:,:),mype,mype_input,add_saved)
            
           end if
 

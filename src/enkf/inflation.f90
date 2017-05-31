@@ -42,6 +42,7 @@ module inflation
 !   2009-02-23  Initial version.
 !   2016-05-02:  Modification for reading state vector from table
 !                (Anna Shlyaeva)
+!   2017-05-12: Johnson, Y. Wang and X. Wang - Add height-dependent inflation
 ! attributes:
 !   language: f95
 !

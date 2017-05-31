@@ -147,7 +147,6 @@ subroutine read_radar_wind_ascii(nread,ndata,nodata,infile,lunout,obstype,twind,
   real(r_kind),parameter :: r8     = 8.0_r_kind
   real(r_kind),parameter:: r6 = 6.0_r_kind
   real(r_kind),parameter:: r360=360.0_r_kind
-!#cltorg  integer(i_kind),parameter:: maxdat=22_i_kind         ! Used in generating cdata array
   integer(i_kind),parameter:: maxdat=23_i_kind         ! Used in generating cdata array
   integer(i_kind),parameter:: izero=0_i_kind, ione=1_i_kind
   
@@ -171,7 +170,6 @@ subroutine read_radar_wind_ascii(nread,ndata,nodata,infile,lunout,obstype,twind,
      integer(i_kind) :: num_beam       
      integer(i_kind) :: num_gate
      real(r_kind) :: nyq_vel
-!cltorg     real(r_kind) , allocatable::nyq_vel(:) ! has dimension (num_beam)
      real(r_kind),allocatable :: azim(:)      !has dimension (num_beam)
      real(r_kind),allocatable :: field(:,:)   !has dimension (num_gate,num_beam)
   end type radar
@@ -228,27 +226,15 @@ logical :: lzkdone2,shvdone2,twxdone2,sgfdone2,eaxdone2
 
 real(r_kind) :: mintilt,maxtilt,maxobrange,minobrange
 
-  !---------SETTINGS FOR FUTURE NAMELIST---------!
-!  integer(i_kind) :: maxobrange=150000_i_kind	 ! Range (m) *within* which to use observations - obs *outside* this range are not used
-!  integer(i_kind) :: minobrange=20000_i_kind 	 ! Range (m) *outside* of which to use observatons - obs *inside* this range are not used
-!  real(r_kind)    :: mintilt=0.0_r_kind   	 ! Only use tilt(elevation) angles (deg) >= this number 
-!  real(r_kind)    :: maxtilt=5.5_r_kind          ! Do no use tilt(elevation) angles (deg) >= this number        
-  integer(i_kind) :: thin_freq=1_i_kind          ! Frequency at which to thin rw obs along the beam (e.g. 4 means that every 4th ob is read)
-  !----------------------------------------------!
+  integer(i_kind) :: thin_freq=1_i_kind     
 
-mintilt=mintiltvr
-maxtilt=maxtiltvr
-minobrange=minobrangevr
-maxobrange=maxobrangevr
+  mintilt=mintiltvr
+  maxtilt=maxtiltvr
+  minobrange=minobrangevr
+  maxobrange=maxobrangevr
 
-!--------------------------------------------------------------------------------------!
-!                            END OF ALL DECLARATIONS                                   !
-!--------------------------------------------------------------------------------------!
-   
   !-Check if radial velocity is in the convinfo file and extract necessary attributes 
   
-print *, "flag: enter read_radar"
-
  ithin=1 !number of obs to keep per grid box
  if(radar_no_thinning) then
  ithin=-1
@@ -290,29 +276,17 @@ print *, "flag: enter read_radar"
   allocate(cdata_all(maxdat,maxobs),isort(maxobs))
 
 
-!!!!!modified for thinning: test with ithin=-1 and single radar before using
+  rmesh=rmesh_vr
+  zmesh=zmesh_vr
 
-! rmesh=2._r_kind
-!  zmesh=500._r_kind
-rmesh=rmesh_vr
-zmesh=zmesh_vr
-
-
-maxout=0
-maxdata=0
-isort=0
-ntdrvr_thin2=0
- icntpnt=0
+  maxout=0
+  maxdata=0
+  isort=0
+  ntdrvr_thin2=0
+  icntpnt=0
   zflag=0
 
-!123 continue 
-!if( (mype .ne. 0) .and. (use_all) ) then !parallelize
-!goto 123
-!endif !parallelize
-
-!print *, "use_all=",use_all !false
- use_all=.true.
-!if (mype .eq. 0) then !parallelize
+  use_all=.true.
   if (ithin > 0) then
      write(6,*)'READ_RADAR: ithin,rmesh :',ithin,rmesh
      use_all=.false.
@@ -332,23 +306,19 @@ ntdrvr_thin2=0
      endif
      write(6,*)'READ_RADAR: xmesh, zflag, nlevz =', xmesh, zflag, nlevz
   endif
-!!end modified for thinning
-!endif !parallelize
 
        
   lunrad=31_i_kind
   open(lunrad,file=trim(infile),status='old',action='read', &
        iostat=ierror,form='formatted')
 
-!print *, "ierr, trim(infile)",ierror,trim(infile)
   
- fileopen: if (ierror == izero) then           !Check to make sure file is open - will also fail if file does not exist. Closing endif at end of subroutine.
+ fileopen: if (ierror == izero) then    
   read(lunrad,'(2i8)') nelv,nvol               !read number of elevations and number of volumes
   goto 123 !modified do this one at a time to save memory
 
 
 123 continue
- !------Reading radar data finished---------------!
     
      
      !*************************IMPORTANT***************************!
@@ -368,8 +338,8 @@ ntdrvr_thin2=0
   
   volumes: do v=ione,nvol 
    
-     read(lunrad,'(i8)') nelv !modified
-  allocate(strct_in_vel(1,nelv)) !modified
+    read(lunrad,'(i8)') nelv 
+    allocate(strct_in_vel(1,nelv))
     tilts: do k=ione,nelv
 
          read(lunrad,'(a4)') strct_in_vel(1,k)%radid
@@ -392,7 +362,6 @@ ntdrvr_thin2=0
         nb=strct_in_vel(1,k)%num_gate
      
         !******allocate arrays within radar data type**********!
-!clt           allocate(strct_in_vel(1,k)%nyq_vel(na))
            allocate(strct_in_vel(1,k)%azim(na))
            allocate(strct_in_vel(1,k)%field(nb,na))
         !******************************************************!
@@ -400,16 +369,8 @@ ntdrvr_thin2=0
         read(lunrad,'(f8.3)') strct_in_vel(1,k)%nyq_vel
         read(lunrad,'(15f6.1)') (strct_in_vel(1,k)%azim(j),j=ione,na)
         read(lunrad,'(20f6.1)') ((strct_in_vel(1,k)%field(i,j),i=ione,nb),j=ione,na)
-     !--Check if observation fits within specified time window--!
-      !-Find reference time of observation
 
 
-!ONE OB ONLY!!!!!!!     
-!strct_in_vel(1,k)%azim = 100.0
-!strct_in_vel(1,k)%fstgatdis=45000
-
-!print *, v,k
-!print *, trim(strct_in_vel(1,k)%radid)
         obdate(1)=strct_in_vel(1,k)%year
         obdate(2)=strct_in_vel(1,k)%month  
         obdate(3)=strct_in_vel(1,k)%day	 
@@ -424,12 +385,9 @@ ntdrvr_thin2=0
         timeb = rmins_ob-rmins_an
 
 
-if(doradaroneob .and. (oneobradid .ne. strct_in_vel(1,k)%radid)) cycle tilts
-!cltorg if(debugmode .and. (strct_in_vel(1,k)%radid .ne. "KTLX") ) cycle tilts
+        if(doradaroneob .and. (oneobradid .ne. strct_in_vel(1,k)%radid)) cycle tilts
 
-!print *, strct_in_vel(1,k)%radid, strct_in_vel(1,k)%elev_angle
         if(abs(timeb) > abs(radartwindow)) then
-!print *, "bad time ",obdate
 	  numbadtime=numbadtime+ione	  
 	  cycle tilts                           !If not in time window, cycle the loop
 	end if                  
@@ -438,9 +396,7 @@ if(doradaroneob .and. (oneobradid .ne. strct_in_vel(1,k)%radid)) cycle tilts
         thistilt=strct_in_vel(1,k)%elev_angle
         if (thistilt <= maxtilt .and. thistilt >= mintilt) then 
      
-          gates: do i=ione,strct_in_vel(1,k)%num_gate,thin_freq    !if thin_freq is 4 and we are using 250m gates then this lets in 1ob per 1 km - similar
-	                                                           !  res to dBZ since the azimuthal res is the same
-           	  
+          gates: do i=ione,strct_in_vel(1,k)%num_gate,thin_freq  
    	      thisrange=strct_in_vel(1,k)%fstgatdis + float(i-ione)*strct_in_vel(1,k)%gateWidth
 	             
              !-Check to make sure observations are within specified range 
@@ -470,7 +426,7 @@ if(doradaroneob .and. (oneobradid .ne. strct_in_vel(1,k)%radid)) cycle tilts
                     epsh=(thisrange*thisrange-ha*ha)/(r8*aactual)
                     h=ha-epsh
 	            thishgt=this_stahgt+h 
-height=thishgt !modified for thinning addition
+                    height=thishgt
 		   !--Find observation location using method from read_l2bufr_mod.f90
 		 
 		   !-Get corrected tilt angle
@@ -497,17 +453,14 @@ height=thishgt !modified for thinning addition
                  
 		    thislat=rlatglob*rad2deg
                     thislon=rlonglob*rad2deg 
-if(doradaroneob) then
-thislat=oneoblat
-thislon=oneoblon
-thishgt=oneobheight
-endif
+
+                    if(doradaroneob) then
+                      thislat=oneoblat
+                      thislon=oneoblon
+                      thishgt=oneobheight
+                     endif
 
 
-                   !-Check format of longitude and correct if necessary
-
-!if(debugmode) print *, "lat/lon/h",thislat,thislon,thishgt
-!if(debugmode)strct_in_vel(1,k)%field(i,j) =thishgt                 
 		    if(thislon>=r360) thislon=thislon-r360
                     if(thislon<zero ) thislon=thislon+r360
                  
@@ -524,19 +477,6 @@ endif
 							! Domain could be rectangular, so ob may be out of
 						        ! range at one end, but not the other.
                 
-                    !If regional, then do rotation                                        
-          
-
-if((trim(strct_in_vel(1,k)%radid) .eq. 'KPUX') .and. (strct_in_vel(1,k)%elev_angle .lt. 1.0) ) then
-cycle azms
-endif
-if((trim(strct_in_vel(1,k)%radid) .eq. 'KFTG') .and. (strct_in_vel(1,k)%elev_angle .lt. 1.0) ) then
-cycle azms
-endif
-if((trim(strct_in_vel(1,k)%radid) .eq. 'KCYS') .and. (strct_in_vel(1,k)%elev_angle .lt. 1.0) ) then
-cycle azms
-endif
-
                    if(regional) then
                        cosazm_earth=cos(thisazimuthr)
                        sinazm_earth=sin(thisazimuthr)
@@ -554,11 +494,6 @@ endif
                        ibadazm=ibadazm+1
                        cycle azms
                     end if
-		    
-   !SINGLE OB		   
-   !     if (i/=121 .or. j/=304 .or. k/=2 .or. v/=1) cycle azms
-   !     write (6,*) 'Single Vr ob is:',strct_in_vel(v,k)%field(i,j)  
-   !SINGLE OB                    
 		    
 		    this_staid=strct_in_vel(1,k)%radid      !Via equivalence in declaration, value is propagated
 		    					    !  to rstation_id used below. 	    
@@ -580,10 +515,6 @@ endif
 		     
 	            call deter_sfc2(thislat,thislon,t4dv,idomsfc,skint,ff10,sfcr)
 		    
-                    !-Load good data into output array
-		    	     
-!		    ndata  = min(ndata+ione,maxobs)     !turned off when thinning added (modified)
-!		    nodata = min(nodata+ione,maxobs)  !number of obs not used (no meaning here)
 
 
 !####################       Data thinning       ###################
@@ -652,13 +583,6 @@ endif
               isort(icntpnt)=iout
            endif
 
-!!end modified for thinning
-
-
-!modified ajohnson: project radial wind onto horizontal:
-!strct_in_vel(1,k)%field(i,j) = cos(thistiltr)*strct_in_vel(1,k)%field(i,j)
-
-!modified ndata to iout here   		    
 		    cdata_all(1,iout) = error		                 ! wind obs error (m/s)
 		    cdata_all(2,iout) = dlon		                 ! grid relative longitude
 	            cdata_all(3,iout) = dlat 	                         ! grid relative latitude
@@ -683,16 +607,8 @@ endif
 	            cdata_all(22,iout)=two                              ! Level 2 data
 	     	    cdata_all(23,iout) = strct_in_vel(1,k)%nyq_vel   ! nyq vel (m/s)
 
-if((thislon*rad2deg .lt. 260.752) .and. (thislon*rad2deg .gt.  260.7501) .and. (thislat*rad2deg .lt. 34.847) .and. (thislat*rad2deg .gt. 34.846) &
-     .and. (thishgt .lt.  1126.63).and. (thishgt .gt. 1126.62) ) then
-print *, "cdata_all: ",cdata_all(1:22,iout)
-endif
+                if(doradaroneob .and. (cdata_all(5,iout) .gt. -99) )goto 987
 
-if(doradaroneob .and. (cdata_all(5,iout) .gt. -99) )goto 987
-
-!if(cdata_all(5,iout) .gt. -99) goto 987 !oneob test
-!cdata_all(5,iout)=25
-!if(iout .eq. 1) goto 987
                 end do azms  !j
               else
 	         num_badrange=num_badrange+ione      !If outside acceptable range, increment
@@ -706,18 +622,17 @@ if(doradaroneob .and. (cdata_all(5,iout) .gt. -99) )goto 987
   
      end do tilts       !k
 
-do k=1,nelv
+     do k=1,nelv
         deallocate(strct_in_vel(1,k)%azim)
         deallocate(strct_in_vel(1,k)%field)
-enddo
-  deallocate(strct_in_vel)
+     enddo
+     deallocate(strct_in_vel)
   end do volumes      !v 
       
 987 continue
   close(lunrad) !modified to do one scan at a time 
 
-!modified for thinning
-  if (.not. use_all) then !comment out for parallelize?
+  if (.not. use_all) then
      deallocate(zl_thin) 
      call del3grids
   endif
@@ -743,19 +658,6 @@ enddo
   !---------------DEALLOCATE ARRAYS-------------!
  
   deallocate(cdata_all)
-!  do v=ione,nvol
-!     do k=ione,nelv
-!        deallocate(strct_in_vel(v,k)%azim)
-!        deallocate(strct_in_vel(v,k)%field)
-!        deallocate(strct_in_rawvel(v,k)%azim)
-!        deallocate(strct_in_rawvel(v,k)%field)
-!        deallocate(strct_in_dbz(v,k)%azim)
-!        deallocate(strct_in_dbz(v,k)%field)
-!     end do
-!  end do
-!  deallocate(strct_in_vel)
-!  deallocate(strct_in_dbz)
-!  deallocate(strct_in_rawvel)
 
  else  !fileopen
   write(6,*) 'READ_RADAR_WIND_ASCII: ERROR OPENING RADIAL VELOCITY FILE: ',trim(infile),' IOSTAT ERROR: ',ierror, ' SKIPPING...'

@@ -8,12 +8,7 @@ module stpdbzmod
 ! abstract: module for stpdbz and its tangent linear stpdbz_tl
 !
 ! program history log:
-!   2005-05-19  Yanqiu zhu - wrap stpdbz and its tangent linear stpdbz_tl into one module
-!   2005-11-16  Derber - remove interfaces
-!   2008-12-02  Todling - remove stpdbz_tl
-!   2009-08-12  lueken - update documentation
-!   2010-05-13  todling - uniform interface across stp routines
-!   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
+!   2017-05-12  Y. Wang and X. Wang - add this for reflectiivty assimilation
 !
 ! subroutines included:
 !   sub stpdbz
