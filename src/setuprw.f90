@@ -70,6 +70,9 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !                                           target hydrometeors (Johnson et al.
 !                                           2015 MWR; Wang and Wang 2016 MWR)
 !                                           POC: xuguang.wang@ou.edu
+!   2016-09-23 Johnson, Y. Wang, X. Wang - write observation dependent horizontal and vertical
+!                                          localization scales into diag file,
+!                                          POC: xuguang.wang@ou.edu
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -258,7 +261,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=24
+     ioff0=24+2
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
@@ -852,6 +855,8 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(22,ii) = factw              ! 10m wind reduction factor
         rdiagbuf(23,ii)=data(irange,i) ! the range in km
         rdiagbuf(24,ii) = robvr ! after possible dealising in this step
+        rdiagbuf(25,ii) = data(24,i)
+        rdiagbuf(26,ii) = data(25,i)
 
         ioff=ioff0
         if (lobsdiagsave) then

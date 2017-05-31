@@ -81,6 +81,9 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !   2016-06-24  guo     - fixed the default value of obsdiags(:,:)%tail%luse to luse(i)
 !                       . removed (%dlat,%dlon) debris.
+!   2016-09-23 Johnson, Y. Wang, X. Wang - write observation dependent horizontal and vertical
+!                                          localization scales into diag file,
+!                                          POC: xuguang.wang@ou.edu
 !   2017-03-31  Hu      -  addd option l_closeobs to use closest obs to analysis
 !                                     time in analysis
 !   2017-03-31  Hu      -  addd option i_coastline to use observation operater

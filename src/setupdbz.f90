@@ -27,6 +27,9 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !                                           1) Explicitly apply the operator H(qr, qs, qg) to hydrometeors
 !                                           2) Directly use the reflectivity from the wrfout
 !                                           POC: xuguang.wang@ou.edu
+!   2016-09-23 Johnson, Y. Wang, X. Wang - write observation dependent horizontal and vertical
+!                                          localization scales into diag file,
+!                                          POC: xuguang.wang@ou.edu
 !   2017-05-12 Y. Wang and X. Wang - Following Guo replacing ob_type with polymorphic obsNode through type casting
 !
 !   input argument list:
@@ -205,8 +208,8 @@ character(len=8) :: cpe
   if(conv_diagsave)then
      ii=izero
      nchar=1_i_kind
-     ioff0=23
-     nreal=23_i_kind                                                             
+     ioff0=25
+     nreal=25_i_kind                                                             
      if (lobsdiagsave) nreal=nreal+4*miter+1
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
   end if
@@ -688,6 +691,8 @@ character(len=8) :: cpe
         rdiagbuf(21,ii)=data(itilt,i)*rad2deg  ! tilt angle
         rdiagbuf(22,ii)=data(irange,i) !clt the range in km
         rdiagbuf(23,ii)=data(idmiss2opt,i) !clt the range in km
+        rdiagbuf(24,ii)=data(19,i)
+        rdiagbuf(25,ii)=data(20,i)
         if (lobsdiagsave) then
             write(6,*)'wrong here, stop in setupdbz.f90 '
             stop

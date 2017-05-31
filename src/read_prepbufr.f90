@@ -136,6 +136,10 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !   2016-03-15  Su      - modified the code so that the program won't stop when no subtype
 !                         is found in non linear qc error tables and b table
 !   2016-06-01  zhu    - use errormod_aircraft
+!   2016-09-23  Johnson, Y. Wang, X. Wang - assign observation dependent horizontal and
+!                                           vertical localization scales to
+!                                           observation arrays,
+!                                           POC: xuguang.wang@ou.edu
 !
 
 !   input argument list:

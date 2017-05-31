@@ -1,4 +1,4 @@
-subroutine read_radar_wind_ascii(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_full,nobs)
+subroutine read_radar_wind_ascii(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_full,nobs,hloc,vloc)
 !$$$   subprogram documentation block
 !                .      .    .                                       .
 !   subprogram: read_dbz        read level2 raw QC'd radial velocity data
@@ -136,6 +136,7 @@ subroutine read_radar_wind_ascii(nread,ndata,nodata,infile,lunout,obstype,twind,
 ! Declare passed variables
   character(len=*),intent(in   ) :: obstype,infile
   character(len=*),intent(in   ) :: sis
+  real(r_kind)    ,intent(in   ) :: hloc,vloc
   real(r_kind)    ,intent(in   ) :: twind
   integer(i_kind) ,intent(in   ) :: lunout
   integer(i_kind) ,intent(inout) :: nread,ndata,nodata
@@ -147,7 +148,7 @@ subroutine read_radar_wind_ascii(nread,ndata,nodata,infile,lunout,obstype,twind,
   real(r_kind),parameter :: r8     = 8.0_r_kind
   real(r_kind),parameter:: r6 = 6.0_r_kind
   real(r_kind),parameter:: r360=360.0_r_kind
-  integer(i_kind),parameter:: maxdat=23_i_kind         ! Used in generating cdata array
+  integer(i_kind),parameter:: maxdat=25_i_kind         ! Used in generating cdata array
   integer(i_kind),parameter:: izero=0_i_kind, ione=1_i_kind
   
 !--Derived data type declaration
@@ -606,6 +607,8 @@ real(r_kind) :: mintilt,maxtilt,maxobrange,minobrange
 	            cdata_all(21,iout)=thiserr
 	            cdata_all(22,iout)=two                              ! Level 2 data
 	     	    cdata_all(23,iout) = strct_in_vel(1,k)%nyq_vel   ! nyq vel (m/s)
+                    cdata_all(24,iout) = hloc
+                    cdata_all(25,iout) = vloc
 
                 if(doradaroneob .and. (cdata_all(5,iout) .gt. -99) )goto 987
 
