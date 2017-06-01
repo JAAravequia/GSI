@@ -117,7 +117,7 @@ function (findInc incName version incFile )
   else()
     execute_process(COMMAND find ${COREPATH}/${incName} -iname ${incName}_module.mod RESULT_VARIABLE res OUTPUT_VARIABLE INCFILES)
     if( NOT (INCFILES) )
-      execute_process(COMMAND find ${COREPATH}/sorc -iname ${incName}_module.mod RESULT_VARIABLE res OUTPUT_VARIABLE INCFILES)
+      execute_process(COMMAND find ${COREPATH} -iname ${incName}_module.mod RESULT_VARIABLE res OUTPUT_VARIABLE INCFILES)
     endif()
   endif()
   message("incfiles are ${INCFILES}")
@@ -217,6 +217,9 @@ if(NOT  BUILD_CRTM )
   find_library( CRTM_LIBRARY 
     NAMES libcrtm_v${CRTM_VER}.a libcrtm.a libCRTM.a 
     HINTS 
+      $ENV{COREPATH} 
+      $ENV{COREPATH}/lib 
+      $ENV{COREPATH}/include 
       /usr/local/jcsda/nwprod_gdas_2014	
       ${CRTM_BASE}
       ${CRTM_BASE}/lib
@@ -224,9 +227,6 @@ if(NOT  BUILD_CRTM )
       ${CRTM_BASE}/${CRTM_VER}/lib
       ${COREPATH}
       ${COREPATH}/lib
-      $ENV{COREPATH} 
-      $ENV{COREPATH}/lib 
-      $ENV{COREPATH}/include 
       ${CORECRTM}/crtm/${CRTM_VER}
       /nwprod2/lib/crtm/v${CRTM_VER}
     PATH_SUFFIXES
