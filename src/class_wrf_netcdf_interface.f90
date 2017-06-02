@@ -11,7 +11,7 @@ module abstract_convert_netcdf_mod
   subroutine convert_netcdf_mass(this)
     import abstract_convert_netcdf_class 
     implicit none
-    class(abstract_convert_netcdf_class), intent(inout) :: this 
+    class(abstract_convert_netcdf_class), intent(inout) :: this
   end subroutine convert_netcdf_mass
   end interface
 
@@ -19,7 +19,7 @@ module abstract_convert_netcdf_mod
   subroutine update_netcdf_nmm(this)
     import abstract_convert_netcdf_class 
     implicit none
-    class(abstract_convert_netcdf_class), intent(inout) :: this 
+    class(abstract_convert_netcdf_class), intent(inout) :: this
   
   end subroutine update_netcdf_nmm
   end interface
@@ -28,7 +28,7 @@ module abstract_convert_netcdf_mod
   subroutine update_netcdf_mass(this)
     import abstract_convert_netcdf_class 
     implicit none
-    class(abstract_convert_netcdf_class), intent(inout) :: this 
+    class(abstract_convert_netcdf_class), intent(inout) :: this
   
   end subroutine update_netcdf_mass
   end interface
@@ -38,7 +38,7 @@ module abstract_convert_netcdf_mod
     use kinds, only: r_single,i_kind,r_kind
     import abstract_convert_netcdf_class 
     implicit none
-    class(abstract_convert_netcdf_class), intent(inout) :: this 
+    class(abstract_convert_netcdf_class), intent(inout) :: this
     logical     ,intent(in   ) :: guess
     logical     ,intent(inout) :: update_pint
     real(r_kind),intent(  out) :: ctph0,stph0,tlm0

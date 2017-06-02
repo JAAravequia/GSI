@@ -40,10 +40,12 @@ use abstract_regional_io_mod
 contains
 
   subroutine init_regional_io_wrf(this)
-     use wrf_params_mod, only: preserve_restart_date
+     use wrf_params_mod, only: init_wrf_params
      implicit none
      class(regional_io_class), intent(inout) :: this
-     preserve_restart_date = .false.
+     associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
+     end associate
+     call init_wrf_params(.false.,.false.,.true.)
      return
   end subroutine init_regional_io_wrf
 
@@ -84,7 +86,7 @@ contains
       use get_wrf_binary_interface_mod, only: get_wrf_binary_interface_class
       use get_wrf_nmm_ensperts_mod, only: get_wrf_nmm_ensperts_class
       use mpimod, only: mpi_comm_world,ierror
-      use wrf_params_mod, only: preserve_restart_date,update_pint,cold_start
+      use wrf_params_mod, only: update_pint,cold_start
 
       implicit none
   
@@ -99,6 +101,8 @@ contains
   
   !   Convert nmm guess file to internal gsi format.  Consider
   !   two possible input formats:  netcdf or binary
+      associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
+      end associate
   
       update_pint=.false.
       cold_start=.true.
@@ -202,7 +206,6 @@ contains
       use gridmod, only: wrf_mass_regional,wrf_nmm_regional,&
          nems_nmmb_regional,cmaq_regional,&
          twodvar_regional,netcdf
-      use wrf_params_mod, only: cold_start, update_pint
       use mpimod, only: mpi_comm_world,ierror
       use rapidrefresh_cldsurf_mod, only: i_gsdcldanal_type
       implicit none
@@ -216,6 +219,8 @@ contains
       type(wrwrfnmma_class) :: wrwrfnmma
       type(convert_netcdf_class) :: netcdf_converter
   
+      associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
+      end associate
   !   Write nmm analysis file.  Consider two possible
   !   output formats:  netcdf or binary
       if (wrf_nmm_regional) then

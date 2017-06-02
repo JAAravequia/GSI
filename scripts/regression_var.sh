@@ -21,7 +21,8 @@ if [ "$#" = 8 ] ; then
   echo $ptmpName
 else
 # Name of the branch being tested
-  updat="Cmake-unit-tests"
+  updat="XXXXXXXX"
+  contrl="XXXXXXXX"
   export cmaketest="false"
   export clean="false"
   export ptmpName=""
@@ -42,14 +43,15 @@ elif [ -d /scratch4/NCEPDEV/da ]; then # Theia
    elif [ -d /scratch4/NCEPDEV/global/noscrub/$LOGNAME ]; then 
      export noscrub="/scratch4/NCEPDEV/global/noscrub/$LOGNAME"
    fi
+elif [ -d /gpfs/tp1/ptmp ]; then # LUNA or SURGE
+   export machine="LUNA"
+   export noscrub="/gpfs/tp1/ptmp/$LOGNAME"
 elif [ -d /data/users ]; then # S4
    export machine="s4"
    export noscrub="/data/users/$LOGNAME"
 fi
 
 contrl="XXXXXXXX"
-contrl="XXXXXXXX"
-
 #  Handle machine specific paths for:
 #  experiment and control executables, fix, ptmp, and CRTM coefficient files.
 #  Location of ndate utility, noscrub directory, and account name (accnt = ada by default).
@@ -69,7 +71,7 @@ if [[ "$machine" = "Theia" ]]; then
 
    export check_resource="no"
 
-   export accnt="hybrid"
+   export accnt="da-cpu"
 
    #  On Theia, there are no scrubbers to remove old contents from stmp* directories.
    #  After completion of regression tests, will remove the regression test subdirecories
@@ -93,6 +95,23 @@ elif [[ "$machine" = "WCOSS" ]]; then
 
    export accnt=""
 
+elif [[ "$machine" = "LUNA" ]]; then
+
+   if [[ "$cmaketest" = "false" ]]; then
+     export basedir="/gpfs/hps/emc/global/noscrub/$LOGNAME/gsi"
+   fi 
+   export group="dev"
+   export queue="dev"
+
+   export ptmp="/ptmpp1/$LOGNAME/$ptmpName"
+
+   export fixcrtm="/gpfs/hps/nco/ops/nwprod/lib/crtm/v2.2.3/fix"
+   export casesdir="/gpfs/hps/emc/global/noscrub/Mark.Potts/CASES"
+   export ndate="/gpfs/hps/emc/global/noscrub/Mallory.Row/VRFY/vsdb_old/nwprod/util/exec/ndate"
+
+   export check_resource="no"
+
+   export accnt=""
 elif [[ "$machine" = "s4" ]]; then
    if [[ "$cmaketest" = "false" ]]; then
      export basedir="/home/$LOGNAME/gsi"
@@ -108,7 +127,7 @@ elif [[ "$machine" = "s4" ]]; then
 #  export casesdir="/scratch/mpotts/CASES"
    export ndate="$NWPROD/util/exec/ndate"
 
-   export check_resource="yes"
+   export check_resource="no"
 
    export accnt="star"
 
@@ -118,9 +137,9 @@ if [[ "$cmaketest" = "false" ]]; then
   export builddir=$noscrub/build
   export gsisrc="$basedir/$updat/src"
   export gsiexec_updat="$gsisrc/global_gsi"
-  export gsiexec_contrl="$basedir/trunk/src/global_gsi"
+  export gsiexec_contrl="$basedir/$contrl/src/global_gsi"
   export enkfexec_updat="$gsisrc/enkf/global_enkf"
-  export enkfexec_contrl="$basedir/trunk/src/enkf/global_enkf"
+  export enkfexec_contrl="$basedir/$contrl/src/enkf/global_enkf"
   export fixgsi="$basedir/$updat/fix"
   export scripts="$basedir/$updat/scripts"
 fi
@@ -198,7 +217,7 @@ export nhr_obsbin="6"          # Time window for observation binning.  Use "6" f
 export HYBENS_GLOBAL=".false."
 export ENSEMBLE_SIZE_GLOBAL="10"
 export HYBENS_UV_GLOBAL=".true."
-export BETA1_INV_GLOBAL="0.5"
+export BETA_S0_GLOBAL="0.5"
 export HYBENS_HOR_SCALE_GLOBAL="1500"
 export HYBENS_VER_SCALE_GLOBAL="20"
 export GENERATE_ENS_GLOBAL=".true."
@@ -207,7 +226,7 @@ export HYBENS_ANISO_GLOBAL=".false."
 export HYBENS_REGIONAL=".false."
 export ENSEMBLE_SIZE_REGIONAL="10"
 export HYBENS_UV_REGIONAL=".true."
-export BETA1_INV_REGIONAL="0.5"
+export BETA_S0_REGIONAL="0.5"
 export HYBENS_HOR_SCALE_REGIONAL="1500"
 export HYBENS_VER_SCALE_REGIONAL="20"
 export GENERATE_ENS_REGIONAL=".true."

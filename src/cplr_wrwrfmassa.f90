@@ -4,12 +4,12 @@ use abstract_wrwrfmassa_mod
   contains
     procedure, pass(this) :: wrwrfmassa_binary => wrwrfmassa_binary_wrf  
     procedure, pass(this) :: wrwrfmassa_netcdf => wrwrfmassa_netcdf_wrf  
-    procedure, pass(this) :: update_start_date
+    procedure, nopass :: update_start_date
     procedure, pass(this) :: generic_sub2grid
-    procedure, pass(this) :: reorder_s 
-    procedure, pass(this) :: contract_ibuf
-    procedure, pass(this) :: transfer_ibuf2jbuf
-    procedure, pass(this) :: move_hg_ibuf
+    procedure, nopass :: reorder_s 
+    procedure, nopass :: contract_ibuf
+    procedure, nopass :: transfer_ibuf2jbuf
+    procedure, nopass :: move_hg_ibuf
   end type wrwrfmassa_class
 contains
   subroutine wrwrfmassa_binary_wrf(this,mype)
@@ -52,8 +52,12 @@ contains
   !   2014-03-12  hu     - add code to read ges_q2 (2m Q), 
   !                               Qnr(rain number concentration), 
   !                               and nsoil (number of soil levels)
+  !   2015-01-13  ladwig - add code to read Qni and Qnc (cloud ice and water
+  !                        number concentration)
   !   2015-01-15  hu     - add i_snowT_check to control temperature adjustment
   !                               over snow  
+  !   2017-03-23  Hu      - add code to use hybrid vertical coodinate in WRF MASS
+  !                               core
   !
   !   input argument list:
   !     mype     - pe number
@@ -74,7 +78,7 @@ contains
     use wrf_mass_guess_mod, only: ges_tten
     use gridmod, only: lon1,lat1,nlat_regional,nlon_regional,&
          nsig,nsig_soil,eta1_ll,pt_ll,itotsub,iglobal,update_regsfc,&
-         aeta1_ll
+         aeta1_ll,eta2_ll,aeta2_ll
     use constants, only: one,zero_single,rd_over_cp_mass,one_tenth,h300,r10,r100
     use gsi_io, only: lendian_in
     use rapidrefresh_cldsurf_mod, only: l_cloud_analysis,l_gsd_soilTQ_nudge,&
@@ -115,13 +119,13 @@ contains
     integer(i_kind) num_loc_groups,num_j_groups
     integer(i_kind) i,it,j,k
     integer(i_kind) i_mu,i_t,i_q,i_u,i_v
-    integer(i_kind) i_qc,i_qi,i_qr,i_qs,i_qg,i_qnr
-    integer(i_kind) kqc,kqi,kqr,kqs,kqg,kqnr,i_tt,ktt
+    integer(i_kind) i_qc,i_qi,i_qr,i_qs,i_qg,i_qnr,i_qni,i_qnc
+    integer(i_kind) kqc,kqi,kqr,kqs,kqg,kqnr,kqni,kqnc,i_tt,ktt
     integer(i_kind) i_th2,i_q2,i_soilt1,i_tslb,i_smois,ktslb,ksmois,ksize
     integer(i_kind) i_sst,i_tsk
     real(r_kind) psfc_this,psfc_this_dry
     real(r_kind):: work_prsl,work_prslk
-    real(r_kind),dimension(lat1+2,lon1+2):: q_integral
+    real(r_kind),dimension(lat1+2,lon1+2):: q_integral,q_integralc4h
     integer(i_llong) n_position
     integer(i_kind) iskip,jextra,nextra
     integer(i_kind) status(mpi_status_size)
@@ -136,7 +140,7 @@ contains
     integer(i_kind) mfcst
     integer(i_long) iyear,imonth,iday,ihour,iminute,isecond,dummy3(3)
     real(r_single) pt_regional_single
-    real(r_kind) deltasigma
+    real(r_kind) deltasigma,deltasigmac4h
     integer(i_kind) ip1,jp1
     character(1) chdrbuf(2048)
     integer(i_kind) iadd,ier,istatus,n_actual_clouds
@@ -158,6 +162,8 @@ contains
     real(r_kind), pointer :: ges_qs(:,:,:)=>NULL()
     real(r_kind), pointer :: ges_qg(:,:,:)=>NULL()
     real(r_kind), pointer :: ges_qnr(:,:,:)=>NULL()
+    real(r_kind), pointer :: ges_qni(:,:,:)=>NULL()
+    real(r_kind), pointer :: ges_qnc(:,:,:)=>NULL()
   
     it=ntguessig
   
@@ -174,6 +180,8 @@ contains
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs', ges_qs, istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qg', ges_qg, istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnr',ges_qnr,istatus );ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qni',ges_qni,istatus );ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnc',ges_qnc,istatus );ier=ier+istatus
        if (ier/=0) n_actual_clouds=0
     end if
   
@@ -186,9 +194,9 @@ contains
     lm=nsig
   
     num_mass_fields=4*lm+4
-    if(l_cloud_analysis .or. n_actual_clouds>0) num_mass_fields=4*lm+4+7*lm
+    if(l_cloud_analysis .and. n_actual_clouds>0) num_mass_fields=4*lm+4+9*lm
     if(l_gsd_soilTQ_nudge) num_mass_fields=4*lm+4+2*nsig_soil+2
-    if(l_cloud_analysis .and. l_gsd_soilTQ_nudge) num_mass_fields=4*lm+4+7*lm+2*nsig_soil+2
+    if(l_cloud_analysis .and. l_gsd_soilTQ_nudge) num_mass_fields=4*lm+4+9*lm+2*nsig_soil+2
     allocate(offset(num_mass_fields))
     allocate(igtype(num_mass_fields),kdim(num_mass_fields),kord(num_mass_fields))
     allocate(length(num_mass_fields))
@@ -231,7 +239,7 @@ contains
   !     update START_DATE record so it contains new analysis time in place of old starting time
     call mpi_file_read_at(mfcst,offset_start_date,chdrbuf,length_start_date,mpi_byte,status,ierror)
     if(mype==0)  then
-       call update_start_date(this,chdrbuf,iyear,imonth,iday,ihour,iminute,isecond)
+       call update_start_date(chdrbuf,iyear,imonth,iday,ihour,iminute,isecond)
        call mpi_file_write_at(mfcst,offset_start_date,chdrbuf,length_start_date,mpi_byte,status,ierror)
     end if
   
@@ -398,7 +406,7 @@ contains
     endif
   
   ! for cloud/hydrometeor analysis fields
-    if(l_cloud_analysis .or. n_actual_clouds>0) then
+    if(l_cloud_analysis .and. n_actual_clouds>0) then
   
        i_qc=i+1
        read(lendian_in) n_position,memoryorder
@@ -489,6 +497,36 @@ contains
           offset(i)=n_position+iadd ; length(i)=im*jm ; igtype(i)=1 ; kdim(i)=lm
           if(mype == 0.and.k==1) write(6,*)' qnr i,igtype,offset,kdim(i) = ',i,igtype(i),offset(i),kdim(i)
        end do
+
+       i_qni=i+1
+       read(lendian_in) n_position,memoryorder
+       do k=1,lm
+          i=i+1                                                       !  qni(k)
+          if(trim(memoryorder)=='XZY') then
+             iadd=0
+             kord(i)=lm
+          else
+             iadd=(k-1)*im*jm*4
+             kord(i)=1
+          end if
+          offset(i)=n_position+iadd ; length(i)=im*jm ; igtype(i)=1 ; kdim(i)=lm
+          if(mype == 0.and.k==1) write(6,*)' qni i,igtype,offset,kdim(i) = ',i,igtype(i),offset(i),kdim(i)
+       end do
+
+       i_qnc=i+1
+       read(lendian_in) n_position,memoryorder
+       do k=1,lm
+          i=i+1                                                       !  qnc(k)
+          if(trim(memoryorder)=='XZY') then
+             iadd=0
+             kord(i)=lm
+          else
+             iadd=(k-1)*im*jm*4
+             kord(i)=1
+          end if
+          offset(i)=n_position+iadd ; length(i)=im*jm ; igtype(i)=1 ; kdim(i)=lm
+          if(mype == 0.and.k==1) write(6,*)' qnc i,igtype,offset,kdim(i) = ',i,igtype(i),offset(i),kdim(i)
+       end do
   
        i_tt=i+1
        read(lendian_in) n_position,memoryorder
@@ -560,8 +598,9 @@ contains
     ku=i_u-1
     kv=i_v-1
     q_integral=one
+    q_integralc4h=zero_single
   ! for hydrometeors
-    if(l_cloud_analysis .or. n_actual_clouds>0) then
+    if(l_cloud_analysis .and. n_actual_clouds>0) then
   !    get pointer to relevant instance of cloud-related backgroud
        ier=0
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql', ges_qc, istatus );ier=ier+istatus
@@ -570,6 +609,8 @@ contains
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs', ges_qs, istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qg', ges_qg, istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnr',ges_qnr,istatus );ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qni',ges_qni,istatus );ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnc',ges_qnc,istatus );ier=ier+istatus
        if (ier/=0) then
            write(6,*)'wrwrfmassa_binary: getpointer failed, cannot do cloud analysis'
            call stop2(999)
@@ -580,6 +621,8 @@ contains
        kqs=i_qs-1
        kqg=i_qg-1
        kqnr=i_qnr-1
+       kqni=i_qni-1
+       kqnc=i_qnc-1
        ktt=i_tt-1
     endif
     ier=0
@@ -593,18 +636,21 @@ contains
     endif
     do k=1,nsig
        deltasigma=eta1_ll(k)-eta1_ll(k+1)
+       deltasigmac4h=eta2_ll(k)-eta2_ll(k+1)
        kt=kt+1
        kq=kq+1
        ku=ku+1
        kv=kv+1
   ! for hydrometeors
-       if(l_cloud_analysis .or. n_actual_clouds>0) then
+       if(l_cloud_analysis .and. n_actual_clouds>0) then
           kqc=kqc+1
           kqi=kqi+1
           kqr=kqr+1
           kqs=kqs+1
           kqg=kqg+1
           kqnr=kqnr+1
+          kqni=kqni+1
+          kqnc=kqnc+1
           ktt=ktt+1
        endif
        do i=1,lon1
@@ -616,7 +662,7 @@ contains
   
   
   !          Convert sensible temperature to potential temperature
-             work_prsl  = one_tenth*(aeta1_ll(k)*(r10*ges_ps(jp1,ip1)-pt_ll)+pt_ll)
+             work_prsl  = one_tenth*(aeta1_ll(k)*(r10*ges_ps(jp1,ip1)-pt_ll)+aeta2_ll(k)+pt_ll)
              work_prslk = (work_prsl/r100)**rd_over_cp_mass
              all_loc(j,i,kt) = ges_tsen(jp1,ip1,k,it)/work_prslk
   
@@ -636,10 +682,13 @@ contains
                 all_loc(j,i,kqs)=ges_qs(jp1,ip1,k)
                 all_loc(j,i,kqg)=ges_qg(jp1,ip1,k)
                 all_loc(j,i,kqnr)=ges_qnr(jp1,ip1,k)
+                all_loc(j,i,kqni)=ges_qni(jp1,ip1,k)
+                all_loc(j,i,kqnc)=ges_qnc(jp1,ip1,k)
                 all_loc(j,i,ktt)=ges_tten(jp1,ip1,k,it)
              endif
   
              q_integral(jp1,ip1)=q_integral(jp1,ip1)+deltasigma*ges_q(jp1,ip1,k)/(one-ges_q(jp1,ip1,k))
+             q_integralc4h(jp1,ip1)=q_integralc4h(jp1,ip1)+deltasigmac4h*ges_q(jp1,ip1,k)/(one-ges_q(jp1,ip1,k))
   
           end do
        end do
@@ -650,7 +699,7 @@ contains
        do j=1,lat1
           jp1=j+1
           psfc_this=r10*ges_ps(jp1,ip1)   ! convert from cb to mb
-          psfc_this_dry=pt_ll+(psfc_this-pt_ll)/q_integral(jp1,ip1)
+          psfc_this_dry=pt_ll+((psfc_this-pt_ll)-q_integralc4h(jp1,ip1))/q_integral(jp1,ip1)
           all_loc(j,i,i_mu)=r100*psfc_this_dry
        end do
     end do
@@ -853,7 +902,7 @@ contains
     endif
   
   ! read hydrometeors
-    if(l_cloud_analysis .or. n_actual_clouds>0) then
+    if(l_cloud_analysis .and. n_actual_clouds>0) then
   !                                    read qc
        if(kord(i_qc)/=1) then
           allocate(jbuf(im,lm,jbegin(mype):min(jend(mype),jm)))
@@ -941,6 +990,36 @@ contains
           end if
           call read_wrf%transfer_jbuf2ibuf(jbuf,jbegin(mype),jend(mype),ibuf,kbegin(mype),kend(mype), &
                            jbegin,jend,kbegin,kend,mype,npe,im,jm,lm,im+1,jm+1,i_qnr,i_qnr+lm-1)
+          deallocate(jbuf)
+       end if
+
+  !                                    read qni
+       if(kord(i_qni)/=1) then
+          allocate(jbuf(im,lm,jbegin(mype):min(jend(mype),jm)))
+          this_offset=offset(i_qni)+(jbegin(mype)-1)*4*im*lm
+          this_length=(jend(mype)-jbegin(mype)+1)*im*lm
+          call mpi_file_read_at(mfcst,this_offset,jbuf(1,1,jbegin(mype)),this_length,mpi_integer4,status,ierror)
+          if(byte_swap) then
+             num_swap=this_length
+             call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
+          end if
+          call read_wrf%transfer_jbuf2ibuf(jbuf,jbegin(mype),jend(mype),ibuf,kbegin(mype),kend(mype), &
+                           jbegin,jend,kbegin,kend,mype,npe,im,jm,lm,im+1,jm+1,i_qni,i_qni+lm-1)
+          deallocate(jbuf)
+       end if
+  
+  !                                    read qnc
+       if(kord(i_qnc)/=1) then
+          allocate(jbuf(im,lm,jbegin(mype):min(jend(mype),jm)))
+          this_offset=offset(i_qnc)+(jbegin(mype)-1)*4*im*lm
+          this_length=(jend(mype)-jbegin(mype)+1)*im*lm
+          call mpi_file_read_at(mfcst,this_offset,jbuf(1,1,jbegin(mype)),this_length,mpi_integer4,status,ierror)
+          if(byte_swap) then
+             num_swap=this_length
+             call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
+          end if
+          call read_wrf%transfer_jbuf2ibuf(jbuf,jbegin(mype),jend(mype),ibuf,kbegin(mype),kend(mype), &
+                           jbegin,jend,kbegin,kend,mype,npe,im,jm,lm,im+1,jm+1,i_qnc,i_qnc+lm-1)
           deallocate(jbuf)
        end if
   
@@ -1134,7 +1213,7 @@ contains
     endif
   
   !  write hydrometeors
-    if(l_cloud_analysis .or. n_actual_clouds>0) then
+    if(l_cloud_analysis .and. n_actual_clouds>0) then
   !                                    write qc
        if(kord(i_qc)/=1) then
           allocate(jbuf(im,lm,jbegin(mype):min(jend(mype),jm)))
@@ -1216,6 +1295,36 @@ contains
           call this%transfer_ibuf2jbuf(jbuf,jbegin(mype),jend(mype),ibuf,kbegin(mype),kend(mype), &
                            jbegin,jend,kbegin,kend,mype,npe,im,jm,lm,im+1,jm+1,i_qnr,i_qnr+lm-1)
           this_offset=offset(i_qnr)+(jbegin(mype)-1)*4*im*lm
+          this_length=(jend(mype)-jbegin(mype)+1)*im*lm
+          if(byte_swap) then
+             num_swap=this_length
+             call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
+          end if
+          call mpi_file_write_at(mfcst,this_offset,jbuf(1,1,jbegin(mype)),this_length,mpi_integer4,status,ierror)
+          deallocate(jbuf)
+       end if
+  
+  !                                    write qni
+       if(kord(i_qni)/=1) then
+          allocate(jbuf(im,lm,jbegin(mype):min(jend(mype),jm)))
+          call this%transfer_ibuf2jbuf(jbuf,jbegin(mype),jend(mype),ibuf,kbegin(mype),kend(mype), &
+                           jbegin,jend,kbegin,kend,mype,npe,im,jm,lm,im+1,jm+1,i_qni,i_qni+lm-1)
+          this_offset=offset(i_qni)+(jbegin(mype)-1)*4*im*lm
+          this_length=(jend(mype)-jbegin(mype)+1)*im*lm
+          if(byte_swap) then
+             num_swap=this_length
+             call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
+          end if
+          call mpi_file_write_at(mfcst,this_offset,jbuf(1,1,jbegin(mype)),this_length,mpi_integer4,status,ierror)
+          deallocate(jbuf)
+       end if
+  
+  !                                    write qnc
+       if(kord(i_qnc)/=1) then
+          allocate(jbuf(im,lm,jbegin(mype):min(jend(mype),jm)))
+          call this%transfer_ibuf2jbuf(jbuf,jbegin(mype),jend(mype),ibuf,kbegin(mype),kend(mype), &
+                           jbegin,jend,kbegin,kend,mype,npe,im,jm,lm,im+1,jm+1,i_qnc,i_qnc+lm-1)
+          this_offset=offset(i_qnc)+(jbegin(mype)-1)*4*im*lm
           this_length=(jend(mype)-jbegin(mype)+1)*im*lm
           if(byte_swap) then
              num_swap=this_length
@@ -1345,7 +1454,7 @@ contains
   
   end subroutine generic_sub2grid
   
-    subroutine reorder_s(this,work,k_in)
+    subroutine reorder_s(work,k_in)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
   ! subprogram:    reorder_s 
@@ -1379,7 +1488,6 @@ contains
       use gridmod, only: ijn,itotsub
       implicit none
   
-      class(wrwrfmassa_class), intent(inout) :: this 
       integer(i_kind)                       , intent(in   ) :: k_in    ! number of levs in work array
   
       real(r_single),dimension(itotsub*k_in), intent(inout) :: work ! array to reorder
@@ -1423,7 +1531,7 @@ contains
       return
     end subroutine reorder_s
   
-  subroutine contract_ibuf(this,ibuf,im,jm,imp,jmp)
+  subroutine contract_ibuf(ibuf,im,jm,imp,jmp)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
   ! subprogram:    contract_ibuf    contract array in place
@@ -1458,7 +1566,6 @@ contains
     use kinds, only: i_long,i_kind
     implicit none
   
-    class(wrwrfmassa_class), intent(inout) :: this 
     integer(i_kind),intent(in   ) :: im,jm,imp,jmp
     integer(i_long),intent(inout) :: ibuf(imp*jmp)
   
@@ -1489,7 +1596,7 @@ contains
   
   end subroutine contract_ibuf
   
-  subroutine transfer_ibuf2jbuf(this,jbuf,jbegin_loc,jend_loc,ibuf,kbegin_loc,kend_loc, &
+  subroutine transfer_ibuf2jbuf(jbuf,jbegin_loc,jend_loc,ibuf,kbegin_loc,kend_loc, &
                        jbegin,jend,kbegin,kend,mype,npe,im_jbuf,jm_jbuf,lm_jbuf, &
                        im_ibuf,jm_ibuf,k_start,k_end)
   !$$$  subprogram documentation block
@@ -1538,7 +1645,6 @@ contains
     use kinds, only: i_long,i_kind
     implicit none
   
-    class(wrwrfmassa_class), intent(inout) :: this 
     integer(i_kind),intent(in   ) :: jbegin_loc,jend_loc,kbegin_loc,kend_loc,mype,npe,im_jbuf,jm_jbuf,lm_jbuf
     integer(i_kind),intent(in   ) :: im_ibuf,jm_ibuf,k_start,k_end
   
@@ -1602,7 +1708,7 @@ contains
   
   end subroutine transfer_ibuf2jbuf
   
-  subroutine move_hg_ibuf(this,temp1,ibuf,im_buf,jm_buf,im_out,jm_out)
+  subroutine move_hg_ibuf(temp1,ibuf,im_buf,jm_buf,im_out,jm_out)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
   ! subprogram:    move_hg_ibuf  copy from one array to another
@@ -1635,7 +1741,6 @@ contains
     use constants, only: zero_ilong
     implicit none
   
-    class(wrwrfmassa_class), intent(inout) :: this 
     integer(i_kind),intent(in   ) :: im_buf,jm_buf,im_out,jm_out
     real(r_single) ,intent(in   ) :: temp1(im_out,jm_out)
     integer(i_long),intent(  out) :: ibuf(im_buf,jm_buf)
@@ -1682,6 +1787,10 @@ contains
   !   2014-03-12  hu     - add code to read ges_q2 (2m Q), 
   !                               Qnr(rain number concentration), 
   !                               and nsoil (number of soil levels)
+  !   2015-01-13  ladwig - add code to read Qni (cloud water number
+  !                               concentration)
+  !   2017-03-23  Hu     - add code to use hybrid vertical coodinate in WRF MASS
+  !                        core
   !
   !   input argument list:
   !     mype     - pe number
@@ -1701,11 +1810,11 @@ contains
     use mpimod, only: mpi_comm_world,ierror,mpi_real4
     use gridmod, only: pt_ll,eta1_ll,lat2,iglobal,itotsub,update_regsfc,&
          lon2,nsig,nsig_soil,lon1,lat1,nlon_regional,nlat_regional,ijn,displs_g,&
-         aeta1_ll,strip
+         aeta1_ll,strip,eta2_ll,aeta2_ll
     use constants, only: one,zero_single,rd_over_cp_mass,one_tenth,r10,r100
     use gsi_io, only: lendian_in, lendian_out
     use rapidrefresh_cldsurf_mod, only: l_cloud_analysis,l_gsd_soilTQ_nudge,&
-         i_use_2mq4b
+         i_use_2mq4b,i_use_2mt4b
     use chemmod, only: laeroana_gocart,wrf_pm2_5
     use gsi_bundlemod, only: GSI_BundleGetPointer
     use gsi_metguess_mod, only: gsi_metguess_get,GSI_MetGuess_Bundle
@@ -1729,20 +1838,20 @@ contains
     real(r_single),allocatable::landmask(:),snow(:),seaice(:)
     character(6) filename
     integer(i_kind) i,j,k,kt,kq,ku,kv,it,i_psfc,i_t,i_q,i_u,i_v
-    integer(i_kind) i_qc,i_qi,i_qr,i_qs,i_qg,i_qnr
-    integer(i_kind) kqc,kqi,kqr,kqs,kqg,kqnr,i_tt,ktt
+    integer(i_kind) i_qc,i_qi,i_qr,i_qs,i_qg,i_qnr,i_qni,i_qnc
+    integer(i_kind) kqc,kqi,kqr,kqs,kqg,kqnr,kqni,kqnc,i_tt,ktt
     integer(i_kind) i_sst,i_skt,i_th2,i_q2,i_soilt1,i_tslb,i_smois,ktslb,ksmois
     integer(i_kind) :: iv, n_gocart_var,i_snowT_check
     integer(i_kind),allocatable :: i_chem(:), kchem(:)
-    integer(i_kind) num_mass_fields,num_all_fields,num_all_pad
+    integer(i_kind) num_mass_fields,num_all_fields,num_all_pad,num_mass_fields_base
     integer(i_kind) regional_time0(6),nlon_regional0,nlat_regional0,nsig0,nsoil
     integer(i_kind) n_actual_clouds,ier,istatus
     real(r_kind) psfc_this,psfc_this_dry
-    real(r_kind),dimension(lat2,lon2):: q_integral
-    real(r_kind) deltasigma
+    real(r_kind),dimension(lat2,lon2):: q_integral,q_integralc4h
+    real(r_kind) deltasigma,deltasigmac4h
     real(r_kind):: work_prsl,work_prslk
     real(r_single) pt0
-    real(r_single) aeta10(nsig),eta10(nsig+1)
+    real(r_single) aeta10(nsig),eta10(nsig+1),aeta20(nsig),eta20(nsig+1)
     real(r_single) glon0(nlon_regional,nlat_regional),glat0(nlon_regional,nlat_regional)
     real(r_single) dx_mc0(nlon_regional,nlat_regional),dy_mc0(nlon_regional,nlat_regional)
   
@@ -1762,6 +1871,8 @@ contains
     real(r_kind), pointer :: ges_qs(:,:,:)=>NULL()
     real(r_kind), pointer :: ges_qg(:,:,:)=>NULL()
     real(r_kind), pointer :: ges_qnr(:,:,:)=>NULL()
+    real(r_kind), pointer :: ges_qni(:,:,:)=>NULL()
+    real(r_kind), pointer :: ges_qnc(:,:,:)=>NULL()
   
     real(r_kind), pointer :: ges_sulf (:,:,:)=>NULL()
     real(r_kind), pointer :: ges_bc1  (:,:,:)=>NULL()
@@ -1780,6 +1891,8 @@ contains
     real(r_kind), pointer :: ges_p25  (:,:,:)=>NULL()
     real(r_kind), pointer :: ges_pm2_5  (:,:,:)=>NULL()
   
+    associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
+    end associate
     it=ntguessig
   
   ! Inquire about cloud guess fields
@@ -1793,6 +1906,8 @@ contains
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs', ges_qs, istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qg', ges_qg, istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnr',ges_qnr,istatus );ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qni',ges_qni,istatus );ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnc',ges_qnc,istatus );ier=ier+istatus
        if (ier/=0) n_actual_clouds=0
     end if
   
@@ -1800,10 +1915,13 @@ contains
     jm=nlat_regional
     lm=nsig
   
-    num_mass_fields=4+4*lm
-    if(l_cloud_analysis .or. n_actual_clouds>0) num_mass_fields=4+4*lm + 7*lm
-    if(l_gsd_soilTQ_nudge) num_mass_fields=4+4*lm+2*nsig_soil+2
-    if(l_gsd_soilTQ_nudge .and. l_cloud_analysis) num_mass_fields=4+4*lm+2*nsig_soil+2+7*lm
+    num_mass_fields_base=2+4*lm + 1
+    num_mass_fields=num_mass_fields_base
+!    The 9 3D cloud analysis fields are: ql,qi,qr,qs,qg,qnr,qni,qnc,tt
+    if(l_cloud_analysis .and. n_actual_clouds>0) num_mass_fields=num_mass_fields + 9*lm
+    if(l_gsd_soilTQ_nudge) num_mass_fields=num_mass_fields+2*nsig_soil+1
+    if(i_use_2mt4b > 0 ) num_mass_fields=num_mass_fields+2
+    if(i_use_2mt4b <= 0 .and. i_use_2mq4b > 0) num_mass_fields=num_mass_fields+1
     if ( laeroana_gocart ) then
        call gsi_chemguess_get ( 'aerosols::3d', n_gocart_var, ier )
        if ( n_gocart_var > 0 ) then
@@ -1833,30 +1951,39 @@ contains
     i_u=i_q+lm
     i_v=i_u+lm
     i_sst=i_v+lm
-    if(l_gsd_soilTQ_nudge) then
+    if(i_use_2mt4b > 0) then
        i_th2=i_sst+1
+    else
+       i_th2=i_sst
+    endif
+    if(l_gsd_soilTQ_nudge) then
        i_tslb=i_th2+1
        i_smois=i_tslb+nsig_soil
        i_soilt1=i_smois+nsig_soil
        i_skt=i_soilt1+1
     else
-       i_skt=i_sst+1
-       i_th2=0
+       i_skt=i_th2+1
        i_tslb=0
        i_smois=0
        i_soilt1=0
     endif
-    i_q2=i_skt+1
+    if(i_use_2mt4b > 0 .or. i_use_2mq4b > 0) then
+       i_q2=i_skt+1
+    else
+       i_q2=i_skt
+    endif
   
   ! for hydrometeors
-    if(l_cloud_analysis .or. n_actual_clouds>0) then
+    if(l_cloud_analysis .and. n_actual_clouds>0) then
        i_qc=i_q2+1
        i_qr=i_qc+lm
        i_qs=i_qr+lm
        i_qi=i_qs+lm
        i_qg=i_qi+lm
        i_qnr=i_qg+lm
-       i_tt=i_qnr+lm
+       i_qni=i_qnr+lm
+       i_qnc=i_qni+lm
+       i_tt=i_qnc+lm
        if ( laeroana_gocart ) then
           do iv = 1, n_gocart_var
              i_chem(iv)=i_tt+(iv-1)*lm+1
@@ -1892,7 +2019,6 @@ contains
        write(filename,'("sigf",i2.2)')ifilesig(ntguessig)
        print *,'update ',trim(filename)
        open (lendian_in,file=filename,form='unformatted')
-    write(6,*) 'opening siganl from wrwrfmassa'
        open (lendian_out,file='siganl',form='unformatted')
        rewind lendian_in ; rewind lendian_out
     end if
@@ -1907,9 +2033,11 @@ contains
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs', ges_qs, istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qg', ges_qg, istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnr',ges_qnr,istatus );ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qni',ges_qni,istatus );ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnc',ges_qnc,istatus );ier=ier+istatus
        if (ier/=0) then
            write(6,*)'READ_WRF_MASS_BINARY_GUESS: getpointer failed, cannot do cloud analysis'
-           if (l_cloud_analysis .or. n_actual_clouds>0) call stop2(999)
+           if (l_cloud_analysis .and. n_actual_clouds>0) call stop2(999)
        endif
     endif
   
@@ -1938,6 +2066,8 @@ contains
        kqs=i_qs-1
        kqg=i_qg-1
        kqnr=i_qnr-1
+       kqni=i_qni-1
+       kqnc=i_qnc-1
        ktt=i_tt-1
     endif
     if ( laeroana_gocart ) then
@@ -1978,20 +2108,24 @@ contains
   
   
     q_integral=one
+    q_integralc4h=zero_single
     do k=1,nsig
        deltasigma=eta1_ll(k)-eta1_ll(k+1)
+       deltasigmac4h=eta2_ll(k)-eta2_ll(k+1)
        kt=kt+1
        kq=kq+1
        ku=ku+1
        kv=kv+1
   ! for hydrometeors
-       if(l_cloud_analysis .or. n_actual_clouds>0) then
+       if(l_cloud_analysis .and. n_actual_clouds>0) then
           kqc=kqc+1
           kqi=kqi+1
           kqr=kqr+1
           kqs=kqs+1
           kqg=kqg+1
           kqnr=kqnr+1
+          kqni=kqni+1
+          kqnc=kqnc+1
           ktt=ktt+1
        endif
        if ( laeroana_gocart ) then
@@ -2012,7 +2146,7 @@ contains
              all_loc(j,i,kv)=ges_v(j,i,k)
   
   !          Convert sensible temperature to potential temperature
-             work_prsl  = one_tenth*(aeta1_ll(k)*(r10*ges_ps(j,i)-pt_ll)+pt_ll)
+             work_prsl  = one_tenth*(aeta1_ll(k)*(r10*ges_ps(j,i)-pt_ll)+aeta2_ll(k)+pt_ll)
              work_prslk = (work_prsl/r100)**rd_over_cp_mass
              all_loc(j,i,kt) = ges_tsen(j,i,k,it)/work_prslk
   
@@ -2020,13 +2154,15 @@ contains
              all_loc(j,i,kq)= ges_q(j,i,k)/(one-ges_q(j,i,k))
              	
   ! for hydrometeors      
-             if(l_cloud_analysis .or. n_actual_clouds>0) then
+             if(l_cloud_analysis .and. n_actual_clouds>0) then
                 all_loc(j,i,kqc)=ges_qc(j,i,k)
                 all_loc(j,i,kqi)=ges_qi(j,i,k)
                 all_loc(j,i,kqr)=ges_qr(j,i,k)
                 all_loc(j,i,kqs)=ges_qs(j,i,k)
                 all_loc(j,i,kqg)=ges_qg(j,i,k)
                 all_loc(j,i,kqnr)=ges_qnr(j,i,k)
+                all_loc(j,i,kqni)=ges_qni(j,i,k)
+                all_loc(j,i,kqnc)=ges_qnc(j,i,k)
                 all_loc(j,i,ktt)=ges_tten(j,i,k,it)
              endif
   
@@ -2055,13 +2191,15 @@ contains
   
              q_integral(j,i)=q_integral(j,i)+deltasigma* &
                   ges_q(j,i,k)/(one-ges_q(j,i,k))
+             q_integralc4h(j,i)=q_integralc4h(j,i)+deltasigmac4h* &
+                  ges_q(j,i,k)/(one-ges_q(j,i,k))
           end do
        end do
     end do
     do i=1,lon2
        do j=1,lat2
           psfc_this=r10*ges_ps(j,i)   ! convert from cb to mb
-          psfc_this_dry=pt_ll+(psfc_this-pt_ll)/q_integral(j,i)
+          psfc_this_dry=pt_ll+((psfc_this-pt_ll)-q_integralc4h(j,i))/q_integral(j,i)
           all_loc(j,i,i_psfc)=r100*psfc_this_dry
        end do
     end do
@@ -2069,10 +2207,10 @@ contains
     if(mype == 0) then
        read(lendian_in) regional_time0,nlon_regional0,nlat_regional0,nsig0,pt0,nsoil
        write(lendian_out) regional_time0,nlon_regional0,nlat_regional0,nsig0,pt0,nsoil
-       read(lendian_in) aeta10
-       write(lendian_out) aeta10
-       read(lendian_in) eta10
-       write(lendian_out) eta10
+       read(lendian_in) aeta10,aeta20
+       write(lendian_out) aeta10,aeta20
+       read(lendian_in) eta10,eta20
+       write(lendian_out) eta10,eta20
        read(lendian_in) glat0,dx_mc0
        write(lendian_out) glat0,dx_mc0
        read(lendian_in) glon0,dy_mc0
@@ -2204,8 +2342,6 @@ contains
              end do
           end do
        end do
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q2m',   ges_q2,  istatus );ier=ier+istatus
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'th2m',  ges_th2, istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tsoil', ges_soilt1, istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tskn' , ges_tsk , istatus );ier=ier+istatus
        if (ier/=0) then ! doesn't have to die - code can be generalized to bypass missing vars
@@ -2215,12 +2351,29 @@ contains
        do i=1,lon2
           do j=1,lat2
              all_loc(j,i,i_skt)=ges_tsk(j,i)
-             all_loc(j,i,i_th2)=ges_th2(j,i)
              all_loc(j,i,i_soilt1)=ges_soilt1(j,i)
           end do
        end do
     endif ! l_gsd_soilTQ_nudge
-    if (i_use_2mq4b >0) then
+
+    if(i_use_2mt4b > 0 ) then
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'th2m', ges_th2,istatus );ier=ier+istatus
+       if (ier/=0) then ! doesn't have to die - code can be generalized to bypass
+           write(6,*)'wrwrfmassa_netcdf: getpointer failed, cannot retrieve th2'
+           call stop2(999)
+       endif
+       do i=1,lon2
+          do j=1,lat2
+             all_loc(j,i,i_th2)=ges_th2(j,i)
+          end do
+       end do
+    endif
+    if(i_use_2mt4b > 0 .or. i_use_2mq4b > 0) then
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q2m',   ges_q2, istatus );ier=ier+istatus
+       if (ier/=0) then ! doesn't have to die - code can be generalized to bypass missing vars          
+           write(6,*)'wrwrfmassa_netcdf: getpointer failed, cannot retrieve q2m'
+           call stop2(999)
+       endif
        do i=1,lon2
           do j=1,lat2
   ! Convert 2m specific humidity to mixing ratio
@@ -2363,27 +2516,29 @@ contains
     end if
   
   ! Update Q2
-    if(mype == 0) read(lendian_in)temp1
-    if (mype==0)write(6,*)' at 10.11 in wrwrfmassa,max,min(temp1)=', &
+    if( i_use_2mq4b>0 .or. i_use_2mt4b > 0) then
+       if(mype == 0) read(lendian_in)temp1
+       if (mype==0)write(6,*)' at 10.11 in wrwrfmassa,max,min(temp1)=', &
                                            maxval(temp1),minval(temp1)
-    call strip(all_loc(:,:,i_q2),strp)
-    tempa=zero_single
-    call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
+       call strip(all_loc(:,:,i_q2),strp)
+       tempa=zero_single
+       call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
             tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
-    if(mype == 0) then
-       write(6,*)' at 10.12 in wrwrfmassa,max,min(tempa)=', &
+       if(mype == 0) then
+          write(6,*)' at 10.12 in wrwrfmassa,max,min(tempa)=', &
                             maxval(tempa),minval(tempa)
-       call fill_mass_grid2t(temp1,im,jm,tempb,2)
-       do i=1,iglobal
+          call fill_mass_grid2t(temp1,im,jm,tempb,2)
+          do i=1,iglobal
              tempa(i)=tempa(i)-tempb(i)
-       end do
-       write(6,*)' at 10.13 in wrwrfmassa,max,min(tempa)=', &
+          end do
+          write(6,*)' at 10.13 in wrwrfmassa,max,min(tempa)=', &
                              maxval(tempa),minval(tempa)
-       call unfill_mass_grid2t(tempa,im,jm,temp1)
-       write(6,*)' at 10.14 in wrwrfmassa,max,min(temp1)=', &
+          call unfill_mass_grid2t(tempa,im,jm,temp1)
+          write(6,*)' at 10.14 in wrwrfmassa,max,min(temp1)=', &
                              maxval(temp1),minval(temp1)
-       write(lendian_out)temp1
-    end if     !endif mype==0
+          write(lendian_out)temp1
+       end if     !endif mype==0
+    endif
   
     if(l_gsd_soilTQ_nudge) then
   ! update soilt1
@@ -2406,7 +2561,9 @@ contains
           write(6,*)' at 10.4 in wrwrfmassa,max,min(temp1)=',maxval(temp1),minval(temp1)
           write(lendian_out)temp1
        end if     !endif mype==0
+    endif  !  l_gsd_soilTQ_nudge
   ! update TH2
+    if( i_use_2mt4b>0 ) then
        if(mype == 0) read(lendian_in)temp1
        if (mype==0)write(6,*)' at 10.5 in wrwrfmassa,max,min(temp1)=',maxval(temp1),minval(temp1)
        call strip(all_loc(:,:,i_th2),strp)
@@ -2427,10 +2584,10 @@ contains
           write(6,*)' at 10.8 in wrwrfmassa,max,min(temp1)=',maxval(temp1),minval(temp1)
           write(lendian_out)temp1
        end if     !endif mype==0
-    endif  !  l_gsd_soilTQ_nudge
+    endif  ! i_use_2mt4b>0
   !
   ! for saving cloud analysis results
-    if(l_cloud_analysis .or. n_actual_clouds>0) then
+    if(l_cloud_analysis .and. n_actual_clouds>0) then
   ! Update qc
        kqc=i_qc-1
        do k=1,nsig
@@ -2539,6 +2696,42 @@ contains
           end if
        end do
    
+  ! Update qni     
+       kqni=i_qni-1
+       do k=1,nsig
+          kqni=kqni+1
+          if(mype == 0) read(lendian_in)temp1
+          call strip(all_loc(:,:,kqni),strp)
+          call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
+               tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
+          if(mype == 0) then
+             call fill_mass_grid2t(temp1,im,jm,tempb,2)
+             do i=1,iglobal
+                tempa(i)=tempa(i)-tempb(i)
+             end do
+             call unfill_mass_grid2t(tempa,im,jm,temp1)
+             write(lendian_out)temp1
+          end if
+       end do
+   
+  ! Update qnc     
+       kqnc=i_qnc-1
+       do k=1,nsig
+          kqnc=kqnc+1
+          if(mype == 0) read(lendian_in)temp1
+          call strip(all_loc(:,:,kqnc),strp)
+          call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
+               tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
+          if(mype == 0) then
+             call fill_mass_grid2t(temp1,im,jm,tempb,2)
+             do i=1,iglobal
+                tempa(i)=tempa(i)-tempb(i)
+             end do
+             call unfill_mass_grid2t(tempa,im,jm,temp1)
+             write(lendian_out)temp1
+          end if
+       end do
+   
   ! Update tten     
        ktt=i_tt-1
        do k=1,nsig
@@ -2624,7 +2817,7 @@ contains
     
   end subroutine wrwrfmassa_netcdf_wrf
 
-  subroutine update_start_date(this,chdrbuf,iyear,imonth,iday,ihour,iminute,isecond)
+  subroutine update_start_date(chdrbuf,iyear,imonth,iday,ihour,iminute,isecond)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
   ! subprogram:    update_start_date  update start date on wrf file
@@ -2660,7 +2853,6 @@ contains
     use kinds, only: i_kind
     implicit none
   
-    class(wrwrfmassa_class), intent(inout) :: this 
     character(1)   ,intent(inout) :: chdrbuf(2048)
     integer(i_kind),intent(in   ) :: iyear,imonth,iday,ihour,iminute,isecond
   

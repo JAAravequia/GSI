@@ -6,184 +6,19 @@ use abstract_get_wrf_nmm_ensperts_mod
     procedure, pass(this) :: convert_binary_nmm_ens => convert_binary_nmm_ens_wrf
     procedure, pass(this) :: general_read_wrf_nmm_binary
     procedure, pass(this) :: general_read_wrf_nmm_netcdf
-    procedure, pass(this) :: create_e2a_blend
+    procedure, nopass :: create_e2a_blend
     procedure, pass(this) :: grads3a
-    procedure, pass(this) :: strip_grd
+    procedure, nopass :: strip_grd
     procedure, pass(this) :: grads3d
     procedure, pass(this) :: sub2grid_3a
     procedure, pass(this) :: generic_grid2sub_ens
-    procedure, pass(this) :: general_fill_nmm_grid2
-    procedure, pass(this) :: general_half_nmm_grid2
-    procedure, pass(this) :: general_reorder2_s
+    procedure, nopass :: general_fill_nmm_grid2
+    procedure, nopass :: general_half_nmm_grid2
+    procedure, nopass :: general_reorder2_s
     procedure, pass(this) :: ens_member_mean_dualres_regional
 
   end type get_wrf_nmm_ensperts_class
 contains
-  subroutine ens_member_mean_dualres_regional(this,en_bar,mype,en_perts,nelen)
-  !$$$  subprogram documentation block
-  !                .      .    .                                       .
-  ! subprogram:    ens_member_mean_dualres_regional
-  !   prgmmr: mizzi            org: ncar/mmm            date: 2010-08-11
-  !
-  ! abstract:
-  !
-  !
-  ! program history log:
-  !   2010-08-11  parrish, initial documentation
-  !   2011-04-05  parrish - add pseudo-bundle capability
-  !   2011-08-31  todling - revisit en_perts (single-prec) in light of extended bundle
-  !
-  !   input argument list:
-  !     en_bar - ensemble mean
-  !      mype  - current processor number
-  !
-  !   output argument list:
-  !
-  ! attributes:
-  !   language: f90
-  !   machine:  ibm RS/6000 SP
-  !
-  !$$$ end documentation block
-  !
-    use kinds, only: r_single,r_kind,i_kind
-    use hybrid_ensemble_parameters, only: n_ens,grd_ens,grd_anl,p_e2a,uv_hyb_ens
-!   use hybrid_ensemble_isotropic, only: en_perts,nelen
-    use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sube2suba
-    use constants, only:  zero,one
-    use control_vectors, only: cvars2d,cvars3d,nc2d,nc3d
-    use gsi_bundlemod, only: gsi_bundlecreate
-    use gsi_bundlemod, only: gsi_grid
-    use gsi_bundlemod, only: gsi_bundle
-    use gsi_bundlemod, only: gsi_bundlegetpointer
-    use gsi_bundlemod, only: gsi_gridcreate
-    implicit none
-  
-    class(get_wrf_nmm_ensperts_class), intent(inout) :: this
-    type(gsi_bundle),intent(in):: en_bar
-    integer(i_kind),intent(in):: mype
-    type(gsi_bundle),allocatable, intent(inout) :: en_perts(:,:)
-    integer(i_kind), intent(in   ):: nelen
-  
-    type(gsi_bundle):: sube,suba
-    type(gsi_grid):: grid_ens,grid_anl
-    real(r_kind) sig_norm_inv
-    type(sub2grid_info)::se,sa
-    integer(i_kind) k
-  
-    integer(i_kind) i,n,ic3
-    logical regional
-    integer(i_kind) num_fields,inner_vars,istat,istatus
-    logical,allocatable::vector(:)
-    real(r_kind),pointer,dimension(:,:,:):: st,vp,tv,rh,oz,cw
-    real(r_kind),pointer,dimension(:,:):: ps
-    real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig),target::dum3
-    real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2),target::dum2
-    character(24) filename
-  
-  !      create simple regular grid
-          call gsi_gridcreate(grid_anl,grd_anl%lat2,grd_anl%lon2,grd_anl%nsig)
-          call gsi_gridcreate(grid_ens,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)
-  
-  !      create two internal bundles, one on analysis grid and one on ensemble grid
-  
-         call gsi_bundlecreate (suba,grid_anl,'ensemble work',istatus, &
-                                   names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
-         if(istatus/=0) then
-            write(6,*)' in ens_spread_dualres_regional: trouble creating bundle_anl bundle'
-            call stop2(999)
-         endif
-         call gsi_bundlecreate (sube,grid_ens,'ensemble work ens',istatus, &
-                                   names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
-         if(istatus/=0) then
-            write(6,*)' ens_spread_dualres_regional: trouble creating bundle_ens bundle'
-            call stop2(999)
-         endif
-  
-    sig_norm_inv=sqrt(n_ens-one)
-  
-    do n=1,n_ens+1
-  
-       do i=1,nelen
-          if(n <= n_ens)then
-             sube%values(i)=en_perts(n,1)%valuesr4(i)*sig_norm_inv+en_bar%values(i)
-          else
-             sube%values(i)=en_bar%values(i)
-          end if
-       end do
-  
-       if(grd_ens%latlon1n == grd_anl%latlon1n) then
-          do i=1,nelen
-             suba%values(i)=sube%values(i)
-          end do
-       else
-          inner_vars=1
-          num_fields=max(0,nc3d)*grd_ens%nsig+max(0,nc2d)
-          allocate(vector(num_fields))
-          vector=.false.
-          do ic3=1,nc3d
-             if(trim(cvars3d(ic3))=='sf'.or.trim(cvars3d(ic3))=='vp') then
-                do k=1,grd_ens%nsig
-                   vector((ic3-1)*grd_ens%nsig+k)=uv_hyb_ens
-                end do
-             end if
-          end do
-          call general_sub2grid_create_info(se,inner_vars,grd_ens%nlat,grd_ens%nlon,grd_ens%nsig,num_fields, &
-                                            regional,vector)
-          call general_sub2grid_create_info(sa,inner_vars,grd_anl%nlat,grd_anl%nlon,grd_anl%nsig,num_fields, &
-                                            regional,vector)
-          deallocate(vector)
-          call general_sube2suba(se,sa,p_e2a,sube%values,suba%values,regional)
-       end if
-  
-       dum2=zero
-       dum3=zero
-       call gsi_bundlegetpointer(suba,'sf',st,istat)
-       if(istat/=0) then
-          write(6,*)' no sf pointer in ens_member_dualres, point st at dum3 array'
-          st => dum3
-       end if
-       call gsi_bundlegetpointer(suba,'vp',vp,istat)
-       if(istat/=0) then
-          write(6,*)' no vp pointer in ens_member_dualres, point vp at dum3 array'
-          vp => dum3
-       end if
-       call gsi_bundlegetpointer(suba,'t',tv,istat)
-       if(istat/=0) then
-          write(6,*)' no t pointer in ens_member_dualres, point tv at dum3 array'
-          tv => dum3
-       end if
-       call gsi_bundlegetpointer(suba,'q',rh,istat)
-       if(istat/=0) then
-             write(6,*)' no q pointer in ens_member_dualres, point rh at dum3 array'
-          rh => dum3
-       end if
-       call gsi_bundlegetpointer(suba,'oz',oz,istat)
-       if(istat/=0) then
-          write(6,*)' no oz pointer in ens_member_dualres, point oz at dum3 array'
-          oz => dum3
-       end if
-       call gsi_bundlegetpointer(suba,'cw',cw,istat)
-       if(istat/=0) then
-             write(6,*)' no cw pointer in ens_member_dualres, point cw at dum3 array'
-          cw => dum3
-       end if
-       call gsi_bundlegetpointer(suba,'ps',ps,istat)
-       if(istat/=0) then
-          write(6,*)' no ps pointer in ens_member_dualres, point ps at dum2 array'
-          ps => dum2
-       end if
-     
-       if(n <= n_ens)then
-          write(filename,"('ens_mem',i3.3)") n
-          call this%grads3a(grd_ens,st,vp,tv,rh,ps,grd_ens%nsig,mype,filename)
-       else
-          call this%grads3a(grd_ens,st,vp,tv,rh,ps,grd_ens%nsig,mype,'ens_bar')
-       end if
-    end do
-     
-    return
-  
-  end subroutine ens_member_mean_dualres_regional
   subroutine get_wrf_nmm_ensperts_wrf(this,en_perts,nelen,region_lat_ens,region_lon_ens,ps_bar)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
@@ -210,10 +45,10 @@ contains
       use kinds, only: r_kind,i_kind,r_single
       use gridmod, only: netcdf,half_grid,filled_grid,regional
       use gridmod, only: aeta1_ll,aeta2_ll,pdtop_ll,pt_ll
-      use constants, only: zero,one,half,grav,fv,zero_single,rd_over_cp_mass, &
-                           rd_over_cp,one_tenth,ten
+      use constants, only: zero,one,half,zero_single, &
+                           one_tenth,ten
       use mpimod, only: mpi_comm_world,ierror,mype
-      use hybrid_ensemble_parameters, only: n_ens,grd_ens,nlat_ens,nlon_ens,sp_ens, &
+      use hybrid_ensemble_parameters, only: n_ens,grd_ens,nlat_ens,nlon_ens, &
                                             merge_two_grid_ensperts,uv_hyb_ens, &
                                             grid_ratio_ens,write_ens_sprd
       use control_vectors, only: cvars2d,cvars3d,nc2d,nc3d
@@ -1107,14 +942,13 @@ contains
   !$$$
   
     use kinds, only: r_single,i_llong,r_kind,i_kind
-    use constants, only: zero,half,rad2deg
+    use constants, only: zero,half
     use gsi_io, only: lendian_out
     use gridmod, only: half_grid,filled_grid,half_nmm_grid2a,fill_nmm_grid2a3
     use hybrid_ensemble_parameters, only: n_ens,merge_two_grid_ensperts
     use get_wrf_binary_interface_mod, only: get_wrf_binary_interface_class
     implicit none
     class(get_wrf_nmm_ensperts_class), intent(inout) :: this
-  
     integer(i_kind),parameter:: in_unit = 15
   
     character(9) wrfens
@@ -1146,6 +980,8 @@ contains
     integer(i_kind) nlp
     integer(i_kind) i0,j0
   
+    associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
+    end associate
     if(.not. merge_two_grid_ensperts)then
        nlp=n_ens
     else
@@ -1446,10 +1282,10 @@ contains
   !$$$ end documentation block
   
       use kinds, only: r_kind,r_single,i_kind,i_llong,i_long
-      use constants, only: zero,one,grav,fv,zero_single,rd_over_cp_mass, &
-                           one_tenth,h300,rad2deg,ten,half
+      use constants, only: zero,one,fv,zero_single, &
+                           one_tenth,h300,ten,half
       use gridmod, only: half_grid,filled_grid,half_nmm_grid2a,fill_nmm_grid2a3
-      use hybrid_ensemble_parameters, only: n_ens,merge_two_grid_ensperts,q_hyb_ens
+      use hybrid_ensemble_parameters, only: q_hyb_ens
       use mpimod, only: ierror,mpi_integer,mpi_sum,mpi_comm_world,npe,mpi_rtype, &
            mpi_offset_kind,mpi_info_null,mpi_mode_rdonly,mpi_status_size
       use general_sub2grid_mod, only: sub2grid_info
@@ -1457,9 +1293,9 @@ contains
       use read_wrf_mass_guess_mod, only: read_wrf_mass_guess_class
   
       implicit none
+      class(get_wrf_nmm_ensperts_class), intent(inout) :: this
   !
   ! Declare passed variables
-      class(get_wrf_nmm_ensperts_class), intent(inout) :: this
       type(sub2grid_info)                   ,intent(in   ) :: grd
       character(24)                         ,intent(in   ) :: filename
       integer(i_kind)                       ,intent(in   ) :: mype
@@ -1871,10 +1707,10 @@ contains
        use kinds, only: r_kind,r_single,i_kind
        use mpimod, only: ierror,mpi_integer,mpi_sum,mpi_real4,mpi_comm_world,npe
        use gridmod, only: half_grid,filled_grid,fill_nmm_grid2a3,half_nmm_grid2a
-       use constants, only: zero,one,ten,one_tenth,half,grav,zero_single,fv,rad2deg
+       use constants, only: zero,one,ten,one_tenth,half,zero_single,fv
        use gsi_io, only: lendian_in
        use general_sub2grid_mod, only: sub2grid_info
-       use hybrid_ensemble_parameters, only: merge_two_grid_ensperts,q_hyb_ens
+       use hybrid_ensemble_parameters, only: q_hyb_ens
        implicit none
      
      ! Declare passed variables here
@@ -2111,92 +1947,304 @@ contains
   
   return
   end subroutine general_read_wrf_nmm_netcdf
-
-  subroutine general_reorder2_s(this,grd,work,k_in)
+  subroutine general_fill_nmm_grid2(grd,gin,nx,ny,gout,igtype,iorder,ireturn)
   !$$$  subprogram documentation block
-  !                .      .    .
-  ! subprogram:    general_reorder2_s
+  !                .      .    .                                       .
+  ! subprogram:    fill_nmm_grid2         fill holes in (wrf) nmm e-grid
+  !   prgmmr: parrish          org: np22                date: 2004-06-22
   !
-  !   prgrmmr:  kleist           org: np20                date: 2004-01-25
-  !
-  ! abstract:  adapt reorder2 to single precision
+  ! abstract: creates an unstaggered A grid from the staggered E grid used
+  !           by the wrf nmm.  This is done by interpolation to fill the
+  !           holes in the E grid.  This is necessary because the gsi is
+  !           not yet able to work with anything other than unstaggered
+  !           grids.  This solution minimizes additional interpolation error
+  !           but doubles the number of grid points.  This routine will be
+  !           eliminated when the gsi has the capability to work directly
+  !           with staggered grids.
   !
   ! program history log:
-  !   2004-01-25  kleist
-  !   2004-05-14  kleist, documentation
-  !   2004-07-15  todling, protex-complaint prologue
-  !   2004-11-29  parrish, adapt reorder2 to single precision
-  !   2008-04-16  safford -- add subprogram doc block
-  !   2011-09-16  mtong, add structure variable grd
+  !   2010-11-21  mtong, add structure variable grd to make the program more general
   !
   !   input argument list:
-  !     grd
-  !     k_in    ! number of levs in work array
-  !     work
+  !     grd      - structure variable containing information about grid
+  !                    (initialized by general_sub2grid_create_info, located in general_sub2grid_mod.f90)
+  !     gin      - input staggered E grid field over entire horizontal domain
+  !     nx,ny    - input grid dimensions
+  !     igtype   - =1, then (1,1) on staggered grid is at corner of grid
+  !                (mass point for nmm)
+  !              - =2, then (1,1) is staggered (wind point for nmm,
+  !                see illustration below)
   !
-  !   output argument list:
-  !     work
+  !                   igtype=1:
+  !
+  !
+  !
+  !       ^   3             x     x     x     x
+  !       |
+  !       y   2                x     x     x     x
+  !
+  !           1             x     x     x     x
+  !
+  !                         1     2     3
+  !
+  !                           x -->
+  !
+  !                   igtype=2:
+  !
+  !
+  !
+  !       ^   3             x     x     x     x
+  !       |
+  !       y   2          x     x     x     x
+  !
+  !           1             x     x     x     x
+  !
+  !                         1     2     3
+  !
+  !                           x -->
+  !
+  !   output argument list
+  !     gout     - output filled grid  (reorganized for distibution to local domains)
   !
   ! attributes:
   !   language: f90
-  !   machine:  ibm rs/6000 sp; sgi origin 2000; compaq/hp
+  !   machine:  ibm RS/6000 SP
   !
   !$$$
-  
-  ! !USES:
-  
-    use constants, only: zero_single
-    use mpimod, only: npe
-    use kinds, only: r_single,i_kind
+    use kinds, only: r_single,r_kind,i_kind
+    use constants, only: quarter,half,zero
     use general_sub2grid_mod, only: sub2grid_info
+  
     implicit none
   
+  !   Declare passed variables
+    type(sub2grid_info) ,intent(in   ) :: grd
+    integer(i_kind)     ,intent(in   ) :: nx,ny,igtype,iorder
+    real(r_single)      ,intent(in   ) :: gin(nx,ny)
+    real(r_single)      ,intent(  out) :: gout(grd%itotsub)
+    integer(i_kind)     ,intent(  out) :: ireturn
   
-  ! !INPUT PARAMETERS:
+    real(r_single) b(2*nx-1,ny)
+    integer(i_kind) i,im,ip,j,jm,jp
+    real(r_single) fill,test
   
-    class(get_wrf_nmm_ensperts_class), intent(inout) :: this
-    type(sub2grid_info),intent(in   ) :: grd
-    integer(i_kind)    ,intent(in   ) :: k_in    ! number of levs in work array
+    ireturn=0
+    if(2*nx-1 /= grd%nlon .or. ny /= grd%nlat)then
+      print *,'input grid and output grid are not consistant'
+      ireturn=1
+      return
+    endif
   
-  ! !INPUT/OUTPUT PARAMETERS:
-  
-    real(r_single),dimension(grd%itotsub,k_in),intent(inout) :: work
-  
-    integer(i_kind) iloc,iskip,i,k,n
-    real(r_single),dimension(grd%itotsub*k_in):: temp
-  
-  ! Zero out temp array
-    do k=1,grd%itotsub*k_in
-       temp(k)=zero_single
+    fill=0.95_r_kind*huge(fill) ; test=0.95_r_kind*fill
+    do j=1,ny
+       do i=1,2*nx-1
+          b(i,j)=fill
+       end do
     end do
   
-  ! Load temp array in order of subdomains
-    iloc=0
-    iskip=0
-    do n=1,npe
-       if (n/=1) then
-          iskip=iskip+grd%ijn_s(n-1)
-       end if
-  
-       do k=1,k_in
-          do i=1,grd%ijn_s(n)
-             iloc=iloc+1
-             temp(iloc)=work(iskip+i,k)
+  ! First transfer all staggered points to appropriate
+  ! points on filled output grid
+    if(igtype==1) then
+       do j=1,ny,2
+          do i=1,nx
+             b(2*i-1,j)=gin(i,j)
           end do
        end do
-    end do
+       do j=2,ny,2
+          do i=1,nx-1
+             b(2*i,j)=gin(i,j)
+          end do
+       end do
+    else
+       do j=1,ny,2
+          do i=1,nx-1
+             b(2*i,j)=gin(i,j)
+          end do
+       end do
+       do j=2,ny,2
+          do i=1,nx
+             b(2*i-1,j)=gin(i,j)
+          end do
+       end do
+    end if
   
-  ! Now load the tmp array back into work
-    iloc=0
-    do k=1,k_in
-       do i=1,grd%itotsub
-          iloc=iloc+1
-          work(i,k)=temp(iloc)
+  
+  !  Now fill in holes
+  
+  ! Top and bottom rows:
+    do j=1,ny,ny-1
+       do i=1,2*nx-1
+          if(b(i,j)>test) then
+             ip=i+1 ; if(ip>2*nx-1) ip=i-1
+             im=i-1 ; if(im<1) im=i+1
+             b(i,j)=half*(b(im,j)+b(ip,j))
+          end if
        end do
     end do
   
-    return
-  end subroutine general_reorder2_s
+  
+  ! Left and right rows:
+    do j=1,ny
+       jp=j+1 ; if(jp>ny)   jp=j-1
+       jm=j-1 ; if(jm<1) jm=j+1
+       do i=1,2*nx-1,2*nx-2
+          if(b(i,j)>test) b(i,j)=half*(b(i,jm)+b(i,jp))
+       end do
+    end do
+  
+  ! Interior points
+    do j=1,ny
+       jp=j+1 ; if(jp>ny) jp=j-1
+       jm=j-1 ; if(jm<1) jm=j+1
+       do i=1,2*nx-1
+          if(b(i,j)>test) then
+             ip=i+1 ; if(ip>2*nx-1) ip=i-1
+             im=i-1 ; if(im<1)      im=i+1
+             b(i,j)=quarter*(b(ip,j)+b(im,j)+b(i,jp)+b(i,jm))
+          end if
+       end do
+    end do
+  
+  
+  ! Reorganize for eventual distribution to local domains
+    do i=1,grd%itotsub
+       gout(i)=zero
+    end do
+    if(iorder==1)then
+       do i=1,grd%itotsub
+          gout(i)=b(grd%ltosj_s(i),grd%ltosi_s(i))
+       end do
+    else
+       do i=1,grd%iglobal
+          gout(i)=b(grd%ltosj(i),grd%ltosi(i))
+       end do
+    endif
+  
+  end subroutine general_fill_nmm_grid2
+  
+  subroutine general_half_nmm_grid2(grd,gin,nx,ny,gout,igtype,iorder,ireturn)
+  !$$$  subprogram documentation block
+  !                .      .    .                                       .
+  ! subprogram:    half_nmm_grid2    make a-grid from every other row of e-grid
+  !   prgmmr: parrish          org: np22                date: 2004-06-22
+  !
+  ! abstract: creates an unstaggered A grid from the staggered E grid used by the wrf nmm.
+  !           This is done by keeping every other row of the original E grid.  If this
+  !           is a mass variable (igtype=1), then no interpolation is required.  If this
+  !           is a wind variable (igtype=2), then interpolation is necessary.  This procedure
+  !           is necessary because the gsi is not yet able to work with anything other than
+  !           unstaggered grids.  This solution introduces greater interpolation error
+  !           compared to the option fill_nmm_grid2, but has the advantage of 4 times fewer
+  !           grid points compared to the output of fill_nmm__grid2.  This routine will be
+  !           eliminated when the gsi has the capability to work directly with staggered grids.
+  !
+  ! program history log:
+  !   2010-11-21  mtong, add structure variable grd
+  !
+  !   input argument list:
+  !     gin      - input staggered E grid field over entire horizontal domain
+  !     nx,ny    - input grid dimensions
+  !     igtype   - =1, then (1,1) on staggered grid is at corner of grid (mass point for nmm)
+  !              - =2, then (1,1) is staggered (wind point for nmm, see illustration below)
+  !
+  !                   igtype=1:
+  !
+  !
+  !
+  !       ^   3             x     x     x     x
+  !       |
+  !       y   2                x     x     x     x
+  !
+  !           1             x     x     x     x
+  !
+  !                         1     2     3
+  !
+  !                           x -->
+  !
+  !                   igtype=2:
+  !
+  !
+  !
+  !       ^   3             x     x     x     x
+  !       |
+  !       y   2          x     x     x     x
+  !
+  !           1             x     x     x     x
+  !
+  !                         1     2     3
+  !
+  !                           x -->
+  !
+  !   output argument list
+  !     gout     - output unstaggered half grid  (reorganized for distibution to local domains)
+  !
+  ! attributes:
+  !   language: f90
+  !   machine:  ibm RS/6000 SP
+  !
+  !$$$
+    use kinds, only: r_single,i_kind
+    use constants, only: quarter, zero
+    use general_sub2grid_mod, only: sub2grid_info
+  
+    implicit none
+  
+  ! Declare passed variables
+    type(sub2grid_info)                  ,intent(in   ) :: grd
+    integer(i_kind)                      ,intent(in   ) :: nx,ny,igtype,iorder
+    real(r_single),dimension(nx,ny)      ,intent(in   ) :: gin
+    real(r_single),dimension(grd%itotsub),intent(  out) :: gout
+    integer(i_kind)                      ,intent(  out) :: ireturn
+  
+  ! Declare local variables
+    integer(i_kind) i,i0,im,j,jj,jm,jp
+    real(r_single),dimension(nx,(ny+5)/2):: c
+  
+    ireturn=0
+    if(grd%nlon /= nx .or. grd%nlat /= 1+ny/2)then
+      print *,'input grid and output grid are not consistant'
+      ireturn=1
+      return
+    endif
+  
+    if(igtype==1) then
+       jj=0
+       do j=1,ny,2
+          jj=jj+1
+          do i=1,nx
+             c(i,jj)=gin(i,j)
+          end do
+       end do
+    else
+       jj=0
+       do j=1,ny,2
+          jj=jj+1
+          jp=j+1 ; if(jp>ny)   jp=j-1
+          jm=j-1 ; if(jm<1) jm=j+1
+          do i=1,nx
+             im=i-1 ; if(im<1) im=i
+             i0=i      ; if(i==nx)   i0=im
+             c(i,jj)=quarter*(gin(im,j)+gin(i0,j)+gin(i,jp)+gin(i,jm))
+          end do
+       end do
+    end if
+  
+  ! Reorganize for eventual distribution to local domains
+    do i=1,grd%itotsub
+       gout(i)=zero
+    end do
+    if(iorder==1)then
+       do i=1,grd%itotsub
+          gout(i)=c(grd%ltosj_s(i),grd%ltosi_s(i))
+       end do
+    else
+       do i=1,grd%iglobal
+          gout(i)=c(grd%ltosj(i),grd%ltosi(i))
+       end do
+    endif
+  
+  end subroutine general_half_nmm_grid2
+
   subroutine generic_grid2sub_ens(this,grd,tempa,all_loc,kbegin_loc,kend_loc,kbegin,kend,mype,num_fields)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
@@ -2272,6 +2320,262 @@ contains
          all_loc,recvcounts,rdispls,mpi_real4,mpi_comm_world,ierror)
   
   end subroutine generic_grid2sub_ens
+  
+  subroutine general_reorder2_s(grd,work,k_in)
+  !$$$  subprogram documentation block
+  !                .      .    .
+  ! subprogram:    general_reorder2_s
+  !
+  !   prgrmmr:  kleist           org: np20                date: 2004-01-25
+  !
+  ! abstract:  adapt reorder2 to single precision
+  !
+  ! program history log:
+  !   2004-01-25  kleist
+  !   2004-05-14  kleist, documentation
+  !   2004-07-15  todling, protex-complaint prologue
+  !   2004-11-29  parrish, adapt reorder2 to single precision
+  !   2008-04-16  safford -- add subprogram doc block
+  !   2011-09-16  mtong, add structure variable grd
+  !
+  !   input argument list:
+  !     grd
+  !     k_in    ! number of levs in work array
+  !     work
+  !
+  !   output argument list:
+  !     work
+  !
+  ! attributes:
+  !   language: f90
+  !   machine:  ibm rs/6000 sp; sgi origin 2000; compaq/hp
+  !
+  !$$$
+  
+  ! !USES:
+  
+    use constants, only: zero_single
+    use mpimod, only: npe
+    use kinds, only: r_single,i_kind
+    use general_sub2grid_mod, only: sub2grid_info
+    implicit none
+  
+  
+  ! !INPUT PARAMETERS:
+  
+    type(sub2grid_info),intent(in   ) :: grd
+    integer(i_kind)    ,intent(in   ) :: k_in    ! number of levs in work array
+  
+  ! !INPUT/OUTPUT PARAMETERS:
+  
+    real(r_single),dimension(grd%itotsub,k_in),intent(inout) :: work
+  
+    integer(i_kind) iloc,iskip,i,k,n
+    real(r_single),dimension(grd%itotsub*k_in):: temp
+  
+  ! Zero out temp array
+    do k=1,grd%itotsub*k_in
+       temp(k)=zero_single
+    end do
+  
+  ! Load temp array in order of subdomains
+    iloc=0
+    iskip=0
+    do n=1,npe
+       if (n/=1) then
+          iskip=iskip+grd%ijn_s(n-1)
+       end if
+  
+       do k=1,k_in
+          do i=1,grd%ijn_s(n)
+             iloc=iloc+1
+             temp(iloc)=work(iskip+i,k)
+          end do
+       end do
+    end do
+  
+  ! Now load the tmp array back into work
+    iloc=0
+    do k=1,k_in
+       do i=1,grd%itotsub
+          iloc=iloc+1
+          work(i,k)=temp(iloc)
+       end do
+    end do
+  
+    return
+  end subroutine general_reorder2_s
+  subroutine create_e2a_blend(nmix,nord_blend,wgt,region_lat_ens,region_lon_ens)
+  !$$$  subprogram documentation block
+  !                .      .    .                                       .
+  ! subprogram:    get_overlap_domain_index
+  !   prgmmr: mtong           org: np22                date: 2012-02-18
+  !
+  ! abstract: create blend zone for moving nest overlaping area
+  !
+  ! program history log:
+  !
+  !   input argument list:
+  !    nord_blend   - order of continuity of blend function (1=continuous 1st derivative, etc)
+  !    nmix         - width of blend zone on edge of e grid in e grid units.
+  !
+  !   output argument list:
+  !    wgt
+  !
+  ! attributes:
+  !   language: f90
+  !   machine:  ibm RS/6000 SP
+  !
+  !$$$ end documentation block
+  
+       use hybrid_ensemble_parameters, only: n_ens,nlon_ens,nlat_ens
+       use kinds, only: r_kind,i_kind,r_single
+       use constants, only: zero,one
+       use gridmod, only: half_grid,filled_grid
+       use blendmod, only: blend
+       use general_tll2xy_mod, only: llxy_cons,general_create_llxy_transform, &
+                                     general_tll2xy
+       use gsi_io, only: lendian_in
+  
+       implicit none
+  
+       real(r_kind),allocatable, intent(inout) :: region_lat_ens(:,:)
+       real(r_kind),allocatable, intent(inout) :: region_lon_ens(:,:)
+       integer(i_kind),intent(in   ) :: nord_blend,nmix
+       real(r_kind)   ,intent(out  ) :: wgt(nlat_ens,nlon_ens)
+  
+       type(llxy_cons) gt_a
+       character(24) :: filename
+       integer(i_kind):: nlon_regional,nlat_regional,nlon_e,nlat_e
+       integer(i_kind):: i,j,n,istr,jstr,iend,jend
+       real(r_kind),allocatable,dimension(:,:):: region_lat_e,region_lon_e
+       real(r_kind) :: xe_a,ye_a,xstr,ystr,xend,yend
+  
+       integer(i_kind),dimension(0:40):: iblend
+       integer(i_kind) mm
+       real(r_kind) dxx,x,y
+       real(r_kind),allocatable::blendx(:),wgt_x(:),wgt_y(:)
+       logical :: outside
+  
+       call general_create_llxy_transform(region_lat_ens,region_lon_ens,nlat_ens,nlon_ens,gt_a)
+  
+       n=0
+       xstr=-huge(xstr)
+       ystr=-huge(ystr)
+       xend=huge(xend)
+       yend=huge(yend)
+  
+       do n=1,n_ens
+          write(filename,"('sigf06_d02_ens_mem',i3.3)") n
+  !        if(mype == 0)print *,'filename=', filename 
+          open(lendian_in,file=trim(filename),form='unformatted')
+  !    Assuming ensemble memebers have the same dimensions
+          if(n == 1)then
+             read(lendian_in) nlon_regional,nlat_regional
+  
+             if(filled_grid) then
+                nlon_e=2*nlon_regional-1
+                nlat_e=nlat_regional
+             end if
+             if(half_grid) then
+                nlon_e=nlon_regional
+                nlat_e=1+nlat_regional/2
+             end if
+             allocate(region_lat_e(nlat_e,nlon_e),region_lon_e(nlat_e,nlon_e))
+          else 
+             read(lendian_in)
+          end if
+  
+          read(lendian_in)
+          read(lendian_in)
+  
+          read(lendian_in) region_lat_e
+          read(lendian_in) region_lon_e
+  
+          do i=1,nlat_e
+             call general_tll2xy(gt_a,region_lon_e(i,1),region_lat_e(i,1),xe_a,ye_a,outside)
+  !           if(mype == 0)print *,'xe_a=', i, xe_a
+             xstr=max(xstr,xe_a)
+          end do
+             
+          do j=1,nlon_e
+             call general_tll2xy(gt_a,region_lon_e(1,j),region_lat_e(1,j),xe_a,ye_a,outside)
+  !           if(mype == 0)print *,'ye_a=', j, ye_a
+             ystr=max(ystr,ye_a)
+          end do
+  
+          do i=1,nlat_e
+             call general_tll2xy(gt_a,region_lon_e(i,nlon_e),region_lat_e(i,nlon_e),xe_a,ye_a,outside)
+             xend=min(xend,xe_a)
+          end do
+  
+          do j=1,nlon_e
+             call general_tll2xy(gt_a,region_lon_e(nlat_e,j),region_lat_e(nlat_e,j),xe_a,ye_a,outside)
+             yend=min(yend,ye_a)
+          end do
+  
+  !        if(mype == 0)print *,'xstr,ystr,xend,yend=', xstr,ystr,xend,yend
+  
+       end do
+  
+       deallocate(region_lat_e,region_lon_e)
+  
+  !     istr=INT(xstr)+1
+  !     jstr=INT(ystr)+1
+  
+  !     iend=INT(xend)
+  !     jend=INT(yend)
+  
+       istr=NINT(xstr)
+       jstr=NINT(ystr)
+  
+       iend=NINT(xend)
+       jend=NINT(yend)
+  
+  !     if(mype == 0)print *,'mtong: istr,jstr,iend,jend=', istr,jstr,iend,jend
+  
+    !  set up blend function
+  
+       mm=nord_blend
+       call blend(mm,iblend)
+       allocate(blendx(nmix))
+       blendx(nmix)=one
+       dxx=one/nmix
+       blendx(1)=zero
+       do i=2,nmix
+          x=(i-one)*dxx
+          y=iblend(mm)
+          do j=mm-1,0,-1
+             y=x*y+iblend(j)
+          end do
+          y=y*x**(mm+1)
+          blendx(i)=y
+       end do
+  
+       allocate(wgt_x(nlon_ens),wgt_y(nlat_ens))
+       wgt_x=zero ; wgt_y=zero ; wgt=zero
+       do i=istr,iend
+          wgt_x(i)=one
+       end do
+       do j=jstr,jend
+          wgt_y(j)=one
+       end do
+       do j=1,nmix
+          wgt_x(istr-1+j)=blendx(j)
+          wgt_x(iend+1-j)=blendx(j)
+          wgt_y(jstr-1+j)=blendx(j)
+          wgt_y(jend+1-j)=blendx(j)
+       end do
+  
+       do j=1,nlon_ens
+          do i=1,nlat_ens
+             wgt(i,j)=wgt_x(j)*wgt_y(i)
+          end do
+       end do
+  
+       deallocate(wgt_x,wgt_y,blendx)
+  
+  end subroutine create_e2a_blend
 
   subroutine grads3a(this,grd,u,v,tsen,q,pd,nvert,mype,fname)
   
@@ -2484,7 +2788,7 @@ contains
     end if
   
   end subroutine grads3d
-  
+
   subroutine sub2grid_3a(this,grd,sub,grid,gridpe,mype)
   
   !     straightforward, but inefficient code to convert a single variable on subdomains to complete
@@ -2524,8 +2828,7 @@ contains
     end if
   
   end subroutine sub2grid_3a
-  
-  subroutine strip_grd(this,grd,field_in,field_out)
+  subroutine strip_grd(grd,field_in,field_out)
   
   ! !USES:
   
@@ -2535,7 +2838,6 @@ contains
   
   ! !INPUT PARAMETERS:
   
-      class(get_wrf_nmm_ensperts_class), intent(inout) :: this
       type(sub2grid_info)                  ,intent(in   ) :: grd
       real(r_kind),dimension(grd%lat2,grd%lon2), intent(in   ) :: field_in    ! full subdomain
                                                                          !    array containing
@@ -2577,478 +2879,169 @@ contains
   
       return
   end subroutine strip_grd
-  
-  
-  subroutine create_e2a_blend(this,nmix,nord_blend,wgt,region_lat_ens,region_lon_ens)
+  subroutine ens_member_mean_dualres_regional(this,en_bar,mype,en_perts,nelen)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
-  ! subprogram:    get_overlap_domain_index
-  !   prgmmr: mtong           org: np22                date: 2012-02-18
+  ! subprogram:    ens_member_mean_dualres_regional
+  !   prgmmr: mizzi            org: ncar/mmm            date: 2010-08-11
   !
-  ! abstract: create blend zone for moving nest overlaping area
+  ! abstract:
+  !
   !
   ! program history log:
+  !   2010-08-11  parrish, initial documentation
+  !   2011-04-05  parrish - add pseudo-bundle capability
+  !   2011-08-31  todling - revisit en_perts (single-prec) in light of extended bundle
   !
   !   input argument list:
-  !    nord_blend   - order of continuity of blend function (1=continuous 1st derivative, etc)
-  !    nmix         - width of blend zone on edge of e grid in e grid units.
+  !     en_bar - ensemble mean
+  !      mype  - current processor number
   !
   !   output argument list:
-  !    wgt
   !
   ! attributes:
   !   language: f90
   !   machine:  ibm RS/6000 SP
   !
   !$$$ end documentation block
-  
-       use hybrid_ensemble_parameters, only: n_ens,nlon_ens,nlat_ens
-       use kinds, only: r_kind,i_kind,r_single
-       use constants, only: zero,one,rad2deg
-       use gridmod, only: half_grid,filled_grid
-       use blendmod, only: blend
-       use general_tll2xy_mod, only: llxy_cons,general_create_llxy_transform, &
-                                     general_tll2xy
-       use mpimod, only: mype
-       use gsi_io, only: lendian_in
-  
-       implicit none
-  
-       class(get_wrf_nmm_ensperts_class), intent(inout) :: this
-       real(r_kind),allocatable, intent(inout) :: region_lat_ens(:,:)
-       real(r_kind),allocatable, intent(inout) :: region_lon_ens(:,:)
-       integer(i_kind),intent(in   ) :: nord_blend,nmix
-       real(r_kind)   ,intent(out  ) :: wgt(nlat_ens,nlon_ens)
-  
-       type(llxy_cons) gt_a
-       character(24) :: filename
-       integer(i_kind):: nlon_regional,nlat_regional,nlon_e,nlat_e
-       integer(i_kind):: i,j,n,istr,jstr,iend,jend
-       real(r_kind),allocatable,dimension(:,:):: region_lat_e,region_lon_e
-       real(r_kind) :: xe_a,ye_a,xstr,ystr,xend,yend
-  
-       integer(i_kind),dimension(0:40):: iblend
-       integer(i_kind) mm
-       real(r_kind) dxx,x,y
-       real(r_kind),allocatable::blendx(:),wgt_x(:),wgt_y(:)
-       logical :: outside
-  
-       call general_create_llxy_transform(region_lat_ens,region_lon_ens,nlat_ens,nlon_ens,gt_a)
-  
-       n=0
-       xstr=-huge(xstr)
-       ystr=-huge(ystr)
-       xend=huge(xend)
-       yend=huge(yend)
-  
-       do n=1,n_ens
-          write(filename,"('sigf06_d02_ens_mem',i3.3)") n
-  !        if(mype == 0)print *,'filename=', filename 
-          open(lendian_in,file=trim(filename),form='unformatted')
-  !    Assuming ensemble memebers have the same dimensions
-          if(n == 1)then
-             read(lendian_in) nlon_regional,nlat_regional
-  
-             if(filled_grid) then
-                nlon_e=2*nlon_regional-1
-                nlat_e=nlat_regional
-             end if
-             if(half_grid) then
-                nlon_e=nlon_regional
-                nlat_e=1+nlat_regional/2
-             end if
-             allocate(region_lat_e(nlat_e,nlon_e),region_lon_e(nlat_e,nlon_e))
-          else 
-             read(lendian_in)
-          end if
-  
-          read(lendian_in)
-          read(lendian_in)
-  
-          read(lendian_in) region_lat_e
-          read(lendian_in) region_lon_e
-  
-          do i=1,nlat_e
-             call general_tll2xy(gt_a,region_lon_e(i,1),region_lat_e(i,1),xe_a,ye_a,outside)
-  !           if(mype == 0)print *,'xe_a=', i, xe_a
-             xstr=max(xstr,xe_a)
-          end do
-             
-          do j=1,nlon_e
-             call general_tll2xy(gt_a,region_lon_e(1,j),region_lat_e(1,j),xe_a,ye_a,outside)
-  !           if(mype == 0)print *,'ye_a=', j, ye_a
-             ystr=max(ystr,ye_a)
-          end do
-  
-          do i=1,nlat_e
-             call general_tll2xy(gt_a,region_lon_e(i,nlon_e),region_lat_e(i,nlon_e),xe_a,ye_a,outside)
-             xend=min(xend,xe_a)
-          end do
-  
-          do j=1,nlon_e
-             call general_tll2xy(gt_a,region_lon_e(nlat_e,j),region_lat_e(nlat_e,j),xe_a,ye_a,outside)
-             yend=min(yend,ye_a)
-          end do
-  
-  !        if(mype == 0)print *,'xstr,ystr,xend,yend=', xstr,ystr,xend,yend
-  
-       end do
-  
-       deallocate(region_lat_e,region_lon_e)
-  
-  !     istr=INT(xstr)+1
-  !     jstr=INT(ystr)+1
-  
-  !     iend=INT(xend)
-  !     jend=INT(yend)
-  
-       istr=NINT(xstr)
-       jstr=NINT(ystr)
-  
-       iend=NINT(xend)
-       jend=NINT(yend)
-  
-  !     if(mype == 0)print *,'mtong: istr,jstr,iend,jend=', istr,jstr,iend,jend
-  
-    !  set up blend function
-  
-       mm=nord_blend
-       call blend(mm,iblend)
-       allocate(blendx(nmix))
-       blendx(nmix)=one
-       dxx=one/nmix
-       blendx(1)=zero
-       do i=2,nmix
-          x=(i-one)*dxx
-          y=iblend(mm)
-          do j=mm-1,0,-1
-             y=x*y+iblend(j)
-          end do
-          y=y*x**(mm+1)
-          blendx(i)=y
-       end do
-  
-       allocate(wgt_x(nlon_ens),wgt_y(nlat_ens))
-       wgt_x=zero ; wgt_y=zero ; wgt=zero
-       do i=istr,iend
-          wgt_x(i)=one
-       end do
-       do j=jstr,jend
-          wgt_y(j)=one
-       end do
-       do j=1,nmix
-          wgt_x(istr-1+j)=blendx(j)
-          wgt_x(iend+1-j)=blendx(j)
-          wgt_y(jstr-1+j)=blendx(j)
-          wgt_y(jend+1-j)=blendx(j)
-       end do
-  
-       do j=1,nlon_ens
-          do i=1,nlat_ens
-             wgt(i,j)=wgt_x(j)*wgt_y(i)
-          end do
-       end do
-  
-       deallocate(wgt_x,wgt_y,blendx)
-  
-  end subroutine create_e2a_blend
-  subroutine general_fill_nmm_grid2(this,grd,gin,nx,ny,gout,igtype,iorder,ireturn)
-  !$$$  subprogram documentation block
-  !                .      .    .                                       .
-  ! subprogram:    fill_nmm_grid2         fill holes in (wrf) nmm e-grid
-  !   prgmmr: parrish          org: np22                date: 2004-06-22
   !
-  ! abstract: creates an unstaggered A grid from the staggered E grid used
-  !           by the wrf nmm.  This is done by interpolation to fill the
-  !           holes in the E grid.  This is necessary because the gsi is
-  !           not yet able to work with anything other than unstaggered
-  !           grids.  This solution minimizes additional interpolation error
-  !           but doubles the number of grid points.  This routine will be
-  !           eliminated when the gsi has the capability to work directly
-  !           with staggered grids.
-  !
-  ! program history log:
-  !   2010-11-21  mtong, add structure variable grd to make the program more general
-  !
-  !   input argument list:
-  !     grd      - structure variable containing information about grid
-  !                    (initialized by general_sub2grid_create_info, located in general_sub2grid_mod.f90)
-  !     gin      - input staggered E grid field over entire horizontal domain
-  !     nx,ny    - input grid dimensions
-  !     igtype   - =1, then (1,1) on staggered grid is at corner of grid
-  !                (mass point for nmm)
-  !              - =2, then (1,1) is staggered (wind point for nmm,
-  !                see illustration below)
-  !
-  !                   igtype=1:
-  !
-  !
-  !
-  !       ^   3             x     x     x     x
-  !       |
-  !       y   2                x     x     x     x
-  !
-  !           1             x     x     x     x
-  !
-  !                         1     2     3
-  !
-  !                           x -->
-  !
-  !                   igtype=2:
-  !
-  !
-  !
-  !       ^   3             x     x     x     x
-  !       |
-  !       y   2          x     x     x     x
-  !
-  !           1             x     x     x     x
-  !
-  !                         1     2     3
-  !
-  !                           x -->
-  !
-  !   output argument list
-  !     gout     - output filled grid  (reorganized for distibution to local domains)
-  !
-  ! attributes:
-  !   language: f90
-  !   machine:  ibm RS/6000 SP
-  !
-  !$$$
     use kinds, only: r_single,r_kind,i_kind
-    use constants, only: quarter,half,zero
-    use general_sub2grid_mod, only: sub2grid_info
-  
+    use hybrid_ensemble_parameters, only: n_ens,grd_ens,grd_anl,p_e2a,uv_hyb_ens
+!   use hybrid_ensemble_isotropic, only: en_perts,nelen
+    use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sube2suba
+    use constants, only:  zero,one
+    use control_vectors, only: cvars2d,cvars3d,nc2d,nc3d
+    use gsi_bundlemod, only: gsi_bundlecreate
+    use gsi_bundlemod, only: gsi_grid
+    use gsi_bundlemod, only: gsi_bundle
+    use gsi_bundlemod, only: gsi_bundlegetpointer
+    use gsi_bundlemod, only: gsi_gridcreate
     implicit none
   
-  !   Declare passed variables
     class(get_wrf_nmm_ensperts_class), intent(inout) :: this
-    type(sub2grid_info) ,intent(in   ) :: grd
-    integer(i_kind)     ,intent(in   ) :: nx,ny,igtype,iorder
-    real(r_single)      ,intent(in   ) :: gin(nx,ny)
-    real(r_single)      ,intent(  out) :: gout(grd%itotsub)
-    integer(i_kind)     ,intent(  out) :: ireturn
+    type(gsi_bundle),intent(in):: en_bar
+    integer(i_kind),intent(in):: mype
+    type(gsi_bundle),allocatable, intent(inout) :: en_perts(:,:)
+    integer(i_kind), intent(in   ):: nelen
   
-    real(r_single) b(2*nx-1,ny)
-    integer(i_kind) i,im,ip,j,jm,jp
-    real(r_single) fill,test
+    type(gsi_bundle):: sube,suba
+    type(gsi_grid):: grid_ens,grid_anl
+    real(r_kind) sig_norm_inv
+    type(sub2grid_info)::se,sa
+    integer(i_kind) k
   
-    ireturn=0
-    if(2*nx-1 /= grd%nlon .or. ny /= grd%nlat)then
-      print *,'input grid and output grid are not consistant'
-      ireturn=1
-      return
-    endif
+    integer(i_kind) i,n,ic3
+    logical regional
+    integer(i_kind) num_fields,inner_vars,istat,istatus
+    logical,allocatable::vector(:)
+    real(r_kind),pointer,dimension(:,:,:):: st,vp,tv,rh,oz,cw
+    real(r_kind),pointer,dimension(:,:):: ps
+    real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig),target::dum3
+    real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2),target::dum2
+    character(24) filename
   
-    fill=0.95_r_kind*huge(fill) ; test=0.95_r_kind*fill
-    do j=1,ny
-       do i=1,2*nx-1
-          b(i,j)=fill
-       end do
-    end do
+  !      create simple regular grid
+          call gsi_gridcreate(grid_anl,grd_anl%lat2,grd_anl%lon2,grd_anl%nsig)
+          call gsi_gridcreate(grid_ens,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)
   
-  ! First transfer all staggered points to appropriate
-  ! points on filled output grid
-    if(igtype==1) then
-       do j=1,ny,2
-          do i=1,nx
-             b(2*i-1,j)=gin(i,j)
-          end do
-       end do
-       do j=2,ny,2
-          do i=1,nx-1
-             b(2*i,j)=gin(i,j)
-          end do
-       end do
-    else
-       do j=1,ny,2
-          do i=1,nx-1
-             b(2*i,j)=gin(i,j)
-          end do
-       end do
-       do j=2,ny,2
-          do i=1,nx
-             b(2*i-1,j)=gin(i,j)
-          end do
-       end do
-    end if
+  !      create two internal bundles, one on analysis grid and one on ensemble grid
   
+         call gsi_bundlecreate (suba,grid_anl,'ensemble work',istatus, &
+                                   names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
+         if(istatus/=0) then
+            write(6,*)' in ens_spread_dualres_regional: trouble creating bundle_anl bundle'
+            call stop2(999)
+         endif
+         call gsi_bundlecreate (sube,grid_ens,'ensemble work ens',istatus, &
+                                   names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
+         if(istatus/=0) then
+            write(6,*)' ens_spread_dualres_regional: trouble creating bundle_ens bundle'
+            call stop2(999)
+         endif
   
-  !  Now fill in holes
+    sig_norm_inv=sqrt(n_ens-one)
   
-  ! Top and bottom rows:
-    do j=1,ny,ny-1
-       do i=1,2*nx-1
-          if(b(i,j)>test) then
-             ip=i+1 ; if(ip>2*nx-1) ip=i-1
-             im=i-1 ; if(im<1) im=i+1
-             b(i,j)=half*(b(im,j)+b(ip,j))
+    do n=1,n_ens+1
+  
+       do i=1,nelen
+          if(n <= n_ens)then
+             sube%values(i)=en_perts(n,1)%valuesr4(i)*sig_norm_inv+en_bar%values(i)
+          else
+             sube%values(i)=en_bar%values(i)
           end if
        end do
-    end do
   
-  
-  ! Left and right rows:
-    do j=1,ny
-       jp=j+1 ; if(jp>ny)   jp=j-1
-       jm=j-1 ; if(jm<1) jm=j+1
-       do i=1,2*nx-1,2*nx-2
-          if(b(i,j)>test) b(i,j)=half*(b(i,jm)+b(i,jp))
-       end do
-    end do
-  
-  ! Interior points
-    do j=1,ny
-       jp=j+1 ; if(jp>ny) jp=j-1
-       jm=j-1 ; if(jm<1) jm=j+1
-       do i=1,2*nx-1
-          if(b(i,j)>test) then
-             ip=i+1 ; if(ip>2*nx-1) ip=i-1
-             im=i-1 ; if(im<1)      im=i+1
-             b(i,j)=quarter*(b(ip,j)+b(im,j)+b(i,jp)+b(i,jm))
-          end if
-       end do
-    end do
-  
-  
-  ! Reorganize for eventual distribution to local domains
-    do i=1,grd%itotsub
-       gout(i)=zero
-    end do
-    if(iorder==1)then
-       do i=1,grd%itotsub
-          gout(i)=b(grd%ltosj_s(i),grd%ltosi_s(i))
-       end do
-    else
-       do i=1,grd%iglobal
-          gout(i)=b(grd%ltosj(i),grd%ltosi(i))
-       end do
-    endif
-  
-  end subroutine general_fill_nmm_grid2
-  
-  subroutine general_half_nmm_grid2(this,grd,gin,nx,ny,gout,igtype,iorder,ireturn)
-  !$$$  subprogram documentation block
-  !                .      .    .                                       .
-  ! subprogram:    half_nmm_grid2    make a-grid from every other row of e-grid
-  !   prgmmr: parrish          org: np22                date: 2004-06-22
-  !
-  ! abstract: creates an unstaggered A grid from the staggered E grid used by the wrf nmm.
-  !           This is done by keeping every other row of the original E grid.  If this
-  !           is a mass variable (igtype=1), then no interpolation is required.  If this
-  !           is a wind variable (igtype=2), then interpolation is necessary.  This procedure
-  !           is necessary because the gsi is not yet able to work with anything other than
-  !           unstaggered grids.  This solution introduces greater interpolation error
-  !           compared to the option fill_nmm_grid2, but has the advantage of 4 times fewer
-  !           grid points compared to the output of fill_nmm__grid2.  This routine will be
-  !           eliminated when the gsi has the capability to work directly with staggered grids.
-  !
-  ! program history log:
-  !   2010-11-21  mtong, add structure variable grd
-  !
-  !   input argument list:
-  !     gin      - input staggered E grid field over entire horizontal domain
-  !     nx,ny    - input grid dimensions
-  !     igtype   - =1, then (1,1) on staggered grid is at corner of grid (mass point for nmm)
-  !              - =2, then (1,1) is staggered (wind point for nmm, see illustration below)
-  !
-  !                   igtype=1:
-  !
-  !
-  !
-  !       ^   3             x     x     x     x
-  !       |
-  !       y   2                x     x     x     x
-  !
-  !           1             x     x     x     x
-  !
-  !                         1     2     3
-  !
-  !                           x -->
-  !
-  !                   igtype=2:
-  !
-  !
-  !
-  !       ^   3             x     x     x     x
-  !       |
-  !       y   2          x     x     x     x
-  !
-  !           1             x     x     x     x
-  !
-  !                         1     2     3
-  !
-  !                           x -->
-  !
-  !   output argument list
-  !     gout     - output unstaggered half grid  (reorganized for distibution to local domains)
-  !
-  ! attributes:
-  !   language: f90
-  !   machine:  ibm RS/6000 SP
-  !
-  !$$$
-    use kinds, only: r_single,i_kind
-    use constants, only: quarter, zero
-    use general_sub2grid_mod, only: sub2grid_info
-  
-    implicit none
-  
-  ! Declare passed variables
-    class(get_wrf_nmm_ensperts_class), intent(inout) :: this
-    type(sub2grid_info)                  ,intent(in   ) :: grd
-    integer(i_kind)                      ,intent(in   ) :: nx,ny,igtype,iorder
-    real(r_single),dimension(nx,ny)      ,intent(in   ) :: gin
-    real(r_single),dimension(grd%itotsub),intent(  out) :: gout
-    integer(i_kind)                      ,intent(  out) :: ireturn
-  
-  ! Declare local variables
-    integer(i_kind) i,i0,im,j,jj,jm,jp
-    real(r_single),dimension(nx,(ny+5)/2):: c
-  
-    ireturn=0
-    if(grd%nlon /= nx .or. grd%nlat /= 1+ny/2)then
-      print *,'input grid and output grid are not consistant'
-      ireturn=1
-      return
-    endif
-  
-    if(igtype==1) then
-       jj=0
-       do j=1,ny,2
-          jj=jj+1
-          do i=1,nx
-             c(i,jj)=gin(i,j)
+       if(grd_ens%latlon1n == grd_anl%latlon1n) then
+          do i=1,nelen
+             suba%values(i)=sube%values(i)
           end do
-       end do
-    else
-       jj=0
-       do j=1,ny,2
-          jj=jj+1
-          jp=j+1 ; if(jp>ny)   jp=j-1
-          jm=j-1 ; if(jm<1) jm=j+1
-          do i=1,nx
-             im=i-1 ; if(im<1) im=i
-             i0=i      ; if(i==nx)   i0=im
-             c(i,jj)=quarter*(gin(im,j)+gin(i0,j)+gin(i,jp)+gin(i,jm))
+       else
+          inner_vars=1
+          num_fields=max(0,nc3d)*grd_ens%nsig+max(0,nc2d)
+          allocate(vector(num_fields))
+          vector=.false.
+          do ic3=1,nc3d
+             if(trim(cvars3d(ic3))=='sf'.or.trim(cvars3d(ic3))=='vp') then
+                do k=1,grd_ens%nsig
+                   vector((ic3-1)*grd_ens%nsig+k)=uv_hyb_ens
+                end do
+             end if
           end do
-       end do
-    end if
+          call general_sub2grid_create_info(se,inner_vars,grd_ens%nlat,grd_ens%nlon,grd_ens%nsig,num_fields, &
+                                            regional,vector)
+          call general_sub2grid_create_info(sa,inner_vars,grd_anl%nlat,grd_anl%nlon,grd_anl%nsig,num_fields, &
+                                            regional,vector)
+          deallocate(vector)
+          call general_sube2suba(se,sa,p_e2a,sube%values,suba%values,regional)
+       end if
   
-  ! Reorganize for eventual distribution to local domains
-    do i=1,grd%itotsub
-       gout(i)=zero
+       dum2=zero
+       dum3=zero
+       call gsi_bundlegetpointer(suba,'sf',st,istat)
+       if(istat/=0) then
+          write(6,*)' no sf pointer in ens_member_dualres, point st at dum3 array'
+          st => dum3
+       end if
+       call gsi_bundlegetpointer(suba,'vp',vp,istat)
+       if(istat/=0) then
+          write(6,*)' no vp pointer in ens_member_dualres, point vp at dum3 array'
+          vp => dum3
+       end if
+       call gsi_bundlegetpointer(suba,'t',tv,istat)
+       if(istat/=0) then
+          write(6,*)' no t pointer in ens_member_dualres, point tv at dum3 array'
+          tv => dum3
+       end if
+       call gsi_bundlegetpointer(suba,'q',rh,istat)
+       if(istat/=0) then
+             write(6,*)' no q pointer in ens_member_dualres, point rh at dum3 array'
+          rh => dum3
+       end if
+       call gsi_bundlegetpointer(suba,'oz',oz,istat)
+       if(istat/=0) then
+          write(6,*)' no oz pointer in ens_member_dualres, point oz at dum3 array'
+          oz => dum3
+       end if
+       call gsi_bundlegetpointer(suba,'cw',cw,istat)
+       if(istat/=0) then
+             write(6,*)' no cw pointer in ens_member_dualres, point cw at dum3 array'
+          cw => dum3
+       end if
+       call gsi_bundlegetpointer(suba,'ps',ps,istat)
+       if(istat/=0) then
+          write(6,*)' no ps pointer in ens_member_dualres, point ps at dum2 array'
+          ps => dum2
+       end if
+     
+       if(n <= n_ens)then
+          write(filename,"('ens_mem',i3.3)") n
+          call this%grads3a(grd_ens,st,vp,tv,rh,ps,grd_ens%nsig,mype,filename)
+       else
+          call this%grads3a(grd_ens,st,vp,tv,rh,ps,grd_ens%nsig,mype,'ens_bar')
+       end if
     end do
-    if(iorder==1)then
-       do i=1,grd%itotsub
-          gout(i)=c(grd%ltosj_s(i),grd%ltosi_s(i))
-       end do
-    else
-       do i=1,grd%iglobal
-          gout(i)=c(grd%ltosj(i),grd%ltosi(i))
-       end do
-    endif
+     
+    return
   
-  end subroutine general_half_nmm_grid2
+  end subroutine ens_member_mean_dualres_regional
 end module get_wrf_nmm_ensperts_mod

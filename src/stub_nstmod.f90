@@ -47,17 +47,14 @@ subroutine nst_set_(mype_io)
 end subroutine nst_set_
 !*******************************************************************************************
 
-subroutine nst_final_(mype_io)
+subroutine nst_final_()
 
     use mpimod, only: mype
-    use kinds, only: i_kind
 
     implicit none
 
-    integer(i_kind),intent(in) :: mype_io
     if ( mype == 0 ) &
         write(6,*) 'Doing nothing in dummy routine NST_FINAL_'
-
 
     return
 

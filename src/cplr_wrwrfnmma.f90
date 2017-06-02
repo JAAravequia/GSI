@@ -4,7 +4,7 @@ use abstract_wrwrfnmma_mod
   contains
     procedure, pass(this) :: wrwrfnmma_binary => wrwrfnmma_binary_wrf  
     procedure, pass(this) :: wrwrfnmma_netcdf => wrwrfnmma_netcdf_wrf  
-    procedure, pass(this) :: get_bndy_file
+    procedure, nopass :: get_bndy_file
     procedure, pass(this) :: wrnemsnmma_binary
   end type wrwrfnmma_class
 contains
@@ -67,8 +67,6 @@ contains
     use control_vectors, only: cvars3d
     use native_endianness, only: byte_swap
     use gfs_stratosphere, only: use_gfs_stratosphere,nsig_save
-    use gfs_stratosphere, only: eta1_save,aeta1_save,deta1_save 
-    use gfs_stratosphere, only: eta2_save,aeta2_save,deta2_save 
     use gfs_stratosphere, only: revert_to_nmmb,restore_nmmb_gfs
     use mpeu_util, only: die
     use wrwrfmassa_mod, only: wrwrfmassa_class
@@ -86,7 +84,7 @@ contains
     real(r_kind),parameter:: r225=225.0_r_kind
   
   ! Declare local variables
-    character(9) wrfanl
+    character(10) wrfanl
   
     integer(i_kind) im,jm,lm
     integer(i_kind) nsig_write 
@@ -928,7 +926,7 @@ contains
     
   end subroutine wrwrfnmma_binary_wrf
   
-  subroutine get_bndy_file(this,temp1,pdb,tb,qb,cwmb,ub,vb,ifld,i_pd,i_t,i_q,i_cwm,i_u,i_v, &
+  subroutine get_bndy_file(temp1,pdb,tb,qb,cwmb,ub,vb,ifld,i_pd,i_t,i_q,i_cwm,i_u,i_v, &
                            n_actual_clouds,im,jm,lm,bdim,igtype)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
@@ -973,7 +971,6 @@ contains
     use kinds, only: r_single,i_kind
     implicit none
   
-    class(wrwrfnmma_class), intent(inout) :: this 
     integer(i_kind),intent(in   ) :: ifld,i_pd,i_t,i_q,i_cwm,i_u,i_v,im,jm,lm,bdim,igtype
     integer(i_kind),intent(in   ) :: n_actual_clouds
     real(r_single), intent(in   ) :: temp1(im,jm)
@@ -1174,7 +1171,9 @@ contains
     
   !   if use_gfs_stratosphere is true, then convert ges fields from nmmb-gfs 
   !        extended vertical coordinate to nmmb vertical coordinate.
-  
+    associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
+    end associate
+ 
     if(use_gfs_stratosphere) then
        call revert_to_nmmb
        nsig_write=nsig_save

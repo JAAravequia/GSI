@@ -106,7 +106,7 @@ contains
     use gridmod, only: lat2,lon2,itotsub,&
          pdtop_ll,pt_ll,nlon,nlat,nlon_regional,nsig,nlat_regional,half_grid,&
          filled_grid,aeta1_ll,aeta2_ll, &
-        displs_s,ijn_s,half_nmm_grid2a,fill_nmm_grid2a3,regional               
+        displs_s,ijn_s,half_nmm_grid2a,fill_nmm_grid2a3
     use general_commvars_mod, only: ltosi_s,ltosj_s
     use constants, only: zero,one_tenth,half,one,grav,fv,zero_single,r0_01,ten
     use wrf_params_mod, only: update_pint
@@ -193,6 +193,8 @@ contains
     real(r_kind),pointer,dimension(:,:,:):: ges_qg=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_qh=>NULL()
   
+    associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
+    end associate
   !  NMM input grid dimensions in module reg_glob_ll
   !      These are the following:
   !          im -- number of NMM longitudes (x-points) on E-grid
@@ -1065,7 +1067,6 @@ contains
     use gridmod, only: lat2,lon2,itotsub,displs_s,ijn_s,&
          pdtop_ll,pt_ll,nlon_regional,nsig,nlat_regional,half_grid,&
          filled_grid,aeta1_ll,aeta2_ll
-    use gridmod, only: regional
     use constants, only: zero,one_tenth,half,one,grav,fv,zero_single,r0_01,ten
     use wrf_params_mod, only: update_pint
     use gsi_io, only: lendian_in
@@ -1131,6 +1132,8 @@ contains
     real(r_kind),pointer,dimension(:,:,:):: ges_qg=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_qh=>NULL()
   
+    associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
+    end associate
   !  NMM input grid dimensions in module reg_glob_ll
   !      These are the following:
   !          im -- number of NMM longitudes (x-points) on E-grid
@@ -1682,7 +1685,7 @@ contains
          fact10,soil_type,veg_frac,veg_type,sfc_rough,sfct,sno,soil_temp,soil_moi,&
          isli,nfldsig,ges_tsen,ges_prsl,ifilesig
     use cloud_efr_mod, only: efr_ql,efr_qi,efr_qr,efr_qs,efr_qg,efr_qh
-    use guess_grids, only: ges_prsi,ges_prsl,ges_prslavg
+    use guess_grids, only: ges_prsl
     use gridmod, only: lat2,lon2,pdtop_ll,pt_ll,nsig,nmmb_verttype,use_gfs_ozone,regional_ozone,& 
          aeta1_ll,aeta2_ll
     use rapidrefresh_cldsurf_mod, only: i_gsdcldanal_type  
@@ -1739,6 +1742,8 @@ contains
     real(r_kind),pointer,dimension(:,:,:):: ges_qg=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_qh=>NULL()
   
+    associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
+    end associate
   !  check to see if using GFS stratosphere:
     if(use_gfs_stratosphere) then
        nsig_read=nsig_save

@@ -483,8 +483,7 @@ rm -f ${exp3}.out
 rm -f ${exp2_scale}.out
 
 if [[ "$clean" = ".true." ]]; then
-#   rm -rf $savdir
-    echo "I would have removed $savdir"
+   rm -rf $savdir
 fi
 
 exit $failed_test

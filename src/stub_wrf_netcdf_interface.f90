@@ -25,13 +25,13 @@ contains
   subroutine convert_netcdf_mass_dummy(this)
     
     implicit none
-    class(convert_netcdf_class), intent(inout) :: this 
+    class(convert_netcdf_class) ,intent(inout) :: this
   end subroutine convert_netcdf_mass_dummy
   
   subroutine convert_netcdf_nmm_dummy(this,update_pint,ctph0,stph0,tlm0,guess)
     use kinds, only: r_single,i_kind,r_kind
     implicit none
-    class(convert_netcdf_class), intent(inout) :: this 
+    class(convert_netcdf_class) ,intent(inout) :: this
     logical     ,intent(in   ) :: guess
     logical     ,intent(inout) :: update_pint
     real(r_kind),intent(  out) :: ctph0,stph0,tlm0
@@ -41,14 +41,14 @@ contains
   subroutine update_netcdf_mass_dummy(this)
   
     implicit none
-    class(convert_netcdf_class), intent(inout) :: this 
+    class(convert_netcdf_class) ,intent(inout) :: this
   
   end subroutine update_netcdf_mass_dummy
   
   subroutine update_netcdf_nmm_dummy(this)
   
     implicit none
-    class(convert_netcdf_class), intent(inout) :: this 
+    class(convert_netcdf_class) ,intent(inout) :: this
   
   end subroutine update_netcdf_nmm_dummy
 end module convert_netcdf_mod

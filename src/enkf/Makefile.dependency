@@ -13,6 +13,7 @@ letkf.o : letkf.F90 kdtree2.o gridinfo_gfs.o radbias.o params.o enkf_obsmod.o st
 loadbal.o : loadbal.f90 covlocal.o gridinfo_gfs.o kdtree2.o enkf_obsmod.o params.o mpisetup.o 
 mpi_readobs.o : mpi_readobs.f90 mpisetup.o readozobs.o readsatobs.o readconvobs.o 
 mpisetup.o : mpisetup.F90 
+netcdf_io_wrf.o : netcdf_io_wrf.f90 
 params.o : params.f90 mpisetup.o 
 quicksort.o : quicksort.f90 
 radbias.o : radbias.f90 loadbal.o params.o enkf_obsmod.o mpisetup.o 
