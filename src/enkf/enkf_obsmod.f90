@@ -87,7 +87,7 @@ module enkf_obsmod
 !   2011-06-20  Added the option of observation box for LETKF.
 !   2015=07-25  Removed observation boxes for LETKF (use kdtree instead)
 !   2017-05-12  Johnson, Y. Wang and X. Wang - add variable-dependent
-!               localization and observation-dependent localization
+!               localization and observation-dependent localization, POC: xuguang.wang@ou.edu
 !
 ! attributes:
 !   language: f95

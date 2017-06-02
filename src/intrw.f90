@@ -69,6 +69,8 @@ subroutine intrw_(rwhead,rval,sval)
 !   2010-05-13  todlng   - update to use gsi_bundle; update interface
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - introduced ladtest_obs         
 !   2014-12-03  derber  - modify so that use of obsdiags can be turned off
+!   2017-05-12  Y. Wang and X. Wang - include w into tangent linear of rw operator, 
+!                                     POC: xuguang.wang@ou.edu
 !
 ! usage: call intw(ru,rv,su,sv)
 !   input argument list:

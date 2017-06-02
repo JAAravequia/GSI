@@ -8,6 +8,7 @@ use constants, only: one,zero,pi,cp,rd,grav,rearth,max_varname_length
 
 ! history
 ! 2017-05-12 Y. Wang and X. Wang - add more state variables in cvars3d_supported
+!                                  for radar DA, POC: xuguang.wang@ou.edu
 
 implicit none
 private

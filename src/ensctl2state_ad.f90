@@ -11,6 +11,7 @@ subroutine ensctl2state_ad(eval,mval,grad)
 !   2013-10-28  todling - rename p3d to prse
 !   2013-11-22  kleist - add option for q perturbations
 !   2014-12-03  derber   - introduce parallel regions for optimization
+!   2017-05-12  Y. Wang and X. Wang - add w as state variable for rw DA, POC: xuguang.wang@ou.edu
 !
 !   input argument list:
 !     eval - Ensemble state variable variable

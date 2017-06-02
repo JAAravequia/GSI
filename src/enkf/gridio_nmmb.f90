@@ -12,7 +12,8 @@ use gridinfo, only: npts,wind2mass,mass2wind
 use mpisetup, only: nproc
 use mpeu_util, only: getindex
 
-! 2017-05-12 Y. Wang and X. Wang - add more state variables
+! 2017-05-12 Y. Wang and X. Wang - add more state variables for radar DA,
+!                                  xuguang.wang@ou.edu
 
 implicit none
 private

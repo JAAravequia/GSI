@@ -41,6 +41,7 @@ subroutine statsconv(mype,&
 !   2014-05-07  pondeca - add howv
 !   2014-06-06  carley/zhu - add tcamt and lcbas
 !   2015-07-10  pondeca - add cldch
+!   2017-05-12  Y. Wang and X. Wang - add dbz, POC: xuguang.wang@ou.edu
 !
 !   input argument list:
 !     mype     - mpi task number

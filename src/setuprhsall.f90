@@ -92,6 +92,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !   2014-0?-16  carley/zhu - add tcamt and lcbas
 !   2015-07-10  pondeca - add cldch
 !   2015-10-01  guo   - full res obvsr: index to allow redistribution of obsdiags
+!   2017-05-12  Y. Wang and X. Wang - add dbz for reflectivity DA. POC: xuguang.wang@ou.edu
 !
 !   input argument list:
 !     ndata(*,1)- number of prefiles retained for further processing

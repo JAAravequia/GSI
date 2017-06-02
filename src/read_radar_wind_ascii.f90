@@ -13,6 +13,10 @@ subroutine read_radar_wind_ascii(nread,ndata,nodata,infile,lunout,obstype,twind,
 !   2011-08-12  carley - fix ob error to 2 m/s
 !   2011-08-23  carley - use deter_sfc_mod
 !   2011-12-08  carley - add wind rotation (earth to grid)
+!   2016-09-23  Johnson, Y. Wang, X. Wang - assign observation dependent horizontal and
+!                                           vertical localization scales to
+!                                           observation arrays,
+!                                           POC: xuguang.wang@ou.edu
 !
 !   input argument list:
 !     infile   - file from which to read data

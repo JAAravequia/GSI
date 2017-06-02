@@ -7,8 +7,8 @@ module intdbzmod
 ! abstract: module for intdbz and its tangent linear intdbz_tl
 !
 ! program history log:
-! 2017-05-12 Y. Wang and X. Wang - add this to directly assimilate reflectivity
-!                                  for both ARW and NMMB models.
+! 2017-05-12 Y. Wang and X. Wang - add tangent linear of dbz operator to directly assimilate reflectivity
+!                                  for both ARW and NMMB models. POC: xuguang.wang@ou.edu
 !
 ! subroutines included:
 !   sub intdbz_
@@ -39,7 +39,7 @@ contains
 subroutine intdbz_(dbzhead,rval,sval)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:    intdbz       apply nonlin qc operator for radar winds
+! subprogram:    intdbz       apply nonlin qc operator for radar reflectivity
 !   prgmmr: derber           org: np23                date: 1991-02-26
 !
 ! abstract: apply observation operator for radar winds

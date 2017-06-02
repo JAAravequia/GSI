@@ -57,6 +57,8 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
 !   2008-12-03  todling - changed handling of ptr%time
 !   2010-01-04  zhang,b - bug fix: accumulate penalty for multiple obs bins
 !   2010-05-13  todling - update to use gsi_bundle
+!   2017-05-12  Y. Wang and X. Wang - include w into adjoint of rw operator,
+!                                     POC: xuguang.wang@ou.edu
 !
 !   input argument list:
 !     rwhead

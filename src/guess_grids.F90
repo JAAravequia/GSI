@@ -106,6 +106,8 @@ module guess_grids
 !                         all tendencies now in a bundle (see tendsmod)
 !                         all derivaties now in a bundle (see derivsmod)
 !   2015-01-15  Hu      - Add coast_prox to hold coast proximity
+!   2017-05-12  Y. Wang and X. Wang - add bottom and top levels of w and rho for
+!                                     radar DA later, POC: xuguang.wang@ou.edu
 !
 ! !AUTHOR: 
 !   kleist           org: np20                date: 2003-12-01

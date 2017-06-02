@@ -20,7 +20,7 @@ module obs_sensitivity
 !   2015-07-10 pondeca  - add reference to wspd10m, td2m ,mxtm ,mitm ,pmsl,
 !                         howv ,tcamt, lcbas, cldch
 !   2016-02-20 pagowski - add pm10
-!   2017-05-12 Y. Wang and X. Wang - add reflectivity (dBZ)
+!   2017-05-12 Y. Wang and X. Wang - add reflectivity (dBZ), POC: xuguang.wang@ou.edu
 !
 ! Subroutines Included:
 !   init_fc_sens  - Initialize computations

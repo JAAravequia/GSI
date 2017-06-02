@@ -9,6 +9,10 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_f
 ! program history log:
 !   2016-02-14  Y. Wang, Johnson, X. Wang - modify read_radar.f90 to read MRMS dbz in netcdf format 
 !                                           in collaboration with Carley, POC: xuguang.wang@ou.edu
+!   2016-09-23  Johnson, Y. Wang, X. Wang - assign observation dependent horizontal and
+!                                           vertical localization scales to
+!                                           observation arrays,
+!                                           POC: xuguang.wang@ou.edu
 !                               
 !
 ! program history log:

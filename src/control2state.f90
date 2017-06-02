@@ -41,6 +41,7 @@ subroutine control2state(xhat,sval,bval)
 !   2014-06-16  carley/zhu - add tcamt and lcbas
 !   2014-12-03  derber   - introduce parallel regions for optimization
 !   2015-07-10  pondeca  - add cldch
+!   2017-05-12  Y. Wang and X. Wang - add w as state variable for rw DA, POC: xuguang.wang@ou.edu
 !
 !   input argument list:
 !     xhat - Control variable

@@ -21,7 +21,7 @@ module gridinfo
   !               within the GSI subroutine get_wrf_nmm_ensperts.F90.
   !               Henry R. Winterbottom
   !   2017-05-12 Y. Wang and X. Wang - add more state variables in
-  !   cvars3d_supported 
+  !                       cvars3d_supported for radar DA, POC: xuguang.wang@ou.edu
   !
   ! attributes:
   !   language:  f95

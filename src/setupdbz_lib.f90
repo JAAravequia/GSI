@@ -1,3 +1,7 @@
+! History log
+
+! 2017-05-12 Johnson, Y. Wang and X. Wang - define reflectivity opeator and its adjoint for WSM6 scheme, POC: xuguang.wang@ou.edu
+
 module setupdbz_lib
 public ::  hx_dart,hx_dart_dbz_state,jqr_dart,jqs_dart,jqg_dart
 contains

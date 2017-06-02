@@ -11,7 +11,8 @@ module m_dbzNode
 ! program history log:
 !   2016-05-18  j guo   - added this document block for the initial polymorphic
 !                         implementation.
-!   2017-05-12 Y. Wang and X. Wang - dbz
+!   2017-05-12 Y. Wang and X. Wang - module for defining reflectivity observation, 
+!                                    POC: xuguang.wang@ou.edu
 !
 !   input argument list: see Fortran 90 style document below
 !

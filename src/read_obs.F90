@@ -11,6 +11,7 @@ module read_obsmod
 !   2015-05-01  Liu Ling - Add call to read_rapidscat 
 !   2015-08-20  zhu  - add flexibility for enabling all-sky and using aerosol info in radiance 
 !                      assimilation. Use radiance_obstype_search from radiance_mod.  
+!   2017-05-12  Y. Wang and X. Wang - add dbz to be read in, POC: xuguang.wang@ou.edu
 !
 ! subroutines included:
 !   sub gsi_inquire   -  inquire statement supporting fortran earlier than 2003
