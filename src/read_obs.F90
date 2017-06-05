@@ -692,7 +692,7 @@ subroutine read_obs(ndata,mype)
     character(22):: string
     character(15):: infile
     character(20):: sis
-    integer(i_kind) i,j,k,ii,nmind,lunout,isfcalc,ithinx,ithin,nread,npuse,nouse
+    integer(i_kind) i,j,k,ii,nmind,lunout,isfcalc,ithinx,ithin,nread,npuse,nouse,nlarge,ilarge
     integer(i_kind) nprof_gps1,npem1,krsize,len4file,npemax,npestart
     integer(i_llong) :: lenbytes
     integer(i_kind):: npetot,npeextra,mmdat
