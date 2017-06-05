@@ -15,7 +15,6 @@ else
 fi
 
 export scripts=${scripts_updat:-$scripts}
-export scripts=${scripts_updat:-$scripts}
 . $scripts/regression_param.sh $regtest
 
 # Launch the individual control and update runs, one-after-another
@@ -39,7 +38,6 @@ for jn in `seq 1 4`; do
      rm -f ${rcname}
      exit 1
    fi
-    fi
    done
 # When all done, test the results of the regression test
 if [ "$debug" == ".false." ]; then

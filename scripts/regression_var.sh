@@ -51,7 +51,6 @@ elif [ -d /data/users ]; then # S4
    export noscrub="/data/users/$LOGNAME"
 fi
 
-contrl="XXXXXXXX"
 #  Handle machine specific paths for:
 #  experiment and control executables, fix, ptmp, and CRTM coefficient files.
 #  Location of ndate utility, noscrub directory, and account name (accnt = ada by default).
