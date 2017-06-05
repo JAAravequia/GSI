@@ -47,7 +47,7 @@ subroutine calc_linhx(hx, dens, rlat, rlon, time, dhx_dx, hx_ens)
 
 ! Declare local variables
   integer(i_kind) :: ix, iy, it, ixp, iyp, itp
-  integer(i_kind) :: inz, i,j 
+  integer(i_kind) :: i,j 
   real(r_kind)    :: delx, dely, delxp, delyp, delt, deltp
 
   ! find interplation indices and deltas
