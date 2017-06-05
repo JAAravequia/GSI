@@ -314,7 +314,7 @@ contains
     implicit none
 
     integer(i_kind) ii,jj,mxlvs,isum,ndim,ib,ie,ier
-    integer(i_kind) n_meteo,n_clouds,n_aeros
+    integer(i_kind) n_meteo,n_clouds_jac,n_aeros_jac
     integer(i_kind),allocatable,dimension(:)::aux,all_levels
     character(len=20),allocatable,dimension(:)::meteo_names
     character(len=20),allocatable,dimension(:)::clouds_names_jac
