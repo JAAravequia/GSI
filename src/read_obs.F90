@@ -636,7 +636,7 @@ subroutine read_obs(ndata,mype)
     use general_commvars_mod, only: ltosi,ltosj
     use obsmod, only: iadate,ndat,time_window,dplat,dsfcalc,dfile,dthin, &
            dtype,dval,dmesh,obsfile_all,ref_obs,nprof_gps,dsis,ditype,&
-           oberrflg,perturb_obs,lobserver,lread_obs_save,obs_input_common, &
+           perturb_obs,lobserver,lread_obs_save,obs_input_common, &
            reduce_diag,nobs_sub,dval_use
     use qcmod, only: njqc
     use gsi_4dvar, only: l4dvar
@@ -1082,17 +1082,22 @@ subroutine read_obs(ndata,mype)
     npestart=0
     mype_root_sub=0
     mmdat=0
-    do i = 1, ndat
-       if (npe_sub(i) > 0) then
-          mmdat = mmdat + 1
-          npe_order(mmdat) = i
-          if (npestart + npe_sub(i) > npe) then
-             npestart = 0
-          endif
-          mype_root_sub(i) = npestart
-          npestart = npestart + npe_sub(i)
-       endif
-    enddo
+    loopx: do j=1,ndat
+       nlarge=0
+       do i=1,ndat
+          if(npe_sub3(i) > nlarge .and. npe_sub3(i)+npestart <= npe)then
+             ilarge=i
+             nlarge=npe_sub3(i)
+          end if
+       end do
+       if(nlarge == 0)exit loopx
+       npe_order(j)=ilarge
+       mype_root_sub(ilarge)=npestart
+       npestart=npestart+npe_sub3(ilarge)
+       mmdat=mmdat+1
+       npe_sub3(ilarge)=0
+       if(npestart + minval(npe_sub3, mask=npe_sub3>0)>= npe) npestart=0
+    end do loopx
 
 !   Define sub-communicators for each data file
     mm1=mype+1
