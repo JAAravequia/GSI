@@ -692,8 +692,8 @@ subroutine read_obs(ndata,mype)
     character(22):: string
     character(15):: infile
     character(20):: sis
-    integer(i_kind) i,j,k,ii,nmind,lunout,isfcalc,ithinx,ithin,nread,npuse,nouse,nlarge,ilarge
-    integer(i_kind) nprof_gps1,npem1,krsize,len4file,npemax,npestart
+    integer(i_kind) i,j,k,ii,nmind,lunout,isfcalc,ithinx,ithin,nread,npuse,nouse
+    integer(i_kind) nprof_gps1,npem1,krsize,len4file,npemax,ilarge,nlarge,npestart
     integer(i_llong) :: lenbytes
     integer(i_kind):: npetot,npeextra,mmdat
     integer(i_kind):: iworld,iworld_group,next_mype,mm1,iix
@@ -1079,7 +1079,9 @@ subroutine read_obs(ndata,mype)
 
 !   Set up locations of first processor
 
+    ilarge=0
     npestart=0
+    npe_sub3=npe_sub
     mype_root_sub=0
     mmdat=0
     loopx: do j=1,ndat
