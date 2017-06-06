@@ -200,6 +200,7 @@ if (nproc <= nanals-1) then
      enddo
    enddo
    deallocate(state_mean)
+   deallocate(qsat)
 
 endif
 
