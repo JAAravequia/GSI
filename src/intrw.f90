@@ -60,7 +60,6 @@ subroutine intrw_(rwhead,rval,sval)
 !   2005-09-28  derber  - consolidate location and weight arrays
 !   2006-07-28  derber  - modify to use new inner loop obs data structure
 !                       - unify NL qc
-!   2007-02-15  rancic  - add foto
 !   2007-03-19  tremolet - binning of observations
 !   2007-06-05  tremolet - use observation diagnostics structure
 !   2007-07-09  tremolet - observation sensitivity
@@ -95,8 +94,7 @@ subroutine intrw_(rwhead,rval,sval)
   use constants, only: half,one,tiny_r_kind,cg_term,r3600
   use obsmod, only: lsaveobsens,l_do_adjoint,luse_obsdiag
   use qcmod, only: nlnqc_iter,varqc_iter
-  use gridmod, only: latlon1n
-  use jfunc, only: jiter,l_foto,xhat_dt,dhat_dt
+  use jfunc, only: jiter
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gsi_4dvar, only: ladtest_obs
@@ -111,10 +109,8 @@ subroutine intrw_(rwhead,rval,sval)
   logical include_w
   integer(i_kind) j1,j2,j3,j4,j5,j6,j7,j8,ier,istatus
 ! real(r_kind) penalty
-  real(r_kind),pointer,dimension(:) :: xhat_dt_u,xhat_dt_v
-  real(r_kind),pointer,dimension(:) :: dhat_dt_u,dhat_dt_v
   real(r_kind) val,valu,valv,valw,w1,w2,w3,w4,w5,w6,w7,w8
-  real(r_kind) cg_rw,p0,grad,wnotgross,wgross,time_rw,pg_rw
+  real(r_kind) cg_rw,p0,grad,wnotgross,wgross,pg_rw
   real(r_kind),pointer,dimension(:) :: su,sv,sw
   real(r_kind),pointer,dimension(:) :: ru,rv,rw
   type(rwNode), pointer :: rwptr
@@ -142,12 +138,6 @@ subroutine intrw_(rwhead,rval,sval)
      include_w=.false.
   end if
 
-  if(l_foto) then
-     call gsi_bundlegetpointer(xhat_dt,'u',xhat_dt_u,istatus);ier=istatus+ier
-     call gsi_bundlegetpointer(xhat_dt,'v',xhat_dt_v,istatus);ier=istatus+ier
-     call gsi_bundlegetpointer(dhat_dt,'u',dhat_dt_u,istatus);ier=istatus+ier
-     call gsi_bundlegetpointer(dhat_dt,'v',dhat_dt_v,istatus);ier=istatus+ier
-  endif
   if(ier/=0)return
 
 
@@ -182,18 +172,6 @@ subroutine intrw_(rwhead,rval,sval)
                  w6*sw(j6)+ w7*sw(j7)+ w8*sw(j8))*rwptr%sintilt
      end if
 
-     if ( l_foto ) then
-        time_rw=rwptr%time*r3600
-        val=val+                                                    &
-         ((w1*xhat_dt_u(j1)+w2*xhat_dt_u(j2)+                       &
-           w3*xhat_dt_u(j3)+w4*xhat_dt_u(j4)+                       &
-           w5*xhat_dt_u(j5)+w6*xhat_dt_u(j6)+                       &
-           w7*xhat_dt_u(j7)+w8*xhat_dt_u(j8))*rwptr%cosazm+         &
-          (w1*xhat_dt_v(j1)+w2*xhat_dt_v(j2)+                       &
-           w3*xhat_dt_v(j3)+w4*xhat_dt_v(j4)+                       &
-           w5*xhat_dt_v(j5)+w6*xhat_dt_v(j6)+                       &
-           w7*xhat_dt_v(j7)+w8*xhat_dt_v(j8))*rwptr%sinazm)*time_rw
-     endif
 
      if(luse_obsdiag)then
         if (lsaveobsens) then
@@ -259,26 +237,6 @@ subroutine intrw_(rwhead,rval,sval)
         end if
 
 
-        if ( l_foto ) then
-           valu=valu*time_rw
-           valv=valv*time_rw
-           dhat_dt_u(j1)=dhat_dt_u(j1)+w1*valu
-           dhat_dt_u(j2)=dhat_dt_u(j2)+w2*valu
-           dhat_dt_u(j3)=dhat_dt_u(j3)+w3*valu
-           dhat_dt_u(j4)=dhat_dt_u(j4)+w4*valu
-           dhat_dt_u(j5)=dhat_dt_u(j5)+w5*valu
-           dhat_dt_u(j6)=dhat_dt_u(j6)+w6*valu
-           dhat_dt_u(j7)=dhat_dt_u(j7)+w7*valu
-           dhat_dt_u(j8)=dhat_dt_u(j8)+w8*valu
-           dhat_dt_v(j1)=dhat_dt_v(j1)+w1*valv
-           dhat_dt_v(j2)=dhat_dt_v(j2)+w2*valv
-           dhat_dt_v(j3)=dhat_dt_v(j3)+w3*valv
-           dhat_dt_v(j4)=dhat_dt_v(j4)+w4*valv
-           dhat_dt_v(j5)=dhat_dt_v(j5)+w5*valv
-           dhat_dt_v(j6)=dhat_dt_v(j6)+w6*valv
-           dhat_dt_v(j7)=dhat_dt_v(j7)+w7*valv
-           dhat_dt_v(j8)=dhat_dt_v(j8)+w8*valv
-        endif
      endif
 
      !rwptr => rwptr%llpoint

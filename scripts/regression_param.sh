@@ -330,9 +330,13 @@ job[1]=${regtest}_loproc_updat
 job[2]=${regtest}_hiproc_updat
 job[3]=${regtest}_loproc_contrl
 job[4]=${regtest}_hiproc_contrl
-
 topts[3]=${topts[1]} ; popts[3]=${popts[1]} ; ropts[3]=${ropts[1]}
 topts[4]=${topts[2]} ; popts[4]=${popts[2]} ; ropts[4]=${ropts[2]}
+
+#job[1]=${regtest}_loproc_updat
+#job[2]=${regtest}_loproc_contrl
+#topts[2]=${topts[1]} ; popts[2]=${popts[1]} ; ropts[2]=${ropts[1]}
+
 
 tmpregdir="tmpreg_$regtest"
 rcname="return_code_${regtest}.out"
