@@ -359,7 +359,9 @@ end subroutine init_
 subroutine clean_(yobs)
   implicit none
   type(obsHeadBundle),intent(out):: yobs
-  yobs=obsHeadBundle()
+  type(obsHeadBundle) tmpobs
+!  yobs=obsHeadBundle()
+   yobs = tmpobs
 end subroutine clean_
 
 end module m_obsHeadBundle

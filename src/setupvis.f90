@@ -107,7 +107,6 @@ subroutine setupvis(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) l,mm1
   integer(i_kind) istat
   integer(i_kind) idomsfc
-  integer(i_kind) numbfgat
   
   logical,dimension(nobs):: luse,muse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID

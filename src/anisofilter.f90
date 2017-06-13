@@ -4863,7 +4863,7 @@ subroutine get2berr_reg_subdomain_option(mype)
   real(r_kind) deta0,deta1
   real(r_single) this0f
 
-  real(r_kind) rstd,b1,berrmax 
+  real(r_kind) rstd,berrmax 
 
   real(r_single),allocatable,dimension(:,:,:,:):: aspectf
   real(r_single),allocatable,dimension(:,:,:,:):: ampsub(:,:,:,:)
@@ -4874,8 +4874,8 @@ subroutine get2berr_reg_subdomain_option(mype)
   real(r_single),allocatable,dimension(:,:)::region_dx4,region_dy4,psg4,psg4a
   real(r_single),allocatable,dimension(:,:,:):: fltvals0,fltvals
   logical lstdmodel0
-  real(r_single),allocatable,dimension(:,:):: slab00,slab11   !for diagnostic purposes only
-  character*2 clun                                            !for diagnostic purposes only
+!  real(r_single),allocatable,dimension(:,:):: slab00,slab11   !for diagnostic purposes only
+!  character*2 clun                                            !for diagnostic purposes only
   character(12) chvarname
   character(8) cvar
 

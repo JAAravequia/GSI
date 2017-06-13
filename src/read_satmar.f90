@@ -53,11 +53,11 @@ subroutine read_satmar (nread, ndata, nodata,                                 &
    use kinds, only: r_kind,r_double,i_kind
    use gsi_4dvar, only: l4dvar,l4densvar,winlen,iwinbgn,thin4d,time_4dvar
    use constants, only: zero, deg2rad,rad2deg,one,two,three,four,ten,half, &
-       r60inv,r60,r3600,grav,tiny_r_kind !,init_constants_derived
-   use gridmod, only: regional, diagnostic_reg,rlats,rlons,nlat,nlon,txy2ll,tll2xy, &
+       r60inv,r60,r3600,tiny_r_kind !,init_constants_derived
+   use gridmod, only: regional, rlats,rlons,nlat,nlon,txy2ll,tll2xy, &
        twodvar_regional
    use satthin, only: map2tgrid,destroygrids,makegrids
-   use convinfo, only: ithin_conv,rmesh_conv,pmesh_conv,nconvtype,icuse,ictype,ioctype
+   use convinfo, only: ithin_conv,rmesh_conv,nconvtype,icuse,ictype,ioctype
    use convthin, only: make3grids,use_all,map3grids,del3grids
    use obsmod, only: bmiss,hilbert_curve
    use mpimod, only: npe
@@ -98,10 +98,9 @@ subroutine read_satmar (nread, ndata, nodata,                                 &
    real(r_kind) :: dlon,dlat
    real(r_kind) :: tdiff,crit1,timedif,toff
    !
-   real(r_kind) :: nsec, nsec_m1,dt_sec, rminobs
-   real(r_kind) :: Hdistm, Pdistm
+   real(r_kind) :: nsec, rminobs
    real(r_kind) :: dlon_earth,dlat_earth
-   real(r_kind) :: hs_max_diff,depth,usage
+   real(r_kind) :: depth,usage
    real(r_kind) :: rmesh,xmesh
 !   real(r_kind),dimension(1,1):: r_prvstg,r_sprvstg
 !  character
@@ -119,8 +118,8 @@ subroutine read_satmar (nread, ndata, nodata,                                 &
    real(r_double), dimension (n_fltJS2)  :: flt_1dJS2
    real(r_double), dimension (n_tm)   :: time_1d
    integer(i_kind), dimension (n_tm-1) :: time_1dMN
-   real(r_double), dimension (n_lc)   :: loc_1d,loc_1d_m1
-   real(r_double), dimension (n_howv) :: howv_1d, howv_1d_m1
+   real(r_double), dimension (n_lc)   :: loc_1d
+   real(r_double), dimension (n_howv) :: howv_1d
    real(r_kind) :: t4dv
 
    character(80),parameter:: hdr_fltJS2   = 'RSST AETP ASFL ADQF ALRF IPIN ODLE'
@@ -483,7 +482,7 @@ subroutine lldistm(latlon1,latlon2, Hdistm, Pdistm)
 !
 ! *#* Documentation block - End *#*
    use kinds, only: r_kind,r_double,i_kind
-   use constants, only: one,deg2rad,pi,rearth
+   use constants, only: one,deg2rad,rearth
    implicit none
    real(r_kind), dimension(2), intent(in) :: latlon1, latlon2
    real(r_kind), intent(out):: Hdistm, Pdistm

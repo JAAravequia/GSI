@@ -41,7 +41,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use kinds, only: r_kind,r_single,r_double,i_kind
 
   use guess_grids, only: hrdifsig,nfldsig,ges_lnprsl, &
-               geop_hgtl,sfcmod_gfs,sfcmod_mm5,comp_fact10,pt_ll     
+               sfcmod_gfs,sfcmod_mm5,comp_fact10,pt_ll     
   use m_obsdiags, only: wspd10mhead
   use obsmod, only: rmiss_single,i_wspd10m_ob_type,obsdiags,&
                     lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset
@@ -55,8 +55,8 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use gridmod, only: get_ij,twodvar_regional,regional
   use constants, only: zero,tiny_r_kind,one,one_tenth,half,wgtlim,rd,grav,&
             two,cg_term,three,four,five,ten,huge_single,r1000,r3600,&
-            grav_ratio,flattening,grav,deg2rad,grav_equator,somigliana, &
-            semi_major_axis,eccentricity
+            grav_ratio,flattening,grav,grav_equator,somigliana, &
+            semi_major_axis
   use jfunc, only: jiter,last,miter
   use qcmod, only: dfact,dfact1,npres_print,qc_satwnds
   use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype
@@ -98,15 +98,15 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) presw,factw,dpres,sfcchk,ugesin,vgesin,dpressave
   real(r_kind) ugesin_scaled,vgesin_scaled
   real(r_kind) qcu,qcv
-  real(r_kind) ratio_errors,tfact,fact,wflate,psges,goverrd,zsges,spdob
-  real(r_kind) slat,sin2,termg,termr,termrg,pobl,uob,vob
-  real(r_kind) dz,zob,z1,z2,p1,p2,dz21,dlnp21,spdb,dstn
+  real(r_kind) ratio_errors,tfact,wflate,psges,goverrd,spdob
+  real(r_kind) uob,vob
+  real(r_kind) spdb
   real(r_kind) dudiff_opp, dvdiff_opp, vecdiff, vecdiff_opp
   real(r_kind) ascat_vec
   real(r_kind) errinv_input,errinv_adjst,errinv_final
   real(r_kind) err_input,err_adjst,err_final,skint,sfcr
   real(r_kind),dimension(nobs):: dup
-  real(r_kind),dimension(nsig)::prsltmp,zges,tges
+  real(r_kind),dimension(nsig)::prsltmp,tges
   real(r_kind) wdirob,wdirgesin,wdirdiffmax
   real(r_kind),dimension(nele,nobs):: data
   real(r_single),allocatable,dimension(:,:)::rdiagbuf
@@ -114,7 +114,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   integer(i_kind) ier,ier2,ilon,ilat,ihgt,iuob,ivob,ipres,id,itime,ikx,iqc
   integer(i_kind) iuse,ilate,ilone,ielev,izz,iprvd,isprvd
-  integer(i_kind) i,nchar,nreal,k,k1,k2,ii,ikxx,nn,isli,ibin,ioff,ioff0,jj,itype
+  integer(i_kind) i,nchar,nreal,k,ii,ikxx,nn,isli,ibin,ioff,ioff0,jj,itype
   integer(i_kind) l,mm1
   integer(i_kind) istat
   integer(i_kind) idomsfc,iskint,iff10,isfcr

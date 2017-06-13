@@ -380,7 +380,7 @@ subroutine read_2d_files(mype)
   use guess_grids, only: hrdifsig_all,hrdifsfc_all
   use gsi_4dvar, only: nhr_assimilation
   use constants, only: zero,one,r60inv
-  use obsmod, only: iadate,time_offset,iadatemn
+  use obsmod, only: time_offset,iadatemn
   implicit none
 
 ! Declare passed variables
@@ -397,7 +397,7 @@ subroutine read_2d_files(mype)
   integer(i_kind) nhr_half
   integer(i_kind) nminanl,nmings,nming2,ndiff
   integer(i_kind),dimension(5):: idate5
-  real(r_kind) hourg,temp
+  real(r_kind) temp
   real(r_kind),dimension(202):: time_ges
 
 !-----------------------------------------------------------------------------
@@ -3329,7 +3329,7 @@ subroutine get_fldstd(field,i1,i2,j1,j2,k1,k2,radius,npass,mype)
 !$$$
 
   use kinds, only: r_single,r_kind,r_double,i_kind
-  use gridmod, only: region_dx,region_dy,nlon,nlat
+  use gridmod, only: region_dx,region_dy
   use anisofilter, only: smther_one
   implicit none
 

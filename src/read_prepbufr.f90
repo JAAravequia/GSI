@@ -136,6 +136,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !   2016-03-15  Su      - modified the code so that the program won't stop when no subtype
 !                         is found in non linear qc error tables and b table
 !   2016-05-05  pondeca - add 10-m u-wind and v-wind (uwnd10m, vwnd10m)
+!   2016-06-01  zhu    - use errormod_aircraft
 !
 
 !   input argument list:
@@ -186,7 +187,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   use convb_t,only: btabl_t
   use convb_uv,only: btabl_uv
   use gsi_4dvar, only: l4dvar,l4densvar,time_4dvar,winlen,thin4d
-  use qcmod, only: errormod,noiqc,newvad,njqc
+  use qcmod, only: errormod,errormod_aircraft,noiqc,newvad,njqc
   use convthin, only: make3grids,map3grids,del3grids,use_all
   use blacklist, only : blacklist_read,blacklist_destroy
   use blacklist, only : blkstns,blkkx,ibcnt
@@ -246,7 +247,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   logical sfctype
   logical luse,ithinp,windcorr
   logical patch_fog
-  logical aircraftset,aircraftobst,aircrafttype
+  logical aircraftset,aircraftobs,aircraftobst,aircrafttype
   logical acft_profl_file
   logical,allocatable,dimension(:,:):: lmsg           ! set true when convinfo entry id found in a message
 
@@ -1349,6 +1350,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
            if(ext_sonde .and. kx==120) call sonde_ext(obsdat,tpc,qcmark,obserr,drfdat,levs,kx,vtcd)
 
            nread=nread+levs
+           aircraftobs = (kx==130) .or. (kx==131) .or. (kx>=133 .and. kx<140) .or. &
+                         (kx==230) .or. (kx==231) .or. (kx>=233 .and. kx<240)
            aircraftobst = .false.
            if(uvob)then
               nread=nread+levs
@@ -1910,7 +1913,11 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !             Temperature
               if(tob) then
                  ppb=obsdat(1,k)
-                 call errormod(pqm,tqm,levs,plevs,errout,k,presl,dpres,nsig,lim_qm)
+                 if (aircraftobs .and. aircraft_t_bc .and. acft_profl_file) then
+                    call errormod_aircraft(pqm,tqm,levs,plevs,errout,k,presl,dpres,nsig,lim_qm,hdr3)
+                 else
+                    call errormod(pqm,tqm,levs,plevs,errout,k,presl,dpres,nsig,lim_qm)
+                 end if
                  toe=obserr(3,k)*errout
                  qtflg=tvflg(k) 
                  if (inflate_error) toe=toe*r1_2
@@ -1959,7 +1966,11 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 
 !             Winds 
               else if(uvob) then 
-                 call errormod(pqm,wqm,levs,plevs,errout,k,presl,dpres,nsig,lim_qm)
+                 if (aircraftobs .and. aircraft_t_bc .and. acft_profl_file) then
+                    call errormod_aircraft(pqm,wqm,levs,plevs,errout,k,presl,dpres,nsig,lim_qm,hdr3)
+                 else
+                    call errormod(pqm,wqm,levs,plevs,errout,k,presl,dpres,nsig,lim_qm)
+                 end if
                  woe=obserr(5,k)*errout
                  if (inflate_error) woe=woe*r1_2
                  if(obsdat(1,k) < r50)woe=woe*r1_2
@@ -2145,7 +2156,11 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !             Specific humidity 
               else if(qob) then
                  qmaxerr=emerr
-                 call errormod(pqm,qqm,levs,plevs,errout,k,presl,dpres,nsig,lim_qm)
+                 if (aircraftobs .and. aircraft_t_bc .and. acft_profl_file) then
+                    call errormod_aircraft(pqm,qqm,levs,plevs,errout,k,presl,dpres,nsig,lim_qm,hdr3)
+                 else
+                    call errormod(pqm,qqm,levs,plevs,errout,k,presl,dpres,nsig,lim_qm)
+                 end if
                  qoe=obserr(2,k)*one_tenth*errout
                  if (inflate_error) then
                     qmaxerr=emerr*r0_7; qoe=qoe*r1_2
