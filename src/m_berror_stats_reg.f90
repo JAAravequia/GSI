@@ -942,22 +942,21 @@ subroutine read_howv_stats(nlat,nlon,npar,arrout)
 !
    implicit none
 ! Declare passed variables
-!   character(256) , optional,                      intent(in   )::filename
-   integer(i_kind),                                intent(in   )::nlat,nlon,npar
-   real(r_kind)   ,  dimension(nlat ,nlon, npar),  intent(  out)::arrout
+   integer(i_kind),   intent(in   )::nlat,nlon,npar
+   real(r_kind), dimension(nlat ,nlon, npar),  intent(  out)::arrout
 ! Declare local variables
-   integer :: reclength,i,j,i_npar
+   integer(i_kind) :: reclength,i,j,i_npar
    character(256) ,  parameter :: myname='read_how_stats : '
    logical :: file_exists
-   integer, parameter :: lun34=34
+   integer(i_kind), parameter :: lun34=34
    character(len=256),dimension(npar) :: filename
-   integer, parameter :: dp1 = kind(1D0)
+   integer(i_kind), parameter :: dp1 = kind(1D0)
 !
    filename(1) = 'howv_var_berr.bin'
    filename(2) = 'howv_lng_berr.bin'
 !
-   arrout(:,:,1)=0.42
-   arrout(:,:,2)=50000
+   arrout(:,:,1)=0.42_r_kind
+   arrout(:,:,2)=50000.0_r_kind
 
    reclength=nlat*r_kind
 !

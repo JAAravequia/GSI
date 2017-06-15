@@ -204,8 +204,8 @@ subroutine setupcldch(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                     dup(k)=-99.0_r_kind
                  endif
                  if(abs(offtime_k)==abs(offtime_l)) then
-                    if (offtime_k .ge. 0.0) dup(l)=-99.0_r_kind
-                    if (offtime_l .ge. 0.0) dup(k)=-99.0_r_kind
+                    if (offtime_k >= 0.0_r_kind) dup(l)=-99.0_r_kind
+                    if (offtime_l >= 0.0_r_kind) dup(k)=-99.0_r_kind
                  endif
               endif
            enddo

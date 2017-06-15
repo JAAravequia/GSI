@@ -232,7 +232,6 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins)
 !                         stpozlev() calls.  This is a next-step fix of the
 !                         minimum fix in stpjo_setup() below, to let output
 !                         pbcjo(:,:,:) to reflect individual ob-types correctly.
-!   2016-05-05  pondeca - add uwnd10m, vwnd10m
 !
 !   input argument list:
 !     yobs

@@ -1213,7 +1213,7 @@ end function fvarname
 function stdbump(chvarname)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:   get_hwllp_lcbas_subdomain_option
+! subprogram:   stdbump
 ! prgmmr: pondeca          org: np22                date: 2017-04-20
 !
 ! abstract: retrieve parameter of background error model
@@ -5997,9 +5997,9 @@ subroutine get_background_subdomain_option(mype)
 
      do k=kps0,kpe0
         do j=jps,jpe
-        do i=ips,ipe
-           field(i,j,k)=valleys(j,i)
-        enddo
+           do i=ips,ipe
+              field(i,j,k)=valleys(j,i)
+           enddo
         enddo
      enddo
 

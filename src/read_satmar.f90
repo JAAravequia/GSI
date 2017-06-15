@@ -74,12 +74,12 @@ subroutine read_satmar (nread, ndata, nodata,                                 &
 !! %%% Declare local varables
 !  integer
    integer(i_kind) :: ithin
-   integer(i_kind),parameter  :: lun11 =  11_i_kind
-   integer(i_kind),parameter  :: nosat =  four 
+   integer(i_kind),parameter  :: lun11 = 11
+   integer(i_kind),parameter  :: nosat =  4 
    integer(i_kind),parameter  :: n_tm  =  6
-   integer(i_kind),parameter  :: n_lc  =  two
-   integer(i_kind),parameter  :: n_howv=  two
-   integer(i_kind),parameter  :: dtLen =  ten
+   integer(i_kind),parameter  :: n_lc  =  2
+   integer(i_kind),parameter  :: n_howv=  2
+   integer(i_kind),parameter  :: dtLen =  10
    integer(i_kind),parameter  :: nreal =  23
    real   (r_kind),parameter  :: r90   =  90.0_r_kind
    real   (r_kind),parameter  :: r6    =  6.0_r_kind
@@ -135,7 +135,7 @@ subroutine read_satmar (nread, ndata, nodata,                                 &
    character(80),parameter:: hdr_howvSAL  = 'SBSWH RMSSWH'
 !!!! #####     CS2    ##### !!!!
    integer(i_kind),parameter  :: n_fltCS2 = 5 
-   integer(i_kind),parameter  :: n_howvCS2 = four
+   integer(i_kind),parameter  :: n_howvCS2 = 4
 !
    real(r_double), dimension (n_fltCS2)  :: flt_1dCS2
 !   real(r_kind), dimension (n_howvCS2) :: howv_1dCS2
@@ -153,9 +153,9 @@ subroutine read_satmar (nread, ndata, nodata,                                 &
      equivalence(rstation_id,c_station_id)
 
 !!!!! Swords
-   integer(i_kind),parameter :: howvMax = 12_i_kind
-   integer(i_kind),parameter :: howvRatMiuSigma = three
-   integer(i_kind),parameter :: howvRathowvDpth = two
+   integer(i_kind),parameter :: howvMax = 12
+   integer(i_kind),parameter :: howvRatMiuSigma = 3
+   integer(i_kind),parameter :: howvRathowvDpth = 2
    real(r_kind),parameter    :: howvDistm = 10000.0_r_kind
 !
 !   call init_constants_derived
@@ -171,10 +171,10 @@ subroutine read_satmar (nread, ndata, nodata,                                 &
    ilat=3
    nrec = 1
 !
-   ithin=-9_i_kind
+   ithin=-9
    nc=zero
    conv: do i1=1,nconvtype
-      if(trim(obstype) == trim(ioctype(i1)) .and. ictype(i1)==547_i_kind) then
+      if(trim(obstype) == trim(ioctype(i1)) .and. ictype(i1)==547) then
          nc=i1
          exit conv
       end if
@@ -238,19 +238,19 @@ subroutine read_satmar (nread, ndata, nodata,                                 &
          time_1d  = zero 
          howv_1d  = zero
          loc_1d   = zero
-         depth    = -99999.
+         depth    = -99999.0_r_kind
 !
          if (     (index(trim(subset),trim(namesat(1))) > 0)      &              !JS2
              .or. (index(trim(subset),trim(namesat(4))) > 0)      ) then         !JS4
 !            sis = namesat(1)
             call ufbint(lun11,flt_1dJS2,n_fltJS2,1,irec,hdr_fltJS2)
 !  Qc flags
-            if (  (flt_1dJS2(1).gt.1.)  .or. &
-                  (flt_1dJS2(2).ne.0.)  .or. &
-                  (flt_1dJS2(3).ne.0.)  .or. &
-                  (flt_1dJS2(4).ne.0.)  .or. &
-                  (flt_1dJS2(5).ne.0.)  .or. &
-                  (flt_1dJS2(6).ne.0.)       )    cycle
+            if (  (flt_1dJS2(1)>1.0_r_double)  .or. &
+                  (flt_1dJS2(2)/=0.0_r_double)  .or. &
+                  (flt_1dJS2(3)/=0.0_r_double)  .or. &
+                  (flt_1dJS2(4)/=0.0_r_double)  .or. &
+                  (flt_1dJS2(5)/=0.0_r_double)  .or. &
+                  (flt_1dJS2(6)/=0.0_r_double)       )    cycle
              
             depth = abs(flt_1dJS2(7))
 !  Time 
@@ -261,10 +261,10 @@ subroutine read_satmar (nread, ndata, nodata,                                 &
          else if   (index(trim(subset),trim(namesat(2)))>0) then                 !SRLTK
 !            sis = namesat(2)            
             call ufbint(lun11,flt_1dSAL,n_fltSAL,1,irec,hdr_fltSAL)
-            if ( (flt_1dSAL(1).gt.1. ) .or.   &
-                 (flt_1dSAL(2).ne.0. ) .or.   &
-                 (flt_1dSAL(3).le.30.) .or.   &
-                 (flt_1dSAL(4).ne.0. )        ) cycle 
+            if ( (flt_1dSAL(1)>1.0_r_double ) .or.   &
+                 (flt_1dSAL(2)/=0.0_r_double) .or.   &
+                 (flt_1dSAL(3)<=30.0_r_double) .or.   &
+                 (flt_1dSAL(4)/=0.0_r_double )        ) cycle 
             
             depth = abs(flt_1dSAL(5))
 !  Time 
@@ -275,11 +275,11 @@ subroutine read_satmar (nread, ndata, nodata,                                 &
          else if   (index(trim(subset),trim(namesat(3)))>0) then                 !CS2
 !            sis=namesat(3) 
             call ufbint(lun11,flt_1dCS2,n_fltCS2,1,irec,hdr_fltCS2)
-            if ( (flt_1dCS2(1) > 1    ) .or.   &
-                 (flt_1dCS2(2) > 0    ) .or.   &
-                 (flt_1dCS2(3) < 90.  ) .or.   &
-                 (flt_1dCS2(4) /= 0.  ) .or.   &
-                 (flt_1dCS2(5) /= 0.  )        ) cycle 
+            if ( (flt_1dCS2(1) > 1.0_r_double    ) .or.   &
+                 (flt_1dCS2(2) > 0.0_r_double    ) .or.   &
+                 (flt_1dCS2(3) < 90.0_r_double   ) .or.   &
+                 (flt_1dCS2(4) /= 0.0_r_double   ) .or.   &
+                 (flt_1dCS2(5) /= 0.0_r_double   )        ) cycle 
 !
             depth = abs(flt_1dCS2(2))
 !  Time 
@@ -310,10 +310,10 @@ subroutine read_satmar (nread, ndata, nodata,                                 &
 !
 !  Physical Space
          call ufbint(lun11,loc_1d,n_lc,1,irec,hdr_loc)
-         if(abs(loc_1d(1))>r90 .or. abs(loc_1d(2))>360.0) cycle
+         if(abs(loc_1d(1))>r90 .or. abs(loc_1d(2))>360.0_r_kind) cycle
 !
-         if (loc_1d(2)>=360.0) loc_1d(2)=loc_1d(2)-360.0
-         if (loc_1d(2)< zero) loc_1d(2)=loc_1d(2)+360.0
+         if (loc_1d(2)>=360.0) loc_1d(2)=loc_1d(2)-360.0_r_kind
+         if (loc_1d(2)< zero) loc_1d(2)=loc_1d(2)+360.0_r_kind
 !        
          dlon_earth=loc_1d(2)*deg2rad
          dlat_earth=loc_1d(1)*deg2rad
@@ -334,7 +334,7 @@ subroutine read_satmar (nread, ndata, nodata,                                 &
          if ( howv_1d(1)              > howvMax                      ) cycle  !qc1
          if ((howv_1d(2)              > zero)            .and.       &
              (howv_1d(1) / howv_1d(2) < howvRatMiuSigma)             ) cycle  !qc2
-         if ((depth<=-99998.)                            .and.       &
+         if ((depth<=-99998.0_r_kind)    .and.       &
              (howv_1d(1) / depth)     > howvRathowvDpth              ) cycle  !qc3
 ! Next lines need update. #ww3
 !         if (tot==one) then
@@ -410,8 +410,8 @@ subroutine read_satmar (nread, ndata, nodata,                                 &
          data_all(18,iout) = zero                      ! station elevation (m)
          data_all(19,iout) = zero                      ! observation height (m)
          data_all(20,iout) = -depth                    ! terrain height at ob location
-         data_all(21,iout) = 100000000000.000                     ! provider name !r_prvstg(1,1)
-         data_all(22,iout) = 100000000000.000                     ! subprovider name !r_sprvstg(1,1)
+         data_all(21,iout) = 100000000000.000_r_kind    ! provider name !r_prvstg(1,1)
+         data_all(22,iout) = 100000000000.000_r_kind    ! subprovider name !r_sprvstg(1,1)
          data_all(23,iout) = 0_r_kind                     ! cat 
 !
       enddo read_loop

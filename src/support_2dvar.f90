@@ -3354,27 +3354,26 @@ subroutine get_fldstd(field,i1,i2,j1,j2,k1,k2,radius,npass,mype)
 
   do k=k1,k2
      do j=j1,j2
-     do i=i1,i2
-        fieldaux(i,j,k)=field(i,j,k)
-     enddo
+        do i=i1,i2
+           fieldaux(i,j,k)=field(i,j,k)
+        enddo
      enddo
   enddo
-
   do k=k1,k2
      do j=j1,j2
-     do i=i1,i2
-        f0=real(fieldaux(i,j,k),kind=r_double)
-        var=0._r_double
-        ncount=0
-        do n=max(j1,j-ijdel),min(j2,j+ijdel)
-        do m=max(i1,i-ijdel),min(i2,i+ijdel)
-           ncount=ncount+1
-           var=var+(real(fieldaux(m,n,k),kind=r_double)-f0)* &
+        do i=i1,i2
+           f0=real(fieldaux(i,j,k),kind=r_double)
+           var=0._r_double
+           ncount=0
+           do n=max(j1,j-ijdel),min(j2,j+ijdel)
+              do m=max(i1,i-ijdel),min(i2,i+ijdel)
+                 ncount=ncount+1
+                 var=var+(real(fieldaux(m,n,k),kind=r_double)-f0)* &
                    (real(fieldaux(m,n,k),kind=r_double)-f0)
+              enddo
+           enddo
+           field(i,j,k)=sqrt(var/real(ncount,kind=r_double))
         enddo
-        enddo
-        field(i,j,k)=sqrt(var/real(ncount,kind=r_double))
-     enddo
      enddo
      call smther_one(field(:,:,k),i1,i2,j1,j2,npass)
   enddo
@@ -3386,9 +3385,9 @@ subroutine get_fldstd(field,i1,i2,j1,j2,k1,k2,radius,npass,mype)
   do k=k1,k2
      stdmean=0._r_double
      do j=j1,j2
-     do i=i1,i2
-        stdmean=stdmean+real(field(i,j,k),kind=r_double)
-     enddo
+        do i=i1,i2
+           stdmean=stdmean+real(field(i,j,k),kind=r_double)
+        enddo
      enddo
      stdmean=stdmean/real(ncount,kind=r_double)
      if (stdmean > 0._r_double) field(:,:,k)=field(:,:,k)/stdmean

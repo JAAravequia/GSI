@@ -841,15 +841,15 @@ subroutine get_usagerj(kx,obstype,c_station_id,c_prvstg,c_sprvstg, &
         endif
         if(wbinlistexist .and. usage_rj/=usage_rj0) then
           call get_wbinid(udbl,vdbl,nbins,ibin)
-          if (ibin <= nbins ) then
-          do m=1,nwbaccpts(ibin)
-             ch8(1:8)=csta_windbin(m,ibin)(1:8)
-             nlen=len_trim(ch8)
-             if (c_station_id(1:nlen)==ch8(1:nlen)) then
+          if(ibin <= nbins ) then
+            do m=1,nwbaccpts(ibin)
+              ch8(1:8)=csta_windbin(m,ibin)(1:8)
+              nlen=len_trim(ch8)
+              if (c_station_id(1:nlen)==ch8(1:nlen)) then
                 usage_rj=usage_rj0
                 exit
-             endif
-          enddo
+              endif
+            enddo
           endif
         endif
      endif

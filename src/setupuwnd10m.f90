@@ -53,7 +53,7 @@ subroutine setupuwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use gridmod, only: nsig
   use gridmod, only: get_ij,twodvar_regional,regional,rotate_wind_xy2ll
   use constants, only: zero,tiny_r_kind,one,one_tenth,half,wgtlim,rd,grav,&
-            two,cg_term,three,four,five,ten,huge_single,r1000,,r3600,&
+            two,cg_term,three,four,five,ten,huge_single,r1000,r3600,&
             grav_ratio,flattening,grav,deg2rad,grav_equator,somigliana, &
             semi_major_axis
   use jfunc, only: jiter,last,miter
@@ -410,8 +410,7 @@ subroutine setupuwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
        if (spdob<one .and. spdges >=ten ) wflate=four*data(ier,i) ! Tyndall/Horel type QC
      endif
 
-
-     ratio_errors=error/(data(ier,i)+drpx+wflate+1.0e6*rhgh+four*rlow)
+     ratio_errors=error/(data(ier,i)+drpx+wflate+1.0e6_r_kind*rhgh+four*rlow)
 
 !    Invert observation error
      error=one/error
