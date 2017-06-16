@@ -34,7 +34,7 @@ module gridio
   use mpisetup, only: nproc
   use netcdf_io
   use params,   only: nlevs, cliptracers, datapath, arw, nmm, datestring, &
-                      pseudo_rh
+                      pseudo_rh, nmm_restart
   use mpeu_util, only: getindex
 
   implicit none
@@ -779,11 +779,10 @@ contains
     read(datestring(5:6),'(i2)') imonth
     read(datestring(7:8),'(i2)') iday
     read(datestring(9:10),'(i2)') ihour
-    if (nmm) then
-!       varstrname = 'NSTART_HOUR'
-!       allocate(vargrid_native(1,1,1))
-!       vargrid_native(1,1,1) = ihour
-!       call writenetcdfdata(filename,vargrid_native,varstrname,1,1,1)
+    if (nmm .and. nmm_restart) then
+       varstrname = 'NSTART_HOUR'
+       vargrid_native(1,1,1) = ihour
+       call writenetcdfdata(filename,vargrid_native,varstrname,1,1,1)
     end if
     !
     !  update START_DATE, SIMULATION_START_DATE, GMT, JULYR, JULDAY 
