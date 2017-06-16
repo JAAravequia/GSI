@@ -163,8 +163,8 @@ install:
 clean:
 	@echo
 	@echo '==== CLEAN ==================================================='
-	- $(RM) global_enkf *.o *.mod *.MOD *.lst *.a *.x
-	- $(RM) loadmap.txt log.make.global_enkf
+	- $(RM) $(EXE_FILE) *.o *.mod *.MOD *.lst *.a *.x *__genmod*
+	- $(RM) loadmap.txt log.make.$(EXE_FILE)
 	- $(MAKE) -f ${MAKE_FILE} doclean
 
 

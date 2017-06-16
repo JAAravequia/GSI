@@ -125,6 +125,7 @@ logical,public :: regional = .false.
 logical,public :: use_gfs_nemsio = .false.
 logical,public :: arw = .false.
 logical,public :: nmm = .true.
+logical,public :: nmm_restart = .true.
 logical,public :: nmmb = .false.
 logical,public :: letkf_flag = .false.
 ! next two are no longer used, instead they are inferred from anavinfo
@@ -155,7 +156,7 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    newpc4pred,nmmb,nhr_anal,fhr_assim,nbackgrounds,save_inflation,nobsl_max,&
                    letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
                    locvertopt, lochoropt, covinflatenh,covinflatesh,covinflatetr,lnsigcovinfcutoff
-namelist /nam_wrf/arw,nmm
+namelist /nam_wrf/arw,nmm,nmm_restart
 namelist /satobs_enkf/sattypes_rad,dsis
 namelist /ozobs_enkf/sattypes_oz
 
