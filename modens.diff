@@ -1,6 +1,6 @@
 diff -urN ../src/enkf/controlvec.f90 enkf/controlvec.f90
---- ../src/enkf/controlvec.f90	2017-05-22 19:30:35.050754000 +0000
-+++ enkf/controlvec.f90	2017-06-07 16:01:16.126803000 +0000
+--- controlvec.f90	2017-05-22 19:30:35.050754000 +0000
++++ controlvec.f90	2017-06-07 16:01:16.126803000 +0000
 @@ -14,7 +14,7 @@
  !  controlvec_cleanup: deallocate allocatable arrays.
  !
@@ -99,8 +99,8 @@ diff -urN ../src/enkf/controlvec.f90 enkf/controlvec.f90
  end subroutine controlvec_cleanup
  
 diff -urN ../src/enkf/enkf.f90 enkf/enkf.f90
---- ../src/enkf/enkf.f90	2017-05-22 19:30:34.674582000 +0000
-+++ enkf/enkf.f90	2017-06-08 02:53:25.601713000 +0000
+--- enkf.f90	2017-05-22 19:30:34.674582000 +0000
++++ enkf.f90	2017-06-08 02:53:25.601713000 +0000
 @@ -112,7 +112,8 @@
                    biasprednorm, oberrvar_orig, probgrosserr, prpgerr,&
                    corrlengthsq,lnsigl,obtimel,obloclat,obloclon,obpress,stattype
@@ -271,8 +271,8 @@ diff -urN ../src/enkf/enkf.f90 enkf/enkf.f90
  call mpi_allreduce(buffertmp,obsprd_post,nobstot,mpi_real4,mpi_sum,mpi_comm_world,ierr)
  if (nproc == 0) print *,'time to broadcast obsprd_post = ',mpi_wtime()-t1
 diff -urN ../src/enkf/enkf_main.f90 enkf/enkf_main.f90
---- ../src/enkf/enkf_main.f90	2017-05-22 19:30:34.818153000 +0000
-+++ enkf/enkf_main.f90	2017-06-07 16:02:30.215690000 +0000
+--- enkf_main.f90	2017-05-22 19:30:34.818153000 +0000
++++ enkf_main.f90	2017-06-07 16:02:30.215690000 +0000
 @@ -32,7 +32,7 @@
  ! program history log:
  !   2009-02-23  Initial version.
@@ -302,8 +302,8 @@ diff -urN ../src/enkf/enkf_main.f90 enkf/enkf_main.f90
   ! Initialize derived radinfo variables
   call init_rad_vars()
 diff -urN ../src/enkf/enkf_obsmod.f90 enkf/enkf_obsmod.f90
---- ../src/enkf/enkf_obsmod.f90	2017-05-22 19:30:34.800373000 +0000
-+++ enkf/enkf_obsmod.f90	2017-06-08 02:56:47.834188000 +0000
+--- enkf_obsmod.f90	2017-05-22 19:30:34.800373000 +0000
++++ enkf_obsmod.f90	2017-06-08 02:56:47.834188000 +0000
 @@ -97,7 +97,7 @@
  use kinds, only : r_kind, r_double, i_kind, r_single
  use constants, only: zero, one, deg2rad, rad2deg, rd, cp, pi
@@ -323,8 +323,8 @@ diff -urN ../src/enkf/enkf_obsmod.f90 enkf/enkf_obsmod.f90
  tdiff = mpi_wtime()-t1
  call mpi_reduce(tdiff,tdiffmax,1,mpi_real4,mpi_max,0,mpi_comm_world,ierr)
 diff -urN ../src/enkf/letkf.F90 enkf/letkf.F90
---- ../src/enkf/letkf.F90	2017-05-22 19:30:34.989722000 +0000
-+++ enkf/letkf.F90	2017-06-16 19:25:07.858092000 +0000
+--- letkf.F90	2017-05-22 19:30:34.989722000 +0000
++++ letkf.F90	2017-06-16 19:25:07.858092000 +0000
 @@ -93,12 +93,13 @@
                    iassim_order,sortinc,deterministic,nlevs,&
                    zhuberleft,zhuberright,varqc,lupd_satbiasc,huber,letkf_novlocal,&
@@ -671,8 +671,8 @@ diff -urN ../src/enkf/letkf.F90 enkf/letkf.F90
     end do
  enddo
 diff -urN ../src/enkf/loadbal.f90 enkf/loadbal.f90
---- ../src/enkf/loadbal.f90	2017-05-22 19:30:35.324090000 +0000
-+++ enkf/loadbal.f90	2017-06-07 16:06:04.211261000 +0000
+--- loadbal.f90	2017-05-22 19:30:35.324090000 +0000
++++ loadbal.f90	2017-06-07 16:06:04.211261000 +0000
 @@ -61,7 +61,7 @@
  !  obtime_chunk(nobs_max): (serial enkf only) real array of ob times of ob priors
  !   being updated on this task (expressed as an offset from the analysis time in
@@ -838,8 +838,8 @@ diff -urN ../src/enkf/loadbal.f90 enkf/loadbal.f90
        do nn=1,ncdim
         do i=1,numptsperproc(np)
 diff -urN ../src/enkf/Makefile.dependency.gfs enkf/Makefile.dependency.gfs
---- ../src/enkf/Makefile.dependency.gfs	2017-05-22 19:30:35.035924000 +0000
-+++ enkf/Makefile.dependency.gfs	2017-06-15 18:54:17.319142000 +0000
+--- Makefile.dependency.gfs	2017-05-22 19:30:35.035924000 +0000
++++ Makefile.dependency.gfs	2017-06-15 18:54:17.319142000 +0000
 @@ -9,7 +9,7 @@
  inflation.o : inflation.f90 smooth_gfs.o loadbal.o gridinfo_gfs.o controlvec.o covlocal.o  params.o mpisetup.o 
  innovstats.o : innovstats.f90   params.o enkf_obsmod.o 
@@ -850,8 +850,8 @@ diff -urN ../src/enkf/Makefile.dependency.gfs enkf/Makefile.dependency.gfs
  mpi_readobs.o : mpi_readobs.f90 mpisetup.o readozobs.o readsatobs.o readconvobs.o  params.o 
  mpisetup.o : mpisetup.F90  
 diff -urN ../src/enkf/mpi_readobs.f90 enkf/mpi_readobs.f90
---- ../src/enkf/mpi_readobs.f90	2017-05-22 19:30:35.184229000 +0000
-+++ enkf/mpi_readobs.f90	2017-06-08 02:57:00.830981000 +0000
+--- mpi_readobs.f90	2017-05-22 19:30:35.184229000 +0000
++++ mpi_readobs.f90	2017-06-08 02:57:00.830981000 +0000
 @@ -51,7 +51,7 @@
                        sprd_ob, ensmean_ob, ensmean_obbc, ob, &
                        oberr, oblon, oblat, obpress, &
@@ -935,8 +935,8 @@ diff -urN ../src/enkf/mpi_readobs.f90 enkf/mpi_readobs.f90
  !$omp end parallel do
         print *, 'prior spread conv: ', minval(sprd_ob(1:nobs_conv)), maxval(sprd_ob(1:nobs_conv))
 diff -urN ../src/enkf/params.f90 enkf/params.f90
---- ../src/enkf/params.f90	2017-05-22 19:30:34.690671000 +0000
-+++ enkf/params.f90	2017-06-15 16:12:46.020618000 +0000
+--- params.f90	2017-05-22 19:30:34.690671000 +0000
++++ params.f90	2017-06-15 16:12:46.020618000 +0000
 @@ -78,6 +78,7 @@
  logical, public :: deterministic, sortinc, pseudo_rh, &
                     varqc, huber, cliptracers, readin_localization
@@ -1027,8 +1027,8 @@ diff -urN ../src/enkf/params.f90 enkf/params.f90
  ! check for deprecated namelist variables
     if (nvars > 0 .or. massbal_adjust) then
 diff -urN ../src/enkf/readconvobs.f90 enkf/readconvobs.f90
---- ../src/enkf/readconvobs.f90	2017-05-22 19:30:35.420446000 +0000
-+++ enkf/readconvobs.f90	2017-06-07 16:08:32.084946000 +0000
+--- readconvobs.f90	2017-05-22 19:30:35.420446000 +0000
++++ readconvobs.f90	2017-06-07 16:08:32.084946000 +0000
 @@ -213,7 +213,7 @@
                              x_lon, x_lat, x_press, x_time, x_code,         &
                              x_errorig, x_type, x_used, id, nanal)
@@ -1078,8 +1078,8 @@ diff -urN ../src/enkf/readconvobs.f90 enkf/readconvobs.f90
        print *,'number of obs not what expected in get_convobs_data',nob,nobs_max
        call stop2(94)
 diff -urN ../src/enkf/readozobs.f90 enkf/readozobs.f90
---- ../src/enkf/readozobs.f90	2017-05-22 19:30:34.864359000 +0000
-+++ enkf/readozobs.f90	2017-06-07 16:08:47.885036000 +0000
+--- readozobs.f90	2017-05-22 19:30:34.864359000 +0000
++++ readozobs.f90	2017-06-07 16:08:47.885036000 +0000
 @@ -127,7 +127,7 @@
             x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
  
@@ -1120,8 +1120,8 @@ diff -urN ../src/enkf/readozobs.f90 enkf/readozobs.f90
    if (nob /= nobs_max) then
        print *,'number of obs not what expected in get_ozobs_data',nob,nobs_max
 diff -urN ../src/enkf/readsatobs.f90 enkf/readsatobs.f90
---- ../src/enkf/readsatobs.f90	2017-05-22 19:30:34.833727000 +0000
-+++ enkf/readsatobs.f90	2017-06-07 16:08:40.261335000 +0000
+--- readsatobs.f90	2017-05-22 19:30:34.833727000 +0000
++++ readsatobs.f90	2017-06-07 16:08:40.261335000 +0000
 @@ -152,7 +152,7 @@
  subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
             x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
@@ -1164,8 +1164,8 @@ diff -urN ../src/enkf/readsatobs.f90 enkf/readsatobs.f90
    if (nobs /= nobs_max) then
        print *,'number of obs not what expected in get_satobs_data',nobs,nobs_max
 diff -urN ../src/enkf/statevec.f90 enkf/statevec.f90
---- ../src/enkf/statevec.f90	2017-06-06 03:00:36.464946000 +0000
-+++ enkf/statevec.f90	2017-06-07 15:57:28.229059000 +0000
+--- statevec.f90	2017-06-06 03:00:36.464946000 +0000
++++ statevec.f90	2017-06-07 15:57:28.229059000 +0000
 @@ -13,7 +13,7 @@
  !  statevec_cleanup: deallocate allocatable arrays.
  !
