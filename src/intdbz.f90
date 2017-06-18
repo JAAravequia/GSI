@@ -77,7 +77,7 @@ subroutine intdbz_(dbzhead,rval,sval)
   use qcmod, only: nlnqc_iter,varqc_iter
   use gridmod, only: latlon1n
   use gridmod, only: wrf_mass_regional, nems_nmmb_regional
-  use jfunc, only: jiter,l_foto,xhat_dt,dhat_dt
+  use jfunc, only: jiter
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gsi_4dvar, only: ladtest_obs
@@ -128,10 +128,6 @@ subroutine intdbz_(dbzhead,rval,sval)
       call gsi_bundlegetpointer(rval,'qg',rqg,istatus);ier=istatus+ier
     end if
   end if
-  if(l_foto) then
-     write(6,*) "Something is wrong, when run here, stop"
-     stop
-  endif
 
   if(ier/=0)return
 
