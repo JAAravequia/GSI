@@ -81,7 +81,6 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
   use qcmod, only: nlnqc_iter,varqc_iter
   use constants, only: half,one,two,tiny_r_kind,cg_term,zero_quad,r3600
   use gridmod, only: latlon1n
-  use jfunc, only: l_foto,xhat_dt,dhat_dt
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use control_vectors, only : w_exist
@@ -106,8 +105,6 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
   real(r_kind) cg_rw,wgross,wnotgross,rw
   real(r_kind),dimension(max(1,nstep))::pen
   real(r_kind) pg_rw
-  real(r_kind),pointer,dimension(:) :: xhat_dt_u,xhat_dt_v
-  real(r_kind),pointer,dimension(:) :: dhat_dt_u,dhat_dt_v
   real(r_kind),pointer,dimension(:) :: su,sv,sw
   real(r_kind),pointer,dimension(:) :: ru,rv,r_w
   type(rwNode), pointer :: rwptr
@@ -128,12 +125,6 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
     call gsi_bundlegetpointer(sval,'w',sw,istatus);ier=istatus+ier
     call gsi_bundlegetpointer(rval,'w',r_w,istatus);ier=istatus+ier
   end if
-  if(l_foto) then
-     call gsi_bundlegetpointer(xhat_dt,'u',xhat_dt_u,istatus);ier=istatus+ier
-     call gsi_bundlegetpointer(xhat_dt,'v',xhat_dt_v,istatus);ier=istatus+ier
-     call gsi_bundlegetpointer(dhat_dt,'u',dhat_dt_u,istatus);ier=istatus+ier
-     call gsi_bundlegetpointer(dhat_dt,'v',dhat_dt_v,istatus);ier=istatus+ier
-  endif
   if(ier/=0)return
 
   rwptr => rwNode_typecast(rwhead)
@@ -170,25 +161,6 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
                                w5*r_w(j5)+w6*r_w(j6)+w7*r_w(j7)+w8*r_w(j8))*rwptr%sintilt
               facrw = facrw + (w1* sw(j1)+w2* sw(j2)+w3* sw(j3)+w4* sw(j4)+ &
                                w5* sw(j5)+w6* sw(j6)+w7* sw(j7)+w8* sw(j8))*rwptr%sintilt
-           end if
-           if(l_foto) then
-              time_rw=rwptr%time*r3600
-              valrw=valrw+((w1*dhat_dt_u(j1)+w2*dhat_dt_u(j2)+ &
-                            w3*dhat_dt_u(j3)+w4*dhat_dt_u(j4)+              &
-                            w5*dhat_dt_u(j5)+w6*dhat_dt_u(j6)+ &
-                            w7*dhat_dt_u(j7)+w8*dhat_dt_u(j8))*rwptr%cosazm+&
-                           (w1*dhat_dt_v(j1)+w2*dhat_dt_v(j2)+ &
-                            w3*dhat_dt_v(j3)+w4*dhat_dt_v(j4)+              &
-                            w5*dhat_dt_v(j5)+w6*dhat_dt_v(j6)+ &
-                            w7*dhat_dt_v(j7)+w8*dhat_dt_v(j8))*rwptr%sinazm)*time_rw
-              facrw=facrw+((w1*xhat_dt_u(j1)+w2*xhat_dt_u(j2)+ &
-                            w3*xhat_dt_u(j3)+w4*xhat_dt_u(j4)+              &
-                            w5*xhat_dt_u(j5)+w6*xhat_dt_u(j6)+ &
-                            w7*xhat_dt_u(j7)+w8*xhat_dt_u(j8))*rwptr%cosazm+&
-                           (w1*xhat_dt_v(j1)+w2*xhat_dt_v(j2)+ &
-                            w3*xhat_dt_v(j3)+w4*xhat_dt_v(j4)+              &
-                            w5*xhat_dt_v(j5)+w6*xhat_dt_v(j6)+ &
-                            w7*xhat_dt_v(j7)+w8*xhat_dt_v(j8))*rwptr%sinazm)*time_rw  
            end if
            do kk=1,nstep
               rw=facrw+sges(kk)*valrw

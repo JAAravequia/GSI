@@ -50,7 +50,6 @@ subroutine stpdbz(dbzhead,rval,sval,out,sges,nstep)
   use qcmod, only: nlnqc_iter,varqc_iter
   use constants, only: half,one,two,tiny_r_kind,cg_term,zero_quad,r3600
   use gridmod, only: latlon1n
-  use jfunc, only: l_foto,xhat_dt,dhat_dt
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gridmod, only: wrf_mass_regional, nems_nmmb_regional
@@ -78,8 +77,6 @@ subroutine stpdbz(dbzhead,rval,sval,out,sges,nstep)
   real(r_kind) cg_dbz,dbz,wgross,wnotgross
   real(r_kind),dimension(max(1,nstep))::pen
   real(r_kind) pg_dbz
-!  real(r_kind),pointer,dimension(:) :: xhat_dt_u,xhat_dt_v
-!  real(r_kind),pointer,dimension(:) :: dhat_dt_u,dhat_dt_v
   real(r_kind),pointer,dimension(:) :: sqr,sqli,sqs,sqg,sdbz
   real(r_kind),pointer,dimension(:) :: rqr,rqli,rqs,rqg,rdbz
   type(dbzNode), pointer :: dbzptr
@@ -112,10 +109,6 @@ subroutine stpdbz(dbzhead,rval,sval,out,sges,nstep)
       call gsi_bundlegetpointer(rval,'qg',rqg,istatus);ier=istatus+ier
     end if
   end if
-  if(l_foto) then
-     write(6,*) "Something is wrong, when run here, stop"
-     stop
-  endif
   if(ier/=0)return
 
   dbzptr => dbzNode_typecast(dbzhead)

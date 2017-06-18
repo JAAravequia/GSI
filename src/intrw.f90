@@ -110,8 +110,6 @@ subroutine intrw_(rwhead,rval,sval)
 ! Declare local varibles
   integer(i_kind) j1,j2,j3,j4,j5,j6,j7,j8,ier,istatus
 ! real(r_kind) penalty
-  real(r_kind),pointer,dimension(:) :: xhat_dt_u,xhat_dt_v
-  real(r_kind),pointer,dimension(:) :: dhat_dt_u,dhat_dt_v
   real(r_kind) val,valu,valv,w1,w2,w3,w4,w5,w6,w7,w8,valw
   real(r_kind) cg_rw,p0,grad,wnotgross,wgross,time_rw,pg_rw
   real(r_kind),pointer,dimension(:) :: su,sv,sw
