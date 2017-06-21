@@ -22,7 +22,7 @@ if [ "$#" = 8 ] ; then
 else
 # Name of the branch being tested
   updat="dl2rw_2"
-  contrl="dl2rw_2_r93682_vs_r93914"
+  contrl="dl2rw_2_r93914_vs_r94486_r94539"
   export cmaketest="false"
   export clean="false"
   export ptmpName=""

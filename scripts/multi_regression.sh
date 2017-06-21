@@ -16,6 +16,7 @@ regtests_all="global_T62
               rtma
               global_enkf_T62"
 
+regtests_all="global_nemsio_T62"
 regtests_debug="global_T62
                 global_4dvar_T62
                 global_hybrid_T126

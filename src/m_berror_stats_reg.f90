@@ -365,8 +365,8 @@ end subroutine berror_read_bal_reg
   real(r_kind) :: raux
 
   ! corz = sqrt(corz)
-  real(r_kind), parameter :: corz_default=one,hwll_default=100000_r_kind,vz_default=one
-  !real(r_kind), parameter :: corz_default=one,hwll_default=27000.00000000,vz_default=one*10
+  !real(r_kind), parameter :: corz_default=one,hwll_default=100000_r_kind,vz_default=one
+  real(r_kind), parameter :: corz_default=one,hwll_default=27000.00000000,vz_default=one*10
 
   allocate ( clat_avn(mlat) )
   allocate ( sigma_avn(1:msig) )
