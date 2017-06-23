@@ -201,7 +201,6 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) nobdealising !
   integer(i_kind) d2n
   real(r_kind) robvr
-  real(r_kind) rnyq_vel ! the nyq velocity
   real(r_kind):: maxvrdiff=50.0
 
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
@@ -228,6 +227,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! Read and reformat observations in work arrays.
   read(lunin)data,luse,ioid
 
+
 !    index information for data array (see reading routine)
   ier=1       ! index of obs error
   ilon=2      ! index of grid relative obs location (x)
@@ -251,8 +251,6 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   izsges=20   ! index of model (guess) elevation for radar associated with vad wind
   ier2=21     ! index of original-original obs error
   iobs_type=22
-  inyq_vel=23 ! index of the nyq velocity
-  idir3=24 ! index of the nyq velocity
 
   numequal=0
   numnotequal=0
@@ -261,7 +259,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=24+2
+     ioff0=26
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
@@ -295,7 +293,6 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         slat=data(ilate,i)*deg2rad
         wrange=data(irange,i)
         zsges0=data(izsges,i)
-        rnyq_vel=data(inyq_vel,i)
      endif
 
 !    Link observation to appropriate observation bin
@@ -593,53 +590,46 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      cosazm  = cos(data(iazm,i))  ! cos(azimuth angle)
      sinazm  = sin(data(iazm,i))  ! sin(azimuth angle)
 
-     call dhdrange(data(itilt,i),data(irange,i),sintilt)
-     costilt=sqrt(1.0-sintilt*sintilt)
+     costilt = cos(data(itilt,i))
      if(w_exist) then
+       call dhdrange(data(itilt,i),data(irange,i),sintilt)
+       costilt=sqrt(1.0-sintilt*sintilt)
        rwwind = (ugesin*cosazm+vgesin*sinazm)*costilt*factw+(wgesin-vterminal)*sintilt*factw
-     else
-       rwwind = (ugesin*cosazm+vgesin*sinazm)*costilt*factw
      endif
 !    rwwind = (ugesin*cosazm+vgesin*sinazm)*costilt*factw
+     if( .not. w_exist )then
      umaxmax=-huge(umaxmax)
      uminmin=huge(uminmin)
      kminmin=kbeambot
      kmaxmax=kbeamtop
-     !do k=kbeambot,kbeamtop
-     !   rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt
-     !   if(umaxmax<rwwindprofile) then
-     !      umaxmax=rwwindprofile
-     !      kmaxmax=k
-     !   end if
-     !   if(uminmin>rwwindprofile) then
-     !      uminmin=rwwindprofile
-     !      kminmin=k
-     !   end if
-     !end do
-     !rwwind=data(irwob,i)
-     !if(data(irwob,i)<uminmin) then
-     !   rwwind=uminmin
-     !   dpres=kminmin
-     !end if
-     !if(data(irwob,i)>umaxmax) then
-     !   rwwind=umaxmax
-     !   dpres=kmaxmax
-     !end if
+     do k=kbeambot,kbeamtop
+        rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt
+        if(umaxmax<rwwindprofile) then
+           umaxmax=rwwindprofile
+           kmaxmax=k
+        end if
+        if(uminmin>rwwindprofile) then
+           uminmin=rwwindprofile
+           kminmin=k
+        end if
+     end do
+     rwwind=data(irwob,i)
+     if(data(irwob,i)<uminmin) then
+        rwwind=uminmin
+        dpres=kminmin
+     end if
+     if(data(irwob,i)>umaxmax) then
+        rwwind=umaxmax
+        dpres=kmaxmax
+     end if
      if(rwwind==data(irwob,i)) then
         numequal=numequal+1
      else
         numnotequal=numnotequal+1
      end if
+     end if
      
      ddiff = data(irwob,i) - rwwind
-
-     robvr=data(irwob,i)
-     if (abs(ddiff).gt.maxvrdiff.and.vr_dealisingopt.and.1.gt.2) then
-      d2n=int(ddiff/rnyq_vel)
-      robvr=robvr-d2n*rnyq_vel
-      ddiff=robvr-rwwind
-      nobdealising=nobdealising+1
-     endif
 
      if (doradaroneob) then
        if(oneobvalue .gt. -900) then
@@ -840,8 +830,8 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(22,ii) = factw              ! 10m wind reduction factor
         rdiagbuf(23,ii)=data(irange,i) ! the range in km
         rdiagbuf(24,ii) = robvr ! after possible dealising in this step
-        rdiagbuf(25,ii) = data(24,i)
-        rdiagbuf(26,ii) = data(25,i)
+        rdiagbuf(25,ii) = data(23,i)
+        rdiagbuf(26,ii) = data(24,i)
 
         ioff=ioff0
         if (lobsdiagsave) then

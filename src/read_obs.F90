@@ -184,7 +184,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
 
   filename2=trim(filename)
   filename2=filename2(1:6)
-  if(dtype.eq.'rw'.or.dtype.eq.'dbz') then
+  if(dtype.eq.'dbz') then
      filename2='dbzvol'
   endif
 
@@ -1450,8 +1450,13 @@ subroutine read_obs(ndata,mype)
 
 !            Process radar winds
              else if (obstype == 'rw') then
-                call read_radar_wind_ascii(nread,npuse,nouse,infile,lunout,obstype,twind,sis,&
-                                hgtl_full,nobs_sub1(1,i),hlocal(i),vlocal(i))
+                if( trim(infile) == 'vr_vol' )then
+                  call read_radar_wind_ascii(nread,npuse,nouse,infile,lunout,obstype,twind,sis,&
+                                  hgtl_full,nobs_sub1(1,i),hlocal(i),vlocal(i))
+                else
+                  call read_radar(nread,npuse,nouse,infile,lunout,obstype,twind,sis,&
+                                  hgtl_full,nobs_sub1(1,i),hlocal(i),vlocal(i))
+                end if
                 string='READ_RADAR_WIND'
 
 !            Process radar reflectivity from MRMS

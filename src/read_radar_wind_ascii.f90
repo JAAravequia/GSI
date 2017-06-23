@@ -152,7 +152,7 @@ subroutine read_radar_wind_ascii(nread,ndata,nodata,infile,lunout,obstype,twind,
   real(r_kind),parameter :: r8     = 8.0_r_kind
   real(r_kind),parameter:: r6 = 6.0_r_kind
   real(r_kind),parameter:: r360=360.0_r_kind
-  integer(i_kind),parameter:: maxdat=25_i_kind         ! Used in generating cdata array
+  integer(i_kind),parameter:: maxdat=24_i_kind         ! Used in generating cdata array
   integer(i_kind),parameter:: izero=0_i_kind, ione=1_i_kind
   
 !--Derived data type declaration
@@ -610,9 +610,8 @@ real(r_kind) :: mintilt,maxtilt,maxobrange,minobrange
 	            cdata_all(20,iout)=zsges		                 ! model elevation at radar site
 	            cdata_all(21,iout)=thiserr
 	            cdata_all(22,iout)=two                              ! Level 2 data
-	     	    cdata_all(23,iout) = strct_in_vel(1,k)%nyq_vel   ! nyq vel (m/s)
-                    cdata_all(24,iout) = hloc
-                    cdata_all(25,iout) = vloc
+                    cdata_all(23,iout) = hloc
+                    cdata_all(24,iout) = vloc
 
                 if(doradaroneob .and. (cdata_all(5,iout) .gt. -99) )goto 987
 

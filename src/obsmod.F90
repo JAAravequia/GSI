@@ -405,7 +405,7 @@ module obsmod
   public :: ntilt_radarfiles
   public :: whichradar
   public :: i_dbz_ob_type
-  public :: vr_dealisingopt, if_vterminal, if_model_dbz
+  public :: vr_dealisingopt, if_vterminal, if_model_dbz, obs_dep_loc
 
   public :: doradaroneob,oneoblat,oneoblon
   public :: oneobddiff,oneobvalue,oneobheight,oneobradid
@@ -562,7 +562,7 @@ module obsmod
   integer(i_kind) ntilt_radarfiles
 
   logical ::  doradaroneob
-  logical :: vr_dealisingopt, if_vterminal, if_model_dbz
+  logical :: vr_dealisingopt, if_vterminal, if_model_dbz, obs_dep_loc
   character(4) :: whichradar,oneobradid
   real(r_kind) :: oneoblat,oneoblon,oneobddiff,oneobvalue,oneobheight
   logical :: radar_no_thinning
@@ -640,9 +640,10 @@ contains
     integer(i_kind) i
 
     ntilt_radarfiles=1
-    vr_dealisingopt=.true.
-    if_vterminal=.true.
+    vr_dealisingopt=.false.
+    if_vterminal=.false.
     if_model_dbz=.true.
+    obs_dep_loc=.false.
     whichradar="KKKK"
 
     oneobradid="KKKK"
@@ -1300,6 +1301,7 @@ allocate(ditype(nall),ipoint(nall))
 ! variables participating in state vector
 dval_use = .false. 
 do ii=1,nrows
+   if( obs_dep_loc ) then
    read(utable(ii),*) dfile(ii),& ! local file name from which to read observatinal data
                       dtype(ii),& ! character string identifying type of observatio
                       dplat(ii),& ! currently contains satellite id (no meaning for non-sat data)
@@ -1309,6 +1311,17 @@ do ii=1,nrows
                       dsfcalc(ii),& ! use orig bilinear FOV surface calculation (routine deter_sfc)
                       hlocal(ii), & !horizontal covariance localization for this ob
                       vlocal(ii) !vertical covariance localization for this ob
+   else
+   read(utable(ii),*) dfile(ii),& ! local file name from which to read observatinal data
+                      dtype(ii),& ! character string identifying type of observatio
+                      dplat(ii),& ! currently contains satellite id (no meaning for non-sat data)
+                      dsis(ii), & ! sensor/instrument/satellite identifier for info files
+                      dval(ii), & !
+                      dthin(ii),& ! thinning flag (1=thinning on; otherwise off)
+                      dsfcalc(ii)
+                      hlocal(ii) = 100.0
+                      vlocal(ii) = 0.55
+   end if
 
    ! The following is to sort out some historical naming conventions
    select case (dsis(ii)(1:4))
