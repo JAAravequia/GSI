@@ -43,6 +43,12 @@ elif [ -d /scratch4/NCEPDEV/da ]; then # Theia
    elif [ -d /scratch4/NCEPDEV/global/noscrub/$LOGNAME ]; then 
      export noscrub="/scratch4/NCEPDEV/global/noscrub/$LOGNAME"
    fi
+elif [ -d /glade/p/ral/jnt/GSI_DTC/regression_data ]; then #NCAR machine
+   if [ "$HOSTNAME" == "yslogin"*  ]; then  #yellowstone
+     export machine="Yellowstone"
+   else
+     export machine="Cheyenne"
+   fi
 elif [ -d /gpfs/tp1/ptmp ]; then # LUNA or SURGE
    export machine="LUNA"
    export noscrub="/gpfs/tp1/ptmp/$LOGNAME"
@@ -94,6 +100,24 @@ elif [[ "$machine" = "WCOSS" ]]; then
 
    export accnt=""
 
+elif [[ "$machine" = "Cheyenne" ]]; then
+
+   if [[ "$cmaketest" = "false" ]]; then
+     export basedir="/glade/u/home/$LOGNAME/comgsi"
+   fi 
+   export group="dev"
+   export queue="regular"
+
+   export ptmp="/glade/scratch/$LOGNAME/$ptmpName"
+
+   export fixcrtm="/glade/p/ral/jnt/GSI_DTC/fix/CRTM_2.2.3/Big_Endian"
+   export casesdir="/glade/p/ral/jnt/GSI_DTC/regression_data/CASES"
+   export ndate="/glade/p/ral/jnt/tools/WRF/v3.6.1/UPPV2.2/src/ndate/ndate.exe"
+
+   export check_resource="no"
+
+   export accnt="P48503002"
+
 elif [[ "$machine" = "LUNA" ]]; then
 
    if [[ "$cmaketest" = "false" ]]; then
@@ -133,14 +157,14 @@ elif [[ "$machine" = "s4" ]]; then
 fi
 
 if [[ "$cmaketest" = "false" ]]; then
-  export builddir=$noscrub/build
-  export gsisrc="$basedir/$updat/src"
-  export gsiexec_updat="$gsisrc/global_gsi"
-  export gsiexec_contrl="$basedir/$contrl/src/global_gsi"
+  export builddir=$HOME/comgsi/build-cheyenne2
+  export gsisrc="$basedir/src"
+  export gsiexec_updat="$builddir/gsi.x"
+  export gsiexec_contrl="$builddir/gsi.x"
   export enkfexec_updat="$gsisrc/enkf/global_enkf"
   export enkfexec_contrl="$basedir/$contrl/src/enkf/global_enkf"
-  export fixgsi="$basedir/$updat/fix"
-  export scripts="$basedir/$updat/scripts"
+  export fixgsi="$basedir/fix"
+  export scripts="$basedir/scripts"
 fi
 # Paths to tmpdir and savedir base on ptmp
 export tmpdir="$ptmp"

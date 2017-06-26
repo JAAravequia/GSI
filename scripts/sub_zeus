@@ -88,7 +88,8 @@ output=${output:-$jobname.out}
 myuser=$LOGNAME
 myhost=$(hostname)
 
-DATA=/scratch4/NCEPDEV/stmp4/$LOGNAME/tmp
+#DATA=/scratch4/NCEPDEV/stmp4/$LOGNAME/tmp
+DATA=/glade/scratch/$LOGNAME/tmp
 mkdir -p $DATA
 
 #partition=${partition:-c1ms}
@@ -114,7 +115,7 @@ echo "#PBS -o $output"                     >> $cfile
 echo "#PBS -N $jobname"                    >> $cfile
 echo "#PBS -q $queue"                      >> $cfile
 echo "#PBS -l walltime=$timew"             >> $cfile
-echo "#PBS -l nodes=$nodes:ppn=$procs"     >> $cfile
+echo "#PBS -l select=$nodes:ncpus=$procs"     >> $cfile
 echo "#PBS -j oe"                          >> $cfile
 echo "#PBS -A "$accnt                      >> $cfile
 echo "#PBS -V"                             >> $cfile
@@ -195,6 +196,6 @@ if [[ -w $SUBLOG ]];then
   jobn=$(grep -i submitted $ofile|head -n1|cut -d\" -f2)
   date -u +"%Y%m%d%H%M%S : $subcmd : $jobn" >>$SUBLOG
 fi
-rm $cfile $ofile
+#rm $cfile $ofile
 [[ $MKDATA = YES ]] && rmdir $DATA
 exit $rc

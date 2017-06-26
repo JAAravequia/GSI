@@ -68,7 +68,7 @@ else
 fi
 export NLAT=$((${LATA}+2))
 
-
+ndate="/glade/p/ral/jnt/tools/WRF/v3.6.1/UPPV2.2/src/ndate/ndate.exe"
 # Given the analysis date, compute the date from which the
 # first guess comes.  Extract cycle and set prefix and suffix
 # for guess and observation data files
@@ -431,14 +431,14 @@ echo "Time after diagnostic loop is `date` "
 
 
 # If requested, clean up $tmpdir
-if [[ "$CLEAN" = "YES" ]];then
-   if [[ $rc -eq 0 ]];then
-      rm -rf $tmpdir
-      cd $tmpdir
-      cd ../
-      rmdir $tmpdir
-   fi
-fi
+#if [[ "$CLEAN" = "YES" ]];then
+#   if [[ $rc -eq 0 ]];then
+#      rm -rf $tmpdir
+#      cd $tmpdir
+#      cd ../
+#      rmdir $tmpdir
+#   fi
+#fi
 
 
 # End of script

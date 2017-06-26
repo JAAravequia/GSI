@@ -4,7 +4,8 @@ case $regtest in
 
     global_T62)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[ "$machine" = "Theia" || "$machine" = "Cheyenne" ]]; then
+           echo "HOOOAHHH"
            topts[1]="0:30:00" ; popts[1]="12/3/" ; ropts[1]="/1"
            topts[2]="0:30:00" ; popts[2]="12/9/" ; ropts[2]="/2"
            sub_cmd="sub_zeus"
@@ -28,7 +29,7 @@ case $regtest in
 
     global_T62_ozonly)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[[ "$machine" = "Theia" || "$machine" = "Cheyenne" ]]]; then
             topts[1]="0:15:00" ; popts[1]="12/1/" ; ropts[1]="/1"
             topts[2]="0:15:00" ; popts[2]="12/3/" ; ropts[2]="/2"
             sub_cmd="sub_zeus"
@@ -52,7 +53,7 @@ case $regtest in
 
     global_4dvar_T62)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[[ "$machine" = "Theia"  ||  "$machine" = "Cheyenne" ]]]; then
             topts[1]="0:15:00" ; popts[1]="12/3/" ; ropts[1]="/1"
             topts[2]="0:15:00" ; popts[2]="12/5/" ; ropts[2]="/2"
             sub_cmd="sub_zeus"
@@ -68,7 +69,7 @@ case $regtest in
 
         if [ "$debug" = ".true." ] ; then
            topts[1]="0:45:00"
-           if [[ "$machine" = "Theia" ]]; then
+        if [[[ "$machine" = "Theia"  ||  "$machine" = "Cheyenne" ]]]; then
               popts[1]="12/5/"
            elif [[ "$machine" = "WCOSS" ]]; then
               popts[1]="16/4/"
@@ -81,7 +82,7 @@ case $regtest in
 
     global_hybrid_T126)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[[ "$machine" = "Theia"  ||  "$machine" = "Cheyenne" ]]]; then
            topts[1]="0:15:00" ; popts[1]="12/3/" ; ropts[1]="/1"
            topts[2]="0:15:00" ; popts[2]="12/5/" ; ropts[2]="/2"
            sub_cmd="sub_zeus"
@@ -105,7 +106,7 @@ case $regtest in
 
     global_lanczos_T62)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[[ "$machine" = "Theia"  ||  "$machine" = "Cheyenne" ]]]; then
            topts[1]="0:20:00" ; popts[1]="12/3/" ; ropts[1]="/1"
            topts[2]="0:20:00" ; popts[2]="12/5/" ; ropts[2]="/2"
            sub_cmd="sub_zeus"
@@ -129,7 +130,7 @@ case $regtest in
 
     global_nemsio_T62)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[[ "$machine" = "Theia"  ||  "$machine" = "Cheyenne" ]]]; then
            topts[1]="0:15:00" ; popts[1]="12/3/" ; ropts[1]="/1"
            topts[2]="0:15:00" ; popts[2]="12/9/" ; ropts[2]="/2"
            sub_cmd="sub_zeus"
@@ -153,7 +154,7 @@ case $regtest in
 
     arw_binary | arw_netcdf)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[[ "$machine" = "Theia"  ||  "$machine" = "Cheyenne" ]]]; then
             topts[1]="0:15:00" ; popts[1]="4/4/"  ; ropts[1]="/1"
             topts[2]="0:15:00" ; popts[2]="6/6/"  ; ropts[2]="/1"
             sub_cmd="sub_zeus"
@@ -177,7 +178,7 @@ case $regtest in
 
     nmm_binary )
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[[ "$machine" = "Theia"  ||  "$machine" = "Cheyenne" ]]]; then
             topts[1]="0:30:00" ; popts[1]="6/6/"  ; ropts[1]="/1"
             topts[2]="0:30:00" ; popts[2]="8/8/"  ; ropts[2]="/1"
             sub_cmd="sub_zeus"
@@ -201,7 +202,7 @@ case $regtest in
 
     nmm_netcdf)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[[ "$machine" = "Theia"  ||  "$machine" = "Cheyenne" ]]]; then
             topts[1]="0:15:00" ; popts[1]="4/2/"  ; ropts[1]="/1"
             topts[2]="0:15:00" ; popts[2]="4/4/"  ; ropts[2]="/1"
             sub_cmd="sub_zeus"
@@ -225,7 +226,7 @@ case $regtest in
 
     nmmb_nems_4denvar)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[[ "$machine" = "Theia"  ||  "$machine" = "Cheyenne" ]]]; then
             topts[1]="0:30:00" ; popts[1]="7/10/"  ; ropts[1]="/1"
             topts[2]="0:30:00" ; popts[2]="9/10/"  ; ropts[2]="/1"
             sub_cmd="sub_zeus"
@@ -249,7 +250,7 @@ case $regtest in
 
     rtma)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[[ "$machine" = "Theia"  ||  "$machine" = "Cheyenne" ]]]; then
             topts[1]="0:15:00" ; popts[1]="8/6/"  ; ropts[1]="/1"
             topts[2]="0:15:00" ; popts[2]="8/8/"  ; ropts[2]="/1"
             sub_cmd="sub_zeus"
@@ -273,7 +274,7 @@ case $regtest in
 
     hwrf_nmm_d2 | hwrf_nmm_d3)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[[ "$machine" = "Theia"  ||  "$machine" = "Cheyenne" ]]]; then
             topts[1]="0:20:00" ; popts[1]="6/6/"  ; ropts[1]="/1"
             topts[2]="0:20:00" ; popts[2]="8/8/"  ; ropts[2]="/1"
             sub_cmd="sub_zeus"
@@ -297,7 +298,7 @@ case $regtest in
 
     global_enkf_T62)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[[ "$machine" = "Theia"  ||  "$machine" = "Cheyenne" ]]]; then
             topts[1]="0:15:00" ; popts[1]="12/3/" ; ropts[1]="/1"
             topts[2]="0:15:00" ; popts[2]="12/5/" ; ropts[2]="/2"
             sub_cmd="sub_zeus"
@@ -348,11 +349,16 @@ export tmpregdir
 export result
 export scaling
 
-if [[ "$machine" = "Theia" ]]; then
+if [[ "$machine" = "Theia" ]]; then 
    export MPI_BUFS_PER_PROC=256
    export MPI_BUFS_PER_HOST=256
    export MPI_GROUP_MAX=256
    export APRUN="mpirun -v -np \$PBS_NP"
+elif [[ "$machine" = "Cheyenne" ]]; then
+   export MPI_BUFS_PER_PROC=256
+   export MPI_BUFS_PER_HOST=256
+   export MPI_GROUP_MAX=256
+   export APRUN="mpiexec_mpt "
 elif [[ "$machine" = "WCOSS" ]]; then
    export MP_USE_BULK_XFER=yes
    export MP_BULK_MIN_MSG_SIZE=64k
