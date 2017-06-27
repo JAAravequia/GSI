@@ -618,7 +618,7 @@ while [[ $imem -le $ENSEND ]]; do
    if [ -s $SFCANL ] ; then
       rm -f $SFCANL
    fi
-   if [ $DOIAU = YES && -s $SFCA03 ] ; then
+   if [ $DOIAU = YES -a -s $SFCA03 ] ; then
       rm -f $SFCA03
    fi
    if [ -s $GSISTAT ] ; then
@@ -651,9 +651,7 @@ while [[ $imem -le $ENSEND ]]; do
    echo "MEMBER $imem : $status" | tee -a $EOMGGRP
 
    if [ $SENDDBN = YES ]; then
-      if [ $NST_GSI -eq 3 ] ; then
-         $DBNROOT/bin/dbn_alert MODEL GFS_ENKF $job $SFCGCY
-      else
+      if [ $NST_GSI -ne 3 ] ; then
          $DBNROOT/bin/dbn_alert MODEL GFS_ENKF $job $SFCANL
       fi
    fi

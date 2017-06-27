@@ -1,7 +1,9 @@
 ####################################
-# Specify Special Fcst Vars
+# Specify Special Vars
 ####################################
 #
+export NCP=${NCP:-cpreq}
+
 # Set executable and script
 export SIGHDR=${SIGHDR:-${EXECgsm}/nemsio_get}
 export SFCHDR=${SFCHDR:-${EXECgsm}/nemsio_get}

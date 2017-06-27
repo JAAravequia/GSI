@@ -450,7 +450,7 @@ subroutine read_files(mype)
      hrdifsig_all(i) = hrdifsig(i)
   end do
   if(mype == 0) write(6,*)'READ_FILES:  atm fcst files used in analysis  :  ',&
-       (ifilesig(i),i=1,nfldsig),(hrdifsig(i),i=1,nfldsig),ntguessig
+       (ifilesig(i),i=1,nfldsig),(hrdifsig(i),i=1,nfldsig),nfldsig,ntguessig
   if (ntguessig==0) then
      write(6,*)'READ_FILES: ***ERROR*** center atm fcst NOT AVAILABLE: PROGRAM STOPS'
      call stop2(99)
@@ -468,13 +468,20 @@ subroutine read_files(mype)
      hrdifsfc_all(i) = hrdifsfc(i)
   end do
   if(mype == 0) write(6,*)'READ_FILES:  sfc fcst files used in analysis:  ',&
-       (ifilesfc(i),i=1,nfldsfc),(hrdifsfc(i),i=1,nfldsfc),ntguessfc
+       (ifilesfc(i),i=1,nfldsfc),(hrdifsfc(i),i=1,nfldsfc),nfldsfc,ntguessfc
   if (ntguessfc==0) then
      write(6,*)'READ_FILES: ***ERROR*** center sfc fcst NOT AVAILABLE: PROGRAM STOPS'
      call stop2(99)
   endif
   if (l4densvar .and. nfldsfc/=ntlevs_ens) then
      write(6,*)'READ_FILES: ***ERROR*** insufficient sfc fcst for 4densvar:  PROGRAM STOPS'
+     call stop2(99)
+  endif
+
+! Ensure same number of atmospheric and surface backgrounds files
+  if (nfldsig /= nfldsfc ) then
+     write(6,*)'READ_FILES: ***ERROR*** inconsistent number of atm and sfc backgrounds:  PROGRAM STOPS'
+     write(6,*)'READ_FILES:  nfldsig=',nfldsig,' nfldsfc=',nfldsfc
      call stop2(99)
   endif
   
@@ -489,13 +496,18 @@ subroutine read_files(mype)
        hrdifnst_all(i) = hrdifnst(i)
     end do
     if(mype == 0) write(6,*)'READ_FILES:  nst fcst files used in analysis:  ',&
-         (ifilenst(i),i=1,nfldnst),(hrdifnst(i),i=1,nfldnst),ntguesnst
+         (ifilenst(i),i=1,nfldnst),(hrdifnst(i),i=1,nfldnst),nfldnst,ntguesnst
     if (ntguesnst==0) then
        write(6,*)'READ_FILES: ***ERROR*** center nst fcst NOT AVAILABLE: PROGRAM STOPS'
        call stop2(99)
     endif
     if (l4densvar .and. nfldnst/=ntlevs_ens) then
        write(6,*)'READ_FILES: ***ERROR*** insufficient nst fcst for 4densvar:  PROGRAM STOPS'
+       call stop2(99)
+    endif
+    if (nfldsig /= nfldnst .or. nfldsfc /= nfldnst ) then
+       write(6,*)'READ_FILES: ***ERROR*** inconsistent number of atm, sfc, nst backgrounds:  PROGRAM STOPS'
+       write(6,*)'READ_FILES:  nfldsig=',nfldsig,' nfldsfc=',nfldsfc,' nfldnst=',nfldnst
        call stop2(99)
     endif
     deallocate(time_nst)

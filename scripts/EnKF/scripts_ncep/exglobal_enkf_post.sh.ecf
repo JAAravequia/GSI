@@ -418,7 +418,7 @@ FHEND=$FHMAX
 FH=$FHBEG
 
 if [[ "$SMOOTH_ENKF" = "YES" ]]; then
-   cp $HYBENSMOOTH ./hybens_smoothinfo
+   $NCP $HYBENSMOOTH ./hybens_smoothinfo
 fi
 
 if [[ "$MPMD" = "YES" ]]; then
@@ -522,12 +522,12 @@ then
    until [[ $FH -gt $FHEND ]];do
       [[ $FH -lt 10 ]]&&FH=0$FH
       FH3=0$FH
-      cp sfg_${CDATE}_fhr${FH}_ensmean       ${SIGENSMEAN}${FH3}${MEMBER_PREFIX}ensmean${MEMBER_SUFFIX}
-      cp bfg_${CDATE}_fhr${FH}_ensmean       ${SFCENSMEAN}${FH3}${MEMBER_PREFIX}ensmean${MEMBER_SUFFIX}
-      cp sfg_${CDATE}_fhr${FH}_ensmean.nc4   ${SIGENSMEAN}${FH3}${MEMBER_PREFIX}ensmean.nc4
-      cp sfg_${CDATE}_fhr${FH}_ensspread.nc4 ${SIGENSMEAN}${FH3}${MEMBER_PREFIX}ensspread.nc4
+      $NCP sfg_${CDATE}_fhr${FH}_ensmean       ${SIGENSMEAN}${FH3}${MEMBER_PREFIX}ensmean${MEMBER_SUFFIX}
+      $NCP bfg_${CDATE}_fhr${FH}_ensmean       ${SFCENSMEAN}${FH3}${MEMBER_PREFIX}ensmean${MEMBER_SUFFIX}
+      $NCP sfg_${CDATE}_fhr${FH}_ensmean.nc4   ${SIGENSMEAN}${FH3}${MEMBER_PREFIX}ensmean.nc4
+      $NCP sfg_${CDATE}_fhr${FH}_ensspread.nc4 ${SIGENSMEAN}${FH3}${MEMBER_PREFIX}ensspread.nc4
       if [ $NST_GSI -gt 0 ]; then
-         cp nfg_${CDATE}_fhr${FH}_ensmean    ${NSTENSMEAN}${FH3}${MEMBER_PREFIX}ensmean${MEMBER_SUFFIX}
+         $NCP nfg_${CDATE}_fhr${FH}_ensmean    ${NSTENSMEAN}${FH3}${MEMBER_PREFIX}ensmean${MEMBER_SUFFIX}
       fi
       FH=`expr $FH + $FHOUT`
    done
@@ -542,7 +542,7 @@ then
       until [[ $FH -gt $FHEND ]];do
          [[ $FH -lt 10 ]]&&FH=0$FH
          FH3=0$FH
-         cp sfg_${CDATE}_fhr${FH}${ENKF_SUFFIX}$member_tmp ${SIGENS_OUT}${FH3}${ENKF_SUFFIX}${MEMBER_PREFIX}${member}${MEMBER_SUFFIX}
+         $NCP sfg_${CDATE}_fhr${FH}${ENKF_SUFFIX}$member_tmp ${SIGENS_OUT}${FH3}${ENKF_SUFFIX}${MEMBER_PREFIX}${member}${MEMBER_SUFFIX}
          FH=`expr $FH + $FHOUT`
       done
       (( imem = $imem + 1 ))
@@ -554,12 +554,12 @@ then
    FH=$FHBEG
    until [[ $FH -gt $FHEND ]];do
       [[ $FH -lt 10 ]]&&FH=0$FH
-      cp sfg_${CDATE}_fhr${FH}_ensmean ${SIGENSMEAN}${FH}_ensmean
-      cp bfg_${CDATE}_fhr${FH}_ensmean ${SFCENSMEAN}${FH}_ensmean
-      cp sfg_${CDATE}_fhr${FH}_ensmean.nc4   ${SIGENSMEAN}${FH}_ensmean.nc4
-      cp sfg_${CDATE}_fhr${FH}_ensspread.nc4 ${SIGENSMEAN}${FH}_ensspread.nc4
+      $NCP sfg_${CDATE}_fhr${FH}_ensmean ${SIGENSMEAN}${FH}_ensmean
+      $NCP bfg_${CDATE}_fhr${FH}_ensmean ${SFCENSMEAN}${FH}_ensmean
+      $NCP sfg_${CDATE}_fhr${FH}_ensmean.nc4   ${SIGENSMEAN}${FH}_ensmean.nc4
+      $NCP sfg_${CDATE}_fhr${FH}_ensspread.nc4 ${SIGENSMEAN}${FH}_ensspread.nc4
       if [ $NST_GSI -gt 0 ]; then
-         cp nfg_${CDATE}_fhr${FH}_ensmean ${NSTENSMEAN}${FH}_ensmean
+         $NCP nfg_${CDATE}_fhr${FH}_ensmean ${NSTENSMEAN}${FH}_ensmean
       fi
       FH=`expr $FH + $FHOUT`
    done
@@ -572,7 +572,7 @@ then
       FH=$FHBEG
       until [[ $FH -gt $FHEND ]];do
          [[ $FH -lt 10 ]]&&FH=0$FH
-         cp sfg_${CDATE}_fhr${FH}${ENKF_SUFFIX}$member ${SIGENS_OUT}${FH}${ENKF_SUFFIX}${member}
+         $NCP sfg_${CDATE}_fhr${FH}${ENKF_SUFFIX}$member ${SIGENS_OUT}${FH}${ENKF_SUFFIX}${member}
          FH=`expr $FH + $FHOUT`
       done
       (( imem = $imem + 1 ))

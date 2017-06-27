@@ -9,7 +9,7 @@
 #BSUB -M 3072
 #BSUB -extsched 'CRAYLINUX[]'
 #BSUB -W 01:00
-#BSUB -cwd /gpfs/hps/emc/global/noscrub/emc.glopara/svn/gfs/work/gdas.v14.1.0/driver
+#BSUB -cwd /gpfs/hps/emc/global/noscrub/emc.glopara/svn/gfs/q3fy17_final/gdas.v14.1.0/driver
 
 set -x
 ulimit -s unlimited
@@ -20,7 +20,7 @@ export ntasks=80
 export ptile=6
 export threads=1
 
-export CDATE=2017011900
+export CDATE=2017040700
 
 
 #############################################################
@@ -42,7 +42,7 @@ export DATAROOT=/gpfs/hps/stmp/$LOGNAME/test
 export gdas_ver=v14.1.0
 export global_shared_ver=v14.1.0
 export grib_util_ver=1.0.3
-export prod_util_ver=1.0.5
+export prod_util_ver=1.0.8
 
 
 #############################################################
@@ -70,7 +70,7 @@ export NTHREADS_ENKF=$threads
 #############################################################
 # Set user specific variables
 #############################################################
-export NWTEST=/gpfs/hps/emc/global/noscrub/emc.glopara/svn/gfs/work
+export NWTEST=/gpfs/hps/emc/global/noscrub/emc.glopara/svn/gfs/q3fy17_final
 export PARA_CONFIG=$NWTEST/gdas.${gdas_ver}/driver/para_config.gdas_enkf_inflate_recenter
 export JOBGLOBAL=$NWTEST/gdas.${gdas_ver}/jobs
 

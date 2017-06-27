@@ -140,6 +140,20 @@ module radinfo
   real(r_kind),allocatable,dimension(:,:):: cbias     ! angle dependent bias for satellite channels
   real(r_kind),allocatable,dimension(:,:):: predx     ! coefficients for predictor part of bias correction
 
+! radiance bias correction terms are as follows:
+!  pred(1,:)  = global offset
+!  pred(2,:)  = zenith angle predictor, is not used and set to zero now
+!  pred(3,:)  = cloud liquid water predictor for clear-sky microwave radiance assimilation
+!  pred(4,:)  = square of temperature laps rate predictor
+!  pred(5,:)  = temperature laps rate predictor
+!  pred(6,:)  = cosinusoidal predictor for SSMI/S ascending/descending bias
+!  pred(7,:)  = sinusoidal predictor for SSMI/S
+!  pred(8,:)  = emissivity sensitivity predictor for land/sea differences
+!  pred(9,:)  = fourth order polynomial of angle bias correction
+!  pred(10,:) = third order polynomial of angle bias correction
+!  pred(11,:) = second order polynomial of angle bias correction
+!  pred(12,:) = first order polynomial of angle bias correction
+
   real(r_kind),allocatable,dimension(:,:):: varA
   real(r_kind),allocatable,dimension(:):: ostats
   real(r_quad),allocatable,dimension(:,:):: rstats

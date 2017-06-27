@@ -4,10 +4,7 @@ export COM_IN=/gpfs/hps/ptmp/emc.glopara/com2/gfs/para
 export COM_OUT=/gpfs/hps/ptmp/emc.glopara/com2/gfs/test
 export SENDDBN=YES
 export SAVEGES=NO
-export GETGES_NWG=/gpfs/hps/ptmp/emc.glopara/com2/gfs/nwges2
 export gesenvir=para
-export GETGES_COM=/gpfs/hps/ptmp/emc.glopara/com2
-export GESROOT=/gpfs/hps/ptmp/emc.glopara/com2/gfs/nwges2
 export KEEPDATA=NO
 
 

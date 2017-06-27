@@ -2127,6 +2127,7 @@ contains
     integer(i_kind) :: ii,jj,istatus
     logical :: skipit_
 
+    istatus=0
     skipit_=.false.
     if (present(skipit)) then
        skipit_=skipit

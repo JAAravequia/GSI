@@ -1,7 +1,10 @@
 ####################################
-# Specify Special Fcst Vars
+# Specify Special Vars
 ####################################
 #
+export RUN_PROD=${RUN_PROD:-"YES"}
+export NCP=${NCP:-cpreq}
+
 # Set executable, script, fix
 export GSIEXEC=${GSIEXEC:-$EXECgsi/global_gsi}
 export ANALYSISSH=${ANALYSISSH:-$SCRgsi/exglobal_analysis.sh.ecf}
@@ -152,8 +155,6 @@ export AIRSBF=${AIRSBF:-${COMINgdas}/${PREINP}airsev.tm00.bufr_d}
 export IASIBF=${IASIBF:-${COMINgdas}/${PREINP}mtiasi.tm00.bufr_d}
 export ESIASI=${ESIASI:-${COMINgdas}/${PREINP}esiasi.tm00.bufr_d}
 export IASIDB=${IASIDB:-${COMINgdas}/${PREINP}iasidb.tm00.bufr_d}
-export AMSREBF=${AMSREBF:-${COMINgdas}/${PREINP}amsre.tm00.bufr_d}
-export AMSR2BF=${AMSR2BF:-${COMINgdas}/${PREINP}amsr2.tm00.bufr_d}
 export GMI1CRBF=${GMI1CRBF:-${COMINgdas}/${PREINP}gmi1cr.tm00.bufr_d}
 export SAPHIRBF=${SAPHIRBF:-${COMINgdas}/${PREINP}saphir.tm00.bufr_d}
 export SEVIRIBF=${SEVIRIBF:-${COMINgdas}/${PREINP}sevcsr.tm00.bufr_d}
@@ -167,7 +168,6 @@ export CRISFSDB=${CRISFSDB:-${COMINgdas}/${PREINP}crisfsdb.tm00.bufr_d}
 export ATMSBF=${ATMSBF:-${COMINgdas}/${PREINP}atms.tm00.bufr_d}
 export ESATMS=${ESATMS:-${COMINgdas}/${PREINP}esatms.tm00.bufr_d}
 export ATMSDB=${ATMSDB:-${COMINgdas}/${PREINP}atmsdb.tm00.bufr_d}
-export SSMITBF=${SSMITBF:-${COMINgdas}/${PREINP}ssmit.tm00.bufr_d}
 export SSMISBF=${SSMISBF:-${COMINgdas}/${PREINP}ssmisu.tm00.bufr_d}
 export SBUVBF=${SBUVBF:-${COMINgdas}/${PREINP}osbuv8.tm00.bufr_d}
 export GOMEBF=${GOMEBF:-${COMINgdas}/${PREINP}gome.tm00.bufr_d}
@@ -208,44 +208,15 @@ export NSTG08=${NSTG08:-${COMINenkfg}/${PREINPENSg}nstf008.ensmean.nemsio}
 export NSTG09=${NSTG09:-${COMINenkfg}/${PREINPENSg}nstf009.ensmean.nemsio}
 
 # Set non-assimilated obs fles as /dev/null to prevent reading
+#export AMSREBF=${AMSREBF:-${COMIN}/${PREINP}amsre.tm00.bufr_d}
+#export SSMITBF=${SSMITBF:-${COMIN}/${PREINP}ssmit.tm00.bufr_d}
+#export AMSR2BF=${AMSR2BF:-${COMIN}/${PREINP}amsr2.tm00.bufr_d}
+
 export GSNDBF=${GSNDBF:-/dev/null}
 export AMSREBF=${AMSREBF:-/dev/null}
 export SSMITBF=${SSMITBF:-/dev/null}
+export AMSR2BF=${AMSR2BF:-/dev/null}
 
-############################################################################ 
-#
-# Check grib date of current snogrb vs that of prev cycle 
-#
-# if cdate_of_snogrb -le cdate_of_snoprv, i.e. file has not been updated 
-#   then set namelist input to CYCLEXEC to use the snow from the guess
-#   FNSNOA=" ";CYCLVARS="FSNOL=99999.,FSNOS=99999.,"
-#   FNSNOA is the name of the snow depth  analysis file 
-#     when not supplied, signals to CYCLEXEC to blend guess and climatology
-#     (Note: file must be " ", not "" or the shell syntax for default
-#      values X=${X:-default} will reset to default if X="")
-#     FSNOL=99999.,FSNOS=99999., sets the blending of guess and climo to
-#		use 100% guess
-#
-####################################
-prev_cdate=$($NDATE -6 ${PDY}$cyc)
-RUN_GETGES=${RUN_GETGES:-YES}        # Set to NO if not running getges.sh
-if [ $RUN_GETGES = YES ]; then
- GETGESSH=${GETGESSH:-getges.sh}
- export gesenvir=${gesenvir:-$envir}
- snoprv=$($GETGESSH -q -t snogrb_$JCAP_ENKF -e $gesenvir -n gdas -v $prev_cdate)
-else
- snoprv=${snoprv:-$FNSNOG}
-fi
-if [ `$WGRIB -4yr ${FNSNOA} 2>/dev/null|grep -i snowc |\
-	  awk -F: '{print $3}'|awk -F= '{print $2}'` -le \
-     `$WGRIB -4yr $snoprv 2>/dev/null |grep -i snowc  |\
-			awk -F: '{print $3}'|awk -F= '{print $2}'` ] ; then
-	export FNSNOA=" "
-	export CYCLVARS="FSNOL=99999.,FSNOS=99999.,"
-else
-     export SNOW_NUDGE_COEFF=${SNOW_NUDGE_COEFF:-0.}
-     export CYCLVARS="FSNOL=${SNOW_NUDGE_COEFF},$CYCLVARS"
-fi
 
 ############################################################################ 
 #
@@ -258,7 +229,7 @@ export ABIASAIR=/dev/null
 
 export SFCANL=${SFCANL:-$COMOUT/${PREINP}sfcanl.ensmean.nemsio}
 export SFCGCY=${SFCGCY:-$COMOUT/${PREINP}gcyanl.ensmean.nemsio}
-export NSTANL=${NSTANL:-$COMOUT/${PREINP}atmanl.ensmean.nemsio}
+export NSTANL=${NSTANL:-$COMOUT/${PREINP}nstanl.ensmean.nemsio}
 export ABIASe=${ABIASe:-$COMOUT/${PREINP}biascr_int.ensmean}
 export GSISTAT=${GSISTAT:-${COMOUT}/${PREINP}gsistat.ensmean}
 export CNVSTAT=${CNVSTAT:-${COMOUT}/${PREINP}cnvstat.ensmean}
@@ -278,32 +249,11 @@ export IGEN=${IGEN:-82}
 #
 # Define Previous Guess File Names (dev users must provide from outside)
 ####################################
-err1=0
-if [ $RUN_GETGES = YES ]; then
-  export gesenvir=${gesenvir:-$envir}
-  $GETGESSH -t biascr -r ${JCAP_ges}$LEVS_ges -v ${PDY}$cyc -e $gesenvir -n gdas gbias
-err1=$?
-  $GETGESSH -t biascr_pc -r ${JCAP_ges}$LEVS_ges -v ${PDY}$cyc -e $gesenvir -n gdas gbias_pc
-  $GETGESSH -t biascr_air -r ${JCAP_ges}${LEVS_ges} -v $PDY$cyc -e $gesenvir -n gdas gbias_air
-  $GETGESSH -t radstat -r ${JCAP_ges}$LEVS_ges -v ${PDY}$cyc -e $gesenvir -n gdas gradstat
-fi
 
 export GBIAS=${GBIAS:-$DATA/gbias}
 export GRADSTAT=${GRADSTAT:-$DATA/gradstat}
 export GBIASPC=${GBIASPC:-$DATA/gbias_pc}
 export GBIASAIR=${GBIASAIR:-$DATA/gbias_air}
-
-
-if [ $err1 -eq 0 ] ; then
-   msg="Analysis Starting/Guess Fields Found"
-   postmsg "$jlogfile" "$msg"
-else
-   msg="FATAL ERROR:  Analysis Cannot Start/Guess Fields Not Available"
-   postmsg "$jlogfile" "$msg"
-   export pgm=$job
-   export err=911
-   err_chk
-fi
 
 
 # Set namelist jobs for ensemble data selection
