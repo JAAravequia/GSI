@@ -1,0 +1,23 @@
+setenv HDF5_ROOT /glade/apps/opt/hdf5/1.8.16/intel/16.0.2
+setenv WRFPATH  /glade/p/work/wrfhelp/PRE_COMPILED_CODE_CHEYENNE/WRFV3.9_intel_dmpar_large-file
+module load intel/16.0.3 netcdf/4.4.1 mkl/10.3.11 cmake/3.3.1
+
+modules 
+  1) ncarenv/1.0        3) intel/16.0.3         5) netcdf/4.4.1    7) mkl/10.3.11
+  2) ncarbinlibs/1.1    4) ncarcompilers/1.0    6) cmake/3.3.1
+
+cmake -DBUILD_CORELIBS=ON -DHDF5_m_LIBRARY_RELEASE:FILEPATH=/usr/lib64/libm.so -DHDF5_rt_LIBRARY_RELEASE:FILEPATH=/usr/lib64/librt.so -DHDF5_dl_LIBRARY_RELEASE:FILEPATH=/usr/lib64/libdl.so -DCMAKE_EXE_LINKER_FLAGS:STRING="-parallel" ..
+
+For gnu compilers--
+setenv HDF5_ROOT /glade/apps/opt/hdf5/1.8.16/gnu/5.3.0/
+setenv WRFPATH /glade/p/work/wrfhelp/PRE_COMPILED_CODE/WRFV3.7.1_gnu_dmpar_large-file/
+setenv CC mpicc
+setenv CXX mpicxx
+
+  1) ncarenv/1.0        3) cmake/3.3.1    5) ncarcompilers/1.0    7) lapack/3.7.0
+  2) ncarbinlibs/1.1    4) gnu/5.3.0      6) netcdf/4.4.0
+cmake -DBUILD_CORELIBS=ON -DLAPACK_lapack_LIBRARY:FILEPATH=/glade/u/apps/opt/netlib/lapack.3.7.0/lib/liblapack.a -DBLAS_blas_LIBRARY:FILEPATH=/glade/u/apps/opt/netlib/lapack.3.7.0/lib/libblas.a ..
+
+
+
+BRARY_RELEASE:FILEPATH=/usr/lib64/libm.so -DHDF5_rt_LIBRARY_RELEASE:FILEPATH=/usr/lib64/librt.so -DHDF5_sz_LIBRARY_RELEASE:FILEPATH=/glade/apps/opt/netcdf/4.4.1/intel/16.0.3/lib/libsz.socmake -DNETCDF_INCLUDES:PATH=/glade/apps/opt/netcdf/4.4.1/intel/16.0.3/include -DNETCDF_INCLUDES_F90:PATH=/glade/apps/opt/netcdf/4.4.1/intel/16.0.3/include -DNETCDF_LIBRARIES:STRING="/glade/apps/opt/netcdf/4.4.1/intel/16.0.3/lib/libnetcdff.so;/glade/apps/opt/netcdf/4.4.1/intel/16.0.3/lib/libnetcdf.so" -DNETCDF_LIBRARIES_C:FILEPATH=/glade/apps/opt/netcdf/4.4.1/intel/16.0.3/lib/libnetcdf.so -DNETCDF_LIBRARIES_F90:FILEPATH=/glade/apps/opt/netcdf/4.4.1/intel/16.0.3/lib/libnetcdff.so -DNETCDF_META:FILEPATH=/glade/apps/opt/netcdf/4.4.1/intel/16.0.3/include/netcdf_meta.h -DNETCDF_flib:FILEPATH=/glade/apps/opt/netcdf/4.4.1/intel/16.0.3/lib/libnetcdff.a -DHDF5_C_INCLUDE_DIR:PATH=/glade/apps/opt/netcdf/4.4.1/intel/16.0.3/include -DHDF5_Fortran_HL_INCLUDE_DIR:PATH=/glade/apps/opt/hdf5/1.8.16/intel/16.0.2/include -DHDF5_HL_INCLUDE_DIR:PATH=/glade/apps/opt/netcdf/4.4.1/intel/16.0.3/include -DHDF5_dl_LIBRARY_RELEASE:FILEPATH=/usr/lib64/libdl.so -DHDF5_hdf5_LIBRARY_RELEASE:FILEPATH=/glade/apps/opt/netcdf/4.4.1/intel/16.0.3/lib/libhdf5.so -DHDF5_hdf5_fortran_LIBRARY_RELEASE:FILEPATH=/glade/apps/opt/hdf5/1.8.16/intel/16.0.2/lib/libhdf5_fortran.so -DHDF5_hdf5_hl_LIBRARY_RELEASE:FILEPATH=/glade/apps/opt/hdf5/1.8.16/intel/16.0.2/lib/libhdf5_hl.so -DHDF5_hdf5hl_fortran_LIBRARY_RELEASE:FILEPATH=/glade/apps/opt/hdf5/1.8.16/intel/16.0.2/lib/libhdf5hl_fortran.so -DHDF5_m_LIBRARY_RELEASE:FILEPATH=/usr/lib64/libm.so -DHDF5_rt_LIBRARY_RELEASE:FILEPATH=/usr/lib64/librt.so -DHDF5_sz_LIBRARY_RELEASE:FILEPATH=/glade/apps/opt/netcdf/4.4.1/intel/16.0.3/lib/libsz.so -DHDF5_z_LIBRARY_RELEASE:FILEPATH=/glade/apps/opt/netcdf/4.4.1/intel/16.0.3/lib/libz.so -DBUILD_CORELIBS=ON $HOME/comgsi
