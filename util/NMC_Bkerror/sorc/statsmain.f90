@@ -67,12 +67,13 @@ program statsmain
 
   namelist/namstat/jcap,jcapin,jcapsmooth,nsig,nlat,nlon,maxcases, &
                    hybrid,smoothdeg,biasrm,vertavg,nems
-
+print*,'before initial setup'
 ! MPI initial setup
   call mpi_init(ierror)
   call mpi_comm_size(mpi_comm_world,npe,ierror)
   call mpi_comm_rank(mpi_comm_world,mype,ierror)
 
+print*,'before initial defaults'
 ! Initialize defaults for namelist variables
   call init_defaults
 
@@ -90,6 +91,7 @@ program statsmain
     write(6,namstat)
   endif
 
+print*,'before create grids'
   if(mype==0) write(6,*) 'INITIALIZE VARIABLES'
   call create_grids
   call create_mapping
@@ -97,24 +99,31 @@ program statsmain
   call initvars(mype,npe)
   call init_mpi_vars(nsig,mype)
 
+print*,'before inisph'
+
 ! need coefficients for finite differencing
   if(mype==0) write(6,*) 'GET FINITE DIFFERENCE COEFFS'
   call inisph(rearth,rlats(2),wgtlats(2),nlon,nlat-2)
 
+print*,'before detersubdomain'
 ! Call routine to do subdomain decomposition based on
 ! grid size and number of pe's
   call deter_subdomain(mype)
   call init_commvars(mype)
 
+print*,'before getcases'
 
 ! Make call to see how many available files there are
   if(mype==0) write(6,*) 'COUNT NUMBER OF AVAILABLE CASES'
   call getcases(numcases,mype)
 
+print*,'before readpairs'
 ! Read in spectral coeffs and right out subdomain grids to scratch files
   call readpairs(npe,mype,numcases)
   
   if(biasrm) call biascor(numcases,mype)
+
+print*,'before balprojs'
 
 ! Get balance projection matrices
   call balprojs(numcases,mype)

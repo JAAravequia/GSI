@@ -49,6 +49,7 @@ subroutine getcases(numcases,mype)
 
   if (nems) then
     call nemsio_init(iret=iret)
+
     !if (iret /= 0) call error_msg('getcases',trim(filename(loop)),null,'init',istop,iret)
   endif
 

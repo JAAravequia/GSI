@@ -14,7 +14,7 @@ setenv CALCSTATS_EXEC $GSIDIR/util/NMC_Bkerror/sorc/calcstats.exe
 
 # Set Input Resolution and path to lagged pairs database
 setenv JCAPIN 574
-setenv NEMS no
+setenv NEMS yes
 if ( $NEMS == "yes") then
   setenv PERTURBDIR /scratch4/NCEPDEV/da/noscrub/Catherine.Thomas/bkerror/sig_fcst/nems
 else
