@@ -88,9 +88,6 @@ elif [[ "$machine" = "WCOSS" ]]; then
 
    export fixcrtm="/da/save/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix_update"
    export casesdir="/da/noscrub/Michael.Lueken/CASES"
-#FOR RTMA
-   export casesdir="/meso/noscrub/Runhua.Yang/IC_spring2017_RTMA.v2.6.0"
-
    export ndate="/nwprod/util/exec/ndate"
 
    export check_resource="yes"
@@ -195,8 +192,8 @@ export nmm_binary_obs="$casesdir/regional/ndas_binary/$nmm_binary_adate"
 export nmm_binary_ges="$casesdir/regional/ndas_binary/$nmm_binary_adate"
 export nmm_netcdf_obs="$casesdir/regional/ndas_binary/$nmm_netcdf_adate"
 export nmm_netcdf_ges="$casesdir/regional/nmm_netcdf/$nmm_netcdf_adate"
-export rtma_obs="$casesdir/$rtma_adate"
-export rtma_ges="$casesdir/$rtma_adate"
+export rtma_obs="$casesdir/regional/rtma_binary/$rtma_adate"
+export rtma_ges="$casesdir/regional/rtma_binary/$rtma_adate"
 export hwrf_nmm_obs="$casesdir/regional/hwrf_nmm/$hwrf_nmm_adate"
 export hwrf_nmm_ges="$casesdir/regional/hwrf_nmm/$hwrf_nmm_adate"
 
