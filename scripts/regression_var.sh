@@ -22,7 +22,8 @@ if [ "$#" = 8 ] ; then
 else
 # Name of the branch being tested
   updat="dl2rw_2"
-  contrl="dl2rw_2_r93914_vs_r94486_r94539"
+  contrl="dl2rw_2_r94486_r94539_vs_r95049"
+  contrl="trunk_r95049"
   export cmaketest="false"
   export clean="false"
   export ptmpName=""
@@ -73,7 +74,7 @@ if [[ "$machine" = "Theia" ]]; then
 
    export check_resource="no"
 
-   export accnt="ren"
+   export accnt="fv3-cpu"
 
    #  On Theia, there are no scrubbers to remove old contents from stmp* directories.
    #  After completion of regression tests, will remove the regression test subdirecories
@@ -169,7 +170,7 @@ export arw_binary_adate="2010072412"
 export arw_netcdf_adate="2008051112"
 export nmm_binary_adate="2010021600"
 export nmm_netcdf_adate="2007122000"
-export rtma_adate="2016021003"
+export rtma_adate="2017031218"
 export hwrf_nmm_adate="2012102812"
 
 # Paths for canned case data.
