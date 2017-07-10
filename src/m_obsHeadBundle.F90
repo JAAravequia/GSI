@@ -53,6 +53,7 @@ module m_obsHeadBundle
 !   2014-05-07  pondeca  - add howv
 !   2014-06-20  carley/zhu - add tcamt and lcbas pointers
 !   2015-07-10  pondeca  - add cldch
+!   2016-03-17  pondeca  - add uwnd10m and vwnd10m (see setupuwnd10m)
 
 
 ! module interface:
@@ -95,7 +96,9 @@ module m_obsHeadBundle
 
   use m_pm10Node , only:  pm10Node  ! 33
   use m_cldchNode, only: cldchNode  ! 34
-  use m_dbzNode,   only:   dbzNode  ! 35
+  use m_uwnd10mNode, only: uwnd10mNode ! 35
+  use m_vwnd10mNode, only: vwnd10mNode ! 36
+  use m_dbzNode,   only:   dbzNode  ! 37
 
   use m_obsLList , only: obsLList_headNode
 
@@ -158,7 +161,9 @@ module m_obsHeadBundle
     class(obsNode),pointer:: lcbas => null()   ! 32
     class(obsNode),pointer::  pm10 => null()   ! 33
     class(obsNode),pointer:: cldch => null()   ! 34
-    class(obsNode),pointer:: dbz => null()   ! 35
+    class(obsNode),pointer:: uwnd10m => null()   ! 35
+    class(obsNode),pointer:: vwnd10m => null()   ! 36
+    class(obsNode),pointer:: dbz => null()   ! 37
 
   end type obsHeadBundle
 
@@ -264,7 +269,9 @@ subroutine init_(yobs,ibin)
   use m_obsdiags, only: lcbashead       ! =32
   use m_obsdiags, only:  pm10head       ! =33
   use m_obsdiags, only: cldchhead       ! =34
-  use m_obsdiags, only: dbzhead         ! =35
+  use m_obsdiags, only: uwnd10mhead     ! =35
+  use m_obsdiags, only: vwnd10mhead     ! =36
+  use m_obsdiags, only: dbzhead         ! =37
 
   use kinds, only: i_kind
   use mpeu_util, only: assert_
@@ -307,7 +314,9 @@ subroutine init_(yobs,ibin)
   ASSERT(ibin<=size(lcbashead))  ! =32
   ASSERT(ibin<=size( pm10head))  ! =33
   ASSERT(ibin<=size(cldchhead))  ! =34
-  ASSERT(ibin<=size(dbzhead))  ! =35
+  ASSERT(ibin<=size(uwnd10mhead))! =35
+  ASSERT(ibin<=size(vwnd10mhead))! =36
+  ASSERT(ibin<=size(dbzhead))    ! =37
 
   yobs%ps    => obsLList_headNode(   pshead(ibin))    ! = 1
   yobs%t     => obsLList_headNode(    thead(ibin))    ! = 2
@@ -345,7 +354,9 @@ subroutine init_(yobs,ibin)
 
   yobs%pm10  => obsLList_headNode( pm10head(ibin))    ! =33
   yobs%cldch => obsLList_headNode(cldchhead(ibin))    ! =34
-  yobs%dbz   => obsLList_headNode(dbzhead(ibin))      ! =35
+  yobs%uwnd10m => obsLList_headNode(uwnd10mhead(ibin))! =35
+  yobs%vwnd10m => obsLList_headNode(vwnd10mhead(ibin))! =36
+  yobs%dbz   => obsLList_headNode(dbzhead(ibin))      ! =37
 return
 end subroutine init_
 

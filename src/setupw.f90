@@ -157,6 +157,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2016-09-23 Johnson, Y. Wang, X. Wang - write observation dependent horizontal and vertical
 !                                          localization scales into diag file,
 !                                          POC: xuguang.wang@ou.edu
+!   2016-12-13  pondeca - add Tyndall & Horel QC for mesonet winds (WAF 2013, Vol. 8, pg. 285) to GSI's 2dvar option
 !   2017-03-31  Hu      -  addd option l_closeobs to use closest obs to analysis
 !                                     time in analysis
 !
@@ -981,6 +982,12 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            call getwdir(ugesin,vgesin,wdirgesin)
            if ( min(abs(wdirob-wdirgesin),abs(wdirob-wdirgesin+r360), &
                           abs(wdirob-wdirgesin-r360)) > wdirdiffmax ) then
+               error = zero
+               ratio_errors = zero
+           endif
+        endif
+        if (itype==288 .or. itype==295) then !Tyndall & Horel QC for mesonet winds /(WAF 2013, Vol. 28, pg. 285)
+           if (spdob < one .and. (spdob-spdb) > five) then
                error = zero
                ratio_errors = zero
            endif

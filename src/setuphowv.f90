@@ -21,6 +21,9 @@ subroutine setuphowv(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2016-09-23 Johnson, Y. Wang, X. Wang - write observation dependent horizontal and vertical
 !                                          localization scales into diag file,
 !                                          POC: xuguang.wang@ou.edu
+!   2016-08-24  stelios - Added check for errors/=0.0
+!   2016-10-07  pondeca - if(.not.proceed) advance through input file first
+!                          before retuning to setuprhsall.f90
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -130,7 +133,10 @@ subroutine setuphowv(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
-  if(.not.proceed) return  ! not all vars available, simply return
+  if(.not.proceed) then
+     read(lunin)data,luse   !advance through input file
+     return  ! not all vars available, simply return
+  endif
 
 ! If require guess vars available, extract from bundle ...
   call init_vars_
@@ -288,6 +294,7 @@ subroutine setuphowv(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      ddiff=data(ihowv,i)-howvges
 
 ! Adjust observation error
+     if (error<=tiny_r_kind.and.data(ier,i)<=tiny_r_kind) cycle   !#ww3
      ratio_errors=error/data(ier,i)
      error=one/error
 
@@ -532,6 +539,8 @@ subroutine setuphowv(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   call gsi_metguess_get ('var::ps', ivar, istatus )
   proceed=ivar>0
   call gsi_metguess_get ('var::z' , ivar, istatus )
+  proceed=proceed.and.ivar>0
+  call gsi_metguess_get ('var::howv' , ivar, istatus )
   proceed=proceed.and.ivar>0
   end subroutine check_vars_ 
 
