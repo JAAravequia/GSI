@@ -176,6 +176,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
 #endif
   if(trim(dtype) == 'tcp' .or. trim(filename) == 'tldplrso')return
   if(trim(filename) == 'mitmdat' .or. trim(filename) == 'mxtmdat')return
+  if(trim(filename) == 'satmar')return
 
 ! Use routine as usual
   if(lexist)then
@@ -387,11 +388,17 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
        else if(trim(filename) == 'satwndbufr')then
          lexist = .false.
          loop: do while(ireadmg(lnbufr,subset,idate2) >= 0)
+!        5 GOES-R AMVs (NC005030, NC005031, NC005032, NC005034 and NC005039)
+!        are added as the GOES-R bufr file provide do not contain other winds.
+!        May not be necessary with the operational satwnd BUFR
             if(trim(subset) == 'NC005010' .or. trim(subset) == 'NC005011' .or.&
                trim(subset) == 'NC005070' .or. trim(subset) == 'NC005071' .or.&
                trim(subset) == 'NC005044' .or. trim(subset) == 'NC005045' .or.&
                trim(subset) == 'NC005046' .or. trim(subset) == 'NC005064' .or.&
-               trim(subset) == 'NC005065' .or. trim(subset) == 'NC005066') then 
+               trim(subset) == 'NC005065' .or. trim(subset) == 'NC005066' .or.& 
+               trim(subset) == 'NC005030' .or. trim(subset) == 'NC005031' .or.& 
+               trim(subset) == 'NC005032' .or. trim(subset) == 'NC005034' .or.&
+               trim(subset) == 'NC005039') then
                lexist = .true.
                exit loop
             endif
@@ -614,6 +621,7 @@ subroutine read_obs(ndata,mype)
 !   2015-09-04  J. Jung - Added mods for CrIS full spectral resolution (FSR)
 !   2016-03-02  s.liu/carley - remove use_reflectivity and use i_gsdcldanal_type
 !   2016-04-28  J. Jung - added logic for RARS and direct broadcast data from NESDIS/UW.
+!   2016-05-05  pondeca - add 10-m u-wind and v-wind (uwnd10m, vwnd10m)
 !   2016-09-19  Guo     - replaced open(obs_input_common) with "call unformatted_open(obs_input_common)"
 !   
 !
@@ -636,7 +644,7 @@ subroutine read_obs(ndata,mype)
     use general_commvars_mod, only: ltosi,ltosj
     use obsmod, only: iadate,ndat,time_window,dplat,dsfcalc,dfile,dthin, &
            dtype,dval,dmesh,obsfile_all,ref_obs,nprof_gps,dsis,ditype,&
-           oberrflg,perturb_obs,lobserver,lread_obs_save,obs_input_common, &
+           perturb_obs,lobserver,lread_obs_save,obs_input_common, &
            reduce_diag,nobs_sub,dval_use
     use qcmod, only: njqc
     use gsi_4dvar, only: l4dvar
@@ -809,7 +817,8 @@ subroutine read_obs(ndata,mype)
            obstype == 'td2m' .or. obstype=='mxtm' .or. &
            obstype == 'mitm' .or. obstype=='pmsl' .or. &
            obstype == 'howv' .or. obstype=='tcamt' .or. &
-           obstype=='lcbas' .or. obstype=='cldch' .or. obstype == 'larcglb' ) then
+           obstype=='lcbas' .or. obstype=='cldch' .or. obstype == 'larcglb' .or. &
+           obstype=='uwnd10m' .or. obstype=='vwnd10m') then
           ditype(i) = 'conv'
        else if( hirs   .or. sndr      .or.  seviri .or. &
                obstype == 'airs'      .or. obstype == 'amsua'     .or.  &
@@ -1097,8 +1106,8 @@ subroutine read_obs(ndata,mype)
        mype_root_sub(ilarge)=npestart
        npestart=npestart+npe_sub3(ilarge)
        mmdat=mmdat+1
-       if(npestart == npe)npestart=0
        npe_sub3(ilarge)=0
+       if(npestart + minval(npe_sub3, mask=npe_sub3>0)>= npe) npestart=0
     end do loopx
 
 !   Define sub-communicators for each data file
@@ -1150,7 +1159,8 @@ subroutine read_obs(ndata,mype)
        if(ditype(i) =='conv')then
           obstype=dtype(i)
           if (obstype == 't' .or. obstype == 'q'  .or. &
-              obstype == 'uv' .or. obstype == 'wspd10m') then
+              obstype == 'uv' .or. obstype == 'wspd10m' .or. &
+              obstype == 'uwnd10m' .or. obstype == 'vwnd10m') then
               use_prsl_full=.true.
               if(belong(i))use_prsl_full_proc=.true.
           else
@@ -1284,8 +1294,9 @@ subroutine read_obs(ndata,mype)
                  obstype == 'pw' .or. obstype == 'spd'.or. & 
                  obstype == 'gust' .or. obstype == 'vis'.or. &
                  obstype == 'td2m' .or. &
-!                obstype=='mxtm' .or. obstype == 'mitm' .or. &
-                 obstype=='howv' .or. obstype=='pmsl' .or. &
+!                 obstype=='mxtm' .or. obstype == 'mitm' .or. &
+!                 obstype=='howv' .or. obstype=='pmsl' .or. &    #howv #ww3 
+                 obstype=='pmsl' .or. &
                  obstype == 'mta_cld' .or. obstype == 'gos_ctp' .or. &
                  obstype == 'lcbas' .or. obstype == 'cldch' ) then
 
@@ -1300,7 +1311,19 @@ subroutine read_obs(ndata,mype)
                    string='READ_PREPBUFR'
 
                 endif
+             else if(obstype == 'howv') then
+                 if ( index(infile,'satmar') /=0) then
+                   
+                    call read_satmar (nread, npuse, nouse                                  &
+                                     , infile, obstype, lunout, gstime, twind, sis         &
+                                     , nobs_sub1(1,i))
+                    string='READ_SATMAR'
+                 else 
+                   call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
+                        prsl_full,nobs_sub1(1,i),read_rec(i))
+                   string='READ_PREPBUFR'
 
+                 endif
              else if(obstype == 'mitm') then
                 if ( index(infile,'mitmdat') /=0) then
                    call read_mitm_mxtm(nread,npuse,nouse,infile,obstype,lunout,gstime,sis, & 
@@ -1338,7 +1361,8 @@ subroutine read_obs(ndata,mype)
                 end if
 
 !             Process winds in the prepbufr
-            else if(obstype == 'uv' .or. obstype == 'wspd10m') then
+            else if(obstype == 'uv' .or. obstype == 'wspd10m' .or. &
+                    obstype == 'uwnd10m' .or. obstype == 'vwnd10m') then
 !             Process satellite winds which seperate from prepbufr
                 if ( index(infile,'satwnd') /=0 ) then
                   call read_satwnd(nread,npuse,nouse,infile,obstype,lunout,gstime,twind,sis,&

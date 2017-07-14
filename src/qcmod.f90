@@ -58,7 +58,10 @@ module qcmod
 !   2015-09-04  J.Jung  - Added mods for CrIS full spectral resolution (FSR)
 !   2015-09-20  zhu     - use radmod to generalize cloud and aerosol usages in radiance assimilation
 !   2015-09-30  ejones  - add sun glint check in qc_amsr2 
+!   2016-04-18  yang    - add logical closest_obs for choosing the obs. timely
+!                         closest to the analysis time from multiple surface obs. at a station.
 !   2016-05-22  zhu     - add errormod_aircraft
+!   2016-09-16  tong    - Remove tdrgross_fact (not used)
 !   2016-10-20  acollard- Ensure AMSU-A channels 1-6,15 are not assimilated if
 !                         any of these are missing.
 !   2016-11-22  sienkiewicz - fix a couple of typos in HIRS qc
@@ -90,7 +93,6 @@ module qcmod
 !   def dfact1          - time factor for duplicate obs at same location for conv. data
 !   def erradar_inflate - radar error inflation factor
 !   def tdrerr_inflate  - logical variable to inflate obs error for tdr data
-!   def tdrgross_fact   - factor applies to tdr gross error
 !   def npres_print     - number of levels for print
 !   def ptop,pbot       - arrays containing top pressure and bottom pressure of print levels
 !   def ptopq,pbotq     - arrays containing top pressure and bottom pressure of print levels for q
@@ -149,12 +151,12 @@ module qcmod
   public :: qc_saphir
 ! set passed variables to public
   public :: npres_print,nlnqc_iter,varqc_iter,pbot,ptop,c_varqc,njqc,vqc
-  public :: use_poq7,noiqc,vadfile,dfact1,dfact,erradar_inflate,tdrgross_fact
+  public :: use_poq7,noiqc,vadfile,dfact1,dfact,erradar_inflate
   public :: pboto3,ptopo3,pbotq,ptopq,newvad,tdrerr_inflate
   public :: igood_qc,ifail_crtm_qc,ifail_satinfo_qc,ifail_interchan_qc,&
             ifail_gross_qc,ifail_cloud_qc,ifail_outside_range,ifail_scanedge_qc
 
-  public :: buddycheck_t,buddydiag_save
+  public :: buddycheck_t,buddydiag_save,closest_obs
 
   logical nlnqc_iter,njqc,vqc
   logical noiqc
@@ -166,10 +168,11 @@ module qcmod
   logical qc_satwnds
   logical buddycheck_t
   logical buddydiag_save
+  logical closest_obs
 
   character(10):: vadfile
   integer(i_kind) npres_print
-  real(r_kind) dfact,dfact1,erradar_inflate,c_varqc,tdrgross_fact
+  real(r_kind) dfact,dfact1,erradar_inflate,c_varqc
   real(r_kind) varqc_iter
   real(r_kind),allocatable,dimension(:)::ptop,pbot,ptopq,pbotq,ptopo3,pboto3
 
@@ -336,7 +339,6 @@ contains
 
     erradar_inflate   = one
     tdrerr_inflate    = .false.
-    tdrgross_fact     = one
 
     nlnqc_iter= .false.
     noiqc = .false.
@@ -356,6 +358,7 @@ contains
     buddycheck_t=.false.   ! When true, run buddy check algorithm on temperature observations
     buddydiag_save=.false. ! When true, output files containing buddy check QC info for all
                            !  obs run through the buddy check
+    closest_obs=.false.    ! When true, select timely nearest obs.
 
     return
   end subroutine init_qcvars

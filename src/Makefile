@@ -349,7 +349,6 @@ clean:
 	inc2guess.f90 \
 	init_jcdfi.f90 \
 	insitu_info.f90 \
-	int3dvar.f90 \
 	intall.f90 \
         intaod.f90 \
 	intco.f90 \
@@ -388,6 +387,8 @@ clean:
 	intvis.f90 \
 	intw.f90 \
 	intwspd10m.f90 \
+	intuwnd10m.f90 \
+	intvwnd10m.f90 \
 	jcmod.f90 \
 	jfunc.f90 \
 	jgrad.f90 \
@@ -467,6 +468,8 @@ clean:
         m_visNode.F90 \
         m_wNode.F90 \
 	m_wspd10mNode.F90 \
+	m_uwnd10mNode.F90 \
+	m_vwnd10mNode.F90 \
 	mp_compact_diffs_mod1.f90 \
 	mp_compact_diffs_support.f90 \
 	mpimod.F90 \
@@ -544,7 +547,6 @@ clean:
 	statspcp.f90 \
 	statsrad.f90 \
 	stop1.f90 \
-	stp3dvar.f90 \
         stpaod.f90 \
 	stpcalc.f90 \
 	stpco.f90 \
@@ -579,6 +581,8 @@ clean:
 	stpvis.f90 \
 	stpw.f90 \
 	stpwspd10m.f90 \
+	stpuwnd10m.f90 \
+	stpvwnd10m.f90 \
 	strong_bal_correction.f90 \
 	strong_baldiag_inc.f90 \
 	strong_fast_global_mod.f90 \
@@ -607,7 +611,6 @@ clean:
 	unfill_nmm_grid2.f90 \
 	unhalf_nmm_grid2.f90 \
 	update_guess.f90 \
-	update_geswtend.f90 \
 	wind_fft.f90 \
         wrf_mass_guess_mod.f90 \
         wrf_params_mod.f90 \
@@ -662,6 +665,7 @@ clean:
 	read_radar.f90 \
 	read_saphir.f90 \
 	read_satwnd.f90 \
+	read_satmar.f90 \
 	read_sfcwnd.f90 \
 	read_rapidscat.f90 \
 	read_seviri.f90 \
@@ -701,6 +705,8 @@ clean:
 	setupvis.f90 \
 	setupw.f90 \
 	setupwspd10m.f90 \
+	setupuwnd10m.f90 \
+	setupvwnd10m.f90 \
 	sst_retrieval.f90 \
         read_NASA_LaRC_cloud.f90
 
