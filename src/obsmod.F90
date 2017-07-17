@@ -573,7 +573,7 @@ module obsmod
   character(128) obs_input_common
   character(20),allocatable,dimension(:):: obsfile_all
   character(10),allocatable,dimension(:):: dtype,ditype,dplat
-  character(20),allocatable,dimension(:):: dfile
+  character(120),allocatable,dimension(:):: dfile
   character(20),allocatable,dimension(:):: dsis
   real(r_kind) ,allocatable,dimension(:):: dval
   real(r_kind) ,allocatable,dimension(:):: time_window
@@ -1331,7 +1331,7 @@ allocate(ditype(nall),ipoint(nall))
 ! Retrieve each token of interest from table and define
 ! variables participating in state vector
 dval_use = .false. 
-do ii=1,nrows
+do ii=1,nrows0
    if( obs_dep_loc ) then
    read(utable(ii),*) dfile(ii),& ! local file name from which to read observatinal data
                       dtype(ii),& ! character string identifying type of observatio

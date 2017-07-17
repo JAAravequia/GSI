@@ -1,4 +1,4 @@
-subroutine general_read_nmmb_radar(grd,filename,mype,g_z,g_ps,g_u,g_v,g_w,g_qr,g_qli,g_qi,g_ql,g_dbz,g_dw,g_tv,g_tsen,g_q,g_oz)
+subroutine general_read_nmmb_radar(grd,filename,mype,g_z,g_ps,g_u,g_v,g_w,g_qr,g_qli,g_ql,g_qi,g_dbz,g_dw,g_tv,g_tsen,g_q,g_oz)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    general_read_nmmb_radar is same as general_read_nmmb but for reading in more variables
@@ -125,8 +125,6 @@ subroutine general_read_nmmb_radar(grd,filename,mype,g_z,g_ps,g_u,g_v,g_w,g_qr,g
 
                     g_rho(j,i,k)=(g_prsl(j,i,k)/(g_tv(j,i,k)*rd))*r1000
               end if
-              call gsi_nemsio_read_fractionnew('f_rain','f_ice','clwmr','f_rimef','mid layer',kr, &
-                   g_qi(:,:,k),g_qli(:,:,k),g_qr(:,:,k),g_ql(:,:,k), mype,mype_input)
 
 
             if( dbz_exist )then
@@ -142,6 +140,8 @@ subroutine general_read_nmmb_radar(grd,filename,mype,g_z,g_ps,g_u,g_v,g_w,g_qr,g
             end if
             end do
         end do
+        call gsi_nemsio_read_fractionnew('f_rain','f_ice','clwmr','f_rimef','mid layer',kr, &
+             g_qi(:,:,k),g_qli(:,:,k),g_qr(:,:,k),g_ql(:,:,k), mype,mype_input)
 	
         if(regional_ozone) then
            if(use_gfs_ozone) then

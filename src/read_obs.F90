@@ -154,6 +154,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   use convinfo, only: nconvtype,ictype,ioctype,icuse
   use chemmod, only : oneobtest_chem,oneob_type_chem,&
        code_pm25_ncbufr,code_pm25_anowbufr,code_pm10_ncbufr,code_pm10_anowbufr
+  use mrmsmod,only: l_mrms_run
 
   implicit none
 
@@ -169,8 +170,6 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   real(r_double) :: satid,rtype
   character(8) subset
 
-  character(len=256) filename2
-
   satid=1      ! debug executable wants default value ???
   idate=0
   nread=0; if(lexist) nread=1   ! in case of a quick return
@@ -180,16 +179,11 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   if(trim(dtype) == 'tcp' .or. trim(filename) == 'tldplrso')return
   if(trim(filename) == 'mitmdat' .or. trim(filename) == 'mxtmdat')return
   if(trim(filename) == 'satmar')return
+  if(trim(dtype) == 'dbz' .and. l_mrms_run )return
 
 ! Use routine as usual
 
-  filename2=trim(filename)
-  filename2=filename2(1:6)
-  if(dtype.eq.'dbz') then
-     filename2='dbzvol'
-  endif
-
-  if(lexist .and. trim(dtype) /= 'tcp' .and. trim(filename2) /= 'dbzvol' )then
+  if(lexist .and. trim(dtype) /= 'tcp' )then
       lnbufr = 15
       open(lnbufr,file=trim(filename),form='unformatted',status ='unknown')
       call openbf(lnbufr,'IN',lnbufr)
@@ -526,10 +520,10 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   !    write(6,*)'read_obs_check: bufr file ',dtype,jsatid,' not available ',trim(filename)
   !end if
 
-  if(lexist .and. trim(dtype) /= 'tcp' .and. trim(filename2) /= 'dbzvol')then
+  if(lexist .and. trim(dtype) /= 'tcp' )then
       write(6,*)'read_obs_check: bufr file date is ',idate,trim(filename),' ',dtype,jsatid
   else
-      if (trim(filename2) /= 'dbzvol') write(6,*)'read_obs_check: bufr file ',dtype,jsatid,' not available ',trim(filename)
+      write(6,*)'read_obs_check: bufr file ',dtype,jsatid,' not available ',trim(filename)
   end if
 
   return
@@ -720,7 +714,7 @@ subroutine read_obs(ndata,mype)
     logical :: acft_profl_file
     character(10):: obstype,platid
     character(22):: string
-    character(15):: infile
+    character(120):: infile
     character(20):: sis
     integer(i_kind) i,j,k,ii,nmind,lunout,isfcalc,ithinx,ithin,nread,npuse,nouse
     integer(i_kind) nprof_gps1,npem1,krsize,len4file,npemax,ilarge,nlarge,npestart

@@ -509,9 +509,9 @@ character(len=8) :: cpe
      
      residual = abs(ddiff)
      ratio    = residual/obserrlm
-     if(miter .eq. 0) then !keep all obs so we can add reflectivity where background is -120 DBZ
+     !if(miter .eq. 0) then !keep all obs so we can add reflectivity where background is -120 DBZ
       if (ratio > cgross(ikx) .or. ratio_errors < tiny_r_kind) then
-        if ( (ratio-cgross(ikx)) <= cgross(ikx) .and. ratio_errors >= tiny_r_kind) then 
+        !if ( (ratio-cgross(ikx)) <= cgross(ikx) .and. ratio_errors >= tiny_r_kind) then 
           ! Since radar reflectivity can be very different from the model background
           ! good observations may be rejected during this QC step.  However, if these observations
           ! are allowed through, they can yield problems with convergence.  Therefore the error
@@ -519,18 +519,18 @@ character(len=8) :: cpe
           ! proportional to the residual.  If this IF-TEST for this inflation fails, the
           ! observation is subsequently rejected.
                     
-           obserror = residual/cgross(ikx)
-           error = one/obserror
+        !   obserror = residual/cgross(ikx)
+        !   error = one/obserror
            
-        else
+        !else
            if (luse(i)) awork(4) = awork(4)+one 
            error = zero 
            ratio_errors = zero 
        
            if(rdBZ.le.5) irejrefsmlobs=irejrefsmlobs+1
-        end if
+        !end if
       end if
-     endif
+     !endif
 
      if (ratio_errors*error <=tiny_r_kind) muse(i)=.false. 
      if (nobskeep>0 .and. luse_obsdiag) muse(i)=obsdiags(i_dbz_ob_type,ibin)%tail%muse(nobskeep)
