@@ -423,7 +423,7 @@ module obsmod
   public :: ntilt_radarfiles
   public :: whichradar
   public :: i_dbz_ob_type
-  public :: vr_dealisingopt, if_vterminal, if_model_dbz, obs_dep_loc
+  public :: vr_dealisingopt, if_vterminal, if_model_dbz, obs_dep_loc, inflate_obserr
 
   public :: doradaroneob,oneoblat,oneoblon
   public :: oneobddiff,oneobvalue,oneobheight,oneobradid
@@ -584,7 +584,7 @@ module obsmod
   integer(i_kind) ntilt_radarfiles
 
   logical ::  doradaroneob
-  logical :: vr_dealisingopt, if_vterminal, if_model_dbz, obs_dep_loc
+  logical :: vr_dealisingopt, if_vterminal, if_model_dbz, obs_dep_loc, inflate_obserr
   character(4) :: whichradar,oneobradid
   real(r_kind) :: oneoblat,oneoblon,oneobddiff,oneobvalue,oneobheight
   logical :: radar_no_thinning
@@ -666,6 +666,7 @@ contains
     vr_dealisingopt=.false.
     if_vterminal=.false.
     if_model_dbz=.true.
+    inflate_obserr=.false.
     obs_dep_loc=.false.
     whichradar="KKKK"
 
