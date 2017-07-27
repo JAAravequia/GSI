@@ -72,7 +72,7 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
    ! Declare local variables
    integer(i_kind):: iret,nlatm2,nlevs,icm
    integer(i_kind):: ier,istatus,iredundant
-   integer(i_kind):: i,j,k,icount
+   integer(i_kind):: i,j,k,icount,kk
    integer(i_kind),dimension(npe)::ilev,iflag,mype_use
    real(r_kind),dimension(grd%nlon,grd%nlat-2):: grid
 
@@ -93,6 +93,7 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
                                                 g_cwmr,g_q,g_oz,g_tv
    real(r_kind),allocatable,dimension(:,:)   :: g_z
    real(r_kind),allocatable,dimension(:,:,:) :: g_u,g_v
+   real(r_kind),pointer,dimension(:,:,:)     :: g_c1,g_c2,g_c3,g_c4,g_c5,g_c6,g_c7
 
    !******************************************************************************
    ! Initialize variables used below
@@ -172,6 +173,24 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
    call gsi_bundlegetpointer(gfs_bundle,'q' ,g_q   ,ier);istatus=istatus+ier
    call gsi_bundlegetpointer(gfs_bundle,'oz',g_oz  ,ier);istatus=istatus+ier
    call gsi_bundlegetpointer(gfs_bundle,'cw',g_cwmr,ier);istatus=istatus+ier
+   if (sighead%ntrac==7) then  ! WSM6 microphysics - from Ruiyu Sun
+      call gsi_bundlegetpointer(gfs_bundle,'ql',g_c1,ier);istatus=istatus+ier
+      call gsi_bundlegetpointer(gfs_bundle,'qi',g_c2,ier);istatus=istatus+ier
+      call gsi_bundlegetpointer(gfs_bundle,'qs',g_c3,ier);istatus=istatus+ier
+      call gsi_bundlegetpointer(gfs_bundle,'qr',g_c4,ier);istatus=istatus+ier
+      call gsi_bundlegetpointer(gfs_bundle,'qg',g_c5,ier);istatus=istatus+ier
+      call gsi_bundlegetpointer(gfs_bundle,'ni',g_c6,ier);istatus=istatus+ier  ! empty
+      call gsi_bundlegetpointer(gfs_bundle,'nr',g_c7,ier);istatus=istatus+ier  ! empty
+   endif
+   if (sighead%ntrac==9) then  ! Thompson microphysics - from Ruiyu Sun
+      call gsi_bundlegetpointer(gfs_bundle,'ql',g_c1,ier);istatus=istatus+ier
+      call gsi_bundlegetpointer(gfs_bundle,'qi',g_c2,ier);istatus=istatus+ier
+      call gsi_bundlegetpointer(gfs_bundle,'ni',g_c3,ier);istatus=istatus+ier
+      call gsi_bundlegetpointer(gfs_bundle,'qs',g_c4,ier);istatus=istatus+ier
+      call gsi_bundlegetpointer(gfs_bundle,'qr',g_c5,ier);istatus=istatus+ier
+      call gsi_bundlegetpointer(gfs_bundle,'qg',g_c6,ier);istatus=istatus+ier
+      call gsi_bundlegetpointer(gfs_bundle,'nr',g_c7,ier);istatus=istatus+ier
+   endif
    if ( istatus /= 0 ) then
       if ( mype == 0 ) then
          write(6,*) 'general_read_gfsatm: ERROR'
@@ -211,8 +230,15 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
          call general_fill_ns(grd,grid,work)
       endif
       if ( icount == icm ) then
-         call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+         if (sighead%ntrac>=7) then
+            call general_reload_wcld(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+              icount,iflag,ilev,work,uvflag,vordivflag, &
+              g_c1,g_c2,g_c3,g_c4,g_c5,g_c6,g_c7)  
+         else
+            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
               icount,iflag,ilev,work,uvflag,vordivflag)
+         endif
+
       endif
    endif ! if ( zflag )
 
@@ -236,8 +262,14 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
        call general_fill_ns(grd,grid,work)
    endif
    if ( icount == icm ) then
-      call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-           icount,iflag,ilev,work,uvflag,vordivflag)
+      if (sighead%ntrac>=7) then
+         call general_reload_wcld(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                 icount,iflag,ilev,work,uvflag,vordivflag, &
+                 g_c1,g_c2,g_c3,g_c4,g_c5,g_c6,g_c7)  
+      else
+         call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                 icount,iflag,ilev,work,uvflag,vordivflag)
+      endif 
    endif
 
    ! Thermodynamic variable:  s-->g transform, communicate to all tasks
@@ -267,8 +299,14 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
          call general_fill_ns(grd,grid,work)
       endif
       if ( icount == icm ) then
-         call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-              icount,iflag,ilev,work,uvflag,vordivflag)
+         if (sighead%ntrac>=7) then
+            call general_reload_wcld(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag, &
+                    g_c1,g_c2,g_c3,g_c4,g_c5,g_c6,g_c7) 
+         else
+            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag)
+         endif
       endif
 
       if ( vordivflag .or. .not. uvflag ) then
@@ -294,8 +332,14 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
             call general_fill_ns(grd,grid,work)
          endif
          if ( icount == icm ) then
-            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-                 icount,iflag,ilev,work,uvflag,vordivflag)
+            if (sighead%ntrac>=7) then
+               call general_reload_wcld(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                       icount,iflag,ilev,work,uvflag,vordivflag, &
+                       g_c1,g_c2,g_c3,g_c4,g_c5,g_c6,g_c7) 
+            else
+               call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                       icount,iflag,ilev,work,uvflag,vordivflag)
+            endif
          endif
 
          icount=icount+1
@@ -319,8 +363,14 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
             call general_fill_ns(grd,grid,work)
          endif
          if ( icount == icm ) then
-            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-                 icount,iflag,ilev,work,uvflag,vordivflag)
+            if (sighead%ntrac>=7) then
+               call general_reload_wcld(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                       icount,iflag,ilev,work,uvflag,vordivflag, &
+                       g_c1,g_c2,g_c3,g_c4,g_c5,g_c6,g_c7) 
+            else
+               call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                       icount,iflag,ilev,work,uvflag,vordivflag)
+            endif
          endif
 
       endif ! if ( vordivflag .or. .not. uvflag ) then
@@ -357,8 +407,14 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
             deallocate(spec_div,grid_v)
          endif
          if ( icount == icm ) then
-            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-                 icount,iflag,ilev,work,uvflag,vordivflag)
+            if (sighead%ntrac>=7) then
+               call general_reload_wcld(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                       icount,iflag,ilev,work,uvflag,vordivflag, &
+                       g_c1,g_c2,g_c3,g_c4,g_c5,g_c6,g_c7) 
+            else
+               call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                       icount,iflag,ilev,work,uvflag,vordivflag)
+            endif
          endif
 
          icount=icount+1
@@ -391,8 +447,14 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
             deallocate(spec_div,grid_v)
          endif
          if ( icount == icm ) then
-            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-                 icount,iflag,ilev,work,uvflag,vordivflag)
+            if (sighead%ntrac>=7) then
+               call general_reload_wcld(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                       icount,iflag,ilev,work,uvflag,vordivflag, &
+                       g_c1,g_c2,g_c3,g_c4,g_c5,g_c6,g_c7) 
+            else
+               call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                       icount,iflag,ilev,work,uvflag,vordivflag)
+            endif
          endif
 
       endif ! if ( uvflag )
@@ -416,8 +478,14 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
          call general_fill_ns(grd,grid,work)
       endif
       if ( icount == icm ) then
-         call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-              icount,iflag,ilev,work,uvflag,vordivflag)
+         if (sighead%ntrac>=7) then
+            call general_reload_wcld(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag, &
+                    g_c1,g_c2,g_c3,g_c4,g_c5,g_c6,g_c7) 
+         else
+            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag)
+         endif
       endif
 
       icount=icount+1
@@ -439,8 +507,14 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
          call general_fill_ns(grd,grid,work)
       endif
       if ( icount == icm ) then
-         call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-              icount,iflag,ilev,work,uvflag,vordivflag)
+         if (sighead%ntrac>=7) then
+            call general_reload_wcld(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag, &
+                    g_c1,g_c2,g_c3,g_c4,g_c5,g_c6,g_c7) 
+         else
+            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag)
+         endif
       endif
 
       icount=icount+1
@@ -449,7 +523,7 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
 
       if (mype==mype_use(icount)) then
          ! Cloud condensate mixing ratio.
-         if (sighead%ntrac>2 .or. sighead%ncldt>=1) then
+         if (sighead%ntrac==3 .or. sighead%ncldt==1) then  ! current microphysics, only total cloud water
             sigdati%i = nlevs * (2+3) + 2 + k    ! cw, 3rd tracer
             sigdati%f => specwrk_4
             call sigio_rrdbti(lunges,sighead,sigdati,iret)
@@ -467,8 +541,183 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
       endif
       if ( icount == icm .or. k == nlevs ) then
          call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-              icount,iflag,ilev,work,uvflag,vordivflag)
+                 icount,iflag,ilev,work,uvflag,vordivflag)
       endif
+
+      if (sighead%ntrac>=7) then  ! WSM6 or Thompson first field after water vapor and ozone
+         icount=icount+1
+         iflag(icount)=11
+         ilev(icount)=k
+
+         if (mype==mype_use(icount)) then
+               sigdati%i = nlevs * (2+3) + 2 + k    ! c1
+               sigdati%f => specwrk_4
+               call sigio_rrdbti(lunges,sighead,sigdati,iret)
+               do i=1,sp_b%nc
+                  spec_work(i)=sp_b%test_mask(i)*specwrk_4(i)
+               enddo
+               do i=1,sp_b%nc
+                  if(sp_b%factsml(i))spec_work(i)=zero
+               enddo
+               call general_sptez_s_b(sp_a,sp_b,spec_work,grid,1)
+               call general_fill_ns(grd,grid,work)
+         endif
+         if ( icount == icm .or. k == nlevs ) then
+            call general_reload_wcld(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag, &
+                    g_c1,g_c2,g_c3,g_c4,g_c5,g_c6,g_c7) 
+         endif
+      endif !ntrac>=7
+   
+         if (sighead%ntrac>=7) then  ! WSM6 or Thompson first field after water vapor and ozone
+         icount=icount+1
+         iflag(icount)=12
+         ilev(icount)=k
+   
+         if (mype==mype_use(icount)) then
+               sigdati%i = nlevs * (2+4) + 2 + k    ! c2
+               sigdati%f => specwrk_4
+               call sigio_rrdbti(lunges,sighead,sigdati,iret)
+               do i=1,sp_b%nc
+                  spec_work(i)=sp_b%test_mask(i)*specwrk_4(i)
+               enddo
+               do i=1,sp_b%nc
+                  if(sp_b%factsml(i))spec_work(i)=zero
+               enddo
+               call general_sptez_s_b(sp_a,sp_b,spec_work,grid,1)
+               call general_fill_ns(grd,grid,work)
+         endif
+         if ( icount == icm .or. k == nlevs ) then
+            call general_reload_wcld(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag, &
+                    g_c1,g_c2,g_c3,g_c4,g_c5,g_c6,g_c7) 
+         endif
+      endif !ntrac>=7
+
+      if (sighead%ntrac>=7) then  ! WSM6 or Thompson first field after water vapor and ozone
+         icount=icount+1
+         iflag(icount)=13
+         ilev(icount)=k
+   
+         if (mype==mype_use(icount)) then
+               sigdati%i = nlevs * (2+5) + 2 + k    ! c3
+               sigdati%f => specwrk_4
+               call sigio_rrdbti(lunges,sighead,sigdati,iret)
+               do i=1,sp_b%nc
+                  spec_work(i)=sp_b%test_mask(i)*specwrk_4(i)
+               enddo
+               do i=1,sp_b%nc
+                  if(sp_b%factsml(i))spec_work(i)=zero
+               enddo
+               call general_sptez_s_b(sp_a,sp_b,spec_work,grid,1)
+               call general_fill_ns(grd,grid,work)
+         endif
+         if ( icount == icm .or. k == nlevs ) then
+            call general_reload_wcld(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag, &
+                    g_c1,g_c2,g_c3,g_c4,g_c5,g_c6,g_c7) 
+         endif
+      endif !ntrac>=7
+
+      if (sighead%ntrac>=7) then  ! WSM6 or Thompson first field after water vapor and ozone
+         icount=icount+1
+         iflag(icount)=14
+         ilev(icount)=k
+   
+         if (mype==mype_use(icount)) then
+               sigdati%i = nlevs * (2+6) + 2 + k    ! c4
+               sigdati%f => specwrk_4
+               call sigio_rrdbti(lunges,sighead,sigdati,iret)
+               do i=1,sp_b%nc
+                  spec_work(i)=sp_b%test_mask(i)*specwrk_4(i)
+               enddo
+               do i=1,sp_b%nc
+                  if(sp_b%factsml(i))spec_work(i)=zero
+               enddo
+               call general_sptez_s_b(sp_a,sp_b,spec_work,grid,1)
+               call general_fill_ns(grd,grid,work)
+         endif
+         if ( icount == icm .or. k == nlevs ) then
+            call general_reload_wcld(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag, &
+                    g_c1,g_c2,g_c3,g_c4,g_c5,g_c6,g_c7) 
+         endif
+      endif !ntrac>=7
+
+      if (sighead%ntrac>=7) then  ! WSM6 or Thompson first field after water vapor and ozone
+         icount=icount+1
+         iflag(icount)=15
+         ilev(icount)=k
+   
+         if (mype==mype_use(icount)) then
+               sigdati%i = nlevs * (2+7) + 2 + k    ! c5
+               sigdati%f => specwrk_4
+               call sigio_rrdbti(lunges,sighead,sigdati,iret)
+               do i=1,sp_b%nc
+                  spec_work(i)=sp_b%test_mask(i)*specwrk_4(i)
+               enddo
+               do i=1,sp_b%nc
+                  if(sp_b%factsml(i))spec_work(i)=zero
+               enddo
+               call general_sptez_s_b(sp_a,sp_b,spec_work,grid,1)
+               call general_fill_ns(grd,grid,work)
+         endif
+         if ( icount == icm .or. k == nlevs ) then
+            call general_reload_wcld(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag, &
+                    g_c1,g_c2,g_c3,g_c4,g_c5,g_c6,g_c7) 
+         endif
+      endif !ntrac>=7
+
+      if (sighead%ntrac>=9) then  ! Thompson 
+         icount=icount+1
+         iflag(icount)=16
+         ilev(icount)=k
+   
+         if (mype==mype_use(icount)) then
+               sigdati%i = nlevs * (2+8) + 2 + k    ! c6
+               sigdati%f => specwrk_4
+               call sigio_rrdbti(lunges,sighead,sigdati,iret)
+               do i=1,sp_b%nc
+                  spec_work(i)=sp_b%test_mask(i)*specwrk_4(i)
+               enddo
+               do i=1,sp_b%nc
+                  if(sp_b%factsml(i))spec_work(i)=zero
+               enddo
+               call general_sptez_s_b(sp_a,sp_b,spec_work,grid,1)
+               call general_fill_ns(grd,grid,work)
+         endif
+         if ( icount == icm .or. k == nlevs ) then
+            call general_reload_wcld(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag, &
+                    g_c1,g_c2,g_c3,g_c4,g_c5,g_c6,g_c7) 
+         endif
+      endif !ntrac>=9
+
+      if (sighead%ntrac>=9) then  ! Thompson 
+         icount=icount+1
+         iflag(icount)=17
+         ilev(icount)=k
+   
+         if (mype==mype_use(icount)) then
+               sigdati%i = nlevs * (2+9) + 2 + k    ! c7
+               sigdati%f => specwrk_4
+               call sigio_rrdbti(lunges,sighead,sigdati,iret)
+               do i=1,sp_b%nc
+                  spec_work(i)=sp_b%test_mask(i)*specwrk_4(i)
+               enddo
+               do i=1,sp_b%nc
+                  if(sp_b%factsml(i))spec_work(i)=zero
+               enddo
+               call general_sptez_s_b(sp_a,sp_b,spec_work,grid,1)
+               call general_fill_ns(grd,grid,work)
+         endif
+         if ( icount == icm .or. k == nlevs ) then
+            call general_reload_wcld(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag, &
+                    g_c1,g_c2,g_c3,g_c4,g_c5,g_c6,g_c7) 
+         endif
+      endif !ntrac>=9
 
    enddo ! do k=1,nlevs
 
@@ -873,7 +1122,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
       endif
       if ( icount == icm ) then
          call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-              icount,iflag,ilev,work,uvflag,vordivflag)
+                 icount,iflag,ilev,work,uvflag,vordivflag)
       endif
    endif
 
@@ -904,7 +1153,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
    endif
    if ( icount == icm ) then
       call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-           icount,iflag,ilev,work,uvflag,vordivflag)
+              icount,iflag,ilev,work,uvflag,vordivflag)
    endif
 
    !   Thermodynamic variable:  s-->g transform, communicate to all tasks
@@ -943,7 +1192,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
       endif
       if ( icount == icm ) then
          call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-              icount,iflag,ilev,work,uvflag,vordivflag)
+                 icount,iflag,ilev,work,uvflag,vordivflag)
       endif
 
       if ( vordivflag .or. .not. uvflag ) then
@@ -1000,7 +1249,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
          endif
          if ( icount == icm ) then
             call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-                 icount,iflag,ilev,work,uvflag,vordivflag)
+                    icount,iflag,ilev,work,uvflag,vordivflag)
          endif
 
          icount=icount+1
@@ -1055,7 +1304,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
          endif
          if ( icount == icm ) then
             call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-                 icount,iflag,ilev,work,uvflag,vordivflag)
+                    icount,iflag,ilev,work,uvflag,vordivflag)
          endif
 
       endif ! if ( vordivflag .or. .not. uvflag )
@@ -1092,7 +1341,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
          endif
          if ( icount == icm ) then
             call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-                 icount,iflag,ilev,work,uvflag,vordivflag)
+                    icount,iflag,ilev,work,uvflag,vordivflag)
          endif
 
          icount=icount+1
@@ -1125,7 +1374,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
          endif
          if ( icount == icm ) then
             call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-                 icount,iflag,ilev,work,uvflag,vordivflag)
+                    icount,iflag,ilev,work,uvflag,vordivflag)
          endif
 
       endif ! if ( uvflag )
@@ -1155,7 +1404,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
       endif
       if ( icount == icm ) then
          call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-              icount,iflag,ilev,work,uvflag,vordivflag)
+                 icount,iflag,ilev,work,uvflag,vordivflag)
       endif
 
       icount=icount+1
@@ -1183,7 +1432,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
       endif
       if ( icount == icm ) then
          call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-              icount,iflag,ilev,work,uvflag,vordivflag)
+                 icount,iflag,ilev,work,uvflag,vordivflag)
       endif
 
       icount=icount+1
@@ -1214,7 +1463,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
 
          if ( icount == icm .or. k == nlevs ) then
             call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-                 icount,iflag,ilev,work,uvflag,vordivflag)
+                    icount,iflag,ilev,work,uvflag,vordivflag)
          endif
 
    enddo ! do k=1,nlevs
@@ -1954,3 +2203,252 @@ subroutine preproc_read_gfsatm(grd,filename,iret)
    return
 
 end subroutine preproc_read_gfsatm
+
+subroutine general_reload_wcld(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+           icount,iflag,ilev,work,uvflag,vdflag, &
+           g_c1,g_c2,g_c3,g_c4,g_c5,g_c6,g_c7)   
+
+
+! !USES:
+
+  use kinds, only: r_kind,i_kind
+  use mpimod, only: npe,mpi_comm_world,ierror,mpi_rtype
+  use general_sub2grid_mod, only: sub2grid_info
+  implicit none
+
+! !INPUT PARAMETERS:
+
+  type(sub2grid_info),                intent(in   ) :: grd
+  integer(i_kind),                    intent(inout) :: icount
+  integer(i_kind),dimension(npe),     intent(inout) :: ilev,iflag
+  real(r_kind),dimension(grd%itotsub),intent(in   ) :: work
+  logical,                            intent(in   ) :: uvflag,vdflag
+
+! !OUTPUT PARAMETERS:
+
+  real(r_kind),dimension(grd%lat2,grd%lon2),         intent(  out) :: g_ps
+  real(r_kind),dimension(grd%lat2,grd%lon2),         intent(inout) :: g_z
+  real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),intent(  out) :: g_u,g_v,&
+       g_vor,g_div,g_cwmr,g_q,g_oz,g_tv, &
+       g_c1,g_c2,g_c3,g_c4,g_c5,g_c6,g_c7
+
+
+
+! !DESCRIPTION: Transfer contents of 2-d array global to 3-d subdomain array
+!
+! !REVISION HISTORY:
+!   2004-05-14  treadon
+!   2004-07-15  todling, protex-compliant prologue
+!   2014-12-03  derber     - introduce vdflag and optimize routines
+!
+! !REMARKS:
+!
+!   language: f90
+!   machine:  ibm rs/6000 sp; sgi origin 2000; compaq/hp
+!
+! !AUTHOR:
+!   treadon          org: np23                date: 2004-05-14
+!
+!EOP
+!-------------------------------------------------------------------------
+
+   integer(i_kind) i,j,k,ij,klev
+   real(r_kind),dimension(grd%lat2*grd%lon2,npe):: sub
+
+   call mpi_alltoallv(work,grd%sendcounts_s,grd%sdispls_s,mpi_rtype,&
+        sub,grd%recvcounts_s,grd%rdispls_s,mpi_rtype,&
+        mpi_comm_world,ierror)
+
+!$omp parallel do  schedule(dynamic,1) private(k,i,j,ij,klev)
+   do k=1,icount
+      if ( iflag(k) == 1 ) then
+         ij=0
+         do j=1,grd%lon2
+            do i=1,grd%lat2
+               ij=ij+1
+               g_z(i,j)=sub(ij,k)
+            enddo
+         enddo
+      elseif ( iflag(k) == 2 ) then
+         ij=0
+         do j=1,grd%lon2
+            do i=1,grd%lat2
+               ij=ij+1
+               g_ps(i,j)=sub(ij,k)
+            enddo
+         enddo
+      elseif ( iflag(k) == 3 ) then
+         klev=ilev(k)
+         ij=0
+         do j=1,grd%lon2
+            do i=1,grd%lat2
+               ij=ij+1
+               g_tv(i,j,klev)=sub(ij,k)
+            enddo
+         enddo
+      elseif ( iflag(k) == 4 ) then
+         klev=ilev(k)
+         if ( vdflag ) then
+           ij=0
+           do j=1,grd%lon2
+              do i=1,grd%lat2
+                 ij=ij+1
+                 g_vor(i,j,klev)=sub(ij,k)
+              enddo
+           enddo
+         endif
+         if ( .not. uvflag ) then
+           ij=0
+           do j=1,grd%lon2
+              do i=1,grd%lat2
+                 ij=ij+1
+                 g_u(i,j,klev)=sub(ij,k)
+              enddo
+           enddo
+         endif
+      elseif ( iflag(k) == 5 ) then
+         klev=ilev(k)
+         if ( vdflag ) then
+           ij=0
+           do j=1,grd%lon2
+              do i=1,grd%lat2
+                 ij=ij+1
+                 g_div(i,j,klev)=sub(ij,k)
+              enddo
+           enddo
+         endif
+         if ( .not. uvflag ) then
+           ij=0
+           do j=1,grd%lon2
+              do i=1,grd%lat2
+                 ij=ij+1
+                 g_v(i,j,klev)=sub(ij,k)
+              enddo
+           enddo
+         endif
+      elseif ( iflag(k) == 6 ) then
+         if ( .not. uvflag) then
+           write(6,*) 'error in general_reload  u '
+         endif
+         klev=ilev(k)
+         ij=0
+         do j=1,grd%lon2
+            do i=1,grd%lat2
+               ij=ij+1
+               g_u(i,j,klev)=sub(ij,k)
+            enddo
+         enddo
+      elseif ( iflag(k) == 7 ) then
+         if ( .not. uvflag) then
+           write(6,*) 'error in general_reload  v '
+         endif
+         klev=ilev(k)
+         ij=0
+         do j=1,grd%lon2
+            do i=1,grd%lat2
+               ij=ij+1
+               g_v(i,j,klev)=sub(ij,k)
+            enddo
+         enddo
+      elseif ( iflag(k) == 8 ) then
+         klev=ilev(k)
+         ij=0
+         do j=1,grd%lon2
+            do i=1,grd%lat2
+               ij=ij+1
+               g_q(i,j,klev)=sub(ij,k)
+            enddo
+         enddo
+      elseif ( iflag(k) == 9 ) then
+         klev=ilev(k)
+         ij=0
+         do j=1,grd%lon2
+            do i=1,grd%lat2
+               ij=ij+1
+               g_oz(i,j,klev)=sub(ij,k)
+            enddo
+         enddo
+      elseif ( iflag(k) == 10 ) then
+         klev=ilev(k)
+         ij=0
+         do j=1,grd%lon2
+            do i=1,grd%lat2
+               ij=ij+1
+               g_cwmr(i,j,klev)=sub(ij,k)
+            enddo
+         enddo
+     else if(iflag(k) == 11)then
+        klev=ilev(k)
+        ij=0
+        do j=1,grd%lon2
+           do i=1,grd%lat2
+              ij=ij+1
+              g_c1(i,j,klev)=sub(ij,k)    ! SIMTB assuming the first field after vapor & ozone is cloud water
+              g_cwmr(i,j,klev)=sub(ij,k)  ! fill to keep current microwave cloudy rad working
+           end do
+        end do
+     else if(iflag(k) == 12)then
+        klev=ilev(k)
+        ij=0
+        do j=1,grd%lon2
+           do i=1,grd%lat2
+              ij=ij+1
+              g_c2(i,j,klev)=sub(ij,k)
+           end do
+        end do
+     else if(iflag(k) == 13)then
+        klev=ilev(k)
+        ij=0
+        do j=1,grd%lon2
+           do i=1,grd%lat2
+              ij=ij+1
+              g_c3(i,j,klev)=sub(ij,k)
+           end do
+        end do
+     else if(iflag(k) == 14)then
+        klev=ilev(k)
+        ij=0
+        do j=1,grd%lon2
+           do i=1,grd%lat2
+              ij=ij+1
+              g_c4(i,j,klev)=sub(ij,k)
+           end do
+        end do
+     else if(iflag(k) == 15)then
+        klev=ilev(k)
+        ij=0
+        do j=1,grd%lon2
+           do i=1,grd%lat2
+              ij=ij+1
+              g_c5(i,j,klev)=sub(ij,k)
+           end do
+        end do
+     else if(iflag(k) == 16)then
+        klev=ilev(k)
+        ij=0
+        do j=1,grd%lon2
+           do i=1,grd%lat2
+              ij=ij+1
+              g_c6(i,j,klev)=sub(ij,k)
+           end do
+        end do
+     else if(iflag(k) == 17)then
+        klev=ilev(k)
+        ij=0
+        do j=1,grd%lon2
+           do i=1,grd%lat2
+              ij=ij+1
+              g_c7(i,j,klev)=sub(ij,k)
+           end do
+        end do
+      endif
+   enddo ! do k=1,icount
+
+   icount=0
+   ilev=0
+   iflag=0
+
+   return
+
+end subroutine general_reload_wcld
+

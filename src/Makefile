@@ -647,6 +647,7 @@ clean:
         read_fl_hdob.f90 \
 	read_gmi.f90 \
 	read_goesimg.f90 \
+	read_goesimgasr.f90 \
 	read_ahi.f90 \
 	read_goesimgr_skycover.f90 \
 	read_goesndr.f90 \
@@ -669,6 +670,7 @@ clean:
 	read_sfcwnd.f90 \
 	read_rapidscat.f90 \
 	read_seviri.f90 \
+	read_sevasr.f90 \
 	read_ssmi.f90 \
 	read_ssmis.f90 \
 	read_superwinds.f90 \

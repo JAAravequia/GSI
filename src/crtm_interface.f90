@@ -35,6 +35,9 @@ module crtm_interface
 !                    - add handling of mixed_use of channels in a sensor (some are clear-sky, others all-sky)
 !   2016-06-03  Collard - Added changes to allow for historical naming conventions
 !   2017-02-24  zhu/todling  - remove gmao cloud fraction treatment
+!   2017-07-25  Nebuda - Simulated Tb changes (SIMTB) including microphysics flag, 
+!                        nearest neighbor guess profile, plus output of Tb clear sky and 
+!                        2d cloud diagnostics of the background input profile to CRTM forward model
 !
 ! subroutines included:
 !   sub init_crtm
@@ -303,6 +306,8 @@ subroutine init_crtm(init_pass,mype_diaghdr,mype,nchanl,isis,obstype,radmod)
   use mpeu_util, only: getindex
   use constants, only: zero,max_varname_length
   use obsmod, only: dval_use
+  use cloud_efr_mod, only: microphysics
+
 
   implicit none
 
@@ -878,7 +883,9 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
                    h,q,clw_guess,prsl,prsi, &
                    trop5,tzbgr,dtsavg,sfc_speed,&
                    tsim,emissivity,ptau5,ts, &
-                   emissivity_k,temp,wmix,jacobian,error_status,tsim_clr, &
+                   emissivity_k,temp,wmix,jacobian,error_status,&
+                   dg2ob_local, ql_SIMTB, qi_SIMTB, &
+                   tsim_clr, &
                    layer_od,jacobian_aero)  
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -919,6 +926,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
 !     nchanl       - number of channels
 !     nreal        - number of descriptor information in data_s
 !     ich          - channel number array
+!     dg2ob_local  - guess to ob location, 0 weighted average (standard), 1 nearest neighbor
 !
 !   output argument list:
 !     h            - interpolated temperature
@@ -940,6 +948,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
 !     jacobian     - nsigradjac level jacobians for use in intrad and stprad
 !     error_status - error status from crtm
 !     layer_od     - layer optical depth
+!     ql_SIMTB,qi_SIMTB - output profile of cloud amount at ob location for diag output
 !     jacobian_aero- nsigaerojac level jacobians for use in intaod
 !     tsim_clr     - option to output simulated brightness temperatures for clear sky                  
 !
@@ -957,7 +966,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   use guess_grids, only: ges_tsen,&
       ges_prsl,ges_prsi,tropprs,dsfct,add_rtm_layers, &
       hrdifsig,nfldsig,hrdifsfc,nfldsfc,ntguessfc,isli2,sno2
-  use cloud_efr_mod, only: efr_ql,efr_qi,efr_qr,efr_qs,efr_qg,efr_qh
+  use cloud_efr_mod, only: efr_ql,efr_qi,efr_qr,efr_qs,efr_qg,efr_qh,microphysics
   use ncepgfs_ghg, only: co2vmr_def,ch4vmr_def,n2ovmr_def,covmr_def
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gsi_chemguess_mod, only: gsi_chemguess_bundle   ! for now, a common block
@@ -992,6 +1001,8 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   real(r_kind),dimension(nsig,nchanl)   ,intent(  out) :: temp,ptau5,wmix
   real(r_kind),dimension(nsigradjac,nchanl),intent(out):: jacobian
   real(r_kind)                          ,intent(  out) :: clw_guess
+  integer(i_kind)                       ,intent(  in)  :: dg2ob_local
+  real(r_kind),dimension(nsig)          ,intent(  out) :: ql_SIMTB,qi_SIMTB
   real(r_kind),dimension(nchanl)        ,intent(  out), optional  :: tsim_clr      
   real(r_kind),dimension(nsigaerojac,nchanl),intent(out),optional :: jacobian_aero
   real(r_kind),dimension(nsig,nchanl)   ,intent(  out)  ,optional :: layer_od
@@ -1019,6 +1030,9 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   integer(i_kind):: error_status_clr
   integer(i_kind),dimension(8)::obs_time,anal_time
   integer(i_kind),dimension(msig) :: klevel
+  integer(i_kind),dimension(1):: wmaxloc ! location of max weight 
+  integer(i_kind),dimension(4):: warray ! weight array
+
 
 ! ****************************** 
 ! Constrained indexing for lai
@@ -1102,6 +1116,21 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   w00=delx1*dely1; w10=delx*dely1; w01=delx1*dely; w11=delx*dely
 ! w_weights = (/w00,w10,w01,w11/)
 
+! SIMTB nearest neighbor
+  if (dg2ob_local == 1 .or. dg2ob_local == 2) then 
+     warray(1) = w00; warray(2) = w10; warray(3) = w01; warray(4) = w11
+     wmaxloc = maxloc(warray)
+     select case(wmaxloc(1))
+        case(1); w00=one; w10=zero; w01=zero; w11=zero
+        case(2); w00=zero; w10=one; w01=zero; w11=zero
+        case(3); w00=zero; w10=zero; w01=one; w11=zero
+        case(4); w00=zero; w10=zero; w01=zero; w11=one
+        case default
+           w00=one; w10=zero; w01=zero; w11=zero  ! or handle with error
+     end select
+  endif
+
+
 
 ! Get time interpolation factors for sigma files
   if(obstime > hrdifsig(1) .and. obstime < hrdifsig(nfldsig))then
@@ -1142,6 +1171,20 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
      dtsfc=one
   end if
   dtsfcp=one-dtsfc
+
+  if (dg2ob_local == 2 .or. dg2ob_local == 3) then   ! nearest neighbor in time (for upper air and surface)
+     if (dtsig > dtsigp) then
+       dtsig=one ; dtsigp=zero
+     else
+       dtsig=zero ; dtsigp=one
+     endif
+     if (dtsfc > dtsfcp) then
+       dtsfc=one ; dtsfcp=zero
+     else
+       dtsfc=zero ; dtsfcp=one
+     endif
+  endif
+
 
   ier=0
   call gsi_bundlegetpointer(gsi_metguess_bundle(itsig ),'ps',psges_itsig ,istatus)
@@ -1391,6 +1434,9 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
 
            sea = min(max(zero,data_s(ifrac_sea)),one)  >= 0.99_r_kind 
            icmask = (sea .and. cld_sea_only_wk) .or. (.not. cld_sea_only_wk) 
+!SIMTB - compute simulated Tb for all surface types
+           if (microphysics > 0) icmask = .true.
+
 
 !       assign tzbgr for Tz retrieval when necessary
            tzbgr = surface(1)%water_temperature
@@ -1562,8 +1608,11 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
                          gsi_metguess_bundle(itsigp)%r3(icloud(iii))%q(ix ,iyp,k)*w01+ &
                          gsi_metguess_bundle(itsigp)%r3(icloud(iii))%q(ixp,iyp,k)*w11)*dtsigp
            cloud(k,ii)=max(cloud(k,ii),zero)
+! SIMTB Keep profile for output diagnostics
+           if (ii == 1) ql_SIMTB(k) = cloud(k,ii)
+           if (ii == 2) qi_SIMTB(k) = cloud(k,ii)
 
-           if (regional .and. (.not. wrf_mass_regional)) then
+           if ((regional .and. (.not. wrf_mass_regional)) .or. (microphysics>0)) then
                if (trim(cloud_names(iii))== 'ql' ) then
                  cloudefr(k,ii)=(efr_ql(ix ,iy ,k,itsig)*w00+efr_ql(ixp,iy ,k,itsig)*w10+ &
                                  efr_ql(ix ,iyp,k,itsig)*w01+efr_ql(ixp,iyp,k,itsig)*w11)*dtsig + &
@@ -1723,6 +1772,8 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
 
   sea = min(max(zero,data_s(ifrac_sea)),one)  >= 0.99_r_kind
   icmask = (sea .and. cld_sea_only_wk) .or. (.not. cld_sea_only_wk)
+  if (microphysics > 0) icmask = .true.
+
 
   do k = 1,msig
 
@@ -1762,7 +1813,8 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
               auxdp(k)=abs(prsi_rtm(kk+1)-prsi_rtm(kk))*r10
               auxq (k)=q(kk2)
 
-              if (regional .and. (.not. wrf_mass_regional) .and. (.not. cold_start)) then
+              if ((microphysics > 0) .or. &
+                 (regional .and. (.not. wrf_mass_regional) .and. (.not. cold_start))) then
                  do ii=1,n_clouds_fwd_wk
                     cloud_cont(k,ii)=cloud(kk2,ii)*c6(k)
                     cloud_efr (k,ii)=cloudefr(kk2,ii)
@@ -1774,12 +1826,15 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
               end if
 
               clw_guess = clw_guess +  cloud_cont(k,1)
+! SIMTB don't enforce minimum cloud liquid & ice content 
+              if (microphysics == 0) then  
               do ii=1,n_clouds_fwd_wk
                  if (ii==1 .and. atmosphere(1)%temperature(k)-t0c>-20.0_r_kind) &
                     cloud_cont(k,1)=max(1.001_r_kind*1.0E-6_r_kind, cloud_cont(k,1))
                  if (ii==2 .and. atmosphere(1)%temperature(k)<t0c) &
                     cloud_cont(k,2)=max(1.001_r_kind*1.0E-6_r_kind, cloud_cont(k,2))
               end do
+              endif
           endif   
         else 
            if (icmask) then
@@ -1848,6 +1903,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   end if
 
 ! Calculate clear-sky Tb for AMSU-A over sea when allsky condition is on
+! SIMTB should work without microphysics test
   if (n_clouds_fwd_wk>0 .and. present(tsim_clr) .and. (.not. mixed_use)) then
      ! Zero out data array in cloud structure: water content, effective
      ! radius and variance
@@ -1897,6 +1953,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
 !  Simulated brightness temperatures
        tsim(i)=rtsolution(i,1)%brightness_temperature
 
+! SIMTB should work without microphysics test
        if (n_clouds_fwd_wk>0 .and. present(tsim_clr)) then
           if (mixed_use) then 
              tsim_clr(i)=rtsolution_clr(i,1)%brightness_temperature  

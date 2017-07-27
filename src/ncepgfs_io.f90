@@ -106,7 +106,8 @@ contains
 !$$$ end documentation block
 
     use kinds, only: i_kind,r_kind
-    use gridmod, only: hires_b,sp_a,grd_a,jcap_b,nlon,nlat,lat2,lon2,nsig,regional
+    use constants, only: zero
+    use gridmod, only: hires_b,sp_a,grd_a,jcap_b,nlon,nlat,lat2,lon2,nsig,regional, ntracer
     use guess_grids, only: ifilesig,nfldsig
     use gsi_metguess_mod, only: gsi_metguess_bundle
     use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -118,7 +119,7 @@ contains
     use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sub2grid_destroy_info
     use mpimod, only: npe,mype
     use mpeu_util, only: die
-    use cloud_efr_mod, only: cloud_calc_gfs,set_cloud_lower_bound    
+    use cloud_efr_mod, only: cloud_calc_gfs,set_cloud_lower_bound, microphysics, set_small_cwmr    
     use general_specmod, only: general_init_spec_vars,general_destroy_spec_vars,spec_vars
     implicit none
 
@@ -126,16 +127,24 @@ contains
     logical:: l_cld_derived,zflag,inithead
     integer(i_kind):: it,nlon_b,num_fields,inner_vars
     integer(i_kind):: iret,iret_ql,iret_qi,istatus 
+    integer(i_kind):: i,j,k
+
 
     type(gsi_bundle) :: atm_bundle
     type(gsi_grid)   :: atm_grid
     integer(i_kind),parameter :: n2d=2
-    integer(i_kind),parameter :: n3d=8
+    integer(i_kind),parameter :: n3d=15
     character(len=4), parameter :: vars2d(n2d) = (/ 'z   ', 'ps  ' /)
+!SIMTB check this
     character(len=4), parameter :: vars3d(n3d) = (/ 'u   ', 'v   ', &
                                                     'vor ', 'div ', &
                                                     'tv  ', 'q   ', &
-                                                    'cw  ', 'oz  ' /)
+                                                    'cw  ', 'oz  ', &
+                                                            'ql  ', &
+                                                    'qi  ', 'qr  ', &
+                                                    'qs  ', 'qg  ', &
+                                                    'ni  ', 'nr  ' /)
+!                                                   'cw  ', 'oz  ' /)
 
     real(r_kind),pointer,dimension(:,:):: ptr2d   =>null()
     real(r_kind),pointer,dimension(:,:,:):: ptr3d =>null()
@@ -152,9 +161,26 @@ contains
     real(r_kind),pointer,dimension(:,:,:):: ges_cwmr_it => null()
     real(r_kind),pointer,dimension(:,:,:):: ges_ql_it   => null()
     real(r_kind),pointer,dimension(:,:,:):: ges_qi_it   => null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qr_it   => null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qs_it   => null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qg_it   => null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_ni_it   => null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_nr_it   => null()
+
+    real(r_kind),dimension(lat2,lon2,nsig):: aux_zero  ! initialize arrays that are not present in the sig file
+
 
     type(spec_vars):: sp_b
     type(sub2grid_info) :: grd_t
+
+! initialize zero array to use when met bundle species are not present in sig  file
+    do k=1,nsig
+       do j=1,lon2
+          do i=1,lat2
+             aux_zero(i,j,k)=zero
+          enddo
+       enddo
+    enddo
 
 
 !   If needed, initialize for hires_b transforms
@@ -207,6 +233,11 @@ contains
        inithead=.false.
        zflag=.false.
 
+       microphysics=0
+       if (ntracer == 7) microphysics=1 ! WSM6
+       if (ntracer == 9) microphysics=2 ! Thompson
+
+
 !      Set values to actual MetGuess fields
        call set_guess_
 
@@ -215,6 +246,13 @@ contains
                        associated(ges_ql_it)  .and.&
                        associated(ges_qi_it)  .and.&
                        associated(ges_tv_it)
+
+! SIMTB turn false if rain, snow, graupel present
+! Self describing input data about microphysics scheme or namelist parameter would be better
+       if (associated(ges_qr_it) .or. &
+           associated(ges_qs_it) .or. &
+           associated(ges_qg_it)) l_cld_derived=.false.
+
 
 !      call set_cloud_lower_bound(ges_cwmr_it)
        if (mype==0) write(6,*)'READ_GFS: l_cld_derived = ', l_cld_derived
@@ -286,14 +324,112 @@ contains
      call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ges_cwmr_it,istatus) 
      if(istatus==0) ges_cwmr_it = ptr3d
   endif
-  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql_it,  iret_ql) 
-  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi_it,  iret_qi)           
-  if (iret_ql/=0) then 
-     if (mype==0) write(6,*)'READ_GFS: cannot get pointer to ql,iret_ql= ',iret_ql 
+
+!SIMTB Original total cloud water 
+  if (microphysics ==0) then
+     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql_it,  iret_ql) 
+     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi_it,  iret_qi)           
+     if (iret_ql/=0) then 
+        if (mype==0) write(6,*)'READ_GFS: cannot get pointer to ql,iret_ql= ',iret_ql 
+     endif
+     if (iret_qi/=0) then 
+        if (mype==0) write(6,*)'READ_GFS: cannot get pointer to qi,iret_qi= ',iret_qi 
+     endif
   endif
-  if (iret_qi/=0) then 
-     if (mype==0) write(6,*)'READ_GFS: cannot get pointer to qi,iret_qi= ',iret_qi 
+
+!SIMTB WSM6 & THOMSPSON
+  if (microphysics ==1 .or. microphysics ==2) then
+     call gsi_bundlegetpointer (atm_bundle,'ql',ptr3d,istatus) 
+     if (istatus==0) then
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql_it, istatus)
+        if (istatus/=0) then
+           if (mype==0) write(6,*)'READ_GFS: cannot get pointer to ql, istatus= ',istatus
+        else
+           ges_ql_it = ptr3d
+        endif
+     endif
+     call gsi_bundlegetpointer (atm_bundle,'qi',ptr3d,istatus) 
+     if (istatus==0) then
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi_it, istatus)
+        if (istatus/=0) then
+           if (mype==0) write(6,*)'READ_GFS: cannot get pointer to qi, istatus= ',istatus
+        else
+           ges_qi_it = ptr3d
+        endif
+     endif
+     call gsi_bundlegetpointer (atm_bundle,'qs',ptr3d,istatus) 
+     if (istatus==0) then
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qs',ges_qs_it, istatus)
+        if (istatus/=0) then
+           if (mype==0) write(6,*)'READ_GFS: cannot get pointer to qs, istatus= ',istatus
+        else
+           ges_qs_it = ptr3d
+        endif
+     endif
+     call gsi_bundlegetpointer (atm_bundle,'qr',ptr3d,istatus) 
+     if (istatus==0) then
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qr',ges_qr_it, istatus)
+        if (istatus/=0) then
+           if (mype==0) write(6,*)'READ_GFS: cannot get pointer to qr, istatus= ',istatus
+        else
+           ges_qr_it = ptr3d
+        endif
+     endif
+     call gsi_bundlegetpointer (atm_bundle,'qg',ptr3d,istatus) 
+     if (istatus==0) then
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qg',ges_qg_it, istatus)
+        if (istatus/=0) then
+           if (mype==0) write(6,*)'READ_GFS: cannot get pointer to qg, istatus= ',istatus
+        else
+           ges_qg_it = ptr3d
+        endif
+     endif
+  endif ! fields common to both WSM6 and Thompson schemes
+
+  if (microphysics ==1) then ! WSM6 does not have these fields
+     call gsi_bundlegetpointer (atm_bundle,'ni',ptr3d,istatus) 
+     if (istatus==0) then
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ni',ges_ni_it, istatus)
+        if (istatus/=0) then
+           if (mype==0) write(6,*)'READ_GFS: cannot get pointer to ni, istatus= ',istatus
+        else
+           ges_ni_it = aux_zero
+        endif
+     endif
+     call gsi_bundlegetpointer (atm_bundle,'nr',ptr3d,istatus) 
+     if (istatus==0) then
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'nr',ges_nr_it, istatus)
+        if (istatus/=0) then
+           if (mype==0) write(6,*)'READ_GFS: cannot get pointer to nr, istatus= ',istatus
+        else
+           ges_nr_it = aux_zero
+        endif
+     endif
   endif
+
+  if (microphysics ==2) then  !Thompson has 2 number fields, ice & rain
+     call gsi_bundlegetpointer (atm_bundle,'ni',ptr3d,istatus) 
+     if (istatus==0) then
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ni',ges_ni_it, istatus)
+        if (istatus/=0) then
+           if (mype==0) write(6,*)'READ_GFS: cannot get pointer to ni, istatus= ',istatus
+        else
+           ges_ni_it = ptr3d
+        endif
+     endif
+     call gsi_bundlegetpointer (atm_bundle,'nr',ptr3d,istatus) 
+     if (istatus==0) then
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'nr',ges_nr_it, istatus)
+        if (istatus/=0) then
+           if (mype==0) write(6,*)'READ_GFS: cannot get pointer to nr, istatus= ',istatus
+        else
+           ges_nr_it = ptr3d
+        endif
+     endif
+  endif
+
+
+
 
   end subroutine set_guess_
 

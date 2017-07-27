@@ -48,7 +48,7 @@
   use crtm_spccoeff, only: sc
   use obsmod, only: ianldate,mype_diaghdr,nchan_total, &
            dplat,obsdiags,obsptr,lobsdiagsave,lobsdiag_allocated,&
-           dirname,time_offset
+           dirname,time_offset, dg2ob
   use obsmod, only: obs_diag,luse_obsdiag
   use gsi_4dvar, only: nobs_bins,hr_obsbin
   use gridmod, only: nsig,get_ij
@@ -148,6 +148,8 @@
   real(r_kind),dimension(nsigaerojac,nchanl):: jacobian_aero
   real(r_kind),dimension(nsig,nchanl):: layer_od
   real(r_kind) :: clw_guess, tzbgr, sfc_speed
+  real(r_kind),dimension(nsig):: ql_SIMTB,qi_SIMTB
+
 
   if ( .not. laeroana_gocart ) then
      return
@@ -325,7 +327,9 @@
              tvp,qvp,clw_guess,prsltmp,prsitmp, &
              trop5,tzbgr,dtsavg,sfc_speed, &
              tsim,emissivity,ptau5,ts,emissivity_k, &
-             temp,wmix,jacobian,error_status,layer_od=layer_od,jacobian_aero=jacobian_aero)
+             temp,wmix,jacobian,error_status,dg2ob(is),ql_SIMTB,qi_SIMTB, &
+             layer_od=layer_od,jacobian_aero=jacobian_aero)
+
 
 
 ! If the CRTM returns an error flag, do not assimilate any channels for this ob

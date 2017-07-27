@@ -166,6 +166,7 @@ module obsmod
 !   def time_offset  - analysis relative time offset
 !   def dplat        - satellite (platform) id
 !   def dthin        - satellite group
+!   def dg2ob        - guess to ob method, 0 weighted ave (default), 1 nearest neighbor
 !   def nsat1        - number of observations of satellites in each pe
 !   def obs_sub_comm - mpi communicator for obs ob pe subdomains (one communicator per obtype)
 !   def mype_diaghdr - pe id for writing out satellite diagnostic file
@@ -370,7 +371,7 @@ module obsmod
   public :: destroyobs
   public :: destroy_obsmod_vars
   public :: ran01dom,dval_use
-  public :: iout_pcp,iout_rad,iadate,iadatemn,write_diag,reduce_diag,oberrflg,bflag,ndat,dthin,dmesh,l_do_adjoint
+  public :: iout_pcp,iout_rad,iadate,iadatemn,write_diag,reduce_diag,oberrflg,bflag,ndat,dthin,dg2ob,dmesh,l_do_adjoint
   public :: lsaveobsens
   public :: i_ps_ob_type,i_t_ob_type,i_w_ob_type,i_q_ob_type
   public :: i_spd_ob_type,i_srw_ob_type,i_rw_ob_type,i_dw_ob_type,i_sst_ob_type
@@ -540,7 +541,7 @@ module obsmod
   integer(i_kind) iout_pm10, mype_pm10
   integer(i_kind),dimension(5):: iadate
   integer(i_kind),dimension(5):: iadatemn
-  integer(i_kind),allocatable,dimension(:):: dsfcalc,dthin,ipoint
+  integer(i_kind),allocatable,dimension(:):: dsfcalc,dthin,dg2ob,ipoint
   integer(i_kind),allocatable,dimension(:)::  nsat1,mype_diaghdr
   integer(i_kind),allocatable :: nobs_sub(:,:)
   integer(i_kind),allocatable :: obscounts(:,:)
@@ -955,6 +956,7 @@ contains
              dsis  (ioff+jj) = dsis(jj)
              ipoint(ioff+jj) = ipoint(jj)
              dthin (ioff+jj) = dthin(jj)
+             dg2ob (ioff+jj) = dg2ob(jj)
              dval  (ioff+jj) = dval(jj)
              dsfcalc(ioff+jj)= dsfcalc(jj)
              obsfile_all(ioff+jj) = trim(obsfile_all(jj))//'.'//cind
@@ -1224,7 +1226,7 @@ nall=ndat_times*ndat_types
 
 ! allocate space for entries from table
 allocate(dfile(nall),dtype(nall),dplat(nall),&
-         dsis(nall),dval(nall),dthin(nall),dsfcalc(nall),&
+         dsis(nall),dval(nall),dthin(nall),dg2ob(nall),dsfcalc(nall),&
          time_window(nall),obsfile_all(nall))
 
 ! things not in table, but dependent on nrows ... move somewhere else !_RTodling
@@ -1241,6 +1243,7 @@ do ii=1,nrows
                       dsis(ii), & ! sensor/instrument/satellite identifier for info files
                       dval(ii), & ! 
                       dthin(ii),& ! thinning flag (1=thinning on; otherwise off)
+                      dg2ob(ii),& ! ges to ob method, 0 weighted ob, 1 nearest neighbor
                       dsfcalc(ii) ! use orig bilinear FOV surface calculation (routine deter_sfc)
 
    ! The following is to sort out some historical naming conventions
@@ -1277,7 +1280,7 @@ if(.not.obs_instr_initialized_) return
 deallocate(ditype,ipoint)
 
 deallocate(dfile,dtype,dplat,&
-           dsis,dval,dthin,dsfcalc,&
+           dsis,dval,dthin,dg2ob,dsfcalc,&
            time_window,obsfile_all)
 
 obs_instr_initialized_ = .false.

@@ -61,6 +61,8 @@ CONTAINS
 
   use gridmod, only: regional,wrf_mass_regional
   use wrf_params_mod, only: cold_start
+  use cloud_efr_mod, only: microphysics
+
   implicit none
 
 ! !ARGUMENTS:
@@ -85,6 +87,7 @@ CONTAINS
 ! 14May2011  Todling    Encapsulate Min-Jeong's code in present module.
 ! 01July2011 Zhu        Add jcloud and cloud_efr; add codes for the regional 
 ! 19Feb2013  Zhu        Add cold_start for the regional
+! 26Jul2017  Nebuda     Add microphysics flag for SIMTB
 !
 !EOP
 !-----------------------------------------------------------------------------
@@ -173,7 +176,7 @@ CONTAINS
 !       Calculate effective radius of given cloud type
 !       ----------------------------------------------
         if(icmask) then
-           if (regional .and. (.not. wrf_mass_regional)) then
+           if ((microphysics>0) .or. (regional .and. (.not. wrf_mass_regional))) then
               cloud(n)%Effective_Radius(:) = cloud_efr(:,n)
            else
               cloud(n)%Effective_Radius(:) = EftSize_(cloud_name(jcloud(n)))

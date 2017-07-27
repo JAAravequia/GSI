@@ -13,6 +13,7 @@ module cloud_efr_mod
 !                           from guess to this package
 !   2014-06-02 Carley     - Move inquire/read routines associated with use of Ferrier microphysics 
 !                           lookup tables from EFFRDS to cloud_init to reduce I/O problems
+!   2017-07-25 Nebuda     - add microphysics flag and calc_effrad
 !
 ! subroutines included:
 !   sub cloud_calc            - cloud composition
@@ -42,6 +43,10 @@ module cloud_efr_mod
   public :: cloud_final
   public :: set_cloud_lower_bound
   public :: efr_ql,efr_qi,efr_qr,efr_qs,efr_qg,efr_qh
+  public :: microphysics
+  public :: calc_effrad
+  public :: set_small_cwmr
+
 
   real(r_kind),allocatable,dimension(:,:,:,:):: efr_ql     ! effective radius for cloud liquid water
   real(r_kind),allocatable,dimension(:,:,:,:):: efr_qi     ! effective radius for cloud ice
@@ -49,6 +54,10 @@ module cloud_efr_mod
   real(r_kind),allocatable,dimension(:,:,:,:):: efr_qs     ! effective radius for snow
   real(r_kind),allocatable,dimension(:,:,:,:):: efr_qg     ! effective radius for graupel
   real(r_kind),allocatable,dimension(:,:,:,:):: efr_qh     ! effective radius for hail
+  integer(i_kind) :: microphysics                          ! 0 Current 1 WSM6 2 Thompson cloud_efr computed from guess fields
+                                                           ! set in ncepgfs_io.f90
+  character(len=*), parameter :: myname = 'cloud_efr_mod'
+
 
 ! local variables to this module (not public)
   logical,save:: cloud_initialized_=.false.
@@ -90,7 +99,8 @@ implicit none
 integer(i_kind) i,j,k,n
 logical pcexist
 
- if(.not.regional) return
+!SIMTB - global case with microphysics
+!if(.not.regional) return
  if(cloud_initialized_) return
 
  allocate (efr_ql(lat2,lon2,nsig,nfldsig),efr_qi(lat2,lon2,nsig,nfldsig), &
@@ -152,6 +162,107 @@ subroutine cloud_final
   cloud_initialized_=.false.
 
 end subroutine cloud_final
+
+subroutine calc_effrad
+
+
+!$$$  subprogram documentation block
+!                .      .    .                                       .
+! subprogram:    calc_effrad     compute effective ratio for WSM6 & Thompson ! microphysics schemes
+!                                assumes tsen & prsl are correct
+
+!                                Zhao effective radius could be set here instead of inside 
+!                                set_crtm_cloud but then unnecessary interp to ob instead of 
+!                                setting to a constant
+!                                this should be called after supersaturation check in read_guess
+
+  use gridmod, only: lat2,lon2,nsig
+  use guess_grids, only: nfldsig, ges_tsen, ges_prsl
+  use constants, only: zero
+  use gsi_bundlemod, only: gsi_bundlegetpointer
+  use gsi_metguess_mod, only: gsi_metguess_bundle
+  use mpimod, only : mype
+
+  implicit none
+
+! Declare local variables
+! Needed for met bundle
+  real(r_kind),dimension(:,:,:),pointer::g_q =>NULL()  ! water vapor MR, inside time loop
+  real(r_kind),dimension(:,:,:),pointer::g_ql=>NULL()  ! Cloud liquid MR
+  real(r_kind),dimension(:,:,:),pointer::g_qi=>NULL()  ! Cloud ice MR
+  real(r_kind),dimension(:,:,:),pointer::g_qs=>NULL()  ! Cloud snow MR
+  real(r_kind),dimension(:,:,:),pointer::g_qr=>NULL()  ! Cloud rain MR
+  real(r_kind),dimension(:,:,:),pointer::g_qg=>NULL()  ! Cloud graupel MR
+  real(r_kind),dimension(:,:,:),pointer::g_ni=>NULL()  ! Cloud ice number
+  real(r_kind),dimension(:,:,:),pointer::g_nr=>NULL()  ! rain ice number
+
+! available from this module 
+! microphysics                                         ! flag 0=Zhao,5=WSM6,7=Thompson
+!                                                      ! g_ni & g_nr will be zero for WSM6
+
+!output is efr_ql, efr_qi, efr_qr, efr_qs, efr_qg which is available from the module interface
+
+  integer(i_kind):: i,j,k,n,mp, ier, istatus
+  real(r_kind)   :: num0
+
+  if (microphysics > 0)  then
+
+  mp =6  ! WSM6 default
+  if (microphysics == 7) mp=8  ! Thompson
+
+! Effective radius function of temperature and pressure, CRTm profile on log prs?
+  num0 = zero
+  do n=1,nfldsig
+
+     ier=0
+     call gsi_bundlegetpointer (gsi_metguess_bundle(n),'q' ,g_q ,istatus)
+     ier=ier+istatus
+     call gsi_bundlegetpointer (gsi_metguess_bundle(n),'qi',g_qi,istatus)
+     ier=ier+istatus
+     call gsi_bundlegetpointer (gsi_metguess_bundle(n),'ql',g_ql,istatus)
+     ier=ier+istatus
+     call gsi_bundlegetpointer (gsi_metguess_bundle(n),'qs',g_qs,istatus)
+     ier=ier+istatus
+     call gsi_bundlegetpointer (gsi_metguess_bundle(n),'qr',g_qr,istatus)
+     ier=ier+istatus
+     call gsi_bundlegetpointer (gsi_metguess_bundle(n),'qg',g_qg,istatus)
+     ier=ier+istatus
+     call gsi_bundlegetpointer (gsi_metguess_bundle(n),'ni',g_ni,istatus)
+     ier=ier+istatus
+     call gsi_bundlegetpointer (gsi_metguess_bundle(n),'nr',g_nr,istatus)
+     ier=ier+istatus
+     if (ier==0) then
+
+     do k = 1, nsig
+        do j = 1, lon2
+           do i = 1, lat2
+              efr_qi(i,j,k,n) = get_effrad(ges_prsl(i,j,k,n),ges_tsen(i,j,k,n), &
+                                           g_q(i,j,k), g_qi(i,j,k), g_ni(i,j,k),'I',mp)
+              efr_ql(i,j,k,n) = get_effrad(ges_prsl(i,j,k,n),ges_tsen(i,j,k,n), &
+                                           g_q(i,j,k), g_ql(i,j,k), num0,       'C',mp)
+              efr_qs(i,j,k,n) = get_effrad(ges_prsl(i,j,k,n),ges_tsen(i,j,k,n), &
+                                           g_q(i,j,k), g_qs(i,j,k), num0,       'S',mp)
+              efr_qr(i,j,k,n) = get_effrad(ges_prsl(i,j,k,n),ges_tsen(i,j,k,n), &
+                                           g_q(i,j,k), g_qr(i,j,k), g_nr(i,j,k),'R',mp)
+              efr_qg(i,j,k,n) = get_effrad(ges_prsl(i,j,k,n),ges_tsen(i,j,k,n), &
+                                           g_q(i,j,k), g_qg(i,j,k), num0,       'G',mp)
+           enddo
+        enddo
+     enddo
+     else ! failed check that met bundle pointer was assigned
+       if(mype==0) write(6,*)trim(myname),' calc_effrad: unable to get met bundle ',&
+         'to calculate cloud species effective radius'
+     endif
+
+  enddo
+
+  endif ! check that microphysics > 0 and effrad needs to be calculated
+
+  return
+
+end subroutine calc_effrad
+
+
 
 subroutine cloud_calc(p0d,q1d,t1d,clwmr,fice,frain,frimef,& 
                       ges_ql,ges_qi,ges_qr,ges_qs,ges_qg,ges_qh,&
@@ -257,6 +368,32 @@ subroutine cloud_calc(p0d,q1d,t1d,clwmr,fice,frain,frimef,&
   end do
   return
 end subroutine cloud_calc
+
+subroutine set_small_cwmr(g_cwmr)
+!$$$  subprogram documentation block
+!                .      .    .                                       .
+! subprogram:    set_small_cwmr     set cloud water MR to qcmin if smaller
+
+  use gridmod, only: lat2,lon2,nsig
+  use constants, only: qcmin
+  implicit none
+
+! Declare passed variables
+  real(r_kind),dimension(lat2,lon2,nsig),intent(inout):: g_cwmr ! mixing ratio of total condensates [Kg/Kg]
+
+! Declare local variables
+  integer(i_kind):: i,j,k
+
+! set values of cloud water smaller than qcmin to qcmin
+  do k=1,nsig
+     do j=1,lon2
+        do i=1,lat2
+           g_cwmr(i,j,k) =max(qcmin,g_cwmr(i,j,k))
+        end do
+     end do
+  end do
+  return
+end subroutine set_small_cwmr
 
 subroutine cloud_calc_gfs(g_ql,g_qi,g_cwmr,g_q,g_tv) 
 !$$$  subprogram documentation block
@@ -597,5 +734,631 @@ end subroutine set_cloud_lower_bound
 
       return
       end function fpvsx
+
+REAL FUNCTION get_effrad(pmid,t,q,q_mr,q_num,species,mp_opt)
+
+  use constants, only: zero
+
+!             efr_qi(i,j,k,n) = get_effrad(ges_prsl(i,j,k,n),ges_tsen(i,j,k,n), &
+!                                          g_q(i,j,k), g_qi(i,j,k), g_ni(i,j,k),'I',mp)
+
+        real(r_kind)     :: pmid ! mid level pressure (ges_prsl)
+        real(r_kind)     :: t    ! sensible temperature (ges_tsen)
+        real(r_kind)     :: q    ! Mixing ratio of water vapor
+        real(r_kind)     :: q_mr ! Mixing ratio of cloud species
+        real(r_kind)     :: q_num ! number of cloud species
+        character(LEN=1) :: species ! character flag of which species 
+                                    ! C=cloud liquid, I=cloud ice, R=rain, S=snow, G=graupel
+        integer(i_kind)  :: mp_opt  ! 6= WSM6, 8= Thompson, 5=Ferrier, 99= Zhao
+
+        real(r_kind)     :: effrad ! effective radius
+        real(r_kind)     :: qqw,qqi,qqr,qqs,qqg
+        real(r_kind)     :: f_rimef
+        real(r_kind)     :: qqnr,qqni,nlice,nrain
+
+        qqw = zero
+        qqi = zero
+        qqr = zero
+        qqs = zero
+        qqg = zero
+        f_rimef = zero
+        nlice = zero
+        nrain = zero
+
+        select case(species)
+           case("C")
+              qqw = q_mr
+           case("R")
+              qqr = q_mr
+              nrain = q_num
+              qqnr = q_num
+           case("G")
+              qqg = q_mr
+           case("S")
+              qqs = q_mr
+           case("I")
+              qqi = q_mr
+              nlice = q_num
+              qqni = q_num
+        end select
+        get_effrad = EFFR(pmid,t,q,qqw,qqi,qqr,f_rimef, nlice, nrain, &
+                     qqs,qqg,qqnr,qqni,mp_opt,species)
+
+return
+end function get_effrad
+
+REAL FUNCTION EFFR(pmid,t,q,qqw,qqi,qqr,f_rimef, nlice, nrain, &
+                   qqs,qqg,qqnr,qqni,mp_opt,species)
+
+!       JASON OTKIN AND WILLIAM LEWIS
+!       09 DECEMBER 2014
+
+! use params_mod, only: pi, rd, d608
+  use constants, only: pi
+  use kinds, only: r_kind,i_kind
+
+        implicit none
+
+        real(r_kind) :: pmid,t,q,qqw,qqi,qqr,qqs,qqg,f_rimef,nlice,nrain
+        real(r_kind) :: qqnr,qqni
+        character(LEN=1) :: species
+
+        integer(i_kind)                         :: n,count,count1,mp_opt
+        real(r_kind) :: rho, ncc, rhox
+        real(r_kind) :: n0_s, n0_r, n0_g
+
+! these are in constants.F90 but have an if (regional) around them
+        real(r_kind),parameter:: d608=0.608_r_kind
+        real(r_kind),parameter:: rd=287.04_r_kind
+
+!-------------------------------------------------------------------------------
+!  GAMMA FUNCTION & RELATED VARIABLES
+!-------------------------------------------------------------------------------
+
+        real(r_kind) :: gamma
+        real(r_kind) :: gamma_crg, gamma_i, gamma_s
+
+!       real :: WGAMMA, GAMMLN
+        real(r_kind)    :: rc,mu_c,am_c,bm_c,cce(3,15),ccg(3,15),ocg1(15),ocg2(15)
+        integer(i_kind) :: nu_c
+
+        real(r_kind), dimension(0:15), parameter:: g_ratio = (/6,24,60,120,210, &
+     &              336,504,720,990,1320,1716,2184,2730,3360,4080,4896/)
+
+        real(r_kind)    :: rr, mu_r, am_r, bm_r, cre(3), crg(3), ore1, org1, org2
+        real(r_kind)    :: mvd_r, ron_sl, ron_r0, ron_c0, ron_c1, ron_c2, obmr
+
+        real(r_kind)    :: ri, mu_i, am_i, bm_i, cie(3), cig(3), oig1, oig2, obmi
+
+        real(r_kind)    :: rs, am_s, oams, cse(3)
+        real(r_kind)    :: loga, a, b, tc0, smob, smo2, smoc
+        REAL, PARAMETER:: mu_s = 0.6357
+        REAL, PARAMETER:: Kap0 = 490.6
+        REAL, PARAMETER:: Kap1 = 17.46
+        REAL, PARAMETER:: Lam0 = 20.78
+        REAL, PARAMETER:: Lam1 = 3.29
+
+!-------------------------------------------------------------------------------
+!  MINIMUM/MAXIMUM CONSTANTS FOR ALL SCHEMES
+!-------------------------------------------------------------------------------
+
+        real(r_kind), parameter :: eps=0.622, beta_crg=3., beta_i=2.,beta_s=2.4
+
+        real(r_kind), parameter :: min_qc=1.e-7, min_qr=1.e-7, min_qi=1.e-8,min_qs=1.e-8, min_qg=1.e-7
+        real(r_kind), parameter :: min_c=2.e-6,  min_r=20.e-6, min_i=4.e-6,min_s=20.e-6, min_g=20.e-6
+        real(r_kind), parameter :: max_c=1.e-2,  max_r=1.e-2,  max_i=1.e-3,max_s=2.e-2,  max_g=5.e-0
+
+        real(r_kind)    :: rg, am_g, bm_g, mu_g
+        real(r_kind)    :: cgg(3), cge(3), oge1, obmg, ogg1, ogg2
+
+!       double precision :: no_exp, no_min, lm_exp, lamg, lamc, lamr, lami, lams
+        real(r_kind) :: no_exp, no_min, lm_exp, lamg, lamc, lamr, lami, lams
+
+!-------------------------------------------------------------------------------
+!  WSM6-SPECIFIC ARRAYS
+!-------------------------------------------------------------------------------
+
+        real(r_kind) :: wsm6_nci, xmi, xmitemp
+
+!-------------------------------------------------------------------------------
+!  CONSTANTS FOR WSM6 MICROPHYSICS SCHEME
+!-------------------------------------------------------------------------------
+        real(r_kind), parameter :: wsm6_cnp=3.e8, wsm6_rhor=1000.
+        real(r_kind), parameter :: wsm6_rhos=100., wsm6_rhog=500.
+        real(r_kind), parameter :: wsm6_dimax=500.e-6, wsm6_dicon=11.9
+        real(r_kind), parameter :: wsm6_alpha=.12, wsm6_t0c=273.15
+        real(r_kind), parameter :: wsm6_n0s=2.e6, wsm6_n0smax=1.e11
+        real(r_kind), parameter :: wsm6_n0r=8.e6, wsm6_n0g=4.e6
+        real(r_kind), parameter :: wsm6_qmin=1.e-15
+
+!-------------------------------------------------------------------------------
+!  CONSTANTS FOR LIN MICROPHYSICS SCHEME
+!-------------------------------------------------------------------------------
+
+        real(r_kind), parameter :: lin_rhoi=100., lin_rhor=1000., lin_rhos=100.
+        real(r_kind), parameter :: lin_rhog=400., lin_cnp=3.e8
+        real(r_kind), parameter :: lin_n0r=8.e6,  lin_n0s=3.e6,   lin_n0g=4.e6
+
+!-------------------------------------------------------------------------------
+!  CONSTANTS FOR NEW THOMPSON MICROPHYSICS SCHEME (FOR WRF VERSIONS 3.1 AND UP)
+!-------------------------------------------------------------------------------
+
+        real(r_kind), parameter :: nthom_rhor=1000., nthom_rhos=100.
+!       WM LEWIS updated rhog to 500 from 400
+        real(r_kind), parameter :: nthom_rhog=500.,  nthom_rhoi=890.
+        real(r_kind), parameter :: nthom_gon_min=1.e4, nthom_gon_max=3.e6
+        real(r_kind), parameter :: nthom_nt_c=100.e6
+
+        real(r_kind), parameter :: nthom_min_nci=5.e2
+        real(r_kind), parameter :: nthom_min_ncr=1.e-6
+
+        real(r_kind), parameter :: nthom_bm_s=2.0               !this is important
+
+        real(r_kind) :: nci2, ncc2, ncr2
+
+        real(r_kind), dimension(10), parameter :: &
+        nthom_sa = (/ 5.065339, -0.062659, -3.032362, 0.029469, -0.000285, &
+                      0.31255,   0.000204,  0.003199, 0.0,      -0.015952/)
+        real(r_kind), dimension(10), parameter :: &
+        nthom_sb = (/ 0.476221, -0.015896,  0.165977, 0.007468, -0.000141, &
+                      0.060366,  0.000079,  0.000594, 0.0,      -0.003577/)
+
+
+        if(mp_opt.eq.6) then                        !WSM6 SCHEME
+
+          n0_r = wsm6_n0r
+          n0_g = wsm6_n0g
+          n0_s = wsm6_n0s
+
+        elseif(mp_opt.eq.2)then                     !LIN SCHEME
+          n0_r = lin_n0r
+          n0_g = lin_n0g
+          n0_s = lin_n0s
+
+        endif
+
+!------------------------------------------------------------------------------
+!  SET DIAMETER ARRAYS TO ZERO, COMPUTE DENSITY
+!------------------------------------------------------------------------------
+
+        effr=0.
+
+        rho=pmid/(rd*t*(1.+D608*q))
+
+
+ if(mp_opt.eq.6)then
+
+     SELECT CASE(species)
+
+     CASE("C")
+
+     if ( qqw.gt.min_qc ) then !cloud diameter: assume constant # concentration
+       effr = 1.0E6*(( 6. * rho * qqw ) / &
+       (pi * wsm6_rhor * wsm6_cnp))**(1/3.)
+
+     endif
+
+     CASE("R")
+
+     if ( qqr.gt.min_qr ) then !rain diameter: assume gamma distribution
+       effr = 1.0E6*( ( 6. * rho * qqr ) / &
+       ( pi * wsm6_rhor * n0_r * gamma_crg ) ) ** (1/(1+beta_crg ) )
+     endif
+
+     CASE("G")
+
+     if ( qqg.gt.min_qg ) then !graupel diameter: assume gamma distribution
+       effr = 1.0E6*( ( 6. * rho * qqg ) / &
+       ( pi * wsm6_rhog * n0_g * gamma_crg ) ) ** (1/(1+beta_crg ) )
+     endif
+
+     CASE("S")
+
+     if ( qqs.gt.min_qs ) then !snow diameter: assume gamma distribution
+       effr = 1.0E6*( ( 6. * rho * qqs ) / &
+       ( pi * wsm6_rhos * n0_s * gamma_s   ) ) ** ( 1/(1+beta_s) )
+     endif
+!  ICE DIAMETER: CALCULATED USING METHOD OUTLINED IN WRF BROWSER.  Refer to
+!  phys/module_mp_wsm6.F (Vice:fallout of ice crystal).
+
+     CASE("I")
+
+     if ( qqi.gt.min_qi ) then !ice diameter
+!       wsm6_nci = min(max(5.38e7*(rho*max(qqi,wsm6_qmin)),1.e3),1.e6)
+!       xmi = rho * qqi / wsm6_nci
+!       effr = 1.0E6*min( sqrt(xmi), wsm6_dimax)
+!!      from wsm6, HWRF ver 3.6:
+!!          temp = (den(i,k)*max(qci(i,k,2),qmin))
+!!          temp = sqrt(sqrt(temp*temp*temp))
+!!          xni(i,k) = min(max(5.38e7*temp,1.e3),1.e6)
+!!      diameter  = max(min(dicon * sqrt(xmi),dimax), 1.e-25)
+       xmitemp=rho*max(qqi,wsm6_qmin)
+       xmitemp=sqrt(sqrt(xmitemp*xmitemp*xmitemp))
+       xmi= min(max(5.38e7*xmitemp,1.e3),1.e6)
+       effr = 1.0E6*max(min(wsm6_dicon * sqrt(xmi),wsm6_dimax), 1.e-25)
+     endif
+
+     END SELECT
+
+ elseif(mp_opt.eq.2)then
+
+     SELECT CASE(species)
+
+     CASE("C")
+
+     if ( qqw > min_qc ) then !cloud diameter: assume constant # concentration
+       effr = 1.0E6*(( 6. * rho * qqw ) / &
+       (pi * lin_rhor * lin_cnp))**(1/3.)
+     endif
+
+     CASE("R")
+
+     if ( qqr > min_qr ) then !rain diameter: assume gamma distribution
+       effr = 1.0E6*( ( 6. * rho * qqr ) / &
+       ( pi * lin_rhor * n0_r * gamma_crg ) ) ** (1/(1+beta_crg ) )
+     endif
+
+     CASE("I")
+
+     if ( qqi > min_qi ) then !ice diameter: assume constant # concentrtion
+       effr = 1.0E6*( ( 6. * rho * qqi ) / &
+       ( pi * lin_rhoi * lin_cnp ) ) ** ( 1/3.)
+     endif
+
+     CASE("S")
+
+     if ( qqs > min_qs ) then !snow diameter: assume gamma distribution
+       effr = 1.0E6*( ( 6. * rho * qqs ) / &
+       ( pi * lin_rhos * n0_s * gamma_s   ) ) ** ( 1/(1+beta_s) )
+     endif
+
+     CASE("G")
+
+     if ( qqg > min_qg ) then !graupel diameter: assume gamma distribution
+       effr = 1.0E6*( ( 6. * rho * qqg ) / &
+       ( pi * lin_rhog * n0_g * gamma_crg ) ) ** (1/(1+beta_crg ) )
+     endif
+
+     END SELECT
+
+ elseif(mp_opt.eq.8)then
+
+!-----------------------------------
+        ! CLOUD DROPLET NUMBER CONCENTRATION
+!-----------------------------------
+
+          ncc = nthom_nt_c
+
+
+!  rain section
+
+          bm_r   = 3.0
+          mu_r   = 0.0
+          obmr   = 1.0 / bm_r
+          am_r   = pi * nthom_rhor / 6.0
+
+          cre(1) = bm_r + 1.
+          cre(2) = mu_r + 1.
+          cre(3) = bm_r + mu_r + 1.
+
+          crg(1) = WGAMMA(cre(1))
+          crg(2) = WGAMMA(cre(2))
+          crg(3) = WGAMMA(cre(3))
+
+          ore1   = 1. / cre(1)
+          org1   = 1. / crg(1)
+          org2   = 1. / crg(2)
+
+!  cloud section
+
+          bm_c   = bm_r
+          mu_c   = min(15.,(1000.e6/nthom_nt_c+2.))
+
+          do n = 1, 15
+             cce(1,n) = n + 1.             ! Substitute variable value of mu_c
+             cce(2,n) = bm_r + n + 1.      ! Substitute variable value of mu_c
+
+             ccg(1,n) = WGAMMA(cce(1,n))
+             ccg(2,n) = WGAMMA(cce(2,n))
+
+             ocg1(n)   = 1./ccg(1,n)
+             ocg2(n)   = 1./ccg(2,n)
+          enddo
+
+!  ice section
+
+          am_i   = pi * nthom_rhoi / 6.0
+          bm_i   = 3.0
+          mu_i   = 0.
+
+          cie(1) = mu_i + 1.
+          cie(2) = bm_i + mu_i + 1.
+
+          cig(1) = WGAMMA(cie(1))
+          cig(2) = WGAMMA(cie(2))
+
+          oig1   = 1./cig(1)
+          oig2   = 1./cig(2)
+          obmi   = 1./bm_i
+
+!  snow section
+
+          am_s   = 0.069
+
+          oams   = 1./am_s
+
+          cse(1) = nthom_bm_s + 1.
+
+!  graupel section
+
+          bm_g   = 3.0
+          mu_g   = 0.0
+          obmg   = 1.0 / bm_g
+          am_g   = pi * nthom_rhog / 6.0
+
+          cge(1) = bm_g + 1.
+          cge(2) = mu_g + 1.
+          cge(3) = bm_g + mu_g + 1.
+
+          cgg(1) = WGAMMA(cge(1))
+          cgg(2) = WGAMMA(cge(2))
+          cgg(3) = WGAMMA(cge(3))
+
+          oge1   = 1. / cge(1)
+          ogg1   = 1. / cgg(1)
+          ogg2   = 1. / cgg(2)
+
+!CLOUD DIAMETER CALCULATIONS
+
+     SELECT CASE (species)
+
+     CASE("C")
+
+            if(qqw .ge. min_qc) then
+
+              rc = MAX(1.E-12, qqw * rho)
+              ncc2 = MAX(1.E-6, ncc * rho)
+              if (ncc2 .lt. 10.e6) then
+                nu_c = 15
+              else
+                nu_c   = min (15, NINT(1000.e6/ncc2) + 2)
+              endif
+
+              lamc = (ncc2/rc)**obmr * (am_r*g_ratio(nu_c))**obmr
+
+              effr = 1.0E6*MAX(5.01E-6, MIN(SNGL(1.0D0*DBLE(3.+nu_c)/lamc),50.E-6))
+
+!           old UPP
+!             effr = 2.*10.
+
+            endif
+
+!RAIN DIAMETER CALCULATIONS
+
+     CASE("R")
+
+            if( qqr > min_qr) then
+
+              rr = MAX(1.E-12, qqr * rho)
+              ncr2 = MAX(1.E-6, qqnr * rho)
+              lamr = (ncr2/rr)**obmr * (am_r*crg(3)*org2)**obmr
+
+              effr = 1.0E6*MAX(50.01E-6, MIN(SNGL(1.0D0*DBLE(3.+mu_r)/lamr),1999.E-6))
+
+!             old UPP
+!              effr=2.*200.
+
+!              print*,'effr_rain=',effr/2.
+
+            endif
+
+!ICE DIAMETER CACLULATIONS
+
+     CASE("I")
+
+            if(qqi .ge. min_qi) then
+
+              ri = MAX(1.E-12, qqi * rho)
+              nci2 = MAX(1.E-6, qqni * rho)
+
+              lami = (nci2/ri)**obmi * (am_i*cig(2)*oig1)**obmi
+
+              effr = 1.0E6*MAX(10.01E-6, MIN(SNGL(1.0D0*DBLE(3.+mu_i)/lami),250.E-6))
+
+!             old UPP
+!               effr=2.*25.
+
+            endif
+
+!SNOW DIAMETER CALCULATIONS
+
+     CASE("S")
+
+            rs = qqs * rho
+
+            if(qqs .ge. min_qs) then
+
+              tc0  = min(-0.1, t-273.15)
+              smob = rs*oams
+
+              if (nthom_bm_s.gt.(2.0-1.e-3) .and. nthom_bm_s.lt.(2.0+1.e-3))then
+                  smo2 = smob
+              else
+                  loga = nthom_sa(1) + nthom_sa(2)*tc0 + nthom_sa(3)*nthom_bm_s+               &
+                         nthom_sa(4)*tc0*nthom_bm_s + nthom_sa(5)*tc0*tc0 +&
+                         nthom_sa(6)*nthom_bm_s*nthom_bm_s +nthom_sa(7)*tc0*tc0*nthom_bm_s +   &
+                         nthom_sa(8)*tc0*nthom_bm_s*nthom_bm_s +nthom_sa(9)*tc0*tc0*tc0 +      &
+                         nthom_sa(10)*nthom_bm_s*nthom_bm_s*nthom_bm_s
+
+                  a    = 10.0**loga
+
+                  b    = nthom_sb(1) + nthom_sb(2)*tc0 + nthom_sb(3)*nthom_bm_s+               &
+                         nthom_sb(4)*tc0*nthom_bm_s + nthom_sb(5)*tc0*tc0 +&
+                         nthom_sb(6)*nthom_bm_s*nthom_bm_s +nthom_sb(7)*tc0*tc0*nthom_bm_s +   &
+                         nthom_sb(8)*tc0*nthom_bm_s*nthom_bm_s +nthom_sb(9)*tc0*tc0*tc0 +      &
+                         nthom_sb(10)*nthom_bm_s*nthom_bm_s*nthom_bm_s
+                  smo2 = (smob/a)**(1./b)
+              endif
+
+              !Calculate bm_s+1 (th) moment.  Useful for diameter calcs.
+              loga      = nthom_sa(1) + nthom_sa(2)*tc0 + nthom_sa(3)*cse(1) +&
+                          nthom_sa(4)*tc0*cse(1) + nthom_sa(5)*tc0*tc0 +&
+                          nthom_sa(6)*cse(1)*cse(1) + nthom_sa(7)*tc0*tc0*cse(1)+      &
+                          nthom_sa(8)*tc0*cse(1)*cse(1) +nthom_sa(9)*tc0*tc0*tc0 +     &
+                          nthom_sa(10)*cse(1)*cse(1)*cse(1)
+
+              a       = 10.0**loga
+
+              b       = nthom_sb(1)+ nthom_sb(2)*tc0 + nthom_sb(3)*cse(1) +&
+                        nthom_sb(4)*tc0*cse(1) + nthom_sb(5)*tc0*tc0 +&
+                        nthom_sb(6)*cse(1)*cse(1) + nthom_sb(7)*tc0*tc0*cse(1) +&
+                        nthom_sb(8)*tc0*cse(1)*cse(1) + nthom_sb(9)*tc0*tc0*tc0 +       &
+                        nthom_sb(10)*cse(1)*cse(1)*cse(1)
+
+              smoc      = a * smo2**b
+
+              effr = 1.0E6*MAX(50.E-6, MIN(smoc/smob, 1999.E-6))
+
+!              print*,'snow effr=',effr
+!             changing snow effr recovers "old" UPP Thompson almost exactly;
+!             i.e. the snow effr is the source of the cold discprepancy.
+
+!             old UPP
+!              effr=2.*250.
+
+            endif
+
+     CASE("G")
+
+            if(qqg .ge. min_qg) then
+
+                no_min  = nthom_gon_max
+
+                no_exp  = 200. / qqg
+
+                no_exp  = max(dble(nthom_gon_min),min(no_exp,dble(nthom_gon_max)))
+
+                no_min  = min(no_exp,no_min)
+
+                no_exp  = no_min
+
+                lm_exp  = (no_exp*am_g*cgg(1)/rg)**oge1
+
+                lamg    = lm_exp*(cgg(3)*ogg2*ogg1)**obmg
+
+                effr= 1.0E6*(3.0 + mu_g) / lamg
+
+!           old UPP
+!            effr=350.
+
+            endif
+
+     END SELECT
+
+  elseif(mp_opt.eq.5.or.mp_opt.eq.85.or.mp_opt.eq.95)then
+
+     SELECT CASE (species)
+
+     CASE("C")
+
+      effr=2.*10.
+
+     CASE("I")
+
+      effr=2.*25.
+
+     CASE("R")
+      if( qqr > min_qr) then
+      rhox=1000.
+      effr=2.*1.0E6*1.5*(rho*qqr/(pi*rhox*nrain))**(1./3.)
+
+!      old UPP    
+!      effr=2.*200.
+!      effr=min(200.,effr)
+!      print*,'effr_rain=',effr/2.
+      endif
+
+     CASE("S")
+
+      if(F_RimeF<=5.0)then
+        RHOX=100.
+          if(NLICE>0.) then
+            effr  = 2.*1.0E6*1.5*(RHO*qqs/(PI*RHOX*NLICE))**(1./3.)
+          endif
+      endif
+
+     CASE("G")
+
+      if(F_RimeF>5.0.and.F_RimeF<=20.0)then
+        RHOX=400.
+          if(NLICE>0.) then
+            effr  = 2.*1.0E6*1.5*(RHO*qqs/(PI*RHOX*NLICE))**(1./3.)
+          endif
+      endif
+
+     CASE("H")
+
+      if(F_RimeF>20.0)then
+        RHOX=900.
+          if(NLICE>0.) then
+            effr  = 2.*1.0E6*1.5*(RHO*qqs/(PI*RHOX*NLICE))**(1./3.)
+          endif
+      endif
+
+     END SELECT
+
+
+  endif
+
+!-----------------------------------------
+! DIAMETER -> RADIUS
+!-----------------------------------------
+
+  effr = 0.5*effr
+
+end function EFFR
+
+      REAL FUNCTION WGAMMA(y)
+
+      IMPLICIT NONE
+      REAL(r_kind), INTENT(IN):: y
+
+!     real(r_kind)    :: GAMMLN
+
+      WGAMMA = EXP(GAMMLN(y))
+
+      END FUNCTION WGAMMA
+
+
+      REAL FUNCTION GAMMLN(XX)
+!     --- RETURNS THE VALUE LN(GAMMA(XX)) FOR XX > 0.
+      IMPLICIT NONE
+      REAL(r_kind), INTENT(IN):: XX
+!     DOUBLE PRECISION, PARAMETER:: STP = 2.5066282746310005D0
+!     DOUBLE PRECISION, DIMENSION(6), PARAMETER:: &
+!              COF = (/76.18009172947146D0, -86.50532032941677D0, &
+!                      24.01409824083091D0, -1.231739572450155D0, &
+!                     .1208650973866179D-2, -.5395239384953D-5/)
+      real(r_kind), PARAMETER:: STP = 2.5066282746310005D0
+      real(r_kind), DIMENSION(6), PARAMETER:: &
+               COF = (/76.18009172947146D0, -86.50532032941677D0, &
+                       24.01409824083091D0, -1.231739572450155D0, &
+                      .1208650973866179D-2, -.5395239384953D-5/)
+      !DOUBLE PRECISION:: SER,TMP,X,Y
+      real(r_kind) :: SER,TMP,X,Y
+      INTEGER(i_kind):: J
+
+      X=XX
+      Y=X
+      TMP=X+5.5D0
+      TMP=(X+0.5D0)*LOG(TMP)-TMP
+      SER=1.000000000190015D0
+      DO 11 J=1,6
+        Y=Y+1.D0
+        SER=SER+COF(J)/Y
+11    CONTINUE
+      GAMMLN=TMP+LOG(STP*SER/X)
+      END FUNCTION GAMMLN
+
 
 end module cloud_efr_mod

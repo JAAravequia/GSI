@@ -48,11 +48,12 @@ module satthin
 !   sub makegrids      - set up thinning grids
 !   sub getsfc         - create full horizontal fields of surface arrays
 !   sub map2tgrid      - map observation to location on thinning grid
+!   sub map2gesgrid    - map observation to location on guess grid
 !   sub destroygrids   - deallocate thinning grid arrays
 !   sub destroy_sfc    - deallocate full horizontal surface arrays
 !   sub indexx         - sort array into ascending order
 !
-! Usecase destription:
+! Usecase description:
 !     read_obs    -->  read_airs, etc
 !   []_makegvals                        - set up for superob weighting
 !   []_getsfc                           - create full horizontal fields of surface arrays
@@ -105,6 +106,7 @@ module satthin
   public :: makegrids
   public :: getsfc
   public :: map2tgrid
+  public :: map2gesgrid
   public :: destroygrids
   public :: destroy_sfc
   public :: indexx
@@ -142,6 +144,8 @@ module satthin
   integer(i_kind),allocatable, dimension(:,:)   :: isli_anl
 ! declare local array sno_anl 
   real(r_single),allocatable, dimension(:,:,:)   :: sno_anl
+  real(r_kind),parameter:: r0p9   = 0.9_r_kind
+
 
   logical use_all
 
@@ -314,6 +318,8 @@ contains
 !
 !$$$
     use constants, only: rearth_equator,deg2rad,zero,half,one,two,pi
+    use gridmod, only: nlat,nlon
+
 
     implicit none
 
@@ -332,9 +338,12 @@ contains
 !   If there is to be no thinning, simply return to calling routine
     use_all=.false.
     itx_all=0
-    if(abs(rmesh) <= one .or. ithin <= 0)then
+!SIMTB use rmesh = 0.9 to flag use siganl guess grid for ob thinning grid
+    if((rmesh /= r0p9 .and. abs(rmesh) <= one) .or. ithin <= 0)then
       use_all=.true.
-      itxmax=1e9
+! SIMTB for not thinned cris, this number is too large
+!     itxmax=1e9
+      itxmax=3.3e7  ! no H8 for SIMTB yet, should be allocated by each instrument
       allocate(icount(itxmax))
       allocate(score_crit(itxmax))
       do j=1,itxmax
@@ -351,46 +360,61 @@ contains
 
 !   Set up dimensions and allocate arrays for thinning grids
     if (rmesh<zero) rkm2dg=one
-    dx    = rmesh*rkm2dg
-    dy    = dx
-    mlat  = dlat_grid/dy + half
-    mlonx = dlon_grid/dx + half
-    delat = dlat_grid/mlat
-    dgv  = delat*half
-    mlat=max(2,mlat);   mlonx=max(2,mlonx)
+    if (rmesh /= r0p9) then 
 
-    allocate(mlon(mlat),glat(mlat),glon(mlonx,mlat),hll(mlonx,mlat))
+       dx    = rmesh*rkm2dg
+       dy    = dx
+       mlat  = dlat_grid/dy + half
+       mlonx = dlon_grid/dx + half
+       delat = dlat_grid/mlat
+       dgv  = delat*half
+       mlat=max(2,mlat);   mlonx=max(2,mlonx)
+   
+       allocate(mlon(mlat),glat(mlat),glon(mlonx,mlat),hll(mlonx,mlat))
 
 
-!   Set up thinning grid lon & lat.  The lon & lat represent the location of the
-!   lower left corner of the thinning grid box.
-    itxmax=0
-    do j = 1,mlat
-       glat(j) = rlat_min + (j-1)*delat
-       glat(j) = glat(j)*deg2rad
-       glatm = glat(j) + dgv*deg2rad
+   !   Set up thinning grid lon & lat.  The lon & lat represent the location of the
+   !   lower left corner of the thinning grid box.
+       itxmax=0
+       do j = 1,mlat
+          glat(j) = rlat_min + (j-1)*delat
+          glat(j) = glat(j)*deg2rad
+          glatm = glat(j) + dgv*deg2rad
+   
+          factor = abs(cos(abs(glatm)))
+          if (rmesh>zero) then
+             mlonj   = nint(mlonx*factor)
+             mlon(j) = max(2,mlonj)
+             delon = dlon_grid/mlon(j)
+          else
+             delon = factor*rmesh
+             delon = min(delon,r360)
+             mlon(j) = dlon_grid/delon
+          endif
+   
+          glat(j) = min(max(-halfpi,glat(j)),halfpi)
+          do i = 1,mlon(j)
+             itxmax=itxmax+1
+             hll(i,j)=itxmax
+             glon(i,j) = rlon_min + (i-1)*delon
+             glon(i,j) = glon(i,j)*deg2rad
+             glon(i,j) = min(max(zero,glon(i,j)),twopi)
+          enddo
+   
+       end do
 
-       factor = abs(cos(abs(glatm)))
-       if (rmesh>zero) then
-          mlonj   = nint(mlonx*factor)
-          mlon(j) = max(2,mlonj)
-          delon = dlon_grid/mlon(j)
-       else
-          delon = factor*rmesh
-          delon = min(delon,r360)
-          mlon(j) = dlon_grid/delon
-       endif
-
-       glat(j) = min(max(-halfpi,glat(j)),halfpi)
-       do i = 1,mlon(j)
-          itxmax=itxmax+1
-          hll(i,j)=itxmax
-          glon(i,j) = rlon_min + (i-1)*delon
-          glon(i,j) = glon(i,j)*deg2rad
-          glon(i,j) = min(max(zero,glon(i,j)),twopi)
+! SIMTB thinning to model guess grid, lons and lats already defined
+    else
+       allocate(hll(nlon,nlat))
+       itxmax=0
+       do j = 1,nlat
+          do i = 1,nlon
+             itxmax=itxmax+1
+             hll(i,j)=itxmax
+          enddo
        enddo
 
-    end do
+    endif
 
 
 !   Allocate  and initialize arrays
@@ -943,6 +967,98 @@ contains
     return
   end subroutine map2tgrid
 
+  subroutine map2gesgrid(dlat,dlon,dist1,crit1,itx,ithin,itt,iuse,sis)
+!$$$  subprogram documentation block
+!                .      .    .                                       .
+! subprogram:    map2gesgrid
+!     prgmmr:    derber      org: np2                 date: 2006-05-03
+!
+! abstract:  This routine maps and thins observations to the guess grid.
+!
+! program history log:
+!   2006-05-03  derber (created from map2grids)
+!   2006-09-13  treadon - set itx=1 for the case use_all=.true.
+!   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
+!   2017-07-26  nebuda  - Map obs to thinning grid which is the guess grid. 
+!                         dist1 closest to i,j point not center of box
+!
+!   input argument list:
+!     dlat       - guess grid relative coordinate
+!     dlon       - guess grid relative coordinate
+!     crit1      - quality indicator for observation (smaller = better)
+!     ithin      - number of obs to retain per thinning grid box
+!     sis        - sensor/instrument/satellite
+!
+!   output argument list:
+!     itx   - combined (i,j) index of observation on thinning grid
+!     itt   - superobs thinning counter
+!     iuse  - .true. if observation should be used
+!     
+!
+! attributes:
+!   language: f90
+!   machine:  ibm rs/6000 sp
+!
+!$$$
+    use gridmod, only: nlat,nlon
+    implicit none
+
+    real(r_kind)   ,intent(in   ) :: dlat
+    real(r_kind)   ,intent(in   ) :: dlon
+    real(r_kind)   ,intent(  out) :: dist1
+    real(r_kind)   ,intent(in   ) :: crit1
+    integer(i_kind),intent(  out) :: itx
+    integer(i_kind),intent(in   ) :: ithin
+    integer(i_kind),intent(  out) :: itt
+    logical        ,intent(  out) :: iuse
+    character(20)  ,intent(in   ) :: sis
+
+    integer(i_kind) ix,iy
+    real(r_kind) dlat1,dlon1,dx,dy,dxx,dyy
+
+!   Compute (i,j) indices of guess mesh grid (grid number 1) which 
+!   contains the current observation.
+    dlat1=dlat
+    dlon1=dlon
+
+! find ob with smallest abs(dy) & abs(dx)
+! need to match 1 to 1
+! at this time, no qc preference
+! time preference
+!   iy=int(dlat1)
+!   dy=dlat1-iy
+!   iy=max(1,min(iy,mlat))
+!   ix=int(dlon1)
+!   dx=dlon1-ix
+!   ix=max(1,min(ix,mlon(iy)))
+
+    iy=nint(dlat1)
+    dy=abs(dlat1-float(iy))
+    iy=max(1,min(iy,nlat))
+
+    ix=nint(dlon1)
+    dx=abs(dlon1-float(ix))
+    ix=max(1,min(ix,nlon))
+
+! need to change this to corner not middle of box
+!   dxx=half-min(dx,one-dx)
+!   dyy=half-min(dy,one-dy)
+    dxx=dx
+    dyy=dy
+    dist1=dxx*dxx+dyy*dyy
+    itx=hll(ix,iy)
+    itt=istart_val(ithin)+itx
+    if(ithin == 0) itt=0
+
+!   Increment obs counter on guess mesh grid.  
+!   Also accumulate observation score and distance functions
+    iuse=.true.
+    if(dist1*crit1 > score_crit(itx) .and. icount(itx))iuse=.false.
+
+    return
+  end subroutine map2gesgrid
+
+
   subroutine checkob(dist1,crit1,itx,iuse)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -1065,7 +1181,13 @@ contains
 !   return are never allocated --> therefore nothing to deallocate
     if(use_all) return
 
-    deallocate(mlon,glat,glon,hll)
+!If map to ges grid, these variables were not allocated
+!   deallocate(mlon,glat,glon,hll)
+    if(allocated(mlon)) deallocate(mlon)
+    if(allocated(glat)) deallocate(glat)
+    if(allocated(glon)) deallocate(glon)
+    if(allocated(hll)) deallocate(hll)
+
     return
   end subroutine destroygrids
 

@@ -1,4 +1,4 @@
-   subroutine setuprad(lunin,mype,aivals,stats,nchanl,nreal,nobs,&
+   subroutine setuprad(lunin,mype,aivals,stats,nchanl,nchanl_fields,nreal,nobs,&
      obstype,isis,is,rad_diagsave,init_pass,last_pass)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -186,11 +186,13 @@
 !   2016-07-19  W. Gu   - add isis to obs type
 !   2016-07-19  W. Gu   - include the dependence of the correlated obs errors on the surface types
 !   2016-07-19  kbathmann -move eigendecomposition for correlated obs here
+!   2017-07-27  Nebuda  - SIMTB added microphysics flag for all sky background Tb included with diag output
 !
 !  input argument list:
 !     lunin   - unit from which to read radiance (brightness temperature, tb) obs
 !     mype    - mpi task id
 !     nchanl  - number of channels per obs
+!     nchanl_fields  - number of channels dependent information (sevasr otherwise=1)
 !     nreal   - number of pieces of non-tb information per obs
 !     nobs    - number of tb observations to process
 !     obstype - type of tb observation
@@ -224,7 +226,7 @@
   use obsmod, only: ianldate,ndat,mype_diaghdr,nchan_total, &
       dplat,dtbduv_on,&
       i_rad_ob_type,obsdiags,obsptr,lobsdiagsave,nobskeep,lobsdiag_allocated,&
-      dirname,time_offset,lwrite_predterms,lwrite_peakwt,reduce_diag
+      dirname,time_offset,lwrite_predterms,lwrite_peakwt,reduce_diag, dg2ob
   use m_obsNode, only: obsNode
   use m_radNode, only: radNode, radNode_typecast
   use m_obsLList, only: obsLList_appendNode
@@ -252,6 +254,8 @@
   use oneobmod, only: lsingleradob,obchan,oblat,oblon,oneob_type
   use radinfo, only: radinfo_adjust_jacobian,radinfo_get_rsqrtinv 
   use radiance_mod, only: rad_obs_type,radiance_obstype_search,radiance_ex_obserr,radiance_ex_biascor
+  use cloud_efr_mod, only: microphysics
+
 
 
 
@@ -265,6 +269,7 @@
   character(10)                     ,intent(in   ) :: obstype
   character(20)                     ,intent(in   ) :: isis
   integer(i_kind)                   ,intent(in   ) :: lunin,mype,nchanl,nreal,nobs,is
+  integer(i_kind)                   ,intent(in   ) :: nchanl_fields
   real(r_kind),dimension(40,ndat)   ,intent(inout) :: aivals
   real(r_kind),dimension(7,jpch_rad),intent(inout) :: stats
   logical                           ,intent(in   ) :: init_pass,last_pass    ! state of "setup" processing
@@ -278,6 +283,9 @@
 
 ! Declare local variables
   character(128) diag_rad_file
+  character(10)  obstype_local ! work around for sevasr, goes_ima need seviri/goes_img for crtm input files
+  character(20)  isis_local    ! work around for sevasr, goes_ima
+
 
   integer(i_kind) iextra,jextra,error_status,istat
   integer(i_kind) ich9,isli,icc,iccm,mm1,ixx
@@ -309,7 +317,7 @@
   real(r_kind) factch6    
 
   logical hirs2,msu,goessndr,hirs3,hirs4,hirs,amsua,amsub,airs,hsb,goes_img,ahi,mhs
-  logical avhrr,avhrr_navy,lextra,ssu,iasi,cris,seviri,atms
+  logical avhrr,avhrr_navy,lextra,ssu,iasi,cris,seviri,atms,sevasr,goes_ima
   logical ssmi,ssmis,amsre,amsre_low,amsre_mid,amsre_hig,amsr2,gmi,saphir
   logical ssmis_las,ssmis_uas,ssmis_env,ssmis_img
   logical sea,mixed,land,ice,snow,toss,l_may_be_passive,eff_area
@@ -331,13 +339,15 @@
   real(r_kind),dimension(nchanl):: obvarinv,utbc,adaptinf,wgtjo
   real(r_kind),dimension(nchanl):: varinv,varinv_use,error0,errf,errf0
   real(r_kind),dimension(nchanl):: tb_obs,tbc,tbcnob,tlapchn,tb_obs_sdv
+!SIMTB sevasr
+  real(r_kind),dimension(nchanl):: tb_clr,tb_cld,tb_low,tb_mid,tb_hig
   real(r_kind),dimension(nchanl):: tnoise,tnoise_cld
   real(r_kind),dimension(nchanl):: emissivity,ts,emissivity_k
   real(r_kind),dimension(nchanl):: tsim,wavenumber,tsim_bc
   real(r_kind),dimension(nchanl):: tsim_clr,cldeff_obs
   real(r_kind),dimension(nsig,nchanl):: wmix,temp,ptau5
   real(r_kind),dimension(nsigradjac,nchanl):: jacobian
-  real(r_kind),dimension(nreal+nchanl,nobs)::data_s
+  real(r_kind),dimension(nreal+nchanl*nchanl_fields,nobs)::data_s
   real(r_kind),dimension(nsig):: qvp,tvp
   real(r_kind),dimension(nsig):: prsltmp
   real(r_kind),dimension(nsig+1):: prsitmp
@@ -348,6 +358,18 @@
 ! real(r_kind) :: predchan6_save   
   real(r_kind) :: cldeff_obs5
   real(r_kind),dimension(:,:), allocatable :: rsqrtinv
+! SIMTB
+  integer(i_kind) nlev_SIMTB, lcloud_SIMTB, lcloud_gfs_SIMTB
+! background Cloud Fraction & Press, OBS no bias correction frac & prs - using cloud_seek
+  real(r_kind) cld_gfs_SIMTB, cldp_gfs_SIMTB, cld_SIMTB, cldp_SIMTB  
+  real(r_kind),dimension(nsig):: ql_SIMTB,qi_SIMTB
+  real(r_kind):: liq_tot_SIMTB,ice_tot_SIMTB,mr_to_tot,wat_tot_SIMTB
+  integer(i_kind) :: deck_begin,deck_end,deck_type,deck1_type,deck2_type,deck3_type
+  real(r_kind):: deck1_ptop,deck2_ptop,deck3_ptop,deck1_delp,deck2_delp,deck3_delp, ndeck
+  real(r_kind):: deck1_ttop,deck2_ttop,deck3_ttop
+  real(r_kind):: deck1_wat,deck2_wat,deck3_wat,deck1_ice,deck2_ice,deck3_ice,deck_wat,deck_ice,mr_min
+! SIMTB
+
 
   integer(i_kind),dimension(nchanl):: ich,id_qc,ich_diag
   integer(i_kind),dimension(nobs_bins) :: n_alloc
@@ -410,6 +432,7 @@
   airs       = obstype == 'airs'
   hsb        = obstype == 'hsb'
   goes_img   = obstype == 'goes_img'
+  goes_ima   = obstype == 'goes_ima'
   ahi        = obstype == 'ahi'
   avhrr      = obstype == 'avhrr'
   avhrr_navy = obstype == 'avhrr_navy'
@@ -428,8 +451,17 @@
   iasi       = obstype == 'iasi'
   cris       = obstype == 'cris' .or. obstype == 'cris-fsr'
   seviri     = obstype == 'seviri'
+  sevasr     = obstype == 'sevasr'
   atms       = obstype == 'atms'
   saphir     = obstype == 'saphir'
+
+! SIMTB - work around to read all sky goes and seviri binary data
+  obstype_local = obstype
+  isis_local = isis
+  if (sevasr) obstype_local = 'seviri'  ! crtm files have names within
+  if (sevasr) isis_local = 'seviri_m10' ! crtm files have names within
+  if (goes_ima) obstype_local = 'goes_img'  ! crtm files have names within
+  if (goes_ima) isis_local(4:4) = 'r' ! imga_g13/15 to imgr_g13 crtm files have names within
 
   ssmis=ssmis_las.or.ssmis_uas.or.ssmis_img.or.ssmis_env.or.ssmis 
 
@@ -503,7 +535,7 @@
   if(mype==mype_diaghdr(is) .and. init_pass .and. jiterstart == jiter)iwrmype = mype_diaghdr(is)
 
 ! Initialize radiative transfer and pointers to values in data_s
-  call init_crtm(init_pass,iwrmype,mype,nchanl,isis,obstype,radmod)
+  call init_crtm(init_pass,iwrmype,mype,nchanl,isis_local,obstype_local,radmod)
 
 ! Get indexes of variables in jacobian to handle exceptions down below
   ioz =getindex(radjacnames,'oz')
@@ -574,7 +606,7 @@
   if (retrieval.and.init_pass) call setup_sst_retrieval(obstype,dplat(is),mype)
 
 ! Special setup for Tz retrieval
-  if (tzr_qc>0) call setup_tzr_qc(obstype)
+  if (tzr_qc>0) call setup_tzr_qc(obstype_local)
 
 ! Get version of rad-diag file
   call get_radiag ('version',iversion_radiag,istatus)
@@ -621,7 +653,8 @@
 
 ! Set number of extra pieces of information to write to diagnostic file
 ! For most satellite sensors there is no extra information.  However, 
-! for GOES Imager data we write additional information.
+! for GOES Imager data we write additional information. standard dev of tb for each channel
+! skip for all sky radiance goes_ima - values not available
   iextra=0
   jextra=0
   if (goes_img .or. lwrite_peakwt) then
@@ -741,7 +774,8 @@
               isli,mype,data_s(iff10,n))
         end if
 
-        if(seviri .and. abs(data_s(iszen_ang,n)) > 180.0_r_kind) data_s(iszen_ang,n)=r100
+        if((seviri .or. sevasr) .and. abs(data_s(iszen_ang,n)) > 180.0_r_kind) data_s(iszen_ang,n)=r100
+
  
  
 !  Set land/sea, snow, ice percentages and flags (no time interpolation)
@@ -790,25 +824,46 @@
         endif
 
 !       Load channel data into work array.
+        ii = nreal
         do i = 1,nchanl
-           tb_obs(i) = data_s(i+nreal,n)
+! original
+!          tb_obs(i) = data_s(i+nreal,n)
+!SIMTB - more fields to read and write to diag output that are channel dependent
+           ii = ii + 1
+           tb_obs(i) = data_s(ii,n)
+           if (sevasr) then
+              ii = ii + 1
+              tb_clr(i) = data_s(ii,n)
+              ii = ii + 1
+              tb_cld(i) = data_s(ii,n)
+              ii = ii + 1
+              tb_low(i) = data_s(ii,n)
+              ii = ii + 1
+              tb_mid(i) = data_s(ii,n)
+              ii = ii + 1
+              tb_hig(i) = data_s(ii,n)
+           endif
+
         end do
  
 
 !       Interpolate model fields to observation location, call crtm and create jacobians
 !       Output both tsim and tsim_clr for allsky
-        if (radmod%lcloud_fwd) then
-           call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, &
+        if (radmod%lcloud_fwd .or. microphysics>0) then
+           call call_crtm(obstype_local,dtime,data_s(:,n),nchanl,nreal,ich, &
                 tvp,qvp,clw_guess,prsltmp,prsitmp, &
                 trop5,tzbgr,dtsavg,sfc_speed, &
                 tsim,emissivity,ptau5,ts,emissivity_k, &
-                temp,wmix,jacobian,error_status,tsim_clr=tsim_clr)
+                temp,wmix,jacobian,error_status, &
+                dg2ob(is), ql_SIMTB, qi_SIMTB, &
+                tsim_clr=tsim_clr)
         else
-           call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, &
+           call call_crtm(obstype_local,dtime,data_s(:,n),nchanl,nreal,ich, &
                 tvp,qvp,clw_guess,prsltmp,prsitmp, &
                 trop5,tzbgr,dtsavg,sfc_speed, &
                 tsim,emissivity,ptau5,ts,emissivity_k, &
-                temp,wmix,jacobian,error_status)
+                temp,wmix,jacobian,error_status, &
+                dg2ob(is), ql_SIMTB, qi_SIMTB)
         endif 
 ! If the CRTM returns an error flag, do not assimilate any channels for this ob 
 ! and set the QC flag to ifail_crtm_qc.
@@ -848,7 +903,7 @@
         if (adp_anglebc) then
            do i=1,nchanl
               mm=ich(i)
-              if (goessndr .or. goes_img .or. ahi .or. seviri .or. ssmis) then
+              if (goessndr .or. goes_img .or. ahi .or. seviri .or. sevasr .or. ssmis) then
                  pred(npred,i)=nadir*deg2rad
               else
                  pred(npred,i)=data_s(iscan_ang,n)
@@ -1135,6 +1190,25 @@
               wavenumber,ptau5,prsltmp,tvp,temp,wmix,emissivity_k,ts,                 &
               id_qc,aivals,errf,varinv,varinv_use,cld,cldp,kmax,zero_irjaco3_pole(n))
 
+! SIMTB get cloud fraction and pressure level, same logic as within qc_irsnd
+! Could be placed in a cloud related module
+! jacobians are clear sky GFS
+    cld_SIMTB = 0.
+    cldp_SIMTB = 0.
+    cld_gfs_SIMTB = 0.
+    cldp_gfs_SIMTB = 0.
+    if (cris) then
+! for obs without bias correction 
+       call cloud_seek(nchanl,nsig,trop5,tsavg5, &
+                      tb_obs,prsltmp,tvp,temp,ts,varinv_use, &
+                      cld_SIMTB,cldp_SIMTB,lcloud_SIMTB)
+! for gfs all sky tb 
+       call cloud_seek(nchanl,nsig,trop5,tsavg5, &
+                      tsim,prsltmp,tvp,temp,ts,varinv_use, &
+                      cld_gfs_SIMTB,cldp_gfs_SIMTB,lcloud_gfs_SIMTB)
+    endif
+
+
 !  --------- MSU -------------------
 !       QC MSU data
         else if (msu) then
@@ -1194,6 +1268,7 @@
 !  ---------- GOES imager --------------
 !       GOES imager Q C
 !
+! SIMTB skipping qc for goes_ima
         else if(goes_img)then
 
 
@@ -1209,6 +1284,7 @@
 !  ---------- SEVIRI  -------------------
 !       SEVIRI Q C
 
+! SIMTB skipping qc for sevasr
         else if (seviri) then
 
            cld = 100-data_s(iclr_sky,n)
@@ -1799,7 +1875,10 @@
 
      if(in_curbin) then
 !       Write diagnostics to output file.
-        if (rad_diagsave .and. luse(n) .and. nchanl_diag > 0) then
+! SIMTB need all data diagnostics out
+!       if (rad_diagsave .and. luse(n) .and. nchanl_diag > 0) then
+        if (rad_diagsave .and. nchanl_diag > 0) then
+
            diagbuf(1)  = cenlat                         ! observation latitude (degrees)
            diagbuf(2)  = cenlon                         ! observation longitude (degrees)
            diagbuf(3)  = zsges                          ! model (guess) elevation at observation location
@@ -1921,6 +2000,23 @@
                  diagbufchan(8,i)=ts(ich_diag(i))                     ! d(Tb)/d(Ts)
               end if
 
+!SIMTB add slot 9-13 channel tb clr, cld, low, mid, hig
+              if (sevasr) then
+                 diagbufchan(9,i) =tb_clr(ich_diag(i))
+                 diagbufchan(10,i)=tb_cld(ich_diag(i))
+                 diagbufchan(11,i)=tb_low(ich_diag(i))
+                 diagbufchan(12,i)=tb_mid(ich_diag(i))
+                 diagbufchan(13,i)=tb_hig(ich_diag(i))
+              else
+!should this be set to a missing value instead?
+                 diagbufchan(9,i) =0.
+                 diagbufchan(10,i)=0.
+                 diagbufchan(11,i)=0.
+                 diagbufchan(12,i)=0.
+                 diagbufchan(13,i)=0.
+              endif
+
+
               if (lwrite_predterms) then
                  predterms=zero
                  do j = 1,npred
@@ -1937,6 +2033,138 @@
                  end do
               end if
            end do
+
+! SIMTB  diags to capture background state at ob location
+           ice_tot_SIMTB = 0.
+           liq_tot_SIMTB = 0.
+           wat_tot_SIMTB = 0.
+           deck_begin=-1
+           deck_end=-1
+           deck_type=-1
+           deck1_type=-1
+           deck2_type=-1
+           deck3_type=-1
+           deck1_ptop=0.
+           deck2_ptop=0.
+           deck3_ptop=0.
+           deck1_ttop=0.
+           deck2_ttop=0.
+           deck3_ttop=0.
+           deck1_delp=0.
+           deck2_delp=0.
+           deck3_delp=0.
+           deck1_wat=0.
+           deck2_wat=0.
+           deck3_wat=0.
+           deck1_ice=0.
+           deck2_ice=0.
+           deck3_ice=0.
+           deck_wat=0.
+           deck_ice=0.
+           mr_min = 0.000005
+           ndeck = 0.
+           nlev_SIMTB = 40  ! only write out bottom 40 trop levels
+           do i=nlev_SIMTB,1,-1
+!             diagbuflev_SIMTB(1,i)=tvp(i)       ! GFS temperature profile at ob location
+!             diagbuflev_SIMTB(2,i)=qvp(i)       ! GFS specific humidity profile at ob location
+!             diagbuflev_SIMTB(3,i)=rh_SIMTB(i)       ! GFS relative humidity profile at ob location
+!             diagbuflev_SIMTB(4,i)=ql_SIMTB(i)       ! GFS cloud liquid water profile at ob location
+!             diagbuflev_SIMTB(5,i)=qi_SIMTB(i)       ! GFS cloud ice water f(t) partitioned from Control Variable cw
+!             diagbuflev_SIMTB(6,i)=prsltmp(i)*r10  ! mid layer pressure  in mb !             do ii=1,nchanl_diag
+
+              mr_to_tot = (prsitmp(i)-prsitmp(i+1))*1000./9.8
+              ice_tot_SIMTB = ice_tot_SIMTB + qi_SIMTB(i)*mr_to_tot ! cloud ice
+              liq_tot_SIMTB = liq_tot_SIMTB + ql_SIMTB(i)*mr_to_tot ! cloud liquid
+              wat_tot_SIMTB = wat_tot_SIMTB + (qvp(i)+qi_SIMTB(i)+ql_SIMTB(i))*mr_to_tot ! precipitable water
+
+              if ((ql_SIMTB(i)+qi_SIMTB(i)) .gt. mr_min) then
+                deck_wat = deck_wat + ql_SIMTB(i)*mr_to_tot ! cloud liquid
+                deck_ice = deck_ice + qi_SIMTB(i)*mr_to_tot ! cloud ice
+
+                if (deck_begin .eq. -1) deck_begin = i
+                if (deck_type .eq. -1) then
+                   if (ql_SIMTB(i) .gt. mr_min .and. qi_SIMTB(i) .le. mr_min) deck_type = 0
+                   if (ql_SIMTB(i) .gt. mr_min .and. qi_SIMTB(i) .gt. mr_min) deck_type = 2
+                   if (ql_SIMTB(i) .le. mr_min .and. qi_SIMTB(i) .gt. mr_min) deck_type = 1
+                else
+                   if (ql_SIMTB(i) .gt. mr_min .and. deck_type .eq. 1) deck_type = 2
+                   if (qi_SIMTB(i) .gt. mr_min .and. deck_type .eq. 0) deck_type = 2
+                endif
+              else
+                if (deck_begin .ne. -1) then
+                  deck_end = i+1
+                  ndeck = ndeck + 1.
+                  if (ndeck .eq. 1.) then
+                      deck1_type = deck_type
+                      deck1_ptop = prsltmp(deck_begin)*r10
+                      deck1_ttop = tvp(deck_begin)
+                      deck1_delp = (prsltmp(deck_end)-prsltmp(deck_begin))*r10
+                      deck1_wat = deck_wat
+                      deck1_ice = deck_ice
+                   endif
+                  if (ndeck .eq. 2.) then
+                      deck2_type = deck_type
+                      deck2_ptop = prsltmp(deck_begin)*r10
+                      deck2_ttop = tvp(deck_begin)
+                      deck2_delp = (prsltmp(deck_end)-prsltmp(deck_begin))*r10
+                      deck2_wat = deck_wat
+                      deck2_ice = deck_ice
+                   endif
+                   if (ndeck .eq. 3.) then
+                      deck3_type = deck_type
+                      deck3_ptop = prsltmp(deck_begin)*r10
+                      deck3_ttop = tvp(deck_begin)
+                      deck3_delp = (prsltmp(deck_end)-prsltmp(deck_begin))*r10
+                      deck3_wat = deck_wat
+                      deck3_ice = deck_ice
+                   endif
+                  deck_begin = -1
+                  deck_end = -1
+                  deck_wat = 0.
+                  deck_ice = 0.
+                endif
+              endif
+           end do
+           diagbuf(31) = liq_tot_SIMTB
+           diagbuf(32) = ice_tot_SIMTB
+           diagbuf(33) = wat_tot_SIMTB
+           diagbuf(34) = ndeck
+           diagbuf(35) = float(deck1_type)
+           diagbuf(36) = deck1_ptop
+           diagbuf(37) = deck1_delp
+           diagbuf(38) = deck1_wat
+           diagbuf(39) = deck1_ice
+           diagbuf(40) = float(deck2_type)
+           diagbuf(41) = deck2_ptop
+           diagbuf(42) = deck2_delp
+           diagbuf(43) = deck2_wat
+           diagbuf(44) = deck2_ice
+           diagbuf(45) = float(deck3_type)
+           diagbuf(46) = deck3_ptop
+           diagbuf(47) = deck3_delp
+           diagbuf(48) = deck3_wat
+           diagbuf(49) = deck3_ice
+           diagbuf(50) = deck1_ttop
+           diagbuf(51) = deck2_ttop
+           diagbuf(52) = deck3_ttop
+           diagbuf(53) = cld_SIMTB
+           diagbuf(54) = cldp_SIMTB
+           diagbuf(55) = cld_gfs_SIMTB
+           diagbuf(56) = cldp_gfs_SIMTB
+           if (sevasr) then
+              diagbuf(57) = data_s(32,n) ! total cloud percent in 4x4 pixel segment
+              diagbuf(58) = data_s(33,n) ! low
+              diagbuf(59) = data_s(34,n) ! mid
+              diagbuf(60) = data_s(35,n) ! hig
+           else
+              diagbuf(57) = 0.
+              diagbuf(58) = 0.
+              diagbuf(59) = 0.
+              diagbuf(60) = 0.
+           endif
+
+! SIMTB end extra diags
+
 
            if (luse_obsdiag .and. lobsdiagsave) then
               if (l_may_be_passive) then
@@ -2051,4 +2279,113 @@
   return
 
  end subroutine setuprad
+
+
+subroutine cloud_seek(nchanl,nsig,trop5,tsavg5, &
+                      tbc,prsltmp,tvp,temp,ts,varinv, &
+                      cld,cldp,lcloud)
+
+  use kinds, only: i_kind,r_kind
+  use constants, only: zero,one,tiny_r_kind
+  use constants, only: r10
+
+!
+! input argument list:
+!     nchanl       - number of channels per obs
+!     trop5        - tropopause pressure
+!     tsavg5       - surface skin temperature
+!     tbc          - input brightness temperature 
+!     prsltmp      - array of layer pressures in vertical (surface to toa)
+!     tvp          - array of temperatures in vertical (surface to toa)
+!     temp         - temperature sensitivity array
+!     ts           - skin temperature sensitivity
+!     varinv       - observation weight (modified obs var error inverse)
+!
+! output argument list:
+!     cld          - cloud fraction
+!     cldp         - cloud pressure
+!     lcloud       - cloud sigma level 
+!
+! attributes:
+!     language: f90
+!     machine:  ibm RS/6000 SP
+!
+!$$$ end documentation block
+
+  implicit none
+
+! Declare passed variables
+
+  integer(i_kind),                    intent(in   ) :: nchanl     ! number of channels
+  integer(i_kind),                    intent(in   ) :: nsig       ! number of vertical leves
+  real(r_kind),                       intent(in   ) :: trop5      ! tropopause pressure
+  real(r_kind),                       intent(in   ) :: tsavg5     ! skin temperature
+  real(r_kind),dimension(nchanl),     intent(in   ) :: tbc        ! brightness temperature (bc leftover from bias control notation)
+  real(r_kind),dimension(nsig),       intent(in   ) :: prsltmp    ! layer pressure  (cb)
+  real(r_kind),dimension(nsig),       intent(in   ) :: tvp        ! temperature 
+  real(r_kind),dimension(nsig,nchanl),intent(in   ) :: temp       ! temperature sensitivity 
+  real(r_kind),dimension(nchanl),     intent(in   ) :: ts         ! skin temperature sensitivity 
+  real(r_kind),dimension(nchanl),     intent(in   ) :: varinv     ! 1/error**2 modified by qc routines
+  real(r_kind),                       intent(  out) :: cld        ! cloud fraction 0-1
+  real(r_kind),                       intent(  out) :: cldp       ! pressure of best fit sigma layer for cloud if present
+  integer(i_kind),                    intent(  out) :: lcloud     ! sigma level of cloud deck
+! Declare local parameters
+
+  real(r_kind) :: sum1,sum2,sum3,cloudp,tmp,dts
+  real(r_kind),dimension(nchanl) :: dtb
+  integer(i_kind) :: i,j,k,kk
+
+
+! define max limit for sum to detect presence of cloud
+  sum3=zero
+  do i=1,nchanl
+     sum3=sum3+tbc(i)*tbc(i)*varinv(i)
+  end do
+
+  sum3=0.75_r_kind*sum3
+
+  lcloud=0
+  cld=zero
+  cldp=r10*prsltmp(1)  ! set to surface pressure for default
+
+  do k=1,nsig
+     if(prsltmp(k) > trop5)then   ! below tropopause
+        sum1=zero
+        sum2=zero
+        do i=1,nchanl
+           if(varinv(i) > tiny_r_kind)then
+              dtb(i)=(tvp(k)-tsavg5)*ts(i)
+              do kk=1,k-1
+                 dtb(i)=dtb(i)+(tvp(k)-tvp(kk))*temp(kk,i)
+              end do
+              sum1=sum1+tbc(i)*dtb(i)*varinv(i)
+              sum2=sum2+dtb(i)*dtb(i)*varinv(i)
+           end if
+        end do
+        if (abs(sum2) < tiny_r_kind) sum2 = sign(tiny_r_kind,sum2)
+        cloudp=min(max(sum1/sum2,zero),one)
+        sum1=zero
+        do i=1,nchanl
+           if(varinv(i) > tiny_r_kind)then
+              tmp=tbc(i)-cloudp*dtb(i)
+              sum1=sum1+tmp*tmp*varinv(i)
+           end if
+        end do
+! minimum is solution
+        if(sum1 < sum3)then
+           sum3=sum1
+           lcloud=k
+           cld=cloudp
+           cldp=r10*prsltmp(k)
+        end if
+     end if
+
+  end do
+
+  return
+
+end subroutine cloud_seek
+
+
+
 

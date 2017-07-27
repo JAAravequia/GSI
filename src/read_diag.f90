@@ -63,9 +63,12 @@ module read_diag
          module procedure get_radiag_int_ ! internal procedure for integers
   end interface
 
-  integer(i_kind),parameter :: ireal_radiag  = 30   ! number of real entries per spot in radiance diagnostic file
+! SIMTB increase output diagnostics
+! integer(i_kind),parameter :: ireal_radiag  = 30   ! number of real entries per spot in radiance diagnostic file
+ integer(i_kind),parameter :: ireal_radiag  = 60   ! number of real entries per spot in radiance diagnostic file
   integer(i_kind),parameter :: ireal_old_radiag  = 26   ! number of real entries per spot in versions older than iversion_radiag_2
-  integer(i_kind),parameter :: ipchan_radiag = 8    ! number of entries per channel per spot in radiance diagnostic file
+! integer(i_kind),parameter :: ipchan_radiag = 8    ! number of entries per channel per spot in radiance diagnostic file
+ integer(i_kind),parameter :: ipchan_radiag = 13   ! number of entries per channel per spot in radiance diagnostic file
 
 ! Declare structures for radiance diagnostic file information
   type diag_header_fix_list

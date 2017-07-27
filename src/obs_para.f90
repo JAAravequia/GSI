@@ -218,6 +218,7 @@ subroutine disobs(ndata,nobs,mm1,lunout,obsfile,obstypeall)
 ! Declare local variables
   integer(i_kind) lon,lat,lat_data,lon_data,n,k,lunin
   integer(i_kind) jj,nreal,nchanl,nn_obs
+  integer(i_kind) nchanl_fields
   integer(i_kind) ndata_s
   integer(i_kind),dimension(mm1):: ibe,ibw,ibn,ibs
   logical,allocatable,dimension(:):: luse_s
@@ -249,7 +250,16 @@ subroutine disobs(ndata,nobs,mm1,lunout,obsfile,obstypeall)
   if(trim(obstype) /=trim(obstypeall)) &
         write(6,*)'DISOBS:  ***ERROR***   obstype,obstypeall=',trim(obstype),trim(obstypeall)
 
-  nn_obs = nreal + nchanl
+!SIMTB more channel dependent input to pass through for diagnostics 
+  nchanl_fields = 1
+  if (obstype == 'sevasr') then
+     read(lunin) nchanl_fields
+  endif
+
+!SIMTB
+! nn_obs = nreal + nchanl
+  nn_obs = nreal + nchanl_fields*nchanl
+
 
   allocate(obs_data(nn_obs,ndata))
 !  Read in all observations of a given type along with subdomain flags
@@ -296,6 +306,9 @@ subroutine disobs(ndata,nobs,mm1,lunout,obsfile,obstypeall)
 
 ! Write observations for given task to output file
   write(lunout) obstypeall,isis,nreal,nchanl
+  if (obstypeall == 'sevasr') then
+     write(lunout) nchanl_fields
+  endif
   write(lunout) data1_s,luse_s,ioid_s
   deallocate(data1_s,luse_s,ioid_s)
 
@@ -422,6 +435,7 @@ subroutine dislag(ndata,mm1,lunout,obsfile,obstypeall,ndata_s)
 ! Declare local variables
   integer(i_kind) num_data,n,lunin,num
   integer(i_kind) jj,nreal,nchanl,nn_obs,ndatax
+  integer(i_kind) nchanl_fields
   logical,allocatable,dimension(:):: luse,luse_s,luse_x
   real(r_kind),allocatable,dimension(:,:):: obs_data,data1_s
   character(10):: obstype
@@ -435,7 +449,15 @@ subroutine dislag(ndata,mm1,lunout,obsfile,obstypeall,ndata_s)
   if(obstype /=obstypeall) &
         write(6,*)'DISLAG:  ***ERROR***   obstype,obstypeall=',obstype,obstypeall
 
-  nn_obs = nreal + nchanl
+!SIMTB more channel dependent input to pass through for diagnostics 
+  nchanl_fields = 1
+  if (obstype == 'sevasr') then
+     read(lunin) nchanl_fields
+  endif
+
+  nn_obs = nreal + nchanl_fields*nchanl
+! nn_obs = nreal + nchanl
+
 
   allocate(obs_data(nn_obs,ndata))
 ! Read in all observations of a given type along with subdomain flags
@@ -480,6 +502,9 @@ subroutine dislag(ndata,mm1,lunout,obsfile,obstypeall,ndata_s)
 
 !    Write observations for given task to output file
      write(lunout) obstypeall,isis,nreal,nchanl
+     if (obstypeall == 'sevasr') then
+        write(lunout) nchanl_fields
+     endif
      write(lunout) data1_s,luse_s
      deallocate(data1_s,luse_s)
   endif

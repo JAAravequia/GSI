@@ -70,7 +70,7 @@ subroutine read_cris(mype,val_cris,ithin,isfcalc,rmesh,jsatid,gstime,&
 ! Use modules
   use kinds, only: r_kind,r_double,i_kind
   use satthin, only: super_val,itxmax,makegrids,map2tgrid,destroygrids, &
-      finalcheck,checkob,score_crit
+      finalcheck,checkob,score_crit, map2gesgrid
   use radinfo, only:iuse_rad,nuchan,nusis,jpch_rad,crtm_coeffs_path,use_edges, &
                radedge1,radedge2,radstart,radstep
   use crtm_module, only: success, &
@@ -86,6 +86,8 @@ subroutine read_cris(mype,val_cris,ithin,isfcalc,rmesh,jsatid,gstime,&
   use gsi_nstcouplermod, only: nst_gsi,nstinfo
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth,gsi_nstcoupler_deter
   use mpimod, only: npe
+  use cloud_efr_mod, only: microphysics
+
 ! use radiance_mod, only: rad_obs_type
 
   implicit none
@@ -193,6 +195,8 @@ subroutine read_cris(mype,val_cris,ithin,isfcalc,rmesh,jsatid,gstime,&
   real(r_kind),parameter:: tbmin  = 50._r_kind
   real(r_kind),parameter:: tbmax  = 550._r_kind
   real(r_kind),parameter:: rato   = 0.87997285_r_kind 
+  real(r_kind),parameter:: r0p9   = 0.9_r_kind
+
 
 ! Initialize variables
   maxinfo    =  31
@@ -563,7 +567,13 @@ subroutine read_cris(mype,val_cris,ithin,isfcalc,rmesh,jsatid,gstime,&
               crit1 = 0.01_r_kind+timedif
            endif
            if( llll > 1 ) crit1 = crit1 + r100 * float(llll)
-           call map2tgrid(dlat_earth,dlon_earth,dist1,crit1,itx,ithin,itt,iuse,sis)
+           if ((rmesh==r0p9) .and. (ithin > zero)) then 
+              crit1 = 1.
+              call map2gesgrid(dlat,dlon,dist1,crit1,itx,ithin,itt,iuse,sis)
+           else
+              call map2tgrid(dlat_earth,dlon_earth,dist1,crit1,itx,ithin,itt,iuse,sis)
+           endif
+
            if(.not. iuse)cycle read_loop
 
 !          Observational info
@@ -718,8 +728,9 @@ subroutine read_cris(mype,val_cris,ithin,isfcalc,rmesh,jsatid,gstime,&
 !       non ice surfaces.  Fixed channels (assuming the 399 set) for now.
 !       This is moved to below where the radiances are read in.
 
-              if (sfcpct(0)+sfcpct(1) > 0.9) &
-                 crit1=crit1+(320.0_r_kind-temperature(sfc_channel_index))
+! SIMTB - do not favor warm pixels
+!             if (sfcpct(0)+sfcpct(1) > 0.9) &
+!                crit1=crit1+(320.0_r_kind-temperature(sfc_channel_index))
  
 !JAJ        endif ! clearest FOV check
 

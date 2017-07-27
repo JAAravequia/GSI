@@ -239,6 +239,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
        i_t,i_pw,i_q,i_co,i_gust,i_vis,i_ref,i_pblh,i_wspd10m,i_td2m,&
        i_mxtm,i_mitm,i_pmsl,i_howv,i_tcamt,i_lcbas,i_cldch,i_uwnd10m,i_vwnd10m,iobs,nprt,ii,jj
   integer(i_kind) it,ier,istatus
+  integer(i_kind) nchanl_fields
 
   real(r_quad):: zjo
   real(r_kind),dimension(40,ndat):: aivals1
@@ -470,7 +471,13 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
  
         if(nobs > 0)then
 
+!SIMTB more channel dependent input to pass through for diagnostics 
            read(lunin,iostat=ier) obstype,isis,nreal,nchanl
+           nchanl_fields = 1
+           if (obstype == 'sevasr') then
+              read(lunin,iostat=ier) nchanl_fields
+           endif
+
            if(mype == mype_diaghdr(is)) then
               write(6,300) obstype,isis,nreal,nchanl
  300          format(' SETUPALL:,obstype,isis,nreal,nchanl=',a12,a20,i7,i7)
@@ -482,7 +489,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
            if(ditype(is) == 'rad')then
  
               call setuprad(lunin,&
-                 mype,aivals,stats,nchanl,nreal,nobs,&
+                 mype,aivals,stats,nchanl,nchanl_fields,nreal,nobs,&
                  obstype,isis,is,rad_diagsave,init_pass,last_pass)
 
 !          Set up for aerosol data
