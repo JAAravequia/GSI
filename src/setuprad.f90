@@ -2063,66 +2063,59 @@
            deck_ice=0.
            mr_min = 0.000005
            ndeck = 0.
-           nlev_SIMTB = 40  ! only write out bottom 40 trop levels
+           nlev_SIMTB = 40  ! only consider bottom 40 trop levels
            do i=nlev_SIMTB,1,-1
-!             diagbuflev_SIMTB(1,i)=tvp(i)       ! GFS temperature profile at ob location
-!             diagbuflev_SIMTB(2,i)=qvp(i)       ! GFS specific humidity profile at ob location
-!             diagbuflev_SIMTB(3,i)=rh_SIMTB(i)       ! GFS relative humidity profile at ob location
-!             diagbuflev_SIMTB(4,i)=ql_SIMTB(i)       ! GFS cloud liquid water profile at ob location
-!             diagbuflev_SIMTB(5,i)=qi_SIMTB(i)       ! GFS cloud ice water f(t) partitioned from Control Variable cw
-!             diagbuflev_SIMTB(6,i)=prsltmp(i)*r10  ! mid layer pressure  in mb !             do ii=1,nchanl_diag
-
               mr_to_tot = (prsitmp(i)-prsitmp(i+1))*1000./9.8
               ice_tot_SIMTB = ice_tot_SIMTB + qi_SIMTB(i)*mr_to_tot ! cloud ice
               liq_tot_SIMTB = liq_tot_SIMTB + ql_SIMTB(i)*mr_to_tot ! cloud liquid
               wat_tot_SIMTB = wat_tot_SIMTB + (qvp(i)+qi_SIMTB(i)+ql_SIMTB(i))*mr_to_tot ! precipitable water
 
-              if ((ql_SIMTB(i)+qi_SIMTB(i)) .gt. mr_min) then
-                deck_wat = deck_wat + ql_SIMTB(i)*mr_to_tot ! cloud liquid
-                deck_ice = deck_ice + qi_SIMTB(i)*mr_to_tot ! cloud ice
+              if ((ql_SIMTB(i)+qi_SIMTB(i)) > mr_min) then
+                 deck_wat = deck_wat + ql_SIMTB(i)*mr_to_tot ! cloud liquid
+                 deck_ice = deck_ice + qi_SIMTB(i)*mr_to_tot ! cloud ice
 
-                if (deck_begin .eq. -1) deck_begin = i
-                if (deck_type .eq. -1) then
-                   if (ql_SIMTB(i) .gt. mr_min .and. qi_SIMTB(i) .le. mr_min) deck_type = 0
-                   if (ql_SIMTB(i) .gt. mr_min .and. qi_SIMTB(i) .gt. mr_min) deck_type = 2
-                   if (ql_SIMTB(i) .le. mr_min .and. qi_SIMTB(i) .gt. mr_min) deck_type = 1
-                else
-                   if (ql_SIMTB(i) .gt. mr_min .and. deck_type .eq. 1) deck_type = 2
-                   if (qi_SIMTB(i) .gt. mr_min .and. deck_type .eq. 0) deck_type = 2
-                endif
+                 if (deck_begin == -1) deck_begin = i
+                 if (deck_type == -1) then
+                    if (ql_SIMTB(i) > mr_min .and. qi_SIMTB(i) <= mr_min) deck_type = 0
+                    if (ql_SIMTB(i) > mr_min .and. qi_SIMTB(i) > mr_min) deck_type = 2
+                    if (ql_SIMTB(i) <= mr_min .and. qi_SIMTB(i) > mr_min) deck_type = 1
+                 else
+                    if (ql_SIMTB(i) > mr_min .and. deck_type == 1) deck_type = 2
+                    if (qi_SIMTB(i) > mr_min .and. deck_type == 0) deck_type = 2
+                 endif
               else
-                if (deck_begin .ne. -1) then
-                  deck_end = i+1
-                  ndeck = ndeck + 1.
-                  if (ndeck .eq. 1.) then
-                      deck1_type = deck_type
-                      deck1_ptop = prsltmp(deck_begin)*r10
-                      deck1_ttop = tvp(deck_begin)
-                      deck1_delp = (prsltmp(deck_end)-prsltmp(deck_begin))*r10
-                      deck1_wat = deck_wat
-                      deck1_ice = deck_ice
-                   endif
-                  if (ndeck .eq. 2.) then
-                      deck2_type = deck_type
-                      deck2_ptop = prsltmp(deck_begin)*r10
-                      deck2_ttop = tvp(deck_begin)
-                      deck2_delp = (prsltmp(deck_end)-prsltmp(deck_begin))*r10
-                      deck2_wat = deck_wat
-                      deck2_ice = deck_ice
-                   endif
-                   if (ndeck .eq. 3.) then
-                      deck3_type = deck_type
-                      deck3_ptop = prsltmp(deck_begin)*r10
-                      deck3_ttop = tvp(deck_begin)
-                      deck3_delp = (prsltmp(deck_end)-prsltmp(deck_begin))*r10
-                      deck3_wat = deck_wat
-                      deck3_ice = deck_ice
-                   endif
-                  deck_begin = -1
-                  deck_end = -1
-                  deck_wat = 0.
-                  deck_ice = 0.
-                endif
+                 if (deck_begin .ne. -1) then
+                   deck_end = i+1
+                   ndeck = ndeck + 1.
+                   if (ndeck == 1.) then
+                       deck1_type = deck_type
+                       deck1_ptop = prsltmp(deck_begin)*r10
+                       deck1_ttop = tvp(deck_begin)
+                       deck1_delp = (prsltmp(deck_end)-prsltmp(deck_begin))*r10
+                       deck1_wat = deck_wat
+                       deck1_ice = deck_ice
+                    endif
+                   if (ndeck == 2.) then
+                       deck2_type = deck_type
+                       deck2_ptop = prsltmp(deck_begin)*r10
+                       deck2_ttop = tvp(deck_begin)
+                       deck2_delp = (prsltmp(deck_end)-prsltmp(deck_begin))*r10
+                       deck2_wat = deck_wat
+                       deck2_ice = deck_ice
+                    endif
+                    if (ndeck == 3.) then
+                       deck3_type = deck_type
+                       deck3_ptop = prsltmp(deck_begin)*r10
+                       deck3_ttop = tvp(deck_begin)
+                       deck3_delp = (prsltmp(deck_end)-prsltmp(deck_begin))*r10
+                       deck3_wat = deck_wat
+                       deck3_ice = deck_ice
+                    endif
+                   deck_begin = -1
+                   deck_end = -1
+                   deck_wat = 0.
+                   deck_ice = 0.
+                 endif
               endif
            end do
            diagbuf(31) = liq_tot_SIMTB
