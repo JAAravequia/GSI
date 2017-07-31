@@ -28,6 +28,7 @@ export END_DATE_STAGE0=$(${BUILD_DIR}/da_advance_time.exe $END_DATE   -$FCST_RAN
 #export START_DATE_STAGE0=$START_DATE  #GD DOWELL
 #export END_DATE_STAGE0=$END_DATE      # GD DOWELL
 export DATE=$START_DATE_STAGE0
+export DATE2=$(${BUILD_DIR}/da_advance_time.exe $START_DATE -$FCST_RANGE2)
 
 echo "${BUILD_DIR}/da_advance_time.exe $START_DATE -$FCST_RANGE1"
 echo "stage 0 $DATE  $START_DATE"
@@ -49,7 +50,15 @@ while [[ $DATE -le $END_DATE_STAGE0 ]]; do
    export HH=$(echo $FCST_TIME | cut -c9-10)
    export FILE_DATE=${YYYY}-${MM}-${DD}_${HH}:00:00
    export DATE0=${YYYY}${MM}${DD}${HH}
-   export FILE=${FC_DIR}/${DATE}/wrfout_d${DOMAIN}_${FILE_DATE}
+   echo "model == $MODEL"
+   if [[ $MODEL == 'WRF' ]];then
+      export INFILE1=${FC_DIR}/${DATE}/wrfout_d${DOMAIN}_${FILE_DATE}
+      export INFILE2=${FC_DIR}/${DATE}/wrfout_d${DOMAIN}_${FILE_DATE}
+   elif [[ $MODEL == 'GFS' ]];then
+      export INFILE1=${FC_DIR}/gfnf${FCST_RANGE1}.gfs.${DATE}.nc4
+      export INFILE2=${FC_DIR}/gfnf${FCST_RANGE2}.gfs.${DATE2}.nc4
+      echo "INFILE1 $INFILE1 INFILE2 $INFILE2"
+   fi
    export FILE1=${DATE0}
    export FILE2=${DATE0}.e001
    export FILE3=${DATE0}.e002
@@ -57,16 +66,14 @@ while [[ $DATE -le $END_DATE_STAGE0 ]]; do
    echo "gen_be_stage0: Calculating standard perturbation fields valid at time " $FCST_TIME
 
    if [[ $BE_METHOD == NMC ]]; then
-     ln -sf $FILE ${TMP_DIR}/$FILE2
-     ln -sf $FILE ${TMP_DIR}/$FILE
-     ln -sf ${FC_DIR}/${NEXT_DATE}/wrfout_d${DOMAIN}_${FILE_DATE} ${TMP_DIR}/$FILE3
+     ln -sf $INFILE1 ${TMP_DIR}/$FILE1
+     ln -sf $INFILE1 ${TMP_DIR}/$FILE2
+     ln -sf $INFILE2 ${TMP_DIR}/$FILE3
      pwd
      echo ""
-     cp  $FILE $FILE2
-     cp  ${FC_DIR}/${NEXT_DATE}/wrfout_d${DOMAIN}_${FILE_DATE} $FILE3 
-      echo "ln -sf $FILE $FILE1"
-      echo "ln -sf $FILE $FILE2"
-      echo "ln -sf ${FC_DIR}/${NEXT_DATE}/wrfout_d${DOMAIN}_${FILE_DATE} $FILE3"
+      echo "ln -sf $INFILE1 $FILE1"
+      echo "ln -sf $INFILE1 $FILE2"
+      echo "ln -sf $INFILE2 $FILE3"
    fi
 
    if [[ $BE_METHOD == ENS ]]; then
@@ -120,6 +127,7 @@ while [[ $DATE -le $END_DATE_STAGE0 ]]; do
 
    echo $DATE $FILE ${FC_DIR}/${NEXT_DATE}/wrfout_d${DOMAIN}_${FILE_DATE}
    export DATE=$(${BUILD_DIR}/da_advance_time.exe $DATE $INTERVAL)
+   export DATE2=$(${BUILD_DIR}/da_advance_time.exe $DATE2 $INTERVAL)
    export FCST_TIME=$(${BUILD_DIR}/da_advance_time.exe $DATE $FCST_RANGE1)
 
 done     # End loop over dates.

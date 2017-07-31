@@ -1,8 +1,8 @@
 
 &gen_be_info
-model = 'WRF'
-application = 'WRFDA'
-be_method = '_BE_METHOD_',
+model = 'GFS'
+application = 'GSI'
+be_method = 'NMC',
 ne = _NE_,
 cut = 0, 0, 0, 0, 0, 0,
 use_mean_ens=.true.
@@ -20,7 +20,7 @@ covar1  = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 covar2  = 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 covar3  = 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 covar4  = 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-covar5  = 0, 0, 1, 1, 0, 0, 0, 0, 0, 0,
+covar5  = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 covar6  = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 covar7  = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 covar8  = 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0,

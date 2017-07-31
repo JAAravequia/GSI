@@ -83,6 +83,7 @@ program gen_be_stage0
   Dim1 = domain%mesh%Dim1 -cut(1) -cut(2) 
   Dim2 = domain%mesh%Dim2 -cut(3) -cut(4) 
   Dim3 = domain%mesh%Dim3 -cut(5) -cut(6) 
+  write(*,*)'allocate'
   call allocate_domain(domain_bc, Dim1, Dim2, Dim3, nvar, cv_list, vardim_list)
   call subset_mesh_bc(domain%mesh, domain_bc%mesh, cut, model)
   call allocate_state(state_mean_bc, Dim1, Dim2, Dim3, nvar, cv_list, vardim_list)
@@ -147,8 +148,11 @@ program gen_be_stage0
 
       write(*,*)'compute mean state'
       call compute_mean_state(state_mean, domain%state, counter)
+      write(*,*)'start subset 1'
       call subset_state_bc( state_mean, state_mean_bc, domain%mesh, cut)
+      write(*,*)'start subset 2'
       call subset_state_bc( domain%state, domain_bc%state, domain%mesh, cut) 
+      write(*,*)'start check'
       call check_state(domain_bc%state,i0,j0,k0)
 
       output_file = 'temp.e'//ce

@@ -160,10 +160,10 @@ module io_input
       integer :: nferr
 
       include 'netcdf.inc'
-
+      write(*,*)'in read_input_state'
       call io_input_init(trim(stream),input_obj)
       input_obj % time = 1
-  
+      write(*,*)'before nferr'
       ! Dimensions  
       nferr = nf_inq_unlimdim(input_obj % rd_ncid, input_obj % rdDimIDTime)
       nferr = nf_inq_dimlen(input_obj % rd_ncid, input_obj % rdDimIDTime, input_obj % rdLocalTime)
@@ -180,7 +180,7 @@ module io_input
       call io_input_state(input_obj, state)
       call io_input_field_time(input_obj, state % date)
       call io_input_finalize(input_obj)
-
+      write(*,*)'end read_input_state'
    end subroutine read_input_state
 
       

@@ -1314,12 +1314,12 @@ module variable_types
      integer, intent(in) :: member
      integer :: vv
      real :: coeffa, coeffb
-
+     write(*,*)'write compute mean state'
      coeffa = 1.0 / real(member)
      coeffb = real(member-1) * coeffa
-
+     write(*,*)'coeff',coeffa, coeffb
      do vv=1, state%nvar
-    
+        write(*,*)'vv',vv 
         if ( state%num(vv)%IDdim == 3 ) then
            state_mean%num(vv)%field%field3d%array =  coeffb * state_mean%num(vv)%field%field3d%array &
              + state%num(vv)%field%field3d%array  * coeffa
@@ -1353,7 +1353,8 @@ module variable_types
      write(*,*)'------------------------------------------------------------------------------'
      write(*,*)' check state at ii0 jj0 kk0 ',ii0, jj0, kk0
      do vv=1, state%nvar
-
+        write(*,*)'vv',vv
+        write(*,*)state%num(vv)%IDdim
         if (state%num(vv)%IDdim == 0) then
            var0 = state%num(vv)%field%field0d%scalar
            write(*,*)'value of  ',trim(state%num(vv)%field%field0d%ioinfo%fieldName),var0        

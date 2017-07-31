@@ -5,6 +5,8 @@ module_ffts.o da_be_spectral.o da_fft_initialize.o da_change_wind_variables.o \
 da_horizontal_covariances.o da_cloud_fraction.o configure.o variable_types.o io_input_model.o \
 io_output.o io_input.o io_output_application.o read_benc.o
 
+NETCDFPATH = /apps/netcdf/4.3.0-intel
+
 AR = ar
 ARFLAGS = cr
 TARGET = libtools.a

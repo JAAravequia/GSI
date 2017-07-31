@@ -25,11 +25,12 @@ module io_input_model
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   
-   subroutine da_get_field8( input_file, var, field_dims, dim1, dim2, dim3, k,field)
+   subroutine da_get_field8( input_file, model, var, field_dims, dim1, dim2, dim3, k,field)
 
       implicit none
 
       character(len=200), intent(in)  :: input_file       ! 1 file nane.
+      character(len=32),  intent(in)  :: model            ! Model name
       character(len=12),  intent(in)  :: var              ! Variable to search for.
       integer,            intent(in)  :: field_dims       ! # Dimensions of field.
       integer,            intent(in)  :: dim1             ! Dimension 1 of field.
@@ -38,8 +39,8 @@ module io_input_model
       integer,            intent(in)  :: k                ! Vertical index.
       real*8,             intent(out) :: field(1:dim1,1:dim2) ! Output field
       real                            :: field_in(1:dim1,1:dim2) ! Output field
-
-      call da_get_field( input_file, var, field_dims, dim1, dim2, dim3, k, field_in )
+      print*,'in da_get_field8',dim1,dim2,dim3,k
+      call da_get_field( input_file, model, var, field_dims, dim1, dim2, dim3, k, field_in )
       field = field_in
 
    end subroutine da_get_field8
@@ -57,6 +58,8 @@ module io_input_model
       type (field2DReal) :: mapfac_u, mapfac_v
       type (field1DReal) :: znu
 
+      print*,'in init_mesh'
+      print*,'trim',trim(model)
       if ( trim(model) == 'WRF' ) then
 
           write(*,*)'WRF model' 
@@ -69,23 +72,55 @@ module io_input_model
           write(*,*)'read XLAT' 
           input_file = trim(filin)//'.e001'         
           var = "XLAT"
-          call da_get_field8( input_file, var, 2, mesh%Dim1, mesh%Dim2, 1, 1, mesh%lat%array )
+          call da_get_field8( input_file, model, var, 2, mesh%Dim1, mesh%Dim2, 1, 1, mesh%lat%array )
           var = "XLONG"
-          call da_get_field8( input_file, var, 2, mesh%Dim1, mesh%Dim2, 1, 1, mesh%lon%array )
+          call da_get_field8( input_file, model, var, 2, mesh%Dim1, mesh%Dim2, 1, 1, mesh%lon%array )
           var = "MAPFAC_M"
-          call da_get_field8( input_file, var, 2, mesh%Dim1, mesh%Dim2, 1, 1, mesh%mapfac_m%array )
+          call da_get_field8( input_file, model, var, 2, mesh%Dim1, mesh%Dim2, 1, 1, mesh%mapfac_m%array )
           var = "MAPFAC_U"
-          call da_get_field8( input_file, var, 2, mesh%Dim1+1, mesh%Dim2, 1, 1, mesh%mapfac_u%array )
+          call da_get_field8( input_file, model, var, 2, mesh%Dim1+1, mesh%Dim2, 1, 1, mesh%mapfac_u%array )
           var = "MAPFAC_V"
-          call da_get_field8( input_file, var, 2, mesh%Dim1, mesh%Dim2+1, 1, 1, mesh%mapfac_v%array )
+          call da_get_field8( input_file, model, var, 2, mesh%Dim1, mesh%Dim2+1, 1, 1, mesh%mapfac_v%array )
           var = "ZNU"
           allocate( tmp2d(mesh%Dim3,1) )
-          call da_get_field8(input_file, var, 1, mesh%Dim3, 1, 1, 1,tmp2d )
+          call da_get_field8(input_file, model, var, 1, mesh%Dim3, 1, 1, 1,tmp2d )
           mesh%znu%array= tmp2d(:,1)
           deallocate(tmp2d) 
-          call da_get_height( input_file, mesh%Dim1, mesh%Dim2, mesh%Dim3, mesh%hgt%array )
+          call da_get_height( input_file, model, mesh%Dim1, mesh%Dim2, mesh%Dim3, mesh%hgt%array )
 
-      end if
+      else if ( trim(model) == 'GFS' ) then
+
+          write(*,*)'GFS model' 
+          ! allocate the array
+          call allocate_field(mesh % mapfac_u,'mapfac_u',mesh%Dim1+1, mesh%Dim2)
+          call allocate_field(mesh % mapfac_v,'mapfac_v',mesh%Dim1, mesh%Dim2+1)
+          call allocate_field(mesh % znu,'znu',mesh%Dim3)
+          ! initialize the array
+          ! got warnings when it compiles for the call da_get_field
+          write(*,*)'read XLAT',mesh%Dim1,mesh%Dim2
+          input_file = trim(filin)//'.e001'         
+          write(*,*) 'input_file', input_file
+          var = "lat"
+          call da_get_field8( input_file, model, var, 2, mesh%Dim1, mesh%Dim2, 1, 1, mesh%lat%array )
+          var = "lon"
+          call da_get_field8( input_file, model, var, 2, mesh%Dim1, mesh%Dim2, 1, 1, mesh%lon%array )
+          mesh%mapfac_m%array=1.0
+          mesh%mapfac_u%array=1.0
+          mesh%mapfac_v%array=1.0
+          mesh%znu%array=1.0
+          !var = "MAPFAC_M"
+          !call da_get_field8( input_file, var, 2, mesh%Dim1, mesh%Dim2, 1, 1, mesh%mapfac_m%array )
+          !var = "MAPFAC_U"
+          !call da_get_field8( input_file, var, 2, mesh%Dim1+1, mesh%Dim2, 1, 1, mesh%mapfac_u%array )
+          !var = "MAPFAC_V"
+          !call da_get_field8( input_file, var, 2, mesh%Dim1, mesh%Dim2+1, 1, 1, mesh%mapfac_v%array )
+          !var = "ZNU"
+          !allocate( tmp2d(mesh%Dim3,1) )
+          !call da_get_field8(input_file, var, 1, mesh%Dim3, 1, 1, 1,tmp2d )
+          !mesh%znu%array= tmp2d(:,1)
+          !deallocate(tmp2d) 
+          !call da_get_height( input_file, mesh%Dim1, mesh%Dim2, mesh%Dim3, mesh%hgt%array )
+      endif
 
    end subroutine init_mesh_stage0
 
@@ -141,7 +176,7 @@ module io_input_model
       mesh_out % hgt % array(1:Dim1_out,1:Dim2_out,1:Dim3_out) = mesh_in % hgt % array(Dim1_bc1:Dim1_bc2, Dim2_bc1:Dim2_bc2, Dim3_bc1:Dim3_bc2)
       mesh_out % ds % scalar = mesh_in % ds % scalar
      
-      if ( trim(model) == 'WRF' ) then
+      if ( trim(model) == 'WRF' .or. 'GFS' ) then
 
          mesh_out % Dim1u = Dim1_out + 1
          mesh_out % Dim2u = Dim2_out
@@ -175,6 +210,13 @@ module io_input_model
      integer :: vv
      integer :: Dim1_bc1, Dim1_bc2, Dim2_bc1, Dim2_bc2, Dim3_bc1, Dim3_bc2
      integer :: Dim1_out, Dim2_out, Dim3_out
+     
+     write(*,*)'mesh',mesh_in%Dim1
+     write(*,*)'mesh',mesh_in%Dim2
+     write(*,*)'mesh',mesh_in%Dim3
+     write(*,*)'nvar',nvar
+     write(*,*)'state_innvar',state_in%nvar
+     write(*,*)'cut',cut
 
      Dim1_bc1 =  1 + cut(1)
      Dim1_bc2 =  mesh_in % Dim1 - cut(2)
@@ -182,13 +224,14 @@ module io_input_model
      Dim2_bc2 =  mesh_in % Dim2 - cut(4)
      Dim3_bc1 =  1 + cut(5)
      Dim3_bc2 =  mesh_in % Dim3 - cut(6)
-
+     print*,'after dim1'
      Dim1_out = mesh_in % Dim1 -cut(1) -cut(2)
      Dim2_out = mesh_in % Dim2 -cut(3) -cut(4)
      Dim3_out = mesh_in % Dim3 -cut(5) -cut(6)
+     print*,'after dim2'
 
      do vv = 1, state_in%nvar
-
+        write(*,*)'vv',vv
         if (state_in%num(vv)%IDdim == 2) then
            state_out%num(vv)%field%field2d%array(1:Dim1_out,1:Dim2_out) = &
               state_in%num(vv)%field%field2d%array(Dim1_bc1:Dim1_bc2, Dim2_bc1:Dim2_bc2)
@@ -241,10 +284,14 @@ module io_input_model
       integer, intent(inout) ::  Dim1, Dim2, Dim3
  
       input_file = trim(filin)//'.e001'
+      
       if ( trim(model) == 'WRF') then
          var = "T"
          call da_stage0_initialize(input_file, var, Dim1, Dim2, Dim3, ds0)
-         write(*,*)'get_vardim_stage0 Dim1, Dim2, Dim3 : ',Dim1, Dim2, Dim3
+         ds = ds0
+      else if ( trim(model) == 'GFS') then
+         var = "tmpmidlayer"
+         call da_stage0_initialize(input_file, var, Dim1, Dim2, Dim3, ds0)
          ds = ds0
       end if  
 
@@ -262,7 +309,7 @@ module io_input_model
       nVar3d = 0
 
       call read_namelist(nVar2d,nVar3d)
-
+      
       call get_vardim_stage0(model, file_in, Dim1, Dim2, Dim3, ds)
 
       nvar = nVar2d + nVar3d
@@ -336,7 +383,7 @@ module io_input_model
 
      if ( (indice_psi/=0).or.(indice_chi/=0).or.(indice_vor/=0).or.(indice_div/=0).or.(indice_u/=0).or.(indice_v/=0) ) then
 
-     if (trim(domain%model)=='WRF') then
+     if (trim(domain%model)=='WRF' .or. 'GFS') then
 
         !  Initialize FFT coefficients:
         if ( poisson_method == 1 ) then
@@ -376,10 +423,18 @@ module io_input_model
         do kk = 1, domain%mesh%Dim3
     
            ! load U, V component
-           var = "U"
-           call da_get_field( input_file, var, 3, domain%mesh%Dim1+1, domain%mesh%Dim2, domain%mesh%Dim3, kk, u )
-           var = "V"
-           call da_get_field( input_file, var, 3, domain%mesh%Dim1, domain%mesh%Dim2+1, domain%mesh%Dim3, kk, v )
+           if(trim(model)=='WRF')then
+             var = "U"
+           elseif (trim(model)=='GFS')then
+             var = 'ugrdmidlayer'
+           endif
+           call da_get_field( input_file, domain%model, var, 3, domain%mesh%Dim1+1, domain%mesh%Dim2, domain%mesh%Dim3, kk, u )
+           if(trim(model)=='WRF') then
+             var = "V"
+           elseif (trim(model)=='GFS') then
+             var = 'vgrdmidlayer'
+           endif
+           call da_get_field( input_file, domain%model, var, 3, domain%mesh%Dim1, domain%mesh%Dim2+1, domain%mesh%Dim3, kk, v )
 
            ! Calculate vor2dticity (in center of mass grid on WRF's Arakawa C-grid):
            if ((indice_psi/=0).or.(indice_chi/=0).or.(indice_vor/=0).or.(indice_div/=0) ) then 
@@ -531,7 +586,7 @@ module io_input_model
            
            if ( indice_qcloud /= 0 ) then
               var = "QCLOUD"
-              call da_get_field8( input_file, var, 3, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, kk, qcond )
+              call da_get_field8( input_file, domain%model, var, 3, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, kk, qcond )
               where(qcond(:,:).lt.0.0)
                   qcond(:,:)=rsmall
               end where
@@ -540,7 +595,7 @@ module io_input_model
 
            if ( indice_qrain /= 0 ) then
               var = "QRAIN"
-              call da_get_field8( input_file, var, 3, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, kk, qcond )
+              call da_get_field8( input_file, domain%model, var, 3, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, kk, qcond )
               where(qcond(:,:).lt.0.0)
                   qcond(:,:)=rsmall
               end where
@@ -549,7 +604,7 @@ module io_input_model
  
            if ( indice_qice /= 0 ) then
               var = "QICE"
-              call da_get_field8( input_file, var, 3, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, kk, qcond )
+              call da_get_field8( input_file, domain%model, var, 3, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, kk, qcond )
               where(qcond(:,:).lt.0.0)
                   qcond(:,:)=rsmall
               end where
@@ -558,7 +613,7 @@ module io_input_model
 
            if ( indice_qsnow /= 0 ) then
               var = "QSNOW"
-              call da_get_field8( input_file, var, 3, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, kk, qcond )
+              call da_get_field8( input_file, domain%model, var, 3, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, kk, qcond )
               where(qcond(:,:).lt.0.0)
                   qcond(:,:)=rsmall
               end where
@@ -605,13 +660,13 @@ module io_input_model
         p2d    = 0.0
         if ( ( indice_temp /= 0 ) .or. ( indice_rh /= 0 ) .or. (indice_qs/=0) ) then
               do kk = 1, domain%mesh%Dim3
-                 call da_get_trh( input_file, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, kk, temp2d, rh2d )
+                 call da_get_trh( input_file, domain%model, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, kk, temp2d, rh2d )
                  if ( indice_temp /= 0 ) then
                     domain % state % num(indice_temp) % field % field3d % array(:,:,kk) = temp2d
                  end if
                  if ( indice_tv /= 0 ) then
                     var = "QVAPOR"
-                    call da_get_field( input_file, var, 3,domain%mesh%Dim1,domain%mesh%Dim2, domain%mesh%Dim3, kk, p2d )
+                    call da_get_field( input_file, domain%model, var, 3,domain%mesh%Dim1,domain%mesh%Dim2, domain%mesh%Dim3, kk, p2d )
                     domain % state % num(indice_tv) % field % field3d %array(:,:,kk) = temp2d*(1 + 1.608*p2d)/(1 + p2d)
                  end if
                  if ( indice_rh /= 0 ) then
@@ -619,7 +674,7 @@ module io_input_model
                  end if
                  if ( indice_qs /= 0 ) then
                     var = "QVAPOR"
-                    call da_get_field( input_file, var, 3, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, kk, rh2d )
+                    call da_get_field( input_file, domain%model, var, 3, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, kk, rh2d )
                     domain % state % num(indice_qs) % field % field3d % array(:,:,kk) = rh2d / (1 + rh2d) 
                  end if
               end do
@@ -715,7 +770,7 @@ module io_input_model
               allocate( temp2d(domain%mesh%Dim1,domain%mesh%Dim2) )
               temp2d = 0.0
               do kk = 1, domain%mesh%Dim3
-                 call da_get_field8( input_file, varname_wrf(ii), 3, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, kk, temp2d )
+                 call da_get_field8( input_file, domain%model, varname_wrf(ii), 3, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, kk, temp2d )
                  domain % state % num(indice) % field % field3d % array(:,:,kk) = temp2d
                  !write(*,*)'temp2d ',temp2d(2,2)
               end do
@@ -747,7 +802,7 @@ module io_input_model
      if (indice /= 0 ) then
         if (trim(domain%model)=="WRF") then
            var = "PSFC"
-           call da_get_field8( input_file, var, 2, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, &
+           call da_get_field8( input_file, domain%model, var, 2, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, &
                            1, domain%state%num(indice)%field%field2d%array )
         end if
   
@@ -789,15 +844,15 @@ module io_input_model
 
            !  Needed for cld fraction: pressure, qvapor
            var = "PB"
-           call da_get_field( input_file, var, 3, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, &
+           call da_get_field( input_file, domain%model, var, 3, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, &
                           kk, tmp2d )
            press(:,:,kk) = tmp2d(:,:)
            var = "P"
-           call da_get_field( input_file, var, 3, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, &
+           call da_get_field( input_file, domain%model, var, 3, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, &
                           kk, tmp2d )
            press(:,:,kk) = press(:,:,kk) + tmp2d(:,:)
            var = "QVAPOR"
-           call da_get_field( input_file, var, 3, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, &
+           call da_get_field( input_file, domain%model, var, 3, domain%mesh%Dim1, domain%mesh%Dim2, domain%mesh%Dim3, &
                           kk, tmp2d )
            qvapor(:,:,kk) = tmp2d(:,:)
 

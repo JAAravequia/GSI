@@ -350,7 +350,7 @@ subroutine da_filter_regcoeffs(ni, nj, nk, num_bins, num_bins2d, num_passes, &
 end subroutine da_filter_regcoeffs
 
 
-subroutine da_get_field( input_file, var, field_dims, dim1, dim2, dim3, k, field)
+subroutine da_get_field( input_file, model, var, field_dims, dim1, dim2, dim3, k, field)
 
    !-----------------------------------------------------------------------
    ! Purpose: TBD
@@ -1729,6 +1729,7 @@ subroutine da_get_field( input_file, var, field_dims, dim1, dim2, dim3, k, field
       parameter (fildoub = 9.9692099683868690e+36)
    
    character(len=200), intent(in)  :: input_file       ! 1 file nane.
+   character(len=32),  intent(in)  :: model            ! Model name
    character(len=12),  intent(in)  :: var              ! Variable to search for.
    integer,            intent(in)  :: field_dims       ! # Dimensions of field. 
    integer,            intent(in)  :: dim1             ! Dimension 1 of field. 
@@ -1759,9 +1760,15 @@ subroutine da_get_field( input_file, var, field_dims, dim1, dim2, dim3, k, field
    end if
 
    istart = 1
-   iend(1) = dim1
-   iend(2) = dim2
-   iend(4) = 1          ! Single time assumed.
+   if (trim(model)=='WRF')then
+     iend(1) = dim1
+     iend(2) = dim2
+     iend(4) = 1          ! Single time assumed.
+   else if (trim(model)=='GFS')then
+     iend(1) = 1
+     iend(3) = dim2
+     iend(4) = dim1 
+   endif
 
    if (field_dims == 1) then
       iend(2) = 1
@@ -1772,14 +1779,22 @@ subroutine da_get_field( input_file, var, field_dims, dim1, dim2, dim3, k, field
       rcode = nf_close( cdfid)
       deallocate( field1d)
    else if (field_dims == 2) then
-      iend(3) = 1
+      if (trim(model)=='WRF') then    
+        iend(3) = 1
+      else if (trim(model)=='GFS') then
+        iend(2) = 1
+      endif
       allocate( field2d(1:dim1,1:dim2))
       call ncvgt( cdfid, id_var, istart, iend, field2d, rcode)
       field(:,:) = field2d(:,:)
       rcode = nf_close( cdfid)
       deallocate( field2d)
    else if (field_dims == 3) then
-      iend(3) = dim3
+      if (trim(model)=='WRF') then
+        iend(3) = dim3
+      else if (trim(model)=='GFS') then
+        iend(2) = dim3
+      endif
       allocate( field3d(1:dim1,1:dim2,1:dim3))
       call ncvgt( cdfid, id_var, istart, iend, field3d, rcode)
       field(:,:) = field3d(:,:,k)
@@ -1791,7 +1806,7 @@ subroutine da_get_field( input_file, var, field_dims, dim1, dim2, dim3, k, field
 end subroutine da_get_field
 
 
-subroutine da_get_height( input_file, dim1, dim2, dim3, height)
+subroutine da_get_height( input_file, model, dim1, dim2, dim3, height)
 
    !---------------------------------------------------------------------------
    ! Purpose: Calculates T, RH from input WRF file.
@@ -1803,6 +1818,7 @@ subroutine da_get_height( input_file, dim1, dim2, dim3, height)
    integer,            intent(in)  :: dim1, dim2, dim3          ! Dimensions.
    real(kind=8),               intent(out) :: height(1:dim1,1:dim2,1:dim3) ! Height.
 
+   character(len=32) :: model                            ! Variable to search for.
    character(len=12) :: var                            ! Variable to search for.
    integer           :: k                              ! Loop counter.
    real              :: gravity_inv                    ! 1/gravity.
@@ -1814,9 +1830,9 @@ subroutine da_get_height( input_file, dim1, dim2, dim3, height)
 
    do k = 1, dim3+1
       var = "PHB"
-      call da_get_field( input_file, var, 3, dim1, dim2, dim3+1, k, phb)
+      call da_get_field( input_file, model, var, 3, dim1, dim2, dim3+1, k, phb)
       var = "PH"
-      call da_get_field( input_file, var, 3, dim1, dim2, dim3+1, k, ph)
+      call da_get_field( input_file, model, var, 3, dim1, dim2, dim3+1, k, ph)
 
       phfull(:,:,k) = phb + ph ! Calculate full geopotential on full(w) model levels:
    end do
@@ -1828,7 +1844,7 @@ subroutine da_get_height( input_file, dim1, dim2, dim3, height)
 end subroutine da_get_height
 
 
-subroutine da_get_trh( input_file, dim1, dim2, dim3, k, temp, rh )
+subroutine da_get_trh( input_file, model, dim1, dim2, dim3, k, temp, rh )
 
    !---------------------------------------------------------------------------
    ! Purpose: Calculates T, RH from input WRF file.
@@ -1837,6 +1853,7 @@ subroutine da_get_trh( input_file, dim1, dim2, dim3, k, temp, rh )
    implicit none
 
    character(len=200), intent(in)  :: input_file       ! 1 file name.
+   character(len=32), intent(in)  :: model      ! model name
    integer,            intent(in)  :: dim1, dim2, dim3          ! Dimensions.
    integer,            intent(in)  :: k                         ! Model level.
    real,               intent(out) :: temp(1:dim1,1:dim2)       ! Temperature.
@@ -1858,16 +1875,16 @@ subroutine da_get_trh( input_file, dim1, dim2, dim3, k, temp, rh )
    real              :: qs                        ! Saturation specific humidity.
 
    var = "T" ! Perturbation potential temperature in WRF.
-   call da_get_field( input_file, var, 3, dim1, dim2, dim3, k, thetap)
+   call da_get_field( input_file, model, var, 3, dim1, dim2, dim3, k, thetap)
 
    var = "PB"  ! Base state pressure in WRF.
-   call da_get_field( input_file, var, 3, dim1, dim2, dim3, k, pb)
+   call da_get_field( input_file, model, var, 3, dim1, dim2, dim3, k, pb)
 
    var = "P" ! Perturbation pressure in WRF.
-   call da_get_field( input_file, var, 3, dim1, dim2, dim3, k, pp)
+   call da_get_field( input_file, model, var, 3, dim1, dim2, dim3, k, pp)
 
    var = "QVAPOR"  ! Water vapor mixing ratio.
-   call da_get_field( input_file, var, 3, dim1, dim2, dim3, k, x)
+   call da_get_field( input_file, model, var, 3, dim1, dim2, dim3, k, x)
 
    do j = 1, dim2
       do i = 1, dim1
