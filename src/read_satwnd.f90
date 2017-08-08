@@ -208,9 +208,15 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 ! GOES-R new BUFR related variables
   character(70)               :: eham_str,prlc_str,wdir_str,wspd_str,pccf_str,solc_str,cvwd_str,cloud1_str,cloud2_str
   real(r_double),dimension(4) :: eham_dat 
-  real(r_double),dimension(4) :: prlc_dat 
+
+  !real(r_double),dimension(4) :: prlc_dat
+  real(r_double),dimension(6) :: prlc_dat !for newBUFR June 2017
+ 
   real(r_double),dimension(4) :: wspd_dat 
-  real(r_double),dimension(3) :: wdir_dat 
+
+  !real(r_double),dimension(3) :: wdir_dat
+  real(r_double),dimension(6) :: wdir_dat !for newBUFR June 2017
+
   real(r_double),dimension(2) :: pccf_dat 
   real(r_double),dimension(2) :: solc_dat,cvwd_dat
   real(r_double),dimension(4) :: cloud1_dat
@@ -239,7 +245,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   data prlc_str /'PRLC'/
   data wdir_str /'WDIR'/
   data wspd_str /'WSPD'/
-! no substitute for qcstr: 1)OGCE is already in goesr_str 2)GNAP not provided in new BUFR 3)PCCF is read directly
+! no substitute for qcstr: 1)OGCE is already in hdrtr 2)GNAP not provided in new BUFR 3)PCCF is read directly
   data pccf_str /'PCCF'/
   data solc_str /'SOLC'/
   data cvwd_str /'CVWD'/  
@@ -894,9 +900,9 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
               !fix obstr/'HAMD PRLC WDIR WSPD'/ (EHAM in new BUFR replaces HAMD in old BUFR)
               obsdat(1)=eham_dat(1)
               if(hdrdat(1) >=r250 .and. hdrdat(1) <=r299 ) then  ! the range of NESDIS satellite IDs
-                                                                 ! The sample newBUFR has SAID=259 (GOES-15)
-                                                                 ! When GOES-R SAID is assigned, pls check
-                                                                 ! if this range is still valid (Genkova)) 
+                                                                 ! GOES-R SAID=270, therefore
+                                                                 ! this range is still valid (Genkova))
+                                                                    
                  c_prvstg='NESDIS'
                  if(hdrdat(10) >68.0_r_kind) cycle loop_readsb   !   reject data zenith angle >68.0 degree 
                  if(trim(subset) == 'NC005030')  then                 ! IR LW winds

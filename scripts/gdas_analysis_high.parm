@@ -262,7 +262,7 @@ fi
 # Set namelist jobs for hybrid 3dvar-ensemble analysis
 export HYBRID_ENSEMBLE=""
 if [[ "$DOHYBVAR" = "YES" ]]; then
-   export HYBRID_ENSEMBLE="l_hyb_ens=.true.,n_ens=$NMEM_ENS,beta1_inv=0.125,s_ens_h=800.,s_ens_v=-0.8,generate_ens=.false.,uv_hyb_ens=.true.,jcap_ens=$JCAP_ENS,nlat_ens=$NLAT_ENS,nlon_ens=$NLON_ENS,aniso_a_en=.false.,jcap_ens_test=$JCAP_ENS,readin_localization=.true.,oz_univ_static=.false.,"
+   export HYBRID_ENSEMBLE="l_hyb_ens=.true.,n_ens=$NMEM_ENS,beta_s0=0.125,s_ens_h=800.,s_ens_v=-0.8,generate_ens=.false.,uv_hyb_ens=.true.,jcap_ens=$JCAP_ENS,nlat_ens=$NLAT_ENS,nlon_ens=$NLON_ENS,aniso_a_en=.false.,jcap_ens_test=$JCAP_ENS,readin_localization=.true.,oz_univ_static=.false.,"
    export STRONGOPTS="tlnmc_option=2,"
 fi
 
@@ -271,7 +271,7 @@ export l4densvar=${l4densvar:-".true."}
 export lwrite4danl=${lwrite4danl:-".false."}
 SETUP_4DVAR=""
 if [ $l4densvar = .true. ] ; then
-   SETUP_4DVAR="niter(1)=50,niter(2)=150,niter_no_qc(1)=25,l4densvar=.true.,ens4d_nstarthr=3,nhr_obsbin=1,nhr_assimilation=6,lwrite4danl=${lwrite4danl},"
+   SETUP_4DVAR="niter(1)=50,niter(2)=150,niter_no_qc(1)=25,l4densvar=.true.,ens_nstarthr=3,nhr_obsbin=1,nhr_assimilation=6,lwrite4danl=${lwrite4danl},"
    export JCOPTS="ljc4tlevs=.true.,"
    export STRONGOPTS="tlnmc_option=3,"
 fi

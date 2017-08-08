@@ -300,7 +300,7 @@ OBS_INPUT::
    l_hyb_ens=${HYBRID_ENS},
    n_ens=${ENSEMBLE_SIZE},
    uv_hyb_ens=${HYBRID_ENS_UV},
-   beta1_inv=${BETA1_INV},
+   beta_s0=${BETA1_INV},
    s_ens_h=${HYBRID_HOR_SCALE},
    s_ens_v=${HYBRID_VER_SCALE},
    generate_ens=${ENSEMBLE_GEN},

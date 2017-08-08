@@ -200,6 +200,7 @@ subroutine read_goesimg(mype,val_img,ithin,rmesh,jsatid,gstime,&
   if(jsatid == 'g13') kidsat = 257
   if(jsatid == 'g14') kidsat = 258
   if(jsatid == 'g15') kidsat = 259
+  if(jsatid == 'g16') kidsat = 270
 
 ! Allocate arrays to hold all data for given satellite
   if(dval_use) maxinfo = maxinfo + 2

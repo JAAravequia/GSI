@@ -228,6 +228,7 @@ subroutine read_goesndr(mype,val_goes,ithin,rmesh,jsatid,infile,&
        if(jsatid=='g13_prep')lsatid=257
        if(jsatid=='g14_prep')lsatid=258
        if(jsatid=='g15_prep')lsatid=259
+       if(jsatid=='g16_prep')lsatid=270
    else
        if(jsatid=='g08')lsatid=252
        if(jsatid=='g09')lsatid=253
@@ -237,6 +238,7 @@ subroutine read_goesndr(mype,val_goes,ithin,rmesh,jsatid,infile,&
        if(jsatid=='g13')lsatid=257
        if(jsatid=='g14')lsatid=258
        if(jsatid=='g15')lsatid=259
+       if(jsatid=='g16')lsatid=270
        if(obstype == 'sndrd1')ldetect = 1
        if(obstype == 'sndrd2')ldetect = 2
        if(obstype == 'sndrd3')ldetect = 3
