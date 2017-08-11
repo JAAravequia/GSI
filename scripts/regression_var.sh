@@ -21,8 +21,8 @@ if [ "$#" = 8 ] ; then
   echo $ptmpName
 else
 # Name of the branch being tested
-  updat="XXXXXXXX"
-  contrl="XXXXXXXX"
+  updat="AMV_Genkova_GoesR"         #branch with Goes-R SatID added
+  contrl="AMV_Genkova_GoesR_QC_exp" #tested branch, which reads ok 03-2017 BUFR
   export cmaketest="false"
   export clean="false"
   export ptmpName=""
@@ -59,10 +59,11 @@ if [[ "$machine" = "Theia" ]]; then
    export group="global"
    export queue="batch"
    if [[ "$cmaketest" = "false" ]]; then
-     export basedir="/scratch4/home/$LOGNAME/gsi"
+     export basedir="/scratch4/NCEPDEV/da/save/$LOGNAME/gsi"
    fi 
 
-   export ptmp="/scratch4/NCEPDEV/stmp3/$LOGNAME/$ptmpName"
+   #export ptmp="/scratch4/NCEPDEV/stmp3/$LOGNAME/$ptmpName"
+   export ptmp="/scratch4/NCEPDEV/stmp3/$LOGNAME"
 
    export fixcrtm="/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update"
    export casesdir="/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES"
