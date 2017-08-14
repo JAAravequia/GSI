@@ -14,7 +14,7 @@ subroutine read_satmar (nread, ndata, nodata,                                 &
 ! =>  Coder                         :     stelios flampouris - stylianos.flampouris@noaa.gov
 ! => Abstract                       :     
 !      1. This routine reads data from CNES and OCEANAVO:
-!      OCEANAVO: xx114 (NC031114) // xx120 (NC031120) // xx121 (NC031121) // xx127 (NC031127)
+!      OCEANAVO: xx114 (NC031114) // xx120 (NC031120) // xx121 (NC031121) // xx127 (NC031127) // xx130 (NC031130)
 !      CNES    : xx115 (NC031115) // xx122 (NC031122) // xx123 (NC031123) // xx124 (NC031124)
 !
 !      DATA SET      |     Corresponding Satellite
@@ -22,6 +22,7 @@ subroutine read_satmar (nread, ndata, nodata,                                 &
 !      xx120, xx123  |     CRYOSAT-2
 !      xx121, xx122  |     SARAL/ATK 
 !      xx124, xx127  |     JASON-3
+!      xx130         |     SENTINEL3a
 !      
 !      2. It uses the provided flags for QC.
 !      3. Observations only within the domain of interest are retained.
@@ -38,6 +39,7 @@ subroutine read_satmar (nread, ndata, nodata,                                 &
 !                 :              2. The c_station_id is variable and gets the
 !                 input from the "subset" according to the values given at the
 !                 datasets when dumped at the tanks.
+! 2017.08.12      :     stelios: Imports Sentinel3a howv obs
 !
 !   input argument list:
 !     ithin    - flag to thin data
