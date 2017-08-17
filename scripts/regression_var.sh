@@ -22,7 +22,7 @@ if [ "$#" = 8 ] ; then
 else
 # Name of the branch being tested
   updat="AMV_Genkova_GoesR"         #branch with Goes-R SatID added
-  contrl="AMV_Genkova_GoesR_QC_exp" #tested branch, which reads ok 03-2017 BUFR
+  contrl="trunk.20170814.r96551"    #newest trunk head  #tested branch, which reads ok 03-2017 BUFR
   export cmaketest="false"
   export clean="false"
   export ptmpName=""
