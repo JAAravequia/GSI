@@ -21,26 +21,26 @@ if [ "$#" = 8 ] ; then
   echo $ptmpName
 else
 # Name of the branch being tested
-  updat="XXXXXXXX"
-  contrl="XXXXXXXX"
+  updat="EXP-enkflinhx"
+  contrl="trunk.r95049"
   export cmaketest="false"
   export clean="false"
-  export ptmpName=""
+  export ptmpName="regression/gsi"
 fi
 
 # First determine what machine are we on:
 if [ -d /da ]; then # WCOSS
    export machine="WCOSS"
-   if [ -d /da/noscrub/$LOGNAME ]; then 
+   if [ -d /da/noscrub/$LOGNAME ]; then
      export noscrub=/da/noscrub/$LOGNAME
    elif [ -d /global/noscrub/$LOGNAME ]; then
      export noscrub=/global/noscrub/$LOGNAME
    fi
 elif [ -d /scratch4/NCEPDEV/da ]; then # Theia
    export machine="Theia"
-   if [ -d /scratch4/NCEPDEV/da/noscrub/$LOGNAME ]; then 
+   if [ -d /scratch4/NCEPDEV/da/noscrub/$LOGNAME ]; then
      export noscrub="/scratch4/NCEPDEV/da/noscrub/$LOGNAME"
-   elif [ -d /scratch4/NCEPDEV/global/noscrub/$LOGNAME ]; then 
+   elif [ -d /scratch4/NCEPDEV/global/noscrub/$LOGNAME ]; then
      export noscrub="/scratch4/NCEPDEV/global/noscrub/$LOGNAME"
    fi
 elif [ -d /gpfs/tp1/ptmp ]; then # LUNA or SURGE
@@ -57,10 +57,10 @@ fi
 if [[ "$machine" = "Theia" ]]; then
 
    export group="global"
-   export queue="batch"
+   export queue="debug"
    if [[ "$cmaketest" = "false" ]]; then
-     export basedir="/scratch4/home/$LOGNAME/gsi"
-   fi 
+     export basedir="/scratch4/NCEPDEV/global/save/$LOGNAME/svn/gsi/branches"
+   fi
 
    export ptmp="/scratch4/NCEPDEV/stmp3/$LOGNAME/$ptmpName"
 
@@ -74,13 +74,13 @@ if [[ "$machine" = "Theia" ]]; then
 
    #  On Theia, there are no scrubbers to remove old contents from stmp* directories.
    #  After completion of regression tests, will remove the regression test subdirecories
-   export clean=".true."
+   export clean=".false."
 
 elif [[ "$machine" = "WCOSS" ]]; then
 
    if [[ "$cmaketest" = "false" ]]; then
      export basedir="/global/save/$LOGNAME/gsi"
-   fi 
+   fi
    export group="dev"
    export queue="dev"
 
@@ -98,7 +98,7 @@ elif [[ "$machine" = "LUNA" ]]; then
 
    if [[ "$cmaketest" = "false" ]]; then
      export basedir="/gpfs/hps/emc/global/noscrub/$LOGNAME/gsi"
-   fi 
+   fi
    export group="dev"
    export queue="dev"
 
@@ -114,7 +114,7 @@ elif [[ "$machine" = "LUNA" ]]; then
 elif [[ "$machine" = "s4" ]]; then
    if [[ "$cmaketest" = "false" ]]; then
      export basedir="/home/$LOGNAME/gsi"
-   fi 
+   fi
    export group="dev"
    export queue="dev"
    export NWPROD="/usr/local/jcsda/nwprod_gdas_2014"
@@ -139,12 +139,14 @@ if [[ "$cmaketest" = "false" ]]; then
   export gsiexec_contrl="$basedir/$contrl/src/global_gsi"
   export enkfexec_updat="$gsisrc/enkf/global_enkf"
   export enkfexec_contrl="$basedir/$contrl/src/enkf/global_enkf"
-  export fixgsi="$basedir/$updat/fix"
-  export scripts="$basedir/$updat/scripts"
+  export fixgsi_updat="$basedir/$updat/fix"
+  export scripts_updat="$basedir/$updat/scripts"
+  export fixgsi_contrl="$basedir/$contrl/fix"
+  export scripts_contrl="$basedir/$contrl/scripts"
 fi
 # Paths to tmpdir and savedir base on ptmp
-export tmpdir="$ptmp"
-export savdir="$ptmp"
+export tmpdir="$ptmp/$updat"
+export savdir="$ptmp/$updat"
 
 # We are dealing with *which* endian files
 export endianness="Big_Endian"
@@ -201,7 +203,7 @@ export hwrf_nmm_ges="$casesdir/regional/hwrf_nmm/$hwrf_nmm_adate"
 export gps_dtype="gps_bnd"
 
 # Regression vfydir
-export regression_vfydir="$noscrub/regression"
+export regression_vfydir="$noscrub/regression/$updat"
 
 # Define debug variable - If you want to run the debug tests, set this variable to .true.  Default is .false.
 export debug=".false."

@@ -87,7 +87,7 @@ LIBgfio   = -L$(CORELIB) -lgfio
 # --------------------------
 INChdf          = -I$(BASEDIR)/$(ARCH)/include/hdf
 LIBhdf          = -L$(BASEDIR)/$(ARCH)/lib  -lmfhdf -ldf -lhdfjpeg -lhdfz -lsz
-LIBnetcdf       = -L$(BASEDIR)/$(ARCH)/lib -lnetcdf -lnetcdff
+LIBnetcdf       = -L$(BASEDIR)/$(ARCH)/lib -lnetcdf
 LIBwrf          = -L$(BASEDIR)/$(ARCH)/lib -lwrflib
 LIBwrfio_int    = -L$(BASEDIR)/$(ARCH)/lib -lwrfio_int
 LIBwrfio_netcdf = -L$(BASEDIR)/$(ARCH)/lib -lwrfio_nf
