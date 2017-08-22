@@ -1821,6 +1821,7 @@ contains
     use gsi_chemguess_mod, only: GSI_ChemGuess_Bundle, gsi_chemguess_get
     use mpeu_util, only: die
     use control_vectors, only : w_exist, dbz_exist
+    use obsmod,only: if_model_dbz
     implicit none
   
   ! Declare passed variables
@@ -1943,7 +1944,7 @@ contains
     endif
 
     if(w_exist) num_mass_fields = num_mass_fields +lm+1
-    if(dbz_exist) num_mass_fields = num_mass_fields +lm
+    if(dbz_exist.and.if_model_dbz) num_mass_fields = num_mass_fields +lm
     
   
     num_all_fields=num_mass_fields
@@ -1994,7 +1995,7 @@ contains
        i_qnr=i_qg+lm
        i_qni=i_qnr+lm
        i_qnc=i_qni+lm
-       if(dbz_exist)then
+       if(dbz_exist.and.if_model_dbz)then
          i_dbz=i_qnc+lm
          i_tt=i_dbz+lm
        else
@@ -2090,7 +2091,7 @@ contains
        kqnr=i_qnr-1
        kqni=i_qni-1
        kqnc=i_qnc-1
-       if(dbz_exist)kdbz=i_dbz-1
+       if(dbz_exist.and.if_model_dbz)kdbz=i_dbz-1
        ktt=i_tt-1
     endif
     if ( laeroana_gocart ) then
@@ -2149,7 +2150,7 @@ contains
           kqnr=kqnr+1
           kqni=kqni+1
           kqnc=kqnc+1
-          if(dbz_exist)kdbz=kdbz+1
+          if(dbz_exist.and.if_model_dbz)kdbz=kdbz+1
           ktt=ktt+1
        endif
        if ( laeroana_gocart ) then
@@ -2187,7 +2188,7 @@ contains
                 all_loc(j,i,kqnr)=ges_qnr(j,i,k)
                 all_loc(j,i,kqni)=ges_qni(j,i,k)
                 all_loc(j,i,kqnc)=ges_qnc(j,i,k)
-                if(dbz_exist)all_loc(j,i,kdbz)=ges_dbz(j,i,k)
+                if(dbz_exist.and.if_model_dbz)all_loc(j,i,kdbz)=ges_dbz(j,i,k)
                 all_loc(j,i,ktt)=ges_tten(j,i,k,it)
              endif
   
@@ -2805,7 +2806,7 @@ contains
           end if
        end do
    
-  if(dbz_exist)then
+  if(dbz_exist.and.if_model_dbz)then
   ! Update refl_10cm
        kdbz=i_dbz-1
        do k=1,nsig

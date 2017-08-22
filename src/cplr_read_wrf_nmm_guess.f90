@@ -1691,7 +1691,7 @@ contains
     use gridmod, only: lat2,lon2,pdtop_ll,pt_ll,nsig,nmmb_verttype,use_gfs_ozone,regional_ozone,& 
          aeta1_ll,aeta2_ll
     use rapidrefresh_cldsurf_mod, only: i_gsdcldanal_type  
-    use constants, only: zero,one_tenth,half,one,fv,rd_over_cp,r100,r0_01,ten
+    use constants, only: zero,one_tenth,half,one,fv,rd_over_cp,r100,r0_01,ten,rd,r1000
     use wrf_params_mod, only: update_pint, cold_start
 
     use gsi_nemsio_mod, only: gsi_nemsio_open,gsi_nemsio_close,gsi_nemsio_read,gsi_nemsio_read_fraction, gsi_nemsio_read_fractionnew
@@ -1701,7 +1701,7 @@ contains
     use mpeu_util, only: die,getindex
     use control_vectors, only: cvars3d
     use cloud_efr_mod, only: cloud_calc,cloud_calc_gfs
-    !use obsmod, only: logspace
+    use obsmod,only: if_model_dbz
     use control_vectors, only : w_exist, dbz_exist
     implicit none
   
@@ -1721,12 +1721,15 @@ contains
     real(r_kind) pd,psfc_this,wmag,pd_to_ps,q_liquid
     integer(i_kind) num_doubtful_sfct,num_doubtful_sfct_all
     real(r_kind),dimension(lat2,lon2):: smthis,sicethis,u10this,v10this,sstthis,tskthis
+
+    real(r_kind)    :: Cr=3.6308e9_r_kind          ! Rain constant coef.
+    real(r_kind)    :: Cli=3.268e9_r_kind          ! Precip. ice constant coef.
   
   ! variables for cloud info
     logical good_fice, good_frain, good_frimef
     integer(i_kind) iqtotal,icw4crtm,ier,iret,n_actual_clouds,istatus,ierr, &
                     i_radar_qr,i_radar_qli,i_radar_qh
-    real(r_kind),dimension(lat2,lon2,nsig):: clwmr,fice,frain,frimef
+    real(r_kind),dimension(lat2,lon2,nsig):: clwmr,fice,frain,frimef,ges_rho,Ze,Zer, Zeli
     real(r_kind),pointer,dimension(:,:  ):: ges_pd  =>NULL()
     real(r_kind),pointer,dimension(:,:  ):: ges_ps  =>NULL()
     real(r_kind),pointer,dimension(:,:  ):: ges_z   =>NULL()
@@ -1892,7 +1895,7 @@ contains
               clwmr=zero
               do kr=1,nsig
                  k=nsig+1-kr
-                 if( dbz_exist ) then
+                 if( dbz_exist .and. if_model_dbz ) then
                      call gsi_nemsio_read('refl_10cm' ,'mid layer','H',kr,ges_dbz(:,:,k),mype,mype_input)
                      where( ges_dbz(:,:,k) < 0.0_r_kind )
                           ges_dbz(:,:,k) = 0.0_r_kind
@@ -1900,6 +1903,23 @@ contains
                  end if
                  call gsi_nemsio_read_fractionnew('f_rain','f_ice','clwmr','f_rimef','mid layer',kr, &
                       ges_qi(:,:,k),ges_qli(:,:,k),ges_qr(:,:,k),ges_ql(:,:,k), mype,mype_input)
+                 if( dbz_exist .and. (.not. if_model_dbz) )then
+                   do i=1,lon2
+                      do j=1,lat2
+                         ges_prsl(j,i,k,it)=one_tenth* &
+                                     (aeta1_ll(k)*pdtop_ll + &
+                                      aeta2_ll(k)*(ten*ges_ps(j,i)-pdtop_ll-pt_ll) + &
+                                      pt_ll)
+                         ges_rho(j,i,k)=(ges_prsl(j,i,k,it)/(ges_tv(j,i,k)*rd))*r1000
+                      end do
+                   end do
+                
+                    Zer(:,:,k)  = Cr * (ges_rho(:,:,k) * ges_qr(:,:,k))**(1.75_r_kind)
+                    Zeli(:,:,k) = Cli * (ges_rho(:,:,k) * ges_qli(:,:,k))**(2.0_r_kind)
+                    Ze(:,:,k)=Zer(:,:,k)+Zeli(:,:,k)
+
+                    ges_dbz(:,:,k) = ten * log10(Ze(:,:,k))
+                 end if
               end do
               if (mype==0) then
                 write(6,*)'QLI,max, min,',maxval(ges_qli),minval(ges_qli)

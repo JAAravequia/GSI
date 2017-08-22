@@ -179,7 +179,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   if(trim(dtype) == 'tcp' .or. trim(filename) == 'tldplrso')return
   if(trim(filename) == 'mitmdat' .or. trim(filename) == 'mxtmdat')return
   if(trim(filename) == 'satmar')return
-  if(trim(dtype) == 'dbz' .and. l_mrms_run )return
+  if(trim(dtype) == 'dbz' )return
 
 ! Use routine as usual
 

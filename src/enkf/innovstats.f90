@@ -142,7 +142,7 @@ if (nobs_conv+nobs_oz > 0) then
                  sumspd_nh,biasspd_nh,sumspd_spread_nh,sumspd_oberr_nh,nobsspd_nh,&
                  sumspd_sh,biasspd_sh,sumspd_spread_sh,sumspd_oberr_sh,nobsspd_sh,&
                  sumspd_tr,biasspd_tr,sumspd_spread_tr,sumspd_oberr_tr,nobsspd_tr)
-         else if (obtype(nob)(1:3) == 'gps') then
+         else if (obtype(nob)(1:3) == 'gps' .or. obtype(nob)(1:3) == 'dbz' ) then
             call obstats(obfit(nob),oberrvar_orig(nob),&
                  obsprd(nob),obloclat(nob),&
                  sumgps_nh,biasgps_nh,sumgps_spread_nh,sumgps_oberr_nh,nobsgps_nh,&

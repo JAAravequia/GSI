@@ -21,7 +21,7 @@ real(r_single),public, allocatable, dimension(:,:) :: gridloc
 real(r_single),public, allocatable, dimension(:,:) :: logp
 integer,public :: npts
 ! supported variable names in anavinfo
-character(len=max_varname_length),public, dimension(10) :: cvars3d_supported = (/ 'u', 'v', 'tv', 'q', 'oz', &
+character(len=max_varname_length),public, dimension(11) :: cvars3d_supported = (/ 'u', 'v', 'tv', 'q', 'oz','qi',&
                                                                                  'ql', 'qr', 'qli', 'dbz', 'w' /)
 character(len=max_varname_length),public, dimension(1) :: cvars2d_supported = (/ 'ps' /)
 contains

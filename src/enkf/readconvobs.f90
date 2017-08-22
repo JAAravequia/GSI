@@ -352,6 +352,8 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
           x_obs(nob) = rdiagbuf(17,n)
           h_x_ensmean(nob) = rdiagbuf(17,n)-rdiagbuf(18,n)
           h_xnobc(nob) = rdiagbuf(17,n)-rdiagbuf2(18,n)
+          x_hloc(nob) = rdiagbuf(20,n)
+          x_vloc(nob) = rdiagbuf(21,n)
           x_type(nob) = obtype
        enddo
        deallocate(cdiagbuf,rdiagbuf,rdiagbuf2)
@@ -434,6 +436,8 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
           x_obs(nob) = rdiagbuf(20,n)
           h_x_ensmean(nob) = rdiagbuf(20,n)-rdiagbuf(21,n)
           h_xnobc(nob) = rdiagbuf(20,n)-rdiagbuf2(21,n)
+          x_hloc(nob) = rdiagbuf(24,n)
+          x_vloc(nob) = rdiagbuf(25,n)
           !h_xnobc(nob) = rdiagbuf(20,n)-rdiagbuf(22,n)
           x_type(nob) = '  v'
        enddo
@@ -509,6 +513,8 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
           h_x_ensmean(nob) = rdiagbuf(17,n)-rdiagbuf(18,n)
           ! ob minus un-bias-corrected background (individ members)
           h_xnobc(nob) = rdiagbuf(17,n)-rdiagbuf2(19,n)
+          x_hloc(nob) = rdiagbuf(20,n)
+          x_vloc(nob) = rdiagbuf(21,n)
        enddo
        deallocate(cdiagbuf,rdiagbuf,rdiagbuf2)
        if(twofiles)deallocate(cdiagbuf2)
@@ -744,6 +750,8 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
           h_x_ensmean(nob) = (rdiagbuf(17,n)-rdiagbuf(18,n))/rdiagbuf(20,n)
           h_xnobc(nob) = (rdiagbuf(17,n)-rdiagbuf2(18,n))/rdiagbuf(20,n)
           !h_xnobc(nob) = (rdiagbuf(17,n)-rdiagbuf2(19,n))/rdiagbuf(20,n)
+          x_hloc(nob) = rdiagbuf(21,n)
+          x_vloc(nob) = rdiagbuf(22,n)
           x_type(nob) = obtype 
        enddo
        deallocate(cdiagbuf,rdiagbuf,rdiagbuf2)
@@ -810,6 +818,8 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
           h_x_ensmean(nob) = rdiagbuf(17,n)-rdiagbuf(18,n)
           h_xnobc(nob) = rdiagbuf(17,n)-rdiagbuf2(18,n)
           !h_xnobc(nob) = rdiagbuf(17,n)-rdiagbuf2(19,n)
+          x_hloc(nob) = rdiagbuf(21,n)
+          x_vloc(nob) = rdiagbuf(22,n)
           x_type(nob) = obtype
        enddo
        deallocate(cdiagbuf,rdiagbuf,rdiagbuf2)
@@ -1010,6 +1020,8 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
           x_obs(nob) = rdiagbuf(17,n)
           h_x_ensmean(nob) = rdiagbuf(17,n)-rdiagbuf(18,n)
           h_xnobc(nob) = rdiagbuf(17,n)-rdiagbuf2(19,n)
+          x_hloc(nob) = rdiagbuf(25,n)
+          x_vloc(nob) = rdiagbuf(26,n)
           x_type(nob) = '  u'
        enddo
        !do n=1,ii
@@ -1152,6 +1164,8 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
           h_x_ensmean(nob) = rdiagbuf(17,n) - (rdiagbuf(5,n)*rdiagbuf(17,n))
           h_xnobc(nob) = rdiagbuf2(17,n) - (rdiagbuf2(5,n)*rdiagbuf2(17,n))
 !!          !h_xnobc(nob) = rdiagbuf(17,n)-rdiagbuf2(19,n)
+          x_hloc(nob) = rdiagbuf(24,n)
+          x_vloc(nob) = rdiagbuf(25,n)
 
           x_type(nob) = obtype
        enddo
@@ -1334,6 +1348,8 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, h_x_ensmean, h_xnobc,
           h_x_ensmean(nob) = rdiagbuf(17,n)-rdiagbuf(18,n)
           h_xnobc(nob) = rdiagbuf(17,n)-rdiagbuf2(18,n)
           !h_xnobc(nob) = rdiagbuf(17,n)-rdiagbuf2(19,n)
+          x_hloc(nob) = rdiagbuf(20,n)
+          x_vloc(nob) = rdiagbuf(21,n)
           x_type(nob) = obtype
        enddo
        deallocate(cdiagbuf,rdiagbuf,rdiagbuf2)

@@ -117,7 +117,7 @@ subroutine general_read_nmmb_radar(grd,filename,mype,g_z,g_ps,g_u,g_v,g_w,g_qr,g
               dumtv=g_tsen(j,i,k) * (one+fv*g_q(j,i,k))
               g_tsen(j,i,k)=dumtv/(one+fv*max(zero,g_q(j,i,k)))     !Recompute tsen based on the limit enforced on q.	      	      	      
 
-              if( .not. if_model_dbz ) then
+              if( dbz_exist .and. ( .not. if_model_dbz ) ) then
                     g_prsl(j,i,k)=one_tenth* &
                                   (aeta1_ll(k)*pdtop_ll + &
                                    aeta2_ll(k)*(ten*g_ps(j,i)-pdtop_ll-pt_ll) + &
@@ -127,21 +127,23 @@ subroutine general_read_nmmb_radar(grd,filename,mype,g_z,g_ps,g_u,g_v,g_w,g_qr,g
               end if
 
 
-            if( dbz_exist )then
-              if ( if_model_dbz )then
-                 g_dbz(j,i,k) = max( dbz(j,i,k), 0.0_r_kind )
-              else
-                 Zer(j,i,k)  = Cr * (g_rho(j,i,k) * g_qr(j,i,k))**(1.75_r_kind)
-                 Zeli(j,i,k) = Cli * (g_rho(j,i,k) * g_qli(j,i,k))**(2.0_r_kind)
-                 Ze(j,i,k)=Zer(j,i,k)+Zeli(j,i,k)
-
-                g_dbz(j,i,k) = ten * log10(Ze(j,i,k))
+              if( dbz_exist )then
+                if ( if_model_dbz )then
+                   g_dbz(j,i,k) = max( dbz(j,i,k), 0.0_r_kind )
+                end if
               end if
-            end if
             end do
         end do
         call gsi_nemsio_read_fractionnew('f_rain','f_ice','clwmr','f_rimef','mid layer',kr, &
              g_qi(:,:,k),g_qli(:,:,k),g_qr(:,:,k),g_ql(:,:,k), mype,mype_input)
+
+        if ( dbz_exist .and. (.not. if_model_dbz) )then
+            Zer(:,:,k)  = Cr * (g_rho(:,:,k) * g_qr(:,:,k))**(1.75_r_kind)
+            Zeli(:,:,k) = Cli * (g_rho(:,:,k) * g_qli(:,:,k))**(2.0_r_kind)
+            Ze(:,:,k)=Zer(:,:,k)+Zeli(:,:,k)
+
+            g_dbz(:,:,k) = ten * log10(Ze(:,:,k))
+        end if
 	
         if(regional_ozone) then
            if(use_gfs_ozone) then

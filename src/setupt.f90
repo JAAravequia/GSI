@@ -1034,7 +1034,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            rdiagbuf(22,ii) = data(ipof,i)       ! data pof
            rdiagbuf(23,ii) = data(ivvlc,i)      ! data vertical velocity
            do j=1,npredt
-              rdiagbuf(22+j,ii) = predbias(j)
+              rdiagbuf(23+j,ii) = predbias(j)
            end do
         end if
         idia=idia0

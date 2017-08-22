@@ -258,7 +258,12 @@ subroutine update_guess(sval,sbias)
            endif
            icloud=getindex(cloud,guess(ic))
            if(icloud>0) then
-              ptr3dges = max(ptr3dges+ptr3dinc,qcmin)
+              if ( trim(guess(ic)) /= 'qni' .or. trim(guess(ic)) /= 'qnr' .or. trim(guess(ic)) /= 'qnc' &
+                   .or. trim(guess(ic)) /= 'dbz' )then
+                 ptr3dges = max(ptr3dges+ptr3dinc,qcmin)
+              else
+                 ptr3dges = max(ptr3dges+ptr3dinc,zero)
+              end if
               cycle
            else  
               ptr3dges = ptr3dges + ptr3dinc

@@ -1345,7 +1345,7 @@ contains
     use gridmod, only: lat2,lon2,nlat_regional,nlon_regional,&
          nsig,nsig_soil,ijn_s,displs_s,eta1_ll,pt_ll,itotsub,aeta1_ll,eta2_ll,aeta2_ll
     use constants, only: zero,one,grav,fv,zero_single,rd_over_cp_mass,one_tenth,r10,r100
-    use constants, only: r0_01, tiny_r_kind
+    use constants, only: r0_01, tiny_r_kind,rd,r1000
     use gsi_io, only: lendian_in
     use chemmod, only: laeroana_gocart,nh4_mfac,oc_mfac,&
          aerotot_guess,init_aerotot_guess,wrf_pm2_5,aero_ratios
@@ -1359,6 +1359,8 @@ contains
 
     use guess_grids, only: ges_w_btlev
     use control_vectors, only : w_exist, dbz_exist
+    use setupdbz_lib,only: hx_dart
+    use obsmod,only: if_model_dbz
 
 
     implicit none
@@ -1409,6 +1411,7 @@ contains
                        indx_dust3, indx_dust4, indx_dust5, &
                        indx_seas1, indx_seas2, indx_seas3, indx_seas4,indx_p25
     character(len=5),allocatable :: cvar(:)
+    real(r_kind)   :: ges_rho, tsn
   
     real(r_kind), pointer :: ges_ps_it (:,:  )=>NULL()
     real(r_kind), pointer :: ges_th2_it(:,:  )=>NULL()
@@ -1473,7 +1476,7 @@ contains
   !       Get pointer for each of the hydrometeors from guess at time index "it"
           it=ntguessig
           ier=0
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql', ges_qc, istatus );ier=ier+istatus
+          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'cw', ges_qc, istatus );ier=ier+istatus
           call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qi', ges_qi, istatus );ier=ier+istatus
           call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qr', ges_qr, istatus );ier=ier+istatus
           call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs', ges_qs, istatus );ier=ier+istatus
@@ -1526,7 +1529,7 @@ contains
        endif
 
        if( w_exist) num_mass_fields = num_mass_fields + lm + 1
-       if( dbz_exist ) num_mass_fields = num_mass_fields + lm
+       if( dbz_exist.and.if_model_dbz ) num_mass_fields = num_mass_fields + lm
   
   
        num_all_fields=num_mass_fields*nfldsig
@@ -1733,6 +1736,14 @@ contains
              write(identity(i),'("record ",i3,"--qnc(",i2,")")')i,k
              jsig_skip(i)=0 ; igtype(i)=1
           end do
+          if( dbz_exist.and.if_model_dbz )then
+            i_dbz=i+1
+            do k=1,lm
+             i=i+1                                                    ! dbz(k)
+             write(identity(i),'("record ",i3,"--tt(",i2,")")')i,k
+             jsig_skip(i)=0 ; igtype(i)=1
+           end do
+          end if
           i_tt=i+1
           do k=1,lm
              i=i+1                                                    ! tt(k)
@@ -1740,14 +1751,6 @@ contains
              jsig_skip(i)=0 ; igtype(i)=1
           end do
        endif
-       if( dbz_exist )then
-         i_dbz=i+1
-          do k=1,lm
-             i=i+1                                                    ! dbz(k)
-             write(identity(i),'("record ",i3,"--tt(",i2,")")')i,k
-             jsig_skip(i)=0 ; igtype(i)=1
-          end do
-       end if
   
        if ( laeroana_gocart ) then
           if (n_gocart_var >0) then
@@ -1894,7 +1897,7 @@ contains
   ! hydrometeors
           if(l_cloud_analysis .or. n_actual_clouds>0) then
   !          Get pointer for each of the hydrometeors from guess at time index "it"
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql', ges_qc, istatus );ier=ier+istatus
+             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'cw', ges_qc, istatus );ier=ier+istatus
              call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qi', ges_qi, istatus );ier=ier+istatus
              call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qr', ges_qr, istatus );ier=ier+istatus
              call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs', ges_qs, istatus );ier=ier+istatus
@@ -1914,7 +1917,7 @@ contains
           endif
           if( dbz_exist ) then
             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'dbz',ges_dbz,istatus );ier=ier+istatus
-            kdbz=i_0+i_dbz-1
+            if( if_model_dbz )kdbz=i_0+i_dbz-1
           end if
           if ( laeroana_gocart ) then
   
@@ -2012,6 +2015,7 @@ contains
   
           q_integral=one
           q_integralc4h=zero
+          kw0 = kw + 1
           do k=1,nsig
              deltasigma=eta1_ll(k)-eta1_ll(k+1)
              deltasigmac4h=eta2_ll(k)-eta2_ll(k+1)
@@ -2032,7 +2036,7 @@ contains
                 kqnc=kqnc+1
                 ktt=ktt+1
              endif
-             if(dbz_exist) kdbz=kdbz+1
+             if(dbz_exist.and.if_model_dbz) kdbz=kdbz+1
              if ( laeroana_gocart ) then
                 if ( n_gocart_var > 0 ) then
                    do iv = 1, n_gocart_var
@@ -2075,7 +2079,7 @@ contains
                       if(k==nsig) ges_tten(j,i,k,it) = -10.0_r_single
   
                    endif
-                   if(dbz_exist) ges_dbz(j,i,k) = all_loc(j,i,kdbz)
+                   if(dbz_exist.and.if_model_dbz) ges_dbz(j,i,k) = all_loc(j,i,kdbz)
                    if ( laeroana_gocart ) then
                       if (indx_sulf>0)  ges_sulf(j,i,k)  = all_loc(j,i,kchem(indx_sulf))
                       if (indx_bc1>0)   ges_bc1(j,i,k)   = all_loc(j,i,kchem(indx_bc1))  
@@ -2222,6 +2226,11 @@ contains
                    work_prslk = (work_prsl/r100)**rd_over_cp_mass
                    ges_tsen(j,i,k,it)     = ges_pot(j,i,k)*work_prslk
                    ges_tv_it(j,i,k) = ges_tsen(j,i,k,it) * (one+fv*ges_q_it(j,i,k))
+                   if( dbz_exist.and.(.not. if_model_dbz) )then
+                     ges_rho = (work_prsl/(ges_tv_it(j,i,k)*rd))*r1000
+                     tsn=ges_tv_it(j,i,k)/(one+fv*max(zero,ges_q_it(j,i,k)))
+                     call hx_dart(ges_qr(j,i,k),ges_qg(j,i,k),ges_qs(j,i,k),ges_rho,tsn,ges_dbz(j,i,k),.false.)
+                   end if
                 end do
              end do
           end do

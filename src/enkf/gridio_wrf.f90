@@ -168,6 +168,12 @@ contains
            cvars(i) = "QGRAUP"
          case ("qi")
            cvars(i) = "QICE"
+         case ("qnr")
+           cvars(i) = "QNRAIN"
+         case ("qnc")
+           cvars(i) = "QNCLOUD"
+         case ("qni")
+           cvars(i) = "QNICE"
          case ("dbz")
            cvars(i) = "REFL_10CM"
          case default
@@ -1240,6 +1246,12 @@ contains
            cvars(i) = "QGRAUP"
          case ("qi")
            cvars(i) = "QICE"
+         case ("qnr")
+           cvars(i) = "QNRAIN"
+         case ("qnc")
+           cvars(i) = "QNCLOUD"
+         case ("qni")
+           cvars(i) = "QNICE"
          case ("dbz")
            cvars(i) = "REFL_10CM"
          case default
@@ -1549,7 +1561,7 @@ contains
 
        ! Clip all tracers (assume names start with 'Q')
 
-       if (cliptracers .and. cvars(l)(1:1) .eq. 'Q') then   !AS: bad, bad, bad. should check the tracer flag (that I'm not saving right now!)
+       if (cliptracers .and. cvars(l)(1:1) .eq. 'Q' .and. cvars(l)(1:2) .ne. 'QN') then   !AS: bad, bad, bad. should check the tracer flag (that I'm not saving right now!)
 
           clip = tiny(vargridin_native(1,1,1))
           where (vargridin_native < clip) vargridin_native = clip

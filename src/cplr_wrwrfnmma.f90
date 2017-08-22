@@ -1130,6 +1130,7 @@ contains
     use gsi_4dvar, only: nhr_assimilation
     use gsi_nemsio_mod, only: gsi_nemsio_update,gsi_nemsio_write_fraction 
     use control_vectors, only : w_exist, dbz_exist
+    use obsmod,only: if_model_dbz
     implicit none
   
   ! Declare passed variables
@@ -1523,6 +1524,7 @@ contains
 
           if (i_radar_qr>0 .and. i_radar_qli>0)then
 
+           if( dbz_exist .and. if_model_dbz )then
            ! refl_10cm
            call gsi_bundlegetpointer (gsi_metguess_bundle(it),'dbz',ges_dbz,iret)
            if (iret==0) then
@@ -1532,6 +1534,8 @@ contains
              work_sub(:,:)=ges_dbz(:,:,k)
              call gsi_nemsio_write('refl_10cm','mid layer','H',kr,work_sub(:,:),mype,mype_input,.false.)
            endif
+           end if
+
            do i=1,lon2
            do j=1,lat2
              work_sub_s(j,i)=ges_qli(j,i,k)

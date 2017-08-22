@@ -2237,6 +2237,9 @@ contains
     use chemmod, only: laeroana_gocart, ppmv_conv,wrf_pm2_5
     use gsi_chemguess_mod, only: gsi_chemguess_get
     use netcdf_mod, only: nc_check
+
+    use control_vectors, only : w_exist, dbz_exist
+    use obsmod, only   : if_model_dbz
   
     implicit none
     class(convert_netcdf_class), intent(inout) :: this
@@ -2272,6 +2275,7 @@ contains
     real(r_kind), pointer :: ges_qnr(:,:,:)=>NULL()
     real(r_kind), pointer :: ges_qni(:,:,:)=>NULL()
     real(r_kind), pointer :: ges_qnc(:,:,:)=>NULL()
+    real(r_kind), pointer :: ges_dbz(:,:,:)=>NULL()
   
   ! binary stuff
   
@@ -2283,7 +2287,7 @@ contains
     integer(i_kind) nlon_regional,nlat_regional,nsig_regional,nsig_soil_regional
     real(r_single) pt_regional
     real(r_single),allocatable::field3(:,:,:),field2(:,:),field1(:),field2b(:,:)
-    real(r_single),allocatable::field3u(:,:,:),field3v(:,:,:)
+    real(r_single),allocatable::field3u(:,:,:),field3v(:,:,:),field3w(:,:,:)
     integer(i_kind),allocatable::ifield2(:,:)
     integer(i_kind) wrf_real
     data iunit / 15 /
@@ -2301,7 +2305,7 @@ contains
   !    get pointer to relevant instance of cloud-related backgroud
        it=ntguessig
        ierr=0
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql', ges_qc, istatus );ierr=ierr+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'cw', ges_qc, istatus );ierr=ierr+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qi', ges_qi, istatus );ierr=ierr+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qr', ges_qr, istatus );ierr=ierr+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs', ges_qs, istatus );ierr=ierr+istatus
@@ -2309,6 +2313,7 @@ contains
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnr',ges_qnr,istatus );ierr=ierr+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qni',ges_qni,istatus );ierr=ierr+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnc',ges_qnc,istatus );ierr=ierr+istatus
+       if(dbz_exist) call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it),'dbz',ges_dbz,istatus );ierr=ierr+istatus
        if (ierr/=0) n_actual_clouds=0
     end if
   
@@ -2356,6 +2361,7 @@ contains
     allocate(field2(nlon_regional,nlat_regional),field3(nlon_regional,nlat_regional,nsig_regional))
     allocate(field3u(nlon_regional+1,nlat_regional,nsig_regional))
     allocate(field3v(nlon_regional,nlat_regional+1,nsig_regional))
+    allocate(field3w(nlon_regional,nlat_regional,nsig_regional+1))
     allocate(field2b(nlon_regional,nlat_regional))
     allocate(ifield2(nlon_regional,nlat_regional))
     allocate(field1(max(nlon_regional,nlat_regional,nsig_regional)))
@@ -2525,6 +2531,31 @@ contains
          start_index,end_index1,               & !mem
          start_index,end_index1,               & !pat
          ierr                                 )
+
+    if(w_exist)then
+    do k=1,nsig_regional+1
+       read(iunit)((field3w(i,j,k),i=1,nlon_regional),j=1,nlat_regional)   ! V
+       write(6,*)' k,max,min,mid W=',k,maxval(field3w(:,:,k)),minval(field3w(:,:,k)), &
+            field3w(nlon_regional/2,nlat_regional/2,k)
+    end do
+    rmse_var='W'
+    call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
+         start_index,end_index1, WrfType, ierr    )
+    write(6,*)' rmse_var=',trim(rmse_var)
+    write(6,*)' ordering=',ordering
+    write(6,*)' WrfType,WRF_REAL=',WrfType,WRF_REAL
+    write(6,*)' ndim1=',ndim1
+    write(6,*)' staggering=',staggering
+    write(6,*)' start_index=',start_index
+    write(6,*)' end_index1=',end_index1
+    call ext_ncd_write_field(dh1,DateStr1,TRIM(rmse_var),              &
+         field3w,WRF_REAL,0,0,0,ordering,           &
+         staggering, dimnames ,               &
+         start_index,end_index1,               & !dom
+         start_index,end_index1,               & !mem
+         start_index,end_index1,               & !pat
+         ierr                                 )
+    end if
     
     read(iunit)   field2   !  LANDMASK
     write(6,*)'max,min LANDMASK=',maxval(field2),minval(field2)
@@ -2715,7 +2746,7 @@ contains
             ierr                                 )
     endif
   
-    if (l_cloud_analysis .and. n_actual_clouds>0) then
+    if (l_cloud_analysis .or. n_actual_clouds>0) then
       do k=1,nsig_regional
          read(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional)   !  Qc
          write(6,*)' k,max,min,mid Qc=',k,maxval(field3(:,:,k)),minval(field3(:,:,k)), &
@@ -2907,7 +2938,33 @@ contains
            start_index,end_index1,               & !mem
            start_index,end_index1,               & !pat
            ierr                                 )
+
+    if(dbz_exist .and. if_model_dbz)then
+    do k=1,nsig_regional
+       read(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional)   ! V
+       write(6,*)' k,max,min,mid dbz=',k,maxval(field3v(:,:,k)),minval(field3v(:,:,k)), &
+            field3v(nlon_regional/2,nlat_regional/2,k)
+    end do
+    rmse_var='REFL_10CM'
+    call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
+         start_index,end_index1, WrfType, ierr    )
+    write(6,*)' rmse_var=',trim(rmse_var)
+    write(6,*)' ordering=',ordering
+    write(6,*)' WrfType,WRF_REAL=',WrfType,WRF_REAL
+    write(6,*)' ndim1=',ndim1
+    write(6,*)' staggering=',staggering
+    write(6,*)' start_index=',start_index
+    write(6,*)' end_index1=',end_index1
+    call ext_ncd_write_field(dh1,DateStr1,TRIM(rmse_var),              &
+         field3,WRF_REAL,0,0,0,ordering,           &
+         staggering, dimnames ,               &
+         start_index,end_index1,               & !dom
+         start_index,end_index1,               & !mem
+         start_index,end_index1,               & !pat
+         ierr                                 )
+    end if
   
+    if( l_cloud_analysis )then
       do k=1,nsig_regional
          read(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional)   ! TTEN 
          write(6,*)' k,max,min,mid TTEN=',k,maxval(field3(:,:,k)),minval(field3(:,:,k)), &
@@ -2930,6 +2987,7 @@ contains
            start_index,end_index1,               & !mem
            start_index,end_index1,               & !pat
            ierr                                 )
+    end if
   
     endif     ! l_cloud_analysis
   
@@ -3024,7 +3082,7 @@ contains
             ierr                                 )
     endif
   
-    deallocate(field1,field2,field2b,ifield2,field3,field3u,field3v)
+    deallocate(field1,field2,field2b,ifield2,field3,field3u,field3v,field3w)
     call ext_ncd_ioclose(dh1, Status)
     close(iunit)
     !
