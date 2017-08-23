@@ -85,7 +85,11 @@ module enkf_obsmod
 ! program history log:
 !   2009-02-23  Initial version.
 !   2011-06-20  Added the option of observation box for LETKF.
-!   2015=07-25  Removed observation boxes for LETKF (use kdtree instead)
+!   2015-07-25  Removed observation boxes for LETKF (use kdtree instead)
+!   2017-08-01  Guoqing.Ge add "init_anasv()" before "init_oz()"
+!        otherwise svars3d is not defined such that EnKF does not work right
+!        for oz and it crashes EnKF compiled by GNU Fortran
+!     NOTE: this requires anavinfo file to be present at running directory
 !   2017-05-12  Johnson, Y. Wang and X. Wang - add variable-dependent
 !               localization and observation-dependent localization, POC: xuguang.wang@ou.edu
 !
@@ -106,6 +110,7 @@ use params, only: &
       lnsigcutoffpsnh, lnsigcutoffpssh, lnsigcutoffpstr,&
       locvertopt,lochoropt
 
+use state_vectors, only: init_anasv
 use mpi_readobs, only:  mpi_getobs
 
 implicit none
@@ -158,6 +163,7 @@ real(r_kind) rhor,rvert
 call init_convinfo()
 call convinfo_read()
 ! read in oz data info
+call init_anasv()
 call init_oz()
 call ozinfo_read()
 ! read radiance bias correction info (standard out redirected 
