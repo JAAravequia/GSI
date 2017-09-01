@@ -128,6 +128,7 @@ subroutine pcgsoi()
        nclen,penorig,gnormorig,xhatsave,yhatsave,&
        iguess,read_guess_solution,diag_precon,step_start, &
        niter_no_qc,print_diag_pcg,lgschmidt
+  use berror, only: vprecond
   use gsi_4dvar, only: nobs_bins, nsubwin, l4dvar, iwrtinc, ladtest, &
                        iorthomax
   use gridmod, only: twodvar_regional
@@ -176,8 +177,8 @@ subroutine pcgsoi()
   real(r_kind) gnormx,penx,penalty,penaltynew
   real(r_double) pennorm
   real(r_quad) zjo
-  real(r_quad),dimension(3):: dprod
-  real(r_kind),dimension(2):: gnorm
+  real(r_quad),dimension(4):: dprod
+  real(r_kind),dimension(3):: gnorm
   real(r_kind) :: zgini,zfini,fjcost(4),fjcostnew(4),zgend,zfend
   real(r_kind) :: fjcost_e
   type(control_vector) :: xhat,gradx,grady,dirx,diry,dirw,ydiff,xdiff
@@ -413,36 +414,62 @@ subroutine pcgsoi()
         end if
      end if
 
-!    Add potential additional preconditioner 
-     if(diag_precon)call precond(grady)
-
-     if (lanlerr) then
-        do i=1,nclen
-           xdiff%values(i)=gradx%values(i)
-           ydiff%values(i)=grady%values(i)
-        end do
-     else
-        do i=1,nclen
-           xdiff%values(i)=gradx%values(i)-xdiff%values(i)
-           ydiff%values(i)=grady%values(i)-ydiff%values(i)
-        end do
-     end if
-
      if (iter==0 .and. print_diag_pcg) then
         call prt_control_norms(grady,'grady')
      endif
 
 !    Calculate new norm of gradients
-     if (iter>0) gsave=gnorm(1)
+     if (iter>0) gsave=gnorm(3)
      dprod(1) = qdot_prod_sub(gradx,grady)
-     dprod(2) = qdot_prod_sub(xdiff,grady)
-     dprod(3) = qdot_prod_sub(ydiff,gradx)
-     call mpl_allreduce(3,qpvals=dprod)
+     if(diag_precon)then
+        if (lanlerr) then
+! xdiff used as a temporary array
+           do i=1,nclen
+              xdiff%values(i)=vprecond(i)*gradx%values(i)
+           end do 
+           dprod(2) = qdot_prod_sub(xdiff,grady)
+           call mpl_allreduce(2,qpvals=dprod)
+           gnorm(2)=dprod(2)
+           gnorm(3)=dprod(2)
+        else
+           do i=1,nclen
+              xdiff%values(i)=vprecond(i)*(gradx%values(i)-xdiff%values(i))
+              ydiff%values(i)=vprecond(i)*(grady%values(i)-ydiff%values(i))
+           end do
+           dprod(2) = qdot_prod_sub(xdiff,grady)
+           dprod(3) = qdot_prod_sub(ydiff,gradx)
+! xdiff used as a temporary array
+           do i=1,nclen
+              xdiff%values(i)=vprecond(i)*gradx%values(i)
+           end do 
+           dprod(4) = qdot_prod_sub(xdiff,grady)
+           call mpl_allreduce(4,qpvals=dprod)
+!          Two dot products in gnorm(2) should be same, but are slightly
+!          different due to round off, so use average.
+           gnorm(2)=0.5_r_quad*(dprod(2)+dprod(3))
+           gnorm(3)=dprod(4)
+        end if
+     else
+        if (lanlerr) then
+           call mpl_allreduce(1,qpvals=dprod)
+           gnorm(2)=dprod(1)
+           gnorm(3)=dprod(1)
+        else
+           do i=1,nclen
+              xdiff%values(i)=gradx%values(i)-xdiff%values(i)
+              ydiff%values(i)=grady%values(i)-ydiff%values(i)
+           end do
+           dprod(2) = qdot_prod_sub(xdiff,grady)
+           dprod(3) = qdot_prod_sub(ydiff,gradx)
+           call mpl_allreduce(3,qpvals=dprod)
+!          Two dot products in gnorm(2) should be same, but are slightly
+!          different due to round off, so use average.
+           gnorm(2)=0.5_r_quad*(dprod(2)+dprod(3))
+           gnorm(3)=dprod(1)
+        end if
+     end if
 
      gnorm(1)=dprod(1)
-!    Two dot products in gnorm(2) should be same, but are slightly different due to round off
-!    so use average.
-     gnorm(2)=0.5_r_quad*(dprod(2)+dprod(3))
      b=zero
      if (gsave>1.e-16_r_kind .and. iter>0) b=gnorm(2)/gsave
 
@@ -454,31 +481,33 @@ subroutine pcgsoi()
         endif
         b=zero
      endif
-     if (mype==0) write(6,888)'pcgsoi: gnorm(1:2),b=',gnorm,b
+     if (mype==0) write(6,888)'pcgsoi: gnorm(1:3),b=',gnorm,b
 
 !    Calculate new search direction
      if (.not. restart) then
-        if(diag_precon)then
-          do i=1,nclen
-             diry%values(i)=dirw%values(i)
-          end do
+        if(.not. lanlerr)then
+           do i=1,nclen
+              xdiff%values(i)=gradx%values(i)
+              ydiff%values(i)=grady%values(i)
+           end do
         end if
-        do i=1,nclen
-           xdiff%values(i)=gradx%values(i)
-           ydiff%values(i)=grady%values(i)
-           dirx%values(i)=-grady%values(i)+b*dirx%values(i)
-           diry%values(i)=-gradx%values(i)+b*diry%values(i)
-        end do
         if(diag_precon)then
-          do i=1,nclen
-             dirw%values(i)=diry%values(i)
-          end do
-          call precond(diry)
+           do i=1,nclen
+              dirx%values(i)=-vprecond(i)*grady%values(i)+b*dirx%values(i)
+              diry%values(i)=-vprecond(i)*gradx%values(i)+b*diry%values(i)
+           end do
+        else
+           do i=1,nclen
+              dirx%values(i)=-grady%values(i)+b*dirx%values(i)
+              diry%values(i)=-gradx%values(i)+b*diry%values(i)
+           end do
         end if
      else
 !    If previous solution available, transfer into local arrays.
-        xdiff=zero
-        ydiff=zero
+        if( .not. lanlerr)then
+           xdiff=zero
+           ydiff=zero
+        end if
         call read_guess_solution(dirx,diry,mype)
         stp=one
      endif
@@ -714,9 +743,6 @@ subroutine pcgsoi()
 
      end if
 
-!    Add potential additional preconditioner 
-     if(diag_precon)call precond(grady)
-
 
 ! Print final Jo table
      zgend=dot_product(gradx,grady,r_quad)
@@ -858,7 +884,6 @@ subroutine init_
   call allocate_cv(grady)
   call allocate_cv(dirx)
   call allocate_cv(diry)
-  if(diag_precon)call allocate_cv(dirw)
   call allocate_cv(ydiff)
   call allocate_cv(xdiff)
   do ii=1,nobs_bins
@@ -879,7 +904,6 @@ subroutine init_
   grady=zero
   dirx=zero
   diry=zero
-  if(diag_precon)dirw=zero
   ydiff=zero
   xdiff=zero
   xhat=zero
@@ -923,7 +947,6 @@ subroutine clean_
   call deallocate_cv(grady)
   call deallocate_cv(dirx)
   call deallocate_cv(diry)
-  if(diag_precon)call deallocate_cv(dirw)
   call deallocate_cv(ydiff)
   call deallocate_cv(xdiff)
  
