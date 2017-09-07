@@ -142,7 +142,14 @@ subroutine general_read_nmmb_radar(grd,filename,mype,g_z,g_ps,g_u,g_v,g_w,g_qr,g
             Zeli(:,:,k) = Cli * (g_rho(:,:,k) * g_qli(:,:,k))**(2.0_r_kind)
             Ze(:,:,k)=Zer(:,:,k)+Zeli(:,:,k)
 
-            g_dbz(:,:,k) = ten * log10(Ze(:,:,k))
+            g_dbz(:,:,k) = 0.0_r_kind
+
+            where ( Ze(:,:,k) > 0.0_r_kind )
+              g_dbz(:,:,k) = ten * log10(Ze(:,:,k))
+            end where
+            where( g_dbz(:,:,k) < 0.0_r_kind )
+               g_dbz(:,:,k) = 0.0_r_kind
+            endwhere
         end if
 	
         if(regional_ozone) then

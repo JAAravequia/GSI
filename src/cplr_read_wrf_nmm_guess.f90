@@ -1918,7 +1918,14 @@ contains
                     Zeli(:,:,k) = Cli * (ges_rho(:,:,k) * ges_qli(:,:,k))**(2.0_r_kind)
                     Ze(:,:,k)=Zer(:,:,k)+Zeli(:,:,k)
 
-                    ges_dbz(:,:,k) = ten * log10(Ze(:,:,k))
+                    ges_dbz(:,:,k) = 0.0_r_kind
+                    
+                    where ( Ze(:,:,k) > 0.0_r_kind )
+                      ges_dbz(:,:,k) = ten * log10(Ze(:,:,k))
+                    end where
+                    where( ges_dbz(:,:,k) < 0.0_r_kind )
+                          ges_dbz(:,:,k) = 0.0_r_kind
+                    end where
                  end if
               end do
               if (mype==0) then
