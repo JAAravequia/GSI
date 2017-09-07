@@ -9,6 +9,7 @@
 
 # Set NMC statistics utility directory
 setenv GSIDIR         /scratch4/NCEPDEV/da/save/$USER/gsi/EXP-NMC-NEMS
+#setenv GSIDIR         /scratch4/NCEPDEV/da/save/$USER/gsi/EXP-NMC-NEMS
 #setenv GSIDIR         /scratch4/NCEPDEV/global/save/$USER/gsi/branches/EXP-betaprofile
 setenv CALCSTATS_EXEC $GSIDIR/util/NMC_Bkerror/sorc/calcstats.exe
 
