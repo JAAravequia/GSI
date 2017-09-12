@@ -1,5 +1,4 @@
 # disable in source builds to protect against overwriting other Makefiles
-#set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 if( NOT DEFINED ENV{CC} )
   find_path( crayComp "ftn" )
   find_path( wcossIntel "mpfort" )
@@ -85,7 +84,7 @@ project(GSI)
     setGeneric()
   endif()
 
-  MESSAGE(${CMAKE_CURRENT_SOURCE_DIR})
+# MESSAGE(${CMAKE_CURRENT_SOURCE_DIR})
   # make sure that the default is a RELEASE
   if (NOT CMAKE_BUILD_TYPE)
     set (CMAKE_BUILD_TYPE RELEASE CACHE STRING
