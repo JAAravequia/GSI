@@ -21,8 +21,8 @@ if [ "$#" = 8 ] ; then
   echo $ptmpName
 else
 # Name of the branch being tested
-  updat="dl2rw_2"
-  contrl="dl2rw_2_r96772_vs_r96924"
+  updat="ProdGSI"
+  contrl="ProdGSI-dl2rw_2-contrl"
   #contrl="trunk_r95049"
   export cmaketest="false"
   export clean="false"
