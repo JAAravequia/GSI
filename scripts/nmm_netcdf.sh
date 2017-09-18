@@ -113,7 +113,6 @@ if [ "$debug" = ".false." ]; then
 else
    . $scripts/regression_namelists_db.sh nmm_netcdf
 fi
-
 cat << EOF > gsiparm.anl
 
 $gsi_namelist

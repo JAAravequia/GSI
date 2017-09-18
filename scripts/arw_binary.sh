@@ -107,8 +107,6 @@ if [ "$debug" = ".false." ]; then
 else
    . $scripts/regression_namelists_db.sh arw_binary
 fi
-
-
 cat << EOF > gsiparm.anl
 
 $gsi_namelist

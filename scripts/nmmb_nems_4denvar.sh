@@ -62,9 +62,8 @@ SINGLEOB="$SINGLEOB_update"
 if [ "$debug" = ".false." ]; then
    . $scripts/regression_namelists.sh nems_nmmb_4denvar
 else
-   . $scripts/regression_namelists_db.sh nems_nmmb_4denvar 
+   . $scripts/regression_namelists_db.sh nems_nmmb_4denvar
 fi
-
 
 #   dmesh(1)=120.0,time_window_max=1.5,ext_sonde=.true.,
 

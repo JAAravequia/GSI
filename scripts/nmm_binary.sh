@@ -107,12 +107,6 @@ SINGLEOB="$SINGLEOB_update"
 
 if [ "$debug" = ".false." ]; then
    . $scripts/regression_namelists.sh nmm_binary
-#   if [[ $exp == *"updat"* ]]; then
-#     . $scripts/regression_namelists_updat.sh nmm_binary 
-#     #. $scripts/regression_namelists_exp.sh nmm_binary 
-#   elif [[ $exp == *"contrl"* ]]; then
-#     . $scripts/regression_namelists.sh nmm_binary 
-#   fi
 else
    . $scripts/regression_namelists_db.sh nmm_binary
 fi
