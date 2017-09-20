@@ -341,7 +341,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
  
         if (obstype == 'sbuv2' ) then
            if (nobskeep>0) then
-              write(6,*)'setupozlay: nobskeep',nobskeep
+!             write(6,*)'setupozlay: nobskeep',nobskeep
               call stop2(259)
            end if
  
@@ -787,9 +787,9 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
      endif
      iextra=0
      if (init_pass .and. mype==mype_diaghdr(is)) then
-        write(4) isis,dplat(is),obstype,jiter,nlevs,ianldate,iint,ireal,irdim1,ioff0 !iextra
-        write(6,*)'SETUPOZ:   write header record for ',&
-             isis,iint,ireal,irdim1,' to file ',trim(diag_ozone_file),' ',ianldate
+         write(4) isis,dplat(is),obstype,jiter,nlevs,ianldate,iint,ireal,irdim1,ioff0 !iextra
+         write(6,*)'SETUPOZ:   write header record for ',&
+              isis,iint,ireal,irdim1,' to file ',trim(diag_ozone_file),' ',ianldate
         do i=1,nlevs
            pob4(i)=pobs(i)
            grs4(i)=gross(i)

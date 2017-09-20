@@ -718,7 +718,7 @@
   read(lunin) data_s,luse,ioid
 
   if (nobskeep>0) then
-     write(6,*)'setuprad: nobskeep',nobskeep
+!    write(6,*)'setuprad: nobskeep',nobskeep
      call stop2(275)
   end if
 

@@ -55,12 +55,15 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     character*500, intent(in) :: obspath
     character*10, intent(in) :: datestring
     character(len=10) :: id,id2
-    real(r_single), allocatable, dimension(:) :: ensmean_ob,ob,oberr,oblon,oblat,obpress,obtime,oberrorig,ensmean_obbc,sprd_ob
-    integer(i_kind), allocatable, dimension(:) :: obcode,indxsat
-    integer(i_kind), allocatable, dimension(:) :: diagused
+    real(r_single), allocatable, dimension(:)   :: ensmean_ob,ob,oberr,oblon,oblat
+    real(r_single), allocatable, dimension(:)   :: obpress,obtime,oberrorig,ensmean_obbc,sprd_ob
+    integer(i_kind), allocatable, dimension(:)  :: obcode,indxsat
+    integer(i_kind), allocatable, dimension(:)  :: diagused
     real(r_single), allocatable, dimension(:,:) :: biaspreds
     real(r_single), allocatable, dimension(:,:) :: anal_ob
-    real(r_single), allocatable, dimension(:)      :: mem_ob 
+    real(r_single), allocatable, dimension(:)   :: mem_ob 
+!   real(r_single), allocatable, dimension(:,:) :: anal_obtmp
+!   real(r_single), allocatable, dimension(:)   :: h_xnobc
     real(r_single) :: analsi,analsim1
     real(r_double) t1,t2
     character(len=20), allocatable,  dimension(:) ::  obtype
