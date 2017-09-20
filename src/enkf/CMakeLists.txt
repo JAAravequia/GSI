@@ -25,7 +25,8 @@ if(BUILD_ENKF)
   set(ENKFMOD_SRCS 
   netcdf_io_wrf.f90 params.f90 covlocal.f90 fftpack.f90 genqsat1.f90 mpisetup.F90 rnorm.f90
   sorting.f90 specmod.f90 reducedgrid.f90 readozobs.f90 readsatobs.f90 readconvobs.f90
-  write_logfile.f90 kdtree2.f90 mpi_readobs.f90 enkf_obsmod.f90 
+  write_logfile.f90 kdtree2.f90 mpi_readobs.f90 enkf_obsmod.f90 statevec.f90 controlvec.f90
+  observer_${ENKF_SUFFIX}.f90 gridio_${ENKF_SUFFIX}.f90 gridinfo_${ENKF_SUFFIX}.f90
   )
   set(ENKF_SRCS 
   innovstats.f90
@@ -36,11 +37,8 @@ if(BUILD_ENKF)
   letkf.F90
   quicksort.f90
   radbias.f90
-  statevec.f90
   loadbal.f90
   smooth_${ENKF_SUFFIX}.f90 
-  gridio_${ENKF_SUFFIX}.f90 
-  gridinfo_${ENKF_SUFFIX}.f90 
   )
   if( NOT crayComp )
     find_package( LAPACK REQUIRED )
