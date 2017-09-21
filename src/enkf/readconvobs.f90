@@ -45,7 +45,7 @@ subroutine get_num_convobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     integer(i_kind) iunit, nchar, nreal, ii, mype,ios, idate, i, ipe, ioff0
     integer(i_kind),intent(out) :: num_obs_tot, num_obs_totdiag
     integer(i_kind),dimension(2):: nn,nobst, nobsps, nobsq, nobsuv, nobsgps, &
-         nobstcp,nobstcx,nobstcy,nobstcz,nobssst, nobsspd, nobsdw, nobsrw, nobspw, nobssrw
+         nobstcp,nobstcx,nobstcy,nobstcz,nobssst, nobsspd, nobsdw, nobsrw, nobspw
     character(8),allocatable,dimension(:):: cdiagbuf
     real(r_single),allocatable,dimension(:,:)::rdiagbuf
     real(r_kind) :: errorlimit,errorlimit2,error,pres,obmax
@@ -68,7 +68,6 @@ subroutine get_num_convobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     nobsrw = 0
     nobspw = 0
     nobsgps = 0
-    nobssrw = 0
     nobstcp = 0; nobstcx = 0; nobstcy = 0; nobstcz = 0
     init_pass = .true.
     peloop: do ipe=0,npefiles
@@ -146,9 +145,6 @@ subroutine get_num_convobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
           nobssst = nobssst + nn
 !  Not currently used so do not add to num_obs_tot
 !  num_obs_tot = num_obs_tot + nn(2)
-       else if (obtype == 'srw') then
-          nobssrw = nobssrw + nn
-          num_obs_tot = num_obs_tot + nn(2)
        else if (obtype == ' rw') then
           nobsrw = nobsrw + nn
           num_obs_tot = num_obs_tot + nn(2)
@@ -194,8 +190,7 @@ subroutine get_num_convobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
           write(6,100) 'spd',nobsspd(1),nobsspd(2)
           write(6,100) 'pw',nobspw(1),nobspw(2)
           write(6,100) 'dw',nobsdw(1),nobsdw(2)
-          write(6,100) 'srw',nobsrw(1),nobssrw(2)
-          write(6,100) 'rw',nobssrw(1),nobsrw(2)
+          write(6,100) 'rw',nobsrw(1),nobsrw(2)
           write(6,100) 'tcp',nobstcp(1),nobstcp(2)
           if (nobstcx(2) .gt. 0) then
              write(6,100) 'tcx',nobstcx(1),nobstcx(2)
@@ -349,7 +344,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
     if (obtype == '  t' .or. obtype == ' uv' .or. obtype == ' ps' .or. &
         obtype == 'tcp' .or. obtype == '  q' .or. obtype == 'spd' .or. &
-        obtype == 'sst' .or. obtype == 'srw' .or. obtype == ' rw' .or. &
+        obtype == 'sst' .or. obtype == ' rw' .or. &
         obtype == 'gps' .or. obtype == ' dw' .or. obtype == ' pw')  then
 
        allocate(cdiagbuf(ii),rdiagbuf(nreal,ii))
@@ -699,13 +694,11 @@ subroutine write_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, &
        ind_sprd = 22
     elseif (obtype == ' dw') then
        ind_sprd = 27
-    elseif (obtype == 'srw') then
-       ind_sprd = 25
     endif
 
     if (obtype == '  t' .or. obtype == ' ps' .or. obtype == 'tcp' .or. &
         obtype == '  q' .or. obtype == ' dw' .or. obtype == ' pw' .or. &
-        obtype == 'srw' .or. obtype == 'spd' .or. obtype == 'gps') then
+        obtype == 'spd' .or. obtype == 'gps') then
        ! defaults for not used in EnKF
        rdiagbuf(12,:) = -1        ! not used in EnKF
        ! only process if this record was used in EnKF
