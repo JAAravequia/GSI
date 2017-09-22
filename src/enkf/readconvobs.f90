@@ -143,8 +143,7 @@ subroutine get_num_convobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
           num_obs_tot = num_obs_tot + nn(2)
        else if (obtype == 'sst') then ! skip sst
           nobssst = nobssst + nn
-!  Not currently used so do not add to num_obs_tot
-!  num_obs_tot = num_obs_tot + nn(2)
+          num_obs_tot = num_obs_tot + nn(2)
        else if (obtype == ' rw') then
           nobsrw = nobsrw + nn
           num_obs_tot = num_obs_tot + nn(2)
@@ -382,15 +381,16 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
               error < errorlimit .or. error > errorlimit2 .or.  &
               abs(obmax) > 1.e9_r_kind .or.                     &
               pres < 0.001_r_kind .or. pres > 1200._r_kind) cycle
-          if ( twofiles .and.                                    &
-              (rdiagbuf(1,n) /= rdiagbuf2(1,n) .or.              &
-               abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5 .or. &
-               abs(rdiagbuf(4,n)-rdiagbuf2(4,n)) .gt. 1.e-5 .or. &
-               abs(rdiagbuf(8,n)-rdiagbuf2(8,n)) .gt. 1.e-5)) then
+          if (twofiles) then
+          if (rdiagbuf(1,n) /= rdiagbuf2(1,n) .or.              &
+              abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5 .or. &
+              abs(rdiagbuf(4,n)-rdiagbuf2(4,n)) .gt. 1.e-5 .or. &
+              abs(rdiagbuf(8,n)-rdiagbuf2(8,n)) .gt. 1.e-5) then
              write (6,*) obtype, ' conv ob data inconsistency '
              write (6,*) (rdiagbuf(i,n),i=1,8)
              write (6,*) (rdiagbuf2(i,n),i=1,8)
              call stop2(-98)
+          end if
           end if
 
           nob = nob + 1
@@ -563,13 +563,14 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
           if(abs(rdiagbuf(7,n)) > 1.e9_r_kind  .or. &
              rdiagbuf(4,n) < 0.001_r_kind .or.      &
              rdiagbuf(4,n) > 1200._r_kind) cycle
-          if(twofiles .and.                                      &
-             (abs(rdiagbuf(2,n)-rdiagbuf2(2,n)) .gt. 1.e-5 .or. &
-              abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5)) then
+          if (twofiles) then
+          if (abs(rdiagbuf(2,n)-rdiagbuf2(2,n)) .gt. 1.e-5 .or. &
+              abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5) then
              write (6,*) obtype, ' conv ob data inconsistency '
              write (6,*) rdiagbuf(:,n)
              write (6,*) rdiagbuf2(:,n)
              call stop2(-98)
+          endif
           endif
 
           nob = nob + 1

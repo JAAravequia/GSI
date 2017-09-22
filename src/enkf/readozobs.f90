@@ -291,11 +291,12 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
               cycle
            endif
            do n=1,ii
-             if(twofiles .and.                                &
-                (diagbuf(1,n) /= diagbuf2(1,n) .or. diagbuf(2,n) /=diagbuf2(2,n)))then
+             if (twofiles) then
+             if (diagbuf(1,n) /= diagbuf2(1,n) .or. diagbuf(2,n) /=diagbuf2(2,n))then
                 write(6,*) 'lat lon inconsistency in ozone '
                 write(6,*) 'lat',diagbuf(1,n),diagbuf2(1,n)
                 write(6,*) 'lon',diagbuf(2,n),diagbuf2(2,n)
+             end if
              end if
 
              nobdiag = nobdiag + 1
