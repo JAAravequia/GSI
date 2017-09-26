@@ -382,6 +382,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
               error < errorlimit .or. error > errorlimit2 .or.  &
               abs(obmax) > 1.e9_r_kind .or.                     &
               pres < 0.001_r_kind .or. pres > 1200._r_kind) cycle
+          if (obtype == 'sst') cycle
           if ( twofiles .and.                                    &
               (rdiagbuf(1,n) /= rdiagbuf2(1,n) .or.              &
                abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5 .or. &
@@ -394,7 +395,6 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
           end if
 
           nob = nob + 1
-  
           x_used(nobdiag) = 1
           x_code(nob)  = rdiagbuf(1,n)
 
