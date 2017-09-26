@@ -210,6 +210,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
         analsim1=1._r_single/float(nanals-1)
 !$omp parallel do private(nob,nanal)
         do nob=1,nobs_tot
+           ensmean_ob(nob)  = sum(anal_ob(:,nob))*analsi
 ! remove ensemble mean from each member.
 ! ensmean_ob is unbiascorrected ensemble mean (anal_ob
            anal_ob(:,nob) = anal_ob(:,nob)-ensmean_ob(nob)
