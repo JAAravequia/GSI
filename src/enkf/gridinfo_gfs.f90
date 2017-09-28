@@ -112,11 +112,6 @@ if (use_gfs_nemsio) then
      endif
      call nemsio_getfilehead(gfile,iret=iret, dimx=nlonsin, dimy=nlatsin,&
                              dimz=nlevsin,jcap=ntrunc,idvc=idvc)
-     ! set ntrunc to nlats if missing
-     ! (only used for inflation smoothing and mass balance adjustment if use_gfsnemsio = T)
-     if (ntrunc < 0) then
-        ntrunc = nlatsin
-     endif 
      if (iret/=0) then
         write(6,*)'grdinfo: gfs model: problem with nemsio_getfilehead, iret=',iret, ', file: ', trim(filename)
         call stop2(23)
