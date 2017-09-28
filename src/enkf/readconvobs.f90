@@ -143,7 +143,8 @@ subroutine get_num_convobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
           num_obs_tot = num_obs_tot + nn(2)
        else if (obtype == 'sst') then ! skip sst
           nobssst = nobssst + nn
-          num_obs_tot = num_obs_tot + nn(2)
+          ! skipping sst obs since ENKF does not how how to handle them yet.
+          !num_obs_tot = num_obs_tot + nn(2)
        else if (obtype == ' rw') then
           nobsrw = nobsrw + nn
           num_obs_tot = num_obs_tot + nn(2)
@@ -381,6 +382,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
               error < errorlimit .or. error > errorlimit2 .or.  &
               abs(obmax) > 1.e9_r_kind .or.                     &
               pres < 0.001_r_kind .or. pres > 1200._r_kind) cycle
+          ! skipping sst obs since ENKF does not how how to handle them yet.
           if (obtype == 'sst') cycle
           if (twofiles) then
           if (rdiagbuf(1,n) /= rdiagbuf2(1,n) .or.              &
