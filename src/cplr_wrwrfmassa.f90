@@ -217,7 +217,7 @@ contains
   
     write(filename,'("sigf",i2.2)')ifilesig(it)
     open(lendian_in,file=filename,form='unformatted') ; rewind lendian_in
-    if(mype == 0) write(6,*)'READ_WRF_MASS_OFFSET_FILE:  open lendian_in=',lendian_in,' to file=',filename
+    if(print_verbose) write(6,*)'READ_WRF_MASS_OFFSET_FILE:  open lendian_in=',lendian_in,' to file=',filename
     read(lendian_in) iyear,imonth,iday,ihour,iminute,isecond,dummy3,pt_regional_single
     do iskip=2,5
        read(lendian_in)
@@ -1815,7 +1815,7 @@ contains
          lon2,nsig,nsig_soil,lon1,lat1,nlon_regional,nlat_regional,ijn,displs_g,&
          aeta1_ll,strip,eta2_ll,aeta2_ll
     use constants, only: one,zero_single,rd_over_cp_mass,one_tenth,r10,r100
-    use gsi_io, only: lendian_in, lendian_out
+    use gsi_io, only: lendian_in, lendian_out, verbose
     use rapidrefresh_cldsurf_mod, only: l_cloud_analysis,l_gsd_soilTQ_nudge,&
          i_use_2mq4b,i_use_2mt4b
     use chemmod, only: laeroana_gocart,wrf_pm2_5
@@ -1893,9 +1893,13 @@ contains
     real(r_kind), pointer :: ges_seas4(:,:,:)=>NULL()
     real(r_kind), pointer :: ges_p25  (:,:,:)=>NULL()
     real(r_kind), pointer :: ges_pm2_5  (:,:,:)=>NULL()
+    logical print_verbose
   
     associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
     end associate
+  
+    print_verbose=.false.
+    if(verbose .and. mype == 0)print_verbose=.true.
     it=ntguessig
   
   ! Inquire about cloud guess fields
@@ -2016,7 +2020,7 @@ contains
     allocate(temp1(im*jm),temp1u((im+1)*jm),temp1v(im*(jm+1)))
     allocate(landmask(im*jm),snow(im*jm),seaice(im*jm))
   
-    if(mype == 0) write(6,*)' at 2 in wrwrfmassa'
+    if(print_verbose) write(6,*)' at 2 in wrwrfmassa'
   
     if(mype == 0) then
        write(filename,'("sigf",i2.2)')ifilesig(ntguessig)
@@ -2055,7 +2059,7 @@ contains
     endif
     
   ! Create all_loc from ges_*
-    if(mype == 0) write(6,*)' at 3 in wrwrfmassa'
+    if(print_verbose) write(6,*)' at 3 in wrwrfmassa'
     all_loc=zero_single
     kt=i_t-1
     kq=i_q-1
@@ -2221,7 +2225,7 @@ contains
     end if
     
   ! Update psfc
-    if(mype == 0) write(6,*)' at 6 in wrwrfmassa'
+    if(print_verbose) write(6,*)' at 6 in wrwrfmassa'
   
     allocate(tempa(itotsub),tempb(itotsub))
     if(mype == 0) read(lendian_in)temp1
@@ -2399,12 +2403,12 @@ contains
   ! SST
     if(update_regsfc) then
        if(mype == 0) read(lendian_in)temp1
-       if (mype==0)write(6,*)' at 9.1 in wrwrfmassa,max,min(temp1)=',maxval(temp1),minval(temp1)
+       if (print_verbose)write(6,*)' at 9.1 in wrwrfmassa,max,min(temp1)=',maxval(temp1),minval(temp1)
        call strip(all_loc(:,:,i_sst),strp)
        call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
             tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
        if(mype == 0) then
-          if(mype == 0) write(6,*)' at 9.2 in wrwrfmassa,max,min(tempa)=',maxval(tempa),minval(tempa)
+          if(print_verbose) write(6,*)' at 9.2 in wrwrfmassa,max,min(tempa)=',maxval(tempa),minval(tempa)
           call fill_mass_grid2t(temp1,im,jm,tempb,2)
           do i=1,iglobal
              if(tempb(i) < (r225)) then
@@ -2413,9 +2417,9 @@ contains
                 tempa(i)=tempa(i)-tempb(i)
              end if
           end do
-          if(mype == 0) write(6,*)' at 9.4 in wrwrfmassa,max,min(tempa)=',maxval(tempa),minval(tempa)
+          if(print_verbose) write(6,*)' at 9.4 in wrwrfmassa,max,min(tempa)=',maxval(tempa),minval(tempa)
           call unfill_mass_grid2t(tempa,im,jm,temp1)
-          write(6,*)' at 9.6 in wrwrfmassa,max,min(temp1)=',maxval(temp1),minval(temp1)
+          if(print_verbose)write(6,*)' at 9.6 in wrwrfmassa,max,min(temp1)=',maxval(temp1),minval(temp1)
           write(lendian_out)temp1
        end if     !endif mype==0
     else
@@ -2493,7 +2497,7 @@ contains
   ! Update SKIN TEMP
     if(update_regsfc .or. l_gsd_soilTQ_nudge) then
        if(mype == 0) read(lendian_in)temp1
-       if (mype==0)write(6,*)' at 10.0 in wrwrfmassa,max,min(temp1)=',maxval(temp1),minval(temp1)
+       if (print_verbose)write(6,*)' at 10.0 in wrwrfmassa,max,min(temp1)=',maxval(temp1),minval(temp1)
        call strip(all_loc(:,:,i_skt),strp)
        call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
             tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
@@ -2521,23 +2525,23 @@ contains
   ! Update Q2
     if( i_use_2mq4b>0 .or. i_use_2mt4b > 0) then
        if(mype == 0) read(lendian_in)temp1
-       if (mype==0)write(6,*)' at 10.11 in wrwrfmassa,max,min(temp1)=', &
+       if (print_verbose)write(6,*)' at 10.11 in wrwrfmassa,max,min(temp1)=', &
                                            maxval(temp1),minval(temp1)
        call strip(all_loc(:,:,i_q2),strp)
        tempa=zero_single
        call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
             tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
        if(mype == 0) then
-          write(6,*)' at 10.12 in wrwrfmassa,max,min(tempa)=', &
+          if(print_verbose)write(6,*)' at 10.12 in wrwrfmassa,max,min(tempa)=', &
                             maxval(tempa),minval(tempa)
           call fill_mass_grid2t(temp1,im,jm,tempb,2)
           do i=1,iglobal
              tempa(i)=tempa(i)-tempb(i)
           end do
-          write(6,*)' at 10.13 in wrwrfmassa,max,min(tempa)=', &
+          if(print_verbose)write(6,*)' at 10.13 in wrwrfmassa,max,min(tempa)=', &
                              maxval(tempa),minval(tempa)
           call unfill_mass_grid2t(tempa,im,jm,temp1)
-          write(6,*)' at 10.14 in wrwrfmassa,max,min(temp1)=', &
+          if(print_verbose)write(6,*)' at 10.14 in wrwrfmassa,max,min(temp1)=', &
                              maxval(temp1),minval(temp1)
           write(lendian_out)temp1
        end if     !endif mype==0
@@ -2546,34 +2550,34 @@ contains
     if(l_gsd_soilTQ_nudge) then
   ! update soilt1
        if(mype == 0) read(lendian_in)temp1
-       if (mype==0)write(6,*)' at 10.1 in wrwrfmassa,max,min(temp1)=',maxval(temp1),minval(temp1)
+       if (print_verbose)write(6,*)' at 10.1 in wrwrfmassa,max,min(temp1)=',maxval(temp1),minval(temp1)
        call strip(all_loc(:,:,i_soilt1),strp)
        tempa=zero_single
        call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
             tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
        if(mype == 0) then
-           write(6,*)' at 10.2 in wrwrfmassa,max,min(tempa)=',maxval(tempa),minval(tempa)
+          if(print_verbose) write(6,*)' at 10.2 in wrwrfmassa,max,min(tempa)=',maxval(tempa),minval(tempa)
           call fill_mass_grid2t(temp1,im,jm,tempb,2)
           do i=1,iglobal
              tempa(i)=tempa(i)-tempb(i)
           end do
-          write(6,*)' at 10.3 in wrwrfmassa,max,min(tempa)=',maxval(tempa),minval(tempa)
+          if(print_verbose)write(6,*)' at 10.3 in wrwrfmassa,max,min(tempa)=',maxval(tempa),minval(tempa)
           i_snowT_check=1
           call unfill_mass_grid2t_ldmk(tempa,im,jm,temp1,landmask, &
                                       snow,seaice,i_snowT_check)
-          write(6,*)' at 10.4 in wrwrfmassa,max,min(temp1)=',maxval(temp1),minval(temp1)
+          if(print_verbose)write(6,*)' at 10.4 in wrwrfmassa,max,min(temp1)=',maxval(temp1),minval(temp1)
           write(lendian_out)temp1
        end if     !endif mype==0
     endif  !  l_gsd_soilTQ_nudge
   ! update TH2
     if( i_use_2mt4b>0 ) then
        if(mype == 0) read(lendian_in)temp1
-       if (mype==0)write(6,*)' at 10.5 in wrwrfmassa,max,min(temp1)=',maxval(temp1),minval(temp1)
+       if (print_verbose)write(6,*)' at 10.5 in wrwrfmassa,max,min(temp1)=',maxval(temp1),minval(temp1)
        call strip(all_loc(:,:,i_th2),strp)
        call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
             tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
        if(mype == 0) then
-           write(6,*)' at 10.6 in wrwrfmassa,max,min(tempa)=',maxval(tempa),minval(tempa)
+          if(print_verbose)write(6,*)' at 10.6 in wrwrfmassa,max,min(tempa)=',maxval(tempa),minval(tempa)
           call fill_mass_grid2t(temp1,im,jm,tempb,2)
           do i=1,iglobal
              if(tempb(i) < (r100)) then
@@ -2582,9 +2586,9 @@ contains
                 tempa(i)=tempa(i)-tempb(i)
              end if
           end do
-          write(6,*)' at 10.7 in wrwrfmassa,max,min(tempa)=',maxval(tempa),minval(tempa)
+          if(print_verbose)write(6,*)' at 10.7 in wrwrfmassa,max,min(tempa)=',maxval(tempa),minval(tempa)
           call unfill_mass_grid2t(tempa,im,jm,temp1)
-          write(6,*)' at 10.8 in wrwrfmassa,max,min(temp1)=',maxval(temp1),minval(temp1)
+          if(print_verbose)write(6,*)' at 10.8 in wrwrfmassa,max,min(temp1)=',maxval(temp1),minval(temp1)
           write(lendian_out)temp1
        end if     !endif mype==0
     endif  ! i_use_2mt4b>0
@@ -2854,6 +2858,7 @@ contains
   !    update date record in START_DATE header record
   
     use kinds, only: i_kind
+    use gsi_io, only: verbose
     implicit none
   
     character(1)   ,intent(inout) :: chdrbuf(2048)
@@ -2864,7 +2869,9 @@ contains
     character(1) c2(2),d2(2),c4(4),d4(4)
     equivalence (c2(1),c_two),(c4(1),c_four)
     integer(i_kind) i,ibegin,j
-  
+    logical print_verbose
+    print_verbose=.false.
+    if(verbose)print_verbose=.true. 
     ibegin=0
     do i=1,1932
        if(chdrbuf(i)=='S'.and.chdrbuf(i+4)=='T'.and.chdrbuf(i+8)=='A' &
@@ -2888,7 +2895,7 @@ contains
        d4(j)=chdrbuf(i)
        chdrbuf(i)=c4(j)
     end do
-    write(6,*) 'UPDATE_START_DATE:  old year, new year =',d4,' , ',c4
+    if(print_verbose)write(6,*) 'UPDATE_START_DATE:  old year, new year =',d4,' , ',c4
   
   !          skip "-"
     i=i+4
@@ -2899,7 +2906,7 @@ contains
        d2(j)=chdrbuf(i)
        chdrbuf(i)=c2(j)
     end do
-    write(6,*) 'UPDATE_START_DATE:  old month, new month =',d2,' , ',c2
+    if(print_verbose)write(6,*) 'UPDATE_START_DATE:  old month, new month =',d2,' , ',c2
   
   !          skip "-"
     i=i+4
@@ -2910,7 +2917,7 @@ contains
        d2(j)=chdrbuf(i)
        chdrbuf(i)=c2(j)
     end do
-    write(6,*) 'UPDATE_START_DATE:  old day, new day =',d2,' , ',c2
+    if(print_verbose)write(6,*) 'UPDATE_START_DATE:  old day, new day =',d2,' , ',c2
   
   !          skip "_"
     i=i+4
@@ -2921,7 +2928,7 @@ contains
        d2(j)=chdrbuf(i)
        chdrbuf(i)=c2(j)
     end do
-    write(6,*) 'UPDATE_START_DATE:  old hour, new hour =',d2,' , ',c2
+    if(print_verbose)write(6,*) 'UPDATE_START_DATE:  old hour, new hour =',d2,' , ',c2
   
   !          skip ":"
     i=i+4
@@ -2932,7 +2939,7 @@ contains
        d2(j)=chdrbuf(i)
        chdrbuf(i)=c2(j)
     end do
-    write(6,*) 'UPDATE_START_DATE:  old minute, new minute =',d2,' , ',c2
+    if(print_verbose)write(6,*) 'UPDATE_START_DATE:  old minute, new minute =',d2,' , ',c2
   
   !          skip ":"
     i=i+4
@@ -2943,7 +2950,7 @@ contains
        d2(j)=chdrbuf(i)
        chdrbuf(i)=c2(j)
     end do
-    write(6,*) 'UPDATE_START_DATE:  old second, new second =',d2,' , ',c2
+    if(print_verbose)write(6,*) 'UPDATE_START_DATE:  old second, new second =',d2,' , ',c2
   
   end subroutine update_start_date
 end module wrwrfmassa_mod

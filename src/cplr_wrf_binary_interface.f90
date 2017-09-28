@@ -2828,6 +2828,7 @@ contains
   
     use kinds, only: i_byte,i_kind,i_llong,i_long,r_single
     use native_endianness, only: byte_swap
+    use gsi_io, only: verbose
     implicit none
   
     integer(i_kind),intent(in   ) :: in_unit
@@ -2843,10 +2844,14 @@ contains
     integer(i_byte) out(4)
     equivalence(buf4(1),buf(1))
     integer(i_kind) i,ii,k,ibegin,iend,ierr
+    logical print_verbose
+   
+    print_verbose=.false.
+    if(verbose)print_verbose=.true.
   
     open(in_unit,file=trim(wrfges),access='direct',recl=lrecl)
   
-    write(6,*)'RETRIEVE_FIELD:  start_block,end_block,s_,e_byte=',&
+    if(print_verbose)write(6,*)'RETRIEVE_FIELD:  start_block,end_block,s_,e_byte=',&
          start_block,end_block,start_byte,end_byte
     if(mod(start_byte-1,4)/=0) write(6,*)' PROBLEM WITH RETRIEVE_FIELD, mod(start_byte-1,4) /= 0'
     if(mod(end_byte,4)/=0) write(6,*)' PROBLEM WITH RETRIEVE_FIELD, mod(end_byte,4) /= 0'
@@ -2912,6 +2917,7 @@ contains
     use kinds, only: i_byte,i_kind,i_llong,i_long,r_single
     use native_endianness, only: byte_swap
     use constants, only: zero
+    use gsi_io, only:verbose
     implicit none
   
     integer(i_kind),intent(in   ) :: in_unit,n1
@@ -2927,10 +2933,14 @@ contains
     integer(i_byte) out(4*n1)
     equivalence(buf4(1),buf(1))
     integer(i_kind) i,ii,k,ibegin,iend,ierr,nretrieved
+    logical print_verbose
+
+    print_verbose=.false.
+    if(verbose)print_verbose=.true.
   
     open(in_unit,file=trim(wrfges),access='direct',recl=lrecl)
   
-    write(6,*)'RETRIEVE_FIELD:  start_block,end_block,s_,e_byte=',&
+    if(print_verbose)write(6,*)'RETRIEVE_FIELD:  start_block,end_block,s_,e_byte=',&
          start_block,end_block,start_byte,end_byte
     if(mod(start_byte-1,4)/=0) write(6,*)' PROBLEM WITH RETRIEVE_FIELD, mod(start_byte-1,4) /= 0'
     if(mod(end_byte,4)/=0) write(6,*)' PROBLEM WITH RETRIEVE_FIELD, mod(end_byte,4) /= 0'
@@ -3004,6 +3014,7 @@ contains
   
     use kinds, only: i_byte,i_kind,i_llong,i_long,r_single
     use native_endianness, only: byte_swap
+    use gsi_io, only: verbose
     implicit none
   
     integer(i_kind),intent(in   ) :: in_unit,n1,n2
@@ -3019,10 +3030,14 @@ contains
     integer(i_byte) out(4*n1*n2)
     equivalence(buf4(1),buf(1))
     integer(i_kind) i,ii,j,k,ibegin,iend,ierr,nretrieved
+    logical print_verbose
   
+    print_verbose=.false.
+    if(verbose)print_verbose=.true.
+
     open(in_unit,file=trim(wrfges),access='direct',recl=lrecl)
   
-    write(6,*)'RETRIEVE_FIELD:  start_block,end_block,s_,e_byte=',&
+    if(print_verbose)write(6,*)'RETRIEVE_FIELD:  start_block,end_block,s_,e_byte=',&
          start_block,end_block,start_byte,end_byte
     if(mod(start_byte-1,4)/=0) write(6,*)' PROBLEM WITH RETRIEVE_FIELD, mod(start_byte-1,4) /= 0'
     if(mod(end_byte,4)/=0) write(6,*)' PROBLEM WITH RETRIEVE_FIELD, mod(end_byte,4) /= 0'
@@ -3054,7 +3069,7 @@ contains
           ii=ii+4
        end do
     end do
-    write(6,*)' in retrieve_field_rn1n2, num expected=',n1*n2, ' num retrieved=',nretrieved
+    if(print_verbose)write(6,*)' in retrieve_field_rn1n2, num expected=',n1*n2, ' num retrieved=',nretrieved
     
   end subroutine retrieve_field_rn1n2
 

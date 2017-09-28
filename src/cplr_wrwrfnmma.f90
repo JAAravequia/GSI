@@ -60,7 +60,7 @@ contains
          half_grid,filled_grid,pdtop_ll,nlat_regional,nlon_regional,&
          nsig,lat1,lon1,eta2_ll,lat2,lon2
     use constants, only: zero_single,r10,r100,qcmin,zero,one
-    use gsi_io, only: lendian_in,lendian_out
+    use gsi_io, only: lendian_in,lendian_out,verbose
     use gsi_metguess_mod, only: gsi_metguess_get,gsi_metguess_bundle
     use gsi_bundlemod, only: gsi_bundlegetpointer
     use mpeu_util, only: die,getindex
@@ -138,7 +138,10 @@ contains
     real(r_single),allocatable:: pdba0(:),tba0(:,:),qba0(:,:),cwmba0(:,:),uba0(:,:),vba0(:,:)
     integer(i_kind) bdim
     integer(i_kind) nstart_hour
+    logical print_verbose
   
+    print_verbose=.false.
+    if(verbose .and. mype == 0)print_verbose=.true.
   !   1. get offsets etc only for records to be updated
   
   !        they are PD, T, Q, U, V, skint/sst
@@ -157,13 +160,15 @@ contains
        nsig_write=nsig
        lm=nsig
     endif
-     if (mype==0) write(6,*)'wrwrfnmma_binary: nsig_write =   ', nsig_write
-     if (mype==0) write(6,*)'wrwrfnmma_binary: nsig =         ', nsig
-     if (mype==0) write(6,*)'wrwrfnmma_binary: lm =           ', lm
-     if (mype==0) write(6,*)'wrwrfnmma_binary: jm =           ', jm
-     if (mype==0) write(6,*)'wrwrfnmma_binary: im =           ', im
-     if (mype==0) write(6,*)'wrwrfnmma_binary: nlat_regional =', nlat_regional                     
-     if (mype==0) write(6,*)'wrwrfnmma_binary: nlon_regional =', nlon_regional                 
+    if(print_verbose)then
+       write(6,*)'wrwrfnmma_binary: nsig_write =   ', nsig_write
+       write(6,*)'wrwrfnmma_binary: nsig =         ', nsig
+       write(6,*)'wrwrfnmma_binary: lm =           ', lm
+       write(6,*)'wrwrfnmma_binary: jm =           ', jm
+       write(6,*)'wrwrfnmma_binary: im =           ', im
+       write(6,*)'wrwrfnmma_binary: nlat_regional =', nlat_regional           
+       write(6,*)'wrwrfnmma_binary: nlon_regional =', nlon_regional      
+    end if
   
   !  allocate boundary file arrays
     bdim=2*im+jm-3
@@ -221,7 +226,7 @@ contains
   
     write(filename,'("sigf",i2.2)')ifilesig(it)
     open(lendian_in,file=filename,form='unformatted') ; rewind lendian_in
-    if(mype == 0) write(6,*)'READ_WRF_NMM_OFFSET_FILE:  open lendian_in=',lendian_in,' to file=',filename
+    if(print_verbose) write(6,*)'READ_WRF_NMM_OFFSET_FILE:  open lendian_in=',lendian_in,' to file=',filename
     read(lendian_in) iyear,imonth,iday,ihour,iminute,isecond
   
     do iskip=2,9
@@ -256,14 +261,13 @@ contains
        end if
     end if
   
-    if(mype==0) write(6,*)' in read_wrf_nmm_binary_guess, wrfanl=',trim(wrfanl)
+    if(print_verbose) write(6,*)' in read_wrf_nmm_binary_guess, wrfanl=',trim(wrfanl)
   
     i=0
     i=i+1 ; i_pd=i                                                ! pd
     read(lendian_in) n_position
     offset(i)=n_position ; length=im*jm ; igtype(i)=1 ; kdim(i)=1
-    if(mype == 0) write(6,*)' pd, i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
-  
+    if(print_verbose) write(6,*)' pd, i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
     read(lendian_in)                                                   ! fis
   
     i_pint=i+1
@@ -280,7 +284,7 @@ contains
              kord(i)=1
           end if
           offset(i)=n_position+iadd ; length(i)=im*jm ; igtype(i)=1 ; kdim(i)=lm+1
-          if(mype == 0.and.k==1) write(6,*)' temp i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
+          if(print_verbose.and.k==1) write(6,*)' temp i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
        end do
     end if
   
@@ -296,7 +300,7 @@ contains
           kord(i)=1
        end if
        offset(i)=n_position+iadd ; length(i)=im*jm ; igtype(i)=1 ; kdim(i)=lm
-       if(mype == 0.and.k==1) write(6,*)' temp i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
+       if(print_verbose.and.k==1) write(6,*)' temp i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
     end do
   
     i_q=i+1
@@ -311,7 +315,7 @@ contains
           kord(i)=1
        end if
        offset(i)=n_position+iadd ; length(i)=im*jm ; igtype(i)=1 ; kdim(i)=lm
-       if(mype == 0.and.k==1) write(6,*)' q i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
+       if(print_verbose.and.k==1) write(6,*)' q i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
     end do
   
     i_u=i+1
@@ -326,7 +330,7 @@ contains
           kord(i)=1
        end if
        offset(i)=n_position+iadd ; length(i)=im*jm ; igtype(i)=2 ; kdim(i)=lm
-       if(mype == 0.and.k==1) write(6,*)' u i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
+       if(print_verbose.and.k==1) write(6,*)' u i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
     end do
   
     i_v=i+1
@@ -341,7 +345,7 @@ contains
           kord(i)=1
        end if
        offset(i)=n_position+iadd ; length(i)=im*jm ; igtype(i)=2 ; kdim(i)=lm
-       if(mype == 0.and.k==1) write(6,*)' v i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
+       if(print_verbose.and.k==1) write(6,*)' v i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
     end do
   
     read(lendian_in)                                                    ! sm
@@ -350,7 +354,7 @@ contains
     i=i+1 ; i_sst=i                                                ! sst
     read(lendian_in) n_position
     offset(i)=n_position ; length=im*jm ; igtype(i)=1 ; kdim(i)=1
-    if(mype == 0) write(6,*)' sst, i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
+    if(print_verbose) write(6,*)' sst, i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
   
     read(lendian_in)                                                    ! ivgtyp
     read(lendian_in)                                                    ! isltyp
@@ -364,7 +368,7 @@ contains
     i=i+1 ; i_tsk=i                                                ! tsk
     read(lendian_in) n_position
     offset(i)=n_position ; length=im*jm ; igtype(i)=1 ; kdim(i)=1
-    if(mype == 0) write(6,*)' tsk, i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
+    if(print_verbose) write(6,*)' tsk, i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
   
     if (n_actual_clouds>0) then
        i_cwm=i+1
@@ -379,7 +383,7 @@ contains
              kord(i)=1
           end if
           offset(i)=n_position+iadd ; length(i)=im*jm ; igtype(i)=1 ; kdim(i)=lm
-          if(mype == 0.and.k==1) write(6,*)' cwm i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
+          if(print_verbose.and.k==1) write(6,*)' cwm i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
        end do
   
        i_f_ice=i+1
@@ -394,7 +398,7 @@ contains
              kord(i)=1
           end if
           offset(i)=n_position+iadd ; length(i)=im*jm ; igtype(i)=1 ; kdim(i)=lm
-          if(mype == 0.and.k==1) write(6,*)' f_ice i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
+          if(print_verbose.and.k==1) write(6,*)' f_ice i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
        end do
   
        i_f_rain=i+1
@@ -409,7 +413,7 @@ contains
              kord(i)=1
           end if
           offset(i)=n_position+iadd ; length(i)=im*jm ; igtype(i)=1 ; kdim(i)=lm
-          if(mype == 0.and.k==1) write(6,*)' f_rain i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
+          if(print_verbose.and.k==1) write(6,*)' f_rain i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
        end do
     end if  ! end of n_actual_clouds>0
   
@@ -484,7 +488,7 @@ contains
              all_loc(j,i,kt)=ges_tsen(j+1,i+1,k,it)   ! sensible temperature
           end do
        end do
-       if (mype==0) then
+       if (print_verbose) then
           write(6,*)'all_loc for t    = ',k,maxval(all_loc(:,:,kt)),minval(all_loc(:,:,kt))                
           write(6,*)'all_loc for q    = ',k,maxval(all_loc(:,:,kq)),minval(all_loc(:,:,kq)) 
           write(6,*)'all_loc for u    = ',k,maxval(all_loc(:,:,ku)),minval(all_loc(:,:,ku))              
@@ -499,7 +503,7 @@ contains
           all_loc(j,i,i_pd)=r100*pd
        end do
     end do
-    if (mype==0) &
+    if (print_verbose) &
     write(6,*)'all_loc for pd   = ',k,maxval(all_loc(:,:,i_pd)),minval(all_loc(:,:,i_pd))                 
   
   !                    update pint by adding eta2(k)*pdinc
@@ -521,7 +525,7 @@ contains
                             +eta2_ll(k)*(all_loc(j,i,i_pd)-ges_pd(j+1,i+1))   ! pint
              end do
           end do
-          if (mype==0) &
+          if (print_verbose) &
           write(6,*)'all_loc for pint = ',k,maxval(all_loc(:,:,kpint)),minval(all_loc(:,:,kpint))      
        end do
     end if
@@ -731,10 +735,6 @@ contains
     end do
   
   !  do reduce add to pe 0 of all boundary variables, then write out boundary variables.
-        ! write(6,'(" pdbg(1)=",e10.1)')pdbg(1)
-        ! do k=1,lm
-        !    write(6,'(" k,t,q,u,v=",i3,4e10.1)')k,tbg(1,k),qbg(1,k),ubg(1,k),vbg(1,k)
-        ! end do
     call mpi_reduce(pdbg,pdbg0,bdim,mpi_real4,mpi_sum,0,mpi_comm_world,ierror)
     call mpi_reduce(pdba,pdba0,bdim,mpi_real4,mpi_sum,0,mpi_comm_world,ierror)
     call mpi_reduce(tbg,tbg0,bdim*lm,mpi_real4,mpi_sum,0,mpi_comm_world,ierror)
@@ -754,6 +754,7 @@ contains
        write(lendian_out) pdbg0,tbg0,qbg0,cwmbg0,ubg0,vbg0
        write(lendian_out) pdba0,tba0,qba0,cwmba0,uba0,vba0
        close(lendian_out)
+       if(print_verbose)then
          write(6,*)' min,max pdbg0=',minval(pdbg0),maxval(pdbg0)
          write(6,*)' min,max tbg0=',minval(tbg0),maxval(tbg0)
          write(6,*)' min,max qbg0=',minval(qbg0),maxval(qbg0)
@@ -772,6 +773,7 @@ contains
          write(6,*)' min,max cwmba0-cwmbg0=',minval(cwmba0-cwmbg0),maxval(cwmba0-cwmbg0)
          write(6,*)' min,max uba0-ubg0=',minval(uba0-ubg0),maxval(uba0-ubg0)
          write(6,*)' min,max vba0-vbg0=',minval(vba0-vbg0),maxval(vba0-vbg0)
+       end if
     end if
   
     deallocate(pdbg ,tbg ,qbg ,cwmbg ,ubg ,vbg )
@@ -1118,6 +1120,7 @@ contains
     use constants, only: zero,half,one,two,rd_over_cp,r10,r100,qcmin
     use gsi_nemsio_mod, only: gsi_nemsio_open,gsi_nemsio_close,gsi_nemsio_read,gsi_nemsio_write
     use gsi_nemsio_mod, only: gsi_nemsio_update
+    use gsi_io, only: verbose
     use gsi_metguess_mod, only: gsi_metguess_get,gsi_metguess_bundle
     use gsi_bundlemod, only: gsi_bundlegetpointer
     use mpeu_util, only: die,getindex
@@ -1170,12 +1173,15 @@ contains
     real(r_kind),pointer,dimension(:,:,:):: ges_qh  =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: dfi_tten=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_ref =>NULL()
+    logical print_verbose
     
   !   if use_gfs_stratosphere is true, then convert ges fields from nmmb-gfs 
   !        extended vertical coordinate to nmmb vertical coordinate.
     associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
     end associate
  
+    print_verbose=.false.
+    if(verbose .and. mype == 0)print_verbose=.true.
     if(use_gfs_stratosphere) then
        call revert_to_nmmb
        nsig_write=nsig_save
@@ -1194,16 +1200,16 @@ contains
        hmax=maxval(geop_hgtl(:,:,k,ntguessig))
        call mpi_allreduce(hmin,hmin0,1,mpi_rtype,mpi_min,mpi_comm_world,ierror)
        call mpi_allreduce(hmax,hmax0,1,mpi_rtype,mpi_max,mpi_comm_world,ierror)
-       if(mype == 0) write(6,*)' k,min,max geop_hgtl=',k,hmin0,hmax0
+       if(print_verbose) write(6,*)' k,min,max geop_hgtl=',k,hmin0,hmax0
        if(hmin0 < 40._r_kind) near_sfc=k
        hmin=minval(ges_prsl(:,:,k,ntguessig))
        hmax=maxval(ges_prsl(:,:,k,ntguessig))
        call mpi_allreduce(hmin,hmin0,1,mpi_rtype,mpi_min,mpi_comm_world,ierror)
        call mpi_allreduce(hmax,hmax0,1,mpi_rtype,mpi_max,mpi_comm_world,ierror)
-       if(mype == 0) write(6,*)' k,min,max ges_prsl=',k,hmin0,hmax0
+       if(print_verbose) write(6,*)' k,min,max ges_prsl=',k,hmin0,hmax0
     end do
     near_sfc=max(near_sfc,2)
-    if(mype == 0) write(6,*)' in wrnemsnmma_binary near_sfc=',near_sfc
+    if(print_verbose) write(6,*)' in wrnemsnmma_binary near_sfc=',near_sfc
   
                     
                        
@@ -1220,7 +1226,7 @@ contains
     add_saved=.true.
   
     call gsi_metguess_get('clouds::3d',n_actual_clouds,iret)
-    if(mype == 0) write(6,*)' in wrnemsnmma_binary after gsi_metguess_get, nclouds,iret=',&
+    if(print_verbose) write(6,*)' in wrnemsnmma_binary after gsi_metguess_get, nclouds,iret=',&
                   n_actual_clouds,iret
     if (n_actual_clouds>0 .and. (i_gsdcldanal_type/=2)) then
   
@@ -1352,7 +1358,6 @@ contains
   
   !* use GSD cloud analysis for NMMB
        if(i_gsdcldanal_type==2) then
-  !    write(6,*)'sliu in wrwrfnmma.F90:: enter dump dfi_tten'
        do i=1,lon2
           do j=1,lat2
              work_sub_t(j,i)=ges_tsen(j,i,k,it)
@@ -1721,7 +1726,7 @@ contains
          half_grid,filled_grid,pdtop_ll,nlat_regional,nlon_regional,&
          nsig,lat1,lon1,ijn,displs_g,eta2_ll,strip,lat2,lon2
     use constants, only: zero_single,r10,r100,qcmin,zero,one
-    use gsi_io, only: lendian_in, lendian_out
+    use gsi_io, only: lendian_in, lendian_out, verbose
     use gsi_metguess_mod, only: gsi_metguess_get,gsi_metguess_bundle
     use gsi_bundlemod, only: gsi_bundlegetpointer
     use mpeu_util, only: die,getindex
@@ -1779,6 +1784,10 @@ contains
     real(r_single),allocatable:: pdbg(:),tbg(:,:),qbg(:,:),cwmbg(:,:),ubg(:,:),vbg(:,:)
     real(r_single),allocatable:: pdba(:),tba(:,:),qba(:,:),cwmba(:,:),uba(:,:),vba(:,:)
     integer(i_kind) bdim
+    logical print_verbose
+
+    print_verbose=.false.
+    if(verbose .and. mype == 0)print_verbose = .true.
   
   ! if use_gfs_stratosphere is true, then convert ges fields from nmm-gfs
   ! extended vertical coordinate to nmmb vertical coordinate.
@@ -1793,13 +1802,15 @@ contains
     jm=nlat_regional
     lm=nsig_write      
   
-    if (mype==0) write(6,*)'wrwrfnmma_netcdf: nsig_write =   ', nsig_write
-    if (mype==0) write(6,*)'wrwrfnmma_netcdf: nsig =         ', nsig
-    if (mype==0) write(6,*)'wrwrfnmma_netcdf: lm =           ', lm
-    if (mype==0) write(6,*)'wrwrfnmma_netcdf: jm =           ', jm
-    if (mype==0) write(6,*)'wrwrfnmma_netcdf: im =           ', im
-    if (mype==0) write(6,*)'wrwrfnmma_netcdf: nlat_regional =', nlat_regional
-    if (mype==0) write(6,*)'wrwrfnmma_netcdf: nlon_regional =', nlon_regional
+    if (print_verbose) then
+       write(6,*)'wrwrfnmma_netcdf: nsig_write =   ', nsig_write
+       write(6,*)'wrwrfnmma_netcdf: nsig =         ', nsig
+       write(6,*)'wrwrfnmma_netcdf: lm =           ', lm
+       write(6,*)'wrwrfnmma_netcdf: jm =           ', jm
+       write(6,*)'wrwrfnmma_netcdf: im =           ', im
+       write(6,*)'wrwrfnmma_netcdf: nlat_regional =', nlat_regional
+       write(6,*)'wrwrfnmma_netcdf: nlon_regional =', nlon_regional
+    end if
   
   !  allocate boundary file arrays
     bdim=2*im+jm-3
@@ -1861,7 +1872,7 @@ contains
     
     allocate(temp1(im*jm))
   
-  ! if(mype == 0) write(6,*)' at 2 in wrwrfnmma'
+  ! if(print_verbose) write(6,*)' at 2 in wrwrfnmma'
   
   
     if(mype == 0) then
@@ -1884,7 +1895,7 @@ contains
     endif
   
   ! Create all_loc from ges_*
-  ! if(mype == 0) write(6,*)' at 3 in wrwrfnmma'
+  ! if(print_verbose) write(6,*)' at 3 in wrwrfnmma'
     all_loc=zero_single
     kt=i_t-1
     kq=i_q-1
@@ -1913,7 +1924,7 @@ contains
           all_loc(j,i,i_pd)=r100*pd
        end do
     end do
-    if (mype==0) &
+    if (print_verbose) &
     write(6,*)'all_loc for pd   = ',k,maxval(all_loc(:,:,i_pd)),minval(all_loc(:,:,i_pd))                                                                                                               
   !                    update pint by adding eta2(k)*pdinc
     if(update_pint) then
@@ -1934,7 +1945,7 @@ contains
                             +eta2_ll(k)*(all_loc(j,i,i_pd)-ges_pd(j,i))   ! pint
              end do
           end do
-          if (mype==0) &
+          if (print_verbose) &
           write(6,*)'all_loc for pint = ',k,maxval(all_loc(:,:,kpint)),minval(all_loc(:,:,kpint))                                                                                                               
        end do
     end if
@@ -2015,14 +2026,14 @@ contains
     
   ! Update pd
   ! if(mype == 0) write(6,*)' at 6 in wrwrfnmma'
-    if(mype == 0) write(6,*)' at wrwrfnmma_netcdf: update PD' 
+    if(print_verbose) write(6,*)' at wrwrfnmma_netcdf: update PD' 
   
     allocate(tempa(itotsub),tempb(itotsub))
     tempa=0.0_r_single
     tempb=0.0_r_single
     if(mype == 0) read(lendian_in)temp1
   ! if(mype == 0) write(6,*)' at 6.1 in wrwrfnmma,max,min(temp1)=',maxval(temp1),minval(temp1)
-    if(mype == 0) write(6,*)' max,min(temp1) PD in       =',maxval(temp1),minval(temp1)       
+    if(print_verbose) write(6,*)' max,min(temp1) PD in       =',maxval(temp1),minval(temp1)       
     call strip(all_loc(:,:,i_pd),strp)
     call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
          tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
@@ -2042,7 +2053,7 @@ contains
        if(half_grid)   call unhalf_nmm_grid2(tempa,im,jm,temp1,igtypeh,2)
   !    if(mype == 0) write(6,*)' at 6.6 in wrwrfnmma,max,min(temp1)=',maxval(temp1),minval(temp1)
        write(lendian_out)temp1
-       if(mype == 0) write(6,*)' max,min(temp1) PD out      =',maxval(temp1),minval(temp1)     
+       if(print_verbose) write(6,*)' max,min(temp1) PD out      =',maxval(temp1),minval(temp1)     
        call this%get_bndy_file(temp1,pdba,tba,qba,cwmba,uba,vba,i_pd,i_pd,i_t,i_q,i_cwm,i_u,i_v, &
                           n_actual_clouds,im,jm,lm,bdim,igtypeh)
     end if
@@ -2053,7 +2064,7 @@ contains
        write(lendian_out)temp1
     end if
   
-    if(mype == 0) write(6,*)' at wrwrfnmma_netcdf: update PINT' 
+    if(print_verbose) write(6,*)' at wrwrfnmma_netcdf: update PINT' 
   ! Update pint
     if(update_pint) then
        kpint=i_pint-1
@@ -2078,13 +2089,13 @@ contains
        end do
     endif
   
-    if(mype == 0) write(6,*)' at wrwrfnmma_netcdf: update PINT' 
+    if(print_verbose) write(6,*)' at wrwrfnmma_netcdf: update PINT' 
   ! Update t
     kt=i_t-1
     do k=1,nsig_write    
        kt=kt+1
        if(mype == 0) read(lendian_in)temp1
-       if(mype == 0) write(6,*)' k,max,min(temp1) T in      =',k,maxval(temp1),minval(temp1)                                             
+       if(print_verbose) write(6,*)' k,max,min(temp1) T in      =',k,maxval(temp1),minval(temp1)                                             
        call strip(all_loc(:,:,kt),strp)
        call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
             tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
@@ -2099,7 +2110,7 @@ contains
           if(filled_grid) call unfill_nmm_grid2(tempa,im,jm,temp1,igtypeh,2)
           if(half_grid)   call unhalf_nmm_grid2(tempa,im,jm,temp1,igtypeh,2)
           write(lendian_out)temp1
-          write(6,*)' k,max,min(temp1) T out     =',k,maxval(temp1),minval(temp1)                                  
+          if(print_verbose)write(6,*)' k,max,min(temp1) T out     =',k,maxval(temp1),minval(temp1)                                  
           call this%get_bndy_file(temp1,pdba,tba,qba,cwmba,uba,vba,kt,i_pd,i_t,i_q,i_cwm,i_u,i_v, &
                              n_actual_clouds,im,jm,lm,bdim,igtypeh)
        end if
@@ -2107,13 +2118,13 @@ contains
   ! if(mype == 0) write(6,*)' at 7 in wrwrfnmma'
   
   
-    if(mype == 0) write(6,*)' at wrwrfnmma_netcdf: update Q'  
+    if(print_verbose) write(6,*)' at wrwrfnmma_netcdf: update Q'  
   ! Update q
     kq=i_q-1
     do k=1,nsig_write    
        kq=kq+1
        if(mype == 0) read(lendian_in)temp1
-       if(mype == 0) write(6,*)' k,max,min(temp1) Q in    =',k,maxval(temp1),minval(temp1)                                             
+       if(print_verbose) write(6,*)' k,max,min(temp1) Q in    =',k,maxval(temp1),minval(temp1)                                             
        call strip(all_loc(:,:,kq),strp)
        call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
             tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
@@ -2128,13 +2139,13 @@ contains
           if(filled_grid) call unfill_nmm_grid2(tempa,im,jm,temp1,igtypeh,2)
           if(half_grid)   call unhalf_nmm_grid2(tempa,im,jm,temp1,igtypeh,2)
           write(lendian_out)temp1
-          write(6,*)' k,max,min(temp1) Q out   =',k,maxval(temp1),minval(temp1)        
+          if(print_verbose)write(6,*)' k,max,min(temp1) Q out   =',k,maxval(temp1),minval(temp1)        
           call this%get_bndy_file(temp1,pdba,tba,qba,cwmba,uba,vba,kq,i_pd,i_t,i_q,i_cwm,i_u,i_v, &
                              n_actual_clouds,im,jm,lm,bdim,igtypeh)
        end if
     end do
   
-    if(mype == 0) write(6,*)' at wrwrfnmma_netcdf: update U'  
+    if(print_verbose) write(6,*)' at wrwrfnmma_netcdf: update U'  
   ! Update u
     ku=i_u-1
     do k=1,nsig_write       
@@ -2162,20 +2173,20 @@ contains
           if(half_grid)   call unhalf_nmm_grid2(tempa,im,jm,temp1,igtypev,2)
   !       if(mype == 0) write(6,*)' at 7.4 in wrwrfnmma,k,max,min(temp1)=',k,maxval(temp1),minval(temp1)
           write(lendian_out)temp1
-          write(6,*)' k,max,min(temp1) U out   =',k,maxval(temp1),minval(temp1)                                  
+          if(print_verbose)write(6,*)' k,max,min(temp1) U out   =',k,maxval(temp1),minval(temp1)                                  
           call this%get_bndy_file(temp1,pdba,tba,qba,cwmba,uba,vba,ku,i_pd,i_t,i_q,i_cwm,i_u,i_v, &
                              n_actual_clouds,im,jm,lm,bdim,igtypev)
        end if
     end do
   ! if(mype == 0) write(6,*)' at 8 in wrwrfnmma'
   
-    if(mype == 0) write(6,*)' at wrwrfnmma_netcdf: update V'  
+    if(print_verbose) write(6,*)' at wrwrfnmma_netcdf: update V'  
   ! Update v
     kv=i_v-1
     do k=1,nsig_write    
        kv=kv+1
        if(mype == 0) read(lendian_in)temp1
-       if(mype == 0) write(6,*)' k,max,min(temp1) V in    =',k,maxval(temp1),minval(temp1)                                             
+       if(print_verbose) write(6,*)' k,max,min(temp1) V in    =',k,maxval(temp1),minval(temp1)                                             
        call strip(all_loc(:,:,kv),strp)
        call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
             tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
@@ -2190,14 +2201,16 @@ contains
           if(filled_grid) call unfill_nmm_grid2(tempa,im,jm,temp1,igtypev,2)
           if(half_grid)   call unhalf_nmm_grid2(tempa,im,jm,temp1,igtypev,2)
           write(lendian_out)temp1
-          write(6,*)' k,max,min(temp1) V out   =',k,maxval(temp1),minval(temp1)                                  
+          if(print_verbose)write(6,*)' k,max,min(temp1) V out   =',k,maxval(temp1),minval(temp1)                                  
           call this%get_bndy_file(temp1,pdba,tba,qba,cwmba,uba,vba,kv,i_pd,i_t,i_q,i_cwm,i_u,i_v, &
                              n_actual_clouds,im,jm,lm,bdim,igtypev)
        end if
     end do
   
-    if(mype == 0) write(6,*)' at wrwrfnmma_netcdf: update surface '                
-    if(mype == 0) write(6,*)' at wrwrfnmma_netcdf: update_regsfc= ',update_regsfc
+    if(print_verbose)then
+       write(6,*)' at wrwrfnmma_netcdf: update surface '                
+       write(6,*)' at wrwrfnmma_netcdf: update_regsfc= ',update_regsfc
+    end if
   ! Load updated skin temperature array if writing out to analysis file
     if (update_regsfc) then
        do i=1,lon1+2
@@ -2219,7 +2232,7 @@ contains
   
   ! SST
     if(update_regsfc) then
-       if(mype == 0) write(6,*)' at wrwrfnmma_netcdf: update SST '    
+       if(print_verbose) write(6,*)' at wrwrfnmma_netcdf: update SST '    
        if(mype == 0) read(lendian_in)temp1
   !    if (mype==0)write(6,*)' at 9.1 in wrwrfnmma,max,min(temp1)=',maxval(temp1),minval(temp1)
        call strip(all_loc(:,:,i_sst),strp)
@@ -2246,7 +2259,7 @@ contains
        end if     !endif mype==0
     else
        if(mype==0) then
-          write(6,*)' at wrwrfnmma_netcdf: read/write SST '    
+          if(print_verbose)write(6,*)' at wrwrfnmma_netcdf: read/write SST '    
           read(lendian_in)temp1
           write(lendian_out)temp1
        end if
@@ -2254,7 +2267,7 @@ contains
     
   ! REST OF FIELDS
     if (mype == 0) then
-       write(6,*)' at wrwrfnmma_netcdf: read/write various surface fields '    
+       if(print_verbose)write(6,*)' at wrwrfnmma_netcdf: read/write various surface fields '    
        do k=4,11
           read(lendian_in)temp1
           write(lendian_out)temp1
@@ -2263,13 +2276,13 @@ contains
     
   ! Update SKIN TEMP
     if(update_regsfc) then
-       if(mype == 0) write(6,*)' at wrwrfnmma_netcdf: update TSK '   
+       if(print_verbose) write(6,*)' at wrwrfnmma_netcdf: update TSK '   
        if(mype == 0) read(lendian_in)temp1
   !    if (mype==0)write(6,*)' at 10.0 in wrwrfnmma,max,min(temp1)=',maxval(temp1),minval(temp1)
        call strip(all_loc(:,:,i_tsk),strp)
        call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
             tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
-       if (mype==0)write(6,*)' at 10.1'
+       if (print_verbose)write(6,*)' at 10.1'
        if(mype == 0) then
           if(filled_grid) call fill_nmm_grid2(temp1,im,jm,tempb,igtypeh,2)
           if(half_grid)   call half_nmm_grid2(temp1,im,jm,tempb,igtypeh,2)
@@ -2286,7 +2299,7 @@ contains
        end if
     else
        if (mype == 0) then
-          write(6,*)' at wrwrfnmma_netcdf: read/write TSK '   
+          if(print_verbose)write(6,*)' at wrwrfnmma_netcdf: read/write TSK '   
           read(lendian_in)temp1
           write(lendian_out)temp1
        end if
@@ -2294,7 +2307,7 @@ contains
   
   ! update cloud hydrometeors
     if (n_actual_clouds>0) then
-       if(mype == 0) write(6,*)' at wrwrfnmma_netcdf: update clouds '   
+       if(print_verbose) write(6,*)' at wrwrfnmma_netcdf: update clouds '   
   !    Update cwm
        kcwm=i_cwm-1
        do k=1,nsig_write   
@@ -2371,24 +2384,26 @@ contains
        write(lendian_out) pdbg,tbg,qbg,cwmbg,ubg,vbg
        write(lendian_out) pdba,tba,qba,cwmba,uba,vba 
        close(lendian_out)
-       write(6,*)' min,max pdbg=',minval(pdbg),maxval(pdbg)
-       write(6,*)' min,max tbg=',minval(tbg),maxval(tbg)
-       write(6,*)' min,max qbg=',minval(qbg),maxval(qbg)
-       write(6,*)' min,max cwmbg=',minval(cwmbg),maxval(cwmbg)
-       write(6,*)' min,max ubg=',minval(ubg),maxval(ubg)
-       write(6,*)' min,max vbg=',minval(vbg),maxval(vbg)
-       write(6,*)' min,max pdba=',minval(pdba),maxval(pdba)
-       write(6,*)' min,max tba=',minval(tba),maxval(tba)
-       write(6,*)' min,max qba=',minval(qba),maxval(qba)
-       write(6,*)' min,max cwmba=',minval(cwmba),maxval(cwmba)
-       write(6,*)' min,max uba=',minval(uba),maxval(uba)
-       write(6,*)' min,max vba=',minval(vba),maxval(vba)
-       write(6,*)' min,max pdba-pdbg=',minval(pdba-pdbg),maxval(pdba-pdbg)
-       write(6,*)' min,max tba-tbg=',minval(tba-tbg),maxval(tba-tbg)
-       write(6,*)' min,max qba-qbg=',minval(qba-qbg),maxval(qba-qbg)
-       write(6,*)' min,max cwmba-cwmbg=',minval(cwmba-cwmbg),maxval(cwmba-cwmbg)
-       write(6,*)' min,max uba-ubg=',minval(uba-ubg),maxval(uba-ubg)
-       write(6,*)' min,max vba-vbg=',minval(vba-vbg),maxval(vba-vbg)
+       if(print_verbose)then
+          write(6,*)' min,max pdbg=',minval(pdbg),maxval(pdbg)
+          write(6,*)' min,max tbg=',minval(tbg),maxval(tbg)
+          write(6,*)' min,max qbg=',minval(qbg),maxval(qbg)
+          write(6,*)' min,max cwmbg=',minval(cwmbg),maxval(cwmbg)
+          write(6,*)' min,max ubg=',minval(ubg),maxval(ubg)
+          write(6,*)' min,max vbg=',minval(vbg),maxval(vbg)
+          write(6,*)' min,max pdba=',minval(pdba),maxval(pdba)
+          write(6,*)' min,max tba=',minval(tba),maxval(tba)
+          write(6,*)' min,max qba=',minval(qba),maxval(qba)
+          write(6,*)' min,max cwmba=',minval(cwmba),maxval(cwmba)
+          write(6,*)' min,max uba=',minval(uba),maxval(uba)
+          write(6,*)' min,max vba=',minval(vba),maxval(vba)
+          write(6,*)' min,max pdba-pdbg=',minval(pdba-pdbg),maxval(pdba-pdbg)
+          write(6,*)' min,max tba-tbg=',minval(tba-tbg),maxval(tba-tbg)
+          write(6,*)' min,max qba-qbg=',minval(qba-qbg),maxval(qba-qbg)
+          write(6,*)' min,max cwmba-cwmbg=',minval(cwmba-cwmbg),maxval(cwmba-cwmbg)
+          write(6,*)' min,max uba-ubg=',minval(uba-ubg),maxval(uba-ubg)
+          write(6,*)' min,max vba-vbg=',minval(vba-vbg),maxval(vba-vbg)
+       end if
     end if
   
     deallocate(pdbg ,tbg ,qbg ,cwmbg ,ubg ,vbg )
