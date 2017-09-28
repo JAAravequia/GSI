@@ -126,7 +126,6 @@ do ii=1,nvars
    else 
       if (nproc .eq. 0) print *,'Error: only ', nlevs, ' and ', nlevs+1,' number of levels is supported in current version, got ',ilev
       call stop2(503)
-      call stop2(503)
    endif
 enddo
 
