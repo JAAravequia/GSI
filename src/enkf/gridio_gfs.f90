@@ -376,9 +376,14 @@
   ! compute saturation q.
   do k=1,nlevs
     ! layer pressure from phillips vertical interolation
-    ug(:) = pressi(:,k)*0.1_r_kind
+    ug(:) = ((pressi(:,k)**kap1-pressi(:,k+1)**kap1)/&
+            (kap1*(pressi(:,k)-pressi(:,k+1))))**kapr
+
     call copytogrdin(ug,pslg(:,k))
-    if (prse_ind > 0)     grdin(:,levels(prse_ind-1)+k,nb) = pslg(:,k)
+    ! Jacobian for gps in pressure is saved in different units in GSI; need to
+    ! multiply pressure by 0.1
+    if (prse_ind > 0)     grdin(:,levels(prse_ind-1)+k,nb) = 0.1*pslg(:,k)
+
   end do
   if (pseudo_rh) then
      call genqsat1(q,qsat(:,:,nb),pslg,tv,ice,npts,nlevs)
@@ -687,6 +692,23 @@
          print *,'unknown vertical coordinate type',sighead%idvc
          call stop2(23)
      end if
+     !==> first guess pressure at interfaces.
+     do k=1,nlevs+1
+        pressi(:,k)=ak(k)+bk(k)*psfg
+     enddo
+     do k=1,nlevs
+        dpfg(:,k) = pressi(:,k)-pressi(:,k+1)
+     enddo
+     !==> analysis pressure at interfaces.
+     do k=1,nlevs+1
+        pressi(:,k)=ak(k)+bk(k)*psg
+     enddo
+     do k=1,nlevs
+        dpanl(:,k) = pressi(:,k)-pressi(:,k+1)
+        !if (nanal .eq. 1) print *,'k,dpanl,dpfg',minval(dpanl(:,k)),&
+        !maxval(dpanl(:,k)),minval(dpfg(:,k)),maxval(dpfg(:,k))
+     enddo
+
   else ! nemsio
      gfileout = gfilein
 
@@ -741,22 +763,6 @@
   endif
 
   if (pst_ind > 0) then
-     ! pressure at interfaces
-     do k=1,nlevs+1
-        pressi(:,k)=ak(k)+bk(k)*psfg
-     enddo
-     do k=1,nlevs
-        dpfg(:,k) = pressi(:,k)-pressi(:,k+1)
-     enddo
-     !==> analysis pressure at interfaces.
-     do k=1,nlevs+1
-        pressi(:,k)=ak(k)+bk(k)*psg
-     enddo
-     do k=1,nlevs
-        dpanl(:,k) = pressi(:,k)-pressi(:,k+1)
-        !if (nanal .eq. 1) print *,'k,dpanl,dpfg',minval(dpanl(:,k)),&
-        !maxval(dpanl(:,k)),minval(dpfg(:,k)),maxval(dpfg(:,k))
-     enddo
      do k=1,nlevs
 !       re-calculate vertical integral of mass flux div for first-guess
         if (use_gfs_nemsio) then
