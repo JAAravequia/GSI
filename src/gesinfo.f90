@@ -378,10 +378,16 @@ subroutine gesinfo(mype)
      end if
 
 !    Check for consistency with namelist settings           
-     if ((gfshead%jcap/=jcap_b.and..not.regional) .or. gfshead%levs/=nsig) then
-        write(6,*)'GESINFO:  ***ERROR*** guess res. inconsistent with namelist'
-        write(6,*)'      guess jcap_b,nsig=',gfshead%jcap,gfshead%levs
-        write(6,*)'   namelist jcap_b,nsig=',jcap_b,nsig
+     if (gfshead%jcap/=jcap_b.and..not.regional) then
+        write(6,*)'GESINFO:  ***WARNING*** guess jcap inconsistent with namelist'
+        write(6,*)'      guess jcap_b=',gfshead%jcap
+        write(6,*)'   namelist jcap_b=',jcap_b
+        !call stop2(85)
+     endif
+     if (gfshead%levs/=nsig) then
+        write(6,*)'GESINFO:  ***ERROR*** guess levels inconsistent with namelist'
+        write(6,*)'      guess nsig=',gfshead%levs
+        write(6,*)'   namelist nsig=',nsig
         call stop2(85)
      endif
 

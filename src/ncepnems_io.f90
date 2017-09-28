@@ -267,6 +267,7 @@ contains
       call stop2(999)
     endif
 
+    print *,'ifilesig',nfldsig,ifilesig
     do it=1,nfldsig
 
        write(filename,'(''sigf'',i2.2)') ifilesig(it)
@@ -1063,7 +1064,14 @@ contains
 
 !            smc
              call nemsio_readrecv(gfile, 'smc', 'soil layer', 1, rwork2d, iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'smc','read',istop,iret)
+! FV3 nemsio files use 'soilw 0-10cm down' insted of 'smc soil layer 1'
+             if (iret /= 0) then
+               call error_msg(trim(my_name),trim(filename),'smc','read',0,iret)
+               if ( mype == 0 ) print *,'try to read soilw 0-10 cm down instead...'
+               call nemsio_readrecv(gfile,'soilw','0-10 cm down',1,rwork2d,iret=iret)
+               if (iret /= 0) &
+               call error_msg(trim(my_name),trim(filename),'soilw','read',istop,iret)
+             endif
              work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
              call tran_gfssfc(work,soil_moi(1,1,it),lonb,latb)
 
@@ -1079,7 +1087,14 @@ contains
 
 !            stc
              call nemsio_readrecv(gfile, 'stc', 'soil layer', 1, rwork2d, iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'stc','read',istop,iret)
+             if (iret /= 0) then
+! FV3 nemsio files use 'tmp 0-10cm down' insted of 'stc soil layer 1'
+               call error_msg(trim(my_name),trim(filename),'stc','read',0,iret)
+               if ( mype == 0 ) print *,'try to read tmp 0-10 cm down instead...'
+               call nemsio_readrecv(gfile,'tmp','0-10 cm down',1,rwork2d,iret=iret)
+               if (iret /= 0) &
+               call error_msg(trim(my_name),trim(filename),'tmp','read',istop,iret)
+             endif
              work(:,:)=reshape(rwork2d(:),(/size(work,1),size(work,2)/))
              call tran_gfssfc(work,soil_temp(1,1,it),lonb,latb)
 
