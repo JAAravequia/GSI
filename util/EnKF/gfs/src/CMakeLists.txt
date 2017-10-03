@@ -16,6 +16,5 @@ if(BUILD_UTIL)
     message("Configuring utility in ${dir}")
     add_subdirectory(${dir})
   endforeach()
-# add_subdirectory(gribmean.fd)
 endif(BUILD_UTIL)
 
