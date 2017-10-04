@@ -1413,7 +1413,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
         if ( trim(obstype) /= 'modis_aod' ) then
            panglr = data_s(iscan_ang)
            if(obstype == 'goes_img' .or. obstype == 'seviri')panglr = zero
-           geometryinfo(1)%sensor_zenith_angle = data_s(ilzen_ang)*rad2deg  ! local zenith angle
+           geometryinfo(1)%sensor_zenith_angle = abs(data_s(ilzen_ang)*rad2deg)  ! local zenith angle
            geometryinfo(1)%source_zenith_angle = data_s(iszen_ang)          ! solar zenith angle
            geometryinfo(1)%sensor_azimuth_angle = data_s(ilazi_ang)         ! local zenith angle
            geometryinfo(1)%source_azimuth_angle = data_s(isazi_ang)         ! solar zenith angle
