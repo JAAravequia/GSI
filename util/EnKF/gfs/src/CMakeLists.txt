@@ -11,6 +11,9 @@ MACRO(SUBDIRLIST result curdir)
 ENDMACRO()
 
 if(BUILD_UTIL)
+  set(CMAKE_Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/util/include")
+  set(UTIL_INC ${CMAKE_Fortran_MODULE_DIRECTORY})
+
   SUBDIRLIST(SUBDIRS ${CMAKE_CURRENT_SOURCE_DIR})
   foreach(dir ${SUBDIRS})
     message("Configuring utility in ${dir}")
