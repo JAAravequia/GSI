@@ -536,6 +536,19 @@
      ! read in first-guess data.
      call sigio_srohdc(iunitsig,trim(filenamein), &
                        sighead,sigdata,ierr)
+     if (sighead%idvc .eq. 0) then ! sigma coordinate, old file format.
+         ak = zero
+         bk = sighead%si(1:nlevs+1)
+     else if (sighead%idvc == 1) then ! sigma coordinate
+         ak = zero
+         bk = sighead%vcoord(1:nlevs+1,2)
+     else if (sighead%idvc == 2 .or. sighead%idvc == 3) then ! hybrid coordinate
+         bk = sighead%vcoord(1:nlevs+1,2) 
+         ak = 0.01_r_kind*sighead%vcoord(1:nlevs+1,1)  ! convert to mb
+     else
+         print *,'unknown vertical coordinate type',sighead%idvc
+         call stop2(23)
+     end if
   endif
 
   u_ind   = getindex(vars3d, 'u')   !< indices in the state var arrays
@@ -679,36 +692,6 @@
      call sptez_s(divspec,vg,-1)
      sigdata%ps = divspec
 
-     if (sighead%idvc .eq. 0) then ! sigma coordinate, old file format.
-         ak = zero
-         bk = sighead%si(1:nlevs+1)
-     else if (sighead%idvc == 1) then ! sigma coordinate
-         ak = zero
-         bk = sighead%vcoord(1:nlevs+1,2)
-     else if (sighead%idvc == 2 .or. sighead%idvc == 3) then ! hybrid coordinate
-         bk = sighead%vcoord(1:nlevs+1,2) 
-         ak = 0.01_r_kind*sighead%vcoord(1:nlevs+1,1)  ! convert to mb
-     else
-         print *,'unknown vertical coordinate type',sighead%idvc
-         call stop2(23)
-     end if
-     !==> first guess pressure at interfaces.
-     do k=1,nlevs+1
-        pressi(:,k)=ak(k)+bk(k)*psfg
-     enddo
-     do k=1,nlevs
-        dpfg(:,k) = pressi(:,k)-pressi(:,k+1)
-     enddo
-     !==> analysis pressure at interfaces.
-     do k=1,nlevs+1
-        pressi(:,k)=ak(k)+bk(k)*psg
-     enddo
-     do k=1,nlevs
-        dpanl(:,k) = pressi(:,k)-pressi(:,k+1)
-        !if (nanal .eq. 1) print *,'k,dpanl,dpfg',minval(dpanl(:,k)),&
-        !maxval(dpanl(:,k)),minval(dpfg(:,k)),maxval(dpfg(:,k))
-     enddo
-
   else ! nemsio
      gfileout = gfilein
 
@@ -763,6 +746,22 @@
   endif
 
   if (pst_ind > 0) then
+     !==> first guess pressure at interfaces.
+     do k=1,nlevs+1
+        pressi(:,k)=ak(k)+bk(k)*psfg
+     enddo
+     do k=1,nlevs
+        dpfg(:,k) = pressi(:,k)-pressi(:,k+1)
+     enddo
+     !==> analysis pressure at interfaces.
+     do k=1,nlevs+1
+        pressi(:,k)=ak(k)+bk(k)*psg
+     enddo
+     do k=1,nlevs
+        dpanl(:,k) = pressi(:,k)-pressi(:,k+1)
+        !if (nanal .eq. 1) print *,'k,dpanl,dpfg',minval(dpanl(:,k)),&
+        !maxval(dpanl(:,k)),minval(dpfg(:,k)),maxval(dpfg(:,k))
+     enddo
      do k=1,nlevs
 !       re-calculate vertical integral of mass flux div for first-guess
         if (use_gfs_nemsio) then
