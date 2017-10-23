@@ -23,6 +23,7 @@
      lwrite_peakwt,use_limit,lrun_subdirs,l_foreaft_thin,lobsdiag_forenkf,&
      obsmod_init_instr_table,obsmod_final_instr_table
   use obsmod, only: luse_obsdiag
+  use obsmod, only: netcdf_diag, binary_diag
   use aircraftinfo, only: init_aircraft,hdist_aircraft,aircraft_t_bc_pof,aircraft_t_bc, &
                           aircraft_t_bc_ext,biaspredt,upd_aircraft,cleanup_tail
   use obs_sensitivity, only: lobsensfc,lobsensincr,lobsensjb,lsensrecompute, &
@@ -49,13 +50,14 @@
                       use_prepb_satwnd,id_drifter
 
   use oneobmod, only: oblon,oblat,obpres,obhourset,obdattim,oneob_type,&
-     oneobtest,magoberr,maginnov,init_oneobmod,pctswitch,lsingleradob,obchan
-  use balmod, only: fstat
+     oneobtest,magoberr,maginnov,init_oneobmod,pctswitch,lsingleradob,obchan,&
+     anaz_rw,anel_rw,range_rw,sstn,lsingleradar,singleradar,learthrel_rw
+  use balmod, only: init_balmod,fstat,lnobalance
   use turblmod, only: use_pbl,init_turbl
   use qcmod, only: dfact,dfact1,create_qcvars,destroy_qcvars,&
       erradar_inflate,tdrerr_inflate,use_poq7,qc_satwnds,&
       init_qcvars,vadfile,noiqc,c_varqc,qc_noirjaco3,qc_noirjaco3_pole,&
-      buddycheck_t,buddydiag_save,njqc,vqc,closest_obs
+      buddycheck_t,buddydiag_save,njqc,vqc,closest_obs,vadwnd_l2rw_qc
   use pcpinfo, only: npredp,diag_pcp,dtphys,deltim,init_pcp
   use jfunc, only: iout_iter,iguess,miter,factqmin,factqmax, &
      factv,factl,factp,factg,factw10m,facthowv,factcldch,niter,niter_no_qc,biascor,&
@@ -322,18 +324,28 @@
 !  10-01-2015 guo       option to redistribute observations in 4d observer mode
 !  07-20-2015 zhu       re-structure codes for enabling all-sky/aerosol radiance assimilation, 
 !                       add radiance_mode_init, radiance_mode_destroy & radiance_obstype_destroy
+!  01-28-2016 mccarty   add netcdf_diag capability
 !  03-02-2016 s.liu/carley - remove use_reflectivity and use i_gsdcldanal_type
 !  03-10-2016 ejones    add control for gmi noise reduction
 !  03-25-2016 ejones    add control for amsr2 noise reduction
 !  04-18-2016 Yang      add closest_obs for selecting obs. from multi-report at a surface observation.
 !  06-24-2016 j. guo    added alwaysLocal => m_obsdiags::obsdiags_alwaysLocal to
 !                       namelist /SETUP/.
+!  08-12-2016 lippi     added namelist parameters for single radial wind
+!                       experiment (anaz_rw,anel_rw,range_rw,sstn,lsingleradar,
+!                       singleradar,learthrel_rw). added a radar station look-up
+!                       table.
 !  08-12-2016 Mahajan   NST stuff belongs in NST module, Adding a NST namelist
 !                       option
+!  08-24-2016 lippi     added nml option lnobalance to zero out all balance correlation
+!                       matricies for univariate analysis.
 !  08-28-2016 li - tic591: add use_readin_anl_sfcmask for consistent sfcmask
 !                          between analysis grids and others
 !  11-29-2016 shlyaeva  add lobsdiag_forenkf option for writing out linearized
 !                       H(x) for EnKF
+!  12-14-2016 lippi     added nml variable learthrel_rw for single radial
+!                       wind observation test, and nml option for VAD QC
+!                       vadwnd_l2rw_qc of level 2 winds.
 !  02-02-2017 Hu        added option i_coastline to turn on the observation
 !                              operator for surface observations along the coastline area
 !  04-01-2017 Hu        added option i_gsdqc to turn on special observation qc
@@ -504,6 +516,8 @@
 !     diagnostic file on 1st outer iteration.  The Jacobian can then be used by
 !     the EnKF to compute ensemble perturbations in observation space.
 !     luse_obsdiag - use obsdiags (useful when running EnKF observers; e.g., echo Jo table) 
+!     binary_diag - trigger binary diag-file output (being phased out)
+!     netcdf_diag - trigger netcdf diag-file output
 !
 !     NOTE:  for now, if in regional mode, then iguess=-1 is forced internally.
 !            add use of guess file later for regional mode.
@@ -535,7 +549,8 @@
        lwrite_peakwt, use_gfs_nemsio,liauon,use_prepb_satwnd,l4densvar,ens_nstarthr,&
        use_gfs_stratosphere,pblend0,pblend1,step_start,diag_precon,lrun_subdirs,&
        use_sp_eqspace,lnested_loops,lsingleradob,thin4d,use_readin_anl_sfcmask,&
-       luse_obsdiag,id_drifter,verbose
+       netcdf_diag,binary_diag,&
+       luse_obsdiag,id_drifter,verbose,lsingleradar,singleradar,lnobalance
 
 ! GRIDOPTS (grid setup variables,including regional specific variables):
 !     jcap     - spectral resolution
@@ -735,7 +750,7 @@
        vadfile,noiqc,c_varqc,blacklst,use_poq7,hilbert_curve,tcp_refps,tcp_width,&
        tcp_ermin,tcp_ermax,qc_noirjaco3,qc_noirjaco3_pole,qc_satwnds,njqc,vqc,&
        aircraft_t_bc_pof,aircraft_t_bc,aircraft_t_bc_ext,biaspredt,upd_aircraft,cleanup_tail,&
-       hdist_aircraft,buddycheck_t,buddydiag_save,closest_obs
+       hdist_aircraft,buddycheck_t,buddydiag_save,closest_obs,vadwnd_l2rw_qc
 
 ! OBS_INPUT (controls input data):
 !      dmesh(max(dthin))- thinning mesh for each group
@@ -762,7 +777,7 @@
 
   namelist/singleob_test/maginnov,magoberr,oneob_type,&
        oblat,oblon,obpres,obdattim,obhourset,pctswitch,&
-       obchan
+       obchan,anel_rw,anaz_rw,range_rw,sstn,learthrel_rw
 
 ! SUPEROB_RADAR (level 2 bufr file to radar wind superobs):
 !      del_azimuth     - azimuth range for superob box  (default 5 degrees)
@@ -1056,6 +1071,7 @@
   call init_co
   call init_convinfo
   call init_jfunc
+  call init_balmod
   call init_berror
   call init_anberror  ! RTodling: alloc vectors should move to create
   call init_grid
@@ -1440,6 +1456,11 @@
      dtype(1)=oneob_type
      if(dtype(1)=='u' .or. dtype(1)=='v')dtype(1)='uv'
      dsis(1)=dtype(1)
+     if(trim(dtype(1))=='rw') then ! Reset some values for radial wind single ob.
+        dfile(1)='l2rwbufr'
+        dplat='null'
+        dsis(1)='l2rw'
+     endif
   endif
 
 ! Single radiance assimilation case
