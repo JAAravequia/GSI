@@ -874,6 +874,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                  rdiagbufp(19,iip) = ddiff              !qob-qges           ! obs-ges w/o bias correction (future slot)
 
                  rdiagbufp(20,iip) = qsges              ! guess saturation specific humidity
+                 rdiagbuf(21,ii) = 1e+10              ! spread (filled in by EnKF)
               else
                  iip=3*nobs
               endif
@@ -1069,6 +1070,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(19,ii) = qob-qges           ! obs-ges w/o bias correction (future slot)
 
         rdiagbuf(20,ii) = qsges              ! guess saturation specific humidity
+        rdiagbuf(21,ii) = 1e+10              ! spread (filled in by EnKF)
 
         ioff=ioff0
         if (lobsdiagsave) then
@@ -1095,8 +1097,10 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         endif
 
         if (twodvar_regional) then
-           rdiagbuf(ioff+1,ii) = data(idomsfc,i) ! dominate surface type
-           rdiagbuf(ioff+2,ii) = data(izz,i)     ! model terrain at ob location
+           ioff = ioff + 1
+           rdiagbuf(ioff,ii) = data(idomsfc,i) ! dominate surface type
+           ioff = ioff + 1
+           rdiagbuf(ioff,ii) = data(izz,i)     ! model terrain at ob location
            r_prvstg            = data(iprvd,i)
            cprvstg(ii)         = c_prvstg        ! provider name
            r_sprvstg           = data(isprvd,i)

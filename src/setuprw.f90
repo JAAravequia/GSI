@@ -963,6 +963,9 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(21,ii)=data(itilt,i)*rad2deg! tilt angle
         rdiagbuf(22,ii) = factw              ! 10m wind reduction factor
 
+        rdiagbuf(23,ii) = 1.e+10             ! ges ensemble spread (filled in EnKF)
+        rdiagbuf(24,ii) = 1.e+10             ! ges ensemble spread (filled in EnKF)
+
         ioff=ioff0
         if (lobsdiagsave) then
            do jj=1,miter 

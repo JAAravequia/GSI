@@ -1591,6 +1591,8 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         end if
 
         rdiagbuf(23,ii) = factw              ! 10m wind reduction factor
+        rdiagbuf(24,ii) = 1.e+10             ! u spread (filled in by EnKF)
+        rdiagbuf(25,ii) = 1.e+10             ! v spread (filled in by EnKF)
 
         ioff=ioff0
         if (lobsdiagsave) then
@@ -1623,8 +1625,10 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         endif
 
         if (twodvar_regional) then
-           rdiagbuf(ioff+1,ii) = data(idomsfc,i) ! dominate surface type
-           rdiagbuf(ioff+2,ii) = data(izz,i)     ! model terrain at ob location
+           ioff = ioff + 1
+           rdiagbuf(ioff,ii) = data(idomsfc,i) ! dominate surface type
+           ioff = ioff + 1
+           rdiagbuf(ioff,ii) = data(izz,i)     ! model terrain at ob location
            r_prvstg            = data(iprvd,i)
            cprvstg(ii)         = c_prvstg        ! provider name
            r_sprvstg           = data(isprvd,i)

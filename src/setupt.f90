@@ -1471,6 +1471,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
     rdiagbuf(17,ii) = data(itob,i)       ! temperature observation (K)
     rdiagbuf(18,ii) = ddiff              ! obs-ges used in analysis (K)
     rdiagbuf(19,ii) = tob-tges           ! obs-ges w/o bias correction (K) (future slot)
+    rdiagbuf(20,ii) = 1.e10              ! spread (filled in by EnKF)
     if (aircraft_t_bc_pof .or. aircraft_t_bc .or. aircraft_t_bc_ext) then
        rdiagbuf(20,ii) = data(ipof,i)       ! data pof
        rdiagbuf(21,ii) = data(ivvlc,i)      ! data vertical velocity
@@ -1503,18 +1504,20 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
     endif
 
     if (twodvar_regional) then
-       rdiagbuf(idia+1,ii) = data(idomsfc,i) ! dominate surface type
-       rdiagbuf(idia+2,ii) = data(izz,i)     ! model terrain at observation location
+       idia = idia + 1
+       rdiagbuf(idia,ii) = data(idomsfc,i) ! dominate surface type
+       idia = idia + 1
+       rdiagbuf(idia,ii) = data(izz,i)     ! model terrain at observation location
        r_prvstg            = data(iprvd,i)
        cprvstg(ii)         = c_prvstg        ! provider name
        r_sprvstg           = data(isprvd,i)
        csprvstg(ii)        = c_sprvstg       ! subprovider name
     endif
 
-        if (save_jacobian) then
-           call writearray(dhx_dx, rdiagbuf(idia+1:nreal,ii))
-           idia = idia + size(dhx_dx)
-        endif
+    if (save_jacobian) then
+       call writearray(dhx_dx, rdiagbuf(idia+1:nreal,ii))
+       idia = idia + size(dhx_dx)
+    endif
 
   end subroutine contents_binary_diag_
 

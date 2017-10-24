@@ -1609,6 +1609,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
         rdiagbuf(4,1,ii) = preso3l             ! override solar zenith angle with a reference pressure (in hPa)
         rdiagbuf(5,1,ii) = rmiss               ! fovn
         rdiagbuf(6,1,ii) = obserror            ! ozone mixing ratio precision
+        rdiagbuf(7,1,ii) = 1.e+10              ! spread (filled in by EnKF)
 
         if (lobsdiagsave) then
            idia=6

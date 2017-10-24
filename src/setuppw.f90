@@ -710,6 +710,7 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(17,ii) = dpw                ! total precipitable water obs (kg/m**2)
         rdiagbuf(18,ii) = ddiff              ! obs-ges used in analysis (kg/m**2)
         rdiagbuf(19,ii) = dpw-pwges          ! obs-ges w/o bias correction (kg/m**2) (future slot)
+        rdiagbuf(20,ii) = 1.e+10             ! ensemble ges spread (filled in by EnKF)
 
         ioff=ioff0
         if (lobsdiagsave) then

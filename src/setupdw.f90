@@ -894,6 +894,8 @@ subroutine setupdw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(25,ii) = data(iatd,i)         ! atmospheric depth
         rdiagbuf(26,ii) = data(ilob,i)         ! line of sight component of wind orig.
 
+        rdiagbuf(27,ii) = 1.e+10               ! ges ensemble spread (filled in by EnKF)
+
         ioff=ioff0
         if (lobsdiagsave) then
            do jj=1,miter 
