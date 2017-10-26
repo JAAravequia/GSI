@@ -1874,7 +1874,6 @@
 !           open(4,file=trim(diag_rad_file),form='unformatted',status='unknown',position='rewind')
            call nc_diag_init(diag_rad_file)
            call nc_diag_chaninfo_dim_set(nchanl)
-
         else
 !           open(4,file=trim(diag_rad_file),form='unformatted',status='old',position='append')
         endif
@@ -2309,6 +2308,10 @@
                  call nc_diag_metadata("BC_Sine_Latitude",                      predbias(7,ich_diag(i))         )             ! sin(lat) bias correction term
                  call nc_diag_metadata("BC_Emissivity",                         predbias(8,ich_diag(i))         )             ! emissivity sensitivity bias correction term
                  call nc_diag_metadata("BC_Fixed_Scan_Position",                predbias(npred+1,ich_diag(i))   )             ! external scan angle
+
+                 if (lwrite_peakwt) then
+                    call nc_diag_metadata("Press_Max_Weight_Function",          weightmax(ich_diag(i))          )
+                 endif
 !                 if (adp_anglebc) then
 !                    do j=npred-angord+1, npred
 !                       predbias_angord(j-npred-angord) = predbias(j,ich_diag(i) )

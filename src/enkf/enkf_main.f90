@@ -75,7 +75,7 @@ program enkf_main
  ! reads namelist parameters.
  use params, only : read_namelist,letkf_flag,readin_localization,lupd_satbiasc,&
                     numiter, nanals, lupd_obspace_serial, write_spread_diag,   &
-                    lobsdiag_forenkf
+                    lobsdiag_forenkf, netcdf_diag
  ! mpi functions and variables.
  use mpisetup, only:  mpi_initialize, mpi_initialize_io, mpi_cleanup, nproc, &
                        mpi_wtime, mpi_comm_world
@@ -105,6 +105,7 @@ program enkf_main
  ! initialize radinfo variables
  use radinfo, only: init_rad, init_rad_vars
  use omp_lib, only: omp_get_max_threads
+ use read_diag, only: set_netcdf_read
 
  implicit none
  integer(i_kind) j,n,nth,ierr
@@ -125,6 +126,10 @@ program enkf_main
 
  ! Initialize derived radinfo variables
  call init_rad_vars()
+
+ ! Initialize read_diag
+ call set_netcdf_read(netcdf_diag)
+
 
  nth= omp_get_max_threads()
  if(nproc== 0)write(6,*) 'enkf_main:  number of threads ',nth

@@ -32,8 +32,8 @@ module readsatobs
 use kinds, only: r_kind,i_kind,r_single,r_double
 use read_diag, only: diag_data_fix_list,diag_header_fix_list,diag_header_chan_list, &
     diag_data_chan_list,diag_data_extra_list,read_radiag_data,read_radiag_header, &
-    diag_data_name_list
-use params, only: nsats_rad, nsatmax_rad, dsis, sattypes_rad, npefiles
+    diag_data_name_list, open_radiag, close_radiag
+use params, only: nsats_rad, nsatmax_rad, dsis, sattypes_rad, npefiles, netcdf_diag
 
 implicit none
 
@@ -105,14 +105,15 @@ subroutine get_num_satobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
            else ! read raw, unconcatenated pe* files.
                obsfile =&
                trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'
+               if (netcdf_diag) obsfile = trim(obsfile)//'.nc4'
            endif
 
            inquire(file=obsfile,exist=fexist)
            if (.not.fexist) cycle peloop
            nkeep = 0
 
-           open(iunit,form="unformatted",file=obsfile,iostat=ios)
-           rewind(iunit)
+           call open_radiag(obsfile,iunit)
+
            if (init_pass) then
               call read_radiag_header(iunit,npred_radiag,lretrieval,header_fix0,header_chan0,data_name0,iflag,lverbose)
               if (iflag /= 0) exit
@@ -140,7 +141,7 @@ subroutine get_num_satobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
               end do chan
            enddo
            num_obs_tot = num_obs_tot + nkeep
-           close(iunit)
+           call close_radiag(obsfile,iunit)
            if (ipe .eq. npefiles) then
               write(6,100) nsat,trim(sattypes_rad(nsat)),num_obs_tot
 100           format(2x,i3,2x,a20,2x,'num_obs_tot= ',i9)
@@ -252,12 +253,12 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
      else ! read raw, unconcatenated pe* files.
          obsfile =&
          trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'
+         if (netcdf_diag) obsfile = trim(obsfile)//'.nc4'
      endif
      inquire(file=obsfile,exist=fexist)
      if(.not.fexist) cycle peloop
+     call open_radiag(obsfile,iunit)
 
-     open(iunit,form="unformatted",file=obsfile)
-     rewind(iunit)
      if (init_pass) then
         call read_radiag_header(iunit,npred_radiag,lretrieval,header_fix,header_chan,data_name,iflag,lverbose)
         if( iflag /= 0 ) exit
@@ -274,10 +275,11 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
        else ! read raw, unconcatenated pe* files.
           obsfile2 =&
           trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id2))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'
+          if (netcdf_diag) obsfile2 = trim(obsfile2)//'.nc4'
        endif
 
-       open(iunit2,form="unformatted",file=obsfile2)
-       rewind(iunit2)
+       call open_radiag(obsfile2, iunit2)
+
        if (init_pass2) then
           call read_radiag_header(iunit2,npred_radiag,lretrieval,header_fix2,header_chan2,data_name2,iflag2,lverbose)
           init_pass2 = .false.
@@ -304,6 +306,7 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
         end if
       end if
       chan:do n=1,header_fix%nchan
+
          nobsdiag = nobsdiag + 1
          if(header_chan(n)%iuse<1) cycle chan
          indxsat=header_chan(n)%iochan
@@ -318,6 +321,7 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
             if(abs(data_chan(n)%tbobs) > 1.e9_r_kind) cycle chan
          endif
          nobs = nobs + 1 
+
          x_used(nobsdiag) = 1
          if (nobs > nobs_max) then
              print *,'warning:  exceeding array bounds in readinfo_from_file',&
@@ -389,10 +393,9 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
       enddo chan
      enddo
 
+     call close_radiag(obsfile,iunit)
 
-     close(iunit)
-     if (twofiles) close(iunit2)
-
+     if (twofiles) call close_radiag(obsfile2,iunit2)
      enddo peloop ! ipe
  enddo ! satellite
  if (nanal == nanals) print *,'time in calc_linhx for sat obs on proc',nproc,' = ',tsum
