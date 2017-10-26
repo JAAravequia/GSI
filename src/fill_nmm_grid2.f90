@@ -120,7 +120,7 @@ subroutine fill_nmm_grid2(gin,nx,ny,gout,igtype,iorder)
         if(b(i,j)>test) then
            ip=i+1 ; if(ip>2*nx-1) ip=i-1
            im=i-1 ; if(im<1) im=i+1
-           b(i,j)=half*(b(im,j)+b(ip,j))
+           b(i,j)=0.5_r_single*(b(im,j)+b(ip,j))
         end if
      end do
   end do
@@ -131,7 +131,7 @@ subroutine fill_nmm_grid2(gin,nx,ny,gout,igtype,iorder)
      jp=j+1 ; if(jp>ny)   jp=j-1
      jm=j-1 ; if(jm<1) jm=j+1
      do i=1,2*nx-1,2*nx-2
-        if(b(i,j)>test) b(i,j)=half*(b(i,jm)+b(i,jp))
+        if(b(i,j)>test) b(i,j)=0.5_r_single*(b(i,jm)+b(i,jp))
      end do
   end do
 
@@ -144,7 +144,7 @@ subroutine fill_nmm_grid2(gin,nx,ny,gout,igtype,iorder)
         if(b(i,j)>test) then
            ip=i+1 ; if(ip>2*nx-1) ip=i-1
            im=i-1 ; if(im<1)      im=i+1
-           b(i,j)=quarter*(b(ip,j)+b(im,j)+b(i,jp)+b(i,jm))
+           b(i,j)=0.25_r_single*(b(ip,j)+b(im,j)+b(i,jp)+b(i,jm))
         end if
      end do
   end do

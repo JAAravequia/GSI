@@ -93,7 +93,7 @@ subroutine half_nmm_grid2(gin,nx,ny,gout,igtype,iorder)
         do i=1,nx
            im=i-1 ; if(im<1) im=i
            i0=i      ; if(i==nx)   i0=im
-           c(i,jj)=quarter*(gin(im,j)+gin(i0,j)+gin(i,jp)+gin(i,jm))
+           c(i,jj)=0.25_r_single*(gin(im,j)+gin(i0,j)+gin(i,jp)+gin(i,jm))
         end do
      end do
   end if

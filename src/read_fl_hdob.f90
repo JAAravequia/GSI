@@ -216,7 +216,7 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
      write(6,*)'READ_FL_HDOB: begin to read flight-level high density data ...'
 
 !    Initialize parameters
-     call init_constants(.true.)
+!    call init_constants(regional)
 
 !    Set common variables
      ltob   = obstype == 't'

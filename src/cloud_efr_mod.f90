@@ -585,7 +585,7 @@ end subroutine set_cloud_lower_bound
       real(r_kind) :: t
       real(r_kind) :: tr
 
-      call init_constants(.true.)
+!     call init_constants(regional)
 
       tr=ttp/t
  

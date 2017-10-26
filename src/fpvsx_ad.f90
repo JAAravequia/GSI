@@ -66,7 +66,7 @@ subroutine fpvsx_ad( t, es, t_ad, es_ad, adjoint )
 !----------------------------------------------
 ! FUNCTION AND TAPE COMPUTATIONS
 !----------------------------------------------
-call init_constants(.false.)
+! call init_constants(regional)
 
   tr = ttp/t
   if (t >= ttp) then
