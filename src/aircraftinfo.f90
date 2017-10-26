@@ -49,7 +49,7 @@ module aircraftinfo
   public :: upd_pred_t
   public :: upd_aircraft
   public :: nsort,itail_sort,idx_sort
-
+  public :: hdist_aircraft
   logical :: aircraft_t_bc ! logical to turn off or on the aircraft temperature bias correction
   logical :: aircraft_t_bc_pof ! logical to turn off or on the aircraft temperature bias correction with pof
   logical :: aircraft_t_bc_ext ! logical to turn off or on the externally supplied aircraft bias correction
@@ -70,6 +70,7 @@ module aircraftinfo
   integer(i_kind),dimension(max_tail):: timelist    ! time stamp
   real(r_kind):: biaspredt                          ! berror var for temperature bias correction coefficients
   real(r_kind):: upd_pred_t                         ! =1 update bias; =0 no update
+  real(r_kind):: hdist_aircraft                     ! horizontal distance threshold for errormod_aircraft
   real(r_kind),allocatable,dimension(:,:):: predt        ! coefficients for predictor part of bias correction
 
   real(r_kind),allocatable,dimension(:,:):: varA_t
@@ -120,6 +121,8 @@ contains
     upd_aircraft=.true.
     upd_pred_t=one
 
+    hdist_aircraft=60000.0_r_kind
+
   end subroutine init_aircraft
 
 
@@ -151,6 +154,7 @@ contains
     use constants, only: zero,zero_quad
     use mpimod, only: mype
     use obsmod, only: iadate
+    use gsi_io, only: verbose
     implicit none
 
     integer(i_kind) j,k,lunin,nlines,ip,istat
@@ -163,11 +167,13 @@ contains
     character(len=1):: cb,cb0
     character(len=10):: tailwk
     character(len=150):: crecord
-    logical pcexist
+    logical pcexist,print_verbose
 
     data lunin / 49 /
 
 
+    print_verbose = .false. .and. mype == 0
+    if(verbose .and. mype == 0)print_verbose=.true.
 !   Determine number of entries in aircraft bias file
     inquire(file='aircftbias_in',exist=pcexist)
     if (.not. pcexist) then 
@@ -194,15 +200,15 @@ contains
     ntail = j
     ntail_update = j
 
-    if (mype==0) then
+    if (print_verbose) then
        write(6,120) ntail
 120    format('AIRCRAFTINFO_READ:  ntail=',1x,i6)
-       if (ntail > max_tail) then 
-          write(6,*)'AIRCRAFTINFO_READ:  ***ERROR*** ntail exceeds max_tail'
-          write(6,*)'AIRCRAFTINFO_READ:  stop program execution'
-          call stop2(340)
-       end if
     endif
+    if (ntail > max_tail) then 
+       write(6,*)'AIRCRAFTINFO_READ:  ***ERROR*** ntail exceeds max_tail'
+       write(6,*)'AIRCRAFTINFO_READ:  stop program execution'
+       call stop2(340)
+    end if
     rewind(lunin)
 
     allocate(predt(npredt,max_tail))
@@ -222,8 +228,8 @@ contains
        j=j+1
        read(crecord,*) taillist(j),idx_tail(j),(predr(ip),ip=1,npredt),(ostatsx(ip),ip=1,npredt), &
                        (varx(ip),ip=1,npredt),timelist(j)
-!       if (mype==0) write(6,110) taillist(j),idx_tail(j),(predr(ip),ip=1,npredt), &
-!                    (ostatsx(ip),ip=1,npredt),(varx(ip),ip=1,npredt),timelist(j)
+       if (print_verbose) write(6,110) taillist(j),idx_tail(j),(predr(ip),ip=1,npredt), &
+                    (ostatsx(ip),ip=1,npredt),(varx(ip),ip=1,npredt),timelist(j)
        do ip=1,npredt
           ostats_t(ip,j)=ostatsx(ip)
           predt(ip,j)=predr(ip)

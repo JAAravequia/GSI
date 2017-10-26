@@ -147,7 +147,7 @@ module m_obsNode
   end interface
 
   abstract interface
-    function intrfc_mytype_
+    function intrfc_mytype_()
       import:: obsNode
       implicit none
       character(len=:),allocatable:: intrfc_mytype_
@@ -169,7 +169,6 @@ module m_obsNode
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   character(len=*),parameter :: myname='m_obsNode'
 
-!#define DEBUG_TRACE
 #include "mytrace.H"
 #include "myassert.H"
 

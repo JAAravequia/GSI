@@ -25,7 +25,8 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use gsi_4dvar, only: nobs_bins,hr_obsbin,min_offset
   use qcmod, only: npres_print,ptop,pbot,dfact,dfact1,qc_satwnds,njqc,vqc
   use oneobmod, only: oneobtest,oneob_type,magoberr,maginnov 
-  use gridmod, only: get_ijk,nsig,twodvar_regional,regional,rotate_wind_xy2ll
+  use gridmod, only: get_ijk,nsig,twodvar_regional,regional,wrf_nmm_regional,&
+      rotate_wind_xy2ll
   use guess_grids, only: nfldsig,hrdifsig,geop_hgtl,sfcmod_gfs
   use guess_grids, only: tropprs,sfcmod_mm5
   use guess_grids, only: ges_lnprsl,comp_fact10,pt_ll,pbl_height
@@ -153,6 +154,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !   2016-06-24  guo     - fixed the default value of obsdiags(:,:)%tail%luse to luse(i)
 !                       . removed (%dlat,%dlon) debris.
+!   2016-12-13  pondeca - add Tyndall & Horel QC for mesonet winds (WAF 2013, Vol. 8, pg. 285) to GSI's 2dvar option
 !   2017-03-31  Hu      -  addd option l_closeobs to use closest obs to analysis
 !                                     time in analysis
 !
@@ -780,9 +782,11 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         LNVD_omb = sqrt(dudiff*dudiff + dvdiff*dvdiff)
         LNVD_ratio = LNVD_omb / log(LNVD_wspd)
         LNVD_threshold = 3.0_r_kind
-        if(LNVD_ratio >= LNVD_threshold .or. &      ! LNVD check
-            (presw > prsfc-110.0_r_kind .and. isli /= 0))then ! near surface check 110 ~1km
-           error = zero
+        if( .not. wrf_nmm_regional) then   ! LNVD check not use for CAWV winds in HWRF
+           if(LNVD_ratio >= LNVD_threshold .or. &      ! LNVD check
+              (presw > prsfc-110.0_r_kind .and. isli /= 0))then ! near surface check 110 ~1km
+              error = zero
+           endif
         endif
 ! check for direction departure gt 50 deg 
         wdirdiffmax=50._r_kind
@@ -979,6 +983,12 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                ratio_errors = zero
            endif
         endif
+        if (itype==288 .or. itype==295) then !Tyndall & Horel QC for mesonet winds /(WAF 2013, Vol. 28, pg. 285)
+           if (spdob < one .and. (spdob-spdb) > five) then
+               error = zero
+               ratio_errors = zero
+           endif
+        endif
      endif
 
      if (ratio_errors*error <=tiny_r_kind) muse(i)=.false.
@@ -1099,7 +1109,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
         my_head%dlev = dpres
         my_head%factw= factw
-        call get_ijk(mm1,dlat,dlon,dpres,my_head%ij(1),my_head%wij(1))
+        call get_ijk(mm1,dlat,dlon,dpres,my_head%ij,my_head%wij)
 
         do j=1,8
            my_head%wij(j)=factw*my_head%wij(j)
@@ -1327,7 +1337,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !!! Set (i,j,k) indices of guess gridpoint that bound obs location
            my_head%dlev = dpres
            my_head%factw= 1._r_kind
-           call get_ijk(mm1,dlat,dlon,dpres,my_head%ij(1),my_head%wij(1))
+           call get_ijk(mm1,dlat,dlon,dpres,my_head%ij,my_head%wij)
 !!! find ddiff
 
            dudiff = dudiffsfc*(0.5_r_kind + 0.5_r_kind*ratio_PBL_height)

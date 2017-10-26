@@ -546,10 +546,10 @@ contains
           do k=0,npe-1
              kend(k)=kbegin(k+1)-1
           end do
-          if(mype == 0) then
-             write(6,*)' kbegin=',kbegin
-             write(6,*)' kend= ',kend
-          end if
+!         if(mype == 0) then
+!            write(6,*)' kbegin=',kbegin
+!            write(6,*)' kend= ',kend
+!         end if
           num_j_groups=jm/npe
           jextra=jm-num_j_groups*npe
           jbegin(0)=1
@@ -564,10 +564,10 @@ contains
           do j=0,npe-1
              jend(j)=min(jbegin(j+1)-1,jm)
           end do
-          if(mype == 0) then
-             write(6,*)' jbegin=',jbegin
-             write(6,*)' jend= ',jend
-          end if
+!         if(mype == 0) then
+!            write(6,*)' jbegin=',jbegin
+!            write(6,*)' jend= ',jend
+!         end if
           
           allocate(ibuf(im*jm,kbegin(mype):kend(mype)))
   
@@ -1075,6 +1075,7 @@ contains
     use gsi_bundlemod, only: gsi_bundlegetpointer
     use mpeu_util, only: die,getindex
     use control_vectors, only: cvars3d
+    use gsi_io, only: verbose
     implicit none
   
   ! Declare passed variables here
@@ -1131,6 +1132,7 @@ contains
     real(r_kind),pointer,dimension(:,:,:):: ges_qs=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_qg=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_qh=>NULL()
+    logical print_verbose
   
     associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
     end associate
@@ -1140,6 +1142,8 @@ contains
   !          jm -- number of NMM latitudes (y-points) on E-grid
   !          lm -- number of NMM vertical levels ( = nsig for now)
   
+       print_verbose=.false.
+       if(verbose)print_verbose=.true.
        sfc_rough = 0.05_r_kind   !default value
        good_o3mr=.false.  ! no input guess for ozone; will use gfs ozone
   
@@ -1171,19 +1175,23 @@ contains
        num_all_fields=num_nmm_fields*nfldsig
        num_loc_groups=num_all_fields/npe
   
-       if(mype == 0) write(6,'(" at 1 in read_wrf_nmm_netcdf_guess, lm            =",i6)')lm
-       if(mype == 0) write(6,'(" at 1 in read_wrf_nmm_netcdf_guess, num_nmm_fields=",i6)')num_nmm_fields
-       if(mype == 0) write(6,'(" at 1 in read_wrf_nmm_netcdf_guess, nfldsig       =",i6)')nfldsig
-       if(mype == 0) write(6,'(" at 1 in read_wrf_nmm_netcdf_guess, num_all_fields=",i6)')num_all_fields
-       if(mype == 0) write(6,'(" at 1 in read_wrf_nmm_netcdf_guess, npe           =",i6)')npe
-       if(mype == 0) write(6,'(" at 1 in read_wrf_nmm_netcdf_guess, num_loc_groups=",i6)')num_loc_groups
+       if(mype == 0 .and. print_verbose) then
+          write(6,'(" at 1 in read_wrf_nmm_netcdf_guess, lm            =",i6)')lm
+          write(6,'(" at 1 in read_wrf_nmm_netcdf_guess, num_nmm_fields=",i6)')num_nmm_fields
+          write(6,'(" at 1 in read_wrf_nmm_netcdf_guess, nfldsig       =",i6)')nfldsig
+          write(6,'(" at 1 in read_wrf_nmm_netcdf_guess, num_all_fields=",i6)')num_all_fields
+          write(6,'(" at 1 in read_wrf_nmm_netcdf_guess, npe           =",i6)')npe
+          write(6,'(" at 1 in read_wrf_nmm_netcdf_guess, num_loc_groups=",i6)')num_loc_groups
+       end if
        do 
           num_all_pad=num_loc_groups*npe
           if(num_all_pad >= num_all_fields) exit
           num_loc_groups=num_loc_groups+1
        end do
-       if(mype == 0) write(6,'(" at 1 in read_wrf_nmm_netcdf_guess, num_all_pad   =",i6)')num_all_pad
-       if(mype == 0) write(6,'(" at 1 in read_wrf_nmm_netcdf_guess, num_loc_groups=",i6)')num_loc_groups
+       if(mype == 0 .and. print_verbose) then
+           write(6,'(" at 1 in read_wrf_nmm_netcdf_guess, num_all_pad   =",i6)')num_all_pad
+           write(6,'(" at 1 in read_wrf_nmm_netcdf_guess, num_loc_groups=",i6)')num_loc_groups
+       end if
   
        allocate(all_loc(lat2,lon2,num_all_pad))
        allocate(jsig_skip(num_nmm_fields))
@@ -1503,12 +1511,12 @@ contains
              end do
           end do
   
-          if(mype == 10) write(6,*)' in read_wrf_nmm_netcdf_guess, min,max(ges_ps)=', &          
-               minval(ges_ps),maxval(ges_ps)                                                        
-          if(mype == 10) write(6,*)' in read_wrf_nmm_netcdf_guess, min,max(soil_moi)=', &
-               minval(soil_moi),maxval(soil_moi)
-          if(mype == 10) write(6,*)' in read_wrf_nmm_netcdf_guess, min,max(soil_temp)=', &
-               minval(soil_temp),maxval(soil_temp)
+!         if(mype == 10) write(6,*)' in read_wrf_nmm_netcdf_guess, min,max(ges_ps)=', &          
+!              minval(ges_ps),maxval(ges_ps)                                                        
+!         if(mype == 10) write(6,*)' in read_wrf_nmm_netcdf_guess, min,max(soil_moi)=', &
+!              minval(soil_moi),maxval(soil_moi)
+!         if(mype == 10) write(6,*)' in read_wrf_nmm_netcdf_guess, min,max(soil_temp)=', &
+!              minval(soil_temp),maxval(soil_temp)
           if(update_pint) then
              ier=0
              call gsi_bundlegetpointer(gsi_metguess_bundle(it),'pint', ges_pint, istatus)
@@ -1597,29 +1605,31 @@ contains
        
        call mpi_reduce(num_doubtful_sfct,num_doubtful_sfct_all,1,mpi_integer,mpi_sum,&
             0,mpi_comm_world,ierror)
-       if(mype == 0) write(6,*)' in read_wrf_nmm_netcdf_guess, num_doubtful_sfct_all = ',num_doubtful_sfct_all
-       if(mype == 0) write(6,*)' in read_wrf_nmm_netcdf_guess, num_doubtful_sfct_all = ',num_doubtful_sfct_all
-       if(mype == 10) write(6,*)' in read_wrf_nmm_netcdf_guess, min,max(sfct)=', &
-            minval(sfct),maxval(sfct)
-       if(mype == 10) write(6,*)' in read_wrf_nmm_netcdf_guess, min,max(veg_type)=', &
-            minval(veg_type),maxval(veg_type)
-       if(mype == 10) write(6,*)' in read_wrf_nmm_netcdf_guess, min,max(veg_frac)=', &
-            minval(veg_frac),maxval(veg_frac)
-       if(mype == 10) write(6,*)' in read_wrf_nmm_netcdf_guess, min,max(soil_type)=', &
-            minval(soil_type),maxval(soil_type)
-       if(mype == 10) write(6,*)' in read_wrf_nmm_netcdf_guess, min,max(isli)=', &
-            minval(isli),maxval(isli)
+       if(mype == 0 .and. print_verbose) then
+          write(6,*)' in read_wrf_nmm_netcdf_guess, num_doubtful_sfct_all = ',num_doubtful_sfct_all
+          write(6,*)' in read_wrf_nmm_netcdf_guess, num_doubtful_sfct_all = ',num_doubtful_sfct_all
+       end if
+!      if(mype == 10) write(6,*)' in read_wrf_nmm_netcdf_guess, min,max(sfct)=', &
+!           minval(sfct),maxval(sfct)
+!      if(mype == 10) write(6,*)' in read_wrf_nmm_netcdf_guess, min,max(veg_type)=', &
+!           minval(veg_type),maxval(veg_type)
+!      if(mype == 10) write(6,*)' in read_wrf_nmm_netcdf_guess, min,max(veg_frac)=', &
+!           minval(veg_frac),maxval(veg_frac)
+!      if(mype == 10) write(6,*)' in read_wrf_nmm_netcdf_guess, min,max(soil_type)=', &
+!           minval(soil_type),maxval(soil_type)
+!      if(mype == 10) write(6,*)' in read_wrf_nmm_netcdf_guess, min,max(isli)=', &
+!           minval(isli),maxval(isli)
        
        deallocate(all_loc,jsig_skip,igtype,identity)
        deallocate(temp1,itemp1)
   
        if (use_gfs_stratosphere) then
-          if (mype==0) write(6,*)'in read_wrf_nmm_netcdf: use_gfs_stratosphere ...beg'     
+          if (mype==0 .and. print_verbose) write(6,*)'in read_wrf_nmm_netcdf: use_gfs_stratosphere ...beg'     
           call add_gfs_stratosphere
-          if (mype==0) write(6,*)'in read_wrf_nmm_netcdf: use_gfs_stratosphere ...end'         
+          if (mype==0 .and. print_verbose) write(6,*)'in read_wrf_nmm_netcdf: use_gfs_stratosphere ...end'         
        endif
   
-       if (mype==0) then
+       if (mype==0 .and. print_verbose) then
           do k=1,nsig
              write(6,*)' in read_wrf_nmm_netcdf_k,ges_tv  =',k,ges_tv(10,10,k)   !debug            
              write(6,*)' in read_wrf_nmm_netcdf_k,ges_tsen=',k,ges_tsen(10,10,k,1) !debug        
@@ -1657,6 +1667,7 @@ contains
   !   2016_03_02  s.liu/carley   - remove use_reflectivity and use i_gsdcldanal_type
   !   2016_06_21  s.liu   - delete unused variable qhtmp
   !   2016_06_30  s.liu   - delete unused variable gridtype in read fraction
+  !   2016-08-12  lippi   - add include_w. If true, reads in guess vertical velocity (w) profile.
   !
   !   input argument list:
   !     mype     - pe number
@@ -1708,7 +1719,8 @@ contains
   ! Declare local parameters
   
   ! Declare local variables
-  
+    logical include_w  
+
   ! other internal variables
     character(255) wrfges
     character(len=*),parameter :: myname='read_nems_nmmb_guess:: '
@@ -1727,6 +1739,7 @@ contains
     real(r_kind),pointer,dimension(:,:  ):: ges_z   =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_u   =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_v   =>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_w   =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_tv  =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_pint=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_q   =>NULL()
@@ -1785,6 +1798,15 @@ contains
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q'  ,ges_q  ,istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'oz' ,ges_oz ,istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'pd' ,ges_pd,istatus );ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'w'  ,ges_w  ,istatus)
+       if (istatus==0) then
+          include_w=.true.
+          if(mype==0) write(6,*)'READ_WRF_NMM_GUESS: Using vertical velocity.'
+       else
+          include_w=.false.
+          if(mype==0) write(6,*)'READ_WRF_NMM_GUESS: NOT using vertical velocity.'
+       end if
+
        if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields, ier =',ier)
   
        if(mype==mype_input) then
@@ -1825,6 +1847,9 @@ contains
           call gsi_nemsio_read('vgrd','mid layer','V',kr,ges_v(:,:,k),   mype,mype_input)
           call gsi_nemsio_read('spfh','mid layer','H',kr,ges_q(:,:,k),   mype,mype_input)
           call gsi_nemsio_read('tmp' ,'mid layer','H',kr,ges_tsen(:,:,k,it),mype,mype_input)
+          if(include_w) then
+             call gsi_nemsio_read('w_tot','mid layer','H',kr,ges_w(:,:,k),mype,mype_input)
+          end if
           do i=1,lon2
              do j=1,lat2
                 ges_tv(j,i,k) = ges_tsen(j,i,k,it) * (one+fv*ges_q(j,i,k))

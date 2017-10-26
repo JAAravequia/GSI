@@ -86,6 +86,8 @@ subroutine read_cris(mype,val_cris,ithin,isfcalc,rmesh,jsatid,gstime,&
   use gsi_nstcouplermod, only: nst_gsi,nstinfo
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth,gsi_nstcoupler_deter
   use mpimod, only: npe
+  use gsi_io, only: verbose
+! use radiance_mod, only: rad_obs_type
 
   implicit none
 
@@ -168,7 +170,7 @@ subroutine read_cris(mype,val_cris,ithin,isfcalc,rmesh,jsatid,gstime,&
   real(r_kind) cdist,disterr,disterrmax,dlon00,dlat00,r01
 
   logical          :: outside,iuse,assim,valid
-  logical          :: cris
+  logical          :: cris,quiet
 
   integer(i_kind)  :: ifov, ifor, iscn, instr, ioff, ilat, ilon, sensorindex
   integer(i_kind)  :: i, l, iskip, bad_line, llll
@@ -192,7 +194,10 @@ subroutine read_cris(mype,val_cris,ithin,isfcalc,rmesh,jsatid,gstime,&
   real(r_kind),parameter:: tbmin  = 50._r_kind
   real(r_kind),parameter:: tbmax  = 550._r_kind
   real(r_kind),parameter:: rato   = 0.87997285_r_kind 
+  logical print_verbose
 
+  print_verbose = .false.
+  if(verbose)print_verbose=.true.
 ! Initialize variables
   maxinfo    =  31
   disterrmax=zero
@@ -220,7 +225,7 @@ subroutine read_cris(mype,val_cris,ithin,isfcalc,rmesh,jsatid,gstime,&
   end if
 
   if (nst_gsi > 0 ) then
-    call gsi_nstcoupler_skindepth(trim(obstype),zob)
+    call gsi_nstcoupler_skindepth(obstype,zob)
   endif
 
 !  write(6,*)'READ_CRIS: mype, mype_root,mype_sub, npe_sub,mpi_comm_sub', &
@@ -263,7 +268,7 @@ subroutine read_cris(mype,val_cris,ithin,isfcalc,rmesh,jsatid,gstime,&
 ! weighting between observations within a given thinning group.
   if (.not. assim) val_cris=zero
 
-  if (mype_sub==mype_root)write(6,*)'READ_CRIS:  ',nusis(ioff+1),' offset ',ioff
+  if (mype_sub==mype_root .and. print_verbose)write(6,*)'READ_CRIS:  ',nusis(ioff+1),' offset ',ioff
 
   senname = 'CRIS'
   
@@ -272,12 +277,13 @@ subroutine read_cris(mype,val_cris,ithin,isfcalc,rmesh,jsatid,gstime,&
 
 ! Load spectral coefficient structure  
   sensorlist(1)=sis
+  quiet=.not. verbose
   if( crtm_coeffs_path /= "" ) then
-     if(mype_sub==mype_root) write(6,*)'READ_CRIS: crtm_spccoeff_load() on path "'//trim(crtm_coeffs_path)//'"'
+     if(mype_sub==mype_root .and. print_verbose) write(6,*)'READ_CRIS: crtm_spccoeff_load() on path "'//trim(crtm_coeffs_path)//'"'
      error_status = crtm_spccoeff_load(sensorlist,&
-        File_Path = crtm_coeffs_path )
+        File_Path = crtm_coeffs_path,quiet=quiet )
   else
-     error_status = crtm_spccoeff_load(sensorlist)
+     error_status = crtm_spccoeff_load(sensorlist,quiet=quiet)
   endif
 
   if (error_status /= success) then
@@ -402,12 +408,13 @@ subroutine read_cris(mype,val_cris,ithin,isfcalc,rmesh,jsatid,gstime,&
            bufr_nchan = int(linele(5))
 
            bufr_size = size(temperature,1)
-           if ( bufr_size /= bufr_nchan ) then    ! allocation if
+           if ( bufr_size /= bufr_nchan ) then   
 !             Allocate the arrays needed for the channel and radiance array
               deallocate(temperature, allchan, bufr_chan_test)
               allocate(temperature(bufr_nchan))   ! dependent on # of channels in the bufr file
               allocate(allchan(2,bufr_nchan))
               allocate(bufr_chan_test(bufr_nchan))
+              bufr_chan_test(:)=0
            endif    ! allocation if
 
 !          CRIS field-of-view ranges from 1 to 9, corresponding to the 9 sensors measured
@@ -696,7 +703,7 @@ subroutine read_cris(mype,val_cris,ithin,isfcalc,rmesh,jsatid,gstime,&
               endif
            end do skip_loop
 
-           if(iskip > 0)write(6,*) ' READ_CRIS : iskip > 0 ',iskip
+           if(iskip > 0 .and. print_verbose)write(6,*) ' READ_CRIS : iskip > 0 ',iskip
 !          if( iskip >= 10 )cycle read_loop 
 
            crit1=crit1 + ten*float(iskip)

@@ -67,7 +67,7 @@ subroutine gesinfo(mype)
 !
 !$$$
   use kinds, only: i_kind,r_kind,r_single
-  use obsmod, only: iadate,ianldate,time_offset
+  use obsmod, only: iadate,ianldate,time_offset,iadatemn
   use gsi_4dvar, only: ibdate, iedate, iadatebgn, iadateend, iwinbgn,time_4dvar
   use gsi_4dvar, only: nhr_assimilation,min_offset
   use mpimod, only: npe
@@ -85,6 +85,7 @@ subroutine gesinfo(mype)
 
   use read_wrf_mass_files_mod, only: read_wrf_mass_files_class
   use read_wrf_nmm_files_mod, only: read_wrf_nmm_files_class
+  use gsi_io, only: verbose
   implicit none
 
 ! Declare passed variables
@@ -118,6 +119,7 @@ subroutine gesinfo(mype)
   type(ncepgfs_head):: gfshead
   type(ncepgfs_headv):: gfsheadv
   type(nemsio_gfile) :: gfile2
+  logical :: print_verbose
 
 !---------------------------------------------------------------------
 ! Get guess date and vertical coordinate structure from atmospheric
@@ -126,6 +128,8 @@ subroutine gesinfo(mype)
   mype_out=npe/2
 
 
+  print_verbose=.false.
+  if(verbose)print_verbose=.true.
 ! Handle non-GMAO interface (ie, NCEP interface)
   write(filename,'("sigf",i2.2)')nhr_assimilation
   inquire(file=filename,exist=fexist)
@@ -142,7 +146,13 @@ subroutine gesinfo(mype)
      idate4(3)=regional_time(3)  !  day
      idate4(4)=regional_time(1)  !  year
      hourg=regional_fhr          !  fcst hour
-
+! Handle RURTMA date:  get iadatemn 
+     iadatemn(1)=regional_time(1)  !  year
+     iadatemn(2)=regional_time(2)  !  month
+     iadatemn(3)=regional_time(3)  !  day
+     iadatemn(4)=regional_time(4)  !  hour
+     iadatemn(5)=regional_time(5)  !  minute
+     if(print_verbose)write (6,*) 'in gesinfo: iadatemn with minutes', iadatemn
 ! Handle NCEP global cases
   else
 
@@ -377,7 +387,7 @@ subroutine gesinfo(mype)
 
 
 !    Echo select header information to stdout
-     if(mype==mype_out) then
+     if(mype==mype_out .and. print_verbose) then
         if ( .not. use_gfs_nemsio ) then
            write(6,100) gfshead%jcap,gfshead%levs,gfshead%latb,gfshead%lonb,&
                 gfshead%ntrac,gfshead%ncldt,idvc5,gfshead%nvcoord,&
@@ -496,8 +506,13 @@ subroutine gesinfo(mype)
      
 
   if(mype==mype_out) then
-     write(6,*)'GESINFO:  Guess    date is ',idate4,hourg
-     write(6,*)'GESINFO:  Analysis date is ',iadate,ianldate,time_offset
+     if (twodvar_regional) then
+        write(6,*)'GESINFO: 2dvar-Guess-date is',regional_time
+        write(6,*)'GESINFO: Analysis date with minute: ',iadatemn
+     else
+        write(6,*)'GESINFO:  Guess    date is ',idate4,hourg
+        write(6,*)'GESINFO:  Analysis date is ',iadate,ianldate,time_offset
+     endif
   endif
 
   if (allocated(nems_vcoord))     deallocate(nems_vcoord)

@@ -106,12 +106,11 @@ subroutine glbsoi(mype)
 !
 !$$$
   use kinds, only: r_kind,i_kind
-  use constants, only: rearth
   use mpimod, only: npe
   use adjtest_obs, only: adtest_obs
   use jfunc, only: miter,jiter,jiterstart,jiterend,iguess,&
       write_guess_solution,R_option,&
-      tendsflag,xhatsave,yhatsave,create_jfunc,destroy_jfunc
+      xhatsave,yhatsave,create_jfunc,destroy_jfunc
   use anberror, only: anisotropic, &
       create_anberror_vars_reg,destroy_anberror_vars_reg,&
       create_anberror_vars,destroy_anberror_vars
@@ -123,8 +122,7 @@ subroutine glbsoi(mype)
   use balmod, only: create_balance_vars_reg,create_balance_vars, &
       destroy_balance_vars_reg,destroy_balance_vars,prebal,prebal_reg
   use compact_diffs, only: create_cdiff_coefs,inisph
-  use gridmod, only: nlat,nlon,nsig,rlats,regional,&
-      twodvar_regional,wgtlats
+  use gridmod, only: regional,twodvar_regional
   use guess_grids, only: nfldsig
   use obsmod, only: write_diag,perturb_obs,ditype,iadate
   use qcmod,only: njqc
@@ -159,6 +157,7 @@ subroutine glbsoi(mype)
 
   use m_prad, only: prad_updatePredx    ! was -- prad_bias()
   use m_obsdiags, only: obsdiags_write
+  use gsi_io,only: verbose
 
   implicit none
 
@@ -171,7 +170,10 @@ subroutine glbsoi(mype)
   integer(i_kind) jiterlast
   real(r_kind) :: zgg,zxy
   character(len=12) :: clfile
+  logical print_verbose
 
+  print_verbose=.false.
+  if(verbose)print_verbose=.true.
 
 !*******************************************************************************************
 !
@@ -283,7 +285,7 @@ subroutine glbsoi(mype)
 ! Main outer analysis loop
   do jiter=jiterstart,jiterlast
 
-     if (mype==0) write(6,*)'GLBSOI: jiter,jiterstart,jiterlast,jiterend=', &
+     if (mype==0) write(6,'(a44,4i5)')'GLBSOI: jiter,jiterstart,jiterlast,jiterend=', &
         jiter,jiterstart,jiterlast,jiterend
 
 !    Set up right hand side of analysis equation
@@ -334,7 +336,7 @@ subroutine glbsoi(mype)
            call pcinfo
 
 !          Standard run
-           if (mype==0) write(6,*)'GLBSOI:  START pcgsoi jiter=',jiter
+           if (mype==0 .and. print_verbose) write(6,*)'GLBSOI:  START pcgsoi jiter=',jiter
            call pcgsoi
         end if
 

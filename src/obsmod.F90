@@ -112,12 +112,18 @@ module obsmod
 !                          procedures into module m_prad in file prad_bias.f90.
 !   2015-09-03  guo      - moved type::obs_handle, its instance yobs, and its
 !                          allocation, into m_obsHeadBundle.F90.
+!   2016-03-07  pondeca  - add uwnd10m,vwnd10m
 !   2016-05-04  guo      - moved all ob_type and ob_head type-definitions into
 !                          their *own* class-style-modules, including 9 recent
 !                          new ob_types.
 !                        - cleaned some debris left from this and previous changes.
 !   2016-05-18  collard  - Added code to allow for historical naming conventions
 !                          for satellite instruments
+!   2015-03-31  wgu      - add isis(sensor/instrument/satellite id) in rad_ob_type to handle
+!                          instruments id in intrad inter-channel correlation
+!                          implementation.
+!   2016-07-19  wgu      - add isfctype - mask for surface type - to radiance obtype
+!   2016-07-19  kbathmann - add rsqrtinv and use_corr_obs to rad_ob_type
 !   2016-07-26  guo      - moved away most cldch_ob_type contents to a new module, m_cldchNode
 !   2016-08-20  guo      - moved (stpcnt,ll_jo,ib_jo) to stpjo.f90.
 !   2016-09-19  guo      - moved function dfile_format() to m_extOzone.F90
@@ -160,6 +166,7 @@ module obsmod
 !   def ndat         - total number of data types
 !   def ipoint       - pointer to input namelist for particular processor
 !   def iadate       - analysis date and time array
+!   def iadatemn     - similar to iadate, but with non-zero minute information
 !   def ianldate     - analysis date in YYYYMMDDHH variable
 !   def time_offset  - analysis relative time offset
 !   def dplat        - satellite (platform) id
@@ -179,8 +186,6 @@ module obsmod
 !   def dwtail       - doppler wind linked list tail
 !   def rwhead       - radial wind linked list head
 !   def rwtail       - radial wind linked list tail
-!   def srwhead      - superobed radial wind linked list head
-!   def srwtail      - superobed radial wind linked list tail
 !   def whead        - conventional wind linked list head
 !   def wtail        - conventional wind linked list tail
 !   def qhead        - moisture linked list head
@@ -223,6 +228,10 @@ module obsmod
 !   def lagtail      - lagrangian data linked list tail
 !   def wspd10mhead  - 10-wind speed linked list head
 !   def wspd10mtail  - 10-wind speed linked list tail
+!   def uwnd10mhead  - 10m-uwind linked list head
+!   def uwnd10mtail  - 10m-uwind linked list tail
+!   def vwnd10mhead  - 10m-uwind linked list head
+!   def vwnd10mtail  - 10m-uwind linked list tail
 !   def td2mhead     - 2m dew point linked list head
 !   def td2mtail     - 2m dew point linked list tail
 !   def mxtmhead     - daily maximum temperature linked list head
@@ -235,6 +244,10 @@ module obsmod
 !   def howvtail     - significant wave height linked list tail
 !   def cldchhead    - cloud ceiling height linked list head
 !   def cldchtail    - cloud ceiling height linked list tail
+!   def uwnd10mhead  - 10m-uwind linked list head
+!   def uwnd10mtail  - 10m-uwind linked list tail
+!   def vwnd10mhead  - 10m-vwind linked list head
+!   def vwnd10mtail  - 10m-vwind linked list tail
 !   def lunobs_obs   - unit to save satellite observation
 !   def iout_rad     - output unit for satellite stats
 !   def iout_pcp     - output unit for precipitation stats
@@ -248,7 +261,6 @@ module obsmod
 !   def iout_pw      - output unit for precipitable water stats
 !   def iout_rw      - output unit for radar wind stats
 !   def iout_dw      - output unit for doppler wind stats
-!   def iout_srw     - output unit for radar superob wind stats
 !   def iout_gps     - output unit for gps refractivity or bending angle stats
 !   def iout_sst     - output unit for conventional sst stats
 !   def iout_gust    - output unit for conventional gust stats
@@ -258,12 +270,16 @@ module obsmod
 !   def iout_lcbas   - output unit for lowest cloud base stats
 !   def iout_lag     - output unit for conventional lag stats
 !   def iout_wspd10m - output unit for conventional 10-m wind speed stats
+!   def iout_uwnd10m - output unit for conventional 10-m uwnd stats
+!   def iout_vwnd10m - output unit for conventional 10-m vwnd stats
 !   def iout_td2m    - output unit for conventional 2-m dew point
 !   def iout_mxtm    - output unit for conventional daily maximum temperature
 !   def iout_mitm    - output unit for conventional daily minimum temperature
 !   def iout_pmsl    - output unit for conventional pressure at mean sea level
 !   def iout_howv    - output unit for conventional significant wave height stats
 !   def iout_cldch   - output unit for conventional cldch stats
+!   def iout_uwnd10m - output unit for conventional 10-m uwind stats
+!   def iout_vwnd10m - output unit for conventional 10-m vwind stats
 !   def iout_pm2_5   - output unit for pm2_5 stats
 !   def iout_pm10    - output unit for pm10 stats
 !   def mype_t       - task to handle temperature stats
@@ -273,7 +289,6 @@ module obsmod
 !   def mype_pw      - task to handle precipitable water stats
 !   def mype_rw      - task to handle radar wind stats
 !   def mype_dw      - task to handle doppler wind stats
-!   def mype_srw     - task to handle radar superob wind stats
 !   def mype_gps     - task to handle gps observation stats
 !   def mype_sst     - task to handle conventional sst stats
 !   def mype_gust    - task to handle conventional gust stats
@@ -283,6 +298,8 @@ module obsmod
 !   def mype_lcbas   - task to handle lowest cloud base stats
 !   def mype_lag     - task to handle conventional lag stats
 !   def mype_wspd10m - task to handle conventional 10-m wind speed stats
+!   def mype_uwnd10m - task to handle conventional 10-m uwnd stats
+!   def mype_vwnd10m - task to handle conventional 10-m vwnd stats
 !   def mype_td2m    - task to handle conventional 2-m dew point
 !   def mype_mxtm    - task to handle conventional daily maximum temperature 
 !   def mype_mitm    - task to handle conventional daily minimum temperature
@@ -354,11 +371,12 @@ module obsmod
   public :: destroyobs
   public :: destroy_obsmod_vars
   public :: ran01dom,dval_use
-  public :: iout_pcp,iout_rad,iadate,write_diag,reduce_diag,oberrflg,bflag,ndat,dthin,dmesh,l_do_adjoint
+  public :: iout_pcp,iout_rad,iadate,iadatemn,write_diag,reduce_diag,oberrflg,bflag,ndat,dthin,dmesh,l_do_adjoint
   public :: lsaveobsens
   public :: i_ps_ob_type,i_t_ob_type,i_w_ob_type,i_q_ob_type
-  public :: i_spd_ob_type,i_srw_ob_type,i_rw_ob_type,i_dw_ob_type,i_sst_ob_type
+  public :: i_spd_ob_type,i_rw_ob_type,i_dw_ob_type,i_sst_ob_type
   public :: i_gust_ob_type,i_vis_ob_type,i_pblh_ob_type,i_wspd10m_ob_type,i_td2m_ob_type
+  public :: i_uwnd10m_ob_type,i_vwnd10m_ob_type
   public :: i_mxtm_ob_type,i_mitm_ob_type,i_pmsl_ob_type,i_howv_ob_type,i_tcamt_ob_type,i_lcbas_ob_type
   public :: i_cldch_ob_type, iout_cldch, mype_cldch
   public :: i_pw_ob_type,i_pcp_ob_type,i_oz_ob_type,i_o3l_ob_type,i_colvk_ob_type,i_gps_ob_type
@@ -376,12 +394,13 @@ module obsmod
   public :: i_pm10_ob_type
   public :: nloz_v8,nloz_v6,nloz_omi,nlco,nobskeep
   public :: grids_dim,rmiss_single,nchan_total,mype_sst,mype_gps
-  public :: mype_uv,mype_dw,mype_rw,mype_srw,mype_q,mype_tcp,mype_lag,mype_ps,mype_t
-  public :: mype_pw,iout_rw,iout_dw,iout_srw,iout_sst,iout_pw,iout_t,iout_q,iout_tcp
+  public :: mype_uv,mype_dw,mype_rw,mype_q,mype_tcp,mype_lag,mype_ps,mype_t
+  public :: mype_pw,iout_rw,iout_dw,iout_sst,iout_pw,iout_t,iout_q,iout_tcp
   public :: iout_lag,iout_uv,iout_gps,iout_ps
   public :: mype_gust,mype_vis,mype_pblh,iout_gust,iout_vis,iout_pblh
   public :: mype_tcamt,mype_lcbas,iout_tcamt,iout_lcbas
   public :: mype_wspd10m,mype_td2m,iout_wspd10m,iout_td2m
+  public :: mype_uwnd10m,mype_vwnd10m,iout_uwnd10m,iout_vwnd10m
   public :: mype_mxtm,mype_mitm,iout_mxtm,iout_mitm
   public :: mype_pmsl,mype_howv,iout_pmsl,iout_howv
   public :: lread_obs_save,obs_input_common,lread_obs_skip
@@ -428,37 +447,38 @@ module obsmod
   integer(i_kind),parameter::   i_w_ob_type= 3    ! w_ob_type
   integer(i_kind),parameter::   i_q_ob_type= 4    ! q_ob_type
   integer(i_kind),parameter:: i_spd_ob_type= 5    ! spd_ob_type
-  integer(i_kind),parameter:: i_srw_ob_type= 6    ! srw_ob_type
-  integer(i_kind),parameter::  i_rw_ob_type= 7    ! rw_ob_type
-  integer(i_kind),parameter::  i_dw_ob_type= 8    ! dw_ob_type
-  integer(i_kind),parameter:: i_sst_ob_type= 9    ! sst_ob_type
-  integer(i_kind),parameter::  i_pw_ob_type=10    ! pw_ob_type
-  integer(i_kind),parameter:: i_pcp_ob_type=11    ! pcp_ob_type
-  integer(i_kind),parameter::  i_oz_ob_type=12    ! oz_ob_type
-  integer(i_kind),parameter:: i_o3l_ob_type=13    ! o3l_ob_type
-  integer(i_kind),parameter:: i_gps_ob_type=14    ! gps_ob_type
-  integer(i_kind),parameter:: i_rad_ob_type=15    ! rad_ob_type
-  integer(i_kind),parameter:: i_tcp_ob_type=16    ! tcp_ob_type
-  integer(i_kind),parameter:: i_lag_ob_type=17    ! lag_ob_type
-  integer(i_kind),parameter:: i_colvk_ob_type= 18 ! colvk_ob_type
-  integer(i_kind),parameter:: i_aero_ob_type =19  ! aero_ob_type
-  integer(i_kind),parameter:: i_aerol_ob_type=20  ! aerol_ob_type
-  integer(i_kind),parameter:: i_pm2_5_ob_type=21  ! pm2_5_ob_type
-  integer(i_kind),parameter:: i_gust_ob_type=22   ! gust_ob_type
-  integer(i_kind),parameter:: i_vis_ob_type=23    ! vis_ob_type
-  integer(i_kind),parameter:: i_pblh_ob_type=24   ! pblh_ob_type
-  integer(i_kind),parameter:: i_wspd10m_ob_type=25! wspd10m_ob_type
-  integer(i_kind),parameter:: i_td2m_ob_type=26   ! td2m_ob_type
-  integer(i_kind),parameter:: i_mxtm_ob_type=27   ! mxtm_ob_type
-  integer(i_kind),parameter:: i_mitm_ob_type=28   ! mitm_ob_type
-  integer(i_kind),parameter:: i_pmsl_ob_type=29   ! pmsl_ob_type
-  integer(i_kind),parameter:: i_howv_ob_type=30   ! howv_ob_type
-  integer(i_kind),parameter:: i_tcamt_ob_type=31  ! tcamt_ob_type
-  integer(i_kind),parameter:: i_lcbas_ob_type=32  ! lcbas_ob_type  
-  integer(i_kind),parameter:: i_pm10_ob_type=33   ! pm10_ob_type
-  integer(i_kind),parameter:: i_cldch_ob_type=34  ! cldch_ob_type
+  integer(i_kind),parameter::  i_rw_ob_type= 6    ! rw_ob_type
+  integer(i_kind),parameter::  i_dw_ob_type= 7    ! dw_ob_type
+  integer(i_kind),parameter:: i_sst_ob_type= 8    ! sst_ob_type
+  integer(i_kind),parameter::  i_pw_ob_type= 9    ! pw_ob_type
+  integer(i_kind),parameter:: i_pcp_ob_type=10    ! pcp_ob_type
+  integer(i_kind),parameter::  i_oz_ob_type=11    ! oz_ob_type
+  integer(i_kind),parameter:: i_o3l_ob_type=12    ! o3l_ob_type
+  integer(i_kind),parameter:: i_gps_ob_type=13    ! gps_ob_type
+  integer(i_kind),parameter:: i_rad_ob_type=14    ! rad_ob_type
+  integer(i_kind),parameter:: i_tcp_ob_type=15    ! tcp_ob_type
+  integer(i_kind),parameter:: i_lag_ob_type=16    ! lag_ob_type
+  integer(i_kind),parameter:: i_colvk_ob_type= 17 ! colvk_ob_type
+  integer(i_kind),parameter:: i_aero_ob_type =18  ! aero_ob_type
+  integer(i_kind),parameter:: i_aerol_ob_type=19  ! aerol_ob_type
+  integer(i_kind),parameter:: i_pm2_5_ob_type=20  ! pm2_5_ob_type
+  integer(i_kind),parameter:: i_gust_ob_type=21   ! gust_ob_type
+  integer(i_kind),parameter:: i_vis_ob_type=22    ! vis_ob_type
+  integer(i_kind),parameter:: i_pblh_ob_type=23   ! pblh_ob_type
+  integer(i_kind),parameter:: i_wspd10m_ob_type=24! wspd10m_ob_type
+  integer(i_kind),parameter:: i_td2m_ob_type=25   ! td2m_ob_type
+  integer(i_kind),parameter:: i_mxtm_ob_type=26   ! mxtm_ob_type
+  integer(i_kind),parameter:: i_mitm_ob_type=27   ! mitm_ob_type
+  integer(i_kind),parameter:: i_pmsl_ob_type=28   ! pmsl_ob_type
+  integer(i_kind),parameter:: i_howv_ob_type=29   ! howv_ob_type
+  integer(i_kind),parameter:: i_tcamt_ob_type=30  ! tcamt_ob_type
+  integer(i_kind),parameter:: i_lcbas_ob_type=31  ! lcbas_ob_type  
+  integer(i_kind),parameter:: i_pm10_ob_type=32   ! pm10_ob_type
+  integer(i_kind),parameter:: i_cldch_ob_type=33  ! cldch_ob_type
+  integer(i_kind),parameter:: i_uwnd10m_ob_type=34! uwnd10m_ob_type
+  integer(i_kind),parameter:: i_vwnd10m_ob_type=35! vwnd10m_ob_type
 
-  integer(i_kind),parameter:: nobs_type = 34      ! number of observation types
+  integer(i_kind),parameter:: nobs_type = 35      ! number of observation types
 
 ! Structure for diagnostics
 
@@ -471,7 +491,7 @@ module obsmod
      real(r_kind) :: elat, elon         ! earth lat-lon for redistribution
      integer(i_kind) :: indxglb         ! a combined index similar to (ich,iob)
      integer(i_kind) :: nchnperobs      ! number of channels per observations
-     integer(i_kind) :: idv,iob,ich	! device, obs., and channel indices
+     integer(i_kind) :: idv,iob,ich     ! device, obs., and channel indices
      logical, pointer :: muse(:)          => null()    ! (miter+1), according the setup()s
      logical :: luse
   end type obs_diag
@@ -504,20 +524,22 @@ module obsmod
   integer(i_kind) nlco,use_limit
   integer(i_kind) iout_rad,iout_pcp,iout_t,iout_q,iout_uv, &
                   iout_oz,iout_ps,iout_pw,iout_rw
-  integer(i_kind) iout_dw,iout_srw,iout_gps,iout_sst,iout_tcp,iout_lag
+  integer(i_kind) iout_dw,iout_gps,iout_sst,iout_tcp,iout_lag
   integer(i_kind) iout_co,iout_gust,iout_vis,iout_pblh,iout_tcamt,iout_lcbas
   integer(i_kind) iout_cldch
   integer(i_kind) iout_wspd10m,iout_td2m,iout_mxtm,iout_mitm,iout_pmsl,iout_howv
+  integer(i_kind) iout_uwnd10m,iout_vwnd10m
   integer(i_kind) mype_t,mype_q,mype_uv,mype_ps,mype_pw, &
-                  mype_rw,mype_dw,mype_srw,mype_gps,mype_sst, &
+                  mype_rw,mype_dw,mype_gps,mype_sst, &
                   mype_tcp,mype_lag,mype_co,mype_gust,mype_vis,mype_pblh, &
                   mype_wspd10m,mype_td2m,mype_mxtm,mype_mitm,mype_pmsl,mype_howv,&
-                  mype_tcamt,mype_lcbas
+                  mype_uwnd10m,mype_vwnd10m, mype_tcamt,mype_lcbas
   integer(i_kind) mype_cldch
   integer(i_kind) nlaero, iout_aero, mype_aero
   integer(i_kind) iout_pm2_5, mype_pm2_5
   integer(i_kind) iout_pm10, mype_pm10
   integer(i_kind),dimension(5):: iadate
+  integer(i_kind),dimension(5):: iadatemn
   integer(i_kind),allocatable,dimension(:):: dsfcalc,dthin,ipoint
   integer(i_kind),allocatable,dimension(:)::  nsat1,mype_diaghdr
   integer(i_kind),allocatable :: nobs_sub(:,:)
@@ -584,6 +606,7 @@ contains
 !   2014-06-16  carley/zhu - add tcamt and lcbas
 !   2015-07-10  pondeca - add cldch
 !   2015-10-27  todling - default to luse_obsdiag is true now
+!   2016-03-07  pondeca - add uwnd10m,vwnd10m
 !
 !   input argument list:
 !
@@ -642,7 +665,6 @@ contains
     iout_pcp=208   ! precipitation rate
     iout_rw=209    ! radar radial wind
     iout_dw=210    ! doppler lidar wind
-    iout_srw=211   ! radar superob wind
     iout_gps=212   ! gps refractivity or bending angle
     iout_sst=213   ! conventional sst
     iout_tcp=214   ! synthetic tc-mslp
@@ -663,15 +685,17 @@ contains
     iout_lcbas=230 ! base height of lowest cloud
     iout_pm10=231  ! pm10
     iout_cldch=232 ! cloud ceiling height
+    iout_uwnd10m=233  ! 10-m uwnd
+    iout_vwnd10m=234  ! 10-m vwnd
 
     mype_ps = npe-1          ! surface pressure
-    mype_uv = max(0,npe-2)   ! u,v wind components
-    mype_t  = max(0,npe-3)   ! virtual temperature
-    mype_q  = max(0,npe-4)   ! moisture (specific humidity)
-    mype_pw = max(0,npe-5)   ! total column water
-    mype_rw = max(0,npe-6)   ! radar radial wind
-    mype_dw = max(0,npe-7)   ! doppler lidar wind
-    mype_srw= max(0,npe-8)   ! radar superob wind
+    mype_t  = max(0,npe-2)   ! temperature
+    mype_q  = max(0,npe-3)   ! moisture
+    mype_uv = max(0,npe-4)   ! uv
+    mype_pw = max(0,npe-5)   ! precipitable water
+    mype_rw = max(0,npe-6)   ! radial winds
+    mype_dw = max(0,npe-7)   ! doppler lidar winds
+    mype_co = max(0,npe-8)   ! carbon monoxide
     mype_gps= max(0,npe-9)   ! gps refractivity or bending angle
     mype_sst= max(0,npe-10)  ! conventional sst
     mype_tcp= max(0,npe-11)  ! synthetic tc-mslp
@@ -691,6 +715,9 @@ contains
     mype_lcbas=max(0,npe-25) ! base height of lowest cloud
     mype_pm10= max(0,npe-26) ! pm10
     mype_cldch=max(0,npe-27) ! cloud ceiling height
+    mype_uwnd10m= max(0,npe-28)! uwnd10m
+    mype_vwnd10m= max(0,npe-29)! vwnd10m
+
 
 !   Initialize arrays used in namelist obs_input 
     time_window_max = three ! set maximum time window to +/-three hours
@@ -716,7 +743,6 @@ contains
     cobstype(  i_w_ob_type)  ="wind                " ! w_ob_type
     cobstype(  i_q_ob_type)  ="moisture            " ! q_ob_type
     cobstype(i_spd_ob_type)  ="wind speed          " ! spd_ob_type
-    cobstype(i_srw_ob_type)  ="srw                 " ! srw_ob_type
     cobstype( i_rw_ob_type)  ="radial wind         " ! rw_ob_type
     cobstype( i_dw_ob_type)  ="doppler wind        " ! dw_ob_type
     cobstype(i_sst_ob_type)  ="sst                 " ! sst_ob_type
@@ -745,6 +771,9 @@ contains
     cobstype(i_tcamt_ob_type)="tcamt               " ! tcamt_ob_type
     cobstype(i_lcbas_ob_type)="lcbas               " ! lcbas_ob_type
     cobstype(i_cldch_ob_type)="cldch               " ! cldch_ob_type
+    cobstype(i_uwnd10m_ob_type) ="uwnd10m          " ! uwnd10m_ob_type
+    cobstype(i_vwnd10m_ob_type) ="vwnd10m          " ! vwnd10m_ob_type
+
 
 
     hilbert_curve=.false.

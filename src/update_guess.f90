@@ -85,6 +85,7 @@ subroutine update_guess(sval,sbias)
 !                         state variable for all-sky radiance assimilation
 !   2015-07-10  pondeca  - add cldch
 !   2016-04-28  eliu    - revise update for cloud water 
+!   2016-06-23  lippi   - Add update for vertical velocity (w).
 !
 !   input argument list:
 !    sval
@@ -251,6 +252,12 @@ subroutine update_guess(sval,sbias)
                call upd_positive_fldr3_(ptr3dges,ptr3dinc,tgmin)
                cycle
            endif
+           if (trim(guess(ic))=='w') then
+               call gsi_bundlegetpointer (sval(ii),               guess(ic),ptr3dinc,istatus)
+               call gsi_bundlegetpointer (gsi_metguess_bundle(it),guess(ic),ptr3dges,istatus)
+               ptr3dges = ptr3dges + ptr3dinc
+               cycle
+           endif
            if (trim(guess(ic))=='tv') then
               cycle ! updating tv is trick since it relates to tsen and therefore q
                     ! since we don't know which comes first in met-guess, we
@@ -358,7 +365,7 @@ subroutine update_guess(sval,sbias)
         endif
         call  gsd_update_soil_tq(tinc_1st,is_t,qinc_1st,is_q,it)
      endif  ! l_gsd_soilTQ_nudge
-     if (i_use_2mt4b.and. is_t>0) then
+     if (i_use_2mt4b > 0 .and. is_t>0) then
         do j=1,lon2
            do i=1,lat2
               tinc_1st(i,j)=p_tv(i,j,1)
@@ -366,7 +373,7 @@ subroutine update_guess(sval,sbias)
         end do
         call  gsd_update_th2(tinc_1st,it)
      endif ! l_gsd_th2_adjust
-     if (i_use_2mq4b.and. is_q>0) then
+     if (i_use_2mq4b > 0 .and. is_q>0) then
         do j=1,lon2
            do i=1,lat2
               qinc_1st(i,j)=p_q(i,j,1)

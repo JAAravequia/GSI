@@ -437,7 +437,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
           mype,nfldsig)
 
 ! Interpolate 2-m qs to obs locations/times
-     if(i_use_2mq4b .and. ((itype > 179 .and. itype < 190) .or. itype == 199) &
+     if((i_use_2mq4b > 0) .and. ((itype > 179 .and. itype < 190) .or. itype == 199) &
             .and.  .not.twodvar_regional)then
         call tintrp2a11(qg2m,qsges,dlat,dlon,dtime,hrdifsig,mype,nfldsig)
      endif
@@ -656,7 +656,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 !       Set (i,j,k) indices of guess gridpoint that bound obs location
         my_head%dlev= dpres
-        call get_ijk(mm1,dlat,dlon,dpres,my_head%ij(1),my_head%wij(1))
+        call get_ijk(mm1,dlat,dlon,dpres,my_head%ij,my_head%wij)
         
         my_head%res    = ddiff
         my_head%err2   = error**2
@@ -828,7 +828,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 !!! Set (i,j,k) indices of guess gridpoint that bound obs location
            my_head%dlev= dpres
-           call get_ijk(mm1,dlat,dlon,dpres,my_head%ij(1),my_head%wij(1))
+           call get_ijk(mm1,dlat,dlon,dpres,my_head%ij,my_head%wij)
 !!! find ddiff       
 
 ! Compute innovations
