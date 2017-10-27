@@ -154,7 +154,7 @@ subroutine fpvsx_tl( t, es, t_d, es_d )
 !----------------------------------------------
 ! FUNCTION AND TAPE COMPUTATIONS
 !----------------------------------------------
-call init_constants(.false.)
+! call init_constants(regional)
 
   tr = ttp/t
   tr_d = -ttp*t_d/t**2
