@@ -424,7 +424,7 @@ subroutine read_radiag_header_nc(ftin,npred_radiag,retrieval,header_fix,header_c
   integer(i_kind)                        :: jiter, nchan_diag, npred, idate, &
                                             ireal, ipchan, iextra, jextra,   &
                                             idiag, angord, iversion, inewpc, &
-                                            isens
+                                            isens, ijacob
 
   iflag = 0
 !  allocate(nchan_diag(1) )
@@ -453,6 +453,7 @@ subroutine read_radiag_header_nc(ftin,npred_radiag,retrieval,header_fix,header_c
   call nc_diag_read_get_global_attr(ftin, "iversion_radiag", iversion)   ; header_fix%iversion = iversion
   call nc_diag_read_get_global_attr(ftin, "New_pc4pred", inewpc)         ; header_fix%inewpc = inewpc
   call nc_diag_read_get_global_attr(ftin, "ioff0", isens)                ; header_fix%isens = isens
+  call nc_diag_read_get_global_attr(ftin, "ijacob", ijacob)              ; header_fix%ijacob = ijacob
 
 
   allocate(header_chan(nchan_dim)   )
@@ -848,7 +849,7 @@ subroutine read_radiag_data_nc_init(ftin, diag_status, header_fix, retrieval)
 
 ! Declare local variables
   integer(i_kind)                          :: nrecord, ndatum, nangord
-  integer(i_kind)                          :: cch, ic, ir, cdatum
+  integer(i_kind)                          :: cch, ic, ir, cdatum, nsdim
   real(r_kind), allocatable, dimension(:)  :: Latitude, Longitude, Elevation, Obs_Time, Scan_Position, &
                                               Sat_Zenith_Angle, Sat_Azimuth_Angle, Sol_Zenith_Angle, Sol_Azimuth_Angle,  &
                                               Sun_Glint_Angle, Water_Fraction, Land_Fraction, Ice_Fraction,  &
@@ -864,6 +865,7 @@ subroutine read_radiag_data_nc_init(ftin, diag_status, header_fix, retrieval)
                                               BC_Sine_Latitude,BC_Emissivity,BC_Fixed_Scan_Position, Press_Max_Weight_Function
   integer(i_kind), allocatable, dimension(:)  :: Channel_Index, Land_Type_Index
   real(r_kind), allocatable, dimension(:,:)   :: BC_angord ! (nobs, BC_angord_arr_dim) ;
+  real(r_single), allocatable, dimension(:,:) :: Observation_Operator_Jacobian
 
   real(r_kind)                                :: clat, clon
 
@@ -897,9 +899,16 @@ subroutine read_radiag_data_nc_init(ftin, diag_status, header_fix, retrieval)
             BC_Lapse_Rate(ndatum),            BC_Cosine_Latitude_times_Node(ndatum),    BC_Sine_Latitude(ndatum),                      &
             BC_Emissivity(ndatum),            BC_Fixed_Scan_Position(ndatum),           Land_Type_Index(ndatum)                        )
 
+  if (header_fix%iextra > 0) then
+     allocate(Press_Max_Weight_Function(ndatum))
+  endif
   if (header_fix%angord > 0) then
      allocate( BC_angord(nangord, ndatum)    )
   end if
+  if (header_fix%ijacob > 0) then
+     call nc_diag_read_get_global_attr(ftin, "Number_of_state_vars", nsdim)
+     allocate(Observation_Operator_Jacobian(nsdim, ndatum))
+  endif
 
   if (allocated(diag_status%all_data_fix))   deallocate(diag_status%all_data_fix)
   if (allocated(diag_status%all_data_chan))  deallocate(diag_status%all_data_chan)
@@ -975,7 +984,9 @@ subroutine read_radiag_data_nc_init(ftin, diag_status, header_fix, retrieval)
   if (header_fix%angord > 0) then
      call nc_diag_read_get_var(ftin, 'BC_angord ', BC_angord )
   end if
-  
+  if (header_fix%ijacob > 0) then
+     call nc_diag_read_get_var(ftin, 'Observation_Operator_Jacobian', Observation_Operator_Jacobian)
+  endif
   cdatum = 1
 
 !  allocate(  all_data_fix(nrecord)        )
@@ -1062,6 +1073,9 @@ subroutine read_radiag_data_nc_init(ftin, diag_status, header_fix, retrieval)
          diag_status%all_data_chan(ir,cch)%bifix = BC_angord(1:nangord,cdatum)
       else
          diag_status%all_data_chan(ir,cch)%bifix(1) = BC_Fixed_Scan_Position(cdatum)
+      endif
+      if (header_fix%ijacob > 0) then
+         diag_status%all_data_chan(ir,cch)%dhx_dx = Observation_Operator_Jacobian(1:nsdim,cdatum)
       endif
       ! placeholder for SST BC
       if (header_fix%iextra > 0) then

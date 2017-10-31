@@ -254,11 +254,11 @@
   use qcmod, only: igood_qc,ifail_gross_qc,ifail_interchan_qc,ifail_crtm_qc,ifail_satinfo_qc,qc_noirjaco3,ifail_cloud_qc
   use qcmod, only: qc_gmi,qc_saphir,qc_amsr2
   use qcmod, only: setup_tzr_qc,ifail_scanedge_qc,ifail_outside_range
-  use state_vectors, only: svars3d, levels, svars2d, ns3d
+  use state_vectors, only: svars3d, levels, svars2d, ns3d, nsdim
   use oneobmod, only: lsingleradob,obchan,oblat,oblon,oneob_type
   use radinfo, only: radinfo_adjust_jacobian,radinfo_get_rsqrtinv 
   use radiance_mod, only: rad_obs_type,radiance_obstype_search,radiance_ex_obserr,radiance_ex_biascor
-  use sparsearr, only: sparr2, new, writearray, size
+  use sparsearr, only: sparr2, new, writearray, size, fullarray
 
 
 
@@ -289,7 +289,7 @@
   integer(i_kind) iextra,jextra,error_status,istat
   integer(i_kind) ich9,isli,icc,iccm,mm1,ixx
   integer(i_kind) m,mm,jc,j,k,i
-  integer(i_kind) n,nlev,kval,ibin,ioff,ioff0,iii,ijacob,isens
+  integer(i_kind) n,nlev,kval,ibin,ioff,ioff0,iii,ijacob
   integer(i_kind) ii,jj,idiag,inewpc,nchanl_diag
   integer(i_kind) ii_ptr
   integer(i_kind) nadir,kraintype,ierrret
@@ -317,6 +317,7 @@
 
   logical hirs2,msu,goessndr,hirs3,hirs4,hirs,amsua,amsub,airs,hsb,goes_img,ahi,mhs
   type(sparr2) :: dhx_dx
+  real(r_single), dimension(:), allocatable :: dhx_dx_array
   logical avhrr,avhrr_navy,lextra,ssu,iasi,cris,seviri,atms
   logical ssmi,ssmis,amsre,amsre_low,amsre_mid,amsre_hig,amsr2,gmi,saphir
   logical ssmis_las,ssmis_uas,ssmis_env,ssmis_img
@@ -379,7 +380,6 @@
   type(rad_obs_type) :: radmod
 
   save_jacobian = rad_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
-  isens = 0 ! sensitivity index, not used
   if (save_jacobian) then
      ijacob = 1 ! flag to indicate jacobian saved in diagnostic file
   else
@@ -409,6 +409,8 @@
         pred(j,i)=zero
      end do
   end do
+
+  if (save_jacobian) allocate(dhx_dx_array(nsdim))
 
 ! Initialize logical flags for satellite platform
 
@@ -1790,8 +1792,10 @@
 
 
      if(in_curbin) then
+
 !       Write diagnostics to output file.
         if (rad_diagsave .and. luse(n) .and. nchanl_diag > 0) then
+
            if (binary_diag) call contents_binary_diag_
            if (netcdf_diag) call contents_netcdf_diag_
 
@@ -1809,6 +1813,8 @@
 ! Deallocate arrays
   deallocate(diagbufchan)
   deallocate(sc_index)
+
+  if (save_jacobian) deallocate(dhx_dx_array)
 
   if (rad_diagsave) then
      if (netcdf_diag) call nc_diag_write
@@ -1844,7 +1850,7 @@
         inewpc=0
         if (newpc4pred) inewpc=1
         write(4) isis,dplat(is),obstype,jiter,nchanl_diag,npred,ianldate,ireal_radiag,ipchan_radiag,iextra,jextra,&
-           idiag,angord,iversion_radiag,inewpc,ioff0
+           idiag,angord,iversion_radiag,inewpc,ioff0,ijacob
         write(6,*)'SETUPRAD:  write header record for ',&
            isis,npred,ireal_radiag,ipchan_radiag,iextra,jextra,idiag,angord,iversion_radiag,&
                       ' to file ',trim(diag_rad_file),' ',ianldate
@@ -1896,6 +1902,8 @@
            call nc_diag_header("iversion_radiag",      iversion_radiag)
            call nc_diag_header("New_pc4pred",          inewpc         )        ! indicator of newpc4pred (1 on, 0 off)
            call nc_diag_header("ioff0",                ioff0          )
+           call nc_diag_header("ijacob",               ijacob         )
+           call nc_diag_header("Number_of_state_vars", nsdim          )
 !           call nc_diag_header("Outer_Loop_Iteration", headfix%jiter)
 !           call nc_diag_header("Satellite_Sensor", headfix%isis)
 !           call nc_diag_header("Satellite",            headfix%id      )            ! sat type
@@ -2067,39 +2075,36 @@
               end if
               diagbufchan(ipchan_radiag+npred+3,i) = 1.e+10   ! spread (filled in by EnKF)
 
-              if (save_jacobian) then
-              j = 1
-              do ii = 1, nvarjac
-                 state_ind = getindex(svars3d, radjacnames(ii))
-                 if (state_ind < 0)     state_ind = getindex(svars2d, radjacnames(ii))
-                 if (state_ind < 0) then
-                    print *, 'Error: no variable ', radjacnames(ii), ' in state vector. Exiting.'
-                    call stop2(1300)
-                 endif
-                 if ( radjacnames(ii) == 'u' .or. radjacnames(ii) == 'v') then
-                    dhx_dx%st_ind(ii)  = sum(levels(1:state_ind-1)) + 1
-                    dhx_dx%end_ind(ii) = sum(levels(1:state_ind-1)) + 1
-                    dhx_dx%val(j) = jacobian( radjacindxs(ii) + 1, ich_diag(i))
-                    j = j + 1
-                 else if (radjacnames(ii) == 'sst') then
-                    dhx_dx%st_ind(ii)  = sum(levels(1:ns3d)) + state_ind
-                    dhx_dx%end_ind(ii) = sum(levels(1:ns3d)) + state_ind
-                    dhx_dx%val(j) = jacobian( radjacindxs(ii) + 1, ich_diag(i))
-                    j = j + 1
-                 else
-                    dhx_dx%st_ind(ii)  = sum(levels(1:state_ind-1)) + 1
-                    dhx_dx%end_ind(ii) = sum(levels(1:state_ind-1)) + nsig
-                    do jj = 1, nsig
-                       dhx_dx%val(j) = jacobian( radjacindxs(ii) + jj, ich_diag(i))
-                       j = j + 1
-                    enddo
-                 endif
-              enddo
-              endif
-
-
               ioff = ipchan_radiag+npred+3
               if (save_jacobian) then
+                 j = 1
+                 do ii = 1, nvarjac
+                    state_ind = getindex(svars3d, radjacnames(ii))
+                    if (state_ind < 0)     state_ind = getindex(svars2d,radjacnames(ii))
+                    if (state_ind < 0) then
+                       print *, 'Error: no variable ', radjacnames(ii), ' in state vector. Exiting.'
+                       call stop2(1300)
+                    endif
+                    if ( radjacnames(ii) == 'u' .or. radjacnames(ii) == 'v') then
+                       dhx_dx%st_ind(ii)  = sum(levels(1:state_ind-1)) + 1
+                       dhx_dx%end_ind(ii) = sum(levels(1:state_ind-1)) + 1
+                       dhx_dx%val(j) = jacobian( radjacindxs(ii) + 1, ich_diag(i))
+                       j = j + 1
+                    else if (radjacnames(ii) == 'sst') then
+                       dhx_dx%st_ind(ii)  = sum(levels(1:ns3d)) + state_ind
+                       dhx_dx%end_ind(ii) = sum(levels(1:ns3d)) + state_ind
+                       dhx_dx%val(j) = jacobian( radjacindxs(ii) + 1, ich_diag(i))
+                       j = j + 1
+                    else
+                       dhx_dx%st_ind(ii)  = sum(levels(1:state_ind-1)) + 1
+                       dhx_dx%end_ind(ii) = sum(levels(1:state_ind-1)) + nsig
+                       do jj = 1, nsig
+                          dhx_dx%val(j) = jacobian( radjacindxs(ii) + jj,ich_diag(i))
+                          j = j + 1
+                       enddo
+                    endif
+                 enddo
+
                  call writearray(dhx_dx, diagbufchan(ioff+1:idiag,i))
                  ioff = ioff+size(dhx_dx)
               endif
@@ -2289,6 +2294,38 @@
                  call nc_diag_metadata("Obs_Minus_Forecast_unadjusted",         tbcnob(ich_diag(i))  )     ! observed - simulated Tb with no bias correction (K)
                  errinv = sqrt(varinv(ich_diag(i)))
                  call nc_diag_metadata("Inverse_Observation_Error",             errinv            )
+                 if (save_jacobian) then
+                    j = 1
+                    do ii = 1, nvarjac
+                       state_ind = getindex(svars3d, radjacnames(ii))
+                       if (state_ind < 0)     state_ind = getindex(svars2d,radjacnames(ii))
+                       if (state_ind < 0) then
+                          print *, 'Error: no variable ', radjacnames(ii), ' in state vector. Exiting.'
+                          call stop2(1300)
+                       endif
+                       if ( radjacnames(ii) == 'u' .or. radjacnames(ii) == 'v') then
+                          dhx_dx%st_ind(ii)  = sum(levels(1:state_ind-1)) + 1
+                          dhx_dx%end_ind(ii) = sum(levels(1:state_ind-1)) + 1
+                          dhx_dx%val(j) = jacobian( radjacindxs(ii) + 1, ich_diag(i))
+                          j = j + 1
+                       else if (radjacnames(ii) == 'sst') then
+                          dhx_dx%st_ind(ii)  = sum(levels(1:ns3d)) + state_ind
+                          dhx_dx%end_ind(ii) = sum(levels(1:ns3d)) + state_ind
+                          dhx_dx%val(j) = jacobian( radjacindxs(ii) + 1, ich_diag(i))
+                          j = j + 1
+                       else
+                          dhx_dx%st_ind(ii)  = sum(levels(1:state_ind-1)) + 1
+                          dhx_dx%end_ind(ii) = sum(levels(1:state_ind-1)) + nsig
+                          do jj = 1, nsig
+                             dhx_dx%val(j) = jacobian( radjacindxs(ii) + jj,ich_diag(i))
+                             j = j + 1
+                          enddo
+                       endif
+                    enddo
+
+                    call fullarray(dhx_dx, dhx_dx_array)
+                    call nc_diag_data2d("Observation_Operator_Jacobian",      dhx_dx_array)
+                 endif
 
                  useflag=one
                  if (iuse_rad(ich(ich_diag(i))) < 1) useflag=-one
