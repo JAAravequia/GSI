@@ -74,6 +74,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 !                       . removed (%dlat,%dlon) debris.
 !   2016-11-29  shlyaeva - save linearized H(x) for EnKF.
 !   2016-12-09  mccarty - add netcdf_diag capability
+!   2017-10-27  todling - revised netcdf output for lay case; obs-sens needs attention
 !
 !   input argument list:
 !     lunin          - unit from which to read observations
@@ -189,6 +190,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   real(r_single),allocatable,dimension(:,:,:)::rdiagbuf
   real(r_kind),dimension(nloz_omi):: apriori, efficiency,pob_oz_omi
   real(r_kind),dimension(nloz_omi+1):: ozges1
+  real(r_kind),dimension(miter) :: obsdiag_iuse
 
   real(r_kind),dimension(nsig,nlevs) :: doz_dz
   real(r_kind),dimension(nsig,nloz_omi+1):: doz_dz1
@@ -262,7 +264,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
      endif
 
      allocate(rdiagbuf(irdim1,nlevs,nobs))
-!    if(netcdf_diag) call init_netcdf_diag_
+     if(netcdf_diag) call init_netcdf_diag_
   end if
 
 ! Locate data for satellite in ozinfo arrays
@@ -543,6 +545,29 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
                  idia = idia+size(dhx_dx)
               endif
 
+              if (netcdf_diag) then
+                 call nc_diag_metadata("MPI_Task_Number", mype                      )
+                 call nc_diag_metadata("Latitude",        data(ilate,i)             )
+                 call nc_diag_metadata("Longitude",       data(ilone,i)             )
+                 call nc_diag_metadata("Time",            data(itime,i)-time_offset )
+                 call nc_diag_metadata("Observation",                  ozobs(k))
+                 call nc_diag_metadata("Inverse_Observation_Error",    errorinv)
+                 call nc_diag_metadata("Obs_Minus_Forecast_adjusted",  ozone_inv(k))
+                 call nc_diag_metadata("Obs_Minus_Forecast_unadjusted",ozone_inv(k) )
+                 if (obstype == 'gome' .or. obstype == 'omieff'  .or. &
+                     obstype == 'omi'  .or. obstype == 'tomseff' ) then
+                    call nc_diag_metadata("Solar_Zenith_Angle", data(isolz,i) )
+                    call nc_diag_metadata("Scan_Position",      data(ifovn,i) )
+                 else
+                    call nc_diag_metadata("Solar_Zenith_Angle",        rmiss )
+                    call nc_diag_metadata("Scan_Position",             rmiss )
+                 endif
+                 if (obstype == 'omieff' .or. obstype == 'omi' ) then
+                    call nc_diag_metadata("Row_Anomaly_Index", data(itoqf,i)  )
+                 else
+                    call nc_diag_metadata("Row_Anomaly_Index",         rmiss  )
+                 endif
+              endif
            endif
 
         end do
@@ -743,8 +768,10 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
                     idia=idia+1
                     if (obsdiags(i_oz_ob_type,ibin)%tail%muse(jj)) then
                        rdiagbuf(idia,k,ii) = one
+                       obsdiag_iuse(jj)    = one
                     else
                        rdiagbuf(idia,k,ii) = -one
+                       obsdiag_iuse(jj)    = -one
                     endif
                  enddo
                  do jj=1,miter+1
@@ -759,6 +786,13 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
                     idia=idia+1
                     rdiagbuf(idia,k,ii) = obsdiags(i_oz_ob_type,ibin)%tail%obssen(jj)
                  enddo
+                 if (netcdf_diag) then
+!                   TBD: Sensitivities must be written out in coordination w/ rest of obs
+!                   call nc_diag_data2d("ObsDiagSave_iuse",     obsdiag_iuse                              )
+!                   call nc_diag_data2d("ObsDiagSave_nldepart", obsdiags(i_oz_ob_type,ibin)%tail%nldepart )
+!                   call nc_diag_data2d("ObsDiagSave_tldepart", obsdiags(i_oz_ob_type,ibin)%tail%tldepart )
+!                   call nc_diag_data2d("ObsDiagSave_obssen",   obsdiags(i_oz_ob_type,ibin)%tail%obssen   )
+                 endif
               endif
            endif ! (in_curbin)
 
@@ -779,7 +813,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 ! If requested, write to diagnostic file
   if (ozone_diagsave) then
 
-!    if (netcdf_diag) call nc_diag_write
+     if (netcdf_diag) call nc_diag_write
 
      if (binary_diag .and. ii>0) then
         filex=obstype
@@ -873,7 +907,6 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 
   subroutine init_netcdf_diag_
   character(len=80) string
-  character(len=128) diag_conv_file
   integer(i_kind) ncd_fileid,ncd_nobs
   logical append_diag
   logical,parameter::verbose=.false.
@@ -907,28 +940,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 ! Observation class
   character(7),parameter     :: obsclass = '  ozlay'
   real(r_kind),parameter::     missing = -9.99e9
-  real(r_kind),dimension(miter) :: obsdiag_iuse
-!                 call nc_diag_metadata("Latitude",     data(ilate,i)           )
-!                 call nc_diag_metadata("Longitude",    data(ilone,i)           )
-!                 call nc_diag_metadata("MPI_Task_Number",              mype    )
-!                 call nc_diag_metadata("Time",         dtime-time_offset       )
-!                 call nc_diag_metadata("Inverse_Observation_Error",    errorinv)
-!                 call nc_diag_metadata("Observation", !                 ozobs(k))
-!                 call nc_diag_metadata("Obs_Minus_Forecast_adjusted",   ozone_inv(k))
-!                 call nc_diag_metadata("Obs_Minus_Forecast_unadjusted",ozone_inv(k) )
-!                 if (obstype == 'gome' .or. obstype == 'omieff'  .or. &
-!                     obstype == 'omi'  .or. obstype == 'tomseff' ) then
-!                    call nc_diag_metadata("Solar_Zenith_Angle", data(isolz,i)          )
-!                    call nc_diag_metadata("Scan_Position",      data(ifovn,i)          )
-!                 else
-!                    call nc_diag_metadata("Solar_Zenith_Angle",        rmiss )
-!                    call nc_diag_metadata("Scan_Position",             rmiss )
-!                 endif
-!                 if (obstype == 'omieff' .or. obstype == 'omi' ) then
-!                    call nc_diag_metadata("Row_Anomaly_Index", data(itoqf,i)           )
-!                 else
-!                    call nc_diag_metadata("Row_Anomaly_Index",         rmiss           )
-!                 endif
+! contents interleafed above should be moved here (RTodling)
   end subroutine contents_netcdf_diag_
 
   subroutine final_vars_
@@ -1458,7 +1470,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
         errorinv = sqrt(varinv3*rat_err2)
 
         if (binary_diag) call contents_binary_diag_
-        if (netcdf_diag) call contents_binary_diag_
+        if (netcdf_diag) call contents_netcdf_diag_
      end if   !end if(ozone_diagsave )
 
   end do   ! end do i=1,nobs
@@ -1568,7 +1580,6 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 
   subroutine init_netcdf_diag_
   character(len=80) string
-  character(len=128) diag_conv_file
   integer(i_kind) ncd_fileid,ncd_nobs
   logical append_diag
   logical,parameter::verbose=.false.
