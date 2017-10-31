@@ -432,10 +432,10 @@ contains
     do k=0,npe-1
        kend(k)=kbegin(k+1)-1
     end do
-    if(mype == 0) then
-       write(6,*)' kbegin=',kbegin
-       write(6,*)' kend= ',kend
-    end if
+!   if(mype == 0) then
+!      write(6,*)' kbegin=',kbegin
+!      write(6,*)' kend= ',kend
+!   end if
     num_j_groups=jm/npe
     jextra=jm-num_j_groups*npe
     jbegin(0)=1
@@ -450,10 +450,10 @@ contains
     do j=0,npe-1
        jend(j)=min(jbegin(j+1)-1,jm)
     end do
-    if(mype == 0) then
-       write(6,*)' jbegin=',jbegin
-       write(6,*)' jend= ',jend
-    end if
+!   if(mype == 0) then
+!      write(6,*)' jbegin=',jbegin
+!      write(6,*)' jend= ',jend
+!   end if
   
     ier=0
     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ps',ges_ps,iret); ier=iret
@@ -1094,6 +1094,7 @@ contains
   !   2015-05-12  wu      - write analysis to file "wrf_inout(nhr_assimilation)"
   !   2015-05-12  S.Liu   - interpolate water content before converting to fraction
   !   2016-03-02  s.liu/carley - remove use_reflectivity and use i_gsdcldanal_type
+  !   2016-06-23  lippi   - add read of vertical velocity (w).
   !   2016-06-30  s.liu - remove gridtype, add_saved in write_fraction
   !   2017-05-12  Y. Wang and X. Wang - add write of hydrometeor-related
   !                        variables (f_rain, f_ice, clwmr and refl_10cm) and W for radar DA, 
@@ -1149,8 +1150,8 @@ contains
     real(r_kind),dimension(lat2,lon2):: work_sub,pd_new,delu10,delv10,u10this,v10this,fact10_local
     real(r_kind),dimension(lat2,lon2):: work_sub_t,work_sub_i,work_sub_r,work_sub_l, work_sub_s
     real(r_kind),dimension(lat2,lon2):: delt2,delq2,t2this,q2this,fact2t_local,fact2q_local
-    real(r_kind),dimension(lat2,lon2,6):: delu,delv,delt,delq,pott
     real(r_kind),dimension(lat2,lon2,nsig)  :: clwmr,frain,fice
+    real(r_kind),dimension(lat2,lon2,6):: delu,delv,delw,delt,delq,pott
     real(r_kind) hmin,hmax,hmin0,hmax0,ten,wgt1,wgt2
     logical use_fact10,use_fact2
     logical good_u10,good_v10,good_tshltr,good_qshltr,good_o3mr
@@ -1164,6 +1165,7 @@ contains
     real(r_kind),pointer,dimension(:,:  ):: ges_ps  =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_u   =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_v   =>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_w   =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_q   =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_oz  =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_ql  =>NULL()
@@ -1174,7 +1176,6 @@ contains
     real(r_kind),pointer,dimension(:,:,:):: ges_qh  =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: dfi_tten=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_ref =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_w   =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_dw   =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_qli   =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_dbz   =>NULL()
@@ -1335,11 +1336,8 @@ contains
           end if
           call gsi_nemsio_write('vgrd','mid layer','V',kr,work_sub(:,:),mype,mype_input,add_saved)
        endif
-
                                    !   w
-
-     if( w_exist )then
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'w_tot',ges_w,iret)
+     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'w',ges_w,iret)
      if (iret==0) then
         call gsi_nemsio_read('w_tot','mid layer','H',kr,work_sub(:,:),mype,mype_input)
         do i=1,lon2
@@ -1350,7 +1348,7 @@ contains
         if(k <= near_sfc) then
            do i=1,lon2
               do j=1,lat2
-                 delv(j,i,k)=work_sub(j,i)
+                 delw(j,i,k)=work_sub(j,i)
               end do
            end do
         end if
@@ -1374,7 +1372,6 @@ contains
         end if
         call gsi_nemsio_write('dwdt','mid layer','H',kr,work_sub(:,:),mype,mype_input,add_saved)
      endif
-     end if ! w_exist
   
                                      !   q
   

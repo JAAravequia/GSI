@@ -57,7 +57,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     integer(i_kind), allocatable, dimension(:) :: obcode,indxsat
     real(r_single), allocatable, dimension(:,:) :: biaspreds
     real(r_single), allocatable, dimension(:,:) :: anal_ob
-    !real(r_single), allocatable, dimension(:,:) :: anal_obtmp
+!   real(r_single), allocatable, dimension(:,:) :: anal_obtmp
     real(r_single), allocatable, dimension(:) :: h_xnobc
     real(r_single) :: analsi,analsim1
     real(r_double) t1,t2

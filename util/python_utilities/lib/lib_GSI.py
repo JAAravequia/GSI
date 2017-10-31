@@ -2,10 +2,10 @@
 
 ###############################################################
 # < next few lines under version control, D O  N O T  E D I T >
-# $Date$
-# $Revision$
-# $Author$
-# $Id$
+# $Date: 2016-10-11 08:58:01 -0400 (Tue, 11 Oct 2016) $
+# $Revision: 82928 $
+# $Author: Michael.Lueken@noaa.gov $
+# $Id: lib_GSI.py 82928 2016-10-11 12:58:01Z Michael.Lueken@noaa.gov $
 ###############################################################
 
 '''
@@ -502,27 +502,31 @@ class GSIstat(object):
         '''
 
         tmp = []
+        pattern = 'cost,grad,step,b,step'
+        for line in self._lines:
+            if _re.match(pattern, line):
+                tmp.append(line.strip().split('=')[-1].split()[:4])
+
+        columns = ['Outer', 'Inner', 'J', 'gJ']
+        df = _pd.DataFrame(data=tmp, columns=columns)
+        df[['Outer', 'Inner',]] = df[['Outer', 'Inner']].astype(_np.int)
+        df.set_index(columns[:2], inplace=True)
+        df = df.astype(_np.float)
+
+        # print_verbose option in GSI also prints out additional information
+        tmp = []
         pattern = 'costterms Jb,Jo,Jc,Jl'
         for line in self._lines:
             if _re.match(pattern,line):
                 tmp.append(line.strip().split('=')[-1].split())
 
-        columns = ['Outer', 'Inner', 'Jb', 'Jo', 'Jc', 'Jl']
-        df = _pd.DataFrame(data=tmp, columns=columns)
-        df[['Outer', 'Inner',]] = df[['Outer', 'Inner']].astype(_np.int)
-        df.set_index(columns[:2], inplace=True)
-        df = df.astype(_np.float)
-        df['J'] = df.sum(axis=1)
-
-        tmp = []
-        pattern = 'cost,grad,step,b,step'
-        for line in self._lines:
-            if _re.match(pattern, line):
-                tmp.append(line.strip().split('=')[-1].split()[3])
-
-        s = _pd.Series(data=tmp, index=df.index)
-        s = s.astype(_np.float)
-        df.loc[:,'gJ'] = s
+        if tmp:
+            columns = ['Outer', 'Inner', 'Jb', 'Jo', 'Jc', 'Jl']
+            df2 = _pd.DataFrame(data=tmp, columns=columns)
+            df2[['Outer', 'Inner',]] = df2[['Outer', 'Inner']].astype(_np.int)
+            df2.set_index(columns[:2], inplace=True)
+            df2 = df2.astype(_np.float)
+            df = _pd.concat([df, df2], axis=1)
 
         return df
 
