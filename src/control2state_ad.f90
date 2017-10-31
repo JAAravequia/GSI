@@ -35,13 +35,6 @@ subroutine control2state_ad(rval,bval,grad)
 !   2014-03-19  pondeca  - add wspd10m
 !   2014-04-10  pondeca  - add td2m,mxtm,mitm,pmsl
 !   2014-05-07  pondeca  - add howv
-iq:q
-
-
-
-ls
-
-
 !   2014-06-16  carley/zhu - add tcamt and lcbas
 !   2014-12-03  derber   - introduce parallel regions for optimization
 !   2015-07-10  pondeca  - add cloud ceiling height (cldch)
@@ -75,7 +68,6 @@ use gsi_chemguess_mod, only: gsi_chemguess_get
 use gsi_metguess_mod, only: gsi_metguess_get
 use mpeu_util, only: getindex
 use constants, only: max_varname_length,zero
-use control_vectors, only : w_exist
 use gridmod, only: wrf_mass_regional,nems_nmmb_regional
 
 implicit none

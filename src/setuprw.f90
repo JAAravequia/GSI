@@ -100,7 +100,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use obsmod, only: rmiss_single,i_rw_ob_type,obsdiags,&
                     lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset, &
                     if_vterminal, ens_hx_dbz_cut, if_model_dbz, &
-                    doradaroneob,oneobddiff,oneobvalue
+                    doradaroneob,oneobddiff,oneobvalue, if_vrobs_raw
   use m_obsNode, only: obsNode
   use m_rwNode, only: rwNode
   use m_obsLList, only: obsLList_appendNode
@@ -122,7 +122,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
 
   use obsmod, only: vr_dealisingopt
-  use control_vectors, only : w_exist, dbz_exist
+  use control_vectors, only : dbz_exist
   use setupdbz_lib, only:hx_dart
 
   implicit none
@@ -603,21 +603,21 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !    Convert guess u,v wind components to radial value consident with obs
      cosazm  = cos(data(iazm,i))  ! cos(azimuth angle)
      sinazm  = sin(data(iazm,i))  ! sin(azimuth angle)
-<<<<<<< HEAD
 
+     if( if_vrobs_raw ) then
      costilt = cos(data(itilt,i))
-     if(w_exist) then
+     if(include_w) then
        call dhdrange(data(itilt,i),data(irange,i),sintilt)
        costilt=sqrt(1.0-sintilt*sintilt)
        rwwind = (ugesin*cosazm+vgesin*sinazm)*costilt*factw+(wgesin-vterminal)*sintilt*factw
      endif
-=======
+     else ! if_vrobs_raw
+
      costilt = cos(data(itilt,i)) ! cos(tilt angle)
      sintilt = sin(data(itilt,i)) ! sin(tilt angle)
      cosazm_costilt = cosazm*costilt
      sinazm_costilt = sinazm*costilt
      !vTgesprofile= 5.40_r_kind*(exp((refgesprofile -43.1_r_kind)/17.5_r_kind)) 
->>>>>>> master
 !    rwwind = (ugesin*cosazm+vgesin*sinazm)*costilt*factw
      umaxmax=-huge(umaxmax)
      uminmin=huge(uminmin)
@@ -626,7 +626,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      do k=kbeambot,kbeamtop
         rwwindprofile=ugesprofile(k)*cosazm_costilt+vgesprofile(k)*sinazm_costilt
         if(include_w) then
-           rwwindprofile=rwwindprofile+(wgesprofile(k)-vterminal)*sintilt 
+           rwwindprofile=rwwindprofile+wgesprofile(k)*sintilt 
         end if
         
         if(umaxmax<rwwindprofile) then
@@ -651,6 +651,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         numequal=numequal+1
      else
         numnotequal=numnotequal+1
+     end if
      end if
      
      ddiff = data(irwob,i) - rwwind

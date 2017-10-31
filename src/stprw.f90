@@ -88,7 +88,6 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
   use gridmod, only: latlon1n
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
-  use control_vectors, only : w_exist
   use m_obsNode, only: obsNode
   use m_rwNode , only: rwNode
   use m_rwNode , only: rwNode_typecast
