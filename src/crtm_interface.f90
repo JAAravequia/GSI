@@ -108,15 +108,16 @@ public isfcr                ! = 28 index of surface roughness
 public iff10                ! = 29 index of ten meter wind factor
 public ilone                ! = 30 index of earth relative longitude (degrees)
 public ilate                ! = 31 index of earth relative latitude (degrees)
+public iirec                ! = 32 index of nc4 input file record number
 public iclr_sky             ! = 7  index of clear sky amount (goes_img, seviri)
 public isst_navy            ! = 7  index of navy sst retrieval (K) (avhrr_navy)
 public idata_type           ! = 32 index of data type (151=day, 152=night, avhrr_navy)
 public iclavr               ! = 32 index of clavr cloud flag (avhrr)
 public isst_hires           ! = 33 index of interpolated hires sst
-public itref                ! = 34/36 index of Tr
-public idtw                 ! = 35/37 index of d(Tw)
-public idtc                 ! = 36/38 index of d(Tc)
-public itz_tr               ! = 37/39 index of d(Tz)/d(Tr)
+public itref                ! = 34/36+nind index of Tr
+public idtw                 ! = 35/37+nind index of d(Tw)
+public idtc                 ! = 36/38+nind index of d(Tc)
+public itz_tr               ! = 37/39+nind index of d(Tz)/d(Tr)
  
 !  Note other module variables are only used within this routine
 
@@ -164,7 +165,7 @@ public itz_tr               ! = 37/39 index of d(Tz)/d(Tr)
   integer(i_kind),save :: iscan_pos,iszen_ang,isazi_ang,ifrac_sea,ifrac_lnd,ifrac_ice
   integer(i_kind),save :: ifrac_sno,its_sea,its_lnd,its_ice,its_sno,itsavg
   integer(i_kind),save :: ivty,ivfr,isty,istp,ism,isn,izz,idomsfc,isfcr,iff10,ilone,ilate
-  integer(i_kind),save :: iclr_sky,isst_navy,idata_type,isst_hires,iclavr
+  integer(i_kind),save :: iclr_sky,isst_navy,idata_type,isst_hires,iclavr, iirec
   integer(i_kind),save :: itref,idtw,idtc,itz_tr,istype
   integer(i_kind),save :: sensorindex
   integer(i_kind),save :: ico2,ico24crtm
@@ -246,7 +247,7 @@ public itz_tr               ! = 37/39 index of d(Tz)/d(Tr)
     1, 4, 2, 2, 8, 7, 2, 6, 5, 2, 3, 8, 1, 6, 9/)
   
 contains
-subroutine init_crtm(init_pass,mype_diaghdr,mype,nchanl,isis,obstype,radmod)
+subroutine init_crtm(init_pass,mype_diaghdr,mype,nchanl,nind,isis,obstype,radmod)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    init_crtm initializes things for use with call to crtm from setuprad
@@ -277,6 +278,7 @@ subroutine init_crtm(init_pass,mype_diaghdr,mype,nchanl,isis,obstype,radmod)
 !     mype_diaghdr - processor to produce output from crtm
 !     mype         - current processor        
 !     nchanl       - number of channels    
+!     nind         - 1 if obs file includes irec from nc4 input file
 !     isis         - instrument/sensor character string 
 !     obstype      - observation type
 !
@@ -309,7 +311,7 @@ subroutine init_crtm(init_pass,mype_diaghdr,mype,nchanl,isis,obstype,radmod)
 
 ! argument 
   logical        ,intent(in) :: init_pass
-  integer(i_kind),intent(in) :: nchanl,mype_diaghdr,mype
+  integer(i_kind),intent(in) :: nchanl,mype_diaghdr,mype, nind
   character(20)  ,intent(in) :: isis
   character(10)  ,intent(in) :: obstype
   type(rad_obs_type),intent(in) :: radmod
@@ -468,7 +470,8 @@ subroutine init_crtm(init_pass,mype_diaghdr,mype,nchanl,isis,obstype,radmod)
  iff10     = 29 ! index of ten meter wind factor
  ilone     = 30 ! index of earth relative longitude (degrees)
  ilate     = 31 ! index of earth relative latitude (degrees)
- icount=ilate
+ if (nind==1)iirec = 32
+ icount=ilate+nind
  if(dval_use) icount=icount+2
  if ( obstype == 'avhrr_navy' .or. obstype == 'avhrr' ) icount=icount+2 ! when an independent SST analysis is read in
  itref     = icount+1 ! index of foundation temperature: Tr
@@ -887,7 +890,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
                    trop5,tzbgr,dtsavg,sfc_speed,&
                    tsim,emissivity,ptau5,ts, &
                    emissivity_k,temp,wmix,jacobian,error_status,tsim_clr, &
-                   layer_od,jacobian_aero)  
+                   layer_od,jacobian_aero, poz_out, cloud1, cloud2, cloudefr1, cloudefr2)  
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    call_crtm   creates vertical profile of t,q,oz,p,zs,etc., 
@@ -1047,7 +1050,12 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   real(r_kind),dimension(msig+1) :: prsi_rtm
   real(r_kind),dimension(msig)  :: prsl_rtm
   real(r_kind),dimension(msig)  :: auxq,auxdp
-  real(r_kind),dimension(nsig)  :: poz
+  real(r_kind),dimension(nsig) :: poz
+  real(r_kind),dimension(nsig), intent(out), optional :: poz_out
+  real(r_kind),dimension(nsig), intent(out), optional :: cloud1
+  real(r_kind),dimension(nsig), intent(out), optional :: cloud2
+  real(r_kind),dimension(nsig), intent(out), optional :: cloudefr1
+  real(r_kind),dimension(nsig), intent(out), optional :: cloudefr2
   real(r_kind),dimension(nsig)  :: rh,qs
   real(r_kind),dimension(5)     :: tmp_time
   real(r_kind),dimension(0:3)   :: dtskin
@@ -1556,6 +1564,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
 
          poz(k)=max(ozsmall,poz(k))
      endif ! oz
+     poz_out=poz
 ! Quantities required for MW cloudy radiance calculations
 
      if (n_clouds_fwd_wk>0) then
@@ -1608,6 +1617,12 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
         end do  
      endif ! <n_clouds_fwd_wk>
   end do
+
+   if (n_clouds_fwd .NE. 2 ) call die ('call_crtm', 'n_clouds_fwd not 2') 
+   cloud1=cloud(:,1) 
+   cloud2=cloud(:,2) 
+   cloudefr1=cloudefr(:,1) 
+   cloudefr2=cloudefr(:,2) 
 ! Interpolate level pressure to observation point for top interface
   prsi(nsig+1)=(ges_prsi(ix ,iy ,nsig+1,itsig )*w00+ &
               ges_prsi(ixp,iy ,nsig+1,itsig )*w10+ &

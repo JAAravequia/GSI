@@ -96,6 +96,8 @@ read_atms.o: read_atms.f90
 	$(FC) -c $(FFLAGS_nobig) $(_I) read_atms.f90
 read_bufrtovs.o: read_bufrtovs.f90
 	$(FC) -c $(FFLAGS_nobig) $(_I) read_bufrtovs.f90
+read_nc4tovs.o: read_nc4tovs.f90
+	$(FC) -c $(FFLAGS_nobig) $(_I) read_nc4tovs.f90
 read_goesimg.o: read_goesimg.f90
 	$(FC) -c $(FFLAGS_nobig) $(_I) read_goesimg.f90
 read_goesndr.o: read_goesndr.f90

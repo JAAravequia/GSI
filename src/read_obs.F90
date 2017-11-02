@@ -153,6 +153,11 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   use convinfo, only: nconvtype,ictype,ioctype,icuse
   use chemmod, only : oneobtest_chem,oneob_type_chem,&
        code_pm25_ncbufr,code_pm25_anowbufr,code_pm10_ncbufr,code_pm10_anowbufr
+  use netcdf, only : nf90_strerror, nf90_noerr, nf90_nowrite 
+  use netcdf, only : nf90_open, nf90_close, nf90_inq_varid
+  use netcdf, only : nf90_inq_dimid, nf90_inquire_dimension, nf90_get_var
+  use netcdf_mod, only: nc_check
+  use mpeu_util, only: die
 
   implicit none
 
@@ -167,6 +172,14 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   integer(i_kind) :: ireadsb,ireadmg,kx,nc,said
   real(r_double) :: satid,rtype
   character(8) subset
+ 
+  logical :: filetype_nc4
+  integer :: ncid, varid, dimid, n_obs, stat
+
+  integer(i_kind), dimension(2)  :: year, mnth, days, hour
+  
+  character(14) :: Iam='read_obs_check'
+  character(4) :: fchar
 
   satid=1      ! debug executable wants default value ???
   idate=0
@@ -180,11 +193,58 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
 
 ! Use routine as usual
   if(lexist)then
-      lnbufr = 15
-      open(lnbufr,file=trim(filename),form='unformatted',status ='unknown')
-      call openbf(lnbufr,'IN',lnbufr)
-      call datelen(10)
-      call readmg(lnbufr,subset,idate,iret)
+
+      filetype_nc4=.false. 
+      if ( index(filename,'nc4') /= 0) then 
+        filetype_nc4=.true.
+        if (index(dtype, 'amsua') ==0 ) then  !CSD-todo: should work for any tovs
+           write(6,*) 'nc4 reader not coded for '//trim(dtype) 
+           call die(Iam) 
+        endif 
+      endif 
+
+      if (.not. filetype_nc4) then 
+          lnbufr = 15
+          open(lnbufr,file=trim(filename),form='unformatted',status ='unknown')
+          call openbf(lnbufr,'IN',lnbufr)
+          call datelen(10)
+          call readmg(lnbufr,subset,idate,iret)
+      else 
+          write(6,*) 'reading date from nc4 file: '//trim(filename)
+          ! open nc file, allowing for permission problems 
+          iret = -1 
+          stat = nf90_open(trim(filename), NF90_NOWRITE, ncid)
+          if(stat /= nf90_noerr) then 
+             print *, trim(nf90_strerror(stat)) 
+          else 
+                  call nc_check(nf90_inq_varid(ncid, "YEAR", varid),Iam,'nf90_inq_varid')
+                  ! ??? nf90_get_var1 not supported???? Set dim to 2 for now
+                  call nc_check(nf90_inq_dimid(ncid,'nobs_bufr', dimid), Iam, 'nf90_inq_dimid')
+                  call nc_check(nf90_inquire_dimension(ncid, dimid, len=n_obs), Iam, 'nf90_inquire_dimension')
+
+                  ! readmg returns iret = -1 if bufr file has no messages. 
+                  if (n_obs .GT. 0) then 
+                          call nc_check(nf90_get_var(ncid, varid, year, start=(/1/), count=(/2/)), & 
+                                         Iam, 'nf90_get_var')
+                          ! Read in date as  YYYYMMDDHH (truncating minutes, not sure how BUFR does 
+                          ! conversion from longer format)
+                          call nc_check(nf90_inq_varid(ncid, "MNTH", varid),Iam,'nf90_inq_varid')
+                          call nc_check(nf90_get_var(ncid, varid, mnth, start=(/1/), count=(/2/)), & 
+                                         Iam, 'nf90_get_var')
+                          call nc_check(nf90_inq_varid(ncid, "DAYS", varid),Iam,'nf90_inq_varid')
+                          call nc_check(nf90_get_var(ncid, varid, days, start=(/1/), count=(/2/)), & 
+                                         Iam, 'nf90_get_var')
+                          call nc_check(nf90_inq_varid(ncid, "HOUR", varid),Iam,'nf90_inq_varid')
+                          call nc_check(nf90_get_var(ncid, varid, hour, start=(/1/), count=(/2/)), &
+                                         Iam, 'nf90_get_var')
+                          idate= year(1)*1000000+mnth(1)*10000+days(1)*100+hour(1)
+                          iret = 0 
+                  endif
+                  call nc_check(nf90_close(ncid),Iam,'nf90_close')
+          endif 
+
+      endif 
+
       if(iret == 0)then
 
 !        Extract date and check for consistency with analysis date
@@ -204,7 +264,11 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
          write(6,*)'***read_obs_check*** iret/=0 for reading date for ',trim(filename),dtype,jsatid,iret
          lexist=.false.
       end if
-      if(lexist)then
+
+      ! nc4 files are separated by satellite, no need to check for sat in file 
+      ! rethink for conventionals
+      ! leaving nread at 1 ( this is the number of messages read before finding the satellite)
+      if(lexist .AND. .not. filetype_nc4 )then 
        if(jsatid == '')then
          kidsat=0
        else if(jsatid == 'metop-a')then
@@ -508,12 +572,13 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
        end if
       end if
 
-      call closbf(lnbufr)
+      if (.not. filetype_nc4)call closbf(lnbufr)
   end if
+  if (filetype_nc4)then; fchar='nc4 '; else; fchar='bufr'; endif 
   if(lexist)then
-      write(6,*)'read_obs_check: bufr file date is ',idate,trim(filename),' ',dtype,jsatid
+      write(6,*)'read_obs_check: '//fchar//' file date is ',idate,trim(filename),' ',dtype,jsatid
   else
-      write(6,*)'read_obs_check: bufr file ',dtype,jsatid,' not available ',trim(filename)
+      write(6,*)'read_obs_check: '//fchar//' file ',dtype,jsatid,' not available ',trim(filename)
   end if
   return
 end subroutine read_obs_check
@@ -734,7 +799,12 @@ subroutine read_obs(ndata,mype)
     data lunout / 81 /
     data lunsave  / 82 /
 
+    logical :: filetype_nc4
+
 !*****************************************************************************
+
+    filetype_nc4=.false.
+    if ( index(infile,'nc4') /= 0) filetype_nc4=.true.
 
 !   Set analysis time and allocate/initialize arrays and variables
     call w3fs21(iadate,nmind)
@@ -1016,7 +1086,7 @@ subroutine read_obs(ndata,mype)
                read_db_rec1(i) = 999999
              end if
 
- 
+!CSD-todo: tasks are assigned based on file size - refine params (lenbuf) for nc4 files?
              if(lexist) then
 !      Initialize number of reader tasks to 1.  For the time being
 !      only allow number of reader tasks >= 1 for select obstype.
@@ -1295,6 +1365,9 @@ subroutine read_obs(ndata,mype)
              rewind(lunout)
           endif
 
+          filetype_nc4=.false.
+          if ( index(infile,'nc4') /= 0) filetype_nc4=.true.
+
 !         Process conventional (prepbufr) data
           string="--"//trim(ditype(i))
           ditype_select: &
@@ -1510,11 +1583,20 @@ subroutine read_obs(ndata,mype)
                   obstype == 'mhs'   .or. obstype == 'hirs4' .or.  &
                   obstype == 'hirs3' .or. obstype == 'hirs2' .or.  &
                   obstype == 'ssu' )) then
+
+             if (filetype_nc4) then
+                call read_nc4tovs(mype,val_dat,ithin,isfcalc,rmesh,platid,gstime,&
+                     infile,lunout,obstype,nread,npuse,nouse,twind,sis, &
+                     mype_root,mype_sub(mm1,i),npe_sub(i),mpi_comm_sub(i), nobs_sub1(1,i), &
+                     read_rec(i),read_ears_rec(i),read_db_rec(i),dval_use,radmod)
+                     string='READ_NC4TOVS'
+              else
                 call read_bufrtovs(mype,val_dat,ithin,isfcalc,rmesh,platid,gstime,&
                      infile,lunout,obstype,nread,npuse,nouse,twind,sis, &
                      mype_root,mype_sub(mm1,i),npe_sub(i),mpi_comm_sub(i), nobs_sub1(1,i), &
                      read_rec(i),read_ears_rec(i),read_db_rec(i),dval_use,radmod)
-                string='READ_BUFRTOVS'
+                     string='READ_BUFRTOVS'
+             endif
 
 !            Process atms data
              else if (obstype == 'atms') then

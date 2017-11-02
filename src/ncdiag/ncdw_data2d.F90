@@ -196,8 +196,9 @@ module ncdw_data2d
         nf90_inquire_dimension, nf90_def_dim, nf90_def_var, &
         nf90_def_var_deflate, nf90_def_var_chunking, nf90_put_var, &
         NF90_BYTE, NF90_SHORT, NF90_INT, NF90_FLOAT, NF90_DOUBLE, &
-        NF90_CHAR, NF90_MAX_NAME, NF90_CHUNKED
-    
+        NF90_CHAR, NF90_MAX_NAME, NF90_CHUNKED, & 
+        nf90_inq_dimid, nf90_noerr 
+
     use ncdw_climsg, only: &
 #ifdef ENABLE_ACTION_MSGS
         nclayer_enable_action, nclayer_actionm, &
@@ -397,7 +398,7 @@ module ncdw_data2d
             integer(i_long)                       :: tmp_dim_id
             character(len=120)                    :: data_dim_name
             character(len=120)                    :: data_dim_str_name
-            integer(i_long)                       :: max_len
+            integer(i_long)                       :: max_len, dimid , ierr
             integer(i_long)                       :: max_str_len, msl_tmp
             
             character(len=:),         allocatable :: string_arr(:)
@@ -439,15 +440,35 @@ module ncdw_data2d
 #endif
                         
                         ! We need to create a new dimension...
-                        write (data_dim_name, "(A, A)") trim(data2d_name), "_arr_dim"
+                        ! CSD : TEMPORARY HACK TO GET PROPER DIM NAMES
+                        select case (trim(data2d_name)) 
+                        case ('tvp','qvp','prsltmp','poz','cloud1', 'cloud2', & 
+                                 'cloudefr1', 'cloudefr2') 
+                                data_dim_name='nsig'
+                        case ('prsitmp') 
+                                data_dim_name='nsig_plus_one'
+                        case default
+                                write (data_dim_name, "(A, A)") trim(data2d_name), "_arr_dim"
+                        endselect 
                         
                         ! Find the maximum array length of this variable!
                         max_len = nc_diag_data2d_max_len_var(curdatindex)
                         
                         ! Create this maximum array length dimension for this variable
-                        if (.NOT. append_only) &
-                            call nclayer_check(nf90_def_dim(ncid, data_dim_name, max_len, diag_data2d_store%var_dim_ids(curdatindex)))
-                        
+                        if (.NOT. append_only) then 
+ 
+                        ! CSD check if dim exists 
+                            ierr  = nf90_inq_dimid(ncid, data_dim_name, dimid)
+                            if (ierr /= nf90_noerr) then ! dim does not exist
+                               call nclayer_check(nf90_def_dim(ncid, data_dim_name, max_len, diag_data2d_store%var_dim_ids(curdatindex)))
+                                !write(6,*) 'CSD - created dim', data_dim_name, diag_data2d_store%var_dim_ids(curdatindex)
+                            else 
+                               !write(6,*) 'CSD - dim exists', data_dim_name, dimid 
+                               diag_data2d_store%var_dim_ids(curdatindex) = dimid 
+                               ! write(6,*) 'CSD - dim exists', diag_data2d_store%var_dim_ids(curdatindex)
+                            endif 
+                        endif 
+ 
                         ! Store maximum length
                         diag_data2d_store%max_lens(curdatindex) = max_len;
                         

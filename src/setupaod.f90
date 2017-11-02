@@ -142,7 +142,7 @@
 
   real(r_kind), dimension(nchanl) :: total_aod, aod_obs, aod
 
-  integer(i_kind) :: istyp, idbcf, ilone, ilate
+  integer(i_kind) :: istyp, idbcf, ilone, ilate,nind
   real(r_kind)    :: styp, dbcf
 
   real(r_kind),dimension(nchanl):: emissivity,ts,emissivity_k
@@ -232,8 +232,9 @@
      endif
   endif
 
+  nind=0 
 ! Initialize radiative transfer
-  call init_crtm(init_pass,mype_diaghdr(is),mype,nchanl,isis,obstype,radmod)
+  call init_crtm(init_pass,mype_diaghdr(is),mype,nchanl,nind,isis,obstype,radmod)
 
 ! If diagnostic file requested, open unit to file and write header.
   if (aero_diagsave) then

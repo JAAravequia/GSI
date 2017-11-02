@@ -1,4 +1,4 @@
-   subroutine setuprad(lunin,mype,aivals,stats,nchanl,nreal,nobs,&
+   subroutine setuprad(lunin,mype,aivals,stats,nchanl,nreal,nind,nobs,&
      obstype,isis,is,rad_diagsave,init_pass,last_pass)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -193,6 +193,7 @@
 !     mype    - mpi task id
 !     nchanl  - number of channels per obs
 !     nreal   - number of pieces of non-tb information per obs
+!     nind    - set to 1 if file countains index from input nc4 file
 !     nobs    - number of tb observations to process
 !     obstype - type of tb observation
 !     isis    - sensor/instrument/satellite id  ex.amsua_n15
@@ -246,7 +247,7 @@
   use crtm_interface, only: init_crtm,call_crtm,destroy_crtm,sensorindex,surface, &
       itime,ilon,ilat,ilzen_ang,ilazi_ang,iscan_ang,iscan_pos,iszen_ang,isazi_ang, &
       ifrac_sea,ifrac_lnd,ifrac_ice,ifrac_sno,itsavg, &
-      izz,idomsfc,isfcr,iff10,ilone,ilate, &
+      izz,idomsfc,isfcr,iff10,ilone,ilate, iirec, &
       isst_hires,isst_navy,idata_type,iclr_sky,itref,idtw,idtc,itz_tr
   use clw_mod, only: calc_clw, ret_amsua
   use qcmod, only: qc_ssmi,qc_seviri,qc_ssu,qc_avhrr,qc_goesimg,qc_msu,qc_irsnd,qc_amsua,qc_mhs,qc_atms
@@ -268,7 +269,7 @@
   logical                           ,intent(in   ) :: rad_diagsave
   character(10)                     ,intent(in   ) :: obstype
   character(20)                     ,intent(in   ) :: isis
-  integer(i_kind)                   ,intent(in   ) :: lunin,mype,nchanl,nreal,nobs,is
+  integer(i_kind)                   ,intent(in   ) :: lunin,mype,nchanl,nreal,nobs,is, nind
   real(r_kind),dimension(40,ndat)   ,intent(inout) :: aivals
   real(r_kind),dimension(7,jpch_rad),intent(inout) :: stats
   logical                           ,intent(in   ) :: init_pass,last_pass    ! state of "setup" processing
@@ -343,6 +344,11 @@
   real(r_kind),dimension(nsigradjac,nchanl):: jacobian
   real(r_kind),dimension(nreal+nchanl,nobs)::data_s
   real(r_kind),dimension(nsig):: qvp,tvp
+  real(r_kind),dimension(nsig):: poz
+  real(r_kind),dimension(nsig):: cloud1
+  real(r_kind),dimension(nsig):: cloud2
+  real(r_kind),dimension(nsig):: cloudefr1
+  real(r_kind),dimension(nsig):: cloudefr2
   real(r_kind),dimension(nsig):: prsltmp
   real(r_kind),dimension(nsig+1):: prsitmp
   real(r_kind),dimension(nchanl):: weightmax
@@ -507,7 +513,7 @@
   if(mype==mype_diaghdr(is) .and. init_pass .and. jiterstart == jiter)iwrmype = mype_diaghdr(is)
 
 ! Initialize radiative transfer and pointers to values in data_s
-  call init_crtm(init_pass,iwrmype,mype,nchanl,isis,obstype,radmod)
+  call init_crtm(init_pass,iwrmype,mype,nchanl,nind,isis,obstype,radmod)
 
 ! Get indexes of variables in jacobian to handle exceptions down below
   ioz =getindex(radjacnames,'oz')
@@ -556,6 +562,7 @@
 ! iff10     = 29    ! index of ten meter wind factor
 ! ilone     = 30    ! index of earth relative longitude (degrees)
 ! ilate     = 31    ! index of earth relative latitude (degrees)
+! iirec     = 32    ! index of nc4 input file record number
 ! itref     = 34/36 ! index of foundation temperature: Tr
 ! idtw      = 35/37 ! index of diurnal warming: d(Tw) at depth zob
 ! idtc      = 36/38 ! index of sub-layer cooling: d(Tc) at depth zob
@@ -665,7 +672,9 @@
 ! If diagnostic file requested, open unit to file and write header.
   if (rad_diagsave .and. nchanl_diag > 0) then
      if (binary_diag) call init_binary_diag_
-     if (netcdf_diag) call init_netcdf_diag_
+     if (netcdf_diag) then 
+     call init_netcdf_diag_
+     endif
   endif
 
 ! Load data array for current satellite
@@ -775,13 +784,17 @@
                 tvp,qvp,clw_guess,prsltmp,prsitmp, &
                 trop5,tzbgr,dtsavg,sfc_speed, &
                 tsim,emissivity,ptau5,ts,emissivity_k, &
-                temp,wmix,jacobian,error_status,tsim_clr=tsim_clr)
+                temp,wmix,jacobian,error_status,tsim_clr=tsim_clr, & 
+                poz_out=poz, cloud1=cloud1, cloud2=cloud2, & 
+                cloudefr1=cloudefr1, cloudefr2=cloudefr2) 
         else
            call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, &
                 tvp,qvp,clw_guess,prsltmp,prsitmp, &
                 trop5,tzbgr,dtsavg,sfc_speed, &
                 tsim,emissivity,ptau5,ts,emissivity_k, &
-                temp,wmix,jacobian,error_status)
+                temp,wmix,jacobian,error_status, & 
+                poz_out=poz, cloud1=cloud1, cloud2=cloud2, & 
+                cloudefr1=cloudefr1, cloudefr2=cloudefr2) 
         endif 
 ! If the CRTM returns an error flag, do not assimilate any channels for this ob 
 ! and set the QC flag to ifail_crtm_qc.
@@ -1476,7 +1489,7 @@
               my_node => null()
 
               my_head%idv = is
-              my_head%iob = ioid(n)
+              my_head%iob = ioid(n) ! does iirec make this redundant?
               my_head%elat= data_s(ilate,n)
               my_head%elon= data_s(ilone,n)
               my_head%isis = isis
@@ -1790,7 +1803,8 @@
 ! Deallocate arrays
   deallocate(diagbufchan)
   deallocate(sc_index)
-
+ 
+write(6,*) 'CSD - calling diag_write', nind
   if (rad_diagsave) then
      if (netcdf_diag) call nc_diag_write
      call dtime_show(myname,'diagsave:rad',i_rad_ob_type)
@@ -2260,8 +2274,20 @@
                        predbias_angord(j) = j
                     end do
                     call nc_diag_data2d("BC_angord",   predbias_angord                                        )
-                 end if
 
+! CSD  - profile call goes in here
+                    call nc_diag_data2d("tvp",tvp) 
+                    call nc_diag_data2d("qvp",qvp) 
+                    call nc_diag_data2d("prsltmp",prsltmp) 
+                    call nc_diag_data2d("poz",poz) 
+                    call nc_diag_data2d("cloud1",cloud1) 
+                    call nc_diag_data2d("cloud2",cloud2) 
+                    call nc_diag_data2d("cloudefr1",cloudefr1) 
+                    call nc_diag_data2d("cloudefr2",cloudefr2) 
+                    call nc_diag_data2d("prsitmp",prsitmp) 
+                 end if
+              ! index in original BUFR file
+                  call nc_diag_metadata("Obs_Input_File_Index",                int(data_s(iirec,n))  )
               enddo
 !  if (adp_anglebc) then
   if (.true.) then

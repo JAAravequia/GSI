@@ -354,6 +354,7 @@
 	read_avhrr.o \
 	read_avhrr_navy.o \
 	read_bufrtovs.o \
+	read_nc4tovs.o \
         read_co.o \
 	read_cris.o \
 	read_diag.o \

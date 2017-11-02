@@ -234,7 +234,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   character(128):: diag_conv_file
   character(len=12) :: clfile
 
-  integer(i_kind) lunin,nobs,nchanl,nreal,nele,&
+  integer(i_kind) lunin,nobs,nchanl,nreal,nele,nind, &
        is,idate,i_dw,i_rw,i_sst,i_tcp,i_gps,i_uv,i_ps,i_lag,&
        i_t,i_pw,i_q,i_co,i_gust,i_vis,i_ref,i_pblh,i_wspd10m,i_td2m,&
        i_mxtm,i_mitm,i_pmsl,i_howv,i_tcamt,i_lcbas,i_cldch,i_uwnd10m,i_vwnd10m,iobs,nprt,ii,jj
@@ -470,6 +470,13 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
         if(nobs > 0)then
 
            read(lunin,iostat=ier) obstype,isis,nreal,nchanl
+! temporary method to track extra index for nc4 files 
+           if ( index(obstype,'amsua') /= 0) then 
+                nind=1
+           else
+                nind=0
+           end if
+
 !          if(mype == mype_diaghdr(is)) then
 !             write(6,300) obstype,isis,nreal,nchanl
 !300          format(' SETUPALL:,obstype,isis,nreal,nchanl=',a12,a20,i5,i5)
@@ -480,8 +487,9 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !          Set up for radiance data
            if(ditype(is) == 'rad')then
  
+              write(6,*) 'CSD - calling setuprad', mype, mype_rad
               call setuprad(lunin,&
-                 mype,aivals,stats,nchanl,nreal,nobs,&
+                 mype,aivals,stats,nchanl,nreal,nind,nobs,&
                  obstype,isis,is,rad_diagsave,init_pass,last_pass)
 
 !          Set up for aerosol data

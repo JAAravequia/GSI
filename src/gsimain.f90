@@ -182,7 +182,7 @@
 !         omegas_ad, oneobmod, ozinfo, pcgsoi, pcpinfo, polcarf, precpd_ad,
 !         prewgt, prewgt_reg, psichi2uv_reg, psichi2uvt_reg,
 !         qcmod, rad_tran_k, radinfo, rdgesig, rdgstat_reg, rdsfull,
-!         read_airs, read_avhrr_navy, read_bufrtovs, read_files, read_goesimg,
+!         read_airs, read_avhrr_navy, read_bufrtovs, read_nc4tovs,read_files, read_goesimg,
 !         read_goesndr, read_gps_ref, read_guess, read_ieeetovs, read_lidar,
 !         read_obs, read_ozone, read_pcp, read_prepbufr, read_radar, 
 !         read_superwinds, read_wrf_mass_files, read_wrf_mass_guess, 

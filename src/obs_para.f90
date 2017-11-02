@@ -250,10 +250,12 @@ subroutine disobs(ndata,nobs,mm1,lunout,obsfile,obstypeall)
   lunin=11
   open(lunin,file=trim(obsfile),form='unformatted')
   read(lunin)obstype,isis,nreal,nchanl,lat_data,lon_data
-  if(trim(obstype) /=trim(obstypeall)) &
+  if( .NOT.  ( trim(obstype) ==trim(obstypeall)  .OR. trim(obstype) ==trim(obstypeall)//'nc4')) &
         write(6,*)'DISOBS:  ***ERROR***   obstype,obstypeall=',trim(obstype),trim(obstypeall)
 
+  write(6,*) 'CSD', obstype,isis,nreal,nchanl,lat_data,lon_data
   nn_obs = nreal + nchanl
+  write(6,*) 'CSD', nn_obs, ndata
 
   allocate(obs_data(nn_obs,ndata))
 !  Read in all observations of a given type along with subdomain flags

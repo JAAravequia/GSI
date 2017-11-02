@@ -100,6 +100,10 @@ read_atms.o :
 read_bufrtovs.o :
 	@echo '---> Compiling $<'
 	$(CF) $(FFLAGS_nobig) -c $<
+
+read_nc4tovs.o :
+	@echo '---> Compiling $<'
+	$(CF) $(FFLAGS_nobig) -c $<
                                                                                 
 read_goesimg.o :
 	@echo '---> Compiling $<'

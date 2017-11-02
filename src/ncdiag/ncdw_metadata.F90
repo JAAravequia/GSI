@@ -927,7 +927,7 @@ module ncdw_metadata
         function nc_diag_metadata_lookup_var(metadata_name) result(ind)
             character(len=*), intent(in)    :: metadata_name
             integer :: i, ind
-            
+           
             ind = -1
             
             if (init_done .AND. allocated(diag_metadata_store)) then
@@ -1015,7 +1015,7 @@ module ncdw_metadata
             if (var_index == -1) then
                 ! First, check to make sure we can still define new variables.
                 if (diag_metadata_store%def_lock) then
-                    call nclayer_error("Can't add new variable - definitions have already been written and locked!")
+                    call nclayer_error(" Can't add new variable - definitions have already been written and locked!")
                 end if
                 
                 call nc_diag_metadata_expand
@@ -1058,13 +1058,13 @@ module ncdw_metadata
             if (diag_metadata_store%data_lock) then
                 call nclayer_error("Can't add new data - data have already been written and locked!")
             end if
-            
+           
             var_index = nc_diag_metadata_lookup_var(metadata_name)
             
             if (var_index == -1) then
                 ! First, check to make sure we can still define new variables.
                 if (diag_metadata_store%def_lock) then
-                    call nclayer_error("Can't add new variable - definitions have already been written and locked!")
+                    call nclayer_error(" Can't add new variable - definitions have already been written and locked!")
                 end if
                 
                 call nc_diag_metadata_expand
@@ -1118,7 +1118,7 @@ module ncdw_metadata
             if (var_index == -1) then
                 ! First, check to make sure we can still define new variables.
                 if (diag_metadata_store%def_lock) then
-                    call nclayer_error("Can't add new variable - definitions have already been written and locked!")
+                    call nclayer_error(" Can't add new variable - definitions have already been written and locked!")
                 end if
 #ifdef _DEBUG_MEM_
                 write (*, "(A, A, A, F)") "NEW METADATA: ", metadata_name, " | First value: ", metadata_value
@@ -1169,7 +1169,7 @@ module ncdw_metadata
             if (var_index == -1) then
                 ! First, check to make sure we can still define new variables.
                 if (diag_metadata_store%def_lock) then
-                    call nclayer_error("Can't add new variable - definitions have already been written and locked!")
+                    call nclayer_error(" Can't add new variable - definitions have already been written and locked!")
                 end if
                 
                 call nc_diag_metadata_expand
@@ -1218,7 +1218,7 @@ module ncdw_metadata
             if (var_index == -1) then
                 ! First, check to make sure we can still define new variables.
                 if (diag_metadata_store%def_lock) then
-                    call nclayer_error("Can't add new variable - definitions have already been written and locked!")
+                    call nclayer_error(" Can't add new variable - definitions have already been written and locked!")
                 end if
                 
                 call nc_diag_metadata_expand

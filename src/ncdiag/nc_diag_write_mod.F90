@@ -298,7 +298,7 @@ module nc_diag_write_mod
             
 #ifdef ENABLE_ACTION_MSGS
             character(len=1000)                   :: action_str
-            
+       
             if (nclayer_enable_action) then
                 if (present(append)) then
                     write(action_str, "(A, L, A)") "nc_diag_init(filename = " // trim(filename) // &
@@ -310,10 +310,11 @@ module nc_diag_write_mod
                 call nclayer_actionm(trim(action_str))
             end if
 #endif
-            
+
             ! Inform user about NetCDF version
             call nclayer_info('Initializing netcdf layer library, version ' // trim(nf90_inq_libvers()) // '...')
-            
+          
+
             ! Make sure we haven't initialized yet. If we have, it
             ! means that another file is open that hasn't been closed
             ! yet!
@@ -324,7 +325,6 @@ module nc_diag_write_mod
                     ! Open the file in append mode!
                     call nclayer_check( nf90_open(filename, NF90_WRITE, ncid, &
                         bsize, cache_nelems = 16777216) ) ! Optimization settings
-                    
                     ! Set the append flag
                     append_only = .TRUE.
                 else
@@ -341,8 +341,8 @@ module nc_diag_write_mod
                     ! here.
                     call nclayer_check( nf90_create(filename, OR(NF90_NETCDF4, NF90_CLOBBER), ncid, &
                         0, bsize, cache_nelems = 16777216) ) ! Optimization settings
+                    !write(6,*) 'CSD - file created', ncid 
                 end if
-                
                 ! Allocation sanity checks...
                 ! These storage variables should NOT be allocated.
                 ! If they are, it indicate that we have a serious problem.
@@ -367,7 +367,6 @@ module nc_diag_write_mod
                 allocate(diag_metadata_store)
                 allocate(diag_data2d_store)
                 allocate(diag_varattr_store)
-                
                 ! Set the current file being written to...
                 cur_nc_file = filename
                 
@@ -379,13 +378,12 @@ module nc_diag_write_mod
                 ! chaninfo/metadata/data2d to read the NetCDF files,
                 ! build a cache, and set up anything necessary to be
                 ! able to resume writing from before.
-                if (present(append) .AND. (append == .TRUE.)) then
+                !if (present(append) .AND. (append == .TRUE.)) then
+                 if (append_only) then 
                     call nclayer_info("Loading chaninfo variables/dimensions from file:")
                     call nc_diag_chaninfo_load_def
-                    
                     call nclayer_info("Loading metadata variables/dimensions from file:")
                     call nc_diag_metadata_load_def
-                    
                     call nclayer_info("Loading data2d variables/dimensions from file:")
                     call nc_diag_data2d_load_def
                 end if
@@ -398,6 +396,7 @@ module nc_diag_write_mod
                     // char(10) &
                     // "              Attempted to open file: " // trim(filename) // ")")
             end if
+
         end subroutine nc_diag_init
         
         ! Lock and commit the variable definitions for the current
