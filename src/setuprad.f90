@@ -1804,7 +1804,7 @@
   deallocate(diagbufchan)
   deallocate(sc_index)
  
-write(6,*) 'CSD - calling diag_write', nind
+!write(6,*) 'CSD - calling diag_write', nind
   if (rad_diagsave) then
      if (netcdf_diag) call nc_diag_write
      call dtime_show(myname,'diagsave:rad',i_rad_ob_type)

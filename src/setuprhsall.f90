@@ -487,7 +487,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !          Set up for radiance data
            if(ditype(is) == 'rad')then
  
-              write(6,*) 'CSD - calling setuprad', mype, mype_rad
+              !write(6,*) 'CSD - calling setuprad', mype, mype_rad
               call setuprad(lunin,&
                  mype,aivals,stats,nchanl,nreal,nind,nobs,&
                  obstype,isis,is,rad_diagsave,init_pass,last_pass)

@@ -5,7 +5,16 @@ subroutine read_nc4tovs(mype,val_tovs,ithin,isfcalc,&
      nrec_start,nrec_start_ears,nrec_start_db,dval_use,radmod)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:    read_bufrtovs                  read bufr tovs 1b data
+! C. Draper: temporary reader for nc4 input files, based directly on
+! read_bufrtovs routine. NOT OPTIMAL! Nov 8. 2017. 
+! To use nc4 files, append "_nc4" to dfile in OBS_INPUT namelist
+! (eg amsua_n19_nc4). Also need to update run script to link 
+! the nc4 file to the updated dfile.
+!
+!
+!
+! subprogram:    read_nc4tovs                  read bufr tovs 1b data
+! 
 !   prgmmr: treadon          org: np23                date: 2003-09-13
 !
 ! abstract:  This routine reads BUFR format TOVS 1b radiance 
@@ -17,78 +26,6 @@ subroutine read_nc4tovs(mype,val_tovs,ithin,isfcalc,&
 !            retains those observations that fall within the regional
 !            domain
 !
-! program history log:
-!   2003-09-13 treadon
-!   2004-05-28 kleist  - update subroutine call
-!   2004-06-16 treadon - update documentation
-!   2004-07-23 derber  - make changes to eliminate obs. earlier in thinning
-!   2004-07-29 treadon - add only to module use, add intent in/out
-!   2004-10-15 derber  - various changes to "quality" prediction used 
-!                        in data selection algorithm
-!   2005-01-26 derber  - land/sea determination and weighting for data selection
-!   2005-02-10 treadon - correct spelling in runtime print message; specify
-!                        _r_kind precision for real constants
-!   2005-07-06 derber  - add mhs and hirs/4 from NOAA-18, clean up code and 
-!                        modify data selection criteria
-!   2005-09-08  derber - modify to use input group time window
-!   2005-09-28  derber - modify to produce consistent surface info 
-!   2005-10-17  treadon - add grid and earth relative obs location to output file
-!   2005-10-18  treadon - remove array obs_load and call to sumload
-!   2005-10-24  derber - use more precise MHS scan properties (step & start)
-!   2005-10-26  treadon - clean up formatting, add clarifying comments, correct
-!                         ndata,ndata1 printout
-!   2005-11-22  derber  - include mean in bias correction
-!   2005-11-29  parrish - modify getsfc to work for different regional options
-!   2006-02-01  parrish - remove getsfc (different version called now in read_obs)
-!   2006-02-03  derber  - modify for new obs control and obs count
-!   2006-02-11  liu - add ssu
-!   2006-03-07  derber - correct error in nodata count
-!   2006-04-27  derber - clean up code
-!   2006-05-02  treadon - move close lnbufr to after 900 continue
-!   2006-05-19  eliu    - add logic to reset relative weight when all channels not used
-!   2006-07-28  derber  - add solar and satellite azimuth angles remove isflg from output
-!   2007-01-18  derber - add kidsat for metop
-!   2007-03-01  tremolet - measure time from beginning of assimilation window
-!   2007-08-31  h.liu - add kidsat for n05, n06, n07, n08, n09, n10, n11, n12,tiros-n
-!   2008-05-27  safford - rm unused vars
-!   2008-09-08  lueken  - merged ed's changes into q1fy09 code
-!   2008-10-14  derber  - properly use EARS data and use MPI_IO
-!   2009-01-02  todling - remove unused vars
-!   2009-01-09  gayno   - add option to calculate surface fields based on 
-!                         size/shape of field of view.
-!   2009-04-17  todling - zero out azimuth angle when unavailable (otherwise can't use old files)
-!   2009-04-18  woollen - improve mpi_io interface with bufrlib routines
-!   2009-04-21  derber  - add ithin to call to makegrids
-!   2009-12-20  gayno - modify for updated version of FOV surface code which 
-!                       calculates relative antenna power for some instruments.
-!   2010-02-25  collard - changes to call to crtm_init for CRTM v2.0
-!   2010-06-29  zhu     - add newpc4pred option
-!   2010-07-12  zhu     - include global offset for amsua in bias correction for adp_anglebc option
-!   2010-09-02  zhu     - add use_edges option
-!   2010-10-12  zhu     - use radstep and radstart from radinfo
-!   2011-04-07  todling - newpc4pred now in radinfo
-!   2011-04-08  li      - (1) use nst_gsi, nstinfo, and add NSST vars
-!                         (2) get zob, tz_tr (call skindepth and cal_tztr)
-!                         (3) interpolate NSST Variables to Obs. location (call deter_nst)
-!                         (4) add more elements (nstinfo) in data array
-!   2011-05-05  todling - merge in Min-Jeong update for cloudy-radiance work
-!   2011-05-20  mccarty - updated to read ATMS data
-!   2011-07-04  todling  - fixes to run either single or double precision
-!   2011-08-01  lueken  - removed deter_sfc subroutines, placed in new module deter_sfc_mod
-!   2011-09-13  gayno - improve error handling for FOV-based sfc calculation
-!                       (isfcalc=1)
-!   2011-12-13  collard Replace find_edges code to speed up execution.
-!   2011-12-14  collard Remove ATMS
-!   2012-03-05  akella  - nst now controlled via coupler
-!   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
-!   2013-12-20  zhu - change icw4crtm>0 to icw4crtm>10  (bug fix)
-!   2014-01-31  mkim - added iql4crtm for all-sky mw radiance data assimilation 
-!   2014-04-27  eliu/zhu - add thinning options for AMSU-A under allsky condition 
-!   2015-02-23  Rancic/Thomas - add thin4d to time window logical
-!   2015-08-20  zhu - use centralized radmod for all-sky and aerosol usages in radiance assimilation
-!   2016-04-28  jung - added logic for RARS and direct broadcast from NESDIS/UW
-!   2016-10-20  collard - fix to allow monitoring and limited assimilation of spectra when key 
-!                         channels are missing.
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -254,7 +191,7 @@ subroutine read_nc4tovs(mype,val_tovs,ithin,isfcalc,&
 !**************************************************************************
 ! Initialize variables
 
-  write(6,*)'CSD-READ_NC4TOVS: entered '//trim(infile)//' on ', mype_root,' ', mype_sub
+  write(6,*)'READ_NC4TOVS: entered '//trim(infile)//' on ', mype_root,' ', mype_sub
 
   nind=1 ! additional indexes, for saving obs in the input file
   maxinfo=31 + nind
@@ -364,7 +301,7 @@ subroutine read_nc4tovs(mype,val_tovs,ithin,isfcalc,&
                   kidsat==204)then
               instr=4 ! hirs-2 on tiros-n,noaa6-10,noaa12
            else  ! sensor/sat mismatch
-              write(6,*) 'READ_BUFRTOVS:  *** WARNING: HIRS2 SENSOR/SAT MISMATCH'
+              write(6,*) 'READ_NC4TOVS:  *** WARNING: HIRS2 SENSOR/SAT MISMATCH'
               instr=5 ! set to something to prevent abort
            endif
         elseif (hirs4) then
@@ -375,7 +312,7 @@ subroutine read_nc4tovs(mype,val_tovs,ithin,isfcalc,&
            elseif(kidsat==207.or.kidsat==208)then
               instr=7   ! noaa 16/17
            else
-              write(6,*) 'READ_BUFRTOVS:  *** WARNING: HIRS3 SENSOR/SAT MISMATCH'
+              write(6,*) 'READ_NC4TOVS:  *** WARNING: HIRS3 SENSOR/SAT MISMATCH'
               instr=7
            endif
         endif
@@ -466,12 +403,12 @@ subroutine read_nc4tovs(mype,val_tovs,ithin,isfcalc,&
      call instrument_init(instr,jsatid,expansion,valid)
      if (.not. valid) then
        if (assim) then
-         write(6,*)'READ_BUFRTOVS:  ***ERROR*** IN SETUP OF FOV-SFC CODE. STOP'
+         write(6,*)'READ_NC4TOVS:  ***ERROR*** IN SETUP OF FOV-SFC CODE. STOP'
          call stop2(71)
        else
          call fov_cleanup
          isfcalc = 0
-         write(6,*)'READ_BUFRTOVS:  ***ERROR*** IN SETUP OF FOV-SFC CODE'
+         write(6,*)'READ_NC4TOVS:  ***ERROR*** IN SETUP OF FOV-SFC CODE'
        endif
      endif
   endif
@@ -530,14 +467,14 @@ subroutine read_nc4tovs(mype,val_tovs,ithin,isfcalc,&
         allocate(data1b8x(nchanl))
         sensorlist(1)=sis
         if( crtm_coeffs_path /= "" ) then
-           if(mype_sub==mype_root) write(6,*)'READ_BUFRTOVS: crtm_spccoeff_load() on path "'//trim(crtm_coeffs_path)//'"'
+           if(mype_sub==mype_root) write(6,*)'READ_NC4TOVS: crtm_spccoeff_load() on path "'//trim(crtm_coeffs_path)//'"'
            error_status = crtm_spccoeff_load(sensorlist,&
               File_Path = crtm_coeffs_path )
            else
               error_status = crtm_spccoeff_load(sensorlist)
            endif
            if (error_status /= success) then
-              write(6,*)'READ_BUFRTOVS:  ***ERROR*** crtm_spccoeff_load error_status=',error_status,&
+              write(6,*)'READ_NC4TOVS:  ***ERROR*** crtm_spccoeff_load error_status=',error_status,&
                  '   TERMINATE PROGRAM EXECUTION'
            call stop2(71)
         endif
@@ -784,13 +721,13 @@ subroutine read_nc4tovs(mype,val_tovs,ithin,isfcalc,&
 
 !  Check for errors in satellite zenith angles 
            if(abs(lzaest-lza)*rad2deg > one) then
-              write(6,*)' READ_BUFRTOVS WARNING uncertainty in lza ', &
+              write(6,*)' READ_NC4TOVS WARNING uncertainty in lza ', &
                  lza*rad2deg,lzaest*rad2deg,sis,ifovmod,start,step
               cycle read_loop
            end if
 
            if(abs(lza)*rad2deg > MAX_SENSOR_ZENITH_ANGLE) then
-              write(6,*)'READ_BUFRTOVS WARNING lza error ',nc4_bfrXbhdr(7,irec),panglr
+              write(6,*)'READ_NC4TOVS WARNING lza error ',nc4_bfrXbhdr(7,irec),panglr
               cycle read_loop
            end if
 
@@ -798,7 +735,7 @@ subroutine read_nc4tovs(mype,val_tovs,ithin,isfcalc,&
            sat_aziang=nc4_bfrXbhdr(9,irec)
            if (abs(sat_aziang) > r360) then
               sat_aziang=zero
-!_RT              write(6,*) 'READ_BUFRTOVS: bad azimuth angle ',sat_aziang
+!_RT              write(6,*) 'READ_NC4TOVS: bad azimuth angle ',sat_aziang
 !_RT              cycle read_loop
            endif
 
@@ -1158,7 +1095,7 @@ endif
 ! Deallocate FOV surface code arrays and nullify pointers.
   if (isfcalc == 1) call fov_cleanup
 
-  if(diagnostic_reg.and.ntest>0) write(6,*)'READ_BUFRTOVS:  ',&
+  if(diagnostic_reg.and.ntest>0) write(6,*)'READ_NC4TOVS:  ',&
      'mype,ntest,disterrmax=',mype,ntest,disterrmax
 
 ! End of routine
