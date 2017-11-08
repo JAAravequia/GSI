@@ -443,7 +443,9 @@ module ncdw_data2d
                         ! CSD : TEMPORARY HACK TO GET PROPER DIM NAMES
                         select case (trim(data2d_name)) 
                         case ('tvp','qvp','prsltmp','poz','cloud1', 'cloud2', & 
-                                 'cloudefr1', 'cloudefr2') 
+                                 'cloudefr1', 'cloudefr2', 'tvtmp','qtmp','vtmp',& 
+                                 'utmp','hsges','qgtmp','qges','tvges', 'tges', & 
+                                 'uges','vges','zges') 
                                 data_dim_name='nsig'
                         case ('prsitmp') 
                                 data_dim_name='nsig_plus_one'

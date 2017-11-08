@@ -750,6 +750,10 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               call nc_diag_data2d("ObsDiagSave_obssen",   obsdiags(i_pw_ob_type,ibin)%tail%obssen   )              
            endif
 
+          call nc_diag_data2d("prsitmp", prsitmp)
+          call nc_diag_data2d("tvges", tvges)
+          call nc_diag_data2d("qges", qges)
+
   end subroutine contents_netcdf_diag_
 
   subroutine final_vars_

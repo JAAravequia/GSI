@@ -180,7 +180,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),dimension(nobs):: dup
   real(r_kind),dimension(lat2,lon2,nsig,nfldsig):: qg
   real(r_kind),dimension(lat2,lon2,nfldsig):: qg2m
-  real(r_kind),dimension(nsig):: prsltmp
+  real(r_kind),dimension(nsig):: prsltmp, qgtmp, qtmp
   real(r_kind),dimension(34):: ptablq
   real(r_single),allocatable,dimension(:,:)::rdiagbuf
   real(r_single),allocatable,dimension(:,:)::rdiagbufp
@@ -416,6 +416,13 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      call tintrp2a11(ges_ps,psges,dlat,dlon,dtime,hrdifsig,&
           mype,nfldsig)
      call tintrp2a1(ges_lnprsl,prsltmp,dlat,dlon,dtime,hrdifsig,&
+          nsig,mype,nfldsig)
+
+! CSD - new calls for ncdiag output
+
+     call tintrp2a1(qg,qgtmp,dlat,dlon,dtime,hrdifsig,&
+          nsig,mype,nfldsig)
+     call tintrp2a1(ges_q,qtmp,dlat,dlon,dtime,hrdifsig,&
           nsig,mype,nfldsig)
 
      presq=r10*exp(dpres)
@@ -1128,6 +1135,10 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               r_sprvstg           = data(isprvd,i)
               call nc_diag_metadata("Subprovider_Name",  c_sprvstg                    )
            endif
+
+      call nc_diag_data2d("qtmp", qtmp)
+      call nc_diag_data2d("qgtmp", qgtmp)
+      call nc_diag_data2d("prsltmp", prsltmp)
 
   end subroutine contents_netcdf_diag_
 

@@ -214,7 +214,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) oscat_vec,ascat_vec,rapidscat_vec
   real(r_kind),dimension(nele,nobs):: data
   real(r_kind),dimension(nobs):: dup
-  real(r_kind),dimension(nsig)::prsltmp,tges,zges
+  real(r_kind),dimension(nsig)::prsltmp,tges,zges, uges, vges
   real(r_kind) wdirob,wdirgesin,wdirdiffmax
   real(r_kind),dimension(34)::ptabluv
   real(r_single),allocatable,dimension(:,:)::rdiagbuf
@@ -566,6 +566,12 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            hrdifsig,mype,nfldsig)
         call tintrp31(ges_v,vgesin,dlat,dlon,dpres,dtime, &
            hrdifsig,mype,nfldsig)
+
+! CSD extra iterpolation for diag output
+        call tintrp2a1(ges_u,uges,dlat,dlon,dtime,hrdifsig,&
+              nsig,mype,nfldsig)
+        call tintrp2a1(ges_v,vges,dlat,dlon,dtime,hrdifsig,&
+              nsig,mype,nfldsig)
 
         if (zob > zges(1)) then
            factw=one
@@ -1644,6 +1650,12 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               r_sprvstg           = data(isprvd,i)
               call nc_diag_metadata("Subprovider_Name",  c_sprvstg                    )
            endif
+
+           call nc_diag_data2d("prsltmp", prsltmp)
+           call nc_diag_data2d("tges", tges)
+           call nc_diag_data2d("zges", zges)
+           call nc_diag_data2d("uges", uges)
+           call nc_diag_data2d("vges", vges)
 
   end subroutine contents_netcdf_diag_
 

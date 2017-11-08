@@ -902,6 +902,8 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               call nc_diag_metadata("Subprovider_Name",  c_sprvstg                    )
            endif
 
+           call nc_diag_data2d("prsltmp", prsltmp)
+
   end subroutine contents_netcdf_diag_
 
   subroutine final_vars_

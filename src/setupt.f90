@@ -1541,6 +1541,15 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
        r_sprvstg           = data(isprvd,i)
        call nc_diag_metadata("Subprovider_Name",  c_sprvstg                    )
     endif
+
+      ! addition of profiles for IODA
+      call nc_diag_data2d("prsltmp", prsltmp)
+      call nc_diag_data2d("tvtmp", tvtmp)
+      call nc_diag_data2d("qtmp", qtmp)
+      call nc_diag_data2d("utmp", utmp)
+      call nc_diag_data2d("vtmp", vtmp)
+      call nc_diag_data2d("hsges", hsges)
+
   end subroutine contents_netcdf_diag_
 
   subroutine final_vars_
