@@ -150,7 +150,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) val2,ress,ressw2,val,valqc
   real(r_kind) cg_ps,wgross,wnotgross,wgt,arg,exp_arg,term,rat_err2,qcgross
   real(r_kind),dimension(nobs):: dup
-  real(r_kind),dimension(nsig):: prsltmp
+  real(r_kind),dimension(nsig):: prsltmp, tvtmp
   real(r_kind),dimension(nele,nobs):: data
   real(r_single),allocatable,dimension(:,:)::rdiagbuf
 
@@ -377,6 +377,11 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      call tintrp2a11(ges_ps,psges,dlat,dlon,dtime,hrdifsig,&
         mype,nfldsig)
      call tintrp2a1(ges_lnprsl,prsltmp,dlat,dlon,dtime,hrdifsig,&
+        nsig,mype,nfldsig)
+
+! CSD - extra fields for diag output
+
+     call tintrp2a1(ges_tv,tvtmp,dlat,dlon,dtime,hrdifsig,&
         nsig,mype,nfldsig)
 
 ! Convert pressure to grid coordinates
@@ -903,6 +908,10 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            endif
 
            call nc_diag_data2d("prsltmp", prsltmp)
+           call nc_diag_data2d("tvtmp", tvtmp)
+
+           call nc_diag_metadata("psges", psges )
+           call nc_diag_metadata("zsges", zsges )
 
   end subroutine contents_netcdf_diag_
 
