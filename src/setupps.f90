@@ -886,29 +886,29 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            call nc_diag_metadata("Observation_Class",       obsclass               )
            call nc_diag_metadata("Observation_Type",        ictype(ikx)            )
            call nc_diag_metadata("Observation_Subtype",     icsubtype(ikx)         )
-           call nc_diag_metadata("Latitude",                data(ilate,i)          )
-           call nc_diag_metadata("Longitude",               data(ilone,i)          )
+           call nc_diag_metadata("Latitude",                real(data(ilate,i),r_single)          )
+           call nc_diag_metadata("Longitude",               real(data(ilone,i),r_single)          )
            call nc_diag_metadata("Station_Elevation",       data(istnelv,i)        )
-           call nc_diag_metadata("Pressure",                data(ipres,i)*r10      )
+           call nc_diag_metadata("Pressure",                real(data(ipres,i)*r10,r_single)      )
            call nc_diag_metadata("Height",                  dhgt                   )
-           call nc_diag_metadata("Time",                    dtime-time_offset      )
+           call nc_diag_metadata("Time",                    real(dtime-time_offset,r_single)      )
            call nc_diag_metadata("Prep_QC_Mark",            data(iqc,i)            )
            call nc_diag_metadata("Prep_Use_Flag",           data(iuse,i)           )
            call nc_diag_metadata("Nonlinear_QC_Var_Jb",     var_jb                 )
            call nc_diag_metadata("Nonlinear_QC_Rel_Wgt",    rwgt                   )                 
            if(muse(i)) then
-              call nc_diag_metadata("Analysis_Use_Flag",    one                    )
+              call nc_diag_metadata("Analysis_Use_Flag",    real(one,r_single)                    )
            else
-              call nc_diag_metadata("Analysis_Use_Flag",    -one                   )              
+              call nc_diag_metadata("Analysis_Use_Flag",    real(-one,r_single)                   )              
            endif
 
-           call nc_diag_metadata("Errinv_Input",            errinv_input           )
+           call nc_diag_metadata("Errinv_Input",            real(errinv_input,r_single)           )
            call nc_diag_metadata("Errinv_Adjust",           errinv_adjst           )
-           call nc_diag_metadata("Errinv_Final",            errinv_final           )
+           call nc_diag_metadata("Errinv_Final",            real(errinv_final,r_single)           )
 
-           call nc_diag_metadata("Observation",                           pob          )
-           call nc_diag_metadata("Obs_Minus_Forecast_adjusted",     pob-pges     )
-           call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", pob-pgesorig )
+           call nc_diag_metadata("Observation",                     real(pob,r_single)          )
+           call nc_diag_metadata("Obs_Minus_Forecast_adjusted",     real(pob-pges,r_single)     )
+           call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", real(pob-pgesorig,r_single) )
  
            if (lobsdiagsave) then
               do jj=1,miter

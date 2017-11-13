@@ -76,8 +76,10 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
 ! get total number of conventional and sat obs for ensmean.
     id = 'ensmean'
     if(nproc == 0)call get_num_convobs(obspath,datestring,nobs_conv,nobs_convdiag,id)
-    if(nproc == iozproc)call get_num_ozobs(obspath,datestring,nobs_oz,nobs_ozdiag,id)
-    if(nproc == isatproc)call get_num_satobs(obspath,datestring,nobs_sat,nobs_satdiag,id)
+!    if(nproc == iozproc)call get_num_ozobs(obspath,datestring,nobs_oz,nobs_ozdiag,id)
+!    if(nproc == isatproc)call get_num_satobs(obspath,datestring,nobs_sat,nobs_satdiag,id)
+    nobs_oz = 0; nobs_ozdiag = 0
+    nobs_sat = 0; nobs_satdiag = 0
     call mpi_bcast(nobs_conv,1,mpi_integer,0,mpi_comm_world,ierr)
     call mpi_bcast(nobs_convdiag,1,mpi_integer,0,mpi_comm_world,ierr)
     call mpi_bcast(nobs_oz,1,mpi_integer,iozproc,mpi_comm_world,ierr)

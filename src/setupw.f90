@@ -1653,37 +1653,37 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            call nc_diag_metadata("Observation_Class",       obsclass               )
            call nc_diag_metadata("Observation_Type",        ictype(ikx)            )
            call nc_diag_metadata("Observation_Subtype",     icsubtype(ikx)         )
-           call nc_diag_metadata("Latitude",                data(ilate,i)          )
-           call nc_diag_metadata("Longitude",               data(ilone,i)          )
+           call nc_diag_metadata("Latitude",                real(data(ilate,i),r_single)          )
+           call nc_diag_metadata("Longitude",               real(data(ilone,i),r_single)          )
            call nc_diag_metadata("Station_Elevation",       data(ielev,i)          )
-           call nc_diag_metadata("Pressure",                presw                  )
+           call nc_diag_metadata("Pressure",                real(presw,r_single)                  )
            call nc_diag_metadata("Height",                  data(ihgt,i)           )
-           call nc_diag_metadata("Time",                    dtime-time_offset      )
+           call nc_diag_metadata("Time",                    real(dtime-time_offset,r_single)      )
            call nc_diag_metadata("Prep_QC_Mark",            data(iqc,i)            )
 !           call nc_diag_metadata("Setup_QC_Mark",           rmiss_single           )
            call nc_diag_metadata("Setup_QC_Mark",           bmiss                  )
            call nc_diag_metadata("Prep_Use_Flag",           data(iuse,i)           )
            if(muse(i)) then
-              call nc_diag_metadata("Analysis_Use_Flag",    one                    )
+              call nc_diag_metadata("Analysis_Use_Flag",    real(one,r_single)                    )
            else
-              call nc_diag_metadata("Analysis_Use_Flag",    -one                   )
+              call nc_diag_metadata("Analysis_Use_Flag",    real(-one,r_single)                   )
            endif
 
            call nc_diag_metadata("Nonlinear_QC_Rel_Wgt",    rwgt                   )
-           call nc_diag_metadata("Errinv_Input",            errinv_input           )
+           call nc_diag_metadata("Errinv_Input",            real(errinv_input,r_single)           )
            call nc_diag_metadata("Errinv_Adjust",           errinv_adjst           )
-           call nc_diag_metadata("Errinv_Final",            errinv_final           )
+           call nc_diag_metadata("Errinv_Final",            real(errinv_final,r_single)           )
 
            call nc_diag_metadata("Wind_Reduction_Factor_at_10m", factw             )
 
            if (.not. regional) then
-              call nc_diag_metadata("u_Observation",                              data(iuob,i)    )
-              call nc_diag_metadata("u_Obs_Minus_Forecast_adjusted",              dudiff          )
-              call nc_diag_metadata("u_Obs_Minus_Forecast_unadjusted",            uob-ugesin      )
+              call nc_diag_metadata("u_Observation",                              real(data(iuob,i),r_single)    )
+              call nc_diag_metadata("u_Obs_Minus_Forecast_adjusted",              real(dudiff,r_single)          )
+              call nc_diag_metadata("u_Obs_Minus_Forecast_unadjusted",            real(uob-ugesin,r_single)      )
 
-              call nc_diag_metadata("v_Observation",                              data(ivob,i)    )
-              call nc_diag_metadata("v_Obs_Minus_Forecast_adjusted",              dvdiff          )
-              call nc_diag_metadata("v_Obs_Minus_Forecast_unadjusted",            vob-vgesin      )
+              call nc_diag_metadata("v_Observation",                              real(data(ivob,i),r_single)    )
+              call nc_diag_metadata("v_Obs_Minus_Forecast_adjusted",              real(dvdiff,r_single)          )
+              call nc_diag_metadata("v_Obs_Minus_Forecast_unadjusted",            real(vob-vgesin,r_single)      )
            else ! (if regional)
 !              replace positions 17-22 with earth relative wind component information
    

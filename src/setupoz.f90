@@ -550,6 +550,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
                  call nc_diag_metadata("Latitude",        data(ilate,i)             )
                  call nc_diag_metadata("Longitude",       data(ilone,i)             )
                  call nc_diag_metadata("Time",            data(itime,i)-time_offset )
+                 call nc_diag_metadata("Reference_Pressure",     pobs(i))
                  call nc_diag_metadata("Observation",                  ozobs(k))
                  call nc_diag_metadata("Inverse_Observation_Error",    errorinv)
                  call nc_diag_metadata("Obs_Minus_Forecast_adjusted",  ozone_inv(k))
