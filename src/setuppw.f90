@@ -750,7 +750,26 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               call nc_diag_data2d("ObsDiagSave_obssen",   obsdiags(i_pw_ob_type,ibin)%tail%obssen   )              
            endif
 
+         call tintrp2a11(rp2,pwges,dlat,dlon,dtime, &
+            hrdifsig,mype,nfldsig)
+
+         call tintrp2a1(ges_prsi,prsitmp,dlat,dlon,dtime, &
+             hrdifsig,nsig+1,mype,nfldsig)
+
+         call tintrp2a1(ges_q,qges,dlat,dlon,dtime, &
+             hrdifsig,nsig,mype,nfldsig)
+
+         call tintrp2a1(ges_tv,tvges,dlat,dlon,dtime, &
+             hrdifsig,nsig,mype,nfldsig)
+
+         call tintrp2a11(ges_z,zges,dlat,dlon,dtime,hrdifsig,&
+             mype,nfldsig)
+
+
+          call nc_diag_metadata("zges", zges)
+          call nc_diag_metadata("pwges", pwges)
           call nc_diag_data2d("prsitmp", prsitmp)
+
           call nc_diag_data2d("tvges", tvges)
           call nc_diag_data2d("qges", qges)
 

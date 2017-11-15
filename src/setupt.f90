@@ -1542,6 +1542,18 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
        call nc_diag_metadata("Subprovider_Name",  c_sprvstg                    )
     endif
 
+
+        call tintrp2a1(ges_tv,tvtmp,dlat,dlon,dtime,hrdifsig,&
+             nsig,mype,nfldsig)
+        call tintrp2a1(ges_q,qtmp,dlat,dlon,dtime,hrdifsig,&
+             nsig,mype,nfldsig)
+        call tintrp2a1(ges_u,utmp,dlat,dlon,dtime,hrdifsig,&
+             nsig,mype,nfldsig)
+        call tintrp2a1(ges_v,vtmp,dlat,dlon,dtime,hrdifsig,&
+             nsig,mype,nfldsig)
+        call tintrp2a1(geop_hgtl,hsges,dlat,dlon,dtime,hrdifsig,&
+             nsig,mype,nfldsig)
+
       ! addition of profiles for IODA
       call nc_diag_data2d("prsltmp", prsltmp)
       call nc_diag_data2d("tvtmp", tvtmp)
