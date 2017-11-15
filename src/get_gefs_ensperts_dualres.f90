@@ -92,6 +92,13 @@ subroutine get_gefs_ensperts_dualres
   logical ice
   type(sub2grid_info) :: grd_tmp
 
+  integer(i_kind),parameter :: n2d=2
+  integer(i_kind),parameter :: n3d=6
+  character(len=4), parameter :: vars2d(n2d) = (/ 'ps  ', 'sst ' /)
+  character(len=4), parameter :: vars3d(n3d) = (/ 'sf  ', 'vp  ', &
+                                                  't   ', 'q   ', &
+                                                  'cw  ', 'oz  ' /)
+
 ! Create perturbations grid and get variable names from perturbations
   if(en_perts(1,1)%grid%im/=grd_ens%lat2.or. &
      en_perts(1,1)%grid%jm/=grd_ens%lon2.or. &
@@ -144,7 +151,7 @@ subroutine get_gefs_ensperts_dualres
   end do
 
 ! Allocate bundle used for reading members
-  call gsi_bundlecreate(en_read,en_perts(1,1)%grid,'aux-ens-read',istatus,names2d=cvars2d,names3d=cvars3d)
+  call gsi_bundlecreate(en_read,en_perts(1,1)%grid,'aux-ens-read',istatus,names2d=vars2d,names3d=vars3d)
   if(istatus/=0) then
     write(6,*)' get_gefs_ensperts_dualres: trouble creating en_read bundle'
     call stop2(999)

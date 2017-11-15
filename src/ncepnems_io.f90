@@ -206,7 +206,7 @@ contains
     use kinds, only: i_kind,r_kind
     use gridmod, only: sp_a,grd_a,lat2,lon2,nsig
     use guess_grids, only: ifilesig,nfldsig
-    use gsi_metguess_mod, only: gsi_metguess_bundle
+    use gsi_metguess_mod, only: gsi_metguess_bundle, gsi_metguess_get
     use gsi_bundlemod, only: gsi_bundlegetpointer
     use gsi_bundlemod, only: gsi_bundlecreate
     use gsi_bundlemod, only: gsi_grid
@@ -220,7 +220,7 @@ contains
 
     character(len=*),parameter::myname_=myname//'*read_'
     character(24) filename
-    integer(i_kind):: it, istatus, inner_vars, num_fields
+    integer(i_kind):: it, istatus, inner_vars, num_fields, ivar, ier
     integer(i_kind):: iret_ql,iret_qi
 
     real(r_kind),pointer,dimension(:,:  ):: ges_ps_it  =>NULL()
@@ -348,8 +348,13 @@ contains
     endif
     call gsi_bundlegetpointer (atm_bundle,'cw',ptr3d,istatus)
     if (istatus==0) then
-       call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ges_cwmr_it,istatus)
-       if(istatus==0) ges_cwmr_it = ptr3d
+       call gsi_metguess_get( 'var::cw', ivar, ier )
+       if (ivar > 0) then
+          call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ges_cwmr_it,istatus)
+          if(istatus==0) ges_cwmr_it = ptr3d
+       else
+          if (mype==0) write(6,*)'READ_ NEMSIO: cw not present in metguess_bundle'
+       endif
     endif
     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql_it,  iret_ql)
     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi_it,  iret_qi)
@@ -1736,6 +1741,8 @@ contains
     use constants, only: two,pi,half,deg2rad
     use gsi_bundlemod, only: gsi_bundle
     use gsi_bundlemod, only: gsi_bundlegetpointer
+    use control_vectors, only: cvars3d
+    use mpeu_util, only: getindex
   
     implicit none
 
@@ -1756,7 +1763,7 @@ contains
     character(len=1)   :: null = ' '
     integer(i_kind),dimension(7):: idate, jdate
     integer(i_kind),dimension(4):: odate
-    integer(i_kind) :: k, mm1, nlatm2, nord_int, i, j, kk
+    integer(i_kind) :: k, mm1, nlatm2, nord_int, i, j, kk, icw
     integer(i_kind) :: iret, lonb, latb, levs, istatus
     integer(i_kind) :: nfhour, nfminute, nfsecondn, nfsecondd
     integer(i_kind) :: istop = 104
@@ -2151,6 +2158,8 @@ contains
     end do
        
 !   Cloud condensate mixing ratio
+    if(mype == 0)write(6,*)'write_atm: ncloud=', ncloud
+    icw=getindex(cvars3d,'cw')
     if (ntracer>2 .or. ncloud>=1) then
        do k=1,grd%nsig
           call mpi_gatherv(cwsm(1,k),grd%ijn(mm1),mpi_rtype,&
@@ -2159,23 +2168,25 @@ contains
           if (mype == mype_out) then
              if(diff_res)then
                 call nemsio_readrecv(gfile,'clwmr','mid layer',k,rwork1d,iret=iret)
-                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'pres','read',istop,iret)
-                grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
-                vector(1)=.false.
-                call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-                call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
-                do kk=1,grd%iglobal
-                   i=grd%ltosi(kk)
-                   j=grd%ltosj(kk)
-                   grid3(i,j,1)=work1(kk)-max(grid3(i,j,1),qcmin)
-                end do
-                call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
-                do j=1,latb
-                   do i=1,lonb
-                      grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+                if(icw > 0)then
+                   if (iret /= 0) call error_msg(trim(my_name),trim(filename),'pres','read',istop,iret)
+                   grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
+                   vector(1)=.false.
+                   call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+                   call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
+                   do kk=1,grd%iglobal
+                      i=grd%ltosi(kk)
+                      j=grd%ltosj(kk)
+                      grid3(i,j,1)=work1(kk)-max(grid3(i,j,1),qcmin)
                    end do
-                end do
-                rwork1d = reshape(grid_b,(/size(rwork1d)/))
+                   call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
+                   do j=1,latb
+                      do i=1,lonb
+                         grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+                      end do
+                   end do
+                   rwork1d = reshape(grid_b,(/size(rwork1d)/))
+                end if
              else
                 call load_grid(work1,grid)
                 rwork1d = reshape(grid,(/size(rwork1d)/))
