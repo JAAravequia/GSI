@@ -217,7 +217,6 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_w
 
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_w
   real(r_kind),allocatable,dimension(:,:,:,: ) :: ges_qr
   real(r_kind),allocatable,dimension(:,:,:,: ) :: ges_qs
   real(r_kind),allocatable,dimension(:,:,:,: ) :: ges_qg

@@ -1467,7 +1467,7 @@ subroutine read_obs(ndata,mype)
                   call read_radar_wind_ascii(nread,npuse,nouse,infile,lunout,obstype,twind,sis,&
                                   hgtl_full,nobs_sub1(1,i),hlocal(i),vlocal(i))
                 else
-                if (vadwnd_l2rw_qc) then
+                  if (vadwnd_l2rw_qc) then
                       write(6,*)'READ_OBS: radial wind,read_radar,dfile=',infile,',dsis=',sis 
                      call read_radar(nread,npuse,nouse,infile,lunout,obstype,twind,sis,&
                                      hgtl_full,nobs_sub1(1,i))
@@ -1476,6 +1476,7 @@ subroutine read_obs(ndata,mype)
                       write(6,*)'READ_OBS: radial wind,read_radar_l2rw_novadqc,dfile=',infile,',dsis=',sis
                      call read_radar_l2rw_novadqc(npuse,nouse,lunout,obstype,sis,nobs_sub1(1,i))
                      string='READ_RADAR_L2RW_NOVADQC'
+                  end if
                 end if
                 string='READ_RADAR_WIND'
 

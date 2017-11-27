@@ -1355,7 +1355,7 @@ contains
          nsig,nsig_soil,ijn_s,displs_s,eta1_ll,pt_ll,itotsub,aeta1_ll,eta2_ll,aeta2_ll
     use constants, only: zero,one,grav,fv,zero_single,rd_over_cp_mass,one_tenth,r10,r100
     use constants, only: r0_01, tiny_r_kind,rd,r1000
-    use gsi_io, only: lendian_in
+    use gsi_io, only: lendian_in, verbose
     use chemmod, only: laeroana_gocart,nh4_mfac,oc_mfac,&
          aerotot_guess,init_aerotot_guess,wrf_pm2_5,aero_ratios
     use rapidrefresh_cldsurf_mod, only: l_cloud_analysis,l_gsd_soiltq_nudge

@@ -431,6 +431,8 @@ setuptcp.o : setuptcp.f90 gsi_metguess_mod.o gsi_bundlemod.o m_dtime.o jfunc.o c
 setuptd2m.o : setuptd2m.f90 gsi_metguess_mod.o gsi_bundlemod.o m_dtime.o convinfo.o qcmod.o jfunc.o constants.o gridmod.o oneobmod.o gsi_4dvar.o obsmod.o m_obsLList.o m_td2mNode.o m_obsNode.o m_obsdiags.o guess_grids.o kinds.o mpeu_util.o 
 setupt.o : setupt.f90 buddycheck_mod.o gsi_metguess_mod.o gsi_bundlemod.o m_dtime.o aircraftinfo.o rapidrefresh_cldsurf_mod.o converr.o converr_t.o convinfo.o constants.o guess_grids.o jfunc.o gridmod.o oneobmod.o qcmod.o gsi_4dvar.o m_obsLList.o m_tNode.o m_obsNode.o obsmod.o m_obsdiags.o kinds.o mpeu_util.o 
 setupvis.o : setupvis.f90 gsi_metguess_mod.o gsi_bundlemod.o m_dtime.o convinfo.o qcmod.o jfunc.o constants.o gridmod.o oneobmod.o gsi_4dvar.o m_obsLList.o m_visNode.o m_obsNode.o obsmod.o m_obsdiags.o guess_grids.o kinds.o mpeu_util.o 
+setupuwnd10m.o : setupuwnd10m.f90 gsi_metguess_mod.o gsi_bundlemod.o m_dtime.o convinfo.o qcmod.o jfunc.o constants.o gridmod.o oneobmod.o gsi_4dvar.o m_obsLList.o m_uwnd10mNode.o m_obsNode.o obsmod.o m_obsdiags.o guess_grids.o kinds.o mpeu_util.o
+setupvwnd10m.o : setupvwnd10m.f90 gsi_metguess_mod.o gsi_bundlemod.o m_dtime.o convinfo.o qcmod.o jfunc.o constants.o gridmod.o oneobmod.o gsi_4dvar.o m_obsLList.o m_vwnd10mNode.o m_obsNode.o obsmod.o m_obsdiags.o guess_grids.o kinds.o mpeu_util.o
 setupw.o : setupw.f90 gsi_metguess_mod.o gsi_bundlemod.o m_dtime.o rapidrefresh_cldsurf_mod.o converr.o converr_uv.o convinfo.o jfunc.o constants.o guess_grids.o gridmod.o oneobmod.o qcmod.o gsi_4dvar.o m_obsLList.o m_wNode.o m_obsNode.o obsmod.o m_obsdiags.o kinds.o mpeu_util.o 
 setupwspd10m.o : setupwspd10m.f90 gsi_metguess_mod.o gsi_bundlemod.o m_dtime.o convinfo.o qcmod.o jfunc.o constants.o gridmod.o oneobmod.o gsi_4dvar.o m_obsLList.o m_wspd10mNode.o m_obsNode.o obsmod.o m_obsdiags.o guess_grids.o kinds.o mpeu_util.o 
 sfc_model.o : sfc_model.f90 constants.o kinds.o 
@@ -460,11 +462,7 @@ stpgps.o : stpgps.f90 m_gpsNode.o m_obsNode.o gsi_bundlemod.o gridmod.o constant
 stpgust.o : stpgust.f90 m_gustNode.o m_obsNode.o gsi_bundlemod.o constants.o qcmod.o kinds.o 
 stphowv.o : stphowv.f90 gsi_bundlemod.o constants.o qcmod.o kinds.o m_howvNode.o m_obsNode.o 
 stpjcmod.o : stpjcmod.f90 state_vectors.o gsi_4dvar.o jcmod.o mpl_allreduce.o mpimod.o derivsmod.o guess_grids.o jfunc.o gridmod.o gsi_metguess_mod.o gsi_bundlemod.o constants.o kinds.o 
-<<<<<<< HEAD
-stpjo.o : stpjo.f90 m_obsHeadBundle.o mpeu_util.o control_vectors.o gsi_bundlemod.o aircraftinfo.o bias_predictors.o stpcldch.o stplcbas.o stptcamt.o stphowv.o stppmsl.o stpmitm.o stpmxtm.o stptd2m.o stpwspd10m.o stpuwnd10m.o stpvwnd10m.o stppblh.o stpvis.o stpgust.o stpaod.o stppm10.o stppm2_5.o stpco.o stpoz.o stppcp.o stpdw.o stptcp.o stpsst.o stpsrw.o stpspd.o stprw.o stpdbz.o stpgps.o stprad.o stpq.o stppw.o stpps.o stpw.o stpt.o obsmod.o kinds.o 
-=======
-stpjo.o : stpjo.f90 m_obsHeadBundle.o mpeu_util.o control_vectors.o gsi_bundlemod.o aircraftinfo.o bias_predictors.o stpvwnd10m.o stpuwnd10m.o stpcldch.o stplcbas.o stptcamt.o stphowv.o stppmsl.o stpmitm.o stpmxtm.o stptd2m.o stpwspd10m.o stppblh.o stpvis.o stpgust.o stpaod.o stppm10.o stppm2_5.o stpco.o stpoz.o stppcp.o stpdw.o stptcp.o stpsst.o stpspd.o stprw.o stpgps.o stprad.o stpq.o stppw.o stpps.o stpw.o stpt.o obsmod.o kinds.o 
->>>>>>> master
+stpjo.o : stpjo.f90 m_obsHeadBundle.o mpeu_util.o control_vectors.o gsi_bundlemod.o aircraftinfo.o bias_predictors.o stpvwnd10m.o stpuwnd10m.o stpcldch.o stplcbas.o stptcamt.o stphowv.o stppmsl.o stpmitm.o stpmxtm.o stptd2m.o stpwspd10m.o stppblh.o stpvis.o stpgust.o stpaod.o stppm10.o stppm2_5.o stpco.o stpoz.o stppcp.o stpdw.o stptcp.o stpsst.o stpspd.o stprw.o stpdbz.o stpgps.o stprad.o stpq.o stppw.o stpps.o stpw.o stpt.o obsmod.o kinds.o 
 stplcbas.o : stplcbas.f90 gsi_bundlemod.o constants.o qcmod.o kinds.o m_lcbasNode.o m_obsNode.o 
 stpmitm.o : stpmitm.f90 gsi_bundlemod.o constants.o qcmod.o kinds.o m_mitmNode.o m_obsNode.o 
 stpmxtm.o : stpmxtm.f90 gsi_bundlemod.o constants.o qcmod.o kinds.o m_mxtmNode.o m_obsNode.o 
