@@ -183,11 +183,9 @@ subroutine get_user_ens_gfs_fastread_(ntindex,en_loc3,m_cvars2d,m_cvars3d, &
     !endif
 
     !  set up partition of available processors for parallel read
-    if ( n_ens > npe ) then
-        if ( mype == 0 ) write(6,*) ' CANNOT READ ENSEMBLE -- n_ens > npe, increase npe >= n_ens '
-        iret= 99
-        return
-    endif
+    if ( n_ens > npe ) &
+        call die(myname_, ': ***ERROR*** CANNOT READ ENSEMBLE  n_ens > npe, increase npe >= n_ens', 99)
+
     call ens_io_partition_(n_ens,io_pe,n_io_pe_s,n_io_pe_e,n_io_pe_em,i_ens)
 
     ! setup communicator for scatter to subdomains:
