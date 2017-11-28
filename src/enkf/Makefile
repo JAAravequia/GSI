@@ -87,7 +87,7 @@ LIBgfio   = -L$(CORELIB) -lgfio
 # --------------------------
 INChdf          = -I$(BASEDIR)/$(ARCH)/include/hdf
 LIBhdf          = -L$(BASEDIR)/$(ARCH)/lib  -lmfhdf -ldf -lhdfjpeg -lhdfz -lsz
-LIBnetcdf       = -L$(BASEDIR)/$(ARCH)/lib -lnetcdf
+LIBnetcdf       = -L$(BASEDIR)/$(ARCH)/lib -lnetcdf -lnetcdff
 LIBwrf          = -L$(BASEDIR)/$(ARCH)/lib -lwrflib
 LIBwrfio_int    = -L$(BASEDIR)/$(ARCH)/lib -lwrfio_int
 LIBwrfio_netcdf = -L$(BASEDIR)/$(ARCH)/lib -lwrfio_nf
@@ -110,7 +110,14 @@ include $(MAKE_CONF)
 # This makefile
 # -------------
 
-  MAKE_FILE = Makefile_gfs
+  MAKE_FILE = Makefile
+
+
+# -----------
+# Load module
+# -----------
+
+  #EXE_FILE = global_enkf
 
 
 # --------------------
@@ -124,7 +131,7 @@ include $(MAKE_CONF)
 # Log file
 # --------
 
-  LOG_FILE = log.make.global_enkf
+  LOG_FILE = log.make.$(EXE_FILE)
 
 
 # ---------------
@@ -152,8 +159,8 @@ install:
 	  echo "	mkdir -p $(INSTALL_DIR)" ;\
 	  mkdir -p $(INSTALL_DIR) ;\
 	fi
-	cp global_enkf $(INSTALL_DIR)
-	@cd $(INSTALL_DIR) ; ls -l `pwd`/global_enkf
+	cp $(EXE_FILE) $(INSTALL_DIR)
+	@cd $(INSTALL_DIR) ; ls -l `pwd`/$(EXE_FILE)
 
 
 # ----------
@@ -267,12 +274,12 @@ $(OBJS_NOSWAP) :
 # ------------
 # Dependencies
 # ------------
-  MAKE_DEPEND = Makefile.dependency.gfs
+  MAKE_DEPEND = Makefile.dependency
 include $(MAKE_DEPEND)
 
 # ----
 
-global_enkf :  $(OBJS) $(OBJS_NOSWAP) $(GSIOBJS)
+$(EXE_FILE) :  $(OBJS) $(OBJS_NOSWAP) $(GSIOBJS)
 	$(LD) -o $@ $(OBJS) $(OBJS_NOSWAP) $(GSIOBJS) $(LIBS) $(LDFLAGS)
 
 
@@ -293,7 +300,7 @@ all :
 	@echo '==== LINK ===================================================='
 	@$(MAKE) -f $(MAKE_FILE) \
 		"LIBS=$(LIBS_N)" "LDFLAGS=$(LDFLAGS_N)" \
-		global_enkf
+		$(EXE_FILE)
 
 debug :
 	@$(MAKE) -f $(MAKE_FILE) "COMP_MODE=$@" check_mode
@@ -308,7 +315,7 @@ debug :
 	@echo '==== LINK ===================================================='
 	@$(MAKE) -f $(MAKE_FILE) \
 		"LIBS=$(LIBS_D)" "LDFLAGS=$(LDFLAGS_D)" \
-		global_enkf
+		$(EXE_FILE)
 
 check_mode :
 	@if [ -e $(LOG_FILE) ]; then \
