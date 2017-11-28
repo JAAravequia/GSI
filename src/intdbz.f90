@@ -113,17 +113,13 @@ subroutine intdbz_(dbzhead,rval,sval)
     call gsi_bundlegetpointer(rval,'dbz',rdbz,istatus);ier=istatus+ier
   else
     call gsi_bundlegetpointer(sval,'qr',sqr,istatus);ier=istatus+ier
-    if(nems_nmmb_regional) then
-      call gsi_bundlegetpointer(sval,'qli',sqli,istatus);ier=istatus+ier
-    else if (wrf_mass_regional) then
+    if (wrf_mass_regional) then
       call gsi_bundlegetpointer(sval,'qs',sqs,istatus);ier=istatus+ier
       call gsi_bundlegetpointer(sval,'qg',sqg,istatus);ier=istatus+ier
     end if
 
     call gsi_bundlegetpointer(rval,'qr',rqr,istatus);ier=istatus+ier
-    if(nems_nmmb_regional) then
-      call gsi_bundlegetpointer(rval,'qli',rqli,istatus);ier=istatus+ier
-    else if (wrf_mass_regional) then
+    if (wrf_mass_regional) then
       call gsi_bundlegetpointer(rval,'qs',rqs,istatus);ier=istatus+ier
       call gsi_bundlegetpointer(rval,'qg',rqg,istatus);ier=istatus+ier
     end if
@@ -160,13 +156,7 @@ subroutine intdbz_(dbzhead,rval,sval)
      else
        qrtl = w1* sqr(j1)+w2* sqr(j2)+w3* sqr(j3)+w4* sqr(j4)+      &
               w5* sqr(j5)+w6* sqr(j6)+w7* sqr(j7)+w8* sqr(j8)
-       if( nems_nmmb_regional )then
-         qlitl = w1* sqli(j1)+w2* sqli(j2)+w3* sqli(j3)+w4* sqli(j4)+  &
-                 w5* sqli(j5)+w6* sqli(j6)+w7* sqli(j7)+w8* sqli(j8)
-
-         val   = (dbzptr%jqr)*qrtl + (dbzptr%jqli)*qlitl
-
-       else if ( wrf_mass_regional )then
+       if ( wrf_mass_regional )then
          qstl  = w1* sqs(j1)+w2* sqs(j2)+w3* sqs(j3)+w4* sqs(j4)+  &
                  w5* sqs(j5)+w6* sqs(j6)+w7* sqs(j7)+w8* sqs(j8)
           
@@ -231,17 +221,7 @@ subroutine intdbz_(dbzhead,rval,sval)
           rqr(j6)=rqr(j6)+w6*valqr
           rqr(j7)=rqr(j7)+w7*valqr
           rqr(j8)=rqr(j8)+w8*valqr
-          if( nems_nmmb_regional )then
-            valqli=dbzptr%jqli*grad
-            rqli(j1)=rqli(j1)+w1*valqli
-            rqli(j2)=rqli(j2)+w2*valqli
-            rqli(j3)=rqli(j3)+w3*valqli
-            rqli(j4)=rqli(j4)+w4*valqli
-            rqli(j5)=rqli(j5)+w5*valqli
-            rqli(j6)=rqli(j6)+w6*valqli
-            rqli(j7)=rqli(j7)+w7*valqli
-            rqli(j8)=rqli(j8)+w8*valqli   
-          else if ( wrf_mass_regional )then
+          if ( wrf_mass_regional )then
             valqs=dbzptr%jqs*grad
             valqg=dbzptr%jqg*grad
 

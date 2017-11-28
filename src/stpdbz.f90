@@ -94,17 +94,13 @@ subroutine stpdbz(dbzhead,rval,sval,out,sges,nstep)
     call gsi_bundlegetpointer(rval,'dbz',rdbz,istatus);ier=istatus+ier
   else
     call gsi_bundlegetpointer(sval,'qr',sqr,istatus);ier=istatus+ier
-    if(nems_nmmb_regional) then
-      call gsi_bundlegetpointer(sval,'qli',sqli,istatus);ier=istatus+ier
-    else if (wrf_mass_regional) then
+    if (wrf_mass_regional) then
       call gsi_bundlegetpointer(sval,'qs',sqs,istatus);ier=istatus+ier
       call gsi_bundlegetpointer(sval,'qg',sqg,istatus);ier=istatus+ier
     end if
 
     call gsi_bundlegetpointer(rval,'qr',rqr,istatus);ier=istatus+ier
-    if(nems_nmmb_regional) then
-      call gsi_bundlegetpointer(rval,'qli',rqli,istatus);ier=istatus+ier
-    else if (wrf_mass_regional) then
+    if (wrf_mass_regional) then
       call gsi_bundlegetpointer(rval,'qs',rqs,istatus);ier=istatus+ier
       call gsi_bundlegetpointer(rval,'qg',rqg,istatus);ier=istatus+ier
     end if
@@ -147,18 +143,7 @@ subroutine stpdbz(dbzhead,rval,sval,out,sges,nstep)
              qrcur=(w1* sqr(j1)+w2* sqr(j2)+w3* sqr(j3)+w4* sqr(j4)+       &
                     w5* sqr(j5)+w6* sqr(j6)+w7* sqr(j7)+w8* sqr(j8))
 
-             if(nems_nmmb_regional)then
-               valqli=(w1* rqli(j1)+w2* rqli(j2)+w3* rqli(j3)+w4* rqli(j4)+       &
-                      w5* rqli(j5)+w6* rqli(j6)+w7* rqli(j7)+w8* rqli(j8))
- 
-               qlicur=(w1* sqli(j1)+w2* sqli(j2)+w3* sqli(j3)+w4* sqli(j4)+       &
-                      w5* sqli(j5)+w6* sqli(j6)+w7* sqli(j7)+w8* sqli(j8))
-
-               valdbz = valqli * dbzptr%jqli + valqr * dbzptr%jqr
-
-               dbzcur = qrcur * dbzptr%jqr + qlicur * dbzptr%jqli - dbzptr%res
-
-             else if (wrf_mass_regional)then
+             if (wrf_mass_regional)then
                valqs=(w1* rqs(j1)+w2* rqs(j2)+w3* rqs(j3)+w4* rqs(j4)+ &
                       w5* rqs(j5)+w6* rqs(j6)+w7* rqs(j7)+w8* rqs(j8))
 

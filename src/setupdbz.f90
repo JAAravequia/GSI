@@ -433,11 +433,8 @@ character(len=8) :: cpe
        if( wrf_mass_regional )then
           call hx_dart(qrgesin,qggesin,qsgesin,rhogesin,tempgesin,rDBZ,debugging)
        else if( nems_nmmb_regional ) then
-          Zer  = Cr * (rhogesin * qrgesin1)**(1.75_r_kind)
-          Zeli = Cli * (rhogesin * qligesin1)**(two)
-          Ze=Zer+Zeli
-
-         rdBZ = ten * log10(Ze)
+          write(6,*) "if_model_dbz should be set as .true."
+          STOP
        endif
      endif !if_model_dbz
 
@@ -449,23 +446,20 @@ character(len=8) :: cpe
        if(rDBZ .gt. 60) rDBZ=60
      endif
 
+     jqr = 0.0
+     jqs = 0.0
+     jqg = 0.0 
 
+     if( .not. if_model_dbz )then
      if( wrf_mass_regional ) then
          call jqr_dart(qrgesin1,qsgesin1,qggesin1,rhogesin,tempgesin,jqr)
          call jqs_dart(qrgesin1,qsgesin1,qggesin1,rhogesin,tempgesin,jqs)
          call jqg_dart(qrgesin1,qsgesin1,qggesin1,rhogesin,tempgesin,jqg)
      else if( nems_nmmb_regional ) then
-         Zer  = Cr * (rhogesin * qrgesin1)**(1.75_r_kind)
-         Zeli = Cli * (rhogesin * qligesin1)**(two)
-         Ze=Zer+Zeli
-
-         denom=(log(ten))*Ze
-         jqr_num  = ten*Cr*((rhogesin)**1.75_r_kind)* &
-                    1.75_r_kind*((qrgesin1)**(0.75_r_kind))
-         jqli_num = ten*Cli*((rhogesin)**two)*two*qligesin1
-         jqr  = jqr_num/denom
-         jqli = jqli_num/denom
+          write(6,*) "if_model_dbz should be set as .true."
+          STOP
      endif
+     end if
 
 
      if(rdBZ==data(idbzob,i)) then
@@ -621,8 +615,6 @@ character(len=8) :: cpe
         if ( wrf_mass_regional ) then
           my_head%jqs     = jqs
           my_head%jqg     = jqg
-        else if ( nems_nmmb_regional )then
-          my_head%jqli    = jqli
         end if
  
         if(luse_obsdiag)then
