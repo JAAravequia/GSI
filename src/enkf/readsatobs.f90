@@ -117,13 +117,12 @@ subroutine get_num_satobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
            else ! read raw, unconcatenated pe* files.
                obsfile =&
                trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'
-               if (netcdf_diag) obsfile = trim(obsfile)//'.nc4'
            endif
+           if (netcdf_diag) obsfile = trim(obsfile)//'.nc4'
 
            inquire(file=obsfile,exist=fexist)
            if (.not.fexist) cycle peloop
            nkeep = 0
-           print *, trim(obsfile)
            call open_radiag(obsfile,iunit)
 
            if (init_pass) then
@@ -414,8 +413,9 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
      else ! read raw, unconcatenated pe* files.
          obsfile =&
          trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'
-         if (netcdf_diag) obsfile = trim(obsfile)//'.nc4'
      endif
+     if (netcdf_diag) obsfile = trim(obsfile)//'.nc4'
+
      inquire(file=obsfile,exist=fexist)
      if(.not.fexist) cycle peloop
      call open_radiag(obsfile,iunit)
@@ -436,8 +436,8 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
        else ! read raw, unconcatenated pe* files.
           obsfile2 =&
           trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id2))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'
-          if (netcdf_diag) obsfile2 = trim(obsfile2)//'.nc4'
        endif
+       if (netcdf_diag) obsfile2 = trim(obsfile2)//'.nc4'
 
        call open_radiag(obsfile2, iunit2)
 
