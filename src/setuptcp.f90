@@ -32,8 +32,8 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !
 !$$$
   use mpeu_util, only: die,perr,getindex
-  use state_vectors, only: ns3d, svars2d, levels
-  use sparsearr, only: sparr2, new, size, writearray
+  use state_vectors, only: ns3d, svars2d, levels, nsdim
+  use sparsearr, only: sparr2, new, size, writearray, fullarray
   use kinds, only: r_kind,i_kind,r_single,r_double
   use m_obsdiags, only: tcphead
   use obsmod, only: obsdiags,i_tcp_ob_type, &
@@ -99,6 +99,7 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),dimension(nsig)::prsltmp
 
   type(sparr2) :: dhx_dx
+  real(r_single), dimension(nsdim) :: dhx_dx_array
   integer(i_kind) :: ps_ind, nind, nnz
 
   integer(i_kind) i,jj
@@ -619,6 +620,7 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
      if (.not. append_diag) then ! don't write headers on append - the module will break?
         call nc_diag_header("date_time",ianldate )
+        call nc_diag_header("Number_of_state_vars", nsdim          )
      endif
   end subroutine init_netcdf_diag_
   subroutine contents_binary_diag_
@@ -689,28 +691,28 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            call nc_diag_metadata("Observation_Class",       obsclass               )
            call nc_diag_metadata("Observation_Type",        ictype(ikx)            )
            call nc_diag_metadata("Observation_Subtype",     icsubtype(ikx)         )
-           call nc_diag_metadata("Latitude",                data(ilate,i)          )
-           call nc_diag_metadata("Longitude",               data(ilone,i)          )
+           call nc_diag_metadata("Latitude",                sngl(data(ilate,i))    )
+           call nc_diag_metadata("Longitude",               sngl(data(ilone,i))    )
            call nc_diag_metadata("Station_Elevation",       zero                   )
-           call nc_diag_metadata("Pressure",                data(ipres,i)*r10      )
+           call nc_diag_metadata("Pressure",                sngl(data(ipres,i)*r10))
            call nc_diag_metadata("Height",                  zero                   )
-           call nc_diag_metadata("Time",                    dtime-time_offset      )
+           call nc_diag_metadata("Time",                    sngl(dtime-time_offset))
            call nc_diag_metadata("Prep_QC_Mark",            one                    )
            call nc_diag_metadata("Prep_Use_Flag",           one                    )
            call nc_diag_metadata("Nonlinear_QC_Rel_Wgt",    rwgt                   )                 
            if(muse(i)) then
-              call nc_diag_metadata("Analysis_Use_Flag",    one                    )
+              call nc_diag_metadata("Analysis_Use_Flag",    sngl(one)              )
            else
-              call nc_diag_metadata("Analysis_Use_Flag",    -one                   )              
+              call nc_diag_metadata("Analysis_Use_Flag",    sngl(-one)             )              
            endif
 
-           call nc_diag_metadata("Errinv_Input",            errinv_input           )
+           call nc_diag_metadata("Errinv_Input",            sngl(errinv_input)     )
            call nc_diag_metadata("Errinv_Adjust",           errinv_adjst           )
-           call nc_diag_metadata("Errinv_Final",            errinv_final           )
+           call nc_diag_metadata("Errinv_Final",            sngl(errinv_final)     )
 
-           call nc_diag_metadata("Observation",                   pob          )
-           call nc_diag_metadata("Obs_Minus_Forecast_adjusted",   pob-pges     )
-           call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", pob-pgesorig )
+           call nc_diag_metadata("Observation",                   sngl(pob)        )
+           call nc_diag_metadata("Obs_Minus_Forecast_adjusted",   sngl(pob-pges)   )
+           call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", sngl(pob-pgesorig))
 
 
            if (lobsdiagsave) then
@@ -727,6 +729,12 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               call nc_diag_data2d("ObsDiagSave_tldepart", obsdiags(i_tcp_ob_type,ibin)%tail%tldepart )
               call nc_diag_data2d("ObsDiagSave_obssen",   obsdiags(i_tcp_ob_type,ibin)%tail%obssen   )             
            endif
+
+          if (save_jacobian) then
+              call fullarray(dhx_dx, dhx_dx_array)
+              call nc_diag_data2d("Observation_Operator_Jacobian", dhx_dx_array)
+          endif
+
   end subroutine contents_netcdf_diag_
 
   subroutine final_vars_

@@ -317,7 +317,7 @@
 
   logical hirs2,msu,goessndr,hirs3,hirs4,hirs,amsua,amsub,airs,hsb,goes_img,ahi,mhs
   type(sparr2) :: dhx_dx
-  real(r_single), dimension(:), allocatable :: dhx_dx_array
+  real(r_single), dimension(nsdim) :: dhx_dx_array
   logical avhrr,avhrr_navy,lextra,ssu,iasi,cris,seviri,atms
   logical ssmi,ssmis,amsre,amsre_low,amsre_mid,amsre_hig,amsr2,gmi,saphir
   logical ssmis_las,ssmis_uas,ssmis_env,ssmis_img
@@ -410,7 +410,6 @@
      end do
   end do
 
-  if (save_jacobian) allocate(dhx_dx_array(nsdim))
 
 ! Initialize logical flags for satellite platform
 
@@ -1813,8 +1812,6 @@
 ! Deallocate arrays
   deallocate(diagbufchan)
   deallocate(sc_index)
-
-  if (save_jacobian) deallocate(dhx_dx_array)
 
   if (rad_diagsave) then
      if (netcdf_diag) call nc_diag_write

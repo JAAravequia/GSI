@@ -456,8 +456,11 @@ subroutine read_radiag_header_nc(ftin,npred_radiag,retrieval,header_fix,header_c
   call nc_diag_read_get_global_attr(ftin, "ijacob", ijacob)              ; header_fix%ijacob = ijacob
 
 
+  if (allocated(header_chan)) deallocate(header_chan)
   allocate(header_chan(nchan_dim)   )
 
+  if (allocated(r_var_stor))  deallocate(r_var_stor)
+  if (allocated(i_var_stor))  deallocate(i_var_stor)
   allocate(r_var_stor(nchan_dim), &
            i_var_stor(nchan_dim)  )
 !  call nc_diag_read_get_var('Var', var_stor)
@@ -789,11 +792,16 @@ subroutine read_radiag_data(ftin,header_fix,retrieval,data_fix,data_chan,data_ex
      id = find_ncdiag_id(ftin)
      if (id < 0) then
         write(6,*) 'READ_RADIAG_DATA:  ***ERROR*** netcdf diag file ', ftin, ' has not been opened yet.'
-        call abort(456)
+        iflag = -2
+        return
      endif
 
      if (.not. ncdiag_open_status(id)%nc_read) then
-        call read_radiag_data_nc_init(ftin, ncdiag_open_status(id), header_fix, retrieval)
+        call read_radiag_data_nc_init(ftin, ncdiag_open_status(id), header_fix, retrieval, iflag)
+     endif
+
+     if (iflag /= 0) then
+        return
      endif
 
      if (ncdiag_open_status(id)%cur_ob_idx .eq. ncdiag_open_status(id)%num_records ) then
@@ -814,7 +822,7 @@ subroutine read_radiag_data(ftin,header_fix,retrieval,data_fix,data_chan,data_ex
 
 end subroutine read_radiag_data
 
-subroutine read_radiag_data_nc_init(ftin, diag_status, header_fix, retrieval)
+subroutine read_radiag_data_nc_init(ftin, diag_status, header_fix, retrieval, iflag)
 !                .      .    .                                       .
 ! subprogram:    read_radiag_data_nc_init           read rad diag data
 !   prgmmr: mccarty          org: np20                date: 2015-08-10
@@ -846,6 +854,7 @@ subroutine read_radiag_data_nc_init(ftin, diag_status, header_fix, retrieval)
   type(ncdiag_status), intent(inout)     :: diag_status
   type(diag_header_fix_list ),intent(in) :: header_fix
   logical,intent(in)                     :: retrieval
+  integer(i_kind),intent(out)            :: iflag
 
 ! Declare local variables
   integer(i_kind)                          :: nrecord, ndatum, nangord
@@ -870,6 +879,11 @@ subroutine read_radiag_data_nc_init(ftin, diag_status, header_fix, retrieval)
   real(r_kind)                                :: clat, clon
 
   ndatum = nc_diag_read_get_dim(ftin,'nobs')
+  if (ndatum <= 0) then
+     iflag = -3
+     return
+  endif
+
   if (header_fix%angord > 0) then
      nangord = nc_diag_read_get_dim(ftin,'BC_angord_arr_dim')
   end if
@@ -1087,6 +1101,34 @@ subroutine read_radiag_data_nc_init(ftin, diag_status, header_fix, retrieval)
 
   diag_status%nc_read = .true.
   diag_status%cur_ob_idx = 1
+
+
+  deallocate(Channel_Index, Latitude, Longitude, Elevation, Obs_Time, Scan_Position,    &
+             Sat_Zenith_Angle, Sat_Azimuth_Angle, Sol_Zenith_Angle, Sol_Azimuth_Angle,  &
+             Sun_Glint_Angle, Water_Fraction, Land_Fraction, Ice_Fraction,              &
+             Snow_Fraction, Water_Temperature, Land_Temperature, Ice_Temperature,       &
+             Snow_Temperature, Soil_Temperature, Soil_Moisture, tsavg5, sstcu, sstph,   &
+             sstnv, dta, dqa, dtp_avh, Vegetation_Fraction, Snow_Depth, tpwc_amsua,     &
+             clw_guess_retrieval, Sfc_Wind_Speed, Cloud_Frac, CTP, CLW, TPWC, clw_obs,  &
+             clw_guess, Foundation_Temperature, SST_Warm_layer_dt, SST_Cool_layer_tdrop, &
+             SST_dTz_dTfound, Observation, Obs_Minus_Forecast_adjusted,                 &
+             Obs_Minus_Forecast_unadjusted, Inverse_Observation_Error, QC_Flag,         &
+             Emissivity, Weighted_Lapse_Rate, dTb_dTs, BC_Constant, BC_Scan_Angle,      &
+             BC_Cloud_Liquid_Water, BC_Lapse_Rate_Squared, BC_Lapse_Rate,               &
+             BC_Cosine_Latitude_times_Node, BC_Sine_Latitude, BC_Emissivity,            &
+             BC_Fixed_Scan_Position, Land_Type_Index)
+
+  if (header_fix%iextra > 0) then
+     deallocate(Press_Max_Weight_Function)
+  endif
+  if (header_fix%angord > 0) then
+     deallocate(BC_angord)
+  end if
+  if (header_fix%ijacob > 0) then
+     deallocate(Observation_Operator_Jacobian)
+  endif
+
+
 end subroutine read_radiag_data_nc_init
 
 subroutine read_radiag_data_nc(ftin,diag_status,header_fix,retrieval,data_fix,data_chan,data_extra,iflag )

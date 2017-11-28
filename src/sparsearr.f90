@@ -86,6 +86,7 @@ end interface
 ! reading sparse array from array
 interface readarray
   module procedure readarray_sparr2
+  module procedure readarray_r_sparr2
 end interface
 
 interface size
@@ -296,6 +297,29 @@ subroutine readarray_sparr2(this, array)
   this%val = array(ind:ind+nnz-1)
 
 end subroutine readarray_sparr2
+
+! reading sparse array from array
+subroutine readarray_r_sparr2(this, array)
+  type(sparr2), intent(out)              :: this
+  real(r_kind), dimension(:), intent(in) :: array
+
+  integer(i_kind) :: ind, nnz, nind
+
+  ind = 1
+  nnz = array(ind)
+  ind = ind + 1
+  nind = array(ind)
+  ind = ind + 1
+
+  call init_sparr2(this, nnz, nind)
+
+  this%st_ind = array(ind:ind+nind-1)
+  ind = ind + nind
+  this%end_ind = array(ind:ind+nind-1)
+  ind = ind + nind
+  this%val = array(ind:ind+nnz-1)
+
+end subroutine readarray_r_sparr2
 
 subroutine fullarray_sparr2(this, array)
   type(sparr2), intent(in)                    :: this

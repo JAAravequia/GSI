@@ -89,7 +89,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !
 !$$$
   use mpeu_util, only: die,perr,getindex
-  use state_vectors, only: svars2d, levels, ns3d
+  use state_vectors, only: svars2d, levels, ns3d, nsdim
   use kinds, only: r_kind,r_single,r_double,i_kind
   use m_obsdiags, only: pshead
   use obsmod, only: rmiss_single,perturb_obs,oberror_tune,&
@@ -118,7 +118,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
-  use sparsearr, only: sparr2, new, size, writearray
+  use sparsearr, only: sparr2, new, size, writearray, fullarray
   use rapidrefresh_cldsurf_mod, only: l_closeobs
 
   implicit none
@@ -189,6 +189,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
 
   type(sparr2) :: dhx_dx
+  real(r_single), dimension(nsdim) :: dhx_dx_array
   integer :: ps_ind, nnz, nind
 
   save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
@@ -802,7 +803,8 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      call nc_diag_init(diag_conv_file, append=append_diag)
 
      if (.not. append_diag) then ! don't write headers on append - the module will break?
-         call nc_diag_header("date_time",ianldate )
+        call nc_diag_header("date_time",ianldate )
+        call nc_diag_header("Number_of_state_vars", nsdim          )
      endif
 
   end subroutine init_netcdf_diag_
@@ -932,6 +934,11 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               call nc_diag_metadata("Provider_Name",     c_prvstg                     )    
               r_sprvstg           = data(isprvd,i)
               call nc_diag_metadata("Subprovider_Name",  c_sprvstg                    )
+           endif
+
+           if (save_jacobian) then
+              call fullarray(dhx_dx, dhx_dx_array)
+              call nc_diag_data2d("Observation_Operator_Jacobian", dhx_dx_array)
            endif
 
   end subroutine contents_netcdf_diag_

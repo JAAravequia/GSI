@@ -99,8 +99,8 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use rapidrefresh_cldsurf_mod, only: l_pw_hgt_adjust, l_limit_pw_innov, max_innov_pct
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
-  use state_vectors, only: svars3d, levels
-  use sparsearr, only: sparr2, new, size, writearray
+  use state_vectors, only: svars3d, levels, nsdim
+  use sparsearr, only: sparr2, new, size, writearray, fullarray
   implicit none
 
 ! Declare passed variables
@@ -148,6 +148,7 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   character(8),allocatable,dimension(:):: cdiagbuf
 
   type(sparr2) :: dhx_dx
+  real(r_single), dimension(nsdim) :: dhx_dx_array
   integer(i_kind) :: q_ind, nnz, nind
 
   logical:: in_curbin, in_anybin, save_jacobian
@@ -677,6 +678,7 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
      if (.not. append_diag) then ! don't write headers on append - the module will break?
         call nc_diag_header("date_time",ianldate )
+        call nc_diag_header("Number_of_state_vars", nsdim          )
      endif
   end subroutine init_netcdf_diag_
   subroutine contents_binary_diag_
@@ -752,27 +754,27 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            call nc_diag_metadata("Observation_Class",             obsclass          )
            call nc_diag_metadata("Observation_Type",              ictype(ikx)       )
            call nc_diag_metadata("Observation_Subtype",           icsubtype(ikx)    )
-           call nc_diag_metadata("Latitude",                      data(ilate,i)     )
-           call nc_diag_metadata("Longitude",                     data(ilone,i)     )
+           call nc_diag_metadata("Latitude",                      real(data(ilate,i),r_single)     )
+           call nc_diag_metadata("Longitude",                     real(data(ilone,i),r_single)     )
            call nc_diag_metadata("Station_Elevation",             data(istnelv,i)   )
-           call nc_diag_metadata("Pressure",                      data(iobsprs,i)   )
+           call nc_diag_metadata("Pressure",                      real(data(iobsprs,i),r_single)   )
            call nc_diag_metadata("Height",                        data(iobshgt,i)   )
-           call nc_diag_metadata("Time",                          dtime-time_offset )
+           call nc_diag_metadata("Time",                          real(dtime-time_offset,r_single) )
            call nc_diag_metadata("Prep_QC_Mark",                  data(iqc,i)       )
            call nc_diag_metadata("Prep_Use_Flag",                 data(iuse,i)      )
            call nc_diag_metadata("Setup_QC_Mark",                 missing           )
            if(muse(i)) then
-              call nc_diag_metadata("Analysis_Use_Flag",          one               )
+              call nc_diag_metadata("Analysis_Use_Flag",          1._r_single               )
            else
-              call nc_diag_metadata("Analysis_Use_Flag",          -one              )
+              call nc_diag_metadata("Analysis_Use_Flag",          -1._r_single              )
            endif
            call nc_diag_metadata("Nonlinear_QC_Rel_Wgt",          rwgt              )
-           call nc_diag_metadata("Errinv_Input",                  errinv_input      )
+           call nc_diag_metadata("Errinv_Input",                  real(errinv_input,r_single)      )
            call nc_diag_metadata("Errinv_Adjust",                 errinv_adjst      )
-           call nc_diag_metadata("Errinv_Final",                  errinv_final      )
-           call nc_diag_metadata("Observation",                   dpw               )
-           call nc_diag_metadata("Obs_Minus_Forecast_adjusted",   ddiff             )
-           call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", dpw-pwges         )
+           call nc_diag_metadata("Errinv_Final",                  real(errinv_final,r_single)      )
+           call nc_diag_metadata("Observation",                   real(dpw,r_single)              )
+           call nc_diag_metadata("Obs_Minus_Forecast_adjusted",   real(ddiff,r_single)             )
+           call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", real(dpw-pwges,r_single)         )
            if (lobsdiagsave) then
               do jj=1,miter
                  if (obsdiags(i_pw_ob_type,ibin)%tail%muse(jj)) then
@@ -787,6 +789,11 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               call nc_diag_data2d("ObsDiagSave_tldepart", obsdiags(i_pw_ob_type,ibin)%tail%tldepart )
               call nc_diag_data2d("ObsDiagSave_obssen",   obsdiags(i_pw_ob_type,ibin)%tail%obssen   )              
            endif
+
+          if (save_jacobian) then
+              call fullarray(dhx_dx, dhx_dx_array)
+              call nc_diag_data2d("Observation_Operator_Jacobian", dhx_dx_array)
+          endif
 
   end subroutine contents_netcdf_diag_
 

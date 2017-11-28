@@ -112,7 +112,8 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
-  use sparsearr, only: sparr2, new, size, writearray
+  use sparsearr, only: sparr2, new, size, writearray, fullarray
+  use state_vectors, only: nsdim
   implicit none
 
 ! Declare passed variables
@@ -183,6 +184,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) rwwindprofile
 
   type(sparr2) :: dhx_dx
+  real(r_single), dimension(nsdim) :: dhx_dx_array
   integer(i_kind) :: nnz, nind
 
   logical:: in_curbin, in_anybin, save_jacobian
@@ -924,6 +926,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
      if (.not. append_diag) then ! don't write headers on append - the module will break?
         call nc_diag_header("date_time",ianldate )
+        call nc_diag_header("Number_of_state_vars", nsdim          )
      endif
   end subroutine init_netcdf_diag_
   subroutine contents_binary_diag_
@@ -1041,6 +1044,10 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               call nc_diag_data2d("ObsDiagSave_nldepart", obsdiags(i_rw_ob_type,ibin)%tail%nldepart )
               call nc_diag_data2d("ObsDiagSave_tldepart", obsdiags(i_rw_ob_type,ibin)%tail%tldepart )
               call nc_diag_data2d("ObsDiagSave_obssen",   obsdiags(i_rw_ob_type,ibin)%tail%obssen   )             
+           endif
+           if (save_jacobian) then
+              call fullarray(dhx_dx, dhx_dx_array)
+              call nc_diag_data2d("Observation_Operator_Jacobian", dhx_dx_array)
            endif
    
   end subroutine contents_netcdf_diag_

@@ -43,6 +43,18 @@ public :: get_satobs_data, get_num_satobs, write_satobs_data
 contains
 
 subroutine get_num_satobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
+    character (len=500), intent(in) :: obspath
+    character(len=10), intent(in) :: id, datestring
+    integer(i_kind), intent(out) :: num_obs_tot, num_obs_totdiag
+
+    if (netcdf_diag) then
+       call get_num_satobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
+    else
+       call get_num_satobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
+    endif
+end subroutine get_num_satobs
+
+subroutine get_num_satobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     use radinfo, only: iuse_rad,nusis,jpch_rad,npred
     character (len=500), intent(in) :: obspath
     character(len=500) obsfile
@@ -111,7 +123,7 @@ subroutine get_num_satobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
            inquire(file=obsfile,exist=fexist)
            if (.not.fexist) cycle peloop
            nkeep = 0
-
+           print *, trim(obsfile)
            call open_radiag(obsfile,iunit)
 
            if (init_pass) then
@@ -148,9 +160,158 @@ subroutine get_num_satobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
            endif
         enddo peloop ! ipe
     enddo ! satellite
-end subroutine get_num_satobs
+end subroutine get_num_satobs_bin
+
+subroutine get_num_satobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
+    use radinfo, only: iuse_rad,nusis,jpch_rad,npred
+  use nc_diag_read_mod, only: nc_diag_read_get_var
+  use nc_diag_read_mod, only: nc_diag_read_get_dim
+  use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
+
+    character (len=500), intent(in) :: obspath
+    character(len=500) obsfile
+    character(len=10), intent(in) :: id, datestring
+    character(len=20) ::  sat_type
+    character(len=4) :: pe_name
+    integer(i_kind), intent(out) :: num_obs_tot, num_obs_totdiag
+    integer(i_kind) iunit, nsat, nobs, nchans, ipe, nkeep, i, jpchstart
+    logical fexist
+    real(r_kind) :: errorlimit,errorlimit2
+
+    integer(i_kind), dimension(:), allocatable :: Satinfo_Chan, Use_Flag, chind
+    real(r_kind), dimension(:), allocatable :: Pressure, QC_Flag, Inv_Error, Observation
+
+
+!  make consistent with screenobs
+    errorlimit=1._r_kind/sqrt(1.e9_r_kind)
+    errorlimit2=1._r_kind/sqrt(1.e-6_r_kind)
+    iunit = 7
+
+    num_obs_tot = 0
+    num_obs_totdiag = 0
+
+    do nsat=1,nsats_rad
+        jpchstart=0
+        do i=1,jpch_rad
+          write(sat_type,'(a20)') adjustl(dsis(nsat))
+          ! The following is to sort out some historical naming conventions
+          select case (sat_type(1:4))
+             case ('airs')
+               sat_type='airs_aqua'
+             case ('iasi')
+               if (index(sat_type,'metop-a') /= 0) sat_type='iasi_metop-a'
+               if (index(sat_type,'metop-b') /= 0) sat_type='iasi_metop-b'
+               if (index(sat_type,'metop-c') /= 0) sat_type='iasi_metop-c'
+          end select
+
+          if(sat_type == trim(nusis(i)) .and. iuse_rad(i) > 0) then
+            jpchstart=i
+            exit
+          end if
+        end do
+        if(jpchstart == 0) cycle
+        peloop: do ipe=0,npefiles
+           write(pe_name,'(i4.4)') ipe
+           if (npefiles .eq. 0) then
+               ! read diag file (concatenated pe* files)
+               obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//datestring//'_'//trim(adjustl(id))
+               inquire(file=obsfile,exist=fexist)
+               if (.not. fexist .or. datestring .eq. '0000000000') &
+               obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//trim(adjustl(id))
+           else ! read raw, unconcatenated pe* files.
+               obsfile =&
+               trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'
+           endif
+
+           if (netcdf_diag) obsfile = trim(obsfile)//'.nc4'
+
+           inquire(file=obsfile,exist=fexist)
+           if (.not.fexist) cycle peloop
+
+           nkeep = 0
+
+           call nc_diag_read_init(obsfile, iunit)
+
+           nobs = nc_diag_read_get_dim(iunit,'nobs')
+
+           if (nobs <= 0) then
+              call nc_diag_read_close(obsfile)
+              cycle peloop
+           endif
+
+           nchans = nc_diag_read_get_dim(iunit,'nchans')
+           allocate(Satinfo_Chan(nchans), Use_Flag(nchans), Pressure(nobs), QC_Flag(nobs),     &
+                    Inv_Error(nobs), Observation(nobs), chind(nobs))
+
+           call nc_diag_read_get_var(iunit, 'satinfo_chan', Satinfo_Chan)
+           call nc_diag_read_get_var(iunit, 'use_flag', Use_Flag)
+           call nc_diag_read_get_var(iunit, 'Channel_Index', chind)
+           call nc_diag_read_get_var(iunit, 'Press_Max_Weight_Function', Pressure)
+           call nc_diag_read_get_var(iunit, 'QC_Flag', QC_Flag)
+           call nc_diag_read_get_var(iunit, 'Inverse_Observation_Error', Inv_Error)
+           call nc_diag_read_get_var(iunit, 'Observation', Observation)
+
+           call nc_diag_read_close(obsfile)
+
+
+           do i = 1, nobs
+              num_obs_totdiag = num_obs_totdiag + 1
+              if(Use_Flag(chind(i)) < 1 ) cycle 
+              if(QC_Flag(i) < 0. .or. Inv_Error(i) < errorlimit &
+                 .or. Inv_Error(i) > errorlimit2 &
+                 .or. Satinfo_Chan(chind(i)) == 0) cycle
+              if(Pressure(i) <= 0.001_r_kind .or.  &
+                 Pressure(i) > 1200._r_kind  .or. &
+                  abs(Observation(i)) > 1.e9_r_kind) cycle 
+              nkeep = nkeep + 1
+           enddo
+           num_obs_tot = num_obs_tot + nkeep
+
+           if (ipe .eq. npefiles) then
+              write(6,100) nsat,trim(sattypes_rad(nsat)),num_obs_tot
+100           format(2x,i3,2x,a20,2x,'num_obs_tot= ',i9)
+           endif
+
+           deallocate(Satinfo_Chan, Use_Flag, Pressure, QC_Flag, Inv_Error, Observation, chind)
+        enddo peloop ! ipe
+    enddo ! satellite
+
+end subroutine get_num_satobs_nc
 
 subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+           x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
+  use radinfo, only: npred
+  character*500, intent(in)     :: obspath
+  character(len=10), intent(in) ::  datestring
+
+  integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
+
+  real(r_single), dimension(nobs_max), intent(out) :: hx_mean,hx_mean_nobc, hx
+  real(r_single), dimension(nobs_max), intent(out) :: x_obs
+  real(r_single), dimension(nobs_max), intent(out) :: x_err, x_errorig
+  real(r_single), dimension(nobs_max), intent(out) :: x_lon, x_lat
+  real(r_single), dimension(nobs_max), intent(out) :: x_press, x_time
+  integer(i_kind), dimension(nobs_max), intent(out) :: x_channum, x_indx
+  character(len=20), dimension(nobs_max), intent(out) :: x_type
+  real(r_single), dimension(npred+1,nobs_max), intent(out) :: x_biaspred
+  integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
+
+
+  character(len=10), intent(in) :: id
+  integer(i_kind), intent(in)   :: nanal
+
+  if (netcdf_diag) then
+    call get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+           x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
+  else
+    call get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+           x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
+  endif
+
+end subroutine get_satobs_data
+
+
+subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
   use radinfo, only: iuse_rad,nusis,jpch_rad,npred,adp_anglebc,emiss_bc
   use params, only: nanals, lobsdiag_forenkf
@@ -410,7 +571,285 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
       call stop2(92)
   end if
 
- end subroutine get_satobs_data
+ end subroutine get_satobs_data_bin
+
+
+subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+           x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
+  use nc_diag_read_mod, only: nc_diag_read_get_var
+  use nc_diag_read_mod, only: nc_diag_read_get_dim, nc_diag_read_get_global_attr
+  use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
+
+  use radinfo, only: iuse_rad,nusis,jpch_rad,npred,adp_anglebc,emiss_bc
+  use params, only: nanals, lobsdiag_forenkf
+  use statevec, only: state_d
+  use constants, only: deg2rad, zero
+  use mpisetup, only: nproc, mpi_wtime
+  use observer_enkf, only: calc_linhx
+  use sparsearr, only: sparr, assignment(=), delete
+
+  character*500, intent(in)     :: obspath
+  character(len=10), intent(in) ::  datestring
+
+  integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
+
+  real(r_single), dimension(nobs_max), intent(out) :: hx_mean,hx_mean_nobc, hx
+  real(r_single), dimension(nobs_max), intent(out) :: x_obs
+  real(r_single), dimension(nobs_max), intent(out) :: x_err, x_errorig
+  real(r_single), dimension(nobs_max), intent(out) :: x_lon, x_lat
+  real(r_single), dimension(nobs_max), intent(out) :: x_press, x_time
+  integer(i_kind), dimension(nobs_max), intent(out) :: x_channum, x_indx
+  character(len=20), dimension(nobs_max), intent(out) :: x_type
+  real(r_single), dimension(npred+1,nobs_max), intent(out) :: x_biaspred
+  integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
+
+
+  character(len=10), intent(in) :: id
+  integer(i_kind), intent(in)   :: nanal
+
+  character*500 obsfile, obsfile2
+  character(len=10) :: id2
+  character(len=4) pe_name
+
+  character(len=20) ::  sat_type
+
+  integer(i_kind) iunit, iob, iobdiag, i, nsat, ipe, jpchstart, nchans
+  integer(i_kind) iunit2, nobs, nsdim
+  integer(i_kind) npred_radiag
+  logical fexist
+  logical twofiles,fexist2
+  real(r_kind) :: errorlimit,errorlimit2
+  real(r_double) t1,t2,tsum,tsum2
+
+  type(sparr)     :: dhx_dx
+
+  integer(i_kind), dimension(:), allocatable :: Satinfo_Chan, Use_Flag, chind
+  real(r_kind), dimension(:), allocatable :: error_variance
+  real(r_kind), dimension(:), allocatable :: Pressure, QC_Flag, Inv_Error, Observation
+  real(r_kind), dimension(:), allocatable :: Latitude, Longitude, Time
+  real(r_kind), dimension(:), allocatable :: Obs_Minus_Forecast_adjusted
+  real(r_kind), dimension(:), allocatable :: Obs_Minus_Forecast_unadjusted, Obs_Minus_Forecast_unadjusted2
+  real(r_single), allocatable, dimension (:,:) :: Observation_Operator_Jacobian
+
+! make consistent with screenobs
+  errorlimit=1._r_kind/sqrt(1.e9_r_kind)
+  errorlimit2=1._r_kind/sqrt(1.e-6_r_kind)
+
+  tsum = 0; tsum2 = 0
+  npred_radiag=npred
+
+  twofiles = (.not. lobsdiag_forenkf) .and. (nanal <= nanals)
+  id2 = 'ensmean'
+  if (nanal <= nanals) then
+     write(id2,'(a3,(i3.3))') 'mem',nanal
+  endif
+
+  hx = zero
+  iob = 0
+  iobdiag = 0
+  x_used = 0
+
+  do nsat=1,nsats_rad
+     jpchstart=0
+     do i=1,jpch_rad
+       write(sat_type,'(a20)') adjustl(dsis(nsat))
+       ! The following is to sort out some historical naming conventions
+       select case (sat_type(1:4))
+          case ('airs')
+            sat_type='airs_aqua'
+          case ('iasi')
+            if (index(sat_type,'metop-a') /= 0) sat_type='iasi_metop-a'
+            if (index(sat_type,'metop-b') /= 0) sat_type='iasi_metop-b'
+            if (index(sat_type,'metop-c') /= 0) sat_type='iasi_metop-c'
+       end select
+
+      if(sat_type == trim(nusis(i)) .and. iuse_rad(i) > 0) then
+         jpchstart = i
+         exit
+       end if
+     end do
+     if(jpchstart == 0) cycle
+
+     peloop: do ipe=0,npefiles
+     write(pe_name,'(i4.4)') ipe
+     if (npefiles .eq. 0) then
+         ! read diag file (concatenated pe* files)
+         obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//datestring//'_'//trim(adjustl(id))
+         inquire(file=obsfile,exist=fexist)
+         if (.not. fexist .or. datestring .eq. '0000000000') &
+         obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//trim(adjustl(id))
+     else ! read raw, unconcatenated pe* files.
+         obsfile =&
+         trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'
+     endif
+     if (netcdf_diag) obsfile = trim(obsfile)//'.nc4'
+
+     inquire(file=obsfile,exist=fexist)
+     if(.not.fexist) cycle peloop
+
+     t1 = mpi_wtime()
+     call nc_diag_read_init(obsfile, iunit)
+
+     nobs = nc_diag_read_get_dim(iunit,'nobs')
+
+     if (nobs <= 0) then
+        call nc_diag_read_close(obsfile)
+        cycle peloop
+     endif
+
+     nchans = nc_diag_read_get_dim(iunit,'nchans')
+     allocate(Satinfo_Chan(nchans), Use_Flag(nchans), error_variance(nchans))
+     allocate(Pressure(nobs), QC_Flag(nobs), Inv_Error(nobs), Latitude(nobs), &
+              Longitude(nobs), Time(nobs), Observation(nobs), chind(nobs),    &
+              Obs_Minus_Forecast_unadjusted(nobs), Obs_Minus_Forecast_adjusted(nobs))
+     call nc_diag_read_get_var(iunit, 'satinfo_chan', Satinfo_Chan)
+     call nc_diag_read_get_var(iunit, 'use_flag', Use_Flag)
+     call nc_diag_read_get_var(iunit, 'error_variance', error_variance)
+
+     call nc_diag_read_get_var(iunit, 'Channel_Index', chind)
+     call nc_diag_read_get_var(iunit, 'Press_Max_Weight_Function', Pressure)
+     call nc_diag_read_get_var(iunit, 'QC_Flag', QC_Flag)
+     call nc_diag_read_get_var(iunit, 'Inverse_Observation_Error', Inv_Error)
+     call nc_diag_read_get_var(iunit, 'Latitude', Latitude)
+     call nc_diag_read_get_var(iunit, 'Longitude', Longitude)
+     call nc_diag_read_get_var(iunit, 'Obs_Time', Time)
+     call nc_diag_read_get_var(iunit, 'Observation', Observation)
+     call nc_diag_read_get_var(iunit, 'Obs_Minus_Forecast_unadjusted', Obs_Minus_Forecast_unadjusted)
+     call nc_diag_read_get_var(iunit, 'Obs_Minus_Forecast_adjusted', Obs_Minus_Forecast_adjusted)
+
+     if (lobsdiag_forenkf) then
+        call nc_diag_read_get_global_attr(iunit, "Number_of_state_vars", nsdim)
+        allocate(Observation_Operator_Jacobian(nsdim, nobs))
+        call nc_diag_read_get_var(iunit, 'Observation_Operator_Jacobian', Observation_Operator_Jacobian)
+     endif
+
+     call nc_diag_read_close(obsfile)
+
+     t2 = mpi_wtime()
+     tsum2 = tsum2 + t2-t1
+
+
+     if(twofiles)then
+        if (npefiles .eq. 0)  then
+          ! read diag file (concatenated pe* files)
+          obsfile2 = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//datestring//'_'//trim(adjustl(id2))
+          inquire(file=obsfile2,exist=fexist2)
+          if (.not. fexist2 .or. datestring .eq. '0000000000') &
+          obsfile2 = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//trim(adjustl(id2))
+       else ! read raw, unconcatenated pe* files.
+          obsfile2 =&
+          trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id2))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'
+       endif
+       if (netcdf_diag) obsfile2 = trim(obsfile2)//'.nc4'
+
+       call nc_diag_read_init(obsfile2, iunit2)
+       allocate(Obs_Minus_Forecast_unadjusted2(nobs))
+       call nc_diag_read_get_var(iunit, 'Obs_Minus_Forecast_unadjusted', Obs_Minus_Forecast_unadjusted2)
+
+       call nc_diag_read_close(obsfile2)
+
+     end if
+
+     do i = 1, nobs
+        iobdiag = iobdiag + 1
+        if (Use_Flag(chind(i)) < 1) cycle
+        if (QC_Flag(i) < 0. .or. Inv_Error(i) < errorlimit &
+                  .or. Inv_Error(i) > errorlimit2 &
+                  .or. Satinfo_Chan(chind(i)) == 0) cycle
+        if (Pressure(i) <= 0.001_r_kind .or.  &
+            Pressure(i) > 1200._r_kind  .or.  &
+            abs(Observation(i)) > 1.e9_r_kind) cycle 
+
+        iob = iob + 1
+
+        x_used(iobdiag) = 1
+        x_type(iob)= sat_type
+
+        x_channum(iob) = chind(i)
+        x_indx(iob) = Satinfo_Chan(chind(i))
+
+        x_lon(iob) = Longitude(i)
+        x_lat(iob) = Latitude(i)
+        x_time(iob) = Time(i)
+        x_obs(iob) = Observation(i)
+        ! bias corrected Hx
+        hx_mean(iob) = x_obs(iob) - Obs_Minus_Forecast_adjusted(i)
+        ! un-bias corrected Hx
+        hx_mean_nobc(iob) = x_obs(iob) - Obs_Minus_Forecast_unadjusted(i)
+
+        if (nanal <= nanals) then
+           ! read full Hx
+           if (.not. lobsdiag_forenkf) then
+              hx(iob) = x_obs(iob) - Obs_Minus_Forecast_unadjusted2(i)
+           ! run linearized Hx
+           else
+              dhx_dx = Observation_Operator_Jacobian(1:nsdim,i)
+              t1 = mpi_wtime()
+              call calc_linhx(hx_mean_nobc(iob), state_d,        &
+                             real(x_lat(iob)*deg2rad,r_single),  &
+                             real(x_lon(iob)*deg2rad,r_single),  &
+                             x_time(iob),                        &
+                             dhx_dx, hx(iob))
+              t2 = mpi_wtime()
+              tsum = tsum + t2-t1
+              call delete(dhx_dx)
+           endif
+        endif
+
+        ! data_chan%errinv is inverse error variance.
+        x_errorig(iob) = error_variance(chind(i))**2
+        x_err(iob) = (1._r_kind/Inv_Error(i))**2
+        x_press(iob) = Pressure(i)
+
+!! DTK:  **NOTE**
+!!       The bifix term will need to be expanded if/when the GSI/GDAS goes to using
+!!       a higher polynomial version of the angle dependent bias correction (if
+!!       and when it is moved into part of the varbc)
+!         x_biaspred(1,nobs) = data_chan(n)%bifix(1) ! fixed angle dependent bias
+!         x_biaspred(2,nobs) = data_chan(n)%bicons ! constant bias correction
+!         x_biaspred(3,nobs) = data_chan(n)%biang ! scan angle bias correction
+!         x_biaspred(4,nobs) = data_chan(n)%biclw ! CLW bias correction
+!         x_biaspred(5,nobs) = data_chan(n)%bilap2 ! square lapse rate bias corr
+!         x_biaspred(6,nobs) = data_chan(n)%bilap ! lapse rate bias correction
+!         if (npred == 7) then
+!           x_biaspred(7,nobs) = data_chan(n)%bicos ! node*cos(lat) bias correction for SSMIS
+!           x_biaspred(8,nobs) = data_chan(n)%bisin ! sin(lat) bias correction for SSMIS
+!         endif
+!         if (emiss_bc) x_biaspred(9,nobs) = data_chan(n)%biemis
+
+!         if (adp_anglebc) then
+!            x_biaspred( 1,nobs)  = data_chan(n)%bifix(5) ! fixed angle dependent bias correction
+!            x_biaspred(npred-2,nobs)  = data_chan(n)%bifix(1) ! 4th order scan angle (predictor)
+!            x_biaspred(npred-1,nobs)  = data_chan(n)%bifix(2) ! 3rd order scan angle (predictor)
+!            x_biaspred(npred,nobs)  = data_chan(n)%bifix(3) ! 2nd order scan angle (predictor)
+!            x_biaspred(npred+1,nobs)    = data_chan(n)%bifix(4) ! 1st order scan angle (predictor)
+!         endif
+
+     enddo
+
+     deallocate(Satinfo_Chan, Use_Flag, error_variance)
+     deallocate(Pressure, QC_Flag, Inv_Error, Latitude, Longitude, Time, &
+                Observation, chind, Obs_Minus_Forecast_unadjusted,       &
+                Obs_Minus_Forecast_adjusted)
+     if (twofiles) deallocate(Obs_Minus_Forecast_unadjusted2)
+     if (lobsdiag_forenkf) deallocate(Observation_Operator_Jacobian)
+
+     enddo peloop ! ipe
+ enddo ! satellite
+ if (nanal == nanals) print *,'time in calc_linhx for sat obs on proc',nproc,' = ',tsum
+ if (nanal == nanals) print *,'time in read_raddiag_data for sat obs on proc',nproc,' = ',tsum2
+
+  if (iob /= nobs_max) then
+      print *,'number of obs not what expected in get_satobs_data',iob,nobs_max
+      call stop2(92)
+  end if
+  if (iobdiag /= nobs_maxdiag) then
+      print *,'number of total diag obs not what expected in get_satobs_data',iobdiag,nobs_maxdiag
+      call stop2(92)
+  end if
+
+ end subroutine get_satobs_data_nc
+
 
 subroutine write_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
   use radinfo, only: iuse_rad,jpch_rad,nusis

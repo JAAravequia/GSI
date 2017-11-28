@@ -34,8 +34,8 @@ private
 public :: get_num_convobs, get_convobs_data, write_convobs_data
 
 
-integer(i_kind), parameter :: nobtype = 11
-character(len=3), dimension(nobtype), parameter :: obtypes = (/'  t', '  q', ' ps', ' uv', 'sst', &
+integer(i_kind), parameter :: nobtype = 10
+character(len=3), dimension(nobtype), parameter :: obtypes = (/'  t', '  q', ' ps', ' uv',  &
                                                                'gps', 'spd', ' pw', ' dw', ' rw', &
                                                                'tcp' /)
 
@@ -126,7 +126,6 @@ subroutine get_num_convobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id
            obmax=abs(rdiagbuf(7,i))
          else
            if(rdiagbuf(12,i) < zero)cycle
-           if (obtype /= 'gps') cycle
            if (obtype == '  q') then
              error=rdiagbuf(20,i)*rdiagbuf(16,i)
              pres=rdiagbuf(6,i)
@@ -143,8 +142,6 @@ subroutine get_num_convobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id
            end if
          end if
          nn(1)=nn(1)+1  ! number of read obs
-
-!         if (obtype == 'gps') print *, error, obmax, pres
          if(error > errorlimit .and. error < errorlimit2 .and. &
             abs(obmax) <= 1.e9_r_kind .and. pres >= 0.001_r_kind .and. &
             pres <= 1200._r_kind) nn(2)=nn(2)+1  ! number of keep obs
@@ -259,7 +256,7 @@ subroutine get_num_convobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     num_obs_totdiag = 0
     nobs = 0
 
-    obtypeloop: do itype=6,6 !nobtype
+    obtypeloop: do itype=1, nobtype
 
      obtype = obtypes(itype)
      peloop: do ipe=0,npefiles
@@ -276,16 +273,18 @@ subroutine get_num_convobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
               trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.conv_'//trim(adjustl(obtype))//'_01.nc4'
         endif
 
-!        print *, 'looking for ', trim(obsfile)
-
         inquire(file=obsfile,exist=fexist)
         if (.not. fexist) cycle peloop
 
         call nc_diag_read_init(obsfile, iunit)
 
         nobs_curr = nc_diag_read_get_dim(iunit,'nobs')
-        print *, trim(obsfile), nobs_curr
-       
+
+        if (nobs_curr <= 0) then
+           call nc_diag_read_close(obsfile)
+           cycle peloop
+        endif
+
         allocate(Pressure(nobs_curr), Analysis_Use_Flag(nobs_curr),     &
                  Errinv_Final(nobs_curr), Observation(nobs_curr))
         call nc_diag_read_get_var(iunit, 'Pressure', Pressure)
@@ -336,8 +335,6 @@ subroutine get_num_convobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
            endif
            if (Analysis_Use_Flag(i) < zero) cycle
 
-
-!           if (obtype == 'gps') print *, i, error, obmax, pres
 
            nobs(itype,1) = nobs(itype,1) + 1
            if (obtype == ' uv') then
@@ -431,7 +428,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
   use mpisetup, only: nproc, mpi_wtime
   use observer_enkf, only: calc_linhx
   use nc_diag_read_mod, only: nc_diag_read_get_var
-  use nc_diag_read_mod, only: nc_diag_read_get_dim
+  use nc_diag_read_mod, only: nc_diag_read_get_dim, nc_diag_read_get_global_attr
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
 
   implicit none
@@ -463,7 +460,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
   character(len=3) :: obtype
 
   integer(i_kind) :: iunit, iunit2, ipe, itype
-  integer(i_kind) :: nobs, nobdiag, i, nob
+  integer(i_kind) :: nobs, nobdiag, i, nob, nsdim
   real(r_kind) :: errorlimit,errorlimit2,error,errororig
   real(r_kind) :: obmax, pres
   real(r_kind) :: errorlimit2_obs,errorlimit2_bnd
@@ -478,7 +475,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
   real(r_single), allocatable, dimension (:) :: Obs_Minus_Forecast_adjusted2, v_Obs_Minus_Forecast_adjusted2
   real(r_single), allocatable, dimension (:) :: Obs_Minus_Forecast_unadjusted2, v_Obs_Minus_Forecast_unadjusted2
   real(r_single), allocatable, dimension (:) :: Forecast_Saturation_Spec_Hum
-  
+  real(r_single), allocatable, dimension (:,:) :: Observation_Operator_Jacobian, v_Observation_Operator_Jacobian
 ! Error limit is made consistent with screenobs routine
   errorlimit = 1._r_kind/sqrt(1.e9_r_kind)
   errorlimit2_obs = 1._r_kind/sqrt(1.e-6_r_kind)
@@ -498,7 +495,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
   hx = zero
 
-  obtypeloop: do itype=6,6 !nobtype
+  obtypeloop: do itype=1, nobtype
 
      obtype = obtypes(itype)
      peloop: do ipe=0,npefiles
@@ -521,6 +518,12 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
         call nc_diag_read_init(obsfile, iunit)
 
         nobs = nc_diag_read_get_dim(iunit,'nobs')
+
+        if (nobs <= 0) then
+           call nc_diag_read_close(obsfile)
+           cycle peloop
+        endif
+
 
         allocate(Latitude(nobs), Longitude(nobs), Pressure(nobs), Time(nobs), &
                  Analysis_Use_Flag(nobs), Errinv_Input(nobs), Errinv_Final(nobs), &
@@ -557,6 +560,18 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
            allocate(Forecast_Saturation_Spec_Hum(nobs))
            call nc_diag_read_get_var(iunit, 'Forecast_Saturation_Spec_Hum', Forecast_Saturation_Spec_Hum)
         endif
+        if (lobsdiag_forenkf) then
+           call nc_diag_read_get_global_attr(iunit, "Number_of_state_vars", nsdim)
+           allocate(Observation_Operator_Jacobian(nsdim, nobs))
+           if (obtype == ' uv') then
+              call nc_diag_read_get_var(iunit, 'u_Observation_Operator_Jacobian', Observation_Operator_Jacobian)
+              allocate(v_Observation_Operator_Jacobian(nsdim, nobs))
+              call nc_diag_read_get_var(iunit, 'v_Observation_Operator_Jacobian', v_Observation_Operator_Jacobian)
+           else
+              call nc_diag_read_get_var(iunit, 'Observation_Operator_Jacobian', Observation_Operator_Jacobian)
+           endif
+        endif
+
 
         call nc_diag_read_close(obsfile)
 
@@ -600,9 +615,9 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
            ! for q, normalize by qsatges
            if (obtype == '  q') then
-              obmax     = abs(Observation(i) / Forecast_Saturation_Spec_Hum(i))
-              errororig = Errinv_Input(i) * Forecast_Saturation_Spec_Hum(i)
-              error     = Errinv_Final(i) * Forecast_Saturation_Spec_Hum(i)
+              obmax     = abs(real(Observation(i),r_single) / real(Forecast_Saturation_Spec_Hum(i),r_single))
+              errororig = real(Errinv_Input(i),r_single) * real(Forecast_Saturation_Spec_Hum(i),r_single)
+              error     = real(Errinv_Final(i),r_single) * real(Forecast_Saturation_Spec_Hum(i),r_single)
            else
               obmax     = abs(Observation(i))
               errororig = Errinv_Input(i)
@@ -647,7 +662,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
            x_obs(nob)   = Observation(i)
 
            ! hx and hxnobc
-           hx_mean(nob) = Observation(i) - Obs_Minus_Forecast_adjusted(i) 
+           hx_mean(nob) = Observation(i) - Obs_Minus_Forecast_adjusted(i)
            hx_mean_nobc(nob) = Observation(i) - Obs_Minus_Forecast_unadjusted(i)
           ! whether that's reasonable
            if (obtype == '  q' .or. obtype == 'spd' .or. obtype == ' dw' .or. &
@@ -673,17 +688,17 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
               ! run the linearized Hx
               else
-
                  t1 = mpi_wtime()
-!                call calc_linhx(hx_mean_nobc(nob), state_d,             &
-!                              real(x_lat(nob)*deg2rad,r_single),      &
-!                              real(x_lon(nob)*deg2rad,r_single),      &
-!                              x_time(nob),                            &
-!                              dhx_dx, hx(nob))
+                 dhx_dx = Observation_Operator_Jacobian(1:nsdim,i)
+                 call calc_linhx(hx_mean_nobc(nob), state_d,             &
+                                 real(x_lat(nob)*deg2rad,r_single),      &
+                                 real(x_lon(nob)*deg2rad,r_single),      &
+                                 x_time(nob),                            &
+                                 dhx_dx, hx(nob))
                  t2 = mpi_wtime()
                  tsum = tsum + t2-t1
-!                 call delete(dhx_dx)
-!                 call delete(dhx_dx_read)
+
+                 call delete(dhx_dx)
               endif
 
               ! normalize q by qsatges
@@ -737,16 +752,15 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
                  ! run linearized Hx
                  else
                     t1 = mpi_wtime()
-!                   call calc_linhx(hx_mean_nobc(nob), state_d, &
-!                                 real(x_lat(nob)*deg2rad,r_single),      &
-!                                 real(x_lon(nob)*deg2rad,r_single),      &
-!                                 x_time(nob),                            &
-!                                 dhx_dx, hx(nob))
+                    dhx_dx = v_Observation_Operator_Jacobian(1:nsdim,i)
+                    call calc_linhx(hx_mean_nobc(nob), state_d, &
+                                    real(x_lat(nob)*deg2rad,r_single),      &
+                                    real(x_lon(nob)*deg2rad,r_single),      &
+                                    x_time(nob),                            &
+                                    dhx_dx, hx(nob))
                     t2 = mpi_wtime()
                     tsum = tsum + t2-t1
-
-!                   call delete(dhx_dx)
-!                   call delete(dhx_dx_read)
+                    call delete(dhx_dx)
                  endif
               endif
            endif
@@ -769,6 +783,13 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
            deallocate(Forecast_Saturation_Spec_Hum)
         endif
 
+        if (lobsdiag_forenkf) then
+           deallocate(Observation_Operator_Jacobian)
+           if (obtype == ' uv') then
+              deallocate(v_Observation_Operator_Jacobian)
+           endif
+        endif
+
         if(twofiles) then
            deallocate(Obs_Minus_Forecast_adjusted2, &
                       Obs_Minus_Forecast_unadjusted2)
@@ -783,7 +804,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
   if (nanal == nanals) print *,'time in calc_linhx for conv obs on proc',nproc,' =',tsum
   if (nob .ne. nobs_max) then
-      print *,'number of obs not what expected in get_convobs_data',nob,nobs_max
+      print *,'nc: number of obs not what expected in get_convobs_data',nob,nobs_max
       call stop2(94)
   end if
   if (nobdiag /= nobs_maxdiag) then
@@ -973,7 +994,7 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
               abs(obmax) > 1.e9_r_kind .or.                     &
               pres < 0.001_r_kind .or. pres > 1200._r_kind) cycle
           ! skipping sst obs since ENKF does not how how to handle them yet.
-          if (obtype /= 'gps') cycle
+          if (obtype == 'sst') cycle
           if (twofiles) then
           if (rdiagbuf(1,n) /= rdiagbuf2(1,n) .or.              &
               abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5 .or. &
@@ -1065,8 +1086,6 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
                 call delete(dhx_dx_read)
              endif
 
-!             if (nanal == 2) print *, nob, x_type(nob), x_obs(nob), hx_mean_nobc(nob), hx(nob)
-
              ! normalize q by qsatges
              if (obtype == '  q') then
                 hx(nob) = hx(nob) /rdiagbuf(20,n)
@@ -1132,7 +1151,6 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
                    call delete(dhx_dx)
                    call delete(dhx_dx_read)
                 endif
-!                if (nanal == 2) print *, nob, x_type(nob), x_obs(nob), hx_mean_nobc(nob), hx(nob)
              endif
           endif
        enddo
@@ -1198,7 +1216,7 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
   if (nanal == nanals) print *,'time in calc_linhx for conv obs on proc',nproc,' =',tsum
   if (nob .ne. nobs_max) then
-      print *,'number of obs not what expected in get_convobs_data',nob,nobs_max
+      print *,'bin: number of obs not what expected in get_convobs_data',nob,nobs_max
       call stop2(94)
   end if
   if (nobdiag /= nobs_maxdiag) then

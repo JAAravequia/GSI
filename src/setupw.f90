@@ -13,7 +13,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! !USES:
 
   use mpeu_util, only: die,perr,getindex
-  use state_vectors, only: svars3d, levels
+  use state_vectors, only: svars3d, levels, nsdim
   use kinds, only: r_kind,r_single,r_double,i_kind
   use m_obsdiags, only: whead
   use obsmod, only: rmiss_single,perturb_obs,oberror_tune,lobsdiag_forenkf,&
@@ -51,7 +51,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
-  use sparsearr, only: sparr2, new, size, writearray
+  use sparsearr, only: sparr2, new, size, writearray, fullarray
 
   implicit none
   
@@ -245,6 +245,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_double) r_prvstg,r_sprvstg
 
   type(sparr2) :: dhx_dx_u, dhx_dx_v
+  real(r_single), dimension(nsdim) :: dhx_dx_array
   integer(i_kind) :: iz, u_ind, v_ind, nnz, nind
   real(r_kind) :: delz
   logical z_height,sfc_data
@@ -1534,6 +1535,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
      if (.not. append_diag) then ! don't write headers on append - the module will break?
         call nc_diag_header("date_time",ianldate )
+        call nc_diag_header("Number_of_state_vars", nsdim          )
      endif
   end subroutine init_netcdf_diag_
   subroutine contents_binary_diag_
@@ -1726,6 +1728,13 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               r_sprvstg           = data(isprvd,i)
               call nc_diag_metadata("Subprovider_Name",  c_sprvstg                    )
            endif
+           if (save_jacobian) then
+              call fullarray(dhx_dx_u, dhx_dx_array)
+              call nc_diag_data2d("u_Observation_Operator_Jacobian", dhx_dx_array)
+              call fullarray(dhx_dx_v, dhx_dx_array)
+              call nc_diag_data2d("v_Observation_Operator_Jacobian", dhx_dx_array)
+           endif
+
 
   end subroutine contents_netcdf_diag_
 

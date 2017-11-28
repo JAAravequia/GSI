@@ -26,7 +26,7 @@ module readozobs
 !$$$
 
 use kinds, only: r_single,i_kind,r_kind,r_double
-use params, only: nsats_oz,sattypes_oz,npefiles
+use params, only: nsats_oz,sattypes_oz,npefiles,netcdf_diag
 use constants, only: deg2rad, zero
 implicit none
 
@@ -36,6 +36,19 @@ public :: get_num_ozobs, get_ozobs_data, write_ozobs_data
 contains
 
 subroutine get_num_ozobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
+   character (len=500), intent(in) :: obspath
+   character (len=10), intent(in) :: datestring
+   character(len=10), intent(in) :: id
+   integer(i_kind),intent(out) :: num_obs_tot, num_obs_totdiag
+
+   if (netcdf_diag) then
+      call get_num_ozobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
+   else
+      call get_num_ozobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
+   endif
+end subroutine get_num_ozobs
+
+subroutine get_num_ozobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     character (len=500), intent(in) :: obspath
     character (len=10), intent(in) :: datestring
     character(len=500) obsfile
@@ -121,9 +134,127 @@ subroutine get_num_ozobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     print *,num_obs_tot,' ozone obs'
     print *,num_obs_totdiag, ' total ozone obs in diag file'
     if(allocated(pob))deallocate(pob,grs,err,iouse)
-end subroutine get_num_ozobs
+end subroutine get_num_ozobs_bin
+
+subroutine get_num_ozobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
+  use nc_diag_read_mod, only: nc_diag_read_get_var
+  use nc_diag_read_mod, only: nc_diag_read_get_dim
+  use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
+
+    character (len=500), intent(in) :: obspath
+    character (len=10), intent(in) :: datestring
+    integer(i_kind), intent(out) :: num_obs_tot, num_obs_totdiag
+    character(len=8), intent(in) :: id
+
+    character(len=500) obsfile
+    character(len=4) pe_name
+    real(r_kind) :: errorlimit,errorlimit2
+    integer(i_kind) iunit
+    integer(i_kind) :: i, nsat, ipe, nobs_curr
+    integer(i_kind):: nread,nkeep
+    logical :: fexist
+
+    real(r_single),  allocatable, dimension (:) :: Pressure
+    integer(i_kind), allocatable, dimension (:) :: Analysis_Use_Flag
+    real(r_single),  allocatable, dimension (:) :: Errinv
+    real(r_single),  allocatable, dimension (:) :: Observation
+
+    num_obs_tot = 0
+    num_obs_totdiag = 0
+!   make consistent with screenobs
+    errorlimit=1._r_kind/sqrt(1.e9_r_kind)
+    errorlimit2=1._r_kind/sqrt(1.e-6_r_kind)
+    do nsat=1,nsats_oz
+        nread = 0
+        nkeep = 0
+        peloop: do ipe=0,npefiles
+           write(pe_name,'(i4.4)') ipe
+           if (npefiles .eq. 0) then
+               ! read diag file (concatenated pe* files)
+               obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_oz(nsat))//"_ges."//datestring//'_'//trim(adjustl(id))//'.nc4'
+               inquire(file=obsfile,exist=fexist)
+               if (.not. fexist .or. datestring .eq. '0000000000') &
+               obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_oz(nsat))//"_ges."//trim(adjustl(id))//'.nc4'
+           else ! read raw, unconcatenated pe* files.
+               obsfile =&
+               trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_oz(nsat))//'_01.nc4'
+           endif
+           inquire(file=obsfile,exist=fexist)
+           if (.not. fexist) cycle peloop
+
+           call nc_diag_read_init(obsfile, iunit)
+
+           nobs_curr = nc_diag_read_get_dim(iunit,'nobs')
+
+           if (nobs_curr <= 0) then
+              call nc_diag_read_close(obsfile)
+              cycle peloop
+           endif
+
+           allocate(Pressure(nobs_curr), Analysis_Use_Flag(nobs_curr),     &
+                   Errinv(nobs_curr), Observation(nobs_curr))
+
+           call nc_diag_read_get_var(iunit, 'Reference_Pressure', Pressure)
+           call nc_diag_read_get_var(iunit, 'Analysis_Use_Flag', Analysis_Use_Flag)
+           call nc_diag_read_get_var(iunit, 'Inverse_Observation_Error', Errinv)
+           call nc_diag_read_get_var(iunit, 'Observation', Observation)
+
+           call nc_diag_read_close(obsfile)
+
+           num_obs_totdiag = num_obs_totdiag + nobs_curr
+           nread = nread + nobs_curr
+           do i = 1, nobs_curr
+             if (Analysis_Use_Flag(i) < 0 .or. Pressure(i) <= 0.001 .or. &
+                 Pressure(i) > 1200._r_kind) cycle
+             if (Errinv(i) <= errorlimit .or.  &
+                 Errinv(i) >= errorlimit2 .or.  &
+                 abs(Observation(i)) > 1.e9_r_kind) cycle
+              nkeep = nkeep + 1
+              num_obs_tot = num_obs_tot + 1
+           end do
+           if (ipe .eq. npefiles) then
+              write(6,100) nsat,trim(sattypes_oz(nsat)),nread,nkeep,num_obs_tot
+100           format(2x,i3,2x,a20,2x,'nread= ',i9,2x,'nkeep=',i9,2x,'num_obs_tot= ',i9)
+           endif
+           deallocate(Pressure, Analysis_Use_Flag, Errinv, Observation)
+        enddo peloop ! ipe
+    enddo ! satellite
+    print *,num_obs_tot,' ozone obs'
+    print *,num_obs_totdiag, ' total ozone obs in diag file'
+end subroutine get_num_ozobs_nc
+
 
 subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+           x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
+
+  character*500, intent(in) :: obspath
+  character*10, intent(in)  :: datestring
+
+  integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
+  real(r_single), dimension(nobs_max), intent(out)      :: hx_mean, hx_mean_nobc, hx
+  real(r_single), dimension(nobs_max), intent(out)      :: x_obs
+  real(r_single), dimension(nobs_max), intent(out)      :: x_err, x_errorig
+  real(r_single), dimension(nobs_max), intent(out)      :: x_lon, x_lat
+  real(r_single), dimension(nobs_max), intent(out)      :: x_press, x_time
+  integer(i_kind), dimension(nobs_max), intent(out)     :: x_code
+  character(len=20), dimension(nobs_max), intent(out)   ::  x_type
+  integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
+
+  character(len=8), intent(in) :: id
+  integer(i_kind), intent(in)  :: nanal
+
+   if (netcdf_diag) then
+      call get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+           x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
+   else
+      call get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+           x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
+   endif
+
+end subroutine get_ozobs_data
+
+
+subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
 
   use sparsearr,only:sparr, sparr2, readarray, delete, assignment(=)
@@ -367,7 +498,213 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
   if(allocated(pob))deallocate(pob,grs,err,iouse)
   if(allocated(pob2))deallocate(pob2,grs2,err2,iouse2)
 
- end subroutine get_ozobs_data
+ end subroutine get_ozobs_data_bin
+
+
+subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+           x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
+  use nc_diag_read_mod, only: nc_diag_read_get_var
+  use nc_diag_read_mod, only: nc_diag_read_get_dim, nc_diag_read_get_global_attr
+  use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
+
+  use sparsearr,only:sparr, sparr2, readarray, delete, assignment(=)
+  use params,only: nanals, lobsdiag_forenkf
+  use statevec, only: state_d
+  use mpisetup, only: mpi_wtime, nproc
+  use observer_enkf, only: calc_linhx
+
+  character*500, intent(in) :: obspath
+  character*10, intent(in)  :: datestring
+
+  integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
+  real(r_single), dimension(nobs_max), intent(out)      :: hx_mean, hx_mean_nobc, hx
+  real(r_single), dimension(nobs_max), intent(out)      :: x_obs
+  real(r_single), dimension(nobs_max), intent(out)      :: x_err, x_errorig
+  real(r_single), dimension(nobs_max), intent(out)      :: x_lon, x_lat
+  real(r_single), dimension(nobs_max), intent(out)      :: x_press, x_time
+  integer(i_kind), dimension(nobs_max), intent(out)     :: x_code
+  character(len=20), dimension(nobs_max), intent(out)   :: x_type
+  integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
+
+  character(len=8), intent(in) :: id
+  integer(i_kind), intent(in)  :: nanal
+
+  character*500    :: obsfile, obsfile2
+  character(len=8) :: id2
+  character(len=4) :: pe_name
+
+  integer(i_kind) :: nobs_curr, nob, nobdiag, i, nsat, ipe, nsdim
+  integer(i_kind) :: iunit, iunit2
+
+  real(r_double) t1,t2,tsum
+  type(sparr)   :: dhx_dx
+
+  real(r_single),  allocatable, dimension (:) :: Latitude, Longitude, Pressure, Time
+  integer(i_kind), allocatable, dimension (:) :: Analysis_Use_Flag
+  real(r_single),  allocatable, dimension (:) :: Errinv
+  real(r_single),  allocatable, dimension (:) :: Observation
+  real(r_single),  allocatable, dimension (:) :: Obs_Minus_Forecast_adjusted, Obs_Minus_Forecast_adjusted2
+  real(r_single),  allocatable, dimension (:) :: Obs_Minus_Forecast_unadjusted
+  real(r_single), allocatable, dimension (:,:) :: Observation_Operator_Jacobian
+
+  logical fexist
+  logical twofiles, fexist2
+  real(r_kind) :: errorlimit,errorlimit2
+
+! make consistent with screenobs
+  errorlimit=1._r_kind/sqrt(1.e9_r_kind)
+  errorlimit2=1._r_kind/sqrt(1.e-6_r_kind)
+
+  twofiles = (.not. lobsdiag_forenkf) .and. (nanal <= nanals)
+  id2 = 'ensmean'
+  if (nanal <= nanals) then
+     write(id2,'(a3,(i3.3))') 'mem',nanal
+  endif
+
+  tsum = 0
+  nob = 0
+  nobdiag = 0
+  x_used = 0
+
+  hx = zero
+
+  do nsat=1,nsats_oz
+      peloop: do ipe=0,npefiles
+         write(pe_name,'(i4.4)') ipe
+         if (npefiles .eq. 0) then
+             ! read diag file (concatenated pe* files)
+             obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_oz(nsat))//"_ges."//datestring//'_'//trim(adjustl(id))//'.nc4'
+             inquire(file=obsfile,exist=fexist)
+             if (.not. fexist .or. datestring .eq. '0000000000') &
+             obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_oz(nsat))//"_ges."//trim(adjustl(id))//'.nc4'
+         else ! read raw, unconcatenated pe* files.
+             obsfile =&
+             trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_oz(nsat))//'_01.nc4'
+         endif
+         inquire(file=obsfile,exist=fexist)
+         if (.not. fexist) then
+            cycle peloop
+         endif
+
+         call nc_diag_read_init(obsfile, iunit)
+
+         nobs_curr = nc_diag_read_get_dim(iunit,'nobs')
+
+         if (nobs_curr <= 0) then
+            call nc_diag_read_close(obsfile)
+            cycle peloop
+         endif
+ 
+         allocate(Latitude(nobs_curr), Longitude(nobs_curr), Time(nobs_curr), Pressure(nobs_curr), &
+                  Analysis_Use_Flag(nobs_curr), Errinv(nobs_curr), Observation(nobs_curr),         &
+                  Obs_Minus_Forecast_adjusted(nobs_curr), Obs_Minus_Forecast_unadjusted(nobs_curr))
+         call nc_diag_read_get_var(iunit, 'Latitude', Latitude)
+         call nc_diag_read_get_var(iunit, 'Longitude', Longitude)
+         call nc_diag_read_get_var(iunit, 'Time', Time)
+         call nc_diag_read_get_var(iunit, 'Reference_Pressure', Pressure)
+         call nc_diag_read_get_var(iunit, 'Analysis_Use_Flag', Analysis_Use_Flag)
+         call nc_diag_read_get_var(iunit, 'Inverse_Observation_Error', Errinv)
+         call nc_diag_read_get_var(iunit, 'Observation', Observation)
+         call nc_diag_read_get_var(iunit, 'Obs_Minus_Forecast_adjusted', Obs_Minus_Forecast_adjusted)
+         call nc_diag_read_get_var(iunit, 'Obs_Minus_Forecast_unadjusted', Obs_Minus_Forecast_unadjusted)
+
+         if (lobsdiag_forenkf) then
+            call nc_diag_read_get_global_attr(iunit, "Number_of_state_vars", nsdim)
+            allocate(Observation_Operator_Jacobian(nsdim, nobs_curr))
+            call nc_diag_read_get_var(iunit, 'Observation_Operator_Jacobian', Observation_Operator_Jacobian)
+         endif
+
+         call nc_diag_read_close(obsfile)
+
+
+         if(twofiles)then
+           if (npefiles .eq. 0) then
+               ! read diag file (concatenated pe* files)
+               obsfile2 = trim(adjustl(obspath))//"diag_"//trim(sattypes_oz(nsat))//"_ges."//datestring//'_'//trim(adjustl(id2))//'.nc4'
+               inquire(file=obsfile2,exist=fexist2)
+               if (.not. fexist2 .or. datestring .eq. '0000000000') &
+               obsfile2 = trim(adjustl(obspath))//"diag_"//trim(sattypes_oz(nsat))//"_ges."//trim(adjustl(id2))//'.nc4'
+           else ! read raw, unconcatenated pe* files.
+               obsfile2 =&
+               trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id2))//'/pe'//pe_name//'.'//trim(sattypes_oz(nsat))//'_01.nc4'
+           endif
+
+           call nc_diag_read_init(obsfile2, iunit2)
+
+           allocate(Obs_Minus_Forecast_adjusted2(nobs_curr))
+           call nc_diag_read_get_var(iunit2, 'Obs_Minus_Forecast_adjusted', Obs_Minus_Forecast_adjusted2)
+
+           call nc_diag_read_close(obsfile2)
+ 
+        end if
+
+        do i = 1, nobs_curr
+           nobdiag = nobdiag + 1
+           if (Analysis_Use_Flag(i) < 0 .or. Pressure(i) <= 0.001 .or. &
+               Pressure(i) > 1200._r_kind) cycle
+
+           if (Errinv(i) <= errorlimit .or. Errinv(i) >= errorlimit2 .or.  &
+               abs(Observation(i)) > 1.e9_r_kind) cycle
+           nob = nob + 1
+           x_used(nobdiag) = 1
+           x_code(nob) = 700  ! made up code 
+           x_lat(nob) = Latitude(i)
+           x_lon(nob) = Longitude(i)
+           x_press(nob) = Pressure(i)
+           x_time(nob) = Time(i)
+           x_err(nob) = (1./Errinv(i))**2
+           x_errorig(nob) = x_err(nob)
+           x_obs(nob) =  Observation(i)
+           hx_mean(nob) = Observation(i) - Obs_Minus_Forecast_adjusted(i)
+           hx_mean_nobc(nob) = Observation(i) - Obs_Minus_Forecast_unadjusted(i)
+           x_type(nob) = ' oz                 '
+           if (nanal <= nanals) then
+             ! read full Hx from diag file
+             if (.not. lobsdiag_forenkf) then
+                hx(nob) = Observation(i) - Obs_Minus_Forecast_adjusted2(i)
+               ! run linearized Hx
+             else
+                dhx_dx = Observation_Operator_Jacobian(1:nsdim,i)
+                t1 = mpi_wtime()
+                call calc_linhx(hx_mean_nobc(nob), state_d,                  &
+                           real(x_lat(nob)*deg2rad,r_single),         &
+                           real(x_lon(nob)*deg2rad,r_single),         &
+                           x_time(nob),                               &
+                           dhx_dx, hx(nob))
+                t2 = mpi_wtime()
+                tsum = tsum + t2-t1
+
+                call delete(dhx_dx)
+             endif
+           endif
+
+         end do ! k
+
+         deallocate(Latitude, Longitude, Time, Pressure, Analysis_Use_Flag, Errinv, &
+                    Observation, Obs_Minus_Forecast_adjusted,                       &
+                    Obs_Minus_Forecast_unadjusted)
+         if (twofiles) then
+            deallocate(Obs_Minus_Forecast_adjusted2)
+         endif
+         if (lobsdiag_forenkf) then
+            deallocate(Observation_Operator_Jacobian)
+         endif
+      enddo peloop ! ipe
+  enddo ! satellite
+  if (nanal == nanals) print *, 'time in calc_linhx for oz obs on proc',nproc,' =',tsum
+
+  if (nob /= nobs_max) then
+      print *,'number of obs not what expected in get_ozobs_data',nob,nobs_max
+      call stop2(93)
+  end if
+  if (nobdiag /= nobs_maxdiag) then
+      print *,'number of total diag obs not what expected in get_ozobs_data',nobdiag,nobs_maxdiag
+      call stop2(93)
+  end if
+
+
+ end subroutine get_ozobs_data_nc
+
 
 subroutine write_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
 

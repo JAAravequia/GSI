@@ -41,7 +41,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   use guess_grids, only: nfldsig, hrdifsig,ges_lnprsl,&
        geop_hgtl,ges_tsen,pt_ll,pbl_height
-  use state_vectors, only: svars3d, levels
+  use state_vectors, only: svars3d, levels, nsdim
 
   use constants, only: zero, one, four,t0c,rd_over_cp,three,rd_over_cp_mass,ten
   use constants, only: tiny_r_kind,half,two,cg_term
@@ -63,7 +63,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
   use buddycheck_mod, only: buddy_check_t
 
-  use sparsearr, only: sparr2, new, size, writearray
+  use sparsearr, only: sparr2, new, size, writearray, fullarray
 
   implicit none
 
@@ -247,6 +247,8 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind),dimension(nobs):: buddyuse
 
   type(sparr2) :: dhx_dx
+  real(r_single), dimension(nsdim) :: dhx_dx_array
+
   integer(i_kind) :: iz, t_ind, nind, nnz
   character(8) station_id
   character(8),allocatable,dimension(:):: cdiagbuf,cdiagbufp
@@ -1434,6 +1436,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      if (.not. append_diag) then ! don't write headers on append - the module will break?
         call nc_diag_header("Number_of_Predictors", npredt         ) ! number of updating bias correction predictors
         call nc_diag_header("date_time",ianldate )
+        call nc_diag_header("Number_of_state_vars", nsdim          )
      endif
 
   end subroutine init_netcdf_diag_
@@ -1531,7 +1534,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
     call nc_diag_metadata("Station_ID",              station_id             )
     call nc_diag_metadata("Observation_Class",       obsclass               )
     call nc_diag_metadata("Observation_Type",        ictype(ikx)            )
-    call nc_diag_metadata("Observation_Subtype",     icsubtype(ikx)         )
+!    call nc_diag_metadata("Observation_Subtype",     icsubtype(ikx)         )
     call nc_diag_metadata("Latitude",                real(data(ilate,i),r_single)          )
 !    call nc_diag_metadata("Latitude",data(ilate,i))
     call nc_diag_metadata("Longitude",               real(data(ilone,i),r_single)          )
@@ -1607,6 +1610,12 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
        r_sprvstg           = data(isprvd,i)
        call nc_diag_metadata("Subprovider_Name",  c_sprvstg                    )
     endif
+
+    if (save_jacobian) then
+       call fullarray(dhx_dx, dhx_dx_array)
+       call nc_diag_data2d("Observation_Operator_Jacobian", dhx_dx_array)
+    endif
+
   end subroutine contents_netcdf_diag_
 
   subroutine final_vars_
