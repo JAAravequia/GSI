@@ -1876,11 +1876,11 @@
         if(init_pass .and. nobs .gt. 0) then
 !           open(4,file=trim(diag_rad_file),form='unformatted',status='unknown',position='rewind')
            call nc_diag_init(diag_rad_file)
-           call nc_diag_chaninfo_dim_set(nchanl)
+           call nc_diag_chaninfo_dim_set(nchanl_diag)
         else
 !           open(4,file=trim(diag_rad_file),form='unformatted',status='old',position='append')
         endif
-        if (init_pass .and. .not. reduce_diag) then
+        if (init_pass) then
            inewpc=0
            if (newpc4pred) inewpc=1
            call nc_diag_header("Satellite_Sensor",     isis           )

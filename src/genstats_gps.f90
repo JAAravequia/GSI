@@ -222,7 +222,6 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
 !   2014-01-28  todling - write sensitivity slot indicator (ioff) to header of diagfile
 !   2014-12-13 derber   - minor optimization modifications
 !   2015-07-28 cucurull - add QC for regional bending angle assimilation
-!   2016-11-29 shlyaeva - increase the size of nreal for saving linearized Hx for EnKF
 !   2015-08-28  guo     - wrapped as a  module (m_gpsStats)
 !                         moved the call to obsmod::destroy_genstats_gps() to
 !                         where this routine was used (setuprhsall()), with its

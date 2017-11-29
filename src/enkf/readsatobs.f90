@@ -623,7 +623,7 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
 
   type(sparr)     :: dhx_dx
 
-  integer(i_kind), dimension(:), allocatable :: Satinfo_Chan, Use_Flag, chind
+  integer(i_kind), dimension(:), allocatable :: Satinfo_Chan, Use_Flag, chind, chaninfoidx
   real(r_kind), dimension(:), allocatable :: error_variance
   real(r_kind), dimension(:), allocatable :: Pressure, QC_Flag, Inv_Error, Observation
   real(r_kind), dimension(:), allocatable :: Latitude, Longitude, Time
@@ -705,6 +705,7 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
      call nc_diag_read_get_var(iunit, 'satinfo_chan', Satinfo_Chan)
      call nc_diag_read_get_var(iunit, 'use_flag', Use_Flag)
      call nc_diag_read_get_var(iunit, 'error_variance', error_variance)
+     call nc_diag_read_get_var(iunit, 'chaninfoidx', chaninfoidx)
 
      call nc_diag_read_get_var(iunit, 'Channel_Index', chind)
      call nc_diag_read_get_var(iunit, 'Press_Max_Weight_Function', Pressure)
@@ -765,7 +766,7 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
         x_used(iobdiag) = 1
         x_type(iob)= sat_type
 
-        x_channum(iob) = chind(i)
+        x_channum(iob) = chaninfoidx(chind(i))
         x_indx(iob) = Satinfo_Chan(chind(i))
 
         x_lon(iob) = Longitude(i)
@@ -827,7 +828,7 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
 
      enddo
 
-     deallocate(Satinfo_Chan, Use_Flag, error_variance)
+     deallocate(Satinfo_Chan, Use_Flag, error_variance, chaninfoidx)
      deallocate(Pressure, QC_Flag, Inv_Error, Latitude, Longitude, Time, &
                 Observation, chind, Obs_Minus_Forecast_unadjusted,       &
                 Obs_Minus_Forecast_adjusted)
