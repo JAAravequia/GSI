@@ -25,6 +25,7 @@ module readconvobs
 !   language: f95
 !
 !$$$
+
 use kinds, only: r_kind,i_kind,r_single,r_double
 use constants, only: one,zero,deg2rad
 use params, only: npefiles, netcdf_diag
@@ -264,10 +265,10 @@ subroutine get_num_convobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
         write(pe_name,'(i4.4)') ipe
         if (npefiles .eq. 0) then
            ! read diag file (concatenated pe* files)
-           obsfile = trim(adjustl(obspath))//"diag_conv_ges."//datestring//'_'//trim(adjustl(id))//'.nc4'
+           obsfile = trim(adjustl(obspath))//"diag_conv_"//trim(adjustl(obtype))//"_ges."//datestring//'_'//trim(adjustl(id))//'.nc4'
            inquire(file=obsfile,exist=fexist)
            if (.not. fexist .or. datestring .eq. '0000000000') &
-              obsfile = trim(adjustl(obspath))//"diag_conv_ges."//trim(adjustl(id))//'.nc4'
+              obsfile = trim(adjustl(obspath))//"diag_conv_"//trim(adjustl(obtype))//"_ges."//trim(adjustl(id))//'.nc4'
         else ! read raw, unconcatenated pe* files.
            obsfile = &
               trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.conv_'//trim(adjustl(obtype))//'_01.nc4'
@@ -503,10 +504,10 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
         write(pe_name,'(i4.4)') ipe
         if (npefiles .eq. 0) then
            ! read diag file (concatenated pe* files)
-           obsfile = trim(adjustl(obspath))//"diag_conv_ges."//datestring//'_'//trim(adjustl(id))//'.nc4'
+           obsfile = trim(adjustl(obspath))//"diag_conv_"//trim(adjustl(obtype))//"_ges."//datestring//'_'//trim(adjustl(id))//'.nc4'
            inquire(file=obsfile,exist=fexist)
            if (.not. fexist .or. datestring .eq. '0000000000') &
-              obsfile = trim(adjustl(obspath))//"diag_conv_ges."//trim(adjustl(id))//'.nc4'
+              obsfile = trim(adjustl(obspath))//"diag_conv_"//trim(adjustl(obtype))//"_ges."//trim(adjustl(id))//'.nc4'
         else ! read raw, unconcatenated pe* files.
            obsfile = &
               trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.conv_'//trim(adjustl(obtype))//'_01.nc4'
@@ -578,10 +579,10 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
         if(twofiles) then
            if (npefiles .eq. 0) then
              ! read diag file (concatenated pe* files)
-             obsfile2 = trim(adjustl(obspath))//"diag_conv_ges."//datestring//'_'//trim(adjustl(id2))//'.nc4'
+             obsfile2 = trim(adjustl(obspath))//"diag_conv_"//trim(adjustl(obtype))//"_ges."//datestring//'_'//trim(adjustl(id2))//'.nc4'
              inquire(file=obsfile2,exist=fexist2)
              if (.not. fexist2 .or. datestring .eq. '0000000000') &
-                obsfile2 = trim(adjustl(obspath))//"diag_conv_ges."//trim(adjustl(id2))//'.nc4'
+                obsfile2 = trim(adjustl(obspath))//"diag_conv_"//trim(adjustl(obtype))//"_ges."//trim(adjustl(id2))//'.nc4'
            else ! read raw, unconcatenated pe* files.
              obsfile2 =&
                  trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id2))//'/pe'//pe_name//'.conv_'//trim(adjustl(obtype))//'_01.nc4'
