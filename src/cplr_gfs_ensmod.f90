@@ -60,12 +60,12 @@ subroutine get_user_ens_gfs(this,grd,ntindex,atm_bundle,iret)
     integer(i_kind),     intent(  out) :: iret
 
     ! Declare internal variables
-    character(len=*),parameter :: myname='get_user_ens_gfs'
-    real(r_single),allocatable :: en_loc3(:,:,:,:)
+    character(len=*),parameter :: myname_='get_user_ens_gfs'
+    real(r_single),allocatable,dimension(:,:,:,:) :: en_loc3
     integer(i_kind) :: m_cvars2d(nc2d),m_cvars3d(nc3d)
 
     integer(i_kind) :: n
-    real(r_kind),allocatable :: clons(:),slons(:)
+    real(r_kind),allocatable,dimension(:) :: clons,slons
 
     associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
     end associate
@@ -152,7 +152,7 @@ subroutine get_user_ens_gfs_fastread_(ntindex,en_loc3,m_cvars2d,m_cvars3d, &
 
 
     ! Declare internal variables
-    character(len=*),parameter :: myname='get_user_ens_gfs_fastread_'
+    character(len=*),parameter :: myname_='get_user_ens_gfs_fastread_'
     character(len=70) :: filename
     integer(i_kind) :: i,ii,j,jj,k,n
     integer(i_kind) :: io_pe,n_io_pe_s,n_io_pe_e,n_io_pe_em,i_ens
@@ -164,9 +164,8 @@ subroutine get_user_ens_gfs_fastread_(ntindex,en_loc3,m_cvars2d,m_cvars3d, &
     integer(i_kind) :: n2d
     integer(i_kind) :: nlon,nlat,nsig
     type(genex_info) :: s_a2b
-    real(r_single),allocatable :: en_full(:,:,:,:)
-    real(r_single),allocatable :: en_loc(:,:,:,:)
-    integer(i_kind),allocatable :: m_cvars2dw(:),m_cvars3dw(:)
+    real(r_single),allocatable,dimension(:,:,:,:) :: en_full,en_loc
+    integer(i_kind),allocatable,dimension(:) :: m_cvars2dw,m_cvars3dw
     integer(i_kind) base_pe,base_pe0
 
     iret = 0
@@ -329,20 +328,15 @@ subroutine move2bundle_(grd,en_loc3,atm_bundle,m_cvars2d,m_cvars3d,iret,clons,sl
     real(r_kind),        intent(in   ) :: clons(grd%nlon),slons(grd%nlon)
 
     ! Declare internal variables
-    character(len=*),parameter :: myname='move2bundle_'
+    character(len=*),parameter :: myname_='move2bundle_'
     character(len=70) :: filename
 
     integer(i_kind) :: ierr
     integer(i_kind) :: im,jm,km,m,k
-    real(r_kind),pointer,dimension(:,:)   :: ps
-    !real(r_kind),pointer,dimension(:,:)   :: sst
-    real(r_kind),pointer,dimension(:,:,:) :: u
-    real(r_kind),pointer,dimension(:,:,:) :: v
-    real(r_kind),pointer,dimension(:,:,:) :: tv
-    real(r_kind),pointer,dimension(:,:,:) :: q
-    real(r_kind),pointer,dimension(:,:,:) :: oz
-    real(r_kind),pointer,dimension(:,:,:) :: cwmr
-    real(r_single),allocatable,dimension(:,:)   :: scr2
+    real(r_kind),pointer,dimension(:,:) :: ps
+    !real(r_kind),pointer,dimension(:,:) :: sst
+    real(r_kind),pointer,dimension(:,:,:) :: u,v,tv,q,oz,cwmr
+    real(r_single),allocatable,dimension(:,:)  :: scr2
     real(r_single),allocatable,dimension(:,:,:) :: scr3
     type(sub2grid_info) :: grd2d,grd3d
     real(r_kind),parameter :: r0_001 = 0.001_r_kind
@@ -368,18 +362,16 @@ subroutine move2bundle_(grd,en_loc3,atm_bundle,m_cvars2d,m_cvars3d,iret,clons,sl
     call gsi_bundlegetpointer(atm_bundle,'cw',cwmr,ierr); iret = ierr + iret
     if ( iret /= 0 ) then
        if ( mype == 0 ) then
-          write(6,'(A)') trim(myname) // ': ERROR!'
-          write(6,'(A)') trim(myname) // ': For now, GFS requires all MetFields: ps,u,v,(sf,vp)tv,q,oz,cw'
-          write(6,'(A)') trim(myname) // ': but some have not been found. Aborting ... '
+          write(6,'(A)') trim(myname_) // ': ERROR!'
+          write(6,'(A)') trim(myname_) // ': For now, GFS requires all MetFields: ps,u,v,(sf,vp)tv,q,oz,cw'
+          write(6,'(A)') trim(myname_) // ': but some have not been found. Aborting ... '
        endif
        goto 100
     endif
 
     do m=1,nc2d
        scr2(:,:)=en_loc3(:,:,m_cvars2d(m))
-       if(trim(cvars2d(m))=='ps') then
-          ps=scr2
-       endif
+       if(trim(cvars2d(m))=='ps') ps=scr2
     !  if(trim(cvars2d(m))=='sst') sst=scr2    !  no sst for now
     enddo
     do m=1,nc3d
@@ -423,9 +415,9 @@ subroutine move2bundle_(grd,en_loc3,atm_bundle,m_cvars2d,m_cvars3d,iret,clons,sl
 
     if ( iret /= 0 ) then
        if ( mype == 0 ) then
-          write(6,'(A)') trim(myname) // ': ERROR!'
-          write(6,'(A)') trim(myname) // ': For now, GFS needs to put all MetFields: ps,u,v,(sf,vp)tv,q,oz,cw'
-          write(6,'(A)') trim(myname) // ': but some have not been found. Aborting ... '
+          write(6,'(A)') trim(myname_) // ': ERROR!'
+          write(6,'(A)') trim(myname_) // ': For now, GFS needs to put all MetFields: ps,u,v,(sf,vp)tv,q,oz,cw'
+          write(6,'(A)') trim(myname_) // ': but some have not been found. Aborting ... '
        endif
        goto 100
     endif
@@ -440,8 +432,8 @@ subroutine move2bundle_(grd,en_loc3,atm_bundle,m_cvars2d,m_cvars3d,iret,clons,sl
 
     if ( iret /= 0 ) then
        if ( mype == 0 ) then
-          write(6,'(A)') trim(myname) // ': WARNING!'
-          write(6,'(3A,I5)') trim(myname) // ': Trouble reading ensemble file : ', trim(filename), ', IRET = ', iret
+          write(6,'(A)') trim(myname_) // ': WARNING!'
+          write(6,'(3A,I5)') trim(myname_) // ': Trouble reading ensemble file : ', trim(filename), ', IRET = ', iret
        endif
     endif
 
@@ -486,7 +478,8 @@ subroutine update_scalar_poles_(grd,s)
     ! Declare local variables
     integer(i_kind) inner_vars,lat2,lon2,nlat,nlon,nvert,kbegin_loc,kend_loc,kend_alloc
     integer(i_kind) ii,i,j,k
-    real(r_kind),allocatable:: sloc(:),work(:,:,:,:)
+    real(r_kind),allocatable,dimension(:) :: sloc
+    real(r_kind),allocatable,dimension(:,:,:,:) :: work
 
     lat2=grd%lat2
     lon2=grd%lon2
@@ -547,9 +540,9 @@ subroutine update_vector_poles_(grd,u,v,clons,slons)
    ! Declare local variables
    integer(i_kind) inner_vars,lat2,lon2,nlat,nlon,nvert,kbegin_loc,kend_loc,kend_alloc
    integer(i_kind) ii,i,j,k
-   real(r_kind),allocatable:: uloc(:),uwork(:,:,:,:)
-   real(r_kind),allocatable:: vloc(:),vwork(:,:,:,:)
-   real(r_kind),allocatable:: tempu(:,:),tempv(:,:)
+   real(r_kind),allocatable,dimension(:) :: uloc,vloc
+   real(r_kind),allocatable,dimension(:,:,:,:) :: uwork,vwork
+   real(r_kind),allocatable,dimension(:,:) :: tempu,tempv
 
    lat2=grd%lat2
    lon2=grd%lon2
@@ -619,6 +612,7 @@ subroutine ens_io_partition_(n_ens,io_pe,n_io_pe_s,n_io_pe_e,n_io_pe_em,i_ens)
 
       use kinds, only: r_kind,i_kind
       use constants, only: half
+
       implicit none
 
 !     Declare passed variables
@@ -711,11 +705,12 @@ subroutine parallel_read_nemsio_state_(en_full,m_cvars2d,m_cvars3d,nlon,nlat,nsi
 ! them on to 4 or 8 byte, whatever is the users choice.  However, since some
 ! initial arithmetic is done before storing the ensembles as 4 byte, in order to
 ! preserve bit wise reproducibility between current and new ensemble read
-   real(r_single),allocatable ::  temp3(:,:,:,:),temp2(:,:,:)
+   real(r_single),allocatable,dimension(:,:,:) ::  temp2
+   real(r_single),allocatable,dimension(:,:,:,:) ::  temp3
    real(r_kind) :: fhour
    type(nemsio_gfile) :: gfile
-   real(r_kind),allocatable::rlats(:),rlons(:)
-   real(r_single),allocatable::r4lats(:),r4lons(:)
+   real(r_kind),allocatable,dimension(:) :: rlats,rlons
+   real(r_single),allocatable,dimension(:) ::r4lats,r4lons
 
    if ( init_head)call nemsio_init(iret=iret)
    if (iret /= 0) call error_msg(trim(myname_),trim(filename),null,'init',istop,iret)
@@ -890,6 +885,8 @@ subroutine fillpoles_s_(temp,nlon,nlat)
    use kinds, only: i_kind,r_kind
    use constants, only: zero,one
 
+   implicit none
+
    integer(i_kind),intent(in   ) :: nlon,nlat
    real(r_kind), intent(inout) :: temp(nlat,nlon)
 
@@ -945,6 +942,8 @@ subroutine fillpoles_v_(tempu,tempv,nlon,nlat,clons,slons)
 
    use kinds, only: i_kind,r_kind
    use constants, only: zero
+
+   implicit none
 
    integer(i_kind),intent(in   ) :: nlon,nlat
    real(r_kind),   intent(inout) :: tempu(nlat,nlon),tempv(nlat,nlon)
@@ -1070,7 +1069,7 @@ subroutine get_user_ens_gfs_member_(grd,member,ntindex,atm_bundle,iret)
     integer(i_kind),     intent(  out) :: iret
 
     ! Declare internal variables
-    character(len=*),parameter :: myname='get_user_ens_gfs_member_'
+    character(len=*),parameter :: myname_='get_user_ens_gfs_member_'
     character(len=70) :: filename
     logical :: zflag = .false.
     logical,save :: inithead = .true.
@@ -1151,7 +1150,7 @@ subroutine put_gsi_ens_gfs(this,grd,member,ntindex,atm_bundle,iret)
     integer(i_kind),     intent(  out) :: iret
 
     ! Declare internal variables
-    character(len=*),parameter :: myname='put_gsi_ens_gfs'
+    character(len=*),parameter :: myname_='put_gsi_ens_gfs'
     character(len=70) :: filename
     integer(i_kind) :: mype_atm
     logical,save :: inithead = .true.
