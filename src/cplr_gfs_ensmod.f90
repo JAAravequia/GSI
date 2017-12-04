@@ -84,6 +84,7 @@ contains
         else
            write(filename,21) trim(adjustl(ensemble_path)),member,ens_fhrlevs(ntindex),mype
         endif
+        write(6,*)'thinkdeb in  cplr_gfs_ensmod.f90 filename is ',trim(filename)
  11     format(a,'ensmean',     '_f',i2.2,'.pe',i4.4)
  21     format(a,'ens_mem',i3.3,'_f',i2.2,'.pe',i4.4)
 
@@ -91,9 +92,9 @@ contains
        !call preproc_read_gfsatm(grd,filename,iret)
 
        ! Keeping this for now
-       im = en_perts(1,1)%grid%im
-       jm = en_perts(1,1)%grid%jm
-       km = en_perts(1,1)%grid%km
+       im = en_perts(1,1,1)%grid%im
+       jm = en_perts(1,1,1)%grid%jm
+       km = en_perts(1,1,1)%grid%km
 
        allocate(scr2(im,jm))
        allocate(scr3(im,jm,km))
@@ -162,6 +163,7 @@ contains
        endif
 12     format(a,'sigf',i2.2,'_ensmean'     )
 22     format(a,'sigf',i2.2,'_ens_mem',i3.3)
+       write(6,*)'thinkdeb filename is ',trim(filename)
 
        if ( use_gfs_nemsio ) then
           call general_read_gfsatm_nems(grd,sp_ens,filename,uv_hyb_ens,.false., &

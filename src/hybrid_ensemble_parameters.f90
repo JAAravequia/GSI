@@ -286,6 +286,12 @@ module hybrid_ensemble_parameters
   public :: en_perts,ps_bar
   public :: region_lat_ens,region_lon_ens
   public :: region_dx_ens,region_dy_ens
+  public :: naensgrp,nsclgrp
+  public :: ensgrp2aensgrp 
+  public :: alphacvarsclgrpmat
+  public ::  para_covwithsclgrp
+  public :: spc_multwgt 
+  public :: spcwgt_params 
 
   logical l_hyb_ens,uv_hyb_ens,q_hyb_ens,oz_univ_static
   logical enspreproc
@@ -323,6 +329,14 @@ module hybrid_ensemble_parameters
   integer(i_kind) ntlevs_ens
   integer(i_kind) regional_ensemble_option
   character(len=512),save :: ensemble_path
+  real(r_kind),allocatable,dimension(:,:) :: alphacvarsclgrpmat
+  integer(i_kind),allocatable,dimension(:) :: ensgrp2aensgrp
+  real(r_kind),allocatable,dimension(:,:) ::  spc_multwgt 
+  real(r_kind),allocatable,dimension(:,:) ::  spcwgt_params
+  real (r_kind) ::  para_covwithsclgrp=1
+   integer(i_kind)::  nsclgrp=1
+   integer(i_kind)::  naensgrp=1
+
 
 ! following is for storage of ensemble perturbations:
 
@@ -330,8 +344,10 @@ module hybrid_ensemble_parameters
 !   def nelen               - length of one ensemble perturbation vector
 
   integer(i_kind) nelen
-  type(gsi_bundle),save,allocatable :: en_perts(:,:)
-  real(r_single),dimension(:,:,:),allocatable:: ps_bar
+!cltorg  type(gsi_bundle),save,allocatable :: en_perts(:,:)
+  type(gsi_bundle),save,allocatable :: en_perts(:,:,:)
+!cltorg  real(r_single),dimension(:,:,:),allocatable:: ps_bar
+  real(r_single),dimension(:,:,:,:),allocatable:: ps_bar
 
 !    following is for interpolation of global ensemble to regional ensemble grid
 
@@ -418,11 +434,15 @@ subroutine create_hybens_localization_parameters
   allocate( beta_s(grd_ens%nsig),beta_e(grd_ens%nsig))
   allocate( sqrt_beta_s(grd_ens%nsig),sqrt_beta_e(grd_ens%nsig) )
   allocate( pwgt(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig) )
+  allocate(alphacvarsclgrpmat(naensgrp,naensgrp))
+  allocate(ensgrp2aensgrp(nsclgrp))
   beta_s  =one
   beta_e  =zero
   sqrt_beta_s=one
   sqrt_beta_e=zero
   pwgt=zero
+  alphacvarsclgrpmat=one
+  ensgrp2aensgrp=1
   
 end subroutine create_hybens_localization_parameters
 
@@ -432,6 +452,9 @@ subroutine destroy_hybens_localization_parameters
   deallocate(s_ens_vv,s_ens_hv) 
   deallocate(beta_s,beta_e)
   deallocate(sqrt_beta_s,sqrt_beta_e,pwgt)
+  deallocate(alphacvarsclgrpmat)
+  deallocate(ensgrp2aensgrp)
+  
 
 end subroutine destroy_hybens_localization_parameters
 

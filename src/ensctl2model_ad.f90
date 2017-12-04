@@ -42,6 +42,7 @@ use mpeu_util, only: getindex
 use gsi_metguess_mod, only: gsi_metguess_get
 use mod_strong, only: tlnmc_option
 use timermod, only: timer_ini,timer_fnl
+use hybrid_ensemble_parameters,only: naensgrp
 implicit none
 
 ! Declare passed variables
@@ -57,7 +58,7 @@ integer(i_kind) :: ii,jj,ic,id,istatus,nclouds,nn
 integer(i_kind), parameter :: ncvars = 5
 integer(i_kind) :: icps(ncvars)
 type(gsi_bundle):: wbundle_c ! work bundle
-type(gsi_bundle),allocatable :: ebundle(:)
+type(gsi_bundle),allocatable :: ebundle(:,:)
 real(r_kind) :: grade(nval_lenz_en)
 character(len=3), parameter :: mycvars(ncvars) = (/  &  ! vars from CV needed here
                                'sf ', 'vp ', 'ps ', 't  ',    &
@@ -77,6 +78,7 @@ real(r_kind),pointer,dimension(:,:,:) :: rv_rank3
 
 logical :: do_getuv,do_tv_to_tsen_ad,do_normal_rh_to_q_ad,do_getprs_ad
 logical :: do_tlnmc,lstrong_bk_vars,do_q_copy
+integer(i_kind) :: ig
 
 !****************************************************************************
 
@@ -122,14 +124,16 @@ do jj=1,ntlevs_ens
          (jj==ibin_anl .and. tlnmc_option==2) )
 
    !allocate(grade(nval_lenz_en))
-   allocate(ebundle(n_ens))
+   allocate(ebundle(naensgrp,n_ens))
+  do ig=1,naensgrp 
    do nn=1,n_ens
-      call gsi_bundlecreate (ebundle(nn),grad%aens(1,1),'m2c ensemble work',istatus)
+      call gsi_bundlecreate (ebundle(ig,nn),grad%aens(1,1,1),'m2c ensemble work',istatus)
       if(istatus/=0) then
          write(6,*) trim(myname), ': trouble creating work ens-bundle'
          call stop2(999)
       endif
    enddo
+  enddo !ig
 
 !  Create a temporary bundle similar to grad, and copy contents of grad into it
    call gsi_bundlecreate ( wbundle_c, grad%step(1), 'stat2ensctl work', istatus )
@@ -209,41 +213,47 @@ do jj=1,ntlevs_ens
 !     Adjoint to convert ps to 3-d pressure
       if(do_getprs_ad) call getprs_ad(cv_ps,cv_tv,rv_prse)
    end if
-
+  do ig=1,naensgrp
    do nn=1,n_ens
-      ebundle(nn)%values=grad%aens(jj,nn)%values
+      ebundle(ig,nn)%values=grad%aens(jj,ig,nn)%values
    enddo
+ enddo
    if(dual_res) then
       call ensemble_forward_model_ad_dual_res(wbundle_c,ebundle,jj)
    else
       call ensemble_forward_model_ad(wbundle_c,ebundle,jj)
    end if
-   call sqrt_beta_s_mult(wbundle_c)
+   call sqrt_beta_s_mult(wbundle_c)  !cltthinkdeb should this be removed? 
 
 !  Apply square-root of ensemble error covariance
    call sqrt_beta_e_mult(ebundle)
-   call ckgcov_a_en_new_factorization_ad(grade,ebundle)
+   do ig=1,naensgrp
+   call ckgcov_a_en_new_factorization_ad(ig,grade,ebundle(ig,:)) !cltthinkdeb
+
+
+   do ii=1,n_ens
+      grad%aens(jj,ig,ii)%values=grad%aens(jj,ig,ii)%values + grade  !cltthinkdeb why  adding
+   enddo
+  enddo !loop ig
+!  do ii=1,nval_lenz_en
+!     grad%aens(jj,1)%values(ii)=grad%aens(jj,1)%values(ii)+grade(ii)
+!  enddo
+
+  do ig=1,naensgrp
+   do nn=n_ens,1,-1 ! first in; last out
+      call gsi_bundledestroy(ebundle(ig,nn),istatus)
+      if(istatus/=0) then
+         write(6,*) trim(myname), ': trouble destroying work ens bundle', ig,nn, istatus
+         call stop2(999)
+      endif
+   enddo
+  enddo
 
    call gsi_bundledestroy(wbundle_c,istatus)
    if (istatus/=0) then
       write(6,*) trim(myname),': trouble destroying work bundle'
       call stop2(999)
    endif
-
-   do ii=1,n_ens
-      grad%aens(jj,ii)%values=grad%aens(jj,ii)%values + grade
-   enddo
-!  do ii=1,nval_lenz_en
-!     grad%aens(jj,1)%values(ii)=grad%aens(jj,1)%values(ii)+grade(ii)
-!  enddo
-
-   do nn=n_ens,1,-1 ! first in; last out
-      call gsi_bundledestroy(ebundle(nn),istatus)
-      if(istatus/=0) then
-         write(6,*) trim(myname), ': trouble destroying work ens bundle', nn, istatus
-         call stop2(999)
-      endif
-   enddo
    deallocate(ebundle)
 !  deallocate(grade)
 

@@ -55,9 +55,9 @@ contains
   
       implicit none
       class(get_wrf_mass_ensperts_class), intent(inout) :: this
-      type(gsi_bundle),allocatable, intent(inout) :: en_perts(:,:)
+      type(gsi_bundle),allocatable, intent(inout) :: en_perts(:,:,:)
       integer(i_kind), intent(in   ):: nelen
-      real(r_single),dimension(:,:,:),allocatable:: ps_bar
+      real(r_single),dimension(:,:,:,:),allocatable:: ps_bar
   
       real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig):: u,v,tv,cwmr,oz,rh
       real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2):: ps
@@ -76,6 +76,8 @@ contains
 
       character(255) filelists(ntlevs_ens)
       character(255) filename
+      integer(i_kind) :: ig
+      ig=1
   
       call gsi_gridcreate(grid_ens,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)
       call gsi_bundlecreate(en_bar,grid_ens,'ensemble',istatus,names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
@@ -110,7 +112,7 @@ contains
          en_bar%values=zero
   
          do n=1,n_ens
-            en_perts(n,it)%valuesr4 = zero
+            en_perts(n,ig,it)%valuesr4 = zero
          enddo
   
          mm1=mype+1
@@ -131,7 +133,7 @@ contains
   ! SAVE ENSEMBLE MEMBER DATA IN COLUMN VECTOR
             do ic3=1,nc3d
   
-               call gsi_bundlegetpointer(en_perts(n,it),trim(cvars3d(ic3)),w3,istatus)
+               call gsi_bundlegetpointer(en_perts(n,ig,it),trim(cvars3d(ic3)),w3,istatus)
                if(istatus/=0) then
                   write(6,*)' error retrieving pointer to ',trim(cvars3d(ic3)),' for ensemble member ',n
                   call stop2(999)
@@ -215,7 +217,7 @@ contains
   
             do ic2=1,nc2d
      
-               call gsi_bundlegetpointer(en_perts(n,it),trim(cvars2d(ic2)),w2,istatus)
+               call gsi_bundlegetpointer(en_perts(n,ig,it),trim(cvars2d(ic2)),w2,istatus)
                if(istatus/=0) then
                   write(6,*)' error retrieving pointer to ',trim(cvars2d(ic2)),' for ensemble member ',n
                   call stop2(999)
@@ -269,7 +271,7 @@ contains
    
                do i=1,grd_ens%lon2
                   do j=1,grd_ens%lat2
-                     ps_bar(j,i,1)=x2(j,i)
+                     ps_bar(j,i,1,1)=x2(j,i)
                   end do
                end do
                exit
@@ -279,6 +281,7 @@ contains
          call mpi_barrier(mpi_comm_world,ierror)
   !
   ! CALCULATE ENSEMBLE SPREAD
+!cltorg  think       call this%ens_spread_dualres_regional(mype,en_perts,nelen,en_bar)
          call this%ens_spread_dualres_regional(mype,en_perts,nelen,en_bar)
          call mpi_barrier(mpi_comm_world,ierror)
   !
@@ -287,7 +290,7 @@ contains
   
          do n=1,n_ens
             do i=1,nelen
-               en_perts(n,it)%valuesr4(i)=(en_perts(n,it)%valuesr4(i)-en_bar%values(i))*sig_norm
+               en_perts(n,ig,it)%valuesr4(i)=(en_perts(n,ig,it)%valuesr4(i)-en_bar%values(i))*sig_norm
             end do
          end do
 
@@ -812,7 +815,7 @@ contains
     class(get_wrf_mass_ensperts_class), intent(inout) :: this
     type(gsi_bundle),OPTIONAL,intent(in):: en_bar
     integer(i_kind),intent(in):: mype
-    type(gsi_bundle),allocatable, intent(in   ) :: en_perts(:,:)
+    type(gsi_bundle),allocatable, intent(in   ) :: en_perts(:,:,:)
     integer(i_kind), intent(in   ):: nelen
   
     type(gsi_bundle):: sube,suba
@@ -829,6 +832,8 @@ contains
     real(r_kind),pointer,dimension(:,:):: ps
     real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig),target::dum3
     real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2),target::dum2
+      integer(i_kind) :: ig
+      ig=1
 
     associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
     end associate
@@ -864,7 +869,7 @@ contains
        do n=1,n_ens
           do i=1,nelen
              sube%values(i)=sube%values(i) &
-               +en_perts(n,1)%valuesr4(i)*en_perts(n,1)%valuesr4(i)
+               +en_perts(n,ig,1)%valuesr4(i)*en_perts(n,ig,1)%valuesr4(i)
           end do
        end do
   
@@ -875,7 +880,7 @@ contains
        do n=1,n_ens
           do i=1,nelen
              sube%values(i)=sube%values(i) &
-               +(en_perts(n,1)%valuesr4(i)-en_bar%values(i))*(en_perts(n,1)%valuesr4(i)-en_bar%values(i))
+               +(en_perts(n,ig,1)%valuesr4(i)-en_bar%values(i))*(en_perts(n,ig,1)%valuesr4(i)-en_bar%values(i))
           end do
        end do
    
@@ -946,7 +951,8 @@ contains
        ps => dum2
     end if
   
-    call write_spread_dualres(st,vp,tv,rh,oz,cw,ps,mype)
+!cltthinkorg bug?     call write_spread_dualres(st,vp,tv,rh,oz,cw,ps,mype)
+    call write_spread_dualres(st,vp,tv,rh,oz,cw,ps)
   
     return
   end subroutine ens_spread_dualres_regional_wrf

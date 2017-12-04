@@ -162,6 +162,7 @@ subroutine pcgsoi()
   use m_obsHeadBundle, only: obsHeadBundle
   use m_obsHeadBundle, only: obsHeadBundle_create
   use m_obsHeadBundle, only: obsHeadBundle_destroy
+  use mpimod, only: npe,mpi_comm_world,ierror
   implicit none
 
 ! Declare passed variables
@@ -204,7 +205,8 @@ subroutine pcgsoi()
   call timer_ini('pcgsoi')
 
 ! Initialize print_verbose to control amount of print-out.
-  print_verbose=.false.
+  print_verbose=.true.
+ print_diag_pcg=.true.
   if(verbose)print_verbose=.true.
   if (ladtest) call adtest()
 
@@ -316,6 +318,8 @@ subroutine pcgsoi()
            call prt_state_norms(rval(ii),'rval')
         enddo
      endif
+     call flush(6)
+     call mpi_barrier(mpi_comm_world,ierror)
 
 !    Adjoint of convert control var to physical space
      if (l4dvar) then
@@ -334,6 +338,9 @@ subroutine pcgsoi()
               eval(ii)=rval(ii)
            end do
            call ensctl2state_ad(eval,mval(1),gradx)
+     if (iter==0 .and. print_diag_pcg) then
+        call prt_control_norms(gradx,'gradx0')
+     endif
         else
            mval(1)=rval(1)
            if (nobs_bins > 1 ) then
@@ -345,6 +352,9 @@ subroutine pcgsoi()
 
      end if
      call control2state_ad(mval,rbias,gradx)
+     if (iter==0 .and. print_diag_pcg) then
+        call prt_control_norms(gradx,'gradx2')
+     endif
 !    End adjoint of convert control var to physical space
 
 !    Print initial Jo table
@@ -358,6 +368,9 @@ subroutine pcgsoi()
      do i=1,nclen
         gradx%values(i)=gradx%values(i)+yhatsave%values(i)
      end do
+     if (iter==0 .and. print_diag_pcg) then
+        call prt_control_norms(gradx,'gradx3')
+     endif
 
 !    Re-orthonormalization if requested
      if(iorthomax>0) then 
@@ -371,6 +384,9 @@ subroutine pcgsoi()
            end do
         end if
      end if
+     if (iter==0 .and. print_diag_pcg) then
+        call prt_control_norms(gradx,'gradx4')
+     endif
 
 !    Multiply by background error
      if(anisotropic) then
@@ -379,6 +395,9 @@ subroutine pcgsoi()
      else
         call bkerror(gradx,grady)
      end if
+     if (iter==0 .and. print_diag_pcg) then
+        call prt_control_norms(grady,'grady0')
+     endif
 
 !    If hybrid ensemble run, then multiply ensemble control variable a_en 
 !                                    by its localization correlation
@@ -392,6 +411,9 @@ subroutine pcgsoi()
         end if
 
      end if
+     if (iter==0 .and. print_diag_pcg) then
+        call prt_control_norms(grady,'grady1')
+     endif
 
      if(iorthomax>0) then
 !       save gradients

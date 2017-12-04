@@ -72,10 +72,10 @@ contains
  
       implicit none
       class(get_wrf_nmm_ensperts_class), intent(inout) :: this
-      type(gsi_bundle),allocatable, intent(inout) :: en_perts(:,:)
+      type(gsi_bundle),allocatable, intent(inout) :: en_perts(:,:,:)
       integer(i_kind), intent(in   ):: nelen
       real(r_kind),allocatable, intent(inout):: region_lat_ens(:,:),region_lon_ens(:,:)
-      real(r_single),dimension(:,:,:),allocatable, intent(inout):: ps_bar
+      real(r_single),dimension(:,:,:,:),allocatable, intent(inout):: ps_bar
   
       type(get_wrf_mass_ensperts_class) :: wrf_mass
       real(r_kind),allocatable,dimension(:,:,:):: u,v,tv,cwmr,oz,rh
@@ -689,7 +689,7 @@ contains
   ! SAVE ENSEMBLE MEMBER DATA IN COLUMN VECTOR
          do ic3=1,nc3d
   
-            call gsi_bundlegetpointer(en_perts(n,1),trim(cvars3d(ic3)),w3,istatus)
+            call gsi_bundlegetpointer(en_perts(n,1,1),trim(cvars3d(ic3)),w3,istatus)
             if(istatus/=0) then
                write(6,*)' error retrieving pointer to ',trim(cvars3d(ic3)),' for ensemble member ',n
                call stop2(999)
@@ -791,7 +791,7 @@ contains
   
          do ic2=1,nc2d
   
-            call gsi_bundlegetpointer(en_perts(n,1),trim(cvars2d(ic2)),w2,istatus)
+            call gsi_bundlegetpointer(en_perts(n,1,1),trim(cvars2d(ic2)),w2,istatus)
             if(istatus/=0) then
                write(6,*)' error retrieving pointer to ',trim(cvars2d(ic2)),' for ensemble member ',n
                call stop2(999)
@@ -828,7 +828,7 @@ contains
       if (use_gfs_stratosphere)then
           do n=1,n_ens
              do ic3=1,nc3d
-                call gsi_bundlegetpointer(en_perts(n,1),trim(cvars3d(ic3)),w3,istatus)
+                call gsi_bundlegetpointer(en_perts(n,1,1),trim(cvars3d(ic3)),w3,istatus)
                 if(istatus/=0) then
                    write(6,*)' error retrieving pointer to ',trim(cvars3d(ic3)),' &
                    for ensemble member ',n
@@ -875,7 +875,7 @@ contains
             end if
             do j=1,grd_ens%lon2
                do i=1,grd_ens%lat2
-                  ps_bar(i,j,1)=x2(i,j)
+                  ps_bar(i,j,1,1)=x2(i,j)
                end do
             end do
             exit
@@ -884,7 +884,7 @@ contains
   
       if(write_ens_sprd)then
          call mpi_barrier(mpi_comm_world,ierror)
-         call wrf_mass%ens_spread_dualres_regional(mype,en_perts,nelen,en_bar)
+         call wrf_mass%ens_spread_dualres_regional(mype,en_perts,nelen,en_bar) !cltthink
          call mpi_barrier(mpi_comm_world,ierror)
       end if
   !
@@ -893,7 +893,7 @@ contains
   
       do n=1,n_ens
          do i=1,nelen
-            en_perts(n,1)%valuesr4(i)=(en_perts(n,1)%valuesr4(i)-en_bar%values(i))*sig_norm
+            en_perts(n,1,1)%valuesr4(i)=(en_perts(n,1,1)%valuesr4(i)-en_bar%values(i))*sig_norm
          end do
       end do
   
@@ -902,6 +902,7 @@ contains
      test=.false.
      if(test)then
          call mpi_barrier(mpi_comm_world,ierror)
+!cltorg think         call this%ens_member_mean_dualres_regional(en_bar,mype,en_perts(:,1,:),nelen)
          call this%ens_member_mean_dualres_regional(en_bar,mype,en_perts,nelen)
          call mpi_barrier(mpi_comm_world,ierror)
       end if
@@ -2917,7 +2918,7 @@ contains
     class(get_wrf_nmm_ensperts_class), intent(inout) :: this
     type(gsi_bundle),intent(in):: en_bar
     integer(i_kind),intent(in):: mype
-    type(gsi_bundle),allocatable, intent(inout) :: en_perts(:,:)
+    type(gsi_bundle),allocatable, intent(inout) :: en_perts(:,:,:)
     integer(i_kind), intent(in   ):: nelen
   
     type(gsi_bundle):: sube,suba
@@ -2961,7 +2962,7 @@ contains
   
        do i=1,nelen
           if(n <= n_ens)then
-             sube%values(i)=en_perts(n,1)%valuesr4(i)*sig_norm_inv+en_bar%values(i)
+             sube%values(i)=en_perts(n,1,1)%valuesr4(i)*sig_norm_inv+en_bar%values(i)
           else
              sube%values(i)=en_bar%values(i)
           end if

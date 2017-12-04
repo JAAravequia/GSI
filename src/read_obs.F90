@@ -1446,7 +1446,8 @@ subroutine read_obs(ndata,mype)
                 string='READ_NASA_LaRC'
              ! for global NASA LaRC obs 
              else if (obstype == 'larcglb' ) then
-                call read_NASA_LaRC_cloud(nread,npuse,nouse,infile,obstype,lunout,twind,sis,nobs_sub1(1,i))
+!cltorg                call read_NASA_LaRC_cloud(nread,npuse,nouse,infile,obstype,lunout,twind,sis,nobs_sub1(1,i))
+                call read_NASA_LaRC_cloud(nread,npuse,nouse,infile,obstype,lunout,sis,nobs_sub1(1,i))
                 string='READ_NASA_LaRC'
 
 !            Process radar winds

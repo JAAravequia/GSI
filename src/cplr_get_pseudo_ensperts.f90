@@ -57,7 +57,7 @@ contains
     implicit none
 !   Declare passed variables
     class(get_pseudo_ensperts_class),  intent(inout) :: this
-    type(gsi_bundle),allocatable, intent(in   ) :: en_perts(:,:)
+    type(gsi_bundle),allocatable, intent(in   ) :: en_perts(:,:,:)
     integer(i_kind),                   intent(in   ) :: nelen
     
 
@@ -493,6 +493,7 @@ contains
     if(write_ens_sprd)then
        call mpi_barrier(mpi_comm_world,ierror)
        call mass_enspert%ens_spread_dualres_regional(mype,en_perts,nelen,en_bar)
+!cltthink en_perts 
        call mpi_barrier(mpi_comm_world,ierror)
     end if
   
@@ -600,12 +601,12 @@ contains
   ! NOTE:  because library perturbation bundle structure is same as ensemble perturbation, 
   !        use same ipc3d and ipc2d indices for lib_perts and en_perts bundles.
   
-    call gsi_bundlegetpointer (en_perts(1,1),cvars3d,ipc3d,istatus)
+    call gsi_bundlegetpointer (en_perts(1,1,1),cvars3d,ipc3d,istatus)
     if(istatus/=0) then
        write(6,*) 'get_pseudo_enperts: cannot find 3d pointers'
        call stop2(999)
     endif
-    call gsi_bundlegetpointer (en_perts(1,1),cvars2d,ipc2d,istatus)
+    call gsi_bundlegetpointer (en_perts(1,1,1),cvars2d,ipc2d,istatus)
     if(istatus/=0) then
        write(6,*) 'get_pseudo_enperts: cannot find 2d pointers'
        call stop2(999)
@@ -618,9 +619,9 @@ contains
           do k=1,grd_ens%nsig
              do j=1,grd_ens%lon2
                 do i=1,grd_ens%lat2
-                   en_perts(n,1)%r3(ipc3d(ic3))%qr4(i,j,k) = wgt(i,j) * &
+                   en_perts(n,1,1)%r3(ipc3d(ic3))%qr4(i,j,k) = wgt(i,j) * &
                                 lib_perts(n)%r3(ipc3d(ic3))%qr4(i,j,k)  + &
-                                (one-wgt(i,j))*en_perts(n,1)%r3(ipc3d(ic3))%qr4(i,j,k)
+                                (one-wgt(i,j))*en_perts(n,1,1)%r3(ipc3d(ic3))%qr4(i,j,k)
                 end do
              end do
           end do
@@ -631,9 +632,9 @@ contains
   
           do j=1,grd_ens%lon2
              do i=1,grd_ens%lat2
-                en_perts(n,1)%r2(ipc2d(ic2))%qr4(i,j) = wgt(i,j)  * &
+                en_perts(n,1,1)%r2(ipc2d(ic2))%qr4(i,j) = wgt(i,j)  * &
                                lib_perts(n)%r2(ipc2d(ic2))%qr4(i,j) + &
-                               (one-wgt(i,j))*en_perts(n,1)%r2(ipc2d(ic2))%qr4(i,j)
+                               (one-wgt(i,j))*en_perts(n,1,1)%r2(ipc2d(ic2))%qr4(i,j)
              end do
           end do
   
@@ -667,12 +668,12 @@ contains
   
           write(filename,"('enpert',i3.3)") n
   
-          call gsi_bundlegetpointer(en_perts(n,1),cvars3d,ipc3d,istatus)
+          call gsi_bundlegetpointer(en_perts(n,1,1),cvars3d,ipc3d,istatus)
           if(istatus/=0) then
             write(6,*) 'mtong: cannot find 3d pointers'
             call stop2(999)
           endif
-          call gsi_bundlegetpointer(en_perts(n,1),cvars2d,ipc2d,istatus)
+          call gsi_bundlegetpointer(en_perts(n,1,1),cvars2d,ipc2d,istatus)
           if(istatus/=0) then
             write(6,*) 'mtong: cannot find 2d pointers'
             call stop2(999)
@@ -686,7 +687,7 @@ contains
                    do k=1,grd_ens%nsig
                       do j=1,grd_ens%lon2
                          do i=1,grd_ens%lat2
-                            u(i,j,k) = en_perts(n,1)%r3(ipc3d(ic3))%qr4(i,j,k)
+                            u(i,j,k) = en_perts(n,1,1)%r3(ipc3d(ic3))%qr4(i,j,k)
                          end do
                       end do
                    end do
@@ -696,7 +697,7 @@ contains
                    do k=1,grd_ens%nsig
                       do j=1,grd_ens%lon2
                          do i=1,grd_ens%lat2
-                            v(i,j,k) = en_perts(n,1)%r3(ipc3d(ic3))%qr4(i,j,k)
+                            v(i,j,k) = en_perts(n,1,1)%r3(ipc3d(ic3))%qr4(i,j,k)
                          end do
                       end do
                    end do
@@ -706,7 +707,7 @@ contains
                    do k=1,grd_ens%nsig
                       do j=1,grd_ens%lon2
                          do i=1,grd_ens%lat2
-                            tv(i,j,k) = en_perts(n,1)%r3(ipc3d(ic3))%qr4(i,j,k)
+                            tv(i,j,k) = en_perts(n,1,1)%r3(ipc3d(ic3))%qr4(i,j,k)
                          end do
                       end do
                    end do
@@ -716,7 +717,7 @@ contains
                    do k=1,grd_ens%nsig
                       do j=1,grd_ens%lon2
                          do i=1,grd_ens%lat2
-                            rh(i,j,k) = en_perts(n,1)%r3(ipc3d(ic3))%qr4(i,j,k)
+                            rh(i,j,k) = en_perts(n,1,1)%r3(ipc3d(ic3))%qr4(i,j,k)
                          end do
                       end do
                    end do
@@ -731,7 +732,7 @@ contains
   
                    do j=1,grd_ens%lon2
                       do i=1,grd_ens%lat2
-                         ps(i,j) = en_perts(n,1)%r2(ipc2d(ic2))%qr4(i,j)
+                         ps(i,j) = en_perts(n,1,1)%r2(ipc2d(ic2))%qr4(i,j)
                       end do
                    end do
   

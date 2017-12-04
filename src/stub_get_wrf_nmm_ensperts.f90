@@ -16,7 +16,7 @@ contains
     type(gsi_bundle),allocatable, intent(inout) :: en_perts(:,:)
     integer(i_kind), intent(in   ):: nelen
     real(r_kind),allocatable, intent(inout):: region_lat_ens(:,:),region_lon_ens(:,:)
-    real(r_single),dimension(:,:,:),allocatable, intent(inout):: ps_bar
+    real(r_single),dimension(:,:,:,:),allocatable, intent(inout):: ps_bar
   
     write(6,*)'GET_WRF_NMM_ENSPERTS:  ***WARNING*** dummy call ... does nothing!'
   return

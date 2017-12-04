@@ -182,7 +182,8 @@ subroutine statsconv(mype,&
         call dtast(bwork,npres_print,pbot,ptop,mesage,jiter,iout_uv,pflag)
         numlow      = nint(awork(2,i_uv))
         numhgh      = nint(awork(3,i_uv))
-        write(iout_uv,900) 'wind',numhgh,numlow
+!cltorg        write(iout_uv,900) 'wind',numhgh,numlow
+        write(iout_uv,*) 'wind',numhgh,numlow
         numfailqc=nint(awork(21,i_uv))
 !       keep a seperate record of numfailqc for ssmi wind speeds
         numfailqc_ssmi=nint(awork(61,i_uv))
@@ -197,7 +198,8 @@ subroutine statsconv(mype,&
            umplty=umplty+awork(4*nsig+k+100,i_uv)
            vmplty=vmplty+awork(5*nsig+k+100,i_uv)
            ntot=ntot+num(k)
-           write(iout_uv,241) 'w',num(k),k,awork(4*nsig+k+100,i_uv),&
+!cltorg           write(iout_uv,241) 'w',num(k),k,awork(4*nsig+k+100,i_uv),&
+           write(iout_uv,*) 'w',num(k),k,awork(4*nsig+k+100,i_uv),&
                            awork(5*nsig+k+100,i_uv),rat1,rat2
         end do
         do k=1,nsig
@@ -209,13 +211,14 @@ subroutine statsconv(mype,&
               rat3=awork(3*nsig+k+100,i_uv)/float(num(k))
            end if
            uvqcplty=uvqcplty+awork(3*nsig+k+100,i_uv)
-           write(iout_uv,240) 'w',num(k),k,awork(4*nsig+k+100,i_uv)+awork(5*nsig+k+100,i_uv), &
+!cltorg           write(iout_uv,240) 'w',num(k),k,awork(4*nsig+k+100,i_uv)+awork(5*nsig+k+100,i_uv), &
+           write(iout_uv,*) 'w',num(k),k,awork(4*nsig+k+100,i_uv)+awork(5*nsig+k+100,i_uv), &
                            awork(3*nsig+k+100,i_uv),rat1,rat3
         end do
 
 !       Write statistics  gross checks
-        write(iout_uv,920)' number ssm/i winds that fail nonlinear qc =',numfailqc_ssmi
-        write(iout_uv,925) 'wind',numgross,numfailqc
+        write(iout_uv,*)' number ssm/i winds that fail nonlinear qc =',numfailqc_ssmi
+        write(iout_uv,*) 'wind',numgross,numfailqc
 !       Write statistics regarding penalties                   
         if(ntot > 0)then
            tu=umplty/float(ntot)
@@ -227,12 +230,18 @@ subroutine statsconv(mype,&
            qctssm=awork(22,i_uv)/awork(6,i_uv)
         end if
      end if
-     write(iout_uv,949) 'u',ntot,umplty,tu
-     write(iout_uv,949) 'v',ntot,vmplty,tv
-     write(iout_uv,950) 'uv',jiter,nread,nkeep,ntot*2
-     write(iout_uv,951) 'uv',umplty+vmplty,uvqcplty,tu+tv,tuv
-     write(iout_uv,950) 'spd',jiter,nreadspd,nkeepspd,numssm
-     write(iout_uv,951) 'spd',awork(5,i_uv),awork(22,i_uv),tssm,qctssm
+!cltorg     write(iout_uv,949) 'u',ntot,umplty,tu
+     write(iout_uv,*) 'u',ntot,umplty,tu
+!cltorg     write(iout_uv,949) 'v',ntot,vmplty,tv
+     write(iout_uv,*) 'v',ntot,vmplty,tv
+!cltorg     write(iout_uv,950) 'uv',jiter,nread,nkeep,ntot*2
+     write(iout_uv,*) 'uv',jiter,nread,nkeep,ntot*2
+!cltorg     write(iout_uv,951) 'uv',umplty+vmplty,uvqcplty,tu+tv,tuv
+     write(iout_uv,*) 'uv',umplty+vmplty,uvqcplty,tu+tv,tuv
+!cltorg     write(iout_uv,950) 'spd',jiter,nreadspd,nkeepspd,numssm
+     write(iout_uv,*) 'spd',jiter,nreadspd,nkeepspd,numssm
+!cltorg     write(iout_uv,951) 'spd',awork(5,i_uv),awork(22,i_uv),tssm,qctssm
+     write(iout_uv,*) 'spd',awork(5,i_uv),awork(22,i_uv),tssm,qctssm
 
 !    Close unit receiving summary output     
      close(iout_uv)

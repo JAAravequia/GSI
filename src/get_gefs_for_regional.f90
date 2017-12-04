@@ -834,7 +834,7 @@ subroutine get_gefs_for_regional
         pbar_nmmb(i,j)=pbar_nmmb(i,j)*bar_norm
 !   also save pbar to module array ps_bar for possible use in vertical localization
 !                                                    in terms of scale heights/normalized p/p
-        ps_bar(i,j,1)=pbar_nmmb(i,j)
+        ps_bar(i,j,1,1)=pbar_nmmb(i,j)
      end do
   end do
 !                                                 write(fname,'("test_pbar_uncorrected")')
@@ -1157,9 +1157,9 @@ subroutine get_gefs_for_regional
      do ic3=1,nc3d
 
         if(ntlevs_ens > 1) then
-           call gsi_bundlegetpointer(en_perts(n,it),trim(cvars3d(ic3)),w3,istatus)
+           call gsi_bundlegetpointer(en_perts(n,1,it),trim(cvars3d(ic3)),w3,istatus)
         else
-           call gsi_bundlegetpointer(en_perts(n,1),trim(cvars3d(ic3)),w3,istatus)
+           call gsi_bundlegetpointer(en_perts(n,1,1),trim(cvars3d(ic3)),w3,istatus)
         endif
         if(istatus/=0) then
            write(6,*)' error retrieving pointer to ',trim(cvars3d(ic3)),' for ensemble member ',n
@@ -1237,9 +1237,9 @@ subroutine get_gefs_for_regional
      do ic2=1,nc2d
 
         if(ntlevs_ens > 1) then
-           call gsi_bundlegetpointer(en_perts(n,it),trim(cvars2d(ic2)),w2,istatus)
+           call gsi_bundlegetpointer(en_perts(n,1,it),trim(cvars2d(ic2)),w2,istatus)
         else
-           call gsi_bundlegetpointer(en_perts(n,1),trim(cvars2d(ic2)),w2,istatus)
+           call gsi_bundlegetpointer(en_perts(n,1,1),trim(cvars2d(ic2)),w2,istatus)
         endif
         if(istatus/=0) then
            write(6,*)' error retrieving pointer to ',trim(cvars2d(ic2)),' for ensemble member ',n
