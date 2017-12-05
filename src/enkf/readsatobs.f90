@@ -62,7 +62,7 @@ subroutine get_num_satobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     character(len=20) ::  sat_type
     character(len=4) :: pe_name
     integer(i_kind), intent(out) :: num_obs_tot, num_obs_totdiag
-    integer(i_kind) iunit, iflag, nsat, ios,n,nkeep, i, jpchstart,indxsat,ipe
+    integer(i_kind) iunit, iflag, nsat, n, nkeep, i, jpchstart,indxsat,ipe
     integer(i_kind) npred_radiag
     logical fexist,lretrieval,lverbose,init_pass
     real(r_kind) :: errorlimit,errorlimit2
@@ -586,7 +586,7 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   use constants, only: deg2rad, zero
   use mpisetup, only: nproc, mpi_wtime
   use observer_enkf, only: calc_linhx
-  use sparsearr, only: sparr, assignment(=), delete
+  use sparsearr, only: sparr, assignment(=), delete, sparr2, new
 
   character*500, intent(in)     :: obspath
   character(len=10), intent(in) ::  datestring
@@ -614,13 +614,14 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   character(len=20) ::  sat_type
 
   integer(i_kind) iunit, iob, iobdiag, i, nsat, ipe, jpchstart, nchans
-  integer(i_kind) iunit2, nobs, nsdim
+  integer(i_kind) iunit2, nobs, nobs2, nsdim, nnz, nind
   integer(i_kind) npred_radiag
   logical fexist
   logical twofiles,fexist2
   real(r_kind) :: errorlimit,errorlimit2
   real(r_double) t1,t2,tsum,tsum2
 
+  type(sparr2)    :: dhx_dx_read
   type(sparr)     :: dhx_dx
 
   integer(i_kind), dimension(:), allocatable :: Satinfo_Chan, Use_Flag, chind, chaninfoidx
@@ -629,7 +630,9 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   real(r_kind), dimension(:), allocatable :: Latitude, Longitude, Time
   real(r_kind), dimension(:), allocatable :: Obs_Minus_Forecast_adjusted
   real(r_kind), dimension(:), allocatable :: Obs_Minus_Forecast_unadjusted, Obs_Minus_Forecast_unadjusted2
-  real(r_single), allocatable, dimension (:,:) :: Observation_Operator_Jacobian
+  integer(i_kind), allocatable, dimension (:,:) :: Observation_Operator_Jacobian_stind
+  integer(i_kind), allocatable, dimension (:,:) :: Observation_Operator_Jacobian_endind
+  real(r_single), allocatable, dimension (:,:) :: Observation_Operator_Jacobian_val
 
 ! make consistent with screenobs
   errorlimit=1._r_kind/sqrt(1.e9_r_kind)
@@ -719,9 +722,14 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
      call nc_diag_read_get_var(iunit, 'Obs_Minus_Forecast_adjusted', Obs_Minus_Forecast_adjusted)
 
      if (lobsdiag_forenkf) then
-        call nc_diag_read_get_global_attr(iunit, "Number_of_state_vars", nsdim)
-        allocate(Observation_Operator_Jacobian(nsdim, nobs))
-        call nc_diag_read_get_var(iunit, 'Observation_Operator_Jacobian', Observation_Operator_Jacobian)
+        call nc_diag_read_get_global_attr(iunit, "jac_nnz", nnz)
+        call nc_diag_read_get_global_attr(iunit, "jac_nind", nind)
+        allocate(Observation_Operator_Jacobian_stind(nind, nobs))
+        allocate(Observation_Operator_Jacobian_endind(nind, nobs))
+        allocate(Observation_Operator_Jacobian_val(nnz, nobs))
+        call nc_diag_read_get_var(iunit, 'Observation_Operator_Jacobian_stind', Observation_Operator_Jacobian_stind)
+        call nc_diag_read_get_var(iunit, 'Observation_Operator_Jacobian_endind', Observation_Operator_Jacobian_endind)
+        call nc_diag_read_get_var(iunit, 'Observation_Operator_Jacobian_val', Observation_Operator_Jacobian_val)
      endif
 
      call nc_diag_read_close(obsfile)
@@ -744,8 +752,13 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
        if (netcdf_diag) obsfile2 = trim(obsfile2)//'.nc4'
 
        call nc_diag_read_init(obsfile2, iunit2)
+
+       nobs2 = nc_diag_read_get_dim(iunit2,'nobs')
+
+       if (nobs2 /= nobs) print *, nanal, trim(obsfile), nobs, nobs2
+
        allocate(Obs_Minus_Forecast_unadjusted2(nobs))
-       call nc_diag_read_get_var(iunit, 'Obs_Minus_Forecast_unadjusted', Obs_Minus_Forecast_unadjusted2)
+       call nc_diag_read_get_var(iunit2, 'Obs_Minus_Forecast_unadjusted', Obs_Minus_Forecast_unadjusted2)
 
        call nc_diag_read_close(obsfile2)
 
@@ -784,7 +797,11 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
               hx(iob) = x_obs(iob) - Obs_Minus_Forecast_unadjusted2(i)
            ! run linearized Hx
            else
-              dhx_dx = Observation_Operator_Jacobian(1:nsdim,i)
+              call new(dhx_dx_read, nnz, nind)
+              dhx_dx_read%st_ind = Observation_Operator_Jacobian_stind(:,i)
+              dhx_dx_read%end_ind = Observation_Operator_Jacobian_endind(:,i)
+              dhx_dx_read%val = Observation_Operator_Jacobian_val(:,i)
+              dhx_dx = dhx_dx_read
               t1 = mpi_wtime()
               call calc_linhx(hx_mean_nobc(iob), state_d,        &
                              real(x_lat(iob)*deg2rad,r_single),  &
@@ -794,6 +811,7 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
               t2 = mpi_wtime()
               tsum = tsum + t2-t1
               call delete(dhx_dx)
+              call delete(dhx_dx_read)
            endif
         endif
 
@@ -833,7 +851,10 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
                 Observation, chind, Obs_Minus_Forecast_unadjusted,       &
                 Obs_Minus_Forecast_adjusted)
      if (twofiles) deallocate(Obs_Minus_Forecast_unadjusted2)
-     if (lobsdiag_forenkf) deallocate(Observation_Operator_Jacobian)
+     if (lobsdiag_forenkf) then
+        deallocate(Observation_Operator_Jacobian_stind, Observation_Operator_Jacobian_endind, &
+                   Observation_Operator_Jacobian_val)
+     endif
 
      enddo peloop ! ipe
  enddo ! satellite

@@ -1900,7 +1900,10 @@
            call nc_diag_header("New_pc4pred",          inewpc         )        ! indicator of newpc4pred (1 on, 0 off)
            call nc_diag_header("ioff0",                ioff0          )
            call nc_diag_header("ijacob",               ijacob         )
-           call nc_diag_header("Number_of_state_vars", nsdim          )
+!           call nc_diag_header("Number_of_state_vars", nsdim          )
+           call nc_diag_header("jac_nnz", nsigradjac)
+           call nc_diag_header("jac_nind", nvarjac)
+
 !           call nc_diag_header("Outer_Loop_Iteration", headfix%jiter)
 !           call nc_diag_header("Satellite_Sensor", headfix%isis)
 !           call nc_diag_header("Satellite",            headfix%id      )            ! sat type
@@ -2321,7 +2324,9 @@
                     enddo
 
                     call fullarray(dhx_dx, dhx_dx_array)
-                    call nc_diag_data2d("Observation_Operator_Jacobian",      dhx_dx_array)
+                    call nc_diag_data2d("Observation_Operator_Jacobian_stind", dhx_dx%st_ind)
+                    call nc_diag_data2d("Observation_Operator_Jacobian_endind", dhx_dx%end_ind)
+                    call nc_diag_data2d("Observation_Operator_Jacobian_val",  real(dhx_dx%val,r_single))
                  endif
 
                  useflag=one

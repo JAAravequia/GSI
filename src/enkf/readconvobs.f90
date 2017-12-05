@@ -1392,6 +1392,83 @@ subroutine write_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, &
 
  end subroutine write_convobs_data
 
+! writing spread diagnostics
+subroutine write_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
+                                 x_fit, x_sprd, x_used, id, id2, gesid2)
+
+  character*500, intent(in) :: obspath
+  character*10, intent(in) :: datestring
+
+  integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
+
+  real(r_single), dimension(nobs_max), intent(in)      :: x_fit, x_sprd
+  integer(i_kind), dimension(nobs_maxdiag), intent(in) :: x_used
+
+  character(len=10), intent(in) :: id, id2, gesid2
+
+
+  character*500 obsfile
+  character(len=4) pe_name
+
+  character(len=3) :: obtype
+  integer(i_kind) :: iunit
+  integer(i_kind) :: nob, nobdiag, nobs, n, ipe, i
+  integer(i_kind) :: enkf_use_flag
+  real(r_single)  :: enkf_fit, enkf_sprd
+  logical :: fexist
+
+  nob  = 0
+  nobdiag = 0
+
+  peloop: do ipe=0,npefiles
+
+    write(pe_name,'(i4.4)') ipe
+    if (npefiles .eq. 0) then
+       ! diag file (concatenated pe* files)
+       obsfile = trim(adjustl(obspath))//"diag_conv_ges."//datestring//'_'//trim(adjustl(id))
+       inquire(file=obsfile,exist=fexist)
+       if (.not. fexist .or. datestring .eq. '0000000000') then
+          obsfile = trim(adjustl(obspath))//"diag_conv_ges."//trim(adjustl(id))
+       endif
+    else ! read raw, unconcatenated pe* files.
+       obsfile = trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.conv_01'
+    endif
+    obsfile = trim(obsfile)//'.nc4'
+
+    inquire(file=obsfile,exist=fexist)
+    if (.not. fexist) cycle peloop
+       
+
+    do i = 1, nobs
+
+       enkf_use_flag = -1
+!       enkf_fit = missing
+!       enkf_sprd = missing
+
+       nobdiag = nobdiag + 1
+
+       ! skip if not used in EnKF
+       if (x_used(nobdiag) == 1) then
+          ! update if it is used in EnKF
+          nob = nob + 1
+          enkf_fit = x_fit(nob)
+          enkf_sprd = x_sprd(nob)
+       endif
+    enddo
+
+  enddo peloop ! ipe loop
+
+  if (nob .ne. nobs_max) then
+      print *,'number of obs not what expected in write_convobs_data',nob,nobs_max
+      call stop2(94)
+  end if
+  if (nobdiag /= nobs_maxdiag) then
+      print *,'number of total obs in diag not what expected in write_convobs_data',nobdiag, nobs_maxdiag
+      call stop2(94)
+  endif
+
+end subroutine write_convobs_data_nc
+
 end module readconvobs
 
 
