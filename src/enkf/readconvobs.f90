@@ -1233,6 +1233,30 @@ subroutine write_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, &
 
   character*500, intent(in) :: obspath
   character*10, intent(in) :: datestring
+
+  integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
+
+  real(r_single), dimension(nobs_max), intent(in)      :: x_fit, x_sprd
+  integer(i_kind), dimension(nobs_maxdiag), intent(in) :: x_used
+
+  character(len=10), intent(in) :: id, id2, gesid2
+
+  if (netcdf_diag) then
+    call write_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
+                              x_fit, x_sprd, x_used, id, id2, gesid2)
+  else
+    call write_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, &
+                              x_fit, x_sprd, x_used, id, id2, gesid2)
+  endif
+end subroutine write_convobs_data
+
+
+! writing spread diagnostics
+subroutine write_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, &
+                              x_fit, x_sprd, x_used, id, id2, gesid2)
+
+  character*500, intent(in) :: obspath
+  character*10, intent(in) :: datestring
   
   integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
 
@@ -1390,11 +1414,15 @@ subroutine write_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, &
       call stop2(94)
   endif
 
- end subroutine write_convobs_data
+ end subroutine write_convobs_data_bin
 
 ! writing spread diagnostics
 subroutine write_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
                                  x_fit, x_sprd, x_used, id, id2, gesid2)
+  use nc_diag_read_mod, only: nc_diag_read_get_dim
+  use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
+  use nc_diag_write_mod, only: nc_diag_init, nc_diag_metadata, nc_diag_write
+  use constants, only: r_missing
 
   character*500, intent(in) :: obspath
   character*10, intent(in) :: datestring
@@ -1439,11 +1467,16 @@ subroutine write_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
     if (.not. fexist) cycle peloop
        
 
-    do i = 1, nobs
+    call nc_diag_read_init(obsfile, iunit)
+    nobs = nc_diag_read_get_dim(iunit,'nobs')
+    call nc_diag_read_close(obsfile)
 
+    call nc_diag_init(obsfile, append=.true.)
+
+    do i = 1, nobs
        enkf_use_flag = -1
-!       enkf_fit = missing
-!       enkf_sprd = missing
+       enkf_fit = r_missing
+       enkf_sprd = r_missing
 
        nobdiag = nobdiag + 1
 
@@ -1451,10 +1484,18 @@ subroutine write_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
        if (x_used(nobdiag) == 1) then
           ! update if it is used in EnKF
           nob = nob + 1
+          enkf_use_flag = 1
           enkf_fit = x_fit(nob)
           enkf_sprd = x_sprd(nob)
        endif
+
+       call nc_diag_metadata("EnKF_use_flag", enkf_use_flag)
+       call nc_diag_metadata("Ens_mean_fit",  enkf_fit)
+       call nc_diag_metadata("Ens_spread",    enkf_sprd)
+
     enddo
+
+    call nc_diag_write
 
   enddo peloop ! ipe loop
 
