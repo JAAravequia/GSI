@@ -251,7 +251,6 @@ subroutine genex_create_info2(s,ias ,iae ,jas ,jae , &
    integer(i_kind) ibuf0(4),ibuf1(4),ibuf2(4),ibuf3(4)
    integer(i_kind) ias_l,iae_l,jas_l,jae_l
    integer(i_kind) numx,numy
-   integer(i_kind) ierror
 
    s%npe=npe
    s%mype=mype
@@ -411,7 +410,6 @@ subroutine genex_create_info3(s,ias ,iae ,jas ,jae ,kas ,kae , &
    integer(i_kind) ibuf0(6),ibuf1(6),ibuf2(6),ibuf3(6)
    integer(i_kind) ias_l,iae_l,jas_l,jae_l,kas_l,kae_l
    integer(i_kind) numx,numy,numz
-   integer(i_kind) ierror
 
    s%npe=npe
    s%mype=mype
@@ -587,7 +585,6 @@ subroutine genex_create_info4(s,ias ,iae ,jas ,jae ,kas ,kae ,mas ,mae , &
    integer(i_kind) ibuf0(8),ibuf1(8),ibuf2(8),ibuf3(8)
    integer(i_kind) ias_l,iae_l,jas_l,jae_l,kas_l,kae_l,mas_l,mae_l
    integer(i_kind) numx,numy,numz,numt
-   integer(i_kind) ierror
 
    s%npe=npe
    s%mype=mype

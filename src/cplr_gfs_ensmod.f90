@@ -137,7 +137,8 @@ subroutine get_user_ens_gfs_fastread_(ntindex,en_loc3,m_cvars2d,m_cvars3d, &
     use gsi_4dvar, only: ens_fhrlevs
     use hybrid_ensemble_parameters, only: n_ens,grd_ens
     use hybrid_ensemble_parameters, only: ensemble_path
-    use control_vectors, only: cvars2d,cvars3d,nc2d,nc3d
+    use control_vectors, only: nc2d,nc3d
+    !use control_vectors, only: cvars2d,cvars3d
     use genex_mod, only: genex_info,genex_create_info,genex,genex_destroy_info
 
     implicit none
@@ -237,7 +238,7 @@ subroutine get_user_ens_gfs_fastread_(ntindex,en_loc3,m_cvars2d,m_cvars3d, &
 
     if ( mas == mae ) &
         call parallel_read_nemsio_state_(en_full,m_cvars2dw,m_cvars3dw,nlon,nlat,nsig, &
-                                         ias,jas,mas,mae, &
+                                         ias,jas,mas, &
                                          iasm,iaemz,jasm,jaemz,kasm,kaemz,masm,maemz, &
                                          filename,.true.,clons,slons)
     base_pe0=-999
@@ -661,7 +662,7 @@ subroutine ens_io_partition_(n_ens,io_pe,n_io_pe_s,n_io_pe_e,n_io_pe_em,i_ens)
 end subroutine ens_io_partition_
 
 subroutine parallel_read_nemsio_state_(en_full,m_cvars2d,m_cvars3d,nlon,nlat,nsig, &
-                                        ias ,jas ,mas ,mae  , &
+                                        ias,jas,mas, &
                                         iasm,iaemz,jasm,jaemz,kasm,kaemz,masm,maemz, &
                                         filename,init_head,clons,slons)
 
@@ -680,7 +681,7 @@ subroutine parallel_read_nemsio_state_(en_full,m_cvars2d,m_cvars3d,nlon,nlat,nsi
 
    ! Declare passed variables
    integer(i_kind),  intent(in   ) :: nlon,nlat,nsig
-   integer(i_kind),  intent(in   ) :: ias ,jas ,mas ,mae
+   integer(i_kind),  intent(in   ) :: ias,jas,mas
    integer(i_kind),  intent(in   ) :: iasm,iaemz,jasm,jaemz,kasm,kaemz,masm,maemz
    integer(i_kind),  intent(inout) :: m_cvars2d(nc2d),m_cvars3d(nc3d)
    real(r_single),   intent(inout) :: en_full(iasm:iaemz,jasm:jaemz,kasm:kaemz,masm:maemz)
