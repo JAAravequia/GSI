@@ -4069,6 +4069,7 @@ subroutine hybens_grid_setup
   spcwgt_params(2,3)=500.0
   spcwgt_params(3,3)=1.0
   spcwgt_params(4,3)=500.0
+  call init_mult_spc_wgts(jcap_ens)
 
   return
 end subroutine hybens_grid_setup
@@ -4209,7 +4210,6 @@ subroutine hybens_localization_setup
       call init_sf_xy(jcap_ens)
    endif
 !cltthinkdev
-   call init_mult_spc_wgts(jcap_ens)
 
    !!!!!!!! setup beta_s, beta_e!!!!!!!!!!!!
    ! vertical variation of static and ensemble weights
