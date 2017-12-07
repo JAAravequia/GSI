@@ -76,7 +76,7 @@ cmake_minimum_required(VERSION 2.8)
   include_directories( ${CORE_INCS} ${NETCDF_INCLUDES} ${MPI_Fortran_INCLUDE_PATH} "./" )
 
 #define the name used for GSI Shared lib and add it with properties and include dirs
-  set(GSISHAREDLIB "gsilib_shrd${debug_suffix}")
+  set(GSISHAREDLIB "gsilib_shrd${debug_suffix}" CACHE INTERNAL "")
   add_library(${GSISHAREDLIB} STATIC ${GSI_SRC} )
   set_target_properties(${GSISHAREDLIB} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
   target_include_directories(${GSISHAREDLIB} PUBLIC "${PROJECT_BINARY_DIR}/include")

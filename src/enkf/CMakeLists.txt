@@ -64,5 +64,6 @@ if(BUILD_ENKF)
   add_executable(enkf_${ENKF_SUFFIX}.x${debug_suffix} enkf_main.f90)
   add_dependencies(enkf_${ENKF_SUFFIX}.x${debug_suffix} enkflib enkfdeplib ${GSI_LIB} )
   target_link_libraries(enkf_${ENKF_SUFFIX}.x${debug_suffix} enkflib enkfdeplib ${GSISHAREDLIB} ${GSILIB} ${CORE_LIBRARIES}
-  ${MPI_Fortran_LIBRARIES} ${LAPACK_LIBRARIES} ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES}  ${HDF5_Fortran_HL_LIBRARIES} ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${GSI_LDFLAGS} )
+  ${MPI_Fortran_LIBRARIES} ${LAPACK_LIBRARIES} ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES}  ${HDF5_Fortran_HL_LIBRARIES}
+  ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${GSI_LDFLAGS} )
 endif()
