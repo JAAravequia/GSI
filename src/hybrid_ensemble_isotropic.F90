@@ -4208,6 +4208,8 @@ subroutine hybens_localization_setup
    else
       call init_sf_xy(jcap_ens)
    endif
+!cltthinkdev
+   call init_mult_spc_wgts(jcap_ens)
 
    !!!!!!!! setup beta_s, beta_e!!!!!!!!!!!!
    ! vertical variation of static and ensemble weights
