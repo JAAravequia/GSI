@@ -39,9 +39,11 @@ if [ $target = wcoss -o $target = cray ]; then
 else
     source $dir_modules/modulefile.ProdGSI.$target
 fi
+module use /usrx/local/dev/modulefiles
+module load cmake/3.6.2
 module list
 
-cmake -DBUILD_UTIL=ON ..
+cmake -DBUILD_UTIL=ON -DCMAKE_BUILD_TYPE=PRODUCTION ..
 
 make -j 6
 
