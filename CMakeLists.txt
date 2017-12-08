@@ -123,9 +123,11 @@ project(GSI)
   
   
   find_package( NetCDF REQUIRED)
+  set(HDF5_USE_STATIC_LIBRARIES 1)
   if(NETCDF4)
     if(CMAKE_MAJOR_VERSION GREATER 2)
       find_package( HDF5 COMPONENTS C HL Fortran_HL REQUIRED )
+      find_package( ZLIB )
     else()
       find_package( HDF5 )
     endif()

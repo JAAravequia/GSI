@@ -127,8 +127,8 @@ cmake_minimum_required(VERSION 2.8)
   else()
     add_dependencies(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} )
   endif()
-
 # Specify all the libraries to be linked into the executable
   target_link_libraries(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${GSISHAREDLIB} ${WRF_LIBRARIES} ${CORE_LIBRARIES}
          ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES} 
-         ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${GSI_LDFLAGS})
+         ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${GSI_LDFLAGS}
+         ${ZLIB_LIBRARIES})
