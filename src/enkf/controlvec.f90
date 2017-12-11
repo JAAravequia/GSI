@@ -239,10 +239,12 @@ endif
 
 end subroutine read_control
 
-subroutine write_control()
+subroutine write_control(no_inflate_flag)
 ! write out each ensemble member to a separate file.
 ! for now, first nanals tasks are IO tasks.
 implicit none
+logical, intent(in) :: no_inflate_flag
+
 real(r_double)  :: t1,t2
 integer(i_kind) :: nanal
 integer(i_kind) :: nb, nvar
@@ -296,7 +298,7 @@ if (nproc <= nanals-1) then
          grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb)*qsat(:,:,nb)
       enddo
    end if
-   call writegriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,grdin)
+   call writegriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,grdin,no_inflate_flag)
    if (nproc == 0) then
      t2 = mpi_wtime()
      print *,'time in writegriddata on root',t2-t1,'secs'

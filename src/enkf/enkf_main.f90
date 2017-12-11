@@ -75,7 +75,7 @@ program enkf_main
  ! reads namelist parameters.
  use params, only : read_namelist,letkf_flag,readin_localization,lupd_satbiasc,&
                     numiter, nanals, lupd_obspace_serial, write_spread_diag,   &
-                    lobsdiag_forenkf, netcdf_diag
+                    lobsdiag_forenkf, netcdf_diag, fso_cycling
  ! mpi functions and variables.
  use mpisetup, only:  mpi_initialize, mpi_initialize_io, mpi_cleanup, nproc, &
                        mpi_wtime, mpi_comm_world
@@ -106,10 +106,13 @@ program enkf_main
  use radinfo, only: init_rad, init_rad_vars
  use omp_lib, only: omp_get_max_threads
  use read_diag, only: set_netcdf_read
+ ! Observation sensitivity usage
+ use enkf_obs_sensitivity, only: init_ob_sens, print_ob_sens, destroy_ob_sens
 
  implicit none
  integer(i_kind) j,n,nth,ierr
  real(r_double) t1,t2
+ logical no_inflate_flag
 
  ! initialize MPI.
  call mpi_initialize()
@@ -177,6 +180,10 @@ program enkf_main
  t2 = mpi_wtime()
  if (nproc == 0) print *,'time in read_control =',t2-t1,'on proc',nproc
 
+ ! Initialization for writing
+ ! observation sensitivity files
+ if(fso_cycling) call init_ob_sens()
+
  ! read in vertical profile of horizontal and vertical localization length
  ! scales, set values for each ob.
  if (readin_localization) call read_locinfo()
@@ -206,6 +213,17 @@ program enkf_main
  t2 = mpi_wtime()
  if (nproc == 0) print *,'time in enkf_update =',t2-t1,'on proc',nproc
 
+ ! Output non-inflated
+ ! analyses for FSO
+ if(fso_cycling) then
+    no_inflate_flag=.true.
+    t1 = mpi_wtime()
+!    call write_ensemble(no_inflate_flag)
+    t2 = mpi_wtime()
+    if (nproc == 0) print *,'time in write_ensemble wo/inflation =',t2-t1,'on proc',nproc
+ end if
+ no_inflate_flag=.false.
+
  ! posterior inflation.
  t1 = mpi_wtime()
  call inflate_ens()
@@ -219,6 +237,9 @@ program enkf_main
     t2 = mpi_wtime()
     if (nproc == 0) print *,'time in write_obsstats =',t2-t1,'on proc',nproc
   endif
+
+ ! print EFSO sensitivity i/o on root task.
+ if(fso_cycling) call print_ob_sens()
 
  ! print innovation statistics for posterior on root task.
  if (nproc == 0 .and. numiter > 0) then
@@ -246,12 +267,13 @@ program enkf_main
  if (nproc == 0) print *,'time in gather_chunks =',t2-t1,'on proc',nproc
 
  t1 = mpi_wtime()
- call write_control()
+ call write_control(no_inflate_flag)
  t2 = mpi_wtime()
  if (nproc == 0) print *,'time in write_control =',t2-t1,'on proc',nproc
 
  call controlvec_cleanup()
  call loadbal_cleanup()
+ if(fso_cycling) call destroy_ob_sens()
 
  ! write log file (which script can check to verify completion).
  if (nproc .eq. 0) then

@@ -39,6 +39,9 @@ if(BUILD_ENKF)
   radbias.f90
   loadbal.f90
   smooth_${ENKF_SUFFIX}.f90 
+  gridio_${ENKF_SUFFIX}.f90 
+  gridinfo_${ENKF_SUFFIX}.f90
+  enkf_obs_sensitivity.f90 
   )
   if( NOT crayComp )
     find_package( LAPACK REQUIRED )

@@ -127,9 +127,18 @@ logical,public :: nmm = .true.
 logical,public :: nmm_restart = .true.
 logical,public :: nmmb = .false.
 logical,public :: letkf_flag = .false.
+
 ! next two are no longer used, instead they are inferred from anavinfo
 logical,public :: massbal_adjust = .false. 
 logical,public :: nvars = -1 
+
+! if true generate additional input files
+! required for EFSO calculations
+logical,public :: fso_cycling = .false.
+
+! if true perform efso calculations
+logical,public :: fso_calculate = .false.
+
 ! if true, use ensemble mean qsat in definition of
 ! normalized humidity analysis variable (instead of
 ! qsat for each member, which is the default behavior
@@ -161,7 +170,8 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    newpc4pred,nmmb,nhr_anal,nhr_state, fhr_assim,nbackgrounds,nstatefields, &
                    save_inflation,nobsl_max,lobsdiag_forenkf,netcdf_diag,&
                    letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
-                   write_spread_diag
+                   write_spread_diag,fso_cycling,fso_calculate
+
 namelist /nam_wrf/arw,nmm,nmm_restart
 namelist /satobs_enkf/sattypes_rad,dsis
 namelist /ozobs_enkf/sattypes_oz
