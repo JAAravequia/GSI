@@ -693,13 +693,13 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            call nc_diag_metadata("Observation_Subtype",     icsubtype(ikx)         )
            call nc_diag_metadata("Latitude",                sngl(data(ilate,i))    )
            call nc_diag_metadata("Longitude",               sngl(data(ilone,i))    )
-           call nc_diag_metadata("Station_Elevation",       zero                   )
+           call nc_diag_metadata("Station_Elevation",       sngl(zero)             )
            call nc_diag_metadata("Pressure",                sngl(data(ipres,i)*r10))
-           call nc_diag_metadata("Height",                  zero                   )
+           call nc_diag_metadata("Height",                  sngl(zero)             )
            call nc_diag_metadata("Time",                    sngl(dtime-time_offset))
-           call nc_diag_metadata("Prep_QC_Mark",            one                    )
-           call nc_diag_metadata("Prep_Use_Flag",           one                    )
-           call nc_diag_metadata("Nonlinear_QC_Rel_Wgt",    rwgt                   )                 
+           call nc_diag_metadata("Prep_QC_Mark",            sngl(one)              )
+           call nc_diag_metadata("Prep_Use_Flag",           sngl(one)              )
+           call nc_diag_metadata("Nonlinear_QC_Rel_Wgt",    sngl(rwgt)             )                 
            if(muse(i)) then
               call nc_diag_metadata("Analysis_Use_Flag",    sngl(one)              )
            else
@@ -707,7 +707,7 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            endif
 
            call nc_diag_metadata("Errinv_Input",            sngl(errinv_input)     )
-           call nc_diag_metadata("Errinv_Adjust",           errinv_adjst           )
+           call nc_diag_metadata("Errinv_Adjust",           sngl(errinv_adjst)     )
            call nc_diag_metadata("Errinv_Final",            sngl(errinv_final)     )
 
            call nc_diag_metadata("Observation",                   sngl(pob)        )

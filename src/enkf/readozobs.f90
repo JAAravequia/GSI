@@ -707,21 +707,42 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
 
 
 subroutine write_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
+implicit none
 
-  character*500, intent(in) :: obspath
-  character*500 obsfile,obsfile2
-  character*10, intent(in) :: datestring
-  character(len=8), intent(in) :: id,id2,gesid2
+  character*500,   intent(in) :: obspath
+  character*10,    intent(in) :: datestring
+  integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
+  real(r_single),  dimension(nobs_max),     intent(in) :: x_fit, x_sprd
+  integer(i_kind), dimension(nobs_maxdiag), intent(in) :: x_used
+  character(len=8), intent(in) :: id, id2, gesid2
+
+  if (netcdf_diag) then
+    call write_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
+  else
+    call write_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
+  endif
+end subroutine write_ozobs_data
+
+
+subroutine write_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
+implicit none
+
+  character*500,   intent(in) :: obspath
+  character*10,    intent(in) :: datestring
+  integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
+  real(r_single),  dimension(nobs_max),     intent(in) :: x_fit, x_sprd
+  integer(i_kind), dimension(nobs_maxdiag), intent(in) :: x_used
+  character(len=8), intent(in) :: id, id2, gesid2
+
+  character*500 :: obsfile, obsfile2
   character(len=4) pe_name
 
   integer(i_kind) :: nlevs  ! number of levels (layer amounts + total column) per obs
   character(20) :: isis     ! sensor/instrument/satellite id
   character(10) :: obstype  !  type of ozone obs
   character(10) :: dplat    ! sat sensor
-  integer(i_kind) iunit,jiter,ii,ireal,iint,irdim1,idate,nob,nobdiag,n,ios,nobs_max,nobs_maxdiag,nsat,k,ipe,ioff0
+  integer(i_kind) iunit,jiter,ii,ireal,iint,irdim1,idate,nob,nobdiag,n,ios,nsat,k,ipe,ioff0
   integer(i_kind) iunit2
-  real(r_single), dimension(nobs_max) :: x_fit, x_sprd
-  integer(i_kind), dimension(nobs_maxdiag) :: x_used
 
   real(r_single),allocatable,dimension(:,:)::diagbuf
   real(r_single),allocatable,dimension(:,:,:)::rdiagbuf
@@ -808,6 +829,99 @@ subroutine write_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, 
 
   if(allocated(pob))deallocate(pob,grs,err,iouse)
 
-end subroutine write_ozobs_data
+end subroutine write_ozobs_data_bin
+
+! writing spread diagnostics
+subroutine write_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
+                                 x_fit, x_sprd, x_used, id, id2, gesid2)
+  use nc_diag_read_mod, only: nc_diag_read_get_dim
+  use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
+  use nc_diag_write_mod, only: nc_diag_init, nc_diag_metadata, nc_diag_write
+  use constants, only: r_missing
+  implicit none
+
+  character*500,   intent(in) :: obspath
+  character*10,    intent(in) :: datestring
+  integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
+  real(r_single),  dimension(nobs_max),     intent(in) :: x_fit, x_sprd
+  integer(i_kind), dimension(nobs_maxdiag), intent(in) :: x_used
+  character(len=8), intent(in) :: id, id2, gesid2
+
+
+  character*500 obsfile
+  character(len=4) pe_name
+
+  integer(i_kind) :: iunit
+  integer(i_kind) :: nob, nobdiag, nobs, ipe, i, nsat
+  integer(i_kind) :: enkf_use_flag
+  real(r_single)  :: enkf_fit, enkf_sprd
+  logical :: fexist
+
+  nob  = 0
+  nobdiag = 0
+
+  do nsat=1,nsats_oz
+      peloop: do ipe=0,npefiles
+         write(pe_name,'(i4.4)') ipe
+         if (npefiles .eq. 0) then
+            ! diag file (concatenated pe* files)
+            obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_oz(nsat))//"_ges."//datestring//'_'//trim(adjustl(id))
+            inquire(file=obsfile,exist=fexist)
+            if (.not. fexist .or. datestring .eq. '0000000000') then
+               obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_oz(nsat))//"_ges."//trim(adjustl(id))
+            endif
+         else ! raw, unconcatenated pe* files.
+            obsfile = trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_oz(nsat))//'_01'
+         endif
+
+         obsfile = trim(obsfile)//'.nc4'
+
+         inquire(file=obsfile,exist=fexist)
+         if (.not. fexist) cycle peloop
+
+
+         call nc_diag_read_init(obsfile, iunit)
+         nobs = nc_diag_read_get_dim(iunit,'nobs')
+         call nc_diag_read_close(obsfile)
+
+         call nc_diag_init(obsfile, append=.true.)
+
+         do i = 1, nobs
+           enkf_use_flag = -1
+           enkf_fit = r_missing
+           enkf_sprd = r_missing
+
+           nobdiag = nobdiag + 1
+
+           ! skip if not used in EnKF
+           if (x_used(nobdiag) == 1) then
+              ! update if it is used in EnKF
+              nob = nob + 1
+              enkf_use_flag = 1
+              enkf_fit = x_fit(nob)
+              enkf_sprd = x_sprd(nob)
+           endif
+
+           call nc_diag_metadata("EnKF_use_flag", enkf_use_flag)
+           call nc_diag_metadata("Ens_mean_fit",  enkf_fit)
+           call nc_diag_metadata("Ens_spread",    enkf_sprd)
+
+        enddo
+        call nc_diag_write
+
+     enddo peloop ! ipe loop
+  enddo
+
+  if (nob .ne. nobs_max) then
+      print *,'number of obs not what expected in write_ozobs_data',nob,nobs_max
+      call stop2(94)
+  end if
+  if (nobdiag /= nobs_maxdiag) then
+      print *,'number of total obs in diag not what expected in write_ozobs_data',nobdiag, nobs_maxdiag
+      call stop2(94)
+  endif
+
+end subroutine write_ozobs_data_nc
+
 
 end module readozobs

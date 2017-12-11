@@ -548,27 +548,27 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 
               if (netcdf_diag) then
                  call nc_diag_metadata("MPI_Task_Number", mype                      )
-                 call nc_diag_metadata("Latitude",        sngl(data(ilate,i))             )
-                 call nc_diag_metadata("Longitude",       sngl(data(ilone,i))             )
-                 call nc_diag_metadata("Time",            sngl(data(itime,i))-sngl(time_offset) )
-                 call nc_diag_metadata("Reference_Pressure",     sngl(pobs(k)))
-                 call nc_diag_metadata("Analysis_Use_Flag", iouse(k))
+                 call nc_diag_metadata("Latitude",        sngl(data(ilate,i))       )
+                 call nc_diag_metadata("Longitude",       sngl(data(ilone,i))       )
+                 call nc_diag_metadata("Time",            sngl(data(itime,i)-time_offset) )
+                 call nc_diag_metadata("Reference_Pressure",     sngl(pobs(k))      )
+                 call nc_diag_metadata("Analysis_Use_Flag",      iouse(k)           )
                  call nc_diag_metadata("Observation",                  sngl(ozobs(k)))
                  call nc_diag_metadata("Inverse_Observation_Error",    sngl(errorinv))
                  call nc_diag_metadata("Obs_Minus_Forecast_adjusted",  sngl(ozone_inv(k)))
                  call nc_diag_metadata("Obs_Minus_Forecast_unadjusted",sngl(ozone_inv(k)))
                  if (obstype == 'gome' .or. obstype == 'omieff'  .or. &
                      obstype == 'omi'  .or. obstype == 'tomseff' ) then
-                    call nc_diag_metadata("Solar_Zenith_Angle", data(isolz,i) )
-                    call nc_diag_metadata("Scan_Position",      data(ifovn,i) )
+                    call nc_diag_metadata("Solar_Zenith_Angle", sngl(data(isolz,i)) )
+                    call nc_diag_metadata("Scan_Position",      sngl(data(ifovn,i)) )
                  else
-                    call nc_diag_metadata("Solar_Zenith_Angle",        rmiss )
-                    call nc_diag_metadata("Scan_Position",             rmiss )
+                    call nc_diag_metadata("Solar_Zenith_Angle",        sngl(rmiss) )
+                    call nc_diag_metadata("Scan_Position",             sngl(rmiss) )
                  endif
                  if (obstype == 'omieff' .or. obstype == 'omi' ) then
-                    call nc_diag_metadata("Row_Anomaly_Index", data(itoqf,i)  )
+                    call nc_diag_metadata("Row_Anomaly_Index", sngl(data(itoqf,i))  )
                  else
-                    call nc_diag_metadata("Row_Anomaly_Index",         rmiss  )
+                    call nc_diag_metadata("Row_Anomaly_Index",         sngl(rmiss)  )
                  endif
                  if (save_jacobian) then
                     call fullarray(dhx_dx, dhx_dx_array)
@@ -1668,16 +1668,16 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   character(7),parameter     :: obsclass = '  ozlev'
   real(r_kind),parameter::     missing = -9.99e9
   real(r_kind),dimension(miter) :: obsdiag_iuse
-           call nc_diag_metadata("Latitude",                     data(ilate,i)            )
-           call nc_diag_metadata("Longitude",                    data(ilone,i)            )
-           call nc_diag_metadata("MPI_Task_Number",              mype                     )
-           call nc_diag_metadata("Time",                         data(itime,i)-time_offset)           
-           call nc_diag_metadata("Inverse_Observation_Error",    errorinv                 )
-           call nc_diag_metadata("Observation",                  ozlv                     ) 
-           call nc_diag_metadata("Obs_Minus_Forecast_adjusted",  ozone_inv                )
-           call nc_diag_metadata("Obs_Minus_Forecast_unadjusted",ozone_inv                )
-           call nc_diag_metadata("Reference_Pressure",           preso3l                  )
-           call nc_diag_metadata("Input_Observation_Error",      obserror                 ) 
+           call nc_diag_metadata("Latitude",                     sngl(data(ilate,i))            )
+           call nc_diag_metadata("Longitude",                    sngl(data(ilone,i))            )
+           call nc_diag_metadata("MPI_Task_Number",              mype                           )
+           call nc_diag_metadata("Time",                         sngl(data(itime,i)-time_offset))
+           call nc_diag_metadata("Inverse_Observation_Error",    sngl(errorinv)                 )
+           call nc_diag_metadata("Observation",                  sngl(ozlv)                     ) 
+           call nc_diag_metadata("Obs_Minus_Forecast_adjusted",  sngl(ozone_inv)                )
+           call nc_diag_metadata("Obs_Minus_Forecast_unadjusted",sngl(ozone_inv)                )
+           call nc_diag_metadata("Reference_Pressure",           sngl(preso3l)                  )
+           call nc_diag_metadata("Input_Observation_Error",      sngl(obserror)                 ) 
 
            if (lobsdiagsave) then
               do jj=1,miter

@@ -35,8 +35,8 @@ private
 public :: get_num_convobs, get_convobs_data, write_convobs_data
 
 
-integer(i_kind), parameter :: nobtype = 10
-character(len=3), dimension(nobtype), parameter :: obtypes = (/'  t', '  q', ' ps', ' uv',  &
+integer(i_kind), parameter :: nobtype = 11
+character(len=3), dimension(nobtype), parameter :: obtypes = (/'  t', '  q', ' ps', ' uv', 'sst', &
                                                                'gps', 'spd', ' pw', ' dw', ' rw', &
                                                                'tcp' /)
 

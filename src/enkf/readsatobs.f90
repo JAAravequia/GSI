@@ -178,7 +178,7 @@ subroutine get_num_satobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     real(r_kind) :: errorlimit,errorlimit2
 
     integer(i_kind), dimension(:), allocatable :: Satinfo_Chan, Use_Flag, chind
-    real(r_kind), dimension(:), allocatable :: Pressure, QC_Flag, Inv_Error, Observation
+    real(r_single), dimension(:), allocatable :: Pressure, QC_Flag, Inv_Error, Observation
 
 
 !  make consistent with screenobs
@@ -626,10 +626,10 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
 
   integer(i_kind), dimension(:), allocatable :: Satinfo_Chan, Use_Flag, chind, chaninfoidx
   real(r_kind), dimension(:), allocatable :: error_variance
-  real(r_kind), dimension(:), allocatable :: Pressure, QC_Flag, Inv_Error, Observation
-  real(r_kind), dimension(:), allocatable :: Latitude, Longitude, Time
-  real(r_kind), dimension(:), allocatable :: Obs_Minus_Forecast_adjusted
-  real(r_kind), dimension(:), allocatable :: Obs_Minus_Forecast_unadjusted, Obs_Minus_Forecast_unadjusted2
+  real(r_single), dimension(:), allocatable :: Pressure, QC_Flag, Inv_Error, Observation
+  real(r_single), dimension(:), allocatable :: Latitude, Longitude, Time
+  real(r_single), dimension(:), allocatable :: Obs_Minus_Forecast_adjusted
+  real(r_single), dimension(:), allocatable :: Obs_Minus_Forecast_unadjusted, Obs_Minus_Forecast_unadjusted2
   integer(i_kind), allocatable, dimension (:,:) :: Observation_Operator_Jacobian_stind
   integer(i_kind), allocatable, dimension (:,:) :: Observation_Operator_Jacobian_endind
   real(r_single), allocatable, dimension (:,:) :: Observation_Operator_Jacobian_val
@@ -874,21 +874,41 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
 
 
 subroutine write_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
+  implicit none
+  character*500,     intent(in) :: obspath
+  character(len=10), intent(in) :: datestring
+  integer(i_kind),   intent(in) :: nobs_max, nobs_maxdiag
+  real(r_single),  dimension(nobs_max),     intent(in) :: x_fit, x_sprd
+  integer(i_kind), dimension(nobs_maxdiag), intent(in) :: x_used
+  character(len=10), intent(in) :: id, id2, gesid2
+
+
+  if (netcdf_diag) then
+     call write_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
+  else
+     call write_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
+  endif
+
+end subroutine write_satobs_data
+
+subroutine write_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
   use radinfo, only: iuse_rad,jpch_rad,nusis
   use read_diag, only: iversion_radiag_2, ireal_radiag, ireal_old_radiag
+  implicit none
 
+  character*500,     intent(in) :: obspath
+  character(len=10), intent(in) :: datestring
+  integer(i_kind),   intent(in) :: nobs_max, nobs_maxdiag
+  real(r_single),  dimension(nobs_max),     intent(in) :: x_fit, x_sprd
+  integer(i_kind), dimension(nobs_maxdiag), intent(in) :: x_used
+  character(len=10), intent(in) :: id, id2, gesid2
 
-  character*500, intent(in) :: obspath
   character*500 obsfile,obsfile2
-  character(len=10), intent(in) :: id,id2,gesid2
   character(len=4) pe_name
 
-  real(r_single), dimension(nobs_max) :: x_fit, x_sprd
   character(len=20) ::  sat_type
-  character(len=10), intent(in) ::  datestring
-  integer(i_kind), dimension(nobs_maxdiag) :: x_used
 
-  integer(i_kind) nobs_max, nobs_maxdiag,iunit,iunit2,iflag,nobs, nobsdiag,n,nsat,ipe,i,jpchstart
+  integer(i_kind) iunit,iunit2,iflag,nobs, nobsdiag,n,nsat,ipe,i,jpchstart
   logical fexist,init_pass
 
   character(len=10):: satid,sentype
@@ -1052,7 +1072,121 @@ subroutine write_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit,
       print *,'number of total diag obs not what expected in get_satobs_data',nobsdiag,nobs_maxdiag
       call stop2(92)
   end if
- end subroutine write_satobs_data
+ end subroutine write_satobs_data_bin
 
+
+
+
+! writing spread diagnostics
+subroutine write_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
+                                 x_fit, x_sprd, x_used, id, id2, gesid2)
+  use nc_diag_read_mod, only: nc_diag_read_get_dim
+  use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
+  use nc_diag_write_mod, only: nc_diag_init, nc_diag_metadata, nc_diag_write
+  use radinfo, only: iuse_rad,nusis,jpch_rad,npred
+  use constants, only: r_missing
+  implicit none
+
+  character*500,     intent(in) :: obspath
+  character(len=10), intent(in) :: datestring
+  integer(i_kind),   intent(in) :: nobs_max, nobs_maxdiag
+  real(r_single),  dimension(nobs_max),     intent(in) :: x_fit, x_sprd
+  integer(i_kind), dimension(nobs_maxdiag), intent(in) :: x_used
+  character(len=10), intent(in) :: id, id2, gesid2
+
+  character*500 obsfile
+  character(len=4) pe_name
+  character(len=20) ::  sat_type
+
+  integer(i_kind) :: iunit
+  integer(i_kind) :: nob, nobdiag, nobs, n, ipe, i, nsat, jpchstart
+  integer(i_kind) :: enkf_use_flag
+  real(r_single)  :: enkf_fit, enkf_sprd
+  logical :: fexist
+
+  nob  = 0
+  nobdiag = 0
+
+  do nsat=1,nsats_rad
+     jpchstart=0
+     do i=1,jpch_rad
+       write(sat_type,'(a20)') adjustl(dsis(nsat))
+          ! The following is to sort out some historical naming conventions
+          select case (sat_type(1:4))
+             case ('airs')
+               sat_type='airs_aqua'
+             case ('iasi')
+               if (index(sat_type,'metop-a') /= 0) sat_type='iasi_metop-a'
+               if (index(sat_type,'metop-b') /= 0) sat_type='iasi_metop-b'
+               if (index(sat_type,'metop-c') /= 0) sat_type='iasi_metop-c'
+          end select
+       if(sat_type == trim(nusis(i)) .and. iuse_rad(i) > 0) then
+         jpchstart = i
+         exit
+       end if
+     end do
+     if(jpchstart == 0) cycle
+     peloop: do ipe=0,npefiles
+     write(pe_name,'(i4.4)') ipe
+     if (npefiles .eq. 0) then
+        ! diag file (concatenated pe* files)
+        obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//datestring//'_'//trim(adjustl(id))
+        inquire(file=obsfile,exist=fexist)
+        if (.not. fexist .or. datestring .eq. '0000000000') then
+           obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//trim(adjustl(id))
+        endif
+     else ! raw, unconcatenated pe* files.
+        obsfile = trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'
+     endif
+
+     obsfile = trim(obsfile)//'.nc4'
+
+     inquire(file=obsfile,exist=fexist)
+     if (.not. fexist) cycle peloop
+
+
+     call nc_diag_read_init(obsfile, iunit)
+     nobs = nc_diag_read_get_dim(iunit,'nobs')
+     call nc_diag_read_close(obsfile)
+
+     call nc_diag_init(obsfile, append=.true.)
+
+     do i = 1, nobs
+        enkf_use_flag = -1
+        enkf_fit = r_missing
+        enkf_sprd = r_missing
+ 
+        nobdiag = nobdiag + 1
+ 
+        ! skip if not used in EnKF
+        if (x_used(nobdiag) == 1) then
+           ! update if it is used in EnKF
+           nob = nob + 1
+           enkf_use_flag = 1
+           enkf_fit = x_fit(nob)
+           enkf_sprd = x_sprd(nob)
+        endif
+
+        call nc_diag_metadata("EnKF_use_flag", enkf_use_flag)
+        call nc_diag_metadata("Ens_mean_fit",  enkf_fit)
+        call nc_diag_metadata("Ens_spread",    enkf_sprd)
+ 
+     enddo
+
+     call nc_diag_write
+
+     enddo peloop ! ipe loop
+  enddo
+
+  if (nob .ne. nobs_max) then
+      print *,'number of obs not what expected in write_satobs_data',nob,nobs_max
+      call stop2(94)
+  end if
+  if (nobdiag /= nobs_maxdiag) then
+      print *,'number of total obs in diag not what expected in write_satobs_data',nobdiag, nobs_maxdiag
+      call stop2(94)
+  endif
+
+end subroutine write_satobs_data_nc
 
 end module readsatobs
