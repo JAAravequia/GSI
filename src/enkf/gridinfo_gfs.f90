@@ -114,11 +114,8 @@ if (use_gfs_nemsio) then
                              dimz=nlevsin,jcap=ntrunc,idvc=idvc)
      ! set ntrunc to nlats if missing
      ! (only used for inflation smoothing and mass balance adjustment if use_gfsnemsio = T)
-     if (ntrunc < 0) then
-        ntrunc = nlatsin
-     endif 
      ! FV3GFS write component does not include JCAP, infer from nlatsin
-!trunk!     if (ntrunc < 0) ntrunc = nlatsin-2
+     if (ntrunc < 0) ntrunc = nlatsin-2
      if (iret/=0) then
         write(6,*)'grdinfo: gfs model: problem with nemsio_getfilehead, iret=',iret, ', file: ', trim(filename)
         call stop2(23)
