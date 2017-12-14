@@ -118,7 +118,7 @@ end subroutine init_sparr2
 
 ! constructor for sparr
 subroutine init_sparr(this, nnz)
-  type(sparr), intent(out) :: this
+  type(sparr), intent(inout) :: this
   integer, intent(in) :: nnz
 
   this%nnz  = nnz
@@ -131,8 +131,8 @@ end subroutine init_sparr
 
 ! copying constructor for sparr (from sparr2)
 subroutine sparr2_to_sparr(this, sp2)
-  type(sparr), intent(out) :: this
-  type(sparr2), intent(in) :: sp2
+  type(sparr),  intent(inout) :: this
+  type(sparr2), intent(in)    :: sp2
 
   integer(i_kind) :: inz, nnz
   integer(i_kind) :: i, j
@@ -152,9 +152,11 @@ subroutine sparr2_to_sparr(this, sp2)
         inz = inz + 1
      enddo
   enddo
+
   call init_sparr(this,nnz)
-  this%ind = nzind
-  this%val = nzval
+
+  this%ind = nzind(1:nnz)
+  this%val = nzval(1:nnz)
   deallocate(nzval, nzind)
 
 end subroutine sparr2_to_sparr
