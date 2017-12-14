@@ -89,11 +89,13 @@ interface readarray
   module procedure readarray_r_sparr2
 end interface
 
+! returns size of the sparse array
 interface size
   module procedure size_sparr2
   module procedure size_sparr
 end interface
 
+! returns full array from sparse array
 interface fullarray
   module procedure fullarray_sparr2
 end interface
@@ -103,7 +105,7 @@ contains
 
 ! constructor for sparr2
 subroutine init_sparr2(this, nnz, nind)
-  type(sparr2), intent(out) :: this
+  type(sparr2), intent(inout) :: this
   integer, intent(in) :: nnz, nind
 
   this%nnz  = nnz
@@ -161,8 +163,9 @@ subroutine sparr2_to_sparr(this, sp2)
 
 end subroutine sparr2_to_sparr
 
+! copying constructor for sparr (from full array)
 subroutine array_to_sparr(this, arr)
-  type(sparr), intent(out) :: this
+  type(sparr), intent(inout) :: this
   real(r_single), dimension(:), intent(in) :: arr
 
   integer(i_kind) :: i, nnz, n
@@ -180,8 +183,9 @@ subroutine array_to_sparr(this, arr)
     endif  
   enddo
   call init_sparr(this, nnz)
-  this%ind = nzind
-  this%val = nzval
+  this%ind = nzind(1:nnz)
+  this%val = nzval(1:nnz)
+
   deallocate(nzind, nzval)
 
 end subroutine array_to_sparr
@@ -225,13 +229,14 @@ end function size_sparr
 ! writing out sparse array to array
 subroutine writearray_sparr2(this, array, ierr)
   type(sparr2), intent(in)                :: this
-  real(r_single), dimension(:), intent(out) :: array
+  real(r_single), dimension(:), intent(inout) :: array
   integer(i_kind), optional, intent(out)  :: ierr
  
   integer(i_kind) :: ind
 
   if (present(ierr)) ierr = 0
   if (size(array) < size_sparr2(this)) then
+    print *, 'Error writing sparse array to array: array size too small'
     if (present(ierr)) ierr = -1
     return
   endif
@@ -252,13 +257,14 @@ end subroutine writearray_sparr2
 ! writing out sparse array to array
 subroutine writearray_r_sparr2(this, array, ierr)
   type(sparr2), intent(in)                :: this
-  real(r_kind), dimension(:), intent(out) :: array
+  real(r_kind), dimension(:), intent(inout) :: array
   integer(i_kind), optional, intent(out)  :: ierr
 
   integer(i_kind) :: ind
 
   if (present(ierr)) ierr = 0
   if (size(array) < size_sparr2(this)) then
+    print *, 'Error writing sparse array to array: array size too small'
     if (present(ierr)) ierr = -1
     return
   endif
@@ -279,7 +285,7 @@ end subroutine writearray_r_sparr2
 
 ! reading sparse array from array
 subroutine readarray_sparr2(this, array)
-  type(sparr2), intent(out)              :: this
+  type(sparr2), intent(inout)              :: this
   real(r_single), dimension(:), intent(in) :: array
 
   integer(i_kind) :: ind, nnz, nind
@@ -302,7 +308,7 @@ end subroutine readarray_sparr2
 
 ! reading sparse array from array
 subroutine readarray_r_sparr2(this, array)
-  type(sparr2), intent(out)              :: this
+  type(sparr2), intent(inout)            :: this
   real(r_kind), dimension(:), intent(in) :: array
 
   integer(i_kind) :: ind, nnz, nind
@@ -323,14 +329,26 @@ subroutine readarray_r_sparr2(this, array)
 
 end subroutine readarray_r_sparr2
 
-subroutine fullarray_sparr2(this, array)
+! returns full array from sparse array
+subroutine fullarray_sparr2(this, array, ierr)
   type(sparr2), intent(in)                    :: this
   real(r_single), dimension(:), intent(inout) :: array
+  integer(i_kind), optional, intent(out)  :: ierr
 
   integer(i_kind) :: i, j, inz
 
   inz = 1
   array = 0._r_single
+
+  ! check if array is appropriate size
+  if (present(ierr)) ierr = 0
+  if ((size(array) < this%nnz) .or.                    &
+      (size(array) < maxval(this%end_ind))) then
+    print *, 'Error in saving full array from sparse array: array size too small'
+    if (present(ierr)) ierr = -1
+    return
+  endif
+
   do i = 1, this%nind
      do j = this%st_ind(i), this%end_ind(i)
         array(j) = this%val(inz)
