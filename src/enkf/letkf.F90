@@ -367,6 +367,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
    corrlength=latval(deglat,corrlengthnh,corrlengthtr,corrlengthsh)
    corrsq = corrlength**2
    ! kd-tree fixed range search
+   if (allocated(sresults)) deallocate(sresults)
    if (nobsl_max > 0) then ! only use nobsl_max nearest obs (sorted by distance).
        allocate(sresults(nobsl_max))
        call kdtree2_n_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),nn=nobsl_max,&

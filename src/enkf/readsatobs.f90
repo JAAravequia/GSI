@@ -23,6 +23,7 @@ module readsatobs
 !   2016-06-03  Collard - Added changes to allow for historical naming conventions
 !   2016-11-29 shlyaeva - updated read routine to calculate linearized H(x)
 !                         added write_ozvobs_data to output ensemble spread
+!   2017-12-13  shlyaeva - added netcdf diag read/write capability
 !
 ! attributes:
 !   language: f95
@@ -42,10 +43,12 @@ public :: get_satobs_data, get_num_satobs, write_satobs_data
 
 contains
 
+! get number of radiance observations
 subroutine get_num_satobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
-    character (len=500), intent(in) :: obspath
-    character(len=10), intent(in) :: id, datestring
-    integer(i_kind), intent(out) :: num_obs_tot, num_obs_totdiag
+    implicit none
+    character(len=500), intent(in)  :: obspath
+    character(len=10),  intent(in)  :: id, datestring
+    integer(i_kind),    intent(out) :: num_obs_tot, num_obs_totdiag
 
     if (netcdf_diag) then
        call get_num_satobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
@@ -54,14 +57,18 @@ subroutine get_num_satobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     endif
 end subroutine get_num_satobs
 
+! get number of radiance observations from binary file
 subroutine get_num_satobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     use radinfo, only: iuse_rad,nusis,jpch_rad,npred
-    character (len=500), intent(in) :: obspath
+    implicit none
+
+    character(len=500), intent(in)  :: obspath
+    character(len=10),  intent(in)  :: id, datestring
+    integer(i_kind),    intent(out) :: num_obs_tot, num_obs_totdiag
+
     character(len=500) obsfile
-    character(len=10), intent(in) :: id, datestring
     character(len=20) ::  sat_type
     character(len=4) :: pe_name
-    integer(i_kind), intent(out) :: num_obs_tot, num_obs_totdiag
     integer(i_kind) iunit, iflag, nsat, n, nkeep, i, jpchstart,indxsat,ipe
     integer(i_kind) npred_radiag
     logical fexist,lretrieval,lverbose,init_pass
@@ -161,18 +168,21 @@ subroutine get_num_satobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     enddo ! satellite
 end subroutine get_num_satobs_bin
 
+! get number of radiance observations from netcdf file
 subroutine get_num_satobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
-    use radinfo, only: iuse_rad,nusis,jpch_rad,npred
+  use radinfo, only: iuse_rad,nusis,jpch_rad,npred
   use nc_diag_read_mod, only: nc_diag_read_get_var
   use nc_diag_read_mod, only: nc_diag_read_get_dim
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
+  implicit none
 
-    character (len=500), intent(in) :: obspath
+    character(len=500), intent(in)  :: obspath
+    character(len=10),  intent(in)  :: id, datestring
+    integer(i_kind),    intent(out) :: num_obs_tot, num_obs_totdiag
+
     character(len=500) obsfile
-    character(len=10), intent(in) :: id, datestring
     character(len=20) ::  sat_type
     character(len=4) :: pe_name
-    integer(i_kind), intent(out) :: num_obs_tot, num_obs_totdiag
     integer(i_kind) iunit, nsat, nobs, nchans, ipe, nkeep, i, jpchstart
     logical fexist
     real(r_kind) :: errorlimit,errorlimit2
@@ -277,9 +287,12 @@ subroutine get_num_satobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
 
 end subroutine get_num_satobs_nc
 
+! read radiance data
 subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
   use radinfo, only: npred
+  implicit none
+
   character*500, intent(in)     :: obspath
   character(len=10), intent(in) ::  datestring
 
@@ -295,7 +308,6 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
   real(r_single), dimension(npred+1,nobs_max), intent(out) :: x_biaspred
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
 
-
   character(len=10), intent(in) :: id
   integer(i_kind), intent(in)   :: nanal
 
@@ -309,7 +321,7 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
 
 end subroutine get_satobs_data
 
-
+! read radiance data from binary file
 subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
   use radinfo, only: iuse_rad,nusis,jpch_rad,npred,adp_anglebc,emiss_bc
@@ -318,6 +330,7 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
   use constants, only: deg2rad, zero
   use mpisetup, only: nproc, mpi_wtime
   use observer_enkf, only: calc_linhx
+  implicit none
 
   character*500, intent(in)     :: obspath
   character(len=10), intent(in) ::  datestring
@@ -573,7 +586,7 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
 
  end subroutine get_satobs_data_bin
 
-
+! read radiance data from netcdf file
 subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
   use nc_diag_read_mod, only: nc_diag_read_get_var
@@ -587,6 +600,8 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   use mpisetup, only: nproc, mpi_wtime
   use observer_enkf, only: calc_linhx
   use sparsearr, only: sparr, assignment(=), delete, sparr2, new
+
+  implicit none
 
   character*500, intent(in)     :: obspath
   character(len=10), intent(in) ::  datestring
@@ -614,7 +629,7 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   character(len=20) ::  sat_type
 
   integer(i_kind) iunit, iob, iobdiag, i, nsat, ipe, jpchstart, nchans
-  integer(i_kind) iunit2, nobs, nobs2, nsdim, nnz, nind
+  integer(i_kind) iunit2, nobs, nobs2, nnz, nind
   integer(i_kind) npred_radiag
   logical fexist
   logical twofiles,fexist2
@@ -872,7 +887,7 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
 
  end subroutine get_satobs_data_nc
 
-
+! write spread diagnostics
 subroutine write_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
   implicit none
   character*500,     intent(in) :: obspath
@@ -884,13 +899,14 @@ subroutine write_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit,
 
 
   if (netcdf_diag) then
-     call write_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
+     call write_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, gesid2)
   else
      call write_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
   endif
 
 end subroutine write_satobs_data
 
+! write spread diagnostics to binary file
 subroutine write_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
   use radinfo, only: iuse_rad,jpch_rad,nusis
   use read_diag, only: iversion_radiag_2, ireal_radiag, ireal_old_radiag
@@ -1074,15 +1090,16 @@ subroutine write_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, x_
   end if
  end subroutine write_satobs_data_bin
 
-
-
-
-! writing spread diagnostics
+! writing spread diagnostics to netcdf file
 subroutine write_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
-                                 x_fit, x_sprd, x_used, id, id2, gesid2)
+                                 x_fit, x_sprd, x_used, id, gesid)
   use nc_diag_read_mod, only: nc_diag_read_get_dim
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
-  use nc_diag_write_mod, only: nc_diag_init, nc_diag_metadata, nc_diag_write
+
+  use netcdf, only: nf90_open, nf90_close, nf90_inq_dimid,  &
+                    NF90_WRITE
+  use ncdw_climsg, only: nclayer_check
+
   use radinfo, only: iuse_rad,nusis,jpch_rad,npred
   use constants, only: r_missing
   implicit none
@@ -1092,16 +1109,16 @@ subroutine write_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
   integer(i_kind),   intent(in) :: nobs_max, nobs_maxdiag
   real(r_single),  dimension(nobs_max),     intent(in) :: x_fit, x_sprd
   integer(i_kind), dimension(nobs_maxdiag), intent(in) :: x_used
-  character(len=10), intent(in) :: id, id2, gesid2
+  character(len=10), intent(in) :: id, gesid
 
   character*500 obsfile
   character(len=4) pe_name
   character(len=20) ::  sat_type
 
-  integer(i_kind) :: iunit
-  integer(i_kind) :: nob, nobdiag, nobs, n, ipe, i, nsat, jpchstart
-  integer(i_kind) :: enkf_use_flag
-  real(r_single)  :: enkf_fit, enkf_sprd
+  integer(i_kind) :: iunit, nobsid
+  integer(i_kind) :: nob, nobdiag, nobs, ipe, i, nsat, jpchstart
+  integer(i_kind), dimension(:), allocatable :: enkf_use_flag
+  real(r_single),  dimension(:), allocatable :: enkf_fit, enkf_sprd
   logical :: fexist
 
   nob  = 0
@@ -1149,31 +1166,36 @@ subroutine write_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
      nobs = nc_diag_read_get_dim(iunit,'nobs')
      call nc_diag_read_close(obsfile)
 
-     call nc_diag_init(obsfile, append=.true.)
+     if (nobs <= 0) cycle peloop
+
+     allocate(enkf_use_flag(nobs), enkf_fit(nobs), enkf_sprd(nobs))
+     enkf_use_flag = -1
+     enkf_fit = r_missing
+     enkf_sprd = r_missing
 
      do i = 1, nobs
-        enkf_use_flag = -1
-        enkf_fit = r_missing
-        enkf_sprd = r_missing
- 
         nobdiag = nobdiag + 1
  
         ! skip if not used in EnKF
         if (x_used(nobdiag) == 1) then
            ! update if it is used in EnKF
            nob = nob + 1
-           enkf_use_flag = 1
-           enkf_fit = x_fit(nob)
-           enkf_sprd = x_sprd(nob)
+           enkf_use_flag(i) = 1
+           enkf_fit(i)  = x_fit(nob)
+           enkf_sprd(i) = x_sprd(nob)
         endif
-
-        call nc_diag_metadata("EnKF_use_flag", enkf_use_flag)
-        call nc_diag_metadata("Ens_mean_fit",  enkf_fit)
-        call nc_diag_metadata("Ens_spread",    enkf_sprd)
- 
      enddo
 
-     call nc_diag_write
+     call nclayer_check(nf90_open(obsfile, NF90_WRITE, iunit))
+     call nclayer_check(nf90_inq_dimid(iunit, "nobs", nobsid))
+
+     call write_ncvar_int(iunit, nobsid, "EnKF_use_flag", enkf_use_flag)
+     call write_ncvar_single(iunit, nobsid, "EnKF_fit_"//trim(gesid), enkf_fit)
+     call write_ncvar_single(iunit, nobsid, "EnKF_spread_"//trim(gesid), enkf_sprd)
+
+     call nclayer_check(nf90_close(iunit))
+
+     deallocate(enkf_use_flag, enkf_fit, enkf_sprd)
 
      enddo peloop ! ipe loop
   enddo
@@ -1186,6 +1208,44 @@ subroutine write_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
       print *,'number of total obs in diag not what expected in write_satobs_data',nobdiag, nobs_maxdiag
       call stop2(94)
   endif
+
+  contains
+  subroutine write_ncvar_single(iunit, dimid, varname, field)
+    use netcdf, only: nf90_def_var, nf90_put_var, nf90_inq_varid,  &
+                      NF90_FLOAT, NF90_ENOTVAR
+    use ncdw_climsg, only: nclayer_check
+    implicit none
+    integer(i_kind), intent(in)  :: iunit, dimid
+    character(*), intent(in)     :: varname
+    real(r_single), dimension(:), allocatable :: field
+
+    integer :: ierr, varid
+
+    ierr = nf90_inq_varid(iunit, varname, varid)
+    if (ierr == NF90_ENOTVAR) then
+       call nclayer_check(nf90_def_var(iunit, varname, NF90_FLOAT, dimid, varid))
+    endif
+    call nclayer_check(nf90_put_var(iunit, varid, field))
+  end subroutine write_ncvar_single
+
+  subroutine write_ncvar_int(iunit, dimid, varname, field)
+    use netcdf, only: nf90_def_var, nf90_put_var, nf90_inq_varid,  &
+                      NF90_INT, NF90_ENOTVAR
+    use ncdw_climsg, only: nclayer_check
+    implicit none
+    integer(i_kind), intent(in)  :: iunit, dimid
+    character(*), intent(in)     :: varname
+    integer(i_kind), dimension(:), allocatable :: field
+
+    integer :: ierr, varid
+
+    ierr = nf90_inq_varid(iunit, varname, varid)
+    if (ierr == NF90_ENOTVAR) then
+       call nclayer_check(nf90_def_var(iunit, varname, NF90_INT, dimid, varid))
+    endif
+    call nclayer_check(nf90_put_var(iunit, varid, field))
+  end subroutine write_ncvar_int
+
 
 end subroutine write_satobs_data_nc
 

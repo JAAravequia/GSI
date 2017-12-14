@@ -210,6 +210,7 @@ subroutine statevec_cleanup()
 ! deallocate module-level allocatable arrays.
 if (allocated(svars3d)) deallocate(svars3d)
 if (allocated(svars2d)) deallocate(svars2d)
+if (allocated(slevels)) deallocate(slevels)
 if (nproc <= nanals-1 .and. allocated(state_d)) deallocate(state_d)
 call gridinfo_cleanup()
 end subroutine statevec_cleanup

@@ -312,6 +312,7 @@ subroutine controlvec_cleanup()
 ! deallocate module-level allocatable arrays.
 if (allocated(cvars3d)) deallocate(cvars3d)
 if (allocated(cvars2d)) deallocate(cvars2d)
+if (allocated(clevels)) deallocate(clevels)
 if (allocated(index_pres)) deallocate(index_pres)
 if (nproc <= nanals-1 .and. allocated(grdin)) deallocate(grdin)
 if (nproc <= nanals-1 .and. allocated(qsat)) deallocate(qsat)

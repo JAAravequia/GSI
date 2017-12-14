@@ -19,6 +19,7 @@ module readozobs
 !   2009-02-23  Initial version.
 !   2016-11-29 shlyaeva - updated read routine to calculate linearized H(x)
 !                         added write_ozvobs_data to output ensemble spread
+!   2017-12-13  shlyaeva - added netcdf diag read/write capability
 !
 ! attributes:
 !   language: f95
@@ -35,11 +36,13 @@ public :: get_num_ozobs, get_ozobs_data, write_ozobs_data
 
 contains
 
+! get number of ozone observations
 subroutine get_num_ozobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
-   character (len=500), intent(in) :: obspath
-   character (len=10), intent(in) :: datestring
-   character(len=10), intent(in) :: id
-   integer(i_kind),intent(out) :: num_obs_tot, num_obs_totdiag
+   implicit none
+   character(len=500), intent(in)  :: obspath
+   character(len=10),  intent(in)  :: datestring
+   character(len=10),  intent(in)  :: id
+   integer(i_kind),    intent(out) :: num_obs_tot, num_obs_totdiag
 
    if (netcdf_diag) then
       call get_num_ozobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
@@ -48,12 +51,16 @@ subroutine get_num_ozobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
    endif
 end subroutine get_num_ozobs
 
+! get number of ozone observations from binary file
 subroutine get_num_ozobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
-    character (len=500), intent(in) :: obspath
-    character (len=10), intent(in) :: datestring
-    character(len=500) obsfile
-    character(len=8), intent(in) :: id
-    character(len=4) pe_name
+    implicit none
+    character(len=500), intent(in)  :: obspath
+    character(len=10),  intent(in)  :: datestring
+    character(len=8),   intent(in)  :: id
+    integer(i_kind),    intent(out) :: num_obs_tot, num_obs_totdiag
+
+    character(len=500) :: obsfile
+    character(len=4) :: pe_name
     integer(i_kind) :: nlevs  ! number of levels (layer amounts + total column) per obs   
     character(20) :: isis     ! sensor/instrument/satellite id
     character(10) :: obstype  !  type of ozone obs
@@ -64,7 +71,6 @@ subroutine get_num_ozobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     real(r_kind) :: errorlimit,errorlimit2
     integer(i_kind),allocatable,dimension(:,:)::idiagbuf
     integer(i_kind) iunit,jiter,ii,ireal,irdim1,ioff0,iint,idate,ios,nsat,n,k,ipe
-    integer(i_kind), intent(out) :: num_obs_tot, num_obs_totdiag
     integer(i_kind), allocatable, dimension(:) :: iouse
     integer(i_kind):: nread,nkeep
     logical :: fexist, init_pass
@@ -136,15 +142,17 @@ subroutine get_num_ozobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     if(allocated(pob))deallocate(pob,grs,err,iouse)
 end subroutine get_num_ozobs_bin
 
+! get number of observations from netcdf file
 subroutine get_num_ozobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
   use nc_diag_read_mod, only: nc_diag_read_get_var
   use nc_diag_read_mod, only: nc_diag_read_get_dim
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
+  implicit none
 
-    character (len=500), intent(in) :: obspath
-    character (len=10), intent(in) :: datestring
-    integer(i_kind), intent(out) :: num_obs_tot, num_obs_totdiag
-    character(len=8), intent(in) :: id
+    character(len=500), intent(in)  :: obspath
+    character(len=10),  intent(in)  :: datestring
+    integer(i_kind),    intent(out) :: num_obs_tot, num_obs_totdiag
+    character(len=8),   intent(in)  :: id
 
     character(len=500) obsfile
     character(len=4) pe_name
@@ -223,10 +231,10 @@ subroutine get_num_ozobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     print *,num_obs_totdiag, ' total ozone obs in diag file'
 end subroutine get_num_ozobs_nc
 
-
+! read ozone observation data
 subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
-
+  implicit none
   character*500, intent(in) :: obspath
   character*10, intent(in)  :: datestring
 
@@ -253,7 +261,7 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
 
 end subroutine get_ozobs_data
 
-
+! read ozone observation data from binary file
 subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
 
@@ -262,6 +270,7 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   use statevec, only: state_d
   use mpisetup, only: mpi_wtime, nproc
   use observer_enkf, only: calc_linhx
+  implicit none
 
   character*500, intent(in) :: obspath
   character*10, intent(in)  :: datestring
@@ -500,7 +509,7 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
 
  end subroutine get_ozobs_data_bin
 
-
+! read ozone observation data from netcdf file
 subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
   use nc_diag_read_mod, only: nc_diag_read_get_var
@@ -512,6 +521,7 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
   use statevec, only: state_d
   use mpisetup, only: mpi_wtime, nproc
   use observer_enkf, only: calc_linhx
+  implicit none
 
   character*500, intent(in) :: obspath
   character*10, intent(in)  :: datestring
@@ -705,7 +715,7 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
 
  end subroutine get_ozobs_data_nc
 
-
+! write spread diagnostics
 subroutine write_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
 implicit none
 
@@ -717,15 +727,15 @@ implicit none
   character(len=8), intent(in) :: id, id2, gesid2
 
   if (netcdf_diag) then
-    call write_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
+    call write_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, gesid2)
   else
     call write_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
   endif
 end subroutine write_ozobs_data
 
-
+! write spread diagnostics to binary file
 subroutine write_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
-implicit none
+  implicit none
 
   character*500,   intent(in) :: obspath
   character*10,    intent(in) :: datestring
@@ -831,12 +841,16 @@ implicit none
 
 end subroutine write_ozobs_data_bin
 
-! writing spread diagnostics
+! writing spread diagnostics to netcdf file
 subroutine write_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
-                                 x_fit, x_sprd, x_used, id, id2, gesid2)
+                                 x_fit, x_sprd, x_used, id, gesid)
   use nc_diag_read_mod, only: nc_diag_read_get_dim
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
-  use nc_diag_write_mod, only: nc_diag_init, nc_diag_metadata, nc_diag_write
+
+  use netcdf, only: nf90_open, nf90_close, nf90_inq_dimid,  &
+                    NF90_WRITE
+  use ncdw_climsg, only: nclayer_check
+
   use constants, only: r_missing
   implicit none
 
@@ -845,16 +859,16 @@ subroutine write_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
   integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
   real(r_single),  dimension(nobs_max),     intent(in) :: x_fit, x_sprd
   integer(i_kind), dimension(nobs_maxdiag), intent(in) :: x_used
-  character(len=8), intent(in) :: id, id2, gesid2
+  character(len=8), intent(in) :: id, gesid
 
 
   character*500 obsfile
   character(len=4) pe_name
 
-  integer(i_kind) :: iunit
+  integer(i_kind) :: iunit, nobsid
   integer(i_kind) :: nob, nobdiag, nobs, ipe, i, nsat
-  integer(i_kind) :: enkf_use_flag
-  real(r_single)  :: enkf_fit, enkf_sprd
+  integer(i_kind), dimension(:), allocatable :: enkf_use_flag
+  real(r_single),  dimension(:), allocatable :: enkf_fit, enkf_sprd
   logical :: fexist
 
   nob  = 0
@@ -884,30 +898,35 @@ subroutine write_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
          nobs = nc_diag_read_get_dim(iunit,'nobs')
          call nc_diag_read_close(obsfile)
 
-         call nc_diag_init(obsfile, append=.true.)
+         if (nobs <= 0) cycle peloop
+
+         allocate(enkf_use_flag(nobs), enkf_fit(nobs), enkf_sprd(nobs))
+         enkf_use_flag = -1
+         enkf_fit = r_missing
+         enkf_sprd = r_missing
 
          do i = 1, nobs
-           enkf_use_flag = -1
-           enkf_fit = r_missing
-           enkf_sprd = r_missing
-
            nobdiag = nobdiag + 1
-
            ! skip if not used in EnKF
            if (x_used(nobdiag) == 1) then
               ! update if it is used in EnKF
               nob = nob + 1
-              enkf_use_flag = 1
-              enkf_fit = x_fit(nob)
-              enkf_sprd = x_sprd(nob)
+              enkf_use_flag(i) = 1
+              enkf_fit(i)  = x_fit(nob)
+              enkf_sprd(i) = x_sprd(nob)
            endif
+         enddo
 
-           call nc_diag_metadata("EnKF_use_flag", enkf_use_flag)
-           call nc_diag_metadata("Ens_mean_fit",  enkf_fit)
-           call nc_diag_metadata("Ens_spread",    enkf_sprd)
+        call nclayer_check(nf90_open(obsfile, NF90_WRITE, iunit))
+        call nclayer_check(nf90_inq_dimid(iunit, "nobs", nobsid))
 
-        enddo
-        call nc_diag_write
+        call write_ncvar_int(iunit, nobsid, "EnKF_use_flag", enkf_use_flag)
+        call write_ncvar_single(iunit, nobsid, "EnKF_fit_"//trim(gesid), enkf_fit)
+        call write_ncvar_single(iunit, nobsid, "EnKF_spread_"//trim(gesid), enkf_sprd)
+
+        call nclayer_check(nf90_close(iunit))
+
+        deallocate(enkf_use_flag, enkf_fit, enkf_sprd)
 
      enddo peloop ! ipe loop
   enddo
@@ -920,6 +939,45 @@ subroutine write_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
       print *,'number of total obs in diag not what expected in write_ozobs_data',nobdiag, nobs_maxdiag
       call stop2(94)
   endif
+
+
+  contains
+  subroutine write_ncvar_single(iunit, dimid, varname, field)
+    use netcdf, only: nf90_def_var, nf90_put_var, nf90_inq_varid,  &
+                      NF90_FLOAT, NF90_ENOTVAR
+    use ncdw_climsg, only: nclayer_check
+    implicit none
+    integer(i_kind), intent(in)  :: iunit, dimid
+    character(*), intent(in)     :: varname
+    real(r_single), dimension(:), allocatable :: field
+
+    integer :: ierr, varid
+
+    ierr = nf90_inq_varid(iunit, varname, varid)
+    if (ierr == NF90_ENOTVAR) then
+       call nclayer_check(nf90_def_var(iunit, varname, NF90_FLOAT, dimid, varid))
+    endif
+    call nclayer_check(nf90_put_var(iunit, varid, field))
+  end subroutine write_ncvar_single
+
+  subroutine write_ncvar_int(iunit, dimid, varname, field)
+    use netcdf, only: nf90_def_var, nf90_put_var, nf90_inq_varid,  &
+                      NF90_INT, NF90_ENOTVAR
+    use ncdw_climsg, only: nclayer_check
+    implicit none
+    integer(i_kind), intent(in)  :: iunit, dimid
+    character(*), intent(in)     :: varname
+    integer(i_kind), dimension(:), allocatable :: field
+
+    integer :: ierr, varid
+
+    ierr = nf90_inq_varid(iunit, varname, varid)
+    if (ierr == NF90_ENOTVAR) then
+       call nclayer_check(nf90_def_var(iunit, varname, NF90_INT, dimid, varid))
+    endif
+    call nclayer_check(nf90_put_var(iunit, varid, field))
+  end subroutine write_ncvar_int
+
 
 end subroutine write_ozobs_data_nc
 

@@ -20,6 +20,7 @@ module readconvobs
 !   2009-02-23  Initial version.
 !   2016-11-29  shlyaeva - updated read routine to calculate linearized H(x)
 !                          added write_convobs_data to output ensemble spread
+!   2017-12-13  shlyaeva - added netcdf diag read/write capability
 !
 ! attributes:
 !   language: f95
@@ -35,43 +36,50 @@ private
 public :: get_num_convobs, get_convobs_data, write_convobs_data
 
 
-integer(i_kind), parameter :: nobtype = 11
-character(len=3), dimension(nobtype), parameter :: obtypes = (/'  t', '  q', ' ps', ' uv', 'sst', &
-                                                               'gps', 'spd', ' pw', ' dw', ' rw', &
-                                                               'tcp' /)
+!> observation types to read from netcdf files
+integer(i_kind), parameter :: nobtype = 10
+character(len=3), dimension(nobtype), parameter :: obtypes = (/'  t', '  q', ' ps', ' uv', 'tcp', &
+                                                               'gps', 'spd', ' pw', ' dw', ' rw' /)
 
 contains
 
+! get number of conventional observations 
 subroutine get_num_convobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
-   character (len=500), intent(in) :: obspath
-   character (len=10), intent(in) :: datestring
-   character(len=10), intent(in) :: id
-   integer(i_kind),intent(out) :: num_obs_tot, num_obs_totdiag
+   implicit none
+
+   character(len=500), intent(in)  :: obspath
+   character(len=10),  intent(in)  :: datestring
+   character(len=10),  intent(in)  :: id
+   integer(i_kind),    intent(out) :: num_obs_tot, num_obs_totdiag
 
    if (netcdf_diag) then
       call get_num_convobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
    else
       call get_num_convobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
    endif
+
 end subroutine get_num_convobs
 
-
+! get number of conventional observations from binary file
 subroutine get_num_convobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
-    character (len=500), intent(in) :: obspath
-    character (len=10), intent(in) :: datestring
-    character(len=500) obsfile
-    character(len=10), intent(in) :: id
-    character(len=4) pe_name
+    implicit none
+    character(len=500), intent(in)  :: obspath
+    character(len=10),  intent(in)  :: datestring
+    character(len=10),  intent(in)  :: id
+    integer(i_kind),    intent(out) :: num_obs_tot, num_obs_totdiag
+
+    character(len=500) :: obsfile
+    character(len=4) :: pe_name
     character(len=3) :: obtype
-    integer(i_kind) iunit, nchar, nreal, ii, mype,ios, idate, i, ipe, ioff0
-    integer(i_kind),intent(out) :: num_obs_tot, num_obs_totdiag
-    integer(i_kind),dimension(2):: nn,nobst, nobsps, nobsq, nobsuv, nobsgps, &
+    integer(i_kind)  :: iunit, nchar, nreal, ii, mype, ios, idate, i, ipe, ioff0
+    integer(i_kind),dimension(2) :: nn,nobst, nobsps, nobsq, nobsuv, nobsgps, &
          nobstcp,nobstcx,nobstcy,nobstcz,nobssst, nobsspd, nobsdw, nobsrw, nobspw
     character(8),allocatable,dimension(:):: cdiagbuf
     real(r_single),allocatable,dimension(:,:)::rdiagbuf
     real(r_kind) :: errorlimit,errorlimit2,error,pres,obmax
     real(r_kind) :: errorlimit2_obs,errorlimit2_bnd
     logical :: fexist, init_pass
+
     iunit = 7
     ! If ob error > errorlimit or < errorlimit2, skip it.
     errorlimit = 1._r_kind/sqrt(1.e9_r_kind)
@@ -224,30 +232,32 @@ subroutine get_num_convobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id
     enddo peloop ! ipe loop
 end subroutine get_num_convobs_bin
 
-
+! get number of conventional observations from netcdf file
 subroutine get_num_convobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
   use nc_diag_read_mod, only: nc_diag_read_get_var
   use nc_diag_read_mod, only: nc_diag_read_get_dim
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
+  implicit none
 
-    character (len=500), intent(in) :: obspath
-    character (len=10), intent(in) :: datestring
-    character(len=500) obsfile
-    character(len=10), intent(in) :: id
-    character(len=4) pe_name
-    character(len=3) :: obtype
-    integer(i_kind) iunit, itype, ipe, i, nobs_curr
-    integer(i_kind),intent(out) :: num_obs_tot, num_obs_totdiag
-    integer(i_kind),dimension(nobtype,2) :: nobs
-    real(r_kind) :: errorlimit,errorlimit2,error,pres,obmax
-    real(r_kind) :: errorlimit2_obs,errorlimit2_bnd
-    logical :: fexist
+  character(len=500), intent(in)  :: obspath
+  character(len=10),  intent(in)  :: datestring
+  character(len=10),  intent(in)  :: id
+  integer(i_kind),    intent(out) :: num_obs_tot, num_obs_totdiag
 
-    real(r_single), allocatable, dimension (:) :: Pressure
-    real(r_single), allocatable, dimension (:) :: Analysis_Use_Flag
-    real(r_single), allocatable, dimension (:) :: Errinv_Final, GPS_Type
-    real(r_single), allocatable, dimension (:) :: Observation, v_Observation
-    real(r_single), allocatable, dimension (:) :: Forecast_Saturation_Spec_Hum
+  character(len=500) :: obsfile
+  character(len=4) :: pe_name
+  character(len=3) :: obtype
+  integer(i_kind) :: iunit, itype, ipe, i, nobs_curr
+  integer(i_kind),dimension(nobtype,2) :: nobs
+  real(r_kind) :: errorlimit,errorlimit2,error,pres,obmax
+  real(r_kind) :: errorlimit2_obs,errorlimit2_bnd
+  logical :: fexist
+
+  real(r_single), allocatable, dimension (:) :: Pressure
+  real(r_single), allocatable, dimension (:) :: Analysis_Use_Flag
+  real(r_single), allocatable, dimension (:) :: Errinv_Final, GPS_Type
+  real(r_single), allocatable, dimension (:) :: Observation, v_Observation
+  real(r_single), allocatable, dimension (:) :: Forecast_Saturation_Spec_Hum
 
     ! If ob error > errorlimit or < errorlimit2, skip it.
     errorlimit = 1._r_kind/sqrt(1.e9_r_kind)
@@ -382,6 +392,7 @@ subroutine get_num_convobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
 
 end subroutine get_num_convobs_nc
 
+! read conventional observations
 subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
                             x_lon, x_lat, x_press, x_time, x_code,         &
@@ -419,6 +430,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
   endif
 end subroutine get_convobs_data
 
+! read conventional observations from netcdf file
 subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
                             x_lon, x_lat, x_press, x_time, x_code,         &
@@ -524,7 +536,6 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
            call nc_diag_read_close(obsfile)
            cycle peloop
         endif
-
 
         allocate(Latitude(nobs), Longitude(nobs), Pressure(nobs), Time(nobs), &
                  Analysis_Use_Flag(nobs), Errinv_Input(nobs), Errinv_Final(nobs), &
@@ -815,6 +826,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
 end subroutine get_convobs_data_nc
 
+! read conventional observation from binary files
 subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
                             x_lon, x_lat, x_press, x_time, x_code,         &
@@ -1230,9 +1242,9 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
 ! writing spread diagnostics
 subroutine write_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, &
                               x_fit, x_sprd, x_used, id, id2, gesid2)
-
+  implicit none
   character*500, intent(in) :: obspath
-  character*10, intent(in) :: datestring
+  character*10,  intent(in) :: datestring
 
   integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
 
@@ -1243,7 +1255,7 @@ subroutine write_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, &
 
   if (netcdf_diag) then
     call write_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
-                              x_fit, x_sprd, x_used, id, id2, gesid2)
+                              x_fit, x_sprd, x_used, id, gesid2)
   else
     call write_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, &
                               x_fit, x_sprd, x_used, id, id2, gesid2)
@@ -1251,10 +1263,10 @@ subroutine write_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, &
 end subroutine write_convobs_data
 
 
-! writing spread diagnostics
+! writing spread diagnostics to binary file
 subroutine write_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, &
                               x_fit, x_sprd, x_used, id, id2, gesid2)
-
+  implicit none
   character*500, intent(in) :: obspath
   character*10, intent(in) :: datestring
   
@@ -1416,13 +1428,18 @@ subroutine write_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, &
 
  end subroutine write_convobs_data_bin
 
-! writing spread diagnostics
+! writing spread diagnostics to netcdf file
 subroutine write_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
-                                 x_fit, x_sprd, x_used, id, id2, gesid2)
+                                 x_fit, x_sprd, x_used, id, gesid)
   use nc_diag_read_mod, only: nc_diag_read_get_dim
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
-  use nc_diag_write_mod, only: nc_diag_init, nc_diag_metadata, nc_diag_write
+
+  use netcdf, only: nf90_inq_dimid, nf90_open, nf90_close, &
+                    NF90_WRITE
+  use ncdw_climsg, only: nclayer_check
+
   use constants, only: r_missing
+  implicit none
 
   character*500, intent(in) :: obspath
   character*10, intent(in) :: datestring
@@ -1432,72 +1449,107 @@ subroutine write_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
   real(r_single), dimension(nobs_max), intent(in)      :: x_fit, x_sprd
   integer(i_kind), dimension(nobs_maxdiag), intent(in) :: x_used
 
-  character(len=10), intent(in) :: id, id2, gesid2
-
+  character(len=10), intent(in) :: id, gesid
 
   character*500 obsfile
   character(len=4) pe_name
 
   character(len=3) :: obtype
-  integer(i_kind) :: iunit
-  integer(i_kind) :: nob, nobdiag, nobs, n, ipe, i
-  integer(i_kind) :: enkf_use_flag
-  real(r_single)  :: enkf_fit, enkf_sprd
+  integer(i_kind) :: iunit, nobsid
+  integer(i_kind) :: nob, nobdiag, nobs, ipe, i, itype
+  integer(i_kind), dimension(:), allocatable :: enkf_use_flag, enkf_use_flag_v
+  real(r_single),  dimension(:), allocatable :: enkf_fit, enkf_fit_v
+  real(r_single),  dimension(:), allocatable :: enkf_sprd, enkf_sprd_v
   logical :: fexist
 
   nob  = 0
   nobdiag = 0
 
-  peloop: do ipe=0,npefiles
 
-    write(pe_name,'(i4.4)') ipe
-    if (npefiles .eq. 0) then
-       ! diag file (concatenated pe* files)
-       obsfile = trim(adjustl(obspath))//"diag_conv_ges."//datestring//'_'//trim(adjustl(id))
-       inquire(file=obsfile,exist=fexist)
-       if (.not. fexist .or. datestring .eq. '0000000000') then
-          obsfile = trim(adjustl(obspath))//"diag_conv_ges."//trim(adjustl(id))
-       endif
-    else ! read raw, unconcatenated pe* files.
-       obsfile = trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.conv_01'
-    endif
-    obsfile = trim(obsfile)//'.nc4'
+  obtypeloop: do itype=1, nobtype
 
-    inquire(file=obsfile,exist=fexist)
-    if (.not. fexist) cycle peloop
-       
+     obtype = obtypes(itype)
+     peloop: do ipe=0,npefiles
 
-    call nc_diag_read_init(obsfile, iunit)
-    nobs = nc_diag_read_get_dim(iunit,'nobs')
-    call nc_diag_read_close(obsfile)
+        write(pe_name,'(i4.4)') ipe
+        if (npefiles .eq. 0) then
+           ! read diag file (concatenated pe* files)
+           obsfile = trim(adjustl(obspath))//"diag_conv_"//trim(adjustl(obtype))//"_ges."//datestring//'_'//trim(adjustl(id))//'.nc4'
+           inquire(file=obsfile,exist=fexist)
+           if (.not. fexist .or. datestring .eq. '0000000000') &
+              obsfile = trim(adjustl(obspath))//"diag_conv_"//trim(adjustl(obtype))//"_ges."//trim(adjustl(id))//'.nc4'
+        else ! read raw, unconcatenated pe* files.
+           obsfile = &
+              trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.conv_'//trim(adjustl(obtype))//'_01.nc4'
+        endif
 
-    call nc_diag_init(obsfile, append=.true.)
+        inquire(file=obsfile,exist=fexist)
+        if (.not. fexist) cycle peloop
 
-    do i = 1, nobs
-       enkf_use_flag = -1
-       enkf_fit = r_missing
-       enkf_sprd = r_missing
+        call nc_diag_read_init(obsfile, iunit)
+        nobs = nc_diag_read_get_dim(iunit,'nobs')
+        call nc_diag_read_close(obsfile)
 
-       nobdiag = nobdiag + 1
+        if (nobs <= 0)  cycle peloop
 
-       ! skip if not used in EnKF
-       if (x_used(nobdiag) == 1) then
-          ! update if it is used in EnKF
-          nob = nob + 1
-          enkf_use_flag = 1
-          enkf_fit = x_fit(nob)
-          enkf_sprd = x_sprd(nob)
-       endif
+        allocate(enkf_use_flag(nobs), enkf_fit(nobs), enkf_sprd(nobs))
+        enkf_use_flag = -1
+        enkf_fit  = r_missing
+        enkf_sprd = r_missing
 
-       call nc_diag_metadata("EnKF_use_flag", enkf_use_flag)
-       call nc_diag_metadata("Ens_mean_fit",  enkf_fit)
-       call nc_diag_metadata("Ens_spread",    enkf_sprd)
+        if (obtype == ' uv') then
+           allocate(enkf_use_flag_v(nobs), enkf_fit_v(nobs), enkf_sprd_v(nobs))
+           enkf_use_flag_v = -1
+           enkf_fit_v  = r_missing
+           enkf_sprd_v = r_missing
+        endif
 
-    enddo
 
-    call nc_diag_write
+        do i = 1, nobs
+           nobdiag = nobdiag + 1
 
-  enddo peloop ! ipe loop
+           ! skip if not used in EnKF
+           if (x_used(nobdiag) == 1) then
+              ! update if it is used in EnKF
+              nob = nob + 1
+              enkf_use_flag(i) = 1
+              enkf_fit(i)  = x_fit(nob)
+              enkf_sprd(i) = x_sprd(nob)
+              if (obtype== ' uv') then
+                 nob = nob + 1
+                 enkf_use_flag_v(i) = 1
+                 enkf_fit_v(i)  = x_fit(nob)
+                 enkf_sprd_v(i) = x_sprd(nob)
+              endif
+           endif
+        enddo
+
+        call nclayer_check(nf90_open(obsfile, NF90_WRITE, iunit))
+        call nclayer_check(nf90_inq_dimid(iunit, "nobs", nobsid))
+        
+        if (obtype == ' uv')  then
+           call write_ncvar_int(iunit, nobsid, "u_EnKF_use_flag", enkf_use_flag)
+           call write_ncvar_int(iunit, nobsid, "v_EnKF_use_flag", enkf_use_flag_v)
+           deallocate(enkf_use_flag, enkf_use_flag_v)
+           call write_ncvar_single(iunit, nobsid, "u_EnKF_fit_"//trim(gesid), enkf_fit)
+           call write_ncvar_single(iunit, nobsid, "v_EnKF_fit_"//trim(gesid), enkf_fit_v)
+           deallocate(enkf_fit, enkf_fit_v)
+           call write_ncvar_single(iunit, nobsid, "u_EnKF_spread_"//trim(gesid), enkf_sprd)
+           call write_ncvar_single(iunit, nobsid, "v_EnKF_spread_"//trim(gesid), enkf_sprd_v)
+           deallocate(enkf_sprd, enkf_sprd_v)
+        else
+           call write_ncvar_int(iunit, nobsid, "EnKF_use_flag", enkf_use_flag)
+           deallocate(enkf_use_flag)
+           call write_ncvar_single(iunit, nobsid, "EnKF_fit_"//trim(gesid), enkf_fit)
+           deallocate(enkf_fit)
+           call write_ncvar_single(iunit, nobsid, "EnKF_spread_"//trim(gesid), enkf_sprd)
+           deallocate(enkf_sprd)
+        endif
+        
+        call nclayer_check(nf90_close(iunit))
+
+     enddo peloop ! ipe loop
+  enddo obtypeloop
 
   if (nob .ne. nobs_max) then
       print *,'number of obs not what expected in write_convobs_data',nob,nobs_max
@@ -1507,6 +1559,43 @@ subroutine write_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
       print *,'number of total obs in diag not what expected in write_convobs_data',nobdiag, nobs_maxdiag
       call stop2(94)
   endif
+
+  contains
+  subroutine write_ncvar_single(iunit, dimid, varname, field)
+    use netcdf, only: nf90_def_var, nf90_put_var, nf90_inq_varid,  &
+                      NF90_FLOAT, NF90_ENOTVAR
+    use ncdw_climsg, only: nclayer_check
+    implicit none
+    integer(i_kind), intent(in)  :: iunit, dimid
+    character(*), intent(in)     :: varname
+    real(r_single), dimension(:), allocatable :: field
+
+    integer :: ierr, varid
+
+    ierr = nf90_inq_varid(iunit, varname, varid)
+    if (ierr == NF90_ENOTVAR) then
+       call nclayer_check(nf90_def_var(iunit, varname, NF90_FLOAT, dimid, varid))
+    endif
+    call nclayer_check(nf90_put_var(iunit, varid, field))
+  end subroutine write_ncvar_single
+
+  subroutine write_ncvar_int(iunit, dimid, varname, field)
+    use netcdf, only: nf90_def_var, nf90_put_var, nf90_inq_varid,  &
+                      NF90_INT, NF90_ENOTVAR
+    use ncdw_climsg, only: nclayer_check
+    implicit none
+    integer(i_kind), intent(in)  :: iunit, dimid
+    character(*), intent(in)     :: varname
+    integer(i_kind), dimension(:), allocatable :: field
+
+    integer :: ierr, varid
+
+    ierr = nf90_inq_varid(iunit, varname, varid)
+    if (ierr == NF90_ENOTVAR) then
+       call nclayer_check(nf90_def_var(iunit, varname, NF90_INT, dimid, varid))
+    endif
+    call nclayer_check(nf90_put_var(iunit, varid, field))
+  end subroutine write_ncvar_int
 
 end subroutine write_convobs_data_nc
 

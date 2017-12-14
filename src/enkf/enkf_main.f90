@@ -218,7 +218,8 @@ program enkf_main
  if(fso_cycling) then
     no_inflate_flag=.true.
     t1 = mpi_wtime()
-!    call write_ensemble(no_inflate_flag)
+    call gather_chunks()
+    call write_control(no_inflate_flag)
     t2 = mpi_wtime()
     if (nproc == 0) print *,'time in write_ensemble wo/inflation =',t2-t1,'on proc',nproc
  end if
@@ -233,7 +234,6 @@ program enkf_main
  if (write_spread_diag) then
     t1 = mpi_wtime()
     call write_obsstats()
-    call mpi_barrier(mpi_comm_world, ierr)
     t2 = mpi_wtime()
     if (nproc == 0) print *,'time in write_obsstats =',t2-t1,'on proc',nproc
   endif
