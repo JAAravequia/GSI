@@ -93,7 +93,7 @@
   integer(i_kind) :: tsen_ind, ql_ind, qi_ind, prse_ind
   integer(i_kind) :: ps_ind, pst_ind, sst_ind
 
-  integer(i_kind) :: k,nt,iunitsig,iret,nb, i,idvc,nlonsin,nlatsin,nlevsin
+  integer(i_kind) :: k,iunitsig,iret,nb, i,idvc,nlonsin,nlatsin,nlevsin
   logical ice
 
   backgroundloop: do nb=1,ntimes
