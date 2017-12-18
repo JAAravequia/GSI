@@ -125,7 +125,6 @@ subroutine get_num_satobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
                obsfile =&
                trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'
            endif
-           if (netcdf_diag) obsfile = trim(obsfile)//'.nc4'
 
            inquire(file=obsfile,exist=fexist)
            if (.not.fexist) cycle peloop
@@ -223,16 +222,15 @@ subroutine get_num_satobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
            write(pe_name,'(i4.4)') ipe
            if (npefiles .eq. 0) then
                ! read diag file (concatenated pe* files)
-               obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//datestring//'_'//trim(adjustl(id))
+               obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//datestring//'_'//trim(adjustl(id))//".nc4"
                inquire(file=obsfile,exist=fexist)
                if (.not. fexist .or. datestring .eq. '0000000000') &
-               obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//trim(adjustl(id))
+               obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//trim(adjustl(id))//".nc4"
            else ! read raw, unconcatenated pe* files.
                obsfile =&
-               trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'
+               trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'//".nc4"
            endif
 
-           if (netcdf_diag) obsfile = trim(obsfile)//'.nc4'
 
            inquire(file=obsfile,exist=fexist)
            if (.not.fexist) cycle peloop
@@ -427,7 +425,6 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
          obsfile =&
          trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'
      endif
-     if (netcdf_diag) obsfile = trim(obsfile)//'.nc4'
 
      inquire(file=obsfile,exist=fexist)
      if(.not.fexist) cycle peloop
@@ -450,7 +447,6 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
           obsfile2 =&
           trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id2))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'
        endif
-       if (netcdf_diag) obsfile2 = trim(obsfile2)//'.nc4'
 
        call open_radiag(obsfile2, iunit2)
 
@@ -692,15 +688,14 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
      write(pe_name,'(i4.4)') ipe
      if (npefiles .eq. 0) then
          ! read diag file (concatenated pe* files)
-         obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//datestring//'_'//trim(adjustl(id))
+         obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//datestring//'_'//trim(adjustl(id))//".nc4"
          inquire(file=obsfile,exist=fexist)
          if (.not. fexist .or. datestring .eq. '0000000000') &
-         obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//trim(adjustl(id))
+         obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//trim(adjustl(id))//".nc4"
      else ! read raw, unconcatenated pe* files.
          obsfile =&
-         trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'
+         trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01.nc4'
      endif
-     if (netcdf_diag) obsfile = trim(obsfile)//'.nc4'
 
      inquire(file=obsfile,exist=fexist)
      if(.not.fexist) cycle peloop
@@ -756,15 +751,14 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
      if(twofiles)then
         if (npefiles .eq. 0)  then
           ! read diag file (concatenated pe* files)
-          obsfile2 = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//datestring//'_'//trim(adjustl(id2))
+          obsfile2 = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//datestring//'_'//trim(adjustl(id2))//".nc4"
           inquire(file=obsfile2,exist=fexist2)
           if (.not. fexist2 .or. datestring .eq. '0000000000') &
-          obsfile2 = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//trim(adjustl(id2))
+          obsfile2 = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//trim(adjustl(id2))//".nc4"
        else ! read raw, unconcatenated pe* files.
           obsfile2 =&
-          trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id2))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'
+          trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id2))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'//".nc4"
        endif
-       if (netcdf_diag) obsfile2 = trim(obsfile2)//'.nc4'
 
        call nc_diag_read_init(obsfile2, iunit2)
 
@@ -1147,16 +1141,14 @@ subroutine write_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
      write(pe_name,'(i4.4)') ipe
      if (npefiles .eq. 0) then
         ! diag file (concatenated pe* files)
-        obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//datestring//'_'//trim(adjustl(id))
+        obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//datestring//'_'//trim(adjustl(id))//".nc4"
         inquire(file=obsfile,exist=fexist)
         if (.not. fexist .or. datestring .eq. '0000000000') then
-           obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//trim(adjustl(id))
+           obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//trim(adjustl(id))//".nc4"
         endif
      else ! raw, unconcatenated pe* files.
-        obsfile = trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'
+        obsfile = trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'//".nc4"
      endif
-
-     obsfile = trim(obsfile)//'.nc4'
 
      inquire(file=obsfile,exist=fexist)
      if (.not. fexist) cycle peloop
