@@ -582,8 +582,6 @@ contains
   ! End of routine
   
     return
-  proceed=proceed.and.ivar>0
-  call gsi_metguess_get ('var::vis' , ivar, istatus )
 end subroutine setupvis
  
 end module setupvis_mod

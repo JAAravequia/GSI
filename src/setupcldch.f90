@@ -67,7 +67,6 @@ contains
     use convinfo, only: icsubtype
     use m_dtime, only: dtime_setup, dtime_check, dtime_show
     use gsi_bundlemod, only : gsi_bundlegetpointer
-    use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
     implicit none
   
   ! Declare passed variables
@@ -575,8 +574,6 @@ contains
   ! End of routine
   
     return
-  proceed=proceed.and.ivar>0
-  call gsi_metguess_get ('var::cldch' , ivar, istatus )
 end subroutine setupcldch
  
 end module setupcldch_mod

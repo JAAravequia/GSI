@@ -177,7 +177,6 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   use setupref_mod, only: setupref_class
   use setuprw_mod, only: setuprw_class
   use setupspd_mod, only: setupspd_class
-  use setupsrw_mod, only: setupsrw_class
   use setupt_mod, only: setupt_class
   use setuptcamt_mod, only: setuptcamt_class
   use setuptcp_mod, only: setuptcp_class
@@ -225,7 +224,6 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   type(setupref_class) :: ref
   type(setuprw_class) :: rw
   type(setupspd_class) :: spd
-  type(setupsrw_class) :: srw
   type(setupt_class) :: t
   type(setuptcamt_class) :: tcamt
   type(setuptcp_class) :: tcp
@@ -256,7 +254,6 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   external:: setupref
 ! external:: setuprw
 ! external:: setupspd
-! external:: setupsrw
   external:: setupsst
 ! external:: setupt
 ! external:: setuptcp
@@ -526,7 +523,6 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
         nobs=nsat1(is)
  
         if(nobs > 0)then
-           if(mype == mype_diaghdr(is)) write(6,*) 'reading new data type--',ditype(is)
            read(lunin,iostat=ier) obstype,isis,nreal,nchanl
 !          if(mype == mype_diaghdr(is)) then
 !             write(6,300) obstype,isis,nreal,nchanl
@@ -608,10 +604,6 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
                  write(6,*) 'setting up pw'
                  call pw%setup(lunin,mype,bwork,awork(1,i_pw),nele,nobs,is,conv_diagsave)
 !                call setuppw(lunin,mype,bwork,awork(1,i_pw),nele,nobs,is,conv_diagsave)
-
-                 write(6,*) 'setting up srw'
-                 call srw%setup(lunin,mype,bwork,awork(1,i_srw),nele,nobs,is,conv_diagsave)
-!                call setupsrw(lunin,mype,bwork,awork(1,i_srw),nele,nobs,is,conv_diagsave)
 !             Set up conventional sst data
               else if(obstype=='sst' .and. getindex(svars2d,'sst')>0) then 
                  call setupsst(lunin,mype,bwork,awork(1,i_sst),nele,nobs,is,conv_diagsave)
@@ -623,17 +615,14 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
                  write(6,*) 'setting up pm2_5'
                  call pm2_5%setuppm2_5(lunin,mype,nele,nobs,isis,is,conv_diagsave)
 !                call setuppm2_5(lunin,mype,nele,nobs,isis,is,conv_diagsave)
-
               else if(obstype == 'pm10')then 
                  write(6,*) 'setting up pm10'
                  call pm10%setuppm10(lunin,mype,nele,nobs,isis,is,conv_diagsave)
 !                call setuppm10(lunin,mype,nele,nobs,isis,is,conv_diagsave)
-
 !             Set up conventional wind gust data
               else if(obstype=='gust' .and. getindex(svars2d,'gust')>0) then
                  write(6,*) 'setting up gust'
                  call gust%setup(lunin,mype,bwork,awork(1,i_gust),nele,nobs,is,conv_diagsave)
-
 !             Set up conventional visibility data
               else if(obstype=='vis' .and. getindex(svars2d,'vis')>0) then
                  write(6,*) 'setting up vis'

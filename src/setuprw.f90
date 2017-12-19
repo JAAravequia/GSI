@@ -174,9 +174,9 @@ contains
     character(8),allocatable,dimension(:):: cdiagbuf
   
     logical,dimension(nobs):: luse,muse
-  integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
+    integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
     logical proceed
-  logical include_w
+    logical include_w
   
     equivalence(rstation_id,station_id)
     real(r_kind) addelev,wrange,beamdepth,elevtop,elevbot
@@ -188,17 +188,22 @@ contains
     logical:: in_curbin, in_anybin
     integer(i_kind),dimension(nobs_bins) :: n_alloc
     integer(i_kind),dimension(nobs_bins) :: m_alloc
-  class(obsNode),pointer:: my_node
-  type(rwNode),pointer:: my_head
+    class(obsNode),pointer:: my_node
+    type(rwNode),pointer:: my_head
     type(obs_diag),pointer:: my_diag
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_w
   
     this%myname='setuprw'
-    this%numvars = 4
-    allocate(this%varnames(this%numvars))
-    this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::z', 'var::ps' /)
+    call this%check_vars_(proceed,include_w)
+    if(include_w) then
+      this%numvars = 5
+      allocate(this%varnames(this%numvars))
+      this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::z', 'var::ps', 'var::w' /)
+    else
+      this%numvars = 4
+      allocate(this%varnames(this%numvars))
+      this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::z', 'var::ps' /)
+    endif
   ! Check to see if required guess fields are available
-  call check_vars_(proceed,include_w)
     if(.not.proceed) return  ! not all vars available, simply return
   
   ! If require guess vars available, extract from bundle ...
@@ -511,18 +516,16 @@ contains
             hrdifsig,mype,nfldsig)
        call tintrp31(this%ges_v,vgesin,dlat,dlon,dpres,dtime,&
             hrdifsig,mype,nfldsig)
-     if(include_w) then
-          call tintrp31(ges_w,wgesin,dlat,dlon,dpres,dtime,&
+       if(include_w) then
+          call tintrp31(this%ges_w,wgesin,dlat,dlon,dpres,dtime,&
           hrdifsig,mype,nfldsig)
-     end if
-
-            nsig,mype,nfldsig)
+       end if
        call tintrp2a1(this%ges_v,vgesprofile,dlat,dlon,dtime,hrdifsig,&
             nsig,mype,nfldsig)
-     if(include_w) then 
-          call tintrp2a1(ges_w,wgesprofile,dlat,dlon,dtime,hrdifsig,&
+       if(include_w) then 
+          call tintrp2a1(this%ges_w,wgesprofile,dlat,dlon,dtime,hrdifsig,&
           nsig,mype,nfldsig) 
-     end if
+       end if
   
   !    Convert guess u,v wind components to radial value consident with obs
        cosazm  = cos(data(iazm,i))  ! cos(azimuth angle)
@@ -807,35 +810,15 @@ contains
   ! End of routine
   
     return
-  subroutine check_vars_ (proceed, include_w)
-  logical,intent(inout) :: include_w
-  call gsi_metguess_get ('var::w' , ivar, istatus )
-  if (ivar>0) then
-     include_w=.true.
-  else
-     include_w=.false.
-  endif
-!    get w ...
-     if(include_w) then
-        varname='w'
-        call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-        if (istatus==0) then
-            if(allocated(ges_w))then
-               write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-               call stop2(999)
-            endif
-            allocate(ges_w(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-            ges_w(:,:,:,1)=rank3
-            do ifld=2,nfldsig
-               call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-               ges_w(:,:,:,ifld)=rank3
-            enddo
-        else
-            write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle,ier= ',istatus
-            call stop2(999)
-        endif
-     end if
-    if(allocated(ges_w )) deallocate(ges_w )
+! subroutine check_vars_ (proceed, include_w)
+! logical,intent(inout) :: include_w
+! call gsi_metguess_get ('var::w' , ivar, istatus )
+! if (ivar>0) then
+!    include_w=.true.
+! else
+!    include_w=.false.
+! endif
+
 end subroutine setuprw
  
 end module setuprw_mod

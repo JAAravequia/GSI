@@ -70,7 +70,6 @@ subroutine setupwspd10m(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use convinfo, only: icsubtype
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
   use gsi_bundlemod, only : gsi_bundlegetpointer
-  use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
   implicit none
 
 ! Declare passed variables
@@ -333,13 +332,13 @@ subroutine setupwspd10m(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      vob = data(ivob,i)
      spdob=sqrt(uob*uob+vob*vob)
    psges = 1.0
-     call tintrp2a11(ges_ps,psges,dlat,dlon,dtime,hrdifsig,&
+     call tintrp2a11(this%ges_ps,psges,dlat,dlon,dtime,hrdifsig,&
           mype,nfldsig)
      call tintrp2a1(ges_lnprsl,prsltmp,dlat,dlon,dtime,hrdifsig,&
           nsig,mype,nfldsig)
 
 ! Interpolate to get wspd10m at obs location/time
-     call tintrp2a11(ges_wspd10m,spdges,dlat,dlon,dtime,hrdifsig,&
+     call tintrp2a11(this%ges_wspd10m,spdges,dlat,dlon,dtime,hrdifsig,&
           mype,nfldsig)
 
      itype=ictype(ikx)
@@ -757,11 +756,6 @@ subroutine setupwspd10m(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! End of routine
   
   return
-  call gsi_metguess_get ('var::wspd10m', ivar, istatus )
-  proceed=proceed.and.ivar>0
-    if(allocated(ges_tv  )) deallocate(ges_tv  )
-    if(allocated(ges_u   )) deallocate(ges_u   )
-    if(allocated(ges_v   )) deallocate(ges_v   )
 end subroutine setupwspd10m
  
 end module setupwspd10m_mod

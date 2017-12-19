@@ -10,6 +10,7 @@ module abstract_setup_mod
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_div
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_u
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_w
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_gust
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_wspd10m
@@ -117,6 +118,7 @@ contains
       class(abstract_setup_class)                      ,intent(inout) :: this
       if(allocated(this%ges_v )) deallocate(this%ges_v )
       if(allocated(this%ges_u )) deallocate(this%ges_u )
+      if(allocated(this%ges_w )) deallocate(this%ges_w )
       if(allocated(this%ges_z )) deallocate(this%ges_z )
       if(allocated(this%ges_ps)) deallocate(this%ges_ps)
       if(allocated(this%ges_tv)) deallocate(this%ges_tv)
@@ -145,7 +147,7 @@ contains
 
   end subroutine final_vars_
 
-  subroutine check_vars_(this,proceed)
+  subroutine check_vars_(this,proceed,include_w)
       use kinds, only: i_kind       
       use gsi_bundlemod, only : gsi_bundlegetpointer
       use gsi_metguess_mod, only : gsi_metguess_bundle
@@ -153,6 +155,7 @@ contains
       implicit none
       class(abstract_setup_class)                      ,intent(inout) :: this
       logical                                          ,intent(inout) :: proceed
+      logical                                 ,optional,intent(inout) :: include_w
       integer(i_kind) ivar, istatus, i
 
 !     write(6,*) 'in checkvars for ',this%myname,' with proceed = ',proceed
@@ -164,6 +167,7 @@ contains
          else
            proceed=proceed.and.ivar>0
          endif
+         if( present(include_w) ) include_w = (ivar > 0)
       enddo
 !     write(6,*) 'after checkvars proceed = ',proceed
   end subroutine check_vars_ 
@@ -228,6 +232,9 @@ contains
         case ('v')
           write(6,*) 'allocating ',varname
           call this%allocate_ges4(this%ges_v,varname)
+        case ('w')
+          write(6,*) 'allocating ',varname
+          call this%allocate_ges4(this%ges_w,varname)
         case ('tv')
           write(6,*) 'allocating ',varname
           call this%allocate_ges4(this%ges_tv,varname)
