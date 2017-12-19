@@ -67,6 +67,10 @@ contains
   !   2014-01-28  todling - write sensitivity slot indicator (ioff) to header of diagfile
   !   2014-12-30  derber - Modify for possibility of not using obsdiag
 !   2015-10-01  guo   - full res obvsr: index to allow redistribution of obsdiags
+!   2016-06-23  lippi  - Add vertical velocity to observation operator. Now,
+!                        costilt is multiplied here instead of factored into wij.
+!                        nml option include_w is used. Add a conditional to use 
+!                        maginnov and magoberr parameters from single ob namelist.   
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !   2016-06-24  guo     - fixed the default value of obsdiags(:,:)%tail%luse to luse(i)
 !                       . removed (%dlat,%dlon) debris.
@@ -97,7 +101,8 @@ contains
   use m_obsLList, only: obsLList_appendNode
     use obsmod, only: obs_diag,luse_obsdiag
     use gsi_4dvar, only: nobs_bins,hr_obsbin
-    use qcmod, only: npres_print,ptop,pbot,tdrerr_inflate,tdrgross_fact
+  use oneobmod, only: magoberr,maginnov,oneobtest
+  use qcmod, only: npres_print,ptop,pbot,tdrerr_inflate
     use guess_grids, only: hrdifsig,geop_hgtl,nfldsig,&
          ges_lnprsl,sfcmod_gfs,sfcmod_mm5,comp_fact10
     use gridmod, only: nsig,get_ijk
@@ -140,6 +145,7 @@ contains
     real(r_kind) sin2,termg,termr,termrg
     real(r_kind) psges,zsges,zsges0
     real(r_kind),dimension(nsig):: zges,hges,ugesprofile,vgesprofile
+  real(r_kind),dimension(nsig):: wgesprofile!,vTgesprofile,refgesprofile
     real(r_kind) prsltmp(nsig)
     real(r_kind) sfcchk  
     real(r_kind) residual,obserrlm,obserror,ratio,scale,val2
@@ -148,10 +154,10 @@ contains
     real(r_kind) cg_w,wgross,wnotgross,wgt,arg,exp_arg,term,rat_err2
     real(r_double) rstation_id
     real(r_kind) dlat,dlon,dtime,dpres,ddiff,error,slat
-    real(r_kind) sinazm,cosazm,costilt
+  real(r_kind) sinazm,cosazm,sintilt,costilt,cosazm_costilt,sinazm_costilt
     real(r_kind) ratio_errors,qcgross
-    real(r_kind) ugesin,vgesin,factw,skint,sfcr
-    real(r_kind) rwwind,presw
+  real(r_kind) ugesin,vgesin,wgesin,factw,skint,sfcr
+  real(r_kind) rwwind,presw,Vr
     real(r_kind) errinv_input,errinv_adjst,errinv_final
     real(r_kind) err_input,err_adjst,err_final
     real(r_kind),dimension(nele,nobs):: data
@@ -170,6 +176,7 @@ contains
     logical,dimension(nobs):: luse,muse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
     logical proceed
+  logical include_w
   
     equivalence(rstation_id,station_id)
     real(r_kind) addelev,wrange,beamdepth,elevtop,elevbot
@@ -184,13 +191,14 @@ contains
   class(obsNode),pointer:: my_node
   type(rwNode),pointer:: my_head
     type(obs_diag),pointer:: my_diag
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_w
   
     this%myname='setuprw'
     this%numvars = 4
     allocate(this%varnames(this%numvars))
     this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::z', 'var::ps' /)
   ! Check to see if required guess fields are available
-    call this%check_vars_(proceed)
+  call check_vars_(proceed,include_w)
     if(.not.proceed) return  ! not all vars available, simply return
   
   ! If require guess vars available, extract from bundle ...
@@ -229,6 +237,7 @@ contains
     numequal=0
     numnotequal=0
   
+
   ! If requested, save select data for output to diagnostic file
     if(conv_diagsave)then
        ii=0
@@ -425,13 +434,6 @@ contains
           pobl   = prsltmp(k1)
        end if
           
-  
-       if(data(iobs_type,i) > three .and. k1 == k2)then
-         dz     = zges(k1)-zsges 
-         dlnp   = prsltmp(k1)-log(psges) 
-         pobl   = log(psges) + (dlnp/dz)*(zob-zsges)
-       endif
-  
        presw  = ten*exp(pobl)
   
   !    Determine location in terms of grid units for midpoint of
@@ -441,11 +443,7 @@ contains
   
   !    Check to see if observation is below midpoint of first
   !    above surface layer.  If so, set rlow to that difference
-       if(data(iobs_type,i) > three)then
-         rlow=max(1-dpres,zero)
-       else
-         rlow=max(sfcchk-dpres,zero)
-       endif
+     rlow=max(sfcchk-dpres,zero)
   
   !    Check to see if observation is above midpoint of layer
   !    at the top of the model.  If so, set rhgh to that difference.
@@ -508,29 +506,43 @@ contains
   
        if(dpres < zero .or. dpres > rsig)ratio_errors = zero
   
-  !    Interpolate guess u and v to observation location and time.
+!    Interpolate guess u, v, and w to observation location and time.
        call tintrp31(this%ges_u,ugesin,dlat,dlon,dpres,dtime,&
             hrdifsig,mype,nfldsig)
        call tintrp31(this%ges_v,vgesin,dlat,dlon,dpres,dtime,&
             hrdifsig,mype,nfldsig)
-       call tintrp2a1(this%ges_u,ugesprofile,dlat,dlon,dtime,hrdifsig,&
+     if(include_w) then
+          call tintrp31(ges_w,wgesin,dlat,dlon,dpres,dtime,&
+          hrdifsig,mype,nfldsig)
+     end if
+
             nsig,mype,nfldsig)
        call tintrp2a1(this%ges_v,vgesprofile,dlat,dlon,dtime,hrdifsig,&
             nsig,mype,nfldsig)
-       
-  
+     if(include_w) then 
+          call tintrp2a1(ges_w,wgesprofile,dlat,dlon,dtime,hrdifsig,&
+          nsig,mype,nfldsig) 
+     end if
   
   !    Convert guess u,v wind components to radial value consident with obs
        cosazm  = cos(data(iazm,i))  ! cos(azimuth angle)
        sinazm  = sin(data(iazm,i))  ! sin(azimuth angle)
-       costilt = cos(data(itilt,i))  ! cos(tilt angle)
+     costilt = cos(data(itilt,i)) ! cos(tilt angle)
+     sintilt = sin(data(itilt,i)) ! sin(tilt angle)
+     cosazm_costilt = cosazm*costilt
+     sinazm_costilt = sinazm*costilt
+     !vTgesprofile= 5.40_r_kind*(exp((refgesprofile -43.1_r_kind)/17.5_r_kind)) 
   !    rwwind = (ugesin*cosazm+vgesin*sinazm)*costilt*factw
        umaxmax=-huge(umaxmax)
        uminmin=huge(uminmin)
        kminmin=kbeambot
        kmaxmax=kbeamtop
        do k=kbeambot,kbeamtop
-          rwwindprofile=(ugesprofile(k)*cosazm+vgesprofile(k)*sinazm)*costilt
+        rwwindprofile=ugesprofile(k)*cosazm_costilt+vgesprofile(k)*sinazm_costilt
+        if(include_w) then
+           rwwindprofile=rwwindprofile+wgesprofile(k)*sintilt 
+        end if
+        
           if(umaxmax<rwwindprofile) then
              umaxmax=rwwindprofile
              kmaxmax=k
@@ -557,6 +569,15 @@ contains
        
        ddiff = data(irwob,i) - rwwind
   
+!    If requested, setup for single obs test.
+     if(oneobtest) then
+        ddiff=maginnov
+        Vr=ddiff+rwwind
+        error=one/magoberr
+        ratio_errors=one
+     end if
+
+
   !    adjust obs error for TDR data
        if(data(iobs_type,i) > three .and. ratio_errors*error > tiny_r_kind &
           .and. tdrerr_inflate) then
@@ -569,11 +590,7 @@ contains
        obserrlm = max(cermin(ikx),min(cermax(ikx),obserror))
        residual = abs(ddiff)
        ratio    = residual/obserrlm
-       if(data(iobs_type,i) > three) then
-          qcgross=cgross(ikx)*tdrgross_fact
-       else
-          qcgross=cgross(ikx)
-       end if
+     qcgross=cgross(ikx)
   
        if (ratio > qcgross .or. ratio_errors < tiny_r_kind) then
           if (luse(i)) awork(4) = awork(4)+one
@@ -661,14 +678,15 @@ contains
   !       Set (i,j,k) indices of guess gridpoint that bound obs location
         my_head%dlev = dpres
         my_head%factw= factw
-        call get_ijk(mm1,dlat,dlon,dpres,my_head%ij(1),my_head%wij(1))
+        call get_ijk(mm1,dlat,dlon,dpres,my_head%ij,my_head%wij)
   
           do j=1,8
-           my_head%wij(j)=factw*costilt*my_head%wij(j)  
+           my_head%wij(j)=factw*my_head%wij(j)  
           end do
         my_head%raterr2 = ratio_errors**2  
-        my_head%cosazm  = cosazm
-        my_head%sinazm  = sinazm
+        my_head%cosazm_costilt = cosazm_costilt
+        my_head%sinazm_costilt = sinazm_costilt
+        my_head%sintilt = sintilt
         my_head%res     = ddiff
         my_head%err2    = error**2
         my_head%time    = dtime
@@ -789,6 +807,35 @@ contains
   ! End of routine
   
     return
+  subroutine check_vars_ (proceed, include_w)
+  logical,intent(inout) :: include_w
+  call gsi_metguess_get ('var::w' , ivar, istatus )
+  if (ivar>0) then
+     include_w=.true.
+  else
+     include_w=.false.
+  endif
+!    get w ...
+     if(include_w) then
+        varname='w'
+        call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+        if (istatus==0) then
+            if(allocated(ges_w))then
+               write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+               call stop2(999)
+            endif
+            allocate(ges_w(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+            ges_w(:,:,:,1)=rank3
+            do ifld=2,nfldsig
+               call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+               ges_w(:,:,:,ifld)=rank3
+            enddo
+        else
+            write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle,ier= ',istatus
+            call stop2(999)
+        endif
+     end if
+    if(allocated(ges_w )) deallocate(ges_w )
 end subroutine setuprw
  
 end module setuprw_mod

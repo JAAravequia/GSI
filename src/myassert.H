@@ -34,7 +34,6 @@
 	! This implementation allows multiple-"#include" in the same
 	! source file.
 
-
 #ifndef ALWAYS_ASSERT
 #ifdef POUND_FOR_STRINGIFY
 #define ALWAYS_ASSERT(EX) If (.not. (EX) ) call assert_(#EX ,__FILE__,__LINE__)

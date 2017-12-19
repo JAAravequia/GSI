@@ -23,7 +23,7 @@
      lwrite_peakwt,use_limit,lrun_subdirs,l_foreaft_thin,&
      obsmod_init_instr_table,obsmod_final_instr_table
   use obsmod, only: luse_obsdiag
-  use aircraftinfo, only: init_aircraft,aircraft_t_bc_pof,aircraft_t_bc, &
+  use aircraftinfo, only: init_aircraft,hdist_aircraft,aircraft_t_bc_pof,aircraft_t_bc, &
                           aircraft_t_bc_ext,biaspredt,upd_aircraft,cleanup_tail
   use obs_sensitivity, only: lobsensfc,lobsensincr,lobsensjb,lsensrecompute, &
                              lobsensadj,lobsensmin,iobsconv,llancdone,init_obsens
@@ -44,26 +44,23 @@
   use ozinfo, only: diag_ozone,init_oz
   use aeroinfo, only: diag_aero, init_aero, init_aero_vars, final_aero_vars
   use coinfo, only: diag_co,init_co
-  use convinfo, only: init_convinfo,npred_conv_max, &
-                      id_bias_ps,id_bias_t,id_bias_spd, &
-                      conv_bias_ps,conv_bias_t,conv_bias_spd, &
-                      stndev_conv_ps,stndev_conv_t,stndev_conv_spd,diag_conv,&
-                      id_bias_pm2_5,conv_bias_pm2_5,&
-                      id_bias_pm10,conv_bias_pm10,&
+  use convinfo, only: init_convinfo, &
+                      diag_conv,&
                       use_prepb_satwnd,id_drifter
 
   use oneobmod, only: oblon,oblat,obpres,obhourset,obdattim,oneob_type,&
-     oneobtest,magoberr,maginnov,init_oneobmod,pctswitch,lsingleradob,obchan
-  use balmod, only: fstat
+     oneobtest,magoberr,maginnov,init_oneobmod,pctswitch,lsingleradob,obchan,&
+     anaz_rw,anel_rw,range_rw,sstn,lsingleradar,singleradar,learthrel_rw
+  use balmod, only: init_balmod,fstat,lnobalance
   use turblmod, only: use_pbl,init_turbl
   use qcmod, only: dfact,dfact1,create_qcvars,destroy_qcvars,&
-      erradar_inflate,tdrerr_inflate,tdrgross_fact,use_poq7,qc_satwnds,&
+      erradar_inflate,tdrerr_inflate,use_poq7,qc_satwnds,&
       init_qcvars,vadfile,noiqc,c_varqc,qc_noirjaco3,qc_noirjaco3_pole,&
-      buddycheck_t,buddydiag_save,njqc,vqc
+      buddycheck_t,buddydiag_save,njqc,vqc,closest_obs,vadwnd_l2rw_qc
   use pcpinfo, only: npredp,diag_pcp,dtphys,deltim,init_pcp
   use jfunc, only: iout_iter,iguess,miter,factqmin,factqmax, &
      factv,factl,factp,factg,factw10m,facthowv,factcldch,niter,niter_no_qc,biascor,&
-     init_jfunc,qoption,cwoption,switch_on_derivatives,tendsflag,l_foto,jiterstart,jiterend,R_option,&
+     init_jfunc,qoption,cwoption,switch_on_derivatives,tendsflag,jiterstart,jiterend,R_option,&
      bcoption,diurnalbc,print_diag_pcg,tsensible,lgschmidt,diag_precon,step_start,pseudo_q2,&
      clip_supersaturation
   use state_vectors, only: init_anasv,final_anasv
@@ -90,7 +87,7 @@
      use_gfs_nemsio,use_readin_anl_sfcmask,use_sp_eqspace,final_grid_vars,&
      jcap_gfs,nlat_gfs,nlon_gfs,jcap_cut,wrf_mass_hybridcord
   use guess_grids, only: ifact10,sfcmod_gfs,sfcmod_mm5,use_compress,nsig_ext,gpstop
-  use gsi_io, only: init_io,lendian_in
+  use gsi_io, only: init_io,lendian_in,verbose
   use regional_io_mod, only: regional_io_class
   use wrf_params_mod, only: update_pint, preserve_restart_date
   use constants, only: zero,one,init_constants,gps_constants,init_constants_derived,three
@@ -139,6 +136,8 @@
   use gfs_stratosphere, only: init_gfs_stratosphere,use_gfs_stratosphere,pblend0,pblend1
   use gfs_stratosphere, only: broadcast_gfs_stratosphere_vars
   use general_commvars_mod, only: init_general_commvars,destroy_general_commvars
+  use radiance_mod, only: radiance_mode_init,radiance_mode_destroy, &
+       radiance_obstype_destroy,radiance_parameter_cloudy_destroy
   use gsi_nstcouplermod, only: gsi_nstcoupler_init_nml
   use gsi_nstcouplermod, only: nst_gsi,nstinfo,zsea1,zsea2,fac_dtl,fac_tsl
 
@@ -322,15 +321,27 @@
 !  01-13-2015 Ladwig    added option l_numconc
 !  09-01-2015 Hu        added option l_closeobs
 !  10-01-2015 guo       option to redistribute observations in 4d observer mode
+!  07-20-2015 zhu       re-structure codes for enabling all-sky/aerosol radiance assimilation, 
+!                       add radiance_mode_init, radiance_mode_destroy & radiance_obstype_destroy
 !  03-02-2016 s.liu/carley - remove use_reflectivity and use i_gsdcldanal_type
 !  03-10-2016 ejones    add control for gmi noise reduction
 !  03-25-2016 ejones    add control for amsr2 noise reduction
+!  04-18-2016 Yang      add closest_obs for selecting obs. from multi-report at a surface observation.
 !  06-24-2016 j. guo    added alwaysLocal => m_obsdiags::obsdiags_alwaysLocal to
 !                       namelist /SETUP/.
+!  08-12-2016 lippi     added namelist parameters for single radial wind
+!                       experiment (anaz_rw,anel_rw,range_rw,sstn,lsingleradar,
+!                       singleradar,learthrel_rw). added a radar station look-up
+!                       table.
 !  08-12-2016 Mahajan   NST stuff belongs in NST module, Adding a NST namelist
 !                       option
+!  08-24-2016 lippi     added nml option lnobalance to zero out all balance correlation
+!                       matricies for univariate analysis.
 !  08-28-2016 li - tic591: add use_readin_anl_sfcmask for consistent sfcmask
 !                          between analysis grids and others
+!  12-14-2016 lippi     added nml variable learthrel_rw for single radial
+!                       wind observation test, and nml option for VAD QC
+!                       vadwnd_l2rw_qc of level 2 winds.
 !  02-02-2017 Hu        added option i_coastline to turn on the observation
 !                              operator for surface observations along the coastline area
 !  04-01-2017 Hu        added option i_gsdqc to turn on special observation qc
@@ -340,7 +351,7 @@
 !-------------------------------------------------------------------------
 
 ! Declare variables.
-  logical:: writediag
+  logical:: writediag,l_foto
   integer(i_kind) i,ngroup
 
 
@@ -415,7 +426,6 @@
 !                           (to be used eventually for time derivatives, dynamic constraints,
 !                            and observation forward models that need horizontal derivatives)
 !     tendsflag - if true, compute time tendencies
-!     l_foto   - option for First-Order Time extrapolation to Observation
 !     sfcmodel - if true, then use boundary layer forward model for surface temperature data.
 !     dtbduv_on - if true, use d(microwave brightness temperature)/d(uv wind) in inner loop
 !     ifact10 - flag for recomputing 10m wind factor
@@ -513,11 +523,7 @@
        diag_rad,diag_pcp,diag_conv,diag_ozone,diag_aero,diag_co,iguess, &
        write_diag,reduce_diag, &
        oneobtest,sfcmodel,dtbduv_on,ifact10,l_foto,offtime_data,&
-       npred_conv_max,&
-       id_bias_ps,id_bias_t,id_bias_spd, &
-       conv_bias_ps,conv_bias_t,conv_bias_spd, &
-       id_bias_pm2_5,conv_bias_pm2_5,id_bias_pm10,conv_bias_pm10, &
-       stndev_conv_ps,stndev_conv_t,stndev_conv_spd,use_pbl,use_compress,nsig_ext,gpstop,&
+       use_pbl,use_compress,nsig_ext,gpstop,&
        perturb_obs,perturb_fact,oberror_tune,preserve_restart_date, &
        crtm_coeffs_path,berror_stats, &
        newpc4pred,adp_anglebc,angord,passive_bc,use_edges,emiss_bc,upd_pred, &
@@ -534,7 +540,7 @@
        lwrite_peakwt, use_gfs_nemsio,liauon,use_prepb_satwnd,l4densvar,ens_nstarthr,&
        use_gfs_stratosphere,pblend0,pblend1,step_start,diag_precon,lrun_subdirs,&
        use_sp_eqspace,lnested_loops,lsingleradob,thin4d,use_readin_anl_sfcmask,&
-       luse_obsdiag,id_drifter
+       luse_obsdiag,id_drifter,verbose,lsingleradar,singleradar,lnobalance
 
 ! GRIDOPTS (grid setup variables,including regional specific variables):
 !     jcap     - spectral resolution
@@ -704,7 +710,6 @@
 !     dfact1   - time factor for duplicate obs at same location for conv. data
 !     erradar_inflate - radar error inflation factor
 !     tdrerr_inflate - logical for tdr obs error inflation
-!     tdrgross_fact - factor applies to tdr gross error
 !     oberrflg - logical for reading in new obs error table (if set to true)
 !     vadfile  - character(10) variable holding name of vadwnd bufr file
 !     noiqc    - logical flag to bypass OIQC (if set to true)
@@ -726,12 +731,16 @@
 !     buddydiag_save - When true, output files containing buddy check QC info for all
 !                      obs run through the buddy check
 !     njqc  -  When true, use Purser''s non linear QC
+!     vqc   -  when true, use ECMWF's non linear QC
+!     closest_obs- when true, choose the timely closest surface observation from
+!     multiple observations at a station.  Currently only applied to Ceiling
+!     height and visibility.
 
-  namelist/obsqc/ dfact,dfact1,erradar_inflate,tdrerr_inflate,tdrgross_fact,oberrflg,&
+  namelist/obsqc/ dfact,dfact1,erradar_inflate,tdrerr_inflate,oberrflg,&
        vadfile,noiqc,c_varqc,blacklst,use_poq7,hilbert_curve,tcp_refps,tcp_width,&
        tcp_ermin,tcp_ermax,qc_noirjaco3,qc_noirjaco3_pole,qc_satwnds,njqc,vqc,&
        aircraft_t_bc_pof,aircraft_t_bc,aircraft_t_bc_ext,biaspredt,upd_aircraft,cleanup_tail,&
-       buddycheck_t,buddydiag_save
+       hdist_aircraft,buddycheck_t,buddydiag_save,closest_obs,vadwnd_l2rw_qc
 
 ! OBS_INPUT (controls input data):
 !      dmesh(max(dthin))- thinning mesh for each group
@@ -758,7 +767,7 @@
 
   namelist/singleob_test/maginnov,magoberr,oneob_type,&
        oblat,oblon,obpres,obdattim,obhourset,pctswitch,&
-       obchan
+       obchan,anel_rw,anaz_rw,range_rw,sstn,learthrel_rw
 
 ! SUPEROB_RADAR (level 2 bufr file to radar wind superobs):
 !      del_azimuth     - azimuth range for superob box  (default 5 degrees)
@@ -1039,6 +1048,7 @@
   call gsi_chemguess_init
   call init_anasv
   call init_anacv
+  call radiance_mode_init
 
   call init_constants_derived
   call init_oneobmod
@@ -1051,6 +1061,7 @@
   call init_co
   call init_convinfo
   call init_jfunc
+  call init_balmod
   call init_berror
   call init_anberror  ! RTodling: alloc vectors should move to create
   call init_grid
@@ -1312,7 +1323,7 @@
      if (mype==0) write(6,*)'GSIMOD:  ***WARNING*** reset perturb_obs=',perturb_obs
   endif
 
-! Force turn of cloud analysis and hydrometeor IO
+! Force turn off cloud analysis and hydrometeor IO
   if (i_gsdcldanal_type==0) then
      l_cloud_analysis = .false.
      if (mype==0) write(6,*)'GSIMOD:  ***WARNING*** set l_cloud_analysis=false'
@@ -1365,8 +1376,9 @@
 ! For now if wrf mass or 2dvar no dynamic constraint
   if (l_tlnmc) tendsflag=.true.
   if (l_foto) then
-     tendsflag=.true.
-     if(mype == 0)write(6,*) 'Warning foto option will be removed in the near future'
+     if(mype == 0)write(6,*) 'Warning foto option has been removed'
+     call stop2(899)
+      
   end if
   if (tendsflag) switch_on_derivatives=.true.
 
@@ -1434,6 +1446,11 @@
      dtype(1)=oneob_type
      if(dtype(1)=='u' .or. dtype(1)=='v')dtype(1)='uv'
      dsis(1)=dtype(1)
+     if(trim(dtype(1))=='rw') then ! Reset some values for radial wind single ob.
+        dfile(1)='l2rwbufr'
+        dplat='null'
+        dsis(1)='l2rw'
+     endif
   endif
 
 ! Single radiance assimilation case
@@ -1581,6 +1598,8 @@
      call final_fgrid2agrid(pf2aP2)
      call final_fgrid2agrid(pf2aP1)
   endif
+  call radiance_obstype_destroy
+  call radiance_parameter_cloudy_destroy
   call final_aero_vars
   call final_rad_vars
   if(passive_bc) call prad_destroy()    ! replacing -- call destroyobs_passive
@@ -1589,6 +1608,7 @@
   call destroy_general_commvars
   call final_grid_vars
 !_TBDone  call final_reg_glob_ll ! gridmod
+  call radiance_mode_destroy
   call final_anacv
   call final_anasv
   call obsmod_final_instr_table

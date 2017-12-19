@@ -170,7 +170,7 @@ install:
 clean:
 	@echo
 	@echo '==== CLEAN ==================================================='
-	- $(RM) $(EXE_FILE) *.o *.mod *.MOD *.lst *.a *.x
+	- $(RM) $(EXE_FILE) *.o *.mod *.MOD *.lst *.a *.x *__genmod*
 	- $(RM) loadmap.txt log.make.$(EXE_FILE)
 	- $(MAKE) -f ${MAKE_FILE} doclean
 
@@ -186,6 +186,7 @@ clean:
   SRCSF90C = \
 	covlocal.f90 \
 	enkf.f90 \
+        enkf_obs_sensitivity.f90 \
 	enkf_main.f90 \
 	fftpack.f90 \
 	genqsat1.f90 \

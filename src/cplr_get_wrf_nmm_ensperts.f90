@@ -294,8 +294,6 @@ contains
             deallocate(outwork)
          end if
   
-         if(mype == 0)print *,'p_e2a%identity=', p_e2a%identity
-  
          if( .not. p_e2a%identity)then
             allocate(work_sub(grd_ens_d01%inner_vars,grd_ens_d01%lat2,grd_ens_d01%lon2,grd_ens_d01%num_fields),stat=istatus)
             if(istatus /= 0)print *,'error allocate work_sub'
@@ -517,8 +515,6 @@ contains
                    grd_ens_d02%nlat,grd_ens_d02%nlon,grd_mix%nlat,grd_mix%nlon,nord_e2a,nord_blend,nmix,gt_e,gt_a,p_e2a)
             deallocate(region_lat_e,region_lon_e)
   
-            if(mype == 0)print *,'p_e2a%identity=', p_e2a%identity
-     
             test=.true.
             if(mype == 0 .and. test)then
                write(blendname,"('blend',i3.3)") n
@@ -1611,10 +1607,10 @@ contains
          kv=kv+1
          do i=1,grd%lon2
             do j=1,grd%lat2
-               g_u(j,i,k) = all_loc(j,i,ku)
-               g_v(j,i,k) = all_loc(j,i,kv)
-               g_q(j,i,k) = all_loc(j,i,kq)
-               g_tsen(j,i,k) = all_loc(j,i,kt) ! actually holds sensible temperature
+               g_u(j,i,k) = real(all_loc(j,i,ku),r_kind)
+               g_v(j,i,k) = real(all_loc(j,i,kv),r_kind)
+               g_q(j,i,k) = real(all_loc(j,i,kq),r_kind)
+               g_tsen(j,i,k) = real(all_loc(j,i,kt) ,r_kind)! actually holds sensible temperature
                g_cwmr(j,i,k) = zero
                g_oz(j,i,k) = zero
   	  end do
@@ -1623,7 +1619,7 @@ contains
   
       do i=1,grd%lon2
          do j=1,grd%lat2
-            pd=r0_01*all_loc(j,i,i_pd)
+            pd=r0_01*real(all_loc(j,i,i_pd),r_kind)
             psfc_this=pd+pdtop_ll+pt_ll
             g_ps(j,i)=one_tenth*psfc_this   ! convert from mb to cb
          end do
@@ -1631,7 +1627,7 @@ contains
   
       do i=1,grd%lon2
          do j=1,grd%lat2
-            g_pd(j,i)=all_loc(j,i,i_pd)
+            g_pd(j,i)=real(all_loc(j,i,i_pd),r_kind)
          end do
       end do
   
@@ -1877,24 +1873,24 @@ contains
   
           do i=1,grd%lon2
              do j=1,grd%lat2
-                g_u(j,i,k) = all_loc(j,i,ku)
-                g_v(j,i,k) = all_loc(j,i,kv)
-                g_q(j,i,k)   = all_loc(j,i,kq)
-                g_tsen(j,i,k)  = all_loc(j,i,kt) ! actually holds sensible temperature
+                g_u(j,i,k) = real(all_loc(j,i,ku),r_kind)
+                g_v(j,i,k) = real(all_loc(j,i,kv),r_kind)
+                g_q(j,i,k)   = real(all_loc(j,i,kq),r_kind)
+                g_tsen(j,i,k)  = real(all_loc(j,i,kt),r_kind)! actually holds sensible temperature
              end do
           end do
        end do
   
        do i=1,grd%lon2
           do j=1,grd%lat2
-             g_pd(j,i)=all_loc(j,i,i_pd)
+             g_pd(j,i)=real(all_loc(j,i,i_pd),r_kind)
           end do
        end do
   
   !    convera wrf nmm pd variable to psfc in mb, and then to log(psfc) in cb
        do i=1,grd%lon2
           do j=1,grd%lat2
-             pd=r0_01*all_loc(j,i,i_0+i_pd)
+             pd=r0_01*real(all_loc(j,i,i_0+i_pd),r_kind)
              psfc_this=pd+pdtop_ll+pt_ll
              g_ps(j,i)=one_tenth*psfc_this   ! convert from mb to cb
           end do

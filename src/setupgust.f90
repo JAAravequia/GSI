@@ -28,10 +28,12 @@ contains
   !   2014-01-28  todling - write sensitivity slot indicator (ioff) to header of diagfile
   !   2014-07-21  carley - ensure no division by 0 when calculating presw
   !   2014-12-30  derber - Modify for possibility of not using obsdiag
+!                          before retuning to setuprhsall.f90
 !   2015-10-01  guo   - full res obvsr: index to allow redistribution of obsdiags
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !   2016-06-24  guo     - fixed the default value of obsdiags(:,:)%tail%luse to luse(i)
 !                       . removed (%dlat,%dlon) debris.
+!   2016-10-07  pondeca - if(.not.proceed) advance through input file first
   !
   !   input argument list:
   !     lunin    - unit from which to read observations
@@ -150,7 +152,10 @@ contains
      
   ! Check to see if required guess fields are available
     call this%check_vars_(proceed)
-    if(.not.proceed) return  ! not all vars available, simply return
+  if(.not.proceed) then
+     read(lunin)data,luse   !advance through input file
+     return  ! not all vars available, simply return
+  endif
   
   ! If require guess vars available, extract from bundle ...
     call this%init_ges
@@ -567,7 +572,7 @@ contains
         my_head%elon= data(ilone,i)
   
   !       Set (i,j) indices of guess gridpoint that bound obs location
-        call get_ij(mm1,dlat,dlon,my_head%ij(1),my_head%wij(1))
+        call get_ij(mm1,dlat,dlon,my_head%ij,my_head%wij)
   
         my_head%res     = ddiff
         my_head%err2    = error**2
@@ -697,6 +702,8 @@ contains
   ! End of routine
   
     return
+  proceed=proceed.and.ivar>0
+  call gsi_metguess_get ('var::gust' , ivar, istatus )
 end subroutine setupgust
  
 end module setupgust_mod

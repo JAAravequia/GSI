@@ -1,23 +1,28 @@
 cmake_minimum_required(VERSION 2.6)
-message("in enkf")
 if(BUILD_ENKF)
   enable_language (Fortran)
   set(Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
   set(CMAKE_Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
-  if(BUILD_GFS)
+  if(BUILD_PRODUCTION)
     set(ENKF_SUFFIX "gfs")
+    set(ENKF_BASE "global_enkf")
+  elseif(BUILD_GFS)
+    set(ENKF_SUFFIX "gfs")
+    set(ENKF_BASE "enkf_gfs")
   elseif(BUILD_NMMB)
     set(ENKF_SUFFIX "nmmb")
+    set(ENKF_BASE "enkf_nmmb")
   else()
     set(ENKF_SUFFIX "wrf")
+    set(ENKF_BASE "enkf_wrf")
   endif()
-  if(USE_WRF)
-    set(GSILIB gsilib_wrf${debug_suffix})
-  else()
-    set(GSILIB  gsilib_global${debug_suffix})
-  endif()
+# if(USE_WRF)
+#   set(GSILIB "gsilib_${debug_suffix}")
+# else()
+#   set(GSILIB  "gsilib_global${debug_suffix}")
+# endif()
   set(ENKF_EXTRA_SRCS gridio_${ENKF_SUFFIX}.f90 )
   add_library( MODS1 OBJECT gridinfo_${ENKF_SUFFIX}.f90 )  
   add_library( MODS2 OBJECT ${ENKF_EXTRA_SRCS} )  
@@ -25,7 +30,7 @@ if(BUILD_ENKF)
   set(ENKFMOD_SRCS 
   netcdf_io_wrf.f90 params.f90 covlocal.f90 fftpack.f90 genqsat1.f90 mpisetup.F90 rnorm.f90
   sorting.f90 specmod.f90 reducedgrid.f90 readozobs.f90 readsatobs.f90 readconvobs.f90
-  write_logfile.f90 kdtree2.f90 mpi_readobs.f90 enkf_obsmod.f90 
+  write_logfile.f90 kdtree2.f90 mpi_readobs.f90 enkf_obsmod.f90
   )
   set(ENKF_SRCS 
   innovstats.f90
@@ -40,7 +45,8 @@ if(BUILD_ENKF)
   loadbal.f90
   smooth_${ENKF_SUFFIX}.f90 
   gridio_${ENKF_SUFFIX}.f90 
-  gridinfo_${ENKF_SUFFIX}.f90 
+  gridinfo_${ENKF_SUFFIX}.f90
+  enkf_obs_sensitivity.f90 
   )
   if( NOT crayComp )
     find_package( LAPACK REQUIRED )
@@ -59,11 +65,13 @@ if(BUILD_ENKF)
   add_library(enkfdeplib STATIC ${ENKFMOD_SRCS} )
   add_library(enkflib STATIC ${ENKF_SRCS} $<TARGET_OBJECTS:MODS1> $<TARGET_OBJECTS:MODS2> )
   add_dependencies(enkfdeplib ${GSILIB} )
-  add_dependencies(MODS1 enkfdeplib gsilib_shrd${debug_suffix} ${GSILIB} )
-  add_dependencies(MODS2 MODS1 enkfdeplib gsilib_shrd${debug_suffix} ${GSILIB} )
-  add_dependencies(enkflib enkfdeplib gsilib_shrd${debug_suffix} ${GSILIB} )
-  add_executable(enkf_${ENKF_SUFFIX}.x${debug_suffix} enkf_main.f90)
-  add_dependencies(enkf_${ENKF_SUFFIX}.x${debug_suffix} enkflib enkfdeplib ${GSI_LIB} )
-  target_link_libraries(enkf_${ENKF_SUFFIX}.x${debug_suffix} enkflib enkfdeplib gsilib_shrd${debug_suffix} ${GSILIB} ${CORE_LIBRARIES}
-  ${MPI_Fortran_LIBRARIES} ${LAPACK_LIBRARIES} ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES}  ${HDF5_Fortran_HL_LIBRARIES} ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} )
+  add_dependencies(MODS1 enkfdeplib ${GSISHAREDLIB} ${GSILIB} )
+  add_dependencies(MODS2 MODS1 enkfdeplib ${GSISHAREDLIB} ${GSILIB} )
+  add_dependencies(enkflib enkfdeplib ${GSISHAREDLIB} ${GSILIB} )
+  set(ENKFEXEC "${ENKF_BASE}${debug_suffix}")
+  add_executable(${ENKFEXEC} enkf_main.f90)
+  add_dependencies(${ENKFEXEC} enkflib enkfdeplib ${GSI_LIB} )
+  target_link_libraries(${ENKFEXEC} enkflib enkfdeplib ${GSISHAREDLIB} ${GSILIB} ${CORE_LIBRARIES}
+  ${MPI_Fortran_LIBRARIES} ${LAPACK_LIBRARIES} ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES}  ${HDF5_Fortran_HL_LIBRARIES}
+  ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${GSI_LDFLAGS} )
 endif()

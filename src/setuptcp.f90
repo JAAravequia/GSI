@@ -405,7 +405,7 @@ contains
         my_head%elat= data(ilate,i)
         my_head%elon= data(ilone,i)
   
-        call get_ij(mm1,dlat,dlon,my_head%ij(1),my_head%wij(1))
+        call get_ij(mm1,dlat,dlon,my_head%ij,my_head%wij)
   
         my_head%res      = ddiff
         my_head%err2     = error**2
