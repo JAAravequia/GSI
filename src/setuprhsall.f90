@@ -252,7 +252,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 ! external:: setupq
   external:: setuprad
   external:: setupref
-! external:: setuprw
+  external:: setuprw
 ! external:: setupspd
   external:: setupsst
 ! external:: setupt

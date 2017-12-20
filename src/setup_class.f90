@@ -156,20 +156,26 @@ contains
       class(abstract_setup_class)                      ,intent(inout) :: this
       logical                                          ,intent(inout) :: proceed
       logical                                 ,optional,intent(inout) :: include_w
-      integer(i_kind) ivar, istatus, i
+      integer(i_kind) ivar, istatus, i, loop_end
 
-!     write(6,*) 'in checkvars for ',this%myname,' with proceed = ',proceed
-      do i = 1,this%numvars
+      proceed = .true.
+      write(6,*) 'in checkvars for ',this%myname,' with proceed = ',proceed
+      if( present(include_w) ) then
+         loop_end = this%numvars - 1
+      else 
+         loop_end = this%numvars 
+      endif
+      do i = 1,loop_end
          call gsi_metguess_get (this%varnames(i), ivar, istatus )
-!        write(6,*) 'checked ',this%varnames(i),' and ivar = ',ivar 
-         if( i == 1 ) then
-           proceed=ivar>0
-         else
-           proceed=proceed.and.ivar>0
-         endif
-         if( present(include_w) ) include_w = (ivar > 0)
+         write(6,*) 'checked ',this%varnames(i),' and ivar = ',ivar 
+         proceed=proceed.and.ivar>0
       enddo
-!     write(6,*) 'after checkvars proceed = ',proceed
+      if( present(include_w) ) then
+         call gsi_metguess_get (this%varnames(this%numvars), ivar, istatus )
+         include_w = (ivar > 0)
+      endif
+      write(6,*) 'after checkvars proceed,ivar = ',proceed,ivar
+      if( present(include_w) ) write(6,*) 'include_w is ',include_w
   end subroutine check_vars_ 
   subroutine init_ges(this)
 

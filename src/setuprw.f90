@@ -118,12 +118,12 @@ contains
     implicit none
   
   ! Declare passed variables
-      class(setuprw_class)                              , intent(inout) :: this
+    class(setuprw_class)                              , intent(inout) :: this
     logical                                          ,intent(in   ) :: conv_diagsave
     integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
     real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
     real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
-  integer(i_kind)                                  ,intent(in   ) :: is ! ndat index
+    integer(i_kind)                                  ,intent(in   ) :: is ! ndat index
   
   
   ! Declare local parameters
@@ -145,7 +145,7 @@ contains
     real(r_kind) sin2,termg,termr,termrg
     real(r_kind) psges,zsges,zsges0
     real(r_kind),dimension(nsig):: zges,hges,ugesprofile,vgesprofile
-  real(r_kind),dimension(nsig):: wgesprofile!,vTgesprofile,refgesprofile
+    real(r_kind),dimension(nsig):: wgesprofile!,vTgesprofile,refgesprofile
     real(r_kind) prsltmp(nsig)
     real(r_kind) sfcchk  
     real(r_kind) residual,obserrlm,obserror,ratio,scale,val2
@@ -154,10 +154,10 @@ contains
     real(r_kind) cg_w,wgross,wnotgross,wgt,arg,exp_arg,term,rat_err2
     real(r_double) rstation_id
     real(r_kind) dlat,dlon,dtime,dpres,ddiff,error,slat
-  real(r_kind) sinazm,cosazm,sintilt,costilt,cosazm_costilt,sinazm_costilt
+    real(r_kind) sinazm,cosazm,sintilt,costilt,cosazm_costilt,sinazm_costilt
     real(r_kind) ratio_errors,qcgross
-  real(r_kind) ugesin,vgesin,wgesin,factw,skint,sfcr
-  real(r_kind) rwwind,presw,Vr
+    real(r_kind) ugesin,vgesin,wgesin,factw,skint,sfcr
+    real(r_kind) rwwind,presw,Vr
     real(r_kind) errinv_input,errinv_adjst,errinv_final
     real(r_kind) err_input,err_adjst,err_final
     real(r_kind),dimension(nele,nobs):: data
@@ -193,17 +193,17 @@ contains
     type(obs_diag),pointer:: my_diag
   
     this%myname='setuprw'
+    this%numvars = 5
+    allocate(this%varnames(this%numvars))
+    this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::z', 'var::ps', 'var::w' /)
+  ! Check to see if required guess fields are available
     call this%check_vars_(proceed,include_w)
-    if(include_w) then
-      this%numvars = 5
-      allocate(this%varnames(this%numvars))
-      this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::z', 'var::ps', 'var::w' /)
-    else
+    if(.not. include_w) then
+      deallocate(this%varnames)
       this%numvars = 4
       allocate(this%varnames(this%numvars))
       this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::z', 'var::ps' /)
-    endif
-  ! Check to see if required guess fields are available
+    endif   
     if(.not.proceed) return  ! not all vars available, simply return
   
   ! If require guess vars available, extract from bundle ...
@@ -810,15 +810,7 @@ contains
   ! End of routine
   
     return
-! subroutine check_vars_ (proceed, include_w)
-! logical,intent(inout) :: include_w
-! call gsi_metguess_get ('var::w' , ivar, istatus )
-! if (ivar>0) then
-!    include_w=.true.
-! else
-!    include_w=.false.
-! endif
 
 end subroutine setuprw
- 
+
 end module setuprw_mod
