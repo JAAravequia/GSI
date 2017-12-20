@@ -61,7 +61,7 @@ w_ind   = getindex(cvars3d, 'w')  ! W (3D)
 
 ps_ind  = getindex(cvars2d, 'ps')  ! Ps (2D)
 
-if( cw_ind * qr_ind * qli_ind <= 0 ) then
+if( cw_ind == 1 .and. cw_ind * qr_ind * qli_ind <= 0 ) then
   write(6,*)'NMMB gridio/readgriddata: please make sure state variables ql, qr, qli all in anavinfo'
   call stop2(23)
 end if
@@ -348,7 +348,7 @@ w_ind   = getindex(cvars3d, 'w')  ! W (3D)
 
 ps_ind  = getindex(cvars2d, 'ps')  ! Ps (2D)
 
-if( cw_ind * qr_ind * qli_ind <= 0 ) then
+if( cw_ind == 1 .and.  cw_ind * qr_ind * qli_ind <= 0 ) then
   write(6,*)'NMMB gridio/readgriddata: please make sure state variables ql, qr, qli all in anavinfo'
   call stop2(23)
 end if

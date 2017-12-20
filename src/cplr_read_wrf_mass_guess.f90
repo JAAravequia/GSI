@@ -1486,7 +1486,7 @@ contains
   !       Get pointer for each of the hydrometeors from guess at time index "it"
           it=ntguessig
           ier=0
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'cw', ges_qc, istatus );ier=ier+istatus
+          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql', ges_qc, istatus );ier=ier+istatus
           call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qi', ges_qi, istatus );ier=ier+istatus
           call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qr', ges_qr, istatus );ier=ier+istatus
           call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs', ges_qs, istatus );ier=ier+istatus
@@ -1911,7 +1911,7 @@ contains
   ! hydrometeors
           if(l_cloud_analysis .or. n_actual_clouds>0) then
   !          Get pointer for each of the hydrometeors from guess at time index "it"
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'cw', ges_qc, istatus );ier=ier+istatus
+             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql', ges_qc, istatus );ier=ier+istatus
              call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qi', ges_qi, istatus );ier=ier+istatus
              call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qr', ges_qr, istatus );ier=ier+istatus
              call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs', ges_qs, istatus );ier=ier+istatus

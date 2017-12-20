@@ -1907,7 +1907,7 @@ contains
     if (n_actual_clouds>0) then
   !    get pointer to relevant instance of cloud-related backgroud
        ier=0
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'cw', ges_qc, istatus );ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql', ges_qc, istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qi', ges_qi, istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qr', ges_qr, istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs', ges_qs, istatus );ier=ier+istatus
@@ -2047,7 +2047,7 @@ contains
   ! get pointer to relevant instance of cloud-related backgroud
     if (n_actual_clouds>0) then
        ier=0
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'cw', ges_qc, istatus );ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql', ges_qc, istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qi', ges_qi, istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qr', ges_qr, istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs', ges_qs, istatus );ier=ier+istatus

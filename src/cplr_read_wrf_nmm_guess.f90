@@ -1822,11 +1822,11 @@ contains
        if (istatus==0) then
           include_w=.true.
           if(mype==0) write(6,*)'READ_WRF_NMM_GUESS: Using vertical velocity.'
+          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'dw' , ges_dw  ,istatus );ier=ier+istatus
        else
           include_w=.false.
           if(mype==0) write(6,*)'READ_WRF_NMM_GUESS: NOT using vertical velocity.'
        end if
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'dw' , ges_dw  ,istatus );ier=ier+istatus
 
        if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields, ier =',ier)
   

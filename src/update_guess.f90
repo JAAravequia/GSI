@@ -166,7 +166,7 @@ subroutine update_guess(sval,sbias)
   call gsi_bundlegetpointer(sval(1),'tv', is_t,  istatus)
   call gsi_bundlegetpointer(sval(1),'q',  is_q,  istatus)
   call gsi_bundlegetpointer(sval(1),'oz', is_oz, istatus)
-  call gsi_bundlegetpointer(sval(1),'ql', is_cw, istatus)
+  call gsi_bundlegetpointer(sval(1),'cw', is_cw, istatus)
   call gsi_bundlegetpointer(sval(1),'sst',is_sst,istatus)
 
 ! Inquire about guess fields
@@ -194,7 +194,7 @@ subroutine update_guess(sval,sbias)
   if (regional) then
      if(is_cw>0)then
         do ii=1,nobs_bins
-           call gsi_bundlegetpointer (sval(ii),'ql',ptr3dinc,istatus)
+           call gsi_bundlegetpointer (sval(ii),'cw',ptr3dinc,istatus)
            do k=1,nsig
               do j=1,lon2
                  do i=1,lat2

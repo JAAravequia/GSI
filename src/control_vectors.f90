@@ -409,9 +409,9 @@ if(trim(cvars3d(ii)).eq.'qr'.or.trim(cvars3d(ii)).eq.'QR') then
   icloud=icloud+1
   cloud_var(icloud)="qr"
 endif
-if(trim(cvars3d(ii)).eq.'cw'.or.trim(cvars3d(ii)).eq.'CW') then
+if(trim(cvars3d(ii)).eq.'ql'.or.trim(cvars3d(ii)).eq.'QL') then
   icloud=icloud+1
-  cloud_var(icloud)="cw"
+  cloud_var(icloud)="ql"
 endif
 if(trim(cvars3d(ii)).eq.'qs'.or.trim(cvars3d(ii)).eq.'QS') then
   icloud=icloud+1
