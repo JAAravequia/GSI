@@ -31,7 +31,7 @@ subroutine get_wrf_mass_ensperts_netcdf
     use hybrid_ensemble_isotropic, only: en_perts,nelen,ps_bar
     use constants, only: zero,one,half,grav,fv,zero_single,rd_over_cp_mass,rd_over_cp,one_tenth
     use mpimod, only: mpi_comm_world,ierror,mype
-    use hybrid_ensemble_parameters, only: n_ens,grd_ens,nlat_ens,nlon_ens,sp_ens,q_hyb_ens
+    use hybrid_ensemble_parameters, only: n_ens,grd_ens,nlat_ens,nlon_ens,sp_ens
     use control_vectors, only: cvars2d,cvars3d,nc2d,nc3d
     use gsi_bundlemod, only: gsi_bundlecreate
     use gsi_bundlemod, only: gsi_grid
@@ -41,15 +41,6 @@ subroutine get_wrf_mass_ensperts_netcdf
     use gsi_bundlemod, only: gsi_gridcreate
 
     implicit none
-    interface 
-       subroutine ens_spread_dualres_regional(mype,en_bar)
-         use kinds, only: r_kind,i_kind,r_single
-         use gsi_bundlemod, only: gsi_bundle
-         integer(i_kind),intent(in):: mype
-         type(gsi_bundle),OPTIONAL,intent(in) :: en_bar
-       end subroutine ens_spread_dualres_regional
-    end interface
-
 
     real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig):: u,v,tv,cwmr,oz,rh
     real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2):: ps
@@ -62,10 +53,11 @@ subroutine get_wrf_mass_ensperts_netcdf
     type(gsi_grid):: grid_ens
     real(r_kind):: bar_norm,sig_norm,kapr,kap1
 
-    integer(i_kind):: iret,i,j,k,n,mm1,istatus
+    integer(i_kind):: iret,i,j,k,m,n,il,jl,mm1,apm_idx,istatus
     integer(i_kind):: ic2,ic3
 
     character(24) filename
+    logical ice
 
     call gsi_gridcreate(grid_ens,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)
     call gsi_bundlecreate(en_bar,grid_ens,'ensemble',istatus,names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
@@ -247,7 +239,7 @@ subroutine get_wrf_mass_ensperts_netcdf
     call mpi_barrier(mpi_comm_world,ierror)
 !
 ! CALCULATE ENSEMBLE SPREAD
-    call ens_spread_dualres_regional(mype,en_bar)
+    call ens_spread_dualres_regional(en_bar,mype)
     call mpi_barrier(mpi_comm_world,ierror)
 !
 ! CONVERT ENSEMBLE MEMBERS TO ENSEMBLE PERTURBATIONS
@@ -305,7 +297,7 @@ subroutine general_read_wrf_mass(filename,g_ps,g_u,g_v,g_tv,g_rh,g_cwmr,g_oz,myp
     use kinds, only: r_kind,r_single,i_kind
     use gridmod, only: nlat_regional,nlon_regional,nsig,eta1_ll,pt_ll,aeta1_ll
     use constants, only: zero,one,grav,fv,zero_single,rd_over_cp_mass,one_tenth,h300
-    use hybrid_ensemble_parameters, only: n_ens,grd_ens,q_hyb_ens
+    use hybrid_ensemble_parameters, only: n_ens,grd_ens
     use mpimod, only: mpi_comm_world,ierror,mpi_rtype,npe
 
     implicit none
@@ -332,13 +324,13 @@ subroutine general_read_wrf_mass(filename,g_ps,g_u,g_v,g_tv,g_rh,g_cwmr,g_oz,myp
     real(r_kind),allocatable,dimension(:):: wrk_fill_2d
     integer(i_kind),allocatable,dimension(:):: dim,dim_id
 
-    integer(i_kind):: nx,ny,nz,i,j,k,d_max,iret,file_id,var_id,ndim,mype
+    integer(i_kind):: nx,ny,nz,i,j,k,d_max,iret,file_id,var_id,ndim,mype,icount,icount_prev
     integer(i_kind):: Time_id,s_n_id,w_e_id,b_t_id,s_n_stag_id,w_e_stag_id,b_t_stag_id
     integer(i_kind):: Time_len,s_n_len,w_e_len,b_t_len,s_n_stag_len,w_e_stag_len,b_t_stag_len
     integer(i_kind) nf_inq_varndims,nf_inq_varid,nf_get_var_real,nf_inq_vardimid,nf_nowrite
     integer(i_kind) nf_open,nf_inq_dimlen,nf_inq_dimid,iderivative
 
-    real(r_kind):: deltasigma
+    real(r_kind):: pb,pt,del_p,p_tot,deltasigma
     real(r_kind) psfc_this_dry,psfc_this
     real(r_kind) work_prslk,work_prsl
 
@@ -619,27 +611,22 @@ subroutine general_read_wrf_mass(filename,g_ps,g_u,g_v,g_tv,g_rh,g_cwmr,g_oz,myp
     print *,'min/max tv',minval(gg_tv),maxval(gg_tv)
 
 !
-! CALCULATE PSEUDO RELATIVE HUMIDITY IF USING RH VARIABLE
-    if (.not.q_hyb_ens) then
-       allocate(qst(ny,nx,nz))
-       ice=.true. 
-       iderivative=0
-       call genqsat(qst,tsn,prsl,ny,nx,nsig,ice,iderivative)
-       do k=1,nz
-          do i=1,nx
-             do j=1,ny
-                gg_rh(j,i,k)=gg_rh(j,i,k)/qst(j,i,k)
-             enddo
+! CALCULATE PSEUDO RELATIVE HUMIDITY
+    allocate(qst(ny,nx,nz))
+    ice=.true. 
+    iderivative=0
+    call genqsat(qst,tsn,prsl,ny,nx,nsig,ice,iderivative)
+    do k=1,nz
+       do i=1,nx
+          do j=1,ny
+             gg_rh(j,i,k)=gg_rh(j,i,k)/qst(j,i,k)
           enddo
        enddo
-       print *,'min/max rh',minval(gg_rh),maxval(gg_rh)
-       deallocate(qst)
-    else
-       print *,'min/max q',minval(gg_rh),maxval(gg_rh)
-    end if
-
+    enddo
+    print *,'min/max rh',minval(gg_rh),maxval(gg_rh)
+!
 ! DEALLOCATE REMAINING TEMPORARY STORAGE
-    deallocate(tsn,prsl,q_integral,p_top)
+    deallocate(tsn,qst,prsl,q_integral,p_top)
   endif ! done netcdf read on root
 
 ! transfer data from root to subdomains on each task
@@ -710,7 +697,7 @@ subroutine fill_regional_2d(fld_in,fld_out)
 return 
 end subroutine fill_regional_2d
 
-subroutine ens_spread_dualres_regional(mype,en_bar)
+subroutine ens_spread_dualres_regional(en_bar,mype)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    ens_spread_dualres_regional
@@ -737,8 +724,7 @@ subroutine ens_spread_dualres_regional(mype,en_bar)
 !$$$ end documentation block
 !
   use kinds, only: r_single,r_kind,i_kind
-  use hybrid_ensemble_parameters, only: n_ens,grd_ens,grd_anl,p_e2a,uv_hyb_ens, &
-                                        regional_ensemble_option
+  use hybrid_ensemble_parameters, only: n_ens,grd_ens,grd_anl,p_e2a,uv_hyb_ens
   use hybrid_ensemble_isotropic, only: en_perts,nelen
   use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sube2suba
   use constants, only:  zero,two,half,one
@@ -751,16 +737,16 @@ subroutine ens_spread_dualres_regional(mype,en_bar)
   use gsi_bundlemod, only: gsi_gridcreate
   implicit none
 
-  type(gsi_bundle),OPTIONAL,intent(in):: en_bar
+  type(gsi_bundle),intent(in):: en_bar
   integer(i_kind),intent(in):: mype
 
   type(gsi_bundle):: sube,suba
   type(gsi_grid):: grid_ens,grid_anl
-  real(r_kind) sp_norm,sig_norm_sq_inv
+  real(r_kind) sp_norm
   type(sub2grid_info)::se,sa
-  integer(i_kind) k
+  integer(i_kind) j,k,apm_k,apm_idx
 
-  integer(i_kind) i,n,ic3
+  integer(i_kind) i,ii,n,ic3
   logical regional
   integer(i_kind) num_fields,inner_vars,istat,istatus
   logical,allocatable::vector(:)
@@ -792,33 +778,16 @@ subroutine ens_spread_dualres_regional(mype,en_bar)
 
   sube%values=zero
 !
-
-  if(regional_ensemble_option == 1)then
-     print *,'global ensemble'
-     sig_norm_sq_inv=n_ens-one
-
-     do n=1,n_ens
-        do i=1,nelen
-           sube%values(i)=sube%values(i) &
-             +en_perts(n,1)%valuesr4(i)*en_perts(n,1)%valuesr4(i)
-        end do
-     end do
-
+  do n=1,n_ens
      do i=1,nelen
-       sube%values(i) = sqrt(sp_norm*sig_norm_sq_inv*sube%values(i))
+        sube%values(i)=sube%values(i) &
+          +(en_perts(n,1)%valuesr4(i)-en_bar%values(i))*(en_perts(n,1)%valuesr4(i)-en_bar%values(i))
      end do
-  else
-     do n=1,n_ens
-        do i=1,nelen
-           sube%values(i)=sube%values(i) &
-             +(en_perts(n,1)%valuesr4(i)-en_bar%values(i))*(en_perts(n,1)%valuesr4(i)-en_bar%values(i))
-        end do
-     end do
+  end do
  
-     do i=1,nelen
-       sube%values(i) = sqrt(sp_norm*sube%values(i))
-     end do
-  end if
+  do i=1,nelen
+    sube%values(i) = sqrt(sp_norm*sube%values(i))
+  end do
 
   if(grd_ens%latlon1n == grd_anl%latlon1n) then
      do i=1,nelen

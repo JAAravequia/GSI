@@ -10,9 +10,6 @@ subroutine bicg()
 ! program history log:
 !   2010-10-01  el akkraoui - initial code, based on Tremolet 2009 code
 !   2011-04-19  el akkraoui - minor adjustments for preconditioning
-!   2012-07-10  todling - add ability to invoke hybrid ensemble
-!   2012-12-06  todling - half-backed implementation of adjoint analysis
-!                         (for now, only works in single outer loop case)
 !
 !   input argument list:
 !
@@ -26,22 +23,22 @@ subroutine bicg()
 
 use kinds,     only: r_kind,i_kind,r_quad
 use gsi_4dvar, only: l4dvar, lsqrtb, ltlint, &
-                     ladtest, lgrtest, lanczosave, ltcost, nwrvecs
+                     ladtest, lgrtest, lanczosave, nwrvecs
 use jfunc,     only: jiter,miter,niter,xhatsave,yhatsave,jiterstart
 use qcmod,     only: nlnqc_iter
-use constants, only: zero,tiny_r_kind
+use constants, only: zero
 use mpimod,    only: mype
 use obs_sensitivity, only: lobsensadj, lobsensmin, lobsensfc, lobsensincr, &
-                           fcsens, llancdone, dot_prod_obs
+                           iobsconv, fcsens, llancdone, dot_prod_obs
 use obsmod,    only: lsaveobsens,l_do_adjoint,write_diag
+use qnewton3,  only: m1qn3
+use lanczos,   only: congrad,setup_congrad,save_precond,congrad_ad,read_lanczos
 use adjtest,   only: adtest
 use grdtest,   only: grtest
 use control_vectors, only: control_vector
 use control_vectors, only: allocate_cv,deallocate_cv,write_cv,inquire_cv
 use control_vectors, only: dot_product,assignment(=)
 use obs_ferrscale, only: lferrscale, apply_hrm1h
-use hybrid_ensemble_parameters,only : l_hyb_ens,aniso_a_en
-use hybrid_ensemble_isotropic, only: beta12mult,bkerror_a_en
 use timermod,      only: timer_ini, timer_fnl
 use bicglanczos, only:  pcglanczos, setup_pcglanczos, save_pcgprecond, pcgprecond, LMPCGL 
 
@@ -53,15 +50,16 @@ character(len=*), parameter :: myname='bicg'
 type(control_vector) :: xhat, gradx, gradf,grads
 real(r_kind)         :: costf,eps,zy
 real(r_quad)         :: zf0,zg0,zff,zgf,zge,zgg,zdx
-integer(i_kind)      :: itermax,ii,itest
+integer(i_kind)      :: itermax,ii,itest,iprt
 logical              :: lsavinc, lsavev
 character(len=12)    :: clfile
 
-real(r_kind) :: zeps
+real(r_kind) :: rdx,zeps
 integer(i_kind) :: jtermax
-type(control_vector) :: yhat,grady
-real(r_kind)         :: zgk
-integer(i_kind)      :: ilen,nprt
+type(control_vector) :: xtry,ytry,yhat,gradw,grady,dirx,diry
+real(r_kind)         :: zgk,zgnew,zfk
+integer(i_kind)      :: jj,ilen,nprt
+logical              :: lsavevecs
 
 
 !**********************************************************************
@@ -76,8 +74,6 @@ call timer_ini('bicg')
 
 ! Initialize
 lsavinc=.false.
-if (lobsensfc.and.lobsensmin) lsaveobsens=.true.
-
 if (ltlint) nlnqc_iter=.false.
 
 ! Allocate control vectors
@@ -95,30 +91,9 @@ xhat=zero
 yhat=zero
 call jgrad(xhat,yhat,zf0,gradx,lsavinc,nprt,myname)
 if(LMPCGL) then 
-   call pcgprecond(gradx,grady)
+      call pcgprecond(gradx,grady,1)
 else 
-   call bkerror(gradx,grady)
-
-   ! If hybrid ensemble run, then multiply ensemble control variable a_en 
-   !                                 by its localization correlation
-   if(l_hyb_ens) then
-
-     if(aniso_a_en) then
-   !   call anbkerror_a_en(gradx,grady)    !  not available yet
-       write(6,*)' ANBKERROR_A_EN not written yet, program stops'
-       call stop2 (999)
-     else
-       call bkerror_a_en(gradx,grady)
-     end if
-
-   ! multiply static (Jb) part of grady by betas_inv(:), and
-   ! multiply ensemble (Je) part of grady by betae_inv(:). [Default:  betae_inv(:)  =  1 - betas_inv(:)]
-   !   (this determines relative contributions from static background Jb and
-   !   ensemble background Je)
-
-     call beta12mult(grady)
-
-   end if
+    call bkerror(gradx,grady)
 endif
 
 zg0=dot_product(gradx,grady,r_quad)
@@ -141,14 +116,14 @@ zeps=eps
 jtermax=itermax
 lsavev=lanczosave
 
-call setup_pcglanczos(mype,nprt,jiter,jiterstart,itermax,nwrvecs, &
-                      l4dvar,lanczosave,ltcost)
+  call setup_pcglanczos(mype,nprt,jiter,jiterstart,itermax,nwrvecs, &
+                     l4dvar,lanczosave)
 
-if(jiter>=miter) lsavev=.false.
+   if(jiter>=miter) lsavev=.false.
            
-call pcglanczos(xhat,yhat,costf,gradx,grady,eps,itermax,lsavev)
+  call pcglanczos(xhat,yhat,costf,gradx,grady,eps,itermax,iobsconv,lsavev)
 
-call save_pcgprecond(lsavev)
+  call save_pcgprecond(lsavev)
 
 if (mype==0) write(6,*)trim(myname),': Minimization final diagnostics'
 
@@ -167,52 +142,7 @@ endif
 
 gradf=zero
 call jgrad(xhat,yhat,zff,gradf,lsavinc,nprt,myname) 
-
-if (lobsensfc) then
-
-!  Compute <dJ/dy,d>
-   if (lobsensincr) then
-!     call test_obsens(fcsens,xhat) ! _RTodling: needs proper grad eval
-   else
-      zy=dot_prod_obs()
-      if (mype==0) write(6,'(A,ES25.18)')'Obs impact <dF/dy,d>= ',zy
-   endif
-!  Save gradient for next (backwards) outer loop
-   if (jiter>1) then ! _RTodling: not correct for jiter>1 
-      do ii=1,xhat%lencv
-         fcsens%values(ii) = fcsens%values(ii) - xhat%values(ii)
-      enddo
-      clfile='fgsens.ZZZ'
-      write(clfile(8:10),'(I3.3)') jiter
-      call write_cv(fcsens,clfile)
-   endif
-   lsaveobsens=.false.
-   l_do_adjoint=.true.
-
-else ! not sensitivity run
-
-   call bkerror(gradf,grads)
-
-! If hybrid ensemble run, then multiply ensemble control variable a_en 
-!                                 by its localization correlation
-   if(l_hyb_ens) then
-
-     if(aniso_a_en) then
-!      call anbkerror_a_en(gradf,grads)    !  not available yet
-       write(6,*)' ANBKERROR_A_EN not written yet, program stops'
-       stop
-     else
-       call bkerror_a_en(gradf,grads)
-     end if
-
-! multiply static (Jb) part of grady by betas_inv(:), and
-! multiply ensemble (Je) part of grady by betae_inv(:). [Default : betae_inv(:) =  1 - betas_inv(:) ]
-!   (this determines relative contributions from static background Jb and
-!   ensemble background Je)
-
-     call beta12mult(grads)
-
-   end if
+call bkerror(gradf,grads)
 
 !  Update xhatsave
    do ii=1,xhat%lencv
@@ -247,7 +177,7 @@ else ! not sensitivity run
        gradf%values(ii) = gradf%values(ii) - gradx%values(ii)
    end do
    zgg=dot_product(gradf,grads,r_quad)
-   zgg=sqrt(max(tiny_r_kind,zgg))
+   zgg=sqrt(zgg)
    if (mype==0) then
       write(6,888)trim(myname),': Gradient norm estimated,actual,error:',zge,zgf,zgg
    endif
@@ -265,7 +195,6 @@ else ! not sensitivity run
    if (lgrtest) call grtest(zdx,itest,xhat)  
    if (ladtest) call adtest(xhat)
 
-endif ! sensitivity option
 
 ! Release memory
 call deallocate_cv(xhat)
@@ -279,7 +208,7 @@ call inquire_cv
 !_RT call inquire_state
 
 ! Finalize timer
-call timer_fnl('bicg')
+call timer_fnl('sqrtmin')
 
 888 format(2A,3(1X,ES25.18))
 

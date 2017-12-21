@@ -33,12 +33,11 @@ if [[ $nargs -lt 1 || $nargs -gt 2 ]]; then
    exit 1
 fi
 
-
 this_file=`basename $0`
 this_dir=`dirname $0`
 
-RADMON_SUFFIX=$1
-echo RADMON_SUFFIX    = ${RADMON_SUFFIX}
+SUFFIX=$1
+echo SUFFIX    = ${SUFFIX}
 
 #--------------------------------------------------------------------
 #  Set plot_time if it is included as an argument.
@@ -56,57 +55,33 @@ export RAD_AREA=rgn
 export PLOT_ALL_REGIONS=
 
 top_parm=${this_dir}/../../parm
-export RADMON_VERSION=${RADMON_VERSION:-${top_parm}/radmon.ver}
-if [[ -s ${RADMON_VERSION} ]]; then
-   . ${RADMON_VERSION}
+
+if [[ -s ${top_parm}/RadMon_config ]]; then
+   . ${top_parm}/RadMon_config
 else
-   echo "Unable to source ${RADMON_VERSION} file"
-   exit 2
+   echo "Unable to source ${top_parm}/RadMon_config"
+   exit
 fi
-
-export RADMON_CONFIG=${RADMON_CONFIG:-${top_parm}/RadMon_config}
-
-if [[ -s ${RADMON_CONFIG} ]]; then
-   . ${RADMON_CONFIG}
+if [[ -s ${top_parm}/RadMon_user_settings ]]; then
+   . ${top_parm}/RadMon_user_settings
 else
-   echo "Unable to source ${RADMON_CONFIG}"
+   echo "Unable to source ${top_parm}/RadMon_user_settings"
    exit
 fi
 
-if [[ -s ${RADMON_USER_SETTINGS} ]]; then
-   . ${RADMON_USER_SETTINGS}
-else
-   echo "Unable to source ${RADMON_USER_SETTINGS}"
-   exit
-fi
-
-. ${IG_PARM}/plot_rad_conf
-. ${IG_PARM}/rgnl_conf
+. ${RADMON_IMAGE_GEN}/parm/plot_rad_conf
+. ${RADMON_IMAGE_GEN}/parm/rgnl_conf
 
 
-#--------------------------------------------------------------------
-#  Check setting of RUN_ONLY_ON_DEV and possible abort if on prod and
-#  not permitted to run there.
-#--------------------------------------------------------------------
-
-if [[ RUN_ONLY_ON_DEV -eq 1 ]]; then
-   is_prod=`${IG_SCRIPTS}/onprod.sh`
-   if [[ $is_prod = 1 ]]; then
-      exit 10
-   fi
-fi
-
-#--------------------------------------------------------------------
-
-
-tmpdir=${STMP_USER}/plot_rgnl_rad${RADMON_SUFFIX}
+tmpdir=${STMP_USER}/plot_rgnl_rad${SUFFIX}
 rm -rf $tmpdir
 mkdir -p $tmpdir
 cd $tmpdir
 
 export PLOT=0
+export PLOT_HORIZ=0
 
-mkdir -p $LOGdir
+mkdir -p $LOGDIR
 
 
 #--------------------------------------------------------------------
@@ -116,14 +91,16 @@ mkdir -p $LOGdir
 #--------------------------------------------------------------------
 
 running=0
-if [[ $MY_MACHINE = "wcoss" ]]; then
-   running=`bjobs -l | grep plot_${RADMON_SUFFIX} | wc -l`
+if [[ $MY_MACHINE = "ccs" ]]; then
+   running=`llq -u ${LOGNAME} -f %jn | grep ${plot} | grep $SUFFIX | wc -l`
+elif [[ $MY_MACHINE = "wcoss" ]]; then
+   running=`bjobs -l | grep plot_${SUFFIX} | wc -l`
 else
-   running=`showq -n -u ${LOGNAME} | grep plot_${RADMON_SUFFIX} | wc -l`
+   running=`showq -n -u ${LOGNAME} | grep plot_${SUFFIX} | wc -l`
 fi
 
 if [[ $running -ne 0 ]]; then
-   echo plot jobs still running for $RADMON_SUFFIX, must exit
+   echo plot jobs still running for $SUFFIX, must exit
    cd $tmpdir
    cd ../
    rm -rf $tmpdir
@@ -137,10 +114,10 @@ fi
 # $PRODATE.
 #
 # If plot_time has been specified via command line argument, then
-# set PDATE to it.  Otherwise, determine the last date processed 
-# (into *.ieee_d files) and use that as the PDATE.
+# set PDATE to it.  Otherwise, use the IMGDATE from the DATA_MAP file
+# and add 6 hrs to determine the next cycle.
 #--------------------------------------------------------------------
-export PRODATE=`${IG_SCRIPTS}/find_cycle.pl 1 ${TANKDIR}`
+export PRODATE=`${SCRIPTS}/find_last_cycle.pl ${TANKDIR}`
 
 if [[ $plot_time != "" ]]; then
    export PDATE=$plot_time
@@ -150,9 +127,6 @@ fi
 export START_DATE=`$NDATE -720 $PDATE`
 echo $PRODATE  $PDATE
 
-sdate=`echo $PDATE|cut -c1-8`
-export CYA=`echo $PDATE|cut -c9-10`
-export PDY=`echo $PDATE|cut -c1-8`
 
 #--------------------------------------------------------------------
 #  exit if no new data is available
@@ -169,11 +143,12 @@ fi
 #  Plot all but horizontal data with each cycle.  Plot horizontal
 #  data on 00z cycle. 
 
+export CYA=`echo $PDATE|cut -c9-10`
 export PLOT=1
 
-#if [[ "$CYA" = "00" ]];then
-#   export PLOT_HORIZ=1
-#fi
+if [[ "$CYA" = "00" ]];then
+   export PLOT_HORIZ=1
+fi
 
 
 #--------------------------------------------------------------------
@@ -183,21 +158,19 @@ export PLOT=1
 if [[ $PLOT -eq 1 ]]; then
 
    if [[ $USE_STATIC_SATYPE -eq 0 ]]; then
+      PDY=`echo $PDATE|cut -c1-8`
 
       if [[ -d ${TANKDIR}/radmon.${PDY} ]]; then
-         test_list=`ls ${TANKDIR}/radmon.${PDY}/angle.*${PDATE}.ieee_d.*`
+         test_list=`ls ${TANKDIR}/radmon.${PDY}/angle.*${PDATE}.ieee_d*`
       else
          test_list=`ls ${TANKDIR}/angle/*.${PDATE}.ieee_d*`
       fi
 
       for test in ${test_list}; do
          this_file=`basename $test`
-         test_anl=`echo $this_file | grep "_anl"`
-         if [[ $test_anl = "" ]]; then
-            tmp=`echo "$this_file" | cut -d. -f2`
-            echo $tmp
-            SATYPE_LIST="$SATYPE_LIST $tmp"
-         fi
+         tmp=`echo "$this_file" | cut -d. -f2`
+         echo $tmp
+         SATYPE_LIST="$SATYPE_LIST $tmp"
       done
 
       SATYPE=$SATYPE_LIST
@@ -228,7 +201,7 @@ if [[ $PLOT -eq 1 ]]; then
   #------------------------------------------------------------------
   # Set environment variables.
 
-  export PLOT_WORK_DIR=${STMP_USER}/plotjobs_${RADMON_SUFFIX}
+  export PLOT_WORK_DIR=${STMP_USER}/plotjobs_${SUFFIX}
   mkdir -p $PLOT_WORK_DIR
   cd $PLOT_WORK_DIR
 
@@ -241,52 +214,41 @@ if [[ $PLOT -eq 1 ]]; then
   fi
   export datdir=$RADSTAT_LOCATION
 
+  export listvar=RAD_AREA,LOADLQ,PDATE,NDATE,START_DATE,TANKDIR,IMGNDIR,PLOT_WORK_DIR,EXEDIR,LOGDIR,SCRIPTS,GSCRIPTS,STNMAP,GRADS,GADDIR,USER,PTMP_USER,STMP_USER,USER_CLASS,SUB,SUFFIX,FIXANG,SATYPE,NCP,PLOT,ACCOUNT,RADMON_DATA_EXTRACT,DATA_MAP,Z,COMPRESS,UNCOMPRESS,PTMP,STMP,TIMEX,LITTLE_ENDIAN,PLOT_ALL_REGIONS,MY_MACHINE,SUB_AVG,datdir,listvar
+
 
   #------------------------------------------------------------------
   #   Submit plot jobs.
 
   if [[ $PLOT_HORIZ -eq 1 ]]; then
-     logfile=${LOGdir}/mk_horiz_plots.log
+     logfile=${LOGDIR}/mk_horiz_plots.log
      rm ${logfile}
 
-     jobname=mk_plot_horiz_${RADMON_SUFFIX}
-     if [[ $MY_MACHINE = "wcoss" ]]; then
-        $SUB -q $JOB_QUEUE -P $PROJECT -M 80 -R affinity[core]  -o ${logfile} -W 0:45 -J ${jobname} ${IG_SCRIPTS}/mk_horiz_plots.sh
-     elif [[ $MY_MACHINE = "cray" ]]; then
-        $SUB -q $JOB_QUEUE -P $PROJECT -M 80 -o ${logfile} -W 0:45 -J ${jobname} ${IG_SCRIPTS}/mk_horiz_plots.sh
+     jobname=mk_plot_horiz_${SUFFIX}
+     if [[ $MY_MACHINE = "ccs" ]]; then
+        ${SUB} -a ${ACCOUNT} -e ${listvar} -j ${jobname} -q dev -g ${USER_CLASS} -t 0:20:00 -o ${logfile} ${SCRIPTS}/mk_horiz_plots.sh ${SUFFIX} ${PDATE}
+     elif [[ $MY_MACHINE = "wcoss" ]]; then
+        $SUB -q dev -o ${logfile} -W 0:45 -J ${jobname} ${SCRIPTS}/mk_horiz_plots.sh
      else
-        $SUB -A $ACCOUNT -l procs=1,walltime=0:20:00 -N ${jobname} -V -j oe -o $LOGdir/mk_horiz_plots.log $IG_SCRIPTS/mk_horiz_plots.sh
+        $SUB -A $ACCOUNT -l procs=1,walltime=0:20:00 -N ${jobname} -v $listvar -j oe -o $LOGDIR/mk_horiz_plots.log $SCRIPTS/mk_horiz_plots.sh
      fi
   fi
 
-  ${IG_SCRIPTS}/mk_angle_plots.sh
+  ${SCRIPTS}/mk_angle_plots.sh
 
-  ${IG_SCRIPTS}/mk_bcoef_plots.sh
+  ${SCRIPTS}/mk_bcoef_plots.sh
 
-  ${IG_SCRIPTS}/mk_bcor_plots.sh
+  ${SCRIPTS}/mk_bcor_plots.sh
 
-  ${IG_SCRIPTS}/mk_time_plots.sh
+  ${SCRIPTS}/mk_time_plots.sh
 
   #------------------------------------------------------------------
-  #  Run the make_archive.sh script if $DO_ARCHIVE is switched on.
+  #  Run the plot_update.sh script if no $plot_time was specified on
+  #  the command line
   #------------------------------------------------------------------
-  if [[ $DO_ARCHIVE = 1 ]]; then
-#     ${IG_SCRIPTS}/make_archive.sh
-     ${IG_SCRIPTS}/nu_make_archive.sh
+  if [[ $plot_time = "" ]]; then
+     ${SCRIPTS}/plot_update.sh
   fi
-
-fi
-
-#--------------------------------------------------------------------
-#  Check for log file and extract data for error report there
-#--------------------------------------------------------------------
-if [[ $DO_DATA_RPT -eq 1 || $DO_DIAG_RPT -eq 1 ]]; then
-
-   logfile=${LOGdir}/data_extract.${RADMON_SUFFIX}.${sdate}.${CYA}.log
-
-   if [[ -s $logfile ]]; then
-      ${IG_SCRIPTS}/extract_err_rpts.sh $sdate $CYA $logfile
-   fi
 fi
 
 #--------------------------------------------------------------------

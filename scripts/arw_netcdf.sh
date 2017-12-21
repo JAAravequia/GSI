@@ -22,7 +22,15 @@ fi
 
 # Set experiment name
 
-exp=$jobname
+if [[ "$arch" = "Linux" ]]; then
+
+   exp=$jobname
+
+elif [[ "$arch" = "AIX" ]]; then
+
+   exp=$LOADL_JOB_NAME
+
+fi
 
 # Set path/file for gsi executable
 #gsiexec=$updat
@@ -108,11 +116,7 @@ OBSINPUT="$OBSINPUT_update"
 SUPERRAD="$SUPERRAD_update"
 SINGLEOB="$SINGLEOB_update"
 
-if [ "$debug" = ".false." ]; then
-   . $scripts/regression_namelists.sh
-else
-   . $scripts/regression_namelists_db.sh
-fi
+. $scripts/regression_namelists.sh
 cat << EOF > gsiparm.anl
 
 $arw_netcdf_namelist
@@ -142,17 +146,17 @@ if [[ "$io_format" = "binary" ]]; then
 elif [[ "$io_format" = "netcdf" ]]; then
    berror=$fixgsi/$endianness/nam_glb_berror.f77.gcv
 fi
-emiscoef_IRwater=$fixcrtm/Nalli.IRwater.EmisCoeff.bin
-emiscoef_IRice=$fixcrtm/NPOESS.IRice.EmisCoeff.bin
-emiscoef_IRland=$fixcrtm/NPOESS.IRland.EmisCoeff.bin
-emiscoef_IRsnow=$fixcrtm/NPOESS.IRsnow.EmisCoeff.bin
-emiscoef_VISice=$fixcrtm/NPOESS.VISice.EmisCoeff.bin
-emiscoef_VISland=$fixcrtm/NPOESS.VISland.EmisCoeff.bin
-emiscoef_VISsnow=$fixcrtm/NPOESS.VISsnow.EmisCoeff.bin
-emiscoef_VISwater=$fixcrtm/NPOESS.VISwater.EmisCoeff.bin
-emiscoef_MWwater=$fixcrtm/FASTEM6.MWwater.EmisCoeff.bin
-aercoef=$fixcrtm/AerosolCoeff.bin
-cldcoef=$fixcrtm/CloudCoeff.bin
+emiscoef_IRwater=$crtm_coef/Nalli.IRwater.EmisCoeff.bin
+emiscoef_IRice=$crtm_coef/NPOESS.IRice.EmisCoeff.bin
+emiscoef_IRland=$crtm_coef/NPOESS.IRland.EmisCoeff.bin
+emiscoef_IRsnow=$crtm_coef/NPOESS.IRsnow.EmisCoeff.bin
+emiscoef_VISice=$crtm_coef/NPOESS.VISice.EmisCoeff.bin
+emiscoef_VISland=$crtm_coef/NPOESS.VISland.EmisCoeff.bin
+emiscoef_VISsnow=$crtm_coef/NPOESS.VISsnow.EmisCoeff.bin
+emiscoef_VISwater=$crtm_coef/NPOESS.VISwater.EmisCoeff.bin
+emiscoef_MWwater=$crtm_coef/FASTEM5.MWwater.EmisCoeff.bin
+aercoef=$crtm_coef/AerosolCoeff.bin
+cldcoef=$crtm_coef/CloudCoeff.bin
 satinfo=$fixgsi/nam_regional_satinfo.txt
 scaninfo=$fixgsi/global_scaninfo.txt
 satangl=$fixgsi/nam_global_satangbias.txt
@@ -160,18 +164,7 @@ atmsbeamdat=$fixgsi/atms_beamwidth.txt
 pcpinfo=$fixgsi/nam_global_pcpinfo.txt
 ozinfo=$fixgsi/nam_global_ozinfo.txt
 errtable=$fixgsi/nam_errtable.r3dv
-convinfo=$fixgsi/nam_regional_convinfo_reg_test.txt
-### add 9 tables
-errtable_pw=$fixgsi/prepobs_errtable_pw.global
-errtable_ps=$fixgsi/prepobs_errtable_ps.global_nqcf
-errtable_t=$fixgsi/prepobs_errtable_t.global_nqcf
-errtable_q=$fixgsi/prepobs_errtable_q.global_nqcf
-errtable_uv=$fixgsi/prepobs_errtable_uv.global_nqcf
-btable_ps=$fixgsi/nqc_b_ps.global_nqcf
-btable_t=$fixgsi/nqc_b_t.global_nqcf
-btable_q=$fixgsi/nqc_b_q.global_nqcf
-btable_uv=$fixgsi/nqc_b_uv.global_nqcf
-
+convinfo=$fixgsi/nam_regional_convinfo.txt
 mesonetuselist=$fixgsi/nam_mesonet_uselist.txt
 
 # Only need this file for single obs test
@@ -201,7 +194,7 @@ $ncp $emiscoef_VISice ./NPOESS.VISice.EmisCoeff.bin
 $ncp $emiscoef_VISland ./NPOESS.VISland.EmisCoeff.bin
 $ncp $emiscoef_VISsnow ./NPOESS.VISsnow.EmisCoeff.bin
 $ncp $emiscoef_VISwater ./NPOESS.VISwater.EmisCoeff.bin
-$ncp $emiscoef_MWwater ./FASTEM6.MWwater.EmisCoeff.bin
+$ncp $emiscoef_MWwater ./FASTEM5.MWwater.EmisCoeff.bin
 $ncp $aercoef  ./AerosolCoeff.bin
 $ncp $cldcoef  ./CloudCoeff.bin
 $ncp $satangl  ./satbias_angle
@@ -213,31 +206,19 @@ $ncp $ozinfo   ./ozinfo
 $ncp $convinfo ./convinfo
 $ncp $errtable ./errtable
 $ncp $mesonetuselist ./mesonetuselist
-####
-#add 9 tables for new varqc
-$ncp $errtable_pw           ./errtable_pw
-$ncp $errtable_ps           ./errtable_ps
-$ncp $errtable_t           ./errtable_t
-$ncp $errtable_q           ./errtable_q
-$ncp $errtable_uv           ./errtable_uv
-$ncp $btable_ps           ./btable_ps
-$ncp $btable_t           ./btable_t
-$ncp $btable_q           ./btable_q
-$ncp $btable_uv           ./btable_uv
-
 
 $ncp $bufrtable ./prepobs_prep.bufrtable
 $ncp $bftab_sst ./bftab_sstphr
 
 # Copy CRTM coefficient files based on entries in satinfo file
 for file in `awk '{if($1!~"!"){print $1}}' ./satinfo | sort | uniq` ;do
-    $ncp $fixcrtm/${file}.SpcCoeff.bin ./
-    $ncp $fixcrtm/${file}.TauCoeff.bin ./
+    $ncp $crtm_coef/${file}.SpcCoeff.bin ./
+    $ncp $crtm_coef/${file}.TauCoeff.bin ./
 done
 
 # Copy observational data to $tmpdir
 $ncp $arw_netcdf_obs/${prefixo}.prepbufr.tm06   ./prepbufr
-$ncp $arw_netcdf_obs/${prefixo}.satwnd.$suffix  ./satwndbufr
+$ncp $arw_netcdf_obs/${prefixo}.satwnd.$suffix  ./satwnd
 $ncp $arw_netcdf_obs/${prefixo}.1bhrs3.$suffix  ./hirs3bufr
 $ncp $arw_netcdf_obs/${prefixo}.1bhrs4.$suffix  ./hirs4bufr
 $ncp $arw_netcdf_obs/${prefixo}.1bamua.$suffix  ./amsuabufr
@@ -264,7 +245,7 @@ elif [[ "$io_format" = "netcdf" ]]; then
 fi
 cp wrf_inout wrf_ges
 
-if [[ "$machine" = "Theia" ]]; then
+if [[ "$arch" = "Linux" ]]; then
 
    cd $tmpdir/
    echo "run gsi now"
@@ -274,16 +255,16 @@ if [[ "$machine" = "Theia" ]]; then
    export MPI_GROUP_MAX=256
    #export OMP_NUM_THREADS=1
 
-#  module load intel
-#  module load mpt
+   module load intel
+   module load mpt
 
    echo "JOB ID : $PBS_JOBID"
-   eval "$launcher -v -np $PBS_NP $tmpdir/gsi.x > stdout"
+   eval "mpiexec_mpt -v -np $PBS_NP $tmpdir/gsi.x > stdout"
 
-elif [[ "$machine" = "WCOSS" ]]; then
+elif [[ "$arch" = "AIX" ]]; then
 
 # Run gsi under Parallel Operating Environment (poe) on NCEP IBM
-   mpirun.lsf $tmpdir/gsi.x < gsiparm.anl > stdout
+   poe $tmpdir/gsi.x < gsiparm.anl > stdout
 
 fi
 

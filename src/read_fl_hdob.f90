@@ -1,5 +1,5 @@
 subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis,&
-                        prsl_full,nobs)
+                        prsl_full)
 
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -17,7 +17,6 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 
 ! program history log:
 !   2013-02-05  eliu     - initial coding
-!   2015-02-23  Rancic/Thomas - add thin4d to time window logical
 !
 !   input argument list:
 !     infile    - unit from which to read BUFR data
@@ -32,7 +31,6 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 !     nread     - number of type "obstype" observations read
 !     nodata    - number of individual "obstype" observations read
 !     ndata     - number of type "obstype" observations retained for further processing
-!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -48,35 +46,24 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
          rlats,rlons,twodvar_regional
      use convinfo, only: nconvtype,ctwind, &
          ncmiter,ncgroup,ncnumgrp,icuse,ictype,icsubtype,ioctype, &
-         ithin_conv,rmesh_conv,pmesh_conv,index_sub, &
+         ithin_conv,rmesh_conv,pmesh_conv, &
          id_bias_ps,id_bias_t,conv_bias_ps,conv_bias_t,use_prepb_satwnd
      use obsmod, only: iadate,oberrflg,perturb_obs,perturb_fact,ran01dom,hilbert_curve
      use obsmod, only: blacklst,offtime_data,bmiss
      use converr,only: etabl
-     use converr_ps,only: etabl_ps,isuble_ps,maxsub_ps
-     use converr_q,only: etabl_q,isuble_q,maxsub_q
-     use converr_t,only: etabl_t,isuble_t,maxsub_t
-     use converr_uv,only: etabl_uv,isuble_uv,maxsub_uv
-     use converr_pw,only: etabl_pw,isuble_pw,maxsub_pw
-     use convb_ps,only: btabl_ps
-     use convb_q,only: btabl_q
-     use convb_t,only: btabl_t
-     use convb_uv,only: btabl_uv
-     use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,time_4dvar,winlen,thin4d
-     use qcmod, only: errormod,njqc
+     use gsi_4dvar, only: l4dvar,iwinbgn,time_4dvar,winlen
+     use qcmod, only: errormod
      use convthin, only: make3grids,map3grids,del3grids,use_all
      use ndfdgrids,only: init_ndfdgrid,destroy_ndfdgrid,relocsfcob,adjust_error
      use jfunc, only: tsensible
      use deter_sfc_mod, only: deter_sfc_type,deter_sfc2
-     use mpimod, only: npe
                                                                                                       
      implicit none
 
 !    Declare passed variables
      character(len=*), intent(in   ) :: infile,obstype
-     character(len=20),intent(in   ) :: sis
+     character(len=*), intent(in   ) :: sis
      integer(i_kind) , intent(in   ) :: lunout
-     integer(i_kind) , dimension(npe), intent(inout) :: nobs
      integer(i_kind) , intent(inout) :: nread,ndata,nodata
      real(r_kind)    , intent(in   ) :: twind
      real(r_kind)    , intent(in   ) :: gstime 
@@ -88,6 +75,7 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
      logical :: inflate_error
      logical :: ltob,lqob,luvob,lspdob,lpsob
      logical :: luse
+     logical :: good
 
 !    Character variables
      character(40) :: timestr,locstr,tmpstr,mststr,wndstr,sfmrstr  
@@ -103,25 +91,26 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
      integer(i_kind), parameter :: mxib  = 31
      integer(i_kind), parameter :: ietabl= 19 
 
-     integer(i_kind) :: i,k,kl,k1,k2 
+     integer(i_kind) :: i,k,m,kl,k1,k2 
      integer(i_kind) :: lunin 
-     integer(i_kind) :: ireadmg,ireadsb
+     integer(i_kind) :: iret,ireadmg,ireadsb
      integer(i_kind) :: idate
      integer(i_kind) :: ilat,ilon 
      integer(i_kind) :: nlv
-     integer(i_kind) :: nreal,nchanl
+     integer(i_kind) :: kx,nreal,nchanl
      integer(i_kind) :: idomsfc,isflg
      integer(i_kind) :: ithin,iout 
      integer(i_kind) :: nc,ncsave
      integer(i_kind) :: ntmatch,ntb
+     integer(i_kind) :: ntread
      integer(i_kind) :: nmsg   
      integer(i_kind) :: maxobs 
-     integer(i_kind) :: itype,iobsub,itypey,iecol
-     integer(i_kind) :: ierr_ps,ierr_q,ierr_t,ierr_uv 
+     integer(i_kind) :: itype,iobsub 
+     integer(i_kind) :: iecol 
      integer(i_kind) :: qcm,lim_qm
      integer(i_kind) :: p_qm,g_qm,t_qm,q_qm,uv_qm,wspd_qm,ps_qm
      integer(i_kind) :: ntest,nvtest
-!    integer(i_kind) :: m,itypex,lcount,iflag
+     integer(i_kind) :: itypex,lcount,iflag
      integer(i_kind) :: nlevp   ! vertical level for thinning
      integer(i_kind) :: pflag   
      integer(i_kind) :: ntmp,iiout,igood
@@ -131,6 +120,7 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
      integer(i_kind) :: nib 
  
      integer(i_kind) :: ibit(mxib)
+     integer(i_kind) :: ntxall(nconvtype)
      integer(i_kind) :: idate5(5)
 
      integer(i_kind), allocatable,dimension(:) :: isort
@@ -143,12 +133,14 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
      real(r_kind), parameter :: r50     =   50.0_r_kind
      real(r_kind), parameter :: r1200   = 1200.0_r_kind
      real(r_kind), parameter :: emerr   =    0.2_r_kind ! RH
+     real(r_kind), parameter :: convert = 1.0e-6_r_kind
+     real(r_kind), parameter :: r999    = 999.0_r_kind
      real(r_kind), parameter :: missing = 1.0e+11_r_kind
 
      real(r_kind) :: toff,t4dv
      real(r_kind) :: rmesh
      real(r_kind) :: usage
-     real(r_kind) :: woe,toe,qoe,psoe,obserr,var_jb
+     real(r_kind) :: woe,toe,qoe,spdoe,psoe,obserr
      real(r_kind) :: dlat,dlon,dlat_earth,dlon_earth
      real(r_kind) :: cdist,disterr,disterrmax,rlon00,rlat00
      real(r_kind) :: vdisterrmax,u00,v00,u0,v0
@@ -156,16 +148,18 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
      real(r_kind) :: wdir,wspd
      real(r_kind) :: tob,uob,vob,qob,spdob,rrob
      real(r_kind) :: rhob,tdob
-     real(r_kind) :: pob_mb,pob_cb,pob_pa,gob
-     real(r_kind) :: psob_mb,psob_cb,psob_pa
+     real(r_kind) :: pob,pob_mb,pob_cb,pob_pa,gob
+     real(r_kind) :: psob,psob_mb,psob_cb,psob_pa
      real(r_kind) :: qmaxerr 
+     real(r_kind) :: swspd,trr
      real(r_kind) :: dlnpsob,dlnpob,ppb
      real(r_kind) :: crit1,timedif,xmesh,pmesh
      real(r_kind) :: sstime,tdiff 
      real(r_kind) :: tsavg,ff10,sfcr,zz
+     real(r_kind) :: qc_pos,qc_met
      real(r_kind) :: es,qsat,rhob_calc,tdob_calc,tdry
      real(r_kind) :: dummy 
-     real(r_kind) :: del,ediff,errmin,jbmin
+     real(r_kind) :: del,ediff,errmin
      real(r_kind) :: tvflg 
 
      real(r_kind) :: presl(nsig)
@@ -224,22 +218,13 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 
      nreal  = 0
      iecol  = 0
-     ierr_ps  = 0
-     ierr_q  = 0
-     ierr_t  = 0
-     ierr_uv  = 0
-     var_jb=zero
-     jbmin=zero
- 
- 
      lim_qm = 4
-     iecol=0
      if (ltob) then
-        nreal  = 25
+        nreal  = 24
         iecol  =  2 
         errmin = half      ! set lower bound of ob error for T or Tv
      else if (luvob) then
-        nreal  = 25
+        nreal  = 24
         iecol  =  4  
         errmin = one       ! set lower bound of ob error for u,v winds
      else if (lspdob) then
@@ -247,11 +232,11 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
         iecol  =  4  
         errmin = one
      else if (lqob) then   ! set lower bound of ob err for surface wind speed
-        nreal  = 26
+        nreal  = 25
         iecol  =  3 
         errmin = half      ! set lower bound of ob error for moisture (RH) 
      else if (lpsob) then  
-        nreal  = 23 
+        nreal  = 22 
         iecol  =  5 
         errmin = one_tenth ! set lower bound of ob error for moisture (RH) 
      else 
@@ -271,28 +256,28 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 !    4: wind speed error [m/s]
 !    5: surface pressure error [mb] 
 !    6: total precipitable water error [?]  
-!     open(ietabl,file='errtable',form='formatted')
-!     rewind ietabl 
-!     lcount = 0
-!     etabl  = 1.e9_r_kind
-!     loopd : do
-!        read(ietabl,100,IOSTAT=iflag) itypex
-!        if( iflag /= 0 ) exit loopd
-!100     format(1x,i3)
-!        lcount = lcount+1
-!        do k = 1,33
-!           read(ietabl,110)(etabl(itypex,k,m),m=1,6)
-!110        format(1x,6e12.5)
-!        end do
-!     end do loopd
+     open(ietabl,file='errtable',form='formatted')
+     rewind ietabl 
+     lcount = 0
+     etabl  = 1.e9_r_kind
+     loopd : do
+        read(ietabl,100,IOSTAT=iflag) itypex
+        if( iflag /= 0 ) exit loopd
+100     format(1x,i3)
+        lcount = lcount+1
+        do k = 1,33
+           read(ietabl,110)(etabl(itypex,k,m),m=1,6)
+110        format(1x,6e12.5)
+        end do
+     end do loopd
 
-!     if (lcount <= 0) then
-!        write(6,*)'READ_FL_HDOB: obs error table not available'
-!        call stop2(49) 
-!     else
-!        write(6,*)'READ_FL_HDOB: obs errors provided by local file errtable'   
-!     endif
-!
+     if (lcount <= 0) then
+        write(6,*)'READ_FL_HDOB: obs error table not available'
+        call stop2(49) 
+     else
+        write(6,*)'READ_FL_HDOB: obs errors provided by local file errtable'   
+     endif
+
 !    Check if the obs type specified in the convinfo is in the fl hdob bufr file 
 !    If found, get the index (nc) from the convinfo for the specified type
      ntmatch =  0
@@ -353,7 +338,7 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
      nmsg   = 0
      maxobs = 0
      call closbf(lunin) 
-     open(lunin,file=trim(infile),form='unformatted')
+     open(lunin,file=infile,form='unformatted')
      call openbf(lunin,'IN',lunin)
      call datelen(10)
 
@@ -386,7 +371,7 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 
 !    Open bufr file again for reading
      call closbf(lunin)
-     open(lunin,file=trim(infile),form='unformatted')
+     open(lunin,file=infile,form='unformatted')
      call openbf(lunin,'IN',lunin)
      call datelen(10)
      ntb   = 0     
@@ -441,12 +426,11 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 
            call w3fs21(idate5,nmind)
            t4dv = real((nmind-iwinbgn),r_kind)*r60inv
-           sstime = real(nmind,r_kind)
-           tdiff  = (sstime-gstime)*r60inv
-
-           if (l4dvar.or.l4densvar) then
+           if (l4dvar) then
               if (t4dv < zero .OR. t4dv > winlen) cycle loop_readsb2
            else
+              sstime = real(nmind,r_kind)
+              tdiff  = (sstime-gstime)*r60inv
               if (abs(tdiff)>twind) cycle loop_readsb2
            endif
            nread = nread+1 
@@ -577,24 +561,23 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
   
 !          Get observation error from error table
            ppb = max(zero,min(pob_mb,r2000))
-           if(.not. njqc) then
-              if(ppb >= etabl(itype,1,1)) k1 = 1
-              do kl = 1,32
-                 if(ppb >= etabl(itype,kl+1,1) .and. ppb <= etabl(itype,kl,1)) k1 = kl
-              end do
-              if(ppb <= etabl(itype,33,1)) k1 = 5
-              k2 = k1+1
-              ediff = etabl(itype,k2,1)-etabl(itype,k1,1)
-              if (abs(ediff) > tiny_r_kind) then
-                 del = (ppb-etabl(itype,k1,1))/ediff
-              else
-                 del = huge_r_kind
-              endif
-              del    = max(zero,min(del,one))
-              obserr = (one-del)*etabl(itype,k1,iecol)+del*etabl(itype,k2,iecol)
-              obserr = max(obserr,errmin)
+           if(ppb >= etabl(itype,1,1)) k1 = 1
+           do kl = 1,32
+              if(ppb >= etabl(itype,kl+1,1) .and. ppb <= etabl(itype,kl,1)) k1 = kl
+           end do
+           if(ppb <= etabl(itype,33,1)) k1 = 5
+           k2 = k1+1
+           ediff = etabl(itype,k2,1)-etabl(itype,k1,1)
+           if (abs(ediff) > tiny_r_kind) then
+              del = (ppb-etabl(itype,k1,1))/ediff
+           else
+              del = huge_r_kind
            endif
-!         Read extrapolated surface pressure [pa] and convert to [cb]
+           del    = max(zero,min(del,one))
+           obserr = (one-del)*etabl(itype,k1,iecol)+del*etabl(itype,k2,iecol)
+           obserr = max(obserr,errmin)
+
+!          Read extrapolated surface pressure [pa] and convert to [cb]
            if (lpsob) then
               call ufbint(lunin,obspsf,1,1,nlv,psfstr)
               if (obspsf(1,1) >= missing .or. &
@@ -606,36 +589,8 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
               psob_mb = obspsf(1,1)*r0_01   ! convert {Pa] to [mb]
               psob_cb = obspsf(1,1)*r0_001  ! convert [Pa] to [cb]
               dlnpsob = log(psob_cb)        ! [cb]
-!             Get observation error from error table
-              if (njqc) then
-                 ppb = max(zero,min(pob_mb,r2000))
-                 itypey=itype
-                 ierr_ps=index_sub(nc)
-                 if(ierr_ps >maxsub_ps) ierr_ps=2
-                 if( icsubtype(nc) /= isuble_ps(itypey,ierr_ps)) then
-                    write(6,*) ' READ_FL_HDOB: the subtypes do not match subtype &
-                            in the errortable,iobsub=',iobsub,isuble_ps(itypey,ierr_ps-1),itypey,itype
-                    call stop2(49)
-                 endif
-                 if(ppb >= etabl_ps(itypey,1,1)) k1 = 1
-                 do kl = 1,32
-                    if(ppb >= etabl_ps(itypey,kl+1,1) .and. ppb <= etabl_ps(itypey,kl,1)) k1 = kl
-                 end do
-                 if(ppb <= etabl_ps(itypey,33,1)) k1 = 5
-                 k2 = k1+1
-                 ediff = etabl_ps(itypey,k2,1)-etabl_ps(itypey,k1,1)
-                 if (abs(ediff) > tiny_r_kind) then
-                    del = (ppb-etabl_ps(itypey,k1,1))/ediff
-                 else
-                    del = huge_r_kind
-                 endif
-                 del    = max(zero,min(del,one))
-                 obserr = (one-del)*etabl_ps(itypey,k1,ierr_ps)+del*etabl_ps(itypey,k2,ierr_ps)
-                 var_jb=(one-del)*btabl_ps(itypey,k1,ierr_ps)+del*btabl_ps(itypey,k2,ierr_ps)
-                 obserr = max(obserr,errmin)
-                 var_jb=max(var_jb,jbmin)
-              endif
            endif
+
 !          Convert raw temperature data to T or Tv     
 !          Read temperature [K],dew pointer temperature [K] and related QC marks 
 !          If both T and Td are available and in good condition, then calculate
@@ -675,36 +630,8 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
                  endif
                  tob = tob*(1.0_r_kind+0.61_r_kind*qob)  ! conver t to tv
               endif
-!             Get observation error from error table
-              if (njqc) then
-                 ppb = max(zero,min(pob_mb,r2000))
-                 itypey=itype
-                 ierr_t=index_sub(nc)
-                 if(ierr_t >maxsub_t) ierr_t=2
-                 if( icsubtype(nc) /= isuble_t(itypey,ierr_t)) then
-                    write(6,*) ' READ_FL_HDOB: the subtypes do not match subtype &
-                            in the errortable,iobsub=',iobsub,isuble_t(itypey,ierr_t-1),itypey,itype
-                    call stop2(49)
-                 endif
-                 if(ppb >= etabl_t(itypey,1,1)) k1 = 1
-                 do kl = 1,32
-                    if(ppb >= etabl_t(itypey,kl+1,1) .and. ppb <= etabl_t(itypey,kl,1)) k1 = kl
-                 end do
-                 if(ppb <= etabl_t(itypey,33,1)) k1 = 5
-                 k2 = k1+1
-                 ediff = etabl_t(itypey,k2,1)-etabl_t(itypey,k1,1)
-                 if (abs(ediff) > tiny_r_kind) then
-                    del = (ppb-etabl_t(itypey,k1,1))/ediff
-                 else
-                    del = huge_r_kind
-                 endif
-                 del    = max(zero,min(del,one))
-                 obserr = (one-del)*etabl_t(itypey,k1,ierr_t)+del*etabl_t(itypey,k2,ierr_t)
-                 var_jb = (one-del)*btabl_t(itypey,k1,ierr_t)+del*btabl_t(itypey,k2,ierr_t)
-                 obserr = max(obserr,errmin)
-                 var_jb=max(var_jb,jbmin)
-              endif
            endif
+
 !          Convert raw moisture data from dew point temperature to specific humidity
 !          Read temperature,dew point temperature,relative humidity,              
 !          related QC mark and then calculate specific humidity
@@ -737,37 +664,9 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
               endif 
 !             write(4000,1004) nread,pob_mb,tob,tdob,qob,qsat,rhob,q_qm,usage 
 !1004         format(i6,6(1x,e20.12),1x,i5,1x,f5.0)
-!             Get observation error from error table
-              if (njqc) then
-                 ppb = max(zero,min(pob_mb,r2000))
-                 itypey=itype
-                 ierr_q=index_sub(nc)
-                 if(ierr_q >maxsub_q) ierr_q=2
-                 if( icsubtype(nc)  /= isuble_q(itypey,ierr_q)) then
-                    write(6,*) ' READ_FL_HDOB: the subtypes do not match subtype &
-                            in the errortable,iobsub=',iobsub,isuble_q(itypey,ierr_q-1),itypey,itype
-                    call stop2(49)
-                 endif
 
-                 if(ppb >= etabl_q(itypey,1,1)) k1 = 1
-                 do kl = 1,32
-                    if(ppb >= etabl_q(itypey,kl+1,1) .and. ppb <= etabl_q(itypey,kl,1)) k1 = kl
-                 end do 
-                 if(ppb <= etabl_q(itypey,33,1)) k1 = 5
-                 k2 = k1+1 
-                 ediff = etabl_q(itypey,k2,1)-etabl_q(itypey,k1,1)
-                 if (abs(ediff) > tiny_r_kind) then
-                    del = (ppb-etabl_q(itypey,k1,1))/ediff
-                 else
-                    del = huge_r_kind
-                 endif
-                 del    = max(zero,min(del,one))
-                 obserr = (one-del)*etabl_q(itypey,k1,ierr_q)+del*etabl_q(itypey,k2,ierr_q)
-                 var_jb = (one-del)*btabl_q(itypey,k1,ierr_q)+del*btabl_q(itypey,k2,ierr_q)
-                 obserr = max(obserr,errmin)
-                 var_jb=max(var_jb,jbmin)
-              endif
            endif
+
 !          Convert raw wind data from wind direction/speed to u & v winds
 !          Read wind direction [degree true], speed [m/s] and related QC mark 
 !          Convert wind direction and spped to u and v wind components
@@ -792,38 +691,6 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
               spdob = obsfmr(1,1) ! surface wind speed 
               rrob  = obsfmr(2,1) ! rain rate 
               if (spdob >= missing .or. rrob >=missing) cycle loop_readsb2
-           endif
-           if( lspdob .or. luvob) then             
-!             Get observation error from error table
-              if (njqc) then
-                 ppb = max(zero,min(pob_mb,r2000))
-                 itypey=itype
-                 ierr_uv=index_sub(nc)
-                 if(ierr_uv >maxsub_uv) ierr_uv=2
-                 if( icsubtype(nc) /= isuble_q(itypey,ierr_uv)) then
-                    write(6,*) ' READ_FL_HDOB: the subtypes do not match subtype &
-                            in the errortable,iobsub=',iobsub,isuble_q(itypey,ierr_uv-1),itypey,itype
-                    call stop2(49)
-                 endif
-
-                 if(ppb >= etabl_uv(itypey,1,1)) k1 = 1
-                 do kl = 1,32
-                    if(ppb >= etabl_uv(itypey,kl+1,1) .and. ppb <= etabl_uv(itypey,kl,1)) k1 = kl
-                 end do 
-                 if(ppb <= etabl_uv(itypey,33,1)) k1 = 5
-                 k2 = k1+1 
-                 ediff = etabl_uv(itypey,k2,1)-etabl_uv(itypey,k1,1)
-                 if (abs(ediff) > tiny_r_kind) then
-                    del = (ppb-etabl_uv(itypey,k1,1))/ediff
-                 else
-                    del = huge_r_kind
-                 endif
-                 del    = max(zero,min(del,one))
-                 obserr = (one-del)*etabl_uv(itypey,k1,ierr_uv)+del*etabl_uv(itypey,k2,ierr_uv)
-                 var_jb = (one-del)*btabl_uv(itypey,k1,ierr_uv)+del*btabl_uv(itypey,k2,ierr_uv)
-                 obserr=max(obserr,errmin)
-                 var_jb=max(var_jb,jbmin)
-              endif
            endif
 
 !          Obtain information necessary for conventional data assimilation 
@@ -869,7 +736,7 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
               ntmp = ndata          ! counting moved into map3grids
 
 !             Set data quality index for thinning
-              if (thin4d) then
+              if (l4dvar) then
                  timedif = zero
               else
                  timedif = abs(t4dv-toff)
@@ -882,7 +749,7 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
               endif
 
               call map3grids(-1,pflag,presl_thin,nlevp,dlat_earth,dlon_earth,& 
-                             pob_cb,crit1,ndata,iout,igood,iiout,luse,.false.,.false.)
+                             pob_cb,crit1,ithin,ndata,iout,igood,iiout,luse,.false.,.false.)
 
               if (.not. luse) cycle loop_readsb2
 
@@ -904,7 +771,7 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 
 !-------------------------------------------------------------------------------------------------          
 !          Write data into output arrays
-           if (var_jb >10.0_r_kind) var_jb=zero 
+
            if (qcm == 3) inflate_error = .true.
 
            if (lpsob) then
@@ -934,8 +801,7 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
               cdata_all(20,iout)=zz                     ! terrain height at ob location                    
               cdata_all(21,iout)=r_prvstg(1,1)          ! provider name
               cdata_all(22,iout)=r_sprvstg(1,1)         ! subprovider name
-              cdata_all(23,iout)=var_jb                 ! non linear qc b
-              if(perturb_obs)cdata_all(24,iout)=ran01dom()*perturb_fact ! ps perturbation              
+              if(perturb_obs)cdata_all(23,iout)=ran01dom()*perturb_fact ! ps perturbation              
            endif
 
 !          Winds --- u, v components 
@@ -979,10 +845,9 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
               cdata_all(22,iout)=r_prvstg(1,1)          ! provider name
               cdata_all(23,iout)=r_sprvstg(1,1)         ! subprovider name
               cdata_all(24,iout)=qcm                    ! cat
-              cdata_all(25,iout)=var_jb                 ! non linear qc 
               if(perturb_obs)then
-                 cdata_all(26,iout)=ran01dom()*perturb_fact ! u perturbation
-                 cdata_all(27,iout)=ran01dom()*perturb_fact ! v perturbation
+                 cdata_all(25,iout)=ran01dom()*perturb_fact ! u perturbation
+                 cdata_all(26,iout)=ran01dom()*perturb_fact ! v perturbation
               endif
              write(3000,1003) nread,pob_mb,uob,vob,qcm,usage    
 1003         format(i12,3e25.18,f5.0,f5.0)
@@ -1018,9 +883,8 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
               cdata_all(22,iout)=r_prvstg(1,1)          ! provider name
               cdata_all(23,iout)=r_sprvstg(1,1)         ! subprovider name
               cdata_all(24,iout)=qcm                    ! cat
-              cdata_all(25,iout)=var_jb                 ! non linear qc
               if(perturb_obs) &
-                 cdata_all(26,iout)=ran01dom()*perturb_fact  ! t perturbation             
+                 cdata_all(25,iout)=ran01dom()*perturb_fact  ! t perturbation             
               write(1000,1001) nread,tdiff,tvflg,pob_mb,qob,rhob,obstmp(2,1),tob,qcm,usage
 1001          format(i12,f8.3,f5.0,5e25.18,f5.0,f5.0)
            endif 
@@ -1047,18 +911,20 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
               cdata_all(12,iout)=obserr*one_tenth       ! original obs error (RH e.g. 0.98)       
               cdata_all(13,iout)=usage                  ! usage parameter
               cdata_all(14,iout)=idomsfc                ! dominate surface type    
-              cdata_all(15,iout)=dlon_earth*rad2deg     ! earth relative longitude (degree)        
-              cdata_all(16,iout)=dlat_earth*rad2deg     ! earth relative latitude (degree)
-              cdata_all(17,iout)=gob                    ! station elevation (m)    
-              cdata_all(18,iout)=gob                    ! observation height (m)   
-              cdata_all(19,iout)=zz                     ! terrain height at ob location             
-              cdata_all(20,iout)=r_prvstg(1,1)          ! provider name
-              cdata_all(21,iout)=r_sprvstg(1,1)         ! subprovider name
-              cdata_all(22,iout)=qcm                    ! cat
-              cdata_all(26,iout)=var_jb                 ! non linear qc
+              cdata_all(15,iout)=tsavg                  ! skin temperature
+              cdata_all(16,iout)=ff10                   ! 10 meter wind factor         
+              cdata_all(17,iout)=sfcr                   ! surface roughness
+              cdata_all(18,iout)=dlon_earth*rad2deg     ! earth relative longitude (degree)        
+              cdata_all(19,iout)=dlat_earth*rad2deg     ! earth relative latitude (degree)
+              cdata_all(20,iout)=gob                    ! station elevation (m)    
+              cdata_all(21,iout)=gob                    ! observation height (m)   
+              cdata_all(22,iout)=zz                     ! terrain height at ob location             
+              cdata_all(23,iout)=r_prvstg(1,1)          ! provider name
+              cdata_all(24,iout)=r_sprvstg(1,1)         ! subprovider name
+              cdata_all(25,iout)=qcm                    ! cat
               if(perturb_obs) &
-                 cdata_all(27,iout)=ran01dom()*perturb_fact ! q perturbation         
-!             write(2000,1002)nread,tdiff,tvflg,pob_mb,tob,qob,rhob,qoe,obserr*one_tenth,qcm,usage 
+                 cdata_all(26,iout)=ran01dom()*perturb_fact ! q perturbation         
+              write(2000,1002) nread,tdiff,tvflg,pob_mb,tob,qob,rhob,qoe,obserr*one_tenth,qcm,usage                                                  
 1002          format(i12,f8.3,f5.0,6e20.12,i5,1x,f5.0)
 
            endif 
@@ -1077,20 +943,20 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
               cdata_all( 7,iout)=rstation_id            ! station id
               cdata_all( 8,iout)=t4dv                   ! time
               cdata_all( 9,iout)=nc                     ! type
-              cdata_all(10,iout)=r10                    !  elevation of observation *emily:10-m wind       
-              cdata_all(11,iout)=qcm                    !  quality mark 
-              cdata_all(12,iout)=obserr                 !  original obs error 
-              cdata_all(13,iout)=usage                  ! usage parameter 
-              cdata_all(14,iout)=idomsfc                !  dominate surface type        
-              cdata_all(15,iout)=tsavg                  ! skin temperature 
-              cdata_all(16,iout)=ff10                   ! 10 meter wind factor     
-              cdata_all(17,iout)=sfcr                   ! surface roughness 
-              cdata_all(18,iout)=dlon_earth*rad2deg     ! earth relative longitude (degree)                
-              cdata_all(19,iout)=dlat_earth*rad2deg     ! earth relative latitude (degree)                  
-              cdata_all(20,iout)=gob                    !  station elevation (m)    
-              cdata_all(21,iout)=zz                     !  terrain height at ob location        
-              cdata_all(22,iout)=r_prvstg(1,1)          !  provider name 
-              cdata_all(23,iout)=r_sprvstg(1,1)         !  subprovider name 
+              cdata_all(10,iout)=r10                    ! elevation of observation *emily:10-m wind      
+              cdata_all(11,iout)=qcm                    ! quality mark
+              cdata_all(12,iout)=obserr                 ! original obs error
+              cdata_all(13,iout)=usage                  ! usage parameter
+              cdata_all(14,iout)=idomsfc                ! dominate surface type       
+              cdata_all(15,iout)=tsavg                  ! skin temperature
+              cdata_all(16,iout)=ff10                   ! 10 meter wind factor    
+              cdata_all(17,iout)=sfcr                   ! surface roughness
+              cdata_all(18,iout)=dlon_earth*rad2deg     ! earth relative longitude (degree)               
+              cdata_all(19,iout)=dlat_earth*rad2deg     ! earth relative latitude (degree)                 
+              cdata_all(20,iout)=gob                    ! station elevation (m)   
+              cdata_all(21,iout)=zz                     ! terrain height at ob location       
+              cdata_all(22,iout)=r_prvstg(1,1)          ! provider name
+              cdata_all(23,iout)=r_sprvstg(1,1)         ! subprovider name
            endif 
 
         end do loop_readsb2
@@ -1112,9 +978,8 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
         end do
      end do
      deallocate(cdata_all)
-!     deallocate(etabl)
+     deallocate(etabl)
 
-     call count_obs(ndata,nreal,ilat,ilon,cdata_out,nobs)
      write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
      write(lunout) cdata_out
      deallocate(cdata_out)
