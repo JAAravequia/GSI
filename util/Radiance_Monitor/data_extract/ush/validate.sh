@@ -5,21 +5,8 @@
      echo "            pdate is the cycle to be processed in YYYYMMDDHH format"
    }
 
-##############################################################
-#
-#  validate.sh 
-#
-#     Purpose:  re-run validation from copied data files using
-#     different (usually updated) base files than the ones
-#     in oper (which can't be updated as easily/quickly)
-#
-#     This is only needed with data that has been copied 
-#     (using Copy_glb.sh). 
-##############################################################
 
 echo "--> start validate.sh"
-echo "       TEST:  COMPRESS        = $COMPRESS"
-echo "       TEST:  RADMON_SUFFIX   = $RADMON_SUFFIX"
 
    nargs=$#
    if [[ $nargs -ne 1 ]]; then
@@ -37,15 +24,11 @@ echo "       TEST:  RADMON_SUFFIX   = $RADMON_SUFFIX"
    ihh=`echo $PDATE | cut -c9-10`
 
 #
-#  Get the gdas_radmon_base.tar file and open it
+#  Get the radmon_base.tar file and open it
 #
-#   cp ~/nbns/stats/${RADMON_SUFFIX}/info/gdas_radmon_base.tar* .
-   cp /nwprod2/gdas_radmon.v2.0.2/fix/gdas_radmon_base.tar .
-   if [[ -s gdas_radmon_base.tar.gz ]]; then
-      gunzip gdas_radmon_base.tar.gz
-   fi
-   tar -xvf gdas_radmon_base.tar
-   rm -f gdas_radmon_base.tar
+   cp ~/nbns/stats/opr/info/radmon_base.tar .
+   tar -xvf radmon_base.tar
+   rm -f radmon_base.tar
 
 #
 #  Get satype list, loop over satype
@@ -72,8 +55,8 @@ echo "       TEST:  RADMON_SUFFIX   = $RADMON_SUFFIX"
    for sat in ${SATYPE_LIST}; do
       echo sat = $sat
 
-      gunzip time.${sat}.${PDATE}.ieee_d.gz
-      gunzip time.${sat}.ctl.gz
+      uncompress time.${sat}.${PDATE}.ieee_d.Z 
+      uncompress time.${sat}.ctl.Z
 
 
       nchan=`cat time.${sat}.ctl | gawk '/title/{print $NF}'`
@@ -108,10 +91,10 @@ cat << EOF > input
  /
 EOF
 
-      ./validate_time.x < input >   stdout.validate.$sat.$ihh
+      $TIMEX ./validate_time.x < input >   stdout.validate.$sat.$ihh
 
 
-      gzip time.${sat}.${PDATE}.ieee_d
+      compress time.${sat}.${PDATE}.ieee_d
 
    done              #  end loop over SATYPE_LIST
 

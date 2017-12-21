@@ -17,7 +17,8 @@
    my $my_os = "export MY_OS=$arch";
 
    #
-   #  Determine if installation is on WCOSS, Theia, or Zeus.
+   #  Determine if installation is on CCS, WCOSS, or Zeus.
+   #  If the arch is aix, CCS is assumed.
    #
    if( $arch ne "linux" && $arch ne "aix" ) {
       die( "only linux and aix are supported, $arch is not\n" );
@@ -27,33 +28,33 @@
 
    my $machine = "";
   
-   #
-   # zeus login nodes are fe1-fe8, and hostname command only returns the node name,
-   # while ccs and (perhaps) wcoss return [hostname].ncep.noaa.gov.  Keep only the
-   # actual hostname and see if it matches the node names for zeus, tide, or gyre.
-   #
-   my $host_zeus  = 0;
-   my $host = "";
-   $host = ` hostname `;
-   chomp( $host );
+   if( $arch eq "aix" ) {
+      $machine = "ccs";
+   }  
+   elsif( $arch eq "linux" ) {
 
-   if( $host =~ /\./ ) {
-      my @hostnames = split( '\.', $host );     
-      $host = $hostnames[0];
-   }
+      #
+      # zeus login nodes are fe1-fe8, and hostname command only returns the node name,
+      # while ccs and (perhaps) wcoss return [hostname].ncep.noaa.gov.  Keep only the
+      # actual hostname and see if it matches the node names for zeus, tide, or gyre.
+      #
+      my $host_zeus  = 0;
+      my $host = "";
+      $host = ` hostname `;
+      chomp( $host );
 
-   if( $host =~ /tfe/ ) { 
-      $machine = "theia";
+      if( $host =~ /\./ ) {
+         my @hostnames = split( '\.', $host );     
+         $host = $hostnames[0];
+      }
+
+      if( $host =~ /fe/ ) { 
+         $machine = "zeus";
+      } 
+      elsif( $host =~ /t/ || $host =~ /g/ ){	# wcoss nodes are tXXaY and gXXaY
+         $machine = "wcoss";
+      }
    } 
-   elsif( $host =~ /fe/ ) { 
-      $machine = "zeus";
-   } 
-   elsif( $host =~ /login/ ) {
-      $machine = "cray";
-   }
-   elsif( $host =~ /t/ || $host =~ /g/ ){	# wcoss nodes are tXXaY and gXXaY
-      $machine = "wcoss";
-   }
 
    print "$machine";
 

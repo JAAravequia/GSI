@@ -1,8 +1,8 @@
 subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
      rmesh,jsatid,gstime,infile,lunout,obstype,&
      nread,ndata,nodata,twind,sis, &
-     mype_root,mype_sub,npe_sub,mpi_comm_sub,nobs, &
-     nrec_start,dval_use)
+     mype_root,mype_sub,npe_sub,mpi_comm_sub, &
+     llb,lll)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_atms                  read atms 1b data
@@ -24,11 +24,7 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
 !
 ! program history log:
 !  2011-12-06  Original version based on r16656 version of read_bufrtovs.  A. Collard
-!  2012-03-05  akella  - nst now controlled via coupler
-!  2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
-!  2013-12-20  eliu - change icw4crtm>0 to icw4crtm>10 (bug fix))
-!  2014-01-31  mkim - add iql4crtm and set qval= 0 for all-sky mw data assimilation
-!  2015-02-23  Rancic/Thomas - add thin4d to time window logical
+!   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -49,13 +45,13 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
 !     mype_sub - mpi task id within sub-communicator
 !     npe_sub  - number of data read tasks
 !     mpi_comm_sub - sub-communicator for data read
-!     nrec_start - first subset with useful information
+!     llb
+!     lll
 !
 !   output argument list:
 !     nread    - number of BUFR ATMS 1b observations read
 !     ndata    - number of BUFR ATMS 1b profiles retained for further processing
 !     nodata   - number of BUFR ATMS 1b observations retained for further processing
-!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -67,28 +63,24 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
       finalcheck,map2tgrid,score_crit
   use radinfo, only: iuse_rad,newchn,cbias,predx,nusis,jpch_rad,air_rad,ang_rad, &
       use_edges,radedge1,radedge2,nusis,radstart,radstep,newpc4pred,maxscan
-  use radinfo, only: nst_gsi,nstinfo
+  use radinfo, only: nst_gsi,nstinfo,fac_dtl,fac_tsl
   use radinfo, only: crtm_coeffs_path,adp_anglebc
   use gridmod, only: diagnostic_reg,regional,nlat,nlon,tll2xy,txy2ll,rlats,rlons
   use constants, only: deg2rad,zero,one,two,three,rad2deg,r60inv
   use crtm_module, only : max_sensor_zenith_angle
   use calc_fov_crosstrk, only : instrument_init, fov_cleanup, fov_check
-  use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,thin4d
+  use gsi_4dvar, only: l4dvar,iwinbgn,winlen
   use gsi_metguess_mod, only: gsi_metguess_get
   use deter_sfc_mod, only: deter_sfc_fov,deter_sfc
   use atms_spatial_average_mod, only : atms_spatial_average
-  use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth,gsi_nstcoupler_deter
-  use mpimod, only: npe
-
   implicit none
 
 ! Declare passed variables
   character(len=*),intent(in   ) :: infile,obstype,jsatid
-  character(len=20),intent(in  ) :: sis
-  integer(i_kind) ,intent(in   ) :: mype,lunout,ithin,nrec_start
+  character(len=*),intent(in   ) :: sis
+  integer(i_kind) ,intent(in   ) :: mype,lunout,ithin
   integer(i_kind) ,intent(inout) :: isfcalc
   integer(i_kind) ,intent(inout) :: nread
-  integer(i_kind),dimension(npe) ,intent(inout) :: nobs
   integer(i_kind) ,intent(  out) :: ndata,nodata
   real(r_kind)    ,intent(in   ) :: rmesh,gstime,twind
   real(r_kind)    ,intent(inout) :: val_tovs
@@ -96,13 +88,14 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
   integer(i_kind) ,intent(in   ) :: mype_sub
   integer(i_kind) ,intent(in   ) :: npe_sub
   integer(i_kind) ,intent(in   ) :: mpi_comm_sub
-  logical         ,intent(in   ) :: dval_use
+  integer(i_kind) ,intent(in   ) :: lll,llb
 
 ! Declare local parameters
 
   character(8),parameter:: fov_flag="crosstrk"
   integer(i_kind),parameter:: n1bhdr=12
   integer(i_kind),parameter:: n2bhdr=4
+  integer(i_kind),parameter:: maxinfo=33
   integer(i_kind),parameter:: maxobs = 800000
   integer(i_kind),parameter:: max_chanl = 22
   real(r_kind),parameter:: r360=360.0_r_kind
@@ -116,29 +109,33 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
 
 ! Declare local variables
   logical outside,iuse,assim,valid
+  logical data_on_edges
 
   character(8) subset
   character(80) hdr1b,hdr2b
 
-  integer(i_kind) ireadsb,ireadmg,irec
-  integer(i_kind) i,j,k,ntest,iob
+  integer(i_kind) ireadsb,ireadmg,irec,isub
+  integer(i_kind) i,j,k,ntest,llll,iob
   integer(i_kind) iret,idate,nchanl,n,idomsfc(1)
   integer(i_kind) ich1,ich2,ich8,ich15,ich16,ich17
-  integer(i_kind) kidsat,maxinfo
-  integer(i_kind) nmind,itx,nreal,nele,itt,num_obs
-  integer(i_kind) iskip,ichan2,ichan1,ichan16,ichan17
-  integer(i_kind) lnbufr,ksatid,isflg,ichan3,ich3,ich4,ich6
+  integer(i_kind) kidsat,instrument
+  integer(i_kind) nmind,itx,nreal,nele,itt,ninstruments, num_obs
+  integer(i_kind) iskip,ichan2,ichan1,ichan15,ichan16,ichan17
+  integer(i_kind) lnbufr,ksatid,ichan8,isflg,ichan3,ich3,ich4,ich6
   integer(i_kind) ilat,ilon, ifovmod, nadir
   integer(i_kind),dimension(5):: idate5
   integer(i_kind) instr,ichan,icw4crtm
-  integer(i_kind):: ier
+  integer(i_kind):: error_status,ier
   integer(i_kind):: radedge_min, radedge_max
   integer(i_kind), POINTER :: ifov
   integer(i_kind), TARGET :: ifov_save(maxobs)
   integer(i_kind), ALLOCATABLE :: IScan(:)
 
+  character(len=20),dimension(1):: sensorlist
+
   real(r_kind) cosza,sfcr
-  real(r_kind) ch1,ch2,ch3,d0,d1,d2,ch16,qval
+  real(r_kind) ch1,ch2,ch3,ch8,d0,d1,d2,ch15,ch16,ch17,qval
+  real(r_kind) ch1flg
   real(r_kind) expansion
   real(r_kind),dimension(0:3):: sfcpct
   real(r_kind),dimension(0:3):: ts
@@ -172,11 +169,10 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
   real(r_double),dimension(n1bhdr):: bfr1bhdr
   real(r_double),dimension(n2bhdr):: bfr2bhdr
 
-  real(r_kind) cdist,disterr,disterrmax,dlon00,dlat00
+  real(r_kind) disterr,disterrmax,dlon00,dlat00
 !**************************************************************************
 ! Initialize variables
 
-  maxinfo=31
   lnbufr = 15
   disterrmax=zero
   ntest=0
@@ -188,12 +184,11 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
   ilat=4
 
   if(nst_gsi>0) then
-     call gsi_nstcoupler_skindepth(obstype,zob)
+     call skindepth(obstype,zob)
   endif
 
 ! Determine whether CW used in CRTM
-  call gsi_metguess_get ( 'i4crtm::ql', icw4crtm, ier )
-  icw4crtm=0  !emily: do clear ATMS assimilation for now
+  call gsi_metguess_get ( 'i4crtm::cw', icw4crtm, ier )
 
 ! Make thinning grids
   call makegrids(rmesh,ithin)
@@ -325,7 +320,7 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
 ! Reopen unit to satellite bufr file
   iob=1
   call closbf(lnbufr)
-  open(lnbufr,file=trim(infile),form='unformatted',status = 'old',err = 500)
+  open(lnbufr,file=infile,form='unformatted',status = 'old',err = 500)
 
   call openbf(lnbufr,'IN',lnbufr)
   hdr1b ='SAID FOVN YEAR MNTH DAYS HOUR MINU SECO CLAT CLON CLATH CLONH'
@@ -335,8 +330,6 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
   irec=0
   read_subset: do while(ireadmg(lnbufr,subset,idate)>=0 .AND. iob < maxobs)
 
-     irec = irec + 1
-     if(irec < nrec_start) cycle read_subset
      read_loop: do while (ireadsb(lnbufr)==0 .and. iob < maxobs)
 
         rsat       => rsat_save(iob)
@@ -350,6 +343,7 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
         solzen     => solzen_save(iob)
         solazi     => solazi_save(iob)
 
+!       Read header record.  (llll=1 is normal feed, 2=EARS data)
         call ufbint(lnbufr,bfr1bhdr,n1bhdr,1,iret,hdr1b)
 
 !       Extract satellite id.  If not the one we want, read next record
@@ -379,19 +373,20 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
         idate5(5) = bfr1bhdr(7) !minute
         call w3fs21(idate5,nmind)
         t4dv= (real((nmind-iwinbgn),r_kind) + bfr1bhdr(8)*r60inv)*r60inv    ! add in seconds
-        tdiff=t4dv+(iwinbgn-gstime)*r60inv
-
-        if (l4dvar.or.l4densvar) then
+        if (l4dvar) then
            if (t4dv<minus_one_minute .OR. t4dv>winlen+one_minute) &
                 cycle read_loop
         else
+           tdiff=t4dv+(iwinbgn-gstime)*r60inv
            if(abs(tdiff) > twind+one_minute) cycle read_loop
         endif
-        if (thin4d) then
+ 
+        if (l4dvar) then
            crit1 = zero
         else
            crit1 = two*abs(tdiff)        ! range:  0 to 6
         endif
+
  
         call ufbint(lnbufr,bfr2bhdr,n2bhdr,1,iret,hdr2b)
 
@@ -464,7 +459,6 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
 ! Complete Read_ATMS thinning and QC steps
 
 ! Allocate arrays to hold all data for given satellite
-  if(dval_use) maxinfo = maxinfo+2
   nreal = maxinfo + nstinfo
   nele  = nreal   + nchanl
   allocate(data_all(nele,itxmax),nrec(itxmax))
@@ -500,10 +494,8 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
         if(diagnostic_reg) then
            call txy2ll(dlon,dlat,dlon00,dlat00)
            ntest=ntest+1
-           cdist=sin(dlat_earth)*sin(dlat00)+cos(dlat_earth)*cos(dlat00)* &
-                (sin(dlon_earth)*sin(dlon00)+cos(dlon_earth)*cos(dlon00))
-           cdist=max(-one,min(cdist,one))
-           disterr=acos(cdist)*rad2deg
+           disterr=acos(sin(dlat_earth)*sin(dlat00)+cos(dlat_earth)*cos(dlat00)* &
+                (sin(dlon_earth)*sin(dlon00)+cos(dlon_earth)*cos(dlon00)))*rad2deg
            disterrmax=max(disterrmax,disterr)
         end if
            
@@ -519,7 +511,7 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
      endif
 
 ! Check time window
-     if (l4dvar.or.l4densvar) then
+     if (l4dvar) then
         if (t4dv<zero .OR. t4dv>winlen) cycle ObsLoop
      else
         tdiff=t4dv+(iwinbgn-gstime)*r60inv
@@ -611,7 +603,7 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
      if (isflg == 0 .and. ch1<285.0_r_kind .and. ch2<285.0_r_kind) then
         cosza = cos(lza)
         d0    = 8.24_r_kind - 2.622_r_kind*cosza + 1.846_r_kind*cosza*cosza
-        if (icw4crtm>10) then
+        if (icw4crtm>0) then
            qval  = zero 
         else 
            qval  = cosza*(d0+d1*log(285.0_r_kind-ch1)+d2*log(285.0_r_kind-ch2))
@@ -652,7 +644,7 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
         dtc   = zero
         tz_tr = one
         if(sfcpct(0)>zero) then
-           call gsi_nstcoupler_deter(dlat_earth,dlon_earth,t4dv,zob,tref,dtw,dtc,tz_tr)
+           call deter_nst(dlat_earth,dlon_earth,t4dv,zob,tref,dtw,dtc,tz_tr)
         endif
      endif
 
@@ -694,10 +686,8 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
      data_all(30,itx) = dlon_earth_deg           ! earth relative longitude (deg)
      data_all(31,itx) = dlat_earth_deg           ! earth relative latitude (deg)
      
-     if(dval_use) then
-        data_all(32,itx)= val_tovs
-        data_all(33,itx)= itt
-     end if
+     data_all(32,itx)= val_tovs
+     data_all(33,itx)= itt
      
      if(nst_gsi>0) then
         data_all(maxinfo+1,itx) = tref            ! foundation temperature
@@ -736,16 +726,12 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
            if(data_all(i+nreal,n) > tbmin .and. &
                 data_all(i+nreal,n) < tbmax)nodata=nodata+1
         end do
+        itt=nint(data_all(maxinfo,n))
+        super_val(itt)=super_val(itt)+val_tovs
+        
      end do
-     if(dval_use .and. assim)then
-        do n=1,ndata
-           itt=nint(data_all(33,n))
-           super_val(itt)=super_val(itt)+val_tovs
-        end do
-     end if
      
 !    Write final set of "best" observations to output file
-     call count_obs(ndata,nele,ilat,ilon,data_all,nobs)
      write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
      write(lunout) ((data_all(k,n),k=1,nele),n=1,ndata)
   end if

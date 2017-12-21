@@ -1,34 +1,26 @@
-#! /bin/bash
+#! /bin/ksh
 
 #------------------------------------------------------------------
 #  makeall
 #
-#  This scripts makes all of the executables in the nwprod, 
-#  data_extract and image_gen subdirectories and places the 
-#  executables into the proper exec directories.
+#  This scripts makes each of the executables in the data_extract
+#  and image_gen subdirectories for both rgn (regional) and glb
+#  (global) sources.  The executables will be put into the correct
+#  exec directories. 
 #
-#  An optional arguments to this script include "clean", "debug",
-#  and "check_prereqs".  Do not use "install" as an optional 
-#  argument -- this script will do that automatically.  
-#  If no argument is included "all" and "install" are assumed.
+#  An optional argument to this script is "clean".  Use this if 
+#  you wish to remove *.o, *.mod, and *.x files in the various src 
+#  directories.  If "clean" is not used, "all" is assumed.
 #------------------------------------------------------------------
-set -ax
 
-mode=${1:-}
-top_level=${PWD}
-echo "top_level = ${top_level}"
+mode=${1:-all}
+
+top_level=`pwd`
 
 machine=`./get_hostname.pl`
 echo "machine = $machine"
 
-#------------------------------
-#  source RadMon_config
-#------------------------------
-. ${top_level}/parm/RadMon_config
-. ${top_level}/parm/radmon.ver
-
-
-if [[ ${machine} = "theia" || ${machine} = "wcoss" || ${machine} = "cray" ]]; then
+if [[ ${machine} = "ccs" || ${machine} = "zeus" || ${machine} = "wcoss" ]]; then
    echo Building executables on ${machine}
    echo
 
@@ -36,58 +28,88 @@ if [[ ${machine} = "theia" || ${machine} = "wcoss" || ${machine} = "cray" ]]; th
    #  make data extract executables
    #------------------------------------------------------------------
 
-   module use -a ${HOMEradmon}/modulefiles/${machine}
-   module load RadMonBuild
-
-   executables="angle bcoef bcor time"
-   echo "Making executables in nwprod/radmon_shared.v${radmon_shared_ver}/sorc:"
-   for var in ${executables}; do
-      if [[ $var = "angle" ]]; then
-         cd ${top_level}/nwprod/radmon_shared.v${radmon_shared_ver}/sorc/verf_radang.fd
-      else
-         cd ${top_level}/nwprod/radmon_shared.v${radmon_shared_ver}/sorc/verf_rad${var}.fd
-      fi
-
-      make ${mode}
-      if [[ $mode = "" ]]; then 
-         make install
-      fi
-
-      echo
-
-   done
-
-   cd ${top_level}/data_extract/sorc/make_base.fd
-   make ${mode}  
-   if [[ $mode = "" ]]; then 
-      make install
+   if [[ ${machine} = "wcoss" ]]; then
+      echo loading module command for wcoss
+      . /usrx/local/Modules/default/init/ksh
+      module load ics
    fi
 
-   cd ${top_level}/data_extract/sorc/validate_time.fd
+   executables="angle bcoef bcor time"
+   echo "Making global executables in data_extract/nwprod/sorc:"
+   for var in ${executables}; do
+      if [[ $var = "angle" ]]; then
+         cd ${top_level}/nwprod/sorc/verf_radang.fd
+      else
+         cd ${top_level}/nwprod/sorc/verf_rad${var}.fd
+      fi
+
+      rm -f Makefile.conf
+      ln -s ${top_level}/parm/Makefile.conf.${machine} Makefile.conf
+
+      echo make ${var} ${mode}
+      make ${mode}
+      echo
+
+      if [[ $mode = all ]]; then
+         cp -f radmon_${var}.glb ${top_level}/nwprod/exec/.
+      fi
+   done
+
+   echo "Making regional executables in data_extract/nwprod/sorc:"
+   for var in ${executables}; do
+      if [[ $var = "angle" ]]; then
+         cd ${top_level}/nwprod/sorc/verf_radang_rgn.fd
+      else
+         cd ${top_level}/nwprod/sorc/verf_rad${var}_rgn.fd
+      fi
+
+      rm -f Makefile.conf
+      ln -s ${top_level}/parm/Makefile.conf.${machine} Makefile.conf
+
+      echo make ${var} ${mode}
+      make ${mode}
+      echo
+
+      if [[ $mode = all ]]; then
+         cp -f radmon_${var}.rgn ${top_level}/nwprod/exec/.
+      fi
+   done
+
+   cd ${top_level}/nwprod/sorc/make_base.fd
+   rm -f Makefile.conf
+   ln -s ${top_level}/parm/Makefile.conf.${machine} Makefile.conf
    make ${mode}  
-   if [[ $mode = "" ]]; then 
-      make install
+   if [[ $mode = all ]]; then
+      cp -f make_base ${top_level}/nwprod/exec/.
    fi
 
 
    #------------------------------------------------------------------
    #  make image generation executables
    #------------------------------------------------------------------
-   executables="horiz summary time bcoef angle"
+   executables="horiz"
 
-   cd ${top_level}/image_gen/src
-   echo "Making image_gen/src:"
+   cd ${top_level}/image_gen/src/glb
+   echo "Making image_gen/src/glb:"
    for var in ${executables}; do
+      rm -f Makefile.conf
+      ln -s ${top_level}/parm/Makefile.conf.${machine} Makefile.conf
 
+      echo make ${var} ${mode}
       make -f makefile.${var} ${mode}
-      if [[ $mode = "" ]]; then 
-         make -f makefile.${var} install
-      fi
       echo
    done
 
-   module unload RadMonBuild
-   set +x
+   cd ${top_level}/image_gen/src/rgn
+   echo "Making image_gen/src/rgn:"
+   for var in ${executables}; do
+      rm -f Makefile.conf
+      ln -s ${top_level}/parm/Makefile.conf.${machine} Makefile.conf
+
+      echo make ${var} ${mode}
+      make -f makefile.${var} ${mode}
+      echo
+   done
 
 else
    echo ${machine} is not supported 

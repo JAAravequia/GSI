@@ -81,6 +81,8 @@ subroutine init_ferr_scale
 
 implicit none
 
+integer(i_kind) :: ierr
+
 lthis_adj=l_do_adjoint
 l_do_adjoint=.true.
 lthis_sqrt=lsqrtb
@@ -147,6 +149,7 @@ integer(i_kind),intent(in   ) :: nprt
 
 type(gsi_bundle) :: ferrin
 type(gsi_bundle) :: ferrout
+integer(i_kind) :: nymd, nhms
 
 if(.not.lferrscale) return
 
@@ -156,9 +159,9 @@ call allocate_state(ferrout)
 ferrin =zero
 ferrout=zero
 
-call get_ferr_scale (ferrin)
+call get_ferr_scale (ferrin,nymd,nhms)
 call hrm1h_ferr_scale(ferrin,ferrout,nprt,'apply_hrm1h')
-call put_ferr_scale (ferrout)
+call put_ferr_scale (ferrout,nymd,nhms)
 
 call deallocate_state(ferrout)
 call deallocate_state(ferrin)
@@ -166,7 +169,7 @@ call clean_ferr_scale
 
 end subroutine apply_hrm1h
 ! ------------------------------------------------------------------------------
-subroutine get_ferr_scale (ferrin)
+subroutine get_ferr_scale (ferrin,nymd,nhms)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    get_ferr_scale
@@ -181,6 +184,7 @@ subroutine get_ferr_scale (ferrin)
 !
 !   input argument list:
 !    ferrin
+!    nymd,nhms
 !
 !   output argument list:
 !    ferrin
@@ -193,9 +197,10 @@ subroutine get_ferr_scale (ferrin)
 
 implicit none
 type(gsi_bundle),intent(inout) :: ferrin ! not yet implemented
+integer(i_kind) ,intent(inout) :: nymd,nhms
 
 real(r_kind) :: zjx
-!integer(i_kind) :: ierr
+integer(i_kind) :: ierr
 
 if (mype==0) then
    write(6,*)'get_ferr_scale: read forecast error vector'
@@ -216,7 +221,7 @@ endif
 return
 end subroutine get_ferr_scale
 ! ------------------------------------------------------------------------------
-subroutine put_ferr_scale (ferrout)
+subroutine put_ferr_scale (ferrout,nymd,nhms)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    get_ferr_scale
@@ -232,6 +237,7 @@ subroutine put_ferr_scale (ferrout)
 !
 !   input argument list:
 !    ferrout
+!    nymd,nhms
 !
 !   output argument list:
 !
@@ -243,9 +249,10 @@ subroutine put_ferr_scale (ferrout)
 
 implicit none
 type(gsi_bundle),intent(inout) :: ferrout
+integer(i_kind) ,intent(in   ) :: nymd,nhms
 
 real(r_kind) :: zjx
-!integer(i_kind) :: ierr
+integer(i_kind) :: ierr
 
 if (mype==0) then
    write(6,*)'put_ferr_scale: store scaled forecast error vector'
@@ -299,9 +306,6 @@ use constants, only: zero_quad
 use mpimod, only: mype
 use obsmod, only: yobs
 use intjomod, only: intjo
-use intradmod, only: setrad
-use mpl_allreducemod, only: mpl_allreduce
-use jfunc, only: nrclen,nsclen,npclen,ntclen
 
 implicit none
 
@@ -317,11 +321,9 @@ type(gsi_bundle) :: sval(nobs_bins), rval(nobs_bins)
 type(gsi_bundle) :: mval(nsubwin)
 type(predictors) :: sbias, rbias
 real(r_quad) :: zjb,zjo,zjc,zjl
-integer(i_kind) :: ii,iobs,ibin,i
+integer(i_kind) :: ii,iobs,ibin
 logical :: llprt,llouter
 character(len=255) :: seqcalls
-real(r_quad),dimension(max(1,nrclen)) :: qpred
-
 
 !**********************************************************************
 
@@ -376,30 +378,11 @@ rbias=zero
 do ii=1,nsubwin
    mval(ii)=zero
 end do
-call setrad(rval(1))
 
-qpred=zero_quad
 ! Compare obs to solution and transpose back to grid (H^T R^{-1} H)
 do ibin=1,nobs_bins
-   call intjo(yobs(ibin),rval(ibin),qpred,sval(ibin),sbias,ibin)
+   call intjo(yobs(ibin),rval(ibin),rbias,sval(ibin),sbias,ibin)
 end do
-
-! Take care of background error for bias correction terms
-
-call mpl_allreduce(nrclen,qpvals=qpred)
-
-do i=1,nsclen
-   rbias%predr(i)=rbias%predr(i)+qpred(i)
-end do
-do i=1,npclen
-   rbias%predp(i)=rbias%predp(i)+qpred(nsclen+i)
-end do
-if (ntclen>0) then
-   do i=1,ntclen
-      rbias%predt(i)=rbias%predt(i)+qpred(nsclen+npclen+i)
-   end do
-end if
-
 
 ! Evaluate Jo
 call evaljo(zjo,iobs,nprt,llouter)

@@ -21,6 +21,7 @@
 !-------------------------------------------------------------------------
 #define MYNAME	"stub"
 !#define VERBOSE
+!#define DEBUG_TRACE
 #include "mytrace.H"
 
 subroutine parallel_init_()
@@ -32,12 +33,11 @@ implicit none
 integer(i_kind):: ierror
 logical:: already_init_mpi
 character(len=*),parameter:: myname_=MYNAME//'::parallel_init_'
-  ierror=0
   call mpi_initialized(already_init_mpi,ierror)
-  if(ierror/=0) call die(myname_,'mpi_initialized(), ierror =',ierror)
+  	if(ierror/=0) call die(myname_,'mpi_initialized(), ierror =',ierror)
   if(.not.already_init_mpi) then
-     call mpi_init(ierror)
-     if(ierror/=0) call die(myname_,'mpi_init(), ierror =',ierror)
+  	call mpi_init(ierror)
+  	if(ierror/=0) call die(myname_,'mpi_init(), ierror =',ierror)
   endif
 end subroutine parallel_init_
 
@@ -603,15 +603,14 @@ type(gsi_bundle),intent(inout):: sval(nobs_bins)
 ! user-specific gradient tests related to TL and AD models
 end subroutine grtests_
 !------------------------------------------------------------------------------------
-subroutine get_1pert_ (xx,what,filename)
+subroutine get_1pert_ (xx,what)
 ! get perturbation from user's model and convert it to relevant gsi bundle
 use constants, only: zero
 use gsi_bundlemod, only: gsi_bundle
 use gsi_bundlemod, only: assignment(=)
 implicit none
 type(gsi_bundle),intent(inout) :: xx
-character(len=*),intent(in) :: what     ! indicates whether tl or ad type perturbation
-character(len=*),intent(in) :: filename ! filename containing pert - set to NULL when n/a
+character(len=*),intent(in) :: what   ! indicates whether tl or ad type perturbation
 xx=zero
 end subroutine get_1pert_
 !------------------------------------------------------------------------------------
@@ -627,7 +626,7 @@ integer(i_kind), intent(in)    :: nymd   ! date to write out field, as in, YYYYM
 integer(i_kind), intent(in)    :: nhms   ! time to write out field, as in, HHMMSS
 end subroutine put_1pert_
 !------------------------------------------------------------------------------------
-subroutine get_Npert_ (xx,n,what,filename)
+subroutine get_Npert_ (xx,n,what)
 ! get perturbation from user's model and convert it to relevant gsi bundle
 use kinds,only: i_kind
 use constants, only: zero
@@ -636,8 +635,7 @@ use gsi_bundlemod, only: assignment(=)
 implicit none
 integer(i_kind) ,intent(in) :: n
 type(gsi_bundle),intent(inout) :: xx(n)
-character(len=*),intent(in) :: what         ! indicates whether tl or ad type perturbation
-character(len=*),intent(in) :: filename(n)  ! arrays w/ filename for pert (NULL when n/a)
+character(len=*),intent(in) :: what   ! indicates whether tl or ad type perturbation
 integer(i_kind) ii
 do ii=1,n
    xx(ii)=zero

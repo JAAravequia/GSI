@@ -476,14 +476,16 @@ character(len=16), parameter :: names3d(n3d) = (/  &
                                 'sf             ',    &
                                 'pe             ',    &
                                 'vt             '    /)
-integer(i_kind) :: levels(n3d)
+logical, parameter :: edges(n3d) = (/ .false., &  ! refers to sf
+                                      .true. , &  ! refers to pe
+                                      .false./)   ! refers to tv
 
 type(GSI_Bundle) :: GSI_Bundle_new 
 type(GSI_Bundle) :: GSI_Bundle_all 
 type(GSI_Grid)   :: grid
 integer(i_kind) ipnt, ival, lat2, lon2, nlev, npes, npee, ierr
+real(r_kind),allocatable,dimension(:) ::varRank1
 real(r_kind),pointer::pe(:,:,:)
-real(r_kind),pointer::vt(:,:,:)
 
 print*, 'TESTING EDGE  ...'
 print*, '-----------------'
@@ -491,19 +493,15 @@ print*, '-----------------'
 lat2 = GSI_bundle_mix%grid%im
 lon2 = GSI_bundle_mix%grid%jm
 nlev = GSI_bundle_mix%grid%km
-
-levels = (/ nlev, nlev+1, nlev /)
-
 call GSI_GridCreate (grid, lat2, lon2, nlev)
 !------------------------------------
 ! create a new 1d bundle and merge it w/ bundle above into yet a 3rd bundle
 !------------------------------------
 call GSI_BundleCreate ( GSI_bundle_new, grid, 'New 3d Bundle', ierr, &
-                                    names3d=names3d, levels=levels )
+                                    names3d=names3d, edges=edges )
      call GSI_BundlePrint ( GSI_bundle_new )
-     call GSI_BundleGetPointer ( GSI_bundle_new, 'vt', vt, ierr ) 
-!    call random_number(GSI_bundle_new%r3(ipnt)%q)
-     call random_number(vt)
+     call GSI_BundleGetPointer ( GSI_bundle_new, 'vt', ipnt, ierr ) 
+     call random_number(GSI_bundle_new%r3(ipnt)%q)
      print*, 'this is the new bundle w/ 3d fields'
      call GSI_BundlePrint ( GSI_bundle_new )
 
@@ -520,12 +518,15 @@ call GSI_BundleMerge ( GSI_bundle_all, GSI_bundle_mix, GSI_bundle_new, 'Merged A
 !         call random_number(pe)
 !     endif
 
-     call GSI_BundlePutVar ( GSI_bundle_all, 'sf', vt, ierr ) 
+     allocate(varRank1(lat2*lon2*nlev))
+     call random_number(varRank1)
+     call GSI_BundlePutVar ( GSI_bundle_all, 'sf', varRank1, ierr ) 
      if (ierr==0) then
         print*
-        print*, 'placed vt in sf slot in new/merged bundle ...'
+        print*, 'modify pe and sf in new/merged bundle ...'
         call GSI_BundlePrint ( GSI_bundle_all )
      endif
+     deallocate(varRank1)
   endif
 
 !-------------------

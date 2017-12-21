@@ -15,7 +15,6 @@ subroutine getuv(u,v,st,vp,iflg)
 !   2009-04-21  derber - rewrite for improved communication - combine with adjoint
 !   2010-04-01  treadon - move strip,reorder,reorder2,vectosub to gridmod
 !   2012-06-12  parrish - replace sub2grid/grid2sub with general_sub2grid/general_grid2sub
-!   2014-12-03  derber - restructure if and do statements.
 !
 !   input argument list:
 !     st        - stream function grid values 
@@ -53,6 +52,7 @@ subroutine getuv(u,v,st,vp,iflg)
   real(r_kind),dimension(nlat,nlon)::awork,bwork
 
   allocate(worksub(2,s2guv%lat2,s2guv%lon2,s2guv%nsig))
+  allocate(work1(2,s2guv%nlat,s2guv%nlon,s2guv%kbegin_loc:s2guv%kend_alloc))
 
   if(iflg == 0)then
      do k=1,nsig
@@ -63,6 +63,7 @@ subroutine getuv(u,v,st,vp,iflg)
            end do
         end do
      end do
+     call general_sub2grid(s2guv,worksub,work1)
   else
      do k=1,nsig
         do j=1,lon2
@@ -72,47 +73,34 @@ subroutine getuv(u,v,st,vp,iflg)
            end do
         end do
      end do
+     call general_sub2grid(s2guv,worksub,work1)
   end if
 
-  allocate(work1(2,s2guv%nlat,s2guv%nlon,s2guv%kbegin_loc:s2guv%kend_alloc))
-  call general_sub2grid(s2guv,worksub,work1)
-
   if(regional)then
-     if(iflg == 0)then
-        do k=s2guv%kbegin_loc,s2guv%kend_loc
+     do k=s2guv%kbegin_loc,s2guv%kend_loc
+        if(iflg == 0)then
            call psichi2uv_reg(work1(1,:,:,k),work1(2,:,:,k),awork,bwork)
-           do j=1,nlon
-              do i=1,nlat
-                 work1(1,i,j,k)=awork(i,j)
-                 work1(2,i,j,k)=bwork(i,j)
-              end do
-           end do
-        end do
-     else
-        do k=s2guv%kbegin_loc,s2guv%kend_loc
+        else
            call psichi2uvt_reg(work1(1,:,:,k),work1(2,:,:,k),awork,bwork)
-           do j=1,nlon
-              do i=1,nlat
-                 work1(1,i,j,k)=awork(i,j)
-                 work1(2,i,j,k)=bwork(i,j)
-              end do
+        end if
+        do j=1,nlon
+           do i=1,nlat
+              work1(1,i,j,k)=awork(i,j)
+              work1(2,i,j,k)=bwork(i,j)
            end do
         end do
-     end if
+     end do
   else
-     if(iflg == 0)then
-        do k=s2guv%kbegin_loc,s2guv%kend_loc
-           call stvp2uv(work1(1,1,1,k),2)
-        end do
-     else
-        do k=s2guv%kbegin_loc,s2guv%kend_loc
-           call tstvp2uv(work1(1,1,1,k),2)
-        end do
-     end if
+     do k=s2guv%kbegin_loc,s2guv%kend_loc
+        if(iflg == 0)then
+           call stvp2uv(work1(1,:,:,k),work1(2,:,:,k))
+        else
+           call tstvp2uv(work1(1,:,:,k),work1(2,:,:,k))
+        end if
+     end do
   end if
 
   call general_grid2sub(s2guv,work1,worksub)
-  deallocate(work1)
   if(iflg == 0) then
      do k=1,nsig
         do j=1,lon2
@@ -133,7 +121,7 @@ subroutine getuv(u,v,st,vp,iflg)
      end do
   end if
 
-  deallocate(worksub)
+  deallocate(worksub,work1)
 
   return
 end subroutine getuv

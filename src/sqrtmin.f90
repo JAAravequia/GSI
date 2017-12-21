@@ -14,8 +14,6 @@ subroutine sqrtmin()
 !   2009-01-18  todling  - calc dot-prod in quad precision
 !   2009-08-12  lueken   - updated documentation
 !   2010-05-15  todling  - add only for all used variables
-!   2010-10-20  hclin    - added prt_guesschem for aod
-!   2012-02-15  todling  - allow pcgsqrt to echo true cost when requested
 !
 !   input argument list:
 !
@@ -57,7 +55,6 @@ real(r_kind) :: costf,eps,zy
 real(r_quad) :: zf0,zg0,zff,zgf,zge,zgg,rdx
 integer(i_kind) :: nprt,itermax,ii,itest,iprt
 logical :: lsavinc, lsavev
-character(len=20) :: what
 character(len=12) :: clfile
 
 !**********************************************************************
@@ -87,7 +84,6 @@ if (ladtest) call adtest()
 zgg=dot_product(xhatsave,xhatsave,r_quad)
 if (mype==0) write(6,888)trim(myname),': Norm xhatsave=',sqrt(zgg)
 call prt_guess('guess')
-call prt_guesschem('chemguess')
 if (lobsensfc.and.lobsensmin) lsaveobsens=.true.
 
 ! Get initial cost function and gradient
@@ -152,7 +148,7 @@ else  ! plain conjugate gradient
       call stop2(309)
    end if
    iprt=0
-   if (ladtest .or. lgrtest .or. ltcost) iprt=1
+   if (ladtest .or. lgrtest) iprt=1
    call pcgsqrt(xhat,costf,gradx,itermax,iprt)
 endif
 
@@ -216,12 +212,10 @@ else
    endif
 
    if (l4dvar) then
-      what ='increment'
+      call prt_guess('increment')
    else
-      what ='analysis'
+      call prt_guess('analysis')
    endif
-   call prt_guess(trim(what))
-   call prt_guesschem(trim(what))
 
    zge=dot_product(gradx,gradx,r_quad)
    zge=sqrt(zge)
