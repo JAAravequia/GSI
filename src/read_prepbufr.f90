@@ -496,6 +496,12 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   wjbmin=zero
   pjbmin=zero
 !------------------------------------------------------------------------
+! Open, then read date from bufr data
+  call closbf(lunin)
+  open(lunin,file=trim(infile),form='unformatted')
+  call openbf(lunin,'IN',lunin)
+  call datelen(10)
+
   ntread=1
   ntmatch=0
   ntx(ntread)=0
@@ -551,14 +557,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   nmsg=0
   nrep=0
   ntb = 0
-
   irec = 0
-! Open, then read date from bufr data
-  call closbf(lunin)
-  open(lunin,file=trim(infile),form='unformatted')
-  call openbf(lunin,'IN',lunin)
-  call datelen(10)
-
   msg_report: do while (ireadmg(lunin,subset,idate) == 0)
      irec = irec + 1
      if(irec < nrec_start) cycle msg_report

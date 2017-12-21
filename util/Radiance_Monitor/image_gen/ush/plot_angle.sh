@@ -17,6 +17,7 @@ SATYPE2=$1
 PVAR=$2
 PTYPE=$3
 
+export SUB_AVG=${SUB_AVG:-1}
 export PLOT_ALL_REGIONS=${PLOT_ALL_REGIONS:-1}
 
 plot_angle_count=plot_angle_count.${RAD_AREA}.gs
@@ -30,9 +31,9 @@ word_count=`echo $PTYPE | wc -w`
 echo word_count = $word_count
 
 if [[ $word_count -le 1 ]]; then
-   tmpdir=${PLOT_WORK_DIR}/plot_angle_${RADMON_SUFFIX}_${SATYPE2}.$PDATE.${PVAR}.${PTYPE}
+   tmpdir=${PLOT_WORK_DIR}/plot_angle_${SUFFIX}_${SATYPE2}.$PDATE.${PVAR}.${PTYPE}
 else
-   tmpdir=${PLOT_WORK_DIR}/plot_angle_${RADMON_SUFFIX}_${SATYPE2}.$PDATE.${PVAR}
+   tmpdir=${PLOT_WORK_DIR}/plot_angle_${SUFFIX}_${SATYPE2}.$PDATE.${PVAR}
 fi
 rm -rf $tmpdir
 mkdir -p $tmpdir
@@ -84,22 +85,10 @@ for type in ${SATYPE2}; do
 
       if [[ -d ${TANKDIR}/radmon.${day} ]]; then
          test_file=${TANKDIR}/radmon.${day}/angle.${type}.${cdate}.ieee_d
-         if [[ $USE_ANL = 1 ]]; then
-            test_file2=${TANKDIR}/radmon.${day}/angle.${type}_anl.${cdate}.ieee_d
-         else
-            test_file2=
-         fi
-
          if [[ -s $test_file ]]; then
             $NCP ${test_file} ./${type}.${cdate}.ieee_d
          elif [[ -s ${test_file}.${Z} ]]; then
             $NCP ${test_file}.${Z} ./${type}.${cdate}.ieee_d.${Z}
-         fi
-
-         if [[ -s $test_file2 ]]; then
-            $NCP ${test_file2} ./${type}_anl.${cdate}.ieee_d
-         elif [[ -s ${test_file2}.${Z} ]]; then
-            $NCP ${test_file2}.${Z} ./${type}_anl.${cdate}.ieee_d.${Z}
          fi
       fi
       if [[ ! -s ${type}.${cdate}.ieee_d && ! -s ${type}.${cdate}.ieee_d.${Z} ]]; then
@@ -114,52 +103,30 @@ for type in ${SATYPE2}; do
 
    for var in ${PTYPE}; do
       echo $var
-
       if [ "$var" =  'count' ]; then
 
-         #------------------------------------------------------------------------ 
-         #  make the js *angle.txt files
-         #  I've stashed this inside of count processing as a temporary
-         #  measure to ensure that it's only executed once for each $type (source)
-         #  (the big sat jobs split the jobs into one per $var type)
-         #
-         if [ ${RAD_AREA} = "glb" ]; then
-            $NCP ${IG_SCRIPTS}/nu_plot_angle.sh .
-            ./nu_plot_angle.sh ${type}
-         fi
-     
 cat << EOF > ${type}_${var}.gs
 'open ${type}.ctl'
-'run ${IG_GSCRIPTS}/${plot_angle_count} ${type} ${var} ${PLOT_ALL_REGIONS} ${PLOT_SUB_AVGS} x1100 y850'
+'run ${IG_GSCRIPTS}/${plot_angle_count} ${type} ${var} ${PLOT_ALL_REGIONS} ${SUB_AVG} x1100 y850'
 'quit'
 EOF
 
       elif [ "$var" =  'penalty' ]; then
 cat << EOF > ${type}_${var}.gs
 'open ${type}.ctl'
-'run ${IG_GSCRIPTS}/${plot_angle_count} ${type} ${var} ${PLOT_ALL_REGIONS} ${PLOT_SUB_AVGS} x1100 y850'
+'run ${IG_GSCRIPTS}/${plot_angle_count} ${type} ${var} ${PLOT_ALL_REGIONS} ${SUB_AVG} x1100 y850'
 'quit'
 EOF
       else
 
 cat << EOF > ${type}_${var}.gs
 'open ${type}.ctl'
-'run ${IG_GSCRIPTS}/${plot_angle_sep} ${type} ${var} ${PLOT_ALL_REGIONS} ${PLOT_SUB_AVGS} x1100 y850'
+'run ${IG_GSCRIPTS}/${plot_angle_sep} ${type} ${var} ${PLOT_ALL_REGIONS} ${SUB_AVG} x1100 y850'
 'quit'
 EOF
       fi
 
-      #--------------------------------------------------------------------
-      #  execute the grads plotting
-      #  This too is a temporary fix.  Eventually it will be executed only
-      #  when $PLOT_STATIC_IMGS is 1.  At the moment regional sources only
-      #  use some of the js plotting (summary and time).
-      #
-      if [[ ${RAD_AREA} = "rgn" || $PLOT_STATIC_IMGS -eq 1 ]]; then 
-         $GRADS -bpc "run ${tmpdir}/${type}_${var}.gs"
-      fi
-
-
+      $GRADS -bpc "run ${tmpdir}/${type}_${var}.gs"
    done 
 
 #   rm -f ${type}*.ieee_d
@@ -174,9 +141,8 @@ done
 if [[ ! -d ${IMGNDIR}/angle ]]; then
    mkdir -p ${IMGNDIR}/angle
 fi
-if [[ ${RAD_AREA} = "rgn" || $PLOT_STATIC_IMGS -eq 1 ]]; then
-   find . -name '*.png' -exec cp -pf {} ${IMGNDIR}/angle/ \;
-fi
+find . -name '*.png' -exec cp -pf {} ${IMGNDIR}/angle/ \;
+
 
 
 
@@ -193,8 +159,8 @@ fi
 # 
 #echo ${LOADLQ}
 
-#count=`ls ${LOADLQ}/*plot*_${RADMON_SUFFIX}* | wc -l`
-#complete=`grep "COMPLETED" ${LOADLQ}/*plot*_${RADMON_SUFFIX}* | wc -l`
+#count=`ls ${LOADLQ}/*plot*_${SUFFIX}* | wc -l`
+#complete=`grep "COMPLETED" ${LOADLQ}/*plot*_${SUFFIX}* | wc -l`
 
 #running=`expr $count - $complete`
 

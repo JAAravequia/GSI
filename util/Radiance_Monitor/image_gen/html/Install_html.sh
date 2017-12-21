@@ -27,8 +27,8 @@ if [[ $nargs -ne 2 ]]; then
    exit 2
 fi
 
-RADMON_SUFFIX=$1
-echo RADMON_SUFFIX = $RADMON_SUFFIX
+SUFFIX=$1
+echo SUFFIX = $SUFFIX
 export RAD_AREA=$2
 
 this_file=`basename $0`
@@ -58,19 +58,16 @@ fi
 
 
 #--------------------------------------------------------------
-#  Get the area for this RADMON_SUFFIX from the data_map file
+#  Get the area for this SUFFIX from the data_map file
 #
 
 if [[ $RAD_AREA == "glb" ]]; then 
-   ${RADMON_IMAGE_GEN}/html/install_glb.sh $RADMON_SUFFIX 
-else 
-   if [[ $RAD_AREA == "glb" ]]; then 
-      new_webdir=${WEBDIR}/${RADMON_SUFFIX}
-      . ${RADMON_IMAGE_GEN}/parm/glbl_conf
-   else
-      new_webdir=${WEBDIR}/regional/${RADMON_SUFFIX}
-      . ${RADMON_IMAGE_GEN}/parm/rgnl_conf
-   fi
+   new_webdir=${WEBDIR}/${SUFFIX}
+   . ${RADMON_IMAGE_GEN}/parm/glbl_conf
+else
+   new_webdir=${WEBDIR}/regional/${SUFFIX}
+   . ${RADMON_IMAGE_GEN}/parm/rgnl_conf
+fi
 
 echo RAD_AREA    = $RAD_AREA
 echo TANKverf = $TANKverf
@@ -79,7 +76,7 @@ echo TANKverf = $TANKverf
 #--------------------------------------------------------------
 #  Create a temporary working directory.
 #
-workdir=$STMP_USER/${RADMON_SUFFIX}_html
+workdir=$STMP_USER/${SUFFIX}_html
 rmdir $workdir
 mkdir $workdir
 cd $workdir
@@ -135,7 +132,7 @@ while [[ data_found -eq 0 && $PDATE -ge $limit ]]; do
 done
 
 if [[ $data_found -eq 0 ]]; then
-   echo Unable to locate any data files in the past 90 days for $RADMON_SUFFIX 
+   echo Unable to locate any data files in the past 90 days for $SUFFIX 
    echo in $TANKverf/angle.
    exit
 fi
@@ -236,11 +233,13 @@ done
 
 #--------------------------------------------------------------
 #  Read the sorted list and create the platform table
-#
 PLATFORM_TBL=./platform.txt
 > ${PLATFORM_TBL}
 TIME_PLATFORM_TBL=./time_platform.txt
 > ${TIME_PLATFORM_TBL}
+
+#echo '<TR><TD ALIGN=LEFT><B> Select Platform:<br>' >> $PLATFORM_TBL
+#echo '<SELECT NAME="sat" size=1 OnChange=plot()>' >> $PLATFORM_TBL
 
 quote='"'
 id='  id="'
@@ -264,7 +263,7 @@ while read line; do
    echo $hline >> $PLATFORM_TBL
    echo $tline >> $TIME_PLATFORM_TBL
 done < "$SORTED_LIST"
-
+#<OPTION VALUE="sndrd1_g11"    id="sndrd1_g11"   > GOES-11 SNDRD1 </OPTION>
 
 echo '</SELECT><P>' >> $PLATFORM_TBL
 echo '</TD></TR>' >> $PLATFORM_TBL
@@ -273,15 +272,9 @@ echo '</TD></TR>' >> $PLATFORM_TBL
 #--------------------------------------------------------------
 #  Edit the html files to add the platform table to each.
 #
-#  An example line entry in platform table is thus:
-#       <OPTION VALUE="sndrd1_g11" id="sndrd1_g11"> GOES-11 SNDRD1 </OPTION>
+html_files="bcoef bcor bcor_angle comp horiz summary time"
 
-mod_html_files="bcoef bcor bcor_angle comp summary time"
-if [[ $PLOT_HORIZ -eq 1 ]]; then
-   mod_html_files="$mod_html_files horiz"
-fi
-
-for file in $mod_html_files; do
+for file in $html_files; do
    $NCP ${RADMON_IMAGE_GEN}/html/$file.html.$RAD_AREA .
    
    html_file=$file.html.$RAD_AREA
@@ -307,9 +300,9 @@ for file in $mod_html_files; do
             select_name_line=`echo $line | grep "SELECT NAME"`
          fi
 
-         test_line=`echo $line | grep "</TR>"`
+         test_line=`echo $line | grep "</TD></TR>"`
          if [[ ${#test_line} -gt 0 ]]; then
-            echo '<TR><TD><B> Select Platform:</B><br>' >> $tmp_html
+            echo '<TR><TD ALIGN=LEFT><B> Select Platform:<br>' >> $tmp_html
             echo $select_name_line >> $tmp_html
 
              if [[ $file == "time" ]]; then
@@ -332,19 +325,18 @@ done
 # Generate the intro.html.$RAD_AREA file.
 #
 $NCP ${RADMON_IMAGE_GEN}/html/mk_intro.sh .
-$NCP ${RADMON_IMAGE_GEN}/html/intro.html  intro.html.stock 
 
 ./mk_intro.sh 
 
 
 #--------------------------------------------------------------
 #  Copy the menu.html file and change "Experimental" to
-#  "Operational" if the suffix is wopr or nrx (operational GDAS
+#  "Operational" if the suffix is opr or nrx (operational GDAS
 #  or NDAS.
 #
 $NCP ${RADMON_IMAGE_GEN}/html/menu.html.$RAD_AREA .
 
-if [[ $RADMON_SUFFIX == "wopr" || $RADMON_SUFFIX == "nrx" ]]; then
+if [[ $SUFFIX == "opr" || $SUFFIX == "nrx" ]]; then
    tmp_menu=./tmp_menu.html.${RAD_AREA}
    sed s/Experimental/Operational/1 menu.html.${RAD_AREA} > ${tmp_menu}
    mv -f ${tmp_menu} menu.html.${RAD_AREA}
@@ -352,106 +344,44 @@ fi
 
 
 $NCP ${RADMON_IMAGE_GEN}/html/index.html.$RAD_AREA .
-html_files="bcoef bcor_angle bcor comp horiz index intro menu summary time"
-plot_files="plot_summary.html"
-js_files="jsuri-1.1.1.js stats.js"
-
+html_files="bcoef bcor_angle  bcor comp horiz index intro menu summary time"
 
 #--------------------------------------------------------------
-#  Make starting directory in $imgndir and copy over html, 
-#  misc, and thumb images.
+#  If we're running on the CCS or WCOSS, push the html files to 
+#  the web server.  If we're on zeus move the html files to
+#  the $IMGNDIR so they can be pulled from the server.
+#  Make the starting directory on the server and copy the
+#  html files to it.
 #
-subdirs="angle bcoef bcor comp horiz summary time"
-subdirs="summary"
+if [[ $MY_MACHINE = "ccs" || $MY_MACHINE = "wcoss" ]]; then
+   ssh -l ${WEB_USER} ${WEB_SVR} "mkdir -p ${new_webdir}"
+   for file in $html_files; do
+      scp ${file}.html.${RAD_AREA} ${WEB_USER}@${WEB_SVR}:${new_webdir}/${file}.html
+   done
 
-if [[ ! -d ${IMGNDIR} ]]; then
-   mkdir -p ${IMGNDIR}
-fi
-imgndir=`dirname ${IMGNDIR}`
+   subdirs="angle bcoef bcor comp horiz summary time"
+   for dir in $subdirs; do
+      ssh -l ${WEB_USER} ${WEB_SVR} "mkdir -p ${new_webdir}/pngs/${dir}"
+   done
+else
+   if [[ ! -d ${IMGNDIR} ]]; then
+      mkdir -p ${IMGNDIR}
+   fi
+   imgndir=`dirname ${IMGNDIR}`
 
-#-----------------------
-#  html files
-#
-for file in $html_files; do
-   $NCP ${file}.html.${RAD_AREA} ${imgndir}/${file}.html
-done
-$NCP intro.html ${imgndir}/.
-
- 
-#-----------------------
-#  mk image dirs 
-#
-for dir in $subdirs; do
-   mkdir -p ${imgndir}/pngs/${dir}
-done
-
-#-----------------------
-#  plot files
-#
-for file in $plot_files; do
-
-   $NCP ${RADMON_IMAGE_GEN}/html/${file} .
+   for file in $html_files; do
+      $NCP ${file}.html.${RAD_AREA} ${imgndir}/${file}.html
+   done
    
-   #  switch all 'INSERT_SUFFIX' tags to the actual suffix
-   sed s/INSERT_SUFFIX/${RADMON_SUFFIX}/g ${file} > ${file}.tmp
-   mv -f ${file}.tmp ${file}
-
-   $NCP ${file} ${imgndir}/.
-
-done
-
-#-----------------------
-#  js files
-#
-for file in $js_files; do
-   $NCP ${RADMON_IMAGE_GEN}/html/${file} ${imgndir}/.
-done
-
-#-----------------------
-#  summary thumb images
-#    If any are missing dummy one in using a copy of sndrdr1_g15.
-#
-thumbs="sum_thumbs.tar"
-$NCP ${RADMON_IMAGE_GEN}/html/${thumbs} ${imgndir}/pngs/summary/. 
-cd ${imgndir}/pngs/summary
-tar -xvf ${thumbs}
-rm -f ${thumbs}
-
-for satype in $SATYPE; do
-   if [[ ! -e ${satype}.summary.png ]]; then
-      $NCP sndrd1_g15.summary.png ${satype}.summary.png
-   fi
-done
-
-img_list=`ls *.png`			# rm any images for sources not in $SATYPE
-for img in ${img_list}; do
-   tmp=`echo "$img" | cut -d. -f1`
-   echo $tmp
-   img_match=`echo $SATYPE | grep $tmp`
-   if [[ ${#img_match} -le 0 ]]; then
-      rm -f ${img}
-   fi
-done
-
-
-#---------------------------------------------------
-# if on wcoss then cd $imgndir and do the rsync here
-#
-if [[ $MY_MACHINE = "wcoss" ]]; then
-   if [[ ${imgndir} != "/" ]]; then	      # sanity check to avoid serious embarrassment
-      /usr/bin/rsync -ave ssh  --exclude *.ctl.${Z} ${imgndir}/ \
-         ${WEB_USER}@${WEB_SVR}.ncep.noaa.gov:${WEBDIR}/
-   fi
+   subdirs="angle bcoef bcor comp horiz summary time"
+   for dir in $subdirs; do
+      mkdir -p ${IMGNDIR}/${dir}
+   done
 fi
 
-#------------------------
-# clean up $workdir
-#
-#cd $workdir
-#cd ../
-#rm -rf $workdir
-
-fi
+cd $workdir
+cd ../
+rm -rf $workdir
 
 echo ""
 echo "END Install_html.sh"

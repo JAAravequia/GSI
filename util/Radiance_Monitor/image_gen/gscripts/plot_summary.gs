@@ -10,14 +10,11 @@ function plotsummary (args)
 
 plotfile=subwrd(args,1)
 sub_avg=subwrd(args,2)
-use_anl=subwrd(args,3)
-xsize=subwrd(args,4)
-ysize=subwrd(args,5)
+xsize=subwrd(args,3)
+ysize=subwrd(args,4)
 platform=plotfile
 
 say 'process plotfile 'plotfile
-say 'argument use_anl 'use_anl
-
 *'open 'plotfile'.ctl'
 
 'q file'

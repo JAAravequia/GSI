@@ -42,7 +42,7 @@
 #
 #   Imported Shell Variables:
 #
-#     HOMEradmon        package's nwprod subdirectory
+#     USHradmon         scripts directory
 #                       defaults to pwd
 #     INISCRIPT         preprocessing script
 #                       defaults to none
@@ -99,7 +99,7 @@ diag_rpt=${6:-${diag_rpt:?}}
 outfile=${7:-${outfile:?}}
 
 # Directories
-HOMEradmon=${HOMEradmon:-$(pwd)}
+USHradmon=${USHradmon:-$(pwd)}
 
 # File names
 INISCRIPT=${INISCRIPT:-}
@@ -110,7 +110,6 @@ ENDSCRIPT=${ENDSCRIPT:-}
 # Other variables
 VERBOSE=${VERBOSE:-NO}
 err=0
-RADMON_SUFFIX=${RADMON_SUFFIX}
 
 if [[ "$VERBOSE" = "YES" ]]; then
    echo EXECUTING $0 $* >&2
@@ -221,22 +220,13 @@ fi
             #  channels, and we need to map the channel to the correct
             #  grouping number in order to produce an accurate hyperlink.
             #
-            #  Update: with the new js plotting the actual channel number
-            #  can be sent.  This applies to all glb sources now; it's not
-            #  yet implemented for regional sources.
-            if [[ $RAD_AREA == 'glb' ]]; then
-               changrp=${channel}
-               echo "for glb using actual channel as changrp value"
-            else 
-               ctlfile="time.${satname}.ctl"
-               if [[ -s ${ctlfile}.Z || -s ${ctlfile}.gz ]]; then
-                  uncompress ${ctlfile}.*
-               fi
-               changrp=`${HOMEradmon}/ush/radmon_getchgrp.pl ${ctlfile} ${channel}`
+            ctlfile="time.${satname}.ctl"
+            if [[ -s ${ctlfile}.Z || -s ${ctlfile}.gz ]]; then
+               uncompress ${ctlfile}.*
             fi
+            changrp=`${USHradmon}/radmon_getchgrp.pl ${ctlfile} ${channel}`
             echo changrp = $changrp
-
-            line3="   http://www.emc.ncep.noaa.gov/gmb/gdas/radiance/esafford/${RADMON_SUFFIX}/index.html?sat=${satname}&region=${region}&channel=${changrp}&stat=${type}"
+            line3="   http://www.emc.ncep.noaa.gov/gmb/gdas/radiance/esafford/opr/index.html?sat=${satname}&region=region${region}&channel=${changrp}&stat=${type}"
             if [[ $changrp -gt 0 ]]; then
                echo "$line3" >> $outfile
                echo "" >> $outfile

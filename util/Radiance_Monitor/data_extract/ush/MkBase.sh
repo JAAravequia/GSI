@@ -20,8 +20,8 @@ function usage {
   echo "Usage:  MkBase.sh suffix [sat] 1>log 2>err"
   echo "            Suffix is data source identifier that matches data in "
   echo "              the $TANKverf/stats directory."
-  echo "            Sat (optional) restricts the list of satellite sources."
-  echo "              No sat means all satellite sources will be included." 
+  echo "            Redirection of log and err files is recommended for "
+  echo "              diagnostic purposes, but not essential"
 }
 
 nargs=$#
@@ -30,7 +30,7 @@ if [[ $nargs -lt 1 && $nargs -gt 2 ]]; then
    exit 1
 fi
 
-RADMON_SUFFIX=$1
+SUFFIX=$1
 
 if [[ $nargs -eq 2 ]]; then
    SATYPE=$2
@@ -51,8 +51,7 @@ echo $area
 # Set environment variables.
 #-------------------------------------------------------------------
 top_parm=${this_dir}/../../parm
-
-export RADMON_VERSION=${RADMON_VERSION:-${top_parm}/radmon.ver}
+export RADMON_CONFIG=${RADMON_CONFIG:-${top_parm}/RadMon_config}
 if [[ -s ${RADMON_VERSION} ]]; then
    . ${RADMON_VERSION}
 else
@@ -60,7 +59,6 @@ else
    exit 2
 fi
 
-export RADMON_CONFIG=${RADMON_CONFIG:-${top_parm}/RadMon_config}
 if [[ -s ${RADMON_CONFIG} ]]; then
    . ${RADMON_CONFIG}
 else
@@ -93,7 +91,7 @@ BDATE=`$NDATE -720 $EDATE`
 echo EDATE = $EDATE
 echo BDATE = $BDATE
 
-tmpdir=${STMP_USER}/base_${RADMON_SUFFIX}
+tmpdir=${STMP_USER}/base_${SUFFIX}
 rm -rf $tmpdir
 mkdir -p $tmpdir
 cd $tmpdir
@@ -208,8 +206,7 @@ for type in ${SATYPE}; do
    #  Copy the executable and run it 
    #------------------------------------------------------------------
    out_file=${type}.base
-#   $NCP ${HOMEradmon}/exec/make_base ./
-   $NCP ${DE_EXEC}/make_base ./
+   $NCP ${HOMEradmon}/exec/make_base ./
 
 cat << EOF > input
  &INPUT
@@ -283,9 +280,8 @@ if [[ -e ${TANKverf}/info/${basefile} || -e ${TANKverf}/info/${basefile}.${Z} ]]
    rm -f ${TANKverf}/info/${basefile}*
 fi
 
-#${COMPRESS} ${basefile}
-#$NCP ${basefile}.${Z} ${TANKverf}/info/.
-$NCP ${basefile} ${TANKverf}/info/.
+${COMPRESS} ${basefile}
+$NCP ${basefile}.${Z} ${TANKverf}/info/.
 
 #-------------------------------------------------------------------
 #  Clean up $tmpdir

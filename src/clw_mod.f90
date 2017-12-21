@@ -698,6 +698,9 @@ subroutine retrieval_gmi(tb,nchanl,clw,gwp,kraintype,ierr)
 !   2014-11-15  ejones
 !   2015-02-13  ejones - set clw high over swath1 edges so these points can be
 !                        reliably filtered out in QC
+!   2015-07-15  ejones - add systematic "bias correction" to GMI TBs prior to
+!                        retrievals
+!   2016-06-06  ejones - remove unused pred_var_gwp value
 !
 !   input argument list:
 !     tb      - Observed brightness temperature [K]
@@ -736,7 +739,7 @@ subroutine retrieval_gmi(tb,nchanl,clw,gwp,kraintype,ierr)
   integer(i_kind)::tb_index(9)
   integer(i_kind)::nchan_reg,nvar_clw,nvar_gwp
   real(r_kind)::regr_coeff_clw(11),pred_var_clw(2)
-  real(r_kind)::regr_coeff_gwp(10),pred_var_gwp(2)
+  real(r_kind)::regr_coeff_gwp(10),pred_var_gwp
   real(r_kind)::sys_bias(13),tb_use(13)
   real(r_kind)::a0_clw,a0_gwp
 !  real(r_kind)::tb10v,tb10h,tb18v,tb18h,tb23v,tb37v,tb37h,tb89v,tb89h,tb166v,tb166h,tb183v,tb183h
@@ -746,6 +749,13 @@ subroutine retrieval_gmi(tb,nchanl,clw,gwp,kraintype,ierr)
 
   kraintype = 0
   ierr = 0
+
+  ! Brightness temperatures used for training CLW and GWP retrievals were
+  ! simulated from ECMWF fields collocated with GMI observations. The retrievals
+  ! here use actual GMI brightness temperatures, so for best results, a
+  ! "systematic bias" (i.e. an average difference between GMI brightness
+  ! temperatures and those simulated from ECMWF fields) is removed from GMI
+  ! brightness temperatures prior to performing retrievals
 
   ! systematic bias
   sys_bias= (/ 1.7942_r_kind, 1.7793_r_kind, 3.7619_r_kind, 2.9459_r_kind,&
@@ -785,8 +795,7 @@ subroutine retrieval_gmi(tb,nchanl,clw,gwp,kraintype,ierr)
   pred_var_clw(1) = log(tb_use(3)-tb_use(4))  !(tb18v - tb18h)
   pred_var_clw(2) = log(tb_use(6)-tb_use(7))   !(tb37v - tb37h)
 
-  pred_var_gwp(1) = 300.0_r_kind-log(tb_use(10))   !(tb166v)
-  pred_var_gwp(2) = 300.0_r_kind-log(tb_use(12))   !(tb183v)
+  pred_var_gwp = 300.0_r_kind-log(tb_use(12))   !(tb183v)
 
 ! ---------- Gross check ------------------------------------
 ! Gross error check on all channels.  If there are any
@@ -847,7 +856,7 @@ subroutine retrieval_gmi(tb,nchanl,clw,gwp,kraintype,ierr)
   ! weight by non-spectral independent variables
   if ( nvar_gwp > nchan_reg ) then
     do i=1,diff_var
-      gwp = gwp + ( pred_var_gwp(i) * regr_coeff_gwp(i+nchan_reg) )
+      gwp = gwp + ( pred_var_gwp * regr_coeff_gwp(i+nchan_reg) )
     enddo
   endif
 
@@ -927,6 +936,13 @@ subroutine retrieval_amsr2(tb,nchanl,clw,kraintype,ierr)
   tb6v=tb(1); tb6h=tb(2); tb7v=tb(3); tb7h=tb(4); tb10v=tb(5); tb10h=tb(6)
   tb18v=tb(7); tb18h=tb(8); tb23v=tb(9); tb23h=tb(10); tb36v=tb(11)
   tb36h=tb(12); tb89v=tb(13); tb89h=tb(14)
+
+  ! Brightness temperatures used for training CLW retrievals were
+  ! simulated from ECMWF fields collocated with AMSR2 observations. The retrievals
+  ! here use actual AMSR2 brightness temperatures, so for best results, a
+  ! "systematic bias" (i.e. an average difference between AMSR2 brightness
+  ! temperatures and those simulated from ECMWF fields) is removed from AMSR2
+  ! brightness temperatures prior to performing retrievals
 
   ! systematic bias
   sys_bias= (/ 0.4800_r_kind, 3.0737_r_kind, 0.7433_r_kind, 3.6430_r_kind,&

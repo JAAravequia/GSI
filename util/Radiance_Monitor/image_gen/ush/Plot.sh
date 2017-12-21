@@ -43,11 +43,11 @@ fi
 this_file=`basename $0`
 this_dir=`dirname $0`
 
-RADMON_SUFFIX=$1
+SUFFIX=$1
 start_dt=$2
 end_dt=$3
 
-echo RADMON_SUFFIX    = ${RADMON_SUFFIX}
+echo SUFFIX    = ${SUFFIX}
 echo start_dt  = ${start_dt}
 echo end_dt    = ${end_dt}
 
@@ -102,7 +102,7 @@ if [[ $RAD_AREA = "glb" ]]; then
 elif [[ $RAD_AREA = "rgn" ]]; then
    . ${IG_PARM}/rgnl_conf
 else
-   echo "ERROR:  unable to determine RAD_AREA for $RADMON_SUFFIX"
+   echo "ERROR:  unable to determine RAD_AREA for $SUFFIX"
    exit 7
 fi
 
@@ -148,6 +148,7 @@ fi
 
 
 export PLOT=1
+export PLOT_HORIZ=0
 #--------------------------------------------------------------------
 # Check status of plot jobs. If any are still running then exit
 # this script. If none are running then remove any old job records 
@@ -158,13 +159,13 @@ export PLOT=1
 #--------------------------------------------------------------------
 
 if [[ $MY_MACHINE = "wcoss" ]]; then
-   running=`bjobs -l | grep plot_${RADMON_SUFFIX} | wc -l` 
+   running=`bjobs -l | grep plot_${SUFFIX} | wc -l` 
 else
-   running=`showq -n -u ${LOGNAME} | grep plot_${RADMON_SUFFIX} | wc -l`
+   running=`showq -n -u ${LOGNAME} | grep plot_${SUFFIX} | wc -l`
 fi
 
 if [[ $running -ne 0 ]]; then
-   echo "Plot jobs still running for $RADMON_SUFFIX, must exit"
+   echo "Plot jobs still running for $SUFFIX, must exit"
    exit
 fi
 
@@ -173,7 +174,7 @@ fi
 #  Create tmpdir and LOGdir
 #--------------------------------------------------------------------
 
-tmpdir=${STMP_USER}/plot_rad${RADMON_SUFFIX}
+tmpdir=${STMP_USER}/plot_rad${SUFFIX}
 rm -rf $tmpdir
 mkdir -p $tmpdir
 cd $tmpdir
@@ -194,9 +195,9 @@ export PDY=`echo $PDATE|cut -c1-8`
 # Make horizontal plots only on 00z cycle.  All other plotting
 # is done with each cycle. 
 #--------------------------------------------------------------------
-#if [[ "$CYA" = "00" ]];then
-#   export PLOT_HORIZ=1
-#fi
+if [[ "$CYA" = "00" ]];then
+   export PLOT_HORIZ=1
+fi
 
 
 if [[ -d $PLOT_WORK_DIR ]]; then
@@ -287,13 +288,11 @@ ${IG_SCRIPTS}/mk_bcor_plots.sh
 if [[ ${PLOT_HORIZ} -eq 1 ]] ; then
    export datdir=$RADSTAT_LOCATION
 
-   jobname="plot_horiz_${RADMON_SUFFIX}"
+   jobname="plot_horiz_${SUFFIX}"
    logfile="${LOGdir}/horiz.log"
 
    if [[ $MY_MACHINE = "wcoss" ]]; then
       $SUB -P $PROJECT -q $JOB_QUEUE -o ${logfile} -M 80 -W 0:45 -J ${jobname}  -R affinity[core] ${IG_SCRIPTS}/mk_horiz_plots.sh
-   elif [[ $MY_MACHINE = "cray" ]]; then
-      $SUB -P $PROJECT -q $JOB_QUEUE -o ${logfile} -M 80 -W 0:45 -J ${jobname}  ${IG_SCRIPTS}/mk_horiz_plots.sh
    else
       $SUB -A $ACCOUNT -l procs=1,walltime=0:20:00 -N ${jobname} -V -j oe -o ${logfile} $IG_SCRIPTS/mk_horiz_plots.sh
    fi
@@ -310,7 +309,7 @@ do_data_rpt=$DO_DATA_RPT
 
 if [[ $do_data_rpt -eq 1 || $do_diag_rpt -eq 1 ]]; then
 
-   logfile_dir=${LOGdir}/rad${RADMON_SUFFIX}
+   logfile_dir=${LOGdir}/rad${SUFFIX}
    logfile=`ls ${logfile_dir}/${PDY}/gdas_verfrad_${CYA}.*`
    if [[ ! -s $logfile ]]; then
       logfile=${LOGdir}/data_extract.${sdate}.${CYA}.log
