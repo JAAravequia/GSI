@@ -27,7 +27,6 @@ module adjtest_obs
            t_ob_type,q_ob_type,w_ob_type,ps_ob_type,pw_ob_type, spd_ob_type, &
            rw_ob_type, dw_ob_type, srw_ob_type, tcp_ob_type, sst_ob_type, &
            oz_ob_type, o3l_ob_type, gps_ob_type, colvk_ob_type, pm2_5_ob_type, rad_ob_type, &
-           pm10_ob_type, aero_ob_type, &
            gust_ob_type,vis_ob_type,pblh_ob_type
 
   use jfunc, only: jiter
@@ -74,10 +73,10 @@ subroutine adtest_obs
   type(control_vector) :: xtest1
   type(gsi_bundle) :: mval(nsubwin)
   type(gsi_bundle) :: stest1(nobs_bins)
-  type(gsi_bundle) :: rval(nobs_bins)
+  type(gsi_bundle) :: sval(nobs_bins), rval(nobs_bins)
   type(predictors) :: sbias1
   type(predictors) :: rbias1
-  integer(i_kind)  :: ii,idig
+  integer(i_kind)  :: i,j,k,ii,idig, iflg
   real(r_kind) :: adj_lhs, adj_rhs, adj_lhs_tmp, adj_rhs_tmp
   real(r_kind) :: adj_rhs_tsen_tmp, adj_rhs_tsen
   real(r_kind) :: zz1, zz2, zz3
@@ -229,11 +228,9 @@ subroutine get_lhs(yobs, lhs)
   type(vis_ob_type),   pointer  :: visptr   ! 17. Conventional visibility
   type(pblh_ob_type),  pointer  :: pblhptr  ! 18. Conventional pbl height
   type(gust_ob_type),  pointer  :: gustptr  ! 19. Conventional wind gust 
-  type(pm10_ob_type),  pointer  :: pm10ptr  ! 20. pm10
-  type(aero_ob_type),  pointer  :: aeroptr  ! 21. aero aod
-
 
 ! ----------------------------------------------------------------------
+  character(len=*),parameter:: myname='adj_lhs'
   integer (i_kind) :: nob, nobs
   integer (i_kind) :: k
 !
@@ -550,37 +547,6 @@ subroutine get_lhs(yobs, lhs)
   call mpi_allreduce(nob,nobs,1,mpi_integer4,mpi_sum,mpi_comm_world,ierror)
 
 !--------------------------------------------------------------------------
-! Do pm10 obs
-  nob = 0
-!-------------------------------------------------------------------------
-  pm10ptr => yobs%pm10
-  do while (associated(pm10ptr))
-
-     if (pm10ptr%luse) then
-        lhs = lhs + pm10ptr%diags%tldepart(jiter) * pm10ptr%diags%tldepart(jiter)
-        nob = nob + 1
-     end if
-     pm10ptr => pm10ptr%llpoint
-  end do
-  call mpi_allreduce(nob,nobs,1,mpi_integer4,mpi_sum,mpi_comm_world,ierror)
-
-!--------------------------------------------------------------------------
-! Do aero aod obs
-  nob = 0
-!-------------------------------------------------------------------------
-!-------------------------------------------------------------------------
-  aeroptr => yobs%aero
-  do while (associated(aeroptr))
-
-     if (aeroptr%luse) then
-        DO k = 1,aeroptr%nlaero
-           lhs = lhs + aeroptr%diags(k)%ptr%tldepart(jiter) * aeroptr%diags(k)%ptr%tldepart(jiter)
-           nob = nob + 1
-        enddo
-     end if
-     aeroptr => aeroptr%llpoint
-  end do
-  call mpi_allreduce(nob,nobs,1,mpi_integer4,mpi_sum,mpi_comm_world,ierror)
 
 !--------------------------------------------------------------------------
   return

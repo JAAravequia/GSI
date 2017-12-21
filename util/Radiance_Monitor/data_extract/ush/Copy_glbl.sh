@@ -13,7 +13,7 @@
 
 function usage {
   echo "Usage:  Copy_glbl.sh suffix date"
-  echo "            File name for Copy_glbl.sh may be full or relative path"
+  echo "            File name for MkCtl_glbl.sh may be full or relative path"
   echo "            Suffix is the indentifier for this data source, and should"
   echo "             correspond to an entry in the ../../parm/data_map file."
   echo "            DATE is 10 digit yyyymmddhh string."
@@ -31,14 +31,11 @@ fi
 
 this_file=`basename $0`
 this_dir=`dirname $0`
-compress="/usrx/local/bin/pigz -f"
-no_diag_rpt=0
-no_error_rpt=0
 
 export SUFFIX=$1
 export DATE=$2
 
-export RAD_AREA=glb
+jobname=link_${SUFFIX}
 
 echo SUFFIX = $SUFFIX
 echo DATE   = $DATE
@@ -49,51 +46,27 @@ echo DATE   = $DATE
 #--------------------------------------------------------------------
 
 top_parm=${this_dir}/../../parm
-export RADMON_VERSION=${RADMON_VERSION:-${top_parm}/radmon.ver}
-if [[ -s ${RADMON_VERSION} ]]; then
-   . ${RADMON_VERSION}
+
+if [[ -s ${top_parm}/RadMon_config ]]; then
+   . ${top_parm}/RadMon_config
 else
-   echo "Unable to source ${RADMON_VERSION} (radmon version) file"
+   echo "Unable to source RadMon_config file in ${top_parm}"
    exit 2
 fi
 
-export RADMON_CONFIG=${RADMON_CONFIG:-${top_parm}/RadMon_config}
-if [[ -s ${RADMON_CONFIG} ]]; then
-   . ${RADMON_CONFIG}
-else
-   echo "Unable to source ${RADMON_CONFIG} (radmon config) file"
-   exit 2
-fi
+. ${RADMON_DATA_EXTRACT}/parm/data_extract_config
+export USHgfs=${USHgfs:-$HOMEgfs/ush}
+. ${PARMverf_rad}/glbl_conf
 
-if [[ -s ${RADMON_USER_SETTINGS} ]]; then
-   . ${RADMON_USER_SETTINGS}
-else
-   echo "Unable to source ${RADMON_USER_SETTINGS} (radmon user settings) file"
-   exit 3
-fi
-
-. ${DE_PARM}/data_extract_config
-export USHradmon=${USHradmon:-$HOMEradmon/ush}
-
-
-#--------------------------------------------------------------------
-#  Check setting of RUN_ONLY_ON_DEV and possible abort if on prod and
-#  not permitted to run there.
-#--------------------------------------------------------------------
-
-if [[ RUN_ONLY_ON_DEV -eq 1 ]]; then
-   is_prod=`${DE_SCRIPTS}/onprod.sh`
-   if [[ $is_prod = 1 ]]; then
-      exit 10
-   fi
-fi
-
+mkdir -p $TANKDIR
+mkdir -p $LOGSverf_rad
 
 #---------------------------------------------------------------
-# Create any missing directories.
+# Create working directory and move to it
 #---------------------------------------------------------------
-mkdir -p $TANKverf
-mkdir -p $LOGdir
+#workdir=$WORKverf_rad/Copy_${SUFFIX}_${DATE}
+#mkdir -p $workdir
+#cd $workdir
 
 day=`echo $DATE|cut -c1-8`
 cycle=`echo $DATE|cut -c9-10`
@@ -105,32 +78,24 @@ echo PDATE = $PDATE
 prev=`$NDATE -06 $PDATE`
 prev_day=`echo $prev|cut -c1-8`
 prev_cyc=`echo $prev|cut -c9-10`
-next=`$NDATE +06 $PDATE`
-next_day=`echo $next|cut -c1-8`
-next_cyc=`echo $next|cut -c9-10`
-
 echo prev_day, prev_cyc = $prev_day, $prev_cyc
 echo next_day, next_cyc = $next_day, $next_cyc
 
-DATA=${DATA:-/com2/verf/prod}
-DATDIR=${DATDIR:-${DATA}/radmon.${day}}
-LOGDIR=${LOGDIR:-/com2/output/prod}
-test_dir=${TANKverf}/radmon.${day}
+
+DATDIR=${DATDIR:-/com/verf/prod/radmon.${day}}
+
+test_dir=${TANKDIR}/radmon.${day}
 
 if [[ ! -d ${test_dir} ]]; then
    mkdir -p ${test_dir}
 fi
 cd ${test_dir}
 
-#if [[ ! -s gdas_radmon_satype.txt  ]]; then
-if [[ ! -s ${SUFFIX}_radmon_satype.txt  ]]; then
-#   if [[ -s ${TANKverf}/radmon.${prev_day}/gdas_radmon_satype.txt ]]; then
-   if [[ -s ${TANKverf}/radmon.${prev_day}/${SUFFIX}.txt ]]; then
-#      $NCP ${TANKverf}/radmon.${prev_day}/gdas_radmon_satype.txt .
-      $NCP ${TANKverf}/radmon.${prev_day}/${SUFFIX}.txt .
+if [[ ! -s gdas_radmon_satype.txt  ]]; then
+   if [[ -s ${TANKDIR}/radmon.${prev_day}/gdas_radmon_satype.txt ]]; then
+      $NCP ${TANKDIR}/radmon.${prev_day}/gdas_radmon_satype.txt .
    else
-#      echo WARNING:  unable to locate gdas_radmon_satype.txt in ${TANKverf}/radmon.${prev_day}
-      echo WARNING:  unable to locate ${SUFFIX}_radmon_satype.txt in ${TANKverf}/radmon.${prev_day}
+      echo WARNING:  unable to locate gdas_radmon_satype.txt in ${TANKDIR}/radmon.${prev_day}
    fi 
 fi
 
@@ -167,11 +132,12 @@ if [[ $nfile_src -gt 0 ]]; then
 #           rm stdout files?
 #           make sure *.base and *.tar are removed
 
-   $NCP ${DE_EXEC}/validate_time.x ${test_dir}/.
-   $NCP $DE_SCRIPTS/validate.sh      ${test_dir}/.
+   $NCP $EXECverf_rad/validate_time.x ${test_dir}/.
+   $NCP $USHverf_rad/validate.sh      ${test_dir}/.
    ./validate.sh ${PDATE}
 
 else
+#  no new data available because $DATDIR doesn't yet exist
    exit_value=5
 fi
 
@@ -188,20 +154,19 @@ if [[ $exit_value == 0 ]]; then
       tar -rvf ${valid_tar} stdout.validate.*.${cycle}
    fi
 
-   #--------------------------------------------------------------------
-   #  Remove extra spaces in new bad_pen file
-   #--------------------------------------------------------------------
-   bad_pen=bad_pen.${PDATE}
-   gawk '{$1=$1}1' $bad_pen > tmp.bad_pen
-   mv -f tmp.bad_pen $bad_pen
-    
+#--------------------------------------------------------------------
+#  Create a new penalty error report using the new bad_pen file
+#--------------------------------------------------------------------
+$NCP $USHgfs/radmon_err_rpt.sh            ${test_dir}/.
+
    #--------------------------------------------------------------------
    #  Create a new penalty error report using the new bad_pen file
    #--------------------------------------------------------------------
-   $NCP $DE_SCRIPTS/radmon_err_rpt.sh      ${test_dir}/.
-   $NCP $HOMEradmon/ush/radmon_getchgrp.pl ${test_dir}/.
+   #$NCP $USHverf_rad/radmon_err_rpt.sh      ${test_dir}/.
+   $NCP $USHgfs/radmon_err_rpt.sh            ${test_dir}/.
+   #$NCP $USHgfs/radmon_getchgrp.pl      ${test_dir}/.
 
-   prev_bad_pen=${TANKverf}/radmon.${prev_day}/bad_pen.${prev}
+   prev_bad_pen=${TANKDIR}/radmon.${prev_day}/bad_pen.${prev}
    bad_pen=bad_pen.${PDATE}
    diag_rpt="diag.txt"
    outfile="pen.${PDATE}.txt"
@@ -210,7 +175,7 @@ if [[ $exit_value == 0 ]]; then
 
  
    #--------------------------------------------------------------------
-   #  Copy over the ${LOGDIR}/YYYYMMDD/gdas_verfrad_HH.o* log 
+   #  Copy over the /com/output/prod/YYYYMMDD/gdas_verfrad_HH.o* log 
    #   Note that the 18z cycle log file is found in the next day's 
    #   directory.
    #    1.  Confirm that any entries in the Diagnostic file report 
@@ -225,9 +190,9 @@ if [[ $exit_value == 0 ]]; then
    tmp_log=tmp_${PDATE}.log
    new_log=new_opr_${PDATE}.log
    if [[ $cycle = 18 ]]; then 
-      $NCP ${LOGDIR}/${next_day}/gdas_verfrad_${cycle}.o* ${opr_log}
+      $NCP /com/output/prod/${next_day}/gdas_verfrad_${cycle}.o* ${opr_log}
    else
-     $NCP ${LOGDIR}/${day}/gdas_verfrad_${cycle}.o* ${opr_log}
+     $NCP /com/output/prod/${day}/gdas_verfrad_${cycle}.o* ${opr_log}
    fi
 
    #--------------------------------------------------------------------
@@ -254,8 +219,7 @@ if [[ $exit_value == 0 ]]; then
          if [[ $len -gt 0 ]]; then
             sat=`echo $new_sat | gawk '{print $1}'`
          
-#            test_satype=`grep $sat gdas_radmon_satype.txt`
-            test_satype=`grep $sat ${SUFFIX}_radmon_satype.txt`
+            test_satype=`grep $sat gdas_radmon_satype.txt`
             len_test=`expr length "$test_satype"`
             if [[ $len_test -gt 0 ]]; then
                echo $line >> $new_diag
@@ -287,97 +251,51 @@ if [[ $exit_value == 0 ]]; then
       mv -f $opr_log opr_log.bu 
       $NCP $tmp_log $opr_log 
 
-   else
-      no_diag_rpt=1 
    fi
 
 
    #--------------------------------------------------------------------
    #  Penalty report processing
    #--------------------------------------------------------------------
-   end=`grep -n '============ ======= ======      Cycle                 Penalty          Bound' ${opr_log} | tail -1`
+   end=`grep -n '============ ======= ======      Cycle                 Penalty          Bound' ${opr_log}`
    opr_log_end=`echo $end | sed 's/:/ /g' | gawk '{print $1}'`
 
    if [[ $opr_log_end -gt 1 ]]; then
       opr_log_start=1
 
 
-      #------------------------------------------------------------------------
-      #  If $outfile exists, replace existing penalty report with $outfile 
-      #  contents or remove the penalty report altogether if there is no
-      #  $outfile
-      #------------------------------------------------------------------------
+      #-----------------------------------------------------------------------------
+      #  If $outfile exists, replace existing penalty report with $outfile contents 
+      #  or remove the penalty report altogether if there is no $outfile
+      #-----------------------------------------------------------------------------
       if [[ -s $outfile ]]; then
-         echo "OUTFILE -s $outfile is TRUE"
          opr_log_end=`expr $opr_log_end + 1`
          gawk "NR>=$opr_log_start && NR<=$opr_log_end" ${opr_log} >> $new_log
          cat $outfile >> $new_log
          echo "End Cycle Data Integrity Report" >> $new_log
       else
-         echo "OUTFILE -s $outfile is FALSE"
          opr_log_end=`expr $opr_log_end - 15`
          gawk "NR>=$opr_log_start && NR<=$opr_log_end" ${opr_log} >> $new_log
-#         echo "NO ERROR REPORT" >> $new_log
-         no_error_rpt=1 
       fi
-
    else
-      
-      if [[ -s $outfile ]]; then
-         rm -f report.txt
-         cp $opr_log $new_log
-
-         echo "Begin Cycle Data Integrity Report" > report.txt  
-
-         echo " "        >> report.txt
-         echo "Cycle Data Integrity Report" >> report.txt
-         echo "${PDATE}" >> report.txt
-         echo " "        >> report.txt
-         echo "Region Definitions:" >> report.txt
-         echo " "        >> report.txt
-    
-         echo "  1  Global              (90S-90N, 0-360E)" >> report.txt
-         echo " "        >> report.txt
-         echo " "        >> report.txt
-         echo "Penalty values outside of the established normal range were found" >> report.txt
-         echo "for these sensor/channel/regions in the past two cycles: " >> report.txt
-         echo " "        >> report.txt
-         echo "Questionable Penalty Values " >> report.txt
-         echo "============ ======= ======      Cycle                 Penalty          Bound" >> report.txt
-         echo "                                 -----                 -------          ----- " >> report.txt
-         echo " "        >> report.txt
-         cat $outfile >> report.txt
-         echo " "        >> report.txt
-         echo " "        >> report.txt
-         echo " "        >> report.txt
-         echo "End Cycle Data Integrity Report" >> report.txt  
-
-         cat report.txt >> $new_log
-
-      else
-         mv $opr_log $new_log
-      fi
+      mv $opr_log $new_log
    fi
 
-   if [[ $no_diag_rpt -eq 1 ]]; then
-      echo "NO DIAG REPORT" >> $new_log
+   if [[ ! -d ${LOGDIR} ]]; then
+      mkdir -p ${LOGDIR}
    fi
-   if [[ $no_error_rpt -eq 1 ]]; then
-      echo "NO ERROR REPORT" >> $new_log
-   fi
+   $NCP ./$new_log ${LOGDIR}/data_extract.${day}.${cycle}.log
 
-   $NCP ./$new_log ${LOGdir}/data_extract.${day}.${cycle}.log
-
-   #rm -f $new_log
+   rm -f $new_log
    rm -f $opr_log 
-   #rm -f $new_diag $tmp_diag
+   rm -f $new_diag $tmp_diag
    rm -f $tmp_log
 
-   $compress *.ctl
+   compress -f *.ctl
 
 
    #--------------------------------------------------------------------
-   # Remove processing scripts/executables and exit.
+   # Advance prodate and exit
    #--------------------------------------------------------------------
    rm -f validate_time.x
    rm -f validate.sh 
@@ -393,6 +311,13 @@ if [[ $exit_value == 0 ]]; then
 
 fi
 
+#if [[ $exit_value -eq 0 ]]; then
+#   `${USHverf_rad}/update_data_map.pl ${DATA_MAP} ${SUFFIX} prodate ${PDATE}`
+#fi
+
+#---------------------------------------------------------------
+# Clean up working directory 
+#---------------------------------------------------------------
 
 echo end Copy_glbl.sh
 exit ${exit_value}

@@ -94,7 +94,6 @@ subroutine intcolev_(colvkhead,rval,sval)
 !   1995-07-11  derber
 !   2010-06-07  tangborn - carbon monoxide based on ozone code
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - introduced ladtest_obs         
-!   2014-12-03  derber  - modify so that use of obsdiags can be turned off
 !
 !   input argument list:
 !     colvkhead  - level carbon monoxide obs type pointer to obs structure
@@ -110,7 +109,7 @@ subroutine intcolev_(colvkhead,rval,sval)
 !$$$
 !--------
   use kinds, only: r_kind,i_kind,r_quad
-  use obsmod, only: colvk_ob_type,lsaveobsens,l_do_adjoint,luse_obsdiag
+  use obsmod, only: colvk_ob_type,lsaveobsens,l_do_adjoint
   use gridmod, only: lat2,lon2,nsig
   use jfunc, only: jiter,xhat_dt,dhat_dt
   use constants, only: one,zero,r3600,zero_quad
@@ -126,10 +125,12 @@ subroutine intcolev_(colvkhead,rval,sval)
 
 ! Declare local variables
   integer(i_kind) i,j,ij,ier,istatus
-  integer(i_kind) k,k1,k2,j1,j2,j3,j4,kk
-  real(r_kind) pob
+  integer(i_kind) k,k1,k2,j1,j2,j3,j4,kk,iz1,iz2,j1x,j2x,j3x,j4x
+  real(r_kind) pob,time_co
   real(r_quad) val1,valx
   real(r_kind) w1,w2,w3,w4,w5,w6,w7,w8
+  real(r_kind),pointer,dimension(:) :: xhat_dt_co
+  real(r_kind),pointer,dimension(:) :: dhat_dt_co
   real(r_kind),pointer,dimension(:,:,:)  :: scop
   real(r_kind),pointer,dimension(:,:,:)  :: rcop
   real(r_kind),allocatable,dimension(:,:) :: sco
@@ -214,17 +215,17 @@ subroutine intcolev_(colvkhead,rval,sval)
               val1=val1+colvkptr%ak(k,j)*vali(j)
            enddo 
 
-           if(luse_obsdiag)then
-              if (lsaveobsens) then
-                 valx=val1*colvkptr%err2(k)*colvkptr%raterr2(k)
-                 colvkptr%diags(k)%ptr%obssen(jiter)=valx
-              else
-                 if (colvkptr%luse) colvkptr%diags(k)%ptr%tldepart(jiter)=val1
-              endif
+           if (lsaveobsens) then
+              colvkptr%diags(k)%ptr%obssen(jiter)=val1*colvkptr%err2(k)*colvkptr%raterr2(k)
+           else
+              if (colvkptr%luse) colvkptr%diags(k)%ptr%tldepart(jiter)=val1
            endif
 
            if (l_do_adjoint) then
-              if (.not. lsaveobsens) then
+              if (lsaveobsens) then
+                 valx = colvkptr%diags(k)%ptr%obssen(jiter)
+
+              else
                  if( ladtest_obs ) then
                     valx = val1
                  else

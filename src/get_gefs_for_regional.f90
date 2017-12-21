@@ -14,10 +14,6 @@ subroutine get_gefs_for_regional
 !   2012-02-08  parrish - a little more cleanup
 !   2012-10-11  wu      - dual resolution for options of regional hybens
 !   2013-02-21  wu      - add call to general_destroy_spec_vars to fix memory problem
-!   2013-10-19  todling - all guess variables in met-guess
-!   2014-11-30  todling - update interface to general_read_gfs routines
-!   2014-12-03  derber - changes to call for general_read_gfsatm
-!   2015-05-12  wu      - changes to read in multiple ensemble for 4DEnVar
 !
 !   input argument list:
 !
@@ -29,20 +25,21 @@ subroutine get_gefs_for_regional
 !
 !$$$ end documentation block
 
-  use gridmod, only: idsl5,regional,use_gfs_nemsio
+  use gridmod, only: idsl5,regional
   use gridmod, only: region_lat,region_lon  
   use gridmod, only: nlon,nlat,lat2,lon2,nsig,rotate_wind_ll2xy
   use hybrid_ensemble_isotropic, only: region_lat_ens,region_lon_ens
   use hybrid_ensemble_isotropic, only: en_perts,ps_bar,nelen
   use hybrid_ensemble_parameters, only: n_ens,grd_ens,grd_anl,grd_a1,grd_e1,p_e2a,uv_hyb_ens,dual_res
-  use hybrid_ensemble_parameters, only: full_ensemble,q_hyb_ens,l_ens_in_diff_time,write_ens_sprd
-  use hybrid_ensemble_parameters, only: ntlevs_ens,ensemble_path
+  use hybrid_ensemble_parameters, only: full_ensemble
  !use hybrid_ensemble_parameters, only: add_bias_perturbation
   use control_vectors, only: cvars2d,cvars3d,nc2d,nc3d
   use gsi_bundlemod, only: gsi_bundlecreate
+  use gsi_bundlemod, only: gsi_grid
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gsi_bundlemod, only: gsi_bundledestroy
+  use gsi_bundlemod, only: gsi_gridcreate
   use constants,only: zero,half,fv,rd_over_cp,one,h300
   use constants, only: rd,grav
   use mpimod, only: mpi_comm_world,ierror,mype,mpi_rtype,mpi_min,mpi_max
@@ -50,44 +47,24 @@ subroutine get_gefs_for_regional
   use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info
   use general_sub2grid_mod, only: general_grid2sub,general_sub2grid
   use general_sub2grid_mod, only: general_suba2sube,general_sube2suba
-  use general_sub2grid_mod, only: general_sub2grid_destroy_info
   use general_specmod, only: spec_vars,general_init_spec_vars,general_destroy_spec_vars
   use egrid2agrid_mod, only: g_create_egrid2points_slow,egrid2agrid_parm,g_egrid2points_faster
   use sigio_module, only: sigio_intkind,sigio_head,sigio_srhead
-  use guess_grids, only: ges_prsl,ntguessig,geop_hgti
-  use guess_grids, only: ges_tsen,ifilesig,hrdifsig
+  use guess_grids, only: ges_prsl,ges_ps,ntguessig,geop_hgti,ges_z
+  use guess_grids, only: ges_tv,ges_q,ges_u,ges_v,ges_tsen
   use aniso_ens_util, only: intp_spl
   use obsmod, only: iadate
-  use mpimod, only: npe
-  use gsi_bundlemod, only: gsi_bundlegetpointer
-  use gsi_bundlemod, only: gsi_bundlecreate
-  use gsi_bundlemod, only: gsi_grid
-  use gsi_bundlemod, only: gsi_gridcreate
-  use gsi_bundlemod, only: gsi_bundle
-  use gsi_bundlemod, only: gsi_bundledestroy
-  use gsi_metguess_mod, only: GSI_MetGuess_Bundle
-  use mpeu_util, only: die
-  use gsi_4dvar, only: nhr_assimilation
   implicit none
 
-  type(sub2grid_info) grd_gfs,grd_mix,grd_gfst
+  type(sub2grid_info) grd_gfs,grd_mix
   type(spec_vars) sp_gfs
-  real(r_kind),allocatable,dimension(:,:,:) :: pri,prsl,prsl1000
-  real(r_kind),pointer,dimension(:,:,:) :: vor =>null()
-  real(r_kind),pointer,dimension(:,:,:) :: div =>null()
-  real(r_kind),pointer,dimension(:,:,:) :: u   =>null()
-  real(r_kind),pointer,dimension(:,:,:) :: v   =>null()
-  real(r_kind),pointer,dimension(:,:,:) :: tv  =>null()
-  real(r_kind),pointer,dimension(:,:,:) :: q   =>null()
-  real(r_kind),pointer,dimension(:,:,:) :: cwmr=>null()
-  real(r_kind),pointer,dimension(:,:,:) :: oz  =>null()
-  real(r_kind),pointer,dimension(:,:)   :: z =>null()
-  real(r_kind),pointer,dimension(:,:)   :: ps=>null()
+  real(r_kind),allocatable,dimension(:,:,:) :: pri,vor,div,u,v,tv,q,cwmr,oz,prsl
+  real(r_kind),allocatable,dimension(:,:)   :: z,ps
   real(r_kind),allocatable,dimension(:) :: ak5,bk5,ck5,tref5
   real(r_kind),allocatable :: work_sub(:,:,:,:),work(:,:,:,:),work_reg(:,:,:,:)
   real(r_kind),allocatable :: tmp_ens(:,:,:,:),tmp_anl(:,:,:,:),tmp_ens2(:,:,:,:)
   real(r_kind),allocatable,dimension(:,:,:)::stbar,vpbar,tbar,rhbar,ozbar,cwbar
-  real(r_kind),allocatable,dimension(:,:)::  pbar_nmmb
+  real(r_kind),allocatable,dimension(:,:)::  sstbar,pbar_nmmb
   real(r_kind),allocatable,dimension(:,:,:,:)::st_eg,vp_eg,t_eg,rh_eg,oz_eg,cw_eg
   real(r_kind),allocatable,dimension(:,:,:):: p_eg_nmmb
   real(r_kind),allocatable,dimension(:,:,:,:):: ges_prsl_e
@@ -96,19 +73,20 @@ subroutine get_gefs_for_regional
   real(r_single),pointer,dimension(:,:,:):: w3
   real(r_single),pointer,dimension(:,:):: w2
 
-  character(len=*),parameter::myname='get_gefs_for_regional'
   real(r_kind) bar_norm,sig_norm,kapr,kap1,trk
-  integer(i_kind) iret,i,j,k,k2,n,mm1,iderivative
-  integer(i_kind) ic2,ic3,it
+  integer(i_kind) iret,i,ig,j,jg,k,k2,n,il,jl,mm1,iderivative
+  integer(i_kind) ic2,ic3
   integer(i_kind) ku,kv,kt,kq,koz,kcw,kz,kps
-  character(255) filename,filelists(ntlevs_ens)
+  character(255) filename
   logical ice
   integer(sigio_intkind):: lunges = 11
   type(sigio_head):: sighead
   type(egrid2agrid_parm) :: p_g2r
   integer(i_kind) inner_vars,num_fields,nlat_gfs,nlon_gfs,nsig_gfs,jcap_gfs,jcap_gfs_test
-  integer(i_kind) nord_g2r,num_fieldst
+  integer(i_kind) nord_g2r
   logical,allocatable :: vector(:)
+  real(r_kind) ozmin,ozmax
+  real(r_kind) ozmin0,ozmax0
   real(r_kind),parameter::  zero_001=0.001_r_kind
   real(r_kind),allocatable,dimension(:) :: xspli,yspli,xsplo,ysplo
   integer(i_kind) iyr,ihourg
@@ -117,72 +95,42 @@ subroutine get_gefs_for_regional
   integer(i_kind),dimension(5) :: iadate_gfs
   real(r_kind) hourg
   real(r_kind),dimension(5):: fha
+  real(r_kind),allocatable,dimension(:)::glb_umin,glb_umax,reg_umin,reg_umax
+  real(r_kind),allocatable,dimension(:)::glb_vmin,glb_vmax,reg_vmin,reg_vmax
+  real(r_kind),allocatable,dimension(:)::glb_tmin,glb_tmax,reg_tmin,reg_tmax
+  real(r_kind),allocatable,dimension(:)::glb_rhmin,glb_rhmax,reg_rhmin,reg_rhmax
+  real(r_kind),allocatable,dimension(:)::glb_ozmin,glb_ozmax,reg_ozmin,reg_ozmax
+  real(r_kind),allocatable,dimension(:)::glb_cwmin,glb_cwmax,reg_cwmin,reg_cwmax
+  real(r_kind),allocatable,dimension(:)::glb_umin0,glb_umax0,reg_umin0,reg_umax0
+  real(r_kind),allocatable,dimension(:)::glb_vmin0,glb_vmax0,reg_vmin0,reg_vmax0
+  real(r_kind),allocatable,dimension(:)::glb_tmin0,glb_tmax0,reg_tmin0,reg_tmax0
+  real(r_kind),allocatable,dimension(:)::glb_rhmin0,glb_rhmax0,reg_rhmin0,reg_rhmax0
+  real(r_kind),allocatable,dimension(:)::glb_ozmin0,glb_ozmax0,reg_ozmin0,reg_ozmax0
+  real(r_kind),allocatable,dimension(:)::glb_cwmin0,glb_cwmax0,reg_cwmin0,reg_cwmax0
+  character(len=50) :: fname
   integer(i_kind) istatus
-  real(r_kind) rdog,h,dz
+  real(r_kind) rdog,h,dz,this_tv
   real(r_kind),allocatable::height(:),zbarl(:,:,:)
-  logical add_bias_perturbation,inithead
+  logical add_bias_perturbation
   integer(i_kind) n_ens_temp
+  logical point1,point2
+  integer(i_kind) kk,n_in
+  real(r_kind) pdiffmax,pmax,pdiffmax0,pmax0,pdiffmin,pdiffmin0
   real(r_kind),allocatable::psfc_out(:,:)
-  integer(i_kind) ilook,jlook,ier
+  integer(i_kind) ilook,jlook
 
   real(r_kind) dlon,dlat,uob,vob,dlon_ens,dlat_ens
   integer(i_kind) ii,jj,n1
   integer(i_kind) iimax,iimin,jjmax,jjmin
-  integer(i_kind) nming1,nming2
-  integer(i_kind) its,ite
   real(r_kind) ratio_x,ratio_y
 
-  type(gsi_bundle) :: atm_bundle
-  type(gsi_grid)   :: atm_grid
-  integer(i_kind),parameter :: n2d=2
-  integer(i_kind),parameter :: n3d=8
-  character(len=4), parameter :: vars2d(n2d) = (/ 'z   ', 'ps  ' /)
-  character(len=4), parameter :: vars3d(n3d) = (/ 'u   ', 'v   ', &
-                                                  'vor ', 'div ', &
-                                                  'tv  ', 'q   ', &
-                                                  'cw  ', 'oz  '  /)
-
-  real(r_kind), pointer :: ges_ps(:,:  )=>NULL()
-  real(r_kind), pointer :: ges_z (:,:  )=>NULL()
-  real(r_kind), pointer :: ges_u (:,:,:)=>NULL()
-  real(r_kind), pointer :: ges_v (:,:,:)=>NULL()
-  real(r_kind), pointer :: ges_tv(:,:,:)=>NULL()
-  real(r_kind), pointer :: ges_q (:,:,:)=>NULL()
-
   add_bias_perturbation=.false.  !  not fully activated yet--testing new adjustment of ps perturbions 1st
-
-  if(ntlevs_ens > 1) then
-     do i=1,ntlevs_ens
-        write(filelists(i),'("filelist",i2.2)')ifilesig(i)
-     enddo
-     its=1
-     ite=ntlevs_ens
-  else
-     write(filelists(1),'("filelist",i2.2)')nhr_assimilation
-     its=ntguessig
-     ite=ntguessig
-  endif
-
-  do it=its,ite
-! get pointers for typical meteorological fields
-  ier=0
-  call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ps',ges_ps,istatus );ier=ier+istatus
-  call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'z', ges_z, istatus );ier=ier+istatus
-  call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'u', ges_u, istatus );ier=ier+istatus
-  call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'v', ges_v, istatus );ier=ier+istatus
-  call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tv',ges_tv,istatus );ier=ier+istatus
-  call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q' ,ges_q, istatus );ier=ier+istatus
-  if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields, ier =',ier)
 
 !     figure out what are acceptable dimensions for global grid, based on resolution of input spectral coefs
 !   need to inquire from file what is spectral truncation, then setup general spectral structure variable
 
 !  filename='sigf06_ens_mem001'
-  if(ntlevs_ens > 1) then
-     open(10,file=trim(filelists(it)),form='formatted',err=30)
-  else
-     open(10,file=trim(filelists(1)),form='formatted',err=30)
-  endif
+  open(10,file='filelist',form='formatted',err=30)
   rewind (10) 
   do n=1,200
      read(10,'(a)',err=20,end=40)filename 
@@ -242,21 +190,16 @@ subroutine get_gefs_for_regional
   iadate_gfs(1)=jda(1) ! year
   iadate_gfs(2)=jda(2) ! mon
   iadate_gfs(3)=jda(3) ! day
-  if(ntlevs_ens > 1) then
-     iadate_gfs(4)=jda(5)+hrdifsig(ntguessig)-hrdifsig(it) ! hour
-  else
-     iadate_gfs(4)=jda(5) ! hour
-  endif
+  iadate_gfs(4)=jda(5) ! hour
   iadate_gfs(5)=0      ! minute
   if(mype == 0) then
      write(6,*)' in get_gefs_for_regional, iadate_gefs=',iadate_gfs
      write(6,*)' in get_gefs_for_regional, iadate    =',iadate
   end if
-           call w3fs21(iadate,nming1)
-           call w3fs21(iadate_gfs,nming2)
-  if( nming1/=nming2 ) then
+  if(iadate_gfs(1)/=iadate(1).or.iadate_gfs(2)/=iadate(2).or.iadate_gfs(3)/=iadate(3).or.&
+                                 iadate_gfs(4)/=iadate(4).or.iadate_gfs(5)/=iadate(5) ) then
      if(mype == 0) write(6,*)' GEFS ENSEMBLE MEMBER DATE NOT EQUAL TO ANALYSIS DATE, PROGRAM STOPS'
-     if(.not.l_ens_in_diff_time) call stop2(85)
+     call stop2(85)
   end if
      
 
@@ -303,12 +246,9 @@ subroutine get_gefs_for_regional
   num_fields=6*nsig_gfs+2      !  want to transfer u,v,t,q,oz,cw,ps,z from gfs subdomain to slab
                             !  later go through this code, adapting gsibundlemod, since currently 
                             !   hardwired.
-  num_fieldst=min(num_fields,npe)
   allocate(vector(num_fields))
   vector=.false.
   vector(1:2*nsig_gfs)=uv_hyb_ens
-  call general_sub2grid_create_info(grd_gfst,inner_vars,nlat_gfs,nlon_gfs,nsig_gfs,num_fieldst, &
-                                  .not.regional)
   call general_sub2grid_create_info(grd_gfs,inner_vars,nlat_gfs,nlon_gfs,nsig_gfs,num_fields, &
                                   .not.regional,vector)
   jcap_gfs=sighead%jcap
@@ -341,45 +281,28 @@ subroutine get_gefs_for_regional
 !                begin loop over ensemble members
 
   rewind(10)
-  inithead=.true.
   do n=1,n_ens
      read(10,'(a)',err=20,end=20)filename 
-     filename=trim(ensemble_path) // trim(filename)
+     filename=trim(filename)
 !     write(filename,100) n
 !100  format('sigf06_ens_mem',i3.3)
 
 
+!!   allocate necessary space on global grid
 
-!    allocate necessary space on global grid
-     call gsi_gridcreate(atm_grid,grd_gfs%lat2,grd_gfs%lon2,grd_gfs%nsig)
-     call gsi_bundlecreate(atm_bundle,atm_grid,'aux-atm-read',istatus,names2d=vars2d,names3d=vars3d)
-     if(istatus/=0) then
-       write(6,*)myname,': trouble creating atm_bundle'
-       call stop2(999)
-     endif
-
-     if(use_gfs_nemsio)then
-        call general_read_gfsatm_nems(grd_gfst,sp_gfs,filename,mype,uv_hyb_ens,.false.,.true., &
-               atm_bundle,.true.,iret)
-     else
-        call general_read_gfsatm(grd_gfst,sp_gfs,sp_gfs,filename,mype,uv_hyb_ens,.false.,.true., &
-               atm_bundle,inithead,iret)
-     end if
-     inithead = .false.
-
-     ier = 0
-     call gsi_bundlegetpointer(atm_bundle,'vor' ,vor ,istatus) ; ier = ier + istatus
-     call gsi_bundlegetpointer(atm_bundle,'div' ,div ,istatus) ; ier = ier + istatus
-     call gsi_bundlegetpointer(atm_bundle,'u'   ,u   ,istatus) ; ier = ier + istatus
-     call gsi_bundlegetpointer(atm_bundle,'v'   ,v   ,istatus) ; ier = ier + istatus
-     call gsi_bundlegetpointer(atm_bundle,'tv'  ,tv  ,istatus) ; ier = ier + istatus
-     call gsi_bundlegetpointer(atm_bundle,'q'   ,q   ,istatus) ; ier = ier + istatus
-     call gsi_bundlegetpointer(atm_bundle,'oz'  ,oz  ,istatus) ; ier = ier + istatus
-     call gsi_bundlegetpointer(atm_bundle,'cw'  ,cwmr,istatus) ; ier = ier + istatus
-     call gsi_bundlegetpointer(atm_bundle,'z'   ,z   ,istatus) ; ier = ier + istatus
-     call gsi_bundlegetpointer(atm_bundle,'ps'  ,ps  ,istatus) ; ier = ier + istatus
-     if ( ier /= 0 ) call die(myname,': missing atm_bundle vars, aborting ...',ier)
-
+     allocate( vor(grd_gfs%lat2,grd_gfs%lon2,grd_gfs%nsig))
+     allocate( div(grd_gfs%lat2,grd_gfs%lon2,grd_gfs%nsig))
+     allocate(   u(grd_gfs%lat2,grd_gfs%lon2,grd_gfs%nsig))
+     allocate(   v(grd_gfs%lat2,grd_gfs%lon2,grd_gfs%nsig))
+     allocate(  tv(grd_gfs%lat2,grd_gfs%lon2,grd_gfs%nsig))
+     allocate(   q(grd_gfs%lat2,grd_gfs%lon2,grd_gfs%nsig))
+     allocate(cwmr(grd_gfs%lat2,grd_gfs%lon2,grd_gfs%nsig))
+     allocate(  oz(grd_gfs%lat2,grd_gfs%lon2,grd_gfs%nsig))
+     allocate(   z(grd_gfs%lat2,grd_gfs%lon2))
+     allocate(  ps(grd_gfs%lat2,grd_gfs%lon2))
+     vor=zero ; div=zero ; u=zero ; v=zero ; tv=zero ; q=zero ; cwmr=zero ; oz=zero ; z=zero ; ps=zero
+     call general_read_gfsatm(grd_gfs,sp_gfs,filename,mype,uv_hyb_ens,z,ps,vor,div,u,v,tv,q,cwmr,oz,iret)
+     deallocate(vor,div)
      allocate(work_sub(grd_gfs%inner_vars,grd_gfs%lat2,grd_gfs%lon2,num_fields))
      do k=1,grd_gfs%nsig
         ku=k ; kv=k+grd_gfs%nsig ; kt=k+2*grd_gfs%nsig ; kq=k+3*grd_gfs%nsig ; koz=k+4*grd_gfs%nsig
@@ -395,6 +318,7 @@ subroutine get_gefs_for_regional
            end do
         end do
      end do
+     deallocate(u,v,tv,q,oz,cwmr)
      kz=num_fields ; kps=kz-1
      do j=1,grd_gfs%lon2
         do i=1,grd_gfs%lat2
@@ -402,9 +326,7 @@ subroutine get_gefs_for_regional
            work_sub(1,i,j,kps)=ps(i,j)
         end do
      end do
-
-     call gsi_bundledestroy(atm_bundle,istatus)
-
+     deallocate(z,ps)
      allocate(work(grd_gfs%inner_vars,grd_gfs%nlat,grd_gfs%nlon,grd_gfs%kbegin_loc:grd_gfs%kend_alloc))
      call general_sub2grid(grd_gfs,work_sub,work)
      deallocate(work_sub)
@@ -454,6 +376,18 @@ subroutine get_gefs_for_regional
         end do
      end if
 
+     allocate(tsen(grd_mix%lat2,grd_mix%lon2,grd_mix%nsig))
+     allocate(qs(grd_mix%lat2,grd_mix%lon2,grd_mix%nsig))
+!    Compute RH and potential virtual temp
+!    First step is go get sensible temperature and 3d pressure
+     do k=1,grd_mix%nsig
+        kt=k+2*grd_mix%nsig ; kq=k+3*grd_mix%nsig
+        do j=1,grd_mix%lon2
+           do i=1,grd_mix%lat2
+              tsen(i,j,k)= work_sub(1,i,j,kt)/(one+fv*max(zero,work_sub(1,i,j,kq)))
+           end do
+        end do
+     end do
 !    Get 3d pressure field now on interfaces
      allocate(prsl(grd_mix%lat2,grd_mix%lon2,grd_mix%nsig))
      if (idsl5/=2) then
@@ -516,80 +450,54 @@ subroutine get_gefs_for_regional
      ! !ilook=29
      ! !jlook=41
      ilook=-1 ; jlook=-1
-     allocate(prsl1000(grd_mix%lat2,grd_mix%lon2,grd_mix%nsig))
-     prsl1000=1000._r_kind*prsl
-     call compute_nmm_surfacep ( ges_z(:,:), zbarl,prsl1000, &
+     call compute_nmm_surfacep ( ges_z(:,:,ntguessig), zbarl,1000._r_kind*prsl,tt, &
                                  psfc_out,grd_mix%nsig,grd_mix%lat2,grd_mix%lon2, &
                                  ilook,jlook)
-     deallocate(tt,zbarl,prsl1000)
+     deallocate(tt,zbarl)
      psfc_out=.001_r_kind*psfc_out
-     !   psfc_out=ges_ps(:,:)
-     !   write(6,*)' min,max ges_ps-psfc_out=',&
-     !        minval(ges_ps(:,:)-psfc_out),maxval(ges_ps(:,:)-psfc_out)
+     !   psfc_out=ges_ps(:,:,ntguessig)
+     !   write(0,*)' min,max ges_ps-psfc_out=',&
+     !        minval(ges_ps(:,:,ntguessig)-psfc_out),maxval(ges_ps(:,:,ntguessig)-psfc_out)
      !               pdiffmax=-huge(pdiffmax)
      !               pdiffmin= huge(pdiffmin)
      !   !  do j=2,grd_mix%lon2-1
      !   !     do i=2,grd_mix%lat2-1
      !      do j=1,grd_mix%lon2
      !         do i=1,grd_mix%lat2
-     !            pdiffmax=max(ges_ps(i,j)-psfc_out(i,j),pdiffmax)
-     !            pdiffmin=min(ges_ps(i,j)-psfc_out(i,j),pdiffmin)
-     !            if(ges_ps(i,j)<10._r_kind) &
-     !               write(6,*)' small ges_ps,i,j,lat2,lon2,ig,jg,ide,jde=',i,j,grd_mix%lat2,grd_mix%lon2,&
+     !            pdiffmax=max(ges_ps(i,j,ntguessig)-psfc_out(i,j),pdiffmax)
+     !            pdiffmin=min(ges_ps(i,j,ntguessig)-psfc_out(i,j),pdiffmin)
+     !            if(ges_ps(i,j,ntguessig)<10._r_kind) &
+     !               write(0,*)' small ges_ps,i,j,lat2,lon2,ig,jg,ide,jde=',i,j,grd_mix%lat2,grd_mix%lon2,&
      !                   grd_mix%istart(mm1)-2+i,grd_mix%jstart(mm1)-2+j,grd_mix%nlat,grd_mix%nlon
      !            if(psfc_out(i,j)<10._r_kind) &
-     !               write(6,*)' small ens ps,i,j,lat2,lon2,ig,jg,ide,jde=',i,j,grd_mix%lat2,grd_mix%lon2,&
+     !               write(0,*)' small ens ps,i,j,lat2,lon2,ig,jg,ide,jde=',i,j,grd_mix%lat2,grd_mix%lon2,&
      !                   grd_mix%istart(mm1)-2+i,grd_mix%jstart(mm1)-2+j,grd_mix%nlat,grd_mix%nlon
      !         end do
      !      end do
      !      call mpi_allreduce(pdiffmax,pdiffmax0,1,mpi_rtype,mpi_max,mpi_comm_world,ierror)
      !      call mpi_allreduce(pdiffmin,pdiffmin0,1,mpi_rtype,mpi_min,mpi_comm_world,ierror)
-     !             if(mype==0) write(6,*)' min,max ges_ps - matt ps =',pdiffmin0,pdiffmax0
+     !             if(mype==0) write(0,*)' min,max ges_ps - matt ps =',pdiffmin0,pdiffmax0
 
      !                                                write(fname,'("matt_pbar_corrected")')
      !                                                call grads1a(psfc_out,1,mype,trim(fname))
      !                                                write(fname,'("ges_ps")')
-     !                                                call grads1a(ges_ps(:,:),1,mype,trim(fname))
+     !                                                call grads1a(ges_ps(:,:,ntguessig),1,mype,trim(fname))
 
+     ice=.true.
+     iderivative=0
+     call genqsat(qs,tsen,prsl,grd_mix%lat2,grd_mix%lon2,grd_mix%nsig,ice,iderivative)
+     deallocate(tsen)
 
-! If not using Q perturbations, convert to RH
-     if (.not.q_hyb_ens) then
-        allocate(tsen(grd_mix%lat2,grd_mix%lon2,grd_mix%nsig))
-        allocate(qs(grd_mix%lat2,grd_mix%lon2,grd_mix%nsig))
-!    Compute RH and potential virtual temp
-!    First step is go get sensible temperature and 3d pressure
-        do k=1,grd_mix%nsig
-           kt=k+2*grd_mix%nsig ; kq=k+3*grd_mix%nsig
-           do j=1,grd_mix%lon2
-              do i=1,grd_mix%lat2
-                 tsen(i,j,k)= work_sub(1,i,j,kt)/(one+fv*max(zero,work_sub(1,i,j,kq)))
-              end do
-           end do 
-        end do
-
-        ice=.true.
-        iderivative=0
-        call genqsat(qs,tsen,prsl,grd_mix%lat2,grd_mix%lon2,grd_mix%nsig,ice,iderivative)
-
-        do k=1,grd_mix%nsig
-           kt=k+2*grd_mix%nsig ; kq=k+3*grd_mix%nsig
-           do j=1,grd_mix%lon2
-              do i=1,grd_mix%lat2
-                 work_sub(1,i,j,kq) = work_sub(1,i,j,kq)/qs(i,j,k)
-              end do
-           end do
-        end do
-        deallocate(qs,tsen)
-     end if
      do k=1,grd_mix%nsig
-        kt=k+2*grd_mix%nsig
+        kt=k+2*grd_mix%nsig ; kq=k+3*grd_mix%nsig
         do j=1,grd_mix%lon2
            do i=1,grd_mix%lat2
+              work_sub(1,i,j,kq) = work_sub(1,i,j,kq)/qs(i,j,k)
               work_sub(1,i,j,kt)=work_sub(1,i,j,kt)/(0.01_r_kind*prsl(i,j,k))**rd_over_cp
            end do
         end do
      end do
-
+     deallocate(qs)
      deallocate(prsl)
 
      iimax=0
@@ -641,19 +549,19 @@ subroutine get_gefs_for_regional
 !                    pdiffmin= huge(pdiffmin)
 !           do j=1,grd_mix%lon2
 !              do i=1,grd_mix%lat2
-!                 pdiffmax=max(ges_ps(i,j)-p_eg_nmmb(i,j,n),pdiffmax)
-!                 pdiffmin=min(ges_ps(i,j)-p_eg_nmmb(i,j,n),pdiffmin)
-!                  if(ges_ps(i,j)<10._r_kind) &
-!                     write(6,*)' small ges_ps,i,j,lat2,lon2,ig,jg,ide,jde=',i,j,grd_mix%lat2,grd_mix%lon2,&
+!                 pdiffmax=max(ges_ps(i,j,ntguessig)-p_eg_nmmb(i,j,n),pdiffmax)
+!                 pdiffmin=min(ges_ps(i,j,ntguessig)-p_eg_nmmb(i,j,n),pdiffmin)
+!                  if(ges_ps(i,j,ntguessig)<10._r_kind) &
+!                     write(0,*)' small ges_ps,i,j,lat2,lon2,ig,jg,ide,jde=',i,j,grd_mix%lat2,grd_mix%lon2,&
 !                         grd_mix%istart(mm1)-1+i,grd_mix%jstart(mm1)-1+j,grd_mix%nlat,grd_mix%nlon
 !                  if(p_eg_nmmb(i,j,n)<10._r_kind) &
-!                     write(6,*)' small ens ps,i,j,lat2,lon2,ig,jg,ide,jde=',i,j,grd_mix%lat2,grd_mix%lon2,&
+!                     write(0,*)' small ens ps,i,j,lat2,lon2,ig,jg,ide,jde=',i,j,grd_mix%lat2,grd_mix%lon2,&
 !                         grd_mix%istart(mm1)-1+i,grd_mix%jstart(mm1)-1+j,grd_mix%nlat,grd_mix%nlon
 !              end do
 !           end do
 !           call mpi_allreduce(pdiffmax,pdiffmax0,1,mpi_rtype,mpi_max,mpi_comm_world,ierror)
 !           call mpi_allreduce(pdiffmin,pdiffmin0,1,mpi_rtype,mpi_min,mpi_comm_world,ierror)
-!                   if(mype==0) write(6,*)' with halo, n,min,max ges_ps - matt ps =',n,pdiffmin0,pdiffmax0
+!                   if(mype==0) write(0,*)' with halo, n,min,max ges_ps - matt ps =',n,pdiffmin0,pdiffmax0
 
   end do   !  end loop over ensemble members.
 
@@ -666,10 +574,11 @@ subroutine get_gefs_for_regional
   allocate(ozbar(grd_mix%lat2,grd_mix%lon2,grd_mix%nsig))
   allocate(cwbar(grd_mix%lat2,grd_mix%lon2,grd_mix%nsig))
   allocate(pbar_nmmb(grd_mix%lat2,grd_mix%lon2))
+  allocate(sstbar(grd_mix%lat2,grd_mix%lon2))
 
 !   compute mean state
   stbar=zero ; vpbar=zero ; tbar=zero ; rhbar=zero ; ozbar=zero ; cwbar=zero 
-  pbar_nmmb=zero
+  sstbar=zero ; pbar_nmmb=zero
   do n=1,n_ens
      do k=1,grd_mix%nsig
         do j=1,grd_mix%lon2
@@ -807,9 +716,9 @@ subroutine get_gefs_for_regional
 
   allocate(ges_prsl_e(grd_ens%inner_vars,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig))
   if(dual_res) then
-     call general_suba2sube(grd_a1,grd_e1,p_e2a,ges_prsl(:,1,1,it),ges_prsl_e(1,:,1,1),regional) ! x?
+     call general_suba2sube(grd_a1,grd_e1,p_e2a,ges_prsl(:,1,1,ntguessig),ges_prsl_e(:,1,1,1),regional) ! x?
   else
-     ges_prsl_e(1,:,:,:)=ges_prsl(:,:,:,it)
+     ges_prsl_e(1,:,:,:)=ges_prsl(:,:,:,ntguessig)
   end if
 
   allocate(xspli(grd_mix%nsig),yspli(grd_mix%nsig),xsplo(grd_ens%nsig),ysplo(grd_ens%nsig))
@@ -922,11 +831,11 @@ subroutine get_gefs_for_regional
         do k=1,nsig
            do j=1,lon2
               do i=1,lat2
-                 qs(i,j,k)=ges_q(i,j,k)
+                 qs(i,j,k)=ges_q(i,j,k,ntguessig)
               end do
            end do
         end do
-        call genqsat(qs,ges_tsen(:,:,:,it),ges_prsl(:,:,:,it),lat2,lon2,nsig,ice,iderivative)
+        call genqsat(qs,ges_tsen(:,:,:,ntguessig),ges_prsl(:,:,:,ntguessig),lat2,lon2,nsig,ice,iderivative)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!! The first member is full perturbation based on regional first guess !!!
@@ -937,29 +846,21 @@ subroutine get_gefs_for_regional
            allocate ( tmp_ens(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig,1) )
            allocate ( tmp_ens2(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig,1) )
            allocate ( tmp_anl(lat2,lon2,nsig,1) )
-
-           if (.not.q_hyb_ens) then
-              tmp_anl(:,:,:,1)=qs(:,:,:)
-              call general_suba2sube(grd_a1,grd_e1,p_e2a,tmp_anl,tmp_ens,regional)
-              tmp_anl(:,:,:,1)=ges_q(:,:,:)
-              call general_suba2sube(grd_a1,grd_e1,p_e2a,tmp_anl,tmp_ens2,regional)
-              rht(:,:,:) = rht(:,:,:)-tmp_ens2(:,:,:,1)/tmp_ens(:,:,:,1)
-           else
-              tmp_anl(:,:,:,1)=ges_q(:,:,:)
-              call general_suba2sube(grd_a1,grd_e1,p_e2a,tmp_anl,tmp_ens2,regional)
-              rht(:,:,:) = rht(:,:,:)-tmp_ens2(:,:,:,1)
-           end if
-
-           tmp_anl(:,:,:,1)=ges_u(:,:,:)
+           tmp_anl(:,:,:,1)=qs(:,:,:)
+           call general_suba2sube(grd_a1,grd_e1,p_e2a,tmp_anl,tmp_ens,regional)
+           tmp_anl(:,:,:,1)=ges_q(:,:,:,ntguessig)
+           call general_suba2sube(grd_a1,grd_e1,p_e2a,tmp_anl,tmp_ens2,regional)
+           rht(:,:,:) = rht(:,:,:)-tmp_ens2(:,:,:,1)/tmp_ens(:,:,:,1)
+           tmp_anl(:,:,:,1)=ges_u(:,:,:,ntguessig)
            call general_suba2sube(grd_a1,grd_e1,p_e2a,tmp_anl,tmp_ens,regional)
            ut(:,:,:) = ut(:,:,:)-tmp_ens(:,:,:,1)
-           tmp_anl(:,:,:,1)=ges_v(:,:,:)
+           tmp_anl(:,:,:,1)=ges_v(:,:,:,ntguessig)
            call general_suba2sube(grd_a1,grd_e1,p_e2a,tmp_anl,tmp_ens,regional)
            vt(:,:,:) = vt(:,:,:)-tmp_ens(:,:,:,1)
-           tmp_anl(:,:,:,1)=ges_tv(:,:,:)
+           tmp_anl(:,:,:,1)=ges_tv(:,:,:,ntguessig)
            call general_suba2sube(grd_a1,grd_e1,p_e2a,tmp_anl,tmp_ens,regional)
            tt(:,:,:) = tt(:,:,:)-tmp_ens(:,:,:,1)
-           tmp_anl(:,:,1,1)=ges_ps(:,:)
+           tmp_anl(:,:,1,1)=ges_ps(:,:,ntguessig)
            call general_suba2sube(grd_a1,grd_e1,p_e2a,tmp_anl,tmp_ens,regional)
            p_eg_nmmb(:,:,n) = p_eg_nmmb(:,:,n)-tmp_ens(:,:,1,1)
            deallocate(tmp_anl,tmp_ens,tmp_ens2)
@@ -967,37 +868,21 @@ subroutine get_gefs_for_regional
            do k=1,grd_ens%nsig
               do j=1,grd_ens%lon2
                  do i=1,grd_ens%lat2
-                    ut(i,j,k) = ut(i,j,k)-ges_u(i,j,k)
-                    vt(i,j,k) = vt(i,j,k)-ges_v(i,j,k)
-                    tt(i,j,k) = tt(i,j,k)-ges_tv(i,j,k)
+                    ut(i,j,k) = ut(i,j,k)-ges_u(i,j,k,ntguessig)
+                    vt(i,j,k) = vt(i,j,k)-ges_v(i,j,k,ntguessig)
+                    tt(i,j,k) = tt(i,j,k)-ges_tv(i,j,k,ntguessig)
+                   rht(i,j,k) = rht(i,j,k)-ges_q(i,j,k,ntguessig)/qs(i,j,k)
                  end do
               end do
            end do
-
-           if (.not.q_hyb_ens) then
-              do k=1,grd_ens%nsig
-                 do j=1,grd_ens%lon2
-                    do i=1,grd_ens%lat2
-                       rht(i,j,k) = rht(i,j,k)-ges_q(i,j,k)/qs(i,j,k)
-                    end do
-                 end do
-              end do
-           else
-              do k=1,grd_ens%nsig
-                 do j=1,grd_ens%lon2
-                    do i=1,grd_ens%lat2
-                       rht(i,j,k) = rht(i,j,k)-ges_q(i,j,k)
-                    end do
-                 end do
-              end do
-           end if
 
            do j=1,grd_ens%lon2
               do i=1,grd_ens%lat2
-                 p_eg_nmmb(i,j,n) = p_eg_nmmb(i,j,n)-ges_ps(i,j)
+                 p_eg_nmmb(i,j,n) = p_eg_nmmb(i,j,n)-ges_ps(i,j,ntguessig)
               end do
            end do
         endif
+
         deallocate(qs)
 
      endif   ! n==1 .and. full_ensemble
@@ -1031,11 +916,7 @@ subroutine get_gefs_for_regional
 !                                                  end if
      do ic3=1,nc3d
 
-        if(ntlevs_ens > 1) then
-           call gsi_bundlegetpointer(en_perts(n,it),trim(cvars3d(ic3)),w3,istatus)
-        else
-           call gsi_bundlegetpointer(en_perts(n,1),trim(cvars3d(ic3)),w3,istatus)
-        endif
+        call gsi_bundlegetpointer(en_perts(n,1),trim(cvars3d(ic3)),w3,istatus)
         if(istatus/=0) then
            write(6,*)' error retrieving pointer to ',trim(cvars3d(ic3)),' for ensemble member ',n
            call stop2(999)
@@ -1111,11 +992,7 @@ subroutine get_gefs_for_regional
      end do
      do ic2=1,nc2d
 
-        if(ntlevs_ens > 1) then
-           call gsi_bundlegetpointer(en_perts(n,it),trim(cvars2d(ic2)),w2,istatus)
-        else
-           call gsi_bundlegetpointer(en_perts(n,1),trim(cvars2d(ic2)),w2,istatus)
-        endif
+        call gsi_bundlegetpointer(en_perts(n,1),trim(cvars2d(ic2)),w2,istatus)
         if(istatus/=0) then
            write(6,*)' error retrieving pointer to ',trim(cvars2d(ic2)),' for ensemble member ',n
            call stop2(999)
@@ -1144,18 +1021,6 @@ subroutine get_gefs_for_regional
      end do
   end do
 
-  call general_sub2grid_destroy_info(grd_gfs)
-  call general_sub2grid_destroy_info(grd_mix)
-  call general_sub2grid_destroy_info(grd_gfst)
-!
-!
-! CALCULATE ENSEMBLE SPREAD
-  if(write_ens_sprd)then
-     call mpi_barrier(mpi_comm_world,ierror)
-     call ens_spread_dualres_regional(mype)
-     call mpi_barrier(mpi_comm_world,ierror)
-  end if
-
   call general_destroy_spec_vars(sp_gfs)
   deallocate(vector)
   deallocate(st_eg,vp_eg,t_eg,rh_eg)
@@ -1165,7 +1030,6 @@ subroutine get_gefs_for_regional
   deallocate(prsl)
   deallocate(ut,vt,tt,rht,ozt,cwt)
 
-  enddo ! it=1,ntlevs_ens
   return
 
 30 write(6,*) 'GET_GEFS+FOR_REGIONAL open filelist failed '
@@ -1174,7 +1038,7 @@ subroutine get_gefs_for_regional
    call stop2(555)
 end subroutine get_gefs_for_regional
 
-  SUBROUTINE compute_nmm_surfacep ( TERRAIN_HGT_T, Z3D_IN, PRESS3D_IN,   &
+  SUBROUTINE compute_nmm_surfacep ( TERRAIN_HGT_T, Z3D_IN, PRESS3D_IN, T3D_IN,   &
                                     psfc_out,generic,IME,JME, Ilook,Jlook )
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -1210,24 +1074,28 @@ end subroutine get_gefs_for_regional
 
        real(r_kind),intent(in) :: TERRAIN_HGT_T(IME,JME)
        real(r_kind),intent(in) :: Z3D_IN(IME,JME,generic)
+       real(r_kind),intent(in) :: T3D_IN(IME,JME,generic)
        real(r_kind),intent(in) :: PRESS3D_IN(IME,JME,generic)
        real(r_kind),intent(out) :: psfc_out(IME,JME)
 
-       integer(i_kind) :: I,J,L,LL
+       integer(i_kind) :: I,J,II,L,KINSERT,K,bot_lev,LL
        integer(i_kind) :: loopinc,iloopinc
 
        real(r_kind) :: PSFC_IN(IME,JME),TOPO_IN(IME,JME)
-       real(r_kind) :: dlnpdz,BOT_INPUT_HGT,BOT_INPUT_PRESS
+       real(r_kind) :: dif1,dif2,dif3,dif4,dlnpdz,BOT_INPUT_HGT,BOT_INPUT_PRESS,dpdz,rhs
+       real(r_kind) :: zin(generic),pin(generic)
 
        real(r_kind), allocatable:: dum2d(:,:),DUM2DB(:,:)
+
+       character (len=132) :: message
 
        logical :: DEFINED_PSFC(IME,JME), DEFINED_PSFCB(IME,JME)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!	write(6,*) 'size(TERRAIN_HGT_T):: ', size(TERRAIN_HGT_T,dim=1),size(TERRAIN_HGT_T,dim=2)
-!	write(6,*) 'what is JME here??? : ', JME
-!	write(6,*) 'JmE: ', JmE
+!	write(0,*) 'size(TERRAIN_HGT_T):: ', size(TERRAIN_HGT_T,dim=1),size(TERRAIN_HGT_T,dim=2)
+!	write(0,*) 'what is JME here??? : ', JME
+!	write(0,*) 'JmE: ', JmE
 
        DO J=1,JME
           DO I=1,IME
@@ -1243,14 +1111,14 @@ end subroutine get_gefs_for_regional
           ENDDO
        ENDDO
 
-!       write(6,*) 'terrain_hgt_t in surfacep compute ', IME,JME
+!       write(0,*) 'terrain_hgt_t in surfacep compute ', IME,JME
 !       do J=JME,1,min(-(JME-1)/20,-1)
-!          write(6,535) J,(TERRAIN_HGT_T(I,J),I=1,IME,max(1,(IME-1)/12))
+!          write(0,535) J,(TERRAIN_HGT_T(I,J),I=1,IME,max(1,(IME-1)/12))
 !       enddo
 
-!       write(6,*) 'z3d_in(3) at same points:'
+!       write(0,*) 'z3d_in(3) at same points:'
 !       do J=JME,1,min(-(JME-1)/20,-1)
-!          write(6,535) J,(Z3D_IN(I,J,3),I=1,IME,max(1,(IME-1)/12))
+!          write(0,535) J,(Z3D_IN(I,J,3),I=1,IME,max(1,(IME-1)/12))
 !       enddo
 ! 535	format(I4,' ::: ',18(f5.0,1x))
 
@@ -1266,7 +1134,7 @@ end subroutine get_gefs_for_regional
           I_loop: DO I=1,ImE
 
              IF (PSFC_IN(I,J) == 0._r_kind) THEN
-                write(6,*) 'QUITTING BECAUSE I,J, PSFC_IN: ', I,J,PSFC_IN(I,J)
+                write(0,*) 'QUITTING BECAUSE I,J, PSFC_IN: ', I,J,PSFC_IN(I,J)
 
                 STOP
              ENDIF
@@ -1277,12 +1145,12 @@ end subroutine get_gefs_for_regional
 
              IF (I == Ilook .AND. J == Jlook) THEN
 
-!	         write(6,*) ' TERRAIN_HGT_T: ', I,J, TERRAIN_HGT_T(I,J)
-                write(6,*) ' PSFC_IN, TOPO_IN: ', &
+!	         write(0,*) ' TERRAIN_HGT_T: ', I,J, TERRAIN_HGT_T(I,J)
+                write(0,*) ' PSFC_IN, TOPO_IN: ', &
                    I, J, PSFC_IN(I,J),TOPO_IN(I,J)
 
                 DO L=1,generic
-                   write(6,*) ' L,PRESS3D_IN, Z3D_IN: ', &
+                   write(0,*) ' L,PRESS3D_IN, Z3D_IN: ', &
                       I,J,L, PRESS3D_IN(I,J,L),Z3D_IN(I,J,L)
                 END DO
              ENDIF
@@ -1298,7 +1166,7 @@ end subroutine get_gefs_for_regional
                    BOT_INPUT_HGT=Z3D_IN(I,J,L)
  
                    IF (I == Ilook .and. J == Jlook) THEN
-                      write(6,*) 'BOT_INPUT_PRESS, BOT_INPUT_HGT NOW : ', &
+                      write(0,*) 'BOT_INPUT_PRESS, BOT_INPUT_HGT NOW : ', &
                          Ilook,Jlook, BOT_INPUT_PRESS, BOT_INPUT_HGT
                    ENDIF
 
@@ -1306,18 +1174,18 @@ end subroutine get_gefs_for_regional
              END DO	
 
              IF (I == Ilook .and. J == Jlook) THEN
-                write(6,*) 'enter this section, TERRAIN_HGT_T, BOT_INPUT_HGT: ', TERRAIN_HGT_T(I,J), BOT_INPUT_HGT
+                write(0,*) 'enter this section, TERRAIN_HGT_T, BOT_INPUT_HGT: ', TERRAIN_HGT_T(I,J), BOT_INPUT_HGT
              ENDIF
 
              IF (TERRAIN_HGT_T(I,J) == BOT_INPUT_HGT ) THEN
                 dum2d(I,J)=BOT_INPUT_PRESS
                 DEFINED_PSFC(I,J)=.TRUE.
                 IF (I == Ilook .and. J == Jlook) THEN
-                   write(6,*) 'TERRAIN_HGT_T == BOT_INPUT_HGT, set dum2d to: ', I,J, dum2d(I,J)
+                   write(0,*) 'TERRAIN_HGT_T == BOT_INPUT_HGT, set dum2d to: ', I,J, dum2d(I,J)
                 ENDIF
 
 	!        IF (BOT_INPUT_HGT /= 0._r_kind .and. (BOT_INPUT_HGT-INT(BOT_INPUT_HGT) /= 0._r_kind) ) THEN
-	!           write(6,*) 'with BOT_INPUT_HGT: ', BOT_INPUT_HGT, &
+	!           write(0,*) 'with BOT_INPUT_HGT: ', BOT_INPUT_HGT, &
         !              'set dum2d to bot_input_pres: ', I,J,dum2d(I,J)
         !        ENDIF
 
@@ -1329,7 +1197,7 @@ end subroutine get_gefs_for_regional
                    dlnpdz= (log(BOT_INPUT_PRESS)-log(PRESS3D_IN(i,j,2)) ) / &
                       (BOT_INPUT_HGT-Z3D_IN(i,j,2))
                    IF (I == Ilook .and. J == Jlook) THEN
-                      write(6,*) 'I,J,dlnpdz(a): ', I,J,dlnpdz
+                      write(0,*) 'I,J,dlnpdz(a): ', I,J,dlnpdz
                    ENDIF
 
                 ELSE
@@ -1341,8 +1209,8 @@ end subroutine get_gefs_for_regional
                          (BOT_INPUT_HGT-Z3D_IN(i,j,3))
 
                       IF (I == Ilook .and. J == Jlook) then
-                         write(6,*) 'p diff: ', BOT_INPUT_PRESS, PRESS3D_IN(i,j,3)
-                         write(6,*) 'z diff: ', BOT_INPUT_HGT, Z3D_IN(i,j,3)
+                         write(0,*) 'p diff: ', BOT_INPUT_PRESS, PRESS3D_IN(i,j,3)
+                         write(0,*) 'z diff: ', BOT_INPUT_HGT, Z3D_IN(i,j,3)
                       ENDIF
 	
                    ELSE
@@ -1367,7 +1235,7 @@ end subroutine get_gefs_for_regional
                 DEFINED_PSFC(I,J)=.TRUE.
 
                 IF (I == Ilook .and. J == Jlook) THEN
-	           write(6,*) 'here(b) set dum2d to: ', I,J, dum2d(I,J)
+	           write(0,*) 'here(b) set dum2d to: ', I,J, dum2d(I,J)
                 ENDIF
 
              ELSE ! target level bounded by input levels
@@ -1382,7 +1250,7 @@ end subroutine get_gefs_for_regional
                       dum2d(i,j)=exp(dum2d(i,j))
                       DEFINED_PSFC(I,J)=.TRUE.
                       IF (I == Ilook .and. J == Jlook) THEN
-	                 write(6,*) 'here(c) set dum2d to: ', I,J, Dum2d(I,J)
+	                 write(0,*) 'here(c) set dum2d to: ', I,J, Dum2d(I,J)
                       ENDIF
                    ENDIF
                 ENDDO
@@ -1392,7 +1260,7 @@ end subroutine get_gefs_for_regional
                    .AND. TERRAIN_HGT_T(I,J) < Z3D_IN(I,J,2)) then
 
           !         IF (mod(I,50) == 0 .AND. mod(J,50) == 0) THEN
-          !            write(6,*) 'I,J,BOT_INPUT_HGT, bot_pres, TERRAIN_HGT_T: ',  &
+          !            write(0,*) 'I,J,BOT_INPUT_HGT, bot_pres, TERRAIN_HGT_T: ',  &
           !               I,J,BOT_INPUT_HGT, BOT_INPUT_PRESS, TERRAIN_HGT_T(I,J)
           !         ENDIF
 
@@ -1403,13 +1271,13 @@ end subroutine get_gefs_for_regional
                    dum2d(i,j)= exp(dum2d(i,j))
                    DEFINED_PSFC(I,J)=.TRUE.
                    IF (I == Ilook .and. J == Jlook) THEN
-	              write(6,*) 'here(d) set dum2d to: ', I,J, Dum2d(I,J)
+	              write(0,*) 'here(d) set dum2d to: ', I,J, Dum2d(I,J)
                    ENDIF
                 ENDIF
 
                 IF (dum2d(I,J) == -9._r_kind) THEN
-                   write(6,*) 'must have flukey situation in new ', I,J
-                   write(6,*) 'I,J,BOT_INPUT_HGT, bot_pres, TERRAIN_HGT_T: ',  &
+                   write(0,*) 'must have flukey situation in new ', I,J
+                   write(0,*) 'I,J,BOT_INPUT_HGT, bot_pres, TERRAIN_HGT_T: ',  &
                       I,J,BOT_INPUT_HGT, BOT_INPUT_PRESS, TERRAIN_HGT_T(I,J)
 
                    DO L=1,generic-1
@@ -1418,7 +1286,7 @@ end subroutine get_gefs_for_regional
                          dum2d(i,j)=PRESS3D_IN(I,J,L)
                          DEFINED_PSFC(I,J)=.TRUE.
                          IF (I == Ilook .and. J == Jlook) THEN
-                            write(6,*) 'here(e) set dum2d to: ', I,J, Dum2d(I,J)
+                            write(0,*) 'here(e) set dum2d to: ', I,J, Dum2d(I,J)
                          ENDIF
                       ENDIF
                    ENDDO
@@ -1427,9 +1295,9 @@ end subroutine get_gefs_for_regional
                       dum2d(I,J)=PSFC_IN(I,J)
                       DEFINED_PSFC(I,J)=.TRUE.
                       IF (I == Ilook .and. J == Jlook) THEN
-	                 write(6,*) 'here(f) set dum2d to: ', I,J, Dum2d(I,J)
+	                 write(0,*) 'here(f) set dum2d to: ', I,J, Dum2d(I,J)
                       ENDIF
-         !             write(6,*) 'matched input topo, psfc: ', I,J,TOPO_IN(I,J),PSFC_IN(I,J)
+         !             write(0,*) 'matched input topo, psfc: ', I,J,TOPO_IN(I,J),PSFC_IN(I,J)
                    ENDIF
 
 !                   IF (dum2d(I,J) == -9._r_kind) THEN
@@ -1438,34 +1306,34 @@ end subroutine get_gefs_for_regional
                 ENDIF
 
                 if (.not. defined_psfc(i,J)) then
-!                   write(6,*) 'switching to true here'
+!                   write(0,*) 'switching to true here'
                    DEFINED_PSFC(I,J)=.TRUE.
                 endif
 
                 IF (I == Ilook .AND. J == Jlook) THEN
-                   write(6,*) 'newstyle psfc: ', I,J,dum2d(I,J)
+                   write(0,*) 'newstyle psfc: ', I,J,dum2d(I,J)
                 ENDIF
 
              ENDIF 
 
              if (.not. DEFINED_PSFC(I,J)) then
-!                write(6,*) 'new style undefined at: ', I,J
+!                write(0,*) 'new style undefined at: ', I,J
              endif
 
           ENDDO I_loop
        ENDDO
 
-      !write(6,*) 'psfc points (new style)'
+      !write(0,*) 'psfc points (new style)'
        loopinc=max( (JmE-1)/20,1)
        iloopinc=max( (ImE-1)/10,1)
 
        DO J=JmE,1,-loopinc
-       !   write(6,633) (dum2d(I,J)/100.,I=1,min(ImE,ImE),iloopinc)
+       !   write(0,633) (dum2d(I,J)/100.,I=1,min(ImE,ImE),iloopinc)
        END DO
 
   633  format(35(f5.0,1x))
 
-!       write(6,*) 'PSFC extremes (new style): ',  minval(dum2d,MASK=DEFINED_PSFC),maxval(dum2d,MASK=DEFINED_PSFC)
+!       write(0,*) 'PSFC extremes (new style): ',  minval(dum2d,MASK=DEFINED_PSFC),maxval(dum2d,MASK=DEFINED_PSFC)
 
 !       IF (minval(dum2d,MASK=DEFINED_PSFC) < 40000._r_kind .or. maxval(dum2d,MASK=DEFINED_PSFC) > 110000._r_kind) THEN
 !       ENDIF
@@ -1496,7 +1364,7 @@ end subroutine get_gefs_for_regional
                    (TERRAIN_HGT_T(I,J) - Z3D_IN(i,j,2)) )
 
                 IF (I == Ilook .and. J == Jlook) THEN
-                   write(6,*) 'I,K, trad: dlnpdz, press_in(2), terrain_t, Z3D_IN(2): ', I,J,dlnpdz, &
+                   write(0,*) 'I,K, trad: dlnpdz, press_in(2), terrain_t, Z3D_IN(2): ', I,J,dlnpdz, &
                       PRESS3D_IN(i,j,2), TERRAIN_HGT_T(I,J), Z3D_IN(i,j,2)
                 ENDIF
 
@@ -1516,17 +1384,17 @@ end subroutine get_gefs_for_regional
                       DUM2DB(i,j)=exp(DUM2DB(i,j))
  
                       IF (I == Ilook .and. J == Jlook) THEN
-                         write(6,*) 'L, L+1, p3d_in(L), p3d_in(L+1), z3d_in(L), z3d_in(L+1): ', &
+                         write(0,*) 'L, L+1, p3d_in(L), p3d_in(L+1), z3d_in(L), z3d_in(L+1): ', &
                                    L, L+1, PRESS3D_IN(i,j,l), PRESS3D_IN(i,j,L+1), &
                                    Z3D_IN(i,j,l), Z3D_IN(i,j,L+1)
-                         write(6,*) 'TERRAIN_HGT_T(I,J) , Z3D_IN(i,j,L): ', TERRAIN_HGT_T(I,J) , Z3D_IN(i,j,L)
-                         write(6,*) 'here(2b) set dum2db to: ', I,J, Dum2db(I,J)
+                         write(0,*) 'TERRAIN_HGT_T(I,J) , Z3D_IN(i,j,L): ', TERRAIN_HGT_T(I,J) , Z3D_IN(i,j,L)
+                         write(0,*) 'here(2b) set dum2db to: ', I,J, Dum2db(I,J)
                       ENDIF
 
                       DEFINED_PSFCB(i,j)=.true.
 
                       IF (DUM2DB(I,J) < 13000._r_kind) THEN
-           !              write(6,*) 'I,J,L,terrain,Z3d(L),z3d(L+1),p3d(L),p3d(l+1): ', I,J,L, &
+           !              write(0,*) 'I,J,L,terrain,Z3d(L),z3d(L+1),p3d(L),p3d(l+1): ', I,J,L, &
            !                 TERRAIN_HGT_T(I,J),Z3D_IN(I,J,L),Z3D_IN(I,J,L+1),PRESS3D_IN(I,J,L), &
            !                 PRESS3D_IN(I,J,L+1)
                       ENDIF
@@ -1536,18 +1404,18 @@ end subroutine get_gefs_for_regional
              ELSEIF (TERRAIN_HGT_T(I,J) == Z3D_IN(i,j,2)) THEN
                 DUM2DB(i,j)=PRESS3D_IN(I,J,2)
                 IF (I == Ilook .and. J == Jlook) THEN
-                   write(6,*) 'here(2c) set dum2db to: ', I,J, Dum2db(I,J)
+                   write(0,*) 'here(2c) set dum2db to: ', I,J, Dum2db(I,J)
                 ENDIF
                 DEFINED_PSFCB(i,j)=.true.
              ENDIF
 
              IF (DUM2DB(I,J) == -9._r_kind) THEN
-         !       write(6,*) 'must have flukey situation in trad ', I,J
+         !       write(0,*) 'must have flukey situation in trad ', I,J
                 DO L=1,generic-1
                    IF ( TERRAIN_HGT_T(I,J) == Z3D_IN(i,j,L) ) THEN
                       DUM2DB(i,j)=PRESS3D_IN(I,J,L)
                       IF (I == Ilook .and. J == Jlook) THEN
-	                 write(6,*) 'here(2d) set dum2db to: ', I,J, Dum2db(I,J)
+	                 write(0,*) 'here(2d) set dum2db to: ', I,J, Dum2db(I,J)
                       ENDIF
                       DEFINED_PSFCB(i,j)=.true.
                    ENDIF
@@ -1555,22 +1423,22 @@ end subroutine get_gefs_for_regional
              ENDIF
 
              IF (DUM2DB(I,J) == -9._r_kind) THEN
-                write(6,*) 'HOPELESS PSFC, I QUIT'
+                write(0,*) 'HOPELESS PSFC, I QUIT'
              ENDIF
 
              if (I == Ilook .and. J == Jlook) THEN
-                write(6,*) ' traditional psfc: ', I,J,DUM2DB(I,J)
+                write(0,*) ' traditional psfc: ', I,J,DUM2DB(I,J)
              ENDIF
 
           ENDDO
        ENDDO
 
-!       write(6,*) 'psfc points (traditional)'
+!       write(0,*) 'psfc points (traditional)'
 !       DO J=JmE,1,-loopinc
-!          write(6,633) (DUM2DB(I,J)/100.,I=1,ime,iloopinc)
+!          write(0,633) (DUM2DB(I,J)/100.,I=1,ime,iloopinc)
 !       ENDDO
 
-!       write(6,*) 'PSFC extremes (traditional): ', minval(DUM2DB,MASK=DEFINED_PSFCB),maxval(DUM2DB,MASK=DEFINED_PSFCB)
+!       write(0,*) 'PSFC extremes (traditional): ', minval(DUM2DB,MASK=DEFINED_PSFCB),maxval(DUM2DB,MASK=DEFINED_PSFCB)
 
 !       IF (minval(DUM2DB,MASK=DEFINED_PSFCB) < 40000._r_kind .or. maxval(DUM2DB,MASK=DEFINED_PSFCB) > 108000._r_kind) THEN
 !       ENDIF
@@ -1582,7 +1450,7 @@ end subroutine get_gefs_for_regional
              IF (DEFINED_PSFCB(I,J) .and. DEFINED_PSFC(I,J)) THEN
 
                 IF (  abs(dum2d(I,J)-DUM2DB(I,J)) > 400._r_kind) THEN
-	!          write(6,*) 'BIG DIFF I,J, dum2d, DUM2DB: ', I,J,dum2d(I,J),DUM2DB(I,J)
+	!          write(0,*) 'BIG DIFF I,J, dum2d, DUM2DB: ', I,J,dum2d(I,J),DUM2DB(I,J)
                 ENDIF
 
 !! do we have enough confidence in new style to give it more than 50% weight?
@@ -1592,22 +1460,22 @@ end subroutine get_gefs_for_regional
              ELSEIF (DEFINED_PSFCB(I,J)) THEN
                 psfc_out(I,J)=DUM2DB(I,J)
              ELSE
-         !       write(6,*) 'I,J,dum2d,DUM2DB: ', I,J,dum2d(I,J),DUM2DB(I,J)
-	 !       write(6,*) 'I,J,DEFINED_PSFC(I,J),DEFINED_PSFCB(I,J): ', I,J,DEFINED_PSFC(I,J),DEFINED_PSFCB(I,J)
+         !       write(0,*) 'I,J,dum2d,DUM2DB: ', I,J,dum2d(I,J),DUM2DB(I,J)
+	 !       write(0,*) 'I,J,DEFINED_PSFC(I,J),DEFINED_PSFCB(I,J): ', I,J,DEFINED_PSFC(I,J),DEFINED_PSFCB(I,J)
              ENDIF
 
              IF (I == Ilook .AND. J == Jlook) THEN
-                write(6,*) ' combined psfc: ', I,J,psfc_out(I,J)
+                write(0,*) ' combined psfc: ', I,J,psfc_out(I,J)
              ENDIF
 
              IF (psfc_out(I,J) < 50000._r_kind .or. psfc_out(I,J) > 108000._r_kind) THEN
- !               write(6,*) 'strange combo on psfc_out, terrain_hgt_t: ', I,J, psfc_out(I,J), terrain_hgt_t(I,J)
- !               write(6,*) 'DEFINED_PSFC, dum2d: ', DEFINED_PSFC(I,J),dum2d(I,J)
- !               write(6,*) 'DEFINED_PSFCB, DUM2DB: ', DEFINED_PSFCB(I,J),DUM2DB(I,J)
+ !               write(0,*) 'strange combo on psfc_out, terrain_hgt_t: ', I,J, psfc_out(I,J), terrain_hgt_t(I,J)
+ !               write(0,*) 'DEFINED_PSFC, dum2d: ', DEFINED_PSFC(I,J),dum2d(I,J)
+ !               write(0,*) 'DEFINED_PSFCB, DUM2DB: ', DEFINED_PSFCB(I,J),DUM2DB(I,J)
 
 !                if (terrain_hgt_t(I,J) > 0._r_kind .and. terrain_hgt_t(I,J) < 5000._r_kind) then
 !                else
-!                   write(6,*) 'will let strange psfc pass because surface topo is: ', terrain_hgt_t(I,J)
+!                   write(0,*) 'will let strange psfc pass because surface topo is: ', terrain_hgt_t(I,J)
 !                endif
 
              ENDIF
@@ -1615,9 +1483,9 @@ end subroutine get_gefs_for_regional
           ENDDO
        ENDDO
 
-      ! write(6,*) 'psfc points (final combined)'
+      ! write(0,*) 'psfc points (final combined)'
        DO J=JmE,1,-loopinc
-      !    write(6,633) (psfc_out(I,J)/100.,I=1,ime,iloopinc)
+      !    write(0,633) (psfc_out(I,J)/100.,I=1,ime,iloopinc)
        ENDDO
 
        deallocate(dum2d,dum2db)
@@ -1737,14 +1605,11 @@ subroutine sub2grid_1a(sub,grid,gridpe,mype)
 
 !     straightforward, but inefficient code to convert a single variable on subdomains to complete
 !      slab on one processor.
-!  2013-10-24 todling - revist strip interface
-!                     - reposition ltosi and others to commvar
 
   use kinds, only: r_kind,i_kind
   use constants, only: zero
   use gridmod, only: nlat,nlon,lat2,lon2,lat1,lon1,&
-         iglobal,ijn,displs_g,itotsub,strip
-  use general_commvars_mod, only: ltosi,ltosj
+         ltosi,ltosj,iglobal,ijn,displs_g,itotsub,strip
   use mpimod, only: mpi_comm_world,ierror,mpi_rtype
   implicit none
 
@@ -1761,7 +1626,7 @@ subroutine sub2grid_1a(sub,grid,gridpe,mype)
   do j=1,lon1*lat1
      zsm(j)=zero
   end do
-  call strip(sub,zsm)
+  call strip(sub,zsm,1)
   call mpi_gatherv(zsm,ijn(mm1),mpi_rtype, &
                  work1,ijn,displs_g,mpi_rtype, &
                  gridpe,mpi_comm_world,ierror)
@@ -1786,7 +1651,6 @@ subroutine setup_ens_pwgt
 ! program history log:
 !   2011_06_14  wu- initial documentation
 !   2012-10-16  wu- only setup if the options are on
-!   2013-10-19  todling - all guess variables in met-guess
 !
 !   input argument list:
 !
@@ -1798,29 +1662,24 @@ subroutine setup_ens_pwgt
 !
 !$$$ end documentation block
 
-  use hybrid_ensemble_parameters, only: grd_ens,pwgtflg,betaflg,grd_a1,grd_e1,p_e2a,coef_bw
+  use hybrid_ensemble_parameters, only: grd_ens,pwgtflg,betaflg,grd_a1,grd_e1,p_e2a
   use kinds, only: r_kind,i_kind
   use gridmod, only: lat2,lon2,nsig,regional
   use general_sub2grid_mod, only: general_suba2sube
-  use guess_grids, only: ges_prsl,ntguessig
+  use guess_grids, only: ges_prsl,ntguessig,ges_ps
   use balmod, only: wgvk
   use mpimod, only: mype,npe,mpi_comm_world,ierror,mpi_rtype,mpi_sum
   use constants,only: zero,one,ten,two,half
   use hybrid_ensemble_parameters, only: beta1_inv,beta1wgt,beta2wgt,pwgt,dual_res
-  use gsi_bundlemod, only: GSI_BundleGetPointer
-  use gsi_metguess_mod, only: GSI_MetGuess_Bundle
-  use mpeu_util, only: die
   implicit none
 
-  character(len=*),parameter::myname='setup_ens_pwgt::'
-  integer(i_kind) k,i,j,istatus
+  integer(i_kind) k,i,j
   real(r_kind) sum
-  integer(i_kind) k8,k1
+  integer(i_kind) k8,k1,kb,kk
   real(r_kind) pih
   real(r_kind) beta2_inv
   real(r_kind),allocatable,dimension(:,:,:,:) :: wgvk_ens,wgvk_anl
   real(r_kind) rk81(2),rk810(2)
-  real(r_kind),pointer:: ges_ps(:,:) =>NULL()
 
   if (.not.regional) then
      if (pwgtflg .or. betaflg) then 
@@ -1829,9 +1688,6 @@ subroutine setup_ens_pwgt
      end if
      return
   end if
-
-  call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(ntguessig), 'ps',ges_ps,istatus)
-  if (istatus/=0) call die(trim(myname),'cannot get pointers for met-fields, ier =',istatus)
 
 !!!!!!!!!!! setup pwgt     !!!!!!!!!!!!!!!!!!!!!
 !!!! weigh with balanced projection for pressure
@@ -1867,7 +1723,7 @@ subroutine setup_ens_pwgt
      j=lon2/2
 
      k8_loop: do k=1,nsig
-        if(ges_prsl(i,j,k,ntguessig)/ges_ps(i,j) < .85_r_kind)then
+        if(ges_prsl(i,j,k,ntguessig)/ges_ps(i,j,ntguessig) < .85_r_kind)then
            rk81(1)=k
            exit k8_loop
         endif
@@ -1891,11 +1747,11 @@ subroutine setup_ens_pwgt
 
 !!! hardwired numbers for beta profile; can be tuned differently  !!!!!!!!!!!!
      do k=1,k8-1
-        beta2wgt(k)=(one-coef_bw)+coef_bw*sin(pih*float(k-1))
+        beta2wgt(k)=0.1_r_kind+0.9_r_kind*sin(pih*float(k-1))
      enddo
      pih=one/(log(ges_prsl(i,j,k1,ntguessig))-log(ges_prsl(i,j,nsig,ntguessig)))
      do k=k1+1,nsig
-        beta2wgt(k)=one-coef_bw*pih*(log(ges_prsl(i,j,k1,ntguessig))-log(ges_prsl(i,j,k,ntguessig)))
+        beta2wgt(k)=one-0.9_r_kind*pih*(log(ges_prsl(i,j,k1,ntguessig))-log(ges_prsl(i,j,k,ntguessig)))
      enddo
 
      beta2_inv=one-beta1_inv

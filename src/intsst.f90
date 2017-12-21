@@ -12,7 +12,6 @@ module intsstmod
 !   2008-11-26  Todling - remove intsst_tl
 !   2009-08-13  lueken - update documentation
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - implemented obs adjoint test  
-!   2014-12-03  derber  - modify so that use of obsdiags can be turned off
 !
 ! subroutines included:
 !   sub intsst
@@ -74,7 +73,7 @@ subroutine intsst(ssthead,rval,sval)
 !$$$
   use kinds, only: r_kind,i_kind
   use constants, only: half,one,tiny_r_kind,cg_term
-  use obsmod, only: sst_ob_type, lsaveobsens, l_do_adjoint,luse_obsdiag
+  use obsmod, only: sst_ob_type, lsaveobsens, l_do_adjoint
   use qcmod, only: nlnqc_iter,varqc_iter
   use gridmod, only: latlon11
   use radinfo, only: nst_gsi
@@ -134,17 +133,17 @@ subroutine intsst(ssthead,rval,sval)
      endif
 
 
-     if(luse_obsdiag)then
-        if (lsaveobsens) then
-           grad = val*sstptr%raterr2*sstptr%err2
-           sstptr%diags%obssen(jiter) = grad
-        else
-           if (sstptr%luse) sstptr%diags%tldepart(jiter)=val
-        endif
+     if (lsaveobsens) then
+        sstptr%diags%obssen(jiter) = val*sstptr%raterr2*sstptr%err2
+     else
+        if (sstptr%luse) sstptr%diags%tldepart(jiter)=val
      endif
 
      if (l_do_adjoint) then
-        if (.not. lsaveobsens) then
+        if (lsaveobsens) then
+           grad = sstptr%diags%obssen(jiter)
+ 
+        else
            if( .not. ladtest_obs) val=val-sstptr%res
 
 !          gradient of nonlinear operator

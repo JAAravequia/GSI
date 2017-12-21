@@ -189,8 +189,8 @@ if [ $machine = IBMP6 ] ; then
 else
   export REDOUT=${REDOUT:-'1>'}
   export REDERR=${REDERR:-'2>'}
-  COMPRESS=${COMPRESS:-gzip}
-  UNCOMPRESS=${UNCOMPRESS:-gunzip}
+  COMPRESS=gzip
+  UNCOMPRESS=gunzip
 fi
 
 ################################################################################
@@ -241,10 +241,7 @@ else
 
    # Guess fields
    ln -fs $GSATANG  satbias_ang.in
-   ln -fs $RADSTAT  radstat
-
-   # Output file
-   ln -fs $SATANGO  satbias_ang.out
+   $NCP $RADSTAT    radstat
 fi
 
 # local input files assumed to already exist are
@@ -345,21 +342,8 @@ export ERR=$?
 export err=$ERR
 $ERRSCRIPT||exit 2
 
-if [[ $FILESTYLE = 'C' ]]
-then
-   # Output file
-   $NCP satbias_ang.out  $SATANGO
-fi
-
-################################################################################
-
-#if test "$RUN" = 'gdas1'
-#then
-    #if test "$SENDDBN" = 'YES'
-    #then
-       #$DBNROOT/bin/dbn_alert MODEL GDAS1_MSC_satang $job $SATANGO
-    #fi
-#fi
+# Output file
+$NCP satbias_ang.out  $SATANGO
 
 ################################################################################
 #  Postprocessing
