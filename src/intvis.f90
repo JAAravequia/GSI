@@ -39,7 +39,6 @@ subroutine intvis(vishead,rval,sval)
 ! program history log:
 !
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - introduced ladtest_obs         
-!   2014-12-03  derber  - modify so that use of obsdiags can be turned off
 !
 !   input argument list:
 !     vishead
@@ -56,7 +55,7 @@ subroutine intvis(vishead,rval,sval)
 !$$$
   use kinds, only: r_kind,i_kind
   use constants, only: half,one,tiny_r_kind,cg_term
-  use obsmod, only: vis_ob_type, lsaveobsens, l_do_adjoint,luse_obsdiag
+  use obsmod, only: vis_ob_type, lsaveobsens, l_do_adjoint
   use qcmod, only: nlnqc_iter,varqc_iter
   use gridmod, only: latlon11
   use jfunc, only: jiter
@@ -103,17 +102,17 @@ subroutine intvis(vishead,rval,sval)
      val=w1*svis(j1)+w2*svis(j2)&
         +w3*svis(j3)+w4*svis(j4)
 
-     if(luse_obsdiag)then
-        if (lsaveobsens) then
-           grad = val*visptr%raterr2*visptr%err2
-           visptr%diags%obssen(jiter) = grad
-        else
-           if (visptr%luse) visptr%diags%tldepart(jiter)=val
-        endif
+     if (lsaveobsens) then
+        visptr%diags%obssen(jiter) = val*visptr%raterr2*visptr%err2
+     else
+        if (visptr%luse) visptr%diags%tldepart(jiter)=val
      endif
 
      if (l_do_adjoint) then
-        if (.not. lsaveobsens) then
+        if (lsaveobsens) then
+           grad = visptr%diags%obssen(jiter)
+ 
+        else
            if(.not. ladtest_obs)  val=val-visptr%res
 
 !          gradient of nonlinear operator

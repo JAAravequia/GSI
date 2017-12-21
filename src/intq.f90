@@ -13,8 +13,6 @@ module intqmod
 !   2008-11-26  Todling - remove intq_tl; add interface back
 !   2009-08-13  lueken - update documentation
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - implemented obs adjoint test  
-!   2014-04-14      Su   -  add another non linear qc(purser's scheme) 
-!   2015-02-26      Su   -  add njqc as an option to choose Purser's varqc
 !
 ! subroutines included:
 !   sub intq_
@@ -69,7 +67,6 @@ subroutine intq_(qhead,rval,sval)
 !   2008-11-28  todling  - turn FOTO optional; changed ptr%time handle
 !   2010-05-13  todling  - update to use gsi_bundle; update interface 
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - introduced ladtest_obs         
-!   2014-12-03  derber  - modify so that use of obsdiags can be turned off
 !
 !   input argument list:
 !     qhead    - obs type pointer to obs structure
@@ -85,9 +82,9 @@ subroutine intq_(qhead,rval,sval)
 !
 !$$$
   use kinds, only: r_kind,i_kind
-  use constants, only: half,one,tiny_r_kind,cg_term,r3600,two
-  use obsmod, only: q_ob_type,lsaveobsens,l_do_adjoint,luse_obsdiag
-  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc
+  use constants, only: half,one,tiny_r_kind,cg_term,r3600
+  use obsmod, only: q_ob_type,lsaveobsens,l_do_adjoint
+  use qcmod, only: nlnqc_iter,varqc_iter
   use gridmod, only: latlon1n
   use jfunc, only: jiter,l_foto,xhat_dt,dhat_dt
   use gsi_bundlemod, only: gsi_bundle
@@ -155,22 +152,22 @@ subroutine intq_(qhead,rval,sval)
            w7*xhat_dt_q(j7)+w8*xhat_dt_q(j8))*time_q
      endif
 
-     if(luse_obsdiag)then
-        if (lsaveobsens) then
-           grad = val*qptr%raterr2*qptr%err2
-           qptr%diags%obssen(jiter) = grad
-        else
-           if (qptr%luse) qptr%diags%tldepart(jiter)=val
-        endif
+     if (lsaveobsens) then
+        qptr%diags%obssen(jiter) = val*qptr%raterr2*qptr%err2
+     else
+        if (qptr%luse) qptr%diags%tldepart(jiter)=val
      endif
 
      if (l_do_adjoint) then
-        if (.not. lsaveobsens) then
+        if (lsaveobsens) then
+           grad = qptr%diags%obssen(jiter)
+  
+        else
            if( .not. ladtest_obs)   val=val-qptr%res
  
 !          gradient of nonlinear operator
  
-           if (vqc .and. nlnqc_iter .and. qptr%pg > tiny_r_kind .and.  &
+           if (nlnqc_iter .and. qptr%pg > tiny_r_kind .and.  &
                                 qptr%b  > tiny_r_kind) then
               q_pg=qptr%pg*varqc_iter
               cg_q=cg_term/qptr%b
@@ -179,15 +176,10 @@ subroutine intq_(qhead,rval,sval)
               p0=wgross/(wgross+exp(-half*qptr%err2*val**2))  ! p0 is P in the reference by Enderson
               val=val*(one-p0)                         ! term is Wqc in the referenc by Enderson
            endif
-
-           if (njqc .and. qptr%jb > tiny_r_kind .and. qptr%jb <10.0_r_kind) then
-              val=sqrt(two*qptr%jb)*tanh(sqrt(qptr%err2)*val/sqrt(two*qptr%jb))
-              grad = val*sqrt(qptr%raterr2*qptr%err2)
-           else
-              grad = val*qptr%raterr2*qptr%err2
-           endif
            if( ladtest_obs) then
               grad = val
+           else
+              grad     = val*qptr%raterr2*qptr%err2
            end if
         endif
 

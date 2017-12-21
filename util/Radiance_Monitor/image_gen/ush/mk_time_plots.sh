@@ -11,9 +11,7 @@
 set -ax
 date
 
-echo Start mk_time_plots.sh
-echo USE_ANL = $USE_ANL
-
+export list=$listvar
 export NUM_CYCLES=${NUM_CYCLES:-121}
 
 imgndir=${IMGNDIR}/time
@@ -22,6 +20,11 @@ tankdir=${TANKDIR}/time
 if [[ ! -d ${imgndir} ]]; then
    mkdir -p ${imgndir}
 fi
+
+#
+# testing
+#export SATYPE="sndrd1_g15"
+#export SATYPE="iasi_metop-a"
 
 #-------------------------------------------------------------------
 #  Locate/update the control files.  If no ctl file is available
@@ -38,8 +41,11 @@ for type in ${SATYPE}; do
    done=0
    test_day=$PDATE
    ctr=$ndays
+#   echo "before while loop, found, done = $found, $done"
 
    while [[ $found -eq 0 && $done -ne 1 ]]; do
+#      echo "top of while loop"
+
       pdy=`echo $test_day|cut -c1-8`
       if [[ -s ${TANKDIR}/radmon.${pdy}/time.${type}.ctl.${Z} ]]; then
          $NCP ${TANKDIR}/radmon.${pdy}/time.${type}.ctl.${Z} ${imgndir}/${type}.ctl.${Z}
@@ -62,6 +68,22 @@ for type in ${SATYPE}; do
    if [[ -s ${imgndir}/${type}.ctl.${Z} || -s ${imgndir}/${type}.ctl ]]; then
       allmissing=0
       found=1
+
+#   elif [[ -s ${TANKDIR}/radmon.${PDY}/time.${type}.ctl || -s ${TANKDIR}/radmon.${PDY}/time.${type}.ctl.${Z} ]]; then
+#      $NCP ${TANKDIR}/radmon.${PDY}/time.${type}.ctl.${Z} ${imgndir}/${type}.ctl.${Z}
+#      if [[ ! -s ${imgndir}/${type}.ctl.${Z} ]]; then
+#         $NCP ${TANKDIR}/radmon.${PDY}/time.${type}.ctl ${imgndir}/${type}.ctl
+#      fi
+#      allmissing=0
+#      found=1
+#
+#   elif [[ -s ${tankdir}/${type}.ctl.${Z} || -s ${tankdir}/${type}.ctl  ]]; then
+#      $NCP ${tankdir}/${type}.ctl* ${imgndir}/.
+#      allmissing=0
+#      found=1
+#
+#   else
+#      echo WARNING:  unable to locate ${type}.ctl
    fi
 done
 
@@ -74,15 +96,22 @@ fi
 #-------------------------------------------------------------------
 #   Update the time definition (tdef) line in the time control
 #   files.  Conditionally remove cray_32bit_ieee from the options line.
+#
+#   Note that the logic for the tdef in time series is backwards 
+#   from angle series.  Time tdefs start at -720 from PDATE.  For
+#   angle series the tdef = $PDATE and the script works backwards.
+#   Some consistency on this point would be great.
 
+   start_date=`$NDATE -720 $PDATE`
 
    for type in ${SATYPE}; do
       if [[ -s ${imgndir}/${type}.ctl.${Z} ]]; then
         ${UNCOMPRESS} ${imgndir}/${type}.ctl.${Z}
       fi
-      ${IG_SCRIPTS}/update_ctl_tdef.sh ${imgndir}/${type}.ctl ${START_DATE} ${NUM_CYCLES}
+#      ${SCRIPTS}/update_ctl_tdef.sh ${imgndir}/${type}.ctl ${start_date}
+      ${SCRIPTS}/update_ctl_tdef.sh ${imgndir}/${type}.ctl ${START_DATE} ${NUM_CYCLES}
  
-      if [[ $MY_MACHINE = "wcoss" || $MY_MACHINE = "zeus" || $MY_MACHINE = "theia" ]]; then
+      if [[ $MY_MACHINE = "wcoss" ]]; then
          sed -e 's/cray_32bit_ieee/ /' ${imgndir}/${type}.ctl > tmp_${type}.ctl
          mv -f tmp_${type}.ctl ${imgndir}/${type}.ctl
       fi
@@ -99,6 +128,8 @@ fi
 
    ${COMPRESS} ${imgndir}/*.ctl
 
+   export listvars=RAD_AREA,LOADLQ,PDATE,NDATE,TANKDIR,IMGNDIR,PLOT_WORK_DIR,EXEDIR,LOGDIR,SCRIPTS,GSCRIPTS,STNMAP,GRADS,GADDIR,USER,STMP_USER,PTMP_USER,USER_CLASS,SUB,SUFFIX,SATYPE,NCP,Z,COMPRESS,UNCOMPRESS,PLOT_ALL_REGIONS,SUB_AVG,listvars
+
 
 #-------------------------------------------------------------------
 #  Summary plots
@@ -107,16 +138,27 @@ fi
 #
 #-------------------------------------------------------------------
 
-   jobname=plot_${RADMON_SUFFIX}_sum
-   logfile=${LOGdir}/plot_summary.log
+   cmdfile=${PLOT_WORK_DIR}/cmdfile_psummary
+   jobname=plot_${SUFFIX}_sum
+   logfile=${LOGDIR}/plot_summary.log
+
+   rm -f $cmdfile
    rm ${logfile}
 
-   if [[ $MY_MACHINE = "wcoss" ]]; then
-      $SUB -q $JOB_QUEUE -P $PROJECT -M 100 -R affinity[core] -o ${logfile} -W 1:00 -J ${jobname} $IG_SCRIPTS/plot_summary.sh
-   elif [[ $MY_MACHINE = "cray" ]]; then
-      $SUB -q $JOB_QUEUE -P $PROJECT -M 100 -o ${logfile} -W 1:00 -J ${jobname} $IG_SCRIPTS/plot_summary.sh
-   elif [[ $MY_MACHINE = "zeus" || $MY_MACHINE = "theia" ]]; then
-      $SUB -A $ACCOUNT -l procs=1,walltime=1:00:00 -N ${jobname} -V -j oe -o ${logfile} $IG_SCRIPTS/plot_summary.sh
+>$cmdfile
+   for type in ${SATYPE}; do
+      echo "$SCRIPTS/plot_summary.sh $type" >> $cmdfile
+   done
+
+   ntasks=`cat $cmdfile|wc -l `
+   ((nprocs=(ntasks+1)/2))
+
+   if [[ $MY_MACHINE = "ccs" ]]; then
+      $SUB -a $ACCOUNT -e $listvar -j ${jobname} -u $USER -q dev  -g ${USER_CLASS} -t 0:30:00 -o ${logfile} $SCRIPTS/plot_summary.sh
+   elif [[ $MY_MACHINE = "wcoss" ]]; then
+      $SUB -q dev -R affinity[core] -o ${logfile} -W 0:45 -J ${jobname} $SCRIPTS/plot_summary.sh
+   elif [[ $MY_MACHINE = "zeus" ]]; then
+      $SUB -A $ACCOUNT -l procs=1,walltime=0:30:00 -N ${jobname} -v $listvar -j oe -o ${logfile} $SCRIPTS/plot_summary.sh
    fi
 
 #-------------------------------------------------------------------
@@ -131,7 +173,7 @@ fi
 #-------------------------------------------------------------------
 #   Rename PLOT_WORK_DIR to time subdir.
 #
-  export PLOT_WORK_DIR="${PLOT_WORK_DIR}/plottime_${RADMON_SUFFIX}"
+  export PLOT_WORK_DIR="${PLOT_WORK_DIR}/plot_time_${SUFFIX}"
   if [ -d $PLOT_WORK_DIR ] ; then
      rm -f $PLOT_WORK_DIR
   fi
@@ -142,14 +184,15 @@ fi
 #-------------------------------------------------------------------
 #  Look over satellite types.  Submit plot job for each type.
 #
+   export listvars=RAD_AREA,LOADLQ,PDATE,NDATE,TANKDIR,IMGNDIR,PLOT_WORK_DIR,EXEDIR,LOGDIR,SCRIPTS,GSCRIPTS,STNMAP,GRADS,GADDIR,USER,STMP_USER,PTMP_USER,USER_CLASS,SUB,SUFFIX,NPREDR,NCP,Z,COMPRESS,UNCOMPRESS,PLOT_ALL_REGIONS,SUB_AVG,listvars
 
    list="count penalty omgnbc total omgbc"
 
-   if [[ $MY_MACHINE = "wcoss" || $MY_MACHINE = "cray" ]]; then	
+   if [[ $MY_MACHINE = "ccs" || $MY_MACHINE = "wcoss" ]]; then		# ccs and wcoss
       suffix=a
       cmdfile=${PLOT_WORK_DIR}/cmdfile_ptime_${suffix}
-      jobname=plot_${RADMON_SUFFIX}_tm_${suffix}
-      logfile=${LOGdir}/plot_time_${suffix}.log
+      jobname=plot_${SUFFIX}_tm_${suffix}
+      logfile=${LOGDIR}/plot_time_${suffix}.log
 
       rm -f $cmdfile
       rm ${logfile}
@@ -157,40 +200,37 @@ fi
 >$cmdfile
 
       for sat in ${SATLIST}; do
-         echo "$IG_SCRIPTS/plot_time.sh $sat $suffix '$list'" >> $cmdfile
+         echo "$SCRIPTS/plot_time.sh $sat $suffix '$list'" >> $cmdfile
       done
       chmod 755 $cmdfile
 
-      if [[ $PLOT_ALL_REGIONS -eq 1 || $ndays -gt 30 ]]; then
-         wall_tm="2:30"
+#      ((nprocs=(ntasks+1)/2))
+
+      if [[ $MY_MACHINE = "wcoss" ]]; then   
+         $SUB -q dev -R affinity[core] -o ${logfile} -W 0:45 -J ${jobname} ${cmdfile}
       else
-         wall_tm="0:45"
+        ntasks=`cat $cmdfile|wc -l `
+        $SUB -a $ACCOUNT -e $listvars -j ${jobname} -u $USER -t 1:00:00 -o ${logfile} -p $ntasks/1/N -q dev -g {USER_CLASS} /usr/bin/poe -cmdfile $cmdfile -pgmmodel mpmd -ilevel 2 -labelio yes -stdoutmode ordered
       fi
 
-      if [[ $MY_MACHINE = "wcoss" ]]; then
-         $SUB -q $JOB_QUEUE -P $PROJECT -M 500 -R affinity[core] -o ${logfile} -W ${wall_tm} -J ${jobname} ${cmdfile}
-      else
-         $SUB -q $JOB_QUEUE -P $PROJECT -M 500 -o ${logfile} -W ${wall_tm} -J ${jobname} ${cmdfile}
-      fi
-      
-   else							# zeus||theia
+   else							# zeus/linux
       for sat in ${SATLIST}; do
          cmdfile=${PLOT_WORK_DIR}/cmdfile_ptime_${sat}
-         jobname=plot_${RADMON_SUFFIX}_tm_${sat}
-         logfile=${LOGdir}/plot_time_${sat}
+         jobname=plot_${SUFFIX}_tm_${sat}
+         logfile=${LOGDIR}/plot_time_${sat}
 
          rm -f ${cmdfile}
          rm -f ${logfile}
 
-         echo "$IG_SCRIPTS/plot_time.sh $sat $sat '$list'" >> $cmdfile
+         echo "$SCRIPTS/plot_time.sh $sat $sat '$list'" >> $cmdfile
 
-         if [[ $PLOT_ALL_REGIONS -eq 1 || $ndays -gt 30 ]]; then
-            wall_tm="1:30:00"
+         if [[ $PLOT_ALL_REGIONS -eq 0 ]]; then
+            wall_tm="0:20:00"
          else
             wall_tm="0:40:00"
          fi
 
-         $SUB -A $ACCOUNT -l procs=1,walltime=${wall_tm} -N ${jobname} -V -j oe -o ${logfile} $cmdfile
+         $SUB -A $ACCOUNT -l procs=1,walltime=${wall_tm} -N ${jobname} -v $listvars -j oe -o ${logfile} $cmdfile
       done
    fi
 
@@ -204,52 +244,46 @@ fi
 #---------------------------------------------------------------------------
    for sat in ${bigSATLIST}; do 
 
-      if [[ $MY_MACHINE = "wcoss" || $MY_MACHINE = "cray" ]]; then	
+      if [[ $MY_MACHINE = "ccs" || $MY_MACHINE = "wcoss" ]]; then	# ccs and wcoss
          cmdfile=${PLOT_WORK_DIR}/cmdfile_ptime_${sat}
-         jobname=plot_${RADMON_SUFFIX}_tm_${sat}
-         logfile=${LOGdir}/plot_time_${sat}.log
+         jobname=plot_${SUFFIX}_tm_${sat}
+         logfile=${LOGDIR}/plot_time_${sat}.log
 
          rm -f ${logfile}
          rm -f ${cmdfile}
  
-         list="penalty count omgnbc total omgbc"
+         list="count penalty omgnbc total omgbc"
          for var in $list; do
-            echo "$IG_SCRIPTS/plot_time.sh $sat $var $var" >> $cmdfile
+            echo "$SCRIPTS/plot_time.sh $sat $var $var" >> $cmdfile
          done
          chmod 755 $cmdfile
 
-#         ntasks=`cat $cmdfile|wc -l `
+         ntasks=`cat $cmdfile|wc -l `
 
-         if [[ $PLOT_ALL_REGIONS -eq 1 || $ndays -gt 30 ]]; then
-            wall_tm="2:30"
-         else
-            wall_tm="1:00"
-         fi
          if [[ $MY_MACHINE = "wcoss" ]]; then
-            $SUB -q $JOB_QUEUE -P $PROJECT -M 500  -R affinity[core] -o ${logfile} -W ${wall_tm} -J ${jobname} ${cmdfile}
+            $SUB -q dev  -R affinity[core] -o ${logfile} -W 1:00 -J ${jobname} ${cmdfile}
          else
-            $SUB -q $JOB_QUEUE -P $PROJECT -M 500  -o ${logfile} -W ${wall_tm} -J ${jobname} ${cmdfile}
+            $SUB -a $ACCOUNT -e $listvars -j ${jobname} -u $USER -t 1:00:00 -o ${logfile} -p $ntasks/1/N -q dev -g {USER_CLASS} /usr/bin/poe -cmdfile $cmdfile -pgmmodel mpmd -ilevel 2 -labelio yes -stdoutmode ordered
          fi
-      else						# zeus||theia
+      else						# zeus/linux
          for var in $list; do
             cmdfile=${PLOT_WORK_DIR}/cmdfile_ptime_${sat}_${var}
-            jobname=plot_${RADMON_SUFFIX}_tm_${sat}_${var}
-            logfile=${LOGdir}/plot_time_${sat}_${var}.log
+            jobname=plot_${SUFFIX}_tm_${sat}_${var}
+            logfile=${LOGDIR}/plot_time_${sat}_${var}.log
             rm -f ${logfile}
             rm -f ${cmdfile}
 
-            if [[ $PLOT_ALL_REGIONS -eq 1 || $ndays -gt 30 ]]; then
-               wall_tm="2:00:00"
+            if [[ $PLOT_ALL_REGIONS -eq 0 ]]; then
+               wall_tm="0:60:00"
             else
-               wall_tm="1:00:00"
+               wall_tm="2:00:00"
             fi
 
-            echo "$IG_SCRIPTS/plot_time.sh $sat $var $var" >> $cmdfile
+            echo "$SCRIPTS/plot_time.sh $sat $var $var" >> $cmdfile
 
-            $SUB -A $ACCOUNT -l procs=1,walltime=${wall_tm} -N ${jobname} -V -j oe -o ${logfile} $cmdfile
+            $SUB -A $ACCOUNT -l procs=1,walltime=${wall_tm} -N ${jobname} -v $listvars -j oe -o ${logfile} $cmdfile
          done
       fi
    done
 
-echo End mk_time_plots.sh
 exit

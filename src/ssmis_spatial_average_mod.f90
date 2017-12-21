@@ -23,16 +23,17 @@ Module SSMIS_Spatial_Average_Mod
 
 CONTAINS 
 
-  SUBROUTINE SSMIS_Spatial_Average(BufrSat, Method, Num_Obs, NChanl,  &
-                                   FOV, Node_InOut, Time, Lat, Lon, BT_InOut, Error_status)
+  SUBROUTINE SSMIS_Spatial_Average(Mype, Mype_Sub, BufrSat, Method, Num_Obs, NChanl,  &
+                                   FOV, Scan , Node_InOut, Time, Lat, Lon, BT_InOut, Error_status)
 
     IMPLICIT NONE
     
     ! Declare passed variables
-    integer(i_kind) ,intent(in   ) :: BufrSat  
+    integer(i_kind) ,intent(in   ) :: Mype,Mype_Sub,BufrSat  
     integer(i_kind) ,intent(in   ) :: Method           ! 1=simple(1)  2=simple(2) 3=AAPP 
     integer(i_kind) ,intent(in   ) :: Num_Obs, NChanl
     integer(i_kind) ,intent(in   ) :: Fov(num_obs)
+    integer(i_kind) ,intent(in   ) :: Scan(num_obs)
     integer(i_kind) ,intent(inout) :: Node_InOut(num_obs)
     real(r_kind)    ,intent(in   ) :: Time(Num_Obs)
     real(r_kind)    ,intent(in   ) :: Lat(Num_Obs)
@@ -48,10 +49,12 @@ CONTAINS
 !   integer(i_kind), parameter :: max_obs=20000000
     integer(i_kind), parameter :: as_node= 1_i_kind
     integer(i_kind), parameter :: ds_node=-1_i_kind
+    real(r_kind),    parameter :: scan_interval=1.90_r_kind
     real(r_kind),    parameter :: btmin=70.0_r_kind
     real(r_kind),    parameter :: btmax=320.0_r_kind
-    real(r_kind),    parameter :: sigma = 1.0_r_kind/25.0_r_kind    
-!   real(r_kind),    parameter :: sigma = 1.0_r_kind/50.0_r_kind  
+    real(r_kind),    parameter :: btbad=-9.99e11_r_kind
+    real(r_kind),    parameter :: sigma = 25.0_r_kind    
+!   real(r_kind),    parameter :: sigma = 50.0_r_kind  
 
     ! Declare local variables
     character(100) :: infile 
@@ -59,42 +62,48 @@ CONTAINS
 
     integer(i_kind) :: i,iscan,ifov,ichan,nchannels,wmosatid,version
     integer(i_kind) :: is,ip,ic 
-    integer(i_kind) :: iobs   
-    integer(i_kind) :: ios,max_scan,min_scan
+    integer(i_kind) :: iobs,ii,jj   
+    integer(i_kind) :: ios,max_scan,min_scan,mintime
     integer(i_kind) :: ns1,ns2,np1,np2 
     integer(i_kind) :: nscan       
     integer(i_kind) :: ntime_scan   
     integer(i_kind) :: delta_scan   
     integer(i_kind) :: scanline_new 
+    integer(i_kind) :: ncount
     integer(i_kind) :: nxaverage(nchanl),nyaverage(nchanl)
-    integer(i_kind) :: channelnumber(nchanl)
+    integer(i_kind) :: channelnumber(nchanl),qc_dist(nchanl)
     integer(i_kind) :: qc_distx(nchanl),qc_disty(nchanl)
     integer(i_kind), allocatable ::  nodeinfo(:,:)
     integer(i_kind), allocatable ::  scanline(:),scanline_back(:,:)
+    integer(i_kind), allocatable ::  counter(:)
+    real(r_kind), allocatable ::  dt(:)
     real(r_kind), allocatable ::  latitude(:,:), longitude(:,:)
     real(r_kind), allocatable ::  time_scan(:)
     real(r_kind), allocatable ::  dist_scan(:)
     real(r_kind), allocatable ::  dist_scan_avg(:)
     real(r_kind), allocatable ::  alat(:),alon(:),blat(:),blon(:)
-    real(r_kind) :: dlat
-!   real(r_kind) :: time1,time2
+    real(r_kind) :: dist_scan_sum, dlat
+    real(r_kind) :: time1,time2
 
     real(r_kind) :: sampling_distx,sampling_disty,beamwidth(nchanl) 
     real(r_kind) :: newwidth(nchanl),cutoff(nchanl)
     real(r_kind), allocatable, target :: bt_image(:,:,:)
     real(r_kind), allocatable :: bt_image_orig(:,:,:)
     real(r_kind), pointer :: bt_image1(:,:)
+    real(r_kind) :: bt_mean(nchanl)
+    real(r_kind) :: num  
     real(r_kind) :: t1,t2,tdiff   
+    real(r_kind) :: s1,s2   
     real(r_kind) :: lat1,lat2,lon1,lon2,dist,wgt 
     real(r_kind) :: xnum,mta   
-    logical      :: gaussian_wgt
+    logical      :: pix1st,pixel_avail,gaussian_wgt,node_unknown
   
     Error_Status=0
 
     if (Method == 1) then  ! simple averaging 1
 
        gaussian_wgt = .false.
-!      write(*,*) 'SSMIS_Spatial_Average: using method from Banghua'
+       write(*,*) 'SSMIS_Spatial_Average: using method from Banghua'
        write(*,*) 'SSMIS_Spatial_Average: bufrsat = ', BufrSat
        write(*,*) 'SSMIS_Spatial_Average: Gaussian Weighted Averaging = ', gaussian_wgt 
 
@@ -114,15 +123,18 @@ CONTAINS
           scanline(iobs) = nscan
        enddo
        max_scan = maxval(scanline)
-       write(*,*) 'SSMIS_Spatial_Average: max_scan,max_fov,nchanl = ', &
-                 max_scan,max_fov,nchanl
+       write(*,*) 'SSMIS_Spatial_Average: max_scan = ', max_scan
+       write(*,*) 'SSMIS_Spatial_Average: max_fov  = ', max_fov
+       write(*,*) 'SSMIS_Spatial_Average: nchanl   = ', nchanl 
 
 !      Allocate and initialize variables
+       allocate(bt_image(max_fov,max_scan,nchanl))
        allocate(bt_image_orig(max_fov,max_scan,nchanl))
        allocate(latitude(max_fov,max_scan))
        allocate(longitude(max_fov,max_scan))
        allocate(nodeinfo(max_fov,max_scan))
        allocate(scanline_back(max_fov,max_scan))
+       bt_image(:,:,:)     = 1000.0_r_kind
        bt_image_orig(:,:,:)= 1000.0_r_kind
        latitude(:,:)       = 1000.0_r_kind 
        longitude(:,:)      = 1000.0_r_kind 
@@ -130,9 +142,11 @@ CONTAINS
        nodeinfo(:,:)       = 1000_i_kind 
 
 !      Put data into 2D (fov vs. scanline) array
+       write(*,*) 'SSMIS_Spatial_Average:  put data into array '
        do iobs = 1, num_obs
           latitude(fov(iobs),scanline(iobs))       = lat(iobs) 
           longitude(fov(iobs),scanline(iobs))      = lon(iobs) 
+          bt_image(fov(iobs),scanline(iobs),:)     = bt_inout(:,iobs)
           bt_image_orig(fov(iobs),scanline(iobs),:)= bt_inout(:,iobs)
           scanline_back(fov(iobs),scanline(iobs))  = iobs
        enddo
@@ -154,64 +168,73 @@ CONTAINS
        nodeinfo(:,max_scan) = nodeinfo(:,max_scan-1)
 
 !      Do spatial averaging in the box centered on each fov for each channel
-!$omp parallel do  schedule(dynamic,1)private(ic,iobs,iscan,ifov,ns1,ns2,np1,np2,xnum,mta,is,ip,lat1,lon1,lat2,lon2,dist,wgt)
+       write(*,*) 'SSMIS_Spatial_Average: do spatial averaging for noise reduction '
        scan_loop: do iscan = 1, max_scan 
           fov_loop: do ifov = 1, max_fov 
 
-             iobs = scanline_back(ifov,iscan) 
-             if (iobs >0) then 
-                node_inout(iobs) = nodeinfo(ifov,iscan)
-!               Define grid box (3 (scan direction) x 7 (satellite track dir))
-                ns1 = iscan-3          
-                ns2 = iscan+3          
-                if (ns1 < 1) ns1=1
-                if (ns2 > max_scan) ns2=max_scan
-                np1 = ifov-1          
-                np2 = ifov+1          
-                if (np1 < 1) np1=1
-                if (np2 > max_fov) np2=max_fov
+!            Define grid box (3 (scan direction) x 7 (satellite track dir))
+             ns1 = iscan-3          
+             ns2 = iscan+3          
+             if (ns1 < 1) ns1=1
+             if (ns2 > max_scan) ns2=max_scan
+             np1 = ifov-1          
+             np2 = ifov+1          
+             if (np1 < 1) np1=1
+             if (np2 > max_fov) np2=max_fov
 
-                channel_loop: do ic = 1, nchanl  
-                   xnum   = 0.0_r_kind
-                   mta    = 0.0_r_kind
-                   if (any(bt_image_orig(np1:np2,ns1:ns2,ic) < btmin .or. &
-                           bt_image_orig(np1:np1,ns1:ns2,ic) > btmax)) then 
-                      bt_inout(ic,iobs) = 1000.0_r_kind 
-                   else
-                     ! Calculate distance of each fov to the center fov 
-                      box_y1: do is = ns1, ns2 
-                      box_x1: do ip = np1, np2 
-                         lat1 = latitude(ifov,iscan)    ! lat of the center fov
-                         lon1 = longitude(ifov,iscan)   ! lon of the center fov
-                         lat2 = latitude(ip,is)          
-                         lon2 = longitude(ip,is)
-                         dist = distance(lat1,lon1,lat2,lon2) 
-                         if (dist > 100.0_r_kind) cycle box_x1  ! outside the box 
-                         if (gaussian_wgt) then
-                            wgt = exp(-0.5_r_kind*(dist*sigma)*(dist*sigma))
-                         else
-                            wgt = 1.0
-                         endif
-                         xnum   = xnum+wgt
-                         mta    = mta +wgt*bt_image_orig(ip,is,ic)
-                      enddo box_x1
-                      enddo box_y1
-                      bt_inout(ic,iobs) = mta/xnum
-                   endif
-                enddo channel_loop 
-             endif
+             channel_loop: do ic = 1, nchanl  
+                ncount = 0_i_kind
+                xnum   = 0.0_r_kind
+                mta    = 0.0_r_kind
+                if (any(bt_image_orig(np1:np2,ns1:ns2,ic) < btmin .or. bt_image_orig(np1:np1,ns1:ns2,ic) > btmax)) then 
+                   bt_image(ifov,iscan,ic) = 1000.0_r_kind 
+                else
+                  ! Calculate distance of each fov to the center fov 
+                   box_y1: do is = ns1, ns2 
+                   box_x1: do ip = np1, np2 
+                      lat1 = latitude(ifov,iscan)    ! lat of the center fov
+                      lon1 = longitude(ifov,iscan)   ! lon of the center fov
+                      lat2 = latitude(ip,is)          
+                      lon2 = longitude(ip,is)
+                      dist = distance(lat1,lon1,lat2,lon2) 
+                      if (dist > 100.0_r_kind) cycle box_x1  ! outside the box 
+                      if (gaussian_wgt) then
+                         wgt = exp(-0.5_r_kind*(dist/sigma)*(dist/sigma))
+                      else
+                         wgt = 1.0
+                      endif
+                      ncount = ncount+1 
+                      xnum   = xnum+wgt
+                      mta    = mta +wgt*bt_image_orig(ip,is,ic)
+                   enddo box_x1
+                   enddo box_y1
+                   bt_image(ifov,iscan,ic) = mta/xnum 
+                endif
+             enddo channel_loop 
+
           enddo fov_loop
        enddo scan_loop
+
+       do iscan = 1, max_scan
+          do ifov = 1, max_fov
+             if (scanline_back(ifov,iscan) >0) then 
+                bt_inout(:,scanline_back(ifov,iscan)) = bt_image(ifov,iscan,:)
+                node_inout(scanline_back(ifov,iscan)) = nodeinfo(ifov,iscan)
+             endif
+          enddo
+       enddo
 
 !      Deallocate arrays
        deallocate(nodeinfo,scanline,scanline_back)
        deallocate(latitude,longitude)
-       deallocate(bt_image_orig)
+       deallocate(bt_image_orig,bt_image)
+       nullify(bt_image1)
+    endif ! Method=1
 
 !============================================================================================================
 
 !   Simple method 2 
-    else if (Method == 2) then  ! simple averaging 2 
+    if (Method == 2) then  ! simple averaging 2 
 
        gaussian_wgt = .false.
        write(*,*) 'SSMIS_Spatial_Average: using method from Emily'
@@ -355,6 +378,7 @@ CONTAINS
              if (np2 > max_fov) np2=max_fov
 
              channel_loop2: do ic = 1, nchanl
+                ncount = 0_i_kind
                 xnum   = 0.0_r_kind
                 mta    = 0.0_r_kind
                 if (any(bt_image_orig(np1:np2,ns1:ns2,ic) < btmin .or. bt_image_orig(np1:np1,ns1:ns2,ic) > btmax)) then
@@ -370,10 +394,11 @@ CONTAINS
                       dist = distance(lat1,lon1,lat2,lon2)
                       if (dist > 100.0_r_kind) cycle box_x2  ! outside the box
                       if (gaussian_wgt) then
-                         wgt = exp(-0.5_r_kind*(dist*sigma)*(dist*sigma))
+                         wgt = exp(-0.5_r_kind*(dist/sigma)*(dist/sigma))
                       else
                          wgt = 1.0
                       endif
+                      ncount = ncount+1
                       xnum   = xnum+wgt
                       mta    = mta +wgt*bt_image_orig(ip,is,ic)
                    enddo box_x2
@@ -396,17 +421,18 @@ CONTAINS
        deallocate(nodeinfo,scanline,scanline_back)
        deallocate(latitude,longitude)
        deallocate(bt_image_orig,bt_image)
+       nullify(bt_image1)
+    endif
 
 
 !============================================================================================================
 
-    else if (Method == 3) then  !  AAPP method
+    if (Method == 3) then  !  AAPP method
 
        write(*,*) 'SSMIS_Spatial_Average: using AAPP method'
        if (bufrsat == 249) infile= 'ssmis_f16_beamwidth.txt'
        if (bufrsat == 285) infile= 'ssmis_f17_beamwidth.txt'
        if (bufrsat == 286) infile= 'ssmis_f18_beamwidth.txt'
-       if (bufrsat == 287) infile= 'ssmis_f19_beamwidth.txt'
 
        ! Read the beamwidth requirements
        OPEN(lninfile,file=infile,form='formatted',status='old', &
@@ -482,7 +508,7 @@ CONTAINS
           where((abs(time(1:num_obs)-time_scan(iscan)))<=0.0001_r_kind) scanline = iscan
        enddo
        max_scan = maxval(scanline)
-!      call cpu_time(time2)
+       call cpu_time(time2)
 !      write(*,*)'CPU time for determining scanline index = ', time2-time1 
 !      write(*,*)'determine scanline index from time' 
 !      write(*,*)'ntime_scan        = ', ntime_scan
@@ -579,7 +605,7 @@ CONTAINS
           ! (otherwise bt_inout just keeps the same value):
           IF (ANY(channelnumber(1:nchannels) == ichan)) THEN
 
-             CALL MODIFY_BEAMWIDTH ( max_fov, max_scan, bt_image1, &
+             CALL MODIFY_BEAMWIDTH ( MYPE, max_fov, max_scan, bt_image1, &
                   sampling_distx, sampling_disty, beamwidth(ichan), newwidth(ichan), &
                   cutoff(ichan), nxaverage(ichan), nyaverage(ichan), &
                   qc_distx(ichan), qc_disty(ichan), IOS)
@@ -607,7 +633,7 @@ CONTAINS
 END Subroutine SSMIS_Spatial_Average
 
 
-SUBROUTINE MODIFY_BEAMWIDTH ( nx, ny, image, sampling_distx, sampling_disty, & 
+SUBROUTINE MODIFY_BEAMWIDTH ( MYPE, nx, ny, image, sampling_distx, sampling_disty, & 
      beamwidth, newwidth, mtfcutoff, nxaverage, nyaverage, qc_distx, qc_disty, &
      Error)
      
@@ -663,6 +689,7 @@ SUBROUTINE MODIFY_BEAMWIDTH ( nx, ny, image, sampling_distx, sampling_disty, &
       PARAMETER (maxval=400.0) !Values greater than this are treated as missing
 
 ! Arguments
+      INTEGER(I_KIND), INTENT(IN)  :: MYPE         
       INTEGER(I_KIND), INTENT(IN)  :: nx, ny         !Size of image
       REAL(R_KIND), INTENT(INOUT)  :: image(nx,ny)   !BT or radiance image
       REAL(R_KIND), INTENT(IN)     :: sampling_distx !typically degrees
@@ -682,11 +709,10 @@ SUBROUTINE MODIFY_BEAMWIDTH ( nx, ny, image, sampling_distx, sampling_disty, &
       INTEGER(I_KIND) :: ifirst
       INTEGER(I_KIND) :: xpow2, ypow2
       INTEGER(I_KIND) :: nxav2, nyav2, naverage
-!     INTEGER(I_KIND) :: deltax
-      INTEGER(I_KIND) :: minii, maxii, minjj, maxjj
+      INTEGER(I_KIND) :: deltax, minii, maxii, minjj, maxjj
       REAL(R_KIND), ALLOCATABLE :: mtfxin(:),mtfxout(:)
       REAL(R_KIND), ALLOCATABLE :: mtfyin(:),mtfyout(:)
-      REAL(R_KIND) :: mtfin,mtfout
+      REAL(R_KIND) :: mtfin,mtfout,mtf_constant     
       REAL(R_KIND) :: mtfx_constant, mtfy_constant   !test
       REAL(R_KIND), ALLOCATABLE :: mtfpad(:,:)
       REAL(R_KIND), ALLOCATABLE :: imagepad(:,:)
@@ -1280,5 +1306,49 @@ SUBROUTINE MODIFY_BEAMWIDTH ( nx, ny, image, sampling_distx, sampling_disty, &
 ! ... End of subroutine SFFTCB ...
 ! 
       END SUBROUTINE SFFTCB
+
+  SUBROUTINE realdistance(latin1,lonin1,latin2,lonin2,dist)
+  !========================================================================================================
+  !
+  !  Purpose:
+  !    To calculate geophysical distance of two points
+  !
+  !  Record of revisions:
+  !     YYYY/MM/DD      Programmer                       Description of change
+  !    ============   ==============   ===========================================================
+  !     2007/03/01     Banghua Yan       Create orginal subroutine
+  !                    (NOAA/NESDIS)
+  !     2009/10/22     Banghua Yan       Implement to GSI package
+  !
+  !========================================================================================================
+
+    use kinds, only: r_kind,r_double,i_kind
+    IMPLICIT NONE
+
+    ! Declare subroutine arguments
+    REAL(r_kind) :: latin1,lonin1,latin2,lonin2
+    REAL(r_kind) :: dist
+    ! Declare local variables
+    REAL(r_kind) :: lat1,lon1,lat2,lon2
+    REAL(r_kind) :: PI,earth_radius,temp
+
+    PI=3.14159_r_kind
+    earth_radius=6378.0_r_kind
+    lat1=latin1*PI/180.0_r_kind
+    lon1=lonin1*PI/180.0_r_kind
+    lat2=latin2*PI/180.0_r_kind
+    lon2=lonin2*PI/180.0_r_kind
+    temp=SIN(lat1)*SIN(lat2) + COS(lat1)*COS(lat2)*COS(lon2-lon1)
+    temp=ACOS(temp)
+    temp=temp*earth_radius
+    IF (temp < 0.) temp=0.0_r_kind
+    dist = temp
+    !B.YAN (COR. 06/24/2008)
+    IF (ABS(lat1-lat2) <= 0.001_r_kind .AND. ABS(lon1-lon2) <= 0.001_r_kind) temp = 0.0_r_kind
+
+  END SUBROUTINE realdistance
+
+
+
 
 END MODULE SSMIS_Spatial_Average_Mod

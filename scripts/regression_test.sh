@@ -49,20 +49,13 @@ for exp in $list; do
    $ncp $savdir/$exp/stdout ./stdout.$exp
    $ncp $savdir/$exp/fort.220 ./fort.220.$exp
    $ncp $savdir/$exp/siganl ./siganl.$exp
-   $ncp $savdir/$exp/siginc ./siginc.$exp
    $ncp $savdir/$exp/wrf_inout ./wrf_inout.$exp
-   $ncp $savdir/$exp/wrf_inout06 ./wrf_inout06.$exp
 done
 
 # Grep out penalty/gradient information, run time, and maximum resident memory from stdout file
 list="$exp1 $exp2 $exp3"
 for exp in $list; do
-   grep -c 'cost,grad,step' stdout.$exp > minimizer_use.$exp
-   if [ $(awk '{ print $1 }' minimizer_use.$exp) -gt 0 ]; then
-      grep 'cost,grad,step' stdout.$exp > penalty.$exp.txt
-   else
-      grep 'congrad::evaljgrad: grepcost' stdout.$exp > penalty.$exp.txt
-   fi
+   grep 'cost,grad,step' fort.220.$exp > penalty.$exp.txt
    grep 'The total amount of wall time' stdout.$exp > runtime.$exp.txt
    grep 'The maximum resident set size' stdout.$exp > memory.$exp.txt
 done
@@ -124,12 +117,7 @@ scale2=$( echo "scale=6;$time2 - $time_scale2" | bc -l )
 
 # Calculate maximum allowable deviation for scalability
 
-scalelogic=$( echo "0 < $scale1" | bc )
-if [[ "$scalelogic" = 1 ]]; then
-   scale1thresh=$( echo "scale=6;$scale1 / $scaledif + $scale1" | bc -l )
-else
-   scale1thresh=$( echo "scale=6;$scale1 / $scaledif - $scale1" | bc -l )
-fi
+scale1thresh=$( echo "scale=6;$scale1 / $scaledif + $scale1" | bc -l )
 
 # Begin applying threshold tests
 # First, wall time (both maximum allowable time and max/min allowable deviation)
@@ -223,19 +211,12 @@ fi
 {
 
 if [[ $(grep -c 'cost,grad,step' penalty.${exp1}-${exp2}.txt) = 0 ]]; then
-   if [[ $(grep -c 'congrad::evaljgrad: grepcost' penalty.${exp1}-${exp2}.txt) = 0 ]]; then
-      echo 'The results between the two runs ('${exp1}' and '${exp2}') are reproducible.'
-#      echo 'since the corresponding penalties and gradients are identical with '$(grep -c 'cost,grad,step' penalty.${exp1}-${exp2}.txt)' lines different.'
-      echo
-   else
-      echo 'The results between the two runs are nonreproducible,'
-      echo 'thus the regression test has failed for '${exp1}' and '${exp2}' analyses.'
-#     echo 'thus the regression test has failed for '${exp1}' and '${exp2}' analyses with '$(grep -c 'cost,grad,step' penalty.${exp1}-${exp2}.txt)' lines different.'
-      echo
-   fi
+   echo 'The results between the two runs ('${exp1}' and '${exp2}') are reproducible'
+   echo 'since the corresponding penalties and gradients are identical with '$(grep -c 'cost,grad,step' penalty.${exp1}-${exp2}.txt)' lines different.'
+   echo
 else
    echo 'The results between the two runs are nonreproducible,'
-   echo 'thus the regression test has failed for '${exp1}' and '${exp2}' analyses.'
+   echo 'thus the regression test has failed for '${exp1}' and '${exp2}' analyses with '$(grep -c 'cost,grad,step' penalty.${exp1}-${exp2}.txt)' lines different.'
    echo
 fi
 
@@ -243,20 +224,7 @@ fi
 
 # Next, check reproducibility of results between exp1 and exp2
 
-if [[ `expr substr $exp1 1 4` = "rtma" ]]; then
-
-{
-
-if cmp -s siganl.${exp1} siganl.${exp2}
-then
-   echo 'The results between the two runs ('${exp1}' and '${exp2}') are reproducible'
-   echo 'since the corresponding results are identical.'
-   echo
-fi
-
-} >> $output
-
-elif [[ -f wrf_inout.${exp1} ]]; then
+if [[ -f wrf_inout.${exp1} ]]; then
 
 {
 
@@ -268,33 +236,7 @@ then
 fi
 
 } >> $output
-
-elif [[ -f wrf_inout06.${exp1} ]]; then
-
-{
-
-if cmp -s wrf_inout06.${exp1} wrf_inout06.${exp2}
-then
-   echo 'The results between the two runs ('${exp1}' and '${exp2}') are reproducible'
-   echo 'since the corresponding results are identical.'
-   echo
-fi
-
-} >> $output
-
-elif [[ `expr substr $exp1 1 6` = "global" ]]; then
-   if [[ -f siginc.${exp1} ]]; then
-{
-
-if cmp -s siginc.${exp1} siginc.${exp2}
-then
-   echo 'The results between the two runs ('${exp1}' and '${exp2}') are reproducible'
-   echo 'since the corresponding results are identical.'
-   echo
-fi
-
-} >> $output
-   else
+else
 {
 
 if cmp -s siganl.${exp1} siganl.${exp2} 
@@ -305,7 +247,7 @@ then
 fi
 
 } >> $output
-   fi
+
 fi
 
 # Next, reproducibility between exp1 and exp3
@@ -313,19 +255,12 @@ fi
 {
 
 if [[ $(grep -c 'cost,grad,step' penalty.${exp1}-${exp3}.txt) = 0 ]]; then
-   if [[ $(grep -c 'congrad::evaljgrad: grepcost' penalty.${exp1}-${exp3}.txt) = 0 ]]; then
-      echo 'The results between the two runs ('${exp1}' and '${exp3}') are reproducible'
-#     echo 'since the corresponding penalties and gradients are identical with '$(grep -c 'cost,grad,step' penalty.${exp1}-${exp3}.txt)' lines different.'
-      echo
-   else
-      echo 'The results between the two runs are nonreproducible,'
-      echo 'thus the regression test has failed for '${exp1}' and '${exp3}' analyses.'
-#     echo 'thus the regression test has failed for '${exp1}' and '${exp3}' analyses with '$(grep -c 'cost,grad,step' penalty.${exp1}-${exp3}.txt)' lines different.'
-      echo
-   fi
+   echo 'The results between the two runs ('${exp1}' and '${exp3}') are reproducible'
+   echo 'since the corresponding penalties and gradients are identical with '$(grep -c 'cost,grad,step' penalty.${exp1}-${exp3}.txt)' lines different.'
+   echo
 else
    echo 'The results between the two runs are nonreproducible,'
-   echo 'thus the regression test has failed for '${exp1}' and '${exp3}' analyses.'
+   echo 'thus the regression test has failed for '${exp1}' and '${exp3}' analyses with '$(grep -c 'cost,grad,step' penalty.${exp1}-${exp3}.txt)' lines different.'
    echo
 fi
 
@@ -333,70 +268,32 @@ fi
 
 # Next, check reproducibility of results between exp1 and exp3
 
-if [[ `expr substr $exp1 1 4` = "rtma" ]]; then
+if [[ -f wrf_inout.${exp1} ]]; then
 
 {
 
-   if cmp -s wrf_inout.${exp1} wrf_inout.${exp3}
-   then
-      echo 'The results between the two runs ('${exp1}' and '${exp3}') are reproducible'
-      echo 'since the corresponding results are identical.'
-      echo
-   fi
+if cmp -s wrf_inout.${exp1} wrf_inout.${exp3}
+then
+   echo 'The results between the two runs ('${exp1}' and '${exp3}') are reproducible'
+   echo 'since the corresponding results are identical.'
+   echo
+fi
 
 } >> $output
 
-elif [[ -f wrf_inout.${exp1} ]]; then
+else
 
 {
 
-   if cmp -s wrf_inout.${exp1} wrf_inout.${exp3}
-   then
-      echo 'The results between the two runs ('${exp1}' and '${exp3}') are reproducible'
-      echo 'since the corresponding results are identical.'
-      echo
-   fi
+if cmp -s siganl.${exp1} siganl.${exp3} 
+then
+   echo 'The results between the two runs ('${exp1}' and '${exp3}') are reproducible'
+   echo 'since the corresponding results are identical.'
+   echo
+fi
 
 } >> $output
 
-elif [[ -f wrf_inout06.${exp1} ]]; then
-
-{
-
-   if cmp -s wrf_inout06.${exp1} wrf_inout06.${exp3}
-   then
-      echo 'The results between the two runs ('${exp1}' and '${exp3}') are reproducible'
-      echo 'since the corresponding results are identical.'
-      echo
-   fi
-
-} >> $output
-
-elif [[ `expr substr $exp1 1 6` = "global" ]]; then
-   if [[ -f siginc.${exp1} ]]; then
-{
-
-      if cmp -s siginc.${exp1} siginc.${exp3}
-      then
-         echo 'The results between the two runs ('${exp1}' and '${exp3}') are reproducible'
-         echo 'since the corresponding results are identical.'
-         echo
-      fi
-
-} >> $output
-   else
-
-{
-
-      if cmp -s siganl.${exp1} siganl.${exp3} 
-      then
-         echo 'The results between the two runs ('${exp1}' and '${exp3}') are reproducible'
-            echo 'since the corresponding results are identical.'
-         echo
-      fi
-
-} >> $output
-   fi
 fi
 
    # Finally, scalability
@@ -424,9 +321,5 @@ rm -f ${exp1}.out
 rm -f ${exp2}.out
 rm -f ${exp3}.out
 rm -f ${exp2_scale}.out
-
-if [[ "$clean" = ".true." ]]; then
-   rm -rf $savdir
-fi
 
 exit

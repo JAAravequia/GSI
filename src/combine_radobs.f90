@@ -56,7 +56,7 @@ subroutine combine_radobs(mype_sub,mype_root,&
   real(r_kind),dimension(nele,itxmax),intent(inout) :: data_all
 
 ! Declare local variables
-  integer(i_kind):: k,l,ndata1,ndata2,kk
+  integer(i_kind):: i,k,l,ndata1,ndata2,kk
   integer(i_kind):: ncounts,ncounts1
 
   real(r_kind),allocatable,dimension(:):: data_crit_min
@@ -142,11 +142,9 @@ subroutine combine_radobs(mype_sub,mype_root,&
      do k=1,itxmax
         if(data_crit(k) < 1.e9_r_kind)then
            ndata=ndata+1
-           if( k /= ndata)then
-              do l=1,nele
-                 data_all(l,ndata)=data_all(l,k)
-              end do
-           end if
+           do l=1,nele
+              data_all(l,ndata)=data_all(l,k)
+           end do
         end if
      end do
   end if

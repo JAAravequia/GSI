@@ -1,5 +1,4 @@
-      subroutine read_pblh(nread,ndata,nodata,infile,obstype,lunout,twindin,&
-         sis,nobs)
+      subroutine read_pblh(nread,ndata,nodata,infile,obstype,lunout,twindin,sis)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:  read_pblh     read obs from msgs in PREPFITS files (rpf == read aircraft)
@@ -9,7 +8,6 @@
 !   2009-10-20    zhu   - modify rpf for reading in pblh data in GSI
 !   2009-10-21  whiting - modify cnem & pblhob for reading Caterina's files
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
-!   2015-02-23  Rancic/Thomas - add l4densvar to time window logical
 !
 !   input argument list:
 !     infile   - unit from which to read BUFR data
@@ -23,7 +21,6 @@
 !     ndata    - number of type "obstype" observations retained for further processing
 !     twindin  - input group time window (hours)
 !     sis      - satellite/instrument/sensor indicator
-!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -40,18 +37,16 @@
            ncmiter,ncgroup,ncnumgrp,icuse,ictype,icsubtype,ioctype, &
            ithin_conv,rmesh_conv,pmesh_conv, &
            id_bias_ps,id_bias_t,conv_bias_ps,conv_bias_t
-      use gsi_4dvar, only: l4dvar,l4densvar,time_4dvar,winlen
+      use gsi_4dvar, only: l4dvar,time_4dvar,winlen
       use obsmod, only: iadate,offtime_data,bmiss
       use deter_sfc_mod, only: deter_sfc2
-      use mpimod, only: npe
       implicit none
 
 !     Declare passed variables
-      character(len=*),intent(in):: infile,obstype
+      character(10),intent(in):: infile,obstype
       character(20),intent(in):: sis
       integer(i_kind),intent(in):: lunout
       integer(i_kind),intent(inout):: nread,ndata,nodata
-      integer(i_kind),dimension(npe),intent(inout):: nobs
       real(r_kind),intent(in):: twindin
 
 !     Declare local parameters
@@ -61,7 +56,7 @@
 
       integer(i_kind) lunin,msgt,ICOMP,idate,nlevp,nlevo,nlevc
       integer(i_kind) iout,nc,nr,nmsg,nrtyp,nrtmax,nchanl
-      integer(i_kind) msub,nmsub,ireadsb,ireadmg
+      integer(i_kind) msub,nmsub,ireadsb,ireadmg,ibfms
       character(80) cnem
       character(8)  ctyp, ctyp0
 
@@ -69,10 +64,8 @@
       real(r_kind) rval(5)
       equivalence (cval(1),rval(1))
 
-      real(r_kind) hdr(MXNM)
-!     real(r_kind) plv(MXNM,MXRP), olv(MXNM,MXRP,MXRP), &
-!          slv(mxnm,mxrp,mxrp)
-      real(r_kind) clv(MXNM,MXRP,MXRP)
+      real(r_kind) hdr(MXNM), plv(MXNM,MXRP), olv(MXNM,MXRP,MXRP)
+      real(r_kind) clv(MXNM,MXRP,MXRP), slv(MXNM,MXRP,MXRP)
       real(r_kind),allocatable,dimension(:,:):: cdata_all
 
       character(10) date
@@ -81,14 +74,13 @@
       integer(i_kind) ikx,nkx,kx,nreal,ilat,ilon
       integer(i_kind) pblhqm,i,maxobs,j,idomsfc
       integer(i_kind) ntest
-!     integer(i_kind),dimension(8):: obs_time,anal_time,lobs_time
-!     real(r_kind) ltime,cenlon_tmp
-      real(r_kind) usage
+      integer(i_kind),dimension(8):: obs_time,anal_time,lobs_time
+      real(r_kind) usage,ltime,cenlon_tmp
       real(r_kind) cdist,disterr,disterrmax,rlon00,rlat00
       real(r_kind) pblhob,pblhoe,pblhelev,pblbak
-      real(r_kind) dlat,dlon,dlat_earth,dlon_earth,stnelev
+      real(r_kind) errout,dlat,dlon,dlat_earth,dlon_earth,stnelev
       real(r_kind) :: tsavg,ff10,sfcr,zz
-!     real(r_kind),dimension(5):: tmp_time
+      real(r_kind),dimension(5):: tmp_time
 
       integer(i_kind) idate5(5),minobs,minan
       real(r_kind) time_correction,timeobs,time,toff,t4dv,zeps
@@ -96,12 +88,12 @@
       data lunin /50/
 
 !     Initialize variables
-      nreal=14
+      nreal=17
       ntest=0
       nrtmax=0                       ! # rpts to print per msg type (0=all)
 
       call closbf(lunin)
-      open(lunin,file=trim(infile),form='unformatted')
+      open(lunin,file=infile,form='unformatted')
       call mesgbc(lunin,msgt,icomp)
       call openbf(lunin,'IN',lunin)
       call datelen(10)                          ! set dates to 8-digit
@@ -158,7 +150,7 @@
       ilon=2
       ilat=3
       call closbf(lunin)
-      open(lunin,file=trim(infile),form='unformatted')
+      open(lunin,file=infile,form='unformatted')
       call mesgbc(lunin,msgt,icomp)
       call openbf(lunin,'IN',lunin)
       call datelen(10)                          ! set dates to 8-digit
@@ -355,7 +347,7 @@
       if (t4dv>winlen.and.t4dv<winlen+zeps) t4dv=winlen
       t4dv=t4dv + time_correction
       nc=ikx
-      if (l4dvar.or.l4densvar) then
+      if (l4dvar) then
            if (t4dv<zero.OR.t4dv>winlen) cycle
       else
            if((real(abs(time)) > real(ctwind(nc)) .or. real(abs(time)) > real(twindin))) cycle 
@@ -382,6 +374,7 @@
 !     pblhob=clv(4,1,2)
       pblhob=clv(1,1,2)
       pblbak=clv(1,1,1)   ! model PBL; from Caterina's files
+!     if (ibfms(pblbak).ne.0 .or. ibfms(pblhob).ne.0) then 
       if (abs(pblbak-bmiss).lt.10.e5 .or. abs(pblhob-bmiss).lt.10.e5) cycle ! <skip processing of this report>
       
       pblhqm=0
@@ -466,9 +459,12 @@
       cdata_all(9,iout)=pblhoe*three            ! max error
       cdata_all(10,iout)=pblhqm                 ! quality mark
       cdata_all(11,iout)=usage                  ! usage parameter
-      cdata_all(12,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
-      cdata_all(13,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
-      cdata_all(14,iout)=stnelev                ! station elevation (m)
+      cdata_all(12,iout)=idomsfc                ! dominate surface type
+      cdata_all(13,iout)=tsavg                  ! skin temperature
+      cdata_all(14,iout)=sfcr                   ! surface roughness
+      cdata_all(15,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
+      cdata_all(16,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
+      cdata_all(17,iout)=stnelev                ! station elevation (m)
 
       end do ! while ireadsb
 
@@ -479,15 +475,14 @@
 !   Normal exit
 
 !   Write observation to scratch file
-     call count_obs(ndata,nreal,ilat,ilon,cdata_all,nobs)
-     write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
-     write(lunout) ((cdata_all(j,i),j=1,nreal),i=1,ndata)
-     deallocate(cdata_all)
- 
-     if (ndata == 0) then
+    write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
+    write(lunout) ((cdata_all(j,i),j=1,nreal),i=1,ndata)
+    deallocate(cdata_all)
+
+    if (ndata == 0) then
         call closbf(lunin)
         write(6,*)'READ_PREPFITS:  closbf(',lunin,')'
-     endif
+    endif
 
-     close(lunin)
-     end subroutine read_pblh
+    close(lunin)
+    end subroutine read_pblh

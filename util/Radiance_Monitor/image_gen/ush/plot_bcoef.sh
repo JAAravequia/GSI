@@ -14,7 +14,7 @@ export list=$listvar
 #------------------------------------------------------------------
 # Set environment variables.
 
-tmpdir=${PLOT_WORK_DIR}/plot_bcoef_${RADMON_SUFFIX}.$PDATE
+tmpdir=${PLOT_WORK_DIR}/plot_bcoef_${SUFFIX}.$PDATE
 rm -rf $tmpdir
 mkdir -p $tmpdir
 cd $tmpdir
@@ -25,7 +25,7 @@ plot_bcoef=plot_bcoef.gs
 
 #------------------------------------------------------------------
 #   Set dates
-bdate=${START_DATE}
+bdate=`$NDATE -720 $PDATE`
 edate=$PDATE
 bdate0=`echo $bdate|cut -c1-8`
 edate0=`echo $edate|cut -c1-8`
@@ -54,8 +54,6 @@ echo ctldir = $ctldir
 # of radmon.YYYYMMDD directories under $TANKDIR.
 
 
-$NCP ${IG_SCRIPTS}/nu_plot_bcoef.sh .
-
 for type in ${SATYPE}; do
 
    $NCP $ctldir/${type}.ctl* ./
@@ -67,22 +65,12 @@ for type in ${SATYPE}; do
 
       if [[ -d ${TANKDIR}/radmon.${day} ]]; then
          test_file=${TANKDIR}/radmon.${day}/bcoef.${type}.${cdate}.ieee_d
-         test_file_anl=${TANKDIR}/radmon.${day}/bcoef.${type}_anl.${cdate}.ieee_d
-         
          if [[ -s $test_file ]]; then
             $NCP ${test_file} ./${type}.${cdate}.ieee_d
          elif [[ -s ${test_file}.${Z} ]]; then
             $NCP ${test_file}.${Z} ./${type}.${cdate}.ieee_d.${Z}
          fi
-
-         if [[ -s $test_file_anl ]]; then
-            $NCP ${test_file_anl} ./${type}_anl.${cdate}.ieee_d
-         elif [[ -s ${test_file_anl}.${Z} ]]; then
-            $NCP ${test_file_anl}.${Z} ./${type}_anl.${cdate}.ieee_d.${Z}
-         fi
-
       fi
-
       if [[ ! -s ${type}.${cdate}.ieee_d && ! -s ${type}.${cdate}.ieee_d.${Z} ]]; then
          $NCP $TANKDIR/bcoef/${type}.${cdate}.ieee_d* ./
       fi
@@ -91,32 +79,22 @@ for type in ${SATYPE}; do
    done
    ${UNCOMPRESS} *.ieee_d.${Z}
 
-   if [[ ${RAD_AREA} = "rgn" || $PLOT_STATIC_IMGS -eq 1 ]]; then
-      list="mean atmpath clw lapse2 lapse cos_ssmis sin_ssmis emiss ordang4 ordang3 ordang2 ordang1"
-      for var in $list; do
-
+   list="mean atmpath clw lapse2 lapse"
+   for var in $list; do
 cat << EOF > ${type}_${var}.gs
 'open ${type}.ctl'
-'run ${IG_GSCRIPTS}/${plot_bcoef} ${type} ${var} x1100 y850'
+'run ${GSCRIPTS}/${plot_bcoef} ${type} ${var} x1100 y850'
 'quit'
 EOF
-         $GRADS -bpc "run ${tmpdir}/${type}_${var}.gs"
+      $TIMEX $GRADS -bpc "run ${tmpdir}/${type}_${var}.gs"
+   done 
 
 
-      done 
-   fi
 
-   if [[ ${RAD_AREA} = "glb" ]]; then
-      ./nu_plot_bcoef.sh ${type}
-   fi
-
-
-#   rm -f ${type}.ieee_d
-#   rm -f ${type}.ctl
+   rm -f ${type}.ieee_d
+   rm -f ${type}.ctl
 
 done
-
-#         rm -f nu_plot_time.sh
 
 #--------------------------------------------------------------------
 # Copy image files to $IMGNDIR to set up for mirror to web server.
@@ -125,8 +103,7 @@ done
 if [[ ! -d ${IMGNDIR}/bcoef ]]; then
    mkdir -p ${IMGNDIR}/bcoef
 fi
-cp -f *.png  ${IMGNDIR}/bcoef
-cp -f *.bcoef.txt ${IMGNDIR}/bcoef
+cp -r *.png  ${IMGNDIR}/bcoef
 
 for var in $list; do
    rm -f ${type}.${var}*.png
@@ -135,9 +112,9 @@ done
 #--------------------------------------------------------------------
 # Clean $tmpdir.  Submit done job.
 
-#cd $tmpdir
-#cd ../
-#rm -rf $tmpdir
+cd $tmpdir
+cd ../
+rm -rf $tmpdir
 
 
 exit

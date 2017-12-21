@@ -8,7 +8,6 @@
 !
 ! program history log:
 !   2010-05-15  zhu
-!   2013-10-27  todling - move destroy to module where init reside (gsimod)
 !
 ! attributes:
 !   language: f90
@@ -20,7 +19,7 @@
   use mpimod, only: mype
   use radinfo, only: npred,jpch_rad,iuse_rad,predx,inew_rad
   use gsi_4dvar, only: nobs_bins
-  use obsmod, only: radheadm,radptrm
+  use obsmod, only: radheadm,radptrm,destroyobs_passive
   use berror, only: varprd
   use mpl_allreducemod, only: mpl_allreduce
   use timermod, only: timer_ini,timer_fnl
@@ -32,6 +31,8 @@
   integer(i_kind),dimension(jpch_rad) :: icp
   integer(i_kind),dimension(npred)    :: iorder
   real(r_kind) varc
+  real(r_quad),dimension(npred) :: work
+  real(r_quad),dimension(npred) :: btmp
   real(r_quad),dimension(npred,npred) :: Atmp
 
   real(r_kind),allocatable,dimension(:) :: iobs
@@ -39,6 +40,7 @@
   real(r_quad),allocatable,dimension(:,:) :: b
   real(r_kind),allocatable,dimension(:,:) :: AA
   real(r_kind),allocatable,dimension(:) :: be
+
 
 ! Initialize timer
   call timer_ini('prad_bias')
@@ -103,7 +105,6 @@
 
 ! Collect data from all processors
   call mpl_allreduce(jpassive,rpvals=iobs)
-  call mpl_allreduce(npred,jpassive,b)
 
   do n = 1,jpassive
      if (iobs(n)<nthreshold) cycle
@@ -117,19 +118,21 @@
 
 !    Collect data from all processors for each channel
      Atmp(:,:) = A(:,:,n)
+     btmp(:)   = b(:,n)
      call mpl_allreduce(npred,npred,Atmp)
+     call mpl_allreduce(npred,qpvals=btmp)
 
 !    Solve linear system
      iorder=0
      kpred=0
      do i=1,npred
-        use: do j=1,npred
-           if(Atmp(i,j) /= zero_quad)then
-             kpred = kpred+1
-             iorder(kpred) = i
-             exit use
-           end if
-        end do use
+        do j=1,npred
+           work(j)=Atmp(i,j)
+        end do
+        if (.not. (all(work==zero_quad))) then 
+           kpred = kpred+1
+           iorder(kpred) = i
+        end if
      end do
 
      if (kpred==0) cycle
@@ -137,7 +140,7 @@
      allocate(AA(kpred,kpred),be(kpred))
      do i = 1,kpred
         ii=iorder(i)
-        be(i) = b(ii,n)
+        be(i) = btmp(ii)
 
         do j = 1,kpred
            jj=iorder(j)
@@ -163,6 +166,7 @@
      deallocate(AA,be)
   end do  ! end of jpassive loop
 
+  call destroyobs_passive
   deallocate(A,b,iobs)
 
 ! Finalize timer
