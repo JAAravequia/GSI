@@ -39,7 +39,6 @@ subroutine inthowv(howvhead,rval,sval)
 ! program history log:
 !
 !   2014-03-19 -  pondeca
-!   2015-03-11 -  pondeca  - modify so that use of obsdiags can be turned off
 !
 !   input argument list:
 !     howvhead
@@ -56,7 +55,7 @@ subroutine inthowv(howvhead,rval,sval)
 !$$$
   use kinds, only: r_kind,i_kind
   use constants, only: half,one,tiny_r_kind,cg_term
-  use obsmod, only: howv_ob_type, lsaveobsens, l_do_adjoint, luse_obsdiag
+  use obsmod, only: howv_ob_type, lsaveobsens, l_do_adjoint
   use qcmod, only: nlnqc_iter,varqc_iter
   use gridmod, only: latlon11
   use jfunc, only: jiter
@@ -103,17 +102,17 @@ subroutine inthowv(howvhead,rval,sval)
      val=w1*showv(j1)+w2*showv(j2)&
         +w3*showv(j3)+w4*showv(j4)
 
-     if(luse_obsdiag)then
-        if (lsaveobsens) then
-           grad = val*howvptr%raterr2*howvptr%err2
-           howvptr%diags%obssen(jiter) = grad
-        else
-           if (howvptr%luse) howvptr%diags%tldepart(jiter)=val
-        endif
+     if (lsaveobsens) then
+        howvptr%diags%obssen(jiter) = val*howvptr%raterr2*howvptr%err2
+     else
+        if (howvptr%luse) howvptr%diags%tldepart(jiter)=val
      endif
 
      if (l_do_adjoint) then
-        if (.not. lsaveobsens) then
+        if (lsaveobsens) then
+           grad = howvptr%diags%obssen(jiter)
+ 
+        else
            if(.not.ladtest_obs)  val=val-howvptr%res
 
 !          gradient of nonlinear operator

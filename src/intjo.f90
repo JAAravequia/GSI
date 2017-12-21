@@ -213,7 +213,6 @@ use intpcpmod, only: intpcp
 use intozmod, only: intoz
 use intcomod, only: intco
 use intpm2_5mod, only: intpm2_5
-use intpm10mod, only: intpm10
 use intlagmod, only: intlag
 use intgustmod, only: intgust
 use intvismod, only: intvis
@@ -239,7 +238,7 @@ type(gsi_bundle), intent(inout) :: rval
 real(r_quad),dimension(max(1,nrclen)), intent(inout) :: qpred
 
 ! Declare local variables
-integer(i_kind) :: ier
+integer(i_kind) :: i,ier
 real(r_kind),pointer,dimension(:,:,:) :: xhat_dt_tsen,xhat_dt_q,xhat_dt_t
 
 
@@ -289,9 +288,6 @@ real(r_kind),pointer,dimension(:,:,:) :: xhat_dt_tsen,xhat_dt_q,xhat_dt_t
 
 ! RHS for pm2_5
   call intpm2_5(yobs%pm2_5,rval,sval)
-
-! RHS for pm10
-  call intpm10(yobs%pm10,rval,sval)
 
 ! RHS for surface pressure observations
   call intps(yobs%ps,rval,sval)

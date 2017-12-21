@@ -39,7 +39,6 @@ subroutine intmitm(mitmhead,rval,sval)
 ! program history log:
 !
 !   2014-03-19 -  pondeca
-!   2015-03-11 -  pondeca  - modify so that use of obsdiags can be turned off
 !
 !   input argument list:
 !     mitmhead
@@ -56,7 +55,7 @@ subroutine intmitm(mitmhead,rval,sval)
 !$$$
   use kinds, only: r_kind,i_kind
   use constants, only: half,one,tiny_r_kind,cg_term
-  use obsmod, only: mitm_ob_type, lsaveobsens, l_do_adjoint, luse_obsdiag
+  use obsmod, only: mitm_ob_type, lsaveobsens, l_do_adjoint
   use qcmod, only: nlnqc_iter,varqc_iter
   use gridmod, only: latlon11
   use jfunc, only: jiter
@@ -103,17 +102,17 @@ subroutine intmitm(mitmhead,rval,sval)
      val=w1*smitm(j1)+w2*smitm(j2)&
         +w3*smitm(j3)+w4*smitm(j4)
 
-     if(luse_obsdiag)then
-        if (lsaveobsens) then
-           grad = val*mitmptr%raterr2*mitmptr%err2
-           mitmptr%diags%obssen(jiter) = grad
-        else
-           if (mitmptr%luse) mitmptr%diags%tldepart(jiter)=val
-        endif
+     if (lsaveobsens) then
+        mitmptr%diags%obssen(jiter) = val*mitmptr%raterr2*mitmptr%err2
+     else
+        if (mitmptr%luse) mitmptr%diags%tldepart(jiter)=val
      endif
 
      if (l_do_adjoint) then
-        if (.not. lsaveobsens) then
+        if (lsaveobsens) then
+           grad = mitmptr%diags%obssen(jiter)
+ 
+        else
            if(.not.ladtest_obs)  val=val-mitmptr%res
 
 !          gradient of nonlinear operator

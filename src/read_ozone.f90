@@ -1,5 +1,5 @@
 subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
-           obstype,twind,sis,ithin,rmesh,nobs)
+           obstype,twind,sis,ithin,rmesh)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_ozone                    read ozone data
@@ -62,7 +62,6 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 !   2013-02-05  guo     - STOP in dec2bin() was replaced with die() to signal an _abort_.
 !   2014-02-03  guo	- removed unused "o3lev" handling, which can (and should) be
 !                         implemented again in module m_extOzone, if ever needed.
-!   2015-02-23  Rancic/Thomas - add thin4d to time window logical
 !
 !   input argument list:
 !     obstype  - observation type to process
@@ -80,7 +79,6 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 !     nread    - number of sbuv/omi ozone observations read
 !     ndata    - number of sbuv/omi ozone profiles retained for further processing
 !     nodata   - number of sbuv/omi ozone observations retained for further processing
-!     nobs     - array of observations on each subdomain for each processor
 !
 ! remarks:
 !   NCEP stopped producing IEEE format sbuv ozone files in April 2004.  
@@ -101,10 +99,9 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   use obsmod, only: iadate,nloz_v6,nloz_v8
   use convinfo, only: nconvtype, &
       icuse,ictype,ioctype
-  use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,thin4d
+  use gsi_4dvar, only: l4dvar,iwinbgn,winlen
   use qcmod, only: use_poq7
   use ozinfo, only: jpch_oz,nusis_oz,iuse_oz
-  use mpimod, only: npe
   implicit none
 
 ! Declare passed variables
@@ -112,7 +109,6 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   character(len=20),intent(in  ) :: sis
   integer(i_kind) ,intent(in   ) :: lunout,ithin
   integer(i_kind) ,intent(inout) :: nread
-  integer(i_kind),dimension(npe) ,intent(inout) :: nobs
   integer(i_kind) ,intent(inout) :: ndata,nodata
   real(r_kind)    ,intent(in   ) :: gstime,twind,rmesh
 
@@ -325,11 +321,11 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      idate5(5) = hdroz(8)  !minute
      call w3fs21(idate5,nmind)
      t4dv=real((nmind-iwinbgn),r_kind)*r60inv
-     sstime=real(nmind,r_kind)
-     tdiff=(sstime-gstime)*r60inv
-     if (l4dvar.or.l4densvar) then
+     if (l4dvar) then
         if(t4dv<zero .OR. t4dv>winlen) goto 110
      else
+        sstime=real(nmind,r_kind)
+        tdiff=(sstime-gstime)*r60inv
         if(abs(tdiff) > twind) goto 110
      end if
      
@@ -498,13 +494,14 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      idate5(5) = hdrozg(7)  !minute
      call w3fs21(idate5,nmind)
      t4dv=real((nmind-iwinbgn),r_kind)*r60inv
-     sstime=real(nmind,r_kind)
-     tdiff=(sstime-gstime)*r60inv
-     if (l4dvar.or.l4densvar) then
+     if (l4dvar) then
         if(t4dv<zero .OR. t4dv>winlen) goto 120
      else
+        sstime=real(nmind,r_kind)
+        tdiff=(sstime-gstime)*r60inv
         if(abs(tdiff) > twind) goto 120
      end if
+
 
 !    extract total ozone
      call ufbint(lunin,totoz,1,1,iret,'OZON')
@@ -522,10 +519,10 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 !    thin GOME data
 !    GOME data has bias when the satellite looks to the east. Consider QC out this data.
 
-     if (thin4d) then
+     if (l4dvar) then 
         timedif = zero 
      else 
-        timedif = r6*abs(tdiff)        ! range:  0 to 18
+        timedif = r6*abs(tdiff)        ! range:  0 to 18 
      endif 
      crit1 = 0.01_r_kind+timedif
      call map2tgrid(dlat_earth,dlon_earth,dist1,crit1,itx,ithin,itt,iuse,sis)
@@ -642,11 +639,11 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      call w3fs21(idate5,nmind)
 
      t4dv=real((nmind-iwinbgn),r_kind)*r60inv
-     sstime=real(nmind,r_kind)
-     tdiff=(sstime-gstime)*r60inv
-     if (l4dvar.or.l4densvar) then
+     if (l4dvar) then
         if (t4dv<zero .OR. t4dv>winlen) go to 130
      else
+        sstime=real(nmind,r_kind)
+        tdiff=(sstime-gstime)*r60inv
         if(abs(tdiff) > twind) go to 130
      end if
 
@@ -674,10 +671,10 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 
 !    thin OMI data
 
-     if (thin4d) then
+     if (l4dvar) then 
         timedif = zero 
      else 
-        timedif = r6*abs(tdiff)        ! range:  0 to 18
+        timedif = r6*abs(tdiff)        ! range:  0 to 18 
      endif 
      crit1 = 0.01_r_kind+timedif
      call map2tgrid(dlat_earth,dlon_earth,dist1,crit1,itx,ithin,itt,iuse,sis)
@@ -866,11 +863,11 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      call w3fs21(idate5,nmind)
 
      t4dv=real((nmind-iwinbgn),r_kind)*r60inv
-     sstime=real(nmind,r_kind)
-     tdiff=(sstime-gstime)*r60inv
-     if (l4dvar.or.l4densvar) then
+     if (l4dvar) then
         if (t4dv<zero .OR. t4dv>winlen) go to 140
      else
+        sstime=real(nmind,r_kind)
+        tdiff=(sstime-gstime)*r60inv
         if(abs(tdiff) > twind) go to 140
      end if
 
@@ -1021,7 +1018,6 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   endif
 
 ! Write header record and data to output file for further processing
-  call count_obs(ndata,nozdat,ilat,ilon,ozout,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
   write(lunout) ((ozout(k,i),k=1,nozdat),i=1,ndata)
   nread=nmrecs

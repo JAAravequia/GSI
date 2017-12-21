@@ -1,6 +1,6 @@
 subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
      infile,lunout,obstype,nread,ndata,nodata,twind,sis,&
-     mype_root,mype_sub,npe_sub,mpi_comm_sub,nobs)
+     mype_root,mype_sub,npe_sub,mpi_comm_sub)
 
 !$$$  subprogram documentation block
 ! subprogram:    read_gmi           read  GMI  bufr data
@@ -33,7 +33,6 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 !                         in the GSI, allowing the observations from ch1-9
 !                         through. If the logical is set to false, the swath
 !                         edge obs are skipped in the read loop. 
-!   2015-09-17  Thomas  - add l4densvar and thin4d to data selection procedure
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -56,7 +55,6 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 !     nread    - number of BUFR  observations read (after eliminating orbit overlap)
 !     ndata    - number of BUFR  profiles retained for further processing (thinned)
 !     nodata   - number of BUFR  observations retained for further processing (thinned)
-!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -75,10 +73,9 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   use gridmod, only: diagnostic_reg,regional,rlats,rlons,nlat,nlon,&
       tll2xy,txy2ll
   use constants, only: deg2rad,rad2deg,zero,one,two,three,four,r60inv,rearth
-  use gsi_4dvar, only: l4dvar,iwinbgn,winlen,l4densvar,thin4d
+  use gsi_4dvar, only: l4dvar,iwinbgn,winlen
   use deter_sfc_mod, only: deter_sfc
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
-  use mpimod, only: npe
 
   implicit none
 
@@ -94,7 +91,6 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   real(r_kind)   , intent(inout) :: val_gmi
   integer(i_kind),intent(inout)  :: nread
   integer(i_kind),intent(inout)  :: ndata,nodata
-  integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
 
 ! Declare local parameters
   logical                   :: use_swath_edge
@@ -131,7 +127,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 ! Declare local variables
   logical        :: assim,outside,iuse,gmi
 
-  integer(i_kind):: i,k,ntest,ireadsb,ireadmg,irec,next,j
+  integer(i_kind):: i,k,ntest,ireadsb,ireadmg,irec,isub,next,j
   integer(i_kind):: iret,idate,nchanl,nchanla
   integer(i_kind):: isflg,nreal,idomsfc
   integer(i_kind):: nmind,itx,nele,itt
@@ -140,6 +136,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   integer(i_kind):: ilat,ilon
 
   real(r_kind) :: sfcr
+  real(r_kind) :: pred
   real(r_kind) :: sstime,tdiff,t4dv
   real(r_kind) :: crit1,dist1
   real(r_kind) :: timedif
@@ -148,7 +145,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 
   real(r_kind) :: disterr,disterrmax,dlon00,dlat00
 
-  integer(i_kind) :: nscan,jc,bufsat,npos,n, npos_bin
+  integer(i_kind) :: nscan,jc,bufsat,js,ij,npos,n, npos_bin
   integer(i_kind),dimension(5):: iobsdate
   real(r_kind):: flgch
   real(r_kind),dimension(0:3):: sfcpct
@@ -304,11 +301,11 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
         iobsdate(1:5) = bfr1bhdr(1:5) !year,month,day,hour,min
         call w3fs21(iobsdate,nmind)
         t4dv=(real(nmind-iwinbgn,r_kind) + real(bfr1bhdr(6),r_kind)*r60inv)*r60inv
-        sstime=real(nmind,r_kind) + real(bfr1bhdr(6),r_kind)*r60inv
-        tdiff=(sstime-gstime)*r60inv
-        if (l4dvar.or.l4densvar) then
+        if (l4dvar) then
            if (t4dv<zero .OR. t4dv>winlen) cycle read_loop
         else
+           sstime=real(nmind,r_kind) + real(bfr1bhdr(6),r_kind)*r60inv
+           tdiff=(sstime-gstime)*r60inv
            if(abs(tdiff) > twind) then 
              cycle read_loop             
            endif                        
@@ -358,8 +355,8 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
            else
               dlat = dlat_earth  
               dlon = dlon_earth  
-              call grdcrd1(dlat,rlats,nlat,1)
-              call grdcrd1(dlon,rlons,nlon,1)
+              call grdcrd(dlat,1,rlats,nlat,1)
+              call grdcrd(dlon,1,rlons,nlon,1)
            endif
 !          If available, set value of zenith angle
            if (pixelsaza(1) < bmiss ) then
@@ -391,16 +388,16 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
            call zensun(doy,time_4_sun_glint_calc,clath_sun_glint_calc,clonh_sun_glint_calc,sun_zenith,sun_azimuth_ang)
            ! output solar zenith angles are between -90 and 90
            ! make sure solar zenith angles are between 0 and 180
-           sun_zenith = 90.0_r_kind-sun_zenith
+           sun_zenith = 90.-sun_zenith
         
 !          If use_swath_edge is true, set missing ch10-13 TBs to 500, so they
 !          can be tossed in gross check while ch1-9 TBs go through. If
 !          use_swath_edge is false, skip these obs 
 
            do jc=10,nchanl
-              if(mirad(jc)>1000.0_r_kind) then         
+              if(mirad(jc)>1000.0) then         
                  if(use_swath_edge) then
-                   mirad(jc) = 500.0_r_kind !-replace missing tbs(ch10-13, swath edge)
+                   mirad(jc) = 500.0 !-replace missing tbs(ch10-13, swath edge)
                  else
                    cycle read_loop   ! skip obs 
                  endif
@@ -411,7 +408,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
            do jc=1, nchanla    ! only does such check the first 9 channels for GMI 1C-R data
               if( mirad(jc)<tbmin(jc) .or. mirad(jc)>tbmax .or. &
                  gmichq(jc) < -0.5_r_kind .or. gmichq(jc) > 1.5_r_kind .or. & 
-                 gmirfi(jc)>0.0_r_kind) then ! &
+                 gmirfi(jc)>0.0) then ! &
                  iskip = iskip + 1
               else
                  nread=nread+1
@@ -425,7 +422,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
            nread=nread + (nchanl - nchanla)
 
            flgch = 0
-           if (thin4d) then
+           if (l4dvar) then
               crit1 = 0.01_r_kind+ flgch
            else
               timedif = 6.0_r_kind*abs(tdiff) ! range: 0 to 18
@@ -440,7 +437,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 
 
            ! if the obs is far from the grid box center, do not use it.
-           if(ithin /= 0) then
+           if(ithin .ne. 0) then
              if(.not. regional .and. dist1 > 0.75_r_kind) cycle read_loop  
            endif
 
@@ -465,7 +462,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
               ts,tsavg,vty,vfr,sty,stp,sm,sn,zz,ff10,sfcr)
 
 !          Only keep obs over ocean    - ej
-           if(isflg /= 0) cycle read_loop
+           if(isflg .ne. 0) cycle read_loop
 
            crit1 = crit1 + rlndsea(isflg)
            call checkob(dist1,crit1,itx,iuse)
@@ -647,7 +644,6 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
         super_val(itt)=super_val(itt)+val_gmi
      end do
 !    Write final set of "best" observations to output file
-     call count_obs(ndata,nele,ilat,ilon,data_all,nobs)
      write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
      write(lunout) ((data_all(k,n),k=1,nele),n=1,ndata)
   

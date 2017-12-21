@@ -16,11 +16,11 @@ subroutine write_all(increment,mype)
   
   use mpimod, only: npe
 
+  use gridmod, only: regional, use_gfs_nemsio
+
   use constants, only: zero
   
   use jfunc, only: biascor
-
-  use gridmod, only: regional
   
   use guess_grids, only: ntguessig
 
@@ -33,6 +33,7 @@ subroutine write_all(increment,mype)
   use regional_io, only: write_regional_analysis
 
   use ncepgfs_io, only: write_gfs
+  use ncepnems_io, only: write_nems
 
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gsi_metguess_mod, only: gsi_metguess_bundle
@@ -123,7 +124,12 @@ subroutine write_all(increment,mype)
 !    Write atmospheric and surface analysis
      mype_atm=0
      mype_sfc=npe/2
-     call write_gfs(increment,mype,mype_atm,mype_sfc)
+     if ( use_gfs_nemsio ) then
+!!        WRITE(6,*)'WARNING :: you elect to write analysis file in NEMSIO format'
+        call write_nems(increment,mype,mype_atm,mype_sfc)
+     else
+        call write_gfs(increment,mype,mype_atm,mype_sfc)
+     endif
 
 !    Write file bias correction     
      if(biascor >= zero)then

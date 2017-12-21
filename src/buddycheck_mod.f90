@@ -143,7 +143,7 @@ subroutine buddy_check_t(is,data,luse,mype,nele,nobs,muse,buddyuse)
   integer(i_kind) itype,msges,iqt,i
   integer(i_kind) ier,ilon,ilat,ipres,itob,id,itime,ikx,iqc,iptrb,icat,ipof,ivvlc,idx
   integer(i_kind) ier2,iuse,ilate,ilone,ikxx,istnelv,iobshgt,izz,iprvd,isprvd
-  integer(i_kind) regime
+  integer(i_kind) regime,istat
   integer(i_kind) idomsfc,iskint,iff10,isfcr
   
   logical sfctype
@@ -323,15 +323,13 @@ subroutine buddy_check_t(is,data,luse,mype,nele,nobs,muse,buddyuse)
   call final_vars_
   ! - Now call buddy check routine
   range = 108000.0_r_kind ! Radius within which we check for an ob's buddies (units are m)
-!
-! 8/31/2015: adjust the difmax value based on case: 2/29/2015 03Z. 
-!  difmax= 7.0_r_kind      ! the final codeMax difference allowed relative to buddies
-!for being consistent, difmax=8, but late will be changed.
-   difmax= 8.0_r_kind      ! Max difference allowed relative to buddies
-
+  difmax= 8.0_r_kind      ! Max difference allowed relative to buddies
  
   call execute_buddy_check(mype,is,nobs,vals,range,difmax,buddyuse)
+
+
 ! End of routine
+
   return
   contains
 

@@ -52,7 +52,7 @@ subroutine get_derivatives (guess,xderivative,yderivative)
 !$$$
 
   use kinds, only: r_kind,i_kind
-  use constants, only: zero,max_varname_length
+  use constants, only: zero
   use gridmod, only: regional,nlat,nlon,lat2,lon2,nsig
   use compact_diffs, only: compact_dlat,compact_dlon
   use gsi_bundlemod, only: gsi_bundlecreate
@@ -78,13 +78,13 @@ subroutine get_derivatives (guess,xderivative,yderivative)
 ! Local Variables
   character(len=*),parameter::myname='get_derivatives'
   integer(i_kind) k,ic,ier,istatus
-  real(r_kind),allocatable,dimension(:,:,:,:):: hwork,hworkd,hworke
+  real(r_kind),allocatable,dimension(:,:,:,:):: hwork,hworkd
   real(r_kind),dimension(:,:,:),pointer :: ptr3dges=>NULL()
   real(r_kind),dimension(:,:  ),pointer :: ptr2dges=>NULL()
   real(r_kind),dimension(:,:,:),pointer :: ptr3ddrv=>NULL()
   real(r_kind),dimension(:,:  ),pointer :: ptr2ddrv=>NULL()
-  character(len=max_varname_length),dimension(:),allocatable:: dvars2d
-  character(len=max_varname_length),dimension(:),allocatable:: dvars3d
+  character(len=20),dimension(:),allocatable:: dvars2d
+  character(len=20),dimension(:),allocatable:: dvars3d
   type(gsi_bundle):: work_bundle
   type(gsi_grid) :: grid
 
@@ -100,7 +100,6 @@ subroutine get_derivatives (guess,xderivative,yderivative)
 
   allocate(hwork (s2g_d%inner_vars,s2g_d%nlat,s2g_d%nlon,s2g_d%kbegin_loc:s2g_d%kend_alloc))
   allocate(hworkd(s2g_d%inner_vars,s2g_d%nlat,s2g_d%nlon,s2g_d%kbegin_loc:s2g_d%kend_alloc))
-  allocate(hworke(s2g_d%inner_vars,s2g_d%nlat,s2g_d%nlon,s2g_d%kbegin_loc:s2g_d%kend_alloc))
 
 !        use s2g_d%kend_alloc instead of s2g_d%kend_loc to force hworkd=0 even if not used on this pe
 
@@ -135,28 +134,32 @@ subroutine get_derivatives (guess,xderivative,yderivative)
      call general_sub2grid(s2g_d,work_bundle%values,hwork)
 
 !    x derivative
+!              !$omp parallel do private(k,vector)     !  fix later
      if(regional) then
         do k=s2g_d%kbegin_loc,s2g_d%kend_loc
-!$omp parallel sections 
-!$omp section
            call delx_reg(hwork(1,:,:,k),hworkd(1,:,:,k),s2g_d%vector(k))
-!$omp section
-           call dely_reg(hwork(1,:,:,k),hworke(1,:,:,k),s2g_d%vector(k))
-!$omp end parallel sections
         end do
      else
         do k=s2g_d%kbegin_loc,s2g_d%kend_loc
-!$omp parallel sections 
-!$omp section
            call compact_dlon(hwork(1,:,:,k),hworkd(1,:,:,k),s2g_d%vector(k))
-!$omp section
-           call compact_dlat(hwork(1,:,:,k),hworke(1,:,:,k),s2g_d%vector(k))
-!$omp end parallel sections
         end do
      end if
+!                !$omp end parallel do                   !  fix later
      call general_grid2sub(s2g_d,hworkd,xderivative%values)
-     call general_grid2sub(s2g_d,hworke,yderivative%values)
 
+!    y derivative
+!                  !$omp parallel do private(k,vector)    !  fix later ?????????
+     if(regional) then
+        do k=s2g_d%kbegin_loc,s2g_d%kend_loc
+           call dely_reg(hwork(1,:,:,k),hworkd(1,:,:,k),s2g_d%vector(k))
+        end do
+     else
+        do k=s2g_d%kbegin_loc,s2g_d%kend_loc
+           call compact_dlat(hwork(1,:,:,k),hworkd(1,:,:,k),s2g_d%vector(k))
+        end do
+     end if
+!
+     call general_grid2sub(s2g_d,hworkd,yderivative%values)
      
 !    clean work space
      call gsi_bundledestroy(work_bundle,ier)
@@ -165,7 +168,7 @@ subroutine get_derivatives (guess,xderivative,yderivative)
         call stop2(999)
      endif
 
-  deallocate(hwork,hworkd,hworke)
+  deallocate(hwork,hworkd)
   deallocate(dvars2d,dvars3d)
 
   return
@@ -207,7 +210,7 @@ subroutine tget_derivatives(guess,xderivative,yderivative)
 !$$$
 
   use kinds, only: r_kind,i_kind
-  use constants, only: zero,max_varname_length
+  use constants, only: zero
   use gridmod, only: regional,nlat,nlon,lat2,lon2,nsig
   use compact_diffs, only: tcompact_dlat,tcompact_dlon
   use gsi_bundlemod, only: gsi_bundlecreate
@@ -233,13 +236,13 @@ subroutine tget_derivatives(guess,xderivative,yderivative)
 ! Local Variables
   character(len=*),parameter::myname='tget_derivatives'
   integer(i_kind) k,ic,ier,istatus
-  real(r_kind),allocatable,dimension(:,:,:,:):: hwork,hwork2,hworkd,hworke
+  real(r_kind),allocatable,dimension(:,:,:,:):: hwork,hworkd
   real(r_kind),pointer    ,dimension(:,:,:)  :: ptr3dges=>NULL()
   real(r_kind),pointer    ,dimension(:,:,:)  :: ptr3ddrv=>NULL()
   real(r_kind),pointer    ,dimension(:,:)    :: ptr2dges=>NULL()
   real(r_kind),pointer    ,dimension(:,:)    :: ptr2ddrv=>NULL()
-  character(len=max_varname_length),dimension(:),allocatable:: dvars2d
-  character(len=max_varname_length),dimension(:),allocatable:: dvars3d
+  character(len=20),dimension(:),allocatable:: dvars2d
+  character(len=20),dimension(:),allocatable:: dvars3d
   type(gsi_bundle):: derivative
   type(gsi_grid):: grid
 
@@ -256,39 +259,40 @@ subroutine tget_derivatives(guess,xderivative,yderivative)
 !        use s2g_d%kend_alloc instead of s2g_d%kend_loc to force hworkd=0 even if not used on this pe
 
   allocate(hwork (s2g_d%inner_vars,s2g_d%nlat,s2g_d%nlon,s2g_d%kbegin_loc:s2g_d%kend_alloc))
-  allocate(hwork2(s2g_d%inner_vars,s2g_d%nlat,s2g_d%nlon,s2g_d%kbegin_loc:s2g_d%kend_alloc))
   allocate(hworkd(s2g_d%inner_vars,s2g_d%nlat,s2g_d%nlon,s2g_d%kbegin_loc:s2g_d%kend_alloc))
-  allocate(hworke(s2g_d%inner_vars,s2g_d%nlat,s2g_d%nlon,s2g_d%kbegin_loc:s2g_d%kend_alloc))
 
 !             initialize hwork to zero, so can accumulate contribution from
 !             all derivatives
   hwork=zero
 
-!   adjoint of x and y derivative
+!   adjoint of y derivative
 
-  call general_sub2grid(s2g_d,yderivative%values,hworke)
-  call general_sub2grid(s2g_d,xderivative%values,hworkd)
+  call general_sub2grid(s2g_d,yderivative%values,hworkd)
+!     !$omp parallel do private(k,vector)   !  fix later ???????????
   if(regional) then
      do k=s2g_d%kbegin_loc,s2g_d%kend_loc
-!$omp parallel sections 
-!$omp section
-        call tdely_reg(hworke(1,:,:,k),hwork2(1,:,:,k),s2g_d%vector(k))
-!$omp section
-        call tdelx_reg(hworkd(1,:,:,k),hwork(1,:,:,k),s2g_d%vector(k))
-!$omp end parallel sections
+        call tdely_reg(hworkd(1,:,:,k),hwork(1,:,:,k),s2g_d%vector(k))
      end do
   else
      do k=s2g_d%kbegin_loc,s2g_d%kend_loc
-!$omp parallel sections 
-!$omp section
-        call tcompact_dlat(hwork2(1,:,:,k),hworke(1,:,:,k),s2g_d%vector(k))
-!$omp section
-        call tcompact_dlon(hwork(1,:,:,k),hworkd(1,:,:,k),s2g_d%vector(k))
-!$omp end parallel sections
+        call tcompact_dlat(hwork(1,:,:,k),hworkd(1,:,:,k),s2g_d%vector(k))
      end do
   end if
-  hworkd=hworkd+hworke
 
+!   adjoint of x derivative
+
+  call general_sub2grid(s2g_d,xderivative%values,hworkd)
+!     !$omp parallel do private(k,vector)   ! fix later ?????
+  if(regional) then
+     do k=s2g_d%kbegin_loc,s2g_d%kend_loc
+        call tdelx_reg(hworkd(1,:,:,k),hwork(1,:,:,k),s2g_d%vector(k))
+     end do
+  else
+     do k=s2g_d%kbegin_loc,s2g_d%kend_loc
+        call tcompact_dlon(hwork(1,:,:,k),hworkd(1,:,:,k),s2g_d%vector(k))
+     end do
+  end if
+!     !$omp end parallel do                 ! fix later ??????
 
   ier=0
   call gsi_gridcreate(grid,lat2,lon2,nsig)
@@ -299,7 +303,7 @@ subroutine tget_derivatives(guess,xderivative,yderivative)
      call stop2(999)
   endif
 
-  call general_grid2sub(s2g_d,hworkd,derivative%values)
+  call general_grid2sub(s2g_d,hwork,derivative%values)
 
 ! Accumulate results
   do ic=1,size(dvars3d)
@@ -325,7 +329,7 @@ subroutine tget_derivatives(guess,xderivative,yderivative)
      call stop2(999)
   endif
 
-  deallocate(hwork,hworkd,hwork2,hworke)
+  deallocate(hwork,hworkd)
   deallocate(dvars2d,dvars3d)
 
 end subroutine tget_derivatives

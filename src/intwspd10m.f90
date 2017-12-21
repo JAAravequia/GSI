@@ -39,7 +39,6 @@ subroutine intwspd10m(wspd10mhead,rval,sval)
 ! program history log:
 !
 !   2014-03-19 -  pondeca
-!   2015-03-11 -  pondeca  - modify so that use of obsdiags can be turned off
 !
 !   input argument list:
 !     wspd10mhead
@@ -56,7 +55,7 @@ subroutine intwspd10m(wspd10mhead,rval,sval)
 !$$$
   use kinds, only: r_kind,i_kind
   use constants, only: half,one,tiny_r_kind,cg_term
-  use obsmod, only: wspd10m_ob_type, lsaveobsens, l_do_adjoint, luse_obsdiag
+  use obsmod, only: wspd10m_ob_type, lsaveobsens, l_do_adjoint
   use qcmod, only: nlnqc_iter,varqc_iter
   use gridmod, only: latlon11
   use jfunc, only: jiter
@@ -103,17 +102,17 @@ subroutine intwspd10m(wspd10mhead,rval,sval)
      val=w1*swspd10m(j1)+w2*swspd10m(j2)&
         +w3*swspd10m(j3)+w4*swspd10m(j4)
 
-     if(luse_obsdiag)then
-        if (lsaveobsens) then
-           grad = val*wspd10mptr%raterr2*wspd10mptr%err2
-           wspd10mptr%diags%obssen(jiter) = grad
-        else
-           if (wspd10mptr%luse) wspd10mptr%diags%tldepart(jiter)=val
-        endif
+     if (lsaveobsens) then
+        wspd10mptr%diags%obssen(jiter) = val*wspd10mptr%raterr2*wspd10mptr%err2
+     else
+        if (wspd10mptr%luse) wspd10mptr%diags%tldepart(jiter)=val
      endif
 
      if (l_do_adjoint) then
-        if (.not. lsaveobsens) then
+        if (lsaveobsens) then
+           grad = wspd10mptr%diags%obssen(jiter)
+ 
+        else
            if(.not.ladtest_obs)  val=val-wspd10mptr%res
 
 !          gradient of nonlinear operator

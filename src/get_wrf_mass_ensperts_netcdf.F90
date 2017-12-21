@@ -41,15 +41,6 @@ subroutine get_wrf_mass_ensperts_netcdf
     use gsi_bundlemod, only: gsi_gridcreate
 
     implicit none
-    interface 
-       subroutine ens_spread_dualres_regional(mype,en_bar)
-         use kinds, only: r_kind,i_kind,r_single
-         use gsi_bundlemod, only: gsi_bundle
-         integer(i_kind),intent(in):: mype
-         type(gsi_bundle),OPTIONAL,intent(in) :: en_bar
-       end subroutine ens_spread_dualres_regional
-    end interface
-
 
     real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig):: u,v,tv,cwmr,oz,rh
     real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2):: ps
@@ -247,7 +238,7 @@ subroutine get_wrf_mass_ensperts_netcdf
     call mpi_barrier(mpi_comm_world,ierror)
 !
 ! CALCULATE ENSEMBLE SPREAD
-    call ens_spread_dualres_regional(mype,en_bar)
+    call ens_spread_dualres_regional(en_bar,mype)
     call mpi_barrier(mpi_comm_world,ierror)
 !
 ! CONVERT ENSEMBLE MEMBERS TO ENSEMBLE PERTURBATIONS
@@ -710,7 +701,7 @@ subroutine fill_regional_2d(fld_in,fld_out)
 return 
 end subroutine fill_regional_2d
 
-subroutine ens_spread_dualres_regional(mype,en_bar)
+subroutine ens_spread_dualres_regional(en_bar,mype)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    ens_spread_dualres_regional
@@ -737,8 +728,7 @@ subroutine ens_spread_dualres_regional(mype,en_bar)
 !$$$ end documentation block
 !
   use kinds, only: r_single,r_kind,i_kind
-  use hybrid_ensemble_parameters, only: n_ens,grd_ens,grd_anl,p_e2a,uv_hyb_ens, &
-                                        regional_ensemble_option
+  use hybrid_ensemble_parameters, only: n_ens,grd_ens,grd_anl,p_e2a,uv_hyb_ens
   use hybrid_ensemble_isotropic, only: en_perts,nelen
   use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sube2suba
   use constants, only:  zero,two,half,one
@@ -751,12 +741,12 @@ subroutine ens_spread_dualres_regional(mype,en_bar)
   use gsi_bundlemod, only: gsi_gridcreate
   implicit none
 
-  type(gsi_bundle),OPTIONAL,intent(in):: en_bar
+  type(gsi_bundle),intent(in):: en_bar
   integer(i_kind),intent(in):: mype
 
   type(gsi_bundle):: sube,suba
   type(gsi_grid):: grid_ens,grid_anl
-  real(r_kind) sp_norm,sig_norm_sq_inv
+  real(r_kind) sp_norm
   type(sub2grid_info)::se,sa
   integer(i_kind) k
 
@@ -792,33 +782,16 @@ subroutine ens_spread_dualres_regional(mype,en_bar)
 
   sube%values=zero
 !
-
-  if(regional_ensemble_option == 1)then
-     print *,'global ensemble'
-     sig_norm_sq_inv=n_ens-one
-
-     do n=1,n_ens
-        do i=1,nelen
-           sube%values(i)=sube%values(i) &
-             +en_perts(n,1)%valuesr4(i)*en_perts(n,1)%valuesr4(i)
-        end do
-     end do
-
+  do n=1,n_ens
      do i=1,nelen
-       sube%values(i) = sqrt(sp_norm*sig_norm_sq_inv*sube%values(i))
+        sube%values(i)=sube%values(i) &
+          +(en_perts(n,1)%valuesr4(i)-en_bar%values(i))*(en_perts(n,1)%valuesr4(i)-en_bar%values(i))
      end do
-  else
-     do n=1,n_ens
-        do i=1,nelen
-           sube%values(i)=sube%values(i) &
-             +(en_perts(n,1)%valuesr4(i)-en_bar%values(i))*(en_perts(n,1)%valuesr4(i)-en_bar%values(i))
-        end do
-     end do
+  end do
  
-     do i=1,nelen
-       sube%values(i) = sqrt(sp_norm*sube%values(i))
-     end do
-  end if
+  do i=1,nelen
+    sube%values(i) = sqrt(sp_norm*sube%values(i))
+  end do
 
   if(grd_ens%latlon1n == grd_anl%latlon1n) then
      do i=1,nelen

@@ -65,7 +65,7 @@ module general_sub2grid_mod
 !
 !$$$ end documentation block
 
-   use kinds, only: r_double,i_kind,i_long,r_single,r_kind
+   use kinds, only: r_double,i_kind,i_long,r_single
 
    implicit none
 
@@ -502,43 +502,51 @@ module general_sub2grid_mod
 
 subroutine get_iuse_pe(npe,nz,iuse_pe)
 
-  use constants, only: one,zero
-  use mpimod, only: mype
+  use constants, only: one
   implicit none
 
   integer(i_kind),intent(in) ::npe,nz
   integer(i_kind),intent(out)::iuse_pe(0:npe-1)
 
-  integer(i_kind) i,icount,nskip,ipoint
-  real(r_kind) :: point,skip2
+  integer(i_kind) iskip_start,iskip,iskiptest,i,icount,left,iright
 
 
-     iuse_pe=1
-     if(npe <= nz) then
-        write(6,*)' nz,npe=',nz,npe,' ---- no iskip found, all processors used'
-     else                    
-        nskip=npe-nz
-        if(nskip > 0)then
-          skip2=float(npe)/float(nskip)
-          point=zero
-          do i=1,nskip
-            ipoint=min(max(0,nint(point)),npe) 
-            iuse_pe(ipoint)=0
-            point=point+skip2
-          end do
-        end if
+     iskip_start= nint((npe-one)/nz)
+     iskip=0
+     do iskiptest=iskip_start+1,1,-1
         icount=0
-        do i=0,npe-1
-           if(iuse_pe(i) > 0)icount = icount+1
+        do i=1,npe,iskiptest
+           icount=icount+1
         end do
-        if(icount /= nz) then
-           write(6,*)' get_pe2 - inconsistent icount,nz ',nz,icount,'program stops',npe,skip2
-           call stop2(999)
+        if(icount>=nz) then
+           iskip=iskiptest
+           exit
         end if
-        if(mype == 0)write(6,*) ' in get_pe2 ',nz,icount,npe,skip2
-   
+     end do
+     if(iskip==0) then
+        write(6,*)' nz,npe=',nz,npe,' ---- no iskip found, program stops'
+        call stop2(999)
      end if
-     return
+     icount=0
+     iuse_pe(:)=0
+     do i=npe-1,0,-iskip
+        icount=icount+1
+        iuse_pe(i)=1
+        if(icount==nz) exit
+     end do
+     left=0
+     do i=0,npe-1
+        if(iuse_pe(i)==1) exit
+        left=left+1
+     end do
+     iright=left/2
+     iuse_pe(:)=0
+     icount=0
+     do i=npe-1-iright,0,-iskip
+        icount=icount+1
+        iuse_pe(i)=1
+        if(icount==nz) exit
+     end do
      
 end subroutine get_iuse_pe
 
@@ -883,6 +891,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_kind,i_kind
       implicit none
 
 !     Declare passed variables
@@ -987,6 +996,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -1031,6 +1041,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -1167,6 +1178,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -1211,6 +1223,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -1337,6 +1350,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -1381,6 +1395,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -1561,6 +1576,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -1684,6 +1700,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -1735,6 +1752,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -1867,6 +1885,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -1912,6 +1931,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -2050,6 +2070,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -2095,6 +2116,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -2205,6 +2227,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -2250,6 +2273,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_single,i_kind
       use m_rerank, only: rerank
       implicit none
 
@@ -2362,6 +2386,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_single,i_kind
       use egrid2agrid_mod, only: g_egrid2agrid,egrid2agrid_parm
       use m_rerank, only: rerank
       implicit none
@@ -2474,6 +2499,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_single,i_kind
       use egrid2agrid_mod, only: g_egrid2agrid,egrid2agrid_parm
       use m_rerank, only: rerank
       implicit none
@@ -2585,6 +2611,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_single,i_kind
       use egrid2agrid_mod, only: g_egrid2agrid_ad,egrid2agrid_parm
       use m_rerank, only: rerank
       implicit none
@@ -2694,6 +2721,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_single,i_kind
       use egrid2agrid_mod, only: g_egrid2agrid_ad,egrid2agrid_parm
       use m_rerank, only: rerank
       implicit none
@@ -2803,6 +2831,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_single,i_kind
       use egrid2agrid_mod, only: g_agrid2egrid,egrid2agrid_parm
       use m_rerank, only: rerank
       implicit none
@@ -2914,6 +2943,7 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+      use kinds, only: r_double,i_kind
       use egrid2agrid_mod, only: g_agrid2egrid,egrid2agrid_parm
       use m_rerank, only: rerank
       implicit none

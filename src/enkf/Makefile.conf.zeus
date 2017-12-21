@@ -18,8 +18,7 @@ LIBwrfio_netcdf = $(WRFPATH)/external/io_netcdf/libwrfio_nf.a
 OBJwrf_frame_pk = $(WRFPATH)/frame/pack_utils.o
 OBJwrf_sizeof_int = $(WRFPATH)/frame/module_machine.o
 WRFLIB = $(LIBwrfio_int) $(LIBwrfio_netcdf) $(OBJwrf_frame_pk) $(OBJwrf_sizeof_int)
-CRTMLIB   = /scratch1/portfolios/NCEPDEV/da/save/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/lib/libcrtm.a
-GSILIBS   = -L$(CORELIB) -lw3emc_d -lbufr_d_64 $(CRTMLIB) $(WRFLIB)
+GSILIBS   = -L$(CORELIB) -lw3emc_d -lbufr_d_64 -lcrtm_v2.1.3 $(WRFLIB)
 
 # Empty out definition of libs use by GMAO EnKF building structure
 LIBtransf = #-L$(CORELIB) -ltransf
@@ -46,7 +45,6 @@ LIBhdf    = #-L$(BASEDIR)/$(ARCH)/lib  -lmfhdf -ldf -lhdfjpeg -lhdfz -lsz
   OMP = -openmp
 
   FFLAGS_F90    = -DGFS   
-  #FFLAGS_F90    = -DGFS -DMPI3 # use this if MPI-3 is available (saves memory for LETKF)
   EXE_FILE = global_enkf
   #FFLAGS_F90    = -DWRF   
   #EXE_FILE = wrf_enkf

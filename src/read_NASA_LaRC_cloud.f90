@@ -1,4 +1,4 @@
-subroutine  read_NASA_LaRC_cloud(nread,ndata,nouse,obstype,lunout,sis,nobs)
+subroutine  read_NASA_LaRC_cloud(nread,ndata,nouse,infile,obstype,lunout,twind,sis)
 !
 !   PRGMMR: Shun Liu          ORG: EMC        DATE: 2013-05-14
 !
@@ -29,16 +29,15 @@ subroutine  read_NASA_LaRC_cloud(nread,ndata,nouse,obstype,lunout,sis,nobs)
   use kinds, only: r_kind,i_kind,r_single
   use constants, only: zero,deg2rad,rad2deg
   use gridmod, only: regional,nlat,nlon,tll2xy,rlats,rlons
-  use mpimod, only: npe
 
   implicit none
 
 ! Declare passed variables
-  character(len=*),intent(in   ) :: obstype
+  character(len=*),intent(in   ) :: obstype,infile
   character(len=20),intent(in  ) :: sis
+  real(r_kind)    ,intent(in   ) :: twind
   integer(i_kind) ,intent(in   ) :: lunout
   integer(i_kind) ,intent(inout) :: nread,ndata,nouse
-  integer(i_kind) ,dimension(npe),intent(inout) :: nobs
 ! real(r_kind),dimension(nlat,nlon,nsig),intent(in):: hgtl_full
 
 ! Declare local parameters
@@ -168,7 +167,6 @@ subroutine  read_NASA_LaRC_cloud(nread,ndata,nouse,obstype,lunout,sis,nobs)
    nread=numobs
    ndata=numobs
    nouse=0
-   call count_obs(numobs,maxdat,ilat,ilon,cdata_all,nobs)
    write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
    write(lunout) ((cdata_all(k,i),k=1,maxdat),i=1,numobs)
    write(6,*)'NASA larccld::',nreal,numobs
@@ -300,7 +298,6 @@ subroutine read_NASALaRC_cloud_bufr_survey(satfile,east_time, west_time)
 !     from a bufr file                      
 !
 ! PROGRAM HISTORY LOG:
-!   2015-05-12  s. liu  - increase max_obstime from 10 to 20 
 !
 !   variable list
 !
@@ -328,7 +325,7 @@ subroutine read_NASALaRC_cloud_bufr_survey(satfile,east_time, west_time)
   character(80):: hdstr='YEAR  MNTH  DAYS HOUR  MINU  SECO'
   real(8) :: hdr(6)
 
-  integer(i_kind) :: ireadmg,ireadsb
+  INTEGER(i_kind) :: ireadmg,ireadsb
 
   character(8) subset
   integer(i_kind) :: unit_in=10,idate,iret,nmsg,ntb
@@ -341,7 +338,7 @@ subroutine read_NASALaRC_cloud_bufr_survey(satfile,east_time, west_time)
 
   INTEGER(i_kind) ::  obs_time
 
-  INTEGER(i_kind),parameter :: max_obstime=20
+  INTEGER(i_kind),parameter :: max_obstime=10
   integer(i_kind) :: num_obstime_all(max_obstime)  
   integer(i_kind) :: num_subset_all(max_obstime) 
   integer(i_kind) :: num_obstime_hh(max_obstime) 

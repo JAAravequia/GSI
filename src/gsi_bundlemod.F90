@@ -2112,9 +2112,11 @@ CONTAINS
 !   retrieve variable
     if( irank==1 ) then
         Bundle%r1(ipnt)%qr8 = cnst
-    else if( irank==2 ) then
+    endif
+    if( irank==2 ) then
         Bundle%r2(ipnt)%qr8 = cnst
-    else if( irank==3 ) then
+    endif
+    if( irank==3 ) then
         Bundle%r3(ipnt)%qr8 = cnst
     endif
 
@@ -2164,9 +2166,11 @@ CONTAINS
 !   retrieve variable
     if( irank==1 ) then
         Bundle%r1(ipnt)%qr4 = cnst
-    else if( irank==2 ) then
+    endif
+    if( irank==2 ) then
         Bundle%r2(ipnt)%qr4 = cnst
-    else if( irank==3 ) then
+    endif
+    if( irank==3 ) then
         Bundle%r3(ipnt)%qr4 = cnst
     endif
 
@@ -2225,9 +2229,11 @@ CONTAINS
 !   retrieve variable
     if( irank==1 ) then
         Bundle%r1(ipnt)%qr8 = fld
-    else if( irank==2 ) then
+    endif
+    if( irank==2 ) then
         Bundle%r2(ipnt)%qr8 = reshape(fld,(/im,jm/))
-    else if( irank==3 ) then
+    endif
+    if( irank==3 ) then
         Bundle%r3(ipnt)%qr8 = reshape(fld,(/im,jm,km/))
     endif
 
@@ -2916,29 +2922,23 @@ CONTAINS
   endif
 
   if(bundi%n1d>0) then
-     do ii=1,bundi%n1d
-        bundo%r1(ii)%shortname=bundi%r1(ii)%shortname
-        bundo%r1(ii)%longname =bundi%r1(ii)%longname
-        bundo%r1(ii)%units    =bundi%r1(ii)%units
-        bundo%r1(ii)%mykind   =bundi%r1(ii)%mykind
-     enddo
+     bundo%r1(1:bundo%n1d)%shortname=bundi%r1%shortname
+     bundo%r1(1:bundo%n1d)%longname =bundi%r1%longname
+     bundo%r1(1:bundo%n1d)%units    =bundi%r1%units
+     bundo%r1(1:bundo%n1d)%mykind   =bundi%r1%mykind
   endif
   if(bundi%n2d>0) then
-     do ii=1,bundi%n2d
-        bundo%r2(ii)%shortname=bundi%r2(ii)%shortname
-        bundo%r2(ii)%longname =bundi%r2(ii)%longname
-        bundo%r2(ii)%units    =bundi%r2(ii)%units
-        bundo%r2(ii)%mykind   =bundi%r2(ii)%mykind
-     enddo
+     bundo%r2(1:bundo%n2d)%shortname=bundi%r2%shortname
+     bundo%r2(1:bundo%n2d)%longname =bundi%r2%longname
+     bundo%r2(1:bundo%n2d)%units    =bundi%r2%units
+     bundo%r2(1:bundo%n2d)%mykind   =bundi%r2%mykind
   endif
   if(bundi%n3d>0) then
-     do ii=1,bundi%n3d
-        bundo%r3(ii)%shortname=bundi%r3(ii)%shortname
-        bundo%r3(ii)%longname =bundi%r3(ii)%longname
-        bundo%r3(ii)%units    =bundi%r3(ii)%units
-        bundo%r3(ii)%level    =bundi%r3(ii)%level
-        bundo%r3(ii)%mykind   =bundi%r3(ii)%mykind
-     enddo
+     bundo%r3(1:bundo%n3d)%shortname=bundi%r3%shortname
+     bundo%r3(1:bundo%n3d)%longname =bundi%r3%longname
+     bundo%r3(1:bundo%n3d)%units    =bundi%r3%units
+     bundo%r3(1:bundo%n3d)%level    =bundi%r3%level
+     bundo%r3(1:bundo%n3d)%mykind   =bundi%r3%mykind
   endif
 
   if (bundo%AllKinds==r_single) then
@@ -3210,27 +3210,30 @@ subroutine self_add_st(yst,xst)
      call stop2(999)
   endif
 
-  if(xst%AllKinds==r_double)then
-     if(yst%AllKinds==r_double)then
-        DO ii=1,yst%ndim
-           yst%valuesR8(ii)=yst%valuesR8(ii)+xst%valuesR8(ii)
-        ENDDO
-     else if(yst%AllKinds==r_single)then
-        DO ii=1,yst%ndim
-           yst%valuesR4(ii)=yst%valuesR4(ii)+xst%valuesR8(ii)
-        ENDDO
-     endif
-  else if(xst%AllKinds==r_single)then
-     if(yst%AllKinds==r_double )then
-        DO ii=1,yst%ndim
-           yst%valuesR8(ii)=yst%valuesR8(ii)+xst%valuesR4(ii)
-        ENDDO
-     else if(yst%AllKinds==r_single)then
-        DO ii=1,yst%ndim
-           yst%valuesR4(ii)=yst%valuesR4(ii)+xst%valuesR4(ii)
-        ENDDO
-     endif
-  end if
+  if(yst%AllKinds==r_single .and. &
+     xst%AllKinds==r_single ) then
+     DO ii=1,yst%ndim
+        yst%valuesR4(ii)=yst%valuesR4(ii)+xst%valuesR4(ii)
+     ENDDO
+  endif
+  if(yst%AllKinds==r_double .and. &
+     xst%AllKinds==r_double ) then
+     DO ii=1,yst%ndim
+        yst%valuesR8(ii)=yst%valuesR8(ii)+xst%valuesR8(ii)
+     ENDDO
+  endif
+  if(yst%AllKinds==r_single .and. &
+     xst%AllKinds==r_double ) then
+     DO ii=1,yst%ndim
+        yst%valuesR4(ii)=yst%valuesR4(ii)+xst%valuesR8(ii)
+     ENDDO
+  endif
+  if(yst%AllKinds==r_double .and. &
+     xst%AllKinds==r_single ) then
+     DO ii=1,yst%ndim
+        yst%valuesR8(ii)=yst%valuesR8(ii)+xst%valuesR4(ii)
+     ENDDO
+  endif
 
   return
 end subroutine self_add_st
@@ -3276,26 +3279,29 @@ subroutine self_add_R8scal(yst,pa,xst)
      call stop2(999)
   endif
 
-  if(xst%AllKinds==r_double ) then 
-     if(yst%AllKinds==r_double )then 
-        DO ii=1,yst%ndim
-           yst%valuesR8(ii)=yst%valuesR8(ii)+pa*xst%valuesR8(ii)
-        ENDDO
-     else if(yst%AllKinds==r_single) then
-        DO ii=1,yst%ndim
-           yst%valuesR4(ii)=yst%valuesR4(ii)+pa*xst%valuesR8(ii)
-        ENDDO
-     endif
-  else if(xst%AllKinds==r_single ) then
-     if(yst%AllKinds==r_double) then
-        DO ii=1,yst%ndim
-           yst%valuesR8(ii)=yst%valuesR8(ii)+pa*xst%valuesR4(ii)
-        ENDDO
-     else if(yst%AllKinds==r_single)then
-        DO ii=1,yst%ndim
-           yst%valuesR4(ii)=yst%valuesR4(ii)+pa*xst%valuesR4(ii)
-        ENDDO
-     end if
+  if(yst%AllKinds==r_single .and. &
+     xst%AllKinds==r_single ) then
+     DO ii=1,yst%ndim
+        yst%valuesR4(ii)=yst%valuesR4(ii)+pa*xst%valuesR4(ii)
+     ENDDO
+  endif
+  if(yst%AllKinds==r_double   .and. &
+     xst%AllKinds==r_single ) then
+     DO ii=1,yst%ndim
+        yst%valuesR8(ii)=yst%valuesR8(ii)+pa*xst%valuesR4(ii)
+     ENDDO
+  endif
+  if(yst%AllKinds==r_single  .and. &
+     xst%AllKinds==r_double   ) then
+     DO ii=1,yst%ndim
+        yst%valuesR4(ii)=yst%valuesR4(ii)+pa*xst%valuesR8(ii)
+     ENDDO
+  endif
+  if(yst%AllKinds==r_double .and. &
+     xst%AllKinds==r_double ) then
+     DO ii=1,yst%ndim
+        yst%valuesR8(ii)=yst%valuesR8(ii)+pa*xst%valuesR8(ii)
+     ENDDO
   endif
 
   return
@@ -3342,26 +3348,29 @@ subroutine self_add_R4scal(yst,pa,xst)
      call stop2(999)
   endif
 
-  if(xst%AllKinds==r_double ) then 
-     if(yst%AllKinds==r_double )then 
-        DO ii=1,yst%ndim
-           yst%valuesR8(ii)=yst%valuesR8(ii)+pa*xst%valuesR8(ii)
-        ENDDO
-     else if(yst%AllKinds==r_single) then
-        DO ii=1,yst%ndim
-           yst%valuesR4(ii)=yst%valuesR4(ii)+pa*xst%valuesR8(ii)
-        ENDDO
-     endif
-  else if(xst%AllKinds==r_single ) then
-     if(yst%AllKinds==r_double) then
-        DO ii=1,yst%ndim
-           yst%valuesR8(ii)=yst%valuesR8(ii)+pa*xst%valuesR4(ii)
-        ENDDO
-     else if(yst%AllKinds==r_single)then
-        DO ii=1,yst%ndim
-           yst%valuesR4(ii)=yst%valuesR4(ii)+pa*xst%valuesR4(ii)
-        ENDDO
-     end if
+  if(yst%AllKinds==r_single .and. &
+     xst%AllKinds==r_single ) then
+     DO ii=1,yst%ndim
+        yst%valuesR4(ii)=yst%valuesR4(ii)+pa*xst%valuesR4(ii)
+     ENDDO
+  endif
+  if(yst%AllKinds==r_double   .and. &
+     xst%AllKinds==r_single ) then
+     DO ii=1,yst%ndim
+        yst%valuesR8(ii)=yst%valuesR8(ii)+pa*xst%valuesR4(ii)
+     ENDDO
+  endif
+  if(yst%AllKinds==r_single  .and. &
+     xst%AllKinds==r_double   ) then
+     DO ii=1,yst%ndim
+        yst%valuesR4(ii)=yst%valuesR4(ii)+pa*xst%valuesR8(ii)
+     ENDDO
+  endif
+  if(yst%AllKinds==r_double .and. &
+     xst%AllKinds==r_double ) then
+     DO ii=1,yst%ndim
+        yst%valuesR8(ii)=yst%valuesR8(ii)+pa*xst%valuesR8(ii)
+     ENDDO
   endif
 
   return
@@ -3384,7 +3393,8 @@ subroutine self_mulR8_(yst,pa)
      DO ii=1,yst%ndim
         yst%valuesR8(ii)=pa*yst%valuesR8(ii)
      ENDDO
-  else if (yst%AllKinds==r_single) then
+  endif
+  if (yst%AllKinds==r_single) then
      DO ii=1,yst%ndim
         yst%valuesR4(ii)=pa*yst%valuesR4(ii)
      ENDDO
@@ -3409,7 +3419,8 @@ subroutine self_mulR4_(yst,pa)
      DO ii=1,yst%ndim
         yst%valuesR8(ii)=pa*yst%valuesR8(ii)
      ENDDO
-  else if (yst%AllKinds==r_single) then
+  endif
+  if (yst%AllKinds==r_single) then
      DO ii=1,yst%ndim
         yst%valuesR4(ii)=pa*yst%valuesR4(ii)
      ENDDO

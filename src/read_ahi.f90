@@ -1,6 +1,6 @@
 subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
      infile,lunout,obstype,nread,ndata,nodata,twind,sis, &
-     mype_root,mype_sub,npe_sub,mpi_comm_sub,nobs)
+     mype_root,mype_sub,npe_sub,mpi_comm_sub)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_ahi                    read himawari-8 ahi data
@@ -19,8 +19,7 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
 !   2014-12-12 zaizhong done the first version of this subroutine
 !   2014-12-23 zaizhong cleaned up and finalized with the proxy data
 !   2015-03-23 zaizhong cleaned up and finalized with the real sample data
-!   2015-09-17 Thomas   add l4densvar and thin4d to data selection procedure
-!
+
 !   input argument list:
 !     mype     - mpi task id
 !     val_img  - weighting factor applied to super obs
@@ -38,7 +37,6 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
 !     nread    - number of BUFR GOES imager observations read
 !     ndata    - number of BUFR GOES imager profiles retained for further processing
 !     nodata   - number of BUFR GOES imager observations retained for further processing
-!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -51,18 +49,16 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
   use gridmod, only: diagnostic_reg,regional,nlat,nlon,txy2ll,tll2xy,rlats,rlons
   use constants, only: deg2rad,zero,one,rad2deg,r60inv,r60
   use radinfo, only: iuse_rad,jpch_rad,nusis,nst_gsi,nstinfo,fac_dtl,fac_tsl
-  use gsi_4dvar, only: l4dvar,iwinbgn,winlen,l4densvar,thin4d
+  use gsi_4dvar, only: l4dvar,iwinbgn,winlen
   use deter_sfc_mod, only: deter_sfc
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
   use file_utility, only : get_lun     
-  use mpimod, only: npe
   implicit none
 
 ! Declare passed variables
   character(len=*),intent(in   ) :: infile,obstype,jsatid
   character(len=*),intent(in  ) :: sis
   integer(i_kind) ,intent(in   ) :: mype,lunout,ithin
-  integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   integer(i_kind) ,intent(inout) :: ndata,nodata
   integer(i_kind) ,intent(inout) :: nread
   real(r_kind)    ,intent(in   ) :: rmesh,gstime,twind
@@ -88,7 +84,7 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
 
   character(8) subset
 
-  integer(i_kind) nchanl,ilath,ilonh,ilzah,iszah,irec,next
+  integer(i_kind) nchanl,ilath,ilonh,ilzah,iszah,irec,isub,next
   integer(i_kind) nmind,lnbufr,idate,ilat,ilon
   integer(i_kind) ireadmg,ireadsb,iret,nreal,nele,itt
   integer(i_kind) itx,i,k,isflg,kidsat,n,iscan,idomsfc
@@ -113,7 +109,7 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
   real(r_kind), dimension(4)          :: ts_coef
   integer(i_kind), dimension(2)       :: ts_ichan
   real(r_kind)                        :: seca, dbt_ts
-  real(r_kind)                        :: dts_thresh = 330.0_r_kind
+  real(r_kind)                        :: dts_thresh = 330.
   integer(i_kind)                     :: qc_thresh = 1
   real(r_kind), dimension(2)          :: bt_ts
   !---regression sst from split window test
@@ -184,9 +180,8 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
 
 !---regression coefficients trained in clear simulation
   !   using CRTM v2.1.3 AHI and ECMWF
-  ts_coef    = (/1.16778_r_kind, -1.27133_r_kind, 0.416716_r_kind, &
-                 2.16380_r_kind/)
-  ts_coef0   = -51.0104_r_kind
+  ts_coef    = (/1.16778, -1.27133, 0.416716, 2.16380/)
+  ts_coef0   = -51.0104
   !---should be channels 11.2 and 12.38 microns
   ts_ichan   = (/10,11/) ! (8,9) offset by two for bands 5 and 6 of AHI
   !---threshold for difference in regression from tsavg
@@ -222,11 +217,11 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
         idate5(5) = hdrh8arr(6)     ! minutes
         call w3fs21(idate5,nmind)
         t4dv = (real((nmind-iwinbgn),r_kind) + real(hdrh8arr(7),r_kind)*r60inv)*r60inv
-        sstime = real(nmind,r_kind) + real(hdrh8arr(7),r_kind)*r60inv
-        tdiff=(sstime-gstime)*r60inv
-        if (l4dvar.or.l4densvar) then
+        if (l4dvar) then
            if (t4dv<zero .OR. t4dv>winlen) cycle read_loop
         else
+           sstime = real(nmind,r_kind) + real(hdrh8arr(7),r_kind)*r60inv
+           tdiff=(sstime-gstime)*r60inv
            if (abs(tdiff)>twind) cycle read_loop
         endif
 
@@ -264,7 +259,7 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
            call grdcrd1(dlon,rlons,nlon,1)
         endif
 
-        if (thin4d) then
+        if (l4dvar) then
            crit1=0.01_r_kind
         else
            timedif = 6.0_r_kind*abs(tdiff)        ! range:  0 to 18
@@ -288,7 +283,7 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
         call deter_sfc(dlat,dlon,dlat_earth,dlon_earth,t4dv,isflg,idomsfc,sfcpct, &
             ts,tsavg,vty,vfr,sty,stp,sm,sn,zz,ff10,sfcr)
 
-        if (isflg >= 1) cycle read_loop   !!!test ocean only
+        if (isflg .ge. 1) cycle read_loop   !!!test ocean only
 
 !       Set common predictor parameters
 
@@ -310,7 +305,7 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
              ts_coef0 + ts_coef(1)*bt_ts(2) + ts_coef(2)*dbt_ts + &
              ts_coef(3)*dbt_ts*dbt_ts + ts_coef(4) * seca
         !---automatically reject freezing regression temperatures
-        if ( ts_reg <= 273.00_r_kind) ts_reg = -10.
+        if ( ts_reg .le. 273.00_r_kind) ts_reg = -10.
         
         !---two options with the split window test
         ! 1.) throw out observations with large SST_reg - SST_detersfc
@@ -322,7 +317,7 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
         ! with delta.ts > dts_threshold
         !  tsavg from deter_sfc
         sst_test = tsavg-ts_reg
-        if (abs(sst_test) >= dts_thresh) cycle read_loop
+        IF (ABS(sst_test) .ge. dts_thresh) cycle read_loop
 
         !---Option 2.)
         !---or we can do this --use sathin module to select best pixels
@@ -424,7 +419,6 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
   end do
 
 ! Write final set of "best" observations to output file
-  call count_obs(ndata,nele,ilat,ilon,data_all,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
   write(lunout) ((data_all(k,n),k=1,nele),n=1,ndata)
 

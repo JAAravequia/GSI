@@ -12,7 +12,7 @@
       use kinds,only : i_kind,r_kind
       use constants, only: zero,one,max_varname_length
       use gridmod, only: nsig
-      use chemmod, only : berror_chem,upper2lower,lower2upper
+      use chemmod, only : berror_chem
 
       implicit none
 
@@ -22,10 +22,10 @@
       public :: berror_stats    ! reconfigurable filename
 
         ! interfaces to file berror_stats.
-      public :: berror_set_reg          ! set internal parameters
-      public :: berror_get_dims_reg	! get dimensions, jfunc::createj_func()
-      public :: berror_read_bal_reg	! get cross-cov.stats., balmod::prebal()
-      public :: berror_read_wgt_reg	! get auto-cov.stats., prewgt()
+      public :: berror_get_dims_reg   ! get dimensions, jfunc::createj_func()
+      public :: berror_read_bal_reg   ! get cross-cov.stats., balmod::prebal()
+      public :: berror_read_wgt_reg   ! get auto-cov.stats., prewgt()
+
 
 ! !REVISION HISTORY:
 !       25Feb10 - Zhu - adopt code format from m_berror_stats
@@ -41,7 +41,6 @@
 
   integer(i_kind),parameter :: default_unit_ = 22
   integer(i_kind),parameter :: ERRCODE=2
-  logical,save:: cwcoveqqcov_
 
   integer(i_kind),allocatable,dimension(:):: lsig
   real(r_kind),allocatable,dimension(:):: coef1,coef2
@@ -80,40 +79,6 @@ contains
   read(inerr) msig,mlat
   close(inerr)
 end subroutine berror_get_dims_reg
-!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-! NASA/GSFC, Global Modeling and Assimilation Office, 900.3, GEOS/DAS  !
-!BOP -------------------------------------------------------------------
-!
-! !IROUTINE: berror_set_reg - set (logical) parameter options internal to B
-!
-! !DESCRIPTION:
-!
-! !INTERFACE:
-
-    subroutine berror_set_reg(opt,value)
-
-      implicit none
-      character(len=*),intent(in) :: opt
-      logical(i_kind), intent(in) :: value
-
-! !REVISION HISTORY:
-!      2014-10-15 - Zhu - adopted from m_berror_stat to make code structure similar
-!EOP ___________________________________________________________________
-
-  character(len=*),parameter :: myname_=myname//'::berror_set_reg'
-  logical found
-
-  found=.false.
-  if(trim(opt)=='cwcoveqqcov') then
-     cwcoveqqcov_=value
-     found=.true.
-  endif
-  if(.not.found) then
-     write(6,*) myname_,'(PREBAL_reg):  ***ERROR*** cannot find:', trim(opt)
-     call stop2(999)
-  endif
-
-end subroutine berror_set_reg
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ! NASA/GSFC, Global Modeling and Assimilation Office, 900.3, GEOS/DAS  !
 !BOP -------------------------------------------------------------------
@@ -265,7 +230,7 @@ end subroutine berror_read_bal_reg
 !
 ! !INTERFACE:
 
-    subroutine berror_read_wgt_reg(msig,mlat,corz,corp,hwll,hwllp,vz,rlsig,varq,qoption,varcw,cwoption,mype,unit)
+    subroutine berror_read_wgt_reg(msig,mlat,corz,corp,hwll,hwllp,vz,rlsig,varq,qoption,mype,unit)
 
       use kinds,only : r_single,r_kind
       use gridmod,only : nlat,nlon,nsig
@@ -279,7 +244,6 @@ end subroutine berror_read_bal_reg
       implicit none
 
       integer(i_kind)                    ,intent(in   ) :: qoption
-      integer(i_kind)                    ,intent(in   ) :: cwoption
       integer(i_kind)                    ,intent(in   ) :: msig,mlat
       integer(i_kind)                    ,intent(in   ) :: mype  ! "my" processor ID
       integer(i_kind),optional           ,intent(in   ) :: unit ! an alternative unit
@@ -291,7 +255,6 @@ end subroutine berror_read_bal_reg
       real(r_kind),dimension(0:mlat+1,nvars-nc3d)   , intent(inout):: hwllp
       real(r_kind),dimension(nsig,0:mlat+1,1:nc3d),intent(inout):: vz
       real(r_kind),dimension(mlat,nsig),intent(inout)::varq
-      real(r_kind),dimension(mlat,nsig),intent(inout)::varcw
 
       real(r_kind),dimension(nsig),intent(out):: rlsig
 
@@ -307,13 +270,10 @@ end subroutine berror_read_bal_reg
 !       20Nov10 Pagowski - make var name longer for chemical berror and
 !                          related change in read
 !       16Feb11 Zhu - add gust,vis,pblh
-!       15Dec12 Zhu - add varcw and cwoption for all-sky radiance assimiation
 !       03Feb14 Todling - varq & qoption in arg list (remove dep on jfunc)
 !       19Mar14 pondeca - add wspd10m
 !       10Apr14 pondeca - add td2m,mxtm,mitm,pmsl
 !       07May14 pondeca - add howv
-!       10Jun14 Zhu - tune error variance and correlation lengths of cw for
-!                     all-sky radiance assimilation
 !       19Jun14 carley/zhu - add tcamt and lcbas
 !
 !EOP ___________________________________________________________________
@@ -336,7 +296,7 @@ end subroutine berror_read_bal_reg
 
 
   character*5 :: varshort
-  character(len=max_varname_length) :: var
+  character(len=max_varname_length) :: var_chem,var
   logical,dimension(nrf):: nrf_err
 
   integer(i_kind) :: nrf3_oz,nrf3_q,nrf3_cw,nrf3_sf,nrf3_vp,nrf2_sst
@@ -345,7 +305,7 @@ end subroutine berror_read_bal_reg
   integer(i_kind) :: nrf3_sfwter,nrf3_vpwter
   integer(i_kind) :: inerr,istat
   integer(i_kind) :: nsigstat,nlatstat,isig
-  integer(i_kind) :: loc,m1,m,i,n,j,k,n0
+  integer(i_kind) :: loc,nn,m1,m,i,n,j,k,n0
   integer(i_kind),allocatable,dimension(:) :: nrf2_loc,nrf3_loc,nmotl_loc
   real(r_kind) :: factoz
   real(r_kind) :: raux
@@ -399,9 +359,9 @@ end subroutine berror_read_bal_reg
   nrf_err=.false.
   read: do
      if (berror_chem) then
-        read(inerr,iostat=istat) varshort,isig
-        var=upper2lower(varshort)
-        if (var == 'pm25') var = 'pm2_5'
+        read(inerr,iostat=istat) var_chem,isig
+        var=var_chem
+!chem variable names can be longer than 5 chars
      else 
         read(inerr,iostat=istat) varshort, isig
         var=varshort
@@ -412,7 +372,7 @@ end subroutine berror_read_bal_reg
      allocate ( hwll_avn(0:mlat+1,1:isig) )
      allocate ( vztdq_avn(1:isig,0:mlat+1) )
 
-     if (var/='q' .or. (var=='cw' .and. cwoption==2)) then
+     if (var/='q') then
         read(inerr) corz_avn
      else
         allocate ( corqq_avn(1:mlat,1:isig) )
@@ -430,15 +390,13 @@ end subroutine berror_read_bal_reg
            nrf_err(n)=.true.
            loc=n
            exit
-        else
-           loc=-999
         end if
      end do
 
      if (isig==msig) then
         do n=1,nc3d
            if (nrf3_loc(n)==loc) then
-              if ((var=='q' .and. qoption==2) .or. (var=='cw' .and. cwoption==2)) then
+              if (var=='q' .and. qoption==2) then
 !                choose which q stat to use
                  do k=1,msig
                     do i=1,mlat
@@ -480,7 +438,7 @@ end subroutine berror_read_bal_reg
      deallocate ( corz_avn )
      deallocate ( hwll_avn )
      deallocate ( vztdq_avn )
-     if (var=='q' .or. var=='cw') deallocate ( corqq_avn )
+     if (var=='q') deallocate ( corqq_avn )
   enddo read
   close(inerr)
 
@@ -559,34 +517,17 @@ end subroutine berror_read_bal_reg
      vz(:,:,nrf3_oz)=vz_oz
   end if
 
-  if (cwcoveqqcov_ .and. nrf3_cw>0) then
-     corz(:,:,nrf3_cw)=corz(:,:,nrf3_q)
-     hwll(:,:,nrf3_cw)=hwll(:,:,nrf3_q)
-     vz(:,:,nrf3_cw)=vz(:,:,nrf3_q)
-  end if
-  if ((.not. cwcoveqqcov_) .and. nrf3_cw>0) then
+  if (nrf3_cw>0) then
      corz(:,:,nrf3_cw)=zero
-     if (cwoption==2) then
-        do k=1,nsig
-           if (ges_prslavg(k)>15.0_r_kind) then
-              do j=1,mlat
-                 varcw(j,k)=max(real(corz(j,k,nrf3_cw),r_kind),zero)
-                 corz(j,k,nrf3_cw)=one
-              enddo
-           end if
-        enddo
-     end if
-     if (cwoption==1 .or. cwoption==3) then
-        do k=1,nsig
-           if (ges_prslavg(k)>15.0_r_kind) then
-              do j=1,mlat
-                 corz(j,k,nrf3_cw)=one
-              end do
-           end if
-        end do
-     end if
-     hwll(:,:,nrf3_cw)=0.5_r_kind*hwll(:,:,nrf3_q)
-     vz(:,:,nrf3_cw)=0.5_r_kind*vz(:,:,nrf3_q)
+     do k=1,nsig
+        if (ges_prslavg(k)>ten) then 
+           do j=1,mlat
+              corz(j,k,nrf3_cw)=1.0e-10_r_kind
+           end do
+        end if
+     end do
+     hwll(:,:,nrf3_cw)=0.75_r_kind*hwll(:,:,nrf3_q)
+     vz(:,:,nrf3_cw)=1.2_r_kind*vz(:,:,nrf3_q)
   end if
 
 
