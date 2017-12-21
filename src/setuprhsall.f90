@@ -125,7 +125,6 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   use coinfo, only: diag_co,mype_co,jpch_co,ihave_co
   use mpimod, only: ierror,mpi_comm_world,mpi_rtype,mpi_sum,npe
   use gridmod, only: nsig,twodvar_regional,wrf_mass_regional,nems_nmmb_regional
-  use gridmod, only: cmaq_regional
   use gsi_4dvar, only: nobs_bins,l4dvar
   use jfunc, only: jiter,jiterstart,miter,first,last
   use qcmod, only: npres_print
@@ -233,6 +232,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
   real(r_kind),dimension(:,:,:),pointer:: ges_tv_it=>NULL()
   real(r_kind),dimension(:,:,:),pointer:: ges_q_it =>NULL()
+  integer(i_kind) :: i
 
   if(.not.init_pass .and. .not.lobsdiag_allocated) call die('setuprhsall','multiple lobsdiag_allocated',lobsdiag_allocated)
 !******************************************************************************
@@ -358,7 +358,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
 
 ! Compute derived quantities on grid
-  if(.not.cmaq_regional) call compute_derived(mype,init_pass)
+  call compute_derived(mype,init_pass)
 
   ! ------------------------------------------------------------------------
 
@@ -493,10 +493,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
               else if(obstype=='lag') then 
                  call setuplag(lunin,mype,bwork,awork(1,i_lag),nele,nobs,is,conv_diagsave)
               else if(obstype == 'pm2_5')then 
-                 call setuppm2_5(lunin,mype,nele,nobs,isis,is,conv_diagsave)
-
-              else if(obstype == 'pm10')then 
-                 call setuppm10(lunin,mype,nele,nobs,isis,is,conv_diagsave)
+                 call setuppm2_5(lunin,mype,nele,nobs,&
+                      isis,is,conv_diagsave)
 
 !             Set up conventional wind gust data
               else if(obstype=='gust' .and. getindex(svars2d,'gust')>0) then

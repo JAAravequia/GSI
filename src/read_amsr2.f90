@@ -1,6 +1,6 @@
 subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
      infile,lunout,obstype,nread,ndata,nodata,twind,sis,&
-     mype_root,mype_sub,npe_sub,mpi_comm_sub,nobs)
+     mype_root,mype_sub,npe_sub,mpi_comm_sub)
 
 ! subprogram:    read_amsr2                  read bufr format amsr2 data
 !   prgmmr: ejones         copied from read_amsre.f90         date: 2014-03-15
@@ -14,9 +14,6 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
 !
 ! program history log:
 !   2014-03-15  ejones   - read amsr2
-!   2015-09-17  Thomas   - add l4densvar and thin4d to data selection procedure
-!   2015-09-30  ejones   - modify solar angle info passed for calculating
-!                          sunglint in QC routine, get rid of old sun glint calc
 ! 
 !
 ! input argument list:
@@ -42,7 +39,6 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
 !     nread    - number of BUFR AMSR2 observations read
 !     ndata    - number of BUFR AMSR2 profiles retained for further processing
 !     nodata   - number of BUFR AMSR2 observations retained for further processing
-!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !     language: f90
@@ -56,11 +52,10 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
   use gridmod, only: diagnostic_reg,regional,nlat,nlon,rlats,rlons,&
       tll2xy
   use constants, only: deg2rad,rad2deg,zero,one,three,r60inv,two
-  use gsi_4dvar, only: l4dvar, iwinbgn, winlen, l4densvar, thin4d
+  use gsi_4dvar, only: l4dvar, iwinbgn, winlen
   use calc_fov_conical, only: instrument_init
   use deter_sfc_mod, only: deter_sfc_fov,deter_sfc
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
-  use mpimod, only: npe
 
   implicit none
 
@@ -83,7 +78,6 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
 ! Output variables
   integer(i_kind)  ,intent(inout) :: nread
   integer(i_kind)  ,intent(inout) :: ndata,nodata
-  integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
 
 ! Number of channels for sensors in BUFR
   integer(i_kind),parameter :: N_AMSRCH  =  14  ! only channels 1-14 processed
@@ -117,7 +111,7 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
   real(r_kind)     :: timedif, pred, crit1, dist1
   real(r_kind),allocatable,dimension(:,:):: data_all
   integer(i_kind),allocatable,dimension(:)::nrec
-  integer(i_kind):: irec,next
+  integer(i_kind):: irec,isub,next
   real(r_kind),dimension(0:3):: sfcpct
   real(r_kind),dimension(0:4):: rlndsea
   real(r_kind),dimension(0:3):: ts
@@ -130,6 +124,8 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
   integer(i_kind) :: ichan, instr, idum
 
   logical :: valid
+  real(r_kind) :: clath_sun_glint_calc , clonh_sun_glint_calc 
+  real(r_kind) :: date5_4_sun_glint_calc
 
   real(r_kind) :: expansion, dlat_earth_deg, dlon_earth_deg
 
@@ -156,7 +152,10 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
   real(r_double),dimension(3,14):: amsrchan_d             
 
 ! ---- sun glint ----
-  real(r_kind) :: sun_zenith
+  integer(i_kind) doy,mlen(12),mday(12),mon,m
+  real(r_kind) sun_elevation,sun_azimuth,bearaz,sun_zenith
+  data  mlen/31,28,31,30,31,30, &
+             31,31,30,31,30,31/ 
 
   integer(i_kind) :: ireadsb, ireadmg 
   real(r_kind),parameter:: one_minute=0.01666667_r_kind
@@ -172,6 +171,11 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
      call gsi_nstcoupler_skindepth(obstype, zob)         ! get penetration depth (zob) for the obstype
   endif
 
+  m = 0
+  do mon=1,12 
+     mday(mon) = m 
+     m = m + mlen(mon) 
+  end do 
   ntest = 0
   nreal = maxinfo+nstinfo
   ndata = 0
@@ -252,7 +256,6 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
         call ufbint(lnbufr,gcomspot_d,4,1,iret,'SAID ORBN SOLAZI SOEL')    !???
 
         said = nint(gcomspot_d(1))
-        if(said /= GCOMW1_SAID)    cycle read_loop
 
 !       Retrieve bufr 2/4 :get amsrspot (siid,ymdhs,lat,lon)
         call ufbrep(lnbufr,amsrspot_d,N_AMSRSPOT_LIST,1,iret, &
@@ -280,15 +283,15 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
 
         call w3fs21(idate5,nmind)
         t4dv = (real((nmind-iwinbgn),r_kind) + amsrspot_d(7)*r60inv)*r60inv ! add in seconds
-        sstime = real(nmind,r_kind) + amsrspot_d(7)*r60inv ! add in seconds
-        tdiff  = (sstime - gstime)*r60inv
 
-        if (l4dvar.or.l4densvar) then
+        if (l4dvar) then
            if (t4dv<zero .OR. t4dv>winlen) cycle read_loop
         else
+           sstime = real(nmind,r_kind) + amsrspot_d(7)*r60inv ! add in seconds
+           tdiff  = (sstime - gstime)*r60inv
            if (abs(tdiff)>twind) cycle read_loop  
         endif
-        if (thin4d) then
+        if (l4dvar) then
            timedif = zero
         else
            timedif = 6.0_r_kind*abs(tdiff) ! range:  0 to 18 
@@ -427,23 +430,32 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
 
 !    Check observational info 
 
-        if( soel < -90._r_kind .or. soel > 90._r_kind )then
+        if( soel < -180._r_kind .or. soel > 180._r_kind )then
            write(6,*)'READ_AMSR2:  ### ERROR IN READING BUFR DATA:', &
               ' STRANGE OBS INFO(FOV,SOLAZI,SOEL):', fovn, solazi, soel
            cycle read_loop       
         endif
-!    make solar azimuth angles from -180 to 180 degrees
-        if (solazi > 180.0_r_kind) then
-           solazi=solazi-360.0_r_kind
-        endif
 
-!    calculate solar zenith angle (used in QC for sun glint)
-        sun_zenith = 90.0_r_kind - soel
 
-!       check to make sure sun zenith is between 0 and 180
-        if (sun_zenith < 0.0_r_kind) then
-          sun_zenith=90.0_r_kind-sun_zenith
-        endif
+! Work on this:
+! Sun glint and solar zenith code from AMSR-E, use this while no sun glint angle
+! is present in the AMSR2 data stream.
+!  -------- Retreive Sun glint angle -----------
+        doy = mday( int(idate5(2)) ) + int(idate5(3))
+        if ((mod( int(idate5(1)),4)==0).and.( int(idate5(2)) > 2))  then 
+           doy = doy + 1
+        end if 
+
+        ifov = nint(fovn)
+
+        clath_sun_glint_calc = clath
+        clonh_sun_glint_calc = clonh
+        if(clonh>180_r_kind) clonh_sun_glint_calc = clonh -360.0_r_kind
+        date5_4_sun_glint_calc =  &                                                                                                
+        real(idate5(4),r_kind)+real(idate5(5),r_kind)*r60inv+real(amsrspot_d(7),r_kind)*r60inv*r60inv   
+
+        call zensun(doy,date5_4_sun_glint_calc,clath_sun_glint_calc,clonh_sun_glint_calc,sun_zenith,sun_azimuth)
+
         saz = amsrspot_d(11)*deg2rad    ! satellite zenith/incidence angle(rad)
 
 !       interpolate NSST variables to Obs. location and get dtw, dtc, tz_tr
@@ -466,7 +478,7 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
         data_all(7,itx) = zero                       ! look angle (rad)
         data_all(8,itx) = ifov                       ! fov number    1-243
         data_all(9,itx) = sun_zenith                 ! solar zenith angle (deg)
-        data_all(10,itx)= solazi                     ! solar azimuth angle from bufr file (deg)
+        data_all(10,itx)= sun_azimuth                ! solar azimuth angle (deg)
         data_all(11,itx) = sfcpct(0)                 ! sea percentage of
         data_all(12,itx) = sfcpct(1)                 ! land percentage
         data_all(13,itx) = sfcpct(2)                 ! sea ice percentage
@@ -531,7 +543,6 @@ subroutine read_amsr2(mype,val_amsr2,ithin,isfcalc,rmesh,gstime,&
      end do
 
 !    Write final set of "best" observations to output file
-     call count_obs(ndata,nele,ilat,ilon,data_all,nobs)
      write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
      write(lunout) ((data_all(k,n),k=1,nele),n=1,ndata)
   endif

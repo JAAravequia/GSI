@@ -37,8 +37,6 @@ subroutine intlcbas(lcbashead,rval,sval)
 !
 ! program history log:
 !
-!   2015-03-11 -  pondeca  - modify so that use of obsdiags can be turned off
-!
 !   input argument list:
 !     lcbashead
 !     slcbas    - increment in grid space
@@ -54,7 +52,7 @@ subroutine intlcbas(lcbashead,rval,sval)
 !$$$
   use kinds, only: r_kind,i_kind
   use constants, only: half,one,tiny_r_kind,cg_term
-  use obsmod, only: lcbas_ob_type, lsaveobsens, l_do_adjoint, luse_obsdiag
+  use obsmod, only: lcbas_ob_type, lsaveobsens, l_do_adjoint
   use qcmod, only: nlnqc_iter,varqc_iter
   use gridmod, only: latlon11
   use jfunc, only: jiter
@@ -103,17 +101,17 @@ subroutine intlcbas(lcbashead,rval,sval)
      val=w1*slcbas(j1)+w2*slcbas(j2)&
         +w3*slcbas(j3)+w4*slcbas(j4)
 
-     if(luse_obsdiag)then
-        if (lsaveobsens) then
-           grad = val*lcbasptr%raterr2*lcbasptr%err2
-           lcbasptr%diags%obssen(jiter) = grad
-        else
-           if (lcbasptr%luse) lcbasptr%diags%tldepart(jiter)=val
-        endif
+     if (lsaveobsens) then
+        lcbasptr%diags%obssen(jiter) = val*lcbasptr%raterr2*lcbasptr%err2
+     else
+        if (lcbasptr%luse) lcbasptr%diags%tldepart(jiter)=val
      endif
 
      if (l_do_adjoint) then
-        if (.not. lsaveobsens) then
+        if (lsaveobsens) then
+           grad = lcbasptr%diags%obssen(jiter)
+ 
+        else
            val=val-lcbasptr%res
 
 !          gradient of nonlinear operator

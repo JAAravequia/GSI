@@ -728,7 +728,6 @@ contains
           end if
        end if
     end do
-
     if(mype == 0)then
        write(6,*)' total number of superobs written=',nsuperall
        write(6,*)'  vrmin,maxall=',vrminall,vrmaxall

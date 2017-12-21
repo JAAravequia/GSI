@@ -1,7 +1,7 @@
 subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
      rmesh,jsatid,gstime,infile,lunout,obstype,&
      nread,ndata,nodata,twind,sis, &
-     mype_root,mype_sub,npe_sub,mpi_comm_sub,nobs)
+     mype_root,mype_sub,npe_sub,mpi_comm_sub)
 ! subprogram:    read_saphir                 read bufr format saphir data
 ! prgmmr :   ejones          org: jcsda               date: 2015-01-02
 ! code copied from read_atms.f90
@@ -15,7 +15,6 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
 !
 ! program history log:
 !  2015-01-02  ejones  - adapted from read_atms.f90
-!  2015-09-17  Thomas  - add l4densvar and thin4d to data selection procedure
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -41,7 +40,6 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
 !     nread    - number of BUFR ATMS 1b observations read
 !     ndata    - number of BUFR ATMS 1b profiles retained for further processing
 !     nodata   - number of BUFR ATMS 1b observations retained for further processing
-!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -59,11 +57,10 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
   use constants, only: deg2rad,zero,one,two,three,rad2deg,r60inv
   use crtm_module, only : max_sensor_zenith_angle
   use calc_fov_crosstrk, only : instrument_init, fov_cleanup, fov_check
-  use gsi_4dvar, only: l4dvar,iwinbgn,winlen,l4densvar,thin4d
+  use gsi_4dvar, only: l4dvar,iwinbgn,winlen
   use gsi_metguess_mod, only: gsi_metguess_get
   use deter_sfc_mod, only: deter_sfc_fov,deter_sfc
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth,gsi_nstcoupler_deter
-  use mpimod, only: npe
 
   implicit none
 
@@ -80,7 +77,6 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
   integer(i_kind) ,intent(in   ) :: mype_sub
   integer(i_kind) ,intent(in   ) :: npe_sub
   integer(i_kind) ,intent(in   ) :: mpi_comm_sub
-  integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
 
 ! Declare local parameters
 
@@ -111,7 +107,7 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
   integer(i_kind)       :: nmind,itx,nreal,nele,itt,num_obs
   integer(i_kind)       :: iskip 
   integer(i_kind)       :: lnbufr,ksatid,isflg  
-  integer(i_kind)       :: ilat,ilon,nadir
+  integer(i_kind)       :: ilat,ilon, ifovmod, nadir
   integer(i_kind),dimension(5):: idate5
   integer(i_kind)       :: instr,ichan,icw4crtm,iql4crtm
   integer(i_kind)       :: ier
@@ -126,6 +122,7 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
   real(r_kind)           :: tsavg,vty,vfr,sty,stp,sm,sn,zz,ff10
   real(r_kind)           :: zob,tref,dtw,dtc,tz_tr
 
+  real(r_kind)           :: pred
   real(r_kind)           :: dlat,dlon,tdiff,panglr
   real(r_kind)           :: dlon_earth_deg,dlat_earth_deg 
   real(r_kind)           :: step,start,dist1
@@ -318,15 +315,15 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
         idate5(5) = bfr1bhdr(7) !minute
         call w3fs21(idate5,nmind)
         t4dv= (real((nmind-iwinbgn),r_kind) + bfr1bhdr(8)*r60inv)*r60inv    ! add in seconds
-        tdiff=t4dv+(iwinbgn-gstime)*r60inv
-        if (l4dvar.or.l4densvar) then
+        if (l4dvar) then
            if (t4dv<minus_one_minute .OR. t4dv>winlen+one_minute) &
                 cycle read_loop
         else
+           tdiff=t4dv+(iwinbgn-gstime)*r60inv
            if(abs(tdiff) > twind+one_minute) cycle read_loop
         endif
  
-        if (thin4d) then
+        if (l4dvar) then
            crit1 = zero
         else
            crit1 = two*abs(tdiff)        ! range:  0 to 6
@@ -346,10 +343,7 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
 
 
 ! compute look angle (panglr) and check against max angle
-!        panglr=(start+float(ifov-1)*step)*deg2rad
-! Use this calculation for now:
-        step = .6660465
-        panglr = (42.96 - float(ifov-1)*step)*deg2rad
+        panglr=(start+float(ifov-1)*step)*deg2rad
 
         if(abs(lza)*rad2deg > MAX_SENSOR_ZENITH_ANGLE) then
           write(6,*)'READ_SAPHIR WARNING lza error ',lza,panglr
@@ -427,7 +421,7 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
      endif
 
 ! Check time window
-     if (l4dvar.or.l4densvar) then
+     if (l4dvar) then
         if (t4dv<zero .OR. t4dv>winlen) cycle ObsLoop
      else
         tdiff=t4dv+(iwinbgn-gstime)*r60inv
@@ -481,12 +475,7 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
      else
         call deter_sfc(dlat,dlon,dlat_earth,dlon_earth,t4dv,isflg, &
              idomsfc(1),sfcpct,ts,tsavg,vty,vfr,sty,stp,sm,sn,zz,ff10,sfcr)
-
-           if(isflg/=0) cycle ObsLoop                     ! use data over water only
-
      endif
-
-
 
      crit1 = crit1 + rlndsea(isflg) + 10._r_kind*float(iskip) + 0.01_r_kind * abs(zz)
      call checkob(dist1,crit1,itx,iuse)
@@ -509,10 +498,7 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
      endif
 
 ! Re-calculate look angle
-!     panglr=(start+float(ifov-1)*step)*deg2rad
-! Use this calculation for now:
-        step = .6660465
-        panglr = (42.96 - float(ifov-1)*step)*deg2rad
+     panglr=(start+float(ifov-1)*step)*deg2rad
 
 !     Load selected observation into data array
               
@@ -523,7 +509,7 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
      data_all(5 ,itx)= lza                       ! local zenith angle
      data_all(6 ,itx)= satazi                    ! local azimuth angle
      data_all(7 ,itx)= panglr                    ! look angle
-     data_all(8 ,itx)= ifov                      ! scan position
+     data_all(8 ,itx)= ifovmod                   ! scan position
      data_all(9 ,itx)= solzen                    ! solar zenith angle
      data_all(10,itx)= solazi                    ! solar azimuth angle
      data_all(11,itx) = sfcpct(0)                ! sea percentage of
@@ -580,6 +566,7 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
   call combine_radobs(mype_sub,mype_root,npe_sub,mpi_comm_sub,&
        nele,itxmax,nread,ndata,data_all,score_crit,nrec)
 
+! 
   if(mype_sub==mype_root)then
      do n=1,ndata
         do i=1,nchanl
@@ -592,7 +579,6 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
      end do
      
 !    Write final set of "best" observations to output file
-     call count_obs(ndata,nele,ilat,ilon,data_all,nobs)
      write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
      write(lunout) ((data_all(k,n),k=1,nele),n=1,ndata)
   end if

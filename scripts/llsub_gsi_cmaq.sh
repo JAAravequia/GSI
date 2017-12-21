@@ -3,7 +3,7 @@
 #@ job_type=parallel
 #@ class=dev
 #@ group=dev
-#@ account_no = RDAS-T2O
+#@ account_no = RDAS-MTN
 
 #@ job_name=cmaq
 #@ error=$(job_name).e$(jobid)

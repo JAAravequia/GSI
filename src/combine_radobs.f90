@@ -142,11 +142,9 @@ subroutine combine_radobs(mype_sub,mype_root,&
      do k=1,itxmax
         if(data_crit(k) < 1.e9_r_kind)then
            ndata=ndata+1
-           if( k /= ndata)then
-              do l=1,nele
-                 data_all(l,ndata)=data_all(l,k)
-              end do
-           end if
+           do l=1,nele
+              data_all(l,ndata)=data_all(l,k)
+           end do
         end if
      end do
   end if
