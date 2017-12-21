@@ -30,7 +30,7 @@ if [[ $nargs -lt 1 && $nargs -gt 2 ]]; then
    exit 1
 fi
 
-RADMON_SUFFIX=$1
+SUFFIX=$1
 
 if [[ $nargs -eq 2 ]]; then
    SATYPE=$2
@@ -93,7 +93,7 @@ BDATE=`$NDATE -720 $EDATE`
 echo EDATE = $EDATE
 echo BDATE = $BDATE
 
-tmpdir=${STMP_USER}/base_${RADMON_SUFFIX}
+tmpdir=${STMP_USER}/base_${SUFFIX}
 rm -rf $tmpdir
 mkdir -p $tmpdir
 cd $tmpdir

@@ -30,9 +30,6 @@ if [[ $nargs -lt 1 || $nags -gt 3 ]]; then
    exit 1
 fi
 
-. /usrx/local/Modules/3.2.9/init/sh
-module load /nwprod2/modulefiles/prod_util/v1.0.2
-
 this_file=`basename $0`
 this_dir=`dirname $0`
 
@@ -42,7 +39,7 @@ this_dir=`dirname $0`
 #
 #  if $COMOUT is defined then assume we're in a parallel.
 #--------------------------------------------------------------------
-export RADMON_SUFFIX=$1
+export SUFFIX=$1
 export RUN_ENVIR=""
 
 if [[ $nargs -ge 2 ]]; then
@@ -64,7 +61,7 @@ if [[ $RUN_ENVIR = "" ]]; then
   fi
 fi
 
-echo RADMON_SUFFIX = $RADMON_SUFFIX
+echo SUFFIX = $SUFFIX
 echo RUN_ENVIR = $RUN_ENVIR
 
 
@@ -153,13 +150,10 @@ if [[ ${RUN_ENVIR} = dev ]]; then
    fi
 fi
 
-tmpdir=${WORKverf_rad}/check_rad${RADMON_SUFFIX}
+tmpdir=${WORKverf_rad}/check_rad${SUFFIX}
 rm -rf $tmpdir
 mkdir -p $tmpdir
 cd $tmpdir
-
-REGIONAL_RR=${REGIONAL_RR:-0} 		#  regional rapid refresh flag
-
 
 #------------------------------------------------------------------
 #  define data file sources depending on $RUN_ENVIR
@@ -191,27 +185,15 @@ if [[ $RUN_ENVIR = dev ]]; then
          exit 5
       fi
 
-      # --------------------------------------------------------------------
-      #  CYCLE_INTERVAL comes from the ../../parm/RadMon_user_settings file
-      # --------------------------------------------------------------------
-#      if [[ $REGIONAL_RR -eq 1 ]]; then
-      qdate=`${NDATE} +${CYCLE_INTERVAL} $pdate`
-#      else
-#         qdate=`${NDATE} +06 $pdate`
-#      fi
+      qdate=`${NDATE} +06 $pdate`
 
-      if [[ $REGIONAL_RR -eq 0 ]]; then
-         fdate=`${DE_SCRIPTS}/find_ndas_radstat.pl 0 $com`
-         echo $fdate
+      fdate=`${DE_SCRIPTS}/find_ndas_radstat.pl 0 $com`
+      echo $fdate
 
-         if [[ $qdate -ge $fdate ]]; then
-            export PDATE=$qdate
-         else 
-            export PDATE=$fdate
-         fi
-      else			# namrr for the moment
-         fdate=`${DE_SCRIPTS}/find_namrr_radstat.pl 0 $com`
+      if [[ $qdate -ge $fdate ]]; then
          export PDATE=$qdate
+      else 
+         export PDATE=$fdate
       fi
    fi 
    sdate=`echo $PDATE|cut -c1-8`
@@ -221,31 +203,24 @@ if [[ $RUN_ENVIR = dev ]]; then
    # Locate required files.
    #---------------------------------------------------------------
    echo $PDATE
-#   DATEM12=`${NDATE} +12 $PDATE`
-#   echo $DATEM12 
+   DATEM12=`${NDATE} +12 $PDATE`
+   echo $DATEM12 
 
-#   PDY00=`echo $PDATE | cut -c 1-8` 
-#   HH00=`echo $PDATE | cut -c 9-10`
-#   PDY12=`echo $DATEM12 | cut -c 1-8`
-#   HH12=`echo $DATEM12 | cut -c 9-10`
+   PDY00=`echo $PDATE | cut -c 1-8` 
+   HH00=`echo $PDATE | cut -c 9-10`
+   PDY12=`echo $DATEM12 | cut -c 1-8`
+   HH12=`echo $DATEM12 | cut -c 9-10`
 
-   if [[ $REGIONAL_RR -eq 1 ]]; then
-#      radstat=$com/namrr.$PDY12/namrr.t${HH12}z.radstat.tm06
-#      biascr=$com/namrr.$PDY12/namrr.t${HH12}z.satbiasc.tm06
-      /bin/sh ${DE_SCRIPTS}/getbestnamrr_radstat.sh ${PDATE} ${DATDIR} ${com}
-   else
-#      radstat=$com/ndas.$PDY12/ndas.t${HH12}z.radstat.tm12
-#      biascr=$com/ndas.$PDY12/ndas.t${HH12}z.satbiasc.tm12
-      /bin/sh ${DE_SCRIPTS}/getbestndas_radstat.sh ${PDATE} ${DATDIR} ${com}
-   fi
+   radstat=$com/ndas.$PDY12/ndas.t${HH12}z.radstat.tm12
+   biascr=$com/ndas.$PDY12/ndas.t${HH12}z.satbiasc.tm12
+
    echo RADSTAT = $radstat
    echo BIASCR  = $biascr
 
+   /bin/sh ${DE_SCRIPTS}/getbestndas_radstat.sh ${PDATE} ${DATDIR} ${com}
 
 
 elif [[ ${RUN_ENVIR} = para ]]; then
-   #  need to change this logic in line with glbl version
-   #  can't default to ndas 
 
    #---------------------------------------------------------------
    # Locate required files.
@@ -289,11 +264,11 @@ if [ -s $radstat -a -s $biascr ]; then
    export PDY=`echo $PDATE|cut -c1-8`
    export cyc=`echo $PDATE|cut -c9-10`
 
-   export job=${RADMON_SUFFIX}_vrfyrad_${PDY}${cyc}
+   export job=ndas_vrfyrad_${PDY}${cyc}
    export SENDSMS=${SENDSMS:-NO}
    export DATA_IN=${WORKverf_rad}
-   export DATA=${DATA:-${STMP_USER}/radmon_de_${RADMON_SUFFIX}}
-   export jlogfile=${WORKverf_rad}/jlogfile_${RADMON_SUFFIX}
+   export DATA=${DATA:-${STMP_USER}/radmon_regional}
+   export jlogfile=${WORKverf_rad}/jlogfile_${SUFFIX}
 
    export VERBOSE=${VERBOSE:-YES}
 
@@ -302,14 +277,14 @@ if [ -s $radstat -a -s $biascr ]; then
    #  Advance the satype file from previous day.
    #  If it isn't found then create one using the contents of the radstat file.
    #----------------------------------------------------------------------------
-   export satype_file=${TANKverf}/radmon.${PDY}/${RADMON_SUFFIX}_radmon_satype.txt
+   export satype_file=${TANKverf}/radmon.${PDY}/${SUFFIX}_radmon_satype.txt
 
    if [[ $CYC = "00" ]]; then
       echo "Making new day directory for 00 cycle"
       mkdir -p ${TANKverf}/radmon.${PDY}
       prev_day=`${NDATE} -06 $PDATE | cut -c1-8`
-      if [[ -s ${TANKverf}/radmon.${prev_day}/${RADMON_SUFFIX}_radmon_satype.txt ]]; then
-         cp ${TANKverf}/radmon.${prev_day}/${RADMON_SUFFIX}_radmon_satype.txt ${TANKverf}/radmon.${PDY}/.
+      if [[ -s ${TANKverf}/radmon.${prev_day}/${SUFFIX}_radmon_satype.txt ]]; then
+         cp ${TANKverf}/radmon.${prev_day}/${SUFFIX}_radmon_satype.txt ${TANKverf}/radmon.${PDY}/.
       fi
     fi
 
@@ -336,14 +311,12 @@ if [ -s $radstat -a -s $biascr ]; then
    #------------------------------------------------------------------
    #   Submit data processing jobs.
 
-   logfile=$LOGdir/data_extract.${RADMON_SUFFIX}.${PDY}.${cyc}.log
+   logfile=$LOGdir/data_extract.${SUFFIX}.${PDY}.${cyc}.log
 
    if [[ $MY_MACHINE = "wcoss" ]]; then
-      $SUB -q $JOB_QUEUE -P $PROJECT -M 40 -R affinity[core] -o ${logfile} -W 0:10 -J ${jobname} $HOMEgdas/jobs/JGDAS_VERFRAD
-   elif [[ $MY_MACHINE = "cray" ]]; then
-      $SUB -q $JOB_QUEUE -P $PROJECT -M 40 -o ${logfile} -W 0:10 -J ${jobname} $HOMEgdas/jobs/JGDAS_VERFRAD
+      $SUB -q $JOB_QUEUE -P $PROJECT -M 40 -R affinity[core] -o ${logfile} -W 0:10 -J ${jobname} $HOMEgdasradmon/jobs/JGDAS_VERFRAD
    elif [[ $MY_MACHINE = "zeus" || $MY_MACHINE = "theia"  ]]; then
-      $SUB -A $ACCOUNT -l procs=1,walltime=0:05:00 -N ${jobname} -V -j oe -o ${logfile} ${HOMEgdas}/jobs/JGDAS_VERFRAD
+      $SUB -A $ACCOUNT -l procs=1,walltime=0:05:00 -N ${jobname} -V -j oe -o ${logfile} ${HOMEgdasradmon}/jobs/JGDAS_VERFRAD
    fi
 
 fi
@@ -357,11 +330,9 @@ fi
 
 exit_value=0
 if [[ ${data_available} -ne 1 ]]; then
-   echo No data available for ${RADMON_SUFFIX}
+   echo No data available for ${SUFFIX}
    exit_value=6
 fi
-
-module unload /nwprod2/modulefiles/prod_util/v1.0.2
 
 echo end VrfyRad_rgn.sh
 exit ${exit_value}

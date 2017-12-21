@@ -9,15 +9,21 @@
 #  to use the automated validation mechanism.
 # *****************************************************************
 
-BINDIR = ../../exec
+SHELL=/bin/sh
+SRCS = make_base.f90
 
-LIBS   = $(W3NCO_LIB4)
-
-OBJS   =  make_base.o
+OBJS =  make_base.o
 
 #
 # *****************************************************************
 #
+
+#------------
+# Include machine dependent compile & load options
+#------------
+MAKE_CONF = Makefile.conf
+include $(MAKE_CONF)
+
 
 CMD = make_base
 
@@ -28,17 +34,9 @@ clean:
 	rm -f *.mod
 	rm -f make_base
 
-check_prereqs:
-	/nwprod/spa_util/check_libs.bash $(LIBS)
-
-install:	
-	cp -f $(CMD) $(BINDIR)/.
-
-debug:  FFLAGS = $(D_FFLAGS)
-debug:  $(CMD)
-
 $(CMD):         $(OBJS)
 	$(CF) $(FFLAGS) $(LDFLAGS) -o $(@) $(OBJS) $(LIBS)
+	cp ${CMD} ../../exec/.
 
 make_base.o : make_base.f90
 	$(CF) $(FFLAGS) -c $(*).f90

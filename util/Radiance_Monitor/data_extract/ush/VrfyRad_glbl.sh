@@ -32,14 +32,8 @@ if [[ $nargs -lt 1 || $nargs -gt 3 ]]; then
    exit 1
 fi
 
-. /usrx/local/Modules/3.2.9/init/sh
-module load /nwprod2/modulefiles/prod_util/v1.0.2
-
 this_file=`basename $0`
 this_dir=`dirname $0`
-num_flds=`echo ${this_dir} | awk -F'/' '{print NF}'`
-
-export KEEPDATA="YES"
 
 #--------------------------------------------------------------------
 #  Eventually remove RUN_ENVIR argument but allow for it to possibly be
@@ -47,7 +41,7 @@ export KEEPDATA="YES"
 #  
 #  if $COMOUT is defined then assume we're in a parallel.
 #--------------------------------------------------------------------
-export RADMON_SUFFIX=$1
+export SUFFIX=$1
 export RUN_ENVIR=""
 
 if [[ $nargs -ge 2 ]]; then
@@ -69,7 +63,7 @@ if [[ $RUN_ENVIR = "" ]]; then
   fi
 fi
 
-echo RADMON_SUFFIX = $RADMON_SUFFIX
+echo SUFFIX = $SUFFIX
 echo RUN_ENVIR = $RUN_ENVIR
 
 
@@ -236,10 +230,8 @@ if [[ -e ${radstat} ]]; then
    export job=gdas_vrfyrad_${PDY}${cyc}
    export SENDSMS=${SENDSMS:-NO}
    export DATA_IN=${WORKverf_rad}
-   export DATA=${DATA:-${STMP_USER}/radmon/${RADMON_SUFFIX}}
-   rm -rf ${DATA}
-   mkdir -p ${DATA}
-   export jlogfile=${WORKverf_rad}/jlogfile_${RADMON_SUFFIX}
+   export DATA=${DATA:-${STMP_USER}/radmon}
+   export jlogfile=${WORKverf_rad}/jlogfile_${SUFFIX}
 
    export VERBOSE=${VERBOSE:-YES}
   
@@ -248,14 +240,14 @@ if [[ -e ${radstat} ]]; then
    #  Advance the satype file from previous day.
    #  If it isn't found then create one using the contents of the radstat file.
    #----------------------------------------------------------------------------
-   satype_file=${TANKverf}/radmon.${PDY}/${RADMON_SUFFIX}_radmon_satype.txt
+   export satype_file=${TANKverf}/radmon.${PDY}/${SUFFIX}_radmon_satype.txt
 
    if [[ $CYC = "00" ]]; then
       echo "Making new day directory for 00 cycle"
       mkdir -p ${TANKverf}/radmon.${PDY}
       prev_day=`${NDATE} -06 $PDATE | cut -c1-8`
-      if [[ -s ${TANKverf}/radmon.${prev_day}/${RADMON_SUFFIX}_radmon_satype.txt ]]; then
-         cp ${TANKverf}/radmon.${prev_day}/${RADMON_SUFFIX}_radmon_satype.txt ${TANKverf}/radmon.${PDY}/.
+      if [[ -s ${TANKverf}/radmon.${prev_day}/${SUFFIX}_radmon_satype.txt ]]; then
+         cp ${TANKverf}/radmon.${prev_day}/${SUFFIX}_radmon_satype.txt ${TANKverf}/radmon.${PDY}/.
       fi
     fi 
 
@@ -269,7 +261,6 @@ if [[ -e ${radstat} ]]; then
       echo "CREATED ${satype_file}"
     fi
 
-    export satype_file=${RADMON_SUFFIX}_radmon_satype.txt
    
    #------------------------------------------------------------------
    #   Override the default base_file declaration if there is an  
@@ -283,11 +274,10 @@ if [[ -e ${radstat} ]]; then
    #   Submit data processing jobs.
    #------------------------------------------------------------------
    if [[ $MY_MACHINE = "wcoss" ]]; then
-      $SUB -q $JOB_QUEUE -P $PROJECT -o $LOGdir/data_extract.${PDY}.${cyc}.log -M 100 -R affinity[core] -W 0:20 -J ${jobname} $HOMEgdas/jobs/JGDAS_VERFRAD
-   elif [[ $MY_MACHINE = "cray" ]]; then
-      $SUB -q $JOB_QUEUE -P $PROJECT -o $LOGdir/data_extract.${PDY}.${cyc}.log -M 100 -W 0:20 -J ${jobname} $HOMEgdas/jobs/JGDAS_VERFRAD
+      $SUB -q $JOB_QUEUE -P $PROJECT -o $LOGdir/data_extract.${PDY}.${cyc}.log -M 100 -R affinity[core] -W 0:20 -J ${jobname} $HOMEgdasradmon/jobs/JGDAS_VERFRAD
+
    elif [[ $MY_MACHINE = "zeus" || $MY_MACHINE = "theia" ]]; then
-      $SUB -A $ACCOUNT -l procs=1,walltime=0:10:00 -N ${jobname} -V -o $LOGdir/data_extract.${PDY}.${CYC}.log -e $LOGdir/error_file.${PDY}.${CYC}.log $HOMEgdas/jobs/JGDAS_VERFRAD
+      $SUB -A $ACCOUNT -l procs=1,walltime=0:10:00 -N ${jobname} -V -o $LOGdir/data_extract.${PDY}.${CYC}.log -e $LOGdir/error_file.${PDY}.${CYC}.log $HOMEgdasradmon/jobs/JGDAS_VERFRAD
    fi
   
 fi
@@ -302,12 +292,11 @@ fi
 exit_value=0
 if [[ ${data_available} -ne 1 ]]; then
    exit_value=6
-   echo No data available for ${RADMON_SUFFIX}
+   echo No data available for ${SUFFIX}
 fi
 
 echo end VrfyRad_glbl.sh
 
-module unload prod_util/v1.0.2
 
 exit ${exit_value}
 
