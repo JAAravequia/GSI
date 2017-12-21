@@ -113,9 +113,8 @@
                my $teststr = $sorttime[$ii];
 
                my @values = split( '\.', $teststr );
-               if( looks_like_number( $values[$idx] ) && length( $values[$idx] ) == 10 ) {
-                  push( @times, $values[$idx] );
-               }
+               push( @times, $values[$idx] );
+
             }
 
             if ( $#times >= 0 ) {

@@ -271,7 +271,6 @@ rm -f $EFCSGRP
 ################################################################################
 # Run forecast for ensemble member
 #---------------------------------
-rc=0
 imem=$ENSBEG
 while [[ $imem -le $ENSEND ]]; do
 
@@ -369,16 +368,11 @@ while [[ $imem -le $ENSEND ]]; do
    fi
 
    $FORECASTSH
-   ra=$?
-   ((rc+=ra))
+   rc=$?
 
-   ##############################################################
-   # Add this statement to notify a member forecast failed to 
-   # complete. Continue ahead with other members, but freeze epos
-   ##############################################################
-   if [ "$SENDECF" = YES -a $ra -ne 0 ]; then
-      ecflow_client --abort="forecast of member $imem FAILED"
-   fi
+   export ERR=$rc
+   export err=$ERR
+   $ERRSCRIPT||exit 2
 
    export COMOUT=$COMOUTSAVE
 
@@ -408,7 +402,7 @@ while [[ $imem -le $ENSEND ]]; do
    if [ $SENDDBN = YES ]; then
      FH=$FHOUT
      while [[ $FH -le $FHMAX ]]; do
-       [[ $FH -lt 10 ]]&&FH=0$FH
+       if [[ $FH -lt 10 ]] ; then FH=0$FH ; fi
        $DBNROOT/bin/dbn_alert MODEL GFS_ENKF $job $COMOUT/bfg_${CDATE}_fhr$FH$SUFOUT
        FH=$((FH+FHOUT))
      done
@@ -416,11 +410,7 @@ while [[ $imem -le $ENSEND ]]; do
 
    rm log
    $NCP $DATATOP/log_all ./log_old
-   if [ $ra -ne 0 ]; then
-      echo "MEMBER $imem : FAIL" > log
-   else
-      echo "MEMBER $imem : PASS" > log
-   fi
+   echo "Process member $imem" > log
    cat log_old log > log_new
    $NCP log_new $DATATOP/log_all
 
@@ -435,13 +425,6 @@ done
 cd $DATATOP
 $NCP log_all $EFCSGRP
 
-################################################################################
-# If any members failed, error out
-#---------------------------------
-
-export ERR=$rc
-export err=$ERR
-$ERRSCRIPT||exit 2
 
 ################################################################################
 #  Postprocessing

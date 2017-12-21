@@ -120,8 +120,12 @@ if(istatus/=0) then
    call stop2(999)
 endif
 
-do_cw_to_hydro = .false.
-do_cw_to_hydro = lc_cw .and. ls_ql .and. ls_qi
+do_cw_to_hydro=.false.
+if (regional) then
+   do_cw_to_hydro=lc_cw.and.ls_ql.and.ls_qi
+else
+   do_cw_to_hydro=lc_cw.and.ls_tsen.and.ls_ql.and.ls_qi  !global
+endif
 
 ! Initialize ensemble contribution to zero
 !$omp parallel do schedule(dynamic,1) private(jj)
@@ -177,9 +181,9 @@ do jj=1,ntlevs_ens
    call gsi_bundlegetvar ( wbundle_c, 't'  , sv_tv,  istatus )
    call gsi_bundlegetvar ( wbundle_c, 'ps' , sv_ps,  istatus )
 !  Get 3d pressure
-   if(do_q_copy) then
-      call gsi_bundlegetvar ( wbundle_c, 'q', sv_q, istatus )
-   else
+   sv_q=zero
+   if(do_q_copy) call gsi_bundlegetvar ( wbundle_c, 'q', sv_q, istatus )
+   if(.not. do_tlnmc)then
       if(do_getprs_tl) call getprs_tl(sv_ps,sv_tv,sv_prse)
 
 !  Convert RH to Q
@@ -187,6 +191,8 @@ do jj=1,ntlevs_ens
          call normal_rh_to_q(cv_rh,sv_tv,sv_prse,sv_q)
       end if
 
+!     Calculate sensible temperature
+      if(do_tv_to_tsen) call tv_to_tsen(sv_tv,sv_q,sv_tsen)
    end if
 
    if (do_cw_to_hydro) then
@@ -228,10 +234,16 @@ do jj=1,ntlevs_ens
 !  Get 3d pressure
       if(do_getprs_tl) call getprs_tl(sv_ps,sv_tv,sv_prse)
   
-   end if
+!  Convert RH to Q
+      if(do_normal_rh_to_q) then
+!  sv_tsen is used as a temporary array in this if statement
+         call normal_rh_to_q(cv_rh,sv_tv,sv_prse,sv_q)
+      end if
 
 !  Calculate sensible temperature 
-   if(do_tv_to_tsen) call tv_to_tsen(sv_tv,sv_q,sv_tsen)
+      if(do_tv_to_tsen) call tv_to_tsen(sv_tv,sv_q,sv_tsen)
+   end if
+
 
 end do  ! ntlevs
 
