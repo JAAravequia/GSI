@@ -85,6 +85,7 @@ subroutine calctends_no_tl(st,vp,t,p,mype,u_t,v_t,t_t,p_t,uvflag)
   real(r_kind),dimension(lat2,lon2):: sumkm1,sumvkm1,sum2km1,sum2vkm1
   real(r_kind),dimension(lat2,lon2,nsig):: t_thor9
   real(r_kind),dimension(lat2,lon2,nsig):: u_x,u_y,v_x,v_y,t_x,t_y
+  real(r_kind),dimension(lat2,lon2,nsig+1):: p3d_x,p3d_y
 
   real(r_kind) tmp,tmp2,tmp3,sumk,sumvk,sum2k,sum2vk,uduvdv
   integer(i_kind) i,j,k,ix,it,kk,ier,istatus
@@ -136,14 +137,8 @@ subroutine calctends_no_tl(st,vp,t,p,mype,u_t,v_t,t_t,p_t,uvflag)
 ! get 3d pressure
   call getprs_tl(p,t,pri)
 
-  if(uvflag)then
-    call get_derivatives2uv(st,vp,t,pri,u,v,u_x,v_x,t_x,pri_x, &
-                                        u_y,v_y,t_y,pri_y)
-  else
-    call get_derivatives2(st,vp,t,pri,u,v,u_x,v_x,t_x,pri_x, &
-                                        u_y,v_y,t_y,pri_y)
-  end if
-
+  call get_derivatives2(st,vp,t,pri,u,v,u_x,v_x,t_x,pri_x, &
+                                        u_y,v_y,t_y,pri_y,uvflag)
 
 !$omp parallel do private(i,j,k,kk,tmp,tmp2,uduvdv, &
 !$omp                  tmp3,sumk,sumvk,sum2k,sum2vk,ix)

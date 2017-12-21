@@ -93,18 +93,18 @@ subroutine stp3dvar(dirx,dir_dt)
   implicit none
 
 ! Declare passed variables
-  type(gsi_bundle), intent(in   ) :: dirx
+  type(gsi_bundle), intent(inout) :: dirx
   type(gsi_bundle), intent(  out) :: dir_dt
 
 ! Declare local variables
   integer(i_kind) ier,istatus
-  real(r_kind),pointer,dimension(:,:,:)::dirx_u
-  real(r_kind),pointer,dimension(:,:,:)::dirx_v
-  real(r_kind),pointer,dimension(:,:,:)::dirx_t
-  real(r_kind),pointer,dimension(:,:,:)::dirx_q
-  real(r_kind),pointer,dimension(:,:,:)::dirx_oz
-  real(r_kind),pointer,dimension(:,:,:)::dirx_cw
-  real(r_kind),pointer,dimension(:,:,:)::dirx_prse
+  real(r_kind),pointer,dimension(:,:,:)::dirx_u=>NULL()
+  real(r_kind),pointer,dimension(:,:,:)::dirx_v=>NULL()
+  real(r_kind),pointer,dimension(:,:,:)::dirx_t=>NULL()
+  real(r_kind),pointer,dimension(:,:,:)::dirx_q=>NULL()
+  real(r_kind),pointer,dimension(:,:,:)::dirx_oz=>NULL()
+  real(r_kind),pointer,dimension(:,:,:)::dirx_cw=>NULL()
+  real(r_kind),pointer,dimension(:,:,:)::dirx_prse=>NULL()
 
   real(r_kind),pointer,dimension(:,:,:)::dir_dt_u=>NULL()
   real(r_kind),pointer,dimension(:,:,:)::dir_dt_v=>NULL()
@@ -137,7 +137,12 @@ subroutine stp3dvar(dirx,dir_dt)
   call gsi_bundlegetpointer(dir_dt,'tsen',dir_dt_tsen,istatus);ier=istatus+ier
   if(ier/=0) return
 
-  call calctends_tl(dirx,dir_dt,mype)
+  call calctends_tl( &
+     dirx_u     ,dirx_v      ,dirx_t     ,               &
+     dirx_q     ,dirx_oz     ,dirx_cw    ,               &
+     mype, nnnn1o,          &
+     dir_dt_u,dir_dt_v ,dir_dt_t,dir_dt_prse, &
+     dir_dt_q,dir_dt_oz,dir_dt_cw,dirx_prse)
 
 ! Convert virtual temperature to sensible temperature for time derivatives
 ! for search direction

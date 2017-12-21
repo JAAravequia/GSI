@@ -50,7 +50,6 @@ module tendsmod
 !$$$ end documentation block
 
   use kinds, only: i_kind,r_kind
-  use constants, only: max_varname_length
   use gridmod, only: lat2,lon2,nsig
   use mpimod, only : mype
   use GSI_BundleMod, only : GSI_BundleCreate
@@ -74,6 +73,8 @@ module tendsmod
   public :: destroy_ges_tendencies
   public :: tnd_initialized
   public :: gsi_tendency_bundle
+  public :: tvars2d, tvars3d
+  public :: tsrcs2d, tsrcs3d
 ! set passed variables to public
   public :: pr_ydif9,pr_ysum9,pr_xdif9,coriolis,curvy,curvx,r_prsum9,prsth9
   public :: what9,pr_xsum9,prdif9,r_prdif9,wint9,wint9_f,r_bdiag9,factk9
@@ -90,8 +91,8 @@ module tendsmod
   real(r_kind) ctph0,stph0,tlm0
 
   type(gsi_bundle) :: gsi_tendency_bundle
-  character(len=max_varname_length),allocatable,dimension(:):: tvars2d, tvars3d
-  character(len=max_varname_length),allocatable,dimension(:):: tsrcs2d, tsrcs3d
+  character(len=32),allocatable,dimension(:):: tvars2d, tvars3d
+  character(len=32),allocatable,dimension(:):: tsrcs2d, tsrcs3d
 
 ! below this point: declare vars not to be made public
   logical,save :: tnd_set_        = .false.
@@ -134,12 +135,12 @@ character(len=*),optional,intent(in) :: rcname ! optional input filename
 
 character(len=*),parameter::myname_=myname//'*set_'
 character(len=*),parameter:: tbname='state_tendencies::'
-integer(i_kind) luin,ii,nrows,ntot,ipnt,istatus
+integer(i_kind) luin,i,ii,nrows,ntot,ipnt,istatus
 integer(i_kind) i2d,i3d,n2d,n3d,irank
 integer(i_kind),allocatable,dimension(:)::nlevs
 character(len=256),allocatable,dimension(:):: utable
-character(len=max_varname_length),allocatable,dimension(:):: vars
-character(len=max_varname_length),allocatable,dimension(:):: sources
+character(len=32),allocatable,dimension(:):: vars
+character(len=32),allocatable,dimension(:):: sources
 logical iamroot_,matched
 
 if(tnd_set_) return
@@ -189,8 +190,8 @@ enddo
 
 deallocate(utable)
 
-if(n2d >0)allocate(tvars2d(n2d),tsrcs2d(n2d))
-if(n3d >0)allocate(tvars3d(n3d),tsrcs3d(n3d),levels(n3d))
+allocate(tvars2d(n2d),tvars3d(n3d),&
+         tsrcs2d(n2d),tsrcs3d(n3d),levels(n3d))
 
 ! loop over variables and identify them by comparison
 i2d=0; i3d=0
@@ -385,11 +386,7 @@ subroutine destroy_ges_tendencies
      if(mype==0) write(6,*)'destroy_ges_tendencies warning: vector not allocated'
   endif
 
-  if(allocated(tvars2d))deallocate(tvars2d)
-  if(allocated(tvars3d))deallocate(tvars3d)
-  if(allocated(tsrcs2d))deallocate(tsrcs2d)
-  if(allocated(tsrcs3d))deallocate(tsrcs3d)
-  if(allocated(levels))deallocate(levels)
+  deallocate(tvars2d,tvars3d,tsrcs2d,tsrcs3d,levels)
 
   tnd_initialized = .false.
   if(mype==0) write(6,*) 'destroy_ges_tendencies: successfully complete'

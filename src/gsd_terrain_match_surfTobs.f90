@@ -43,7 +43,7 @@ subroutine gsd_terrain_match_surfTobs(mype,nreal,ndata,cdata_all)
   real(r_kind),dimension(nreal,ndata),intent(inout):: cdata_all
 
 ! Declare external calls for code analysis
-  external:: intrp2a11
+  external:: intrp2a
 
 ! Declare local parameters
   real(r_kind),parameter:: r0_5 = 0.5_r_kind
@@ -58,7 +58,7 @@ subroutine gsd_terrain_match_surfTobs(mype,nreal,ndata,cdata_all)
 
   character(len=*),parameter::myname='gsd_terrain_match_surfTobs'
   real(r_kind) pres1,topo1,temp1,temp5,tvold,gamcorr,tvnew,factor 
-  real(r_kind) geop5
+  real(r_kind) stnelevnew,dz,geop1,geop5
   integer(i_kind) iobsout, kx, nc, ier, istatus
   real(r_kind) toe,dlat,dlon
   real(r_kind) stnelev, dlnpob, usage
@@ -68,6 +68,8 @@ subroutine gsd_terrain_match_surfTobs(mype,nreal,ndata,cdata_all)
   real(r_kind),dimension(:,:,:),pointer:: ges_tv_nt=>NULL()
 
   real(r_double) rstation_id
+  character(8) station_id
+  equivalence(rstation_id,station_id)
   logical iqtflg
 
 !**************************************************************************
@@ -97,15 +99,15 @@ subroutine gsd_terrain_match_surfTobs(mype,nreal,ndata,cdata_all)
         usage   = cdata_all(12,iobsout)
         stnelev = cdata_all(19,iobsout)
 
-        call intrp2a11(geop_hgti(1,1,5,ntguessig),geop5,dlat,dlon,mype)
-        call intrp2a11(ges_z_nt,topo1,dlat,dlon,mype)
-        call intrp2a11(ges_ps_nt,pres1,dlat,dlon,mype)
+        call intrp2a(geop_hgti(1,1,5,ntguessig),geop5,dlat,dlon,1,1,mype)
+        call intrp2a(ges_z_nt,topo1,dlat,dlon,1,1,mype)
+        call intrp2a(ges_ps_nt,pres1,dlat,dlon,1,1,mype)
         if(iqtflg)then
-           call intrp2a11(ges_tv_nt(:,:,1),temp1,dlat,dlon,mype)
-           call intrp2a11(ges_tv_nt(:,:,5),temp5,dlat,dlon,mype)
+           call intrp2a(ges_tv_nt(1,1,1),temp1,dlat,dlon,1,1,mype)
+           call intrp2a(ges_tv_nt(1,1,5),temp5,dlat,dlon,1,1,mype)
         else
-           call intrp2a11(ges_tsen(:,:,1,ntguessig),temp1,dlat,dlon,mype)
-           call intrp2a11(ges_tsen(:,:,5,ntguessig),temp5,dlat,dlon,mype)
+           call intrp2a(ges_tsen(1,1,1,ntguessig),temp1,dlat,dlon,1,1,mype)
+           call intrp2a(ges_tsen(1,1,5,ntguessig),temp5,dlat,dlon,1,1,mype)
         endif
 
         gamcorr=(temp1-temp5)/geop5  

@@ -3,7 +3,15 @@ set -x
 
 # Set experiment name and analysis date
 
-exp=$jobname
+if [[ "$arch" = "Linux" ]]; then
+
+   exp=$jobname
+
+elif [[ "$arch" = "AIX" ]]; then
+
+   exp=$LOADL_JOB_NAME
+
+fi
 
 # Set path/file for gsi executable
 #basedir=/scratch1/portfolios/NCEPDEV/da/save/Michael.Lueken
@@ -27,7 +35,7 @@ savdir=$savdir/out${JCAP}/${exp}
 #fixgsi=$fixgsi
 #fixgsi=$basedir/EXP-port/fix
 #fixcrtm=$fixcrtm
-#fixcrtm=$basedir/nwprod/lib/sorc/CRTM_REL-2.2.3/Big_Endian
+#fixcrtm=$basedir/nwprod/lib/sorc/CRTM_REL-2.1.3/Big_Endian
 
 #datobs=$datobs
 #datobs=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/sigmap/$adate
@@ -40,7 +48,6 @@ savdir=$savdir/out${JCAP}/${exp}
 #   ndate is a date manipulation utility
 #   ncp is cp replacement, currently keep as /bin/cp
 
-UNCOMPRESS=gunzip
 CLEAN=NO
 #ndate=/scratch1/portfolios/NCEPDEV/da/save/Michael.Lueken/nwprod/util/exec/ndate
 ncp=/bin/cp
@@ -189,11 +196,7 @@ OBSINPUT="$OBSINPUT_update"
 SUPERRAD="$SUPERRAD_update"
 SINGLEOB="$SINGLEOB_update"
 
-if [ "$debug" = ".false." ]; then
-   . $scripts/regression_namelists.sh
-else
-   . $scripts/regression_namelists_db.sh
-fi
+. $scripts/regression_namelists.sh
 
 ##!   l4dvar=.false.,nhr_assimilation=6,nhr_obsbin=6,
 ##!   lsqrtb=.true.,lcongrad=.false.,ltlint=.true.,
@@ -223,19 +226,19 @@ EOF
 
 berror=$fixgsi/$endianness/global_berror.l${LEVS}y${NLAT}.f77
 
-emiscoef_IRwater=$fixcrtm/Nalli.IRwater.EmisCoeff.bin
-emiscoef_IRice=$fixcrtm/NPOESS.IRice.EmisCoeff.bin
-emiscoef_IRland=$fixcrtm/NPOESS.IRland.EmisCoeff.bin
-emiscoef_IRsnow=$fixcrtm/NPOESS.IRsnow.EmisCoeff.bin
-emiscoef_VISice=$fixcrtm/NPOESS.VISice.EmisCoeff.bin
-emiscoef_VISland=$fixcrtm/NPOESS.VISland.EmisCoeff.bin
-emiscoef_VISsnow=$fixcrtm/NPOESS.VISsnow.EmisCoeff.bin
-emiscoef_VISwater=$fixcrtm/NPOESS.VISwater.EmisCoeff.bin
-emiscoef_MWwater=$fixcrtm/FASTEM6.MWwater.EmisCoeff.bin
-aercoef=$fixcrtm/AerosolCoeff.bin
-cldcoef=$fixcrtm/CloudCoeff.bin
+emiscoef_IRwater=$crtm_coef/Nalli.IRwater.EmisCoeff.bin
+emiscoef_IRice=$crtm_coef/NPOESS.IRice.EmisCoeff.bin
+emiscoef_IRland=$crtm_coef/NPOESS.IRland.EmisCoeff.bin
+emiscoef_IRsnow=$crtm_coef/NPOESS.IRsnow.EmisCoeff.bin
+emiscoef_VISice=$crtm_coef/NPOESS.VISice.EmisCoeff.bin
+emiscoef_VISland=$crtm_coef/NPOESS.VISland.EmisCoeff.bin
+emiscoef_VISsnow=$crtm_coef/NPOESS.VISsnow.EmisCoeff.bin
+emiscoef_VISwater=$crtm_coef/NPOESS.VISwater.EmisCoeff.bin
+emiscoef_MWwater=$crtm_coef/FASTEM5.MWwater.EmisCoeff.bin
+aercoef=$crtm_coef/AerosolCoeff.bin
+cldcoef=$crtm_coef/CloudCoeff.bin
 satangl=$fixgsi/global_satangbias.txt
-scaninfo=$fixgsi/global_scaninfo.txt
+
 satinfo=$fixgsi/global_satinfo.txt
 convinfo=$fixgsi/global_convinfo_reg_test.txt
 anavinfo=$fixgsi/global_anavinfo.l64.txt
@@ -244,16 +247,6 @@ pcpinfo=$fixgsi/global_pcpinfo.txt
 hybens_locinfo=$fixgsi/global_hybens_locinfo.l64.txt
 errtable=$fixgsi/prepobs_errtable.global
 atmsbeaminfo=$fixgsi/atms_beamwidth.txt
-### add 9 tables
-errtable_pw=$fixgsi/prepobs_errtable_pw.global
-errtable_ps=$fixgsi/prepobs_errtable_ps.global_nqcf
-errtable_t=$fixgsi/prepobs_errtable_t.global_nqcf
-errtable_q=$fixgsi/prepobs_errtable_q.global_nqcf
-errtable_uv=$fixgsi/prepobs_errtable_uv.global_nqcf
-btable_ps=$fixgsi/nqc_b_ps.global_nqcf
-btable_t=$fixgsi/nqc_b_t.global_nqcf
-btable_q=$fixgsi/nqc_b_q.global_nqcf
-btable_uv=$fixgsi/nqc_b_uv.global_nqcf
 
 # Only need this file for single obs test
 bufrtable=$fixgsi/prepobs_prep.bufrtable
@@ -281,11 +274,10 @@ $ncp $emiscoef_VISice ./NPOESS.VISice.EmisCoeff.bin
 $ncp $emiscoef_VISland ./NPOESS.VISland.EmisCoeff.bin
 $ncp $emiscoef_VISsnow ./NPOESS.VISsnow.EmisCoeff.bin
 $ncp $emiscoef_VISwater ./NPOESS.VISwater.EmisCoeff.bin
-$ncp $emiscoef_MWwater ./FASTEM6.MWwater.EmisCoeff.bin
+$ncp $emiscoef_MWwater ./FASTEM5.MWwater.EmisCoeff.bin
 $ncp $aercoef  ./AerosolCoeff.bin
 $ncp $cldcoef  ./CloudCoeff.bin
 $ncp $satangl  ./satbias_angle
-$ncp $scaninfo ./scaninfo
 $ncp $satinfo  ./satinfo
 $ncp $pcpinfo  ./pcpinfo
 $ncp $ozinfo   ./ozinfo
@@ -295,26 +287,13 @@ $ncp $anavinfo ./anavinfo
 $ncp $hybens_locinfo ./hybens_locinfo
 $ncp $atmsbeaminfo ./atms_beamwidth.txt
 
-####
-#add 9 tables for new varqc
-$ncp $errtable_pw           ./errtable_pw
-$ncp $errtable_ps           ./errtable_ps
-$ncp $errtable_t           ./errtable_t
-$ncp $errtable_q           ./errtable_q
-$ncp $errtable_uv           ./errtable_uv
-$ncp $btable_ps           ./btable_ps
-$ncp $btable_t           ./btable_t
-$ncp $btable_q           ./btable_q
-$ncp $btable_uv           ./btable_uv
-###
-
 $ncp $bufrtable ./prepobs_prep.bufrtable
 $ncp $bftab_sst ./bftab_sstphr
 
 # Copy CRTM coefficient files based on entries in satinfo file
 for file in `awk '{if($1!~"!"){print $1}}' ./satinfo | sort | uniq` ;do
-    $ncp $fixcrtm/${file}.SpcCoeff.bin ./
-    $ncp $fixcrtm/${file}.TauCoeff.bin ./
+    $ncp $crtm_coef/${file}.SpcCoeff.bin ./
+    $ncp $crtm_coef/${file}.TauCoeff.bin ./
 done
 
 
@@ -345,26 +324,12 @@ ln -s -f $global_T62_obs/${prefix_obs}eshrs3.${suffix}   ./hirs3bufrears
 ln -s -f $global_T62_obs/${prefix_obs}ssmit.${suffix}    ./ssmitbufr
 ln -s -f $global_T62_obs/${prefix_obs}amsre.${suffix}    ./amsrebufr
 ln -s -f $global_T62_obs/${prefix_obs}ssmis.${suffix}    ./ssmisbufr
-ln -s -f $global_T62_obs/${prefix_obs}atms.${suffix}     ./atmsbufr
-ln -s -f $global_T62_obs/${prefix_obs}cris.${suffix}     ./crisbufr
 ln -s -f $global_T62_obs/${prefix_obs}syndata.tcvitals.tm00 ./tcvitl
 
 
 # Copy bias correction, atmospheric and surface files
 ln -s -f $global_T62_ges/${prefix_tbc}.abias              ./satbias_in
-ln -s -f $global_T62_ges/${prefix_tbc}.abias_pc           ./satbias_pc
 ln -s -f $global_T62_ges/${prefix_tbc}.satang             ./satbias_angle
-ln -s -f $global_T62_ges/${prefix_tbc}.radstat            ./radstat.gdas
-
-listdiag=`tar xvf radstat.gdas | cut -d' ' -f2 | grep _ges`
-for type in $listdiag; do
-   diag_file=`echo $type | cut -d',' -f1`
-   fname=`echo $diag_file | cut -d'.' -f1`
-   date=`echo $diag_file | cut -d'.' -f2`
-   $UNCOMPRESS $diag_file
-   fnameanl=$(echo $fname|sed 's/_ges//g')
-   mv $fname.$date $fnameanl
-done
 
 if [[ "$endianness" = "Big_Endian" ]]; then
    ln -s -f $global_T62_ges/${prefix_sfc}.bf03            ./sfcf03
@@ -387,7 +352,7 @@ elif [[ "$endianness" = "Little_Endian" ]]; then
 fi
 
 # Run gsi under Parallel Operating Environment (poe) on NCEP IBM
-if [[ "$machine" = "Theia" ]]; then
+if [[ "$arch" = "Linux" ]]; then
 
    cd $tmpdir/
    echo "run gsi now"
@@ -397,15 +362,15 @@ if [[ "$machine" = "Theia" ]]; then
    export MPI_GROUP_MAX=256
    #export OMP_NUM_THREADS=1
 
-#  module load intel
-#  module load mpt
+   module load intel
+   module load mpt
 
    echo "JOB ID : $PBS_JOBID"
-   eval "$launcher -v -np $PBS_NP $tmpdir/gsi.x > stdout"
+   eval "mpiexec_mpt -v -np $PBS_NP $tmpdir/gsi.x > stdout"
 
-elif [[ "$machine" = "WCOSS" ]]; then
+elif [[ "$arch" = "AIX" ]]; then
 
-   mpirun.lsf $tmpdir/gsi.x < gsiparm.anl > stdout
+   poe $tmpdir/gsi.x < gsiparm.anl > stdout
 
 fi
 

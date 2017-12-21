@@ -6,9 +6,9 @@
 #  Verification and data extraction script for global (GDAS) radiance
 #  diagnostic data.
 #
-#  This script verifies data is available and submits the
-#  JGDAS_VERFRAD job, which performs the data extraction and
-#  validation checks. 
+#  This script verifies data is available and submits the 
+#  JGDAS_VRFYRAD.sms.prod job, which performs the data extraction 
+#  and validation checks. 
 #--------------------------------------------------------------------
 set -ax
 echo start VrfyRad_glbl.sh
@@ -32,14 +32,8 @@ if [[ $nargs -lt 1 || $nargs -gt 3 ]]; then
    exit 1
 fi
 
-. /usrx/local/Modules/3.2.9/init/sh
-module load /nwprod2/modulefiles/prod_util/v1.0.2
-
 this_file=`basename $0`
 this_dir=`dirname $0`
-num_flds=`echo ${this_dir} | awk -F'/' '{print NF}'`
-
-export KEEPDATA="YES"
 
 #--------------------------------------------------------------------
 #  Eventually remove RUN_ENVIR argument but allow for it to possibly be
@@ -47,7 +41,7 @@ export KEEPDATA="YES"
 #  
 #  if $COMOUT is defined then assume we're in a parallel.
 #--------------------------------------------------------------------
-export RADMON_SUFFIX=$1
+export SUFFIX=$1
 export RUN_ENVIR=""
 
 if [[ $nargs -ge 2 ]]; then
@@ -69,7 +63,7 @@ if [[ $RUN_ENVIR = "" ]]; then
   fi
 fi
 
-echo RADMON_SUFFIX = $RADMON_SUFFIX
+echo SUFFIX = $SUFFIX
 echo RUN_ENVIR = $RUN_ENVIR
 
 
@@ -86,30 +80,17 @@ fi
 
 
 top_parm=${this_dir}/../../parm
-export RADMON_VERSION=${RADMON_VERSION:-${top_parm}/radmon.ver}
-if [[ -s ${RADMON_VERSION} ]]; then
-   . ${RADMON_VERSION}
+
+if [[ -s ${top_parm}/RadMon_config ]]; then
+   . ${top_parm}/RadMon_config
+   . ${top_parm}/RadMon_user_settings
 else
-   echo "Unable to source ${RADMON_VERSION} file"
+   echo "Unable to source RadMon_config file in ${top_parm}"
    exit 2
 fi
 
-export RADMON_CONFIG=${RADMON_CONFIG:-${top_parm}/RadMon_config}
-if [[ -s ${RADMON_CONFIG} ]]; then
-   . ${RADMON_CONFIG}
-else
-   echo "Unable to source ${RADMON_CONFIG} file"
-   exit 2
-fi
-
-if [[ -s ${RADMON_USER_SETTINGS} ]]; then
-   . ${RADMON_USER_SETTINGS}
-else
-   echo "Unable to source ${RADMON_USER_SETTINGS} file"
-   exit 3
-fi
-
-. ${DE_PARM}/data_extract_config
+. ${RADMON_DATA_EXTRACT}/parm/data_extract_config
+. ${PARMverf_rad}/glbl_conf
 
 
 #--------------------------------------------------------------------
@@ -118,17 +99,17 @@ fi
 #--------------------------------------------------------------------
 
 if [[ RUN_ONLY_ON_DEV -eq 1 ]]; then
-   is_prod=`${DE_SCRIPTS}/onprod.sh`
+   is_prod=`${USHverf_rad}/AmIOnProd.sh`
    if [[ $is_prod = 1 ]]; then
       exit 10
    fi
 fi
 
 
-mkdir -p $TANKverf
-mkdir -p $LOGdir
+mkdir -p $TANKDIR
+mkdir -p $LOGDIR
 
-jobname=$DATA_EXTRACT_JOBNAME
+jobname=${DATA_EXTRACT_JOBNAME}
 
 #--------------------------------------------------------------------
 # Check status of monitoring job.  Are any earlier verf jobs still 
@@ -140,19 +121,12 @@ jobname=$DATA_EXTRACT_JOBNAME
 if [[ $RUN_ENVIR = dev ]]; then
    if [[ $MY_MACHINE = "wcoss" ]]; then
       total=`bjobs -l | grep ${jobname} | wc -l`
-   elif [[ $MY_MACHINE = "zeus" || $MY_MACHINE = "theia" ]]; then
-      total=0
-      line=`qstat -u ${LOGNAME} | grep ${jobname}`
-      test=`echo $line | gawk '{print $10}'`
-
-      total=`echo $line | grep ${jobname} | wc -l`
-      if [[ $test = "C" && $total -eq "1" ]]; then
-         total=0
-      fi
+   elif [[ $MY_MACHINE = "zeus" ]]; then
+      total=`qstat -u ${LOGNAME} | grep ${jobname} | wc -l`
    fi
 
    if [[ $total -gt 0 ]]; then
-      exit 4
+      exit 3
    fi
 
 fi
@@ -169,11 +143,11 @@ if [[ $RUN_ENVIR = dev ]]; then
    # Get date of cycle to process.
    #---------------------------------------------------------------
    if [[ $PDATE = "" ]]; then
-      pdate=`${DE_SCRIPTS}/find_cycle.pl 1 ${TANKverf}`
+      pdate=`${USHverf_rad}/find_cycle.pl 1 ${TANKDIR}`
       if [[ ${#pdate} -ne 10 ]]; then
          echo "ERROR:  Unable to locate any previous cycle's data files"
          echo "        Please re-run this script with a specified starting cycle as the last argument"
-         exit 5
+         exit 4
       fi
       qdate=`${NDATE} +06 $pdate`
       export PDATE=${qdate}
@@ -191,9 +165,11 @@ if [[ $RUN_ENVIR = dev ]]; then
       export DATDIR=${DATDIR}/gdas.${PDY}
 
       export biascr=$DATDIR/gdas1.t${CYC}z.abias  
+#      export satang=$DATDIR/gdas1.t${CYC}z.satang
       export radstat=$DATDIR/gdas1.t${CYC}z.radstat
    else
       export biascr=$DATDIR/biascr.gdas.${PDATE}  
+#      export satang=$DATDIR/satang.gdas.${PDATE}
       export radstat=$DATDIR/radstat.gdas.${PDATE}
    fi
 
@@ -208,9 +184,11 @@ elif [[ $RUN_ENVIR = para ]]; then
    export CYC=`echo $PDATE|cut -c9-10`
 
    export biascr=$DATDIR/biascr.gdas.${CDATE}  
+#   export satang=$DATDIR/satang.gdas.${CDATE}
    export radstat=$DATDIR/radstat.gdas.${CDATE}
 
    echo biascr  = $biascr
+#   echo satang  = $satang
    echo radstat = $radstat
 
 else
@@ -236,58 +214,39 @@ if [[ -e ${radstat} ]]; then
    export job=gdas_vrfyrad_${PDY}${cyc}
    export SENDSMS=${SENDSMS:-NO}
    export DATA_IN=${WORKverf_rad}
-   export DATA=${DATA:-${STMP_USER}/radmon/${RADMON_SUFFIX}}
-   rm -rf ${DATA}
-   mkdir -p ${DATA}
-   export jlogfile=${WORKverf_rad}/jlogfile_${RADMON_SUFFIX}
+   export DATA=${DATA:-$STMP/$LOGNAME/radmon}
+   export jlogfile=${WORKverf_rad}/jlogfile_${SUFFIX}
+   export TANKverf=${MY_TANKDIR}/stats/${SUFFIX}
 
    export VERBOSE=${VERBOSE:-YES}
   
 
-   #----------------------------------------------------------------------------
-   #  Advance the satype file from previous day.
-   #  If it isn't found then create one using the contents of the radstat file.
-   #----------------------------------------------------------------------------
-   satype_file=${TANKverf}/radmon.${PDY}/${RADMON_SUFFIX}_radmon_satype.txt
-
    if [[ $CYC = "00" ]]; then
-      echo "Making new day directory for 00 cycle"
       mkdir -p ${TANKverf}/radmon.${PDY}
       prev_day=`${NDATE} -06 $PDATE | cut -c1-8`
-      if [[ -s ${TANKverf}/radmon.${prev_day}/${RADMON_SUFFIX}_radmon_satype.txt ]]; then
-         cp ${TANKverf}/radmon.${prev_day}/${RADMON_SUFFIX}_radmon_satype.txt ${TANKverf}/radmon.${PDY}/.
-      fi
-    fi 
+      cp ${TANKverf}/radmon.${prev_day}/gdas_radmon_satype.txt ${TANKverf}/radmon.${PDY}/.
+   fi
 
-    echo "TESTING for $satype_file"
-    if [[ -s ${satype_file} ]]; then
-      echo "${satype_file} is good to go"
-    else
-      echo "CREATING satype file"
-      radstat_satype=`tar -tvf $radstat | grep _ges | awk -F_ '{ print $2 "_" $3 }'`
-      echo $radstat_satype > ${satype_file}
-      echo "CREATED ${satype_file}"
-    fi
-
-    export satype_file=${RADMON_SUFFIX}_radmon_satype.txt
    
    #------------------------------------------------------------------
    #   Override the default base_file declaration if there is an  
    #   available base file for this source.
    #------------------------------------------------------------------
-   if [[ -s ${TANKverf}/info/radmon_base.tar.${Z} || -s ${TANKverf}/info/radmon_base.tar ]]; then
+   if [[ -s ${TANKverf}/info/radmon_base.tar.Z || -s ${TANKverf}/info/radmon_base.tar ]]; then
       export base_file=${TANKverf}/info/radmon_base.tar 
    fi
+
+   export JOBNAME=${jobname}
+
 
    #------------------------------------------------------------------
    #   Submit data processing jobs.
    #------------------------------------------------------------------
    if [[ $MY_MACHINE = "wcoss" ]]; then
-      $SUB -q $JOB_QUEUE -P $PROJECT -o $LOGdir/data_extract.${PDY}.${cyc}.log -M 100 -R affinity[core] -W 0:20 -J ${jobname} $HOMEgdas/jobs/JGDAS_VERFRAD
-   elif [[ $MY_MACHINE = "cray" ]]; then
-      $SUB -q $JOB_QUEUE -P $PROJECT -o $LOGdir/data_extract.${PDY}.${cyc}.log -M 100 -W 0:20 -J ${jobname} $HOMEgdas/jobs/JGDAS_VERFRAD
-   elif [[ $MY_MACHINE = "zeus" || $MY_MACHINE = "theia" ]]; then
-      $SUB -A $ACCOUNT -l procs=1,walltime=0:10:00 -N ${jobname} -V -o $LOGdir/data_extract.${PDY}.${CYC}.log -e $LOGdir/error_file.${PDY}.${CYC}.log $HOMEgdas/jobs/JGDAS_VERFRAD
+      $SUB -q $JOB_QUEUE -P $PROJECT -o $LOGDIR/data_extract.${PDY}.${cyc}.log -M 100 -R affinity[core] -W 0:30 -J ${jobname} $HOMEgfs/jobs/JGDAS_VRFYRAD.sms.prod
+
+   elif [[ $MY_MACHINE = "zeus" ]]; then
+      $SUB -A $ACCOUNT -l procs=1,walltime=0:10:00 -N ${jobname} -V -o $LOGDIR/data_extract.${PDY}.${CYC}.log -e $LOGDIR/error_file.${PDY}.${CYC}.log $HOMEgfs/jobs/JGDAS_VRFYRAD.sms.prod
    fi
   
 fi
@@ -301,13 +260,12 @@ fi
 
 exit_value=0
 if [[ ${data_available} -ne 1 ]]; then
-   exit_value=6
-   echo No data available for ${RADMON_SUFFIX}
+   exit_value=5
+   echo No data available for ${SUFFIX}
 fi
 
 echo end VrfyRad_glbl.sh
 
-module unload prod_util/v1.0.2
 
 exit ${exit_value}
 

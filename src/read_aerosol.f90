@@ -1,6 +1,6 @@
 subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
            obstype,twind,sis,ithin,rmesh, &
-           mype_root,mype_sub,npe_sub,mpi_comm_sub,nobs)
+           mype,mype_root,mype_sub,npe_sub,mpi_comm_sub)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_aerosol                    read aerosol data
@@ -21,7 +21,6 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 !   2011-01-05  hclin   - added three more BUFR records (STYP DBCF QAOD)
 !   2011-08-01  lueken  - changed F90 to f90 (no machine logic)
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
-!   2015-02-23  Rancic/Thomas - add thin4d to time window logical
 !
 !   input argument list:
 !     obstype  - observation type to process
@@ -34,6 +33,7 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 !     sis      - satellite/instrument/sensor indicator
 !     ithin    - flag to thin data
 !     rmesh    - thinning mesh size (km)
+!     mype     - mpi task id
 !     mype_root - "root" task for sub-communicator
 !     mype_sub - mpi task id within sub-communicator
 !     npe_sub  - number of data read tasks
@@ -43,7 +43,6 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 !     nread    - number of modis aerosol observations read
 !     ndata    - number of modis aerosol profiles retained for further processing
 !     nodata   - number of modis aerosol observations retained for further processing
-!     nobs     - array of observations on each subdomain for each processor
 !
 ! remarks:
 !
@@ -57,23 +56,23 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   use chemmod,   only: aod_qa_limit, luse_deepblue
   use constants, only: deg2rad, zero, two, three, four, rad2deg, r60inv
   use obsmod,    only: iadate, rmiss_single
-  use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,thin4d
+  use gsi_4dvar, only: l4dvar,iwinbgn,winlen
   use satthin,   only: itxmax,makegrids,destroygrids,checkob, &
       finalcheck,map2tgrid,score_crit
-  use mpimod, only: npe
   implicit none
 !
 ! Declare local parameters
+  real(r_kind), parameter :: r6   = 6.0_r_kind
   real(r_kind), parameter :: r360 = 360.0_r_kind
 !
 ! Declare passed variables
 !
-  character(len=*),intent(in)    :: obstype, infile, jsatid
-  character(len=20),intent(in)   :: sis
+  character(10),   intent(in)    :: obstype, infile, jsatid
+  character(20),   intent(in)    :: sis
   integer(i_kind), intent(in)    :: lunout, ithin
   integer(i_kind), intent(inout) :: nread
-  integer(i_kind),dimension(npe), intent(inout) :: nobs
   integer(i_kind), intent(inout) :: ndata, nodata
+  integer(i_kind) ,intent(in)    :: mype
   integer(i_kind) ,intent(in)    :: mype_root
   integer(i_kind) ,intent(in)    :: mype_sub
   integer(i_kind) ,intent(in)    :: npe_sub
@@ -87,12 +86,14 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   character (len= 8) :: subset
   character (len=10) :: date
 
-  integer(i_kind) :: naerodat
-  integer(i_kind) :: idate, jdate, ksatid, iy, iret, im, ihh, idd
+  integer(i_kind) :: naerodat, next, ireadmg, ireadsb
+  integer(i_kind) :: idate, jdate, ksatid, kk, iy, iret, im, ihh, idd
   integer(i_kind) :: lunin = 10
   integer(i_kind) :: nmind, i, n
+  integer(i_kind) :: imin, isec
   integer(i_kind) :: k, ilat, ilon, nreal, nchanl
   integer(i_kind) :: kidsat
+  integer(i_kind) :: JULIAN, IDAYYR, IDAYWK
   integer(i_kind), dimension(5) :: idate5
 !
 !| NC008041 | SAID    AEROSOL  CLONH   CLATH YYMMDD  HHMMSS  SOZA  SOLAZI       |
@@ -137,10 +138,10 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 
   integer(i_kind) :: itx, itt, irec
 
-  real(r_kind) :: tdiff, sstime, dlon, dlat, t4dv, timedif, crit1, dist1
-  real(r_kind) :: slons0, slats0, rsat, solzen, azimuth, dlat_earth, dlon_earth
+  real(r_kind) :: tdiff, sstime, slons, slats, dlon, dlat, t4dv, toq, poq, timedif, crit1, dist1
+  real(r_kind) :: slons0, slats0, rsat, toto3, solzen, azimuth, dlat_earth, dlon_earth
   real(r_kind) :: styp, dbcf, qaod
-  real(r_kind),dimension(0:6):: rlndsea
+  real(r_kind),dimension(0:4):: rlndsea
 
   real(r_kind), allocatable, dimension(:,:) :: aeroout
   real(r_kind), allocatable, dimension(:)   :: dataaod
@@ -165,16 +166,13 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   rlndsea(2) = 20._r_kind  ! styp 2: desert
   rlndsea(3) = 10._r_kind  ! styp 3: land
   rlndsea(4) = 25._r_kind  ! styp 4: deep blue
-  rlndsea(5) = 30._r_kind  ! styp 5: nnr ocean
-  rlndsea(6) = 35._r_kind  ! styp 6: nnr land
-
 
 ! Make thinning grids
   call makegrids(rmesh,ithin)
 
   if ( obstype == 'modis_aod' ) then
 !
-     open(lunin,file=trim(infile),form='unformatted')
+     open(lunin,file=infile,form='unformatted')
      call openbf(lunin,'IN',lunin)
      call datelen(10)
      call readmg(lunin,subset,idate,iret)
@@ -251,17 +249,17 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 
               call w3fs21(idate5,nmind)
               t4dv=real((nmind-iwinbgn),r_kind)*r60inv
-              sstime=real(nmind,r_kind)
-              tdiff=(sstime-gstime)*r60inv
-              if (l4dvar.or.l4densvar) then
+              if (l4dvar) then
                  if(t4dv<zero .OR. t4dv>winlen) cycle read_modis
               else
+                 sstime=real(nmind,r_kind)
+                 tdiff=(sstime-gstime)*r60inv
                  if ( abs(tdiff) > twind ) cycle read_modis
               end if
 
               nread = nread + 1   !nread = nread + nchanl
 
-              if (thin4d) then
+              if (l4dvar) then
                  timedif = zero
               else
                  timedif = two*abs(tdiff)        ! range:  0 to 6
@@ -334,7 +332,6 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
                  end do
               end do
               ! Write final set of "best" observations to output file
-              call count_obs(ndata,naerodat,ilat,ilon,aeroout,nobs)
               write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
               write(lunout) ((aeroout(k,n),k=1,naerodat),n=1,ndata)
            end if

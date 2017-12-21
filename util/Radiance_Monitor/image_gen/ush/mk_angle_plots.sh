@@ -80,9 +80,9 @@ for type in ${SATYPE}; do
    if [[ -s ${imgndir}/${type}.ctl.${Z} ]]; then
      ${UNCOMPRESS} ${imgndir}/${type}.ctl.${Z}
    fi
-   ${IG_SCRIPTS}/update_ctl_tdef.sh ${imgndir}/${type}.ctl ${START_DATE} ${NUM_CYCLES}
+   ${SCRIPTS}/update_ctl_tdef.sh ${imgndir}/${type}.ctl ${START_DATE} ${NUM_CYCLES}
 
-   if [[ $MY_MACHINE = "wcoss" || $MY_MACHINE = "zeus" || $MY_MACHINE = "theia" ]]; then
+   if [[ $MY_MACHINE = "wcoss" || $MY_MACHINE = "zeus" ]]; then
       sed -e 's/cray_32bit_ieee/ /' ${imgndir}/${type}.ctl > tmp_${type}.ctl
       mv -f tmp_${type}.ctl ${imgndir}/${type}.ctl
    fi
@@ -105,7 +105,7 @@ ${COMPRESS} -f ${imgndir}/*.ctl
 #-------------------------------------------------------------------
 #   Rename PLOT_WORK_DIR to angle subdir.
 #
-export PLOT_WORK_DIR="${PLOT_WORK_DIR}/plotangle_${RADMON_SUFFIX}"
+export PLOT_WORK_DIR="${PLOT_WORK_DIR}/plotangle_${SUFFIX}"
 
 if [[ -d $PLOT_WORK_DIR ]]; then
    rm -f $PLOT_WORK_DIR
@@ -120,22 +120,21 @@ cd $PLOT_WORK_DIR
 
 list="count penalty omgnbc total omgbc fixang lapse lapse2 const scangl clw cos sin emiss ordang4 ordang3 ordang2 ordang1"
 
-  if [[ ${MY_MACHINE} = "wcoss" || ${MY_MACHINE} = "cray" ]]; then
+  if [[ ${MY_MACHINE} = "wcoss" ]]; then
      suffix=a
      cmdfile=${PLOT_WORK_DIR}/cmdfile_pangle_${suffix}
-     jobname=plot_${RADMON_SUFFIX}_ang_${suffix}
-     logfile=$LOGdir/plot_angle_${suffix}.log
+     jobname=plot_${SUFFIX}_ang_${suffix}
+     logfile=$LOGDIR/plot_angle_${suffix}.log
 
      rm -f $cmdfile
      rm -f $logfile
 
-     rm $LOGdir/plot_angle_${suffix}.log
-
+     rm $LOGDIR/plot_angle_${suffix}.log
+#>$cmdfile
      for type in ${SATLIST}; do
-       echo "$IG_SCRIPTS/plot_angle.sh $type $suffix '$list'" >> $cmdfile
+       echo "$SCRIPTS/plot_angle.sh $type $suffix '$list'" >> $cmdfile
      done
      chmod 755 $cmdfile
-     echo "CMDFILE:  $cmdfile"
 
      ntasks=`cat $cmdfile|wc -l `
 
@@ -145,22 +144,19 @@ list="count penalty omgnbc total omgbc fixang lapse lapse2 const scangl clw cos 
         wall_tm="1:45"
      fi
 
-     if [[ ${MY_MACHINE} = "wcoss" ]]; then
-        $SUB -q $JOB_QUEUE -P $PROJECT -o ${logfile} -M 20000 -W ${wall_tm} -R affinity[core] -J ${jobname} $cmdfile
-     else	# cray
-        $SUB -q $JOB_QUEUE -P $PROJECT -o ${logfile} -M 20000 -W ${wall_tm} -J ${jobname} $cmdfile
-     fi
-  else				# Zeus/theia platform
+     $SUB -q $JOB_QUEUE -P $PROJECT -o ${logfile} -M 500 -W ${wall_tm} -R affinity[core] -J ${jobname} $cmdfile
+     
+  else				# Zeus/linux platform
      for sat in ${SATLIST}; do
         suffix=${sat} 
         cmdfile=${PLOT_WORK_DIR}/cmdfile_pangle_${suffix}
-        jobname=plot_${RADMON_SUFFIX}_ang_${suffix}
-        logfile=${LOGdir}/plot_angle_${suffix}.log
+        jobname=plot_${SUFFIX}_ang_${suffix}
+        logfile=${LOGDIR}/plot_angle_${suffix}.log
 
         rm -f $cmdfile
         rm -f $logfile
 
-        echo "$IG_SCRIPTS/plot_angle.sh $sat $suffix '$list'" >> $cmdfile
+        echo "$SCRIPTS/plot_angle.sh $sat $suffix '$list'" >> $cmdfile
 
         if [[ $PLOT_ALL_REGIONS -eq 1 || $ndays -gt 30 ]]; then
            wall_tm="5:00:00"
@@ -181,7 +177,7 @@ list="count penalty omgnbc total omgbc fixang lapse lapse2 const scangl clw cos 
   #    job for each is necessary.
   #   
 
-echo "starting $bigSATLIST"
+echo starting $bigSATLIST
 
 set -A list count penalty omgnbc total omgbc fixang lapse lapse2 const scangl clw cos sin emiss ordang4 ordang3 ordang2 ordang1
 
@@ -189,21 +185,21 @@ for sat in ${bigSATLIST}; do
    echo processing $sat in $bigSATLIST
 
    #
-   #  wcoss submit 4 jobs for each $sat
+   #  CCS submit 4 jobs for each $sat
    #
-   if [[ $MY_MACHINE = "wcoss" || $MY_MACHINE = "cray" ]]; then 	
+   if [[ $MY_MACHINE = "wcoss" ]]; then 	
       batch=1
       ii=0
 
       suffix="${sat}_${batch}"
       cmdfile=${PLOT_WORK_DIR}/cmdfile_pangle_${suffix}
       rm -f $cmdfile
-      jobname=plot_${RADMON_SUFFIX}_ang_${suffix}
-      logfile=${LOGdir}/plot_angle_${suffix}.log
+      jobname=plot_${SUFFIX}_ang_${suffix}
+      logfile=${LOGDIR}/plot_angle_${suffix}.log
 
       while [[ $ii -le ${#list[@]}-1 ]]; do
 
-         echo "$IG_SCRIPTS/plot_angle.sh $sat $suffix ${list[$ii]}" >> $cmdfile
+         echo "$SCRIPTS/plot_angle.sh $sat $suffix ${list[$ii]}" >> $cmdfile
          ntasks=`cat $cmdfile|wc -l `
          chmod 755 $cmdfile
 
@@ -213,25 +209,15 @@ for sat in ${bigSATLIST}; do
             wall_tm="1:00"
          fi
 
-        
-#         mem="6000"
-#         if [[ $batch -eq 1 ]]; then
-            mem="24000"
-#         fi
-
-         if [[ $MY_MACHINE = "wcoss" ]]; then
-            $SUB -q $JOB_QUEUE -P $PROJECT -o ${logfile} -M ${mem} -W ${wall_tm} -R affinity[core] -J ${jobname} $cmdfile
-         else
-            $SUB -q $JOB_QUEUE -P $PROJECT -o ${logfile} -M ${mem} -W ${wall_tm} -J ${jobname} $cmdfile
-         fi
+         $SUB -q $JOB_QUEUE -P $PROJECT -o ${logfile} -M 600 -W ${wall_tm} -R affinity[core] -J ${jobname} $cmdfile
 
          (( batch=batch+1 ))
 
          suffix="${sat}_${batch}"
          cmdfile=${PLOT_WORK_DIR}/cmdfile_pangle_${suffix}
          rm -f $cmdfile
-         jobname=plot_${RADMON_SUFFIX}_ang_${suffix}
-         logfile=${LOGdir}/plot_angle_${suffix}.log
+         jobname=plot_${SUFFIX}_ang_${suffix}
+         logfile=${LOGDIR}/plot_angle_${suffix}.log
 
          (( ii=ii+1 ))
       done
@@ -244,10 +230,10 @@ for sat in ${bigSATLIST}; do
       while [[ $ii -le ${#list[@]}-1 ]]; do
          cmdfile=${PLOT_WORK_DIR}/cmdfile_pangle_${suffix}_${list[$ii]}
          rm -f $cmdfile
-         logfile=${LOGdir}/plot_angle_${suffix}_${list[$ii]}.log
-         jobname=plot_${RADMON_SUFFIX}_ang_${suffix}_${list[$ii]}
+         logfile=${LOGDIR}/plot_angle_${suffix}_${list[$ii]}.log
+         jobname=plot_${SUFFIX}_ang_${suffix}_${list[$ii]}
 
-         echo "${IG_SCRIPTS}/plot_angle.sh $sat $suffix ${list[$ii]}" >> $cmdfile
+         echo "${SCRIPTS}/plot_angle.sh $sat $suffix ${list[$ii]}" >> $cmdfile
 
          if [[ $PLOT_ALL_REGIONS -eq 1 || $ndays -gt 30 ]]; then
             wall_tm="5:00:00"

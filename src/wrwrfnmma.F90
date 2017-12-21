@@ -57,10 +57,9 @@ subroutine wrwrfnmma_binary(mype)
   use mpeu_util, only: die,getindex
   use control_vectors, only: cvars3d
   use native_endianness, only: byte_swap
-  use gfs_stratosphere, only: use_gfs_stratosphere,nsig_save
+  use gfs_stratosphere, only: use_gfs_stratosphere,nsig_save  
   use gfs_stratosphere, only: eta1_save,aeta1_save,deta1_save 
   use gfs_stratosphere, only: eta2_save,aeta2_save,deta2_save 
-  use gfs_stratosphere, only: revert_to_nmmb,restore_nmmb_gfs
   use mpeu_util, only: die
 
   implicit none
@@ -86,12 +85,13 @@ subroutine wrwrfnmma_binary(mype)
   integer(i_llong) num_swap
   character(6) filename
   integer(i_kind) i,j,k,kpint,kt,kq,ku,kv,it,i_pd,i_pint,i_t,i_q,i_u,i_v
-  integer(i_kind) i_sst,i_tsk,i_cwm,i_f_ice,i_f_rain
-  integer(i_kind) kcwm,kf_ice,kf_rain
+  integer(i_kind) i_sst,i_tsk,i_cwm,i_f_ice,i_f_rain,i_f_rimef
+  integer(i_kind) kcwm,kf_ice,kf_rain,kf_rimef
   integer(i_kind) num_nmm_fields,num_j_groups,num_loc_groups
   real(r_kind) pd,psfc_this
   integer(i_llong) n_position
   integer(i_kind) iskip,jextra,nextra
+  integer(i_kind) iii,jjj,lll
   integer(i_kind) status(mpi_status_size)
   integer(i_kind) jbegin(0:npe),jend(0:npe-1)
   integer(i_kind) kbegin(0:npe),kend(0:npe-1)
@@ -1045,7 +1045,7 @@ subroutine get_bndy_file(temp1,pdb,tb,qb,cwmb,ub,vb,ifld,i_pd,i_t,i_q,i_cwm,i_u,
 
 end subroutine get_bndy_file
 
-subroutine wrnemsnmma_binary(mype,cold_start)
+subroutine wrnemsnmma_binary(mype)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    wrwrfnmma              write out wrf NMM restart file
@@ -1076,10 +1076,6 @@ subroutine wrnemsnmma_binary(mype,cold_start)
 !   2012-12-04  s.liu   - add gsd cloud analsyis variables
 !   2013-10-18  s.liu   - add use_reflectivity option for cloud analysis variables
 !   2013-10-19  todling - upper-air guess now in metguess
-!   2014-04-11  zhu     - add cold_start option for the case when the restart file is from the GFS
-!   2014-06-05  carley  - bug fix for writing out cloud analysis variables 
-!   2014-06-27  S.Liu   - detach use_reflectivity from n_actual_clouds
-!   2015-05-12  wu      - write analysis to file "wrf_inout(nhr_assimilation)"
 !
 !   input argument list:
 !     mype     - pe number
@@ -1106,14 +1102,11 @@ subroutine wrnemsnmma_binary(mype,cold_start)
   use mpeu_util, only: die,getindex
   use control_vectors, only: cvars3d
   use gfs_stratosphere, only: use_gfs_stratosphere,nsig_save
-  use gfs_stratosphere, only: revert_to_nmmb,restore_nmmb_gfs
   use mpimod, only: mpi_comm_world,ierror,mpi_rtype,mpi_integer4,mpi_min,mpi_max,mpi_sum
-  use gsi_4dvar, only: nhr_assimilation
 
   implicit none
 
 ! Declare passed variables
-  logical cold_start
   integer(i_kind),intent(in   ) :: mype
 
 ! Declare local variables
@@ -1133,10 +1126,9 @@ subroutine wrnemsnmma_binary(mype,cold_start)
   logical good_u10,good_v10,good_tshltr,good_qshltr,good_o3mr
 
 ! variables for cloud info
-  integer(i_kind) iret,ier_cloud,n_actual_clouds,istatus,ierr
+  integer(i_kind) iret,ier_cloud,n_actual_clouds,istatus
   real(r_kind) total_ice
   real(r_kind),dimension(lat2,lon2):: work_clwmr,work_fice,work_frain
-  real(r_kind),pointer,dimension(:,:,:):: ges_cw  =>NULL()
   real(r_kind),pointer,dimension(:,:  ):: ges_pd  =>NULL()
   real(r_kind),pointer,dimension(:,:  ):: ges_ps  =>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_u   =>NULL()
@@ -1150,8 +1142,7 @@ subroutine wrnemsnmma_binary(mype,cold_start)
   real(r_kind),pointer,dimension(:,:,:):: ges_qg  =>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_qh  =>NULL()
   real(r_kind),pointer,dimension(:,:,:):: dfi_tten=>NULL()
-  real(r_kind),pointer,dimension(:,:,:):: ges_ref =>NULL()
-  
+
 !   if use_gfs_stratosphere is true, then convert ges fields from nmmb-gfs 
 !        extended vertical coordinate to nmmb vertical coordinate.
 
@@ -1199,7 +1190,7 @@ subroutine wrnemsnmma_binary(mype,cold_start)
   add_saved=.true.
 
   call gsi_metguess_get('clouds::3d',n_actual_clouds,iret)
-  if(mype == 0) write(6,*)' in wrnemsnmma_binary after gsi_metguess_get, nclouds,iret=',&
+  if(mype == 0) write(6,*)' in wrnemsnmma_binary after gsi_metguess_get, ncoulds,iret=',&
                 n_actual_clouds,iret
   if (n_actual_clouds>0 .and. (.not.use_reflectivity)) then
 
@@ -1210,8 +1201,7 @@ subroutine wrnemsnmma_binary(mype,cold_start)
      iqtotal=getindex(cvars3d,'qt')
 
 !    Get pointer to cloud water mixing ratio
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ges_cw,iret); ier_cloud=iret
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql,iret); ier_cloud=ier_cloud+iret
+     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql,iret); ier_cloud=iret
      call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi,iret); ier_cloud=ier_cloud+iret
      call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qr',ges_qr,iret); ier_cloud=ier_cloud+iret
      call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qs',ges_qs,iret); ier_cloud=ier_cloud+iret
@@ -1219,31 +1209,15 @@ subroutine wrnemsnmma_binary(mype,cold_start)
      call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qh',ges_qh,iret); ier_cloud=ier_cloud+iret
 
      if ((icw4crtm<=0 .and. iqtotal<=0) .or. ier_cloud/=0) n_actual_clouds=0
+  end if
 
-  else if (use_reflectivity)then
-    
-!    Get pointer to hydrometeor mixing ratios, reflectivity, and temperature tendency
-!       for the cloud analysis
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql,iret); ier_cloud=iret
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi,iret); ier_cloud=ier_cloud+iret
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qr',ges_qr,iret); ier_cloud=ier_cloud+iret
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qs',ges_qs,iret); ier_cloud=ier_cloud+iret
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qg',ges_qg,iret); ier_cloud=ier_cloud+iret 
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ref',ges_ref,istatus);ier_cloud=ier_cloud+iret
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'tten',dfi_tten,istatus);ier_cloud=ier_cloud+iret
-     if(ier_cloud/=0) then
-        write(6,*)'wrwrfnmma.F90 :: missng hydrometeor/tten/ref fields for cloud analysis nothing to do'
-	n_actual_clouds=0
-     end if	
-  end if 
-
-  if(mype==mype_input) write(wrfanl,'("wrf_inout",i2.2)') nhr_assimilation
+  if(mype==mype_input) wrfanl = 'wrf_inout'
 
 !   update date info so start time is analysis time, and forecast time = 0
   call gsi_nemsio_update(wrfanl,'WRNEMSNMMA_BINARY:  problem with update of wrfanl',mype,mype_input)
 
 !   open output file for read-write so we can update fields.
-  call gsi_nemsio_open(wrfanl,'rdwr','WRNEMSNMMA_BINARY:  problem with wrfanl',mype,mype_input,ierr)
+  call gsi_nemsio_open(wrfanl,'rdwr','WRNEMSNMMA_BINARY:  problem with wrfanl',mype,mype_input)
 
   do kr=1,nsig_write
 
@@ -1405,50 +1379,36 @@ subroutine wrnemsnmma_binary(mype,cold_start)
 
                              ! cloud
      if (n_actual_clouds>0 .and. (.not.use_reflectivity)) then
-        call gsi_nemsio_read('clwmr','mid layer','H',kr,work_sub(:,:),mype,mype_input)
-        if (cold_start) then
-           do i=1,lon2
-              do j=1,lat2
-                 if (ges_ql(j,i,k)<=qcmin) ges_ql(j,i,k)=qcmin
-                 if (ges_qi(j,i,k)<=qcmin) ges_qi(j,i,k)=qcmin
-                 work_clwmr(j,i)=ges_ql(j,i,k)+ges_qr(j,i,k)
-                 work_sub(j,i)=work_clwmr(j,i)-max(work_sub(j,i),qcmin)
-              end do
-           end do
-           call gsi_nemsio_write('clwmr','mid layer','H',kr,work_sub(:,:),mype,mype_input,add_saved)
-        else
-           do i=1,lon2
-              do j=1,lat2
-                 if (ges_ql(j,i,k)<=qcmin) ges_ql(j,i,k)=qcmin
-                 if (ges_qi(j,i,k)<=qcmin) ges_qi(j,i,k)=qcmin
-                 if (ges_qs(j,i,k)<=qcmin) ges_qs(j,i,k)=qcmin
-                 if (ges_qg(j,i,k)<=qcmin) ges_qg(j,i,k)=qcmin
-                 if (ges_qh(j,i,k)<=qcmin) ges_qh(j,i,k)=qcmin
-                 if (ges_qr(j,i,k)<=qcmin) ges_qr(j,i,k)=qcmin
-                 total_ice=ges_qi(j,i,k)+ges_qs(j,i,k)+ges_qg(j,i,k)+ges_qh(j,i,k)
-                 work_clwmr(j,i)=total_ice+ges_ql(j,i,k)+ges_qr(j,i,k)
-                 work_sub(j,i)=work_clwmr(j,i)-max(work_sub(j,i),qcmin)
-
-                 if (work_clwmr(j,i)>zero) then
-                    work_fice(j,i)=total_ice/work_clwmr(j,i)
-                    if (work_fice(j,i)<one) then
-                       work_frain(j,i)=ges_qr(j,i,k)/(work_clwmr(j,i)*(one-work_fice(j,i)))
-                    else
-                       work_frain(j,i)=zero
-                    end if
+        do i=1,lon2
+           do j=1,lat2
+              if (ges_ql(j,i,k)<=qcmin) ges_ql(j,i,k)=zero
+              if (ges_qi(j,i,k)<=qcmin) ges_qi(j,i,k)=zero
+              if (ges_qs(j,i,k)<=qcmin) ges_qs(j,i,k)=zero
+              if (ges_qg(j,i,k)<=qcmin) ges_qg(j,i,k)=zero
+              if (ges_qh(j,i,k)<=qcmin) ges_qh(j,i,k)=zero
+              if (ges_qr(j,i,k)<=qcmin) ges_qr(j,i,k)=zero
+              total_ice=ges_qi(j,i,k)+ges_qs(j,i,k)+ges_qg(j,i,k)+ges_qh(j,i,k)
+              work_clwmr(j,i)=total_ice+ges_ql(j,i,k)+ges_qr(j,i,k)
+              if (work_clwmr(j,i)>zero) then
+                 work_fice(j,i)=total_ice/work_clwmr(j,i)
+                 if (work_fice(j,i)<one) then
+                    work_frain(j,i)=ges_qr(j,i,k)/(work_clwmr(j,i)*(one-work_fice(j,i)))
                  else
-                    work_fice(j,i)=zero
                     work_frain(j,i)=zero
                  end if
-              end do
+              else
+                 work_fice(j,i)=zero
+                 work_frain(j,i)=zero
+              end if
            end do
-           call gsi_nemsio_write('clwmr','mid layer','H',kr,work_sub(:,:),mype,mype_input,add_saved)
-           call gsi_nemsio_write('f_ice','mid layer','H',kr,work_fice(:,:),mype,mype_input,.false.)
-           call gsi_nemsio_write('f_rain','mid layer','H',kr,work_frain(:,:),mype,mype_input,.false.)
-           call gsi_nemsio_read('f_rimef','mid layer','H',kr,work_sub(:,:),mype,mype_input)
-           call gsi_nemsio_write('f_rimef','mid layer','H',kr,work_sub(:,:),mype,mype_input,.false.)
-        end if ! end of non-coldstart
-     end if  ! end of nguess
+        end do
+        call gsi_nemsio_write('clwmr','mid layer','H',kr,work_clwmr(:,:),mype,mype_input,.false.)
+        call gsi_nemsio_write('f_ice','mid layer','H',kr,work_fice(:,:),mype,mype_input,.false.)
+        call gsi_nemsio_write('f_rain','mid layer','H',kr,work_frain(:,:),mype,mype_input,.false.)
+
+        call gsi_nemsio_read('f_rimef','mid layer','H',kr,work_sub(:,:),mype,mype_input)
+        call gsi_nemsio_write('f_rimef','mid layer','H',kr,work_sub(:,:),mype,mype_input,.false.)
+     end if
 
   end do
 
@@ -1703,10 +1663,9 @@ subroutine wrwrfnmma_netcdf(mype)
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use mpeu_util, only: die,getindex
   use control_vectors, only: cvars3d
-  use gfs_stratosphere, only: use_gfs_stratosphere,nsig_save
+  use gfs_stratosphere, only: use_gfs_stratosphere,nsig_save  
   use gfs_stratosphere, only: eta1_save,aeta1_save,deta1_save
   use gfs_stratosphere, only: eta2_save,aeta2_save,deta2_save
-  use gfs_stratosphere, only: revert_to_nmmb,restore_nmmb_gfs
 
   implicit none
 

@@ -17,7 +17,7 @@ echo "Starting plot_time.sh"
 
 #------------------------------------------------------------------
 # Set environment variables.
-tmpdir=${PLOT_WORK_DIR}/plot_time_${RADMON_SUFFIX}_${SATYPE2}.$PDATE.${PVAR}
+tmpdir=${PLOT_WORK_DIR}/plot_time_${SUFFIX}_${SATYPE2}.$PDATE.${PVAR}
 rm -rf $tmpdir
 mkdir -p $tmpdir
 cd $tmpdir
@@ -30,7 +30,6 @@ echo plot_time_sep = $plot_time_sep
 
 
 echo PLOT_WORK_DIR = $PLOT_WORK_DIR
-echo tmpdir        = $tmpdir
 
 #------------------------------------------------------------------
 #   Set dates
@@ -63,14 +62,9 @@ echo ctldir = $ctldir
 # of radmon.YYYYMMDD directories under $TANKDIR.
 
 for type in ${SATYPE2}; do
-   $NCP $ctldir/${type}.ctl* ./
+   $NCP $ctldir/${type}*.ctl* ./
    if [[ -s ./${type}.ctl.${Z} ]]; then
       ${UNCOMPRESS} ./${type}.ctl.${Z}
-   fi
-
-   if [[ $USE_ANL = 1 ]]; then
-      $NCP $ctldir/${type}_anl.ctl* ./
-      ${UNCOMPRESS} ./${type}_anl.ctl.${Z}
    fi
 
    cdate=$bdate
@@ -79,23 +73,14 @@ for type in ${SATYPE2}; do
 
       if [[ -d ${TANKDIR}/radmon.${day} ]]; then
          test_file=${TANKDIR}/radmon.${day}/time.${type}.${cdate}.ieee_d
-         if [[ $USE_ANL = 1 ]]; then
-            test_file2=${TANKDIR}/radmon.${day}/time.${type}_anl.${cdate}.ieee_d
-         else
-            test_file2=
-         fi
-
          if [[ -s $test_file ]]; then
             $NCP ${test_file} ./${type}.${cdate}.ieee_d
          elif [[ -s ${test_file}.${Z} ]]; then
             $NCP ${test_file}.${Z} ./${type}.${cdate}.ieee_d.${Z}
          fi
-
-         if [[ -s $test_file2 ]]; then
-            $NCP ${test_file2} ./${type}_anl.${cdate}.ieee_d
-         elif [[ -s ${test_file2}.${Z} ]]; then
-            $NCP ${test_file2}.${Z} ./${type}_anl.${cdate}.ieee_d.${Z}
-         fi
+      fi
+      if [[ ! -s ${type}.${cdate}.ieee_d && ! -s ${type}.${cdate}.ieee_d.${Z} ]]; then
+         $NCP $TANKDIR/time/${type}*${cdate}.ieee_d* ./
       fi
 
       adate=`$NDATE +6 $cdate`
@@ -103,49 +88,39 @@ for type in ${SATYPE2}; do
    done
    ${UNCOMPRESS} ./*.ieee_d.${Z}
 
-   if [[ ${RAD_AREA} = "rgn" || $PLOT_STATIC_IMGS -eq 1 ]]; then
      for var in ${PTYPE}; do
      echo $var
-        if [ "$var" =  'count' ]; then 
+      if [ "$var" =  'count' ]; then 
 cat << EOF > ${type}_${var}.gs
 'open ${type}.ctl'
-'run ${IG_GSCRIPTS}/${plot_time_count} ${type} ${var} ${PLOT_ALL_REGIONS} x1100 y850'
+'run ${GSCRIPTS}/${plot_time_count} ${type} ${var} ${PLOT_ALL_REGIONS} x1100 y850'
 'quit'
 EOF
-        elif [ "$var" =  'penalty' ]; then
+elif [ "$var" =  'penalty' ]; then
 cat << EOF > ${type}_${var}.gs
 'open ${type}.ctl'
-'run ${IG_GSCRIPTS}/${plot_time_count} ${type} ${var} ${PLOT_ALL_REGIONS} x1100 y850'
+'run ${GSCRIPTS}/${plot_time_count} ${type} ${var} ${PLOT_ALL_REGIONS} x1100 y850'
 'quit'
 EOF
-        else
+else
 cat << EOF > ${type}_${var}.gs
 'open ${type}.ctl'
-'run ${IG_GSCRIPTS}/${plot_time_sep} ${type} ${var} ${PLOT_ALL_REGIONS} x1100 y850'
+'run ${GSCRIPTS}/${plot_time_sep} ${type} ${var} ${PLOT_ALL_REGIONS} x1100 y850'
 'quit'
 EOF
-        fi
+fi
+echo ${tmpdir}/${type}_${var}.gs
+      $GRADS -bpc "run ${tmpdir}/${type}_${var}.gs"
+   done
 
-        echo "running GrADS on ${tmpdir}/${type}_${var}.gs"
-        $GRADS -bpc "run ${tmpdir}/${type}_${var}.gs"
 
-     done 
-   fi
 
-   #  This restriction is in place because the regional html doesn't yet
-   #  use the interactive plotting by default.  That is next on the todo list.
-   #  All global sources and nrx (operatioal ndas)  are supported though.
-   if [[ ${RAD_AREA} = "glb" || ${RADMON_SUFFIX} = "nrx" ]]; then
-      $NCP ${IG_SCRIPTS}/nu_plot_time.sh .
-      ./nu_plot_time.sh ${type}
-#     rm -f nu_plot_time.sh
-   fi
+#   rm -f ${type}.ieee_d
+#   rm -f ${type}.${PDATE}.ieee_d
+#   rm -f ${type}.ctl
 
 done
 
-rm -f ${type}.ieee_d
-rm -f ${type}.${PDATE}.ieee_d
-#   rm -f ${type}.ctl
 
 #--------------------------------------------------------------------
 # Copy image files to $IMGNDIR to set up for mirror to web server.
@@ -154,9 +129,8 @@ rm -f ${type}.${PDATE}.ieee_d
 if [[ ! -d ${IMGNDIR}/time ]]; then
    mkdir -p ${IMGNDIR}/time
 fi
-if [[ ${RAD_AREA} = "rgn" || $PLOT_STATIC_IMGS -eq 1 ]]; then
-   cp -f *.png  ${IMGNDIR}/time
-fi
+cp -r *.png  ${IMGNDIR}/time
+
 
 #for var in ${PTYPE}; do
 #   rm -f ${type}.${var}*.png
@@ -168,6 +142,21 @@ fi
 #cd $tmpdir
 #cd ../
 #rm -rf $tmpdir
+
+#--------------------------------------------------------------------
+# If this is the last time/summary plot job to finish then rm PLOT_WORK_DIR.
+#
+
+#count=`ls ${LOADLQ}/*plot*_${SUFFIX}*time* | wc -l`
+#complete=`grep "COMPLETED" ${LOADLQ}/*plot*_${SUFFIX}*time* | wc -l`
+
+#running=`expr $count - $complete`
+
+#if [[ $running -eq 1 ]]; then
+#   cd ${PLOT_WORK_DIR}
+#   cd ../
+#   rm -rf ${PLOT_WORK_DIR}
+#fi
 
 echo "Exiting plot_time.sh"
 exit

@@ -296,7 +296,6 @@ subroutine antest_maps0_subdomain_option(mype,theta0f,z0f)
 !$$$ end documentation block
 
   use kinds, only: r_kind,i_kind,r_single
-  use constants, only: max_varname_length
   use anberror, only: kvar_start,kvar_end,var_names,levs_jdvar,indices,pf2aP1
   use gridmod, only: nsig,nlon,nlat,istart,jstart,lat2,lon2
   use constants, only: zero_single,zero,one,rd_over_cp,r100
@@ -334,14 +333,14 @@ subroutine antest_maps0_subdomain_option(mype,theta0f,z0f)
   real(r_kind),dimension(:,:,:),pointer::ges_tv_it=>NULL()
 
   real(r_kind) h00,h000
-  integer(i_kind) lunin,i,j,k,ivar,iglob,jglob,ivar_plot
+  integer(i_kind) lunin,i,j,k,ivar,iglob,jglob,ivar_plot,k_plot
   integer(i_kind) it,mm1
   integer(i_kind) lvar
   integer(i_kind):: ips,ipe,jps,jpe,kps,kpe
   integer(i_kind):: nlatf,nlonf
   type(gsi_bundle):: bundle_work
   type(gsi_grid) :: grid
-  character(max_varname_length) :: names2dwork(1),names3dwork(4)
+  character(2) :: names2dwork(1),names3dwork(4)
 
   names2dwork(1)='ps'
   names3dwork(1)='sf'

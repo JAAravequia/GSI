@@ -39,8 +39,6 @@ subroutine wrwrfmassa_binary(mype)
 !   2014-03-12  hu     - add code to read ges_q2 (2m Q), 
 !                               Qnr(rain number concentration), 
 !                               and nsoil (number of soil levels)
-!   2015-01-15  hu     - add i_snowT_check to control temperature adjustment
-!                               over snow  
 !
 !   input argument list:
 !     mype     - pe number
@@ -65,7 +63,7 @@ subroutine wrwrfmassa_binary(mype)
   use constants, only: one,zero_single,rd_over_cp_mass,one_tenth,h300,r10,r100
   use gsi_io, only: lendian_in
   use rapidrefresh_cldsurf_mod, only: l_cloud_analysis,l_gsd_soilTQ_nudge,&
-       i_use_2mq4b
+       l_use_2mQ4B
   use wrf_mass_guess_mod, only: destroy_cld_grids
   use gsi_bundlemod, only: GSI_BundleGetPointer
   use gsi_metguess_mod, only: gsi_metguess_get,GSI_MetGuess_Bundle
@@ -97,6 +95,7 @@ subroutine wrwrfmassa_binary(mype)
   integer(i_kind) ifld,im,jm,lm,num_mass_fields
   integer(i_kind) num_loc_groups,num_j_groups
   integer(i_kind) i,it,j,k
+  integer(i_kind) iii,jjj,lll
   integer(i_kind) i_mu,i_t,i_q,i_u,i_v
   integer(i_kind) i_qc,i_qi,i_qr,i_qs,i_qg,i_qnr
   integer(i_kind) kqc,kqi,kqr,kqs,kqg,kqnr,i_tt,ktt
@@ -108,13 +107,13 @@ subroutine wrwrfmassa_binary(mype)
   integer(i_llong) n_position
   integer(i_kind) iskip,jextra,nextra
   integer(i_kind) status(mpi_status_size)
-  integer(i_kind) request,request_ldmk,request_ldmk_snow,request_ldmk_seaice
+  integer(i_kind) request,request_ldmk
   integer(i_kind) jbegin(0:npe),jend(0:npe-1),jend2(0:npe-1)
   integer(i_kind) kbegin(0:npe),kend(0:npe-1)
   integer(i_long),allocatable:: ibuf(:,:)
   integer(i_long),allocatable:: jbuf(:,:,:)
-  real(r_single),allocatable::mub(:,:), landmask(:,:),snow(:,:),seaice(:,:)
-  integer(i_kind) kdim_mub,i_snowT_check
+  real(r_single),allocatable::mub(:,:), landmask(:,:)
+  integer(i_kind) kdim_mub
   integer(i_kind) kt,kq,ku,kv
   integer(i_kind) mfcst
   integer(i_long) iyear,imonth,iday,ihour,iminute,isecond,dummy3(3)
@@ -143,8 +142,6 @@ subroutine wrwrfmassa_binary(mype)
   real(r_kind), pointer :: ges_qnr(:,:,:)=>NULL()
 
   it=ntguessig
-
-  ksize=0
 
 ! Inquire about cloud guess fields
   call gsi_metguess_get('clouds::3d',n_actual_clouds,istatus)
@@ -298,9 +295,7 @@ subroutine wrwrfmassa_binary(mype)
   allocate(landmask(im,jm))
   call mpi_file_iread_at(mfcst,n_position,landmask,im*jm,mpi_real4,request_ldmk,ierror)
 
-  read(lendian_in) n_position                                         ! xice
-  allocate(seaice(im,jm))
-  call mpi_file_iread_at(mfcst,n_position,seaice,im*jm,mpi_real4,request_ldmk_seaice,ierror)
+  read(lendian_in)                                                    ! xice
 
   i=i+1 ; i_sst=i                                                ! sst
   read(lendian_in) n_position
@@ -310,11 +305,7 @@ subroutine wrwrfmassa_binary(mype)
   read(lendian_in)                                                    ! ivgtyp
   read(lendian_in)                                                    ! isltyp
   read(lendian_in)                                                    ! vegfrac
-
-  read(lendian_in) n_position                                         ! sno
-  allocate(snow(im,jm))
-  call mpi_file_iread_at(mfcst,n_position,snow,im*jm,mpi_real4,request_ldmk_snow,ierror)
-
+  read(lendian_in)                                                    ! sno
   read(lendian_in)                                                    ! u10
   read(lendian_in)                                                    ! v10
   if(l_gsd_soilTQ_nudge) then
@@ -691,7 +682,7 @@ subroutine wrwrfmassa_binary(mype)
         end do
      end do
   endif ! l_gsd_soilTQ_nudge
-  if (i_use_2mq4b > 0) then
+  if (l_use_2mQ4B) then
      do i=1,lon1
         ip1=i+1
         do j=1,lat1
@@ -717,20 +708,6 @@ subroutine wrwrfmassa_binary(mype)
   if(byte_swap) then
      num_swap=im*jm
      call to_native_endianness_r4(landmask(1,1),num_swap) !got landmask for
-                                                          ! soil nudging in 2X
-                                                          ! grid
-  end if
-  call mpi_wait(request_ldmk_snow,status,ierror)
-  if(byte_swap) then
-     num_swap=im*jm
-     call to_native_endianness_r4(snow(1,1),num_swap)     !got snow for
-                                                          ! soil nudging in 2X
-                                                          ! grid
-  end if
-  call mpi_wait(request_ldmk_seaice,status,ierror)
-  if(byte_swap) then
-     num_swap=im*jm
-     call to_native_endianness_r4(seaice(1,1),num_swap)   !got seaice for
                                                           ! soil nudging in 2X
                                                           ! grid
   end if
@@ -989,12 +966,7 @@ subroutine wrwrfmassa_binary(mype)
            (ifld >=i_smois .and. ifld <=i_smois+ksize-1) .or. &
            (ifld >=i_tslb .and. ifld <=i_tslb+ksize-1) ) then 
 ! for 2X soil nudging
-           i_snowT_check=0
-           if(ifld==i_tsk .or. ifld==i_soilt1 .or. ifld ==i_tslb) &
-                i_snowT_check=1 
-           if(ifld >=i_smois .and. ifld <=i_smois+ksize-1) i_snowT_check=2
-           call unfill_mass_grid2t_ldmk(tempa(1,ifld),im,jm,temp1,landmask, &
-                                        snow,seaice,i_snowT_check)
+           call unfill_mass_grid2t_ldmk(tempa(1,ifld),im,jm,temp1,landmask)
         else
            call unfill_mass_grid2t(tempa(1,ifld),im,jm,temp1)
         endif
@@ -1246,8 +1218,6 @@ subroutine wrwrfmassa_binary(mype)
   deallocate(length)
   deallocate(mub)
   deallocate(landmask)
-  deallocate(snow)
-  deallocate(seaice)
   deallocate(tempa)
   deallocate(tempb)
   deallocate(temp1)
@@ -1258,6 +1228,39 @@ subroutine wrwrfmassa_binary(mype)
   call mpi_file_close(mfcst,ierror)
 
 end subroutine wrwrfmassa_binary
+#else /* Start no WRF-library block */
+subroutine wrwrfmassa_binary(mype)
+!$$$  subprogram documentation block
+!                .      .    .                                       .
+! subprogram:    wrwrfmassa              write out wrf MASS restart file
+!   prgmmr: parrish          org: np22                date: 2004-06-23
+!
+! abstract:  dummy call to read wrf MASS guess restart interface file, 
+!            add analysis increment, and write out wrf MASS analysis 
+!            restart interface file.
+!
+! program history log
+!   2005-02-25 todling - add dummy subroutine to skip over wrf code
+!   2005-03-14 treadon - add write statement to note entry into dummy routine
+!   input argument list:
+!     mype     - pe number
+!
+!   output argument list:
+!     no output arguments
+!
+! attributes:
+!   language: f90
+!   machine:  ibm RS/6000 SP
+!
+!$$$
+  use kinds, only: i_kind
+  implicit none
+
+  integer(i_kind),intent(in   ) :: mype
+
+  if (mype==0) write(6,*)'WRWRFMASSA_BINARY:  enter dummy call, do nothing'
+end subroutine wrwrfmassa_binary
+#endif /* End no WRF-library block */
 
 subroutine generic_sub2grid(all_loc,tempa,kbegin_loc,kend_loc,kbegin,kend,mype,num_fields)
 !$$$  subprogram documentation block
@@ -1683,8 +1686,8 @@ subroutine wrwrfmassa_netcdf(mype)
   use constants, only: one,zero_single,rd_over_cp_mass,one_tenth,r10,r100
   use gsi_io, only: lendian_in, lendian_out
   use rapidrefresh_cldsurf_mod, only: l_cloud_analysis,l_gsd_soilTQ_nudge,&
-       i_use_2mq4b
-  use chemmod, only: laeroana_gocart,wrf_pm2_5
+       l_use_2mQ4B
+  use chemmod, only: laeroana_gocart
   use gsi_bundlemod, only: GSI_BundleGetPointer
   use gsi_metguess_mod, only: gsi_metguess_get,GSI_MetGuess_Bundle
   use gsi_chemguess_mod, only: GSI_ChemGuess_Bundle, gsi_chemguess_get
@@ -1703,13 +1706,13 @@ subroutine wrwrfmassa_netcdf(mype)
   real(r_single),allocatable::temp1(:),temp1u(:),temp1v(:),tempa(:),tempb(:)
   real(r_single),allocatable::all_loc(:,:,:)
   real(r_single),allocatable::strp(:)
-  real(r_single),allocatable::landmask(:),snow(:),seaice(:)
+  real(r_single),allocatable::landmask(:)
   character(6) filename
   integer(i_kind) i,j,k,kt,kq,ku,kv,it,i_psfc,i_t,i_q,i_u,i_v
   integer(i_kind) i_qc,i_qi,i_qr,i_qs,i_qg,i_qnr
   integer(i_kind) kqc,kqi,kqr,kqs,kqg,kqnr,i_tt,ktt
   integer(i_kind) i_sst,i_skt,i_th2,i_q2,i_soilt1,i_tslb,i_smois,ktslb,ksmois
-  integer(i_kind) :: iv, n_gocart_var,i_snowT_check
+  integer(i_kind) :: iv, n_gocart_var
   integer(i_kind),allocatable :: i_chem(:), kchem(:)
   integer(i_kind) num_mass_fields,num_all_fields,num_all_pad
   integer(i_kind) regional_time0(6),nlon_regional0,nlat_regional0,nsig0,nsoil
@@ -1755,7 +1758,6 @@ subroutine wrwrfmassa_netcdf(mype)
   real(r_kind), pointer :: ges_seas3(:,:,:)=>NULL()
   real(r_kind), pointer :: ges_seas4(:,:,:)=>NULL()
   real(r_kind), pointer :: ges_p25  (:,:,:)=>NULL()
-  real(r_kind), pointer :: ges_pm2_5  (:,:,:)=>NULL()
 
   it=ntguessig
 
@@ -1791,14 +1793,6 @@ subroutine wrwrfmassa_netcdf(mype)
         laeroana_gocart = .false.
      endif
   endif
-
-  if ( wrf_pm2_5 ) then
-     num_mass_fields = num_mass_fields + lm
-     allocate(i_chem(1))
-     allocate(kchem(1))
-  endif
-  
-
   num_all_fields=num_mass_fields
   num_all_pad=num_all_fields
   allocate(all_loc(lat2,lon2,num_all_pad))
@@ -1839,29 +1833,16 @@ subroutine wrwrfmassa_netcdf(mype)
            i_chem(iv)=i_tt+(iv-1)*lm+1
         end do
      endif
-
-     if ( wrf_pm2_5 ) then
-        iv=1
-        i_chem(iv)=i_tt+(iv-1)*lm+1
-     endif
-     
   else
      if ( laeroana_gocart) then
         do iv = 1, n_gocart_var
            i_chem(iv)=i_skt+(iv-1)*lm+1
         end do
      endif
-
-     if ( wrf_pm2_5 ) then
-        iv=1
-        i_chem(iv)=i_skt+(iv-1)*lm+1
-     endif
-
-
   endif
   
   allocate(temp1(im*jm),temp1u((im+1)*jm),temp1v(im*(jm+1)))
-  allocate(landmask(im*jm),snow(im*jm),seaice(im*jm))
+  allocate(landmask(im*jm))
 
   if(mype == 0) write(6,*)' at 2 in wrwrfmassa'
 
@@ -1941,18 +1922,6 @@ subroutine wrwrfmassa_netcdf(mype)
      end do
   endif
 
-  if ( wrf_pm2_5 ) then
-     ier = 0
-     call GSI_BundleGetPointer ( GSI_ChemGuess_Bundle(it), 'pm2_5',  ges_pm2_5,  istatus )
-     ier=ier+istatus
-     if (ier/=0 .and. mype == 0) then
-         write(6,*)'WRWRFMASSA_NETCDF: getpointer failed for gocart pm2_5'
-     endif
-     iv=1
-     kchem(iv) = i_chem(iv)-1
-  endif
-
-
   q_integral=one
   do k=1,nsig
      deltasigma=eta1_ll(k)-eta1_ll(k+1)
@@ -1975,13 +1944,6 @@ subroutine wrwrfmassa_netcdf(mype)
            kchem(iv) = kchem(iv)+1
         end do
      endif
-
-     if (wrf_pm2_5) then
-        iv=1
-        kchem(iv) = kchem(iv)+1
-     endif
-
-
      do i=1,lon2
         do j=1,lat2
            all_loc(j,i,ku)=ges_u(j,i,k)
@@ -2023,11 +1985,6 @@ subroutine wrwrfmassa_netcdf(mype)
               all_loc(j,i,kchem(14))=ges_seas4(j,i,k)
               if ( n_gocart_var>=15 ) all_loc(j,i,kchem(15))=ges_p25(j,i,k)
            endif
-
-           if ( wrf_pm2_5 ) then
-              all_loc(j,i,kchem(1))=ges_pm2_5(j,i,k)
-           endif
-           
 
            q_integral(j,i)=q_integral(j,i)+deltasigma* &
                 ges_q(j,i,k)/(one-ges_q(j,i,k))
@@ -2196,7 +2153,7 @@ subroutine wrwrfmassa_netcdf(mype)
         end do
      end do
   endif ! l_gsd_soilTQ_nudge
-  if (i_use_2mq4b >0) then
+  if (l_use_2mQ4B) then
      do i=1,lon2
         do j=1,lat2
 ! Convert 2m specific humidity to mixing ratio
@@ -2212,7 +2169,6 @@ subroutine wrwrfmassa_netcdf(mype)
      write(lendian_out)temp1
 ! SICE
      read(lendian_in)temp1
-     seaice=temp1
      write(lendian_out)temp1
   end if
 
@@ -2248,15 +2204,7 @@ subroutine wrwrfmassa_netcdf(mype)
 ! REST OF FIELDS
   if(l_gsd_soilTQ_nudge) then
      if (mype == 0) then
-        do k=4,6
-           read(lendian_in)temp1
-           write(lendian_out)temp1
-        end do
-! SM   This is snow
-        read(lendian_in)temp1
-        write(lendian_out)temp1
-        snow=temp1
-        do k=8,9
+        do k=4,9
            read(lendian_in)temp1
            write(lendian_out)temp1
         end do
@@ -2274,9 +2222,7 @@ subroutine wrwrfmassa_netcdf(mype)
            do i=1,iglobal
               tempa(i)=tempa(i)-tempb(i)
            end do
-           i_snowT_check=2
-           call unfill_mass_grid2t_ldmk(tempa,im,jm,temp1,landmask,&
-                                        snow,seaice,i_snowT_check)
+           call unfill_mass_grid2t_ldmk(tempa,im,jm,temp1,landmask)
            write(lendian_out)temp1
         end if
      end do
@@ -2293,10 +2239,7 @@ subroutine wrwrfmassa_netcdf(mype)
            do i=1,iglobal
               tempa(i)=tempa(i)-tempb(i)
            end do
-           i_snowT_check=0
-           if(k==1) i_snowT_check=1
-           call unfill_mass_grid2t_ldmk(tempa,im,jm,temp1,landmask, &
-                                        snow,seaice,i_snowT_check)
+           call unfill_mass_grid2t_ldmk(tempa,im,jm,temp1,landmask)
            write(lendian_out)temp1
         end if
      end do
@@ -2306,7 +2249,6 @@ subroutine wrwrfmassa_netcdf(mype)
            read(lendian_in)temp1
            write(lendian_out)temp1
         end do
-        snow=0
      end if
   endif !  l_gsd_soilTQ_nudge
   
@@ -2326,9 +2268,7 @@ subroutine wrwrfmassa_netcdf(mype)
               tempa(i)=tempa(i)-tempb(i)
            end if
         end do
-        i_snowT_check=1
-        call unfill_mass_grid2t_ldmk(tempa,im,jm,temp1,landmask, &
-                                     snow,seaice,i_snowT_check)
+        call unfill_mass_grid2t_ldmk(tempa,im,jm,temp1,landmask)
         write(lendian_out)temp1
      end if
   else
@@ -2376,9 +2316,7 @@ subroutine wrwrfmassa_netcdf(mype)
            tempa(i)=tempa(i)-tempb(i)
         end do
         write(6,*)' at 10.3 in wrwrfmassa,max,min(tempa)=',maxval(tempa),minval(tempa)
-        i_snowT_check=1
-        call unfill_mass_grid2t_ldmk(tempa,im,jm,temp1,landmask, &
-                                    snow,seaice,i_snowT_check)
+        call unfill_mass_grid2t_ldmk(tempa,im,jm,temp1,landmask)
         write(6,*)' at 10.4 in wrwrfmassa,max,min(temp1)=',maxval(temp1),minval(temp1)
         write(lendian_out)temp1
      end if     !endif mype==0
@@ -2559,29 +2497,6 @@ subroutine wrwrfmassa_netcdf(mype)
      deallocate(kchem)
   endif
 
-  if ( wrf_pm2_5 ) then
-     iv=1
-     kchem(iv)=i_chem(iv)-1
-     do k=1,nsig
-        tempa=0.0
-        kchem(iv)=kchem(iv)+1
-        if(mype == 0) read(lendian_in)temp1
-        call strip(all_loc(:,:,kchem(iv)),strp)
-        call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
-             tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
-        if(mype == 0) then
-           call fill_mass_grid2t(temp1,im,jm,tempb,2)
-           do i=1,iglobal
-              tempa(i)=tempa(i)-tempb(i)
-           end do
-           call unfill_mass_grid2t(tempa,im,jm,temp1)
-           write(lendian_out)temp1
-        end if
-     end do
-     deallocate(i_chem)
-     deallocate(kchem)
-  endif
-
   if (mype==0) then
      close(lendian_in)
      close(lendian_out)
@@ -2595,8 +2510,6 @@ subroutine wrwrfmassa_netcdf(mype)
   deallocate(tempa)
   deallocate(tempb)
   deallocate(landmask)
-  deallocate(snow)
-  deallocate(seaice)
   
 end subroutine wrwrfmassa_netcdf
 
@@ -2726,86 +2639,3 @@ subroutine update_start_date(chdrbuf,iyear,imonth,iday,ihour,iminute,isecond)
   write(6,*) 'UPDATE_START_DATE:  old second, new second =',d2,' , ',c2
 
 end subroutine update_start_date
-#else /* Start no WRF-library block */
-subroutine wrwrfmassa_binary(mype)
-!$$$  subprogram documentation block
-!                .      .    .                                       .
-! subprogram:    wrwrfmassa              write out wrf MASS restart file
-!   prgmmr: parrish          org: np22                date: 2004-06-23
-!
-! abstract:  dummy call to read wrf MASS guess restart interface file, 
-!            add analysis increment, and write out wrf MASS analysis 
-!            restart interface file.
-!
-! program history log
-!   2005-02-25 todling - add dummy subroutine to skip over wrf code
-!   2005-03-14 treadon - add write statement to note entry into dummy routine
-!   input argument list:
-!     mype     - pe number
-!
-!   output argument list:
-!     no output arguments
-!
-! attributes:
-!   language: f90
-!   machine:  ibm RS/6000 SP
-!
-!$$$
-  use kinds, only: i_kind
-  implicit none
-
-  integer(i_kind),intent(in   ) :: mype
-
-  if (mype==0) write(6,*)'WRWRFMASSA_BINARY:  enter dummy call, do nothing'
-end subroutine wrwrfmassa_binary
-subroutine wrwrfmassa_netcdf(mype)
-!$$$  subprogram documentation block
-!                .      .    .                                       .
-! subprogram:    wrwrfmassa              write out wrf MASS restart file
-!   prgmmr: parrish          org: np22                date: 2004-06-23
-!
-! abstract:  dummy call to read wrf MASS guess restart interface file, add analysis
-!            increment, and write out wrf MASS analysis restart 
-!            interface file.
-!
-! program history log:
-!   2004-06-23  parrish, document
-!   2004-08-03  treadon - add only to module use, add intent in/out
-!   2006-02-15  treadon - convert specific humidity to moisture mixing ratio
-!   2006-03-07  treadon - convert virtual temperature to potential temperature
-!   2006-04-06  middlecoff - changed iog  from 11 to lendian_in
-!                            changed ioan from 51 to lendian_out
-!   2006-07-28  derber  - include sensible temperature
-!   2006-07-31  kleist - change to use ges_ps instead of lnps
-!   2008-03-27  safford - rm unused vars and uses
-!   2008-12-05  todling - adjustment for dsfct time dimension addition
-!   2010-03-29  hu     - add code to gether cloud/hydrometeor fields and write out
-!   2010-04-01  treadon - move strip_single to gridmod
-!   2011-04-29  todling - introduce MetGuess and wrf_mass_guess_mod
-!   2011-09-20  hclin   - added 15 wrfchem/gocart fields for aod
-!   2012-04-13  whitaker - don't call GSI_BundleGetPointer if n_actual_clouds = 0
-!   2013-10-19  todling - metguess now holds background !   2013-10-24  todling - general interface to strip !   2014-03-12  hu     - add code to read ges_q2 (2m Q), 
-!                               Qnr(rain number concentration), 
-!                               and nsoil (number of soil levels)
-!
-!   input argument list:
-!     mype     - pe number
-!
-!   output argument list:
-!     no output arguments
-!
-! attributes:
-!   language: f90
-!   machine:  ibm RS/6000 SP
-!
-!$$$
-  use kinds, only: r_kind,r_single,i_kind
-  implicit none
-
-! Declare passed variables
-  integer(i_kind),intent(in   ) :: mype
-
-  if (mype==0) write(6,*)'WRWRFMASSA_NETCDF:  enter dummy call, do nothing'
-  
-end subroutine wrwrfmassa_netcdf
-#endif /* End no WRF-library block */

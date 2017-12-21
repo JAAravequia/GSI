@@ -32,7 +32,7 @@ use qcmod,     only: nlnqc_iter
 use constants, only: zero,tiny_r_kind
 use mpimod,    only: mype
 use obs_sensitivity, only: lobsensadj, lobsensmin, lobsensfc, lobsensincr, &
-                           fcsens, llancdone, dot_prod_obs
+                           iobsconv, fcsens, llancdone, dot_prod_obs
 use obsmod,    only: lsaveobsens,l_do_adjoint,write_diag
 use adjtest,   only: adtest
 use grdtest,   only: grtest
@@ -41,7 +41,7 @@ use control_vectors, only: allocate_cv,deallocate_cv,write_cv,inquire_cv
 use control_vectors, only: dot_product,assignment(=)
 use obs_ferrscale, only: lferrscale, apply_hrm1h
 use hybrid_ensemble_parameters,only : l_hyb_ens,aniso_a_en
-use hybrid_ensemble_isotropic, only: beta12mult,bkerror_a_en
+use hybrid_ensemble_isotropic, only: beta12mult
 use timermod,      only: timer_ini, timer_fnl
 use bicglanczos, only:  pcglanczos, setup_pcglanczos, save_pcgprecond, pcgprecond, LMPCGL 
 
@@ -57,11 +57,12 @@ integer(i_kind)      :: itermax,ii,itest
 logical              :: lsavinc, lsavev
 character(len=12)    :: clfile
 
-real(r_kind) :: zeps
+real(r_kind) :: rdx,zeps
 integer(i_kind) :: jtermax
-type(control_vector) :: yhat,grady
-real(r_kind)         :: zgk
-integer(i_kind)      :: ilen,nprt
+type(control_vector) :: xtry,ytry,yhat,gradw,grady,dirx,diry
+real(r_kind)         :: zgk,zgnew,zfk
+integer(i_kind)      :: jj,ilen,nprt
+logical              :: lsavevecs
 
 
 !**********************************************************************
@@ -95,7 +96,7 @@ xhat=zero
 yhat=zero
 call jgrad(xhat,yhat,zf0,gradx,lsavinc,nprt,myname)
 if(LMPCGL) then 
-   call pcgprecond(gradx,grady)
+   call pcgprecond(gradx,grady,1)
 else 
    call bkerror(gradx,grady)
 
@@ -146,7 +147,7 @@ call setup_pcglanczos(mype,nprt,jiter,jiterstart,itermax,nwrvecs, &
 
 if(jiter>=miter) lsavev=.false.
            
-call pcglanczos(xhat,yhat,costf,gradx,grady,eps,itermax,lsavev)
+call pcglanczos(xhat,yhat,costf,gradx,grady,eps,itermax,iobsconv,lsavev)
 
 call save_pcgprecond(lsavev)
 

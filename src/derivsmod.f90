@@ -8,7 +8,6 @@ module derivsmod
 !
 ! program history log:
 !   2013-10-19 Todling - Initial code.
-!   2014-06-18 Carley - add lgues and dlcbasdlog
 !
 ! public subroutines:
 !  drv_initialized         - initialize name of fields to calc derivs for
@@ -31,7 +30,7 @@ module derivsmod
 use kinds, only: i_kind, r_kind
 use mpimod, only: mype
 use gridmod, only: lat2,lon2,nsig
-use constants, only: zero,max_varname_length
+use constants, only: zero
 use state_vectors, only: svars2d,svars3d
 use GSI_BundleMod, only : GSI_BundleCreate
 use GSI_BundleMod, only : GSI_Bundle
@@ -58,22 +57,20 @@ public :: gsi_xderivative_bundle
 public :: gsi_yderivative_bundle
 public :: dvars2d, dvars3d
 public :: dsrcs2d, dsrcs3d
-public :: cwgues,cwgues0  
-public :: ggues,vgues,pgues,lgues,dvisdlog,dlcbasdlog
-public :: w10mgues,howvgues
+public :: cwgues
+public :: ggues,vgues,pgues,dvisdlog
 public :: qsatg,qgues,dqdt,dqdrh,dqdp
 
 logical :: drv_initialized = .false.
 
 type(gsi_bundle),pointer :: gsi_xderivative_bundle(:)
 type(gsi_bundle),pointer :: gsi_yderivative_bundle(:)
-character(len=max_varname_length),allocatable,dimension(:):: dvars2d, dvars3d
-character(len=max_varname_length),allocatable,dimension(:):: dsrcs2d, dsrcs3d
+character(len=32),allocatable,dimension(:):: dvars2d, dvars3d
+character(len=32),allocatable,dimension(:):: dsrcs2d, dsrcs3d
 
 real(r_kind),allocatable,dimension(:,:,:):: qsatg,qgues,dqdt,dqdrh,dqdp
-real(r_kind),allocatable,dimension(:,:):: ggues,vgues,pgues,lgues,dvisdlog,dlcbasdlog
-real(r_kind),allocatable,dimension(:,:):: w10mgues,howvgues
-real(r_kind),target,allocatable,dimension(:,:,:):: cwgues,cwgues0        
+real(r_kind),allocatable,dimension(:,:):: ggues,vgues,pgues,dvisdlog
+real(r_kind),target,allocatable,dimension(:,:,:):: cwgues
 
 ! below this point: declare vars not to be made public
 
@@ -116,12 +113,12 @@ character(len=*),optional,intent(in) :: rcname ! optional input filename
 
 character(len=*),parameter::myname_=myname//'*set_'
 character(len=*),parameter:: tbname='state_derivatives::'
-integer(i_kind) luin,ii,nrows,ntot,ipnt,istatus
+integer(i_kind) luin,i,ii,nrows,ntot,ipnt,istatus
 integer(i_kind) i2d,i3d,n2d,n3d,irank
 integer(i_kind),allocatable,dimension(:)::nlevs
 character(len=256),allocatable,dimension(:):: utable
-character(len=max_varname_length),allocatable,dimension(:):: vars
-character(len=max_varname_length),allocatable,dimension(:):: sources
+character(len=32),allocatable,dimension(:):: vars
+character(len=32),allocatable,dimension(:):: sources
 logical iamroot_,matched
 
 if(drv_set_) return
@@ -277,7 +274,7 @@ drv_set_=.true.
  logical, intent(in) :: switch_on_derivatives
  integer(i_kind),intent(in) :: nfldsig
 
- integer nt,ierror
+ integer nt,istatus,ierror
  character(len=32) bname
  type(gsi_grid) :: grid
 
@@ -400,9 +397,6 @@ drv_set_=.true.
 !   2013-10-25  todling - revisit variable initialization
 !   2013-11-12  lueken - revisit logic around cwgues
 !   2014-02-03  todling - CV length and B-dims here (no longer in observer)
-!   2014-03-19  pondeca - add w10mgues
-!   2014-05-07  pondeca - add howvgues
-!   2014-06-18  carley - add lgues and dlcbasdlog
 !
 !   input argument list:
 !    mlat
@@ -419,6 +413,7 @@ drv_set_=.true.
     implicit none
 
     integer(i_kind) i,j,k
+    integer(i_kind) msig,mlat,mlon 
 
     if (getindex(svars3d,'q')>0) then
        allocate(qsatg(lat2,lon2,nsig),&
@@ -440,12 +435,10 @@ drv_set_=.true.
     endif
 
     allocate(cwgues(lat2,lon2,nsig))
-    allocate(cwgues0(lat2,lon2,nsig))  
     do k=1,nsig
        do j=1,lon2
           do i=1,lat2
              cwgues(i,j,k)=zero
-             cwgues0(i,j,k)=zero  
           end do
         end do
     end do
@@ -475,32 +468,6 @@ drv_set_=.true.
           end do
        end do
     end if
-    if (getindex(svars2d,'lcbas')>0) then
-       allocate(lgues(lat2,lon2),dlcbasdlog(lat2,lon2))
-       do j=1,lon2
-          do i=1,lat2
-             lgues(i,j)=zero
-             dlcbasdlog(i,j)=zero
-          end do
-       end do
-    end if
-    if (getindex(svars2d,'wspd10m')>0) then
-       allocate(w10mgues(lat2,lon2))
-       do j=1,lon2
-          do i=1,lat2
-             w10mgues(i,j)=zero
-          end do
-       end do
-    end if
-    if (getindex(svars2d,'howv')>0) then
-       allocate(howvgues(lat2,lon2))
-       do j=1,lon2
-          do i=1,lat2
-             howvgues(i,j)=zero
-          end do
-       end do
-    end if
-
 
     return
   end subroutine create_auxiliar_
@@ -519,9 +486,6 @@ drv_set_=.true.
 !   2011-02-16  zhu     - add ggues,vgues,pgues
 !   2011-07-15  zhu     - add cwgues
 !   2013-10-25  todling, revisit deallocs
-!   2014-03-19  pondeca - add w10mgues
-!   2014-05-07  pondeca - add howvgues
-!   2014-06-18  carley - add lgues and dlcbasdlog 
 !
 !   input argument list:
 !
@@ -540,15 +504,10 @@ drv_set_=.true.
     if(allocated(qsatg)) deallocate(qsatg)
     if(allocated(qgues)) deallocate(qgues)
     if(allocated(cwgues)) deallocate(cwgues)
-    if(allocated(cwgues0)) deallocate(cwgues0)
     if(allocated(ggues)) deallocate(ggues)
     if(allocated(vgues)) deallocate(vgues)
     if(allocated(dvisdlog)) deallocate(dvisdlog)
     if(allocated(pgues)) deallocate(pgues)
-    if(allocated(lgues)) deallocate(lgues)
-    if(allocated(dlcbasdlog)) deallocate(dlcbasdlog)
-    if(allocated(w10mgues)) deallocate(w10mgues)
-    if(allocated(howvgues)) deallocate(howvgues)
 
     return
   end subroutine destroy_auxiliar_

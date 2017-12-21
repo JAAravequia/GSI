@@ -20,8 +20,8 @@
 #--------------------------------------------------------------------
 
 function usage {
-  echo "Usage:  Plot.sh suffix start_date end_date"
-  echo "            File name for Plot.sh may be full or relative path"
+  echo "Usage:  Plot_glbl.sh suffix start_date end_date"
+  echo "            File name for CkPlt_glbl.sh may be full or relative path"
   echo "            Suffix is data source identifier that matches data in "
   echo "              the $TANKDIR/stats directory."
   echo "            start_date and end_date are in the format YYYYMMDDHH."
@@ -43,11 +43,11 @@ fi
 this_file=`basename $0`
 this_dir=`dirname $0`
 
-RADMON_SUFFIX=$1
+SUFFIX=$1
 start_dt=$2
 end_dt=$3
 
-echo RADMON_SUFFIX    = ${RADMON_SUFFIX}
+echo SUFFIX    = ${SUFFIX}
 echo start_dt  = ${start_dt}
 echo end_dt    = ${end_dt}
 
@@ -71,38 +71,27 @@ fi
 
 top_parm=${this_dir}/../../parm
 
-export RADMON_VERSION=${RADMON_VERSION:-${top_parm}/radmon.ver}
-if [[ -s ${RADMON_VERSION} ]]; then
-   . ${RADMON_VERSION}
+if [[ -s ${top_parm}/RadMon_config ]]; then
+   . ${top_parm}/RadMon_config
 else
-   echo "Unable to source ${RADMON_VERSION} file"
-   exit 2
-fi
-
-export RADMON_CONFIG=${RADMON_CONFIG:-${top_parm}/RadMon_config}
-
-if [[ -s ${RADMON_CONFIG} ]]; then
-   . ${RADMON_CONFIG}
-else
-   echo "Unable to source ${RADMON_CONFIG}"
+   echo "Unable to source ${top_parm}/RadMon_config"
    exit 4
 fi
-
-if [[ -s ${RADMON_USER_SETTINGS} ]]; then
-   . ${RADMON_USER_SETTINGS}
+if [[ -s ${top_parm}/RadMon_user_settings ]]; then
+   . ${top_parm}/RadMon_user_settings
 else
-   echo "Unable to source ${RADMON_USER_SETTINGS}"
+   echo "Unable to source ${top_parm}/RadMon_user_settings"
    exit 6
 fi
 
-. ${IG_PARM}/plot_rad_conf
+. ${RADMON_IMAGE_GEN}/parm/plot_rad_conf
 
 if [[ $RAD_AREA = "glb" ]]; then
-   . ${IG_PARM}/glbl_conf
+   . ${RADMON_IMAGE_GEN}/parm/glbl_conf
 elif [[ $RAD_AREA = "rgn" ]]; then
-   . ${IG_PARM}/rgnl_conf
+   . ${RADMON_IMAGE_GEN}/parm/rgnl_conf
 else
-   echo "ERROR:  unable to determine RAD_AREA for $RADMON_SUFFIX"
+   echo "ERROR:  unable to determine RAD_AREA for $SUFFIX"
    exit 7
 fi
 
@@ -112,16 +101,19 @@ fi
 #--------------------------------------------------------------------
 
 if [[ RUN_ONLY_ON_DEV -eq 1 ]]; then
-   is_prod=`${IG_SCRIPTS}/onprod.sh`
+   is_prod=`${SCRIPTS}/AmIOnProd.sh`
    if [[ $is_prod = 1 ]]; then
       exit 10
    fi
 fi
 
+
+#--------------------------------------------------------------------
+
 #--------------------------------------------------------------------
 #  Deterine the number of cycles between start_dt and end_dt.
 #--------------------------------------------------------------------
-export NUM_CYCLES=`${IG_SCRIPTS}/cycle_delta.pl ${start_dt} ${end_dt}`
+export NUM_CYCLES=`${SCRIPTS}/cycle_delta.pl ${start_dt} ${end_dt}`
 echo NUM_CYCLES = $NUM_CYCLES
 
 if [[ $NUM_CYCLES -le 0 ]]; then
@@ -137,9 +129,9 @@ fi
 #  have a cycle delta of 1 from $start_dt.  (Two cycles are necessary
 #  for grads to plot.)
 #--------------------------------------------------------------------
-proc_dt=`${IG_SCRIPTS}/find_cycle.pl 1 ${TANKDIR}`
+proc_dt=`${SCRIPTS}/find_cycle.pl 1 ${TANKDIR}`
 echo proc_date = $proc_dt
-delta_proc_start=`${IG_SCRIPTS}/cycle_delta.pl ${start_dt} ${proc_dt}`
+delta_proc_start=`${SCRIPTS}/cycle_delta.pl ${start_dt} ${proc_dt}`
 if [[ $delta_proc_start -le 0 ]]; then
    echo "ERROR:  no data available -- last processed date is ${proc_dt}"
    echo "        requested plot start date is ${start_dt}"
@@ -148,6 +140,7 @@ fi
 
 
 export PLOT=1
+export PLOT_HORIZ=0
 #--------------------------------------------------------------------
 # Check status of plot jobs. If any are still running then exit
 # this script. If none are running then remove any old job records 
@@ -158,27 +151,27 @@ export PLOT=1
 #--------------------------------------------------------------------
 
 if [[ $MY_MACHINE = "wcoss" ]]; then
-   running=`bjobs -l | grep plot_${RADMON_SUFFIX} | wc -l` 
+   running=`bjobs -l | grep plot_${SUFFIX} | wc -l` 
 else
-   running=`showq -n -u ${LOGNAME} | grep plot_${RADMON_SUFFIX} | wc -l`
+   running=`showq -n -u ${LOGNAME} | grep plot_${SUFFIX} | wc -l`
 fi
 
 if [[ $running -ne 0 ]]; then
-   echo "Plot jobs still running for $RADMON_SUFFIX, must exit"
+   echo "Plot jobs still running for $SUFFIX, must exit"
    exit
 fi
 
 
 #--------------------------------------------------------------------
-#  Create tmpdir and LOGdir
+#  Create tmpdir and LOGDIR
 #--------------------------------------------------------------------
 
-tmpdir=${STMP_USER}/plot_rad${RADMON_SUFFIX}
+tmpdir=${STMP_USER}/plot_rad${SUFFIX}
 rm -rf $tmpdir
 mkdir -p $tmpdir
 cd $tmpdir
 
-mkdir -p $LOGdir
+mkdir -p $LOGDIR
 
 
 #--------------------------------------------------------------------
@@ -194,10 +187,11 @@ export PDY=`echo $PDATE|cut -c1-8`
 # Make horizontal plots only on 00z cycle.  All other plotting
 # is done with each cycle. 
 #--------------------------------------------------------------------
-#if [[ "$CYA" = "00" ]];then
-#   export PLOT_HORIZ=1
-#fi
+if [[ "$CYA" = "00" ]];then
+   export PLOT_HORIZ=1
+fi
 
+#echo plot = $PLOT, plot_horiz = $PLOT_HORIZ
 
 if [[ -d $PLOT_WORK_DIR ]]; then
    rm -rf $PLOT_WORK_DIR
@@ -278,28 +272,26 @@ export START_DATE=${start_dt}
 #------------------------------------------------------------------
 #   Start image plotting jobs.
 #------------------------------------------------------------------
-${IG_SCRIPTS}/mk_angle_plots.sh
+${SCRIPTS}/mk_angle_plots.sh
 
-${IG_SCRIPTS}/mk_bcoef_plots.sh
+${SCRIPTS}/mk_bcoef_plots.sh
 
-${IG_SCRIPTS}/mk_bcor_plots.sh
+${SCRIPTS}/mk_bcor_plots.sh
 
 if [[ ${PLOT_HORIZ} -eq 1 ]] ; then
    export datdir=$RADSTAT_LOCATION
 
-   jobname="plot_horiz_${RADMON_SUFFIX}"
-   logfile="${LOGdir}/horiz.log"
+   jobname="plot_horiz_${SUFFIX}"
+   logfile="${LOGDIR}/horiz.log"
 
    if [[ $MY_MACHINE = "wcoss" ]]; then
-      $SUB -P $PROJECT -q $JOB_QUEUE -o ${logfile} -M 80 -W 0:45 -J ${jobname}  -R affinity[core] ${IG_SCRIPTS}/mk_horiz_plots.sh
-   elif [[ $MY_MACHINE = "cray" ]]; then
-      $SUB -P $PROJECT -q $JOB_QUEUE -o ${logfile} -M 80 -W 0:45 -J ${jobname}  ${IG_SCRIPTS}/mk_horiz_plots.sh
+      $SUB -P $PROJECT -q $JOB_QUEUE -o ${logfile} -M 80 -W 0:45 -J ${jobname}  -R affinity[core] ${SCRIPTS}/mk_horiz_plots.sh
    else
-      $SUB -A $ACCOUNT -l procs=1,walltime=0:20:00 -N ${jobname} -V -j oe -o ${logfile} $IG_SCRIPTS/mk_horiz_plots.sh
+      $SUB -A $ACCOUNT -l procs=1,walltime=0:20:00 -N ${jobname} -V -j oe -o ${logfile} $SCRIPTS/mk_horiz_plots.sh
    fi
 fi
 
-${IG_SCRIPTS}/mk_time_plots.sh
+${SCRIPTS}/mk_time_plots.sh
 
 
 #--------------------------------------------------------------------
@@ -310,14 +302,14 @@ do_data_rpt=$DO_DATA_RPT
 
 if [[ $do_data_rpt -eq 1 || $do_diag_rpt -eq 1 ]]; then
 
-   logfile_dir=${LOGdir}/rad${RADMON_SUFFIX}
+   logfile_dir=${LOGSverf_rad}/rad${SUFFIX}
    logfile=`ls ${logfile_dir}/${PDY}/gdas_verfrad_${CYA}.*`
    if [[ ! -s $logfile ]]; then
-      logfile=${LOGdir}/data_extract.${sdate}.${CYA}.log
+      logfile=${LOGDIR}/data_extract.${sdate}.${CYA}.log
    fi
   
    if [[ -s $logfile ]]; then
-      ${IG_SCRIPTS}/extract_err_rpts.sh $sdate $CYA $logfile
+      ${SCRIPTS}/extract_err_rpts.sh $sdate $CYA $logfile
    fi
 fi
 

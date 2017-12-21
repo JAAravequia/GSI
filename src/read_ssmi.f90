@@ -1,7 +1,6 @@
 subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
      infile,lunout,obstype,nread,ndata,nodata,twind,sis,&
-     mype_root,mype_sub,npe_sub,mpi_comm_sub,nobs, &
-     nrec_start,dval_use)
+     mype_root,mype_sub,npe_sub,mpi_comm_sub)
 
 !$$$  subprogram documentation block
 ! subprogram:    read_ssmi           read SSM/I  bufr1b data
@@ -50,9 +49,6 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
 !   2011-08-01  lueken  - added module use deter_sfc_mod 
 !   2012-03-05  akella  - nst now controlled via coupler
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
-!   2014-05-02  sienkiewicz- modify gross check screening to allow data to be used with bad ch6, if
-!                              ch6 data has been turned off - only toss if do85GHz is true
-!   2015-02-23  Rancic/Thomas - add thin4d to time window logical
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -70,13 +66,11 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
 !     mype_sub - mpi task id within sub-communicator
 !     npe_sub  - number of data read tasks
 !     mpi_comm_sub - sub-communicator for data read
-!     nrec_start - first subset with useful information
 !
 !   output argument list:
 !     nread    - number of BUFR SSM/I observations read (after eliminating orbit overlap)
 !     ndata    - number of BUFR SSM/I profiles retained for further processing (thinned)
 !     nodata   - number of BUFR SSM/I observations retained for further processing (thinned)
-!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -91,17 +85,16 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
   use gridmod, only: diagnostic_reg,regional,rlats,rlons,nlat,nlon,&
       tll2xy,txy2ll
   use constants, only: deg2rad,rad2deg,zero,one,two,three,four,r60inv
-  use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,thin4d
+  use gsi_4dvar, only: l4dvar,iwinbgn,winlen
   use deter_sfc_mod, only: deter_sfc
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
-  use mpimod, only: npe
 
   implicit none
 
 ! Declare passed variables
-  character(len=*),intent(in   ) :: infile,obstype,jsatid
-  character(len=20),intent(in  ) :: sis
-  integer(i_kind),intent(in   ) :: mype,lunout,ithin,nrec_start
+  character(10)  ,intent(in   ) :: infile,obstype,jsatid
+  character(20)  ,intent(in   ) :: sis
+  integer(i_kind),intent(in   ) :: mype,lunout,ithin
   integer(i_kind),intent(in   ) :: mype_root
   integer(i_kind),intent(in   ) :: mype_sub
   integer(i_kind),intent(in   ) :: npe_sub
@@ -109,15 +102,14 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
   real(r_kind)   ,intent(in   ) :: rmesh,gstime,twind
   real(r_kind)   ,intent(inout) :: val_ssmi
 
-  integer(i_kind),dimension(npe),intent(inout):: nobs
   integer(i_kind),intent(inout):: nread
 
   integer(i_kind),intent(inout):: ndata,nodata
-  logical        ,intent(in   ):: dval_use
 
 
 ! Declare local parameters
   integer(i_kind),parameter :: n1bhdr=14
+  integer(i_kind),parameter :: maxinfo=33
   integer(i_kind),parameter :: maxchanl=30
 
   integer(i_kind),parameter :: ntime=8      !time header
@@ -136,11 +128,11 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
 
   character(8) subset
 
-  integer(i_kind):: i,k,ntest,ireadsb,ireadmg,irec,next
+  integer(i_kind):: i,k,ntest,ireadsb,ireadmg,irec,isub,next
   integer(i_kind):: iret,idate,nchanl
   integer(i_kind):: isflg,nreal,idomsfc
   integer(i_kind):: nmind,itx,nele,itt
-  integer(i_kind):: iskip,maxinfo
+  integer(i_kind):: iskip
   integer(i_kind):: lnbufr
   integer(i_kind):: ilat,ilon
   integer(i_kind),allocatable,dimension(:)::nrec
@@ -153,7 +145,7 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
   real(r_kind) timedif
   real(r_kind),allocatable,dimension(:,:):: data_all
 
-  real(r_kind) disterr,disterrmax,dlon00,dlat00,cdist
+  real(r_kind) disterr,disterrmax,dlon00,dlat00
 
 !  ---- bufr argument -----
   real(r_double),dimension(n1bhdr):: bfr1bhdr
@@ -178,7 +170,6 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
 
 !**************************************************************************
 ! Initialize variables
-  maxinfo=31
   lnbufr = 15
   disterrmax=zero
   ntest=0
@@ -229,9 +220,9 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
      if (nusis(i)==sis) then
         if (iuse_rad(i)>=0) then
            if (iuse_rad(i)>0) assim=.true.
-           if (nuchan(i)==6) ch6=.true.
-           if (nuchan(i)==7) ch7=.true.
-           if (assim.and.ch6.and.ch7) exit
+	   if (nuchan(i)==6) ch6=.true.
+	   if (nuchan(i)==7) ch7=.true.
+	   if (assim.and.ch6.and.ch7) exit
         endif
      endif
   end do search
@@ -243,12 +234,11 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
   call makegrids(rmesh,ithin)
 
 ! Open unit to satellite bufr file
-  open(lnbufr,file=trim(infile),form='unformatted')
+  open(lnbufr,file=infile,form='unformatted')
   call openbf(lnbufr,'IN',lnbufr)
   call datelen(10)
 
 ! Allocate arrays to hold data
-  if(dval_use)maxinfo=maxinfo+2
   nreal  = maxinfo + nstinfo
   nele   = nreal   + nchanl
   allocate(data_all(nele,itxmax),nrec(itxmax))
@@ -259,7 +249,6 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
   next=0
   read_subset: do while(ireadmg(lnbufr,subset,idate)>=0)
      irec=irec+1
-     if(irec < nrec_start) cycle read_subset
      next=next+1
      if(next == npe_sub)next=0
      if(next /= mype_sub)cycle
@@ -277,11 +266,11 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
         iobsdate(1:5) = bfr1bhdr(2:6) !year,month,day,hour,min
         call w3fs21(iobsdate,nmind)
         t4dv=(real(nmind-iwinbgn,r_kind) + real(bfr1bhdr(7),r_kind)*r60inv)*r60inv
-        sstime=real(nmind,r_kind) + real(bfr1bhdr(7),r_kind)*r60inv
-        tdiff=(sstime-gstime)*r60inv
-        if (l4dvar.or.l4densvar) then
+        if (l4dvar) then
            if (t4dv<zero .OR. t4dv>winlen) cycle read_loop
         else
+           sstime=real(nmind,r_kind) + real(bfr1bhdr(7),r_kind)*r60inv
+           tdiff=(sstime-gstime)*r60inv
            if(abs(tdiff) > twind)  cycle read_loop
         endif
 
@@ -315,10 +304,8 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
               if(diagnostic_reg) then
                  call txy2ll(dlon,dlat,dlon00,dlat00)
                  ntest=ntest+1
-                 cdist=sin(dlat_earth)*sin(dlat00)+cos(dlat_earth)*cos(dlat00)* &
-                      (sin(dlon_earth)*sin(dlon00)+cos(dlon_earth)*cos(dlon00))
-                 cdist=max(-one,min(cdist,one))
-                 disterr=acos(cdist)*rad2deg
+                 disterr=acos(sin(dlat_earth)*sin(dlat00)+cos(dlat_earth)*cos(dlat00)* &
+                      (sin(dlon_earth)*sin(dlon00)+cos(dlon_earth)*cos(dlon00)))*rad2deg
                  disterrmax=max(disterrmax,disterr)
               end if
 
@@ -351,8 +338,7 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
               ij = ij+1
               if(mirad(ij)<tbmin .or. mirad(ij)>tbmax ) then
                  iskip = iskip + 1
-                 if(jc == 1 .or. jc == 3)iskip=iskip+nchanl
-                 if(jc == 6 .and. do85GHz)iskip=iskip+nchanl    ! skip on bad ch6 only if using 85GHz data
+                 if(jc == 1 .or. jc == 3 .or. jc == 6)iskip=iskip+nchanl
               else
                  nread=nread+1
               end if
@@ -362,7 +348,7 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
            if(iskip >= nchanl)  cycle scan_loop  !if all ch for any position is bad, skip 
            flgch = iskip*two   !used for thinning priority range 0-14
 
-           if (thin4d) then
+           if (l4dvar) then
               crit1 = 0.01_r_kind+ flgch
            else
               timedif = 6.0_r_kind*abs(tdiff) ! range: 0 to 18
@@ -411,15 +397,13 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
            else              ! otherwise do alternate check for rain
 
               if (isflg/=0) then     ! just try to scren out land pts.
-                 pred = 50_r_kind
+                 pred = 30_r_kind
               else
                  tb19v=tbob(1);  tb22v=tbob(3);
                  if (tb19v < 288.0_r_kind .and. tb22v < 288.0_r_kind) then
                     q19 = -6.723_r_kind * ( log(290.0_r_kind - tb19v)  &
                          - 2.850_r_kind - 0.405_r_kind* log(290.0_r_kind - tb22v))
-                    pred = min(75._r_kind * q19,50.)  ! scale 0.4mm -> pred ~ 30
-                 else
-                    pred = 50_r_kind      ! default if Tb 19/22 > 288
+                    pred = 75._r_kind * q19  ! scale 0.4mm -> pred ~ 30
                  endif
               endif
            endif
@@ -478,10 +462,8 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
            data_all(29,itx)= ff10                 ! ten meter wind factor
            data_all(30,itx)= dlon_earth*rad2deg   ! earth relative longitude (degrees)
            data_all(31,itx)= dlat_earth*rad2deg   ! earth relative latitude (degrees)
-           if(dval_use)then
-              data_all(32,itx)= val_ssmi
-              data_all(33,itx)= itt
-           end if
+           data_all(maxinfo-1,itx)= val_ssmi
+           data_all(maxinfo,itx)= itt
 
            if(nst_gsi>0) then
               data_all(maxinfo+1,itx) = tref       ! foundation temperature
@@ -520,16 +502,12 @@ subroutine read_ssmi(mype,val_ssmi,ithin,rmesh,jsatid,gstime,&
            if(data_all(i+nreal,n) > tbmin .and. &
               data_all(i+nreal,n) < tbmax)nodata=nodata+1
         end do
+        itt=nint(data_all(maxinfo,n))
+        super_val(itt)=super_val(itt)+val_ssmi
+
      end do
-     if(dval_use .and. assim)then
-        do n=1,ndata
-           itt=nint(data_all(33,n))
-           super_val(itt)=super_val(itt)+val_ssmi
-        end do
-     end if
 
 !    Write final set of "best" observations to output file
-     call count_obs(ndata,nele,ilat,ilon,data_all,nobs)
      write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
      write(lunout) ((data_all(k,n),k=1,nele),n=1,ndata)
   

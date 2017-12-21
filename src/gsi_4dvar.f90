@@ -20,9 +20,7 @@ module gsi_4dvar
 !			  and gsi_4dcoupler_final_traj() from gsimain_finalize(),
 !   2011-07-10 guo/zhang- add liauon
 !   2012-02-08 kleist   - add new features for 4dvar with ensemble/hybrid.
-!   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - introduced ladtest_obs 
-!   2015-02-23 Rancic/Thomas - iwinbgn changed from hours to mins, added thin4d
-!                         option to remove thinning in time       
+!   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - introduced ladtest_obs         
 !
 ! Subroutines Included:
 !   sub init_4dvar    -
@@ -51,7 +49,7 @@ module gsi_4dvar
 !   iedate            - Date and time at  end  of 4dvar window
 !   iadateend         - Date and time at  end  of 4dvar window
 !
-!   iwinbgn           - Time since ref at start of 4dvar window (mins)
+!   iwinbgn           - Time since ref at start of 4dvar window (hours)
 !   winlen            - Length of 4dvar window (hours)
 !   winoff            - Main analysis time within 4dvar window (hours)
 !
@@ -79,10 +77,6 @@ module gsi_4dvar
 !                       this should generally match with min_offset
 !   ibin_anl          - Analysis update bin.  This will be one for any 3D of 4DVAR mode, but
 !                       will be set to center of window for 4D-ens mode
-!   lwrite4danl       - logical to turn on writing out of 4D analysis state for 4D analysis modes
-!                       ** currently only set up for write_gfs in ncepgfs_io module
-!   thin4d            - When .t., removes thinning of observations due to
-!                       location in the time window
 !
 ! attributes:
 !   language: f90
@@ -111,7 +105,6 @@ module gsi_4dvar
   public :: ladtest,ladtest_obs,lgrtest,lcongrad,nhr_obsbin,nhr_subwin,nwrvecs
   public :: jsiga,ltcost,iorthomax,liauon,lnested_loops
   public :: l4densvar,ens4d_nhr,ens4d_fhrlevs,ens4d_nstarthr,ibin_anl
-  public :: lwrite4danl,thin4d
 
   logical         :: l4dvar
   logical         :: lsqrtb
@@ -128,8 +121,6 @@ module gsi_4dvar
   logical         :: liauon
   logical         :: l4densvar
   logical         :: lnested_loops
-  logical         :: lwrite4danl
-  logical         :: thin4d
 
   integer(i_kind) :: iwrtinc
   integer(i_kind) :: iadatebgn, iadateend
@@ -206,12 +197,9 @@ ens4d_nhr=3
 ens4d_nstarthr=3
 ibin_anl=1
 
-lwrite4danl = .false.
-thin4d = .false.
-
 end subroutine init_4dvar
 ! --------------------------------------------------------------------
-subroutine setup_4dvar(mype)
+subroutine setup_4dvar(miter,mype)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    setup_4dvar
@@ -226,6 +214,7 @@ subroutine setup_4dvar(mype)
 !
 !   input argument list:
 !    mype     - mpi task id
+!    miter
 !
 !   output argument list:
 !
@@ -239,9 +228,10 @@ use hybrid_ensemble_parameters, only: ntlevs_ens
 use jcmod, only: ljc4tlevs
 implicit none
 integer(i_kind),intent(in   ) :: mype
+integer(i_kind),intent(in   ) :: miter
 
 ! local variables
-integer(i_kind) :: ibin,k
+integer(i_kind) :: ibin,ierr,k
 
 winlen = real(nhr_assimilation,r_kind)
 winoff = real(min_offset/60._r_kind,r_kind)
@@ -305,14 +295,6 @@ if ( iwrtinc>0 .and. ((.not.l4dvar) .and. (.not.l4densvar)) ) then
    write(6,*)'SETUP_4DVAR: iwrtinc l4dvar inconsistent',iwrtinc,l4dvar
    call stop2(135)
 end if
-if ( lwrite4danl .and. ((.not.l4dvar) .and. (.not.l4densvar)) ) then
-   write(6,*)'SETUP_4DVAR: lwrite4danl,l4dvar,l4densvar inconsistent',lwrite4danl,l4dvar,l4densvar
-   call stop2(135)
-end if
-if ( iwrtinc>0 .and. lwrite4danl) then
-   write(6,*) 'SETUP_4DVAR: iwrtinc>0, cannot write out 4d analysis state, setting lwrite4danl to false'
-end if
-
 
 if (l4densvar) then
    ntlevs_ens=nobs_bins
@@ -330,7 +312,7 @@ if (l4densvar) then
       if (mype==0)  write(6,*)'SETUP_4DVAR: timelevel, ens4d_fhrlevs = ',k,ens4d_fhrlevs(k)
    enddo
 
-   ibin_anl = (nhr_assimilation/(2*nhr_obsbin))+1
+   ibin_anl = (nhr_assimilation/2)+1
    if (mype==0) write(6,*)'SETUP_4DVAR: 4densvar mode, ibin_anl and nobs_bins = ',ibin_anl,nobs_bins
 else
    ntlevs_ens=1
@@ -402,7 +384,6 @@ integer(i_kind),intent(in   ) :: idate   ! Date (yyyymmddhh)
 real(r_kind)   ,intent(  out) :: step4d  ! Time since start of 4D-Var window (hours)
 
 integer(i_kind) iyr,imo,idy,ihr,nmin_obs,nhrobs,nhrbgn,nhroff
-integer(i_kind),dimension(5) :: idate5
 
 ihr=idate
 iyr=ihr/1000000
@@ -411,12 +392,7 @@ imo=ihr/10000
 ihr=ihr-10000*imo
 idy=ihr/100
 ihr=ihr-100*idy
-idate5(1)=iyr
-idate5(2)=imo
-idate5(3)=idy
-idate5(4)=ihr
-idate5(5)=0
-call w3fs21(idate5,nmin_obs)
+call w3fs21((/iyr,imo,idy,ihr,0/),nmin_obs)
 if (MOD(nmin_obs,60)/=0) then
    write(6,*)'time_4dvar: minutes should be 0',nmin_obs
    call stop2(136)

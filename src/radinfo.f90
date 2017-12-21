@@ -37,9 +37,6 @@ module radinfo
 !   2013-02-19  sienkiewicz   - add adjustable SSMIS bias term weight
 !   2013-07-10  zhu     - add option upd_pred for radiance bias update indicator
 !   2013-07-19  zhu     - add option emiss_bc for emissivity sensitivity radiance bias predictor
-!   2014-04-23   li     - change scan bias correction mode for avhrr and avhrr_navy
-!   2014-04-24   li     - apply abs (absolute) to AA and be for safeguarding
-!   2015-03-01   li     - add zsea1 & zsea2 to handle the vertical mean temperature based on NSST T-Profile
 !
 ! subroutines included:
 !   sub init_rad            - set satellite related variables to defaults
@@ -90,11 +87,9 @@ module radinfo
   public :: newpc4pred
   public :: biaspredvar
   public :: radjacnames,radjacindxs,nsigradjac
-  public :: nst_gsi,nstinfo,zsea1,zsea2,fac_dtl,fac_tsl,tzr_bufrsave,nst_tzr
-
+  public :: nst_gsi,nst_tzr,nstinfo,fac_dtl,fac_tsl,tzr_bufrsave
   public :: radedge1, radedge2
   public :: ssmis_precond
-  public :: radinfo_adjust_jacobian
 
   integer(i_kind),parameter:: numt = 33   ! size of AVHRR bias correction file
   integer(i_kind),parameter:: ntlapthresh = 100 ! threshhold value of cycles if tlapmean update is needed
@@ -109,12 +104,10 @@ module radinfo
   logical use_edges   ! logical to use data on scan edges (.true.=to use)
 
   integer(i_kind) nst_gsi   ! indicator of Tr Analysis
+  integer(i_kind) nst_tzr   ! indicator of Tz retrieval QC tzr
   integer(i_kind) nstinfo   ! number of nst variables
-  integer(i_kind) zsea1     ! upper depth (in mm) to do the mean
-  integer(i_kind) zsea2     ! lower depth (in mm) to do the mean
   integer(i_kind) fac_dtl   ! indicator of DTL
   integer(i_kind) fac_tsl   ! indicator of TSL
-  integer(i_kind) nst_tzr   ! indicator of Tz retrieval QC tzr
 
   integer(i_kind) ssmis_method  !  noise reduction method for SSMIS
 
@@ -181,9 +174,6 @@ module radinfo
   real(r_kind) :: biaspredvar
   logical,save :: newpc4pred ! controls preconditioning due to sat-bias correction term 
 
-  interface radinfo_adjust_jacobian; module procedure adjust_jac_; end interface
-
-  character(len=*),parameter :: myname='radinfo'
 contains
 
 
@@ -232,12 +222,10 @@ contains
                            ! 1 = read nst info but not applied
                            ! 2 = read nst info, applied to Tb simulation but no Tr analysis
                            ! 3 = read nst info, applied to Tb simulation and do Tr Analysis
+    nst_tzr   = 0          ! 0 = no Tz ret in gsi; 1 = retrieve and applied to QC
     nstinfo   = 0          ! number of nst fields used in Tr analysis
-    zsea1     = 0          ! upper depth to do the mean
-    zsea2     = 0          ! lower depth to do the mean
     fac_dtl   = 0          ! indicator to apply DTL model
     fac_tsl   = 0          ! indicator to apply TSL model
-    nst_tzr   = 0          ! 0 = no Tz ret in gsi; 1 = retrieve and applied to QC
     tzr_bufrsave = .false. ! .true.=generate bufr file for Tz retrieval
 
     passive_bc = .false.  ! .true.=turn on bias correction for monitored channels
@@ -290,7 +278,7 @@ contains
     use gridmod, only: nsig
     implicit none
 
-    integer(i_kind) ii,jj,mxlvs,isum,ndim,ib,ie,ier
+    integer(i_kind) ns,ii,jj,mxlvs,isum,ndummy,ndim,ib,ie,ier
     integer(i_kind) nvarjac,n_meteo,n_clouds,n_aeros
     integer(i_kind),allocatable,dimension(:)::aux,all_levels
     character(len=20),allocatable,dimension(:)::meteo_names
@@ -346,14 +334,23 @@ contains
 !   inquire number of clouds to participate in CRTM calculations
     call gsi_metguess_get ( 'clouds_4crtm_jac::3d', n_clouds, ier )
     n_clouds=max(0,n_clouds)
+    allocate(clouds_names(n_clouds))
+    if (n_clouds>0) then
+        call gsi_metguess_get ( 'clouds_4crtm_jac::3d', clouds_names, ier )
+    endif
 
 !   inquire number of aerosols to participate in CRTM calculations
     call gsi_chemguess_get ( 'aerosols_4crtm_jac::3d', n_aeros, ier )
     n_aeros=max(0,n_aeros)
+    allocate(aeros_names(n_aeros))
+    if (n_aeros>0) then
+        call gsi_chemguess_get ( 'aerosols_4crtm_jac::3d', aeros_names, ier )
+    endif
 
     nvarjac=size(wirednames)+n_meteo+n_clouds+n_aeros
     allocate(radjacnames(nvarjac))
     allocate(radjacindxs(nvarjac))
+    allocate(aux(nvarjac))
 
 !   Fill in with wired names first
     do ii=1,size(wirednames)
@@ -374,8 +371,6 @@ contains
 !   Fill in clouds next 
     jj=0
     if (n_clouds>0) then
-       allocate(clouds_names(n_clouds))
-       call gsi_metguess_get ( 'clouds_4crtm_jac::3d', clouds_names, ier )
        ib=size(wirednames)+n_meteo+1
        ie=ib+n_clouds-1
        do ii=ib,ie
@@ -383,13 +378,10 @@ contains
           radjacnames(ii) = trim(clouds_names(jj))
           radjacindxs(ii) = mxlvs
        enddo
-       deallocate(clouds_names)
     endif
 !   Fill in aerosols next 
     jj=0
     if (n_aeros>0) then
-        allocate(aeros_names(n_aeros))
-        call gsi_chemguess_get ( 'aerosols_4crtm_jac::3d', aeros_names, ier )
        ib=size(wirednames)+n_meteo+n_clouds+1
        ie=ib+n_aeros-1
        do ii=ib,ie
@@ -397,7 +389,6 @@ contains
           radjacnames(ii) = trim(aeros_names(jj))
           radjacindxs(ii) = mxlvs
        enddo
-       deallocate(aeros_names)
     endif
 
 !   Overwrite levels for certain fields (this must be revisited)
@@ -408,7 +399,6 @@ contains
     enddo
 
 !   Determine initial pointer location for each var in the Jacobian
-    allocate(aux(nvarjac))
     if(size(radjacnames)>0) then
        nsigradjac = sum(radjacindxs)
        isum=0
@@ -420,6 +410,8 @@ contains
        radjacindxs=aux
     endif
     deallocate(aux)
+    deallocate(aeros_names)
+    deallocate(clouds_names)
     deallocate(meteo_names)
 
     if(mype==0) then
@@ -444,7 +436,6 @@ contains
 !
 ! program history log:
 !   2011-05-16  todling
-!   2014-04-13  todling - add call to finalize correlated R related quantities
 !
 !   input argument list:
 !
@@ -456,10 +447,8 @@ contains
 !
 !$$$ end documentation block
 
-    use correlated_obsmod, only: corr_ob_finalize
     implicit none
 
-    call corr_ob_finalize
     if(allocated(radjacindxs)) deallocate(radjacindxs)
     if(allocated(radjacnames)) deallocate(radjacnames)
 
@@ -516,7 +505,6 @@ contains
 !   2013-02-13  eliu    - change write-out format for iout_rad (for two
 !                         additional SSMIS bias correction coefficients)
 !   2013-05-14  guo     - add read error messages to alarm user a format change.
-!   2014-04-13  todling - add initialization of correlated R-covariance
 !
 !   input argument list:
 !
@@ -530,7 +518,6 @@ contains
 
 ! !USES:
 
-    use correlated_obsmod, only: corr_ob_initialize
     use obsmod, only: iout_rad
     use constants, only: zero,one,zero_quad
     use mpimod, only: mype
@@ -541,7 +528,7 @@ contains
 
 
     integer(i_kind) i,j,k,ich,lunin,lunout,nlines
-    integer(i_kind) ip,istat,n,ichan,nstep,edge1,edge2,ntlapupdate
+    integer(i_kind) ip,istat,n,ichan,mch,ij,nstep,edge1,edge2,ntlapupdate
     real(r_kind),dimension(npred):: predr
     real(r_kind) tlapm
     real(r_kind) tsum
@@ -583,10 +570,6 @@ contains
        call stop2(79)
     endif
     jpch_rad = j
-    if(jpch_rad == 0)then
-      close(lunin)
-      return
-    end if
 
 
 !   Allocate arrays to hold radiance information
@@ -605,7 +588,7 @@ contains
     allocate(satsenlist(jpch_rad),nfound(jpch_rad))
     iuse_rad(0)=-999
     inew_rad=.true.
-    ifactq=15
+    ifactq=0
     air_rad=one
     ang_rad=one
 
@@ -944,9 +927,6 @@ contains
        close(lunin)
     endif           ! endif for if (retrieval) then
 
-!   Initialize observation error covariance for 
-!   instruments we account for inter-channel correlations
-    call corr_ob_initialize
 
 !   Close unit for runtime output.  Return to calling routine
     if(mype==mype_rad)close(iout_rad)
@@ -1296,12 +1276,6 @@ contains
       nstep = 30
       edge1 = 1
       edge2 = 30
-   else if (index(isis,'saphir')/=0) then
-      step  = 0.666_r_kind
-      start = -42.960_r_kind
-      nstep = 130
-      edge1 = 1
-      edge2 = 130
    end if
 
    return
@@ -1322,9 +1296,6 @@ contains
 !   2011-04-07  todling - adjust argument list (interface) since newpc4pred is local now
 !   2013-01-03  j.jin   - adding logical tmi for mean_only. (radinfo file not yet ready. JJ)
 !   2013-07-19  zhu  - unify the weight assignments for both active and passive channels
-!   2014-10-01  ejones  - add gmi and amsr2 logical
-!   2015-01-16  ejones  - add saphir logical
-!   2015-03-23  zaizhong ma - added the Himawari-8 ahi
 !
 ! attributes:
 !   language: f90
@@ -1334,7 +1305,7 @@ contains
 
 ! !USES:
 
-   use obsmod, only: ndat,dplat,dtype,dsis
+   use obsmod, only: ndat,dplat,dfile,dtype,dsis
    use mpimod, only:  npe,mype,mpi_comm_world,ierror
    use read_diag, only: read_radiag_header,read_radiag_data,diag_header_fix_list,&
         diag_header_chan_list,diag_data_fix_list,diag_data_chan_list,&
@@ -1353,11 +1324,12 @@ contains
 !  Declare local variables
    logical lexist
    logical lverbose 
+   logical data_on_edges
    logical update
    logical mean_only
-   logical ssmi,ssmis,amsre,amsre_low,amsre_mid,amsre_hig,tmi,gmi,amsr2,saphir
+   logical ssmi,ssmis,amsre,amsre_low,amsre_mid,amsre_hig,tmi
    logical ssmis_las,ssmis_uas,ssmis_env,ssmis_img
-   logical avhrr,avhrr_navy,goessndr,goes_img,ahi,seviri
+   logical avhrr,avhrr_navy,goessndr,goes_img,seviri
 
    character(10):: obstype,platid
    character(20):: satsens,satsens_id
@@ -1366,7 +1338,7 @@ contains
    integer(i_kind):: ix,ii,iii,iich,ndatppe
    integer(i_kind):: i,j,jj,n_chan,k,lunout
    integer(i_kind):: ierror_code
-   integer(i_kind):: istatus,ispot
+   integer(i_kind):: istatus,ispot,iuseqc
    integer(i_kind):: np,new_chan,nc
    integer(i_kind):: counttmp
    integer(i_kind):: radedge_min, radedge_max
@@ -1375,8 +1347,7 @@ contains
    integer(i_kind),dimension(maxdat):: ipoint
  
    real(r_kind):: bias,scan,errinv,rnad,atiny
-   real(r_kind):: tlaptmp,tsumtmp,ratio
-!  real(r_kind):: wgtlap
+   real(r_kind):: tlaptmp,tsumtmp,ratio,wgtlap
    real(r_kind),allocatable,dimension(:):: tsum0,tsum,tlap0,tlap1,tlap2,tcnt
    real(r_kind),allocatable,dimension(:,:):: AA
    real(r_kind),allocatable,dimension(:):: be
@@ -1460,7 +1431,7 @@ contains
       endif
 
 !     Process file
-      if(mype == 0)write(6,*)'INIT_PREDX:  Task ',mype,' processing ',trim(fdiag_rad)
+      write(6,*)'INIT_PREDX:  Task ',mype,' processing ',trim(fdiag_rad)
       satsens = header_fix%isis
       n_chan = header_fix%nchan
 
@@ -1493,7 +1464,6 @@ contains
                    obstype == 'sndrd2'.or. obstype == 'sndrd3' .or.  &
                    obstype == 'sndrd4'
       goes_img   = obstype == 'goes_img'
-      ahi        = obstype == 'ahi'
       avhrr      = obstype == 'avhrr'
       avhrr_navy = obstype == 'avhrr_navy'
       ssmi       = obstype == 'ssmi'
@@ -1509,11 +1479,9 @@ contains
       ssmis=ssmis_las.or.ssmis_uas.or.ssmis_img.or.ssmis_env.or.ssmis
       seviri     = obstype == 'seviri'
       tmi        = obstype == 'tmi'
-      gmi        = obstype == 'gmi'
-      saphir     = obstype == 'saphir'
-      amsr2      = obstype == 'amsr2'
       mean_only=ssmi .or. ssmis .or. amsre .or. goessndr .or. goes_img & 
-                .or. ahi .or. seviri .or. tmi
+                .or. avhrr .or. avhrr_navy .or. seviri   .or. tmi
+
 !     Allocate arrays and initialize
       if (mean_only) then 
          np=1
@@ -1673,6 +1641,7 @@ contains
          close(lntemp)
       end if
 
+
       if (new_chan/=0) then
          if (all(iobs<nthreshold)) then
             deallocate(A,b,iobs,pred)
@@ -1686,8 +1655,8 @@ contains
             if (iobs(i)<nthreshold) cycle
             AA(:,:)=A(:,:,i)
             be(:)  =b(:,i)
-            if (all(abs(AA)<atiny)) cycle
-            if (all(abs(be)<atiny)) cycle
+            if (all(AA<atiny)) cycle
+            if (all(be<atiny)) cycle
             call linmm(AA,be,np,1,np,np)
 
             predx(1,ich(i))=be(1)
@@ -1733,7 +1702,7 @@ contains
 !        Process the scratch file
          if (lexist) then
 !           Read data from scratch file
-            if(mype == 0)write(6,*) 'INIT_PREDX:  processing update file i=',i,' with fname=',trim(fname)
+            write(6,*) 'INIT_PREDX:  processing update file i=',i,' with fname=',trim(fname)
             open(lntemp,file=fname,form='formatted')
             do
                read(lntemp,210,end=160) iich,(predr(k),k=1,angord+1)
@@ -1757,7 +1726,7 @@ contains
 !        Process the scratch file
          if (lexist) then
 !           Read data from scratch file
-            if(mype == 0)write(6,*) 'INIT_PREDX:  processing update file i=',i,' with fname=',trim(fname)
+            write(6,*) 'INIT_PREDX:  processing update file i=',i,' with fname=',trim(fname)
             open(lntemp,file=fname,form='formatted')
             do 
                read(lntemp,220,end=260) jj,tlaptmp,tsumtmp,counttmp
@@ -1788,70 +1757,5 @@ contains
    return
    end subroutine init_predx
 
-   logical function adjust_jac_ (obstype,sea,land,nchanl,nsigradjac,ich,varinv,&
-                                 depart,obvarinv,adaptinf,jacobian)
-!$$$  subprogram documentation block
-!                .      .    .
-! subprogram:    adjust_jac_
-!
-!   prgrmmr:     todling  org: gmao                date: 2014-04-15
-!
-! abstract:  provide hook to module handling inter-channel ob correlated errors
-!
-! program history log:
-!   2014-04-15  todling - initial code
-!
-! attributes:
-!   language: f90
-!   machine:  ibm rs/6000 sp; SGI Origin 2000; Compaq/HP
-!
-!$$$ end documentation block
-   use constants, only: tiny_r_kind,zero,one
-   use correlated_obsmod, only: idnames
-   use correlated_obsmod, only: corr_ob_amiset
-   use correlated_obsmod, only: corr_ob_scale_jac
-   use correlated_obsmod, only: GSI_BundleErrorCov 
-   use mpeu_util, only: getindex
-   use mpeu_util, only: die
-   use mpimod, only: mype
-   implicit none
-   character(len=*),intent(in) :: obstype
-   logical,         intent(in) :: sea
-   logical,         intent(in) :: land
-   integer(i_kind), intent(in) :: nchanl
-   integer(i_kind), intent(in) :: nsigradjac
-   integer(i_kind), intent(in) :: ich(nchanl)
-   real(r_kind), intent(inout) :: varinv(nchanl)
-   real(r_kind), intent(inout) :: depart(nchanl)
-   real(r_kind), intent(inout) :: obvarinv(nchanl)
-   real(r_kind), intent(inout) :: adaptinf(nchanl)
-   real(r_kind), intent(inout) :: jacobian(nsigradjac,nchanl)
-
-   character(len=*),parameter::myname_ = myname//'*adjust_jac_'
-   character(len=80) covtype
-   integer(i_kind) iinstr
-
-   adjust_jac_=.false.
-
-   if(.not.allocated(idnames)) then
-     return
-   endif
-
-               covtype = trim(obstype)//':global'
-   if (sea)    covtype = trim(obstype)//':sea'
-   if (land)   covtype = trim(obstype)//':land'
-   iinstr=getindex(idnames,trim(covtype))
-   if(iinstr<0) then
-      return ! nothing to do
-   endif
-
-   if(.not.corr_ob_amiset(GSI_BundleErrorCov(iinstr))) then
-      call die(myname_,' improperly set GSI_BundleErrorCov')
-   endif
-
-   adjust_jac_ = corr_ob_scale_jac (depart,obvarinv,adaptinf,jacobian,nchanl,jpch_rad,varinv, &
-                                    iuse_rad,ich,GSI_BundleErrorCov(iinstr))
-
-end function adjust_jac_
  
 end module radinfo

@@ -11,8 +11,6 @@
 ! program history log:
 !   2010-10-20  hclin - modified from setuprad for aod
 !   2014-01-28  todling - write sensitivity slot indicator (ioff) to header of diagfile
-!   2014-12-30  derber - Modify for possibility of not using obsdiag
-!   2016-02-20  pagowski - added NASA nnr AOD
 !
 !  input argument list:
 !     lunin   - unit from which to read radiance (brightness temperature, tb) obs
@@ -43,7 +41,7 @@
   use obsmod, only: ianldate,iadate,ndat,mype_diaghdr,nchan_total, &
            dplat,obsdiags,obsptr,lobsdiagsave,lobsdiag_allocated,&
            dirname,time_offset
-  use obsmod, only: obs_diag,luse_obsdiag
+  use obsmod, only: obs_diag
   use gsi_4dvar, only: nobs_bins,hr_obsbin
   use gridmod, only: nsig,regional,msig,get_ij
   use constants, only: tiny_r_kind,zero,one,three,r10
@@ -82,11 +80,11 @@
   integer(i_kind) icc
   integer(i_kind) j,k,ncnt,i
   integer(i_kind) mm1
-  integer(i_kind) n,ibin,ioff,ioff0,iii
+  integer(i_kind) kk,n,kk2,ibin,ioff,ioff0,iii
   integer(i_kind) ii,jj,idiag
 
   real(r_single) freq4,pol4,wave4,varch4
-  real(r_kind) errinv,useflag
+  real(r_kind) obserr,errinv,useflag
   real(r_kind) trop5,pangs
   real(r_kind) cenlon,cenlat,slats,slons,dtime
   real(r_kind) val_obs
@@ -96,7 +94,7 @@
   real(r_single),dimension(ireal):: diagbuf
   real(r_single),allocatable,dimension(:,:):: diagbufchan
 
-  real(r_kind),dimension(nchanl):: varinv,error0
+  real(r_kind),dimension(nchanl):: varinv,varinv_use,error0
   real(r_kind),dimension(nchanl):: tnoise,errmax
   real(r_kind),dimension(nchanl):: var,ratio_aoderr,aodinv
   real(r_kind),dimension(nreal+nchanl,nobs)::data_s
@@ -104,9 +102,9 @@
   real(r_kind),dimension(nsig):: qvp,tvp
   real(r_kind),dimension(nsig+1):: prsitmp
   real(r_kind) dtsavg
-  real(r_single) :: psfc
 
   integer(i_kind),dimension(nchanl):: ich,id_qc
+  integer(i_kind),dimension(msig):: klevel
 
   character(10) filex
   character(12) string
@@ -133,6 +131,7 @@
   real(r_kind),dimension(nsigaerojac,nchanl):: jacobian_aero
   real(r_kind),dimension(nsig,nchanl):: layer_od
   real(r_kind) :: clw_guess, tzbgr, sfc_speed
+  real(r_kind) :: sum_jacobian_aero
 
   if ( .not. laeroana_gocart ) then
      return
@@ -201,7 +200,6 @@
      return
   endif
 
-  ioff0=0
   if (lobsdiagsave) then
      if (l_may_be_passive) then
          ioff0=4
@@ -293,12 +291,6 @@
                  if ( nint(dbcf) >= 0 .and. nint(dbcf) <= 3 ) then
                     tnoise = 0.05_r_kind+0.15_r_kind*aod_obs+0.01_r_kind*(three-dbcf)
                  end if
-              case ( 5 )  ! nnr ocean
-                 tnoise = 0.2_r_kind*(aod_obs+0.01_r_kind)
-              case ( 6 )  ! nnr land
-                 tnoise = 0.2_r_kind*(aod_obs+0.01_r_kind)
-
-                 
            end select
         end if
  
@@ -307,8 +299,7 @@
              tvp,qvp,clw_guess,prsltmp,prsitmp, &
              trop5,tzbgr,dtsavg,sfc_speed, &
              tsim,emissivity,ptau5,ts,emissivity_k, &
-             temp,wmix,jacobian,error_status,layer_od=layer_od,jacobian_aero=jacobian_aero)
-
+             temp,wmix,jacobian,error_status,layer_od,jacobian_aero)
 
 ! If the CRTM returns an error flag, do not assimilate any channels for this ob
 ! and set the QC flag to ifail_crtm_qc.
@@ -393,11 +384,11 @@
               my_head%iob = n
  
               allocate(aerotail(ibin)%head%res(icc),aerotail(ibin)%head%err2(icc), &
+                       aerotail(ibin)%head%diags(icc),&
                        aerotail(ibin)%head%raterr2(icc), &
                        aerotail(ibin)%head%daod_dvar(nsigaerojac,icc), &
                        aerotail(ibin)%head%ich(icc),&
                        aerotail(ibin)%head%icx(icc))
-              if(luse_obsdiag)allocate (aerotail(ibin)%head%diags(icc))
 
               aerotail(ibin)%head%nlaero  = icc         ! profile observation count
               call get_ij(mm1,slats,slons,aerotail(ibin)%head%ij(1),aerotail(ibin)%head%wij(1))
@@ -413,103 +404,113 @@
                     aerotail(ibin)%head%err2(iii)=var(iii)
                     aerotail(ibin)%head%raterr2(iii)=ratio_aoderr(iii)
                     aerotail(ibin)%head%icx(iii)=m
+                    sum_jacobian_aero=0.0
                     do k = 1, nsigaerojac
-                       aerotail(ibin)%head%daod_dvar(k,iii)=jacobian_aero(k,ii)
+                       sum_jacobian_aero=sum_jacobian_aero+jacobian_aero(k,ii)
+                    enddo
+                    do k = 1, nsigaerojac
+                       aerotail(ibin)%head%daod_dvar(k,iii)=jacobian_aero(k,ii)/&
+                                       sum_jacobian_aero
                     end do
                     my_head%ich(iii)=ii
                  end if
               end do
+!if(mype==0) then
+!   DO ii=1,iii
+!   DO k=1,nsigaerojac
+!      write(*,*) ii,k,aerotail(ibin)%head%daod_dvar(k,ii)
+!   ENDDO
+!   ENDDO
+!endif
            end if ! icc
         endif ! (in_curbin)
 
 !       Link obs to diagnostics structure
-        if(luse_obsdiag)then
-           iii=0
-           do ii=1,nchanl
-              if (.not.lobsdiag_allocated) then
-                 if (.not.associated(obsdiags(i_aero_ob_type,ibin)%head)) then
-                    allocate(obsdiags(i_aero_ob_type,ibin)%head,stat=istat)
-                    if (istat/=0) then
-                       write(6,*)'setupaod: failure to allocate obsdiags',istat
-                       call stop2(276)
-                    end if
-                    obsdiags(i_aero_ob_type,ibin)%tail => obsdiags(i_aero_ob_type,ibin)%head
-                 else
-                    allocate(obsdiags(i_aero_ob_type,ibin)%tail%next,stat=istat)
-                    if (istat/=0) then
-                       write(6,*)'setupaod: failure to allocate obsdiags',istat
-                       call stop2(277)
-                    end if
-                    obsdiags(i_aero_ob_type,ibin)%tail => obsdiags(i_aero_ob_type,ibin)%tail%next
+        iii=0
+        do ii=1,nchanl
+           if (.not.lobsdiag_allocated) then
+              if (.not.associated(obsdiags(i_aero_ob_type,ibin)%head)) then
+                 allocate(obsdiags(i_aero_ob_type,ibin)%head,stat=istat)
+                 if (istat/=0) then
+                    write(6,*)'setupaod: failure to allocate obsdiags',istat
+                    call stop2(276)
                  end if
-                 allocate(obsdiags(i_aero_ob_type,ibin)%tail%muse(miter+1))
-                 allocate(obsdiags(i_aero_ob_type,ibin)%tail%nldepart(miter+1))
-                 allocate(obsdiags(i_aero_ob_type,ibin)%tail%tldepart(miter))
-                 allocate(obsdiags(i_aero_ob_type,ibin)%tail%obssen(miter))
-                 obsdiags(i_aero_ob_type,ibin)%tail%indxglb=(n-1)*nchanl+ii
-                 obsdiags(i_aero_ob_type,ibin)%tail%nchnperobs=-99999
-                 obsdiags(i_aero_ob_type,ibin)%tail%luse=.false.
-                 obsdiags(i_aero_ob_type,ibin)%tail%muse(:)=.false.
-                 obsdiags(i_aero_ob_type,ibin)%tail%nldepart(:)=-huge(zero)
-                 obsdiags(i_aero_ob_type,ibin)%tail%tldepart(:)=zero
-                 obsdiags(i_aero_ob_type,ibin)%tail%wgtjo=-huge(zero)
-                 obsdiags(i_aero_ob_type,ibin)%tail%obssen(:)=zero
- 
-                 n_alloc(ibin) = n_alloc(ibin) +1
-                 my_diag => obsdiags(i_aero_ob_type,ibin)%tail
-                 my_diag%idv = is
-                 my_diag%iob = n
-                 my_diag%ich = ii
+                 obsdiags(i_aero_ob_type,ibin)%tail => obsdiags(i_aero_ob_type,ibin)%head
               else
-                 if (.not.associated(obsdiags(i_aero_ob_type,ibin)%tail)) then
-                    obsdiags(i_aero_ob_type,ibin)%tail => obsdiags(i_aero_ob_type,ibin)%head
-                 else
-                    obsdiags(i_aero_ob_type,ibin)%tail => obsdiags(i_aero_ob_type,ibin)%tail%next
+                 allocate(obsdiags(i_aero_ob_type,ibin)%tail%next,stat=istat)
+                 if (istat/=0) then
+                    write(6,*)'setupaod: failure to allocate obsdiags',istat
+                    call stop2(277)
                  end if
-                 if (obsdiags(i_aero_ob_type,ibin)%tail%indxglb/=(n-1)*nchanl+ii) then
+                 obsdiags(i_aero_ob_type,ibin)%tail => obsdiags(i_aero_ob_type,ibin)%tail%next
+              end if
+              allocate(obsdiags(i_aero_ob_type,ibin)%tail%muse(miter+1))
+              allocate(obsdiags(i_aero_ob_type,ibin)%tail%nldepart(miter+1))
+              allocate(obsdiags(i_aero_ob_type,ibin)%tail%tldepart(miter))
+              allocate(obsdiags(i_aero_ob_type,ibin)%tail%obssen(miter))
+              obsdiags(i_aero_ob_type,ibin)%tail%indxglb=(n-1)*nchanl+ii
+              obsdiags(i_aero_ob_type,ibin)%tail%nchnperobs=-99999
+              obsdiags(i_aero_ob_type,ibin)%tail%luse=.false.
+              obsdiags(i_aero_ob_type,ibin)%tail%muse(:)=.false.
+              obsdiags(i_aero_ob_type,ibin)%tail%nldepart(:)=-huge(zero)
+              obsdiags(i_aero_ob_type,ibin)%tail%tldepart(:)=zero
+              obsdiags(i_aero_ob_type,ibin)%tail%wgtjo=-huge(zero)
+              obsdiags(i_aero_ob_type,ibin)%tail%obssen(:)=zero
+ 
+              n_alloc(ibin) = n_alloc(ibin) +1
+              my_diag => obsdiags(i_aero_ob_type,ibin)%tail
+              my_diag%idv = is
+              my_diag%iob = n
+              my_diag%ich = ii
+           else
+              if (.not.associated(obsdiags(i_aero_ob_type,ibin)%tail)) then
+                 obsdiags(i_aero_ob_type,ibin)%tail => obsdiags(i_aero_ob_type,ibin)%head
+              else
+                 obsdiags(i_aero_ob_type,ibin)%tail => obsdiags(i_aero_ob_type,ibin)%tail%next
+              end if
+              if (obsdiags(i_aero_ob_type,ibin)%tail%indxglb/=(n-1)*nchanl+ii) then
                  write(6,*)'setupaod: index error'
-                    call stop2(278)
-                 endif
+                 call stop2(278)
               endif
+           endif
 
-              if (in_curbin) then
-                 if (ii==1) obsptr => obsdiags(i_aero_ob_type,ibin)%tail
-                 if (ii==1) obsdiags(i_aero_ob_type,ibin)%tail%nchnperobs = nchanl
-                 obsdiags(i_aero_ob_type,ibin)%tail%luse = luse(n)
-                 obsdiags(i_aero_ob_type,ibin)%tail%nldepart(jiter) = aod(ii)
-                 obsdiags(i_aero_ob_type,ibin)%tail%wgtjo=varinv(ii)
- 
-!                Load data into output arrays
-                 m=ich(ii)
-                 if (varinv(ii)>tiny_r_kind .and. iuse_aero(m)>=1) then
-                    iii=iii+1
-                    aerotail(ibin)%head%diags(iii)%ptr => obsdiags(i_aero_ob_type,ibin)%tail
-                    obsdiags(i_aero_ob_type,ibin)%tail%muse(jiter) = .true.
-  
-                    ! verify the pointer to obsdiags
- 
-                    my_head => aerotail(ibin)%head
-                    my_diag => aerotail(ibin)%head%diags(iii)%ptr
- 
-                    if (my_head%idv      /= my_diag%idv .or. &
-                        my_head%iob      /= my_diag%iob .or. &
-                        my_head%ich(iii) /= my_diag%ich ) then
-                       call perr(myname,'mismatching %[head,diags]%(idv,iob,ich,ibin) =', &
-                             (/is,i,ii,ibin/))
-                       call perr(myname,'my_head%(idv,iob,ich) =',(/my_head%idv,my_head%iob,my_head%ich(iii)/))
-                       call perr(myname,'my_diag%(idv,iob,ich) =',(/my_diag%idv,my_diag%iob,my_diag%ich/))
-                       call die(myname)
-                    endif
-                 endif
-              endif ! (in_curbin)
-           enddo
            if (in_curbin) then
-              if( iii/=icc ) then
-                 write(6,*)'setupaod: error iii icc',iii,icc
-                 call stop2(279)
+              if (ii==1) obsptr => obsdiags(i_aero_ob_type,ibin)%tail
+              if (ii==1) obsdiags(i_aero_ob_type,ibin)%tail%nchnperobs = nchanl
+              obsdiags(i_aero_ob_type,ibin)%tail%luse = luse(n)
+              obsdiags(i_aero_ob_type,ibin)%tail%nldepart(jiter) = aod(ii)
+              obsdiags(i_aero_ob_type,ibin)%tail%wgtjo=varinv(ii)
+ 
+!             Load data into output arrays
+              m=ich(ii)
+              if (varinv(ii)>tiny_r_kind .and. iuse_aero(m)>=1) then
+                 iii=iii+1
+                 aerotail(ibin)%head%diags(iii)%ptr => obsdiags(i_aero_ob_type,ibin)%tail
+                 obsdiags(i_aero_ob_type,ibin)%tail%muse(jiter) = .true.
+  
+                 ! verify the pointer to obsdiags
+ 
+                 my_head => aerotail(ibin)%head
+                 my_diag => aerotail(ibin)%head%diags(iii)%ptr
+ 
+                 if (my_head%idv      /= my_diag%idv .or. &
+                     my_head%iob      /= my_diag%iob .or. &
+                     my_head%ich(iii) /= my_diag%ich ) then
+                    call perr(myname,'mismatching %[head,diags]%(idv,iob,ich,ibin) =', &
+                          (/is,i,ii,ibin/))
+                    call perr(myname,'my_head%(idv,iob,ich) =',(/my_head%idv,my_head%iob,my_head%ich(iii)/))
+                    call perr(myname,'my_diag%(idv,iob,ich) =',(/my_diag%idv,my_diag%iob,my_diag%ich/))
+                    call die(myname)
+                 endif
               endif
            endif ! (in_curbin)
-        endif
+        enddo
+        if (in_curbin) then
+           if( iii/=icc ) then
+              write(6,*)'setupaod: error iii icc',iii,icc
+              call stop2(279)
+           endif
+        endif ! (in_curbin)
  
 !    End of l_may_be_passive block
      endif
@@ -525,8 +526,7 @@
  
            do i=1,nchanl
               diagbufchan(1,i)=aod_obs(i)      ! observed brightness temperature (K)
-!              diagbufchan(2,i)=total_aod(i)   ! observed - simulated Tb with no bias corrrection (K) - this should be innovation
-              diagbufchan(2,i)=aod(i)          ! innovation
+              diagbufchan(2,i)=total_aod(i)    ! observed - simulated Tb with no bias corrrection (K)
               errinv = sqrt(varinv(i))
               diagbufchan(3,i)=errinv          ! inverse observation error
               useflag=one
@@ -576,8 +576,7 @@
               endif
            endif
 
-           psfc=prsitmp(1)*r10 ! convert to hPa
-           write(4) psfc,diagbuf,diagbufchan
+           write(4) diagbuf,diagbufchan
 
         end if
      endif ! (in_curbin)

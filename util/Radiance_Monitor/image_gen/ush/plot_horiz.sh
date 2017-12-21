@@ -22,9 +22,9 @@ echo $SAT
 
 pid_test=`echo $PID | tail -c -3`
 if [[ ${pid_test} = "_1" || ${pid_test} = "_2" ]]; then
-   tmpdir=${DATADIR}/horiz_${RADMON_SUFFIX}.${PID}.${PDATE}
+   tmpdir=${DATADIR}/horiz_${SUFFIX}.${PID}.${PDATE}
 else
-   tmpdir=${DATADIR}/horiz_${RADMON_SUFFIX}.${SAT}.${PDATE}
+   tmpdir=${DATADIR}/horiz_${SUFFIX}.${SAT}.${PDATE}
 fi
 rm -rf $tmpdir
 
@@ -41,14 +41,14 @@ ln -s ${DATADIR}/${SAT}.* ${tmpdir}/.
 #
 #  Loop over satellite types.  Submit plot job for each type.
 
-$NCP ${IG_GSCRIPTS}/cbarnew.gs ./
+$NCP ${GSCRIPTS}/cbarnew.gs ./
 $STNMAP -i ${SAT}.ctl
 
 for var in ${PTYPE}; do
 
 cat << EOF > ${SAT}_${var}.gs
 'open ${SAT}.ctl'
-'run ${IG_GSCRIPTS}/plot_horiz.gs ${SAT} ${var} x1100 y850'
+'run ${GSCRIPTS}/plot_horiz.gs ${SAT} ${var} x1100 y850'
 'quit'
 EOF
 
@@ -98,10 +98,10 @@ find . -name '*.png' -exec cp -pf {} ${IMGNDIR}/horiz/ \;
 #cd ..
 #rm -rf $tmpdir
 
-#cat ${LOADLQ}/plot_${RADMON_SUFFIX}_horiz* 
+#cat ${LOADLQ}/plot_${SUFFIX}_horiz* 
 
-#count=`ls ${LOADLQ}/plot_${RADMON_SUFFIX}* | wc -l`
-#complete=`grep "COMPLETED" ${LOADLQ}/plot_${RADMON_SUFFIX}* | wc -l`
+#count=`ls ${LOADLQ}/plot_${SUFFIX}* | wc -l`
+#complete=`grep "COMPLETED" ${LOADLQ}/plot_${SUFFIX}* | wc -l`
 
 #running=`expr $count - $complete`
 

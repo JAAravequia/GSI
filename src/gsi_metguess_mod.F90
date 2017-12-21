@@ -207,7 +207,6 @@ module gsi_metguess_mod
 ! !USES:
 
 use kinds, only: i_kind,r_kind
-use constants, only: max_varname_length
 use mpimod, only : mype
 use mpeu_util,only: die
 use file_utility, only : get_lun
@@ -273,7 +272,7 @@ type(GSI_Bundle),pointer :: GSI_MetGuess_Bundle(:)   ! still a common block for 
 ! !PRIVATE ROUTINES:
 !BOC
 
-integer(i_kind),parameter::MAXSTR=max_varname_length
+integer(i_kind),parameter::MAXSTR=256
 logical:: guess_grid_initialized_=.false.
 logical:: guess_initialized_=.false.
 character(len=*), parameter :: myname = 'gsi_metguess_mod'
@@ -364,7 +363,7 @@ open(luin,file=rcname,form='formatted')
 ! Scan file for desired table first
 ! and get size of table
 call gettablesize(tbname,luin,ntot,nmguess)
-if(nmguess<=0) then
+if(nmguess==0) then
    close(luin)
    return
 endif
@@ -390,22 +389,12 @@ do ii=1,nmguess
    endif
 enddo
 
-if(ng3d > 0)then
-   allocate(mguess3d(ng3d), &
-            metsty3d(ng3d), &
-            i4crtm3d(ng3d), &
-            levels3d(ng3d), &
-            usrname3d(ng3d))
-end if
-if(ng2d > 0)then
-   allocate(mguess2d(ng2d), &
-            metsty2d(ng2d), &
-            i4crtm2d(ng2d), &
-            levels2d(ng2d), &
-            usrname2d(ng2d))
-end if
-
-   allocate(levels(nmguess),i4crtm(nmguess),usrname(nmguess),&
+allocate(mguess3d(ng3d),mguess2d(ng2d), &
+         metsty3d(ng3d),metsty2d(ng2d), &
+         i4crtm3d(ng3d),i4crtm2d(ng2d), &
+         levels3d(ng3d),levels2d(ng2d), &
+         usrname3d(ng3d),usrname2d(ng2d), &
+         levels(nmguess),i4crtm(nmguess),usrname(nmguess),&
          mguess(nmguess),metstype(nmguess))
 
 ! Now load information from table
@@ -559,7 +548,8 @@ end subroutine final_
 !BOC
 
     character(len=*), parameter :: myname_ = myname//'*create_'
-    integer(i_kind) nt,ier
+    integer(i_kind) i,j,k,n,nt,ic,ier
+    character(len=MAXSTR) :: var
     type(GSI_Grid):: grid
 
     istatus=0
@@ -633,6 +623,7 @@ end subroutine final_
 
     character(len=*), parameter :: myname_ = myname//'*destroy_'
     integer(i_kind) :: nt,ier
+    character(len=MAXSTR) :: var
 
     istatus=0
     if(.not.guess_grid_initialized_) return
@@ -790,7 +781,7 @@ end subroutine final_
   integer(i_kind),intent(out):: ivar(:)
   integer(i_kind),intent(out):: istatus
   character(len=*),parameter:: myname_=myname//"*get_int1d_"
-  integer(i_kind) i,ii
+  integer(i_kind) i,ii,id
   logical labfound
   labfound=.false.
   istatus=1

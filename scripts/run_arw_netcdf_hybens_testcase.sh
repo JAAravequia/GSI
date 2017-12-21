@@ -17,7 +17,7 @@
 #@ node_resources = ConsumableMemory (110 GB)
 #@ class=debug
 #@ group=dev
-#@ account_no = RDAS-T2O
+#@ account_no = RDAS-MTN
 #@ wall_clock_limit = 0:05:00
 #@ notification=error
 #@ restart=no

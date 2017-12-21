@@ -43,7 +43,7 @@ module aircraftinfo
   public :: cleanup_tail
   public :: biaspredt
   public :: max_tail
-  public :: ntail, ntail_update, idx_tail, taillist, timelist, npredt, predt
+  public :: ntail, ntail_update, idx_tail, taillist, typelist, timelist, npredt, predt
   public :: ostats_t,rstats_t,varA_t
   public :: mype_airobst
   public :: upd_pred_t
@@ -64,6 +64,7 @@ module aircraftinfo
   integer(i_kind) nsort           ! used in sorting tail number
   
   character(len=10),dimension(max_tail):: taillist  ! tail number
+  character(len=10),dimension(max_tail):: typelist  ! type 
   character(len=1),dimension(max_tail):: itail_sort ! used in sorting tail number
   integer(i_kind),dimension(max_tail):: idx_tail    ! index of tail
   integer(i_kind),dimension(max_tail):: idx_sort    ! used in sorting tail number
@@ -153,7 +154,7 @@ contains
     use obsmod, only: iadate
     implicit none
 
-    integer(i_kind) j,k,lunin,nlines,ip,istat
+    integer(i_kind) i,j,k,lunin,nlines,ip,istat
     integer(i_kind) anal_time
     integer(i_kind) isort
     real(r_kind),dimension(npredt):: ostatsx
@@ -162,7 +163,7 @@ contains
     character(len=1):: cflg
     character(len=1):: cb,cb0
     character(len=10):: tailwk
-    character(len=150):: crecord
+    character(len=126):: crecord
     logical pcexist
 
     data lunin / 49 /
@@ -231,8 +232,8 @@ contains
        end do
     end do
     close(lunin)
-100 format(a1,a150)
-110 format(a10,1x,i5,9(1x,f12.6),1x,i8)
+100 format(a1,a126)
+110 format(a10,1x,i5,10(1x,f10.4))
 
 !   Do not update aircraft temperature bias at 6Z and 18Z
     if (.not. upd_aircraft) then 
@@ -296,7 +297,7 @@ contains
 
     integer(i_kind) i,j,jj,lunout
     integer(i_kind) iyyyymm,obsolete
-!   real(r_kind),dimension(npredt):: varx
+    real(r_kind),dimension(npredt):: varx
 
     data lunout / 51 /
 
@@ -338,7 +339,7 @@ contains
 
     do jj=1,ntail_update-obsolete
        j = idx_csort(jj)
-       write(lunout,'(1x,a10,1x,i5,9(1x,f12.6),1x,i7)') &
+       write(lunout,'(1x,a10,1x,i5,9(1x,f10.4),1x,i7)') &
             taillist(j),jj,(predt(i,j),i=1,npredt), &
             (ostats_t(i,j),i=1,npredt),(varA_t(i,j),i=1,npredt),timelist(j)
     end do

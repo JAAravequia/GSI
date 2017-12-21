@@ -221,7 +221,6 @@ module gsi_chemguess_mod
 ! !USES:
 
 use kinds, only: i_kind,r_kind
-use constants, only: max_varname_length
 use mpimod, only : mype
 use mpeu_util,only: die
 use file_utility, only : get_lun
@@ -292,7 +291,7 @@ type(GSI_Bundle),pointer :: GSI_ChemGuess_Bundle(:)   ! still a common for now
 ! !PRIVATE ROUTINES:
 !BOC
 
-integer(i_kind),parameter::MAXSTR=max_varname_length
+integer(i_kind),parameter::MAXSTR=256
 logical:: chem_grid_initialized_=.false.
 logical:: chem_initialized_=.false.
 character(len=*), parameter :: myname = 'gsi_chemguess_mod'
@@ -406,16 +405,12 @@ do ii=1,ntgases
    endif
 enddo
 
-allocate(i4crtm(ntgases),usrname(ntgases),&
+allocate(tgases3d(ng3d),tgases2d(ng2d),&
+         chemty3d(ng3d),chemty2d(ng2d),&
+         i4crtm3d(ng3d),i4crtm2d(ng2d),&
+         usrname3d(ng3d),usrname2d(ng2d),&
+         i4crtm(ntgases),usrname(ntgases),&
          tgases(ntgases),chemtype(ntgases))
-if(ng3d > 0)allocate(tgases3d(ng3d),&
-                     chemty3d(ng3d),&
-                     i4crtm3d(ng3d),&
-                     usrname3d(ng3d))
-if(ng2d > 0)allocate(tgases2d(ng2d),&
-                     chemty2d(ng2d),&
-                     i4crtm2d(ng2d),&
-                     usrname2d(ng2d))
 
 ! Now load information from table
 ng3d=0;ng2d=0
@@ -562,7 +557,8 @@ end subroutine final_
 !BOC
 
     character(len=*), parameter :: myname_ = myname//'*create_'
-    integer(i_kind) nt
+    integer(i_kind) i,j,k,n,nt,ic
+    character(len=MAXSTR) :: var
     type(GSI_Grid):: grid
 
     istatus=0
@@ -634,6 +630,7 @@ end subroutine final_
 
     character(len=*), parameter :: myname_ = myname//'*destroy_'
     integer(i_kind) :: nt,ier
+    character(len=MAXSTR) :: var
     istatus=0
 
     if(.not.chem_grid_initialized_) return

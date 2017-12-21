@@ -120,7 +120,7 @@ public as2d        ! normalized scale factor for background error 2d-variables
 public atsfc_sdv   ! standard deviation of surface temperature error over (1) land (and (2) ice
 public an_amp0     ! multiplying factors on reference background error variances
 
-public nrf2_loc,nrf3_loc,nmotl_loc   ! what are these for??
+public nrf2_loc,nrf3_loc   ! what are these for??
 public ntracer
 
 type control_vector
@@ -147,7 +147,7 @@ logical :: lsqrtb
 integer(i_kind) :: m_vec_alloc, max_vec_alloc, m_allocs, m_deallocs
 
 logical,allocatable,dimension(:):: nrf_3d
-integer(i_kind),allocatable,dimension(:):: nrf2_loc,nrf3_loc,nmotl_loc
+integer(i_kind),allocatable,dimension(:):: nrf2_loc,nrf3_loc
 integer(i_kind) nrf,nvars
 integer(i_kind) ntracer
 
@@ -230,6 +230,8 @@ subroutine setup_control_vectors(ksig,klat,klon,katlon11,katlon1n, &
                                  kval_lenz_en
   logical                  , intent(in   ) :: ldsqrtb
 
+  integer(i_kind) n
+
   nsig=ksig
   lat2=klat
   lon2=klon
@@ -286,7 +288,7 @@ character(len=*),parameter:: tbname='control_vector::'
 character(len=256),allocatable,dimension(:):: utable
 character(len=20) var,source,funcof
 character(len=*),parameter::myname_=myname//'*init_anacv'
-integer(i_kind) luin,ii,ntot
+integer(i_kind) luin,i,ii,ntot
 integer(i_kind) ilev, itracer
 real(r_kind) aas,amp
 
@@ -331,7 +333,7 @@ allocate(an_amp0(nvars))
 
 ! want to rid code from the following ...
 nrf=nc2d+nc3d
-allocate(nrf_3d(nrf),nrf2_loc(nc2d),nrf3_loc(nc3d),nmotl_loc(mvars))
+allocate(nrf_3d(nrf),nrf2_loc(nc2d),nrf3_loc(nc3d))
 
 ! Now load information from table
 nc3d=0;nc2d=0;mvars=0
@@ -341,7 +343,6 @@ do ii=1,nvars
    if(trim(adjustl(source))=='motley') then
        mvars=mvars+1
        cvarsmd(mvars)=trim(adjustl(var))
-       nmotl_loc(mvars)=ii
        atsfc_sdv(mvars)=aas
    else
       if(ilev==1) then
@@ -383,7 +384,7 @@ end subroutine init_anacv
 subroutine final_anacv
   implicit none
   deallocate(nrf_var)
-  deallocate(nrf_3d,nrf2_loc,nrf3_loc,nmotl_loc)
+  deallocate(nrf_3d,nrf2_loc,nrf3_loc)
   deallocate(as3d,as2d)
   deallocate(an_amp0)
   deallocate(atsfc_sdv)
@@ -425,9 +426,10 @@ subroutine allocate_cv(ycv)
   use hybrid_ensemble_parameters, only: grd_ens
   implicit none
   type(control_vector), intent(  out) :: ycv
-  integer(i_kind) :: ii,jj,nn,ndim,ierror,n_step,n_aens
+  character(len=max_varname_length) cvar
+  integer(i_kind) :: ii,jj,n,nn,ngrid,ndim,ierror,n_step,n_aens
+  integer(i_kind) :: mold2(2,2), mold3(2,2,2)
   character(len=256)::bname
-  character(len=max_varname_length)::ltmp(1) 
   type(gsi_grid) :: grid_motley
 
   if (ycv%lallocated) then
@@ -500,11 +502,10 @@ subroutine allocate_cv(ycv)
 !    Set ensemble-based part of control vector
      if (l_hyb_ens) then
 
-         ltmp(1)='a_en'
          do nn=1,n_ens
             ycv%aens(jj,nn)%values => ycv%values(ii+1:ii+n_aens)
             write(bname,'(a,i3.3,a,i4.4)') 'Ensemble Control Bundle subwin-',jj,' and member-',nn
-            call GSI_BundleSet(ycv%aens(jj,nn),ycv%grid_aens,bname,ierror,names3d=ltmp,bundle_kind=r_kind)
+            call GSI_BundleSet(ycv%aens(jj,nn),ycv%grid_aens,bname,ierror,names3d=(/'a_en'/),bundle_kind=r_kind)
             if (ierror/=0) then
                 write(6,*)'allocate_cv: error alloc(ensemble bundle)'
                 call stop2(109)
@@ -599,7 +600,7 @@ subroutine deallocate_cv(ycv)
 
   implicit none
   type(control_vector), intent(inout) :: ycv
-  integer(i_kind) :: ii,nn,ierror
+  integer(i_kind) :: ii,n,nn,ierror
 
   if (ycv%lallocated) then
      do ii=1,nsubwin
@@ -916,7 +917,7 @@ subroutine qdot_prod_vars_eb(xcv,ycv,prods,eb)
   real(r_quad)        , intent(  out) :: prods(nsubwin+1)
 
   real(r_quad) :: zz(nsubwin)
-  integer(i_kind) :: ii,i,nn,m3d,m2d
+  integer(i_kind) :: ii,i,nn,m3d,m2d,istatus
   real(r_quad),allocatable,dimension(:) :: partsum
 
   prods(:)=zero_quad
@@ -1025,6 +1026,7 @@ real(r_kind) function dot_prod_cv(xcv,ycv)
 
 ! local variables
   real(r_quad) :: dd(1)
+  integer(i_kind) :: ii
 
   if (xcv%lencv/=ycv%lencv) then
      write(6,*)'dot_prod_cv: error length',xcv%lencv,ycv%lencv
@@ -1067,6 +1069,7 @@ real(r_quad) function qdot_prod_cv(xcv,ycv,kind)
 
 ! local variables
   real(r_quad) :: dd(1)
+  integer(i_kind) :: ii
 
   if (xcv%lencv/=ycv%lencv) then
      write(6,*)'qdot_prod_cv: error length',xcv%lencv,ycv%lencv

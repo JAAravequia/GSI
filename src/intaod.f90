@@ -42,7 +42,6 @@ contains
 !
 ! program history log:
 !   2010-10-20  hclin   - modified from intrad for total aod
-!   2014-12-03  derber  - modify so that use of obsdiags can be turned off
 !
 !   input argument list:
 !     aerohead  - obs type pointer to obs structure
@@ -60,7 +59,7 @@ contains
     use kinds, only: r_kind,i_kind,r_quad
     use aeroinfo, only: aerojacnames,aerojacindxs,nsigaerojac
     use state_vectors, only: svars
-    use obsmod, only: aero_ob_type,lsaveobsens,l_do_adjoint,luse_obsdiag
+    use obsmod, only: aero_ob_type,lsaveobsens,l_do_adjoint
     use jfunc, only: jiter,l_foto,xhat_dt,dhat_dt
     use gridmod, only: latlon11,latlon1n,nsig
     use qcmod, only: nlnqc_iter,varqc_iter
@@ -79,12 +78,12 @@ contains
     type(gsi_bundle), intent(inout) :: rval
 
 ! Declare local variables
-    integer(i_kind) j1,j2,j3,j4,i1,i2,i3,i4,n,k,ic,nn
-    integer(i_kind) istatus,naero
+    integer(i_kind) j,j1,j2,j3,j4,i1,i2,i3,i4,n,n_1,n_2,k,ic,ix,nn,jn
+    integer(i_kind) ier,istatus,naero,id
     integer(i_kind),dimension(nsig) :: i1n,i2n,i3n,i4n
     real(r_kind) val
     real(r_kind) w1,w2,w3,w4
-!   real(r_kind) cg_aero,p0,wnotgross,wgross
+    real(r_kind) cg_aero,p0,wnotgross,wgross
     type(aero_ob_type), pointer :: aeroptr
 
     real(r_kind),pointer,dimension(:) :: sv_chem
@@ -147,18 +146,17 @@ contains
              val=val+tdir(k)*aeroptr%daod_dvar(k,nn)
           end do
 
-          if(luse_obsdiag)then
-             if (lsaveobsens) then
-                val = val*aeroptr%err2(nn)*aeroptr%raterr2(nn)
-                aeroptr%diags(nn)%ptr%obssen(jiter) = val
-             else
-                if (aeroptr%luse) aeroptr%diags(nn)%ptr%tldepart(jiter) = val
-             endif
+          if (lsaveobsens) then
+             aeroptr%diags(nn)%ptr%obssen(jiter) = val*aeroptr%err2(nn)*aeroptr%raterr2(nn)
+          else
+             if (aeroptr%luse) aeroptr%diags(nn)%ptr%tldepart(jiter) = val
           endif
 
           if (l_do_adjoint) then
-             if ( .not. lsaveobsens) then
-
+             if (lsaveobsens) then
+                val=aeroptr%diags(nn)%ptr%obssen(jiter)
+ 
+             else
                 val=val-aeroptr%res(nn)
 
 !             Multiply by variance.

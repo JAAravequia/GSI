@@ -76,7 +76,7 @@ character(len=*),parameter:: myname ='control2model'
 real(r_kind),dimension(lat2,lon2,nsig) :: workst,workvp,workrh
 type(gsi_bundle) :: wbundle
 type(gsi_grid)   :: grid
-integer(i_kind) :: ii,jj,i,ic,id,ngases,nclouds,istatus
+integer(i_kind) :: ii,jj,i,j,k,ic,id,ngases,nclouds,istatus
 character(len=10),allocatable,dimension(:) :: gases
 character(len=max_varname_length),allocatable,dimension(:) :: clouds
 
@@ -162,7 +162,7 @@ end if
 do jj=1,nsubwin
 
 !  create an internal structure w/ the same vars as those in the control vector, including motley vars
-   call gsi_bundlecreate (wbundle,grid,'control2model work',istatus,names2d=cvars2dpm,names3d=cvars3d)
+   call gsi_bundlecreate (wbundle,grid,'model2control work',istatus,names2d=cvars2dpm,names3d=cvars3d)
    if(istatus/=0) then
       write(6,*) trim(myname), ': trouble creating work bundle'
       call stop2(999)
@@ -229,7 +229,12 @@ do jj=1,nsubwin
    if (nclouds>0) then
       if (cw_to_hydro) then
 !        Case when cw is generated from hydrometeors
-         call cw2hydro_tl(sval(jj),wbundle,clouds,nclouds)
+         if (.not. do_tv_to_tsen) then 
+            allocate(sv_tsen(lat2,lon2,nsig))
+            call tv_to_tsen(sv_tv,sv_q,sv_tsen)
+         end if
+         call cw2hydro_tl(sval(jj),wbundle,sv_tsen,clouds,nclouds)
+         if (.not. do_tv_to_tsen) deallocate(sv_tsen)
       else
 !        Case when cloud-vars map one-to-one, take care of them together
          do ic=1,nclouds

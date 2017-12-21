@@ -26,7 +26,7 @@ export DATES="$D1 $D2 $D3 $D4"
 #  Set up the DATADIR, copy the radstat files to a temporary directory,
 #  untar and extract needed ges files. 
 
-DATADIR="${STMP_USER}/horiz_${RADMON_SUFFIX}.${PDATE}"
+DATADIR="${STMP_USER}/horiz_${SUFFIX}.${PDATE}"
 rm -rf $DATADIR
 mkdir -p $DATADIR
 cd $DATADIR
@@ -34,7 +34,7 @@ cd $DATADIR
 #--------------------------------------------------------------------
 #   Copy extraction program to working directory
 
-$NCP ${IG_EXEC}/horiz.x  ./horiz.x
+$NCP $EXEDIR/horiz.x  ./horiz.x
 
 
 #--------------------------------------------------------------------
@@ -101,7 +101,7 @@ cat << EOF > input.$sat.$ihh
   idhh=-18,
   incr=6,
   nchanl=${nchanl},
-  suffix='${RADMON_SUFFIX}',
+  suffix='${SUFFIX}',
   little_endian=${LITTLE_ENDIAN},
  /
 EOF
@@ -119,7 +119,7 @@ fi
 
 for sat in ${SATYPE}; do
 
-   if [[ $MY_MACHINE = "wcoss" || $MY_MACHINE = "zeus" || $MY_MACHINE = "theia" ]]; then
+   if [[ $MY_MACHINE = "wcoss" || $MY_MACHINE = "zeus" ]]; then
       sed -e 's/cray_32bit_ieee/ /' ${sat}.ctl > tmp_${type}.ctl
       mv -f tmp_${type}.ctl ${sat}.ctl
    fi
@@ -153,36 +153,32 @@ done
 #  submit the plot jobs
 #
 
-if [[ $MY_MACHINE = "wcoss" || $MY_MACHINE = "cray" ]]; then
-   cmdfile="./cmdfile_horiz_${RADMON_SUFFIX}_${PID}"
-   logfile=${LOGdir}/horiz_${PID}.log
+if [[ $MY_MACHINE = "wcoss" ]]; then
+   cmdfile="./cmdfile_horiz_${SUFFIX}_${PID}"
+   logfile=${LOGDIR}/horiz_${PID}.log
    rm -f $cmdfile
 
 >$cmdfile
    for sat in ${SATLIST}; do
-     echo "$IG_SCRIPTS/plot_horiz.sh $sat" >> $cmdfile
+     echo "$SCRIPTS/plot_horiz.sh $sat" >> $cmdfile
    done
 
    chmod 755 $cmdfile
    ntasks=`cat $cmdfile|wc -l`
-   jobname=plot_${RADMON_SUFFIX}_hrz_${PID}
+   jobname=plot_${SUFFIX}_hrz_${PID}
 
-   if [[ $MY_MACHINE = "wcoss" ]]; then
-      $SUB -q $JOB_QUEUE -P $PROJECT -R affinity[core] -M 500 -o ${logfile} -W 0:45 -J ${jobname} $cmdfile
-   else
-      $SUB -q $JOB_QUEUE -P $PROJECT -M 500 -o ${logfile} -W 0:45 -J ${jobname} $cmdfile
-   fi
+   $SUB -q $JOB_QUEUE -P $PROJECT -R affinity[core] -M 500 -o ${logfile} -W 0:45 -J ${jobname} $cmdfile
 
 else							# zeus/linux
    for sat in ${SATLIST}; do
       jobname=horiz_${sat}
-      cmdfile="./cmdfile_horiz_${RADMON_SUFFIX}_${sat}"
-      logfile=${LOGdir}/horiz_${sat}.log
+      cmdfile="./cmdfile_horiz_${SUFFIX}_${sat}"
+      logfile=${LOGDIR}/horiz_${sat}.log
 
       rm -f ${cmdfile}
       rm -f ${logfile}
 
-      echo "$IG_SCRIPTS/plot_horiz.sh $sat" >> $cmdfile
+      echo "$SCRIPTS/plot_horiz.sh $sat" >> $cmdfile
 
       $SUB -A $ACCOUNT -l procs=${ntasks},walltime=0:50:00 -N ${jobname} -V -j oe -o ${logfile} $cmdfile
    done
@@ -197,43 +193,39 @@ for sat in ${bigSATLIST}; do
    export PTYPE="obs cor"
 
    PID="${sat}_1"
-   cmdfile="./cmdfile_horiz_${RADMON_SUFFIX}_${PID}"
+   cmdfile="./cmdfile_horiz_${SUFFIX}_${PID}"
 
    rm -f $cmdfile
 >$cmdfile
-   echo "$IG_SCRIPTS/plot_horiz.sh $sat" >> $cmdfile
+   echo "$SCRIPTS/plot_horiz.sh $sat" >> $cmdfile
    chmod 755 $cmdfile
 
    ntasks=`cat $cmdfile|wc -l`
-   jobname=plot_${RADMON_SUFFIX}_hrz_${PID}
+   jobname=plot_${SUFFIX}_hrz_${PID}
    
    if [[ $MY_MACHINE = "wcoss" ]]; then
       $SUB -q $JOB_QUEUE -P $PROJECT -R affinity[core] -M 500 -o ${logfile} -W 2:45 -J ${jobname} $cmdfile
-   elif [[ $MY_MACHINE = "cray" ]]; then
-      $SUB -q $JOB_QUEUE -P $PROJECT -M 500 -o ${logfile} -W 2:45 -J ${jobname} $cmdfile
    else
-      $SUB -A $ACCOUNT -l procs=${ntasks},walltime=2:00:00 -N ${jobname} -V -j oe -o $LOGdir/horiz_${PID}.log $cmdfile
+      $SUB -A $ACCOUNT -l procs=${ntasks},walltime=2:00:00 -N ${jobname} -V -j oe -o $LOGDIR/horiz_${PID}.log $cmdfile
    fi
 
 #  --------
    PID="${sat}_2"
-   cmdfile="./cmdfile_horiz_${RADMON_SUFFIX}_${PID}"
+   cmdfile="./cmdfile_horiz_${SUFFIX}_${PID}"
    export PTYPE="obsges obsnbc"
 
    rm -f $cmdfile
 >$cmdfile
-   echo "$IG_SCRIPTS/plot_horiz.sh $sat" >> $cmdfile
+   echo "$SCRIPTS/plot_horiz.sh $sat" >> $cmdfile
    chmod 755 $cmdfile
 
    ntasks=`cat $cmdfile|wc -l`
-   jobname=plot_${RADMON_SUFFIX}_hrz_${PID}
+   jobname=plot_${SUFFIX}_hrz_${PID}
    
    if [[ $MY_MACHINE = "wcoss" ]]; then
       $SUB -q $JOB_QUEUE -P $PROJECT -R affinity[core] -M 500 -o ${logfile} -W 2:45 -J ${jobname} $cmdfile
-   elif [[ $MY_MACHINE = "cray" ]]; then
-      $SUB -q $JOB_QUEUE -P $PROJECT -M 500 -o ${logfile} -W 2:45 -J ${jobname} $cmdfile
    else
-      $SUB -A $ACCOUNT -l procs=${ntasks},walltime=2:00:00 -N ${jobname} -V -j oe -o $LOGdir/horiz_${PID}.log $cmdfile
+      $SUB -A $ACCOUNT -l procs=${ntasks},walltime=2:00:00 -N ${jobname} -V -j oe -o $LOGDIR/horiz_${PID}.log $cmdfile
    fi
 
 done 

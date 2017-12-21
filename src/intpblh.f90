@@ -40,8 +40,6 @@ subroutine intpblh(pblhhead,rval,sval)
 ! program history log:
 !
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - introduced ladtest_obs         
-!   2014-12-03  derber  - modify so that use of obsdiags can be turned off
-!
 !   input argument list:
 !     pblhhead
 !     spblh    - increment in grid space
@@ -57,7 +55,7 @@ subroutine intpblh(pblhhead,rval,sval)
 !$$$
   use kinds, only: r_kind,i_kind
   use constants, only: half,one,tiny_r_kind,cg_term
-  use obsmod, only: pblh_ob_type, lsaveobsens, l_do_adjoint,luse_obsdiag
+  use obsmod, only: pblh_ob_type, lsaveobsens, l_do_adjoint
   use qcmod, only: nlnqc_iter,varqc_iter
   use gridmod, only: latlon11
   use jfunc, only: jiter
@@ -104,18 +102,18 @@ subroutine intpblh(pblhhead,rval,sval)
      val=w1*spblh(j1)+w2*spblh(j2)&
         +w3*spblh(j3)+w4*spblh(j4)
 
-     if(luse_obsdiag)then
-        if (lsaveobsens) then
-           grad = val*pblhptr%raterr2*pblhptr%err2
-           pblhptr%diags%obssen(jiter) = grad
-        else
-           if (pblhptr%luse) pblhptr%diags%tldepart(jiter)=val
-        endif
+     if (lsaveobsens) then
+        pblhptr%diags%obssen(jiter) = val*pblhptr%raterr2*pblhptr%err2
+     else
+        if (pblhptr%luse) pblhptr%diags%tldepart(jiter)=val
      endif
 
      if (l_do_adjoint) then
-        if (.not. lsaveobsens) then
-           if( .not. ladtest_obs)   val=val-pblhptr%res
+        if (lsaveobsens) then
+           grad = pblhptr%diags%obssen(jiter)
+ 
+        else
+        if( .not. ladtest_obs)   val=val-pblhptr%res
 
 !          gradient of nonlinear operator
            if (nlnqc_iter .and. pblhptr%pg > tiny_r_kind .and. &

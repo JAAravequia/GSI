@@ -54,7 +54,6 @@ subroutine read_wrf_mass_binary_guess(mype)
 !   2014-03-12  hu     - add code to read ges_q2 (2m Q), 
 !                               Qnr(rain number concentration), 
 !                               and nsoil (number of soil levels)
-!   2014-12-12  hu     - change l_use_2mq4b to i_use_2mq4b
 !
 !   input argument list:
 !     mype     - pe number
@@ -88,7 +87,7 @@ subroutine read_wrf_mass_binary_guess(mype)
   use constants, only: zero,one,grav,fv,zero_single,rd_over_cp_mass,one_tenth,h300,r10,r100
   use constants, only: r0_01
   use gsi_io, only: lendian_in
-  use rapidrefresh_cldsurf_mod, only: l_cloud_analysis,l_gsd_soilTQ_nudge,i_use_2mq4b
+  use rapidrefresh_cldsurf_mod, only: l_cloud_analysis,l_gsd_soilTQ_nudge,l_use_2mQ4B
   use wrf_mass_guess_mod, only: soil_temp_cld,isli_cld,ges_xlon,ges_xlat,ges_tten,create_cld_grids
   use gsi_bundlemod, only: GSI_BundleGetPointer
   use gsi_metguess_mod, only: gsi_metguess_get,GSI_MetGuess_Bundle
@@ -126,6 +125,7 @@ subroutine read_wrf_mass_binary_guess(mype)
   integer(i_kind) ifld,im,jm,lm,num_mass_fields
   integer(i_kind) num_loc_groups,num_j_groups
   integer(i_kind) i,it,j,k
+  integer(i_kind) iii,jjj,lll
   integer(i_kind) i_mub,i_mu,i_fis,i_t,i_q,i_u,i_v,i_sno,i_u10,i_v10,i_smois,i_tslb
   integer(i_kind) i_sm,i_xice,i_sst,i_tsk,i_ivgtyp,i_isltyp,i_vegfrac
   integer(i_kind) isli_this
@@ -149,6 +149,11 @@ subroutine read_wrf_mass_binary_guess(mype)
   integer(i_kind) i_th2,i_q2,i_soilt1,ksmois,ktslb
   integer(i_kind) ier, istatus
   integer(i_kind) n_actual_clouds
+  integer(i_kind) :: indx_sulf, indx_bc1, indx_bc2,  &
+                     indx_oc1, indx_oc2, indx_dust1, indx_dust2, &
+                     indx_dust3, indx_dust4, indx_dust5, &
+                     indx_seas1, indx_seas2, indx_seas3, indx_seas4,indx_p25
+  character(len=5),allocatable :: cvar(:)
 
   real(r_kind), pointer :: ges_ps_it (:,:  )=>NULL()
   real(r_kind), pointer :: ges_th2_it(:,:  )=>NULL()
@@ -169,6 +174,22 @@ subroutine read_wrf_mass_binary_guess(mype)
   real(r_kind), pointer :: ges_qs (:,:,:)=>NULL()
   real(r_kind), pointer :: ges_qg (:,:,:)=>NULL()
   real(r_kind), pointer :: ges_qnr(:,:,:)=>NULL()
+
+  real(r_kind), pointer :: ges_sulf(:,:,:)=>NULL()
+  real(r_kind), pointer :: ges_bc1(:,:,:)=>NULL()
+  real(r_kind), pointer :: ges_bc2(:,:,:)=>NULL()
+  real(r_kind), pointer :: ges_oc1(:,:,:)=>NULL()
+  real(r_kind), pointer :: ges_oc2(:,:,:)=>NULL()
+  real(r_kind), pointer :: ges_dust1(:,:,:)=>NULL()
+  real(r_kind), pointer :: ges_dust2(:,:,:)=>NULL()
+  real(r_kind), pointer :: ges_dust3(:,:,:)=>NULL()
+  real(r_kind), pointer :: ges_dust4(:,:,:)=>NULL()
+  real(r_kind), pointer :: ges_dust5(:,:,:)=>NULL()
+  real(r_kind), pointer :: ges_seas1(:,:,:)=>NULL()
+  real(r_kind), pointer :: ges_seas2(:,:,:)=>NULL()
+  real(r_kind), pointer :: ges_seas3(:,:,:)=>NULL()
+  real(r_kind), pointer :: ges_seas4(:,:,:)=>NULL()
+  real(r_kind), pointer :: ges_p25(:,:,:)=>NULL()
 
   integer(i_kind) iadd
   character(132) memoryorder
@@ -198,7 +219,6 @@ subroutine read_wrf_mass_binary_guess(mype)
      call gsi_metguess_get('clouds::3d',n_actual_clouds,istatus)
      if (n_actual_clouds>0) then
 !       Get pointer for each of the hydrometeors from guess at time index "it"
-        ier=0
         it=ntguessig
         call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql', ges_qc, istatus );ier=ier+istatus
         call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qi', ges_qi, istatus );ier=ier+istatus
@@ -265,7 +285,7 @@ subroutine read_wrf_mass_binary_guess(mype)
            call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tsoil',ges_soilt1_it,istatus );ier=ier+istatus
            if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields, ier =',ier)
         endif
-        if (i_use_2mq4b>0) then
+        if (l_use_2mQ4B) then
            call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q2m'  ,ges_q2_it,istatus);ier=ier+istatus
            if (ier/=0) call die(trim(myname),'cannot get pointers for q2m, ier =',ier)
         endif
@@ -309,8 +329,7 @@ subroutine read_wrf_mass_binary_guess(mype)
         endif
         read(lendian_in) wrfges
         read(lendian_in) ! n_position          !  offset for START_DATE record
-!       if(mype == 0) write(6,*)'READ_WRF_MASS_BINARY_GUESS:  read wrfges,n_position= ',wrfges,' ',n_position
-        if(mype == 0) write(6,*)'READ_WRF_MASS_BINARY_GUESS:  read wrfges= ',wrfges
+        if(mype == 0) write(6,*)'READ_WRF_MASS_BINARY_GUESS:  read wrfges,n_position= ',wrfges,' ',n_position
         
         i=i+1 ; i_mub=i                                                ! mub
         read(lendian_in) n_position
@@ -1081,7 +1100,7 @@ subroutine read_wrf_mass_binary_guess(mype)
                  ges_tsk_it(j,i)=all_loc(j,i,i_tsk)
                  ges_soilt1_it(j,i)=all_loc(j,i,i_soilt1)
               endif
-              if(i_use_2mq4b>0) then
+              if(l_use_2mQ4B) then
                 ges_q2_it(j,i)=all_loc(j,i,i_q2)
 ! Convert 2m guess mixing ratio to specific humidity
                 ges_q2_it(j,i) = ges_q2_it(j,i)/(one+ges_q2_it(j,i))
@@ -1236,9 +1255,8 @@ subroutine read_wrf_mass_netcdf_guess(mype)
   use constants, only: zero,one,grav,fv,zero_single,rd_over_cp_mass,one_tenth,r10,r100
   use constants, only: r0_01, tiny_r_kind
   use gsi_io, only: lendian_in
-  use chemmod, only: laeroana_gocart,nh4_mfac,oc_mfac,&
-       aerotot_guess,init_aerotot_guess,wrf_pm2_5,aero_ratios
-  use rapidrefresh_cldsurf_mod, only: l_cloud_analysis,l_gsd_soiltq_nudge,i_use_2mq4b
+  use chemmod, only: laeroana_gocart
+  use rapidrefresh_cldsurf_mod, only: l_cloud_analysis,l_gsd_soilTQ_nudge,l_use_2mQ4B
   use wrf_mass_guess_mod, only: soil_temp_cld,isli_cld,ges_xlon,ges_xlat,ges_tten,create_cld_grids
   use gsi_bundlemod, only: GSI_BundleGetPointer
   use gsi_metguess_mod, only: gsi_metguess_get,GSI_MetGuess_Bundle
@@ -1285,7 +1303,7 @@ subroutine read_wrf_mass_netcdf_guess(mype)
   integer(i_kind) i_th2,i_q2,i_soilt1,ksmois,ktslb
   integer(i_kind) ier, istatus
   integer(i_kind) n_actual_clouds
-  integer(i_kind) iv,n_gocart_var
+  integer(i_kind) iv,n,n_gocart_var
   integer(i_kind) :: indx_sulf, indx_bc1, indx_bc2,  &
                      indx_oc1, indx_oc2, indx_dust1, indx_dust2, &
                      indx_dust3, indx_dust4, indx_dust5, &
@@ -1327,7 +1345,6 @@ subroutine read_wrf_mass_netcdf_guess(mype)
   real(r_kind), pointer :: ges_seas3(:,:,:)=>NULL()
   real(r_kind), pointer :: ges_seas4(:,:,:)=>NULL()
   real(r_kind), pointer :: ges_p25(:,:,:)=>NULL()
-  real(r_kind), pointer :: ges_pm2_5(:,:,:)=>NULL()
 
 !  WRF MASS input grid dimensions in module gridmod
 !      These are the following:
@@ -1377,12 +1394,6 @@ subroutine read_wrf_mass_netcdf_guess(mype)
      if(l_gsd_soilTQ_nudge .and. l_cloud_analysis) &
                           num_mass_fields=15+4*lm+7*lm+2+2*nsig_soil
 
-     if (laeroana_gocart .and. wrf_pm2_5 ) then
-        if(mype==0) write(6,*)'laeroana_gocart canoot be both true'
-        call stop2(2)
-     endif
-
-
      if ( laeroana_gocart ) then
         call gsi_chemguess_get ('aerosols::3d',n_gocart_var,istatus)
         if ( n_gocart_var > 0 ) then
@@ -1391,11 +1402,6 @@ subroutine read_wrf_mass_netcdf_guess(mype)
            laeroana_gocart = .false.
         endif
      endif
-
-     if ( wrf_pm2_5 ) then
-        num_mass_fields = num_mass_fields + lm
-     endif
-
 
      num_all_fields=num_mass_fields*nfldsig
      num_loc_groups=num_all_fields/npe
@@ -1593,24 +1599,12 @@ subroutine read_wrf_mass_netcdf_guess(mype)
               i_chem(iv)=i+1
               do k=1,lm
                 i=i+1
+!mhu                write(identity(i),'("record ",i3,"--"//trim(cvar(iv))//"(",i2,")")')i,k
                 jsig_skip(i)=0 ; igtype(i)=1
               end do
            end do
         endif
      endif ! laeroana_gocart
-
-     if ( wrf_pm2_5 ) then
-        allocate(cvar(1))
-        allocate(i_chem(1))
-        allocate(kchem(1))
-        iv=1
-        i_chem(iv)=i+1
-        do k=1,lm
-           i=i+1
-           jsig_skip(i)=0 ; igtype(i)=1
-        end do
-     endif
-
 
 !    End of stuff from MASS restart file
 
@@ -1708,15 +1702,9 @@ subroutine read_wrf_mass_netcdf_guess(mype)
         call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tv',ges_tv_it,istatus );ier=ier+istatus
         call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q' ,ges_q_it, istatus );ier=ier+istatus
         if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields, ier =',ier)
-        if(i_use_2mq4b>0) then
+        if(l_use_2mQ4B) then
            call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it),'q2m',ges_q2_it,istatus ); ier=ier+istatus
            if (ier/=0) call die(trim(myname),'cannot get pointers for q2m, ier =',ier)
-        endif
-        if (l_gsd_soilTQ_nudge) then
-           call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'th2m',ges_th2_it, istatus );ier=ier+istatus
-           call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tskn',ges_tsk_it, istatus );ier=ier+istatus 
-           call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tsoil',ges_soilt1_it,istatus);ier=ier+istatus
-           if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields, ier =',ier)
         endif
 
 ! hydrometeors
@@ -1737,14 +1725,6 @@ subroutine read_wrf_mass_netcdf_guess(mype)
            ktt=i_0+i_tt-1
         endif
         if ( laeroana_gocart ) then
-
-           if (aero_ratios) then 
-              IF (mype==0) write(6,*) 'aero_ratios = .true. disabled - reset aero_ratios = .false. Aborting'
-              call stop2(3)
-           endif
-
-           if (aero_ratios .and. it==1) call init_aerotot_guess()
-
            ier = 0
            indx_sulf=-1; indx_bc1=-1; indx_bc2=-1; indx_oc1=-1; indx_oc2=-1
            indx_dust1=-1;indx_dust2=-1;indx_dust3=-1; indx_dust4=-1;
@@ -1812,21 +1792,6 @@ subroutine read_wrf_mass_netcdf_guess(mype)
            endif
         endif
 
-        if ( wrf_pm2_5 ) then
-           ier = 0
-           iv=1
-           cvar(1)='pm2_5'
-
-           call GSI_BundleGetPointer(GSI_ChemGuess_Bundle(it),cvar(iv),ges_pm2_5,istatus)
-           ier=ier+istatus
-           if (ier/=0 .and. mype == 0) then
-              write(6,*)'READ_WRF_MASS_NETCDF_GUESS: getpointer failed ',  &
-                   'for pm2_5 species ',cvar(iv)
-           endif
-           kchem(iv) = i_0+i_chem(iv)-1
-        endif
-
-
 !             wrf pressure variable is dry air partial pressure--need to add water vapor contribution
 !              so accumulate 1 + total water vapor to use as correction factor
 
@@ -1854,12 +1819,6 @@ subroutine read_wrf_mass_netcdf_guess(mype)
                  end do
               endif
            endif
-
-           if ( wrf_pm2_5 ) then
-              iv = 1
-              kchem(iv) = kchem(iv)+1
-           endif
-
            do i=1,lon2
               do j=1,lat2
                  ges_u_it(j,i,k) = all_loc(j,i,ku)
@@ -1899,30 +1858,6 @@ subroutine read_wrf_mass_netcdf_guess(mype)
                     if (indx_seas3>0) ges_seas3(j,i,k) = all_loc(j,i,kchem(indx_seas3)) 
                     if (indx_seas4>0) ges_seas4(j,i,k) = all_loc(j,i,kchem(indx_seas4)) 
                     if (indx_p25>0)   ges_p25(j,i,k)   = all_loc(j,i,kchem(indx_p25))   
-                    if (aero_ratios .and. it==1) then
-                       aerotot_guess(j,i,k)=max(tiny_r_kind,&
-                       ges_sulf(j,i,k)*nh4_mfac+&
-                       ges_bc1(j,i,k)+&
-                       ges_bc2(j,i,k)+&
-                       ges_oc1(j,i,k)*oc_mfac+&
-                       ges_oc2(j,i,k)*oc_mfac+&
-                       ges_p25(j,i,k)+&
-                       ges_dust1(j,i,k)+&
-                       ges_dust2(j,i,k)+&
-                       ges_dust3(j,i,k)+&
-                       ges_dust4(j,i,k)+&
-                       ges_dust5(j,i,k)+&
-                       ges_seas1(j,i,k)+&
-                       ges_seas2(j,i,k)+&
-                       ges_seas3(j,i,k)+&
-                       ges_seas4(j,i,k))
-                    endif
-
-                 end if
-
-                 if ( wrf_pm2_5 ) then
-                    iv=1
-                    ges_pm2_5(j,i,k)  = all_loc(j,i,kchem(iv))
                  end if
               end do
            end do
@@ -1931,12 +1866,6 @@ subroutine read_wrf_mass_netcdf_guess(mype)
            deallocate(i_chem)
            deallocate(kchem)
         endif
-
-        if ( wrf_pm2_5 ) then
-           deallocate(i_chem)
-           deallocate(kchem)
-        endif
-
 
         if(l_gsd_soilTQ_nudge) then
            ier=0
@@ -1991,7 +1920,7 @@ subroutine read_wrf_mass_netcdf_guess(mype)
                  ges_soilt1_it(j,i)=all_loc(j,i,i_0+i_soilt1)
               endif
 ! Convert 2m guess mixing ratio to specific humidity
-              if(i_use_2mq4b>0) then
+              if(l_use_2mQ4B) then
                  ges_q2_it(j,i)=all_loc(j,i,i_0+i_q2)
                  ges_q2_it(j,i)=ges_q2_it(j,i)/(one+ges_q2_it(j,i))
               endif
@@ -2081,6 +2010,58 @@ subroutine read_wrf_mass_netcdf_guess(mype)
 
      return
 end subroutine read_wrf_mass_netcdf_guess
+#else /* Start no WRF-library block */
+subroutine read_wrf_mass_binary_guess(mype)
+!$$$  subprogram documentation block
+!                .      .    .                                       .
+! subprogram:    read_wrf_mass_binary_guess
+!   prgmmr:
+!
+! abstract:
+!
+! program history log:
+!   2009-12-07  lueken - added subprogram doc block and implicit none
+!
+!   input argument list:
+!
+!   output argument list:
+!
+! attributes:
+!   language: f90
+!   machine:  ibm RS/6000 SP
+!
+!$$$ end documentation block
+  use kinds,only: i_kind
+  implicit none
+  integer(i_kind),intent(in)::mype
+  write(6,*)'READ_WRF_MASS_BINARY_GUESS:  dummy routine, does nothing!'
+end subroutine read_wrf_mass_binary_guess
+subroutine read_wrf_mass_netcdf_guess(mype)
+!$$$  subprogram documentation block
+!                .      .    .                                       .
+! subprogram:    read_wrf_mass_netcdf_guess
+!   prgmmr:
+!
+! abstract:
+!
+! program history log:
+!   2009-12-07  lueken - added subprogram doc block and implicit none
+!
+!   input argument list:
+!
+!   output argument list:
+!
+! attributes:
+!   language: f90
+!   machine:  ibm RS/6000 SP
+!
+!$$$ end documentation block
+  use kinds,only: i_kind
+  implicit none
+  integer(i_kind),intent(in)::mype
+  write(6,*)'READ_WRF_MASS_NETCDF_GUESS:  dummy routine, does nothing!'
+end subroutine read_wrf_mass_netcdf_guess
+#endif /* End no WRF-library block */
 
 subroutine generic_grid2sub(tempa,all_loc,kbegin_loc,kend_loc,kbegin,kend,mype,num_fields)
 !$$$  subprogram documentation block
@@ -2498,55 +2479,3 @@ subroutine move_ibuf_ihg(ibuf,temp1,im_buf,jm_buf,im_out,jm_out)
   end do
   
 end subroutine move_ibuf_ihg
-#else /* Start no WRF-library block */
-subroutine read_wrf_mass_binary_guess(mype)
-!$$$  subprogram documentation block
-!                .      .    .                                       .
-! subprogram:    read_wrf_mass_binary_guess
-!   prgmmr:
-!
-! abstract:
-!
-! program history log:
-!   2009-12-07  lueken - added subprogram doc block and implicit none
-!
-!   input argument list:
-!
-!   output argument list:
-!
-! attributes:
-!   language: f90
-!   machine:  ibm RS/6000 SP
-!
-!$$$ end documentation block
-  use kinds,only: i_kind
-  implicit none
-  integer(i_kind),intent(in)::mype
-  write(6,*)'READ_WRF_MASS_BINARY_GUESS:  dummy routine, does nothing!'
-end subroutine read_wrf_mass_binary_guess
-subroutine read_wrf_mass_netcdf_guess(mype)
-!$$$  subprogram documentation block
-!                .      .    .                                       .
-! subprogram:    read_wrf_mass_netcdf_guess
-!   prgmmr:
-!
-! abstract:
-!
-! program history log:
-!   2009-12-07  lueken - added subprogram doc block and implicit none
-!
-!   input argument list:
-!
-!   output argument list:
-!
-! attributes:
-!   language: f90
-!   machine:  ibm RS/6000 SP
-!
-!$$$ end documentation block
-  use kinds,only: i_kind
-  implicit none
-  integer(i_kind),intent(in)::mype
-  write(6,*)'READ_WRF_MASS_NETCDF_GUESS:  dummy routine, does nothing!'
-end subroutine read_wrf_mass_netcdf_guess
-#endif /* End no WRF-library block */

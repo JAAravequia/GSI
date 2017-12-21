@@ -1,5 +1,5 @@
-subroutine read_co(nread,ndata,nodata,infile,gstime,lunout, &
-           obstype,sis,nobs)
+subroutine read_co(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
+           obstype,twind,sis,ithin,rmesh)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_co                    read co data
@@ -12,67 +12,87 @@ subroutine read_co(nread,ndata,nodata,infile,gstime,lunout, &
 
 !    2010-03-30  Tangborn, initial code.
 !    2011-08-01  Lueken  - replaced F90 with f90 (no machine logic), fixed indentation
-!    2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
-!
+!   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
+
 !   input argument list:
 !     obstype  - observation type to process
+!     jsatid   - satellite id to read
 !     infile   - unit from which to read co data
 !     gstime   - analysis time in minutes from reference date
 !     lunout   - unit to which to write data for further processing
 !     obstype  - observation type to process
+!     twind    - input group time window (hours)
 !     sis      - satellite/instrument/sensor indicator
+!     ithin    - flag to thin data
+!     rmesh    - thinning mesh size (km)
 !
 !   output argument list:
 !     nread    - number of co observations read
 !     ndata    - number of co profiles retained for further processing
 !     nodata   - number of co observations retained for further processing
-!     nobs     - array of observations on each subdomain for each processor
 
   use kinds, only: r_kind,r_double,i_kind
-  use satthin, only: makegrids,map2tgrid,finalcheck,itxmax
+  use satthin, only: makegrids,map2tgrid,destroygrids, &
+      finalcheck,itxmax
   use gridmod, only: nlat,nlon,regional,tll2xy,rlats,rlons
   use constants, only: deg2rad,zero,rad2deg,one_tenth,r60inv,two
   use obsmod, only: iadate,nlco
   use convinfo, only: nconvtype, &
       icuse,ictype,ioctype
-  use gsi_4dvar, only: iwinbgn
+  use gsi_4dvar, only: l4dvar,iwinbgn,winlen
   use qcmod, only: use_poq7
-  use mpimod, only: npe
   implicit none
 
 ! Declare passed variables
-  character(len=*),intent(in   ) :: obstype,infile
-  character(len=20),intent(in  ) :: sis
-  integer(i_kind) ,intent(in   ) :: lunout
+  character(len=*),intent(in   ) :: obstype,infile,jsatid
+  character(len=*),intent(in   ) :: sis
+  integer(i_kind) ,intent(in   ) :: lunout,ithin
   integer(i_kind) ,intent(inout) :: nread
-  integer(i_kind),dimension(npe) ,intent(inout) :: nobs
   integer(i_kind) ,intent(inout) :: ndata,nodata
-  real(r_kind)    ,intent(in   ) :: gstime
+  real(r_kind)    ,intent(in   ) :: gstime,twind,rmesh
 
 ! Declare local parameters
+  real(r_kind),parameter:: r6   = 6.0_r_kind
+  real(r_kind),parameter:: r76  = 76.0_r_kind
+  real(r_kind),parameter:: r84  = 84.0_r_kind
+
   real(r_kind),parameter:: r360 = 360.0_r_kind
 
+  real(r_kind),parameter:: rmiss = -9999.9_r_kind
   real(r_kind),parameter:: badco = 10000.0_r_kind
 
 ! Declare local variables
-  logical outside
-  logical lerror,leof,lmax
+  logical outside,version6,version8,iuse
+  logical lerror,leof,lmax,lok
 
+
+  character(2) version
+  character(8) subset,subset6,subset8
+  character(49) costr
+  character(63) lcostr
+  character(51) cogstr
+  character(27) cogstr2
+  character(42) costr2
 
   integer(i_kind) maxobs,ncodat
-  integer(i_kind) lunin
+  integer(i_kind) idate,jdate,ksatid,kk,iy,iret,im,ihh,idd,lunin
   integer(i_kind) nmind,i,j
   integer(i_kind) imin
   integer(i_kind) k,ilat,ilon,nreal,nchanl
 ! integer(i_kind) ithin,kidsat
+  integer(i_kind) kidsat
   integer(i_kind) idate5(5)
+  integer(i_kind) JULIAN,IDAYYR,IDAYWK
+  integer(i_kind) itype, ikx
+  integer(i_kind) isnd, ilev, iflg, mflg
   integer(i_kind) inum,iyear,imonth,iday,ihour,iferror
 
 
-  integer(i_kind) ipoq7
+  integer(i_kind) itx,itt,ipoq7
 
-  real(r_kind) tdiff,sstime,dlon,dlat,t4dv,poq
-  real(r_kind) slons0,slats0,rsat,solzen,dlat_earth,dlon_earth
+  real(r_kind) tdiff,sstime,slons,slats,dlon,dlat,t4dv,toq,poq,timedif,crit1,dist1
+  real(r_kind) slons0,slats0,rsat,solzen,solzenp,dlat_earth,dlon_earth
+  real(r_kind) rsec, ppmv, prec, pres, pob, obserr, usage
   real(r_kind) rlat,rlon,rpress,rsza
   real(r_kind),allocatable,dimension(:):: pco
   real(r_kind),allocatable,dimension(:):: apco
@@ -83,6 +103,15 @@ subroutine read_co(nread,ndata,nodata,infile,gstime,lunout, &
   real(r_kind),allocatable,dimension(:,:):: coout
 
   real(r_double),dimension(10):: hdrco
+  real(r_double),dimension(10):: hdrcog
+  real(r_double),dimension(5):: hdrcog2
+  real(r_double),dimension(10):: hdrcoo
+  real(r_double),dimension(8) :: hdrcoo2
+
+  real(r_double) totco
+
+  logical eof
+
 
 ! Set constants.  Initialize variables
   rsat=999._r_kind
@@ -107,7 +136,7 @@ subroutine read_co(nread,ndata,nodata,infile,gstime,lunout, &
 !    Read in observations from ascii file 
 
 !    Opening file for reading
-     open(lunin,file=trim(infile),form='formatted',iostat=iferror)
+     open(lunin,file=infile,form='formatted',iostat=iferror)
      lerror = (iferror/=0)
 
 110  continue
@@ -166,6 +195,7 @@ subroutine read_co(nread,ndata,nodata,infile,gstime,lunout, &
      t4dv=real((nmind-iwinbgn),r_kind)*r60inv
      sstime=real(nmind,r_kind)
      tdiff=(sstime-gstime)*r60inv
+     
 
 !    Check co layer values.  If any layer value is bad, toss entire profile
 !     do k=1,nlco
@@ -206,7 +236,6 @@ subroutine read_co(nread,ndata,nodata,infile,gstime,lunout, &
 
 
 ! Write header record and data to output file for further processing
-  call count_obs(ndata,ncodat+nchanl,ilat,ilon,coout,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
   write(lunout) ((coout(k,i),k=1,ncodat+nchanl),i=1,ndata)
   nread=ndata ! nmrecs

@@ -5,7 +5,7 @@
 #
 #  This script makes sets all necessary configuration definitions
 #  and calls the makeall.sh script to build all the necessary
-#  executables.  This script works for zeus, theia, and wcoss 
+#  executables.  This script works for ccs, zeus, and wcoss
 #  machines.
 #
 #-------------------------------------------------------------------
@@ -16,7 +16,7 @@
    my $machine = `/usr/bin/perl get_hostname.pl`;
    my $my_machine="export MY_MACHINE=$machine";
 
-   if( $machine ne "cray" && $machine ne "theia" && $machine ne "wcoss" ) {
+   if( $machine ne "ccs" && $machine ne "zeus" && $machine ne "wcoss" ) {
       die( "ERROR --- Unrecognized machine hostname, $machine.  Exiting now...\n" );
    }
    else {
@@ -24,11 +24,17 @@
    }
 
    #
-   #  surge, theia, and wcoss are all little endian machines, and all run linux
+   #  zeus is the only little endian machine
    # 
-   my $little_endian = "export LITTLE_ENDIAN=\${LITTLE_ENDIAN:-0}";
-   my $my_os = "linux";
+   my $little_endian = "export LITTLE_ENDIAN=0";
+   if( $machine eq "zeus" ) {
+      $little_endian = "export LITTLE_ENDIAN=1";   
+   }
 
+   my $my_os = "linux";
+   if( $machine eq "ccs" ) {
+      my $my_os = "aix";
+   }
 
    #
    #  Idenfity basedir location of package
@@ -43,7 +49,7 @@
       $radmon = `pwd`;
       $radmon =~ s/^\s+|\s+$//g;
    }
-   my $my_radmon = "export MY_RADMON=\${MY_RADMON:-$radmon}";
+   my $my_radmon = "export MY_RADMON=$radmon";
    print "my_radmon = $my_radmon \n";
    print"\n\n";
 
@@ -53,12 +59,9 @@
    #  TANKDIR location
    #
    my $user_name = $ENV{ 'USER' };
-   if( $machine eq "theia" ){
-      $tankdir = "/scratch4/NCEPDEV/da/save/$user_name/nbns";
-   }
-   elsif( $machine eq "cray" ){
-      $tankdir = "/gpfs/hps/emc/da/noscrub/$user_name/nbns";
-   }
+   if( $mahine eq "zeus" ) {
+      $tankdir = "/scratch2/portfolios/NCEPDEV/global/save/$user_name/nbns";
+   } 
    else {
       $tankdir = "/global/save/$user_name/nbns";
    }
@@ -74,7 +77,7 @@
    if( length($new_tankdir ) > 0 ) {
       $tankdir = $new_tankdir;
    }
-   my $my_tankdir="export MY_TANKDIR=\${MY_TANKDIR:-$tankdir}";
+   my $my_tankdir="export MY_TANKDIR=$tankdir";
    print "my_tankdir = $my_tankdir\n";
    print "\n\n";
    sleep( 1 );
@@ -94,7 +97,7 @@
    if( length($new_server ) > 0 ) {
       $server = $new_server;
    }
-   my $my_server="export WEB_SVR=\${WEB_SVR:-$server}";
+   my $my_server="export WEB_SVR=$server";
    print "my_server = $my_server\n";
    print "\n\n";
    sleep( 1 );
@@ -114,7 +117,7 @@
    if( length($new_webuser ) > 0 ) {
       $webuser = $new_webuser;
    }
-   my $my_webuser="export WEB_USER=\${WEB_USER:-$webuser}";
+   my $my_webuser="export WEB_USER=$webuser";
    print "my_webuser = $my_webuser\n";
    print "\n\n";
    sleep( 1 );
@@ -134,7 +137,7 @@
    if( length($new_webdir ) > 0 ) {
       $webdir = $new_webdir;
    }
-   my $my_webdir="export WEBDIR=\${WEBDIR:-$webdir}";
+   my $my_webdir="export WEBDIR=$webdir";
    print "my_webdir = $my_webdir\n";
    print "\n\n";
    sleep( 1 );
@@ -142,67 +145,11 @@
    #
    #  Set up ptmp and stmp locations according to $arch.
    #
-   #
-   my $my_ptmp;
-   my $my_stmp;
-
-   if( $machine eq "wcoss" ) {
-      $ptmp = "/ptmpd1";
-      print "Please specify PTMP location.  This is used for temporary work space.\n";
-      print "  Available options are: \n";
-      print "      /ptmpd1  (default)\n";
-      print "      /ptmpd2\n";
-      print "      /ptmpd3\n";
-      print "      /ptmpp1\n";
-      print "      /ptmpp2\n";
-   
-      print "  Return to accept default location or enter new location now.\n";
-      print "\n";
-      print "  Default PTMP:  $ptmp \n";
-      print "     ?\n";
-      my $new_ptmp = <>;
-      $new_ptmp =~ s/^\s+|\s+$//g;
-
-      if( length($new_ptmp ) > 0 ) {
-         $ptmp = $new_ptmp;
-      }
-      $my_ptmp="export MY_PTMP=\${MY_PTMP:-$ptmp}";
-      print "my_ptmp = $my_ptmp\n";
-      print "\n\n";
-      sleep( 1 );
-
-      $stmp = "/stmpd1";
-      print "Please specify STMP location.  This is used for temporary work space.\n";
-      print "  Available options are: \n";
-      print "      /stmpd1  (default)\n";
-      print "      /stmpd2\n";
-      print "      /stmpd3\n";
-      print "      /stmpp1\n";
-      print "      /stmpp2\n";
-
-      print "  Return to accept default location or enter new location now.\n";
-      print "\n";
-      print "  Default STMP:  $stmp \n";
-      print "     ?\n";
-      my $new_stmp = <>;
-      $new_stmp =~ s/^\s+|\s+$//g;
-
-      if( length($new_stmp ) > 0 ) {
-         $stmp = $new_stmp;
-      }
-      $my_stmp="export MY_STMP=\${MY_STMP:-$stmp}";
-      print "my_stmp = $my_stmp\n";
-      print "\n\n";
-      sleep( 1 );
-
-   }
-   elsif( $machine eq "cray" ) {
-      $my_ptmp="export MY_PTMP=\${MY_PTMP:-/gpfs/hps/ptmp}";
-      $my_stmp="export MY_STMP=\${MY_STMP:-/gpfs/hps/stmp}";
-   }
-   elsif( $machine eq "theia" ){
-      $my_ptmp="export MY_PTMP=\${MY_PTMP:-/scratch4/NCEPDEV/stmp4}";
-      $my_stmp="export MY_STMP=\${MY_STMP:-/scratch4/NCEPDEV/stmp3}";
+   my $my_ptmp="export PTMP=/ptmp";
+   my $my_stmp="export STMP=/stmp";
+   if( $machine eq "zeus" ) {
+      $my_ptmp="export PTMP=/scratch2/portfolios/NCEPDEV/ptmp";
+      $my_stmp="export STMP=/scratch2/portfolios/NCEPDEV/stmp";
    } 
 
    print "my_ptmp = $my_ptmp\n";
@@ -234,10 +181,10 @@
       elsif( $_ =~ "MY_MACHINE=" ) {
          print $out "$my_machine\n";
       }
-      elsif( $_ =~ "MY_PTMP=" ) {
+      elsif( $_ =~ "PTMP=" ) {
          print $out "$my_ptmp\n";
       }
-      elsif( $_ =~ "MY_STMP=" ) {
+      elsif( $_ =~ "STMP=" ) {
          print $out "$my_stmp\n";
       }
       else {
@@ -255,22 +202,20 @@
    print "\n";
    print "Updating parm/RadMon_user_settings\n";
 
-   my $account = "export ACCOUNT=\${ACCOUNT:-glbss}";
-   if( $machine ne "zeus" && $machine ne "theia" ) {
-      $account = "export ACCOUNT=\${ACCOUNT:-}";
+   my $account = "export ACCOUNT=\${ACCOUNT:-ada}";
+   if( $machine ne "zeus" ) {
+      $account = "export ACCOUNT=";
    }
 
-   my $project = "export PROJECT=\${PROJECT:-GDAS-T2O}";
-   if( $machine ne "wcoss" && $machine ne "cray" ) {
+   my $project = "export PROJECT=\${PROJECT:-GDAS-T20}";
+   if( $machine ne "wcoss" ) {
       $project="export PROJECT=";
    } 
 
-   my $job_queue="export JOB_QUEUE=";
-   if( $machine eq "cray" ) {
-      $job_queue="export JOB_QUEUE=\${JOB_QUEUE:-dev}";
-   } elsif( $machine eq "wcoss" ){
-      $job_queue = "export JOB_QUEUE=\${JOB_QUEUE:-dev_shared}";
-   }
+   my $job_queue = "export JOB_QUEUE=\${JOB_QUEUE:-dev}";
+   if( $machine ne "wcoss" ) {
+      $job_queue="export JOB_QUEUE=";
+   } 
 
 
     my $uname = $ENV{ 'USER' };

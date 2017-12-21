@@ -235,7 +235,8 @@ contains
     real(r_kind),dimension(0:nya-1,0:nxa-1),intent(in):: region_dx,region_dy,region_lat
     real(r_kind),intent(in):: phi0
 
-    integer(i_kind) i,j,nx,ny
+    integer(i_kind) i,ia,j,ja,nx,ny
+    integer(i_kind) is1,ie1,js1,je1,is2,ie2,js2,je2
     integer(i_kind) k,jump
     integer(i_kind) ii,im,ip,jj,jm,jp
     real(r_kind) x00,y00,x0p,x0m,xp0,xm0,y0p,y0m,yp0,ym0
@@ -244,6 +245,8 @@ contains
     real(r_kind),allocatable:: d(:),dh(:),u(:),o(:)
     real(r_kind),allocatable:: dbar(:),ubar(:),obar(:)
     real(r_kind),allocatable:: dbarh(:),ubarh(:),obarh(:)
+    real(r_kind),allocatable::vtest(:),ftest(:),vtest0(:),ftest0(:)
+    real(r_kind) errmaxv,errmaxvh,errmaxf,errmaxfh
     integer(i_kind) ibad,jbad
     integer(i_kind) ic,if,jc,jf
 
@@ -835,7 +838,7 @@ contains
     real(r_kind),parameter:: nine_sixt2=nine_sixteenths**2
 
     integer(i_kind) if,ic,jf,jc
-    integer(i_kind) icm2,icp,icp2,icm,jcm2,jcm,jcp2,jcp
+    integer(i_kind) icm2,icp,icp2,icm,jcm2,jcm,jcp2,jcp,nxflim,nyflim
 
 !    start with coincident points and points closest to boundary that are linearly interpolated:
 
@@ -935,7 +938,7 @@ contains
     real(r_kind),parameter:: nine_sixt2=nine_sixteenths**2
 
     integer(i_kind) if,ic,jf,jc
-    integer(i_kind) icm2,icp,icp2,icm,jcm2,jcm,jcp2,jcp
+    integer(i_kind) icm2,icp,icp2,icm,jcm2,jcm,jcp2,jcp,nxflim,nyflim
 
     c=zero
 
@@ -1569,6 +1572,7 @@ contains
 
     integer(i_kind) irelax,k,m
     real(r_kind) helmholtz_factor
+         real(r_kind) fmax,fmean
 
     if(nxall(1) /= nx.or.nyall(1) /= ny) then
        write(6,*)' inconsistent input nx,ny in fmg, program stops'
@@ -1712,6 +1716,7 @@ contains
 
     integer(i_kind) irelax,k,m
     real(r_kind) helmholtz_factor
+         real(r_kind) fmax,fmean
 
     if(nxall(1) /= nx.or.nyall(1) /= ny) then
        write(6,*)' inconsistent input nx,ny in fmg, program stops'
@@ -2057,9 +2062,11 @@ contains
     real(r_kind),intent(in):: test_div(0:ny1,0:nx1)
     logical,intent(in):: helmholtz_on
 
+    integer(i_kind) irelax,k,i,j
     real(r_kind) helmholtz
+    character(120) fname
     real(r_kind),allocatable:: f(:,:),v(:,:),w(:,:)
-!             real(r_kind) time0,timef
+              real(r_kind) time0,timef
 
 !             run tests with test_div_full
     allocate(f(0:ny1,0:nx1))
@@ -2068,7 +2075,7 @@ contains
     f=test_div
         write(6,'(" min,max f before call fmg=",2e15.4)')minval(f),maxval(f)
         call fmg(v,f,helmholtz_on,1,1,20,mg(1)%nx,mg(1)%ny)
-!              write(6,'(" time in fmg =",f15.6," seconds")') .001*(timef()-time0)
+               write(6,'(" time in fmg =",f15.6," seconds")') .001*(timef()-time0)
         w=zero
         helmholtz=zero
         if(helmholtz_on) helmholtz=one
@@ -2096,7 +2103,7 @@ contains
 
     use constants, only: zero,one
 
-    integer(i_kind) i,k,nx,ny
+    integer(i_kind) i,j,k,lwave,nx,ny
     character(50) string
 
    !do k=1,mgrid
@@ -2161,7 +2168,8 @@ contains
     real(r_kind) xtz,yty,helmholtz_factor,errmax
     integer(i_kind) i,ii,j,jj,kc,kf,ihem,nrelax1,nrelax2,nrelax_solve
     logical helmholtz
-    integer(i_kind) mgrid2,ivar
+    integer(i_kind) mgrid2,ibicubic,ivar
+    logical bicubic
 
 !              c2f_bilinear
 
@@ -2744,7 +2752,7 @@ contains
      end do
     end do
     end do
-    write(6,'(" max error for vcycle_ad=",e10.3)') errmax
+          write(6,'(" max error for vcycle_ad=",e10.3)') errmax
 
 !              fmg_ad
    
@@ -2858,7 +2866,7 @@ subroutine fmg_initialize_e(mype)
   real(r_kind) region_lat_e(0:nlat+1,0:nlon+1)
   real(r_kind) region_dx_e(0:nlat+1,0:nlon+1),region_dy_e(0:nlat+1,0:nlon+1)
   integer(i_kind) i,j
-  real(r_kind) rx,ry,rlon
+  real(r_kind) rx,ry,rlon,rlat
 
 !                 for this version, make parallel by vertical modes, so only have nvmodes_keep copies
 !                     this is most simpleminded approach--later modify to take advantage of all processors
@@ -2935,19 +2943,28 @@ subroutine fmg_strong_bal_correction(u_t,v_t,t_t,ps_t,psi,chi,t,ps,bal_diagnosti
   real(r_kind),dimension(lat2,lon2,nvmodes_keep)::utilde,vtilde,mtilde
   real(r_kind),dimension(lat2,lon2,nvmodes_keep)::delpsitilde,delchitilde,delmtilde,dummytilde
   real(r_kind),dimension(nlat,nlon)::u0t,v0t,m0t,div0t,vor0t,rhs,mtg,delm,divtg,vortg,mtg_x,mtg_y
-  real(r_kind),dimension(nlat,nlon)::delvor,deldiv,delpsi,delchi,delf1,delf2
+  real(r_kind),dimension(nlat,nlon)::delvor,deldiv,delpsi,delchi,u_psi,v_psi,u_chi,v_chi,delf1,delf2
   integer(i_kind) mode_number_a,mode_number_b
   real(r_kind) bal_a (nvmodes_keep),bal_b (nvmodes_keep)
   real(r_kind) bal_a0(nvmodes_keep),bal_b0(nvmodes_keep)
   real(r_kind) bal(nvmodes_keep)
+  real(r_kind),dimension(lat2,lon2,nvmodes_keep)::delupsitilde,delvpsitilde,deluchitilde,delvchitilde
+  real(r_kind),dimension(lat2,lon2,nvmodes_keep)::delutilde,delvtilde
   character(1) bourke_mcgregor_scheme
 
-  integer(i_kind) i,j
+            !???????????????????????????????????
+                      real(r_kind),dimension(lat2,lon2,nvmodes_keep)::utild2,vtild2,mtild2
+                      real(r_kind) errmaxu,errmaxv,errmaxm
+                      real(r_kind),dimension(nlat,nlon)::uwork,vwork,twork,pwork
+                      integer(i_kind) iy,jx,i,j,k
+                      character(100) fname
+                      real(r_kind) errmaxpsi,errmaxchi,errmaxdummy
+            !???????????????????????????????????
 
-  if(uv_hyb_ens) then
-     write(0,*)' STOP IN fmg_strong_bal_correction--NOT ABLE TO ACCEPT uv_hyb_ens=.true. YET'
-     call stop2(998)
-  end if
+              if(uv_hyb_ens) then
+                write(0,*)' STOP IN fmg_strong_bal_correction--NOT ABLE TO ACCEPT uv_hyb_ens=.true. YET'
+                call stop2(998)
+              end if
 
  !bourke_mcgregor_scheme='A'
   bourke_mcgregor_scheme='B'
@@ -3150,17 +3167,22 @@ subroutine fmg_strong_bal_correction_ad(u_t,v_t,t_t,ps_t,psi,chi,t,ps,update,myp
 
   real(r_kind),dimension(lat2,lon2,nvmodes_keep)::utilde,vtilde,mtilde,utdum,vtdum,mtdum
   real(r_kind),dimension(lat2,lon2,nvmodes_keep)::delpsitilde,delchitilde,delmtilde,dummytilde
-  real(r_kind),dimension(nlat,nlon)::u0t,v0t,m0t,div0t,vor0t,rhs,mtg,delm
-  real(r_kind),dimension(nlat,nlon)::delvor,deldiv,delpsi,delchi,delf1,delf2
+  real(r_kind),dimension(nlat,nlon)::u0t,v0t,m0t,div0t,vor0t,rhs,mtg,delm,divtg,vortg,mtg_x,mtg_y
+  real(r_kind),dimension(nlat,nlon)::delvor,deldiv,delpsi,delchi,u_psi,v_psi,u_chi,v_chi,delf1,delf2
   real(r_kind),dimension(lat2,lon2,nsig)::dpsi,dchi,dt
   real(r_kind),dimension(lat2,lon2)::dps
   integer(i_kind) i,j,mode_number_a,mode_number_b
+  real(r_kind) bal_a (nvmodes_keep),bal_b (nvmodes_keep)
+  real(r_kind) bal_a0(nvmodes_keep),bal_b0(nvmodes_keep)
+  real(r_kind) bal(nvmodes_keep)
+  real(r_kind),dimension(lat2,lon2,nvmodes_keep)::delupsitilde,delvpsitilde,deluchitilde,delvchitilde
+  real(r_kind),dimension(lat2,lon2,nvmodes_keep)::delutilde,delvtilde
   character(1) bourke_mcgregor_scheme
 
-  if(uv_hyb_ens) then
-    write(0,*)' STOP IN fmg_strong_bal_correction--NOT ABLE TO ACCEPT uv_hyb_ens=.true. YET'
-    call stop2(998)
-  end if
+              if(uv_hyb_ens) then
+                write(0,*)' STOP IN fmg_strong_bal_correction--NOT ABLE TO ACCEPT uv_hyb_ens=.true. YET'
+                call stop2(998)
+              end if
 
  !bourke_mcgregor_scheme='A'
   bourke_mcgregor_scheme='B'
@@ -4107,7 +4129,7 @@ end subroutine generic_sub2grid8
 !EOP
 !-------------------------------------------------------------------------
 
-    integer(i_kind) iloc,iskip,i,k,n
+    integer(i_kind) iloc,iskip,i,j,k,n
     real(r_kind),dimension(itotsub,k_in):: temp
 
 ! Zero out temp array

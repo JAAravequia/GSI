@@ -41,57 +41,47 @@ if [[ -s $err_rpt ]]; then
   rm $err_rpt
 fi
 
-nodiag=`grep 'NO DIAG REPORT' $file` 
-if [[ $nodiag = "" ]]; then
-  
-   start=`grep -n 'cat diag_report.txt' $file`
-   if [[ ! $start = "" ]]; then
-      diag_start=`echo $start | sed 's/:/ /' | gawk '{print $1}'`
-      diag_start=`expr $diag_start + 1`
+start=`grep -n 'cat diag_report.txt' $file`
+if [[ ! $start = "" ]]; then
+   diag_start=`echo $start | sed 's/:/ /' | gawk '{print $1}'`
+   diag_start=`expr $diag_start + 1`
 
-      end=`grep -n 'End Problem Reading Diagnostic File' $file`
-      diag_end=`echo $end | sed 's/:/ /2' | gawk '{print $9}'`
-      diag_end=`expr $diag_end - 1`
+   end=`grep -n 'End Problem Reading Diagnostic File' $file`
+   diag_end=`echo $end | sed 's/:/ /2' | gawk '{print $9}'`
+   diag_end=`expr $diag_end - 1`
 
-      echo "Source = ${RADMON_SUFFIX}" >> $err_rpt
-      echo " " >> $err_rpt
-      gawk "NR>=$diag_start && NR<=$diag_end" $file >> $err_rpt
-      echo " " >> $err_rpt
-      echo " " >> $err_rpt
-      echo " " >> $err_rpt
-      echo " " >> $err_rpt
+   echo "Source = ${SUFFIX}" >> $err_rpt
+   echo " " >> $err_rpt
+   gawk "NR>=$diag_start && NR<=$diag_end" $file >> $err_rpt
+   echo " " >> $err_rpt
+   echo " " >> $err_rpt
+   echo " " >> $err_rpt
+   echo " " >> $err_rpt
+fi
+
+start=`grep -n 'Begin Cycle Data Integrity Report' $file`
+if [[ ! $start = "" ]]; then
+   data_start=`echo $start | sed 's/:/ /' | gawk '{print $1}'`
+   data_start=`expr $data_start + 1`
+
+   end=`grep -n 'End Cycle Data Integrity Report' $file`
+   data_end=`echo $end | sed 's/:/ /' | gawk '{print $1}'`
+   data_end=`expr $data_end - 1`
+
+   if [[ ! data_start = "" && ! data_end = "" ]]; then
+      echo "Source = ${SUFFIX}" >> $err_rpt
+      gawk "NR>=$data_start && NR<=$data_end" $file >> $err_rpt
    fi
 fi
 
-noerr=`grep 'NO ERROR REPORT' $file`
-if [[ $noerr = "" ]]; then
-   start=`grep -n 'Begin Cycle Data Integrity Report' $file | tail -1`
-   if [[ ! $start = "" ]]; then
-      data_start=`echo $start | sed 's/:/ /' | gawk '{print $1}'`
-      data_start=`expr $data_start + 1`
+#-------------------------------------------------------------------
+#  change the links in $err_rpt to point to the correct suffix
+#  (opr) is hard-coded in the links in the error report at the moment
 
-      end=`grep -n 'End Cycle Data Integrity Report' $file | tail -1`
-      data_end=`echo $end | sed 's/:/ /' | gawk '{print $1}'`
-      data_end=`expr $data_end - 1`
+sed "s/\/opr\//\/${SUFFIX}\//g"  $err_rpt > tmp.txt
+rm -f $err_rpt
+mv -f tmp.txt $err_rpt
 
-      if [[ ! data_start = "" && ! data_end = "" ]]; then
-         echo "Source = ${RADMON_SUFFIX}" >> $err_rpt
-         gawk "NR>=$data_start && NR<=$data_end" $file >> $err_rpt
-      fi
-   fi
-
-   #-------------------------------------------------------------------
-   #  change the links in $err_rpt to point to the correct suffix
-   #  (opr) is hard-coded in the links in the error report at the moment
-   if [[ $RAD_AREA = "rgn" ]]; then
-      sed "s/\/opr\//\/regional\/${RADMON_SUFFIX}\//g"  $err_rpt > tmp.txt
-   else
-      sed "s/\/opr\//\/${RADMON_SUFFIX}\//g"  $err_rpt > tmp.txt
-   fi
-   rm -f $err_rpt
-   mv -f tmp.txt $err_rpt
-
-fi
 
 #-------------------------------------------------------------------
 #  mail error notifications
@@ -108,9 +98,9 @@ echo "RECEIVED.  PLEASE DIRECT REPLIES TO edward.safford@noaa.gov" >> $err_rpt
 echo "*********************** WARNING ***************************" >> $err_rpt
 
          if [[ $MAIL_CC == "" ]]; then
-            /bin/mail -s RadMon_error_report ${MAIL_TO}< ${err_rpt}
+            /bin/mail -v -s RadMon_error_report ${MAIL_TO}< ${err_rpt}
          else
-            /bin/mail -s RadMon_error_report -c "${MAIL_CC}" ${MAIL_TO}< ${err_rpt}
+            /bin/mail -v -s RadMon_error_report -c "${MAIL_CC}" ${MAIL_TO}< ${err_rpt}
          fi
       fi
    fi

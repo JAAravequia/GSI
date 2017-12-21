@@ -8,7 +8,7 @@
 ! !INTERFACE:
 !
 subroutine setuppcp(lunin,mype,aivals,nele,nobs,&
-     obstype,isis,is,pcp_diagsave,init_pass)
+     obstype,isis,is,pcp_diagsave,init_pass,last_pass)
 
 ! !USES:
 
@@ -49,8 +49,8 @@ subroutine setuppcp(lunin,mype,aivals,nele,nobs,&
   use obsmod, only: i_pcp_ob_type,obsdiags,lobsdiagsave,ianldate
   use obsmod, only: mype_diaghdr,nobskeep,lobsdiag_allocated,dirname
   use obsmod, only: pcp_ob_type
-  use obsmod, only: obs_diag,luse_obsdiag
-  use gsi_4dvar, only: nobs_bins,hr_obsbin,l4dvar,l4densvar
+  use obsmod, only: obs_diag
+  use gsi_4dvar, only: nobs_bins,hr_obsbin,l4dvar
 
   use gsi_metguess_mod, only: gsi_metguess_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -82,7 +82,7 @@ subroutine setuppcp(lunin,mype,aivals,nele,nobs,&
  
   logical                        , intent(in   ) :: pcp_diagsave   ! switch diagnostic output on/off
                                                                    !   (.false.=no output)
-  logical                        , intent(in   ) :: init_pass      ! state of "setup" processing
+  logical                        , intent(in   ) :: init_pass,last_pass	! state of "setup" processing
 
 
 ! !INPUT/OUTPUT PARAMETERS:
@@ -148,9 +148,6 @@ subroutine setuppcp(lunin,mype,aivals,nele,nobs,&
 !   2011-05-01  todling - add metguess-bundle; cwmr no longer in guess-grids
 !   2013-10-19  todling - metguess now holds background
 !                         tendencies now in bundle
-!   2014-12-30  derber - Modify for possibility of not using obsdiag
-!   2015-08-31  thomas - Added 4DEnVar to logical to exclude downweighting of
-!                        obs away from center of window 
 !
 !
 ! !REMARKS:  This routine is NOT correctly set up if running
@@ -179,7 +176,7 @@ subroutine setuppcp(lunin,mype,aivals,nele,nobs,&
 ! Declare local variables
   integer(i_kind) isatid,itime,ilon,ilat,isfcflg,ipcp,isdv
   integer(i_kind) icnt,ilone,ilate,icnv,itype,iclw,icli
-  integer(i_kind) itim,itimp,istat
+  integer(i_kind) itim,itimp,istat,idomsfc,isfcr
 
   logical sea
   logical ssmi,amsu,tmi,stage3,muse
@@ -205,7 +202,7 @@ subroutine setuppcp(lunin,mype,aivals,nele,nobs,&
 
 
   real(r_kind) avg,sdv,rterm1,rterm2,rterm
-  real(r_kind) error,a0,a1
+  real(r_kind) error,a0,a1,obser
   real(r_kind) errlog
   real(r_kind) rdocp,frain,dtp,dtf,sum,sixthpi
   real(r_kind) drad,vfact,efact,fhour,rtime
@@ -368,21 +365,23 @@ endif
   ilon    = 3     ! index of grid relative obs location (x)
   ilat    = 4     ! index of grid relative obs location (y)
   isfcflg = 5     ! index of surface flag
-  ipcp    = 6     ! index of rain rate (mm/hr)
-  isdv    = 7     ! index of standard deviation of superob
-  icnt    = 8     ! index of number of obs in superob
-  ilone   = 9     ! index of earth realtive obs longitude (degrees)
-  ilate   = 10    ! index of earth relative obs latitude (degrees)
+  idomsfc = 6     ! index of dominant surface type
+  isfcr   = 7     ! index of surface roughness
+  ipcp    = 8     ! index of rain rate (mm/hr)
+  isdv    = 9     ! index of standard deviation of superob
+  icnt    = 10    ! index of number of obs in superob
+  ilone   = 11    ! index of earth realtive obs longitude (degrees)
+  ilate   = 12    ! index of earth relative obs latitude (degrees)
 
   if (tmi) then
-     icnv  = 7
-     iclw  = 8
-     icli  = 9
-     icnt  = 10
-     ilone = 11
-     ilate = 12
+     icnv  = 9
+     iclw  = 10
+     icli  = 11
+     icnt  = 12
+     ilone = 13
+     ilate = 14
   elseif (amsu) then
-     itype = 8
+     itype = 10
   endif
   rterm1=one/float(nsig)
   rterm2=one/float(nsig*(nsig-1))
@@ -513,52 +512,50 @@ endif
      IF (ibin<1.OR.ibin>nobs_bins) write(6,*)mype,'Error nobs_bins,ibin= ',nobs_bins,ibin
 
 !    Link obs to diagnostics structure
-     if(luse_obsdiag)then
-        if (.not.lobsdiag_allocated) then
-           if (.not.associated(obsdiags(i_pcp_ob_type,ibin)%head)) then
-              allocate(obsdiags(i_pcp_ob_type,ibin)%head,stat=istat)
-              if (istat/=0) then
-                 write(6,*)'setuppcp: failure to allocate obsdiags',istat
-                 call stop2(263)
-              end if
-              obsdiags(i_pcp_ob_type,ibin)%tail => obsdiags(i_pcp_ob_type,ibin)%head
-           else
-              allocate(obsdiags(i_pcp_ob_type,ibin)%tail%next,stat=istat)
-              if (istat/=0) then
-                 write(6,*)'setuppcp: failure to allocate obsdiags',istat
-                 call stop2(264)
-              end if
-              obsdiags(i_pcp_ob_type,ibin)%tail => obsdiags(i_pcp_ob_type,ibin)%tail%next
+     if (.not.lobsdiag_allocated) then
+        if (.not.associated(obsdiags(i_pcp_ob_type,ibin)%head)) then
+           allocate(obsdiags(i_pcp_ob_type,ibin)%head,stat=istat)
+           if (istat/=0) then
+              write(6,*)'setuppcp: failure to allocate obsdiags',istat
+              call stop2(263)
            end if
-           allocate(obsdiags(i_pcp_ob_type,ibin)%tail%muse(miter+1))
-           allocate(obsdiags(i_pcp_ob_type,ibin)%tail%nldepart(miter+1))
-           allocate(obsdiags(i_pcp_ob_type,ibin)%tail%tldepart(miter))
-           allocate(obsdiags(i_pcp_ob_type,ibin)%tail%obssen(miter))
-           obsdiags(i_pcp_ob_type,ibin)%tail%indxglb=n
-           obsdiags(i_pcp_ob_type,ibin)%tail%nchnperobs=-99999
-           obsdiags(i_pcp_ob_type,ibin)%tail%luse=.false.
-           obsdiags(i_pcp_ob_type,ibin)%tail%muse(:)=.false.
-           obsdiags(i_pcp_ob_type,ibin)%tail%nldepart(:)=-huge(zero)
-           obsdiags(i_pcp_ob_type,ibin)%tail%tldepart(:)=zero
-           obsdiags(i_pcp_ob_type,ibin)%tail%wgtjo=-huge(zero)
-           obsdiags(i_pcp_ob_type,ibin)%tail%obssen(:)=zero
-
-           n_alloc(ibin) = n_alloc(ibin) +1
-           my_diag => obsdiags(i_pcp_ob_type,ibin)%tail
-           my_diag%idv = is
-           my_diag%iob = n
-           my_diag%ich = 1
+           obsdiags(i_pcp_ob_type,ibin)%tail => obsdiags(i_pcp_ob_type,ibin)%head
         else
-           if (.not.associated(obsdiags(i_pcp_ob_type,ibin)%tail)) then
-              obsdiags(i_pcp_ob_type,ibin)%tail => obsdiags(i_pcp_ob_type,ibin)%head
-           else
-              obsdiags(i_pcp_ob_type,ibin)%tail => obsdiags(i_pcp_ob_type,ibin)%tail%next
+           allocate(obsdiags(i_pcp_ob_type,ibin)%tail%next,stat=istat)
+           if (istat/=0) then
+              write(6,*)'setuppcp: failure to allocate obsdiags',istat
+              call stop2(264)
            end if
-           if (obsdiags(i_pcp_ob_type,ibin)%tail%indxglb/=n) then
-              write(6,*)'setuppcp: index error'
-              call stop2(265)
-           end if
-        endif
+           obsdiags(i_pcp_ob_type,ibin)%tail => obsdiags(i_pcp_ob_type,ibin)%tail%next
+        end if
+        allocate(obsdiags(i_pcp_ob_type,ibin)%tail%muse(miter+1))
+        allocate(obsdiags(i_pcp_ob_type,ibin)%tail%nldepart(miter+1))
+        allocate(obsdiags(i_pcp_ob_type,ibin)%tail%tldepart(miter))
+        allocate(obsdiags(i_pcp_ob_type,ibin)%tail%obssen(miter))
+        obsdiags(i_pcp_ob_type,ibin)%tail%indxglb=n
+        obsdiags(i_pcp_ob_type,ibin)%tail%nchnperobs=-99999
+        obsdiags(i_pcp_ob_type,ibin)%tail%luse=.false.
+        obsdiags(i_pcp_ob_type,ibin)%tail%muse(:)=.false.
+        obsdiags(i_pcp_ob_type,ibin)%tail%nldepart(:)=-huge(zero)
+        obsdiags(i_pcp_ob_type,ibin)%tail%tldepart(:)=zero
+        obsdiags(i_pcp_ob_type,ibin)%tail%wgtjo=-huge(zero)
+        obsdiags(i_pcp_ob_type,ibin)%tail%obssen(:)=zero
+
+        n_alloc(ibin) = n_alloc(ibin) +1
+        my_diag => obsdiags(i_pcp_ob_type,ibin)%tail
+        my_diag%idv = is
+        my_diag%iob = n
+        my_diag%ich = 1
+     else
+        if (.not.associated(obsdiags(i_pcp_ob_type,ibin)%tail)) then
+           obsdiags(i_pcp_ob_type,ibin)%tail => obsdiags(i_pcp_ob_type,ibin)%head
+        else
+           obsdiags(i_pcp_ob_type,ibin)%tail => obsdiags(i_pcp_ob_type,ibin)%tail%next
+        end if
+        if (obsdiags(i_pcp_ob_type,ibin)%tail%indxglb/=n) then
+           write(6,*)'setuppcp: index error'
+           call stop2(265)
+        end if
      endif
 
      if(.not.in_curbin) cycle
@@ -903,7 +900,7 @@ endif
         end if
 !
 !       Reduce weight and tighten obs-ges bound as function of obs time.
-        if(.not.(l4dvar.or.l4densvar))then
+        if(.not. l4dvar)then
            term  = cos(sixthpi*(dtime-half*hr_obsbin))
            term  = term**3
            term  = max(zero,min(term,one))
@@ -944,14 +941,12 @@ endif
      endif
 
      muse= (varinv>r1em6.and.iusep(kx)>=1)
-     if(luse_obsdiag)then
-        if (nobskeep>0) muse=obsdiags(i_pcp_ob_type,ibin)%tail%muse(nobskeep)
+     if (nobskeep>0) muse=obsdiags(i_pcp_ob_type,ibin)%tail%muse(nobskeep)
 
-        obsdiags(i_pcp_ob_type,ibin)%tail%luse=luse(n)
-        obsdiags(i_pcp_ob_type,ibin)%tail%muse(jiter)=muse
-        obsdiags(i_pcp_ob_type,ibin)%tail%nldepart(jiter)= drad
-        obsdiags(i_pcp_ob_type,ibin)%tail%wgtjo= varinv
-     end if
+     obsdiags(i_pcp_ob_type,ibin)%tail%luse=luse(n)
+     obsdiags(i_pcp_ob_type,ibin)%tail%muse(jiter)=muse
+     obsdiags(i_pcp_ob_type,ibin)%tail%nldepart(jiter)= drad
+     obsdiags(i_pcp_ob_type,ibin)%tail%wgtjo= varinv
 
 
 !
@@ -1005,19 +1000,17 @@ endif
         end do
         pcptail(ibin)%head%icxp=kx
         pcptail(ibin)%head%luse=luse(n)
-        if(luse_obsdiag)then
-           pcptail(ibin)%head%diags => obsdiags(i_pcp_ob_type,ibin)%tail
+        pcptail(ibin)%head%diags => obsdiags(i_pcp_ob_type,ibin)%tail
 
-           my_head => pcptail(ibin)%head
-           my_diag => pcptail(ibin)%head%diags
-           if(my_head%idv /= my_diag%idv .or. &
-              my_head%iob /= my_diag%iob ) then
-              call perr(myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
-                    (/is,n,ibin/))
-              call perr(myname,'my_head%(idv,iob) =',(/my_head%idv,my_head%iob/))
-              call perr(myname,'my_diag%(idv,iob) =',(/my_diag%idv,my_diag%iob/))
-              call die(myname)
-           endif
+        my_head => pcptail(ibin)%head
+        my_diag => pcptail(ibin)%head%diags
+        if(my_head%idv /= my_diag%idv .or. &
+           my_head%iob /= my_diag%iob ) then
+           call perr(myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
+                 (/is,n,ibin/))
+           call perr(myname,'my_head%(idv,iob) =',(/my_head%idv,my_head%iob/))
+           call perr(myname,'my_diag%(idv,iob) =',(/my_diag%idv,my_diag%iob/))
+           call die(myname)
         endif
      end if
 

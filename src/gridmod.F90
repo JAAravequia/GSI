@@ -79,11 +79,6 @@ module gridmod
 !                       - move vars ltosj/i to commvars and corresponding load routines
 !   2012-12-04 s.liu    - added use_reflectivity flag
 !   2014-03-12  Hu     - Code for GSI analysis on Mass grid larger than background mass grid   
-!   08-18-2014 tong      add jcap_gfs, nlon_gfs, nlat_gfs for regional analysis,
-!                        when running with use_gfs_ozone = .true. or use_gfs_stratosphere = .true.,
-!                        to allow spectral to grid transformation to a lower resolution grid
-!                      
-!                        
 !
 !
 ! !AUTHOR: 
@@ -142,8 +137,7 @@ module gridmod
   public :: jtstart,jtstop,nthreads
   public :: use_gfs_nemsio
   public :: use_reflectivity
-  public :: jcap_gfs,nlat_gfs,nlon_gfs
-  public :: use_sp_eqspace,jcap_cut
+  public :: use_sp_eqspace
 
   interface strip
      module procedure strip_single_rank33_
@@ -232,7 +226,6 @@ module gridmod
   integer(i_kind) itotsub           ! number of horizontal points of all subdomains combined
   integer(i_kind) msig              ! number of profile layers to use when calling RTM
 
-  integer(i_kind) jcap_cut          ! spectral triangular truncation beyond which you recalculate pln and plntop - default 600 - used to save memory
   integer(i_kind) jcap              ! spectral triangular truncation of ncep global analysis
   integer(i_kind) jcap_b            ! spectral triangular truncation of ncep global background
   integer(i_kind) nthreads          ! number of threads used (currently only used in calctends routines)
@@ -298,7 +291,6 @@ module gridmod
   integer(i_kind) nlon_regional,nlat_regional
   real(r_kind) regional_fhr
   integer(i_kind) regional_time(6)
-  integer(i_kind) jcap_gfs,nlat_gfs,nlon_gfs
 
 ! The following is for the generalized transform
   real(r_kind) pihalf,sign_pole,rlambda0
@@ -443,7 +435,6 @@ contains
        nlayers(k) = 1
     end do
 
-    jcap_cut=600
     jcap=62
     jcap_b=62
     hires_b=.false.
@@ -453,10 +444,6 @@ contains
     use_gfs_nemsio = .false.
 
     use_sp_eqspace = .false.
-
-    jcap_gfs=1534
-    nlat_gfs=1538
-    nlon_gfs=3072
 
     return
   end subroutine init_grid
@@ -475,7 +462,6 @@ contains
 ! !USES:
 
     use mpeu_util, only: getindex
-    use general_specmod, only: spec_cut
     implicit none
 
 ! !INPUT PARAMETERS:
@@ -513,12 +499,11 @@ contains
 !EOP
 !-------------------------------------------------------------------------
     character(len=*),parameter::myname_=myname//'*init_grid_vars'
-    integer(i_kind) i,k,inner_vars,num_fields
+    integer(i_kind) i,k,nlon_b,inner_vars,num_fields
     integer(i_kind) n3d,n2d,nvars,tid,nth
     integer(i_kind) ipsf,ipvp,jpsf,jpvp,isfb,isfe,ivpb,ivpe
     logical,allocatable,dimension(:):: vector
 
-    spec_cut=jcap_cut
     if(jcap==62) gencode=80.0_r_kind
     ns1=2*nsig+1
     nsig2=2*nsig
@@ -991,7 +976,7 @@ contains
 !-------------------------------------------------------------------------
 
     logical fexist
-    integer(i_kind) i,k
+    integer(i_kind) i,j,k
     real(r_single)pt,pdtop
     real(r_single),allocatable:: deta1(:),aeta1(:),eta1(:),deta2(:),aeta2(:),eta2(:)
     real(r_single) dlmd,dphd
@@ -1200,7 +1185,7 @@ contains
        end do
 
 ! ???????  later change glat_an,glon_an to region_lat,region_lon, with dimensions flipped
-       call init_general_transform(glat_an,glon_an)
+       call init_general_transform(glat_an,glon_an,mype)
 
        deallocate(deta1,aeta1,eta1,deta2,aeta2,eta2,glat,glon,glat_an,glon_an)
        deallocate(dx_nmm,dy_nmm,dx_an,dy_an)
@@ -1333,7 +1318,7 @@ contains
        end do
 
 ! ???????  later change glat_an,glon_an to region_lat,region_lon, with dimensions flipped
-       call init_general_transform(glat_an,glon_an)
+       call init_general_transform(glat_an,glon_an,mype)
 
        deallocate(aeta1,eta1,glat,glon,glat_an,glon_an)
        deallocate(dx_mc,dy_mc)
@@ -1502,7 +1487,7 @@ contains
        end do
 
 ! ???????  later change glat_an,glon_an to region_lat,region_lon, with dimensions flipped
-       call init_general_transform(glat_an,glon_an)
+       call init_general_transform(glat_an,glon_an,mype)
 
        deallocate(deta1,aeta1,eta1,deta2,aeta2,eta2,glat,glon,glat_an,glon_an)
        deallocate(dx_nmm,dy_nmm,dx_an,dy_an)
@@ -1636,7 +1621,7 @@ contains
        end do
 
 
-       call init_general_transform(glat_an,glon_an)
+       call init_general_transform(glat_an,glon_an,mype)
 
        deallocate(aeta1,eta1,aeta2,eta2,glat,glon,glat_an,glon_an,dx_mc,dy_mc)
 
@@ -1744,7 +1729,7 @@ contains
        end do
 
 ! ???????  later change glat_an,glon_an to region_lat,region_lon, with dimensions flipped
-       call init_general_transform(glat_an,glon_an)
+       call init_general_transform(glat_an,glon_an,mype)
 
        deallocate(aeta1,eta1,glat,glon,glat_an,glon_an)
        deallocate(dx_mc,dy_mc)
@@ -1754,7 +1739,7 @@ contains
     return
   end subroutine init_reg_glob_ll
 
- subroutine init_general_transform(glats,glons)
+ subroutine init_general_transform(glats,glons,mype)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    init_general_transform
@@ -1773,6 +1758,7 @@ contains
 !
 !   input argument list:
 !    glons,glats - lons,lats of input grid points of dimesion nlon,nlat
+!    mype        - mpi task id
 !
 !   output argument list:
 !
@@ -1786,6 +1772,7 @@ contains
   implicit none
 
   real(r_kind)   ,intent(in   ) :: glats(nlon,nlat),glons(nlon,nlat)
+  integer(i_kind),intent(in   ) :: mype
 
   real(r_kind),parameter:: rbig =1.0e30_r_kind
   real(r_kind) xbar_min,xbar_max,ybar_min,ybar_max
@@ -3558,7 +3545,6 @@ end subroutine init_general_transform
 !   2004-05-14  kleist, documentation
 !   2004-07-15  todling, protex-compliant prologue
 !   2013-10-24  todling create general interface (single/double)
-!   2014-08-21  pondeca - replace lat1 with lat2 in calculation for iji
 !
 ! !REMARKS:
 !
@@ -3578,7 +3564,7 @@ end subroutine init_general_transform
        jp1 = j+1
        do i=1,lat1
           ijo = ijo+1
-          iji = (i+1)+(jp1-1)*lat2
+          iji = (i+1)+(jp1-1)*lat1
           field_out(ijo)=field_in(iji) !(i+1,jp1)
        end do
     end do

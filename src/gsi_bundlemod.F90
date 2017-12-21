@@ -56,7 +56,7 @@ module GSI_BundleMod
           module procedure create3_  !   merging two bundles
    end interface
    interface GSI_BundleDup           ! duplicate a bundle
-          module procedure dup_      ! dup(x,y)   -- y = x
+          module procedure dup_      !	dup(x,y)   -- y = x
           module procedure scl_dup_  !  dup(a,x,y) -- y = a*x
           module procedure sclR4_dup_ !  dup(a,x,y) -- y = a*x
    end interface
@@ -124,7 +124,7 @@ module GSI_BundleMod
           module procedure self_add_R8scal
    end interface
    interface gsi_bundleAddmul  ! I believe "addmul" is the conventional name
-   ! gs_bundleAddmul(y,a,x) := y+=a*x
+   	! gs_bundleAddmul(y,a,x) := y+=a*x
           module procedure self_add_R4scal
           module procedure self_add_R8scal
    end interface
@@ -883,7 +883,8 @@ CONTAINS
 !noBOC
     character(len=*),parameter :: myname_=myname//'*set2_'
 
-    integer(i_kind) :: i,ii,nd,n1d,ndim1d,ntotal
+    integer(i_kind) :: i,ii,nd,n1d,n2d,n3d,ndim1d,ndim2d,ndim3d,ntotal
+    integer(i_kind) :: mold2(2,2), mold3(2,2,2)
 
     n1d = -1
     Bundle%name = name
@@ -1297,7 +1298,7 @@ CONTAINS
 !noBOC
 
     character(len=*),parameter::myname_=myname//'*create2_'
-    integer(i_kind) :: k,n1d,n2d,n3d,this_bundle_kind
+    integer(i_kind) ::  i,k,n1d,n2d,n3d,this_bundle_kind
     character(len=MAXSTR),allocatable::names1d(:),names2d(:),names3d(:)
     integer(i_kind),allocatable::levels(:)
 
@@ -1495,18 +1496,18 @@ CONTAINS
 
     if(present(name)) then
       call create2_(Bundo,Bundi,name,istatus=ier)
-      if(ier/=0) call perr(myname_, &
-         'create2_(name="'//trim(name)//'"), istatus =',ier)
+      		if(ier/=0) call perr(myname_, &
+		  'create2_(name="'//trim(name)//'"), istatus =',ier)
     else
       call create2_(Bundo,Bundi,Bundi%name,istatus=ier)
-      if(ier/=0) call perr(myname_, &
-             'create2_(name="'//trim(Bundi%name)//'"), istatus =',ier)
+      		if(ier/=0) call perr(myname_, &
+		  'create2_(name="'//trim(Bundi%name)//'"), istatus =',ier)
     endif
-    if(ier/=0) then
-      if(.not.present(istatus)) call die(myname_)
-      istatus=ier
-      return
-    endif
+      		if(ier/=0) then
+		  if(.not.present(istatus)) call die(myname_)
+		  istatus=ier
+		  return
+		endif
 
     call copy_(Bundo,Bundi)
   end subroutine dup_
@@ -1552,18 +1553,18 @@ CONTAINS
 
     if(present(name)) then
       call create2_(Bundo,Bundi,name,istatus=ier)
-      if(ier/=0) call perr(myname_, &
-          'create2_(name="'//trim(name)//'"), istatus =',ier)
+      		if(ier/=0) call perr(myname_, &
+		  'create2_(name="'//trim(name)//'"), istatus =',ier)
     else
       call create2_(Bundo,Bundi,Bundi%name,istatus=ier)
-      if(ier/=0) call perr(myname_, &
-          'create2_(name="'//trim(Bundi%name)//'"), istatus =',ier)
+      		if(ier/=0) call perr(myname_, &
+		  'create2_(name="'//trim(Bundi%name)//'"), istatus =',ier)
     endif
-    if(ier/=0) then
-       if(.not.present(istatus)) call die(myname_)
-       istatus=ier
-       return
-    endif
+      		if(ier/=0) then
+		  if(.not.present(istatus)) call die(myname_)
+		  istatus=ier
+		  return
+		endif
 
     call gsi_bundleAssign(Bundo,0._r_double)
     call gsi_bundleAddmul(Bundo,a,Bundi)
@@ -1610,18 +1611,18 @@ CONTAINS
 
     if(present(name)) then
       call create2_(Bundo,Bundi,name,istatus=ier)
-      if(ier/=0) call perr(myname_, &
-          'create2_(name="'//trim(name)//'"), istatus =',ier)
+      		if(ier/=0) call perr(myname_, &
+		  'create2_(name="'//trim(name)//'"), istatus =',ier)
     else
       call create2_(Bundo,Bundi,Bundi%name,istatus=ier)
-      if(ier/=0) call perr(myname_, &
-           'create2_(name="'//trim(Bundi%name)//'"), istatus =',ier)
+      		if(ier/=0) call perr(myname_, &
+		  'create2_(name="'//trim(Bundi%name)//'"), istatus =',ier)
     endif
-    if(ier/=0) then
-       if(.not.present(istatus)) call die(myname_)
-       istatus=ier
-       return
-    endif
+      		if(ier/=0) then
+		  if(.not.present(istatus)) call die(myname_)
+		  istatus=ier
+		  return
+		endif
 
     call gsi_bundleAssign(Bundo,0._r_single)
     call gsi_bundleAddmul(Bundo,a,Bundi)
@@ -1662,7 +1663,7 @@ CONTAINS
 !-------------------------------------------------------------------------
 !noBOC
     
-    integer(i_kind) :: i, n1d, n2d, n3d
+    integer(i_kind) :: i, n1d, n2d, n3d, irank_
 
     istatus=0
     n1d = Bundle%n1d
@@ -1730,6 +1731,7 @@ CONTAINS
 !-------------------------------------------------------------------------
 !noBOC
     
+    integer(i_kind) :: i,nflds
     integer(i_kind) :: irank_
     integer(i_kind) :: ival_
 
@@ -1827,7 +1829,7 @@ CONTAINS
 !-------------------------------------------------------------------------
 !noBOC
     
-    integer(i_kind) :: irank,ipnt,ival,nsz
+    integer(i_kind) :: i,irank,ipnt,ival,nsz
 
     istatus=0
     call GSI_BundleGetPointer ( Bundle, fldname, ipnt, istatus, irank=irank, ival=ival )
@@ -1883,7 +1885,7 @@ CONTAINS
 !-------------------------------------------------------------------------
 !noBOC
     
-    integer(i_kind) :: irank,ipnt,ival,nsz
+    integer(i_kind) :: i,irank,ipnt,ival,nsz
 
     istatus=0
     call GSI_BundleGetPointer ( Bundle, fldname, ipnt, istatus, irank=irank, ival=ival )
@@ -1935,7 +1937,7 @@ CONTAINS
 !-------------------------------------------------------------------------
 !noBOC
     
-    integer(i_kind) :: irank,ipnt
+    integer(i_kind) :: i,irank,ipnt
 
     istatus=0
     call GSI_BundleGetPointer ( Bundle, fldname, ipnt, istatus, irank=irank )
@@ -1976,7 +1978,7 @@ CONTAINS
 !-------------------------------------------------------------------------
 !noBOC
     
-    integer(i_kind) :: irank,ipnt
+    integer(i_kind) :: i,irank,ipnt
 
     istatus=0
     call GSI_BundleGetPointer ( Bundle, fldname, ipnt, istatus, irank=irank )
@@ -2016,7 +2018,7 @@ CONTAINS
 !-------------------------------------------------------------------------
 !noBOC
     
-    integer(i_kind) :: irank,ipnt
+    integer(i_kind) :: i,irank,ipnt
 
     istatus=0
     call GSI_BundleGetPointer ( Bundle, fldname, ipnt, istatus, irank=irank )
@@ -2056,7 +2058,7 @@ CONTAINS
 !-------------------------------------------------------------------------
 !noBOC
     
-    integer(i_kind) :: irank,ipnt
+    integer(i_kind) :: i,irank,ipnt
 
     istatus=0
     call GSI_BundleGetPointer ( Bundle, fldname, ipnt, istatus, irank=irank )
@@ -2101,7 +2103,7 @@ CONTAINS
 !-------------------------------------------------------------------------
 !noBOC
     
-    integer(i_kind) :: irank,ipnt
+    integer(i_kind) :: n,irank,ipnt,im,jm,km
 
     istatus=0
 
@@ -2112,9 +2114,11 @@ CONTAINS
 !   retrieve variable
     if( irank==1 ) then
         Bundle%r1(ipnt)%qr8 = cnst
-    else if( irank==2 ) then
+    endif
+    if( irank==2 ) then
         Bundle%r2(ipnt)%qr8 = cnst
-    else if( irank==3 ) then
+    endif
+    if( irank==3 ) then
         Bundle%r3(ipnt)%qr8 = cnst
     endif
 
@@ -2153,7 +2157,7 @@ CONTAINS
 !-------------------------------------------------------------------------
 !noBOC
     
-    integer(i_kind) :: irank,ipnt
+    integer(i_kind) :: n,irank,ipnt,im,jm,km
 
     istatus=0
 
@@ -2164,9 +2168,11 @@ CONTAINS
 !   retrieve variable
     if( irank==1 ) then
         Bundle%r1(ipnt)%qr4 = cnst
-    else if( irank==2 ) then
+    endif
+    if( irank==2 ) then
         Bundle%r2(ipnt)%qr4 = cnst
-    else if( irank==3 ) then
+    endif
+    if( irank==3 ) then
         Bundle%r3(ipnt)%qr4 = cnst
     endif
 
@@ -2210,7 +2216,7 @@ CONTAINS
 !EOP
 !-------------------------------------------------------------------------
 !noBOC
-    integer(i_kind) :: irank,ipnt,im,jm,km
+    integer(i_kind) :: n,irank,ipnt,im,jm,km
 
     istatus=0
 
@@ -2225,9 +2231,11 @@ CONTAINS
 !   retrieve variable
     if( irank==1 ) then
         Bundle%r1(ipnt)%qr8 = fld
-    else if( irank==2 ) then
+    endif
+    if( irank==2 ) then
         Bundle%r2(ipnt)%qr8 = reshape(fld,(/im,jm/))
-    else if( irank==3 ) then
+    endif
+    if( irank==3 ) then
         Bundle%r3(ipnt)%qr8 = reshape(fld,(/im,jm,km/))
     endif
 
@@ -2271,7 +2279,7 @@ CONTAINS
 !EOP
 !-------------------------------------------------------------------------
 !noBOC
-    integer(i_kind) :: irank,ipnt,im,jm,km
+    integer(i_kind) :: n,irank,ipnt,im,jm,km
 
     istatus=0
 
@@ -2326,7 +2334,7 @@ CONTAINS
 !-------------------------------------------------------------------------
 !noBOC
     
-    integer(i_kind) :: irank,ipnt
+    integer(i_kind) :: n,irank,ipnt,im,jm,km
 
     istatus=0
 
@@ -2370,7 +2378,7 @@ CONTAINS
 !-------------------------------------------------------------------------
 !noBOC
     
-    integer(i_kind) :: irank,ipnt
+    integer(i_kind) :: n,irank,ipnt,im,jm,km
 
     istatus=0
 
@@ -2392,7 +2400,7 @@ CONTAINS
     real(r_double),  intent(in) :: fld(:,:,:)
     integer(i_kind),intent(out) :: istatus
     
-    integer(i_kind) :: irank,ipnt
+    integer(i_kind) :: n,irank,ipnt
 
     istatus=0
 
@@ -2414,7 +2422,7 @@ CONTAINS
     real(r_single),  intent(in) :: fld(:,:,:)
     integer(i_kind),intent(out) :: istatus
     
-    integer(i_kind) :: irank,ipnt
+    integer(i_kind) :: n,irank,ipnt
 
     istatus=0
 
@@ -2896,7 +2904,7 @@ CONTAINS
 !noBOC
 
   character(len=*),parameter::myname_='copy_'
-  integer(i_kind) :: ii
+  integer(i_kind) :: ii,istatus
   logical :: samedim
 
   samedim = bundo%ndim==bundi%ndim.and.&
@@ -2916,29 +2924,23 @@ CONTAINS
   endif
 
   if(bundi%n1d>0) then
-     do ii=1,bundi%n1d
-        bundo%r1(ii)%shortname=bundi%r1(ii)%shortname
-        bundo%r1(ii)%longname =bundi%r1(ii)%longname
-        bundo%r1(ii)%units    =bundi%r1(ii)%units
-        bundo%r1(ii)%mykind   =bundi%r1(ii)%mykind
-     enddo
+     bundo%r1(1:bundo%n1d)%shortname=bundi%r1%shortname
+     bundo%r1(1:bundo%n1d)%longname =bundi%r1%longname
+     bundo%r1(1:bundo%n1d)%units    =bundi%r1%units
+     bundo%r1(1:bundo%n1d)%mykind   =bundi%r1%mykind
   endif
   if(bundi%n2d>0) then
-     do ii=1,bundi%n2d
-        bundo%r2(ii)%shortname=bundi%r2(ii)%shortname
-        bundo%r2(ii)%longname =bundi%r2(ii)%longname
-        bundo%r2(ii)%units    =bundi%r2(ii)%units
-        bundo%r2(ii)%mykind   =bundi%r2(ii)%mykind
-     enddo
+     bundo%r2(1:bundo%n2d)%shortname=bundi%r2%shortname
+     bundo%r2(1:bundo%n2d)%longname =bundi%r2%longname
+     bundo%r2(1:bundo%n2d)%units    =bundi%r2%units
+     bundo%r2(1:bundo%n2d)%mykind   =bundi%r2%mykind
   endif
   if(bundi%n3d>0) then
-     do ii=1,bundi%n3d
-        bundo%r3(ii)%shortname=bundi%r3(ii)%shortname
-        bundo%r3(ii)%longname =bundi%r3(ii)%longname
-        bundo%r3(ii)%units    =bundi%r3(ii)%units
-        bundo%r3(ii)%level    =bundi%r3(ii)%level
-        bundo%r3(ii)%mykind   =bundi%r3(ii)%mykind
-     enddo
+     bundo%r3(1:bundo%n3d)%shortname=bundi%r3%shortname
+     bundo%r3(1:bundo%n3d)%longname =bundi%r3%longname
+     bundo%r3(1:bundo%n3d)%units    =bundi%r3%units
+     bundo%r3(1:bundo%n3d)%level    =bundi%r3%level
+     bundo%r3(1:bundo%n3d)%mykind   =bundi%r3%mykind
   endif
 
   if (bundo%AllKinds==r_single) then
@@ -3010,7 +3012,7 @@ CONTAINS
 !noBOC
 
   character(len=*),parameter::myname_='assignR8_const_'
-  integer(i_kind) :: ii
+  integer(i_kind) :: ii,istatus
 
   if (bundo%AllKinds<0 ) then
      write(6,*)trim(myname_),': error bundle precision ',bundo%AllKinds
@@ -3060,7 +3062,7 @@ CONTAINS
 !noBOC
 
   character(len=*),parameter::myname_='assignR4_const_'
-  integer(i_kind) :: ii
+  integer(i_kind) :: ii,istatus
 
   if (bundo%AllKinds<0 ) then
      write(6,*)trim(myname_),': error bundle precision ',bundo%AllKinds
@@ -3210,27 +3212,30 @@ subroutine self_add_st(yst,xst)
      call stop2(999)
   endif
 
-  if(xst%AllKinds==r_double)then
-     if(yst%AllKinds==r_double)then
-        DO ii=1,yst%ndim
-           yst%valuesR8(ii)=yst%valuesR8(ii)+xst%valuesR8(ii)
-        ENDDO
-     else if(yst%AllKinds==r_single)then
-        DO ii=1,yst%ndim
-           yst%valuesR4(ii)=yst%valuesR4(ii)+xst%valuesR8(ii)
-        ENDDO
-     endif
-  else if(xst%AllKinds==r_single)then
-     if(yst%AllKinds==r_double )then
-        DO ii=1,yst%ndim
-           yst%valuesR8(ii)=yst%valuesR8(ii)+xst%valuesR4(ii)
-        ENDDO
-     else if(yst%AllKinds==r_single)then
-        DO ii=1,yst%ndim
-           yst%valuesR4(ii)=yst%valuesR4(ii)+xst%valuesR4(ii)
-        ENDDO
-     endif
-  end if
+  if(yst%AllKinds==r_single .and. &
+     xst%AllKinds==r_single ) then
+     DO ii=1,yst%ndim
+        yst%valuesR4(ii)=yst%valuesR4(ii)+xst%valuesR4(ii)
+     ENDDO
+  endif
+  if(yst%AllKinds==r_double .and. &
+     xst%AllKinds==r_double ) then
+     DO ii=1,yst%ndim
+        yst%valuesR8(ii)=yst%valuesR8(ii)+xst%valuesR8(ii)
+     ENDDO
+  endif
+  if(yst%AllKinds==r_single .and. &
+     xst%AllKinds==r_double ) then
+     DO ii=1,yst%ndim
+        yst%valuesR4(ii)=yst%valuesR4(ii)+xst%valuesR8(ii)
+     ENDDO
+  endif
+  if(yst%AllKinds==r_double .and. &
+     xst%AllKinds==r_single ) then
+     DO ii=1,yst%ndim
+        yst%valuesR8(ii)=yst%valuesR8(ii)+xst%valuesR4(ii)
+     ENDDO
+  endif
 
   return
 end subroutine self_add_st
@@ -3276,26 +3281,29 @@ subroutine self_add_R8scal(yst,pa,xst)
      call stop2(999)
   endif
 
-  if(xst%AllKinds==r_double ) then 
-     if(yst%AllKinds==r_double )then 
-        DO ii=1,yst%ndim
-           yst%valuesR8(ii)=yst%valuesR8(ii)+pa*xst%valuesR8(ii)
-        ENDDO
-     else if(yst%AllKinds==r_single) then
-        DO ii=1,yst%ndim
-           yst%valuesR4(ii)=yst%valuesR4(ii)+pa*xst%valuesR8(ii)
-        ENDDO
-     endif
-  else if(xst%AllKinds==r_single ) then
-     if(yst%AllKinds==r_double) then
-        DO ii=1,yst%ndim
-           yst%valuesR8(ii)=yst%valuesR8(ii)+pa*xst%valuesR4(ii)
-        ENDDO
-     else if(yst%AllKinds==r_single)then
-        DO ii=1,yst%ndim
-           yst%valuesR4(ii)=yst%valuesR4(ii)+pa*xst%valuesR4(ii)
-        ENDDO
-     end if
+  if(yst%AllKinds==r_single .and. &
+     xst%AllKinds==r_single ) then
+     DO ii=1,yst%ndim
+        yst%valuesR4(ii)=yst%valuesR4(ii)+pa*xst%valuesR4(ii)
+     ENDDO
+  endif
+  if(yst%AllKinds==r_double   .and. &
+     xst%AllKinds==r_single ) then
+     DO ii=1,yst%ndim
+        yst%valuesR8(ii)=yst%valuesR8(ii)+pa*xst%valuesR4(ii)
+     ENDDO
+  endif
+  if(yst%AllKinds==r_single  .and. &
+     xst%AllKinds==r_double   ) then
+     DO ii=1,yst%ndim
+        yst%valuesR4(ii)=yst%valuesR4(ii)+pa*xst%valuesR8(ii)
+     ENDDO
+  endif
+  if(yst%AllKinds==r_double .and. &
+     xst%AllKinds==r_double ) then
+     DO ii=1,yst%ndim
+        yst%valuesR8(ii)=yst%valuesR8(ii)+pa*xst%valuesR8(ii)
+     ENDDO
   endif
 
   return
@@ -3342,26 +3350,29 @@ subroutine self_add_R4scal(yst,pa,xst)
      call stop2(999)
   endif
 
-  if(xst%AllKinds==r_double ) then 
-     if(yst%AllKinds==r_double )then 
-        DO ii=1,yst%ndim
-           yst%valuesR8(ii)=yst%valuesR8(ii)+pa*xst%valuesR8(ii)
-        ENDDO
-     else if(yst%AllKinds==r_single) then
-        DO ii=1,yst%ndim
-           yst%valuesR4(ii)=yst%valuesR4(ii)+pa*xst%valuesR8(ii)
-        ENDDO
-     endif
-  else if(xst%AllKinds==r_single ) then
-     if(yst%AllKinds==r_double) then
-        DO ii=1,yst%ndim
-           yst%valuesR8(ii)=yst%valuesR8(ii)+pa*xst%valuesR4(ii)
-        ENDDO
-     else if(yst%AllKinds==r_single)then
-        DO ii=1,yst%ndim
-           yst%valuesR4(ii)=yst%valuesR4(ii)+pa*xst%valuesR4(ii)
-        ENDDO
-     end if
+  if(yst%AllKinds==r_single .and. &
+     xst%AllKinds==r_single ) then
+     DO ii=1,yst%ndim
+        yst%valuesR4(ii)=yst%valuesR4(ii)+pa*xst%valuesR4(ii)
+     ENDDO
+  endif
+  if(yst%AllKinds==r_double   .and. &
+     xst%AllKinds==r_single ) then
+     DO ii=1,yst%ndim
+        yst%valuesR8(ii)=yst%valuesR8(ii)+pa*xst%valuesR4(ii)
+     ENDDO
+  endif
+  if(yst%AllKinds==r_single  .and. &
+     xst%AllKinds==r_double   ) then
+     DO ii=1,yst%ndim
+        yst%valuesR4(ii)=yst%valuesR4(ii)+pa*xst%valuesR8(ii)
+     ENDDO
+  endif
+  if(yst%AllKinds==r_double .and. &
+     xst%AllKinds==r_double ) then
+     DO ii=1,yst%ndim
+        yst%valuesR8(ii)=yst%valuesR8(ii)+pa*xst%valuesR8(ii)
+     ENDDO
   endif
 
   return
@@ -3384,7 +3395,8 @@ subroutine self_mulR8_(yst,pa)
      DO ii=1,yst%ndim
         yst%valuesR8(ii)=pa*yst%valuesR8(ii)
      ENDDO
-  else if (yst%AllKinds==r_single) then
+  endif
+  if (yst%AllKinds==r_single) then
      DO ii=1,yst%ndim
         yst%valuesR4(ii)=pa*yst%valuesR4(ii)
      ENDDO
@@ -3409,7 +3421,8 @@ subroutine self_mulR4_(yst,pa)
      DO ii=1,yst%ndim
         yst%valuesR8(ii)=pa*yst%valuesR8(ii)
      ENDDO
-  else if (yst%AllKinds==r_single) then
+  endif
+  if (yst%AllKinds==r_single) then
      DO ii=1,yst%ndim
         yst%valuesR4(ii)=pa*yst%valuesR4(ii)
      ENDDO
@@ -3425,7 +3438,7 @@ real(r_quad) function dplevs2dr8_(dx,dy,ihalo)
   integer(i_kind),optional,intent(in) :: ihalo
 
   real(r_quad) dplevs
-  integer(i_kind) :: im,jm,ii,jj,ihalo_
+  integer(i_kind) :: im,jm,km,ii,jj,kk,ihalo_
 
   im=size(dx,1)
   jm=size(dx,2)
@@ -3451,7 +3464,7 @@ real(r_double) function dplevs2dr4_(dx,dy,ihalo)
   integer(i_kind),optional,intent(in) :: ihalo
 
   real(r_double) dplevs
-  integer(i_kind) :: im,jm,ii,jj,ihalo_
+  integer(i_kind) :: im,jm,km,ii,jj,kk,ihalo_
 
   im=size(dx,1)
   jm=size(dx,2)
@@ -3937,7 +3950,7 @@ end function sum3dR4_
 
   logical function redundant_ ( Bundle )
   type(gsi_bundle),intent(in) :: Bundle
-  integer(i_kind) i,j,ic,n1d,n2d,n3d,nvars,istatus
+  integer(i_kind) i,ii,j,ic,n1d,n2d,n3d,nvars,istatus
   character(len=MAXSTR),allocatable::fnames(:)
 
   redundant_=.false.

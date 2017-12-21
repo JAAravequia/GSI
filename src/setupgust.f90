@@ -19,8 +19,6 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !                          tintrp2a to tintrp2a1, tintrp2a11 (to allow successful debug compile on WCOSS)
 !   2013-10-19  todling - metguess now holds background
 !   2014-01-28  todling - write sensitivity slot indicator (ioff) to header of diagfile
-!   2014-07-21  carley - ensure no division by 0 when calculating presw
-!   2014-12-30  derber - Modify for possibility of not using obsdiag
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -45,7 +43,7 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use obsmod, only: gusthead,gusttail,rmiss_single,i_gust_ob_type,obsdiags,&
                     lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset
   use obsmod, only: gust_ob_type
-  use obsmod, only: obs_diag,bmiss,luse_obsdiag
+  use obsmod, only: obs_diag,bmiss
   use gsi_4dvar, only: nobs_bins,hr_obsbin
   use oneobmod, only: magoberr,maginnov,oneobtest
   use gridmod, only: nlat,nlon,istart,jstart,lon1,nsig
@@ -84,25 +82,25 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   real(r_kind) gustges,dlat,dlon,ddiff,dtime,error,r0_001,thirty
   real(r_kind) scale,val2,rsig,rsigp,ratio,ressw2,ress,residual
-  real(r_kind) obserrlm,obserror,val,valqc,rlow,rhgh,drpx
+  real(r_kind) obserrlm,obserror,val,valqc,rlow,rhgh,drpx,prsfc
   real(r_kind) term,rwgt
   real(r_kind) cg_gust,wgross,wnotgross,wgt,arg,exp_arg,rat_err2
-  real(r_kind) presw,factw,dpres,sfcchk
+  real(r_kind) presw,factw,dpres,dpressave,sfcchk,prsln2
   real(r_kind) ratio_errors,tfact,fact,wflate,ten,psges,goverrd,zsges
-  real(r_kind) slat,sin2,termg,termr,termrg,pobl
-  real(r_kind) dz,zob,z1,z2,p1,p2,dz21,dlnp21,dstn
+  real(r_kind) slat,sin2,termg,termr,termrg,dlnp,pobl
+  real(r_kind) dz,zob,pob,z1,z2,p1,p2,dz21,dlnp21,spdb,dstn
   real(r_kind) errinv_input,errinv_adjst,errinv_final
   real(r_kind) err_input,err_adjst,err_final,skint,sfcr
   real(r_kind),dimension(nobs):: dup
-  real(r_kind),dimension(nsig)::prsltmp,zges
+  real(r_kind),dimension(nsig)::prsltmp,tges,zges
   real(r_kind),dimension(nele,nobs):: data
   real(r_single),allocatable,dimension(:,:)::rdiagbuf
 
 
   integer(i_kind) ier,ilon,ilat,ihgt,igust,ipres,id,itime,ikx,imaxerr,iqc
   integer(i_kind) iuse,ilate,ilone,istnelv,iprvd,isprvd
-  integer(i_kind) i,nchar,nreal,k,k1,k2,ii,ikxx,nn,isli,ibin,ioff,ioff0,jj
-  integer(i_kind) l,mm1
+  integer(i_kind) i,nchar,nreal,k,j,k1,k2,ii,ikxx,nn,isli,ibin,ioff,ioff0,jj
+  integer(i_kind) l,ix,iy,ix1,iy1,ixp,iyp,mm1
   integer(i_kind) istat
   integer(i_kind) idomsfc,iskint,iff10,isfcr
   
@@ -241,53 +239,51 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      IF (ibin<1.OR.ibin>nobs_bins) write(6,*)mype,'Error nobs_bins,ibin= ',nobs_bins,ibin
 
 !    Link obs to diagnostics structure
-     if(luse_obsdiag)then
-        if (.not.lobsdiag_allocated) then
-           if (.not.associated(obsdiags(i_gust_ob_type,ibin)%head)) then
-              allocate(obsdiags(i_gust_ob_type,ibin)%head,stat=istat)
-              if (istat/=0) then
-                 write(6,*)'setupgust: failure to allocate obsdiags',istat
-                 call stop2(295)
-              end if
-              obsdiags(i_gust_ob_type,ibin)%tail => obsdiags(i_gust_ob_type,ibin)%head
-           else
-              allocate(obsdiags(i_gust_ob_type,ibin)%tail%next,stat=istat)
-              if (istat/=0) then
-                 write(6,*)'setupgust: failure to allocate obsdiags',istat
-                 call stop2(295)
-              end if
-              obsdiags(i_gust_ob_type,ibin)%tail => obsdiags(i_gust_ob_type,ibin)%tail%next
+     if (.not.lobsdiag_allocated) then
+        if (.not.associated(obsdiags(i_gust_ob_type,ibin)%head)) then
+           allocate(obsdiags(i_gust_ob_type,ibin)%head,stat=istat)
+           if (istat/=0) then
+              write(6,*)'setupgust: failure to allocate obsdiags',istat
+              call stop2(295)
            end if
-           allocate(obsdiags(i_gust_ob_type,ibin)%tail%muse(miter+1))
-           allocate(obsdiags(i_gust_ob_type,ibin)%tail%nldepart(miter+1))
-           allocate(obsdiags(i_gust_ob_type,ibin)%tail%tldepart(miter))
-           allocate(obsdiags(i_gust_ob_type,ibin)%tail%obssen(miter))
-           obsdiags(i_gust_ob_type,ibin)%tail%indxglb=i
-           obsdiags(i_gust_ob_type,ibin)%tail%nchnperobs=-99999
-           obsdiags(i_gust_ob_type,ibin)%tail%luse=.false.
-           obsdiags(i_gust_ob_type,ibin)%tail%muse(:)=.false.
-           obsdiags(i_gust_ob_type,ibin)%tail%nldepart(:)=-huge(zero)
-           obsdiags(i_gust_ob_type,ibin)%tail%tldepart(:)=zero
-           obsdiags(i_gust_ob_type,ibin)%tail%wgtjo=-huge(zero)
-           obsdiags(i_gust_ob_type,ibin)%tail%obssen(:)=zero
-
-           n_alloc(ibin) = n_alloc(ibin) +1
-           my_diag => obsdiags(i_gust_ob_type,ibin)%tail
-           my_diag%idv = is
-           my_diag%iob = i
-           my_diag%ich = 1
+           obsdiags(i_gust_ob_type,ibin)%tail => obsdiags(i_gust_ob_type,ibin)%head
         else
-           if (.not.associated(obsdiags(i_gust_ob_type,ibin)%tail)) then
-              obsdiags(i_gust_ob_type,ibin)%tail => obsdiags(i_gust_ob_type,ibin)%head
-           else
-              obsdiags(i_gust_ob_type,ibin)%tail => obsdiags(i_gust_ob_type,ibin)%tail%next
+           allocate(obsdiags(i_gust_ob_type,ibin)%tail%next,stat=istat)
+           if (istat/=0) then
+              write(6,*)'setupgust: failure to allocate obsdiags',istat
+              call stop2(295)
            end if
-           if (obsdiags(i_gust_ob_type,ibin)%tail%indxglb/=i) then
-              write(6,*)'setupgust: index error'
-              call stop2(297)
-           end if
+           obsdiags(i_gust_ob_type,ibin)%tail => obsdiags(i_gust_ob_type,ibin)%tail%next
         end if
-     end if
+        allocate(obsdiags(i_gust_ob_type,ibin)%tail%muse(miter+1))
+        allocate(obsdiags(i_gust_ob_type,ibin)%tail%nldepart(miter+1))
+        allocate(obsdiags(i_gust_ob_type,ibin)%tail%tldepart(miter))
+        allocate(obsdiags(i_gust_ob_type,ibin)%tail%obssen(miter))
+        obsdiags(i_gust_ob_type,ibin)%tail%indxglb=i
+        obsdiags(i_gust_ob_type,ibin)%tail%nchnperobs=-99999
+        obsdiags(i_gust_ob_type,ibin)%tail%luse=.false.
+        obsdiags(i_gust_ob_type,ibin)%tail%muse(:)=.false.
+        obsdiags(i_gust_ob_type,ibin)%tail%nldepart(:)=-huge(zero)
+        obsdiags(i_gust_ob_type,ibin)%tail%tldepart(:)=zero
+        obsdiags(i_gust_ob_type,ibin)%tail%wgtjo=-huge(zero)
+        obsdiags(i_gust_ob_type,ibin)%tail%obssen(:)=zero
+
+        n_alloc(ibin) = n_alloc(ibin) +1
+        my_diag => obsdiags(i_gust_ob_type,ibin)%tail
+        my_diag%idv = is
+        my_diag%iob = i
+        my_diag%ich = 1
+     else
+        if (.not.associated(obsdiags(i_gust_ob_type,ibin)%tail)) then
+           obsdiags(i_gust_ob_type,ibin)%tail => obsdiags(i_gust_ob_type,ibin)%head
+        else
+           obsdiags(i_gust_ob_type,ibin)%tail => obsdiags(i_gust_ob_type,ibin)%tail%next
+        end if
+        if (obsdiags(i_gust_ob_type,ibin)%tail%indxglb/=i) then
+           write(6,*)'setupgust: index error'
+           call stop2(297)
+        end if
+     endif
 
      if(.not.in_curbin) cycle
 
@@ -394,7 +390,7 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
             mype,nfldsig)
        call tintrp2a1(ges_lnprsl,prsltmp,dlat,dlon,dtime,hrdifsig,&
             nsig,mype,nfldsig)
-       if ((dpres-one) < tiny_r_kind) then
+       if (dpres<one) then
           z1=zero;    p1=log(psges)
           z2=zges(1); p2=prsltmp(1)
        elseif (dpres>nsig) then
@@ -410,7 +406,6 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
        endif
 
        dz21     = z2-z1
-       if(dz21==zero)cycle
        dlnp21   = p2-p1
        dz       = zob-z1
        pobl     = p1 + (dlnp21/dz21)*dz
@@ -469,7 +464,7 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      end if
      if (ratio_errors*error <=tiny_r_kind) muse(i)=.false.
 
-     if (nobskeep>0 .and. luse_obsdiag) muse(i)=obsdiags(i_gust_ob_type,ibin)%tail%muse(nobskeep)
+     if (nobskeep>0) muse(i)=obsdiags(i_gust_ob_type,ibin)%tail%muse(nobskeep)
 
 !    Compute penalty terms (linear & nonlinear qc).
      val      = error*ddiff
@@ -518,12 +513,10 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
      endif
 
-     if(luse_obsdiag)then
-        obsdiags(i_gust_ob_type,ibin)%tail%luse=luse(i)
-        obsdiags(i_gust_ob_type,ibin)%tail%muse(jiter)=muse(i)
-        obsdiags(i_gust_ob_type,ibin)%tail%nldepart(jiter)=ddiff
-        obsdiags(i_gust_ob_type,ibin)%tail%wgtjo= (error*ratio_errors)**2
-     end if
+     obsdiags(i_gust_ob_type,ibin)%tail%luse=luse(i)
+     obsdiags(i_gust_ob_type,ibin)%tail%muse(jiter)=muse(i)
+     obsdiags(i_gust_ob_type,ibin)%tail%nldepart(jiter)=ddiff
+     obsdiags(i_gust_ob_type,ibin)%tail%wgtjo= (error*ratio_errors)**2
 
 !    If obs is "acceptable", load array with obs info for use
 !    in inner loop minimization (int* and stp* routines)
@@ -554,20 +547,18 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         gusttail(ibin)%head%b       = cvar_b(ikx)
         gusttail(ibin)%head%pg      = cvar_pg(ikx)
         gusttail(ibin)%head%luse    = luse(i)
-        if(luse_obsdiag)then
-           gusttail(ibin)%head%diags => obsdiags(i_gust_ob_type,ibin)%tail
+        gusttail(ibin)%head%diags => obsdiags(i_gust_ob_type,ibin)%tail
  
-           my_head => gusttail(ibin)%head
-           my_diag => gusttail(ibin)%head%diags
-           if(my_head%idv /= my_diag%idv .or. &
-              my_head%iob /= my_diag%iob ) then
-              call perr(myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
-                    (/is,i,ibin/))
-              call perr(myname,'my_head%(idv,iob) =',(/my_head%idv,my_head%iob/))
-              call perr(myname,'my_diag%(idv,iob) =',(/my_diag%idv,my_diag%iob/))
-              call die(myname)
-           endif
-        end if
+	my_head => gusttail(ibin)%head
+	my_diag => gusttail(ibin)%head%diags
+        if(my_head%idv /= my_diag%idv .or. &
+	   my_head%iob /= my_diag%iob ) then
+	  call perr(myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
+	  	(/is,i,ibin/))
+	  call perr(myname,'my_head%(idv,iob) =',(/my_head%idv,my_head%iob/))
+	  call perr(myname,'my_diag%(idv,iob) =',(/my_diag%idv,my_diag%iob/))
+	  call die(myname)
+	endif
      endif
 
 
@@ -690,6 +681,7 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   subroutine init_vars_
 
   real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
+  real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
   character(len=5) :: varname
   integer(i_kind) ifld, istatus
 

@@ -118,7 +118,6 @@ subroutine intozlay_(ozhead,rval,sval)
 !   2010-05-13  todling  - update to use gsi_bundle; update interface
 !   2012-09-08  wargan   - add OMI with efficiency factors
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - introduced ladtest_obs         
-!   2014-12-03  derber  - modify so that use of obsdiags can be turned off
 !
 !   input argument list:
 !     ozhead  - layer ozone obs type pointer to obs structure
@@ -135,7 +134,7 @@ subroutine intozlay_(ozhead,rval,sval)
 !$$$
 !--------
   use kinds, only: r_kind,i_kind,r_quad
-  use obsmod, only: oz_ob_type,lsaveobsens,l_do_adjoint,nloz_omi,luse_obsdiag
+  use obsmod, only: oz_ob_type,lsaveobsens,l_do_adjoint,nloz_omi
   use gridmod, only: lat2,lon2,nsig
   use jfunc, only: jiter,l_foto,xhat_dt,dhat_dt
   use constants, only: one,zero,r3600,zero_quad
@@ -162,7 +161,7 @@ subroutine intozlay_(ozhead,rval,sval)
   real(r_kind),allocatable,dimension(:,:) :: soz
   real(r_kind),allocatable,dimension(:,:) :: roz
   type(oz_ob_type), pointer :: ozptr
-  real(r_kind),dimension(nloz_omi):: val_lay
+  real(r_kind),dimension(nloz_omi):: efficiency, val_lay
 
 ! Retrieve pointers
 ! Simply return if any pointer not found
@@ -238,17 +237,17 @@ subroutine intozlay_(ozhead,rval,sval)
               endif
            enddo
 
-           if(luse_obsdiag)then
-              if (lsaveobsens) then
-                 valx=val1*ozptr%err2(k)*ozptr%raterr2(k)
-                 ozptr%diags(k)%ptr%obssen(jiter)=valx
-              else
-                 if (ozptr%luse) ozptr%diags(k)%ptr%tldepart(jiter)=val1
-              endif
+           if (lsaveobsens) then
+              ozptr%diags(k)%ptr%obssen(jiter)=val1*ozptr%err2(k)*ozptr%raterr2(k)
+           else
+              if (ozptr%luse) ozptr%diags(k)%ptr%tldepart(jiter)=val1
            endif
 
            if (l_do_adjoint) then
-              if (.not. lsaveobsens) then
+              if (lsaveobsens) then
+                 valx = ozptr%diags(k)%ptr%obssen(jiter)
+
+              else
                  if(ladtest_obs) then
                     valx=val1
                  else
@@ -363,18 +362,18 @@ subroutine intozlay_(ozhead,rval,sval)
      endif ! OMI ozone with efficiency factor
      
 
-     if(luse_obsdiag)then
-        if (lsaveobsens) then
-           valx=val1*ozptr%err2(k)*ozptr%raterr2(k)
-           ozptr%diags(k)%ptr%obssen(jiter)=valx
-        else
-           if (ozptr%luse) ozptr%diags(k)%ptr%tldepart(jiter)=val1
-        endif
+     if (lsaveobsens) then
+        ozptr%diags(k)%ptr%obssen(jiter)=val1*ozptr%err2(k)*ozptr%raterr2(k)
+     else
+        if (ozptr%luse) ozptr%diags(k)%ptr%tldepart(jiter)=val1
      endif
 
      if (l_do_adjoint) then
         if (ozptr%apriori(1) .lt. zero) then ! non-OMI ozone
-           if (.not. lsaveobsens) then
+           if (lsaveobsens) then
+              valx = ozptr%diags(k)%ptr%obssen(jiter)
+              
+           else
               if(ladtest_obs) then
                  valx=val1
               else
@@ -492,7 +491,6 @@ subroutine intozlev_(o3lhead,rval,sval)
 !   2009-01-22  sienkiewicz - add time derivative
 !   2010-05-13  todling  - update to use gsi_bundle; update interface
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - introduced ladtest_obs         
-!   2014-12-03  derber  - modify so that use of obsdiags can be turned off
 !
 !   input argument list:
 !     o3lhead - level ozone obs type pointer to obs structure
@@ -510,7 +508,7 @@ subroutine intozlev_(o3lhead,rval,sval)
 !--------
 
   use kinds, only: r_kind,i_kind
-  use obsmod, only: o3l_ob_type,lsaveobsens, l_do_adjoint,luse_obsdiag
+  use obsmod, only: o3l_ob_type,lsaveobsens, l_do_adjoint
   use gridmod, only: latlon1n
   use constants, only: r3600
   use jfunc, only: jiter,l_foto,xhat_dt,dhat_dt

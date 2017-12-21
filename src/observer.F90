@@ -1,5 +1,6 @@
 module observermod
 !#define VERBOSE
+!#define DEBUG_TRACE
 #include "mytrace.H"
 
 !$$$  subprogram documentation block
@@ -21,8 +22,6 @@ module observermod
 !                          reg_tlnmc_type for two kinds of regional tlnmc.
 !   2013-10-19  todling - update cloud_efr module name
 !   2014-02-03  todling - remove B-dependence; move cost-create/destroy out
-!   2014-12-03  derber - modify for possibly not using obsdiag arrays, change
-!                        call to getsfc
 !
 !   input argument list:
 !     mype - mpi task id
@@ -37,7 +36,7 @@ module observermod
 
   use kinds, only: i_kind
   use constants, only: rearth
-  use mpimod, only: mype,npe
+  use mpimod, only: mype
   use jfunc, only: miter,jiter,jiterstart,&
        switch_on_derivatives,tendsflag
   use gridmod, only: nlat,nlon,rlats,regional,twodvar_regional,wgtlats,nsig,&
@@ -45,8 +44,8 @@ module observermod
   use guess_grids, only: create_ges_grids,create_sfc_grids,&
        destroy_ges_grids,destroy_sfc_grids,nfldsig
   use cloud_efr_mod, only: cloud_init,cloud_final
-  use obsmod, only: write_diag,obs_setup,ndat,dirname,lobserver,ndat,nobs_sub, &
-       lread_obs_skip,nprof_gps,ditype,obs_input_common,iadate,luse_obsdiag
+  use obsmod, only: write_diag,obs_setup,ndat,dirname,lobserver,&
+       lread_obs_skip,nprof_gps,ditype,obs_input_common,iadate
   use satthin, only: superp,super_val1,getsfc,destroy_sfc
   use gsi_4dvar, only: l4dvar
   use convinfo, only: convinfo_destroy
@@ -147,6 +146,7 @@ subroutine guess_init_
 
 ! Declare local variables
 
+  integer(i_kind):: msig,mlat,mlon
   integer(i_kind):: ierr
 
 !*******************************************************************************************
@@ -307,15 +307,14 @@ subroutine set_
 !$$$
 
   use mpeu_util, only: tell,die
-  use gsi_io, only: mype_io
   implicit none
   character(len=*), parameter :: Iam="observer_set"
 
 ! Declare passed variables
 
 ! Declare local variables
-  logical:: lhere
-  integer(i_kind):: lunsave,istat1,istat2,istat3,ndat_old,npe_old
+  logical:: lhere,use_sfc
+  integer(i_kind):: lunsave,istat1,istat2
   
   data lunsave  / 22 /
 _ENTRY_(Iam)
@@ -345,9 +344,8 @@ _ENTRY_(Iam)
         call stop2(329)
      endif
   
-     allocate(nobs_sub(npe,ndat))
      open(lunsave,file=obs_input_common,form='unformatted')
-     read(lunsave,iostat=istat1) ndata,ndat_old,npe_old,superp,nprof_gps,ditype
+     read(lunsave,iostat=istat1) ndata,superp,nprof_gps,ditype
      allocate(super_val1(0:superp))
      read(lunsave,iostat=istat2) super_val1
      if (istat1/=0 .or. istat2/=0) then
@@ -355,16 +353,6 @@ _ENTRY_(Iam)
              trim(obs_input_common),' istat1,istat2=',istat1,istat2,'  Terminate execution'
         call stop2(329) 
      endif
-     if(npe_old /= npe .or. ndat /= ndat_old) then
-        if (mype==0) write(6,*) ' observer_set: inconsistent ndat,npe ',ndat,npe,    &
-               ' /= ',ndat_old,npe_old
-        call stop2(330)
-     end if
-     read(lunsave,iostat=istat3) nobs_sub
-     if(istat3 /= 0) then
-        if(mype == 0) write(6,*) ' observer_set: error reading nobs_sub '
-        call stop2(331)
-     end if
      close(lunsave)
 
      if (mype==0) write(6,*)'OBSERVER_SET:  read collective obs selection info from ',&
@@ -372,7 +360,8 @@ _ENTRY_(Iam)
 
 !    Load isli2 and sno2 arrays using fields from surface guess file.  Arrays
 !    isli2 and sno2 are used in intppx (called from setuprad) and setuppcp.
-     call getsfc(mype,mype_io,.false.,.false.)
+     use_sfc=.false.
+     call getsfc(mype,use_sfc)
      call destroy_sfc
 
   endif
@@ -471,7 +460,7 @@ _ENTRY_(Iam)
 
      last  = jiter == miter+1 ! there is no obsdiags output if
                               ! jiterstart==miter+1.  e.g. miter=2 and jiterstart=3
-     if (l4dvar.and.(.not.last) .and. last_pass_ .and. luse_obsdiag) then
+     if (l4dvar.and.(.not.last) .and. last_pass_) then
         clfile='obsdiags.ZZZ'
         write(clfile(10:12),'(I3.3)') jiter
         call write_obsdiags(clfile)
@@ -524,6 +513,7 @@ subroutine final_
 ! Declare passed variables
 
 ! Declare local variables
+  integer(i_kind) error_status
   character(len=*),parameter:: Iam="observer_final"
 
 !*******************************************************************************************
@@ -600,9 +590,9 @@ subroutine guess_final_
   call cloud_final()
   call destroy_sfc_grids()
   call destroy_bias_grids()
-  call destroy_ges_grids
+  call destroy_ges_grids(switch_on_derivatives,tendsflag)
 #ifndef HAVE_ESMF
-  call destroy_chemges_grids(ierr)
+  call destroy_chemges_grids(mype,ierr)
   call destroy_metguess_grids(mype,ierr)
 #endif /* HAVE_ESMF */
 

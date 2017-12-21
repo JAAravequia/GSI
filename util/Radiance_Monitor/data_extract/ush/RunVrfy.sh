@@ -7,27 +7,22 @@
 #
 #  This script will run the data extraction for a given source in a
 #  loop.  The loop can be from the last cycle processed (as 
-#  determined by the contents of $TANKverf) until the available
+#  determined by the contents of $TANKDIR) until the available
 #  radstat data is exhausted, from the input start date until 
 #  available data is exhausted, or from the start to the end date.
-#
-#  The RAD_AREA defaults to glb (global).  If you want to use this
-#  script to process regional data then export RAD_AREA=rgn in your 
-#  shell and then run this script.
 # 
 #  Calling sequence is Suffix, Area, [start_date], [end_date}
 #    suffix     = identifier for this data source
+#    area       = "glb" or "rgn"
 #    start_date = optional starting cycle to process
 #    end_date   = optional ending cycle to process
 #--------------------------------------------------------------------
 
 function usage {
-  echo "Usage:  RunVrfy.sh suffix start_date [end_date]"
+  echo "Usage:  RunVrfy.sh suffix rad_area start_date [end_date]"
   echo "            Suffix is the indentifier for this data source."
   echo "            Start_date is the optional starting cycle to process (YYYYMMDDHH format)."
   echo "            End_date   is the optional ending cycle to process (YYYYMMDDHH format)."
-  echo "            RAD_AREA is set by default to glb (global).  If you want to process"
-  echo "	    regional data export RAD_AREA=rgn in your shell and run this script."
 }
 
 set -ax
@@ -54,14 +49,13 @@ fi
 this_file=`basename $0`
 this_dir=`dirname $0`
 
-RADMON_SUFFIX=$1
+SUFFIX=$1
 START_DATE=$2
 END_DATE=$3
 
 RUN_ENVIR=${RUN_ENVIR:-dev}
-RAD_AREA=${RAD_AREA:-glb}
 
-echo RADMON_SUFFIX     = $RADMON_SUFFIX
+echo SUFFIX     = $SUFFIX
 echo START_DATE = $START_DATE
 echo END_DATE   = $END_DATE
 
@@ -70,31 +64,21 @@ echo END_DATE   = $END_DATE
 #--------------------------------------------------------------------
 top_parm=${this_dir}/../../parm
 
-export RADMON_VERSION=${RADMON_VERSION:-${top_parm}/radmon.ver}
-if [[ -s ${RADMON_VERSION} ]]; then
-   . ${RADMON_VERSION}
+if [[ -s ${top_parm}/RadMon_config ]]; then
+   . ${top_parm}/RadMon_config
 else
-   echo "Unable to source ${RADMON_VERSION} file"
-   exit 2
-fi
-
-export RADMON_CONFIG=${RADMON_CONFIG:-${top_parm}/RadMon_config}
-
-if [[ -s ${RADMON_CONFIG} ]]; then
-   . ${RADMON_CONFIG}
-else
-   echo "Unable to source ${RADMON_CONFIG} file"
+   echo "Unable to source RadMon_config file in ${top_parm}"
    exit 2 
 fi
 
-if [[ -s ${RADMON_USER_SETTINGS} ]]; then
-   . ${RADMON_USER_SETTINGS}
+if [[ -s ${top_parm}/RadMon_user_settings ]]; then
+   . ${top_parm}/RadMon_user_settings
 else
-   echo "Unable to source ${RADMON_USER_SETTINGS} file"
+   echo "Unable to source RadMon_user_settings file in ${top_parm}"
    exit 2 
 fi
 
-. ${DE_PARM}/data_extract_config
+. ${RADMON_DATA_EXTRACT}/parm/data_extract_config
 
 #--------------------------------------------------------------------
 #  Check setting of RUN_ONLY_ON_DEV and possible abort if on prod and
@@ -102,20 +86,22 @@ fi
 #--------------------------------------------------------------------
 
 if [[ RUN_ONLY_ON_DEV -eq 1 ]]; then
-   is_prod=`${DE_SCRIPTS}/onprod.sh`
+   is_prod=`${USHverf_rad}/AmIOnProd.sh`
    if [[ $is_prod = 1 ]]; then
       exit 10
    fi
 fi
 
 
-log_file=${LOGdir}/VrfyRad_${RADMON_SUFFIX}.log
-err_file=${LOGdir}/VrfyRad_${RADMON_SUFFIX}.err
+log_file=${LOGSverf_rad}/VrfyRad_${SUFFIX}.log
+err_file=${LOGSverf_rad}/VrfyRad_${SUFFIX}.err
 
 if [[ $RAD_AREA = glb ]]; then
    vrfy_script=VrfyRad_glbl.sh
+   . ${RADMON_DATA_EXTRACT}/parm/glbl_conf
 elif [[ $RAD_AREA = rgn ]]; then
    vrfy_script=VrfyRad_rgnl.sh
+   . ${RADMON_DATA_EXTRACT}/parm/rgnl_conf
 else
    exit 3
 fi
@@ -141,7 +127,7 @@ start_len=`echo ${#START_DATE}`
 if [[ ${start_len} -gt 0 ]]; then
    pdate=`${NDATE} -06 $START_DATE`
 else
-   pdate=`${DE_SCRIPTS}/find_cycle.pl 1 ${TANKverf}`
+   pdate=`${USHverf_rad}/find_cycle.pl 1 ${TANKDIR}`
    pdate_len=`echo ${#pdate}`
    START_DATE=`${NDATE} +06 $pdate`
 fi
@@ -154,25 +140,15 @@ fi
 cdate=$START_DATE
 done=0
 ctr=0
-jobname=$DATA_EXTRACT_JOBNAME
-
 while [[ $done -eq 0 ]]; do
 
    #--------------------------------------------------------------------
    # Check for running jobs   
    #--------------------------------------------------------------------
    if [[ $MY_MACHINE = "wcoss" ]]; then
-      running=`bjobs -l | grep de_${RADMON_SUFFIX} | wc -l`
+      running=`bjobs -l | grep data_extract_${SUFFIX} | wc -l`
    elif [[ $MY_MACHINE = "zeus" ]]; then
-      running=1 
-      line=`qstat -u ${LOGNAME} | grep ${jobname}`
-      test=`echo $line | gawk '{print $10}'`
-
-      total=`echo $line | grep ${jobname} | wc -l`
-      if [[ $test = "C" || $total -le 0 ]]; then
-         running=0
-      fi
-
+      running=`qstat -u $LOGNAME | grep data_extract_${SUFFIX} | wc -l`
    fi
 
    if [[ $running -ne 0 ]]; then
@@ -192,7 +168,7 @@ while [[ $done -eq 0 ]]; do
       # Run the verification/extraction script
       #-----------------------------------------------------------------
       echo Processing ${cdate}
-      ${DE_SCRIPTS}/${vrfy_script} ${RADMON_SUFFIX} ${RUN_ENVIR} ${cdate} 1>${log_file} 2>${err_file}
+      ${USHverf_rad}/${vrfy_script} ${SUFFIX} ${RUN_ENVIR} ${cdate} 1>${log_file} 2>${err_file}
 
       #-----------------------------------------------------------------
       # done is true (1) if the vrfy_script produced an error code, or
@@ -205,14 +181,10 @@ while [[ $done -eq 0 ]]; do
          done=1
       else
          #--------------------------------------------------------------
-         # If not done advance the cdate to the next cycle.
-         # sleep is for zeus's job queue to catch up.
+         # If not done advance the cdate to the next cycle
          #--------------------------------------------------------------
          cdate=`${NDATE} +06 $cdate`
          ctr=0
-         if [[ $MY_MACHINE = "zeus" ]]; then
-            sleep 30 
-         fi
       fi
    fi
 

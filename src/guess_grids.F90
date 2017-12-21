@@ -13,7 +13,6 @@ module guess_grids
 ! !USES:
  
   use kinds, only: r_single,r_kind,i_kind
-  use constants, only: max_varname_length
   use gridmod, only: regional
   use gridmod, only: wrf_nmm_regional,nems_nmmb_regional
   use gridmod, only: eta1_ll
@@ -105,7 +104,6 @@ module guess_grids
 !   2013-10-19  todling - metguess now holds background
 !                         all tendencies now in a bundle (see tendsmod)
 !                         all derivaties now in a bundle (see derivsmod)
-!   2015-01-15  Hu      - Add coast_prox to hold coast proximity
 !
 ! !AUTHOR: 
 !   kleist           org: np20                date: 2003-12-01
@@ -140,10 +138,9 @@ module guess_grids
   public :: ges_teta
   public :: fact_tv,tropprs,sfct
   public :: ntguessfc,ntguesnst,dsfct,ifilesig,veg_frac,soil_type,veg_type
-  public :: sno2,ifilesfc,ifilenst,sfc_rough,fact10,sno,isli,soil_temp,soil_moi,coast_prox 
+  public :: sno2,ifilesfc,ifilenst,sfc_rough,fact10,sno,isli,soil_temp,soil_moi
   public :: nfldsfc,nfldnst,hrdifsig,ges_tsen,sfcmod_mm5,sfcmod_gfs,ifact10,hrdifsfc,hrdifnst
   public :: geop_hgti,ges_lnprsi,ges_lnprsl,geop_hgtl,pt_ll,pbl_height
-  public :: wgt_lcbas
   public :: ges_qsat
   public :: use_compress,nsig_ext,gpstop
 
@@ -207,7 +204,6 @@ module guess_grids
   integer(i_kind),allocatable,dimension(:,:,:):: isli    ! snow/land/ice mask
   integer(i_kind),allocatable,dimension(:,:,:):: isli_g  ! isli on horiz/global grid
   integer(i_kind),allocatable,dimension(:,:):: isli2     ! snow/land/ice mask at analysis time
-  real(r_kind),allocatable,dimension(:,:):: coast_prox   ! coast proximity mask
 
   real(r_kind),allocatable,dimension(:,:,:):: sno2  ! sno depth on subdomain
 
@@ -237,7 +233,6 @@ module guess_grids
 
   real(r_kind),allocatable,dimension(:,:,:):: pbl_height  !  GSD PBL height in hPa
                                                           ! Guess Fields ...
-  real(r_kind),allocatable,dimension(:,:):: wgt_lcbas     ! weight given to base height of lowest cloud seen
   real(r_kind),allocatable,dimension(:,:,:,:):: ges_prsi  ! interface pressure
   real(r_kind),allocatable,dimension(:,:,:,:):: ges_prsl  ! layer midpoint pressure
   real(r_kind),allocatable,dimension(:,:,:,:):: ges_lnprsl! log(layer midpoint pressure)
@@ -328,7 +323,7 @@ contains
          veg_type(lat2,lon2,nfldsfc),veg_frac(lat2,lon2,nfldsfc),&
          sfc_rough(lat2,lon2,nfldsfc),&
          soil_type(lat2,lon2,nfldsfc),soil_temp(lat2,lon2,nfldsfc),&
-         soil_moi(lat2,lon2,nfldsfc), coast_prox(lat2,lon2),&
+         soil_moi(lat2,lon2,nfldsfc), &
          stat=istatus)
     if (istatus/=0) write(6,*)'CREATE_SFC_GRIDS(2):  allocate error, istatus=',&
          istatus,lat2,lon2,nlat,nlon,nfldsfc
@@ -347,7 +342,6 @@ contains
        do j=1,lon2
           do i=1,lat2
              isli(i,j,it)=0
-             coast_prox(i,j)=zero
              fact10(i,j,it)=zero
              sfct(i,j,it)=zero
              dsfct(i,j,it)=zero
@@ -425,7 +419,6 @@ contains
 !   2011-02-09  zhu     - add ges_gust,ges_vis,ges_pblh
 !   2012-05-14  todling - revisit cw check to check also on some hydrometeors
 !   2013-10-19  todling - revisit initialization of certain vars wrt ESMF
-!   2014-06-09  carley/zhu - add wgt_lcbas
 !
 ! !REMARKS:
 !   language: f90
@@ -437,7 +430,8 @@ contains
 !EOP
 !-------------------------------------------------------------------------
 
-    integer(i_kind) i,j,k,n,istatus
+    integer(i_kind) i,j,k,n,ivar,ivar_cw,ivar_qi,ivar_ql,istatus
+    logical lvar
     if(ges_grids_allocated_) call die('create_ges_grids','already allocated')
     ges_grids_allocated_=.true.
 
@@ -461,7 +455,7 @@ contains
             geop_hgtl(lat2,lon2,nsig,nfldsig), &
             geop_hgti(lat2,lon2,nsig+1,nfldsig),ges_prslavg(nsig),&
             tropprs(lat2,lon2),fact_tv(lat2,lon2,nsig),&
-            pbl_height(lat2,lon2,nfldsig),wgt_lcbas(lat2,lon2), &
+            pbl_height(lat2,lon2,nfldsig),&
             ges_qsat(lat2,lon2,nsig,nfldsig),stat=istatus)
        if (istatus/=0) write(6,*)'CREATE_GES_GRIDS(ges_prsi,..):  allocate error, istatus=',&
             istatus,lat2,lon2,nsig,nfldsig
@@ -519,12 +513,6 @@ contains
           end do
        end do
 
-       do j=1,lon2
-          do i=1,lat2
-             wgt_lcbas(i,j)=0.01_r_kind
-          end do
-       end do
-
     end if ! ges_initialized
     
 !   If tendencies option on, allocate/initialize _ten arrays to zero
@@ -576,7 +564,7 @@ contains
 !-------------------------------------------------------------------------
    character(len=*),parameter::myname_=myname//'*create_metguess_grids'
    integer(i_kind) :: nmguess                   ! number of meteorol. fields (namelist)
-   character(len=max_varname_length),allocatable:: mguess(:)   ! names of meterol. fields
+   character(len=256),allocatable:: mguess(:)   ! names of meterol. fields
 
    istatus=0
   
@@ -687,7 +675,7 @@ contains
 !-------------------------------------------------------------------------
   character(len=*),parameter::myname_=myname//'*create_chemges_grids'
    integer(i_kind) :: ntgases                   ! number of tracer gases (namelist)
-   character(len=max_varname_length),allocatable:: tgases(:)   ! names of tracer gases
+   character(len=256),allocatable:: tgases(:)   ! names of tracer gases
 
   istatus=0
   
@@ -728,10 +716,11 @@ contains
 !
 ! !INTERFACE:
 !
-  subroutine destroy_chemges_grids(istatus)
+  subroutine destroy_chemges_grids(mype,istatus)
 ! !USES:
   implicit none
 ! !INPUT PARAMETERS:
+  integer(i_kind),intent(in)::mype
 ! !OUTPUT PARAMETERS:
   integer(i_kind),intent(out)::istatus
 ! !DESCRIPTION: destroy chem background
@@ -761,13 +750,15 @@ contains
 !
 ! !INTERFACE:
 !
-  subroutine destroy_ges_grids
+  subroutine destroy_ges_grids(switch_on_derivatives,tendsflag)
 
 ! !USES:
 
     implicit none
 
 ! !INPUT PARAMETERS:
+    logical,intent(in   ) :: switch_on_derivatives    ! flag for horizontal derivatives
+    logical,intent(in   ) :: tendsflag                ! flag for tendency
     
 ! !DESCRIPTION: deallocate guess and bias grids
 !
@@ -793,7 +784,8 @@ contains
 !
 !EOP
 !-------------------------------------------------------------------------
-    integer(i_kind):: istatus
+    integer(i_kind):: ivar,ivar_cw,ivar_qi,ivar_ql,istatus
+    logical :: lvar
 
     call destroy_ges_derivatives
 
@@ -801,7 +793,7 @@ contains
 !
     deallocate(ges_prsi,ges_prsl,ges_lnprsl,ges_lnprsi,&
          ges_tsen,ges_teta,geop_hgtl,geop_hgti,ges_prslavg,&
-         tropprs,fact_tv,pbl_height,wgt_lcbas,ges_qsat,stat=istatus)
+         tropprs,fact_tv,pbl_height,ges_qsat,stat=istatus)
     if (istatus/=0) &
          write(6,*)'DESTROY_GES_GRIDS(ges_prsi,..):  deallocate error, istatus=',&
          istatus
@@ -851,7 +843,7 @@ contains
     integer(i_kind):: istatus
 
 ! Deallocate arrays containing full horizontal nst fields
-!   if (nst_gsi > 0) call gsi_nstcoupler_final()
+    if (nst_gsi > 0) call gsi_nstcoupler_final()
 
     if(.not.sfc_grids_allocated_) call die('destroy_sfc_grids_','not allocated')
     sfc_grids_allocated_=.false.
@@ -860,18 +852,13 @@ contains
     if (istatus/=0) &
          write(6,*)'DESTROY_SFC_GRIDS:  deallocate error, istatus=',&
          istatus
-    if(allocated(isli))deallocate(isli)
-    if(allocated(fact10))deallocate(fact10)
-    if(allocated(sfct))deallocate(sfct)
-    if(allocated(sno))deallocate(sno)
-    if(allocated(veg_type))deallocate(veg_type)
-    if(allocated(veg_frac))deallocate(veg_frac)
-    if(allocated(soil_type))deallocate(soil_type)
-    if(allocated(sfc_rough))deallocate(sfc_rough)
-    if(allocated(soil_temp))deallocate(soil_temp)
-    if(allocated(soil_moi))deallocate(soil_moi)
-    if(allocated(dsfct))deallocate(dsfct)
-    if(allocated(coast_prox))deallocate(coast_prox)
+#ifndef HAVE_ESMF
+    deallocate(isli,fact10,dsfct,sfct,sno,veg_type,veg_frac,soil_type,&
+         sfc_rough,soil_temp,soil_moi,stat=istatus)
+    if (istatus/=0) &
+         write(6,*)'DESTROY_SFC_GRIDS:  deallocate error, istatus=',&
+         istatus
+#endif /* HAVE_ESMF */
 
     return
   end subroutine destroy_sfc_grids
@@ -1039,7 +1026,7 @@ contains
     real(r_kind) kap1,kapr,trk
     real(r_kind),dimension(:,:)  ,pointer::ges_ps=>NULL()
     real(r_kind),dimension(:,:,:),pointer::ges_tv=>NULL()
-    integer(i_kind) i,j,k,jj,itv,ips
+    integer(i_kind) i,j,k,jj,itv,ips,ier,istatus
     logical ihaveprs(nfldsig)
 
     kap1=rd_over_cp+one
@@ -1057,13 +1044,14 @@ contains
           do j=1,lon2
              do i=1,lat2
                 if(regional) then
-                   if (wrf_nmm_regional.or.nems_nmmb_regional) &
+                   if (wrf_nmm_regional.or.nems_nmmb_regional.or.&
+                        cmaq_regional ) &
                       ges_prsi(i,j,k,jj)=one_tenth* &
                              (eta1_ll(k)*pdtop_ll + &
                               eta2_ll(k)*(ten*ges_ps(i,j)-pdtop_ll-pt_ll) + &
                               pt_ll)
 
-                   if (wrf_mass_regional .or. twodvar_regional .or. cmaq_regional ) &      
+                   if (wrf_mass_regional .or. twodvar_regional) &
                       ges_prsi(i,j,k,jj)=one_tenth*(eta1_ll(k)*(ten*ges_ps(i,j)-pt_ll) + pt_ll)
                 else
                    if (idvc5==1 .or. idvc5==2) then
@@ -1088,7 +1076,7 @@ contains
     end do
 
     if(regional) then
-       if (wrf_nmm_regional.or.nems_nmmb_regional) then
+       if (wrf_nmm_regional.or.nems_nmmb_regional.or.cmaq_regional) then
 ! load using aeta coefficients
           do jj=1,nfldsig
              call gsi_bundlegetpointer(gsi_metguess_bundle(jj),'ps' ,ges_ps ,ips)
@@ -1106,7 +1094,7 @@ contains
              end do
           end do
        end if   ! end if wrf_nmm regional block
-       if (wrf_mass_regional .or. twodvar_regional .or. cmaq_regional) then
+       if (wrf_mass_regional .or. twodvar_regional) then
 ! load using aeta coefficients
           do jj=1,nfldsig
              call gsi_bundlegetpointer(gsi_metguess_bundle(jj),'ps' ,ges_ps ,ips)
@@ -1165,7 +1153,7 @@ contains
 ! surface pressure and pressure profile at the layer midpoints
     if (regional) then
        ges_psfcavg = r1013
-       if (wrf_nmm_regional.or.nems_nmmb_regional) then
+       if (wrf_nmm_regional.or.nems_nmmb_regional.or.cmaq_regional) then
           do k=1,nsig
              ges_prslavg(k)=aeta1_ll(k)*pdtop_ll+aeta2_ll(k)*(r1013-pdtop_ll-pt_ll)+pt_ll
           end do

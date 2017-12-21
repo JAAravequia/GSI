@@ -108,7 +108,7 @@ module anisofilter_glb
 
   use raflib,only: init_raf4_wrap,raf_sm4_wrap,raf_sm4_ad_wrap
 
-  use jfunc, only: varq,qoption,varcw,cwoption
+  use jfunc, only: varq,qoption
 
   use control_vectors, only: an_amp0
   use control_vectors, only: cvars2d,cvars3d,cvarsmd
@@ -813,7 +813,7 @@ subroutine read_bckgstats_glb(mype)
   integer(i_kind):: mcount0,mcount,ierror
   real(r_kind) :: pbar4a,pbar4(nsig)
 
-  integer(i_kind):: inerr,n,i,j,k,l
+  integer(i_kind):: inerr,n,i,j,k,kc,kd,kt,kq,koz,l
   real(r_single),dimension(nlat,nsig,nrf3):: corzin
   real(r_single),dimension(nlat,nrf2):: corpin
   real(r_single),dimension(nlat,nsig,nrf3):: hwllin
@@ -849,7 +849,7 @@ subroutine read_bckgstats_glb(mype)
   allocate ( vz(nsig,mlat,nrf3) )
 
 ! Read amplitudes
-  call berror_read_wgt(corzin,corpin,hwllin,hwllpin,vscalesin,corsstin,hsst,varq,qoption,varcw,cwoption,mype,inerr)
+  call berror_read_wgt(corzin,corpin,hwllin,hwllpin,vscalesin,corsstin,hsst,varq,qoption,mype,inerr)
 
   if(mype==0) then
      write(6,*) '--- start read_bckgstats_glb ---'
@@ -2213,7 +2213,7 @@ subroutine anbkgvar_rewgt(mype)
 
   integer(i_kind),intent(in   ) :: mype
 
-  integer(i_kind):: i,j,k,ix,ier,mm1
+  integer(i_kind):: i,j,k,ix,ier,mm1,it
 
   real(r_kind),dimension(lat2,lon2,nsig):: sfvar,vpvar,tvar
   real(r_kind),dimension(lat2,lon2):: psvar
@@ -3851,8 +3851,7 @@ subroutine ens_uv2psichi(work1,work2)
 !
 !$$$ end documentation block
   use gridmod, only: sp_a,grd_a
-  use compact_diffs,only: noq, coef, xdcirdp, ydsphdp,lcy,lacox1,lbcox1
-  use compact_diffs,only: lacox2,lbcox2,lacoy1,lbcoy1,lacoy2,lbcoy2
+  use compact_diffs,only: noq, coef, xdcirdp, ydsphdp
 
   implicit none
 
@@ -3861,14 +3860,28 @@ subroutine ens_uv2psichi(work1,work2)
 
 ! Declare local variables
   real(r_kind),dimension(nlat,nlon):: work3,work4
-  integer(i_kind) ny
-  integer(i_kind) iy,ix
+  integer(i_kind) lacox1,nxa,lacox2,lbcox1,nxh,ny,nya
+  integer(i_kind) nbp,lcy,lbcoy2,iy,ix,lacoy1,lbcox2,lacoy2,lbcoy1
   real(r_kind) rnlon,div_n,div_s,vor_n,vor_s
   real(r_kind),dimension(nlat-2,nlon):: grdu,grdv,&
        grid_div,grid_vor,du_dlat,du_dlon,dv_dlat,dv_dlon
   real(r_kind),dimension(sp_a%nc):: spc1,spc2
 
   ny =nlat-2
+  nxh=nlon/2
+  nbp=2*noq+1
+  nya=ny*nbp
+  nxa=nxh*nbp
+
+  lacox1=1
+  lbcox1=lacox1+nxa
+  lacox2=lbcox1+nxa
+  lbcox2=lacox2+nxa
+  lacoy1=lbcox2+nxa
+  lbcoy1=lacoy1+nya
+  lacoy2=lbcoy1+nya
+  lbcoy2=lacoy2+nya
+  lcy   =lbcoy2+nya-1
 
   du_dlat=zero
   du_dlon=zero
@@ -3889,11 +3902,11 @@ subroutine ens_uv2psichi(work1,work2)
 
 ! Compute x derivative of u:  du_dlon = du/dlon
   call xdcirdp(grdu,du_dlon,coef(lacox1),coef(lbcox1),coef(lacox2),coef(lbcox2),&
-       nlon,ny,noq)
+       nlon,ny,noq,nxh)
 
 ! Compute x derivative of v:  dv_dlon = dv/dlon
   call xdcirdp(grdv,dv_dlon,coef(lacox1),coef(lbcox1),coef(lacox2),coef(lbcox2),&
-       nlon,ny,noq)
+       nlon,ny,noq,nxh)
 
 ! Multiply u and v by cos(lat).  Note:  coef(lcy+iy) contains 1/cos(lat)
   do ix=1,nlon

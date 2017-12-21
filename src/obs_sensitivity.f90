@@ -40,9 +40,7 @@ use obsmod, only: cobstype, nobs_type, obsdiags, obsptr, obscounts, &
                   i_sst_ob_type, i_pw_ob_type, i_pcp_ob_type, i_oz_ob_type, &
                   i_o3l_ob_type, i_gps_ob_type, i_rad_ob_type, i_tcp_ob_type, &
                   i_lag_ob_type, i_colvk_ob_type, i_aero_ob_type, i_aerol_ob_type, &
-                  i_pm2_5_ob_type, i_gust_ob_type, i_vis_ob_type, i_pblh_ob_type, &
-                  i_pm10_ob_type
-
+                  i_pm2_5_ob_type, i_gust_ob_type, i_vis_ob_type, i_pblh_ob_type
 use mpimod, only: mype
 use control_vectors, only: control_vector,allocate_cv,read_cv,deallocate_cv, &
     dot_product,assignment(=)
@@ -139,7 +137,7 @@ type(gsi_bundle) :: eval(ntlevs_ens)
 type(predictors) :: zbias
 type(control_vector) :: xwork
 real(r_kind) :: zjx
-integer(i_kind) :: ii
+integer(i_kind) :: ii,ierr
 character(len=80),allocatable,dimension(:)::fname
 
 if (mype==0) then
@@ -198,7 +196,7 @@ if (lobsensfc) then
             zbias=zero
             call gsi_4dcoupler_getpert(fcgrad,nsubwin,'adm',fname)
             if (lsqrtb) then
-               call control2model_ad(fcgrad,zbias,fcsens)
+               call model2control(fcgrad,zbias,fcsens)
             else
                if (l_hyb_ens) then
                   do ii=1,ntlevs_ens
@@ -206,13 +204,13 @@ if (lobsensfc) then
                   end do
                   eval(1)=fcgrad(1)
                   fcgrad(1)=zero
-                  call ensctl2state_ad(eval,fcgrad(1),fcsens)
-                  call control2state_ad(fcgrad,zbias,fcsens)
+                  call state2ensctl(eval,fcgrad,fcsens)
+                  call state2control(fcgrad,zbias,fcsens)
                   do ii=1,ntlevs_ens
                      call deallocate_state(eval(ii))
                   end do
                else
-                  call control2state_ad(fcgrad,zbias,fcsens)
+                  call state2control(fcgrad,zbias,fcsens)
                end if
             endif
             do ii=1,nsubwin
@@ -255,7 +253,6 @@ cobtype(i_colvk_ob_type) ="colvk"
 cobtype(i_aero_ob_type)  ="aero "
 cobtype(i_aerol_ob_type) ="aerol"
 cobtype(i_pm2_5_ob_type) ="pm2_5"
-cobtype(i_pm10_ob_type)  ="pm10 "
 cobtype(i_gust_ob_type)  ="gust "
 cobtype(i_vis_ob_type)   ="vis  "
 cobtype(i_pblh_ob_type)  ="pblh "

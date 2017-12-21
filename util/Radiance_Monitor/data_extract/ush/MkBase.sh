@@ -15,13 +15,14 @@
 
 set -ax
 date
+#export list=$listvar
 
 function usage {
-  echo "Usage:  MkBase.sh suffix [sat] 1>log 2>err"
+  echo "Usage:  MkBase.sh suffix 1>log 2>err"
   echo "            Suffix is data source identifier that matches data in "
-  echo "              the $TANKverf/stats directory."
-  echo "            Sat (optional) restricts the list of satellite sources."
-  echo "              No sat means all satellite sources will be included." 
+  echo "              the $TANKDIR/stats directory."
+  echo "            Redirection of log and err files is recommended for "
+  echo "              diagnostic purposes, but not essential"
 }
 
 nargs=$#
@@ -30,7 +31,7 @@ if [[ $nargs -lt 1 && $nargs -gt 2 ]]; then
    exit 1
 fi
 
-RADMON_SUFFIX=$1
+SUFFIX=$1
 
 if [[ $nargs -eq 2 ]]; then
    SATYPE=$2
@@ -40,42 +41,42 @@ fi
 this_file=`basename $0`
 this_dir=`dirname $0`
 
-#--------------------------------------------------------------------
-# Get the area (glb/rgn) for this suffix
-#--------------------------------------------------------------------
-RAD_AREA=${RAD_AREA:-glb}
-area=$RAD_AREA
-echo $area
 
 #------------------------------------------------------------------
 # Set environment variables.
 #-------------------------------------------------------------------
 top_parm=${this_dir}/../../parm
 
-export RADMON_VERSION=${RADMON_VERSION:-${top_parm}/radmon.ver}
-if [[ -s ${RADMON_VERSION} ]]; then
-   . ${RADMON_VERSION}
+if [[ -s ${top_parm}/RadMon_config ]]; then
+   . ${top_parm}/RadMon_config
 else
-   echo "Unable to source ${RADMON_VERSION} file"
+   echo "Unable to source RadMon_config file in ${top_parm}"
    exit 2
 fi
 
-export RADMON_CONFIG=${RADMON_CONFIG:-${top_parm}/RadMon_config}
-if [[ -s ${RADMON_CONFIG} ]]; then
-   . ${RADMON_CONFIG}
+if [[ -s ${top_parm}/RadMon_user_settings ]]; then
+   . ${top_parm}/RadMon_user_settings
 else
-   echo "Unable to source ${RADMON_CONFIG} file"
+   echo "Unable to source RadMon_user_settings file in ${top_parm}"
    exit 2
 fi
 
-if [[ -s ${RADMON_USER_SETTINGS} ]]; then
-   . ${RADMON_USER_SETTINGS}
-else
-   echo "Unable to source ${RADMON_USER_SETTINGS} file"
-   exit 2
-fi
+. ${RADMON_DATA_EXTRACT}/parm/data_extract_config
 
-. ${DE_PARM}/data_extract_config
+
+#--------------------------------------------------------------------
+# Get the area (glb/rgn) for this suffix
+#--------------------------------------------------------------------
+echo DATA_MAP = $DATA_MAP
+
+area=$RAD_AREA
+echo $area
+
+if [[ $area = glb ]]; then
+   . ${PARMverf_rad}/glbl_conf
+else
+   . ${PARMverf_rad}/rgnl_conf
+fi
 
 
 #-------------------------------------------------------------------
@@ -83,7 +84,7 @@ fi
 #    BDATE is beginning date for the 30/60 day range
 #    EDATE is ending date for 30/60 day range (always use 00 cycle) 
 #-------------------------------------------------------------------
-EDATE=`${DE_SCRIPTS}/find_cycle.pl 1 ${TANKverf}`
+EDATE=`${USHverf_rad}/find_cycle.pl 1 ${TANKDIR}`
 echo $EDATE
 
 sdate=`echo $EDATE|cut -c1-8`
@@ -93,7 +94,7 @@ BDATE=`$NDATE -720 $EDATE`
 echo EDATE = $EDATE
 echo BDATE = $BDATE
 
-tmpdir=${STMP_USER}/base_${RADMON_SUFFIX}
+tmpdir=${STMP_USER}/base_${SUFFIX}
 rm -rf $tmpdir
 mkdir -p $tmpdir
 cd $tmpdir
@@ -103,13 +104,13 @@ cd $tmpdir
 #  find or build $SATYPE list for this data source.
 #-------------------------------------------------------------------
 if [[ $SINGLE_SAT -eq 0 ]]; then
-   if [[ -e ${TANKverf}/info/SATYPE.txt ]]; then
-      SATYPE=`cat ${TANKverf}/info/SATYPE.txt`
+   if [[ -e ${TANKDIR}/info/SATYPE.txt ]]; then
+      SATYPE=`cat ${TANKDIR}/info/SATYPE.txt`
    else
       PDY=`echo $EDATE|cut -c1-8`
 
-      if [[ -d ${TANKverf}/radmon.${PDY} ]]; then
-         test_list=`ls ${TANKverf}/radmon.${PDY}/angle.*${EDATE}.ieee_d*`
+      if [[ -d ${TANKDIR}/radmon.${PDY} ]]; then
+         test_list=`ls ${TANKDIR}/radmon.${PDY}/angle.*${EDATE}.ieee_d*`
          for test in ${test_list}; do
             this_file=`basename $test`
             tmp=`echo "$this_file" | cut -d. -f2`
@@ -161,8 +162,8 @@ for type in ${SATYPE}; do
    while [[ $cdate -le $EDATE ]]; do
       day=`echo $cdate | cut -c1-8 `
 
-      if [[ -d ${TANKverf}/radmon.${day} ]]; then
-         test_file=${TANKverf}/radmon.${day}/time.${type}.${cdate}.ieee_d
+      if [[ -d ${TANKDIR}/radmon.${day} ]]; then
+         test_file=${TANKDIR}/radmon.${day}/time.${type}.${cdate}.ieee_d
          if [[ -s $test_file ]]; then
             $NCP ${test_file} ./${type}.${cdate}.ieee_d
          elif [[ -s ${test_file}.${Z} ]]; then
@@ -170,7 +171,7 @@ for type in ${SATYPE}; do
          fi
       fi
       if [[ ! -s ${type}.${cdate}.ieee_d && ! -s ${type}.${cdate}.ieee_d.${Z} ]]; then
-         $NCP $TANKverf/time/${type}.${cdate}.ieee_d* ./
+         $NCP $TANKDIR/time/${type}.${cdate}.ieee_d* ./
       fi
 
       adate=`$NDATE +6 $cdate`
@@ -179,14 +180,14 @@ for type in ${SATYPE}; do
 
 
    day=`echo $EDATE | cut -c1-8 `
-   test_file=${TANKverf}/radmon.${day}/time.${type}.ctl
+   test_file=${TANKDIR}/radmon.${day}/time.${type}.ctl
  
    if [[ -s ${test_file} ]]; then
-      $NCP $TANKverf/radmon.${day}/time.${type}.ctl ${type}.ctl
+      $NCP $TANKDIR/radmon.${day}/time.${type}.ctl ${type}.ctl
    elif [[ -s ${test_file}.${Z} ]]; then
-      $NCP $TANKverf/radmon.${day}/time.${type}.ctl.${Z} ${type}.ctl.${Z}
+      $NCP $TANKDIR/radmon.${day}/time.${type}.ctl.${Z} ${type}.ctl.${Z}
    else
-      $NCP $TANKverf/time/${type}.ctl* ./
+      $NCP $TANKDIR/time/${type}.ctl* ./
    fi
 
    ${UNCOMPRESS} *.${Z}
@@ -208,8 +209,7 @@ for type in ${SATYPE}; do
    #  Copy the executable and run it 
    #------------------------------------------------------------------
    out_file=${type}.base
-#   $NCP ${HOMEradmon}/exec/make_base ./
-   $NCP ${DE_EXEC}/make_base ./
+   $NCP ${HOMEgfs}/exec/make_base ./
 
 cat << EOF > input
  &INPUT
@@ -239,13 +239,13 @@ done
 
 
 #-------------------------------------------------------------------
-#  Pack all basefiles into a tar file and move it to $TANKverf/info.
+#  Pack all basefiles into a tar file and move it to $TANKDIR/info.
 #  If a SINGLE_SAT was supplied at the command line then copy the
 #  existing $basefile and add/replace the requested sat, leaving
 #  all others in the $basefile unchanged.
 #-------------------------------------------------------------------
-if [[ ! -d ${TANKverf}/info ]]; then
-   mkdir -p ${TANKverf}/info
+if [[ ! -d ${TANKDIR}/info ]]; then
+   mkdir -p ${TANKDIR}/info
 fi
 
 cd $tmpdir
@@ -259,8 +259,8 @@ else
    cd $newbase
 
    #  copy over existing $basefile
-   if [[ -e ${TANKverf}/info/${basefile} || -e ${TANKverf}/info/${basefile}.${Z} ]]; then
-      $NCP ${TANKverf}/info/${basefile}* .
+   if [[ -e ${TANKDIR}/info/${basefile} || -e ${TANKDIR}/info/${basefile}.${Z} ]]; then
+      $NCP ${TANKDIR}/info/${basefile}* .
       if [[ -e ${basefile}.${Z} ]]; then
          $UNCOMPRESS ${basefile}.${Z}
       fi
@@ -279,13 +279,12 @@ else
 fi
 
 #  Remove the old version of the $basefile
-if [[ -e ${TANKverf}/info/${basefile} || -e ${TANKverf}/info/${basefile}.${Z} ]]; then
-   rm -f ${TANKverf}/info/${basefile}*
+if [[ -e ${TANKDIR}/info/${basefile} || -e ${TANKDIR}/info/${basefile}.${Z} ]]; then
+   rm -f ${TANKDIR}/info/${basefile}*
 fi
 
-#${COMPRESS} ${basefile}
-#$NCP ${basefile}.${Z} ${TANKverf}/info/.
-$NCP ${basefile} ${TANKverf}/info/.
+${COMPRESS} ${basefile}
+$NCP ${basefile}.${Z} ${TANKDIR}/info/.
 
 #-------------------------------------------------------------------
 #  Clean up $tmpdir

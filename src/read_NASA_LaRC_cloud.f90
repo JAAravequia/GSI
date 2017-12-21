@@ -1,4 +1,4 @@
-subroutine  read_NASA_LaRC_cloud(nread,ndata,nouse,obstype,lunout,sis,nobs)
+subroutine  read_NASA_LaRC_cloud(nread,ndata,nouse,infile,obstype,lunout,twind,sis)
 !
 !   PRGMMR: Shun Liu          ORG: EMC        DATE: 2013-05-14
 !
@@ -7,7 +7,6 @@ subroutine  read_NASA_LaRC_cloud(nread,ndata,nouse,obstype,lunout,sis,nobs)
 !     code 
 !
 ! PROGRAM HISTORY LOG:
-!    2014-12-03 derber - remove unused variables
 !
 !   variable list
 !
@@ -29,16 +28,15 @@ subroutine  read_NASA_LaRC_cloud(nread,ndata,nouse,obstype,lunout,sis,nobs)
   use kinds, only: r_kind,i_kind,r_single
   use constants, only: zero,deg2rad,rad2deg
   use gridmod, only: regional,nlat,nlon,tll2xy,rlats,rlons
-  use mpimod, only: npe
 
   implicit none
 
 ! Declare passed variables
-  character(len=*),intent(in   ) :: obstype
-  character(len=20),intent(in  ) :: sis
+  character(len=*),intent(in   ) :: obstype,infile
+  character(len=*),intent(in   ) :: sis
+  real(r_kind)    ,intent(in   ) :: twind
   integer(i_kind) ,intent(in   ) :: lunout
   integer(i_kind) ,intent(inout) :: nread,ndata,nouse
-  integer(i_kind) ,dimension(npe),intent(inout) :: nobs
 ! real(r_kind),dimension(nlat,nlon,nsig),intent(in):: hgtl_full
 
 ! Declare local parameters
@@ -46,21 +44,28 @@ subroutine  read_NASA_LaRC_cloud(nread,ndata,nouse,obstype,lunout,sis,nobs)
 
 ! Declare local variables
   logical outside    !,good0,lexist1,lexist2,lexist3
+  real(r_kind),dimension(maxdat):: cdata
   real(r_kind),allocatable,dimension(:,:):: cdata_all
   real(r_kind) dlat_earth,dlon_earth
   real(r_kind) dlat,dlon
   real(r_kind) dlatmax,dlonmax,dlatmin,dlonmin
   real(r_kind) usage
 
-  integer(i_kind) nreal,nchanl,ilat,ilon
+  integer(i_kind) nreal,nchanl,ilat,ilon,ikx
 
   real(r_kind),parameter:: r360=360.0_r_kind
 
 
   CHARACTER*80   satfile
+  INTEGER ::   nxp, nyp  ! dimension
   
 !     ****VARIABLES FOR THIS NETCDF FILE****
 !
+  CHARACTER*24 :: cbase_time
+  INTEGER(i_kind) ::  base_time
+  INTEGER(i_kind) ::  ibase_year,ibase_month,ibase_day,ibase_hour,ihour
+  INTEGER(i_kind) ::  icycle_year,icycle_month,icycle_day,icycle_hour
+  REAL*8      time_offset
   REAL(r_single), allocatable ::   lat_l(:)
   REAL(r_single), allocatable ::   lon_l(:)
   REAL(r_single), allocatable ::   lwp_l(:)
@@ -70,15 +75,33 @@ subroutine  read_NASA_LaRC_cloud(nread,ndata,nouse,obstype,lunout,sis,nobs)
 !
 !  array for RR
 !
+  REAL(r_single), allocatable ::   w_pcld(:,:)
+  REAL(r_single), allocatable ::   w_tcld(:,:)
+  REAL(r_single), allocatable ::   w_frac(:,:)
+  REAL(r_single), allocatable ::   w_lwp (:,:)
+  integer(i_kind),allocatable ::   nlev_cld(:,:)
+
+!
+! Working
   
   integer :: nfov
   parameter (nfov=650)
+  real, allocatable ::     Pxx(:,:,:),Txx(:,:,:),WPxx(:,:,:)
+  real,allocatable  ::     xdist(:,:,:), xxxdist(:)
+  real     fr,sqrt, qc, type
+  integer,allocatable  ::  PHxx(:,:,:),index(:,:), jndex(:)
+  integer  ioption
+  integer  ixx,ii,jj,med_pt,igrid,jgrid  &
+               ,ncount,ncount1,ncount2,ii1,jj1,nobs,n
 
-  integer i,k
+  integer i,j,k,ipt,cfov
+  Integer nf_status,nf_fid,nf_vid
 
+  integer :: NCID
   integer(i_kind) :: east_time, west_time
-  integer :: maxobs,numobs
+  integer :: isat, maxobs,numobs
 
+  integer :: status,mype
   character*10  atime
 
 !**********************************************************************
@@ -168,7 +191,6 @@ subroutine  read_NASA_LaRC_cloud(nread,ndata,nouse,obstype,lunout,sis,nobs)
    nread=numobs
    ndata=numobs
    nouse=0
-   call count_obs(numobs,maxdat,ilat,ilon,cdata_all,nobs)
    write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
    write(lunout) ((cdata_all(k,i),k=1,maxdat),i=1,numobs)
    write(6,*)'NASA larccld::',nreal,numobs
@@ -235,6 +257,7 @@ subroutine read_NASALaRC_cloud_bufr(satfile,atime,east_time, west_time, &
 
   INTEGER ::   maxobs, numobs  ! dimension
   INTEGER(i_kind) ::  obs_time
+  REAL*8      time_offset
   REAL*4      lat                            (  maxobs)
   REAL*4      lon                            (  maxobs)
   integer     phase                          (  maxobs)
@@ -246,6 +269,7 @@ subroutine read_NASALaRC_cloud_bufr(satfile,atime,east_time, west_time, &
 !  ** misc
       
 !  integer i,j,k
+!  Integer nf_status,nf_fid,nx,ny,nf_vid
 !
 !  integer :: status
   character*10  atime
@@ -300,7 +324,6 @@ subroutine read_NASALaRC_cloud_bufr_survey(satfile,east_time, west_time)
 !     from a bufr file                      
 !
 ! PROGRAM HISTORY LOG:
-!   2015-05-12  s. liu  - increase max_obstime from 10 to 20 
 !
 !   variable list
 !
@@ -328,7 +351,7 @@ subroutine read_NASALaRC_cloud_bufr_survey(satfile,east_time, west_time)
   character(80):: hdstr='YEAR  MNTH  DAYS HOUR  MINU  SECO'
   real(8) :: hdr(6)
 
-  integer(i_kind) :: ireadmg,ireadsb
+  INTEGER(i_kind) :: ireadmg,ireadsb
 
   character(8) subset
   integer(i_kind) :: unit_in=10,idate,iret,nmsg,ntb
@@ -339,15 +362,18 @@ subroutine read_NASALaRC_cloud_bufr_survey(satfile,east_time, west_time)
   CHARACTER*40, intent(in)    ::   satfile
   integer(i_kind),intent(out) :: east_time, west_time 
 
+  INTEGER ::   maxobs, numobs  ! dimension
   INTEGER(i_kind) ::  obs_time
+  REAL*8      time_offset
 
-  INTEGER(i_kind),parameter :: max_obstime=20
+  INTEGER(i_kind),parameter :: max_obstime=10
   integer(i_kind) :: num_obstime_all(max_obstime)  
   integer(i_kind) :: num_subset_all(max_obstime) 
   integer(i_kind) :: num_obstime_hh(max_obstime) 
   integer(i_kind) :: num_obstime 
 
 !
+  character*10  atime
   integer :: i,ii,hhh
 !
 !**********************************************************************

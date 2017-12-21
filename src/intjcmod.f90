@@ -9,9 +9,6 @@ module intjcmod
 ! program history log:
 !   2012-01-21  kleist - consolidation of Jc int routines into single module
 !   2013-10-25  todling - nullify work pointers
-!   2014-03-19  pondeca - add weak constraint subroutine for wspd10m
-!   2014-05-07  pondeca - add weak constraint subroutine for howv
-!   2014-06-17  carley/zhu - add intliml for lcbas + some cleanup
 !
 ! subroutines included:
 !
@@ -27,7 +24,7 @@ use gsi_bundlemod, only: gsi_bundle,gsi_bundlegetpointer
 implicit none
 
 PRIVATE
-PUBLIC intlimq,intlimg,intlimp,intlimv,intlimw10m,intlimhowv,intliml,intjcdfi,intjcpdry,intjcpdry1,intjcpdry2
+PUBLIC intlimq,intlimg,intlimp,intlimv,intjcdfi,intjcpdry
 
 contains
 
@@ -68,8 +65,8 @@ subroutine intlimq(rval,sval,itbin)
   use gridmod, only: lat2,lon2,nsig,lat1,lon1
   use jfunc, only: factqmin,factqmax
   use derivsmod, only: qgues,qsatg
-  use gsi_metguess_mod, only: gsi_metguess_bundle 
   use guess_grids, only: ges_qsat
+  use gsi_metguess_mod, only: gsi_metguess_bundle
   implicit none
 
 ! Declare passed variables
@@ -96,7 +93,6 @@ subroutine intlimq(rval,sval,itbin)
   call gsi_bundlegetpointer(gsi_metguess_bundle(itbin),'q',ges_q_it,ier)
   if(ier/=0)return
  
-!$omp parallel do  schedule(dynamic,1) private(k,j,i,q)
   do k = 1,nsig
      do j = 2,lon1+1
         do i = 2,lat1+1
@@ -143,9 +139,13 @@ subroutine intlimg(rval,sval)
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+  use kinds, only: r_kind,i_kind
+  use constants, only: zero
   use gridmod, only: lat2,lon2,nsig,lat1,lon1
   use jfunc, only: factg
   use derivsmod, only: ggues
+  use gsi_bundlemod, only: gsi_bundle
+  use gsi_bundlemod, only: gsi_bundlegetpointer
   implicit none
 
 ! Declare passed variables
@@ -153,7 +153,7 @@ subroutine intlimg(rval,sval)
   type(gsi_bundle),intent(inout) :: rval
 
 ! Declare local variables
-  integer(i_kind) i,j,ier,istatus
+  integer(i_kind) i,j,k,ier,istatus
   real(r_kind) gust
   real(r_kind),pointer,dimension(:,:) :: sg=>NULL()
   real(r_kind),pointer,dimension(:,:) :: rg=>NULL()
@@ -215,7 +215,7 @@ subroutine intlimp(rval,sval)
   type(gsi_bundle),intent(inout) :: rval
 
 ! Declare local variables
-  integer(i_kind) i,j,ier,istatus
+  integer(i_kind) i,j,k,ier,istatus
   real(r_kind) pblh
   real(r_kind),pointer,dimension(:,:) :: sp=>NULL()
   real(r_kind),pointer,dimension(:,:) :: rp=>NULL()
@@ -277,7 +277,7 @@ subroutine intlimv(rval,sval)
   type(gsi_bundle),intent(inout) :: rval
 
 ! Declare local variables
-  integer(i_kind) i,j,ier,istatus
+  integer(i_kind) i,j,k,ier,istatus
   real(r_kind) vis
   real(r_kind),pointer,dimension(:,:) :: sv=>NULL()
   real(r_kind),pointer,dimension(:,:) :: rv=>NULL()
@@ -305,207 +305,13 @@ subroutine intlimv(rval,sval)
   return
 end subroutine intlimv
 
-subroutine intlimw10m(rval,sval)
+subroutine intjcpdry(rval,sval,pjc)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:    intlimw10m
-!   prgmmr: pondeca           org: np23                date: 2014-03-19
-!
-! abstract: limit negative 10-m wind speed as a weak constraint
-!
-! program history log:
-!   2014-03-19  pondeca
-!
-!   input argument list:
-!     sg       - increment in grid space
-!
-!   output argument list:
-!     rg       - results from limiting operator                 
-!
-! remarks: see modules used
-!
-! attributes:
-!   language: f90
-!   machine:  ibm RS/6000 SP
-!
-!$$$
-  use kinds, only: r_kind,i_kind
-  use constants, only: zero
-  use gridmod, only: lat2,lon2,nsig,lat1,lon1
-  use jfunc, only: factw10m
-  use derivsmod, only: w10mgues
-  use gsi_bundlemod, only: gsi_bundle
-  use gsi_bundlemod, only: gsi_bundlegetpointer
-  implicit none
-
-! Declare passed variables
-  type(gsi_bundle),intent(in   ) :: sval
-  type(gsi_bundle),intent(inout) :: rval
-
-! Declare local variables
-  integer(i_kind) i,j,ier,istatus
-  real(r_kind) wspd10m
-  real(r_kind),pointer,dimension(:,:) :: sg=>NULL()
-  real(r_kind),pointer,dimension(:,:) :: rg=>NULL()
-
-  if (factw10m==zero) return
-
-! Retrieve pointers
-! Simply return if any pointer not found
-  ier=0
-  call gsi_bundlegetpointer(sval,'wspd10m',sg,istatus);ier=istatus+ier
-  call gsi_bundlegetpointer(rval,'wspd10m',rg,istatus);ier=istatus+ier
-  if(ier/=0)return
- 
-  do j = 2,lon1+1
-     do i = 2,lat1+1
-        wspd10m = w10mgues(i,j) + sg(i,j)
-           
-!       Lower constraint limit
-        if (wspd10m < zero) then
-           rg(i,j) = rg(i,j) + factw10m*wspd10m/(w10mgues(i,j)*w10mgues(i,j))
-        end if
-     end do
-  end do
-
-  return
-end subroutine intlimw10m
-
-subroutine intlimhowv(rval,sval)
-!$$$  subprogram documentation block
-!                .      .    .                                       .
-! subprogram:    intlimhowv
-!   prgmmr: pondeca           org: np23                date: 2014-05-07
-!
-! abstract: limit negative significant wave height as a weak constraint
-!
-! program history log:
-!   2014-03-19  pondeca
-!
-!   input argument list:
-!     sg       - increment in grid space
-!
-!   output argument list:
-!     rg       - results from limiting operator                 
-!
-! remarks: see modules used
-!
-! attributes:
-!   language: f90
-!   machine:  ibm RS/6000 SP
-!
-!$$$
-  use kinds, only: r_kind,i_kind
-  use constants, only: zero
-  use gridmod, only: lat2,lon2,nsig,lat1,lon1
-  use jfunc, only: facthowv
-  use derivsmod, only: howvgues
-  use gsi_bundlemod, only: gsi_bundle
-  use gsi_bundlemod, only: gsi_bundlegetpointer
-  implicit none
-
-! Declare passed variables
-  type(gsi_bundle),intent(in   ) :: sval
-  type(gsi_bundle),intent(inout) :: rval
-
-! Declare local variables
-  integer(i_kind) i,j,ier,istatus
-  real(r_kind) howv
-  real(r_kind),pointer,dimension(:,:) :: sg=>NULL()
-  real(r_kind),pointer,dimension(:,:) :: rg=>NULL()
-
-  if (facthowv==zero) return
-
-! Retrieve pointers
-! Simply return if any pointer not found
-  ier=0
-  call gsi_bundlegetpointer(sval,'howv',sg,istatus);ier=istatus+ier
-  call gsi_bundlegetpointer(rval,'howv',rg,istatus);ier=istatus+ier
-  if(ier/=0)return
- 
-  do j = 2,lon1+1
-     do i = 2,lat1+1
-        howv = howvgues(i,j) + sg(i,j)
-           
-!       Lower constraint limit
-        if (howv < zero) then
-           rg(i,j) = rg(i,j) + facthowv*howv/(howvgues(i,j)*howvgues(i,j))
-        end if
-     end do
-  end do
-
-  return
-end subroutine intlimhowv
-
-subroutine intliml(rval,sval)
-!$$$  subprogram documentation block
-!                .      .    .                                       .
-! subprogram:    intliml
-!   prgmmr: zhu           org: np23                date: 2012-04-20
-!
-! abstract: limit negative lcbas as a weak constraint
-!
-! program history log:
-!   2012-04-20  zhu
-!
-!   input argument list:
-!     sv       - increment in grid space
-!
-!   output argument list:
-!     rv       - results from limiting operator                 
-!
-! remarks: see modules used
-!
-! attributes:
-!   language: f90
-!   machine:  ibm RS/6000 SP
-!
-!$$$
-  use gridmod, only: lat2,lon2,nsig,lat1,lon1
-  use jfunc, only: factl
-  use derivsmod, only: lgues
-  implicit none
-
-! Declare passed variables
-  type(gsi_bundle),intent(in   ) :: sval
-  type(gsi_bundle),intent(inout) :: rval
-
-! Declare local variables
-  integer(i_kind) i,j,ier,istatus
-  real(r_kind) lcbas
-  real(r_kind),pointer,dimension(:,:) :: sv=>NULL()
-  real(r_kind),pointer,dimension(:,:) :: rv=>NULL()
-
-  if (factl==zero) return
-
-! Retrieve pointers
-! Simply return if any pointer not found
-  ier=0
-  call gsi_bundlegetpointer(sval,'lcbas',sv,istatus);ier=istatus+ier
-  call gsi_bundlegetpointer(rval,'lcbas',rv,istatus);ier=istatus+ier
-  if(ier/=0)return
-
-  do j = 2,lon1+1
-     do i = 2,lat1+1
-        lcbas = lgues(i,j) + sv(i,j)
-
-!       Lower constraint limit
-        if (lcbas < zero) then
-           rv(i,j) = rv(i,j) + factl*lcbas/(lgues(i,j)*lgues(i,j))
-        end if
-     end do
-  end do
-
-  return
-end subroutine intliml
-
-subroutine intjcpdry(rval,sval,nbins,pjc)
-!$$$  subprogram documentation block
-!                .      .    .                                       .
-! subprogram:    intjcpdry   mean dry ps conservation contribution to gradient
+! subprogram:    intjcpdry   adjoint for mean dry ps conservation
 !   prgmmr: kleist           org: np23                date: 2009-07-07
 !
-! abstract: calculate contribution to gradient from mass conservation: combined
+! abstract: calculate stepsize contribution and penalty for limiting changes to dry mass
 !
 ! program history log:
 !   2009-07-07  kleist
@@ -516,16 +322,20 @@ subroutine intjcpdry(rval,sval,nbins,pjc)
 !   2011-11-01  eliu    - add handling for ql & qi increments and search directions
 !   2013-05-05  todling - separate dry mass from the rest (zero-diff change)
 !                         collapse two verions of this routine into one (add opt arg)
-!   2014-12-02  derber  - fix comments
 !
 !   input argument list:
-!     sval     - current increments
-!     nbins    - number of observation bins
-!     rval     - input gradient
+!     rq       - q search direction
+!     rc       - cloud water search direction
+!     rp       - surface pressure search direction
+!     sq       - q increment
+!     sc       - cloud water increment
+!     sp       - increment in grid space
+!     mype     - integer PE
 !
 !   output argument list:
-!     rval     - input value plus contribution to gradient
-!     pjc      - optional -- penalty from mass term
+!     rq       - q search direction
+!     rc       - cloud water search direction
+!     rp       - surface pressure search direction
 !
 ! attributes:
 !   language: f90
@@ -541,14 +351,12 @@ subroutine intjcpdry(rval,sval,nbins,pjc)
   implicit none
 
 ! Declare passed variables
-  type(gsi_bundle),intent(in   ),dimension(nbins) :: sval
-  type(gsi_bundle),intent(inout),dimension(nbins) :: rval
-  integer(i_kind),intent(in) :: nbins
+  type(gsi_bundle),intent(in   ) :: sval
+  type(gsi_bundle),intent(inout) :: rval
   real(r_quad)    ,intent(  out),optional :: pjc
 
 ! Declare local variables
-  real(r_quad),dimension(2*nbins) :: mass ! 1=dry;2=wv
-  real(r_quad),dimension(nsig) :: mass2
+  real(r_quad),dimension(2) :: mass ! 1=dry;2=wv
   real(r_quad) rcon,con,dmass
   integer(i_kind) i,j,k,it,ii,mm1,ier,icw,iql,iqi,istatus
   real(r_kind),pointer,dimension(:,:,:) :: sq =>NULL()
@@ -561,328 +369,93 @@ subroutine intjcpdry(rval,sval,nbins,pjc)
   real(r_kind),pointer,dimension(:,:,:) :: rqi=>NULL()
   real(r_kind),pointer,dimension(:,:)   :: sp =>NULL()
   real(r_kind),pointer,dimension(:,:)   :: rp =>NULL()
-
-  integer(i_kind) :: n
   
   it=ntguessig
-  mass=zero_quad
+
+! Retrieve pointers
+! Simply return if any pointer not found
+  ier=0; icw=0; iql=0; iqi=0
+  call gsi_bundlegetpointer(sval,'q' ,sq, istatus);ier=istatus+ier
+  call gsi_bundlegetpointer(sval,'cw',sc, istatus);icw=istatus+icw
+  call gsi_bundlegetpointer(sval,'ql',sql,istatus);iql=istatus+iql
+  call gsi_bundlegetpointer(sval,'qi',sqi,istatus);iqi=istatus+iqi
+  call gsi_bundlegetpointer(sval,'ps',sp, istatus);ier=istatus+ier
+  call gsi_bundlegetpointer(rval,'q' ,rq, istatus);ier=istatus+ier
+  call gsi_bundlegetpointer(rval,'cw',rc, istatus);icw=istatus+icw
+  call gsi_bundlegetpointer(rval,'ql',rql,istatus);iql=istatus+iql
+  call gsi_bundlegetpointer(rval,'qi',rqi,istatus);iqi=istatus+iqi
+  call gsi_bundlegetpointer(rval,'ps',rp, istatus);ier=istatus+ier
+  if(ier+icw*(iql+iqi)/=0)then
+    if (mype==0) write(6,*)'intjcpdry: checking ier+icw*(iql+iqi)=', ier+icw*(iql+iqi)
+    return
+  end if
+
+  mass(:)=zero_quad
   rcon=one_quad/(two_quad*float(nlon))
   mm1=mype+1
 
-  do n=1,nbins
-! Retrieve pointers
-! Simply return if any pointer not found
-     ier=0; icw=0; iql=0; iqi=0
-     call gsi_bundlegetpointer(sval(n),'q' ,sq, istatus);ier=istatus+ier
-     call gsi_bundlegetpointer(sval(n),'cw',sc, istatus);icw=istatus+icw
-     call gsi_bundlegetpointer(sval(n),'ql',sql,istatus);iql=istatus+iql
-     call gsi_bundlegetpointer(sval(n),'qi',sqi,istatus);iqi=istatus+iqi
-     call gsi_bundlegetpointer(sval(n),'ps',sp, istatus);ier=istatus+ier
-     if(ier+icw*(iql+iqi)/=0)then
-       if (mype==0) write(6,*)'intjcpdry: checking ier+icw*(iql+iqi)=', ier+icw*(iql+iqi)
-       return
-     end if
-
-
 ! Calculate mean surface pressure contribution in subdomain
-     do j=2,lon2-1
-       do i=2,lat2-1
-         ii=istart(mm1)+i-2
-         mass(n)=mass(n)+sp(i,j)*wgtlats(ii)
-       end do
-     end do
+  do j=2,lon2-1
+    do i=2,lat2-1
+      ii=istart(mm1)+i-2
+      mass(1)=mass(1)+sp(i,j)*wgtlats(ii)
+    end do
+  end do
 
-     mass2(:)=zero_quad
 ! Calculate water-vapor contribution to total mass
-!$omp parallel do  schedule(dynamic,1) private(k,j,i,ii,con)
-     do k=1,nsig
-        do j=2,lon2-1
-           do i=2,lat2-1
-              ii=istart(mm1)+i-2
-              con = (ges_prsi(i,j,k,it)-ges_prsi(i,j,k+1,it))*wgtlats(ii)
-              mass2(k)=mass2(k)+sq(i,j,k)*con
-              if (icw==0) then
-                 mass2(k)=mass2(k)+sc(i,j,k)*con
-              else
-                 mass2(k)=mass2(k)+(sql(i,j,k)+sqi(i,j,k))*con
-              endif
-           end do
+  do k=1,nsig
+     do j=2,lon2-1
+        do i=2,lat2-1
+           ii=istart(mm1)+i-2
+           con = (ges_prsi(i,j,k,it)-ges_prsi(i,j,k+1,it))*wgtlats(ii)
+           mass(2)=mass(2)+sq(i,j,k)*con
+           if (icw==0) then
+              mass(2)=mass(2)+sc(i,j,k)*con
+           else
+              mass(2)=mass(2)+(sql(i,j,k)+sqi(i,j,k))*con
+           endif
         end do
-     end do
-     do k=1,nsig
-        mass(nbins+n)=mass(nbins+n)+mass2(k)
      end do
   end do
 
 ! First, use MPI to get global mean increment
-  call mpl_allreduce(2*nbins,qpvals=mass)
+  call mpl_allreduce(2,qpvals=mass)
 
-  do n=1,nbins
-     ier=0; icw=0; iql=0; iqi=0
-     call gsi_bundlegetpointer(rval(n),'q' ,rq, istatus);ier=istatus+ier
-     call gsi_bundlegetpointer(rval(n),'cw',rc, istatus);icw=istatus+icw
-     call gsi_bundlegetpointer(rval(n),'ql',rql,istatus);iql=istatus+iql
-     call gsi_bundlegetpointer(rval(n),'qi',rqi,istatus);iqi=istatus+iqi
-     call gsi_bundlegetpointer(rval(n),'ps',rp, istatus);ier=istatus+ier
-     if(ier+icw*(iql+iqi)/=0)then
-       if (mype==0) write(6,*)'intjcpdry: checking ier+icw*(iql+iqi)=', ier+icw*(iql+iqi)
-       return
-     end if
-!    Remove water-vapor contribution to get incremental dry ps
-!    if (mype==0) write(6,*)'intjcpdry: total mass =', mass(n)
-!    if (mype==0) write(6,*)'intjcpdry: wv    mass =', mass(nbins+n)
-     dmass=mass(n)-mass(nbins+n)
-     dmass=bamp_jcpdry*dmass*rcon*rcon
-     if(present(pjc)) then
-        pjc = dmass*dmass
-     endif
+! Remove water-vapor contribution to get incremental dry ps
+! if (mype==0) write(6,*)'intjcpdry: total mass =', mass(1)
+! if (mype==0) write(6,*)'intjcpdry: wv    mass =', mass(2)
+  dmass=mass(1)-mass(2)
+  dmass=bamp_jcpdry*dmass*rcon*rcon
+  if(present(pjc)) then
+     pjc = dmass*dmass
+  endif
 
-!    Calculate mean surface pressure contribution in subdomain
+! Calculate mean surface pressure contribution in subdomain
+  do j=2,lon2-1
+    do i=2,lat2-1
+      ii=istart(mm1)+i-2
+      rp(i,j)=rp(i,j)+dmass*wgtlats(ii)
+    end do
+  end do
+! Remove water to get incremental dry ps
+  do k=1,nsig
      do j=2,lon2-1
-       do i=2,lat2-1
-         ii=istart(mm1)+i-2
-         rp(i,j)=rp(i,j)+dmass*wgtlats(ii)
-       end do
-     end do
-!    Remove water to get incremental dry ps
-!$omp parallel do  schedule(dynamic,1) private(k,j,i,ii,con)
-     do k=1,nsig
-        do j=2,lon2-1
-           do i=2,lat2-1
-              ii=istart(mm1)+i-2
-              con = dmass*(ges_prsi(i,j,k,it)-ges_prsi(i,j,k+1,it))*wgtlats(ii)
-              rq(i,j,k)=rq(i,j,k)-con
-              if (icw==0)then
-                 rc(i,j,k)=rc(i,j,k)-con
-              else
-                 rql(i,j,k)=rql(i,j,k)-con
-                 rqi(i,j,k)=rqi(i,j,k)-con
-              endif
-           end do
+        do i=2,lat2-1
+           ii=istart(mm1)+i-2
+           con = dmass*(ges_prsi(i,j,k,it)-ges_prsi(i,j,k+1,it))*wgtlats(ii)
+           rq(i,j,k)=rq(i,j,k)-con
+           if (icw==0)then
+              rc(i,j,k)=rc(i,j,k)-con
+           else
+              rql(i,j,k)=rql(i,j,k)-con
+              rqi(i,j,k)=rqi(i,j,k)-con
+           endif
         end do
      end do
   end do
 
   return
 end subroutine intjcpdry
-subroutine intjcpdry1(sval,nbins,mass)
-!$$$  subprogram documentation block
-!                .      .    .                                       .
-! subprogram:    intjcpdry1  mean dry ps conservation: part 1
-!   prgmmr: kleist           org: np23                date: 2009-07-07
-!
-! abstract: calculate contribution to gradient from mass conservation: part 1
-!
-! program history log:
-!   2009-07-07  kleist
-!   2010-05-13  todling - update to use gsi_bundle
-!   2010-05-25  derber  - modify to minimize number of communications
-!   2010-08-18  hu      - added qpvals= to mpl_allreduce call
-!   2010-11-03  treadon - correct i,j loop limits for rq,rc update
-!   2011-11-01  eliu    - add handling for ql & qi increments and search directions
-!   2013-05-05  todling - separate dry mass from the rest (zero-diff change)
-!                         collapse two verions of this routine into one (add opt arg)
-!   2014-12-02  derber  - fix comments - break up into 2 parts to minimize
-!   communications
-!
-!   input argument list:
-!     sval     - current increments
-!     nbins    - number of observation bins
-!
-!   output argument list:
-!     mass     - output mass vector
-!
-! attributes:
-!   language: f90
-!   machine:  ibm RS/6000 SP
-!
-!$$$
-  use mpimod, only: mype
-  use gridmod, only: lat2,lon2,nsig,wgtlats,nlon,istart
-  use guess_grids, only: ges_prsi,ntguessig
-  use jcmod, only: bamp_jcpdry
-  use gsi_metguess_mod,  only: gsi_metguess_get
-  implicit none
-
-! Declare passed variables
-  type(gsi_bundle),intent(in   ),dimension(nbins) :: sval
-  integer(i_kind),intent(in) :: nbins
-  real(r_quad),dimension(2*nbins),intent(out) :: mass ! 1=dry;2=wv
-
-! Declare local variables
-  real(r_quad),dimension(nsig) :: mass2
-  real(r_quad) rcon,con
-  integer(i_kind) i,j,k,it,ii,mm1,ier,icw,iql,iqi,istatus
-  real(r_kind),pointer,dimension(:,:,:) :: sq =>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: sc =>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: sql=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: sqi=>NULL()
-  real(r_kind),pointer,dimension(:,:)   :: sp =>NULL()
-
-  integer(i_kind) :: n
-  
-  it=ntguessig
-  mass=zero_quad
-  rcon=one_quad/(two_quad*float(nlon))
-  mm1=mype+1
-
-  do n=1,nbins
-! Retrieve pointers
-! Simply return if any pointer not found
-     ier=0; icw=0; iql=0; iqi=0
-     call gsi_bundlegetpointer(sval(n),'q' ,sq, istatus);ier=istatus+ier
-     call gsi_bundlegetpointer(sval(n),'cw',sc, istatus);icw=istatus+icw
-     call gsi_bundlegetpointer(sval(n),'ql',sql,istatus);iql=istatus+iql
-     call gsi_bundlegetpointer(sval(n),'qi',sqi,istatus);iqi=istatus+iqi
-     call gsi_bundlegetpointer(sval(n),'ps',sp, istatus);ier=istatus+ier
-     if(ier+icw*(iql+iqi)/=0)then
-       if (mype==0) write(6,*)'intjcpdry: checking ier+icw*(iql+iqi)=', ier+icw*(iql+iqi)
-       return
-     end if
-
-
-! Calculate mean surface pressure contribution in subdomain
-     do j=2,lon2-1
-       do i=2,lat2-1
-         ii=istart(mm1)+i-2
-         mass(n)=mass(n)+sp(i,j)*wgtlats(ii)
-       end do
-     end do
-
-     mass2(:)=zero_quad
-! Calculate water-vapor contribution to total mass
-!$omp parallel do  schedule(dynamic,1) private(k,j,i,ii,con)
-     do k=1,nsig
-        do j=2,lon2-1
-           do i=2,lat2-1
-              ii=istart(mm1)+i-2
-              con = (ges_prsi(i,j,k,it)-ges_prsi(i,j,k+1,it))*wgtlats(ii)
-              mass2(k)=mass2(k)+sq(i,j,k)*con
-              if (icw==0) then
-                 mass2(k)=mass2(k)+sc(i,j,k)*con
-              else
-                 mass2(k)=mass2(k)+(sql(i,j,k)+sqi(i,j,k))*con
-              endif
-           end do
-        end do
-     end do
-     do k=1,nsig
-        mass(nbins+n)=mass(nbins+n)+mass2(k)
-     end do
-  end do
-
-  return
-end subroutine intjcpdry1
-subroutine intjcpdry2(rval,nbins,mass,pjc)
-!$$$  subprogram documentation block
-!                .      .    .                                       .
-! subprogram:    intjcpdry2   dry ps conservation: part 2
-!   prgmmr: kleist           org: np23                date: 2009-07-07
-!
-! abstract: calculate contribution to gradient from mass conservation: part 2
-!
-! program history log:
-!   2009-07-07  kleist
-!   2010-05-13  todling - update to use gsi_bundle
-!   2010-05-25  derber  - modify to minimize number of communications
-!   2010-08-18  hu      - added qpvals= to mpl_allreduce call
-!   2010-11-03  treadon - correct i,j loop limits for rq,rc update
-!   2011-11-01  eliu    - add handling for ql & qi increments and search directions
-!   2013-05-05  todling - separate dry mass from the rest (zero-diff change)
-!                         collapse two verions of this routine into one (add opt arg)
-!   2014-12-02  derber  - fix comments - break up into 2 parts to minimize
-!   communications
-!
-!   input argument list:
-!     nbins    - number of observation bins
-!     rval     - input gradient
-!     mass     - input mass vector
-!
-!   output argument list:
-!     rval     - input value plus contribution to gradient
-!     pjc      - optional -- penalty from mass term
-!
-! attributes:
-!   language: f90
-!   machine:  ibm RS/6000 SP
-!
-!$$$
-  use mpimod, only: mype
-  use gridmod, only: lat2,lon2,nsig,wgtlats,nlon,istart
-  use guess_grids, only: ges_prsi,ntguessig
-  use jcmod, only: bamp_jcpdry
-  use gsi_metguess_mod,  only: gsi_metguess_get
-  implicit none
-
-! Declare passed variables
-  type(gsi_bundle),intent(inout),dimension(nbins) :: rval
-  integer(i_kind),intent(in) :: nbins
-  real(r_quad),dimension(2*nbins),intent(in) :: mass ! 1=dry;2=wv
-  real(r_quad)    ,intent(  out),optional :: pjc
-
-! Declare local variables
-  real(r_quad) rcon,con,dmass
-  integer(i_kind) i,j,k,it,ii,mm1,ier,icw,iql,iqi,istatus
-  real(r_kind),pointer,dimension(:,:,:) :: rq =>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: rc =>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: rql=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: rqi=>NULL()
-  real(r_kind),pointer,dimension(:,:)   :: rp =>NULL()
-
-  integer(i_kind) :: n
-  
-  it=ntguessig
-  rcon=one_quad/(two_quad*float(nlon))
-  mm1=mype+1
-
-  do n=1,nbins
-     ier=0; icw=0; iql=0; iqi=0
-     call gsi_bundlegetpointer(rval(n),'q' ,rq, istatus);ier=istatus+ier
-     call gsi_bundlegetpointer(rval(n),'cw',rc, istatus);icw=istatus+icw
-     call gsi_bundlegetpointer(rval(n),'ql',rql,istatus);iql=istatus+iql
-     call gsi_bundlegetpointer(rval(n),'qi',rqi,istatus);iqi=istatus+iqi
-     call gsi_bundlegetpointer(rval(n),'ps',rp, istatus);ier=istatus+ier
-     if(ier+icw*(iql+iqi)/=0)then
-       if (mype==0) write(6,*)'intjcpdry: checking ier+icw*(iql+iqi)=', ier+icw*(iql+iqi)
-       return
-     end if
-!    Remove water-vapor contribution to get incremental dry ps
-!    if (mype==0) write(6,*)'intjcpdry: total mass =', mass(n)
-!    if (mype==0) write(6,*)'intjcpdry: wv    mass =', mass(nbins+n)
-     dmass=mass(n)-mass(nbins+n)
-     dmass=bamp_jcpdry*dmass*rcon*rcon
-     if(present(pjc)) then
-        pjc = dmass*dmass
-     endif
-
-!    Calculate mean surface pressure contribution in subdomain
-     do j=2,lon2-1
-       do i=2,lat2-1
-         ii=istart(mm1)+i-2
-         rp(i,j)=rp(i,j)+dmass*wgtlats(ii)
-       end do
-     end do
-!    Remove water to get incremental dry ps
-!$omp parallel do  schedule(dynamic,1) private(k,j,i,ii,con)
-     do k=1,nsig
-        do j=2,lon2-1
-           do i=2,lat2-1
-              ii=istart(mm1)+i-2
-              con = dmass*(ges_prsi(i,j,k,it)-ges_prsi(i,j,k+1,it))*wgtlats(ii)
-              rq(i,j,k)=rq(i,j,k)-con
-              if (icw==0)then
-                 rc(i,j,k)=rc(i,j,k)-con
-              else
-                 rql(i,j,k)=rql(i,j,k)-con
-                 rqi(i,j,k)=rqi(i,j,k)-con
-              endif
-           end do
-        end do
-     end do
-  end do
-
-  return
-end subroutine intjcpdry2
 
 subroutine intjcdfi(rval,sval,pjc)
 !$$$  subprogram documentation block

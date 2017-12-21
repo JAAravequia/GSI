@@ -70,13 +70,13 @@ module constants
   public :: psv_a, psv_b, psv_c, psv_d
   public :: ef_alpha, ef_beta, ef_gamma
   public :: max_varname_length
-  public :: z_w_max,tfrozen
+  public :: z_w_max
   public :: qmin,qcmin,tgmin
   public :: i_missing, r_missing
 
 ! Declare derived constants
   integer(i_kind):: huge_i_kind
-  integer(i_kind), parameter :: max_varname_length=32
+  integer(i_kind), parameter :: max_varname_length=12
   real(r_single):: tiny_single, huge_single
   real(r_kind):: xai, xa, xbi, xb, dldt, rozcon,ozcon,fv, tpwcon,eps, rd_over_g
   real(r_kind):: el2orc, g_over_rd, rd_over_cp, cpr, omeps, epsm1, factor2
@@ -130,8 +130,8 @@ module constants
   real(r_kind),parameter::  r4000     = 4000.0_r_kind
   real(r_kind),parameter::  r3600     = 3600.0_r_kind
 
-  real(r_kind),parameter:: z_w_max    = 30.0_r_kind     ! maximum diurnal thermocline thickness
-  real(r_kind),parameter:: tfrozen    = 271.2_r_kind    ! sea water frozen point temperature
+! maximum diurnal thermocline thickness
+  real(r_kind),parameter:: z_w_max   = 30.0_r_kind
 
   real(r_quad),parameter::  zero_quad = 0.0_r_quad
   real(r_quad),parameter::  one_quad  = 1.0_r_quad

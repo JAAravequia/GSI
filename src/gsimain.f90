@@ -307,7 +307,7 @@
 !          = 124 - enorm_state: error in ilat
 !          = 125 - evaljo: obscounts not allocated
 !          = 126 - check_bks: troubled vertical coord system
-!          = 127 -
+!          = 127 - 
 !          = 128 - 
 !          = 129 - 
 !          = 130 - 
@@ -315,7 +315,7 @@
 !          = 132 - gsi_4dvar: Error in observation binning
 !          = 133 - gsi_4dvar: Error in sub-windows definition
 !          = 134 - setup_4dvar: unable to fullfil request for increment output
-!          = 135 - setup_4dvar: iwrtinc or lwrite4danl inconsistent
+!          = 135 - setup_4dvar: iwrtinc l4dvar inconsistent
 !          = 136 - time_4dvar: minutes should be 0
 !          = 137 - gsimod: adjoint computation requires contrad
 !          = 138 - setup_congrad: kamxit>maxiter
@@ -326,7 +326,7 @@
 !          = 143 - m_stats: MPI_allreduce(dot-sum)
 !          = 144 - m_stats: MPI_allreduce(min-max)
 !          = 145 - m_stats: MPI_allreduce(dim)
-!          = 146 - control2model_ad: assumes lsqrtb
+!          = 146 - model2control: assumes lsqrtb
 !          = 147 - model_tl: error nstep
 !          = 148 - model_tl: error nfrctl
 !          = 149 - model_tl: error nfrobs
@@ -492,7 +492,7 @@
 !          = 308 - sqrtmin: congrad requires ltlint
 !          = 309 - sqrtmin: congrad requires ltlint
 !          = 310 - sqrtmin: error estimated gradient
-!          = 311 - control2state_ad: not for sqrt(B)
+!          = 311 - state2control: not for sqrt(B)
 !          = 312 - allocate_state: state already allocated
 !          = 313 - allocate_state:  error length
 !          = 314 - stpspd:ltlint & foto not compatible at this time

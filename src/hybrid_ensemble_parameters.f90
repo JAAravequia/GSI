@@ -107,9 +107,6 @@ module hybrid_ensemble_parameters
 !     grid_ratio_ens: ratio of ensemble grid resolution to analysis resolution (default value is 1)
 !     enspreproc:      if .true., read in preprocessed ensemble members (in
 !                      files already subsetted for subdomains on each task).
-!     vvlocal:  logical variable, if .true., then horizontal localization length
-!               function of z, default = .false. 
-!     ensemble_path: path to ensemble members; default './'
 !=====================================================================================================
 !
 !
@@ -140,9 +137,6 @@ module hybrid_ensemble_parameters
 !   2013-01-20  parrish - move initialization of beta1wgt, beta2wgt, pwgt to after allocation.
 !   2013-11-22  kleist  - add option for q perturbations
 !   2013-12-03  wu      - add parameter coef_bw for option:betaflg
-!   2014-05-14  wu      - add logical variable vvlocal for vertically verying horizontal localization length in regional
-!   2015-01-22  Hu      - add flag i_en_perts_io to control reading ensemble perturbation.
-!   2015-02-11  Hu      - add flag l_ens_in_diff_time to force GSI hybrid use ensembles not available at analysis time
 !
 ! subroutines included:
 
@@ -213,20 +207,6 @@ module hybrid_ensemble_parameters
 !   def use_localization_grid - if true, then use extra lower res gaussian grid for horizontal localization
 !                                   (global runs only--allows possiblity for non-gaussian ensemble grid)
 !   def enspreproc           - flag to read (.true.) already subsetted ensemble data.
-!   def vvlocal             - logical switch for vertically varying horizontal localization length
-!   def i_en_perts_io       - flag to write out and read in ensemble perturbations in ensemble grid.   
-!                             This is to speed up RAP/HRRR hybrid runs because the
-!                             same ensemble perturbations are used in 6 cycles    
-!                               =0:  No ensemble perturbations IO (default)
-!                               =2:  skip get_gefs_for_regional and read in ensemble
-!                                     perturbations from saved files.
-!   def  l_ens_in_diff_time  -  if use ensembles that are available at different       
-!                               time from analysis time.
-!                             =false: only ensembles available at analysis time
-!                                      can be used for hybrid. (default)
-!                             =true: ensembles available time can be different
-!                                      from analysis time in hybrid analysis
-!   def ensemble_path        - path to ensemble members; default './'
 !
 ! attributes:
 !   language: f90
@@ -247,7 +227,7 @@ module hybrid_ensemble_parameters
        destroy_hybens_localization_parameters
 ! set passed variables to public
   public :: generate_ens,n_ens,nlon_ens,nlat_ens,jcap_ens,jcap_ens_test,l_hyb_ens,&
-       s_ens_h,oz_univ_static,vvlocal
+       s_ens_h,oz_univ_static
   public :: uv_hyb_ens,q_hyb_ens,s_ens_v,beta1_inv,aniso_a_en,s_ens_hv,s_ens_vv
   public :: readin_beta,betas_inv,betae_inv
   public :: readin_localization
@@ -273,9 +253,6 @@ module hybrid_ensemble_parameters
   public :: nval_lenz_en
   public :: ntlevs_ens
   public :: enspreproc
-  public :: i_en_perts_io
-  public :: l_ens_in_diff_time
-  public :: ensemble_path
 
   logical l_hyb_ens,uv_hyb_ens,q_hyb_ens,oz_univ_static
   logical enspreproc
@@ -291,9 +268,6 @@ module hybrid_ensemble_parameters
   logical use_localization_grid
   logical use_gfs_ens
   logical eqspace_ensgrid
-  logical vvlocal
-  logical l_ens_in_diff_time
-  integer(i_kind) i_en_perts_io
   integer(i_kind) n_ens,nlon_ens,nlat_ens,jcap_ens,jcap_ens_test
   real(r_kind) beta1_inv,s_ens_h,s_ens_v,grid_ratio_ens,coef_bw
   type(sub2grid_info),save :: grd_ens,grd_loc,grd_sploc,grd_anl,grd_e1,grd_a1
@@ -312,7 +286,6 @@ module hybrid_ensemble_parameters
   integer(i_kind) nval_lenz_en
   integer(i_kind) ntlevs_ens
   integer(i_kind) regional_ensemble_option
-  character(len=512),save :: ensemble_path
 
 contains
 
@@ -328,10 +301,6 @@ subroutine init_hybrid_ensemble_parameters
 !   
 !   2010-01-13  lueken - added subprogram doc block
 !   12-05-2012  el akkraoui - hybrid beta parameters now vertically varying
-!   2014-09-15  carley - moved the init of variables beta1wgt, beta2wgt, and
-!                         pwgt, to routine  create_hybens_localization_parameters.
-!                         Otherwise these variables were referenced prior to
-!                         memory allocation. 
 !
 !   input argument list:
 !
@@ -343,6 +312,7 @@ subroutine init_hybrid_ensemble_parameters
 !
 !$$$ end documentation block
   use constants, only: one
+  use constants, only: zero
   implicit none
 
   l_hyb_ens=.false.
@@ -364,8 +334,6 @@ subroutine init_hybrid_ensemble_parameters
   use_gfs_ens=.true.         ! when global: default is to read ensemble from GFS
   eqspace_ensgrid=.false.
   enspreproc=.false.
-  vvlocal=.false.
-  l_ens_in_diff_time=.false.
   coef_bw=0.9_r_kind
   n_ens=0
   nlat_ens=0
@@ -373,31 +341,27 @@ subroutine init_hybrid_ensemble_parameters
   jcap_ens_test=0
   nlon_ens=0
   beta1_inv=one
+  beta1wgt=one
+  beta2wgt=zero
+  pwgt=zero
   grid_ratio_ens=one
   s_ens_h = 2828._r_kind     !  km (this was optimal value in 
                              !   Wang, X.,D. M. Barker, C. Snyder, and T. M. Hamill, 2008: A hybrid
                              !      ETKF.3DVAR data assimilation scheme for the WRF Model. Part II: 
                              !      Observing system simulation experiment. Mon.  Wea. Rev., 136, 5132-5147.)
 
-  s_ens_v = 30._r_kind       ! grid units
+  s_ens_v = 30._r_kind       ! grid units 
   nval_lenz_en=-1            ! initialize dimension to absurd value
   ntlevs_ens=1               ! default for number of time levels for ensemble perturbations
-  i_en_perts_io=0            ! default for en_pert IO. 0 is no IO
-  ensemble_path = './'       ! default for path to ensemble members
 
 end subroutine init_hybrid_ensemble_parameters
 
 subroutine create_hybens_localization_parameters
-  use constants, only: one
-  use constants, only: zero
   implicit none
   
   allocate( s_ens_hv(grd_ens%nsig),s_ens_vv(grd_ens%nsig) )
   allocate( betas_inv(grd_ens%nsig),betae_inv(grd_ens%nsig))
   allocate( beta1wgt(grd_ens%nsig),beta2wgt(grd_ens%nsig),pwgt(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig) )
-  beta1wgt=one
-  beta2wgt=zero
-  pwgt=zero
   
 end subroutine create_hybens_localization_parameters
 

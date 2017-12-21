@@ -77,11 +77,6 @@ subroutine update_guess(sval,sbias)
 !   2014-02-12  Hu      - Adjust 2m Q based on 1st level moisture analysis increment  
 !   2014-02-15  kim     - revisit various options of cloud-related updates
 !   2014-04-13  todling - replace update bias code w/ call to routine in bias_predictors
-!   2014-05-07  pondeca - constrain significant wave height (howv) to be >=0
-!   2014-06-16  carley/zhu - add tcamt and lcbas
-!   2014-06-17  carley  - remove setting nguess=0 when use_reflectivity==true
-!   2014-11-28  zhu     - move update of cw to compute_derived when cw is not 
-!                         state variable for all-sky radiance assimilation
 !
 !   input argument list:
 !    sval
@@ -100,11 +95,10 @@ subroutine update_guess(sval,sbias)
 !$$$
   use kinds, only: r_kind,i_kind
   use mpimod, only: mype
-  use constants, only: zero,one,fv,max_varname_length,qmin,qcmin,tgmin,&
-                       r100,one_tenth
+  use constants, only: zero,one,fv,max_varname_length,qmin,qcmin,tgmin
   use jfunc, only: iout_iter,biascor,tsensible,clip_supersaturation
   use gridmod, only: lat2,lon2,nsig,&
-       regional,twodvar_regional,regional_ozone
+       regional,twodvar_regional,regional_ozone,use_reflectivity
   use guess_grids, only: ges_tsen,ges_qsat,&
        nfldsig,hrdifsig,hrdifsfc,nfldsfc,dsfct
   use state_vectors, only: svars3d,svars2d
@@ -140,16 +134,21 @@ subroutine update_guess(sval,sbias)
   character(max_varname_length),allocatable,dimension(:) :: cloud
   integer(i_kind) i,j,k,it,ij,ii,ic,id,ngases,nguess,istatus
   integer(i_kind) is_t,is_q,is_oz,is_cw,is_sst
-  integer(i_kind) icloud,ncloud
-  integer(i_kind) idq
+  integer(i_kind) ipinc,ipinc1,ipinc2,ipges,icloud,ncloud
+  integer(i_kind) ipges_ql,ipges_qi,ipges_cw,idq,ier
   real(r_kind) :: zt
   real(r_kind),pointer,dimension(:,:  ) :: ptr2dinc =>NULL()
   real(r_kind),pointer,dimension(:,:  ) :: ptr2dges =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: ptr3dinc =>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ptr3dinc1=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ptr3dinc2=>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: ptr3dges =>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ptr3dges1 =>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ptr3dges2 =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: p_q      =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: p_tv     =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: ptr3daux =>NULL()
+  real(r_kind),pointer,dimension(:,:  ) :: ptr2daux =>NULL()
 
   real(r_kind),dimension(lat2,lon2)     :: tinc_1st,qinc_1st
 
@@ -157,6 +156,8 @@ subroutine update_guess(sval,sbias)
 ! In 3dvar, nobs_bins=1 is smaller than nfldsig. This subroutine is
 ! written in a way that is more efficient in that case but might not
 ! be the best in 4dvar.
+  tinc_1st=0.0_r_kind
+  qinc_1st=0.0_r_kind
 
 ! Get required pointers and abort if not found (RTod: needs revision)
   call gsi_bundlegetpointer(sval(1),'tv', is_t,  istatus)
@@ -167,6 +168,7 @@ subroutine update_guess(sval,sbias)
 
 ! Inquire about guess fields
   call gsi_metguess_get('dim',nguess,istatus)
+  if(use_reflectivity) nguess=0
   if (nguess>0) then
      allocate(guess(nguess))
      call gsi_metguess_get('gsinames',guess,istatus)
@@ -233,98 +235,6 @@ subroutine update_guess(sval,sbias)
         endif
      endif
 
-!    Update extra met-guess fields
-     do ic=1,nguess
-        id=getindex(svars3d,guess(ic))
-        if (id>0) then  ! Case when met_guess and state vars map one-to-one, take care of them together 
-           call gsi_bundlegetpointer (sval(ii),               guess(ic),ptr3dinc,istatus)
-           call gsi_bundlegetpointer (gsi_metguess_bundle(it),guess(ic),ptr3dges,istatus)
-           if (trim(guess(ic))=='q') then
-               call upd_positive_fldr3_(ptr3dges,ptr3dinc, qmin)
-               if(clip_supersaturation) ptr3dges(:,:,:) = min(ptr3dges(:,:,:),ges_qsat(:,:,:,it))
-               cycle
-           endif
-           if (trim(guess(ic))=='oz') then
-               call upd_positive_fldr3_(ptr3dges,ptr3dinc,tgmin)
-               cycle
-           endif
-           if (trim(guess(ic))=='tv') then
-              cycle ! updating tv is trick since it relates to tsen and therefore q
-                    ! since we don't know which comes first in met-guess, we
-                    ! must postpone updating tv after all other met-guess fields
-           endif
-           icloud=getindex(cloud,guess(ic))
-           if(icloud>0) then
-              ptr3dges = max(ptr3dges+ptr3dinc,qcmin)
-              cycle
-           else  
-              ptr3dges = ptr3dges + ptr3dinc
-              cycle
-           endif
-        else  ! Case when met_guess and state vars do not map one-to-one 
-           if (trim(guess(ic))=='div') then
-               call gsi_bundlegetpointer (gsi_metguess_bundle(it),guess(ic),ptr3dges,istatus)
-               ptr3dges = ptr3dges + xhat_div(:,:,:,ii)
-               cycle
-           endif
-           if (trim(guess(ic))=='vor') then
-               call gsi_bundlegetpointer (gsi_metguess_bundle(it),guess(ic),ptr3dges,istatus)
-               ptr3dges = ptr3dges + xhat_vor(:,:,:,ii)
-               cycle
-           endif
-        endif
-        id=getindex(svars2d,guess(ic))
-        if (id>0) then
-           call gsi_bundlegetpointer (sval(ii),               guess(ic),ptr2dinc,istatus)
-           call gsi_bundlegetpointer (gsi_metguess_bundle(it),guess(ic),ptr2dges,istatus)
-           ptr2dges = ptr2dges + ptr2dinc
-           if (trim(guess(ic))=='gust')  ptr2dges = max(ptr2dges,zero)
-           if (trim(guess(ic))=='vis')   ptr2dges = max(min(ptr2dges,20000.0_r_kind),one_tenth)
-           if (trim(guess(ic))=='wspd10m') ptr2dges = max(ptr2dges,zero)
-           if (trim(guess(ic))=='pblh')  ptr2dges = max(ptr2dges,zero)
-           if (trim(guess(ic))=='howv')  ptr2dges = max(ptr2dges,zero)
-           if (trim(guess(ic))=='tcamt') ptr2dges = max(min(ptr2dges,r100),zero) !Cannot have > 100% or < 0% cloud amount
-           if (trim(guess(ic))=='lcbas') ptr2dges = max(min(ptr2dges,20000.0_r_kind),one_tenth)
-           cycle
-        endif
-     enddo
-!    At this point, handle the Tv exception since by now Q has been updated 
-!    NOTE 1: This exceptions is unnecessary: all we need to do is put tsens in the
-!    state-vector instead of tv (but this will require changes elsewhere).
-!    For now we keep the exception code in place
-!    NOTE 2: the following assumes tv has same name in met-guess and increment vectors
-     id=getindex(svars3d,'tv')
-     if (id>0) then
-        call gsi_bundlegetpointer (sval(ii),               'tv',ptr3dinc,istatus)
-        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'tv',ptr3dges,istatus)
-        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'q ',ptr3daux,idq)
-        if (.not.twodvar_regional .or. .not.tsensible) then
-!           TV analyzed; Tsens diagnosed
-            ptr3dges = ptr3dges + ptr3dinc
-            if(idq==0) ges_tsen(:,:,:,it) = ptr3dges/(one+fv*ptr3daux)
-        else
-!           Tsens analyzed; Tv diagnosed
-            ges_tsen(:,:,:,it) = ges_tsen(:,:,:,it) + ptr3dinc
-            if(idq==0) ptr3dges = ges_tsen(:,:,:,it)*(one+fv*ptr3daux)
-        endif
-     endif
-!    Update trace gases
-     do ic=1,ngases
-        id=getindex(svars3d,gases(ic))
-        if (id>0) then
-           call gsi_bundlegetpointer (sval(ii),                gases(ic),ptr3dinc,istatus)
-           call gsi_bundlegetpointer (gsi_chemguess_bundle(it),gases(ic),ptr3dges,istatus)
-           call upd_positive_fldr3_(ptr3dges,ptr3dinc,tgmin)
-           cycle
-        endif
-        id=getindex(svars2d,gases(ic))
-        if (id>0) then
-           call gsi_bundlegetpointer (sval(ii),                gases(ic),ptr2dinc,istatus)
-           call gsi_bundlegetpointer (gsi_chemguess_bundle(it),gases(ic),ptr2dges,istatus)
-           call upd_positive_fldr2_(ptr2dges,ptr2dinc,tgmin)
-           cycle
-        endif
-     enddo
 ! update surface and soil    
      if (l_gsd_soilTQ_nudge ) then
         if(is_q>0) then
@@ -360,11 +270,145 @@ subroutine update_guess(sval,sbias)
         call  gsd_update_q2(qinc_1st)
      endif ! l_gsd_q2_adjust
 
+
+!    Update extra met-guess fields
+     do ic=1,nguess
+        id=getindex(svars3d,guess(ic))
+        if (id>0) then  ! Case when met_guess and state vars map one-to-one, take care of them together 
+           call gsi_bundlegetpointer (sval(ii),               guess(ic),ptr3dinc,istatus)
+           call gsi_bundlegetpointer (gsi_metguess_bundle(it),guess(ic),ptr3dges,istatus)
+           if (trim(guess(ic))=='q') then
+               call upd_positive_fldr3_(ptr3dges,ptr3dinc, qmin)
+               if(clip_supersaturation) ptr3dges(:,:,:) = min(ptr3dges(:,:,:),ges_qsat(:,:,:,it))
+               cycle
+           endif
+           if (trim(guess(ic))=='oz') then
+               call upd_positive_fldr3_(ptr3dges,ptr3dinc,tgmin)
+               cycle
+           endif
+           if (trim(guess(ic))=='tv') then
+              cycle ! updating tv is trick since it relates to tsen and therefore q
+                    ! since we don't know which comes first in met-guess, we
+                    ! must postpone updating tv after all other met-guess fields
+           endif
+           icloud=getindex(cloud,guess(ic))
+           if(icloud>0) then
+              if(cloud(icloud)=='cw') then
+                 call gsi_bundlegetpointer (sval(ii), 'ql',ptr3dinc1,istatus)
+                 call gsi_bundlegetpointer (sval(ii), 'qi',ptr3dinc2,istatus)
+                 if(istatus == 0)  then     !for metges:cw, state vec:ql/qi/cw 
+                    call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ptr3dges, istatus)
+                    ptr3dges = ptr3dges+ptr3dinc1+ptr3dinc2
+                 else      ! for metges: cw=10,ql/qi=-1, state vec:cw only (such as original clr sky rad DA)
+                   ptr3dges = ptr3dges+ptr3dinc
+                   !let's split to ql/qi guess in GSI_Gridcomp because order of q, tv updates are tricky.
+                 endif    
+              else   !metges: ql (or qi)  , state vec:ql,qi,cw
+                   ptr3dges = ptr3dges+ptr3dinc
+              endif
+              ptr3dges = max(ptr3dges,qcmin)
+              cycle
+           else  
+              ptr3dges = ptr3dges + ptr3dinc
+              cycle
+           endif
+        else  ! Case when met_guess and state vars do not map one-to-one 
+           if (trim(guess(ic))=='div') then
+               call gsi_bundlegetpointer (gsi_metguess_bundle(it),guess(ic),ptr3dges,istatus)
+               ptr3dges = ptr3dges + xhat_div(:,:,:,ii)
+               cycle
+           endif
+           if (trim(guess(ic))=='vor') then
+               call gsi_bundlegetpointer (gsi_metguess_bundle(it),guess(ic),ptr3dges,istatus)
+               ptr3dges = ptr3dges + xhat_vor(:,:,:,ii)
+               cycle
+           endif
+        endif
+        id=getindex(svars2d,guess(ic))
+        if (id>0) then
+           call gsi_bundlegetpointer (sval(ii),               guess(ic),ptr2dinc,istatus)
+           call gsi_bundlegetpointer (gsi_metguess_bundle(it),guess(ic),ptr2dges,istatus)
+           ptr2dges = ptr2dges + ptr2dinc
+           cycle
+        endif
+     enddo
+!    At this point, handle the Tv exception since by now Q has been updated 
+!    NOTE 1: This exceptions is unnecessary: all we need to do is put tsens in the
+!    state-vector instead of tv (but this will require changes elsewhere).
+!    For now we keep the exception code in place
+!    NOTE 2: the following assumes tv has same name in met-guess and increment vectors
+     id=getindex(svars3d,'tv')
+     if (id>0) then
+        call gsi_bundlegetpointer (sval(ii),               'tv',ptr3dinc,istatus)
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'tv',ptr3dges,istatus)
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'q ',ptr3daux,idq)
+        if (.not.twodvar_regional .or. .not.tsensible) then
+!           TV analyzed; Tsens diagnosed
+            ptr3dges = ptr3dges + ptr3dinc
+            if(idq>0) ges_tsen(:,:,:,it) = ptr3dges/(one+fv*ptr3daux)
+        else
+!           Tsens analyzed; Tv diagnosed
+            ges_tsen(:,:,:,it) = ges_tsen(:,:,:,it) + ptr3dinc
+            if(idq>0) ptr3dges = ges_tsen(i,j,k,it)*(one+fv*ptr3daux)
+        endif
+     endif
+!    Update trace gases
+     do ic=1,ngases
+        id=getindex(svars3d,gases(ic))
+        if (id>0) then
+           call gsi_bundlegetpointer (sval(ii),                gases(ic),ptr3dinc,istatus)
+           call gsi_bundlegetpointer (gsi_chemguess_bundle(it),gases(ic),ptr3dges,istatus)
+           call upd_positive_fldr3_(ptr3dges,ptr3dinc,tgmin)
+           cycle
+        endif
+        id=getindex(svars2d,gases(ic))
+        if (id>0) then
+           call gsi_bundlegetpointer (sval(ii),                gases(ic),ptr2dinc,istatus)
+           call gsi_bundlegetpointer (gsi_chemguess_bundle(it),gases(ic),ptr2dges,istatus)
+           call upd_positive_fldr2_(ptr2dges,ptr2dinc,tgmin)
+           cycle
+        endif
+     enddo
+
+     if (twodvar_regional) then
+        ier=0
+        call gsi_bundlegetpointer (sval(ii),'gust',ptr2dinc,istatus)
+        ier=ier+istatus
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'gust',ptr2dges,istatus)
+        ier=ier+istatus
+        if(ier==0) then
+           ptr2dges = ptr2dges + ptr2dinc
+           ptr2dges = max(ptr2dges,zero)
+        endif
+        ier=0
+        call gsi_bundlegetpointer (sval(ii),'vis',ptr2dinc,istatus)
+        ier=ier+istatus
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'vis',ptr2dges,istatus)
+        ier=ier+istatus
+        if(ier==0) then
+           ptr2dges = ptr2dges + ptr2dinc
+           do j=1,lon2
+              do i=1,lat2
+                 if (ptr2dges(i,j)<=zero) ptr2dges(i,j)=0.1_r_kind
+                 if (ptr2dges(i,j)>20000.0_r_kind) ptr2dges(i,j)=20000.0_r_kind
+              end do
+           end do
+        endif
+        ier=0
+        call gsi_bundlegetpointer (sval(ii),'pblh',ptr2dinc,istatus)
+        ier=ier+istatus
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'pblh',ptr2dges,istatus)
+        ier=ier+istatus
+        if(ier==0) then
+           ptr2dges = ptr2dges + ptr2dinc
+           ptr2dges = max(ptr2dges,zero)
+        endif
+     end if
   end do
 
-  if(ngases>0) deallocate(gases)
-  if(ncloud>0) deallocate(cloud)
-  if(nguess>0) deallocate(guess)
+  if(ngases>0)then
+     deallocate(gases)
+  endif
 
   if(is_sst>0) then
      do it=1,nfldsfc
