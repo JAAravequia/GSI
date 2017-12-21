@@ -28,9 +28,6 @@ module anisofilter_glb
 !   2010-03-31  treadon - replace specmod components with sp_a structure
 !   2010-05-28  todling - obtain variable id's on the fly (add getindex)
 !   2010-06-05  todling - an_amp0 coming from control_vectors
-!   2013-10-19  todling - metguess now holds background
-!   2013-10-24  todling - general interface to strip
-!   2013-10-25  todling - reposition ltosi and others to commvars
 !
 ! subroutines included:
 !   anprewgt                    - compute the anisotropic aspect tensor for the
@@ -98,9 +95,8 @@ module anisofilter_glb
   use gridmod, only: nsig,nsig1o,nlon,nlat, &
                      lat2,lon2, &
                      itotsub,lon1,lat1,&
-                     displs_s,displs_g,ijn_s,ijn,strip
-
-  use general_commvars_mod, only: ltosi_s,ltosj_s
+                     ltosi_s,ltosj_s, &
+                     displs_s,displs_g,ijn_s,ijn,strip_single
 
   use constants, only: zero_single, tiny_single,            & ! for real(4)
                        zero,        tiny_r_kind, half, one, two, & ! for real(8)
@@ -108,7 +104,7 @@ module anisofilter_glb
 
   use raflib,only: init_raf4_wrap,raf_sm4_wrap,raf_sm4_ad_wrap
 
-  use jfunc, only: varq,qoption,varcw,cwoption
+  use jfunc, only: varq,qoption
 
   use control_vectors, only: an_amp0
   use control_vectors, only: cvars2d,cvars3d,cvarsmd
@@ -116,14 +112,12 @@ module anisofilter_glb
   use control_vectors, only: nrf3 => nc3d
   use control_vectors, only: nrf2 => nc2d
 
-  use guess_grids, only: ges_prsl,ntguessig,ges_tsen
+  use guess_grids, only: ges_u,ges_v,ges_prsl,ges_tv,ges_z,ntguessig,&
+                         ges_ps,ges_q,ges_tsen
 
   use mpimod, only: npe,levs_id,nvar_id,ierror,&
                     mpi_real8,mpi_real4,mpi_integer4,&
                     mpi_sum,mpi_comm_world
-
-  use gsi_metguess_mod, only: gsi_metguess_bundle
-  use gsi_bundlemod, only: gsi_bundlegetpointer
 
   use anisofilter, only: lreadnorm, &
                          r015, &
@@ -149,7 +143,6 @@ module anisofilter_glb
 
   use berror, only: bkgv_flowdep
   use mpeu_util, only: getindex
-  use mpeu_util, only: die
 
   implicit none
 
@@ -229,7 +222,6 @@ module anisofilter_glb
   integer(i_kind) :: nrf3_cw,nrf3_q,nrf3_sf,nrf3_vp,nrf3_t,nrf3_oz
   integer(i_kind) :: nrf2_ps,nrf2_sst,nrf2_stl,nrf2_sti
 
-  character(len=*),parameter::myname='anisofilter_glb'
 !-------------------------------------------------------------------------
 contains
 !-------------------------------------------------------------------------
@@ -791,7 +783,6 @@ subroutine read_bckgstats_glb(mype)
 !                   - read in the error info for used control variables only 
 !                   - use nrf* for generalized control variables
 !                   - mv varq to berror_read_wgt
-!   2014-02-01  todling - update interface to berror_read_wgt
 !
 !   input argument list:
 !    mype    - mpi task id
@@ -813,7 +804,7 @@ subroutine read_bckgstats_glb(mype)
   integer(i_kind):: mcount0,mcount,ierror
   real(r_kind) :: pbar4a,pbar4(nsig)
 
-  integer(i_kind):: inerr,n,i,j,k,l
+  integer(i_kind):: inerr,n,i,j,k,kc,kd,kt,kq,koz,l
   real(r_single),dimension(nlat,nsig,nrf3):: corzin
   real(r_single),dimension(nlat,nrf2):: corpin
   real(r_single),dimension(nlat,nsig,nrf3):: hwllin
@@ -849,7 +840,7 @@ subroutine read_bckgstats_glb(mype)
   allocate ( vz(nsig,mlat,nrf3) )
 
 ! Read amplitudes
-  call berror_read_wgt(corzin,corpin,hwllin,hwllpin,vscalesin,corsstin,hsst,varq,qoption,varcw,cwoption,mype,inerr)
+  call berror_read_wgt(corzin,corpin,hwllin,hwllpin,vscalesin,corsstin,hsst,mype,inerr)
 
   if(mype==0) then
      write(6,*) '--- start read_bckgstats_glb ---'
@@ -1031,9 +1022,8 @@ subroutine get_background_glb(mype)
   integer(i_kind),intent(in   ) :: mype
 
 ! Declare local variables
-  character(len=*),parameter::myname_=myname//'*get_background_glb'
   integer(i_kind) i,j,k,mm1,k1,ivar,nlonfc,ier,it,loc,iderivative
-  integer(i_kind) iflm,ilat,ilon,ilatp,ilatm,ilonp,ilonm,istatus
+  integer(i_kind) iflm,ilat,ilon,ilatp,ilatm,ilonp,ilonm
 
   real(r_kind) hwll_loc,rnf2,rnf212
   real(r_kind) asp1,asp2,asp3
@@ -1052,13 +1042,6 @@ subroutine get_background_glb(mype)
   real(r_kind),allocatable :: rlonf   (:,:)
   real(r_kind),allocatable :: rlonsinf(:,:)
   real(r_kind),allocatable :: rloncosf(:,:)
-
-  real(r_kind),dimension(:,:  ),pointer:: ges_ps_it=>NULL()
-  real(r_kind),dimension(:,:  ),pointer:: ges_z_it=>NULL()
-  real(r_kind),dimension(:,:,:),pointer:: ges_u_it=>NULL()
-  real(r_kind),dimension(:,:,:),pointer:: ges_v_it=>NULL()
-  real(r_kind),dimension(:,:,:),pointer:: ges_tv_it=>NULL()
-  real(r_kind),dimension(:,:,:),pointer:: ges_q_it=>NULL()
 
   integer(i_long):: ngauss_smooth,npass_smooth,normal_smooth,ifilt_ord_smooth
   integer(i_long):: nsmooth_smooth,nsmooth_shapiro_smooth
@@ -1315,37 +1298,22 @@ subroutine get_background_glb(mype)
 
   it=ntguessig
 
-  ier=0
-  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ps',ges_ps_it,  istatus)
-  ier=ier+istatus
-  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'z' ,ges_z_it,   istatus)
-  ier=ier+istatus
-  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'u' ,ges_u_it,   istatus)
-  ier=ier+istatus
-  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'v' ,ges_v_it,   istatus)
-  ier=ier+istatus
-  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'tv',ges_tv_it,  istatus)
-  ier=ier+istatus
-  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'q', ges_q_it,   istatus)
-  ier=ier+istatus
-  if(ier/=0) call die(myname_,'missing fields, ier= ', ier)
-
   call setup_sub2fslab
   ! T
-  field(:,:,:)=ges_tv_it(:,:,:)/(ges_prsl(:,:,:,it)/r100)**rd_over_cp
+  field(:,:,:)=ges_tv(:,:,:,it)/(ges_prsl(:,:,:,it)/r100)**rd_over_cp
   call sub2fslab_glb  (field,theta0f ,theta2f ,theta3f)
   call sub2fslabdz_glb(field,theta0zf,theta2zf,theta3zf)
 
   ! U
-  call sub2fslab_glb  (ges_u_it,u0f ,u2f ,u3f )
-  call sub2fslabdz_glb(ges_u_it,u0zf,u2zf,u3zf)
+  call sub2fslab_glb  (ges_u(1,1,1,it),u0f ,u2f ,u3f )
+  call sub2fslabdz_glb(ges_u(1,1,1,it),u0zf,u2zf,u3zf)
 
   ! V
-  call sub2fslab_glb  (ges_v_it,v0f ,v2f ,v3f )
-  call sub2fslabdz_glb(ges_v_it,v0zf,v2zf,v3zf)
+  call sub2fslab_glb  (ges_v(1,1,1,it),v0f ,v2f ,v3f )
+  call sub2fslabdz_glb(ges_v(1,1,1,it),v0zf,v2zf,v3zf)
 
   ! Z
-  call sub2fslab2d_glb(ges_z_it,z0f ,z2f ,z3f )
+  call sub2fslab2d_glb(ges_z(1,1  ,it),z0f ,z2f ,z3f )
   do j=1,pf2aP1%nlonf
      do i=1,pf2aP1%nlatf
         z0f(i,j,2:nsig1o)=z0f(i,j,1)
@@ -1364,10 +1332,10 @@ subroutine get_background_glb(mype)
 
   ! RH
   ice=.true.
-  field(:,:,:)=ges_q_it(:,:,:)
+  field(:,:,:)=ges_q(:,:,:,it)
   iderivative=0
   call genqsat(field,ges_tsen(1,1,1,it),ges_prsl(1,1,1,it),lat2,lon2,nsig,ice,iderivative)
-  field(:,:,:)=ges_q_it(:,:,:)/field(:,:,:)
+  field(:,:,:)=ges_q(:,:,:,it)/field(:,:,:)
 
   call sub2fslab_glb(field,rh0f,rh2f,rh3f)
 
@@ -1376,7 +1344,7 @@ subroutine get_background_glb(mype)
   ! note: psg will not be used in the filter space
   !---
   allocate(psg(nlat,nlon,nsig1o))
-  field(:,:,1)=1000.0_r_single*ges_ps_it
+  field(:,:,1)=1000.0_r_single*ges_ps(:,:,it)
   call sub2slab2d(field(1,1,1),psg)
 
   call destroy_sub2fslab
@@ -2213,7 +2181,7 @@ subroutine anbkgvar_rewgt(mype)
 
   integer(i_kind),intent(in   ) :: mype
 
-  integer(i_kind):: i,j,k,ix,ier,mm1
+  integer(i_kind):: i,j,k,ix,ier,mm1,it
 
   real(r_kind),dimension(lat2,lon2,nsig):: sfvar,vpvar,tvar
   real(r_kind),dimension(lat2,lon2):: psvar
@@ -2270,6 +2238,8 @@ subroutine anbkgvar_rewgt(mype)
      call stop2(stpcode_alloc)
   end if
 
+  it=ntguessig
+
   call setup_sub2fslab
   call sub2fslab_glb  (sfvar,sfvar0f,sfvar2f,sfvar3f)
   call sub2fslab_glb  (vpvar,vpvar0f,vpvar2f,vpvar3f)
@@ -2295,7 +2265,6 @@ subroutine get_aspect_ens(mype)
 !   2007-11-16  sato - for global
 !   2008-01-15  sato - add more accurate blending of iso & aniso tensor
 !   2010-03-11  zhu  - use nvars from control_vectors
-!   2013-10-24  todling - pges_minmax now gets time slot as input
 !
 !   input argument list:
 !    mype     - mpi task id
@@ -2484,7 +2453,7 @@ subroutine get_aspect_ens(mype)
 
      allocate(pgesmin(nsig))           !vert. profile of bckg layer minimum pressure
      allocate(pgesmax(nsig))           !vert. profile of bckg layer maximum pressure
-     call pges_minmax(mype,ntguessig,pgesmin,pgesmax)
+     call pges_minmax(mype,pgesmin,pgesmax)
 
      allocate(enscoeff(4,nlat,nlon))
      allocate(iref(nlat,nlon))
@@ -3557,7 +3526,7 @@ subroutine get_ensmber_glb(kens,ifld,igrid,ifldlevs, &
      open (54,file='field.dat_'//clun//'_'//clun2,form='unformatted')
      do k=1,nsig
         auxa(:,:)=field(:,:,k)
-        call strip(auxa,strp)
+        call strip_single(auxa,strp,1)
         call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
              tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
         if (mype==0) then
@@ -3851,8 +3820,7 @@ subroutine ens_uv2psichi(work1,work2)
 !
 !$$$ end documentation block
   use gridmod, only: sp_a,grd_a
-  use compact_diffs,only: noq, coef, xdcirdp, ydsphdp,lcy,lacox1,lbcox1
-  use compact_diffs,only: lacox2,lbcox2,lacoy1,lbcoy1,lacoy2,lbcoy2
+  use compact_diffs,only: noq, coef, xdcirdp, ydsphdp
 
   implicit none
 
@@ -3861,14 +3829,28 @@ subroutine ens_uv2psichi(work1,work2)
 
 ! Declare local variables
   real(r_kind),dimension(nlat,nlon):: work3,work4
-  integer(i_kind) ny
-  integer(i_kind) iy,ix
+  integer(i_kind) lacox1,nxa,lacox2,lbcox1,nxh,ny,nya
+  integer(i_kind) nbp,lcy,lbcoy2,iy,ix,lacoy1,lbcox2,lacoy2,lbcoy1
   real(r_kind) rnlon,div_n,div_s,vor_n,vor_s
   real(r_kind),dimension(nlat-2,nlon):: grdu,grdv,&
        grid_div,grid_vor,du_dlat,du_dlon,dv_dlat,dv_dlon
   real(r_kind),dimension(sp_a%nc):: spc1,spc2
 
   ny =nlat-2
+  nxh=nlon/2
+  nbp=2*noq+1
+  nya=ny*nbp
+  nxa=nxh*nbp
+
+  lacox1=1
+  lbcox1=lacox1+nxa
+  lacox2=lbcox1+nxa
+  lbcox2=lacox2+nxa
+  lacoy1=lbcox2+nxa
+  lbcoy1=lacoy1+nya
+  lacoy2=lbcoy1+nya
+  lbcoy2=lacoy2+nya
+  lcy   =lbcoy2+nya-1
 
   du_dlat=zero
   du_dlon=zero
@@ -3889,11 +3871,11 @@ subroutine ens_uv2psichi(work1,work2)
 
 ! Compute x derivative of u:  du_dlon = du/dlon
   call xdcirdp(grdu,du_dlon,coef(lacox1),coef(lbcox1),coef(lacox2),coef(lbcox2),&
-       nlon,ny,noq)
+       nlon,ny,noq,nxh)
 
 ! Compute x derivative of v:  dv_dlon = dv/dlon
   call xdcirdp(grdv,dv_dlon,coef(lacox1),coef(lbcox1),coef(lacox2),coef(lbcox2),&
-       nlon,ny,noq)
+       nlon,ny,noq,nxh)
 
 ! Multiply u and v by cos(lat).  Note:  coef(lcy+iy) contains 1/cos(lat)
   do ix=1,nlon

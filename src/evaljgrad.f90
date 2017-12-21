@@ -20,9 +20,6 @@ subroutine evaljgrad(xhat,fjcost,gradx,lupdfgs,nprt,calledby)
 !   2010-05-27  todling - replace geos_pgcmtest w/ general gsi_4dcoupler
 !   2010-08-19  lueken  - add only to module use
 !   2010-10-13  jing    - moved idmodel handling to the pertmod implementation
-!   2013-05-18  todling - evaljcdfi placed in intjcmod w/ name intjcdfi
-!   2014-01-30  todling - adding components to enable ens-hyb option
-!   2014-02-07  todling - update bias when doing 4dvar
 !
 !   input argument list:
 !    xhat - current state estimate (in control space)
@@ -45,20 +42,15 @@ use gsi_4dvar, only: nobs_bins, nsubwin, l4dvar, ltlint, iwrtinc
 use constants, only: zero,zero_quad
 use mpimod, only: mype
 use jfunc, only: xhatsave
-use jfunc, only: nrclen,nsclen,npclen,ntclen
 use jcmod, only: ljcdfi
-use gridmod, only: lat2,lon2,nsig,twodvar_regional
-use hybrid_ensemble_parameters, only: l_hyb_ens,ntlevs_ens
+use gridmod, only: lat2,lon2,nsig
 use obsmod, only: yobs, lsaveobsens, l_do_adjoint
 use obs_sensitivity, only: fcsens
 use mod_strong, only: l_tlnmc,baldiag_inc
 use control_vectors, only: control_vector,prt_control_norms,dot_product,assignment(=)
 use state_vectors, only: allocate_state,deallocate_state,prt_state_norms
 use bias_predictors, only: predictors,allocate_preds,deallocate_preds,assignment(=)
-use bias_predictors, only: update_bias_preds
 use intjomod, only: intjo
-use intradmod, only: setrad
-use intjcmod, only: intjcdfi
 use gsi_4dcouplermod, only: gsi_4dcoupler_grtests
 use gsi_bundlemod, only: gsi_bundle
 use gsi_bundlemod, only: gsi_bundleCreate
@@ -66,7 +58,6 @@ use gsi_bundlemod, only: gsi_bundleDestroy
 use gsi_bundlemod, only: self_add,assignment(=)
 use xhat_vordivmod, only : xhat_vordiv_init, xhat_vordiv_calc, xhat_vordiv_clean
 use mpeu_util, only: die
-use mpl_allreducemod, only: mpl_allreduce
 
 implicit none
 
@@ -82,16 +73,14 @@ character(len=*)    , intent(in   ) :: calledby
 character(len=*), parameter :: myname='evaljgrad'
 type(gsi_bundle) :: sval(nobs_bins), rval(nobs_bins)
 type(gsi_bundle) :: mval(nsubwin)
-type(gsi_bundle) :: eval(ntlevs_ens)
 type(gsi_bundle),dimension(nobs_bins) :: adtest_sval, adtest_rval
 type(gsi_bundle),dimension(nsubwin  ) :: adtest_mval
 type(predictors) :: sbias, rbias
 real(r_quad) :: zjb,zjo,zjc,zjl
-integer(i_kind) :: ii,iobs,ibin,i
+integer(i_kind) :: ii,iobs,ibin
 logical :: llprt,llouter
 logical,parameter:: pertmod_adtest=.true.
 character(len=255) :: seqcalls
-real(r_quad),dimension(max(1,nrclen)) :: qpred
 
 !**********************************************************************
 
@@ -107,11 +96,6 @@ end do
 do ii=1,nsubwin
    call allocate_state(mval(ii))
 end do
-if(l_hyb_ens) then
-   do ii=1,ntlevs_ens
-      call allocate_state(eval(ii))
-   end do
-endif
 call allocate_preds(sbias)
 call allocate_preds(rbias)
 
@@ -143,30 +127,18 @@ endif
 
 ! Run TL model to fill sval
 if (l4dvar) then
-   if (l_hyb_ens) then
-       call ensctl2model(xhat,mval(1),eval)
-       mval(1)=eval(1)
-   end if
-
    if(l_do_adjoint.and.pertmod_adtest) &
-         call adtest_copy_(mval,adtest_mval)
+   		call adtest_copy_(mval,adtest_mval)
 
    call model_tl(mval,sval,llprt)
 
    if(l_do_adjoint.and.pertmod_adtest) &
-         call adtest_copy_(sval,adtest_sval)
+   		call adtest_copy_(sval,adtest_sval)
 
 else
-   if (l_hyb_ens) then
-       call ensctl2model(xhat,mval(1),eval)
-       do ii=1,nobs_bins
-          sval(ii)=eval(ii)
-       enddo
-   else
-       do ii=1,nobs_bins
-          sval(ii)=mval(1)
-       enddo
-   end if
+   do ii=1,nobs_bins
+      sval(ii)=mval(1)
+   enddo
 end if
 
 ! Perform test of AGCM TLM and ADM
@@ -187,27 +159,10 @@ do ii=1,nsubwin
    mval(ii)=zero
 end do
 
-call setrad(sval(1))
-qpred=zero_quad
 ! Compare obs to solution and transpose back to grid (H^T R^{-1} H)
 do ibin=1,nobs_bins
-   call intjo(yobs(ibin),rval(ibin),qpred,sval(ibin),sbias,ibin)
+   call intjo(yobs(ibin),rval(ibin),rbias,sval(ibin),sbias,ibin)
 end do
-! Take care of background error for bias correction terms
-
-call mpl_allreduce(nrclen,qpvals=qpred)
-
-do i=1,nsclen
-  rbias%predr(i)=rbias%predr(i)+qpred(i)
-end do
-do i=1,npclen
-   rbias%predp(i)=rbias%predp(i)+qpred(nsclen+i)
-end do
-if (ntclen>0) then
-   do i=1,ntclen
-      rbias%predt(i)=rbias%predt(i)+qpred(nsclen+npclen+i)
-   end do
-end if
 
 ! Evaluate Jo
 call evaljo(zjo,iobs,nprt,llouter)
@@ -222,7 +177,7 @@ if (l_do_adjoint) then
    endif
 
    if (ljcdfi) then
-      call intjcdfi(rval,sval,pjc=zjc)
+      call evaljcdfi(sval,zjc,rval)
    else
 ! Jc and other 3D-Var terms
 ! Don't know how to deal with Jc term so comment for now...
@@ -239,35 +194,22 @@ if (l_do_adjoint) then
 !  Run adjoint model
    if (l4dvar) then
       if(l_do_adjoint.and.pertmod_adtest) &
-              call adtest_copy_(rval,adtest_rval)
+      		call adtest_copy_(rval,adtest_rval)
 
       call model_ad(mval,rval,llprt)
 
       if(l_do_adjoint.and.pertmod_adtest) then
         call adtest_show_(adtest_mval,adtest_sval,adtest_rval,mval)
-        call adtest_dstr_(adtest_mval)
-        call adtest_dstr_(adtest_sval)
-        call adtest_dstr_(adtest_rval)
+	call adtest_dstr_(adtest_mval)
+	call adtest_dstr_(adtest_sval)
+	call adtest_dstr_(adtest_rval)
       endif
 
-      if (l_hyb_ens) then
-          eval(1)=mval(1)
-          call ensctl2model_ad(eval,mval(1),gradx)
-      end if
-
    else
-
-      if (l_hyb_ens) then
-          do ii=1,nobs_bins
-              eval(ii)=rval(ii)
-          enddo
-          call ensctl2model_ad(eval,mval(1),gradx)
-      else
-         mval(1)=rval(1)
-         do ii=2,nobs_bins
-            call self_add(mval(1),rval(ii))
-         enddo
-      end if
+      mval(1)=rval(1)
+      do ii=2,nobs_bins
+         call self_add(mval(1),rval(ii))
+      enddo
    end if
 
    if (nprt>=2) then
@@ -277,7 +219,7 @@ if (l_do_adjoint) then
    endif
 
 !  Adjoint of convert control var to physical space
-   call control2model_ad(mval,rbias,gradx)
+   call model2control(mval,rbias,gradx)
 
 !  Cost function
    fjcost=zjb+zjo+zjc+zjl
@@ -295,20 +237,12 @@ if (lupdfgs.and.l_tlnmc.and.baldiag_inc) call strong_baldiag_inc(sval,size(sval)
 if (lupdfgs) then
    call xhat_vordiv_init
    call xhat_vordiv_calc(sval)
+   if (nprt>=1.and.mype==0) write(6,*)trim(seqcalls),': evaljgrad: Updating guess'
+   call update_guess(sval,sbias)
+   call write_all(-1,mype)
    if (iwrtinc>0) then
-      if (nprt>=1.and.mype==0) write(6,*)trim(seqcalls),': evaljgrad: Setting increment for output'
       call inc2guess(sval)
-      call view_st (sval,'xinc')
       call write_all(iwrtinc,mype)
-      ! NOTE: presently in 4dvar, we handle the biases in a slightly inconsistent when
-      ! as when in 3dvar - that is, the state is not updated, but the biases are.
-      ! This assumes GSI handles a single iteration of the outer loop at a time
-      ! when doing 4dvar (that is, multiple iterations require stop-and-go).
-      call update_bias_preds(twodvar_regional,sbias)
-   else
-      if (nprt>=1.and.mype==0) write(6,*)trim(seqcalls),': evaljgrad: Updating guess'
-      call update_guess(sval,sbias)
-      call write_all(-1,mype)
    endif
    call xhat_vordiv_clean
 endif
@@ -316,11 +250,6 @@ endif
 ! Release memory
 call deallocate_preds(rbias)
 call deallocate_preds(sbias)
-if(l_hyb_ens) then
-   do ii=1,ntlevs_ens
-      call deallocate_state(eval(ii))
-   end do
-endif
 do ii=1,nsubwin
    call deallocate_state(mval(ii))
 end do
@@ -359,11 +288,11 @@ subroutine adtest_copy_(vi,vo)
   
   do iv=1,size(vi)
     call gsi_bundleCreate(vo(iv),vi(iv),"adtest_"//trim(vi(iv)%name),istatus=ierr)
-    if(ierr/=0) then
-       call perr(myname_,'gsi_bundleCreate("adtest_'//trim(vi(iv)%name)//'"), istatus =',ierr)
-       call perr(myname_,'                ("adtest_'//trim(vi(iv)%name)//'"),      iv =',iv  )
-       call die(myname_)
-    endif
+     		if(ierr/=0) then
+		  call perr(myname_,'gsi_bundleCreate("adtest_'//trim(vi(iv)%name)//'"), istatus =',ierr)
+		  call perr(myname_,'                ("adtest_'//trim(vi(iv)%name)//'"),      iv =',iv  )
+		  call die(myname_)
+		endif
     vo(iv)=vi(iv)
   enddo
 end subroutine adtest_copy_
@@ -381,11 +310,11 @@ subroutine adtest_dstr_(v)
 
   do iv=1,size(v)
     call gsi_bundleDestroy(v(iv),istatus=ierr)
-     if(ierr/=0) then
-        call perr(myname_,'gsi_bundleDestroy("adtest_'//trim(v(iv)%name)//'"), istatus =',ierr)
-        call perr(myname_,'                 ("adtest_'//trim(v(iv)%name)//'"),      iv =',iv  )
-        call die(myname_)
-     endif
+     		if(ierr/=0) then
+		  call perr(myname_,'gsi_bundleDestroy("adtest_'//trim(v(iv)%name)//'"), istatus =',ierr)
+		  call perr(myname_,'                 ("adtest_'//trim(v(iv)%name)//'"),      iv =',iv  )
+		  call die(myname_)
+		endif
   enddo
 end subroutine adtest_dstr_
 
@@ -396,8 +325,8 @@ subroutine adtest_show_(x,p,q,y)
   use mpeu_util, only: stdout,perr,die
   use mpimod   , only: mype
   implicit none
-  type(gsi_bundle),dimension(:),intent(in):: x, p     ! some x, and p=Mx
-  type(gsi_bundle),dimension(:),intent(in):: q, y     ! some q, and y=M'q
+  type(gsi_bundle),dimension(:),intent(in):: x, p	! some x, and p=Mx
+  type(gsi_bundle),dimension(:),intent(in):: q, y	! some q, and y=M'q
 
   character(len=*),parameter:: myname_=myname//".adtest_show_"
   real(r_quad):: dpp,dqq,dpq,cpq,rpq
@@ -429,12 +358,12 @@ subroutine adtest_show_(x,p,q,y)
 
   dpq=0._r_quad
   do iv=1,size(p)
-    dpq=dpq+dot_product(p(iv),q(iv))          ! (p,q)
+    dpq=dpq+dot_product(p(iv),q(iv))		! (p,q)
   enddo
   
   dxy=0._r_quad
   do iv=1,size(x)
-    dxy=dxy+dot_product(x(iv),y(iv))       ! (x,y)
+    dxy=dxy+dot_product(x(iv),y(iv))		! (x,y)
   enddo
 
   cpq=1._r_quad
@@ -446,15 +375,15 @@ subroutine adtest_show_(x,p,q,y)
     dpp=0._r_quad
     dqq=0._r_quad
     do iv=1,size(p)
-      dpp=dpp+dot_product(p(iv),p(iv))       ! (p,p)
-      dqq=dqq+dot_product(q(iv),q(iv))       ! (q,q)
+      dpp=dpp+dot_product(p(iv),p(iv))		! (p,p)
+      dqq=dqq+dot_product(q(iv),q(iv))		! (q,q)
     enddo
 
     dyy=0._r_quad
     dxx=0._r_quad
     do iv=1,size(x)
-      dyy=dyy+dot_product(y(iv),y(iv))          ! (y,y)
-      dxx=dxx+dot_product(x(iv),x(iv))          ! (x,x)
+      dyy=dyy+dot_product(y(iv),y(iv))		! (y,y)
+      dxx=dxx+dot_product(x(iv),x(iv))		! (x,x)
     enddo
 
     if(IamROOT_) then

@@ -20,7 +20,6 @@ platform=plotfile
 *platform=amsua.016
 
 say 'process 'field' from 'plotfile
-say 'using xsize ysize: 'xsize' and 'ysize
 *'open amsua.016.ctl'
 
 debug=0
@@ -57,27 +56,6 @@ if (field = scangl)
 endif
 if (field = clw)
  type="cloud liquid water correction (K)"
-endif
-if (field = cos)
- type="Cos for SSMIS"
-endif
-if (field = sin)
- type="Sin for SSMIS"
-endif
-if (field = emiss)
- type="Emissivity sensitivity term"
-endif
-if (field = ordang4)
- type="4th order angle term"
-endif
-if (field = ordang3)
- type="3rd order angle term"
-endif
-if (field = ordang2)
- type="2nd order angle term"
-endif
-if (field = ordang1)
- type="1st order angle term"
 endif
 
 
@@ -198,8 +176,7 @@ if (field = "omgnbc")
    'set y 1 'nchan
    'set z 1'
    'set lon 'new_xs' 'new_xe
-   'define satang1=fixang(t='tlast')/count(t='tlast')'
-   'define fixed1=-1*satang1(t='tlast')'
+   'define fixed=-1*satang(t='tlast')'
 endif
 *say ' new_xs, new_xe ='new_xs','new_xe
 
@@ -333,7 +310,7 @@ while (chn<=nchan)
          say 'sdv'it' min,max,avg='minsdv','maxsdv','avgsdv
 
       if (field = "omgnbc")
-         'd fixed1'
+         'd fixed'
          rec7=sublin(result,7)
          rec8=sublin(result,8)
          valsat=subwrd(rec7,8)
@@ -455,7 +432,7 @@ while (chn<=nchan)
       'set cmark 0'
       'set cstyle 3'
       'set ccolor 1'
-      'd fixed1'
+      'd fixed'
       'set z 'region
    endif
 
@@ -533,7 +510,8 @@ while (chn<=nchan)
          'draw string 7.4 10.20 solid=avg, '
          'set string 2 r 6'
          'draw string 8.3 10.20 dash=sdv'
-      else
+      endif
+      if (field = "fixang" | field = "lapse" | field = "lapse2" | field = "const" | field = "scangl" | field = "clw")
          'set string 4 r 6'
          'draw string 7.5 10.4 blue, '
          'set string 2 r 6'

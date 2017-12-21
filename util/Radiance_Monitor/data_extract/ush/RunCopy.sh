@@ -15,7 +15,7 @@
 #--------------------------------------------------------------------
 
 function usage {
-  echo "Usage:  RunCopy.sh suffix start_date [end_date]"
+  echo "Usage:  RunVrfy.sh suffix start_date [end_date]"
   echo "            File name for RunCopy.sh can be full or relative path"
   echo "            Suffix is the indentifier for this data source."
   echo "            Start_date is the optional starting cycle to process (YYYYMMDDHH format)."
@@ -29,6 +29,20 @@ function usage {
 set -ax
 echo start RunCopy.sh
 
+#
+#  Temporary change, abort if running on prod.  This is an attempt to
+#  eliminate prossible crons running on the prod machine for me only.
+#
+#   machine=`hostname | cut -c1`
+#   prod=`cat /etc/prod | cut -c1`
+#
+#   if [[ $machine = $prod ]]; then
+#      exit 10 
+#   fi
+#
+#  End temporary change
+#
+
 
 nargs=$#
 if [[ $nargs -lt 1 ]]; then
@@ -39,14 +53,13 @@ fi
 this_file=`basename $0`
 this_dir=`dirname $0`
 
-RADMON_SUFFIX=$1
+SUFFIX=$1
 START_DATE=$2
 END_DATE=$3
 
 RUN_ENVIR=${RUN_ENVIR:-dev}
-RAD_AREA=${RAD_AREA:-glb}
 
-echo RADMON_SUFFIX     = $RADMON_SUFFIX
+echo SUFFIX     = $SUFFIX
 echo START_DATE = $START_DATE
 echo END_DATE   = $END_DATE
 
@@ -54,54 +67,32 @@ echo END_DATE   = $END_DATE
 # Set environment variables
 #--------------------------------------------------------------------
 top_parm=${this_dir}/../../parm
-export RADMON_CONFIG=${RADMON_CONFIG:-${top_parm}/RadMon_config}
 
-if [[ -s ${RADMON_CONFIG} ]]; then
-   . ${RADMON_CONFIG}
+if [[ -s ${top_parm}/RadMon_config ]]; then
+   . ${top_parm}/RadMon_config
 else
-   echo "Unable to source ${RADMON_CONFIG} file"
+   echo "Unable to source RadMon_config file in ${top_parm}"
    exit 2 
 fi
 
-if [[ -s ${RADMON_USER_SETTINGS} ]]; then
-   . ${RADMON_USER_SETTINGS}
+if [[ -s ${top_parm}/RadMon_user_settings ]]; then
+   . ${top_parm}/RadMon_user_settings
 else
-   echo "Unable to source ${RADMON_USER_SETTINGS} file"
+   echo "Unable to source RadMon_user_settings file in ${top_parm}"
    exit 6 
 fi
 
-. ${DE_PARM}/data_extract_config
 
-#--------------------------------------------------------------------
-#  Check setting of RUN_ONLY_ON_DEV and possible abort if on prod and
-#  not permitted to run there.
-#--------------------------------------------------------------------
-
-if [[ RUN_ONLY_ON_DEV -eq 1 ]]; then
-   is_prod=`${DE_SCRIPTS}/onprod.sh`
-   if [[ $is_prod = 1 ]]; then
-      exit 10
-   fi
-fi
-
+. ${RADMON_DATA_EXTRACT}/parm/data_extract_config
 
 if [[ $RAD_AREA = glb ]]; then
    copy_script=Copy_glbl.sh
+   . ${RADMON_DATA_EXTRACT}/parm/glbl_conf
 elif [[ $RAD_AREA = rgn ]]; then
    copy_script=Copy_rgnl.sh
+   . ${RADMON_DATA_EXTRACT}/parm/rgnl_conf
 else
    exit 3
-fi
-
-#--------------------------------------------------------------------
-#  Check for running on prod machine.
-#--------------------------------------------------------------------
-
-if [[ RUN_ON_PROD -eq 0 ]]; then
-   is_prod=`${DE_SCRIPTS}/onprod.sh`
-   if [[ $is_prod -eq 1 ]]; then
-      exit 10
-   fi
 fi
 
 
@@ -119,11 +110,11 @@ fi
 
 #--------------------------------------------------------------------
 # If we have a START_DATE then use it, otherwise use the 
-#   find_cycle.pl script to determine the last copied cycle.
+#   find_last_cycle.pl script to determine the last copied cycle.
 #--------------------------------------------------------------------
 start_len=`echo ${#START_DATE}`
 if [[ ${start_len} -le 0 ]]; then
-   pdate=`${DE_SCRIPTS}/find_cycle.pl 1 ${TANKverf}`
+   pdate=`${USHverf_rad}/find_last_cycle.pl ${TANKDIR}`
    pdate_len=`echo ${#pdate}`
    if [[ ${pdate_len} -ne 10 ]]; then
       exit 4
@@ -133,7 +124,7 @@ fi
 
 cdate=$START_DATE
 
-mkdir -p $LOGdir
+
 #--------------------------------------------------------------------
 # Run in a loop until END_DATE is processed, or an error occurs, or 
 #   we run out of data.
@@ -145,10 +136,12 @@ while [[ $done -eq 0 ]]; do
    #--------------------------------------------------------------------
    # Check for running jobs   
    #--------------------------------------------------------------------
-   if [[ $MY_MACHINE = "wcoss" ]]; then
-      running=`bjobs -l | grep data_extract_${RADMON_SUFFIX} | wc -l`
+   if [[ $MY_MACHINE = "ccs" ]]; then
+      running=`llq -u ${LOGNAME} -f %jn | grep data_extract_${SUFFIX} | wc -l`
+   elif [[ $MY_MACHINE = "wcoss" ]]; then
+      running=`bjobs -l | grep data_extract_${SUFFIX} | wc -l`
    elif [[ $MY_MACHINE = "zeus" ]]; then
-      running=`qstat -u $LOGNAME | grep data_extract_${RADMON_SUFFIX} | wc -l`
+      running=`qstat -u $LOGNAME | grep data_extract_${SUFFIX} | wc -l`
    fi
 
    if [[ $running -ne 0 ]]; then
@@ -167,11 +160,11 @@ while [[ $done -eq 0 ]]; do
       #-----------------------------------------------------------------
       # Run the copy script
       #-----------------------------------------------------------------
-      log_file=${LOGdir}/CopyRad_${RADMON_SUFFIX}_${cdate}.log
-      err_file=${LOGdir}/CopyRad_${RADMON_SUFFIX}_${cdate}.err
+      log_file=${LOGSverf_rad}/CopyRad_${SUFFIX}_${cdate}.log
+      err_file=${LOGSverf_rad}/CopyRad_${SUFFIX}_${cdate}.err
 
       echo Processing ${cdate}
-      ${DE_SCRIPTS}/${copy_script} ${RADMON_SUFFIX} ${cdate} 1>${log_file} 2>${err_file}
+      ${USHverf_rad}/${copy_script} ${SUFFIX} ${cdate} 1>${log_file} 2>${err_file}
 
       #-----------------------------------------------------------------
       # done is true (1) if the copy_script produced an error code, or

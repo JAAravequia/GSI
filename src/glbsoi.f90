@@ -82,16 +82,8 @@ subroutine glbsoi(mype)
 !   2010-10-01  el akkraoui/todling - add Bi-CG as optional minimization scheme
 !   2011-04-07  todling - newpc4pred now in radinfo
 !   2011-08-01  lueken  - replaced F90 with f90 (no machine logic)
-!   2011-09-05  todling - repositioned initialization of ensemble to enable sqrt-ens feature
-!   2012-07-12  todling - read yhatsave as well as xhatsave in 4dvar mode; knob for nested resolution
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - implemented obs adjoint test  
-!   2013-05-19  zhu     - add aircraft temperature bias correction
 !   2013-07-02  parrish - remove references to init_strongvars_1, init_strongvars_2
-!   2014-02-03  todling - move cost function create/destroy from observer to this routine;
-!                         reposition load of ens due to init of sqrt(ens) dims dependences
-!   2014-02-05  todling - update interface to prebal
-!   2014-06-19  carley/zhu - Modify for R_option: optional variable correlation length twodvar_regional
-!                            lcbas analysis variable
 !
 !   input argument list:
 !     mype - mpi task id
@@ -108,79 +100,62 @@ subroutine glbsoi(mype)
   use mpimod, only: npe
   use adjtest_obs, only: adtest_obs
   use jfunc, only: miter,jiter,jiterstart,jiterend,iguess,&
-      write_guess_solution,R_option,&
-      tendsflag,xhatsave,yhatsave,create_jfunc,destroy_jfunc
+      write_guess_solution,&
+      tendsflag,xhatsave
   use anberror, only: anisotropic, &
       create_anberror_vars_reg,destroy_anberror_vars_reg,&
       create_anberror_vars,destroy_anberror_vars
   use anisofilter, only: anprewgt_reg
   use anisofilter_glb, only: anprewgt
   use berror, only: create_berror_vars_reg,create_berror_vars,&
-      set_predictors_var,destroy_berror_vars_reg,destroy_berror_vars,& 
-      bkgv_flowdep,pcinfo,fut2ps,cwcoveqqcov
+      set_predictors_var,destroy_berror_vars_reg,&
+      destroy_berror_vars,bkgv_flowdep,pcinfo
   use balmod, only: create_balance_vars_reg,create_balance_vars, &
       destroy_balance_vars_reg,destroy_balance_vars,prebal,prebal_reg
   use compact_diffs, only: create_cdiff_coefs,inisph
   use gridmod, only: nlat,nlon,nsig,rlats,regional,&
       twodvar_regional,wgtlats
   use guess_grids, only: nfldsig
-  use obsmod, only: write_diag,perturb_obs,ditype,iadate
-  use qcmod,only: njqc
+  use obsmod, only: write_diag,perturb_obs,ditype
   use turblmod, only: create_turblvars,destroy_turblvars
   use obs_sensitivity, only: lobsensfc, iobsconv, lsensrecompute, &
       init_fc_sens, save_fc_sens, lobsensincr, lobsensjb
   use smooth_polcarf, only: norsp,destroy_smooth_polcas
   use jcmod, only: ljcdfi
-  use gsi_4dvar, only: l4dvar, lsqrtb, lbicg, lanczosave, lnested_loops, ladtest_obs
+  use gsi_4dvar, only: l4dvar, lsqrtb, lbicg, lanczosave, ladtest_obs
   use pcgsoimod, only: pcgsoi
-  use control_vectors, only: dot_product
+  use control_vectors, only: dot_product,read_cv,write_cv
   use radinfo, only: radinfo_write,passive_bc,newpc4pred
   use pcpinfo, only: pcpinfo_write
   use converr, only: converr_destroy
-  use converr_ps, only: converr_ps_destroy
-  use converr_q, only: converr_q_destroy
-  use converr_t, only: converr_t_destroy
-  use converr_uv, only: converr_uv_destroy
-  use converr_pw, only: converr_pw_destroy
-  use convb_ps, only: convb_ps_destroy
-  use convb_q, only: convb_q_destroy
-  use convb_t, only: convb_t_destroy
-  use convb_uv, only: convb_uv_destroy
   use zrnmi_mod, only: zrnmi_initialize
   use observermod, only: observer_init,observer_set,observer_finalize,ndata
   use timermod, only: timer_ini, timer_fnl
   use hybrid_ensemble_parameters, only: l_hyb_ens,destroy_hybens_localization_parameters
-  use hybrid_ensemble_isotropic, only: create_ensemble,load_ensemble,destroy_ensemble, &
-       hybens_localization_setup,hybens_grid_setup
+  use hybrid_ensemble_isotropic, only: create_ensemble,load_ensemble
   use gfs_stratosphere, only: destroy_nmmb_vcoords,use_gfs_stratosphere
-  use aircraftinfo, only: aircraftinfo_write,aircraft_t_bc_pof,aircraft_t_bc,mype_airobst
 
   implicit none
-
 
 ! Declare passed variables
   integer(i_kind),intent(in   ) :: mype
 
 ! Declare local variables
-  logical laltmin
+  logical slow_pole_in,laltmin
 
-  integer(i_kind) jiterlast
-  real(r_kind) :: zgg,zxy
+  integer(i_kind) nlev_mp,jiterlast
+  real(r_kind) :: zgg
   character(len=12) :: clfile
-
 
 !*******************************************************************************************
 !
 ! Initialize timer for this procedure
   call timer_ini('glbsoi')
 
-  if(mype==0) write(6,*) 'glbsoi: starting ...'
-
 
 ! If l_hyb_ens is true, then initialize machinery for hybrid ensemble 3dvar
   if(l_hyb_ens) then
      call hybens_grid_setup
-     call create_ensemble
   end if
 
 ! Check for alternative minimizations
@@ -199,9 +174,6 @@ subroutine glbsoi(mype)
      endif
   endif
 
-! Set cost function
-  call create_jfunc
-
 ! Read observations and scatter
   call observer_set
 
@@ -213,13 +185,11 @@ subroutine glbsoi(mype)
      else
         call create_berror_vars_reg
      end if
-     call prebal_reg(cwcoveqqcov)
-     if (.not. R_option) then
-        if(anisotropic) then
-           call anprewgt_reg(mype)
-        else
-           call prewgt_reg(mype)
-        end if
+     call prebal_reg
+     if(anisotropic) then
+        call anprewgt_reg(mype)
+     else
+        call prewgt_reg(mype)
      end if
   else
      call create_balance_vars
@@ -229,7 +199,7 @@ subroutine glbsoi(mype)
         call create_berror_vars
      end if
      
-     call prebal(fut2ps,cwcoveqqcov)
+     call prebal
 
 !    Load background error arrays used by recursive filters
      if(anisotropic) then
@@ -241,35 +211,25 @@ subroutine glbsoi(mype)
 
 ! If l_hyb_ens is true, then read in ensemble perturbations
   if(l_hyb_ens) then
+     call create_ensemble
      call load_ensemble
      call hybens_localization_setup
   end if
+
+! Read output from previous min.
+  if (l4dvar.and.jiterstart>1) then
+     clfile='xhatsave.ZZZ'
+     write(clfile(10:12),'(I3.3)') jiterstart-1
+     call read_cv(xhatsave,clfile)
+     zgg=dot_product(xhatsave,xhatsave)
+     if (mype==0) write(6,*)'Norm xhatsave=',sqrt(zgg)
+  endif
 
 ! Set error (variance) for predictors (only use guess)
   call set_predictors_var
 
 ! Set errors and create variables for dynamical constraint
   if (ljcdfi) call init_jcdfi
-
-! Read output from previous min.
-  if (l4dvar.and.jiterstart>1) then
-     clfile='xhatsave.ZZZ'
-     write(clfile(10:12),'(I3.3)') jiterstart-1
-     call view_cv_ad(xhatsave,iadate,clfile,.not.lnested_loops)
-     zgg=dot_product(xhatsave,xhatsave)
-     if (mype==0) write(6,*)'Norm   xhatsave=',sqrt(zgg)
-     if (.not.lsqrtb) then
-        clfile='yhatsave.ZZZ'
-        write(clfile(10:12),'(I3.3)') jiterstart-1
-        call view_cv_ad(yhatsave,iadate,clfile,.not.lnested_loops)
-        zgg=dot_product(yhatsave,yhatsave)
-        zxy=dot_product(xhatsave,yhatsave)
-        if (mype==0) then
-            write(6,*)'Norm   yhatsave=',sqrt(zgg)
-            write(6,*)'Norm x,yhatsave=',zxy
-        endif
-     endif
-  endif
 
   jiterlast=miter
   if (lsensrecompute) jiterlast=jiterend
@@ -284,19 +244,6 @@ subroutine glbsoi(mype)
 
 !    Set up right hand side of analysis equation
      call setuprhsall(ndata,mype,.true.,.true.)
-
-!    Estimate correlation length for lcbas if R_option==.true.
-!      For this to work we need to have run setuplcbas first to get the weights.
-!      Note that R_option is only applicable for lcbas and not for any
-!      another twodvar_regional variables.  All other variables are handled
-!      as they would have been otherwise.
-     if (R_option .and. twodvar_regional .and. jiter==jiterstart) then
-        if(anisotropic) then
-           call anprewgt_reg(mype)
-        else
-           call prewgt_reg(mype)
-        end if
-     end if
 
 ! implement obs adjoint test and return  
      if( ladtest_obs) then
@@ -341,7 +288,7 @@ subroutine glbsoi(mype)
            if (lobsensincr .or. lobsensjb) then
               clfile='xhatsave.ZZZ'
               write(clfile(10:12),'(I3.3)') jiter
-              call view_cv(xhatsave,iadate,clfile,.not.lnested_loops)
+              call write_cv(xhatsave,clfile)
            endif
         elseif (l4dvar.or.lanczosave) then
            clfile='obsdiags.ZZZ'
@@ -349,18 +296,9 @@ subroutine glbsoi(mype)
            call write_obsdiags(clfile)
            clfile='xhatsave.ZZZ'
            write(clfile(10:12),'(I3.3)') jiter
-           call view_cv(xhatsave,iadate,clfile,.not.lnested_loops)
+           call write_cv(xhatsave,clfile)
            zgg=dot_product(xhatsave,xhatsave)
-           if (mype==0) write(6,*)'Norm   xhatsave=',sqrt(zgg)
-           if(.not.lsqrtb) then
-              clfile='yhatsave.ZZZ'
-              write(clfile(10:12),'(I3.3)') jiter
-              call view_cv(yhatsave,iadate,clfile,.not.lnested_loops)
-              zgg=dot_product(yhatsave,yhatsave)
-              zxy=dot_product(xhatsave,yhatsave)
-              if (mype==0) write(6,*)'Norm   yhatsave=',sqrt(zgg)
-              if (mype==0) write(6,*)'Norm x,yhatsave=',zxy
-           endif
+           if (mype==0) write(6,*)'Norm xhatsave=',sqrt(zgg)
         endif
 
 !       Save output of adjoint of analysis equation
@@ -384,27 +322,7 @@ subroutine glbsoi(mype)
   endif
 
 ! Deallocate arrays
-!RY:  in trunk 
-!RY: Q: Is this destroy at the end of the entire analysisi?
-!  if(perturb_obs) call converr_destroy
-!RY:  need to understand the following things
-
-  if(perturb_obs) then
-     if(njqc) then
-        call converr_ps_destroy
-        call converr_q_destroy
-        call converr_t_destroy
-        call converr_uv_destroy
-        call converr_pw_destroy
-        call convb_ps_destroy
-        call convb_q_destroy
-        call convb_t_destroy
-        call convb_uv_destroy
-     else
-        call converr_destroy
-     endif  
-  endif
-
+  if(perturb_obs) call converr_destroy
   if (regional) then
      if(anisotropic) then
         call destroy_anberror_vars_reg
@@ -430,32 +348,19 @@ subroutine glbsoi(mype)
      if (l4dvar) then
         if(mype == 0) call radinfo_write
         if(mype == npe-1) call pcpinfo_write
-        if(mype==mype_airobst .and. (aircraft_t_bc_pof .or. aircraft_t_bc)) call aircraftinfo_write
      else
         if (jiter==miter+1 ) then
            if(mype == 0) call radinfo_write
            if(mype == npe-1) call pcpinfo_write
-           if(mype==mype_airobst .and. (aircraft_t_bc_pof .or. aircraft_t_bc)) call aircraftinfo_write
         endif
      endif
   endif
 
-! Finalize cost function 
-  call destroy_jfunc
-
 ! Finalize observer
   call observer_finalize
-
-! When applicable, finalize ensemble 
-  if(l_hyb_ens) then
-    call destroy_ensemble
-  endif
-
-  if(mype==0) write(6,*) 'glbsoi: complete'
 
 ! Finalize timer for this procedure
   call timer_fnl('glbsoi')
 
 ! End of routine
-
 end subroutine glbsoi
