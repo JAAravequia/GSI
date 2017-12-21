@@ -46,6 +46,7 @@ subroutine control2state_ad(rval,bval,grad)
 !
 !$$$
 use kinds, only: i_kind,r_kind
+use constants, only: zero
 use control_vectors, only: control_vector
 use control_vectors, only: cvars3d,cvars2d
 use bias_predictors, only: predictors
@@ -271,7 +272,10 @@ do jj=1,nsubwin
 
 !  Adjoint of convert input normalized RH to q to add contribution of moisture
 !  to t, p , and normalized rh
-   if(do_normal_rh_to_q_ad) call normal_rh_to_q_ad(cv_rh,cv_t,rv_prse,rv_q)
+   if(do_normal_rh_to_q_ad) then
+     call normal_rh_to_q_ad(cv_rh,cv_t,rv_prse,rv_q)
+     rv_q=zero
+   end if
 
 !  Adjoint to convert ps to 3-d pressure
    if(do_getprs_ad) call getprs_ad(cv_ps,cv_t,rv_prse)

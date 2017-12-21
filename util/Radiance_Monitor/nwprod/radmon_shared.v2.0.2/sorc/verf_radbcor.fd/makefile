@@ -1,19 +1,26 @@
 # *****************************************************************
 #  makefile.bcor
 #
-#  Make the radmon_bcor executable.
+#  Make the radmon_bcor.glb executable.  The executable will extract
+#  bcor radiance data from a diagnostic file from a global run.
 #
 # *****************************************************************
 
-BINDIR = ../../exec
-
-LIBS   = $(W3NCO_LIB4)
+SHELL=/bin/sh
+SRCS = kinds.F90 read_diag.f90 bcor.f90 avgsdv.f90 create_ctl_bcor.f90
 
 OBJS =  kinds.o read_diag.o bcor.o avgsdv.o create_ctl_bcor.o
 
 #
 # *****************************************************************
 #
+
+#------------
+# Include machine dependent compile & load options
+#------------
+MAKE_CONF = Makefile.conf
+include $(MAKE_CONF)
+
 
 CMD = radmon_bcor
 
@@ -23,15 +30,6 @@ clean:
 	rm -f *.o
 	rm -f *.mod
 	rm -f radmon_bcor
-
-check_prereqs:
-	/nwprod/spa_util/check_libs.bash $(LIBS)
-
-install:
-	cp -f $(CMD) $(BINDIR)/
-
-debug:  FFLAGS = $(D_FFLAGS)
-debug:  $(CMD)
 
 $(CMD):         $(OBJS)
 	$(CF) $(FFLAGS) $(LDFLAGS) -o $(@) $(OBJS) $(LIBS)

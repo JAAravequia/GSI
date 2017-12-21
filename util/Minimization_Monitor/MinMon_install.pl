@@ -5,7 +5,7 @@
 #
 #  This script makes sets all configuration definitions
 #  and calls the makeall.sh script to build all the necessary
-#  executables.  This script works for wcoss, cray, and theia.
+#  executables.  This script works for zeus and wcoss machines.
 #
 #-------------------------------------------------------------------
 
@@ -15,7 +15,7 @@
    my $machine = `/usr/bin/perl get_hostname.pl`;
    my $my_machine="export MY_MACHINE=$machine";
 
-   if( $machine ne "theia" && $machine ne "wcoss" && $machine ne "cray" ) {
+   if( $machine ne "zeus" && $machine ne "wcoss" ) {
       die( "ERROR --- Unrecognized machine hostname, $machine.  Exiting now...\n" );
    }
    else {
@@ -50,11 +50,8 @@
    #  TANKDIR location
    #
    my $user_name = $ENV{ 'USER' };
-   if( $machine eq "theia" ) {
+   if( $mahine eq "zeus" ) {
       $tankdir = "/scratch2/portfolios/NCEPDEV/global/save/$user_name/nbns";
-   }
-   elsif( $machine eq "cray" ){
-      $tankdir = "/gpfs/hps/emc/da/save/$user_name/nbns";
    } 
    else {
       $tankdir = "/global/save/$user_name/nbns";
@@ -82,64 +79,55 @@
    #
    #	(note I'll need to do something here for Zeus defaults)
    #
-   my $my_ptmp="";
-   my $my_stmp="";
+   $ptmp = "/ptmpd1";
+   print "Please specify PTMP location.  This is used for temporary work space.\n";
+   print "  Available options are: \n";
+   print "      /ptmpd1  (default)\n";
+   print "      /ptmpd2\n";
+   print "      /ptmpd3\n";
+   print "      /ptmpp1\n";
+   print "      /ptmpp2\n";
 
-   if( $machine eq "cray" ) {
-      $my_ptmp="export MY_PTMP=\${MY_PTMP:-/gpfs/hps/ptmp}";
-      $my_stmp="export MY_STMP=\${MY_STMP:-/gpfs/hps/stmp}";
+   print "  Return to accept default location or enter new location now.\n";
+   print "\n";
+   print "  Default PTMP:  $ptmp \n";
+   print "     ?\n";
+   my $new_ptmp = <>;
+   $new_ptmp =~ s/^\s+|\s+$//g;
+
+   if( length($new_ptmp ) > 0 ) {
+      $ptmp = $new_ptmp;
    }
-   elsif( $machine eq "wcoss" ) {
-   
-      $ptmp = "/ptmpd1";
-      print "Please specify PTMP location.  This is used for temporary work space.\n";
-      print "  Available options are: \n";
-      print "      /ptmpd1  (default)\n";
-      print "      /ptmpd2\n";
-      print "      /ptmpd3\n";
-      print "      /ptmpp1\n";
-      print "      /ptmpp2\n";
-
-      print "  Return to accept default location or enter new location now.\n";
-      print "\n";
-      print "  Default PTMP:  $ptmp \n";
-      print "     ?\n";
-      my $new_ptmp = <>;
-      $new_ptmp =~ s/^\s+|\s+$//g;
-
-      if( length($new_ptmp ) > 0 ) {
-         $ptmp = $new_ptmp;
-      }
-      $my_ptmp="export MY_PTMP=\${MY_PTMP:-$ptmp}";
-      print "my_ptmp = $my_ptmp\n";
-      print "\n\n";
-      sleep( 1 );
+   my $my_ptmp="export MY_PTMP=\${MY_PTMP:-$ptmp}";
+   print "my_ptmp = $my_ptmp\n";
+   print "\n\n";
+   sleep( 1 );
 
 
-      $stmp = "/stmpd1";
-      print "Please specify STMP location.  This is used for temporary work space.\n";
-      print "  Available options are: \n";
-      print "      /stmpd1  (default)\n";
-      print "      /stmpd2\n";
-      print "      /stmpd3\n";
-      print "      /stmpp1\n";
-      print "      /stmpp2\n";
-   
-      print "  Return to accept default location or enter new location now.\n";
-      print "\n";
-      print "  Default STMP:  $stmp \n";
-      print "     ?\n";
-      my $new_stmp = <>;
-      $new_stmp =~ s/^\s+|\s+$//g;
+   $stmp = "/stmpd1";
+   print "Please specify STMP location.  This is used for temporary work space.\n";
+   print "  Available options are: \n";
+   print "      /stmpd1  (default)\n";
+   print "      /stmpd2\n";
+   print "      /stmpd3\n";
+   print "      /stmpp1\n";
+   print "      /stmpp2\n";
 
-      if( length($new_stmp ) > 0 ) {
-         $stmp = $new_stmp;
-      }
-      $my_stmp="export MY_STMP=\${MY_STMP:-$stmp}";
-      print "my_stmp = $my_stmp\n";
-      print "\n\n";
-      sleep( 1 );
+   print "  Return to accept default location or enter new location now.\n";
+   print "\n";
+   print "  Default STMP:  $stmp \n";
+   print "     ?\n";
+   my $new_stmp = <>;
+   $new_stmp =~ s/^\s+|\s+$//g;
+
+   if( length($new_stmp ) > 0 ) {
+      $stmp = $new_stmp;
    }
+   my $my_stmp="export MY_STMP=\${MY_STMP:-$stmp}";
+   print "my_stmp = $my_stmp\n";
+   print "\n\n";
+   sleep( 1 );
+
 
    #
    #  Web sever name
@@ -251,7 +239,7 @@
    sleep( 2 );
  
    my $account = "export ACCOUNT=\${ACCOUNT:-glbss}";
-   if( $machine ne "theia" ) {
+   if( $machine ne "zeus" ) {
       $account = "export ACCOUNT=\${ACCOUNT:-}";
    }
 
@@ -261,7 +249,7 @@
    my $project = "GDAS-T2O";
    my $my_project = "";
 
-   if( $machine ne "wcoss" && $machine ne "cray" ) {
+   if( $machine ne "wcoss" ) {
       $project="export PROJECT=";
    } else {
       print "Please specify the PROJECT setting for job submissions from this package.\n";
@@ -287,7 +275,7 @@
    my $job_queue = "dev_shared";
    my $my_job_queue = "";
 
-   if( $machine eq "theia" ) {
+   if( $machine ne "wcoss" ) {
       $job_queue="export JOB_QUEUE=";
    } else {
       print "Please specify the JOB_QUEUE for job submissions from this package.\n";
