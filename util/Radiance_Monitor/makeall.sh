@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/ksh
 
 #------------------------------------------------------------------
 #  makeall
@@ -7,28 +7,25 @@
 #  data_extract and image_gen subdirectories and places the 
 #  executables into the proper exec directories.
 #
-#  An optional arguments to this script include "clean", "debug",
-#  and "check_prereqs".  Do not use "install" as an optional 
-#  argument -- this script will do that automatically.  
-#  If no argument is included "all" and "install" are assumed.
+#  An optional argument to this script is "clean".  Use this if 
+#  you wish to remove *.o, *.mod, and *.x files in the various src 
+#  directories.  If "clean" is not used, "all" is assumed.
 #------------------------------------------------------------------
-set -ax
 
-mode=${1:-}
-top_level=${PWD}
-echo "top_level = ${top_level}"
+mode=${1:-all}
+
+top_level=`pwd`
 
 machine=`./get_hostname.pl`
 echo "machine = $machine"
 
 #------------------------------
-#  source RadMon_config
+#  set correct version numbers
 #------------------------------
-. ${top_level}/parm/RadMon_config
 . ${top_level}/parm/radmon.ver
 
 
-if [[ ${machine} = "theia" || ${machine} = "wcoss" || ${machine} = "cray" ]]; then
+if [[ ${machine} = "zeus" || ${machine} = "wcoss" ]]; then
    echo Building executables on ${machine}
    echo
 
@@ -36,8 +33,11 @@ if [[ ${machine} = "theia" || ${machine} = "wcoss" || ${machine} = "cray" ]]; th
    #  make data extract executables
    #------------------------------------------------------------------
 
-   module use -a ${HOMEradmon}/modulefiles/${machine}
-   module load RadMonBuild
+   if [[ ${machine} = "wcoss" ]]; then
+      echo loading module command for wcoss
+      . /usrx/local/Modules/default/init/ksh
+      module load ics
+   fi
 
    executables="angle bcoef bcor time"
    echo "Making executables in nwprod/radmon_shared.v${radmon_shared_ver}/sorc:"
@@ -48,26 +48,29 @@ if [[ ${machine} = "theia" || ${machine} = "wcoss" || ${machine} = "cray" ]]; th
          cd ${top_level}/nwprod/radmon_shared.v${radmon_shared_ver}/sorc/verf_rad${var}.fd
       fi
 
-      make ${mode}
-      if [[ $mode = "" ]]; then 
-         make install
+      if [[ ${machine} != "wcoss" ]]; then
+         rm -f Makefile.conf
+         cp -f ${top_level}/parm/Makefile.conf.${machine} Makefile.conf
       fi
 
+      echo make ${var} ${mode}
+      make ${mode}
       echo
 
+      if [[ $mode = all ]]; then
+         cp -f radmon_${var} ${top_level}/nwprod/radmon_shared.v${radmon_shared_ver}/exec/.
+      fi
    done
 
    cd ${top_level}/data_extract/sorc/make_base.fd
+   rm -f Makefile.conf
+   cp -f ${top_level}/parm/Makefile.conf.${machine} Makefile.conf
    make ${mode}  
-   if [[ $mode = "" ]]; then 
-      make install
-   fi
 
    cd ${top_level}/data_extract/sorc/validate_time.fd
+   rm -f Makefile.conf
+   cp -f ${top_level}/parm/Makefile.conf.${machine} Makefile.conf
    make ${mode}  
-   if [[ $mode = "" ]]; then 
-      make install
-   fi
 
 
    #------------------------------------------------------------------
@@ -78,16 +81,13 @@ if [[ ${machine} = "theia" || ${machine} = "wcoss" || ${machine} = "cray" ]]; th
    cd ${top_level}/image_gen/src
    echo "Making image_gen/src:"
    for var in ${executables}; do
+      rm -f Makefile.conf
+      cp -f ${top_level}/parm/Makefile.conf.${machine} Makefile.conf
 
+      echo make ${var} ${mode}
       make -f makefile.${var} ${mode}
-      if [[ $mode = "" ]]; then 
-         make -f makefile.${var} install
-      fi
       echo
    done
-
-   module unload RadMonBuild
-   set +x
 
 else
    echo ${machine} is not supported 

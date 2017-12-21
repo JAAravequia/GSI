@@ -18,6 +18,9 @@
 #            other supporting files into a temporary working directory.
 #
 #
+# Script history log:
+# 2012-02-02  Safford  initial script
+#
 # Usage:  radmon_verf_bcoef.sh PDATE
 #
 #   Input script positional parameters:
@@ -41,15 +44,27 @@
 #                       defaults to current directory
 #     SATYPE            list of satellite/instrument sources
 #                       defaults to none
+#     INISCRIPT         preprocessing script
+#                       defaults to none
+#     LOGSCRIPT         log script
+#                       defaults to none
+#     ERRSCRIPT         error processing script
+#                       defaults to 'eval [[ $err = 0 ]]'
+#     ENDSCRIPT         postprocessing script
+#                       defaults to none
 #     VERBOSE           Verbose flag (YES or NO)
 #                       defaults to NO
 #     LITTLE_ENDIAN     flag for LE machine
 #                       defaults to 0 (big endian)
-#     USE_ANL		use analysis files as inputs in addition to 
-#                         the ges files.  Default is 0 (ges only)
+#
+#   Exported Shell Variables:
+#     err           Last return code
 #
 #   Modules and files referenced:
-#     scripts    : 
+#     scripts    : $INISCRIPT
+#                  $LOGSCRIPT
+#                  $ERRSCRIPT
+#                  $ENDSCRIPT
 #
 #     programs   : $NCP
 #                  $bcoef_exec
@@ -60,7 +75,7 @@
 #
 #     output data: $bcoef_file
 #                  $bcoef_ctl
-#                  $pgmout
+#                  $bcoef_stdout
 #
 # Remarks:
 #
@@ -68,26 +83,28 @@
 #      0 - no problem encountered
 #     >0 - some problem encountered
 #
+#  Control variable resolution priority
+#    1 Command line argument.
+#    2 Environment variable.
+#    3 Inline default.
+#
+# Attributes:
+#   Language: POSIX shell
+#   Machine: IBM SP
 ####################################################################
 #  Command line arguments.
 export PDATE=${1:-${PDATE:?}}
 
-scr=radmon_verf_bcoef.sh
-msg="${scr} HAS STARTED"
-postmsg "$jlogfile" "$msg"
-
-if [[ "$VERBOSE" = "YES" ]]; then
-   set -ax
-fi
-
 # Directories
-FIXgdas=${FIXgdas:-$(pwd)}
+FIXradmon=${FIXradmon:-$(pwd)}
 EXECradmon=${EXECradmon:-$(pwd)}
 TANKverf_rad=${TANKverf_rad:-$(pwd)}
 
 # File names
-pgmout=${pgmout:-${jlogfile}}
-touch $pgmout
+INISCRIPT=${INISCRIPT:-}
+LOGSCRIPT=${LOGSCRIPT:-}
+ERRSCRIPT=${ERRSCRIPT:-}
+ENDSCRIPT=${ENDSCRIPT:-}
 
 # Other variables
 MAKE_CTL=${MAKE_CTL:-1}
@@ -97,9 +114,18 @@ SATYPE=${SATYPE:-}
 VERBOSE=${VERBOSE:-NO}
 LITTLE_ENDIAN=${LITTLE_ENDIAN:-0}
 USE_ANL=${USE_ANL:-0}
-
 err=0
+#bcoef_exec=radmon_bcoef.${RAD_AREA}
 bcoef_exec=radmon_bcoef
+
+if [[ "$VERBOSE" = "YES" ]]; then
+   set -ax
+   echo "$(date) executing $0 $* >&2"
+fi
+################################################################################
+#  Preprocessing
+$INISCRIPT
+$LOGSCRIPT
 
 if [[ $USE_ANL -eq 1 ]]; then
    gesanl="ges anl"
@@ -121,8 +147,6 @@ else
 #--------------------------------------------------------------------
 #   Run program for given time
 
-   export pgm=${bcoef_exec}
-
    iyy=`echo $PDATE | cut -c1-4`
    imm=`echo $PDATE | cut -c5-6`
    idd=`echo $PDATE | cut -c7-8`
@@ -133,9 +157,6 @@ else
 
    for type in ${SATYPE}; do
       for dtype in ${gesanl}; do
-
-      prep_step
-
       ctr=`expr $ctr + 1`
 
          if [[ $dtype == "anl" ]]; then
@@ -145,7 +166,6 @@ else
             bcoef_ctl=bcoef.${ctl_file}
             stdout_file=stdout.${type}_anl
             bcoef_stdout=bcoef.${stdout_file}
-            input_file=${type}_anl
          else
             data_file=${type}.${PDATE}.ieee_d
             bcoef_file=bcoef.${data_file}
@@ -153,17 +173,12 @@ else
             bcoef_ctl=bcoef.${ctl_file}
             stdout_file=stdout.${type}
             bcoef_stdout=bcoef.${stdout_file}
-            input_file=${type}
          fi 
 
-         rm input
+      rm input
 
-         # Check for 0 length data file here and avoid running 
-         # the executable if $data_file doesn't exist or is 0 bytes
-         #
-         if [[ -s $input_file ]]; then
-            nchanl=-999
-            npredr=5
+      nchanl=-999
+      npredr=5
 
 cat << EOF > input
  &INPUT
@@ -183,37 +198,34 @@ cat << EOF > input
   little_endian=${LITTLE_ENDIAN},
  /
 EOF
-            startmsg
-            ./${bcoef_exec} < input >>${pgmout} 2>>errfile
-            export err=$?; err_chk
-            if [[ $? -ne 0 ]]; then
-               fail=`expr $fail + 1`
-            fi
+      $TIMEX ./${bcoef_exec} < input >   ${stdout_file}
+      if [[ $? -ne 0 ]]; then
+          fail=`expr $fail + 1`
+      fi
 
 
 #-------------------------------------------------------------------
 #  move data, control, and stdout files to $TANKverf_rad and compress
 #
 
-            if [[ -s ${data_file} ]]; then
-               mv ${data_file} ${bcoef_file}
-               mv ${bcoef_file} $TANKverf_rad/.
-               ${COMPRESS} -f $TANKverf_rad/${bcoef_file}
-            fi
+      if [[ -s ${data_file} ]]; then
+         mv ${data_file} ${bcoef_file}
+         mv ${bcoef_file} $TANKverf_rad/.
+         ${COMPRESS} -f $TANKverf_rad/${bcoef_file}
+      fi
 
-            if [[ -s ${ctl_file} ]]; then
-               mv ${ctl_file} ${bcoef_ctl}
-               mv ${bcoef_ctl}  ${TANKverf_rad}/.
-               ${COMPRESS} -f ${TANKverf_rad}/${bcoef_ctl}
-            fi
+      if [[ -s ${ctl_file} ]]; then
+         mv ${ctl_file} ${bcoef_ctl}
+         mv ${bcoef_ctl}  ${TANKverf_rad}/.
+         ${COMPRESS} -f ${TANKverf_rad}/${bcoef_ctl}
+      fi
 
-            if [[ -s ${stdout_file} ]]; then
-               mv ${stdout_file} ${bcoef_stdout}
-               mv ${bcoef_stdout}  ${TANKverf_rad}/.
-               ${COMPRESS} -f ${TANKverf_rad}/${bcoef_stdout}
-            fi
+      if [[ -s ${stdout_file} ]]; then
+         mv ${stdout_file} ${bcoef_stdout}
+         mv ${bcoef_stdout}  ${TANKverf_rad}/.
+         ${COMPRESS} -f ${TANKverf_rad}/${bcoef_stdout}
+      fi
 
-         fi # -s $data_file
       done  # dtype in $gesanl loop
    done     # type in $SATYPE loop
 
@@ -225,11 +237,11 @@ fi
 
 ################################################################################
 #  Post processing
+$ENDSCRIPT
+set +x
+
 if [[ "$VERBOSE" = "YES" ]]; then
    echo $(date) EXITING $0 with error code ${err} >&2
 fi
-
-msg="${scr} HAS ENDED"
-postmsg "$jlogfile" "$msg"
 
 exit ${err}
