@@ -22,6 +22,8 @@ function usage {
   echo "              the $TANKverf/stats directory."
   echo "            Sat (optional) restricts the list of satellite sources."
   echo "              No sat means all satellite sources will be included." 
+  echo "            Redirection of log and err files is recommended for "
+  echo "              diagnostic purposes, but not essential"
 }
 
 nargs=$#
@@ -30,7 +32,7 @@ if [[ $nargs -lt 1 && $nargs -gt 2 ]]; then
    exit 1
 fi
 
-RADMON_SUFFIX=$1
+SUFFIX=$1
 
 if [[ $nargs -eq 2 ]]; then
    SATYPE=$2
@@ -93,7 +95,7 @@ BDATE=`$NDATE -720 $EDATE`
 echo EDATE = $EDATE
 echo BDATE = $BDATE
 
-tmpdir=${STMP_USER}/base_${RADMON_SUFFIX}
+tmpdir=${STMP_USER}/base_${SUFFIX}
 rm -rf $tmpdir
 mkdir -p $tmpdir
 cd $tmpdir
@@ -283,9 +285,8 @@ if [[ -e ${TANKverf}/info/${basefile} || -e ${TANKverf}/info/${basefile}.${Z} ]]
    rm -f ${TANKverf}/info/${basefile}*
 fi
 
-#${COMPRESS} ${basefile}
-#$NCP ${basefile}.${Z} ${TANKverf}/info/.
-$NCP ${basefile} ${TANKverf}/info/.
+${COMPRESS} ${basefile}
+$NCP ${basefile}.${Z} ${TANKverf}/info/.
 
 #-------------------------------------------------------------------
 #  Clean up $tmpdir

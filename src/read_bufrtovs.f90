@@ -2,8 +2,7 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
      rmesh,jsatid,gstime,infile,lunout,obstype,&
      nread,ndata,nodata,twind,sis, &
      mype_root,mype_sub,npe_sub,mpi_comm_sub, &
-     llb,lll,nobs, &
-     nrec_start,nrec_start_ears,dval_use)
+     llb,lll)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_bufrtovs                  read bufr tovs 1b data
@@ -108,15 +107,11 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
 !     mpi_comm_sub - sub-communicator for data read
 !     llb
 !     lll
-!     dval_use - logical for using dval
-!     nrec_start - first subset with useful information
-!     nrec_start_ears - first ears subset with useful information
 !
 !   output argument list:
 !     nread    - number of BUFR TOVS 1b observations read
 !     ndata    - number of BUFR TOVS 1b profiles retained for further processing
 !     nodata   - number of BUFR TOVS 1b observations retained for further processing
-!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -144,17 +139,14 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
   use gsi_metguess_mod, only: gsi_metguess_get
   use deter_sfc_mod, only: deter_sfc_fov,deter_sfc
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
-  use mpimod, only: npe
   implicit none
 
 ! Declare passed variables
   character(len=*),intent(in   ) :: infile,obstype,jsatid
   character(len=20),intent(in  ) :: sis
   integer(i_kind) ,intent(in   ) :: mype,lunout,ithin
-  integer(i_kind) ,intent(in   ) :: nrec_start,nrec_start_ears
   integer(i_kind) ,intent(inout) :: isfcalc
   integer(i_kind) ,intent(inout) :: nread
-  integer(i_kind),dimension(npe) ,intent(inout) :: nobs
   integer(i_kind) ,intent(  out) :: ndata,nodata
   real(r_kind)    ,intent(in   ) :: rmesh,gstime,twind
   real(r_kind)    ,intent(inout) :: val_tovs
@@ -163,13 +155,13 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
   integer(i_kind) ,intent(in   ) :: npe_sub
   integer(i_kind) ,intent(in   ) :: mpi_comm_sub
   integer(i_kind) ,intent(in   ) :: lll,llb
-  logical,         intent(in   ) :: dval_use
 
 ! Declare local parameters
 
   character(8),parameter:: fov_flag="crosstrk"
   integer(i_kind),parameter:: n1bhdr=13
   integer(i_kind),parameter:: n2bhdr=4
+  integer(i_kind),parameter:: maxinfo=33
   real(r_kind),parameter:: r360=360.0_r_kind
   real(r_kind),parameter:: tbmin=50.0_r_kind
   real(r_kind),parameter:: tbmax=550.0_r_kind
@@ -182,18 +174,18 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
   character(8) subset
   character(80) hdr1b,hdr2b
 
-  integer(i_kind) ireadsb,ireadmg,irec,next,nrec_startx
+  integer(i_kind) ireadsb,ireadmg,irec,next
   integer(i_kind) i,j,k,ifov,ntest,llll
   integer(i_kind) iret,idate,nchanl,n,idomsfc(1)
   integer(i_kind) ich1,ich2,ich8,ich15,ich16,ich17
-  integer(i_kind) kidsat,instrument,maxinfo
+  integer(i_kind) kidsat,instrument
   integer(i_kind) nmind,itx,nreal,nele,itt,ninstruments
   integer(i_kind) iskip,ichan2,ichan1,ichan15
   integer(i_kind) lnbufr,ksatid,ichan8,isflg,ichan3,ich3,ich4,ich6
   integer(i_kind) ilat,ilon,ifovmod
   integer(i_kind),dimension(5):: idate5
   integer(i_kind) instr,ichan,icw4crtm
-  integer(i_kind) error_status,ier,irecx
+  integer(i_kind) error_status,ier
   integer(i_kind) radedge_min, radedge_max
   integer(i_kind),allocatable,dimension(:)::nrec
   character(len=20),dimension(1):: sensorlist
@@ -225,7 +217,6 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
 !**************************************************************************
 ! Initialize variables
 
-  maxinfo=31
   lnbufr = 15
   disterrmax=zero
   ntest=0
@@ -456,7 +447,6 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
   endif
 
 ! Allocate arrays to hold all data for given satellite
-  if(dval_use) maxinfo=maxinfo+2
   nreal = maxinfo + nstinfo
   nele  = nreal   + nchanl
   hdr1b ='SAID FOVN YEAR MNTH DAYS HOUR MINU SECO CLAT CLON CLATH CLONH HOLS'
@@ -464,18 +454,11 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
   allocate(data_all(nele,itxmax),data1b8(nchanl),data1b4(nchanl),nrec(itxmax))
 
 
-  next=0
   irec=0
 ! Big loop over standard data feed and possible ears data
   do llll=llb,lll
 
 
-     if(llll == 1)then
-        nrec_startx=nrec_start
-     end if
-     if(llll == 2) then
-        nrec_startx=nrec_start_ears
-     end if
 !    Set bufr subset names based on type of data to read
 
 !    Open unit to satellite bufr file
@@ -520,14 +503,12 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
 
    
 !    Loop to read bufr file
-     irecx=0
+     next=0
      read_subset: do while(ireadmg(lnbufr,subset,idate)>=0)
-        irecx=irecx+1
-        if(irecx < nrec_startx) cycle read_subset
         irec=irec+1
         next=next+1
         if(next == npe_sub)next=0
-        if(next/=mype_sub)cycle read_subset
+        if(next/=mype_sub)cycle
         read_loop: do while (ireadsb(lnbufr)==0)
 
 !          Read header record.  (llll=1 is normal feed, 2=EARS data)
@@ -770,7 +751,6 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
                        air_rad(ichan1)*cbias(15,ichan1)
                  ch2 = data1b8(ich2)-ang_rad(ichan2)*cbias(ifov,ichan2)+ &
                        air_rad(ichan2)*cbias(15,ichan2)   
-                 ch15= data1b8(ich15)-ang_rad(ichan15)*cbias(ifov,ichan15)
               end if
               if (isflg == 0 .and. ch1<285.0_r_kind .and. ch2<285.0_r_kind) then
                  cosza = cos(lza)
@@ -901,10 +881,8 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
            data_all(30,itx) = dlon_earth_deg           ! earth relative longitude (deg)
            data_all(31,itx) = dlat_earth_deg           ! earth relative latitude (deg)
 
-           if(dval_use) then
-              data_all(32,itx)= val_tovs
-              data_all(33,itx)= itt
-           end if
+           data_all(32,itx)= val_tovs
+           data_all(33,itx)= itt
 
            if(nst_gsi>0) then
               data_all(maxinfo+1,itx) = tref            ! foundation temperature
@@ -950,16 +928,12 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
            if(data_all(i+nreal,n) > tbmin .and. &
               data_all(i+nreal,n) < tbmax)nodata=nodata+1
         end do
+        itt=nint(data_all(maxinfo,n))
+        super_val(itt)=super_val(itt)+val_tovs
+
      end do
-     if(dval_use .and. assim)then
-        do n=1,ndata
-           itt=nint(data_all(33,n))
-           super_val(itt)=super_val(itt)+val_tovs
-        end do
-     end if
 
 !    Write final set of "best" observations to output file
-     call count_obs(ndata,nele,ilat,ilon,data_all,nobs)
      write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
      write(lunout) ((data_all(k,n),k=1,nele),n=1,ndata)
   end if

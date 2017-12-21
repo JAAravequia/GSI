@@ -57,10 +57,9 @@ subroutine wrwrfnmma_binary(mype)
   use mpeu_util, only: die,getindex
   use control_vectors, only: cvars3d
   use native_endianness, only: byte_swap
-  use gfs_stratosphere, only: use_gfs_stratosphere,nsig_save
+  use gfs_stratosphere, only: use_gfs_stratosphere,nsig_save  
   use gfs_stratosphere, only: eta1_save,aeta1_save,deta1_save 
   use gfs_stratosphere, only: eta2_save,aeta2_save,deta2_save 
-  use gfs_stratosphere, only: revert_to_nmmb,restore_nmmb_gfs
   use mpeu_util, only: die
 
   implicit none
@@ -1079,7 +1078,6 @@ subroutine wrnemsnmma_binary(mype,cold_start)
 !   2014-04-11  zhu     - add cold_start option for the case when the restart file is from the GFS
 !   2014-06-05  carley  - bug fix for writing out cloud analysis variables 
 !   2014-06-27  S.Liu   - detach use_reflectivity from n_actual_clouds
-!   2015-05-12  wu      - write analysis to file "wrf_inout(nhr_assimilation)"
 !
 !   input argument list:
 !     mype     - pe number
@@ -1106,9 +1104,7 @@ subroutine wrnemsnmma_binary(mype,cold_start)
   use mpeu_util, only: die,getindex
   use control_vectors, only: cvars3d
   use gfs_stratosphere, only: use_gfs_stratosphere,nsig_save
-  use gfs_stratosphere, only: revert_to_nmmb,restore_nmmb_gfs
   use mpimod, only: mpi_comm_world,ierror,mpi_rtype,mpi_integer4,mpi_min,mpi_max,mpi_sum
-  use gsi_4dvar, only: nhr_assimilation
 
   implicit none
 
@@ -1133,7 +1129,7 @@ subroutine wrnemsnmma_binary(mype,cold_start)
   logical good_u10,good_v10,good_tshltr,good_qshltr,good_o3mr
 
 ! variables for cloud info
-  integer(i_kind) iret,ier_cloud,n_actual_clouds,istatus,ierr
+  integer(i_kind) iret,ier_cloud,n_actual_clouds,istatus
   real(r_kind) total_ice
   real(r_kind),dimension(lat2,lon2):: work_clwmr,work_fice,work_frain
   real(r_kind),pointer,dimension(:,:,:):: ges_cw  =>NULL()
@@ -1237,13 +1233,13 @@ subroutine wrnemsnmma_binary(mype,cold_start)
      end if	
   end if 
 
-  if(mype==mype_input) write(wrfanl,'("wrf_inout",i2.2)') nhr_assimilation
+  if(mype==mype_input) wrfanl = 'wrf_inout'
 
 !   update date info so start time is analysis time, and forecast time = 0
   call gsi_nemsio_update(wrfanl,'WRNEMSNMMA_BINARY:  problem with update of wrfanl',mype,mype_input)
 
 !   open output file for read-write so we can update fields.
-  call gsi_nemsio_open(wrfanl,'rdwr','WRNEMSNMMA_BINARY:  problem with wrfanl',mype,mype_input,ierr)
+  call gsi_nemsio_open(wrfanl,'rdwr','WRNEMSNMMA_BINARY:  problem with wrfanl',mype,mype_input)
 
   do kr=1,nsig_write
 
@@ -1703,10 +1699,9 @@ subroutine wrwrfnmma_netcdf(mype)
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use mpeu_util, only: die,getindex
   use control_vectors, only: cvars3d
-  use gfs_stratosphere, only: use_gfs_stratosphere,nsig_save
+  use gfs_stratosphere, only: use_gfs_stratosphere,nsig_save  
   use gfs_stratosphere, only: eta1_save,aeta1_save,deta1_save
   use gfs_stratosphere, only: eta2_save,aeta2_save,deta2_save
-  use gfs_stratosphere, only: revert_to_nmmb,restore_nmmb_gfs
 
   implicit none
 

@@ -32,8 +32,6 @@ fi
 this_file=`basename $0`
 this_dir=`dirname $0`
 compress="/usrx/local/bin/pigz -f"
-no_diag_rpt=0
-no_error_rpt=0
 
 export SUFFIX=$1
 export DATE=$2
@@ -112,9 +110,9 @@ next_cyc=`echo $next|cut -c9-10`
 echo prev_day, prev_cyc = $prev_day, $prev_cyc
 echo next_day, next_cyc = $next_day, $next_cyc
 
-DATA=${DATA:-/com2/verf/prod}
-DATDIR=${DATDIR:-${DATA}/radmon.${day}}
-LOGDIR=${LOGDIR:-/com2/output/prod}
+
+DATDIR=${DATDIR:-/com/verf/prod/radmon.${day}}
+
 test_dir=${TANKverf}/radmon.${day}
 
 if [[ ! -d ${test_dir} ]]; then
@@ -122,15 +120,11 @@ if [[ ! -d ${test_dir} ]]; then
 fi
 cd ${test_dir}
 
-#if [[ ! -s gdas_radmon_satype.txt  ]]; then
-if [[ ! -s ${SUFFIX}_radmon_satype.txt  ]]; then
-#   if [[ -s ${TANKverf}/radmon.${prev_day}/gdas_radmon_satype.txt ]]; then
-   if [[ -s ${TANKverf}/radmon.${prev_day}/${SUFFIX}.txt ]]; then
-#      $NCP ${TANKverf}/radmon.${prev_day}/gdas_radmon_satype.txt .
-      $NCP ${TANKverf}/radmon.${prev_day}/${SUFFIX}.txt .
+if [[ ! -s gdas_radmon_satype.txt  ]]; then
+   if [[ -s ${TANKverf}/radmon.${prev_day}/gdas_radmon_satype.txt ]]; then
+      $NCP ${TANKverf}/radmon.${prev_day}/gdas_radmon_satype.txt .
    else
-#      echo WARNING:  unable to locate gdas_radmon_satype.txt in ${TANKverf}/radmon.${prev_day}
-      echo WARNING:  unable to locate ${SUFFIX}_radmon_satype.txt in ${TANKverf}/radmon.${prev_day}
+      echo WARNING:  unable to locate gdas_radmon_satype.txt in ${TANKverf}/radmon.${prev_day}
    fi 
 fi
 
@@ -210,7 +204,7 @@ if [[ $exit_value == 0 ]]; then
 
  
    #--------------------------------------------------------------------
-   #  Copy over the ${LOGDIR}/YYYYMMDD/gdas_verfrad_HH.o* log 
+   #  Copy over the /com/output/prod/YYYYMMDD/gdas_verfrad_HH.o* log 
    #   Note that the 18z cycle log file is found in the next day's 
    #   directory.
    #    1.  Confirm that any entries in the Diagnostic file report 
@@ -225,9 +219,9 @@ if [[ $exit_value == 0 ]]; then
    tmp_log=tmp_${PDATE}.log
    new_log=new_opr_${PDATE}.log
    if [[ $cycle = 18 ]]; then 
-      $NCP ${LOGDIR}/${next_day}/gdas_verfrad_${cycle}.o* ${opr_log}
+      $NCP /com/output/prod/${next_day}/gdas_verfrad_${cycle}.o* ${opr_log}
    else
-     $NCP ${LOGDIR}/${day}/gdas_verfrad_${cycle}.o* ${opr_log}
+     $NCP /com/output/prod/${day}/gdas_verfrad_${cycle}.o* ${opr_log}
    fi
 
    #--------------------------------------------------------------------
@@ -254,8 +248,7 @@ if [[ $exit_value == 0 ]]; then
          if [[ $len -gt 0 ]]; then
             sat=`echo $new_sat | gawk '{print $1}'`
          
-#            test_satype=`grep $sat gdas_radmon_satype.txt`
-            test_satype=`grep $sat ${SUFFIX}_radmon_satype.txt`
+            test_satype=`grep $sat gdas_radmon_satype.txt`
             len_test=`expr length "$test_satype"`
             if [[ $len_test -gt 0 ]]; then
                echo $line >> $new_diag
@@ -287,8 +280,6 @@ if [[ $exit_value == 0 ]]; then
       mv -f $opr_log opr_log.bu 
       $NCP $tmp_log $opr_log 
 
-   else
-      no_diag_rpt=1 
    fi
 
 
@@ -308,21 +299,16 @@ if [[ $exit_value == 0 ]]; then
       #  $outfile
       #------------------------------------------------------------------------
       if [[ -s $outfile ]]; then
-         echo "OUTFILE -s $outfile is TRUE"
          opr_log_end=`expr $opr_log_end + 1`
          gawk "NR>=$opr_log_start && NR<=$opr_log_end" ${opr_log} >> $new_log
          cat $outfile >> $new_log
          echo "End Cycle Data Integrity Report" >> $new_log
       else
-         echo "OUTFILE -s $outfile is FALSE"
          opr_log_end=`expr $opr_log_end - 15`
          gawk "NR>=$opr_log_start && NR<=$opr_log_end" ${opr_log} >> $new_log
-#         echo "NO ERROR REPORT" >> $new_log
-         no_error_rpt=1 
       fi
 
    else
-      
       if [[ -s $outfile ]]; then
          rm -f report.txt
          cp $opr_log $new_log
@@ -357,13 +343,6 @@ if [[ $exit_value == 0 ]]; then
       else
          mv $opr_log $new_log
       fi
-   fi
-
-   if [[ $no_diag_rpt -eq 1 ]]; then
-      echo "NO DIAG REPORT" >> $new_log
-   fi
-   if [[ $no_error_rpt -eq 1 ]]; then
-      echo "NO ERROR REPORT" >> $new_log
    fi
 
    $NCP ./$new_log ${LOGdir}/data_extract.${day}.${cycle}.log

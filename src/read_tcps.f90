@@ -1,4 +1,4 @@
-subroutine read_tcps(nread,ndata,nodata,infile,obstype,lunout,sis,nobs)
+subroutine read_tcps(nread,ndata,nodata,infile,obstype,lunout,sis)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_tcps                   read tcvitals ascii file
@@ -22,7 +22,6 @@ subroutine read_tcps(nread,ndata,nodata,infile,obstype,lunout,sis,nobs)
 !   output argument list:
 !     nread    - number of bogus data read
 !     ndata    - number of bogus data retained for further processing
-!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -37,7 +36,6 @@ subroutine read_tcps(nread,ndata,nodata,infile,obstype,lunout,sis,nobs)
   use tcv_mod, only: get_storminfo,numstorms,stormlat,stormlon,stormpsmin,stormdattim,&
        centerid,stormid,destroy_tcv_card,tcp_refps,tcp_width,tcp_ermin,tcp_ermax
   use gsi_4dvar, only: time_4dvar
-  use mpimod, only:npe
   implicit none
 
 ! Declare passed variables
@@ -45,7 +43,6 @@ subroutine read_tcps(nread,ndata,nodata,infile,obstype,lunout,sis,nobs)
   character(20)  ,intent(in   ) :: sis
   integer(i_kind),intent(in   ) :: lunout
   integer(i_kind),intent(inout) :: nread,ndata,nodata
-  integer(i_kind),dimension(npe),intent(inout) :: nobs
 
 ! Declare local parameters
   real(r_kind),parameter:: r360=360.0_r_kind
@@ -174,8 +171,6 @@ subroutine read_tcps(nread,ndata,nodata,infile,obstype,lunout,sis,nobs)
   write(6,*) 'READ_TCPS: # out of domain =', noutside
 
 ! Write observations to scratch file
-
-  call count_obs(ndata,maxdat,ilat,ilon,cdata_all,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
   write(lunout) ((cdata_all(k,i),k=1,maxdat),i=1,ndata)
 

@@ -1,5 +1,5 @@
   subroutine read_pcp(nread,ndata,nodata,gstime,infile,lunout,obstype, &
-              twind,sis,nobs)
+              twind,sis)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_pcp                           read pcp rate data
@@ -56,7 +56,6 @@
 !     nread    - number of precipitation rate observations read
 !     ndata    - number of precipitation rate profiles retained for further processing
 !     nodata   - number of precipitation rate observations retained for further processing
-!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -69,7 +68,6 @@
   use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen
   use deter_sfc_mod, only: deter_sfc_type
   use obsmod, only: bmiss
-  use mpimod, only: npe
 
   implicit none
 
@@ -78,7 +76,6 @@
   character(len=20),intent(in  ) :: sis
   integer(i_kind) ,intent(in   ) :: lunout
   integer(i_kind) ,intent(inout) :: nread
-  integer(i_kind),dimension(npe) ,intent(inout) :: nobs
   integer(i_kind) ,intent(inout) :: ndata,nodata
   real(r_kind)    ,intent(in   ) :: gstime
   real(r_kind)    ,intent(in   ) :: twind
@@ -157,6 +154,7 @@
 ! Write header record to pcp obs output file
   ilon=3
   ilat=4
+  write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
 
   allocate(pcpdata(ndatout,maxobs))
   pcpdata=zero
@@ -339,8 +337,6 @@
 
 
 ! Write retained data to local file
-  call count_obs(ndata,ndatout,ilat,ilon,pcpdata,nobs)
-  write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
   write(lunout) ((pcpdata(k,i),k=1,ndatout),i=1,ndata)
   deallocate(pcpdata)
 

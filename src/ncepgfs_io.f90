@@ -20,21 +20,17 @@ module ncepgfs_io
 !                        (2) add write_ens_sfc_nst, write_ens_dsfct
 !   2014-12-03 derber - modify for changes to general_read/write_gfsatm
 !   2014-12-03 derber - modify read_sfc routines to minimize communications/IO
-!   2015-03-13  li     - introduce zsea1 & zsea2 enable to use vertical mean
-!                        temperature based on NSST T-Profile. And move Tf analysis increment
-!                        interpolation (analysis grid to ensemble grid) to re-center step
-!   2015-04-25  li     - modify read_nst, read_gfsnst routines to minimize communications/IO
-
 !
 ! Subroutines Included:
 !   sub read_gfs          - driver to read ncep gfs atmospheric ("sigma") files
 !   sub read_gfssfc       - read ncep gfs surface file, scatter on grid to 
 !                           analysis subdomains
+!   sub sfc_interpolate   - interpolate from gfs atm grid to gfs sfc grid
 !   sub write_gfs         - driver to write ncep gfs atmospheric and surface
 !                           analysis files
 !   sub write_gfssfc      - gather/write on grid ncep surface analysis file
-!   sub read_nst          - driver to read ncep nst file
-!   sub read_gfsnst       - read ncep nst filea from one task and then broadcast to others
+!   sub read_gfsnst       - read ncep nst file, scatter on grid to
+!                           analysis subdomains
 !   sub write_gfs_sfc_nst - gather/write on grid ncep surface & nst analysis file
 !   sub write_ens_sfc_nst - gather/write on ensemble grid ncep surface & nst analysis file
 !   sub write_ens_dsfct   - gather/write on ensemble grid ncep Ts analysis increment
@@ -47,7 +43,7 @@ module ncepgfs_io
 !   machine:
 !
 !$$$ end documentation block
-  use sigio_module, only: sigio_head
+
   implicit none
 
   private
@@ -55,16 +51,12 @@ module ncepgfs_io
   public read_gfs
   public read_gfs_chem
   public read_gfssfc
-  public read_nst
   public read_gfsnst
   public write_gfs
   public write_gfs_sfc_nst
+  public sfc_interpolate
   public sigio_cnvtdv8
-  public tran_gfssfc
-  public sighead 
   public write_ghg_grid
-
-  type(sigio_head) :: sighead 
 
 contains
 
@@ -101,17 +93,10 @@ contains
 !$$$ end documentation block
 
     use kinds, only: i_kind,r_kind
-    use gridmod, only: hires_b,sp_a,grd_a,jcap_b,nlon,nlat,lat2,lon2,nsig,regional
+    use gridmod, only: hires_b,sp_a,grd_a,jcap_b,nlon,nlat,lat2,lon2,nsig
     use guess_grids, only: ifilesig,nfldsig 
     use gsi_metguess_mod, only: gsi_metguess_bundle
     use gsi_bundlemod, only: gsi_bundlegetpointer
-    use gsi_bundlemod, only: gsi_bundlecreate
-    use gsi_bundlemod, only: gsi_grid
-    use gsi_bundlemod, only: gsi_gridcreate
-    use gsi_bundlemod, only: gsi_bundle
-    use gsi_bundlemod, only: gsi_bundledestroy
-    use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sub2grid_destroy_info
-    use mpimod, only: npe
     use mpeu_util, only: die
     use cloud_efr_mod, only: cloud_calc_gfs,set_cloud_lower_bound    
     use gsi_io, only: mype_io
@@ -122,22 +107,20 @@ contains
     integer(i_kind),intent(in   ) :: mype
 
     character(24) filename
-    logical:: l_cld_derived,zflag,inithead
-    integer(i_kind):: it,nlon_b,num_fields,inner_vars
+    logical:: l_cld_derived,zflag
+    integer(i_kind):: it,nlon_b
     integer(i_kind):: iret,iret_ql,iret_qi,istatus 
 
-    type(gsi_bundle) :: atm_bundle
-    type(gsi_grid)   :: atm_grid
-    integer(i_kind),parameter :: n2d=2
-    integer(i_kind),parameter :: n3d=8
-    character(len=4), parameter :: vars2d(n2d) = (/ 'z   ', 'ps  ' /)
-    character(len=4), parameter :: vars3d(n3d) = (/ 'u   ', 'v   ', &
-                                                    'vor ', 'div ', &
-                                                    'tv  ', 'q   ', &
-                                                    'cw  ', 'oz  ' /)
-
-    real(r_kind),pointer,dimension(:,:):: ptr2d   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ptr3d =>NULL()
+    real(r_kind),dimension(lat2,lon2  ):: aux_ps
+    real(r_kind),dimension(lat2,lon2  ):: aux_z
+    real(r_kind),dimension(lat2,lon2,nsig):: aux_u
+    real(r_kind),dimension(lat2,lon2,nsig):: aux_v
+    real(r_kind),dimension(lat2,lon2,nsig):: aux_vor
+    real(r_kind),dimension(lat2,lon2,nsig):: aux_div
+    real(r_kind),dimension(lat2,lon2,nsig):: aux_tv
+    real(r_kind),dimension(lat2,lon2,nsig):: aux_q
+    real(r_kind),dimension(lat2,lon2,nsig):: aux_oz
+    real(r_kind),dimension(lat2,lon2,nsig):: aux_cwmr
 
     real(r_kind),pointer,dimension(:,:  ):: ges_ps_it   => NULL()
     real(r_kind),pointer,dimension(:,:  ):: ges_z_it    => NULL()
@@ -153,7 +136,6 @@ contains
     real(r_kind),pointer,dimension(:,:,:):: ges_qi_it   => NULL()
 
     type(spec_vars):: sp_b
-    type(sub2grid_info) :: grd_t
 
 
 !   If needed, initialize for hires_b transforms
@@ -166,22 +148,7 @@ contains
             sp_b%jcap,sp_b%imax,sp_b%jmax
     endif
 
-    inner_vars=1
-    num_fields=min(8*grd_a%nsig+2,npe)
-!  Create temporary communication information fore read routines
-    call general_sub2grid_create_info(grd_t,inner_vars,grd_a%nlat,grd_a%nlon, &
-          grd_a%nsig,num_fields,regional)
-
-!   Allocate bundle used for reading members
-    call gsi_gridcreate(atm_grid,lat2,lon2,nsig)
-    call gsi_bundlecreate(atm_bundle,atm_grid,'aux-atm-read',istatus,names2d=vars2d,names3d=vars3d)
-    if(istatus/=0) then
-      write(6,*)' read_gfs: trouble creating atm_bundle'
-      call stop2(999)
-    endif
-
     zflag=.true.
-    inithead=.true.
     do it=1,nfldsig
 
        write(filename,100) ifilesig(it)
@@ -191,19 +158,24 @@ contains
 !         If hires_b, spectral to grid transform for background
 !         uses double FFT.   Need to pass in sp_a and sp_b
 
-          call general_read_gfsatm(grd_t,sp_a,sp_b,filename,mype,.true.,.true.,zflag, &
-               atm_bundle,&
-               inithead,iret)
+          call general_read_gfsatm(grd_a,sp_a,sp_b,filename,mype,.true.,.true.,zflag, &
+               aux_z,aux_ps,&
+               aux_vor,aux_div,&
+               aux_u,aux_v,&
+               aux_tv,aux_q,&
+               aux_cwmr,aux_oz,iret)
 
        else
 
 !         Otherwise, use standard transform.  Use sp_a in place of sp_b.
 
-          call general_read_gfsatm(grd_t,sp_a,sp_a,filename,mype,.true.,.true.,zflag, &
-               atm_bundle,&
-               inithead,iret)
+          call general_read_gfsatm(grd_a,sp_a,sp_a,filename,mype,.true.,.true.,zflag, &
+               aux_z,aux_ps,&
+               aux_vor,aux_div,&
+               aux_u,aux_v,&
+               aux_tv,aux_q,&
+               aux_cwmr,aux_oz,iret)
        endif
-       inithead=.false.
        zflag=.false.
 
 !      Set values to actual MetGuess fields
@@ -223,9 +195,6 @@ contains
        end if
 
     end do
-    call gsi_bundledestroy(atm_bundle,istatus)
-
-    call general_sub2grid_destroy_info(grd_t)
 
     if (hires_b) call general_destroy_spec_vars(sp_b)
 
@@ -235,56 +204,26 @@ contains
 
   subroutine set_guess_
 
-  call gsi_bundlegetpointer (atm_bundle,'ps',ptr2d,istatus) 
-  if (istatus==0) then
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ps',ges_ps_it  ,istatus) 
-     if(istatus==0) ges_ps_it = ptr2d
-  endif
-  call gsi_bundlegetpointer (atm_bundle,'z',ptr2d,istatus) 
-  if (istatus==0) then
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'z' ,ges_z_it   ,istatus) 
-     if(istatus==0) ges_z_it = ptr2d
-  endif
-  call gsi_bundlegetpointer (atm_bundle,'u',ptr3d,istatus) 
-  if (istatus==0) then
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'u' ,ges_u_it   ,istatus) 
-     if(istatus==0) ges_u_it = ptr3d
-  endif
-  call gsi_bundlegetpointer (atm_bundle,'v',ptr3d,istatus) 
-  if (istatus==0) then
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'v' ,ges_v_it   ,istatus) 
-     if(istatus==0) ges_v_it = ptr3d
-  endif
-  call gsi_bundlegetpointer (atm_bundle,'vor',ptr3d,istatus) 
-  if (istatus==0) then
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'vor',ges_vor_it,istatus) 
-     if(istatus==0) ges_vor_it = ptr3d
-  endif
-  call gsi_bundlegetpointer (atm_bundle,'div',ptr3d,istatus) 
-  if (istatus==0) then
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'div',ges_div_it,istatus) 
-     if(istatus==0) ges_div_it = ptr3d
-  endif
-  call gsi_bundlegetpointer (atm_bundle,'tv',ptr3d,istatus) 
-  if (istatus==0) then
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'tv',ges_tv_it  ,istatus) 
-     if(istatus==0) ges_tv_it = ptr3d
-  endif
-  call gsi_bundlegetpointer (atm_bundle,'q',ptr3d,istatus) 
-  if (istatus==0) then
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'q' ,ges_q_it   ,istatus) 
-     if(istatus==0) ges_q_it = ptr3d
-  endif
-  call gsi_bundlegetpointer (atm_bundle,'oz',ptr3d,istatus) 
-  if (istatus==0) then
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'oz',ges_oz_it  ,istatus) 
-     if(istatus==0) ges_oz_it = ptr3d
-  endif
-  call gsi_bundlegetpointer (atm_bundle,'cw',ptr3d,istatus) 
-  if (istatus==0) then
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ges_cwmr_it,istatus) 
-     if(istatus==0) ges_cwmr_it = ptr3d
-  endif
+  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ps',ges_ps_it  ,istatus) 
+  if(istatus==0) ges_ps_it = aux_ps
+  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'z' ,ges_z_it   ,istatus) 
+  if(istatus==0) ges_z_it = aux_z
+  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'u' ,ges_u_it   ,istatus) 
+  if(istatus==0) ges_u_it = aux_u
+  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'v' ,ges_v_it   ,istatus) 
+  if(istatus==0) ges_v_it = aux_v
+  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'vor',ges_vor_it,istatus) 
+  if(istatus==0) ges_vor_it = aux_vor
+  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'div',ges_div_it,istatus) 
+  if(istatus==0) ges_div_it = aux_div
+  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'tv',ges_tv_it  ,istatus) 
+  if(istatus==0) ges_tv_it = aux_tv
+  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'q' ,ges_q_it   ,istatus) 
+  if(istatus==0) ges_q_it = aux_q
+  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'oz',ges_oz_it  ,istatus) 
+  if(istatus==0) ges_oz_it = aux_oz
+  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ges_cwmr_it,istatus) 
+  if(istatus==0) ges_cwmr_it = aux_cwmr
   call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql_it,  iret_ql) 
   call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi_it,  iret_qi)           
   if (iret_ql/=0) then 
@@ -298,7 +237,7 @@ contains
 
   end subroutine read_gfs
 
-  subroutine read_gfs_chem (iyear, month,idd, it )
+  subroutine read_gfs_chem (iyear, month,idd )
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    read_gfs_chem
@@ -322,10 +261,6 @@ contains
 !   2011-05-24  yang    - add idd for time interpolation of co2 field
 !   2011-06-29  todling - no explict reference to internal bundle arrays
 !   2013-11-08  todling - revisit check for present of GHG in chem-bundle
-!   2016-01-12  todling - allow for full Co2 field to be used when specified by user
-!                         (should be extra option in ncepgfs_ghg)
-!                       - pass time index (it) as optional arg for when routine
-!                         called sequentially in time
 !
 !   input argument list:
 !
@@ -354,14 +289,12 @@ contains
     integer(i_kind), intent(in):: iyear
     integer(i_kind), intent(in):: month
     integer(i_kind), intent(in):: idd
-    integer(i_kind), intent(in), optional:: it
 
 !   Declare local variables
     character(len=*),parameter :: myname='read_gfs_chem'
-    integer(i_kind)            :: i,j,k,n,it_,ier
+    integer(i_kind)            :: i,j,n,ier
     integer(i_kind)            :: ico24crtm,ich44crtm,in2o4crtm,ico4crtm
     character(len=3) :: char_ghg
-    real(r_kind),allocatable,dimension(:) :: avefld
     real(r_kind),dimension(lat2):: xlats
     real(r_kind),pointer,dimension(:,:,:)::p_co2=>NULL()
     real(r_kind),pointer,dimension(:,:,:)::p_ch4=>NULL()
@@ -374,10 +307,6 @@ contains
 
     if(.not.associated(gsi_chemguess_bundle)) return
 
-    it_=1
-    if (present(it)) then
-       it_=it
-    endif
 !   Get subdomain latitude array
     j = mype + 1
     do i = 1, lat2
@@ -388,32 +317,18 @@ contains
 !!      WILL CHANGE THE CODE FOLLOWING WHAT I DID IN crtm_interface.f90            !!!!!!
 
 ! check whether CO2 exist
-    call gsi_bundlegetpointer(gsi_chemguess_bundle(it_),'co2',p_co2,ier)
+    call gsi_bundlegetpointer(gsi_chemguess_bundle(1),'co2',p_co2,ier)
     if (associated(p_co2)) then
        call gsi_chemguess_get ( 'i4crtm::co2', ico24crtm, ier )
        if (ico24crtm >= 0 ) then
-          if (ico24crtm<=2) then
-             call read_gfsco2 (iyear,month,idd,ico24crtm,xlats,&
-                               lat2,lon2,nsig,mype,  &
-                               p_co2 )
+          call read_gfsco2 (iyear,month,idd,ico24crtm,xlats,&
+                          lat2,lon2,nsig,mype,  &
+                          p_co2 )
 ! Approximation: assign three time slots (nfldsig) of ghg with same values
-             if (.not.present(it)) then
-                do n=2,nfldsig
-                   call gsi_bundlegetpointer(gsi_chemguess_bundle(n),'co2',ptr3d_co2,ier)
-                   ptr3d_co2 = p_co2
-                enddo
-             endif
-          else
-             allocate(avefld(size(p_co2,3)))
-             call glbave(p_co2,avefld)
-             if (mype==0) then
-                write(6,'(a)') 'Mean Co2'
-                do k=1,nsig
-                   write(6,'(1p,(e10.3,1x))') avefld(k)
-                enddo
-             endif
-             deallocate(avefld)
-          endif
+          do n=2,nfldsig
+             call gsi_bundlegetpointer(gsi_chemguess_bundle(n),'co2',ptr3d_co2,ier)
+             ptr3d_co2 = p_co2
+          enddo
           char_ghg='co2'
 ! take comment out for printing out the interpolated tracer gas fields.
 !        call write_ghg_grid (ptr3d_co2,char_ghg,mype)
@@ -421,7 +336,7 @@ contains
     endif ! <co2>
 
 ! check whether CH4 data exist
-    call gsi_bundlegetpointer(gsi_chemguess_bundle(it_),'ch4',p_ch4,ier)
+    call gsi_bundlegetpointer(gsi_chemguess_bundle(1),'ch4',p_ch4,ier)
     if (associated(p_ch4)) then
        call gsi_chemguess_get ( 'i4crtm::ch4', ich44crtm, ier )
        if (ich44crtm > 0 ) then
@@ -429,19 +344,17 @@ contains
           call read_ch4n2oco (iyear,month,idd,char_ghg,xlats,&
                           lat2,lon2,nsig,mype,  &
                           p_ch4 )
-          if (.not.present(it))then
-             do n=2,nfldsig
-                call gsi_bundlegetpointer(gsi_chemguess_bundle(n),'ch4',ptr3d_ch4,ier)
-                ptr3d_ch4 = p_ch4
-             enddo
-          endif
+          do n=2,nfldsig
+             call gsi_bundlegetpointer(gsi_chemguess_bundle(n),'ch4',ptr3d_ch4,ier)
+             ptr3d_ch4 = p_ch4
+          enddo
 ! take comment out for printing out the interpolated tracer gas fields.
 !         call write_ghg_grid (ptr3d_ch4,char_ghg,mype)
        endif
     endif ! <ch4>
 
 ! check whether N2O data exist
-    call gsi_bundlegetpointer(gsi_chemguess_bundle(it_),'n2o',p_n2o,ier)
+    call gsi_bundlegetpointer(gsi_chemguess_bundle(1),'n2o',p_n2o,ier)
     if (associated(p_n2o)) then
        call gsi_chemguess_get ( 'i4crtm::n2o', in2o4crtm, ier )
        if (in2o4crtm > 0 ) then
@@ -449,19 +362,17 @@ contains
           call read_ch4n2oco (iyear,month,idd,char_ghg,xlats,&
                           lat2,lon2,nsig,mype,  &
                           p_n2o )
-          if (.not.present(it))then
-             do n=2,nfldsig
-                call gsi_bundlegetpointer(gsi_chemguess_bundle(n),'n2o',ptr3d_n2o,ier)
-                ptr3d_n2o = p_n2o
-             enddo
-          endif
+          do n=2,nfldsig
+             call gsi_bundlegetpointer(gsi_chemguess_bundle(n),'n2o',ptr3d_n2o,ier)
+             ptr3d_n2o = p_n2o
+          enddo
 ! take comment out for printing out the interpolated tracer gas fields.
 !        call write_ghg_grid (ptr3d_n2o,char_ghg,mype)
        endif
     endif ! <n2o>
 
 ! check whether CO data exist
-    call gsi_bundlegetpointer(gsi_chemguess_bundle(it_),'co',p_co,ier)
+    call gsi_bundlegetpointer(gsi_chemguess_bundle(1),'co',p_co,ier)
     if (associated(p_co)) then
        call gsi_chemguess_get ( 'i4crtm::co', ico4crtm, ier )
        if (ico4crtm > 0 ) then
@@ -469,12 +380,10 @@ contains
           call read_ch4n2oco ( iyear,month,idd,char_ghg,xlats,&
                           lat2,lon2,nsig,mype,  &
                           p_co )
-          if (.not.present(it)) then
-             do n=2,nfldsig
-                call gsi_bundlegetpointer(gsi_chemguess_bundle(n),'co',ptr3d_co,ier)
-                ptr3d_co = p_co
-             enddo
-          endif
+          do n=2,nfldsig
+             call gsi_bundlegetpointer(gsi_chemguess_bundle(n),'co',ptr3d_co,ier)
+             ptr3d_co = p_co
+          enddo
 ! take comment out for printing out the interpolated tracer gas fields.
 !        call write_ghg_grid (ptr3d_co,char_ghg,mype)
        endif
@@ -557,8 +466,8 @@ end subroutine write_ghg_grid
 !   2012-01-24  whitaker - create routine
 !
 !   input argument list:
-!    lunges             - unit number to use for IO
-!    filename           - gfs surface file to read
+!     lunges             - unit number to use for IO
+!     filename           - gfs surface file to read
 !
 !   output argument list:
 !
@@ -573,17 +482,17 @@ end subroutine write_ghg_grid
     use kinds, only: i_kind,r_single,r_kind
     use gridmod, only: nlat_sfc,nlon_sfc
     use guess_grids, only: nfldsfc,ifilesfc
-    integer(i_kind), dimension(nlat_sfc,nlon_sfc),intent(  out) :: isli
-    real(r_single),  dimension(nlat_sfc,nlon_sfc),intent(  out) :: &
+    integer(i_kind),dimension(nlat_sfc,nlon_sfc),intent(  out) :: isli
+    real(r_kind)   ,dimension(nlat_sfc,nlon_sfc),intent(  out) :: &
          veg_type,soil_type,terrain
-    real(r_single),  dimension(nlat_sfc,nlon_sfc,nfldsfc),intent(  out) ::  &
+    real(r_kind)   ,dimension(nlat_sfc,nlon_sfc,nfldsfc),intent(  out) ::  &
          fact10,sfct,sno,veg_frac,soil_temp,soil_moi,sfc_rough
     logical,                                    intent(in   ) :: use_sfc_any
     integer(i_kind) :: latb,lonb
     integer(i_kind) :: iret,n,i,j
     type(sfcio_head) :: sfc_head
     type(sfcio_data) :: sfc_data
-    real(r_single),allocatable,dimension(:,:):: outtmp
+    real(r_kind),allocatable,dimension(:,:):: outtmp
     integer(i_kind) :: nsfc,it
     character(24) :: filename
 !   Declare local parameters
@@ -677,7 +586,7 @@ end subroutine write_ghg_grid
        end do
 !   Print date/time stamp
        write(6,700) latb,lonb,sfc_head%fhour,sfc_head%idate
-700    format('READ_SFC:  ges read/scatter, nlat,nlon=',&
+700    format('READ_GFSSFC:  ges read/scatter, nlat,nlon=',&
             2i6,', hour=',f10.1,', idate=',4i5)
        call sfcio_axdata(sfc_data,iret)
        call sfcio_sclose(lunges,iret)
@@ -733,18 +642,18 @@ end subroutine write_ghg_grid
 !$$$
     use kinds, only: r_kind,i_kind,r_single
     use gridmod, only: nlat_sfc,nlon_sfc
-    use guess_grids, only: nfldsfc,sfcmod_mm5,sfcmod_gfs
-    use mpimod, only: mpi_itype,mpi_rtype4,mpi_comm_world
+    use guess_grids, only: nfldsfc
+    use mpimod, only: mpi_itype,mpi_rtype,mpi_comm_world
     use constants, only: zero
     implicit none
 
 !   Declare passed variables
     integer(i_kind)                      ,intent(in   ) :: iope
     integer(i_kind)                      ,intent(in   ) :: mype
-    integer(i_kind), dimension(nlat_sfc,nlon_sfc),intent(  out) :: isli
-    real(r_single),  dimension(nlat_sfc,nlon_sfc),intent(  out) :: &
+    integer(i_kind),dimension(nlat_sfc,nlon_sfc),intent(  out) :: isli
+    real(r_kind)   ,dimension(nlat_sfc,nlon_sfc),intent(  out) :: &
          veg_type,soil_type,terrain
-    real(r_single),  dimension(nlat_sfc,nlon_sfc,nfldsfc),intent(  out) :: &
+    real(r_kind)   ,dimension(nlat_sfc,nlon_sfc,nfldsfc),intent(  out) :: &
          fact10,sfct,sno,veg_frac,soil_temp,soil_moi,sfc_rough
     logical                              ,intent(in   ) :: use_sfc_any
 
@@ -764,223 +673,22 @@ end subroutine write_ghg_grid
     npts=nlat_sfc*nlon_sfc
     nptsall=npts*nfldsfc
 
-    call mpi_bcast(sfct,      nptsall,mpi_rtype4,iope,mpi_comm_world,iret)
-    call mpi_bcast(fact10,    nptsall,mpi_rtype4,iope,mpi_comm_world,iret)
-    call mpi_bcast(sno,       nptsall,mpi_rtype4,iope,mpi_comm_world,iret)
-    if(sfcmod_mm5 .or. sfcmod_gfs)then
-    call mpi_bcast(sfc_rough, nptsall,mpi_rtype4,iope,mpi_comm_world,iret)
-    else
-       sfc_rough = zero
-    end if
-    call mpi_bcast(terrain,   npts,   mpi_rtype4,iope,mpi_comm_world,iret)
-    call mpi_bcast(isli,      npts,   mpi_itype,iope,mpi_comm_world,iret)
+    call mpi_bcast(sfct,nptsall,mpi_rtype,iope,mpi_comm_world,iret)
+    call mpi_bcast(fact10,nptsall,mpi_rtype,iope,mpi_comm_world,iret)
+    call mpi_bcast(sno,nptsall,mpi_rtype,iope,mpi_comm_world,iret)
+    call mpi_bcast(sfc_rough,nptsall,mpi_rtype,iope,mpi_comm_world,iret)
+    call mpi_bcast(terrain,npts,mpi_rtype,iope,mpi_comm_world,iret)
+    call mpi_bcast(isli,npts,mpi_itype,iope,mpi_comm_world,iret)
     if(use_sfc_any)then
-       call mpi_bcast(veg_frac, nptsall,mpi_rtype4,iope,mpi_comm_world,iret)
-       call mpi_bcast(soil_temp,nptsall,mpi_rtype4,iope,mpi_comm_world,iret)
-       call mpi_bcast(soil_moi, nptsall,mpi_rtype4,iope,mpi_comm_world,iret)
-       call mpi_bcast(veg_type, npts,   mpi_rtype4,iope,mpi_comm_world,iret)
-       call mpi_bcast(soil_type,npts,   mpi_rtype4,iope,mpi_comm_world,iret)
+       call mpi_bcast(veg_frac,nptsall,mpi_rtype,iope,mpi_comm_world,iret)
+       call mpi_bcast(soil_temp,nptsall,mpi_rtype,iope,mpi_comm_world,iret)
+       call mpi_bcast(soil_moi,nptsall,mpi_rtype,iope,mpi_comm_world,iret)
+       call mpi_bcast(veg_type,npts,mpi_rtype,iope,mpi_comm_world,iret)
+       call mpi_bcast(soil_type,npts,mpi_rtype,iope,mpi_comm_world,iret)
     end if
 
     return
   end subroutine read_gfssfc
-
-  subroutine read_nst(tref,dt_cool,z_c,dt_warm,z_w,c_0,c_d,w_0,w_d)
-!$$$  subprogram documentation block
-!                .      .    .
-! subprogram:    read_nst
-!
-!   prgrmmr: li
-!
-! abstract: driver to read nst fields
-!
-! program history log:
-!   2015-04-24  li - create routine based on read_sfc
-!
-!   input argument list:
-!     lunges             - unit number to use for IO
-!     filename           - nst surface file to read
-!
-!   output argument list:
-!
-! attributes:
-!   language:  f90
-!   machine:   ibm RS/6000 SP
-!
-!$$$ end documentation block
-    use nstio_module, only: nstio_srohdc,nstio_head,nstio_data,nstio_intkind
-    use nstio_module, only: nstio_axdata,nstio_srclose
-    use kinds, only: i_kind,r_single,r_kind
-    use gridmod, only: nlat_sfc,nlon_sfc
-    use guess_grids, only: nfldnst,ifilenst
-    use constants, only: two
-    real(r_single), dimension(nlat_sfc,nlon_sfc,nfldnst),intent(  out) :: &
-                    tref,dt_cool,z_c,dt_warm,z_w,c_0,c_d,w_0,w_d
-    integer(i_kind) :: latb,lonb
-    integer(i_kind) :: iret,n
-    type(nstio_head) :: nst_head
-    type(nstio_data) :: nst_data
-    real(r_single),allocatable,dimension(:,:):: dwarm_tmp
-    integer(i_kind) :: nnst,it
-    character(24) :: filename
-!   Declare local parameters
-    integer(nstio_intkind):: lunges = 13
-    integer(i_kind),parameter:: nnst_all = 9
-
-    do it=1,nfldnst
-! read a nst file on the task
-       write(filename,200)ifilenst(it)
-200    format('nstf',i2.2)
-       call nstio_srohdc(lunges,filename,nst_head,nst_data,iret)
-!      Check for possible problems
-       if (iret /= 0) then
-          write(6,*)'READ_NST:  ***ERROR*** problem reading ',filename,&
-               ', iret=',iret
-          call nstio_axdata(nst_data,iret)
-          call stop2(80)
-       endif
-       lonb = nst_head%lonb
-       latb = nst_head%latb
-       if ( (latb /= nlat_sfc-2) .or. (lonb /= nlon_sfc) ) then
-          write(6,*)'READ_NST:  ***ERROR*** inconsistent grid dimensions.  ',&
-                 ', nlon,nlat-2=',nlon_sfc,nlat_sfc-2,' -vs- nst file lonb,latb=',&
-                    lonb,latb
-          call nstio_axdata(nst_data,iret)
-          call stop2(80)
-       endif
-
-       nnst=nnst_all
-
-!$omp parallel do private(n,dwarm_tmp)
-       do n=1,nnst
- 
-          if(n == 1)then                            ! foundation temperature (Tf)
-
-             call tran_gfssfc(nst_data%tref,tref(1,1,it),lonb,latb)                                 
-
-          else if(n == 2) then                      ! cooling amount
-
-             call tran_gfssfc(nst_data%dt_cool,dt_cool(1,1,it),lonb,latb)  
-
-          else if(n == 3) then                      ! cooling layer thickness
-
-             call tran_gfssfc(nst_data%z_c,z_c(1,1,it),lonb,latb)        
-
-          else if(n == 4 ) then                     ! warming amount
-
-             allocate(dwarm_tmp(lonb,latb))
-             dwarm_tmp(:,:)  = two*nst_data%xt(:,:)/nst_data%xz(:,:)
-             call tran_gfssfc(dwarm_tmp,dt_warm(1,1,it),lonb,latb)  
-             deallocate(dwarm_tmp)
-
-          else if(n == 5 ) then                     ! warm layer thickness
-
-             call tran_gfssfc(nst_data%xz,z_w(1,1,it),lonb,latb)                       
-
-          else if(n == 6) then                      ! coefficient 1 to get d(Tz)/d(Tf)
-
-             call tran_gfssfc(nst_data%c_0,c_0(1,1,it),lonb,latb)                           
-
-          else if(n == 7) then                      ! coefficient 2 to get d(Tz)/d(Tf)
-
-             call tran_gfssfc(nst_data%c_d,c_d(1,1,it),lonb,latb)            
-
-          else if(n == 8 ) then                     ! coefficient 3 to get d(Tz)/d(Tf)
-
-             call tran_gfssfc(nst_data%w_0,w_0(1,1,it),lonb,latb)            
-
-          else if(n == 9 ) then                     ! coefficient 4 to get d(Tz)/d(Tf)
-
-             call tran_gfssfc(nst_data%w_d,w_d(1,1,it),lonb,latb)                     
-
-          end if
-
-!         End of loop over data records
-       end do
-!   Print date/time stamp
-       write(6,700) latb,lonb,nst_head%fhour,nst_head%idate
-700    format('READ_NST:  ges read/scatter, nlat,nlon=',&
-            2i6,', hour=',f10.1,', idate=',4i5)
-       call nstio_axdata(nst_data,iret)
-       call nstio_srclose(lunges,iret)
-!   End of loop over time levels
-    end do
-
-  end subroutine read_nst
-
-
-  subroutine read_gfsnst(iope,mype,tref,dt_cool,z_c,dt_warm,z_w,c_0,c_d,w_0,w_d)
-
-!$$$  subprogram documentation block
-!                .      .    .                                       .
-! subprogram:    read_gfsnst   
-!   prgmmr: li          org: np23                date: 2009-08-26
-!
-! abstract: read gfs nst fields from a specific task and then broadcast to others
-! 
-!
-! program history log:
-!   2015-04-25  li : modify to minimize communications/IO
-!
-!   input argument list:
-!     iope     - mpi task handling i/o
-!     mype     - mpi task id
-!
-!   output argument list:
-!   tref     (:,:)                        ! oceanic foundation temperature
-!   dt_cool  (:,:)                        ! sub-layer cooling amount at sub-skin layer
-!   z_c      (:,:)                        ! depth of sub-layer cooling layer
-!   dt_warm  (:,:)                        ! diurnal warming amount at sea surface (skin layer)
-!   z_w      (:,:)                        ! depth of diurnal warming layer
-!   c_0      (:,:)                        ! coefficient to calculate d(Tz)/d(tr) in dimensionless
-!   c_d      (:,:)                        ! coefficient to calculate d(Tz)/d(tr) in m^-1
-!   w_0      (:,:)                        ! coefficient to calculate d(Tz)/d(tr) in dimensionless
-!   w_d      (:,:)                        ! coefficient to calculate d(Tz)/d(tr) in m^-1
-!
-! attributes:
-!   language: f90
-!   machine:  ibm RS/6000 SP
-!
-!$$$
-    use kinds, only: r_kind,i_kind,r_single
-    use gridmod, only: nlat_sfc,nlon_sfc
-    use guess_grids, only: nfldnst
-    use mpimod, only: mpi_itype,mpi_rtype4,mpi_comm_world
-    use constants, only: zero
-    implicit none
-
-!   Declare passed variables
-    integer(i_kind)                      ,intent(in   ) :: iope
-    integer(i_kind)                      ,intent(in   ) :: mype
-    real(r_single), dimension(nlat_sfc,nlon_sfc,nfldnst),intent(  out) :: &
-                    tref,dt_cool,z_c,dt_warm,z_w,c_0,c_d,w_0,w_d
-
-!   Declare local variables
-    integer(i_kind):: iret,npts,nptsall
-
-!-----------------------------------------------------------------------------
-!   Read nst file on processor iope
-    if(mype == iope)then
-      call read_nst(tref,dt_cool,z_c,dt_warm,z_w,c_0,c_d,w_0,w_d)
-    end if
-
-!   Load onto all processors
-
-    npts=nlat_sfc*nlon_sfc
-    nptsall=npts*nfldnst
-
-    call mpi_bcast(tref,    nptsall,mpi_rtype4,iope,mpi_comm_world,iret)
-    call mpi_bcast(dt_cool, nptsall,mpi_rtype4,iope,mpi_comm_world,iret)
-    call mpi_bcast(z_c,     nptsall,mpi_rtype4,iope,mpi_comm_world,iret)
-    call mpi_bcast(dt_warm, nptsall,mpi_rtype4,iope,mpi_comm_world,iret)
-    call mpi_bcast(z_w,     nptsall,mpi_rtype4,iope,mpi_comm_world,iret)
-    call mpi_bcast(c_0,     nptsall,mpi_rtype4,iope,mpi_comm_world,iret)
-    call mpi_bcast(c_d,     nptsall,mpi_rtype4,iope,mpi_comm_world,iret)
-    call mpi_bcast(w_0,     nptsall,mpi_rtype4,iope,mpi_comm_world,iret)
-    call mpi_bcast(w_d,     nptsall,mpi_rtype4,iope,mpi_comm_world,iret)
-
-    return
-  end subroutine read_gfsnst
 
 subroutine tran_gfssfc(ain,aout,lonb,latb)
 !$$$  subprogram documentation block
@@ -1006,7 +714,7 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-    use kinds, only: r_kind,i_kind,r_single
+    use kinds, only: r_kind,i_kind
     use constants, only: zero
     use sfcio_module, only: sfcio_realkind
     implicit none
@@ -1014,7 +722,7 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
 !   Declare passed variables
     integer(i_kind)                  ,intent(in ) :: lonb,latb
     real(sfcio_realkind),dimension(lonb,latb),intent(in ) :: ain
-    real(r_single),dimension(latb+2,lonb),intent(out) :: aout
+    real(r_kind),dimension(latb+2,lonb),intent(out) :: aout
 
 !   Declare local variables
     integer(i_kind) i,j
@@ -1040,6 +748,148 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
 
     return
     end subroutine tran_gfssfc
+
+
+  subroutine read_gfsnst(filename,mype,tref,dt_cool,z_c,dt_warm,z_w,c_0,c_d,w_0,w_d)
+
+!$$$  subprogram documentation block
+!                .      .    .                                       .
+! subprogram:    read_gfsnst     read gfs nst guess file (quadratic Gaussin grids) without scattering to tasks
+!   prgmmr: li          org: np23                date: 2009-08-26
+!
+! abstract: read nst file
+!
+! program history log:
+!
+!   input argument list:
+!     filename - name of nst guess file
+!     mype     - mpi task id
+!
+!  output argument list:
+!  tref     (:,:)                        ! oceanic foundation temperature
+!  dt_cool  (:,:)                        ! sub-layer cooling amount at sub-skin layer
+!  z_c      (:,:)                        ! depth of sub-layer cooling layer
+!  dt_warm  (:,:)                        ! diurnal warming amount at sea surface (skin layer)
+!  z_w      (:,:)                        ! depth of diurnal warming layer
+!  c_0      (:,:)                        ! coefficient to calculate d(Tz)/d(tr) in dimensionless
+!  c_d      (:,:)                        ! coefficient to calculate d(Tz)/d(tr) in m^-1
+!  w_0      (:,:)                        ! coefficient to calculate d(Tz)/d(tr) in dimensionless
+!  w_d      (:,:)                        ! coefficient to calculate d(Tz)/d(tr) in m^-1
+
+! attributes:
+!   language: f90
+!   machine:  ibm RS/6000 SP
+!
+!$$$
+    use kinds, only: r_kind,i_kind
+    use gridmod, only: itotsub,nlat_sfc,nlon_sfc
+    use nstio_module, only: nstio_srohdc,nstio_head,nstio_data
+
+    use constants, only: zero,two
+    implicit none
+
+!   Declare passed variables
+    character(*),intent(in):: filename
+    integer(i_kind),intent(in):: mype
+    real(r_kind),dimension(nlat_sfc,nlon_sfc),intent(out):: tref,dt_cool,z_c,dt_warm,z_w,c_0,c_d,w_0,w_d
+!   Declare local parameters
+    integer(i_kind):: lun_nst = 13
+    integer(i_kind),parameter:: n_nst=9
+!   Declare local variables
+    integer(i_kind) i,j,k,latb,lonb
+    integer(i_kind):: irets
+    real(r_kind) sumn,sums
+    real(r_kind),allocatable,dimension(:,:,:):: work,nstges
+
+    type(nstio_head):: nst_head
+    type(nstio_data):: nst_data
+!   Read nst file
+    call nstio_srohdc(lun_nst,trim(filename),nst_head,nst_data,irets)
+
+!   Check for possible problems
+    if (irets /= 0) then
+       write(6,*)'READ_GFSNST:  ***ERROR*** problem reading ',filename,&
+            ', irets=',irets
+       call stop2(80)
+    endif
+    latb=nst_head%latb                   ! e.g. 576     for T382
+    lonb=nst_head%lonb                   ! e.g. 1152    for T382
+    if ( (latb /= nlat_sfc-2) .or. &
+         (lonb /= nlon_sfc) ) then
+       write(6,*)'READ_GFSNST:  ***ERROR*** inconsistent grid dimensions.  ',&
+            ', nlon_sfc,nlat_sfc-2=',nlon_sfc,nlat_sfc-2,' -vs- nst file lonb,latb=',&
+            lonb,latb
+       call stop2(80)
+    endif
+
+!   Load nst guess fields required in Tr analysis into local work array
+    allocate(work(lonb,latb,n_nst),nstges(latb+2,lonb,n_nst))
+
+    work = zero
+    work(:,:,1)  = nst_data%tref(:,:)
+    work(:,:,2)  = nst_data%dt_cool(:,:)
+    work(:,:,3)  = nst_data%z_c(:,:)
+    work(:,:,4)  = two*nst_data%xt(:,:)/nst_data%xz(:,:)
+    work(:,:,5)  = nst_data%xz(:,:)
+    work(:,:,6)  = nst_data%c_0(:,:)
+    work(:,:,7)  = nst_data%c_d(:,:)
+    work(:,:,8)  = nst_data%w_0(:,:)
+    work(:,:,9)  = nst_data%w_d(:,:)
+
+!     Fill nst guess array
+      do k=1,n_nst
+
+!        Compute mean for southern- and northern-most rows
+!        of surface guess array
+         sumn = zero
+         sums = zero
+         do i=1,lonb
+            sumn = work(i,1,k)    + sumn
+            sums = work(i,latb,k) + sums
+         end do
+         sumn = sumn/float(lonb)
+         sums = sums/float(lonb)
+
+!        Transfer from local work array to surface guess array
+         do j = 1,lonb
+            nstges(1,j,k)=sums
+            nstges(latb+2,j,k)=sumn
+            do i=2,latb+1
+              nstges(i,j,k) = work(j,latb+2-i,k)
+            end do
+          end do
+
+!     End of loop over data records
+      end do
+
+
+!     Deallocate local work arrays
+      deallocate(work)
+!   Load data into output arrays
+    do j=1,lonb
+     do i=1,latb+2
+       tref(i,j)    = nstges(i,j,1)
+       dt_cool(i,j) = nstges(i,j,2)
+       z_c(i,j)     = nstges(i,j,3)
+       dt_warm(i,j) = nstges(i,j,4)
+       z_w(i,j)     = nstges(i,j,5)
+       c_0(i,j)     = nstges(i,j,6)
+       c_d(i,j)     = nstges(i,j,7)
+       w_0(i,j)     = nstges(i,j,8)
+       w_d(i,j)     = nstges(i,j,9)
+     end do
+    end do
+    deallocate(nstges)
+
+!   Print date/time stamp
+    if(mype==0) then
+       write(6,700) latb,lonb,nst_head%fhour,nst_head%idate
+700    format('READ_GFSNST:  ges read, nlat,nlon=',&
+            2i6,', hour=',f10.1,', idate=',4i5)
+    end if
+
+    return
+  end subroutine read_gfsnst
 
   subroutine write_gfs(increment,mype,mype_atm,mype_sfc)
 !$$$  subprogram documentation block
@@ -1080,8 +930,8 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
 
     use kinds, only: i_kind,r_kind
     use guess_grids, only: dsfct,isli2
-    use guess_grids, only: ntguessig,ntguessfc,ifilesig,nfldsig,ges_prsl,ges_prsi
-    use gridmod, only: hires_b,sp_a,grd_a,jcap_b,nlon,nlat,lat2,lon2,nsig,use_gfs_nemsio
+    use guess_grids, only: ntguessig,ntguessfc,ifilesig,nfldsig
+    use gridmod, only: hires_b,sp_a,grd_a,jcap_b,nlon,nlat,lat2,lon2,nsig
     use gridmod, only: lat2,lon2,nsig   
     use gsi_metguess_mod, only: gsi_metguess_bundle
     use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -1093,27 +943,28 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
     use constants, only:zero
     use general_specmod, only: general_init_spec_vars,general_destroy_spec_vars,spec_vars
     use gsi_4dvar, only: lwrite4danl
-    use ncepnems_io, only: write_nemsatm,write_nemssfc,write_nemssfc_nst
 
     implicit none
 
     integer(i_kind),intent(in   ) :: increment
     integer(i_kind),intent(in   ) :: mype,mype_atm,mype_sfc
-    character(24):: filename,file_sfc,file_nst
+    character(24):: filename
     integer(i_kind) itoutsig,istatus,iret_write,nlon_b,ntlevs,it
     integer(i_kind) i,j,k 
 
-    real(r_kind),dimension(grd_a%lat2,grd_a%lon2  ):: aux_ps
-    real(r_kind),dimension(grd_a%lat2,grd_a%lon2,grd_a%nsig):: aux_u
-    real(r_kind),dimension(grd_a%lat2,grd_a%lon2,grd_a%nsig):: aux_v
-    real(r_kind),dimension(grd_a%lat2,grd_a%lon2,grd_a%nsig):: aux_vor
-    real(r_kind),dimension(grd_a%lat2,grd_a%lon2,grd_a%nsig):: aux_div
-    real(r_kind),dimension(grd_a%lat2,grd_a%lon2,grd_a%nsig):: aux_tv
-    real(r_kind),dimension(grd_a%lat2,grd_a%lon2,grd_a%nsig):: aux_q
-    real(r_kind),dimension(grd_a%lat2,grd_a%lon2,grd_a%nsig):: aux_oz
-    real(r_kind),dimension(grd_a%lat2,grd_a%lon2,grd_a%nsig):: aux_cwmr
+    real(r_kind),dimension(lat2,lon2  ):: aux_ps
+    real(r_kind),dimension(lat2,lon2  ):: aux_z
+    real(r_kind),dimension(lat2,lon2,nsig):: aux_u
+    real(r_kind),dimension(lat2,lon2,nsig):: aux_v
+    real(r_kind),dimension(lat2,lon2,nsig):: aux_vor
+    real(r_kind),dimension(lat2,lon2,nsig):: aux_div
+    real(r_kind),dimension(lat2,lon2,nsig):: aux_tv
+    real(r_kind),dimension(lat2,lon2,nsig):: aux_q
+    real(r_kind),dimension(lat2,lon2,nsig):: aux_oz
+    real(r_kind),dimension(lat2,lon2,nsig):: aux_cwmr
 
     real(r_kind),pointer,dimension(:,:  ):: ges_ps_it  =>NULL()
+    real(r_kind),pointer,dimension(:,:  ):: ges_z_it   =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_u_it   =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_v_it   =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_div_it =>NULL()
@@ -1123,17 +974,17 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
     real(r_kind),pointer,dimension(:,:,:):: ges_oz_it  =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_cwmr_it=>NULL()
 
-    logical :: inithead
     type(spec_vars):: sp_b
 
 !   Write atmospheric analysis file
-    if ( lwrite4danl ) then
-       ntlevs=nfldsig
-    else
+    if (.not.lwrite4danl) then
        ntlevs=1
+    else
+       ntlevs=nfldsig
     end if
 
     aux_ps=zero
+    aux_z=zero
     aux_u=zero
     aux_v=zero
     aux_vor=zero
@@ -1143,26 +994,20 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
     aux_oz=zero
     aux_cwmr=zero
 
-    inithead=.true.
     do it=1,ntlevs
        if (increment>0) then
           filename='siginc'
           itoutsig=increment
           if(mype==0) write(6,*) 'WRITE_GFS: writing time slot ', itoutsig
+       else if (.not.lwrite4danl) then
+          filename='siganl'
+          itoutsig=ntguessig
+          if(mype==0) write(6,*) 'WRITE_GFS: writing single analysis state for F ', itoutsig
        else
-          if ( lwrite4danl ) then
-             if ( it == ntguessig ) then
-                filename='siganl'
-             else
-                write(filename,"('siga',i2.2)") ifilesig(it)
-             endif
-             itoutsig=it
-             if(mype==0) write(6,*) 'WRITE_GFS: writing full analysis state for F ', itoutsig
-          else
-             filename='siganl'
-             itoutsig=ntguessig
-             if(mype==0) write(6,*) 'WRITE_GFS: writing single analysis state for F ', itoutsig
-          endif
+          write(filename,100) ifilesig(it)
+100       format('siga',i2.2)
+          itoutsig=it
+          if(mype==0) write(6,*) 'WRITE_GFS: writing full analysis state for F ', itoutsig
        endif
 
        call set_analysis_(itoutsig)
@@ -1181,71 +1026,50 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
 
 !   If hires_b, spectral to grid transform for background
 !   uses double FFT.   Need to pass in sp_a and sp_b
-       if(use_gfs_nemsio)then
-          call write_nemsatm(grd_a,sp_a,filename,mype,mype_atm, &
-            aux_ps,&
-            aux_tv,aux_q,&
-            aux_oz,aux_cwmr,ges_prsl(:,:,:,itoutsig), &
-            aux_u,aux_v,ges_prsi(:,:,:,itoutsig),itoutsig)
-       else
-          nlon_b=((2*jcap_b+1)/nlon+1)*nlon
-          if (nlon_b /= sp_a%imax) then
-             hires_b=.true.
-             call general_init_spec_vars(sp_b,jcap_b,jcap_b,nlat,nlon_b)
-             if (mype==0) &
-                  write(6,*)'WRITE_GFS:  allocate and load sp_b with jcap,imax,jmax=',&
-                  sp_b%jcap,sp_b%imax,sp_b%jmax
+       nlon_b=((2*jcap_b+1)/nlon+1)*nlon
+       if (nlon_b /= sp_a%imax) then
+          hires_b=.true.
+          call general_init_spec_vars(sp_b,jcap_b,jcap_b,nlat,nlon_b)
+          if (mype==0) &
+               write(6,*)'WRITE_GFS:  allocate and load sp_b with jcap,imax,jmax=',&
+               sp_b%jcap,sp_b%imax,sp_b%jmax
 
-             call general_write_gfsatm(grd_a,sp_a,sp_b,filename,mype,mype_atm, &
-                  aux_ps,&
-                  aux_vor,aux_div,&
-                  aux_tv,aux_q,&
-                  aux_oz,aux_cwmr,itoutsig,inithead,&
-                  iret_write)
-
-             call general_destroy_spec_vars(sp_b)
-
-!   Otherwise, use standard transform.  Use sp_a in place of sp_b.
-          else
-             call general_write_gfsatm(grd_a,sp_a,sp_a,filename,mype,mype_atm, &
-               aux_ps,&
+          call general_write_gfsatm(grd_a,sp_a,sp_b,filename,mype,mype_atm, &
+               aux_z,aux_ps,&
                aux_vor,aux_div,&
                aux_tv,aux_q,&
-               aux_oz,aux_cwmr,itoutsig,inithead,&
+               aux_oz,aux_cwmr,it,&
                iret_write)
-          end if
+
+          call general_destroy_spec_vars(sp_b)
+
+!   Otherwise, use standard transform.  Use sp_a in place of sp_b.
+       else
+          call general_write_gfsatm(grd_a,sp_a,sp_a,filename,mype,mype_atm, &
+               aux_z,aux_ps,&
+               aux_vor,aux_div,&
+               aux_tv,aux_q,&
+               aux_oz,aux_cwmr,it,&
+               iret_write)
        endif
-       inithead=.false.
     end do ! end do over ntlevs
 
 !   Write surface analysis file
     if (increment>0) then
        filename='sfcinc.gsi'
-       if(use_gfs_nemsio)then
-         call write_nemssfc(filename,mype,mype_sfc,dsfct(:,:,ntguessfc))
-       else
-         call write_gfssfc(filename,mype,mype_sfc,dsfct(1,1,ntguessfc))
-       end if
+       call write_gfssfc(filename,mype,mype_sfc,dsfct(1,1,ntguessfc))
     else
       if ( nst_gsi > 0 ) then
-        file_sfc = 'sfcanl'
-        file_nst = 'nstanl'
-        if(use_gfs_nemsio)then
-          call write_nemssfc_nst(file_sfc,file_nst,mype,mype_sfc,dsfct(:,:,ntguessfc))
-        else
-          call write_gfs_sfc_nst(mype,mype_sfc,dsfct(1,1,ntguessfc))
-        end if
+        call write_gfs_sfc_nst(mype,mype_sfc,dsfct(1,1,ntguessfc))
+
+!       if ( l_hyb_ens .and. nst_gsi == 3 ) then
         if ( l_hyb_ens ) then
           call write_ens_dsfct(mype,mype_sfc,dsfct(1,1,ntguessfc))
         endif
 
       else
         filename='sfcanl.gsi'
-        if(use_gfs_nemsio)then
-          call write_nemssfc(filename,mype,mype_sfc,dsfct(:,:,ntguessfc))
-        else
-          call write_gfssfc(filename,mype,mype_sfc,dsfct(1,1,ntguessfc))
-        end if
+        call write_gfssfc(filename,mype,mype_sfc,dsfct(1,1,ntguessfc))
       endif
     endif
 
@@ -1258,6 +1082,8 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
 
   call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ps',ges_ps_it  ,istatus) 
   if(istatus==0) aux_ps = ges_ps_it
+  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'z' ,ges_z_it   ,istatus) 
+  if(istatus==0) aux_z = ges_z_it
   call gsi_bundlegetpointer (gsi_metguess_bundle(it),'u' ,ges_u_it   ,istatus) 
   if(istatus==0) aux_u = ges_u_it
   call gsi_bundlegetpointer (gsi_metguess_bundle(it),'v' ,ges_v_it   ,istatus) 
@@ -1368,7 +1194,6 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
     use general_commvars_mod, only: ltosi,ltosj
 
     use obsmod, only: iadate
-    use ncepnems_io, only: sfc_interpolate
     
     use constants, only: zero_single
     
@@ -1401,11 +1226,11 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
     integer(i_kind) latb,lonb,nlatm2
     integer(i_kind) i,j,ip1,jp1,ilat,ilon,jj,mm1
 
+    real(r_kind),dimension(nlon,nlat):: buffer
     real(r_kind),dimension(lat1,lon1):: sfcsub
     real(r_kind),dimension(nlon,nlat):: grid
     real(r_kind),dimension(max(iglobal,itotsub)):: sfcall
-    real(r_single),dimension(nlon,nlat):: buffer
-    real(r_single),allocatable,dimension(:,:):: buffer2
+    real(r_kind),allocatable,dimension(:,:):: buffer2
 
     type(sfcio_head):: head
     type(sfcio_data):: data
@@ -1586,12 +1411,10 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
     use gridmod, only: iglobal,ijn,displs_g,itotsub
     use gridmod, only: rlats,rlons,rlats_sfc,rlons_sfc
     use general_commvars_mod, only: ltosi,ltosj
-    use ncepnems_io, only: sfc_interpolate
-
     use obsmod,  only: iadate,ianldate
     use constants, only: zero,zero_single,two,tfrozen,z_w_max,rad2deg
     use guess_grids, only: isli2
-    use radinfo, only: nst_gsi,zsea1,zsea2
+    use radinfo, only: nst_gsi
     use sfcio_module, only: sfcio_intkind,sfcio_head,sfcio_data,&
          sfcio_srohdc,sfcio_swohdc,sfcio_axdata
 
@@ -1618,20 +1441,19 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
     integer(sfcio_intkind),parameter:: io_sfctsk = 15
     integer(sfcio_intkind),parameter:: io_sfcanl = 52
     integer(sfcio_intkind),parameter:: io_nstanl = 53
-    integer(sfcio_intkind),parameter:: io_dtfanl = 54
 
     integer(i_kind),parameter:: nprep=15
 
     real(r_kind),parameter :: houra = zero_single
 
 !   Declare local variables
-    character(len=6) :: fname_sfcges,fname_sfcgcy,fname_sfctsk,fname_sfcanl,fname_nstges,fname_nstanl,fname_dtfanl
+    character(len=6) :: fname_sfcges,fname_sfcgcy,fname_sfctsk,fname_sfcanl,fname_nstges,fname_nstanl
 
     character(len=10):: canldate
     integer(i_kind):: iret,n_new_water,n_new_seaice
     integer(i_kind):: latb,lonb,nlatm2
     integer(i_kind):: i,j,ip1,jp1,ilat,ilon,mm1
-    real(r_single) :: r_zsea1,r_zsea2
+    real(r_kind) :: dtw,dtc
 
     real(r_kind),    dimension(lat1,lon1):: dsfct_sub
     integer(i_kind), dimension(lat1,lon1):: isli_sub
@@ -1642,12 +1464,10 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
     real(r_kind),    dimension(nlat,nlon):: dsfct_glb,dsfct_tmp
     integer(i_kind), dimension(nlat,nlon):: isli_glb,isli_tmp
 
-    real(r_kind),    dimension(nlat_sfc,nlon_sfc)  :: dsfct_gsi
+    real(r_kind),    dimension(nlat_sfc,nlon_sfc)  :: dsfct_gsi,work
     integer(i_kind), dimension(nlat_sfc,nlon_sfc)  :: isli_gsi
 
     real(r_kind),    dimension(nlon_sfc,nlat_sfc-2):: dsfct_anl
-    real(r_single),  dimension(nlon_sfc,nlat_sfc-2):: dtzm
-    real(r_single),  dimension(nlat_sfc,nlon_sfc)  :: work
 
     type(sfcio_head):: head_sfcges,head_sfcgcy,head_sfcanl
     type(sfcio_data):: data_sfcges,data_sfcgcy,data_sfcanl
@@ -1668,7 +1488,6 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
     fname_sfcanl = 'sfcanl'
     fname_nstges = 'nstf06'
     fname_nstanl = 'nstanl'
-    fname_dtfanl = 'dtfanl'
 !
 !   Extract the analysis increment and surface mask in subdomain without the
 !   buffer
@@ -1698,7 +1517,7 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
 
       write(*,'(a,5(1x,a6))') 'write_gfs_sfc_nst:',fname_sfcges,fname_nstges,fname_sfctsk,fname_sfcanl,fname_nstanl
 !
-!     get Tf analysis increment and surface mask at analysis (lower resolution)
+!     get Tr analysis increment and surface mask at analysis (lower resolution)
 !     grids
 !
       do i=1,iglobal
@@ -1707,13 +1526,6 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
          dsfct_glb(ilat,ilon) = dsfct_all(i)
          isli_glb (ilat,ilon) = isli_all (i)
       end do
-!
-!      write dsfct_anl to a data file for later use (at eupd step at present)
-!
-       open(io_dtfanl,file=fname_dtfanl,form='unformatted')
-       write(io_dtfanl) nlon,nlat
-       write(io_dtfanl) dsfct_glb
-       write(io_dtfanl) isli_glb
 
 !      Read nst guess file for static/full resolution analysis
        call nstio_srohdc(io_nstges,fname_nstges,head_nst,data_nst,iret)
@@ -1814,15 +1626,13 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
 !
        if ( nst_gsi > 2 ) then
 !
-!         For the new open water (sea ice just melted) grids, (1) set dsfct_anl = zero; (2) reset the NSSTM variables
+!         For the new open water (sea ice just melted) grids, reset the NSSTM
+!         variables
 !
 !         Notes: data_sfcges%slmsk is the mask of the background
 !                data_sfcanl%slmsk is the mask of the analysis since global_cycle has been applied
 !
           where ( data_sfcanl%slmsk(:,:) == zero .and. data_sfcges%slmsk(:,:) == two )
-
-            dsfct_anl(:,:)        = zero
-
             data_nst%xt(:,:)      = zero
             data_nst%xs(:,:)      = zero
             data_nst%xu(:,:)      = zero
@@ -1853,13 +1663,10 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
 !
 !         update SST: tsea for sfc file
 !
-          r_zsea1 = 0.001_r_single*real(zsea1)
-          r_zsea2 = 0.001_r_single*real(zsea2)
-          call dtzm_2d(data_nst%xt,data_nst%xz,data_nst%dt_cool,data_nst%z_c, &
-                       data_sfcanl%slmsk,r_zsea1,r_zsea2,lonb,latb,dtzm)
-
           where ( data_sfcanl%slmsk(:,:) == zero )
-             data_sfcanl%tsea(:,:) = max(data_nst%tref(:,:) + dtzm(:,:), tfrozen)
+             data_sfcanl%tsea(:,:) = max(data_nst%tref(:,:)  &
+                                   + two*data_nst%xt(:,:)/data_nst%xz(:,:) & 
+                                   - data_nst%dt_cool(:,:), tfrozen)
           end where
 !         Write updated information to surface analysis file
           call sfcio_swohdc(io_sfcanl,fname_sfcanl,head_sfcanl,data_sfcanl,iret)
@@ -1867,6 +1674,44 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
 !         write(6,100) fname_sfcanl,lonb,latb,houra,iadate(1:4),iret
 100       format(' WRITE_NST_SFC:  sfc analysis written  for ',&
              a6,2i6,1x,f4.1,4(i4,1x),' with iret=',i2)
+!
+!         write info on the new open water and new sea ice grids
+!
+          n_new_water = 0
+          n_new_seaice = 0
+          do j = 1, latb
+             do i = 1, lonb
+ 
+                if ( data_sfcanl%slmsk(i,j) == zero .and. data_sfcges%slmsk(i,j) == two ) then
+                   n_new_water = n_new_water + 1
+                   dtw = two*data_nst%xt(i,j)/data_nst%xz(i,j)
+                   dtc = data_nst%dt_cool(i,j)
+ 
+                   write(*,'(a,I7,2F8.2,16F7.2)') 'new water grids:',n_new_water, &
+                   rad2deg*rlats_sfc(latb+2-j),rad2deg*rlons_sfc(i), &
+                   data_sfcges%fice(i,j), data_sfcgcy%fice(i,j),data_sfcanl%fice(i,j), &
+                   data_sfcges%hice(i,j), data_sfcgcy%hice(i,j),data_sfcanl%hice(i,j), &
+                   data_sfcges%tisfc(i,j),data_sfcgcy%tisfc(i,j),data_sfcanl%tisfc(i,j),&
+                   data_sfcges%tsea(i,j), data_sfcgcy%tsea(i,j),data_sfcanl%tsea(i,j), &
+                   data_nst%tref(i,j),dsfct_anl(i,j),dtw,dtc
+                endif
+
+                if ( data_sfcanl%slmsk(i,j) == two .and. data_sfcges%slmsk(i,j) == zero ) then
+                   n_new_seaice = n_new_seaice + 1
+                   dtw = two*data_nst%xt(i,j)/data_nst%xz(i,j)
+                   dtc = data_nst%dt_cool(i,j)
+                   write(*,'(a,I7,2F8.2,16F7.2)') 'new seaice grids:',n_new_seaice,&
+                   rad2deg*rlats_sfc(latb+2-j),rad2deg*rlons_sfc(i), &
+                   data_sfcges%fice(i,j), data_sfcgcy%fice(i,j),data_sfcanl%fice(i,j), &
+                   data_sfcges%hice(i,j), data_sfcgcy%hice(i,j),data_sfcanl%hice(i,j), &
+                   data_sfcges%tisfc(i,j),data_sfcgcy%tisfc(i,j),data_sfcanl%tisfc(i,j),&
+                   data_sfcges%tsea(i,j), data_sfcgcy%tsea(i,j),data_sfcanl%tsea(i,j), &
+                   data_nst%tref(i,j),dsfct_anl(i,j),dtw,dtc
+                endif
+
+             end do
+          end do
+          write(*,'(a,I3,1x,I8,1x,I8)') 'write_gfs_sfc_nst,nst_gsi,n_new_water,n_new_seaice:',nst_gsi,n_new_water,n_new_seaice
 
        else          ! when (nst_gsi <= 2)
 
@@ -1876,7 +1721,8 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
              end do
           end do
 !
-!         For the new open water (sea ice just melted) grids, reset the NSSTM variables
+!         For the new open water (sea ice just melted) grids, reset the NSSTM
+!         variables
 !
           where ( data_sfcanl%slmsk(:,:) == zero .and. data_sfcges%slmsk(:,:) == two ) 
              data_nst%xt(:,:)      = zero
@@ -1914,23 +1760,6 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
              a6,2i6,1x,f4.1,4(i4,1x),' with iret=',i2)
 
        endif                   ! if ( nst_gsi > 2 ) then
-
-!
-!      write info on the new open water and new sea ice grids
-!
-       n_new_water = 0
-       n_new_seaice = 0
-       do j = 1, latb
-          do i = 1, lonb
-             if ( data_sfcanl%slmsk(i,j) == zero .and. data_sfcges%slmsk(i,j) == two ) then
-                n_new_water = n_new_water + 1
-             endif
-             if ( data_sfcanl%slmsk(i,j) == two .and. data_sfcges%slmsk(i,j) == zero ) then
-                n_new_seaice = n_new_seaice + 1
-             endif
-          end do
-       end do
-       write(*,'(a,I3,1x,I8,1x,I8)') 'write_gfs_sfc_nst,nst_gsi,n_new_water,n_new_seaice:',nst_gsi,n_new_water,n_new_seaice
 
 !      Update guess date/time to analysis date/time for nst file
        head_nst%fhour = head_sfcanl%fhour            ! forecast hour
@@ -2103,12 +1932,11 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
 
     integer(i_kind), allocatable, dimension(:,:):: isli_tmp,isli_gsi
 
-    real(r_kind),   allocatable, dimension(:)   :: wlatx,slatx,rlats_ens_sfc,rlons_ens_sfc
-    real(r_kind),   allocatable, dimension(:,:) :: dsfct_gsi,dsfct_anl
-    real(r_kind),   allocatable, dimension(:,:) :: dsfct_tmp
-    real(r_single), allocatable, dimension(:,:) :: work
+    real(r_kind), allocatable, dimension(:)     :: wlatx,slatx,rlats_ens_sfc,rlons_ens_sfc
+    real(r_kind), allocatable, dimension(:,:)   :: dsfct_gsi,work,dsfct_anl
+    real(r_kind), allocatable, dimension(:,:) :: dsfct_tmp
 
-    real(r_kind) :: dlon
+    real(r_kind) :: dlon,dtw,dtc
 
     type(sfcio_head):: head_sfcges,head_sfcgcy,head_sfcanl
     type(sfcio_data):: data_sfcges,data_sfcgcy,data_sfcanl
@@ -2120,8 +1948,6 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
     mm1 = mype + 1
     nlatm2  = nlat - 2
 !   get analysis date (yyyymmddhh) in character
-    write(canldate,'(I10)') ianldate
-!   get file names
     write(canldate,'(I10)') ianldate
 
 !
@@ -2294,7 +2120,8 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
           endif                   ! if ( k == 1 ) then
 
 !
-!         update tref (in nst file) & tsea (in the surface file) when Tr analysis is on
+!         update tref (in nst file) & tsea (in the surface file) when Tr analysis
+!         is on
 !
           if ( nst_gsi > 2 ) then
 !
@@ -2341,10 +2168,45 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
                                       - data_nst%dt_cool(:,:), tfrozen)
              end where
 
+             n_new_water = 0
+             n_new_seaice = 0
+             do j = 1, latb
+                do i = 1, lonb
+ 
+                   if ( data_sfcanl%slmsk(i,j) == zero .and. data_sfcges%slmsk(i,j) == two ) then
+                      n_new_water = n_new_water + 1
+                      dtw = two*data_nst%xt(i,j)/data_nst%xz(i,j)
+                      dtc = data_nst%dt_cool(i,j)
+                      write(*,'(a,I7,2F8.2,16F7.2)') 'new water grids:',n_new_water, &
+                      rad2deg*rlats_ens_sfc(latb+2-j),rad2deg*rlons_ens_sfc(i), &
+                      data_sfcges%fice(i,j),data_sfcgcy%fice(i,j),data_sfcanl%fice(i,j), &
+                      data_sfcges%hice(i,j),data_sfcgcy%hice(i,j),data_sfcanl%hice(i,j), &
+                      data_sfcges%tisfc(i,j),data_sfcgcy%tisfc(i,j),data_sfcanl%tisfc(i,j),&
+                      data_sfcges%tsea(i,j),data_sfcgcy%tsea(i,j),data_sfcanl%tsea(i,j), &
+                      data_nst%tref(i,j),dsfct_anl(i,j),dtw,dtc
+                   endif
+
+                   if ( data_sfcanl%slmsk(i,j) == two .and. data_sfcges%slmsk(i,j) == zero ) then
+                      n_new_seaice = n_new_seaice + 1
+                      dtw = two*data_nst%xt(i,j)/data_nst%xz(i,j)
+                      dtc = data_nst%dt_cool(i,j)
+                      write(*,'(a,I7,2F8.2,16F7.2)') 'new seaice grids:',n_new_seaice,&
+                      rad2deg*rlats_ens_sfc(latb+2-j),rad2deg*rlons_ens_sfc(i), &
+                      data_sfcges%fice(i,j),data_sfcgcy%fice(i,j),data_sfcanl%fice(i,j), &
+                      data_sfcges%hice(i,j),data_sfcgcy%hice(i,j),data_sfcanl%hice(i,j), &
+                      data_sfcges%tisfc(i,j),data_sfcgcy%tisfc(i,j),data_sfcanl%tisfc(i,j),&
+                      data_sfcges%tsea(i,j),data_sfcgcy%tsea(i,j),data_sfcanl%tsea(i,j), &
+                      data_nst%tref(i,j),dsfct_anl(i,j),dtw,dtc
+                   endif
+
+                end do
+             end do
+             write(*,'(a,I3,1x,I8,1x,I8)')'write_gfs_sfc_nst,nst_gsi,n_new_water,n_new_seaice:',nst_gsi,n_new_water,n_new_seaice
 
 
           else          ! when (nst_gsi <= 2)
 
+             n_new_water = 0
              do j=1,latb
                 do i=1,lonb
                    data_nst%tref(i,j) = data_sfcanl%tsea(i,j)     ! keep tref as tsea before analysis
@@ -2376,21 +2238,8 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
                    data_sfcanl%tsea(i,j) = max(data_sfcanl%tsea(i,j) + dsfct_anl(i,j),271.0_r_kind)  ! update tsea
                 end do
              end do
+             write(*,*) ' write_ens_sfc_nst, nst_gsi, number of the new water grids:',nst_gsi,n_new_water
           endif                   ! if ( nst_gsi > 2 ) then
-
-          n_new_water = 0
-          n_new_seaice = 0
-          do j = 1, latb
-             do i = 1, lonb
-                if ( data_sfcanl%slmsk(i,j) == zero .and. data_sfcges%slmsk(i,j) == two ) then
-                   n_new_water = n_new_water + 1
-                endif
-                if ( data_sfcanl%slmsk(i,j) == two .and. data_sfcges%slmsk(i,j) == zero ) then
-                   n_new_seaice = n_new_seaice + 1
-                endif
-             end do
-          end do
-          write(*,'(a,I3,1x,I8,1x,I8)')'write_gfs_sfc_nst,nst_gsi,n_new_water,n_new_seaice:',nst_gsi,n_new_water,n_new_seaice
 
 !         Update guess date/time to analysis date/time for nst file
           head_nst%fhour    = head_sfcanl%fhour                  ! forecast hour
@@ -2554,10 +2403,9 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
     real(r_kind),    dimension(nlat,nlon):: dsfct_glb
     integer(i_kind), dimension(nlat,nlon):: isli_glb
 
-    real(r_kind),   allocatable, dimension(:)   :: wlatx,slatx,rlats_ens_sfc,rlons_ens_sfc
-    real(r_kind),   allocatable, dimension(:,:) :: dsfct_gsi,dsfct_anl
-    real(r_kind),   allocatable, dimension(:,:) :: dsfct_tmp
-    real(r_single), allocatable, dimension(:,:) :: work
+    real(r_kind), allocatable, dimension(:)   :: wlatx,slatx,rlats_ens_sfc,rlons_ens_sfc
+    real(r_kind), allocatable, dimension(:,:) :: dsfct_gsi,work,dsfct_anl
+    real(r_kind), allocatable, dimension(:,:) :: dsfct_tmp
 
     integer(i_kind), allocatable, dimension(:,:):: isli_tmp,isli_gsi
 
@@ -2661,12 +2509,14 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
        allocate(dsfct_gsi(nlat_ens_sfc,nlon_ens_sfc),work(nlat_ens_sfc,nlon_ens_sfc), &
                  isli_gsi(nlat_ens_sfc,nlon_ens_sfc),dsfct_anl(nlon_ens_sfc,nlat_ens_sfc-2))
 
+
        allocate(dsfct_tmp(nlat,nlon),isli_tmp(nlat,nlon))
 
        if ( (latb /= nlatm2) .or. (lonb /= nlon) ) then
 
           write(6,*)'WRITE_ENS_DSFCT:  different grid dimensions analysis vs sfc. interpolating sfc temperature  ',&
                ', nlon,nlat_-2=',nlon,nlatm2,' -vs- sfc file lonb,latb=',lonb,latb
+
 !
 !         get lats and lons for ensemble grids
 !
@@ -2740,7 +2590,7 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
        endif                 ! if ( (latb /= nlatm2) .or. (lonb /= nlon) ) then
 
 !
-!      write dsfct_anl to a data file for later use (at eupd step at present)
+!      write dsfct_anl to a data file for later use (at rcen step at present)
 !
        open(io_dtsinc,file=fname_dtsinc,form='unformatted')
        write(io_dtsinc) dsfct_anl
@@ -2760,6 +2610,100 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
     endif                               ! if (mype == mype_so ) then
 !   End of routine
   end subroutine write_ens_dsfct
+
+  subroutine sfc_interpolate(a,na_lon,na_lat,b,ns_lon,ns_lat)
+!$$$  subprogram documentation block
+!                .      .    .
+! subprogram:    sfc_interpolate --- interpolates from analysis grid to 
+!                                    surface grid
+!   prgrmmr:     derber -  initial version; org: np2
+!
+! abstract:      This routine interpolates a on analysis grid to b on 
+!                surface grid
+!
+! program history log:
+!   2008-02-26  derber  - original routine
+!   2008-05-28  safford - add subprogram doc block, rm unused uses
+!   2011-04-01  li - change kind of output field (b: single to r_kind)
+!   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
+!
+!   input argument list:
+!     na_lon  - number of longitude grid analysis 
+!     na_lat  - number of latitude grid analysis
+!     ns_lon  - number of longitude grid sfc 
+!     ns_lat  - number of latitude grid sfc
+!     a       - analysis values
+!
+!   output argument list:
+!     b       - surface values
+!
+! attributes:
+!   language: f90
+!   machines: ibm RS/6000 SP; SGI Origin 2000; Compaq HP
+!
+!$$$ end documentation block
+
+! !USES:
+    use kinds, only: r_kind,i_kind,r_single
+    use constants, only: zero,one
+    use gridmod, only: rlats,rlons,rlats_sfc,rlons_sfc
+    
+    implicit none
+
+! !INPUT PARAMETERS:
+    integer(i_kind)                        ,intent(in   ) :: na_lon  ! number of longitude grid analysis 
+    integer(i_kind)                        ,intent(in   ) :: na_lat  ! number of latitude grid analysis
+    integer(i_kind)                        ,intent(in   ) :: ns_lon  ! number of longitude grid sfc 
+    integer(i_kind)                        ,intent(in   ) :: ns_lat  ! number of latitude grid sfc
+
+    real(r_kind), dimension(na_lon,na_lat),intent(in   ) :: a   ! analysis values
+
+! !OUTPUT PARAMETERS:
+    real(r_kind), dimension(ns_lon,ns_lat),intent(  out) :: b   ! surface values
+
+
+!   Declare local variables
+    integer(i_kind) i,j,ix,iy,ixp,iyp
+    real(r_kind) dx1,dy1,dx,dy,w00,w01,w10,w11,bout,dlat,dlon
+
+!*****************************************************************************
+
+    b=zero
+!   Loop over all points to get interpolated value
+    do j=1,ns_lat
+       dlat=rlats_sfc(j)
+       call grdcrd1(dlat,rlats,na_lat,1)
+       iy=int(dlat)
+       iy=min(max(1,iy),na_lat)
+       dy  =dlat-iy
+       dy1 =one-dy
+       iyp=min(na_lat,iy+1)
+
+
+       do i=1,ns_lon
+          dlon=rlons_sfc(i)
+          call grdcrd1(dlon,rlons,na_lon,1)
+          ix=int(dlon)
+          dx  =dlon-ix
+          dx=max(zero,min(dx,one))
+          dx1 =one-dx
+!         w00=dx1*dy1; w10=dx1*dy; w01=dx*dy1; w11=dx*dy
+          w00=dx1*dy1; w10=dx*dy1; w01=dx1*dy; w11=dx*dy
+
+          ix=min(max(0,ix),na_lon)
+          ixp=ix+1
+          if(ix==0) ix=na_lon
+          if(ixp==na_lon+1) ixp=1
+          bout=w00*a(ix,iy)+w01*a(ix,iyp)+w10*a(ixp,iy)+w11*a(ixp,iyp)
+          b(i,j)=bout
+
+       end do
+    end do
+
+    
+!   End of routine
+    return
+  end subroutine sfc_interpolate
 
 !-------------------------------------------------------------------------------
   subroutine sigio_cnvtdv8(im,ix,km,idvc,idvm,ntrac,iret,t,q,cpi,cnflg)
@@ -2824,33 +2768,5 @@ subroutine tran_gfssfc(ain,aout,lonb,latb)
     return
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   end subroutine sigio_cnvtdv8
-
-  subroutine glbave(fld,ave)
-  use kinds, only: r_kind,i_kind,r_quad
-  use constants, only: zero_quad,two_quad
-  use mpimod, only: mype
-  use gridmod, only: lat2,lon2,nlon,istart,wgtlats
-  use mpl_allreducemod, only: mpl_allreduce
-  implicit none
-  real(r_kind),intent(in)    :: fld(:,:,:) 
-  real(r_kind),intent(inout) :: ave(:) 
-  integer(i_kind) i,j,k,mp1,ii
-  real(r_quad),allocatable,dimension(:):: xave
-  allocate(xave(size(ave,1)))
-  mp1=mype+1
-  do k=1,size(ave,1)
-     xave(k)=zero_quad
-     do j=2,lon2-1
-        do i=2,lat2-1
-           ii=istart(mp1)+i-2
-           xave(k)=xave(k)+fld(i,j,k)*wgtlats(ii)
-        enddo
-     enddo
-  enddo
-  xave=xave/(two_quad*float(nlon))
-  call mpl_allreduce(size(ave,1),xave)
-  ave=xave
-  deallocate(xave)
-  end subroutine glbave
 
 end module ncepgfs_io

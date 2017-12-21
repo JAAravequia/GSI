@@ -1,5 +1,4 @@
-      subroutine read_pblh(nread,ndata,nodata,infile,obstype,lunout,twindin,&
-         sis,nobs)
+      subroutine read_pblh(nread,ndata,nodata,infile,obstype,lunout,twindin,sis)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:  read_pblh     read obs from msgs in PREPFITS files (rpf == read aircraft)
@@ -23,7 +22,6 @@
 !     ndata    - number of type "obstype" observations retained for further processing
 !     twindin  - input group time window (hours)
 !     sis      - satellite/instrument/sensor indicator
-!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f90
@@ -43,7 +41,6 @@
       use gsi_4dvar, only: l4dvar,l4densvar,time_4dvar,winlen
       use obsmod, only: iadate,offtime_data,bmiss
       use deter_sfc_mod, only: deter_sfc2
-      use mpimod, only: npe
       implicit none
 
 !     Declare passed variables
@@ -51,7 +48,6 @@
       character(20),intent(in):: sis
       integer(i_kind),intent(in):: lunout
       integer(i_kind),intent(inout):: nread,ndata,nodata
-      integer(i_kind),dimension(npe),intent(inout):: nobs
       real(r_kind),intent(in):: twindin
 
 !     Declare local parameters
@@ -479,15 +475,14 @@
 !   Normal exit
 
 !   Write observation to scratch file
-     call count_obs(ndata,nreal,ilat,ilon,cdata_all,nobs)
-     write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
-     write(lunout) ((cdata_all(j,i),j=1,nreal),i=1,ndata)
-     deallocate(cdata_all)
- 
-     if (ndata == 0) then
+    write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
+    write(lunout) ((cdata_all(j,i),j=1,nreal),i=1,ndata)
+    deallocate(cdata_all)
+
+    if (ndata == 0) then
         call closbf(lunin)
         write(6,*)'READ_PREPFITS:  closbf(',lunin,')'
-     endif
+    endif
 
-     close(lunin)
-     end subroutine read_pblh
+    close(lunin)
+    end subroutine read_pblh

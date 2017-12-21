@@ -1,18 +1,7 @@
 #!/bin/csh -x
 
-if ( -d /da ) then
-    set target = wcoss
-else if ( -d /scratch1 ) then
-    set host = `hostname`
-    if ( `expr substr $host 1 1` == 'f' ) then
-        set target = zeus
-    else if ( `expr substr $host 1 1` == 't' ) then
-        set target = theia
-    endif
-else
-    echo "`hostname` is not supported"
-    exit -1
-endif
+set target = zeus 
+if ( $#argv >= 1 ) set target = $1
 
 cd ..
 set dir_root    = `pwd`
@@ -24,17 +13,17 @@ set dir_scripts = $dir_root/scripts
 cd $dir_src
 configure clean 
 configure $target
-make clean; if ( $status ) exit $status
-make -j 8; if ( $status ) exit $status
-make lib; if ( $status ) exit $status
+make clean
+make -j 8
+make lib
 
 # Next build EnKF executable and library
 cd $dir_src/enkf
 configure clean 
 configure $target
-make clean; if ( $status ) exit $status
-make -j 8; if ( $status ) exit $status
-make lib; if ( $status ) exit $status
+make clean
+make -j 8
+make lib
 
 # Copy global_gsi and global_enkf in exec directory
 mkdir -p $dir_root/exec
@@ -48,8 +37,8 @@ foreach util ( `ls -1d *.fd` )
     cd $util
     configure clean
     configure $target
-    make clean; if ( $status ) exit $status
-    make; if ( $status ) exit $status
+    make clean
+    make
     cd ..
 end
 

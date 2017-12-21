@@ -39,7 +39,6 @@ module radinfo
 !   2013-07-19  zhu     - add option emiss_bc for emissivity sensitivity radiance bias predictor
 !   2014-04-23   li     - change scan bias correction mode for avhrr and avhrr_navy
 !   2014-04-24   li     - apply abs (absolute) to AA and be for safeguarding
-!   2015-03-01   li     - add zsea1 & zsea2 to handle the vertical mean temperature based on NSST T-Profile
 !
 ! subroutines included:
 !   sub init_rad            - set satellite related variables to defaults
@@ -90,8 +89,7 @@ module radinfo
   public :: newpc4pred
   public :: biaspredvar
   public :: radjacnames,radjacindxs,nsigradjac
-  public :: nst_gsi,nstinfo,zsea1,zsea2,fac_dtl,fac_tsl,tzr_bufrsave,nst_tzr
-
+  public :: nst_gsi,nst_tzr,nstinfo,fac_dtl,fac_tsl,tzr_bufrsave
   public :: radedge1, radedge2
   public :: ssmis_precond
   public :: radinfo_adjust_jacobian
@@ -109,12 +107,10 @@ module radinfo
   logical use_edges   ! logical to use data on scan edges (.true.=to use)
 
   integer(i_kind) nst_gsi   ! indicator of Tr Analysis
+  integer(i_kind) nst_tzr   ! indicator of Tz retrieval QC tzr
   integer(i_kind) nstinfo   ! number of nst variables
-  integer(i_kind) zsea1     ! upper depth (in mm) to do the mean
-  integer(i_kind) zsea2     ! lower depth (in mm) to do the mean
   integer(i_kind) fac_dtl   ! indicator of DTL
   integer(i_kind) fac_tsl   ! indicator of TSL
-  integer(i_kind) nst_tzr   ! indicator of Tz retrieval QC tzr
 
   integer(i_kind) ssmis_method  !  noise reduction method for SSMIS
 
@@ -232,12 +228,10 @@ contains
                            ! 1 = read nst info but not applied
                            ! 2 = read nst info, applied to Tb simulation but no Tr analysis
                            ! 3 = read nst info, applied to Tb simulation and do Tr Analysis
+    nst_tzr   = 0          ! 0 = no Tz ret in gsi; 1 = retrieve and applied to QC
     nstinfo   = 0          ! number of nst fields used in Tr analysis
-    zsea1     = 0          ! upper depth to do the mean
-    zsea2     = 0          ! lower depth to do the mean
     fac_dtl   = 0          ! indicator to apply DTL model
     fac_tsl   = 0          ! indicator to apply TSL model
-    nst_tzr   = 0          ! 0 = no Tz ret in gsi; 1 = retrieve and applied to QC
     tzr_bufrsave = .false. ! .true.=generate bufr file for Tz retrieval
 
     passive_bc = .false.  ! .true.=turn on bias correction for monitored channels
@@ -1296,12 +1290,6 @@ contains
       nstep = 30
       edge1 = 1
       edge2 = 30
-   else if (index(isis,'saphir')/=0) then
-      step  = 0.666_r_kind
-      start = -42.960_r_kind
-      nstep = 130
-      edge1 = 1
-      edge2 = 130
    end if
 
    return
@@ -1322,9 +1310,6 @@ contains
 !   2011-04-07  todling - adjust argument list (interface) since newpc4pred is local now
 !   2013-01-03  j.jin   - adding logical tmi for mean_only. (radinfo file not yet ready. JJ)
 !   2013-07-19  zhu  - unify the weight assignments for both active and passive channels
-!   2014-10-01  ejones  - add gmi and amsr2 logical
-!   2015-01-16  ejones  - add saphir logical
-!   2015-03-23  zaizhong ma - added the Himawari-8 ahi
 !
 ! attributes:
 !   language: f90
@@ -1355,9 +1340,9 @@ contains
    logical lverbose 
    logical update
    logical mean_only
-   logical ssmi,ssmis,amsre,amsre_low,amsre_mid,amsre_hig,tmi,gmi,amsr2,saphir
+   logical ssmi,ssmis,amsre,amsre_low,amsre_mid,amsre_hig,tmi
    logical ssmis_las,ssmis_uas,ssmis_env,ssmis_img
-   logical avhrr,avhrr_navy,goessndr,goes_img,ahi,seviri
+   logical avhrr,avhrr_navy,goessndr,goes_img,seviri
 
    character(10):: obstype,platid
    character(20):: satsens,satsens_id
@@ -1460,7 +1445,7 @@ contains
       endif
 
 !     Process file
-      if(mype == 0)write(6,*)'INIT_PREDX:  Task ',mype,' processing ',trim(fdiag_rad)
+      write(6,*)'INIT_PREDX:  Task ',mype,' processing ',trim(fdiag_rad)
       satsens = header_fix%isis
       n_chan = header_fix%nchan
 
@@ -1493,7 +1478,6 @@ contains
                    obstype == 'sndrd2'.or. obstype == 'sndrd3' .or.  &
                    obstype == 'sndrd4'
       goes_img   = obstype == 'goes_img'
-      ahi        = obstype == 'ahi'
       avhrr      = obstype == 'avhrr'
       avhrr_navy = obstype == 'avhrr_navy'
       ssmi       = obstype == 'ssmi'
@@ -1509,11 +1493,8 @@ contains
       ssmis=ssmis_las.or.ssmis_uas.or.ssmis_img.or.ssmis_env.or.ssmis
       seviri     = obstype == 'seviri'
       tmi        = obstype == 'tmi'
-      gmi        = obstype == 'gmi'
-      saphir     = obstype == 'saphir'
-      amsr2      = obstype == 'amsr2'
       mean_only=ssmi .or. ssmis .or. amsre .or. goessndr .or. goes_img & 
-                .or. ahi .or. seviri .or. tmi
+                .or. seviri .or. tmi
 !     Allocate arrays and initialize
       if (mean_only) then 
          np=1
@@ -1733,7 +1714,7 @@ contains
 !        Process the scratch file
          if (lexist) then
 !           Read data from scratch file
-            if(mype == 0)write(6,*) 'INIT_PREDX:  processing update file i=',i,' with fname=',trim(fname)
+            write(6,*) 'INIT_PREDX:  processing update file i=',i,' with fname=',trim(fname)
             open(lntemp,file=fname,form='formatted')
             do
                read(lntemp,210,end=160) iich,(predr(k),k=1,angord+1)
@@ -1757,7 +1738,7 @@ contains
 !        Process the scratch file
          if (lexist) then
 !           Read data from scratch file
-            if(mype == 0)write(6,*) 'INIT_PREDX:  processing update file i=',i,' with fname=',trim(fname)
+            write(6,*) 'INIT_PREDX:  processing update file i=',i,' with fname=',trim(fname)
             open(lntemp,file=fname,form='formatted')
             do 
                read(lntemp,220,end=260) jj,tlaptmp,tsumtmp,counttmp

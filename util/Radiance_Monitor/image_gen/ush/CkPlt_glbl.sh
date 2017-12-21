@@ -39,9 +39,9 @@ fi
 this_file=`basename $0`
 this_dir=`dirname $0`
 
-RADMON_SUFFIX=$1
+SUFFIX=$1
 
-echo RADMON_SUFFIX    = ${RADMON_SUFFIX}
+echo SUFFIX    = ${SUFFIX}
 
 #--------------------------------------------------------------------
 #  Set plot_time if it is included as an argument.
@@ -114,13 +114,13 @@ export PLOT=1
 #--------------------------------------------------------------------
 
 if [[ $MY_MACHINE = "wcoss" ]]; then
-   running=`bjobs -l | grep plot_${RADMON_SUFFIX} | wc -l` 
+   running=`bjobs -l | grep plot_${SUFFIX} | wc -l` 
 else
-   running=`showq -n -u ${LOGNAME} | grep plot_${RADMON_SUFFIX} | wc -l`
+   running=`showq -n -u ${LOGNAME} | grep plot_${SUFFIX} | wc -l`
 fi
 
 if [[ $running -ne 0 ]]; then
-   echo "Plot jobs still running for $RADMON_SUFFIX, must exit"
+   echo "Plot jobs still running for $SUFFIX, must exit"
    exit
 fi
 
@@ -129,7 +129,7 @@ fi
 #  Create tmpdir and LOGdir
 #--------------------------------------------------------------------
 
-tmpdir=${STMP_USER}/plot_rad${RADMON_SUFFIX}
+tmpdir=${STMP_USER}/plot_rad${SUFFIX}
 rm -rf $tmpdir
 mkdir -p $tmpdir
 cd $tmpdir
@@ -152,15 +152,8 @@ if [[ $plot_time != "" ]]; then
 else
    export PDATE=$PRODATE
 fi
-#export START_DATE=`$NDATE -720 $PDATE`
+export START_DATE=`$NDATE -720 $PDATE`
 echo $PRODATE  $PDATE
-
-export NUM_CYCLES=${NUM_CYCLES:-121}
-hrs=`expr $NUM_CYCLES \\* -6`
-echo "hrs = $hrs"
-
-export START_DATE=`$NDATE ${hrs} $PDATE`
-echo "start_date, prodate, pdate = $START_DATE $PRODATE  $PDATE"
 
 sdate=`echo $PDATE|cut -c1-8`
 export CYA=`echo $PDATE|cut -c9-10`
@@ -175,7 +168,7 @@ export PDY=`echo $PDATE|cut -c1-8`
 #--------------------------------------------------------------------
 proceed="NO"
 if [[ "$PRODATE" == "auto" ]]; then
-   proceed=`${IG_SCRIPTS}/confirm_data.sh ${RADMON_SUFFIX} ${PDATE}`
+   proceed=`${IG_SCRIPTS}/confirm_data.sh ${SUFFIX} ${PDATE}`
 elif [[ $PDATE -le $PRODATE ]]; then
    nfile_src=`ls -l ${TANKDIR}/radmon.${PDY}/*${PDATE}*ieee_d* | egrep -c '^-'` 
    if [[ $nfile_src -gt 0 ]]; then
@@ -276,13 +269,11 @@ fi
 if [[ ${PLOT_HORIZ} -eq 1 ]] ; then
    export datdir=${RADSTAT_LOCATION}
 
-   jobname="plot_horiz_${RADMON_SUFFIX}"
+   jobname="plot_horiz_${SUFFIX}"
    logfile="${LOGdir}/horiz.log"
 
    if [[ $MY_MACHINE = "wcoss" ]]; then
       $SUB -P $PROJECT -q $JOB_QUEUE -o ${logfile} -M 80 -W 0:45 -R affinity[core] -J ${jobname} ${IG_SCRIPTS}/mk_horiz_plots.sh
-   elif [[ $MY_MACHINE = "cray" ]]; then
-      $SUB -P $PROJECT -q $JOB_QUEUE -o ${logfile} -M 80 -W 0:45  -J ${jobname} ${IG_SCRIPTS}/mk_horiz_plots.sh
    else
       $SUB -A $ACCOUNT -l procs=1,walltime=0:20:00 -N ${jobname} -V -j oe -o ${logfile} $IG_SCRIPTS/mk_horiz_plots.sh
    fi
@@ -296,8 +287,7 @@ ${IG_SCRIPTS}/mk_time_plots.sh
 #  Run the make_archive.sh script if $DO_ARCHIVE is switched on.
 #------------------------------------------------------------------
 if [[ $DO_ARCHIVE = 1 ]]; then
-#   ${IG_SCRIPTS}/make_archive.sh
-   ${IG_SCRIPTS}/nu_make_archive.sh
+   ${IG_SCRIPTS}/make_archive.sh
 fi
 
 #--------------------------------------------------------------------

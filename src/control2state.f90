@@ -205,6 +205,8 @@ do jj=1,nsubwin
    wbundle=xhat%step(jj)
 
 !  Get pointers to required control variables
+   if (icsfwter >0) call gsi_bundlegetpointer (wbundle,'sfwter',cv_sfwter,istatus)
+   if (icvpwter >0) call gsi_bundlegetpointer (wbundle,'vpwter',cv_vpwter,istatus)
 
    if(ladtest_obs) then
 ! Convert from subdomain to full horizontal field distributed among processors
@@ -224,8 +226,6 @@ do jj=1,nsubwin
 !  Convert streamfunction and velocity potential to u,v
    if(do_getuv) then
       if (twodvar_regional .and. icsfwter>0 .and. icvpwter>0) then
-         call gsi_bundlegetpointer (wbundle,'sfwter',cv_sfwter,istatus)
-         call gsi_bundlegetpointer (wbundle,'vpwter',cv_vpwter,istatus)
          allocate(uland(lat2,lon2,nsig),vland(lat2,lon2,nsig), &
                   uwter(lat2,lon2,nsig),vwter(lat2,lon2,nsig))
          call getuv(uland,vland,cv_sf,cv_vp,0)
@@ -281,7 +281,10 @@ do jj=1,nsubwin
    if (do_cw_to_hydro) then
 !     Case when cloud-vars do not map one-to-one (cv-to-sv)
 !     e.g. cw-to-ql&qi
-      call cw2hydro_tl(sval(jj),wbundle,clouds,nclouds)
+      if (.not. do_tv_to_tsen) then
+         call tv_to_tsen(cv_t,sv_q,sv_tsen)
+      end if
+      call cw2hydro_tl(sval(jj),wbundle,sv_tsen,clouds,nclouds)
    else
 !     Case when cloud-vars map one-to-one (cv-to-sv), take care of them together
 !     e.g. cw-to-cw

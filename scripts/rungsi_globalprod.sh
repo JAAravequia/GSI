@@ -18,10 +18,14 @@
 #PBS -o gsi_global.e${jobid} 
 #PBS -N gsi_global
 #PBS -q batch
-#PBS -l walltime=00:30:00 
-#PBS -l nodes=2:ppn=12
+#PBS -l walltime=03:30:00 
+##PBS -l nodes=2:ppn=12
+##PBS -l nodes=16:ppn=3
+#PBS -l nodes=8:ppn=12
+##PBS -l nodes=32:ppn=12
 #PBS -j eo                
-#PBS -A ada
+##PBS -A drt
+#PBS -A h-sandy
 #PBS -V
 #=======================================================
 
@@ -33,9 +37,10 @@ echo "Time starting the job is `date` "
 if [ -d /da ]; then
   TOPDIR=/da   # This would be the WCOSS
   MACHINE=WCOSS
-elif [ -d /scratch4/NCEPDEV/da ]; then
-  TOPDIR=/scratch4/NCEPDEV/da     #This is zeus 
-  MACHINE=THEIA
+elif [ -d /scratch2/portfolios/NESDIS/drt ]; then
+# TOPDIR=/scratch1/portfolios/NCEPDEV/da     #This is zeus 
+  TOPDIR=/scratch2/portfolios/NESDIS/drt     #This is zeus 
+  MACHINE=ZEUS
 else 
   echo CANNOT FIND A VALID TOP-LEVEL DIRECTORY
   exit 1
@@ -46,20 +51,26 @@ fi
 #=================================================================================================
 
 # Set experiment name and analysis date
-adate=2015060100
+adate=2015012500
 expnm=globalprod    
 exp=globalprod.$adate
-expid=${expnm}.$adate.wcoss
+#expid=${expnm}.$adate.wcoss
+expid=${expnm}.$adate
 
 # Set path/file for gsi executable
-gsiexec=/da/save/$USER/trunk/src/global_gsi
+#gsiexec=/da/save/$USER/trunk/src/global_gsi
+ gsiexec=${TOPDIR}/save/$USER/gsi_svn/src/global_gsi
 
 # Specify GSI fixed field
-fixgsi=/da/save/$USER/trunk/fix
+#fixgsi=/da/save/$USER/trunk/fix
+fixgsi=${TOPDIR}/save/$USER/gsi_svn/fix
 
 # Set the JCAP resolution which you want.
 # All resolutions use LEVS=64
-export JCAP=62
+ export JCAP=62
+#export JCAP=126
+#export JCAP=382
+#export JCAP=574
 export LEVS=64
 export JCAP_B=$JCAP
 export lrun_subdirs=.true.
@@ -70,18 +81,19 @@ if [ $MACHINE = WCOSS ]; then
    datdir=/ptmp/$USER/data_sigmap/${exp}
    tmpdir=/ptmp/$USER/tmp${JCAP}_sigmap/${expid}  
    savdir=/ptmp/$USER/out${JCAP}/sigmap/${expid}  
-   fixcrtm=/da/save/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix
+   fixcrtm=/usrx/local/nceplibs/fix/crtm_v2.1.3
    endianness=Big_Endian
    COMPRESS=gzip 
    UNCOMPRESS=gunzip
    DIAG_COMPRESS=YES 
    DIAG_SUFFIX="" 
    DIAG_TARBALL=YES 
-elif [ $MACHINE = THEIA ]; then
-   datdir=/scratch4/NCEPDEV/stmp3/$USER/data_sigmap/${exp}
-   tmpdir=/scratch4/NCEPDEV/stmp3/$USER/tmp${JCAP}_sigmap/${expid}  
-   savdir=/scratch4/NCEPDEV/stmp3/$USER/out${JCAP}/sigmap/${expid} 
-   fixcrtm=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix
+elif [ $MACHINE = ZEUS ]; then
+   datdir=/scratch2/portfolios/NCEPDEV/ptmp/$USER/data_sigmap/${exp}
+   tmpdir=/scratch2/portfolios/NCEPDEV/ptmp/$USER/tmp${JCAP}_sigmap/${expid}  
+   savdir=/scratch2/portfolios/NCEPDEV/ptmp/$USER/out${JCAP}/sigmap/${expid} 
+#  fixcrtm=/scratch1/portfolios/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/sorc/CRTM_REL-2.1.3/Big_Endian
+   fixcrtm=/scratch2/portfolios/NESDIS/drt/save/Tong.Zhu/CRTM/nwprod/lib/CRTM_REL-2.2.1/Big_Endian
    endianness=Big_Endian
 #  endianness=Little_Endian - once all background fields are available in little endian format, uncomment this option and remove Big_Endian
    COMPRESS=gzip
@@ -101,12 +113,12 @@ if [ $MACHINE = WCOSS ]; then
    export ndate=/nwprod/util/exec/ndate
    export ncp=/bin/cp
    export wc=/usr/bin/wc
-elif [ $MACHINE = THEIA ]; then
-   export SIGHDR=/scratch4/NCEPDEV/global/save/Shrinivas.Moorthi/para/exec/global_sighdr
-   export FIXGLOBAL=/scratch4/NCEPDEV/global/save/Shrinivas.Moorthi/para/fix/fix_am 
-   export CHGRESEXEC=/scratch4/NCEPDEV/global/save/Shrinivas.Moorthi/para/exec/global_chgres
-   export CHGRESSH=/scratch4/NCEPDEV/global/save/Shrinivas.Moorthi/para/ush/global_chgres_uf_gaea.sh 
-   export ndate=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/util/exec/ndate
+elif [ $MACHINE = ZEUS ]; then
+   export SIGHDR=/scratch2/portfolios/NCEPDEV/global/save/Shrinivas.Moorthi/para/exec/global_sighdr
+   export FIXGLOBAL=/scratch2/portfolios/NCEPDEV/global/save/Shrinivas.Moorthi/para/fix/fix_am 
+   export CHGRESEXEC=/scratch2/portfolios/NCEPDEV/global/save/Shrinivas.Moorthi/para/exec/global_chgres
+   export CHGRESSH=/scratch2/portfolios/NCEPDEV/global/save/Shrinivas.Moorthi/para/ush/global_chgres_uf_gaea.sh 
+   export ndate=/scratch1/portfolios/NCEPDEV/da/save/Michael.Lueken/nwprod/util/exec/ndate
    export ncp=/bin/cp
    export wc=/usr/bin/wc
 else
@@ -226,7 +238,7 @@ if [ $MACHINE = WCOSS ]; then
     echo Use Get_Initial_Files.sh to get them
     exit 1
   fi
-elif  [ $MACHINE = THEIA ]; then    
+elif  [ $MACHINE = ZEUS ]; then    
   if [ -s ${datdir}/gdas1.t${hha}z.sgm3prep ]; then 
     datobs=${datdir}
     datges=${datdir}
@@ -360,11 +372,11 @@ SINGLEOB=""
 
 cat << EOF > gsiparm.anl
  &SETUP
-   miter=2,niter(1)=100,niter(2)=100,
+   miter=2,niter(1)=100,niter(2)=150,
    niter_no_qc(1)=50,niter_no_qc(2)=0,
    write_diag(1)=.true.,write_diag(2)=.false.,write_diag(3)=.true.,
    qoption=2,
-   gencode=82,factqmin=5.0,factqmax=0.005,deltim=$DELTIM,
+   gencode=$IGEN,factqmin=5.0,factqmax=5.0,deltim=$DELTIM,
    iguess=-1,
    oneobtest=.false.,retrieval=.false.,l_foto=.false.,
    use_pbl=.false.,use_compress=.true.,nsig_ext=12,gpstop=50.,
@@ -385,8 +397,6 @@ cat << EOF > gsiparm.anl
    hswgt=0.45,0.3,0.25,
    bw=0.0,norsp=4,
    bkgv_flowdep=.true.,bkgv_rewgtfct=1.5,
-   bkgv_write=.false.,
-   cwcoveqqcov=.false.,
    $BKGVERR
  /
  &ANBKGERR
@@ -398,13 +408,13 @@ cat << EOF > gsiparm.anl
    $JCOPTS
  /
  &STRONGOPTS
-   tlnmc_option=2,nstrong=1,nvmodes_keep=8,period_max=6.,period_width=1.5,
+   tlnmc_option=1,nstrong=1,nvmodes_keep=8,period_max=6.,period_width=1.5,
    baldiag_full=.true.,baldiag_inc=.true.,
    $STRONGOPTS
  /
  &OBSQC
    dfact=0.75,dfact1=3.0,noiqc=.true.,oberrflg=.false.,c_varqc=0.02,
-   use_poq7=.true.,qc_noirjaco3_pole=.true.,vqc=.true.
+   use_poq7=.true.,
    $OBSQC
  /
  &OBS_INPUT
@@ -475,7 +485,7 @@ OBS_INPUT::
    mhsbufr        mhs         metop-b     mhs_metop-b          0.0     1      0
    iasibufr       iasi        metop-b     iasi616_metop-b      0.0     1      0
    gomebufr       gome        metop-b     gome_metop-b         0.0     2      0
-   atmsbufr       atms        npp         atms_npp             0.0     1      0
+   atmsbufr       atms        npp         atms_npp             0.0     3      0
    crisbufr       cris        npp         cris_npp             0.0     1      0
 ::
  &SUPEROB_RADAR
@@ -552,6 +562,9 @@ bftab_sst=$fixgsi/bufrtab.012
 # Copy executable and fixed files to $tmpdir
 $ncp $gsiexec ./gsi.x
 
+$ncp /scratch2/portfolios/NESDIS/drt/save/Tong.Zhu/gsi_svn/fix/thinning_param.txt ./thinning_param.txt
+$ncp /scratch2/portfolios/NESDIS/drt/save/Tong.Zhu/gsi_svn/fix/thinning_std.txt ./thinning_std.txt
+
 $ncp $anavinfo ./anavinfo
 $ncp $berror   ./berror_stats
 $ncp $emiscoef_IRwater ./Nalli.IRwater.EmisCoeff.bin
@@ -624,24 +637,16 @@ $ncp $datobs/${prefix_obs}cris.${suffix}     ./crisbufr
 $ncp $datobs/${prefix_obs}syndata.tcvitals.tm00 ./tcvitl
 
 
-#  # For data before Feb 2015 
-#  # Copy bias correction, atmospheric and surface files
-#  $ncp $datges/${prefix_tbc}.abias              ./satbias_in
-#  $ncp $datges/${prefix_tbc}.satang             ./satbias_angle
-#  #$ncp $datges/${prefix_tbc}.abias_pc          ./satbias_pc
-#  #$ncp $datges/${prefix_tbc}.radstat           ./radstat.gdas
+# Copy bias correction, atmospheric and surface files
+$ncp $datges/${prefix_tbc}.abias              ./satbias_in
+#ln -s -f $datges/${prefix_tbc}.abias_pc           ./satbias_pc
+$ncp $datges/${prefix_tbc}.satang             ./satbias_angle
+$ncp $datges/${prefix_tbc}.radstat            ./radstat.gdas
 
- # For data after Feb 2015 
- # Copy bias correction, atmospheric and surface files
- $ncp $datges/${prefix_tbc}.abias               ./satbias_in
- #$ncp $datges/${prefix_tbc}.satang             ./satbias_angle
- $ncp $datges/${prefix_tbc}.abias_pc            ./satbias_pc
- $ncp $datges/${prefix_tbc}.radstat             ./radstat.gdas
+#/da/save/$USER/trunk/util/Radiance_bias_correction_Utilities/write_biascr_option.x -newpc4pred -adp_anglebc 4
 
-/da/save/$USER/trunk/util/Radiance_bias_correction_Utilities/write_biascr_option.x -newpc4pred -adp_anglebc 4
-
-cp satbias_in satbias_in.orig
-cp satbias_in.new satbias_in
+#cp satbias_in satbias_in.orig
+#cp satbias_in.new satbias_in
 
 listdiag=`tar xvf radstat.gdas | cut -d' ' -f2 | grep _ges`
 for type in $listdiag; do
@@ -681,8 +686,8 @@ else
    #emily
    if [  $MACHINE = WCOSS  ]; then
       export SIGLEVEL=/NCEPDEV/rstprod/nwprod/fix/global_hyblev.l64.txt
-   elif [  $MACHINE = THEIA  ]; then
-      export SIGLEVEL=/scratch4/NCEPDEV/rstprod/nwprod/fix/global_hyblev.l64.txt
+   elif [  $MACHINE = ZEUS  ]; then
+      export SIGLEVEL=/NCEPPROD/nwprod/fix/global_hyblev.l64.txt
    fi
 
    export JCAP=$JCAP
@@ -736,7 +741,7 @@ else
 fi
 
 # Run gsi under Parallel Operating Environment (poe) on NCEP IBM
-if [  $MACHINE = THEIA  ]; then
+if [  $MACHINE = ZEUS  ]; then
 
    cd $tmpdir/
    echo "run gsi now"
@@ -744,15 +749,14 @@ if [  $MACHINE = THEIA  ]; then
    export MPI_BUFS_PER_PROC=256
    export MPI_BUFS_PER_HOST=256
    export MPI_GROUP_MAX=256
-   #export OMP_NUM_THREADS=1
-   export OMP_STACKSIZE=512M
+#  export OMP_NUM_THREADS=1
 
    /bin/ksh --login
-   #module load intel
-   #module load mpt
+   module load intel
+   module load mpt
 
    echo "JOB ID : $PBS_JOBID"
-   eval "mpirun -v -np $PBS_NP $tmpdir/gsi.x > stdout"
+   eval "mpiexec_mpt -v -np $PBS_NP $tmpdir/gsi.x > stdout"
    rc=$?
 
 elif [  $MACHINE = WCOSS  ]; then

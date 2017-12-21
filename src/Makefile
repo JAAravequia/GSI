@@ -189,6 +189,7 @@ clean:
 
   SRCSF90C = \
 	gfs_stratosphere.f90 \
+	add_gfs_stratosphere.f90 \
 	adjtest.f90 \
         adjtest_obs.f90 \
         adjust_cloudobs_mod.f90 \
@@ -238,15 +239,6 @@ clean:
 	control2state.f90 \
 	control_vectors.f90 \
 	converr.f90 \
-        converr_ps.f90 \
-        converr_q.f90 \
-        converr_t.f90 \
-        converr_uv.f90 \
-        converr_pw.f90 \
-        convb_ps.f90 \
-        convb_q.f90 \
-        convb_t.f90 \
-        convb_uv.f90 \
 	convinfo.f90 \
 	convthin.f90 \
 	convthin_time.f90 \
@@ -342,7 +334,6 @@ clean:
 	intpblh.f90 \
 	intpcp.f90 \
 	intpm2_5.f90 \
-        intpm10.f90 \
 	intpmsl.f90 \
 	intps.f90 \
 	intpw.f90 \
@@ -446,7 +437,6 @@ clean:
 	read_files.f90 \
 	read_gfs_ozone_for_regional.f90 \
 	read_guess.F90 \
-        read_mitm_mxtm.f90 \
 	read_obsdiags.F90 \
 	read_wrf_mass_files.F90 \
 	read_wrf_mass_guess.F90 \
@@ -461,7 +451,6 @@ clean:
 	set_crtm_aerosolmod.f90 \
 	set_crtm_cloudmod.f90 \
         setupaod.f90 \
-        setuppm10.f90 \
 	setupyobs.f90 \
 	sfc_model.f90 \
 	sfcobsqc.f90 \
@@ -483,7 +472,6 @@ clean:
 	statsrad.f90 \
 	stop1.f90 \
 	stp3dvar.f90 \
-        stpaod.f90 \
 	stpcalc.f90 \
 	stpco.f90 \
 	stpdw.f90 \
@@ -497,7 +485,6 @@ clean:
 	stppblh.f90 \
 	stppcp.f90 \
 	stppm2_5.f90 \
-	stppm10.f90 \
 	stppmsl.f90 \
 	stpmitm.f90 \
 	stpmxtm.f90 \
@@ -532,6 +519,7 @@ clean:
 	timermod.f90 \
 	tintrp2a.f90 \
 	tintrp3.f90 \
+        thin_cstrot.f90 \
 	tpause.f90 \
 	tpause_t.F90 \
         tune_pbl_height.f90 \
@@ -571,7 +559,6 @@ clean:
 	read_radarref_mosaic.f90 \
 	read_aerosol.f90 \
 	read_airs.f90 \
-	read_amsr2.f90 \
 	read_amsre.f90 \
 	read_anowbufr.f90 \
 	read_avhrr.f90 \
@@ -582,9 +569,7 @@ clean:
 	read_cris.f90 \
 	read_diag.f90 \
         read_fl_hdob.f90 \
-	read_gmi.f90 \
 	read_goesimg.f90 \
-	read_ahi.f90 \
 	read_goesimgr_skycover.f90 \
 	read_goesndr.f90 \
 	read_gps.f90 \
@@ -600,10 +585,8 @@ clean:
 	read_pcp.f90 \
 	read_prepbufr.f90 \
 	read_radar.f90 \
-	read_saphir.f90 \
 	read_satwnd.f90 \
 	read_sfcwnd.f90 \
-	read_rapidscat.f90 \
 	read_seviri.f90 \
 	read_ssmi.f90 \
 	read_ssmis.f90 \

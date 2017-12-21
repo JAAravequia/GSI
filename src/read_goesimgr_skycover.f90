@@ -1,5 +1,5 @@
 subroutine  read_goesimgr_skycover(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis,&
-                        prsl_full,nobs)
+                        prsl_full)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_goesimgr_skycover                    read GOES Imager sky cover product
@@ -31,7 +31,6 @@ subroutine  read_goesimgr_skycover(nread,ndata,nodata,infile,obstype,lunout,gsti
 !     nread    - number of obs read 
 !     ndata    - number of obs retained for further processing
 !     nodata   - number of obs retained for further processing
-!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f95/2003
@@ -54,7 +53,6 @@ subroutine  read_goesimgr_skycover(nread,ndata,nodata,infile,obstype,lunout,gsti
   use obsmod, only: iadate,bmiss,oberrflg,perturb_obs,perturb_fact,ran01dom
   use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,time_4dvar,thin4d
   use adjust_cloudobs_mod, only: adjust_goescldobs
-  use mpimod, only: npe
 
   implicit none
 
@@ -63,7 +61,6 @@ subroutine  read_goesimgr_skycover(nread,ndata,nodata,infile,obstype,lunout,gsti
   character(len=20)                     ,intent(in   ) :: sis
   integer(i_kind)                       ,intent(in   ) :: lunout
   integer(i_kind)                       ,intent(inout) :: nread,ndata,nodata
-  integer(i_kind),dimension(npe)        ,intent(inout) :: nobs
   real(r_kind)                          ,intent(in   ) :: twind,gstime
   real(r_kind),dimension(nlat,nlon,nsig),intent(in   ) :: prsl_full
 
@@ -122,7 +119,7 @@ subroutine  read_goesimgr_skycover(nread,ndata,nodata,infile,obstype,lunout,gsti
 
   nc=0
   conv: do i=1,nconvtype
-     if(trim(obstype) == trim(ioctype(i)) .and. ictype(i)==154_i_kind) then
+     if(trim(obstype) == trim(ioctype(i)) .and. ictype(i)==999_i_kind) then
         nc=i
         exit conv
      end if
@@ -397,7 +394,6 @@ subroutine  read_goesimgr_skycover(nread,ndata,nodata,infile,obstype,lunout,gsti
   end do
   deallocate(iloc,isort,cdata_all)
  
-  call count_obs(ndata,nreal,ilat,ilon,cdata_out,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon,ndata
   write(lunout) cdata_out
 
