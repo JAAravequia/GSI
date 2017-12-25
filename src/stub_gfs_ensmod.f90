@@ -25,7 +25,7 @@ use abstract_get_gfs_ensmod_mod
   end type get_gfs_ensmod_class
 contains
   
-  subroutine get_user_ens_dummy(this,grd,ntindex,atm_bundle,iret)
+  subroutine get_user_ens_dummy(this,grd,member,ntindex,atm_bundle,iret)
      use kinds, only: i_kind
      use general_sub2grid_mod, only: sub2grid_info
      use gsi_bundlemod, only: gsi_bundle
@@ -33,8 +33,9 @@ contains
      ! Declare passed variables
      class(get_gfs_ensmod_class), intent(inout) :: this
      type(sub2grid_info), intent(in   ) :: grd
+     integer(i_kind),     intent(in   ) :: member
      integer(i_kind),     intent(in   ) :: ntindex
-     type(gsi_bundle),    intent(inout) :: atm_bundle(:)
+     type(gsi_bundle),    intent(inout) :: atm_bundle
      integer(i_kind),     intent(  out) :: iret
      iret = 0
   end subroutine get_user_ens_dummy
