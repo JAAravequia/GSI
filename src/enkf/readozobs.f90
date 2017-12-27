@@ -879,16 +879,14 @@ subroutine write_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
          write(pe_name,'(i4.4)') ipe
          if (npefiles .eq. 0) then
             ! diag file (concatenated pe* files)
-            obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_oz(nsat))//"_ges."//datestring//'_'//trim(adjustl(id))
+            obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_oz(nsat))//"_ges."//datestring//'_'//trim(adjustl(id))//'.nc4'
             inquire(file=obsfile,exist=fexist)
             if (.not. fexist .or. datestring .eq. '0000000000') then
-               obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_oz(nsat))//"_ges."//trim(adjustl(id))
+               obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_oz(nsat))//"_ges."//trim(adjustl(id))//'.nc4'
             endif
          else ! raw, unconcatenated pe* files.
-            obsfile = trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_oz(nsat))//'_01'
+            obsfile = trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_oz(nsat))//'_01'//'.nc4'
          endif
-
-         obsfile = trim(obsfile)//'.nc4'
 
          inquire(file=obsfile,exist=fexist)
          if (.not. fexist) cycle peloop
