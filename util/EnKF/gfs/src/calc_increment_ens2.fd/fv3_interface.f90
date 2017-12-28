@@ -55,8 +55,7 @@ module fv3_interface
   type analysis_grid
      character(len=500)                                                :: filename
      real(r_kind),                   dimension(:,:,:),     allocatable :: dpres
-     real(r_kind),                   dimension(:,:,:),     allocatable :: dpi
-     real(r_kind),                   dimension(:,:,:),     allocatable :: pres
+     real(r_kind),                   dimension(:,:,:),     allocatable :: dlnp
      real(r_kind),                   dimension(:,:,:),     allocatable :: ugrd
      real(r_kind),                   dimension(:,:,:),     allocatable :: vgrd
      real(r_kind),                   dimension(:,:,:),     allocatable :: spfh
@@ -452,7 +451,7 @@ contains
     ! Define counting variables
 
     integer                                                              :: i, j, k
-    real(r_kind), allocatable, dimension(:,:,:) :: delpi_inc,pot_temp
+    real(r_kind), allocatable, dimension(:,:,:) :: fg_dz, an_dz, pot_temp
 
     !=====================================================================
 
@@ -471,17 +470,15 @@ contains
     incr_grid%v_inc     = an_grid%vgrd  - fg_grid%vgrd
     incr_grid%delp_inc  = an_grid%dpres - fg_grid%dpres
     ! compute hydrostatic delz increment
-    allocate(delpi_inc(incr_grid%nx,incr_grid%ny,incr_grid%nz))
-    allocate(pot_temp(incr_grid%nx,incr_grid%ny,incr_grid%nz))
-    delpi_inc  = an_grid%dpi - fg_grid%dpi
-    !print *,'min/max delpi_inc',minval(delpi_inc),maxval(delpi_inc)
+    allocate(fg_dz(incr_grid%nx,incr_grid%ny,incr_grid%nz))
+    allocate(an_dz(incr_grid%nx,incr_grid%ny,incr_grid%nz))
     !print *,'rgas,rvap,cp',rgas,rvap,cp,rvap/rgas-1.
-    pot_temp = an_grid%tmp*(1.+(rvap/rgas-1.)*an_grid%spfh)*(an_grid%pres/1.e5)**(rgas/cp)
-    print *,'min/max pot_temp',minval(pot_temp),maxval(pot_temp)
-    ! hydrostatic equation dz/dpi = -theta/g 
-    incr_grid%delz_inc  = -pot_temp*delpi_inc/9.80665
-    print *,'min/max delz_inc',minval(incr_grid%delz_inc),maxval(incr_grid%delz_inc)
-    deallocate(delpi_inc, pot_temp)
+! hydrostatic equation g*dz = -R_d*T_v*dlnp
+    fg_dz = -rgas*fg_grid%tmp*(1.+(rvap/rgas-1.)*fg_grid%spfh)*fg_grid%dlnp/9.8066
+    an_dz = -rgas*an_grid%tmp*(1.+(rvap/rgas-1.)*an_grid%spfh)*an_grid%dlnp/9.8066
+    incr_grid%delz_inc = an_dz - fg_dz
+    deallocate(fg_dz, an_dz)
+
     incr_grid%temp_inc  = an_grid%tmp   - fg_grid%tmp
     incr_grid%sphum_inc = an_grid%spfh  - fg_grid%spfh
     incr_grid%clwmr_inc = an_grid%clwmr - fg_grid%clwmr
@@ -507,6 +504,9 @@ contains
     ! Loop through local variable
 
     do k = 1, incr_grid%nz
+       !print *,k,minval(incr_grid%delz_inc(:,:,k)),maxval(incr_grid%delz_inc(:,:,k)),&
+       !minval(incr_grid%delp_inc(:,:,k)),maxval(incr_grid%delp_inc(:,:,k)),&
+       !minval(incr_grid%temp_inc(:,:,k)),maxval(incr_grid%temp_inc(:,:,k))
 
        ! Define local variables
 
@@ -554,7 +554,6 @@ contains
     real(r_kind),               dimension(:,:,:),            allocatable :: vcoord
     real(r_kind),               dimension(:),                allocatable :: workgrid
     real(r_kind), allocatable, dimension(:,:) :: delz
-    real(r_kind) kap,kapr,kap1
     logical flip_lats
 
     ! Define counting variables
@@ -655,37 +654,16 @@ contains
        pressi(:,:,k) = grid%ak(k) + grid%bk(k)*grid%psfc(:,:)
     end do ! do k = 1, meta_nemsio%dimz + 1
 
-    kap = rgas/cp
-    kapr = 1./kap
-    kap1 = kap+1.
-    !print *,'rd,cp,kap',rgas,cp,kap
     do k = 1, meta_nemsio%dimz
        ! defined as higher pressure minus lower pressure
        grid%dpres(:,:,meta_nemsio%dimz - k + 1) = pressi(:,:,k) -          &
             & pressi(:,:,k+1)
-       grid%dpi(:,:,meta_nemsio%dimz - k + 1) = cp*pressi(:,:,k)**kap- &
-            & cp*pressi(:,:,k+1)**kap
-       ! GSM definition (average of exner function)
-       !grid%pres(:,:,meta_nemsio%dimz - k + 1) = &
-       !  ((pressi(:,:,k)**kap1-pressi(:,:,k+1)**kap1)/&
-       !  (kap1*(pressi(:,:,k)-pressi(:,:,k+1))))**kapr
-       ! simple mean (FV3 uses this)
-       grid%pres(:,:,meta_nemsio%dimz - k + 1) = &
-       0.5*(pressi(:,:,k)+pressi(:,:,k+1))
-       !print *,k,minval(grid%pres(:,:,meta_nemsio%dimz - k + 1)),&
-       ! maxval(grid%pres(:,:,meta_nemsio%dimz - k + 1))
-       !print *,'dpres',k,minval(grid%dpres(:,:,meta_nemsio%dimz - k + 1)),&
-       !maxval(grid%dpres(:,:,meta_nemsio%dimz - k + 1))
-
-       ! Define local variables
-
+       grid%dlnp(:,:,meta_nemsio%dimz - k + 1) = log(pressi(:,:,k))- &
+            & log(pressi(:,:,k+1))
        if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
             & grid%dpres(:,:,meta_nemsio%dimz - k + 1))
        if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
-            & grid%dpi(:,:,meta_nemsio%dimz - k + 1))
-       if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
-            & grid%pres(:,:,meta_nemsio%dimz - k + 1))
-
+            & grid%dlnp(:,:,meta_nemsio%dimz - k + 1))
     end do ! do k = 1, meta_nemsio%dimz
 
     ! Deallocate memory for local variables
@@ -759,10 +737,8 @@ contains
          & allocate(grid%hybi(grid%nzp1))
     if(.not. allocated(an_grid%dpres))                                     &
          & allocate(an_grid%dpres(grid%nx,grid%ny,grid%nz))
-    if(.not. allocated(an_grid%dpi))                                     &
-         & allocate(an_grid%dpi(grid%nx,grid%ny,grid%nz))
-    if(.not. allocated(an_grid%pres))                                     &
-         & allocate(an_grid%pres(grid%nx,grid%ny,grid%nz))
+    if(.not. allocated(an_grid%dlnp))                                     &
+         & allocate(an_grid%dlnp(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(an_grid%ugrd))                                      &
          & allocate(an_grid%ugrd(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(an_grid%vgrd))                                      &
@@ -785,10 +761,8 @@ contains
          & allocate(an_grid%ck(grid%nz+1))
     if(.not. allocated(fg_grid%dpres))                                     &
          & allocate(fg_grid%dpres(grid%nx,grid%ny,grid%nz))
-    if(.not. allocated(fg_grid%dpi))                                     &
-         & allocate(fg_grid%dpi(grid%nx,grid%ny,grid%nz))
-    if(.not. allocated(fg_grid%pres))                                     &
-         & allocate(fg_grid%pres(grid%nx,grid%ny,grid%nz))
+    if(.not. allocated(fg_grid%dlnp))                                     &
+         & allocate(fg_grid%dlnp(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(fg_grid%ugrd))                                      &
          & allocate(fg_grid%ugrd(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(fg_grid%vgrd))                                      &
@@ -846,8 +820,7 @@ contains
     if(allocated(grid%hyai))      deallocate(grid%hyai)
     if(allocated(grid%hybi))      deallocate(grid%hybi)
     if(allocated(an_grid%dpres))  deallocate(an_grid%dpres)
-    if(allocated(an_grid%dpi))  deallocate(an_grid%dpi)
-    if(allocated(an_grid%pres))  deallocate(an_grid%pres)
+    if(allocated(an_grid%dlnp))  deallocate(an_grid%dlnp)
     if(allocated(an_grid%ugrd))   deallocate(an_grid%ugrd)
     if(allocated(an_grid%vgrd))   deallocate(an_grid%vgrd)
     if(allocated(an_grid%spfh))   deallocate(an_grid%spfh)
@@ -859,8 +832,7 @@ contains
     if(allocated(an_grid%bk))     deallocate(an_grid%bk)
     if(allocated(fg_grid%ck))     deallocate(an_grid%ck)
     if(allocated(fg_grid%dpres))  deallocate(fg_grid%dpres)
-    if(allocated(fg_grid%dpi))  deallocate(fg_grid%dpi)
-    if(allocated(fg_grid%pres))  deallocate(fg_grid%pres)
+    if(allocated(fg_grid%dlnp))  deallocate(fg_grid%dlnp)
     if(allocated(fg_grid%ugrd))   deallocate(fg_grid%ugrd)
     if(allocated(fg_grid%vgrd))   deallocate(fg_grid%vgrd)
     if(allocated(fg_grid%spfh))   deallocate(fg_grid%spfh)
