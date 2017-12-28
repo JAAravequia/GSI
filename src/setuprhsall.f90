@@ -595,7 +595,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up conventional wind gust data
               else if(obstype=='gust' .and. getindex(svars2d,'gust')>0) then
                  write(6,*) 'setting up gust'
-!                call gust%setup(lunin,mype,bwork,awork(1,i_gust),nele,nobs,is,conv_diagsave)
+                 call gust%setup(lunin,mype,bwork,awork(1,i_gust),nele,nobs,is,conv_diagsave)
+!                call setupgust(lunin,mype,bwork,awork(1,i_gust),nele,nobs,is,conv_diagsave)
 !             Set up conventional visibility data
               else if(obstype=='vis' .and. getindex(svars2d,'vis')>0) then
                  write(6,*) 'setting up vis'
