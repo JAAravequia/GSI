@@ -247,34 +247,6 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   external:: setupozlay
   external:: setupozlev
   external:: setuppcp
-! external:: setupps
-! external:: setuppw
-! external:: setupq
-  external:: setuprad
-  external:: setupref
-  external:: setuprw
-! external:: setupspd
-  external:: setupsst
-! external:: setupt
-! external:: setuptcp
-! external:: setupw
-! external:: setupgust
-! external:: setupvis
-! external:: setuppblh
-! external:: setupwspd10m
-! external:: setuptd2m
-  external:: setupmxtm
-! external:: setupmitm
-! external:: setuppmsl
-  external:: setuphowv
-! external:: setuptcamt
-! external:: setuplcbas
-! external:: setupcldch
-  external:: setupuwnd10m
-  external:: setupvwnd10m
-  external:: statsconv
-  external:: statsoz
-  external:: statspcp
   external:: statsrad
   external:: stop2
   external:: w3tage
@@ -592,6 +564,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
               else if(obstype=='dw')then
                  write(6,*) 'setting up dw'
                  call dw%setup(lunin,mype,bwork,awork(1,i_dw),nele,nobs,is,conv_diagsave)
+!                call setupdw(lunin,mype,bwork,awork(1,i_dw),nele,nobs,is,conv_diagsave)
 
 !             Set up radar wind data
               else if(obstype=='rw')then
@@ -622,7 +595,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up conventional wind gust data
               else if(obstype=='gust' .and. getindex(svars2d,'gust')>0) then
                  write(6,*) 'setting up gust'
-                 call gust%setup(lunin,mype,bwork,awork(1,i_gust),nele,nobs,is,conv_diagsave)
+!                call gust%setup(lunin,mype,bwork,awork(1,i_gust),nele,nobs,is,conv_diagsave)
 !             Set up conventional visibility data
               else if(obstype=='vis' .and. getindex(svars2d,'vis')>0) then
                  write(6,*) 'setting up vis'
@@ -656,6 +629,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
               else if(obstype=='mitm' .and. getindex(svars2d,'mitm')>0) then
                  write(6,*) 'setting up mitm'
                  call mitm%setup(lunin,mype,bwork,awork(1,i_mitm),nele,nobs,is,conv_diagsave)
+!                call setupmitm(lunin,mype,bwork,awork(1,i_mitm),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional pmsl data
               else if(obstype=='pmsl' .and. getindex(svars2d,'pmsl')>0) then
@@ -678,6 +652,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
               else if(obstype=='lcbas' .and. getindex(svars2d,'lcbas')>0) then
                  write(6,*) 'setting up lcbas'
                  call lcbas%setup(lunin,mype,bwork,awork(1,i_lcbas),nele,nobs,is,conv_diagsave)
+!                call setuplcbas(lunin,mype,bwork,awork(1,i_lcbas),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional cldch data
               else if(obstype=='cldch' .and. getindex(svars2d,'cldch')>0) then

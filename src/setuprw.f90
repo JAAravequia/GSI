@@ -195,14 +195,14 @@ contains
     this%myname='setuprw'
     this%numvars = 5
     allocate(this%varnames(this%numvars))
-    this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::z', 'var::ps', 'var::w' /)
+    this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::u', 'var::v', 'var::w' /)
   ! Check to see if required guess fields are available
     call this%check_vars_(proceed,include_w)
     if(.not. include_w) then
       deallocate(this%varnames)
       this%numvars = 4
       allocate(this%varnames(this%numvars))
-      this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::z', 'var::ps' /)
+      this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::u', 'var::v' /)
     endif   
     if(.not.proceed) return  ! not all vars available, simply return
   
@@ -448,7 +448,7 @@ contains
   
   !    Check to see if observation is below midpoint of first
   !    above surface layer.  If so, set rlow to that difference
-     rlow=max(sfcchk-dpres,zero)
+       rlow=max(sfcchk-dpres,zero)
   
   !    Check to see if observation is above midpoint of layer
   !    at the top of the model.  If so, set rhgh to that difference.
@@ -520,6 +520,9 @@ contains
           call tintrp31(this%ges_w,wgesin,dlat,dlon,dpres,dtime,&
           hrdifsig,mype,nfldsig)
        end if
+
+       call tintrp2a1(this%ges_u,ugesprofile,dlat,dlon,dtime,hrdifsig,&
+            nsig,mype,nfldsig)
        call tintrp2a1(this%ges_v,vgesprofile,dlat,dlon,dtime,hrdifsig,&
             nsig,mype,nfldsig)
        if(include_w) then 
@@ -530,21 +533,21 @@ contains
   !    Convert guess u,v wind components to radial value consident with obs
        cosazm  = cos(data(iazm,i))  ! cos(azimuth angle)
        sinazm  = sin(data(iazm,i))  ! sin(azimuth angle)
-     costilt = cos(data(itilt,i)) ! cos(tilt angle)
-     sintilt = sin(data(itilt,i)) ! sin(tilt angle)
-     cosazm_costilt = cosazm*costilt
-     sinazm_costilt = sinazm*costilt
-     !vTgesprofile= 5.40_r_kind*(exp((refgesprofile -43.1_r_kind)/17.5_r_kind)) 
+       costilt = cos(data(itilt,i)) ! cos(tilt angle)
+       sintilt = sin(data(itilt,i)) ! sin(tilt angle)
+       cosazm_costilt = cosazm*costilt
+       sinazm_costilt = sinazm*costilt
+       !vTgesprofile= 5.40_r_kind*(exp((refgesprofile -43.1_r_kind)/17.5_r_kind)) 
   !    rwwind = (ugesin*cosazm+vgesin*sinazm)*costilt*factw
        umaxmax=-huge(umaxmax)
        uminmin=huge(uminmin)
        kminmin=kbeambot
        kmaxmax=kbeamtop
        do k=kbeambot,kbeamtop
-        rwwindprofile=ugesprofile(k)*cosazm_costilt+vgesprofile(k)*sinazm_costilt
-        if(include_w) then
-           rwwindprofile=rwwindprofile+wgesprofile(k)*sintilt 
-        end if
+          rwwindprofile=ugesprofile(k)*cosazm_costilt+vgesprofile(k)*sinazm_costilt
+          if(include_w) then
+             rwwindprofile=rwwindprofile+wgesprofile(k)*sintilt 
+          end if
         
           if(umaxmax<rwwindprofile) then
              umaxmax=rwwindprofile
@@ -572,13 +575,13 @@ contains
        
        ddiff = data(irwob,i) - rwwind
   
-!    If requested, setup for single obs test.
-     if(oneobtest) then
-        ddiff=maginnov
-        Vr=ddiff+rwwind
-        error=one/magoberr
-        ratio_errors=one
-     end if
+!      If requested, setup for single obs test.
+       if(oneobtest) then
+          ddiff=maginnov
+          Vr=ddiff+rwwind
+          error=one/magoberr
+          ratio_errors=one
+       end if
 
 
   !    adjust obs error for TDR data
@@ -593,7 +596,7 @@ contains
        obserrlm = max(cermin(ikx),min(cermax(ikx),obserror))
        residual = abs(ddiff)
        ratio    = residual/obserrlm
-     qcgross=cgross(ikx)
+       qcgross=cgross(ikx)
   
        if (ratio > qcgross .or. ratio_errors < tiny_r_kind) then
           if (luse(i)) awork(4) = awork(4)+one
@@ -602,7 +605,7 @@ contains
        end if
        
        if (ratio_errors*error <=tiny_r_kind) muse(i)=.false.
-     if (nobskeep>0.and.luse_obsdiag) muse(i)=obsdiags(i_rw_ob_type,ibin)%tail%muse(nobskeep)
+       if (nobskeep>0.and.luse_obsdiag) muse(i)=obsdiags(i_rw_ob_type,ibin)%tail%muse(nobskeep)
        
        val     = error*ddiff
   
@@ -657,50 +660,50 @@ contains
           end do
        end if
   
-     if (luse_obsdiag) then
+       if (luse_obsdiag) then
           obsdiags(i_rw_ob_type,ibin)%tail%muse(jiter)=muse(i)
           obsdiags(i_rw_ob_type,ibin)%tail%nldepart(jiter)=ddiff
           obsdiags(i_rw_ob_type,ibin)%tail%wgtjo= (error*ratio_errors)**2
-     endif
+       endif
        
   !    If obs is "acceptable", load array with obs info for use
   !    in inner loop minimization (int* and stp* routines)
        if ( .not. last .and. muse(i)) then
   
-        allocate(my_head)
+          allocate(my_head)
           m_alloc(ibin) = m_alloc(ibin) +1
-        my_node => my_head        ! this is a workaround
-        call obsLList_appendNode(rwhead(ibin),my_node)
-        my_node => null()
-
-        my_head%idv = is
-        my_head%iob = ioid(i)
-        my_head%elat= data(ilate,i)
-        my_head%elon= data(ilone,i)
+          my_node => my_head        ! this is a workaround
+          call obsLList_appendNode(rwhead(ibin),my_node)
+          my_node => null()
+  
+          my_head%idv = is
+          my_head%iob = ioid(i)
+          my_head%elat= data(ilate,i)
+          my_head%elon= data(ilone,i)
   
   !       Set (i,j,k) indices of guess gridpoint that bound obs location
-        my_head%dlev = dpres
-        my_head%factw= factw
-        call get_ijk(mm1,dlat,dlon,dpres,my_head%ij,my_head%wij)
+          my_head%dlev = dpres
+          my_head%factw= factw
+          call get_ijk(mm1,dlat,dlon,dpres,my_head%ij,my_head%wij)
   
           do j=1,8
-           my_head%wij(j)=factw*my_head%wij(j)  
+             my_head%wij(j)=factw*my_head%wij(j)  
           end do
-        my_head%raterr2 = ratio_errors**2  
-        my_head%cosazm_costilt = cosazm_costilt
-        my_head%sinazm_costilt = sinazm_costilt
-        my_head%sintilt = sintilt
-        my_head%res     = ddiff
-        my_head%err2    = error**2
-        my_head%time    = dtime
-        my_head%luse    = luse(i)
-        my_head%b       = cvar_b(ikx)
-        my_head%pg      = cvar_pg(ikx)
+          my_head%raterr2 = ratio_errors**2  
+          my_head%cosazm_costilt = cosazm_costilt
+          my_head%sinazm_costilt = sinazm_costilt
+          my_head%sintilt = sintilt
+          my_head%res     = ddiff
+          my_head%err2    = error**2
+          my_head%time    = dtime
+          my_head%luse    = luse(i)
+          my_head%b       = cvar_b(ikx)
+          my_head%pg      = cvar_pg(ikx)
   
-        if (luse_obsdiag) then
-           my_head%diags => obsdiags(i_rw_ob_type,ibin)%tail
+          if (luse_obsdiag) then
+             my_head%diags => obsdiags(i_rw_ob_type,ibin)%tail
           
-           my_diag => my_head%diags
+             my_diag => my_head%diags
              if(my_head%idv /= my_diag%idv .or. &
                 my_head%iob /= my_diag%iob ) then
                 call perr(this%myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
@@ -711,7 +714,7 @@ contains
              endif
           endif
 
-        my_head => null()
+          my_head => null()
        endif
   
   !    Save select output for diagnostic file

@@ -88,9 +88,11 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !   2014-03-19  pondeca - add wspd10m
 !   2014-04-10  pondeca - add td2m,mxtm,mitm,pmsl
 !   2014-05-07  pondeca - add howv
-!   2014-0-16   carley/zhu - add tcamt and lcbas
 !   2014-12-30  derber - Modify for possibility of not using obsdiag
+!   2014-0?-16  carley/zhu - add tcamt and lcbas
 !   2015-07-10  pondeca - add cldch
+!   2015-10-01  guo   - full res obvsr: index to allow redistribution of obsdiags
+!   2016-05-05  pondeca - add uwnd10m, vwund10m
 !
 !   input argument list:
 !     ndata(*,1)- number of prefiles retained for further processing
@@ -112,10 +114,13 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   use constants, only: zero,one,fv,zero_quad
   use guess_grids, only: load_prsges,load_geop_hgt,load_gsdpbl_hgt
   use guess_grids, only: ges_tsen,nfldsig
-  use obsmod, only: nsat1,iadate,nobs_type,obscounts,mype_diaghdr,&
-       nchan_total,ndat,obs_setup,luse_obsdiag,&
-       dirname,write_diag,nprof_gps,ditype,obsdiags,lobserver,&
-       destroyobs,inquire_obsdiags,lobskeep,nobskeep,lobsdiag_allocated
+! use obsmod, only: mype_diaghdr
+  use obsmod, only: nsat1,iadate,nobs_type,obscounts,&
+       ndat,obs_setup,&
+       dirname,write_diag,ditype,obsdiags,lobserver,&
+       destroyobs,inquire_obsdiags,lobskeep,nobskeep,lobsdiag_allocated, &
+       luse_obsdiag
+  use obsmod, only: lobsdiagsave
   use obs_sensitivity, only: lobsensfc, lsensrecompute
   use radinfo, only: newpc4pred
   use radinfo, only: mype_rad,diag_rad,jpch_rad,retrieval,fbias,npred,ostats,rstats
@@ -124,10 +129,11 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   use pcpinfo, only: diag_pcp
   use ozinfo, only: diag_ozone,mype_oz,jpch_oz,ihave_oz
   use coinfo, only: diag_co,mype_co,jpch_co,ihave_co
-  use mpimod, only: ierror,mpi_comm_world,mpi_rtype,mpi_sum,npe
+  use mpimod, only: ierror,mpi_comm_world,mpi_rtype,mpi_sum
   use gridmod, only: nsig,twodvar_regional,wrf_mass_regional,nems_nmmb_regional
   use gridmod, only: cmaq_regional
   use gsi_4dvar, only: nobs_bins,l4dvar
+  use gsi_4dvar, only: mPEs_observer
   use jfunc, only: jiter,jiterstart,miter,first,last
   use qcmod, only: npres_print
   use convinfo, only: nconvtype,diag_conv
@@ -150,58 +156,122 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   use m_rhs, only: stats_co => rhs_stats_co
   use m_rhs, only: stats_oz => rhs_stats_oz
   use m_rhs, only: toss_gps_sub => rhs_toss_gps
+! use setupbend_mod, only: setupbend_class
+! use setupco_mod, only: setupco_class
+! use setupcldch_mod, only: setupcldch_class
+! use setupdw_mod, only: setupdw_class
+! use setupgust_mod, only: setupgust_class
+! use setuphowv_mod, only: setuphowv_class
+! use setuplcbas_mod, only: setuplcbas_class
+! use setupmitm_mod, only: setupmitm_class
+! use setupmxtm_mod, only: setupmxtm_class
+! use setupoz_mod, only: setupoz_class
+! use setuppblh_mod, only: setuppblh_class
+! use setuppcp_mod, only: setuppcp_class
+! use setuppmsl_mod, only: setuppmsl_class
+! use setuppm10_mod, only: setuppm10_class
+! use setuppm2_5_mod, only: setuppm2_5_class
+! use setupps_mod, only: setupps_class
+! use setuppw_mod, only: setuppw_class
+! use setupq_mod, only: setupq_class
+! use setupref_mod, only: setupref_class
+! use setuprw_mod, only: setuprw_class
+! use setupspd_mod, only: setupspd_class
+! use setupt_mod, only: setupt_class
+! use setuptcamt_mod, only: setuptcamt_class
+! use setuptcp_mod, only: setuptcp_class
+! use setuptd2m_mod, only: setuptd2m_class
+! use setupvis_mod, only: setupvis_class
+! use setupw_mod, only: setupw_class
+! use setupwspd10m_mod, only: setupwspd10m_class
+
+  use m_gpsStats, only: gpsStats_genstats       ! was genstats_gps()
+  use m_gpsStats, only: gpsStats_destroy        ! was done by genstats_gps()
 
   use gsi_bundlemod, only: GSI_BundleGetPointer
   use gsi_metguess_mod, only: GSI_MetGuess_Bundle
+  use m_obsdiags, only: obsdiags_reset
+  use m_obsdiags, only: obsdiags_read
+  use m_obsdiags, only: obsdiags_sort
+  use m_obsdiags, only: obsdiags_write
 
-  use mpeu_util, only: die
+  use mpeu_util, only: die,warn,perr
+  use mpeu_util, only: basename
   implicit none
 
 ! Declare passed variables
   integer(i_kind)                  ,intent(in   ) :: mype
   integer(i_kind),dimension(ndat,3),intent(in   ) :: ndata
   logical                          ,intent(in   ) :: init_pass, last_pass   ! state of "setup" processing
-
+! type(setupbend_class) :: bend
+! type(setupcldch_class) :: cldch
+! type(setupco_class) :: co  
+! type(setupdw_class) :: dw
+! type(setupgust_class) :: gust
+! type(setuphowv_class) :: howv
+! type(setuplcbas_class) :: lcbas
+! type(setupmitm_class) :: mitm
+! type(setupmxtm_class) :: mxtm
+! type(setupoz_class) :: oz
+! type(setuppblh_class) :: pblh
+! type(setuppcp_class) :: pcp
+! type(setuppm10_class) :: pm10
+! type(setuppm2_5_class) :: pm2_5
+! type(setuppmsl_class) :: pmsl
+! type(setupps_class) :: ps
+! type(setuppw_class) :: pw
+! type(setupq_class) :: q
+! type(setupref_class) :: ref
+! type(setuprw_class) :: rw
+! type(setupspd_class) :: spd
+! type(setupt_class) :: t
+! type(setuptcamt_class) :: tcamt
+! type(setuptcp_class) :: tcp
+! type(setuptd2m_class) :: td2m
+! type(setupvis_class) :: vis
+! type(setupw_class) :: w
+! type(setupwspd10m_class) :: wspd10m
 
 ! Declare external calls for code analysis
   external:: compute_derived
   external:: evaljo
-  external:: genstats_gps
+  !external:: genstats_gps
   external:: mpi_allreduce
   external:: mpi_finalize
   external:: mpi_reduce
-  external:: read_obsdiags
+  !external:: read_obsdiags
   external:: setupaod
   external:: setupbend
-  external:: setupdw
+! external:: setupdw
   external:: setuplag
   external:: setupozlay
   external:: setupozlev
   external:: setuppcp
-  external:: setupps
-  external:: setuppw
-  external:: setupq
+! external:: setupps
+! external:: setuppw
+! external:: setupq
   external:: setuprad
   external:: setupref
   external:: setuprw
-  external:: setupspd
-  external:: setupsrw
+! external:: setupspd
   external:: setupsst
-  external:: setupt
-  external:: setuptcp
-  external:: setupw
-  external:: setupgust
-  external:: setupvis
-  external:: setuppblh
-  external:: setupwspd10m
-  external:: setuptd2m
+! external:: setupt
+! external:: setuptcp
+! external:: setupw
+! external:: setupgust
+! external:: setupvis
+! external:: setuppblh
+! external:: setupwspd10m
+! external:: setuptd2m
   external:: setupmxtm
-  external:: setupmitm
-  external:: setuppmsl
+! external:: setupmitm
+! external:: setuppmsl
   external:: setuphowv
-  external:: setuptcamt
-  external:: setuplcbas
-  external:: setupcldch
+! external:: setuptcamt
+! external:: setuplcbas
+! external:: setupcldch
+  external:: setupuwnd10m
+  external:: setupvwnd10m
   external:: statsconv
   external:: statsoz
   external:: statspcp
@@ -220,9 +290,9 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   character(len=12) :: clfile
 
   integer(i_kind) lunin,nobs,nchanl,nreal,nele,&
-       is,idate,i_dw,i_rw,i_srw,i_sst,i_tcp,i_gps,i_uv,i_ps,i_lag,&
+       is,idate,i_dw,i_rw,i_sst,i_tcp,i_gps,i_uv,i_ps,i_lag,&
        i_t,i_pw,i_q,i_co,i_gust,i_vis,i_ref,i_pblh,i_wspd10m,i_td2m,&
-       i_mxtm,i_mitm,i_pmsl,i_howv,i_tcamt,i_lcbas,i_cldch,iobs,nprt,ii,jj
+       i_mxtm,i_mitm,i_pmsl,i_howv,i_tcamt,i_lcbas,i_cldch,i_uwnd10m,i_vwnd10m,iobs,nprt,ii,jj
   integer(i_kind) it,ier,istatus
 
   real(r_quad):: zjo
@@ -235,6 +305,12 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
   real(r_kind),dimension(:,:,:),pointer:: ges_tv_it=>NULL()
   real(r_kind),dimension(:,:,:),pointer:: ges_q_it =>NULL()
+  character(len=*),parameter:: myname='setuprhsall'
+   
+  logical,parameter:: OBSDIAGS_RELOAD = .false.
+  !logical,parameter:: OBSDIAGS_RELOAD = .true.
+  logical:: opened
+  character(len=256):: tmpname,tmpaccess,tmpform
 
   if(.not.init_pass .and. .not.lobsdiag_allocated) call die('setuprhsall','multiple lobsdiag_allocated',lobsdiag_allocated)
 !******************************************************************************
@@ -264,31 +340,33 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   i_pw = 5
   i_rw = 6
   i_dw = 7
-  i_srw= 8
-  i_gps= 9
-  i_sst= 10
-  i_tcp= 11
-  i_lag= 12
-  i_co = 13
-  i_gust=14
-  i_vis =15
-  i_pblh=16
-  i_wspd10m=17
-  i_td2m=18
-  i_mxtm=19
-  i_mitm=20
-  i_pmsl=21
-  i_howv=22
-  i_tcamt=23
-  i_lcbas=24
-  i_cldch=25
-  i_ref =i_cldch
+  i_gps= 8
+  i_sst= 9 
+  i_tcp= 10
+  i_lag= 11
+  i_co = 12
+  i_gust=13
+  i_vis =14
+  i_pblh=15
+  i_wspd10m=16
+  i_td2m=17
+  i_mxtm=18
+  i_mitm=19
+  i_pmsl=20
+  i_howv=21
+  i_tcamt=22
+  i_lcbas=23
+  i_cldch=24
+  i_uwnd10m=26
+  i_vwnd10m=27
+  i_ref =i_vwnd10m
 
   allocate(awork1(7*nsig+100,i_ref))
   if(.not.rhs_allocated) call rhs_alloc(aworkdim2=size(awork1,2))
 
 ! Reset observation pointers
   if(init_pass) call destroyobs
+  if(init_pass) call obsdiags_reset(obsdiags_keep=lobsdiagsave)   ! replacing destroyobs()
 
 ! Read observation diagnostics if available
   if (l4dvar) then
@@ -296,12 +374,14 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
      clfile='obsdiags.ZZZ'
      if (lobsensfc .and. .not.lsensrecompute) then
         write(clfile(10:12),'(I3.3)') miter
-        call read_obsdiags(clfile)
+        !call read_obsdiags(clfile)
+        call obsdiags_read(clfile,mPEs=mPEs_observer)      ! replacing read_obsdiags()
         call inquire_obsdiags(miter)
      else if (getodiag) then
         if (.not.lobserver) then
            write(clfile(10:12),'(I3.3)') jiter
-           call read_obsdiags(clfile)
+           !call read_obsdiags(clfile)
+           call obsdiags_read(clfile,mPEs=mPEs_observer)   ! replacing read_obsdiags()
            call inquire_obsdiags(miter)
         endif
      endif
@@ -375,14 +455,12 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
         call lag_state_write()
      end if
 
-!    Reset observation pointers
-     if(luse_obsdiag)then
-        do ii=1,nobs_bins
-           do jj=1,nobs_type
-              obsdiags(jj,ii)%tail => NULL()
-           enddo
+!    Reset observation pointers.  This is assumed by setup*() routines.
+     do ii=1,size(obsdiags,2)
+        do jj=1,size(obsdiags,1)
+           obsdiags(jj,ii)%tail => NULL()
         enddo
-     end if
+     enddo
 
      lunin=1
      open(lunin,file=obs_setup,form='unformatted')
@@ -396,8 +474,34 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
         diag_conv_file=trim(dirname) // trim(string)
         if(init_pass) then
            open(7,file=trim(diag_conv_file),form='unformatted',status='unknown',position='rewind')
+
         else
-           open(7,file=trim(diag_conv_file),form='unformatted',status='old',position='append')
+           !  open(7,file=trim(diag_conv_file),form='unformatted',status='old',position='append')
+
+                ! Without a close(7) until the last_pass=.true., the same file
+                ! is expected to remain open "asis", equivalent to an "append"
+                ! position through a re-open().  Therefore, a sequence of
+                ! verification steps are taken to replace the earlier open()
+                ! statement, to avoid re-open() without a close().
+
+           inquire(unit=7,opened=opened)
+           if(opened) then
+             inquire(unit=7,name=tmpname,form=tmpform,access=tmpaccess)
+             tmpname=basename(tmpname)
+             if(trim(tmpname)/=trim(diag_conv_file)) then
+               call perr(myname,'unexpectly occupied, unit =',7)
+               call perr(myname,'           diag_conv_file =',trim(diag_conv_file))
+               call perr(myname,'   inquire(unit=7,  name= )',trim(tmpname))
+               call perr(myname,'   inquire(unit=7,  form= )',trim(tmpform))
+               call perr(myname,'   inquire(unit=7,access= )',trim(tmpaccess))
+               call  die(myname)
+             endif
+
+           else
+             call perr(myname,'unexpectly closed, unit =',7)
+             call perr(myname,'         diag_conv_file =',trim(diag_conv_file))
+             call  die(myname)
+           endif
         endif
         idate=iadate(4)+iadate(3)*100+iadate(2)*10000+iadate(1)*1000000
         if(init_pass .and. mype == 0)write(7)idate
@@ -419,12 +523,11 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
         nobs=nsat1(is)
  
         if(nobs > 0)then
-
            read(lunin,iostat=ier) obstype,isis,nreal,nchanl
-           if(mype == mype_diaghdr(is)) then
-              write(6,300) obstype,isis,nreal,nchanl
- 300          format(' SETUPALL:,obstype,isis,nreal,nchanl=',a12,a20,i7,i7)
-           endif
+!          if(mype == mype_diaghdr(is)) then
+!             write(6,300) obstype,isis,nreal,nchanl
+!300          format(' SETUPALL:,obstype,isis,nreal,nchanl=',a12,a20,i5,i5)
+!          endif
            if(ier/=0) call die('setuprhsall','read(), iostat =',ier)
            nele=nreal+nchanl
 
@@ -444,50 +547,64 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !          Set up for precipitation data
            else if(ditype(is) == 'pcp')then
               call setuppcp(lunin,mype,&
+!             call pcp%setuppcp(lunin,mype,&
                  aivals,nele,nobs,obstype,isis,is,pcp_diagsave,init_pass)
  
 !          Set up conventional data
            else if(ditype(is) == 'conv')then
 !             Set up temperature data
               if(obstype=='t')then
+                 write(6,*) 'setting up t'
+!                call t%setup(lunin,mype,bwork,awork(1,i_t),nele,nobs,is,conv_diagsave)
                  call setupt(lunin,mype,bwork,awork(1,i_t),nele,nobs,is,conv_diagsave)
 
 !             Set up uv wind data
               else if(obstype=='uv')then
+                 write(6,*) 'setting up uv'
+!                call w%setup(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
                  call setupw(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
 
 !             Set up wind speed data
               else if(obstype=='spd')then
+                 write(6,*) 'setting up spd'
+!                call spd%setup(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
                  call setupspd(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
 
 !             Set up surface pressure data
               else if(obstype=='ps')then
+                 write(6,*) 'setting up ps'
+!                call ps%setup(lunin,mype,bwork,awork(1,i_ps),nele,nobs,is,conv_diagsave)
                  call setupps(lunin,mype,bwork,awork(1,i_ps),nele,nobs,is,conv_diagsave)
  
 !             Set up tc-mslp data
               else if(obstype=='tcp')then
+                 write(6,*) 'setting up tcp'
+!                call tcp%setup(lunin,mype,bwork,awork(1,i_tcp),nele,nobs,is,conv_diagsave)
                  call setuptcp(lunin,mype,bwork,awork(1,i_tcp),nele,nobs,is,conv_diagsave)
 
 !             Set up moisture data
               else if(obstype=='q') then
+                 write(6,*) 'setting up q'
+!                call q%setup(lunin,mype,bwork,awork(1,i_q),nele,nobs,is,conv_diagsave)
                  call setupq(lunin,mype,bwork,awork(1,i_q),nele,nobs,is,conv_diagsave)
 
 !             Set up lidar wind data
               else if(obstype=='dw')then
+                 write(6,*) 'setting up dw'
                  call setupdw(lunin,mype,bwork,awork(1,i_dw),nele,nobs,is,conv_diagsave)
+!                call dw%setup(lunin,mype,bwork,awork(1,i_dw),nele,nobs,is,conv_diagsave)
 
 !             Set up radar wind data
               else if(obstype=='rw')then
+                 write(6,*) 'setting up rw'
+!                call rw%setup(lunin,mype,bwork,awork(1,i_rw),nele,nobs,is,conv_diagsave)
                  call setuprw(lunin,mype,bwork,awork(1,i_rw),nele,nobs,is,conv_diagsave)
 
 !             Set up total precipitable water (total column water) data
               else if(obstype=='pw')then
+                 write(6,*) 'setting up pw'
+!                call pw%setup(lunin,mype,bwork,awork(1,i_pw),nele,nobs,is,conv_diagsave)
                  call setuppw(lunin,mype,bwork,awork(1,i_pw),nele,nobs,is,conv_diagsave)
-
-!             Set up superob radar wind data
-              else if(obstype=='srw')then
-                 call setupsrw(lunin,mype,bwork,awork(1,i_srw),nele,nobs,is,conv_diagsave)
-
 !             Set up conventional sst data
               else if(obstype=='sst' .and. getindex(svars2d,'sst')>0) then 
                  call setupsst(lunin,mype,bwork,awork(1,i_sst),nele,nobs,is,conv_diagsave)
@@ -496,63 +613,94 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
               else if(obstype=='lag') then 
                  call setuplag(lunin,mype,bwork,awork(1,i_lag),nele,nobs,is,conv_diagsave)
               else if(obstype == 'pm2_5')then 
+                 write(6,*) 'setting up pm2_5'
+!                call pm2_5%setuppm2_5(lunin,mype,nele,nobs,isis,is,conv_diagsave)
                  call setuppm2_5(lunin,mype,nele,nobs,isis,is,conv_diagsave)
-
               else if(obstype == 'pm10')then 
+                 write(6,*) 'setting up pm10'
+!                call pm10%setuppm10(lunin,mype,nele,nobs,isis,is,conv_diagsave)
                  call setuppm10(lunin,mype,nele,nobs,isis,is,conv_diagsave)
-
 !             Set up conventional wind gust data
               else if(obstype=='gust' .and. getindex(svars2d,'gust')>0) then
-                 call setupgust(lunin,mype,bwork,awork(1,i_gust),nele,nobs,is,conv_diagsave)
-
+                 write(6,*) 'setting up gust'
+!                setupgust(lunin,mype,bwork,awork(1,i_gust),nele,nobs,is,conv_diagsave)
+!                call gust%setup(lunin,mype,bwork,awork(1,i_gust),nele,nobs,is,conv_diagsave)
 !             Set up conventional visibility data
               else if(obstype=='vis' .and. getindex(svars2d,'vis')>0) then
+                 write(6,*) 'setting up vis'
+!                call vis%setup(lunin,mype,bwork,awork(1,i_vis),nele,nobs,is,conv_diagsave)
                  call setupvis(lunin,mype,bwork,awork(1,i_vis),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional pbl height data
               else if(obstype=='pblh' .and. getindex(svars2d,'pblh')>0) then
+                 write(6,*) 'setting up pblh'
+!                call pblh%setup(lunin,mype,bwork,awork(1,i_pblh),nele,nobs,is,conv_diagsave)
                  call setuppblh(lunin,mype,bwork,awork(1,i_pblh),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional wspd10m data
               else if(obstype=='wspd10m' .and. getindex(svars2d,'wspd10m')>0) then
+                 write(6,*) 'setting up wspd10m'
+!                call wspd10m%setup(lunin,mype,bwork,awork(1,i_wspd10m),nele,nobs,is,conv_diagsave)
                  call setupwspd10m(lunin,mype,bwork,awork(1,i_wspd10m),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional td2m data
               else if(obstype=='td2m' .and. getindex(svars2d,'td2m')>0) then
+                 write(6,*) 'setting up td2m'
+!                call td2m%setup(lunin,mype,bwork,awork(1,i_td2m),nele,nobs,is,conv_diagsave)
                  call setuptd2m(lunin,mype,bwork,awork(1,i_td2m),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional mxtm data
               else if(obstype=='mxtm' .and. getindex(svars2d,'mxtm')>0) then
                  call setupmxtm(lunin,mype,bwork,awork(1,i_mxtm),nele,nobs,is,conv_diagsave)
+!                call mxtm%setup(lunin,mype,bwork,awork(1,i_mxtm),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional mitm data
               else if(obstype=='mitm' .and. getindex(svars2d,'mitm')>0) then
+                 write(6,*) 'setting up mitm'
+!                call mitm%setup(lunin,mype,bwork,awork(1,i_mitm),nele,nobs,is,conv_diagsave)
                  call setupmitm(lunin,mype,bwork,awork(1,i_mitm),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional pmsl data
               else if(obstype=='pmsl' .and. getindex(svars2d,'pmsl')>0) then
+                 write(6,*) 'setting up pmsl'
+!                call pmsl%setup(lunin,mype,bwork,awork(1,i_pmsl),nele,nobs,is,conv_diagsave)
                  call setuppmsl(lunin,mype,bwork,awork(1,i_pmsl),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional howv data
               else if(obstype=='howv' .and. getindex(svars2d,'howv')>0) then
                  call setuphowv(lunin,mype,bwork,awork(1,i_howv),nele,nobs,is,conv_diagsave)
+!                call howv%setup(lunin,mype,bwork,awork(1,i_howv),nele,nobs,is,conv_diagsave)
 
 !             Set up total cloud amount data
               else if(obstype=='tcamt' .and. getindex(svars2d,'tcamt')>0) then
+                 write(6,*) 'setting up tcamt'
+!                call tcamt%setup(lunin,mype,bwork,awork(1,i_tcamt),nele,nobs,is,conv_diagsave)
                  call setuptcamt(lunin,mype,bwork,awork(1,i_tcamt),nele,nobs,is,conv_diagsave)
 
 !             Set up base height of lowest cloud seen
               else if(obstype=='lcbas' .and. getindex(svars2d,'lcbas')>0) then
+                 write(6,*) 'setting up lcbas'
                  call setuplcbas(lunin,mype,bwork,awork(1,i_lcbas),nele,nobs,is,conv_diagsave)
+!                call lcbas%setup(lunin,mype,bwork,awork(1,i_lcbas),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional cldch data
               else if(obstype=='cldch' .and. getindex(svars2d,'cldch')>0) then
+                 write(6,*) 'setting up cldch'
                  call setupcldch(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+!                call cldch%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+
+!             Set up conventional uwnd10m data
+              else if(obstype=='uwnd10m' .and. getindex(svars2d,'uwnd10m')>0) then
+                 call setupuwnd10m(lunin,mype,bwork,awork(1,i_uwnd10m),nele,nobs,is,conv_diagsave)
+
+!             Set up conventional vwnd10m data
+              else if(obstype=='vwnd10m' .and. getindex(svars2d,'vwnd10m')>0) then
+                 call setupvwnd10m(lunin,mype,bwork,awork(1,i_vwnd10m),nele,nobs,is,conv_diagsave)
 
 !             skip this kind of data because they are not used in the var analysis
               else if(obstype == 'mta_cld' .or. obstype == 'gos_ctp' .or. &
                       obstype == 'rad_ref' .or. obstype=='lghtn' .or. &
-                      obstype == 'larccld' ) then
+                      obstype == 'larccld' .or. obstype == 'larcglb') then
                  read(lunin,iostat=ier)
                  if(ier/=0) call die('setuprhsall','read(), iostat =',ier)
 
@@ -566,25 +714,30 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
            else if(ditype(is) == 'ozone' .and. ihave_oz)then
               if (obstype == 'o3lev' .or. index(obstype,'mls')/=0 ) then
                  call setupozlev(lunin,mype,stats_oz,nchanl,nreal,nobs,&
+!                call oz%setupozlev(lunin,mype,stats_oz,nchanl,nreal,nobs,&
                       obstype,isis,is,ozone_diagsave,init_pass)
               else
                  call setupozlay(lunin,mype,stats_oz,nchanl,nreal,nobs,&
+!                call oz%setupozlay(lunin,mype,stats_oz,nchanl,nreal,nobs,&
                       obstype,isis,is,ozone_diagsave,init_pass)
               end if
 
 !          Set up co (mopitt) data
            else if(ditype(is) == 'co')then 
               call setupco(lunin,mype,stats_co,nchanl,nreal,nobs,&
+!             call co%setupco(lunin,mype,stats_co,nchanl,nreal,nobs,&
                    obstype,isis,is,co_diagsave,init_pass)
 
 !          Set up GPS local refractivity data
            else if(ditype(is) == 'gps')then
               if(obstype=='gps_ref')then
                  call setupref(lunin,mype,awork(1,i_gps),nele,nobs,toss_gps_sub,is,init_pass,last_pass)
+!                call ref%setupref(lunin,mype,awork(1,i_gps),nele,nobs,toss_gps_sub,is,init_pass,last_pass)
 
 !             Set up GPS local bending angle data
               else if(obstype=='gps_bnd')then
                  call setupbend(lunin,mype,awork(1,i_gps),nele,nobs,toss_gps_sub,is,init_pass,last_pass)
+!                call bend%setupbend(lunin,mype,awork(1,i_gps),nele,nobs,toss_gps_sub,is,init_pass,last_pass)
               end if
            end if
 
@@ -609,13 +762,29 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 ! Deallocate wind field array for Lagrangian data assimilation
   call lag_destroy_uv()
 
-! Setup observation vectors
-  call setupyobs
-
 ! Finalize qc and accumulate statistics for GPSRO data
-  call genstats_gps(bwork,awork(1,i_gps),toss_gps_sub,conv_diagsave,mype)
+  call gpsStats_genstats(bwork,awork(:,i_gps),toss_gps_sub,conv_diagsave,mype)
+  call gpsStats_destroy()       ! replacing ...
+  ! -- call genstats_gps(bwork,awork(1,i_gps),toss_gps_sub,conv_diagsave,mype)
 
   if (conv_diagsave) close(7)
+
+  if(l_PBL_pseudo_SurfobsT.or.l_PBL_pseudo_SurfobsQ.or.l_PBL_pseudo_SurfobsUV) then
+  else
+     call obsdiags_sort()
+  endif
+
+! for temporary testing purposes, _write and _read.
+  if(OBSDIAGS_RELOAD) then
+    call obsdiags_write('obsdiags.ttt',force=.true.)
+        ! call Barrier() before obsdiags_read(), to make sure all PEs have
+        ! finished their obsdiags_write().
+    if(mPEs_observer>0) call MPI_Barrier(mpi_comm_world,ier)
+
+    call obsdiags_read('obsdiags.ttt',mPEs=mPEs_observer,force=.true., &
+        ignore_iter=.true.)
+    call inquire_obsdiags(miter)
+  endif
 
 ! call inquire_obsdiags(miter)
 
@@ -682,9 +851,9 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
 !    Compute and print statistics for "conventional" data
      call statsconv(mype,&
-          i_ps,i_uv,i_srw,i_t,i_q,i_pw,i_rw,i_dw,i_gps,i_sst,i_tcp,i_lag, &
+          i_ps,i_uv,i_t,i_q,i_pw,i_rw,i_dw,i_gps,i_sst,i_tcp,i_lag, &
           i_gust,i_vis,i_pblh,i_wspd10m,i_td2m,i_mxtm,i_mitm,i_pmsl,i_howv, &
-          i_tcamt,i_lcbas,i_cldch,i_ref,bwork1,awork1,ndata)
+          i_tcamt,i_lcbas,i_cldch,i_uwnd10m,i_vwnd10m,i_ref,bwork1,awork1,ndata)
 
   endif  ! < .not. lobserver >
 

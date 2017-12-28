@@ -90,7 +90,7 @@ cmake_minimum_required(VERSION 2.8)
     else()
       set(GSIBASE "gsi")
     endif()
-    set(GSISUFFIX ".x")
+    set(GSISUFFIX ".x" CACHE INTERNAL "")
   endif()
 # Set names, libs, and properties depending on if we are building with WRF or not
   if(USE_WRF) 
