@@ -1087,11 +1087,8 @@ subroutine write_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, x_
 ! writing spread diagnostics to netcdf file
 subroutine write_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
                                  x_fit, x_sprd, x_used, id, gesid)
-  use nc_diag_read_mod, only: nc_diag_read_get_dim
-  use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
-
-  use netcdf, only: nf90_open, nf90_close, nf90_inq_dimid,  &
-                    NF90_WRITE
+  use netcdf, only: nf90_inq_dimid, nf90_open, nf90_close, NF90_NETCDF4, &
+                    nf90_inquire_dimension, NF90_WRITE, nf90_create, nf90_def_dim
   use ncdw_climsg, only: nclayer_check
 
   use radinfo, only: iuse_rad,nusis,jpch_rad,npred
@@ -1105,7 +1102,7 @@ subroutine write_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
   integer(i_kind), dimension(nobs_maxdiag), intent(in) :: x_used
   character(len=10), intent(in) :: id, gesid
 
-  character*500 obsfile
+  character*500 obsfile, obsfile2
   character(len=4) pe_name
   character(len=20) ::  sat_type
 
@@ -1142,28 +1139,29 @@ subroutine write_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
      if (npefiles .eq. 0) then
         ! diag file (concatenated pe* files)
         obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//datestring//'_'//trim(adjustl(id))//".nc4"
+        obsfile2 = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//datestring//'_'//trim(adjustl(id))//"_spread.nc4"
         inquire(file=obsfile,exist=fexist)
         if (.not. fexist .or. datestring .eq. '0000000000') then
            obsfile = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//trim(adjustl(id))//".nc4"
+           obsfile2 = trim(adjustl(obspath))//"diag_"//trim(sattypes_rad(nsat))//"_ges."//trim(adjustl(id))//"_spread.nc4"
         endif
      else ! raw, unconcatenated pe* files.
         obsfile = trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'//".nc4"
+        obsfile2 = trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.'//trim(sattypes_rad(nsat))//'_01'//"_spread.nc4"
      endif
 
      inquire(file=obsfile,exist=fexist)
      if (.not. fexist) cycle peloop
 
 
-     call nc_diag_read_init(obsfile, iunit)
-     nobs = nc_diag_read_get_dim(iunit,'nobs')
-     call nc_diag_read_close(obsfile)
+     call nclayer_check(nf90_open(obsfile, NF90_WRITE, iunit))
+     call nclayer_check(nf90_inq_dimid(iunit, "nobs", nobsid))
+     call nclayer_check(nf90_inquire_dimension(iunit, nobsid, len = nobs))
+     call nclayer_check(nf90_close(iunit))
 
      if (nobs <= 0) cycle peloop
 
      allocate(enkf_use_flag(nobs), enkf_fit(nobs), enkf_sprd(nobs))
-     enkf_use_flag = -1
-     enkf_fit = r_missing
-     enkf_sprd = r_missing
 
      do i = 1, nobs
         nobdiag = nobdiag + 1
@@ -1175,11 +1173,22 @@ subroutine write_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
            enkf_use_flag(i) = 1
            enkf_fit(i)  = x_fit(nob)
            enkf_sprd(i) = x_sprd(nob)
+        else
+           enkf_use_flag(i) = -1
+           enkf_fit(i) = r_missing
+           enkf_sprd(i) = r_missing
         endif
      enddo
 
-     call nclayer_check(nf90_open(obsfile, NF90_WRITE, iunit))
-     call nclayer_check(nf90_inq_dimid(iunit, "nobs", nobsid))
+     inquire(file=obsfile2,exist=fexist)
+     if (.not. fexist) then
+        call nclayer_check(nf90_create(trim(obsfile2), NF90_NETCDF4, &
+                           iunit, 0))
+        call nclayer_check(nf90_def_dim(iunit, "nobs", nobs, nobsid))
+     else
+        call nclayer_check(nf90_open(obsfile2, NF90_WRITE, iunit))
+        call nclayer_check(nf90_inq_dimid(iunit, "nobs", nobsid))
+     endif
 
      call write_ncvar_int(iunit, nobsid, "EnKF_use_flag", enkf_use_flag)
      call write_ncvar_single(iunit, nobsid, "EnKF_fit_"//trim(gesid), enkf_fit)

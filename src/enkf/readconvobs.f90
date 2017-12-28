@@ -1431,11 +1431,8 @@ subroutine write_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, &
 ! writing spread diagnostics to netcdf file
 subroutine write_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
                                  x_fit, x_sprd, x_used, id, gesid)
-  use nc_diag_read_mod, only: nc_diag_read_get_dim
-  use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
-
-  use netcdf, only: nf90_inq_dimid, nf90_open, nf90_close, &
-                    NF90_WRITE
+  use netcdf, only: nf90_inq_dimid, nf90_open, nf90_close, NF90_NETCDF4, &
+                    nf90_inquire_dimension, NF90_WRITE, nf90_create, nf90_def_dim
   use ncdw_climsg, only: nclayer_check
 
   use constants, only: r_missing
@@ -1451,7 +1448,7 @@ subroutine write_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
 
   character(len=10), intent(in) :: id, gesid
 
-  character*500 obsfile
+  character*500 obsfile, obsfile2
   character(len=4) pe_name
 
   character(len=3) :: obtype
@@ -1475,33 +1472,32 @@ subroutine write_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
         if (npefiles .eq. 0) then
            ! read diag file (concatenated pe* files)
            obsfile = trim(adjustl(obspath))//"diag_conv_"//trim(adjustl(obtype))//"_ges."//datestring//'_'//trim(adjustl(id))//'.nc4'
+           obsfile2 = trim(adjustl(obspath))//"diag_conv_"//trim(adjustl(obtype))//"_ges."//datestring//'_'//trim(adjustl(id))//'_spread.nc4'
            inquire(file=obsfile,exist=fexist)
            if (.not. fexist .or. datestring .eq. '0000000000') &
               obsfile = trim(adjustl(obspath))//"diag_conv_"//trim(adjustl(obtype))//"_ges."//trim(adjustl(id))//'.nc4'
+              obsfile2 = trim(adjustl(obspath))//"diag_conv_"//trim(adjustl(obtype))//"_ges."//trim(adjustl(id))//'_spread.nc4'
         else ! read raw, unconcatenated pe* files.
            obsfile = &
               trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.conv_'//trim(adjustl(obtype))//'_01.nc4'
+           obsfile2 = &
+              trim(adjustl(obspath))//'gsitmp_'//trim(adjustl(id))//'/pe'//pe_name//'.conv_'//trim(adjustl(obtype))//'_01_spread.nc4'
         endif
 
         inquire(file=obsfile,exist=fexist)
         if (.not. fexist) cycle peloop
 
-        call nc_diag_read_init(obsfile, iunit)
-        nobs = nc_diag_read_get_dim(iunit,'nobs')
-        call nc_diag_read_close(obsfile)
+        call nclayer_check(nf90_open(obsfile, NF90_WRITE, iunit, cache_size = 2147483647))
+        call nclayer_check(nf90_inq_dimid(iunit, "nobs", nobsid))
+        call nclayer_check(nf90_inquire_dimension(iunit, nobsid, len = nobs))
+        call nclayer_check(nf90_close(iunit))
 
-        if (nobs <= 0)  cycle peloop
+        if (nobs <= 0) cycle peloop
 
         allocate(enkf_use_flag(nobs), enkf_fit(nobs), enkf_sprd(nobs))
-        enkf_use_flag = -1
-        enkf_fit  = r_missing
-        enkf_sprd = r_missing
 
         if (obtype == ' uv') then
            allocate(enkf_use_flag_v(nobs), enkf_fit_v(nobs), enkf_sprd_v(nobs))
-           enkf_use_flag_v = -1
-           enkf_fit_v  = r_missing
-           enkf_sprd_v = r_missing
         endif
 
 
@@ -1521,12 +1517,29 @@ subroutine write_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
                  enkf_fit_v(i)  = x_fit(nob)
                  enkf_sprd_v(i) = x_sprd(nob)
               endif
+           else
+              enkf_use_flag(i) = -1
+              enkf_fit(i)  = r_missing
+              enkf_sprd(i) = r_missing
+              if (obtype== ' uv') then
+                 enkf_use_flag_v(i) = -1
+                 enkf_fit_v(i)  = r_missing
+                 enkf_sprd_v(i) = r_missing
+              endif
+
            endif
         enddo
-
-        call nclayer_check(nf90_open(obsfile, NF90_WRITE, iunit))
-        call nclayer_check(nf90_inq_dimid(iunit, "nobs", nobsid))
         
+        inquire(file=obsfile2,exist=fexist)
+        if (.not. fexist) then
+           call nclayer_check(nf90_create(trim(obsfile2), NF90_NETCDF4, &
+                              iunit, 0))
+           call nclayer_check(nf90_def_dim(iunit, "nobs", nobs, nobsid))
+        else
+           call nclayer_check(nf90_open(obsfile2, NF90_WRITE, iunit))
+           call nclayer_check(nf90_inq_dimid(iunit, "nobs", nobsid))
+        endif
+
         if (obtype == ' uv')  then
            call write_ncvar_int(iunit, nobsid, "u_EnKF_use_flag", enkf_use_flag)
            call write_ncvar_int(iunit, nobsid, "v_EnKF_use_flag", enkf_use_flag_v)
