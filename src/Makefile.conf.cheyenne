@@ -19,9 +19,12 @@ BACIO_LIB4=$(CORELIB)/libbacio_4.a
 BUFR_LIBd=$(CORELIB)/libbufr_v10.2.3_d_64.a
 CRTM_LIB=$(CORECRTM)/libcrtm_v2.2.3.a
 NEMSIO_LIB=$(CORELIB)/libnemsio.a
-SFCIO_LIB=$(CORELIB)/libsfcio_4.a
-SIGIO_LIB=$(CORELIB)/libsigio_big_4.a
-SP_LIBd=$(CORELIB)/libsp_v2.0.1_d.a
+#SFCIO_LIB=$(CORELIB)/libsfcio_4.a
+#SIGIO_LIB=$(CORELIB)/libsigio_4.a
+#SP_LIBd=$(CORELIB)/libsp_v2.0.1_d.a
+SFCIO_LIB=/glade/p/work/tcwu/hwrfrun/sorc/hwrf-utilities/libs/libsfcio_i4r4.a
+SIGIO_LIB=/glade/p/work/tcwu/hwrfrun/sorc/hwrf-utilities/libs/libsigio_i4r4.a
+SP_LIBd=/glade/p/work/tcwu/hwrfrun/sorc/hwrf-utilities/libs/libsp_i4r8.a
 W3EMC_LIBd=$(CORELIB)/libw3emc_d.a
 W3NCO_LIBd=$(CORELIB)/libw3nco_d.a
 

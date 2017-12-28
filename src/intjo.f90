@@ -231,6 +231,10 @@ use intlcbasmod, only: intlcbas
 use intcldchmod, only: intcldch
 use intuwnd10mmod, only: intuwnd10m
 use intvwnd10mmod, only: intvwnd10m
+! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
+use intswcpmod, only: intswcp
+use intlwcpmod, only: intlwcp
+! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 use gsi_bundlemod, only: gsi_bundle
 use gsi_bundlemod, only: gsi_bundlegetpointer
 
@@ -353,6 +357,14 @@ real(r_quad),dimension(max(1,nrclen)), intent(inout) :: qpred
 
 ! RHS for conventional vwnd10m observations
   call intvwnd10m(yobs%vwnd10m,rval,sval)
+
+! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
+! RHS for swcp observations
+  call intswcp(yobs%swcp,rval,sval)
+
+! RHS for lwcp observations
+  call intlwcp(yobs%lwcp,rval,sval)
+! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 
 ! Take care of background error for bias correction terms
 

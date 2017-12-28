@@ -343,6 +343,25 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
           end do 
           nread = nread + 1
          end do fileloop
+!  -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------     
+        else if(trim(filename) == 'wcpbufr')then
+         lexist = .false.
+         file2loop: do while(ireadmg(lnbufr,subset,idate2) >= 0)
+          do while(ireadsb(lnbufr)>=0)
+           call ufbint(lnbufr,rtype,1,1,iret,'TYP')
+           write(6,*) 'read_obs_check: wcpbufr ufbint iret = ', iret
+           kx=nint(rtype)
+           write(6,*) 'read_obs_check: wcpbufr trim(dtype) = ', trim(dtype), ' and kx = ', kx
+           do nc=1,nconvtype
+             if(trim(ioctype(nc)) == trim(dtype) .and. kx == ictype(nc) .and. icuse(nc) > minuse)then
+               lexist = .true.
+               exit file2loop
+             end if
+           end do
+          end do
+          nread = nread + 1
+         end do file2loop
+!  -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------     
        else if(trim(filename) == 'gps_ref' .or.  trim(filename) == 'gps_bnd')then
          lexist = .false.
          gpsloop: do while(ireadmg(lnbufr,subset,idate2) >= 0)
@@ -830,6 +849,10 @@ subroutine read_obs(ndata,mype)
            obstype=='lcbas' .or. obstype=='cldch' .or. obstype == 'larcglb' .or. &
            obstype=='uwnd10m' .or. obstype=='vwnd10m') then
           ditype(i) = 'conv'
+! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
+       else if (obstype == 'swcp' .or. obstype == 'lwcp') then
+          ditype(i) = 'wcp'
+! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
        else if( hirs   .or. sndr      .or.  seviri .or. &
                obstype == 'airs'      .or. obstype == 'amsua'     .or.  &
                obstype == 'msu'       .or. obstype == 'iasi'      .or.  &
@@ -1502,7 +1525,17 @@ subroutine read_obs(ndata,mype)
                     nobs_sub1(1,i))
                 string='READ_PBLH'
              end if conv_obstype_select
-
+! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
+!            Process swcp and lwcp
+          else if (ditype(i) == 'wcp') then
+            if ( obstype == 'swcp' .or. obstype == 'lwcp' ) then
+              write(*,*) 'begin of READ_WCPBUFR at mype = ', mype
+              call read_wcpbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis, &
+                   prsl_full,nobs_sub1(1,i),read_rec(i))
+              string='READ_WCPBUFR'
+              write(*,*) 'end of READ_WCPBUFR at mype = ', mype
+            end if
+! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
           else if (ditype(i) == 'rad')then
 
              call radiance_obstype_search(obstype,radmod)
