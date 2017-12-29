@@ -1533,7 +1533,7 @@ subroutine write_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
         inquire(file=obsfile2,exist=fexist)
         if (.not. fexist) then
            call nclayer_check(nf90_create(trim(obsfile2), NF90_NETCDF4, &
-                              iunit, 0))
+                              iunit))
            call nclayer_check(nf90_def_dim(iunit, "nobs", nobs, nobsid))
         else
            call nclayer_check(nf90_open(obsfile2, NF90_WRITE, iunit))
@@ -1578,6 +1578,7 @@ subroutine write_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
     use netcdf, only: nf90_def_var, nf90_put_var, nf90_inq_varid,  &
                       nf90_def_var_deflate,NF90_FLOAT, NF90_ENOTVAR
     use ncdw_climsg, only: nclayer_check
+    use ncdw_types, only: NLAYER_COMPRESSION
     implicit none
     integer(i_kind), intent(in)  :: iunit, dimid
     character(*), intent(in)     :: varname
@@ -1588,8 +1589,8 @@ subroutine write_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
     ierr = nf90_inq_varid(iunit, varname, varid)
     if (ierr == NF90_ENOTVAR) then
        call nclayer_check(nf90_def_var(iunit, varname, NF90_FLOAT, dimid, varid))
+       call nclayer_check(nf90_def_var_deflate(iunit, varid, 1, 1, NLAYER_COMPRESSION))
     endif
-    call nclayer_check(nf90_def_var_deflate(iunit, varid, 1, 1, 5))
     call nclayer_check(nf90_put_var(iunit, varid, field))
   end subroutine write_ncvar_single
 
@@ -1597,6 +1598,7 @@ subroutine write_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
     use netcdf, only: nf90_def_var, nf90_put_var, nf90_inq_varid,  &
                       nf90_def_var_deflate,NF90_INT, NF90_ENOTVAR
     use ncdw_climsg, only: nclayer_check
+    use ncdw_types, only: NLAYER_COMPRESSION
     implicit none
     integer(i_kind), intent(in)  :: iunit, dimid
     character(*), intent(in)     :: varname
@@ -1607,8 +1609,8 @@ subroutine write_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
     ierr = nf90_inq_varid(iunit, varname, varid)
     if (ierr == NF90_ENOTVAR) then
        call nclayer_check(nf90_def_var(iunit, varname, NF90_INT, dimid, varid))
+       call nclayer_check(nf90_def_var_deflate(iunit, varid, 1, 1, NLAYER_COMPRESSION))
     endif
-    call nclayer_check(nf90_def_var_deflate(iunit, varid, 1, 1, 5))
     call nclayer_check(nf90_put_var(iunit, varid, field))
   end subroutine write_ncvar_int
 
