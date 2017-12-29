@@ -365,10 +365,6 @@ module obsmod
 ! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 !   def l_wcp_cwm      - namelist logical whether to use operator that
 !                        includes cwm for both swcp and lwcp or not
-!   def lqsmooth       - namelist logical for smooth q* fields
-!   def qsmooth_parm1  - namelist real for lqsmooth 
-!   def qsmooth_parm2  - namelist integer for lqsmooth 
-!   def qsmooth_parm3  - namelist integer for lqsmooth
 ! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 !
 ! attributes:
@@ -452,10 +448,6 @@ module obsmod
 
 ! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
   public :: l_wcp_cwm
-  public :: lqsmooth
-  public :: qsmooth_parm1
-  public :: qsmooth_parm2
-  public :: qsmooth_parm3
 ! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 
   interface obsmod_init_instr_table
@@ -621,10 +613,6 @@ module obsmod
 
 ! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
   logical l_wcp_cwm
-  logical lqsmooth
-  real(r_kind) qsmooth_parm1
-  integer(i_kind) qsmooth_parm2
-  integer(i_kind) qsmooth_parm3
 ! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 
   character(len=*),parameter:: myname='obsmod'
@@ -854,11 +842,7 @@ contains
     luse_obsdiag     = .false.
 
 ! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
-    l_wcp_cwm          = .false.                      ! .true. = use operator that involves cwm
-    lqsmooth           = .false.                      ! .true. = turn on q* fields smooth with digital filter 
-    qsmooth_parm1      = 0.5_r_kind                   ! real number for lqsmooth
-    qsmooth_parm2      = 2                            ! integer number for lqsmooth
-    qsmooth_parm3      = 1                            ! integer number for lqsmooth
+    l_wcp_cwm          = .false.                 ! .true. = use operator that involves cwm
 ! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 
     return

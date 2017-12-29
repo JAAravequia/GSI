@@ -272,7 +272,6 @@ clean:
 	cplr_gfs_ensmod.f90 \
         cplr_read_wrf_nmm_files.f90 \
         cplr_read_wrf_nmm_guess.f90 \
-        parqvarsmod.f90 \
         cplr_regional_io.f90 \
         cplr_wrf_binary_interface.f90 \
         cplr_wrf_netcdf_interface.f90 \

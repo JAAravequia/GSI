@@ -32,11 +32,26 @@ use guess_grids, only: ges_tsen,ntguessig
 use derivsmod, only: cwgues
 use gsi_bundlemod, only: gsi_bundle
 use gsi_bundlemod, only: gsi_bundlegetpointer
+! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
+use gsi_metguess_mod, only: gsi_metguess_bundle
+! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 implicit none
 
 PRIVATE
 PUBLIC cw2hydro_tl
 PUBLIC cw2hydro_ad
+! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
+PUBLIC cw2hydro_tl_p6
+PUBLIC cw2hydro_ad_p6
+real(r_kind),parameter :: t1=t0c-30.0_r_kind
+real(r_kind),parameter :: t2=t0c-40.0_r_kind
+real(r_kind),parameter :: coef1=0.05_r_kind
+real(r_kind),parameter :: coef2=0.10_r_kind
+real(r_kind),pointer,dimension(:,:,:):: fice=>NULL()
+real(r_kind),pointer,dimension(:,:,:):: frain=>NULL()
+real(r_kind),pointer,dimension(:,:,:):: frimef=>NULL()
+integer(i_kind) :: istatus
+! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 
 
 contains
@@ -251,5 +266,270 @@ end do
 
 return
 end subroutine cw2hydro_ad
+
+! -------------------------- Ting-Chi Wu 2017/12/29 ----------------------------
+subroutine cw2hydro_tl_p6(sval,wbundle,sv_tsen)
+!$$$  subprogram documentation block
+!                .      .    .                                       .
+! subprogram:    cw2hydro_tl_p6
+!   prgmmr: Ting-Chi Wu
+!
+! abstract:  Tangent linear of converting control variable cw to hydrometers
+!
+! program history log:
+!   2017-07-19  T.-C. Wu - modified from cw2hydro_tl to use 6 instead of 2 hydrometeors
+!
+!   input argument list:
+!    sval     - state variable
+!    wbundle  - bundel for control variable
+!    clouds - cloud names
+!
+!   output argument list:
+!    sval     - state variable
+!
+!$$$ end documentation block
+
+implicit none
+
+! Declare passed variables
+type(gsi_bundle), intent(inout):: sval
+type(gsi_bundle), intent(in   ):: wbundle
+real(r_kind),     intent(in   ):: sv_tsen(lat2,lon2,nsig)
+
+! Declare local variables
+integer(i_kind) i,j,k,ic,istatus
+real(r_kind) coef, dcoefdt
+real(r_kind) dicedt, dicedcw, dprecicedt, dprecicedcw
+real(r_kind), pointer, dimension(:,:,:) :: cv_cw
+real(r_kind), pointer, dimension(:,:,:) :: sv_cw, sv_ql, sv_qi, sv_qr, sv_qs, sv_qg, sv_qh
+
+!write(6,*) 'cw2hydro_tl_p6 begins : cwgues = ', maxval(cwgues), minval(cwgues)
+!write(6,*) 'cw2hydro_tl_p6 begins : cv_cw = ', maxval(cv_cw), minval(cv_cw)
+!write(6,*) 'cw2hydro_tl_p6 begins : sv_tsen = ', maxval(sv_tsen), minval(sv_tsen)
+
+call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),  'fice', fice,istatus)
+call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig), 'frain', frain,istatus)
+call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),'frimef', frimef,istatus)
+
+!write(6,*) 'cw2hydro_tl_p6 begins : fice = ', maxval(fice), minval(fice)
+!write(6,*) 'cw2hydro_tl_p6 begins : frain = ', maxval(frain), minval(frain)
+!write(6,*) 'cw2hydro_tl_p6 begins : frimef = ', maxval(frimef), minval(frimef)
+
+! Split cw into cloud_liquid, cloud_ice, rain, snow, graupel, and hail
+! (cloud_calc in cloud_efr_mod.f90)
+call gsi_bundlegetpointer (wbundle, 'cw', cv_cw, istatus)
+call gsi_bundlegetpointer (sval, 'cw', sv_cw, istatus)
+call gsi_bundlegetpointer (sval, 'ql', sv_ql, istatus)
+call gsi_bundlegetpointer (sval, 'qi', sv_qi, istatus)
+call gsi_bundlegetpointer (sval, 'qr', sv_qr, istatus)
+call gsi_bundlegetpointer (sval, 'qs', sv_qs, istatus)
+call gsi_bundlegetpointer (sval, 'qg', sv_qg, istatus)
+call gsi_bundlegetpointer (sval, 'qh', sv_qh, istatus)
+
+sv_ql=zero
+sv_qi=zero
+sv_qr=zero
+sv_qs=zero
+sv_qg=zero
+sv_qh=zero
+sv_cw=zero
+
+do k=1,nsig
+   do j=1,lon2
+      do i=1,lat2
+         sv_ql(i,j,k)=cv_cw(i,j,k)*(one-fice(i,j,k))*(one-frain(i,j,k)) ! ql is not a function of T
+         sv_qr(i,j,k)=cv_cw(i,j,k)*(one-fice(i,j,k))*frain(i,j,k) ! qr is not a function of T
+
+         if ( ges_tsen(i,j,k,ntguessig) > t0c-30.0_r_kind) then
+           dicedcw = 0.05*fice(i,j,k)
+           dprecicedcw = 0.95*fice(i,j,k)
+           dicedt = zero
+           dprecicedt = zero
+         else
+           coef=(ges_tsen(i,j,k,ntguessig)-t2)/(t1-t2)*coef1+ &
+                (ges_tsen(i,j,k,ntguessig)-t1)/(t1-t2)*coef2
+           dcoefdt = one/(t1-t2)*coef1+one/(t1-t2)*coef2
+           dicedcw = coef*fice(i,j,k)
+           dprecicedcw = (one-coef)*fice(i,j,k)
+           dicedt = dcoefdt*cwgues(i,j,k)*fice(i,j,k)
+           dprecicedt = -dcoefdt*cwgues(i,j,k)*fice(i,j,k)
+         endif
+
+         sv_qi(i,j,k)=cv_cw(i,j,k)*dicedcw+sv_tsen(i,j,k)*dicedt
+
+         if (frimef(i,j,k)>=one .and. frimef(i,j,k)<=5.0_r_kind) then
+           sv_qs(i,j,k)=cv_cw(i,j,k)*dprecicedcw+sv_tsen(i,j,k)*dprecicedt
+         endif
+         if (frimef(i,j,k)>5.0_r_kind .and. frimef(i,j,k)<=20.0_r_kind) then
+           sv_qg(i,j,k)=cv_cw(i,j,k)*dprecicedcw+sv_tsen(i,j,k)*dprecicedt
+         endif
+         if (frimef(i,j,k)>20.0_r_kind) then
+           sv_qh(i,j,k)=cv_cw(i,j,k)*dprecicedcw+sv_tsen(i,j,k)*dprecicedt
+         endif
+
+      end do
+   end do
+end do
+
+sv_cw=cv_cw
+
+!write(6,*) 'cw2hydro_tl_p6 ends : sv_ql = ', maxval(sv_ql), minval(sv_ql)
+!write(6,*) 'cw2hydro_tl_p6 ends : sv_qi = ', maxval(sv_qi), minval(sv_qi)
+!write(6,*) 'cw2hydro_tl_p6 ends : sv_qr = ', maxval(sv_qr), minval(sv_qr)
+!write(6,*) 'cw2hydro_tl_p6 ends : sv_qs = ', maxval(sv_qs), minval(sv_qs)
+!write(6,*) 'cw2hydro_tl_p6 ends : sv_qg = ', maxval(sv_qg), minval(sv_qg)
+!write(6,*) 'cw2hydro_tl_p6 ends : sv_qh = ', maxval(sv_qh), minval(sv_qh)
+!write(6,*) 'cw2hydro_tl_p6 ends : sv_cw = ', maxval(sv_cw), minval(sv_cw)
+
+return
+
+end subroutine cw2hydro_tl_p6
+
+subroutine cw2hydro_ad_p6(rval,wbundle,rv_tsen)
+!$$$  subprogram documentation block
+!                .      .    .                                       .
+! subprogram:    cw2hydro_ad_p6
+!   prgmmr: Ting-Chi Wu
+!
+! abstract:  adjoint of cw2hydro_p6 (subroutine cloud_calc)
+!
+! program history log:
+!   2017-07-19  T.-C. Wu - modified from cw2hydro_ad to use 6 instead of 2 hydrometeors
+!
+!   input argument list:
+!     rval   - state variable
+!     wbundle - work bundle
+!
+!   output argument list:
+!     wbundle 
+!
+!$$$ end documentation block
+
+implicit none
+
+! Declare passed variables
+type(gsi_bundle), intent(in   ):: rval
+type(gsi_bundle), intent(inout):: wbundle
+real(r_kind),intent(inout) :: rv_tsen(:,:,:)
+
+! Declare local variables
+integer(i_kind) i,j,k, ic, istatus
+real(r_kind) coef, dcoefdt
+real(r_kind) dicedt, dicedcw, dprecicedt, dprecicedcw
+real(r_kind) work
+real(r_kind), pointer, dimension(:,:,:) :: cv_cw
+real(r_kind), pointer, dimension(:,:,:) :: rv_cw, rv_ql, rv_qi, rv_qr, rv_qs, rv_qg, rv_qh
+
+!write(6,*) 'cw2hydro_ad_p6 begins : rv_tsen = ', maxval(rv_tsen), minval(rv_tsen)
+!write(6,*) 'cw2hydro_ad_p6 begins : rv_cw = ', maxval(rv_cw), minval(rv_cw)
+!write(6,*) 'cw2hydro_ad_p6 begins : rv_ql = ', maxval(rv_ql), minval(rv_ql)
+!write(6,*) 'cw2hydro_ad_p6 begins : rv_qi = ', maxval(rv_qi), minval(rv_qi)
+!write(6,*) 'cw2hydro_ad_p6 begins : rv_qr = ', maxval(rv_qr), minval(rv_qr)
+!write(6,*) 'cw2hydro_ad_p6 begins : rv_qs = ', maxval(rv_qs), minval(rv_qs)
+!write(6,*) 'cw2hydro_ad_p6 begins : rv_qg = ', maxval(rv_qg), minval(rv_qg)
+!write(6,*) 'cw2hydro_ad_p6 begins : rv_qh = ', maxval(rv_qh), minval(rv_qh)
+
+call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),  'fice', fice,istatus)
+call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig), 'frain', frain,istatus)
+call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),'frimef', frimef,istatus)
+
+!write(6,*) 'cw2hydro_ad_p6 begins : fice = ', maxval(fice), minval(fice)
+!write(6,*) 'cw2hydro_ad_p6 begins : frain = ', maxval(frain), minval(frain)
+!write(6,*) 'cw2hydro_ad_p6 begins : frimef = ', maxval(frimef), minval(frimef)
+
+call gsi_bundlegetpointer (wbundle, 'cw', cv_cw, istatus)
+call gsi_bundlegetpointer (rval, 'cw', rv_cw, istatus)
+call gsi_bundlegetpointer (rval, 'ql', rv_ql, istatus)
+call gsi_bundlegetpointer (rval, 'qi', rv_qi, istatus)
+call gsi_bundlegetpointer (rval, 'qr', rv_qr, istatus)
+call gsi_bundlegetpointer (rval, 'qs', rv_qs, istatus)
+call gsi_bundlegetpointer (rval, 'qg', rv_qg, istatus)
+call gsi_bundlegetpointer (rval, 'qh', rv_qh, istatus)
+
+do k=1,nsig
+   do j=1,lon2
+      do i=1,lat2
+         rv_cw(i,j,k)=rv_cw(i,j,k)+rv_ql(i,j,k)*(one-fice(i,j,k))*(one-frain(i,j,k))
+         rv_ql(i,j,k)=zero
+!         rv_tsen(i,j,k)=rv_tsen(i,j,k)+zero ! ql is not a function of T
+      end do
+   end do
+end do
+do k=1,nsig
+   do j=1,lon2
+      do i=1,lat2
+         rv_cw(i,j,k)=rv_cw(i,j,k)+rv_qr(i,j,k)*(one-fice(i,j,k))*frain(i,j,k)
+         rv_qr(i,j,k)=zero
+!         rv_tsen(i,j,k)=rv_tsen(i,j,k)+zero ! qr is not a function of T
+      end do
+   end do
+end do
+
+
+do k=1,nsig
+   do j=1,lon2
+      do i=1,lat2
+        if ( ges_tsen(i,j,k,ntguessig) > t0c-30.0_r_kind) then
+          dicedcw = 0.05*fice(i,j,k)
+          dprecicedcw = 0.95*fice(i,j,k)
+          dicedt = zero
+          dprecicedt = zero
+        else
+          coef=(ges_tsen(i,j,k,ntguessig)-t2)/(t1-t2)*coef1+ &
+               (ges_tsen(i,j,k,ntguessig)-t1)/(t1-t2)*coef2
+          dcoefdt = one/(t1-t2)*coef1+one/(t1-t2)*coef2
+
+          dicedcw = coef*fice(i,j,k)
+          dprecicedcw = (one-coef)*fice(i,j,k)
+          dicedt = dcoefdt*cwgues(i,j,k)*fice(i,j,k)
+          dprecicedt = -dcoefdt*cwgues(i,j,k)*fice(i,j,k)
+        endif
+
+        work=zero
+        work=work+rv_qi(i,j,k)*dicedt
+        rv_cw(i,j,k)=rv_cw(i,j,k)+rv_qi(i,j,k)*dicedcw
+        rv_qi(i,j,k)=zero
+        rv_tsen(i,j,k)=rv_tsen(i,j,k)+work
+        if (frimef(i,j,k)>=one .and. frimef(i,j,k)<=5.0_r_kind) then
+          work=work+rv_qs(i,j,k)*dprecicedt
+          rv_cw(i,j,k)=rv_cw(i,j,k)+rv_qs(i,j,k)*dprecicedcw
+          rv_qs(i,j,k)=zero
+          rv_tsen(i,j,k)=rv_tsen(i,j,k)+work
+        endif
+        if (frimef(i,j,k)>5.0_r_kind .and. frimef(i,j,k)<=20.0_r_kind) then
+          work=work+rv_qg(i,j,k)*dprecicedt
+          rv_cw(i,j,k)=rv_cw(i,j,k)+rv_qg(i,j,k)*dprecicedcw
+          rv_qg(i,j,k)=zero
+          rv_tsen(i,j,k)=rv_tsen(i,j,k)+work
+        endif
+        if (frimef(i,j,k)>20.0_r_kind) then
+          work=work+rv_qh(i,j,k)*dprecicedt
+          rv_cw(i,j,k)=rv_cw(i,j,k)+rv_qh(i,j,k)*dprecicedcw
+          rv_qh(i,j,k)=zero
+          rv_tsen(i,j,k)=rv_tsen(i,j,k)+work
+        endif
+      end do
+   end do
+end do
+
+cv_cw=rv_cw
+rv_cw=zero
+
+!write(6,*) 'cw2hydro_ad_p6 ends : rv_cw = ', maxval(rv_cw), minval(rv_cw)
+!write(6,*) 'cw2hydro_ad_p6 ends : rv_ql = ', maxval(rv_ql), minval(rv_ql)
+!write(6,*) 'cw2hydro_ad_p6 ends : rv_qi = ', maxval(rv_qi), minval(rv_qi)
+!write(6,*) 'cw2hydro_ad_p6 ends : rv_qr = ', maxval(rv_qr), minval(rv_qr)
+!write(6,*) 'cw2hydro_ad_p6 ends : rv_qs = ', maxval(rv_qs), minval(rv_qs)
+!write(6,*) 'cw2hydro_ad_p6 ends : rv_qg = ', maxval(rv_qg), minval(rv_qg)
+!write(6,*) 'cw2hydro_ad_p6 ends : rv_qh = ', maxval(rv_qh), minval(rv_qh)
+!write(6,*) 'cw2hydro_ad_p6 ends : cwgues = ', maxval(cwgues), minval(cwgues)
+!write(6,*) 'cw2hydro_ad_p6 ends : cv_cw = ', maxval(cv_cw), minval(cv_cw)
+!write(6,*) 'cw2hydro_ad_p6 ends : rv_tsen = ', maxval(rv_tsen), minval(rv_tsen)
+
+return
+
+end subroutine cw2hydro_ad_p6
+! -------------------------- Ting-Chi Wu 2017/12/29 ----------------------------
+
 
 end module cwhydromod

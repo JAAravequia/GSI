@@ -37,12 +37,10 @@ subroutine stplwcp(lwcphead,rval,sval,out,sges,nstep)
 !
 ! program history log:
 !   2017-06-28  Ting-Chi Wu - mimic the structure in stppw.f90 and stpgps.f90 
-!                           - stplwcp.f90 includes 3 stp options
+!                           - stplwcp.f90 includes 2 stp options
 !                             1) when l_wcp_cwm = .false.: 
 !                                operator = f(T,P,q)
-!                             2) when l_wcp_cwm = .true. and lpartition2: 
-!                                operator = f(ql) partition2
-!                             3) when l_wcp_cwm = .true. and lpartition6: 
+!                             2) when l_wcp_cwm = .true. and CWM partition6: 
 !                                 operator = f(ql,qr) partition6
 !
 !   input argument list:
@@ -81,8 +79,7 @@ subroutine stplwcp(lwcphead,rval,sval,out,sges,nstep)
   use m_lwcpNode , only: lwcpNode
   use m_lwcpNode , only: lwcpNode_typecast
   use m_lwcpNode , only: lwcpNode_nextcast
-  use obsmod, only: l_wcp_cwm, lqsmooth
-  use parqvarsmod, only: lpartition2, lpartition6
+  use obsmod, only: l_wcp_cwm
   implicit none
 
 ! Declare passed variables
@@ -130,37 +127,11 @@ subroutine stplwcp(lwcphead,rval,sval,out,sges,nstep)
 
   else
 
-    if (lpartition2) then
-      if (lqsmooth) then
-        call gsi_bundlegetpointer(sval,'ql_sm',sql,istatus);ier=istatus+ier
-        call gsi_bundlegetpointer(rval,'ql_sm',rql,istatus);ier=istatus+ier
-        !if (ier==0) write(6,*) 'STPLWCP (l_wcp_cwm = T and lpartition2 with smooth)'
-      else
-        call gsi_bundlegetpointer(sval,'ql',sql,istatus);ier=istatus+ier
-        call gsi_bundlegetpointer(rval,'ql',rql,istatus);ier=istatus+ier
-        !if (ier==0) write(6,*) 'STPLWCP (l_wcp_cwm = T and lpartition2 without smooth)'
-      endif
-
-    elseif (lpartition6) then
-      if (lqsmooth) then
-        call gsi_bundlegetpointer(sval,'ql_sm',sql,istatus);ier=istatus+ier
-        call gsi_bundlegetpointer(sval,'qr_sm',sqr,istatus);ier=istatus+ier
-        call gsi_bundlegetpointer(rval,'ql_sm',rql,istatus);ier=istatus+ier
-        call gsi_bundlegetpointer(rval,'qr_sm',rqr,istatus);ier=istatus+ier
-        !if (ier==0) write(6,*) 'STPLWCP (l_wcp_cwm = T and lpartition6 with smooth)'
-      else
-        call gsi_bundlegetpointer(sval,'ql',sql,istatus);ier=istatus+ier
-        call gsi_bundlegetpointer(sval,'qr',sqr,istatus);ier=istatus+ier
-        call gsi_bundlegetpointer(rval,'ql',rql,istatus);ier=istatus+ier
-        call gsi_bundlegetpointer(rval,'qr',rqr,istatus);ier=istatus+ier
-        !if (ier==0) write(6,*) 'STPLWCP (l_wcp_cwm = T and lpartition6 without smooth)'
-      endif
-
-    else
-
-      write(6,*) 'STPLWCP: ERROR!!! No Appropriate STP for l_wcp_cwm = T'
-
-    endif ! lpartition2 or lpartition6
+    call gsi_bundlegetpointer(sval,'ql',sql,istatus);ier=istatus+ier
+    call gsi_bundlegetpointer(sval,'qr',sqr,istatus);ier=istatus+ier
+    call gsi_bundlegetpointer(rval,'ql',rql,istatus);ier=istatus+ier
+    call gsi_bundlegetpointer(rval,'qr',rqr,istatus);ier=istatus+ier
+    !if (ier==0) write(6,*) 'STPLWCP (l_wcp_cwm = T)'
 
   endif ! l_wcp_cwm
 
@@ -200,23 +171,14 @@ subroutine stplwcp(lwcphead,rval,sval,out,sges,nstep)
                 val  = val  + rt_tl*lwcpptr%jac_t(j)+rp_tl*lwcpptr%jac_p(j)+rq_tl*lwcpptr%jac_q(j)
              enddo
            else
-             if (lpartition2) then
-               do j=1,nsig
-                 ql_TL =w1* sql(i1(j))+w2* sql(i2(j))+w3* sql(i3(j))+w4* sql(i4(j))
-                 rql_TL=w1* rql(i1(j))+w2* rql(i2(j))+w3* rql(i3(j))+w4* rql(i4(j))
-                 val2 = val2 +  ql_tl*lwcpptr%jac_ql(j)
-                 val  = val  + rql_tl*lwcpptr%jac_ql(j)
-               enddo
-             elseif (lpartition6) then
-               do j=1,nsig
-                 ql_TL =w1* sql(i1(j))+w2* sql(i2(j))+w3* sql(i3(j))+w4* sql(i4(j))
-                 rql_TL=w1* rql(i1(j))+w2* rql(i2(j))+w3* rql(i3(j))+w4* rql(i4(j))
-                 qr_TL =w1* sqr(i1(j))+w2* sqr(i2(j))+w3* sqr(i3(j))+w4* sqr(i4(j))
-                 rqr_TL=w1* rqr(i1(j))+w2* rqr(i2(j))+w3* rqr(i3(j))+w4* rqr(i4(j))
-                 val2 = val2 +  ql_tl*lwcpptr%jac_ql(j)+  qr_tl*lwcpptr%jac_qr(j) 
-                 val  = val  + rql_tl*lwcpptr%jac_ql(j)+ rqr_tl*lwcpptr%jac_qr(j)
-               enddo        
-             endif ! lpartition2 or lpartition6
+             do j=1,nsig
+               ql_TL =w1* sql(i1(j))+w2* sql(i2(j))+w3* sql(i3(j))+w4* sql(i4(j))
+               rql_TL=w1* rql(i1(j))+w2* rql(i2(j))+w3* rql(i3(j))+w4* rql(i4(j))
+               qr_TL =w1* sqr(i1(j))+w2* sqr(i2(j))+w3* sqr(i3(j))+w4* sqr(i4(j))
+               rqr_TL=w1* rqr(i1(j))+w2* rqr(i2(j))+w3* rqr(i3(j))+w4* rqr(i4(j))
+               val2 = val2 +  ql_tl*lwcpptr%jac_ql(j)+  qr_tl*lwcpptr%jac_qr(j) 
+               val  = val  + rql_tl*lwcpptr%jac_ql(j)+ rqr_tl*lwcpptr%jac_qr(j)
+             enddo        
            endif ! l_wcp_cwm
 
            do kk=1,nstep

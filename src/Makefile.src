@@ -91,7 +91,6 @@
         cplr_read_wrf_mass_guess.o  \
         cplr_read_wrf_nmm_files.o  \
         cplr_read_wrf_nmm_guess.o  \
-        parqvarsmod.o \
         cplr_regional_io.o  \
         cplr_wrf_binary_interface.o  \
         cplr_wrf_netcdf_interface.o  \

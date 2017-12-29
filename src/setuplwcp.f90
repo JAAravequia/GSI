@@ -14,12 +14,10 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !
 ! program history log:
 !   2017-06-28  Ting-Chi Wu - mimic the structure in setuppw.f90 and setupbend.f90 
-!                           - setuplwcp.f90 includes 3 operator options
+!                           - setuplwcp.f90 includes 2 operator options
 !                             1) when l_wcp_cwm = .false.: 
 !                                operator = f(T,P,q)
-!                             2) when l_wcp_cwm = .true. and lpartition2: 
-!                                operator = f(ql) partition2
-!                             3) when l_wcp_cwm = .true. and lpartition6: 
+!                             2) when l_wcp_cwm = .true. and CWM partition6: 
 !                                operator = f(ql,qr) partition6
 !
 !   input argument list:
@@ -44,7 +42,7 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use m_obsdiags, only: lwcphead
   use obsmod, only: rmiss_single,i_lwcp_ob_type,obsdiags,&
                     lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset
-  use obsmod, only: l_wcp_cwm, lqsmooth
+  use obsmod, only: l_wcp_cwm
   use m_obsNode, only: obsNode
   use m_lwcpNode, only: lwcpNode
   use m_obsLList, only: obsLList_appendNode
@@ -61,8 +59,6 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
   use gfs_stratosphere, only: use_gfs_stratosphere, nsig_save
-  use parqvarsmod, only: lpartition2, lpartition6
-  use parqvarsmod, only: ges_ql_sm, ges_qr_sm
   implicit none
 
 ! Declare passed variables
@@ -202,59 +198,22 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   else
 
-    ! l_wcp_cwm = T and lpartition2: ql and qi' 
-    if (lpartition2) then
-      ges_lwcp = zero
+  ! l_wcp_cwm = T and partition6: ql, qi, qr, qs, qg, and qh'
+    ges_lwcp = zero
       
-      do jj=1,nfldsig
-        if (lqsmooth) then
-          ges_ql(:,:,:,jj) = ges_ql_sm(:,:,:,jj)
-        !else
-        !  ! gues_ql is acquired through gsi_bundlegetpointer in the init_vars_ call
-        !  ges_ql(:,:,:,jj) = ges_ql(:,:,:,jj)
-        endif
-        do k=1,nsig
-          do j=1,lon2
-            do i=1,lat2
-              if (ges_tsen(i,j,k,jj) >= tlower .and. k <= nsig_top ) then  
-                ges_lwcp(i,j,jj) = ges_lwcp(i,j,jj) + ges_ql(i,j,k,jj) * &
-                                 tpwcon*r10*(ges_prsi(i,j,k,jj)-ges_prsi(i,j,k+1,jj)) ! kg/m^2
-              endif
-            enddo
+    do jj=1,nfldsig
+      do k=1,nsig
+        do j=1,lon2
+          do i=1,lat2
+            if (ges_tsen(i,j,k,jj) >= tlower .and. k <= nsig_top ) then
+              ges_lwcp(i,j,jj) = ges_lwcp(i,j,jj) + &
+                               (ges_ql(i,j,k,jj)+ges_qr(i,j,k,jj)) * &
+                               tpwcon*r10*(ges_prsi(i,j,k,jj)-ges_prsi(i,j,k+1,jj)) ! kg/m^2
+            endif
           enddo
         enddo
       enddo
- 
-    ! l_wcp_cwm = T and lpartition6: ql, qi, qr, qs, qg, and qh'
-    elseif (lpartition6) then
-      ges_lwcp = zero
-      
-      do jj=1,nfldsig
-        if (lqsmooth) then
-          ges_ql(:,:,:,jj) = ges_ql_sm(:,:,:,jj)
-          ges_qr(:,:,:,jj) = ges_qr_sm(:,:,:,jj)
-        !else
-        !  ! gues_ql/qr are acquired through gsi_bundlegetpointer in the init_vars_ call
-        !  ges_ql(:,:,:,jj) = ges_ql(:,:,:,jj)
-        !  ges_qr(:,:,:,jj) = ges_qr(:,:,:,jj)
-        endif
-        do k=1,nsig
-          do j=1,lon2
-            do i=1,lat2
-              if (ges_tsen(i,j,k,jj) >= tlower .and. k <= nsig_top ) then
-                ges_lwcp(i,j,jj) = ges_lwcp(i,j,jj) + &
-                                 (ges_ql(i,j,k,jj)+ges_qr(i,j,k,jj)) * &
-                                 tpwcon*r10*(ges_prsi(i,j,k,jj)-ges_prsi(i,j,k+1,jj)) ! kg/m^2
-              endif
-            enddo
-          enddo
-        enddo
-      enddo
-    
-    else
-      write(6,*) 'SETUPLWCP: ERROR!!! No Appropriate Operator for l_wcp_cwm = T'
-
-    endif ! lpartition2 or lpartition6
+    enddo
 
   endif ! l_wcp_cwm  
 
@@ -421,24 +380,15 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
        call tintrp2a1(ges_q,qges,dlat,dlon,dtime, &
            hrdifsig,nsig,mype,nfldsig)
      else
-       if (lpartition2) then
-         call tintrp2a1(ges_tsen,tges,dlat,dlon,dtime, &
-             hrdifsig,nsig,mype,nfldsig)
-         call tintrp2a1(ges_ql,qlges,dlat,dlon,dtime, &
-             hrdifsig,nsig,mype,nfldsig)
-!         write(6,*) 'SETUPLWCP (l_wcp_cwm = T and lpartition2): tges = ', tges
-!         write(6,*) 'SETUPLWCP (l_wcp_cwm = T and lpartition2): qlges = ', qlges
-       elseif (lpartition6) then
-         call tintrp2a1(ges_tsen,tges,dlat,dlon,dtime, &
-             hrdifsig,nsig,mype,nfldsig)
-         call tintrp2a1(ges_ql,qlges,dlat,dlon,dtime, &
-             hrdifsig,nsig,mype,nfldsig)
-         call tintrp2a1(ges_qr,qrges,dlat,dlon,dtime, &
-             hrdifsig,nsig,mype,nfldsig)
-!         write(6,*) 'SETUPLWCP (l_wcp_cwm = T and lpartition6): tges = ', tges
-!         write(6,*) 'SETUPLWCP (l_wcp_cwm = T and lpartition6): qlges = ', qlges
-!         write(6,*) 'SETUPLWCP (l_wcp_cwm = T and lpartition6): qrges = ', qrges
-       endif
+       call tintrp2a1(ges_tsen,tges,dlat,dlon,dtime, &
+           hrdifsig,nsig,mype,nfldsig)
+       call tintrp2a1(ges_ql,qlges,dlat,dlon,dtime, &
+           hrdifsig,nsig,mype,nfldsig)
+       call tintrp2a1(ges_qr,qrges,dlat,dlon,dtime, &
+           hrdifsig,nsig,mype,nfldsig)
+!       write(6,*) 'SETUPLWCP (l_wcp_cwm = T): tges = ', tges
+!       write(6,*) 'SETUPLWCP (l_wcp_cwm = T): qlges = ', qlges
+!       write(6,*) 'SETUPLWCP (l_wcp_cwm = T): qrges = ', qrges
      endif
 
 !=============================================================================================================
@@ -619,20 +569,13 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !                           dssqdq(k)*(tpwcon*r10*(piges(k)-piges(k+1)))
             endif
     
-         else
+          else
 
-            if (lpartition2) then
-              if ( tges(k) >= tlower .and. k <= nsig_top ) then
-                my_head%jac_ql(k)=tpwcon*r10*(piges(k)-piges(k+1)) 
-!                write(6,*) 'SETUPLWCP (l_wcp_cwm = T and lpartition2): k, dfdql = ', k, tpwcon*r10*(piges(k)-piges(k+1))
-              endif
-            elseif (lpartition6) then
-              if ( tges(k) >= tlower .and. k <= nsig_top ) then
-                my_head%jac_ql(k)=tpwcon*r10*(piges(k)-piges(k+1)) 
-                my_head%jac_qr(k)=tpwcon*r10*(piges(k)-piges(k+1)) 
-!                write(6,*) 'SETUPLWCP (l_wcp_cwm = T and lpartition6): k, dfdql = ', k, tpwcon*r10*(piges(k)-piges(k+1))
-!                write(6,*) 'SETUPLWCP (l_wcp_cwm = T and lpartition6): k, dfdqr = ', k, tpwcon*r10*(piges(k)-piges(k+1))
-              endif
+            if ( tges(k) >= tlower .and. k <= nsig_top ) then
+              my_head%jac_ql(k)=tpwcon*r10*(piges(k)-piges(k+1)) 
+              my_head%jac_qr(k)=tpwcon*r10*(piges(k)-piges(k+1)) 
+!              write(6,*) 'SETUPLWCP (l_wcp_cwm = T): k, dfdql = ', k, tpwcon*r10*(piges(k)-piges(k+1))
+!              write(6,*) 'SETUPLWCP (l_wcp_cwm = T): k, dfdqr = ', k, tpwcon*r10*(piges(k)-piges(k+1))
             endif
  
           endif
@@ -755,7 +698,6 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   subroutine check_vars_ (proceed)
   use obsmod, only: l_wcp_cwm
-  use parqvarsmod, only: lpartition2, lpartition6
   logical,intent(inout) :: proceed
   integer(i_kind) ivar, istatus
 ! Check to see if required guess fields are available
@@ -766,30 +708,16 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   else
 
-    if (lpartition2) then 
-
-      call gsi_metguess_get ('var::ql' , ivar, istatus )
-       proceed=ivar>0
-
-    elseif (lpartition6) then
-
-      call gsi_metguess_get ('var::ql' , ivar, istatus )
-      proceed=ivar>0
-      call gsi_metguess_get ('var::qr', ivar, istatus )
-      proceed=proceed.and.ivar>0
-
-    else
-
-      write(6,*) 'SETUPLWCP: ERROR!!! No Appropriate check_vars_ for l_wcp_cwm = T'
-
-    endif ! lpartition2 or lpartition6
+    call gsi_metguess_get ('var::ql' , ivar, istatus )
+    proceed=ivar>0
+    call gsi_metguess_get ('var::qr', ivar, istatus )
+    proceed=proceed.and.ivar>0
 
   endif ! l_wcp_cwm
   end subroutine check_vars_ 
 
   subroutine init_vars_
   use obsmod, only: l_wcp_cwm
-  use parqvarsmod, only: lpartition2, lpartition6
   real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
   real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
   character(len=5) :: varname
@@ -821,70 +749,42 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
     else
 
-      if (lpartition2) then
-
-        ! get ql ...
-        varname='ql'
-        call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-        if (istatus==0) then
-          if(allocated(ges_ql))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-          endif
-          allocate(ges_ql(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-          ges_ql(:,:,:,1)=rank3
-          do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_ql(:,:,:,ifld)=rank3
-          enddo
-        else
-          write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+      ! get ql ...
+      varname='ql'
+      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+      if (istatus==0) then
+        if(allocated(ges_ql))then
+          write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
           call stop2(999)
         endif
-
-      elseif (lpartition6) then
-
-        ! get ql ...
-        varname='ql'
-        call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-        if (istatus==0) then
-          if(allocated(ges_ql))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-          endif
-          allocate(ges_ql(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-          ges_ql(:,:,:,1)=rank3
-          do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_ql(:,:,:,ifld)=rank3
-          enddo
-        else
-          write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-        endif
-        ! get qr ...
-        varname='qr'
-        call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-        if (istatus==0) then
-          if(allocated(ges_qr))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-          endif
-          allocate(ges_qr(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-          ges_qr(:,:,:,1)=rank3
-          do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_qr(:,:,:,ifld)=rank3
-          enddo
-        else
-          write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-          call stop2(999)
-        endif
-
+        allocate(ges_ql(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+        ges_ql(:,:,:,1)=rank3
+        do ifld=2,nfldsig
+          call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+          ges_ql(:,:,:,ifld)=rank3
+        enddo
       else
-        write(6,*) 'SETUPLWCP: ERROR!!! No Appropriate check_vars_ for l_wcp_cwm = T'
-
-      endif ! lpartition2 or lpartition6
+        write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+        call stop2(999)
+      endif
+      ! get qr ...
+      varname='qr'
+      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+      if (istatus==0) then
+        if(allocated(ges_qr))then
+          write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+          call stop2(999)
+        endif
+        allocate(ges_qr(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+        ges_qr(:,:,:,1)=rank3
+        do ifld=2,nfldsig
+          call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+          ges_qr(:,:,:,ifld)=rank3
+        enddo
+      else
+        write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+        call stop2(999)
+      endif
 
     endif ! l_wcp_cwm
 
