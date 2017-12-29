@@ -949,7 +949,7 @@ subroutine write_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
   contains
   subroutine write_ncvar_single(iunit, dimid, varname, field)
     use netcdf, only: nf90_def_var, nf90_put_var, nf90_inq_varid,  &
-                      NF90_FLOAT, NF90_ENOTVAR
+                      nf90_def_var_deflate,NF90_FLOAT, NF90_ENOTVAR
     use ncdw_climsg, only: nclayer_check
     implicit none
     integer(i_kind), intent(in)  :: iunit, dimid
@@ -962,12 +962,13 @@ subroutine write_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
     if (ierr == NF90_ENOTVAR) then
        call nclayer_check(nf90_def_var(iunit, varname, NF90_FLOAT, dimid, varid))
     endif
+    call nclayer_check(nf90_def_var_deflate(iunit, varid, 1, 1, 5))
     call nclayer_check(nf90_put_var(iunit, varid, field))
   end subroutine write_ncvar_single
 
   subroutine write_ncvar_int(iunit, dimid, varname, field)
     use netcdf, only: nf90_def_var, nf90_put_var, nf90_inq_varid,  &
-                      NF90_INT, NF90_ENOTVAR
+                      nf90_def_var_deflate,NF90_INT, NF90_ENOTVAR
     use ncdw_climsg, only: nclayer_check
     implicit none
     integer(i_kind), intent(in)  :: iunit, dimid
@@ -980,6 +981,7 @@ subroutine write_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
     if (ierr == NF90_ENOTVAR) then
        call nclayer_check(nf90_def_var(iunit, varname, NF90_INT, dimid, varid))
     endif
+    call nclayer_check(nf90_def_var_deflate(iunit, varid, 1, 1, 5))
     call nclayer_check(nf90_put_var(iunit, varid, field))
   end subroutine write_ncvar_int
 
