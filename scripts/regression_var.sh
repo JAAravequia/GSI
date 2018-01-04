@@ -42,6 +42,8 @@ elif [ -d /scratch4/NCEPDEV/da ]; then # Theia
      export noscrub="/scratch4/NCEPDEV/da/noscrub/$LOGNAME"
    elif [ -d /scratch4/NCEPDEV/global/noscrub/$LOGNAME ]; then
      export noscrub="/scratch4/NCEPDEV/global/noscrub/$LOGNAME"
+   elif [ -d /scratch3/BMC/gsienkf/$LOGNAME ]; then
+     export noscrub="/scratch3/BMC/gsienkf/$LOGNAME"
    fi
 elif [ -d /gpfs/hps/ptmp ]; then # LUNA or SURGE
    export machine="WCOSS_C"
@@ -71,7 +73,11 @@ if [[ "$machine" = "Theia" ]]; then
      export basedir="/scratch4/NCEPDEV/global/save/$LOGNAME/svn/gsi/branches"
    fi
 
-   export ptmp="/scratch4/NCEPDEV/stmp3/$LOGNAME/$ptmpName"
+   if [ -d /scratch4/NCEPDEV/stmp3/$LOGNAME ]; then
+     export ptmp="/scratch4/NCEPDEV/stmp3/$LOGNAME/$ptmpName"
+   elif [ -d /scratch3/BMC/gsienkf/$LOGNAME ]; then
+     export ptmp="/scratch3/BMC/gsienkf/$LOGNAME/tmp/$ptmpName"
+   fi
 
    export fixcrtm="/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update"
    export casesdir="/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES"
@@ -80,6 +86,7 @@ if [[ "$machine" = "Theia" ]]; then
    export check_resource="no"
 
    export accnt="da-cpu"
+#   export accnt="gsienkf"
 
    #  On Theia, there are no scrubbers to remove old contents from stmp* directories.
    #  After completion of regression tests, will remove the regression test subdirecories
