@@ -1067,6 +1067,12 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                ratio_errors = zero
            endif
         endif
+        if (itype==288 .or. itype==295) then !Tyndall & Horel QC for mesonet winds /(WAF 2013, Vol. 28, pg. 285)
+           if (spdob < one .and. (spdob-spdb) > five) then
+               error = zero
+               ratio_errors = zero
+           endif
+        endif
      endif
 
      if (ratio_errors*error <=tiny_r_kind) muse(i)=.false.

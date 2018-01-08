@@ -85,8 +85,8 @@ if [[ "$machine" = "Theia" ]]; then
 
    export check_resource="no"
 
-#   export accnt="da-cpu"
-   export accnt="gsienkf"
+   export accnt="da-cpu"
+#   export accnt="gsienkf"
 
    #  On Theia, there are no scrubbers to remove old contents from stmp* directories.
    #  After completion of regression tests, will remove the regression test subdirecories
