@@ -155,7 +155,7 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   else
     nsig_top = nsig
   endif
-  write(6,*) 'SETUPLWCP: nsig, nsig_top = ', nsig, nsig_top
+  !write(6,*) 'SETUPLWCP: nsig, nsig_top = ', nsig, nsig_top
 
   tupper = ttp
   tlower = tmix
@@ -401,7 +401,7 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      !   ddiff = sign(min(abs(ddiff),max_innov_pct*lwcpges),ddiff)
      !end if
 
-     write(6,*) 'SETUPLWCP: observed, guessed, and diff = ', dlwcp, lwcpges, ddiff
+!     write(6,*) 'SETUPLWCP: observed, guessed, and diff = ', dlwcp, lwcpges, ddiff
  
 
 !    Gross checks using innovation

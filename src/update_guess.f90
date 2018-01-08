@@ -154,6 +154,12 @@ subroutine update_guess(sval,sbias)
   real(r_kind),pointer,dimension(:,:,:) :: ptr3daux =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: ges_ql   =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: ges_qi   =>NULL()
+! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------   
+  real(r_kind),pointer,dimension(:,:,:) :: ges_qr   =>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_qs   =>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_qg   =>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_qh   =>NULL()
+! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 
   real(r_kind),dimension(lat2,lon2)     :: tinc_1st,qinc_1st
 
@@ -299,7 +305,19 @@ subroutine update_guess(sval,sbias)
            cycle
         endif
      enddo
-     if (getindex(svars3d,'ql')>0 .and. getindex(svars3d,'qi')>0) then
+! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
+!     if (getindex(svars3d,'ql')>0 .and. getindex(svars3d,'qi')>0) then
+!        ier=0
+!        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ptr3dges,istatus) ; ier=istatus                                                              
+!        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql,  istatus) ; ier=ier+istatus                                        
+!        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi,  istatus) ; ier=ier+istatus                                
+!        if (ier==0) then
+!           ptr3dges = ges_ql + ges_qi
+!        endif
+!     endif
+     if (getindex(svars3d,'ql')>0 .and. getindex(svars3d,'qi')>0 .and. &
+         getindex(svars3d,'qr')==0 .and. getindex(svars3d,'qs')==0 .and. &
+         getindex(svars3d,'qg')==0 .and. getindex(svars3d,'qh')==0) then
         ier=0
         call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ptr3dges,istatus) ; ier=istatus                                                              
         call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql,  istatus) ; ier=ier+istatus                                        
@@ -307,7 +325,23 @@ subroutine update_guess(sval,sbias)
         if (ier==0) then
            ptr3dges = ges_ql + ges_qi
         endif
+     elseif (getindex(svars3d,'ql')>0 .and. getindex(svars3d,'qi')>0 .and. &
+             getindex(svars3d,'qr')>0 .and. getindex(svars3d,'qs')>0 .and. &
+             getindex(svars3d,'qg')>0 .and. getindex(svars3d,'qh')>0) then
+        ier=0
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ptr3dges,istatus) ; ier=istatus                            
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql,  istatus) ; ier=ier+istatus                        
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi,  istatus) ; ier=ier+istatus                        
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qr',ges_qr,  istatus) ; ier=ier+istatus                        
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qs',ges_qs,  istatus) ; ier=ier+istatus                        
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qg',ges_qg,  istatus) ; ier=ier+istatus                        
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qh',ges_qh,  istatus) ; ier=ier+istatus                        
+        if (ier==0) then
+           ptr3dges = ges_ql + ges_qi + ges_qr + ges_qs + ges_qg + ges_qh
+        endif
+
      endif
+! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 !    At this point, handle the Tv exception since by now Q has been updated 
 !    NOTE 1: This exceptions is unnecessary: all we need to do is put tsens in the
 !    state-vector instead of tv (but this will require changes elsewhere).

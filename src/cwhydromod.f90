@@ -41,8 +41,8 @@ PRIVATE
 PUBLIC cw2hydro_tl
 PUBLIC cw2hydro_ad
 ! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
-PUBLIC cw2hydro_tl_p6
-PUBLIC cw2hydro_ad_p6
+PUBLIC cw2hydro_tl_hwrf
+PUBLIC cw2hydro_ad_hwrf
 real(r_kind),parameter :: t1=t0c-30.0_r_kind
 real(r_kind),parameter :: t2=t0c-40.0_r_kind
 real(r_kind),parameter :: coef1=0.05_r_kind
@@ -268,10 +268,10 @@ return
 end subroutine cw2hydro_ad
 
 ! -------------------------- Ting-Chi Wu 2017/12/29 ----------------------------
-subroutine cw2hydro_tl_p6(sval,wbundle,sv_tsen)
+subroutine cw2hydro_tl_hwrf(sval,wbundle,sv_tsen)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:    cw2hydro_tl_p6
+! subprogram:    cw2hydro_tl_hwrf
 !   prgmmr: Ting-Chi Wu
 !
 ! abstract:  Tangent linear of converting control variable cw to hydrometers
@@ -303,17 +303,17 @@ real(r_kind) dicedt, dicedcw, dprecicedt, dprecicedcw
 real(r_kind), pointer, dimension(:,:,:) :: cv_cw
 real(r_kind), pointer, dimension(:,:,:) :: sv_cw, sv_ql, sv_qi, sv_qr, sv_qs, sv_qg, sv_qh
 
-!write(6,*) 'cw2hydro_tl_p6 begins : cwgues = ', maxval(cwgues), minval(cwgues)
-!write(6,*) 'cw2hydro_tl_p6 begins : cv_cw = ', maxval(cv_cw), minval(cv_cw)
-!write(6,*) 'cw2hydro_tl_p6 begins : sv_tsen = ', maxval(sv_tsen), minval(sv_tsen)
+!write(6,*) 'cw2hydro_tl_hwrf begins : cwgues = ', maxval(cwgues), minval(cwgues)
+!write(6,*) 'cw2hydro_tl_hwrf begins : cv_cw = ', maxval(cv_cw), minval(cv_cw)
+!write(6,*) 'cw2hydro_tl_hwrf begins : sv_tsen = ', maxval(sv_tsen), minval(sv_tsen)
 
 call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),  'fice', fice,istatus)
 call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig), 'frain', frain,istatus)
 call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),'frimef', frimef,istatus)
 
-!write(6,*) 'cw2hydro_tl_p6 begins : fice = ', maxval(fice), minval(fice)
-!write(6,*) 'cw2hydro_tl_p6 begins : frain = ', maxval(frain), minval(frain)
-!write(6,*) 'cw2hydro_tl_p6 begins : frimef = ', maxval(frimef), minval(frimef)
+!write(6,*) 'cw2hydro_tl_hwrf begins : fice = ', maxval(fice), minval(fice)
+!write(6,*) 'cw2hydro_tl_hwrf begins : frain = ', maxval(frain), minval(frain)
+!write(6,*) 'cw2hydro_tl_hwrf begins : frimef = ', maxval(frimef), minval(frimef)
 
 ! Split cw into cloud_liquid, cloud_ice, rain, snow, graupel, and hail
 ! (cloud_calc in cloud_efr_mod.f90)
@@ -373,25 +373,25 @@ end do
 
 sv_cw=cv_cw
 
-!write(6,*) 'cw2hydro_tl_p6 ends : sv_ql = ', maxval(sv_ql), minval(sv_ql)
-!write(6,*) 'cw2hydro_tl_p6 ends : sv_qi = ', maxval(sv_qi), minval(sv_qi)
-!write(6,*) 'cw2hydro_tl_p6 ends : sv_qr = ', maxval(sv_qr), minval(sv_qr)
-!write(6,*) 'cw2hydro_tl_p6 ends : sv_qs = ', maxval(sv_qs), minval(sv_qs)
-!write(6,*) 'cw2hydro_tl_p6 ends : sv_qg = ', maxval(sv_qg), minval(sv_qg)
-!write(6,*) 'cw2hydro_tl_p6 ends : sv_qh = ', maxval(sv_qh), minval(sv_qh)
-!write(6,*) 'cw2hydro_tl_p6 ends : sv_cw = ', maxval(sv_cw), minval(sv_cw)
+!write(6,*) 'cw2hydro_tl_hwrf ends : sv_ql = ', maxval(sv_ql), minval(sv_ql)
+!write(6,*) 'cw2hydro_tl_hwrf ends : sv_qi = ', maxval(sv_qi), minval(sv_qi)
+!write(6,*) 'cw2hydro_tl_hwrf ends : sv_qr = ', maxval(sv_qr), minval(sv_qr)
+!write(6,*) 'cw2hydro_tl_hwrf ends : sv_qs = ', maxval(sv_qs), minval(sv_qs)
+!write(6,*) 'cw2hydro_tl_hwrf ends : sv_qg = ', maxval(sv_qg), minval(sv_qg)
+!write(6,*) 'cw2hydro_tl_hwrf ends : sv_qh = ', maxval(sv_qh), minval(sv_qh)
+!write(6,*) 'cw2hydro_tl_hwrf ends : sv_cw = ', maxval(sv_cw), minval(sv_cw)
 
 return
 
-end subroutine cw2hydro_tl_p6
+end subroutine cw2hydro_tl_hwrf
 
-subroutine cw2hydro_ad_p6(rval,wbundle,rv_tsen)
+subroutine cw2hydro_ad_hwrf(rval,wbundle,rv_tsen)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:    cw2hydro_ad_p6
+! subprogram:    cw2hydro_ad_hwrf
 !   prgmmr: Ting-Chi Wu
 !
-! abstract:  adjoint of cw2hydro_p6 (subroutine cloud_calc)
+! abstract:  adjoint of cw2hydro_hwrf (subroutine cloud_calc)
 !
 ! program history log:
 !   2017-07-19  T.-C. Wu - modified from cw2hydro_ad to use 6 instead of 2 hydrometeors
@@ -420,22 +420,15 @@ real(r_kind) work
 real(r_kind), pointer, dimension(:,:,:) :: cv_cw
 real(r_kind), pointer, dimension(:,:,:) :: rv_cw, rv_ql, rv_qi, rv_qr, rv_qs, rv_qg, rv_qh
 
-!write(6,*) 'cw2hydro_ad_p6 begins : rv_tsen = ', maxval(rv_tsen), minval(rv_tsen)
-!write(6,*) 'cw2hydro_ad_p6 begins : rv_cw = ', maxval(rv_cw), minval(rv_cw)
-!write(6,*) 'cw2hydro_ad_p6 begins : rv_ql = ', maxval(rv_ql), minval(rv_ql)
-!write(6,*) 'cw2hydro_ad_p6 begins : rv_qi = ', maxval(rv_qi), minval(rv_qi)
-!write(6,*) 'cw2hydro_ad_p6 begins : rv_qr = ', maxval(rv_qr), minval(rv_qr)
-!write(6,*) 'cw2hydro_ad_p6 begins : rv_qs = ', maxval(rv_qs), minval(rv_qs)
-!write(6,*) 'cw2hydro_ad_p6 begins : rv_qg = ', maxval(rv_qg), minval(rv_qg)
-!write(6,*) 'cw2hydro_ad_p6 begins : rv_qh = ', maxval(rv_qh), minval(rv_qh)
+!write(6,*) 'cw2hydro_ad_hwrf begins : rv_tsen = ', maxval(rv_tsen), minval(rv_tsen)
 
 call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),  'fice', fice,istatus)
 call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig), 'frain', frain,istatus)
 call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),'frimef', frimef,istatus)
 
-!write(6,*) 'cw2hydro_ad_p6 begins : fice = ', maxval(fice), minval(fice)
-!write(6,*) 'cw2hydro_ad_p6 begins : frain = ', maxval(frain), minval(frain)
-!write(6,*) 'cw2hydro_ad_p6 begins : frimef = ', maxval(frimef), minval(frimef)
+!write(6,*) 'cw2hydro_ad_hwrf begins : fice = ', maxval(fice), minval(fice)
+!write(6,*) 'cw2hydro_ad_hwrf begins : frain = ', maxval(frain), minval(frain)
+!write(6,*) 'cw2hydro_ad_hwrf begins : frimef = ', maxval(frimef), minval(frimef)
 
 call gsi_bundlegetpointer (wbundle, 'cw', cv_cw, istatus)
 call gsi_bundlegetpointer (rval, 'cw', rv_cw, istatus)
@@ -445,6 +438,15 @@ call gsi_bundlegetpointer (rval, 'qr', rv_qr, istatus)
 call gsi_bundlegetpointer (rval, 'qs', rv_qs, istatus)
 call gsi_bundlegetpointer (rval, 'qg', rv_qg, istatus)
 call gsi_bundlegetpointer (rval, 'qh', rv_qh, istatus)
+
+!write(6,*) 'cw2hydro_ad_hwrf begins : cv_cw = ', maxval(cv_cw), minval(cv_cw)
+!write(6,*) 'cw2hydro_ad_hwrf begins : rv_cw = ', maxval(rv_cw), minval(rv_cw)
+!write(6,*) 'cw2hydro_ad_hwrf begins : rv_ql = ', maxval(rv_ql), minval(rv_ql)
+!write(6,*) 'cw2hydro_ad_hwrf begins : rv_qi = ', maxval(rv_qi), minval(rv_qi)
+!write(6,*) 'cw2hydro_ad_hwrf begins : rv_qr = ', maxval(rv_qr), minval(rv_qr)
+!write(6,*) 'cw2hydro_ad_hwrf begins : rv_qs = ', maxval(rv_qs), minval(rv_qs)
+!write(6,*) 'cw2hydro_ad_hwrf begins : rv_qg = ', maxval(rv_qg), minval(rv_qg)
+!write(6,*) 'cw2hydro_ad_hwrf begins : rv_qh = ', maxval(rv_qh), minval(rv_qh)
 
 do k=1,nsig
    do j=1,lon2
@@ -515,20 +517,20 @@ end do
 cv_cw=rv_cw
 rv_cw=zero
 
-!write(6,*) 'cw2hydro_ad_p6 ends : rv_cw = ', maxval(rv_cw), minval(rv_cw)
-!write(6,*) 'cw2hydro_ad_p6 ends : rv_ql = ', maxval(rv_ql), minval(rv_ql)
-!write(6,*) 'cw2hydro_ad_p6 ends : rv_qi = ', maxval(rv_qi), minval(rv_qi)
-!write(6,*) 'cw2hydro_ad_p6 ends : rv_qr = ', maxval(rv_qr), minval(rv_qr)
-!write(6,*) 'cw2hydro_ad_p6 ends : rv_qs = ', maxval(rv_qs), minval(rv_qs)
-!write(6,*) 'cw2hydro_ad_p6 ends : rv_qg = ', maxval(rv_qg), minval(rv_qg)
-!write(6,*) 'cw2hydro_ad_p6 ends : rv_qh = ', maxval(rv_qh), minval(rv_qh)
-!write(6,*) 'cw2hydro_ad_p6 ends : cwgues = ', maxval(cwgues), minval(cwgues)
-!write(6,*) 'cw2hydro_ad_p6 ends : cv_cw = ', maxval(cv_cw), minval(cv_cw)
-!write(6,*) 'cw2hydro_ad_p6 ends : rv_tsen = ', maxval(rv_tsen), minval(rv_tsen)
+!write(6,*) 'cw2hydro_ad_hwrf ends : rv_cw = ', maxval(rv_cw), minval(rv_cw)
+!write(6,*) 'cw2hydro_ad_hwrf ends : rv_ql = ', maxval(rv_ql), minval(rv_ql)
+!write(6,*) 'cw2hydro_ad_hwrf ends : rv_qi = ', maxval(rv_qi), minval(rv_qi)
+!write(6,*) 'cw2hydro_ad_hwrf ends : rv_qr = ', maxval(rv_qr), minval(rv_qr)
+!write(6,*) 'cw2hydro_ad_hwrf ends : rv_qs = ', maxval(rv_qs), minval(rv_qs)
+!write(6,*) 'cw2hydro_ad_hwrf ends : rv_qg = ', maxval(rv_qg), minval(rv_qg)
+!write(6,*) 'cw2hydro_ad_hwrf ends : rv_qh = ', maxval(rv_qh), minval(rv_qh)
+!write(6,*) 'cw2hydro_ad_hwrf ends : cwgues = ', maxval(cwgues), minval(cwgues)
+!write(6,*) 'cw2hydro_ad_hwrf ends : cv_cw = ', maxval(cv_cw), minval(cv_cw)
+!write(6,*) 'cw2hydro_ad_hwrf ends : rv_tsen = ', maxval(rv_tsen), minval(rv_tsen)
 
 return
 
-end subroutine cw2hydro_ad_p6
+end subroutine cw2hydro_ad_hwrf
 ! -------------------------- Ting-Chi Wu 2017/12/29 ----------------------------
 
 

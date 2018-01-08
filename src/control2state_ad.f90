@@ -57,6 +57,9 @@ use gsi_4dvar, only: nsubwin, lsqrtb
 use gridmod, only: regional,lat2,lon2,nsig,twodvar_regional
 use jfunc, only: nsclen,npclen,ntclen
 use cwhydromod, only: cw2hydro_ad
+! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
+use cwhydromod, only: cw2hydro_ad_hwrf
+! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 use gsi_bundlemod, only: gsi_bundlecreate
 use gsi_bundlemod, only: gsi_bundle
 use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -107,11 +110,20 @@ real(r_kind),pointer,dimension(:,:,:) :: cv_vpwter=>NULL()
 real(r_kind),pointer,dimension(:,:)   :: cv_cldch=>NULL()
 
 ! Declare required local state variables
-integer(i_kind), parameter :: nsvars = 8
+! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
+!integer(i_kind), parameter :: nsvars = 8
+!integer(i_kind) :: isps(nsvars)
+!character(len=4), parameter :: mysvars(nsvars) = (/  &  ! vars from ST needed here
+!                'u   ', 'v   ', 'prse', 'q   ', 'tsen', 'ql  ', 'qi  ', 'w   ' /)
+!logical :: ls_u,ls_v,ls_w,ls_prse,ls_q,ls_tsen,ls_ql,ls_qi
+integer(i_kind), parameter :: nsvars = 12
 integer(i_kind) :: isps(nsvars)
 character(len=4), parameter :: mysvars(nsvars) = (/  &  ! vars from ST needed here
-                'u   ', 'v   ', 'prse', 'q   ', 'tsen', 'ql  ', 'qi  ', 'w   ' /)
+                'u   ', 'v   ', 'prse', 'q   ', 'tsen', 'ql  ', 'qi  ', 'w   ', &
+                'qr  ', 'qs  ', 'qg  ', 'qh  ' /)
 logical :: ls_u,ls_v,ls_w,ls_prse,ls_q,ls_tsen,ls_ql,ls_qi
+logical :: ls_qr,ls_qs,ls_qg,ls_qh
+! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 real(r_kind),pointer,dimension(:,:)   :: rv_ps=>NULL(),rv_sst=>NULL()
 real(r_kind),pointer,dimension(:,:)   :: rv_gust=>NULL(),rv_vis=>NULL(),rv_pblh=>NULL()
 real(r_kind),pointer,dimension(:,:)   :: rv_wspd10m=>NULL(),rv_tcamt=>NULL(),rv_lcbas=>NULL()
@@ -126,6 +138,9 @@ real(r_kind),pointer,dimension(:,:)   :: rv_rank2=>NULL()
 real(r_kind),allocatable,dimension(:,:,:):: uland,vland,uwter,vwter
 
 logical :: do_getuv,do_tv_to_tsen_ad,do_normal_rh_to_q_ad,do_getprs_ad,do_cw_to_hydro_ad
+! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
+logical :: do_cw_to_hydro_ad_hwrf
+! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 
 !******************************************************************************
 
@@ -161,6 +176,10 @@ call gsi_bundlegetpointer (rval(1),mysvars,isps,istatus)
 ls_u  =isps(1)>0; ls_v   =isps(2)>0; ls_prse=isps(3)>0
 ls_q  =isps(4)>0; ls_tsen=isps(5)>0; ls_ql  =isps(6)>0
 ls_qi =isps(7)>0; ls_w   =isps(8)>0
+! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
+ls_qr  =isps(9)>0; ls_qs =isps(10)>0
+ls_qg =isps(11)>0; ls_qh =isps(12)>0
+! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 
 ! Define what to do depending on what's in CV and SV
 do_getuv            =lc_sf.and.lc_vp.and.ls_u  .and.ls_v
@@ -169,8 +188,12 @@ do_normal_rh_to_q_ad=lc_t .and.lc_rh.and.ls_prse.and.ls_q
 do_getprs_ad        =lc_t .and.lc_ps.and.ls_prse
 
 do_cw_to_hydro_ad=.false.
+do_cw_to_hydro_ad_hwrf=.false.
 if (regional) then
    do_cw_to_hydro_ad=lc_cw.and.ls_ql.and.ls_qi
+! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
+   do_cw_to_hydro_ad_hwrf=lc_cw.and.ls_ql.and.ls_qi.and.ls_qr.and.ls_qs.and.ls_qg.and.ls_qh
+! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 else
    do_cw_to_hydro_ad=lc_cw.and.ls_tsen.and.ls_ql.and.ls_qi.and.(.not.lc_ql) !ncep global
 endif
@@ -269,10 +292,19 @@ do jj=1,nsubwin
    call gsi_bundleputvar ( wbundle, 'q' ,  zero,   istatus )
    call gsi_bundleputvar ( wbundle, 'ps',  rv_ps,  istatus )
 
-   if (do_cw_to_hydro_ad) then
+! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
+!   if (do_cw_to_hydro_ad) then
+   if (do_cw_to_hydro_ad .and. .not.do_cw_to_hydro_ad_hwrf) then
+! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 !     Case when cloud-vars do not map one-to-one
 !     e.g. cw-to-ql&qi
       call cw2hydro_ad(rval(jj),wbundle,clouds,nclouds)
+! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
+   elseif (do_cw_to_hydro_ad_hwrf) then
+!     Case when cloud-vars do not map one-to-one
+!     e.g. cw-to-ql&qi&qr&qs&qg&qh
+      call cw2hydro_ad_hwrf(rval(jj),wbundle,rv_tsen)
+! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
    else
 !     Case when cloud-vars map one-to-one, take care of them together
 !     e.g. cw-to-cw
