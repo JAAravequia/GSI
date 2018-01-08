@@ -1,31 +1,34 @@
-# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
-# file Copyright.txt or https://cmake.org/licensing for details.
-
-#.rst:
-# SelectLibraryConfigurations
-# ---------------------------
-#
-#
-#
 # select_library_configurations( basename )
 #
-# This macro takes a library base name as an argument, and will choose
-# good values for basename_LIBRARY, basename_LIBRARIES,
-# basename_LIBRARY_DEBUG, and basename_LIBRARY_RELEASE depending on what
-# has been found and set.  If only basename_LIBRARY_RELEASE is defined,
-# basename_LIBRARY will be set to the release value, and
-# basename_LIBRARY_DEBUG will be set to basename_LIBRARY_DEBUG-NOTFOUND.
-# If only basename_LIBRARY_DEBUG is defined, then basename_LIBRARY will
-# take the debug value, and basename_LIBRARY_RELEASE will be set to
-# basename_LIBRARY_RELEASE-NOTFOUND.
+# This macro takes a library base name as an argument, and will choose good
+# values for basename_LIBRARY, basename_LIBRARIES, basename_LIBRARY_DEBUG, and
+# basename_LIBRARY_RELEASE depending on what has been found and set.  If only
+# basename_LIBRARY_RELEASE is defined, basename_LIBRARY will be set to the
+# release value, and basename_LIBRARY_DEBUG will be set to
+# basename_LIBRARY_DEBUG-NOTFOUND.  If only basename_LIBRARY_DEBUG is defined,
+# then basename_LIBRARY will take the debug value, and basename_LIBRARY_RELEASE
+# will be set to basename_LIBRARY_RELEASE-NOTFOUND.
 #
-# If the generator supports configuration types, then basename_LIBRARY
-# and basename_LIBRARIES will be set with debug and optimized flags
-# specifying the library to be used for the given configuration.  If no
-# build type has been set or the generator in use does not support
-# configuration types, then basename_LIBRARY and basename_LIBRARIES will
-# take only the release value, or the debug value if the release one is
-# not set.
+# If the generator supports configuration types, then basename_LIBRARY and
+# basename_LIBRARIES will be set with debug and optimized flags specifying the
+# library to be used for the given configuration.  If no build type has been set
+# or the generator in use does not support configuration types, then
+# basename_LIBRARY and basename_LIBRARIES will take only the release value, or
+# the debug value if the release one is not set.
+
+#=============================================================================
+# Copyright 2009 Will Dicharry <wdicharry@stellarscience.com>
+# Copyright 2005-2009 Kitware, Inc.
+#
+# Distributed under the OSI-approved BSD License (the "License");
+# see accompanying file Copyright.txt for details.
+#
+# This software is distributed WITHOUT ANY WARRANTY; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the License for more information.
+#=============================================================================
+# (To distribute this file outside of CMake, substitute the full
+#  License text for the above reference.)
 
 # This macro was adapted from the FindQt4 CMake module and is maintained by Will
 # Dicharry <wdicharry@stellarscience.com>.
