@@ -312,8 +312,10 @@ close(luin)
 nc3d=0; nc2d=0;mvars=0
 do ii=1,nvars
    read(utable(ii),*) var, ilev, itracer, aas, amp, source, funcof
+   write(6,*) 'utable ',ii,' is ',var, ilev, itracer, aas, amp, source, funcof
    if(trim(adjustl(source))=='motley') then
       mvars=mvars+1
+      write(6,*) 'adding to mvars', mvars, trim(adjustl(source))
    else
       if(ilev==1) then
           nc2d=nc2d+1
@@ -323,6 +325,9 @@ do ii=1,nvars
    endif
 enddo
 
+write(6,*) 'in control vectors, nvars is ',nvars
+write(6,*) 'in control vectors, nc3d is ',nc3d
+write(6,*) 'in control vectors, nc2d is ',nc2d
 allocate(nrf_var(nvars),cvars3d(nc3d),cvars2d(nc2d))
 allocate(as3d(nc3d),as2d(nc2d))
 allocate(cvarsmd(mvars))

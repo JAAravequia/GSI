@@ -202,7 +202,7 @@ module general_sub2grid_mod
 
    end type sub2grid_info
 
-   logical :: print_verbose=.false.
+   logical :: print_verbose=.true.
 
 !  other declarations  ...
 
@@ -429,17 +429,24 @@ module general_sub2grid_mod
 !      next, determine vertical layout:
       allocate(idoit(0:s%npe-1))
       if(.not.present(nskip).and.s%num_fields<s%npe) then
+         write(6,*) 'HEY s%num_fields is ',s%num_fields
+         write(6,*) 'HEY s%npe is ',s%npe
          call get_iuse_pe(s%npe,s%num_fields,idoit)
+         write(6,*) 'HEY s%num_fields is now',s%num_fields
          npe_used=s%num_fields
          if(s%mype==0.and.print_verbose) &
            write(6,*)' npe,num_fields,npe_used,idoit=',s%npe,s%num_fields,npe_used,idoit
       else
          idoit=0
          npe_used=0
+         write(6,*) 'HEY2 s%npe is ',s%npe
+         write(6,*) 'HEY2 nskip is ',nskip
          do n=0,s%npe-1,s%nskip
             npe_used=npe_used+1
             idoit(n)=1
          end do
+         write(6,*) 'HEY2 s%npe is now ',s%npe
+         write(6,*) 'HEY2 nskip is now',nskip
       end if
       allocate(s%kbegin(0:s%npe),s%kend(0:s%npe-1))
       num_loc_groups=s%num_fields/npe_used

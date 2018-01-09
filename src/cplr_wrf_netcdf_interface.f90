@@ -77,7 +77,6 @@ contains
     character(len=19)  :: DateStr1
     character(len=6)   :: filename
     integer(i_kind)            :: dh1
-    
     integer(i_kind) :: iunit
     
     integer(i_kind) :: i,j,k
@@ -113,10 +112,14 @@ contains
     end associate
     
     print_verbose=.false.
+    dh1 = 0 
+    ndim1 = 0
+    WrfType = 0
     if(verbose) print_verbose=.true.
     wrf_real=104
     end_index=0
     start_index=0
+    Status = 0
     
   ! Inquire about cloud guess fields
     call gsi_metguess_get('clouds::3d',n_actual_clouds,ierr)
