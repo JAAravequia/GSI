@@ -1225,8 +1225,8 @@ contains
             if(print_verbose)then
               write(6,*)' k,max,min,mid Dbz=',k,maxval(field3(:,:,k)),minval(field3(:,:,k)), &
                         field3(nlon_regional/2,nlat_regional/2,k)
-              write(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional) !dBZ
             end if
+            write(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional) !dBZ
        end do
       end if
 
