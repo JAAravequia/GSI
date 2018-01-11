@@ -129,7 +129,7 @@ case $regtest in
            topts[2]="0:15:00" ; popts[2]="6/10/" ; ropts[2]="/2"
            sub_cmd="sub_zeus"
         elif [[ "$machine" = "WCOSS" ]]; then
-           topts[1]="0:35:00" ; popts[1]="6/8/" ; ropts[1]="/1"
+           topts[1]="2:35:00" ; popts[1]="6/8/" ; ropts[1]="/1"
            topts[2]="0:35:00" ; popts[2]="6/10/" ; ropts[2]="/2"
            sub_cmd="sub_wcoss -a GDAS-T2O -d $PWD"
         elif [[ "$machine" = "WCOSS_C" ]]; then
@@ -352,8 +352,8 @@ case $regtest in
             topts[2]="0:20:00" ; popts[2]="8/8/"  ; ropts[2]="/1"
             sub_cmd="sub_zeus"
         elif [[ "$machine" = "WCOSS" ]]; then
-            topts[1]="0:20:00" ; popts[1]="6/6/"  ; ropts[1]="/1"
-            topts[2]="0:20:00" ; popts[2]="8/8/"  ; ropts[2]="/1"
+            topts[1]="8:20:00" ; popts[1]="6/6/"  ; ropts[1]="/1"
+            topts[2]="8:20:00" ; popts[2]="8/8/"  ; ropts[2]="/1"
             sub_cmd="sub_wcoss -a HWRF-T2O -d $PWD"
         elif [[ "$machine" = "WCOSS_C" ]]; then
             topts[1]="1:20:00" ; popts[1]="48/8/"  ; ropts[1]="1024/1"  # sub_wcoss_c popts are "#tasks/#nodes/"

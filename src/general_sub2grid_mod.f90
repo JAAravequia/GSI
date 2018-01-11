@@ -440,13 +440,12 @@ module general_sub2grid_mod
          idoit=0
          npe_used=0
          write(6,*) 'HEY2 s%npe is ',s%npe
-         write(6,*) 'HEY2 nskip is ',nskip
+         write(6,*) 'HEY2 nskip is ',s%nskip
          do n=0,s%npe-1,s%nskip
             npe_used=npe_used+1
             idoit(n)=1
          end do
          write(6,*) 'HEY2 s%npe is now ',s%npe
-         write(6,*) 'HEY2 nskip is now',nskip
       end if
       allocate(s%kbegin(0:s%npe),s%kend(0:s%npe-1))
       num_loc_groups=s%num_fields/npe_used
