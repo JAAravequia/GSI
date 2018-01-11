@@ -1,0 +1,120 @@
+#!/bin/sh
+
+# accept one build arguement 
+#arg1=$1
+
+# create build directory
+if test -d ./build ; then
+  echo "directory build already exists, delete or rename the directory and dry again"
+  exit
+else
+mkdir ./build
+fi
+
+# set CORE_DIR to top of source tree.
+CORE_DIR=`pwd`
+echo "$CORE_DIR"
+export CORE_DIR
+export CORELIB=$CORE_DIR/libsrc
+echo "$CORELIB"
+
+# set path to WRF and test that it exists
+if  test -z "$WRFPATH"  ; then
+    if test -z $WRF_DIR; then
+      echo '** WARNING: No path to WRF_DIR and environment variable WRF_DIR not set.'
+      exit
+    else
+      export WRFPATH=$WRF_DIR
+    fi
+fi  
+
+# Query user for compilers to use
+echo 'Please select from among the following supported platforms.'
+echo '      '
+echo '    1.  Linux x86_64, PGI compilers (pgf90 & pgcc)  '
+echo '    2.  Linux x86_64, PGI compilers (pgf90 & gcc)  '
+echo '    3.  Linux x86_64, GNU compilers (gfortran & gcc)  '
+echo '    4.  Linux x86_64, Intel/gnu compiler (ifort & gcc) '
+echo '    5.  Linux x86_64, Intel compiler (ifort & icc)  '
+echo '    6.  Linux x86_64, Intel compiler w/intel mpi (mpiifort & icc)  '
+echo '    7.  Linux x86_64, Intel compiler (mpif90 -f90=ifort & icc)     '
+echo '     '
+echo 'Enter selection [1-7] :'
+# Read entry and determine if it is valid. After two invalid trys, exit
+      read resp
+      if [[ -n ${resp//[1-7]/} ]]; then
+         echo 'Not a valid entry, enter selection [1-7] :'
+         read resp
+         if [[ -n ${resp//[1-7]/} ]]; then
+            echo 'Still not a valid entry, exiting' ; exit 1
+         fi
+      fi
+# Set upp build env based on answer
+      if [ "$resp" = "1" ] ; then
+         echo '    1.  Linux x86_64, PGI compilers (pgf90 & pgcc)  '
+         export CC=pgcc
+         export CXX=
+         export FC=pgf90
+         cd build
+         cmake -DBUILD_CORELIBS=ON $CORE_DIR
+         make -j 8
+      fi
+      if [ "$resp" = "2" ] ; then
+         echo '    2.  Linux x86_64, PGI compilers (pgf90 & gcc)  '
+         export CC=gcc
+         export CXX=g++
+         export FC=pgf90
+         cd build
+         cmake -DBUILD_CORELIBS=ON $CORE_DIR
+         make -j 8
+      fi
+
+      if [ "$resp" = "3" ] ; then
+         echo '    3.  Linux x86_64, GNU compilers (gfortran & gcc)  '
+         export CC=gcc
+         export CXX=g++
+         export FC=mpif90
+         cd build
+         cmake -DBUILD_CORELIBS=ON $CORE_DIR
+         make -j 8
+      fi
+
+      if [ "$resp" = "4" ] ; then
+         echo '    4.  Linux x86_64, Intel/gnu compiler (ifort & gcc) '
+         export CC=gcc
+         export CXX=g++
+         export FC=mpif90
+         cd build
+         cmake -DBUILD_CORELIBS=ON $CORE_DIR
+         make -j 8
+      fi
+
+      if [ "$resp" = "5" ] ; then
+         echo '    5.  Linux x86_64, Intel compiler (ifort & icc)  '
+         export CC=icc
+         export CXX=icpc
+         export FC=mpif90
+         cd build
+         cmake -DBUILD_CORELIBS=ON $CORE_DIR
+         make -j 8
+      fi
+
+      if [ "$resp" = "6" ] ; then
+         echo '    6.  Linux x86_64, Intel compiler w/intel mpi (mpiifort & icc)  '
+         export CC=icc
+         export CXX=icpc
+         export FC=mpiifort
+         cd build
+         cmake -DBUILD_CORELIBS=ON $CORE_DIR
+         make -j 8
+      fi
+
+      if [ "$resp" = "7" ] ; then
+         echo '    7.  Linux x86_64, Intel compiler (mpif90 -f90=ifort & icc)  '
+         export CC=icc
+         export CXX=icpc
+         export FC=mpif90 -f90=ifort
+         cd build
+         cmake -DBUILD_CORELIBS=ON $CORE_DIR
+         make -j 8
+      fi
