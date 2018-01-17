@@ -77,7 +77,9 @@ subroutine tpause_t(km,p,t,h,ptp)
     hphd(k)=h(k)+hd
   end do
   do k=klim(1),klim(2)
+     write(6,*) 'HEY t and h are ',k,t(k-1),t(k+1),h(k+1),h(k-1)
      gamu=(t(k-1)-t(k+1))/(h(k+1)-h(k-1))
+     write(6,*) 'gamu is ',gamu
      if(gamu<=gamtp) then
 #ifdef ibm_sp
         call rsearch(km-k-1,h(k+1:),1,hphd(k:),kd)

@@ -479,11 +479,12 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
 !          Set up for radiance data
            if(ditype(is) == 'rad')then
- 
+              write(6,*) 'calling setuprad with ',is,' and isis is ',isis 
               call setuprad(lunin,&
                  mype,aivals,stats,nchanl,nreal,nobs,&
                  obstype,isis,is,rad_diagsave,init_pass,last_pass)
 
+              write(6,*) 'returned from setuprad with ',is,' and isis is ',isis 
 !          Set up for aerosol data
            else if(ditype(is) == 'aero')then
               call setupaod(lunin,&

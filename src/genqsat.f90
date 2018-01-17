@@ -98,9 +98,9 @@ subroutine genqsat(qsat,tsen,prsl,lat2,lon2,nsig,ice,iderivative)
         end do
     end if
   end if
-!$omp parallel do  schedule(dynamic,1) private(k,j,i,tdry,tr,es,esw,esi,w) &
-!$omp private(pw,esmax,es2,idpupdate,idtupdate,desdt,dwdt,deswdt,desidt) &
-!$omp private(mint,lmint,estmax)
+!!$omp parallel do  schedule(dynamic,1) private(k,j,i,tdry,tr,es,esw,esi,w) &
+!!$omp private(pw,esmax,es2,idpupdate,idtupdate,desdt,dwdt,deswdt,desidt) &
+!!$omp private(mint,lmint,estmax)
   do j=1,lon2
      do i=1,lat2
         mint(i)=340._r_kind
@@ -117,7 +117,7 @@ subroutine genqsat(qsat,tsen,prsl,lat2,lon2,nsig,ice,iderivative)
         end do
      end do
      do i=1,lat2
-        tdry = mint(i)
+        tdry = mint(i)+1.0e-8
         tr = ttp/tdry
         if (tdry >= ttp .or. .not. ice) then
            estmax(i) = psat * (tr**xa) * exp(xb*(one-tr))
@@ -133,7 +133,7 @@ subroutine genqsat(qsat,tsen,prsl,lat2,lon2,nsig,ice,iderivative)
      do k = 1,nsig
         do i = 1,lat2
 
-           tdry = tsen(i,j,k)
+           tdry = tsen(i,j,k)+1.0e-8
            tr = ttp/tdry
            if (tdry >= ttp .or. .not. ice) then
               es = psat * (tr**xa) * exp(xb*(one-tr))

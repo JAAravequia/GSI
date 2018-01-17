@@ -497,13 +497,15 @@
   endif
 
   if ( mype == 0 .and. .not.l_may_be_passive) write(6,*)mype,'setuprad: passive obs',is,isis
-
+  write(6,*) 'HEY at 1',mype
 !  Logic to turn off print of reading coefficients if not first interation or not mype_diaghdr or not init_pass
   iwrmype=-99
   if(mype==mype_diaghdr(is) .and. init_pass .and. jiterstart == jiter)iwrmype = mype_diaghdr(is)
 
+  write(6,*) 'HEY at 2',mype
 ! Initialize radiative transfer and pointers to values in data_s
   call init_crtm(init_pass,iwrmype,mype,nchanl,isis,obstype,radmod)
+  write(6,*) 'HEY at 3',mype
 
 ! Get indexes of variables in jacobian to handle exceptions down below
   ioz =getindex(radjacnames,'oz')
@@ -577,6 +579,7 @@
   if (tzr_qc>0) call setup_tzr_qc(obstype)
 
 ! Get version of rad-diag file
+  write(6,*) 'HEY at 4',mype
   call get_radiag ('version',iversion_radiag,istatus)
   if(istatus/=0) then
      write(6,*)'SETUPRAD: trouble getting version of diag file'
@@ -600,6 +603,7 @@
   endif
 
 
+  write(6,*) 'HEY at 5',mype
 
 !  Find number of channels written to diag file
   if(reduce_diag)then
@@ -658,6 +662,7 @@
      wavenumber(i)=sc(sensorindex)%wavenumber(sc_index(i))
   end do
 
+  write(6,*) 'HEY at 6',mype
 ! If diagnostic file requested, open unit to file and write header.
   if (rad_diagsave .and. nchanl_diag > 0) then
      filex=obstype
@@ -695,6 +700,7 @@
      endif
   endif
 
+  write(6,*) 'HEY at 7',mype
 ! Load data array for current satellite
   read(lunin) data_s,luse,ioid
 

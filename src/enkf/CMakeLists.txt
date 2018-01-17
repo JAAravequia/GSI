@@ -68,7 +68,7 @@ if(BUILD_ENKF)
   add_dependencies(MODS1 enkfdeplib ${GSISHAREDLIB} ${GSILIB} )
   add_dependencies(MODS2 MODS1 enkfdeplib ${GSISHAREDLIB} ${GSILIB} )
   add_dependencies(enkflib enkfdeplib ${GSISHAREDLIB} ${GSILIB} )
-  set(ENKFEXEC "${ENKF_BASE}${debug_suffix}${GSISUFFIX}")
+  set(ENKFEXEC "${ENKF_BASE}${debug_suffix}${GSISUFFIX}" CACHE INTERNAL "ENKF Executable name")
   add_executable(${ENKFEXEC} enkf_main.f90)
   add_dependencies(${ENKFEXEC} enkflib enkfdeplib ${GSI_LIB} )
   target_link_libraries(${ENKFEXEC} enkflib enkfdeplib ${GSISHAREDLIB} ${GSILIB} ${CORE_LIBRARIES}
