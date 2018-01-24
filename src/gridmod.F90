@@ -587,11 +587,6 @@ contains
 
 ! Initialize structures for grid(s)
     inner_vars=1
-    write(6,*) 'Hey, cvars3d is ',cvars3d
-    write(6,*) 'Hey, cvars2d is ',cvars2d
-    write(6,*) 'Hey, n3d is ',n3d
-    write(6,*) 'Hey, nsig is ',nsig
-    write(6,*) 'Hey, n2d is ',n2d
     num_fields=n3d*nsig+n2d
     allocate(vector(num_fields))
     vector=.false.
