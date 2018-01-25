@@ -34,7 +34,6 @@ module stpjomod
                   & i_wspd10m_ob_type,i_uwnd10m_ob_type,i_vwnd10m_ob_type,i_td2m_ob_type,i_mxtm_ob_type,i_mitm_ob_type, &
                     i_pmsl_ob_type,i_howv_ob_type,i_tcamt_ob_type,i_lcbas_ob_type,  &
                     i_aero_ob_type, i_cldch_ob_type, i_swcp_ob_type, i_lwcp_ob_type
-                    ! Ting-Chi Wu 2017/12/18 added i_swcp_ob_type, i_lwcp_ob_type     
 
   implicit none
 
@@ -296,10 +295,8 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins)
   use stpcldchmod, only: stpcldch
   use stpuwnd10mmod, only: stpuwnd10m
   use stpvwnd10mmod, only: stpvwnd10m
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
   use stpswcpmod, only: stpswcp
   use stplwcpmod, only: stplwcp
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
   use bias_predictors, only: predictors
   use aircraftinfo, only: aircraft_t_bc_pof,aircraft_t_bc
   use gsi_bundlemod, only: gsi_bundle
@@ -482,7 +479,6 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins)
           if (getindex(cvars2d,'vwnd10m')>0) &
           call stpvwnd10m(yobs(ib)%vwnd10m,dval(ib),xval(ib),pbcjo(1,i_vwnd10m_ob_type,ib),sges,nstep)
 
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 !   penalty, b, and c for solid-water content path
        case(i_swcp_ob_type)
           call stpswcp(yobs(ib)%swcp,dval(ib),xval(ib),pbcjo(1,i_swcp_ob_type,ib),sges,nstep)
@@ -490,7 +486,6 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins)
 !   penalty, b, and c for liquid-water content path
        case(i_lwcp_ob_type)
           call stplwcp(yobs(ib)%lwcp,dval(ib),xval(ib),pbcjo(1,i_lwcp_ob_type,ib),sges,nstep)
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 
        case default
           call perr('stpjo','unexpected thread, ll_jo(mm) =',ll)
@@ -796,7 +791,6 @@ subroutine stpjo_setup(yobs)
              ll_jo(stpcnt) = i_vwnd10m_ob_type
              ib_jo(stpcnt) = ib
           end if
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
        case(i_swcp_ob_type)
 !         penalty, b, and c for solid-water content path
           if(associated(yobs(ib)%swcp)) then
@@ -811,7 +805,6 @@ subroutine stpjo_setup(yobs)
              ll_jo(stpcnt) = i_lwcp_ob_type
              ib_jo(stpcnt) = ib
           end if
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
        end select
      end do     ! ib
     end do      ! ll (i.e. i_ob_type)

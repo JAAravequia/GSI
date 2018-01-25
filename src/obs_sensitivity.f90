@@ -49,7 +49,6 @@ use obsmod, only: cobstype, nobs_type, obscounts, &
                   i_pmsl_ob_type, i_howv_ob_type, i_tcamt_ob_type, i_lcbas_ob_type, &
                   i_cldch_ob_type, i_uwnd10m_ob_type, i_vwnd10m_ob_type, i_pm10_ob_type, &
                   i_swcp_ob_type, i_lwcp_ob_type
-! Ting-Chi Wu 2017/12/18 added i_swcp_ob_type, i_lwcp_ob_type
 
 use mpimod, only: mype
 use control_vectors, only: control_vector,allocate_cv,read_cv,deallocate_cv, &
@@ -283,10 +282,8 @@ cobtype(i_lcbas_ob_type)  ="lcbas"
 cobtype(i_cldch_ob_type)  ="cldch"
 cobtype(i_uwnd10m_ob_type) ="u10m "
 cobtype(i_vwnd10m_ob_type) ="v10m "
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 cobtype(i_swcp_ob_type)  ="swcp "
 cobtype(i_lwcp_ob_type)  ="lwcp "
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 
 
 return

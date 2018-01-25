@@ -154,12 +154,10 @@ subroutine update_guess(sval,sbias)
   real(r_kind),pointer,dimension(:,:,:) :: ptr3daux =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: ges_ql   =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: ges_qi   =>NULL()
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------   
   real(r_kind),pointer,dimension(:,:,:) :: ges_qr   =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: ges_qs   =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: ges_qg   =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: ges_qh   =>NULL()
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 
   real(r_kind),dimension(lat2,lon2)     :: tinc_1st,qinc_1st
 
@@ -305,7 +303,6 @@ subroutine update_guess(sval,sbias)
            cycle
         endif
      enddo
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 !     if (getindex(svars3d,'ql')>0 .and. getindex(svars3d,'qi')>0) then
 !        ier=0
 !        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ptr3dges,istatus) ; ier=istatus                                                              
@@ -341,7 +338,6 @@ subroutine update_guess(sval,sbias)
         endif
 
      endif
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 !    At this point, handle the Tv exception since by now Q has been updated 
 !    NOTE 1: This exceptions is unnecessary: all we need to do is put tsens in the
 !    state-vector instead of tv (but this will require changes elsewhere).

@@ -32,15 +32,12 @@ use guess_grids, only: ges_tsen,ntguessig
 use derivsmod, only: cwgues
 use gsi_bundlemod, only: gsi_bundle
 use gsi_bundlemod, only: gsi_bundlegetpointer
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 use gsi_metguess_mod, only: gsi_metguess_bundle
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 implicit none
 
 PRIVATE
 PUBLIC cw2hydro_tl
 PUBLIC cw2hydro_ad
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 PUBLIC cw2hydro_tl_hwrf
 PUBLIC cw2hydro_ad_hwrf
 real(r_kind),parameter :: t1=t0c-30.0_r_kind
@@ -51,7 +48,6 @@ real(r_kind),pointer,dimension(:,:,:):: fice=>NULL()
 real(r_kind),pointer,dimension(:,:,:):: frain=>NULL()
 real(r_kind),pointer,dimension(:,:,:):: frimef=>NULL()
 integer(i_kind) :: istatus
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 
 
 contains
@@ -267,7 +263,6 @@ end do
 return
 end subroutine cw2hydro_ad
 
-! -------------------------- Ting-Chi Wu 2017/12/29 ----------------------------
 subroutine cw2hydro_tl_hwrf(sval,wbundle,sv_tsen)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -531,7 +526,6 @@ rv_cw=zero
 return
 
 end subroutine cw2hydro_ad_hwrf
-! -------------------------- Ting-Chi Wu 2017/12/29 ----------------------------
 
 
 end module cwhydromod

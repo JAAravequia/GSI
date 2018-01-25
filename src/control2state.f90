@@ -62,9 +62,7 @@ use gsi_4dvar, only: nsubwin, l4dvar, lsqrtb, ladtest_obs
 use gridmod, only: regional,lat2,lon2,nsig, nlat, nlon, twodvar_regional            
 use jfunc, only: nsclen,npclen,ntclen
 use cwhydromod, only: cw2hydro_tl
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 use cwhydromod, only: cw2hydro_tl_hwrf
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 use gsi_bundlemod, only: gsi_bundlecreate
 use gsi_bundlemod, only: gsi_bundle
 use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -119,7 +117,6 @@ real(r_kind),pointer,dimension(:,:,:) :: cv_vpwter=>NULL()
 real(r_kind),pointer,dimension(:,:)   :: cv_cldch=>NULL()
 
 ! Declare required local state variables
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 !integer(i_kind), parameter :: nsvars = 8
 !integer(i_kind) :: isps(nsvars)
 !character(len=4), parameter :: mysvars(nsvars) = (/  &  ! vars from ST needed here
@@ -132,7 +129,6 @@ character(len=4), parameter :: mysvars(nsvars) = (/  &  ! vars from ST needed he
                 'qr  ', 'qs  ', 'qg  ', 'qh  ' /)
 logical :: ls_u,ls_v,ls_w,ls_prse,ls_q,ls_tsen,ls_ql,ls_qi
 logical :: ls_qr,ls_qs,ls_qg,ls_qh
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 real(r_kind),pointer,dimension(:,:)   :: sv_ps=>NULL(),sv_sst=>NULL()
 real(r_kind),pointer,dimension(:,:)   :: sv_gust=>NULL(),sv_vis=>NULL(),sv_pblh=>NULL()
 real(r_kind),pointer,dimension(:,:)   :: sv_wspd10m=>NULL(),sv_tcamt=>NULL(),sv_lcbas=>NULL()
@@ -147,9 +143,7 @@ real(r_kind),pointer,dimension(:,:)   :: sv_rank2=>NULL()
 real(r_kind),allocatable,dimension(:,:,:):: uland,vland,uwter,vwter
 
 logical :: do_getprs_tl,do_normal_rh_to_q,do_tv_to_tsen,do_getuv,do_cw_to_hydro
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 logical :: do_cw_to_hydro_hwrf
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 
 !******************************************************************************
 
@@ -189,10 +183,8 @@ call gsi_bundlegetpointer (sval(1),mysvars,isps,istatus)
 ls_u  =isps(1)>0; ls_v   =isps(2)>0; ls_prse=isps(3)>0
 ls_q  =isps(4)>0; ls_tsen=isps(5)>0; ls_ql =isps(6)>0
 ls_qi =isps(7)>0; ls_w   =isps(8)>0
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 ls_qr  =isps(9)>0; ls_qs =isps(10)>0
 ls_qg =isps(11)>0; ls_qh =isps(12)>0 
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 
 ! Define what to do depending on what's in CV and SV
 do_getprs_tl     =lc_ps.and.lc_t .and.ls_prse
@@ -203,10 +195,8 @@ do_getuv         =lc_sf.and.lc_vp.and.ls_u.and.ls_v
 do_cw_to_hydro=.false.
 do_cw_to_hydro_hwrf=.false.
 if (regional) then
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
    do_cw_to_hydro=lc_cw.and.ls_ql.and.ls_qi
    do_cw_to_hydro_hwrf=lc_cw.and.ls_ql.and.ls_qi.and.ls_qr.and.ls_qs.and.ls_qg.and.ls_qh
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 else
    do_cw_to_hydro=lc_cw.and.ls_tsen.and.ls_ql.and.ls_qi.and.(.not.lc_ql) !ncep global 
 endif
@@ -315,14 +305,11 @@ do jj=1,nsubwin
 !  Copy other variables
    call gsi_bundlegetvar ( wbundle, 't'  , sv_tv,  istatus )  
 
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 !   if (do_cw_to_hydro) then
    if (do_cw_to_hydro .and. .not.do_cw_to_hydro_hwrf) then
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 !     Case when cloud-vars do not map one-to-one (cv-to-sv)
 !     e.g. cw-to-ql&qi
       call cw2hydro_tl(sval(jj),wbundle,clouds,nclouds)
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
    elseif (do_cw_to_hydro_hwrf) then
 !     Case when cloud-vars do not map one-to-one (cv-to-sv)
 !     e.g. cw-to-ql&qi&qr&qs&qg&qh
@@ -330,7 +317,6 @@ do jj=1,nsubwin
         call tv_to_tsen(cv_t,sv_q,sv_tsen)
       endif
       call cw2hydro_tl_hwrf(sval(jj),wbundle,sv_tsen)
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
    else
 !     Case when cloud-vars map one-to-one (cv-to-sv), take care of them together
 !     e.g. cw-to-cw

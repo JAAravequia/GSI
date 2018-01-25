@@ -3,7 +3,6 @@ subroutine statsconv(mype,&
      i_gust,i_vis,i_pblh,i_wspd10m,i_td2m,i_mxtm,i_mitm,i_pmsl,i_howv, & 
      i_tcamt,i_lcbas,i_cldch,i_uwnd10m,i_vwnd10m,&
      i_swcp,i_lwcp,i_ref,bwork,awork,ndata)
-     ! Ting-Chi Wu 2017/12/18 added i_swcp, i_lwcp
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    statconv    prints statistics for conventional data
@@ -72,10 +71,8 @@ subroutine statsconv(mype,&
 !     i_cldch   - index in awork array holding cldch info
 !     i_uwnd10m- index in awork array holding uwnd10m info
 !     i_vwnd10m- index in awork array holding vwnd10m info
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 !     i_swcp   - index in awork array holding swcp info
 !     i_lwcp   - index in awork array holding lwcp info
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 !     i_ref    - size of second dimension of awork array
 !     bwork    - array containing information for statistics
 !     awork    - array containing information for data counts and gross checks
@@ -103,7 +100,6 @@ subroutine statsconv(mype,&
        mype_vis,mype_pblh,mype_wspd10m,mype_td2m,mype_mxtm,mype_mitm,&
        mype_pmsl,mype_howv,mype_tcamt,mype_lcbas,mype_cldch,mype_uwnd10m,mype_vwnd10m,&
        mype_swcp,mype_lwcp
-       ! Ting-Chi Wu 2017/12/18 added iout_swcp, iout_lwcp, mype_swcp, mype_lwcp
   use qcmod, only: npres_print,ptop,pbot,ptopq,pbotq
   use jfunc, only: first,jiter
   use gridmod, only: nsig
@@ -115,7 +111,6 @@ subroutine statsconv(mype,&
        i_t,i_q,i_pw,i_rw,i_dw,i_gps,i_sst,i_tcp,i_lag,i_gust,i_vis,i_pblh,&
        i_wspd10m,i_td2m,i_mxtm,i_mitm,i_pmsl,i_howv,i_tcamt,i_lcbas,&
        i_cldch,i_uwnd10m,i_vwnd10m,i_swcp,i_lwcp,i_ref
-       ! Ting-Chi Wu 2017/12/18 added i_swcp, i_lwcp
   real(r_kind),dimension(7*nsig+100,i_ref)     ,intent(in   ) :: awork
   real(r_kind),dimension(npres_print,nconvtype,5,3),intent(in   ) :: bwork
   integer(i_kind),dimension(ndat,3)                ,intent(in   ) :: ndata
@@ -126,9 +121,7 @@ subroutine statsconv(mype,&
   integer(i_kind) numgrspw,numsst,nsuperp,nump,nhitopo,ntoodif
   integer(i_kind) numgrsq,numhgh,numgust,numvis,numpblh,numwspd10m,numuwnd10m,numvwnd10m
   integer(i_kind) numtd2m,nummxtm,nummitm,numpmsl,numhowv,numtcamt,numlcbas,numcldch
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
   integer(i_kind) numgrsswcp,numgrslwcp
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
   integer(i_kind) ntot,numlow,k,numssm,i,j
   integer(i_kind) numgross,numfailqc,numfailqc_ssmi,nread,nkeep
   integer(i_kind) numfail1_gps,numfail2_gps,numfail3_gps,nreadspd,nkeepspd
@@ -136,15 +129,11 @@ subroutine statsconv(mype,&
 
   real(r_kind) grsmlt,tq,pw,rat,tgps,qmplty,tpw,tdw,rwmplty,trw
   real(r_kind) tmplty,tt,dwmplty,gpsmplty,umplty,tssm,qctssm,tu,tv,tuv
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
   real(r_kind) tswcp,tlwcp
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
   real(r_kind) vmplty,uvqcplty,rat1,rat2,rat3
   real(r_kind) dwqcplty,tqcplty,qctt,qctrw,rwqcplty,qctdw,qqcplty,qctgps
   real(r_kind) gpsqcplty,tpw3,pw3,qctq
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
   real(r_kind) tswcp3,tlwcp3
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
   real(r_kind),dimension(1):: pbotall,ptopall
   
   logical,dimension(nconvtype):: pflag
@@ -1322,7 +1311,6 @@ subroutine statsconv(mype,&
      close(iout_lag)
   endif
 
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 ! Summary report for solid-water content path
   if(mype==mype_swcp) then
      if(first)then
@@ -1410,7 +1398,6 @@ subroutine statsconv(mype,&
 
      close(iout_lwcp)
   end if
-! -------------------------- Ting-Chi Wu 2017/12/18 ---------------------------- 
 
 
 ! Format statements used above

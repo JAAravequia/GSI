@@ -217,10 +217,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   external:: setupcldch
   external:: setupuwnd10m
   external:: setupvwnd10m
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
   external:: setupswcp
   external:: setuplwcp
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
   external:: statsconv
   external:: statsoz
   external:: statspcp
@@ -243,7 +241,6 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
        i_t,i_pw,i_q,i_co,i_gust,i_vis,i_ref,i_pblh,i_wspd10m,i_td2m,&
        i_mxtm,i_mitm,i_pmsl,i_howv,i_tcamt,i_lcbas,i_cldch,i_uwnd10m,i_vwnd10m,&
        i_swcp,i_lwcp,iobs,nprt,ii,jj
-  ! Ting-Chi Wu 2017/12/18 added i_swcp, i_lwcp
   integer(i_kind) it,ier,istatus
 
   real(r_quad):: zjo
@@ -310,12 +307,9 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   i_cldch=24
   i_uwnd10m=26
   i_vwnd10m=27
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
   i_swcp=28
   i_lwcp=29
-!  i_ref =i_vwnd10m
   i_ref =i_lwcp
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 
   allocate(awork1(7*nsig+100,i_ref))
   if(.not.rhs_allocated) call rhs_alloc(aworkdim2=size(awork1,2))
@@ -626,20 +620,13 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
               end if
 
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 !          Set up solid/liquid-water content path data
            else if(ditype(is) == 'wcp')then
-!             Set up solid-water content path data
               if(obstype=='swcp')then
-!                 write(6,*)'SETUPALL: begin of SETUPSWCP, mype =', mype
                  call setupswcp(lunin,mype,bwork,awork(1,i_swcp),nele,nobs,is,conv_diagsave)
-!                 write(6,*)'SETUPALL: end of SETUPSWCP, mype =', mype
               else if (obstype=='lwcp')then
-!                 write(6,*)'SETUPALL: begin of SETUPLWCP, mype =', mype
                  call setuplwcp(lunin,mype,bwork,awork(1,i_lwcp),nele,nobs,is,conv_diagsave)
-!                 write(6,*)'SETUPALL: end of SETUPLWCP, mype =', mype
               endif
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 
 !          set up ozone (sbuv/omi/mls) data
            else if(ditype(is) == 'ozone' .and. ihave_oz)then
@@ -780,7 +767,6 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
           i_ps,i_uv,i_t,i_q,i_pw,i_rw,i_dw,i_gps,i_sst,i_tcp,i_lag, &
           i_gust,i_vis,i_pblh,i_wspd10m,i_td2m,i_mxtm,i_mitm,i_pmsl,i_howv, &
           i_tcamt,i_lcbas,i_cldch,i_uwnd10m,i_vwnd10m,i_swcp,i_lwcp,i_ref,bwork1,awork1,ndata)
-     ! Ting-Chi Wu 2017/12/18 added i_swcp, i_lwcp
 
   endif  ! < .not. lobserver >
 

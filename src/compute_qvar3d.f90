@@ -63,12 +63,10 @@ subroutine compute_qvar3d
   real(r_kind),pointer,dimension(:,:,:):: ges_var=>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_ql=>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_qi=>NULL()
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------   
   real(r_kind),pointer,dimension(:,:,:):: ges_qr=>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_qs=>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_qg=>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_qh=>NULL()
-! -------------------------- Ting-Chi Wu 2018/1/4 ---------------------------- 
   real(r_kind),pointer,dimension(:,:,:):: ges_q =>NULL()
   integer(i_kind):: maxvarq1
 
@@ -160,13 +158,11 @@ subroutine compute_qvar3d
      call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),'ql',ges_ql,istatus);ier=istatus
      call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),'qi',ges_qi,istatus);ier=ier+istatus
      if (ier/=0) return
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
      call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),'qr',ges_qr,istatus);ier6=istatus
      call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),'qs',ges_qs,istatus);ier6=ier6+istatus
      call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),'qg',ges_qg,istatus);ier6=ier6+istatus
      call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),'qh',ges_qh,istatus);ier6=ier6+istatus
      if (ier6/=0) return
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 
      if (cwoption==3) then
         do k = 1,nsig
@@ -175,7 +171,6 @@ subroutine compute_qvar3d
                  if (ges_prsl(i,j,k,ntguessig)<15.0_r_kind) then
                     dssv(i,j,k,nrf3_cw)=zero
                  else
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 !                    cwtmp=ges_ql(i,j,k)+ges_qi(i,j,k)
                     if (ier==0 .and. ier6/=0) then
                       cwtmp=ges_ql(i,j,k)+ges_qi(i,j,k)
@@ -184,7 +179,6 @@ subroutine compute_qvar3d
                            +ges_qr(i,j,k)+ges_qs(i,j,k) &
                            +ges_qg(i,j,k)+ges_qh(i,j,k)
                     endif
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
                     if (cwtmp<1.0e-10_r_kind) cwtmp=1.0e-10_r_kind
                     dn1=0.05_r_kind*cwtmp
                     dssv(i,j,k,nrf3_cw)=dn1*dssv(i,j,k,nrf3_cw)
@@ -197,7 +191,6 @@ subroutine compute_qvar3d
         do k = 1,nsig
            do j = 1,lon2
               do i = 1,lat2
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
 !                 cwtmp=ges_ql(i,j,k)+ges_qi(i,j,k)
                  if (ier==0 .and. ier6/=0) then
                    cwtmp=ges_ql(i,j,k)+ges_qi(i,j,k)
@@ -206,7 +199,6 @@ subroutine compute_qvar3d
                         +ges_qr(i,j,k)+ges_qs(i,j,k) &
                         +ges_qg(i,j,k)+ges_qh(i,j,k)
                  endif
-! -------------------------- Ting-Chi Wu 2018/1/4 ----------------------------
                  if (cwtmp<1.0e-10_r_kind) cwtmp=1.0e-10_r_kind
                  d=-2.0_r_kind*log(cwtmp) + one
                  n=int(d)

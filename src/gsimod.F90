@@ -23,9 +23,7 @@
      lwrite_peakwt,use_limit,lrun_subdirs,l_foreaft_thin,&
      obsmod_init_instr_table,obsmod_final_instr_table
   use obsmod, only: luse_obsdiag
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
   use obsmod, only: l_wcp_cwm
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
   use aircraftinfo, only: init_aircraft,hdist_aircraft,aircraft_t_bc_pof,aircraft_t_bc, &
                           aircraft_t_bc_ext,biaspredt,upd_aircraft,cleanup_tail
   use obs_sensitivity, only: lobsensfc,lobsensincr,lobsensjb,lsensrecompute, &
@@ -548,7 +546,6 @@
        use_gfs_stratosphere,pblend0,pblend1,step_start,diag_precon,lrun_subdirs,&
        use_sp_eqspace,lnested_loops,lsingleradob,thin4d,use_readin_anl_sfcmask,&
        luse_obsdiag,id_drifter,verbose,lsingleradar,singleradar,lnobalance,l_wcp_cwm
-       ! Ting-Chi Wu 2017/12/18 added l_wcp_cwm
 
 
 ! GRIDOPTS (grid setup variables,including regional specific variables):

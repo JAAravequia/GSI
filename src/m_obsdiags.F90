@@ -87,10 +87,8 @@ module m_obsdiags
   use m_pm10Node , only:  pm10Node ! 32
   use m_cldchNode, only:  cldchNode ! 33
 
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
   use m_swcpNode , only:  swcpNode ! 34
   use m_lwcpNode , only:  lwcpNode ! 35
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 
   use m_obsNodeTypeManager, only: nobs_type
   use gsi_4dvar           , only: nobs_bins
@@ -209,10 +207,8 @@ module m_obsdiags
   public :: pm10head
   public :: cldchhead
 
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
   public :: swcphead
   public :: lwcphead
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 
   type(obsLList),dimension(:),pointer :: pshead => null()
   type(obsLList),dimension(:),pointer :: tcphead => null()
@@ -253,10 +249,8 @@ module m_obsdiags
   type(obsLList),dimension(:),pointer :: pm10head => null()
   type(obsLList),dimension(:),pointer :: cldchhead => null()
 
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
   type(obsLList),dimension(:),pointer :: swcphead => null()
   type(obsLList),dimension(:),pointer :: lwcphead => null()
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 
   type(obsLList),dimension(:,:),pointer :: obsLLists => null()
 
@@ -733,10 +727,8 @@ _ENTRY_(myname_)
     pm10head => ptr_obsbins_(obsllists,'pm10')
    cldchhead => ptr_obsbins_(obsllists,'cldch')
 
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
     swcphead => ptr_obsbins_(obsllists,'swcp')
     lwcphead => ptr_obsbins_(obsllists,'lwcp')
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 
 _EXIT_(myname_)
 return
@@ -787,10 +779,8 @@ _ENTRY_(myname_)
     pm10head => null()
    cldchhead => null()
 
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
     swcphead => null()
     lwcphead => null()
-! -------------------------- Ting-Chi Wu 2017/12/18 ----------------------------
 
 _EXIT_(myname_)
 return
