@@ -10,6 +10,6 @@ module namelist_def
   character(len=500)                             :: firstguess_filename                     = 'NOT USED'
   character(len=500)                             :: increment_filename                      = 'fv3_increment.nc'
   character(len=500)                             :: datapath                                = './'
-  logical                                        :: debug                                   = .false.
+  logical                                        :: debug,zero_cwmrinc                      = .false.
   
 end module namelist_def
