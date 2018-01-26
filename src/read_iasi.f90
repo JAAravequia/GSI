@@ -653,7 +653,7 @@ subroutine read_iasi(mype,val_iasi,ithin,isfcalc,rmesh,jsatid,gstime,&
 !          In our case (616 channels) there are 10 groups of cscale (dimension :: cscale(3,10))
 !          The units are W/m2..... you need to convert to mW/m2.... (subtract 5 from cscale(3)
            do i=1,10  ! convert exponent scale factor to int and change units
-              if(cscale(3,i) < 100.0) then
+              if(cscale(3,i) < bmiss) then
                 iexponent = -nint(cscale(3,i) - 5)
                 sscale(i)=ten**iexponent
               else 
