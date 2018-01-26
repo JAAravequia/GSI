@@ -613,7 +613,6 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
 !$$$
    use kinds, only: r_kind,r_single,i_kind
    use mpimod, only: mype
-   use gridmod, only: ntracer,ncloud,itotsub,jcap_b
    use general_sub2grid_mod, only: sub2grid_info
    use general_specmod, only: spec_vars
    use mpimod, only: npe
@@ -622,7 +621,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
    use ncepnems_io, only: error_msg
    use nemsio_module, only: nemsio_gfile,nemsio_getfilehead,nemsio_readrecv
    use egrid2agrid_mod,only: g_egrid2agrid,g_create_egrid2agrid,egrid2agrid_parm,destroy_egrid2agrid
-   use general_commvars_mod, only: fill2_ns,filluv2_ns,ltosj_s,ltosi_s
+   use general_commvars_mod, only: fill2_ns,filluv2_ns
    use constants, only: two,pi,half,deg2rad,r60,r3600
    use gsi_bundlemod, only: gsi_bundle
    use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -783,7 +782,6 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
    endif ! if ( procuse )
 
    ! Get pointer to relevant variables (this should be made flexible and general)
-   call gsi_bundlegetpointer(gfs_bundle,'ps',g_ps  ,ier);istatus=ier
    iredundant=0
    call gsi_bundlegetpointer(gfs_bundle,'sf',g_div ,ier)
    if ( ier == 0 ) iredundant = iredundant + 1
@@ -823,6 +821,8 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
       endif
       call stop2(999)
    endif
+   istatus=0
+   call gsi_bundlegetpointer(gfs_bundle,'ps',g_ps  ,ier);istatus=istatus+ier
    call gsi_bundlegetpointer(gfs_bundle,'q' ,g_q   ,ier);istatus=istatus+ier
    call gsi_bundlegetpointer(gfs_bundle,'oz',g_oz  ,ier);istatus=istatus+ier
    call gsi_bundlegetpointer(gfs_bundle,'cw',g_cwmr,ier);istatus=istatus+ier
@@ -1297,7 +1297,7 @@ subroutine general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr,
 ! !USES:
 
   use kinds, only: r_kind,i_kind
-  use mpimod, only: npe,mpi_comm_world,ierror,mpi_rtype,mype
+  use mpimod, only: npe,mpi_comm_world,ierror,mpi_rtype
   use general_sub2grid_mod, only: sub2grid_info
   implicit none
 
@@ -1853,104 +1853,3 @@ subroutine general_fillv_ns(grd,sp,gridu_in,gridv_in,gridv_out)
 
    return
 end subroutine general_fillv_ns
-
-subroutine preproc_read_gfsatm(grd,filename,iret)
-
-   use kinds, only: r_kind,i_kind
-   use constants, only: zero
-   use mpimod, only: mpi_comm_world,ierror,mype
-   use mpimod, only: mpi_mode_rdonly,mpi_info_null,mpi_rtype,mpi_offset_kind
-   use mpi, only: mpi_status_ignore
-   use general_sub2grid_mod, only: sub2grid_info,general_grid2sub
-   use gsi_bundlemod, only: gsi_bundle,gsi_bundlegetpointer
-
-   implicit none
-
-   type(sub2grid_info), intent(in   ) :: grd
-   character(len=*),    intent(in   ) :: filename
-   integer(i_kind),     intent(  out) :: iret
-
-   real(r_kind),dimension(grd%lat2,grd%lon2) :: g_z,g_ps
-   real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig) :: &
-                g_u,g_v,g_vor,g_div,g_cwmr,g_q,g_oz,g_tv
-
-   real(r_kind),dimension(:,:,:,:),allocatable:: work_grd,work_sub
-   integer(i_kind) :: count,lunges
-   integer(i_kind) :: i,j,k,im,jm,km
-   integer(mpi_offset_kind) :: offset
- 
-   ! Assume all goes well
-   iret = 0
-
-   im=grd%lat2
-   jm=grd%lon2
-   km=grd%nsig
-
-   allocate(work_grd(grd%inner_vars,grd%nlat,grd%nlon,grd%kbegin_loc:grd%kend_alloc))
-
-   call mpi_file_open(mpi_comm_world,trim(adjustl(filename)), &
-                      mpi_mode_rdonly,mpi_info_null,lunges,ierror)
-   if ( ierror /= 0 ) then
-      write(6,'(a,i5,a,i5,a)') '***ERROR***  MPI_FILE_OPEN failed on task = ', mype, ' ierror = ', ierror
-      iret = ierror
-      goto 1000
-   endif
-
-   count  = grd%nlat * grd%nlon *  grd%nlevs_alloc
-   offset = grd%nlat * grd%nlon * (grd%kbegin_loc-1) * r_kind
-   call mpi_file_read_at(lunges,offset,work_grd,count,mpi_rtype,mpi_status_ignore,ierror)
-   if ( ierror /= 0 ) then
-      write(6,'(a,i5,a,i5,a)') '***ERROR***  MPI_FILE_READ_AT failed on task = ', mype, ' ierror = ', ierror
-      iret = ierror
-      goto 1000
-   endif
-
-   call mpi_file_close(lunges,ierror)
-   if ( ierror /= 0 ) then
-      write(6,'(a,i5,a,i5,a)') '***ERROR***  MPI_FILE_CLOSE failed on task = ', mype, ' ierror = ', ierror
-      iret = ierror
-      goto 1000
-   endif
-
-   allocate(work_sub(grd%inner_vars,im,jm,grd%num_fields))
-
-   call general_grid2sub(grd,work_grd,work_sub)
-
-   deallocate(work_grd)
-
-   !$omp parallel do schedule(dynamic,1) private(k,j,i)
-   do k = 1,km
-      do j = 1,jm
-         do i = 1,im
-         g_u(   i,j,k) = work_sub(1,i,j,k+0*km)
-         g_v(   i,j,k) = work_sub(1,i,j,k+1*km)
-         g_tv(  i,j,k) = work_sub(1,i,j,k+2*km)
-         g_q(   i,j,k) = work_sub(1,i,j,k+3*km)
-         g_oz(  i,j,k) = work_sub(1,i,j,k+4*km)
-         g_cwmr(i,j,k) = work_sub(1,i,j,k+5*km)
-         enddo
-      enddo
-   enddo
-
-   g_vor = zero
-   g_div = zero
-
-   !$omp parallel do schedule(dynamic,1) private(j,i)
-   do j = 1,jm
-      do i = 1,im
-         g_ps(i,j) = work_sub(1,i,j,grd%num_fields-1)
-         g_z( i,j) = work_sub(1,i,j,grd%num_fields  )
-      enddo
-   enddo
-
-   deallocate(work_sub)
-
-   return
-
-1000 continue
-
-   write(6,*)'PREPROC_READ_GFSATM: ***ERROR*** reading ',&
-              trim(filename),' IRET=',iret
-   return
-
-end subroutine preproc_read_gfsatm

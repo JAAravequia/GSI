@@ -45,14 +45,15 @@ subroutine get_gefs_ensperts_dualres
 !
 !$$$ end documentation block
 
-  use gridmod, only: idsl5,use_gfs_nemsio,regional
+  use mpeu_util, only: die
+  use gridmod, only: idsl5,regional
   use hybrid_ensemble_parameters, only: n_ens,write_ens_sprd,oz_univ_static,ntlevs_ens
   use hybrid_ensemble_parameters, only: use_gfs_ens,s_ens_v
   use hybrid_ensemble_parameters, only: en_perts,ps_bar,nelen
   use constants,only: zero,zero_single,half,fv,rd_over_cp,one,qcmin
-  use mpimod, only: mpi_comm_world,ierror,mype,npe
+  use mpimod, only: mpi_comm_world,mype,npe
   use kinds, only: r_kind,i_kind,r_single
-  use hybrid_ensemble_parameters, only: grd_ens,nlat_ens,nlon_ens,q_hyb_ens
+  use hybrid_ensemble_parameters, only: grd_ens,q_hyb_ens
   use hybrid_ensemble_parameters, only: beta_s0,beta_s,beta_e
   use control_vectors, only: cvars2d,cvars3d,nc2d,nc3d
   use gsi_bundlemod, only: gsi_bundlecreate
@@ -61,7 +62,7 @@ subroutine get_gefs_ensperts_dualres
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gsi_bundlemod, only: gsi_bundledestroy
   use gsi_bundlemod, only: gsi_gridcreate
-  use gsi_enscouplermod, only: gsi_enscoupler_get_user_ens
+  use get_gfs_ensmod_mod, only: get_gfs_ensmod_class
   use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sub2grid_destroy_info
   implicit none
 
@@ -75,8 +76,8 @@ subroutine get_gefs_ensperts_dualres
   real(r_single),pointer,dimension(:,:):: w2
   real(r_kind),pointer,dimension(:,:,:):: x3
   real(r_kind),pointer,dimension(:,:):: x2
-  type(gsi_bundle)            :: en_read
-  type(gsi_bundle),allocatable:: en_bar(:)
+  type(gsi_bundle),allocatable,dimension(:) :: en_read
+  type(gsi_bundle),allocatable,dimension(:) :: en_bar
 ! type(gsi_grid)  :: grid_ens
   real(r_kind) bar_norm,sig_norm,kapr,kap1,rh
   real(r_kind),allocatable,dimension(:,:):: z,sst2
@@ -88,6 +89,7 @@ subroutine get_gefs_ensperts_dualres
   integer(i_kind) ipc3d(nc3d),ipc2d(nc2d)
   integer(i_kind) ier
 ! integer(i_kind) il,jl
+  type(get_gfs_ensmod_class) :: enscoupler
   logical ice
   type(sub2grid_info) :: grd_tmp
 
@@ -96,7 +98,7 @@ subroutine get_gefs_ensperts_dualres
      en_perts(1,1)%grid%jm/=grd_ens%lon2.or. &
      en_perts(1,1)%grid%km/=grd_ens%nsig ) then
      if (mype==0) then
-        write(6,*) 'get_gefs_ensperts_dualres: grd_ens ', grd_ens%lat2,grd_ens%lon2,grd_ens%nsig 
+        write(6,*) 'get_gefs_ensperts_dualres: grd_ens ', grd_ens%lat2,grd_ens%lon2,grd_ens%nsig
         write(6,*) 'get_gefs_ensperts_dualres: pertgrid', en_perts(1,1)%grid%im, en_perts(1,1)%grid%jm, en_perts(1,1)%grid%km
         write(6,*) 'get_gefs_ensperts_dualres: inconsistent dims, aborting ...'
      endif
@@ -136,18 +138,17 @@ subroutine get_gefs_ensperts_dualres
   allocate(en_bar(ntlevs_ens))
   do m=1,ntlevs_ens
      call gsi_bundlecreate(en_bar(m),en_perts(1,1)%grid,'ensemble',istatus,names2d=cvars2d,names3d=cvars3d)
-     if(istatus/=0) then
-        write(6,*)' get_gefs_ensperts_dualres: trouble creating en_bar bundle'
-        call stop2(999)
-     endif
+     if ( istatus /= 0 ) &
+        call die('get_gefs_ensperts_dualres',': trouble creating en_bar bundle, istatus =',istatus)
   end do
 
-! Allocate bundle used for reading members
-  call gsi_bundlecreate(en_read,en_perts(1,1)%grid,'aux-ens-read',istatus,names2d=cvars2d,names3d=cvars3d)
-  if(istatus/=0) then
-    write(6,*)' get_gefs_ensperts_dualres: trouble creating en_read bundle'
-    call stop2(999)
-  endif
+  ! Allocate bundle used for reading members
+  allocate(en_read(n_ens))
+  do n=1,n_ens
+     call gsi_bundlecreate(en_read(n),en_perts(1,1)%grid,'ensemble member',istatus,names2d=cvars2d,names3d=cvars3d)
+     if ( istatus /= 0 ) &
+        call die('get_gefs_ensperts_dualres',': trouble creating en_read bundle, istatus =',istatus)
+  end do
 
   allocate(z(im,jm))
   allocate(sst2(im,jm))
@@ -155,28 +156,30 @@ subroutine get_gefs_ensperts_dualres
   sst2=zero        !    for now, sst not used in ensemble perturbations, so if sst array is called for
                    !      then sst part of en_perts will be zero when sst2=zero
 
-  do m=1,ntlevs_ens
+  ntlevs_ens_loop: do m=1,ntlevs_ens
+
      en_bar(m)%values=zero
-     do n=1,n_ens
+
+     call enscoupler%get_user_ens_(grd_tmp,m,en_read,iret)
+
+     ! Check read return code.  Revert to static B if read error detected
+     if ( iret /= 0 ) then
+        beta_s0=one
+        beta_s=one
+        beta_e=zero
+        if ( mype == npe ) &
+           write(6,'(A,I4,A,F6.3)')'***WARNING*** ERROR READING ENS FILE, iret = ',iret,' RESET beta_s0 = ',beta_s0
+        cycle
+     endif
+
+     n_ens_loop: do n=1,n_ens
 
        en_perts(n,m)%valuesr4=zero
-       
-       call gsi_enscoupler_get_user_ens(grd_tmp,n,m,en_read,iret)
-
-       ! Check read return code.  Revert to static B if read error detected
-       if ( iret /= 0 ) then
-          beta_s0=one
-          beta_s=one
-          beta_e=zero
-          if ( mype == npe ) &
-             write(6,'(A,I4,A,F6.3)')'***WARNING*** ERROR READING ENS FILE, iret = ',iret,' RESET beta_s0 = ',beta_s0
-          cycle
-       endif
 
        if (.not.q_hyb_ens) then !use RH
-         call gsi_bundlegetpointer(en_read,'ps',ps,ier);istatus=ier
-         call gsi_bundlegetpointer(en_read,'t' ,tv,ier);istatus=istatus+ier
-         call gsi_bundlegetpointer(en_read,'q' ,q ,ier);istatus=istatus+ier
+         call gsi_bundlegetpointer(en_read(n),'ps',ps,ier);istatus=ier
+         call gsi_bundlegetpointer(en_read(n),'t' ,tv,ier);istatus=istatus+ier
+         call gsi_bundlegetpointer(en_read(n),'q' ,q ,ier);istatus=istatus+ier
 ! Compute RH
 ! Get 3d pressure field now on interfaces
          allocate(pri(im,jm,km+1))
@@ -194,7 +197,7 @@ subroutine get_gefs_ensperts_dualres
                   end do
                end do
             end do
-         else 
+         else
 !$omp parallel do schedule(dynamic,1) private(k,j,i)
             do k=1,km
                do j=1,jm
@@ -216,7 +219,7 @@ subroutine get_gefs_ensperts_dualres
 !_$omp parallel do schedule(dynamic,1) private(i,k,j,ic3,rh)
        do ic3=1,nc3d
 
-          call gsi_bundlegetpointer(en_read,trim(cvars3d(ic3)),p3,istatus)
+          call gsi_bundlegetpointer(en_read(n),trim(cvars3d(ic3)),p3,istatus)
           if(istatus/=0) then
              write(6,*)' error retrieving pointer to ',trim(cvars3d(ic3)),' from read in member ',m
              call stop2(999)
@@ -281,7 +284,7 @@ subroutine get_gefs_ensperts_dualres
 !_$omp parallel do schedule(dynamic,1) private(i,j,ic2,ipic)
        do ic2=1,nc2d
 
-          call gsi_bundlegetpointer(en_read,trim(cvars2d(ic2)),p2,istatus)
+          call gsi_bundlegetpointer(en_read(n),trim(cvars2d(ic2)),p2,istatus)
           if(istatus/=0) then
              write(6,*)' error retrieving pointer to ',trim(cvars2d(ic2)),' from read in member ',m
              call stop2(999)
@@ -318,13 +321,20 @@ subroutine get_gefs_ensperts_dualres
           end if
 
        end do
-    end do ! end do over ensemble
-  end do !end do over bins
+    end do n_ens_loop ! end do over ensemble
+  end do  ntlevs_ens_loop !end do over bins
+
+  do n=1,n_ens
+     call gsi_bundledestroy(en_read(n),istatus)
+     if ( istatus /= 0 ) &
+        call die('get_gefs_ensperts_dualres',': trouble destroying en_read bundle, istatus = ', istatus)
+  end do
+  deallocate(en_read)
 
   call general_sub2grid_destroy_info(grd_tmp)
 
 ! Copy pbar to module array.  ps_bar may be needed for vertical localization
-! in terms of scale heights/normalized p/p 
+! in terms of scale heights/normalized p/p
 ! Convert to mean
   bar_norm = one/float(n_ens)
   sig_norm=sqrt(one/max(one,n_ens-one))
@@ -340,10 +350,8 @@ subroutine get_gefs_ensperts_dualres
 
      if(s_ens_v <= zero)then
         call gsi_bundlegetpointer(en_bar(m),'ps',x2,istatus)
-        if(istatus/=0) then
-           write(6,*)' error retrieving pointer to (ps) for en_bar'
-           call stop2(999)
-        end if
+        if(istatus/=0) &
+           call die('get_gefs_ensperts_dualres:',' error retrieving pointer to (ps) for en_bar, istatus = ', istatus)
 
         do j=1,jm
            do i=1,im
@@ -352,7 +360,7 @@ subroutine get_gefs_ensperts_dualres
         end do
      end if
 ! Convert ensemble members to perturbations
-   
+
      do n=1,n_ens
         do i=1,nelen
            en_perts(n,m)%valuesr4(i)=en_perts(n,m)%valuesr4(i)-en_bar(m)%values(i)
@@ -403,7 +411,7 @@ subroutine get_gefs_ensperts_dualres
 !        sst2(i,j)=sst_full(il,jl)
 !      end do
 !    end do
-!  
+!
 !    m=0
 !    do j=1,jm
 !      do i=im
@@ -427,7 +435,7 @@ subroutine get_gefs_ensperts_dualres
                 call stop2(999)
       endif
    end do
-  
+
    deallocate(sst2)
    deallocate(z)
    deallocate(en_bar)
@@ -461,7 +469,6 @@ subroutine ens_spread_dualres(en_bar,ibin)
 !   machine:  ibm RS/6000 SP
 !
 !$$$ end documentation block
-  use mpimod, only: mype
   use kinds, only: r_single,r_kind,i_kind
   use hybrid_ensemble_parameters, only: n_ens,grd_ens,grd_anl,p_e2a,uv_hyb_ens
   use hybrid_ensemble_parameters, only: en_perts,nelen
@@ -730,6 +737,7 @@ subroutine general_getprs_glb(ps,tv,prs)
 !   2008-06-04  safford - rm unused uses
 !   2008-09-05  lueken  - merged ed's changes into q1fy09 code
 !   2010-02-23  parrish - copy getprs and generalize for dual resolution.
+!   2017-03-23  Hu      - add code to use hybrid vertical coodinate in WRF MASS CORE.
 !
 !   input argument list:
 !     ps       - surface pressure
@@ -745,11 +753,10 @@ subroutine general_getprs_glb(ps,tv,prs)
 
   use kinds,only: r_kind,i_kind
   use constants,only: zero,half,one_tenth,rd_over_cp,one
-  use gridmod,only: nsig,lat2,lon2,ak5,bk5,ck5,tref5,idvc5
+  use gridmod,only: nsig,ak5,bk5,ck5,tref5,idvc5
   use gridmod,only: wrf_nmm_regional,nems_nmmb_regional,eta1_ll,eta2_ll,pdtop_ll,pt_ll,&
        regional,wrf_mass_regional,twodvar_regional
   use hybrid_ensemble_parameters, only: grd_ens
-  use mpimod, only: mype
   implicit none
 
 ! Declare passed variables
@@ -764,7 +771,7 @@ subroutine general_getprs_glb(ps,tv,prs)
 ! Declare local parameter
   real(r_kind),parameter:: ten = 10.0_r_kind
 
-                                     
+
   kapr=one/rd_over_cp
 
   if (regional) then
@@ -779,11 +786,20 @@ subroutine general_getprs_glb(ps,tv,prs)
               end do
            end do
         end do
-     elseif (wrf_mass_regional .or. twodvar_regional) then
+     elseif (twodvar_regional) then
         do k=1,nsig+1
            do j=1,grd_ens%lon2
               do i=1,grd_ens%lat2
                  prs(i,j,k)=one_tenth*(eta1_ll(k)*(ten*ps(i,j)-pt_ll) + pt_ll)
+              end do
+           end do
+        end do
+     elseif (wrf_mass_regional) then
+        do k=1,nsig+1
+           do j=1,grd_ens%lon2
+              do i=1,grd_ens%lat2
+                 prs(i,j,k)=one_tenth*(eta1_ll(k)*(ten*ps(i,j)-pt_ll) + &
+                                       eta2_ll(k) + pt_ll)
               end do
            end do
         end do

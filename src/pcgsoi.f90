@@ -93,19 +93,19 @@ subroutine pcgsoi()
 !   2010-05-13  todling - update interface to update_geswtend; update to gsi_bundle for state vector
 !                       - declare all use explicitly
 !   2010-05-28  Hu      - add call for cloud analysis driver : gsdcloudanalysis
-!   2010-09-24  todling - must turn off variational qc when ltlint=.t.
-!   2011-04-25  eL akkraoui - add option for re-orthogonalization.
+!   2011-04-25  el akkraoui - add option for re-orthogonalization.
 !   2011-07-10  todling - minor fixes for general precision handling. 
 !   2011-11-17  kleist - add handling for separate state vector for ensemble bits (hybrid ens/var)
 !   2013-01-26  parrish - WCOSS debug compile flags type mismatch for calls to ensctl2state_ad
 !                          and ensctl2state.  I put in temporary fix to allow debug compile
 !                          by replacing mval with mval(1).  This is likely not
 !                          correct for multiple obs bins.
+!   2014-10-25  todling - reposition final clean to allow proper complition of 4dvar
 !   2014-12-22  Hu      -  add option i_gsdcldanal_type to control cloud analysis  
+!   2016-03-02  s.liu/carley  - remove use_reflectivity and use i_gsdcldanal_type 
+!   2016-03-25  todling - beta-mult param now within cov (following Dave Parrish corrections)
 !   2016-05-13  parrish -  remove beta12mult.  Replace with sqrt_beta_s_mult, sqrt_beta_e_mult, inside
 !                          bkerror and bkerror_a_en.
-!   2016-03-02  s.liu/carley  - remove use_reflectivity and use i_gsdcldanal_type 
-!                       
 !
 ! input argument list:
 !
@@ -123,13 +123,13 @@ subroutine pcgsoi()
 !$$$
   use kinds, only: r_kind,i_kind,r_double,r_quad
   use qcmod, only: nlnqc_iter,varqc_iter,c_varqc,vqc
-  use obsmod, only: destroyobs,oberror_tune,luse_obsdiag,yobs
+  use obsmod, only: destroyobs,oberror_tune,luse_obsdiag
   use jfunc, only: iter,jiter,jiterstart,niter,miter,iout_iter,&
        nclen,penorig,gnormorig,xhatsave,yhatsave,&
        iguess,read_guess_solution,diag_precon,step_start, &
-       niter_no_qc,l_foto,xhat_dt,print_diag_pcg,lgschmidt
+       niter_no_qc,print_diag_pcg,lgschmidt
   use gsi_4dvar, only: nobs_bins, nsubwin, l4dvar, iwrtinc, ladtest, &
-                       ltlint, iorthomax
+                       iorthomax
   use gridmod, only: twodvar_regional
   use constants, only: zero,one,five,tiny_r_kind
   use anberror, only: anisotropic
@@ -155,8 +155,13 @@ subroutine pcgsoi()
   use gsi_bundlemod, only : self_add,assignment(=)
   use gsi_bundlemod, only : gsi_bundleprint
   use gsi_4dcouplermod, only : gsi_4dcoupler_grtests
-    use rapidrefresh_cldsurf_mod, only: i_gsdcldanal_type
+  use rapidrefresh_cldsurf_mod, only: i_gsdcldanal_type
+  use gsi_io, only: verbose
 
+  use stpjomod, only: stpjo_setup
+  use m_obsHeadBundle, only: obsHeadBundle
+  use m_obsHeadBundle, only: obsHeadBundle_create
+  use m_obsHeadBundle, only: obsHeadBundle_destroy
   implicit none
 
 ! Declare passed variables
@@ -172,6 +177,7 @@ subroutine pcgsoi()
   real(r_kind) gnormx,penx,penalty,penaltynew
   real(r_double) pennorm
   real(r_quad) zjo
+  real(r_quad) :: zdla
   real(r_quad),dimension(3):: dprod
   real(r_kind),dimension(2):: gnorm
   real(r_kind) :: zgini,zfini,fjcost(4),fjcostnew(4),zgend,zfend
@@ -181,17 +187,13 @@ subroutine pcgsoi()
   type(gsi_bundle) :: eval(ntlevs_ens)
   type(gsi_bundle) :: mval(nsubwin)
   type(predictors) :: sbias, rbias
-  logical:: lanlerr
   
   type(control_vector), allocatable, dimension(:) :: cglwork
   type(control_vector), allocatable, dimension(:) :: cglworkhat
+  type(obsHeadBundle),pointer,dimension(:):: yobs
   integer(i_kind) :: iortho
-  real(r_quad) :: zdla
-!    note that xhatt,dirxt,xhatp,dirxp are added to carry corrected grid fields
-!      of t and p from implicit normal mode initialization (strong constraint option)
-!     inmi generates a linear correction to t,u,v,p.  already have xhatuv which can
-!      be used for the corrected wind, but nothing for t,p.  xhatt, etc are used exactly
-!       like xhatuv,dirxuv.
+  logical :: print_verbose
+  logical:: lanlerr
 
 ! Step size diagnostic strings
   data step /'good', 'SMALL'/
@@ -201,6 +203,9 @@ subroutine pcgsoi()
 ! Initialize timer
   call timer_ini('pcgsoi')
 
+! Initialize print_verbose to control amount of print-out.
+  print_verbose=.false.
+  if(verbose)print_verbose=.true.
   if (ladtest) call adtest()
 
 ! Set constants.  Initialize variables.
@@ -213,9 +218,30 @@ subroutine pcgsoi()
   if(diag_precon)stp=one
   small_step=1.e-2_r_kind*stp
   end_iter=.false.
-  gsave=zero
   llouter=.false.
+  gsave=zero
   
+
+! Convergence criterion needs to be relaxed a bit for anisotropic mode,
+! because the anisotropic recursive filter, for reasons of computational
+! efficiency, uses r_single (4 byte) arithmetic.  this generally triggers
+! the warning about penalty increasing, but this doesn't happen until
+! the gradient has been reduced by more than 9 orders of magnitude.
+  converge=1.e-10_r_kind
+  if(anisotropic) converge=1.e-9_r_kind
+
+  lanlerr=.false.
+  if ( twodvar_regional .and. jiter==1 ) lanlerr=.true.
+! Allocate required memory and initialize fields
+  call init_(lanlerr)
+  if(print_diag_pcg)call prt_guess('guess')
+
+  if ( lanlerr .and. lgschmidt ) call init_mgram_schmidt
+  nlnqc_iter=.false.
+  call obsHeadBundle_create(yobs,nobs_bins)
+  call stpjo_setup(yobs)
+  call obsHeadBundle_destroy(yobs)
+
   if(iorthomax>0) then 
      allocate(cglwork(iorthomax+1))
      DO ii=1,iorthomax+1
@@ -228,24 +254,6 @@ subroutine pcgsoi()
         cglworkhat(ii)=zero
      END DO
   end if
-
-! Convergence criterion needs to be relaxed a bit for anisotropic mode,
-! because the anisotropic recursive filter, for reasons of computational
-! efficiency, uses r_single (4 byte) arithmetic.  this generally triggers
-! the warning about penalty increasing, but this doesn't happen until
-! the gradient has been reduced by more than 9 orders of magnitude.
-  converge=1.e-10_r_kind
-  if(anisotropic) converge=1.e-9_r_kind
-
-! Allocate required memory and initialize fields
-  call init_
-  if(print_diag_pcg)call prt_guess('guess')
-
-  lanlerr=.false.
-  if ( twodvar_regional .and. jiter==1 ) lanlerr=.true.
-  if ( lanlerr .and. lgschmidt ) call init_mgram_schmidt
-  nlnqc_iter=.false.
-  call stpjo_setup(yobs,nobs_bins)
 
 ! Perform inner iteration
   inner_iteration: do iter=0,niter(jiter)
@@ -309,6 +317,7 @@ subroutine pcgsoi()
         enddo
      endif
 
+!    Adjoint of convert control var to physical space
      if (l4dvar) then
 !       Run adjoint model
         call model_ad(mval,rval,llprt)
@@ -335,8 +344,8 @@ subroutine pcgsoi()
         end if
 
      end if
-!    Adjoint of convert control var to physical space
      call control2state_ad(mval,rbias,gradx)
+!    End adjoint of convert control var to physical space
 
 !    Print initial Jo table
      if (iter==0 .and. print_diag_pcg .and. luse_obsdiag) then
@@ -346,20 +355,11 @@ subroutine pcgsoi()
      endif
 
 !    Add contribution from background term
-!    grady is being used as a temporary array
      do i=1,nclen
         gradx%values(i)=gradx%values(i)+yhatsave%values(i)
      end do
 
-!    Multiply by background error
-     if(anisotropic) then
-        call anbkerror(gradx,grady)
-        if(lanlerr .and. lgschmidt) call mgram_schmidt(gradx,grady)
-     else
-        call bkerror(gradx,grady)
-     end if
-
-!    first re-orthonormalization
+!    Re-orthonormalization if requested
      if(iorthomax>0) then 
         iortho=min(iorthomax,iter) 
         if(iter .ne. 0) then 
@@ -370,6 +370,14 @@ subroutine pcgsoi()
               end do
            end do
         end if
+     end if
+
+!    Multiply by background error
+     if(anisotropic) then
+        call anbkerror(gradx,grady)
+        if(lanlerr .and. lgschmidt) call mgram_schmidt(gradx,grady)
+     else
+        call bkerror(gradx,grady)
      end if
 
 !    If hybrid ensemble run, then multiply ensemble control variable a_en 
@@ -385,16 +393,7 @@ subroutine pcgsoi()
 
      end if
 
-!    second re-orthonormalization
      if(iorthomax>0) then
-        if(iter .ne. 0) then 
-           do ii=iortho,1,-1
-              zdla = DOT_PRODUCT(grady,cglwork(ii))
-              do i=1,nclen
-                 grady%values(i) = grady%values(i) - zdla*cglworkhat(ii)%values(i)
-              end do
-           end do
-        end if
 !       save gradients
         if (iter <= iortho) then
            zdla = sqrt(dot_product(gradx,grady,r_quad))
@@ -408,37 +407,40 @@ subroutine pcgsoi()
 !    Add potential additional preconditioner 
      if(diag_precon)call precond(grady)
 
+     if (iter==0 .and. print_diag_pcg) then
+        call prt_control_norms(grady,'grady')
+     endif
+
+     if (iter>0) gsave=gnorm(1)
+     b=zero
+!    Calculate new norm of gradients
      if (lanlerr) then
-        do i=1,nclen
-           xdiff%values(i)=gradx%values(i)
-           ydiff%values(i)=grady%values(i)
-        end do
+        dprod(1) = qdot_prod_sub(gradx,grady)
+        call mpl_allreduce(1,qpvals=dprod)
+        gnorm(1)=dprod(1)
+        gnorm(2)=gnorm(1)
      else
         do i=1,nclen
            xdiff%values(i)=gradx%values(i)-xdiff%values(i)
            ydiff%values(i)=grady%values(i)-ydiff%values(i)
         end do
+        dprod(1) = qdot_prod_sub(gradx,grady)
+        dprod(2) = qdot_prod_sub(xdiff,grady)
+        dprod(3) = qdot_prod_sub(ydiff,gradx)
+        call mpl_allreduce(3,qpvals=dprod)
+        gnorm(1)=dprod(1)
+
+!       Two dot products in gnorm(2) should be same, but are slightly 
+!       different due to round-off so use average.
+        gnorm(2)=0.5_r_quad*(dprod(2)+dprod(3))
+        do i=1,nclen
+           xdiff%values(i)=gradx%values(i)
+           ydiff%values(i)=grady%values(i)
+        end do
      end if
 
-     if (iter==0 .and. print_diag_pcg) then
-        call prt_control_norms(grady,'grady')
-     endif
-
-!    Calculate new norm of gradients
-     if (iter>0) gsave=gnorm(1)
-     dprod(1) = qdot_prod_sub(gradx,grady)
-     dprod(2) = qdot_prod_sub(xdiff,grady)
-     dprod(3) = qdot_prod_sub(ydiff,gradx)
-     call mpl_allreduce(3,qpvals=dprod)
-
-     gnorm(1)=dprod(1)
-!    Two dot products in gnorm(2) should be same, but are slightly different due to round off
-!    so use average.
-     gnorm(2)=0.5_r_quad*(dprod(2)+dprod(3))
-     b=zero
-     if (gsave>1.e-16_r_kind .and. iter>0) b=gnorm(2)/gsave
-
      if(mype == 0)write(iout_iter,*)'Minimization iteration',iter
+     if (gsave>1.e-16_r_kind .and. iter>0) b=gnorm(2)/gsave
      if (b<zero .or. b>five) then
         if (mype==0) then
            if (iout_6) write(6,105) gnorm(2),gsave,b
@@ -446,7 +448,7 @@ subroutine pcgsoi()
         endif
         b=zero
      endif
-     if (mype==0) write(6,888)'pcgsoi: gnorm(1:2),b=',gnorm,b
+     if (mype==0 .and. print_verbose) write(6,888)'pcgsoi: gnorm(1:2),b=',gnorm,b
 
 !    Calculate new search direction
      if (.not. restart) then
@@ -456,8 +458,6 @@ subroutine pcgsoi()
           end do
         end if
         do i=1,nclen
-           xdiff%values(i)=gradx%values(i)
-           ydiff%values(i)=grady%values(i)
            dirx%values(i)=-grady%values(i)+b*dirx%values(i)
            diry%values(i)=-gradx%values(i)+b*diry%values(i)
         end do
@@ -469,13 +469,15 @@ subroutine pcgsoi()
         end if
      else
 !    If previous solution available, transfer into local arrays.
-        xdiff=zero
-        ydiff=zero
         call read_guess_solution(dirx,diry,mype)
         stp=one
+        if(.not. lanlerr)then
+           xdiff=zero
+           ydiff=zero
+        end if
      endif
 
-!    Convert search direction form control space to physical space
+!    Convert search direction from control space to physical space
      call control2state(dirx,mval,rbias)
      if (l4dvar) then
         if (l_hyb_ens) then
@@ -483,10 +485,6 @@ subroutine pcgsoi()
            mval(1)=eval(1)
         end if
 
-!       Run TL model to fill rval
-!       The TLM being linear, rval could be updated in the same way as the
-!       control variable. That would eliminate the need for running the TLM
-!       at the cost of storing an additional 4D state variable.
         call model_tl(mval,rval,llprt)
      else
 
@@ -511,12 +509,6 @@ subroutine pcgsoi()
 
 !    Diagnostic calculations
      if (iter==0) then
-        zgini=gnorm(1)
-        zfini=penalty
-        if (mype==0) then
-           write(6,888)'Initial cost function =',zfini
-           write(6,888)'Initial gradient norm =',sqrt(zgini)
-        endif
         if(jiter==jiterstart .or. oberror_tune) then
            gnormorig=gnorm(1)
            penorig=penalty
@@ -527,20 +519,30 @@ subroutine pcgsoi()
      penx=penalty/penorig
 
      if (mype==0) then
-        write(iout_iter,888)'pcgsoi: gnorm(1:2)',gnorm
-        write(iout_iter,999)'costterms Jb,Jo,Jc,Jl  =',jiter,iter,fjcost
+        if (iter==0) then
+           zgini=gnorm(1)
+           zfini=penalty
+           write(6,888)'Initial cost function =',zfini
+           write(6,888)'Initial gradient norm =',sqrt(zgini)
+        endif
+        if(print_verbose)then
+           write(iout_iter,888)'pcgsoi: gnorm(1:2)',gnorm
+           write(iout_iter,999)'costterms Jb,Jo,Jc,Jl  =',jiter,iter,fjcost
+        end if
         istep=1
         if (stp<small_step) istep=2
         write(6,9992)'cost,grad,step,b,step? =',jiter,iter,penalty,sqrt(gnorm(1)),stp,b,step(istep)
         write(iout_iter,9992)'cost,grad,step,b,step? =',jiter,iter,penalty,sqrt(gnorm(1)),stp,b,step(istep)
-        if (zgini>tiny_r_kind .and. zfini>tiny_r_kind) then
-           write(iout_iter,9993) 'estimated penalty reduction this iteration',&
-                 jiter,iter,(penalty-penaltynew),(penalty-penaltynew)/penorig,'%'
-           write(iout_iter,999)'penalty and grad reduction WRT outer and initial iter=', &
-               jiter,iter,penalty/zfini,sqrt(gnorm(1)/zgini),penx,gnormx
-        else
-           write(iout_iter,999)'grad and penalty reduction WRT outer and initial iter=N/A'
-        endif
+        if(print_verbose)then
+           if (zgini>tiny_r_kind .and. zfini>tiny_r_kind) then
+              write(iout_iter,9993) 'estimated penalty reduction this iteration',&
+                    jiter,iter,(penalty-penaltynew),(penalty-penaltynew)/penorig,'%'
+              write(iout_iter,999)'penalty and grad reduction WRT outer and initial iter=', &
+                  jiter,iter,penalty/zfini,sqrt(gnorm(1)/zgini),penx,gnormx
+           else
+              write(iout_iter,999)'grad and penalty reduction WRT outer and initial iter=N/A'
+           endif
+        end if
 
      endif
 999  format(A,2(1X,I3),6(1X,ES25.18))
@@ -589,6 +591,9 @@ subroutine pcgsoi()
      pennorm=penx
 
   end do inner_iteration
+!  End of inner iteration
+
+!  Deallocate space for renormalization
   if(iorthomax>0) then 
      do ii=1,iorthomax+1
         call deallocate_cv(cglwork(ii))
@@ -619,7 +624,7 @@ subroutine pcgsoi()
      call penal(sval(1))
      xhatsave=zero
      yhatsave=zero
-     call clean_
+     call clean_(lanlerr)
      return
   endif
 
@@ -769,15 +774,16 @@ subroutine pcgsoi()
 ! Update guess (model background, bias correction) fields
 ! if (mype==0) write(6,*)'pcgsoi: Updating guess'
   if(iwrtinc<=0) call update_guess(sval,sbias)
-  if(l_foto) call update_geswtend(xhat_dt)
 
 ! cloud analysis  after iteration
 ! if(jiter == miter .and. i_gsdcldanal_type==1) then
   if(jiter == miter) then
     if(i_gsdcldanal_type==2) then
-     call gsdcloudanalysis4nmmb(mype)
+       call gsdcloudanalysis4nmmb(mype)
     else if(i_gsdcldanal_type==1) then
-     call gsdcloudanalysis(mype)
+       call gsdcloudanalysis(mype)
+    else if(i_gsdcldanal_type==30) then
+       call gsdcloudanalysis4gfs(mype)
     endif
   endif
 
@@ -788,13 +794,13 @@ subroutine pcgsoi()
       call write_all(-1)
     else
       if(jiter == miter) then
-         call clean_
          call write_all(-1)
       endif
   endif
 
 ! Overwrite guess with increment (4d-var only, for now)
   if (iwrtinc>0) then
+     call view_st (sval,'xinc')
      call inc2guess(sval)
      call write_all(iwrtinc)
      call prt_guess('increment')
@@ -809,7 +815,7 @@ subroutine pcgsoi()
   call xhat_vordiv_clean
 
 ! Clean up major fields
-  if (jiter < miter) call clean_
+  call clean_(lanlerr)
 
 ! Finalize timer
   call timer_fnl('pcgsoi')
@@ -819,7 +825,7 @@ subroutine pcgsoi()
 
 contains
 
-subroutine init_
+subroutine init_(lanlerr)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    init_    initialize pcgsoi
@@ -842,6 +848,7 @@ subroutine init_
 
   use jfunc, only: diag_precon
   implicit none
+  logical,intent(in):: lanlerr
 
 ! Allocate local variables
   call allocate_cv(xhat)
@@ -850,8 +857,12 @@ subroutine init_
   call allocate_cv(dirx)
   call allocate_cv(diry)
   if(diag_precon)call allocate_cv(dirw)
-  call allocate_cv(ydiff)
-  call allocate_cv(xdiff)
+  if(.not. lanlerr)then
+     call allocate_cv(ydiff)
+     call allocate_cv(xdiff)
+     ydiff=zero
+     xdiff=zero
+  end if
   do ii=1,nobs_bins
      call allocate_state(sval(ii))
      call allocate_state(rval(ii))
@@ -871,18 +882,12 @@ subroutine init_
   dirx=zero
   diry=zero
   if(diag_precon)dirw=zero
-  ydiff=zero
-  xdiff=zero
   xhat=zero
 
-  if(l_foto)then
-     call allocate_state(xhat_dt)
-     xhat_dt=zero
-  end if
 
 end subroutine init_
 
-subroutine clean_
+subroutine clean_(lanlerr)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    clean_    clean pcgsoi
@@ -904,10 +909,14 @@ subroutine clean_
 !$$$ end documentation block
 
   use jfunc, only: diag_precon
+  use m_obsdiags, only: obsdiags_reset
+  use obsmod, only: destroyobs,lobsdiagsave
   implicit none
+  logical,intent(in):: lanlerr
 
 ! Deallocate obs file
-  if (.not.l4dvar) call destroyobs
+  if (.not.l4dvar) call destroyobs()      ! phasing out, by gradually reducing its funtionality
+  if (.not.l4dvar) call obsdiags_reset(obsdiags_keep=lobsdiagsave)   ! replacing destroyobs()
 
 ! Release state-vector memory
   call deallocate_cv(xhat)
@@ -916,8 +925,10 @@ subroutine clean_
   call deallocate_cv(dirx)
   call deallocate_cv(diry)
   if(diag_precon)call deallocate_cv(dirw)
-  call deallocate_cv(ydiff)
-  call deallocate_cv(xdiff)
+  if(.not. lanlerr)then
+     call deallocate_cv(ydiff)
+     call deallocate_cv(xdiff)
+  end if
  
 ! Release bias-predictor memory
   call deallocate_preds(sbias)
@@ -933,9 +944,6 @@ subroutine clean_
   do ii=1,ntlevs_ens
      call deallocate_state(eval(ii))
   end do
-  if(l_foto)then
-     call deallocate_state(xhat_dt)
-  end if
 ! call inquire_state
 
 end subroutine clean_

@@ -41,6 +41,8 @@ subroutine control2state(xhat,sval,bval)
 !   2014-06-16  carley/zhu - add tcamt and lcbas
 !   2014-12-03  derber   - introduce parallel regions for optimization
 !   2015-07-10  pondeca  - add cldch
+!   2016-05-03  pondeca  - add uwnd10m and vwnd10m
+!   2016-08-12  lippi    - add vertical velocity (w) to mycvars and mysvars.
 !
 !   input argument list:
 !     xhat - Control variable
@@ -56,9 +58,9 @@ use kinds, only: r_kind,i_kind
 use control_vectors, only: control_vector
 use control_vectors, only: cvars3d,cvars2d
 use bias_predictors, only: predictors
-use gsi_4dvar, only: nsubwin, nobs_bins, l4dvar, lsqrtb, ladtest_obs
-use gridmod, only: latlon1n,latlon11,regional,lat2,lon2,nsig, nlat, nlon, twodvar_regional            
-use jfunc, only: nsclen,npclen,ntclen,nrclen
+use gsi_4dvar, only: nsubwin, l4dvar, lsqrtb, ladtest_obs
+use gridmod, only: regional,lat2,lon2,nsig, nlat, nlon, twodvar_regional            
+use jfunc, only: nsclen,npclen,ntclen
 use cwhydromod, only: cw2hydro_tl
 use gsi_bundlemod, only: gsi_bundlecreate
 use gsi_bundlemod, only: gsi_bundle
@@ -92,21 +94,21 @@ type(gsi_bundle):: wbundle ! work bundle
 !       the state and control vectors, but rather the ones
 !       this routines knows how to handle.
 ! Declare required local control variables
-integer(i_kind), parameter :: ncvars = 8
+integer(i_kind), parameter :: ncvars = 9
 integer(i_kind) :: icps(ncvars)
-integer(i_kind) :: icpblh,icgust,icvis,icoz,icwspd10m
+integer(i_kind) :: icpblh,icgust,icvis,icoz,icwspd10m,icw
 integer(i_kind) :: ictd2m,icmxtm,icmitm,icpmsl,ichowv
 integer(i_kind) :: icsfwter,icvpwter,ictcamt,iclcbas
-integer(i_kind) :: iccldch
+integer(i_kind) :: iccldch,icuwnd10m,icvwnd10m
 character(len=3), parameter :: mycvars(ncvars) = (/  &  ! vars from CV needed here
-                               'sf ', 'vp ', 'ps ', 't  ',    &
-                               'q  ', 'cw ', 'ql ', 'qi ' /)
-logical :: lc_sf,lc_vp,lc_ps,lc_t,lc_rh,lc_cw,lc_ql,lc_qi
+                'sf ', 'vp ', 'ps ', 't  ', 'q  ', 'cw ', 'ql ', 'qi ', 'w  ' /)
+logical :: lc_sf,lc_vp,lc_w,lc_ps,lc_t,lc_rh,lc_cw,lc_ql,lc_qi
 real(r_kind),pointer,dimension(:,:)   :: cv_ps=>NULL()
 real(r_kind),pointer,dimension(:,:)   :: cv_vis=>NULL()
 real(r_kind),pointer,dimension(:,:)   :: cv_lcbas=>NULL()
 real(r_kind),pointer,dimension(:,:,:) :: cv_sf=>NULL()
 real(r_kind),pointer,dimension(:,:,:) :: cv_vp=>NULL()
+!real(r_kind),pointer,dimension(:,:,:) :: cv_w=>NULL()
 real(r_kind),pointer,dimension(:,:,:) :: cv_t=>NULL()
 real(r_kind),pointer,dimension(:,:,:) :: cv_rh=>NULL()
 real(r_kind),pointer,dimension(:,:,:) :: cv_sfwter=>NULL()
@@ -114,15 +116,16 @@ real(r_kind),pointer,dimension(:,:,:) :: cv_vpwter=>NULL()
 real(r_kind),pointer,dimension(:,:)   :: cv_cldch=>NULL()
 
 ! Declare required local state variables
-integer(i_kind), parameter :: nsvars = 7
+integer(i_kind), parameter :: nsvars = 8
 integer(i_kind) :: isps(nsvars)
 character(len=4), parameter :: mysvars(nsvars) = (/  &  ! vars from ST needed here
-                               'u   ', 'v   ', 'prse', 'q   ', 'tsen', 'ql  ','qi  ' /)
-logical :: ls_u,ls_v,ls_prse,ls_q,ls_tsen,ls_ql,ls_qi
+                'u   ', 'v   ', 'prse', 'q   ', 'tsen', 'ql  ', 'qi  ', 'w   ' /)
+logical :: ls_u,ls_v,ls_w,ls_prse,ls_q,ls_tsen,ls_ql,ls_qi
 real(r_kind),pointer,dimension(:,:)   :: sv_ps,sv_sst
 real(r_kind),pointer,dimension(:,:)   :: sv_gust,sv_vis,sv_pblh,sv_wspd10m,sv_tcamt,sv_lcbas
 real(r_kind),pointer,dimension(:,:)   :: sv_td2m,sv_mxtm,sv_mitm,sv_pmsl,sv_howv,sv_cldch
-real(r_kind),pointer,dimension(:,:,:) :: sv_u,sv_v,sv_prse,sv_q,sv_tsen,sv_tv,sv_oz
+real(r_kind),pointer,dimension(:,:)   :: sv_uwnd10m,sv_vwnd10m
+real(r_kind),pointer,dimension(:,:,:) :: sv_u,sv_v,sv_w,sv_prse,sv_q,sv_tsen,sv_tv,sv_oz
 real(r_kind),pointer,dimension(:,:,:) :: sv_rank3
 real(r_kind),pointer,dimension(:,:)   :: sv_rank2
 
@@ -160,13 +163,14 @@ endif
 call gsi_bundlegetpointer (xhat%step(1),mycvars,icps,istatus)
 lc_sf =icps(1)>0; lc_vp =icps(2)>0; lc_ps =icps(3)>0
 lc_t  =icps(4)>0; lc_rh =icps(5)>0; lc_cw =icps(6)>0
-lc_ql =icps(7)>0; lc_qi =icps(8)>0
+lc_ql =icps(7)>0; lc_qi =icps(8)>0; lc_w  =icps(9)>0
 
 ! Since each internal vector of xhat has the same structure, pointers are
 ! the same independent of the subwindow jj
 call gsi_bundlegetpointer (sval(1),mysvars,isps,istatus)
 ls_u  =isps(1)>0; ls_v   =isps(2)>0; ls_prse=isps(3)>0
-ls_q  =isps(4)>0; ls_tsen=isps(5)>0; ls_ql =isps(6)>0; ls_qi =isps(7)>0
+ls_q  =isps(4)>0; ls_tsen=isps(5)>0; ls_ql =isps(6)>0
+ls_qi =isps(7)>0; ls_w   =isps(8)>0
 
 ! Define what to do depending on what's in CV and SV
 do_getprs_tl     =lc_ps.and.lc_t .and.ls_prse
@@ -193,9 +197,12 @@ call gsi_bundlegetpointer (xhat%step(1),'pmsl',icpmsl,istatus)
 call gsi_bundlegetpointer (xhat%step(1),'howv',ichowv,istatus)
 call gsi_bundlegetpointer (xhat%step(1),'sfwter',icsfwter,istatus)
 call gsi_bundlegetpointer (xhat%step(1),'vpwter',icvpwter,istatus)
+call gsi_bundlegetpointer (xhat%step(1),'w',icw,istatus)
 call gsi_bundlegetpointer (xhat%step(1),'tcamt',ictcamt,istatus)
 call gsi_bundlegetpointer (xhat%step(1),'lcbas',iclcbas,istatus)
 call gsi_bundlegetpointer (xhat%step(1),'cldch',iccldch,istatus)
+call gsi_bundlegetpointer (xhat%step(1),'uwnd10m',icuwnd10m,istatus)
+call gsi_bundlegetpointer (xhat%step(1),'vwnd10m',icvwnd10m,istatus)
 
 ! Loop over control steps
 do jj=1,nsubwin
@@ -347,6 +354,10 @@ do jj=1,nsubwin
       call gsi_bundlegetpointer (sval(jj),'howv' ,sv_howv, istatus)
       call gsi_bundlegetvar ( wbundle, 'howv', sv_howv, istatus )
    end if
+   if (icw>0) then 
+      call gsi_bundlegetpointer (sval(jj),'w' ,sv_w, istatus)
+      call gsi_bundlegetvar ( wbundle, 'w', sv_w, istatus )
+   end if
    if (ictcamt>0) then 
       call gsi_bundlegetpointer (sval(jj),'tcamt' ,sv_tcamt, istatus)
       call gsi_bundlegetvar ( wbundle, 'tcamt', sv_tcamt, istatus )
@@ -362,6 +373,14 @@ do jj=1,nsubwin
       call gsi_bundlegetpointer (sval(jj),'cldch'  ,sv_cldch , istatus)
       !  Convert log(cldch) to cldch
       call logcldch_to_cldch(cv_cldch,sv_cldch)
+   end if
+   if (icuwnd10m>0) then
+      call gsi_bundlegetpointer (sval(jj),'uwnd10m' ,sv_uwnd10m, istatus)
+      call gsi_bundlegetvar ( wbundle, 'uwnd10m', sv_uwnd10m, istatus )
+   end if
+   if (icvwnd10m>0) then
+      call gsi_bundlegetpointer (sval(jj),'vwnd10m' ,sv_vwnd10m, istatus)
+      call gsi_bundlegetvar ( wbundle, 'vwnd10m', sv_vwnd10m, istatus )
    end if
 
 !  Same one-to-one map for chemistry-vars; take care of them together 

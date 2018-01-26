@@ -1,5 +1,4 @@
 module observermod
-!#define VERBOSE
 #include "mytrace.H"
 
 !$$$  subprogram documentation block
@@ -21,8 +20,7 @@ module observermod
 !                          reg_tlnmc_type for two kinds of regional tlnmc.
 !   2013-10-19  todling - update cloud_efr module name
 !   2014-02-03  todling - remove B-dependence; move cost-create/destroy out
-!   2014-12-03  derber - modify for possibly not using obsdiag arrays, change
-!                        call to getsfc
+!   2014-10-08  todling - rename bkg-bias routines for clarity
 !
 !   input argument list:
 !     mype - mpi task id
@@ -50,7 +48,7 @@ module observermod
   use satthin, only: superp,super_val1,getsfc,destroy_sfc
   use gsi_4dvar, only: l4dvar
   use convinfo, only: convinfo_destroy
-  use m_gsiBiases, only : create_bias_grids, destroy_bias_grids
+  use m_gsiBiases, only : create_bkgbias_grids, destroy_bkgbias_grids
   use m_berror_stats, only: berror_get_dims
   use m_berror_stats_reg, only: berror_get_dims_reg
   use timermod, only: timer_ini, timer_fnl
@@ -161,7 +159,7 @@ subroutine guess_init_
 #endif /*/ HAVE_ESMF */
 
   call create_ges_grids(switch_on_derivatives,tendsflag)
-  call create_bias_grids()
+  call create_bkgbias_grids(iadate(4))
   call create_sfc_grids()
   call cloud_init()
 
@@ -231,8 +229,10 @@ subroutine init_
 !$$$
 
   use mpeu_util,only : tell, die
+  use gsi_io, only : verbose
   implicit none
   character(len=*),parameter:: Iam='observer_init'
+  logical :: print_verbose
 
 ! Declare passed variables
 
@@ -240,42 +240,41 @@ subroutine init_
 _ENTRY_(Iam)
 
 
+  print_verbose=.false.  
+  if(verbose)print_verbose=.true.
   if(ob_initialized_) call die(Iam,'already initialized')
   ob_initialized_=.true.
   iamset_ = .false.
 
-#ifdef VERBOSE
-  call tell('observer.init_','entered')
-#endif
-!*******************************************************************************************
+  if(print_verbose)then
+     call tell('observer.init_','entered')
+  end if
 !
 ! Initialize timer for this procedure
   call timer_ini('observer')
   call timer_ini('observer.init_')
-#ifdef VERBOSE
-  call tell('observer.init_','timer_ini_()')
-#endif
+  if(print_verbose)then
+     call tell('observer.init_','timer_ini_()')
+  end if
 
 ! Initialize guess
   call guess_init_
-#ifdef VERBOSE
-  call tell('observer.init_','guess_init_()')
-#endif
+  if(print_verbose)then
+     call tell('observer.init_','guess_init_()')
+  end if
 
 !     ndata(*,1)- number of prefiles retained for further processing
 !     ndata(*,2)- number of observations read
 !     ndata(*,3)- number of observations keep after read
-#ifdef VERBOSE
-  call tell('observer.init_','ndat =',ndat)
-#endif
+  if(print_verbose)then
+     call tell('observer.init_','ndat =',ndat)
+  end if
   allocate(ndata(ndat,3))
-#ifdef VERBOSE
-  call tell('observer.init_','allocate(ndata)')
-
-
-  call tell('observer.init_','exiting')
-#endif
-  if(mype==0) write(6,*) Iam, ': successfully initialized'
+  if(print_verbose)then
+     call tell('observer.init_','allocate(ndata)')
+     call tell('observer.init_','exiting')
+  end if
+  if(print_verbose .and. mype==0) write(6,*) Iam, ': successfully initialized'
 ! End of routine
   call timer_fnl('observer.init_')
 _EXIT_(Iam)
@@ -413,6 +412,8 @@ subroutine run_(init_pass,last_pass)
 !$$$
 
   use mpeu_util, only: tell,die
+  use m_obsdiags, only: obsdiags_write
+  use gsi_io, only: verbose
   implicit none
   logical,optional,intent(in) :: init_pass
   logical,optional,intent(in) :: last_pass
@@ -427,18 +428,21 @@ subroutine run_(init_pass,last_pass)
   character(len=12) :: clfile
   logical :: init_pass_
   logical :: last_pass_
+  logical :: print_verbose
   
 _ENTRY_(Iam)
+  print_verbose=.false.
+  if(verbose)print_verbose=.true.
   call timer_ini('observer.run_')
   init_pass_=.false.
   if(present(init_pass)) init_pass_=init_pass
   last_pass_=.false.
   if(present(last_pass)) last_pass_= last_pass
 
-#ifdef VERBOSE
-  call tell(Iam,'init_pass =',init_pass_)
-  call tell(Iam,'last_pass =',last_pass_)
-#endif
+  if(print_verbose)then
+     call tell(Iam,'init_pass =',init_pass_)
+     call tell(Iam,'last_pass =',last_pass_)
+  end if
 
   if(.not.ob_initialized_) call die(Iam,'not initialized')
 
@@ -454,13 +458,11 @@ _ENTRY_(Iam)
      write(6,*)'observer should only be called in 4dvar'
      call stop2(157)
   endif
-#ifdef VERBOSE
-  if(mype==0) then
+  if(mype==0 .and. print_verbose) then
      call tell(Iam,'miter =',miter)
      call tell(Iam,'jiterstart =',jiterstart)
      call tell(Iam,'jiterlast  =',jiterlast )
   endif
-#endif
   if (mype==0) write(6,*)'OBSERVER: jiterstart,jiterlast=',jiterstart,jiterlast
 
 ! Main outer analysis loop
@@ -471,10 +473,11 @@ _ENTRY_(Iam)
 
      last  = jiter == miter+1 ! there is no obsdiags output if
                               ! jiterstart==miter+1.  e.g. miter=2 and jiterstart=3
-     if (l4dvar.and.(.not.last) .and. last_pass_ .and. luse_obsdiag) then
+     if (l4dvar.and.(.not.last) .and. last_pass_) then
         clfile='obsdiags.ZZZ'
         write(clfile(10:12),'(I3.3)') jiter
-        call write_obsdiags(clfile)
+        !call write_obsdiags(clfile)
+        call obsdiags_write(clfile)     ! replacing write_obsdiags()
      endif
 
 ! End of outer iteration loop
@@ -518,6 +521,7 @@ subroutine final_
 !$$$
   use compact_diffs,only: destroy_cdiff_coefs
   use mp_compact_diffs_mod1, only: destroy_mp_compact_diffs1
+  use gsi_io, only : verbose
   use mpeu_util, only: tell,die
   implicit none
 
@@ -525,10 +529,13 @@ subroutine final_
 
 ! Declare local variables
   character(len=*),parameter:: Iam="observer_final"
+  logical print_verbose
 
 !*******************************************************************************************
 _ENTRY_(Iam)
   call timer_ini('observer.final_')
+  print_verbose=.false.
+  if(verbose) print_verbose=.true.
 
   if(.not.ob_initialized_) call die(Iam,'not initialized')
   ob_initialized_=.false.
@@ -548,7 +555,7 @@ _ENTRY_(Iam)
   call convinfo_destroy
 
   deallocate(ndata)
-  if(mype==0) write(6,*) Iam, ': successfully finalized'
+  if(mype==0 .and. print_verbose) write(6,*) Iam, ': successfully finalized'
 
 ! Finalize timer for this procedure
   call timer_fnl('observer.final_')
@@ -599,7 +606,7 @@ subroutine guess_final_
 ! Deallocate remaining arrays
   call cloud_final()
   call destroy_sfc_grids()
-  call destroy_bias_grids()
+  call destroy_bkgbias_grids()
   call destroy_ges_grids
 #ifndef HAVE_ESMF
   call destroy_chemges_grids(ierr)

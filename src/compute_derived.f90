@@ -89,8 +89,8 @@ subroutine compute_derived(mype,init_pass)
   use kinds, only: r_kind,i_kind
   use jfunc, only: jiter,jiterstart,&
        qoption,switch_on_derivatives,&
-       tendsflag,varq,clip_supersaturation
-  use control_vectors, only: cvars3d,cvars2d
+       tendsflag,clip_supersaturation
+  use control_vectors, only: cvars3d
   use control_vectors, only: nrf_var
   use control_vectors, only: an_amp0
   use mpimod, only: levs_id
@@ -105,12 +105,11 @@ subroutine compute_derived(mype,init_pass)
        dvisdlog,w10mgues,howvgues,cwgues,cldchgues,dcldchdlog
   use tendsmod, only: tnd_initialized
   use tendsmod, only: gsi_tendency_bundle
-  use gridmod, only: lat2,lon2,nsig,nnnn1o,aeta2_ll,nsig1o  
+  use gridmod, only: lat2,lon2,nsig,nsig1o  
   use gridmod, only: regional
   use gridmod, only: twodvar_regional
-  use gridmod, only: wrf_nmm_regional,wrf_mass_regional
+  use gridmod, only: wrf_mass_regional
   use berror, only: hswgt
-  use balmod, only: rllat1,llmax
   use mod_strong, only: l_tlnmc,baldiag_full
   use obsmod, only: write_diag
   use gsi_4dvar, only: l4dvar
@@ -133,6 +132,7 @@ subroutine compute_derived(mype,init_pass)
   use gsi_4dcouplermod, only: gsi_4dcoupler_init_traj
   use mpeu_util, only: getindex
   use mpeu_util, only: die, tell
+  use gsi_io, only: verbose
   implicit none
 
 
@@ -170,6 +170,10 @@ subroutine compute_derived(mype,init_pass)
 ! for anisotropic mode
   integer(i_kind):: k1,ivar,kvar,igauss,iq_loc
   real(r_kind):: factor,factk,hswgtsum
+  logical print_verbose
+
+  print_verbose=.false.
+  if(verbose)print_verbose=.true.
 
   if(init_pass .and. (ntguessig<1 .or. ntguessig>nfldsig)) &
      call die(myname,'invalid init_pass, ntguessig =',ntguessig)
@@ -300,7 +304,7 @@ subroutine compute_derived(mype,init_pass)
 
               call strong_bal_correction(ges_u_ten,ges_v_ten,ges_tv_ten,ges_prs_ten(:,:,1),mype, &
                                          ges_u,ges_v,ges_tv,&
-                                         ges_ps,.true.,fullfield,.false.,.true.)
+                                         ges_ps,print_verbose,fullfield,.false.,.true.)
 
               call final_vars_('tendency')
            end if

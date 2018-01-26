@@ -34,12 +34,15 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 !                         through. If the logical is set to false, the swath
 !                         edge obs are skipped in the read loop. 
 !   2015-09-17  Thomas  - add l4densvar and thin4d to data selection procedure
+!   2015-10-01  guo     - Fixed dlxx_earth_deg, to avoid truncation errors
 !   2016-03-04  ejones  - add spatial averaging capability (use SSMI/S spatial averaging)
 !   2016-04-29  ejones  - update some mnemonics for expected operational bufr
 !                         tanks
 !   2016-07-25  ejones  - increase maxobs, remove fov binning, make most arrays
 !                         static
+!   2016-03-11  guo     - Refixed dlxx_earth_deg, for the new dlxx_earth_save(:).
 !   2016-10-05  acollard -Fix interaction with NSST.
+!   2017-01-03  todling - treat save arrays as allocatable
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -77,7 +80,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   use kinds, only: r_kind,r_double,i_kind
   use satthin, only: super_val,itxmax,makegrids,map2tgrid,destroygrids, &
       checkob,finalcheck,score_crit
-  use radinfo, only: iuse_rad,jpch_rad,nusis,nuchan,use_edges, &
+  use radinfo, only: iuse_rad,jpch_rad,nusis,use_edges, &
                      radedge1,radedge2,gmi_method
   use gridmod, only: diagnostic_reg,regional,rlats,rlons,nlat,nlon,&
       tll2xy,txy2ll
@@ -89,6 +92,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   use ssmis_spatial_average_mod, only : ssmis_spatial_average
   use m_sortind
   use mpimod, only: npe
+! use radiance_mod, only: rad_obs_type
 
   implicit none
 
@@ -122,7 +126,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   real(r_kind)              :: tbmax, satinfo_v(ninfo)
   real(r_double),dimension(ntime):: bfr1bhdr
 
-  integer(i_kind),parameter :: nloc=4                                      !location dat used for ufbint()
+  integer(i_kind),parameter :: nloc=3                                      !location dat used for ufbint()
   real(r_double),dimension(nloc) :: midat                                  !location data from 
 
   character(40),parameter   :: strloc='CLATH CLONH'                        !use for ufbint() 
@@ -177,6 +181,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   real(r_kind):: sat_def_ang,sat_def_ang2    
   real(r_kind),allocatable        :: relative_time_in_seconds(:)
 
+  real(r_kind) :: dlon_earth_deg,dlat_earth_deg
   real(r_kind),pointer :: t4dv,dlon_earth,dlat_earth,crit1
   real(r_kind),pointer :: sat_zen_ang,sat_zen_ang2,sat_azimuth_ang,sat_azimuth_ang2
   real(r_kind),pointer :: sat_scan_ang,sat_scan_ang2
@@ -185,24 +190,24 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 
   integer(i_kind),allocatable        :: sorted_index(:)
 
-  integer(i_kind),target,dimension(maxobs) :: ifov_save
-  integer(i_kind),target,dimension(maxobs) :: iscan_save
-  integer(i_kind),target,dimension(maxobs) :: iorbn_save
-  integer(i_kind),target,dimension(maxobs) :: inode_save
-  real(r_kind),target,dimension(maxobs)    :: dlon_earth_save
-  real(r_kind),target,dimension(maxobs)    :: dlat_earth_save
-  real(r_kind),target,dimension(maxobs)    :: sat_zen_ang_save,sat_azimuth_ang_save,sat_scan_ang_save
-  real(r_kind),target,dimension(maxobs)    :: sat_zen_ang2_save,sat_azimuth_ang2_save,sat_scan_ang2_save
-  real(r_kind),target,dimension(maxobs)    :: t4dv_save
-  real(r_kind),target,dimension(maxobs)    :: crit1_save
-  real(r_kind),target,dimension(maxchanl,maxobs) :: tbob_save
+  integer(i_kind),target,allocatable,dimension(:) :: ifov_save
+  integer(i_kind),target,allocatable,dimension(:) :: iscan_save
+  integer(i_kind),target,allocatable,dimension(:) :: iorbn_save
+  integer(i_kind),target,allocatable,dimension(:) :: inode_save
+  real(r_kind),target,allocatable,dimension(:)    :: dlon_earth_save
+  real(r_kind),target,allocatable,dimension(:)    :: dlat_earth_save
+  real(r_kind),target,allocatable,dimension(:)    :: sat_zen_ang_save,sat_azimuth_ang_save,sat_scan_ang_save
+  real(r_kind),target,allocatable,dimension(:)    :: sat_zen_ang2_save,sat_azimuth_ang2_save,sat_scan_ang2_save
+  real(r_kind),target,allocatable,dimension(:)    :: t4dv_save
+  real(r_kind),target,allocatable,dimension(:)    :: crit1_save
+  real(r_kind),target,allocatable,dimension(:,:)  :: tbob_save
+  real(r_kind),target,allocatable,dimension(:)    :: sun_zenith_save,sun_azimuth_ang_save
 
 
 ! ---- sun glint ----
   integer(i_kind):: doy,mday(12),mon,m,mlen(12)
   real(r_kind)   :: time_4_sun_glint_calc,clath_sun_glint_calc,clonh_sun_glint_calc
   real(r_kind),pointer :: sun_zenith,sun_azimuth_ang
-  real(r_kind),target,dimension(maxobs)    :: sun_zenith_save,sun_azimuth_ang_save
 
   data  mlen/31,28,31,30,31,30, &
              31,31,30,31,30,31/
@@ -217,6 +222,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 !**************************************************************************
 
 ! Initialize variables
+  call init_(maxchanl,maxobs)
   use_swath_edge = .false.
 
   do_noise_reduction = .true.
@@ -311,7 +317,6 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   next=0
   irec=0
   iobs=1
-  nrec=999999
 
   read_subset: do while(ireadmg(lnbufr,subset,idate)>=0) ! GMI scans
      irec=irec+1
@@ -365,7 +370,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 
 
 ! ----- Read header record to extract obs location information  
-        call ufbint(lnbufr,midat(2:4),nloc,1,iret,'SCLAT SCLON HMSL')
+        call ufbint(lnbufr,midat,nloc,1,iret,'SCLAT SCLON HMSL')
         call ufbrep(lnbufr,gmichq,1,nchanl,iret,'TPQC2')
         call ufbrep(lnbufr,gmirfi,1,nchanl,iret,'VIIRSQ')
         call ufbrep(lnbufr,pixelsaza,1,ngs,iret,strsaza)
@@ -394,21 +399,21 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
         sat_azimuth_ang = val_angls(1,1)   
         sun_zenith      = val_angls(2,1)
         sun_azimuth_ang = val_angls(3,1)
-        sat_scan_ang = asin( sin(sat_zen_ang)*rearth/(rearth+midat(4)) )
+        sat_scan_ang = asin( sin(sat_zen_ang)*rearth/(rearth+midat(3)) )
         if (pixelsaza(ngs) < bmiss ) then
           sat_zen_ang2 = pixelsaza(ngs)*deg2rad
         else
           sat_zen_ang2 = sat_def_ang2*deg2rad
         endif
-        sat_scan_ang2 = asin( sin(sat_zen_ang2)*rearth/(rearth+midat(4)) )
+        sat_scan_ang2 = asin( sin(sat_zen_ang2)*rearth/(rearth+midat(3)) )
         sat_azimuth_ang2 = val_angls(1,ngs)     
 
            !  -------- Retreive Sun glint angle -----------
         clath_sun_glint_calc = pixelloc(1)
         clonh_sun_glint_calc = pixelloc(2)
         if(clonh_sun_glint_calc > 180._r_kind) clonh_sun_glint_calc = clonh_sun_glint_calc - 360.0_r_kind
-        doy = mday( int(bfr1bhdr(2)) ) + int(bfr1bhdr(3))
-        if ((mod( int(bfr1bhdr(1)),4)==0).and.( int(bfr1bhdr(2)) > 2))  then
+        doy = mday(iobsdate(2)) + iobsdate(3)
+        if ( (mod(iobsdate(1),4)==0) .and. (iobsdate(2)>2) ) then
            doy = doy + 1
         end if
         time_4_sun_glint_calc = bfr1bhdr(4)+bfr1bhdr(5)*r60inv+bfr1bhdr(6)*r60inv*r60inv
@@ -546,6 +551,8 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
         if (inode == 0) cycle obsloop   ! this indicate duplicated data
      endif 
 
+     dlat_earth_deg = dlat_earth
+     dlon_earth_deg = dlon_earth
      dlat_earth     = dlat_earth*deg2rad
      dlon_earth     = dlon_earth*deg2rad
 
@@ -674,8 +681,8 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
     data_all(27,itx)= idomsfc + 0.001_r_kind ! dominate surface type
     data_all(28,itx)= sfcr                 ! surface roughness
     data_all(29,itx)= ff10                 ! ten meter wind factor
-    data_all(30,itx)= dlon_earth*rad2deg   ! earth relative longitude (degrees)
-    data_all(31,itx)= dlat_earth*rad2deg   ! earth relative latitude (degrees)
+    data_all(30,itx)= dlon_earth_deg       ! earth relative longitude (degrees)
+    data_all(31,itx)= dlat_earth_deg       ! earth relative latitude (degrees)
 
     if(dval_use) then
        data_all(32,itx)= val_gmi
@@ -798,12 +805,14 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   endif
 
 ! Deallocate data arrays
+  deallocate(nrec)
   deallocate(data_all)
 
 
 ! Deallocate satthin arrays
 1000 continue
   call destroygrids
+  call clean_
 
   if(diagnostic_reg .and. ntest>0 .and. mype_sub==mype_root) &
      write(6,*)'READ_GMI:  mype,ntest,disterrmax=',&
@@ -811,6 +820,37 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 
 ! End of routine
  return
+ contains
+ subroutine init_(maxchanl,maxobs)
+  integer(i_kind),intent(in) :: maxchanl,maxobs
+  allocate(ifov_save(maxobs))
+  allocate(iscan_save(maxobs))
+  allocate(iorbn_save(maxobs))
+  allocate(inode_save(maxobs))
+  allocate(dlon_earth_save(maxobs))
+  allocate(dlat_earth_save(maxobs))
+  allocate(sat_zen_ang_save(maxobs),sat_azimuth_ang_save(maxobs),sat_scan_ang_save(maxobs))
+  allocate(sat_zen_ang2_save(maxobs),sat_azimuth_ang2_save(maxobs),sat_scan_ang2_save(maxobs))
+  allocate(t4dv_save(maxobs))
+  allocate(crit1_save(maxobs))
+  allocate(tbob_save(maxchanl,maxobs))
+  allocate(sun_zenith_save(maxobs),sun_azimuth_ang_save(maxobs))
+ end subroutine init_
+ subroutine clean_
+  deallocate(sun_zenith_save,sun_azimuth_ang_save)
+  deallocate(tbob_save)
+  deallocate(crit1_save)
+  deallocate(t4dv_save)
+  deallocate(sat_zen_ang2_save,sat_azimuth_ang2_save,sat_scan_ang2_save)
+  deallocate(sat_zen_ang_save,sat_azimuth_ang_save,sat_scan_ang_save)
+  deallocate(dlat_earth_save)
+  deallocate(dlon_earth_save)
+  deallocate(inode_save)
+  deallocate(iorbn_save)
+  deallocate(iscan_save)
+  deallocate(ifov_save)
+ end subroutine clean_
+
 end subroutine read_gmi
 
 

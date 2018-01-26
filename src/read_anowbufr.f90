@@ -18,6 +18,7 @@ subroutine read_anowbufr(nread,ndata,nodata,gstime,&
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
 !   2013-11-01 pagowski - make code compatible with ncep/mhu airnow bufr
 !   2015-02-23  Rancic/Thomas - add l4densvar to time window logical
+!   2015-10-01  guo     - consolidate use of ob location (in deg)
 !
 !   input argument list:
 !     infile   - unit from which to read BUFR data
@@ -43,8 +44,7 @@ subroutine read_anowbufr(nread,ndata,nodata,gstime,&
   use gridmod, only: diagnostic_reg,regional,nlon,nlat,&
        tll2xy,txy2ll,rlats,rlons,region_dx
   use convinfo, only: nconvtype,ctwind, &
-       icuse,ioctype,ictype,cermin,cermax,&
-       id_bias_pm2_5,conv_bias_pm2_5,id_bias_pm10,conv_bias_pm10
+       icuse,ioctype,ictype,cermin,cermax
   use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen
   use chemmod, only : obs2model_anowbufr_pm,&
         iconc,ierror,ilat,ilon,itime,iid,ielev,isite,iikx,ilate,ilone,&
@@ -101,6 +101,7 @@ subroutine read_anowbufr(nread,ndata,nodata,gstime,&
 
   real(r_kind) :: tdiff,obstime,t4dv
   real(r_kind) :: dlat,dlon,error_1,error_2,obserror,dlat_earth,dlon_earth
+  real(r_kind) :: dlat_earth_deg,dlon_earth_deg
   
   real(r_kind) cdist,disterr,disterrmax,rlon00,rlat00
   integer(i_kind) ntest,ios
@@ -204,6 +205,9 @@ subroutine read_anowbufr(nread,ndata,nodata,gstime,&
            if(indata(nxob) >= r360)  indata(nxob) = indata(nxob) - r360
            if(indata(nxob) <  zero)  indata(nxob) = indata(nxob) + r360
 
+           dlon_earth_deg=indata(nxob)
+           dlat_earth_deg=indata(nyob)
+
            dlon_earth=indata(nxob)*deg2rad
            dlat_earth=indata(nyob)*deg2rad
 
@@ -295,10 +299,6 @@ subroutine read_anowbufr(nread,ndata,nodata,gstime,&
            
            conc=conc*obs2model_anowbufr_pm()
 
-           if (kx == code_pm25_ncbufr .and. id_bias_pm2_5 == 1 ) conc=conc+conv_bias_pm2_5
-           if (kx == code_pm10_ncbufr .and. id_bias_pm10 == 1 ) conc=conc+conv_bias_pm10
-
-
            error_1=cermax(ikx)+cermin(ikx)*percent*conc
            error_2=tunable_error*error_1*&
                  sqrt(region_dx(nint(dlat),nint(dlon))/&
@@ -318,8 +318,8 @@ subroutine read_anowbufr(nread,ndata,nodata,gstime,&
            cdata_all(ielev,ndata)  = site_elev               ! elevation
            cdata_all(isite,ndata)  = site_char               ! site character
            cdata_all(iikx,ndata)   = ikx                     ! ordered number in convinfo table
-           cdata_all(ilate,ndata)  = dlat_earth*rad2deg      ! earth relative latitude (degrees)
-           cdata_all(ilone,ndata)  = dlon_earth*rad2deg      ! earth relative longitude (degrees)
+           cdata_all(ilate,ndata)  = dlat_earth_deg          ! earth relative latitude (degrees)
+           cdata_all(ilone,ndata)  = dlon_earth_deg          ! earth relative longitude (degrees)
 
 
         end if

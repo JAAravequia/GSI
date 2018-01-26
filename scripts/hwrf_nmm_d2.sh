@@ -117,6 +117,7 @@ EOF
 #   aerocoef = CRTM coefficients for aerosol effects
 #   cldcoef  = CRTM coefficients for cloud effects
 #   satinfo  = text file with information about assimilation of brightness temperatures
+#   cloudyinfo  = text file with information about assimilation of cloudy radiance
 #   pcpinfo  = text file with information about assimilation of prepcipitation rates
 #   ozinfo   = text file with information about assimilation of ozone data
 #   errtable = text file with obs error for conventional data (optional)
@@ -138,6 +139,7 @@ emiscoef_MWwater=$fixcrtm/FASTEM6.MWwater.EmisCoeff.bin
 aercoef=$fixcrtm/AerosolCoeff.bin
 cldcoef=$fixcrtm/CloudCoeff.bin
 satinfo=$fixgsi/hwrf_satinfo.txt
+cloudyinfo=$fixgsi/cloudy_radiance_info.txt
 atmsbeaminfo=$fixgsi/atms_beamwidth.txt
 scaninfo=$fixgsi/global_scaninfo.txt
 pcpinfo=$fixgsi/nam_global_pcpinfo.txt
@@ -186,6 +188,7 @@ $ncp $emiscoef_MWwater ./FASTEM6.MWwater.EmisCoeff.bin
 $ncp $aercoef  ./AerosolCoeff.bin
 $ncp $cldcoef  ./CloudCoeff.bin
 $ncp $satinfo  ./satinfo
+$ncp $cloudyinfo  ./cloudy_radiance_info.txt
 $ncp $scaninfo ./scaninfo
 $ncp $pcpinfo  ./pcpinfo
 $ncp $ozinfo   ./ozinfo
@@ -245,7 +248,7 @@ $lnsf $hwrf_nmm_obs/${prefixa}.eshrs3.${suffix}   ./hirs3bufrears
 #$lnsf $hwrf_nmm_obs/${prefixa}.ssmis.${suffix}    ./ssmisbufr
 $lnsf $hwrf_nmm_obs/${prefixa}.atms.${suffix}     ./atmsbufr
 $lnsf $hwrf_nmm_obs/${prefixa}.cris.${suffix}     ./crisbufr
-$lnsf $hwrf_nmm_obs/${prefixa}.crisfs.${suffix}   ./crisfsbufr
+$lnsf $hwrf_nmm_obs/${prefixa}.crisf4.${suffix}   ./crisfsbufr
 #$lnsf $hwrf_nmm_obs/${prefixa}.syndata.tcvitals.tm00 ./tcvitl
 $lnsf $hwrf_nmm_obs/${prefixo}.tldplr.${suffix}  ./tldplrbufr
 

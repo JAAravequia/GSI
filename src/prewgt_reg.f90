@@ -74,8 +74,8 @@ subroutine prewgt_reg(mype)
   use balmod, only: rllat,rllat1,llmin,llmax
   use berror, only: dssvs,&
        bw,ny,nx,dssv,vs,be,ndeg,&
-       init_rftable,hzscl,slw,nhscrf,cwcoveqqcov
-  use mpimod, only: nvar_id,levs_id,mpi_sum,mpi_comm_world,ierror,mpi_rtype
+       init_rftable,hzscl,slw,nhscrf,bkgv_write
+  use mpimod, only: nvar_id,levs_id,mpi_sum,mpi_comm_world,mpi_rtype
   use jfunc, only: varq,qoption,varcw,cwoption
   use control_vectors, only: cvars2d,cvars3d
   use control_vectors, only: as2d,as3d,atsfc_sdv
@@ -341,6 +341,7 @@ subroutine prewgt_reg(mype)
      end do
   end do
 
+  if (bkgv_write) call write_bkgvars2_grid
 
 ! hybrid sigma level structure calculated in rdgstat_reg   
 ! ks used to load constant horizontal scales for SF/VP

@@ -208,6 +208,8 @@ subroutine init_rf_z(z_len)
 !                             by Jeff Whitaker for his distance in which the Gaspari-Cohn function 1st = 0.
 !   2011-07-19  tong    - add the calculation of pressure vertical profile for regional model,
 !                             when vertical localization length scale is in units of ln(p)
+!   2017-03-23  Hu      - add code to use hybrid vertical coodinate in WRF MASS
+!                             core
 !
 !   input argument list:
 !     z_len    - filter length scale in grid units
@@ -294,8 +296,12 @@ subroutine init_rf_z(z_len)
                            eta2_ll(k)*(ten*ps_bar(ii,jj,1)-pdtop_ll-pt_ll) + &
                            pt_ll)
                  endif
-                 if (wrf_mass_regional .or. twodvar_regional) then
+                 if (twodvar_regional) then
                     p_interface(k)=one_tenth*(eta1_ll(k)*(ten*ps_bar(ii,jj,1)-pt_ll)+pt_ll)
+                 endif
+                 if (wrf_mass_regional) then
+                    p_interface(k)=one_tenth*(eta1_ll(k)*(ten*ps_bar(ii,jj,1)-pt_ll)+&
+                                              eta2_ll(k) + pt_ll)
                  endif
                  ln_p_int(k)=log(max(p_interface(k),0.0001_r_kind))
               enddo
@@ -967,7 +973,6 @@ subroutine normal_new_factorization_rf_y
   use kinds, only: r_kind,i_kind
   use hybrid_ensemble_parameters, only: grd_loc,vvlocal
   use constants, only: zero,one
-  use mpimod, only: mype
   implicit none
 
   integer(i_kind) i,k,lend,lcount,iadvance,iback,kl,loop,ll,iend
@@ -1160,9 +1165,17 @@ end subroutine normal_new_factorization_rf_y
                                           i_en_perts_io
     use hybrid_ensemble_parameters, only: nelen,en_perts,ps_bar
     use gsi_enscouplermod, only: gsi_enscoupler_put_gsi_ens
-    use mpimod, only: mype,ierror
+    use mpimod, only: mype
+    use get_pseudo_ensperts_mod, only: get_pseudo_ensperts_class
+    use get_wrf_mass_ensperts_mod, only: get_wrf_mass_ensperts_class
+    use get_wrf_nmm_ensperts_mod, only: get_wrf_nmm_ensperts_class
+  use hybrid_ensemble_parameters, only: region_lat_ens,region_lon_ens
+
     implicit none
 
+   type(get_pseudo_ensperts_class) :: pseudo_enspert
+   type(get_wrf_mass_ensperts_class) :: wrf_mass_enspert
+   type(get_wrf_nmm_ensperts_class) :: wrf_nmm_enspert
     type(gsi_bundle),allocatable:: en_bar(:)
     type(gsi_bundle):: bundle_anl,bundle_ens
     type(gsi_grid)  :: grid_anl,grid_ens
@@ -1276,7 +1289,6 @@ end subroutine normal_new_factorization_rf_y
     else
 
 !            read in ensembles
-
        if (.not.regional) then
 
           call get_gefs_ensperts_dualres
@@ -1309,6 +1321,8 @@ end subroutine normal_new_factorization_rf_y
 
                 if(i_en_perts_io==2) then ! get en_perts from save files
                    call en_perts_get_from_save
+                elseif(i_en_perts_io==3) then ! get en_perts from save files
+                   call en_perts_get_from_save_fulldomain
                 else
                    call get_gefs_for_regional
                 endif
@@ -1316,23 +1330,20 @@ end subroutine normal_new_factorization_rf_y
 !     pseudo_hybens = .true.: pseudo ensemble hybrid option for hwrf
 !                             GEFS ensemble perturbations in TC vortex area
 !                             are replaced with TC vortex library perturbations
-#ifdef WRF
                 if (pseudo_hybens) then
-                   call get_pseudo_ensperts
+                   call pseudo_enspert%get_pseudo_ensperts(en_perts,nelen)
                 end if
-#endif /* end NO WRF-library block */
-
              case(2)
 
 !     regional_ensemble_option = 2: ensembles are WRF NMM (HWRF) format
 
-                call get_wrf_nmm_ensperts
+                call wrf_nmm_enspert%get_wrf_nmm_ensperts(en_perts,nelen,region_lat_ens,region_lon_ens,ps_bar)
 
              case(3)
 
 !     regional_ensemble_option = 3: ensembles are ARW netcdf format.
 
-                call get_wrf_mass_ensperts_netcdf
+                call wrf_mass_enspert%get_wrf_mass_ensperts(en_perts,nelen,ps_bar)
 
              case(4)
 
@@ -1542,7 +1553,7 @@ end subroutine normal_new_factorization_rf_y
 
     use kinds, only: r_kind,i_kind
     use gridmod, only: nnnn1o
-    use berror, only: nx,ny,nf
+    use berror, only: nx,ny
     use hybrid_ensemble_parameters, only: grd_ens
     implicit none
 
@@ -1880,7 +1891,7 @@ end subroutine normal_new_factorization_rf_y
 !
 !$$$
     use hybrid_ensemble_parameters, only: n_ens,pwgtflg,pwgt
-    use hybrid_ensemble_parameters, only: grd_ens,grd_anl,p_e2a,uv_hyb_ens
+    use hybrid_ensemble_parameters, only: grd_ens,grd_anl,p_e2a
     use hybrid_ensemble_parameters, only: en_perts
     use general_sub2grid_mod, only: general_sube2suba
     use gridmod,only: regional
@@ -2183,7 +2194,7 @@ end subroutine normal_new_factorization_rf_y
 !
 !$$$
     use hybrid_ensemble_parameters, only: n_ens,pwgtflg,pwgt
-    use hybrid_ensemble_parameters, only: n_ens,grd_ens,grd_anl,p_e2a,uv_hyb_ens
+    use hybrid_ensemble_parameters, only: n_ens,grd_ens,grd_anl,p_e2a
     use hybrid_ensemble_parameters, only: en_perts
     use general_sub2grid_mod, only: general_sube2suba_ad
     use gridmod,only: regional
@@ -2328,7 +2339,7 @@ end subroutine normal_new_factorization_rf_y
 
     use kinds, only: r_kind,i_kind
     use mpimod, only: npe,mype,mpi_comm_world,ierror,mpi_rtype
-    use gridmod, only: nlat,nlon,nsig,nnnn1o,regional,vlevs
+    use gridmod, only: nlat,nlon,nnnn1o,regional,vlevs
     use berror, only: nx,ny,nf
     implicit none
 
@@ -2472,9 +2483,9 @@ end subroutine normal_new_factorization_rf_y
 !$$$
 
   use kinds, only: r_kind,i_kind
-  use gridmod, only: nnnn1o,nsig,vlevs
+  use gridmod, only: vlevs
   use constants, only: zero
-  use mpimod, only: mype,mpi_rtype,ierror,mpi_comm_world
+  use mpimod, only: mpi_rtype,ierror,mpi_comm_world
   implicit none
 
   real(r_kind),dimension(nh_0:nh_1,vlevs,nscl),intent(in   ) :: zsub
@@ -2542,7 +2553,7 @@ subroutine sqrt_beta_s_mult_cvec(grady)
   use control_vectors,only: control_vector
   use timermod, only: timer_ini,timer_fnl
 
-  use gridmod, only: nsig,regional,lat2,lon2
+  use gridmod, only: nsig,lat2,lon2
 
   implicit none
 
@@ -2632,7 +2643,7 @@ subroutine sqrt_beta_s_mult_bundle(grady)
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use timermod, only: timer_ini,timer_fnl
 
-  use gridmod, only: nsig,regional,lat2,lon2
+  use gridmod, only: nsig,lat2,lon2
 
   implicit none
 
@@ -2841,7 +2852,6 @@ subroutine init_sf_xy(jcap_in)
 
   use kinds, only: r_kind,i_kind,r_single
   use hybrid_ensemble_parameters,only: s_ens_hv,sp_loc,grd_ens,grd_loc,sp_ens,n_ens,p_sploc2ens,grd_sploc
-  use hybrid_ensemble_parameters,only: generate_ens
   use hybrid_ensemble_parameters,only: use_localization_grid
   use gridmod,only: use_sp_eqspace
   use general_specmod, only: general_init_spec_vars
@@ -2852,6 +2862,7 @@ subroutine init_sf_xy(jcap_in)
   use egrid2agrid_mod,only: g_create_egrid2agrid
   use general_sub2grid_mod, only: sub2grid_info
   use gsi_enscouplermod, only: gsi_enscoupler_localization_grid
+  use gsi_io, only: verbose
   implicit none
 
   integer(i_kind),intent(in   ) :: jcap_in
@@ -2871,7 +2882,10 @@ subroutine init_sf_xy(jcap_in)
   logical,allocatable,dimension(:)::ksame
   integer(i_kind) nord_sploc2ens
   integer(i_kind) nlon_sploc0,nlon_sploc,nlat_sploc,num_fields
+  logical print_verbose
 
+  print_verbose = .false. .and. mype == 0
+  if(verbose .and. mype == 0)print_verbose=.true.
   make_test_maps=.false.
   nord_sploc2ens=4
 
@@ -2908,7 +2922,7 @@ subroutine init_sf_xy(jcap_in)
      nlon_sploc=grd_ens%nlon
      nlon_sploc0=nlon_sploc
   end if
-  if(mype == 0)then
+  if(print_verbose)then
      write(6,*)' nlat_sploc,nlon_sploc0,nlon_sploc=',nlat_sploc,nlon_sploc0,nlon_sploc
      write(6,*)' nlat_ens  ,nlon_ens              =',grd_ens%nlat,grd_ens%nlon
   end if
@@ -2918,7 +2932,7 @@ subroutine init_sf_xy(jcap_in)
 !  set up spectral variables for jcap
 
   call general_init_spec_vars(sp_loc,jcap,jcap,nlat_sploc,nlon_sploc,eqspace=use_sp_eqspace)
-  if(mype==0) then
+  if(print_verbose) then
      if( grd_ens%nlon == nlon_sploc .and. grd_ens%nlat == nlat_sploc)then
         write(6,*)' ensemble and analysis nlat,nlon are the same '
      else
@@ -3009,7 +3023,7 @@ subroutine init_sf_xy(jcap_in)
      rkm(grd_sploc%nlat-i)=(asin(one)-asin(sp_loc%slat(i)))*rearth*.001_r_kind
      rkm(1+i)=(asin(one)+asin(sp_loc%slat(i)))*rearth*.001_r_kind
   enddo
-  if(mype == 0) write(6,*)' in init_sf_xy, lat,max(dlat)=', &
+  if(print_verbose) write(6,*)' in init_sf_xy, lat,max(dlat)=', &
            rkm(1+(grd_sploc%nlat-2)/2), &
           -rkm(grd_sploc%nlat-(grd_sploc%nlat-2)/2)+rkm(1+(grd_sploc%nlat-2)/2),' km'
 
@@ -3160,10 +3174,9 @@ subroutine sf_xy(f,k_start,k_end)
 !$$$ end documentation block
 
   use kinds, only: r_kind,i_kind
-  use hybrid_ensemble_parameters, only: grd_ens,sp_loc,grd_loc,p_sploc2ens,grd_sploc
+  use hybrid_ensemble_parameters, only: grd_ens,sp_loc,p_sploc2ens,grd_sploc
   use hybrid_ensemble_parameters,only: use_localization_grid
   use egrid2agrid_mod,only: g_egrid2agrid,g_egrid2agrid_ad  
-  use mpimod, only: mype
   implicit none
 
   integer(i_kind),intent(in   ) :: k_start,k_end
@@ -3224,7 +3237,7 @@ subroutine sqrt_sf_xy(z,f,k_start,k_end)
 !$$$ end documentation block
 
   use kinds, only: r_kind,i_kind
-  use hybrid_ensemble_parameters, only: grd_ens,sp_loc,grd_loc,p_sploc2ens,grd_sploc
+  use hybrid_ensemble_parameters, only: grd_ens,sp_loc,p_sploc2ens,grd_sploc
   use hybrid_ensemble_parameters,only: use_localization_grid
   use egrid2agrid_mod,only: g_egrid2agrid
   implicit none
@@ -3288,7 +3301,7 @@ subroutine sqrt_sf_xy_ad(z,f,k_start,k_end)
 !$$$ end documentation block
 
   use kinds, only: r_kind,i_kind
-  use hybrid_ensemble_parameters, only: grd_ens,sp_loc,grd_loc,p_sploc2ens,grd_sploc
+  use hybrid_ensemble_parameters, only: grd_ens,sp_loc,p_sploc2ens,grd_sploc
 
   use hybrid_ensemble_parameters,only: use_localization_grid
   use egrid2agrid_mod,only: g_egrid2agrid_ad
@@ -3411,7 +3424,6 @@ subroutine bkerror_a_en(gradx,grady)
   use control_vectors, only: control_vector
   use timermod, only: timer_ini,timer_fnl
   use hybrid_ensemble_parameters, only: n_ens
-  use hybrid_ensemble_parameters, only: nval_lenz_en
   use gsi_bundlemod,only: gsi_bundlegetpointer
   implicit none
 
@@ -3812,8 +3824,8 @@ subroutine hybens_grid_setup
 !
 !$$$
   use kinds, only: r_kind,i_kind
-  use hybrid_ensemble_parameters, only: aniso_a_en,generate_ens,n_ens,&
-                      s_ens_h,nlon_ens,nlat_ens,jcap_ens,jcap_ens_test,&
+  use hybrid_ensemble_parameters, only: aniso_a_en,n_ens,&
+                      nlon_ens,nlat_ens,jcap_ens,jcap_ens_test,&
                       grd_ens,grd_loc,grd_a1,grd_e1,grd_anl,sp_ens,p_e2a,&
                       dual_res,uv_hyb_ens,grid_ratio_ens
   use hybrid_ensemble_parameters, only: region_lat_ens,region_lon_ens,&
@@ -3822,7 +3834,7 @@ subroutine hybens_grid_setup
   use general_sub2grid_mod, only: general_sub2grid_create_info
   use general_specmod, only: general_init_spec_vars
   use egrid2agrid_mod,only: g_create_egrid2agrid,create_egrid2agrid
-  use mpimod, only: mype,ierror,npe
+  use mpimod, only: mype
   use constants, only: zero,one
   use control_vectors, only: cvars3d,nc2d,nc3d
   use gridmod, only: region_lat,region_lon,region_dx,region_dy
@@ -3964,14 +3976,17 @@ subroutine hybens_localization_setup
    use hybrid_ensemble_parameters, only: readin_beta,beta_s,beta_e,beta_s0,sqrt_beta_s,sqrt_beta_e
    use hybrid_ensemble_parameters, only: readin_localization,create_hybens_localization_parameters, &
                                          vvlocal,s_ens_h,s_ens_hv,s_ens_v,s_ens_vv
+   use gsi_io, only: verbose
 
    implicit none
 
    integer(i_kind),parameter   :: lunin = 47
    character(len=40),parameter :: fname = 'hybens_info'
    integer(i_kind) :: k,msig,istat,nz,kl
-   logical         :: lexist
+   logical         :: lexist,print_verbose
    real(r_kind),allocatable:: s_ens_h_gu_x(:),s_ens_h_gu_y(:)
+   print_verbose=.false. .and. mype == 0
+   if(verbose .and. mype == 0)print_verbose=.true.
 
    ! Allocate
    call create_hybens_localization_parameters
@@ -3994,7 +4009,7 @@ subroutine hybens_localization_setup
             close(lunin)
             call stop2(123)
          endif
-         if(mype==0) write(6,'(" LOCALIZATION, BETA_S, BETA_E VERTICAL PROFILES FOLLOW")')
+         if(print_verbose) write(6,'(" LOCALIZATION, BETA_S, BETA_E VERTICAL PROFILES FOLLOW")')
          do k = 1,grd_ens%nsig
             read(lunin,101) s_ens_hv(k), s_ens_vv(k), beta_s(k), beta_e(k)
             if(mype==0) write(6,101) s_ens_hv(k), s_ens_vv(k), beta_s(k), beta_e(k)
@@ -4029,7 +4044,7 @@ subroutine hybens_localization_setup
       do k = 1,grd_ens%nsig
          beta_e(k) = beta_e(k) * blend_rm(k)
          beta_s(k) = one - beta_e(k)
-         if ( mype == 0 ) write(6,*)'beta_s, beta_e=', &
+         if (print_verbose) write(6,*)'beta_s, beta_e=', &
                           k,beta_s(k),beta_e(k)
       enddo
    endif
@@ -4082,7 +4097,7 @@ subroutine hybens_localization_setup
    call setup_pwgt
 
    ! write out final values for s_ens_hv, s_ens_vv, beta_s, beta_e
-   if ( mype == 0 ) then
+   if ( print_verbose ) then
       write(6,*) 'HYBENS_LOCALIZATION_SETUP: s_ens_hv,s_ens_vv,beta_s,beta_e'
       do k=1,grd_ens%nsig
          write(6,101) s_ens_hv(k), s_ens_vv(k), beta_s(k), beta_e(k)
@@ -4121,17 +4136,20 @@ subroutine convert_km_to_grid_units(s_ens_h_gu_x,s_ens_h_gu_y,nz)
   use kinds, only: r_kind,i_kind
   use hybrid_ensemble_parameters, only: grd_loc,n_ens,s_ens_hv
   use hybrid_ensemble_parameters, only: region_dx_ens,region_dy_ens
+  use gsi_io, only: verbose
   implicit none
 
   integer(i_kind) ,intent(in   ) ::nz
   real(r_kind),intent(  out) ::s_ens_h_gu_x(nz),s_ens_h_gu_y(nz)
-  logical,parameter:: debug=.false.
-   real(r_kind) dxmax,dymax
+  logical :: print_verbose
+  real(r_kind) dxmax,dymax
   integer(i_kind) k,n,nk
 
+  print_verbose=.false.
+  if(verbose) print_verbose=.true.
   dxmax=maxval(region_dx_ens)
   dymax=maxval(region_dy_ens)
-  if(debug)then
+  if(print_verbose)then
      write(6,*)' in convert_km_to_grid_units, min, max region_dx_ens*.001=',&
                  .001_r_kind*minval(region_dx_ens),.001_r_kind*dxmax
      write(6,*)' in convert_km_to_grid_units, min, max region_dy_ens*.001=',&
@@ -4141,7 +4159,7 @@ subroutine convert_km_to_grid_units(s_ens_h_gu_x,s_ens_h_gu_y,nz)
   do k=1,nz
      s_ens_h_gu_x(k)=s_ens_hv(k)/(.001_r_kind*dxmax)
      s_ens_h_gu_y(k)=s_ens_hv(k)/(.001_r_kind*dymax)
-     if(debug) write(6,*)' in convert_km_to_grid_units,s_ens_h,s_ens_h_gu_x,y=', &
+     if(print_verbose) write(6,*)' in convert_km_to_grid_units,s_ens_h,s_ens_h_gu_x,y=', &
                     s_ens_hv(k),s_ens_h_gu_x(k),s_ens_h_gu_y(k)
 
   enddo
@@ -4360,7 +4378,6 @@ subroutine grads1_ens(f,nvert,mype,fname)
   use kinds, only: r_single,r_kind,i_kind
   use constants, only: one
   use gridmod, only: nlat,nlon,lon2,lat2
-  use hybrid_ensemble_parameters, only: grd_ens
   implicit none
 
   integer(i_kind),intent(in   ) :: nvert,mype
@@ -4705,7 +4722,7 @@ subroutine get_region_lat_lon_ens(region_lat_ens,region_lon_ens,rlat_e,rlon_e,nl
   use kinds, only: r_kind,i_kind,r_single
   use constants, only: half,one,two,pi
   use gridmod, only: nlon,nlat,txy2ll
-                               use constants, only: rad2deg     ! debug only
+  use constants, only: rad2deg     ! debug only
   use gridmod, only: region_lat,region_lon
   use mpimod, only: mype
   implicit none
@@ -4887,7 +4904,6 @@ subroutine get_regional_dual_res_grid(eps,r_e,n_a,n_e,x_a,x_e)
 
   use kinds, only: r_kind,i_kind,r_single
   use constants, only: half,one,two
-                               use mpimod, only: mype
   implicit none
 
   real(r_kind),intent(in):: eps      !  width of halo zone that ensemble grid extends beyond analysis grid
@@ -5028,7 +5044,7 @@ subroutine setup_pwgt
 
    use kinds, only: r_kind,i_kind
    use constants,only: zero,one
-   use mpimod, only: mype,npe,mpi_comm_world,ierror,mpi_rtype,mpi_sum
+   use mpimod, only: mype,mpi_comm_world,mpi_rtype,mpi_sum
    use gridmod, only: lat2,lon2,nsig,regional
    use general_sub2grid_mod, only: general_suba2sube
    use balmod, only: wgvk

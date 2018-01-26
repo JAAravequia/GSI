@@ -208,6 +208,7 @@ EOF
 #   aerocoef = CRTM coefficients for aerosol effects
 #   cldcoef  = CRTM coefficients for cloud effects
 #   satinfo  = text file with information about assimilation of brightness temperatures
+#   cloudyinfo  = text file with information about assimilation of cloudy radiance
 #   satangl  = angle dependent bias correction file (fixed in time)
 #   pcpinfo  = text file with information about assimilation of prepcipitation rates
 #   ozinfo   = text file with information about assimilation of ozone data
@@ -232,6 +233,7 @@ cldcoef=$fixcrtm/CloudCoeff.bin
 satangl=$fixgsi/global_satangbias.txt
 scaninfo=$fixgsi/global_scaninfo.txt
 satinfo=$fixgsi/global_satinfo.txt
+cloudyinfo=$fixgsi/cloudy_radiance_info.txt
 convinfo=$fixgsi/global_convinfo_reg_test.txt
 anavinfo=$fixgsi/global_anavinfo.l64.txt
 ozinfo=$fixgsi/global_ozinfo.txt
@@ -278,6 +280,7 @@ $ncp $cldcoef  ./CloudCoeff.bin
 $ncp $satangl  ./satbias_angle
 $ncp $scaninfo ./scaninfo
 $ncp $satinfo  ./satinfo
+$ncp $cloudyinfo  ./cloudy_radiance_info.txt
 $ncp $pcpinfo  ./pcpinfo
 $ncp $ozinfo   ./ozinfo
 $ncp $convinfo ./convinfo
@@ -338,7 +341,7 @@ ln -s -f $global_T62_obs/${prefix_obs}amsre.${suffix}    ./amsrebufr
 ln -s -f $global_T62_obs/${prefix_obs}ssmis.${suffix}    ./ssmisbufr
 ln -s -f $global_T62_obs/${prefix_obs}atms.${suffix}     ./atmsbufr
 ln -s -f $global_T62_obs/${prefix_obs}cris.${suffix}     ./crisbufr
-ln -s -f $global_T62_obs/${prefix_obs}crisfs.${suffix}   ./crisfsbufr
+ln -s -f $global_T62_obs/${prefix_obs}crisf4.${suffix}   ./crisfsbufr
 ln -s -f $global_T62_obs/${prefix_obs}syndata.tcvitals.tm00 ./tcvitl
 
 

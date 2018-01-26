@@ -166,7 +166,7 @@ subroutine cloud_calc(p0d,q1d,t1d,clwmr,fice,frain,frimef,&
 ! program history log:
 !   2011-06-18 Yanqiu Zhu
 
-  use gridmod, only: lat2,lon2,nsig,wrf_mass_regional
+  use gridmod, only: lat2,lon2,wrf_mass_regional
   implicit none
 
   integer(i_kind) i,j
@@ -579,13 +579,11 @@ end subroutine set_cloud_lower_bound
 
 
       real(r_kind) function fpvsx(t)
-      use constants, only: tmix, xai, xbi, xa, xb, ttp, psatk, init_constants
+      use constants, only: tmix, xai, xbi, xa, xb, ttp, psatk
       implicit none
 
       real(r_kind) :: t
       real(r_kind) :: tr
-
-      call init_constants(.true.)
 
       tr=ttp/t
  

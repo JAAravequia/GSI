@@ -67,14 +67,14 @@ subroutine gesinfo(mype)
 !
 !$$$
   use kinds, only: i_kind,r_kind,r_single
-  use obsmod, only: iadate,ianldate,time_offset
+  use obsmod, only: iadate,ianldate,time_offset,iadatemn
   use gsi_4dvar, only: ibdate, iedate, iadatebgn, iadateend, iwinbgn,time_4dvar
   use gsi_4dvar, only: nhr_assimilation,min_offset
   use mpimod, only: npe
   use gridmod, only: idvc5,ak5,bk5,ck5,tref5,&
       regional,nsig,regional_fhr,regional_time,&
       wrf_nmm_regional,wrf_mass_regional,twodvar_regional,nems_nmmb_regional,cmaq_regional,&
-      ntracer,ncloud,nlat,nlon,idvm5,&
+      ntracer,ncloud,idvm5,&
       ncepgfs_head,ncepgfs_headv,idpsfc5,idthrm5,idsl5,cp5,jcap_b, use_gfs_nemsio
   use sigio_module, only: sigio_head,sigio_srhead,sigio_sclose,&
       sigio_sropen
@@ -83,6 +83,9 @@ subroutine gesinfo(mype)
 
   use constants, only: zero,h300,r60,r3600,i_missing
 
+  use read_wrf_mass_files_mod, only: read_wrf_mass_files_class
+  use read_wrf_nmm_files_mod, only: read_wrf_nmm_files_class
+  use gsi_io, only: verbose
   implicit none
 
 ! Declare passed variables
@@ -91,6 +94,8 @@ subroutine gesinfo(mype)
 ! Declare local parameters
   integer(i_kind),parameter:: lunges=11
   real(r_kind),parameter::  zero_001=0.001_r_kind
+  type(read_wrf_nmm_files_class):: wrf_nmm_files
+  type(read_wrf_mass_files_class):: wrf_mass_files
 
 ! Declare local variables
 
@@ -114,6 +119,8 @@ subroutine gesinfo(mype)
   type(ncepgfs_head):: gfshead
   type(ncepgfs_headv):: gfsheadv
   type(nemsio_gfile) :: gfile2
+  logical :: print_verbose
+  logical :: fatal = .false.
 
 !---------------------------------------------------------------------
 ! Get guess date and vertical coordinate structure from atmospheric
@@ -122,6 +129,8 @@ subroutine gesinfo(mype)
   mype_out=npe/2
 
 
+  print_verbose=.false.
+  if(verbose)print_verbose=.true.
 ! Handle non-GMAO interface (ie, NCEP interface)
   write(filename,'("sigf",i2.2)')nhr_assimilation
   inquire(file=filename,exist=fexist)
@@ -138,7 +147,13 @@ subroutine gesinfo(mype)
      idate4(3)=regional_time(3)  !  day
      idate4(4)=regional_time(1)  !  year
      hourg=regional_fhr          !  fcst hour
-
+! Handle RURTMA date:  get iadatemn
+     iadatemn(1)=regional_time(1)  !  year
+     iadatemn(2)=regional_time(2)  !  month
+     iadatemn(3)=regional_time(3)  !  day
+     iadatemn(4)=regional_time(4)  !  hour
+     iadatemn(5)=regional_time(5)  !  minute
+     if(print_verbose)write (6,*) 'in gesinfo: iadatemn with minutes', iadatemn
 ! Handle NCEP global cases
   else
 
@@ -155,7 +170,7 @@ subroutine gesinfo(mype)
         endif
         if (mype==mype_out) &
              write(6,*)'GESINFO:  Read NCEP sigio format file, ',filename
-           
+
 !       Extract information from NCEP atmospheric guess using sigio
 !       Fill structure with NCEP sigio header information
         gfshead%fhour=sighead%fhour
@@ -170,10 +185,10 @@ subroutine gesinfo(mype)
         gfshead%idsl=sighead%idsl
         gfshead%ncldt=sighead%ncldt
         gfshead%nvcoord=sighead%nvcoord
-        
+
         allocate(gfsheadv%vcoord(gfshead%levs+1,gfshead%nvcoord))
         gfsheadv%vcoord=sighead%vcoord
-        
+
         allocate(gfsheadv%cpi(gfshead%ntrac+1))
         if (mod(gfshead%idvm/10,10) == 3) then
            do k=1,gfshead%ntrac+1
@@ -344,7 +359,7 @@ subroutine gesinfo(mype)
         call stop2(85)
      endif
 
-!    Load reference temperature array (used by general coordinate)        
+!    Load reference temperature array (used by general coordinate)
      do k=1,nsig
         tref5(k)=h300
      end do
@@ -363,17 +378,33 @@ subroutine gesinfo(mype)
         end do
      end if
 
-!    Check for consistency with namelist settings           
-     if ((gfshead%jcap/=jcap_b.and..not.regional) .or. gfshead%levs/=nsig) then
-        write(6,*)'GESINFO:  ***ERROR*** guess res. inconsistent with namelist'
-        write(6,*)'      guess jcap_b,nsig=',gfshead%jcap,gfshead%levs
-        write(6,*)'   namelist jcap_b,nsig=',jcap_b,nsig
-        call stop2(85)
+!    Check for consistency with namelist settings
+     if (gfshead%jcap/=jcap_b.and..not.regional .or. gfshead%levs/=nsig) then
+        if (gfshead%levs/=nsig) then
+           write(6,*)'GESINFO:  ***ERROR*** guess levels inconsistent with namelist'
+           write(6,*)'      guess nsig=',gfshead%levs
+           write(6,*)'   namelist nsig=',nsig
+           fatal = .true.
+        endif
+        if (gfshead%jcap/=jcap_b.and..not.regional ) then
+           if (gfshead%jcap < 0) then
+              ! FV3GFS write component does not write JCAP to the NEMSIO file
+              write(6,*)'GESINFO:  ***WARNING*** guess jcap inconsistent with namelist'
+              write(6,*)'GESINFO:  ***WARNING*** this is a FV3GFS NEMSIO file'
+              fatal = .false.
+           else
+              write(6,*)'GESINFO:  ***ERROR*** guess jcap inconsistent with namelist'
+              fatal = .true.
+           endif
+           write(6,*)'      guess jcap_b=',gfshead%jcap
+           write(6,*)'   namelist jcap_b=',jcap_b
+        endif
+        if ( fatal ) call stop2(85)
      endif
 
 
 !    Echo select header information to stdout
-     if(mype==mype_out) then
+     if(mype==mype_out .and. print_verbose) then
         if ( .not. use_gfs_nemsio ) then
            write(6,100) gfshead%jcap,gfshead%levs,gfshead%latb,gfshead%lonb,&
                 gfshead%ntrac,gfshead%ncldt,idvc5,gfshead%nvcoord,&
@@ -476,11 +507,11 @@ subroutine gesinfo(mype)
 ! Get information about date/time and number of guess files
   if (regional) then
      if(wrf_nmm_regional) then
-        call read_wrf_nmm_files(mype)
+        call wrf_nmm_files%read_wrf_nmm_files(mype)
      else if(nems_nmmb_regional) then
-        call read_nems_nmmb_files(mype)
+        call wrf_nmm_files%read_nems_nmmb_files(mype)
      else if(wrf_mass_regional) then
-        call read_wrf_mass_files(mype)
+        call wrf_mass_files%read_wrf_mass_files(mype)
      else if(twodvar_regional) then
         call read_2d_files(mype)
      else if(cmaq_regional) then
@@ -489,11 +520,16 @@ subroutine gesinfo(mype)
   else
      call read_files(mype)
   endif
-     
+
 
   if(mype==mype_out) then
-     write(6,*)'GESINFO:  Guess    date is ',idate4,hourg
-     write(6,*)'GESINFO:  Analysis date is ',iadate,ianldate,time_offset
+     if (twodvar_regional) then
+        write(6,*)'GESINFO: 2dvar-Guess-date is',regional_time
+        write(6,*)'GESINFO: Analysis date with minute: ',iadatemn
+     else
+        write(6,*)'GESINFO:  Guess    date is ',idate4,hourg
+        write(6,*)'GESINFO:  Analysis date is ',iadate,ianldate,time_offset
+     endif
   endif
 
   if (allocated(nems_vcoord))     deallocate(nems_vcoord)
