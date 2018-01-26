@@ -489,7 +489,6 @@
 !                     analysis scheme
 !     lrun_subdirs - logical to toggle use of subdirectires at runtime for pe specific files
 !     mpes_observer - informs Solver number of PEs used to run Observer
-!     emiss_bc    - option to turn on emissivity bias predictor
 !     lsingleradob - logical for single radiance observation assimilation.
 !                   Uses existing bufr file and rejects all radiances that don''t fall within a tight threshold around
 !                   oblat/oblon (SINGLEOB_TEST)
@@ -1167,6 +1166,10 @@
       write(6,*) ' jcap_cut < jcap+1 not allowed '
     end if
   end if
+
+  if (.not.(emiss_bc) .and. mype == 0)  &
+     write(6,*) ' Emiss_bc no longer used'
+
   if(vqc .and. niter_no_qc(1) < niter(1))then
      varqc_max=c_varqc*(niter(1)-niter_no_qc(1))
      if(varqc_max < one .and. varqc_max > zero)then

@@ -116,7 +116,7 @@ module radinfo
   logical tzr_bufrsave! logical to turn off or on the bufr file output for Tz retrieval (true=on)
 
   logical adp_anglebc ! logical to turn off or on the variational radiance angle bias correction
-  logical emiss_bc    ! logical to turn off or on the emissivity predictor
+  logical emiss_bc    ! logical to turn off or on the emissivity predictor (now obsolete - always true)
   logical passive_bc  ! logical to turn off or on radiance bias correction for monitored channels
   logical use_edges   ! logical to use data on scan edges (.true.=to use)
 
@@ -261,7 +261,7 @@ contains
     newpc4pred = .false.  ! .true.=turn on new preconditioning for bias coefficients
     passive_bc = .false.  ! .true.=turn on bias correction for monitored channels
     adp_anglebc = .false. ! .true.=turn on angle bias correction
-    emiss_bc = .false.    ! .true.=turn on emissivity bias correction
+    emiss_bc = .true.     ! .true.=turn on emissivity bias correction
     angord = 0            ! order of polynomial for angle bias correction
     use_edges = .true.    ! .true.=to use data on scan edges
     upd_pred = one        ! 1.0=bias correction coefficients evolve
@@ -335,10 +335,8 @@ contains
 
     call set_radiag ('version',30303,ier)
     if (adp_anglebc) npred=npred+angord
-    if (emiss_bc) then
-        npred=npred+1
-        call set_radiag ('version',30303,ier)
-    endif
+    npred=npred+1
+    call set_radiag ('version',30303,ier)
     
 !   inquire about variables in guess
     mxlvs = 0

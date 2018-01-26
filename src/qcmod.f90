@@ -119,7 +119,7 @@ module qcmod
   use constants, only: r0_01,r0_02,r0_03,r0_04,r0_05,r10,r60,r100,h300,r400,r1000,r2000,r2400,r4000
   use constants, only: deg2rad,rad2deg,t0c,one_tenth,rearth_equator
   use obsmod, only: rmiss_single
-  use radinfo, only: iuse_rad,passive_bc
+  use radinfo, only: iuse_rad
   use radinfo, only: tzr_qc
   use radiance_mod, only: rad_obs_type
   implicit none
@@ -2075,7 +2075,7 @@ subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,   &
 
 !       reject channels with iuse_rad(j)=-1 when they are peaking below the cloud
         j=ich(i)
-        if (passive_bc .and. iuse_rad(j)==-1) then
+        if (iuse_rad(j)==-1) then
            if (lcloud .ge. kmax(i)) then
               if(luse)aivals(11,is)   = aivals(11,is) + one
               varinv(i) = zero
@@ -2514,6 +2514,8 @@ subroutine qc_amsua(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse,   &
 !                           cloud info, diff_clw, scattering and surface wind
 !                           speed for AMSUA/ATMS cloudy radiance assimilation
 !     2015-09-20  zhu     - add radmod to generalize all-sky condition for radiance
+!     2017-01-26  collard - Remove references to passive_bc and emiss_bc (latter
+!                           assumed true by default)
 !
 ! input argument list:
 !     nchanl       - number of channels per obs
@@ -2558,7 +2560,6 @@ subroutine qc_amsua(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse,   &
   use kinds, only: r_kind, i_kind
   use mpeu_util, only: getindex
   use gsi_metguess_mod, only: gsi_metguess_get
-  use radinfo, only: emiss_bc
   implicit none
 
 ! Declare passed variables
@@ -2874,49 +2875,33 @@ subroutine qc_amsua(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse,   &
 !       forecast tracks to be degraded without this QC.
 !       (Is this still true?)
            
-           if (sea .and. (.not.emiss_bc)) then
-              thrd1=r0_05
-              thrd2=r0_03
-              thrd3=r0_05
+           if (sea) then
+              thrd1=0.025_r_kind
+              thrd2=0.015_r_kind
+              thrd3=0.030_r_kind
+              thrd15=0.030_r_kind
+           else
+              thrd1=0.020_r_kind
+              thrd2=0.015_r_kind
+              thrd3=0.035_r_kind
+              thrd15=0.015_r_kind
            end if
            
-           if (emiss_bc) then
-              if (sea) then
-                 thrd1=0.025_r_kind
-                 thrd2=0.015_r_kind
-                 thrd3=0.030_r_kind
-                 thrd15=0.030_r_kind
-              else
-                 thrd1=0.020_r_kind
-                 thrd2=0.015_r_kind
-                 thrd3=0.035_r_kind
-                 thrd15=0.015_r_kind
-              end if
-           end if
-           
-           if ((sea .and. (.not.emiss_bc)) .or. emiss_bc) then
-              dtde1 = emissivity_k(ich238)
-              de1   = zero
-              if (dtde1 /= zero) de1=abs(tbc(ich238))/dtde1
-              dtde2 = emissivity_k(ich314)
-              de2   = zero
-              if (dtde2 /= zero) de2=abs(tbc(ich314))/dtde2
-              dtde3 = emissivity_k(ich503)
-              de3   = zero
-              if (dtde3 /= zero) de3=abs(tbc(ich503))/dtde3
+           dtde1 = emissivity_k(ich238)
+           de1   = zero
+           if (dtde1 /= zero) de1=abs(tbc(ich238))/dtde1
+           dtde2 = emissivity_k(ich314)
+           de2   = zero
+           if (dtde2 /= zero) de2=abs(tbc(ich314))/dtde2
+           dtde3 = emissivity_k(ich503)
+           de3   = zero
+           if (dtde3 /= zero) de3=abs(tbc(ich503))/dtde3
               
-              if (sea .and. (.not.emiss_bc)) then
-                 qc4emiss = de2>thrd2 .or. de3>thrd3 .or. de1>thrd1
-              end if
-              
-              if (emiss_bc) then
-                 dtde15= emissivity_k(ich890)
-                 de15  = zero
-                 if (dtde15 /= zero) de15=abs(tbc(ich890))/dtde15
+           dtde15= emissivity_k(ich890)
+           de15  = zero
+           if (dtde15 /= zero) de15=abs(tbc(ich890))/dtde15
                  
-                 qc4emiss= de2>thrd2 .or. de3>thrd3 .or. de1>thrd1 .or. de15>thrd15
-              end if
-           end if
+           qc4emiss= de2>thrd2 .or. de3>thrd3 .or. de1>thrd1 .or. de15>thrd15
         end if
      endif ! <lcw4crtm>
 

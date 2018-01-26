@@ -214,7 +214,7 @@
   use crtm_spccoeff, only: sc
   use radinfo, only: nuchan,tlapmean,predx,cbias,ermax_rad,tzr_qc,&
       npred,jpch_rad,varch,varch_cld,iuse_rad,icld_det,nusis,fbias,retrieval,b_rad,pg_rad,&
-      air_rad,ang_rad,adp_anglebc,angord,ssmis_precond,emiss_bc,upd_pred, &
+      air_rad,ang_rad,adp_anglebc,angord,ssmis_precond,upd_pred, &
       passive_bc,ostats,rstats,newpc4pred,radjacnames,radjacindxs,nsigradjac
   use gsi_nstcouplermod, only: nstinfo
   use read_diag, only: get_radiag,ireal_radiag,ipchan_radiag
@@ -468,16 +468,12 @@
 !       Set error instrument channels
         tnoise(jc)=varch(j)
         channel_passive=iuse_rad(j)==-1 .or. iuse_rad(j)==0
-        if (iuse_rad(j)< -1 .or. (channel_passive .and.  &
-           .not.rad_diagsave)) tnoise(jc)=r1e10
-        if (passive_bc .and. channel_passive) tnoise(jc)=varch(j)
+        if (iuse_rad(j)< -1) tnoise(jc)=r1e10
         if (iuse_rad(j)>0) l_may_be_passive=.true.
         if (tnoise(jc) < 1.e4_r_kind) toss = .false.
 
         tnoise_cld(jc)=varch_cld(j)
-        if (iuse_rad(j)< -1 .or. (iuse_rad(j) == -1 .and.  &
-           .not.rad_diagsave)) tnoise_cld(jc)=r1e10
-        if (passive_bc .and. (iuse_rad(j)==-1)) tnoise_cld(jc)=varch_cld(j)
+        if (iuse_rad(j) < -1) tnoise_cld(jc)=r1e10
      end if
   end do
 
@@ -940,25 +936,25 @@
 
 
 
-!       Apply bias correction
  
-           kmax(i) = 0
-           if (lwrite_peakwt .or. passive_bc) then
-              ptau5derivmax = -9.9e31_r_kind
-! maximum of weighting function is level at which transmittance
+! Calculate maximum of weighting function is level at which transmittance
 ! (ptau5) is changing the fastest.  This is used for the level
-! assignment (needed for vertical localization).
-              weightmax(i) = zero
-              do k=2,nsig
-                 ptau5deriv = abs( (ptau5(k-1,i)-ptau5(k,i))/ &
-                    (log(prsltmp(k-1))-log(prsltmp(k))) )
-                 if (ptau5deriv > ptau5derivmax) then
-                    ptau5derivmax = ptau5deriv
-                    kmax(i) = k
-                    weightmax(i) = r10*prsitmp(k) ! cb to mb.
-                 end if
-              enddo
-           end if
+! assignment (needed for vertical localization) and for cloud detection for 
+! passive IR channels.
+           kmax(i) = 0
+           ptau5derivmax = -9.9e31_r_kind
+           weightmax(i) = zero
+           do k=2,nsig
+              ptau5deriv = abs( (ptau5(k-1,i)-ptau5(k,i))/ &
+                 (log(prsltmp(k-1))-log(prsltmp(k))) )
+              if (ptau5deriv > ptau5derivmax) then
+                 ptau5derivmax = ptau5deriv
+                 kmax(i) = k
+                 weightmax(i) = r10*prsitmp(k) ! cb to mb.
+               end if
+           enddo
+
+!       Apply bias correction
 
            tlapchn(i)= (ptau5(2,i)-ptau5(1,i))*(tsavg5-tvp(2))
            do k=2,nsig-1
@@ -985,7 +981,7 @@
            endif                                                   
 
 !          emissivity sensitivity bias predictor
-           if (adp_anglebc .and. emiss_bc) then 
+           if (adp_anglebc) then 
               pred(8,i)=zero
               if (.not.sea .and. abs(emissivity_k(i))>0.001_r_kind) then
                  pred(8,i)=emissivity_k(i)
@@ -1087,8 +1083,7 @@
         do i=1,nchanl
            mm=ich(i)
            channel_passive=iuse_rad(ich(i))==-1 .or. iuse_rad(ich(i))==0
-           if(tnoise(i) < 1.e4_r_kind .or. (channel_passive .and. rad_diagsave) &
-                  .or. (passive_bc .and. channel_passive))then
+           if(tnoise(i) < 1.e4_r_kind .or. channel_passive )then
               varinv(i)     = varinv(i)/error0(i)**2
               errf(i)       = error0(i)
            else
@@ -1348,8 +1343,7 @@
            do i=2,nlev
 !          do i=1,nlev
               channel_passive=iuse_rad(ich(i))==-1 .or. iuse_rad(ich(i))==0
-              if (varinv(i)<tiny_r_kind .and. ((iuse_rad(ich(i))>=1) .or. &
-                  (passive_bc .and. channel_passive))) then
+              if (varinv(i)<tiny_r_kind .and. iuse_rad(ich(i))>=0) then
                  kval=max(i-1,kval)
                  if(amsub .or. hsb .or. mhs)kval=nlev
                  if(amsua .and. i <= 3)kval = zero
