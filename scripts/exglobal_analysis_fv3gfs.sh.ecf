@@ -242,6 +242,14 @@ cyc=$(echo $CDATE | cut -c9-10)
 GDATE=$($NDATE -$assim_freq $CDATE)
 gPDY=$(echo $GDATE | cut -c1-8)
 gcyc=$(echo $GDATE | cut -c9-10)
+if [ $DOIAU = "YES" ]; then
+   SDATE=$($NDATE -3 $CDATE)
+   sPDY=$(echo $SDATE | cut -c1-8)
+   scyc=$(echo $SDATE | cut -c9-10)
+else
+   sPDY=$PDY
+   scyc=$cyc
+fi
 
 # Get header information from Ensemble Guess files
 if [ $DOHYBVAR = "YES" ]; then
@@ -320,7 +328,7 @@ RAPIDREFRESH_CLDSURF=${RAPIDREFRESH_CLDSURF:-""}
 CHEM=${CHEM:-""}
 NST=${NST:-""}
 
-#uGSI Namelist parameters
+#GSI Namelist parameters
 lrun_subdirs=${lrun_subdirs:-".true."}
 if [ $DOHYBVAR = "YES" ]; then
    l_hyb_ens=.true.
@@ -333,7 +341,7 @@ else
 fi
 
 # Set 4D-EnVar specific variables
-if [ $DOHYBVAR = "YES" -a $l4densvar = ".true." -a $lwrite4danl = ".true." ]; then
+if [ $l4densvar = ".true." -a $lwrite4danl = ".true." ]; then
    ATMA03=${ATMA03:-${COMOUT}/${APREFIX}atma003${ASUFFIX}}
    ATMA04=${ATMA04:-${COMOUT}/${APREFIX}atma004${ASUFFIX}}
    ATMA05=${ATMA05:-${COMOUT}/${APREFIX}atma005${ASUFFIX}}
@@ -554,7 +562,7 @@ fi
 # Output files
 # $SFCANL is no longer created here since global_cycle is not called
 $NLN $ATMANL siganl
-if [ $DOHYBVAR = "YES" -a $l4densvar = ".true." -a $lwrite4danl = ".true." ]; then
+if [ $l4densvar = ".true." -a $lwrite4danl = ".true." ]; then
    $NLN $ATMA03   siga03
    $NLN $ATMA04   siga04
    $NLN $ATMA05   siga05
@@ -847,7 +855,7 @@ $ERRSCRIPT || exit 2
 ##############################################################
 # Calculate analysis increment here before releasing FV3 forecast
 if [ $DO_CALC_INCREMENT = "YES" ]; then
-  if [ $DOIAU = "YES" -a $l4densvar = ".true." -a $lwrite4danl = ".true." ]; then
+  if [ $l4densvar = ".true." -a $lwrite4danl = ".true." ]; then
      ncmd=7
      $NLN sigf03 atmges_mem001 ; $NLN siga03 atmanl_mem001 ; $NLN ${COMOUT}/${APREFIX}atmi003.nc atminc_mem001
      $NLN sigf04 atmges_mem002 ; $NLN siga04 atmanl_mem002 ; $NLN ${COMOUT}/${APREFIX}atmi004.nc atminc_mem002
@@ -928,10 +936,10 @@ if [ $DOGCYCLE = "YES" ]; then
     fi
 
     for n in $(seq 1 $ntiles); do
-        $NLN $COMIN_GES/RESTART/$PDY.${cyc}0000.sfc_data.tile${n}.nc $DATA/fnbgsi.00$n
-        $NLN $COMOUT/RESTART/$PDY.${cyc}0000.sfcanl_data.tile${n}.nc $DATA/fnbgso.00$n
-        $NLN $FIXfv3/$CASE/${CASE}_grid.tile${n}.nc                  $DATA/fngrid.00$n
-        $NLN $FIXfv3/$CASE/${CASE}_oro_data.tile${n}.nc              $DATA/fnorog.00$n
+        $NLN $COMIN_GES/RESTART/$sPDY.${scyc}0000.sfc_data.tile${n}.nc $DATA/fnbgsi.00$n
+        $NLN $COMOUT/RESTART/$sPDY.${scyc}0000.sfcanl_data.tile${n}.nc $DATA/fnbgso.00$n
+        $NLN $FIXfv3/$CASE/${CASE}_grid.tile${n}.nc                    $DATA/fngrid.00$n
+        $NLN $FIXfv3/$CASE/${CASE}_oro_data.tile${n}.nc                $DATA/fnorog.00$n
     done
 
     export APRUNCY=$APRUN_CYCLE
