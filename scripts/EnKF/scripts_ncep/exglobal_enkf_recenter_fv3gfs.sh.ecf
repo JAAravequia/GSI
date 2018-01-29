@@ -259,6 +259,15 @@ gPDY=$(echo $GDATE | cut -c1-8)
 gcyc=$(echo $GDATE | cut -c9-10)
 GDUMP=${GDUMP:-"gdas"}
 
+if [ $DOIAU = "YES" ]; then
+   SDATE=$($NDATE -3 $CDATE)
+   sPDY=$(echo $SDATE | cut -c1-8)
+   scyc=$(echo $SDATE | cut -c9-10)
+else
+   sPDY=$PDY
+   scyc=$cyc
+fi
+
 # Get dimension information based on CASE
 res=$(echo $CASE | cut -c2-)
 JCAP_CASE=$((res*2-2))
@@ -312,10 +321,10 @@ for n in $(seq 1 $ntiles); do
 
         [[ $TILE_NUM -eq 1 ]] && mkdir -p $COMIN_ENS/$memchar/RESTART
 
-        $NLN $COMIN_GES_ENS/$memchar/RESTART/$PDY.${cyc}0000.sfc_data.tile${n}.nc $DATA/fnbgsi.$cmem
-        $NLN $COMIN_ENS/$memchar/RESTART/$PDY.${cyc}0000.sfcanl_data.tile${n}.nc  $DATA/fnbgso.$cmem
-        $NLN $FIXfv3/$CASE/${CASE}_grid.tile${n}.nc                               $DATA/fngrid.$cmem
-        $NLN $FIXfv3/$CASE/${CASE}_oro_data.tile${n}.nc                           $DATA/fnorog.$cmem
+        $NLN $COMIN_GES_ENS/$memchar/RESTART/$sPDY.${scyc}0000.sfc_data.tile${n}.nc $DATA/fnbgsi.$cmem
+        $NLN $COMIN_ENS/$memchar/RESTART/$sPDY.${scyc}0000.sfcanl_data.tile${n}.nc  $DATA/fnbgso.$cmem
+        $NLN $FIXfv3/$CASE/${CASE}_grid.tile${n}.nc                                 $DATA/fngrid.$cmem
+        $NLN $FIXfv3/$CASE/${CASE}_oro_data.tile${n}.nc                             $DATA/fnorog.$cmem
 
     done
 
