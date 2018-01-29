@@ -146,7 +146,7 @@ subroutine setupvis(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   n_alloc(:)=0
   m_alloc(:)=0
-  vis_errmax=5000.0_r_kind
+  vis_errmax=4000.0_r_kind
 !*********************************************************************************
 ! Read and reformat observations in work arrays.
   read(lunin)data,luse,ioid
@@ -331,9 +331,17 @@ subroutine setupvis(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
      if(.not.in_curbin) cycle
 
+!RY: follow Manuel's way to do a Single Observation test !     --a tentative way
+     rstation_id     = data(id,i)
+!RY: for Single obs. at the selected obs. write out the interpolatant value
+     if (trim(station_id) .eq. 'KSXT') then
+        call tintrp2SO (ges_vis,visges,dlat,dlon,dtime,hrdifsig,mype,nfldsig)
+     else
 ! Interpolate to get vis at obs location/time
-     call tintrp2a11(ges_vis,visges,dlat,dlon,dtime,hrdifsig,&
+       call tintrp2a11(ges_vis,visges,dlat,dlon,dtime,hrdifsig,&
         mype,nfldsig)
+     endif
+!RY: ****  END the code for SO
 
 ! Adjust observation error
      ratio_errors=error/data(ier,i)
@@ -370,6 +378,17 @@ subroutine setupvis(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         error = zero
         ratio_errors=zero
      end if
+!RY: follow Manuel's way to do a Single Observation test !     --a tentative way
+      rstation_id     = data(id,i)
+      if (trim(station_id) .ne. 'KSXT') then
+         error = zero
+         ratio_errors=zero
+      else
+        write (6,*) 'trim(station_id=)',trim(station_id)
+        write (6,*) 'error=', 1.0/error,'ddiff=',ddiff
+     endif
+!RY: ****  END Manuel's way to do a Single Observation test 
+
      if (ratio_errors*error <=tiny_r_kind) muse(i)=.false.
      if (nobskeep>0.and.luse_obsdiag) muse(i)=obsdiags(i_vis_ob_type,ibin)%tail%muse(nobskeep)
 
