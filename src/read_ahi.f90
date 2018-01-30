@@ -51,6 +51,7 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
       checkob,finalcheck,score_crit
   use gridmod, only: diagnostic_reg,regional,nlat,nlon,txy2ll,tll2xy,rlats,rlons
   use constants, only: deg2rad,zero,one,rad2deg,r60inv,r60
+  use obsmod, only: bmiss
   use radinfo, only: iuse_rad,jpch_rad,nusis
   use gsi_4dvar, only: l4dvar,iwinbgn,winlen,l4densvar,thin4d
   use deter_sfc_mod, only: deter_sfc
@@ -76,7 +77,7 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
   integer(i_kind) ,intent(in   ) :: mpi_comm_sub
 
 ! Declare local parameters
-  integer(i_kind),parameter:: nimghdr=13
+  integer(i_kind),parameter:: nimghdr=14
   integer(i_kind),parameter:: maxinfo=33
   integer(i_kind),parameter:: maxchanl=11
   real(r_kind),parameter:: r360=360.0_r_kind
@@ -84,7 +85,7 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
   real(r_kind),parameter:: tbmin=50.0_r_kind
   real(r_kind),parameter:: tbmax=550.0_r_kind
   character(80),parameter:: hdrh8  = &            ! Himawari-8 AHI header
-              'SAID YEAR MNTH DAYS HOUR MINU SECW CLATH CLONH SAZA SOZA BEARAZ SOLAZI'
+              'SAID GCLONG SCLF YEAR MNTH DAYS HOUR MINU SECO CLATH CLONH LSQL SAZA SOZA'
 
 ! Declare local variables
   logical outside,iuse,assim
@@ -110,8 +111,8 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
   real(r_kind),allocatable,dimension(:,:):: data_all
 
   real(r_double),dimension(nimghdr) :: hdrh8arr       !   Himawari8 AHI data
-  real(r_double),dimension(3,12) :: dataahi              !   Himawari8 AHI data
-
+  real(r_double),dimension(12) :: dataahi,dataahi1              !   Himawari8 AHI data
+  real(r_kind) rclrsky
 !--start-- variables for AHI cloud detection
   real(r_kind)                        :: ts_coef0
   real(r_kind), dimension(4)          :: ts_coef
@@ -146,10 +147,10 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
   ndata=0
   nodata=0
   nchanl=10       ! the channel number
-  ilath=8        ! the position of latitude in the header
-  ilonh=9        ! the position of longitude in the header
-  ilzah=10       ! satellite zenith angle
-  iszah=11       ! solar zenith angle
+  ilath=10        ! the position of latitude in the header
+  ilonh=11        ! the position of longitude in the header
+  ilzah=13       ! satellite zenith angle
+  iszah=14       ! solar zenith angle
 
 ! If all channels of a given sensor are set to monitor or not
 ! assimilate mode (iuse_rad<1), reset relative weight to zero.
@@ -192,10 +193,10 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
                  2.16380_r_kind/)
   ts_coef0   = -51.0104_r_kind
   !---should be channels 11.2 and 12.38 microns
-  ts_ichan   = (/10,11/) ! (8,9) offset by two for bands 5 and 6 of AHI
+  ts_ichan   = (/4,5/) ! (8,9) offset by two for bands 5 and 6 of AHI
   !---threshold for difference in regression from tsavg
   !   COAT used 1.25 so we may need to make this smaller.
-  dts_thresh = 2.00
+  dts_thresh = 1.00
   !---currently not used
   qc_thresh  = -1
 
@@ -210,8 +211,18 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
 !       Read through each reacord
         call ufbint(lnbufr,hdrh8arr,nimghdr,1,iret,hdrh8)
         if(hdrh8arr(1) /= kidsat) cycle read_loop
-        call ufbrep(lnbufr,dataahi,3,12,iret,'TMBR CHNM CHWL')
+        call ufbrep(lnbufr,dataahi1,1,12,iret,'NCLDMNT')
+          rclrsky=bmiss
+        do n=1,12
+           if(dataahi1(n)>= zero .and. dataahi1(n) <= 100.0_r_kind ) then
+              rclrsky=dataahi1(n)
+!!             first QC filter out data with less clear sky fraction
+!             if ( rclrsky < r70 ) cycle read_loop
+          end if
+       end do
+      call ufbrep(lnbufr,dataahi,1,12,iret,'TMBRST')
         nread=nread+nchanl
+!print *,'hahahahahaha',dataahi
 
 !      first step QC filter out data with less clear sky fraction
         if (hdrh8arr(ilzah) >r60) cycle read_loop
@@ -219,20 +230,20 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
 
 !       Compare relative obs time with window.  If obs 
 !       falls outside of window, don't use this obs
-        idate5(1) = hdrh8arr(2)     !year
-        idate5(2) = hdrh8arr(3)     ! month
-        idate5(3) = hdrh8arr(4)     ! day
-        idate5(4) = hdrh8arr(5)     ! hours
-        idate5(5) = hdrh8arr(6)     ! minutes
+        idate5(1) = hdrh8arr(4)     !year
+        idate5(2) = hdrh8arr(5)     ! month
+        idate5(3) = hdrh8arr(6)     ! day
+        idate5(4) = hdrh8arr(7)     ! hours
+        idate5(5) = hdrh8arr(8)     ! minutes
         call w3fs21(idate5,nmind)
-        t4dv = (real((nmind-iwinbgn),r_kind) + real(hdrh8arr(7),r_kind)*r60inv)*r60inv
-        sstime = real(nmind,r_kind) + real(hdrh8arr(7),r_kind)*r60inv
+        t4dv = (real((nmind-iwinbgn),r_kind) + real(hdrh8arr(9),r_kind)*r60inv)*r60inv
+        sstime = real(nmind,r_kind) + real(hdrh8arr(9),r_kind)*r60inv
         tdiff=(sstime-gstime)*r60inv
-        if (l4dvar.or.l4densvar) then
-           if (t4dv<zero .OR. t4dv>winlen) cycle read_loop
-        else
-           if (abs(tdiff)>twind) cycle read_loop
-        endif
+!        if (l4dvar.or.l4densvar) then
+!          if (t4dv<zero .OR. t4dv>winlen) cycle read_loop
+!        else
+!           if (abs(tdiff)>twind) cycle read_loop
+!        endif
 
 !       Convert obs location from degrees to radians
         if (hdrh8arr(ilonh)>=r360) hdrh8arr(ilonh)=hdrh8arr(ilonh)-r360
@@ -277,7 +288,7 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
            crit1=0.01_r_kind+timedif
         endif
         call map2tgrid(dlat_earth,dlon_earth,dist1,crit1,itx,ithin,itt,iuse,sis)
-        if(.not. iuse)cycle read_loop
+!        if(.not. iuse)cycle read_loop
 
 
 !       Locate the observation on the analysis grid.  Get sst and land/sea/ice
@@ -294,7 +305,7 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
         call deter_sfc(dlat,dlon,dlat_earth,dlon_earth,t4dv,isflg,idomsfc,sfcpct, &
             ts,tsavg,vty,vfr,sty,stp,sm,sn,zz,ff10,sfcr)
 
-        if (isflg >= 1) cycle read_loop   !!!test ocean only
+       if (isflg >= 1) cycle read_loop   !!!test ocean only
 
 !       Set common predictor parameters
 
@@ -303,8 +314,17 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
 
         !---secant of the sensor zenith angle  
         seca = 1.0_r_kind / COS( hdrh8arr(ilzah) * deg2rad )
+        ts_coef    = (/1.16778_r_kind, -1.27133_r_kind, 0.416716_r_kind, &
+                       2.16380_r_kind/)
+        ts_coef0   = -51.0104_r_kind
+
+        ts_ichan = (/4,5/)
+        dts_thresh = 1.00
+        !---currently not used
+        qc_thresh  = -1
+
         !---brightness temperature of channels used for regression
-        bt_ts   = dataahi(1,ts_ichan)
+        bt_ts   = dataahi(ts_ichan)
          
         !---difference in BTs water-window or window-water 
         !  (depends on channel selection)
@@ -328,7 +348,7 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
         ! with delta.ts > dts_threshold
         !  tsavg from deter_sfc
         sst_test = tsavg-ts_reg
-        if (abs(sst_test) >= dts_thresh) cycle read_loop
+!        if (abs(sst_test) >= dts_thresh) cycle read_loop
 
         !---Option 2.)
         !---or we can do this --use sathin module to select best pixels
@@ -369,11 +389,11 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
         data_all( 3,itx) = dlon                       ! grid relative longitude
         data_all( 4,itx) = dlat                       ! grid relative latitude
         data_all( 5,itx) = hdrh8arr(ilzah)*deg2rad    ! satellite zenith angle (radians)
-        data_all( 6,itx) = hdrh8arr(12)               ! satellite azimuth angle (radians)
-!ZZ        data_all( 7,itx) = dataahi(2,1)               ! clear sky amount
+        data_all( 6,itx) = hdrh8arr(13)               ! satellite azimuth angle (radians)
+        data_all( 7,itx) = rclrsky                    ! clear sky amount
         data_all( 8,itx) = iscan                      ! integer scan position
         data_all( 9,itx) = hdrh8arr(iszah)            ! solar zenith angle
-        data_all(10,itx) = hdrh8arr(13)               ! solar azimuth angle
+        data_all(10,itx) = hdrh8arr(14)               ! solar azimuth angle
         data_all(11,itx) = sfcpct(0)                  ! sea percentage of
         data_all(12,itx) = sfcpct(1)                  ! land percentage
         data_all(13,itx) = sfcpct(2)                  ! sea ice percentage
@@ -408,7 +428,7 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
 !       Transfer observation location and other data to local arrays
 
         do k=1,nchanl
-           data_all(k+nreal,itx)=dataahi(1,k+2)   ! test only for AHI channels:7-16
+           data_all(k+nreal,itx)=dataahi(k)   ! test only for AHI channels:7-16
         end do
 
         nrec(itx)=irec
@@ -420,7 +440,7 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
      nele,itxmax,nread,ndata,data_all,score_crit,nrec)
 
 ! If no observations read, jump to end of routine.
-  if (mype_sub==mype_root.and.ndata>0) then
+!  if (mype_sub==mype_root.and.ndata>0) then
      do n=1,ndata
         do k=1,nchanl
            if(data_all(k+nreal,n) > tbmin .and. &
@@ -434,7 +454,8 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
      call count_obs(ndata,nele,ilat,ilon,data_all,nobs)
      write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
      write(lunout) ((data_all(k,n),k=1,nele),n=1,ndata)
-  end if
+!print *,'data_all_ha',data_all
+ ! end if
 
 ! Deallocate local arrays
   deallocate(data_all,nrec)

@@ -1,164 +1,194 @@
-cmake_minimum_required(VERSION 2.8)
-# need to set CMP0046 when using add_dependencies with cmake version 3.6.2
-  if(crayComp)
-    cmake_policy(SET CMP0046 NEW)
+# disable in source builds to protect against overwriting other Makefiles
+#set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
+if( NOT DEFINED ENV{CC} )
+  find_path( crayComp "ftn" )
+  find_path( wcossIntel "mpfort" )
+  find_path( intelComp "ifort" )
+  find_path( pgiComp "pgf90" )
+  if( crayComp )
+    set(CMAKE_SYSTEM_NAME "CrayLinuxEnvironment")
+    set(CMAKE_C_COMPILER "${crayComp}/cc")
+    set(CMAKE_CXX_COMPILER "${crayComp}/CC")
+    set(CMAKE_Fortran_COMPILER "${crayComp}/ftn")
   endif()
+  if( intelComp )
+    set(ENV{CC} "icc")
+    set(ENV{CXX} "icpc")
+    set(ENV{FC} "ifort")
+  endif()
+  if( wcossIntel )
+    message("Setting env for wcoss intel")
+    set(ENV{CC} "mpcc")
+    set(ENV{CXX} "mpCC")
+    set(ENV{FC} "mpfort")
+  endif()
+  if( pgiComp )
+    set(ENV{CC} "pgcc")
+    set(ENV{CXX} "pgCC")
+    set(ENV{FC} "pgf90")
+  endif()
+endif()
+
+project(GSI)
+  enable_language (Fortran)
+  option(USE_WRF "Find WRF object files and build regional GSI model" ON)
+  option(BUILD_GLOBAL "Build GSI without WRF (regional) module " OFF)
+  option(BUILD_GSI "Build the GSI model" ON)
+  option(BUILD_ENKF "Build the Enkf executable " ON)
+  option(BUILD_GFS "Build the Enkf with GFS module " ON)
+  option(BUILD_NMMB "Build the Enkf with NMMB module " OFF)
+  option(BUILD_WRF "Build the Enkf with WRF module " OFF)
+  option(BUILD_CORELIBS "Build the Core libraries " OFF)
+  option(BUILD_REG_TESTING "Build the Regression Testing Suite" ON)
+  option(BUILD_UNIT_TESTING "Build the Unit Testing Suite" OFF)
+  cmake_minimum_required(VERSION 2.8)
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
-# get a list of all the fortran source files
-  file(GLOB GSI_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*90 )
-# get a list of all cplr files
-  file(GLOB CLASS_SRC ${CMAKE_CURRENT_SOURCE_DIR}/class*90 )
-# create a list of all corresponding stub files
-  string(REGEX REPLACE "class" "stub" STUB_SRC "${CLASS_SRC}") 
-# create a list of all corresponding class files
-  string(REGEX REPLACE "class" "cplr" CPLR_SRC "${CLASS_SRC}") 
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
+  SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
+  SET(ARCHIVE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+  set(CMAKE_INCLUDE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/include")
+  set(Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
+  set(CMAKE_Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
+  file(MAKE_DIRECTORY ${CMAKE_INCLUDE_OUTPUT_DIRECTORY})
+  include(${CMAKE_SOURCE_DIR}/cmake/Modules/setPlatformVariables.cmake)
+  include(${CMAKE_SOURCE_DIR}/cmake/Modules/setCompilerFlags.cmake)
+  if(BUILD_REG_TESTING)
+    set(CTEST_TEST_TIMEOUT 86400 )
+    find_package(GSICONTROL)
+    include( CTest )
+  endif(BUILD_REG_TESTING)
 
-# these files use the cplr or stub modules, so they need to be compiled for all versions of GSI (WRF, no-WRF, etc)
-  set(LINKED_SRC "${CMAKE_CURRENT_SOURCE_DIR}/gesinfo.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/get_gefs_ensperts_dualres.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/get_gefs_for_regional.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/read_guess.F90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/bkgcov.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/bicglanczos.F90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/bicg.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/set_crtm_cloudmod.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/crtm_interface.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/gsi_nemsio_mod.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/ensctl2model_ad.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/ensctl2model.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/ensctl2state.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/ensctl2state_ad.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/lanczos.F90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/getsiga.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/test_obsens.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/sqrtmin.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/evaljgrad.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/pcgsoi.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/en_perts_io.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/bkerror.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/hybrid_ensemble_isotropic.F90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/write_all.F90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/glbsoi.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/setupaod.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/setuprad.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/general_read_nmmb.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/get_nmmb_ensperts.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/gsimod.F90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/gsimain.f90")
+  cmake_policy(SET CMP0009 NEW)
+  site_name(HOSTNAME)
+  string(REGEX MATCH "s4-" HOST-S4 ${HOSTNAME} )
+  string(REGEX MATCH "tfe[0-9]" HOST-Theia ${HOSTNAME} )
+  string(REGEX MATCH "g[0-9][0-9]a" HOST-Gyre ${HOSTNAME} )
+  string(REGEX MATCH "t[0-9][0-9]a" HOST-Tide ${HOSTNAME} )
+  string(REGEX MATCH "llogin" HOST-Luna ${HOSTNAME} )
+  string(REGEX MATCH "slogin" HOST-Surge ${HOSTNAME} )
+  if( HOST-S4 ) 
+    set( host "S4" )
+    setS4()
+  elseif(( HOST-Tide ) OR ( HOST-Gyre ) ) 
+    set( host "WCOSS" )
+    setWCOSS()
+  elseif( HOST-Theia )
+    set( host "THEIA" )
+    setTHEIA()
+  elseif( ( crayComp ) OR ( HOST-Luna) OR ( HOST-Surge ) )
+    find_path( crayComp "ftn" )
+    set( host "LUNA" )
+    setCRAY()
+  else(  )
+    set( host "GENERIC" )
+    setGeneric()
+  endif()
 
-# remove all stub, cplr and linked files from the rest of the source files
-  list( REMOVE_ITEM GSI_SRC ${LINKED_SRC} )
-  list( REMOVE_ITEM GSI_SRC ${STUB_SRC} )
-  list( REMOVE_ITEM GSI_SRC ${CPLR_SRC} )
+  MESSAGE(${CMAKE_CURRENT_SOURCE_DIR})
+  # make sure that the default is a RELEASE
+  if (NOT CMAKE_BUILD_TYPE)
+    set (CMAKE_BUILD_TYPE RELEASE CACHE STRING
+        "Choose the type of build, options are: None Debug Release."
+        FORCE)
+  endif (NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_Fortran_FLAGS_RELEASE "")  
+  if (CMAKE_CXX_COMPILER_ID MATCHES "GNU*")
+    message("Setting GNU flags")
+    setGNU()
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
+    message("Setting Intel flags")
+    setIntel()
+  elseif(CMAKE_C_COMPILER MATCHES "pgc*")
+    message("Setting PGI flags")
+    setPGI()
+  endif()
 
-# remove stub_nstmod from the rest of the source files
-  list( REMOVE_ITEM GSI_SRC "${CMAKE_CURRENT_SOURCE_DIR}/stub_nstmod.f90" )
-
-# The specific regional/WRF source files
+  set(intsize 4) 
+  set(doublesize 4) 
+  set(libsuffix "_i${intsize}r${doublesize}")
+  
+  if( NOT(HOST-Luna) AND NOT(HOST-Surge) ) 
+    find_package(MPI REQUIRED)
+  endif()
+  add_definitions(${MPI_Fortran_COMPILE_FLAGS})
+  include_directories(${MPI_Fortran_INCLUDE_DIRS} ${MPI_INCLUDE_PATH} "./" ${CMAKE_INCLUDE_OUTPUT_DIRECTORY})
+  link_directories(${MPI_Fortran_LIBRARIES} ${ARCHIVE_OUTPUT_PATH} )
+  
+  
+  find_package( NetCDF REQUIRED)
+  if(NETCDF4)
+    set(HDF5_USE_STATIC_LIBRARIES "OFF")
+    if(CMAKE_MAJOR_VERSION GREATER 2)
+      find_package( HDF5 COMPONENTS C HL Fortran_HL REQUIRED )
+    else()
+      find_package( HDF5 )
+    endif()
+    find_package( CURL )
+  endif()
+  if( NOT crayComp )
+    message(" trying to find lapack")
+    find_package( LAPACK )
+  endif()
   if(USE_WRF)
-    set( REGIONAL_SRC ${CPLR_SRC} )
-    list( APPEND REGIONAL_SRC ${LINKED_SRC} )
-    set_source_files_properties( ${REGIONAL_SRC} PROPERTIES COMPILE_FLAGS ${GSI_Fortran_FLAGS} )
+    find_package( WRF )
   endif()
-
-# The non-WRF specific src files
-  set( GLOBAL_SRC ${CPLR_SRC} )
-  set( GLOBAL_SRC ${STUB_SRC} )
-  list( APPEND GLOBAL_SRC ${LINKED_SRC} )
-  list( APPEND GSI_SRC  "${CMAKE_CURRENT_SOURCE_DIR}/blockIO.c")
-
-  set_source_files_properties( ${GSI_SRC} PROPERTIES COMPILE_FLAGS ${GSI_Fortran_FLAGS} )
-  set_source_files_properties( ${GLOBAL_SRC} PROPERTIES COMPILE_FLAGS ${GSI_Fortran_FLAGS} )
-
-  set_source_files_properties( ${CMAKE_CURRENT_SOURCE_DIR}/blockIO.c  PROPERTIES COMPILE_FLAGS ${GSI_CFLAGS} )
-
-  include_directories( ${CORE_INCS} ${NETCDF_INCLUDES} ${MPI_Fortran_INCLUDE_PATH} "./" )
-  add_library(gsilib_shrd${debug_suffix} STATIC ${GSI_SRC} )
-
-  if(USE_WRF) 
-    add_library(gsilib_wrf${debug_suffix} STATIC ${REGIONAL_SRC} )
-  endif()
-  if(BUILD_GLOBAL)
-    add_library(gsilib_global${debug_suffix} STATIC ${GLOBAL_SRC} )
-    target_link_libraries( gsilib_shrd${debug_suffix} gsilib_global${debug_suffix} ${CORE_LIBRARIES})
-    target_link_libraries( gsilib_global${debug_suffix} ${CORE_LIBRARIES})
-    set_target_properties(gsilib_global PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
-    target_include_directories(gsilib_global PUBLIC "${PROJECT_BINARY_DIR}/include")
-    add_dependencies(gsilib_global${debug_suffix} gsilib_shrd${debug_suffix} )
-  endif()
-
-
-
-  if(USE_WRF) 
-    set_target_properties(gsilib_wrf${debug_suffix} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include/wrf")
-  endif()
-  set_target_properties(gsilib_shrd${debug_suffix} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
-  if(USE_WRF) 
-    target_include_directories(gsilib_wrf${debug_suffix} PUBLIC "${PROJECT_BINARY_DIR}/include/wrf")
-  endif()
-  target_include_directories(gsilib_shrd${debug_suffix} PUBLIC "${PROJECT_BINARY_DIR}/include")
-# add_library(clib${debug_suffix} STATIC ${CMAKE_CURRENT_SOURCE_DIR}/blockIO.c )
+  # default installation
+  get_filename_component (default_prefix ".." ABSOLUTE)
+  set (CMAKE_INSTALL_PREFIX ${default_prefix} CACHE STRING "set prefix"
+        FORCE)
+  
+  
+  # FFLAGS depend on the compiler
+  get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
+  set(CFLAGS "-I. -DFortranByte=char -DFortranInt=int -DFortranLlong='long long' -O3  -Dfunder")
+  set (CMAKE_Fortran_INC_FLAGS "-I ./ -I ${CORE_INCS} -I ${NETCDF_INCLUDES} ")
+  set (CFLAGS_N "-I. -DFortranByte=char -DFortranInt=int -DFortranLlong='long long'  -O3  -Dfunder")
 
 
   if(BUILD_CORELIBS )
-    if(USE_WRF) 
-      add_dependencies(gsilib_wrf${debug_suffix} gsilib_shrd${debug_suffix} ${bacio} ${crtm} ${bufr} ${nemsio} ${sigio} ${sfcio} ${sp} ${w3emc} ${w3nco} )
-    endif()
-    if(BUILD_GLOBAL)
-#     add_library(gsilib_global${debug_suffix} STATIC ${GLOBAL_SRC} )
-      add_dependencies(gsilib_global${debug_suffix} gsilib_shrd${debug_suffix} ${bacio} ${crtm} ${bufr} ${nemsio} ${sigio} ${sfcio} ${sp} ${w3emc} ${w3nco} )
-    endif()
-    add_dependencies(gsilib_shrd${debug_suffix} ${bacio} ${crtm} ${bufr} ${nemsio} ${sigio} ${sfcio} ${sp} ${w3emc} ${w3nco} )
-  endif()
-
-# add_custom_target(RMIFCORE COMMAND "sed 's/-lifcore//g' " WORKING_DIRECTORY "/gpfs/gd1/emc/global/noscrub/Mark.Potts/ProdGSI/build/src/CMakeFiles/gsi.x.dir" INPUT_FILE "link.txt" )
-# execute_process(COMMAND "sed_cmd" WORKING_DIRECTORY "/gpfs/gd1/emc/global/noscrub/Mark.Potts/ProdGSI/build" ERROR_FILE "sed_err" OUTPUT_FILE "sed_out"  )
-  if(USE_WRF) 
-    add_dependencies(gsilib_wrf${debug_suffix} gsilib_shrd${debug_suffix} )
-    add_executable(gsi.x${debug_suffix} ${CMAKE_CURRENT_SOURCE_DIR}/gsimain.f90 ${CMAKE_CURRENT_SOURCE_DIR}/gsimod.F90 )
-#   add_executable(gsi.x${debug_suffix} ${CMAKE_CURRENT_SOURCE_DIR}/gsimain.f90 )
-  endif()
-
-  if(BUILD_GLOBAL)
-    add_executable(gsi_global.x${debug_suffix} ${CMAKE_CURRENT_SOURCE_DIR}/gsimain.f90 ${CMAKE_CURRENT_SOURCE_DIR}/gsimod.F90 )
-#   add_executable(gsi_global.x${debug_suffix} ${CMAKE_CURRENT_SOURCE_DIR}/gsimain.f90 )
-  endif()
-
-  if(USE_WRF) 
-    set_target_properties(gsi.x${debug_suffix} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
-    set_target_properties(gsi.x${debug_suffix} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include/wrf")
-  endif()
-
-  if(BUILD_GLOBAL)
-    set_target_properties(gsi_global.x${debug_suffix} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
-  endif()
-
-  if(BUILD_CORELIBS )
-    if(BUILD_GLOBAL)
-      add_dependencies(gsi_global.x${debug_suffix} gsilib_shrd${debug_suffix} gsilib_global${debug_suffix} ${w3nco} ${bacio} ${crtm} ${bufr} ${nemsio} ${sigio} ${sfcio} ${sp} ${w3emc} )
-    endif()
-    if(USE_WRF) 
-      add_dependencies(gsi.x${debug_suffix} gsilib_shrd${debug_suffix} gsilib_wrf${debug_suffix} ${bacio} ${crtm} ${bufr} ${nemsio} ${sigio} ${sfcio} ${sp} ${w3emc} ${w3nco} )
-    endif()
+    message("setting values for corelibs")
+    set(BUILD_CRTM "ON" CACHE STRING "Build the CRTM library" )
+    set(BUILD_BACIO "ON" CACHE STRING "Build the BACIO library" )
+    set(BUILD_BUFR "ON" CACHE STRING "Build the BUFR library" )
+    set(BUILD_SFCIO "ON" CACHE STRING "Build the SFCIO library" )
+    set(BUILD_SIGIO "ON" CACHE STRING "Build the SIGIO library" )
+    set(BUILD_NEMSIO "ON" CACHE STRING "Build the NEMSIO library" )
+    set(BUILD_SP "ON" CACHE STRING "Build the SP library" )
+    set(BUILD_EMC "ON" CACHE STRING "Build the EMC library" )
+    set(BUILD_NCO "ON" CACHE STRING "Build the NCO library" )
+    set(FIND_SRC ON )
   else()
-    if(BUILD_GLOBAL)
-      add_dependencies(gsi_global.x${debug_suffix} gsilib_shrd${debug_suffix} gsilib_global${debug_suffix} )
-    endif()
-    if(USE_WRF) 
-      add_dependencies(gsi.x${debug_suffix} gsilib_shrd${debug_suffix} gsilib_wrf${debug_suffix} )
-    endif()
+    set(FIND_SRC OFF)
+  endif()
+  find_package( CORELIBS )
+  if(BUILD_CORELIBS) 
+    add_subdirectory(core-libs)
   endif()
 
-  if( NOT HOST-Luna AND NOT HOST-Surge )
-    list( REMOVE_ITEM LAPACK_LIBRARIES "-lm" )
+  add_subdirectory(src)
+  add_subdirectory(src/enkf)
+
+  set(GSILIB gsilib)
+
+  if(BUILD_UNIT_TESTING)
+    set(CTEST_TEST_TIMEOUT 400 )
+    find_package(GSICONTROL)
+    include( CTest )
+    add_subdirectory(unit-tests)
+  endif(BUILD_UNIT_TESTING)
+  if(BUILD_REG_TESTING)
+    if(USE_WRF)
+      file(WRITE "${PROJECT_BINARY_DIR}/regression_var.out" "${CMAKE_SOURCE_DIR}/scripts/regression_var.sh ${host} ${CMAKE_SOURCE_DIR}/.. ${PROJECT_BINARY_DIR} ${CMAKE_SOURCE_DIR} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/gsi.x${debug_suffix} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/enkf_gfs.x${debug_suffix} ${GSICONTROL} ${ENKFCONTROL} ")
+      set( REG_TEST_NAMES "global_T62;global_T62_ozonly;global_4dvar_T62;global_4denvar_T126;global_lanczos_T62;arw_netcdf;
+          arw_binary;nmm_binary;nmm_netcdf;nmmb_nems_4denvar;hwrf_nmm_d2;hwrf_nmm_d3;rtma;global_enkf_T62")
+    else()
+      file(WRITE "${PROJECT_BINARY_DIR}/regression_var.out" "${CMAKE_SOURCE_DIR}/scripts/regression_var.sh ${host} ${CMAKE_SOURCE_DIR}/.. ${PROJECT_BINARY_DIR} ${CMAKE_SOURCE_DIR} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/gsi_global.x${debug_suffix} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/enkf.x${debug_suffix} ${GSICONTROL} ${ENKFCONTROL} ")
+      set( REG_TEST_NAMES "global_T62;global_T62_ozonly;global_4dvar_T62;global_lanczos_T62;global_nemsio_T62")
+    endif()
+    foreach( REG_TEST ${REG_TEST_NAMES} )
+      add_test(NAME ${REG_TEST} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/scripts COMMAND regression_driver.sh ${REG_TEST} ${PROJECT_BINARY_DIR})
+    endforeach( REG_TEST )
+    set_tests_properties( ${REG_TEST_NAMES} PROPERTIES TIMEOUT 86400 )
   endif()
-  if(USE_WRF) 
-    target_link_libraries(gsi.x${debug_suffix} gsilib_shrd${debug_suffix} gsilib_wrf${debug_suffix} gsilib_shrd${debug_suffix} ${WRF_LIBRARIES} ${CORE_LIBRARIES}
-         ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES} 
-         ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${GSI_LDFLAGS})
-  endif()
-  if(BUILD_GLOBAL) 
-    target_link_libraries(gsi_global.x${debug_suffix} gsilib_shrd${debug_suffix} gsilib_global${debug_suffix} gsilib_shrd${debug_suffix}  
-         ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES}   
-         ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${CORE_LIBRARIES} )
-  endif()
+ 

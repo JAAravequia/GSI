@@ -472,7 +472,7 @@ subroutine read_seviri(mype,val_sev,ithin,rmesh,jsatid,&
     call count_obs(ndata,nele,ilat,ilon,data_all,nobs)
     write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
     write(lunout) ((data_all(k,n),k=1,nele),n=1,ndata)
-
+!print *,'data_all_haha',data_all
   endif
 
 ! Deallocate local arrays

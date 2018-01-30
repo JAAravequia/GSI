@@ -106,7 +106,7 @@ LIBsys          =
 #------------
 # Include machine dependent compile & load options
 #------------
-  MAKE_CONF = Makefile.conf
+  MAKE_CONF = Makefile.conf.theia
 include $(MAKE_CONF)
 
 
