@@ -164,7 +164,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   use setuphowv_mod, only: setuphowv_class
   use setuplcbas_mod, only: setuplcbas_class
   use setupmitm_mod, only: setupmitm_class
-! use setupmxtm_mod, only: setupmxtm_class
+  use setupmxtm_mod, only: setupmxtm_class
   use setupoz_mod, only: setupoz_class
   use setuppblh_mod, only: setuppblh_class
   use setuppcp_mod, only: setuppcp_class
@@ -211,7 +211,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   type(setuphowv_class) :: howv
   type(setuplcbas_class) :: lcbas
   type(setupmitm_class) :: mitm
-! type(setupmxtm_class) :: mxtm
+  type(setupmxtm_class) :: mxtm
   type(setupoz_class) :: oz
   type(setuppblh_class) :: pblh
   type(setuppcp_class) :: pcp
@@ -623,8 +623,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
 !             Set up conventional mxtm data
               else if(obstype=='mxtm' .and. getindex(svars2d,'mxtm')>0) then
-                 call setupmxtm(lunin,mype,bwork,awork(1,i_mxtm),nele,nobs,is,conv_diagsave)
-!                call mxtm%setup(lunin,mype,bwork,awork(1,i_mxtm),nele,nobs,is,conv_diagsave)
+!                call setupmxtm(lunin,mype,bwork,awork(1,i_mxtm),nele,nobs,is,conv_diagsave)
+                 call mxtm%setup(lunin,mype,bwork,awork(1,i_mxtm),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional mitm data
               else if(obstype=='mitm' .and. getindex(svars2d,'mitm')>0) then

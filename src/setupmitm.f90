@@ -108,7 +108,7 @@ contains
     integer(i_kind) idomsfc
     
     logical,dimension(nobs):: luse,muse
-  integer(i_kind),dimension(nobs):: ioid  ! initial (pre-distribution) obs ID
+    integer(i_kind),dimension(nobs):: ioid  ! initial (pre-distribution) obs ID
     logical proceed
   
     character(8) station_id
