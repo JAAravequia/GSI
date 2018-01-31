@@ -224,9 +224,9 @@ do jj=1,nsubwin
       call general_grid2sub(s2g_cv,hwork,wbundle%values)
    end if
 
-!$omp parallel sections private(istatus,ii,ic,id)
+!!$omp parallel sections private(istatus,ii,ic,id)
 
-!$omp section
+!!$omp section
 
    call gsi_bundlegetpointer (wbundle,'sf' ,cv_sf ,istatus)
    call gsi_bundlegetpointer (wbundle,'vp' ,cv_vp ,istatus)
@@ -266,7 +266,7 @@ do jj=1,nsubwin
       end if
    end if
 
-!$omp section
+!!$omp section
 !  Get pointers to required state variables
    call gsi_bundlegetpointer (sval(jj),'prse',sv_prse,istatus)
    call gsi_bundlegetpointer (sval(jj),'tv'  ,sv_tv,  istatus)
@@ -305,7 +305,7 @@ do jj=1,nsubwin
       enddo
    end if
 
-!$omp section
+!!$omp section
    call gsi_bundlegetpointer (sval(jj),'ps'  ,sv_ps,  istatus)
    call gsi_bundlegetvar ( wbundle, 'ps' , sv_ps,  istatus )
    call gsi_bundlegetpointer (sval(jj),'sst' ,sv_sst, istatus)
@@ -397,7 +397,7 @@ do jj=1,nsubwin
       endif
    enddo
 
-!$omp end parallel sections
+!!$omp end parallel sections
 
 ! Clean up
    call gsi_bundledestroy(wbundle,istatus)

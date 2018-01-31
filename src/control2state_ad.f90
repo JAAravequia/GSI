@@ -201,9 +201,9 @@ do jj=1,nsubwin
       call stop2(999)
    endif
 
-!$omp parallel sections private(istatus,ii,ic,id,istatus_oz)
+!!$omp parallel sections private(istatus,ii,ic,id,istatus_oz)
 
-!$omp section
+!!$omp section
 
    call gsi_bundlegetpointer (wbundle,'sf' ,cv_sf ,istatus)
    call gsi_bundlegetpointer (wbundle,'vp' ,cv_vp ,istatus)
@@ -247,7 +247,7 @@ do jj=1,nsubwin
       end if
    end if
 
-!$omp section
+!!$omp section
 
 !  Get pointers to required control variables
    call gsi_bundlegetpointer (wbundle,'ps' ,cv_ps ,istatus)
@@ -292,7 +292,7 @@ do jj=1,nsubwin
    if(do_getprs_ad) call getprs_ad(cv_ps,cv_t,rv_prse)
 
 
-!$omp section
+!!$omp section
 
    call gsi_bundlegetpointer (rval(jj),'sst' ,rv_sst, istatus)
    call gsi_bundleputvar ( wbundle, 'sst', rv_sst, istatus )
@@ -390,7 +390,7 @@ do jj=1,nsubwin
       call gsi_bundleputvar ( wbundle, 'vwnd10m', rv_vwnd10m, istatus )
    end if
 
-!$omp end parallel sections
+!!$omp end parallel sections
 
 !  Adjoint of transfer variables
 
