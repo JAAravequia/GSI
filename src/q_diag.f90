@@ -21,6 +21,9 @@ subroutine q_diag(it,mype)
 !   2013-10-24  todling - reposition load_grid to commvars
 !   2013-10-30  jung    - switch from using qsatg to ges_qsat
 !   2014-04-18  todling - pass it in arg list
+!   2018-01-18  tong    - remove ges_cwmr to use cwgues to calculate pw. cwgues
+!                         has been calculated outside before this routine is
+!                         called
 !
 !   input argument list:
 !    mype       - mpi task id
@@ -63,9 +66,12 @@ subroutine q_diag(it,mype)
   real(r_kind),dimension(lat1*lon1):: psm,pwm
   real(r_kind),dimension(max(iglobal,itotsub)):: work_ps,work_pw
   real(r_kind),dimension(nlon,nlat-2):: grid_ps,grid_pw
+  real(r_kind),allocatable,dimension(:,:,:):: qtgues
   real(r_kind),pointer,dimension(:,:  ):: ges_ps=>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_q =>NULL()
-  real(r_kind),pointer,dimension(:,:,:):: ges_cwmr_it=>NULL()
+  real(r_kind),pointer,dimension(:,:,:):: ges_qr_it=>NULL()
+  real(r_kind),pointer,dimension(:,:,:):: ges_qs_it=>NULL()
+  real(r_kind),pointer,dimension(:,:,:):: ges_qg_it=>NULL()
 
   mype_out=0
   mm1=mype+1
@@ -77,19 +83,16 @@ subroutine q_diag(it,mype)
   ier=ier+istatus
   if(ier/=0) return ! nothing to do
 
-! get pointer to cloud water condensate
   call gsi_metguess_get('clouds::3d',n_actual_clouds,ier)
   if (n_actual_clouds>0) then
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ges_cwmr_it,istatus)
-     if (istatus/=0) then
-        if (regional) then 
-           ges_cwmr_it => cwgues        ! temporarily
-        else
-           call die('q_diag','cannot get pointer to cwmr, istatus =',istatus)
-        end if
-     end if
-  else
-     ges_cwmr_it => cwgues
+     allocate(qtgues(lat2,lon2,nsig))
+     qtgues=cwgues
+     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qr',ges_qr_it,istatus)
+     if (istatus == 0) qtgues=qtgues+ges_qr_it 
+     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qs',ges_qs_it,istatus)
+     if (istatus == 0) qtgues=qtgues+ges_qs_it
+     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qg',ges_qg_it,istatus)
+     if (istatus == 0) qtgues=qtgues+ges_qg_it
   end if
 
   qrms=zero
@@ -107,10 +110,12 @@ subroutine q_diag(it,mype)
               qrms(2,3)=qrms(2,3) + one
            end if
            pw(i,j)=pw(i,j)+(ges_prsi(i,j,k,it)-ges_prsi(i,j,k+1,it))* &
-                (ges_q(i,j,k)+ges_cwmr_it(i,j,k))
+                   (ges_q(i,j,k)+qtgues(i,j,k))
         end do
      end do
   end do
+
+  if(allocated(qtgues))deallocate(qtgues)
 
   call strip(ges_ps,psm)
   call strip(pw,pwm)

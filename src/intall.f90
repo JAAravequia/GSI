@@ -180,7 +180,6 @@ subroutine intall(sval,sbias,rval,rbias)
   use intradmod, only: setrad
   use intjomod, only: intjo
   use bias_predictors, only : predictors,assignment(=)
-  use state_vectors, only: allocate_state,deallocate_state
   use intjcmod, only: intlimq,intlimg,intlimv,intlimp,intlimw10m,intlimhowv,intlimcldch,&
       intliml,intjcpdry1,intjcpdry2,intjcdfi
   use timermod, only: timer_ini,timer_fnl

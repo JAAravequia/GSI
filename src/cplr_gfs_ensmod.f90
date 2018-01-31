@@ -317,6 +317,7 @@ subroutine move2bundle_(grd,en_loc3,atm_bundle,m_cvars2d,m_cvars3d,iret,clons,sl
     use gsi_bundlemod, only: gsi_bundlegetpointer,gsi_bundleputvar
     use gsi_bundlemod, only : assignment(=)
     use control_vectors, only: cvars2d,cvars3d,nc2d,nc3d
+    use mpeu_util, only: getindex
 
     implicit none
 
@@ -334,9 +335,11 @@ subroutine move2bundle_(grd,en_loc3,atm_bundle,m_cvars2d,m_cvars3d,iret,clons,sl
 
     integer(i_kind) :: ierr
     integer(i_kind) :: im,jm,km,m,k
+    integer(i_kind) :: icw,iql,iqi,iqr,iqs,iqg
     real(r_kind),pointer,dimension(:,:) :: ps
     !real(r_kind),pointer,dimension(:,:) :: sst
     real(r_kind),pointer,dimension(:,:,:) :: u,v,tv,q,oz,cwmr
+    real(r_kind),pointer,dimension(:,:,:) :: ql,qi,qr,qs,qg
     real(r_single),allocatable,dimension(:,:)  :: scr2
     real(r_single),allocatable,dimension(:,:,:) :: scr3
     type(sub2grid_info) :: grd2d,grd3d
@@ -349,6 +352,13 @@ subroutine move2bundle_(grd,en_loc3,atm_bundle,m_cvars2d,m_cvars3d,iret,clons,sl
     allocate(scr2(im,jm))
     allocate(scr3(im,jm,km))
 
+    icw=getindex(cvars3d,'cw')
+    iql=getindex(cvars3d,'ql')
+    iqi=getindex(cvars3d,'qi')
+    iqr=getindex(cvars3d,'qr')
+    iqs=getindex(cvars3d,'qs')
+    iqg=getindex(cvars3d,'qg')
+
 !   initialize atm_bundle to zero
 
     atm_bundle=zero
@@ -360,7 +370,12 @@ subroutine move2bundle_(grd,en_loc3,atm_bundle,m_cvars2d,m_cvars3d,iret,clons,sl
     call gsi_bundlegetpointer(atm_bundle,'t' ,tv,  ierr); iret = ierr + iret
     call gsi_bundlegetpointer(atm_bundle,'q' ,q ,  ierr); iret = ierr + iret
     call gsi_bundlegetpointer(atm_bundle,'oz',oz,  ierr); iret = ierr + iret
-    call gsi_bundlegetpointer(atm_bundle,'cw',cwmr,ierr); iret = ierr + iret
+    if (icw > 0) call gsi_bundlegetpointer(atm_bundle,'cw',cwmr,ierr); iret = ierr + iret
+    if (iql > 0) call gsi_bundlegetpointer(atm_bundle,'ql',ql  ,ierr); iret = ierr + iret
+    if (iqi > 0) call gsi_bundlegetpointer(atm_bundle,'qi',qi  ,ierr); iret = ierr + iret
+    if (iqr > 0) call gsi_bundlegetpointer(atm_bundle,'qr',qr  ,ierr); iret = ierr + iret
+    if (iqs > 0) call gsi_bundlegetpointer(atm_bundle,'qs',qs  ,ierr); iret = ierr + iret
+    if (iqg > 0) call gsi_bundlegetpointer(atm_bundle,'qg',qg  ,ierr); iret = ierr + iret
     if ( iret /= 0 ) then
        if ( mype == 0 ) then
           write(6,'(A)') trim(myname_) // ': ERROR!'
@@ -385,6 +400,11 @@ subroutine move2bundle_(grd,en_loc3,atm_bundle,m_cvars2d,m_cvars3d,iret,clons,sl
        if(trim(cvars3d(m))=='q')   q    = scr3
        if(trim(cvars3d(m))=='oz')  oz   = scr3
        if(trim(cvars3d(m))=='cw')  cwmr = scr3
+       if(trim(cvars3d(m))=='ql')  ql   = scr3
+       if(trim(cvars3d(m))=='qi')  qi   = scr3
+       if(trim(cvars3d(m))=='qr')  qr   = scr3
+       if(trim(cvars3d(m))=='qs')  qs   = scr3
+       if(trim(cvars3d(m))=='qg')  qg   = scr3
     enddo
 
 !   convert ps from Pa to cb
@@ -403,7 +423,12 @@ subroutine move2bundle_(grd,en_loc3,atm_bundle,m_cvars2d,m_cvars3d,iret,clons,sl
     call update_scalar_poles_(grd3d,tv)
     call update_scalar_poles_(grd3d,q)
     call update_scalar_poles_(grd3d,oz)
-    call update_scalar_poles_(grd3d,cwmr)
+    if (icw > 0) call update_scalar_poles_(grd3d,cwmr)
+    if (iql > 0) call update_scalar_poles_(grd3d,ql)
+    if (iqi > 0) call update_scalar_poles_(grd3d,qi)
+    if (iqr > 0) call update_scalar_poles_(grd3d,qr)
+    if (iqs > 0) call update_scalar_poles_(grd3d,qs)
+    if (iqg > 0) call update_scalar_poles_(grd3d,qg)
 
     call gsi_bundleputvar(atm_bundle,'ps',ps,  ierr); iret = ierr
     !call gsi_bundleputvar(atm_bundle,'sst',sst,ierr); iret = ierr + iret  ! no sst for now
@@ -412,7 +437,12 @@ subroutine move2bundle_(grd,en_loc3,atm_bundle,m_cvars2d,m_cvars3d,iret,clons,sl
     call gsi_bundleputvar(atm_bundle,'t' ,tv,  ierr); iret = ierr + iret
     call gsi_bundleputvar(atm_bundle,'q' ,q ,  ierr); iret = ierr + iret
     call gsi_bundleputvar(atm_bundle,'oz',oz,  ierr); iret = ierr + iret
-    call gsi_bundleputvar(atm_bundle,'cw',cwmr,ierr); iret = ierr + iret
+    if (icw > 0) call gsi_bundleputvar(atm_bundle,'cw',cwmr,ierr); iret = ierr + iret
+    if (iql > 0) call gsi_bundleputvar(atm_bundle,'ql',ql,  ierr); iret = ierr + iret
+    if (iqi > 0) call gsi_bundleputvar(atm_bundle,'qi',qi,  ierr); iret = ierr + iret
+    if (iqr > 0) call gsi_bundleputvar(atm_bundle,'qr',qr,  ierr); iret = ierr + iret
+    if (iqs > 0) call gsi_bundleputvar(atm_bundle,'qs',qs,  ierr); iret = ierr + iret
+    if (iqg > 0) call gsi_bundleputvar(atm_bundle,'qg',qg,  ierr); iret = ierr + iret
 
     if ( iret /= 0 ) then
        if ( mype == 0 ) then
@@ -692,6 +722,7 @@ subroutine parallel_read_nemsio_state_(en_full,m_cvars2d,m_cvars3d,nlon,nlat,nsi
    ! Declare local variables
    integer(i_kind) i,ii,j,jj,k,lonb,latb,levs
    integer(i_kind) k2,k3,k3u,k3v,k3t,k3q,k3cw,k3oz,kf
+   integer(i_kind) k3ql,k3qi,k3qr,k3qs,k3qg
    integer(i_kind) iret,istop
    integer(i_kind),dimension(7):: idate
    integer(i_kind),dimension(4):: odate
@@ -699,7 +730,7 @@ subroutine parallel_read_nemsio_state_(en_full,m_cvars2d,m_cvars3d,nlon,nlat,nsi
    integer(i_kind) nrec
    character(len=120) :: myname_ = 'parallel_read_nemsio_state_'
    character(len=1)   :: null = ' '
-   real(r_single),allocatable,dimension(:) :: work
+   real(r_single),allocatable,dimension(:) :: work, work2
 ! NOTE:  inportant to keep 8 byte precision for work array, even though what is
 ! on ensemble NEMS file is 4 byte precision.  The NEMSIO automatically (through
 ! interfaces presumably) must be able to read 4 byte and 8 byte records and pass
@@ -761,20 +792,49 @@ subroutine parallel_read_nemsio_state_(en_full,m_cvars2d,m_cvars3d,nlon,nlat,nsi
    odate(4) = idate(1)  !year
 
    allocate(work(nlon*(nlat-2)))
+   allocate(work2(nlon*(nlat-2)))
    allocate(temp3(nlat,nlon,nsig,nc3d))
    allocate(temp2(nlat,nlon,nc2d))
    k3u=0 ; k3v=0 ; k3t=0 ; k3q=0 ; k3cw=0 ; k3oz=0
+   k3ql=0 ; k3qi=0 ; k3qr=0 ; k3qs=0 ; k3qg=0
    do k3=1,nc3d
       if(cvars3d(k3)=='sf') k3u=k3
       if(cvars3d(k3)=='vp') k3v=k3
       if(cvars3d(k3)=='t') k3t=k3
       if(cvars3d(k3)=='q') k3q=k3
       if(cvars3d(k3)=='cw') k3cw=k3
+      if(cvars3d(k3)=='ql') k3ql=k3
+      if(cvars3d(k3)=='qi') k3qi=k3
+      if(cvars3d(k3)=='qr') k3qr=k3
+      if(cvars3d(k3)=='qs') k3qs=k3 
+      if(cvars3d(k3)=='qg') k3qg=k3
       if(cvars3d(k3)=='oz') k3oz=k3
       do k=1,nsig
          if(trim(cvars3d(k3))=='cw') then
             call nemsio_readrecv(gfile,'clwmr','mid layer',k,work,iret=iret)
             if (iret /= 0) call error_msg(trim(myname_),trim(filename),'clwmr','read',istop+6,iret)
+            call nemsio_readrecv(gfile,'icmr','mid layer',k,work2,iret=iret)
+            if (iret == 0) work=work+work2
+            call move1_(work,temp3(:,:,k,k3),nlon,nlat)
+         elseif(trim(cvars3d(k3))=='ql') then
+            call nemsio_readrecv(gfile,'clwmr','mid layer',k,work,iret=iret)
+            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'clwmr','read',istop+6,iret)
+            call move1_(work,temp3(:,:,k,k3),nlon,nlat)
+         elseif(trim(cvars3d(k3))=='qi') then
+            call nemsio_readrecv(gfile,'icmr','mid layer',k,work,iret=iret)
+            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'icmr','read',istop+7,iret)
+            call move1_(work,temp3(:,:,k,k3),nlon,nlat)
+         elseif(trim(cvars3d(k3))=='qr') then
+            call nemsio_readrecv(gfile,'rwmr','mid layer',k,work,iret=iret)
+            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'rwmr','read',istop+8,iret)
+            call move1_(work,temp3(:,:,k,k3),nlon,nlat)
+         elseif(trim(cvars3d(k3))=='qs') then
+            call nemsio_readrecv(gfile,'snmr','mid layer',k,work,iret=iret)
+            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'snmr','read',istop+9,iret)
+            call move1_(work,temp3(:,:,k,k3),nlon,nlat)
+         elseif(trim(cvars3d(k3))=='qg') then
+            call nemsio_readrecv(gfile,'grle','mid layer',k,work,iret=iret)
+            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'grle','read',istop+10,iret)
             call move1_(work,temp3(:,:,k,k3),nlon,nlat)
          elseif(trim(cvars3d(k3))=='oz') then
             call nemsio_readrecv(gfile,'o3mr','mid layer',k,work,iret=iret)
@@ -799,7 +859,7 @@ subroutine parallel_read_nemsio_state_(en_full,m_cvars2d,m_cvars3d,nlon,nlat,nsi
          endif
       enddo
    enddo
-   if (k3u==0.or.k3v==0.or.k3t==0.or.k3q==0.or.k3cw==0.or.k3oz==0) &
+   if (k3u==0.or.k3v==0.or.k3t==0.or.k3q==0.or.k3oz==0) &
       write(6,'(" WARNING, problem with one of k3-")')
 
 !   convert T to Tv:    postpone this calculation
@@ -819,7 +879,7 @@ subroutine parallel_read_nemsio_state_(en_full,m_cvars2d,m_cvars3d,nlon,nlat,nsi
          call move1_(work,temp2(:,:,k2),nlon,nlat)
       endif
    enddo
-   deallocate(work)
+   deallocate(work,work2)
 
 !  move temp2,temp3 to en_full
    kf=0
@@ -1035,6 +1095,7 @@ subroutine get_user_ens_gfs_member_(grd,member,ntindex,atm_bundle,iret)
 !
 ! program history log:
 !   2016-06-30  mahajan  - initial code
+!   2018-01-07  tong     - add hydrometeors
 !
 !   input argument list:
 !     grd      - grd info for ensemble
@@ -1058,7 +1119,10 @@ subroutine get_user_ens_gfs_member_(grd,member,ntindex,atm_bundle,iret)
     use hybrid_ensemble_parameters, only: ensemble_path
     use hybrid_ensemble_parameters, only: uv_hyb_ens
     use hybrid_ensemble_parameters, only: sp_ens
-    use gsi_bundlemod, only: gsi_bundle
+    use gsi_bundlemod, only: gsi_bundle, gsi_bundlegetpointer
+    use control_vectors, only: cvars3d,imp_physics
+    use mpeu_util, only: getindex
+    use cloud_efr_mod, only: cloud_calc_gfs2
 
     implicit none
 
@@ -1074,6 +1138,10 @@ subroutine get_user_ens_gfs_member_(grd,member,ntindex,atm_bundle,iret)
     character(len=70) :: filename
     logical :: zflag = .false.
     logical,save :: inithead = .true.
+    real(r_kind),pointer,dimension(:,:,:):: en_cw  => NULL()
+    real(r_kind),pointer,dimension(:,:,:):: en_ql  => NULL()
+    real(r_kind),pointer,dimension(:,:,:):: en_qi  => NULL()
+    integer(i_kind) :: icw,istatus
 
     ! if member == 0, read ensemble mean
     if ( member == 0 ) then
@@ -1084,9 +1152,17 @@ subroutine get_user_ens_gfs_member_(grd,member,ntindex,atm_bundle,iret)
 12  format(a,'sigf',i2.2,'_ensmean'     )
 22  format(a,'sigf',i2.2,'_ens_mem',i3.3)
 
+    icw=getindex(cvars3d,'cw')
+
     if ( use_gfs_nemsio ) then
        call general_read_gfsatm_nems(grd,sp_ens,filename,uv_hyb_ens,.false., &
             zflag,atm_bundle,.true.,iret)
+       if(imp_physics == 99 .and. icw > 0) then
+          call gsi_bundlegetpointer (atm_bundle,'cw',en_cw,istatus)
+          call gsi_bundlegetpointer (atm_bundle,'ql',en_ql,istatus)
+          call gsi_bundlegetpointer (atm_bundle,'qi',en_ql,istatus)
+          call cloud_calc_gfs2(en_ql,en_qi,en_cw)
+       end if
     else
        call general_read_gfsatm(grd,sp_ens,sp_ens,filename,uv_hyb_ens,.false., &
             zflag,atm_bundle,inithead,iret)

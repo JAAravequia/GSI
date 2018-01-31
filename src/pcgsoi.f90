@@ -791,11 +791,11 @@ subroutine pcgsoi()
   if(.not.l4dvar) call prt_guess('analysis')
   call prt_state_norms(sval(1),'increment')
   if (twodvar_regional) then
-      call write_all(-1)
-    else
-      if(jiter == miter) then
-         call write_all(-1)
-      endif
+     call write_all(-1)
+  else
+     if(jiter == miter) then
+        call write_all(-1)
+     endif
   endif
 
 ! Overwrite guess with increment (4d-var only, for now)

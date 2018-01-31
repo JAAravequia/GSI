@@ -617,14 +617,21 @@ subroutine intjcpdry(rval,sval,nbins,pjc)
   real(r_quad),dimension(nsig) :: mass2
   real(r_quad) rcon,con,dmass
   integer(i_kind) i,j,k,it,ii,mm1,ier,icw,iql,iqi,istatus
+  integer(i_kind) iqr,iqs,iqg
   real(r_kind),pointer,dimension(:,:,:) :: sq =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: sc =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: sql=>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: sqi=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: sqr=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: sqs=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: sqg=>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: rq =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: rc =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: rql=>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: rqi=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: rqr=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: rqs=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: rqg=>NULL()
   real(r_kind),pointer,dimension(:,:)   :: sp =>NULL()
   real(r_kind),pointer,dimension(:,:)   :: rp =>NULL()
 
@@ -638,17 +645,25 @@ subroutine intjcpdry(rval,sval,nbins,pjc)
   do n=1,nbins
 ! Retrieve pointers
 ! Simply return if any pointer not found
-     ier=0; icw=0; iql=0; iqi=0
+     ier=0; icw=0; iql=0; iqi=0; iqr=0; iqs=0; iqg=0
      call gsi_bundlegetpointer(sval(n),'q' ,sq, istatus);ier=istatus+ier
-     call gsi_bundlegetpointer(sval(n),'cw',sc, istatus);icw=istatus+icw
-     call gsi_bundlegetpointer(sval(n),'ql',sql,istatus);iql=istatus+iql
-     call gsi_bundlegetpointer(sval(n),'qi',sqi,istatus);iqi=istatus+iqi
+     call gsi_bundlegetpointer(sval(n),'cw',sc, icw)
+     call gsi_bundlegetpointer(sval(n),'ql',sql,iql)
+     call gsi_bundlegetpointer(sval(n),'qi',sqi,iqi)
+     call gsi_bundlegetpointer(sval(n),'qr',sqr,iqr)
+     call gsi_bundlegetpointer(sval(n),'qs',sqs,iqs)
+     call gsi_bundlegetpointer(sval(n),'qg',sqg,iqg)
      call gsi_bundlegetpointer(sval(n),'ps',sp, istatus);ier=istatus+ier
-     if(ier+icw*(iql+iqi)/=0)then
-       if (mype==0) write(6,*)'intjcpdry: checking ier+icw*(iql+iqi)=', ier+icw*(iql+iqi)
+     if(ier/=0 .or. (iql==0) /= (iqi==0))then
+       if (mype==0) write(6,*)'intjcpdry: checking ier, iql, iqi=', &
+                    ier, iql, iqi
        return
      end if
-
+     if(icw==0 .and. (iql==0 .or. iqi==0))then
+       if (mype==0) write(6,*)'intjcpdry: checking icw, iql, iqi=', &
+                    icw, iql, iqi
+       return
+     end if
 
 ! Calculate mean surface pressure contribution in subdomain
      do j=2,lon2-1
@@ -668,10 +683,13 @@ subroutine intjcpdry(rval,sval,nbins,pjc)
               con = (ges_prsi(i,j,k,it)-ges_prsi(i,j,k+1,it))*wgtlats(ii)
               mass2(k)=mass2(k)+sq(i,j,k)*con
               if (icw==0) then
-                 mass2(k)=mass2(k)+sc(i,j,k)*con
-              else
+                 mass2(k)=mass2(k)+sc(i,j,k)*con 
+              else if (iql==0 .and. iqi==0) then
                  mass2(k)=mass2(k)+(sql(i,j,k)+sqi(i,j,k))*con
               endif
+              if (iqr==0) mass2(k)=mass2(k)+sqr(i,j,k)*con
+              if (iqs==0) mass2(k)=mass2(k)+sqs(i,j,k)*con
+              if (iqg==0) mass2(k)=mass2(k)+sqg(i,j,k)*con
            end do
         end do
      end do
@@ -684,14 +702,23 @@ subroutine intjcpdry(rval,sval,nbins,pjc)
   call mpl_allreduce(2*nbins,qpvals=mass)
 
   do n=1,nbins
-     ier=0; icw=0; iql=0; iqi=0
+     ier=0; icw=0; iql=0; iqi=0; iqr=0; iqs=0; iqg=0
      call gsi_bundlegetpointer(rval(n),'q' ,rq, istatus);ier=istatus+ier
-     call gsi_bundlegetpointer(rval(n),'cw',rc, istatus);icw=istatus+icw
-     call gsi_bundlegetpointer(rval(n),'ql',rql,istatus);iql=istatus+iql
-     call gsi_bundlegetpointer(rval(n),'qi',rqi,istatus);iqi=istatus+iqi
+     call gsi_bundlegetpointer(rval(n),'cw',rc, icw)
+     call gsi_bundlegetpointer(rval(n),'ql',rql,iql)
+     call gsi_bundlegetpointer(rval(n),'qi',rqi,iqi)
+     call gsi_bundlegetpointer(rval(n),'qr',rqr,iqr)
+     call gsi_bundlegetpointer(rval(n),'qs',rqs,iqs)
+     call gsi_bundlegetpointer(rval(n),'qg',rqg,iqg)
      call gsi_bundlegetpointer(rval(n),'ps',rp, istatus);ier=istatus+ier
-     if(ier+icw*(iql+iqi)/=0)then
-       if (mype==0) write(6,*)'intjcpdry: checking ier+icw*(iql+iqi)=', ier+icw*(iql+iqi)
+     if(ier/=0 .or. (iql==0) /= (iqi==0))then
+       if (mype==0) write(6,*)'intjcpdry: checking ier, iql, iqi=', &
+                    ier, iql, iqi
+       return
+     end if
+     if(icw==0 .and. (iql==0 .or. iqi==0))then
+       if (mype==0) write(6,*)'intjcpdry: checking icw, iql, iqi=', &
+                    icw, iql, iqi
        return
      end if
 !    Remove water-vapor contribution to get incremental dry ps
@@ -718,12 +745,15 @@ subroutine intjcpdry(rval,sval,nbins,pjc)
               ii=istart(mm1)+i-2
               con = dmass*(ges_prsi(i,j,k,it)-ges_prsi(i,j,k+1,it))*wgtlats(ii)
               rq(i,j,k)=rq(i,j,k)-con
-              if (icw==0)then
+              if (icw==0) then
                  rc(i,j,k)=rc(i,j,k)-con
-              else
+              else if (iql==0 .and. iqi ==0) then
                  rql(i,j,k)=rql(i,j,k)-con
                  rqi(i,j,k)=rqi(i,j,k)-con
               endif
+              if (iqr==0) rqr(i,j,k)=rqr(i,j,k)-con
+              if (iqs==0) rqs(i,j,k)=rqs(i,j,k)-con
+              if (iqg==0) rqg(i,j,k)=rqg(i,j,k)-con
            end do
         end do
      end do
@@ -777,10 +807,14 @@ subroutine intjcpdry1(sval,nbins,mass)
   real(r_quad),dimension(nsig) :: mass2
   real(r_quad) rcon,con
   integer(i_kind) i,j,k,it,ii,mm1,ier,icw,iql,iqi,istatus
+  integer(i_kind) iqr,iqs,iqg
   real(r_kind),pointer,dimension(:,:,:) :: sq =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: sc =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: sql=>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: sqi=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: sqr=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: sqs=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: sqg=>NULL()
   real(r_kind),pointer,dimension(:,:)   :: sp =>NULL()
 
   integer(i_kind) :: n
@@ -793,17 +827,25 @@ subroutine intjcpdry1(sval,nbins,mass)
   do n=1,nbins
 ! Retrieve pointers
 ! Simply return if any pointer not found
-     ier=0; icw=0; iql=0; iqi=0
+     ier=0; icw=0; iql=0; iqi=0; iqr=0; iqs=0; iqg=0
      call gsi_bundlegetpointer(sval(n),'q' ,sq, istatus);ier=istatus+ier
-     call gsi_bundlegetpointer(sval(n),'cw',sc, istatus);icw=istatus+icw
-     call gsi_bundlegetpointer(sval(n),'ql',sql,istatus);iql=istatus+iql
-     call gsi_bundlegetpointer(sval(n),'qi',sqi,istatus);iqi=istatus+iqi
+     call gsi_bundlegetpointer(sval(n),'cw',sc, icw)
+     call gsi_bundlegetpointer(sval(n),'ql',sql,iql)
+     call gsi_bundlegetpointer(sval(n),'qi',sqi,iqi)
+     call gsi_bundlegetpointer(sval(n),'qr',sqr,iqr)
+     call gsi_bundlegetpointer(sval(n),'qs',sqs,iqs)
+     call gsi_bundlegetpointer(sval(n),'qg',sqg,iqg)
      call gsi_bundlegetpointer(sval(n),'ps',sp, istatus);ier=istatus+ier
-     if(ier+icw*(iql+iqi)/=0)then
-       if (mype==0) write(6,*)'intjcpdry: checking ier+icw*(iql+iqi)=', ier+icw*(iql+iqi)
+     if(ier/=0 .or. (iql==0) /= (iqi==0))then
+       if (mype==0) write(6,*)'intjcpdry1: checking ier, iql, iqi=', &
+                    ier, iql, iqi
        return
      end if
-
+     if(icw==0 .and. (iql==0 .or. iqi==0))then
+       if (mype==0) write(6,*)'intjcpdry1: checking icw, iql, iqi=', &
+                    icw, iql, iqi
+       return
+     end if
 
 ! Calculate mean surface pressure contribution in subdomain
      do j=2,lon2-1
@@ -824,9 +866,12 @@ subroutine intjcpdry1(sval,nbins,mass)
               mass2(k)=mass2(k)+sq(i,j,k)*con
               if (icw==0) then
                  mass2(k)=mass2(k)+sc(i,j,k)*con
-              else
+              else if (iql==0 .and. iqi==0) then
                  mass2(k)=mass2(k)+(sql(i,j,k)+sqi(i,j,k))*con
               endif
+              if (iqr==0) mass2(k)=mass2(k)+sqr(i,j,k)*con
+              if (iqs==0) mass2(k)=mass2(k)+sqs(i,j,k)*con
+              if (iqg==0) mass2(k)=mass2(k)+sqg(i,j,k)*con
            end do
         end do
      end do
@@ -886,10 +931,14 @@ subroutine intjcpdry2(rval,nbins,mass,pjc)
 ! Declare local variables
   real(r_quad) rcon,con,dmass
   integer(i_kind) i,j,k,it,ii,mm1,ier,icw,iql,iqi,istatus
+  integer(i_kind) iqr,iqs,iqg
   real(r_kind),pointer,dimension(:,:,:) :: rq =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: rc =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: rql=>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: rqi=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: rqr=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: rqs=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: rqg=>NULL()
   real(r_kind),pointer,dimension(:,:)   :: rp =>NULL()
 
   integer(i_kind) :: n
@@ -899,14 +948,23 @@ subroutine intjcpdry2(rval,nbins,mass,pjc)
   mm1=mype+1
 
   do n=1,nbins
-     ier=0; icw=0; iql=0; iqi=0
+     ier=0; icw=0; iql=0; iqi=0; iqr=0; iqs=0; iqg=0
      call gsi_bundlegetpointer(rval(n),'q' ,rq, istatus);ier=istatus+ier
-     call gsi_bundlegetpointer(rval(n),'cw',rc, istatus);icw=istatus+icw
-     call gsi_bundlegetpointer(rval(n),'ql',rql,istatus);iql=istatus+iql
-     call gsi_bundlegetpointer(rval(n),'qi',rqi,istatus);iqi=istatus+iqi
+     call gsi_bundlegetpointer(rval(n),'cw',rc, icw)
+     call gsi_bundlegetpointer(rval(n),'ql',rql,iql)
+     call gsi_bundlegetpointer(rval(n),'qi',rqi,iqi)
+     call gsi_bundlegetpointer(rval(n),'qr',rqr,iqr)
+     call gsi_bundlegetpointer(rval(n),'qs',rqs,iqs)
+     call gsi_bundlegetpointer(rval(n),'qg',rqg,iqg)
      call gsi_bundlegetpointer(rval(n),'ps',rp, istatus);ier=istatus+ier
-     if(ier+icw*(iql+iqi)/=0)then
-       if (mype==0) write(6,*)'intjcpdry: checking ier+icw*(iql+iqi)=', ier+icw*(iql+iqi)
+     if(ier/=0 .or. (iql==0) /= (iqi==0))then
+       if (mype==0) write(6,*)'intjcpdry2: checking ier, iql, iqi=', &
+                    ier, iql, iqi
+       return
+     end if
+     if(icw==0 .and. (iql==0 .or. iqi==0))then
+       if (mype==0) write(6,*)'intjcpdry2: checking icw, iql, iqi=', &
+                    icw, iql, iqi
        return
      end if
 !    Remove water-vapor contribution to get incremental dry ps
@@ -933,12 +991,15 @@ subroutine intjcpdry2(rval,nbins,mass,pjc)
               ii=istart(mm1)+i-2
               con = dmass*(ges_prsi(i,j,k,it)-ges_prsi(i,j,k+1,it))*wgtlats(ii)
               rq(i,j,k)=rq(i,j,k)-con
-              if (icw==0)then
+              if (icw==0) then
                  rc(i,j,k)=rc(i,j,k)-con
-              else
+              else if (iql==0 .and. iqi==0) then
                  rql(i,j,k)=rql(i,j,k)-con
                  rqi(i,j,k)=rqi(i,j,k)-con
               endif
+              if (iqr==0) rqr(i,j,k)=rqr(i,j,k)-con
+              if (iqs==0) rqs(i,j,k)=rqs(i,j,k)-con
+              if (iqg==0) rqg(i,j,k)=rqg(i,j,k)-con 
            end do
         end do
      end do

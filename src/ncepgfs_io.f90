@@ -119,24 +119,27 @@ contains
     use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sub2grid_destroy_info
     use mpimod, only: npe,mype
     use mpeu_util, only: die
-    use cloud_efr_mod, only: cloud_calc_gfs,set_cloud_lower_bound    
+    use cloud_efr_mod, only: cloud_calc_gfs,set_cloud_lower_bound
     use general_specmod, only: general_init_spec_vars,general_destroy_spec_vars,spec_vars
     implicit none
 
     character(24) filename
     logical:: l_cld_derived,zflag,inithead
     integer(i_kind):: it,nlon_b,num_fields,inner_vars
-    integer(i_kind):: iret,iret_ql,iret_qi,istatus 
+    integer(i_kind):: iret,iret_ql,iret_qi,istatus
 
     type(gsi_bundle) :: atm_bundle
     type(gsi_grid)   :: atm_grid
     integer(i_kind),parameter :: n2d=2
-    integer(i_kind),parameter :: n3d=8
+    integer(i_kind),parameter :: n3d=13
     character(len=4), parameter :: vars2d(n2d) = (/ 'z   ', 'ps  ' /)
     character(len=4), parameter :: vars3d(n3d) = (/ 'u   ', 'v   ', &
                                                     'vor ', 'div ', &
                                                     'tv  ', 'q   ', &
-                                                    'cw  ', 'oz  ' /)
+                                                    'cw  ', 'oz  ', &
+                                                    'ql  ', 'qi  ', &
+                                                    'qr  ', 'qs  ', &
+                                                    'qg  ' /)
 
     real(r_kind),pointer,dimension(:,:):: ptr2d   =>null()
     real(r_kind),pointer,dimension(:,:,:):: ptr3d =>null()
@@ -169,7 +172,7 @@ contains
     endif
 
     inner_vars=1
-    num_fields=min(8*grd_a%nsig+2,npe)
+    num_fields=min(n3d*grd_a%nsig+n2d,npe)
 !  Create temporary communication information fore read routines
     call general_sub2grid_create_info(grd_t,inner_vars,grd_a%nlat,grd_a%nlon, &
           grd_a%nsig,num_fields,regional)
@@ -221,7 +224,7 @@ contains
        if (mype==0) write(6,*)'READ_GFS: l_cld_derived = ', l_cld_derived
 
        if (l_cld_derived) then
-          call cloud_calc_gfs(ges_ql_it,ges_qi_it,ges_cwmr_it,ges_q_it,ges_tv_it) 
+          call cloud_calc_gfs(ges_ql_it,ges_qi_it,ges_cwmr_it,ges_q_it,ges_tv_it)
        end if
 
     end do
@@ -282,18 +285,18 @@ contains
      call gsi_bundlegetpointer (gsi_metguess_bundle(it),'oz',ges_oz_it  ,istatus) 
      if(istatus==0) ges_oz_it = ptr3d
   endif
-  call gsi_bundlegetpointer (atm_bundle,'cw',ptr3d,istatus) 
+  call gsi_bundlegetpointer (atm_bundle,'cw',ptr3d,istatus)
   if (istatus==0) then
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ges_cwmr_it,istatus) 
+     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ges_cwmr_it,istatus)
      if(istatus==0) ges_cwmr_it = ptr3d
   endif
-  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql_it,  iret_ql) 
-  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi_it,  iret_qi)           
-  if (iret_ql/=0) then 
-     if (mype==0) write(6,*)'READ_GFS: cannot get pointer to ql,iret_ql= ',iret_ql 
+  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql_it,  iret_ql)
+  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi_it,  iret_qi)
+  if (iret_ql/=0) then
+     if (mype==0) write(6,*)'READ_GFS: cannot get pointer to ql,iret_ql= ',iret_ql
   endif
-  if (iret_qi/=0) then 
-     if (mype==0) write(6,*)'READ_GFS: cannot get pointer to qi,iret_qi= ',iret_qi 
+  if (iret_qi/=0) then
+     if (mype==0) write(6,*)'READ_GFS: cannot get pointer to qi,iret_qi= ',iret_qi
   endif
 
   end subroutine set_guess_
@@ -1182,6 +1185,11 @@ end subroutine write_ghg_grid
     real(r_kind),pointer,dimension(:,:,:):: aux_q
     real(r_kind),pointer,dimension(:,:,:):: aux_oz
     real(r_kind),pointer,dimension(:,:,:):: aux_cwmr
+    real(r_kind),pointer,dimension(:,:,:):: aux_ql
+    real(r_kind),pointer,dimension(:,:,:):: aux_qi
+    real(r_kind),pointer,dimension(:,:,:):: aux_qr
+    real(r_kind),pointer,dimension(:,:,:):: aux_qs
+    real(r_kind),pointer,dimension(:,:,:):: aux_qg
 
     real(r_kind),pointer,dimension(:,:  ):: ges_ps_it  =>null()
     real(r_kind),pointer,dimension(:,:,:):: ges_u_it   =>null()
@@ -1192,16 +1200,24 @@ end subroutine write_ghg_grid
     real(r_kind),pointer,dimension(:,:,:):: ges_q_it   =>null()
     real(r_kind),pointer,dimension(:,:,:):: ges_oz_it  =>null()
     real(r_kind),pointer,dimension(:,:,:):: ges_cwmr_it=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_ql_it  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qi_it  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qr_it  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qs_it  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qg_it  =>null()
 
     type(gsi_bundle) :: atm_bundle
     type(gsi_grid)   :: atm_grid
     integer(i_kind),parameter :: n2d=2
-    integer(i_kind),parameter :: n3d=8
+    integer(i_kind),parameter :: n3d=13
     character(len=4), parameter :: vars2d(n2d) = (/ 'z   ', 'ps  ' /)
     character(len=4), parameter :: vars3d(n3d) = (/ 'u   ', 'v   ', &
                                                     'vor ', 'div ', &
                                                     'tv  ', 'q   ', &
-                                                    'cw  ', 'oz  ' /)
+                                                    'cw  ', 'oz  ', &
+                                                    'ql  ', 'qi  ', &
+                                                    'qr  ', 'qs  ', &
+                                                    'qg  ' /)
 
     logical :: inithead
     type(spec_vars):: sp_b
@@ -1239,6 +1255,16 @@ end subroutine write_ghg_grid
     if ( istatus == 0 ) aux_oz = zero
     call gsi_bundlegetpointer(atm_bundle,'cw',aux_cwmr,istatus)
     if ( istatus == 0 ) aux_cwmr = zero
+    call gsi_bundlegetpointer(atm_bundle,'ql',aux_ql,istatus)
+    if ( istatus == 0 ) aux_ql = zero
+    call gsi_bundlegetpointer(atm_bundle,'qi',aux_qi,istatus)
+    if ( istatus == 0 ) aux_qi = zero
+    call gsi_bundlegetpointer(atm_bundle,'qr',aux_qr,istatus)
+    if ( istatus == 0 ) aux_qr = zero
+    call gsi_bundlegetpointer(atm_bundle,'qs',aux_qs,istatus)
+    if ( istatus == 0 ) aux_qs = zero
+    call gsi_bundlegetpointer(atm_bundle,'qg',aux_qg,istatus)
+    if ( istatus == 0 ) aux_qg = zero
 
     inithead=.true.
     do it=1,ntlevs
@@ -1293,6 +1319,17 @@ end subroutine write_ghg_grid
         if ( istatus == 0 ) aux_oz = ges_oz_it
         call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'cw',ges_cwmr_it,istatus) 
         if ( istatus == 0 ) aux_cwmr = ges_cwmr_it
+        call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'ql',ges_ql_it,istatus)
+        if ( istatus == 0 ) aux_ql = ges_ql_it
+        call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'qi',ges_qi_it,istatus)
+        if ( istatus == 0 ) aux_qi = ges_qi_it
+        call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'qr',ges_qr_it,istatus)
+        if ( istatus == 0 ) aux_qr = ges_qr_it
+        call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'qs',ges_qs_it,istatus)
+        if ( istatus == 0 ) aux_qs = ges_qs_it
+        call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'qg',ges_qg_it,istatus)
+        if ( istatus == 0 ) aux_qg = ges_qg_it
+
 
         if ( use_gfs_nemsio ) then
 
@@ -1336,7 +1373,7 @@ end subroutine write_ghg_grid
             call write_gfssfc(filename,mype_sfc,dsfct(1,1,ntguessfc))
         endif
     else
-       if ( nst_gsi > 0 ) then
+        if ( nst_gsi > 0 ) then
           if ( sfcnst_comb ) then
              call write_tf_inc_nc(mype_sfc,dsfct(:,:,ntguessfc))
           else
@@ -1346,14 +1383,14 @@ end subroutine write_ghg_grid
                  call write_gfs_sfc_nst (mype_sfc,dsfct(1,1,ntguessfc))
              endif
           endif
-       else
-           filename='sfcanl.gsi'
-           if ( use_gfs_nemsio ) then
-               call write_nemssfc(filename,mype_sfc,dsfct(:,:,ntguessfc))
-           else
-               call write_gfssfc (filename,mype_sfc,dsfct(1,1,ntguessfc))
-           endif
-       endif
+        else
+            filename='sfcanl.gsi'
+            if ( use_gfs_nemsio ) then
+                call write_nemssfc(filename,mype_sfc,dsfct(:,:,ntguessfc))
+            else
+                call write_gfssfc (filename,mype_sfc,dsfct(1,1,ntguessfc))
+            endif
+        endif
     endif
 
   end subroutine write_gfs
@@ -2038,7 +2075,7 @@ end subroutine write_ghg_grid
 
   subroutine write_tf_inc_nc(mype_so,xvar2)
 !
-! abstract: get a global dtf and msk used in GSI by gatjering sub-domanin ones and write them in netCDF 
+! abstract: get a global dtf and msk used in GSI by gatjering sub-domanin ones and write them in netCDF
 !
 !  REMARKS:
 !
@@ -2082,8 +2119,8 @@ end subroutine write_ghg_grid
 !
 !  INPUT PARAMETERS:
 !
-    integer(i_kind),                   intent(in) :: mype_so          
-    real(r_kind),dimension(lat2,lon2), intent(in) :: xvar2            
+    integer(i_kind),                   intent(in) :: mype_so
+    real(r_kind),dimension(lat2,lon2), intent(in) :: xvar2
 !
 !  OUTPUT PARAMETERS:
 !
@@ -2174,13 +2211,13 @@ end subroutine write_ghg_grid
        call nc_check( nf90_put_att(ncid, msk_varid, units, msk_units),'lat_name','dtfanl' )
 !      End define mode.
        call nc_check( nf90_enddef(ncid),'Att_End','dtfanl' )
-!      Write the coordinate variable data. 
+!      Write the coordinate variable data.
        call nc_check( nf90_put_var(ncid, lat_varid, rlats*rad2deg),'write_lats','dtfanl' )
        call nc_check( nf90_put_var(ncid, lon_varid, rlons*rad2deg),'write_lons','dtfanl' )
 !      These settings tell netcdf to write one timestep of data.
        count = (/ nlon, nlat /)
        start = (/ 1, 1 /)
-!      Write the data. 
+!      Write the data.
        call nc_check( nf90_put_var(ncid, dtf_varid, dtf, start, count),'write_dtf','dtfanl' )
        call nc_check( nf90_put_var(ncid, msk_varid, msk, start, count),'write_msk','dtfanl' )
 

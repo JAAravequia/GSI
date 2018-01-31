@@ -15,6 +15,7 @@ subroutine prt_guess(sgrep)
 !   2011-12-02  zhu    - add safe-guard for the case when there is no entry in the metguess table
 !   2013-10-19  todling - metguess now holds background 
 !   2013-04-15  zhu    - account for aircraft bias correction
+!   2018-01-08  tong   - add hydrometeors
 !
 !   input argument list:
 !    sgrep  - prefix for write statement
@@ -52,8 +53,8 @@ subroutine prt_guess(sgrep)
   character(len=*), intent(in   ) :: sgrep
 
 ! Declare local variables
-  integer(i_kind), parameter :: nvars=12
-  integer(i_kind) ii,istatus,ier
+  integer(i_kind), parameter :: nvars=17
+  integer(i_kind) ii,istatus,ier,ivar
   integer(i_kind) ntsig
   integer(i_kind) ntsfc
   integer(i_kind) n_actual_clouds
@@ -68,12 +69,20 @@ subroutine prt_guess(sgrep)
   real(r_kind),pointer,dimension(:,:,:)::ges_q_it=>NULL()
   real(r_kind),pointer,dimension(:,:,:)::ges_oz_it=>NULL()
   real(r_kind),pointer,dimension(:,:,:)::ges_cwmr_it=>NULL()
+  real(r_kind),pointer,dimension(:,:,:)::ges_ql_it=>NULL()
+  real(r_kind),pointer,dimension(:,:,:)::ges_qi_it=>NULL()
+  real(r_kind),pointer,dimension(:,:,:)::ges_qr_it=>NULL()
+  real(r_kind),pointer,dimension(:,:,:)::ges_qs_it=>NULL()
+  real(r_kind),pointer,dimension(:,:,:)::ges_qg_it=>NULL() 
   character(len=4) :: cvar(nvars+3)
+  logical :: lprt(nvars+3)
 
 !*******************************************************************************
 
   ntsig = ntguessig
   ntsfc = ntguessfc
+  lprt = .true.
+  zloc = zero
 
   ier=0
   call gsi_bundlegetpointer (gsi_metguess_bundle(ntsig),'ps',ges_ps_it,istatus)
@@ -97,20 +106,50 @@ subroutine prt_guess(sgrep)
 ! get pointer to cloud water condensate
   call gsi_metguess_get('clouds::3d',n_actual_clouds,ier)
   if (n_actual_clouds>0) then
-     call gsi_bundlegetpointer (gsi_metguess_bundle(ntsig),'cw',ges_cwmr_it,istatus)
-     if (istatus/=0) then 
-        if (regional) then 
-           ges_cwmr_it => cwgues
-        else
-           ier=99
-        end if
-     end if
-  else
-     if(associated(ges_cwmr_it)) then
-        ges_cwmr_it => cwgues
+     call gsi_metguess_get ( 'var::cw', ivar, ier )
+     if (ivar > 0)then
+        call gsi_bundlegetpointer (gsi_metguess_bundle(ntsig),'cw',ges_cwmr_it,istatus)
+        ier=ier+istatus
      else
-        ier=99
+        lprt(7) = .false.
+     endif 
+     call gsi_metguess_get ( 'var::ql', ivar, ier )
+     if (ivar > 0)then
+        call gsi_bundlegetpointer (gsi_metguess_bundle(ntsig),'ql',ges_ql_it,istatus)
+        ier=ier+istatus
+     else
+        lprt(8) = .false. 
      endif
+     call gsi_metguess_get ( 'var::qi', ivar, ier )
+     if (ivar > 0)then
+        call gsi_bundlegetpointer (gsi_metguess_bundle(ntsig),'qi',ges_qi_it,istatus)
+        ier=ier+istatus
+     else
+        lprt(9) = .false.
+     endif
+     call gsi_metguess_get ( 'var::qr', ivar, ier )
+     if (ivar > 0)then
+        call gsi_bundlegetpointer (gsi_metguess_bundle(ntsig),'qr',ges_qr_it,istatus)
+        ier=ier+istatus
+     else
+        lprt(10) = .false.
+     endif
+     call gsi_metguess_get ( 'var::qs', ivar, ier )
+     if (ivar > 0)then
+        call gsi_bundlegetpointer (gsi_metguess_bundle(ntsig),'qs',ges_qs_it,istatus)
+        ier=ier+istatus
+     else
+        lprt(11) = .false.
+     endif
+     call gsi_metguess_get ( 'var::qg', ivar, ier )
+     if (ivar > 0)then
+        call gsi_bundlegetpointer (gsi_metguess_bundle(ntsig),'qg',ges_qg_it,istatus)
+        ier=ier+istatus
+     else
+        lprt(12) = .false.
+     endif
+  else
+     lprt(7:12) = .false.
   end if
   if (ier/=0) return ! this is a fundamental routine, when some not found just return
 
@@ -121,14 +160,19 @@ subroutine prt_guess(sgrep)
   cvar( 5)='TSEN'
   cvar( 6)='OZ  '
   cvar( 7)='CW  '
-  cvar( 8)='DIV '
-  cvar( 9)='VOR '
-  cvar(10)='PRSL'
-  cvar(11)='PS  '
-  cvar(12)='SST '
-  cvar(13)='radb'
-  cvar(14)='pcpb'
-  cvar(15)='aftb'
+  cvar( 8)='QL  '
+  cvar( 9)='QI  '
+  cvar(10)='QR  '
+  cvar(11)='QS  '
+  cvar(12)='QG  '
+  cvar(13)='DIV '
+  cvar(14)='VOR '
+  cvar(15)='PRSL'
+  cvar(16)='PS  '
+  cvar(17)='SST '
+  cvar(18)='radb'
+  cvar(19)='pcpb'
+  cvar(20)='aftb'
 
   zloc(1)          = sum   (ges_u_it  (2:lat1+1,2:lon1+1,1:nsig))
   zloc(2)          = sum   (ges_v_it  (2:lat1+1,2:lon1+1,1:nsig))
@@ -136,39 +180,54 @@ subroutine prt_guess(sgrep)
   zloc(4)          = sum   (ges_q_it  (2:lat1+1,2:lon1+1,1:nsig))
   zloc(5)          = sum   (ges_tsen  (2:lat1+1,2:lon1+1,1:nsig,ntsig))
   zloc(6)          = sum   (ges_oz_it (2:lat1+1,2:lon1+1,1:nsig))
-  zloc(7)          = sum   (ges_cwmr_it(2:lat1+1,2:lon1+1,1:nsig))
-  zloc(8)          = sum   (ges_div_it (2:lat1+1,2:lon1+1,1:nsig))
-  zloc(9)          = sum   (ges_vor_it (2:lat1+1,2:lon1+1,1:nsig))
-  zloc(10)         = sum   (ges_prsl  (2:lat1+1,2:lon1+1,1:nsig,ntsig))
-  zloc(11)         = sum   (ges_ps_it (2:lat1+1,2:lon1+1             ))
-  zloc(12)         = sum   (sfct      (2:lat1+1,2:lon1+1,       ntsfc))
+  if (lprt(7))  zloc(7)  = sum   (ges_cwmr_it(2:lat1+1,2:lon1+1,1:nsig))
+  if (lprt(8))  zloc(8)  = sum   (ges_ql_it  (2:lat1+1,2:lon1+1,1:nsig))
+  if (lprt(9))  zloc(9)  = sum   (ges_qi_it  (2:lat1+1,2:lon1+1,1:nsig))
+  if (lprt(10)) zloc(10) = sum   (ges_qr_it  (2:lat1+1,2:lon1+1,1:nsig))
+  if (lprt(11)) zloc(11) = sum   (ges_qs_it  (2:lat1+1,2:lon1+1,1:nsig))
+  if (lprt(12)) zloc(12) = sum   (ges_qg_it  (2:lat1+1,2:lon1+1,1:nsig))
+  zloc(13)         = sum   (ges_div_it (2:lat1+1,2:lon1+1,1:nsig))
+  zloc(14)         = sum   (ges_vor_it (2:lat1+1,2:lon1+1,1:nsig))
+  zloc(15)         = sum   (ges_prsl   (2:lat1+1,2:lon1+1,1:nsig,ntsig))
+  zloc(16)         = sum   (ges_ps_it  (2:lat1+1,2:lon1+1             ))
+  zloc(17)         = sum   (sfct       (2:lat1+1,2:lon1+1,       ntsfc))
   zloc(nvars+1)    = minval(ges_u_it  (2:lat1+1,2:lon1+1,1:nsig))
   zloc(nvars+2)    = minval(ges_v_it  (2:lat1+1,2:lon1+1,1:nsig))
   zloc(nvars+3)    = minval(ges_tv_it (2:lat1+1,2:lon1+1,1:nsig))
   zloc(nvars+4)    = minval(ges_q_it  (2:lat1+1,2:lon1+1,1:nsig))
   zloc(nvars+5)    = minval(ges_tsen  (2:lat1+1,2:lon1+1,1:nsig,ntsig))
   zloc(nvars+6)    = minval(ges_oz_it (2:lat1+1,2:lon1+1,1:nsig))
-  zloc(nvars+7)    = minval(ges_cwmr_it(2:lat1+1,2:lon1+1,1:nsig))
-  zloc(nvars+8)    = minval(ges_div_it(2:lat1+1,2:lon1+1,1:nsig))
-  zloc(nvars+9)    = minval(ges_vor_it(2:lat1+1,2:lon1+1,1:nsig))
-  zloc(nvars+10)   = minval(ges_prsl  (2:lat1+1,2:lon1+1,1:nsig,ntsig))
-  zloc(nvars+11)   = minval(ges_ps_it (2:lat1+1,2:lon1+1             ))
-  zloc(nvars+12)   = minval(sfct      (2:lat1+1,2:lon1+1,       ntsfc))
+  if (lprt(7))  zloc(nvars+7)  = minval(ges_cwmr_it(2:lat1+1,2:lon1+1,1:nsig))
+  if (lprt(8))  zloc(nvars+8)  = minval(ges_ql_it  (2:lat1+1,2:lon1+1,1:nsig))
+  if (lprt(9))  zloc(nvars+9)  = minval(ges_qi_it  (2:lat1+1,2:lon1+1,1:nsig))
+  if (lprt(10)) zloc(nvars+10) = minval(ges_qr_it  (2:lat1+1,2:lon1+1,1:nsig))
+  if (lprt(11)) zloc(nvars+11) = minval(ges_qs_it  (2:lat1+1,2:lon1+1,1:nsig))
+  if (lprt(12)) zloc(nvars+12) = minval(ges_qg_it  (2:lat1+1,2:lon1+1,1:nsig))
+  zloc(nvars+13)   = minval(ges_div_it(2:lat1+1,2:lon1+1,1:nsig))
+  zloc(nvars+14)   = minval(ges_vor_it(2:lat1+1,2:lon1+1,1:nsig))
+  zloc(nvars+15)   = minval(ges_prsl  (2:lat1+1,2:lon1+1,1:nsig,ntsig))
+  zloc(nvars+16)   = minval(ges_ps_it (2:lat1+1,2:lon1+1             ))
+  zloc(nvars+17)   = minval(sfct      (2:lat1+1,2:lon1+1,       ntsfc))
   zloc(2*nvars+1)  = maxval(ges_u_it  (2:lat1+1,2:lon1+1,1:nsig))
   zloc(2*nvars+2)  = maxval(ges_v_it  (2:lat1+1,2:lon1+1,1:nsig))
   zloc(2*nvars+3)  = maxval(ges_tv_it (2:lat1+1,2:lon1+1,1:nsig))
   zloc(2*nvars+4)  = maxval(ges_q_it  (2:lat1+1,2:lon1+1,1:nsig))
   zloc(2*nvars+5)  = maxval(ges_tsen  (2:lat1+1,2:lon1+1,1:nsig,ntsig))
   zloc(2*nvars+6)  = maxval(ges_oz_it (2:lat1+1,2:lon1+1,1:nsig))
-  zloc(2*nvars+7)  = maxval(ges_cwmr_it(2:lat1+1,2:lon1+1,1:nsig))
-  zloc(2*nvars+8)  = maxval(ges_div_it(2:lat1+1,2:lon1+1,1:nsig))
-  zloc(2*nvars+9)  = maxval(ges_vor_it(2:lat1+1,2:lon1+1,1:nsig))
-  zloc(2*nvars+10) = maxval(ges_prsl  (2:lat1+1,2:lon1+1,1:nsig,ntsig))
-  zloc(2*nvars+11) = maxval(ges_ps_it (2:lat1+1,2:lon1+1             ))
-  zloc(2*nvars+12) = maxval(sfct      (2:lat1+1,2:lon1+1,       ntsfc))
-  zloc(3*nvars+1)  = real(lat1*lon1*nsig*ntsig,r_kind)
-  zloc(3*nvars+2)  = real(lat1*lon1*ntsig,r_kind)
-  zloc(3*nvars+3)  = real(lat1*lon1*nsig*ntsig,r_kind)
+  if (lprt(7))  zloc(2*nvars+7)  = maxval(ges_cwmr_it(2:lat1+1,2:lon1+1,1:nsig))
+  if (lprt(8))  zloc(2*nvars+8)  = maxval(ges_ql_it  (2:lat1+1,2:lon1+1,1:nsig))
+  if (lprt(9))  zloc(2*nvars+9)  = maxval(ges_qi_it  (2:lat1+1,2:lon1+1,1:nsig))
+  if (lprt(10)) zloc(2*nvars+10) = maxval(ges_qr_it  (2:lat1+1,2:lon1+1,1:nsig))
+  if (lprt(11)) zloc(2*nvars+11) = maxval(ges_qs_it  (2:lat1+1,2:lon1+1,1:nsig))
+  if (lprt(12)) zloc(2*nvars+12) = maxval(ges_qg_it  (2:lat1+1,2:lon1+1,1:nsig))
+  zloc(2*nvars+13)  = maxval(ges_div_it(2:lat1+1,2:lon1+1,1:nsig))
+  zloc(2*nvars+14)  = maxval(ges_vor_it(2:lat1+1,2:lon1+1,1:nsig))
+  zloc(2*nvars+15)  = maxval(ges_prsl  (2:lat1+1,2:lon1+1,1:nsig,ntsig))
+  zloc(2*nvars+16)  = maxval(ges_ps_it (2:lat1+1,2:lon1+1             ))
+  zloc(2*nvars+17)  = maxval(sfct      (2:lat1+1,2:lon1+1,       ntsfc))
+  zloc(3*nvars+1)   = real(lat1*lon1*nsig*ntsig,r_kind)
+  zloc(3*nvars+2)   = real(lat1*lon1*ntsig,r_kind)
+  zloc(3*nvars+3)   = real(lat1*lon1*nsig*ntsig,r_kind)
 
 
 ! Gather contributions
@@ -212,7 +271,7 @@ subroutine prt_guess(sgrep)
      write(6,'(80a)') ('=',ii=1,80)
      write(6,'(a,2x,a,10x,a,17x,a,20x,a)') 'Status ', 'Var', 'Mean', 'Min', 'Max'
      do ii=1,nvars+3
-        write(6,999)sgrep,cvar(ii),zavg(ii),zmin(ii),zmax(ii)
+        if (lprt(ii)) write(6,999)sgrep,cvar(ii),zavg(ii),zmin(ii),zmax(ii)
      enddo
      write(6,'(80a)') ('=',ii=1,80)
   endif
@@ -315,7 +374,6 @@ subroutine prt_guessfc2(sgrep,use_sfc)
         zall(2*nvars+8)  = maxval(veg_type_full )
         zall(2*nvars+10) = maxval(soil_type_full)
      end if
-
 
      zz=zall(3*nvars+1)
      do ii=1,nvars-3

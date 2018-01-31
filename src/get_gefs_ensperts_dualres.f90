@@ -93,13 +93,6 @@ subroutine get_gefs_ensperts_dualres
   logical ice
   type(sub2grid_info) :: grd_tmp
 
-  integer(i_kind),parameter :: n2d=2
-  integer(i_kind),parameter :: n3d=6
-  character(len=4), parameter :: vars2d(n2d) = (/ 'ps  ', 'sst ' /)
-  character(len=4), parameter :: vars3d(n3d) = (/ 'sf  ', 'vp  ', &
-                                                  't   ', 'q   ', &
-                                                  'cw  ', 'oz  ' /)
-
 ! Create perturbations grid and get variable names from perturbations
   if(en_perts(1,1)%grid%im/=grd_ens%lat2.or. &
      en_perts(1,1)%grid%jm/=grd_ens%lon2.or. &
@@ -258,6 +251,66 @@ subroutine get_gefs_ensperts_dualres
              end if
           end if
           if ( trim(cvars3d(ic3)) == 'cw' ) then
+!$omp parallel do schedule(dynamic,1) private(i,j,k)
+             do k=1,km
+                do j=1,jm
+                   do i=1,im
+                      w3(i,j,k) = max(p3(i,j,k),qcmin)
+                      x3(i,j,k)=x3(i,j,k)+max(p3(i,j,k),qcmin)
+                   end do
+                end do
+             end do
+             cycle
+          end if
+          if ( trim(cvars3d(ic3)) == 'ql' ) then
+!$omp parallel do schedule(dynamic,1) private(i,j,k)
+             do k=1,km
+                do j=1,jm
+                   do i=1,im
+                      w3(i,j,k) = max(p3(i,j,k),qcmin)
+                      x3(i,j,k)=x3(i,j,k)+max(p3(i,j,k),qcmin)
+                   end do
+                end do
+             end do
+             cycle
+          end if
+          if ( trim(cvars3d(ic3)) == 'qi' ) then
+!$omp parallel do schedule(dynamic,1) private(i,j,k)
+             do k=1,km
+                do j=1,jm
+                   do i=1,im
+                      w3(i,j,k) = max(p3(i,j,k),qcmin)
+                      x3(i,j,k)=x3(i,j,k)+max(p3(i,j,k),qcmin)
+                   end do
+                end do
+             end do
+             cycle
+          end if
+          if ( trim(cvars3d(ic3)) == 'qr' ) then
+!$omp parallel do schedule(dynamic,1) private(i,j,k)
+             do k=1,km
+                do j=1,jm
+                   do i=1,im
+                      w3(i,j,k) = max(p3(i,j,k),qcmin)
+                      x3(i,j,k)=x3(i,j,k)+max(p3(i,j,k),qcmin)
+                   end do
+                end do
+             end do
+             cycle
+          end if
+          if ( trim(cvars3d(ic3)) == 'qs' ) then
+!$omp parallel do schedule(dynamic,1) private(i,j,k)
+             do k=1,km
+                do j=1,jm
+                   do i=1,im
+                      w3(i,j,k) = max(p3(i,j,k),qcmin)
+                      x3(i,j,k)=x3(i,j,k)+max(p3(i,j,k),qcmin)
+                   end do
+                end do
+             end do
+             cycle
+          end if
+          if ( trim(cvars3d(ic3)) == 'qg' ) then
 !$omp parallel do schedule(dynamic,1) private(i,j,k)
              do k=1,km
                 do j=1,jm
@@ -502,7 +555,7 @@ subroutine ens_spread_dualres(en_bar,ibin)
   logical regional
   integer(i_kind) num_fields,inner_vars,istat,istatus
   logical,allocatable::vector(:)
-  real(r_kind),pointer,dimension(:,:,:):: st,vp,tv,rh,oz,cw
+  real(r_kind),pointer,dimension(:,:,:):: st,vp,tv,rh,oz,cw,ql,qi,qr,qs,qg
   real(r_kind),pointer,dimension(:,:):: ps
   real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig),target::dum3
   real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2),target::dum2
@@ -597,19 +650,44 @@ subroutine ens_spread_dualres(en_bar,ibin)
      write(6,*)' no cw pointer in ens_spread_dualres, point cw at dum3 array'
      cw => dum3
   end if
+  call gsi_bundlegetpointer(suba,'ql',ql,istat)
+  if(istat/=0) then
+     write(6,*)' no ql pointer in ens_spread_dualres, point ql at dum3 array'
+     ql => dum3
+  end if
+  call gsi_bundlegetpointer(suba,'qi',qi,istat)
+  if(istat/=0) then
+     write(6,*)' no qi pointer in ens_spread_dualres, point qi at dum3 array'
+     qi => dum3
+  end if
+  call gsi_bundlegetpointer(suba,'qr',qr,istat)
+  if(istat/=0) then
+     write(6,*)' no qr pointer in ens_spread_dualres, point qr at dum3 array'
+     qr => dum3
+  end if
+  call gsi_bundlegetpointer(suba,'qs',qs,istat)
+  if(istat/=0) then
+     write(6,*)' no qs pointer in ens_spread_dualres, point qs at dum3 array'
+     qs => dum3
+  end if
+  call gsi_bundlegetpointer(suba,'qg',qg,istat)
+  if(istat/=0) then
+     write(6,*)' no qg pointer in ens_spread_dualres, point qg at dum3 array'
+     qg => dum3
+  end if
   call gsi_bundlegetpointer(suba,'ps',ps,istat)
   if(istat/=0) then
      write(6,*)' no ps pointer in ens_spread_dualres, point ps at dum2 array'
      ps => dum2
   end if
 
-  call write_spread_dualres(st,vp,tv,rh,oz,cw,ps)
+  call write_spread_dualres(st,vp,tv,rh,oz,cw,ql,qi,qr,qs,qg,ps)
 
   return
 end subroutine ens_spread_dualres
 
 
-subroutine write_spread_dualres(a,b,c,d,e,f,g2in)
+subroutine write_spread_dualres(a,b,c,d,e,f,q1,q2,q3,q4,q5,g2in)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    write_spread_dualres   write ensemble spread for diagnostics
@@ -622,6 +700,7 @@ subroutine write_spread_dualres(a,b,c,d,e,f,g2in)
 ! program history log:
 !   2010-01-05  kleist, initial documentation
 !   2010-02-28  parrish - make changes to allow dual resolution capability
+!   2017-12-27  tong - add hydrometeories
 !
 !   input argument list:
 !     a    -  spread variable 1
@@ -630,7 +709,12 @@ subroutine write_spread_dualres(a,b,c,d,e,f,g2in)
 !     d    -  spread variable 4
 !     e    -  spread variable 5
 !     f    -  spread variable 6
-!     g    -  spread variable 7
+!     q1   -  spread variable 7
+!     q2   -  spread variable 8
+!     q3   -  spread variable 9
+!     q4   -  spread variable 10 
+!     q5   -  spread variable 11
+!     g2in -  spread variable 12
 !
 !   output argument list:
 !
@@ -648,8 +732,9 @@ subroutine write_spread_dualres(a,b,c,d,e,f,g2in)
   character(255):: grdfile
 
   real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig),intent(in):: a,b,c,d,e,f
+  real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig),intent(in):: q1,q2,q3,q4,q5
   real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2),intent(in):: g2in
-  real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig,6):: g3in
+  real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig,11):: g3in
 
   real(r_kind),dimension(grd_anl%nlat,grd_anl%nlon,grd_anl%nsig):: work8_3d
   real(r_kind),dimension(grd_anl%nlat,grd_anl%nlon):: work8_2d
@@ -662,7 +747,7 @@ subroutine write_spread_dualres(a,b,c,d,e,f,g2in)
 ! Initial memory used by 2d and 3d grids
   mem2d = 4*grd_anl%nlat*grd_anl%nlon
   mem3d = 4*grd_anl%nlat*grd_anl%nlon*grd_anl%nsig
-  num3d=6
+  num3d=11
 
 ! transfer 2d arrays to generic work aray
   do k=1,grd_anl%nsig
@@ -674,6 +759,11 @@ subroutine write_spread_dualres(a,b,c,d,e,f,g2in)
          g3in(i,j,k,4)=d(i,j,k)
          g3in(i,j,k,5)=e(i,j,k)
          g3in(i,j,k,6)=f(i,j,k)
+         g3in(i,j,k,7)=q1(i,j,k)
+         g3in(i,j,k,8)=q2(i,j,k)
+         g3in(i,j,k,9)=q3(i,j,k)
+         g3in(i,j,k,10)=q4(i,j,k)
+         g3in(i,j,k,11)=q5(i,j,k)
        end do
      end do
   end do

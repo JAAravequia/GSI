@@ -195,7 +195,6 @@ subroutine compute_derived(mype,init_pass)
   do ii=1,nfldsig
      call gsi_bundlegetpointer (gsi_metguess_bundle(ii),'q',ges_q,ier)
      if (ier/=0) exit
-     if(ii == ntguessig) call q_diag(ii,mype)
      do k=1,nsig
         do j=1,lon2
            do i=1,lat2
@@ -253,6 +252,7 @@ subroutine compute_derived(mype,init_pass)
   else
      if(associated(ges_cwmr)) ges_cwmr => cwgues
   end if  ! end of n_actual_clouds
+  call q_diag(it,mype)
 
 ! RTodling: The following call is in a completely undesirable place
 ! -----------------------------------------------------------------

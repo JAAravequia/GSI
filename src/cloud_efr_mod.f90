@@ -317,7 +317,41 @@ subroutine cloud_calc_gfs(g_ql,g_qi,g_cwmr,g_q,g_tv)
   return
 end subroutine cloud_calc_gfs
 
-subroutine set_cloud_lower_bound(g_cwmr)
+subroutine cloud_calc_gfs2(g_ql,g_qi,g_cwmr)
+!$$$  subprogram documentation block
+!                .      .    .                                       .
+! subprogram:    cloud_calc_gfs2     calculate cloud mixing ratio
+!   prgmmr: mtong          org: np22                date: 2017-12-21
+!
+! abstract: calculate cloud water total condensate
+!
+! program history log:
+
+  use gridmod, only: lat2,lon2,nsig
+  use constants, only: qcmin
+  implicit none
+
+! Declare passed variables
+  real(r_kind),dimension(lat2,lon2,nsig),intent(in   ):: g_ql   ! mixing ratio of cloud liquid water [Kg/Kg]
+  real(r_kind),dimension(lat2,lon2,nsig),intent(in   ):: g_qi   ! mixing ratio of cloud ice [Kg/Kg]
+  real(r_kind),dimension(lat2,lon2,nsig),intent(  out):: g_cwmr ! mixing ratio of total condensates [Kg/Kg]
+
+! Declare local variables
+  integer(i_kind):: i,j,k
+
+! Calculate total condensate  
+  do k=1,nsig
+     do j=1,lon2
+        do i=1,lat2
+           g_cwmr(i,j,k) =g_ql(i,j,k)+g_qi(i,j,k)
+        end do
+     end do
+  end do
+
+  return
+end subroutine cloud_calc_gfs2
+
+subroutine set_cloud_lower_bound(g_qx)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    set_cloud_lower_bound    
@@ -327,26 +361,27 @@ subroutine set_cloud_lower_bound(g_cwmr)
 !
 ! program history log:
 !   2011-11-01 eliu   set minimum value for cloud water mixing ratio 
+!   2011-12-21 mtong  change the input arrage to be 2D
 
   use gridmod, only: lat2,lon2,nsig
+  use constants, only: qcmin
   implicit none
 
 ! Declare passed variables
-  real(r_kind),dimension(lat2,lon2,nsig),intent(inout):: g_cwmr   ! mixing ratio of cloud liquid water [Kg/Kg]
+  real(r_kind),dimension(lat2,lon2,nsig),intent(inout):: g_qx   ! mixing ratio [Kg/Kg]
 
 ! Declare local variables
   integer(i_kind):: i,j,k
 
-! Set lower bound for cloud water  mixing ratio (according to B. Ferrier)
-  do k = 1, nsig
-     do j = 1, lon2
-        do i = 1, lat2
-           if (g_cwmr(i,j,k) <= qcmin) then
-              g_cwmr(i,j,k)=zero   
-           endif
+! Set lower bound for mixing ratio (according to B. Ferrier)
+  do k=1,nsig
+     do j=1,lon2
+        do i=1,lat2
+           g_qx(i,j,k)=max(qcmin,g_qx(i,j,k))
         enddo
      enddo
   enddo
+
   return
 end subroutine set_cloud_lower_bound 
 

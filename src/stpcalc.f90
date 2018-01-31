@@ -222,7 +222,6 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
        stplimhowv,stplimcldch,stpjcdfi,stpjcpdry,stpliml
   use bias_predictors, only: predictors
   use control_vectors, only: control_vector,qdot_prod_sub,cvars2d
-  use state_vectors, only: allocate_state,deallocate_state
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gsi_bundlemod, only: assignment(=)

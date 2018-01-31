@@ -731,8 +731,9 @@ subroutine stpjcpdry(rval,sval,pen,b,c,nbins)
 ! Declare local variables
   real(r_quad),dimension(2*nbins):: dmass
   real(r_quad) :: rcon,con
-  integer(i_kind) i,j,k,it,mm1,ii,ier,icw,iql,iqi,istatus,n
+  integer(i_kind) i,j,k,it,mm1,ii,ier,icw,iql,iqi,iqr,iqs,iqg,istatus,n
   real(r_kind),pointer,dimension(:,:,:) :: rq,sq,rc,sc,rql,rqi,sql,sqi
+  real(r_kind),pointer,dimension(:,:,:) :: sqr,sqs,sqg,rqr,rqs,rqg
   real(r_kind),pointer,dimension(:,:)   :: rp,sp
   logical return_now
   real(r_quad) :: dmn, dmn2
@@ -747,19 +748,31 @@ subroutine stpjcpdry(rval,sval,pen,b,c,nbins)
   do n=1,nbins
 !    Retrieve pointers
 !    Simply return if any pointer not found
-     ier=0; icw=0; iql=0; iqi=0
+     ier=0; icw=0; iql=0; iqi=0; iqr=0; iqs=0; iqg=0
      call gsi_bundlegetpointer(sval(n),'q' ,sq, istatus);ier=istatus+ier
      call gsi_bundlegetpointer(sval(n),'cw',sc, istatus);icw=istatus+icw
      call gsi_bundlegetpointer(sval(n),'ql',sql,istatus);iql=istatus+iql
      call gsi_bundlegetpointer(sval(n),'qi',sqi,istatus);iqi=istatus+iqi
+     call gsi_bundlegetpointer(sval(n),'qr',sqr,istatus);iqr=istatus+iqr
+     call gsi_bundlegetpointer(sval(n),'qs',sqs,istatus);iqs=istatus+iqs
+     call gsi_bundlegetpointer(sval(n),'qg',sqg,istatus);iqg=istatus+iqg
      call gsi_bundlegetpointer(sval(n),'ps',sp, istatus);ier=istatus+ier
      call gsi_bundlegetpointer(rval(n),'q' ,rq, istatus);ier=istatus+ier
      call gsi_bundlegetpointer(rval(n),'cw',rc, istatus);icw=istatus+icw
      call gsi_bundlegetpointer(rval(n),'ql',rql,istatus);iql=istatus+iql
      call gsi_bundlegetpointer(rval(n),'qi',rqi,istatus);iqi=istatus+iqi
+     call gsi_bundlegetpointer(rval(n),'qr',rqr,istatus);iqr=istatus+iqr
+     call gsi_bundlegetpointer(rval(n),'qs',rqs,istatus);iqs=istatus+iqs
+     call gsi_bundlegetpointer(rval(n),'qg',rqg,istatus);iqg=istatus+iqg
      call gsi_bundlegetpointer(rval(n),'ps',rp, istatus);ier=istatus+ier
-     if(ier+icw*(iql+iqi)/=0)then
-       if (mype==0) write(6,*)'stpjcpdry: checking ier+icw*(iql+iqi)=', ier+icw*(iql+iqi)
+     if(ier/=0 .or. (iql==0) /= (iqi==0))then
+       if (mype==0) write(6,*)'stpjcpdry: checking ier, iql, iqi=', &
+                    ier, iql, iqi
+       return
+     end if
+     if(icw==0 .and. (iql==0 .or. iqi==0))then
+       if (mype==0) write(6,*)'stpjcpdry: checking icw, iql, iqi=', &
+                    icw, iql, iqi
        return
      end if
 
@@ -790,9 +803,21 @@ subroutine stpjcpdry(rval,sval,pen,b,c,nbins)
               if(icw==0)then
                  dmn=dmn - sc(i,j,k)*con
                  dmn2=dmn2 - rc(i,j,k)*con
-              else
+              else if (iql==0 .and. iqi==0) then
                  dmn=dmn - (sql(i,j,k)+sqi(i,j,k))*con
                  dmn2=dmn2 - (rql(i,j,k)+rqi(i,j,k))*con
+              endif
+              if (iqr==0)then
+                 dmn=dmn - sqr(i,j,k)*con
+                 dmn2=dmn2 - rqr(i,j,k)*con
+              endif
+              if (iqs==0)then
+                 dmn=dmn - sqs(i,j,k)*con
+                 dmn2=dmn2 - rqs(i,j,k)*con
+              endif
+              if (iqg==0)then
+                 dmn=dmn - sqg(i,j,k)*con
+                 dmn2=dmn2 - rqg(i,j,k)*con
               endif
            end do
         end do
