@@ -395,11 +395,11 @@ do nb=1,nbackgrounds
         anlfileprefixes(nb)="analysis."
       endif
      else ! global
-      if (nbackgrounds > 1) then
+!      if (nbackgrounds > 1) then
         anlfileprefixes(nb)="sanl_"//datestring//"_fhr"//charfhr_anal(nb)//"_"
-      else
-        anlfileprefixes(nb)="sanl_"//datestring//"_"
-      endif
+!      else
+!        anlfileprefixes(nb)="sanl_"//datestring//"_"
+!      endif
      endif
    endif
 enddo

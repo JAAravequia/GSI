@@ -71,7 +71,10 @@ NVARS_ENKF=${NVARS_ENKF:-5}
 NAM_ENKF=${NAM_ENKF:-""}
 SATOBS_ENKF=${SATOBS_ENKF:-""}
 OZOBS_ENKF=${OZOBS_ENKF:-""}
-imp_physics=${imp_physics:-"99"}
+
+imp_physics=${imp_physics:-99}
+letkf=${letkf:-".false."}
+IAUFHRS=${IAUFHRS_ENKF:-6}
 
 ################################################################################
 ATMGES_ENSMEAN=$COMIN_GES_ENS/${GPREFIX}atmf006.ensmean${GSUFFIX}
@@ -141,6 +144,7 @@ fi
 # Ensemble guess, observational data and analysis
 
 flist="$CNVSTAT $OZNSTAT $RADSTAT"
+# Untar ensemble mean diag files
 if [ $USE_CFP = "YES" ]; then
    echo "$DATA/untar.sh ensmean" | tee -a $DATA/mp_untar.sh
 else
@@ -149,8 +153,10 @@ else
       tar -xvf $fname
    done
 fi
-for imem in `seq 1 $NMEM_ENKF`; do
-   memchar="mem"`printf %03i $imem`
+
+# Untar ensemble member diag files
+for imem in $(seq 1 $NMEM_ENKF); do
+   memchar="mem"$(printf %03i $imem)
    if [ $USE_CFP = "YES" ]; then
       echo "$DATA/untar.sh $memchar" | tee -a $DATA/mp_untar.sh
    else
@@ -159,12 +165,7 @@ for imem in `seq 1 $NMEM_ENKF`; do
          tar -xvf $fname
       done
    fi
-   $NLN $COMIN_GES_ENS/$memchar/${GPREFIX}atmf006${ENKF_SUFFIX}${GSUFFIX}  sfg_${CDATE}_fhr06_${memchar}
-   $NLN $COMOUT_ANL_ENS/$memchar/${APREFIX}atmanl${ASUFFIX}                sanl_${CDATE}_${memchar}
 done
-
-# Ensemble mean guess
-$NLN $COMIN_GES_ENS/${GPREFIX}atmf006.ensmean${GSUFFIX} sfg_${CDATE}_fhr06_ensmean
 
 if [ $USE_CFP = "YES" ]; then
    chmod 755 $DATA/mp_untar.sh
@@ -174,6 +175,33 @@ if [ $USE_CFP = "YES" ]; then
       APRUNCFP=$(eval echo $APRUNCFP)
       $APRUNCFP $DATA/mp_untar.sh
    fi
+fi
+
+# Link ensemble member prior and posteriors
+fhrs=$(echo $IAUFHRS | sed -e "s/,/ /g")
+for fhr in $fhrs; do
+   fhrchar2=$(printf %02i $fhr)
+   fhrchar=$(printf %03i $fhr)
+   fsuff="f$fhrchar"
+   if [ $fhr -eq 6 ]; then
+      asuff="anl"
+   else
+      asuff="a$fhrchar"
+   fi
+   for imem in $(seq 1 $NMEM_ENKF); do
+      memchar="mem"$(printf %03i $imem)
+      $NLN $COMIN_GES_ENS/$memchar/${GPREFIX}atm$fsuff${ENKF_SUFFIX}${GSUFFIX}   sfg_${CDATE}_fhr${fhrchar2}_${memchar}
+      $NLN $COMOUT_ANL_ENS/$memchar/${APREFIX}atm$asuff${ASUFFIX}               sanl_${CDATE}_fhr${fhrchar2}_${memchar}
+   done
+done
+
+# Link ensemble mean prior (only fhr6 is required)
+$NLN $COMIN_GES_ENS/${GPREFIX}atmf006.ensmean${GSUFFIX} sfg_${CDATE}_fhr06_ensmean
+
+if [ $letkf = ".true." ]; then
+    nobsl_max=${nobsl_max:-10000}
+else
+    nobsl_max=-1
 fi
 
 ################################################################################
@@ -195,6 +223,8 @@ cat > enkf.nml << EOFnml
    reducedgrid=.true.,readin_localization=.true.,
    use_gfs_nemsio=.true.,imp_physics=$imp_physics,
    univaroz=.false.,adp_anglebc=.true.,angord=4,use_edges=.false.,emiss_bc=.true.,
+   letkf=$letkf,nobsl_max=$nobsl_max,
+   nhr_anal=$IAUFHRS,
    $NAM_ENKF
 /
 &satobs_enkf

@@ -89,6 +89,9 @@ SMOOTH_ENKF=${SMOOTH_ENKF:-"YES"}
 APRUN_ECEN=${APRUN_ECEN:-${APRUN:-""}}
 NTHREADS_ECEN=${NTHREADS_ECEN:-${NTHREADS:-1}}
 
+DOIAU=${DOIAU_ENKF:-"NO"}
+IAUFHRS=${IAUFHRS_ENKF:-6}
+
 ################################################################################
 # Preprocessing
 if [ ! -d $DATA ]; then mkdir -p $DATA; fi
@@ -99,31 +102,63 @@ ENKF_SUFFIX="s"
 
 ################################################################################
 # Link ensemble member guess, analysis and increment files
-for imem in $(seq 1 $NMEM_ENKF); do
-   memchar="mem"$(printf %03i $imem)
-   $NLN $COMIN_GES_ENS/$memchar/${GPREFIX}atmf006${ENKF_SUFFIX}$GSUFFIX ./atmges_$memchar
-   $NLN $COMIN_ENS/$memchar/${APREFIX}atmanl$ASUFFIX ./atmanl_$memchar
-   $NLN $COMIN_ENS/$memchar/${APREFIX}atminc.nc ./atminc_$memchar
-   [[ $RECENTER_ENKF = "YES" ]] && $NLN $COMIN_ENS/$memchar/${APREFIX}ratmanl$ASUFFIX ./ratmanl_$memchar
+fhrs=$(echo $IAUFHRS | sed -e "s/,/ /g")
+for fhr in $fhrs; do
+
+   fhrchar=$(printf %03i $fhr)
+
+   fsuff="f$fhrchar"
+   if [ $fhr -eq 6 ]; then
+      asuff="anl"
+      isuff="inc"
+   else
+      asuff="a${fhrchar}"
+      isuff="i${fhrchar}"
+   fi
+
+   for imem in $(seq 1 $NMEM_ENKF); do
+      memchar="mem"$(printf %03i $imem)
+      $NLN $COMIN_GES_ENS/$memchar/${GPREFIX}atm${fsuff}${ENKF_SUFFIX}$GSUFFIX ./atm${fsuff}_$memchar
+      $NLN $COMIN_ENS/$memchar/${APREFIX}atm${asuff}$ASUFFIX                   ./atm${asuff}_$memchar
+      $NLN $COMIN_ENS/$memchar/${APREFIX}atm${isuff}.nc                        ./atm${isuff}_$memchar
+
+      if [ $RECENTER_ENKF = "YES" ]; then
+         $NLN $COMIN_ENS/$memchar/${APREFIX}ratm${asuff}$ASUFFIX ./ratm${asuff}_$memchar
+      fi
+   done
+
+   $NLN $COMIN_ENS/${APREFIX}atm${asuff}.ensmean$ASUFFIX ./atm${asuff}_ensmean
+
 done
 
-# Link ensemble mean analysis
-$NLN $COMIN_ENS/${APREFIX}atmanl.ensmean$ASUFFIX ./atmanl_ensmean
-
 # Compute ensemble mean analysis
-DATAPATH="./"
-ATMANLNAME="atmanl"
-ATMANLMEANNAME="atmanl_ensmean"
-
 export OMP_NUM_THREADS=$NTHREADS_ECEN
-
 $NCP $GETATMENSMEANEXEC $DATA
-$APRUN_ECEN ${DATA}/$(basename $GETATMENSMEANEXEC) $DATAPATH $ATMANLMEANNAME $ATMANLNAME $NMEM_ENKF
-rc=$?
 
-export ERR=$rc
-export err=$ERR
-$ERRSCRIPT || exit 2
+for fhr in $fhrs; do
+
+   echo "Computing ensemble mean analysis for fhr = $fhr"
+
+   fhrchar=$(printf %03i $fhr)
+
+   if [ $fhr -eq 6 ]; then
+      asuff="anl"
+   else
+      asuff="a${fhrchar}"
+   fi
+
+   DATAPATH="./"
+   ATMANLNAME="atm${asuff}"
+   ATMANLMEANNAME="atm${asuff}_ensmean"
+
+   $APRUN_ECEN ${DATA}/$(basename $GETATMENSMEANEXEC) $DATAPATH $ATMANLMEANNAME $ATMANLNAME $NMEM_ENKF
+   rc=$?
+
+   export ERR=$rc
+   export err=$ERR
+   $ERRSCRIPT || exit 2
+
+done
 
 LONB_ENKF=${LONB_ENKF:-$($NEMSIOGET atmanl_ensmean dimx | awk '{print $2}')}
 LATB_ENKF=${LATB_ENKF:-$($NEMSIOGET atmanl_ensmean dimy | awk '{print $2}')}
@@ -138,9 +173,11 @@ fi
 # This is to give the user the option to recenter, default is YES
 if [ $RECENTER_ENKF = "YES" ]; then
 
+   # Copy recenter executable to DATA directory
+   $NCP $RECENATMEXEC $DATA
+
    # GSI EnVar analysis
    ATMANL_GSI=${ATMANL_GSI:-$COMIN/${APREFIX}atmanl$ASUFFIX}
-   ATMANL_GSI_ENSRES=${ATMANL_GSI_ENSRES:-$COMIN/${APREFIX}atmanl.ensres$ASUFFIX}
 
    LONB=${LONB:-$($NEMSIOGET $ATMANL_GSI dimx | awk '{print $2}')}
    LATB=${LATB:-$($NEMSIOGET $ATMANL_GSI dimy | awk '{print $2}')}
@@ -150,88 +187,119 @@ if [ $RECENTER_ENKF = "YES" ]; then
       JCAP=$((LATB-2))
    fi
 
-   # If GSI EnVar analysis is at ensemble resolution, no chgres is required
+   # Decide if chgres is required for GSI EnVar analysis to ensemble resolution
    if [ $JCAP = $JCAP_ENKF -a $LATB = $LATB_ENKF -a $LONB = $LONB_ENKF ]; then
 
-      $NLN $ATMANL_GSI        atmanl_gsi_ensres
+      DO_CHGRES="NO"
 
    else
 
-      $NLN $ATMANL_GSI        atmanl_gsi
-      $NLN $ATMANL_GSI_ENSRES atmanl_gsi_ensres
+      DO_CHGRES="YES"
 
       SIGLEVEL=${SIGLEVEL:-${FIXgsm}/global_hyblev.l${LEVS}.txt}
+      TERRAIN=$COMIN/${APREFIX}atmanl.ensmean$ASUFFIX
 
-      export OMP_NUM_THREADS=$NTHREADS_CHGRES
+      # Copy chgres executable to DATA directory
+      $NCP $CHGRESEXEC $DATA
 
-      rm -f fort.43
-      cat > fort.43 << EOF
+   fi
+
+   for fhr in $fhrs; do
+
+      fhrchar=$(printf %03i $fhr)
+
+      if [ $fhr -eq 6 ]; then
+         asuff="anl"
+      else
+         asuff="a$fhrchar"
+      fi
+
+      ATMANL_GSI=$COMIN/${APREFIX}atm$asuff$ASUFFIX
+      ATMANL_GSI_ENSRES=$COMIN/${APREFIX}atm${asuff}.ensres$ASUFFIX
+
+      if [ $DO_CHGRES = "NO" ]; then
+
+         eval $NLN $ATMANL_GSI atm${asuff}_ensres
+
+      else
+
+         eval $NLN $ATMANL_GSI        atm${asuff}_gsi
+         eval $NLN $ATMANL_GSI_ENSRES atm${asuff}_ensres
+
+         rm -f fort.43
+         cat > fort.43 << EOF
 &nam_setup
   i_output=$LONB_ENKF
   j_output=$LATB_ENKF
-  input_file="atmanl_gsi"
-  output_file="atmanl_gsi_ensres"
-  terrain_file="atmanl_ensmean"
+  input_file="atm${asuff}_gsi"
+  output_file="atm${asuff}_ensres"
+  terrain_file="$TERRAIN"
   vcoord_file="$SIGLEVEL"
 /
 EOF
 
-      $APRUN_CHGRES $CHGRESEXEC
+         export OMP_NUM_THREADS=$NTHREADS_CHGRES
+         $APRUN_CHGRES ${DATA}/$(basename $CHGRESEXEC)
+         rc=$?
+
+         export ERR=$rc
+         export err=$ERR
+         $ERRSCRIPT || exit 3
+
+      fi
+
+      ################################################################################
+      # Recenter ensemble member atmospheric analyses about hires analysis
+
+      FILENAMEIN="atm$asuff"
+      FILENAME_MEANIN="atm${asuff}_ensmean"  # EnKF ensemble mean analysis
+      FILENAME_MEANOUT="atm${asuff}_ensres"  # recenter around GSI analysis at ensemble resolution
+      FILENAMEOUT="ratmanl"
+
+      export OMP_NUM_THREADS=$NTHREADS_ECEN
+      $APRUN_ECEN ${DATA}/$(basename $RECENATMEXEC) $FILENAMEIN $FILENAME_MEANIN $FILENAME_MEANOUT $FILENAMEOUT $NMEM_ENKF
       rc=$?
 
       export ERR=$rc
       export err=$ERR
-      $ERRSCRIPT || exit 3
+      $ERRSCRIPT || exit 4
 
-   fi
+  done # for fhr in $fhrs; do
 
-   ################################################################################
-   # Recenter ensemble member atmospheric analyses about hires analysis
-
-   FILENAMEIN="atmanl"
-   FILENAME_MEANIN="atmanl_ensmean"     # EnKF ensemble mean analysis
-   FILENAME_MEANOUT="atmanl_gsi_ensres" # recenter around GSI analysis at ensemble resolution
-   FILENAMEOUT="ratmanl"
-
-   export OMP_NUM_THREADS=$NTHREADS_ECEN
-
-   $NCP $RECENATMEXEC $DATA
-   $APRUN_ECEN ${DATA}/$(basename $RECENATMEXEC) $FILENAMEIN $FILENAME_MEANIN $FILENAME_MEANOUT $FILENAMEOUT $NMEM_ENKF
-   rc=$?
-
-   export ERR=$rc
-   export err=$ERR
-   $ERRSCRIPT || exit 2
-
-   # Optionally alert recentered files
-   if [ ${SENDDBN:-"NO"} = "YES" ]; then
-      for imem in $(seq 1 $NMEM_ENKF); do
-         memchar="mem"$(printf %03i $imem)
-         $DBNROOT/bin/dbn_alert MODEL GFS_ENKF $job $COMIN_ENS/$memchar/${APREFIX}ratmanl$ASUFFIX
-      done
-   fi
-
-fi
+fi # if [ $RECENTER_ENKF = "YES" ]; then
 
 ################################################################################
 # Calculate ensemble analysis increment
 
-if [ $RECENTER_ENKF = "YES" ]; then
-    ATMANLNAME='ratmanl'
-else
-    ATMANLNAME='atmanl'
-fi
-
 export OMP_NUM_THREADS=1
 $NCP $CALCINCEXEC $DATA
 
-rm calc_increment.nml
-cat > calc_increment.nml << EOF
+for fhr in $fhrs; do
+
+   fhrchar=$(printf %03i $fhr)
+
+   fsuff="f$fhrchar"
+   if [ $fhr -eq 6 ]; then
+      asuff="anl"
+      isuff="inc"
+   else
+      asuff="a$fhrchar"
+      isuff="i$fhrchar"
+   fi
+
+   if [ $RECENTER_ENKF = "YES" ]; then
+      ATMANLNAME="ratm$asuff"
+   else
+      ATMANLNAME="atm$asuff"
+   fi
+
+   rm calc_increment.nml
+   cat > calc_increment.nml << EOF
 &setup
   datapath = './'
   analysis_filename = '$ATMANLNAME'
-  firstguess_filename = 'atmges'
-  increment_filename = 'atminc'
+  firstguess_filename = 'atm$fsuff'
+  increment_filename = 'atm$isuff'
   debug = .false.
   nens = $NMEM_ENKF
   imp_physics = $imp_physics
@@ -240,14 +308,16 @@ cat > calc_increment.nml << EOF
   incvars_to_zero = $INCREMENTS_TO_ZERO
 /
 EOF
-cat calc_increment.nml
+   cat calc_increment.nml
 
-$APRUN_ECEN ${DATA}/$(basename $CALCINCEXEC)
-rc=$?
+   $APRUN_ECEN ${DATA}/$(basename $CALCINCEXEC)
+   rc=$?
 
-export ERR=$rc
-export err=$rc
-$ERRSCRIPT || exit 4
+   export ERR=$rc
+   export err=$rc
+   $ERRSCRIPT || exit 4
+
+done # for fhr in $fhrs; do
 
 ################################################################################
 # Update surface fields in the FV3 restart's using global_cycle

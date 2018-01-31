@@ -80,10 +80,10 @@ export OMP_NUM_THREADS=$NTHREADS_EPOS
 
 ################################################################################
 # Forecast ensemble member files
-for imem in $(seq 1 $NMEM_ENKF); do
-   memchar="mem"$(printf %03i $imem)
-   for fhr in $(seq $FHMIN $FHOUT $FHMAX); do
-      fhrchar=$(printf %03i $fhr)
+for fhr in $(seq $FHMIN $FHOUT $FHMAX); do
+   fhrchar=$(printf %03i $fhr)
+   for imem in $(seq 1 $NMEM_ENKF); do
+      memchar="mem"$(printf %03i $imem)
       $NLN $COMIN/$memchar/${PREFIX}sfcf$fhrchar${SUFFIX} sfcf${fhrchar}_$memchar
       $NLN $COMIN/$memchar/${PREFIX}atmf$fhrchar${SUFFIX} atmf${fhrchar}_$memchar
    done
