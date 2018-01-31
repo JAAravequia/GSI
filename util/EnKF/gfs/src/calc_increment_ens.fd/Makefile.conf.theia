@@ -18,7 +18,7 @@ NEMSIO_LIB=$(CORELIB)/nemsio/v$(NEMSIO_VER)/libnemsio_v$(NEMSIO_VER).a
 W3NCO_LIB4=$(CORELIB)/w3nco/v$(W3NCO_VER)/libw3nco_v$(W3NCO_VER)_4.a
 
 NETCDF_INC=$(NETCDF)/include
-NETCDF_LIB=-L$(NETCDF)/lib -lnetcdf
+NETCDF_LIB=-L$(NETCDF)/lib -lnetcdf -lnetcdff
 
 # ---------------------------
 # General targets/definitions
