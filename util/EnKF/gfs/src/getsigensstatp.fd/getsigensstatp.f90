@@ -50,7 +50,8 @@ program getsigensstatp
     integer :: mype,mype1,npe,orig_group,new_group,new_comm
     integer,dimension(:),allocatable :: new_group_members,reclev
     real(r_single),allocatable,dimension(:,:) :: rwork_mem,rwork_avg
-    real(r_single),allocatable,dimension(:) :: glats,gwts
+    real(r_double),allocatable,dimension(:) :: glats8,gwts8
+    real(r_single),allocatable,dimension(:) :: glats
     logical :: sigio,nemsio
 
     type(sigio_head)   :: sigheadi
@@ -173,10 +174,15 @@ program getsigensstatp
         nsize = npts*nflds
 
         if ( mype == 0 ) then
-            allocate(glats(latb),gwts(latb))
-            call splat(idrt,latb,glats,gwts)
-            glats = 180.0_r_single / acos(-1.0_r_single) * asin(glats(latb:1:-1))
-            deallocate(gwts)
+            allocate(glats8(latb),gwts8(latb))
+            allocate(glats(latb))
+            call splat(idrt,latb,glats8,gwts8)
+            glats8 = 180.0_r_double / acos(-1.0_r_double) * asin(glats8(latb:1:-1))
+            glats = glats8
+            deallocate(glats8,gwts8)
+            write(6,'(a,i5)')' npts  = ',npts
+            write(6,'(a,i5)')' nflds   = ',nflds
+            write(6,'(a,i5)')' nsize   = ',nsize
         endif
 
         allocate(rwork_mem(npts,nflds))
@@ -208,6 +214,7 @@ program getsigensstatp
 
         elseif ( nemsio ) then
 
+            write(6,'(2a)')  'Read data from ',trim(filenamein)
             call nemsio_readrecv(gfile,'pres','sfc',1,rwork_mem(:,1),iret=iret)
             do k = 1,nlevs
                 krecu    = 1 + 0*nlevs + k
@@ -227,6 +234,8 @@ program getsigensstatp
 
         endif
 
+        call mpi_barrier(new_comm,iret)
+        print *,'compute ensemble mean'
         call mpi_allreduce(rwork_mem,rwork_avg,nsize,mpi_real4,mpi_sum,new_comm,iret)
 
         rwork_avg = rwork_avg * rnanals
@@ -275,7 +284,9 @@ subroutine write_to_disk(statstr)
    integer :: ncid,varid,vardim(3)
    real(r_single) :: var2d(lonb,latb),var3d(lonb,latb,nlevs),glons(lonb)
    integer :: glevs(nlevs)
-   integer :: i,kbeg,kend
+   integer :: i,kbeg,kend,shuffle,deflate,deflate_level
+
+   shuffle = 1; deflate = 1; deflate_level = 4
 
    glons(1) = 0._r_single
    do i=2,lonb
@@ -287,7 +298,7 @@ subroutine write_to_disk(statstr)
 
    filenameout = trim(adjustl(datapath)) // trim(adjustl(filepref)) // '_ens' // trim(adjustl(statstr)) // '.nc4'
 
-   call nc_check( nf90_create(trim(adjustl(filenameout)),cmode=ior(NF90_CLOBBER,NF90_64BIT_OFFSET),ncid=ncid),myname,'create '//trim(filenameout) )
+   call nc_check( nf90_create(trim(adjustl(filenameout)),cmode=ior(NF90_CLOBBER,NF90_NETCDF4),ncid=ncid),myname,'create '//trim(filenameout) )
    call nc_check( nf90_def_dim(ncid,'lon',lonb,vardim(1)),myname,'def_dim lon '//trim(filenameout) )
    call nc_check( nf90_def_dim(ncid,'lat',latb,vardim(2)),myname,'def_dim lat '//trim(filenameout) )
    call nc_check( nf90_def_dim(ncid,'lev',nlevs,vardim(3)),myname,'def_dim lev '//trim(filenameout) )
@@ -304,24 +315,31 @@ subroutine write_to_disk(statstr)
    call nc_check( nf90_put_att(ncid, varid, 'units','up'),myname, 'put_att, units lev '//trim(filenameout) )
    call nc_check( nf90_put_att(ncid, varid, 'axis','Z'),myname, 'put_att, axis lev '//trim(filenameout) )
    call nc_check( nf90_def_var(ncid,'ps',nf90_float,vardim(1:2),varid),myname,'def_var ps '//trim(filenameout) )
+   call nc_check( nf90_def_var_deflate(ncid, varid, shuffle, deflate, deflate_level) ,myname, 'def_var_deflate ps')
    call nc_check( nf90_put_att(ncid, varid, 'long_name','surface pressure'),myname, 'put_att, long_name ps '//trim(filenameout) )
    call nc_check( nf90_put_att(ncid, varid, 'units','hPa'),myname, 'put_att, units ps '//trim(filenameout) )
    call nc_check( nf90_def_var(ncid,'u',nf90_float,vardim,varid),myname,'def_var u '//trim(filenameout) )
    call nc_check( nf90_put_att(ncid, varid, 'long_name','zonal wind'),myname, 'put_att, long_name u '//trim(filenameout) )
+   call nc_check( nf90_def_var_deflate(ncid, varid, shuffle, deflate, deflate_level) ,myname, 'def_var_deflate u')
    call nc_check( nf90_put_att(ncid, varid, 'units','m/s'),myname, 'put_att, units u '//trim(filenameout) )
    call nc_check( nf90_def_var(ncid,'v',nf90_float,vardim,varid),myname,'def_var v '//trim(filenameout) )
+   call nc_check( nf90_def_var_deflate(ncid, varid, shuffle, deflate, deflate_level) ,myname, 'def_var_deflate v')
    call nc_check( nf90_put_att(ncid, varid, 'long_name','meridional wind'),myname, 'put_att, long_name v '//trim(filenameout) )
    call nc_check( nf90_put_att(ncid, varid, 'units','m/s'),myname, 'put_att, units v '//trim(filenameout) )
    call nc_check( nf90_def_var(ncid,'t',nf90_float,vardim,varid),myname,'def_var t '//trim(filenameout) )
+   call nc_check( nf90_def_var_deflate(ncid, varid, shuffle, deflate, deflate_level) ,myname, 'def_var_deflate t')
    call nc_check( nf90_put_att(ncid, varid, 'long_name','temperature'),myname, 'put_att, long_name t '//trim(filenameout) )
    call nc_check( nf90_put_att(ncid, varid, 'units','K'),myname, 'put_att, units t '//trim(filenameout) )
    call nc_check( nf90_def_var(ncid,'q',nf90_float,vardim,varid),myname,'def_var q '//trim(filenameout) )
+   call nc_check( nf90_def_var_deflate(ncid, varid, shuffle, deflate, deflate_level) ,myname, 'def_var_deflate q')
    call nc_check( nf90_put_att(ncid, varid, 'long_name','specific humidity'),myname, 'put_att, long_name q '//trim(filenameout) )
    call nc_check( nf90_put_att(ncid, varid, 'units','kg/kg'),myname, 'put_att, units q '//trim(filenameout) )
    call nc_check( nf90_def_var(ncid,'oz',nf90_float,vardim,varid),myname,'def_var oz '//trim(filenameout) )
+   call nc_check( nf90_def_var_deflate(ncid, varid, shuffle, deflate, deflate_level) ,myname, 'def_var_deflate oz')
    call nc_check( nf90_put_att(ncid, varid, 'long_name','ozone mixing ratio'),myname, 'put_att, long_name oz '//trim(filenameout) )
    call nc_check( nf90_put_att(ncid, varid, 'units','kg/kg'),myname, 'put_att, units oz '//trim(filenameout) )
    call nc_check( nf90_def_var(ncid,'cw',nf90_float,vardim,varid),myname,'def_var cw '//trim(filenameout) )
+   call nc_check( nf90_def_var_deflate(ncid, varid, shuffle, deflate, deflate_level) ,myname, 'def_var_deflate cw')
    call nc_check( nf90_put_att(ncid, varid, 'long_name','cloud-water mixing ratio'),myname, 'put_att, long_name cw '//trim(filenameout) )
    call nc_check( nf90_put_att(ncid, varid, 'units','kg/kg'),myname, 'put_att, units cw '//trim(filenameout) )
    call nc_check( nf90_enddef(ncid),myname,'enddef, '//trim(filenameout) )
