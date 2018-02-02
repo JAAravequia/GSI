@@ -2,10 +2,12 @@ module setupmxtm_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setupmxtm_class
   contains
-    procedure, pass(this) :: setup => setupmxtm
+!   procedure, pass(this) :: setup => setupmxtm
+    procedure, pass(this) :: setupDerived => setupDerived_
   end type setupmxtm_class
 contains
-subroutine setupmxtm(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
+!subroutine setupmxtm(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
+subroutine setupDerived_(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    setupmxtm    compute rhs of oi for conventional daily maximum temperature
@@ -74,6 +76,8 @@ subroutine setupmxtm(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
   real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
   integer(i_kind)                                  ,intent(in   ) :: is ! ndat index
+  logical,dimension(nobs)                          ,intent(inout) :: luse 
+  real(r_kind),dimension(nele,nobs)                ,intent(inout) :: data
 
 ! Declare external calls for code analysis
   external:: tintrp2a11
@@ -97,7 +101,7 @@ subroutine setupmxtm(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) errinv_input,errinv_adjst,errinv_final
   real(r_kind) err_input,err_adjst,err_final
   real(r_kind),dimension(nobs):: dup
-  real(r_kind),dimension(nele,nobs):: data
+! real(r_kind),dimension(nele,nobs),intent(inout):: data
   real(r_single),allocatable,dimension(:,:)::rdiagbuf
 
 
@@ -108,7 +112,8 @@ subroutine setupmxtm(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) istat
   integer(i_kind) idomsfc
   
-  logical,dimension(nobs):: luse,muse
+! logical,dimension(nobs):: luse,muse
+  logical,dimension(nobs):: muse
   integer(i_kind),dimension(nobs):: ioid  ! initial (pre-distribution) obs ID
   logical proceed
 
@@ -129,25 +134,23 @@ subroutine setupmxtm(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   equivalence(rstation_id,station_id)
   equivalence(r_prvstg,c_prvstg)
   equivalence(r_sprvstg,c_sprvstg)
-
-! real(r_kind),allocatable,dimension(:,:,:) :: ges_ps     !will need at some point
-! real(r_kind),allocatable,dimension(:,:,:) :: ges_z      !will probably need at some point
-! real(r_kind),allocatable,dimension(:,:,:) :: ges_mxtm
-
+! character(len=14) varnames(3) 
+! data varnames/'var::z', 'var::ps', 'var::mxtm'/
+! call this%allocate_and_check_vars(('setupmxtm'),lunin,luse,nele,nobs,data,(/'var::z', 'var::ps', 'var::mxtm'/))
 ! Check to see if required guess fields are available
-  this%myname='setupmxtm'
-  this%numvars = 3
-  allocate(this%varnames(this%numvars))
-  this%varnames(1:this%numvars) = (/ 'var::z', 'var::ps', 'var::mxtm' /)
+! this%myname='setupmxtm'
+! this%numvars = 3
+! allocate(this%varnames(this%numvars))
+! this%varnames(1:this%numvars) = (/ 'var::z', 'var::ps', 'var::mxtm' /)
 ! Check to see if required guess fields are available
-  call this%check_vars_(proceed)
-  if(.not.proceed) then
-     read(lunin)data,luse   !advance through input file
-     return  ! not all vars available, simply return
-  endif
+! call this%check_vars_(proceed)
+! if(.not.proceed) then
+!    read(lunin)data,luse   !advance through input file
+!    return  ! not all vars available, simply return
+! endif
 
 ! If require guess vars available, extract from bundle ...
-  call this%init_ges
+! call this%init_ges
 
   n_alloc(:)=0
   m_alloc(:)=0
@@ -526,7 +529,7 @@ subroutine setupmxtm(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   end do
 
 ! Release memory of local guess arrays
-  call this%final_vars_
+! call this%final_vars_
 
 ! Write information to diagnostic file
   if(conv_diagsave .and. ii>0)then
@@ -544,7 +547,8 @@ subroutine setupmxtm(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! End of routine
 
   return
-end subroutine setupmxtm
+!end subroutine setupmxtm
+end subroutine setupDerived_
 
 end module setupmxtm_mod
 

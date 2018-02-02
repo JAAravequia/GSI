@@ -2,10 +2,10 @@ module setuppw_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setuppw_class
   contains
-    procedure, pass(this) :: setup => setuppw
+    procedure, pass(this) :: setupDerived => setuppw
   end type setuppw_class
 contains
-  subroutine setuppw(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
+  subroutine setuppw(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
   ! subprogram:    setuppw     compute rhs of oi for total column water
@@ -128,7 +128,7 @@ contains
     real(r_kind) errinv_input,errinv_adjst,errinv_final
     real(r_kind) err_input,err_adjst,err_final,tfact
     real(r_kind),dimension(nobs)::dup
-    real(r_kind),dimension(nele,nobs):: data
+    real(r_kind),dimension(nele,nobs),intent(inout):: data
     real(r_kind),dimension(lat2,lon2,nfldsig)::rp2
     real(r_kind),dimension(nsig+1):: prsitmp
     real(r_kind),dimension(nsig):: qges, tvges
@@ -157,10 +157,10 @@ contains
     equivalence(rstation_id,station_id)
   
   
-    this%myname='setuppw'
-    this%numvars = 3
-    allocate(this%varnames(this%numvars))
-    this%varnames(1:this%numvars) = (/ 'var::z', 'var::tv', 'var::q' /)
+!   this%myname='setuppw'
+!   this%numvars = 3
+!   allocate(this%varnames(this%numvars))
+!   this%varnames(1:this%numvars) = (/ 'var::z', 'var::tv', 'var::q' /)
     n_alloc(:)=0
     m_alloc(:)=0
   
@@ -169,11 +169,11 @@ contains
     scale=one
   
   ! Check to see if required guess fields are available
-    call this%check_vars_(proceed)
-    if(.not.proceed) return  ! not all vars available, simply return
+!   call this%check_vars_(proceed)
+!   if(.not.proceed) return  ! not all vars available, simply return
   
   ! If require guess vars available, extract from bundle ...
-    call this%init_ges
+!   call this%init_ges
   
   !******************************************************************************
   ! Read and reformat observations in work arrays.
@@ -569,7 +569,7 @@ contains
     end do
   
   ! Release memory of local guess arrays
-    call this%final_vars_
+!   call this%final_vars_
   
   ! Write information to diagnostic file
     if(conv_diagsave .and. ii>0)then

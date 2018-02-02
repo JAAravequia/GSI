@@ -2,7 +2,7 @@ module setupw_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setupw_class
   contains
-    procedure, pass(this) :: setup => setupw
+    procedure, pass(this) :: setupDerived => setupw
   end type setupw_class
 contains
   !-------------------------------------------------------------------------
@@ -15,7 +15,7 @@ contains
   ! !INTERFACE:
   !
   
-  subroutine setupw(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
+  subroutine setupw(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
   
   ! !USES:
   
@@ -214,7 +214,7 @@ contains
     real(r_kind) dudiff_opp, dvdiff_opp, vecdiff, vecdiff_opp
     real(r_kind) dudiff_opp_rs, dvdiff_opp_rs, vecdiff_rs, vecdiff_opp_rs
     real(r_kind) oscat_vec,ascat_vec,rapidscat_vec
-    real(r_kind),dimension(nele,nobs):: data
+    real(r_kind),dimension(nele,nobs),intent(inout):: data
     real(r_kind),dimension(nobs):: dup
     real(r_kind),dimension(nsig)::prsltmp,tges,zges
     real(r_kind) wdirob,wdirgesin,wdirdiffmax
@@ -263,18 +263,18 @@ contains
     equivalence(r_sprvstg,c_sprvstg)
  
      
-    this%numvars = 5
-    this%myname="setupw"
-    if(.not.allocated(this%varnames)) then
-      allocate(this%varnames(this%numvars))
-      this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::z', 'var::ps', 'var::tv' /)
-    endif
+!   this%numvars = 5
+!   this%myname="setupw"
+!   if(.not.allocated(this%varnames)) then
+!     allocate(this%varnames(this%numvars))
+!     this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::z', 'var::ps', 'var::tv' /)
+!   endif
   ! Check to see if required guess fields are available
-    call this%check_vars_(proceed)
-    if(.not.proceed) return  ! not all vars available, simply return
+!   call this%check_vars_(proceed)
+!   if(.not.proceed) return  ! not all vars available, simply return
   
   ! If require guess vars available, extract from bundle ...
-    call this%init_ges
+!   call this%init_ges
   
     n_alloc(:)=0
     m_alloc(:)=0
@@ -1380,7 +1380,7 @@ contains
     if(num_bad_ikx > 0) write(6,*)' in setupw, num_bad_ikx ( ikx<1 or ikx>nconvtype ) = ',num_bad_ikx
   
   ! Release memory of local guess arrays
-    call this%final_vars_
+!   call this%final_vars_
   
   ! Write information to diagnostic file
     if(conv_diagsave .and. ii>0)then

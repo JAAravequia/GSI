@@ -2,7 +2,7 @@ module setupdw_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setupdw_class
   contains
-    procedure, pass(this) :: setup => setupdw
+    procedure, pass(this) :: setupDerived => setupdw
   end type setupdw_class
 contains
   
@@ -15,7 +15,7 @@ contains
 !
 ! !INTERFACE:
 !
-  subroutine setupdw(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
+  subroutine setupdw(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
   
   ! !USES:
   
@@ -165,7 +165,7 @@ contains
     real(r_kind) cg_dw,wgross,wnotgross,wgt,arg,term,exp_arg,rat_err2
     real(r_kind) errinv_input,errinv_adjst,errinv_final
     real(r_kind) err_input,err_adjst,err_final,tfact
-    real(r_kind),dimension(nele,nobs):: data
+    real(r_kind),dimension(nele,nobs),intent(inout):: data
     real(r_kind),dimension(nobs):: dup
     real(r_kind),dimension(nsig):: hges,zges,prsltmp
     real(r_single),allocatable,dimension(:,:)::rdiagbuf
@@ -199,16 +199,16 @@ contains
 !   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_u
 !   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
  
-    this%myname='setupdw'
-    this%numvars = 4 
-    allocate(this%varnames(this%numvars))
-    this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::u', 'var::v' /)
-  ! Check to see if required guess fields are available
+!   this%myname='setupdw'
+!   this%numvars = 4 
+!   allocate(this%varnames(this%numvars))
+!   this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::u', 'var::v' /)
+! ! Check to see if required guess fields are available
     call this%check_vars_(proceed)
-    if(.not.proceed) return  ! not all vars available, simply return
-  
+!   if(.not.proceed) return  ! not all vars available, simply return
+! 
   ! If require guess vars available, extract from bundle ...
-    call this%init_ges
+!   call this%init_ges
   
     n_alloc(:)=0
     m_alloc(:)=0
@@ -726,7 +726,7 @@ contains
     end do
   
   ! Release memory of local guess arrays
-    call this%final_vars_
+!   call this%final_vars_
   
   ! Write information to diagnostic file
     if(conv_diagsave .and. ii>0)then

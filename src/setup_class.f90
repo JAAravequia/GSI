@@ -28,19 +28,144 @@ module abstract_setup_mod
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_tcamt
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_td2m
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_vis
+
+
   character(len=16) :: myname
   character(len=14),allocatable,dimension(:) :: varnames
   integer(i_kind) numvars
   contains
     procedure, pass(this) :: setup
+    procedure, pass(this) :: setupp
+    procedure, pass(this) :: setupDerived
+    procedure, pass(this) :: allocate_and_check_vars
     procedure, pass(this) :: final_vars_
     procedure, pass(this) :: check_vars_
     procedure, pass(this) ::  init_ges
     procedure, pass(this) ::  allocate_ges3
     procedure, pass(this) ::  allocate_ges4
+!   procedure, pass(this) :: setup_ctor2
+!   procedure, pass(this) :: setup_ctor3
+!   procedure, pass(this) :: setup_ctor4
+!   procedure, pass(this) :: setup_ctor5
+!   procedure, pass(this) :: setup_ctor6
+!   procedure, pass(this) :: setup_ctor7
+!   procedure, pass(this) :: setup_ctor8
   end type abstract_setup_class
+  interface abstract_setup_class
+       module procedure setup_ctor2
+       module procedure setup_ctor3
+  end interface 
 
 contains    
+! subroutine setup_cctor()
+!    this%myname = "UNDEFINED"
+!    this%numvars = 0
+! end subroutine setup_cctor
+  type(abstract_setup_class) function setup_ctor2(obsname,varname1)
+     character(len=16),                        intent(in) :: obsname
+     character(len=14),                        intent(in) :: varname1
+     setup_ctor2.myname = obsname
+     setup_ctor2.numvars = 1
+     allocate(setup_ctor2.varnames(setup_ctor2.numvars))
+     setup_ctor2.varnames(1) = varname1
+  end function setup_ctor2
+  type(abstract_setup_class) function setup_ctor3(obsname,varname1,varname2)
+     character(len=16),                        intent(in) :: obsname
+     character(len=14),                        intent(in) :: varname1
+     character(len=14),                        intent(in) :: varname2
+     setup_ctor3.myname = obsname
+     setup_ctor3.numvars = 2
+     allocate(setup_ctor3.varnames(setup_ctor3.numvars))
+     setup_ctor3.varnames(1) = varname1
+     setup_ctor3.varnames(2) = varname2
+  end function setup_ctor3
+!  subroutine setup_ctor4(this,obsname,varname1,varname2,varname3)
+!     class(abstract_setup_class)              ,intent(inout) :: this
+!     character(len=16),                        intent(in) :: obsname
+!     character(len=14),                        intent(in) :: varname1
+!     character(len=14),                        intent(in) :: varname2
+!     character(len=14),                        intent(in) :: varname3
+!     this%myname = obsname
+!     this%numvars = 3
+!     allocate(this%varnames(this%numvars))
+!     this%varnames(1) = varname1
+!     this%varnames(2) = varname2
+!     this%varnames(3) = varname3
+!  end subroutine setup_ctor4
+!  subroutine setup_ctor5(this,obsname,varname1,varname2,varname3,varname4)
+!     class(abstract_setup_class)              ,intent(inout) :: this
+!     character(len=16),                        intent(in) :: obsname
+!     character(len=14),                        intent(in) :: varname1
+!     character(len=14),                        intent(in) :: varname2
+!     character(len=14),                        intent(in) :: varname3
+!     character(len=14),                        intent(in) :: varname4
+!     this%myname = obsname
+!     this%numvars = 4
+!     allocate(this%varnames(this%numvars))
+!     this%varnames(1) = varname1
+!     this%varnames(2) = varname2
+!     this%varnames(3) = varname3
+!     this%varnames(4) = varname4
+!  end subroutine setup_ctor5
+!  subroutine setup_ctor6(this,obsname,varname1,varname2,varname3,varname4,varname5)
+!     class(abstract_setup_class)              ,intent(inout) :: this
+!     character(len=16),                        intent(in) :: obsname
+!     character(len=14),                        intent(in) :: varname1
+!     character(len=14),                        intent(in) :: varname2
+!     character(len=14),                        intent(in) :: varname3
+!     character(len=14),                        intent(in) :: varname4
+!     character(len=14),                        intent(in) :: varname5
+!     this%myname = obsname
+!     this%numvars = 5
+!     allocate(this%varnames(this%numvars))
+!     this%varnames(1) = varname1
+!     this%varnames(2) = varname2
+!     this%varnames(3) = varname3
+!     this%varnames(4) = varname4
+!     this%varnames(5) = varname5
+!  end subroutine setup_ctor6
+!  subroutine setup_ctor7(this,obsname,varname1,varname2,varname3,varname4,varname5,varname6)
+!     class(abstract_setup_class)              ,intent(inout) :: this
+!     character(len=16),                        intent(in) :: obsname
+!     character(len=14),                        intent(in) :: varname1
+!     character(len=14),                        intent(in) :: varname2
+!     character(len=14),                        intent(in) :: varname3
+!     character(len=14),                        intent(in) :: varname4
+!     character(len=14),                        intent(in) :: varname5
+!     character(len=14),                        intent(in) :: varname6
+!     this%myname = obsname
+!     this%numvars = 6
+!     allocate(this%varnames(this%numvars))
+!     this%varnames(1) = varname1
+!     this%varnames(2) = varname2
+!     this%varnames(3) = varname3
+!     this%varnames(4) = varname4
+!     this%varnames(5) = varname5
+!     this%varnames(6) = varname6
+!  end subroutine setup_ctor7
+!  subroutine setup_ctor8(this,obsname,varname1,varname2,varname3,varname4,varname5,varname6,varname7)
+!     class(abstract_setup_class)              ,intent(inout) :: this
+!     character(len=16),                        intent(in) :: obsname
+!     character(len=14),                        intent(in) :: varname1
+!     character(len=14),                        intent(in) :: varname2
+!     character(len=14),                        intent(in) :: varname3
+!     character(len=14),                        intent(in) :: varname4
+!     character(len=14),                        intent(in) :: varname5
+!     character(len=14),                        intent(in) :: varname6
+!     character(len=14),                        intent(in) :: varname7
+!     this%myname = obsname
+!     this%numvars = 7
+!     allocate(this%varnames(this%numvars))
+!     this%varnames(1) = varname1
+!     this%varnames(2) = varname2
+!     this%varnames(3) = varname3
+!     this%varnames(4) = varname4
+!     this%varnames(5) = varname5
+!     this%varnames(6) = varname6
+!     this%varnames(7) = varname7
+!  end subroutine setup_ctor8
+
+
   subroutine setup(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
       use kinds, only: r_kind,r_single,r_double,i_kind       
       use gridmod, only: nsig
@@ -54,6 +179,75 @@ contains
       logical                                          ,intent(in   ) :: conv_diagsave
       write(6,*) 'this is a dummy setup'
   end subroutine setup
+  subroutine setupDerived(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
+      use kinds, only: r_kind,r_single,r_double,i_kind       
+      use gridmod, only: nsig
+      use qcmod, only: npres_print
+      use convinfo, only: nconvtype
+      class(abstract_setup_class)                      ,intent(inout) :: this
+      integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
+      real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
+      real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
+      integer(i_kind)                                  ,intent(in   ) :: is ! ndat index
+      logical                                          ,intent(in   ) :: conv_diagsave
+      logical,dimension(nobs)                          ,intent(inout) :: luse 
+      real(r_kind),dimension(nele,nobs)                ,intent(inout) :: data
+      write(6,*) 'this is a dummy setupDerived'
+  end subroutine setupDerived
+
+  subroutine setupp(this,obsname,varnames,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
+      use kinds, only: r_kind,r_single,r_double,i_kind       
+      use gridmod, only: nsig
+      use qcmod, only: npres_print
+      use convinfo, only: nconvtype
+      class(abstract_setup_class)                      ,intent(inout) :: this
+      character(len=16)                                ,intent(in   ) :: obsname
+      character(len=14)                                ,intent(in   ) :: varnames(:)
+      integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
+      real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
+      real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
+      integer(i_kind)                                  ,intent(in   ) :: is ! ndat index
+      logical                                          ,intent(in   ) :: conv_diagsave
+
+      logical,dimension(nobs)          :: luse
+      real(r_kind),dimension(nele,nobs):: data
+      write(6,*) ' in setupp for ',obsname,' with varnames ',varnames
+      call this%allocate_and_check_vars(obsname,lunin,luse,nele,nobs,data,varnames)
+      call this%setupDerived(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
+      call this%final_vars_
+
+  end subroutine setupp
+  subroutine allocate_and_check_vars(this,obsname,lunin,luse,nele,nobs,data,varnames)
+      use kinds, only: i_kind       
+      implicit none
+      class(abstract_setup_class)                      ,intent(inout) :: this
+      character(len=16)                                ,intent(in   ) :: obsname
+      integer(i_kind)                                  ,intent(in   ) :: lunin,nobs,nele
+      logical,dimension(nobs)                          ,intent(inout) :: luse
+      character(len=14)                                ,intent(in   ) :: varnames(:)
+      real(r_kind),dimension(nele,nobs)                ,intent(inout) :: data
+      integer(i_kind) :: i
+
+      logical :: proceed = .true.
+
+      this%myname=obsname
+      this%numvars = size(varnames)
+      write(6,*) ' in allocate for ',obsname,' with size of varnames ',this%numvars
+      allocate(this%varnames(this%numvars))
+      do i=1,this%numvars  
+        this%varnames(i) = varnames(i)
+      enddo
+! Check to see if required guess fields are available
+      call this%check_vars_(proceed)
+      if(.not.proceed) then
+         read(lunin)data,luse   !advance through input file
+         return  ! not all vars available, simply return
+      endif
+
+! If require guess vars available, extract from bundle ...
+      call this%init_ges
+      return 
+  end subroutine allocate_and_check_vars
   subroutine allocate_ges3(this,ges,varname)
     use gsi_metguess_mod, only : gsi_metguess_bundle
     use gsi_bundlemod, only : gsi_bundlegetpointer

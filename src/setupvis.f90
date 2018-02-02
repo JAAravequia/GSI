@@ -2,10 +2,10 @@ module setupvis_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setupvis_class
   contains
-    procedure, pass(this) :: setup => setupvis
+    procedure, pass(this) :: setupDerived => setupvis
   end type setupvis_class
 contains
-  subroutine setupvis(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
+  subroutine setupvis(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
   ! subprogram:    setupvis    compute rhs for conventional surface vis
@@ -104,7 +104,7 @@ contains
     real(r_kind) errinv_input,errinv_adjst,errinv_final
     real(r_kind) err_input,err_adjst,err_final
     real(r_kind),dimension(nobs):: dup
-    real(r_kind),dimension(nele,nobs):: data
+    real(r_kind),dimension(nele,nobs),intent(inout):: data
     real(r_single),allocatable,dimension(:,:)::rdiagbuf
   
   
@@ -138,19 +138,19 @@ contains
     equivalence(r_sprvstg,c_sprvstg)
     
   
-    this%myname='setupvis'
-    this%numvars = 3
-    allocate(this%varnames(this%numvars))
-    this%varnames(1:this%numvars) = (/ 'var::z', 'var::ps', 'var::vis' /)
+!   this%myname='setupvis'
+!   this%numvars = 3
+!   allocate(this%varnames(this%numvars))
+!   this%varnames(1:this%numvars) = (/ 'var::z', 'var::ps', 'var::vis' /)
   ! Check to see if required guess fields are available
-    call this%check_vars_(proceed)
-  if(.not.proceed) then
-     read(lunin)data,luse   !advance through input file
-     return  ! not all vars available, simply return
-  endif
+!   call this%check_vars_(proceed)
+! if(.not.proceed) then
+!    read(lunin)data,luse   !advance through input file
+!    return  ! not all vars available, simply return
+! endif
   
   ! If require guess vars available, extract from bundle ...
-    call this%init_ges
+!   call this%init_ges
   
     n_alloc(:)=0
     m_alloc(:)=0
@@ -566,7 +566,7 @@ contains
     end do
   
   ! Release memory of local guess arrays
-    call this%final_vars_
+!   call this%final_vars_
   
   ! Write information to diagnostic file
     if(conv_diagsave .and. ii>0)then

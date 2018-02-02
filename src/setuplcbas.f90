@@ -3,10 +3,10 @@ use abstract_setup_mod
   type, extends(abstract_setup_class) :: setuplcbas_class
 ! real(r_kind),allocatable,dimension(:,:,:) :: ges_lcbas
   contains
-    procedure, pass(this) :: setup => setuplcbas
+    procedure, pass(this) :: setupDerived => setuplcbas
   end type setuplcbas_class
 contains
-  subroutine setuplcbas(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
+  subroutine setuplcbas(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
   ! subprogram:    setuplcbas    compute rhs for cloud base height of lowest cloud seen
@@ -99,7 +99,7 @@ contains
     real(r_kind) errinv_input,errinv_adjst,errinv_final
     real(r_kind) err_input,err_adjst,err_final
     real(r_kind),dimension(nobs):: dup
-    real(r_kind),dimension(nele,nobs):: data
+    real(r_kind),dimension(nele,nobs),intent(inout):: data
     real(r_single),allocatable,dimension(:,:)::rdiagbuf
   
   
@@ -133,19 +133,19 @@ contains
     equivalence(r_sprvstg,c_sprvstg)
     
   ! Check to see if required guess fields are available
-    this%numvars = 2
-    allocate(this%varnames(this%numvars))
-    this%varnames(1:this%numvars) = (/ 'var::lcbas', 'var::z' /)
-    this%myname='setuplcbas'
-    call this%check_vars_(proceed)
-   if(.not.proceed) then
-      print *, 'Whoa!  We have some missing metguess variables in setuplcbas.f90....returning to setuprhsall.f90 after advancing through input file'
-    read(lunin)data,luse,ioid
-      return  ! not all vars available, simply return
-    end if
+!   this%numvars = 2
+!   allocate(this%varnames(this%numvars))
+!   this%varnames(1:this%numvars) = (/ 'var::lcbas', 'var::z' /)
+!   this%myname='setuplcbas'
+!   call this%check_vars_(proceed)
+!  if(.not.proceed) then
+!     print *, 'Whoa!  We have some missing metguess variables in setuplcbas.f90....returning to setuprhsall.f90 after advancing through input file'
+!   read(lunin)data,luse,ioid
+!     return  ! not all vars available, simply return
+!   end if
   
   ! If require guess vars available, extract from bundle ...
-    call this%init_ges
+!   call this%init_ges
   
     n_alloc(:)=0
     m_alloc(:)=0

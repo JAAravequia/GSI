@@ -2,10 +2,10 @@ module setuphowv_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setuphowv_class
   contains
-    procedure, pass(this) :: setup => setuphowv
+    procedure, pass(this) :: setupDerived => setuphowv
   end type setuphowv_class
 contains
-subroutine setuphowv(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
+subroutine setuphowv(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    setuphowv    compute rhs of oi for significant waver height
@@ -98,7 +98,7 @@ subroutine setuphowv(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) errinv_input,errinv_adjst,errinv_final
   real(r_kind) err_input,err_adjst,err_final
   real(r_kind),dimension(nobs):: dup
-  real(r_kind),dimension(nele,nobs):: data
+  real(r_kind),dimension(nele,nobs),intent(inout):: data
   real(r_single),allocatable,dimension(:,:)::rdiagbuf
 
 
@@ -135,19 +135,19 @@ subroutine setuphowv(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! real(r_kind),allocatable,dimension(:,:,:) :: ges_z    !might need at some point
 ! real(r_kind),allocatable,dimension(:,:,:) :: ges_howv
 
-  this%myname='setuphowv'
-  this%numvars = 3
-  allocate(this%varnames(this%numvars))
-  this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::howv' /)
+! this%myname='setuphowv'
+! this%numvars = 3
+! allocate(this%varnames(this%numvars))
+! this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::howv' /)
 ! Check to see if required guess fields are available
-  call this%check_vars_(proceed)
-  if(.not.proceed) then
-     read(lunin)data,luse   !advance through input file
-     return  ! not all vars available, simply return
-  endif
+! call this%check_vars_(proceed)
+! if(.not.proceed) then
+!    read(lunin)data,luse   !advance through input file
+!    return  ! not all vars available, simply return
+! endif
 
 ! If require guess vars available, extract from bundle ...
-  call this%init_ges
+! call this%init_ges
 
   n_alloc(:)=0
   m_alloc(:)=0
@@ -520,7 +520,7 @@ subroutine setuphowv(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   end do
 
 ! Release memory of local guess arrays
-  call this%final_vars_
+! call this%final_vars_
 
 ! Write information to diagnostic file
   if(conv_diagsave .and. ii>0)then

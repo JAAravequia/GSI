@@ -2,10 +2,10 @@ module setuptcp_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setuptcp_class
   contains
-    procedure, pass(this) :: setup => setuptcp
+    procedure, pass(this) :: setupDerived => setuptcp
   end type setuptcp_class
 contains
-  subroutine setuptcp(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
+  subroutine setuptcp(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
   ! subprogram:    setuptcp                     setup tcpel data
@@ -96,7 +96,7 @@ contains
     real(r_kind) ratio_errors,psges,zsges,rdp,drdp
     real(r_kind) pob,pges,pgesorig,half_tlapse,ddiff,halfpi,r0_005,rdelz,psges2
   
-    real(r_kind),dimension(nele,nobs):: data
+    real(r_kind),dimension(nele,nobs),intent(inout):: data
     real(r_kind),dimension(nsig)::prsltmp
   
     integer(i_kind) i,jj
@@ -116,19 +116,19 @@ contains
     integer(i_kind) nchar,nreal,ii
   
   
-    this%myname='setuptcp'
-    this%numvars = 3
-    allocate(this%varnames(this%numvars))
-    this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::tv' /)
+!   this%myname='setuptcp'
+!   this%numvars = 3
+!   allocate(this%varnames(this%numvars))
+!   this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::tv' /)
     n_alloc(:)=0
     m_alloc(:)=0
   
   ! Check to see if required guess fields are available
-    call this%check_vars_(proceed)
-    if(.not.proceed) return  ! not all vars available, simply return
+!   call this%check_vars_(proceed)
+!   if(.not.proceed) return  ! not all vars available, simply return
   
   ! If require guess vars available, extract from bundle ...
-    call this%init_ges
+!   call this%init_ges
   
   !******************************************************************************
   ! Read and reformat observations in work arrays.
@@ -517,7 +517,7 @@ contains
     end do
   
   ! Release memory of local guess arrays
-    call this%final_vars_
+!   call this%final_vars_
   
   ! Write information to diagnostic file
     if(conv_diagsave .and. ii>0)then

@@ -2,10 +2,10 @@ module setupwspd10m_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setupwspd10m_class
   contains
-    procedure, pass(this) :: setup => setupwspd10m
+    procedure, pass(this) :: setupDerived => setupwspd10m
   end type setupwspd10m_class
 contains
-subroutine setupwspd10m(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
+subroutine setupwspd10m(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    setupwspd10m    compute rhs for conventional 10 m wind speed
@@ -114,7 +114,7 @@ subroutine setupwspd10m(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),dimension(nobs):: dup
   real(r_kind),dimension(nsig)::prsltmp,tges
   real(r_kind) wdirob,wdirgesin,wdirdiffmax
-  real(r_kind),dimension(nele,nobs):: data
+  real(r_kind),dimension(nele,nobs),intent(inout):: data
   real(r_single),allocatable,dimension(:,:)::rdiagbuf
 
 
@@ -148,20 +148,20 @@ subroutine setupwspd10m(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   equivalence(r_prvstg,c_prvstg)
   equivalence(r_sprvstg,c_sprvstg)
   
-  this%myname='setupwspd10m'
-  this%numvars = 6
-  allocate(this%varnames(this%numvars))
-  this%varnames(1:this%numvars) = (/ 'var::wspd10m', 'var::ps', 'var::z', 'var::u', 'var::v', 'var::tv' /)
+! this%myname='setupwspd10m'
+! this%numvars = 6
+! allocate(this%varnames(this%numvars))
+! this%varnames(1:this%numvars) = (/ 'var::wspd10m', 'var::ps', 'var::z', 'var::u', 'var::v', 'var::tv' /)
 
 ! Check to see if required guess fields are available
-  call this%check_vars_(proceed)
-  if(.not.proceed) then
-     read(lunin)data,luse   !advance through input file
-     return  ! not all vars available, simply return
-  endif
+! call this%check_vars_(proceed)
+! if(.not.proceed) then
+!    read(lunin)data,luse   !advance through input file
+!    return  ! not all vars available, simply return
+! endif
 
 ! If require guess vars available, extract from bundle ...
-  call this%init_ges
+! call this%init_ges
 
   n_alloc(:)=0
   m_alloc(:)=0
@@ -738,7 +738,7 @@ subroutine setupwspd10m(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   end do
 
 ! Release memory of local guess arrays
-  call this%final_vars_
+! call this%final_vars_
 
 ! Write information to diagnostic file
   if(conv_diagsave .and. ii>0)then

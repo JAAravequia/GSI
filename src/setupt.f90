@@ -2,7 +2,7 @@ module setupt_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setupt_class
   contains
-    procedure, pass(this) :: setup => setupt
+    procedure, pass(this) :: setupDerived => setupt
   end type setupt_class
 contains
   !-------------------------------------------------------------------------
@@ -14,7 +14,7 @@ contains
   !
   ! !INTERFACE:
   !
-  subroutine setupt(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
+  subroutine setupt(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
   
   ! !USES:
   
@@ -218,7 +218,7 @@ contains
     real(r_kind) cg_t,wgross,wnotgross,wgt,arg,exp_arg,term,rat_err2,qcgross
     real(r_kind),dimension(nobs)::dup
     real(r_kind),dimension(nsig):: prsltmp
-    real(r_kind),dimension(nele,nobs):: data
+    real(r_kind),dimension(nele,nobs),intent(inout):: data
     real(r_kind),dimension(npredt):: predbias
     real(r_kind),dimension(npredt):: pred
     real(r_kind),dimension(npredt):: predcoef
@@ -274,16 +274,16 @@ contains
     n_alloc(:)=0
     m_alloc(:)=0
   
-    this%myname='setupt'
-    this%numvars = 5
-    allocate(this%varnames(this%numvars))
-    this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::q', 'var::ps', 'var::tv' /)
+!   this%myname='setupt'
+!   this%numvars = 5
+!   allocate(this%varnames(this%numvars))
+!   this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::q', 'var::ps', 'var::tv' /)
   ! Check to see if required guess fields are available
-    call this%check_vars_(proceed)
-    if(.not.proceed) return  ! not all vars available, simply return
+!   call this%check_vars_(proceed)
+!   if(.not.proceed) return  ! not all vars available, simply return
   
   ! If require guess vars available, extract from bundle ...
-    call this%init_ges
+!   call this%init_ges
   
   !*********************************************************************************
   ! Read and reformat observations in work arrays.
@@ -1231,7 +1231,7 @@ contains
     end do
   
   ! Release memory of local guess arrays
-    call this%final_vars_
+!   call this%final_vars_
   
   ! Write information to diagnostic file
     if(conv_diagsave .and. ii>0)then

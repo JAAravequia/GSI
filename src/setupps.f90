@@ -2,10 +2,10 @@ module setupps_mod
 use abstract_setup_mod
   type, extends(abstract_setup_class) :: setupps_class
   contains
-    procedure, pass(this) :: setup => setupps
+    procedure, pass(this) :: setupDerived => setupps
   end type setupps_class
 contains
-  subroutine setupps(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
+  subroutine setupps(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
   ! subprogram:    setupps     compute rhs of oi for surface pressure
@@ -153,7 +153,7 @@ contains
     real(r_kind) cg_ps,wgross,wnotgross,wgt,arg,exp_arg,term,rat_err2,qcgross
     real(r_kind),dimension(nobs):: dup
     real(r_kind),dimension(nsig):: prsltmp
-    real(r_kind),dimension(nele,nobs):: data
+    real(r_kind),dimension(nele,nobs),intent(inout):: data
     real(r_single),allocatable,dimension(:,:)::rdiagbuf
   
     integer(i_kind) ier,ilon,ilat,ipres,ihgt,itemp,id,itime,ikx,iqc,iptrb,ijb
@@ -184,10 +184,10 @@ contains
     equivalence(r_sprvstg,c_sprvstg)
     
   
-    this%myname='setupps'
-    this%numvars = 3
-    allocate(this%varnames(this%numvars))
-    this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::tv' /)
+!   this%myname='setupps'
+!   this%numvars = 3
+!   allocate(this%varnames(this%numvars))
+!   this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::tv' /)
     n_alloc(:)=0
     m_alloc(:)=0
   !*******************************************************************************
@@ -705,7 +705,7 @@ contains
     end do
   
   ! Release memory of local guess arrays
-    call this%final_vars_
+!   call this%final_vars_
   
   ! Write information to diagnostic file
   
