@@ -19,7 +19,7 @@ BACIO_LIB4=$(CORELIB)/bacio/v$(BACIO_VER)/libbacio_v$(BACIO_VER)_4.a
 NEMSIO_LIB=$(CORELIB)/nemsio/v$(NEMSIO_VER)/libnemsio_v$(NEMSIO_VER).a
 SIGIO_LIB4=$(CORELIB)/sigio/v$(SIGIO_VER)/libsigio_v$(SIGIO_VER)_4.a
 SP_LIB4=$(CORELIB)/sp/v$(SP_VER)/libsp_v$(SP_VER)_4.a
-W3NCO_LIB4=$(CORELIB)/w3nco/v$(W3NCO_VER)/libw3nco_v$(W3NCO_VER)_4.a
+W3NCO_LIB4=$(CORELIB)/w3nco/v$(W3NCO_VER)/libw3nco_v$(W3NCO_VER)_d.a
 
 # ---------------------------
 # General targets/definitions
