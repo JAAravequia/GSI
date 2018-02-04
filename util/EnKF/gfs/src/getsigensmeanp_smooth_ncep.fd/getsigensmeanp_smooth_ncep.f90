@@ -245,7 +245,7 @@ program getsigensmeanp_smooth
            do n = 1,nrec
               call nemsio_writerec(gfileo,n,rwork_avg(:,n),iret=iret)
            end do
-           call nemsio_writerecv(gfileo,'hgt','sfc',1,rwork_hgt,iret=iret)
+           !call nemsio_writerecv(gfileo,'hgt','sfc',1,rwork_hgt,iret=iret)
            call nemsio_close(gfileo,iret=iret)
            write(6,'(3a,i5)')'Write nemsio bin4 ensemble mean ',trim(filenameout),' iret = ', iret
            ! write grib also
@@ -255,7 +255,7 @@ program getsigensmeanp_smooth
            do n = 1,nrec
               call nemsio_writerec(gfileo,n,rwork_avg(:,n),iret=iret)
            end do
-           call nemsio_writerecv(gfileo,'hgt','sfc',1,rwork_hgt,iret=iret)
+           !call nemsio_writerecv(gfileo,'hgt','sfc',1,rwork_hgt,iret=iret)
            call nemsio_close(gfileo,iret=iret)
            write(6,'(3a,i5)')'Write nemsio grib ensemble mean ',trim(filenameout),' iret = ', iret
         endif
