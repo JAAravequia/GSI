@@ -68,6 +68,8 @@ contains
                                                     ! array containing information about ...
     real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork !  data counts and gross checks
     real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork !  obs-ges stats 
+    real(r_kind),dimension(nele,nobs),intent(inout):: data
+    logical,dimension(nobs),intent(inout):: luse
   
   ! !DESCRIPTION:  For doppler lidar wind observations, this routine
   !  \begin{enumerate}
@@ -165,7 +167,6 @@ contains
     real(r_kind) cg_dw,wgross,wnotgross,wgt,arg,term,exp_arg,rat_err2
     real(r_kind) errinv_input,errinv_adjst,errinv_final
     real(r_kind) err_input,err_adjst,err_final,tfact
-    real(r_kind),dimension(nele,nobs),intent(inout):: data
     real(r_kind),dimension(nobs):: dup
     real(r_kind),dimension(nsig):: hges,zges,prsltmp
     real(r_single),allocatable,dimension(:,:)::rdiagbuf
@@ -181,7 +182,7 @@ contains
     character(8) station_id
     character(8),allocatable,dimension(:):: cdiagbuf
   
-    logical,dimension(nobs):: luse,muse
+    logical,dimension(nobs):: muse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
     logical proceed
   

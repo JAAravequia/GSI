@@ -45,7 +45,7 @@ module abstract_setup_mod
     procedure, pass(this) ::  allocate_ges4
 !   procedure, pass(this) :: setup_ctor2
 !   procedure, pass(this) :: setup_ctor3
-!   procedure, pass(this) :: setup_ctor4
+    procedure, pass(this) :: initialize 
 !   procedure, pass(this) :: setup_ctor5
 !   procedure, pass(this) :: setup_ctor6
 !   procedure, pass(this) :: setup_ctor7
@@ -79,19 +79,19 @@ contains
      setup_ctor3.varnames(1) = varname1
      setup_ctor3.varnames(2) = varname2
   end function setup_ctor3
-!  subroutine setup_ctor4(this,obsname,varname1,varname2,varname3)
-!     class(abstract_setup_class)              ,intent(inout) :: this
-!     character(len=16),                        intent(in) :: obsname
-!     character(len=14),                        intent(in) :: varname1
-!     character(len=14),                        intent(in) :: varname2
-!     character(len=14),                        intent(in) :: varname3
-!     this%myname = obsname
-!     this%numvars = 3
-!     allocate(this%varnames(this%numvars))
-!     this%varnames(1) = varname1
-!     this%varnames(2) = varname2
-!     this%varnames(3) = varname3
-!  end subroutine setup_ctor4
+  subroutine initialize(this,obsname,varname1,varname2,varname3)
+      class(abstract_setup_class)              ,intent(inout) :: this
+      character(len=16),                        intent(in) :: obsname
+      character(len=14),                        intent(in) :: varname1
+      character(len=14),                        intent(in) :: varname2
+      character(len=14),                        intent(in) :: varname3
+      this%myname = obsname
+      this%numvars = 3
+      allocate(this%varnames(this%numvars))
+      this%varnames(1) = varname1
+      this%varnames(2) = varname2
+      this%varnames(3) = varname3
+   end subroutine initialize
 !  subroutine setup_ctor5(this,obsname,varname1,varname2,varname3,varname4)
 !     class(abstract_setup_class)              ,intent(inout) :: this
 !     character(len=16),                        intent(in) :: obsname

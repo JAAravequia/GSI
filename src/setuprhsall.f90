@@ -156,6 +156,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   use m_rhs, only: stats_co => rhs_stats_co
   use m_rhs, only: stats_oz => rhs_stats_oz
   use m_rhs, only: toss_gps_sub => rhs_toss_gps
+  use abstract_setup_mod, only: abstract_setup_class
   use setupbend_mod, only: setupbend_class
   use setupco_mod, only: setupco_class
   use setupcldch_mod, only: setupcldch_class
@@ -204,7 +205,9 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   integer(i_kind),dimension(ndat,3),intent(in   ) :: ndata
   logical                          ,intent(in   ) :: init_pass, last_pass   ! state of "setup" processing
   type(setupbend_class) :: bend
-  type(setupcldch_class) :: cldch
+! type(setupcldch_class) :: cldch = abstract_setup_class('setupcldch','var::ps','var::z','var::cldch')
+  type(setupcldch_class) :: cldch  
+! cldch = abstract_setup_class('setupcldch','var::ps','var::z','var::cldch')
   type(setupco_class) :: co  
   type(setupdw_class) :: dw
   type(setupgust_class) :: gust
@@ -284,6 +287,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   logical:: opened
   character(len=256):: tmpname,tmpaccess,tmpform
 
+  cldch = setupcldch_class('setupcldch','var::ps','var::z','var::cldch')
   if(.not.init_pass .and. .not.lobsdiag_allocated) call die('setuprhsall','multiple lobsdiag_allocated',lobsdiag_allocated)
 !******************************************************************************
 ! Initialize timer
@@ -676,8 +680,9 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
               else if(obstype=='cldch' .and. getindex(svars2d,'cldch')>0) then
                  write(6,*) 'setting up cldch'
 !                call setupcldch(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
-                 call cldch%setupp(('setupcldch'),(/ 'var::ps', 'var::z', 'var::cldch' /),&
-                     lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+                 call cldch%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+!                call cldch%setupp(('setupcldch'),(/ 'var::ps', 'var::z', 'var::cldch' /),&
+!                    lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional uwnd10m data
               else if(obstype=='uwnd10m' .and. getindex(svars2d,'uwnd10m')>0) then
