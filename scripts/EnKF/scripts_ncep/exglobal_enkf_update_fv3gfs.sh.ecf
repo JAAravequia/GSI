@@ -74,6 +74,7 @@ imp_physics=${imp_physics:-"99"}
 lupp=${lupp:-".true."}
 lobsdiag_forenkf=${lobsdiag_forenkf:-".false"}
 write_spread_diag=${write_spread_diag:-".false"}
+netcdf_diag=${netcdf_diag:-".false."}
 
 ################################################################################
 ATMGES_ENSMEAN=$COMIN_GES_ENS/${GPREFIX}atmf006.ensmean${GSUFFIX}
@@ -200,6 +201,7 @@ cat > enkf.nml << EOFnml
    univaroz=.false.,adp_anglebc=.true.,angord=4,use_edges=.false.,emiss_bc=.true.,
    lobsdiag_forenkf=$lobsdiag_forenkf,
    write_spread_diag=$write_spread_diag,
+   netcdf_diag=$netcdf_diag,
    $NAM_ENKF
 /
 &satobs_enkf
