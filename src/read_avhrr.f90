@@ -199,7 +199,9 @@ subroutine read_avhrr(mype,val_avhrr,ithin,rmesh,jsatid,&
   rlndsea(3) = 30._r_kind
   rlndsea(4) = 30._r_kind
 
-                                        ! 207, 208 or 209 for NOAA-16, 17 & 18 respectively
+                                        ! 205,206,207,208 or 209 for NOAA-14,16,16,17 & 18 respectively
+  if(jsatid == 'n14')bufsat = 205
+  if(jsatid == 'n15')bufsat = 206
   if(jsatid == 'n16')bufsat = 207
 ! if(jsatid == 'n17')bufsat = 208
   if(jsatid == 'n17')bufsat = 4
