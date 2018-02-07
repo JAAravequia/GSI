@@ -1866,9 +1866,6 @@
   end subroutine init_binary_diag_
   subroutine init_netcdf_diag_
   character(len=80) string
-  character(len=128) diag_conv_file
-  integer(i_kind) ncd_fileid,ncd_nobs
-  logical append_diag
         filex=obstype
         write(string,1976) jiter
 1976 format('_',i2.2)
@@ -2200,7 +2197,6 @@
   character(7),parameter     :: obsclass = '    rad'
   real(r_single),parameter::  missing = -9.99e9
   integer(i_kind),parameter:: imissing = -999999
-  real(r_kind),dimension(miter) :: obsdiag_iuse
   real(r_kind),dimension(:),allocatable :: predbias_angord
 
 !  if (adp_anglebc) then

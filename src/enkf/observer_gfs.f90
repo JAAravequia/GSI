@@ -29,7 +29,7 @@ subroutine calc_linhx(hx, dens, rlat, rlon, time, dhx_dx, hx_ens)
 !
 !$$$
   use kinds, only: r_kind,i_kind,r_single
-  use params, only: nstatefields, nlons, nlats, nlevs, nhr_state, fhr_assim
+  use params, only: nstatefields, nlons, nlats, nhr_state, fhr_assim
   use gridinfo, only: npts, latsgrd, lonsgrd
   use statevec, only: nsdim
   use constants, only: zero,one,pi

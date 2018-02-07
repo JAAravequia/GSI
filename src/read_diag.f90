@@ -369,14 +369,14 @@ subroutine read_radiag_header(ftin,npred_radiag,retrieval,header_fix,header_chan
 
   iflag = 0
   if (netcdf) then
-     call read_radiag_header_nc(ftin,npred_radiag,retrieval,header_fix,header_chan,data_name,iflag,lverbose)
+     call read_radiag_header_nc(ftin,header_fix,header_chan,iflag)
   else
      call read_radiag_header_bin(ftin,npred_radiag,retrieval,header_fix,header_chan,data_name,iflag,lverbose)
   endif
 
 end subroutine read_radiag_header
 
-subroutine read_radiag_header_nc(ftin,npred_radiag,retrieval,header_fix,header_chan,data_name,iflag,lverbose)
+subroutine read_radiag_header_nc(ftin,header_fix,header_chan,iflag)
 !                .      .    .                                       .
 ! subprogram:    read_diag_header_nc              read rad diag header
 !   prgmmr: mccarty           org: gmao                date: 2003-01-01
@@ -389,15 +389,11 @@ subroutine read_radiag_header_nc(ftin,npred_radiag,retrieval,header_fix,header_c
 !
 ! input argument list:
 !   ftin          - unit number connected to diagnostic file 
-!   npred_radiag  - number of bias correction terms
-!   retrieval     - .true. if sst retrieval
 !
 ! output argument list:
 !   header_fix    - header information structure
 !   header_chan   - channel information structure
-!   data_name     - diag file data names
 !   iflag         - error code
-!   lverbose      - optional flag to turn off default output to standard out 
 !
 ! attributes:
 !   language: f90
@@ -406,13 +402,9 @@ subroutine read_radiag_header_nc(ftin,npred_radiag,retrieval,header_fix,header_c
 !$$$
 ! Declare passed arguments
   integer(i_kind),intent(in)             :: ftin
-  integer(i_kind),intent(in)             :: npred_radiag
-  logical,intent(in)                     :: retrieval
   type(diag_header_fix_list ),intent(out):: header_fix
   type(diag_header_chan_list),allocatable :: header_chan(:)
-  type(diag_data_name_list)              :: data_name
   integer(i_kind),intent(out)            :: iflag
-  logical,optional,intent(in)            :: lverbose
 
 ! local variables
   integer(i_kind)                        :: nchan_dim
@@ -813,7 +805,7 @@ subroutine read_radiag_data(ftin,header_fix,retrieval,data_fix,data_chan,data_ex
      endif
 
      if (iflag .ge. 0) then
-        call read_radiag_data_nc(ftin,ncdiag_open_status(id),header_fix,retrieval,data_fix,data_chan,data_extra,iflag)
+        call read_radiag_data_nc(ncdiag_open_status(id),header_fix,data_fix,data_chan,data_extra,iflag)
      endif
 
   else
@@ -1131,7 +1123,7 @@ subroutine read_radiag_data_nc_init(ftin, diag_status, header_fix, retrieval, if
 
 end subroutine read_radiag_data_nc_init
 
-subroutine read_radiag_data_nc(ftin,diag_status,header_fix,retrieval,data_fix,data_chan,data_extra,iflag )
+subroutine read_radiag_data_nc(diag_status,header_fix,data_fix,data_chan,data_extra,iflag )
 !                .      .    .                                       .
 ! subprogram:    read_radiag_dat                    read rad diag data
 !   prgmmr: tahara           org: np20                date: 2015-08-10
@@ -1143,7 +1135,6 @@ subroutine read_radiag_data_nc(ftin,diag_status,header_fix,retrieval,data_fix,da
 !   2015-08-10 mccarty  - create routine
 !
 ! input argument list:
-!   ftin - unit number connected to diagnostic file
 !   header_fix - header information structure
 !
 ! output argument list:
@@ -1159,10 +1150,8 @@ subroutine read_radiag_data_nc(ftin,diag_status,header_fix,retrieval,data_fix,da
 !$$$
 
 ! Declare passed arguments
-  integer(i_kind),intent(in)             :: ftin
   type(ncdiag_status), intent(inout)     :: diag_status
   type(diag_header_fix_list ),intent(in) :: header_fix
-  logical,intent(in)                     :: retrieval
   type(diag_data_fix_list)   ,intent(out):: data_fix
   type(diag_data_chan_list)  ,allocatable :: data_chan(:)
   type(diag_data_extra_list) ,allocatable :: data_extra(:,:)

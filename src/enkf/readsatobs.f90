@@ -169,7 +169,7 @@ end subroutine get_num_satobs_bin
 
 ! get number of radiance observations from netcdf file
 subroutine get_num_satobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
-  use radinfo, only: iuse_rad,nusis,jpch_rad,npred
+  use radinfo, only: iuse_rad,nusis,jpch_rad
   use nc_diag_read_mod, only: nc_diag_read_get_var
   use nc_diag_read_mod, only: nc_diag_read_get_dim
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
@@ -589,7 +589,7 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   use nc_diag_read_mod, only: nc_diag_read_get_dim, nc_diag_read_get_global_attr
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
 
-  use radinfo, only: iuse_rad,nusis,jpch_rad,npred,adp_anglebc,emiss_bc
+  use radinfo, only: iuse_rad,nusis,jpch_rad,npred
   use params, only: nanals, lobsdiag_forenkf
   use statevec, only: state_d
   use constants, only: deg2rad, zero
@@ -1091,7 +1091,7 @@ subroutine write_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
                     nf90_inquire_dimension, NF90_WRITE, nf90_create, nf90_def_dim
   use ncdw_climsg, only: nclayer_check
 
-  use radinfo, only: iuse_rad,nusis,jpch_rad,npred
+  use radinfo, only: iuse_rad,nusis,jpch_rad
   use constants, only: r_missing
   implicit none
 

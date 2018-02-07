@@ -47,7 +47,6 @@ subroutine setuppcp(lunin,mype,aivals,nele,nobs,&
 
   use obsmod, only: ndat,dplat,time_offset
 
-  use obsmod, only: netcdf_diag, binary_diag, dirname
   use nc_diag_write_mod, only: nc_diag_init, nc_diag_header, nc_diag_metadata, &
        nc_diag_write, nc_diag_data2d
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_get_dim, nc_diag_read_close
@@ -1360,10 +1359,6 @@ endif
   end subroutine init_vars_
 
   subroutine init_netcdf_diag_
-  character(len=80) string
-  character(len=128) diag_conv_file
-  integer(i_kind) ncd_fileid,ncd_nobs
-  logical append_diag
   end subroutine init_netcdf_diag_
   subroutine contents_binary_diag_
   end subroutine contents_binary_diag_
@@ -1371,7 +1366,6 @@ endif
 ! Observation class
   character(7),parameter     :: obsclass = '    pcp'
   real(r_kind),parameter::     missing = -9.99e9
-  real(r_kind),dimension(miter) :: obsdiag_iuse
   end subroutine contents_netcdf_diag_
 
   subroutine final_vars_
