@@ -458,20 +458,6 @@ if (nproc .eq. 0) then
   charfhr_anal(1:nbackgrounds)
 endif
 
-! total number of 2d grids to update.
-if (massbal_adjust) then
-   if (regional .or. nmmb) then
-      if (nproc .eq. 0) print *,'mass balance adjustment only implemented for GFS'
-      massbal_adjust = .false.
-      ndim = nlevs*nvars+1
-   else
-      if (nproc .eq. 0) print *,'add ps tend as analysis var, so mass balance adjustment can be done'
-      ndim = nlevs*nvars+2 ! including surface pressure and ps tendency.
-   endif
-else
-   ndim = nlevs*nvars+1 ! including surface pressure and ps tendency.
-endif
-
 call init_constants(.false.) ! initialize constants.
 call init_constants_derived()
 
