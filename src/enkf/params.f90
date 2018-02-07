@@ -76,10 +76,10 @@ character(len=500),public :: datapath
 ! update is used.  If .false, a perturbed obs (stochastic) update
 ! is used.
 logical, public :: deterministic, sortinc, pseudo_rh, &
-                   varqc, huber, cliptracers, readin_localization
+                   varqc, huber, cliptracers, readin_localization, lupp
 integer(i_kind),public ::  iassim_order,nlevs,nanals,numiter,&
                            nlons,nlats,nbackgrounds,nstatefields
-integer(i_kind),public :: nsats_rad,nsats_oz
+integer(i_kind),public :: nsats_rad,nsats_oz,imp_physics
 ! random seed for perturbed obs (deterministic=.false.)
 ! if zero, system clock is used.  Also used when
 ! iassim_order=1 (random shuffling of obs for serial assimilation).
@@ -103,7 +103,7 @@ integer,public :: npefiles = 0
 ! for LETKF, max number of obs in local volume.
 ! default is -1, which means take all obs within
 ! specified localization radius.  if nobsl_max > 0,
-! only the first nobsl_max closest obs within the 
+! only the first nobsl_max closest obs within the
 ! localization radius will be used. Ignored
 ! if letkf_flag = .false.
 integer,public :: nobsl_max = -1
@@ -112,7 +112,7 @@ logical,public :: save_inflation = .false.
 ! do sat bias correction update.
 logical,public :: lupd_satbiasc = .false.
 ! do ob space update with serial filter (only used if letkf_flag=.true.)
-logical,public :: lupd_obspace_serial = .false. 
+logical,public :: lupd_obspace_serial = .false.
 ! disable vertical localization for letkf
 logical,public :: letkf_novlocal = .false.
 ! simple_partition=.false. does more sophisticated
@@ -170,7 +170,7 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    newpc4pred,nmmb,nhr_anal,nhr_state, fhr_assim,nbackgrounds,nstatefields, &
                    save_inflation,nobsl_max,lobsdiag_forenkf,netcdf_diag,&
                    letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
-                   write_spread_diag,fso_cycling,fso_calculate
+                   write_spread_diag,fso_cycling,fso_calculate,imp_physics,lupp
 
 namelist /nam_wrf/arw,nmm,nmm_restart
 namelist /satobs_enkf/sattypes_rad,dsis
@@ -187,9 +187,9 @@ integer i,nb
 ! time (analysis time YYYYMMDDHH)
 datestring = "0000000000" ! if 0000000000 will not be used.
 ! corrlength (length for horizontal localization in km)
-corrlengthnh = 2800 
-corrlengthtr = 2800 
-corrlengthsh = 2800 
+corrlengthnh = 2800
+corrlengthtr = 2800
+corrlengthsh = 2800
 ! read in localization length scales from an external file.
 readin_localization = .false.
 ! min and max inflation.
@@ -237,7 +237,7 @@ analpertwttr = 0.0_r_single
 paoverpb_thresh = 1.0_r_single! don't skip any obs
 ! set to to 0 for the order they are read in, 1 for random order, or 2 for
 ! order of predicted posterior variance reduction (based on prior)
-iassim_order = 0 
+iassim_order = 0
 ! use 'pseudo-rh' analysis variable, as in GSI.
 pseudo_rh = .false.
 ! if deterministic is true, use LETKF/EnSRF w/o perturbed obs.
@@ -246,6 +246,11 @@ deterministic = .true.
 ! if deterministic is false, re-order obs to minimize regression erros
 ! as described in Anderson (2003) (only used for serial filter).
 sortinc = .true.
+! type of GFS microphyics.
+! 99: Zhao-Carr, 11: GFDL
+imp_physics = 99
+! lupp, if true output extra variables
+lupp = .false.
 ! these are all mandatory.
 ! nlons and nlats are # of lons and lats
 nlons = 0
@@ -318,7 +323,7 @@ end do
 if(nproc == 0)write(6,*) 'number of satellite ozone files used',nsats_oz
 
 
-! default value of vertical localization for sat radiances 
+! default value of vertical localization for sat radiances
 ! and surface pressure should be same as other data.
 if (lnsigcutoffsatnh < 0._r_single) lnsigcutoffsatnh = lnsigcutoffnh
 if (lnsigcutoffsattr < 0._r_single) lnsigcutoffsattr = lnsigcutofftr
@@ -371,7 +376,7 @@ if (nproc == 0) then
        letkf_flag) then
      print *,'warning: no time localization in LETKF!'
    endif
-   
+
    print *, trim(adjustl(datapath))
    if (datestring .ne. '0000000000') print *, 'analysis time ',datestring
    print *, nanals,' members'
@@ -432,11 +437,11 @@ do nb=1,nbackgrounds
         anlfileprefixes(nb)="analysis."
       endif
      else ! global
-      if (nbackgrounds > 1) then
+!      if (nbackgrounds > 1) then
         anlfileprefixes(nb)="sanl_"//datestring//"_fhr"//charfhr_anal(nb)//"_"
-      else
-        anlfileprefixes(nb)="sanl_"//datestring//"_"
-      endif
+!      else
+!        anlfileprefixes(nb)="sanl_"//datestring//"_"
+!      endif
      endif
    endif
 enddo
@@ -451,6 +456,20 @@ if (nproc .eq. 0) then
   print *,'number of background forecast times to be updated = ',nbackgrounds
   print *,'first-guess forecast hours for analysis = ',&
   charfhr_anal(1:nbackgrounds)
+endif
+
+! total number of 2d grids to update.
+if (massbal_adjust) then
+   if (regional .or. nmmb) then
+      if (nproc .eq. 0) print *,'mass balance adjustment only implemented for GFS'
+      massbal_adjust = .false.
+      ndim = nlevs*nvars+1
+   else
+      if (nproc .eq. 0) print *,'add ps tend as analysis var, so mass balance adjustment can be done'
+      ndim = nlevs*nvars+2 ! including surface pressure and ps tendency.
+   endif
+else
+   ndim = nlevs*nvars+1 ! including surface pressure and ps tendency.
 endif
 
 call init_constants(.false.) ! initialize constants.

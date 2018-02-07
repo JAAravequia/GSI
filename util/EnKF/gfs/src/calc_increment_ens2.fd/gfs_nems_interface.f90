@@ -134,7 +134,6 @@ module gfs_nems_interface
   public :: gfs_nems_write
   public :: gfs_nems_vcoord
   public :: gfs_nems_flip_xlat_axis
-  public :: gfs_nems_variable_exist
   public :: nemsio_meta
 
   !-----------------------------------------------------------------------
@@ -150,16 +149,15 @@ contains
   subroutine gfs_nems_initialize(meta_nemsio,filename)
 
     ! Define variables passed to routine
-
-    type(nemsio_meta)                           :: meta_nemsio
-    character(len=500), optional, intent(inout) :: filename
+    
+    type(nemsio_meta)                                                    :: meta_nemsio
+    character(len=500),                        optional,   intent(inout) :: filename
 
     !=====================================================================
 
     ! Define local variables
 
     call nemsio_init(iret=nemsio_iret)
-    if ( nemsio_iret /= 0 ) stop 1
 
     ! Check local variable and proceed accordingly
 
@@ -168,18 +166,16 @@ contains
 
     call nemsio_open(gfile,trim(adjustl(filename)),'read',              &
          & iret=nemsio_iret)
-    if ( nemsio_iret /= 0 ) stop 2
     call nemsio_getfilehead(gfile,iret=nemsio_iret,                     &
          & dimx=meta_nemsio%dimx,                                       &
-         & dimy=meta_nemsio%dimy,                                       &
-         & dimz=meta_nemsio%dimz,                                       &
-         & nrec=meta_nemsio%nrec)
-    if ( nemsio_iret /= 0 ) stop 3
+         & nrec=meta_nemsio%nrec,                                       & 
+         & dimy=meta_nemsio%dimy)                                       
     if (.not. allocated(meta_nemsio%lon)) &
-        allocate(meta_nemsio%lon(meta_nemsio%dimx*meta_nemsio%dimy))
+    allocate(meta_nemsio%lon(meta_nemsio%dimx*meta_nemsio%dimy))
     if (.not. allocated(meta_nemsio%lat)) &
-        allocate(meta_nemsio%lat(meta_nemsio%dimx*meta_nemsio%dimy))
+    allocate(meta_nemsio%lat(meta_nemsio%dimx*meta_nemsio%dimy))
     call nemsio_getfilehead(gfile,iret=nemsio_iret,                     &
+         & dimz=meta_nemsio%dimz,                                       &
          & lat=meta_nemsio%lat,                                         &
          & lon=meta_nemsio%lon,                                         &
          & idate=meta_nemsio%idate,                                     &
@@ -191,17 +187,6 @@ contains
          & nfminute=meta_nemsio%nfminute,                               &
          & nfsecondn=meta_nemsio%nfsecondn,                             &
          & nfsecondd=meta_nemsio%nfsecondd)
-    if ( nemsio_iret /= 0 ) stop 4
-    if (.not. allocated(meta_nemsio%recname)) &
-        allocate(meta_nemsio%recname(meta_nemsio%nrec))
-    call nemsio_getfilehead(gfile,iret=nemsio_iret,                     &
-         & recname=meta_nemsio%recname)
-    if ( nemsio_iret /= 0 ) stop 5
-    if (.not. allocated(meta_nemsio%reclev)) &
-        allocate(meta_nemsio%reclev(meta_nemsio%nrec))
-    call nemsio_getfilehead(gfile,iret=nemsio_iret,                     &
-         & reclev=meta_nemsio%reclev)
-    if ( nemsio_iret /= 0 ) stop 6
 
     ! Define format statements
 
@@ -231,38 +216,6 @@ contains
 
   !=======================================================================
 
-  ! gfs_nems_variable_exist.f90:
-
-  !-----------------------------------------------------------------------
-
-  function gfs_nems_variable_exist(meta_nemsio,varname) result(var_exist)
-
-    ! Define variables passed to routine
-
-    type(nemsio_meta) :: meta_nemsio
-    character(len=*)  :: varname
-    logical           :: var_exist
-
-    !=====================================================================
-
-    ! Define local variables
-
-    integer :: n
-
-    var_exist = .false.
-    do n=1,meta_nemsio%nrec
-        if ( trim(meta_nemsio%recname(n)) == trim(varname) ) then
-            var_exist = .true.
-            return
-        endif
-    enddo
-
-    !=====================================================================
-
-  end function gfs_nems_variable_exist
-
-  !=======================================================================
-
   ! gfs_nems_vcoord.f90:
 
   !-----------------------------------------------------------------------
@@ -270,7 +223,7 @@ contains
   subroutine gfs_nems_vcoord(meta_nemsio,filename,vcoord)
 
     ! Define variables passed to routine
-
+    
     type(nemsio_gfile)                                                   :: lgfile
     type(nemsio_meta)                                                    :: meta_nemsio
     character(len=500)                                                   :: filename
@@ -430,7 +383,7 @@ contains
   subroutine gfs_grid_initialize(grid,meta_nemsio)
 
     ! Define variables passed to routine
-
+    
     type(gfs_grid)                                                       :: grid
     type(nemsio_meta)                                                    :: meta_nemsio
 
@@ -451,7 +404,7 @@ contains
     call init_constants_derived()
 
     ! Allocate memory for local variables
-
+       
     if(.not. allocated(grid%rlon))                                         &
          & allocate(grid%rlon(grid%nlons,grid%nlats))
     if(.not. allocated(grid%rlat))                                         &
@@ -460,11 +413,11 @@ contains
          & allocate(workgrid(grid%nlats))
 
     ! Compute local variables
-
+    
     grid%ncoords = grid%nlons*grid%nlats
-
+    
     n = 0
-    do j=1,grid%nlats
+    do j=1,grid%nlats 
     do i=1,grid%nlons
        n = n + 1
        grid%rlon(i,j) = meta_nemsio%lon(n)
@@ -491,7 +444,7 @@ contains
   subroutine gfs_grid_cleanup(grid)
 
     ! Define variables passed to routine
-
+    
     type(gfs_grid)                                                       :: grid
 
     !=====================================================================
