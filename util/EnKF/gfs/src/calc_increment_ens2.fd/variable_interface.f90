@@ -186,6 +186,15 @@ contains
        grid%nems_levtyp = 'mid layer'
        
     end if ! if(trim(adjustl(grid%var_name)) .eq. 'clwmr')
+
+    if(trim(adjustl(grid%var_name)) .eq. 'icwmr') then
+       
+       ! Define local variables
+       
+       grid%nems_name   = 'icwmr'
+       grid%nems_levtyp = 'mid layer'
+       
+    end if ! if(trim(adjustl(grid%var_name)) .eq. 'icmr')
     
     ! Check local variable and proceed accordingly
     

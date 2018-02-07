@@ -61,6 +61,7 @@ module fv3_interface
      real(r_kind),                   dimension(:,:,:),     allocatable :: spfh
      real(r_kind),                   dimension(:,:,:),     allocatable :: tmp
      real(r_kind),                   dimension(:,:,:),     allocatable :: clwmr
+     real(r_kind),                   dimension(:,:,:),     allocatable :: icmr
      real(r_kind),                   dimension(:,:,:),     allocatable :: o3mr
      real(r_kind),                   dimension(:,:),       allocatable :: psfc
      real(r_kind),                   dimension(:),         allocatable :: ak
@@ -76,6 +77,7 @@ module fv3_interface
      real(r_kind),                   dimension(:,:,:),     allocatable :: sphum_inc
      real(r_kind),                   dimension(:,:,:),     allocatable :: temp_inc
      real(r_kind),                   dimension(:,:,:),     allocatable :: clwmr_inc
+     real(r_kind),                   dimension(:,:,:),     allocatable :: icmr_inc
      real(r_kind),                   dimension(:,:,:),     allocatable :: o3mr_inc
      real(r_kind),                   dimension(:),         allocatable :: lon
      real(r_kind),                   dimension(:),         allocatable :: lat
@@ -167,6 +169,7 @@ contains
     integer                                                              :: varid_t_inc
     integer                                                              :: varid_sphum_inc
     integer                                                              :: varid_liq_wat_inc
+    integer                                                              :: varid_ice_wat_inc
     integer                                                              :: varid_o3mr_inc
     integer                                                              :: dimid_lon
     integer                                                              :: dimid_lat
@@ -310,6 +313,14 @@ contains
        print *, 'error creating liq_wat_inc ',trim(nf90_strerror(ncstatus))
        stop 1
     endif
+    if (imp_physics .ne. 99) then
+    ncstatus    = nf90_def_var(ncfileid,'ice_wat_inc',nf90_float,dimid_3d, &
+         & varid_ice_wat_inc)
+    if (ncstatus /= nf90_noerr) then
+       print *, 'error creating ice_wat_inc ',trim(nf90_strerror(ncstatus))
+       stop 1
+    endif
+    endif
     ncstatus    = nf90_def_var(ncfileid,'o3mr_inc',nf90_float,dimid_3d,    &
          & varid_o3mr_inc)
     if (ncstatus /= nf90_noerr) then
@@ -408,13 +419,23 @@ contains
        print *, trim(nf90_strerror(ncstatus))
        stop 1
     endif
-    if (zero_cwmrinc) grid%clwmr_inc=0
+    if (zero_mpinc) grid%clwmr_inc=0
     if (debug) print *,'writing clwmr_inc, min/max =',&
     minval(grid%clwmr_inc),maxval(grid%clwmr_inc)
     ncstatus    = nf90_put_var(ncfileid,varid_liq_wat_inc,grid%clwmr_inc)
     if (ncstatus /= nf90_noerr) then
        print *, trim(nf90_strerror(ncstatus))
        stop 1
+    endif
+    if (imp_physics .ne. 99) then
+    if (zero_mpinc) grid%icmr_inc=0
+    if (debug) print *,'writing icmr_inc, min/max =',&
+    minval(grid%icmr_inc),maxval(grid%icmr_inc)
+    ncstatus    = nf90_put_var(ncfileid,varid_ice_wat_inc,grid%icmr_inc)
+    if (ncstatus /= nf90_noerr) then
+       print *, trim(nf90_strerror(ncstatus))
+       stop 1
+    endif
     endif
     if (debug) print *,'writing o3mr_inc, min/max =',&
     minval(grid%o3mr_inc),maxval(grid%o3mr_inc)
@@ -483,6 +504,7 @@ contains
     incr_grid%temp_inc  = an_grid%tmp   - fg_grid%tmp
     incr_grid%sphum_inc = an_grid%spfh  - fg_grid%spfh
     incr_grid%clwmr_inc = an_grid%clwmr - fg_grid%clwmr
+    if (imp_physics .ne. 99) incr_grid%icmr_inc = an_grid%icmr - fg_grid%icmr
     incr_grid%o3mr_inc  = an_grid%o3mr  - fg_grid%o3mr
 
     ! Define local variables
@@ -637,6 +659,16 @@ contains
             & reshape(workgrid,(/meta_nemsio%dimx,meta_nemsio%dimy/))
        if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
             & grid%clwmr(:,:,meta_nemsio%dimz - k + 1))
+       if (imp_physics .ne. 99) then
+       var_info%var_name                        = 'icmr'
+       call variable_lookup(var_info)
+       call gfs_nems_read(workgrid,var_info%nems_name,                     &
+            & var_info%nems_levtyp,k)
+       grid%icmr(:,:,meta_nemsio%dimz - k + 1) =                          &
+            & reshape(workgrid,(/meta_nemsio%dimx,meta_nemsio%dimy/))
+       if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
+            & grid%icmr(:,:,meta_nemsio%dimz - k + 1))
+       endif
        var_info%var_name                        = 'o3mr'
        call variable_lookup(var_info)
        call gfs_nems_read(workgrid,var_info%nems_name,                     &
@@ -717,6 +749,8 @@ contains
          & allocate(grid%temp_inc(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(grid%clwmr_inc))                                    &
          & allocate(grid%clwmr_inc(grid%nx,grid%ny,grid%nz))
+    if(imp_physics .ne. 99 .and. .not. allocated(grid%icmr_inc))           &
+         & allocate(grid%icmr_inc(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(grid%o3mr_inc))                                     &
          & allocate(grid%o3mr_inc(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(grid%lon))                                          &
@@ -747,6 +781,8 @@ contains
          & allocate(an_grid%tmp(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(an_grid%clwmr))                                     &
          & allocate(an_grid%clwmr(grid%nx,grid%ny,grid%nz))
+    if(imp_physics .ne. 99 .and. .not. allocated(an_grid%icmr))            &
+         & allocate(an_grid%icmr(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(an_grid%o3mr))                                      &
          & allocate(an_grid%o3mr(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(an_grid%psfc))                                      &
@@ -771,6 +807,8 @@ contains
          & allocate(fg_grid%tmp(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(fg_grid%clwmr))                                     &
          & allocate(fg_grid%clwmr(grid%nx,grid%ny,grid%nz))
+    if(imp_physics .ne. 99 .and. .not. allocated(fg_grid%icmr))            &
+         & allocate(fg_grid%icmr(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(fg_grid%o3mr))                                      &
          & allocate(fg_grid%o3mr(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(fg_grid%psfc))                                      &
@@ -809,6 +847,7 @@ contains
     if(allocated(grid%sphum_inc)) deallocate(grid%sphum_inc)
     if(allocated(grid%temp_inc))  deallocate(grid%temp_inc)
     if(allocated(grid%clwmr_inc)) deallocate(grid%clwmr_inc)
+    if(allocated(grid%icmr_inc)) deallocate(grid%icmr_inc)
     if(allocated(grid%o3mr_inc))  deallocate(grid%o3mr_inc)
     if(allocated(grid%lon))       deallocate(grid%lon)
     if(allocated(grid%lat))       deallocate(grid%lat)
@@ -824,6 +863,7 @@ contains
     if(allocated(an_grid%spfh))   deallocate(an_grid%spfh)
     if(allocated(an_grid%tmp))    deallocate(an_grid%tmp)
     if(allocated(an_grid%clwmr))  deallocate(an_grid%clwmr)
+    if(allocated(an_grid%icmr))  deallocate(an_grid%icmr)
     if(allocated(an_grid%o3mr))   deallocate(an_grid%o3mr)
     if(allocated(an_grid%psfc))   deallocate(an_grid%psfc)
     if(allocated(an_grid%ak))     deallocate(an_grid%ak)
@@ -836,6 +876,7 @@ contains
     if(allocated(fg_grid%spfh))   deallocate(fg_grid%spfh)
     if(allocated(fg_grid%tmp))    deallocate(fg_grid%tmp)
     if(allocated(fg_grid%clwmr))  deallocate(fg_grid%clwmr)
+    if(allocated(fg_grid%icmr))  deallocate(fg_grid%icmr)
     if(allocated(fg_grid%o3mr))   deallocate(fg_grid%o3mr)
     if(allocated(fg_grid%psfc))   deallocate(fg_grid%psfc)
     if(allocated(fg_grid%ak))     deallocate(fg_grid%ak)

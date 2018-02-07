@@ -2,7 +2,7 @@ program calc_increment_main
 
   use kinds
   use namelist_def, only : datapath, analysis_filename, firstguess_filename, increment_filename, debug,&
-   zero_cwmrinc
+   zero_mpinc, imp_physics
   use calc_increment_interface
 
   implicit none
@@ -15,15 +15,17 @@ program calc_increment_main
   call getarg(4, bufchar)
   read(bufchar,'(L)') debug
   call getarg(5, bufchar)
-  read(bufchar,'(L)') zero_cwmrinc
+  read(bufchar,'(L)') zero_mpinc
+  call getarg(5, bufchar)
+  read(bufchar,'(i5)') imp_physics
 
   !write(6,*) 'DATAPATH        = ', trim(datapath)
   write(6,*) 'ANALYSIS FILENAME   = ', trim(analysis_filename)
   write(6,*) 'FIRSTGUESS FILENAME = ', trim(firstguess_filename)
   write(6,*) 'INCREMENT FILENAME  = ', trim(increment_filename)
   write(6,*) 'DEBUG           = ', debug
-  write(6,*) 'ZERO_CWMRINC    = ', zero_cwmrinc
-
+  write(6,*) 'ZERO_MPINC      = ', zero_mpinc
+  write(6,*) 'IMP_PHYSICS     = ', imp_physics
   call calc_increment()
 
 end program calc_increment_main
