@@ -21,27 +21,29 @@ if [ "$#" = 8 ] ; then
   echo $ptmpName
 else
 # Name of the branch being tested
-  updat="XXXXXXXX"
-  contrl="XXXXXXXX"
+  updat="EXP-enkflinhx"
+  contrl="trunk.r95049"
   export cmaketest="false"
   export clean="false"
-  export ptmpName=""
+  export ptmpName="regression/gsi"
 fi
 
 # First determine what machine are we on:
 if [ -d /da ]; then # WCOSS
    export machine="WCOSS"
-   if [ -d /da/noscrub/$LOGNAME ]; then 
+   if [ -d /da/noscrub/$LOGNAME ]; then
      export noscrub=/da/noscrub/$LOGNAME
    elif [ -d /global/noscrub/$LOGNAME ]; then
      export noscrub=/global/noscrub/$LOGNAME
    fi
 elif [ -d /scratch4/NCEPDEV/da ]; then # Theia
    export machine="Theia"
-   if [ -d /scratch4/NCEPDEV/da/noscrub/$LOGNAME ]; then 
+   if [ -d /scratch4/NCEPDEV/da/noscrub/$LOGNAME ]; then
      export noscrub="/scratch4/NCEPDEV/da/noscrub/$LOGNAME"
-   elif [ -d /scratch4/NCEPDEV/global/noscrub/$LOGNAME ]; then 
+   elif [ -d /scratch4/NCEPDEV/global/noscrub/$LOGNAME ]; then
      export noscrub="/scratch4/NCEPDEV/global/noscrub/$LOGNAME"
+   elif [ -d /scratch3/BMC/gsienkf/$LOGNAME ]; then
+     export noscrub="/scratch3/BMC/gsienkf/$LOGNAME"
    fi
 elif [ -d /gpfs/hps/ptmp ]; then # LUNA or SURGE
    export machine="WCOSS_C"
@@ -53,7 +55,12 @@ elif [ -d /gpfs/hps/ptmp ]; then # LUNA or SURGE
 elif [ -d /data/users ]; then # S4
    export machine="s4"
    export noscrub="/data/users/$LOGNAME"
+elif [ -d /discover/nobackup ]; then # NCCS Discover
+   export machine="discover"
 fi
+
+# We are dealing with *which* endian files
+export endianness="Big_Endian"
 
 #  Handle machine specific paths for:
 #  experiment and control executables, fix, ptmp, and CRTM coefficient files.
@@ -61,12 +68,16 @@ fi
 if [[ "$machine" = "Theia" ]]; then
 
    export group="global"
-   export queue="batch"
+   export queue="debug"
    if [[ "$cmaketest" = "false" ]]; then
-     export basedir="/scratch4/home/$LOGNAME/gsi"
-   fi 
+     export basedir="/scratch4/NCEPDEV/global/save/$LOGNAME/svn/gsi/branches"
+   fi
 
-   export ptmp="/scratch4/NCEPDEV/stmp3/$LOGNAME/$ptmpName"
+   if [ -d /scratch4/NCEPDEV/stmp3/$LOGNAME ]; then
+     export ptmp="/scratch4/NCEPDEV/stmp3/$LOGNAME/$ptmpName"
+   elif [ -d /scratch3/BMC/gsienkf/$LOGNAME ]; then
+     export ptmp="/scratch3/BMC/gsienkf/$LOGNAME/tmp/$ptmpName"
+   fi
 
    export fixcrtm="/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update"
    export casesdir="/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES"
@@ -75,16 +86,17 @@ if [[ "$machine" = "Theia" ]]; then
    export check_resource="no"
 
    export accnt="da-cpu"
+#   export accnt="gsienkf"
 
    #  On Theia, there are no scrubbers to remove old contents from stmp* directories.
    #  After completion of regression tests, will remove the regression test subdirecories
-#  export clean=".true."
+   export clean=".false."
 
 elif [[ "$machine" = "WCOSS" ]]; then
 
    if [[ "$cmaketest" = "false" ]]; then
      export basedir="/global/save/$LOGNAME/gsi"
-   fi 
+   fi
    export group="dev"
    export queue="dev"
 
@@ -102,7 +114,7 @@ elif [[ "$machine" = "WCOSS_C" ]]; then
 
    if [[ "$cmaketest" = "false" ]]; then
      export basedir="/gpfs/hps/emc/global/noscrub/$LOGNAME/svn/gsi"
-   fi 
+   fi
    export group="dev"
    export queue="dev"
 
@@ -118,7 +130,7 @@ elif [[ "$machine" = "WCOSS_C" ]]; then
 elif [[ "$machine" = "s4" ]]; then
    if [[ "$cmaketest" = "false" ]]; then
      export basedir="/home/$LOGNAME/gsi"
-   fi 
+   fi
    export group="dev"
    export queue="dev"
    export NWPROD="/usr/local/jcsda/nwprod_gdas_2014"
@@ -133,25 +145,35 @@ elif [[ "$machine" = "s4" ]]; then
    export check_resource="no"
 
    export accnt="star"
-
+elif [ "$machine" == "discover" ]; then
+   export basedir="/gpfsm/dnb31/pchakrab/code/ext/gsi"
+   export group="global"
+   export queue="batch"
+   export ptmp=$basedir
+   export noscrub=$basedir
+   export fixcrtm="/discover/nobackup/projects/gmao/share/gmao_ops/fvInput_4dvar/gsi/etc/fix_ncep20170329/REL-2.2.3-r60152_local-rev_1/CRTM_Coeffs/$endianness"
+   export casesdir="/discover/nobackup/projects/gmao/obsdev/wrmccart/NCEP_regression/CASES"
+   export ndate="$basedir/$updat/scripts/ndate"
+   export check_resource="no"
+   export accnt="g0613"
+   export clean=".false."
 fi
 
 if [[ "$cmaketest" = "false" ]]; then
   export builddir=$noscrub/build
   export gsisrc="$basedir/$updat/src"
-  export gsiexec_updat="$gsisrc/global_gsi"
-  export gsiexec_contrl="$basedir/$contrl/src/global_gsi"
+  export gsiexec_updat="$basedir/$updat/bld/bin/gsi_global.x"
+  export gsiexec_contrl="$basedir/$contrl/bld/bin/gsi_global.x"
   export enkfexec_updat="$gsisrc/enkf/global_enkf"
   export enkfexec_contrl="$basedir/$contrl/src/enkf/global_enkf"
-  export fixgsi="$basedir/$updat/fix"
-  export scripts="$basedir/$updat/scripts"
+  export fixgsi_updat="$basedir/$updat/fix"
+  export scripts_updat="$basedir/$updat/scripts"
+  export fixgsi_contrl="$basedir/$contrl/fix"
+  export scripts_contrl="$basedir/$contrl/scripts"
 fi
 # Paths to tmpdir and savedir base on ptmp
-export tmpdir="$ptmp"
-export savdir="$ptmp"
-
-# We are dealing with *which* endian files
-export endianness="Big_Endian"
+export tmpdir="$ptmp/$updat"
+export savdir="$ptmp/$updat"
 
 # Variables with the same values are defined below.
 
@@ -208,7 +230,7 @@ export hwrf_nmm_ges="$casesdir/regional/hwrf_nmm/$hwrf_nmm_adate"
 export gps_dtype="gps_bnd"
 
 # Regression vfydir
-export regression_vfydir="$noscrub/regression"
+export regression_vfydir="$noscrub/regression/$updat"
 
 # Define debug variable - If you want to run the debug tests, set this variable to .true.  Default is .false.
 export debug=".false."
