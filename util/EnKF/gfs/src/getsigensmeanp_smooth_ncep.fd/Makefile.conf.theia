@@ -5,7 +5,7 @@
 # Redefine variables for NOAA HPCS
 # ----------------------------------
 BACIO_VER = 2.0.1
-NEMSIO_VER = 2.2.3
+NEMSIO_VER = 2.2.1
 SIGIO_VER = 2.0.1
 SP_VER = 2.0.2
 W3NCO_VER = 2.0.6
