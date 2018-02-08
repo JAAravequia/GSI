@@ -75,12 +75,9 @@ cmake_minimum_required(VERSION 2.8)
   set_source_files_properties( ${GLOBAL_SRC} PROPERTIES COMPILE_FLAGS ${GSI_Fortran_FLAGS} )
   set_source_files_properties( ${CMAKE_CURRENT_SOURCE_DIR}/blockIO.c  PROPERTIES COMPILE_FLAGS ${GSI_CFLAGS} )
 
+# Add the include paths
   include_directories( ${CORE_INCS} ${NETCDF_INCLUDES} ${MPI_Fortran_INCLUDE_PATH} "./" ${NCDIAG_INCS} )
 
-  if( BUILD_NCDIAG )
-      add_dependencies(gsilib_shrd${debug_suffix} ${NCDIAG_LIBRARIES} )
-  endif( BUILD_NCDIAG )
-    set_target_properties(gsilib_global PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include" )
 #define the name used for GSI Shared lib and add it with properties and include dirs
   set(GSISHAREDLIB "gsilib_shrd${debug_suffix}" CACHE INTERNAL "")
   add_library(${GSISHAREDLIB} STATIC ${GSI_SRC} )
@@ -125,18 +122,16 @@ cmake_minimum_required(VERSION 2.8)
   endif()
 
   add_dependencies(${GSILIB} ${GSISHAREDLIB} )
-
+  if( BUILD_NCDIAG )
+      add_dependencies(${GSISHAREDLIB}  ${NCDIAG_LIBRARIES} )
+  endif( BUILD_NCDIAG )
 # Add dependencies if we are building the core libs or are just using pre-built libs 
-  if(BUILD_CORELIBS )
+  if(BUILD_CORELIBS)
     add_dependencies(${GSILIB} ${GSISHAREDLIB} ${bacio} ${crtm} ${bufr} ${nemsio} ${sigio} ${sfcio} ${sp} ${w3emc} ${w3nco} )
     add_dependencies(${GSISHAREDLIB} ${bacio} ${crtm} ${bufr} ${nemsio} ${sigio} ${sfcio} ${sp} ${w3emc} ${w3nco} )
     add_dependencies(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${w3nco} ${bacio} ${crtm} ${bufr} ${nemsio} ${sigio} ${sfcio} ${sp} ${w3emc} )
   else()
     add_dependencies(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} )
-    target_link_libraries(gsi.x${debug_suffix} gsilib_shrd${debug_suffix} gsilib_wrf${debug_suffix} gsilib_shrd${debug_suffix} ${WRF_LIBRARIES} ${CORE_LIBRARIES} ${NCDIAG_LIBRARIES}
   endif()
 # Specify all the libraries to be linked into the executable
-  target_link_libraries(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${GSISHAREDLIB} ${WRF_LIBRARIES} ${CORE_LIBRARIES}
-         ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES} 
-         ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${CORE_LIBRARIES} ${NCDIAG_LIBRARIES} 
-         ${ZLIB_LIBRARIES} )
+  target_link_libraries( ${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${GSISHAREDLIB} ${WRF_LIBRARIES} ${CORE_LIBRARIES} ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES} ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${CORE_LIBRARIES} ${NCDIAG_LIBRARIES} ${ZLIB_LIBRARIES} )
