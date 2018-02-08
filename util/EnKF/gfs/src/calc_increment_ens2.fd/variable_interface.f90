@@ -187,11 +187,11 @@ contains
        
     end if ! if(trim(adjustl(grid%var_name)) .eq. 'clwmr')
 
-    if(trim(adjustl(grid%var_name)) .eq. 'icwmr') then
+    if(trim(adjustl(grid%var_name)) .eq. 'icmr') then
        
        ! Define local variables
        
-       grid%nems_name   = 'icwmr'
+       grid%nems_name   = 'icmr'
        grid%nems_levtyp = 'mid layer'
        
     end if ! if(trim(adjustl(grid%var_name)) .eq. 'icmr')

@@ -16,7 +16,7 @@ program calc_increment_main
   read(bufchar,'(L)') debug
   call getarg(5, bufchar)
   read(bufchar,'(L)') zero_mpinc
-  call getarg(5, bufchar)
+  call getarg(6, bufchar)
   read(bufchar,'(i5)') imp_physics
 
   !write(6,*) 'DATAPATH        = ', trim(datapath)
