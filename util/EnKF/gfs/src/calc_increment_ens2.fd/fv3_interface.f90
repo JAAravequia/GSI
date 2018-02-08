@@ -307,6 +307,7 @@ contains
        print *, 'error creating sphum_inc ',trim(nf90_strerror(ncstatus))
        stop 1
     endif
+    if (imp_physics .gt. 0) then
     ncstatus    = nf90_def_var(ncfileid,'liq_wat_inc',nf90_float,dimid_3d, &
          & varid_liq_wat_inc)
     if (ncstatus /= nf90_noerr) then
@@ -319,6 +320,7 @@ contains
     if (ncstatus /= nf90_noerr) then
        print *, 'error creating ice_wat_inc ',trim(nf90_strerror(ncstatus))
        stop 1
+    endif
     endif
     endif
     ncstatus    = nf90_def_var(ncfileid,'o3mr_inc',nf90_float,dimid_3d,    &
@@ -419,6 +421,7 @@ contains
        print *, trim(nf90_strerror(ncstatus))
        stop 1
     endif
+    if (imp_physics .gt. 0) then
     if (zero_mpinc) grid%clwmr_inc=0
     if (debug) print *,'writing clwmr_inc, min/max =',&
     minval(grid%clwmr_inc),maxval(grid%clwmr_inc)
@@ -435,6 +438,7 @@ contains
     if (ncstatus /= nf90_noerr) then
        print *, trim(nf90_strerror(ncstatus))
        stop 1
+    endif
     endif
     endif
     if (debug) print *,'writing o3mr_inc, min/max =',&
@@ -503,8 +507,10 @@ contains
 
     incr_grid%temp_inc  = an_grid%tmp   - fg_grid%tmp
     incr_grid%sphum_inc = an_grid%spfh  - fg_grid%spfh
+    if (imp_physics .gt. 0) then
     incr_grid%clwmr_inc = an_grid%clwmr - fg_grid%clwmr
     if (imp_physics .ne. 99) incr_grid%icmr_inc = an_grid%icmr - fg_grid%icmr
+    endif
     incr_grid%o3mr_inc  = an_grid%o3mr  - fg_grid%o3mr
 
     ! Define local variables
@@ -651,6 +657,7 @@ contains
             & reshape(workgrid,(/meta_nemsio%dimx,meta_nemsio%dimy/))
        if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
             & grid%tmp(:,:,meta_nemsio%dimz - k + 1))
+       if (imp_physics .gt. 0) then
        var_info%var_name                        = 'clwmr'
        call variable_lookup(var_info)
        call gfs_nems_read(workgrid,var_info%nems_name,                     &
@@ -668,6 +675,7 @@ contains
             & reshape(workgrid,(/meta_nemsio%dimx,meta_nemsio%dimy/))
        if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
             & grid%icmr(:,:,meta_nemsio%dimz - k + 1))
+       endif
        endif
        var_info%var_name                        = 'o3mr'
        call variable_lookup(var_info)
@@ -747,10 +755,12 @@ contains
          & allocate(grid%sphum_inc(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(grid%temp_inc))                                     &
          & allocate(grid%temp_inc(grid%nx,grid%ny,grid%nz))
+    if (imp_physics .gt. 0) then
     if(.not. allocated(grid%clwmr_inc))                                    &
          & allocate(grid%clwmr_inc(grid%nx,grid%ny,grid%nz))
     if(imp_physics .ne. 99 .and. .not. allocated(grid%icmr_inc))           &
          & allocate(grid%icmr_inc(grid%nx,grid%ny,grid%nz))
+    endif
     if(.not. allocated(grid%o3mr_inc))                                     &
          & allocate(grid%o3mr_inc(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(grid%lon))                                          &
@@ -779,10 +789,12 @@ contains
          & allocate(an_grid%spfh(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(an_grid%tmp))                                       &
          & allocate(an_grid%tmp(grid%nx,grid%ny,grid%nz))
+    if (imp_physics .gt. 0) then
     if(.not. allocated(an_grid%clwmr))                                     &
          & allocate(an_grid%clwmr(grid%nx,grid%ny,grid%nz))
     if(imp_physics .ne. 99 .and. .not. allocated(an_grid%icmr))            &
          & allocate(an_grid%icmr(grid%nx,grid%ny,grid%nz))
+    endif
     if(.not. allocated(an_grid%o3mr))                                      &
          & allocate(an_grid%o3mr(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(an_grid%psfc))                                      &
@@ -805,10 +817,12 @@ contains
          & allocate(fg_grid%spfh(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(fg_grid%tmp))                                       &
          & allocate(fg_grid%tmp(grid%nx,grid%ny,grid%nz))
+    if (imp_physics .gt. 0) then
     if(.not. allocated(fg_grid%clwmr))                                     &
          & allocate(fg_grid%clwmr(grid%nx,grid%ny,grid%nz))
     if(imp_physics .ne. 99 .and. .not. allocated(fg_grid%icmr))            &
          & allocate(fg_grid%icmr(grid%nx,grid%ny,grid%nz))
+    endif
     if(.not. allocated(fg_grid%o3mr))                                      &
          & allocate(fg_grid%o3mr(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(fg_grid%psfc))                                      &
