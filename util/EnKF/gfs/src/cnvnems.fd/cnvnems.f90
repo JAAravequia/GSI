@@ -61,8 +61,11 @@ program cnvnems
   gfileo=gfile
   call nemsio_open(gfileo,trim(filenameout),'WRITE',modelname='GFS',iret=iret,gdatatype=outformat)
   do n = 1,nrec
+     ! skip microphysics vars to save space (not needed for replay)
+     if (trim(recnam(n)) .ne. 'clwmr' .and. trim(recnam(n)) .ne. 'icmr') then
      print *,n,trim(recnam(n)),reclev(n),minval(rwork(:,n)),maxval(rwork(:,n))
      call nemsio_writerec(gfileo,n,rwork(:,n),iret=iret)
+     endif
   end do
 
 ! Deallocate structures and arrays

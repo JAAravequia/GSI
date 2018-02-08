@@ -264,7 +264,10 @@ program getsigensmeanp_smooth
            gfileo=gfile
            call nemsio_open(gfileo,trim(filenameout),'WRITE',modelname='GFS',iret=iret,gdatatype='grib')
            do n = 1,nrec
-              call nemsio_writerec(gfileo,n,rwork_avg(:,n),iret=iret)
+              ! skip microphysics vars to save space (not needed for replay)
+              if (trim(recnam(n)) .ne. 'clwmr' .and. trim(recnam(n)) .ne. 'icmr') then
+                 call nemsio_writerec(gfileo,n,rwork_avg(:,n),iret=iret)
+              endif
            end do
            !call nemsio_writerecv(gfileo,'hgt','sfc',1,rwork_hgt,iret=iret)
            call nemsio_close(gfileo,iret=iret)
