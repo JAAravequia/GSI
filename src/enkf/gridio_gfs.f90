@@ -756,8 +756,7 @@
        call copyfromgrdin(grdin(:,levels(n3d) + ps_ind,nb),ug)
      endif
      !print *,'nanal,min/max psfg,min/max inc',nanal,minval(psfg),maxval(psfg),minval(ug),maxval(ug)
-     call nemsio_readrecv(gfilein,'dpres','mid layer',1,nems_wrk,iret=iret)
-     if (iret==0) then
+     if (lupp) then
         do k=1,nlevs
            psg = ug*(bk(k)-bk(k+1))
            call nemsio_readrecv(gfilein,'dpres','mid layer',k,nems_wrk,iret=iret)
@@ -981,6 +980,10 @@
            ug=ug*log((ak(k)+bk(k)*vg)/(ak(k+1)+bk(k+1)*vg))
            ug=ug-delzb
            call nemsio_readrecv(gfilein,'delz','mid layer',k,nems_wrk,iret=iret)
+           if (iret/=0) then
+              write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(delz), iret=',iret
+              call stop2(23)
+           endif
            nems_wrk = nems_wrk + ug
            call nemsio_writerecv(gfileout,'delz','mid layer',k,nems_wrk,iret=iret)
            if (iret/=0) then
@@ -1041,27 +1044,35 @@
               write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(icmr), iret=',iret
               call stop2(23)
            endif
-
-           call nemsio_readrecv(gfilein,'rwmr','mid layer',k,nems_wrk2,iret=iret)
-           if (iret/=0) then
+            
+           if (lupp) then
+              call nemsio_readrecv(gfilein,'rwmr','mid layer',k,nems_wrk2,iret=iret)
+              if (iret/=0) then
+                 write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(rwmr), iret=',iret
+                 call stop2(23)
+              endif
               call nemsio_writerecv(gfileout,'rwmr','mid layer',k,nems_wrk2,iret=iret)
               if (iret/=0) then
                  write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(rwmr), iret=',iret
                  call stop2(23)
               endif
-           endif
 
-           call nemsio_readrecv(gfilein,'snmr','mid layer',k,nems_wrk2,iret=iret)
-           if (iret/=0) then
+              call nemsio_readrecv(gfilein,'snmr','mid layer',k,nems_wrk2,iret=iret)
+              if (iret/=0) then
+                 write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(snmr), iret=',iret
+                 call stop2(23)
+              endif
               call nemsio_writerecv(gfileout,'snmr','mid layer',k,nems_wrk2,iret=iret)
               if (iret/=0) then
                  write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(snmr), iret=',iret
                  call stop2(23)
               endif
-           endif
 
-           call nemsio_readrecv(gfilein,'grle','mid layer',k,nems_wrk2,iret=iret)
-           if (iret/=0) then
+              call nemsio_readrecv(gfilein,'grle','mid layer',k,nems_wrk2,iret=iret)
+              if (iret/=0) then
+                 write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(grle), iret=',iret
+                 call stop2(23)
+              endif
               call nemsio_writerecv(gfileout,'grle','mid layer',k,nems_wrk2,iret=iret)
               if (iret/=0) then
                  write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(grle), iret=',iret
@@ -1071,8 +1082,12 @@
         endif
 
         !Additional variables needed for Unified Post Processor
-        call nemsio_readrecv(gfilein,'dzdt','mid layer',k,nems_wrk2,iret=iret)
-        if (iret==0) then
+        if (lupp) then
+           call nemsio_readrecv(gfilein,'dzdt','mid layer',k,nems_wrk2,iret=iret)
+           if (iret/=0) then
+              write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(dzdt), iret=',iret
+              call stop2(23)
+           endif
            call nemsio_writerecv(gfileout,'dzdt','mid layer',k,nems_wrk2,iret=iret)
            if (iret/=0) then
               write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(dzdt), iret=',iret
