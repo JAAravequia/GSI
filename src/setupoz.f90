@@ -1087,7 +1087,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   external:: stop2
 
 ! Declare local variables  
-  real(r_kind) :: dt, delz
+  real(r_kind) :: delz
   integer(i_kind) :: iz, oz_ind, nind, nnz
   type(sparr2) :: dhx_dx
   

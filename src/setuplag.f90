@@ -44,7 +44,6 @@ subroutine setuplag(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use m_obsLList, only: obsLList_appendNode
   use obsmod, only: obs_diag,luse_obsdiag
 
-  use obsmod, only: netcdf_diag, binary_diag, dirname
   use nc_diag_write_mod, only: nc_diag_init, nc_diag_header, nc_diag_metadata, &
        nc_diag_write, nc_diag_data2d
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_get_dim, nc_diag_read_close
@@ -621,10 +620,6 @@ subroutine setuplag(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! End of routine
 contains
   subroutine init_netcdf_diag_
-  character(len=80) string
-  character(len=128) diag_conv_file
-  integer(i_kind) ncd_fileid,ncd_nobs
-  logical append_diag
   end subroutine init_netcdf_diag_
   subroutine contents_binary_diag_
   end subroutine contents_binary_diag_
@@ -632,6 +627,5 @@ contains
 ! Observation class
   character(7),parameter     :: obsclass = '    lag'
   real(r_kind),parameter::     missing = -9.99e9
-  real(r_kind),dimension(miter) :: obsdiag_iuse
   end subroutine contents_netcdf_diag_
 end subroutine setuplag
