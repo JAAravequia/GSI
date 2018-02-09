@@ -970,8 +970,9 @@
            call stop2(23)
         endif
         if (lupp) then
-           if (reducedgrid) then
-              call reducedtoreg(grdin(:,ndim,nb),vg)
+           vg = 0.
+           if (ps_ind > 0) then
+              call copyfromgrdin(grdin(:,levels(n3d) + ps_ind,nb),vg)
            else
               vg = grdin(:,ndim,nb)
            endif
