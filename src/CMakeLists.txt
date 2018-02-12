@@ -51,6 +51,12 @@ cmake_minimum_required(VERSION 2.8)
   list( REMOVE_ITEM GSI_SRC ${STUB_SRC} )
   list( REMOVE_ITEM GSI_SRC ${CPLR_SRC} )
 
+# remove source stubs if we are building the ncdiag library
+  if( BUILD_NCDIAG )
+    list( REMOVE_ITEM GSI_SRC "${CMAKE_CURRENT_SOURCE_DIR}/nc_diag_read_mod.f90" )
+    list( REMOVE_ITEM GSI_SRC "${CMAKE_CURRENT_SOURCE_DIR}/nc_diag_write_mod.f90" )
+  endif( BUILD_NCDIAG )
+
 # remove stub_nstmod from the rest of the source files
   list( REMOVE_ITEM GSI_SRC "${CMAKE_CURRENT_SOURCE_DIR}/stub_nstmod.f90" )
 
@@ -72,8 +78,6 @@ cmake_minimum_required(VERSION 2.8)
   set_source_files_properties( ${GLOBAL_SRC} PROPERTIES COMPILE_FLAGS ${GSI_Fortran_FLAGS} )
   set_source_files_properties( ${CMAKE_CURRENT_SOURCE_DIR}/blockIO.c  PROPERTIES COMPILE_FLAGS ${GSI_CFLAGS} )
 
-# Add the include paths
-  include_directories( ${CORE_INCS} ${NETCDF_INCLUDES} ${MPI_Fortran_INCLUDE_PATH} "./" )
 
 #define the name used for GSI Shared lib and add it with properties and include dirs
   set(GSISHAREDLIB "gsilib_shrd${debug_suffix}" CACHE INTERNAL "")
@@ -120,6 +124,9 @@ cmake_minimum_required(VERSION 2.8)
   endif()
 
   add_dependencies(${GSILIB} ${GSISHAREDLIB} )
+  if( BUILD_NCDIAG )
+      add_dependencies(${GSISHAREDLIB} ${NCDIAG_LIBRARIES} )
+  endif( BUILD_NCDIAG )
 
 # Add dependencies if we are building the core libs or are just using pre-built libs 
   if(BUILD_CORELIBS )

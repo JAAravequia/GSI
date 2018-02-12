@@ -55,6 +55,7 @@ module fv3_interface
   type analysis_grid
      character(len=500)                                                :: filename
      real(r_kind),                   dimension(:,:,:),     allocatable :: dpres
+     real(r_kind),                   dimension(:,:,:),     allocatable :: dlnp
      real(r_kind),                   dimension(:,:,:),     allocatable :: ugrd
      real(r_kind),                   dimension(:,:,:),     allocatable :: vgrd
      real(r_kind),                   dimension(:,:,:),     allocatable :: spfh
@@ -69,6 +70,7 @@ module fv3_interface
 
   type increment_grid
      real(r_kind),                   dimension(:,:,:),     allocatable :: delp_inc
+     real(r_kind),                   dimension(:,:,:),     allocatable :: delz_inc
      real(r_kind),                   dimension(:,:,:),     allocatable :: u_inc
      real(r_kind),                   dimension(:,:,:),     allocatable :: v_inc
      real(r_kind),                   dimension(:,:,:),     allocatable :: sphum_inc
@@ -161,6 +163,7 @@ contains
     integer                                                              :: varid_u_inc
     integer                                                              :: varid_v_inc
     integer                                                              :: varid_delp_inc
+    integer                                                              :: varid_delz_inc
     integer                                                              :: varid_t_inc
     integer                                                              :: varid_sphum_inc
     integer                                                              :: varid_liq_wat_inc
@@ -178,7 +181,7 @@ contains
 
     ! Define local variables
 
-    print *,'writing to ',trim(increment_filename)
+    if (debug) print *,'writing to ',trim(increment_filename)
     ncstatus    = nf90_create(trim(increment_filename),                 &
          cmode=ior(NF90_CLOBBER,NF90_64BIT_OFFSET),ncid=ncfileid)
     if (ncstatus /= nf90_noerr) then
@@ -283,6 +286,12 @@ contains
        print *, 'error creating delp_inc ',trim(nf90_strerror(ncstatus))
        stop 1
     endif
+    ncstatus    = nf90_def_var(ncfileid,'delz_inc',nf90_float,dimid_3d,    &
+         & varid_delz_inc)
+    if (ncstatus /= nf90_noerr) then
+       print *, 'error creating delz_inc ',trim(nf90_strerror(ncstatus))
+       stop 1
+    endif
     ncstatus    = nf90_def_var(ncfileid,'T_inc',nf90_float,dimid_3d,       &
          & varid_t_inc)
     if (ncstatus /= nf90_noerr) then
@@ -378,6 +387,13 @@ contains
        print *, trim(nf90_strerror(ncstatus))
        stop 1
     endif
+    if (debug) print *,'writing delz_inc, min/max =',&
+    minval(grid%delz_inc),maxval(grid%delz_inc)
+    ncstatus    = nf90_put_var(ncfileid,varid_delz_inc,grid%delz_inc)
+    if (ncstatus /= nf90_noerr) then
+       print *, trim(nf90_strerror(ncstatus))
+       stop 1
+    endif
     if (debug) print *,'writing temp_inc, min/max =',&
     minval(grid%temp_inc),maxval(grid%temp_inc)
     ncstatus    = nf90_put_var(ncfileid,varid_t_inc,grid%temp_inc)
@@ -392,6 +408,7 @@ contains
        print *, trim(nf90_strerror(ncstatus))
        stop 1
     endif
+    if (zero_cwmrinc) grid%clwmr_inc=0
     if (debug) print *,'writing clwmr_inc, min/max =',&
     minval(grid%clwmr_inc),maxval(grid%clwmr_inc)
     ncstatus    = nf90_put_var(ncfileid,varid_liq_wat_inc,grid%clwmr_inc)
@@ -435,6 +452,7 @@ contains
     ! Define counting variables
 
     integer                                                              :: i, j, k
+    real(r_kind), allocatable, dimension(:,:,:) :: fg_dz, an_dz, pot_temp
 
     !=====================================================================
 
@@ -452,6 +470,16 @@ contains
     incr_grid%u_inc     = an_grid%ugrd  - fg_grid%ugrd
     incr_grid%v_inc     = an_grid%vgrd  - fg_grid%vgrd
     incr_grid%delp_inc  = an_grid%dpres - fg_grid%dpres
+    ! compute hydrostatic delz increment
+    allocate(fg_dz(incr_grid%nx,incr_grid%ny,incr_grid%nz))
+    allocate(an_dz(incr_grid%nx,incr_grid%ny,incr_grid%nz))
+    !print *,'rgas,rvap,cp',rgas,rvap,cp,rvap/rgas-1.
+! hydrostatic equation g*dz = -R_d*T_v*dlnp
+    fg_dz = -rgas*fg_grid%tmp*(1.+(rvap/rgas-1.)*fg_grid%spfh)*fg_grid%dlnp/9.8066
+    an_dz = -rgas*an_grid%tmp*(1.+(rvap/rgas-1.)*an_grid%spfh)*an_grid%dlnp/9.8066
+    incr_grid%delz_inc = an_dz - fg_dz
+    deallocate(fg_dz, an_dz)
+
     incr_grid%temp_inc  = an_grid%tmp   - fg_grid%tmp
     incr_grid%sphum_inc = an_grid%spfh  - fg_grid%spfh
     incr_grid%clwmr_inc = an_grid%clwmr - fg_grid%clwmr
@@ -515,7 +543,7 @@ contains
 
     ! Define variables passed to routine
 
-    type(analysis_grid)                                                  :: grid
+    type(analysis_grid) :: grid
 
     ! Define variables computed within routine
 
@@ -523,6 +551,7 @@ contains
     real(r_kind),               dimension(:,:,:),            allocatable :: pressi
     real(r_kind),               dimension(:,:,:),            allocatable :: vcoord
     real(r_kind),               dimension(:),                allocatable :: workgrid
+    real(r_kind), allocatable, dimension(:,:) :: delz
     logical flip_lats
 
     ! Define counting variables
@@ -530,6 +559,7 @@ contains
     integer                                                              :: i, j, k
 
     !=====================================================================
+
 
     ! Define local variables
 
@@ -562,37 +592,6 @@ contains
          & 1)
     grid%psfc(:,:)    = reshape(workgrid,(/meta_nemsio%dimx,               &
          & meta_nemsio%dimy/))
-
-    ! Loop through local variable
-
-    do k = 1, meta_nemsio%dimz + 1
-
-       ! Compute local variables
-
-       pressi(:,:,k) = grid%ak(k) + grid%bk(k)*grid%psfc(:,:)
-
-    end do ! do k = 1, meta_nemsio%dimz + 1
-
-    ! Loop through local variable
-
-    do k = 1, meta_nemsio%dimz
-
-       ! Compute local variables
-
-       ! defined as higher pressure minus lower pressure
-       grid%dpres(:,:,meta_nemsio%dimz - k + 1) = pressi(:,:,k) -          &
-            & pressi(:,:,k+1)
-       !if (debug) print *,'dpres',k,minval(grid%dpres(:,:,meta_nemsio%dimz - k + 1)),&
-       !maxval(grid%dpres(:,:,meta_nemsio%dimz - k + 1))
-
-       ! Define local variables
-
-       if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
-            & grid%dpres(:,:,meta_nemsio%dimz - k + 1))
-
-    end do ! do k = 1, meta_nemsio%dimz
-
-    ! Loop through local variable
 
     do k = 1, meta_nemsio%dimz
 
@@ -649,6 +648,22 @@ contains
 
     end do ! do k = 1, meta_nemsio%dimz
 
+    do k = 1, meta_nemsio%dimz + 1
+       pressi(:,:,k) = grid%ak(k) + grid%bk(k)*grid%psfc(:,:)
+    end do ! do k = 1, meta_nemsio%dimz + 1
+
+    do k = 1, meta_nemsio%dimz
+       ! defined as higher pressure minus lower pressure
+       grid%dpres(:,:,meta_nemsio%dimz - k + 1) = pressi(:,:,k) -          &
+            & pressi(:,:,k+1)
+       grid%dlnp(:,:,meta_nemsio%dimz - k + 1) = log(pressi(:,:,k))- &
+            & log(pressi(:,:,k+1))
+       if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
+            & grid%dpres(:,:,meta_nemsio%dimz - k + 1))
+       if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
+            & grid%dlnp(:,:,meta_nemsio%dimz - k + 1))
+    end do ! do k = 1, meta_nemsio%dimz
+
     ! Deallocate memory for local variables
 
     if(allocated(pressi))   deallocate(pressi)
@@ -690,6 +705,8 @@ contains
 
     if(.not. allocated(grid%delp_inc))                                     &
          & allocate(grid%delp_inc(grid%nx,grid%ny,grid%nz))
+    if(.not. allocated(grid%delz_inc))                                     &
+         & allocate(grid%delz_inc(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(grid%u_inc))                                        &
          & allocate(grid%u_inc(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(grid%v_inc))                                        &
@@ -718,6 +735,8 @@ contains
          & allocate(grid%hybi(grid%nzp1))
     if(.not. allocated(an_grid%dpres))                                     &
          & allocate(an_grid%dpres(grid%nx,grid%ny,grid%nz))
+    if(.not. allocated(an_grid%dlnp))                                     &
+         & allocate(an_grid%dlnp(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(an_grid%ugrd))                                      &
          & allocate(an_grid%ugrd(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(an_grid%vgrd))                                      &
@@ -740,6 +759,8 @@ contains
          & allocate(an_grid%ck(grid%nz+1))
     if(.not. allocated(fg_grid%dpres))                                     &
          & allocate(fg_grid%dpres(grid%nx,grid%ny,grid%nz))
+    if(.not. allocated(fg_grid%dlnp))                                     &
+         & allocate(fg_grid%dlnp(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(fg_grid%ugrd))                                      &
          & allocate(fg_grid%ugrd(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(fg_grid%vgrd))                                      &
@@ -782,6 +803,7 @@ contains
     ! Deallocate memory for local variables
 
     if(allocated(grid%delp_inc))  deallocate(grid%delp_inc)
+    if(allocated(grid%delz_inc))  deallocate(grid%delz_inc)
     if(allocated(grid%u_inc))     deallocate(grid%u_inc)
     if(allocated(grid%v_inc))     deallocate(grid%v_inc)
     if(allocated(grid%sphum_inc)) deallocate(grid%sphum_inc)
@@ -796,6 +818,7 @@ contains
     if(allocated(grid%hyai))      deallocate(grid%hyai)
     if(allocated(grid%hybi))      deallocate(grid%hybi)
     if(allocated(an_grid%dpres))  deallocate(an_grid%dpres)
+    if(allocated(an_grid%dlnp))  deallocate(an_grid%dlnp)
     if(allocated(an_grid%ugrd))   deallocate(an_grid%ugrd)
     if(allocated(an_grid%vgrd))   deallocate(an_grid%vgrd)
     if(allocated(an_grid%spfh))   deallocate(an_grid%spfh)
@@ -807,6 +830,7 @@ contains
     if(allocated(an_grid%bk))     deallocate(an_grid%bk)
     if(allocated(fg_grid%ck))     deallocate(an_grid%ck)
     if(allocated(fg_grid%dpres))  deallocate(fg_grid%dpres)
+    if(allocated(fg_grid%dlnp))  deallocate(fg_grid%dlnp)
     if(allocated(fg_grid%ugrd))   deallocate(fg_grid%ugrd)
     if(allocated(fg_grid%vgrd))   deallocate(fg_grid%vgrd)
     if(allocated(fg_grid%spfh))   deallocate(fg_grid%spfh)

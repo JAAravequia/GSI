@@ -2,7 +2,8 @@ program calc_increment_pmain
 
   use mpi
   use kinds
-  use namelist_def, only : datapath, analysis_filename, firstguess_filename, increment_filename, debug
+  use namelist_def, only : datapath, analysis_filename, firstguess_filename, increment_filename, debug,&
+   zero_cwmrinc
   use calc_increment_interface
 
   implicit none
@@ -27,6 +28,10 @@ program calc_increment_pmain
   read(bufchar,'(L)') debug
   call getarg(6, bufchar)
   read(bufchar,'(I5)') nens
+  if (iargc() > 6) then
+     call getarg(7, bufchar)
+     read(bufchar,'(L)') zero_cwmrinc
+  endif
 
   if ( mype == 0 ) then
     write(6,*) 'DATAPATH        = ', trim(datapath)
@@ -35,6 +40,7 @@ program calc_increment_pmain
     write(6,*) 'INCREMENT TMPL  = ', trim(increment_tmpl)
     write(6,*) 'DEBUG           = ', debug
     write(6,*) 'NENS            = ', nens
+    write(6,*) 'ZERO_CWMRINC    = ', zero_cwmrinc
   endif
 
   call mpi_barrier(mpi_comm_world, ierr)
