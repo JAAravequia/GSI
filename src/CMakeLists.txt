@@ -154,16 +154,16 @@ cmake_minimum_required(VERSION 2.8)
     endif()
   endif()
 
-  if( NOT HOST-Luna AND NOT HOST-Surge )
-    list( REMOVE_ITEM LAPACK_LIBRARIES "-lm" )
-  endif()
+  #if( NOT HOST-Luna AND NOT HOST-Surge )
+  #  list( REMOVE_ITEM LAPACK_LIBRARIES "-lm" )
+  #endif()
   if(USE_WRF) 
     target_link_libraries(gsi.x${debug_suffix} gsilib_shrd${debug_suffix} gsilib_wrf${debug_suffix} gsilib_shrd${debug_suffix} ${WRF_LIBRARIES} ${CORE_LIBRARIES} ${NCDIAG_LIBRARIES}
          ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES} 
-         ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${GSI_LDFLAGS} ${ZLIB_LIBRARIES} )
+         ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${GSI_LDFLAGS})
   endif()
   if(BUILD_GLOBAL) 
     target_link_libraries(gsi_global.x${debug_suffix} gsilib_shrd${debug_suffix} gsilib_global${debug_suffix} gsilib_shrd${debug_suffix}  
          ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES}   
-         ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${CORE_LIBRARIES} ${NCDIAG_LIBRARIES} ${ZLIB_LIBRARIES} )
+         ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${CORE_LIBRARIES} ${NCDIAG_LIBRARIES} )
   endif()
