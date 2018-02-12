@@ -77,6 +77,7 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_f
   use obsmod, only: iadate,doradaroneob,oneoblat,oneoblon,oneobheight,oneobradid, &
                     mintiltdbz,maxtiltdbz,minobrangedbz,maxobrangedbz,debugmode,&
                     static_gsi_nopcp_dbz,rmesh_dbz,zmesh_dbz
+  use hybrid_ensemble_parameters,only : l_hyb_ens
   use obsmod,only: radar_no_thinning,missing_to_nopcp
   use convinfo, only: nconvtype,ctwind,cgross,icuse,ioctype
   use convthin, only: make3grids,map3grids,del3grids,use_all
@@ -363,8 +364,7 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_f
           end if
        end if
 
-       imissing2nopcp = 0
-       if(miter .ne. 0 ) then ! For gsi 3DVar run
+       if(miter .ne. 0 .and. (.not. l_hyb_ens) ) then ! For gsi 3DVar run
          if (l_limmax) then
            if ( dbzQC(i,j,k) > 60_r_kind ) then
              dbzQC(i,j,k) = 60_r_kind
@@ -378,21 +378,20 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_f
          num_dbz2mindbz = num_dbz2mindbz + 1
        end if
 
-       imissing2nopcp = 0
        !-Special treatment for no-precip obs?
-       if( miter .eq. 0 ) then
-         if ( dbzQC(i,j,k) < 10._r_kind .and. dbzQC(i,j,k) > 0.0_r_kind ) then
-           if ( nopcp ) then
-             dbzQC(i,j,k) = 0.0
-             num_nopcp = num_nopcp + ione
-           else
-             num_noise = num_noise + ione
-             cycle
-           end if
-         end if
-       else if ( dbzQC(i,j,k) <= dbznoise ) then ! === for 3dvar no precip obs are defined as -30 dbz
-         dbzQC(i,j,k) = static_gsi_nopcp_dbz
-       end if
+       !if( miter .eq. 0 ) then
+       !  if ( dbzQC(i,j,k) < 10._r_kind .and. dbzQC(i,j,k) > 0.0_r_kind ) then
+       !    if ( nopcp ) then
+       !      dbzQC(i,j,k) = 0.0
+       !      num_nopcp = num_nopcp + ione
+       !    else
+       !      num_noise = num_noise + ione
+       !      cycle
+       !    end if
+       !  end if
+       !else if ( dbzQC(i,j,k) <= dbznoise ) then ! === for 3dvar no precip obs are defined as -30 dbz
+       !  dbzQC(i,j,k) = static_gsi_nopcp_dbz
+       !end if
 
        if ( dbzQC(i,j,k) < 10._r_kind .and. dbzQC(i,j,k) > 0.0_r_kind ) cycle
 
