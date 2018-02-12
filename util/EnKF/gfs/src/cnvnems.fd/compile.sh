@@ -1,0 +1,1 @@
+ifort -I /scratch3/NCEPDEV/nceplibs/incmod/nemsio_v2.2.3 -O3 -xHOST -o cnvnems.x cnvnems.f90 /scratch3/NCEPDEV/nceplibs/libnemsio_v2.2.3.a /scratch3/NCEPDEV/nceplibs/libbacio_v2.0.2_4.a /scratch3/NCEPDEV/nwprod/lib/libw3nco_v2.0.6_d.a
