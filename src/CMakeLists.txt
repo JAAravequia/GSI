@@ -78,6 +78,8 @@ cmake_minimum_required(VERSION 2.8)
   set_source_files_properties( ${GLOBAL_SRC} PROPERTIES COMPILE_FLAGS ${GSI_Fortran_FLAGS} )
   set_source_files_properties( ${CMAKE_CURRENT_SOURCE_DIR}/blockIO.c  PROPERTIES COMPILE_FLAGS ${GSI_CFLAGS} )
 
+# Add the include paths
+  include_directories( ${CORE_INCS} ${NETCDF_INCLUDES} ${MPI_Fortran_INCLUDE_PATH} "./" ${NCDIAG_INCS} )
 
 #define the name used for GSI Shared lib and add it with properties and include dirs
   set(GSISHAREDLIB "gsilib_shrd${debug_suffix}" CACHE INTERNAL "")
@@ -140,4 +142,4 @@ cmake_minimum_required(VERSION 2.8)
   target_link_libraries(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${GSISHAREDLIB} ${WRF_LIBRARIES} ${CORE_LIBRARIES}
          ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES} 
          ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${GSI_LDFLAGS}
-         ${ZLIB_LIBRARIES} )
+         ${ZLIB_LIBRARIES} ${NCDIAG_LIBRARIES} )
