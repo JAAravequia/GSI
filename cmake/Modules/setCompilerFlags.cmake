@@ -22,7 +22,6 @@ function (setIntel)
     elseif( HOST-Luna OR HOST-Surge )
       set( MKL_FLAG "" )
       set(GSI_Fortran_FLAGS "-DPOUND_FOR_STRINGIFY -fp-model source -assume byterecl -convert big_endian -implicitnone -D_REAL8_ ${OMPFLAG} ${MPI_Fortran_COMPILE_FLAGS}" PARENT_SCOPE)
-      set(GSI_LDFLAGS "-liomp5" PARENT_SCOPE)
  
       set(ENKF_Fortran_FLAGS "-O3 -fp-model source -convert big_endian -assume byterecl -implicitnone  -DGFS -D_REAL8_ ${OMPFLAG} " PARENT_SCOPE)
       set(UTIL_Fortran_FLAGS "-O3 -fp-model source -convert big_endian -assume byterecl -implicitnone  -DWRF -D_REAL8_ ${OMPFLAG} " PARENT_SCOPE)
