@@ -1,5 +1,6 @@
 regtest=$1
 
+echo "HEY!! machine is $machine"
 case $regtest in
 
     global_T62)
@@ -8,6 +9,10 @@ case $regtest in
            topts[1]="2:30:00" ; popts[1]="12/3/" ; ropts[1]="/1"
            topts[2]="2:30:00" ; popts[2]="12/9/" ; ropts[2]="/2"
            sub_cmd="sub_zeus"
+        elif [[ "$machine" = "Cheyenne" ]]; then
+           topts[1]="0:30:00" ; popts[1]="16/2/" ; ropts[1]="/1"
+           topts[2]="0:30:00" ; popts[2]="16/4/" ; ropts[2]="/2"
+           sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
         elif [[ "$machine" = "WCOSS" ]]; then
            topts[1]="2:30:00" ; popts[1]="16/2/" ; ropts[1]="/1"
            topts[2]="2:30:00" ; popts[2]="16/4/" ; ropts[2]="/2"

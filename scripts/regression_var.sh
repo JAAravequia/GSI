@@ -36,6 +36,11 @@ if [ -d /da ]; then # WCOSS
    elif [ -d /global/noscrub/$LOGNAME ]; then
      export noscrub=/global/noscrub/$LOGNAME
    fi
+elif [ -d /glade/scratch ]; then # Cheyenne
+   echo "HEY! in the first Cheyenne section"
+   export machine="Cheyenne"
+   export queue="economy"
+   export noscrub="/glade/scratch/$LOGNAME"
 elif [ -d /scratch4/NCEPDEV/da ]; then # Theia
    export machine="Theia"
    if [ -d /scratch4/NCEPDEV/da/noscrub/$LOGNAME ]; then 
@@ -55,10 +60,25 @@ elif [ -d /data/users ]; then # S4
    export noscrub="/data/users/$LOGNAME"
 fi
 
-#  Handle machine specific paths for:
-#  experiment and control executables, fix, ptmp, and CRTM coefficient files.
-#  Location of ndate utility, noscrub directory, and account name (accnt = ada by default).
-if [[ "$machine" = "Theia" ]]; then
+echo "machine name is $machine"
+echo "looking to see which machine we have"
+if [[ "$machine" = "Cheyenne" ]]; then
+   echo "HEY! in the Cheyenne section 2"
+   export group="global"
+   export queue="economy"
+   if [[ "$cmaketest" = "false" ]]; then
+     export basedir="/glade/scratch/$LOGNAME/gsi"
+   fi 
+   export ptmp="/glade/scratch/$LOGNAME/$ptmpName"
+
+   export fixcrtm="/glade/u/home/mpotts/crtm/2.2.3/fix_update"
+   export casesdir="/glade/scratch/mpotts/CASES"
+   export ndate="/glade/p/work/wrfhelp/PRE_COMPILED_CODE_CHEYENNE/UPPV3.2_intel_dmpar/src/ndate/ndate.exe"
+
+   export check_resource="no"
+   export accnt="p48503002"
+
+elif [[ "$machine" = "Theia" ]]; then
 
    export group="global"
    export queue="batch"
