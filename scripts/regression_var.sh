@@ -71,7 +71,7 @@ if [[ "$machine" = "Cheyenne" ]]; then
    fi 
    export ptmp="/glade/scratch/$LOGNAME/$ptmpName"
 
-   export fixcrtm="/glade/u/home/mpotts/crtm/2.2.3/fix_update"
+   export fixcrtm="/glade/scratch/mpotts/crtm/2.2.3/fix_update"
    export casesdir="/glade/scratch/mpotts/CASES"
    export ndate="/glade/p/work/wrfhelp/PRE_COMPILED_CODE_CHEYENNE/UPPV3.2_intel_dmpar/src/ndate/ndate.exe"
 

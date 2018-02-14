@@ -41,6 +41,10 @@ case $regtest in
             topts[1]="2:15:00" ; popts[1]="12/1/" ; ropts[1]="/1"
             topts[2]="2:15:00" ; popts[2]="12/3/" ; ropts[2]="/2"
             sub_cmd="sub_zeus"
+        elif [[ "$machine" = "Cheyenne" ]]; then
+            topts[1]="0:15:00" ; popts[1]="16/1/" ; ropts[1]="/1"
+            topts[2]="0:15:00" ; popts[2]="16/2/" ; ropts[2]="/2"
+            sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
         elif [[ "$machine" = "WCOSS" ]]; then
             topts[1]="2:15:00" ; popts[1]="16/1/" ; ropts[1]="/1"
             topts[2]="2:15:00" ; popts[2]="16/2/" ; ropts[2]="/2"
@@ -73,6 +77,10 @@ case $regtest in
             topts[1]="2:35:00" ; popts[1]="16/2/" ; ropts[1]="/1"
             topts[2]="2:25:00" ; popts[2]="16/4/" ; ropts[2]="/2"
             sub_cmd="sub_wcoss -a GDAS-T2O -d $PWD"
+        elif [[ "$machine" = "Cheyenne" ]]; then
+            topts[1]="2:35:00" ; popts[1]="16/2/" ; ropts[1]="/1"
+            topts[2]="2:25:00" ; popts[2]="16/4/" ; ropts[2]="/2"
+            sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
         elif [[ "$machine" = "WCOSS_C" ]]; then
             topts[1]="1:35:00" ; popts[1]="48/12/" ; ropts[1]="1024/1"  # sub_wcoss_c popts are "#tasks/#nodes/"
             topts[2]="1:25:00" ; popts[2]="60/15/" ; ropts[2]="1024/2"
@@ -109,6 +117,10 @@ case $regtest in
            topts[1]="2:15:00" ; popts[1]="16/2/" ; ropts[1]="/1"
            topts[2]="2:15:00" ; popts[2]="16/4/" ; ropts[2]="/2"
            sub_cmd="sub_wcoss -a GDAS-T2O -d $PWD"
+        elif [[ "$machine" = "Cheyenne" ]]; then
+           topts[1]="2:15:00" ; popts[1]="16/2/" ; ropts[1]="/1"
+           topts[2]="2:15:00" ; popts[2]="16/4/" ; ropts[2]="/2"
+           sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
         elif [[ "$machine" = "WCOSS_C" ]]; then
            topts[1]="2:15:00" ; popts[1]="48/8/" ; ropts[1]="1024/1"  # sub_wcoss_c popts are "#tasks/#nodes/"
            topts[2]="2:15:00" ; popts[2]="60/10/" ; ropts[2]="1024/2"
@@ -137,6 +149,10 @@ case $regtest in
            topts[1]="1:59:00" ; popts[1]="6/8/" ; ropts[1]="/1"
            topts[2]="2:35:00" ; popts[2]="6/10/" ; ropts[2]="/2"
            sub_cmd="sub_wcoss -a GDAS-T2O -d $PWD"
+        elif [[ "$machine" = "Cheyenne" ]]; then
+           topts[1]="1:59:00" ; popts[1]="6/8/" ; ropts[1]="/1"
+           topts[2]="2:35:00" ; popts[2]="6/10/" ; ropts[2]="/2"
+           sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
         elif [[ "$machine" = "WCOSS_C" ]]; then
            topts[1]="2:35:00" ; popts[1]="48/8/" ; ropts[1]="1024/1"  # sub_wcoss_c popts are "#tasks/#nodes/"
            topts[2]="2:35:00" ; popts[2]="60/10/" ; ropts[2]="1024/2"
@@ -161,6 +177,10 @@ case $regtest in
            topts[1]="2:20:00" ; popts[1]="16/2/" ; ropts[1]="/1"
            topts[2]="2:20:00" ; popts[2]="16/4/" ; ropts[2]="/2"
            sub_cmd="sub_wcoss -a GDAS-T2O -d $PWD"
+        elif [[ "$machine" = "Cheyenne" ]]; then
+           topts[1]="2:20:00" ; popts[1]="16/2/" ; ropts[1]="/1"
+           topts[2]="2:20:00" ; popts[2]="16/4/" ; ropts[2]="/2"
+           sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
         elif [[ "$machine" = "WCOSS_C" ]]; then
            topts[1]="2:20:00" ; popts[1]="48/8/" ; ropts[1]="1024/1"  # sub_wcoss_c popts are "#tasks/#nodes/"
            topts[2]="2:20:00" ; popts[2]="60/10/" ; ropts[2]="1024/2"
@@ -189,6 +209,10 @@ case $regtest in
            topts[1]="2:15:00" ; popts[1]="16/2/" ; ropts[1]="/1"
            topts[2]="2:15:00" ; popts[2]="16/4/" ; ropts[2]="/2"
            sub_cmd="sub_wcoss -a GDAS-T2O -d $PWD"
+        elif [[ "$machine" = "Cheyenne" ]]; then
+           topts[1]="2:15:00" ; popts[1]="16/2/" ; ropts[1]="/1"
+           topts[2]="2:15:00" ; popts[2]="16/4/" ; ropts[2]="/2"
+           sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
         elif [[ "$machine" = "WCOSS_C" ]]; then
            topts[1]="2:30:00" ; popts[1]="48/8/" ; ropts[1]="1024/1"  # sub_wcoss_c popts are "#tasks/#nodes/"
            topts[2]="2:30:00" ; popts[2]="60/10/" ; ropts[2]="1024/2"
@@ -217,6 +241,10 @@ case $regtest in
             topts[1]="2:15:00" ; popts[1]="16/1/" ; ropts[1]="/1"
             topts[2]="2:15:00" ; popts[2]="16/2/" ; ropts[2]="/1"
             sub_cmd="sub_wcoss -a RDAS-T2O -d $PWD"
+        elif [[ "$machine" = "Cheyenne" ]]; then
+            topts[1]="2:15:00" ; popts[1]="16/1/" ; ropts[1]="/1"
+            topts[2]="2:15:00" ; popts[2]="16/2/" ; ropts[2]="/1"
+           sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
         elif [[ "$machine" = "WCOSS_C" ]]; then
             topts[1]="2:15:00" ; popts[1]="20/2/" ; ropts[1]="1024/1"  # sub_wcoss_c popts are "#tasks/#nodes/"
             topts[2]="2:15:00" ; popts[2]="16/4/" ; ropts[2]="1024/1"
@@ -245,6 +273,10 @@ case $regtest in
             topts[1]="2:30:00" ; popts[1]="7/12/" ; ropts[1]="/1"
             topts[2]="2:30:00" ; popts[2]="9/12/" ; ropts[2]="/2"
             sub_cmd="sub_wcoss -a RDAS-T2O -d $PWD"
+        elif [[ "$machine" = "Cheyenne" ]]; then
+            topts[1]="2:30:00" ; popts[1]="7/12/" ; ropts[1]="/1"
+            topts[2]="2:30:00" ; popts[2]="9/12/" ; ropts[2]="/2"
+           sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
         elif [[ "$machine" = "WCOSS_C" ]]; then
             topts[1]="2:30:00" ; popts[1]="48/8/" ; ropts[1]="1024/1"  # sub_wcoss_c popts are "#tasks/#nodes/"
             topts[2]="2:30:00" ; popts[2]="60/10/" ; ropts[2]="1024/2"
@@ -273,6 +305,10 @@ case $regtest in
             topts[1]="2:15:00" ; popts[1]="8/1/"  ; ropts[1]="/1"
             topts[2]="2:15:00" ; popts[2]="16/1/" ; ropts[2]="/2"
             sub_cmd="sub_wcoss -a RDAS-T2O -d $PWD"
+        elif [[ "$machine" = "Cheyenne" ]]; then
+            topts[1]="2:15:00" ; popts[1]="8/1/"  ; ropts[1]="/1"
+            topts[2]="2:15:00" ; popts[2]="16/1/" ; ropts[2]="/2"
+           sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
         elif [[ "$machine" = "WCOSS_C" ]]; then
             topts[1]="2:15:00" ; popts[1]="8/2/"  ; ropts[1]="1024/1"  # sub_wcoss_c popts are "#tasks/#nodes/"
             topts[2]="2:15:00" ; popts[2]="16/4/" ; ropts[2]="1024/2"
@@ -301,6 +337,10 @@ case $regtest in
             topts[1]="2:30:00" ; popts[1]="7/10/" ; ropts[1]="/1"
             topts[2]="2:30:00" ; popts[2]="9/10/" ; ropts[2]="/2"
             sub_cmd="sub_wcoss -a RDAS-T2O -d $PWD"
+        elif [[ "$machine" = "Cheyenne" ]]; then
+            topts[1]="2:30:00" ; popts[1]="7/10/" ; ropts[1]="/1"
+            topts[2]="2:30:00" ; popts[2]="9/10/" ; ropts[2]="/2"
+           sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
         elif [[ "$machine" = "WCOSS_C" ]]; then
             topts[1]="1:30:00" ; popts[1]="72/9/" ; ropts[1]="1024/1"  # sub_wcoss_c popts are "#tasks/#nodes/"
             topts[2]="1:30:00" ; popts[2]="96/12/" ; ropts[2]="1024/2"
@@ -329,6 +369,10 @@ case $regtest in
             topts[1]="2:15:00" ; popts[1]="8/6/"  ; ropts[1]="/1"
             topts[2]="2:15:00" ; popts[2]="8/8/"  ; ropts[2]="/1"
             sub_cmd="sub_wcoss -a RTMA-T2O -d $PWD"
+        elif [[ "$machine" = "Cheyenne" ]]; then
+            topts[1]="2:15:00" ; popts[1]="8/6/"  ; ropts[1]="/1"
+            topts[2]="2:15:00" ; popts[2]="8/8/"  ; ropts[2]="/1"
+           sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
         elif [[ "$machine" = "WCOSS_C" ]]; then
             topts[1]="1:15:00" ; popts[1]="48/6/"  ; ropts[1]="1024/1"  # sub_wcoss_c popts are "#tasks/#nodes/"
             topts[2]="1:15:00" ; popts[2]="64/8/"  ; ropts[2]="1024/1"
@@ -360,6 +404,10 @@ case $regtest in
             topts[1]="1:20:00" ; popts[1]="6/6/"  ; ropts[1]="/1"
             topts[2]="1:20:00" ; popts[2]="8/8/"  ; ropts[2]="/1"
             sub_cmd="sub_wcoss -a HWRF-T2O -d $PWD"
+        elif [[ "$machine" = "Cheyenne" ]]; then
+            topts[1]="1:20:00" ; popts[1]="6/6/"  ; ropts[1]="/1"
+            topts[2]="1:20:00" ; popts[2]="8/8/"  ; ropts[2]="/1"
+           sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
         elif [[ "$machine" = "WCOSS_C" ]]; then
             topts[1]="1:20:00" ; popts[1]="48/8/"  ; ropts[1]="1024/1"  # sub_wcoss_c popts are "#tasks/#nodes/"
             topts[2]="1:20:00" ; popts[2]="60/10/"  ; ropts[2]="1024/1"
@@ -388,6 +436,10 @@ case $regtest in
             topts[1]="2:15:00" ; popts[1]="16/2/" ; ropts[1]="/1"
             topts[2]="2:15:00" ; popts[2]="16/4/" ; ropts[2]="/2"
             sub_cmd="sub_wcoss -a GDAS-T2O -d $PWD"
+        elif [[ "$machine" = "Cheyenne" ]]; then
+            topts[1]="2:15:00" ; popts[1]="16/2/" ; ropts[1]="/1"
+            topts[2]="2:15:00" ; popts[2]="16/4/" ; ropts[2]="/2"
+           sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
         elif [[ "$machine" = "WCOSS_C" ]]; then
             topts[1]="2:15:00" ; popts[1]="20/4/" ; ropts[1]="1024/1"  # sub_wcoss_c popts are "#tasks/#nodes/"
             topts[2]="2:15:00" ; popts[2]="20/5/" ; ropts[2]="1024/2"
@@ -441,6 +493,14 @@ if [[ "$machine" = "Theia" ]]; then
    export MPI_BUFS_PER_HOST=256
    export MPI_GROUP_MAX=256
    export APRUN="mpirun -v -np \$PBS_NP"
+elif [[ "$machine" = "Cheyenne" ]]; then
+   export OMP_STACKSIZE=1024M
+   export MPI_BUFS_PER_PROC=256
+   export MPI_BUFS_PER_HOST=256
+   export MPI_GROUP_MAX=256
+#  export APRUN="mpiexec_mpt "
+   export APRUN="mpirun -v -np \$NCPUS"
+#  export APRUN="mpirun -v -np \$PBS_NP"
 elif [[ "$machine" = "WCOSS" ]]; then
    export MP_USE_BULK_XFER=yes
    export MP_BULK_MIN_MSG_SIZE=64k
@@ -449,7 +509,7 @@ elif [[ "$machine" = "WCOSS_C" ]]; then
    export KMP_AFFINITY=disabled
    export OMP_STACKSIZE=2G
    export FORT_BUFFERED=true
-   export APRUN=""
+   export APRUN="mpirun -v -np \$PBS_NP"
 elif [[ "$machine" = "s4" ]]; then
    export APRUN="srun"
    export MPI_BUFS_PER_PROC=2048
