@@ -320,7 +320,7 @@
         endif
      enddo
   else
-!$omp parallel do private(k,nt,ug,vg,divspec,vrtspec)  shared(sigdata,pressi,vmassdiv,grdin,tv,q,cw,u_ind,v_ind,pst_ind,q_ind,tsen_ind,cw_ind,qi_ind,ql_ind)
+!$omp parallel do private(k,ug,vg,divspec,vrtspec)  shared(sigdata,pressi,vmassdiv,grdin,tv,q,cw,u_ind,v_ind,pst_ind,q_ind,tsen_ind,cw_ind,qi_ind,ql_ind)
      do k=1,nlevs
    
         vrtspec = sigdata%z(:,k); divspec = sigdata%d(:,k)
