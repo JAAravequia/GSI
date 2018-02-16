@@ -92,6 +92,7 @@ cmake_minimum_required(VERSION 2.8)
     endif()
     set(GSISUFFIX ".x")
   endif()
+
 # Set names, libs, and properties depending on if we are building with WRF or not
   if(USE_WRF) 
     set(GSIEXEC "${GSIBASE}${debug_suffix}${GSISUFFIX}" CACHE INTERNAL "GSI Executable Name")
@@ -133,4 +134,4 @@ cmake_minimum_required(VERSION 2.8)
   target_link_libraries(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${GSISHAREDLIB} ${WRF_LIBRARIES} ${CORE_LIBRARIES}
          ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES} 
          ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${GSI_LDFLAGS}
-         ${ZLIB_LIBRARIES} ${CORE_BUILT} )
+         ${ZLIB_LIBRARIES} ${CORE_BUILT} ${CORE_LIBRARIES} ${CORE_BUILT} )

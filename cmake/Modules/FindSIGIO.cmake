@@ -65,6 +65,7 @@ else()
   set( CORE_INCS ${INCLUDE_OUTPUT_PATH} ${SIGIOINC} )
 endif()
 
+
 set( SIGIO_LIBRARY_PATH ${SIGIO_LIBRARY} CACHE STRING "SIGIO Library Location" )
 set( SIGIO_INCLUDE_PATH ${SIGIOINC} CACHE STRING "SIGIO Include Location" )
 
