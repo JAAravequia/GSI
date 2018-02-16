@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.6)
-if(BUILD_CORELIBS)
+if(BUILD_BACIO)
   file(GLOB BACIO_SRC ${BACIO_DIR}/*.f)
   set_source_files_properties( ${BACIO_SRC} PROPERTIES COMPILE_FLAGS ${BACIO_Fortran_FLAGS} )
   file(GLOB BACIO_C_SRC ${BACIO_DIR}/*.c)

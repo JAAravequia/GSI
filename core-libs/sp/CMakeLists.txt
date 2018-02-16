@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.6)
-if(BUILD_CORELIBS)
+if(BUILD_SP)
   file(GLOB SP_SRC ${SP_DIR}/*.f )
   set_source_files_properties( ${SP_SRC} PROPERTIES COMPILE_FLAGS ${SP_Fortran_FLAGS} )
   file(GLOB SP_F77_SRC ${SP_DIR}/*.F )

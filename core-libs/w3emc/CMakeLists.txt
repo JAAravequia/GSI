@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-if(BUILD_CORELIBS)
+if(BUILD_W3EMC)
   file(GLOB W3EMC_SRC ${W3EMC_DIR}/*.F)
   file(GLOB W3EMC_F77_SRC ${W3EMC_DIR}/*.f)
   set_source_files_properties( ${W3EMC_F77_SRC} COMPILE_FLAGS ${W3EMC_Fortran_FLAGS})

@@ -71,7 +71,8 @@ if(BUILD_ENKF)
   set(ENKFEXEC "${ENKF_BASE}${debug_suffix}${GSISUFFIX}")
   add_executable(${ENKFEXEC} enkf_main.f90)
   add_dependencies(${ENKFEXEC} enkflib enkfdeplib ${GSI_LIB} )
+  message("HEY, in enkf -- core built ${CORE_BUILT} ")
   target_link_libraries(${ENKFEXEC} enkflib enkfdeplib ${GSISHAREDLIB} ${GSILIB} ${CORE_LIBRARIES}
   ${MPI_Fortran_LIBRARIES} ${LAPACK_LIBRARIES} ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES}  ${HDF5_Fortran_HL_LIBRARIES}
-  ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${GSI_LDFLAGS} )
+  ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${GSI_LDFLAGS} ${CORE_BUILT} )
 endif()

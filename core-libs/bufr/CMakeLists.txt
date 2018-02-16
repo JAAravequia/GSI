@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.6)
 #message("in bufr")
-if(BUILD_CORELIBS)
+if(BUILD_BUFR)
   file(GLOB BUFR_F77_SRC ${BUFR_DIR}/*.f ${BUFR_DIR}/*.F)
   file(GLOB BUFR_C_SRC ${BUFR_DIR}/*.c)
   file(GLOB BUFR_PRM ${BUFR_DIR}/*.PRM)

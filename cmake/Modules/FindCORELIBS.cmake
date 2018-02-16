@@ -4,10 +4,6 @@
 #  CORE_LIBRARIES
 #    Full list of libraries required to link GSI executable
 include(findHelpers)
-if(DEFINED ENV{BACIO_VER})
-  set(BACIO_VER $ENV{BACIO_VER})
-  STRING(REGEX REPLACE "v" "" BACIO_VER ${BACIO_VER})
-endif()
 if(DEFINED ENV{BUFR_VER})
   set(BUFR_VER $ENV{BUFR_VER})
   STRING(REGEX REPLACE "v" "" BUFR_VER ${BUFR_VER})
@@ -104,33 +100,6 @@ else()
     set( libsuffix "_v${W3NCO_VER}${debug_suffix}" )
     set( W3NCO_LIBRARY "${LIBRARY_OUTPUT_PATH}/libw3nco${libsuffix}.a" CACHE STRING "W3NCO Library" )
     set( w3nco "w3nco${libsuffix}")
-endif()
-if(NOT  BUILD_BACIO  )
-  if(DEFINED ENV{BACIO_LIB4})
-    set(BACIO_LIBRARY $ENV{BACIO_LIB4} )
-  else()
-    find_library( BACIO_LIBRARY 
-      NAMES libbacio.a libbacio_4.a libbacio_v${BACIO_VER}_4.a 
-      HINTS $ENV{COREPATH}/lib /usr/local/jcsda/nwprod_gdas_2014	
-          ${COREPATH}/bacio/v${BACIO_VER}
-          ${COREPATH}/bacio/v${BACIO_VER}/intel
-      PATH_SUFFIXES
-        lib
-       ${NO_DEFAULT_PATH}
-      )
-    message("Found BACIO library ${BACIO_LIBRARY}")
-  endif()
-else()
-    if( DEFINED ENV{BACIO_SRC} )
-      set( BACIO_DIR $ENV{BACIO_SRC} CACHE STRING "BACIO Source Directory" )
-    else()
-      if( FIND_SRC ) 
-        findSrc( "bacio" BACIO_VER BACIO_DIR )
-      endif()
-    endif()
-    set( libsuffix "_v${BACIO_VER}${debug_suffix}" )
-    set( BACIO_LIBRARY "${LIBRARY_OUTPUT_PATH}/libbacio${libsuffix}.a" CACHE STRING "BACIO Library" )
-    set( bacio "bacio${libsuffix}")
 endif()
 if(NOT  BUILD_BUFR  )
   if(DEFINED ENV{BUFR_LIBd} )
@@ -286,10 +255,18 @@ else()
     set( sp "sp${libsuffix}")
 endif()
 
-set( CORE_LIBRARIES ${SFCIO_LIBRARY} ${SIGIO_LIBRARY} 
+message("HEY! CORE libs are ${CORE_LIBRARIES}")
+if( CORE_LIBRARIES )
+  list( APPEND CORE_LIBRARIES ${SFCIO_LIBRARY} ${SIGIO_LIBRARY} 
                   ${NEMSIO_LIBRARY} ${SP_LIBRARY} ${W3NCO_LIBRARY} ${BUFR_LIBRARY}  
-                  ${BACIO_LIBRARY} ${W3EMC_LIBRARY} )
-set( CORE_INCS ${INCLUDE_OUTPUT_PATH} ${SFCIOINC} ${SIGIOINC} ${NEMSIOINC} ${W3EMCINC}  )
+                  ${W3EMC_LIBRARY} CACHE INTERNAL "List of Core libs" )
+  list( APPEND CORE_INCS ${INCLUDE_OUTPUT_PATH} ${SFCIOINC} ${SIGIOINC} ${NEMSIOINC} ${W3EMCINC}  )
+else()
+  set( CORE_LIBRARIES ${SFCIO_LIBRARY} ${SIGIO_LIBRARY} 
+                  ${NEMSIO_LIBRARY} ${SP_LIBRARY} ${W3NCO_LIBRARY} ${BUFR_LIBRARY}  
+                  ${W3EMC_LIBRARY} CACHE INTERNAL "List of Core libs" )
+  set( CORE_INCS ${INCLUDE_OUTPUT_PATH} ${SFCIOINC} ${SIGIOINC} ${NEMSIOINC} ${W3EMCINC}  )
+endif()
 
 set( BUFR_LIBRARY_PATH ${BUFR_LIBRARY} CACHE STRING "BUFR Library Location" )
 
@@ -303,8 +280,6 @@ set( W3NCO_LIBRARY_PATH ${W3NCO_LIBRARY} CACHE STRING "W3NCO Library Location" )
 
 set( W3EMC_LIBRARY_PATH ${W3EMC_LIBRARY} CACHE STRING "W3EMC Library Location" )
 set( W3EMC_INCLUDE_PATH ${W3EMCINC} CACHE STRING "W3EMC Include Location" )
-
-set( BACIO_LIBRARY_PATH ${BACIO_LIBRARY} CACHE STRING "BACIO Library Location" )
 
 set( NEMSIO_LIBRARY_PATH ${NEMSIO_LIBRARY} CACHE STRING "NEMSIO Library Location" )
 set( NEMSIO_INCLUDE_PATH ${NEMSIOINC} CACHE STRING "NEMSIO Include Location" )

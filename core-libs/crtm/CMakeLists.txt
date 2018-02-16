@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.6)
 
-if(BUILD_CORELIBS)
+if(BUILD_CRTM)
   file(GLOB CRTM_FPP_SRC ${CRTM_DIR}/*.fpp)
   set(CRTM_PP_SRC "")
   FOREACH( fppfile ${CRTM_FPP_SRC} )

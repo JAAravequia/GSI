@@ -121,10 +121,11 @@ cmake_minimum_required(VERSION 2.8)
   add_dependencies(${GSILIB} ${GSISHAREDLIB} )
 
 # Add dependencies if we are building the core libs or are just using pre-built libs 
-  if(BUILD_CORELIBS )
-    add_dependencies(${GSILIB} ${GSISHAREDLIB} ${bacio} ${crtm} ${bufr} ${nemsio} ${sigio} ${sfcio} ${sp} ${w3emc} ${w3nco} )
-    add_dependencies(${GSISHAREDLIB} ${bacio} ${crtm} ${bufr} ${nemsio} ${sigio} ${sfcio} ${sp} ${w3emc} ${w3nco} )
-    add_dependencies(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${w3nco} ${bacio} ${crtm} ${bufr} ${nemsio} ${sigio} ${sfcio} ${sp} ${w3emc} )
+  if(CORE_BUILT)
+    message("list of core built ${CORE_BUILT}")
+    add_dependencies(${GSILIB} ${GSISHAREDLIB} ${CORE_BUILT} )
+    add_dependencies(${GSISHAREDLIB} ${bacio} ${CORE_BUILT} )
+    add_dependencies(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${CORE_BUILT} )
   else()
     add_dependencies(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} )
   endif()
@@ -132,4 +133,4 @@ cmake_minimum_required(VERSION 2.8)
   target_link_libraries(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${GSISHAREDLIB} ${WRF_LIBRARIES} ${CORE_LIBRARIES}
          ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES} 
          ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${GSI_LDFLAGS}
-         ${ZLIB_LIBRARIES} )
+         ${ZLIB_LIBRARIES} ${CORE_BUILT} )

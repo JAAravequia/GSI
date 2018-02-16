@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.6)
-if(BUILD_CORELIBS)
+if(BUILD_W3NCO)
   set (CMAKE_C_FLAGS "-O0 -DUNDERSCORE -DLINUX -D__linux__")
   file(GLOB W3NCO_SRC ${W3NCO_DIR}/*.f)
   file(GLOB W3NCO_C_SRC ${W3NCO_DIR}/*.c)
