@@ -81,7 +81,7 @@ program cnvnems
   endif
 
 ! Process input files (one file per task)
-  if ( mype1 <= nanals+1 ) then
+  if ( mype1 <= nanals ) then
 
   if ( mype1 == 1 ) then
      filenamein = trim(adjustl(datapath)) // &
