@@ -256,12 +256,21 @@ subroutine read_files(mype)
         call w3fs21(idate5,nmings)
         nming2=nmings+60*hourg
         write(6,*)'READ_FILES:  atm guess file',filename,hourg,idateg,nming2
+        write(6,*) 'hey, calc t4dv ',nming2, iwinbgn,r60inv,real((nming2-iwinbgn),r_kind)
         t4dv=real((nming2-iwinbgn),r_kind)*r60inv
+        write(6,*) 'hey, before first cycle ',t4dv,winlen,l4dvar,l4densvar
         if (l4dvar.or.l4densvar) then
-           if (t4dv<zero .OR. t4dv>winlen) cycle
+           if (t4dv<zero .OR. t4dv>winlen) then
+             write(6,*) 'hey, first cycle ',t4dv,winlen
+             cycle
+           endif
         else
            ndiff=nming2-nminanl
-           if(abs(ndiff) > 60*nhr_half ) cycle
+           write(6,*) 'hey, before second cycle ',ndiff,60*nhr_half
+           if(abs(ndiff) > 60*nhr_half ) then
+             write(6,*) 'hey, second cycle ',ndiff,60*nhr_half
+             cycle
+           endif
         endif
         iwan=iwan+1
         if(nminanl==nming2) iamana(1)=iwan
@@ -443,7 +452,9 @@ subroutine read_files(mype)
   if(.not.allocated(time_nst)) allocate(time_nst(nfldnst,2))
   if (nst_gsi > 0 ) call mpi_bcast(time_nst,2*nfldnst,mpi_rtype,npem1,mpi_comm_world,ierror)
 
+  write(6,*) 'HEY!!!, mype is ',mype,' and iamana is ',iamana
   call mpi_bcast(iamana,3,mpi_rtype,npem1,mpi_comm_world,ierror)
+  write(6,*) 'after bcast HEY!!!, mype is ',mype,' and iamana is ',iamana
   call mpi_bcast(i_ges,2,mpi_itype,npem1,mpi_comm_world,ierror)
   nlon_sfc=i_ges(1)
   nlat_sfc=i_ges(2)
@@ -467,7 +478,8 @@ subroutine read_files(mype)
      ifilesig(i) = nint(time_atm(i,2))
      hrdifsig_all(i) = hrdifsig(i)
   end do
-  if(mype == 0) write(6,*)'READ_FILES:  atm fcst files used in analysis  :  ',&
+! if(mype == 0) write(6,*)'READ_FILES:  atm fcst files used in analysis  :  ',&
+  write(6,*)'READ_FILES: mype atm fcst files used in analysis  :  ',mype,&
        (ifilesig(i),i=1,nfldsig),(hrdifsig(i),i=1,nfldsig),ntguessig
   if (ntguessig==0) then
      write(6,*)'READ_FILES: ***ERROR*** center atm fcst NOT AVAILABLE: PROGRAM STOPS'

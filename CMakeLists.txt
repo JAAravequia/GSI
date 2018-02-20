@@ -144,7 +144,7 @@ project(GSI)
     endif()
   endif()
   if(USE_WRF)
-    find_package( WRF )
+#   find_package( WRF )
   endif()
   # default installation
   get_filename_component (default_prefix ".." ABSOLUTE)
