@@ -73,7 +73,7 @@ if [[ "$machine" = "Cheyenne" ]]; then
 
    export fixcrtm="/glade/p/ral/jnt/tools/crtm/2.2.3/fix_update"
    export casesdir="/glade/p/ral/jnt/tools/CASES"
-   export ndate="$builddir/ndate.x"
+   export ndate="$builddir/bin/ndate.x"
 
    export check_resource="no"
    export accnt="p48503002"
