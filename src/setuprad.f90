@@ -486,14 +486,14 @@
   if(jc == 0) then
      if(mype == 0) write(6,*)'SETUPRAD: No channels found for ', obstype,isis
      if(nobs > 0)read(lunin)
-     go to 135
+     return
   end if
 
   if (toss) then
      if(mype == 0)write(6,*)'SETUPRAD: all obs var > 1e4.  do not use ',&
         'data from satellite is=',isis
      if(nobs >0)read(lunin)                    
-     goto 135
+     return
   endif
 
   if ( mype == 0 .and. .not.l_may_be_passive) write(6,*)mype,'setuprad: passive obs',is,isis
@@ -2051,8 +2051,6 @@
   endif
 
   call destroy_crtm
-
-135 continue
 
 ! End of routine
   return

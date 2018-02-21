@@ -122,9 +122,17 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
       call sigio_rropen(lunges,filename,iret)
       if ( init_head .or. mype == 0 ) then
          call sigio_rrhead(lunges,sighead,iret_read)
-         if ( iret_read /= 0 ) goto 1000
+         if ( iret_read /= 0 ) then
+            write(6,*)'GENERAL_READ_GFSATM:  ***ERROR*** reading iret_read ',&
+               trim(filename),' mype,iret_read=',mype,iret_read,grd%nsig,nlevs
+            return
+         end if
       endif
-      if ( nlevs /= sighead%levs ) goto 1000
+      if ( nlevs /= sighead%levs ) then
+         write(6,*)'GENERAL_READ_GFSATM:  ***ERROR*** reading nlevs ',&
+            trim(filename),' mype,iret_read=',mype,iret_read,grd%nsig,nlevs
+         return
+      end if
    endif
 
    ! Get pointer to relevant variables (this should be made flexible and general)
@@ -554,13 +562,6 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
    deallocate(g_z)
    deallocate(g_u,g_v)
 
-   return
-
-   ! ERROR detected while reading file
-1000 continue
-   write(6,*)'GENERAL_READ_GFSATM:  ***ERROR*** reading ',&
-         trim(filename),' mype,iret_read=',mype,iret_read,grd%nsig,nlevs
-   return
 
    ! End of routine.  Return
 

@@ -157,12 +157,12 @@ subroutine ens_uv_to_psichi(u,v,truewind)
   n0=max(nlat,nlon)
   ijext=4
 100 continue
-  n1=n0+2*ijext
-  call check_32primes(n1,lprime)
-  if (.not.lprime) then
+  do 
+     n1=n0+2*ijext
+     call check_32primes(n1,lprime)
+     if(lprime)exit
      ijext=ijext+1
-     goto 100
-  endif
+  end do
 
   nxs=ijext+1
   nxe=ijext+nlon
@@ -503,16 +503,16 @@ subroutine ens_intpcoeffs_reg(ngrds,igbox,iref,jref,igbox0f,ensmask,enscoeff,gbl
      ilateral=2
      jlateral=2
 100  continue
-     ilower=i1+ilateral
-     iupper=i2-ilateral
-     jleft=j1+jlateral
-     jright=j2-jlateral
-     ltest=any(ensmask(ilower:iupper,jleft:jright,kg)<zero)
-     if (ltest) then
+     do 
+        ilower=i1+ilateral
+        iupper=i2-ilateral
+        jleft=j1+jlateral
+        jright=j2-jlateral
+        ltest=any(ensmask(ilower:iupper,jleft:jright,kg)<zero)
+        if(.not. ltest)exit
         ilateral=ilateral+2
         jlateral=jlateral+2
-        goto 100
-     endif
+     end do
      ilateral=ilateral+4  !increase if necessary
      jlateral=jlateral+4
  
@@ -971,26 +971,18 @@ subroutine check_32primes(n,lprime)
 ! check for factors of 3
 !
   do 10 ii = 1,20
-     if (nn==3*(nn/3)) then
-        nfax = nfax+1
-        nn = nn/3
-     else
-        go to 20
-     end if
+     if (nn/=3*(nn/3)) exit
+     nfax = nfax+1
+     nn = nn/3
 10 continue
-20 continue
 !
 ! check for factors of 2
 !
   do 30 ii = nfax+1,20
-     if (nn==2*(nn/2)) then
-        nfax = nfax +1
-        nn = nn/2
-     else
-        go to 40
-     end if
+     if (nn/=2*(nn/2))exit
+     nfax = nfax +1
+     nn = nn/2
 30 continue
-40 continue
   if (nn==1) lprime=.true.
 
   return

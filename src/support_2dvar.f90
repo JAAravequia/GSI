@@ -500,7 +500,7 @@ subroutine read_2d_files(mype)
 !    Check for consistency of times from sigma guess files.
      in_unit=15
      iwan=0
-     do i=0,99
+     loop_file:do i=0,99
         write(filename,100)i
 100     format('sigf',i2.2)
         inquire(file=filename,exist=fexist)
@@ -513,13 +513,12 @@ subroutine read_2d_files(mype)
            nming2=nmings
            ndiff=nming2-nminanl
            write(6,*)'READ_2d_FILES: sigma guess file time in minutes',nming2
-           if(abs(ndiff) > 60*nhr_half ) go to 110
+           if(abs(ndiff) > 60*nhr_half ) cycle loop_file
            iwan=iwan+1
            time_ges(iwan) = (nming2-nminanl)*r60inv + time_offset
            time_ges(iwan+100)=i+r0_001
         end if
-110     continue
-     end do
+     end do loop_file
      write(6,*)'READ_2d_FILES:iwan=',iwan,(time_ges(i),i=1,iwan)
      time_ges(201)=one
      time_ges(202)=one
@@ -2068,18 +2067,17 @@ subroutine adjust_error(alon,alat,oberr,oberr2)
   if (slmask(is,js)<=0.5_r_single) rsign1=-1._r_single
   if (slmask(is,js)>0.5_r_single)  rsign1=+1._r_single
 
-  do j=js,je
+  loop_1:do j=js,je
      do i=is,ie
         if (slmask(i,j)<=0.5_r_single) rsign2=-1._r_single
         if (slmask(i,j)>0.5_r_single)  rsign2=+1._r_single
         if (rsign1*rsign2<zero_single) then
            oberr=oberr*oberrinflfact
            oberr2=oberr2*oberrinflfact
-           goto 100 
+           exit loop_1
         endif
      enddo 
-  enddo 
-100 continue
+  enddo loop_1
 ! print*,'in adjust_error: after, oberr,oberr2=',oberr,oberr2
 end subroutine adjust_error
 !****************************************************************
@@ -3084,7 +3082,7 @@ subroutine getwdir(ue,ve,wdir)
   wspd2=ue*ue+ve*ve
   if (wspd2.eq.zero) then
        wdir=zero 
-       goto 100
+       return
   endif
 
   if (ve.eq.zero) then
@@ -3098,7 +3096,7 @@ subroutine getwdir(ue,ve,wdir)
      if (ue.ge.zero .and. ve.le.zero ) wdir = angle + r360
   endif
 
-100 continue
+  return
 end subroutine getwdir
 !************************************************************
 !------------------------------------------------------

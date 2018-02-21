@@ -608,7 +608,7 @@ subroutine oztot_ncread_(dfile,dtype,dsis, ozout,nmrecs,ndata,nodata, &
      call check(nf90_close(ncid))
      
      ! now screen the data and put them into the right places
-     do irec = 1, nmrecs
+     irec_loop: do irec = 1, nmrecs
         iy = iya(irec)
         im = ima(irec)
         idd = idda(irec)
@@ -636,7 +636,7 @@ subroutine oztot_ncread_(dfile,dtype,dsis, ozout,nmrecs,ndata,nodata, &
         
 !!!!        nmrecs=nmrecs+1
         !      Convert observation location to radians
-        if(abs(slats)>90._r_kind .or. abs(slons)>r360) go to 135  
+        if(abs(slats)>90._r_kind .or. abs(slons)>r360) cycle irec_loop 
         if(slons< zero) slons=slons+r360
         if(slons==r360) slons=zero
         dlat_earth_deg = slats
@@ -646,7 +646,7 @@ subroutine oztot_ncread_(dfile,dtype,dsis, ozout,nmrecs,ndata,nodata, &
 
         if(regional)then
            call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
-           if(outside) go to 135
+           if(outside) cycle irec_loop
         else
            dlat = dlat_earth
            dlon = dlon_earth
@@ -666,12 +666,12 @@ subroutine oztot_ncread_(dfile,dtype,dsis, ozout,nmrecs,ndata,nodata, &
         sstime=real(nmind,r_kind)
         tdiff=(sstime-gstime)*r60inv
         if (l4dvar.or.l4densvar) then
-           if (t4dv<zero .OR. t4dv>winlen) go to 135
+           if (t4dv<zero .OR. t4dv>winlen) cycle irec_loop
         else
-           if(abs(tdiff) > twind) go to 135
+           if(abs(tdiff) > twind) cycle irec_loop
         end if
 
-        if (totoz > badoz ) goto 135
+        if (totoz > badoz ) cycle irec_loop
         
 ! Apply data screening based on quality flags
 ! Bit 10 (from the left) in TOQF represents row anomaly.  All 17 bits in toqf is
@@ -681,25 +681,25 @@ subroutine oztot_ncread_(dfile,dtype,dsis, ozout,nmrecs,ndata,nodata, &
         select case(dtype)
         case('omieff')
 
-           if (toqf .ne. 0 .and. toqf .ne. 1) go to 135 
+           if (toqf .ne. 0 .and. toqf .ne. 1) cycle irec_loop
  
 !       Remove obs at high solar zenith angles
-           if (sza > 84.0_r_kind) goto 135
+           if (sza > 84.0_r_kind) cycle irec_loop
 
 !       remove the bad scan position data: fovn beyond 25
            if (removeScans) then
-              if (fovn >=25_i_kind) goto 135
+              if (fovn >=25) cycle irec_loop
            endif
-           if (fovn <=2_i_kind .or. fovn >=58_i_kind) goto 135
+           if (fovn <=2 .or. fovn >=58) cycle irec_loop
 
 !       remove the data in which the C-pair algorithm ((331 and 360 nm) is used. 
-           if (alqf == 3_i_kind .or. alqf == 13_i_kind) goto 135
+           if (alqf == 3 .or. alqf == 13) cycle irec_loop
 
         case('tomseff')
         ! The meaning of quality flags for TOMS version 8 is similar to that
         ! for SBUV:
         ! 0 - good data, 1 - good data with SZA > 84 deg
-           if (toqf /= 0) goto 135
+           if (toqf /= 0) cycle irec_loop
 
         case default
         end select
@@ -714,9 +714,9 @@ subroutine oztot_ncread_(dfile,dtype,dsis, ozout,nmrecs,ndata,nodata, &
         crit1 = 0.01_r_kind+timedif
         if (ithin /= 0) then
            call satthin_map2tgrid(dlat_earth,dlon_earth,dist1,crit1,itx,ithin,itt,iuse,dsis)
-           if(.not. iuse)go to 135 
+           if(.not. iuse)cycle irec_loop
            call satthin_finalcheck(dist1,crit1,itx,iuse)
-           if(.not. iuse)go to 135
+           if(.not. iuse)cycle irec_loop
            ndata=ndata+1
            nodata=ndata
         else
@@ -753,8 +753,7 @@ subroutine oztot_ncread_(dfile,dtype,dsis, ozout,nmrecs,ndata,nodata, &
 
 !!        ASSERT_(size(ozout,1)==37)
 
-135     continue
-     end do
+     end do irec_loop
 
      deallocate(iya,ima,idda,ihha,imina, &
           rseca,fovna,slatsa,slonsa,totoza, &
@@ -981,13 +980,13 @@ subroutine ozlev_ncread_(dfile, ozout,nmrecs,ndata,nodata, gstime,twind)
         do ilev = 1, mlslevs
            ! note that most of the quality control is done at the 
            ! pre-processing stage
-           if (mlspress(ilev) .gt. 262.0 .or. mlspress(ilev) .lt. 0.1 ) cycle ! goto 145
-           if (mlsozone(ilev, iprof) .lt. -900.0) cycle ! goto 145 ! undefined
-           if (mlserr(ilev, iprof) .lt. -900.0) cycle ! goto 145 ! undefined
+           if (mlspress(ilev) .gt. 262.0 .or. mlspress(ilev) .lt. 0.1 ) cycle 
+           if (mlsozone(ilev, iprof) .lt. -900.0) cycle !  undefined
+           if (mlserr(ilev, iprof) .lt. -900.0) cycle ! undefined
 !           if (ndata >= maxobs) then 
 !              write(6,*) ' read_ozone:   Number of MLS obs reached maxobs = ', &
 !                   maxobs
-!              return ! goto 150
+!              return 
 !           endif
            if (iuse_oz(ipos(ilev)) < 0) then
               usage = 100._r_kind
@@ -1066,7 +1065,6 @@ subroutine ozlev_ncread_(dfile, ozout,nmrecs,ndata,nodata, gstime,twind)
               ozout(13,ndata)=ppmv                ! ozone mixing ratio in ppmv
            endif
            
-! 145        continue
         end do
      end do
 
@@ -1233,12 +1231,12 @@ subroutine ozlev_bufrread_(dfile,dtype,dsis, ozout,nmrecs,ndata,nodata, &
 !! This is the top of the profile loop
      ndata=0
      iprofs=0
-139  continue
+     profile: do
      call readsb(lunin,iret)
      if (iret/=0) then           !JJJ, end of the subset
         call readmg(lunin,subset,jdate,iret)  !JJJ  open a new mg
-        if (iret/=0) goto 150    !JJJ, no more  mg,  EOF      
-        goto 139
+        if (iret/=0) exit profile !JJJ, no more  mg,  EOF      
+        cycle profile
      endif
 
      do k=1,nloz
@@ -1254,14 +1252,14 @@ subroutine ozlev_bufrread_(dfile,dtype,dsis, ozout,nmrecs,ndata,nodata, &
      rsat = hdrmls(1); ksatid=rsat
 
      if(jsatid == 'aura')kidsat = 785
-     if (ksatid /= kidsat) go to 139
+     if (ksatid /= kidsat) cycle profile
 
      nmrecs=nmrecs+nloz
 
 !    Convert observation location to radians
      slats0= hdrmls(2)
      slons0= hdrmls(3)
-     if(abs(slats0)>90._r_kind .or. abs(slons0)>r360) go to 139
+     if(abs(slats0)>90._r_kind .or. abs(slons0)>r360) cycle profile
      if(slons0< zero) slons0=slons0+r360
      if(slons0==r360) slons0=zero
      dlat_earth_deg = slats0
@@ -1271,7 +1269,7 @@ subroutine ozlev_bufrread_(dfile,dtype,dsis, ozout,nmrecs,ndata,nodata, &
 
      if(regional)then
         call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
-        if(outside) go to 139
+        if(outside) cycle profile
      else
         dlat = dlat_earth
         dlon = dlon_earth
@@ -1292,7 +1290,7 @@ subroutine ozlev_bufrread_(dfile,dtype,dsis, ozout,nmrecs,ndata,nodata, &
         if (t4dv<zero .OR. t4dv>winlen) then
            write(6,*)'read_ozone: mls obs time idate5=',idate5,', t4dv=',&
               t4dv,' is outside time window, sstime=',sstime*r60inv
-           go to 139
+           cycle profile
         endif
      else
         sstime=real(nmind,r_kind)
@@ -1300,7 +1298,7 @@ subroutine ozlev_bufrread_(dfile,dtype,dsis, ozout,nmrecs,ndata,nodata, &
         if (abs(tdiff) > twind) then
            write(6,*)'read_ozone: mls obs time idate5=',idate5,', tdiff=',&
               tdiff,' is outside time window=',twind
-           go to 139
+           cycle profile
         endif
      end if
 
@@ -1318,9 +1316,9 @@ subroutine ozlev_bufrread_(dfile,dtype,dsis, ozout,nmrecs,ndata,nodata, &
 
      decimal=int(hdrmls(12))
      call dec2bin(decimal,binary_mls,18)
-     if (binary_mls(1) == 1 ) goto 139
+     if (binary_mls(1) == 1 ) cycle profile
 
-     if(hdrmls(11) >= 1.8_r_kind) go to 139
+     if(hdrmls(11) >= 1.8_r_kind) cycle profile
 
 !    extract pressure, ozone mixing ratio and precision
      call ufbrep(lunin,hdrmlsl2,4,nloz,iret,mlstrl2)
@@ -1377,8 +1375,7 @@ subroutine ozlev_bufrread_(dfile,dtype,dsis, ozout,nmrecs,ndata,nodata, &
         endif
      end do
 
-     go to 139
-150  continue   ! this is the bottom of the profile loop
+     end do profile
 !    End of o3lev bufr loop
 
      nodata=min(ndata,maxobs)   ! count of retained data

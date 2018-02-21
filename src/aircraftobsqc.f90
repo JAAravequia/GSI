@@ -98,24 +98,27 @@ subroutine init_aircraft_rjlists
        read(aircraft_unit,*,end=141)
     enddo
 140 continue
-    read(aircraft_unit,'(a30)',end=141) cstring
-    if(cstring(11:11) == 'T') then
-       ntrjs_aircraft=ntrjs_aircraft+1
-       t_aircraft_rjlist(ntrjs_aircraft,1)=cstring(1:8)
-       t_aircraft_rjlist(ntrjs_aircraft,2)=cstring(22:29)
-    endif
-    if(cstring(13:13) == 'W') then
-       nwrjs_aircraft=nwrjs_aircraft+1
-       w_aircraft_rjlist(nwrjs_aircraft,1)=cstring(1:8)
-       w_aircraft_rjlist(nwrjs_aircraft,2)=cstring(22:29)
-    endif
-    if(cstring(15:15) == 'R') then
-       nqrjs_aircraft=nqrjs_aircraft+1
-       q_aircraft_rjlist(nqrjs_aircraft,1)=cstring(1:8)
-       q_aircraft_rjlist(nqrjs_aircraft,2)=cstring(22:29)
-    endif
-    goto 140
-141 continue
+    do
+       read(aircraft_unit,'(a30)',end=141) cstring
+       if(cstring(11:11) == 'T') then
+          ntrjs_aircraft=ntrjs_aircraft+1
+          t_aircraft_rjlist(ntrjs_aircraft,1)=cstring(1:8)
+          t_aircraft_rjlist(ntrjs_aircraft,2)=cstring(22:29)
+       endif
+       if(cstring(13:13) == 'W') then
+          nwrjs_aircraft=nwrjs_aircraft+1
+          w_aircraft_rjlist(nwrjs_aircraft,1)=cstring(1:8)
+          w_aircraft_rjlist(nwrjs_aircraft,2)=cstring(22:29)
+       endif
+       if(cstring(15:15) == 'R') then
+          nqrjs_aircraft=nqrjs_aircraft+1
+          q_aircraft_rjlist(nqrjs_aircraft,1)=cstring(1:8)
+          q_aircraft_rjlist(nqrjs_aircraft,2)=cstring(22:29)
+       endif
+       cycle
+141    continue
+       exit
+    end do
     print*,'aircraft_rejectlist: T, W, R=', ntrjs_aircraft,nwrjs_aircraft,nqrjs_aircraft
  endif
  close(aircraft_unit)
