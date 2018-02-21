@@ -1,5 +1,6 @@
 function (findSrc varName version varDir )
       if(EXISTS ${CMAKE_SOURCE_DIR}/libsrc/${varName})
+          message("setting source for ${varName} to be in libsrc")
           set( ${varDir} "${CMAKE_SOURCE_DIR}/libsrc/${varName}" PARENT_SCOPE)
           set( ${varCacheName} "${CMAKE_SOURCE_DIR}/libsrc/${varName}" CACHE STRING "" FORCE )
       else()
