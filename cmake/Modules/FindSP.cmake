@@ -40,7 +40,7 @@ if( NOT SP_LIBRARY ) # didn't find the library, so build it from source
     set( SP_LIBRARY "${LIBRARY_OUTPUT_PATH}/libsp${libsuffix}.a" CACHE STRING "SP Library" )
     set( sp "sp${libsuffix}")
     set( BUILD_SP "ON" CACHE INTERNAL "Build the SP library")
-    add_subdirectory(${CMAKE_SOURCE_DIR}/core-libs/sp)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/libsrc/sp)
     set( SP_LIBRARY ${sp} )
     if( CORE_BUILT )
       list( APPEND CORE_BUILT ${SP_LIBRARY} )

@@ -44,7 +44,7 @@ if( NOT NEMSIO_LIBRARY ) # didn't find the library, so build it from source
     set( NEMSIO_LIBRARY "${LIBRARY_OUTPUT_PATH}/libnemsio${libsuffix}.a" CACHE STRING "NEMSIO Library" )
     set( nemsio "nemsio${libsuffix}")
     set( BUILD_NEMSIO "ON" CACHE INTERNAL "Build the NEMSIO library")
-    add_subdirectory(${CMAKE_SOURCE_DIR}/core-libs/nemsio)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/libsrc/nemsio)
     set( NEMSIO_LIBRARY ${nemsio} )
     if( CORE_BUILT )
       list( APPEND CORE_BUILT ${NEMSIO_LIBRARY} )

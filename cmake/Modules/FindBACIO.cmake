@@ -36,7 +36,7 @@ if( NOT BACIO_LIBRARY ) # didn't find the library, so build it from source
     set( libsuffix "_v${BACIO_VER}${debug_suffix}" )
     set( bacio "bacio${libsuffix}")
     set( BUILD_BACIO "ON" CACHE INTERNAL "Build Bacio library" )
-    add_subdirectory(${CMAKE_SOURCE_DIR}/core-libs/bacio)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/libsrc/bacio)
     set( BACIO_LIBRARY ${bacio} )
     if( CORE_BUILT )
       list( APPEND CORE_BUILT ${BACIO_LIBRARY} )

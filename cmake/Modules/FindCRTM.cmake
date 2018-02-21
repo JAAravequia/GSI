@@ -53,7 +53,7 @@ if( NOT CRTM_LIBRARY ) # didn't find the library, so build it from source
     set( CRTM_LIBRARY "${LIBRARY_OUTPUT_PATH}/libcrtm${libsuffix}.a" CACHE STRING "CRTM Library" )
     set( crtm "crtm${libsuffix}")
     set( BUILD_CRTM "ON" CACHE INTERNAL "Build the CRTM library")
-    add_subdirectory(${CMAKE_SOURCE_DIR}/core-libs/crtm)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/libsrc/crtm)
     set( CRTM_LIBRARY ${crtm} )
     if( CORE_BUILT )
       list( APPEND CORE_BUILT ${CRTM_LIBRARY} )

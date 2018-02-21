@@ -46,7 +46,7 @@ if( NOT SIGIO_LIBRARY ) # didn't find the library, so build it from source
     set( SIGIO_LIBRARY "${LIBRARY_OUTPUT_PATH}/libsigio${libsuffix}.a" CACHE STRING "SIGIO Library" )
     set( sigio "sigio${libsuffix}")
     set( BUILD_SIGIO "ON" CACHE INTERNAL "Build the SIGIO library")
-    add_subdirectory(${CMAKE_SOURCE_DIR}/core-libs/sigio)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/libsrc/sigio)
     set( SIGIO_LIBRARY ${sigio} )
     if( CORE_BUILT )
       list( APPEND CORE_BUILT ${SIGIO_LIBRARY} )

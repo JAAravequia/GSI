@@ -52,7 +52,7 @@ if( NOT W3EMC_LIBRARY ) # didn't find the library, so build it from source
     set( W3EMC_LIBRARY "${LIBRARY_OUTPUT_PATH}/libw3emc${libsuffix}.a" CACHE STRING "W3EMC Library" )
     set( w3emc "w3emc${libsuffix}")
     set( BUILD_W3EMC "ON" CACHE INTERNAL "Build the W3EMC library")
-    add_subdirectory(${CMAKE_SOURCE_DIR}/core-libs/w3emc)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/libsrc/w3emc)
     set( W3EMC_LIBRARY ${w3emc} )
   if( CORE_BUILT )
     list( APPEND CORE_BUILT ${W3EMC_LIBRARY} )

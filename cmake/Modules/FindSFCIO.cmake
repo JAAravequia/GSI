@@ -44,7 +44,7 @@ if( NOT SFCIO_LIBRARY ) # didn't find the library, so build it from source
     set( SFCIO_LIBRARY "${LIBRARY_OUTPUT_PATH}/libsfcio${libsuffix}.a" CACHE STRING "SFCIO Library" )
     set( sfcio "sfcio${libsuffix}")
     set( BUILD_SFCIO "ON" CACHE INTERNAL "Build the SFCIO library")
-    add_subdirectory(${CMAKE_SOURCE_DIR}/core-libs/sfcio)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/libsrc/sfcio)
     set( SFCIO_LIBRARY ${sfcio} )
     if( CORE_BUILT )
       list( APPEND CORE_BUILT ${SFCIO_LIBRARY} )

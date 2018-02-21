@@ -40,7 +40,7 @@ if( NOT BUFR_LIBRARY ) # didn't find the library, so build it from source
     set( BUFR_LIBRARY "${LIBRARY_OUTPUT_PATH}/libbufr${libsuffix}.a" CACHE STRING "BUFR Library" )
     set( bufr "bufr${libsuffix}")
     set( BUILD_BUFR "ON" CACHE INTERNAL "Build the BUFR library")
-    add_subdirectory(${CMAKE_SOURCE_DIR}/core-libs/bufr)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/libsrc/bufr)
     set( BUFR_LIBRARY ${bufr} )
 
     if( CORE_BUILT )

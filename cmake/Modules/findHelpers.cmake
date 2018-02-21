@@ -20,7 +20,7 @@ function (findSrc varName version varDir )
           $ENV{${varDir}}/libsrc
           $ENV{${varDir}}/lib/sorc
           $ENV{CORPATH}/lib/sorc
-          ${CMAKE_SOURCE_DIR}/core-libs/${varName}
+          ${CMAKE_SOURCE_DIR}/libsrc/${varName}
         ) 
         if( NOT TMP_DIR ) 
            message("didn't find directory")

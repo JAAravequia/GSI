@@ -16,5 +16,7 @@ function (setCheyenne)
   set(BUILD_SP "ON" CACHE INTERNAL "")
   set(BUILD_NEMSIO "ON" CACHE INTERNAL "")
   set(ENV{MPI_HOME} $ENV{MPI_ROOT} )
+  message("HEY! BUILD_SFCIO is ${BUILD_SFCIO}")
+  message("HEY! BUILD_SIGIO is ${BUILD_SIGIO}")
 endfunction()
 

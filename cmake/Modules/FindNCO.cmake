@@ -40,7 +40,7 @@ if( NOT W3NCO_LIBRARY ) # didn't find the library, so build it from source
     set( W3NCO_LIBRARY "${LIBRARY_OUTPUT_PATH}/libw3nco${libsuffix}.a" CACHE STRING "W3NCO Library" )
     set( w3nco "w3nco${libsuffix}")
     set( BUILD_W3NCO "ON" CACHE INTERNAL "Build the W3NCO library")
-    add_subdirectory(${CMAKE_SOURCE_DIR}/core-libs/w3nco)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/libsrc/w3nco)
     set( W3NCO_LIBRARY ${w3nco} )
     if( CORE_BUILT )
       list( APPEND CORE_BUILT ${W3NCO_LIBRARY} )
