@@ -1,9 +1,9 @@
 !WRF:DRIVER_LAYER:DECOMPOSITION
 !
 # define IWORDSIZE 4
-# define RWORDSIZE 4
 # define DWORDSIZE 8
-# define LWORDSIZE 8
+# define RWORDSIZE 4
+# define LWORDSIZE 4
 
 MODULE module_machine
 

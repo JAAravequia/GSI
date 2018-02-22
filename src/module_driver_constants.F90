@@ -3,9 +3,11 @@
 !  This MODULE contains all of the constants used in the model.  These
 !  are separated by usage within the code.
 
-#define MAX_DOMAINS_F 10
+#define MAX_DOMAINS_F 21
 # define IWORDSIZE 4
+# define DWORDSIZE 8
 # define RWORDSIZE 4
+# define LWORDSIZE 4
 
 MODULE module_driver_constants
 

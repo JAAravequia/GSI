@@ -697,6 +697,7 @@ subroutine FieldIO(IO,DataHandle,DateStr,Length,MemoryOrder &
   integer                                   :: NDim
   integer,dimension(NVarDims)               :: VStart
   integer,dimension(NVarDims)               :: VCount
+! include 'wrf_io_flags.h'
 
   call GetTimeIndex(IO,DataHandle,DateStr,TimeIndex,Status)
   if(Status /= WRF_NO_ERR) then
@@ -715,23 +716,22 @@ subroutine FieldIO(IO,DataHandle,DateStr,Length,MemoryOrder &
   VCount(NDim+1) = 1
 
   ! Do not use SELECT statement here as sometimes WRF_REAL=WRF_DOUBLE
-! IF (FieldType == WRF_REAL) THEN
-!   call ext_ncd_RealFieldIO    (IO,NCID,VarID,VStart,VCount,XField,Status)
-! ELSE IF (FieldType == WRF_DOUBLE) THEN
-!   call ext_ncd_DoubleFieldIO  (IO,NCID,VarID,VStart,VCount,XField,Status)
-! ELSE IF (FieldType == WRF_INTEGER) THEN
-!   call ext_ncd_IntFieldIO     (IO,NCID,VarID,VStart,VCount,XField,Status)
-! ELSE IF (FieldType == WRF_LOGICAL) THEN
-!   call ext_ncd_LogicalFieldIO (IO,NCID,VarID,VStart,VCount,XField,Status)
-!   if(Status /= WRF_NO_ERR) return
-! ELSE
-!for wrf_complex, double_complex
+  IF (FieldType == WRF_REAL) THEN
+    call ext_ncd_RealFieldIO    (IO,NCID,VarID,VStart,VCount,XField,Status)
+  ELSE IF (FieldType == WRF_DOUBLE) THEN
+    call ext_ncd_DoubleFieldIO  (IO,NCID,VarID,VStart,VCount,XField,Status)
+  ELSE IF (FieldType == WRF_INTEGER) THEN
+    call ext_ncd_IntFieldIO     (IO,NCID,VarID,VStart,VCount,XField,Status)
+  ELSE IF (FieldType == WRF_LOGICAL) THEN
+    call ext_ncd_LogicalFieldIO (IO,NCID,VarID,VStart,VCount,XField,Status)
+    if(Status /= WRF_NO_ERR) return
+  ELSE
    write(6,*) 'WARNING---- some missing calls commented out'
       Status = WRF_WARN_DATA_TYPE_NOT_FOUND
       write(msg,*) 'Warning DATA TYPE NOT FOUND in ',__FILE__,', line', __LINE__
       call wrf_debug ( WARN , TRIM(msg))
       return
-! END IF
+  END IF
 
   return
 end subroutine FieldIO
