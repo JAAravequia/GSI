@@ -77,12 +77,12 @@ END SUBROUTINE ext_int_open_for_read
 
 
 
-SUBROUTINE int_get_ti_header_c ( hdrbuf, hdrbufsize, n, itypesize, typesize, &
-                           DataHandle, Data, Count, code )
+!SUBROUTINE int_get_ti_header_c ( hdrbuf, hdrbufsize, n, itypesize, typesize, &
+!                          DataHandle, Data, Count, code )
 
-  write(6,*) 'Calling dummy 9'
-RETURN
-END SUBROUTINE int_get_ti_header_c	
+!  write(6,*) 'Calling dummy 9'
+!RETURN
+!END SUBROUTINE int_get_ti_header_c	
 
 
 ! NETCDF STUBS

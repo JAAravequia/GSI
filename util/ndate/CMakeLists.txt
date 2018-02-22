@@ -5,6 +5,6 @@ cmake_minimum_required(VERSION 2.6)
   add_executable(ndate.x  ${NDATE_SRC} )
   set_target_properties( ndate.x PROPERTIES COMPILE_FLAGS ${NDATE_Fortran_FLAGS} )
   include_directories( ${CORE_INCS} ) 
-  target_link_libraries( ndate.x w3nco_v )
-  add_dependencies( ndate.x w3nco_v )
+  target_link_libraries( ndate.x ${w3nco} )
+  add_dependencies( ndate.x ${w3nco} )
 

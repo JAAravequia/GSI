@@ -25,8 +25,9 @@ if(NOT BUILD_W3NCO )
     PATH_SUFFIXES
         lib
      ${NO_DEFAULT_PATH})
-    set( w3nco "w3nco_v${W3NCO_VER}")
+#   set( w3nco "w3nco_v${W3NCO_VER}")
     message("Found W3NCO library ${W3NCO_LIBRARY}")
+    set( w3nco ${W3NCO_LIBRARY})
   endif()
 endif()
 if( NOT W3NCO_LIBRARY ) # didn't find the library, so build it from source
