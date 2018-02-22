@@ -6,6 +6,8 @@ cmake_minimum_required(VERSION 2.8)
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 # get a list of all the fortran source files
   file(GLOB GSI_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*90 )
+# get a list of all the c source files
+  file(GLOB GSI_C_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*c )
 # get a list of all cplr files
   file(GLOB CLASS_SRC ${CMAKE_CURRENT_SOURCE_DIR}/class*90 )
 # create a list of all corresponding stub files
@@ -65,12 +67,14 @@ cmake_minimum_required(VERSION 2.8)
   set( GLOBAL_SRC ${CPLR_SRC} )
   set( GLOBAL_SRC ${STUB_SRC} )
   list( APPEND GLOBAL_SRC ${LINKED_SRC} )
-  list( APPEND GSI_SRC  "${CMAKE_CURRENT_SOURCE_DIR}/blockIO.c")
+  
+  list( APPEND GSI_SRC  ${GSI_C_SRC} )
 
 # set up the compiler flags
   set_source_files_properties( ${GSI_SRC} PROPERTIES COMPILE_FLAGS ${GSI_Fortran_FLAGS} )
   set_source_files_properties( ${GLOBAL_SRC} PROPERTIES COMPILE_FLAGS ${GSI_Fortran_FLAGS} )
-  set_source_files_properties( ${CMAKE_CURRENT_SOURCE_DIR}/blockIO.c  PROPERTIES COMPILE_FLAGS ${GSI_CFLAGS} )
+  set_source_files_properties( ${GSI_C_SRC} PROPERTIES COMPILE_FLAGS ${GSI_CFLAGS} )
+# set_source_files_properties( ${CMAKE_CURRENT_SOURCE_DIR}/blockIO.c  PROPERTIES COMPILE_FLAGS ${GSI_CFLAGS} )
 
 # Add the include paths
   include_directories( ${CORE_INCS} ${NETCDF_INCLUDES} ${MPI_Fortran_INCLUDE_PATH} "./" )
