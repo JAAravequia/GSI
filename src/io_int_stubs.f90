@@ -9,18 +9,21 @@ SUBROUTINE ext_int_get_dom_ti_real ( DataHandle,Element,   Data, Count, Outcount
   INTEGER ,       INTENT(OUT) :: Outcount
   INTEGER ,       INTENT(OUT) :: Status
 
+  write(6,*) 'Calling dummy 1'
 RETURN
 END SUBROUTINE ext_int_get_dom_ti_real 
 
 
 SUBROUTINE ext_int_get_dom_ti_integer ( DataHandle,Element,   Data, Count, Outcount, Status )
 
+  write(6,*) 'Calling dummy 2'
 RETURN
 END SUBROUTINE ext_int_get_dom_ti_integer 
 
 
 !--- get_dom_ti_char
 SUBROUTINE ext_int_get_dom_ti_char ( DataHandle,Element,   Data,  Status )
+  write(6,*) 'Calling dummy 3'
 
 RETURN
 END SUBROUTINE ext_int_get_dom_ti_char 
@@ -30,6 +33,7 @@ END SUBROUTINE ext_int_get_dom_ti_char
 SUBROUTINE ext_int_get_var_info ( DataHandle , VarName , NDim , MemoryOrder , Stagger , &
                               DomainStart , DomainEnd , WrfType, Status )
 
+  write(6,*) 'Calling dummy 4'
 RETURN
 END SUBROUTINE ext_int_get_var_info
 
@@ -41,6 +45,7 @@ SUBROUTINE ext_int_read_field ( DataHandle , DateStr , VarName , Field , FieldTy
                             MemoryStart , MemoryEnd ,                                    &
                             PatchStart , PatchEnd ,                                      &
                             Status )
+  write(6,*) 'Calling dummy 5'
   RETURN
 
 END SUBROUTINE ext_int_read_field
@@ -49,6 +54,7 @@ END SUBROUTINE ext_int_read_field
 !--- close
 SUBROUTINE ext_int_ioclose ( DataHandle, Status )
 
+  write(6,*) 'Calling dummy 6'
   RETURN
 END SUBROUTINE ext_int_ioclose
 
@@ -56,6 +62,7 @@ END SUBROUTINE ext_int_ioclose
 !--- initialize
 SUBROUTINE ext_int_ioinit( SysDepInfo, Status )
 
+  write(6,*) 'Calling dummy 7'
 END SUBROUTINE ext_int_ioinit
 
 
@@ -64,6 +71,7 @@ END SUBROUTINE ext_int_ioinit
 SUBROUTINE ext_int_open_for_read ( FileName , Comm_compute, Comm_io, SysDepInfo, &
                                DataHandle , Status )
 
+  write(6,*) 'Calling dummy 8'
   RETURN  
 END SUBROUTINE ext_int_open_for_read
 
@@ -72,6 +80,7 @@ END SUBROUTINE ext_int_open_for_read
 SUBROUTINE int_get_ti_header_c ( hdrbuf, hdrbufsize, n, itypesize, typesize, &
                            DataHandle, Data, Count, code )
 
+  write(6,*) 'Calling dummy 9'
 RETURN
 END SUBROUTINE int_get_ti_header_c	
 
@@ -136,6 +145,7 @@ END SUBROUTINE int_get_ti_header_c
 
 subroutine int_gen_ti_header_c ( hdrbuf, hdrbufsize, itypesize, typesize, &
                            DataHandle, Data, Count, code )
+  write(6,*) 'Calling dummy 10'
  RETURN
 END SUBROUTINE int_gen_ti_header_c
 
