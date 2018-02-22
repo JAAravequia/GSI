@@ -143,11 +143,11 @@ END SUBROUTINE int_get_ti_header_c
 !end subroutine wrf_error_fatal 
 
 
-subroutine int_gen_ti_header_c ( hdrbuf, hdrbufsize, itypesize, typesize, &
-                           DataHandle, Data, Count, code )
-  write(6,*) 'Calling dummy 10'
- RETURN
-END SUBROUTINE int_gen_ti_header_c
+!subroutine int_gen_ti_header_c ( hdrbuf, hdrbufsize, itypesize, typesize, &
+!                           DataHandle, Data, Count, code )
+! write(6,*) 'Calling dummy 10'
+!RETURN
+!END SUBROUTINE int_gen_ti_header_c
 
 
 
