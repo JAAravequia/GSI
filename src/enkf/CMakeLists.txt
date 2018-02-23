@@ -48,7 +48,7 @@ if(BUILD_ENKF)
   gridinfo_${ENKF_SUFFIX}.f90
   enkf_obs_sensitivity.f90 
   )
-  if( NOT crayComp )
+  if( NOT HOST-Luna )
     find_package( LAPACK REQUIRED )
   endif()
   
