@@ -539,7 +539,7 @@ contains
     logical,allocatable,dimension(:):: vector
     logical print_verbose
 
-    print_verbose=.true. .and. mype == 0
+    print_verbose=.false. .and. mype == 0
     if(verbose .and. mype == 0)print_verbose=.true.
     spec_cut=jcap_cut
     if(jcap==62) gencode=80.0_r_kind

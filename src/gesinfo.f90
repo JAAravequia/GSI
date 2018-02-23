@@ -479,7 +479,6 @@ subroutine gesinfo(mype)
 
 ! Set the analysis time - this is output info...
 ! w3fs21(NCEP-w3) converts analysis time to minutes relative to a fixed date.
-  write(6,*) 'Hey, ibdate and nmin_an are ',ibdate,nmin_an
   call w3fs21(ibdate,nmin_an)
   iwinbgn = nmin_an
 
