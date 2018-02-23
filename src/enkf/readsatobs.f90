@@ -589,7 +589,7 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   use nc_diag_read_mod, only: nc_diag_read_get_dim, nc_diag_read_get_global_attr
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
 
-  use radinfo, only: iuse_rad,nusis,jpch_rad,npred
+  use radinfo, only: iuse_rad,nusis,jpch_rad,npred,adp_anglebc,emiss_bc
   use params, only: nanals, lobsdiag_forenkf
   use statevec, only: state_d
   use constants, only: deg2rad, zero
@@ -626,7 +626,7 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
 
   integer(i_kind) iunit, iob, iobdiag, i, nsat, ipe, jpchstart, nchans
   integer(i_kind) iunit2, nobs, nobs2, nnz, nind
-  integer(i_kind) npred_radiag
+  integer(i_kind) npred_radiag, angord
   logical fexist
   logical twofiles,fexist2
   real(r_kind) :: errorlimit,errorlimit2
@@ -644,6 +644,11 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   integer(i_kind), allocatable, dimension (:,:) :: Observation_Operator_Jacobian_stind
   integer(i_kind), allocatable, dimension (:,:) :: Observation_Operator_Jacobian_endind
   real(r_single), allocatable, dimension (:,:) :: Observation_Operator_Jacobian_val
+  real(r_single), dimension(:), allocatable :: BC_Fixed_Scan_Position, BC_Constant, BC_Scan_Angle
+  real(r_single), dimension(:), allocatable :: BC_Cloud_Liquid_Water, BC_Lapse_Rate_Squared, BC_Lapse_Rate
+  real(r_single), dimension(:), allocatable :: BC_Cosine_Latitude_times_Node, BC_Sine_Latitude
+  real(r_single), dimension(:), allocatable :: BC_Emissivity
+  real(r_single), allocatable, dimension (:,:) :: BC_angord
 
 ! make consistent with screenobs
   errorlimit=1._r_kind/sqrt(1.e9_r_kind)
@@ -730,6 +735,33 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
      call nc_diag_read_get_var(iunit, 'Observation', Observation)
      call nc_diag_read_get_var(iunit, 'Obs_Minus_Forecast_unadjusted', Obs_Minus_Forecast_unadjusted)
      call nc_diag_read_get_var(iunit, 'Obs_Minus_Forecast_adjusted', Obs_Minus_Forecast_adjusted)
+
+     allocate(BC_Fixed_Scan_Position(nobs), BC_Constant(nobs), BC_Scan_Angle(nobs), &
+              BC_Cloud_Liquid_Water(nobs), BC_Lapse_Rate_Squared(nobs),             &
+              BC_Lapse_Rate(nobs))
+     call nc_diag_read_get_var(iunit, 'BC_Fixed_Scan_Position', BC_Fixed_Scan_Position)
+     call nc_diag_read_get_var(iunit, 'BC_Constant', BC_Constant)
+     call nc_diag_read_get_var(iunit, 'BC_Scan_Angle', BC_Scan_Angle)
+     call nc_diag_read_get_var(iunit, 'BC_Cloud_Liquid_Water', BC_Cloud_Liquid_Water)
+     call nc_diag_read_get_var(iunit, 'BC_Lapse_Rate_Squared', BC_Lapse_Rate_Squared)
+     call nc_diag_read_get_var(iunit, 'BC_Lapse_Rate', BC_Lapse_Rate)
+
+     if (npred == 7) then
+        allocate(BC_Cosine_Latitude_times_Node(nobs), BC_Sine_Latitude(nobs))
+        call nc_diag_read_get_var(iunit, 'BC_Cosine_Latitude_times_Node', BC_Cosine_Latitude_times_Node) 
+        call nc_diag_read_get_var(iunit, 'BC_Sine_Latitude', BC_Sine_Latitude)
+     endif
+
+     if (emiss_bc) then
+        allocate(BC_Emissivity(nobs))
+        call nc_diag_read_get_var(iunit, 'BC_Emissivity', BC_Emissivity)
+     endif
+
+     if (adp_anglebc) then
+        call nc_diag_read_get_global_attr(iunit, "angord", angord)
+        allocate(BC_angord(angord, nobs))
+        call nc_diag_read_get_var(iunit, 'BC_angord', BC_angord)
+     endif
 
      if (lobsdiag_forenkf) then
         call nc_diag_read_get_global_attr(iunit, "jac_nnz", nnz)
@@ -829,29 +861,29 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
         x_err(iob) = (1._r_kind/Inv_Error(i))**2
         x_press(iob) = Pressure(i)
 
-!! DTK:  **NOTE**
-!!       The bifix term will need to be expanded if/when the GSI/GDAS goes to using
-!!       a higher polynomial version of the angle dependent bias correction (if
-!!       and when it is moved into part of the varbc)
-!         x_biaspred(1,nobs) = data_chan(n)%bifix(1) ! fixed angle dependent bias
-!         x_biaspred(2,nobs) = data_chan(n)%bicons ! constant bias correction
-!         x_biaspred(3,nobs) = data_chan(n)%biang ! scan angle bias correction
-!         x_biaspred(4,nobs) = data_chan(n)%biclw ! CLW bias correction
-!         x_biaspred(5,nobs) = data_chan(n)%bilap2 ! square lapse rate bias corr
-!         x_biaspred(6,nobs) = data_chan(n)%bilap ! lapse rate bias correction
-!         if (npred == 7) then
-!           x_biaspred(7,nobs) = data_chan(n)%bicos ! node*cos(lat) bias correction for SSMIS
-!           x_biaspred(8,nobs) = data_chan(n)%bisin ! sin(lat) bias correction for SSMIS
-!         endif
-!         if (emiss_bc) x_biaspred(9,nobs) = data_chan(n)%biemis
+! DTK:  **NOTE**
+!       The bifix term will need to be expanded if/when the GSI/GDAS goes to using
+!       a higher polynomial version of the angle dependent bias correction (if
+!       and when it is moved into part of the varbc)
+         x_biaspred(1,nobs) = BC_Fixed_Scan_Position(i) ! fixed angle dependent bias
+         x_biaspred(2,nobs) = BC_Constant(i) ! constant bias correction
+         x_biaspred(3,nobs) = BC_Scan_Angle(i) ! scan angle bias correction
+         x_biaspred(4,nobs) = BC_Cloud_Liquid_Water(i) ! CLW bias correction
+         x_biaspred(5,nobs) = BC_Lapse_Rate_Squared(i) ! square lapse rate bias corr
+         x_biaspred(6,nobs) = BC_Lapse_Rate(i) ! lapse rate bias correction
+         if (npred == 7) then
+           x_biaspred(7,nobs) = BC_Cosine_Latitude_times_Node(i) ! node*cos(lat) bias correction for SSMIS
+           x_biaspred(8,nobs) = BC_Sine_Latitude(i) ! sin(lat) bias correction for SSMIS
+         endif
+         if (emiss_bc) x_biaspred(9,nobs) = BC_Emissivity(i)
 
-!         if (adp_anglebc) then
-!            x_biaspred( 1,nobs)  = data_chan(n)%bifix(5) ! fixed angle dependent bias correction
-!            x_biaspred(npred-2,nobs)  = data_chan(n)%bifix(1) ! 4th order scan angle (predictor)
-!            x_biaspred(npred-1,nobs)  = data_chan(n)%bifix(2) ! 3rd order scan angle (predictor)
-!            x_biaspred(npred,nobs)  = data_chan(n)%bifix(3) ! 2nd order scan angle (predictor)
-!            x_biaspred(npred+1,nobs)    = data_chan(n)%bifix(4) ! 1st order scan angle (predictor)
-!         endif
+         if (adp_anglebc) then
+            x_biaspred( 1,nobs)  = BC_angord(5,i) ! fixed angle dependent bias correction
+            x_biaspred(npred-2,nobs)  = BC_angord(1,i) ! 4th order scan angle (predictor)
+            x_biaspred(npred-1,nobs)  = BC_angord(2,i) ! 3rd order scan angle (predictor)
+            x_biaspred(npred,nobs)    = BC_angord(3,i) ! 2nd order scan angle (predictor)
+            x_biaspred(npred+1,nobs)  = BC_angord(4,i) ! 1st order scan angle (predictor)
+         endif
 
      enddo
 
@@ -859,6 +891,12 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
      deallocate(Pressure, QC_Flag, Inv_Error, Latitude, Longitude, Time, &
                 Observation, chind, Obs_Minus_Forecast_unadjusted,       &
                 Obs_Minus_Forecast_adjusted)
+     deallocate(BC_Fixed_Scan_Position, BC_Constant, BC_Scan_Angle,      &
+               BC_Cloud_Liquid_Water, BC_Lapse_Rate_Squared,             &
+               BC_Lapse_Rate)
+     if (npred == 7)  deallocate(BC_Cosine_Latitude_times_Node, BC_Sine_Latitude)
+     if (emiss_bc)    deallocate(BC_Emissivity)
+     if (adp_anglebc) deallocate(BC_angord)
      if (twofiles) deallocate(Obs_Minus_Forecast_unadjusted2)
      if (lobsdiag_forenkf) then
         deallocate(Observation_Operator_Jacobian_stind, Observation_Operator_Jacobian_endind, &
