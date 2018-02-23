@@ -2206,10 +2206,8 @@
   integer(i_kind),parameter:: imissing = -999999
   real(r_kind),dimension(:),allocatable :: predbias_angord
 
-!  if (adp_anglebc) then
-  if (.true.) then
-    allocate(predbias_angord(5) )
-!    allocate(predbias_angord(angord) )
+  if (adp_anglebc) then
+    allocate(predbias_angord(angord) )
     predbias_angord = zero
   endif
 
@@ -2354,12 +2352,9 @@
                  if (lwrite_peakwt) then
                     call nc_diag_metadata("Press_Max_Weight_Function",          sngl(weightmax(ich_diag(i)))       )
                  endif
-!                 if (adp_anglebc) then
-!                    do j=npred-angord+1, npred
-!                       predbias_angord(j-npred-angord) = predbias(j,ich_diag(i) )
-                 if (.true.) then
-                    do j=1,5
-                       predbias_angord(j) = j
+                 if (adp_anglebc) then
+                    do j=1, angord
+                        predbias_angord(j) = predbias(npred-angord+j, ich_diag(i) )
                     end do
                     call nc_diag_data2d("BC_angord",   sngl(predbias_angord)                                       )
                  end if
