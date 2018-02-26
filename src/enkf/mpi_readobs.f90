@@ -26,6 +26,7 @@ module mpi_readobs
 !   2009-02-23  Initial version.
 !   2016-11-29  shlyaeva: Added the option of writing out ensemble spread in
 !               diag files
+!   2018-02-26  shlyaeva: modifications for model-space localization
 !
 ! attributes:
 !   language: f95
@@ -38,32 +39,36 @@ use readconvobs
 use readsatobs
 use readozobs
 use mpisetup
+use sparsearr, only: sparr
+use intweight
 
 implicit none
 
 private
-public :: mpi_getobs
+public :: mpi_getobs, mpi_obsstats
 
 contains
 
 subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_tot, &
                       nobs_convdiag, nobs_ozdiag, nobs_satdiag, nobs_totdiag, &
-                      sprd_ob, ensmean_ob, ensmean_obbc, ob, &
+                      sprd_ob, ensmean_ob, ensmean_obbc, ensmean_ob_linerr, interp, dhx_dx, ob, &
                       oberr, oblon, oblat, obpress, &
                       obtime, oberrorig, obcode, obtype, &
-                      biaspreds, diagused,  anal_ob, indxsat, nanals)
+                      biaspreds, diagused,  anal_ob, mem_ob, indxsat, nanals)
     character*500, intent(in) :: obspath
     character*10, intent(in) :: datestring
     character(len=10) :: id,id2
     real(r_single), allocatable, dimension(:)   :: ensmean_ob,ob,oberr,oblon,oblat
     real(r_single), allocatable, dimension(:)   :: obpress,obtime,oberrorig,ensmean_obbc,sprd_ob
+    real(r_single), allocatable, dimension(:)   :: ensmean_ob_linerr
     integer(i_kind), allocatable, dimension(:)  :: obcode,indxsat
     integer(i_kind), allocatable, dimension(:)  :: diagused
     real(r_single), allocatable, dimension(:,:) :: biaspreds
     real(r_single), allocatable, dimension(:,:) :: anal_ob
     real(r_single), allocatable, dimension(:)   :: mem_ob 
-!   real(r_single), allocatable, dimension(:,:) :: anal_obtmp
-!   real(r_single), allocatable, dimension(:)   :: h_xnobc
+    type(sparr), allocatable, dimension(:)      :: dhx_dx
+    type(intw),  allocatable, dimension(:)      :: interp
+
     real(r_single) :: analsi,analsim1
     real(r_double) t1,t2
     character(len=20), allocatable,  dimension(:) ::  obtype
@@ -99,7 +104,8 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
        allocate(sprd_ob(nobs_tot),ob(nobs_tot),oberr(nobs_tot),oblon(nobs_tot),&
        oblat(nobs_tot),obpress(nobs_tot),obtime(nobs_tot),oberrorig(nobs_tot),obcode(nobs_tot),&
        obtype(nobs_tot),ensmean_ob(nobs_tot),ensmean_obbc(nobs_tot),&
-       biaspreds(npred+1, nobs_sat),indxsat(nobs_sat), diagused(nobs_totdiag))
+       biaspreds(npred+1, nobs_sat),indxsat(nobs_sat), diagused(nobs_totdiag),&
+       dhx_dx(nobs_tot), interp(nobs_tot), ensmean_ob_linerr(nobs_tot))
     else
 ! stop if no obs found (must be an error somewhere).
        print *,'no obs found!'
@@ -121,7 +127,8 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
 ! first nobs_conv are conventional obs.
       call get_convobs_data(obspath, datestring, nobs_conv, nobs_convdiag, &
         ensmean_obbc(1:nobs_conv), ensmean_ob(1:nobs_conv),                &
-        mem_ob(1:nobs_conv), ob(1:nobs_conv),                                 &
+        mem_ob(1:nobs_conv), ensmean_ob_linerr(1:nobs_conv),               &
+        interp(1:nobs_conv), dhx_dx(1:nobs_conv), ob(1:nobs_conv),         &
         oberr(1:nobs_conv), oblon(1:nobs_conv), oblat(1:nobs_conv),       &
         obpress(1:nobs_conv), obtime(1:nobs_conv), obcode(1:nobs_conv),   &
         oberrorig(1:nobs_conv), obtype(1:nobs_conv),                      &
@@ -133,6 +140,8 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
         ensmean_obbc(nobs_conv+1:nobs_conv+nobs_oz),     &
         ensmean_ob(nobs_conv+1:nobs_conv+nobs_oz),       &
         mem_ob(nobs_conv+1:nobs_conv+nobs_oz),              &
+        interp(nobs_conv+1:nobs_conv+nobs_oz),               &
+        dhx_dx(nobs_conv+1:nobs_conv+nobs_oz),               &
         ob(nobs_conv+1:nobs_conv+nobs_oz),               &
         oberr(nobs_conv+1:nobs_conv+nobs_oz),            &
         oblon(nobs_conv+1:nobs_conv+nobs_oz),            &
@@ -152,6 +161,9 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
         ensmean_obbc(nobs_conv+nobs_oz+1:nobs_tot),       &
         ensmean_ob(nobs_conv+nobs_oz+1:nobs_tot),         &
         mem_ob(nobs_conv+nobs_oz+1:nobs_tot),                &
+        ensmean_ob_linerr(nobs_conv+nobs_oz+1:nobs_tot),     &
+        interp(nobs_conv+nobs_oz+1:nobs_tot),                &
+        dhx_dx(nobs_conv+nobs_oz+1:nobs_tot),                &
         ob(nobs_conv+nobs_oz+1:nobs_tot),                 &
         oberr(nobs_conv+nobs_oz+1:nobs_tot),              &
         oblon(nobs_conv+nobs_oz+1:nobs_tot),              &
@@ -235,13 +247,93 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     if (nproc == 0) t1 = mpi_wtime()
     call mpi_bcast(ensmean_ob,nobs_tot,mpi_real4,0,mpi_comm_world,ierr)
     call mpi_bcast(sprd_ob,nobs_tot,mpi_real4,0,mpi_comm_world,ierr)
+    call mpi_bcast(ensmean_ob_linerr,nobs_tot,mpi_real4,0,mpi_comm_world,ierr)
     if (nproc == 0) then
         t2 = mpi_wtime()
         print *,'time to broadcast ob prior ensemble mean and spread = ',t2-t1
     endif
 
-    deallocate(mem_ob)
+!    deallocate(mem_ob)
 
  end subroutine mpi_getobs
+
+subroutine mpi_obsstats(nobs_conv, nobs_oz, nobs_sat, nobs_tot, &
+                         bg_ob, bc_ob, interp, dhx_dx, mean_ob, sprd_ob, nanals)
+
+use observer_enkf, only: calc_linhx
+use controlvec, only: grdin,ncdim
+use params, only: nbackgrounds
+use gridinfo, only: npts
+implicit none
+real(r_single), dimension(nobs_tot) :: bg_ob, bc_ob
+real(r_single), allocatable, dimension(:,:) :: anal_ob
+real(r_single), allocatable, dimension(:)   :: mem_ob, sprd_ob, mean_ob
+type(sparr), dimension(nobs_tot) :: dhx_dx
+type(intw),  dimension(nobs_tot) :: interp
+
+integer(i_kind) nob, ierr, nobs_conv, nobs_oz, nobs_sat, nobs_tot, nanal
+integer(i_kind), intent(in) :: nanals
+
+if (nproc == 0) then
+  ! this array only needed on root.
+   allocate(anal_ob(nanals,nobs_tot), mean_ob(nobs_tot), sprd_ob(nobs_tot))
+end if
+allocate(mem_ob(nobs_tot))
+
+! use mpi_send/mpi_recv to gather ob prior ensemble on root.
+! a bit slower, but does not require large temporary array like mpi_gather.
+if (nproc <= nanals-1) then
+   do nob = 1, nobs_tot
+      call calc_linhx(bg_ob(nob), grdin, interp(nob),   &
+                      dhx_dx(nob), mem_ob(nob), npts, ncdim, nbackgrounds)  ! add dHx/dx * analysis increment to background Hx
+   enddo
+
+   if (nproc == 0) then
+     anal_ob(1,:) = mem_ob(:)
+     do nanal=2,nanals
+        call mpi_recv(mem_ob,nobs_tot,mpi_real4,nanal-1, &
+                      1,mpi_comm_io,mpi_status,ierr)
+        anal_ob(nanal,:) = mem_ob(:)
+     enddo
+
+  else ! nproc != 0
+     ! send to root.
+     call mpi_send(mem_ob,nobs_tot,mpi_real4,0,1,mpi_comm_io,ierr)
+  end if
+end if ! nanal <= nanals
+
+! make anal_ob contain ob prior ensemble *perturbations*
+if (nproc == 0) then
+
+!$omp parallel do private(nob)
+  do nob=1,nobs_tot
+! remove ensemble mean from each member.
+     mean_ob(nob)  = sum(anal_ob(:,nob)) /real(nanals)
+! ensmean_ob is unbiascorrected ensemble mean (anal_ob
+     anal_ob(:,nob) = anal_ob(:,nob)-mean_ob(nob)
+! compute sprd
+     sprd_ob(nob) = sum(anal_ob(:,nob)**2)/(nanals-1)
+
+! calc bias corrected mean
+     mean_ob(nob) = mean_ob(nob) + bc_ob(nob)
+  enddo
+!$omp end parallel do
+
+!  print *, 'anal: ', anal_ob(:,1)
+!  print *, 'mean: ', mean_ob-bc_ob, mean_ob
+
+!  print *, 'mean before bc: ', mean_ob - bc_ob
+!  print *, 'mean after bc: ', mean_ob
+  print *, 'post spread conv: ', minval(sprd_ob(1:nobs_conv)), maxval(sprd_ob(1:nobs_conv))
+  print *, 'post spread oz: ',   minval(sprd_ob(nobs_conv+1:nobs_conv+nobs_oz)), &
+                                 maxval(sprd_ob(nobs_conv+1:nobs_conv+nobs_oz))
+  print *, 'post spread sat: ',  minval(sprd_ob(nobs_conv+nobs_oz+1:nobs_tot)),  &
+                                 maxval(sprd_ob(nobs_conv+nobs_oz+1:nobs_tot))
+  deallocate(anal_ob)
+
+endif
+deallocate(mem_ob)
+
+end subroutine mpi_obsstats
 
 end module mpi_readobs

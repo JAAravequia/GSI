@@ -82,7 +82,7 @@ program enkf_main
  ! obs and ob priors, associated metadata.
  use enkf_obsmod, only : readobs, write_obsstats, obfit_prior, obsprd_prior, &
                     nobs_sat, obfit_post, obsprd_post, &
-                    obsmod_cleanup, biasprednorminv
+                    obsmod_cleanup, biasprednorminv, calc_obsstats
  ! innovation statistics.
  use innovstats, only: print_innovstats
  ! model control vector 
@@ -231,9 +231,25 @@ program enkf_main
  t2 = mpi_wtime()
  if (nproc == 0) print *,'time in inflate_ens =',t2-t1,'on proc',nproc
 
+ t1 = mpi_wtime()
+ call gather_chunks()
+ t2 = mpi_wtime()
+ if (nproc == 0) print *,'time in gather_chunks =',t2-t1,'on proc',nproc
+
+ t1 = mpi_wtime()
+ call calc_obsstats()
+ t2 = mpi_wtime()
+ if (nproc == 0) print *,'time in calc_obsstats =',t2-t1,'on proc',nproc
+
+ if (nproc == 0) then
+    ! print innovation statistics for prior on root task.
+    print *,'innovation statistics for prior:'
+    call print_innovstats(obfit_prior, obsprd_prior)
+end if
+
  if (write_spread_diag) then
     t1 = mpi_wtime()
-    call write_obsstats()
+!    call write_obsstats()
     t2 = mpi_wtime()
     if (nproc == 0) print *,'time in write_obsstats =',t2-t1,'on proc',nproc
   endif
@@ -260,11 +276,6 @@ program enkf_main
  ! free memory (radinfo memory freed in radinfo_write)
  ! and write out analysis ensemble.
  call obsmod_cleanup()
-
- t1 = mpi_wtime()
- call gather_chunks()
- t2 = mpi_wtime()
- if (nproc == 0) print *,'time in gather_chunks =',t2-t1,'on proc',nproc
 
  t1 = mpi_wtime()
  call write_control(no_inflate_flag)

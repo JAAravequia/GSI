@@ -21,6 +21,7 @@ module readconvobs
 !   2016-11-29  shlyaeva - updated read routine to calculate linearized H(x)
 !                          added write_convobs_data to output ensemble spread
 !   2017-12-13  shlyaeva - added netcdf diag read/write capability
+!   2018-02-26  shlyaeva - modification for model-space localization
 !
 ! attributes:
 !   language: f95
@@ -394,9 +395,12 @@ end subroutine get_num_convobs_nc
 
 ! read conventional observations
 subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
-                            hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
+                            hx_mean, hx_mean_nobc, hx, hx_linerr, interp,  &
+                            dhx_dx, x_obs, x_err,       &
                             x_lon, x_lat, x_press, x_time, x_code,         &
                             x_errorig, x_type, x_used, id, nanal)
+  use sparsearr, only: sparr
+  use intweight, only: intw
   implicit none
 
   character*500,   intent(in) :: obspath
@@ -405,7 +409,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean_nobc
-  real(r_single), dimension(nobs_max), intent(out)    :: hx
+  real(r_single), dimension(nobs_max), intent(out)    :: hx, hx_linerr
   real(r_single), dimension(nobs_max), intent(out)    :: x_obs
   real(r_single), dimension(nobs_max), intent(out)    :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out)    :: x_lon, x_lat
@@ -414,17 +418,22 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
   character(len=20), dimension(nobs_max), intent(out) :: x_type
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
 
+  type(sparr), dimension(nobs_max), intent(out) :: dhx_dx
+  type(intw),  dimension(nobs_max), intent(out) :: interp
+
   character(len=10), intent(in) :: id
   integer, intent(in)           :: nanal
 
   if (netcdf_diag) then
     call get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
-                            hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
+                            hx_mean, hx_mean_nobc, hx, hx_linerr, interp,   &
+                            dhx_dx, x_obs, x_err,       &
                             x_lon, x_lat, x_press, x_time, x_code,         &
                             x_errorig, x_type, x_used, id, nanal)
   else
     call get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
-                            hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
+                            hx_mean, hx_mean_nobc, hx, hx_linerr, interp,   &
+                            dhx_dx, x_obs, x_err,       &
                             x_lon, x_lat, x_press, x_time, x_code,         &
                             x_errorig, x_type, x_used, id, nanal)
   endif
@@ -432,18 +441,20 @@ end subroutine get_convobs_data
 
 ! read conventional observations from netcdf file
 subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
-                            hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
+                            hx_mean, hx_mean_nobc, hx, hx_linerr, interp,     &
+                            dhx_dx, x_obs, x_err,       &
                             x_lon, x_lat, x_press, x_time, x_code,         &
                             x_errorig, x_type, x_used, id, nanal)
   use sparsearr, only: sparr, delete, assignment(=)
-  use params, only: nanals, lobsdiag_forenkf
-  use statevec, only: state_d
+  use params, only: nanals, lobsdiag_forenkf, nstatefields
+  use gridinfo, only: npts
+  use statevec, only: state_d, state_mean
   use mpisetup, only: nproc, mpi_wtime
-  use observer_enkf, only: calc_linhx
+  use observer_enkf, only: calc_linhx, calc_interp
   use nc_diag_read_mod, only: nc_diag_read_get_var
   use nc_diag_read_mod, only: nc_diag_read_get_dim, nc_diag_read_get_global_attr
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
-
+  use intweight
   implicit none
 
   character*500,   intent(in) :: obspath
@@ -452,7 +463,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean_nobc
-  real(r_single), dimension(nobs_max), intent(out)    :: hx
+  real(r_single), dimension(nobs_max), intent(out)    :: hx, hx_linerr
   real(r_single), dimension(nobs_max), intent(out)    :: x_obs
   real(r_single), dimension(nobs_max), intent(out)    :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out)    :: x_lon, x_lat
@@ -460,6 +471,11 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
   integer(i_kind), dimension(nobs_max), intent(out)   :: x_code
   character(len=20), dimension(nobs_max), intent(out) :: x_type
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
+
+  type(sparr), dimension(nobs_max), intent(out) :: dhx_dx
+  type(intw),  dimension(nobs_max), intent(out) :: interp
+
+  real(r_single), dimension(nobs_max) :: hx_mean_lin
 
   character(len=10), intent(in) :: id
   integer, intent(in)           :: nanal
@@ -468,7 +484,6 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
   character(len=4) pe_name
   character*500 obsfile, obsfile2
   character(len=10) :: id2
-  type(sparr)     :: dhx_dx
 
   character(len=3) :: obtype
 
@@ -688,35 +703,42 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
            if (x_type(nob) == 'tcp')  x_type(nob) = ' ps'
            if (x_type(nob) == ' rw')  x_type(nob) = '  u'
 
+
            ! get Hx
-           if (nanal <= nanals) then
-              ! read full Hx from file
-              if (.not. lobsdiag_forenkf) then
+           ! read full Hx from file
+           if (.not. lobsdiag_forenkf) then
+             if (nanal <= nanals) then
                  hx(nob) = Observation(i) - Obs_Minus_Forecast_unadjusted2(i)
                  if (obtype == '  q' .or. obtype == 'spd' .or. obtype == ' dw' .or. &
                      obtype == ' pw') then
                     hx(nob) = Observation(i) - Obs_Minus_Forecast_adjusted2(i)
                  endif
+             endif
+           ! run the linearized Hx
+           else
+             dhx_dx(nob) = Observation_Operator_Jacobian(1:nsdim,i)
 
-              ! run the linearized Hx
-              else
-                 t1 = mpi_wtime()
-                 dhx_dx = Observation_Operator_Jacobian(1:nsdim,i)
-                 call calc_linhx(hx_mean_nobc(nob), state_d,             &
-                                 real(x_lat(nob)*deg2rad,r_single),      &
-                                 real(x_lon(nob)*deg2rad,r_single),      &
-                                 x_time(nob),                            &
-                                 dhx_dx, hx(nob))
-                 t2 = mpi_wtime()
-                 tsum = tsum + t2-t1
+             t1 = mpi_wtime()
+             call calc_interp(real(x_lat(nob)*deg2rad,r_single),      &
+                              real(x_lon(nob)*deg2rad,r_single),      &
+                              x_time(nob), interp(nob))
 
-                 call delete(dhx_dx)
-              endif
+             if (nanal <= nanals) then
+                call calc_linhx(hx_mean_nobc(nob), state_d,             &
+                                interp(nob), dhx_dx(nob),hx(nob),npts,nsdim,nstatefields,nob)
+                call calc_linhx(0._r_single, state_mean,             &
+                             interp(nob),dhx_dx(nob),hx_mean_lin(nob),npts,nsdim,nstatefields,nob)
+                hx_linerr(nob) = hx_mean(nob)-hx_mean_lin(nob)
 
-              ! normalize q by qsatges
-              if (obtype == '  q') then
-                 hx(nob) = hx(nob) / Forecast_Saturation_Spec_Hum(i)
-              endif
+                ! normalize q by qsatges
+                if (obtype == '  q') then
+                   hx(nob) = hx(nob) / Forecast_Saturation_Spec_Hum(i)
+                   hx_linerr(nob) = hx_linerr(nob) / Forecast_Saturation_Spec_Hum(i)
+                endif
+             endif
+
+             t2 = mpi_wtime()
+             tsum = tsum + t2-t1
            endif
 
            ! normalize q by qsatges
@@ -755,27 +777,35 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
               ! observation type
               x_type(nob)  = '  v'
 
-              ! run linearized hx
-              if (nanal <= nanals) then
-                 ! read full Hx
-                 if (.not. lobsdiag_forenkf) then
-                    hx(nob) = v_Observation(i) - v_Obs_Minus_Forecast_unadjusted2(i)
 
-                 ! run linearized Hx
-                 else
-                    t1 = mpi_wtime()
-                    dhx_dx = v_Observation_Operator_Jacobian(1:nsdim,i)
-                    call calc_linhx(hx_mean_nobc(nob), state_d, &
-                                    real(x_lat(nob)*deg2rad,r_single),      &
-                                    real(x_lon(nob)*deg2rad,r_single),      &
-                                    x_time(nob),                            &
-                                    dhx_dx, hx(nob))
-                    t2 = mpi_wtime()
-                    tsum = tsum + t2-t1
-                    call delete(dhx_dx)
-                 endif
+             ! run linearized hx
+             ! read full Hx
+             if (.not. lobsdiag_forenkf) then
+               if (nanal <= nanals) then
+                   hx(nob) = v_Observation(i) - v_Obs_Minus_Forecast_unadjusted2(i)
+               endif
+             ! run linearized Hx
+             else
+                dhx_dx(nob) = v_Observation_Operator_Jacobian(1:nsdim,i)
+
+                t1 = mpi_wtime()
+                call calc_interp(real(x_lat(nob)*deg2rad,r_single),      &
+                                 real(x_lon(nob)*deg2rad,r_single),      &
+                                 x_time(nob), interp(nob))
+
+                if (nanal <= nanals) then
+                   call calc_linhx(hx_mean_nobc(nob), state_d,           &
+                                 interp(nob), dhx_dx(nob),hx(nob),npts,nsdim,nstatefields)
+                   call calc_linhx(0._r_single, state_mean,             &
+                                interp(nob),dhx_dx(nob),hx_mean_lin(nob),npts,nsdim,nstatefields,nob)
+                   hx_linerr(nob) = hx_mean(nob)-hx_mean_lin(nob)
+                endif
+
+                t2 = mpi_wtime()
+                tsum = tsum + t2-t1
+
               endif
-           endif
+          endif
         enddo
 
         deallocate(Latitude, Longitude, Pressure, Time, Analysis_Use_Flag,  &
@@ -828,14 +858,17 @@ end subroutine get_convobs_data_nc
 
 ! read conventional observation from binary files
 subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
-                            hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
+                            hx_mean, hx_mean_nobc, hx, hx_linerr, interp,      &
+                            dhx_dx, x_obs, x_err,       &
                             x_lon, x_lat, x_press, x_time, x_code,         &
                             x_errorig, x_type, x_used, id, nanal)
   use sparsearr, only: sparr2, sparr, readarray, delete, assignment(=), size
-  use params, only: nanals, lobsdiag_forenkf
-  use statevec, only: state_d
+  use params, only: nanals, lobsdiag_forenkf, nstatefields
+  use gridinfo, only: npts
+  use statevec, only: state_d, nsdim, state_mean
   use mpisetup, only: nproc, mpi_wtime
-  use observer_enkf, only: calc_linhx
+  use observer_enkf, only: calc_linhx, calc_interp
+  use intweight
   implicit none
 
   character*500,   intent(in) :: obspath
@@ -844,7 +877,7 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean_nobc
-  real(r_single), dimension(nobs_max), intent(out)    :: hx
+  real(r_single), dimension(nobs_max), intent(out)    :: hx, hx_linerr
   real(r_single), dimension(nobs_max), intent(out)    :: x_obs
   real(r_single), dimension(nobs_max), intent(out)    :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out)    :: x_lon, x_lat
@@ -852,6 +885,11 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
   integer(i_kind), dimension(nobs_max), intent(out)   :: x_code
   character(len=20), dimension(nobs_max), intent(out) :: x_type
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
+
+  type(sparr), dimension(nobs_max), intent(out) :: dhx_dx
+  type(intw),  dimension(nobs_max), intent(out) :: interp
+
+  real(r_single), dimension(nobs_max) :: hx_mean_lin
 
   character(len=10), intent(in) :: id
   integer, intent(in)           :: nanal
@@ -862,7 +900,6 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
   character(len=10) :: id2
 
   type(sparr2)    :: dhx_dx_read
-  type(sparr)     :: dhx_dx
 
   character(len=3) :: obtype, obtype2
   integer(i_kind) :: iunit, iunit2
@@ -1065,10 +1102,11 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
           if (obtype == 'tcp')   x_type(nob) = ' ps'
           if (obtype == ' rw')   x_type(nob) = '  u'
 
+
           ! get Hx
-          if (nanal <= nanals) then
-             ! read full Hx from file
-             if (.not. lobsdiag_forenkf) then
+          ! read full Hx from file
+          if (.not. lobsdiag_forenkf) then
+             if (nanal <= nanals) then
                 if (obtype == 'gps') then
                    hx(nob) = rdiagbuf2(17,n) - (rdiagbuf2(5,n)*rdiagbuf2(17,n))
                 else
@@ -1078,32 +1116,37 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
                     obtype == ' pw') then
                    hx(nob) = rdiagbuf(17,n) - rdiagbuf2(18,n)
                 endif
+             endif
+          ! run the linearized Hx
+          else
+             ind = ioff0 + 1
+             call readarray(dhx_dx_read, rdiagbuf(ind:nreal,n))
+             ind = ind + size(dhx_dx_read)
+             dhx_dx(nob) = dhx_dx_read
 
-             ! run the linearized Hx 
-             else
-                ind = ioff0 + 1
-                call readarray(dhx_dx_read, rdiagbuf(ind:nreal,n))
-                ind = ind + size(dhx_dx_read)
-                dhx_dx = dhx_dx_read
+             t1 = mpi_wtime()
 
-                t1 = mpi_wtime()
-                call calc_linhx(hx_mean_nobc(nob), state_d,             &
-                              real(x_lat(nob)*deg2rad,r_single),      &
+             call calc_interp(real(x_lat(nob)*deg2rad,r_single),      &
                               real(x_lon(nob)*deg2rad,r_single),      &
-                              x_time(nob),                            &
-                              dhx_dx, hx(nob))
-                t2 = mpi_wtime()
-                tsum = tsum + t2-t1
+                              x_time(nob), interp(nob))
 
-                call delete(dhx_dx)
-                call delete(dhx_dx_read)
+             if (nanal <= nanals) then
+                call calc_linhx(hx_mean_nobc(nob), state_d,             &
+                                interp(nob), dhx_dx(nob),hx(nob),npts,nsdim,nstatefields,nob)
+                call calc_linhx(0._r_single, state_mean,             &
+                             interp(nob),dhx_dx(nob),hx_mean_lin(nob),npts,nsdim,nstatefields,nob)
+                hx_linerr(nob) = hx_mean(nob)-hx_mean_lin(nob)
+                ! normalize q by qsatges
+                if (obtype == '  q') then
+                   hx(nob) = hx(nob) /rdiagbuf(20,n)
+                endif
+
              endif
 
-             ! normalize q by qsatges
-             if (obtype == '  q') then
-                hx(nob) = hx(nob) /rdiagbuf(20,n)
-             endif
+             t2 = mpi_wtime()
+             tsum = tsum + t2-t1
 
+             call delete(dhx_dx_read)
           endif
 
           ! normalize q by qsatges
@@ -1142,29 +1185,37 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
              ! observation type
              x_type(nob)  = '  v'
 
-             ! run linearized hx
-             if (nanal <= nanals) then
-                ! read full Hx
-                if (.not. lobsdiag_forenkf) then
-                   hx(nob) = rdiagbuf(20,n)-rdiagbuf2(22,n)
-                ! run linearized Hx
-                else
-                   call readarray(dhx_dx_read, rdiagbuf(ind:nreal,n))
-                   dhx_dx = dhx_dx_read
-  
-                   t1 = mpi_wtime()
-                   call calc_linhx(hx_mean_nobc(nob), state_d,                  &
-                                 real(x_lat(nob)*deg2rad,r_single),      &
-                                 real(x_lon(nob)*deg2rad,r_single),      &
-                                 x_time(nob),                            &
-                                 dhx_dx, hx(nob))
-                   t2 = mpi_wtime()
-                   tsum = tsum + t2-t1
 
-                   call delete(dhx_dx)
-                   call delete(dhx_dx_read)
+             ! run linearized hx
+             ! read full Hx
+             if (.not. lobsdiag_forenkf) then
+               if (nanal <= nanals) then
+                   hx(nob) = rdiagbuf(20,n)-rdiagbuf2(22,n)
+               endif
+             ! run linearized Hx
+             else
+                call readarray(dhx_dx_read, rdiagbuf(ind:nreal,n))
+                dhx_dx(nob) = dhx_dx_read
+
+                t1 = mpi_wtime()
+                call calc_interp(real(x_lat(nob)*deg2rad,r_single),      &
+                                 real(x_lon(nob)*deg2rad,r_single),      &
+                                 x_time(nob), interp(nob))
+
+                if (nanal <= nanals) then
+                   call calc_linhx(hx_mean_nobc(nob), state_d,           &
+                                 interp(nob),dhx_dx(nob),hx(nob),npts,nsdim,nstatefields)
+                   call calc_linhx(0._r_single, state_mean,             &
+                                interp(nob),dhx_dx(nob),hx_mean_lin(nob),npts,nsdim,nstatefields,nob)
+                   hx_linerr(nob) = hx_mean(nob)-hx_mean_lin(nob)
                 endif
+
+                t2 = mpi_wtime()
+                tsum = tsum + t2-t1
+
+                call delete(dhx_dx_read)
              endif
+
           endif
        enddo
        deallocate(cdiagbuf,rdiagbuf)

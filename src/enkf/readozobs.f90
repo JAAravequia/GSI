@@ -20,6 +20,7 @@ module readozobs
 !   2016-11-29 shlyaeva - updated read routine to calculate linearized H(x)
 !                         added write_ozvobs_data to output ensemble spread
 !   2017-12-13  shlyaeva - added netcdf diag read/write capability
+!   2018-02-26  shlyaeva - modifications for model-space localization
 !
 ! attributes:
 !   language: f95
@@ -232,8 +233,11 @@ subroutine get_num_ozobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
 end subroutine get_num_ozobs_nc
 
 ! read ozone observation data
-subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, &
+           interp, dhx_dx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
+  use sparsearr, only: sparr
+  use intweight, only: intw
   implicit none
   character*500, intent(in) :: obspath
   character*10, intent(in)  :: datestring
@@ -248,28 +252,37 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
   character(len=20), dimension(nobs_max), intent(out)   ::  x_type
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
 
+  type(intw),  dimension(nobs_max), intent(out) :: interp
+  type(sparr), dimension(nobs_max), intent(out) :: dhx_dx
+
+
   character(len=8), intent(in) :: id
   integer(i_kind), intent(in)  :: nanal
 
    if (netcdf_diag) then
-      call get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+      call get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, &
+           interp, dhx_dx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
    else
-      call get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+      call get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, &
+           interp, dhx_dx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
    endif
 
 end subroutine get_ozobs_data
 
 ! read ozone observation data from binary file
-subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, &
+           interp, dhx_dx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
 
   use sparsearr,only:sparr, sparr2, readarray, delete, assignment(=)
-  use params,only: nanals, lobsdiag_forenkf
-  use statevec, only: state_d
+  use params,only: nanals, lobsdiag_forenkf, nstatefields
+  use statevec, only: state_d,nsdim
+  use gridinfo, only: npts
   use mpisetup, only: mpi_wtime, nproc
-  use observer_enkf, only: calc_linhx
+  use observer_enkf, only: calc_linhx, calc_interp
+  use intweight
   implicit none
 
   character*500, intent(in) :: obspath
@@ -284,6 +297,9 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   integer(i_kind), dimension(nobs_max), intent(out)     :: x_code
   character(len=20), dimension(nobs_max), intent(out)   ::  x_type
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
+
+  type(intw),  dimension(nobs_max), intent(out) :: interp
+  type(sparr), dimension(nobs_max), intent(out) :: dhx_dx
 
   character(len=8), intent(in) :: id
   integer(i_kind), intent(in)  :: nanal
@@ -302,7 +318,6 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   integer(i_kind) ipe,ind
 
   real(r_double) t1,t2,tsum
-  type(sparr)   :: dhx_dx
   type(sparr2)  :: dhx_dx_read
 
   real(r_single),allocatable,dimension(:,:)::diagbuf,diagbuf2
@@ -456,29 +471,31 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
              hx_mean(nob) = rdiagbuf(1,k,n)-rdiagbuf(2,k,n)
              hx_mean_nobc(nob) = rdiagbuf(1,k,n)-rdiagbuf(2,k,n)
              x_type(nob) = ' oz                 '
-             if (nanal <= nanals) then
-               ! read full Hx from diag file
-               if (.not. lobsdiag_forenkf) then
-                  hx(nob) = rdiagbuf(1,k,n)-rdiagbuf2(2,k,n)
-               ! run linearized Hx 
-               else
-                  ind = ioff0 + 1
-                  ! read dHx/dx profile
-                  call readarray(dhx_dx_read, rdiagbuf(ind:irdim1,k,n))
-                  dhx_dx = dhx_dx_read
-   
-                  t1 = mpi_wtime()
-                  call calc_linhx(hx_mean_nobc(nob), state_d,                  &
-                             real(x_lat(nob)*deg2rad,r_single),         & 
-                             real(x_lon(nob)*deg2rad,r_single),         &
-                             x_time(nob),                               &
-                             dhx_dx, hx(nob))
-                  t2 = mpi_wtime()
-                  tsum = tsum + t2-t1
 
-                  call delete(dhx_dx)
-                  call delete(dhx_dx_read)
-               endif
+             ! read full Hx from diag file
+             if (.not. lobsdiag_forenkf) then
+                if (nanal <= nanals) then
+                   hx(nob) = rdiagbuf(1,k,n)-rdiagbuf2(2,k,n)
+                endif
+               ! run linearized Hx
+             else
+                ind = ioff0 + 1
+                ! read dHx/dx profile
+                call readarray(dhx_dx_read, rdiagbuf(ind:irdim1,k,n))
+                dhx_dx(nob) = dhx_dx_read
+
+                t1 = mpi_wtime()
+                call calc_interp(real(x_lat(nob)*deg2rad,r_single),    &
+                                 real(x_lon(nob)*deg2rad,r_single),     &
+                                 x_time(nob), interp(nob))
+                if (nanal <= nanals) then
+                   call calc_linhx(hx_mean_nobc(nob), state_d,            &
+                                  interp(nob), dhx_dx(nob),hx(nob),npts,nsdim,nstatefields)
+                endif
+                t2 = mpi_wtime()
+                tsum = tsum + t2-t1
+
+                call delete(dhx_dx_read)
              endif
 
            end do ! nn
@@ -510,17 +527,20 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
  end subroutine get_ozobs_data_bin
 
 ! read ozone observation data from netcdf file
-subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, &
+           interp, dhx_dx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
   use nc_diag_read_mod, only: nc_diag_read_get_var
   use nc_diag_read_mod, only: nc_diag_read_get_dim, nc_diag_read_get_global_attr
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
 
   use sparsearr,only:sparr, sparr2, readarray, delete, assignment(=)
-  use params,only: nanals, lobsdiag_forenkf
+  use params,only: nanals, lobsdiag_forenkf, nstatefields
+  use gridinfo, only: npts
   use statevec, only: state_d
   use mpisetup, only: mpi_wtime, nproc
-  use observer_enkf, only: calc_linhx
+  use observer_enkf, only: calc_linhx, calc_interp
+  use intweight
   implicit none
 
   character*500, intent(in) :: obspath
@@ -536,6 +556,9 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
   character(len=20), dimension(nobs_max), intent(out)   :: x_type
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
 
+  type(intw),  dimension(nobs_max), intent(out) :: interp
+  type(sparr), dimension(nobs_max), intent(out) :: dhx_dx
+
   character(len=8), intent(in) :: id
   integer(i_kind), intent(in)  :: nanal
 
@@ -547,7 +570,6 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
   integer(i_kind) :: iunit, iunit2
 
   real(r_double) t1,t2,tsum
-  type(sparr)   :: dhx_dx
 
   real(r_single),  allocatable, dimension (:) :: Latitude, Longitude, Pressure, Time
   integer(i_kind), allocatable, dimension (:) :: Analysis_Use_Flag
@@ -668,24 +690,27 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
            hx_mean(nob) = Observation(i) - Obs_Minus_Forecast_adjusted(i)
            hx_mean_nobc(nob) = Observation(i) - Obs_Minus_Forecast_unadjusted(i)
            x_type(nob) = ' oz                 '
-           if (nanal <= nanals) then
-             ! read full Hx from diag file
-             if (.not. lobsdiag_forenkf) then
-                hx(nob) = Observation(i) - Obs_Minus_Forecast_adjusted2(i)
-               ! run linearized Hx
-             else
-                dhx_dx = Observation_Operator_Jacobian(1:nsdim,i)
-                t1 = mpi_wtime()
-                call calc_linhx(hx_mean_nobc(nob), state_d,                  &
-                           real(x_lat(nob)*deg2rad,r_single),         &
-                           real(x_lon(nob)*deg2rad,r_single),         &
-                           x_time(nob),                               &
-                           dhx_dx, hx(nob))
-                t2 = mpi_wtime()
-                tsum = tsum + t2-t1
 
-                call delete(dhx_dx)
-             endif
+
+           ! read full Hx from diag file
+           if (.not. lobsdiag_forenkf) then
+              if (nanal <= nanals) then
+                 hx(nob) = Observation(i) - Obs_Minus_Forecast_adjusted2(i)
+              endif
+           ! run linearized Hx
+           else
+              dhx_dx(nob) = Observation_Operator_Jacobian(1:nsdim,i)
+
+              t1 = mpi_wtime()
+              call calc_interp(real(x_lat(nob)*deg2rad,r_single),    &
+                               real(x_lon(nob)*deg2rad,r_single),     &
+                               x_time(nob), interp(nob))
+              if (nanal <= nanals) then
+                 call calc_linhx(hx_mean_nobc(nob), state_d,            &
+                                 interp(nob), dhx_dx(nob),hx(nob),npts,nsdim,nstatefields)
+              endif
+              t2 = mpi_wtime()
+              tsum = tsum + t2-t1
            endif
 
          end do ! k

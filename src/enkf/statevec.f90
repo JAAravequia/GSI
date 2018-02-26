@@ -50,7 +50,7 @@ use constants, only : max_varname_length
 implicit none
 private
 public :: read_state, statevec_cleanup, init_statevec
-real(r_single),public, allocatable, dimension(:,:,:) :: state_d
+real(r_single),public, allocatable, dimension(:,:,:) :: state_d, state_mean
 
 integer(i_kind), public :: ns2d, ns3d, nsdim
 character(len=max_varname_length), allocatable, dimension(:), public :: svars3d
@@ -164,9 +164,8 @@ end subroutine init_statevec
 subroutine read_state()
 ! read ensemble members on IO tasks,
 implicit none
-integer(i_kind) nanal, i, nb
+integer(i_kind) nanal
 real(r_double), allocatable, dimension(:,:,:) :: qsat
-real(r_single), allocatable, dimension(:) :: state_mean
 integer(i_kind) ierr
 
 ! must at least nanals tasks allocated.
@@ -190,16 +189,11 @@ if (nproc <= nanals-1) then
    call readgriddata(nanal,svars3d,svars2d,ns3d,ns2d,slevels,nsdim,nstatefields,statefileprefixes,.false.,state_d,qsat)
 
    ! subtract the mean
-   allocate(state_mean(npts)) 
-   do nb = 1, nstatefields
-     do i = 1, nsdim
-       state_mean = state_d(:,i,nb)
-       call mpi_allreduce(mpi_in_place,state_mean,npts,mpi_real4,mpi_sum,mpi_comm_io,ierr)
-       state_mean = state_mean/real(nanals)
-       state_d(:,i,nb) = state_d(:,i,nb) - state_mean
-     enddo
-   enddo
-   deallocate(state_mean)
+   allocate(state_mean(npts,nsdim,nstatefields)) 
+   state_mean = state_d
+   call mpi_allreduce(mpi_in_place,state_mean,npts*nsdim*nstatefields,mpi_real4,mpi_sum,mpi_comm_io,ierr)
+   state_mean = state_mean / float(nanals)
+   state_d = state_d - state_mean
    deallocate(qsat)
 
 endif
@@ -212,6 +206,7 @@ if (allocated(svars3d)) deallocate(svars3d)
 if (allocated(svars2d)) deallocate(svars2d)
 if (allocated(slevels)) deallocate(slevels)
 if (nproc <= nanals-1 .and. allocated(state_d)) deallocate(state_d)
+if (nproc <= nanals-1 .and. allocated(state_mean)) deallocate(state_mean)
 call gridinfo_cleanup()
 end subroutine statevec_cleanup
 

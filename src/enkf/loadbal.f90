@@ -90,6 +90,7 @@ module loadbal
 !   2015-07-25  Remove observation box selection (use kdtree instead).
 !   2016-05-02  shlyaeva: modification for reading state vector from table
 !   2016-09-07  shlyaeva: moved distribution of chunks here from controlvec
+!   2018-02-26  shlyaeva: modifications for model-space localization
 !
 ! attributes:
 !   language: f95
@@ -99,12 +100,15 @@ module loadbal
 use mpisetup
 use params, only: datapath, nanals, simple_partition, letkf_flag,&
                   corrlengthnh, corrlengthsh, corrlengthtr, lupd_obspace_serial
-use enkf_obsmod, only: nobstot, obloc, oblnp, ensmean_ob, obtime, anal_ob, corrlengthsq
+use enkf_obsmod, only: nobstot, obloc, oblnp, ensmean_ob, obtime, anal_ob, corrlengthsq, &
+                       dhx_dx, interp
 use kinds, only: r_kind, i_kind, r_double, r_single
 use kdtree2_module, only: kdtree2, kdtree2_create, kdtree2_destroy, &
                           kdtree2_result, kdtree2_r_nearest
 use gridinfo, only: gridloc, logp, latsgrd, nlevs_pres, npts
 use constants, only: zero, rad2deg, deg2rad
+use intweight, only: intw
+use sparsearr, only: sparr, delete
 
 implicit none
 private
@@ -119,9 +123,17 @@ real(r_single),public, allocatable, dimension(:,:,:) :: ensmean_chunk, ensmean_c
 real(r_single),public, allocatable, dimension(:,:) :: obloc_chunk, grdloc_chunk
 real(r_single),public, allocatable, dimension(:) :: oblnp_chunk, &
  obtime_chunk, ensmean_obchunk
+
+type(sparr), public, allocatable, dimension(:) :: dhx_dx_chunk
+type(intw),  public, allocatable, dimension(:) :: interp_chunk
+
 integer(i_kind),public, allocatable, dimension(:) :: iprocob, indxob_chunk,&
                           numptsperproc, numobsperproc
 integer(i_kind),public, allocatable, dimension(:,:) :: indxproc, indxproc_obs
+
+integer(i_kind),public, allocatable, dimension(:) :: global_proc_id     ! which processor has i-th gridpoint
+integer(i_kind),public, allocatable, dimension(:) :: global_proc_index  ! what is the index of i-th global point in
+
 integer(i_kind),public :: npts_min, npts_max, nobs_min, nobs_max
 integer(8) totsize
 ! kd-tree structures.
@@ -184,6 +196,9 @@ end do
 npts_max = maxval(numptsperproc)
 npts_min = minval(numptsperproc)
 allocate(indxproc(numproc,npts_max))
+
+allocate(global_proc_id(npts), global_proc_index(npts))
+
 ! indxproc(np,i) is i'th horiz grid index for processor np.
 ! there are numptsperpoc(np) i values for processor np
 rtmp = 0
@@ -200,7 +215,10 @@ do n=1,npts
    endif
    numptsperproc(np) = numptsperproc(np)+1 ! recalculate
    indxproc(np,numptsperproc(np)) = n
+   global_proc_id(n) = np-1
+   global_proc_index(n) = numptsperproc(np)
 end do
+
 ! print estimated workload for each task
 if (nproc == 0) then
    do np=1,numproc
@@ -324,6 +342,8 @@ if (.not. letkf_flag .or. lupd_obspace_serial) then
    allocate(obtime_chunk(numobsperproc(nproc+1)))
    allocate(ensmean_obchunk(numobsperproc(nproc+1)))
    allocate(indxob_chunk(nobstot))
+   allocate(dhx_dx_chunk(numobsperproc(nproc+1)))
+   allocate(interp_chunk(numobsperproc(nproc+1)))
    indxob_chunk = -1
    do nob1=1,numobsperproc(nproc+1)
       nob2 = indxproc_obs(nproc+1,nob1)
@@ -332,6 +352,9 @@ if (.not. letkf_flag .or. lupd_obspace_serial) then
       indxob_chunk(nob2) = nob1
       ensmean_obchunk(nob1) = ensmean_ob(nob2)
       obloc_chunk(:,nob1) = obloc(:,nob2)
+      dhx_dx_chunk(nob1) = dhx_dx(nob2)
+      call delete(dhx_dx(nob2))
+      interp_chunk(nob1) = interp(nob2)
    enddo
    ! set up kd-trees for serial filter to search only the subset
    ! of gridpoints, obs to be updated on this processor..
@@ -599,6 +622,10 @@ if (allocated(indxproc_obs)) deallocate(indxproc_obs)
 if (allocated(numptsperproc)) deallocate(numptsperproc)
 if (allocated(numobsperproc)) deallocate(numobsperproc)
 if (allocated(indxproc)) deallocate(indxproc)
+if (allocated(global_proc_id)) deallocate(global_proc_id)
+if (allocated(global_proc_index)) deallocate(global_proc_index)
+if (allocated(dhx_dx_chunk)) deallocate(dhx_dx_chunk)
+if (allocated(interp_chunk)) deallocate(interp_chunk)
 if (associated(kdtree_obs)) call kdtree2_destroy(kdtree_obs)
 if (associated(kdtree_obs2)) call kdtree2_destroy(kdtree_obs2)
 if (associated(kdtree_grid)) call kdtree2_destroy(kdtree_grid)

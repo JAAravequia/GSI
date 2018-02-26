@@ -91,6 +91,7 @@ module enkf_obsmod
 !        for oz and it crashes EnKF compiled by GNU Fortran
 !     NOTE: this requires anavinfo file to be present at running directory
 !   2016-11-29  shlyaeva: Added the option of writing out ensemble spread in diag files
+!   2018-02-26  shlyaeva: modifications for model-space localization
 !
 ! attributes:
 !   language: f95
@@ -107,19 +108,24 @@ use params, only: &
       lnsigcutoffsatnh, lnsigcutoffsatsh, lnsigcutoffsattr,&
       varqc, huber, zhuberleft, zhuberright,&
       lnsigcutoffpsnh, lnsigcutoffpssh, lnsigcutoffpstr
-
+use sparsearr, only: sparr
+use intweight, only: intw
 use state_vectors, only: init_anasv
-use mpi_readobs, only:  mpi_getobs
+use mpi_readobs, only:  mpi_getobs, mpi_obsstats
 
 implicit none
 private
-public :: readobs, obsmod_cleanup, write_obsstats
+public :: readobs, obsmod_cleanup, write_obsstats, calc_obsstats
 
 real(r_single), public, allocatable, dimension(:) :: obsprd_prior, ensmean_obnobc,&
- ensmean_ob, ob, oberrvar, obloclon, obloclat, &
+ ensmean_ob, ensmean_ob_linerr, ob, oberrvar, obloclon, obloclat, &
  obpress, obtime, oberrvar_orig,&
  oblnp, obfit_prior, prpgerr, oberrvarmean, probgrosserr, &
  lnsigl,corrlengthsq,obtimel
+
+type(intw), public, allocatable, dimension(:) :: interp
+type(sparr), public, allocatable, dimension(:) :: dhx_dx
+
 integer(i_kind), public, allocatable, dimension(:) :: numobspersat
 integer(i_kind), allocatable, dimension(:)         :: diagused
 ! posterior stats computed in enkf_update
@@ -138,6 +144,7 @@ integer(i_kind) :: nobs_convdiag, nobs_ozdiag, nobs_satdiag, nobstotdiag
 ! for letkf, anal_ob used on all tasks in letkf_update (bcast from root in loadbal), deallocated
 ! in letkf_update.
 real(r_single), public, allocatable, dimension(:,:) :: anal_ob
+real(r_single), public, allocatable, dimension(:) :: mem_ob
 
 contains
 
@@ -199,11 +206,11 @@ deltapredx = zero
 t1 = mpi_wtime()
 call mpi_getobs(datapath, datestring, nobs_conv, nobs_oz, nobs_sat, nobstot,  &
                 nobs_convdiag,nobs_ozdiag, nobs_satdiag, nobstotdiag,         &
-                obsprd_prior, ensmean_obnobc, ensmean_ob, ob,                 &
+                obsprd_prior, ensmean_obnobc, ensmean_ob, ensmean_ob_linerr,  &
+                interp, dhx_dx, ob,                 &
                 oberrvar, obloclon, obloclat, obpress,                        &
                 obtime, oberrvar_orig, stattype, obtype, biaspreds, diagused, &
-                anal_ob,indxsat,nanals)
-
+                anal_ob,mem_ob,indxsat,nanals)
 tdiff = mpi_wtime()-t1
 call mpi_reduce(tdiff,tdiffmax,1,mpi_real4,mpi_max,0,mpi_comm_world,ierr)
 if (nproc == 0) then
@@ -285,10 +292,39 @@ end do
 
 ! these allocated here, but not computed till after the state 
 ! update in enkf_update.
-allocate(obfit_post(nobstot))
-allocate(obsprd_post(nobstot))
-obsprd_post = zero
+!allocate(obfit_post(nobstot))
+!allocate(obsprd_post(nobstot))
+!obsprd_post = zero
 end subroutine readobs
+
+subroutine calc_obsstats()
+implicit none
+
+!  print *, nproc, ' alloc? ', allocated(dhx_dx), allocated(interp)
+
+  call mpi_obsstats(nobs_conv, nobs_oz, nobs_sat, nobstot, &
+                     mem_ob, ensmean_ob-ensmean_obnobc, interp, dhx_dx, obfit_post, obsprd_post, nanals)
+!_linerr, interp, dhx_dx, obfit_post, obsprd_post, nanals)
+!-ensmean_obnobc, interp, dhx_dx, obfit_post, obsprd_post, nanals)
+
+  if (nproc == 0) then
+     ! calc O-F (obfit_post returned from obsstats is Hx
+     obfit_post = ob - obfit_post
+!     print *, 'obs: ', ob(1:nobstot)
+!     print *, 'hxmean: ', ob(1:nobstot) - obfit_post(1:nobstot)
+!     print *, 'hxmean prior: ', ob(1:nobstot) - obfit_prior(1:nobstot)
+
+
+     print *, 'post fit conv: ', minval(obfit_post(1:nobs_conv)),maxval(obfit_post(1:nobs_conv))
+     print *, 'post fit oz: ', minval(obfit_post(nobs_conv+1:nobs_conv+nobs_oz)),&
+                                 maxval(obfit_post(nobs_conv+1:nobs_conv+nobs_oz))
+     print *, 'post fit sat: ', minval(obfit_post(nobs_conv+nobs_oz+1:nobstot)),&
+                                 maxval(obfit_post(nobs_conv+nobs_oz+1:nobstot))
+
+  endif
+
+end subroutine calc_obsstats
+
 
 subroutine write_obsstats()
 use readconvobs, only: write_convobs_data
@@ -470,6 +506,8 @@ if (allocated(biasprednorm)) deallocate(biasprednorm)
 if (allocated(biasprednorminv)) deallocate(biasprednorminv)
 if (allocated(anal_ob)) deallocate(anal_ob)
 if (allocated(diagused)) deallocate(diagused)
+if (allocated(dhx_dx)) deallocate(dhx_dx)
+if (allocated(interp)) deallocate(interp)
 end subroutine obsmod_cleanup
 
 

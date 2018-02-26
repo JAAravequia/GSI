@@ -81,11 +81,13 @@ end interface
 interface writearray
   module procedure writearray_sparr2
   module procedure writearray_r_sparr2
+  module procedure writearray_sparr
 end interface
 
 ! reading sparse array from array
 interface readarray
   module procedure readarray_sparr2
+  module procedure readarray_sparr
   module procedure readarray_r_sparr2
 end interface
 
@@ -282,6 +284,31 @@ subroutine writearray_r_sparr2(this, array, ierr)
 
 end subroutine writearray_r_sparr2
 
+! writing out sparse array to array
+subroutine writearray_sparr(this, array, ierr)
+  type(sparr), intent(in)                :: this
+  real(r_single), dimension(:), intent(inout) :: array
+  integer(i_kind), optional, intent(out)  :: ierr
+
+  integer(i_kind) :: ind
+
+  if (present(ierr)) ierr = 0
+  if (size(array) < size_sparr(this)) then
+    print *, 'Error writing sparse array to array: array size too small'
+    if (present(ierr)) ierr = -1
+    return
+  endif
+
+  ind = 1
+  array(ind) = this%nnz
+  ind = ind + 1
+  array(ind:ind+this%nnz-1) = this%ind
+  ind = ind + this%nnz
+  array(ind:ind+this%nnz-1) = this%val
+
+end subroutine writearray_sparr
+
+
 
 ! reading sparse array from array
 subroutine readarray_sparr2(this, array)
@@ -307,6 +334,25 @@ subroutine readarray_sparr2(this, array)
 end subroutine readarray_sparr2
 
 ! reading sparse array from array
+subroutine readarray_sparr(this, array)
+  type(sparr), intent(out)                 :: this
+  real(r_single), dimension(:), intent(in) :: array
+
+  integer(i_kind) :: ind, nnz
+
+  ind = 1
+  nnz = array(ind)
+  ind = ind + 1
+
+  call init_sparr(this, nnz)
+
+  this%ind = array(ind:ind+nnz-1)
+  ind = ind + nnz
+
+  this%val = array(ind:ind+nnz-1)
+
+end subroutine readarray_sparr
+
 subroutine readarray_r_sparr2(this, array)
   type(sparr2), intent(inout)            :: this
   real(r_kind), dimension(:), intent(in) :: array

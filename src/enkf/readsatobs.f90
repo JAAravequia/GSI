@@ -24,6 +24,7 @@ module readsatobs
 !   2016-11-29 shlyaeva - updated read routine to calculate linearized H(x)
 !                         added write_ozvobs_data to output ensemble spread
 !   2017-12-13  shlyaeva - added netcdf diag read/write capability
+!   2018-02-26  shlyaeva - modifications for model-space localization
 !
 ! attributes:
 !   language: f95
@@ -286,9 +287,12 @@ subroutine get_num_satobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
 end subroutine get_num_satobs_nc
 
 ! read radiance data
-subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_linerr, &
+           interp, dhx_dx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
   use radinfo, only: npred
+  use sparsearr, only: sparr
+  use intweight, only: intw
   implicit none
 
   character*500, intent(in)     :: obspath
@@ -297,7 +301,7 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
   integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
 
   real(r_single), dimension(nobs_max), intent(out) :: hx_mean,hx_mean_nobc, hx
-  real(r_single), dimension(nobs_max), intent(out) :: x_obs
+  real(r_single), dimension(nobs_max), intent(out) :: x_obs, hx_linerr
   real(r_single), dimension(nobs_max), intent(out) :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out) :: x_lon, x_lat
   real(r_single), dimension(nobs_max), intent(out) :: x_press, x_time
@@ -306,28 +310,37 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
   real(r_single), dimension(npred+1,nobs_max), intent(out) :: x_biaspred
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
 
+  type(intw),  dimension(nobs_max), intent(out) :: interp
+  type(sparr), dimension(nobs_max), intent(out) :: dhx_dx
+
   character(len=10), intent(in) :: id
   integer(i_kind), intent(in)   :: nanal
 
   if (netcdf_diag) then
-    call get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+    call get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_linerr, &
+           interp, dhx_dx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
   else
-    call get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+    call get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_linerr, &
+           interp, dhx_dx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
   endif
 
 end subroutine get_satobs_data
 
 ! read radiance data from binary file
-subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_linerr, &
+           interp, dhx_dx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
   use radinfo, only: iuse_rad,nusis,jpch_rad,npred,adp_anglebc,emiss_bc
-  use params, only: nanals, lobsdiag_forenkf
-  use statevec, only: state_d
+  use params, only: nanals, lobsdiag_forenkf, nstatefields
+  use statevec, only: state_d, state_mean, nsdim
+  use gridinfo, only: npts
   use constants, only: deg2rad, zero
   use mpisetup, only: nproc, mpi_wtime
-  use observer_enkf, only: calc_linhx
+  use observer_enkf, only: calc_linhx, calc_interp
+  use sparsearr
+  use intweight
   implicit none
 
   character*500, intent(in)     :: obspath
@@ -336,7 +349,7 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
   integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
 
   real(r_single), dimension(nobs_max), intent(out) :: hx_mean,hx_mean_nobc, hx
-  real(r_single), dimension(nobs_max), intent(out) :: x_obs
+  real(r_single), dimension(nobs_max), intent(out) :: x_obs, hx_linerr
   real(r_single), dimension(nobs_max), intent(out) :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out) :: x_lon, x_lat
   real(r_single), dimension(nobs_max), intent(out) :: x_press, x_time
@@ -345,6 +358,10 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
   real(r_single), dimension(npred+1,nobs_max), intent(out) :: x_biaspred
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
 
+  type(intw),  dimension(nobs_max), intent(out) :: interp
+  type(sparr), dimension(nobs_max), intent(out) :: dhx_dx
+
+  real(r_single), dimension(nobs_max) :: hx_mean_lin
 
   character(len=10), intent(in) :: id
   integer(i_kind), intent(in)   :: nanal
@@ -509,21 +526,31 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
          ! un-bias corrected Hx
          hx_mean_nobc(nobs) = x_obs(nobs) - data_chan(n)%omgnbc
 
-         if (nanal <= nanals) then
-            ! read full Hx
-            if (.not. lobsdiag_forenkf) then
-               hx(nobs) = x_obs(nobs) - data_chan2(n)%omgnbc
-            ! run linearized Hx
-            else
-               t1 = mpi_wtime()
-               call calc_linhx(hx_mean_nobc(nobs), state_d,              &
-                             real(x_lat(nobs)*deg2rad,r_single),  &
+
+         if (.not. lobsdiag_forenkf) then
+           if (nanal <= nanals) then
+              hx(nobs) = x_obs(nobs) - data_chan2(n)%omgnbc
+           endif
+         ! run linearized Hx
+         else
+            t1 = mpi_wtime()
+            dhx_dx(nobs) = data_chan(n)%dhx_dx
+
+            call calc_interp(real(x_lat(nobs)*deg2rad,r_single),  &
                              real(x_lon(nobs)*deg2rad,r_single),  &
-                             x_time(nobs),                        &
-                             data_chan(n)%dhx_dx, hx(nobs))
-               t2 = mpi_wtime()
-               tsum = tsum + t2-t1
+                             x_time(nobs), interp(nobs))
+
+            if (nanal <= nanals) then
+               call calc_linhx(hx_mean_nobc(nobs), state_d,              &
+                               interp(nobs), dhx_dx(nobs),hx(nobs),npts,nsdim,nstatefields)
+               call calc_linhx(0._r_single, state_mean,             &
+                               interp(nobs),dhx_dx(nobs),hx_mean_lin(nobs),npts,nsdim,nstatefields)
+               hx_linerr(nobs) = hx_mean(nobs)-hx_mean_lin(nobs)
             endif
+            call delete(data_chan(n)%dhx_dx)
+
+            t2 = mpi_wtime()
+            tsum = tsum + t2-t1
          endif
 
          ! data_chan%errinv is inverse error variance.
@@ -583,18 +610,21 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
  end subroutine get_satobs_data_bin
 
 ! read radiance data from netcdf file
-subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_linerr,&
+           interp, dhx_dx, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
   use nc_diag_read_mod, only: nc_diag_read_get_var
   use nc_diag_read_mod, only: nc_diag_read_get_dim, nc_diag_read_get_global_attr
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
 
   use radinfo, only: iuse_rad,nusis,jpch_rad,npred,adp_anglebc,emiss_bc
-  use params, only: nanals, lobsdiag_forenkf
-  use statevec, only: state_d
+  use params, only: nanals, lobsdiag_forenkf, nstatefields
+  use statevec, only: state_d, nsdim, state_mean
+  use gridinfo, only: npts
   use constants, only: deg2rad, zero
   use mpisetup, only: nproc, mpi_wtime
-  use observer_enkf, only: calc_linhx
+  use observer_enkf, only: calc_linhx, calc_interp
+  use intweight
   use sparsearr, only: sparr, assignment(=), delete, sparr2, new
 
   implicit none
@@ -605,7 +635,7 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
 
   real(r_single), dimension(nobs_max), intent(out) :: hx_mean,hx_mean_nobc, hx
-  real(r_single), dimension(nobs_max), intent(out) :: x_obs
+  real(r_single), dimension(nobs_max), intent(out) :: x_obs, hx_linerr
   real(r_single), dimension(nobs_max), intent(out) :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out) :: x_lon, x_lat
   real(r_single), dimension(nobs_max), intent(out) :: x_press, x_time
@@ -614,6 +644,10 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   real(r_single), dimension(npred+1,nobs_max), intent(out) :: x_biaspred
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
 
+  type(intw),  dimension(nobs_max), intent(out) :: interp
+  type(sparr), dimension(nobs_max), intent(out) :: dhx_dx
+
+  real(r_single), dimension(nobs_max) :: hx_mean_lin
 
   character(len=10), intent(in) :: id
   integer(i_kind), intent(in)   :: nanal
@@ -633,7 +667,6 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   real(r_double) t1,t2,tsum,tsum2
 
   type(sparr2)    :: dhx_dx_read
-  type(sparr)     :: dhx_dx
 
   integer(i_kind), dimension(:), allocatable :: Satinfo_Chan, Use_Flag, chind, chaninfoidx
   real(r_kind), dimension(:), allocatable :: error_variance
@@ -832,29 +865,36 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
         ! un-bias corrected Hx
         hx_mean_nobc(iob) = x_obs(iob) - Obs_Minus_Forecast_unadjusted(i)
 
-        if (nanal <= nanals) then
-           ! read full Hx
-           if (.not. lobsdiag_forenkf) then
+         ! read full Hx
+         if (.not. lobsdiag_forenkf) then
+           if (nanal <= nanals) then
               hx(iob) = x_obs(iob) - Obs_Minus_Forecast_unadjusted2(i)
-           ! run linearized Hx
-           else
-              call new(dhx_dx_read, nnz, nind)
-              dhx_dx_read%st_ind = Observation_Operator_Jacobian_stind(:,i)
-              dhx_dx_read%end_ind = Observation_Operator_Jacobian_endind(:,i)
-              dhx_dx_read%val = Observation_Operator_Jacobian_val(:,i)
-              dhx_dx = dhx_dx_read
-              t1 = mpi_wtime()
-              call calc_linhx(hx_mean_nobc(iob), state_d,        &
-                             real(x_lat(iob)*deg2rad,r_single),  &
-                             real(x_lon(iob)*deg2rad,r_single),  &
-                             x_time(iob),                        &
-                             dhx_dx, hx(iob))
-              t2 = mpi_wtime()
-              tsum = tsum + t2-t1
-              call delete(dhx_dx)
-              call delete(dhx_dx_read)
            endif
-        endif
+         ! run linearized Hx
+         else
+            t1 = mpi_wtime()
+            call new(dhx_dx_read, nnz, nind)
+            dhx_dx_read%st_ind = Observation_Operator_Jacobian_stind(:,i)
+            dhx_dx_read%end_ind = Observation_Operator_Jacobian_endind(:,i)
+            dhx_dx_read%val = Observation_Operator_Jacobian_val(:,i)
+            dhx_dx(iob) = dhx_dx_read
+            call calc_interp(real(x_lat(iob)*deg2rad,r_single),  &
+                             real(x_lon(iob)*deg2rad,r_single),  &
+                             x_time(iob), interp(iob))
+
+            if (nanal <= nanals) then
+               call calc_linhx(hx_mean_nobc(iob), state_d,              &
+                               interp(iob), dhx_dx(iob),hx(iob),npts,nsdim,nstatefields)
+               call calc_linhx(0._r_single, state_mean,             &
+                               interp(iob), dhx_dx(iob),hx_mean_lin(iob),npts,nsdim,nstatefields)
+               hx_linerr(iob) = hx_mean(iob)-hx_mean_lin(iob)
+            endif
+
+            call delete(dhx_dx_read)
+
+            t2 = mpi_wtime()
+            tsum = tsum + t2-t1
+         endif
 
         ! data_chan%errinv is inverse error variance.
         x_errorig(iob) = error_variance(chind(i))**2
