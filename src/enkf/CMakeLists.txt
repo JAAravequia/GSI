@@ -54,9 +54,9 @@ if(BUILD_ENKF)
   
   add_definitions(${MPI_Fortran_FLAGS})
   
-  include_directories(${CMAKE_CURRENT_BINARY_DIR} "${PROJECT_BINARY_DIR}/include/wrf" "${PROJECT_BINARY_DIR}/include/global"  ${CMAKE_CURRENT_BINARY_DIR}/..
-  ${MPI_Fortran_INCLUDE_DIRS} ${MPI_INCLUDE_PATH} ${CORE_INCS}
-  ${NETCDF_INCLUDES} )
+  include_directories(${CMAKE_CURRENT_BINARY_DIR} "${PROJECT_BINARY_DIR}/include/wrf" "${PROJECT_BINARY_DIR}/include/global"  ${CMAKE_CURRENT_BINARY_DIR}/.. ${MPI_Fortran_INCLUDE_DIRS} ${MPI_Fortran_INCLUDE_PATH} ${CORE_INCS} ${NETCDF_INCLUDES} )
+  message("HEY in enkf mpi inc dirs are ${MPI_Fortran_INCLUDE_DIRS}")
+  message("HEY in enkf mpi inc path is  ${MPI_Fortran_INCLUDE_PATH}")
   link_directories(${MPI_Fortran_LIBRARIES})
  
   set_source_files_properties( ${ENKF_SRCS} PROPERTIES COMPILE_FLAGS ${ENKF_Fortran_FLAGS} )
