@@ -50,7 +50,6 @@ module satthin
 !   sub map2tgrid      - map observation to location on thinning grid
 !   sub destroygrids   - deallocate thinning grid arrays
 !   sub destroy_sfc    - deallocate full horizontal surface arrays
-!   sub indexx         - sort array into ascending order
 !
 ! Usecase destription:
 !     read_obs    -->  read_airs, etc
@@ -107,7 +106,6 @@ module satthin
   public :: map2tgrid
   public :: destroygrids
   public :: destroy_sfc
-  public :: indexx
 ! set passed variables to public
   public :: rlat_min,rlon_min,dlat_grid,dlon_grid,superp,super_val1,super_val
   public :: veg_type_full,soil_type_full,sfc_rough_full,sno_full,sst_full
@@ -1129,142 +1127,5 @@ contains
     return
   end subroutine destroy_sfc
 
-  subroutine indexx(n,arr,indx)
-!$$$  subprogram documentation block
-!                .      .    .                                       .
-! subprogram:    indexx
-!     prgmmr:    treadon     org: np23                date: 2002-10-17
-!
-! abstract:  This routine indexes a sort key array, arr, such that
-!            arr(indx(i),i=1,n) is the sort key in ascending order.
-!
-! program history log:
-!   2002-10-17  treadon
-!   2004-06-22  treadon - update documentation
-!
-!   input argument list:
-!     n    - size of sort key array
-!     arr  - sort key array
-!
-!   output argument list:
-!     indx - index array
-!
-! attributes:
-!   language: f90
-!   machine:  ibm rs/6000 sp
-!
-!$$$
-    use kinds, only: r_double
-    use constants, only: one
-    implicit none
-
-    integer(i_kind) maxblock
-    parameter (maxblock=1000)
-
-    integer(i_kind),intent(in   ) :: n
-    real(r_kind)   ,intent(in   ) :: arr(n)
-
-    integer(i_kind),intent(  out) :: indx(n)
-
-#ifdef ibm_sp
-    real(r_kind),dimension(maxblock)::work
-    real(r_double) oned
-
-    oned=1._r_double
-    if (digits(one)<digits(oned)) then
-       call ssorts(arr,1,n,indx,work,maxblock)
-    else
-       call dsorts(arr,1,n,indx,work,maxblock)
-    endif
-#else
-    integer(i_kind) m,nstack
-    parameter (m=7,nstack=500)
-    integer(i_kind) i,indxt,ir,itemp,j,jstack,k,l,istack(nstack)
-    real(r_kind) a
-    
-    do j=1,n
-       indx(j)=j
-    end do
-    jstack=0
-    l=1
-    ir=n
-    
-1   continue
-    
-    if(ir-l<m)then
-       do j=l+1,ir
-          indxt=indx(j)
-          a=arr(indxt)
-          do i=j-1,l,-1
-             if(arr(indx(i))<=a)goto 2
-             indx(i+1)=indx(i)
-          end do
-          i=l-1
-2         continue
-          indx(i+1)=indxt
-       end do
-       if(jstack==0)return
-       ir=istack(jstack)
-       l=istack(jstack-1)
-       jstack=jstack-2
-       
-    else
-       k=(l+ir)/2
-       itemp=indx(k)
-       indx(k)=indx(l+1)
-       indx(l+1)=itemp
-       if(arr(indx(l))>arr(indx(ir)))then
-          itemp=indx(l)
-          indx(l)=indx(ir)
-          indx(ir)=itemp
-       endif
-       if(arr(indx(l+1))>arr(indx(ir)))then
-          itemp=indx(l+1)
-          indx(l+1)=indx(ir)
-          indx(ir)=itemp
-       endif
-       if(arr(indx(l))>arr(indx(l+1)))then
-          itemp=indx(l)
-          indx(l)=indx(l+1)
-          indx(l+1)=itemp
-       endif
-       i=l+1
-       j=ir
-       indxt=indx(l+1)
-       a=arr(indxt)
-3      continue
-       i=i+1
-       if(arr(indx(i))<a)goto 3
-       
-4      continue
-       j=j-1
-       if(arr(indx(j))>a)goto 4
-       if(j<i)goto 5
-       itemp=indx(i)
-       indx(i)=indx(j)
-       indx(j)=itemp
-       goto 3
-       
-5      continue
-       indx(l+1)=indx(j)
-       indx(j)=indxt
-       jstack=jstack+2
-       if(jstack>nstack)then
-          write(6,*)'INDEXX:  nstack=',nstack,' too small in indexx'
-          call stop2(32)
-       endif
-       if(ir-i+1>=j-l)then
-          istack(jstack)=ir
-          istack(jstack-1)=i
-          ir=j-1
-       else
-          istack(jstack)=j-1
-          istack(jstack-1)=l
-          l=i
-       endif
-    endif
-    goto 1
-#endif
-  end subroutine indexx
 
 end module satthin

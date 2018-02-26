@@ -8282,7 +8282,6 @@ do i=ig1,igm
       ins1(i)=ism-nom    ! reset index of first point of stencil
    endif
 enddo
-ns=ism
 
 !----------------------------------------------------------------------------
 ! Use Newton-Raphson iterations to locate the g-coordinates of all this
@@ -8306,18 +8305,23 @@ do i=is0+1,ism-1 ! Loop over s-grid target points interior to this segment
 !----------------------------------------------------------------------------
 ! Perform Newton-Raphson iterations to refine interval fraction, r:
 !----------------------------------------------------------------------------
-   do init=1,nnit
+   ns=-1
+   loop1: do init=1,nnit
       call lagw(hunit,r,q,wt,dwt,no) ! Get Lagrange weights, wt and d(wt)/dg
       estar =dot_product(wt, sofg(ie1:ien))-et ! <- Residual error, estar.
       destar=dot_product(dwt,sofg(ie1:ien))    ! <- d(estar)/dg.
       dr=-estar/destar                         ! <- Newton correction to r
       r=r+dr                                   ! <- Refined estimate, r
-      if(abs(dr) <= rcrit)goto 1               ! <- Converged enough yet?
-   enddo
- ! stop 'Too many Newton iterations'           ! <- It never convergenced! 
-   write(6,*)' Too many Newton iterations'           ! <- It never convergenced! 
-   ns=-1
-   return
+      if(abs(dr) <= rcrit)then 
+         ns=ism                                ! <- Converged enough yet?
+         exit loop1
+      end if
+   enddo loop1
+   if(ns == -1)then
+!     stop 'Too many Newton iterations'           ! <- It never convergenced! 
+      write(6,*)' Too many Newton iterations'           ! <- It never convergenced! 
+      return
+   end if
 1  wt=wt+dr*dwt                                ! <- Final refinement to wt
    cofs(i)=dot_product(wt, cofg(ie1:ien))      ! <- Interpolate c(s)
 enddo

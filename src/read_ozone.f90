@@ -255,159 +255,159 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 
      if(iret/=0) goto 160
      
-110  continue
-     call readsb(lunin,iret)
-     if (iret/=0) then
-        call readmg(lunin,subset,jdate,iret)
-        if (iret/=0) goto 150
-        goto 110
-     endif
+     obsloop: do
+        call readsb(lunin,iret)
+        if (iret/=0) then
+           call readmg(lunin,subset,jdate,iret)
+           if (iret/=0) goto 150
+           cycle obsloop
+        endif
      
-!    extract header information
-!    BUFR code values for satellite identifiers are listed in
-!    Dennis Keyser's website,
-!    http://www.emc.ncep.noaa.gov/mmb/papers/keyser/Satellite_Historical.txt
+!       extract header information
+!       BUFR code values for satellite identifiers are listed in
+!       Dennis Keyser's website,
+!       http://www.emc.ncep.noaa.gov/mmb/papers/keyser/Satellite_Historical.txt
 
-     call ufbint(lunin,hdroz,10,1,iret,ozstr)
-     rsat = hdroz(1); ksatid=rsat
-     if(jsatid == 'nim07') kidsat = 767
-     if(jsatid == 'n09') kidsat = 201
-     if(jsatid == 'n11') kidsat = 203
-     if(jsatid == 'n14') kidsat = 205
-     if(jsatid == 'n16') kidsat = 207
-     if(jsatid == 'n17') kidsat = 208
-     if(jsatid == 'n18') kidsat = 209
-     if(jsatid == 'n19') kidsat = 223
+        call ufbint(lunin,hdroz,10,1,iret,ozstr)
+        rsat = hdroz(1); ksatid=rsat
+        if(jsatid == 'nim07') kidsat = 767
+        if(jsatid == 'n09') kidsat = 201
+        if(jsatid == 'n11') kidsat = 203
+        if(jsatid == 'n14') kidsat = 205
+        if(jsatid == 'n16') kidsat = 207
+        if(jsatid == 'n17') kidsat = 208
+        if(jsatid == 'n18') kidsat = 209
+        if(jsatid == 'n19') kidsat = 223
 
-     if (ksatid /= kidsat) go to 110
+        if (ksatid /= kidsat) cycle obsloop
 
-     nmrecs=nmrecs+nloz+1
+        nmrecs=nmrecs+nloz+1
     
-!    Convert observation location to radians
-     slats0= hdroz(2)
-     slons0= hdroz(3)
-     if(abs(slats0)>90._r_kind .or. abs(slons0)>r360) go to 110  
-     if(slons0< zero) slons0=slons0+r360
-     if(slons0==r360) slons0=zero
-     dlat_earth_deg = slats0
-     dlon_earth_deg = slons0
-     dlat_earth = slats0 * deg2rad
-     dlon_earth = slons0 * deg2rad
+!       Convert observation location to radians
+        slats0= hdroz(2)
+        slons0= hdroz(3)
+        if(abs(slats0)>90._r_kind .or. abs(slons0)>r360) cycle obsloop
+        if(slons0< zero) slons0=slons0+r360
+        if(slons0==r360) slons0=zero
+        dlat_earth_deg = slats0
+        dlon_earth_deg = slons0
+        dlat_earth = slats0 * deg2rad
+        dlon_earth = slons0 * deg2rad
 
-     if(regional)then
-        call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
-        if(outside) go to 110
-     else
-        dlat = dlat_earth
-        dlon = dlon_earth
-        call grdcrd1(dlat,rlats,nlat,1)
-        call grdcrd1(dlon,rlons,nlon,1)
-     endif
+        if(regional)then
+           call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
+           if(outside) cycle obsloop
+        else
+           dlat = dlat_earth
+           dlon = dlon_earth
+           call grdcrd1(dlat,rlats,nlat,1)
+           call grdcrd1(dlon,rlons,nlon,1)
+        endif
      
-!    Special check for NOAA-17 version 6
-!    Before July 2007 NOAA-17 SBUV/2 has a stray light problem which produces
-!    erroneous ozone profile retrievals for a limited portion
-!    of its measurements. The contaminated signals only occur
-!    in the Southern Hemisphere and only for Solar Zenith
-!    Angles (SZA) greater than 76 Degrees.
+!       Special check for NOAA-17 version 6
+!       Before July 2007 NOAA-17 SBUV/2 has a stray light problem which produces
+!       erroneous ozone profile retrievals for a limited portion
+!       of its measurements. The contaminated signals only occur
+!       in the Southern Hemisphere and only for Solar Zenith
+!       Angles (SZA) greater than 76 Degrees.
 
-     if (version6) then
-        solzen = hdroz(9)    ! solar zenith angle
-        solzenp= hdroz(10)   ! profile solar zenith angle
-        if (ksatid==208 .and. dlat_earth<zero .and. solzenp > r76) goto 110
-     else if(version8)then
-        solzen = hdroz(10)    ! solar zenith angle
-     endif
+        if (version6) then
+           solzen = hdroz(9)    ! solar zenith angle
+           solzenp= hdroz(10)   ! profile solar zenith angle
+           if (ksatid==208 .and. dlat_earth<zero .and. solzenp > r76) cycle obsloop
+        else if(version8)then
+           solzen = hdroz(10)    ! solar zenith angle
+        endif
 
-!    Convert observation time to relative time
-     idate5(1) = hdroz(4)  !year
-     idate5(2) = hdroz(5)  !month
-     idate5(3) = hdroz(6)  !day
-     idate5(4) = hdroz(7)  !hour
-     idate5(5) = hdroz(8)  !minute
-     call w3fs21(idate5,nmind)
-     t4dv=real((nmind-iwinbgn),r_kind)*r60inv
-     sstime=real(nmind,r_kind)
-     tdiff=(sstime-gstime)*r60inv
-     if (l4dvar.or.l4densvar) then
-        if(t4dv<zero .OR. t4dv>winlen) goto 110
-     else
-        if(abs(tdiff) > twind) goto 110
-     end if
-     
-!    Extract layer ozone values and compute profile total ozone
-     if (version8) then
-        call ufbseq(lunin,ozone_v8,29,21,iret,'OZOPQLSQ')
-        totoz=zero
-        do k=1,nloz
-           kk=nloz-k+1
-           poz(k) = ozone_v8(6,kk)
-           totoz=totoz+ozone_v8(6,k)
-        end do
-        poz(nloz+1) = totoz
-     endif
+!       Convert observation time to relative time
+        idate5(1) = hdroz(4)  !year
+        idate5(2) = hdroz(5)  !month
+        idate5(3) = hdroz(6)  !day
+        idate5(4) = hdroz(7)  !hour
+        idate5(5) = hdroz(8)  !minute
+        call w3fs21(idate5,nmind)
+        t4dv=real((nmind-iwinbgn),r_kind)*r60inv
+        sstime=real(nmind,r_kind)
+        tdiff=(sstime-gstime)*r60inv
+        if (l4dvar.or.l4densvar) then
+           if(t4dv<zero .OR. t4dv>winlen) cycle obsloop
+        else
+           if(abs(tdiff) > twind) cycle obsloop
+        end if
+        
+!       Extract layer ozone values and compute profile total ozone
+        if (version8) then
+           call ufbseq(lunin,ozone_v8,29,21,iret,'OZOPQLSQ')
+           totoz=zero
+           do k=1,nloz
+              kk=nloz-k+1
+              poz(k) = ozone_v8(6,kk)
+              totoz=totoz+ozone_v8(6,k)
+           end do
+           poz(nloz+1) = totoz
+        endif
  
-     if (version6) then
-        call ufbint(lunin,ozone_v6,nloz,1,iret,lozstr)
+        if (version6) then
+           call ufbint(lunin,ozone_v6,nloz,1,iret,lozstr)
+           do k=1,nloz
+              kk=nloz-k+1
+              poz(k) = ozone_v6(kk)
+           end do
+
+!          extract total ozone
+           call ufbint(lunin,totoz,1,1,iret,'OTSP')
+           poz(nloz+1) = totoz
+        endif
+
+
+!       Extract and apply version 8 total and profile ozone quaility information
+!       Toss observations for which the total ozone error code is neither 0 nor 2
+!       Toss observations for which the profile ozone error code is neither 0 nor 1
+!       NOTES:  
+!         1) Profile ozone error code 0 identifies good data; 1 identifies good
+!            data with a solar zenith angle > 84 degrees;  7 identifies profile
+!            for which stray light correction applied
+!         2) Total ozone error code 0 indentifies good data; 2 identifies good 
+!            data with a solar zenith angle > 84 degrees.
+!         3) We do not use the version 6 error flags.   Thus, initialize toq and
+!            poq to 0 (use the data)
+
+        toq=0._r_double
+        poq=0._r_double
+        if (version8) then
+           call ufbint(lunin,toq,1,1,iret,'SBUVTOQ')
+           call ufbint(lunin,poq,1,1,iret,'SBUVPOQ')
+           if (toq/=0 .and. toq/=2) cycle obsloop
+           if (poq/=0 .and. poq/=1 .and. poq/=ipoq7) cycle obsloop
+        endif
+
+!       Check ozone layer values.  If any layer value is bad, toss entire profile
         do k=1,nloz
-           kk=nloz-k+1
-           poz(k) = ozone_v6(kk)
+           if (poz(k)>badoz) cycle obsloop
         end do
-
-!       extract total ozone
-        call ufbint(lunin,totoz,1,1,iret,'OTSP')
-        poz(nloz+1) = totoz
-     endif
-
-
-!    Extract and apply version 8 total and profile ozone quaility information
-!    Toss observations for which the total ozone error code is neither 0 nor 2
-!    Toss observations for which the profile ozone error code is neither 0 nor 1
-!    NOTES:  
-!      1) Profile ozone error code 0 identifies good data; 1 identifies good
-!         data with a solar zenith angle > 84 degrees;  7 identifies profile
-!         for which stray light correction applied
-!      2) Total ozone error code 0 indentifies good data; 2 identifies good 
-!         data with a solar zenith angle > 84 degrees.
-!      3) We do not use the version 6 error flags.   Thus, initialize toq and
-!         poq to 0 (use the data)
-
-     toq=0._r_double
-     poq=0._r_double
-     if (version8) then
-        call ufbint(lunin,toq,1,1,iret,'SBUVTOQ')
-        call ufbint(lunin,poq,1,1,iret,'SBUVPOQ')
-        if (toq/=0 .and. toq/=2) goto 110
-        if (poq/=0 .and. poq/=1 .and. poq/=ipoq7) goto 110
-     endif
-
-!    Check ozone layer values.  If any layer value is bad, toss entire profile
-     do k=1,nloz
-        if (poz(k)>badoz) goto 110
-     end do
      
 !    Write ozone record to output file
-     ndata=min(ndata+1,maxobs)
-     nodata=nodata+nloz+1
-     ozout(1,ndata)=rsat
-     ozout(2,ndata)=t4dv
-     ozout(3,ndata)=dlon               ! grid relative longitude
-     ozout(4,ndata)=dlat               ! grid relative latitude
-     ozout(5,ndata)=dlon_earth_deg     ! earth relative longitude (degrees)
-     ozout(6,ndata)=dlat_earth_deg     ! earth relative latitude (degrees)
-     ozout(7,ndata)=toq                ! total ozone error flag
-     ozout(8,ndata)=poq                ! profile ozone error flag
-     ozout(9,ndata)=solzen             ! solar zenith angle
-     do k=1,nloz+1
-        ozout(k+9,ndata)=poz(k)
-     end do
+        ndata=min(ndata+1,maxobs)
+        nodata=nodata+nloz+1
+        ozout(1,ndata)=rsat
+        ozout(2,ndata)=t4dv
+        ozout(3,ndata)=dlon               ! grid relative longitude
+        ozout(4,ndata)=dlat               ! grid relative latitude
+        ozout(5,ndata)=dlon_earth_deg     ! earth relative longitude (degrees)
+        ozout(6,ndata)=dlat_earth_deg     ! earth relative latitude (degrees)
+        ozout(7,ndata)=toq                ! total ozone error flag
+        ozout(8,ndata)=poq                ! profile ozone error flag
+        ozout(9,ndata)=solzen             ! solar zenith angle
+        do k=1,nloz+1
+           ozout(k+9,ndata)=poz(k)
+        end do
 
-!    Loop back to read next profile
-     goto 110
+!       Loop back to read next profile
+     end do obsloop
 
-!    End of bufr ozone block
+!       End of bufr ozone block
 
-! Process GOME-2 data
+!    Process GOME-2 data
 
   else if ( obstype == 'gome') then
 
@@ -445,119 +445,119 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      ihh=0
      if(iret/=0) goto 160
 
-120  continue
-     call readsb(lunin,iret)
-     if (iret/=0) then
-        call readmg(lunin,subset,jdate,iret)
-        if (iret/=0) goto 150
-        goto 120
-     endif
+     obsloop2: do 
+        call readsb(lunin,iret)
+        if (iret/=0) then
+           call readmg(lunin,subset,jdate,iret)
+           if (iret/=0) goto 150
+           cycle obsloop2
+        endif
      
-!    extract header information
-     call ufbint(lunin,hdrozg,10,1,iret,ozgstr)
-     call ufbint(lunin,hdrozg2,5,1,iret,ozgstr2)
-     rsat = hdrozg(1); ksatid=rsat
+!       extract header information
+        call ufbint(lunin,hdrozg,10,1,iret,ozgstr)
+        call ufbint(lunin,hdrozg2,5,1,iret,ozgstr2)
+        rsat = hdrozg(1); ksatid=rsat
 
-     if(jsatid == 'metop-a')kidsat = 4
-     if(jsatid == 'metop-b')kidsat = 3
-     if(jsatid == 'metop-c')kidsat = 5
+        if(jsatid == 'metop-a')kidsat = 4
+        if(jsatid == 'metop-b')kidsat = 3
+        if(jsatid == 'metop-c')kidsat = 5
 
-     if (ksatid /= kidsat) go to 120
+        if (ksatid /= kidsat) cycle obsloop2
 
-!    NESDIS does not put a flag for high SZA gome-2 data (SZA > 84 degree)
-     if ( hdrozg(9) > r84 ) go to 120
+!       NESDIS does not put a flag for high SZA gome-2 data (SZA > 84 degree)
+        if ( hdrozg(9) > r84 ) cycle obsloop2
 
-     nmrecs=nmrecs+nloz+1
+        nmrecs=nmrecs+nloz+1
     
-!    Convert observation location to radians
-     slats0= hdrozg(2)
-     slons0= hdrozg(3)
-     if(abs(slats0)>90._r_kind .or. abs(slons0)>r360) go to 120  
-     if(slons0< zero) slons0=slons0+r360
-     if(slons0==r360) slons0=zero
-     dlat_earth_deg = slats0
-     dlon_earth_deg = slons0
-     dlat_earth = slats0 * deg2rad
-     dlon_earth = slons0 * deg2rad
+!       Convert observation location to radians
+        slats0= hdrozg(2)
+        slons0= hdrozg(3)
+        if(abs(slats0)>90._r_kind .or. abs(slons0)>r360) cycle obsloop2
+        if(slons0< zero) slons0=slons0+r360
+        if(slons0==r360) slons0=zero
+        dlat_earth_deg = slats0
+        dlon_earth_deg = slons0
+        dlat_earth = slats0 * deg2rad
+        dlon_earth = slons0 * deg2rad
 
-     if(regional)then
-        call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
-        if(outside) go to 120
-     else
-        dlat = dlat_earth
-        dlon = dlon_earth
-        call grdcrd1(dlat,rlats,nlat,1)
-        call grdcrd1(dlon,rlons,nlon,1)
-     endif
+        if(regional)then
+           call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
+           if(outside) cycle obsloop2
+        else
+           dlat = dlat_earth
+           dlon = dlon_earth
+           call grdcrd1(dlat,rlats,nlat,1)
+           call grdcrd1(dlon,rlons,nlon,1)
+        endif
      
-!    Convert observation time to relative time
-     idate5(1) = hdrozg(4)  !year
-     IDAYYR = hdrozg(5)     ! Day of year
-     JULIAN = -31739 + 1461 * (idate5(1) + 4799) /4 &
-              -3 * ((idate5(1) + 4899) / 100) / 4 + IDAYYR
-     call w3fs26(JULIAN,idate5(1),idate5(2),idate5(3),IDAYWK,IDAYYR)
-!    idate5(2) month
-!    idate5(3) day
-     idate5(4) = hdrozg(6)  !hour
-     idate5(5) = hdrozg(7)  !minute
-     call w3fs21(idate5,nmind)
-     t4dv=real((nmind-iwinbgn),r_kind)*r60inv
-     sstime=real(nmind,r_kind)
-     tdiff=(sstime-gstime)*r60inv
-     if (l4dvar.or.l4densvar) then
-        if(t4dv<zero .OR. t4dv>winlen) goto 120
-     else
-        if(abs(tdiff) > twind) goto 120
-     end if
+!       Convert observation time to relative time
+        idate5(1) = hdrozg(4)  !year
+        IDAYYR = hdrozg(5)     ! Day of year
+        JULIAN = -31739 + 1461 * (idate5(1) + 4799) /4 &
+                 -3 * ((idate5(1) + 4899) / 100) / 4 + IDAYYR
+        call w3fs26(JULIAN,idate5(1),idate5(2),idate5(3),IDAYWK,IDAYYR)
+!       idate5(2) month
+!       idate5(3) day
+        idate5(4) = hdrozg(6)  !hour
+        idate5(5) = hdrozg(7)  !minute
+        call w3fs21(idate5,nmind)
+        t4dv=real((nmind-iwinbgn),r_kind)*r60inv
+        sstime=real(nmind,r_kind)
+        tdiff=(sstime-gstime)*r60inv
+        if (l4dvar.or.l4densvar) then
+           if(t4dv<zero .OR. t4dv>winlen) cycle obsloop2
+        else
+           if(abs(tdiff) > twind) cycle obsloop2
+        end if
 
-!    extract total ozone
-     call ufbint(lunin,totoz,1,1,iret,'OZON')
+!       extract total ozone
+        call ufbint(lunin,totoz,1,1,iret,'OZON')
 
-     if (totoz > badoz ) goto 120
+        if (totoz > badoz ) cycle obsloop2
 
-!    only accept flag 0 (good) data
-     toq=0._r_double
-     call ufbint(lunin,toq,1,1,iret,'GOMEEF')
-     if (toq/=0) goto 120
+!       only accept flag 0 (good) data
+        toq=0._r_double
+        call ufbint(lunin,toq,1,1,iret,'GOMEEF')
+        if (toq/=0) cycle obsloop2
 
-!    only accept scan positions from 2 to 25
-     if( hdrozg2(5) < two .or. hdrozg2(5) > 25.0_r_kind ) goto 120
+!       only accept scan positions from 2 to 25
+        if( hdrozg2(5) < two .or. hdrozg2(5) > 25.0_r_kind ) cycle obsloop2
 
-!    thin GOME data
-!    GOME data has bias when the satellite looks to the east. Consider QC out this data.
+!       thin GOME data
+!       GOME data has bias when the satellite looks to the east. Consider QC out this data.
 
-     if (thin4d) then
-        timedif = zero 
-     else 
-        timedif = r6*abs(tdiff)        ! range:  0 to 18
-     endif 
-     crit1 = 0.01_r_kind+timedif
-     call map2tgrid(dlat_earth,dlon_earth,dist1,crit1,itx,ithin,itt,iuse,sis)
-     if(.not. iuse) goto 120
+        if (thin4d) then
+           timedif = zero 
+        else 
+           timedif = r6*abs(tdiff)        ! range:  0 to 18
+        endif 
+        crit1 = 0.01_r_kind+timedif
+        call map2tgrid(dlat_earth,dlon_earth,dist1,crit1,itx,ithin,itt,iuse,sis)
+        if(.not. iuse) cycle obsloop2
 
-     call finalcheck(dist1,crit1,itx,iuse)
-     if(.not. iuse) goto 120
+        call finalcheck(dist1,crit1,itx,iuse)
+        if(.not. iuse) cycle obsloop2
 
-     ndata=ndata+1
-     nodata=ndata
+        ndata=ndata+1
+        nodata=ndata
 
-     ozout(1,itx)=rsat
-     ozout(2,itx)=t4dv
-     ozout(3,itx)=dlon               ! grid relative longitude
-     ozout(4,itx)=dlat               ! grid relative latitude
-     ozout(5,itx)=dlon_earth_deg     ! earth relative longitude (degrees)
-     ozout(6,itx)=dlat_earth_deg     ! earth relative latitude (degrees)
-     ozout(7,itx)=toq                ! total ozone error flag
-     ozout(8,itx)=hdrozg(9)          ! solar zenith angle
-     ozout(9,itx)=hdrozg(10)         ! solar azimuth angle
-     ozout(10,itx)=hdrozg2(1)        ! CLOUD AMOUNT IN SEGMENT
-     ozout(11,itx)=hdrozg2(2)        ! SNOW COVER
-     ozout(12,itx)=hdrozg2(3)        ! AEROSOL CONTAMINATION INDEX
-     ozout(13,itx)=hdrozg2(4)        ! ASCENDING/DESCENDING ORBIT QUALIFIER
-     ozout(14,itx)=hdrozg2(5)        ! scan position (fovn)
-     ozout(15,itx)=totoz
+        ozout(1,itx)=rsat
+        ozout(2,itx)=t4dv
+        ozout(3,itx)=dlon               ! grid relative longitude
+        ozout(4,itx)=dlat               ! grid relative latitude
+        ozout(5,itx)=dlon_earth_deg     ! earth relative longitude (degrees)
+        ozout(6,itx)=dlat_earth_deg     ! earth relative latitude (degrees)
+        ozout(7,itx)=toq                ! total ozone error flag
+        ozout(8,itx)=hdrozg(9)          ! solar zenith angle
+        ozout(9,itx)=hdrozg(10)         ! solar azimuth angle
+        ozout(10,itx)=hdrozg2(1)        ! CLOUD AMOUNT IN SEGMENT
+        ozout(11,itx)=hdrozg2(2)        ! SNOW COVER
+        ozout(12,itx)=hdrozg2(3)        ! AEROSOL CONTAMINATION INDEX
+        ozout(13,itx)=hdrozg2(4)        ! ASCENDING/DESCENDING ORBIT QUALIFIER
+        ozout(14,itx)=hdrozg2(5)        ! scan position (fovn)
+        ozout(15,itx)=totoz
        
-     goto 120
+     end do obsloop2
 
 !    End of GOME bufr block
 

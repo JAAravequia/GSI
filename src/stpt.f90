@@ -268,21 +268,16 @@ subroutine stpt(thead,dval,xval,out,sges,nstep,rpred,spred)
 !       Note:  if wgross=0 (no gross error, then wnotgross=1 and this all 
 !              reduces to the linear case (no qc)
 
-!  Jim Purse's non linear QC scheme
+!  Jim Purser's non linear QC scheme
         if(njqc .and. tptr%jb  > tiny_r_kind .and. tptr%jb <10.0_r_kind) then
            do kk=1,max(1,nstep)
               pen(kk) = two*two*tptr%jb*log(cosh(sqrt(pen(kk)/(two*tptr%jb))))
            enddo
-           out(1) = out(1)+pen(1)*tptr%raterr2
-           do kk=2,nstep
-              out(kk) = out(kk)+(pen(kk)-pen(1))*tptr%raterr2
-           end do
-        else
-           out(1) = out(1)+pen(1)*tptr%raterr2
-           do kk=2,nstep
-              out(kk) = out(kk)+(pen(kk)-pen(1))*tptr%raterr2
-           end do
         endif
+        out(1) = out(1)+pen(1)*tptr%raterr2
+        do kk=2,nstep
+          out(kk) = out(kk)+(pen(kk)-pen(1))*tptr%raterr2
+        end do
 
      endif
      tptr => tNode_nextcast(tptr)
