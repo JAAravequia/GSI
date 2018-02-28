@@ -77,7 +77,7 @@ cmake_minimum_required(VERSION 2.8)
 # set_source_files_properties( ${CMAKE_CURRENT_SOURCE_DIR}/blockIO.c  PROPERTIES COMPILE_FLAGS ${GSI_CFLAGS} )
 
 # Add the include paths
-  message("HEY!!! in src, MPI include PATH  ${MPI_Fortran_INCLUDE_PATH}")
+  message("MPI include PATH  ${MPI_Fortran_INCLUDE_PATH}")
   include_directories( ${CORE_INCS} ${NETCDF_INCLUDES} ${MPI_Fortran_INCLUDE_PATH} "./"  )
 
 #define the name used for GSI Shared lib and add it with properties and include dirs
@@ -128,7 +128,6 @@ cmake_minimum_required(VERSION 2.8)
 
 # Add dependencies if we are building the core libs or are just using pre-built libs 
   if(CORE_BUILT)
-    message("list of core built ${CORE_BUILT}")
     add_dependencies(${GSILIB} ${GSISHAREDLIB} ${CORE_BUILT} )
     add_dependencies(${GSISHAREDLIB} ${bacio} ${CORE_BUILT} )
     add_dependencies(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${CORE_BUILT} )
@@ -136,7 +135,6 @@ cmake_minimum_required(VERSION 2.8)
     add_dependencies(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} )
   endif()
 # Specify all the libraries to be linked into the executable
-  message("HEY!!! wrflib is ${wrflib}" )
   target_link_libraries(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${GSISHAREDLIB} ${WRF_LIBRARIES} ${CORE_LIBRARIES}
          ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES} 
          ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${GSI_LDFLAGS}

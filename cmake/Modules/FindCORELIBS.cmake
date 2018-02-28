@@ -255,7 +255,6 @@ else()
     set( sp "sp${libsuffix}")
 endif()
 
-message("HEY! CORE libs are ${CORE_LIBRARIES}")
 if( CORE_LIBRARIES )
   list( APPEND CORE_LIBRARIES ${SFCIO_LIBRARY} ${SIGIO_LIBRARY} 
                   ${NEMSIO_LIBRARY} ${SP_LIBRARY} ${W3NCO_LIBRARY} ${BUFR_LIBRARY}  

@@ -1,7 +1,7 @@
 # - Find the Control version of GSI to use for regression testing
 
 set( NO_DEFAULT_PATH )
-message("HEY, control path is ${CONTROLPATH}")
+message("Control path is ${CONTROLPATH}")
 find_file( CONTROL_EXE 
     NAMES gsi.x global_gsi ${GSIEXEC}
     HINTS
