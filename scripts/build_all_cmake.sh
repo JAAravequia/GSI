@@ -36,12 +36,16 @@ cd $dir_root/build
 module purge
 if [ $target = wcoss -o $target = cray ]; then
     module load $dir_modules/modulefile.ProdGSI.$target
+    if [ $target = cray ]; then
+        module use /usrx/local/dev/modulefiles
+        module load cmake/3.6.2
+    fi
 else
     source $dir_modules/modulefile.ProdGSI.$target
 fi
 module list
 
-cmake -DBUILD_UTIL=ON ..
+cmake -DBUILD_UTIL=ON -DCMAKE_BUILD_TYPE=PRODUCTION ..
 
 make -j 6
 
