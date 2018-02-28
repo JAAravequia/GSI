@@ -394,9 +394,10 @@ end subroutine get_num_convobs_nc
 
 ! read conventional observations
 subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
-                            hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
+                            hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err,       &
                             x_lon, x_lat, x_press, x_time, x_code,         &
                             x_errorig, x_type, x_used, id, nanal)
+  use params, only: neigv
   implicit none
 
   character*500,   intent(in) :: obspath
@@ -406,6 +407,8 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean_nobc
   real(r_single), dimension(nobs_max), intent(out)    :: hx
+  ! hx_modens holds modulated ensemble in ob space (zero size if neigv=0)
+  real(r_single), dimension(nobs_max,neigv), intent(out) :: hx_modens
   real(r_single), dimension(nobs_max), intent(out)    :: x_obs
   real(r_single), dimension(nobs_max), intent(out)    :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out)    :: x_lon, x_lat
@@ -419,12 +422,12 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
   if (netcdf_diag) then
     call get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
-                            hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
+                            hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err,       &
                             x_lon, x_lat, x_press, x_time, x_code,         &
                             x_errorig, x_type, x_used, id, nanal)
   else
     call get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
-                            hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
+                            hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err,       &
                             x_lon, x_lat, x_press, x_time, x_code,         &
                             x_errorig, x_type, x_used, id, nanal)
   endif
@@ -432,11 +435,11 @@ end subroutine get_convobs_data
 
 ! read conventional observations from netcdf file
 subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
-                            hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
+                            hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err,       &
                             x_lon, x_lat, x_press, x_time, x_code,         &
                             x_errorig, x_type, x_used, id, nanal)
   use sparsearr, only: sparr, delete, assignment(=)
-  use params, only: nanals, lobsdiag_forenkf
+  use params, only: nanals, lobsdiag_forenkf, nlevs, neigv, vlocal_evecs
   use statevec, only: state_d
   use mpisetup, only: nproc, mpi_wtime
   use observer_enkf, only: calc_linhx
@@ -453,6 +456,9 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean_nobc
   real(r_single), dimension(nobs_max), intent(out)    :: hx
+  ! hx_modens holds modulated ensemble in ob space (zero size if neigv=0)
+  real(r_single), dimension(nobs_max,neigv), intent(out) :: hx_modens
+
   real(r_single), dimension(nobs_max), intent(out)    :: x_obs
   real(r_single), dimension(nobs_max), intent(out)    :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out)    :: x_lon, x_lat
@@ -464,7 +470,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
   character(len=10), intent(in) :: id
   integer, intent(in)           :: nanal
 
-  real(r_double) t1,t2,tsum
+  real(r_double) t1,t2,tsum,vscale(nlevs+1)
   character(len=4) pe_name
   character*500 obsfile, obsfile2
   character(len=10) :: id2
@@ -473,7 +479,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
   character(len=3) :: obtype
 
   integer(i_kind) :: iunit, iunit2, ipe, itype
-  integer(i_kind) :: nobs, nobdiag, i, nob, nsdim
+  integer(i_kind) :: nobs, nobdiag, i, nob, nsdim, neig
   real(r_kind) :: errorlimit,errorlimit2,error,errororig
   real(r_kind) :: obmax, pres
   real(r_kind) :: errorlimit2_obs,errorlimit2_bnd
@@ -701,12 +707,27 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
               ! run the linearized Hx
               else
                  t1 = mpi_wtime()
+                 vscale = 1._r_double
                  dhx_dx = Observation_Operator_Jacobian(1:nsdim,i)
+
                  call calc_linhx(hx_mean_nobc(nob), state_d,             &
                                  real(x_lat(nob)*deg2rad,r_single),      &
                                  real(x_lon(nob)*deg2rad,r_single),      &
                                  x_time(nob),                            &
-                                 dhx_dx, hx(nob))
+                                 dhx_dx, hx(nob), vscale)
+
+                 ! compute modulated ensemble in obs space
+                 if (neigv > 0) then
+                     do neig=1,neigv
+                        vscale = vlocal_evecs(neig,:)
+                        call calc_linhx(hx_mean_nobc(nob), state_d,   &
+                                  real(x_lat(nob)*deg2rad,r_single),  &
+                                  real(x_lon(nob)*deg2rad,r_single),  &
+                                  x_time(nob),                        &
+                                  dhx_dx, hx_modens(nob,neig), vscale)
+                     enddo
+                 endif
+
                  t2 = mpi_wtime()
                  tsum = tsum + t2-t1
 
@@ -765,11 +786,23 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
                  else
                     t1 = mpi_wtime()
                     dhx_dx = v_Observation_Operator_Jacobian(1:nsdim,i)
+                    vscale = 1._r_double
                     call calc_linhx(hx_mean_nobc(nob), state_d, &
                                     real(x_lat(nob)*deg2rad,r_single),      &
                                     real(x_lon(nob)*deg2rad,r_single),      &
                                     x_time(nob),                            &
-                                    dhx_dx, hx(nob))
+                                    dhx_dx, hx(nob), vscale)
+                   ! compute modulated ensemble in obs space
+                   if (neigv > 0) then
+                       do neig=1,neigv
+                          vscale = vlocal_evecs(neig,:)
+                          call calc_linhx(hx_mean_nobc(nob), state_d,   &
+                                    real(x_lat(nob)*deg2rad,r_single),  &
+                                    real(x_lon(nob)*deg2rad,r_single),  &
+                                    x_time(nob),                        &
+                                    dhx_dx, hx_modens(nob,neig), vscale)
+                       enddo
+                   endif
                     t2 = mpi_wtime()
                     tsum = tsum + t2-t1
                     call delete(dhx_dx)
@@ -828,11 +861,11 @@ end subroutine get_convobs_data_nc
 
 ! read conventional observation from binary files
 subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
-                            hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
+                            hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err,       &
                             x_lon, x_lat, x_press, x_time, x_code,         &
                             x_errorig, x_type, x_used, id, nanal)
   use sparsearr, only: sparr2, sparr, readarray, delete, assignment(=), size
-  use params, only: nanals, lobsdiag_forenkf
+  use params, only: nanals, lobsdiag_forenkf, nlevs, neigv, vlocal_evecs
   use statevec, only: state_d
   use mpisetup, only: nproc, mpi_wtime
   use observer_enkf, only: calc_linhx
@@ -845,6 +878,8 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean_nobc
   real(r_single), dimension(nobs_max), intent(out)    :: hx
+  ! hx_modens holds modulated ensemble in ob space (zero size if neigv=0)
+  real(r_single), dimension(nobs_max,neigv), intent(out) :: hx_modens
   real(r_single), dimension(nobs_max), intent(out)    :: x_obs
   real(r_single), dimension(nobs_max), intent(out)    :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out)    :: x_lon, x_lat
@@ -856,7 +891,7 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
   character(len=10), intent(in) :: id
   integer, intent(in)           :: nanal
 
-  real(r_double) t1,t2,tsum
+  real(r_double) t1,t2,tsum, vscale(nlevs+1)
   character(len=4) pe_name
   character*500 obsfile, obsfile2
   character(len=10) :: id2
@@ -866,7 +901,7 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
   character(len=3) :: obtype, obtype2
   integer(i_kind) :: iunit, iunit2
-  integer(i_kind) :: nob, nobdiag, n, i
+  integer(i_kind) :: nob, nobdiag, n, i, neig
   integer(i_kind) :: nchar, nreal, ii, mype, ioff0
   integer(i_kind) :: nchar2, nreal2, ii2, mype2, ioff02, idate2
   integer(i_kind) :: ipe, ios, idate
@@ -1087,11 +1122,24 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
                 dhx_dx = dhx_dx_read
 
                 t1 = mpi_wtime()
+                vscale = 1._r_double
                 call calc_linhx(hx_mean_nobc(nob), state_d,             &
                               real(x_lat(nob)*deg2rad,r_single),      &
                               real(x_lon(nob)*deg2rad,r_single),      &
                               x_time(nob),                            &
-                              dhx_dx, hx(nob))
+                              dhx_dx, hx(nob),vscale)
+                ! compute modulated ensemble in obs space
+                if (neigv > 0) then
+                    do neig=1,neigv
+                       vscale = vlocal_evecs(neig,:)
+                       call calc_linhx(hx_mean_nobc(nob), state_d,   &
+                                 real(x_lat(nob)*deg2rad,r_single),  &
+                                 real(x_lon(nob)*deg2rad,r_single),  &
+                                 x_time(nob),                        &
+                                 dhx_dx, hx_modens(nob,neig), vscale)
+                    enddo
+                endif
+
                 t2 = mpi_wtime()
                 tsum = tsum + t2-t1
 
@@ -1153,11 +1201,25 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
                    dhx_dx = dhx_dx_read
   
                    t1 = mpi_wtime()
+                   vscale = 1._r_double
+
                    call calc_linhx(hx_mean_nobc(nob), state_d,                  &
                                  real(x_lat(nob)*deg2rad,r_single),      &
                                  real(x_lon(nob)*deg2rad,r_single),      &
                                  x_time(nob),                            &
-                                 dhx_dx, hx(nob))
+                                 dhx_dx, hx(nob), vscale)
+                   ! compute modulated ensemble in obs space
+                   if (neigv > 0) then
+                       do neig=1,neigv
+                          vscale = vlocal_evecs(neig,:)
+                          call calc_linhx(hx_mean_nobc(nob), state_d,   &
+                                    real(x_lat(nob)*deg2rad,r_single),  &
+                                    real(x_lon(nob)*deg2rad,r_single),  &
+                                    x_time(nob),                        &
+                                    dhx_dx, hx_modens(nob,neig), vscale)
+                       enddo
+                   endif
+
                    t2 = mpi_wtime()
                    tsum = tsum + t2-t1
 

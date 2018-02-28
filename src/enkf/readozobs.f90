@@ -61,7 +61,7 @@ subroutine get_num_ozobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
 
     character(len=500) :: obsfile
     character(len=4) :: pe_name
-    integer(i_kind) :: nlevs  ! number of levels (layer amounts + total column) per obs   
+    integer(i_kind) :: nlevsoz  ! number of levels (layer amounts + total column) per obs   
     character(20) :: isis     ! sensor/instrument/satellite id
     character(10) :: obstype  !  type of ozone obs
     character(10) :: dplat    ! sat sensor
@@ -100,9 +100,9 @@ subroutine get_num_ozobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
            if (.not. fexist) cycle peloop
            open(iunit,form="unformatted",file=obsfile,iostat=ios)
            if (init_pass) then
-              read(iunit,err=20,end=30) isis,dplat,obstype,jiter,nlevs,idate,iint,ireal,irdim1,ioff0
+              read(iunit,err=20,end=30) isis,dplat,obstype,jiter,nlevsoz,idate,iint,ireal,irdim1,ioff0
               if(allocated(pob))deallocate(pob,grs,err,iouse)
-              allocate(pob(nlevs),grs(nlevs),err(nlevs),iouse(nlevs))
+              allocate(pob(nlevsoz),grs(nlevsoz),err(nlevsoz),iouse(nlevsoz))
               read(iunit,err=20,end=30) pob,grs,err,iouse
               init_pass = .false.
            endif
@@ -110,9 +110,9 @@ subroutine get_num_ozobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
            read(iunit,err=20,end=30) ii
            allocate(idiagbuf(iint,ii))
            allocate(diagbuf(ireal,ii))
-           allocate(rdiagbuf(irdim1,nlevs,ii))
+           allocate(rdiagbuf(irdim1,nlevsoz,ii))
            read(iunit,err=20,end=30) idiagbuf,diagbuf,rdiagbuf
-           do k=1,nlevs
+           do k=1,nlevsoz
              nread=nread+ii
              num_obs_totdiag = num_obs_totdiag + ii
              if (iouse(k) < 0 .or. pob(k) <= 0.001 .or. &
@@ -232,14 +232,17 @@ subroutine get_num_ozobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
 end subroutine get_num_ozobs_nc
 
 ! read ozone observation data
-subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
+  use params, only: neigv
   implicit none
   character*500, intent(in) :: obspath
   character*10, intent(in)  :: datestring
 
   integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
   real(r_single), dimension(nobs_max), intent(out)      :: hx_mean, hx_mean_nobc, hx
+  ! hx_modens holds modulated ensemble in ob space (zero size if neigv=0)
+  real(r_single), dimension(nobs_max,neigv), intent(out) :: hx_modens
   real(r_single), dimension(nobs_max), intent(out)      :: x_obs
   real(r_single), dimension(nobs_max), intent(out)      :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out)      :: x_lon, x_lat
@@ -252,21 +255,21 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
   integer(i_kind), intent(in)  :: nanal
 
    if (netcdf_diag) then
-      call get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+      call get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
    else
-      call get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+      call get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
    endif
 
 end subroutine get_ozobs_data
 
 ! read ozone observation data from binary file
-subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
 
   use sparsearr,only:sparr, sparr2, readarray, delete, assignment(=)
-  use params,only: nanals, lobsdiag_forenkf
+  use params,only: nanals, lobsdiag_forenkf, nlevs, neigv, vlocal_evecs
   use statevec, only: state_d
   use mpisetup, only: mpi_wtime, nproc
   use observer_enkf, only: calc_linhx
@@ -277,6 +280,8 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
 
   integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
   real(r_single), dimension(nobs_max), intent(out)      :: hx_mean, hx_mean_nobc, hx
+  ! hx_modens holds modulated ensemble in ob space (zero size if neigv=0)
+  real(r_single), dimension(nobs_max,neigv), intent(out) :: hx_modens
   real(r_single), dimension(nobs_max), intent(out)      :: x_obs
   real(r_single), dimension(nobs_max), intent(out)      :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out)      :: x_lon, x_lat
@@ -292,16 +297,16 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   character(len=8) :: id2
   character(len=4) :: pe_name
 
-  integer(i_kind) :: nlevs  ! number of levels (layer amounts + total column) per obs   
+  integer(i_kind) :: nlevsoz  ! number of levels (layer amounts + total column) per obs   
   character(20) :: isis,isis2        ! sensor/instrument/satellite id
   character(10) :: obstype,obstype2  !  type of ozone obs
   character(10) :: dplat,dplat2      ! sat sensor
-  integer(i_kind) nob, nobdiag, n, ios, nsat, k
+  integer(i_kind) nob, nobdiag, n, ios, nsat, k, neig
   integer(i_kind) iunit,jiter,ii,ireal,iint,irdim1,idate,ioff0
-  integer(i_kind) iunit2,jiter2,ii2,ireal2,iint2,irdim12,idate2,ioff02,nlevs2
+  integer(i_kind) iunit2,jiter2,ii2,ireal2,iint2,irdim12,idate2,ioff02,nlevsoz2
   integer(i_kind) ipe,ind
 
-  real(r_double) t1,t2,tsum
+  real(r_double) t1,t2,tsum,vscale(nlevs+1)
   type(sparr)   :: dhx_dx
   type(sparr2)  :: dhx_dx_read
 
@@ -357,9 +362,9 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
          open(iunit,form="unformatted",file=obsfile,iostat=ios)
          rewind(iunit)
          if (init_pass) then
-            read(iunit,err=20,end=30) isis,dplat,obstype,jiter,nlevs,idate,iint,ireal,irdim1,ioff0
+            read(iunit,err=20,end=30) isis,dplat,obstype,jiter,nlevsoz,idate,iint,ireal,irdim1,ioff0
             if(allocated(pob))deallocate(pob,grs,err,iouse)
-            allocate(pob(nlevs),grs(nlevs),err(nlevs),iouse(nlevs))
+            allocate(pob(nlevsoz),grs(nlevsoz),err(nlevsoz),iouse(nlevsoz))
             read(iunit,err=20,end=30) pob,grs,err,iouse
             init_pass = .false.
          endif
@@ -377,24 +382,24 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
            open(iunit2,form="unformatted",file=obsfile2,iostat=ios)
            rewind(iunit2)
            if (init_pass2) then
-              read(iunit2,err=20,end=30) isis2,dplat2,obstype2,jiter2,nlevs2,idate2,iint2,ireal2,irdim12,ioff02
+              read(iunit2,err=20,end=30) isis2,dplat2,obstype2,jiter2,nlevsoz2,idate2,iint2,ireal2,irdim12,ioff02
               if(isis /= isis2 .or. dplat /= dplat2 .or. obstype /= obstype2 .or. jiter /= jiter2 .or. &
-                 nlevs /= nlevs2 .or. idate /= idate2 .or. iint /= iint2 .or. ireal /= ireal2)then
+                 nlevsoz /= nlevsoz2 .or. idate /= idate2 .or. iint /= iint2 .or. ireal /= ireal2)then
                  write(6,*) 'inconsistency in ozone files'
                  write(6,*) 'isis',isis,isis2
                  write(6,*) 'dplat',dplat,dplat2
                  write(6,*) 'obstype',obstype,obstype2
                  write(6,*) 'jiter',jiter,jiter2
-                 write(6,*) 'nlevs',nlevs,nlevs2
+                 write(6,*) 'nlevsoz',nlevsoz,nlevsoz2
                  write(6,*) 'idate',idate,idate2
                  write(6,*) 'iint',iint,iint2
                  write(6,*) 'ireal',ireal,ireal2
                  call stop2(66)
               end if
               if (allocated(pob2)) deallocate(pob2,err2,grs2,iouse2)
-              allocate(pob2(nlevs),grs2(nlevs),err2(nlevs),iouse2(nlevs))
+              allocate(pob2(nlevsoz),grs2(nlevsoz),err2(nlevsoz),iouse2(nlevsoz))
               read(iunit2,err=20,end=30) pob2,grs2,err2,iouse2
-              do k=1,nlevs
+              do k=1,nlevsoz
                 if(pob(k) /= pob2(k) .or. grs(k) /= grs2(k) .or. err(k) /= err2(k) .or. &
                    iouse(k) /= iouse2(k))then
                    write(6,*) ' ozone file vertical inconsistency level = ',k
@@ -413,7 +418,7 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
          read(iunit,err=20,end=30) ii
          allocate(idiagbuf(iint,ii))
          allocate(diagbuf(ireal,ii))
-         allocate(rdiagbuf(irdim1,nlevs,ii))
+         allocate(rdiagbuf(irdim1,nlevsoz,ii))
          read(iunit,err=20,end=30) idiagbuf,diagbuf,rdiagbuf
          if (twofiles) then
             read(iunit2,err=20,end=30) ii2
@@ -421,10 +426,10 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
                write(6,*) 'ii inconsistency in ozone ',ii,ii2
                call stop2(68)
             end if
-            allocate(idiagbuf2(iint,ii), diagbuf2(ireal,ii),rdiagbuf2(irdim1,nlevs,ii))
+            allocate(idiagbuf2(iint,ii), diagbuf2(ireal,ii),rdiagbuf2(irdim1,nlevsoz,ii))
             read(iunit2,err=20,end=30) idiagbuf2,diagbuf2,rdiagbuf2
          endif
-         do k=1,nlevs
+         do k=1,nlevsoz
            if (iouse(k) < 0 .or. pob(k) <= 0.001 .or. &
                pob(k) > 1200._r_kind) then
               nobdiag = nobdiag + ii
@@ -468,11 +473,23 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
                   dhx_dx = dhx_dx_read
    
                   t1 = mpi_wtime()
-                  call calc_linhx(hx_mean_nobc(nob), state_d,                  &
-                             real(x_lat(nob)*deg2rad,r_single),         & 
-                             real(x_lon(nob)*deg2rad,r_single),         &
-                             x_time(nob),                               &
-                             dhx_dx, hx(nob))
+                  vscale = 1._r_double
+                  call calc_linhx(hx_mean_nobc(nob), state_d,       &
+                                real(x_lat(nob)*deg2rad,r_single),  &
+                                real(x_lon(nob)*deg2rad,r_single),  &
+                                x_time(nob),                        &
+                                dhx_dx, hx(nob), vscale)
+                  ! compute modulated ensemble in obs space
+                  if (neigv > 0) then
+                      do neig=1,neigv
+                         vscale = vlocal_evecs(neig,:)
+                         call calc_linhx(hx_mean_nobc(nob), state_d,   &
+                                   real(x_lat(nob)*deg2rad,r_single),  &
+                                   real(x_lon(nob)*deg2rad,r_single),  &
+                                   x_time(nob),                        &
+                                   dhx_dx, hx_modens(nob,neig), vscale)
+                      enddo
+                  endif
                   t2 = mpi_wtime()
                   tsum = tsum + t2-t1
 
@@ -510,14 +527,14 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
  end subroutine get_ozobs_data_bin
 
 ! read ozone observation data from netcdf file
-subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
   use nc_diag_read_mod, only: nc_diag_read_get_var
   use nc_diag_read_mod, only: nc_diag_read_get_dim, nc_diag_read_get_global_attr
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
 
   use sparsearr,only:sparr, sparr2, readarray, delete, assignment(=)
-  use params,only: nanals, lobsdiag_forenkf
+  use params,only: nanals, lobsdiag_forenkf, nlevs, neigv, vlocal_evecs
   use statevec, only: state_d
   use mpisetup, only: mpi_wtime, nproc
   use observer_enkf, only: calc_linhx
@@ -528,6 +545,8 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
 
   integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
   real(r_single), dimension(nobs_max), intent(out)      :: hx_mean, hx_mean_nobc, hx
+  ! hx_modens holds modulated ensemble in ob space (zero size if neigv=0)
+  real(r_single), dimension(nobs_max,neigv), intent(out) :: hx_modens
   real(r_single), dimension(nobs_max), intent(out)      :: x_obs
   real(r_single), dimension(nobs_max), intent(out)      :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out)      :: x_lon, x_lat
@@ -543,10 +562,10 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
   character(len=8) :: id2
   character(len=4) :: pe_name
 
-  integer(i_kind) :: nobs_curr, nob, nobdiag, i, nsat, ipe, nsdim
+  integer(i_kind) :: nobs_curr, nob, nobdiag, i, nsat, ipe, nsdim, neig
   integer(i_kind) :: iunit, iunit2
 
-  real(r_double) t1,t2,tsum
+  real(r_double) t1,t2,tsum, vscale(nlevs+1)
   type(sparr)   :: dhx_dx
 
   real(r_single),  allocatable, dimension (:) :: Latitude, Longitude, Pressure, Time
@@ -676,11 +695,23 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
              else
                 dhx_dx = Observation_Operator_Jacobian(1:nsdim,i)
                 t1 = mpi_wtime()
-                call calc_linhx(hx_mean_nobc(nob), state_d,                  &
-                           real(x_lat(nob)*deg2rad,r_single),         &
-                           real(x_lon(nob)*deg2rad,r_single),         &
-                           x_time(nob),                               &
-                           dhx_dx, hx(nob))
+                vscale = 1._r_double
+                call calc_linhx(hx_mean_nobc(nob), state_d,       &
+                               real(x_lat(nob)*deg2rad,r_single),  &
+                               real(x_lon(nob)*deg2rad,r_single),  &
+                               x_time(nob),                        &
+                               dhx_dx, hx(nob), vscale)
+                ! compute modulated ensemble in obs space
+                if (neigv > 0) then
+                    do neig=1,neigv
+                       vscale = vlocal_evecs(neig,:)
+                       call calc_linhx(hx_mean_nobc(nob), state_d,   &
+                                 real(x_lat(nob)*deg2rad,r_single),  &
+                                 real(x_lon(nob)*deg2rad,r_single),  &
+                                 x_time(nob),                        &
+                                 dhx_dx, hx_modens(nob,neig), vscale)
+                    enddo
+                endif
                 t2 = mpi_wtime()
                 tsum = tsum + t2-t1
 
@@ -747,7 +778,7 @@ subroutine write_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, x_f
   character*500 :: obsfile, obsfile2
   character(len=4) pe_name
 
-  integer(i_kind) :: nlevs  ! number of levels (layer amounts + total column) per obs
+  integer(i_kind) :: nlevsoz  ! number of levels (layer amounts + total column) per obs
   character(20) :: isis     ! sensor/instrument/satellite id
   character(10) :: obstype  !  type of ozone obs
   character(10) :: dplat    ! sat sensor
@@ -791,10 +822,10 @@ subroutine write_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, x_f
          rewind(iunit)
          if (init_pass) then
             open(iunit2,form="unformatted",file=obsfile2,iostat=ios)
-            read(iunit,err=20,end=30) isis,dplat,obstype,jiter,nlevs,idate,iint,ireal,irdim1,ioff0
-            write(iunit2,err=20)      isis,dplat,obstype,jiter,nlevs,idate,iint,ireal,irdim1,ioff0
+            read(iunit,err=20,end=30) isis,dplat,obstype,jiter,nlevsoz,idate,iint,ireal,irdim1,ioff0
+            write(iunit2,err=20)      isis,dplat,obstype,jiter,nlevsoz,idate,iint,ireal,irdim1,ioff0
             if(allocated(pob))deallocate(pob,grs,err,iouse)
-            allocate(pob(nlevs),grs(nlevs),err(nlevs),iouse(nlevs))
+            allocate(pob(nlevsoz),grs(nlevsoz),err(nlevsoz),iouse(nlevsoz))
             read(iunit,err=20,end=30) pob,grs,err,iouse
             write(iunit2,err=20) pob,grs,err,iouse
             init_pass = .false.
@@ -803,10 +834,10 @@ subroutine write_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, x_f
          read(iunit,err=20,end=30) ii
          allocate(idiagbuf(iint,ii))
          allocate(diagbuf(ireal,ii))
-         allocate(rdiagbuf(irdim1,nlevs,ii))
+         allocate(rdiagbuf(irdim1,nlevsoz,ii))
          read(iunit,err=20,end=30) idiagbuf,diagbuf,rdiagbuf
          rdiagbuf(2,:,:) = 1.e10
-         do k=1,nlevs
+         do k=1,nlevsoz
             do n=1,ii
                nobdiag = nobdiag + 1
                if (x_used(nobdiag) == 1) then

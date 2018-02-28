@@ -286,9 +286,10 @@ subroutine get_num_satobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
 end subroutine get_num_satobs_nc
 
 ! read radiance data
-subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
   use radinfo, only: npred
+  use params, only: neigv
   implicit none
 
   character*500, intent(in)     :: obspath
@@ -297,6 +298,8 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
   integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
 
   real(r_single), dimension(nobs_max), intent(out) :: hx_mean,hx_mean_nobc, hx
+  ! hx_modens holds modulated ensemble in ob space (zero size if neigv=0)
+  real(r_single), dimension(nobs_max,neigv), intent(out) :: hx_modens
   real(r_single), dimension(nobs_max), intent(out) :: x_obs
   real(r_single), dimension(nobs_max), intent(out) :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out) :: x_lon, x_lat
@@ -310,20 +313,20 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
   integer(i_kind), intent(in)   :: nanal
 
   if (netcdf_diag) then
-    call get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+    call get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
   else
-    call get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+    call get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
   endif
 
 end subroutine get_satobs_data
 
 ! read radiance data from binary file
-subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
   use radinfo, only: iuse_rad,nusis,jpch_rad,npred,adp_anglebc,emiss_bc
-  use params, only: nanals, lobsdiag_forenkf
+  use params, only: nanals, lobsdiag_forenkf, nlevs, neigv, vlocal_evecs
   use statevec, only: state_d
   use constants, only: deg2rad, zero
   use mpisetup, only: nproc, mpi_wtime
@@ -336,6 +339,8 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
   integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
 
   real(r_single), dimension(nobs_max), intent(out) :: hx_mean,hx_mean_nobc, hx
+  ! hx_modens holds modulated ensemble in ob space (zero size if neigv=0)
+  real(r_single), dimension(nobs_max,neigv), intent(out) :: hx_modens
   real(r_single), dimension(nobs_max), intent(out) :: x_obs
   real(r_single), dimension(nobs_max), intent(out) :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out) :: x_lon, x_lat
@@ -355,13 +360,13 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
 
   character(len=20) ::  sat_type
 
-  integer(i_kind) iunit, iflag,nobs,nobsdiag, n,nsat,ipe,i,jpchstart,indxsat
+  integer(i_kind) iunit, iflag,nobs,nobsdiag, n,nsat,ipe,i,jpchstart,indxsat, neig
   integer(i_kind) iunit2, iflag2
   integer(i_kind) npred_radiag
   logical fexist,lretrieval,lverbose,init_pass
   logical twofiles,fexist2,init_pass2
   real(r_kind) :: errorlimit,errorlimit2
-  real(r_double) t1,t2,tsum,tsum2
+  real(r_double) t1,t2,tsum,tsum2,vscale(nlevs+1)
 
   type(diag_header_fix_list )         :: header_fix, header_fix2
   type(diag_header_chan_list),allocatable :: header_chan(:), header_chan2(:)
@@ -515,12 +520,26 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
                hx(nobs) = x_obs(nobs) - data_chan2(n)%omgnbc
             ! run linearized Hx
             else
-               t1 = mpi_wtime()
-               call calc_linhx(hx_mean_nobc(nobs), state_d,              &
+
+
+               vscale = 1._r_double
+               call calc_linhx(hx_mean_nobc(nobs), state_d,       &
                              real(x_lat(nobs)*deg2rad,r_single),  &
                              real(x_lon(nobs)*deg2rad,r_single),  &
                              x_time(nobs),                        &
-                             data_chan(n)%dhx_dx, hx(nobs))
+                             data_chan(n)%dhx_dx, hx(nobs), vscale)
+               ! compute modulated ensemble in obs space
+               if (neigv > 0) then
+                   do neig=1,neigv
+                      vscale = vlocal_evecs(neig,:)
+                      !if (nproc .eq. 10 .and. nobs .eq. 1) print *,neig,vscale
+                      call calc_linhx(hx_mean_nobc(nobs), state_d,   &
+                                real(x_lat(nobs)*deg2rad,r_single),  &
+                                real(x_lon(nobs)*deg2rad,r_single),  &
+                                x_time(nobs),                        &
+                                data_chan(n)%dhx_dx, hx_modens(nobs,neig), vscale)
+                   enddo
+               endif
                t2 = mpi_wtime()
                tsum = tsum + t2-t1
             endif
@@ -583,14 +602,14 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
  end subroutine get_satobs_data_bin
 
 ! read radiance data from netcdf file
-subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
+subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
   use nc_diag_read_mod, only: nc_diag_read_get_var
   use nc_diag_read_mod, only: nc_diag_read_get_dim, nc_diag_read_get_global_attr
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
 
   use radinfo, only: iuse_rad,nusis,jpch_rad,npred,adp_anglebc,emiss_bc
-  use params, only: nanals, lobsdiag_forenkf
+  use params, only: nanals, lobsdiag_forenkf, nlevs, neigv, vlocal_evecs
   use statevec, only: state_d
   use constants, only: deg2rad, zero
   use mpisetup, only: nproc, mpi_wtime
@@ -605,6 +624,8 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
 
   real(r_single), dimension(nobs_max), intent(out) :: hx_mean,hx_mean_nobc, hx
+  ! hx_modens holds modulated ensemble in ob space (zero size if neigv=0)
+  real(r_single), dimension(nobs_max,neigv), intent(out) :: hx_modens
   real(r_single), dimension(nobs_max), intent(out) :: x_obs
   real(r_single), dimension(nobs_max), intent(out) :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out) :: x_lon, x_lat
@@ -625,12 +646,12 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   character(len=20) ::  sat_type
 
   integer(i_kind) iunit, iob, iobdiag, i, nsat, ipe, jpchstart, nchans
-  integer(i_kind) iunit2, nobs, nobs2, nnz, nind
+  integer(i_kind) iunit2, nobs, nobs2, nnz, nind, neig
   integer(i_kind) npred_radiag, angord
   logical fexist
   logical twofiles,fexist2
   real(r_kind) :: errorlimit,errorlimit2
-  real(r_double) t1,t2,tsum,tsum2
+  real(r_double) t1,t2,tsum,tsum2,vscale(nlevs+1)
 
   type(sparr2)    :: dhx_dx_read
   type(sparr)     :: dhx_dx
@@ -844,11 +865,25 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
               dhx_dx_read%val = Observation_Operator_Jacobian_val(:,i)
               dhx_dx = dhx_dx_read
               t1 = mpi_wtime()
-              call calc_linhx(hx_mean_nobc(iob), state_d,        &
-                             real(x_lat(iob)*deg2rad,r_single),  &
-                             real(x_lon(iob)*deg2rad,r_single),  &
-                             x_time(iob),                        &
-                             dhx_dx, hx(iob))
+
+              vscale = 1._r_double
+              call calc_linhx(hx_mean_nobc(nobs), state_d,       &
+                             real(x_lat(nobs)*deg2rad,r_single),  &
+                             real(x_lon(nobs)*deg2rad,r_single),  &
+                             x_time(nobs),                        &
+                             dhx_dx, hx(nobs), vscale)
+              ! compute modulated ensemble in obs space
+              if (neigv > 0) then
+                  do neig=1,neigv
+                     vscale = vlocal_evecs(neig,:)
+                     !if (nproc .eq. 10 .and. nobs .eq. 1) print *,neig,vscale
+                     call calc_linhx(hx_mean_nobc(nobs), state_d,   &
+                               real(x_lat(nobs)*deg2rad,r_single),  &
+                               real(x_lon(nobs)*deg2rad,r_single),  &
+                               x_time(nobs),                        &
+                               dhx_dx, hx_modens(nobs,neig), vscale)
+                  enddo
+              endif
               t2 = mpi_wtime()
               tsum = tsum + t2-t1
               call delete(dhx_dx)

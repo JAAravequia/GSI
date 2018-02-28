@@ -146,7 +146,9 @@ logical test_loadbal
 if (letkf_flag) then
    ! used for finding nearest obs to grid point in LETKF.
    ! results are sorted by distance.
-   kdtree_obs2  => kdtree2_create(obloc,sort=.true.,rearrange=.true.)
+   if (nobstot >= 3) then
+      kdtree_obs2  => kdtree2_create(obloc,sort=.true.,rearrange=.true.)
+   endif
 endif
 
 ! partition state vector for using Grahams rule..
@@ -510,7 +512,7 @@ use covlocal, only:  latval
 
 implicit none
 integer(i_kind), dimension(:), intent(inout) :: numobs
-real(r_single) :: deglat,corrlength,corrsq
+real(r_single) :: deglat,corrlength,corrsq,r
 type(kdtree2_result),dimension(:),allocatable :: sresults
 
 integer nob,n1,n2,i,ideln
@@ -529,8 +531,19 @@ obsloop: do i=n1,n2
        deglat = latsgrd(i)*rad2deg
        corrlength=latval(deglat,corrlengthnh,corrlengthtr,corrlengthsh)
        corrsq = corrlength**2
-       call kdtree2_r_nearest(tp=kdtree_obs2,qv=gridloc(:,i),r2=corrsq,&
-                              nfound=numobs(i),nalloc=nobstot,results=sresults)
+
+       if (associated(kdtree_obs2)) then
+         call kdtree2_r_nearest(tp=kdtree_obs2,qv=gridloc(:,i),r2=corrsq,&
+              nfound=numobs(i),nalloc=nobstot,results=sresults)
+       else
+         numobs(i) = 0
+         do nob = 1, nobstot
+            r = sum( (gridloc(:,i)-obloc(:,nob))**2, 1)
+            if (r < corrsq) then
+              numobs(i) = numobs(i) + 1
+            endif
+         enddo
+       endif
     else
        do nob=1,nobstot
           if (sum((obloc(1:3,nob)-gridloc(1:3,i))**2,1) < corrlengthsq(nob)) &

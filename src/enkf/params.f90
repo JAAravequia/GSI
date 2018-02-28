@@ -107,6 +107,12 @@ integer,public :: npefiles = 0
 ! localization radius will be used. Ignored
 ! if letkf_flag = .false.
 integer,public :: nobsl_max = -1
+! for modulated ensemble, neigv is the number of
+! eigenvectors of the vertical localization matrix
+! if neigv=0, ob space localization is used
+integer,public :: neigv = 0
+real(r_double) :: vlocal_eval
+real(r_double),public,dimension(:,:), allocatable :: vlocal_evecs
 logical,public :: params_initialized = .true.
 logical,public :: save_inflation = .false.
 ! do sat bias correction update.
@@ -131,6 +137,10 @@ logical,public :: letkf_flag = .false.
 ! next two are no longer used, instead they are inferred from anavinfo
 logical,public :: massbal_adjust = .false. 
 logical,public :: nvars = -1 
+! Use Sakov's 'deterministic EnKF' approx. (K/2 used for pert update)
+logical,public :: denkf = .false.
+! sort obs in LETKF in order of decreasing DFS
+logical,public :: dfs_sort = .false.
 
 ! if true generate additional input files
 ! required for EFSO calculations
@@ -170,7 +180,7 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    newpc4pred,nmmb,nhr_anal,nhr_state, fhr_assim,nbackgrounds,nstatefields, &
                    save_inflation,nobsl_max,lobsdiag_forenkf,netcdf_diag,&
                    letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
-                   write_spread_diag,fso_cycling,fso_calculate
+                   neigv,denkf,dfs_sort,write_spread_diag,fso_cycling,fso_calculate
 
 namelist /nam_wrf/arw,nmm,nmm_restart
 namelist /satobs_enkf/sattypes_rad,dsis
@@ -180,7 +190,8 @@ namelist /ozobs_enkf/sattypes_oz
 contains
 
 subroutine read_namelist()
-integer i,nb
+integer i,j,nb
+logical fexist
 ! have all processes read namelist from file enkf.nml
 
 ! defaults
@@ -333,6 +344,63 @@ latboundmp=-latbound+p5delat
 latboundmm=-latbound-p5delat
 delatinv=1.0_r_single/delat
 
+! if neigv > 0, use modulated ensemble to compute Kalman gain (but use
+! this K to update only original ensemble). Only works with LETKF/DENKF.
+allocate(vlocal_evecs(neigv,nlevs+1))
+if (neigv > 0) then
+  if (.not. lobsdiag_forenkf) then
+    if (nproc .eq. 0) then
+       print *,'lobsdiag_forenkf must be true if neigv>0'
+    endif
+    call stop2(19)
+  endif
+  ! neigv>0 implies letkf_flag=denkf=letkf_novlocal=lobsdiag_forenkf=.true. and
+  ! lnsigcutoff* = 1.e30
+  if (.not. letkf_flag) then
+    if (nproc .eq. 0) print *,"re-setting letkf_flag to true"
+    letkf_flag = .true.
+  endif
+  if (.not. letkf_novlocal) then
+     if (nproc .eq. 0) print *,"re-setting letkf_novlocal to true"
+     letkf_novlocal = .true.
+  endif
+  if (letkf_novlocal .and. .not. denkf) then
+     if (nproc .eq. 0) print *,"re-setting denkf to true"
+     denkf = .true.
+  endif
+  ! set vertical localization parameters to very large values
+  ! (turns vertical localization off)
+  lnsigcutoffnh = 1.e30
+  lnsigcutoffsh = 1.e30
+  lnsigcutofftr = 1.e30
+  lnsigcutoffsatnh = 1.e30
+  lnsigcutoffsatsh = 1.e30
+  lnsigcutoffsattr = 1.e30
+  lnsigcutoffpsnh = 1.e30
+  lnsigcutoffpssh = 1.e30
+  lnsigcutoffpstr = 1.e30
+! read in eigenvalues/vectors of vertical localization matrix on all tasks
+! (text file vlocal_eig.dat must exist)
+  inquire(file='vlocal_eig.dat',exist=fexist)
+  if ( fexist ) then
+     open(7,file='vlocal_eig.dat',status="old",action="read")
+  else
+     if (nproc .eq. 0) print *, 'error vlocal_eig.dat does not exist'
+     call stop2(19)
+  endif
+  if (nproc .eq. 0) print *,'vertical localization eigenvalues'
+  do i = 1,neigv
+     read(7,*) vlocal_eval
+     if (nproc .eq. 0) print *,i,vlocal_eval
+     do j = 1,nlevs
+        read(7,*) vlocal_evecs(i,j)
+     enddo
+     ! nlevs+1 same as level 1 (2d variables treated as surface)
+     vlocal_evecs(i,nlevs+1) = vlocal_evecs(i,1)
+  enddo
+  close(7)
+endif
+
 ! have to do ob space update for serial filter (not for LETKF).
 if ((.not. letkf_flag .or. lupd_obspace_serial) .and. numiter < 1) numiter = 1
 
@@ -374,7 +442,13 @@ if (nproc == 0) then
    
    print *, trim(adjustl(datapath))
    if (datestring .ne. '0000000000') print *, 'analysis time ',datestring
-   print *, nanals,' members'
+   if (neigv > 0) then
+      print *,nanals,' (unmodulated) members'
+      print *,neigv,' eigenvectors for vertical localization'
+      print *,nanals*neigv,' modulated ensemble members'
+   else
+      print *,nanals,' members'
+   endif
 
 ! check for deprecated namelist variables
    if (nvars > 0 .or. massbal_adjust) then

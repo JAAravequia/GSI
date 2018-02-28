@@ -87,18 +87,19 @@ use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, oblnp, &
                   obfit_prior, obfit_post, obsprd_prior, obsprd_post,&
                   numobspersat, deltapredx, biaspreds, corrlengthsq,&
                   biasprednorm, probgrosserr, prpgerr, obtype, obpress,&
-                  lnsigl, anal_ob, obloclat, obloclon, stattype
+                  lnsigl, anal_ob, anal_ob_modens, obloclat, obloclon, stattype
 use constants, only: pi, one, zero, rad2deg, deg2rad
 use params, only: sprd_tol, datapath, nanals, iseed_perturbed_obs,&
                   iassim_order,sortinc,deterministic,nlevs,&
                   zhuberleft,zhuberright,varqc,lupd_satbiasc,huber,letkf_novlocal,&
                   lupd_obspace_serial,corrlengthnh,corrlengthtr,corrlengthsh,&
-                  nbackgrounds,nobsl_max
+                  nbackgrounds,nobsl_max,neigv,vlocal_evecs,denkf,dfs_sort
 use radinfo, only: npred,nusis,nuchan,jpch_rad,predx
 use radbias, only: apply_biascorr, update_biascorr
 use gridinfo, only: nlevs_pres,lonsgrd,latsgrd,logp,npts,gridloc
 use kdtree2_module, only: kdtree2, kdtree2_create, kdtree2_destroy, &
                           kdtree2_result, kdtree2_n_nearest, kdtree2_r_nearest
+use sorting, only: quicksort, isort
 
 implicit none
 
@@ -113,37 +114,41 @@ implicit none
 
 ! local variables.
 integer(i_kind) nob,nf,nanal,&
-                i,nrej,npt,nn,nnmax,ierr
+                i,nlev,nrej,npt,nn,nnmax,ierr
 integer(i_kind) nobsl, ngrd1, nobsl2, nthreads, nb, &
                 nobslocal_min,nobslocal_max, &
                 nobslocal_minall,nobslocal_maxall
 integer(i_kind),allocatable,dimension(:) :: oindex
-real(r_single) :: deglat, dist, corrsq
+real(r_single) :: deglat, dist, corrsq, oberrfact, gain, r
 real(r_double) :: t1,t2,t3,t4,t5,tbegin,tend,tmin,tmax,tmean
-real(r_kind) r_nanals,r_nanalsm1,r_scalefact
+real(r_kind) r_nanals,r_nanalsm1
 real(r_kind) normdepart, pnge, width
 real(r_kind),dimension(nobstot):: oberrvaruse
 real(r_kind) vdist
 real(r_kind) corrlength
 real(r_kind) sqrtoberr
-logical vlocal
+logical vlocal, kdobs
 ! For LETKF core processes
 real(r_kind),allocatable,dimension(:,:) :: hxens
+real(r_single),allocatable,dimension(:,:,:) :: ens_tmp
 real(r_single),allocatable,dimension(:,:) :: obperts,obens
-real(r_single),allocatable,dimension(:) :: kfgain
-real(r_kind),allocatable,dimension(:) :: rdiag,dep,rloc
-real(r_kind),dimension(nanals,nanals) :: trans
+real(r_single),allocatable,dimension(:) :: kfgain, dfs
+real(r_kind),allocatable,dimension(:) :: rdiag,dep,rloc,statesprd_prior
+real(r_kind),allocatable,dimension(:,:) :: trans
 real(r_kind),dimension(nanals) :: work,work2
 ! kdtree stuff
 type(kdtree2_result),dimension(:),allocatable :: sresults
+integer(i_kind), dimension(:), allocatable :: indxassim, indxob
 #ifdef MPI3
 ! pointers used for MPI-3 shared memory manipulations.
 real(r_single), pointer, dimension(:,:) :: anal_ob_fp ! Fortran pointer
 type(c_ptr)                             :: anal_ob_cp ! C pointer
+real(r_single), pointer, dimension(:,:) :: anal_ob_modens_fp ! Fortran pointer
+type(c_ptr)                             :: anal_ob_modens_cp ! C pointer
 real(r_single), pointer, dimension(:,:) :: obperts_fp ! Fortran pointer
 type(c_ptr)                             :: obperts_cp ! C pointer
-integer disp_unit, shm_win, shm_win2
-integer(MPI_ADDRESS_KIND) :: win_size, nsize
+integer disp_unit, shm_win, shm_win2, shm_win3
+integer(MPI_ADDRESS_KIND) :: win_size, nsize, nsize2, win_size2
 integer(MPI_ADDRESS_KIND) :: segment_size
 #endif
 real(r_single), allocatable, dimension(:) :: buffer
@@ -156,7 +161,8 @@ if (nproc == 0) print *,'using',nthreads,' openmp threads'
 ! define a few frequently used parameters
 r_nanals=one/float(nanals)
 r_nanalsm1=one/float(nanals-1)
-r_scalefact = sqrt(float(nanals)/float(nanals-1))
+
+kdobs=associated(kdtree_obs2)
 
 ! create random numbers for perturbed obs on root task.
 if (.not. deterministic .and. nproc .eq. 0) then
@@ -182,13 +188,20 @@ t1 = mpi_wtime()
 ! shared memory group on each node.
 disp_unit = num_bytes_for_r_single ! anal_ob is r_single
 nsize = nobstot*nanals
+nsize2 = nobstot*nanals*neigv
 if (nproc_shm == 0) then
    win_size = nsize*disp_unit
+   win_size2 = nsize2*disp_unit
 else
    win_size = 0
+   win_size2 = 0
 endif
 call MPI_Win_allocate_shared(win_size, disp_unit, MPI_INFO_NULL,&
                              mpi_comm_shmem, anal_ob_cp, shm_win, ierr)
+if (neigv > 0) then
+   call MPI_Win_allocate_shared(win_size2, disp_unit, MPI_INFO_NULL,&
+                                mpi_comm_shmem, anal_ob_modens_cp, shm_win3, ierr)
+endif
 if (.not. deterministic) then
    call MPI_Win_allocate_shared(win_size, disp_unit, MPI_INFO_NULL,&
                                 mpi_comm_shmem, obperts_cp, shm_win2, ierr)
@@ -208,6 +221,17 @@ if (nproc_shm == 0) then
          anal_ob_fp(nanal,1:nobstot) = buffer(1:nobstot)
       end if 
    end do
+   if (neigv > 0) then
+      call MPI_Win_lock(MPI_LOCK_EXCLUSIVE,0,MPI_MODE_NOCHECK,shm_win3,ierr)
+      call c_f_pointer(anal_ob_modens_cp, anal_ob_modens_fp, [nanals*neigv, nobstot])
+      do nanal=1,nanals*neigv
+         if (nproc == 0) buffer(1:nobstot) = anal_ob_modens(nanal,1:nobstot)
+         if (nproc_shm == 0) then
+            call mpi_bcast(buffer,nobstot,mpi_real4,0,mpi_comm_shmemroot,ierr)
+            anal_ob_modens_fp(nanal,1:nobstot) = buffer(1:nobstot)
+         end if 
+      end do
+   endif
    if (.not. deterministic) then
       call MPI_Win_lock(MPI_LOCK_EXCLUSIVE,0,MPI_MODE_NOCHECK,shm_win2,ierr)
       call c_f_pointer(obperts_cp, obperts_fp, [nanals, nobstot])
@@ -221,9 +245,12 @@ if (nproc_shm == 0) then
    endif
    deallocate(buffer)
    call MPI_Win_unlock(0, shm_win, ierr)
+   if (neigv > 0) call MPI_Win_unlock(0, shm_win3, ierr)
    nullify(anal_ob_fp)
+   if (neigv > 0) nullify(anal_ob_modens_fp)
    ! don't need anal_ob anymore
    if (allocated(anal_ob)) deallocate(anal_ob)
+   if (allocated(anal_ob_modens)) deallocate(anal_ob_modens)
    if (.not. deterministic) then
       ! don't need obperts anymore
       call MPI_Win_unlock(0, shm_win2, ierr)
@@ -238,6 +265,10 @@ call mpi_barrier(mpi_comm_world, ierr)
 ! segment (containing observation prior ensemble) on each task.
 call MPI_Win_shared_query(shm_win, 0, segment_size, disp_unit, anal_ob_cp, ierr)
 call c_f_pointer(anal_ob_cp, anal_ob_fp, [nanals, nobstot])
+if (neigv > 0) then
+   call MPI_Win_shared_query(shm_win3, 0, segment_size, disp_unit, anal_ob_modens_cp, ierr)
+   call c_f_pointer(anal_ob_modens_cp, anal_ob_modens_fp, [nanals*neigv, nobstot])
+endif
 if (.not. deterministic) then
    call MPI_Win_shared_query(shm_win2, 0, segment_size, disp_unit, obperts_cp, ierr)
    call c_f_pointer(obperts_cp, obperts_fp, [nanals, nobstot])
@@ -248,12 +279,20 @@ endif
 allocate(buffer(nobstot))
 ! allocate anal_ob on non-root tasks
 if (nproc .ne. 0) allocate(anal_ob(nanals,nobstot))
+if (neigv > 0 .and. nproc .ne. 0) allocate(anal_ob_modens(nanals*neigv,nobstot))
 ! bcast anal_ob from root one member at a time.
 do nanal=1,nanals
    buffer(1:nobstot) = anal_ob(nanal,1:nobstot)
    call mpi_bcast(buffer,nobstot,mpi_real4,0,mpi_comm_world,ierr)
    if (nproc .ne. 0) anal_ob(nanal,1:nobstot) = buffer(1:nobstot)
 end do
+if (neigv > 0) then
+   do nanal=1,nanals*neigv
+      buffer(1:nobstot) = anal_ob_modens(nanal,1:nobstot)
+      call mpi_bcast(buffer,nobstot,mpi_real4,0,mpi_comm_world,ierr)
+      if (nproc .ne. 0) anal_ob_modens(nanal,1:nobstot) = buffer(1:nobstot)
+   end do
+endif
 if (.not. deterministic) then
    if (nproc .ne. 0) allocate(obperts(nanals,nobstot))
    do nanal=1,nanals
@@ -347,12 +386,16 @@ tbegin = mpi_wtime()
 nobslocal_max = -999
 nobslocal_min = nobstot
 
+if (nobsl_max > 0 .and. dfs_sort) then
+    allocate(statesprd_prior(ncdim))
+endif
+
 ! Update ensemble on model grid.
 ! Loop for each horizontal grid points on this task.
 !$omp parallel do schedule(dynamic) private(npt,nob,nobsl, &
-!$omp                  nobsl2,ngrd1,corrlength, &
-!$omp                  nf,vdist,kfgain,obens, &
-!$omp                  nn,hxens,rdiag,dep,rloc,i,work,work2,trans, &
+!$omp                  gain,nobsl2,oberrfact,ngrd1,corrlength,ens_tmp, &
+!$omp                  nf,vdist,kfgain,obens,indxassim,indxob, &
+!$omp                  nn,hxens,dfs,rdiag,dep,rloc,i,work,work2,trans, &
 !$omp                  oindex,deglat,dist,corrsq,nb,sresults) &
 !$omp  reduction(+:t1,t2,t3,t4,t5) &
 !$omp  reduction(max:nobslocal_max) &
@@ -360,30 +403,126 @@ nobslocal_min = nobstot
 grdloop: do npt=1,numptsperproc(nproc+1)
 
    t1 = mpi_wtime()
-
+   if (neigv > 0) then
+      if (.not. allocated(ens_tmp)) allocate(ens_tmp(nanals*neigv,ncdim,nbackgrounds))
+      if (.not. allocated(trans)) allocate(trans(nanals*neigv,nanals*neigv))
+   else
+      if (.not. allocated(ens_tmp)) allocate(ens_tmp(nanals,ncdim,nbackgrounds))
+      if (.not. allocated(trans)) allocate(trans(nanals,nanals))
+   endif
    ! find obs close to this grid point (using kdtree)
    ngrd1=indxproc(nproc+1,npt)
    deglat = latsgrd(ngrd1)*rad2deg
    corrlength=latval(deglat,corrlengthnh,corrlengthtr,corrlengthsh)
    corrsq = corrlength**2
+   allocate(sresults(nobstot))
+   do nb=1,nbackgrounds
+      do i=1,ncdim ! state space ensemble spread for column being updated
+         nlev = index_pres(i) ! vertical index for i'th control variable
+         if (nlev .eq. nlevs+1) nlev=1 ! 2d fields, assume surface
+         if (neigv > 0 ) then
+            call expand_ens(neigv,nanals, &
+                            anal_chunk(1:nanals,npt,i,nb), &
+                            ens_tmp(:,i,nb),vlocal_evecs(:,nlev))
+         else
+            ens_tmp(:,i,nb) = anal_chunk(:,npt,i,nb)
+         endif
+      enddo
+   enddo
    ! kd-tree fixed range search
-   if (allocated(sresults)) deallocate(sresults)
+!   if (allocated(sresults)) deallocate(sresults)
    if (nobsl_max > 0) then ! only use nobsl_max nearest obs (sorted by distance).
-       allocate(sresults(nobsl_max))
-       call kdtree2_n_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),nn=nobsl_max,&
-            results=sresults)
-       nobsl = nobsl_max
+       if (dfs_sort) then ! sort by DFS instead of distance.
+          do i=1,ncdim ! state space ensemble spread for column being updated
+             statesprd_prior(i) =  &
+             sqrt(sum(ens_tmp(:,i,(nbackgrounds/2)+1)**2)*r_nanalsm1)
+          enddo
+          allocate(dfs(nobstot))
+          allocate(rloc(nobstot))
+          allocate(indxob(nobstot))
+          ! calculate integrated DFS for each ob in local volume
+          nobsl = 0
+          do nob=1,nobstot
+             rloc(nob) = sum((obloc(:,nob)-grdloc_chunk(:,npt))**2,1)
+             dist = sqrt(rloc(nob)/corrlengthsq(nob))
+             if (dist < 1.0 - tiny(dist) .and. &
+                 oberrvaruse(nob) < 1.e10_r_single) then
+                nobsl = nobsl + 1
+                dfs(nobsl) = 0.
+                indxob(nobsl) = nob
+                oberrfact = taper(dist)
+                do i=1,ncdim
+#ifdef MPI3
+                    gain = sum(ens_tmp(1:nanals,i,(nbackgrounds/2)+1)*anal_ob_fp(1:nanals,nob))*r_nanalsm1
+#else
+                    gain = sum(ens_tmp(1:nanals,i,(nbackgrounds/2)+1)*anal_ob(1:nanals,nob))*r_nanalsm1
+#endif
+! DFS is estimated increment normalized by spread, summed over all variables in column, for middle of window
+                    gain = gain/(obsprd_prior(nob) + oberrvaruse(nob)/oberrfact)
+                    gain = gain/statesprd_prior(i)
+                    dfs(nobsl) = dfs(nobsl)+abs(gain*(ob(nob)-ensmean_ob(nob)))
+                enddo
+             endif
+          enddo
+          ! sort on DFS
+          allocate(indxassim(nobsl))
+          call quicksort(nobsl,dfs(1:nobsl),indxassim)
+          nf = 0 ! results ordered by DFS, largest to smallest
+          nobsl2 = min(nobsl_max,nobsl)
+          do nob=nobsl,nobsl-nobsl2+1,-1
+             nf = nf + 1
+             sresults(nf)%dis = rloc(indxob(indxassim(nob)))
+             sresults(nf)%idx = indxob(indxassim(nob))
+             !if (nproc == 0 .and. npt == 1) &
+             !print *,nf,sresults(nf)%idx,dfs(indxassim(nob)),sqrt(sresults(nf)%dis/corrlengthsq(sresults(nf)%idx)),obtype(sresults(nf)%idx)
+          enddo
+          deallocate(rloc,dfs,indxassim,indxob)
+          nobsl = nobsl2
+       else
+          if (kdobs) then
+             call kdtree2_n_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),nn=nobsl_max,&
+                  results=sresults)
+             nobsl = nobsl_max
+          else
+             nobsl = 0
+             do nob = 1, nobstot
+                r = sum( (grdloc_chunk(:,npt)-obloc(:,nob))**2, 1)
+                if (r < corrsq) then
+                   nobsl = nobsl + 1
+                   sresults(nobsl)%idx = nob
+                   sresults(nobsl)%dis = r
+                endif
+             enddo
+             nobsl_max = nobsl
+          endif
+       endif
    else ! find all obs within localization radius (sorted by distance).
-       allocate(sresults(nobstot))
-       call kdtree2_r_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),r2=corrsq,&
-            nfound=nobsl,nalloc=nobstot,results=sresults)
+       if (kdobs) then
+         call kdtree2_r_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),r2=corrsq,&
+              nfound=nobsl,nalloc=nobstot,results=sresults)
+       else
+         nobsl = 0
+         do nob = 1, nobstot
+            r = sum( (grdloc_chunk(:,npt)-obloc(:,nob))**2, 1)
+            if (r < corrsq) then
+              nobsl = nobsl + 1
+              sresults(nobsl)%idx = nob
+              sresults(nobsl)%dis = r
+            endif
+         enddo
+       endif
    endif
 
    t2 = t2 + mpi_wtime() - t1
    t1 = mpi_wtime()
 
    ! Skip when no observations in local area
-   if(nobsl == 0) cycle grdloop
+   if(nobsl == 0) then
+      if (allocated(sresults)) deallocate(sresults)
+      if (allocated(trans)) deallocate(trans)
+      if (allocated(ens_tmp)) deallocate(ens_tmp)
+      cycle grdloop
+   endif
 
    ! Loop through vertical levels (nnmax=1 if no vertical localization)
    verloop: do nn=1,nnmax
@@ -415,16 +554,28 @@ grdloop: do npt=1,numptsperproc(nproc+1)
          deallocate(rloc,oindex)
          cycle verloop
       end if
-      allocate(hxens(nanals,nobsl2))
+      if (neigv > 0) then
+         allocate(hxens(nanals*neigv,nobsl2))
+      else
+         allocate(hxens(nanals,nobsl2))
+      endif
       allocate(rdiag(nobsl2))
       allocate(dep(nobsl2))
       do nob=1,nobsl2
          nf=oindex(nob)
+         if (neigv > 0) then
+#ifdef MPI3
+         hxens(1:nanals*neigv,nob)=anal_ob_modens_fp(1:nanals*neigv,nf) 
+#else
+         hxens(1:nanals*neigv,nob)=anal_ob_modens(1:nanals*neigv,nf) 
+#endif
+         else
 #ifdef MPI3
          hxens(1:nanals,nob)=anal_ob_fp(1:nanals,nf) 
 #else
          hxens(1:nanals,nob)=anal_ob(1:nanals,nf) 
 #endif
+         endif
          rdiag(nob)=one/oberrvaruse(nf)
          dep(nob)=ob(nf)-ensmean_ob(nf)
       end do
@@ -432,26 +583,42 @@ grdloop: do npt=1,numptsperproc(nproc+1)
       t3 = t3 + mpi_wtime() - t1
       t1 = mpi_wtime()
 
-      if (.not. deterministic) then
+      if (.not. deterministic .or. denkf) then
          allocate(kfgain(nobsl2),obens(nobsl2,nanals))
-         ! add ob perts to observation priors
-         do nob=1,nobsl2
-            nf = oindex(nob)
-            obens(nob,1:nanals) = &
+         if (.not. deterministic) then
+            ! add ob perts to observation priors
+            do nob=1,nobsl2
+               nf = oindex(nob)
+               obens(nob,1:nanals) = &
 #ifdef MPI3
-            obperts_fp(1:nanals,nf) + anal_ob_fp(1:nanals,nf) 
+               obperts_fp(1:nanals,nf) + anal_ob_fp(1:nanals,nf) 
 #else
-            obperts(1:nanals,nf) + anal_ob(1:nanals,nf) 
+               obperts(1:nanals,nf) + anal_ob(1:nanals,nf) 
 #endif
-         enddo
+            enddo
+         else
+            do nob=1,nobsl2
+               nf = oindex(nob)
+               obens(nob,1:nanals) = &
+#ifdef MPI3
+               anal_ob_fp(1:nanals,nf) 
+#else
+               anal_ob(1:nanals,nf) 
+#endif
+            enddo
+         endif
       endif
       deallocate(oindex)
   
       ! Compute transformation matrix of LETKF
-      call letkf_core(nobsl2,hxens,rdiag,dep,rloc(1:nobsl2),trans)
+      if (neigv > 0) then
+         call letkf_core(nobsl2,hxens,rdiag,dep,rloc(1:nobsl2),trans,nanals*neigv,neigv)
+      else
+         call letkf_core(nobsl2,hxens,rdiag,dep,rloc(1:nobsl2),trans,nanals,1)
+      endif
       deallocate(rloc,rdiag)
-      ! if perturbed obs not used, these arrays no longer needed.
-      if (deterministic) then
+      ! if perturbed obs or denkf not used, these arrays no longer needed.
+      if (deterministic .and. .not. denkf) then
          deallocate(hxens,dep)
       endif
       
@@ -465,20 +632,31 @@ grdloop: do npt=1,numptsperproc(nproc+1)
          ! if not vlocal, update all state variables in column.
          if(vlocal .and. index_pres(i) /= nn) cycle
          if (deterministic) then
-            work(1:nanals) = anal_chunk(1:nanals,npt,i,nb)
-            work2(1:nanals) = ensmean_chunk(npt,i,nb)
-            if(r_kind == kind(1.d0)) then
-               call dgemv('t',nanals,nanals,1.d0,trans,nanals,work,1,1.d0, &
-                    & work2,1)
+            if (denkf) then
+               do nob=1,nobsl2
+                  kfgain(nob) = sum(hxens(:,nob)*ens_tmp(:,i,nb))
+               enddo
+               ensmean_chunk(npt,i,nb) = ensmean_chunk(npt,i,nb) + sum(kfgain*dep)
+               do nanal=1,nanals
+                  anal_chunk(nanal,npt,i,nb) = anal_chunk(nanal,npt,i,nb) - &
+                  sum(0.5*kfgain*obens(:,nanal))
+               enddo
             else
-               call sgemv('t',nanals,nanals,1.e0,trans,nanals,work,1,1.e0, &
-                    & work2,1)
-            end if
-            ensmean_chunk(npt,i,nb) = sum(work2(1:nanals)) * r_nanals
-            anal_chunk(1:nanals,npt,i,nb) = work2(1:nanals)-ensmean_chunk(npt,i,nb)
+               work(1:nanals) = anal_chunk(1:nanals,npt,i,nb)
+               work2(1:nanals) = ensmean_chunk(npt,i,nb)
+               if(r_kind == kind(1.d0)) then
+                  call dgemv('t',nanals,nanals,1.d0,trans,nanals,work,1,1.d0, &
+                       & work2,1)
+               else
+                  call sgemv('t',nanals,nanals,1.e0,trans,nanals,work,1,1.e0, &
+                       & work2,1)
+               end if
+               ensmean_chunk(npt,i,nb) = sum(work2(1:nanals)) * r_nanals
+               anal_chunk(1:nanals,npt,i,nb) = work2(1:nanals)-ensmean_chunk(npt,i,nb)
+            endif
          else ! perturbed obs using LETKF gain.
             do nob=1,nobsl2
-               kfgain(nob) = sum(hxens(:,nob)*anal_chunk(:,npt,i,nb))
+               kfgain(nob) = sum(hxens(:,nob)*ens_tmp(:,i,nb))
             enddo
             ensmean_chunk(npt,i,nb) = ensmean_chunk(npt,i,nb) + sum(kfgain*dep)
             do nanal=1,nanals
@@ -488,18 +666,24 @@ grdloop: do npt=1,numptsperproc(nproc+1)
          endif
       enddo
       enddo
-      ! deallocate arrays needed for perturbed obs LETKF
-      if (.not. deterministic) then
-         deallocate(hxens,kfgain,dep,obens)
-      endif
+      ! deallocate arrays needed for perturbed obs LETKF and DENKF
+      if (allocated(hxens)) deallocate(hxens)
+      if (allocated(kfgain)) deallocate(kfgain)
+      if (allocated(dep)) deallocate(dep)
+      if (allocated(obens)) deallocate(obens)
 
       t5 = t5 + mpi_wtime() - t1
       t1 = mpi_wtime()
 
    end do verloop
+
    if (allocated(sresults)) deallocate(sresults)
+   if (allocated(trans)) deallocate(trans)
+   if (allocated(ens_tmp)) deallocate(ens_tmp)
 end do grdloop
 !$omp end parallel do
+
+if (allocated(statesprd_prior)) deallocate(statesprd_prior)
 
 ! make sure posterior perturbations still have zero mean.
 ! (roundoff errors can accumulate)
@@ -555,16 +739,22 @@ if (.not. deterministic) then
    nullify(obperts_fp)
    call MPI_Win_free(shm_win2, ierr)
 endif
+if (neigv > 0) then
+   nullify(anal_ob_modens_fp)
+   call MPI_Win_free(shm_win3, ierr)
+endif
 #endif
 ! deallocate anal_ob on non-root tasks.
 if (nproc .ne. 0 .and. allocated(anal_ob)) deallocate(anal_ob)
+if (nproc .ne. 0 .and. allocated(anal_ob_modens)) deallocate(anal_ob_modens)
 if (allocated(obperts)) deallocate(obperts)
+if (allocated(ens_tmp)) deallocate(ens_tmp)
 
 return
 
 end subroutine letkf_update
 
-subroutine letkf_core(nobsl,hxens,rdiaginv,dep,rloc,trans)
+subroutine letkf_core(nobsl,hxens,rdiaginv,dep,rloc,trans,nanals,neigv)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    letkf_core
@@ -601,7 +791,7 @@ subroutine letkf_core(nobsl,hxens,rdiaginv,dep,rloc,trans)
 !
 !$$$ end documentation block
 implicit none
-integer(i_kind)                      ,intent(in ) :: nobsl
+integer(i_kind)                      ,intent(in ) :: nobsl,nanals,neigv
 real(r_kind),dimension(nanals,nobsl ),intent(inout) :: hxens
 real(r_kind),dimension(nobsl        ),intent(in ) :: rdiaginv
 real(r_kind),dimension(nobsl        ),intent(in ) :: dep
@@ -610,8 +800,7 @@ real(r_kind),dimension(nanals,nanals),intent(out) :: trans
 real(r_kind), allocatable, dimension(:,:) :: work1,work2,eivec,pa
 real(r_kind), allocatable, dimension(:) :: rrloc,eival,work3
 real(r_kind) :: rho
-integer(i_kind) :: i,j,nob,nanal,ierr
-!integer(i_kind) :: lwork
+integer(i_kind) :: i,j,nob,nanal,ierr,lwork
 !for dsyevr
 integer(i_kind) iwork(10*nanals),isuppz(2*nanals)
 real(r_kind) vl,vu,work(70*nanals)
@@ -647,7 +836,7 @@ else
 end if
 ! hdxb^T Rinv hdxb + (m-1) I
 do nanal=1,nanals
-   work1(nanal,nanal) = work1(nanal,nanal) + real(nanals-1,r_kind)
+   work1(nanal,nanal) = work1(nanal,nanal) + real(nanals/neigv-1,r_kind)
 end do
 ! eigenvalues and eigenvectors of [ hdxb^T Rinv hdxb + (m-1) I ]
 ! use LAPACK dsyev
@@ -715,7 +904,7 @@ do nanal=1,nanals
 end do
 ! T = sqrt[(m-1)Pa]
 do j=1,nanals
-   rho = sqrt( real(nanals-1,r_kind) / eival(j) )
+   rho = sqrt( real(nanals/neigv-1,r_kind) / eival(j) )
    do i=1,nanals
       work1(i,j) = eivec(i,j) * rho
    end do

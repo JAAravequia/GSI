@@ -91,7 +91,7 @@ program enkf_main
  ! model state vector
  use statevec, only: read_state, statevec_cleanup, init_statevec
  ! EnKF linhx observer
- use observer_enkf, only: init_observer_enkf
+ use observer_enkf, only: init_observer_enkf, destroy_observer_enkf
  ! load balancing
  use loadbal, only: load_balance, loadbal_cleanup, scatter_chunks, gather_chunks
  ! enkf update
@@ -163,6 +163,7 @@ program enkf_main
  ! cleanup state vectors after observation operator is done if lin Hx
  if (lobsdiag_forenkf) then
     call statevec_cleanup()
+    call destroy_observer_enkf()
  endif
 
  ! print innovation statistics for prior on root task.
