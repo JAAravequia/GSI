@@ -22,7 +22,7 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !                         bounds array references associated with dpres<zero
 !   2012-02-12  carley  - Update to include use of metguess bundle with qr and qli
 !   2016-02-15  Johnson, Y. Wang, X. Wang - Develop the reflectivity operator for WRF ARW 
-!                                           (Johnson et al. 2015 MWR; Wang and Wang 2016 MWR).
+!                                           (Johnson et al. 2015 MWR; Wang and Wang 2017 MWR).
 !                                           Two options were developed,
 !                                           1) Explicitly apply the operator H(qr, qs, qg) to hydrometeors
 !                                           2) Directly use the reflectivity from the wrfout

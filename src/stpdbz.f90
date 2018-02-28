@@ -8,7 +8,7 @@ module stpdbzmod
 ! abstract: module for stpdbz and its tangent linear stpdbz_tl
 !
 ! program history log:
-!   2017-05-12  Y. Wang and X. Wang - add adjoint of reflectivity operator, POC: xuguang.wang@ou.edu
+!   2017-05-12  Y. Wang and X. Wang - add adjoint of reflectivity operator (Wang and Wang 2017 MWR), POC: xuguang.wang@ou.edu
 !
 ! subroutines included:
 !   sub stpdbz

@@ -8,7 +8,7 @@ module intdbzmod
 !
 ! program history log:
 ! 2017-05-12 Y. Wang and X. Wang - add tangent linear of dbz operator to directly assimilate reflectivity
-!                                  for both ARW and NMMB models. POC: xuguang.wang@ou.edu
+!                                  for both ARW and NMMB models (Wang and Wang 2017 MWR). POC: xuguang.wang@ou.edu
 !
 ! subroutines included:
 !   sub intdbz_

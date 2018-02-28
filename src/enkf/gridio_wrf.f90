@@ -17,6 +17,8 @@ module gridio
   !   
   !   2011-11-30  Initial version.
   !   2017-05-12 Y. Wang and X. Wang - add more state variables for radar DA,
+  !                                    (Johnson et al. 2015 MWR; Wang and Wang
+  !                                    2017 MWR)
   !                                    POC: xuguang.wang@ou.edu
   !
   ! attributes:
