@@ -26,8 +26,10 @@
 !   2015-06-29  Add ability to read/write multiple time levels
 !   2016-05-02  Modification for reading state vector from table
 !               (Anna Shlyaeva)
-!   2016-04-20  Modify to handle the updated nemsio sig file (P, DP, DPDT
-!               removed)
+!   2016-04-20  Modify to handle the updated nemsio sig file (P, DP, DPDT removed)
+!               For GFS and NMMB
+!   2017-06-14  Adding functionality to optionally write non-inflated ensembles,  
+!               a required input for EFSO calculations 
 !
 ! attributes:
 !   language: f95
@@ -187,7 +189,7 @@
      ! pressure at interfaces
      do k=1,nlevs+1
         pressi(:,k)=ak(k)+bk(k)*psg
-        if (nanal .eq. 1) print *,'sigio, min/max pressi',k,minval(pressi(:,k)),maxval(pressi(:,k))
+        if (nanal .eq. 1) print *,'nemsio, min/max pressi',k,minval(pressi(:,k)),maxval(pressi(:,k))
      enddo
      deallocate(ak,bk)
   else
@@ -291,12 +293,8 @@
    
         vrtspec = sigdata%z(:,k); divspec = sigdata%d(:,k)
         call sptezv_s(divspec,vrtspec,ug,vg,1)
-        if (u_ind > 0) then
-           call copytogrdin(ug,grdin(:,nlevs*(u_ind-1)+k,nb))
-        endif
-        if (v_ind > 0) then
-           call copytogrdin(vg,grdin(:,nlevs*(v_ind-1)+k,nb))
-        endif
+        if (u_ind > 0) call copytogrdin(ug,grdin(:,nlevs*(u_ind-1)+k,nb))
+        if (v_ind > 0) call copytogrdin(vg,grdin(:,nlevs*(v_ind-1)+k,nb))
 
 ! calculate vertical integral of mass flux div (ps tendency)
 ! this variable is analyzed in order to enforce mass balance in the analysis
@@ -322,13 +320,13 @@
         if (oz_ind > 0) then
            divspec = sigdata%q(:,k,2)
            call sptez_s(divspec,ug,1)
-           call copytogrdin(ug,grdin(:,nlevs*(oz_ind-1)+k,nb))
+           call copytogrdin(ug,grdin(:,nlevs*(oz_ind-1)+k,nb))                                                                                                                                                                                                             
         endif
 
         if (cw_ind > 0) then
            divspec = sigdata%q(:,k,3)
            call sptez_s(divspec,ug,1)
-           call copytogrdin(ug,grdin(:,nlevs*(cw_ind-1)+k,nb))
+           call copytogrdin(ug,grdin(:,nlevs*(cw_ind-1)+k,nb))                                                                                                                                                                                                             
         endif
 
      enddo
@@ -337,7 +335,7 @@
 
   ! surface pressure
   if (ps_ind > 0) then
-    call copytogrdin(psg,grdin(:,nlevs*nc3d + ps_ind,nb))
+    call copytogrdin(psg,grdin(:,nlevs*nc3d + ps_ind,nb))                                                                                                                                                                                                          
   endif
   if (.not. use_gfs_nemsio) call sigio_axdata(sigdata,iret)
 
@@ -346,7 +344,7 @@
      pstend = sum(vmassdiv,2)
      if (nanal .eq. 1) &
      print *,nanal,'min/max first-guess ps tend',minval(pstend),maxval(pstend)
-     call copytogrdin(pstend,grdin(:,nlevs*nc3d + pst_ind,nb))
+     call copytogrdin(pstend,grdin(:,nlevs*nc3d + pst_ind,nb))                                                                                                                                                                                                                
   endif
 
   ! compute saturation q.
@@ -371,7 +369,7 @@
 
  end subroutine readgriddata
 
- subroutine writegriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,grdin)
+ subroutine writegriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,grdin,no_inflate_flag)
   use sigio_module, only: sigio_head, sigio_data, sigio_sclose, sigio_sropen, &
                           sigio_srohdc, sigio_sclose, sigio_axdata, &
                           sigio_aldata, sigio_swohdc
@@ -387,6 +385,7 @@
   character(len=max_varname_length), dimension(nc2d), intent(in) :: cvars2d
   character(len=max_varname_length), dimension(nc3d), intent(in) :: cvars3d
   real(r_single), dimension(npts,nc3d*nlevs+nc2d,nbackgrounds), intent(inout) :: grdin
+  logical, intent(in) :: no_inflate_flag
   real(r_kind), allocatable, dimension(:,:) :: vmassdiv,dpanl,dpfg,pressi
   real(r_kind), allocatable, dimension(:,:) :: vmassdivinc
   real(r_kind), allocatable, dimension(:,:) :: ugtmp,vgtmp
@@ -423,7 +422,11 @@
 
   backgroundloop: do nb=1,nbackgrounds
 
-  filenameout = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"mem"//charnanal
+  if(no_inflate_flag) then
+    filenameout = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"nimem"//charnanal
+  else
+    filenameout = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"mem"//charnanal
+  end if
   filenamein = trim(adjustl(datapath))//trim(adjustl(fgfileprefixes(nb)))//"mem"//charnanal
   ! for nemsio, analysis file must be copied from first guess at scripting
   ! level.  This file is read in and modified.

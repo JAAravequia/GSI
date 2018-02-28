@@ -1103,9 +1103,9 @@ contains
              endif
              do i=1,lon2
                 do j=1,lat2
-                   ges_u_it(j,i,k) = all_loc(j,i,ku)
-                   ges_v_it(j,i,k) = all_loc(j,i,kv)
-                   ges_q_it(j,i,k) = all_loc(j,i,kq)
+                   ges_u_it(j,i,k) = real(all_loc(j,i,ku),r_kind)
+                   ges_v_it(j,i,k) = real(all_loc(j,i,kv),r_kind)
+                   ges_q_it(j,i,k) = real(all_loc(j,i,kq),r_kind)
                    q_integral(j,i) = q_integral(j,i)+deltasigma*ges_q_it(j,i,k)
                    q_integralc4h(j,i) = q_integralc4h(j,i)+deltasigmac4h*ges_q_it(j,i,k)
   
@@ -1113,18 +1113,18 @@ contains
                    ges_q_it(j,i,k) = ges_q_it(j,i,k)/(one+ges_q_it(j,i,k))
   
   !                Add offset to get guess potential temperature
-                   ges_pot(j,i,k)  = all_loc(j,i,kt) + h300
+                   ges_pot(j,i,k)  = real(all_loc(j,i,kt),r_kind) + h300
   ! hydrometeors
                    if(l_cloud_analysis .or. n_actual_clouds>0) then
-                      ges_qc(j,i,k) = all_loc(j,i,kqc)
-                      ges_qi(j,i,k) = all_loc(j,i,kqi)
-                      ges_qr(j,i,k) = all_loc(j,i,kqr)
-                      ges_qs(j,i,k) = all_loc(j,i,kqs)
-                      ges_qg(j,i,k) = all_loc(j,i,kqg)
-                      ges_qnr(j,i,k)= all_loc(j,i,kqnr)
-                      ges_qni(j,i,k)= all_loc(j,i,kqni)
-                      ges_qnc(j,i,k)= all_loc(j,i,kqnc)
-  !                    ges_tten(j,i,k,it) = all_loc(j,i,ktt)
+                      ges_qc(j,i,k) = real(all_loc(j,i,kqc),r_kind)
+                      ges_qi(j,i,k) = real(all_loc(j,i,kqi),r_kind)
+                      ges_qr(j,i,k) = real(all_loc(j,i,kqr),r_kind)
+                      ges_qs(j,i,k) = real(all_loc(j,i,kqs),r_kind)
+                      ges_qg(j,i,k) = real(all_loc(j,i,kqg),r_kind)
+                      ges_qnr(j,i,k)= real(all_loc(j,i,kqnr),r_kind)
+                      ges_qni(j,i,k)= real(all_loc(j,i,kqni),r_kind)
+                      ges_qnc(j,i,k)= real(all_loc(j,i,kqnc),r_kind)
+  !                    ges_tten(j,i,k,it) = real(all_loc(j,i,ktt),r_kind)
                       ges_tten(j,i,k,it) = -20.0_r_single
                       if(k==nsig) ges_tten(j,i,k,it) = -10.0_r_single
   
@@ -1148,8 +1148,8 @@ contains
                 ktslb=ktslb+1
                 do i=1,lon2
                    do j=1,lat2
-                      ges_smois_it(j,i,k) = all_loc(j,i,ksmois)
-                      ges_tslb_it(j,i,k) = all_loc(j,i,ktslb)
+                      ges_smois_it(j,i,k) = real(all_loc(j,i,ksmois),r_kind)
+                      ges_tslb_it(j,i,k) = real(all_loc(j,i,ktslb),r_kind)
                    enddo
                 enddo
              enddo  ! k
@@ -1162,8 +1162,8 @@ contains
           else
              do i=1,lon2
                 do j=1,lat2
-                   soil_moi(j,i,it)=all_loc(j,i,i_smois)
-                   soil_temp(j,i,it)=all_loc(j,i,i_tslb)
+                   soil_moi(j,i,it)=real(all_loc(j,i,i_smois),r_kind)
+                   soil_temp(j,i,it)=real(all_loc(j,i,i_tslb),r_kind)
                 enddo
              enddo
           endif
@@ -1175,25 +1175,25 @@ contains
                 ges_z_it(j,i) = all_loc(j,i,i_fis)/grav
   
   !             Convert psfc units of mb and then convert to log(psfc) in cb
-                psfc_this_dry=r0_01*(all_loc(j,i,i_mub)+all_loc(j,i,i_mu)+pt_regional_single)
+                psfc_this_dry=r0_01*real(all_loc(j,i,i_mub)+all_loc(j,i,i_mu)+pt_regional_single,r_kind)
                 psfc_this=(psfc_this_dry-pt_ll)*q_integral(j,i)+pt_ll+q_integralc4h(j,i)
                 ges_ps_it(j,i)=one_tenth*psfc_this   ! convert from mb to cb
-                sno(j,i,it)=all_loc(j,i,i_sno)
-  !GSD              soil_moi(j,i,it)=all_loc(j,i,i_smois)
-  !GSD              soil_temp(j,i,it)=all_loc(j,i,i_tslb)
+                sno(j,i,it)=real(all_loc(j,i,i_sno),r_kind)
+  !GSD              soil_moi(j,i,it)=real(all_loc(j,i,i_smois),r_kind)
+  !GSD              soil_temp(j,i,it)=real(all_loc(j,i,i_tslb),r_kind)
   ! for cloud analysis
                 if(l_cloud_analysis .and. n_actual_clouds>0) then
                    soil_temp_cld(j,i,it)=soil_temp(j,i,it)
-                   ges_xlon(j,i,it)=all_loc(j,i,i_xlon)/rad2deg_single
-                   ges_xlat(j,i,it)=all_loc(j,i,i_xlat)/rad2deg_single
+                   ges_xlon(j,i,it)=real(all_loc(j,i,i_xlon),r_kind)/rad2deg_single
+                   ges_xlat(j,i,it)=real(all_loc(j,i,i_xlat),r_kind)/rad2deg_single
                 endif
                 if(l_gsd_soilTQ_nudge) then
-                   ges_th2_it(j,i)=all_loc(j,i,i_th2)
-                   ges_tsk_it(j,i)=all_loc(j,i,i_tsk)
-                   ges_soilt1_it(j,i)=all_loc(j,i,i_soilt1)
+                   ges_th2_it(j,i)=real(all_loc(j,i,i_th2),r_kind)
+                   ges_tsk_it(j,i)=real(all_loc(j,i,i_tsk),r_kind)
+                   ges_soilt1_it(j,i)=real(all_loc(j,i,i_soilt1),r_kind)
                 endif
                 if(i_use_2mq4b>0) then
-                  ges_q2_it(j,i)=all_loc(j,i,i_q2)
+                  ges_q2_it(j,i)=real(all_loc(j,i,i_q2),r_kind)
   ! Convert 2m guess mixing ratio to specific humidity
                   ges_q2_it(j,i) = ges_q2_it(j,i)/(one+ges_q2_it(j,i))
                 endif
@@ -1220,9 +1220,9 @@ contains
           do i=1,lon2
              do j=1,lat2
                 fact10(j,i,it)=one    !  later fix this by using correct w10/w(1)
-                veg_type(j,i,it)=all_loc(j,i,i_ivgtyp)
-                veg_frac(j,i,it)=r0_01*all_loc(j,i,i_vegfrac)
-                soil_type(j,i,it)=all_loc(j,i,i_isltyp)
+                veg_type(j,i,it)=real(all_loc(j,i,i_ivgtyp),r_kind)
+                veg_frac(j,i,it)=r0_01*real(all_loc(j,i,i_vegfrac),r_kind)
+                soil_type(j,i,it)=real(all_loc(j,i,i_isltyp),r_kind)
                 sm_this=zero
                 if(all_loc(j,i,i_sm) /= zero_single) sm_this=one
                 xice_this=zero
@@ -1234,8 +1234,8 @@ contains
                 isli(j,i,it)=isli_this
   
   !?????????????????????????????????check to see if land skin temp is pot temp--if so, need to convert
-                sfct(j,i,it)=all_loc(j,i,i_sst)
-                if(isli(j,i,it) /= 0) sfct(j,i,it)=all_loc(j,i,i_tsk)
+                sfct(j,i,it)=real(all_loc(j,i,i_sst),r_kind)
+                if(isli(j,i,it) /= 0) sfct(j,i,it)=real(all_loc(j,i,i_tsk),r_kind)
                 if(sfct(j,i,it) < one) then
   
   !             For now, replace missing skin temps with 1st sigma level temp
@@ -1365,13 +1365,10 @@ contains
     use gsi_metguess_mod, only: gsi_metguess_get,GSI_MetGuess_Bundle
     use gsi_chemguess_mod, only: GSI_ChemGuess_Bundle, gsi_chemguess_get
     use mpeu_util, only: die
-
     use guess_grids, only: ges_w_btlev
     use control_vectors, only : w_exist, dbz_exist
     use setupdbz_lib,only: hx_dart
     use obsmod,only: if_model_dbz
-
-
     implicit none
     class(read_wrf_mass_guess_class),intent(inout) :: this
   
@@ -1383,7 +1380,7 @@ contains
     real(r_kind),parameter:: rough_default=0.05_r_kind
   
   ! Declare local variables
-    integer(i_kind) kt,kq,ku,kv, kw,kw0,kdbz
+    integer(i_kind) kt,kq,ku,kv,kw,kw0,kdbz
   
   ! MASS variable names stuck in here
   
@@ -1409,7 +1406,7 @@ contains
     real(r_kind) deltasigma,deltasigmac4h
     real(r_kind):: work_prsl,work_prslk
     integer(i_kind),allocatable :: i_chem(:),kchem(:)
-    integer(i_kind) i_qc,i_qi,i_qr,i_qs,i_qg,i_qnr,i_qni,i_qnc,i_w, i_dbz
+    integer(i_kind) i_qc,i_qi,i_qr,i_qs,i_qg,i_qnr,i_qni,i_qnc,i_w,i_dbz
     integer(i_kind) kqc,kqi,kqr,kqs,kqg,kqnr,kqni,kqnc,i_xlon,i_xlat,i_tt,ktt
     integer(i_kind) i_th2,i_q2,i_soilt1,ksmois,ktslb
     integer(i_kind) ier, istatus
@@ -1624,7 +1621,6 @@ contains
           write(identity(i),'("record ",i3,"--v(",i2,")")')i,k
           jsig_skip(i)=0 ; igtype(i)=3
        end do
-
        if(w_exist) then
          i_w=i+1
          do k=1,lm+1
@@ -1633,7 +1629,6 @@ contains
            jsig_skip(i)=0 ; igtype(i)=1
          end do
        endif
-
        i=i+1   ; i_sm=i                                              ! landmask
        write(identity(i),'("record ",i3,"--sm")')i
        jsig_skip(i)=0 ; igtype(i)=1
@@ -2066,50 +2061,50 @@ contains
   
              do i=1,lon2
                 do j=1,lat2
-                   ges_u_it(j,i,k) = all_loc(j,i,ku)
-                   ges_v_it(j,i,k) = all_loc(j,i,kv)
-                   ges_pot(j,i,k)  = all_loc(j,i,kt)
-                   ges_q_it(j,i,k) = all_loc(j,i,kq)
+                   ges_u_it(j,i,k) = real(all_loc(j,i,ku),r_kind)
+                   ges_v_it(j,i,k) = real(all_loc(j,i,kv),r_kind)
+                   ges_pot(j,i,k)  = real(all_loc(j,i,kt),r_kind)
+                   ges_q_it(j,i,k) = real(all_loc(j,i,kq),r_kind)
                    q_integral(j,i) = q_integral(j,i)+deltasigma*ges_q_it(j,i,k)
                    q_integralc4h(j,i) = q_integralc4h(j,i)+deltasigmac4h*ges_q_it(j,i,k)
                    if(w_exist) then
-                     ges_w_it(j,i,k) = 0.5*(all_loc(j,i,kw)+all_loc(j,i,kw+1))
+                     ges_w_it(j,i,k) = 0.5*real((all_loc(j,i,kw)+all_loc(j,i,kw+1)),r_kind)
                    end if
   
   !                Convert guess mixing ratio to specific humidity
                    ges_q_it(j,i,k) = ges_q_it(j,i,k)/(one+ges_q_it(j,i,k))
   ! hydrometeors
                    if(l_cloud_analysis .or. n_actual_clouds>0) then
-                      ges_qc(j,i,k) = all_loc(j,i,kqc)
-                      ges_qi(j,i,k) = all_loc(j,i,kqi)
-                      ges_qr(j,i,k) = all_loc(j,i,kqr)
-                      ges_qs(j,i,k) = all_loc(j,i,kqs)
-                      ges_qg(j,i,k) = all_loc(j,i,kqg)
-                      ges_qnr(j,i,k)= all_loc(j,i,kqnr)
-                      ges_qni(j,i,k)= all_loc(j,i,kqni)
-                      ges_qnc(j,i,k)= all_loc(j,i,kqnc)
-  !                    ges_tten(j,i,k,it) = all_loc(j,i,ktt)
+                      ges_qc(j,i,k) = real(all_loc(j,i,kqc),r_kind)
+                      ges_qi(j,i,k) = real(all_loc(j,i,kqi),r_kind)
+                      ges_qr(j,i,k) = real(all_loc(j,i,kqr),r_kind)
+                      ges_qs(j,i,k) = real(all_loc(j,i,kqs),r_kind)
+                      ges_qg(j,i,k) = real(all_loc(j,i,kqg),r_kind)
+                      ges_qnr(j,i,k)= real(all_loc(j,i,kqnr),r_kind)
+                      ges_qni(j,i,k)= real(all_loc(j,i,kqni),r_kind)
+                      ges_qnc(j,i,k)= real(all_loc(j,i,kqnc),r_kind)
+  !                    ges_tten(j,i,k,it) = real(all_loc(j,i,ktt),r_kind)
                       ges_tten(j,i,k,it) = -20.0_r_single
                       if(k==nsig) ges_tten(j,i,k,it) = -10.0_r_single
   
                    endif
-                   if(dbz_exist.and.if_model_dbz) ges_dbz(j,i,k) = all_loc(j,i,kdbz)
+                   if(dbz_exist.and.if_model_dbz) ges_dbz(j,i,k) = real(all_loc(j,i,kdbz),r_kind)
                    if ( laeroana_gocart ) then
-                      if (indx_sulf>0)  ges_sulf(j,i,k)  = all_loc(j,i,kchem(indx_sulf))
-                      if (indx_bc1>0)   ges_bc1(j,i,k)   = all_loc(j,i,kchem(indx_bc1))  
-                      if (indx_bc2>0)   ges_bc2(j,i,k)   = all_loc(j,i,kchem(indx_bc2))  
-                      if (indx_oc1>0)   ges_oc1(j,i,k)   = all_loc(j,i,kchem(indx_oc1))  
-                      if (indx_oc2>0)   ges_oc2(j,i,k)   = all_loc(j,i,kchem(indx_oc2))  
-                      if (indx_dust1>0) ges_dust1(j,i,k) = all_loc(j,i,kchem(indx_dust1))
-                      if (indx_dust2>0) ges_dust2(j,i,k) = all_loc(j,i,kchem(indx_dust2))
-                      if (indx_dust3>0) ges_dust3(j,i,k) = all_loc(j,i,kchem(indx_dust3))
-                      if (indx_dust4>0) ges_dust4(j,i,k) = all_loc(j,i,kchem(indx_dust4))
-                      if (indx_dust5>0) ges_dust5(j,i,k) = all_loc(j,i,kchem(indx_dust5))
-                      if (indx_seas1>0) ges_seas1(j,i,k) = all_loc(j,i,kchem(indx_seas1)) 
-                      if (indx_seas2>0) ges_seas2(j,i,k) = all_loc(j,i,kchem(indx_seas2)) 
-                      if (indx_seas3>0) ges_seas3(j,i,k) = all_loc(j,i,kchem(indx_seas3)) 
-                      if (indx_seas4>0) ges_seas4(j,i,k) = all_loc(j,i,kchem(indx_seas4)) 
-                      if (indx_p25>0)   ges_p25(j,i,k)   = all_loc(j,i,kchem(indx_p25))   
+                      if (indx_sulf>0)  ges_sulf(j,i,k)  = real(all_loc(j,i,kchem(indx_sulf)),r_kind)
+                      if (indx_bc1>0)   ges_bc1(j,i,k)   = real(all_loc(j,i,kchem(indx_bc1)),r_kind)
+                      if (indx_bc2>0)   ges_bc2(j,i,k)   = real(all_loc(j,i,kchem(indx_bc2)),r_kind)
+                      if (indx_oc1>0)   ges_oc1(j,i,k)   = real(all_loc(j,i,kchem(indx_oc1)),r_kind)
+                      if (indx_oc2>0)   ges_oc2(j,i,k)   = real(all_loc(j,i,kchem(indx_oc2)),r_kind)
+                      if (indx_dust1>0) ges_dust1(j,i,k) = real(all_loc(j,i,kchem(indx_dust1)),r_kind)
+                      if (indx_dust2>0) ges_dust2(j,i,k) = real(all_loc(j,i,kchem(indx_dust2)),r_kind)
+                      if (indx_dust3>0) ges_dust3(j,i,k) = real(all_loc(j,i,kchem(indx_dust3)),r_kind)
+                      if (indx_dust4>0) ges_dust4(j,i,k) = real(all_loc(j,i,kchem(indx_dust4)),r_kind)
+                      if (indx_dust5>0) ges_dust5(j,i,k) = real(all_loc(j,i,kchem(indx_dust5)),r_kind)
+                      if (indx_seas1>0) ges_seas1(j,i,k) = real(all_loc(j,i,kchem(indx_seas1)),r_kind) 
+                      if (indx_seas2>0) ges_seas2(j,i,k) = real(all_loc(j,i,kchem(indx_seas2)),r_kind) 
+                      if (indx_seas3>0) ges_seas3(j,i,k) = real(all_loc(j,i,kchem(indx_seas3)),r_kind) 
+                      if (indx_seas4>0) ges_seas4(j,i,k) = real(all_loc(j,i,kchem(indx_seas4)),r_kind) 
+                      if (indx_p25>0)   ges_p25(j,i,k)   = real(all_loc(j,i,kchem(indx_p25)),r_kind)   
                       if (aero_ratios .and. it==1) then
                          aerotot_guess(j,i,k)=max(tiny_r_kind,&
                          ges_sulf(j,i,k)*nh4_mfac+&
@@ -2133,7 +2128,7 @@ contains
   
                    if ( wrf_pm2_5 ) then
                       iv=1
-                      ges_pm2_5(j,i,k)  = all_loc(j,i,kchem(iv))
+                      ges_pm2_5(j,i,k)  = real(all_loc(j,i,kchem(iv)),r_kind)
                    end if
                 end do
              end do
@@ -2163,8 +2158,8 @@ contains
                 ktslb=ktslb+1
                 do i=1,lon2
                    do j=1,lat2
-                      ges_smois_it(j,i,k) = all_loc(j,i,ksmois)
-                      ges_tslb_it(j,i,k) = all_loc(j,i,ktslb)
+                      ges_smois_it(j,i,k) = real(all_loc(j,i,ksmois),r_kind)
+                      ges_tslb_it(j,i,k) = real(all_loc(j,i,ktslb),r_kind)
                    enddo
                 enddo
              enddo  ! k
@@ -2177,8 +2172,8 @@ contains
           else
              do i=1,lon2
                 do j=1,lat2
-                   soil_moi(j,i,it)=all_loc(j,i,i_0+i_smois)
-                   soil_temp(j,i,it)=all_loc(j,i,i_0+i_tslb)
+                   soil_moi(j,i,it)=real(all_loc(j,i,i_0+i_smois),r_kind)
+                   soil_temp(j,i,it)=real(all_loc(j,i,i_0+i_tslb),r_kind)
                 enddo
              enddo
           endif
@@ -2196,32 +2191,32 @@ contains
              do j=1,lat2
   
   !             NOTE:  MASS surface elevation is multiplied by g, so divide by g below
-                ges_z_it(j,i)    = all_loc(j,i,i_0+i_fis)/grav
+                ges_z_it(j,i)    = real(all_loc(j,i,i_0+i_fis),r_kind)/grav
   
   !             Convert psfc units of mb and then convert to log(psfc) in cb
-                psfc_this_dry=r0_01*all_loc(j,i,i_0+i_psfc)
+                psfc_this_dry=r0_01*real(all_loc(j,i,i_0+i_psfc),r_kind)
                 psfc_this=(psfc_this_dry-pt_ll)*q_integral(j,i)+pt_ll+q_integralc4h(j,i)
                 ges_ps_it(j,i)=one_tenth*psfc_this   ! convert from mb to cb
-                sno(j,i,it)=all_loc(j,i,i_0+i_sno)
+                sno(j,i,it)=real(all_loc(j,i,i_0+i_sno),r_kind)
                 sfc_rough(j,i,it)=rough_default
                 if(i_use_2mt4b > 0 ) then
-                   ges_th2_it(j,i)=all_loc(j,i,i_0+i_th2)
+                   ges_th2_it(j,i)=real(all_loc(j,i,i_0+i_th2),r_kind)
                 endif
   ! for GSD soil nudging
                 if(l_gsd_soilTQ_nudge) then
-                   ges_tsk_it(j,i)=all_loc(j,i,i_0+i_tsk)
-                   ges_soilt1_it(j,i)=all_loc(j,i,i_0+i_soilt1)
+                   ges_tsk_it(j,i)=real(all_loc(j,i,i_0+i_tsk),r_kind)
+                   ges_soilt1_it(j,i)=real(all_loc(j,i,i_0+i_soilt1),r_kind)
                 endif
   ! Convert 2m guess mixing ratio to specific humidity
                 if(i_use_2mt4b > 0 .or. i_use_2mq4b>0) then
-                   ges_q2_it(j,i)=all_loc(j,i,i_0+i_q2)
+                   ges_q2_it(j,i)=real(all_loc(j,i,i_0+i_q2),r_kind)
                    ges_q2_it(j,i)=ges_q2_it(j,i)/(one+ges_q2_it(j,i))
                 endif
   ! for cloud analysis
-                if(l_cloud_analysis .or. n_actual_clouds>0) then
+                if(l_cloud_analysis .and. n_actual_clouds>0) then
                    soil_temp_cld(j,i,it)=soil_temp(j,i,it)
-                   ges_xlon(j,i,it)=all_loc(j,i,i_0+i_xlon)
-                   ges_xlat(j,i,it)=all_loc(j,i,i_0+i_xlat)
+                   ges_xlon(j,i,it)=real(all_loc(j,i,i_0+i_xlon),r_kind)
+                   ges_xlat(j,i,it)=real(all_loc(j,i,i_0+i_xlat),r_kind)
                 endif
   
              end do
@@ -2256,9 +2251,9 @@ contains
           do i=1,lon2
              do j=1,lat2
                 fact10(j,i,it)=one    !  later fix this by using correct w10/w(1)
-                veg_type(j,i,it)=all_loc(j,i,i_0+i_ivgtyp)
-                veg_frac(j,i,it)=r0_01*all_loc(j,i,i_0+i_vegfrac)
-                soil_type(j,i,it)=all_loc(j,i,i_0+i_isltyp)
+                veg_type(j,i,it)=real(all_loc(j,i,i_0+i_ivgtyp),r_kind)
+                veg_frac(j,i,it)=r0_01*real(all_loc(j,i,i_0+i_vegfrac),r_kind)
+                soil_type(j,i,it)=real(all_loc(j,i,i_0+i_isltyp),r_kind)
                 sm_this=zero
                 if(all_loc(j,i,i_0+i_sm) /= zero_single) sm_this=one
                 xice_this=zero
@@ -2270,12 +2265,12 @@ contains
                 isli(j,i,it)=isli_this
                 
   !?????????????????????????????????check to see if land skin temp is pot temp--if so, need to convert
-                sfct(j,i,it)=all_loc(j,i,i_0+i_sst)
-                if(isli(j,i,it) /= 0) sfct(j,i,it)=all_loc(j,i,i_0+i_tsk)
+                sfct(j,i,it)=real(all_loc(j,i,i_0+i_sst),r_kind)
+                if(isli(j,i,it) /= 0) sfct(j,i,it)=real(all_loc(j,i,i_0+i_tsk),r_kind)
                 if(sfct(j,i,it) < one) then
   
   !             For now, replace missing skin temps with 1st sigma level temp
-                   sfct(j,i,it)=all_loc(j,i,i_0+i_t) 
+                   sfct(j,i,it)=real(all_loc(j,i,i_0+i_t),r_kind) 
                    write(6,*)' doubtful skint replaced with 1st sigma level t, j,i,mype,sfct=',&
                         j,i,mype,sfct(j,i,it)
                    num_doubtful_sfct=num_doubtful_sfct+1

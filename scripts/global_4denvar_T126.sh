@@ -223,6 +223,7 @@ cldcoef=$fixcrtm/CloudCoeff.bin
 satangl=$fixgsi/global_satangbias.txt
 scaninfo=$fixgsi/global_scaninfo.txt
 satinfo=$fixgsi/global_satinfo.txt
+cloudyinfo=$fixgsi/cloudy_radiance_info.txt
 convinfo=$fixgsi/global_convinfo_reg_test.txt
 insituinfo=$fixgsi/global_insituinfo.txt
 ### add 9 tables
@@ -272,6 +273,7 @@ $ncp $satangl  ./satbias_angle
 $ncp $atmsbeamdat  ./atms_beamwidth.txt
 $ncp $scaninfo ./scaninfo
 $ncp $satinfo  ./satinfo
+$ncp $cloudyinfo  ./cloudy_radiance_info.txt
 $ncp $pcpinfo  ./pcpinfo
 $ncp $ozinfo   ./ozinfo
 $ncp $convinfo ./convinfo
@@ -332,6 +334,8 @@ $ncp $global_4denvar_T126_datobs/gmi1cr.gdas.$global_4denvar_T126_adate         
 $ncp $global_4denvar_T126_datobs/saphir.gdas.$global_4denvar_T126_adate                 ./saphirbufr
 $ncp $global_4denvar_T126_datobs/cris.gdas.$global_4denvar_T126_adate                   ./crisbufr
 $ncp $global_4denvar_T126_datobs/crisdb.gdas.$global_4denvar_T126_adate                 ./crisbufr_db
+$ncp $global_4denvar_T126_datobs/crisf4.gdas.$global_4denvar_T126_adate                 ./crisfsbufr
+$ncp $global_4denvar_T126_datobs/crisf4db.gdas.$global_4denvar_T126_adate               ./crisfsbufr_db
 $ncp $global_4denvar_T126_datobs/sevcsr.gdas.$global_4denvar_T126_adate                 ./seviribufr
 $ncp $global_4denvar_T126_datobs/atms.gdas.$global_4denvar_T126_adate                   ./atmsbufr
 $ncp $global_4denvar_T126_datobs/atmsdb.gdas.$global_4denvar_T126_adate                 ./atmsbufr_db
