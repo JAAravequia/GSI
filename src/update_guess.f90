@@ -303,15 +303,6 @@ subroutine update_guess(sval,sbias)
            cycle
         endif
      enddo
-!     if (getindex(svars3d,'ql')>0 .and. getindex(svars3d,'qi')>0) then
-!        ier=0
-!        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ptr3dges,istatus) ; ier=istatus                                                              
-!        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql,  istatus) ; ier=ier+istatus                                        
-!        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi,  istatus) ; ier=ier+istatus                                
-!        if (ier==0) then
-!           ptr3dges = ges_ql + ges_qi
-!        endif
-!     endif
      if (getindex(svars3d,'ql')>0 .and. getindex(svars3d,'qi')>0 .and. &
          getindex(svars3d,'qr')==0 .and. getindex(svars3d,'qs')==0 .and. &
          getindex(svars3d,'qg')==0 .and. getindex(svars3d,'qh')==0) then

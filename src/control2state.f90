@@ -117,11 +117,6 @@ real(r_kind),pointer,dimension(:,:,:) :: cv_vpwter=>NULL()
 real(r_kind),pointer,dimension(:,:)   :: cv_cldch=>NULL()
 
 ! Declare required local state variables
-!integer(i_kind), parameter :: nsvars = 8
-!integer(i_kind) :: isps(nsvars)
-!character(len=4), parameter :: mysvars(nsvars) = (/  &  ! vars from ST needed here
-!                'u   ', 'v   ', 'prse', 'q   ', 'tsen', 'ql  ', 'qi  ', 'w   ' /)
-!logical :: ls_u,ls_v,ls_w,ls_prse,ls_q,ls_tsen,ls_ql,ls_qi
 integer(i_kind), parameter :: nsvars = 12
 integer(i_kind) :: isps(nsvars)
 character(len=4), parameter :: mysvars(nsvars) = (/  &  ! vars from ST needed here
@@ -129,16 +124,13 @@ character(len=4), parameter :: mysvars(nsvars) = (/  &  ! vars from ST needed he
                 'qr  ', 'qs  ', 'qg  ', 'qh  ' /)
 logical :: ls_u,ls_v,ls_w,ls_prse,ls_q,ls_tsen,ls_ql,ls_qi
 logical :: ls_qr,ls_qs,ls_qg,ls_qh
-real(r_kind),pointer,dimension(:,:)   :: sv_ps=>NULL(),sv_sst=>NULL()
-real(r_kind),pointer,dimension(:,:)   :: sv_gust=>NULL(),sv_vis=>NULL(),sv_pblh=>NULL()
-real(r_kind),pointer,dimension(:,:)   :: sv_wspd10m=>NULL(),sv_tcamt=>NULL(),sv_lcbas=>NULL()
-real(r_kind),pointer,dimension(:,:)   :: sv_td2m=>NULL(),sv_mxtm=>NULL(),sv_mitm=>NULL(),sv_pmsl=>NULL()
-real(r_kind),pointer,dimension(:,:)   :: sv_howv=>NULL(),sv_cldch=>NULL()
-real(r_kind),pointer,dimension(:,:)   :: sv_uwnd10m=>NULL(),sv_vwnd10m=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: sv_u=>NULL(),sv_v=>NULL(),sv_w=>NULL(),sv_prse=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: sv_q=>NULL(),sv_tsen=>NULL(),sv_tv=>NULL(),sv_oz=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: sv_rank3=>NULL()
-real(r_kind),pointer,dimension(:,:)   :: sv_rank2=>NULL()
+real(r_kind),pointer,dimension(:,:)   :: sv_ps,sv_sst
+real(r_kind),pointer,dimension(:,:)   :: sv_gust,sv_vis,sv_pblh,sv_wspd10m,sv_tcamt,sv_lcbas
+real(r_kind),pointer,dimension(:,:)   :: sv_td2m,sv_mxtm,sv_mitm,sv_pmsl,sv_howv,sv_cldch
+real(r_kind),pointer,dimension(:,:)   :: sv_uwnd10m,sv_vwnd10m
+real(r_kind),pointer,dimension(:,:,:) :: sv_u,sv_v,sv_w,sv_prse,sv_q,sv_tsen,sv_tv,sv_oz
+real(r_kind),pointer,dimension(:,:,:) :: sv_rank3
+real(r_kind),pointer,dimension(:,:)   :: sv_rank2
 
 real(r_kind),allocatable,dimension(:,:,:):: uland,vland,uwter,vwter
 
@@ -305,7 +297,6 @@ do jj=1,nsubwin
 !  Copy other variables
    call gsi_bundlegetvar ( wbundle, 't'  , sv_tv,  istatus )  
 
-!   if (do_cw_to_hydro) then
    if (do_cw_to_hydro .and. .not.do_cw_to_hydro_hwrf) then
 !     Case when cloud-vars do not map one-to-one (cv-to-sv)
 !     e.g. cw-to-ql&qi

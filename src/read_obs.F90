@@ -349,9 +349,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
          file2loop: do while(ireadmg(lnbufr,subset,idate2) >= 0)
           do while(ireadsb(lnbufr)>=0)
            call ufbint(lnbufr,rtype,1,1,iret,'TYP')
-           write(6,*) 'read_obs_check: wcpbufr ufbint iret = ', iret
            kx=nint(rtype)
-           write(6,*) 'read_obs_check: wcpbufr trim(dtype) = ', trim(dtype), ' and kx = ', kx
            do nc=1,nconvtype
              if(trim(ioctype(nc)) == trim(dtype) .and. kx == ictype(nc) .and. icuse(nc) > minuse)then
                lexist = .true.
@@ -1522,13 +1520,11 @@ subroutine read_obs(ndata,mype)
              end if conv_obstype_select
 !            Process swcp and lwcp
           else if (ditype(i) == 'wcp') then
-            if ( obstype == 'swcp' .or. obstype == 'lwcp' ) then
-              write(*,*) 'begin of READ_WCPBUFR at mype = ', mype
-              call read_wcpbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis, &
+             if ( obstype == 'swcp' .or. obstype == 'lwcp' ) then
+                call read_wcpbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis, &
                    prsl_full,nobs_sub1(1,i),read_rec(i))
-              string='READ_WCPBUFR'
-              write(*,*) 'end of READ_WCPBUFR at mype = ', mype
-            end if
+                string='READ_WCPBUFR'
+             end if
           else if (ditype(i) == 'rad')then
 
              call radiance_obstype_search(obstype,radmod)

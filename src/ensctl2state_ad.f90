@@ -64,11 +64,6 @@ character(len=3), parameter :: mycvars(ncvars) = (/  &  ! vars from CV needed he
 logical :: lc_sf,lc_vp,lc_ps,lc_t,lc_rh,lc_cw
 real(r_kind),pointer,dimension(:,:,:) :: cv_sf,cv_vp,cv_rh
 ! Declare required local state variables
-!integer(i_kind), parameter :: nsvars = 7 
-!integer(i_kind) :: isps(nsvars)
-!character(len=4), parameter :: mysvars(nsvars) = (/  &  ! vars from ST needed here
-!                               'u   ', 'v   ', 'prse', 'q   ', 'tsen','ql  ','qi  ' /)                                
-!logical :: ls_u,ls_v,ls_prse,ls_q,ls_tsen,ls_ql,ls_qi
 integer(i_kind), parameter :: nsvars = 11 
 integer(i_kind) :: isps(nsvars)
 character(len=4), parameter :: mysvars(nsvars) = (/  &  ! vars from ST needed here
@@ -197,7 +192,6 @@ do jj=1,ntlevs_ens
 
 !$omp section
 
-!   if (do_cw_to_hydro_ad) then
    if (do_cw_to_hydro_ad .and. .not.do_cw_to_hydro_ad_hwrf) then
 !     Case when cloud-vars do not map one-to-one
 !     e.g. cw-to-ql&qi

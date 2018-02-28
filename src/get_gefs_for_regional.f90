@@ -1221,13 +1221,11 @@ subroutine get_gefs_for_regional
               end do
 
            case('cw','CW')
-!          temporarily ignore cloud water perturbations
+!          open cloud water perturbations for regional analysis
 
               do k=1,grd_ens%nsig
                  do j=1,grd_ens%lon2
                     do i=1,grd_ens%lat2
-!                   !   w3(i,j,k) = cwt(i,j,k)*sig_norm
-!                       w3(i,j,k) = zero
                       w3(i,j,k) = cwt(i,j,k)*sig_norm
                     end do
                  end do
