@@ -441,7 +441,7 @@ do niter=1,numiter
 
          ! which processor is this gridpoint on?
          npgrid = global_proc_id(interp%ind(kgrid))
-         if (nproc == 0) print *, nob, kgrid, interp%ind(kgrid), npgrid
+!         if (nproc == 0) print *, nob, kgrid, interp%ind(kgrid), npgrid
 
          if (nproc == npgrid) then
             kgrid_loc = global_proc_index(interp%ind(kgrid))
@@ -526,9 +526,9 @@ do niter=1,numiter
       do inz1 = 1, dhx_dx%nnz
          hxd = hxd + hx_anal(:,inz1) 
       enddo
-      if (nproc == npob)   print *, nob, ' hxmean: ', hxmean, ob(nob)-hxmean !, ensmean_obchunk(nob1)
-      if (nproc == npob)  print *, nob, 'hxd calc: ', hxd
-      if (nproc == npob)  print *, nob, 'hxd read: ', anal_obchunk_prior(:,nob1)
+!      if (nproc == npob)   print *, nob, ' hxmean: ', hxmean, ob(nob)-hxmean !, ensmean_obchunk(nob1)
+!      if (nproc == npob)  print *, nob, 'hxd calc: ', hxd
+!      if (nproc == npob)  print *, nob, 'hxd read: ', anal_obchunk_prior(:,nob1)
 
       t5 = t5 + mpi_wtime() - t1
       t1 = mpi_wtime()
@@ -615,7 +615,6 @@ do niter=1,numiter
           nn1 = 1
           nn2 = ncdim
 !      end if
-      print *, 'before update'
       if (nf > 0) then
 !$omp parallel do schedule(dynamic,1) private(ii,i,nb,nn,nnn,nnn2,bht_i,hx_anal_acc,inz1,lnsig,vloc,kfgain)
           do ii=1,nf ! loop over nearby horiz grid points
