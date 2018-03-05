@@ -228,7 +228,8 @@ if (nproc_shm == 0) then
          if (nproc == 0) buffer(1:nobstot) = anal_ob_modens(nanal,1:nobstot)
          if (nproc_shm == 0) then
             call mpi_bcast(buffer,nobstot,mpi_real4,0,mpi_comm_shmemroot,ierr)
-            print *, nproc, nproc_shm, nanal, size(buffer), size(anal_ob_modens_fp)
+            print *, nproc, nproc_shm, nanal, size(buffer), size(anal_ob_modens_fp), win_size2, nanals*neigv, nobstot
+            print *, nproc, nanal, minval(buffer), maxval(buffer)
             anal_ob_modens_fp(nanal,1:nobstot) = buffer(1:nobstot)
          end if 
       end do
