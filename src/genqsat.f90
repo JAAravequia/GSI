@@ -118,11 +118,7 @@ subroutine genqsat(qsat,tsen,prsl,lat2,lon2,nsig,ice,iderivative)
      end do
      do i=1,lat2
         tdry = mint(i)
-<<<<<<< HEAD
-        if( tdry == 0.0 ) tdry = 1.0e-8
-=======
         if( abs(tdry) < 1.0e-8_r_kind ) tdry = 1.0e-8_r_kind
->>>>>>> indy-lib-update
         tr = ttp/tdry
         if (tdry >= ttp .or. .not. ice) then
            estmax(i) = psat * (tr**xa) * exp(xb*(one-tr))
