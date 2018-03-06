@@ -2877,7 +2877,7 @@ subroutine init_sf_xy(jcap_in)
   real(r_kind) s_ens_h_min
   real(r_kind) rlats_ens_local(grd_ens%nlat)
   real(r_kind) rlons_ens_local(grd_ens%nlon)
-  character(5) mapname
+  character(6) mapname
   logical make_test_maps
   logical,allocatable,dimension(:)::ksame
   integer(i_kind) nord_sploc2ens
@@ -3071,6 +3071,7 @@ subroutine init_sf_xy(jcap_in)
         end if
 
 !            correct spectrum by dividing by pn0_npole
+        where (g < zero) g = zero   ! need to revisit here
         gsave=g
 
 !       obtain pn0_npole

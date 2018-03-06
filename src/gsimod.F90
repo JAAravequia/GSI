@@ -62,10 +62,11 @@
      factv,factl,factp,factg,factw10m,facthowv,factcldch,niter,niter_no_qc,biascor,&
      init_jfunc,qoption,cwoption,switch_on_derivatives,tendsflag,jiterstart,jiterend,R_option,&
      bcoption,diurnalbc,print_diag_pcg,tsensible,lgschmidt,diag_precon,step_start,pseudo_q2,&
-     clip_supersaturation
+     clip_supersaturation,clip_hydrometeor
   use state_vectors, only: init_anasv,final_anasv
   use control_vectors, only: init_anacv,final_anacv,nrf,nvars,nrf_3d,cvars3d,cvars2d,&
      nrf_var,imp_physics,lupp
+  use derivsmod, only : init_anadv
   use berror, only: norh,ndeg,vs,bw,init_berror,hzscl,hswgt,pert_berr,pert_berr_fct,&
      bkgv_flowdep,bkgv_rewgtfct,bkgv_write,fpsproj,nhscrf,adjustozvar,fut2ps,cwcoveqqcov
   use anberror, only: anisotropic,ancovmdl,init_anberror,npass,ifilt_ord,triad4, &
@@ -348,6 +349,8 @@
 !  04-01-2017 Hu        added option i_gsdqc to turn on special observation qc
 !                              from GSD (for RAP/HRRR application)
 !  08-31-2017 Li        add sfcnst_comb for option to read sfc & nst combined file 
+!  02-21-2018 Tong      move initializing derivative vector here
+!  03-05-2018 Tong      add clip_hydrometeor to setup namelist
 !
 !EOP
 !-------------------------------------------------------------------------
@@ -368,6 +371,7 @@
 !     factqmin - weighting factor for negative moisture constraint
 !     factqmax - weighting factor for supersaturated moisture constraint
 !     clip_supersaturation - flag to remove supersaturation during each outer loop default=.false.
+!     clip_hydrometeor - flag to set lower bound for hydrometers
 !     deltim   - model timestep
 !     dtphys   - physics timestep
 !     biascor  - background error bias correction coefficient
@@ -518,7 +522,7 @@
 !     NOTE:  for now, if in regional mode, then iguess=-1 is forced internally.
 !            add use of guess file later for regional mode.
 
-  namelist/setup/gencode,factqmin,factqmax,clip_supersaturation, &
+  namelist/setup/gencode,factqmin,factqmax,clip_supersaturation,clip_hydrometeor, &
        factv,factl,factp,factg,factw10m,facthowv,factcldch,R_option,deltim,dtphys,&
        biascor,bcoption,diurnalbc,&
        niter,niter_no_qc,miter,qoption,cwoption,nhr_assimilation,&
@@ -1528,6 +1532,7 @@
 ! Initialize variables, create/initialize arrays
   call init_reg_glob_ll(mype,lendian_in)
   call init_grid_vars(jcap,npe,cvars3d,cvars2d,nrf_var,mype)
+  if (switch_on_derivatives) call init_anadv
   call init_general_commvars
   call create_obsmod_vars
   call gpsStats_create()                ! extracted from obsmod::create_obsmod_vars()

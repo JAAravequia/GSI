@@ -880,7 +880,7 @@
            else
               vg = grdin(:,ndim,nb)
            endif
-           vg = nems_wrk2 + vg           
+           vg = nems_wrk2 + vg
            ug=(rd/grav)*ug
            ug=ug*log((ak(k)+bk(k)*vg)/(ak(k+1)+bk(k+1)*vg))
            ug=ug-delzb
@@ -896,7 +896,7 @@
               call stop2(23)
            endif
         endif
- 
+
         call nemsio_readrecv(gfilein,'o3mr','mid layer',k,nems_wrk,iret=iret)
         if (iret/=0) then
            write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(o3mr), iret=',iret
@@ -954,8 +954,8 @@
         endif
         nems_wrk = nems_wrk + ug
         nems_wrk2 = nems_wrk2 + vg
-        if (cliptracers)  where (nems_wrk < clip) nems_wrk = clip
-        if (cliptracers.and.imp_physics/=99)  where (nems_wrk2 < clip) nems_wrk2 = clip
+        if (nvars .ge. 6 .and. cliptracers)  where (nems_wrk < clip) nems_wrk = clip
+        if (nvars .ge. 6 .and. cliptracers.and.imp_physics/=99)  where (nems_wrk2 < clip) nems_wrk2 = clip
         call nemsio_writerecv(gfileout,'clwmr','mid layer',k,nems_wrk,iret=iret)
         if (iret/=0) then
            write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(clwmr), iret=',iret
@@ -968,39 +968,37 @@
               call stop2(23)
            endif
 
-           if (lupp) then
-              call nemsio_readrecv(gfilein,'rwmr','mid layer',k,nems_wrk2,iret=iret)
-              if (iret/=0) then
-                 write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(rwmr), iret=',iret
-                 call stop2(23)
-              endif
-              call nemsio_writerecv(gfileout,'rwmr','mid layer',k,nems_wrk2,iret=iret)
-              if (iret/=0) then
-                 write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(rwmr), iret=',iret
-                 call stop2(23)
-              endif
+           call nemsio_readrecv(gfilein,'rwmr','mid layer',k,nems_wrk2,iret=iret)
+           if (iret/=0) then
+              write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(rwmr), iret=',iret
+              call stop2(23)
+           endif
+           call nemsio_writerecv(gfileout,'rwmr','mid layer',k,nems_wrk2,iret=iret)
+           if (iret/=0) then
+              write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(rwmr), iret=',iret
+              call stop2(23)
+           endif
 
-              call nemsio_readrecv(gfilein,'snmr','mid layer',k,nems_wrk2,iret=iret)
-              if (iret/=0) then
-                 write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(snmr), iret=',iret
-                 call stop2(23)
-              endif
-              call nemsio_writerecv(gfileout,'snmr','mid layer',k,nems_wrk2,iret=iret)
-              if (iret/=0) then
-                 write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(snmr), iret=',iret
-                 call stop2(23)
-              endif
+           call nemsio_readrecv(gfilein,'snmr','mid layer',k,nems_wrk2,iret=iret)
+           if (iret/=0) then
+              write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(snmr), iret=',iret
+              call stop2(23)
+           endif
+           call nemsio_writerecv(gfileout,'snmr','mid layer',k,nems_wrk2,iret=iret)
+           if (iret/=0) then
+              write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(snmr), iret=',iret
+              call stop2(23)
+           endif
 
-              call nemsio_readrecv(gfilein,'grle','mid layer',k,nems_wrk2,iret=iret)
-              if (iret/=0) then
-                 write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(grle), iret=',iret
-                 call stop2(23)
-              endif
-              call nemsio_writerecv(gfileout,'grle','mid layer',k,nems_wrk2,iret=iret)
-              if (iret/=0) then
-                 write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(grle), iret=',iret
-                 call stop2(23)
-              endif
+           call nemsio_readrecv(gfilein,'grle','mid layer',k,nems_wrk2,iret=iret)
+           if (iret/=0) then
+              write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(grle), iret=',iret
+              call stop2(23)
+           endif
+           call nemsio_writerecv(gfileout,'grle','mid layer',k,nems_wrk2,iret=iret)
+           if (iret/=0) then
+              write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(grle), iret=',iret
+              call stop2(23)
            endif
         endif
 

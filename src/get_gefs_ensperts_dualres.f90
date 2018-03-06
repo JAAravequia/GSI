@@ -64,6 +64,7 @@ subroutine get_gefs_ensperts_dualres
   use gsi_bundlemod, only: gsi_gridcreate
   use get_gfs_ensmod_mod, only: get_gfs_ensmod_class
   use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sub2grid_destroy_info
+  use jfunc, only: clip_hydrometeor
   implicit none
 
   real(r_kind),pointer,dimension(:,:)   :: ps
@@ -90,7 +91,7 @@ subroutine get_gefs_ensperts_dualres
   integer(i_kind) ier
 ! integer(i_kind) il,jl
   type(get_gfs_ensmod_class) :: enscoupler
-  logical ice
+  logical :: ice, is_cloud
   type(sub2grid_info) :: grd_tmp
 
 ! Create perturbations grid and get variable names from perturbations
@@ -250,67 +251,15 @@ subroutine get_gefs_ensperts_dualres
                 cycle
              end if
           end if
-          if ( trim(cvars3d(ic3)) == 'cw' ) then
-!$omp parallel do schedule(dynamic,1) private(i,j,k)
-             do k=1,km
-                do j=1,jm
-                   do i=1,im
-                      w3(i,j,k) = max(p3(i,j,k),qcmin)
-                      x3(i,j,k)=x3(i,j,k)+max(p3(i,j,k),qcmin)
-                   end do
-                end do
-             end do
-             cycle
-          end if
-          if ( trim(cvars3d(ic3)) == 'ql' ) then
-!$omp parallel do schedule(dynamic,1) private(i,j,k)
-             do k=1,km
-                do j=1,jm
-                   do i=1,im
-                      w3(i,j,k) = max(p3(i,j,k),qcmin)
-                      x3(i,j,k)=x3(i,j,k)+max(p3(i,j,k),qcmin)
-                   end do
-                end do
-             end do
-             cycle
-          end if
-          if ( trim(cvars3d(ic3)) == 'qi' ) then
-!$omp parallel do schedule(dynamic,1) private(i,j,k)
-             do k=1,km
-                do j=1,jm
-                   do i=1,im
-                      w3(i,j,k) = max(p3(i,j,k),qcmin)
-                      x3(i,j,k)=x3(i,j,k)+max(p3(i,j,k),qcmin)
-                   end do
-                end do
-             end do
-             cycle
-          end if
-          if ( trim(cvars3d(ic3)) == 'qr' ) then
-!$omp parallel do schedule(dynamic,1) private(i,j,k)
-             do k=1,km
-                do j=1,jm
-                   do i=1,im
-                      w3(i,j,k) = max(p3(i,j,k),qcmin)
-                      x3(i,j,k)=x3(i,j,k)+max(p3(i,j,k),qcmin)
-                   end do
-                end do
-             end do
-             cycle
-          end if
-          if ( trim(cvars3d(ic3)) == 'qs' ) then
-!$omp parallel do schedule(dynamic,1) private(i,j,k)
-             do k=1,km
-                do j=1,jm
-                   do i=1,im
-                      w3(i,j,k) = max(p3(i,j,k),qcmin)
-                      x3(i,j,k)=x3(i,j,k)+max(p3(i,j,k),qcmin)
-                   end do
-                end do
-             end do
-             cycle
-          end if
-          if ( trim(cvars3d(ic3)) == 'qg' ) then
+
+          is_cloud = trim(cvars3d(ic3)) == 'cw' .or. &
+                     trim(cvars3d(ic3)) == 'ql' .or. &
+                     trim(cvars3d(ic3)) == 'qi' .or. &
+                     trim(cvars3d(ic3)) == 'qr' .or. &
+                     trim(cvars3d(ic3)) == 'qs' .or. &
+                     trim(cvars3d(ic3)) == 'qg'
+
+          if ( is_cloud .and. clip_hydrometeor) then
 !$omp parallel do schedule(dynamic,1) private(i,j,k)
              do k=1,km
                 do j=1,jm

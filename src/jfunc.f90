@@ -47,6 +47,7 @@ module jfunc
 !   2014-05-07  pondeca - add facthowv
 !   2014-06-18  carley/zhu - add lcbas and tcamt
 !   2015-07-10  pondeca - add factcldch
+!   2018-03-05  tong    - add clip_hydrometeor
 !
 ! Subroutines Included:
 !   sub init_jfunc           - set defaults for cost function variables
@@ -135,9 +136,10 @@ module jfunc
   public :: factg,factv,factp,factl,R_option,factw10m,facthowv,factcldch,diag_precon,step_start
   public :: pseudo_q2
   public :: varq
+  public :: clip_hydrometeor
 
   logical first,last,switch_on_derivatives,tendsflag,print_diag_pcg,tsensible,lgschmidt,diag_precon
-  logical clip_supersaturation,R_option
+  logical clip_supersaturation,R_option,clip_hydrometeor
   logical pseudo_q2
   integer(i_kind) iout_iter,miter,iguess,nclen,qoption,cwoption
   integer(i_kind) jiter,jiterstart,jiterend,iter
@@ -201,6 +203,7 @@ contains
     factqmin=zero
     factqmax=zero
     clip_supersaturation=.false.
+    clip_hydrometeor=.true.
     factg=zero
     factv=zero
     factp=zero

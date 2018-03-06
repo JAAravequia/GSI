@@ -242,6 +242,8 @@ contains
 
 !   get work pe:
 
+    workpe=0
+
     print_verbose=.false.
     if(verbose .and. g1%mype==workpe) print_verbose=.true.
     allocate(numlevs(0:g1%npe-1))
