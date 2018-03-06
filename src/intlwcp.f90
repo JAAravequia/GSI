@@ -121,7 +121,6 @@ subroutine intlwcp_(lwcphead,rval,sval)
     call gsi_bundlegetpointer(rval,'tsen',rt,istatus);ier=istatus+ier
     call gsi_bundlegetpointer(rval,'prse',rp,istatus);ier=istatus+ier
     call gsi_bundlegetpointer(rval,'q'   ,rq,istatus);ier=istatus+ier
-    !if (ier==0) write(6,*) 'INTLWCP (l_wcp_cwm = F)'
 
   else
 
@@ -129,7 +128,6 @@ subroutine intlwcp_(lwcphead,rval,sval)
     call gsi_bundlegetpointer(sval,'qr',sqr,istatus);ier=istatus+ier
     call gsi_bundlegetpointer(rval,'ql',rql,istatus);ier=istatus+ier
     call gsi_bundlegetpointer(rval,'qr',rqr,istatus);ier=istatus+ier
-    !if (ier==0) write(6,*) 'INTLWCP (l_wcp_cwm = T)'
 
   endif ! l_wcp_cwm
 
@@ -163,7 +161,6 @@ subroutine intlwcp_(lwcphead,rval,sval)
                        p_TL*lwcpptr%jac_p(k) + & 
                        q_TL*lwcpptr%jac_q(k) ) ! tpwcon*r10*(piges(k)-piges(k+1)) already did in setuplwcp.f90
        end do
-!       write(6,*) 'INTLWCP (l_wcp_cwm = F): val at ',jiter,' oloop and ',iter,' iloop = ', val
      else
        do k=1,nsig
          ql_TL=w1* sql(i1(k))+w2* sql(i2(k))+w3* sql(i3(k))+w4* sql(i4(k))
@@ -171,7 +168,6 @@ subroutine intlwcp_(lwcphead,rval,sval)
          val = val + ( ql_TL*lwcpptr%jac_ql(k) + & 
                        qr_TL*lwcpptr%jac_qr(k) ) ! tpwcon*r10*(piges(k)-piges(k+1)) already did in setuplwcp.f90
        end do
-!       write(6,*) 'INTLWCP (l_wcp_cwm = T): val at ',jiter,' oloop and ',iter,' iloop = ', val
      endif ! l_wcp_cwm
 
      if(luse_obsdiag)then
