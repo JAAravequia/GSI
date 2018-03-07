@@ -130,8 +130,6 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
   ilon=2
   ilat=3
 
-  allocate(cdata_all(maxdat,maxobs))
-
 
 ! Open, then read date from bufr data
   open(lunin,file=trim(infile),form='unformatted')
@@ -139,10 +137,12 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
   call datelen(10)
   call readmg(lunin,subset,idate,iret)
   if(iret/=0) then
-      print*,' failed to dw read data from ',lunin    ! msq
-      goto 1010
+      print*,' failed to dw read data from ',lunin,' iret =',iret   
+      close(lunin)
+      return
   endif
 
+  allocate(cdata_all(maxdat,maxobs))
 
 ! Time offset
   call time_4dvar(idate,toff)
@@ -306,9 +306,8 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
   write(lunout) ((cdata_all(k,i),k=1,maxdat),i=1,ndata)
 
 
-! Close unit to bufr file
-1010 continue
   deallocate(cdata_all)
+! Close unit to bufr file
   call closbf(lunin)
 
 ! End of routine

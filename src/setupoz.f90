@@ -232,11 +232,6 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
      pobs(j)=1.e10_r_kind
   end do
 
-  if(ozone_diagsave)then
-     irdim1=6
-     if(lobsdiagsave) irdim1=irdim1+4*miter+1
-     allocate(rdiagbuf(irdim1,nlevs,nobs))
-  end if
 
 ! Locate data for satellite in ozinfo arrays
   itoss =1
@@ -275,17 +270,26 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 ! Handle error conditions
   if (nlevs>nlev) write(6,*)'SETUPOZ:  level number reduced for ',obstype,' ', &
        nlevs,' --> ',nlev
-  if (nlev == 0) then
-     if (mype==0) write(6,*)'SETUPOZ:  no levels found for ',isis
-     if (nobs>0) read(lunin) 
-     goto 135
-  endif
-  if (itoss==1) then
-     if (mype==0) write(6,*)'SETUPOZ:  all obs variances > 1.e4.  Do not use ',&
+  if (nlev == 0 .or. itoss == 1) then
+     if (mype==0) then
+        if(nlev == 0) write(6,*)'SETUPOZ:  no levels found for ',isis
+        if(itoss == 1)write(6,*)'SETUPOZ:  all obs variances > 1.e4.  Do not use ',&
           'data from satellite ',isis
-     if (nobs>0) read(lunin)
-     goto 135
+     end if
+     if (nobs>0) read(lunin) 
+!    Release memory of local guess arrays
+     call final_vars_
+
+!    clean up
+     call dtime_show('setupozlay','diagsave:oz',i_oz_ob_type)
+     return
   endif
+
+  if(ozone_diagsave)then
+     irdim1=6
+     if(lobsdiagsave) irdim1=irdim1+4*miter+1
+     allocate(rdiagbuf(irdim1,nlevs,nobs))
+  end if
 
 ! Read and transform ozone data
   read(lunin) data,luse,ioid
@@ -772,7 +776,6 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   if(ozone_diagsave) deallocate(rdiagbuf)
 
 ! End of routine
-  return
 
   return
   contains

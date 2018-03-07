@@ -180,13 +180,13 @@ subroutine read_mitm_mxtm(nread,ndata,nodata,infile,obstype,lunout,gstime,sis,no
 
   ! Find number of reports
   maxobs = 0
-  100 continue 
+  obsloop: do 
       read(lunin,90,end=101) c_station_id,c_prvstg,c_sprvstg, & 
           rkx,tank,rlat4,rlon4,stnelev4,itimeshift,obval4
       maxobs=maxobs+1
-      goto 100
-  101 continue
-   if(print_verbose)write(6,*)myname,': maxobs=',maxobs
+  end do obsloop
+101 continue
+  if(print_verbose)write(6,*)myname,': maxobs=',maxobs
 
   if (maxobs == 0) then
      write(6,*)myname,': No reports found.  returning to read_obs.F90...'

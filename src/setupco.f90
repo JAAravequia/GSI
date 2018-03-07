@@ -188,11 +188,6 @@ subroutine setupco(lunin,mype,stats_co,nlevs,nreal,nobs,&
      pobs(j)=1.e10_r_kind
   end do
 
-  if(co_diagsave)then
-     irdim1=3
-     if(lobsdiagsave) irdim1=irdim1+4*miter+1
-     allocate(rdiagbuf(irdim1,nlevs,nobs))
-  end if
 
 ! Locate data for satellite in coinfo arrays
   itoss =1
@@ -244,17 +239,29 @@ subroutine setupco(lunin,mype,stats_co,nlevs,nreal,nobs,&
 ! Handle error conditions
   if (nlevs>nlev) write(6,*)'SETUPCO:  level number reduced for ',obstype,' ', &
        nlevs,' --> ',nlev
-  if (nlev == 0) then
-     if (mype==0) write(6,*)'SETUPCO:  no levels found for ',isis
-     if (nobs>0) read(lunin) 
-     goto 135
-  endif
-  if (itoss==1) then
-     if (mype==0) write(6,*)'SETUPCO:  all obs variances > 1.e4.  Do not use ',&
+  if (nlev == 0 .or. itoss == 1) then
+     if (mype==0) then
+        if(nlev == 0)write(6,*)'SETUPCO:  no levels found for ',isis
+        if(itoss == 1) write(6,*)'SETUPCO:  all obs variances > 1.e4.  Do not use ',&
           'data from satellite ',isis
-     if (nobs>0) read(lunin)
-     goto 135
+     end if
+     if (nobs>0) read(lunin) 
+
+!    Release memory of local guess arrays
+     call final_vars_
+
+!    clean up
+     if(allocated(ges_co)) deallocate(ges_co)
+     call dtime_show('setupco','diagsave:co',i_colvk_ob_type)
+
+     return
   endif
+
+  if(co_diagsave)then
+     irdim1=3
+     if(lobsdiagsave) irdim1=irdim1+4*miter+1
+     allocate(rdiagbuf(irdim1,nlevs,nobs))
+  end if
 
 ! Read and transform co data
   read(lunin) data,luse,ioid
@@ -708,6 +715,8 @@ endif   ! (in_curbin)
      close(4)
   endif
 
+  if(co_diagsave) deallocate(rdiagbuf)
+
 ! Jump to this line if problem with data
 135 continue        
 
@@ -717,7 +726,6 @@ endif   ! (in_curbin)
 ! clean up
   if(allocated(ges_co)) deallocate(ges_co)
   call dtime_show('setupco','diagsave:co',i_colvk_ob_type)
-  if(co_diagsave) deallocate(rdiagbuf)
 
 ! End of routine
   return
