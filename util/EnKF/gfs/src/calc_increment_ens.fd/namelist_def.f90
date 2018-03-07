@@ -8,7 +8,7 @@ module namelist_def
   public :: analysis_filename, firstguess_filename, increment_filename
   public :: datapath
   public :: debug
-  public :: do_icmr
+  public :: imp_physics
   public :: incvars_to_zero
   public :: read_namelist
   public :: write_namelist
@@ -24,8 +24,6 @@ module namelist_def
   logical            :: debug               = .false.
   integer            :: imp_physics         = 99
   character(len=10)  :: incvars_to_zero(max_vars) = 'NONE'
-
-  logical            :: do_icmr             = .false.
 
   namelist /setup/ datapath, analysis_filename, firstguess_filename, increment_filename, &
                    nens, debug, imp_physics

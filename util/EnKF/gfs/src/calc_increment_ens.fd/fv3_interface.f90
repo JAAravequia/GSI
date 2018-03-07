@@ -63,6 +63,9 @@ module fv3_interface
      real(r_kind), dimension(:,:,:), allocatable :: clwmr
      real(r_kind), dimension(:,:,:), allocatable :: o3mr
      real(r_kind), dimension(:,:,:), allocatable :: icmr
+     real(r_kind), dimension(:,:,:), allocatable :: rwmr
+     real(r_kind), dimension(:,:,:), allocatable :: snmr
+     real(r_kind), dimension(:,:,:), allocatable :: grle
      real(r_kind), dimension(:,:),   allocatable :: psfc
      real(r_kind), dimension(:),     allocatable :: ak
      real(r_kind), dimension(:),     allocatable :: bk
@@ -79,6 +82,9 @@ module fv3_interface
      real(r_kind), dimension(:,:,:), allocatable :: clwmr_inc
      real(r_kind), dimension(:,:,:), allocatable :: o3mr_inc
      real(r_kind), dimension(:,:,:), allocatable :: icmr_inc
+     real(r_kind), dimension(:,:,:), allocatable :: rwmr_inc
+     real(r_kind), dimension(:,:,:), allocatable :: snmr_inc
+     real(r_kind), dimension(:,:,:), allocatable :: grle_inc
      real(r_kind), dimension(:),     allocatable :: lon
      real(r_kind), dimension(:),     allocatable :: lat
      real(r_kind), dimension(:),     allocatable :: lev
@@ -172,6 +178,9 @@ contains
     integer :: varid_clwmr_inc
     integer :: varid_o3mr_inc
     integer :: varid_icmr_inc
+    integer :: varid_rwmr_inc
+    integer :: varid_snmr_inc
+    integer :: varid_grle_inc
     integer :: dimid_lon
     integer :: dimid_lat
     integer :: dimid_lev
@@ -260,9 +269,15 @@ contains
     call netcdf_check(nf90_def_var(ncfileid,'o3mr_inc',nf90_float,dimid_3d,varid_o3mr_inc), &
          & 'nf90_def_var', context='o3mr_inc')
 
-    if ( do_icmr ) then
+    if ( imp_physics /= 99 ) then
       call netcdf_check(nf90_def_var(ncfileid,'icmr_inc',nf90_float,dimid_3d, varid_icmr_inc), &
            & 'nf90_def_var', context='icmr_inc')
+      call netcdf_check(nf90_def_var(ncfileid,'rwmr_inc',nf90_float,dimid_3d, varid_rwmr_inc), &
+           & 'nf90_def_var', context='rwmr_inc')
+      call netcdf_check(nf90_def_var(ncfileid,'snmr_inc',nf90_float,dimid_3d, varid_snmr_inc), &
+           & 'nf90_def_var', context='snmr_inc')
+      call netcdf_check(nf90_def_var(ncfileid,'grle_inc',nf90_float,dimid_3d, varid_grle_inc), &
+           & 'nf90_def_var', context='grle_inc')
     endif
 
     call netcdf_check(nf90_put_att(ncfileid,nf90_global,'source','GSI'), &
@@ -327,11 +342,21 @@ contains
     call netcdf_check(nf90_put_var(ncfileid,varid_o3mr_inc,grid%o3mr_inc), &
          & 'nf90_put_var', context='o3mr_inc')
 
-    if ( do_icmr ) then
+    if ( imp_physics /= 99 )then
       if (debug) print*, 'writing icmr_inc min/max =', minval(grid%icmr_inc),maxval(grid%icmr_inc)
       call netcdf_check(nf90_put_var(ncfileid,varid_icmr_inc,grid%icmr_inc), &
            & 'nf90_put_var', context='icmr_inc')
+      if (debug) print*, 'writing rwmr_inc min/max =', minval(grid%rwmr_inc),maxval(grid%rwmr_inc)
+      call netcdf_check(nf90_put_var(ncfileid,varid_rwmr_inc,grid%rwmr_inc), &
+           & 'nf90_put_var', context='rwmr_inc')
+      if (debug) print*, 'writing snmr_inc min/max =', minval(grid%snmr_inc),maxval(grid%snmr_inc)
+      call netcdf_check(nf90_put_var(ncfileid,varid_snmr_inc,grid%snmr_inc), &
+           & 'nf90_put_var', context='snmr_inc')
+      if (debug) print*, 'writing grle_inc min/max =', minval(grid%grle_inc),maxval(grid%grle_inc)
+      call netcdf_check(nf90_put_var(ncfileid,varid_grle_inc,grid%grle_inc), &
+           & 'nf90_put_var', context='grle_inc')
     endif
+
 
     call netcdf_check(nf90_close(ncfileid), &
          & 'nf90_close')
@@ -411,7 +436,12 @@ contains
     incr_grid%sphum_inc = an_grid%spfh  - fg_grid%spfh
     incr_grid%clwmr_inc = an_grid%clwmr - fg_grid%clwmr
     incr_grid%o3mr_inc  = an_grid%o3mr  - fg_grid%o3mr
-    if ( do_icmr ) incr_grid%icmr_inc = an_grid%icmr - fg_grid%icmr
+    if ( imp_physics /= 99 ) then
+       incr_grid%icmr_inc = an_grid%icmr - fg_grid%icmr
+       incr_grid%rwmr_inc = an_grid%rwmr - fg_grid%rwmr
+       incr_grid%snmr_inc = an_grid%snmr - fg_grid%snmr
+       incr_grid%grle_inc = an_grid%grle - fg_grid%grle
+    endif
 
     do i=1,max_vars
         varname = incvars_to_zero(i)
@@ -424,7 +454,10 @@ contains
             if ( trim(varname) == 'sphum_inc' ) incr_grid%sphum_inc = zero
             if ( trim(varname) == 'clwmr_inc' ) incr_grid%clwmr_inc = zero
             if ( trim(varname) == 'o3mwr_inc' ) incr_grid%o3mr_inc  = zero
-            if ( do_icmr .and. trim(varname) == 'icmr_inc' ) incr_grid%icmr_inc = zero
+            if ( imp_physics /= 99 .and. trim(varname) == 'icmr_inc' ) incr_grid%icmr_inc = zero
+            if ( imp_physics /= 99 .and. trim(varname) == 'rwmr_inc' ) incr_grid%rwmr_inc = zero
+            if ( imp_physics /= 99 .and. trim(varname) == 'snmr_inc' ) incr_grid%snmr_inc = zero
+            if ( imp_physics /= 99 .and. trim(varname) == 'grle_inc' ) incr_grid%grle_inc = zero
         else
             cycle
         endif
@@ -625,7 +658,7 @@ contains
             & reshape(workgrid,(/meta_nemsio%dimx,meta_nemsio%dimy/))
        if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
             & grid%o3mr(:,:,meta_nemsio%dimz - k + 1))
-       if ( do_icmr ) then
+       if ( imp_physics /= 99 ) then
          var_info%var_name                        = 'icmr'
          call variable_lookup(var_info)
          call gfs_nems_read(workgrid,var_info%nems_name,                     &
@@ -635,6 +668,33 @@ contains
          if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
               & grid%icmr(:,:,meta_nemsio%dimz - k + 1))
        endif
+       if ( imp_physics /= 99 ) then
+         var_info%var_name                        = 'rwmr'
+         call variable_lookup(var_info)
+         call gfs_nems_read(workgrid,var_info%nems_name,                     &
+              & var_info%nems_levtyp,k)
+         grid%rwmr(:,:,meta_nemsio%dimz - k + 1)  =                          &
+              & reshape(workgrid,(/meta_nemsio%dimx,meta_nemsio%dimy/))
+         if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
+              & grid%rwmr(:,:,meta_nemsio%dimz - k + 1))
+         var_info%var_name                        = 'snmr'
+         call variable_lookup(var_info)
+         call gfs_nems_read(workgrid,var_info%nems_name,                     &
+              & var_info%nems_levtyp,k)
+         grid%snmr(:,:,meta_nemsio%dimz - k + 1)  =                          &
+              & reshape(workgrid,(/meta_nemsio%dimx,meta_nemsio%dimy/))
+         if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
+              & grid%snmr(:,:,meta_nemsio%dimz - k + 1))
+         var_info%var_name                        = 'grle'
+         call variable_lookup(var_info)
+         call gfs_nems_read(workgrid,var_info%nems_name,                     &
+              & var_info%nems_levtyp,k)
+         grid%grle(:,:,meta_nemsio%dimz - k + 1)  =                          &
+              & reshape(workgrid,(/meta_nemsio%dimx,meta_nemsio%dimy/))
+         if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
+              & grid%grle(:,:,meta_nemsio%dimz - k + 1))
+       endif
+
 
     end do ! do k = 1, meta_nemsio%dimz
 
@@ -693,8 +753,14 @@ contains
          & allocate(grid%clwmr_inc(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(grid%o3mr_inc))                                     &
          & allocate(grid%o3mr_inc(grid%nx,grid%ny,grid%nz))
-    if(do_icmr .and. .not. allocated(grid%icmr_inc))                       &
+    if(imp_physics /= 99 .and. .not. allocated(grid%icmr_inc))                       &
          & allocate(grid%icmr_inc(grid%nx,grid%ny,grid%nz))
+    if(imp_physics /= 99 .and. .not. allocated(grid%rwmr_inc))             &
+         & allocate(grid%rwmr_inc(grid%nx,grid%ny,grid%nz))
+    if(imp_physics /= 99 .and. .not. allocated(grid%snmr_inc))             &
+         & allocate(grid%snmr_inc(grid%nx,grid%ny,grid%nz))
+    if(imp_physics /= 99 .and. .not. allocated(grid%grle_inc))             &
+         & allocate(grid%grle_inc(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(grid%lon))                                          &
          & allocate(grid%lon(grid%nx))
     if(.not. allocated(grid%lat))                                          &
@@ -725,8 +791,14 @@ contains
          & allocate(an_grid%clwmr(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(an_grid%o3mr))                                      &
          & allocate(an_grid%o3mr(grid%nx,grid%ny,grid%nz))
-    if(do_icmr .and. .not. allocated(an_grid%icmr))                        &
+    if(imp_physics /= 99 .and. .not. allocated(an_grid%icmr))                        &
          & allocate(an_grid%icmr(grid%nx,grid%ny,grid%nz))
+    if(imp_physics /= 99 .and. .not. allocated(an_grid%rwmr))              &
+         & allocate(an_grid%rwmr(grid%nx,grid%ny,grid%nz))
+    if(imp_physics /= 99 .and. .not. allocated(an_grid%snmr))              &
+         & allocate(an_grid%snmr(grid%nx,grid%ny,grid%nz))
+    if(imp_physics /= 99 .and. .not. allocated(an_grid%grle))              &
+         & allocate(an_grid%grle(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(an_grid%psfc))                                      &
          & allocate(an_grid%psfc(grid%nx,grid%ny))
     if(.not. allocated(an_grid%ak))                                        &
@@ -751,8 +823,14 @@ contains
          & allocate(fg_grid%clwmr(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(fg_grid%o3mr))                                      &
          & allocate(fg_grid%o3mr(grid%nx,grid%ny,grid%nz))
-    if(do_icmr .and. .not. allocated(fg_grid%icmr))                        &
+    if(imp_physics /= 99 .and. .not. allocated(fg_grid%icmr))                        &
          & allocate(fg_grid%icmr(grid%nx,grid%ny,grid%nz))
+    if(imp_physics /= 99 .and. .not. allocated(fg_grid%rwmr))              &
+         & allocate(fg_grid%rwmr(grid%nx,grid%ny,grid%nz))
+    if(imp_physics /= 99 .and. .not. allocated(fg_grid%snmr))              &
+         & allocate(fg_grid%snmr(grid%nx,grid%ny,grid%nz))
+    if(imp_physics /= 99 .and. .not. allocated(fg_grid%grle))              &
+         & allocate(fg_grid%grle(grid%nx,grid%ny,grid%nz))
     if(.not. allocated(fg_grid%psfc))                                      &
          & allocate(fg_grid%psfc(grid%nx,grid%ny))
     if(.not. allocated(fg_grid%ak))                                        &
@@ -791,6 +869,9 @@ contains
     if(allocated(grid%clwmr_inc)) deallocate(grid%clwmr_inc)
     if(allocated(grid%o3mr_inc))  deallocate(grid%o3mr_inc)
     if(allocated(grid%icmr_inc))  deallocate(grid%icmr_inc)
+    if(allocated(grid%rwmr_inc))  deallocate(grid%rwmr_inc)
+    if(allocated(grid%snmr_inc))  deallocate(grid%snmr_inc)
+    if(allocated(grid%grle_inc))  deallocate(grid%grle_inc)
     if(allocated(grid%lon))       deallocate(grid%lon)
     if(allocated(grid%lat))       deallocate(grid%lat)
     if(allocated(grid%lev))       deallocate(grid%lev)
@@ -807,6 +888,9 @@ contains
     if(allocated(an_grid%clwmr))  deallocate(an_grid%clwmr)
     if(allocated(an_grid%o3mr))   deallocate(an_grid%o3mr)
     if(allocated(an_grid%icmr))   deallocate(an_grid%icmr)
+    if(allocated(an_grid%rwmr))   deallocate(an_grid%rwmr)
+    if(allocated(an_grid%snmr))   deallocate(an_grid%snmr)
+    if(allocated(an_grid%grle))   deallocate(an_grid%grle)
     if(allocated(an_grid%psfc))   deallocate(an_grid%psfc)
     if(allocated(an_grid%ak))     deallocate(an_grid%ak)
     if(allocated(an_grid%bk))     deallocate(an_grid%bk)
@@ -820,6 +904,9 @@ contains
     if(allocated(fg_grid%clwmr))  deallocate(fg_grid%clwmr)
     if(allocated(fg_grid%o3mr))   deallocate(fg_grid%o3mr)
     if(allocated(fg_grid%icmr))   deallocate(fg_grid%icmr)
+    if(allocated(fg_grid%rwmr))   deallocate(fg_grid%rwmr)
+    if(allocated(fg_grid%snmr))   deallocate(fg_grid%snmr)
+    if(allocated(fg_grid%grle))   deallocate(fg_grid%grle)
     if(allocated(fg_grid%psfc))   deallocate(fg_grid%psfc)
     if(allocated(fg_grid%ak))     deallocate(fg_grid%ak)
     if(allocated(fg_grid%bk))     deallocate(fg_grid%bk)

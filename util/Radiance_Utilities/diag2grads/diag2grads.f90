@@ -21,6 +21,7 @@
 program diag2grads
 
 ! Include modules
+  use kinds, only:  i_kind
   use Utilities_Time
   use read_diag
   use grads_hdr
@@ -38,6 +39,7 @@ program diag2grads
 
 ! Declare namelist with defaults
   logical           :: retrieval        = .false.
+  logical           :: lwrite_stn       = .true.
 
   integer           :: idsat            = 14   ! HIRS14
   integer           :: n_chan           = 19
@@ -62,10 +64,12 @@ program diag2grads
   character(len=GRADS_MAXLEN_COMMENT)  :: comment  = ''
   character(len=GRADS_MAXLEN_FILENAME) :: filename = ''
   character(len=GRADS_MAXLEN_FILENAME+4) :: dsetname = ''
+  character(len=GRADS_MAXLEN_FILENAME+6) :: bnryname = ''
+  character(len=GRADS_MAXLEN_FILENAME+10):: channame = ''
   
   namelist / PARM / comment, ft_diag_top, ft_diag_end, filename, &
        idsat, n_chan, datetime, tint, South, North, West, East, &
-       qc, solar, retrieval
+       qc, solar, retrieval, lwrite_stn
   
 
 
@@ -95,16 +99,24 @@ program diag2grads
   integer :: time_work(5)
   
   integer :: iobs_total
-  integer :: i, k, n
+  integer :: i, n, k
   integer :: npred_radiag, n_bcor
-  integer :: lunstn,lunctl
+  integer :: lunstn,lunctl,lunbnry,lunchan
   integer :: nlev,nflag,itime_terminator
 
   real(4):: rlat,rlon,rtim
 
+  integer(i_kind),parameter:: iversion_radiag_1 = 11104   ! Version when bias-correction entries were modified
+  integer(i_kind),parameter:: iversion_radiag_2 = 13784   ! Version when NSST entries were added
+  integer(i_kind),parameter:: iversion_radiag_3 = 19180   ! Version when SSMIS added
+  integer(i_kind),parameter:: iversion_radiag_4 = 30303   ! Version when emissivity predictor added
+
+
   npred_radiag = 5
   lunstn = 21
   lunctl = 22
+  lunbnry = 23 
+  lunchan = 24
 
 
 ! Read namelist
@@ -144,10 +156,14 @@ program diag2grads
   
 ! Open file to GrADS station data file
   dsetname = trim(filename) // '.dat'
-  open(lunstn,file=dsetname,form='unformatted')
-  write(6,*)'Open unit lunstn=',lunstn,' to GrADS station data file ',trim(dsetname)
-  
-
+  bnryname = trim(filename) // '_b.dat'
+  channame = trim(filename) // '_nchan.dat'
+  if(lwrite_stn)then
+     open(lunstn,file=dsetname,form='unformatted')
+     write(6,*)'Open unit lunstn=',lunstn,' to GrADS station data file ',trim(dsetname)
+  endif
+  open(lunbnry,file=bnryname,form='unformatted',access='stream')
+  open(lunchan,file=channame,form='unformatted',access='stream')
 
 ! Allocate channel list array
   allocate( nuchan(n_chan) )
@@ -328,24 +344,61 @@ program diag2grads
            data_lvl(5,n)  = data_chan(n)%qcmark
            data_lvl(6,n)  = data_chan(n)%emiss
            data_lvl(7,n)  = data_chan(n)%tlap
-           if (header_fix%iversion < iversion_radiag) then
-              data_lvl( 8,n)=data_chan(n)%bifix(1)
-              data_lvl( 9,n)=data_chan(n)%bilap
-              data_lvl(10,n)=data_chan(n)%bilap2
-              data_lvl(11,n)=data_chan(n)%bicons
-              data_lvl(12,n)=data_chan(n)%biang
-              data_lvl(13,n)=data_chan(n)%biclw
+           data_lvl(8,n)  = data_chan(n)%tb_tz
+
+           if (header_fix%iversion < iversion_radiag_1) then
+              data_lvl( 8,n) = data_chan(n)%bifix(1)
+              data_lvl( 9,n) = data_chan(n)%bilap
+              data_lvl(10,n) = data_chan(n)%bilap2
+              data_lvl(11,n) = data_chan(n)%bicons
+              data_lvl(12,n) = data_chan(n)%biang
+              data_lvl(13,n) = data_chan(n)%biclw
               if (retrieval) data_lvl(13,n)=data_chan(n)%bisst
-           else
-              data_lvl(8,n)  = data_chan(n)%bicons
-              data_lvl(9,n)  = data_chan(n)%biang
+           elseif ( header_fix%iversion < iversion_radiag_2 .and. header_fix%iversion >= iversion_radiag_1 ) then
+              data_lvl( 8,n) = data_chan(n)%bicons
+              data_lvl( 9,n) = data_chan(n)%biang
               data_lvl(10,n) = data_chan(n)%biclw
               data_lvl(11,n) = data_chan(n)%bilap2
               data_lvl(12,n) = data_chan(n)%bilap
               do i=1,header_fix%angord+1
                  data_lvl(12+i,n) = data_chan(n)%bifix(i)
               end do
-              data_lvl(12+header_fix%angord+2,n)=data_chan(n)%bisst
+              data_lvl(12+header_fix%angord+2,n) = data_chan(n)%bisst
+           elseif ( header_fix%iversion < iversion_radiag_3 .and. header_fix%iversion >= iversion_radiag_2 ) then
+              data_lvl( 9,n) = data_chan(n)%bicons
+              data_lvl(10,n) = data_chan(n)%biang
+              data_lvl(11,n) = data_chan(n)%biclw
+              data_lvl(12,n) = data_chan(n)%bilap2
+              data_lvl(13,n) = data_chan(n)%bilap
+              do i=1,header_fix%angord+1
+                 data_lvl(13+i,n) = data_chan(n)%bifix(i)
+              end do
+              data_lvl(13+header_fix%angord+2,n) = data_chan(n)%bisst
+           elseif ( header_fix%iversion < iversion_radiag_4 .and. header_fix%iversion >= iversion_radiag_3 ) then
+              data_lvl( 9,n) = data_chan(n)%bicons
+              data_lvl(10,n) = data_chan(n)%biang
+              data_lvl(11,n) = data_chan(n)%biclw
+              data_lvl(12,n) = data_chan(n)%bilap2
+              data_lvl(13,n) = data_chan(n)%bilap
+              data_lvl(14,n) = data_chan(n)%bicos
+              data_lvl(15,n) = data_chan(n)%bisin
+              do i=1,header_fix%angord+1
+                 data_lvl(15+i,n) = data_chan(n)%bifix(i)
+              end do
+              data_lvl(15+header_fix%angord+2,n) = data_chan(n)%bisst
+           else
+              data_lvl( 9,n) = data_chan(n)%bicons
+              data_lvl(10,n) = data_chan(n)%biang
+              data_lvl(11,n) = data_chan(n)%biclw
+              data_lvl(12,n) = data_chan(n)%bilap2
+              data_lvl(13,n) = data_chan(n)%bilap
+              data_lvl(14,n) = data_chan(n)%bicos
+              data_lvl(15,n) = data_chan(n)%bisin
+              data_lvl(16,n) = data_chan(n)%biemis
+              do i=1,header_fix%angord+1
+                 data_lvl(16+i,n) = data_chan(n)%bifix(i)
+              end do
+              data_lvl(16+header_fix%angord+2,n) = data_chan(n)%bisst
            endif
            
 !       End loop over channels
@@ -357,21 +410,24 @@ program diag2grads
         
         iobs_total = iobs_total + 1
 
+        write(lunchan)n_chan,7
+        write(lunbnry)(nuchan(k),(data_lvl(i,k),i=1,7),k=1,n_chan)
+        write(6,*)(nuchan(k),(data_lvl(i,k),i=1,7),k=1,n_chan)
+        write(6,*)'xxxxxx'
       
 !       Write station data
-        call write_station_data(lunstn,&
-             id, &                         ! id
-             rlat, &                       ! lat
-             rlon, &                       ! lon
-             rtim, &                       ! t
-             n_chan, &                     ! nlev(# of chan)
-             nelem_lvl, &
-             nelem_sfc, &
-             nuchan, &                     ! ch # assigned as hight
-             data_lvl, &
-             data_sfc )
+        if(lwrite_stn)call write_station_data(lunstn,&
+                           id, &                         ! id
+                           rlat, &                       ! lat
+                           rlon, &                       ! lon
+                           rtim, &                       ! t
+                           n_chan, &                     ! nlev(# of chan)
+                           nelem_lvl, &
+                           nelem_sfc, &
+                           nuchan, &                     ! ch # assigned as hight
+                           data_lvl, &
+                           data_sfc )
         
-
 !       Periodically print data
         if( mod(iobs_total,2000) == 0 )then    
            write(6,*) 'DATA #:', iobs_total
@@ -387,7 +443,7 @@ program diag2grads
      
     
 !    Write a record to indicate the end of time group
-     if (itime_terminator==0) then
+     if (lwrite_stn .and. itime_terminator==0) then
         write(6,*)'Write GrADS station data terminator for time ft_diag=',ft_diag
         stid='time_end'
         rlat=0.0
@@ -404,7 +460,7 @@ program diag2grads
     
     
 ! Close GrADS station file
-  if (itime_terminator==0) then
+  if (lwrite_stn .and. itime_terminator==0) then
      write(6,*)'Write GrADS station data terminator'
      stid='end'
      rlat=0.0
@@ -415,24 +471,27 @@ program diag2grads
      write(lunstn) stid,rlat,rlon,rtim,nlev,nflag
   endif
   write(6,*)'Close GrADS station data file attached to lunstn=',lunstn
-  close(lunstn)
+  if (lwrite_stn) close(lunstn)
+  close(lunbnry)
+  close(lunchan)
 
 
 ! Create GrADS control file
-  dsetname = trim(filename) // '.ctl'
-  open(lunctl,file=dsetname,form='formatted')
-  write(6,*)'Open unit lunctl=',lunctl,' to GrADS control file ',dsetname
-  call write_station_ctl(lunctl,comment, &
-       filename, &
-       datetime, &
-       tint, &
-       ft_diag_end - ft_diag_top + 1, &
-       n_chan, &
-       nelem_lvl, &
-       nelem_sfc, &
-       data_name)
-  close(lunctl)
-
+  if(lwrite_stn)then
+     dsetname = trim(filename) // '.ctl'
+     open(lunctl,file=dsetname,form='formatted')
+     write(6,*)'Open unit lunctl=',lunctl,' to GrADS control file ',dsetname
+     call write_station_ctl(lunctl,comment, &
+          filename, &
+          datetime, &
+          tint, &
+          ft_diag_end - ft_diag_top + 1, &
+          n_chan, &
+          nelem_lvl, &
+          nelem_sfc, &
+          data_name)
+     close(lunctl)
+  endif
   
 
 ! Check total number of data

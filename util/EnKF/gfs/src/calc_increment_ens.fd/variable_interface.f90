@@ -218,7 +218,33 @@ contains
 
     end if ! if(trim(adjustl(grid%var_name)) .eq. 'icmr')
 
-    !=====================================================================
+    if(trim(adjustl(grid%var_name)) .eq. 'rwmr') then
+
+       ! Define local variables
+
+       grid%nems_name   = 'rwmr'
+       grid%nems_levtyp = 'mid layer'
+
+    end if ! if(trim(adjustl(grid%var_name)) .eq. 'rwmr')
+
+    if(trim(adjustl(grid%var_name)) .eq. 'snmr') then
+
+       ! Define local variables
+
+       grid%nems_name   = 'snmr'
+       grid%nems_levtyp = 'mid layer'
+
+    end if ! if(trim(adjustl(grid%var_name)) .eq. 'snmr')
+
+    if(trim(adjustl(grid%var_name)) .eq. 'grle') then
+
+       ! Define local variables
+
+       grid%nems_name   = 'grle'
+       grid%nems_levtyp = 'mid layer'
+
+    end if ! if(trim(adjustl(grid%var_name)) .eq. 'grle')
+  !=====================================================================
 
   end subroutine variable_lookup
 

@@ -45,7 +45,7 @@ program recentersigp
   character(16),dimension(:),allocatable:: fieldlevtyp_di,fieldlevtyp_mi,fieldlevtyp_mo
   integer,dimension(:),allocatable:: fieldlevel_di,fieldlevel_mi,fieldlevel_mo,orderdi,ordermi
   integer nsigi,nsigo,iret,mype,mype1,npe,nanals,ierr
-  integer:: nrec,latb,lonb,levs,npts,n,i,k,nn
+  integer:: nrec,latb,lonb,levs,npts,n,i
   real,allocatable,dimension(:):: rwork1d
   real,allocatable,dimension(:,:)   :: rwork1di,rwork1do,rwork1dmi,rwork1dmo
 
@@ -146,7 +146,7 @@ program recentersigp
         allocate(rwork1dmo(npts,nrec))
         allocate(rwork1do(npts,nrec))
 
-        allocate(fieldname_di(nrec), fieldlevtyp_di(nrec),fieldlevel_di(nrec))
+        allocate(fieldname_di(nrec),fieldlevtyp_di(nrec),fieldlevel_di(nrec))
         allocate(fieldname_mi(nrec),fieldlevtyp_mi(nrec),fieldlevel_mi(nrec))
         allocate(fieldname_mo(nrec),fieldlevtyp_mo(nrec),fieldlevel_mo(nrec))
         allocate(orderdi(nrec),ordermi(nrec))
@@ -168,6 +168,10 @@ program recentersigp
         call getorder(fieldname_mo,fieldname_di,fieldlevtyp_mo,fieldlevtyp_di,fieldlevel_mo,fieldlevel_di,nrec,orderdi)
         call getorder(fieldname_mo,fieldname_mi,fieldlevtyp_mo,fieldlevtyp_mi,fieldlevel_mo,fieldlevel_mi,nrec,ordermi)
 
+        deallocate(fieldname_di,fieldlevtyp_di,fieldlevel_di)
+        deallocate(fieldname_mi,fieldlevtyp_mi,fieldlevel_mi)
+        deallocate(fieldname_mo,fieldlevtyp_mo,fieldlevel_mo)
+
 !       Recenter ensemble member about chgres hi-res analysis
         do n=1,nrec
            do i=1,npts
@@ -183,6 +187,7 @@ program recentersigp
         deallocate(rwork1dmi)
         deallocate(rwork1dmo)
         deallocate(rwork1do)
+        deallocate(orderdi,ordermi)
 
         call nemsio_close(gfilemi,iret=iret)
         call nemsio_close(gfilemo,iret=iret)

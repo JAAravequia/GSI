@@ -118,7 +118,7 @@ OBJ_FILES = ${SRC_C:.c=.o} ${SRC_F:.f=.o} ${SRCSF90:.f90=.o}
 # Dependency list
 # ---------------
 
-diag2grads.o : diag2grads.f90 write_station.o grads_hdr.o read_diag.o utilities_time.o
+diag2grads.o : diag2grads.f90 kinds.o write_station.o grads_hdr.o read_diag.o utilities_time.o
 grads_hdr.o : grads_hdr.f90
 kinds.o : kinds.F90
 read_diag.o : read_diag.f90 kinds.o
