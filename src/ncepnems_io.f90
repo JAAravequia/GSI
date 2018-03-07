@@ -1905,7 +1905,7 @@ contains
 ! !USES:
     use kinds, only: r_kind,i_kind
 
-    use constants, only: r1000,fv,one,zero,qcmin,r0_05,t0c
+    use constants, only: r1000,fv,one,zero,qcmin,r0_05,t0c,qmin
 
     use mpimod, only: mpi_rtype
     use mpimod, only: mpi_comm_world
