@@ -77,7 +77,7 @@ subroutine read_cmaq_files(mype)
      
 !    check for consistency of times from sigma guess files.
      iwan=0
-     do i=0,99
+     iloop: do i=0,99
         write(filename,100)i
 100     format('sigf',i2.2)
         inquire(file=filename,exist=fexist)
@@ -95,18 +95,17 @@ subroutine read_cmaq_files(mype)
            write(6,*)'read_cmaq_files:  sigma guess file, nming2 ',hourg,idateg,nming2
            t4dv=real((nming2-iwinbgn),r_kind)*r60inv
            if (l4dvar.or.l4densvar) then
-              if (t4dv<zero .or. t4dv>winlen) go to 110
+              if (t4dv<zero .or. t4dv>winlen) cycle iloop
            else
               ndiff=nming2-nminanl
-              if(abs(ndiff) > 60*nhr_half ) go to 110
+              if(abs(ndiff) > 60*nhr_half ) cycle iloop
            endif
            
            iwan=iwan+1
            time_ges(iwan,1) = real((nming2-iwinbgn),r_kind)*r60inv
            time_ges(iwan+100,1)=i+r0_001
         end if
-110     continue
-     end do
+     end do iloop
      
      time_ges(201,1)=one
      time_ges(202,1)=one

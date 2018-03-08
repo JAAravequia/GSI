@@ -588,16 +588,17 @@ subroutine zroots(a,m,roots,polish)
         call laguer(a,m,roots(j),small,.true.)
      end do
   endif
-  do j=2,m
+  jloop: do j=2,m
      x=roots(j)
      do i=j-1,1,-1
-        if(real(roots(i),r_kind)<=real(x,r_kind))go to 10
+        if(real(roots(i),r_kind)<=real(x,r_kind))then
+           roots(i+1)=x
+           cycle jloop
+        end if
         roots(i+1)=roots(i)
      end do
-     i=0
-10   continue
-     roots(i+1)=x
-  end do
+     roots(1)=x
+  end do jloop
   return
 end subroutine zroots
 

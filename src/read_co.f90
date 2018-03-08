@@ -114,7 +114,7 @@ subroutine read_co(nread,ndata,nodata,infile,gstime,lunout, &
        if (.not.lerror) then 
           read(lunin,fmt=*,iostat=iferror) &
              inum,iyear,imonth,iday,ihour,imin,rlat,rlon,rpress,rsza
-          if(iferror/=0) go to 150
+          if(iferror/=0) exit read_loop
           do i=1,nlco 
              read(lunin,fmt=*,iostat=iferror) (aker(i,j),j=1,nlco)
           enddo 
@@ -200,9 +200,6 @@ subroutine read_co(nread,ndata,nodata,infile,gstime,lunout, &
      end do read_loop
 
   endif
-
-! Jump here when eof detected
-150 continue
 
 
 ! Write header record and data to output file for further processing

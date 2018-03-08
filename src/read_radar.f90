@@ -1384,318 +1384,635 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
      end if
   end do
 
-  if(trim(infile) == 'tldplrso') goto 75
+  if(trim(infile) /= 'tldplrso') then
 
-  nswptype=0
-  nmrecs=0
-  irec=0
-  if(l_foreaft_thin)then
-! read the first 500 records to deterine which criterion
-! should be used to seperate fore/aft sweep
-    open(lnbufr,file=trim(infile),form='unformatted')
-    call openbf(lnbufr,'IN',lnbufr)
-    call datelen(10)
-    call readmg(lnbufr,subset,idate,iret)
-    if(iret/=0) then
-       write(6,*)'READ_RADAR: problem reading tail Doppler radar bufr file tldplrbufr'
-       call closbf(lnbufr)
-       go to 1100
-    end if
-
-!   Big loop over bufr file
-
-700   call readsb(lnbufr,iret)
-800   continue
-    if(iret/=0) then
-       call readmg(lnbufr,subset,idate,iret)
-       if(iret/=0) go to 85
-       go to 700
-    end if
-    if(subset/=subset_check(loop)) then
-       iret=99
-       go to 800
-    end if
-    nmrecs = nmrecs+1
-
-!   Read header.  Extract elevation angle
-    call ufbint(lnbufr,hdr,12,1,levs,hdrstr(2))
-    thistilt=hdr(12)
-
-    if(nmrecs == 1)then
-      tdrele1 = hdr(12)
-      tdrele2 = hdr(12)
-    end if
-
-    tdrele1 = tdrele2
-    tdrele2 = hdr(12)
-    if(abs(tdrele2-tdrele1)>r100) then
-       print *,'tdrele2,tdrele1=',tdrele2,tdrele1
-       nswptype=1
-       go to 85
-    end if
-
-    if(nmrecs <= 500)then
-       go to 700
-    else
-       go to 85
-    end if
-
-85 continue
-    call closbf(lnbufr)
-    close(lnbufr)
-  end if
-
-  print *,'nmrecs, nswptype=', nmrecs, nswptype
-
-! Open, then read bufr data
-  open(lnbufr,file=trim(infile),form='unformatted')
-  call openbf(lnbufr,'IN',lnbufr)
-  call datelen(10)
-  call readmg(lnbufr,subset,idate,iret)
-  if(iret/=0) then
-     write(6,*)'READ_RADAR: problem reading tail Doppler radar bufr file tldplrbufr'
-     call closbf(lnbufr)
-     go to 1100
-  end if
-
-! Time offset
-  call time_4dvar(idate,toff)
-
-  write(date,'( i10)') idate
-  read (date,'(i4,3i2)') iy,im,idd,ihh
-  write(6,*)'READ_RADAR: bufr file date is ',iy,im,idd,ihh
-
-  idate5(1) = iy    ! year
-  idate5(2) = im    ! month
-  idate5(3) = idd   ! day
-  idate5(4) = ihh   ! hour
-  idate5(5) = 0     ! minute
-  call w3fs21(idate5,mincy)
-
-  nmrecs=0
-!    Big loop over bufr file
-
-  if(l_foreaft_thin) then 
-     firstbeam = 0
-     foreswp = .true.
-     aftswp = .false.
-     nforeswp=1
-    naftswp=0
-     nswp=1
-  else
-     foreswp = .false.
-     aftswp = .false.
-  endif
-  bigloop2:do
-     call readsb(lnbufr,iret)
-     if(iret/=0 .or. subset/=subset_check(loop)) then
-        call readmg(lnbufr,subset,idate,iret)
-        if(iret/=0) exit bigloop2
-        cycle bigloop2
-     end if
-     nmrecs = nmrecs+1
-     irec = irec+1
-
-!       Read header.  Extract station infomration
-     call ufbint(lnbufr,hdr,12,1,levs,hdrstr(2))
-
-!    rstation_id=hdr(1)
-     if(hdr(1) == zero)then
-        cstaid='NOAA    '
-     else if(hdr(1) == one)then
-        cstaid='FRENCH  '
-     else if(hdr(1)== two)then
-        cstaid='G-IV    '
-     else if(hdr(1)== three)then
-        cstaid='AOC     '
-     else
-        cstaid='UNKNOWN '
-     endif
-
-     kx=990+nint(hdr(1))
-
-     if(nmrecs==1)print *,'Antenna ID:', hdr(1),cstaid
-  
-     iyr = hdr(2)
-     imo = hdr(3)
-     idy = hdr(4)
-     ihr = hdr(5)
-     imn = hdr(6)
-     isc = hdr(7)
-
-     idate5(1) = iyr
-     idate5(2) = imo
-     idate5(3) = idy
-     idate5(4) = ihr
-     idate5(5) = imn
-     ikx=0
-     do i=1,nconvtype
-        if(trim(ioctype(i)) == trim(obstype) .and. kx == ictype(i))ikx = i
-     end do
-     if(ikx == 0) cycle bigloop2
-     call w3fs21(idate5,minobs)
-
-     t4dv=real(minobs-iwinbgn,r_kind)*r60inv
-     if (l4dvar.or.l4densvar) then
-        if (t4dv<zero .OR. t4dv>winlen) then
-           ntimeout=ntimeout+1
-           cycle bigloop2
-        end if
-        timeo=t4dv
-     else
-        timeo = real(minobs-mincy,r_kind)*r60inv
-        if (abs(timeo) > twind .or. abs(timeo) > ctwind(ikx)) then
-           ntimeout=ntimeout+1
-           cycle bigloop2
-        end if
-     endif
-
-     timemax=max(timemax,timeo)
-     timemin=min(timemin,timeo)
-
-     this_stalat=hdr(8)
-     this_stalon=hdr(9)
-
-     rlon0=deg2rad*this_stalon
-     this_stalatr=this_stalat*deg2rad
-     clat0=cos(this_stalatr) ; slat0=sin(this_stalatr)
-     this_stahgt=hdr(10)
-     thisazimuth=hdr(11)
-     thistilt=hdr(12)
-     elevmax=max(elevmax,thistilt)
-     elevmin=min(elevmin,thistilt)
-
-!     define fore/aft sweeps for thinning (pseduo dual Doppler)
-
+     nswptype=0
+     nmrecs=0
+     irec=0
      if(l_foreaft_thin)then
-        if (firstbeam == 0) then
-           tdrele1 = hdr(12)
-           tdrele2 = hdr(12)
-           if(nswptype == 0)then
-              tdrele3 = hdr(12)
-           end if 
-           firstbeam = 1
-        endif
+!    read the first 500 records to deterine which criterion
+!    should be used to seperate fore/aft sweep
+       open(lnbufr,file=trim(infile),form='unformatted')
+       call openbf(lnbufr,'IN',lnbufr)
+       call datelen(10)
+       call readmg(lnbufr,subset,idate,iret)
+       if(iret/=0) then
+          write(6,*)'READ_RADAR: problem reading tail Doppler radar bufr file tldplrbufr'
+          call closbf(lnbufr)
+          go to 1100
+       end if
 
-        if(nswptype == 0)then
-           tdrele1 = tdrele2
-           tdrele2 = tdrele3
-           tdrele3 = hdr(12)
+!      Big loop over bufr file
 
-           if(firstbeam > 0 .and. tdrele2>=tdrele1 .and. tdrele2>=tdrele3 .and. tdrele2 > r60 &
-              .and. irec > r150)then  
-              if(foreswp) then
-                 foreswp = .false.
-                 aftswp = .true.
-                 naftswp = naftswp+1
-                 irec=0
-              else
-                 aftswp = .false.
-                 foreswp = .true.
-                 nforeswp = nforeswp+1
-                 irec=0
-              endif
-   
-              nswp = nswp+1
-           endif
+700      call readsb(lnbufr,iret)
+800      continue
+       if(iret/=0) then
+          call readmg(lnbufr,subset,idate,iret)
+          if(iret/=0) go to 85
+          go to 700
+       end if
+       if(subset/=subset_check(loop)) then
+          iret=99
+          go to 800
+       end if
+       nmrecs = nmrecs+1
 
-        else if(nswptype == 1)then
-           tdrele1 = tdrele2
-           tdrele2 = hdr(12)
+!      Read header.  Extract elevation angle
+       call ufbint(lnbufr,hdr,12,1,levs,hdrstr(2))
+       thistilt=hdr(12)
 
-           if(abs(tdrele2-tdrele1)>r100) then
-              if(foreswp) then
-                 foreswp = .false.
-                 aftswp = .true.
-                 naftswp = naftswp+1
-                 irec=0
-              else
-                 aftswp = .false.
-                 foreswp = .true.
-                 nforeswp = nforeswp+1
-                 irec=0
-              endif
+       if(nmrecs == 1)then
+         tdrele1 = hdr(12)
+         tdrele2 = hdr(12)
+       end if
 
-              nswp = nswp+1
-           endif
-        else
-           foreswp = .false.
-           aftswp = .false.
-        end if
+       tdrele1 = tdrele2
+       tdrele2 = hdr(12)
+       if(abs(tdrele2-tdrele1)>r100) then
+          print *,'tdrele2,tdrele1=',tdrele2,tdrele1
+          nswptype=1
+          go to 85
+       end if
+
+       if(nmrecs <= 500)then
+          go to 700
+       else
+          go to 85
+       end if
+
+85    continue
+       call closbf(lnbufr)
+       close(lnbufr)
+     end if
+
+     print *,'nmrecs, nswptype=', nmrecs, nswptype
+
+!    Open, then read bufr data
+     open(lnbufr,file=trim(infile),form='unformatted')
+     call openbf(lnbufr,'IN',lnbufr)
+     call datelen(10)
+     call readmg(lnbufr,subset,idate,iret)
+     if(iret/=0) then
+        write(6,*)'READ_RADAR: problem reading tail Doppler radar bufr file tldplrbufr'
+        call closbf(lnbufr)
+        go to 1100
+     end if
+
+!    Time offset
+     call time_4dvar(idate,toff)
+
+     write(date,'( i10)') idate
+     read (date,'(i4,3i2)') iy,im,idd,ihh
+     write(6,*)'READ_RADAR: bufr file date is ',iy,im,idd,ihh
+
+     idate5(1) = iy    ! year
+     idate5(2) = im    ! month
+     idate5(3) = idd   ! day
+     idate5(4) = ihh   ! hour
+     idate5(5) = 0     ! minute
+     call w3fs21(idate5,mincy)
+
+     nmrecs=0
+!       Big loop over bufr file
+
+     if(l_foreaft_thin) then 
+        firstbeam = 0
+        foreswp = .true.
+        aftswp = .false.
+        nforeswp=1
+        naftswp=0
+        nswp=1
      else
         foreswp = .false.
         aftswp = .false.
      endif
+     bigloop2:do
+        call readsb(lnbufr,iret)
+        if(iret/=0 .or. subset/=subset_check(loop)) then
+           call readmg(lnbufr,subset,idate,iret)
+           if(iret/=0) exit bigloop2
+           cycle bigloop2
+        end if
+        nmrecs = nmrecs+1
+        irec = irec+1
 
-     if(abs(thistilt)>r75)then
-        ibadtilt=ibadtilt+1; cycle bigloop2
-     endif
+!          Read header.  Extract station infomration
+        call ufbint(lnbufr,hdr,12,1,levs,hdrstr(2))
 
-     staheight=this_stahgt
-     if(staheight<-r1000.or.staheight>r50000) then
-        ibadstaheight=ibadstaheight+1; cycle bigloop2
-     end if
+!       rstation_id=hdr(1)
+        if(hdr(1) == zero)then
+           cstaid='NOAA    '
+        else if(hdr(1) == one)then
+           cstaid='FRENCH  '
+        else if(hdr(1)== two)then
+           cstaid='G-IV    '
+        else if(hdr(1)== three)then
+           cstaid='AOC     '
+        else
+           cstaid='UNKNOWN '
+        endif
 
-!    Go through the data levels
-     call ufbint(lnbufr,tdr_obs,4,maxlevs,levs,datstr(2))
-     if(levs>maxlevs) then
-        write(6,*)'READ_RADAR:  ***ERROR*** increase read_radar bufr size since ',&
-           'number of levs=',levs,' > maxlevs=',maxlevs
-        call stop2(84)
-     endif
-!    use local coordinate centered on this_stalat,this_stalon. note that global and local
-!    azimuth angle are the same at the origin (this_stalat,this_stalon)
-!    and azimuth angle is fixed in local coordinate along entire radial line.
-!    we convert back to global azimuth angle at each point along line
-!    at end of computation.  that way we avoid worrying about where poles are.
+        kx=990+nint(hdr(1))
 
-     aactual=erad+this_stahgt
-     thistiltr=thistilt*deg2rad
-     selev0=sin(thistiltr) ; celev0=cos(thistiltr)
-     a43=four_thirds*aactual
-     ii=0
-     do k=1,levs
-        nread=nread+1
-!       Select data every 3 km along each beam
-        if(MOD(INT(tdr_obs(1,k)-tdr_obs(1,1)),3000) < 100)then
-           if(tdr_obs(3,k) >= 800.) nmissing=nmissing+1     !xx
-           if(tdr_obs(3,k) < 800.) then
-              ii=ii+1
-              dopbin(ii)=tdr_obs(3,k)
-              thisrange=tdr_obs(1,k)
+        if(nmrecs==1)print *,'Antenna ID:', hdr(1),cstaid
+  
+        iyr = hdr(2)
+        imo = hdr(3)
+        idy = hdr(4)
+        ihr = hdr(5)
+        imn = hdr(6)
+        isc = hdr(7)
 
-              call getvrlocalinfo(thisrange,thisazimuth,this_stahgt,aactual,a43,selev0,celev0, &
-                             rlon0,clat0,slat0,r8,r89_5,nsubzero,ii,z(ii),elev(ii),elat8(ii), &
-                             elon8(ii),glob_azimuth8(ii))
+        idate5(1) = iyr
+        idate5(2) = imo
+        idate5(3) = idy
+        idate5(4) = ihr
+        idate5(5) = imn
+        ikx=0
+        do i=1,nconvtype
+           if(trim(ioctype(i)) == trim(obstype) .and. kx == ictype(i))ikx = i
+        end do
+        if(ikx == 0) cycle bigloop2
+        call w3fs21(idate5,minobs)
+
+        t4dv=real(minobs-iwinbgn,r_kind)*r60inv
+        if (l4dvar.or.l4densvar) then
+           if (t4dv<zero .OR. t4dv>winlen) then
+              ntimeout=ntimeout+1
+              cycle bigloop2
+           end if
+           timeo=t4dv
+        else
+           timeo = real(minobs-mincy,r_kind)*r60inv
+           if (abs(timeo) > twind .or. abs(timeo) > ctwind(ikx)) then
+              ntimeout=ntimeout+1
+              cycle bigloop2
+           end if
+        endif
+
+        timemax=max(timemax,timeo)
+        timemin=min(timemin,timeo)
+
+        this_stalat=hdr(8)
+        this_stalon=hdr(9)
+
+        rlon0=deg2rad*this_stalon
+        this_stalatr=this_stalat*deg2rad
+        clat0=cos(this_stalatr) ; slat0=sin(this_stalatr)
+        this_stahgt=hdr(10)
+        thisazimuth=hdr(11)
+        thistilt=hdr(12)
+        elevmax=max(elevmax,thistilt)
+        elevmin=min(elevmin,thistilt)
+
+!        define fore/aft sweeps for thinning (pseduo dual Doppler)
+
+        if(l_foreaft_thin)then
+           if (firstbeam == 0) then
+              tdrele1 = hdr(12)
+              tdrele2 = hdr(12)
+              if(nswptype == 0)then
+                 tdrele3 = hdr(12)
+              end if 
+              firstbeam = 1
+           endif
+
+           if(nswptype == 0)then
+              tdrele1 = tdrele2
+              tdrele2 = tdrele3
+              tdrele3 = hdr(12)
+
+              if(firstbeam > 0 .and. tdrele2>=tdrele1 .and. tdrele2>=tdrele3 .and. tdrele2 > r60 &
+                 .and. irec > r150)then  
+                 if(foreswp) then
+                    foreswp = .false.
+                    aftswp = .true.
+                    naftswp = naftswp+1
+                    irec=0
+                 else
+                    aftswp = .false.
+                    foreswp = .true.
+                    nforeswp = nforeswp+1
+                    irec=0
+                 endif
+   
+                 nswp = nswp+1
+              endif
+
+           else if(nswptype == 1)then
+              tdrele1 = tdrele2
+              tdrele2 = hdr(12)
+
+              if(abs(tdrele2-tdrele1)>r100) then
+                 if(foreswp) then
+                    foreswp = .false.
+                    aftswp = .true.
+                    naftswp = naftswp+1
+                    irec=0
+                 else
+                    aftswp = .false.
+                    foreswp = .true.
+                    nforeswp = nforeswp+1
+                    irec=0
+                 endif
+
+                 nswp = nswp+1
+              endif
+           else
+              foreswp = .false.
+              aftswp = .false.
            end if
         else
-           ntdrvr_thin1=ntdrvr_thin1+1
+           foreswp = .false.
+           aftswp = .false.
         endif
+
+        if(abs(thistilt)>r75)then
+           ibadtilt=ibadtilt+1; cycle bigloop2
+        endif
+
+        staheight=this_stahgt
+        if(staheight<-r1000.or.staheight>r50000) then
+           ibadstaheight=ibadstaheight+1; cycle bigloop2
+        end if
+
+!       Go through the data levels
+        call ufbint(lnbufr,tdr_obs,4,maxlevs,levs,datstr(2))
+        if(levs>maxlevs) then
+           write(6,*)'READ_RADAR:  ***ERROR*** increase read_radar bufr size since ',&
+              'number of levs=',levs,' > maxlevs=',maxlevs
+           call stop2(84)
+        endif
+!       use local coordinate centered on this_stalat,this_stalon. note that global and local
+!       azimuth angle are the same at the origin (this_stalat,this_stalon)
+!       and azimuth angle is fixed in local coordinate along entire radial line.
+!       we convert back to global azimuth angle at each point along line
+!       at end of computation.  that way we avoid worrying about where poles are.
+
+        aactual=erad+this_stahgt
+        thistiltr=thistilt*deg2rad
+        selev0=sin(thistiltr) ; celev0=cos(thistiltr)
+        a43=four_thirds*aactual
+        ii=0
+        do k=1,levs
+           nread=nread+1
+!          Select data every 3 km along each beam
+           if(MOD(INT(tdr_obs(1,k)-tdr_obs(1,1)),3000) < 100)then
+              if(tdr_obs(3,k) >= 800.) nmissing=nmissing+1     !xx
+              if(tdr_obs(3,k) < 800.) then
+                 ii=ii+1
+                 dopbin(ii)=tdr_obs(3,k)
+                 thisrange=tdr_obs(1,k)
+
+                 call getvrlocalinfo(thisrange,thisazimuth,this_stahgt,aactual,a43,selev0,celev0, &
+                                rlon0,clat0,slat0,r8,r89_5,nsubzero,ii,z(ii),elev(ii),elat8(ii), &
+                                elon8(ii),glob_azimuth8(ii))
+              end if
+           else
+              ntdrvr_thin1=ntdrvr_thin1+1
+           endif
+        end do
+
+!    Further process tail Doppler radar Vr data
+        iimax=max(iimax,ii)  
+
+        if( ii > 0 )then
+           dlat_earth=this_stalat    !station lat (degrees)
+           dlon_earth=this_stalon    !station lon (degrees)
+           if (dlon_earth>=r360) dlon_earth=dlon_earth-r360
+           if (dlon_earth<zero ) dlon_earth=dlon_earth+r360
+           dlat_earth = dlat_earth * deg2rad
+           dlon_earth = dlon_earth * deg2rad
+
+           clon=cos(dlon_earth)
+           slon=sin(dlon_earth)
+           clat=cos(dlat_earth)
+           slat=sin(dlat_earth)
+
+           do i=1,ii
+              ntdrvr_in=ntdrvr_in+1
+              tiltangle=elev(i)*deg2rad
+   
+!           Get observation (lon,lat).  Compute distance from radar.
+              dlat_earth=elat8(i)
+              dlon_earth=elon8(i)
+              if(dlon_earth>=r360) dlon_earth=dlon_earth-r360
+              if(dlon_earth<zero ) dlon_earth=dlon_earth+r360
+              dlat_earth_deg = dlat_earth
+              dlon_earth_deg = dlon_earth
+              dlat_earth = dlat_earth*deg2rad
+              dlon_earth = dlon_earth*deg2rad
+
+              if(regional) then
+                 call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
+                 dlatmax=max(dlat,dlatmax)
+                 dlonmax=max(dlon,dlonmax)
+                 dlatmin=min(dlat,dlatmin)
+                 dlonmin=min(dlon,dlonmin)
+                 if (outside) then
+                    noutside=noutside+1
+                    cycle
+                 endif
+              else
+                 dlat = dlat_earth
+                 dlon = dlon_earth
+                 call grdcrd1(dlat,rlats,nlat,1)
+                 call grdcrd1(dlon,rlons,nlon,1)
+              endif
+              clonh=cos(dlon_earth)
+              slonh=sin(dlon_earth)
+              clath=cos(dlat_earth)
+              slath=sin(dlat_earth)
+              cdist=slat*slath+clat*clath*(slon*slonh+clon*clonh)
+              cdist=max(-one,min(cdist,one))
+              dist=eradkm*acos(cdist)
+              irrr=nint(dist*1000*xscalei)
+              if(irrr<=0 .or. irrr>max_rrr)then
+                 nirrr=nirrr+1
+                 cycle
+              endif
+
+!           Extract radial wind data
+              height= z(i)
+              rwnd  = dopbin(i)
+              azm_earth = glob_azimuth8(i)
+              if(regional) then
+                 cosazm_earth=cos(azm_earth*deg2rad)
+                 sinazm_earth=sin(azm_earth*deg2rad)
+                 call rotate_wind_ll2xy(cosazm_earth,sinazm_earth,cosazm,sinazm,dlon_earth,dlon,dlat)
+                 azm=atan2(sinazm,cosazm)*rad2deg
+              else
+                 azm=azm_earth
+              end if
+              iaaa=azm/(r360/(r8*irrr))
+              iaaa=mod(iaaa,8*irrr)
+              if(iaaa<0) iaaa=iaaa+8*irrr
+              iaaa=iaaa+1
+              iaaamax=max(iaaamax,iaaa)
+              iaaamin=min(iaaamin,iaaa)
+              error = erradar_inflate*thiserr
+              errmax=max(error,errmax)
+              if(thiserr>zero) errmin=min(error,errmin)
+
+!           Perform limited qc based on azimuth angle, elevation angle, radial wind
+!           speed, range, distance from radar site
+
+              good0=.true.
+              if(abs(azm)>r400) then
+                 ibadazm=ibadazm+1; good0=.false.
+              end if
+              if(abs(rwnd) > r71 .or. abs(rwnd) < r2 ) then
+                 ibadwnd=ibadwnd+1; good0=.false.
+              end if
+              if(thisrange>r92) then
+                 ibadrange=ibadrange+1; good0=.false.
+              end if
+              if(dist>r400) then
+                 ibaddist=ibaddist+1; good0=.false.
+              end if
+              if(height<-r1000.or.height>r50000) then
+                 ibadheight=ibadheight+1; good0=.false.
+              end if
+              good=.true.
+              if(.not.good0) then
+                 notgood0=notgood0+1
+                 cycle
+              end if
+!           if data is good, load into output array
+
+              if(good) then
+                 ntdrvr_kept=ntdrvr_kept+1
+!####################       Data thinning       ###################
+
+                 icntpnt=icntpnt+1
+   
+                 if(ithin > 0)then
+                    if(zflag == 0)then
+                       klon1= int(dlon);  klat1= int(dlat)
+                       dx   = dlon-klon1; dy   = dlat-klat1
+                       dx1  = one-dx;     dy1  = one-dy
+                       w00=dx1*dy1; w10=dx1*dy; w01=dx*dy1; w11=dx*dy
+
+                       klat1=min(max(1,klat1),nlat); klon1=min(max(0,klon1),nlon)
+                       if (klon1==0) klon1=nlon
+                       klatp1=min(nlat,klat1+1); klonp1=klon1+1
+                       if (klonp1==nlon+1) klonp1=1
+                       do kk=1,nsig
+                          hges(kk)=w00*hgtl_full(klat1 ,klon1 ,kk) +  &
+                                   w10*hgtl_full(klatp1,klon1 ,kk) + &
+                                   w01*hgtl_full(klat1 ,klonp1,kk) + &
+                                   w11*hgtl_full(klatp1,klonp1,kk)
+                       end do
+                       sin2  = sin(dlat_earth)*sin(dlat_earth)
+                       termg = grav_equator * &
+                          ((one+somigliana*sin2)/sqrt(one-eccentricity*eccentricity*sin2))
+                       termr = semi_major_axis /(one + flattening + grav_ratio -  &
+                          two*flattening*sin2)
+                       termrg = (termg/grav)*termr
+                       do k=1,nsig
+                          zges(k) = (termr*hges(k)) / (termrg-hges(k))
+                          zl_thin(k)=zges(k)
+                       end do
+                    endif
+
+                    zobs = height
+
+                    ntmp=ndata  ! counting moved to map3gridS
+                    if (thin4d) then
+                       timedif = zero
+                    else
+                       timedif=abs(t4dv-toff)
+                    endif
+                    crit1 = timedif/r6+half
+
+                    call map3grids(1,zflag,zl_thin,nlevz,dlat_earth,dlon_earth,&
+                       zobs,crit1,ndata,iout,icntpnt,iiout,luse,foreswp,aftswp)
+                    maxout=max(maxout,iout)
+                    maxdata=max(maxdata,ndata)
+
+                    if (.not. luse) then
+                       if (foreswp) then
+                          ntdrvr_thin2_foreswp=ntdrvr_thin2_foreswp+1  
+                       else if (aftswp) then
+                          ntdrvr_thin2_aftswp=ntdrvr_thin2_aftswp+1
+                       end if
+                       ntdrvr_thin2=ntdrvr_thin2+1
+                       cycle
+                    endif
+                    if(iiout > 0) isort(iiout)=0
+                    if (ndata > ntmp) then
+                       nodata=nodata+1
+                    endif
+                    isort(icntpnt)=iout
+
+                 else
+                    ndata =ndata+1
+                    nodata=nodata+1
+                    iout=ndata
+                    isort(icntpnt)=iout
+                 endif
+
+                 if(ndata > maxobs) then
+                    write(6,*)'READ_PREPBUFR:  ***WARNING*** ndata > maxobs for ',obstype
+                    ndata = maxobs
+                 end if
+
+!             Set usage variable
+                 usage = zero
+
+                 if(icuse(ikx) < 0)usage=r100
+                 if(ncnumgrp(ikx) > 0 )then                     ! cross validation on
+                    if(mod(ndata,ncnumgrp(ikx))== ncgroup(ikx)-1)usage=ncmiter(ikx)
+                 end if
+
+                 call deter_zsfc_model(dlat,dlon,zsges)
+
+!    Get information from surface file necessary for conventional data here
+                 call deter_sfc2(dlat_earth,dlon_earth,t4dv,idomsfc,skint,ff10,sfcr)
+
+
+                 cdata(1) = error             ! wind obs error (m/s)
+                 cdata(2) = dlon              ! grid relative longitude
+                 cdata(3) = dlat              ! grid relative latitude
+                 cdata(4) = height            ! obs absolute height (m)
+                 cdata(5) = rwnd              ! wind obs (m/s)
+                 cdata(6) = azm*deg2rad       ! azimuth angle (radians)
+                 cdata(7) = t4dv              ! obs time (hour)
+                 cdata(8) = ikx               ! type
+                 cdata(9) = tiltangle         ! tilt angle (radians)
+                 cdata(10)= staheight         ! station elevation (m)
+                 cdata(11)= rstation_id       ! station id
+                 cdata(12)= usage             ! usage parameter
+                 cdata(13)= idomsfc           ! dominate surface type
+                 cdata(14)= skint             ! skin temperature
+                 cdata(15)= ff10              ! 10 meter wind factor
+                 cdata(16)= sfcr              ! surface roughness
+                 cdata(17)=dlon_earth_deg     ! earth relative longitude (degrees)
+                 cdata(18)=dlat_earth_deg     ! earth relative latitude (degrees)
+                 cdata(19)=dist               ! range from radar in km (used to estimate beam spread)
+                 cdata(20)=zsges              ! model elevation at radar site
+                 cdata(21)=thiserr
+                 cdata(22)=hdr(1)+three+one   ! tail Doppler radar
+                 do j=1,maxdat
+                    cdata_all(j,iout)=cdata(j)
+                 end do
+                 if(foreswp)nfore=nfore+1
+                 if(aftswp)naft=naft+1
+                 jjj=jjj+1
+              else
+                 notgood = notgood + 1
+              end if  ! if(good)
+
+           end do
+
+        endif ! if(ii .gt. 0)
+
+! End of bufr read loop
+
+     end do bigloop2
+
+! Normal exit
+1100    continue
+     call closbf(lnbufr)
+
+
+! Close unit to bufr file
+     close(lnbufr)
+
+  else
+
+75 continue
+
+! Loop to read TDR superobs data
+
+     ikx=0
+     do i=1,nconvtype
+        if(trim(ioctype(i)) == trim(obstype))ikx = i
      end do
+     if(ikx == 0) return
 
-! Further process tail Doppler radar Vr data
-     iimax=max(iimax,ii)  
+     call w3fs21(iadate,mincy) ! analysis time in minutes
 
-     if( ii > 0 )then
-        dlat_earth=this_stalat    !station lat (degrees)
-        dlon_earth=this_stalon    !station lon (degrees)
-        if (dlon_earth>=r360) dlon_earth=dlon_earth-r360
-        if (dlon_earth<zero ) dlon_earth=dlon_earth+r360
-        dlat_earth = dlat_earth * deg2rad
-        dlon_earth = dlon_earth * deg2rad
+     open(lnbufr,file=trim(infile),form='formatted',err=300)
+     rewind (lnbufr)
+     do n=1,10
+        istop=0
+        read(lnbufr,'(a)',err=200,end=1200)filename
+        print *,'filename=', trim(filename)
+        open(25,file=trim(filename),form='formatted',access='sequential')
+        obsloop4:do while (istop.eq.0)
+           ii=1
+           READ(25,'(I4,4I2,8F10.3)',iostat=istop) iyr,imo,idy,ihr,imn,this_stalat, &
+           this_stalon,this_stahgt,azm0,elev0,range0,thisvr,rotang
 
-        clon=cos(dlon_earth)
-        slon=sin(dlon_earth)
-        clat=cos(dlat_earth)
-        slat=sin(dlat_earth)
+           nread=nread+1
+     
+           idate5(1) = iyr
+           idate5(2) = imo
+           idate5(3) = idy
+           idate5(4) = ihr
+           idate5(5) = imn
+           call w3fs21(idate5,minobs)
+   
+           t4dv=real(minobs-iwinbgn,r_kind)*r60inv
+           if (l4dvar.or.l4densvar) then
+              if (t4dv<zero .OR. t4dv>winlen) cycle obsloop4
+              timeo=t4dv
+           else
+              timeo = real(minobs-mincy,r_kind)*r60inv
+              if (abs(timeo)>twind) cycle obsloop4
+           endif
 
-        do i=1,ii
+           timemax=max(timemax,timeo)
+           timemin=min(timemin,timeo)
+   
+           rlon0=deg2rad*this_stalon
+           this_stalatr=this_stalat*deg2rad
+           clat0=cos(this_stalatr) ; slat0=sin(this_stalatr)
+           thistilt=elev0
+           elevmax=max(elevmax,thistilt)
+           elevmin=min(elevmin,thistilt)
+           thisazimuth=azm0
+           thisrange=range0*r1000
+           if(abs(thistilt)>r75)then
+              ibadtilt=ibadtilt+1; cycle obsloop4
+           endif
+   
+           staheight=this_stahgt
+           if(staheight<-r1000.or.staheight>r50000) then
+              ibadstaheight=ibadstaheight+1; cycle obsloop4
+           end if
+
+           aactual=erad+this_stahgt
+           thistiltr=thistilt*deg2rad
+           selev0=sin(thistiltr) ; celev0=cos(thistiltr)
+           a43=four_thirds*aactual
+
+         
+           call getvrlocalinfo(thisrange,thisazimuth,this_stahgt,aactual,a43,selev0,celev0, &
+                          rlon0,clat0,slat0,r8,r89_5,nsubzero,ii,z(ii),elev(ii),elat8(ii), &
+                          elon8(ii),glob_azimuth8(ii))
+
+
+           dlat_earth=this_stalat    !station lat (degrees)
+           dlon_earth=this_stalon    !station lon (degrees)
+           if (dlon_earth>=r360) dlon_earth=dlon_earth-r360
+           if (dlon_earth<zero ) dlon_earth=dlon_earth+r360
+           dlat_earth = dlat_earth * deg2rad
+           dlon_earth = dlon_earth * deg2rad
+
+           clon=cos(dlon_earth)
+           slon=sin(dlon_earth)
+           clat=cos(dlat_earth)
+           slat=sin(dlat_earth)
+
+
            ntdrvr_in=ntdrvr_in+1
-           tiltangle=elev(i)*deg2rad
+           tiltangle=elev(ii)*deg2rad
 
 !        Get observation (lon,lat).  Compute distance from radar.
-           dlat_earth=elat8(i)
-           dlon_earth=elon8(i)
+           dlat_earth=elat8(ii)
+           dlon_earth=elon8(ii)
            if(dlon_earth>=r360) dlon_earth=dlon_earth-r360
            if(dlon_earth<zero ) dlon_earth=dlon_earth+r360
            dlat_earth_deg = dlat_earth
@@ -1733,9 +2050,9 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
            endif
 
 !        Extract radial wind data
-           height= z(i)
-           rwnd  = dopbin(i)
-           azm_earth = glob_azimuth8(i)
+           height= z(ii)
+           rwnd  = thisvr
+           azm_earth = glob_azimuth8(ii)
            if(regional) then
               cosazm_earth=cos(azm_earth*deg2rad)
               sinazm_earth=sin(azm_earth*deg2rad)
@@ -1761,7 +2078,7 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
            if(abs(azm)>r400) then
               ibadazm=ibadazm+1; good0=.false.
            end if
-           if(abs(rwnd) > r71 .or. abs(rwnd) < r2 ) then
+           if(abs(rwnd) > r71) then
               ibadwnd=ibadwnd+1; good0=.false.
            end if
            if(thisrange>r92) then
@@ -1778,7 +2095,7 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
               notgood0=notgood0+1
               cycle
            end if
-!        if data is good, load into output array
+!     if data is good, load into output array
 
            if(good) then
               ntdrvr_kept=ntdrvr_kept+1
@@ -1826,16 +2143,11 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
                  crit1 = timedif/r6+half
 
                  call map3grids(1,zflag,zl_thin,nlevz,dlat_earth,dlon_earth,&
-                    zobs,crit1,ndata,iout,icntpnt,iiout,luse,foreswp,aftswp)
+                    zobs,crit1,ndata,iout,icntpnt,iiout,luse,.false.,.false.)
                  maxout=max(maxout,iout)
                  maxdata=max(maxdata,ndata)
-
+   
                  if (.not. luse) then
-                    if (foreswp) then
-                       ntdrvr_thin2_foreswp=ntdrvr_thin2_foreswp+1  
-                    else if (aftswp) then
-                       ntdrvr_thin2_aftswp=ntdrvr_thin2_aftswp+1
-                    end if
                     ntdrvr_thin2=ntdrvr_thin2+1
                     cycle
                  endif
@@ -1892,333 +2204,21 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
               cdata(19)=dist               ! range from radar in km (used to estimate beam spread)
               cdata(20)=zsges              ! model elevation at radar site
               cdata(21)=thiserr
-              cdata(22)=hdr(1)+three+one   ! tail Doppler radar
+              cdata(22)=three+two          ! tail Doppler radar
               do j=1,maxdat
                  cdata_all(j,iout)=cdata(j)
               end do
-              if(foreswp)nfore=nfore+1
-              if(aftswp)naft=naft+1
               jjj=jjj+1
            else
               notgood = notgood + 1
            end if  ! if(good)
-
-        end do
-
-     endif ! if(ii .gt. 0)
-
-! End of bufr read loop
-
-  end do bigloop2
-
-! Normal exit
-1100 continue
-  call closbf(lnbufr)
-
-
-! Close unit to bufr file
-  close(lnbufr)
-
-  go to 1200
-
-75 continue
-
-! Loop to read TDR superobs data
-
-  ikx=0
-  do i=1,nconvtype
-     if(trim(ioctype(i)) == trim(obstype))ikx = i
-  end do
-  if(ikx == 0) return
-
-  call w3fs21(iadate,mincy) ! analysis time in minutes
-
-  open(lnbufr,file=trim(infile),form='formatted',err=300)
-  rewind (lnbufr)
-  do n=1,10
-     istop=0
-     read(lnbufr,'(a)',err=200,end=1200)filename
-     print *,'filename=', trim(filename)
-     open(25,file=trim(filename),form='formatted',access='sequential')
-     do while (istop.eq.0)
-        ii=1
-        READ(25,'(I4,4I2,8F10.3)',iostat=istop) iyr,imo,idy,ihr,imn,this_stalat, &
-        this_stalon,this_stahgt,azm0,elev0,range0,thisvr,rotang
-
-        nread=nread+1
-     
-        idate5(1) = iyr
-        idate5(2) = imo
-        idate5(3) = idy
-        idate5(4) = ihr
-        idate5(5) = imn
-        call w3fs21(idate5,minobs)
-   
-        t4dv=real(minobs-iwinbgn,r_kind)*r60inv
-        if (l4dvar.or.l4densvar) then
-           if (t4dv<zero .OR. t4dv>winlen) goto 90
-           timeo=t4dv
-        else
-           timeo = real(minobs-mincy,r_kind)*r60inv
-           if (abs(timeo)>twind) goto 90
-        endif
-
-        timemax=max(timemax,timeo)
-        timemin=min(timemin,timeo)
-   
-        rlon0=deg2rad*this_stalon
-        this_stalatr=this_stalat*deg2rad
-        clat0=cos(this_stalatr) ; slat0=sin(this_stalatr)
-        thistilt=elev0
-        elevmax=max(elevmax,thistilt)
-        elevmin=min(elevmin,thistilt)
-        thisazimuth=azm0
-        thisrange=range0*r1000
-        if(abs(thistilt)>r75)then
-           ibadtilt=ibadtilt+1; goto 90
-        endif
-   
-        staheight=this_stahgt
-        if(staheight<-r1000.or.staheight>r50000) then
-           ibadstaheight=ibadstaheight+1; goto 90
-        end if
-
-        aactual=erad+this_stahgt
-        thistiltr=thistilt*deg2rad
-        selev0=sin(thistiltr) ; celev0=cos(thistiltr)
-        a43=four_thirds*aactual
-
-         
-        call getvrlocalinfo(thisrange,thisazimuth,this_stahgt,aactual,a43,selev0,celev0, &
-                       rlon0,clat0,slat0,r8,r89_5,nsubzero,ii,z(ii),elev(ii),elat8(ii), &
-                       elon8(ii),glob_azimuth8(ii))
-
-
-        dlat_earth=this_stalat    !station lat (degrees)
-        dlon_earth=this_stalon    !station lon (degrees)
-        if (dlon_earth>=r360) dlon_earth=dlon_earth-r360
-        if (dlon_earth<zero ) dlon_earth=dlon_earth+r360
-        dlat_earth = dlat_earth * deg2rad
-        dlon_earth = dlon_earth * deg2rad
-
-        clon=cos(dlon_earth)
-        slon=sin(dlon_earth)
-        clat=cos(dlat_earth)
-        slat=sin(dlat_earth)
-
-
-        ntdrvr_in=ntdrvr_in+1
-        tiltangle=elev(ii)*deg2rad
-
-!     Get observation (lon,lat).  Compute distance from radar.
-        dlat_earth=elat8(ii)
-        dlon_earth=elon8(ii)
-        if(dlon_earth>=r360) dlon_earth=dlon_earth-r360
-        if(dlon_earth<zero ) dlon_earth=dlon_earth+r360
-        dlat_earth_deg = dlat_earth
-        dlon_earth_deg = dlon_earth
-        dlat_earth = dlat_earth*deg2rad
-        dlon_earth = dlon_earth*deg2rad
-
-        if(regional) then
-           call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
-           dlatmax=max(dlat,dlatmax)
-           dlonmax=max(dlon,dlonmax)
-           dlatmin=min(dlat,dlatmin)
-           dlonmin=min(dlon,dlonmin)
-           if (outside) then
-              noutside=noutside+1
-              cycle
-           endif
-        else
-           dlat = dlat_earth
-           dlon = dlon_earth
-           call grdcrd1(dlat,rlats,nlat,1)
-           call grdcrd1(dlon,rlons,nlon,1)
-        endif
-        clonh=cos(dlon_earth)
-        slonh=sin(dlon_earth)
-        clath=cos(dlat_earth)
-        slath=sin(dlat_earth)
-        cdist=slat*slath+clat*clath*(slon*slonh+clon*clonh)
-        cdist=max(-one,min(cdist,one))
-        dist=eradkm*acos(cdist)
-        irrr=nint(dist*1000*xscalei)
-        if(irrr<=0 .or. irrr>max_rrr)then
-           nirrr=nirrr+1
-           cycle
-        endif
-
-!     Extract radial wind data
-        height= z(ii)
-        rwnd  = thisvr
-        azm_earth = glob_azimuth8(ii)
-        if(regional) then
-           cosazm_earth=cos(azm_earth*deg2rad)
-           sinazm_earth=sin(azm_earth*deg2rad)
-           call rotate_wind_ll2xy(cosazm_earth,sinazm_earth,cosazm,sinazm,dlon_earth,dlon,dlat)
-           azm=atan2(sinazm,cosazm)*rad2deg
-        else
-           azm=azm_earth
-        end if
-        iaaa=azm/(r360/(r8*irrr))
-        iaaa=mod(iaaa,8*irrr)
-        if(iaaa<0) iaaa=iaaa+8*irrr
-        iaaa=iaaa+1
-        iaaamax=max(iaaamax,iaaa)
-        iaaamin=min(iaaamin,iaaa)
-        error = erradar_inflate*thiserr
-        errmax=max(error,errmax)
-        if(thiserr>zero) errmin=min(error,errmin)
-
-!     Perform limited qc based on azimuth angle, elevation angle, radial wind
-!     speed, range, distance from radar site
-
-        good0=.true.
-        if(abs(azm)>r400) then
-           ibadazm=ibadazm+1; good0=.false.
-        end if
-        if(abs(rwnd) > r71) then
-           ibadwnd=ibadwnd+1; good0=.false.
-        end if
-        if(thisrange>r92) then
-           ibadrange=ibadrange+1; good0=.false.
-        end if
-        if(dist>r400) then
-           ibaddist=ibaddist+1; good0=.false.
-        end if
-        if(height<-r1000.or.height>r50000) then
-           ibadheight=ibadheight+1; good0=.false.
-        end if
-        good=.true.
-        if(.not.good0) then
-           notgood0=notgood0+1
-           cycle
-        end if
-!     if data is good, load into output array
-
-        if(good) then
-           ntdrvr_kept=ntdrvr_kept+1
-!####################       Data thinning       ###################
-
-           icntpnt=icntpnt+1
-
-           if(ithin > 0)then
-              if(zflag == 0)then
-                 klon1= int(dlon);  klat1= int(dlat)
-                 dx   = dlon-klon1; dy   = dlat-klat1
-                 dx1  = one-dx;     dy1  = one-dy
-                 w00=dx1*dy1; w10=dx1*dy; w01=dx*dy1; w11=dx*dy
-
-                 klat1=min(max(1,klat1),nlat); klon1=min(max(0,klon1),nlon)
-                 if (klon1==0) klon1=nlon
-                 klatp1=min(nlat,klat1+1); klonp1=klon1+1
-                 if (klonp1==nlon+1) klonp1=1
-                 do kk=1,nsig
-                    hges(kk)=w00*hgtl_full(klat1 ,klon1 ,kk) +  &
-                             w10*hgtl_full(klatp1,klon1 ,kk) + &
-                             w01*hgtl_full(klat1 ,klonp1,kk) + &
-                             w11*hgtl_full(klatp1,klonp1,kk)
-                 end do
-                 sin2  = sin(dlat_earth)*sin(dlat_earth)
-                 termg = grav_equator * &
-                    ((one+somigliana*sin2)/sqrt(one-eccentricity*eccentricity*sin2))
-                 termr = semi_major_axis /(one + flattening + grav_ratio -  &
-                    two*flattening*sin2)
-                 termrg = (termg/grav)*termr
-                 do k=1,nsig
-                    zges(k) = (termr*hges(k)) / (termrg-hges(k))
-                    zl_thin(k)=zges(k)
-                 end do
-              endif
-
-              zobs = height
-
-              ntmp=ndata  ! counting moved to map3gridS
-              if (thin4d) then
-                 timedif = zero
-              else
-                 timedif=abs(t4dv-toff)
-              endif
-              crit1 = timedif/r6+half
-
-              call map3grids(1,zflag,zl_thin,nlevz,dlat_earth,dlon_earth,&
-                 zobs,crit1,ndata,iout,icntpnt,iiout,luse,.false.,.false.)
-              maxout=max(maxout,iout)
-              maxdata=max(maxdata,ndata)
-
-              if (.not. luse) then
-                 ntdrvr_thin2=ntdrvr_thin2+1
-                 cycle
-              endif
-              if(iiout > 0) isort(iiout)=0
-              if (ndata > ntmp) then
-                 nodata=nodata+1
-              endif
-              isort(icntpnt)=iout
-
-           else
-              ndata =ndata+1
-              nodata=nodata+1
-              iout=ndata
-              isort(icntpnt)=iout
-           endif
-
-           if(ndata > maxobs) then
-              write(6,*)'READ_PREPBUFR:  ***WARNING*** ndata > maxobs for ',obstype
-              ndata = maxobs
-           end if
-
-!       Set usage variable
-           usage = zero
-
-           if(icuse(ikx) < 0)usage=r100
-           if(ncnumgrp(ikx) > 0 )then                     ! cross validation on
-              if(mod(ndata,ncnumgrp(ikx))== ncgroup(ikx)-1)usage=ncmiter(ikx)
-           end if
-
-           call deter_zsfc_model(dlat,dlon,zsges)
-
-! Get information from surface file necessary for conventional data here
-           call deter_sfc2(dlat_earth,dlon_earth,t4dv,idomsfc,skint,ff10,sfcr)
-
-
-           cdata(1) = error             ! wind obs error (m/s)
-           cdata(2) = dlon              ! grid relative longitude
-           cdata(3) = dlat              ! grid relative latitude
-           cdata(4) = height            ! obs absolute height (m)
-           cdata(5) = rwnd              ! wind obs (m/s)
-           cdata(6) = azm*deg2rad       ! azimuth angle (radians)
-           cdata(7) = t4dv              ! obs time (hour)
-           cdata(8) = ikx               ! type
-           cdata(9) = tiltangle         ! tilt angle (radians)
-           cdata(10)= staheight         ! station elevation (m)
-           cdata(11)= rstation_id       ! station id
-           cdata(12)= usage             ! usage parameter
-           cdata(13)= idomsfc           ! dominate surface type
-           cdata(14)= skint             ! skin temperature
-           cdata(15)= ff10              ! 10 meter wind factor
-           cdata(16)= sfcr              ! surface roughness
-           cdata(17)=dlon_earth_deg     ! earth relative longitude (degrees)
-           cdata(18)=dlat_earth_deg     ! earth relative latitude (degrees)
-           cdata(19)=dist               ! range from radar in km (used to estimate beam spread)
-           cdata(20)=zsges              ! model elevation at radar site
-           cdata(21)=thiserr
-           cdata(22)=three+two          ! tail Doppler radar
-           do j=1,maxdat
-              cdata_all(j,iout)=cdata(j)
-           end do
-           jjj=jjj+1
-        else
-           notgood = notgood + 1
-        end if  ! if(good)
         
-90 continue
-     end do ! end of loop, reading records of data
-     close(25)
+        end do obsloop4! end of loop, reading records of data
+        close(25)
 
-  end do ! end of loop, reading TDR so data files
+     end do ! end of loop, reading TDR so data files
 
+  end if
 1200 continue
   close(lnbufr)
 

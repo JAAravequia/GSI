@@ -873,7 +873,7 @@ subroutine ozlev_ncread_(dfile, ozout,nmrecs,ndata,nodata, gstime,twind)
      call check(nf90_open(trim(dfile),nf90_nowrite,ncid),stat=ier)
 
      ! ignore if the file is not actually present.
-     if(ier/=nf90_noerr) return ! go to 170
+     if(ier/=nf90_noerr) return 
    
      ! Get dimensions from OMI input file
      call check(nf90_inq_dimid(ncid, "nprofiles", nrecDimId),stat=ier)
@@ -881,7 +881,7 @@ subroutine ozlev_ncread_(dfile, ozout,nmrecs,ndata,nodata, gstime,twind)
      ! ignore if the file header is empty
      if(ier/=nf90_noerr) then
         call check(nf90_close(ncid),stat=ier)
-        return ! go to 170
+        return 
      endif
 
      ! Get dimensions from MLS input file: # of profiles and # of levels
@@ -891,13 +891,13 @@ subroutine ozlev_ncread_(dfile, ozout,nmrecs,ndata,nodata, gstime,twind)
      ! ignore if the file header is empty
      if(ier/=nf90_noerr) then
         call check(nf90_close(ncid),stat=ier)
-        return ! go to 170
+        return 
      endif
 
      if(nprofs==0) then
         nodata=0
         call check(nf90_close(ncid),stat=ier)
-        return ! go to 170
+        return 
      endif
 
      ! Continue the input

@@ -951,17 +951,16 @@ contains
              llmax=max0(1,llmax)
              llmin=min0(1,llmin)
           else
-             do m=1,mlat-1
+             mloop:do m=1,mlat-1
                 m1=m+1
                 if((region_lat(i,j)>=clat_avn(m)).and.  &
                    (region_lat(i,j)<clat_avn(m1)))then
                    rllat(i,j)=float(m)
                    llmax=max0(m,llmax)
                    llmin=min0(m,llmin)
-                   go to 1234
+                   exit mloop
                 end if
-             end do
-1234         continue
+             end do mloop
              rllat(i,j)=rllat(i,j)+(region_lat(i,j)-clat_avn(m))/(clat_avn(m1)-clat_avn(m))
           endif
        end do

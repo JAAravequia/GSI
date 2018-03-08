@@ -92,7 +92,7 @@ subroutine read_tcps(nread,ndata,nodata,infile,obstype,lunout,sis,nobs)
 
   write(6,*) 'READ_TCPS:  IANLDATE = ',ianldate
 
-  do i=1,numstorms
+  stormloop: do i=1,numstorms
      nmrecs=nmrecs+1
      nread=nread+1
 
@@ -108,7 +108,7 @@ subroutine read_tcps(nread,ndata,nodata,infile,obstype,lunout,sis,nobs)
      if (stormdattim(i)/=ianldate) then
         write(6,*) 'READ_TCPS:  IGNORE TC_VITALS ENTRY # ',i
         write(6,*) 'READ_TCPS:  MISMATCHED FROM ANALYSIS TIME, OBS / ANL DATES = ',stormdattim(i),ianldate
-        go to 990
+        cycle stormloop
      end if
 
 ! Set center and storm id (only used in diagnostic file)
@@ -169,10 +169,8 @@ subroutine read_tcps(nread,ndata,nodata,infile,obstype,lunout,sis,nobs)
      cdata_all(9,ndata)=usage                 ! usage parameter
      cdata_all(10,ndata)=rstation_id          ! storm name (centerid_stormid)
 
-990  continue
-
 ! End of loop over number of storms
-  end do
+  end do stormloop
 
   write(6,*) 'READ_TCPS:  NUMBER OF OBS READ IN = ', ndata
   write(6,*) 'READ_TCPS: # out of domain =', noutside
