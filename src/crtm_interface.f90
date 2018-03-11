@@ -1764,12 +1764,11 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
 
      if (n_clouds_fwd_wk>0) then
         kgkg_kgm2=(atmosphere(1)%level_pressure(k)-atmosphere(1)%level_pressure(k-1))*r100/grav
+        c6(k) = kgkg_kgm2 
+        auxdp(k)=abs(prsi_rtm(kk+1)-prsi_rtm(kk))*r10
+        auxq (k)=q(kk2)
         if (cw_cv) then
           if (icmask) then 
-              c6(k) = kgkg_kgm2
-              auxdp(k)=abs(prsi_rtm(kk+1)-prsi_rtm(kk))*r10
-              auxq (k)=q(kk2)
-
               if (regional .and. (.not. wrf_mass_regional) .and. (.not. cold_start)) then
                  do ii=1,n_clouds_fwd_wk
                     cloud_cont(k,ii)=cloud(kk2,ii)*c6(k)
@@ -1920,11 +1919,19 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
        emissivity_k(i) = rtsolution_k(i,1)%surface_emissivity
 
 !  Surface temperature sensitivity
-       if(nst_gsi > 1 .and. (data_s(itz_tr) > half .and. data_s(itz_tr) <= one) ) then
-          ts(i)   = surface_k(i,1)%water_temperature*data_s(itz_tr) + &
-                    surface_k(i,1)%land_temperature + &
-                    surface_k(i,1)%ice_temperature + &
-                    surface_k(i,1)%snow_temperature
+
+       if(nst_gsi > 1)then
+          if( (data_s(itz_tr) > half .and. data_s(itz_tr) <= one) ) then
+             ts(i)   = surface_k(i,1)%water_temperature*data_s(itz_tr) + &
+                       surface_k(i,1)%land_temperature + &
+                       surface_k(i,1)%ice_temperature + &
+                       surface_k(i,1)%snow_temperature
+          else
+             ts(i)   = surface_k(i,1)%water_temperature + &
+                       surface_k(i,1)%land_temperature + &
+                       surface_k(i,1)%ice_temperature + &
+                       surface_k(i,1)%snow_temperature
+          endif
        else
           ts(i)   = surface_k(i,1)%water_temperature + &
                     surface_k(i,1)%land_temperature + &

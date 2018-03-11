@@ -57,9 +57,9 @@ program diag2grads
 
   integer           :: qc               =   0  ! 0:all 1:only qc pass -1:only rejected
   integer           :: solar            =   0  ! 0:all 1:night 2:day
-  character(len=5)  :: cqc(-1:1)        = (/ 'ALL  ', 'PASS ', 'RJCT ' /)
-  character(len=5)  :: clandsea(0:2)    = (/ 'ALL  ', 'LAND ', 'SEA  ' /)
-  character(len=5)  :: csolar(0:2)      = (/ 'ALL  ', 'NIGHT', 'DAY  ' /)
+!  character(len=5)  :: cqc(-1:1)        = (/ 'ALL  ', 'PASS ', 'RJCT ' /)
+!  character(len=5)  :: clandsea(0:2)    = (/ 'ALL  ', 'LAND ', 'SEA  ' /)
+!  character(len=5)  :: csolar(0:2)      = (/ 'ALL  ', 'NIGHT', 'DAY  ' /)
   
   character(len=GRADS_MAXLEN_COMMENT)  :: comment  = ''
   character(len=GRADS_MAXLEN_FILENAME) :: filename = ''
@@ -92,7 +92,7 @@ program diag2grads
   character(8):: stid
   integer :: ft_diag
   
-  integer :: lsflag, iceflag, scan, mype
+!  integer :: lsflag, iceflag, scan, mype
   integer :: iflag, iexist, nelem_sfc,nelem_lvl
   
   integer :: ttlmin_file, ttlmin_assign, ttlmin_assign0
@@ -256,7 +256,8 @@ program diag2grads
 !       Read data record
         call read_radiag_data( ft_diag, header_fix, retrieval, data_fix, data_chan, data_extra, iflag )
         if( iflag /= 0 )then
-           write(6,*)'***ERROR***  problem reading data iflag=',iflag,' iexist=',iexist
+           write(6,*)'***WARNING***  problem reading data iflag=',iflag,' iexist=',iexist
+           write(6,*)'*************  EOF or error'  
            exit      ! EOF or error
         endif
         
@@ -412,8 +413,6 @@ program diag2grads
 
         write(lunchan)n_chan,7
         write(lunbnry)(nuchan(k),(data_lvl(i,k),i=1,7),k=1,n_chan)
-        write(6,*)(nuchan(k),(data_lvl(i,k),i=1,7),k=1,n_chan)
-        write(6,*)'xxxxxx'
       
 !       Write station data
         if(lwrite_stn)call write_station_data(lunstn,&

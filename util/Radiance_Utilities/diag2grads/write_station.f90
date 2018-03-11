@@ -32,7 +32,6 @@ contains
     integer :: datetime(5)
     integer :: tint, nt,i
     integer :: n_chan,nelem_lvl,nelem_sfc
-    real(4):: nuchan(n_chan)
     type(diag_data_name_list) :: data_name
     character(len=GRADS_MAXLEN_FILENAME+4):: dsetname
     character(len=3),dimension(12):: cmonth
@@ -58,7 +57,7 @@ contains
        write(lunctl,'("stnmap ^",a)') trim(dsetname)
     endif
     
-    write(lunctl,'("options sequential big_endian template")')
+    write(lunctl,'("options sequential big_endian")')
     imissing = grads_missing
     write(lunctl,'("undef ",i6)') imissing
     write(lunctl,'("title ",a)') trim(comment)
