@@ -394,7 +394,6 @@ subroutine setupswcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      !   ddiff = sign(min(abs(ddiff),max_innov_pct*swcpges),ddiff)
      !end if
 
-
 !    Gross checks using innovation
 
      residual = abs(ddiff)
