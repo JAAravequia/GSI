@@ -655,7 +655,7 @@ do niter=1,numiter
       t7 = t7 + mpi_wtime() - t1
 
       ncount = ncount + 1
-      if (nproc == 0) print *, nobx, ' ob assimilated; ', hpfht
+!      if (nproc == 0) print *, nobx, ' ob assimilated; ', hpfht
 
   end do obsloop ! loop over obs to assimilate
 
