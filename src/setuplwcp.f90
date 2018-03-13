@@ -79,7 +79,7 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_double) rstation_id
   real(r_kind):: lwcpges,grsmlt,dlat,dlon,dtime,obserror, &
        obserrlm,residual,ratio,dlwcp
-  real(r_kind) error,ddiff, lwcp_diff
+  real(r_kind) error,ddiff
   real(r_kind) ressw2,ress,scale,val2,val,valqc
   real(r_kind) rat_err2,exp_arg,term,ratio_errors,rwgt
   real(r_kind) cg_lwcp,wgross,wnotgross,wgt,arg
@@ -88,7 +88,6 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),dimension(nobs)::dup
   real(r_kind),dimension(nele,nobs):: data
   real(r_single),allocatable,dimension(:,:)::rdiagbuf
-  real(r_kind) zges
 
   integer(i_kind) ikxx,nn,istat,ibin,ioff,ioff0
   integer(i_kind) i,nchar,nreal,k,j,jj,ii,l,mm1
@@ -155,7 +154,6 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   else
     nsig_top = nsig
   endif
-  !write(6,*) 'SETUPLWCP: nsig, nsig_top = ', nsig, nsig_top
 
   tupper = ttp
   tlower = tmix
@@ -165,9 +163,9 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
     qvsl = zero; ssqvl = zero
     ges_lwcp = zero
 
-    tcenter = 0.5 * (tupper + tlower)
+    tcenter = 0.5_r_kind * (tupper + tlower)
     ges_tr = ttp / ges_tsen
-    ges_w = 0.5 * (one + tanh((ges_tsen-tcenter)/((tupper-tlower)/4.))) ! hyperbolic tangent
+    ges_w = 0.5_r_kind * (one + tanh((ges_tsen-tcenter)/((tupper-tlower)/4._r_kind))) ! hyperbolic tangent
     esl = psatk * (ges_tr**xa) * exp(xb*(one-ges_tr))
     esi = psatk * (ges_tr**xai) * exp(xbi*(one-ges_tr))
     es = ges_w * esl + (one-ges_w) * esi 
@@ -181,19 +179,15 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         do j=1,lon2
           do i=1,lat2
             if (ges_tsen(i,j,k,jj) >= tlower .and. k <= nsig_top ) then
-              qvsl(i,j,k,jj) = 0.622 * es(i,j,k,jj) / (ges_prsl(i,j,k,jj)-es(i,j,k,jj)) ! ges_prsl in cbar
+              qvsl(i,j,k,jj) = 0.622_r_kind * es(i,j,k,jj) / (ges_prsl(i,j,k,jj)-es(i,j,k,jj)) ! ges_prsl in cbar
               ssqvl(i,j,k,jj) = qv(i,j,k,jj) - qvsl(i,j,k,jj) ! kg/kg
-              if (ssqvl(i,j,k,jj) .lt. zero) ssqvl(i,j,k,jj) = zero
+              if (ssqvl(i,j,k,jj) < zero) ssqvl(i,j,k,jj) = zero
               ges_lwcp(i,j,jj) = ges_lwcp(i,j,jj) + ssqvl(i,j,k,jj) * &
                                  tpwcon*r10*(ges_prsi(i,j,k,jj)-ges_prsi(i,j,k+1,jj)) ! kg/m^2
             endif
           end do
         end do
-!        write(6,*) 'SETUPLWCP (l_wcp_cwm = F): jj, k, ges_q = ', jj, k, &
-!                    maxval(ges_q(:,:,k,jj)), minval(ges_q(:,:,k,jj))
       end do
-!      write(6,*) 'SETUPLWCP (l_wcp_cwm = F): ges_lwcp = ', & 
-!                 jj, maxval(ges_lwcp(:,:,jj)), minval(ges_lwcp(:,:,jj))
     end do
 
   else
@@ -368,10 +362,6 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      call tintrp2a1(ges_prsi,piges,dlat,dlon,dtime, &
          hrdifsig,nsig+1,mype,nfldsig)
 
-!     write(6,*) 'SETUPLWCP: hrdifsig (gridtime) of nfldsig = ', hrdifsig, nfldsig
-!     write(6,*) 'SETUPLWCP: lwcpges = ', lwcpges
-!     write(6,*) 'SETUPLWCP: piges = ', piges ! (cbar)
-
      if (.not.l_wcp_cwm) then
        call tintrp2a1(ges_prsl,plges,dlat,dlon,dtime, &
            hrdifsig,nsig,mype,nfldsig)
@@ -386,9 +376,6 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            hrdifsig,nsig,mype,nfldsig)
        call tintrp2a1(ges_qr,qrges,dlat,dlon,dtime, &
            hrdifsig,nsig,mype,nfldsig)
-!       write(6,*) 'SETUPLWCP (l_wcp_cwm = T): tges = ', tges
-!       write(6,*) 'SETUPLWCP (l_wcp_cwm = T): qlges = ', qlges
-!       write(6,*) 'SETUPLWCP (l_wcp_cwm = T): qrges = ', qrges
      endif
 
 !=============================================================================================================
@@ -400,9 +387,6 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      !   ! Limit size of lwcp innovation to a percent of the background value
      !   ddiff = sign(min(abs(ddiff),max_innov_pct*lwcpges),ddiff)
      !end if
-
-!     write(6,*) 'SETUPLWCP: observed, guessed, and diff = ', dlwcp, lwcpges, ddiff
- 
 
 !    Gross checks using innovation
 
@@ -426,7 +410,6 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      if (nobskeep>0.and.luse_obsdiag) muse(i)=obsdiags(i_lwcp_ob_type,ibin)%tail%muse(nobskeep)
 
      val      = error*ddiff
-!     write(6,*) 'SETUPLWCP: error, ddiff, and val(=error*ddiff) = ', error, ddiff, val
 
      if(luse(i))then
 !    Compute penalty terms (linear & nonlinear qc).
@@ -537,36 +520,32 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
             
             qvges(k) = qges(k)/(one-qges(k)) ! kg/kg
             trges(k) = ttp/tges(k)
-            wges(k) = 0.5*(one+tanh((tges(k)-tcenter)/((tupper-tlower)/4.))) ! hyperbolic tangent
+            wges(k) = 0.5_r_kind*(one+tanh((tges(k)-tcenter)/((tupper-tlower)/4._r_kind))) ! hyperbolic tangent
  
             if ( tges(k) >= tlower .and. k <= nsig_top ) then
               !psat is in Pa; psatk is in cbar 
               eslges(k) = psatk*(trges(k)**xa)*exp(xb*(one-trges(k))) ! cbar
               esiges(k) = psatk*(trges(k)**xai)*exp(xbi*(one-trges(k))) !cbar
               esges(k) = wges(k) * eslges(k) + (one-wges(k)) * esiges(k) ! cbar           
-              qvsges(k) = 0.622*esges(k)/(plges(k)-esges(k)) ! kg/kg
+              qvsges(k) = 0.622_r_kind*esges(k)/(plges(k)-esges(k)) ! kg/kg
               ssqges(k) = qvges(k)-qvsges(k)
-              if ( ssqges(k) .lt. zero ) ssqges(k)=zero
+              if ( ssqges(k) < zero ) ssqges(k)=zero
                 !jacobian 
                 desldt(k) = eslges(k)*(-xa/tges(k)) + eslges(k)*xb*ttp/(tges(k)**2)
                 desidt(k) = esiges(k)*(-xai/tges(k)) + esiges(k)*xbi*ttp/(tges(k)**2)
                 ! hyperbolic tangent
-                dwdt(k) = 0.5*(one/cosh((tges(k)-tcenter)/((tupper-tlower)/4.))**2)*(4./(tupper-tlower)) 
+                dwdt(k) = 0.5_r_kind*(one/cosh((tges(k)-tcenter)/((tupper-tlower)/4._r_kind))**2)*(4._r_kind/(tupper-tlower)) 
                 desdt(k) = dwdt(k)*eslges(k) + wges(k)*desldt(k) &
                          + (-dwdt(K))*esiges(k) + (one-wges(k))*desidt(k)
  
-                dssqdt(k) = -0.622* ( desdt(k)/(plges(k)-esges(k)) &
+                dssqdt(k) = -0.622_r_kind* ( desdt(k)/(plges(k)-esges(k)) &
                           + esges(k)*desdt(k)/((plges(k)-esges(k))**2) )
                 dssqdq(k) = one/(one-qges(k)) + qges(k)/((one-qges(k))**2)
-                dssqdp(k) = 0.622*esges(k)/(plges(k)-esges(k))**2
+                dssqdp(k) = 0.622_r_kind*esges(k)/(plges(k)-esges(k))**2
 
                 my_head%jac_t(k)=dssqdt(k)*(tpwcon*r10*(piges(k)-piges(k+1))) 
                 my_head%jac_p(k)=dssqdp(k)*(tpwcon*r10*(piges(k)-piges(k+1))) 
                 my_head%jac_q(k)=dssqdq(k)*(tpwcon*r10*(piges(k)-piges(k+1))) 
-!                write(6,*) 'SETUPLWCP (l_wcp_cwm = F): k, tges, qvges, ssqges(k), dfdt, dfdp, dfdq = ', &
-!                           k, tges(k), qvges(k), ssqges(k), dssqdt(k)*(tpwcon*r10*(piges(k)-piges(k+1))), &
-!                           dssqdp(k)*(tpwcon*r10*(piges(k)-piges(k+1))), & 
-!                           dssqdq(k)*(tpwcon*r10*(piges(k)-piges(k+1)))
             endif
     
           else
@@ -574,8 +553,6 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
             if ( tges(k) >= tlower .and. k <= nsig_top ) then
               my_head%jac_ql(k)=tpwcon*r10*(piges(k)-piges(k+1)) 
               my_head%jac_qr(k)=tpwcon*r10*(piges(k)-piges(k+1)) 
-!              write(6,*) 'SETUPLWCP (l_wcp_cwm = T): k, dfdql = ', k, tpwcon*r10*(piges(k)-piges(k+1))
-!              write(6,*) 'SETUPLWCP (l_wcp_cwm = T): k, dfdqr = ', k, tpwcon*r10*(piges(k)-piges(k+1))
             endif
  
           endif
@@ -718,7 +695,6 @@ subroutine setuplwcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   subroutine init_vars_
   use obsmod, only: l_wcp_cwm
-  real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
   real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
   character(len=5) :: varname
   integer(i_kind) ifld, istatus

@@ -292,7 +292,7 @@ type(gsi_bundle), intent(in   ):: wbundle
 real(r_kind),     intent(in   ):: sv_tsen(lat2,lon2,nsig)
 
 ! Declare local variables
-integer(i_kind) i,j,k,ic,istatus
+integer(i_kind) i,j,k,istatus
 real(r_kind) coef, dcoefdt
 real(r_kind) dicedt, dicedcw, dprecicedt, dprecicedcw
 real(r_kind), pointer, dimension(:,:,:) :: cv_cw
@@ -328,8 +328,8 @@ do k=1,nsig
          sv_qr(i,j,k)=cv_cw(i,j,k)*(one-fice(i,j,k))*frain(i,j,k) ! qr is not a function of T
 
          if ( ges_tsen(i,j,k,ntguessig) > t0c-30.0_r_kind) then
-           dicedcw = 0.05*fice(i,j,k)
-           dprecicedcw = 0.95*fice(i,j,k)
+           dicedcw = 0.05_r_kind*fice(i,j,k)
+           dprecicedcw = 0.95_r_kind*fice(i,j,k)
            dicedt = zero
            dprecicedt = zero
          else
@@ -392,7 +392,7 @@ type(gsi_bundle), intent(inout):: wbundle
 real(r_kind),intent(inout) :: rv_tsen(:,:,:)
 
 ! Declare local variables
-integer(i_kind) i,j,k, ic, istatus
+integer(i_kind) i,j,k, istatus
 real(r_kind) coef, dcoefdt
 real(r_kind) dicedt, dicedcw, dprecicedt, dprecicedcw
 real(r_kind) work
@@ -436,8 +436,8 @@ do k=1,nsig
    do j=1,lon2
       do i=1,lat2
         if ( ges_tsen(i,j,k,ntguessig) > t0c-30.0_r_kind) then
-          dicedcw = 0.05*fice(i,j,k)
-          dprecicedcw = 0.95*fice(i,j,k)
+          dicedcw = 0.05_r_kind*fice(i,j,k)
+          dprecicedcw = 0.95_r_kind*fice(i,j,k)
           dicedt = zero
           dprecicedt = zero
         else

@@ -99,7 +99,7 @@ subroutine intlwcp_(lwcphead,rval,sval)
   real(r_kind) :: t_AD,p_AD,q_AD
   real(r_kind) :: ql_TL,qr_TL
   real(r_kind) :: ql_AD,qr_AD
-  real(r_kind) val,lwcpcon1,w1,w2,w3,w4
+  real(r_kind) val,w1,w2,w3,w4
   real(r_kind) cg_lwcp,grad,p0,wnotgross,wgross,pg_lwcp
   real(r_kind),pointer,dimension(:) :: st, sp, sq
   real(r_kind),pointer,dimension(:) :: sql, sqr

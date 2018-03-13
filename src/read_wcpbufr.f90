@@ -83,55 +83,47 @@ subroutine read_wcpbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   character(10) date
   character(8) subset
   character(8) c_station_id
-  character(8) cc_station_id
   character(1) sidchr(8)
-  character(8) stnid
 
   integer(i_kind) ireadmg,ireadsb,icntpnt,icntpnt2,icount,iiout
-  integer(i_kind) lunin,i,maxobs,j,idomsfc,it29,nmsgmax,mxtb
+  integer(i_kind) lunin,i,maxobs,nmsgmax,mxtb
   integer(i_kind) kk,klon1,klat1,klonp1,klatp1
-  integer(i_kind) nc,nx,isflg,ntread,itx,ii,ncsave
+  integer(i_kind) nc,nx,ntread,itx,ii,ncsave
   integer(i_kind) ihh,idd,idate,iret,im,iy,k,levs
-  integer(i_kind) kx,kx0,nreal,nchanl,ilat,ilon,ithin
+  integer(i_kind) kx,nreal,nchanl,ilat,ilon,ithin
   integer(i_kind) qm, swcpq, lwcpq
   integer(i_kind) nlevp         ! vertical level for thinning
   integer(i_kind) ntmp,iout
   integer(i_kind) pflag,irec
   integer(i_kind) ntest,nvtest,iosub,ixsub,isubsub,iobsub
-  integer(i_kind) kl,k1,k2, k1_swcp, k2_swcp, k1_lwcp, k2_lwcp
-  integer(i_kind) itypex,itypey
+  integer(i_kind) kl,k1,k2
+  integer(i_kind) itypex
   integer(i_kind) minobs,minan
   integer(i_kind) ntb,ntmatch,ncx
   integer(i_kind) nmsg                ! message index
-  integer(i_kind) iyyyymm
-  integer(i_kind) jj,start,next 
   integer(i_kind),dimension(5):: idate5
   integer(i_kind),dimension(255):: pqm
   integer(i_kind),dimension(nconvtype)::ntxall
   integer(i_kind),dimension(nconvtype+1)::ntx
   integer(i_kind),allocatable,dimension(:):: isort,iloc,nrep
   integer(i_kind),allocatable,dimension(:,:):: tab
-  integer(i_kind) ibfms,thisobtype_usage
-  integer(i_kind) iwmo,ios
-  real(r_kind) time,timex,time_drift,timeobs,toff,t4dv,zeps
-  real(r_kind) qtflg,tdry,rmesh,ediff,usage
-  real(r_kind) u0,v0,uob,vob,dx,dy,dx1,dy1,w00,w10,w01,w11
-  real(r_kind) dlnpob,ppb,poe
+  real(r_kind) time,timex,timeobs,toff,t4dv,zeps
+  real(r_kind) rmesh,ediff,usage
+  real(r_kind) dx,dy,dx1,dy1,w00,w10,w01,w11
+  real(r_kind) dlnpob,ppb
   real(r_kind) swcpoe, swcpmerr, lwcpoe, lwcpmerr
   real(r_kind) dlat,dlon,dlat_earth,dlon_earth
   real(r_kind) dlat_earth_deg,dlon_earth_deg
   real(r_kind) stnelev
   real(r_kind) cdist,disterr,disterrmax,rlon00,rlat00
-  real(r_kind) vdisterrmax,u00,v00
+  real(r_kind) vdisterrmax
   real(r_kind) del, swcperrmin, lwcperrmin
-  real(r_kind) tsavg,ff10,sfcr,zz
   real(r_kind) crit1,timedif,xmesh,pmesh
   real(r_kind) time_correction
   real(r_kind) perrmin
   real(r_kind),dimension(nsig):: presl
   real(r_kind),dimension(nsig-1):: dpres
   real(r_kind),dimension(255)::plevs
-  real(r_kind),dimension(255):: tvflg
   real(r_kind),allocatable,dimension(:):: presl_thin
   real(r_kind),allocatable,dimension(:,:):: cdata_all,cdata_out
 
@@ -639,11 +631,6 @@ subroutine read_wcpbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(15,iout)=obsdat(1,k)            ! observation pressure (hPa)
                  cdata_all(16,iout)=obsdat(2,k)            ! observation height (m)
  
-!                 write(6,*) 'READ_WCPBUFR: swcp (iout, long, lat, pres, k, usage, time, & 
-!                             type, obs, obsq, obserr, maxerr = ', &
-!                             iout, dlon_earth_deg, dlat_earth_deg, obsdat(1,k), k, usage, t4dv, &
-!                             nc, obsdat(3,k)*convert, swcpq, swcpoe, swcpmerr
-
 !             liquid-water content path (Hurricane GPROF: TMI and GMI)
               else if(lwcpob) then
 
@@ -665,11 +652,6 @@ subroutine read_wcpbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(14,iout)=stnelev                ! station elevation (m)
                  cdata_all(15,iout)=obsdat(1,k)            ! observation pressure (hPa)
                  cdata_all(16,iout)=obsdat(2,k)            ! observation height (m)
-
-!                 write(6,*) 'READ_WCPBUFR: lwcp (iout, long, lat, pres, k, usage, time, & 
-!                             type, obs, obsq, obserr, maxerr = ', &
-!                             iout, dlon_earth_deg, dlat_earth_deg, obsdat(1,k), k, usage, t4dv, &
-!                             nc, obsdat(4,k)*convert, lwcpq, lwcpoe, lwcpmerr
 
               end if
 

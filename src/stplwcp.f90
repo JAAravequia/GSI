@@ -92,7 +92,7 @@ subroutine stplwcp(lwcphead,rval,sval,out,sges,nstep)
 ! Declare local variables  
   integer(i_kind) j,kk,ier,istatus
   integer(i_kind),dimension(nsig):: i1,i2,i3,i4
-  real(r_kind) val,val2,w1,w2,w3,w4,time_lwcp,pg_lwcp
+  real(r_kind) val,val2,w1,w2,w3,w4,pg_lwcp
   real(r_kind) cg_lwcp,wgross,wnotgross,lwcpx
   real(r_kind),dimension(max(1,nstep))::pen
   real(r_kind),pointer,dimension(:) :: st, sp, sq

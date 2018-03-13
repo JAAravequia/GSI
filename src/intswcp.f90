@@ -103,7 +103,7 @@ subroutine intswcp_(swcphead,rval,sval)
   real(r_kind) :: t_AD,p_AD,q_AD
   real(r_kind) :: qi_TL,qs_TL,qg_TL,qh_TL
   real(r_kind) :: qi_AD,qs_AD,qg_AD,qh_AD
-  real(r_kind) val,swcpcon1,w1,w2,w3,w4
+  real(r_kind) val,w1,w2,w3,w4
   real(r_kind) cg_swcp,grad,p0,wnotgross,wgross,pg_swcp
   real(r_kind),pointer,dimension(:) :: st, sp, sq
   real(r_kind),pointer,dimension(:) :: sqi, sqs, sqg, sqh
@@ -125,7 +125,6 @@ subroutine intswcp_(swcphead,rval,sval)
     call gsi_bundlegetpointer(rval,'tsen',rt,istatus);ier=istatus+ier
     call gsi_bundlegetpointer(rval,'prse',rp,istatus);ier=istatus+ier
     call gsi_bundlegetpointer(rval,'q'   ,rq,istatus);ier=istatus+ier
-    !if (ier==0) write(6,*) 'INTSWCP (l_wcp_cwm = F)'
 
   else
 
@@ -137,7 +136,6 @@ subroutine intswcp_(swcphead,rval,sval)
     call gsi_bundlegetpointer(rval,'qs',rqs,istatus);ier=istatus+ier
     call gsi_bundlegetpointer(rval,'qg',rqg,istatus);ier=istatus+ier
     call gsi_bundlegetpointer(rval,'qh',rqh,istatus);ier=istatus+ier
-    !if (ier==0) write(6,*) 'INTSWCP (l_wcp_cwm = T)'
 
   endif ! l_wcp_cwm
 
@@ -171,7 +169,6 @@ subroutine intswcp_(swcphead,rval,sval)
                       p_TL*swcpptr%jac_p(k) + & 
                       q_TL*swcpptr%jac_q(k) ) ! tpwcon*r10*(piges(k)-piges(k+1)) already did in setupswcp.f90
       end do
-!      write(6,*) 'INTSWCP (l_wcp_cwm = F): val at ',jiter,' oloop and ',iter,' iloop = ', val
     else
       do k=1,nsig
         qi_TL=w1* sqi(i1(k))+w2* sqi(i2(k))+w3* sqi(i3(k))+w4* sqi(i4(k))
@@ -183,7 +180,6 @@ subroutine intswcp_(swcphead,rval,sval)
                       qg_TL*swcpptr%jac_qg(k) + & 
                       qh_TL*swcpptr%jac_qh(k) ) ! tpwcon*r10*(piges(k)-piges(k+1)) already did in setupswcp.f90
       end do
-!      write(6,*) 'INTSWCP (l_wcp_cwm = T): val at ',jiter,' oloop and ',iter,' iloop = ', val
     endif ! l_wcp_cwm
 
     if(luse_obsdiag)then
