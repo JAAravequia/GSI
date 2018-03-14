@@ -27,10 +27,10 @@ fi
 #  Directories.
 pwd=$(pwd)
 export NWPROD=${NWPROD:-$pwd}
-export BASE_GSM=${BASE_GSM:-$NWPROD}
-export BASE_GSI=${BASE_GSI:-$NWPROD}
-FIXgsi=${FIXgsi:-$BASE_GSI/fix}
-GSIEXEC=${GSIEXEC:-$BASE_GSI/exec/global_gsi}
+export HOMEgfs=${HOMEgfs:-$NWPROD}
+export HOMEgsi=${HOMEgsi:-$NWPROD}
+FIXgsi=${FIXgsi:-$HOMEgsi/fix}
+GSIEXEC=${GSIEXEC:-$HOMEgsi/exec/global_gsi}
 export DATA=${DATA:-$pwd/analysis.$$}
 DMPDIR=${DMPDIR:-$NWPROD}
 export COMIN=${COMIN:-$pwd}
@@ -58,16 +58,22 @@ NTHREADS_GSI=${NTHREADS_GSI:-${NTHREADS:-1}}
 
 # Surface cycle related parameters
 DOGCYCLE=${DOGCYCLE:-"NO"}
-CYCLESH=${CYCLESH:-$BASE_GSM/ush/global_cycle.sh}
-export CYCLEXEC=${CYCLEXEC:-$BASE_GSM/exec/global_cycle}
+CYCLESH=${CYCLESH:-$HOMEgfs/ush/global_cycle.sh}
+export CYCLEXEC=${CYCLEXEC:-$HOMEgfs/exec/global_cycle}
 NTHREADS_CYCLE=${NTHREADS_CYCLE:-24}
 APRUN_CYCLE=${APRUN_CYCLE:-${APRUN:-""}}
 export SNOW_NUDGE_COEFF=${SNOW_NUDGE_COEFF:-'-2.'}
 export CYCLVARS=${CYCLVARS:-""}
 export FHOUR=${FHOUR:-0}
 export DELTSFC=${DELTSFC:-6}
-export FIXgsm=${FIXgsm:-$BASE_GSM/fix/fix_am}
-export FIXfv3=${FIXfv3:-$BASE_GSM/fix/fix_fv3_gmted2010}
+export FIXgsm=${FIXgsm:-$HOMEgfs/fix/fix_am}
+export FIXfv3=${FIXfv3:-$HOMEgfs/fix/fix_fv3_gmted2010}
+
+DOGAUSFCANL=${DOGAUSFCANL-"NO"}
+GAUSFCANLSH=${GAUSFCANLSH:-$HOMEgfs/ush/gaussian_sfcanl.sh}
+export GAUSFCANLEXE=${GAUSFCANLEXE:-$HOMEgfs/exec/gaussian_sfcanl.exe}
+NTHREADS_GAUSFCANL=${NTHREADS_GAUSFCANL:-1}
+APRUN_GAUSFCANL=${APRUN_GAUSFCANL:-${APRUN:-""}}
 
 # FV3 specific info (required for global_cycle)
 export CASE=${CASE:-"C384"}
@@ -78,11 +84,12 @@ QUILTING=${QUILTING:-".true."}
 
 # Microphysics in the model; 99:ZC, 11:GFDLMP
 imp_physics=${imp_physics:-99}
+lupp=${lupp:-".true."}
 
 # Dependent Scripts and Executables
 NTHREADS_CALCINC=${NTHREADS_CALCINC:-1}
 APRUN_CALCINC=${APRUN_CALCINC:-${APRUN:-""}}
-CALCINCEXEC=${CALCINCEXEC:-$BASE_GSI/exec/calc_increment_ens.x}
+CALCINCEXEC=${CALCINCEXEC:-$HOMEgsi/exec/calc_increment_ens.x}
 
 # OPS flags
 RUN=${RUN:-""}
@@ -666,7 +673,7 @@ cat > gsiparm.anl << EOF
   crtm_coeffs_path='./crtm_coeffs/',
   newpc4pred=.true.,adp_anglebc=.true.,angord=4,passive_bc=.true.,use_edges=.false.,
   diag_precon=.true.,step_start=1.e-3,emiss_bc=.true.,nhr_obsbin=${nhr_obsbin:-3},
-  cwoption=3,imp_physics=$imp_physics,
+  cwoption=3,imp_physics=$imp_physics,lupp=$lupp,
   $SETUP
 /
 &GRIDOPTS
@@ -895,12 +902,6 @@ if [ $DOGCYCLE = "YES" ]; then
 
     mkdir -p $COMOUT/RESTART
 
-    # Get dimension information based on CASE
-    res=$(echo $CASE | cut -c2-)
-    JCAP_CASE=$((res*2-2))
-    LATB_CASE=$((res*2))
-    LONB_CASE=$((res*4))
-
     # Global cycle requires these files
     export FNTSFA=${FNTSFA:-$COMIN_OBS/${OPREFIX}rtgssthr.grb}
     export FNACNA=${FNACNA:-$COMIN_OBS/${OPREFIX}seaice.5min.blend.grb}
@@ -949,6 +950,18 @@ if [ $DOGCYCLE = "YES" ]; then
     export ERR=$rc
     export err=$ERR
     $ERRSCRIPT || exit 11
+
+    # Create gaussian grid surface analysis file
+    if [ $DOGAUSFCANL = "YES" ]; then
+        export APRUNSFC=$APRUN_GAUSFCANL
+        export OMP_NUM_THREADS_SFC=$NTHREADS_GAUSFCANL
+
+        $GAUSFCANLSH
+        rc=$?
+        export ERR=$rc
+        export err=$ERR
+        $ERRSCRIPT || exit 12
+    fi
 
 fi
 

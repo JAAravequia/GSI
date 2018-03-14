@@ -27,7 +27,7 @@ fi
 # Directories.
 pwd=$(pwd)
 export NWPROD=${NWPROD:-$pwd}
-export BASE_GSI=${BASE_GSI:-$NWPROD}
+export HOMEgsi=${HOMEgsi:-$NWPROD}
 export COMIN=${COMIN:-$pwd}
 export COMIN_GES_ENS=${COMIN_GES_ENS:-$COMIN}
 export COMOUT=${COMOUT:-$COMIN}
@@ -40,8 +40,8 @@ export NLN=${NLN:-"/bin/ln -sf"}
 export ERRSCRIPT=${ERRSCRIPT:-'eval [[ $err = 0 ]]'}
 
 # Scripts.
-INVOBSSH=${INVOBSSH:-$BASE_GSI/scripts/exglobal_innovate_obs_fv3gfs.sh.ecf}
-export ANALYSISSH=${ANALYSISSH:-$BASE_GSI/scripts/exglobal_analysis_fv3gfs.sh.ecf}
+INVOBSSH=${INVOBSSH:-$HOMEgsi/scripts/exglobal_innovate_obs_fv3gfs.sh.ecf}
+export ANALYSISSH=${ANALYSISSH:-$HOMEgsi/scripts/exglobal_analysis_fv3gfs.sh.ecf}
 
 # Enemble group, begin and end
 ENSGRP=${ENSGRP:-1}
@@ -59,11 +59,12 @@ RERUN_EOMGGRP=${RERUN_EOMGGRP:-"YES"}
 SENDECF=${SENDECF:-"NO"}
 
 export SMOOTH_ENKF=${SMOOTH_ENKF:-"YES"}
+export USE_SELECT=${USE_SELECT:-"NO"}
+export SELECT_OBS=${SELECT_OBS:-${COMOUT}/${APREFIX}obsinput}
 
 ################################################################################
 # Preprocessing
-[[ -d $DATA ]] && rm -rf $DATA
-mkdir -p $DATA
+if [ ! -d $DATA ]; then mkdir -p $DATA; fi
 cd $DATA || exit 99
 DATATOP=$DATA
 
@@ -72,8 +73,6 @@ ENKF_SUFFIX="s"
 
 ################################################################################
 # Set output data
-cymd=`echo $CDATE | cut -c1-8`
-chh=`echo  $CDATE | cut -c9-10`
 EOMGGRP=$COMOUT/eomg.grp${ENSGRP}
 if [ -f $EOMGGRP ]; then
    if [ $RERUN_EOMGGRP = "YES" ]; then
@@ -89,13 +88,24 @@ fi
 COMOUT_SAVE=$COMOUT
 
 ################################################################################
+# If requested, link and de-tar obs_input
+if [ $USE_SELECT = "YES" ]; then
+   rm -rf obsinput ; mkdir -p obsinput ; cd obsinput
+   $NLN $SELECT_OBS obsinput.tar
+   tar -xvf obsinput.tar
+   rm obsinput.tar
+   export SELECT_OBS=$DATA/obsinput
+   cd $DATA
+fi
+
+################################################################################
 # Run innovation script for ensemble member
 rc=0
-for imem in `seq $ENSBEG $ENSEND`; do
+for imem in $(seq $ENSBEG $ENSEND); do
 
    cd $DATATOP
 
-   cmem=`printf %03i $imem`
+   cmem=$(printf %03i $imem)
    memchar="mem$cmem"
 
    echo "Processing MEMBER: $cmem"
@@ -104,7 +114,7 @@ for imem in `seq $ENSBEG $ENSEND`; do
 
    skip_mem="NO"
    if [ -f ${EOMGGRP}.fail ]; then
-      memstat=`cat ${EOMGGRP}.fail | grep "MEMBER $cmem" | grep "PASS" | wc -l`
+      memstat=$(cat ${EOMGGRP}.fail | grep "MEMBER $cmem" | grep "PASS" | wc -l)
       [[ $memstat -eq 1 ]] && skip_mem="YES"
    fi
 
