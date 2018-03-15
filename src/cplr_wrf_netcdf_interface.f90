@@ -679,8 +679,8 @@ contains
          if(print_verbose)then
            write(6,*)' k,max,min,mid W=',k,maxval(field3w(:,:,k)),minval(field3w(:,:,k)), &
                field3w(nlon_regional/2,nlat_regional/2,k)
-           write(iunit)((field3w(i,j,k),i=1,nlon_regional),j=1,nlat_regional)   ! w
          end if
+         write(iunit)((field3w(i,j,k),i=1,nlon_regional),j=1,nlat_regional)   ! w
        end do
      endif
 
