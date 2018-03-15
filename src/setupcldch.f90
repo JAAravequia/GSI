@@ -8,13 +8,13 @@ use abstract_setup_mod
      module procedure setup_ctor
   end interface
 contains
-  type(setupcldch_class) function setup_ctor(this,obsname,varname1,varname2,varname3)
-      class(setupcldch_class)                          ,intent(inout) :: this
+  type(setupcldch_class) function setup_ctor(obsname,varname1,varname2,varname3)
+!     class(setupcldch_class)                          ,intent(inout) :: this
       character(*),                        intent(in) :: obsname
       character(*),                        intent(in) :: varname1
       character(*),                        intent(in) :: varname2
       character(*),                        intent(in) :: varname3
-      call this%initialize(obsname,varname1,varname2,varname3) 
+      call setup_ctor%initialize(obsname,varname1,varname2,varname3) 
 !     setup_ctor.myname = obsname
 !     setup_ctor.numvars = 3
 !     allocate(setup_ctor.varnames(setup_ctor.numvars))
