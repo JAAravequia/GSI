@@ -189,13 +189,6 @@ project(GSI)
     add_subdirectory(util/EnKF/gfs/src)
   endif(BUILD_UTIL) 
 
-
-  if(BUILD_UNIT_TESTING)
-    set(CTEST_TEST_TIMEOUT 400 )
-    find_package(GSICONTROL)
-    include( CTest )
-    add_subdirectory(unit-tests)
-  endif(BUILD_UNIT_TESTING)
   if(BUILD_REG_TESTING)
     if(USE_WRF)
       file(WRITE "${PROJECT_BINARY_DIR}/regression_var.out" "${CMAKE_SOURCE_DIR}/scripts/regression_var.sh ${host} ${CMAKE_SOURCE_DIR}/.. ${PROJECT_BINARY_DIR} ${CMAKE_SOURCE_DIR} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${GSIEXEC} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${ENKFEXEC} ${GSICONTROL} ${ENKFCONTROL} ")

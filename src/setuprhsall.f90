@@ -288,6 +288,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   character(len=256):: tmpname,tmpaccess,tmpform
 
   cldch = setupcldch_class('setupcldch','var::ps','var::z','var::cldch')
+  ps = setupps_class('setupps','var::ps','var::z','var::tv')
   if(.not.init_pass .and. .not.lobsdiag_allocated) call die('setuprhsall','multiple lobsdiag_allocated',lobsdiag_allocated)
 !******************************************************************************
 ! Initialize timer
@@ -552,8 +553,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up surface pressure data
               else if(obstype=='ps')then
                  write(6,*) 'setting up ps'
-                 call ps%setupp(('setupps'),(/'var::ps','var::z','var::tv'/),&
-                      lunin,mype,bwork,awork(1,i_ps),nele,nobs,is,conv_diagsave)
+                 call ps%setup(lunin,mype,bwork,awork(1,i_ps),nele,nobs,is,conv_diagsave)
 !                call setupps(lunin,mype,bwork,awork(1,i_ps),nele,nobs,is,conv_diagsave)
  
 !             Set up tc-mslp data

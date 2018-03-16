@@ -81,10 +81,10 @@ contains
   end function setup_ctor3
   subroutine initialize(this,obsname,varname1,varname2,varname3)
       class(abstract_setup_class)              ,intent(inout) :: this
-      character(len=16),                        intent(in) :: obsname
-      character(len=14),                        intent(in) :: varname1
-      character(len=14),                        intent(in) :: varname2
-      character(len=14),                        intent(in) :: varname3
+      character(*),                        intent(in) :: obsname
+      character(*),                        intent(in) :: varname1
+      character(*),                        intent(in) :: varname2
+      character(*),                        intent(in) :: varname3
       this%myname = obsname
       this%numvars = 3
       allocate(this%varnames(this%numvars))
@@ -177,7 +177,13 @@ contains
       real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
       integer(i_kind)                                  ,intent(in   ) :: is ! ndat index
       logical                                          ,intent(in   ) :: conv_diagsave
-      write(6,*) 'this is a dummy setup'
+      real(r_kind),dimension(nele,nobs)                               :: data
+      logical,dimension(nobs)                                         :: luse 
+
+      write(6,*) ' in setup for ',this.myname,' with varnames ',this.varnames
+      call this%allocate_and_check_vars(this.myname,lunin,luse,nele,nobs,data,this.varnames)
+      call this%setupDerived(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
+      call this%final_vars_
   end subroutine setup
   subroutine setupDerived(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
       use kinds, only: r_kind,r_single,r_double,i_kind       

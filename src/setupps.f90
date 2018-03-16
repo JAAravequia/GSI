@@ -4,7 +4,19 @@ use abstract_setup_mod
   contains
     procedure, pass(this) :: setupDerived => setupps
   end type setupps_class
+  interface setupps_class
+     module procedure setup_ctor
+  end interface
 contains
+  type(setupps_class) function setup_ctor(obsname,varname1,varname2,varname3)
+      character(*),                        intent(in) :: obsname
+      character(*),                        intent(in) :: varname1
+      character(*),                        intent(in) :: varname2
+      character(*),                        intent(in) :: varname3
+      write(6,*) 'in constructor, setting obsname to be ',obsname
+      call setup_ctor%initialize(obsname,varname1,varname2,varname3) 
+      write(6,*) 'in constructor, setting obsname is ',setup_ctor.myname
+  end function setup_ctor
   subroutine setupps(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
