@@ -85,6 +85,7 @@ subroutine update_guess(sval,sbias)
 !                         state variable for all-sky radiance assimilation
 !   2015-07-10  pondeca  - add cldch
 !   2016-04-28  eliu    - revise update for cloud water 
+!   2016-06-23  lippi   - Add update for vertical velocity (w).
 !
 !   input argument list:
 !    sval
@@ -124,6 +125,7 @@ subroutine update_guess(sval,sbias)
   use gsi_chemguess_mod, only: gsi_chemguess_get
   use mpeu_util, only: getindex
   use rapidrefresh_cldsurf_mod, only: l_gsd_limit_ocean_q,l_gsd_soilTQ_nudge
+  use rapidrefresh_cldsurf_mod, only: i_use_2mq4b,i_use_2mt4b
   use gsd_update_mod, only: gsd_limit_ocean_q,gsd_update_soil_tq,&
        gsd_update_th2,gsd_update_q2
 
@@ -231,7 +233,7 @@ subroutine update_guess(sval,sbias)
 ! GSD modification for moisture
      if(is_q>0) then
         if(l_gsd_limit_ocean_q) then
-           call gsd_limit_ocean_q(p_q)
+           call gsd_limit_ocean_q(p_q,it)
         endif
      endif
 
@@ -248,6 +250,12 @@ subroutine update_guess(sval,sbias)
            endif
            if (trim(guess(ic))=='oz') then
                call upd_positive_fldr3_(ptr3dges,ptr3dinc,tgmin)
+               cycle
+           endif
+           if (trim(guess(ic))=='w') then
+               call gsi_bundlegetpointer (sval(ii),               guess(ic),ptr3dinc,istatus)
+               call gsi_bundlegetpointer (gsi_metguess_bundle(it),guess(ic),ptr3dges,istatus)
+               ptr3dges = ptr3dges + ptr3dinc
                cycle
            endif
            if (trim(guess(ic))=='tv') then
@@ -339,6 +347,7 @@ subroutine update_guess(sval,sbias)
      enddo
 ! update surface and soil    
      if (l_gsd_soilTQ_nudge ) then
+        qinc_1st=0_r_kind
         if(is_q>0) then
            do j=1,lon2
               do i=1,lat2
@@ -346,6 +355,7 @@ subroutine update_guess(sval,sbias)
               end do
            end do
         endif
+        tinc_1st=0_r_kind
         if(is_t > 0) then
            do j=1,lon2
               do i=1,lat2
@@ -353,23 +363,23 @@ subroutine update_guess(sval,sbias)
               end do
            end do
         endif
-        call  gsd_update_soil_tq(tinc_1st,is_t,qinc_1st,is_q)
+        call  gsd_update_soil_tq(tinc_1st,is_t,qinc_1st,is_q,it)
      endif  ! l_gsd_soilTQ_nudge
-     if (l_gsd_soilTQ_nudge .and. is_t>0) then
+     if (i_use_2mt4b > 0 .and. is_t>0) then
         do j=1,lon2
            do i=1,lat2
               tinc_1st(i,j)=p_tv(i,j,1)
            end do
         end do
-        call  gsd_update_th2(tinc_1st)
+        call  gsd_update_th2(tinc_1st,it)
      endif ! l_gsd_th2_adjust
-     if (l_gsd_soilTQ_nudge .and. is_q>0) then
+     if (i_use_2mq4b > 0 .and. is_q>0) then
         do j=1,lon2
            do i=1,lat2
               qinc_1st(i,j)=p_q(i,j,1)
            end do
         end do
-        call  gsd_update_q2(qinc_1st)
+        call  gsd_update_q2(qinc_1st,it)
      endif ! l_gsd_q2_adjust
 
   end do

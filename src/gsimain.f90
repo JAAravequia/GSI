@@ -10,7 +10,7 @@
    program gsi
 
    use gsimod, only: gsimain_initialize,gsimain_run,gsimain_finalize
-   use gsi_4dvar, only: l4dvar,idmodel
+   use gsi_4dvar, only: l4dvar
    use gsi_4dcouplermod, only: gsi_4dcoupler_init_traj
    use gsi_4dcouplermod, only: gsi_4dcoupler_final_traj
    use timermod, only: timer_pri
@@ -106,7 +106,6 @@
 !   2006-10-25  sienkiewicz - add blacklist flag to namelist
 !   2006-11-30  todling - add fpsproj parameter to bkgerr namelist
 !   2007-03-12       su - add perturb_obs,perturb_fact,c_varqc
-!   2007-03-20  rancic  - incorporate foto
 !   2007-04-10  todling - split following C.Cruz and da Silva's modification to ESMF
 !   2007-04-13  tremolet - add error code 100
 !   2007-06-08  kleist/treadon - add init_directories
@@ -178,7 +177,7 @@
 !         gsimain, gsisub, guess_grids, half_nmm_grid2, hopers, iceem_amsu,
 !         inguesfc, inisph, intall, intall_qc, intdw, intlimq,
 !         intoz, intpcp, intps, intpw, intq, intrad, intref, intbend, intrp2a, intrp3,
-!         intrp3oz, intrppx, intrw, intspd, intsrw, intsst, intt, intw, jfunc,
+!         intrp3oz, intrppx, intrw, intspd, intsst, intt, intw, jfunc,
 !         kinds, landem, locatelat_reg, mpimod, nlmsas_ad, obs_para, obsmod,
 !         omegas_ad, oneobmod, ozinfo, pcgsoi, pcpinfo, polcarf, precpd_ad,
 !         prewgt, prewgt_reg, psichi2uv_reg, psichi2uvt_reg,
@@ -189,12 +188,12 @@
 !         read_superwinds, read_wrf_mass_files, read_wrf_mass_guess, 
 !         read_wrf_nmm_files, read_wrf_nmm_guess, rfdpar, rsearch, satthin,
 !         setupdw, setupoz, setuppcp, setupps, setuppw, setupq, setuprad,
-!         setupref, setupbend, setuprhsall, setuprw, setupspd, setupsrw, setupsst,
+!         setupref, setupbend, setuprhsall, setuprw, setupspd, setupsst,
 !         setupt, setupw, simpin1, simpin1_init, smooth121, smoothrf,
 !         smoothwwrf, smoothzrf, snwem_amsu, specmod, 
 !         sst_retrieval, statsconv, statsoz, statspcp, statsrad, stop2, stpbend,
 !         stpcalc, stpcalc_qc, stpdw, stplimq, stpoz, stppcp, stpps, stppw,
-!         stpq, stprad, stpref, stprw, stpspd, stpsrw, stpsst, stpt, stpw,
+!         stpq, stprad, stpref, stprw, stpspd, stpsst, stpt, stpw,
 !         stvp2uv, stvp2uv_reg, sub2grid, tbalance, tintrp2a, tintrp3,
 !         tpause, tpause_t, transform, tstvp2uv, tstvp2uv_reg, unfill_mass_grid2,
 !         unfill_nmm_grid2, unhalf_nmm_grid2, update_ggrid, wrf_binary_interface,
@@ -243,6 +242,7 @@
 !          =  51 - invalid pflag (convthin:make3grids)
 !          =  54 - data handling mix up(setuprhsall)
 !          =  55 - NOBS > NSDATA (setuprhsall-tran)
+!          =  56 - iobs > maxobs (read_amsr2)
 !          =  59 - problems reading sst analysis (rdgrbsst)
 !          =  60 - inconsistent dimensions (rdgrbsst)
 !          =  61 - odd number of longitudes (inisph)
@@ -473,9 +473,6 @@
 !          = 289 - setupspd: failure to allocate obsdiags
 !          = 290 - setupspd: failure to allocate obsdiags
 !          = 291 - setupspd: index error
-!          = 292 - setupsrw: failure to allocate obsdiags
-!          = 293 - setupsrw: failure to allocate obsdiags
-!          = 294 - setupsrw: index error
 !          = 295 - setupsst: failure to allocate obsdiags
 !          = 296 - setupsst: failure to allocate obsdiags
 !          = 297 - setupsst: index error
@@ -495,7 +492,6 @@
 !          = 311 - control2state_ad: not for sqrt(B)
 !          = 312 - allocate_state: state already allocated
 !          = 313 - allocate_state:  error length
-!          = 314 - stpspd:ltlint & foto not compatible at this time
 !          = 315 - test_obsens: only for validation
 !          = 316 - write_obsdiags: error open
 !          = 317 - bkerror: not for use with lsqrtb
@@ -523,6 +519,7 @@
 !          = 339 - error:more than one MLS  data type not allowed
 !          = 340 - error reading aircraft temperature bias file
 !          = 341 - aircraft tail number exceeds maximum
+!          = 899 - foto no longer available
 !
 !
 ! remarks: resolution, unit numbers and several constants are

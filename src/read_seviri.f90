@@ -65,6 +65,7 @@ subroutine read_seviri(mype,val_sev,ithin,rmesh,jsatid,&
   use gsi_nstcouplermod, only: nst_gsi,nstinfo
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
   use mpimod, only: npe
+! use radiance_mod, only: rad_obs_type
   implicit none
 
 ! Declare passed variables
@@ -233,6 +234,7 @@ subroutine read_seviri(mype,val_sev,ithin,rmesh,jsatid,&
   if(jsatid == 'm08') kidsat = 55
   if(jsatid == 'm09') kidsat = 56
   if(jsatid == 'm10') kidsat = 57
+  if(jsatid == 'm11') kidsat = 70
 
   nrec=999999
   irec=0

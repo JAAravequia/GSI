@@ -41,6 +41,7 @@ module radinfo
 !   2014-04-23   li     - change scan bias correction mode for avhrr and avhrr_navy
 !   2014-04-24   li     - apply abs (absolute) to AA and be for safeguarding
 !   2015-03-01   li     - add zsea1 & zsea2 to handle the vertical mean temperature based on NSST T-Profile
+!   2015-7-10   zhu     - add two additional columns to satinfo file: icloud4crtm & iaerosol4crtm
 !   2016-03-10  ejones  - add control for GMI noise reduction
 !   2016-03-24  ejones  - add control for AMSR2 noise reduction
 !   2016-06-03  Collard - Added changes to allow for historical naming conventions
@@ -102,6 +103,7 @@ module radinfo
   public :: radedge1, radedge2
   public :: ssmis_precond
   public :: radinfo_adjust_jacobian
+  public :: icloud4crtm,iaerosol4crtm
   public :: radinfo_get_rsqrtinv
 
   public :: dec2bin
@@ -145,6 +147,20 @@ module radinfo
   real(r_kind),allocatable,dimension(:,:):: cbias     ! angle dependent bias for satellite channels
   real(r_kind),allocatable,dimension(:,:):: predx     ! coefficients for predictor part of bias correction
 
+! radiance bias correction terms are as follows:
+!  pred(1,:)  = global offset
+!  pred(2,:)  = zenith angle predictor, is not used and set to zero now
+!  pred(3,:)  = cloud liquid water predictor for clear-sky microwave radiance assimilation
+!  pred(4,:)  = square of temperature laps rate predictor
+!  pred(5,:)  = temperature laps rate predictor
+!  pred(6,:)  = cosinusoidal predictor for SSMI/S ascending/descending bias
+!  pred(7,:)  = sinusoidal predictor for SSMI/S
+!  pred(8,:)  = emissivity sensitivity predictor for land/sea differences
+!  pred(9,:)  = fourth order polynomial of angle bias correction
+!  pred(10,:) = third order polynomial of angle bias correction
+!  pred(11,:) = second order polynomial of angle bias correction
+!  pred(12,:) = first order polynomial of angle bias correction
+ 
   real(r_kind),allocatable,dimension(:,:):: varA
   real(r_kind),allocatable,dimension(:):: ostats
   real(r_quad),allocatable,dimension(:,:):: rstats
@@ -173,6 +189,8 @@ module radinfo
   logical,allocatable,dimension(:):: inew_rad  ! indicator if it needs initialized for satellite radiance data
   logical,allocatable,dimension(:):: update_tlapmean ! indicator if tlapmean update is needed
 
+  integer(i_kind),allocatable,dimension(:):: icloud4crtm  ! provide cloud info to crtm if icloud4crtm=0 & 1
+  integer(i_kind),allocatable,dimension(:):: iaerosol4crtm  ! provide aerosol info to crtm if iaerosol4crtm=0 & 1
   integer(i_kind),allocatable,dimension(:):: ifactq    ! scaling parameter for d(Tb)/dq sensitivity
 
   character(len=20),allocatable,dimension(:):: nusis   ! sensor/instrument/satellite indicator
@@ -217,6 +235,7 @@ contains
 !                         for gmi
 !   2016-03-24  ejones  - add amsr2_method for using ssmis spatial averaging code
 !                         for amsr2
+!   2017-09-14  li      - change default value of tzr_qc = 1
 !
 !   input argument list:
 !
@@ -237,7 +256,7 @@ contains
     diag_rad = .true.       ! .true.=generate radiance diagnostic file
     mype_rad = 0            ! mpi task to collect and print radiance use information on/from
     npred=7                 ! number of bias correction predictors
-    tzr_qc = 0              ! 0 = no Tz ret in gsi; 1 = retrieve and applied to QC
+    tzr_qc = 1              ! 0 = no Tz ret in gsi; 1 = retrieve and applied to QC
     tzr_bufrsave = .false.  ! .true.=generate bufr file for Tz retrieval
 
     newpc4pred = .false.  ! .true.=turn on new preconditioning for bias coefficients
@@ -291,20 +310,24 @@ contains
     use gsi_metguess_mod, only: gsi_metguess_get
     use gsi_chemguess_mod, only: gsi_chemguess_get
     use gridmod, only: nsig
+    use gsi_io, only: verbose
     implicit none
 
     integer(i_kind) ii,jj,mxlvs,isum,ndim,ib,ie,ier
-    integer(i_kind) nvarjac,n_meteo,n_clouds,n_aeros
+    integer(i_kind) nvarjac,n_meteo,n_clouds_jac,n_aeros_jac
     integer(i_kind),allocatable,dimension(:)::aux,all_levels
     character(len=20),allocatable,dimension(:)::meteo_names
-    character(len=20),allocatable,dimension(:)::clouds_names
-    character(len=20),allocatable,dimension(:)::aeros_names
+    character(len=20),allocatable,dimension(:)::clouds_names_jac
+    character(len=20),allocatable,dimension(:)::aeros_names_jac
 
 !   the following vars are wired-in until MetGuess handles all guess fiedls
 !   character(len=3),parameter :: wirednames(6) = (/ 'tv ','q  ','oz ', 'u  ', 'v  ', 'sst' /)
     character(len=3),parameter :: wirednames(1) = (/ 'sst' /)
     integer(i_kind) ,parameter :: wiredlevs (1) = (/ 1 /)
+    logical print_verbose
 
+    print_verbose = .false. .and. mype == 0
+    if(verbose .and. mype == 0)print_verbose=.true.
 !   safeguard angord value for option adp_anglebc
     if (adp_anglebc) then 
        if (angord==0) then 
@@ -347,14 +370,14 @@ contains
     endif
 
 !   inquire number of clouds to participate in CRTM calculations
-    call gsi_metguess_get ( 'clouds_4crtm_jac::3d', n_clouds, ier )
-    n_clouds=max(0,n_clouds)
+    call gsi_metguess_get ( 'clouds_4crtm_jac::3d', n_clouds_jac, ier )
+    n_clouds_jac=max(0,n_clouds_jac)
 
 !   inquire number of aerosols to participate in CRTM calculations
-    call gsi_chemguess_get ( 'aerosols_4crtm_jac::3d', n_aeros, ier )
-    n_aeros=max(0,n_aeros)
+    call gsi_chemguess_get ( 'aerosols_4crtm_jac::3d', n_aeros_jac, ier )
+    n_aeros_jac=max(0,n_aeros_jac)
 
-    nvarjac=size(wirednames)+n_meteo+n_clouds+n_aeros
+    nvarjac=size(wirednames)+n_meteo+n_clouds_jac+n_aeros_jac
     allocate(radjacnames(nvarjac))
     allocate(radjacindxs(nvarjac))
 
@@ -376,31 +399,31 @@ contains
     endif
 !   Fill in clouds next 
     jj=0
-    if (n_clouds>0) then
-       allocate(clouds_names(n_clouds))
-       call gsi_metguess_get ( 'clouds_4crtm_jac::3d', clouds_names, ier )
+    if (n_clouds_jac>0) then
+       allocate(clouds_names_jac(n_clouds_jac))
+       call gsi_metguess_get ( 'clouds_4crtm_jac::3d', clouds_names_jac, ier )
        ib=size(wirednames)+n_meteo+1
-       ie=ib+n_clouds-1
+       ie=ib+n_clouds_jac-1
        do ii=ib,ie
           jj=jj+1
-          radjacnames(ii) = trim(clouds_names(jj))
+          radjacnames(ii) = trim(clouds_names_jac(jj))
           radjacindxs(ii) = mxlvs
        enddo
-       deallocate(clouds_names)
+       deallocate(clouds_names_jac)
     endif
 !   Fill in aerosols next 
     jj=0
-    if (n_aeros>0) then
-        allocate(aeros_names(n_aeros))
-        call gsi_chemguess_get ( 'aerosols_4crtm_jac::3d', aeros_names, ier )
-       ib=size(wirednames)+n_meteo+n_clouds+1
-       ie=ib+n_aeros-1
+    if (n_aeros_jac>0) then
+        allocate(aeros_names_jac(n_aeros_jac))
+        call gsi_chemguess_get ( 'aerosols_4crtm_jac::3d', aeros_names_jac, ier )
+       ib=size(wirednames)+n_meteo+n_clouds_jac+1
+       ie=ib+n_aeros_jac-1
        do ii=ib,ie
           jj=jj+1
-          radjacnames(ii) = trim(aeros_names(jj))
+          radjacnames(ii) = trim(aeros_names_jac(jj))
           radjacindxs(ii) = mxlvs
        enddo
-       deallocate(aeros_names)
+       deallocate(aeros_names_jac)
     endif
 
 !   Overwrite levels for certain fields (this must be revisited)
@@ -425,7 +448,7 @@ contains
     deallocate(aux)
     deallocate(meteo_names)
 
-    if(mype==0) then
+    if(print_verbose) then
       print*, 'Vars in Rad-Jacobian (dims)'
       print*, '--------------------------'
       do ii=1,nvarjac
@@ -524,6 +547,9 @@ contains
 !                             reset in non adp_anglebc case
 !   2014-12-19  W. Gu   - update the obs error in satinfo for instruments accounted for the correlated R-covariance
 !   2015-04-01  W. Gu   - add the hook to scale the bias correction term for inter-channel correlated obs errors.
+!   2015-07-10  zhu     - read in and determine icloud4crtm & iaerosol4crtm for all channels
+!                         for generalized all-sky radiance assimilation, as all-sky
+!                         may be enabled for part of the channels for certain instruments
 !   2016-07-14  jung    - mods to make SEVIRI channel numbers consistent with other instruments.
 !   2016-09-08  sienkiewicz - revert again to allocate cbias, cbiasx after maxscan reset in non adp_anglebc case
 !
@@ -550,7 +576,7 @@ contains
 
 
     integer(i_kind) i,j,k,ich,lunin,lunout,nlines
-    integer(i_kind) ip,istat,n,ichan,nstep,edge1,edge2,ntlapupdate
+    integer(i_kind) ip,istat,n,ichan,nstep,edge1,edge2,ntlapupdate,icw,iaeros
     real(r_kind),dimension(npred):: predr
     real(r_kind) tlapm
     real(r_kind) tsum
@@ -633,10 +659,8 @@ contains
          ifactq(jpch_rad),varch(jpch_rad),varch_cld(jpch_rad), &
          ermax_rad(jpch_rad),b_rad(jpch_rad),pg_rad(jpch_rad), &
          ang_rad(jpch_rad),air_rad(jpch_rad),inew_rad(jpch_rad),&
-         icld_det(jpch_rad)) 
-
+         icld_det(jpch_rad),icloud4crtm(jpch_rad),iaerosol4crtm(jpch_rad))
     allocate(nfound(jpch_rad))
-
     iuse_rad(0)=-999
     inew_rad=.true.
     ifactq=15
@@ -656,9 +680,9 @@ contains
     do k=1,nlines
        read(lunin,100) cflg,crecord
        if (cflg == '!') cycle
-       read(crecord,*,iostat=istat) nusis(j),nuchan(j),iuse_rad(j),&
-            varch(j),varch_cld(j),ermax_rad(j),b_rad(j),pg_rad(j),icld_det(j) 
-             
+       read(crecord,*,iostat=istat) nusis(j),nuchan(j),iuse_rad(j),varch(j), &
+            varch_cld(j),ermax_rad(j),b_rad(j),pg_rad(j),icld_det(j),icw,iaeros
+
        ! The following is to sort out some historical naming conventions
        select case (nusis(j)(1:4))
          case ('airs')
@@ -681,9 +705,11 @@ contains
        if(iuse_rad(j) == 4 .or. iuse_rad(j) == 2) air_rad(j)=zero
        if(iuse_rad(j) == 4 .or. iuse_rad(j) == 3) ang_rad(j)=zero
 
+       icloud4crtm(j)=icw
+       iaerosol4crtm(j)=iaeros
        if (mype==mype_rad) write(iout_rad,110) j,nusis(j), &
             nuchan(j),varch(j),varch_cld(j),iuse_rad(j),ermax_rad(j), &
-            b_rad(j),pg_rad(j),icld_det(j) 
+            b_rad(j),pg_rad(j),icld_det(j),icloud4crtm(j),iaerosol4crtm(j)
 
        j=j+1
     end do
@@ -691,7 +717,7 @@ contains
 100 format(a1,a120)
 110 format(i4,1x,a20,' chan= ',i4,  &
           ' var= ',f7.3,' varch_cld=',f7.3,' use= ',i2,' ermax= ',F7.3, &
-          ' b_rad= ',F7.2,' pg_rad=',F7.2,' icld_det=',I2) 
+          ' b_rad= ',F7.2,' pg_rad=',F7.2,' icld_det=',I2,' icloud=',I2,' iaeros=',I2)
 
 !   Allocate arrays for additional preconditioning info
 !   Read in information for data number and preconditioning
@@ -776,7 +802,8 @@ contains
 !   Allocate arrays to receive angle dependent bias information.
 !   Open file to bias file (satang=satbias_angle).  Read data.
 
-    maxscan=90  ! Default value for old files
+    maxscan=250
+    if (.not.adp_anglebc) maxscan = 90 ! default value for old files
 
     if (adp_anglebc) then 
 
@@ -1171,7 +1198,7 @@ contains
 !   information from satinfo file.
 
     deallocate (predx,cbias,tlapmean,nuchan,nusis,iuse_rad,air_rad,ang_rad, &
-         ifactq,varch,varch_cld,inew_rad,icld_det)
+         ifactq,varch,varch_cld,inew_rad,icld_det,icloud4crtm,iaerosol4crtm)
 
     if (adp_anglebc) deallocate(count_tlapmean,update_tlapmean,tsum_tlapmean)
     if (newpc4pred) deallocate(ostats,rstats,varA)
@@ -1504,6 +1531,7 @@ contains
    integer(i_kind),parameter:: nthreshold = 100
    integer(i_kind),parameter:: maxchn = 3000
    integer(i_kind),parameter:: maxdat = 100
+   real(r_kind),   parameter:: atiny  = 1.0e-10_r_kind
 
 !  Declare local variables
    logical lexist
@@ -1527,7 +1555,7 @@ contains
    integer(i_kind),dimension(maxchn):: ich
    integer(i_kind),dimension(maxdat):: ipoint
  
-   real(r_kind):: bias,scan,errinv,rnad,atiny
+   real(r_kind):: bias,scan,errinv,rnad
    real(r_kind):: tlaptmp,tsumtmp,ratio
    real(r_kind),allocatable,dimension(:):: tsum0,tsum,tlap0,tlap1,tlap2,tcnt
    real(r_kind),allocatable,dimension(:,:):: AA
@@ -1780,6 +1808,7 @@ contains
 !           errinv=data_chan(j)%errinv
 !           if (iuse_rad(jj)<=0) errinv=exp(-(data_chan(j)%omgnbc/3.0_r_kind)**2)
                   errinv=exp(-(data_chan(j)%omgnbc/3.0_r_kind)**2)
+                  if (errinv<atiny) cycle loopc
 
                   if (update_tlapmean(jj)) then
                      tlaptmp=data_chan(j)%tlap
@@ -1880,7 +1909,6 @@ contains
          endif
 
 !        Solve linear system
-         atiny=1.0e-10_r_kind
          allocate(AA(np,np),be(np))
          do i=1,new_chan
             if (iobs(i)<nthreshold) cycle
@@ -2130,7 +2158,7 @@ END subroutine dec2bin
                                     iuse_rad,ich,GSI_BundleErrorCov(iinstr))
 end function adjust_jac_
 
-subroutine get_rsqrtinv_ (iinstr,nchasm,ich,ichasm,varinv,rsqrtinv)
+subroutine get_rsqrtinv_ (nchanl,iinstr,nchasm,ich,ichasm,varinv,rsqrtinv)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    get_rsqrtinv_
@@ -2155,6 +2183,7 @@ subroutine get_rsqrtinv_ (iinstr,nchasm,ich,ichasm,varinv,rsqrtinv)
    implicit none
    integer(i_kind), intent(in) :: iinstr
    integer(i_kind), intent(in) :: nchasm
+   integer(i_kind), intent(in) :: nchanl
    integer(i_kind), intent(in) :: ich(nchasm)
    integer(i_kind), intent(in) :: ichasm(nchasm)
    real(r_kind), intent(in) :: varinv(nchasm)    ! inverse of specified ob-error-variance
@@ -2162,7 +2191,7 @@ subroutine get_rsqrtinv_ (iinstr,nchasm,ich,ichasm,varinv,rsqrtinv)
 
    character(len=*),parameter::myname_ = myname//'*get_rsqrtinv_'
 
-   call corr_ob_rsqrtinv (jpch_rad,iuse_rad,nchasm,ich,ichasm,varinv,&
+   call corr_ob_rsqrtinv (nchanl,jpch_rad,iuse_rad,nchasm,ich,ichasm,varinv,&
                           rsqrtinv,GSI_BundleErrorCov(iinstr))
 
 end subroutine get_rsqrtinv_

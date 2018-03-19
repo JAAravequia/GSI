@@ -47,7 +47,7 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
      use kinds, only: r_single,r_kind,r_double,i_kind
      use constants, only: zero,one_tenth,one,two,ten,deg2rad,t0c,half,&
          three,four,rad2deg,tiny_r_kind,huge_r_kind,r0_01,&
-         r60inv,r10,r100,r2000,hvap,eps,omeps,rv,grav,init_constants
+         r60inv,r10,r100,r2000,hvap,eps,omeps,rv,grav
      use gridmod, only: diagnostic_reg,regional,nlon,nlat,nsig,&
          tll2xy,txy2ll,rotate_wind_ll2xy,rotate_wind_xy2ll,&
          rlats,rlons,twodvar_regional
@@ -216,7 +216,6 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
      write(6,*)'READ_FL_HDOB: begin to read flight-level high density data ...'
 
 !    Initialize parameters
-     call init_constants(.true.)
 
 !    Set common variables
      ltob   = obstype == 't'
@@ -453,7 +452,7 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
            else
               if (abs(tdiff)>twind) cycle loop_readsb2
            endif
-           nread = nread+1 
+           nread = nread+2
 
 !          Read QC control flag for HDOB positional data
 !          QHDOP: 0  all parameters of nominal accuracy
@@ -944,16 +943,16 @@ subroutine read_fl_hdob(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 
               if(iiout > 0) isort(iiout) = 0
               if (ndata > ntmp) then
-                 nodata = nodata+1
+                 nodata = nodata+2
                  if (luvob) &
-                 nodata = nodata+1
+                 nodata = nodata+2
               endif
               isort(igood) = iout
            else
               ndata        = ndata+1
-              nodata       = nodata+1
+              nodata       = nodata+2
               if (luvob) &
-              nodata       = nodata+1
+              nodata       = nodata+2
               iout         = ndata
               isort(igood) = iout
            endif ! ithin

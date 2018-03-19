@@ -58,6 +58,7 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
 !   2015-02-23  Rancic/Thomas - add l4densvar to time window logical
 !   2015-10-01  guo     - consolidate use of ob location (in deg)
+!   2017-11-16  dutta   - addition of profile quality flags for KOMPSAT5 GPSRO.
 !
 !   input argument list:
 !     infile   - unit from which to read BUFR data
@@ -250,10 +251,11 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
         endif
  
 ! Check profile quality flags
-        if ( ((said > 739).and.(said < 746)).or.(said == 820).or.(said == 786)) then  !CDAAC processing
+        if ( ((said > 739).and.(said < 746)).or.(said == 820).or.(said == 786).or.&
+              (said == 825)) then  !CDAAC processing
            if(pcc==zero) then
-              write(6,*)'READ_GPS:  bad profile said=',said,'ptid=',ptid,&
-                  ' SKIP this report'
+!             write(6,*)'READ_GPS:  bad profile said=',said,'ptid=',ptid,&
+!                 ' SKIP this report'
               cycle read_loop
            endif
         endif
@@ -458,7 +460,7 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
           write(6,1020)'READ_GPS:  LEO_id,nprof_gps = ',gpsro_itype(i),nmrecs_id(i)
   end do
   write(6,1020)'READ_GPS:  ref_obs,nprof_gps= ',ref_obs,nprof_gps
-1020 format(a31,2(i6,1x))
+1020 format(a31,L,i6)
 
 ! Deallocate arrays
   deallocate(gpsro_ctype,gpsro_itype,gpsro_ikx,nmrecs_id)

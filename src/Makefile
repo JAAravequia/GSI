@@ -225,6 +225,19 @@ clean:
 	chemmod.f90 \
 	clw_mod.f90 \
 	cloud_efr_mod.f90 \
+        class_get_pseudo_ensperts.f90 \
+        class_get_wrf_mass_ensperts.f90 \
+        class_get_wrf_nmm_ensperts.f90 \
+        class_gfs_ensmod.f90 \
+        class_read_wrf_mass_files.f90 \
+        class_read_wrf_mass_guess.f90 \
+        class_read_wrf_nmm_files.f90 \
+        class_read_wrf_nmm_guess.f90 \
+        class_regional_io.f90 \
+        class_wrf_binary_interface.f90 \
+        class_wrf_netcdf_interface.f90 \
+        class_wrwrfmassa.f90 \
+        class_wrwrfnmma.f90 \
 	cmaq_routines.f90 \
 	co_mop_ak.f90 \
 	coinfo.f90 \
@@ -251,6 +264,19 @@ clean:
 	convthin.f90 \
 	convthin_time.f90 \
         correlated_obsmod.F90 \
+        cplr_get_pseudo_ensperts.f90 \
+        cplr_get_wrf_mass_ensperts.f90 \
+        cplr_get_wrf_nmm_ensperts.f90 \
+        cplr_read_wrf_mass_files.f90 \
+        cplr_read_wrf_mass_guess.f90 \
+	cplr_gfs_ensmod.f90 \
+        cplr_read_wrf_nmm_files.f90 \
+        cplr_read_wrf_nmm_guess.f90 \
+        cplr_regional_io.f90 \
+        cplr_wrf_binary_interface.f90 \
+        cplr_wrf_netcdf_interface.f90 \
+        cplr_wrwrfmassa.f90 \
+        cplr_wrwrfnmma.f90 \
 	crtm_interface.f90 \
 	cvsection.f90 \
 	cwhydromod.f90 \
@@ -279,6 +305,7 @@ clean:
 	general_transform.f90 \
         general_tll2xy_mod.f90 \
 	general_write_gfsatm.f90 \
+        genex_mod.f90 \
 	gengrid_vars.f90 \
 	genqsat.f90 \
 	genstats_gps.f90 \
@@ -288,9 +315,6 @@ clean:
 	get_derivatives2.f90 \
 	get_gefs_for_regional.f90 \
         get_nmmb_ensperts.f90 \
-        get_pseudo_ensperts.F90 \
-	get_wrf_mass_ensperts_netcdf.F90 \
-        get_wrf_nmm_ensperts.F90 \
 	get_semimp_mats.f90 \
 	getprs.f90 \
 	getsiga.f90 \
@@ -304,9 +328,11 @@ clean:
 	gsd_terrain_match_surfTobs.f90 \
 	gsdcloudanalysis.F90 \
 	gsdcloudanalysis4NMMB.F90 \
+	gsdcloudanalysis4gfs.F90 \
         gsd_update_mod.f90 \
 	gsi_4dvar.f90 \
 	gsi_4dcouplermod.f90 \
+	gsi_bias.f90 \
 	gsi_bundlemod.F90 \
 	gsi_chemguess_mod.F90 \
 	gsi_enscouplermod.f90 \
@@ -325,7 +351,6 @@ clean:
 	inc2guess.f90 \
 	init_jcdfi.f90 \
 	insitu_info.f90 \
-	int3dvar.f90 \
 	intall.f90 \
         intaod.f90 \
 	intco.f90 \
@@ -355,7 +380,6 @@ clean:
 	intrp3oz.f90 \
 	intrw.f90 \
 	intspd.f90 \
-	intsrw.f90 \
 	intsst.f90 \
 	intt.f90 \
 	inttcamt.f90 \
@@ -364,6 +388,8 @@ clean:
 	intvis.f90 \
 	intw.f90 \
 	intwspd10m.f90 \
+	intuwnd10m.f90 \
+	intvwnd10m.f90 \
 	jcmod.f90 \
 	jfunc.f90 \
 	jgrad.f90 \
@@ -434,7 +460,6 @@ clean:
         m_radNode.F90 \
         m_rwNode.F90 \
         m_spdNode.F90 \
-        m_srwNode.F90 \
         m_sstNode.F90 \
         m_tNode.F90 \
 	m_tcamtNode.F90 \
@@ -443,6 +468,8 @@ clean:
         m_visNode.F90 \
         m_wNode.F90 \
 	m_wspd10mNode.F90 \
+	m_uwnd10mNode.F90 \
+	m_vwnd10mNode.F90 \
 	mp_compact_diffs_mod1.f90 \
 	mp_compact_diffs_support.f90 \
 	mpimod.F90 \
@@ -492,11 +519,6 @@ clean:
 	read_gfs_ozone_for_regional.f90 \
 	read_guess.F90 \
         read_mitm_mxtm.f90 \
-	read_wrf_mass_files.F90 \
-	read_wrf_mass_guess.F90 \
-	read_wrf_nmm_files.F90 \
-	read_wrf_nmm_guess.F90 \
-	regional_io.f90 \
 	reorg_metar_cloud.f90 \
 	rfdpar.f90 \
 	rsearch.F90 \
@@ -525,7 +547,6 @@ clean:
 	statspcp.f90 \
 	statsrad.f90 \
 	stop1.f90 \
-	stp3dvar.f90 \
         stpaod.f90 \
 	stpcalc.f90 \
 	stpco.f90 \
@@ -551,7 +572,6 @@ clean:
 	stprad.f90 \
 	stprw.f90 \
 	stpspd.f90 \
-	stpsrw.f90 \
 	stpsst.f90 \
 	stpt.f90 \
 	stptcamt.f90 \
@@ -560,14 +580,16 @@ clean:
 	stpvis.f90 \
 	stpw.f90 \
 	stpwspd10m.f90 \
+	stpuwnd10m.f90 \
+	stpvwnd10m.f90 \
 	strong_bal_correction.f90 \
 	strong_baldiag_inc.f90 \
 	strong_fast_global_mod.f90 \
 	sub2fslab_mod.f90 \
 	support_2dvar.f90 \
-	cplr_gfs_ensmod.f90 \
 	cplr_gfs_nstmod.f90 \
 	stub_pertmod.F90 \
+	stub_ensmod.f90 \
 	stub_set_crtm_aerosol.f90 \
 	stub_timermod.f90 \
 	tendsmod.f90 \
@@ -588,15 +610,11 @@ clean:
 	unfill_nmm_grid2.f90 \
 	unhalf_nmm_grid2.f90 \
 	update_guess.f90 \
-	update_geswtend.f90 \
 	wind_fft.f90 \
-	wrf_mass_guess_mod.f90 \
-	wrf_binary_interface.F90 \
-	wrf_netcdf_interface.F90 \
+        wrf_mass_guess_mod.f90 \
+        wrf_params_mod.f90 \
 	write_all.F90 \
 	write_bkgvars_grid.f90 \
-	wrwrfmassa.F90 \
-	wrwrfnmma.F90 \
 	xhat_vordivmod.f90 \
 	zrnmi_mod.f90
 
@@ -608,6 +626,7 @@ clean:
 	obs_para.f90 \
 	observer.F90 \
 	oneobmod.F90 \
+	radiance_mod.f90 \
 	radinfo.f90 \
 	read_Lightning.f90 \
 	read_nasa_larc.f90 \
@@ -645,12 +664,12 @@ clean:
 	read_radar.f90 \
 	read_saphir.f90 \
 	read_satwnd.f90 \
+	read_satmar.f90 \
 	read_sfcwnd.f90 \
 	read_rapidscat.f90 \
 	read_seviri.f90 \
 	read_ssmi.f90 \
 	read_ssmis.f90 \
-	read_superwinds.f90 \
 	read_tcps.f90 \
 	setupbend.f90 \
 	setupco.f90 \
@@ -675,7 +694,6 @@ clean:
 	setuprhsall.f90 \
 	setuprw.f90 \
 	setupspd.f90 \
-	setupsrw.f90 \
 	setupsst.f90 \
 	setupt.f90 \
 	setuptcamt.f90 \
@@ -684,6 +702,8 @@ clean:
 	setupvis.f90 \
 	setupw.f90 \
 	setupwspd10m.f90 \
+	setupuwnd10m.f90 \
+	setupvwnd10m.f90 \
 	sst_retrieval.f90 \
         read_NASA_LaRC_cloud.f90
 

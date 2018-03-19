@@ -2,8 +2,8 @@
 
 #PBS -N nmcstats
 #PBS -l walltime=00:10:00
-#PBS -l nodes=100:ppn=4
-#PBS -q debug
+#PBS -l nodes=150:ppn=3
+#PBS -t batch
 #PBS -A da-cpu
 #PBS -j oe
 
@@ -37,10 +37,13 @@ setenv LEVS 64
 setenv MAXCASES 8
 
 # Create a temporary working directory
-setenv TMPDIR "/scratch4/NCEPDEV/stmp4/$user/tmp/nmcstats_T${JCAP}_n$MAXCASES"
-if ( -d $TMPDIR ) rm -rf $TMPDIR
-mkdir -p $TMPDIR
-cd $TMPDIR
+setenv DATA /scratch3/NCEPDEV/stmp1/$USER/tmp/nmcstats_T${JCAP}_n${MAXCASES}_new
+if ( -d $DATA ) rm -rf $DATA
+mkdir -p $DATA
+cd $DATA
+
+module unload intel impi
+module load intel impi
 
 # Namelist
 rm -f stats.parm
@@ -51,8 +54,8 @@ else
 endif
 cat << EOF > stats.parm
 &namstat
-    jcap=$JCAP,
     jcapin=$JCAPIN,
+    jcap=$JCAP,
     jcapsmooth=$JCAP,
     nsig=$LEVS,
     nlat=$NLAT,
@@ -69,16 +72,33 @@ EOF
 # Link perturbation database
 rm -f infiles
 touch infiles
+
 if ( $NEMS == "yes") then
-  ls $PERTURBDIR/gfnf24.gfs.* >> infiles
-  ls $PERTURBDIR/gfnf48.gfs.* >> infiles
+   set PREFIX = "gfn"
 else
-  ls $PERTURBDIR/sigf24.gfs.* >> infiles
-  ls $PERTURBDIR/sigf48.gfs.* >> infiles
+   set PREFIX = "sig"
 endif
+
+set vdate = 2010041900
+set edate = 2011043018
+while ( $vdate <= $edate )
+    set adate = `advance_time $vdate -24h`
+    set f24 = $PERTURBDIR/${PREFIX}f24.gfs.$adate
+    set adate = `advance_time $vdate -48h`
+    set f48 = $PERTURBDIR/${PREFIX}f48.gfs.$adate
+    if ( ( -f $f24 ) & ( -f $f48 ) ) then
+        ls $f24 >> infiles
+        ls $f48 >> infiles
+    endif
+    set vdate = `advance_time $vdate +18h`
+end
 ln -sf infiles fort.10
 
 # Copy the executable and link necessary files
+if ( ! -f $CALCSTATS_EXEC ) then
+    echo "$CALCSTATS_EXEC not found, ABORT!"
+    exit 1
+endif
 cp -f $CALCSTATS_EXEC                                   ./calcstats.exe
 cp -f $GSIDIR/util/NMC_Bkerror/fix/sst2dvar_stat0.5.ufs ./berror_sst
 
@@ -86,7 +106,8 @@ setenv MPI_BUFS_PER_PROC 1024
 setenv MPI_BUFS_PER_HOST 1024
 setenv MPI_GROUP_MAX     1024
 setenv OMP_NUM_THREADS   1
-setenv APRUN             "mpirun -np $PBS_NP"
+
+setenv APRUN "mpirun -np $PBS_NP"
 
 $APRUN calcstats.exe |& tee calcstats.out
 if ( $status ) exit $status

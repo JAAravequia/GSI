@@ -30,6 +30,7 @@ module m_prad
 
 ! module interface:
 
+  use m_obsNode , only: obsNode
   use m_radNode , only: radNode
   use m_radNode , only: radNode_typecast
   use m_radNode , only: radNode_nextcast
@@ -100,9 +101,19 @@ contains
     implicit none
 
     ALLOCATE(radheadm(nobs_bins))
-
+    call lreset_(radheadm(:))
     return
   end subroutine create_passive_obsmod_vars
+
+  subroutine lreset_(llists)
+    use kinds, only: i_kind
+    implicit none
+    type(obsLList),dimension(:),intent(inout) :: llists
+    integer(kind=i_kind):: ib
+    do ib=lbound(llists,1),ubound(llists,1)
+      call obsLList_reset(llists(ib),mold=radNode_mold)
+    enddo
+  end subroutine lreset_
 
 ! ----------------------------------------------------------------------
   subroutine destroyobs_passive
@@ -126,17 +137,9 @@ contains
 !   machine:  ibm rs/6000 sp
 !
 !$$$  end documentation block
-    use gsi_4dvar, only: nobs_bins
-    use kinds, only: i_kind
-
     implicit none
 
-    integer(i_kind) :: ii
-
-    do ii=1,nobs_bins
-       call obsLList_reset(radheadm(ii),mold=radNode_mold)
-    end do
-
+    call lreset_(radheadm(:))
     deallocate(radheadm)
 
     return
@@ -173,6 +176,7 @@ contains
   implicit none
 
   integer(i_kind),parameter :: nthreshold=100
+  real(r_kind),parameter :: atiny=1.0e-10_r_kind
   integer(i_kind) i,n,j,ii,jj,jpassive,ibin,ic,mp,mm,kpred
   integer(i_kind),dimension(jpch_rad) :: icp
   integer(i_kind),dimension(npred)    :: iorder
@@ -185,6 +189,7 @@ contains
   real(r_kind),allocatable,dimension(:,:) :: AA
   real(r_kind),allocatable,dimension(:) :: be
 
+  class(obsNode),pointer:: obsptrm
   type(radNode),pointer:: radptrm
 
 ! Initialize timer
@@ -200,6 +205,7 @@ contains
      end if
   end do
   if (mype==0) write(6,*) 'prad_bias: number of passive channels=', jpassive 
+  if (jpassive<1) return
 
 ! Allocate arrays and initialize
   allocate(A(npred,npred,jpassive),b(npred,jpassive))
@@ -217,7 +223,8 @@ contains
 ! Big loop for observations
   do ibin=1,nobs_bins
      !radptrm => obsLList_headNode(radheadm(ibin))
-     radptrm => radNode_typecast(obsLList_headNode(radheadm(ibin)))
+     obsptrm => obsLList_headNode(radheadm(ibin))
+     radptrm => radNode_typecast(obsptrm)
 
      do while (associated(radptrm))
 
@@ -229,10 +236,11 @@ contains
               if (inew_rad(ic) .and. all(predx(:,ic)==zero)) cycle 
 
               mp=icp(ic)
-              iobs(mp)=iobs(mp)+one
 
 !             Assign arrays Ax=b              
               varc=radptrm%err2(n)*radptrm%raterr2(n)
+              if (sqrt(varc)<atiny) cycle
+              iobs(mp)=iobs(mp)+one
               do i=1,npred
                  do j=1,npred
                     A(i,j,mp)=A(i,j,mp)+radptrm%pred(i,n)*radptrm%pred(j,n)*varc
@@ -301,6 +309,8 @@ contains
         jj=(mm-1)*npred+ii
         AA(i,i) = AA(i,i)+one/varprd(jj)
      end do
+     if (all(abs(AA)<atiny)) cycle
+     if (all(abs(be)<atiny)) cycle
      call linmm(AA,be,kpred,1,kpred,kpred)
 
 

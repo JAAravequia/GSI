@@ -2,7 +2,7 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
      rmesh,jsatid,gstime,infile,lunout,obstype,&
      nread,ndata,nodata,twind,sis, &
      mype_root,mype_sub,npe_sub,mpi_comm_sub, nobs, &
-     nrec_start,nrec_start_ears,nrec_start_db,dval_use)
+     nrec_start,nrec_start_ears,nrec_start_db,dval_use,radmod)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_bufrtovs                  read bufr tovs 1b data
@@ -85,6 +85,7 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
 !   2014-01-31  mkim - added iql4crtm for all-sky mw radiance data assimilation 
 !   2014-04-27  eliu/zhu - add thinning options for AMSU-A under allsky condition 
 !   2015-02-23  Rancic/Thomas - add thin4d to time window logical
+!   2015-08-20  zhu - use centralized radmod for all-sky and aerosol usages in radiance assimilation
 !   2016-04-28  jung - added logic for RARS and direct broadcast from NESDIS/UW
 !   2016-10-20  collard - fix to allow monitoring and limited assimilation of spectra when key 
 !                         channels are missing.
@@ -140,11 +141,12 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
   use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,thin4d
   use antcorr_application, only: remove_antcorr
   use mpeu_util, only: getindex
-  use gsi_metguess_mod, only: gsi_metguess_get
   use deter_sfc_mod, only: deter_sfc_fov,deter_sfc
   use gsi_nstcouplermod, only: nst_gsi,nstinfo
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth, gsi_nstcoupler_deter
   use mpimod, only: npe
+  use radiance_mod, only: rad_obs_type
+  use gsi_io, only: verbose
   implicit none
 
 ! Declare passed variables
@@ -163,6 +165,7 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
   integer(i_kind) ,intent(in   ) :: npe_sub
   integer(i_kind) ,intent(in   ) :: mpi_comm_sub
   logical,         intent(in   ) :: dval_use
+  type(rad_obs_type),intent(in ) :: radmod
 
 ! Declare local parameters
 
@@ -191,8 +194,8 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
   integer(i_kind) lnbufr,ksatid,ichan8,isflg,ichan3,ich3,ich4,ich6
   integer(i_kind) ilat,ilon,ifovmod
   integer(i_kind),dimension(5):: idate5
-  integer(i_kind) instr,ichan,icw4crtm
-  integer(i_kind) error_status,ier,irecx,ierr
+  integer(i_kind) instr,ichan
+  integer(i_kind) error_status,irecx,ierr
   integer(i_kind) radedge_min, radedge_max
   integer(i_kind),allocatable,dimension(:)::nrec
   character(len=20),dimension(1):: sensorlist
@@ -222,11 +225,14 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
 
   real(r_kind) disterr,disterrmax,cdist,dlon00,dlat00
 
-  logical :: critical_channels_missing
+  logical :: critical_channels_missing,quiet
+  logical :: print_verbose
 
 !**************************************************************************
 ! Initialize variables
 
+  print_verbose=.false.
+  if(verbose) print_verbose=.true.
   maxinfo=31
   lnbufr = 15
   disterrmax=zero
@@ -241,9 +247,6 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
   if(nst_gsi>0) then
      call gsi_nstcoupler_skindepth(obstype, zob)         ! get penetration depth (zob) for the obstype
   endif
-
-! Determine whether CW used in CRTM
-  call gsi_metguess_get ( 'i4crtm::ql', icw4crtm, ier )
 
 ! Make thinning grids
   call makegrids(rmesh,ithin)
@@ -493,14 +496,15 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
      call openbf(lnbufr,'IN',lnbufr)
 
      if(llll >= 2 .and. (amsua .or. amsub .or. mhs))then
+        quiet=.not.verbose
         allocate(data1b8x(nchanl))
         sensorlist(1)=sis
         if( crtm_coeffs_path /= "" ) then
-           if(mype_sub==mype_root) write(6,*)'READ_BUFRTOVS: crtm_spccoeff_load() on path "'//trim(crtm_coeffs_path)//'"'
+           if(mype_sub==mype_root .and. print_verbose) write(6,*)'READ_BUFRTOVS: crtm_spccoeff_load() on path "'//trim(crtm_coeffs_path)//'"'
            error_status = crtm_spccoeff_load(sensorlist,&
-              File_Path = crtm_coeffs_path )
+              File_Path = crtm_coeffs_path, quiet=quiet )
            else
-              error_status = crtm_spccoeff_load(sensorlist)
+              error_status = crtm_spccoeff_load(sensorlist,quiet=quiet)
            endif
            if (error_status /= success) then
               write(6,*)'READ_BUFRTOVS:  ***ERROR*** crtm_spccoeff_load error_status=',error_status,&
@@ -785,7 +789,7 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
                     cosza = cos(lza)
                     d0    = 8.24_r_kind - 2.622_r_kind*cosza + 1.846_r_kind*cosza*cosza                                 
                     qval=cosza*(d0+d1*log(285.0_r_kind-ch1)+d2*log(285.0_r_kind-ch2))
-                    if (icw4crtm>10) then
+                    if (radmod%lcloud_fwd) then
                        ! no preference in selecting clouds/precipitation
                        ! qval=zero 
                        ! favor non-precipitating clouds                                                   
