@@ -458,7 +458,7 @@
                            nemsio_readrec,nemsio_writerec,nemsio_intkind,&
                            nemsio_getheadvar,nemsio_realkind,nemsio_getfilehead,&
                            nemsio_readrecv,nemsio_init,nemsio_setheadvar,nemsio_writerecv
-  use constants, only: grav
+  use constants, only: t0c, r0_05, rd, grav
   use params, only: nbackgrounds,anlfileprefixes,fgfileprefixes,reducedgrid
   use params, only: lupp
   implicit none
@@ -1018,6 +1018,16 @@
         ug = 0.
         if (cw_ind > 0) then
            call copyfromgrdin(grdin(:,levels(cw_ind-1)+k,nb),ug)
+        endif
+        if (imp_physics == 11) then
+           call nemsio_readrecv(gfilein,'icmr','mid layer',k,nems_wrk2,iret=iret)
+           if (iret/=0) then
+              write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(icmr), iret=',iret
+              call stop2(23)
+           endif
+           vg = ug * work  !cloud ice
+           ug = ug * (one - work)  !cloud water
+           nems_wrk2 = nems_wrk2 + vg
         endif
         if (imp_physics == 11) then
            call nemsio_readrecv(gfilein,'icmr','mid layer',k,nems_wrk2,iret=iret)

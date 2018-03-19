@@ -537,6 +537,7 @@ contains
        call gfs_nems_vcoord(meta_nemsio,grid%filename,vcoord)
        grid%ak = vcoord(:,1,1)
        grid%bk = vcoord(:,2,1)
+
        var_info%var_name = 'psfc'
        call variable_lookup(var_info)
        call gfs_nems_read(workgrid,var_info%nems_name,var_info%nems_levtyp,   &

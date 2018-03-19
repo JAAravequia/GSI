@@ -14,7 +14,8 @@ if [ "$#" = 8 ] ; then
   export gsiexec_contrl=$7
   export enkfexec_contrl=$8
   export fixgsi="$gsisrc/fix"
-  export scripts="$gsisrc/scripts"
+  export scripts="$gsisrc/regression"
+  export ush="$gsisrc/ush"
   export cmaketest="true"
   export clean="false"
   export ptmpName=`echo $builddir | sed -e "s/\//_/g"`
@@ -70,7 +71,7 @@ if [[ "$machine" = "Theia" ]]; then
    export group="global"
    export queue="debug"
    if [[ "$cmaketest" = "false" ]]; then
-     export basedir="/scratch4/NCEPDEV/global/save/$LOGNAME/svn/gsi/branches"
+     export basedir="/scratch4/NCEPDEV/da/save/$LOGNAME/git/gsi"
    fi
 
    if [ -d /scratch4/NCEPDEV/stmp3/$LOGNAME ]; then
@@ -166,10 +167,9 @@ if [[ "$cmaketest" = "false" ]]; then
   export gsiexec_contrl="$basedir/$contrl/bld/bin/gsi_global.x"
   export enkfexec_updat="$gsisrc/enkf/global_enkf"
   export enkfexec_contrl="$basedir/$contrl/src/enkf/global_enkf"
-  export fixgsi_updat="$basedir/$updat/fix"
-  export scripts_updat="$basedir/$updat/scripts"
-  export fixgsi_contrl="$basedir/$contrl/fix"
-  export scripts_contrl="$basedir/$contrl/scripts"
+  export fixgsi="$basedir/$updat/fix"
+  export scripts="$basedir/$updat/regression"
+  export ush="$basedir/$updat/ush"
 fi
 # Paths to tmpdir and savedir base on ptmp
 export tmpdir="$ptmp/$updat"
