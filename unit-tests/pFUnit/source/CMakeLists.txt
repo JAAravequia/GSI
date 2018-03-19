@@ -7,6 +7,9 @@ find_package(PythonInterp REQUIRED) #Sets ${PYTHON_EXECUTABLE}
 set(srcs Assert.F90)
 
 # Generate AssertArray files:  AssertArrays.fh, generated.inc, and AssertXYZ?.F90
+
+SET (MAX_RANK 5)
+message("HEY, calling generate with max rank = ${MAX_RANK}")
 execute_process(
    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/GenerateAssertsOnArrays.py --maxRank ${MAX_RANK}
    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}

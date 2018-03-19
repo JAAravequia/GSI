@@ -58,11 +58,12 @@ ENDIF()
 
 
 OPTION(MPI "Use MPI for parallel runs" YES)
-OPTION(FIND_MPI "Attempt to automatically find MPI information" YES)
+OPTION(FIND_MPI "Attempt to automatically find MPI information" NO)
 OPTION(MPI_USE_MPIEXEC "Use CMake's FindMPI to find mpiexec" NO)
 OPTION(OPENMP "Use OPENMP for parallel runs" NO)
 
 # The following sets robust to "ON".
+set(ROBUST "YES")
 OPTION(ROBUST "Build robust test runner" YES)
 
 # If the user specifies this on the command line (or equivalently, in the
@@ -72,15 +73,15 @@ set(OPENMP_FLAGS "OPENMP_FLAGS-NOTFOUND"
   CACHE STRING "OpenMP flags for the Fortran compiler.")
 
 
-if (MPI)
-    add_definitions(-DUSE_MPI)
-    if (FIND_MPI)
-      find_package(MPI REQUIRED)
-      add_definitions(${MPI_Fortran_COMPILE_FLAGS})
-      include_directories(${MPI_Fortran_INCLUDE_PATH})
-    endif()
-    message( STATUS "MPI enabled")
-endif()
+#if (MPI)
+#    add_definitions(-DUSE_MPI)
+#    if (FIND_MPI)
+#      find_package(MPI REQUIRED)
+#      add_definitions(${MPI_Fortran_COMPILE_FLAGS})
+#      include_directories(${MPI_Fortran_INCLUDE_PATH})
+#    endif()
+#    message( STATUS "MPI enabled")
+#endif()
 
 # 2014-0807 MLR MAX_RANK needed for code generation, not here.
 #if (MAX_RANK)
@@ -88,6 +89,7 @@ endif()
 #endif()
 
 if (ROBUST)
+    message("HEY! using BUILD_ROBUST")
     add_definitions(-DBUILD_ROBUST)
 endif()
 
@@ -188,9 +190,9 @@ set(CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS "")
 set(CMAKE_SKIP_RPATH ON)
 
 add_subdirectory (source)
-add_subdirectory (tests)
-add_subdirectory (include)
-add_subdirectory (bin)
+#add_subdirectory (tests)
+#add_subdirectory (include)
+#add_subdirectory (bin)
 
 # Packaging
 include (cmake/packaging.cmake)

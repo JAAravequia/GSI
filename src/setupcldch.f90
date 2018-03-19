@@ -9,18 +9,11 @@ use abstract_setup_mod
   end interface
 contains
   type(setupcldch_class) function setup_ctor(obsname,varname1,varname2,varname3)
-!     class(setupcldch_class)                          ,intent(inout) :: this
       character(*),                        intent(in) :: obsname
       character(*),                        intent(in) :: varname1
       character(*),                        intent(in) :: varname2
       character(*),                        intent(in) :: varname3
       call setup_ctor%initialize(obsname,varname1,varname2,varname3) 
-!     setup_ctor.myname = obsname
-!     setup_ctor.numvars = 3
-!     allocate(setup_ctor.varnames(setup_ctor.numvars))
-!     setup_ctor.varnames(1) = varname1
-!     setup_ctor.varnames(2) = varname2
-!     setup_ctor.varnames(3) = varname3
   end function setup_ctor
   subroutine setupcldch(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
   !$$$  subprogram documentation block

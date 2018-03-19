@@ -174,14 +174,15 @@ project(GSI)
     find_package(GSICONTROL)
     include( CTest )
   endif(BUILD_REG_TESTING)
+
+  add_subdirectory(src)
+
   if(BUILD_UNIT_TESTING)
     set(CTEST_TEST_TIMEOUT 400 )
     find_package(GSICONTROL)
     include( CTest )
     add_subdirectory(unit-tests)
   endif(BUILD_UNIT_TESTING)
-
-  add_subdirectory(src)
   if(BUILD_ENKF)
     add_subdirectory(src/enkf)
   endif(BUILD_ENKF) 
