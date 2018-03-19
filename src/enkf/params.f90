@@ -76,10 +76,10 @@ character(len=500),public :: datapath
 ! update is used.  If .false, a perturbed obs (stochastic) update
 ! is used.
 logical, public :: deterministic, sortinc, pseudo_rh, &
-                   varqc, huber, cliptracers, readin_localization,&
-                   lupp
+                   varqc, huber, cliptracers, readin_localization
+logical, public :: lupp
 integer(i_kind),public ::  iassim_order,nlevs,nanals,numiter,&
-                           nlons,nlats,ndim,nbackgrounds
+                           nlons,nlats,nbackgrounds,nstatefields
 integer(i_kind),public :: nsats_rad,nsats_oz,imp_physics
 ! random seed for perturbed obs (deterministic=.false.)
 ! if zero, system clock is used.  Also used when
@@ -387,7 +387,7 @@ if (nproc == 0) then
       print *,'WARNING: nvars and massbal_adjust are no longer used!'
       print *,'They are inferred from the anavinfo file instead.'
    endif
-
+   
 end if
 
 ! background forecast time for analysis
