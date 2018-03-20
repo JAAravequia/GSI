@@ -240,8 +240,7 @@ subroutine get_gefs_ensperts_dualres
              write(6,*)' error retrieving pointer to ',trim(cvars3d(ic3)),' for ensemble member ',n
              call stop2(999)
           end if
-!cltthinkdeborg          call gsi_bundlegetpointer(en_bar(ig,m),trim(cvars3d(ic3)),x3,istatus)
-          call gsi_bundlegetpointer(en_bar(1,m),trim(cvars3d(ic3)),x3,istatus)
+          call gsi_bundlegetpointer(en_bar(ig0,m),trim(cvars3d(ic3)),x3,istatus)
           if(istatus/=0) then
              write(6,*)' error retrieving pointer to ',trim(cvars3d(ic3)),' for en_bar'
              call stop2(999)
@@ -306,8 +305,7 @@ subroutine get_gefs_ensperts_dualres
              write(6,*)' error retrieving pointer to ',trim(cvars2d(ic2)),' for ensemble member ',n
              call stop2(999)
           end if
-!lctthinkdeb          call gsi_bundlegetpointer(en_bar(ig,m),trim(cvars2d(ic2)),x2,istatus)
-          call gsi_bundlegetpointer(en_bar(1,m),trim(cvars2d(ic2)),x2,istatus)
+          call gsi_bundlegetpointer(en_bar(ig0,m),trim(cvars2d(ic2)),x2,istatus)
           if(istatus/=0) then
              write(6,*)' error retrieving pointer to ',trim(cvars2d(ic2)),' for en_bar'
              call stop2(999)
@@ -357,8 +355,7 @@ subroutine get_gefs_ensperts_dualres
 
 
      if(s_ens_v <= zero)then
-!cltthinkdeborg        call gsi_bundlegetpointer(en_bar(ig,m),'ps',x2,istatus)
-        call gsi_bundlegetpointer(en_bar(1,m),'ps',x2,istatus)
+        call gsi_bundlegetpointer(en_bar(ig0,m),'ps',x2,istatus)
         if(istatus/=0) then
            write(6,*)' error retrieving pointer to (ps) for en_bar'
            call stop2(999)
@@ -394,26 +391,25 @@ subroutine get_gefs_ensperts_dualres
         end if
         do i=1,nelen
            en_perts(n,ig0,m)%valuesr4(i)=en_perts(n,ig0,m)%valuesr4(i)*sig_norm
-!cltthinkdeb           en_perts(n,ig,m)%valuesr4(i)=0.1
         end do
      end do
   end do
-
+  if(nsclgrp.gt.1) then
    do m=1,ntlevs_ens
       do n=1,n_ens
         en_pertstmp1%values=en_perts(n,1,m)%valuesr4
        do ig=1,nsclgrp
-!cltthinkdeb        call apply_scaledepwgts(grd_ens,sp_ens,en_pertstmp,spc_multwgt(:,ig),en_perts(n,ig,m))
-        call apply_scaledepwgts(grd_ens,sp_ens,en_pertstmp1,spc_multwgt(:,ig),en_pertstmp2)
+        call apply_scaledepwgts(grd_ens,sp_ens,en_pertstmp1,spc_multwgt(:,ig),en_pertstmp2,ig,n)
         en_perts(n,ig,m)%valuesr4=en_pertstmp2%values
        enddo  !clt ig
       enddo
      
    do ig=2,nsclgrp 
-     ps_bar(:,:,ig,m)=ps_bar(:,:,1,m)
+     ps_bar(:,:,ig,m)=ps_bar(:,:,ig0,m)
    enddo
   enddo
               
+  endif
 
 !  since initial version is ignoring sst perturbations, skip following code for now.  revisit
 !   later--creating general_read_gfssfc, analogous to general_read_gfsatm above.

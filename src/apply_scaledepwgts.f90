@@ -7,14 +7,19 @@
 !$$$  subprogram documentation block
  function fwgtofwvlen (rvlft,rvrgt,rcons,rlen,rinput)
            use kinds, only: r_kind,i_kind,r_single
+          implicit none
           real (r_kind):: fwgtofwvlen
           real(r_kind):: rvlft,rvrgt,rcons,rlen,rinput
-          real (r_kind):: rtem1
+          real (r_kind):: rlen1,rtem1,rconshalf
+!          write(6,*)'rinput and ,rvlft rvlft is ',rinput,rvlft,rvrgt
+          rlen1=rlen/10.0 ! rlen corresponds to a (-5,5) region
+          rconshalf=0.5*rcons
           if(rinput.gt.rvlft.and.rinput.lt.rvrgt) then
               fwgtofwvlen=rcons
           else
               rtem1=min(abs(rinput-rvlft),abs(rinput-rvrgt))
-              fwgtofwvlen=rcons*exp(-rtem1/rlen)
+!cltorg              fwgtofwvlen=rcons*0.5*(1.0+tanh(5.0-rtem1/rlen1))
+              fwgtofwvlen=rconshalf*(1.0+tanh(5.0-rtem1/rlen1))
           endif
         
        
@@ -38,41 +43,63 @@ subroutine init_mult_spc_wgts(jcap_in)
   use gsi_io, only: verbose
   use hybrid_ensemble_parameters,only: naensgrp
   use hybrid_ensemble_parameters, only: nsclgrp
-  use hybrid_ensemble_parameters, only: spc_multwgt,spcwgt_params
+  use hybrid_ensemble_parameters, only: spc_multwgt,spcwgt_params,l_sum_spc_weights
   implicit none
 
   integer(i_kind),intent(in   ) :: jcap_in
   real(r_kind),allocatable::totwvlength(:)
 
-  integer(i_kind) i,ii,j,k,l,n,jcap,kk,nsigend
-  character(5) mapname
+  integer(i_kind) i,ii,j,k,l,n,kk,nsigend
   integer ig
-  real(r_kind) rwvint,rtem1,rtem2
+  real(r_kind) rwv0,rtem1,rtem2
   real (r_kind):: fwgtofwvlen
 
 
 !    make sure s_ens_hv is within allowable range  ( pi*rearth*.001/jcap_in <= s_ens_hv <= 5500 )
-  allocate(totwvlength(jcap))
+  allocate(totwvlength(jcap_in))
 
-   
-  rwvint=2*pi*rearth*.001_r_kind/jcap_in
+  write(6,*)'thinkdeb l_sum is ',  l_sum_spc_weights
+  rwv0=2*pi*rearth*.001_r_kind
   do i=1,jcap_in
-  totwvlength(i)=i*rwvint
+  totwvlength(i)= rwv0/i                 !cltorg  2*pi*rearth/(2*i)  
   enddo
- do i=1,jcap
+ do i=1,jcap_in
   rtem1=0
   do ig=1,nsclgrp
+  if(ig.ne.2) then
   spc_multwgt(i,ig)=fwgtofwvlen(spcwgt_params(1,ig),spcwgt_params(2,ig),spcwgt_params(3,ig),spcwgt_params(4,ig),totwvlength(i)) !fwv2wgt(twvlength)
+  if(l_sum_spc_weights.eq.0 ) then
   rtem1=rtem1+spc_multwgt(i,ig)
+  else
+  rtem1=rtem1+spc_multwgt(i,ig)**2
+  endif
+   endif
    enddo
   rtem2=1-rtem1
-  if(abs(rtem2).gt.zero) then 
-   do ig=1,nsclgrp
-   spc_multwgt(i,ig)=spc_multwgt(i,ig)/rtem1*rtem2+spc_multwgt(i,ig)
-   enddo
+  if(abs(rtem2).ge.zero) then 
+!cltorg   spc_multwgt(i,ig)=spc_multwgt(i,ig)/rtem1*rtem2+spc_multwgt(i,ig)
+ 
+  if(l_sum_spc_weights.eq.0 ) then
+   spc_multwgt(i,2)=rtem2 !cltorg spc_multwgt(i,ig)/rtem1*rtem2+spc_multwgt(i,ig)
+  else
+   spc_multwgt(i,2)=sqrt(rtem2) !cltorg spc_multwgt(i,ig)/rtem1*rtem2+spc_multwgt(i,ig)
+  endif
   endif
    
   enddo
+  spc_multwgt=max(spc_multwgt,0.0)
+   if(mype.eq.0) then
+   open(121,file="test-spcwght.dat",form="formatted")
+   do i=1,jcap_in
+   write(121,111)(totwvlength(i)),((spc_multwgt(i,j)),j=1,nsclgrp)
+!clt   write(121,*)(totwvlength(i)),((spc_multwgt(i,j)),j=1,nsclgrp)
+   enddo
+   close (121)
+   endif
+ 111 format(g15.6,3(g11.4,1x)) 
+
+
+
   
   deallocate(totwvlength)
   return
@@ -81,7 +108,7 @@ end subroutine init_mult_spc_wgts
 
 
 
-subroutine apply_scaledepwgts(grd_in,sp_in,wbundle,spwgts,wbundle2)  
+subroutine apply_scaledepwgts(grd_in,sp_in,wbundle,spwgts,wbundle2,igrp,nensid)  
 !   2017-03-30  J. Kay, X. Wang - copied from Kleist's apply_scaledepwgts and
 !                                 add the calculation of scale-dependent weighting for mixed resolution ensemble  
 !                                 POC: xuguang.wang@ou.edu
@@ -89,7 +116,8 @@ subroutine apply_scaledepwgts(grd_in,sp_in,wbundle,spwgts,wbundle2)
   use constants, only:  one
   use control_vectors, only: nrf_var,cvars2d,cvars3d,control_vector
   use kinds, only: r_kind,i_kind
-  use mpimod, only: mype,nvar_id
+  use kinds, only: r_single
+  use mpimod, only: mype,nvar_id,levs_id
   use hybrid_ensemble_parameters, only: oz_univ_static
   use general_specmod, only: general_spec_multwgt
   use gsi_bundlemod, only: gsi_bundle
@@ -97,6 +125,7 @@ subroutine apply_scaledepwgts(grd_in,sp_in,wbundle,spwgts,wbundle2)
   use general_specmod, only: spec_vars
   use general_sub2grid_mod, only: sub2grid_info
    use mpimod, only: mpi_comm_world,mype,npe,ierror
+  use file_utility, only : get_lun
   implicit none
 
 ! Declare passed variables
@@ -105,15 +134,21 @@ subroutine apply_scaledepwgts(grd_in,sp_in,wbundle,spwgts,wbundle2)
   type(spec_vars),intent (in):: sp_in
   type(sub2grid_info),intent(in)::grd_in
   real(r_kind),dimension(0:sp_in%jcap),intent(in):: spwgts
+  integer(i_kind), intent(in):: igrp !group index
+  integer(i_kind), intent(in):: nensid !ensemble member index
 
 ! Declare local variables
   integer(i_kind) ii,iflg,kk
+  integer(i_kind) i,j,lunit 
 
   real(r_kind),dimension(grd_in%lat2,grd_in%lon2):: slndt,sicet,sst
   real(r_kind),dimension(grd_in%nlat*grd_in%nlon*grd_in%nlevs_alloc)      :: hwork
   real(r_kind),dimension(grd_in%nlat,grd_in%nlon,grd_in%nlevs_alloc)      :: work
   real(r_kind),dimension(grd_in%nlat,grd_in%nlon,grd_in%nlevs_alloc)      :: work1
   real(r_kind),dimension(sp_in%nc):: spc1
+  real(r_single) outwork(grd_in%nlon,grd_in%nlat)
+  character*64 :: fname1
+  character*5:: varname1
 
   iflg=1
 ! Beta1 first
@@ -134,14 +169,37 @@ subroutine apply_scaledepwgts(grd_in,sp_in,wbundle,spwgts,wbundle2)
      elseif ( (nrf_var(nvar_id(kk))=='sti').or.(nrf_var(nvar_id(kk))=='STI') ) then
         cycle
      end if
+!   if(mype==0) then
+      do j=1,grd_in%nlon
+        do i=1,grd_in%nlat
+           outwork(j,i)=work(i,j,kk)
+        enddo
+     enddo
+!clt     write(mapname,'("out_",i2.2)')1+mod(grd_loc%kbegin_loc-1,grd_ens%nsig)
+!cltorg     write(fname1,'("grp",i2.2,"mem",i2.2,"-out_vname",A5,"lev-",i2.2)')igrp,nensid, nrf_var(nvar_id)(1:5),levs_id(kk)
+     i=5-len_trim( nrf_var(nvar_id(kk))) 
+     varname1=repeat("_",i)
+     varname1=trim(varname1)//trim(nrf_var(nvar_id(kk)))
+     write(fname1,'("grp",i2.2,"mem",i2.2,"-out_vname",A5,"lev-",i3.3)')igrp,nensid, varname1,levs_id(kk)
+!clt     call outgrads1(outwork,grd_in%nlon,grd_in%nlat,trim(fname1))
+!clt   end if
+    
 
 ! Transform from physical space to spectral space   
      call general_g2s0(grd_in,sp_in,spc1,work(:,:,kk))
-  if(mype == 0) write(6,*) 'jk_apply0=', spc1
+!cltorg  if(mype == 0) write(6,*) 'jk_apply0=', spc1
   if(mype == 0) write(6,*) 'jk_apply0_spc1=', shape(spc1)
   if(mype == 0) write(6,*) 'jk_apply0_spc2=', sp_in%jcap
   if(mype == 0) write(6,*) 'jk_apply0_spc2=', sp_in%nc
-  if(mype == 0) write(6,*) 'jk_apply0_spc3=', spwgts 
+!cltorg  if(mype == 0) write(6,*) 'jk_apply0_spc3=', spwgts 
+!    lunit=get_lun()
+!    open(lunit,file="spc_"//trim(fname1),form='formatted')
+     
+!    write(lunit,*)sp_in%nc
+!    do i=1,sp_in%nc
+!    write(lunit,*)spc1(i)
+!    enddo
+!   close (lunit)
 
 ! Apply spectral weights
   call general_spec_multwgt(sp_in,spc1,spwgts)
@@ -150,6 +208,26 @@ subroutine apply_scaledepwgts(grd_in,sp_in,wbundle,spwgts,wbundle2)
     call general_s2g0(grd_in,sp_in,spc1,work(:,:,kk))
   work1(:,:,kk)=work(:,:,kk)-work1(:,:,kk)
   if(mype ==0) write(6,*)'thinkdeb150 max diff is ',maxval(work1(:,:,kk))
+!   if(mype==0) then
+      do j=1,grd_in%nlon
+        do i=1,grd_in%nlat
+           outwork(j,i)=work(i,j,kk)
+        enddo
+     enddo
+!clt     write(mapname,'("out_",i2.2)')1+mod(grd_loc%kbegin_loc-1,grd_ens%nsig)
+!     fname1="post_"//trim(fname1)
+!cltorg     write(fname1,'("post_grp",i2.2,"mem",i2.2,"-out_vname",A5,"lev-",i2.2)')igrp,nensid, nrf_var(nvar_id(kk))(1:5),levs_id(kk)
+!     call outgrads1(outwork,grd_in%nlon,grd_in%nlat,trim(fname1))
+!    lunit=get_lun()
+!    open(lunit,file="spc_"//trim(fname1),form='formatted')
+     
+!    write(lunit,*)sp_in%nc
+!    do i=1,sp_in%nc
+!    write(lunit,*)spc1(i)
+!    enddo
+!   close (lunit)
+!   end if
+
   end do
 
 ! Transfer work back to subdomains
@@ -218,7 +296,6 @@ subroutine apply_scaledepwgts_ad(grd_in,sp_in,wbundle,spwgts)
 ! Adjoint of g2s
   call general_g2s0_ad(grd_in,sp_in,spc1,work(:,:,kk))
   work1(:,:,kk)=work(:,:,kk)-work1(:,:,kk)
-  if(mype ==0) write(6,*)'thinkdeb250 max diff is ',maxval(work1(:,:,kk))
 
   end do
 ! Transfer work back to subdomains

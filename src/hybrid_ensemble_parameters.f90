@@ -292,6 +292,7 @@ module hybrid_ensemble_parameters
   public ::  para_covwithsclgrp
   public :: spc_multwgt 
   public :: spcwgt_params 
+  public :: l_sum_spc_weights 
 
   logical l_hyb_ens,uv_hyb_ens,q_hyb_ens,oz_univ_static
   logical enspreproc
@@ -311,11 +312,14 @@ module hybrid_ensemble_parameters
   logical l_ens_in_diff_time
   integer(i_kind) i_en_perts_io
   integer(i_kind) n_ens,nlon_ens,nlat_ens,jcap_ens,jcap_ens_test
-  real(r_kind) beta_s0,s_ens_h,s_ens_v,grid_ratio_ens
+  real(r_kind) beta_s0,s_ens_v,grid_ratio_ens
+  integer(i_kind),parameter::max_aens=10
+  real(r_kind) s_ens_h(max_aens)
   type(sub2grid_info),save :: grd_ens,grd_loc,grd_sploc,grd_anl,grd_e1,grd_a1
   type(spec_vars),save :: sp_ens,sp_loc
   type(egrid2agrid_parm),save :: p_e2a,p_sploc2ens
-  real(r_kind),allocatable,dimension(:) :: s_ens_hv,s_ens_vv
+  real(r_kind),allocatable,dimension(:) :: s_ens_vv
+  real(r_kind),allocatable,dimension(:,:) :: s_ens_hv
   real(r_kind),allocatable,dimension(:) :: sqrt_beta_s,sqrt_beta_e
   real(r_kind),allocatable,dimension(:) :: beta_s,beta_e
   real(r_kind),allocatable,dimension(:,:,:) :: pwgt
@@ -336,6 +340,7 @@ module hybrid_ensemble_parameters
   real (r_kind) ::  para_covwithsclgrp=1
    integer(i_kind)::  nsclgrp=1
    integer(i_kind)::  naensgrp=1
+   integer(i_kind)::  l_sum_spc_weights=0
 
 
 ! following is for storage of ensemble perturbations:
@@ -430,7 +435,7 @@ subroutine create_hybens_localization_parameters
   use constants, only: zero
   implicit none
   
-  allocate( s_ens_hv(grd_ens%nsig),s_ens_vv(grd_ens%nsig) )
+  allocate( s_ens_hv(grd_ens%nsig,naensgrp),s_ens_vv(grd_ens%nsig) )
   allocate( beta_s(grd_ens%nsig),beta_e(grd_ens%nsig))
   allocate( sqrt_beta_s(grd_ens%nsig),sqrt_beta_e(grd_ens%nsig) )
   allocate( pwgt(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig) )
