@@ -251,6 +251,10 @@ module obsmod
 !   def uwnd10mtail  - 10m-uwind linked list tail
 !   def vwnd10mhead  - 10m-vwind linked list head
 !   def vwnd10mtail  - 10m-vwind linked list tail
+!   def swcphead     - solid-water content path linked list head
+!   def swcptail     - solid-water content path linked list tail
+!   def lwcphead     - liquid-water content path linked list head
+!   def lwcptail     - liquid-water content path linked list tail
 !   def lunobs_obs   - unit to save satellite observation
 !   def iout_rad     - output unit for satellite stats
 !   def iout_pcp     - output unit for precipitation stats
@@ -285,6 +289,8 @@ module obsmod
 !   def iout_vwnd10m - output unit for conventional 10-m vwind stats
 !   def iout_pm2_5   - output unit for pm2_5 stats
 !   def iout_pm10    - output unit for pm10 stats
+!   def iout_swcp    - output unit for swcp stats
+!   def iout_lwcp    - output unit for lwcp stats
 !   def mype_t       - task to handle temperature stats
 !   def mype_q       - task to handle moisture stats
 !   def mype_uv      - task to handle wind stats
@@ -312,6 +318,8 @@ module obsmod
 !   def mype_aero    - task to handle aerosol stats
 !   def mype_pm2_5   - task to handle pm2_5
 !   def mype_pm10    - task to handle pm10
+!   def mype_swcp    - task to handle swcp
+!   def mype_lwcp    - task to handle lwcp
 !   def oberrflg     - logical for reading in new observation error table
 !                      .true.  will read in obs errors from file 'errtable'
 !                      .false. will not read in new obs errors
@@ -353,6 +361,8 @@ module obsmod
 !                        (nobs_type,npe)
 !   def binary_diag    - trigger binary diag-file output (being phased out)
 !   def netcdf_diag    - trigger netcdf diag-file output
+!   def l_wcp_cwm      - namelist logical whether to use operator that
+!                        includes cwm for both swcp and lwcp or not
 !
 ! attributes:
 !   langauge: f90
@@ -386,6 +396,7 @@ module obsmod
   public :: i_cldch_ob_type, iout_cldch, mype_cldch
   public :: i_pw_ob_type,i_pcp_ob_type,i_oz_ob_type,i_o3l_ob_type,i_colvk_ob_type,i_gps_ob_type
   public :: i_rad_ob_type,i_tcp_ob_type,i_lag_ob_type
+  public :: i_swcp_ob_type, i_lwcp_ob_type
   public :: obscounts,nobs_type
   public :: cobstype,nprof_gps,time_offset,ianldate
   public :: iout_oz,iout_co,dsis,ref_obs,obsfile_all,lobserver,perturb_obs,ditype,dsfcalc,dplat
@@ -408,6 +419,7 @@ module obsmod
   public :: mype_uwnd10m,mype_vwnd10m,iout_uwnd10m,iout_vwnd10m
   public :: mype_mxtm,mype_mitm,iout_mxtm,iout_mitm
   public :: mype_pmsl,mype_howv,iout_pmsl,iout_howv
+  public :: mype_swcp,mype_lwcp,iout_swcp,iout_lwcp
   public :: lread_obs_save,obs_input_common,lread_obs_skip
   public :: ndat_times,lwrite_predterms,lwrite_peakwt
   public :: bmiss
@@ -428,6 +440,8 @@ module obsmod
   public :: nobs_sub
 
   public :: netcdf_diag, binary_diag
+
+  public :: l_wcp_cwm
 
   interface obsmod_init_instr_table
           module procedure init_instr_table_
@@ -486,8 +500,10 @@ module obsmod
   integer(i_kind),parameter:: i_cldch_ob_type=33  ! cldch_ob_type
   integer(i_kind),parameter:: i_uwnd10m_ob_type=34! uwnd10m_ob_type
   integer(i_kind),parameter:: i_vwnd10m_ob_type=35! vwnd10m_ob_type
+  integer(i_kind),parameter:: i_swcp_ob_type=36   ! swcp_ob_type
+  integer(i_kind),parameter:: i_lwcp_ob_type=37   ! lwcp_ob_type
 
-  integer(i_kind),parameter:: nobs_type = 35      ! number of observation types
+  integer(i_kind),parameter:: nobs_type = 37      ! number of observation types
 
 ! Structure for diagnostics
 
@@ -544,6 +560,8 @@ module obsmod
                   mype_wspd10m,mype_td2m,mype_mxtm,mype_mitm,mype_pmsl,mype_howv,&
                   mype_uwnd10m,mype_vwnd10m, mype_tcamt,mype_lcbas
   integer(i_kind) mype_cldch
+  integer(i_kind) iout_swcp, iout_lwcp
+  integer(i_kind) mype_swcp, mype_lwcp
   integer(i_kind) nlaero, iout_aero, mype_aero
   integer(i_kind) iout_pm2_5, mype_pm2_5
   integer(i_kind) iout_pm10, mype_pm10
@@ -582,6 +600,8 @@ module obsmod
   logical ext_sonde
   logical lrun_subdirs
   logical l_foreaft_thin
+
+  logical l_wcp_cwm
 
   character(len=*),parameter:: myname='obsmod'
 contains
@@ -697,6 +717,9 @@ contains
     iout_cldch=232 ! cloud ceiling height
     iout_uwnd10m=233  ! 10-m uwnd
     iout_vwnd10m=234  ! 10-m vwnd
+    iout_swcp=235  ! solid-water content path
+    iout_lwcp=236  ! liquid-water content path
+
 
     mype_ps = npe-1          ! surface pressure
     mype_t  = max(0,npe-2)   ! temperature
@@ -727,6 +750,9 @@ contains
     mype_cldch=max(0,npe-27) ! cloud ceiling height
     mype_uwnd10m= max(0,npe-28)! uwnd10m
     mype_vwnd10m= max(0,npe-29)! vwnd10m
+    mype_swcp=max(0,npe-30)  ! solid-water content path
+    mype_lwcp=max(0,npe-31)  ! liquid-water content path
+
 
 
 !   Initialize arrays used in namelist obs_input 
@@ -783,7 +809,8 @@ contains
     cobstype(i_cldch_ob_type)="cldch               " ! cldch_ob_type
     cobstype(i_uwnd10m_ob_type) ="uwnd10m          " ! uwnd10m_ob_type
     cobstype(i_vwnd10m_ob_type) ="vwnd10m          " ! vwnd10m_ob_type
-
+    cobstype(i_swcp_ob_type) ="swcp                " ! swcp_ob_type
+    cobstype(i_lwcp_ob_type) ="lwcp                " ! lwcp_ob_type
 
 
     hilbert_curve=.false.
@@ -800,6 +827,8 @@ contains
 !   set default on diag writing
     netcdf_diag = .false. ! by default, do not write netcdf_diag
     binary_diag = .true.  ! by default, do write binary diag
+
+    l_wcp_cwm          = .false.                 ! .true. = use operator that involves cwm
 
     return
   end subroutine init_obsmod_dflts
