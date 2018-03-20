@@ -1791,7 +1791,8 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
         else 
            if (icmask) then
               do ii=1,n_clouds_fwd_wk
-                 cloud_cont(k,ii)=cloud(kk2,ii)*kgkg_kgm2
+                 cloud_cont(k,ii)=cloud(kk2,ii)*c6(k)
+                 if (trim(cloud_names_fwd(ii))=='ql') clw_guess = clw_guess + cloud_cont(k,ii)
                  if (trim(cloud_names_fwd(ii))=='ql' .and.  atmosphere(1)%temperature(k)-t0c>-20.0_r_kind) &
                      cloud_cont(k,ii)=max(1.001_r_kind*1.0E-6_r_kind, cloud_cont(k,ii))
                  if (trim(cloud_names_fwd(ii))=='qi' .and.  atmosphere(1)%temperature(k)<t0c) &
