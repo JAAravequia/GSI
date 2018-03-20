@@ -12,7 +12,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 !            retains those observations that fall within the regional
 !            domain
 !            For the satellite ID type: 240: GOES short wave winds, 
-!            241: India, 242:JMA Visible,243: EUMETSAT visible,244: AVHRR winds
+!            241: India VIS+IR+WVCT , 242:JMA Visible,243: EUMETSAT visible,244: AVHRR winds
 !            245: GOES IR. 246: GOES WV cloud top, 247: GOES WV deep layer
 !            250: JMA WV deep layer. 251:GOES visible, 252: JMA IR winds
 !            253: EUMETSAT IR winds, 254: EUMETSAT WV deep layer winds
@@ -20,8 +20,9 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 !            260: VIIR IR winds
 !            respectively
 !            For satellite subtype: 50-70 from EUMETSAT geostationary satellites(METEOSAT) 
-!                                   100-199 from JMA geostationary satellites(MTSAT)
+!                                   100-199 from JMA geostationary satellites(HIMAWARI)
 !                                   250-299 from NESDIS geostationary satellites(GOES)
+!                                   400-499 from India
 !                                   700-799 from NASA Terra and Aqua satellites
 !                                   <10, 200-223 from NOAA-15, 16, 17, 18, polar
 !                                   orbit and EUMESAT MetOp satellites 
@@ -126,7 +127,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   real(r_kind),parameter:: r3_33= 3.33_r_kind
   real(r_kind),parameter:: r6= 6.0_r_kind
   real(r_kind),parameter:: r50= 50.0_r_kind
-  real(r_kind),parameter:: r70= 70.0_r_kind
+  real(r_kind),parameter:: r80= 80.0_r_kind  !r70= 70.0_r_kind
   real(r_kind),parameter:: r90= 90.0_r_kind
   real(r_kind),parameter:: r105= 105.0_r_kind
   real(r_kind),parameter:: r110= 110.0_r_kind
@@ -328,7 +329,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
         iobsub=int(hdrdat(1))
         if(trim(subset) == 'NC005064' .or. trim(subset) == 'NC005065' .or. &
            trim(subset) == 'NC005066') then
-           if( hdrdat(1) <r70 .and. hdrdat(1) >= r50) then   !the range of EUMETSAT satellite IDS
+           if( hdrdat(1) <r80 .and. hdrdat(1) >= r50) then   !the range of EUMETSAT satellite IDS
               if(hdrdat(9) == one)  then                  ! IR winds
                  itype=253
               else if(hdrdat(9) == two) then              ! visible winds
@@ -430,6 +431,34 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
                     itype=246
                  else if(trim(subset) == 'NC005031')  then            ! WV clear sky/deep layer
                     itype=247
+                 endif
+
+        !India section of the 'if' statement over 'subsets' 
+        else if(trim(subset) == 'NC005024' .or. trim(subset) == 'NC005025' .or. trim(subset) == 'NC005026') then
+! Commented out, because we need to confirm  SWCM/hdrdat(9) is correct
+! NOTE: Once it is confirmed that SWCM values are sensible, apply this logic and replace the lines below
+!                 if(hdrdat(9) == one)  then
+!                    if(hdrdat(12) <50000000000000.0_r_kind) then
+!                     itype=245                                      ! GOES-R IR(LW) winds
+!                    else
+!                     itype=240                                      ! GOES-R IR(SW) winds
+!                    endif
+!                 else if(hdrdat(9) == two  ) then
+!                    itype=251                                       !  GOES-R VIS winds
+!                 else if(hdrdat(9) == three ) then
+!                    itype=246                                       !  GOES-R WV CT winds
+!                 else if(hdrdat(9) >= four ) then 
+!                    itype=247                                       !  GOES-R WV CA winds
+!                 endif
+
+!Temporary solution for the commented code above Note: HOW TO SPLIT THE WINDS INTO MORE "itype"s
+
+                 if(trim(subset) == 'NC005024')  then                 ! IR LW and SW winds
+                    itype=241
+                 else if(trim(subset) == 'NC005025')  then            ! VIS winds
+                    itype=241
+                 else if(trim(subset) == 'NC005026')  then            ! WVCT winds
+                    itype=241
                  endif
 
          endif
@@ -617,7 +646,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
            ! assign types and get quality info : start
            if(trim(subset) == 'NC005064' .or. trim(subset) == 'NC005065' .or. &  
               trim(subset) == 'NC005066') then
-              if( hdrdat(1) <r70 .and. hdrdat(1) >= r50) then    ! the range of EUMETSAT satellite IDs      
+              if( hdrdat(1) <r80 .and. hdrdat(1) >= r50) then    ! the range of EUMETSAT satellite IDs      
                  c_prvstg='EUMETSAT'
                  if(hdrdat(10) >68.0_r_kind) cycle loop_readsb   !   reject data zenith angle >68.0 degree 
                  if(hdrdat(9) == one)  then                  ! IR winds
@@ -972,6 +1001,142 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
                 if(itype==251 )  then;  c_prvstg='GOESR' ; c_sprvstg='VIS'  ; endif
               endif
 ! Extra block for GOES-R winds: End
+
+! Extra block for INSAT winds: Start
+           else if(trim(subset) == 'NC005024' .or. trim(subset) == 'NC005025' .or. trim(subset) == 'NC005026') then       
+              if(hdrdat(1) >=r250 .and. hdrdat(1) <=r299 ) then  ! the range of INSAT satellite IDs
+                                                                 ! The sample
+                                                                 ! newBUFR has
+                                                                 ! SAID=259
+                                                                 ! (GOES-15)
+                                                                 ! When GOES-R
+                                                                 ! SAID is
+                                                                 ! assigned, pls
+                                                                 ! check
+                                                                 ! if this range
+                                                                 ! is still
+                                                                 ! valid
+                                                                 ! (Genkova)) 
+                 c_prvstg='NESDIS'
+                 if(hdrdat(10) >68.0_r_kind) cycle loop_readsb   !   reject data
+zenith angle >68.0 degree 
+                 if(trim(subset) == 'NC005030')  then                 ! IR LW
+winds
+                    itype=245
+                    c_station_id='IR'//stationid
+                    c_sprvstg='IR'
+                    !write(6,*)'itype= ',itype
+                 else if(trim(subset) == 'NC005039')  then            ! IR SW
+winds
+                    itype=240
+                    c_station_id='IR'//stationid
+                    c_sprvstg='IR'
+                    !write(6,*)'itype= ',itype
+                 else if(trim(subset) == 'NC005032')  then            ! VIS
+winds
+                    itype=251
+                    c_station_id='VI'//stationid
+                    c_sprvstg='VI'
+                    !write(6,*)'itype= ',itype
+                 else if(trim(subset) == 'NC005034')  then            ! WV cloud
+top
+                    itype=246
+                    c_station_id='WV'//stationid
+                    c_sprvstg='WV'
+                    !write(6,*)'itype= ',itype
+                 else if(trim(subset) == 'NC005031')  then            ! WV clear
+sky/deep layer
+                    itype=247
+                    c_station_id='WV'//stationid
+                    c_sprvstg='WV'
+                    !write(6,*)'itype= ',itype
+                 endif
+
+!                 call ufbint(lunin,rep_array,1,1,iret, '{AMVAHA}')
+!                 irep_array = int(rep_array)
+!                 allocate( amvaha(4,irep_array))
+!                 call ufbint(lunin,amvaha,4,irep_array,iret, 'EHAM PRLC TMDBST
+!                 HOCT')
+!                 deallocate( amvaha )
+!
+!                 call ufbint(lunin,rep_array,1,1,iret, '{AMVIII}')
+!                 irep_array = int(rep_array)
+!                 allocate( amviii(12,irep_array))
+!                 call ufbrep(lunin,amviii,12,irep_array,iret, 'LTDS SCLF SAID
+!                 SIID CHNM SCCF ORBN SAZA BEARAZ EHAM PRLC TMDBST')
+!                 deallocate( amviii )
+
+                 call ufbint(lunin,rep_array,1,1,iret, '{AMVIVR}')
+                 irep_array = int(rep_array)
+                 allocate( amvivr(2,irep_array))
+                 call ufbrep(lunin,amvivr,2,irep_array,iret, 'TCOV CVWD')
+                 pct1 = amvivr(2,1)     ! use of pct1 (a new variable in the
+BUFR) is introduced by Nebuda/Genkova
+                 deallocate( amvivr )
+
+!                 call ufbrep(lunin,rep_array,1,1,iret, '{AMVCLD}')
+!                 irep_array = int(rep_array)
+!                 allocate( amvcld(12,irep_array))
+!                 call ufbrep(lunin,amvcld,12,irep_array,iret, 'FOST CDTP MUCE
+!                 VSAT TMDBST VSAT CDTP MUCE OECS CDTP HOCT COPT')
+!                 deallocate( amvcld )
+
+                 call ufbseq(lunin,amvqic,2,4,iret, 'AMVQIC')
+                 qifn = amvqic(2,2)  ! QI w/ fcst does not exist in this BUFR
+                 ee = amvqic(2,4) ! NOTE: GOES-R's ee is in [m/s]
+
+! Additional QC introduced by Sharon Nebuda (for GOES-R winds from MSG proxy
+! images)
+                 if (qifn < 80_r_kind .or. qifn > r100 )   qm=15 !reject data
+with low QI
+                 if (ppb < 125.0_r_kind) qm=15 !reject data above 125hPa: Trop
+check in setup.f90
+                 experr_norm = 10.0_r_kind - 0.1_r_kind * ee   ! introduced by
+Santek/Nebuda 
+                 if (obsdat(4) > 0.1_r_kind) then  ! obsdat(4) is the AMV speed
+                    experr_norm = experr_norm/obsdat(4)
+                 else
+                    experr_norm = 100.0_r_kind
+                 end if
+                 if (experr_norm > 0.9_r_kind) qm=15 ! reject data with
+EE/SPD>0.9
+
+                 if(wrf_nmm_regional) then
+                    ! type 251 has been determine not suitable to be subjected
+                    ! to pct1 range check
+                    if(itype==240 .or. itype==245 .or. itype==246) then
+                       if (pct1 < 0.04_r_kind) qm=15
+                       if (pct1 > 0.50_r_kind) qm=15
+                    elseif (itype==251) then
+                       if (pct1 > 0.50_r_kind) qm=15
+                    endif
+                 else
+                    if(itype==240 .or. itype==245 .or. itype==246 .or.
+itype==251) then
+                    ! types 245 and 246 have been used to determine the
+                    ! acceptable pct1 range, but that pct1 range is applied to
+                    ! all GOES-R winds
+                       if (pct1 < 0.04_r_kind) qm=15
+                       if (pct1 > 0.50_r_kind) qm=15
+                    endif
+                 endif
+
+                ! winds rejected by qc dont get used
+                if (qm == 15) usage=r100
+                if (qm == 3 .or. qm ==7) woe=woe*r1_2
+                ! set strings for diagnostic output
+                if(itype==240 )  then;  c_prvstg='GOESR' ; c_sprvstg='IRSW'  ;
+endif
+                if(itype==245 )  then;  c_prvstg='GOESR' ; c_sprvstg='IR'  ;
+endif
+                if(itype==246 )  then;  c_prvstg='GOESR' ; c_sprvstg='WVCT'  ;
+endif
+                if(itype==247 )  then;  c_prvstg='GOESR' ; c_sprvstg='WVCS'  ;
+endif
+                if(itype==251 )  then;  c_prvstg='GOESR' ; c_sprvstg='VIS'  ;
+endif
+              endif
+! Extra block for INSAT winds: End
 
            endif
            ! assign types and get quality info : end
