@@ -164,7 +164,7 @@ subroutine setuppm2_5(this,lunin,mype,nreal,nobs,isis,is,conv_diagsave)
     this%myname="setuppm2_5"
     this%numvars = 4
     allocate(this%varnames(this%numvars))
-    this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::tv', 'var::pm2_5' /)
+    this%varnames(1:this%numvars) = (/ 'var::ps   ', 'var::z    ', 'var::tv   ', 'var::pm2_5' /)
   ! Check to see if required guess fields are available
     call this%check_vars_pm2_5(proceed)
     if(.not.proceed) return  ! not all vars available, simply return

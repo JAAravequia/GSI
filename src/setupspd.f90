@@ -120,6 +120,8 @@ contains
     real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
     real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
   integer(i_kind)                                  ,intent(in   ) :: is ! ndat index
+      logical,dimension(nobs)                          ,intent(inout) :: luse 
+      real(r_kind),dimension(nele,nobs)                ,intent(inout) :: data
   
   ! Declare local variables
     real(r_kind),parameter:: ten=10.0_r_kind
@@ -144,7 +146,6 @@ contains
     real(r_kind) cg_spd,wgross,wnotgross,wgt,arg,exp_arg,term,rat_err2
     real(r_kind) errinv_input,errinv_adjst,errinv_final
     real(r_kind) err_input,err_adjst,err_final
-    real(r_kind),dimension(nele,nobs),intent(inout):: data
     real(r_kind),dimension(nobs):: dup
     real(r_kind),dimension(nsig)::prsltmp,tges
     real(r_single),allocatable,dimension(:,:)::rdiagbuf
@@ -156,7 +157,7 @@ contains
     integer(i_kind) idomsfc,iskint,iff10,isfcr,isli
   
     
-    logical,dimension(nobs):: luse,muse
+    logical,dimension(nobs):: muse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
     logical proceed
   

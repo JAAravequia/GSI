@@ -43,7 +43,7 @@ module abstract_setup_mod
     procedure, pass(this) ::  init_ges
     procedure, pass(this) ::  allocate_ges3
     procedure, pass(this) ::  allocate_ges4
-!   procedure, pass(this) :: setup_ctor2
+!   procedure,nopass  :: setup_ctor2
 !   procedure, pass(this) :: setup_ctor3
     procedure, pass(this) :: initialize 
 !   procedure, pass(this) :: setup_ctor5
@@ -51,34 +51,38 @@ module abstract_setup_mod
 !   procedure, pass(this) :: setup_ctor7
 !   procedure, pass(this) :: setup_ctor8
   end type abstract_setup_class
-  interface abstract_setup_class
-       module procedure setup_ctor2
-       module procedure setup_ctor3
-  end interface 
+! interface abstract_setup_class
+!      module procedure setup_ctor2
+!      module procedure setup_ctor3
+! end interface 
 
 contains    
 ! subroutine setup_cctor()
 !    this%myname = "UNDEFINED"
 !    this%numvars = 0
 ! end subroutine setup_cctor
-  type(abstract_setup_class) function setup_ctor2(obsname,varname1)
-     character(len=16),                        intent(in) :: obsname
-     character(len=14),                        intent(in) :: varname1
-     setup_ctor2.myname = obsname
-     setup_ctor2.numvars = 1
-     allocate(setup_ctor2.varnames(setup_ctor2.numvars))
-     setup_ctor2.varnames(1) = varname1
-  end function setup_ctor2
-  type(abstract_setup_class) function setup_ctor3(obsname,varname1,varname2)
-     character(len=16),                        intent(in) :: obsname
-     character(len=14),                        intent(in) :: varname1
-     character(len=14),                        intent(in) :: varname2
-     setup_ctor3.myname = obsname
-     setup_ctor3.numvars = 2
-     allocate(setup_ctor3.varnames(setup_ctor3.numvars))
-     setup_ctor3.varnames(1) = varname1
-     setup_ctor3.varnames(2) = varname2
-  end function setup_ctor3
+! class(abstract_setup_class) function setup_ctor2(obsname,varname1)
+! class(abstract_setup_class) function setup_ctor2(this,obsname,varname1) 
+!    implicit none
+!    class(abstract_setup_class),allocatable  ,intent(inout) :: setup_ctor2
+!    character(len=16),                        intent(in) :: obsname
+!    character(len=14),                        intent(in) :: varname1
+!    allocate(setup_ctor2)
+!    setup_ctor2%myname = obsname
+!    setup_ctor2%numvars = 1
+!    allocate(setup_ctor2%varnames(setup_ctor2%numvars))
+!    setup_ctor2%varnames(1) = varname1
+! end function setup_ctor2
+! type(abstract_setup_class) function setup_ctor3(obsname,varname1,varname2)
+!    character(len=16),                        intent(in) :: obsname
+!    character(len=14),                        intent(in) :: varname1
+!    character(len=14),                        intent(in) :: varname2
+!    setup_ctor3%myname = obsname
+!    setup_ctor3%numvars = 2
+!    allocate(setup_ctor3%varnames(setup_ctor3%numvars))
+!    setup_ctor3%varnames(1) = varname1
+!    setup_ctor3%varnames(2) = varname2
+! end function setup_ctor3
   subroutine initialize(this,obsname,varname1,varname2,varname3)
       class(abstract_setup_class)              ,intent(inout) :: this
       character(*),                        intent(in) :: obsname
@@ -180,8 +184,8 @@ contains
       real(r_kind),dimension(nele,nobs)                               :: data
       logical,dimension(nobs)                                         :: luse 
 
-      write(6,*) ' in setup for ',this.myname,' with varnames ',this.varnames
-      call this%allocate_and_check_vars(this.myname,lunin,luse,nele,nobs,data,this.varnames)
+      write(6,*) ' in setup for ',this%myname,' with varnames ',this%varnames
+      call this%allocate_and_check_vars(this%myname,lunin,luse,nele,nobs,data,this%varnames)
       call this%setupDerived(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
       call this%final_vars_
   end subroutine setup

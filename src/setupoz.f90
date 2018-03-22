@@ -221,7 +221,7 @@ subroutine setupozlay(this,lunin,mype,stats_oz,nlevs,nreal,nobs,&
   this%varnames(1:this%numvars) = (/ 'var::oz' /)
 
 ! Check to see if required guess fields are available
-  call this%check_vars_(proceed)
+  call check_vars_(proceed)
   if(.not.proceed) return  ! not all vars available, simply return
 
 ! If require guess vars available, extract from bundle ...
@@ -777,7 +777,7 @@ subroutine setupozlay(this,lunin,mype,stats_oz,nlevs,nreal,nobs,&
 135 continue        
 
 ! Release memory of local guess arrays
-  call this%final_vars_
+  call final_vars_
 
 ! clean up
   call dtime_show('setupozlay','diagsave:oz',i_oz_ob_type)
@@ -1004,7 +1004,7 @@ subroutine setupozlev(this,lunin,mype,stats_oz,nlevs,nreal,nobs,&
   this%numvars = 2
   allocate(this%varnames(this%numvars))
   this%varnames(1:this%numvars) = (/ 'var::ps', 'var::oz' /)
-  call this%check_vars_(proceed)
+  call check_vars_(proceed)
   if(.not.proceed) return  ! not all vars available, simply return
 
 ! If require guess vars available, extract from bundle ...
@@ -1386,7 +1386,7 @@ subroutine setupozlev(this,lunin,mype,stats_oz,nlevs,nreal,nobs,&
   endif
 
 ! Release memory of local guess arrays
-  call this%final_vars_
+  call final_vars_
 
 ! clean up
   call dtime_show('setupozlev','diagsave:ozlv',i_o3l_ob_type)

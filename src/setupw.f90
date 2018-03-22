@@ -65,6 +65,8 @@ contains
      integer(i_kind)                                  ,intent(in   ) :: nobs  ! number of observations
      integer(i_kind)                                  ,intent(in   ) :: is    ! ndat index
      logical                                          ,intent(in   ) :: conv_diagsave ! logical to save innovation dignostics
+     logical,dimension(nobs)                          ,intent(inout) :: luse 
+     real(r_kind),dimension(nele,nobs)                ,intent(inout) :: data
      
   ! !INPUT/OUTPUT PARAMETERS:
   
@@ -214,7 +216,6 @@ contains
     real(r_kind) dudiff_opp, dvdiff_opp, vecdiff, vecdiff_opp
     real(r_kind) dudiff_opp_rs, dvdiff_opp_rs, vecdiff_rs, vecdiff_opp_rs
     real(r_kind) oscat_vec,ascat_vec,rapidscat_vec
-    real(r_kind),dimension(nele,nobs),intent(inout):: data
     real(r_kind),dimension(nobs):: dup
     real(r_kind),dimension(nsig)::prsltmp,tges,zges
     real(r_kind) wdirob,wdirgesin,wdirdiffmax
@@ -244,7 +245,7 @@ contains
     real(r_double) r_prvstg,r_sprvstg
   
     logical z_height,sfc_data
-    logical,dimension(nobs):: luse,muse
+    logical,dimension(nobs):: muse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
     logical lowlevelsat
     logical proceed

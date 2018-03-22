@@ -79,6 +79,8 @@ subroutine setupwspd10m(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,l
   real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
   real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
   integer(i_kind)                                  ,intent(in   ) :: is ! ndat index
+  logical,dimension(nobs)                          ,intent(inout) :: luse 
+  real(r_kind),dimension(nele,nobs)                ,intent(inout) :: data
 
 ! Declare external calls for code analysis
   external:: tintrp2a1,tintrp2a11
@@ -114,7 +116,6 @@ subroutine setupwspd10m(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,l
   real(r_kind),dimension(nobs):: dup
   real(r_kind),dimension(nsig)::prsltmp,tges
   real(r_kind) wdirob,wdirgesin,wdirdiffmax
-  real(r_kind),dimension(nele,nobs),intent(inout):: data
   real(r_single),allocatable,dimension(:,:)::rdiagbuf
 
 
@@ -125,7 +126,7 @@ subroutine setupwspd10m(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,l
   integer(i_kind) istat
   integer(i_kind) idomsfc,iskint,iff10,isfcr
   
-  logical,dimension(nobs):: luse,muse
+  logical,dimension(nobs):: muse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
   logical lowlevelsat
   logical proceed

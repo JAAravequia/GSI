@@ -237,7 +237,7 @@ subroutine setupref(this,lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,la
   this%myname='setupref'
   this%numvars = 3
   allocate(this%varnames(this%numvars))
-  this%varnames(1:this%numvars) = (/ 'var::z', 'var::tv', 'var::q' /)
+  this%varnames(1:this%numvars) = (/ 'var::z ', 'var::tv', 'var::q ' /)
   n_alloc(:)=0
   m_alloc(:)=0
 !*******************************************************************************

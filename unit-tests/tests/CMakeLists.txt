@@ -13,7 +13,7 @@ include_directories(
       ${PROJECT_SOURCE_DIR}
       ${PFUNIT_DIR}/mod
 )
-set(UNIT_TEST_LIST "test_read_wrf_nmm;test_adjoint;test_setupps")
+set(UNIT_TEST_LIST "test_setupps")
 # set(UNIT_TEST_LIST "test_read_wrf_nmm;test_read_wrf_mass;test_adjoint")
 #set(UNIT_TEST_LIST "test_read_wrf_nmm")
 #foreach(_sample ${UNIT_TEST_LIST})
@@ -47,7 +47,7 @@ foreach(_test ${UNIT_TEST_LIST})
          ${GSILIB} ${FRAMEPACK} ${FRAMEMODULE}
          ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES}   
          ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${CORE_LIBRARIES} 
-         ${IOINT_LIB} ${WRFNETCDF_LIB} )
+         ${IOINT_LIB} ${WRFNETCDF_LIB} ${wrflib} )
   target_include_directories( ${_test}.x PUBLIC ${PROJECT_BINARY_DIR}/generated/${_test})
   add_test(NAME ${_test} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/unit-tests/data COMMAND 
        ${PROJECT_BINARY_DIR}/bin/${_test}.x )

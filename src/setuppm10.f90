@@ -158,7 +158,7 @@ contains
     this%myname="setuppm10"
     this%numvars = 4
     allocate(this%varnames(this%numvars))
-    this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::pm10', 'var::tv' /)
+    this%varnames(1:this%numvars) = (/ 'var::ps  ', 'var::z   ', 'var::pm10', 'var::tv  ' /)
 
   ! Check to see if required guess fields are available
     call this%check_vars_pm10(proceed)

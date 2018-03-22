@@ -222,11 +222,11 @@ contains
     if(i_use_2mq4b>0) then
       this%numvars = 3
       allocate(this%varnames(this%numvars))
-      this%varnames(1:this%numvars) = (/ 'var::ps', 'var::q2m', 'var::q' /)
+      this%varnames(1:this%numvars) = (/ 'var::ps ', 'var::q2m', 'var::q  ' /)
     else 
       this%numvars = 2
       allocate(this%varnames(this%numvars))
-      this%varnames(1:this%numvars) = (/ 'var::ps', 'var::q' /)
+      this%varnames(1:this%numvars) = (/ 'var::ps', 'var::q ' /)
     endif
   ! Check to see if required guess fields are available
     call this%check_vars_(proceed)

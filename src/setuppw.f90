@@ -104,12 +104,14 @@ contains
     implicit none
   
   ! Declare passed variables
-      class(setuppw_class)                              , intent(inout) :: this
+    class(setuppw_class)                              , intent(inout) :: this
     logical                                          ,intent(in   ) :: conv_diagsave
     integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
     real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
     real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
-  integer(i_kind)                                  ,intent(in   ) :: is ! ndat index
+    integer(i_kind)                                  ,intent(in   ) :: is ! ndat index
+    logical,dimension(nobs)                          ,intent(inout) :: luse 
+    real(r_kind),dimension(nele,nobs)                ,intent(inout) :: data
   
   ! Declare local parameter
   
@@ -128,7 +130,6 @@ contains
     real(r_kind) errinv_input,errinv_adjst,errinv_final
     real(r_kind) err_input,err_adjst,err_final,tfact
     real(r_kind),dimension(nobs)::dup
-    real(r_kind),dimension(nele,nobs),intent(inout):: data
     real(r_kind),dimension(lat2,lon2,nfldsig)::rp2
     real(r_kind),dimension(nsig+1):: prsitmp
     real(r_kind),dimension(nsig):: qges, tvges
@@ -140,7 +141,7 @@ contains
     integer(i_kind) ier,ilon,ilat,ipw,id,itime,ikx,ipwmax,iqc
     integer(i_kind) ier2,iuse,ilate,ilone,istnelv,iobshgt,iobsprs
   
-    logical,dimension(nobs):: luse,muse
+    logical,dimension(nobs):: muse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
     logical proceed
     

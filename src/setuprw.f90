@@ -195,14 +195,14 @@ contains
     this%myname='setuprw'
     this%numvars = 5
     allocate(this%varnames(this%numvars))
-    this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::u', 'var::v', 'var::w' /)
+    this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z ', 'var::u ', 'var::v ', 'var::w ' /)
   ! Check to see if required guess fields are available
     call this%check_vars_(proceed,include_w)
     if(.not. include_w) then
       deallocate(this%varnames)
       this%numvars = 4
       allocate(this%varnames(this%numvars))
-      this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::u', 'var::v' /)
+      this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z ', 'var::u ', 'var::v ' /)
     endif   
     if(.not.proceed) return  ! not all vars available, simply return
   

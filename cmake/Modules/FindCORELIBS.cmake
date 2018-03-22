@@ -125,7 +125,7 @@ function (findInc incName version incFile )
       execute_process(COMMAND find ${COREPATH}/${incName} -iname ${incName}_module.mod RESULT_VARIABLE res OUTPUT_VARIABLE INCFILES)
     endif()
     if( NOT (INCFILES) )
-      execute_process(COMMAND find ${COREPATH} -iname ${incName}_module.mod RESULT_VARIABLE res OUTPUT_VARIABLE INCFILES)
+      execute_process(COMMAND find ${COREPATH}/sorc -iname ${incName}_module.mod RESULT_VARIABLE res OUTPUT_VARIABLE INCFILES)
     endif()
   endif()
 # message("incfiles are ${INCFILES}")
@@ -225,9 +225,6 @@ if(NOT  BUILD_CRTM )
   find_library( CRTM_LIBRARY 
     NAMES libcrtm_v${CRTM_VER}.a libcrtm.a libCRTM.a 
     HINTS 
-      $ENV{COREPATH} 
-      $ENV{COREPATH}/lib 
-      $ENV{COREPATH}/include 
       /usr/local/jcsda/nwprod_gdas_2014	
       ${CRTM_BASE}
       ${CRTM_BASE}/lib
@@ -236,6 +233,9 @@ if(NOT  BUILD_CRTM )
       ${CRTM_BASE}/v${CRTM_VER}/intel
       ${COREPATH}
       ${COREPATH}/lib
+      $ENV{COREPATH} 
+      $ENV{COREPATH}/lib 
+      $ENV{COREPATH}/include 
       ${CORECRTM}/crtm/${CRTM_VER}
       /nwprod2/lib/crtm/v${CRTM_VER}
     PATH_SUFFIXES
@@ -508,7 +508,7 @@ endif()
 set( CORE_LIBRARIES ${CRTM_LIBRARY} ${SFCIO_LIBRARY} ${SIGIO_LIBRARY} 
                   ${NEMSIO_LIBRARY} ${SP_LIBRARY} ${W3NCO_LIBRARY} ${BUFR_LIBRARY}  
                   ${BACIO_LIBRARY} ${W3EMC_LIBRARY} )
-set( CORE_INCS ${INCLUDE_OUTPUT_PATH} ${CRTMINC} ${SFCIOINC} ${SIGIOINC} ${NEMSIOINC} ${W3EMCINC} )
+set( CORE_INCS ${INCLUDE_OUTPUT_PATH} ${CRTMINC} ${SFCIOINC} ${SIGIOINC} ${NEMSIOINC} ${W3EMCINC}  )
 
 set( CRTM_LIBRARY_PATH ${CRTM_LIBRARY} CACHE STRING "CRTM Library Location" )
 set( CRTM_INCLUDE_PATH ${CRTMINC} CACHE STRING "CRTM Include Location" )

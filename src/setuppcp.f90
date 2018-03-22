@@ -292,7 +292,7 @@ subroutine setuppcp(this,lunin,mype,aivals,nele,nobs,&
   this%myname='setuppcp'
   this%numvars = 5
   allocate(this%varnames(this%numvars))
-  this%varnames(1:this%numvars) = (/ 'var::ps', 'var::q', 'var::div', 'var::v', 'var::u' /)
+  this%varnames(1:this%numvars) = (/ 'var::ps ', 'var::q  ', 'var::div', 'var::v  ', 'var::u  ' /)
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
   if(.not.proceed) return  ! not all vars available, simply return

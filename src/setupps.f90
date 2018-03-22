@@ -15,7 +15,7 @@ contains
       character(*),                        intent(in) :: varname3
       write(6,*) 'in constructor, setting obsname to be ',obsname
       call setup_ctor%initialize(obsname,varname1,varname2,varname3) 
-      write(6,*) 'in constructor, setting obsname is ',setup_ctor.myname
+      write(6,*) 'in constructor, setting obsname is ',setup_ctor%myname
   end function setup_ctor
   subroutine setupps(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
   !$$$  subprogram documentation block
@@ -135,12 +135,14 @@ contains
     implicit none
   
   ! Declare passed variables
-      class(setupps_class)                              , intent(inout) :: this
+    class(setupps_class)                              , intent(inout) :: this
     real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
     real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
     integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
     integer(i_kind)                                  ,intent(in   ) :: is     ! ndat index
     logical                                          ,intent(in   ) :: conv_diagsave
+    logical,dimension(nobs)                          ,intent(inout) :: luse 
+    real(r_kind),dimension(nele,nobs)                ,intent(inout) :: data
   
   ! Declare local parameters
     real(r_kind),parameter:: r0_7=0.7_r_kind
@@ -165,7 +167,6 @@ contains
     real(r_kind) cg_ps,wgross,wnotgross,wgt,arg,exp_arg,term,rat_err2,qcgross
     real(r_kind),dimension(nobs):: dup
     real(r_kind),dimension(nsig):: prsltmp
-    real(r_kind),dimension(nele,nobs),intent(inout):: data
     real(r_single),allocatable,dimension(:,:)::rdiagbuf
   
     integer(i_kind) ier,ilon,ilat,ipres,ihgt,itemp,id,itime,ikx,iqc,iptrb,ijb
@@ -173,7 +174,7 @@ contains
     integer(i_kind) ikxx,nn,istat,ibin,ioff,ioff0
     integer(i_kind) i,nchar,nreal,ii,jj,k,l,mm1
   
-    logical,dimension(nobs):: luse,muse
+    logical,dimension(nobs):: muse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
     logical proceed
    

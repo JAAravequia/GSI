@@ -80,12 +80,14 @@ contains
     implicit none
   
   ! Declare passed variables
-      class(setupgust_class)                              , intent(inout) :: this
-    logical                                          ,intent(in   ) :: conv_diagsave
+    class(setupgust_class)                              , intent(inout) :: this
     integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
     real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
     real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
-  integer(i_kind)                                  ,intent(in   ) :: is ! ndat index
+    integer(i_kind)                                  ,intent(in   ) :: is ! ndat index
+    logical                                          ,intent(in   ) :: conv_diagsave
+    logical,dimension(nobs)                          ,intent(inout) :: luse 
+    real(r_kind),dimension(nele,nobs)                ,intent(inout) :: data
   
   ! Declare external calls for code analysis
     external:: tintrp2a1,tintrp2a11
@@ -111,7 +113,6 @@ contains
     real(r_kind) err_input,err_adjst,err_final,skint,sfcr
     real(r_kind),dimension(nobs):: dup
     real(r_kind),dimension(nsig)::prsltmp,zges
-    real(r_kind),dimension(nele,nobs),intent(inout):: data
     real(r_single),allocatable,dimension(:,:)::rdiagbuf
   
   
@@ -122,7 +123,7 @@ contains
     integer(i_kind) istat
     integer(i_kind) idomsfc,iskint,iff10,isfcr
     
-    logical,dimension(nobs):: luse,muse
+    logical,dimension(nobs):: muse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
     logical proceed
   

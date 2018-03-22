@@ -261,7 +261,7 @@ subroutine setupbend(this,lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,l
   this%myname='setupbend'
   this%numvars = 3
   allocate(this%varnames(this%numvars))
-  this%varnames(1:this%numvars) = (/ 'var::z', 'var::tv', 'var::q' /)
+  this%varnames(1:this%numvars) = (/ 'var::z ', 'var::tv', 'var::q ' /)
 ! Check to see if required guess fields are available
   call this%check_vars_(proceed)
   if(.not.proceed) return  ! not all vars available, simply return

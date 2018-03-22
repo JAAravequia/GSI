@@ -82,6 +82,8 @@ contains
     real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
     real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
   integer(i_kind)                                  ,intent(in   ) :: is ! ndat index
+    logical,dimension(nobs)                          ,intent(inout) :: luse 
+    real(r_kind),dimension(nele,nobs)                ,intent(inout) :: data
   
   ! Declare external calls for code analysis
     external:: tintrp2a11
@@ -104,7 +106,6 @@ contains
     real(r_kind) errinv_input,errinv_adjst,errinv_final
     real(r_kind) err_input,err_adjst,err_final
     real(r_kind),dimension(nobs):: dup
-    real(r_kind),dimension(nele,nobs),intent(inout):: data
     real(r_single),allocatable,dimension(:,:)::rdiagbuf
   
   
@@ -115,7 +116,7 @@ contains
     integer(i_kind) istat
     integer(i_kind) idomsfc
     
-    logical,dimension(nobs):: luse,muse
+    logical,dimension(nobs):: muse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
     logical proceed
   

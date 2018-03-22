@@ -75,6 +75,8 @@ contains
     integer(i_kind)                                  , intent(in   ) :: nobs    ! number of observations
     integer(i_kind)                                  , intent(in   ) :: is      ! ndat index
     logical                                          , intent(in   ) :: conv_diagsave   ! logical to save innovation dignostics
+    logical,dimension(nobs)                          ,intent(inout) :: luse 
+    real(r_kind),dimension(nele,nobs)                ,intent(inout) :: data
   
   
   ! !INPUT/OUTPUT PARAMETERS:
@@ -218,7 +220,6 @@ contains
     real(r_kind) cg_t,wgross,wnotgross,wgt,arg,exp_arg,term,rat_err2,qcgross
     real(r_kind),dimension(nobs)::dup
     real(r_kind),dimension(nsig):: prsltmp
-    real(r_kind),dimension(nele,nobs),intent(inout):: data
     real(r_kind),dimension(npredt):: predbias
     real(r_kind),dimension(npredt):: pred
     real(r_kind),dimension(npredt):: predcoef
@@ -249,7 +250,7 @@ contains
     character(8) c_prvstg,c_sprvstg
     real(r_double) r_prvstg,r_sprvstg
   
-    logical,dimension(nobs):: luse,muse
+    logical,dimension(nobs):: muse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
     logical sfctype
     logical iqtflg

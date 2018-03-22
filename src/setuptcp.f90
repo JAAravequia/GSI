@@ -70,6 +70,8 @@ contains
     real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork ! data counts and gross checks
   
     logical                                          ,intent(in)    :: conv_diagsave
+    logical,dimension(nobs)                          ,intent(inout) :: luse 
+    real(r_kind),dimension(nele,nobs)                ,intent(inout) :: data
   
   ! Declare external calls for code analysis
     external:: intrp2a11,tintrp2a1,tintrp2a11
@@ -82,7 +84,7 @@ contains
     character(8) station_id
     equivalence(rstation_id,station_id)
   
-    logical,dimension(nobs):: luse,muse
+    logical,dimension(nobs):: muse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
     logical proceed
   
@@ -96,7 +98,6 @@ contains
     real(r_kind) ratio_errors,psges,zsges,rdp,drdp
     real(r_kind) pob,pges,pgesorig,half_tlapse,ddiff,halfpi,r0_005,rdelz,psges2
   
-    real(r_kind),dimension(nele,nobs),intent(inout):: data
     real(r_kind),dimension(nsig)::prsltmp
   
     integer(i_kind) i,jj
