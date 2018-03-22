@@ -203,7 +203,6 @@ program main
       fullExecutable = executable
 #endif
 !      allocate(runner, source=RobustRunner(fullExecutable, listeners))
-      write(6,*) 'HEY! in 1'
       allocate(runner, &
            & source=RobustRunner( &
            &    fullExecutable, &
@@ -215,10 +214,8 @@ program main
       write (*,*) 'Robust runner not built.'
 #endif
    else if (useSubsetRunner) then
-      write(6,*) 'HEY! in 2'
       allocate(runner, source=SubsetRunner(numSkip=numSkip))
    else
-      write(6,*) 'HEY! in 3'
       allocate(runner, source=newTestRunner(listeners))
    end if
 

@@ -91,6 +91,7 @@ contains
 
 
       conv_diagsave = .false.
+      write(6,*) "HEY, calling initialize"
       call gsimain_initialize
       write(6,*) ' done with initialize'      
       call mpi_comm_rank(mpi_comm_world,mype,ierror)

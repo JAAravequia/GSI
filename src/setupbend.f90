@@ -254,6 +254,7 @@ subroutine setupbend(this,lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,l
 !44  => PAZ
 !750-755 => COSMIC-2 Equatorial
 !724-729 => COSMIC-2 Polar
+!825 => KOMPSAT-5
 
 ! real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
 ! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
