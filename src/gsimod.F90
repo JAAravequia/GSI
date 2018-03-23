@@ -1101,6 +1101,7 @@
 ! namelist to different unit number and have each task read 
 ! namelist file.
 #ifdef ibm_sp
+  write(6,*) 'in ibm section'
 ! Initialize table of instruments and data types
   read(5,setup) 
   read(5,gridopts)
@@ -1121,9 +1122,12 @@
   read(5,nst)
 #else
 ! Initialize table of instruments and data types
+  write(6,*) 'calling obsmod_init'
   call obsmod_init_instr_table(nhr_assimilation,ndat,rcname='gsiparm.anl')
+  write(6,*) 'opening gsiparm.anl'
   open(11,file='gsiparm.anl')
   read(11,setup,iostat=ios)
+  write(6,*) 'after opening gsiparm.anl, ios is ',ios
   if(ios/=0) call die(myname_,'read(setup)',ios)  
   close(11)
 
