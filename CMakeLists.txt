@@ -74,7 +74,7 @@ project(GSI)
   if( HOST-S4 ) 
     set( host "S4" )
     setS4()
-  elseif(( HOST-Tide ) OR ( HOST-Gyre ) ) 
+  elseif(( HOST-Tide ) OR ( HOST-Gyre ) )
     set( host "WCOSS" )
     setWCOSS()
   elseif( HOST-Theia )
@@ -116,8 +116,8 @@ project(GSI)
     setPGI()
   endif()
 
-  set(intsize 4) 
-  set(doublesize 4) 
+  set(intsize 4)
+  set(doublesize 4)
   set(libsuffix "_i${intsize}r${doublesize}")
   
   find_package(MPI REQUIRED)
@@ -128,15 +128,12 @@ project(GSI)
   add_definitions(${MPI_Fortran_COMPILE_FLAGS})
   include_directories(${MPI_Fortran_INCLUDE_DIRS} ${MPI_INCLUDE_PATH} "./" ${CMAKE_INCLUDE_OUTPUT_DIRECTORY})
   link_directories(${MPI_Fortran_LIBRARIES} ${ARCHIVE_OUTPUT_PATH} )
-  
-  
+
+
   find_package( NetCDF REQUIRED)
   if(NETCDF4)
     if(CMAKE_MAJOR_VERSION GREATER 2)
-#     find_package( HDF5 COMPONENTS C HL Fortran_HL REQUIRED )
       find_package( ZLIB )
-    else()
-#     find_package( HDF5 )
     endif()
     find_package( CURL )
   endif()
@@ -159,8 +156,8 @@ project(GSI)
   get_filename_component (default_prefix ".." ABSOLUTE)
   set (CMAKE_INSTALL_PREFIX ${default_prefix} CACHE STRING "set prefix"
         FORCE)
-  
-  
+
+
   # FFLAGS depend on the compiler
   get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
   set(CFLAGS "-I. -DFortranByte=char -DFortranInt=int -DFortranLlong='long long' -O3  -Dfunder")
@@ -207,15 +204,15 @@ project(GSI)
   endif(BUILD_UNIT_TESTING)
   if(BUILD_REG_TESTING)
     if(USE_WRF)
-      file(WRITE "${PROJECT_BINARY_DIR}/regression_var.out" "${CMAKE_SOURCE_DIR}/scripts/regression_var.sh ${host} ${CMAKE_SOURCE_DIR}/.. ${PROJECT_BINARY_DIR} ${CMAKE_SOURCE_DIR} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${GSIEXEC} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${ENKFEXEC} ${GSICONTROL} ${ENKFCONTROL} ")
+      file(WRITE "${PROJECT_BINARY_DIR}/regression_var.out" "${CMAKE_SOURCE_DIR}/regression/regression_var.sh ${host} ${CMAKE_SOURCE_DIR}/.. ${PROJECT_BINARY_DIR} ${CMAKE_SOURCE_DIR} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${GSIEXEC} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${ENKFEXEC} ${GSICONTROL} ${ENKFCONTROL} ")
       set( REG_TEST_NAMES "global_T62;global_T62_ozonly;global_4dvar_T62;global_4denvar_T126;global_lanczos_T62;arw_netcdf;
           arw_binary;nmm_binary;nmm_netcdf;nmmb_nems_4denvar;hwrf_nmm_d2;hwrf_nmm_d3;rtma;global_enkf_T62")
     else()
-      file(WRITE "${PROJECT_BINARY_DIR}/regression_var.out" "${CMAKE_SOURCE_DIR}/scripts/regression_var.sh ${host} ${CMAKE_SOURCE_DIR}/.. ${PROJECT_BINARY_DIR} ${CMAKE_SOURCE_DIR} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${GSIEXEC} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${ENKFEXEC} ${GSICONTROL} ${ENKFCONTROL} ")
+      file(WRITE "${PROJECT_BINARY_DIR}/regression_var.out" "${CMAKE_SOURCE_DIR}/regression/regression_var.sh ${host} ${CMAKE_SOURCE_DIR}/.. ${PROJECT_BINARY_DIR} ${CMAKE_SOURCE_DIR} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${GSIEXEC} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${ENKFEXEC} ${GSICONTROL} ${ENKFCONTROL} ")
       set( REG_TEST_NAMES "global_T62;global_T62_ozonly;global_4dvar_T62;global_lanczos_T62;global_nemsio_T62")
     endif()
     foreach( REG_TEST ${REG_TEST_NAMES} )
-      add_test(NAME ${REG_TEST} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/scripts COMMAND regression_driver.sh ${REG_TEST} ${PROJECT_BINARY_DIR})
+      add_test(NAME ${REG_TEST} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/regression COMMAND regression_driver.sh ${REG_TEST} ${PROJECT_BINARY_DIR})
     endforeach( REG_TEST )
     set_tests_properties( ${REG_TEST_NAMES} PROPERTIES TIMEOUT 86400 )
   endif()

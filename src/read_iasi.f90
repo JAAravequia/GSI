@@ -657,7 +657,7 @@ subroutine read_iasi(mype,val_iasi,ithin,isfcalc,rmesh,jsatid,gstime,&
                 iexponent = -(nint(cscale(3,i)) - 5)
                 sscale(i)=ten**iexponent
               else 
-                sscale(i)=0.0
+                sscale(i)=0.0_r_kind
               endif
            end do
 
