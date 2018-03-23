@@ -574,7 +574,7 @@ subroutine new_factorization_rf_x(f,iadvance,iback,nlevs)
   ny=grd_loc%nlat ; nx=grd_loc%nlon ; nz=nlevs
 
   if(vvlocal)then
-!cltorg !$omp parallel do schedule(dynamic,1) private(k,j,i,l)
+!$omp parallel do schedule(dynamic,1) private(k,j,i,l)
      do k=1,nz
 
         if(iadvance == 1) then
@@ -617,7 +617,7 @@ subroutine new_factorization_rf_x(f,iadvance,iback,nlevs)
 
      enddo
   else 
-!cltorg !$omp parallel do schedule(dynamic,1) private(k,j,i,l)
+!$omp parallel do schedule(dynamic,1) private(k,j,i,l)
      do k=1,nz
 
         if(iadvance == 1) then
@@ -1589,7 +1589,7 @@ end subroutine normal_new_factorization_rf_y
     real(r_kind) zloc1(ny,nx)
     integer(i_kind) i,ii,j,jj,k
 
-!cltorg !$omp parallel do schedule(dynamic,1) private(j,k,i,jj,ii,zloc1)
+!$omp parallel do schedule(dynamic,1) private(j,k,i,jj,ii,zloc1)
     do j=1,nscl
        do k=1,nnnn1o
           i=0
@@ -1668,7 +1668,7 @@ end subroutine normal_new_factorization_rf_y
             reshape(qvar3d,(/size(qvar3d,1),size(qvar3d,2),size(qvar3d,3),1/)),qvar3d_ens,regional)
     end if
     do m=1,ntlevs_ens
-!cltorg !$omp parallel do schedule(dynamic,1) private(n,i,j,k,w3,istatus)
+!$omp parallel do schedule(dynamic,1) private(n,i,j,k,w3,istatus,ig)
      do ig=1,nsclgrp
        do n=1,n_ens
           call gsi_bundlegetpointer(en_perts(n,ig,m),'q',w3,istatus)
@@ -1794,6 +1794,7 @@ end subroutine normal_new_factorization_rf_y
     integer(i_kind) :: ipc3d(nc3d),ipc2d(nc2d),istatus
     integer(i_kind) :: ig
     integer(i_kind) :: iaens
+    INTEGER OMP_GET_THREAD_NUM
 
     im=cvec%grid%im
     jm=cvec%grid%jm
@@ -1822,8 +1823,15 @@ end subroutine normal_new_factorization_rf_y
     endif
  
     ipx=1
+!$OMP PARALLEL
+!$OMP critical 
 
-!cltorg!$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ipic)
+   write(6,*) "Hello World ! openmp rank " ,  OMP_GET_THREAD_NUM()           
+
+!$OMP END critical 
+!$OMP END PARALLEL
+!cltorg $omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ipic)
+!$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ipic,ig,iaens)
     do k=1,km
        do ic3=1,nc3d
           ipic=ipc3d(ic3)
@@ -1846,7 +1854,8 @@ end subroutine normal_new_factorization_rf_y
        enddo
     enddo
 
-!cltorg !$omp parallel do schedule(dynamic,1) private(j,n,k,i,ic2,ipic)
+!cltorg!$omp parallel do schedule(dynamic,1) private(j,n,k,i,ic2,ipic)
+!$omp parallel do schedule(dynamic,1) private(j,n,k,i,ic2,ipic,ig,iaens)
     do ic2=1,nc2d
        ipic=ipc2d(ic2)
        do j=1,jm
@@ -1996,7 +2005,7 @@ end subroutine normal_new_factorization_rf_y
     im=work_ens%grid%im
     jm=work_ens%grid%jm
     km=work_ens%grid%km
-!!cltorg $omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ipic)
+!$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ipic,iaens)
     do k=1,km
        do ic3=1,nc3d
           ipic=ipc3d(ic3)
@@ -2018,7 +2027,7 @@ end subroutine normal_new_factorization_rf_y
         enddo
        enddo
     enddo
-!cltorg !$omp parallel do schedule(dynamic,1) private(j,n,k,i,ic2,ipic)
+!$omp parallel do schedule(dynamic,1) private(j,n,k,i,ic2,ipic,iaens)
     do ic2=1,nc2d
        ipic=ipc2d(ic2)
        do j=1,jm
@@ -2172,6 +2181,7 @@ end subroutine normal_new_factorization_rf_y
     ipx=1
 !cltorg !$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ic2,ipic)
 !clt how to change opmen after adding ig loop
+!$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ic2,ipic,ig,iaens)
    do ig=1,nsclgrp
     iaens=ensgrp2aensgrp(ig)
     do n=1,n_ens
@@ -2335,7 +2345,7 @@ end subroutine normal_new_factorization_rf_y
     im=a_en(1,1)%grid%im
     jm=a_en(1,1)%grid%jm
     km=a_en(1,1)%grid%km
-!cltorg !$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ic2,ipic)
+!$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ic2,ipic,iaens)
   do ig=1,nsclgrp
     iaens=ensgrp2aensgrp(ig)
     do n=1,n_ens
@@ -2660,7 +2670,7 @@ subroutine sqrt_beta_s_mult_cvec(grady)
      call stop2(999)
   endif
 
-!cltorg !$omp parallel do schedule(dynamic,1) private(ic3,ic2,k,j,i,ii)
+!$omp parallel do schedule(dynamic,1) private(ic3,ic2,k,j,i,ii)
   ! multiply by sqrt_beta_s
   do j=1,lon2
      do ii=1,nsubwin
@@ -2750,7 +2760,7 @@ subroutine sqrt_beta_s_mult_bundle(grady)
      call stop2(999)
   endif
 
-!cltorg !$omp parallel do schedule(dynamic,1) private(ic3,ic2,k,j,i)
+!$omp parallel do schedule(dynamic,1) private(ic3,ic2,k,j,i)
   ! multiply by sqrt_beta_s
   do j=1,lon2
      do ic3=1,nc3d
@@ -2825,7 +2835,7 @@ subroutine sqrt_beta_e_mult_cvec(grady)
   ! Initialize timer
   call timer_ini('sqrt_beta_e_mult')
 
-!cltorg !$omp parallel do schedule(dynamic,1) private(nn,k,j,i,ii)
+!$omp parallel do schedule(dynamic,1) private(nn,k,j,i,ii,iaens)
   ! multiply by sqrt_beta_e
   do j=1,grd_ens%lon2
      do ii=1,nsubwin
@@ -2893,7 +2903,7 @@ subroutine sqrt_beta_e_mult_bundle(aens)
   ! Initialize timer
   call timer_ini('sqrt_beta_e_mult')
 
-!cltorg !$omp parallel do schedule(dynamic,1) private(nn,k,j,i)
+!$omp parallel do schedule(dynamic,1) private(nn,k,j,i,iaens)
   ! multiply by sqrt_beta_e
   do j=1,grd_ens%lon2
     do iaens=1,naensgrp
@@ -3295,7 +3305,7 @@ subroutine sf_xy(iaensgrpin,f,k_start,k_end)
 
   if(.not.use_localization_grid) then
 
-!cltorg !$omp parallel do schedule(dynamic,1) private(k)
+!$omp parallel do schedule(dynamic,1) private(k)
     do k=k_start,k_end
        call sfilter(grd_ens,sp_loc,spectral_filter(iaensgrpin,:,k_index(k)),f(1,1,k))
     enddo
@@ -3303,7 +3313,7 @@ subroutine sf_xy(iaensgrpin,f,k_start,k_end)
   else
 
     vector=.false.
-!cltorg !$omp parallel do schedule(dynamic,1) private(k,work)
+!$omp parallel do schedule(dynamic,1) private(k,work)
     do k=k_start,k_end
        call g_egrid2agrid_ad(p_sploc2ens,work,f(:,:,k:k),k,k,vector(k:k))
        call sfilter(grd_ens,sp_loc,spectral_filter(iaensgrpin,:,k_index(k)),f(1,1,k))
@@ -3566,7 +3576,7 @@ type(gsi_bundle),allocatable :: ebundle2(:,:)
      write(6,*)'bkerror_a_en: trouble getting pointer to ensemble CV'
      call stop2(317)
   endif
-!cltorg !$omp parallel do schedule(dynamic,1) private(nn,ii)
+!$omp parallel do schedule(dynamic,1) private(nn,ii,iaens)
   do nn=1,n_ens
     do iaens=1,naensgrp
      do ii=1,nsubwin
@@ -3726,7 +3736,7 @@ subroutine bkgcov_a_en_new_factorization(iaensgrpin,a_en)
      call stop2(999)
   endif
   iadvance=1 ; iback=2
-!cltorg !$omp parallel do schedule(dynamic,1) private(k,ii,is,ie)
+!$omp parallel do schedule(dynamic,1) private(k,ii,is,ie)
   do k=1,n_ens
      call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback)
      ii=(k-1)*a_en(1)%ndim
@@ -3756,7 +3766,7 @@ subroutine bkgcov_a_en_new_factorization(iaensgrpin,a_en)
 ! Retrieve ensemble components from long vector
 ! Apply vertical smoother on each ensemble member
   iadvance=2 ; iback=1
-!cltorg !$omp parallel do schedule(dynamic,1) private(k,ii,is,ie)
+!$omp parallel do schedule(dynamic,1) private(k,ii,is,ie)
   do k=1,n_ens
      ii=(k-1)*a_en(1)%ndim
      is=ii+1
