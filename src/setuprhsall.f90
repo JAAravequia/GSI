@@ -445,6 +445,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
      enddo
 
      lunin=1
+     write(6,*) 'obs_setup is ',obs_setup
      open(lunin,file=obs_setup,form='unformatted')
      rewind lunin
  

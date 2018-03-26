@@ -191,7 +191,9 @@ subroutine glbsoi
   laltmin = lsqrtb.or.lbicg
 
 ! Initialize observer
+  write(6,*) 'calling observer init'
   call observer_init
+  write(6,*) 'DONE calling observer init'
 
 ! Check GSI options against available number of guess time levels
   if (nfldsig == 1) then
@@ -204,9 +206,11 @@ subroutine glbsoi
   endif
 
 ! Set cost function
+  write(6,*) 'calling create_jfunc '
   call create_jfunc
 
 ! Read observations and scatter
+  write(6,*) 'calling observer set'
   call observer_set
 
 ! Create/setup background error and background error balance

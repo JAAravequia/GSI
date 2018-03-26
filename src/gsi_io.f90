@@ -74,7 +74,7 @@ contains
 !   Set unit numbers reserved for little endian input and output
     lendian_in  = 15
     lendian_out = 66
-    verbose = .false.
+    verbose = .true.
 
     if (mype==0) write(6,*)'INIT_IO:  reserve units lendian_in=',lendian_in,&
        ' and lendian_out=',lendian_out,' for little endian i/o'

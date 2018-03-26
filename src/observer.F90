@@ -240,7 +240,7 @@ subroutine init_
 _ENTRY_(Iam)
 
 
-  print_verbose=.false.  
+  print_verbose=.true.  
   if(verbose)print_verbose=.true.
   if(ob_initialized_) call die(Iam,'already initialized')
   ob_initialized_=.true.
@@ -329,7 +329,6 @@ _ENTRY_(Iam)
 ! Create file names for pe relative observation data.  obs_setup files are used
 ! in outer loop setup routines. 
   obs_setup = trim(dirname) // 'obs_setup'
-
 ! Read observations or collective observation information
   if (.not.lread_obs_skip) then
 
@@ -472,6 +471,7 @@ _ENTRY_(Iam)
   do jiter=jiterstart,jiterlast
 
 !    Set up right hand side of analysis equation
+     write(6,*) ' calling setuprhsall'
      call setuprhsall(ndata,mype,init_pass_,last_pass_)
 
      last  = jiter == miter+1 ! there is no obsdiags output if
