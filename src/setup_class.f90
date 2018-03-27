@@ -327,7 +327,8 @@ contains
                  case ("ps_lon")
                    call gsi_bundlegetpointer(gsi_xderivative_bundle(ifld),trim(varname),rank2,istatus)
                  case ("ps_lat")
-                   call gsi_bundlegetpointer(gsi_yderivative_bundle(ifld),trim(varname),rank2,istatus)
+! BUG in original  call gsi_bundlegetpointer(gsi_yderivative_bundle(ifld),trim(varname),rank2,istatus)
+                   call gsi_bundlegetpointer(gsi_xderivative_bundle(ifld),trim(varname),rank2,istatus)
               end select
              ges(:,:,ifld)=rank2
           enddo

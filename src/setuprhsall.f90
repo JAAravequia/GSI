@@ -184,7 +184,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 ! use setuptd2m_mod, only: setuptd2m_class
   use setupvis_mod, only: setupvis_class
   use setupw_mod, only: setupw_class
-  use setupwspd10m_mod, only: setupwspd10m_class
+! use setupwspd10m_mod, only: setupwspd10m_class
 
   use m_gpsStats, only: gpsStats_genstats       ! was genstats_gps()
   use m_gpsStats, only: gpsStats_destroy        ! was done by genstats_gps()
@@ -233,7 +233,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 ! type(setuptd2m_class) :: td2m
   type(setupvis_class) :: vis
   type(setupw_class) :: w
-  type(setupwspd10m_class) :: wspd10m
+! type(setupwspd10m_class) :: wspd10m
 
 ! Declare external calls for code analysis
   external:: compute_derived
@@ -317,7 +317,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   t = setupt_class('setupt','var::ps', 'var::v', 'var::u', 'var::q', 'var::tv')
   vis = setupvis_class('setupvis','var::ps', 'var::z', 'var::vis')
   w = setupw_class('setupw','var::ps', 'var::z', 'var::v', 'var::u', 'var::tv')
-  wspd10m = setupwspd10m_class('var::wspd10m', 'var::ps', 'var::z', 'var::u', 'var::v', 'var::tv')
+! wspd10m = setupwspd10m_class('var::wspd10m', 'var::ps', 'var::z', 'var::u', 'var::v', 'var::tv')
 
   if(i_use_2mq4b>0) then
     q = setupq_class('setupq','var::ps','var::q2m ','var::q')
@@ -656,8 +656,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up conventional wspd10m data
               else if(obstype=='wspd10m' .and. getindex(svars2d,'wspd10m')>0) then
                  write(6,*) 'setting up wspd10m'
-                 call wspd10m%setup(lunin,mype,bwork,awork(1,i_wspd10m),nele,nobs,is,conv_diagsave)
-!                call setupwspd10m(lunin,mype,bwork,awork(1,i_wspd10m),nele,nobs,is,conv_diagsave)
+!                call wspd10m%setup(lunin,mype,bwork,awork(1,i_wspd10m),nele,nobs,is,conv_diagsave)
+                 call setupwspd10m(lunin,mype,bwork,awork(1,i_wspd10m),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional td2m data
               else if(obstype=='td2m' .and. getindex(svars2d,'td2m')>0) then
