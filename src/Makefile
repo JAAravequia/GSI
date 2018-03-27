@@ -463,6 +463,7 @@ clean:
         m_rwNode.F90 \
         m_spdNode.F90 \
         m_sstNode.F90 \
+	m_stubTimer.f90 \
         m_tNode.F90 \
 	m_tcamtNode.F90 \
         m_tcpNode.F90 \
@@ -597,7 +598,6 @@ clean:
 	stub_pertmod.F90 \
 	stub_ensmod.f90 \
 	stub_set_crtm_aerosol.f90 \
-	stub_timermod.f90 \
 	tendsmod.f90 \
 	test_obsens.f90 \
 	tcv_mod.f90 \
