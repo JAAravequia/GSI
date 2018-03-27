@@ -281,6 +281,7 @@ m_sortind.o : m_sortind.f90 kinds.o
 m_spdNode.o : m_spdNode.F90 mytrace.H myassert.H m_cvgridLookup.o m_obsdiagNode.o m_obsNode.o mpeu_util.o kinds.o obsmod.o 
 m_sstNode.o : m_sstNode.F90 mytrace.H myassert.H m_cvgridLookup.o m_obsdiagNode.o m_obsNode.o mpeu_util.o kinds.o obsmod.o 
 m_stats.o : m_stats.f90 mpimod.o constants.o kinds.o 
+m_stubTimer.o : m_stubTimer.f90 kinds.o mpeu_mpif.o mpeu_util.o
 m_tcamtNode.o : m_tcamtNode.F90 mytrace.H myassert.H m_cvgridLookup.o m_obsdiagNode.o m_obsNode.o mpeu_util.o kinds.o obsmod.o 
 m_tcpNode.o : m_tcpNode.F90 mytrace.H myassert.H m_cvgridLookup.o m_obsdiagNode.o m_obsNode.o mpeu_util.o kinds.o obsmod.o 
 m_td2mNode.o : m_td2mNode.F90 mytrace.H myassert.H m_cvgridLookup.o m_obsdiagNode.o m_obsNode.o mpeu_util.o kinds.o obsmod.o 
@@ -486,13 +487,12 @@ strong_fast_global_mod.o : strong_fast_global_mod.f90 mod_strong.o mod_vtrans.o 
 stub_ensmod.o : stub_ensmod.f90 gsi_bundlemod.o general_sub2grid_mod.o hybrid_ensemble_parameters.o kinds.o 
 stub_pertmod.o : stub_pertmod.F90 mytrace.H gsi_io.o constants.o gsi_bundlemod.o gsi_4dcouplermod.o mpeu_util.o kinds.o 
 stub_set_crtm_aerosol.o : stub_set_crtm_aerosol.f90 mpeu_util.o constants.o kinds.o 
-stub_timermod.o : stub_timermod.f90 kinds.o 
 sub2fslab_mod.o : sub2fslab_mod.f90 constants.o patch2grid_mod.o fgrid2agrid_mod.o general_commvars_mod.o general_sub2grid_mod.o control_vectors.o gsi_bundlemod.o anberror.o gridmod.o kinds.o 
 support_2dvar.o : support_2dvar.f90 convinfo.o anisofilter.o jfunc.o derivsmod.o gsi_bundlemod.o gsi_metguess_mod.o gridmod.o obsmod.o constants.o guess_grids.o mpimod.o mpeu_util.o gsi_io.o gsi_4dvar.o kinds.o 
 tcv_mod.o : tcv_mod.f90 constants.o kinds.o 
 tendsmod.o : tendsmod.f90 mpeu_util.o gsi_chemguess_mod.o gsi_metguess_mod.o gsi_bundlemod.o mpimod.o gridmod.o constants.o kinds.o 
 test_obsens.o : test_obsens.f90 control_vectors.o obs_sensitivity.o mpimod.o obsmod.o jfunc.o constants.o kinds.o 
-timermod.o : timermod.f90 kinds.o 
+timermod.o : timermod.f90 kinds.o m_stubTimer.o mpeu_mpif.o mpeu_util.o
 tintrp2a.o : tintrp2a.f90 guess_grids.o constants.o gridmod.o kinds.o 
 tintrp3.o : tintrp3.f90 constants.o gridmod.o kinds.o 
 tpause.o : tpause.f90 gsi_metguess_mod.o gsi_bundlemod.o gridmod.o guess_grids.o constants.o kinds.o 
