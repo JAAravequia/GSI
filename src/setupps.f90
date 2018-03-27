@@ -13,9 +13,8 @@ contains
       character(*),                        intent(in) :: varname1
       character(*),                        intent(in) :: varname2
       character(*),                        intent(in) :: varname3
-      write(6,*) 'in constructor, setting obsname to be ',obsname
-      call setup_ctor%initialize(obsname,varname1,varname2,varname3) 
-      write(6,*) 'in constructor, setting obsname is ',setup_ctor%myname
+
+      call setup_ctor%initialize(obsname,varname1=varname1,varname2=varname2,varname3=varname3)
   end function setup_ctor
   subroutine setupps(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
   !$$$  subprogram documentation block
@@ -197,10 +196,6 @@ contains
     equivalence(r_sprvstg,c_sprvstg)
     
   
-!   this%myname='setupps'
-!   this%numvars = 3
-!   allocate(this%varnames(this%numvars))
-!   this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::tv' /)
     n_alloc(:)=0
     m_alloc(:)=0
   !*******************************************************************************
@@ -241,13 +236,6 @@ contains
     half_tlapse=0.00325_r_kind  ! half of 6.5K/1km
     mm1=mype+1
     var_jb=zero
-  
-  ! Check to see if required guess fields are available
-    call this%check_vars_(proceed)
-    if(.not.proceed) return  ! not all vars available, simply return
-  
-  ! If require guess vars available, extract from bundle ...
-    call this%init_ges
   
   !  Check to see if observation should be used or monitored
   !  muse = true  then used
@@ -716,9 +704,6 @@ contains
   
   ! End of loop over observations
     end do
-  
-  ! Release memory of local guess arrays
-!   call this%final_vars_
   
   ! Write information to diagnostic file
   

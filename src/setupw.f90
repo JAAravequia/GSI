@@ -4,7 +4,20 @@ use abstract_setup_mod
   contains
     procedure, pass(this) :: setupDerived => setupw
   end type setupw_class
+  interface setupw_class
+     module procedure setup_ctor
+  end interface
 contains
+  type(setupw_class) function setup_ctor(obsname,varname1,varname2,varname3,varname4,varname5)
+      character(*),                        intent(in) :: obsname
+      character(*),                        intent(in) :: varname1
+      character(*),                        intent(in) :: varname2
+      character(*),                        intent(in) :: varname3
+      character(*),                        intent(in) :: varname4
+      character(*),                        intent(in) :: varname5
+      call setup_ctor%initialize(obsname,varname1=varname1,varname2=varname2,varname3=varname3,&
+            varname4=varname4,varname5=varname5) 
+  end function setup_ctor
   !-------------------------------------------------------------------------
   !    NOAA/NCEP, National Centers for Environmental Prediction GSI        !
   !-------------------------------------------------------------------------
@@ -264,19 +277,6 @@ contains
     equivalence(r_sprvstg,c_sprvstg)
  
      
-!   this%numvars = 5
-!   this%myname="setupw"
-!   if(.not.allocated(this%varnames)) then
-!     allocate(this%varnames(this%numvars))
-!     this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::z', 'var::ps', 'var::tv' /)
-!   endif
-  ! Check to see if required guess fields are available
-!   call this%check_vars_(proceed)
-!   if(.not.proceed) return  ! not all vars available, simply return
-  
-  ! If require guess vars available, extract from bundle ...
-!   call this%init_ges
-  
     n_alloc(:)=0
     m_alloc(:)=0
   !******************************************************************************
@@ -1379,9 +1379,6 @@ contains
     end do
   ! End of loop over observations
     if(num_bad_ikx > 0) write(6,*)' in setupw, num_bad_ikx ( ikx<1 or ikx>nconvtype ) = ',num_bad_ikx
-  
-  ! Release memory of local guess arrays
-!   call this%final_vars_
   
   ! Write information to diagnostic file
     if(conv_diagsave .and. ii>0)then

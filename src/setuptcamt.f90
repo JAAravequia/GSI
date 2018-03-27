@@ -4,7 +4,15 @@ use abstract_setup_mod
   contains
     procedure, pass(this) :: setupDerived => setuptcamt
   end type setuptcamt_class
+  interface setuptcamt_class
+     module procedure setup_ctor
+  end interface
 contains
+  type(setuptcamt_class) function setup_ctor(obsname,varname1)
+      character(*),                        intent(in) :: obsname
+      character(*),                        intent(in) :: varname1
+      call setup_ctor%initialize(obsname,varname1=varname1)
+  end function setup_ctor
   subroutine setuptcamt(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
@@ -128,21 +136,6 @@ contains
     equivalence(rstation_id,station_id)
     equivalence(r_prvstg,c_prvstg)
     equivalence(r_sprvstg,c_sprvstg)
-  
-!   this%myname='setuptcamt'
-!   this%numvars = 1
-!   allocate(this%varnames(this%numvars))
-!   this%varnames(1:this%numvars) = (/ 'var::tcamt' /)
-  ! Check to see if required guess fields are available
-!   call this%check_vars_(proceed)
-!  if(.not.proceed) then
-!     print *, 'Whoa!  We have some missing metguess variables in setuptcamt.f90....returning to setuprhsall.f90 after advancing through input file'
-!   read(lunin)data,luse,ioid
-!     return  ! not all vars available, simply return
-!   end if
-  
-  ! If require guess vars available, extract from bundle ...
-!   call this%init_ges
   
     n_alloc(:)=0
     m_alloc(:)=0
@@ -519,9 +512,6 @@ contains
   
   
     end do
-  
-  ! Release memory of local guess arrays
-    call this%final_vars_
   
   ! Write information to diagnostic file
     if(conv_diagsave)then

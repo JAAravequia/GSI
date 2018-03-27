@@ -4,7 +4,24 @@ use abstract_setup_mod
   contains
     procedure, pass(this) :: setup => setuprw
   end type setuprw_class
+  interface setuprw_class
+     module procedure setup_ctor
+  end interface
 contains
+  type(setuprw_class) function setup_ctor(obsname,varname1,varname2,varname3,varname4,varname5)
+      implicit none
+      character(*),                        intent(in) :: obsname
+      character(*),                        intent(in) :: varname1
+      character(*),                        intent(in) :: varname2
+      character(*),                        intent(in) :: varname3
+      character(*),                        intent(in) :: varname4
+      character(*),                        intent(in) :: varname5
+      logical :: include_w
+
+      call setup_ctor%initialize(obsname,varname1=varname1,varname2=varname2,varname3=varname3,&
+                varname4=varname4,varname5=varname5,include_w=include_w) 
+  end function setup_ctor
+
   subroutine setuprw(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
@@ -192,22 +209,22 @@ contains
     type(rwNode),pointer:: my_head
     type(obs_diag),pointer:: my_diag
   
-    this%myname='setuprw'
-    this%numvars = 5
-    allocate(this%varnames(this%numvars))
-    this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z ', 'var::u ', 'var::v ', 'var::w ' /)
+!   this%myname='setuprw'
+!   this%numvars = 5
+!   allocate(this%varnames(this%numvars))
+!   this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z ', 'var::u ', 'var::v ', 'var::w ' /)
   ! Check to see if required guess fields are available
-    call this%check_vars_(proceed,include_w)
-    if(.not. include_w) then
-      deallocate(this%varnames)
-      this%numvars = 4
-      allocate(this%varnames(this%numvars))
-      this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z ', 'var::u ', 'var::v ' /)
-    endif   
-    if(.not.proceed) return  ! not all vars available, simply return
+!   call this%check_vars_(proceed,include_w)
+!   if(.not. include_w) then
+!     deallocate(this%varnames)
+!     this%numvars = 4
+!     allocate(this%varnames(this%numvars))
+!     this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z ', 'var::u ', 'var::v ' /)
+!   endif   
+!   if(.not.proceed) return  ! not all vars available, simply return
   
-  ! If require guess vars available, extract from bundle ...
-    call this%init_ges
+! ! If require guess vars available, extract from bundle ...
+!   call this%init_ges
   
     n_alloc(:)=0
     m_alloc(:)=0
@@ -800,7 +817,7 @@ contains
     end do
   
   ! Release memory of local guess arrays
-    call this%final_vars_
+!   call this%final_vars_
   
   ! Write information to diagnostic file
     if(conv_diagsave .and. ii>0)then

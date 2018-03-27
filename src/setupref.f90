@@ -4,7 +4,17 @@ use abstract_setup_mod
   contains
     procedure, pass(this) :: setupref
   end type setupref_class
+  interface setupref_class
+     module procedure setup_ctor
+  end interface
 contains
+  type(setupref_class) function setup_ctor(obsname,varname1,varname2,varname3)
+      character(*),                        intent(in) :: obsname
+      character(*),                        intent(in) :: varname1
+      character(*),                        intent(in) :: varname2
+      character(*),                        intent(in) :: varname3
+      call setup_ctor%initialize(obsname,varname1=varname1,varname2=varname2,varname3=varname3)
+  end function setup_ctor
 subroutine setupref(this,lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pass)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -230,14 +240,6 @@ subroutine setupref(this,lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,la
   type(gpsNode),pointer:: my_head
   type(obs_diag),pointer:: my_diag
 
-! real(r_kind),allocatable,dimension(:,:,:  ) :: this%ges_z
-! real(r_kind),allocatable,dimension(:,:,:,:) :: this%ges_tv
-! real(r_kind),allocatable,dimension(:,:,:,:) :: this%ges_q
-
-  this%myname='setupref'
-  this%numvars = 3
-  allocate(this%varnames(this%numvars))
-  this%varnames(1:this%numvars) = (/ 'var::z ', 'var::tv', 'var::q ' /)
   n_alloc(:)=0
   m_alloc(:)=0
 !*******************************************************************************
@@ -289,19 +291,14 @@ subroutine setupref(this,lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,la
   rsig=float(nsig)
   mm1=mype+1
 
-! Check to see if required guess fields are available
-  call this%check_vars_(proceed)
-  if(.not.proceed) return  ! not all vars available, simply return
-
-! If require guess vars available, extract from bundle ...
-  call this%init_ges
-
 ! Allocate arrays for output to diagnostic file
   mreal=21
   nreal=mreal
   if (lobsdiagsave) nreal=nreal+4*miter+1
 
+  write(6,*) 'HEY 1'
   if(init_pass) call gpsrhs_alloc(is,'ref',nobs,nsig,nreal,-1,-1)
+  write(6,*) 'HEY 2'
   call gpsrhs_aliases(is)
   if(nreal/=size(rdiagbuf,1)) then
      call perr(this%myname,'nreal/=size(rdiagbuf,1)')
@@ -1019,9 +1016,6 @@ subroutine setupref(this,lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,la
         endif ! (in_curbin .and. muse=1)
      endif ! (last_pass)
   end do
-
-  ! Release memory of local guess arrays
-  call this%final_vars_
 
   ! Save these arrays for later passes
   data_ier (:)=data(ier ,:)

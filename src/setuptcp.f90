@@ -4,7 +4,17 @@ use abstract_setup_mod
   contains
     procedure, pass(this) :: setupDerived => setuptcp
   end type setuptcp_class
+  interface setuptcp_class
+     module procedure setup_ctor
+  end interface
 contains
+  type(setuptcp_class) function setup_ctor(obsname,varname1,varname2,varname3)
+      character(*),                        intent(in) :: obsname
+      character(*),                        intent(in) :: varname1
+      character(*),                        intent(in) :: varname2
+      character(*),                        intent(in) :: varname3
+      call setup_ctor%initialize(obsname,varname1=varname1,varname2=varname2,varname3=varname3)
+  end function setup_ctor
   subroutine setuptcp(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
@@ -117,19 +127,8 @@ contains
     integer(i_kind) nchar,nreal,ii
   
   
-!   this%myname='setuptcp'
-!   this%numvars = 3
-!   allocate(this%varnames(this%numvars))
-!   this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::tv' /)
     n_alloc(:)=0
     m_alloc(:)=0
-  
-  ! Check to see if required guess fields are available
-!   call this%check_vars_(proceed)
-!   if(.not.proceed) return  ! not all vars available, simply return
-  
-  ! If require guess vars available, extract from bundle ...
-!   call this%init_ges
   
   !******************************************************************************
   ! Read and reformat observations in work arrays.
@@ -516,9 +515,6 @@ contains
   
   ! End of loop over observations
     end do
-  
-  ! Release memory of local guess arrays
-!   call this%final_vars_
   
   ! Write information to diagnostic file
     if(conv_diagsave .and. ii>0)then

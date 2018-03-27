@@ -37,16 +37,76 @@ contains
       use gridmod, only: create_grid_vars
       use observermod, only: observer_init,ndata
       use setupcldch_mod, only: setupcldch_class
+      use setupbend_mod, only: setupbend_class
+      use setupco_mod, only: setupco_class
+      use setupdw_mod, only: setupdw_class
+      use setupgust_mod, only: setupgust_class
+      use setuphowv_mod, only: setuphowv_class
+      use setuplcbas_mod, only: setuplcbas_class
+      use setupmitm_mod, only: setupmitm_class
+      use setupmxtm_mod, only: setupmxtm_class
+      use setupoz_mod, only: setupoz_class
+      use setuppblh_mod, only: setuppblh_class
+      use setuppm10_mod, only: setuppm10_class
+      use setuppm2_5_mod, only: setuppm2_5_class
+      use setuppmsl_mod, only: setuppmsl_class
+      use setuppcp_mod, only: setuppcp_class
+      use setuppw_mod, only: setuppw_class
+      use setupps_mod, only: setupps_class
+      use setupq_mod, only: setupq_class
+      use setupref_mod, only: setupref_class
+      use setuprw_mod, only: setuprw_class
+      use setupspd_mod, only: setupspd_class
+      use setupt_mod, only: setupt_class
+      use setuptcamt_mod, only: setuptcamt_class
+      use setuptcp_mod, only: setuptcp_class
+      use setupvis_mod, only: setupvis_class
+      use setupw_mod, only: setupw_class
+      use setupwspd10m_mod, only: setupwspd10m_class
       use m_rhs, only: bwork  => rhs_bwork
       use m_rhs, only: awork  => rhs_awork
+      use m_rhs, only: stats_oz => rhs_stats_oz
+      use m_rhs, only: toss_gps_sub => rhs_toss_gps
  
       class (Test_setupps), intent(inout) :: this
       integer(i_kind) :: mype
       type(setupcldch_class) :: cldch
-      logical conv_diagsave
+      type(setupbend_class) :: bend
+      type(setupco_class) :: co
+      type(setupdw_class) :: dw
+      type(setupgust_class) :: gust
+      type(setuphowv_class) :: howv
+      type(setuplcbas_class) :: lcbas
+      type(setupmitm_class) :: mitm
+      type(setupmxtm_class) :: mxtm
+      type(setupoz_class) :: ozlay
+      type(setupoz_class) :: ozlev
+      type(setuppblh_class) :: pblh 
+      type(setuppcp_class) :: pcp  
+      type(setuppm10_class) :: pm10 
+      type(setuppm2_5_class) :: pm2_5
+      type(setuppmsl_class) :: pmsl
+      type(setupps_class) :: ps
+      type(setuppw_class) :: pw
+      type(setupq_class) :: q
+      type(setupref_class) :: ref
+      type(setuprw_class) :: rw
+      type(setupspd_class) :: spd
+      type(setupt_class) :: t
+      type(setuptcamt_class) :: tcamt
+      type(setuptcp_class) :: tcp
+      type(setupvis_class) :: vis
+      type(setupw_class) :: w
+      type(setupwspd10m_class) :: wspd10m
+      logical conv_diagsave, ozone_diagsave, init_pass, last_pass
       integer(i_kind) lunin,nobs,nele,is,i_cldch
+      character(20)::isis
+      character(10)::obstype
+      integer(i_kind) ier,nreal,nchanl
 
-
+      init_pass = .true.
+      last_pass = .true.
+      ozone_diagsave = .false.
       conv_diagsave = .false.
       write(6,*) "HEY, calling initialize"
       call gsimain_initialize
@@ -59,12 +119,89 @@ contains
       call gesinfo(mype)
       call observer_init()
       obs_setup = 'dir.0000/obs_setup'
-      call setuprhsall(ndata,mype,.true.,.true.)
 
       cldch = setupcldch_class('setupcldch','var::ps','var::z','var::cldch')
-      write(6,*) 'HEY! done with instantiation of cldch'
+      bend = setupbend_class('setupbend', 'var::z', 'var::tv', 'var::q')
+      co = setupco_class('setupco', 'var::co' )
+      dw = setupdw_class('setupdw', 'var::ps', 'var::z', 'var::u', 'var::v')
+      gust = setupgust_class('setupgust', 'var::ps', 'var::z', 'var::gust')
+      howv = setuphowv_class('setuphowv', 'var::ps', 'var::z', 'var::howv')
+      lcbas = setuplcbas_class('setuplcbas', 'var::lcbas', 'var::z')
+      mitm = setupmitm_class('setupmitm', 'var::ps', 'var::z', 'var::mitm')
+      mxtm = setupmxtm_class('setupmxtm', 'var::ps', 'var::z', 'var::mxtm')
+      ozlay = setupoz_class('setupozlay', 'var::oz' )
+      ozlev = setupoz_class('setupozlev', 'var::oz', 'var::ps' )
+      pblh = setuppblh_class('setuppblh', 'var::z', 'var::ps' )
+      pcp = setuppcp_class('setuppcp', 'var::ps', 'var::u', 'var::v', 'var::div', 'var::q',&
+                   'var::prs_ten', 'var::tv_ten', 'var::q_ten', 'var::ps_lon', 'var::ps_lat')
+      pm10 = setuppm10_class('setuppm10', 'var::ps', 'var::z', 'var::pm10', 'var::tv')
+      pm2_5 = setuppm2_5_class('setuppm2_5', 'var::ps', 'var::z', 'var::pm2_5', 'var::tv')
+
+
+      write(6,*) 'obsname is ',cldch%myname
+      write(6,*) 'varnames are  ',cldch%varnames(1:cldch%numvars)
+      lunin = 1 
+      open(lunin,file=obs_setup,form='unformatted')
+      read(lunin,iostat=ier) obstype,isis,nreal,nchanl
+
       call cldch%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
-      write(6,*) 'HEY! done with setup of cldch'
+      call bend%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+      call co%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+      call dw%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+      call gust%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+      call mitm%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+      call mxtm%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+      call ozlev%setupozlev(lunin,mype,stats_oz,nchanl,nreal,nobs,&
+                      obstype,isis,is,ozone_diagsave,init_pass)
+      call ozlay%setupozlay(lunin,mype,stats_oz,nchanl,nreal,nobs,&
+                      obstype,isis,is,ozone_diagsave,init_pass)
+
+      call pblh%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+      call pcp%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+      call pm10%setuppm10(lunin,mype,nreal,nobs,isis,is,conv_diagsave)
+      call pm2_5%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+
+      pmsl = setuppmsl_class('setuppmsl', 'var::ps', 'var::z', 'var::pmsl')
+      call pmsl%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+
+      ps = setupps_class('setupps','var::ps','var::z ','var::tv')
+      call ps%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+
+      pw = setuppw_class('setuppw','var::tv','var::z ','var::q')
+      call pw%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+
+      q = setupq_class('setupq','var::ps','var::q2m ','var::q')
+      call q%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+
+      ref = setupref_class('setupref','var::tv','var::z','var::q')
+!     call ref%setupref(lunin,mype,awork(1,8),nele,nobs,toss_gps_sub,is,.false.,last_pass)
+
+      rw = setuprw_class('setuprw','var::ps','var::z','var::u','var::v','var::w')
+      call rw%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+
+      spd = setupspd_class('setupspd','var::ps','var::z','var::u','var::v','var::tv')
+      call spd%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+
+      tcamt = setuptcamt_class('setuptcamt','var::tcamt')
+      call tcamt%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+
+      tcp = setuptcp_class('setuptcp','var::ps', 'var::z', 'var::tv')
+      call tcp%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+
+      t = setupt_class('setupt','var::ps', 'var::v', 'var::u', 'var::q', 'var::tv')
+      call t%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+
+      vis = setupvis_class('setupvis','var::ps', 'var::z', 'var::vis')
+      call vis%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+
+      w = setupw_class('setupw','var::ps', 'var::z', 'var::v', 'var::u', 'var::tv')
+      call w%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+
+      wspd10m = setupwspd10m_class('var::wspd10m', 'var::ps', 'var::z', 'var::u', 'var::v', 'var::tv')
+      call wspd10m%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+     
+      call setuprhsall(ndata,mype,.true.,.true.)
+
       @assertEqual(1, 1)
 !     @assertEqual(3, ifilesfc(1))
 !     @assertEqual(2.0, hrdifsfc(1))

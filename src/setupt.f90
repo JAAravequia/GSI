@@ -4,7 +4,20 @@ use abstract_setup_mod
   contains
     procedure, pass(this) :: setupDerived => setupt
   end type setupt_class
+  interface setupt_class
+     module procedure setup_ctor
+  end interface
 contains
+  type(setupt_class) function setup_ctor(obsname,varname1,varname2,varname3,varname4,varname5)
+      character(*),                        intent(in) :: obsname
+      character(*),                        intent(in) :: varname1
+      character(*),                        intent(in) :: varname2
+      character(*),                        intent(in) :: varname3
+      character(*),                        intent(in) :: varname4
+      character(*),                        intent(in) :: varname5
+      call setup_ctor%initialize(obsname,varname1=varname1,varname2=varname2,varname3=varname3,&
+             varname4=varname4,varname5=varname5) 
+  end function setup_ctor
   !-------------------------------------------------------------------------
   !    NOAA/NCEP, National Centers for Environmental Prediction GSI        !
   !-------------------------------------------------------------------------
@@ -274,17 +287,6 @@ contains
   
     n_alloc(:)=0
     m_alloc(:)=0
-  
-!   this%myname='setupt'
-!   this%numvars = 5
-!   allocate(this%varnames(this%numvars))
-!   this%varnames(1:this%numvars) = (/ 'var::v', 'var::u', 'var::q', 'var::ps', 'var::tv' /)
-  ! Check to see if required guess fields are available
-!   call this%check_vars_(proceed)
-!   if(.not.proceed) return  ! not all vars available, simply return
-  
-  ! If require guess vars available, extract from bundle ...
-!   call this%init_ges
   
   !*********************************************************************************
   ! Read and reformat observations in work arrays.
@@ -1230,9 +1232,6 @@ contains
   
   ! End of loop over observations
     end do
-  
-  ! Release memory of local guess arrays
-!   call this%final_vars_
   
   ! Write information to diagnostic file
     if(conv_diagsave .and. ii>0)then

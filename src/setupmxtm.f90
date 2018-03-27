@@ -5,7 +5,17 @@ use abstract_setup_mod
 !   procedure, pass(this) :: setup => setupmxtm
     procedure, pass(this) :: setupDerived => setupDerived_
   end type setupmxtm_class
+  interface setupmxtm_class
+     module procedure setup_ctor
+  end interface
 contains
+  type(setupmxtm_class) function setup_ctor(obsname,varname1,varname2,varname3)
+      character(*),                        intent(in) :: obsname
+      character(*),                        intent(in) :: varname1
+      character(*),                        intent(in) :: varname2
+      character(*),                        intent(in) :: varname3
+      call setup_ctor%initialize(obsname,varname1=varname1,varname2=varname2,varname3=varname3) 
+  end function setup_ctor
 !subroutine setupmxtm(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
 subroutine setupDerived_(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
 !$$$  subprogram documentation block
@@ -134,23 +144,6 @@ subroutine setupDerived_(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,
   equivalence(rstation_id,station_id)
   equivalence(r_prvstg,c_prvstg)
   equivalence(r_sprvstg,c_sprvstg)
-! character(len=14) varnames(3) 
-! data varnames/'var::z', 'var::ps', 'var::mxtm'/
-! call this%allocate_and_check_vars(('setupmxtm'),lunin,luse,nele,nobs,data,(/'var::z', 'var::ps', 'var::mxtm'/))
-! Check to see if required guess fields are available
-! this%myname='setupmxtm'
-! this%numvars = 3
-! allocate(this%varnames(this%numvars))
-! this%varnames(1:this%numvars) = (/ 'var::z', 'var::ps', 'var::mxtm' /)
-! Check to see if required guess fields are available
-! call this%check_vars_(proceed)
-! if(.not.proceed) then
-!    read(lunin)data,luse   !advance through input file
-!    return  ! not all vars available, simply return
-! endif
-
-! If require guess vars available, extract from bundle ...
-! call this%init_ges
 
   n_alloc(:)=0
   m_alloc(:)=0
@@ -527,9 +520,6 @@ subroutine setupDerived_(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,
  
      end if
   end do
-
-! Release memory of local guess arrays
-! call this%final_vars_
 
 ! Write information to diagnostic file
   if(conv_diagsave .and. ii>0)then

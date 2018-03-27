@@ -5,7 +5,17 @@ use abstract_setup_mod
   contains
     procedure, pass(this) :: setupDerived => setuplcbas
   end type setuplcbas_class
+  interface setuplcbas_class
+     module procedure setup_ctor
+  end interface
 contains
+  type(setuplcbas_class) function setup_ctor(obsname,varname1,varname2)
+      character(*),                        intent(in) :: obsname
+      character(*),                        intent(in) :: varname1
+      character(*),                        intent(in) :: varname2
+      call setup_ctor%initialize(obsname,varname1=varname1,varname2=varname2) 
+  end function setup_ctor
+
   subroutine setuplcbas(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
@@ -134,19 +144,6 @@ contains
     equivalence(r_sprvstg,c_sprvstg)
     
   ! Check to see if required guess fields are available
-!   this%numvars = 2
-!   allocate(this%varnames(this%numvars))
-!   this%varnames(1:this%numvars) = (/ 'var::lcbas', 'var::z' /)
-!   this%myname='setuplcbas'
-!   call this%check_vars_(proceed)
-!  if(.not.proceed) then
-!     print *, 'Whoa!  We have some missing metguess variables in setuplcbas.f90....returning to setuprhsall.f90 after advancing through input file'
-!   read(lunin)data,luse,ioid
-!     return  ! not all vars available, simply return
-!   end if
-  
-  ! If require guess vars available, extract from bundle ...
-!   call this%init_ges
   
     n_alloc(:)=0
     m_alloc(:)=0

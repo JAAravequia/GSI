@@ -4,7 +4,17 @@ use abstract_setup_mod
   contains
     procedure, pass(this) :: setupDerived => setupgust
   end type setupgust_class
+  interface setupgust_class
+     module procedure setup_ctor
+  end interface
 contains
+  type(setupgust_class) function setup_ctor(obsname,varname1,varname2,varname3)
+      character(*),                        intent(in) :: obsname
+      character(*),                        intent(in) :: varname1
+      character(*),                        intent(in) :: varname2
+      character(*),                        intent(in) :: varname3
+      call setup_ctor%initialize(obsname,varname1=varname1,varname2=varname2,varname3=varname3) 
+  end function setup_ctor
   subroutine setupgust(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
@@ -145,21 +155,6 @@ contains
     equivalence(r_prvstg,c_prvstg)
     equivalence(r_sprvstg,c_sprvstg)
     
-!   this%myname='setupgust'
-!   this%numvars = 3
-!   allocate(this%varnames(this%numvars))
-!   this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::gust' /)
-     
-  ! Check to see if required guess fields are available
-!   call this%check_vars_(proceed)
-! if(.not.proceed) then
-!    read(lunin)data,luse   !advance through input file
-!    return  ! not all vars available, simply return
-! endif
-  
-  ! If require guess vars available, extract from bundle ...
-!   call this%init_ges
-  
     n_alloc(:)=0
     m_alloc(:)=0
   !*********************************************************************************

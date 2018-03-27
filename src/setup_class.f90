@@ -5,6 +5,13 @@ module abstract_setup_mod
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_howv
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_mxtm
+! real(r_kind),pointer,dimension(:,:,:  ) :: ges_cwmr_im
+! real(r_kind),pointer,dimension(:,:,:  ) :: ges_cwmr_ip
+  real(r_kind),pointer,dimension(:,:,:  ) :: ges_prs_ten=>NULL()
+  real(r_kind),pointer,dimension(:,:,:  ) :: ges_tv_ten=>NULL()
+  real(r_kind),pointer,dimension(:,:,:  ) :: ges_q_ten=>NULL()
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps_lon
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps_lat
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_co
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_oz
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_div
@@ -42,14 +49,10 @@ module abstract_setup_mod
     procedure, pass(this) :: check_vars_
     procedure, pass(this) ::  init_ges
     procedure, pass(this) ::  allocate_ges3
+    procedure, pass(this) ::  allocate_drv_ges3
+    procedure, pass(this) ::  allocate_tnd_ges3
     procedure, pass(this) ::  allocate_ges4
-!   procedure,nopass  :: setup_ctor2
-!   procedure, pass(this) :: setup_ctor3
     procedure, pass(this) :: initialize 
-!   procedure, pass(this) :: setup_ctor5
-!   procedure, pass(this) :: setup_ctor6
-!   procedure, pass(this) :: setup_ctor7
-!   procedure, pass(this) :: setup_ctor8
   end type abstract_setup_class
 ! interface abstract_setup_class
 !      module procedure setup_ctor2
@@ -83,91 +86,126 @@ contains
 !    setup_ctor3%varnames(1) = varname1
 !    setup_ctor3%varnames(2) = varname2
 ! end function setup_ctor3
-  subroutine initialize(this,obsname,varname1,varname2,varname3)
+  subroutine initialize(this,obsname,varname1,varname2,varname3,varname4,varname5,varname6,varname7,varname8,&
+                 varname9,varname10,varname11,varname12,include_w)
       class(abstract_setup_class)              ,intent(inout) :: this
       character(*),                        intent(in) :: obsname
-      character(*),                        intent(in) :: varname1
-      character(*),                        intent(in) :: varname2
-      character(*),                        intent(in) :: varname3
+      character(*),optional,               intent(in) :: varname1
+      character(*),optional,               intent(in) :: varname2
+      character(*),optional,               intent(in) :: varname3
+      character(*),optional,               intent(in) :: varname4
+      character(*),optional,               intent(in) :: varname5
+      character(*),optional,               intent(in) :: varname6
+      character(*),optional,               intent(in) :: varname7
+      character(*),optional,               intent(in) :: varname8
+      character(*),optional,               intent(in) :: varname9
+      character(*),optional,               intent(in) :: varname10
+      character(*),optional,               intent(in) :: varname11
+      character(*),optional,               intent(in) :: varname12
+      logical,optional,                    intent(inout) :: include_w
+      character(len=14),allocatable,dimension(:) :: tmpnames
+      integer(i_kind)    :: counter,i,j
+      logical :: proceed = .true. 
+      counter = 0 
       this%myname = obsname
-      this%numvars = 3
+      if(present(varname1)) then
+         counter = counter + 1
+      endif  
+      if(present(varname2)) then
+         counter = counter + 1
+      endif  
+      if(present(varname3)) then
+         counter = counter + 1
+      endif  
+      if(present(varname4)) then
+         counter = counter + 1
+      endif  
+      if(present(varname5)) then
+         counter = counter + 1
+      endif  
+      if(present(varname6)) then
+         counter = counter + 1
+      endif  
+      if(present(varname7)) then
+         counter = counter + 1
+      endif  
+      if(present(varname8)) then
+         counter = counter + 1
+      endif  
+      if(present(varname9)) then
+         counter = counter + 1
+      endif  
+      if(present(varname10)) then
+         counter = counter + 1
+      endif  
+      if(present(varname11)) then
+         counter = counter + 1
+      endif  
+      if(present(varname12)) then
+         counter = counter + 1
+      endif  
+      this%numvars = counter
       allocate(this%varnames(this%numvars))
-      this%varnames(1) = varname1
-      this%varnames(2) = varname2
-      this%varnames(3) = varname3
+      if(present(varname1)) then
+         this%varnames(1) = varname1
+      endif  
+      if(present(varname2)) then
+         this%varnames(2) = varname2
+      endif  
+      if(present(varname3)) then
+         this%varnames(3) = varname3
+      endif  
+      if(present(varname4)) then
+         this%varnames(4) = varname4
+      endif  
+      if(present(varname5)) then
+         this%varnames(5) = varname5
+      endif  
+      if(present(varname6)) then
+         this%varnames(6) = varname6
+      endif  
+      if(present(varname7)) then
+         this%varnames(7) = varname7
+      endif  
+      if(present(varname8)) then
+         this%varnames(8) = varname8
+      endif  
+      if(present(varname9)) then
+         this%varnames(9) = varname9
+      endif  
+      if(present(varname10)) then
+         this%varnames(10) = varname10
+      endif  
+      if(present(varname11)) then
+         this%varnames(11) = varname11
+      endif  
+      if(present(varname12)) then
+         this%varnames(12) = varname12
+      endif 
+      if(present(include_w)) then 
+        call this%check_vars_(proceed,include_w)
+        if(.not.include_w) then ! find var::w and remove from the list
+           j = 1
+           allocate(tmpnames(this%numvars - 1))
+           do i = 1,this%numvars
+              if(this%varnames(i) /= 'var::w') then
+                tmpnames(j) = this%varnames(i)
+                j=j+1
+              endif
+           enddo
+           deallocate(this%varnames)
+           this%numvars = this%numvars - 1
+           allocate(this%varnames(this%numvars))
+           this%varnames(1:this%numvars) = tmpnames(1:this%numvars)
+           deallocate(tmpnames)
+        endif   
+      else
+        call this%check_vars_(proceed)  
+      endif
+      if(.not.proceed) return ! not all vars available, simply return
+      call this%init_ges
+
    end subroutine initialize
-!  subroutine setup_ctor5(this,obsname,varname1,varname2,varname3,varname4)
-!     class(abstract_setup_class)              ,intent(inout) :: this
-!     character(len=16),                        intent(in) :: obsname
-!     character(len=14),                        intent(in) :: varname1
-!     character(len=14),                        intent(in) :: varname2
-!     character(len=14),                        intent(in) :: varname3
-!     character(len=14),                        intent(in) :: varname4
-!     this%myname = obsname
-!     this%numvars = 4
-!     allocate(this%varnames(this%numvars))
-!     this%varnames(1) = varname1
-!     this%varnames(2) = varname2
-!     this%varnames(3) = varname3
-!     this%varnames(4) = varname4
-!  end subroutine setup_ctor5
-!  subroutine setup_ctor6(this,obsname,varname1,varname2,varname3,varname4,varname5)
-!     class(abstract_setup_class)              ,intent(inout) :: this
-!     character(len=16),                        intent(in) :: obsname
-!     character(len=14),                        intent(in) :: varname1
-!     character(len=14),                        intent(in) :: varname2
-!     character(len=14),                        intent(in) :: varname3
-!     character(len=14),                        intent(in) :: varname4
-!     character(len=14),                        intent(in) :: varname5
-!     this%myname = obsname
-!     this%numvars = 5
-!     allocate(this%varnames(this%numvars))
-!     this%varnames(1) = varname1
-!     this%varnames(2) = varname2
-!     this%varnames(3) = varname3
-!     this%varnames(4) = varname4
-!     this%varnames(5) = varname5
-!  end subroutine setup_ctor6
-!  subroutine setup_ctor7(this,obsname,varname1,varname2,varname3,varname4,varname5,varname6)
-!     class(abstract_setup_class)              ,intent(inout) :: this
-!     character(len=16),                        intent(in) :: obsname
-!     character(len=14),                        intent(in) :: varname1
-!     character(len=14),                        intent(in) :: varname2
-!     character(len=14),                        intent(in) :: varname3
-!     character(len=14),                        intent(in) :: varname4
-!     character(len=14),                        intent(in) :: varname5
-!     character(len=14),                        intent(in) :: varname6
-!     this%myname = obsname
-!     this%numvars = 6
-!     allocate(this%varnames(this%numvars))
-!     this%varnames(1) = varname1
-!     this%varnames(2) = varname2
-!     this%varnames(3) = varname3
-!     this%varnames(4) = varname4
-!     this%varnames(5) = varname5
-!     this%varnames(6) = varname6
-!  end subroutine setup_ctor7
-!  subroutine setup_ctor8(this,obsname,varname1,varname2,varname3,varname4,varname5,varname6,varname7)
-!     class(abstract_setup_class)              ,intent(inout) :: this
-!     character(len=16),                        intent(in) :: obsname
-!     character(len=14),                        intent(in) :: varname1
-!     character(len=14),                        intent(in) :: varname2
-!     character(len=14),                        intent(in) :: varname3
-!     character(len=14),                        intent(in) :: varname4
-!     character(len=14),                        intent(in) :: varname5
-!     character(len=14),                        intent(in) :: varname6
-!     character(len=14),                        intent(in) :: varname7
-!     this%myname = obsname
-!     this%numvars = 7
-!     allocate(this%varnames(this%numvars))
-!     this%varnames(1) = varname1
-!     this%varnames(2) = varname2
-!     this%varnames(3) = varname3
-!     this%varnames(4) = varname4
-!     this%varnames(5) = varname5
-!     this%varnames(6) = varname6
-!     this%varnames(7) = varname7
-!  end subroutine setup_ctor8
 
 
   subroutine setup(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -184,8 +222,7 @@ contains
       real(r_kind),dimension(nele,nobs)                               :: data
       logical,dimension(nobs)                                         :: luse 
 
-      write(6,*) ' in setup for ',this%myname,' with varnames ',this%varnames
-      call this%allocate_and_check_vars(this%myname,lunin,luse,nele,nobs,data,this%varnames)
+      write(6,*) ' in abstract setup for ',this%myname,' with varnames ',this%varnames
       call this%setupDerived(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
       call this%final_vars_
   end subroutine setup
@@ -202,7 +239,7 @@ contains
       logical                                          ,intent(in   ) :: conv_diagsave
       logical,dimension(nobs)                          ,intent(inout) :: luse 
       real(r_kind),dimension(nele,nobs)                ,intent(inout) :: data
-      write(6,*) 'this is a dummy setupDerived'
+      write(6,*) 'this is a dummy setupDerived for ',this%myname
   end subroutine setupDerived
 
   subroutine setupp(this,obsname,varnames,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
@@ -258,6 +295,73 @@ contains
       call this%init_ges
       return 
   end subroutine allocate_and_check_vars
+  subroutine allocate_drv_ges3(this,ges,varname)
+    use derivsmod, only : drv_initialized
+    use derivsmod, only : gsi_xderivative_bundle
+    use derivsmod, only : gsi_yderivative_bundle
+    use gsi_bundlemod, only : gsi_bundlegetpointer
+    use guess_grids, only: nfldsig
+    implicit none
+    class(abstract_setup_class)                , intent(inout) :: this
+    real(r_kind),allocatable,dimension(:,:,:  )    , intent(inout) :: ges
+    character(len=*),                            intent(in   ) :: varname
+    real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
+    integer(i_kind) ifld, istatus
+
+    if(drv_initialized) then
+      select case (varname)
+         case ("ps_lon")
+           call gsi_bundlegetpointer(gsi_xderivative_bundle(1),trim(varname),rank2,istatus)
+         case ("ps_lat")
+           call gsi_bundlegetpointer(gsi_yderivative_bundle(1),trim(varname),rank2,istatus)
+      end select
+      if (istatus==0) then
+          if(allocated(ges))then
+             write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
+             call stop2(999)
+          endif
+          allocate(ges(size(rank2,1),size(rank2,2),nfldsig))
+          ges(:,:,1)=rank2
+          do ifld=2,nfldsig
+              select case (varname)
+                 case ("ps_lon")
+                   call gsi_bundlegetpointer(gsi_xderivative_bundle(ifld),trim(varname),rank2,istatus)
+                 case ("ps_lat")
+                   call gsi_bundlegetpointer(gsi_yderivative_bundle(ifld),trim(varname),rank2,istatus)
+              end select
+             ges(:,:,ifld)=rank2
+          enddo
+      else
+          write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+          call stop2(999)
+      endif
+    endif
+
+  end subroutine allocate_drv_ges3
+  subroutine allocate_tnd_ges3(this,ges,varname)
+    use tendsmod, only : tnd_initialized
+    use tendsmod, only : gsi_tendency_bundle
+    use gsi_bundlemod, only : gsi_bundlegetpointer
+    use guess_grids, only: nfldsig
+    implicit none
+    class(abstract_setup_class)                , intent(inout) :: this
+    real(r_kind),pointer,dimension(:,:,:  )    , intent(inout) :: ges
+    character(len=*),                            intent(in   ) :: varname
+    real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
+    integer(i_kind) ifld, istatus
+
+    if(tnd_initialized) then
+       call gsi_bundlegetpointer(gsi_tendency_bundle,trim(varname),rank2,istatus)
+       if (istatus/=0) then
+         write(6,*) trim(this%myname),': ', trim(varname), ' not found in tend bundle, ier= ',istatus
+         call stop2(999)
+       else
+           write(6,*) trim(this%myname), ': tendency bundle not properly allocated, aborting ... '
+           call stop2(999)
+       endif
+    endif
+
+  end subroutine allocate_tnd_ges3
   subroutine allocate_ges3(this,ges,varname)
     use gsi_metguess_mod, only : gsi_metguess_bundle
     use gsi_bundlemod, only : gsi_bundlegetpointer
@@ -275,7 +379,6 @@ contains
              write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
              call stop2(999)
           endif
-          write(6,*) 'in ges3, ',this%myname,' allocating ',varname
           allocate(ges(size(rank2,1),size(rank2,2),nfldsig))
           ges(:,:,1)=rank2
           do ifld=2,nfldsig
@@ -320,6 +423,7 @@ contains
   end subroutine allocate_ges4
   subroutine final_vars_(this)
       class(abstract_setup_class)                      ,intent(inout) :: this
+      write(6,*) 'deallocating ',this%myname
       if(allocated(this%ges_v )) deallocate(this%ges_v )
       if(allocated(this%ges_u )) deallocate(this%ges_u )
       if(allocated(this%ges_w )) deallocate(this%ges_w )
@@ -347,8 +451,19 @@ contains
       if(allocated(this%ges_co)) deallocate(this%ges_co)
       if(allocated(this%ges_div)) deallocate(this%ges_div)
       if(allocated(this%ges_oz)) deallocate(this%ges_oz)
-      deallocate(this%varnames)
-
+!     if(associated(this%ges_cwmr_im)) nullify(this%ges_cwmr_im)
+!     if(associated(this%ges_cwmr_ip)) nullify(this%ges_cwmr_ip)
+      if(associated(this%ges_prs_ten)) nullify(this%ges_prs_ten)
+      if(associated(this%ges_tv_ten)) nullify(this%ges_tv_ten)
+      if(associated(this%ges_q_ten)) nullify(this%ges_q_ten)
+      if(allocated(this%ges_ps_lon)) deallocate(this%ges_ps_lon)
+      if(allocated(this%ges_ps_lat)) deallocate(this%ges_ps_lat)
+      if(allocated(this%varnames)) then 
+         deallocate(this%varnames)
+      else
+         write(6,*) 'WARNING!!! varnames were not allocated for ',this%myname
+      endif
+      write(6,*) 'done deallocating ',this%myname
   end subroutine final_vars_
 
   subroutine check_vars_(this,proceed,include_w)
@@ -403,6 +518,21 @@ contains
       varname = fullname(6:14)
       write(6,*) 'HEY working on ',varname,' for ',this%myname
       select case (varname)
+        case ('prs_ten')
+          write(6,*) 'allocating ',varname
+          call this%allocate_tnd_ges3(this%ges_prs_ten,varname)
+        case ('tv_ten')
+          write(6,*) 'allocating ',varname
+          call this%allocate_tnd_ges3(this%ges_tv_ten,varname)
+        case ('q_ten')
+          write(6,*) 'allocating ',varname
+          call this%allocate_tnd_ges3(this%ges_q_ten,varname)
+        case ('ps_lon')
+          write(6,*) 'allocating ',varname
+          call this%allocate_drv_ges3(this%ges_ps_lon,varname)
+        case ('ps_lat')
+          write(6,*) 'allocating ',varname
+          call this%allocate_drv_ges3(this%ges_ps_lat,varname)
         case ('ps')
           write(6,*) 'allocating ',varname
           call this%allocate_ges3(this%ges_ps,varname)
@@ -465,6 +595,7 @@ contains
         case ('div')
           call this%allocate_ges4(this%ges_div,varname)
       end select
+      write(6,*) 'HEY done with ',varname,' for ',this%myname
 
     enddo
   end subroutine init_ges

@@ -4,7 +4,18 @@ use abstract_setup_mod
   contains
     procedure, pass(this) :: setupDerived => setupdw
   end type setupdw_class
+  interface setupdw_class
+     module procedure setup_ctor
+  end interface
 contains
+  type(setupdw_class) function setup_ctor(obsname,varname1,varname2,varname3,varname4)
+      character(*),                        intent(in) :: obsname
+      character(*),                        intent(in) :: varname1
+      character(*),                        intent(in) :: varname2
+      character(*),                        intent(in) :: varname3
+      character(*),                        intent(in) :: varname4
+      call setup_ctor%initialize(obsname,varname1=varname1,varname2=varname2,varname3=varname3,varname4=varname4) 
+  end function setup_ctor
   
 !-------------------------------------------------------------------------
 !    NOAA/NCEP, National Centers for Environmental Prediction GSI        !
@@ -35,12 +46,12 @@ contains
          wgtlim
     use constants, only: tiny_r_kind,half,cg_term,huge_single
   
-  use obsmod, only: rmiss_single,i_dw_ob_type,obsdiags
-  use m_obsdiags, only: dwhead
-  use obsmod, only: lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset
-  use m_obsNode, only: obsNode
-  use m_dwNode, only: dwNode
-  use m_obsLList, only: obsLList_appendNode
+    use obsmod, only: rmiss_single,i_dw_ob_type,obsdiags
+    use m_obsdiags, only: dwhead
+    use obsmod, only: lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset
+    use m_obsNode, only: obsNode
+    use m_dwNode, only: dwNode
+    use m_obsLList, only: obsLList_appendNode
     use obsmod, only: obs_diag,luse_obsdiag
     use gsi_4dvar, only: nobs_bins,hr_obsbin
   
@@ -56,7 +67,7 @@ contains
     implicit none
   
   ! !INPUT PARAMETERS:
-    class(setupdw_class)                              , intent(inout) :: this 
+    class(setupdw_class)                             ,intent(inout) :: this 
     integer(i_kind)                                  ,intent(in   ) :: lunin   ! unit from which to read observations
     integer(i_kind)                                  ,intent(in   ) :: mype    ! mpi task id
     integer(i_kind)                                  ,intent(in   ) :: nele    ! number of data elements per observation
@@ -194,22 +205,6 @@ contains
     type(obs_diag),pointer:: my_diag
     
     equivalence(rstation_id,station_id)
-  
-!   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
-!   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
-!   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_u
-!   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
- 
-!   this%myname='setupdw'
-!   this%numvars = 4 
-!   allocate(this%varnames(this%numvars))
-!   this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z', 'var::u', 'var::v' /)
-! ! Check to see if required guess fields are available
-    call this%check_vars_(proceed)
-!   if(.not.proceed) return  ! not all vars available, simply return
-! 
-  ! If require guess vars available, extract from bundle ...
-!   call this%init_ges
   
     n_alloc(:)=0
     m_alloc(:)=0

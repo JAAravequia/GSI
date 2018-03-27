@@ -4,7 +4,17 @@ use abstract_setup_mod
   contains
     procedure, pass(this) :: setupDerived => setuppw
   end type setuppw_class
+  interface setuppw_class
+     module procedure setup_ctor
+  end interface
 contains
+  type(setuppw_class) function setup_ctor(obsname,varname1,varname2,varname3)
+      character(*),                        intent(in) :: obsname
+      character(*),                        intent(in) :: varname1
+      character(*),                        intent(in) :: varname2
+      character(*),                        intent(in) :: varname3
+      call setup_ctor%initialize(obsname,varname1=varname1,varname2=varname2,varname3=varname3)
+  end function setup_ctor
   subroutine setuppw(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
@@ -158,10 +168,6 @@ contains
     equivalence(rstation_id,station_id)
   
   
-!   this%myname='setuppw'
-!   this%numvars = 3
-!   allocate(this%varnames(this%numvars))
-!   this%varnames(1:this%numvars) = (/ 'var::z', 'var::tv', 'var::q' /)
     n_alloc(:)=0
     m_alloc(:)=0
   
@@ -169,12 +175,6 @@ contains
     mm1=mype+1
     scale=one
   
-  ! Check to see if required guess fields are available
-!   call this%check_vars_(proceed)
-!   if(.not.proceed) return  ! not all vars available, simply return
-  
-  ! If require guess vars available, extract from bundle ...
-!   call this%init_ges
   
   !******************************************************************************
   ! Read and reformat observations in work arrays.
@@ -568,9 +568,6 @@ contains
   
   
     end do
-  
-  ! Release memory of local guess arrays
-!   call this%final_vars_
   
   ! Write information to diagnostic file
     if(conv_diagsave .and. ii>0)then

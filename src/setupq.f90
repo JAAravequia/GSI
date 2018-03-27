@@ -4,7 +4,24 @@ use abstract_setup_mod
   contains
     procedure, pass(this) :: setup => setupq
   end type setupq_class
+  interface setupq_class
+     module procedure setup_ctor
+     module procedure setup_ctor3
+  end interface
 contains
+  type(setupq_class) function setup_ctor(obsname,varname1,varname2)
+      character(*),                        intent(in) :: obsname
+      character(*),                        intent(in) :: varname1
+      character(*),                        intent(in) :: varname2
+      call setup_ctor%initialize(obsname,varname1=varname1,varname2=varname2)
+  end function setup_ctor
+  type(setupq_class) function setup_ctor3(obsname,varname1,varname2,varname3)
+      character(*),                        intent(in) :: obsname
+      character(*),                        intent(in) :: varname1
+      character(*),                        intent(in) :: varname2
+      character(*),                        intent(in) :: varname3
+      call setup_ctor3%initialize(obsname,varname1=varname1,varname2=varname2,varname3=varname3)
+  end function setup_ctor3
   subroutine setupq(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
@@ -217,23 +234,6 @@ contains
     equivalence(r_prvstg,c_prvstg)
     equivalence(r_sprvstg,c_sprvstg)
   
-  
-    this%myname='setupq'
-    if(i_use_2mq4b>0) then
-      this%numvars = 3
-      allocate(this%varnames(this%numvars))
-      this%varnames(1:this%numvars) = (/ 'var::ps ', 'var::q2m', 'var::q  ' /)
-    else 
-      this%numvars = 2
-      allocate(this%varnames(this%numvars))
-      this%varnames(1:this%numvars) = (/ 'var::ps', 'var::q ' /)
-    endif
-  ! Check to see if required guess fields are available
-    call this%check_vars_(proceed)
-    if(.not.proceed) return  ! not all vars available, simply return
-  
-  ! If require guess vars available, extract from bundle ...
-    call this%init_ges
   
     n_alloc(:)=0
     m_alloc(:)=0
@@ -928,9 +928,6 @@ contains
   ! End of loop over observations
     end do
     
-  ! Release memory of local guess arrays
-    call this%final_vars_
-  
   ! Write information to diagnostic file
     if(conv_diagsave .and. ii>0)then
        call dtime_show(this%myname,'diagsave:q',i_q_ob_type)

@@ -4,7 +4,16 @@ use abstract_setup_mod
   contains
     procedure, pass(this) :: setupDerived => setuppblh
   end type setuppblh_class
+  interface setuppblh_class
+     module procedure setup_ctor
+  end interface
 contains
+  type(setuppblh_class) function setup_ctor(obsname,varname1,varname2)
+      character(*),                        intent(in) :: obsname
+      character(*),                        intent(in) :: varname1
+      character(*),                        intent(in) :: varname2
+      call setup_ctor%initialize(obsname,varname1=varname1,varname2=varname2) 
+  end function setup_ctor
   subroutine setuppblh(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
@@ -126,21 +135,6 @@ contains
   
     equivalence(rstation_id,station_id)
     
-  ! Check to see if required guess fields are available
-!   this%myname='setuppblh'
-!   this%numvars = 2
-!   allocate(this%varnames(this%numvars))
-!   this%varnames(1:this%numvars) = (/ 'var::ps', 'var::z' /)
-
-!   call this%check_vars_(proceed)
-!   if(.not.proceed) then
-!    read(lunin)data,luse   !advance through input file
-!    return  ! not all vars available, simply return
-! endif
-  
-  ! If require guess vars available, extract from bundle ...
-!   call this%init_ges
-  
     n_alloc(:)=0
     m_alloc(:)=0
   !*********************************************************************************
@@ -500,9 +494,6 @@ contains
   
   
     end do
-  
-  ! Release memory of local guess arrays
-!   call this%final_vars_
   
   ! Write information to diagnostic file
     if(conv_diagsave .and. ii>0)then
