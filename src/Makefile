@@ -363,6 +363,7 @@ clean:
 	intjo.f90 \
 	intlag.f90 \
 	intlcbas.f90 \
+        intlight.f90 \
 	intmitm.f90 \
 	intmxtm.f90 \
 	intoz.f90 \
@@ -401,6 +402,7 @@ clean:
 	lag_traj.f90 \
 	lagmod.f90 \
 	lanczos.F90 \
+        lightinfo.f90 \
 	logcldch_to_cldch.f90 \
 	loglcbas_to_lcbas.f90 \
 	logvis_to_vis.f90 \
@@ -441,6 +443,7 @@ clean:
         m_lagNode.F90 \
 	m_latlonRange.F90 \
 	m_lcbasNode.F90 \
+        m_lightNode.F90 \
 	m_mitmNode.F90 \
 	m_mxtmNode.F90 \
         m_o3lNode.F90 \
@@ -547,6 +550,7 @@ clean:
 	state_vectors.f90 \
 	statsco.f90 \
 	statsconv.f90 \
+        statslight.f90 \
 	statsoz.f90 \
 	statspcp.f90 \
 	statsrad.f90 \
@@ -562,6 +566,7 @@ clean:
 	stpjo.f90 \
         stpjcmod.f90 \
 	stplcbas.f90 \
+        stplight.f90 \
 	stpoz.f90 \
 	stppblh.f90 \
 	stppcp.f90 \
@@ -592,6 +597,7 @@ clean:
 	strong_baldiag_inc.f90 \
 	strong_fast_global_mod.f90 \
 	sub2fslab_mod.f90 \
+        sumslightbias.f90 \
 	support_2dvar.f90 \
 	cplr_gfs_nstmod.f90 \
 	stub_pertmod.F90 \
@@ -651,6 +657,7 @@ clean:
 	read_diag.f90 \
         read_fl_hdob.f90 \
 	read_gmi.f90 \
+        read_goesglm.f90 \
 	read_goesimg.f90 \
 	read_ahi.f90 \
 	read_goesimgr_skycover.f90 \
@@ -686,6 +693,7 @@ clean:
 	setupcldch.f90 \
 	setuplag.f90 \
 	setuplcbas.f90 \
+        setuplight.f90 \
 	setupmitm.f90 \
 	setupmxtm.f90 \
 	setupoz.f90 \

@@ -93,7 +93,9 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !   2015-07-10  pondeca - add cldch
 !   2015-10-01  guo   - full res obvsr: index to allow redistribution of obsdiags
 !   2016-05-05  pondeca - add uwnd10m, vwund10m
-!
+!   2018-01-01  Apodaca - add GOES/GLM lightning
+!   2018-01-02  Apodaca - add bias correction for lightning flash rate based on
+!                         optimal parameter estimation
 !   input argument list:
 !     ndata(*,1)- number of prefiles retained for further processing
 !     ndata(*,2)- number of observations read
@@ -111,7 +113,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !
 !$$$
   use kinds, only: r_kind,i_kind,r_quad,r_single
-  use constants, only: zero,one,fv,zero_quad
+  use constants, only: zero,one,fv,zero_quad,half
   use guess_grids, only: load_prsges,load_geop_hgt,load_gsdpbl_hgt
   use guess_grids, only: ges_tsen,nfldsig
 ! use obsmod, only: mype_diaghdr
@@ -128,8 +130,9 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   use aircraftinfo, only: aircraft_t_bc_pof,aircraft_t_bc,ostats_t,rstats_t,npredt,ntail
   use pcpinfo, only: diag_pcp
   use ozinfo, only: diag_ozone,mype_oz,jpch_oz,ihave_oz
+  use lightinfo, only: mype_light,diag_light
   use coinfo, only: diag_co,mype_co,jpch_co,ihave_co
-  use mpimod, only: ierror,mpi_comm_world,mpi_rtype,mpi_sum
+  use mpimod, only: ierror,mpi_comm_world,mpi_rtype,mpi_itype,mpi_sum
   use gridmod, only: nsig,twodvar_regional,wrf_mass_regional,nems_nmmb_regional
   use gridmod, only: cmaq_regional
   use gsi_4dvar, only: nobs_bins,l4dvar
@@ -181,6 +184,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   external:: compute_derived
   external:: evaljo
   !external:: genstats_gps
+  external:: mpi_barrier
   external:: mpi_allreduce
   external:: mpi_finalize
   external:: mpi_reduce
@@ -217,31 +221,36 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   external:: setupcldch
   external:: setupuwnd10m
   external:: setupvwnd10m
-  external:: setupswcp
-  external:: setuplwcp
+  external:: setuplight
   external:: statsconv
   external:: statsoz
   external:: statspcp
   external:: statsrad
+  external:: statslight
   external:: stop2
+  external:: sumslightbias
   external:: w3tage
 
 ! Delcare local variables
   logical rad_diagsave,ozone_diagsave,pcp_diagsave,conv_diagsave,llouter,getodiag,co_diagsave
   logical aero_diagsave
+  logical light_diagsave
 
   character(80):: string
   character(10)::obstype
   character(20)::isis
   character(128):: diag_conv_file
+  character(128):: diag_light_file
   character(len=12) :: clfile
 
   integer(i_kind) lunin,nobs,nchanl,nreal,nele,&
-       is,idate,i_dw,i_rw,i_sst,i_tcp,i_gps,i_uv,i_ps,i_lag,&
+       is,idate,i_dw,i_rw,i_sst,i_tcp,i_gps,i_uv,i_ps,i_lag,i_light,&
        i_t,i_pw,i_q,i_co,i_gust,i_vis,i_ref,i_pblh,i_wspd10m,i_td2m,&
-       i_mxtm,i_mitm,i_pmsl,i_howv,i_tcamt,i_lcbas,i_cldch,i_uwnd10m,i_vwnd10m,&
-       i_swcp,i_lwcp,iobs,nprt,ii,jj
+       i_mxtm,i_mitm,i_pmsl,i_howv,i_tcamt,i_lcbas,i_cldch,i_uwnd10m,i_vwnd10m,iobs,nprt,ii,jj
+  integer(i_kind) i
   integer(i_kind) it,ier,istatus
+  integer(i_kind) nobs_gbl
+  integer(i_kind) nobs_loc
 
   real(r_quad):: zjo
   real(r_kind),dimension(40,ndat):: aivals1
@@ -250,7 +259,13 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   real(r_kind),dimension(9,jpch_co):: stats_co1
   real(r_kind),dimension(npres_print,nconvtype,5,3):: bwork1
   real(r_kind),allocatable,dimension(:,:):: awork1
-
+  real(r_kind):: sum_loc
+  real(r_kind):: sum_gbl 
+  real(r_kind):: r0,w0
+  real(r_kind):: eps
+  real(r_kind):: eps0
+  real(r_kind):: dlight,lightges0
+ 
   real(r_kind),dimension(:,:,:),pointer:: ges_tv_it=>NULL()
   real(r_kind),dimension(:,:,:),pointer:: ges_q_it =>NULL()
   character(len=*),parameter:: myname='setuprhsall'
@@ -280,6 +295,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   ozone_diagsave= write_diag(jiter) .and. diag_ozone .and. ihave_oz
   co_diagsave   = write_diag(jiter) .and. diag_co    .and. ihave_co
   aero_diagsave = write_diag(jiter) .and. diag_aero
+  light_diagsave= write_diag(jiter) .and. diag_light
 
   i_ps = 1
   i_uv = 2
@@ -307,9 +323,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   i_cldch=24
   i_uwnd10m=26
   i_vwnd10m=27
-  i_swcp=28
-  i_lwcp=29
-  i_ref =i_lwcp
+  i_light=28
+  i_ref =i_light
 
   allocate(awork1(7*nsig+100,i_ref))
   if(.not.rhs_allocated) call rhs_alloc(aworkdim2=size(awork1,2))
@@ -467,6 +482,27 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
         rstats_t=zero_quad
      end if
 
+!    If requested, create lightning diagnostic files
+     if(light_diagsave)then
+        write(string,500) jiter
+500     format('light_',i2.2)
+        diag_light_file=trim(dirname) // trim(string)
+        if(init_pass) then
+           open(55,file=trim(diag_light_file),form='unformatted',status='unknown',position='rewind')
+        else
+           open(55,file=trim(diag_light_file),form='unformatted',status='old',position='append')
+        endif
+        idate=iadate(4)+iadate(3)*100+iadate(2)*10000+iadate(1)*1000000
+        if(init_pass .and. mype == 0)write(55)idate
+     end if
+
+!    Initialize variables used for lightning bias correction
+
+     r0=half
+     w0=half
+     eps0=one
+     sum_loc=zero
+     nobs_loc=zero
 
 !    Loop over data types to process
      do is=1,ndat
@@ -620,14 +656,6 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
               end if
 
-!          Set up solid/liquid-water content path data
-           else if(ditype(is) == 'wcp')then
-              if(obstype=='swcp')then
-                 call setupswcp(lunin,mype,bwork,awork(1,i_swcp),nele,nobs,is,conv_diagsave)
-              else if (obstype=='lwcp')then
-                 call setuplwcp(lunin,mype,bwork,awork(1,i_lwcp),nele,nobs,is,conv_diagsave)
-              endif
-
 !          set up ozone (sbuv/omi/mls) data
            else if(ditype(is) == 'ozone' .and. ihave_oz)then
               if (obstype == 'o3lev' .or. index(obstype,'mls')/=0 ) then
@@ -654,9 +682,57 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
               end if
            end if
 
-        end if
+!          Set up lightning (GOES/GLM)  data
+           else if(ditype(is) == 'light')then
+              if(obstype == 'goes_glm')then
+                 call setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave,eps)
+              end if
 
-     end do
+!          Collect information from all CPU's about the sums used in
+!          the online bias correction applied to the forward operator for
+!          lightning flash rate.
+
+           do i=1,nobs
+             call mpi_barrier(mpi_comm_world,ierror)
+             call sumslightbias(dlight,lightges0,mype,nobs,nobs_loc,sum_loc)
+             call mpi_allreduce(nobs_loc,nobs_gbl,1,mpi_itype,mpi_sum,&
+                               mpi_comm_world,ierror)
+             call mpi_allreduce(sum_loc,sum_gbl,1,mpi_rtype,mpi_sum,&
+                               mpi_comm_world,ierror)
+
+!           Calculation of an optimal multiplicative bias correction parameter
+!           eps=eps0*exp[(1/nobs)*sum[log(y/(eps0*h(x)))]/(1+r0/w0)], as in
+!           Apodaca et al. (2014).
+!           r0   - diagonal of the observation error covariance matrix associated
+!                  with a logarithmic transformation [diag(RL)=r0]
+!            w0   - diagonal of the uncertainty matrix of the guess [diag(W)=w0]
+!            eps0 - guess value of lightning flash rate
+
+!        Uncomment for testing
+!            if(mype == 0) then
+!              write(*,*) "setuprhsall: Bias nobs_loc,nobs_gbl=",nobs_loc,nobs_gbl
+!              write(*,*) "setuprhsall: Bias sum_loc=",sum_loc
+!              write(*,*) "setuprhsall: Bias sum_gbl=",sum_gbl
+!            endif
+
+!==
+            if(nobs_gbl .gt. 0) then
+               eps=eps0*exp( (one/ float(nobs_gbl))*sum_gbl/(one+r0/w0) )
+            else
+               eps=eps0
+            endif  !! if(nobs_gbl .gt. 0) then
+
+!          Uncomment for testing
+!            if(mype == 0) then
+!               write(*,*) miter,"setuprhsall: multiplicative bias eps0=",eps0
+!               write(*,*) miter,"setuprhsall: multiplicative bias eps=",eps
+!            endif
+
+          enddo !do i=1,nobs
+
+        end if !if(nobs > 0)then
+
+     end do !loop over all data types
      close(lunin)
 
   else
@@ -681,6 +757,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   ! -- call genstats_gps(bwork,awork(1,i_gps),toss_gps_sub,conv_diagsave,mype)
 
   if (conv_diagsave) close(7)
+  if (light_diagsave) close(55)
 
   if(l_PBL_pseudo_SurfobsT.or.l_PBL_pseudo_SurfobsQ.or.l_PBL_pseudo_SurfobsUV) then
   else
@@ -766,7 +843,10 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
      call statsconv(mype,&
           i_ps,i_uv,i_t,i_q,i_pw,i_rw,i_dw,i_gps,i_sst,i_tcp,i_lag, &
           i_gust,i_vis,i_pblh,i_wspd10m,i_td2m,i_mxtm,i_mitm,i_pmsl,i_howv, &
-          i_tcamt,i_lcbas,i_cldch,i_uwnd10m,i_vwnd10m,i_swcp,i_lwcp,i_ref,bwork1,awork1,ndata)
+          i_tcamt,i_lcbas,i_cldch,i_uwnd10m,i_vwnd10m,i_ref,bwork1,awork1,ndata)
+
+!     Compute and print statistics for "lightning" data
+        if (mype==mype_light) call statslight(mype,i_light,bwork,awork,i_ref,ndata)
 
   endif  ! < .not. lobserver >
 
