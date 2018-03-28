@@ -265,7 +265,7 @@ subroutine open_radiag(filename, ftin)
       if (nopen_ncdiag >= MAX_OPEN_NCDIAG) then
          write(6,*) 'OPEN_RADIAG:  ***ERROR*** Cannot open more than ', &
                     MAX_OPEN_NCDIAG, ' netcdf diag files.'
-         call abort(456)
+         call stop2(456)
       endif
       call nc_diag_read_init(filename,ftin)
       do i = 1, MAX_OPEN_NCDIAG
@@ -305,7 +305,7 @@ subroutine close_radiag(filename, ftin)
       if (id < 0) then
          write(6,*) 'CLOSE_RADIAG:  ***ERROR*** ncdiag file ', filename,   &
                     ' was not opened'
-         call abort(456)
+         call stop2(456)
       endif
       call nc_diag_read_close(filename)
       ncdiag_open_id(id) = -1
@@ -427,7 +427,7 @@ subroutine read_radiag_header_nc(ftin,header_fix,header_chan,iflag)
 
   if (nchan_dim .ne. nchan_diag) then
      write(*,*)'ERROR: Number of channels from dimension do not match those from header, aborting.'
-     call abort(321)
+     call stop2(321)
   endif  
 
   call nc_diag_read_get_global_attr(ftin, "Satellite_Sensor", isis)      ; header_fix%isis = isis

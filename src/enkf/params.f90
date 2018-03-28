@@ -131,7 +131,7 @@ logical,public :: letkf_flag = .false.
 
 ! next two are no longer used, instead they are inferred from anavinfo
 logical,public :: massbal_adjust = .false. 
-logical,public :: nvars = -1 
+integer(i_kind),public :: nvars = -1 
 
 ! if true generate additional input files
 ! required for EFSO calculations
