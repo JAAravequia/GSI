@@ -185,6 +185,7 @@
 	intjo.o \
 	intlag.o \
 	intlcbas.o \
+        intlight.o \
 	intmitm.o \
 	intmxtm.o \
 	intoz.o \
@@ -224,6 +225,7 @@
 	lag_traj.o \
 	lagmod.o \
 	lanczos.o \
+        lightinfo.o \
 	logcldch_to_cldch.o \
 	loglcbas_to_lcbas.o \
 	logvis_to_vis.o \
@@ -247,6 +249,7 @@
 	m_gustNode.o \
 	m_howvNode.o \
 	m_lagNode.o \
+        m_lightNode.o \
 	m_latlonRange.o \
 	m_lcbasNode.o \
 	m_mitmNode.o \
@@ -366,6 +369,7 @@
 	read_gmi.o \
 	read_goesimg.o \
 	read_goesimgr_skycover.o \
+        read_goesglm.o \
 	read_goesndr.o \
 	read_gps.o \
 	read_guess.o \
@@ -412,6 +416,7 @@
 	setupgust.o \
 	setuphowv.o \
 	setuplag.o \
+        setuplight.o \
 	setuplcbas.o \
 	setupmitm.o \
 	setupmxtm.o \
@@ -458,6 +463,7 @@
 	state_vectors.o \
 	statsco.o \
 	statsconv.o \
+        statslight.o \
 	statsoz.o \
 	statspcp.o \
 	statsrad.o \
@@ -473,6 +479,7 @@
 	stpjo.o \
 	stphowv.o \
 	stplcbas.o \
+        stplight.o \
 	stpmitm.o \
 	stpmxtm.o \
 	stpoz.o \
@@ -508,6 +515,7 @@
         stub_set_crtm_aerosol.o  \
         stub_timermod.o  \
 	sub2fslab_mod.o \
+        sumslightbias.o \
 	support_2dvar.o \
 	tendsmod.o \
 	test_obsens.o \
