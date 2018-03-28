@@ -223,16 +223,16 @@ do jj=1,ntlevs_ens
    else
       call ensemble_forward_model_ad(wbundle_c,ebundle,jj)
    end if
-   call sqrt_beta_s_mult(wbundle_c)  !cltthinkdeb should this be removed? 
+   call sqrt_beta_s_mult(wbundle_c)   
 
 !  Apply square-root of ensemble error covariance
    call sqrt_beta_e_mult(ebundle)
    do ig=1,naensgrp
-   call ckgcov_a_en_new_factorization_ad(ig,grade,ebundle(ig,:)) !cltthinkdeb
+   call ckgcov_a_en_new_factorization_ad(ig,grade,ebundle(ig,:)) 
 
 
    do ii=1,n_ens
-      grad%aens(jj,ig,ii)%values=grad%aens(jj,ig,ii)%values + grade  !cltthinkdeb why  adding
+      grad%aens(jj,ig,ii)%values=grad%aens(jj,ig,ii)%values + grade  
    enddo
   enddo !loop ig
 !  do ii=1,nval_lenz_en

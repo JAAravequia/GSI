@@ -5,6 +5,8 @@
 ! end function fwgtofwvlen
 !end interface 
 !$$$  subprogram documentation block
+!28-03-2018    T. Lei and D. Kleist   consoliated and added codes 
+!                                     for the scale dependent scale localization scheme
  function fwgtofwvlen (rvlft,rvrgt,rcons,rlen,rinput)
            use kinds, only: r_kind,i_kind,r_single
           implicit none
@@ -58,10 +60,9 @@ subroutine init_mult_spc_wgts(jcap_in)
 !    make sure s_ens_hv is within allowable range  ( pi*rearth*.001/jcap_in <= s_ens_hv <= 5500 )
   allocate(totwvlength(jcap_in))
 
-  write(6,*)'thinkdeb l_sum is ',  l_sum_spc_weights
   rwv0=2*pi*rearth*.001_r_kind
   do i=1,jcap_in
-  totwvlength(i)= rwv0/i                 !cltorg  2*pi*rearth/(2*i)  
+  totwvlength(i)= rwv0/i                   
   enddo
  do i=1,jcap_in
   rtem1=0
@@ -77,12 +78,11 @@ subroutine init_mult_spc_wgts(jcap_in)
    enddo
   rtem2=1-rtem1
   if(abs(rtem2).ge.zero) then 
-!cltorg   spc_multwgt(i,ig)=spc_multwgt(i,ig)/rtem1*rtem2+spc_multwgt(i,ig)
  
   if(l_sum_spc_weights.eq.0 ) then
-   spc_multwgt(i,2)=rtem2 !cltorg spc_multwgt(i,ig)/rtem1*rtem2+spc_multwgt(i,ig)
+   spc_multwgt(i,2)=rtem2 
   else
-   spc_multwgt(i,2)=sqrt(rtem2) !cltorg spc_multwgt(i,ig)/rtem1*rtem2+spc_multwgt(i,ig)
+   spc_multwgt(i,2)=sqrt(rtem2)
   endif
   endif
    
@@ -175,31 +175,17 @@ subroutine apply_scaledepwgts(grd_in,sp_in,wbundle,spwgts,wbundle2,igrp,nensid)
            outwork(j,i)=work(i,j,kk)
         enddo
      enddo
-!clt     write(mapname,'("out_",i2.2)')1+mod(grd_loc%kbegin_loc-1,grd_ens%nsig)
-!cltorg     write(fname1,'("grp",i2.2,"mem",i2.2,"-out_vname",A5,"lev-",i2.2)')igrp,nensid, nrf_var(nvar_id)(1:5),levs_id(kk)
      i=5-len_trim( nrf_var(nvar_id(kk))) 
      varname1=repeat("_",i)
      varname1=trim(varname1)//trim(nrf_var(nvar_id(kk)))
      write(fname1,'("grp",i2.2,"mem",i2.2,"-out_vname",A5,"lev-",i3.3)')igrp,nensid, varname1,levs_id(kk)
-!clt     call outgrads1(outwork,grd_in%nlon,grd_in%nlat,trim(fname1))
-!clt   end if
     
 
 ! Transform from physical space to spectral space   
      call general_g2s0(grd_in,sp_in,spc1,work(:,:,kk))
-!cltorg  if(mype == 0) write(6,*) 'jk_apply0=', spc1
   if(mype == 0) write(6,*) 'jk_apply0_spc1=', shape(spc1)
   if(mype == 0) write(6,*) 'jk_apply0_spc2=', sp_in%jcap
   if(mype == 0) write(6,*) 'jk_apply0_spc2=', sp_in%nc
-!cltorg  if(mype == 0) write(6,*) 'jk_apply0_spc3=', spwgts 
-!    lunit=get_lun()
-!    open(lunit,file="spc_"//trim(fname1),form='formatted')
-     
-!    write(lunit,*)sp_in%nc
-!    do i=1,sp_in%nc
-!    write(lunit,*)spc1(i)
-!    enddo
-!   close (lunit)
 
 ! Apply spectral weights
   call general_spec_multwgt(sp_in,spc1,spwgts)
@@ -207,26 +193,12 @@ subroutine apply_scaledepwgts(grd_in,sp_in,wbundle,spwgts,wbundle2,igrp,nensid)
 ! Transform back to physical space
     call general_s2g0(grd_in,sp_in,spc1,work(:,:,kk))
   work1(:,:,kk)=work(:,:,kk)-work1(:,:,kk)
-  if(mype ==0) write(6,*)'thinkdeb150 max diff is ',maxval(work1(:,:,kk))
 !   if(mype==0) then
       do j=1,grd_in%nlon
         do i=1,grd_in%nlat
            outwork(j,i)=work(i,j,kk)
         enddo
      enddo
-!clt     write(mapname,'("out_",i2.2)')1+mod(grd_loc%kbegin_loc-1,grd_ens%nsig)
-!     fname1="post_"//trim(fname1)
-!cltorg     write(fname1,'("post_grp",i2.2,"mem",i2.2,"-out_vname",A5,"lev-",i2.2)')igrp,nensid, nrf_var(nvar_id(kk))(1:5),levs_id(kk)
-!     call outgrads1(outwork,grd_in%nlon,grd_in%nlat,trim(fname1))
-!    lunit=get_lun()
-!    open(lunit,file="spc_"//trim(fname1),form='formatted')
-     
-!    write(lunit,*)sp_in%nc
-!    do i=1,sp_in%nc
-!    write(lunit,*)spc1(i)
-!    enddo
-!   close (lunit)
-!   end if
 
   end do
 
@@ -237,70 +209,3 @@ subroutine apply_scaledepwgts(grd_in,sp_in,wbundle,spwgts,wbundle2,igrp,nensid)
   return
 end subroutine apply_scaledepwgts
 
-subroutine apply_scaledepwgts_ad(grd_in,sp_in,wbundle,spwgts)
-  use constants, only:  one, zero
-  use control_vectors, only: nrf_var,cvars2d,cvars3d,control_vector
-  use kinds, only: r_kind,i_kind
-  use mpimod, only: mype,nvar_id
-  use hybrid_ensemble_parameters, only: oz_univ_static
-  use general_specmod, only: general_spec_multwgt
-  use general_specmod, only: spec_vars
-!cltorgl  use gridmod, only: ,nlat,nlon,nnnn1o,lat2,lon2,nsig
-  use gsi_bundlemod, only: gsi_bundle
-  use general_sub2grid_mod, only: general_sub2grid,general_grid2sub   
-  use general_sub2grid_mod, only: sub2grid_info
-  implicit none
-
-! Declare passed variables
-  type(gsi_bundle),intent(inout) :: wbundle
-  type(spec_vars),intent (in):: sp_in
-  type(sub2grid_info),intent(in)::grd_in
-  real(r_kind),dimension(sp_in%jcap),intent(in):: spwgts
-
-! Declare local variables
-  integer(i_kind) ii,iflg,kk
-
-  real(r_kind),dimension(grd_in%lat2,grd_in%lon2):: slndt,sicet,sst
-  real(r_kind),dimension(grd_in%nlat*grd_in%nlon*grd_in%nlevs_alloc)      :: hwork
-  real(r_kind),dimension(grd_in%nlat,grd_in%nlon,grd_in%nlevs_alloc)      :: work
-  real(r_kind),dimension(grd_in%nlat,grd_in%nlon,grd_in%nlevs_alloc)      :: work1
-  real(r_kind),dimension(sp_in%nc):: spc1
-
-  iflg=1
-! Get from subdomains to
-  call general_sub2grid(grd_in,wbundle%values,hwork)
-  work=reshape(hwork,(/grd_in%nlat,grd_in%nlon,grd_in%nlevs_alloc/))
-  work1=work
-! Transfer work to spectral space
-  do kk=1,grd_in%nlevs_alloc     
-
-! Shut off this bit if univariate ozone or surface temperature
-     if ( (nrf_var(nvar_id(kk))=='oz').or.(nrf_var(nvar_id(kk))=='OZ').and.oz_univ_static ) then
-        cycle
-     elseif ( (nrf_var(nvar_id(kk))=='sst').or.(nrf_var(nvar_id(kk))=='SST') ) then
-        cycle
-     elseif ( (nrf_var(nvar_id(kk))=='stl').or.(nrf_var(nvar_id(kk))=='STL') ) then
-        cycle
-     elseif ( (nrf_var(nvar_id(kk))=='sti').or.(nrf_var(nvar_id(kk))=='STI') ) then
-        cycle
-     end if
-     spc1(:)=zero
-
-! Adjoint of s2g
-     call general_s2g0_ad(grd_in,sp_in,spc1,work(:,:,kk))
-
-! Spectral weights
-!cltthinkdeb     call general_spec_multwgt(sp_in,spc1,spwgts)
-  if(mype == 0) write(6,*) 'jk_apply_ad=', spwgts
-
-! Adjoint of g2s
-  call general_g2s0_ad(grd_in,sp_in,spc1,work(:,:,kk))
-  work1(:,:,kk)=work(:,:,kk)-work1(:,:,kk)
-
-  end do
-! Transfer work back to subdomains
-  hwork=reshape(work,(/grd_in%nlat*grd_in%nlon*grd_in%nlevs_alloc/))
-!cltthinkdeb  call general_grid2sub(grd_in,hwork,wbundle%values)    
-
-  return
-end subroutine apply_scaledepwgts_ad

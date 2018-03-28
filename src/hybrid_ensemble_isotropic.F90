@@ -47,6 +47,7 @@ module hybrid_ensemble_isotropic
 !   2014-12-02  derber  - many optimization changes
 !   2015-04-07  carley  - bug fix to allow grd_loc%nlat=grd_loc%nlon
 !   2016-05-13  parrish - remove beta12mult
+!   2018-03-28  T. Lei  - added  SDL related coded
 !
 ! subroutines included:
 !   sub init_rf_z                         - initialize localization recursive filter (z direction)
@@ -2999,7 +3000,7 @@ subroutine init_sf_xy(jcap_in)
                                         s_ens_h_min,' km.'
         if(mype == 0) write(6,*)' s_ens_hv(',k,') reset to min value'
         s_ens_hv(k,iaens)=s_ens_h_min
-     else if(s_ens_hv(k,iaens) >  5500._r_kind) then
+     else if(s_ens_hv(k,iaens) >  5500._r_kind.and.1.gt.2) then
         if(mype == 0) write(6,*)' s_ens_hv(',k,') = ',s_ens_hv(k,iaens),' km--too large, max value = 5500 km.'
         if(mype == 0) write(6,*)' s_ens_hv(',k,') reset to max value'
         s_ens_hv(k,iaens)=5500._r_kind
@@ -3217,14 +3218,6 @@ subroutine init_sf_xy(jcap_in)
   
          spectral_filter(iaens,:,:)=max(spectral_filter(iaens,:,:),0.0)
          sqrt_spectral_filter(iaens,:,:)=sqrt(spectral_filter(iaens,:,:))
-!           do n=1,sp_loc%jcap
-!             do ii=1,grd_sploc%nsig
-                 
-!            write(6,*)'thinkdeb7777 spectral_filer ',iaens,ii,n,spectral_filter(iaens,n,ii), sqrt_spectral_filter(iaens,n,ii)
-!             enddo 
-!           enddo
-      
-!cltthinkdev
   
 
 !  assign array k_index for each processor, based on grd_loc%kbegin_loc,grd_loc%kend_loc
@@ -4623,7 +4616,6 @@ subroutine hybens_localization_setup
    else
       call init_sf_xy(jcap_ens)
    endif
-!cltthinkdev
 
    !!!!!!!! setup beta_s, beta_e!!!!!!!!!!!!
    ! vertical variation of static and ensemble weights
