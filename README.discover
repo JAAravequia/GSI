@@ -4,5 +4,5 @@ To build on discover, do the following
 (1) source g5_modules.sh
 (2) module load other/git other/cmake
 (3) mkdir bld && cd bld
-(4) cmake -DBASEDIR=$BASEDIR/Linux -DBUILD_CORELIBS=ON -DUSE_WRF=OFF -DBUILD_GLOBAL=ON ..
-(5) make -j N
+(4) cmake ..
+(5) make -jN
