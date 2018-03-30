@@ -243,7 +243,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
 ! modulated ensemble.
            if (neigv > 0) then
               anal_ob_modens(:,nob) = anal_ob_modens(:,nob)-ensmean_ob(nob)
-              sprd_ob(nob) = sum(anal_ob_modens(:,nob)**2)*analsim1
+              sprd_ob(nob) = sum(anal_ob_modens(:,nob)**2)/float(nanals*neigv- 1) !*analsim1
            endif
         enddo
 !$omp end parallel do
