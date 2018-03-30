@@ -137,7 +137,8 @@ logical,public :: letkf_flag = .false.
 
 ! next two are no longer used, instead they are inferred from anavinfo
 logical,public :: massbal_adjust = .false. 
-logical,public :: nvars = -1 
+integer(i_kind),public :: nvars = -1
+
 ! Use Sakov's 'deterministic EnKF' approx. (K/2 used for pert update)
 logical,public :: denkf = .false.
 ! sort obs in LETKF in order of decreasing DFS

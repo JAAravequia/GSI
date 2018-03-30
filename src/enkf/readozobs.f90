@@ -993,7 +993,7 @@ subroutine write_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
     ierr = nf90_inq_varid(iunit, varname, varid)
     if (ierr == NF90_ENOTVAR) then
        call nclayer_check(nf90_def_var(iunit, varname, NF90_FLOAT, dimid, varid))
-       call nclayer_check(nf90_def_var_deflate(iunit, varid, 1, 1, NLAYER_COMPRESSION))
+       call nclayer_check(nf90_def_var_deflate(iunit, varid, 1, 1, int(NLAYER_COMPRESSION)))
     endif
     call nclayer_check(nf90_put_var(iunit, varid, field))
   end subroutine write_ncvar_single
@@ -1013,7 +1013,7 @@ subroutine write_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
     ierr = nf90_inq_varid(iunit, varname, varid)
     if (ierr == NF90_ENOTVAR) then
        call nclayer_check(nf90_def_var(iunit, varname, NF90_INT, dimid, varid))
-       call nclayer_check(nf90_def_var_deflate(iunit, varid, 1, 1, NLAYER_COMPRESSION))
+       call nclayer_check(nf90_def_var_deflate(iunit, varid, 1, 1, int(NLAYER_COMPRESSION)))
     endif
     call nclayer_check(nf90_put_var(iunit, varid, field))
   end subroutine write_ncvar_int
