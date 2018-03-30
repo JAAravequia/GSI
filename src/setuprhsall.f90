@@ -184,7 +184,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 ! use setuptd2m_mod, only: setuptd2m_class
   use setupvis_mod, only: setupvis_class
   use setupw_mod, only: setupw_class
-! use setupwspd10m_mod, only: setupwspd10m_class
+  use setupwspd10m_mod, only: setupwspd10m_class
 
   use m_gpsStats, only: gpsStats_genstats       ! was genstats_gps()
   use m_gpsStats, only: gpsStats_destroy        ! was done by genstats_gps()
@@ -233,7 +233,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 ! type(setuptd2m_class) :: td2m
   type(setupvis_class) :: vis
   type(setupw_class) :: w
-! type(setupwspd10m_class) :: wspd10m
+  type(setupwspd10m_class) :: wspd10m
 
 ! Declare external calls for code analysis
   external:: compute_derived
@@ -546,7 +546,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !          endif
            if(ier/=0) call die('setuprhsall','read(), iostat =',ier)
            nele=nreal+nchanl
-
+           write(6,*) 'Setting up data for ditype(',is,') = ',ditype(is)
 !          Set up for radiance data
            if(ditype(is) == 'rad')then
  
@@ -576,7 +576,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
 !             Set up uv wind data
               else if(obstype=='uv')then
-                 write(6,*) 'setting up uv'
+                 write(6,*) 'setting up w'
                  call w%setup(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
 !                call setupw(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
 
@@ -656,8 +656,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up conventional wspd10m data
               else if(obstype=='wspd10m' .and. getindex(svars2d,'wspd10m')>0) then
                  write(6,*) 'setting up wspd10m'
-!                call wspd10m%setup(lunin,mype,bwork,awork(1,i_wspd10m),nele,nobs,is,conv_diagsave)
-                 call setupwspd10m(lunin,mype,bwork,awork(1,i_wspd10m),nele,nobs,is,conv_diagsave)
+                 call wspd10m%setup(lunin,mype,bwork,awork(1,i_wspd10m),nele,nobs,is,conv_diagsave)
+!                call setupwspd10m(lunin,mype,bwork,awork(1,i_wspd10m),nele,nobs,is,conv_diagsave)
 
 !             Set up conventional td2m data
               else if(obstype=='td2m' .and. getindex(svars2d,'td2m')>0) then

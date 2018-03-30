@@ -720,9 +720,6 @@ contains
   ! Jump to this line if problem with data
   135 continue        
   
-  ! Release memory of local guess arrays
-    call this%final_vars_
-  
   ! clean up
     if(allocated(this%ges_co)) deallocate(this%ges_co)
     call dtime_show('setupco','diagsave:co',i_colvk_ob_type)

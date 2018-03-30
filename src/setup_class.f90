@@ -53,6 +53,7 @@ module abstract_setup_mod
     procedure, pass(this) ::  allocate_tnd_ges3
     procedure, pass(this) ::  allocate_ges4
     procedure, pass(this) :: initialize 
+    procedure, pass(this) :: destructor
   end type abstract_setup_class
 ! interface abstract_setup_class
 !      module procedure setup_ctor2
@@ -86,6 +87,16 @@ contains
 !    setup_ctor3%varnames(1) = varname1
 !    setup_ctor3%varnames(2) = varname2
 ! end function setup_ctor3
+  subroutine destructor(this)
+      class(abstract_setup_class)              ,intent(inout) :: this
+      call this%final_vars_
+      write(6,*) "HEY!!! in destructor"
+      if(allocated(this%varnames)) then 
+         deallocate(this%varnames)
+      else
+         write(6,*) 'WARNING!!! varnames were not allocated for ',this%myname
+      endif
+  end subroutine destructor   
   subroutine initialize(this,obsname,varname1,varname2,varname3,varname4,varname5,varname6,varname7,varname8,&
                  varname9,varname10,varname11,varname12,include_w)
       class(abstract_setup_class)              ,intent(inout) :: this
@@ -222,7 +233,11 @@ contains
       real(r_kind),dimension(nele,nobs)                               :: data
       logical,dimension(nobs)                                         :: luse 
 
-      write(6,*) ' in abstract setup for ',this%myname,' with varnames ',this%varnames
+      if(allocated(this%varnames)) then 
+          write(6,*) ' in abstract setup for ',this%myname,' with varnames ',this%varnames
+      else
+          write(6,*) ' in abstract setup for ',this%myname,' with NO VARNAMES!'
+      endif
       call this%setupDerived(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
       call this%final_vars_
   end subroutine setup
@@ -541,31 +556,43 @@ contains
           write(6,*) 'allocating ',varname
           call this%allocate_ges3(this%ges_z,varname)
         case ('gust')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges3(this%ges_gust,varname)
         case ('wspd10m')
           write(6,*) 'allocating ',varname
           call this%allocate_ges3(this%ges_wspd10m,varname)
         case ('cldch')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges3(this%ges_cldch,varname)
         case ('lcbas')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges3(this%ges_lcbas,varname)
         case ('mitm')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges3(this%ges_mitm,varname)
         case ('pblh')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges3(this%ges_pblh,varname)
         case ('th2')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges3(this%ges_th2,varname)
         case ('pmsl')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges3(this%ges_pmsl,varname)
         case ('q2m')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges3(this%ges_q2m,varname)
         case ('q2')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges3(this%ges_q2,varname)
         case ('tcamt')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges3(this%ges_tcamt,varname)
         case ('td2m')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges3(this%ges_td2m,varname)
         case ('vis')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges3(this%ges_vis,varname)
         case ('u')
           write(6,*) 'allocating ',varname
@@ -580,20 +607,28 @@ contains
           write(6,*) 'allocating ',varname
           call this%allocate_ges4(this%ges_tv,varname)
         case ('pm10')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges4(this%ges_pm10,varname)
         case ('q')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges4(this%ges_q,varname)
         case ('pm2_5')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges4(this%ges_pm2_5,varname)
         case ('mxtm')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges3(this%ges_mxtm,varname)
         case ('howv')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges3(this%ges_howv,varname)
         case ('co')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges4(this%ges_co,varname)
         case ('oz')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges4(this%ges_oz,varname)
         case ('div')
+          write(6,*) 'allocating ',varname
           call this%allocate_ges4(this%ges_div,varname)
       end select
       write(6,*) 'HEY done with ',varname,' for ',this%myname

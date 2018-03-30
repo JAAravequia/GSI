@@ -1142,9 +1142,6 @@ contains
        endif ! (last_pass)
     end do ! i=1,nobs
   
-    ! Release memory of local guess arrays
-    call this%final_vars_
-  
     ! Save these arrays for later passes
     data_ier (:)=data(ier ,:)
     data_ihgt(:)=data(ihgt,:)
