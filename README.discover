@@ -6,3 +6,8 @@ To build on discover, do the following
 (3) mkdir bld && cd bld
 (4) cmake ..
 (5) make -jN
+
+For running regression tests, define the control location in
+bld/regression_var.out. Replace CONTROL_EXE-NOTFOUND by the full path to the
+gsi executable. Also modify the file bld/CTestTestfile.cmake to exclude the
+test global_nemsio_T62 as it is not supported on Discover, yet.

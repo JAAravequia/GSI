@@ -17,6 +17,9 @@ case $machine in
 	Cheyenne)
 	   sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
     ;;
+	Discover)
+	   sub_cmd="sub_discover"
+    ;;
     *) # EXIT out for unresolved machine
         echo "unknown $machine"
         exit 1
@@ -42,6 +45,9 @@ case $regtest in
         elif [[ "$machine" = "s4" ]]; then
            topts[1]="1:45:00" ; popts[1]="20/4" ; ropts[1]="/1"
            topts[2]="1:45:00" ; popts[2]="40/2" ; ropts[2]="/2"
+        elif [[ "$machine" = "Discover" ]]; then
+           topts[1]="0:30:00" ; popts[1]="24/1/" ; ropts[1]="/1"
+           topts[2]="0:30:00" ; popts[2]="48/2/" ; ropts[2]="/2"
         fi
 
         if [ "$debug" = ".true." ] ; then
@@ -69,6 +75,9 @@ case $regtest in
         elif [[ "$machine" = "s4" ]]; then
            topts[1]="0:25:00" ; popts[1]="16/2/" ; ropts[1]="/1"
            topts[2]="0:25:00" ; popts[2]="16/4/" ; ropts[2]="/2"
+        elif [[ "$machine" = "Discover" ]]; then
+           topts[1]="0:30:00" ; popts[1]="16/1/" ; ropts[1]="/1"
+           topts[2]="0:30:00" ; popts[2]="32/2/" ; ropts[2]="/2"
         fi
 
         if [ "$debug" = ".true." ] ; then
@@ -96,6 +105,9 @@ case $regtest in
         elif [[ "$machine" = "s4" ]]; then
             topts[1]="0:55:00" ; popts[1]="16/2/" ; ropts[1]="/1"
             topts[2]="0:45:00" ; popts[2]="16/4/" ; ropts[2]="/2"
+        elif [[ "$machine" = "Discover" ]]; then
+           topts[1]="0:30:00" ; popts[1]="24/1/" ; ropts[1]="/1"
+           topts[2]="0:30:00" ; popts[2]="48/2/" ; ropts[2]="/2"
         fi
 
         if [ "$debug" = ".true." ] ; then
@@ -182,6 +194,9 @@ case $regtest in
         elif [[ "$machine" = "s4" ]]; then
            topts[1]="0:30:00" ; popts[1]="16/2/" ; ropts[1]="/1"
            topts[2]="0:30:00" ; popts[2]="16/4/" ; ropts[2]="/2"
+        elif [[ "$machine" = "Discover" ]]; then
+           topts[1]="0:30:00" ; popts[1]="24/1/" ; ropts[1]="/1"
+           topts[2]="0:30:00" ; popts[2]="48/2/" ; ropts[2]="/2"
         fi
 
         if [ "$debug" = ".true." ] ; then
@@ -472,4 +487,6 @@ elif [[ "$machine" = "s4" ]]; then
    export MP_STDOUTMODE=ORDERED
    export KMP_STACKSIZE=512MB 
    export KMP_AFFINITY=scatter
+elif [[ "$machine" = "Discover" ]]; then
+   export APRUN="mpiexec_mpt -np \$SLURM_NTASKS"
 fi

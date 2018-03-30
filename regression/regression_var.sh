@@ -59,6 +59,8 @@ elif [ -d /gpfs/hps/ptmp ]; then # LUNA or SURGE
 elif [ -d /data/users ]; then # S4
    export machine="s4"
    export noscrub="/data/users/$LOGNAME"
+elif [ -d /discover/nobackup ]; then # Discover
+    export machine="Discover"
 fi
 
 echo "machine name is $machine"
@@ -154,7 +156,20 @@ elif [[ "$machine" = "s4" ]]; then
    export check_resource="no"
 
    export accnt="star"
-
+elif [ "$machine" == "Discover" ]; then
+   if [[ "$cmaketest" = "false" ]]; then
+       echo "Regression tests on Discover need to be run via ctest"
+       exit 1
+   fi
+   export ptmp=$basedir
+   export noscrub=$basedir
+   export fixcrtm="/discover/nobackup/projects/gmao/share/gmao_ops/fvInput_4dvar/gsi/etc/fix_ncep20170329/REL-2.2.3-r60152_local-rev_1/CRTM_Coeffs/$endianness"
+   export casesdir="/discover/nobackup/projects/gmao/obsdev/wrmccart/NCEP_regression/CASES"
+   export ndate="/home/pchakrab/.local/bin/ndate"
+   export check_resource="no"
+   export accnt="g0613"
+   export queue="compute"
+   export clean=".false."
 fi
 
 if [[ "$cmaketest" = "false" ]]; then
