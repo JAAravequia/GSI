@@ -106,8 +106,8 @@ case $regtest in
             topts[1]="0:55:00" ; popts[1]="16/2/" ; ropts[1]="/1"
             topts[2]="0:45:00" ; popts[2]="16/4/" ; ropts[2]="/2"
         elif [[ "$machine" = "Discover" ]]; then
-           topts[1]="0:30:00" ; popts[1]="24/1/" ; ropts[1]="/1"
-           topts[2]="0:30:00" ; popts[2]="48/2/" ; ropts[2]="/2"
+           topts[1]="1:30:00" ; popts[1]="24/1/" ; ropts[1]="/1"
+           topts[2]="1:30:00" ; popts[2]="48/2/" ; ropts[2]="/2"
         fi
 
         if [ "$debug" = ".true." ] ; then
