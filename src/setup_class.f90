@@ -224,6 +224,7 @@ contains
       use gridmod, only: nsig
       use qcmod, only: npres_print
       use convinfo, only: nconvtype
+      
       class(abstract_setup_class)                      ,intent(inout) :: this
       integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
       real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
@@ -239,7 +240,7 @@ contains
           write(6,*) ' in abstract setup for ',this%myname,' with NO VARNAMES!'
       endif
       call this%setupDerived(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
-      call this%final_vars_
+!     call this%final_vars_
   end subroutine setup
   subroutine setupDerived(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
       use kinds, only: r_kind,r_single,r_double,i_kind       
@@ -276,7 +277,7 @@ contains
       write(6,*) ' in setupp for ',obsname,' with varnames ',varnames
       call this%allocate_and_check_vars(obsname,lunin,luse,nele,nobs,data,varnames)
       call this%setupDerived(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
-      call this%final_vars_
+!     call this%final_vars_
 
   end subroutine setupp
   subroutine allocate_and_check_vars(this,obsname,lunin,luse,nele,nobs,data,varnames)
@@ -474,11 +475,11 @@ contains
       if(associated(this%ges_q_ten)) nullify(this%ges_q_ten)
       if(allocated(this%ges_ps_lon)) deallocate(this%ges_ps_lon)
       if(allocated(this%ges_ps_lat)) deallocate(this%ges_ps_lat)
-      if(allocated(this%varnames)) then 
-         deallocate(this%varnames)
-      else
-         write(6,*) 'WARNING!!! varnames were not allocated for ',this%myname
-      endif
+!     if(allocated(this%varnames)) then 
+!        deallocate(this%varnames)
+!     else
+!        write(6,*) 'WARNING!!! varnames were not allocated for ',this%myname
+!     endif
       write(6,*) 'done deallocating ',this%myname
   end subroutine final_vars_
 

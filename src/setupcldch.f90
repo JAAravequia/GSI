@@ -144,10 +144,12 @@ contains
     
     n_alloc(:)=0
     m_alloc(:)=0
-  cldch_errmax=10000.0_r_kind
+    cldch_errmax=10000.0_r_kind
+    write(6,*) 'HEY 1'
   !*********************************************************************************
   ! Read and reformat observations in work arrays.
   read(lunin)data,luse,ioid
+    write(6,*) 'HEY 2'
 ! index information for data array (see reading routine)
     ier=1       ! index of obs error
     ilon=2      ! index of grid relative obs location (x)
@@ -186,6 +188,7 @@ contains
   offtime_k=0.0_r_kind
   offtime_l=0.0_r_kind
   dup=one
+    write(6,*) 'HEY 3'
 !  if closest_obs=.true., choose the timely closest observation among the multi-reports at a station.
   if (closest_obs) then
      dup=one
@@ -230,6 +233,7 @@ contains
      end do
   endif
   
+    write(6,*) 'HEY 4'
   ! If requested, save select data for output to diagnostic file
     if(conv_diagsave)then
        ii=0
@@ -325,10 +329,12 @@ contains
   
        if(.not.in_curbin) cycle
   
+    write(6,*) 'HEY 5'
   ! Interpolate to get cldch at obs location/time
        call tintrp2a11(this%ges_cldch,cldchges,dlat,dlon,dtime,hrdifsig,&
           mype,nfldsig)
   
+    write(6,*) 'HEY 6'
   ! Adjust observation error
        ratio_errors=error/data(ier,i)
        error=one/error

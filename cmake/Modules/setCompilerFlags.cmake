@@ -83,7 +83,7 @@ endfunction()
 
 function (setGNU)
   message("Setting GNU Compiler Flags")
-  set(GSI_Fortran_FLAGS " -O3 -fconvert=big-endian -fbacktrace -g -ffast-math -fno-second-underscore -frecord-marker=4 -funroll-loops -ggdb -Wall -fno-range-check -D_REAL8_ -fopenmp -ffree-line-length-0" PARENT_SCOPE)
+  set(GSI_Fortran_FLAGS " -O0 -fconvert=big-endian -fbacktrace -g -ffast-math -fno-second-underscore -frecord-marker=4 -funroll-loops -ggdb -Wall -fno-range-check -D_REAL8_ -fopenmp -ffree-line-length-0" PARENT_SCOPE)
   set(EXTRA_LINKER_FLAGS "-lgomp" PARENT_SCOPE)
   set(GSI_CFLAGS "-I. -DFortranByte=char -DFortranInt=int -DFortranLlong='long long'  -g  -Dfunder" PARENT_SCOPE )
   set(ENKF_Fortran_FLAGS " -O3 -fconvert=big-endian -ffree-line-length-0 -ffast-math -fno-second-underscore -frecord-marker=4 -funroll-loops -ggdb -Wall -fno-range-check -DGFS -D_REAL8_ -fopenmp" PARENT_SCOPE)

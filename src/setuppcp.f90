@@ -1,32 +1,3 @@
-module setuppcp_mod
-use abstract_setup_mod
-  type, extends(abstract_setup_class) :: setuppcp_class
-  contains
-    procedure, pass(this) :: setuppcp
-  end type setuppcp_class
-  interface setuppcp_class
-     module procedure setup_ctor
-  end interface
-contains
-  type(setuppcp_class) function setup_ctor(obsname,varname1,varname2,varname3,varname4,varname5,&
-            varname6,varname7,varname8,varname9,varname10)
-      character(*),                        intent(in) :: obsname
-      character(*),                        intent(in) :: varname1
-      character(*),                        intent(in) :: varname2
-      character(*),                        intent(in) :: varname3
-      character(*),                        intent(in) :: varname4
-      character(*),                        intent(in) :: varname5
-      character(*),                        intent(in) :: varname6
-      character(*),                        intent(in) :: varname7
-      character(*),                        intent(in) :: varname8
-      character(*),                        intent(in) :: varname9
-      character(*),                        intent(in) :: varname10
-      call setup_ctor%initialize(obsname,varname1=varname1,varname2=varname2,varname3=varname3,&
-             varname4=varname4,varname5=varname5,&
-             varname6=varname6,varname7=varname7,&
-             varname8=varname8,varname9=varname9,&
-             varname10=varname10)
-  end function setup_ctor
 !-------------------------------------------------------------------------
 !    NOAA/NCEP, National Centers for Environmental Prediction GSI        !
 !-------------------------------------------------------------------------
@@ -36,7 +7,7 @@ contains
 !
 ! !INTERFACE:
 !
-subroutine setuppcp(this,lunin,mype,aivals,nele,nobs,&
+subroutine setuppcp(lunin,mype,aivals,nele,nobs,&
      obstype,isis,is,pcp_diagsave,init_pass)
 
 ! !USES:
@@ -86,6 +57,7 @@ subroutine setuppcp(this,lunin,mype,aivals,nele,nobs,&
   use gsi_4dvar, only: nobs_bins,hr_obsbin,l4dvar,l4densvar
 
   use gsi_metguess_mod, only: gsi_metguess_bundle
+  use gsi_bundlemod, only: gsi_bundlegetpointer
   
   use constants, only: rd,cp,pi,zero,quarter,r60, &
        half,one,two,three,tiny_r_kind,one_tenth,cg_term,r1000,wgtlim,fv,r3600,r10
@@ -100,7 +72,6 @@ subroutine setuppcp(this,lunin,mype,aivals,nele,nobs,&
 
 ! !INPUT PARAMETERS:
 
-  class(setuppcp_class)          , intent(inout) :: this
   integer(i_kind)                , intent(in   ) :: lunin          ! unit from which to read 
                                                                    !   precpitation observations
   integer(i_kind)                , intent(in   ) :: mype           ! mpi task id
@@ -163,7 +134,7 @@ subroutine setuppcp(this,lunin,mype,aivals,nele,nobs,&
 !   2006-07-28  derber  - modify to use new inner loop obs data structure
 !                       - unify NL qc
 !                       - process one ob at a time
-!   2006-07-31  kleist  - use separate derivative arrays, change to use this%ges_ps
+!   2006-07-31  kleist  - use separate derivative arrays, change to use ges_ps
 !   2006-10-12  treadon - replace virtual temperature with sensible
 !   2007-01-19  derber  - load log(one+satpcp) instead of satpcp into structure
 !   2007-03-19  tremolet - binning of observations
@@ -275,6 +246,7 @@ subroutine setuppcp(this,lunin,mype,aivals,nele,nobs,&
        t_ges,q_ges,u_ges,v_ges,div_ges,cwm_ges,zges,z0,&
        prsl0,del0,sl0,tsen_ten0,q_ten0,p_ten0
   real(r_kind),dimension(nsig+1):: prsi0
+  real(r_kind),pointer,dimension(:,:,:)::ges_cwmr_im,ges_cwmr_ip
 
   real(r_kind),parameter::  zero_7  = 0.7_r_kind
   real(r_kind),parameter::  r1em6   = 0.000001_r_kind
@@ -284,7 +256,7 @@ subroutine setuppcp(this,lunin,mype,aivals,nele,nobs,&
   real(r_kind),parameter::  r45     = 45.0_r_kind
 ! real(r_kind),parameter::  r272_16 = 272.16_r_kind
   real(r_kind),parameter::  r10000  = 10000.0_r_kind
-! character(len=*),parameter:: myname='setuppcp'
+  character(len=*),parameter:: myname='setuppcp'
 
   logical:: in_curbin, in_anybin
   logical   proceed
@@ -293,40 +265,34 @@ subroutine setuppcp(this,lunin,mype,aivals,nele,nobs,&
   class(obsNode),pointer:: my_node
   type(pcpNode),pointer:: my_head
   type(obs_diag),pointer:: my_diag
-  real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
 
-  real(r_kind),pointer,dimension(:,:,:)::ges_cwmr_im,ges_cwmr_ip
-! real(r_kind),allocatable,dimension(:,:,:  ) :: this%ges_ps
-! real(r_kind),allocatable,dimension(:,:,:,:) :: this%ges_u
-! real(r_kind),allocatable,dimension(:,:,:,:) :: this%ges_v
-! real(r_kind),allocatable,dimension(:,:,:,:) :: this%ges_div
-! real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
+  real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_u
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_div
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
 
-! real(r_kind),pointer,dimension(:,:,:)   :: ges_prs_ten=>NULL()
-! real(r_kind),pointer,dimension(:,:,:)   :: ges_tv_ten =>NULL()
-! real(r_kind),pointer,dimension(:,:,:)   :: ges_q_ten  =>NULL()
+  real(r_kind),pointer,dimension(:,:,:)   :: ges_prs_ten=>NULL()
+  real(r_kind),pointer,dimension(:,:,:)   :: ges_tv_ten =>NULL()
+  real(r_kind),pointer,dimension(:,:,:)   :: ges_q_ten  =>NULL()
 
-! real(r_kind),allocatable,dimension(:,:,:) :: ges_ps_lon
-! real(r_kind),allocatable,dimension(:,:,:) :: ges_ps_lat
+  real(r_kind),allocatable,dimension(:,:,:) :: ges_ps_lon
+  real(r_kind),allocatable,dimension(:,:,:) :: ges_ps_lat
 
   data  rmiss / -999._r_kind /
 
-! this%myname='setuppcp'
-! this%numvars = 5
-! allocate(this%varnames(this%numvars))
-! this%varnames(1:this%numvars) = (/ 'var::ps ', 'var::q  ', 'var::div', 'var::v  ', 'var::u  ' /)
 ! Check to see if required guess fields are available
-! call check_vars_(proceed)
-! if(.not.proceed) return  ! not all vars available, simply return
+  call check_vars_(proceed)
+  if(.not.proceed) return  ! not all vars available, simply return
 
 ! If require guess vars available, extract from bundle ...
-! call init_vars_
+  call init_vars_
 
 !! Verify preconditions
 if(.not. (drv_initialized.and.tnd_initialized) ) then
-  if(.not.drv_initialized) call perr(this%myname,'drv_initialized =',drv_initialized)
-  if(.not.tnd_initialized) call perr(this%myname,'tnd_initialized =',tnd_initialized)
-  call die(this%myname)
+  if(.not.drv_initialized) call perr(myname,'drv_initialized =',drv_initialized)
+  if(.not.tnd_initialized) call perr(myname,'tnd_initialized =',tnd_initialized)
+  call die(myname)
 endif
 
   n_alloc(:)=0
@@ -603,7 +569,7 @@ endif
               obsdiags(i_pcp_ob_type,ibin)%tail => obsdiags(i_pcp_ob_type,ibin)%tail%next
            end if
            if (.not.associated(obsdiags(i_pcp_ob_type,ibin)%tail)) then
-              call die(this%myname,'.not.associated(obsdiags(i_pcp_ob_type,ibin)%tail)')
+              call die(myname,'.not.associated(obsdiags(i_pcp_ob_type,ibin)%tail)')
            end if
            if (obsdiags(i_pcp_ob_type,ibin)%tail%indxglb/=ioid(n)) then
               write(6,*)'setuppcp: index error'
@@ -672,9 +638,9 @@ endif
      deltp=one-delt
 
 !    Get pointer to could water mixing ratio
-     call gsi_bundlegetpointer(gsi_metguess_bundle(itim), trim('cw'),ges_cwmr_im,istatus)
+     call gsi_bundlegetpointer (gsi_metguess_bundle(itim), 'cw',ges_cwmr_im,istatus)
      if (istatus/=0) call die('setuppcp','cannot get pointer to cwmr(itim), istatus =',istatus)
-     call gsi_bundlegetpointer(gsi_metguess_bundle(itimp),trim('cw'),ges_cwmr_ip,istatus)
+     call gsi_bundlegetpointer (gsi_metguess_bundle(itimp),'cw',ges_cwmr_ip,istatus)
      if (istatus/=0) call die('setuppcp','cannot get pointer to cwmr(itimp), istatus =',istatus)
 
 !    Set and save spatial interpolation indices and weights.
@@ -709,29 +675,29 @@ endif
         rmask0= isli2(i,j)
 
 !       Perform interpolation.
-        pterm = delt*this%ges_ps(i,j,itim) + deltp*this%ges_ps(i,j,itimp)
+        pterm = delt*ges_ps(i,j,itim) + deltp*ges_ps(i,j,itimp)
         psexp4 = pterm
 
-        plon0 = delt*this%ges_ps_lon(i,j,itim) + deltp*this%ges_ps_lon(i,j,itimp)
-        plat0 = delt*this%ges_ps_lat(i,j,itim) + deltp*this%ges_ps_lat(i,j,itimp)
+        plon0 = delt*ges_ps_lon(i,j,itim) + deltp*ges_ps_lon(i,j,itimp)
+        plat0 = delt*ges_ps_lat(i,j,itim) + deltp*ges_ps_lat(i,j,itimp)
 
 
         do k=1,nsig
            t0(k)    = delt *ges_tsen(i,j,k,itim)  + deltp*ges_tsen(i,j,k,itimp)
-           q0(k)    = delt *this%ges_q(i,j,k,itim)     + deltp*this%ges_q(i,j,k,itimp)
-           u0(k)    = delt *this%ges_u(i,j,k,itim)     + deltp*this%ges_u(i,j,k,itimp)
-           v0(k)    = delt *this%ges_v(i,j,k,itim)     + deltp*this%ges_v(i,j,k,itimp)
-           div0(k)  = delt *this%ges_div(i,j,k,itim)   + deltp*this%ges_div(i,j,k,itimp)
+           q0(k)    = delt *ges_q(i,j,k,itim)     + deltp*ges_q(i,j,k,itimp)
+           u0(k)    = delt *ges_u(i,j,k,itim)     + deltp*ges_u(i,j,k,itimp)
+           v0(k)    = delt *ges_v(i,j,k,itim)     + deltp*ges_v(i,j,k,itimp)
+           div0(k)  = delt *ges_div(i,j,k,itim)   + deltp*ges_div(i,j,k,itimp)
            cwm0(k)  = delt *ges_cwmr_im(i,j,k)    + deltp*ges_cwmr_ip(i,j,k)
            z0(k)    = delt *geop_hgtl(i,j,k,itim) + deltp*geop_hgtl(i,j,k,itimp)
            prsl0(k) = delt *ges_prsl(i,j,k,itim)  + deltp*ges_prsl(i,j,k,itimp)
            prsi0(k) = delt *ges_prsi(i,j,k,itim)  + deltp*ges_prsi(i,j,k,itimp)
 
-           q_ten0(k)  = this%ges_q_ten(i,j,k)
-           tsen_ten0(k) = (this%ges_tv_ten(i,j,k) - fv*t0(k)*this%ges_q_ten(i,j,k))/(one+fv*q0(k))
+           q_ten0(k)  = ges_q_ten(i,j,k)
+           tsen_ten0(k) = (ges_tv_ten(i,j,k) - fv*t0(k)*ges_q_ten(i,j,k))/(one+fv*q0(k))
 
 !          NOTE:  k=1 is surface pressure tendency
-           p_ten0(k)  = this%ges_prs_ten(i,j,k+1)
+           p_ten0(k)  = ges_prs_ten(i,j,k+1)
 
 
         end do
@@ -1058,11 +1024,11 @@ endif
            my_diag => my_head%diags
            if(my_head%idv /= my_diag%idv .or. &
               my_head%iob /= my_diag%iob ) then
-              call perr(this%myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
+              call perr(myname,'mismatching %[head,diags]%(idv,iob,ibin) =', &
                         (/is,ioid(n),ibin/))
-              call perr(this%myname,'my_head%(idv,iob) =',(/my_head%idv,my_head%iob/))
-              call perr(this%myname,'my_diag%(idv,iob) =',(/my_diag%idv,my_diag%iob/))
-              call die(this%myname)
+              call perr(myname,'my_head%(idv,iob) =',(/my_head%idv,my_head%iob/))
+              call perr(myname,'my_diag%(idv,iob) =',(/my_diag%idv,my_diag%iob/))
+              call die(myname)
            endif
         endif
         my_head => null()
@@ -1191,7 +1157,7 @@ endif
   if (pcp_diagsave) then
      close(4)
      deallocate(diagbuf)
-     call dtime_show(this%myname,'diagsave:pcp',i_pcp_ob_type)
+     call dtime_show(myname,'diagsave:pcp',i_pcp_ob_type)
   endif
 
 ! End of routine
@@ -1228,94 +1194,94 @@ endif
      varname='ps'
      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
      if (istatus==0) then
-         if(allocated(this%ges_ps))then
-            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
+         if(allocated(ges_ps))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
             call stop2(999)
          endif
-         allocate(this%ges_ps(size(rank2,1),size(rank2,2),nfldsig))
-         this%ges_ps(:,:,1)=rank2
+         allocate(ges_ps(size(rank2,1),size(rank2,2),nfldsig))
+         ges_ps(:,:,1)=rank2
          do ifld=2,nfldsig
             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-            this%ges_ps(:,:,ifld)=rank2
+            ges_ps(:,:,ifld)=rank2
          enddo
      else
-         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
 !    get u ...
      varname='u'
      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
      if (istatus==0) then
-         if(allocated(this%ges_u))then
-            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
+         if(allocated(ges_u))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
             call stop2(999)
          endif
-         allocate(this%ges_u(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         this%ges_u(:,:,:,1)=rank3
+         allocate(ges_u(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         ges_u(:,:,:,1)=rank3
          do ifld=2,nfldsig
             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            this%ges_u(:,:,:,ifld)=rank3
+            ges_u(:,:,:,ifld)=rank3
          enddo
      else
-         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
 !    get v ...
      varname='v'
      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
      if (istatus==0) then
-         if(allocated(this%ges_v))then
-            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
+         if(allocated(ges_v))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
             call stop2(999)
          endif
-         allocate(this%ges_v(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         this%ges_v(:,:,:,1)=rank3
+         allocate(ges_v(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         ges_v(:,:,:,1)=rank3
          do ifld=2,nfldsig
             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            this%ges_v(:,:,:,ifld)=rank3
+            ges_v(:,:,:,ifld)=rank3
          enddo
      else
-         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
 !    get div ...
      varname='div'
      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
      if (istatus==0) then
-         if(allocated(this%ges_div))then
-            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
+         if(allocated(ges_div))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
             call stop2(999)
          endif
-         allocate(this%ges_div(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         this%ges_div(:,:,:,1)=rank3
+         allocate(ges_div(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         ges_div(:,:,:,1)=rank3
          do ifld=2,nfldsig
             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            this%ges_div(:,:,:,ifld)=rank3
+            ges_div(:,:,:,ifld)=rank3
          enddo
      else
-         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
 !    get q ...
      varname='q'
      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
      if (istatus==0) then
-         if(allocated(this%ges_q))then
-            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
+         if(allocated(ges_q))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
             call stop2(999)
          endif
-         allocate(this%ges_q(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         this%ges_q(:,:,:,1)=rank3
+         allocate(ges_q(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         ges_q(:,:,:,1)=rank3
          do ifld=2,nfldsig
             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            this%ges_q(:,:,:,ifld)=rank3
+            ges_q(:,:,:,ifld)=rank3
          enddo
      else
-         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
   else
-     write(6,*) trim(this%myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
+     write(6,*) trim(myname), ': inconsistent vector sizes (nfldsig,size(metguess_bundle) ',&
                  nfldsig,size(gsi_metguess_bundle)
      call stop2(999)
   endif
@@ -1323,27 +1289,27 @@ endif
   if(tnd_initialized) then
 !    get prs_ten ...
      varname='prse'
-     call gsi_bundlegetpointer(gsi_tendency_bundle,trim(varname),this%ges_prs_ten,istatus)
+     call gsi_bundlegetpointer(gsi_tendency_bundle,trim(varname),ges_prs_ten,istatus)
      if (istatus/=0) then
-         write(6,*) trim(this%myname),': ', trim(varname), ' not found in tend bundle, ier= ',istatus
+         write(6,*) trim(myname),': ', trim(varname), ' not found in tend bundle, ier= ',istatus
          call stop2(999)
      endif
 !    get tv_ten ...
      varname='tv'
-     call gsi_bundlegetpointer(gsi_tendency_bundle,trim(varname),this%ges_tv_ten,istatus)
+     call gsi_bundlegetpointer(gsi_tendency_bundle,trim(varname),ges_tv_ten,istatus)
      if (istatus/=0) then
-         write(6,*) trim(this%myname),': ', trim(varname), ' not found in tend bundle, ier= ',istatus
+         write(6,*) trim(myname),': ', trim(varname), ' not found in tend bundle, ier= ',istatus
          call stop2(999)
      endif
 !    get q_ten ...
      varname='q'
-     call gsi_bundlegetpointer(gsi_tendency_bundle,trim(varname),this%ges_q_ten,istatus)
+     call gsi_bundlegetpointer(gsi_tendency_bundle,trim(varname),ges_q_ten,istatus)
      if (istatus/=0) then
-         write(6,*) trim(this%myname),': ', trim(varname), ' not found in tend bundle, ier= ',istatus
+         write(6,*) trim(myname),': ', trim(varname), ' not found in tend bundle, ier= ',istatus
          call stop2(999)
      endif
   else
-     write(6,*) trim(this%myname), ': tendency bundle not properly allocated, aborting ... '
+     write(6,*) trim(myname), ': tendency bundle not properly allocated, aborting ... '
      call stop2(999)
   endif
 ! extract derivatives from derivatives bundle
@@ -1352,52 +1318,51 @@ endif
      varname='ps'
      call gsi_bundlegetpointer(gsi_xderivative_bundle(1),trim(varname),rank2,istatus)
      if (istatus==0) then
-         if(allocated(this%ges_ps_lon))then
-            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
+         if(allocated(ges_ps_lon))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
             call stop2(999)
          endif
-         allocate(this%ges_ps_lon(size(rank2,1),size(rank2,2),nfldsig))
-         this%ges_ps_lon(:,:,1)=rank2
+         allocate(ges_ps_lon(size(rank2,1),size(rank2,2),nfldsig))
+         ges_ps_lon(:,:,1)=rank2
          do ifld=2,nfldsig
             call gsi_bundlegetpointer(gsi_xderivative_bundle(ifld),trim(varname),rank2,istatus)
-            this%ges_ps_lon(:,:,ifld)=rank2
+            ges_ps_lon(:,:,ifld)=rank2
          enddo
      else
-         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
 !    get ps_lat ...
      varname='ps'
      call gsi_bundlegetpointer(gsi_yderivative_bundle(1),trim(varname),rank2,istatus)
      if (istatus==0) then
-         if(allocated(this%ges_ps_lat))then
-            write(6,*) trim(this%myname), ': ', trim(varname), ' already incorrectly alloc '
+         if(allocated(ges_ps_lat))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
             call stop2(999)
          endif
-         allocate(this%ges_ps_lat(size(rank2,1),size(rank2,2),nfldsig))
-         this%ges_ps_lat(:,:,1)=rank2
+         allocate(ges_ps_lat(size(rank2,1),size(rank2,2),nfldsig))
+         ges_ps_lat(:,:,1)=rank2
          do ifld=2,nfldsig
             call gsi_bundlegetpointer(gsi_xderivative_bundle(ifld),trim(varname),rank2,istatus)
-            this%ges_ps_lat(:,:,ifld)=rank2
+            ges_ps_lat(:,:,ifld)=rank2
          enddo
      else
-         write(6,*) trim(this%myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
   endif
   end subroutine init_vars_
 
   subroutine final_vars_
-      if(associated(this%ges_prs_ten)) nullify(this%ges_prs_ten)
-      if(associated(this%ges_tv_ten)) nullify(this%ges_tv_ten)
-      if(associated(this%ges_q_ten)) nullify(this%ges_q_ten)
+    if(associated(ges_q_ten  )) nullify(ges_q_ten  )
+    if(associated(ges_tv_ten )) nullify(ges_tv_ten )
+    if(associated(ges_prs_ten)) nullify(ges_prs_ten)
 !
-    if(allocated(this%ges_q )) deallocate(this%ges_q )
-    if(allocated(this%ges_div))deallocate(this%ges_div)
-    if(allocated(this%ges_v )) deallocate(this%ges_v )
-    if(allocated(this%ges_u )) deallocate(this%ges_u )
-    if(allocated(this%ges_ps)) deallocate(this%ges_ps)
+    if(allocated(ges_q )) deallocate(ges_q )
+    if(allocated(ges_div))deallocate(ges_div)
+    if(allocated(ges_v )) deallocate(ges_v )
+    if(allocated(ges_u )) deallocate(ges_u )
+    if(allocated(ges_ps)) deallocate(ges_ps)
   end subroutine final_vars_
 
 end subroutine setuppcp
-end module setuppcp_mod
