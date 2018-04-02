@@ -348,9 +348,7 @@ module hybrid_ensemble_parameters
 !   def nelen               - length of one ensemble perturbation vector
 
   integer(i_kind) nelen
-!cltorg  type(gsi_bundle),save,allocatable :: en_perts(:,:)
   type(gsi_bundle),save,allocatable :: en_perts(:,:,:)
-!cltorg  real(r_single),dimension(:,:,:),allocatable:: ps_bar
   real(r_single),dimension(:,:,:,:),allocatable:: ps_bar
 
 !    following is for interpolation of global ensemble to regional ensemble grid

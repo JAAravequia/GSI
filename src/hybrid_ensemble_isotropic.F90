@@ -1364,14 +1364,12 @@ end subroutine normal_new_factorization_rf_y
 !     regional_ensemble_option = 2: ensembles are WRF NMM (HWRF) format
 
                 call wrf_nmm_enspert%get_wrf_nmm_ensperts(en_perts,nelen,region_lat_ens,region_lon_ens,ps_bar)
-!cltthink ps_bar
 
              case(3)
 
 !     regional_ensemble_option = 3: ensembles are ARW netcdf format.
 
                 call wrf_mass_enspert%get_wrf_mass_ensperts(en_perts,nelen,ps_bar)
-!cltthink ps_bar
 
              case(4)
 
@@ -1802,7 +1800,6 @@ end subroutine normal_new_factorization_rf_y
     km=cvec%grid%km
 
 !   Check resolution consistency between static and ensemble components
-!cltorg    nogood=im/=a_en(1)%grid%im.or.jm/=a_en(1)%grid%jm.or.km/=a_en(1)%grid%km
     nogood=im/=a_en(1,1)%grid%im.or.jm/=a_en(1,1)%grid%jm.or.km/=a_en(1,1)%grid%km
     if (nogood) then
        write(6,*) myname_,': static&ensemble vectors have inconsistent dims'
@@ -1827,11 +1824,9 @@ end subroutine normal_new_factorization_rf_y
 !$OMP PARALLEL
 !$OMP critical 
 
-   write(6,*) "Hello World ! openmp rank " ,  OMP_GET_THREAD_NUM()           
 
 !$OMP END critical 
 !$OMP END PARALLEL
-!cltorg $omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ipic)
 !$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ipic,ig,iaens)
     do k=1,km
        do ic3=1,nc3d
@@ -1855,7 +1850,6 @@ end subroutine normal_new_factorization_rf_y
        enddo
     enddo
 
-!cltorg!$omp parallel do schedule(dynamic,1) private(j,n,k,i,ic2,ipic)
 !$omp parallel do schedule(dynamic,1) private(j,n,k,i,ic2,ipic,ig,iaens)
     do ic2=1,nc2d
        ipic=ipc2d(ic2)
@@ -2180,8 +2174,6 @@ end subroutine normal_new_factorization_rf_y
     endif
 
     ipx=1
-!cltorg !$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ic2,ipic)
-!clt how to change opmen after adding ig loop
 !$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ic2,ipic,ig,iaens)
    do ig=1,nsclgrp
     iaens=ensgrp2aensgrp(ig)
@@ -3618,7 +3610,6 @@ enddo
        call bkgcov_a_en_new_factorization(iaensgrp,grady%aens(ii,iaensgrp,1:n_ens))
       enddo  
    else  
-!clt this doens' work      ebundle=grady%aens(ii,:,:) 
    do nn=1,n_ens
    do ig=1,naensgrp
     ebundle(ig,nn)%values=grady%aens(ii,ig,nn)%values
@@ -3627,7 +3618,6 @@ enddo
   do iaensgrp=1,naensgrp
    call ckgcov_a_en_new_factorization_ad2(iaensgrp,ebundle2(iaensgrp,:),ebundle(iaensgrp,:))
   enddo
-  !clt
   if (l_sum_spc_weights.eq.0) then
   call  covsclgrp_a_en_multmatrix(ebundle2,alphacvarsclgrpmat)
   endif
@@ -3638,7 +3628,6 @@ enddo
 endif
     !end if
   enddo
-  !clt
 
 
 
@@ -3916,7 +3905,6 @@ subroutine ckgcov_a_en_new_factorization2(iaensgrpin,a_ens_in,a_en)
 ! Passed Variables
   integer(i_kind),intent(in   ) :: iaensgrpin 
   type(gsi_bundle),intent(inout) :: a_en(n_ens)
-!cltorg  real(r_kind),dimension(nval_lenz_en),intent(in   ) :: z
   type(gsi_bundle),intent(in) :: a_ens_in(n_ens)
 
 ! Local Variables
@@ -3971,7 +3959,6 @@ subroutine ckgcov_a_en_new_factorization2(iaensgrpin,a_ens_in,a_en)
 
 
 
-!clt first transform a_ens_in to z in spectral space
 
 
   if(grd_loc%kend_loc+1-grd_loc%kbegin_loc==0) then
@@ -4251,24 +4238,23 @@ subroutine ckgcov_a_en_new_factorization_ad2(iaensgrpin,a_en_out,a_en)
         d2work=hwork
      end if
   end if
-        z0=z
+  z0=z
   
-      zsp=reshape(z,(/sp_loc%nc,max(grd_loc%kbegin_loc,grd_loc%kend_alloc)-grd_loc%kbegin_loc+1/))
-       z2=reshape(zsp,(/nval_lenz_en/))
-     ilatlon=grd_loc%nlat*grd_loc%nlon
-        do kk=grd_loc%kbegin_loc,grd_loc%kend_loc
+  zsp=reshape(z,(/sp_loc%nc,max(grd_loc%kbegin_loc,grd_loc%kend_alloc)-grd_loc%kbegin_loc+1/))
+  z2=reshape(zsp,(/nval_lenz_en/))
+  ilatlon=grd_loc%nlat*grd_loc%nlon
+  do kk=grd_loc%kbegin_loc,grd_loc%kend_loc
          
-         call   general_s2g0(grd_loc,sp_loc,zsp(:,kk),rwork(:,:))
-         k=kk-grd_loc%kbegin_loc
-        do j=1,grd_loc%nlon
-         do i=1,grd_loc%nlat
-            hwork(k*ilatlon+(j-1)*grd_loc%nlat+i)=rwork(i,j)
-         enddo
-       enddo
+     call   general_s2g0(grd_loc,sp_loc,zsp(:,kk),rwork(:,:))
+     k=kk-grd_loc%kbegin_loc
+     do j=1,grd_loc%nlon
+        do i=1,grd_loc%nlat
+           hwork(k*ilatlon+(j-1)*grd_loc%nlat+i)=rwork(i,j)
         enddo
-!clt       thinktobe
-        call general_grid2sub(grd_loc,hwork,a_en_work)
-     do k=1,n_ens
+     enddo
+  enddo
+  call general_grid2sub(grd_loc,hwork,a_en_work)
+  do k=1,n_ens
      ii=(k-1)*a_en_out(1)%ndim
      is=ii+1
      ie=ii+a_en_out(1)%ndim
@@ -4276,14 +4262,7 @@ subroutine ckgcov_a_en_new_factorization_ad2(iaensgrpin,a_en_out,a_en)
   enddo
 
 
-
-
   deallocate(a_en_work)
-
-
-
-
-
 
 
   return
@@ -4456,7 +4435,7 @@ subroutine hybens_grid_setup
 !  spcwgt_params(3,4)=1.0
 !  spcwgt_params(4,4)=00.0  !clt this should not be used hence, set up as 0 for warning 
   if(nsclgrp.gt.1) then
-  call init_mult_spc_wgts(jcap_ens)
+    call init_mult_spc_wgts(jcap_ens)
   endif
   return
 end subroutine hybens_grid_setup

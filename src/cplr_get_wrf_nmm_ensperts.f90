@@ -884,7 +884,7 @@ contains
   
       if(write_ens_sprd)then
          call mpi_barrier(mpi_comm_world,ierror)
-         call wrf_mass%ens_spread_dualres_regional(mype,en_perts,nelen,en_bar) !cltthink
+         call wrf_mass%ens_spread_dualres_regional(mype,en_perts,nelen,en_bar) 
          call mpi_barrier(mpi_comm_world,ierror)
       end if
   !
@@ -902,7 +902,6 @@ contains
      test=.false.
      if(test)then
          call mpi_barrier(mpi_comm_world,ierror)
-!cltorg think         call this%ens_member_mean_dualres_regional(en_bar,mype,en_perts(:,1,:),nelen)
          call this%ens_member_mean_dualres_regional(en_bar,mype,en_perts,nelen)
          call mpi_barrier(mpi_comm_world,ierror)
       end if

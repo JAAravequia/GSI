@@ -467,7 +467,6 @@ subroutine allocate_cv(ycv)
 ! If so, define grid of ensemble control vector
   n_aens=0
   if (l_hyb_ens) then
-!cltorg      ALLOCATE(ycv%aens(nsubwin,n_ens))
       ALLOCATE(ycv%aens(nsubwin,naensgrp,n_ens))
       call GSI_GridCreate(ycv%grid_aens,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)
          if (lsqrtb) then
@@ -866,10 +865,8 @@ real(r_quad) function qdot_prod_sub(xcv,ycv)
         m3d=xcv%step(ii)%n3d
         m2d=xcv%step(ii)%n2d
         itot=max(m3d,0)+max(m2d,0)
-!cltorg        if(l_hyb_ens)itot=itot+n_ens
         if(l_hyb_ens)itot=itot+naensgrp*n_ens
         allocate(partsum(itot))
-!clthink for openmp
 !$omp parallel do  schedule(dynamic,1) private(i)
         do i = 1,m3d
            partsum(i) = dplevs(xcv%step(ii)%r3(i)%q,ycv%step(ii)%r3(i)%q,ihalo=1)
@@ -958,13 +955,13 @@ subroutine qdot_prod_vars_eb(xcv,ycv,prods,eb)
         end do
      endif
      if(trim(eb) == 'cost_e') then
-       do ig=1,naensgrp
-        do nn=1,n_ens
-           do ii=1,nsubwin
-              zz(ii)=zz(ii)+qdot_product( xcv%aens(ii,ig,nn)%values(:) ,ycv%aens(ii,ig,nn)%values(:) )
-           end do
-        end do
-       enddo
+        do ig=1,naensgrp
+         do nn=1,n_ens
+            do ii=1,nsubwin
+               zz(ii)=zz(ii)+qdot_product( xcv%aens(ii,ig,nn)%values(:) ,ycv%aens(ii,ig,nn)%values(:) )
+            end do
+         end do
+        enddo
      endif
   else
      if(trim(eb) == 'cost_b') then
@@ -990,22 +987,21 @@ subroutine qdot_prod_vars_eb(xcv,ycv,prods,eb)
         do ii=1,nsubwin ! RTod: somebody could work in opt/zing this ...
            allocate(partsum(n_ens*naensgrp))
           do ig=1,naensgrp
-           ngtmp=(ig-1)*n_ens
+              ngtmp=(ig-1)*n_ens
 !$omp parallel do  schedule(dynamic,1) private(nn,m3d,m2d)
-           do nn=1,n_ens
-              nn0=nn+ngtmp
-              partsum(nn0) = zero_quad
-!cltorg              partsum(nn) = zero_quad
-              m3d=xcv%aens(ii,ig,nn)%n3d
-              do i = 1,m3d
-                 partsum(nn0)= partsum(nn0) + dplevs(xcv%aens(ii,ig,nn)%r3(i)%q,ycv%aens(ii,ig,nn)%r3(i)%q,ihalo=1)
-              enddo
-              m2d=xcv%aens(ii,ig,nn)%n2d
-              do i = 1,m2d
-                 partsum(nn0)= partsum(nn0) + dplevs(xcv%aens(ii,ig,nn)%r2(i)%q,ycv%aens(ii,ig,nn)%r2(i)%q,ihalo=1)
-              enddo
-           enddo
-        enddo  !ig
+             do nn=1,n_ens
+                nn0=nn+ngtmp
+                partsum(nn0) = zero_quad
+                m3d=xcv%aens(ii,ig,nn)%n3d
+                do i = 1,m3d
+                   partsum(nn0)= partsum(nn0) + dplevs(xcv%aens(ii,ig,nn)%r3(i)%q,ycv%aens(ii,ig,nn)%r3(i)%q,ihalo=1)
+                enddo
+                m2d=xcv%aens(ii,ig,nn)%n2d
+                do i = 1,m2d
+                   partsum(nn0)= partsum(nn0) + dplevs(xcv%aens(ii,ig,nn)%r2(i)%q,ycv%aens(ii,ig,nn)%r2(i)%q,ihalo=1)
+                enddo
+             enddo
+           enddo  !ig
            do nn=1,n_ens*naensgrp
              zz(ii)=zz(ii)+partsum(nn)
            end do

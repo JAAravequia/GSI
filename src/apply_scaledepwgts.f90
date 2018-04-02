@@ -20,7 +20,6 @@
               fwgtofwvlen=rcons
           else
               rtem1=min(abs(rinput-rvlft),abs(rinput-rvrgt))
-!cltorg              fwgtofwvlen=rcons*0.5*(1.0+tanh(5.0-rtem1/rlen1))
               fwgtofwvlen=rconshalf*(1.0+tanh(5.0-rtem1/rlen1))
           endif
         
@@ -30,7 +29,7 @@
 !
 !$$$
 
-subroutine init_mult_spc_wgts(jcap_in)
+ subroutine init_mult_spc_wgts(jcap_in)
   use kinds, only: r_kind,i_kind,r_single
   use hybrid_ensemble_parameters,only: s_ens_hv,sp_loc,grd_ens,grd_loc,sp_ens,n_ens,p_sploc2ens,grd_sploc
   use hybrid_ensemble_parameters,only: use_localization_grid
@@ -57,58 +56,51 @@ subroutine init_mult_spc_wgts(jcap_in)
   real (r_kind):: fwgtofwvlen
 
 
-!    make sure s_ens_hv is within allowable range  ( pi*rearth*.001/jcap_in <= s_ens_hv <= 5500 )
   allocate(totwvlength(jcap_in))
 
   rwv0=2*pi*rearth*.001_r_kind
   do i=1,jcap_in
   totwvlength(i)= rwv0/i                   
   enddo
- do i=1,jcap_in
-  rtem1=0
-  do ig=1,nsclgrp
-  if(ig.ne.2) then
-  spc_multwgt(i,ig)=fwgtofwvlen(spcwgt_params(1,ig),spcwgt_params(2,ig),spcwgt_params(3,ig),spcwgt_params(4,ig),totwvlength(i)) !fwv2wgt(twvlength)
-  if(l_sum_spc_weights.eq.0 ) then
-  rtem1=rtem1+spc_multwgt(i,ig)
-  else
-  rtem1=rtem1+spc_multwgt(i,ig)**2
-  endif
-   endif
+  do i=1,jcap_in
+   rtem1=0
+   do ig=1,nsclgrp
+    if(ig.ne.2) then
+     spc_multwgt(i,ig)=fwgtofwvlen(spcwgt_params(1,ig),spcwgt_params(2,ig),spcwgt_params(3,ig),spcwgt_params(4,ig),totwvlength(i)) !fwv2wgt(twvlength)
+     if(l_sum_spc_weights.eq.0 ) then
+      rtem1=rtem1+spc_multwgt(i,ig)
+     else
+      rtem1=rtem1+spc_multwgt(i,ig)**2
+     endif
+    endif
    enddo
-  rtem2=1-rtem1
-  if(abs(rtem2).ge.zero) then 
+   rtem2=1-rtem1
+   if(abs(rtem2).ge.zero) then 
  
-  if(l_sum_spc_weights.eq.0 ) then
-   spc_multwgt(i,2)=rtem2 
-  else
-   spc_multwgt(i,2)=sqrt(rtem2)
-  endif
-  endif
-   
+    if(l_sum_spc_weights.eq.0 ) then
+     spc_multwgt(i,2)=rtem2 
+    else
+     spc_multwgt(i,2)=sqrt(rtem2)
+    endif
+   endif
   enddo
   spc_multwgt=max(spc_multwgt,0.0)
-   if(mype.eq.0) then
-   open(121,file="test-spcwght.dat",form="formatted")
-   do i=1,jcap_in
-   write(121,111)(totwvlength(i)),((spc_multwgt(i,j)),j=1,nsclgrp)
-!clt   write(121,*)(totwvlength(i)),((spc_multwgt(i,j)),j=1,nsclgrp)
-   enddo
-   close (121)
-   endif
+!   if(mype.eq.0) then
+!   open(121,file="test-spcwght.dat",form="formatted")
+!   do i=1,jcap_in
+!   write(121,111)(totwvlength(i)),((spc_multwgt(i,j)),j=1,nsclgrp)
+!   enddo
+!   close (121)
+!   endif
  111 format(g15.6,3(g11.4,1x)) 
-
-
-
   
   deallocate(totwvlength)
   return
-
-end subroutine init_mult_spc_wgts
-
+ end subroutine init_mult_spc_wgts
 
 
-subroutine apply_scaledepwgts(grd_in,sp_in,wbundle,spwgts,wbundle2,igrp,nensid)  
+
+ subroutine apply_scaledepwgts(grd_in,sp_in,wbundle,spwgts,wbundle2,igrp,nensid)  
 !   2017-03-30  J. Kay, X. Wang - copied from Kleist's apply_scaledepwgts and
 !                                 add the calculation of scale-dependent weighting for mixed resolution ensemble  
 !                                 POC: xuguang.wang@ou.edu
@@ -170,35 +162,31 @@ subroutine apply_scaledepwgts(grd_in,sp_in,wbundle,spwgts,wbundle2,igrp,nensid)
         cycle
      end if
 !   if(mype==0) then
-      do j=1,grd_in%nlon
+     do j=1,grd_in%nlon
         do i=1,grd_in%nlat
            outwork(j,i)=work(i,j,kk)
         enddo
      enddo
-     i=5-len_trim( nrf_var(nvar_id(kk))) 
-     varname1=repeat("_",i)
-     varname1=trim(varname1)//trim(nrf_var(nvar_id(kk)))
-     write(fname1,'("grp",i2.2,"mem",i2.2,"-out_vname",A5,"lev-",i3.3)')igrp,nensid, varname1,levs_id(kk)
+!     i=5-len_trim( nrf_var(nvar_id(kk))) 
+!     varname1=repeat("_",i)
+!     varname1=trim(varname1)//trim(nrf_var(nvar_id(kk)))
+!     write(fname1,'("grp",i2.2,"mem",i2.2,"-out_vname",A5,"lev-",i3.3)')igrp,nensid, varname1,levs_id(kk)
     
 
 ! Transform from physical space to spectral space   
      call general_g2s0(grd_in,sp_in,spc1,work(:,:,kk))
-  if(mype == 0) write(6,*) 'jk_apply0_spc1=', shape(spc1)
-  if(mype == 0) write(6,*) 'jk_apply0_spc2=', sp_in%jcap
-  if(mype == 0) write(6,*) 'jk_apply0_spc2=', sp_in%nc
 
 ! Apply spectral weights
-  call general_spec_multwgt(sp_in,spc1,spwgts)
-  !if(mype == 0) write(6,*) 'jk_apply1=', spwgts
+     call general_spec_multwgt(sp_in,spc1,spwgts)
 ! Transform back to physical space
-    call general_s2g0(grd_in,sp_in,spc1,work(:,:,kk))
-  work1(:,:,kk)=work(:,:,kk)-work1(:,:,kk)
+     call general_s2g0(grd_in,sp_in,spc1,work(:,:,kk))
+     work1(:,:,kk)=work(:,:,kk)-work1(:,:,kk)
 !   if(mype==0) then
-      do j=1,grd_in%nlon
-        do i=1,grd_in%nlat
-           outwork(j,i)=work(i,j,kk)
-        enddo
-     enddo
+!      do j=1,grd_in%nlon
+!        do i=1,grd_in%nlat
+!           outwork(j,i)=work(i,j,kk)
+!        enddo
+!     enddo
 
   end do
 

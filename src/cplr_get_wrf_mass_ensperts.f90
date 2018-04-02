@@ -281,7 +281,6 @@ contains
          call mpi_barrier(mpi_comm_world,ierror)
   !
   ! CALCULATE ENSEMBLE SPREAD
-!cltorg  think       call this%ens_spread_dualres_regional(mype,en_perts,nelen,en_bar)
          call this%ens_spread_dualres_regional(mype,en_perts,nelen,en_bar)
          call mpi_barrier(mpi_comm_world,ierror)
   !
@@ -951,7 +950,6 @@ contains
        ps => dum2
     end if
   
-!cltthinkorg bug?     call write_spread_dualres(st,vp,tv,rh,oz,cw,ps,mype)
     call write_spread_dualres(st,vp,tv,rh,oz,cw,ps)
   
     return

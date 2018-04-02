@@ -493,7 +493,6 @@ contains
     if(write_ens_sprd)then
        call mpi_barrier(mpi_comm_world,ierror)
        call mass_enspert%ens_spread_dualres_regional(mype,en_perts,nelen,en_bar)
-!cltthink en_perts 
        call mpi_barrier(mpi_comm_world,ierror)
     end if
   
