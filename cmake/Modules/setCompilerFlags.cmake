@@ -92,6 +92,7 @@ function (setIntel)
     set (W3NCO_C_FLAGS "-O0 -g -DUNDERSCORE -DLINUX -D__linux__ " PARENT_SCOPE )
     set (NDATE_Fortran_FLAGS "-fp-model source -ftz -assume byterecl -convert big_endian -heap-arrays  -DCOMMCODE -DLINUX -DUPPLITTLEENDIAN -O3 -Wl,-noinhibit-exec" PARENT_SCOPE)
   endif()
+    set( NCDIAG_Fortran_FLAGS "-free -assume byterecl -convert big_endian" PARENT_SCOPE )
 endfunction()
 
 function (setGNU)
