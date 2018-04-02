@@ -116,7 +116,7 @@ echo "#SBATCH --ntasks=$procs"             >> $cfile
 echo "#SBATCH --nodes=$nodes"              >> $cfile
 echo "#SBATCH --account=$accnt"            >> $cfile
 echo "#SBATCH --constraint=hasw"           >> $cfile
-echo "#SBATCH --qos=advda"                 >> $cfile
+#echo "#SBATCH --qos=advda"                >> $cfile
 echo "#SBATCH --export=ALL"                >> $cfile
 echo "#SBATCH --partition=$queue"          >> $cfile
 #. $exec                                   >> $cfile
