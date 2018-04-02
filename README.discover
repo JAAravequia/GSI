@@ -7,7 +7,17 @@ To build on discover, do the following
 (4) cmake ..
 (5) make -jN
 
-For running regression tests, define the control location in
-bld/regression_var.out. Replace CONTROL_EXE-NOTFOUND by the full path to the
-gsi executable. Also modify the file bld/CTestTestfile.cmake to exclude the
-test global_nemsio_T62 as it is not supported on Discover, yet.
+For running regression tests, the local of the control version of gsi_global.x
+needs to be defined. This can be achieved in two (2) ways:
+
+(1) If the location of the control exe is known at build time, gsi can be
+    built using
+    > cmake -DCONTROL_EXE=/path/to/control/gsi_global.x ..
+
+(2) If gsi was built without specifying the location of the control exe,
+    i.e. via "cmake ..", location of control exe can be specified in
+    bld/regression_var.out by replacing the string CONTROL_EXE-NOTFOUND by the
+    full path to the gsi executable.
+
+Also the file bld/CTestTestfile.cmake needs to be modified to exclude the test
+global_nemsio_T62 as it is not supported on Discover, yet.
