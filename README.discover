@@ -21,3 +21,6 @@ needs to be defined. This can be achieved in two (2) ways:
 
 Also the file bld/CTestTestfile.cmake needs to be modified to exclude the test
 global_nemsio_T62 as it is not supported on Discover, yet.
+
+The regression tests can then be run via
+> ctest -j4
