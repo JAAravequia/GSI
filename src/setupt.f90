@@ -1440,7 +1440,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 !rdiagbuf(13,ii) is the combination of var_jb and non-linear qc relative weight
 ! in the format of:  var_jb*1.0e+6 + rwgt
-    rdiagbuf(13,ii) = var_jb*1.0e+6 + rwgt ! combination of var_jb and rwgt
+    rdiagbuf(13,ii) = var_jb*1.0e+6_r_single + rwgt ! combination of var_jb and rwgt
     rdiagbuf(14,ii) = errinv_input       ! prepbufr inverse obs error (K**-1)
     rdiagbuf(15,ii) = errinv_adjst       ! read_prepbufr inverse obs error (K**-1)
     rdiagbuf(16,ii) = errinv_final       ! final inverse observation error (K**-1)
@@ -1448,7 +1448,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
     rdiagbuf(17,ii) = data(itob,i)       ! temperature observation (K)
     rdiagbuf(18,ii) = ddiff              ! obs-ges used in analysis (K)
     rdiagbuf(19,ii) = tob-tges           ! obs-ges w/o bias correction (K) (future slot)
-    rdiagbuf(20,ii) = 1.e10              ! spread (filled in by EnKF)
+    rdiagbuf(20,ii) = 1.e10_r_single     ! spread (filled in by EnKF)
     if (aircraft_t_bc_pof .or. aircraft_t_bc .or. aircraft_t_bc_ext) then
        rdiagbuf(20,ii) = data(ipof,i)       ! data pof
        rdiagbuf(21,ii) = data(ivvlc,i)      ! data vertical velocity
@@ -1524,7 +1524,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
  !rdiagbuf(13,ii) is the combination of var_jb and non-linear qc relative weight
  ! in the format of:  var_jb*1.0e+6 + rwgt
-     rdiagbufp(13,iip) = var_jb*1.0e+6 + rwgt ! combination of var_jb and rwgt
+     rdiagbufp(13,iip) = var_jb*1.0e+6_r_single + rwgt ! combination of var_jb and rwgt
      rdiagbufp(14,iip) = errinv_input       ! prepbufr inverse obs error (K**-1)
      rdiagbufp(15,iip) = errinv_adjst       ! read_prepbufr inverse obs error (K**-1)
      rdiagbufp(16,iip) = errinv_final       ! final inverse observation error (K**-1)
@@ -1532,7 +1532,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      rdiagbufp(17,iip) = data(itob,i)       ! temperature observation (K)
      rdiagbufp(18,iip) = ddiff              ! obs-ges used in analysis (K)
      rdiagbufp(19,iip) = ddiff              ! tob-tges           ! obs-ges w/o bias correction (K) (future slot)
-     rdiagbufp(20,iip) = 1.e10              ! spread (filled in by EnKF)
+     rdiagbufp(20,iip) = 1.e10_r_single     ! spread (filled in by EnKF)
 
      idia=idia0
      if (save_jacobian) then
@@ -1630,8 +1630,6 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   character(7),parameter     :: obsclass = '      t'
   real(r_single),parameter::     missing = -9.99e9_r_single
 
-  real(r_kind),dimension(miter) :: obsdiag_iuse
-
     call nc_diag_metadata("Station_ID",              station_id             )
     call nc_diag_metadata("Observation_Class",       obsclass               )
     call nc_diag_metadata("Observation_Type",        ictype(ikx)            )
@@ -1685,14 +1683,14 @@ end subroutine setupt
 ! !ROUTINE:  ifind --- find character string in sorted list
 !
 ! !INTERFACE:
-integer function ifind (sid,xsid,nsid)
+integer(i_kind) function ifind (sid,xsid,nsid)
 
 ! !USES:
-
+  use kinds, only: i_kind
   implicit none
 
 ! !INPUT PARAMETERS:
-  integer nsid
+  integer(i_kind) nsid
   character(len=8) sid(nsid), xsid
 
 ! !DESCRIPTION:  Find character string in a sorted list - used to
@@ -1707,9 +1705,9 @@ integer function ifind (sid,xsid,nsid)
 
 
 ! Declare local variables
-  integer istart,iend,imid
+  integer(i_kind) istart,iend,imid
   
-  if (xsid .gt. sid(nsid) .or. xsid .lt. sid(1)) then
+  if (xsid > sid(nsid) .or. xsid < sid(1)) then
      ifind = 0
      return
   end if
@@ -1717,17 +1715,17 @@ integer function ifind (sid,xsid,nsid)
   iend=nsid+1
   do while (iend-istart > 1)
      imid=(istart+iend)/2
-     if (xsid .eq. sid(imid)) then
+     if (xsid == sid(imid)) then
         ifind = imid
         return
-     else if (xsid .gt. sid(imid)) then
+     else if (xsid > sid(imid)) then
         istart = imid
      else 
         iend = imid
      endif
   end do
   
-  if (xsid .eq. sid(iend)) then
+  if (xsid == sid(iend)) then
      ifind = imid
   else
      ifind = 0

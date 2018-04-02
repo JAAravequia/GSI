@@ -425,7 +425,7 @@ subroutine read_radiag_header_nc(ftin,header_fix,header_chan,iflag)
   
   call nc_diag_read_get_global_attr(ftin, "Number_of_channels", nchan_diag)
 
-  if (nchan_dim .ne. nchan_diag) then
+  if (nchan_dim /= nchan_diag) then
      write(*,*)'ERROR: Number of channels from dimension do not match those from header, aborting.'
      call stop2(321)
   endif  
@@ -723,9 +723,9 @@ subroutine read_radiag_header_bin(ftin,npred_radiag,retrieval,header_fix,header_
 end subroutine read_radiag_header_bin
 
 integer(i_kind) function find_ncdiag_id(ftin)
-  integer, intent(in) :: ftin
+  integer(i_kind), intent(in) :: ftin
 
-  integer :: i
+  integer(i_kind) :: i
 
   find_ncdiag_id = -1
   do i = 1, MAX_OPEN_NCDIAG
@@ -796,15 +796,15 @@ subroutine read_radiag_data(ftin,header_fix,retrieval,data_fix,data_chan,data_ex
         return
      endif
 
-     if (ncdiag_open_status(id)%cur_ob_idx .eq. ncdiag_open_status(id)%num_records ) then
+     if (ncdiag_open_status(id)%cur_ob_idx == ncdiag_open_status(id)%num_records ) then
        iflag = 0
-     else if (ncdiag_open_status(id)%cur_ob_idx .gt. ncdiag_open_status(id)%num_records) then
+     else if (ncdiag_open_status(id)%cur_ob_idx > ncdiag_open_status(id)%num_records) then
        iflag = -1
      else
        iflag = 1
      endif
 
-     if (iflag .ge. 0) then
+     if (iflag >= 0) then
         call read_radiag_data_nc(ncdiag_open_status(id),header_fix,data_fix,data_chan,data_extra,iflag)
      endif
 
@@ -1044,7 +1044,7 @@ subroutine read_radiag_data_nc_init(ftin, diag_status, header_fix, retrieval, if
     endif
 
     do ic=1,header_fix%nchan
-      if (clat .ne. Latitude(cdatum) .or. clon .ne. Longitude(cdatum)) then
+      if (clat /= Latitude(cdatum) .or. clon /= Longitude(cdatum)) then
         write(*,*) 'ERROR: Lats & Lons are mismatched.  This is bad'
         print *,'irecord=',ir
         print *,'clat,clon=',clat,clon

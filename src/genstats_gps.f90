@@ -744,8 +744,8 @@ end subroutine contents_binary_diag_
 
 subroutine contents_netcdf_diag_
   use sparsearr, only: sparr2, readarray, fullarray
-  integer,dimension(miter) :: obsdiag_iuse
-  integer                  :: obstype, obssubtype
+  integer(i_kind),dimension(miter) :: obsdiag_iuse
+  integer(i_kind)                  :: obstype, obssubtype
   type(sparr2) :: dhx_dx
 
 ! Observation class

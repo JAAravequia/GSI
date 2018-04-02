@@ -1877,7 +1877,7 @@
         write(string,1976) jiter
 1976 format('_',i2.2)
         diag_rad_file= trim(dirname) // trim(filex) // '_' // trim(dplat(is)) // trim(string) // '.nc4'
-        if(init_pass .and. nobs .gt. 0) then
+        if(init_pass .and. nobs > 0) then
 !           open(4,file=trim(diag_rad_file),form='unformatted',status='unknown',position='rewind')
            call nc_diag_init(diag_rad_file)
            call nc_diag_chaninfo_dim_set(nchanl_diag)
@@ -2077,7 +2077,7 @@
                     diagbufchan(ipchan_radiag+j,i)=predbias(j,ich_diag(i)) ! Tb bias correction terms (K)
                  end do
               end if
-              diagbufchan(ipchan_radiag+npred+3,i) = 1.e+10   ! spread (filled in by EnKF)
+              diagbufchan(ipchan_radiag+npred+3,i) = 1.e+10_r_single   ! spread (filled in by EnKF)
 
               ioff = ipchan_radiag+npred+3
               if (save_jacobian) then
@@ -2202,7 +2202,7 @@
   subroutine contents_netcdf_diag_
 ! Observation class
   character(7),parameter     :: obsclass = '    rad'
-  real(r_single),parameter::  missing = -9.99e9
+  real(r_single),parameter::  missing = -9.99e9_r_single
   integer(i_kind),parameter:: imissing = -999999
   real(r_kind),dimension(:),allocatable :: predbias_angord
 

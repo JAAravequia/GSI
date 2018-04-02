@@ -1043,7 +1043,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(19,ii) = qob-qges           ! obs-ges w/o bias correction (future slot)
 
         rdiagbuf(20,ii) = qsges              ! guess saturation specific humidity
-        rdiagbuf(21,ii) = 1e+10              ! spread (filled in by EnKF)
+        rdiagbuf(21,ii) = 1e+10_r_single     ! spread (filled in by EnKF)
 
         ioff=ioff0
         if (lobsdiagsave) then
@@ -1119,7 +1119,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbufp(19,iip) = ddiff              !qob-qges           ! obs-ges w/o bias correction (future slot)
 
         rdiagbufp(20,iip) = qsges              ! guess saturation specific humidity
-        rdiagbufp(21,iip) = 1e+10              ! spread (filled in by EnKF)
+        rdiagbufp(21,iip) = 1e+10_r_single     ! spread (filled in by EnKF)
 
         ioff=ioff0
         if (save_jacobian) then
@@ -1132,7 +1132,6 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   subroutine contents_netcdf_diag_
 ! Observation class
   character(7),parameter     :: obsclass = '      q'
-  real(r_kind),parameter::     missing = -9.99e9_r_kind
   real(r_kind),dimension(miter) :: obsdiag_iuse
 
            call nc_diag_metadata("Station_ID",              station_id             )
@@ -1195,8 +1194,6 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   subroutine contents_netcdf_diagp_
 ! Observation class
   character(7),parameter     :: obsclass = '      q'
-  real(r_kind),parameter::     missing = -9.99e9_r_kind
-  real(r_kind),dimension(miter) :: obsdiag_iuse
 
            call nc_diag_metadata("Station_ID",              station_id             )
            call nc_diag_metadata("Observation_Class",       obsclass               )

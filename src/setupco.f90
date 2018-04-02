@@ -772,7 +772,6 @@ endif   ! (in_curbin)
   subroutine contents_netcdf_diag_
 ! Observation class
   character(7),parameter     :: obsclass = '     co'
-  real(r_kind),parameter::     missing = -9.99e9
   end subroutine contents_netcdf_diag_
 
   subroutine final_vars_

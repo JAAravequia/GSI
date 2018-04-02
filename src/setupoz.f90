@@ -527,7 +527,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
               else
                  rdiagbuf(6,k,ii) = rmiss                
               endif
-              rdiagbuf(7,k,ii) = 1.e+10             ! spread (filled in by EnKF)
+              rdiagbuf(7,k,ii) = 1.e+10_r_single          ! spread (filled in by EnKF)
 
               idia = ioff0
               if (save_jacobian) then
@@ -951,7 +951,6 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   subroutine contents_netcdf_diag_
 ! Observation class
   character(7),parameter     :: obsclass = '  ozlay'
-  real(r_kind),parameter::     missing = -9.99e9
 ! contents interleafed above should be moved here (RTodling)
   end subroutine contents_netcdf_diag_
 
@@ -1632,7 +1631,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
         rdiagbuf(4,1,ii) = preso3l             ! override solar zenith angle with a reference pressure (in hPa)
         rdiagbuf(5,1,ii) = rmiss               ! fovn
         rdiagbuf(6,1,ii) = obserror            ! ozone mixing ratio precision
-        rdiagbuf(7,1,ii) = 1.e+10              ! spread (filled in by EnKF)
+        rdiagbuf(7,1,ii) = 1.e+10_r_single     ! spread (filled in by EnKF)
 
         if (lobsdiagsave) then
            idia=6
@@ -1666,7 +1665,6 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   subroutine contents_netcdf_diag_
 ! Observation class
   character(7),parameter     :: obsclass = '  ozlev'
-  real(r_kind),parameter::     missing = -9.99e9
   real(r_kind),dimension(miter) :: obsdiag_iuse
            call nc_diag_metadata("Latitude",                     sngl(data(ilate,i))            )
            call nc_diag_metadata("Longitude",                    sngl(data(ilone,i))            )
