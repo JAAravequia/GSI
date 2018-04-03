@@ -301,9 +301,12 @@ contains
     mreal=21
     nreal=mreal
     if (lobsdiagsave) nreal=nreal+4*miter+1
-  
+ 
+    write(6,*) 'BEND 1' 
     if(init_pass) call gpsrhs_alloc(is,'bend',nobs,nsig,nreal,grids_dim,nsig_ext)
+    write(6,*) 'BEND 2, is = ',is
     call gpsrhs_aliases(is)
+    write(6,*) 'BEND 3' 
     if(nreal/=size(rdiagbuf,1)) then
        call perr(this%myname,'unexpected dimension')
        call perr(this%myname,'nreal =',nreal)
@@ -362,6 +365,7 @@ contains
        tpdpres(i)=data(ihgt,i)
        ikx=nint(data(ikxx,i))
   
+    write(6,*) 'BEND 4' 
   !    Interpolate log(pres),temperature,specific humidity, 
   !    corrected geopotential heights and topography to obs location
        call tintrp2a1(ges_lnprsi,prsltmp,dlat,dlon,dtime,hrdifsig,&
@@ -467,6 +471,7 @@ contains
   
   !    locate observation in model vertical grid
        hob=tpdpres(i)
+    write(6,*) 'BEND 5' 
        call grdcrd1(hob,ref_rad(1),nsig,1)
        data(ihgt,i)=hob
   

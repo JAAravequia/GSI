@@ -204,7 +204,7 @@ contains
         call cldch%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
         write(6,*) 'calling bend'
 !       call bend%setup(lunin,mype,bwork,awork(1,i_gps),nele,nobs,is,conv_diagsave)
-!       call bend%setupbend(lunin,mype,awork(1,8),nele,nobs,toss_gps_sub,is,.false.,.false.)
+        call bend%setupbend(lunin,mype,awork(1,8),nele,nobs,toss_gps_sub,is,.false.,.false.)
 !       call co%setup(lunin,mype,bwork,awork(1,i_co),nele,nobs,is,conv_diagsave)
         call co%setupco(lunin,mype,stats_co,nchanl,nreal,nobs,&
                    obstype,isis,is,conv_diagsave,.false.)
