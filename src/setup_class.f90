@@ -194,6 +194,7 @@ contains
          this%varnames(12) = varname12
       endif 
       if(present(include_w)) then 
+        write(6,*) 'myid = ',mype,' calling checkvars for ',this%myname
         call this%check_vars_(proceed,include_w)
         if(.not.include_w) then ! find var::w and remove from the list
            j = 1
@@ -211,8 +212,10 @@ contains
            deallocate(tmpnames)
         endif   
       else
+        write(6,*) 'myid = ',mype,' calling checkvars for ',this%myname
         call this%check_vars_(proceed)  
       endif
+      write(6,*) 'myid = ',mype,' after checkvars for ',this%myname,' proceed is ',proceed
       if(.not.proceed) return ! not all vars available, simply return
       call this%init_ges
 
@@ -235,9 +238,9 @@ contains
       logical,dimension(nobs)                                         :: luse 
 
       if(allocated(this%varnames)) then 
-          write(6,*) ' in abstract setup for ',this%myname,' with varnames ',this%varnames
+          write(6,*) 'myid = ',mype,' in abstract setup for ',this%myname,' with varnames ',this%varnames,' lunin is ',lunin
       else
-          write(6,*) ' in abstract setup for ',this%myname,' with NO VARNAMES!'
+          write(6,*) 'myid = ',mype,' in abstract setup for ',this%myname,' with NO VARNAMES! lunin is ',lunin
       endif
       call this%setupDerived(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
 !     call this%final_vars_

@@ -172,8 +172,8 @@ contains
 !   this%varnames(1:this%numvars) = (/ 'var::ps  ', 'var::z   ', 'var::pm10', 'var::tv  ' /)
 
 ! ! Check to see if required guess fields are available
-!   call this%check_vars_pm10(proceed)
-!   if(.not.proceed) return  ! not all vars available, simply return
+    call this%check_vars_pm10(proceed)
+    if(.not.proceed) return  ! not all vars available, simply return
   
 ! ! If require guess vars available, extract from bundle ...
 !   call this%init_ges

@@ -8,15 +8,16 @@ use abstract_setup_mod
      module procedure setup_ctor
   end interface
 contains
-  type(setupwspd10m_class) function setup_ctor(obsname,varname1,varname2,varname3,varname4,varname5)
+  type(setupwspd10m_class) function setup_ctor(obsname,varname1,varname2,varname3,varname4,varname5,varname6)
       character(*),                        intent(in) :: obsname
       character(*),                        intent(in) :: varname1
       character(*),                        intent(in) :: varname2
       character(*),                        intent(in) :: varname3
       character(*),                        intent(in) :: varname4
       character(*),                        intent(in) :: varname5
+      character(*),                        intent(in) :: varname6
       call setup_ctor%initialize(obsname,varname1=varname1,varname2=varname2,varname3=varname3,&
-              varname4=varname4,varname5=varname5) 
+              varname4=varname4,varname5=varname5,varname6=varname6) 
   end function setup_ctor
 subroutine setupwspd10m(this,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,luse,data)
 !$$$  subprogram documentation block

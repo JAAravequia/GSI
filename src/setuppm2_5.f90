@@ -172,6 +172,9 @@ contains
       integer(i_kind) :: ipm2_5,n_gocart_var
     
     
+      call this%check_vars_pm2_5(proceed)
+      if(.not.proceed) return  ! not all vars available, simply return
+
       n_alloc(:)=0
       m_alloc(:)=0
     
