@@ -865,24 +865,24 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
 !       The bifix term will need to be expanded if/when the GSI/GDAS goes to using
 !       a higher polynomial version of the angle dependent bias correction (if
 !       and when it is moved into part of the varbc)
-         x_biaspred(1,nobs) = BC_Fixed_Scan_Position(i) ! fixed angle dependent bias
-         x_biaspred(2,nobs) = BC_Constant(i) ! constant bias correction
-         x_biaspred(3,nobs) = BC_Scan_Angle(i) ! scan angle bias correction
-         x_biaspred(4,nobs) = BC_Cloud_Liquid_Water(i) ! CLW bias correction
-         x_biaspred(5,nobs) = BC_Lapse_Rate_Squared(i) ! square lapse rate bias corr
-         x_biaspred(6,nobs) = BC_Lapse_Rate(i) ! lapse rate bias correction
+         x_biaspred(1,iob) = BC_Fixed_Scan_Position(i) ! fixed angle dependent bias
+         x_biaspred(2,iob) = BC_Constant(i) ! constant bias correction
+         x_biaspred(3,iob) = BC_Scan_Angle(i) ! scan angle bias correction
+         x_biaspred(4,iob) = BC_Cloud_Liquid_Water(i) ! CLW bias correction
+         x_biaspred(5,iob) = BC_Lapse_Rate_Squared(i) ! square lapse rate bias corr
+         x_biaspred(6,iob) = BC_Lapse_Rate(i) ! lapse rate bias correction
          if (npred == 7) then
-           x_biaspred(7,nobs) = BC_Cosine_Latitude_times_Node(i) ! node*cos(lat) bias correction for SSMIS
-           x_biaspred(8,nobs) = BC_Sine_Latitude(i) ! sin(lat) bias correction for SSMIS
+           x_biaspred(7,iob) = BC_Cosine_Latitude_times_Node(i) ! node*cos(lat) bias correction for SSMIS
+           x_biaspred(8,iob) = BC_Sine_Latitude(i) ! sin(lat) bias correction for SSMIS
          endif
-         if (emiss_bc) x_biaspred(9,nobs) = BC_Emissivity(i)
+         if (emiss_bc) x_biaspred(9,iob) = BC_Emissivity(i)
 
          if (adp_anglebc) then
-            x_biaspred( 1,nobs)  = BC_angord(5,i) ! fixed angle dependent bias correction
-            x_biaspred(npred-2,nobs)  = BC_angord(1,i) ! 4th order scan angle (predictor)
-            x_biaspred(npred-1,nobs)  = BC_angord(2,i) ! 3rd order scan angle (predictor)
-            x_biaspred(npred,nobs)    = BC_angord(3,i) ! 2nd order scan angle (predictor)
-            x_biaspred(npred+1,nobs)  = BC_angord(4,i) ! 1st order scan angle (predictor)
+            x_biaspred( 1,iob)  = BC_angord(5,i) ! fixed angle dependent bias correction
+            x_biaspred(npred-2,iob)  = BC_angord(1,i) ! 4th order scan angle (predictor)
+            x_biaspred(npred-1,iob)  = BC_angord(2,i) ! 3rd order scan angle (predictor)
+            x_biaspred(npred,iob)    = BC_angord(3,i) ! 2nd order scan angle (predictor)
+            x_biaspred(npred+1,iob)  = BC_angord(4,i) ! 1st order scan angle (predictor)
          endif
 
      enddo
