@@ -298,7 +298,9 @@ contains
 !            the cloudy/with aerosol radiance processing routines.
 !
 ! program history log:
-!   2015-07-20  zhu     
+!   2015-07-20  zhu -- initial code    
+!   2018-04-04  zhu -- move rad_type_info(k)%cclr and rad_type_info(k)%ccld to this subroutine
+!   2018-04-06  derber -- change rad_type_info(k)%cclr default value from zero to a large number
 !
 !   input argument list:
 !
@@ -862,7 +864,7 @@ contains
 !            
 !
 ! program history log:
-!   2018-04-04  zhu -- apapted from radiance_ex_obserr_1
+!   2018-04-04  zhu/bi -- adapted from radiance_ex_obserr_1
 !
 !   input argument list:
 !
