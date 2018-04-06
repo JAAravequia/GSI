@@ -157,7 +157,8 @@ export core=${core:-core}
 export KMP_STACKSIZE=${KMP_STACKSIZE:-1024m}
 
 export TZ=GMT
-cfile=$DATA/sub$$
+#cfile=$DATA/sub$$
+cfile=sub$$
 > $cfile
 
 if [ $INHERIT_ENV = YES ] ; then

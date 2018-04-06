@@ -168,7 +168,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   use setupmxtm_mod, only: setupmxtm_class
   use setupoz_mod, only: setupoz_class
   use setuppblh_mod, only: setuppblh_class
-! use setuppcp_mod, only: setuppcp_class
+  use setuppcp_mod, only: setuppcp_class
   use setuppmsl_mod, only: setuppmsl_class
   use setuppm10_mod, only: setuppm10_class
   use setuppm2_5_mod, only: setuppm2_5_class
@@ -217,7 +217,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   type(setupoz_class) :: ozlev
   type(setupoz_class) :: ozlay
   type(setuppblh_class) :: pblh
-! type(setuppcp_class) :: pcp
+  type(setuppcp_class) :: pcp
   type(setuppm10_class) :: pm10
   type(setuppm2_5_class) :: pm2_5
   type(setuppmsl_class) :: pmsl
@@ -302,8 +302,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   ozlay = setupoz_class('setupozlay', 'var::oz')
   ozlev = setupoz_class('setupozlev', 'var::ps', 'var::oz')
   pblh = setuppblh_class('setuppblh', 'var::ps', 'var::z')
-! pcp = setuppcp_class('setuppcp', 'var::ps', 'var::u', 'var::v', 'var::div', 'var::q',&
-!                  'var::prs_ten', 'var::tv_ten', 'var::q_ten', 'var::ps_lon', 'var::ps_lat')
+  pcp = setuppcp_class('setuppcp', 'var::ps', 'var::u', 'var::v', 'var::div', 'var::q',&
+                   'var::prs_ten', 'var::tv_ten', 'var::q_ten', 'var::ps_lon', 'var::ps_lat')
   pm10 = setuppm10_class('setuppm10', 'var::ps', 'var::z', 'var::pm10', 'var::tv')
   pm2_5 = setuppm2_5_class('setuppm2_5', 'var::ps', 'var::z', 'var::pm2_5', 'var::tv')
   pmsl = setuppmsl_class('setuppmsl', 'var::ps', 'var::z', 'var::pmsl')
@@ -562,8 +562,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
 !          Set up for precipitation data
            else if(ditype(is) == 'pcp')then
-              call setuppcp(lunin,mype,&
-!             call pcp%setuppcp(lunin,mype,&
+!             call setuppcp(lunin,mype,&
+              call pcp%setuppcp(lunin,mype,&
                  aivals,nele,nobs,obstype,isis,is,pcp_diagsave,init_pass)
  
 !          Set up conventional data
