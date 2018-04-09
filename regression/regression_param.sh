@@ -6,7 +6,7 @@ case $machine in
 	   sub_cmd="sub_zeus"
     ;;
 	WCOSS)
-	   sub_cmd="sub_wcoss -a GDAS-T2O -d $PWD"
+	   sub_cmd="sub_wcoss -a ibm -d $PWD"
     ;;
 	WCOSS_C)
 	   sub_cmd="sub_wcoss_c -a GDAS-T2O -d $PWD"
@@ -455,7 +455,7 @@ elif [[ "$machine" = "Cheyenne" ]]; then
 elif [[ "$machine" = "WCOSS" ]]; then
    export MP_USE_BULK_XFER=yes
    export MP_BULK_MIN_MSG_SIZE=64k
-   export APRUN="mpirun.lsf"
+   export APRUN="mpirun"
 elif [[ "$machine" = "WCOSS_C" ]]; then
    export KMP_AFFINITY=disabled
    export OMP_STACKSIZE=2G

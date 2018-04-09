@@ -121,7 +121,7 @@ mpiver=${mpiver:-poe}
 envars=$envars
 
 #DATA=/lustre/fs/scratch/$LOGNAME/stmpp1
-DATA=${DATA:-/stmpp1/$LOGNAME/sub}
+DATA=${DATA:-/gpfs/dell2/ptmp/$LOGNAME/sub}
 if [ -s $DATA ] ; then
   MKDATA=NO
 else
@@ -157,23 +157,23 @@ export core=${core:-core}
 export KMP_STACKSIZE=${KMP_STACKSIZE:-1024m}
 
 export TZ=GMT
-cfile=$DATA/sub$$
+cfile=sub$$
 > $cfile
 
 if [ $INHERIT_ENV = YES ] ; then
- echo "#!/bin/ksh"                                                >> $cfile
+ echo "#!/bin/bash"                                                >> $cfile
 else
- echo "#!/bin/ksh --login"                                        >> $cfile
- echo "#BSUB -L /bin/ksh"                                         >> $cfile
+ echo "#!/bin/bash "                                        >> $cfile
+ echo "#BSUB -L /bin/bash"                                         >> $cfile
 fi
-echo "#BSUB -a $mpiver"                                           >> $cfile
+#echo "#BSUB -a $mpiver"                                           >> $cfile
 echo "#BSUB -P $account"                                          >> $cfile
 echo "#BSUB -e $output"                                           >> $cfile
 echo "#BSUB -o $output"                                           >> $cfile
 echo "#BSUB -cwd $dirin"                                          >> $cfile
 ##echo "#BSUB -o $output.%J"                                      >> $cfile
 echo "#BSUB -J $jobname"                                          >> $cfile
-echo "#BSUB -network type=sn_all:mode=US"                         >> $cfile
+#echo "#BSUB -network type=sn_all:mode=US"                         >> $cfile
 echo "#BSUB -q $queue"                                            >> $cfile
 echo "#BSUB -n $tot_size"                                         >> $cfile
 if [ $mpiver = openmp ] ; then
@@ -303,10 +303,17 @@ fi
 for var in $(eval echo $envars | tr , ' ') ; do
  echo "export $var"                                             >> $cfile
 done
+
 echo "export OMP_NUM_THREADS=$threads"                          >> $cfile
 echo "" >>$cfile
 echo ". "$(awk '{ print $1, $2, $3, $4, $5, $6, $7, $8, $9 }' $regdir/regression_var.out) >> $cfile 
 echo "" >>$cfile
+
+echo "module purge"    >> $cfile
+echo "module load EnvVars/1.0.2"    >> $cfile
+echo "module load lsf/10.1"    >> $cfile
+echo "module load ips/18.0.1.163"    >> $cfile
+echo "module load impi/18.0.1"    >> $cfile
 
 echo "$exec"                                                    >> $cfile
 
@@ -322,7 +329,7 @@ elif [[ $verbose = YES ]];then
 fi
 bsub=${bsub:-$LSF_BINDIR/bsub}
 
-ofile=$DATA/subout$$
+ofile=subout$$
 >$ofile
 chmod 777 $ofile
 $bsub < $cfile
@@ -332,6 +339,6 @@ if [[ -w $SUBLOG ]];then
   jobn=$(grep -i submitted $ofile|head -n1|cut -d\" -f2)
   date +"%Y%m%d%H%M%S : $subcmd : $jobn" >>$SUBLOG
 fi
-#rm $cfile $ofile
+rm $cfile $ofile
 [[ $MKDATA = YES ]] && rmdir $DATA
 exit $rc
