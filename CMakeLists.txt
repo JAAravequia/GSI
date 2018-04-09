@@ -89,7 +89,7 @@ project(GSI)
     set( HOST-Luna "TRUE" )
     setCRAY()
   elseif( ( HOST-Venus ) )
-    set( host "WCOSS" ) # just need the submission parameters and scripts on Venus/Mars
+    set( host "WCOSS_D" ) # just need the submission parameters and scripts on Venus/Mars
   else(  )
     set( host "GENERIC" )
     setGeneric()

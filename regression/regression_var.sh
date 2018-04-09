@@ -28,27 +28,155 @@ else
   export clean="false"
   export ptmpName=""
 fi
+# If we don't know already determine what machine are we on:
+if [ -z ${machine+x} ]; then 
+  echo "machine is unset"; 
+  if [ -d /da ]; then # WCOSS
+     export machine="WCOSS"
+  elif [ -d /glade/scratch ]; then # Cheyenne
+   export machine="Cheyenne"
+  elif [ -d /scratch4/NCEPDEV/da ]; then # Theia
+   export machine="Theia"
+  elif [ -d /gpfs/hps/ptmp ]; then # LUNA or SURGE
+   export machine="WCOSS_C"
+  elif [ -d /gpfs/dell1/ptmp ]; then # venus or mars
+   export machine="WCOSS_D"
+  elif [ -d /data/users ]; then # S4
+   export machine="s4"
+  fi
+else echo "machine is set to '$machine'"; 
+fi
 
-export machine="WCOSS"
-export noscrub=/gpfs/dell2/emc/noscrub/$LOGNAME
-
-echo "machine name is $machine"
-echo "looking to see which machine we have"
+case $machine in
+   WCOSS_D)
+   export noscrub=/gpfs/dell2/emc/noscrub/$LOGNAME
    export group="dev"
    export queue="dev"
 
-#  export ptmp="/ptmpp1/$LOGNAME/$ptmpName"
    export ptmp="/gpfs/dell2/ptmp/$LOGNAME/$ptmpName"
 
    export fixcrtm="/gpfs/dell2/emc/noscrub/Mark.Potts/fix_update"
-#  export casesdir="/da/noscrub/Michael.Lueken/CASES"
    export casesdir="/gpfs/dell2/emc/noscrub/Mark.Potts/CASES"
-#  export ndate="/nwprod/util/exec/ndate"
    export ndate="$builddir/bin/ndate.x"
 
    export check_resource="yes"
 
    export accnt=""
+   ;;
+   WCOSS)
+   if [ -d /da/noscrub/$LOGNAME ]; then 
+     export noscrub=/da/noscrub/$LOGNAME
+   elif [ -d /global/noscrub/$LOGNAME ]; then
+     export noscrub=/global/noscrub/$LOGNAME
+   fi
+   if [[ "$cmaketest" = "false" ]]; then
+     export basedir="/global/save/$LOGNAME/gsi"
+   fi 
+   export group="dev"
+   export queue="dev"
+
+   export ptmp="/ptmpp1/$LOGNAME/$ptmpName"
+
+   export fixcrtm="/da/save/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix_update"
+   export casesdir="/da/noscrub/Michael.Lueken/CASES"
+   export ndate="/nwprod/util/exec/ndate"
+
+   export check_resource="yes"
+
+   export accnt=""
+   ;;
+   Cheyenne)
+   export queue="economy"
+   export noscrub="/glade/scratch/$LOGNAME"
+   export group="global"
+   if [[ "$cmaketest" = "false" ]]; then
+     export basedir="/glade/scratch/$LOGNAME/gsi"
+   fi 
+   export ptmp="/glade/scratch/$LOGNAME/$ptmpName"
+
+   export fixcrtm="/glade/p/ral/jnt/tools/crtm/2.2.3/fix_update"
+   export casesdir="/glade/p/ral/jnt/tools/CASES"
+   export ndate="$builddir/bin/ndate.x"
+
+   export check_resource="no"
+   export accnt="p48503002"
+   ;;
+   Theia)
+   if [ -d /scratch4/NCEPDEV/da/noscrub/$LOGNAME ]; then 
+     export noscrub="/scratch4/NCEPDEV/da/noscrub/$LOGNAME"
+   elif [ -d /scratch4/NCEPDEV/global/noscrub/$LOGNAME ]; then 
+     export noscrub="/scratch4/NCEPDEV/global/noscrub/$LOGNAME"
+   fi
+   export group="global"
+   export queue="batch"
+   if [[ "$cmaketest" = "false" ]]; then
+     export basedir="/scratch4/NCEPDEV/da/save/$LOGNAME/git/gsi"
+   fi 
+
+   export ptmp="/scratch4/NCEPDEV/stmp3/$LOGNAME/$ptmpName"
+
+   export fixcrtm="/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update"
+   export casesdir="/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES"
+   export ndate="/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/util/exec/ndate"
+
+   export check_resource="no"
+
+   export accnt="da-cpu"
+
+   #  On Theia, there are no scrubbers to remove old contents from stmp* directories.
+   #  After completion of regression tests, will remove the regression test subdirecories
+   export clean=".true."
+   ;;
+   WCOSS_C)
+   if [ -d /gpfs/hps/emc/global/noscrub/$LOGNAME ]; then
+      export noscrub="/gpfs/hps/emc/global/noscrub/$LOGNAME"
+   elif [ -d /gpfs/hps/emc/da/noscrub/$LOGNAME ]; then
+      export noscrub="/gpfs/hps/emc/da/noscrub/$LOGNAME"
+   fi
+   if [[ "$cmaketest" = "false" ]]; then
+     export basedir="/gpfs/hps/emc/global/noscrub/$LOGNAME/svn/gsi"
+   fi 
+   export group="dev"
+   export queue="dev"
+
+   export ptmp="/gpfs/hps/ptmp/$LOGNAME/$ptmpName"
+
+   export fixcrtm="/gpfs/hps/nco/ops/nwprod/lib/crtm/v2.2.4/fix"
+   export casesdir="/gpfs/hps/emc/da/noscrub/Michael.Lueken/CASES"
+   export ndate=$NDATE
+
+   export check_resource="no"
+
+   export accnt=""
+   ;;
+   s4)
+   export noscrub="/data/users/$LOGNAME"
+   if [[ "$cmaketest" = "false" ]]; then
+     export basedir="/home/$LOGNAME/gsi"
+   fi 
+   export group="dev"
+   export queue="dev"
+   export NWPROD="/usr/local/jcsda/nwprod_gdas_2014"
+   export ptmp="/scratch/short/$LOGNAME/$ptmpName"
+
+   export fixcrtm="/home/mpotts/gsi/trunk/lib/CRTM_REL-2.2.3/fix_update"
+   export casesdir="/data/users/mpotts/CASES"
+   export ndate="$NWPROD/util/exec/ndate"
+
+   export check_resource="no"
+
+   export accnt="star"
+   ;;
+   *) 
+   echo "unknown $machine"
+   exit 1
+esac
+
+
+
+
+
+
 
 if [[ "$cmaketest" = "false" ]]; then
   export builddir=$noscrub/build
