@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
-  file(GLOB NDATE_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*.f)
+  set(NDATE_SRC ${CMAKE_CURRENT_SOURCE_DIR}/ndate.f ${W3NCO_DIR}/w3valdat.f ${W3NCO_DIR}/errexit.f ${W3NCO_DIR}/errmsg.f ${W3NCO_DIR}/w3reddat.f ${W3NCO_DIR}/iw3jdn.f ${W3NCO_DIR}/w3movdat.f ${W3NCO_DIR}/w3fs26.f  ${W3NCO_DIR}/w3utcdat.f )
+ 
+  set( Fortran_COMPILER /usrx/local/intel/14.0.1/composer_xe_2013_sp1.2.144/bin/intel64/ifort CACHE FILEPATH "Forced use of ibm wrapper" FORCE )
   set(NDATE_Fortran_FLAGS "-fp-model source -ftz -assume byterecl -convert big_endian -heap-arrays  -DCOMMCODE -DLINUX -DUPPLITTLEENDIAN -O3 -Wl,-noinhibit-exec ")
   set_source_files_properties( ${NDATE_SRC} PROPERTIES COMPILE_FLAGS ${NDATE_Fortran_FLAGS} )
   add_executable(ndate.x  ${NDATE_SRC} )

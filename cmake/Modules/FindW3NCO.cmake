@@ -56,5 +56,6 @@ else( NOT W3NCO_LIBRARY )
   endif()
 endif( NOT W3NCO_LIBRARY )
 
+set( W3NCO_DIR ${CMAKE_SOURCE_DIR}/libsrc/w3nco CACHE STRING "W3NCO Source Location")
 set( W3NCO_LIBRARY_PATH ${W3NCO_LIBRARY} CACHE STRING "W3NCO Library Location" )
 
