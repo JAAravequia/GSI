@@ -496,7 +496,7 @@
      goto 135
   endif
 
-  if ( mype == 0 .and. .not.l_may_be_passive) write(6,*)mype,'setuprad: passive obs',is,isis
+  if (mype == 0 .and. .not.l_may_be_passive) write(6,*)' setuprad: passive obs',is,isis
 
 !  Logic to turn off print of reading coefficients if not first interation or not mype_diaghdr or not init_pass
   iwrmype=-99

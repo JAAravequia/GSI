@@ -282,7 +282,7 @@ subroutine frfhvo(p1,iv)
      
         !    backing filter:
         do i=nsig,1,-1
-           !       treat remaining complex roots:
+        !       treat remaining complex roots:
            do kr=1,ndeg,2   ! <-- index of "real" components
               ki=kr+1            ! <-- index of "imag" components
               bekr=be(kr)

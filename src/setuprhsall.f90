@@ -270,7 +270,6 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 ! Initialize variables and constants.
   first = jiter == jiterstart   ! .true. on first outer iter
   last  = jiter == miter+1      ! .true. following last outer iter
-  llouter=.true.
 
 ! Set diagnostic output flag
 

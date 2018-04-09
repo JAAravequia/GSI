@@ -877,11 +877,9 @@ real(r_quad) function qdot_prod_sub(xcv,ycv)
   end if
 
 ! Duplicated part of vector
-  if(mype == 0)then
-     do j=nclen1+1,nclen
-        qdot_prod_sub=qdot_prod_sub+xcv%values(j)*ycv%values(j) 
-     end do
-  end if
+  do j=nclen1+1+mype,nclen,npe
+     qdot_prod_sub=qdot_prod_sub+xcv%values(j)*ycv%values(j) 
+  end do
 
 return
 end function qdot_prod_sub

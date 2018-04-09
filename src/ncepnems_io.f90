@@ -1080,11 +1080,11 @@ contains
           elseif(n == 2 .and. use_sfc_any) then          ! soil moisture
 
 !            smc/soilw
-             call nemsio_readrecv(gfile, 'smc', 'soil layer', 1, rwork2d, iret=iret)
+             call nemsio_readrecv(gfile,'soilw','0-10 cm down',1,rwork2d,iret=iret)
              ! FV3 nemsio files use 'soilw 0-10cm down' insted of 'smc soil layer 1'
              if (iret /= 0) then
-               if ( mype == 0 ) print *,'could not read smc, try to read soilw 0-10 cm down instead...'
-               call nemsio_readrecv(gfile,'soilw','0-10 cm down',1,rwork2d,iret=iret)
+               if ( mype == 0 ) print *,'could not read soilw 0-10 cm down, try to read smc instead...'
+               call nemsio_readrecv(gfile, 'smc', 'soil layer', 1, rwork2d, iret=iret)
                if (iret /= 0) &
                call error_msg(trim(my_name),trim(filename),'smc/soilw','read',istop,iret)
              endif
@@ -1102,11 +1102,11 @@ contains
           elseif(n == 4 .and. use_sfc_any) then          ! soil temperature
 
 !            stc/tmp
-             call nemsio_readrecv(gfile, 'stc', 'soil layer', 1, rwork2d, iret=iret)
+               call nemsio_readrecv(gfile,'tmp','0-10 cm down',1,rwork2d,iret=iret)
              if (iret /= 0) then
                ! FV3 nemsio files use 'tmp 0-10cm down' insted of 'stc soil layer 1'
-               if ( mype == 0 ) print *,'could not read stc, try to read tmp 0-10 cm down instead...'
-               call nemsio_readrecv(gfile,'tmp','0-10 cm down',1,rwork2d,iret=iret)
+               if ( mype == 0 ) print *,'could not read tmp 0-10cm down, try to read stc instead...'
+               call nemsio_readrecv(gfile, 'stc', 'soil layer', 1, rwork2d, iret=iret)
                if (iret /= 0) &
                call error_msg(trim(my_name),trim(filename),'stc/tmp','read',istop,iret)
              endif

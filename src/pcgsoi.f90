@@ -128,8 +128,7 @@ subroutine pcgsoi()
        nclen,penorig,gnormorig,xhatsave,yhatsave,&
        iguess,read_guess_solution,diag_precon,step_start, &
        niter_no_qc,print_diag_pcg,lgschmidt
-  use gsi_4dvar, only: nobs_bins, nsubwin, l4dvar, iwrtinc, ladtest, &
-                       iorthomax
+  use gsi_4dvar, only: nobs_bins, l4dvar, iwrtinc, ladtest, iorthomax
   use gridmod, only: twodvar_regional
   use constants, only: zero,one,five,tiny_r_kind
   use anberror, only: anisotropic
@@ -151,10 +150,8 @@ subroutine pcgsoi()
                                 mgram_schmidt,destroy_mgram_schmidt
   use hybrid_ensemble_parameters,only : l_hyb_ens,aniso_a_en,ntlevs_ens
   use hybrid_ensemble_isotropic, only: bkerror_a_en
-  use gsi_bundlemod, only : gsi_bundle
-  use gsi_bundlemod, only : self_add,assignment(=)
+  use gsi_bundlemod, only : gsi_bundle,assignment(=)
   use gsi_bundlemod, only : gsi_bundleprint
-  use gsi_4dcouplermod, only : gsi_4dcoupler_grtests
   use rapidrefresh_cldsurf_mod, only: i_gsdcldanal_type
   use gsi_io, only: verbose
 
@@ -169,7 +166,7 @@ subroutine pcgsoi()
 ! Declare local parameters
 
 ! Declare local variables  
-  logical iout_6,restart,end_iter,llprt,llouter
+  logical restart,end_iter,llprt,llouter
   character(5) step(2)
   integer(i_kind) i,istep,iobs,ii,nprt
   real(r_kind) stp,b,converge
@@ -184,8 +181,6 @@ subroutine pcgsoi()
   real(r_kind) :: fjcost_e
   type(control_vector) :: xhat,gradx,grady,dirx,diry,dirw,ydiff,xdiff
   type(gsi_bundle) :: sval(nobs_bins), rval(nobs_bins)
-  type(gsi_bundle) :: eval(ntlevs_ens)
-  type(gsi_bundle) :: mval(nsubwin)
   type(predictors) :: sbias, rbias
   
   type(control_vector), allocatable, dimension(:) :: cglwork
@@ -209,13 +204,17 @@ subroutine pcgsoi()
   if (ladtest) call adtest()
 
 ! Set constants.  Initialize variables.
-  restart=.false.
-  if (jiter==0 .and. (iguess==1 .or. iguess==2)) restart=.true.
+  if (jiter==0 .and. (iguess==1 .or. iguess==2)) then
+     restart=.true.
+  else
+     restart=.false.
+  end if
   pennorm=10.e50_r_double
-  iout_6=.true.
-  if (iout_iter==6) iout_6=.false.
-  stp=step_start
-  if(diag_precon)stp=one
+  if(diag_precon)then
+     stp=one
+  else
+     stp=step_start
+  end if
   small_step=1.e-2_r_kind*stp
   end_iter=.false.
   llouter=.false.
@@ -227,11 +226,17 @@ subroutine pcgsoi()
 ! efficiency, uses r_single (4 byte) arithmetic.  this generally triggers
 ! the warning about penalty increasing, but this doesn't happen until
 ! the gradient has been reduced by more than 9 orders of magnitude.
-  converge=1.e-10_r_kind
-  if(anisotropic) converge=1.e-9_r_kind
+  if(anisotropic) then
+     converge=1.e-9_r_kind
+  else
+     converge=1.e-10_r_kind
+  end if
 
-  lanlerr=.false.
-  if ( twodvar_regional .and. jiter==1 ) lanlerr=.true.
+  if ( twodvar_regional .and. jiter==1 ) then
+     lanlerr=.true.
+  else
+     lanlerr=.false.
+  end if
 ! Allocate required memory and initialize fields
   call init_(lanlerr)
   if(print_diag_pcg)call prt_guess('guess')
@@ -244,15 +249,15 @@ subroutine pcgsoi()
 
   if(iorthomax>0) then 
      allocate(cglwork(iorthomax+1))
-     DO ii=1,iorthomax+1
-        CALL allocate_cv(cglwork(ii))
+     do ii=1,iorthomax+1
+        call allocate_cv(cglwork(ii))
         cglwork(ii)=zero
-     ENDDO
+     end do
      allocate(cglworkhat(iorthomax+1))
-     DO ii=1,iorthomax+1
-        CALL allocate_cv(cglworkhat(ii))
+     do ii=1,iorthomax+1
+        call allocate_cv(cglworkhat(ii))
         cglworkhat(ii)=zero
-     END DO
+     end do
   end if
 
 ! Perform inner iteration
@@ -269,38 +274,11 @@ subroutine pcgsoi()
         endif
      end if
 
-     do ii=1,nobs_bins
-        rval(ii)=zero
-     end do
-     gradx=zero
      llprt=(mype==0).and.(iter<=1)
 
 !    Convert from control space directly to physical
 !    space for comparison with obs.
-     call control2state(xhat,mval,sbias)
-     if (l4dvar) then
-        if (l_hyb_ens) then
-           call ensctl2state(xhat,mval(1),eval)
-           mval(1)=eval(1)
-        end if
-
-!       Perform test of AGCM TLM and ADM
-        call gsi_4dcoupler_grtests(mval,sval,nsubwin,nobs_bins)
-
-!       Run TL model to fill sval
-        call model_tl(mval,sval,llprt)
-     else
-        if (l_hyb_ens) then
-           call ensctl2state(xhat,mval(1),eval)
-           do ii=1,nobs_bins
-              sval(ii)=eval(ii)
-           end do
-        else
-           do ii=1,nobs_bins
-              sval(ii)=mval(1)
-           end do
-        end if
-     end if
+     call control2state_all(xhat,sbias,sval,llprt)
 
      if (iter<=1 .and. print_diag_pcg) then
         do ii=1,nobs_bins
@@ -308,7 +286,10 @@ subroutine pcgsoi()
         enddo
      end if
 
-!    Compare obs to solution and transpose back to grid
+     do ii=1,nobs_bins
+        rval(ii)=zero
+     end do
+!    Compare obs to solution
      call intall(sval,sbias,rval,rbias)
 
      if (iter<=1 .and. print_diag_pcg) then
@@ -317,35 +298,15 @@ subroutine pcgsoi()
         enddo
      endif
 
-!    Adjoint of convert control var to physical space
-     if (l4dvar) then
-!       Run adjoint model
-        call model_ad(mval,rval,llprt)
+     gradx=zero
 
-        if (l_hyb_ens) then
-           eval(1)=mval(1)
-           call ensctl2state_ad(eval,mval(1),gradx)
-        end if
-     else
+!  Transpose of control2state to get information back on grid
+     call control2state_all_ad(gradx,rbias,rval,llprt)
 
-!       Convert to control space directly from physical space.
-        if (l_hyb_ens) then
-           do ii=1,nobs_bins
-              eval(ii)=rval(ii)
-           end do
-           call ensctl2state_ad(eval,mval(1),gradx)
-        else
-           mval(1)=rval(1)
-           if (nobs_bins > 1 ) then
-              do ii=2,nobs_bins
-                 call self_add(mval(1),rval(ii))
-              enddo
-           end if
-        end if
-
-     end if
-     call control2state_ad(mval,rbias,gradx)
-!    End adjoint of convert control var to physical space
+!    Add contribution from background term
+     do i=1,nclen
+        gradx%values(i)=gradx%values(i)+yhatsave%values(i)
+     end do
 
 !    Print initial Jo table
      if (iter==0 .and. print_diag_pcg .and. luse_obsdiag) then
@@ -353,11 +314,6 @@ subroutine pcgsoi()
         call evaljo(zjo,iobs,nprt,llouter)
         call prt_control_norms(gradx,'gradx')
      endif
-
-!    Add contribution from background term
-     do i=1,nclen
-        gradx%values(i)=gradx%values(i)+yhatsave%values(i)
-     end do
 
 !    Re-orthonormalization if requested
      if(iorthomax>0) then 
@@ -414,8 +370,8 @@ subroutine pcgsoi()
      if (iter>0) gsave=gnorm(1)
      b=zero
 !    Calculate new norm of gradients
+     dprod(1) = qdot_prod_sub(gradx,grady)
      if (lanlerr) then
-        dprod(1) = qdot_prod_sub(gradx,grady)
         call mpl_allreduce(1,qpvals=dprod)
         gnorm(1)=dprod(1)
         gnorm(2)=gnorm(1)
@@ -424,10 +380,10 @@ subroutine pcgsoi()
            xdiff%values(i)=gradx%values(i)-xdiff%values(i)
            ydiff%values(i)=grady%values(i)-ydiff%values(i)
         end do
-        dprod(1) = qdot_prod_sub(gradx,grady)
         dprod(2) = qdot_prod_sub(xdiff,grady)
         dprod(3) = qdot_prod_sub(ydiff,gradx)
         call mpl_allreduce(3,qpvals=dprod)
+
         gnorm(1)=dprod(1)
 
 !       Two dot products in gnorm(2) should be same, but are slightly 
@@ -443,7 +399,7 @@ subroutine pcgsoi()
      if (gsave>1.e-16_r_kind .and. iter>0) b=gnorm(2)/gsave
      if (b<zero .or. b>five) then
         if (mype==0) then
-           if (iout_6) write(6,105) gnorm(2),gsave,b
+           write(6,105) gnorm(2),gsave,b
            write(iout_iter,105) gnorm(2),gsave,b
         endif
         b=zero
@@ -471,35 +427,11 @@ subroutine pcgsoi()
 !    If previous solution available, transfer into local arrays.
         call read_guess_solution(dirx,diry,mype)
         stp=one
-        if(.not. lanlerr)then
-           xdiff=zero
-           ydiff=zero
-        end if
+        restart=.false.
      endif
 
 !    Convert search direction from control space to physical space
-     call control2state(dirx,mval,rbias)
-     if (l4dvar) then
-        if (l_hyb_ens) then
-           call ensctl2state(dirx,mval(1),eval)
-           mval(1)=eval(1)
-        end if
-
-        call model_tl(mval,rval,llprt)
-     else
-
-        if (l_hyb_ens) then
-           call ensctl2state(dirx,mval(1),eval)
-           do ii=1,nobs_bins
-              rval(ii)=eval(ii)
-           end do
-        else
-           do ii=1,nobs_bins
-              rval(ii)=mval(1)
-           end do
-        end if
-
-     end if
+     call control2state_all(dirx,rbias,rval,llprt)
 
 !    Calculate stepsize
      call stpcalc(stp,sval,sbias,xhat,dirx,rval,rbias, &
@@ -554,27 +486,16 @@ subroutine pcgsoi()
         penx >= pennorm .or. end_iter)then
 
         if(mype == 0)then
-           if(iout_6) write(6,101)
+           write(6,101)
            write(iout_iter,101)
 
-           if(gnormx < converge) then
-              if(iout_6)write(6,130)gnormx,converge
-              write(iout_iter,130) gnormx,converge
-           end if
-           if(penalty < converge) then
-              if(iout_6)write(6,131)penalty,converge
-              write(iout_iter,131) penalty,converge
-           end if
-           if(penx >= pennorm) then
-              if(iout_6)write(6,100)jiter,iter,penx,pennorm
-              write(iout_iter,100)jiter,iter,penx,pennorm
-           end if
+           if(gnormx < converge)write(iout_iter,130) gnormx,converge
+           if(penalty < converge)write(iout_iter,131) penalty,converge
+           if(penx >= pennorm)write(iout_iter,100)jiter,iter,penx,pennorm
            if(end_iter)then
               if(stp > zero)then
-                 if(iout_6)write(6,140)
                  write(iout_iter,140)
               else
-                 if(iout_6)write(6,141)
                  write(iout_iter,141)
               end if
            end if
@@ -609,17 +530,7 @@ subroutine pcgsoi()
 ! Calculate adjusted observation error factor
   if( oberror_tune .and. (.not.l4dvar) ) then
      if (mype == 0) write(6,*) 'PCGSOI:  call penal for obs perturbation'
-     call control2state(xhat,mval,sbias)
-     if (l_hyb_ens) then
-        call ensctl2state(xhat,mval(1),eval)
-        do ii=1,nobs_bins
-           sval(ii)=eval(ii)
-        end do
-     else
-        do ii=1,nobs_bins
-           sval(ii)=mval(1)
-        end do
-     end if
+     call control2state_all(xhat,sbias,sval,llprt)
 
      call penal(sval(1))
      xhatsave=zero
@@ -633,25 +544,7 @@ subroutine pcgsoi()
   if (l_tlnmc .and. baldiag_inc) call strong_baldiag_inc(sval,size(sval))
 
   llprt=(mype==0)
-  call control2state(xhat,mval,sbias)
-  if (l4dvar) then
-    if (l_hyb_ens) then
-       call ensctl2state(xhat,mval(1),eval)
-       mval(1)=eval(1)
-    end if
-    call model_tl(mval,sval,llprt)
-  else
-    if (l_hyb_ens) then
-       call ensctl2state(xhat,mval(1),eval)
-       do ii=1,nobs_bins
-          sval(ii)=eval(ii)
-       end do
-    else
-       do ii=1,nobs_bins
-          sval(ii)=mval(1)
-       end do
-    end if
-  end if
+  call control2state_all(xhat,sbias,sval,llprt)
 
   if(print_diag_pcg)then
 
@@ -663,28 +556,7 @@ subroutine pcgsoi()
      end do
      call intall(sval,sbias,rval,rbias)
      gradx=zero
-     if (l4dvar) then
-       call model_ad(mval,rval,llprt)
-       if (l_hyb_ens) then
-          eval(1)=mval(1)
-          call ensctl2state_ad(eval,mval(1),gradx)
-       end if
-     else
-       if (l_hyb_ens) then
-          do ii=1,nobs_bins
-            eval(ii)=rval(ii)
-          end do
-          call ensctl2state_ad(eval,mval(1),gradx)
-       else
-          mval(1)=rval(1)
-          if (nobs_bins > 1 ) then
-             do ii=2,nobs_bins
-                call self_add(mval(1),rval(ii))
-             enddo
-          end if
-       end if
-     end if
-     call control2state_ad(mval,rbias,gradx)
+     call control2state_all_ad(gradx,rbias,rval,llprt)
   
 !    Add contribution from background term
      do i=1,nclen
@@ -757,7 +629,6 @@ subroutine pcgsoi()
            write(iout_iter,999)'penalty and grad reduction WRT outer and initial iter=N/A'
         endif
 
-
 !    Print final diagnostics
         write(6,888)'Final   cost function=',zfend
         write(6,888)'Final   gradient norm=',sqrt(zgend)
@@ -772,11 +643,9 @@ subroutine pcgsoi()
   call xhat_vordiv_calc(sval)
 
 ! Update guess (model background, bias correction) fields
-! if (mype==0) write(6,*)'pcgsoi: Updating guess'
   if(iwrtinc<=0) call update_guess(sval,sbias)
 
 ! cloud analysis  after iteration
-! if(jiter == miter .and. i_gsdcldanal_type==1) then
   if(jiter == miter) then
     if(i_gsdcldanal_type==2) then
        call gsdcloudanalysis4nmmb(mype)
@@ -869,13 +738,6 @@ subroutine init_(lanlerr)
   end do
   call allocate_preds(sbias)
   call allocate_preds(rbias)
-  do ii=1,nsubwin
-     call allocate_state(mval(ii))
-  end do
-
-  do ii=1,ntlevs_ens
-     call allocate_state(eval(ii))
-  end do
 
   gradx=zero
   grady=zero
@@ -938,16 +800,174 @@ subroutine clean_(lanlerr)
      call deallocate_state(sval(ii))
      call deallocate_state(rval(ii))
   end do
-  do ii=1,nsubwin
-     call deallocate_state(mval(ii))
-  end do
-  do ii=1,ntlevs_ens
-     call deallocate_state(eval(ii))
-  end do
 ! call inquire_state
 
 end subroutine clean_
 
 end subroutine pcgsoi
+
+subroutine control2state_all(xhat,sbias,sval,llprt)
+!$$$  subprogram documentation block
+!                .      .    .                                       .
+! subprogram:    control2state_all    convert from control to physical space
+!   prgmmr:      Derber
+!   
+! abstract: Convert from control space directly to physical
+!    space for comparison with obs.
+!
+! program history log:
+!   2016-04-02  Derber
+!
+!   input argument list:
+!
+!   output argument list:
+!
+! attributes:
+!   language: f90
+!   machine:
+!
+!$$$ end documentation block
+     use gsi_4dvar, only: nobs_bins, nsubwin, l4dvar
+     use hybrid_ensemble_parameters,only : l_hyb_ens,ntlevs_ens
+     use gsi_bundlemod, only : gsi_bundle,assignment(=)
+     use bias_predictors, only: predictors
+     use control_vectors, only: control_vector
+     use gsi_4dcouplermod, only : gsi_4dcoupler_grtests
+     use state_vectors, only : allocate_state,deallocate_state
+     use kinds, only: i_kind
+
+     type(control_vector),intent(in) :: xhat
+     type(gsi_bundle),intent(inout) :: sval(nobs_bins)
+     type(predictors),intent(inout) :: sbias
+     logical,intent(in):: llprt
+     integer(i_kind) :: ii
+     type(gsi_bundle) :: eval(ntlevs_ens)
+     type(gsi_bundle) :: mval(nsubwin)
+
+     do ii=1,nsubwin
+        call allocate_state(mval(ii))
+     end do
+     do ii=1,ntlevs_ens
+        call allocate_state(eval(ii))
+     end do
+
+     call control2state(xhat,mval,sbias)
+     if (l4dvar) then
+        if (l_hyb_ens) then
+           call ensctl2state(xhat,mval(1),eval)
+           mval(1)=eval(1)
+        end if
+
+!       Perform test of AGCM TLM and ADM
+        call gsi_4dcoupler_grtests(mval,sval,nsubwin,nobs_bins)
+
+!       Run TL model to fill sval
+        call model_tl(mval,sval,llprt)
+     else
+        if (l_hyb_ens) then
+           call ensctl2state(xhat,mval(1),eval)
+           do ii=1,nobs_bins
+              sval(ii)=eval(ii)
+           end do
+        else
+           do ii=1,nobs_bins
+              sval(ii)=mval(1)
+           end do
+        end if
+     end if
+
+     do ii=1,nsubwin
+        call deallocate_state(mval(ii))
+     end do
+     do ii=1,ntlevs_ens
+        call deallocate_state(eval(ii))
+     end do
+
+     return
+end subroutine control2state_all
+subroutine control2state_all_ad(xhat,sbias,sval,llprt)
+!$$$  subprogram documentation block
+!                .      .    .                                       .
+! subprogram:    control2state_all_ad    adjoint of convert from control to physical space
+!   prgmmr:      Derber
+!   
+! abstract: Adjoint of convert from control space directly to physical
+!    space for comparison with obs.
+!
+! program history log:
+!   2016-04-02  Derber
+!
+!   input argument list:
+!
+!   output argument list:
+!
+! attributes:
+!   language: f90
+!   machine:
+!
+!$$$ end documentation block
+     use gsi_4dvar, only: nobs_bins, nsubwin, l4dvar
+     use hybrid_ensemble_parameters,only : l_hyb_ens,ntlevs_ens
+     use gsi_bundlemod, only : gsi_bundle
+     use gsi_bundlemod, only : self_add,assignment(=)
+     use bias_predictors, only: predictors
+     use control_vectors, only: control_vector
+     use state_vectors, only : allocate_state,deallocate_state
+     use kinds, only: i_kind
+
+     type(control_vector),intent(inout) :: xhat
+     type(gsi_bundle),intent(in) :: sval(nobs_bins)
+     type(predictors),intent(in) :: sbias
+     logical,intent(in):: llprt
+     integer(i_kind) :: ii
+     type(gsi_bundle) :: eval(ntlevs_ens)
+     type(gsi_bundle) :: mval(nsubwin)
+
+     do ii=1,nsubwin
+        call allocate_state(mval(ii))
+     end do
+     do ii=1,ntlevs_ens
+        call allocate_state(eval(ii))
+     end do
+
+!    Adjoint of convert control var to physical space
+     if (l4dvar) then
+!       Run adjoint model
+        call model_ad(mval,sval,llprt)
+
+        if (l_hyb_ens) then
+           eval(1)=mval(1)
+           call ensctl2state_ad(eval,mval(1),xhat)
+        end if
+     else
+
+!       Convert to control space directly from physical space.
+        if (l_hyb_ens) then
+           do ii=1,nobs_bins
+              eval(ii)=sval(ii)
+           end do
+           call ensctl2state_ad(eval,mval(1),xhat)
+        else
+           mval(1)=sval(1)
+           if (nobs_bins > 1 ) then
+              do ii=2,nobs_bins
+                 call self_add(mval(1),sval(ii))
+              enddo
+           end if
+        end if
+
+     end if
+     call control2state_ad(mval,sbias,xhat)
+!    End adjoint of convert control var to physical space
+
+     do ii=1,nsubwin
+        call deallocate_state(mval(ii))
+     end do
+     do ii=1,ntlevs_ens
+        call deallocate_state(eval(ii))
+     end do
+
+     return
+end subroutine control2state_all_ad
 
 end module pcgsoimod
