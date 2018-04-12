@@ -313,7 +313,8 @@ echo "module purge"    >> $cfile
 echo "module load EnvVars/1.0.2"    >> $cfile
 echo "module load lsf/10.1"    >> $cfile
 echo "module load ips/18.0.1.163"    >> $cfile
-echo "module load impi/18.0.1"    >> $cfile
+#echo "module load impi/18.0.1"    >> $cfile
+echo "module load smpi/10.1.1.0"    >> $cfile
 
 echo "$exec"                                                    >> $cfile
 
@@ -339,6 +340,6 @@ if [[ -w $SUBLOG ]];then
   jobn=$(grep -i submitted $ofile|head -n1|cut -d\" -f2)
   date +"%Y%m%d%H%M%S : $subcmd : $jobn" >>$SUBLOG
 fi
-#rm $cfile $ofile
+rm $cfile $ofile
 [[ $MKDATA = YES ]] && rmdir $DATA
 exit $rc

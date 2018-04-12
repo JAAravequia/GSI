@@ -94,7 +94,8 @@ project(GSI)
     setCRAY()
   elseif( ( HOST-Venus ) )
     set( host "WCOSS_D" ) # just need the submission parameters and scripts on Venus/Mars
-    option(BUILD_CORELIBS "Build the Core libraries " ON) # do this until libraries and modules are settled
+    setWCOSS_D()
+#   option(BUILD_CORELIBS "Build the Core libraries " ON) # do this until libraries and modules are settled
   else(  )
     set( host "GENERIC" )
     option(BUILD_CORELIBS "Build the Core libraries " ON)

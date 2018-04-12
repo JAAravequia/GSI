@@ -22,6 +22,7 @@ if(NOT BUILD_W3NCO )
        /usr/local/jcsda/nwprod_gdas_2014	
        ${COREPATH}/w3nco/v${W3NCO_VER}
        ${COREPATH}/w3nco/v${W3NCO_VER}/intel
+       ${COREPATH}/w3nco/v${W3NCO_VER}/ips/${COMPILER_VERSION}
     PATH_SUFFIXES
         lib
      ${NO_DEFAULT_PATH})
