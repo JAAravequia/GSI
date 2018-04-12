@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 2.6)
 if(BUILD_UTIL)
+  
+  set(LOCAL_Fortran_FLAGS "-O3 -fp-model source -convert big_endian -assume byterecl -implicitnone  ${OMPFLAG}" )
   file(GLOB LOCAL_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*.f90)
-  set_source_files_properties( ${LOCAL_SRC} PROPERTIES COMPILE_FLAGS ${UTIL_Fortran_FLAGS} )
+  set_source_files_properties( ${LOCAL_SRC} PROPERTIES COMPILE_FLAGS ${LOCAL_Fortran_FLAGS} )
   add_executable(getsigensmeanp_smooth.x  ${LOCAL_SRC} )
-  set_target_properties( getsigensmeanp_smooth.x PROPERTIES COMPILE_FLAGS ${UTIL_Fortran_FLAGS} )
+  set_target_properties( getsigensmeanp_smooth.x PROPERTIES COMPILE_FLAGS ${LOCAL_Fortran_FLAGS} )
   SET( CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${OMPFLAG}" )
   include_directories( ${CORE_INCS} ) 
   add_dependencies(getsigensmeanp_smooth.x ${GSISHAREDLIB})
