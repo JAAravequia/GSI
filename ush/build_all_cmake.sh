@@ -11,6 +11,9 @@ dir_root=${2:-$pwd}
 if [ $target = wcoss ]; then
     . /usrx/local/Modules/3.2.10/init/sh
     conf_target=nco
+elif [ $target = dell -o $target = wcoss_d ]; then
+    . $MODULESHOME/init/sh
+    conf_target=nco
 elif [ $target = cray -o $target = wcoss_c ]; then
     . $MODULESHOME/init/sh
     conf_target=nco
@@ -34,10 +37,16 @@ mkdir -p $dir_root/build
 cd $dir_root/build
 
 module purge
-if [ $target = wcoss -o $target = cray ]; then
+if [ $target = wcoss -o $target = cray  ]; then
+    echo "hey sourcing $dir_modeles/modulefile.ProdGSI.$target"
     module load $dir_modules/modulefile.ProdGSI.$target
-else
+else 
+  if [ $target = dell -o $target = wcoss_d ]; then
+#   module load $dir_modules/modulefile.ProdGSI.$target
     source $dir_modules/modulefile.ProdGSI.$target
+  else
+    source $dir_modules/modulefile.ProdGSI.$target
+  fi
 fi
 module list
 
