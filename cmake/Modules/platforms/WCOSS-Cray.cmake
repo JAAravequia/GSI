@@ -1,7 +1,6 @@
 function (setCRAY)
   message("Setting paths for Cray")
-  find_package( HDF5 COMPONENTS C HL Fortran_HL REQUIRED )
-  set(HDF5_USE_STATIC_LIBRARIES "ON" CACHE INTERNAL "" )
+  set(HDF5_USE_STATIC_LIBRARIES "ON" CACHE INTERNAL "HDF5_Static" )
 # set( OMPFLAG "-openmp" PARENT_SCOPE )
   if( NOT DEFINED ENV{COREPATH} )
     set(COREPATH "/gpfs/hps/nco/ops/nwprod/lib" PARENT_SCOPE )
