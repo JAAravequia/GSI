@@ -16,9 +16,9 @@ elif [[ -d /cm ]] ; then
     conf_target=nco
     target=cray
 elif [[ -d /ioddev_dell ]]; then
-    target=dell
-    . $MODULESHOME/init/sh
+    . $MODULESHOME/init/bash
     conf_target=nco
+    target=dell
 elif [[ -d /scratch3 ]] ; then
     . /apps/lmod/lmod/init/sh
     target=theia
@@ -38,13 +38,14 @@ rm -rf $dir_root/build
 mkdir -p $dir_root/build
 cd $dir_root/build
 
-if [ $target = wcoss -o $target = cray  ]; then
-    echo "hey sourcing $dir_modeles/modulefile.ProdGSI.$target"
+if [ $target = wcoss -o $target = cray ]; then
+    echo "hey loading $dir_modules/modulefile.ProdGSI.$target"
     module load $dir_modules/modulefile.ProdGSI.$target
-elif [ $target = dell -o $target = theia ]; then
+elif [ $target = theia -o $target = dell ]; then
+    echo "hey sourcing $dir_modules/modulefile.ProdGSI.$target"
     source $dir_modules/modulefile.ProdGSI.$target
 fi
-module list
+#module list
 
 cmake -DBUILD_UTIL=ON -DCMAKE_BUILD_TYPE=PRODUCTION ..
 
