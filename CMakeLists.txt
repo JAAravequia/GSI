@@ -93,6 +93,7 @@ project(GSI)
     option(BUILD_CORELIBS "Build the Core libraries " OFF)
     set( HOST-Luna "TRUE" )
     setCRAY()
+    find_package(HDF5 COMPONENTS C HL Fortran_HL REQUIRED )
   elseif( ( HOST-Venus ) )
     set( host "WCOSS_D" ) # just need the submission parameters and scripts on Venus/Mars
     setWCOSS_D()
