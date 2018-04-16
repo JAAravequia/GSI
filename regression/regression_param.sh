@@ -21,9 +21,6 @@ case $machine in
 	   export sub_cmd="sub_discover"
     ;;
 	Cheyenne)
-	   sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
-    ;;
-	Cheyenne)
            sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
     ;;
     *) # EXIT out for unresolved machine

@@ -28,6 +28,7 @@ else
   export clean="false"
   export ptmpName=""
 fi
+echo "beginning regression_var.sh, machine is $machine"
 # If we don't know already determine what machine are we on:
 if [ -z ${machine+x} ]; then 
   echo "machine is unset"; 
@@ -35,15 +36,8 @@ if [ -z ${machine+x} ]; then
      export machine="WCOSS"
   elif [ -d /glade/scratch ]; then # Cheyenne
    export machine="Cheyenne"
-elif [ -d /glade/scratch ]; then # Cheyenne
-   echo "HEY! in the first Cheyenne section"
-   export machine="Cheyenne"
-   export queue="economy"
-   export noscrub="/glade/scratch/$LOGNAME"
   elif [ -d /scratch4/NCEPDEV/da ]; then # Theia
    export machine="Theia"
-   elif [ -d /scratch3/BMC/gsienkf/$LOGNAME ]; then
-     export noscrub="/scratch3/BMC/gsienkf/$LOGNAME"
   elif [ -d /gpfs/hps/ptmp ]; then # LUNA or SURGE
    export machine="WCOSS_C"
   elif [ -d /gpfs/dell1/ptmp ]; then # venus or mars
@@ -54,24 +48,6 @@ elif [ -d /discover/nobackup ]; then # NCCS Discover
    export machine="discover"
   fi
 else echo "machine is set to '$machine'"; 
-echo "looking to see which machine we have"
-if [[ "$machine" = "Cheyenne" ]]; then
-   echo "HEY! in the Cheyenne section 2"
-   export group="global"
-   export queue="economy"
-   if [[ "$cmaketest" = "false" ]]; then
-     export basedir="/glade/scratch/$LOGNAME/gsi"
-   fi 
-   export ptmp="/glade/scratch/$LOGNAME/$ptmpName"
-
-   export fixcrtm="/glade/p/ral/jnt/tools/crtm/2.2.3/fix_update"
-   export casesdir="/glade/p/ral/jnt/tools/CASES"
-   export ndate="$builddir/bin/ndate.x"
-
-   export check_resource="no"
-   export accnt="p48503002"
-
-elif [[ "$machine" = "Theia" ]]; then
 fi
 
 case $machine in
@@ -133,6 +109,8 @@ case $machine in
      export noscrub="/scratch4/NCEPDEV/da/noscrub/$LOGNAME"
    elif [ -d /scratch4/NCEPDEV/global/noscrub/$LOGNAME ]; then 
      export noscrub="/scratch4/NCEPDEV/global/noscrub/$LOGNAME"
+    elif [ -d /scratch3/BMC/gsienkf/$LOGNAME ]; then
+     export noscrub="/scratch3/BMC/gsienkf/$LOGNAME"
    fi
    export group="global"
    export queue="batch"
@@ -220,6 +198,10 @@ if [[ "$cmaketest" = "false" ]]; then
   export scripts="$basedir/$updat/regression"
   export ush="$basedir/$updat/ush"
 fi
+
+# We are dealing with *which* endian files
+export endianness="Big_Endian"
+
 # Paths to tmpdir and savedir base on ptmp
 export tmpdir="$ptmp"
 export savdir="$ptmp"
@@ -282,7 +264,7 @@ export gps_dtype="gps_bnd"
 export regression_vfydir="$noscrub/regression"
 
 # Define debug variable - If you want to run the debug tests, set this variable to .true.  Default is .false.
-export debug=".false."
+export debug=".true"
 
 # Define parameters for global_T62_3d4dvar and global_T62_4dvar
 export minimization="lanczos"  # If "lanczos", use sqrtb lanczos minimization algorithm.  Otherwise use "pcgsoi".

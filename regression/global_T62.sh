@@ -78,9 +78,7 @@ hhg=`echo $gdate | cut -c9-10`
 prefix_obs=gdas1.t${hha}z.
 prefix_prep=$prefix_obs
 prefix_tbc=gdas1.t${hhg}z
-prefix_tbc=gdas1.t18z
 prefix_sfc=gdas${resol}.t${hhg}z
-prefix_sfc=gdas${resol}.t18z
 prefix_atm=gdas${resol}.t${hha}z
 suffix=tm00.bufr_d
 
@@ -383,10 +381,10 @@ elif [[ "$endianness" = "Little_Endian" ]]; then
    ln -s -f $global_T62_obs/${prefix_atm}.sgp3prep.le     ./sigf09
 fi
 
-module load ips impi
-echo "modules loaded are "
-module list
-which mpirun
+#module load ips impi
+#echo "modules loaded are "
+#module list
+#which mpirun
 # Run GSI
 cd $tmpdir
 echo "run gsi now"
