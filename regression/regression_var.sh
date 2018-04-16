@@ -54,24 +54,6 @@ elif [ -d /discover/nobackup ]; then # NCCS Discover
    export machine="discover"
   fi
 else echo "machine is set to '$machine'"; 
-echo "looking to see which machine we have"
-if [[ "$machine" = "Cheyenne" ]]; then
-   echo "HEY! in the Cheyenne section 2"
-   export group="global"
-   export queue="economy"
-   if [[ "$cmaketest" = "false" ]]; then
-     export basedir="/glade/scratch/$LOGNAME/gsi"
-   fi 
-   export ptmp="/glade/scratch/$LOGNAME/$ptmpName"
-
-   export fixcrtm="/glade/p/ral/jnt/tools/crtm/2.2.3/fix_update"
-   export casesdir="/glade/p/ral/jnt/tools/CASES"
-   export ndate="$builddir/bin/ndate.x"
-
-   export check_resource="no"
-   export accnt="p48503002"
-
-elif [[ "$machine" = "Theia" ]]; then
 fi
 
 case $machine in
