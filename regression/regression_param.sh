@@ -9,7 +9,7 @@ case $machine in
 	   export sub_cmd="sub_wcoss -a GDAS-T2O -d $PWD"
     ;;
 	WCOSS_D)
-	   sub_cmd="sub_wcoss_d -a ibm -d $PWD"
+	   export sub_cmd="sub_wcoss_d -a ibm -d $PWD"
     ;;
 	WCOSS_C)
 	   export sub_cmd="sub_wcoss_c -a GDAS-T2O -d $PWD"
@@ -21,17 +21,13 @@ case $machine in
 	   export sub_cmd="sub_discover"
     ;;
 	Cheyenne)
-	   sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
-    ;;
-	Cheyenne)
-           sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
+	   export sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
     ;;
     *) # EXIT out for unresolved machine
         echo "unknown $machine"
         exit 1
 
 esac
-echo "HEY! setting machine to $machine"
 
 case $regtest in
 
