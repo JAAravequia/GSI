@@ -381,10 +381,6 @@ elif [[ "$endianness" = "Little_Endian" ]]; then
    ln -s -f $global_T62_obs/${prefix_atm}.sgp3prep.le     ./sigf09
 fi
 
-#module load ips impi
-#echo "modules loaded are "
-#module list
-#which mpirun
 # Run GSI
 cd $tmpdir
 echo "run gsi now"
