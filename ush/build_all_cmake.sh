@@ -16,7 +16,7 @@ elif [[ -d /cm ]] ; then
     conf_target=nco
     target=cray
 elif [[ -d /ioddev_dell ]]; then
-    . $MODULESHOME/init/bash
+    . $MODULESHOME/init/sh
     conf_target=nco
     target=dell
 elif [[ -d /scratch3 ]] ; then
@@ -41,11 +41,27 @@ cd $dir_root/build
 if [ $target = wcoss -o $target = cray ]; then
     echo "hey loading $dir_modules/modulefile.ProdGSI.$target"
     module load $dir_modules/modulefile.ProdGSI.$target
-elif [ $target = theia -o $target = dell ]; then
+elif [ $target = theia ]; then
     echo "hey sourcing $dir_modules/modulefile.ProdGSI.$target"
     source $dir_modules/modulefile.ProdGSI.$target
+elif [ $target = dell ]; then
+    echo "hey sourcing $dir_modules/modulefile.ProdGSI.$target"
+    source $dir_modules/modulefile.ProdGSI.$target
+    export NETCDF_INCLUDE=-I/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/include
+    export NETCDF_CFLAGS=-I/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/include
+    export NETCDF_LDFLAGS_CXX="-L/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/lib -lnetcdf -lnetcdf_c++"
+    export NETCDF_LDFLAGS_CXX4="-L/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/lib -lnetcdf -lnetcdf_c++4"
+    export NETCDF_CXXFLAGS=-I/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/include
+    export NETCDF_FFLAGS=-I/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/include
+    export NETCDF_ROOT=/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0
+    export NETCDF_LIB=/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/lib
+    export NETCDF_LDFLAGS_F="-L/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/lib -lnetcdff"
+    export NETCDF_LDFLAGS_C="-L/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/lib -lnetcdf"
+    export NETCDF_LDFLAGS="-L/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/lib -lnetcdff"
+    export NETCDF=/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0
+    export NETCDF_INC=/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/include
+    export NETCDF_CXX4FLAGS=-I/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/include
 fi
-#module list
 
 cmake -DBUILD_UTIL=ON -DCMAKE_BUILD_TYPE=PRODUCTION ..
 

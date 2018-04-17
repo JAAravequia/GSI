@@ -17,13 +17,6 @@ set COMP_MPI mpiifort
 
 set C_COMP icc
 
-set FFLAGS_COM "-fp-model source"
-set LDFLAGS_COM "-mkl"
-
-set WRF_SHARED_VER v1.1.0
-set WRF_SHARED_ROOT /nwprod/sorc/wrf_shared.fd
-set WRF_SHARED_PATH ${WRF_SHARED_ROOT}
-
 module purge
 # Known conflicts
 #module use /usrx/local/prod/modulefiles
@@ -35,7 +28,6 @@ module load ips/18.0.1.163
 module load impi/18.0.1
 
 # Loading nceplibs modules
-module load NetCDF/4.5.0
 module load bufr/11.2.0
 module load nemsio/2.2.3
 module load sfcio/1.0.0
@@ -45,9 +37,10 @@ module load w3nco/2.0.6
 module load w3emc/2.3.0
 module load crtm/2.2.5
 module load bacio/2.0.2
-
+#
+#export LMOD_EXACT_MATCH=NO
+#module load HDF5-serial 
+#module load NetCDF
 module use -a /usrx/local/dev/modulefiles
 module load cmake/3.10.0
 
-cmake -DBUILT_UTIL=ON -DBUILD_PRODUCTION=ON ..
-make -j 8
