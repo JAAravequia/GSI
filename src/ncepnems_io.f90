@@ -1299,7 +1299,6 @@ contains
     use kinds, only: r_kind,i_kind,r_single
     use gridmod, only: nlat_sfc,nlon_sfc
     use guess_grids, only: nfldsfc,sfcmod_mm5,sfcmod_gfs
-    use gsi_nstcouplermod, only: nst_gsi
     use mpimod, only: mpi_itype,mpi_rtype4,mpi_comm_world,mype
     use constants, only: zero
     implicit none
@@ -1889,7 +1888,6 @@ contains
     real(r_kind),pointer,dimension(:,:,:) :: sub_u,sub_v,sub_tv
     real(r_kind),pointer,dimension(:,:,:) :: sub_q,sub_oz,sub_cwmr
 
-    !real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig) :: sub_cwl,sub_cwi
     real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig) :: sub_dzb,sub_dza
     real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig) :: sub_prsl
     real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig+1) :: sub_prsi
