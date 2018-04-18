@@ -57,7 +57,7 @@ echo 'Enter selection [1-7] :'
          export FC=pgf90
          cd build
          cmake -DBUILD_CORELIBS=ON $CORE_DIR
-         make -j 8
+         make -j 8 > build.log 2>&1 &
       fi
       if [ "$resp" = "2" ] ; then
          echo '    2.  Linux x86_64, PGI compilers (pgf90 & gcc)  '
@@ -66,7 +66,7 @@ echo 'Enter selection [1-7] :'
          export FC=pgf90
          cd build
          cmake -DBUILD_CORELIBS=ON $CORE_DIR
-         make -j 8
+         make -j 8 > build.log 2>&1 &
       fi
 
       if [ "$resp" = "3" ] ; then
@@ -76,7 +76,7 @@ echo 'Enter selection [1-7] :'
          export FC=mpif90
          cd build
          cmake -DBUILD_CORELIBS=ON $CORE_DIR
-         make -j 8
+         make -j 8 > build.log 2>&1 &
       fi
 
       if [ "$resp" = "4" ] ; then
@@ -86,7 +86,7 @@ echo 'Enter selection [1-7] :'
          export FC=mpif90
          cd build
          cmake -DBUILD_CORELIBS=ON $CORE_DIR
-         make -j 8
+         make -j 8 > build.log 2>&1 &
       fi
 
       if [ "$resp" = "5" ] ; then
@@ -96,7 +96,7 @@ echo 'Enter selection [1-7] :'
          export FC=mpif90
          cd build
          cmake -DBUILD_CORELIBS=ON $CORE_DIR
-         make -j 8
+         make -j 8 > build.log 2>&1 &
       fi
 
       if [ "$resp" = "6" ] ; then
@@ -106,7 +106,7 @@ echo 'Enter selection [1-7] :'
          export FC=mpiifort
          cd build
          cmake -DBUILD_CORELIBS=ON $CORE_DIR
-         make -j 8
+         make -j 8 > build.log 2>&1 &
       fi
 
       if [ "$resp" = "7" ] ; then
@@ -116,5 +116,5 @@ echo 'Enter selection [1-7] :'
          export FC=mpif90 -f90=ifort
          cd build
          cmake -DBUILD_CORELIBS=ON $CORE_DIR
-         make -j 8
+         make -j 8 > build.log 2>&1 &
       fi
