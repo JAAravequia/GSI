@@ -130,6 +130,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
 !   2014-10-01  ejones   - add gmi and amsr2
 !   2015-01-16  ejones   - add saphir
 !   2016-09-19  guo      - properly initialized nread, in case of for quick-return cases.
+!   2017-11-16  dutta    - adding KOMPSAT5 bufr i.d for reading the data.
 !                           
 !
 !   input argument list:
@@ -219,6 +220,8 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
          kidsat = 56 
        else if(jsatid == 'm10')then
          kidsat = 57 
+       else if(jsatid == 'm11')then
+         kidsat = 70 
        else if(jsatid == 'n08')then
          kidsat=200
        else if(jsatid == 'n09')then
@@ -243,6 +246,10 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
          kidsat=223
        else if(jsatid == 'npp')then
          kidsat=224
+       else if(jsatid == 'n20')then
+         kidsat=225
+       else if(jsatid == 'n21')then
+         kidsat=226
        else if(jsatid == 'f08')then
          kidsat=241
        else if(jsatid == 'f10')then
@@ -339,6 +346,21 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
           end do 
           nread = nread + 1
          end do fileloop
+        else if(trim(filename) == 'wcpbufr')then
+         lexist = .false.
+         file2loop: do while(ireadmg(lnbufr,subset,idate2) >= 0)
+          do while(ireadsb(lnbufr)>=0)
+           call ufbint(lnbufr,rtype,1,1,iret,'TYP')
+           kx=nint(rtype)
+           do nc=1,nconvtype
+             if(trim(ioctype(nc)) == trim(dtype) .and. kx == ictype(nc) .and. icuse(nc) > minuse)then
+               lexist = .true.
+               exit file2loop
+             end if
+           end do
+          end do
+          nread = nread + 1
+         end do file2loop
        else if(trim(filename) == 'gps_ref' .or.  trim(filename) == 'gps_bnd')then
          lexist = .false.
          gpsloop: do while(ireadmg(lnbufr,subset,idate2) >= 0)
@@ -347,7 +369,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
            end if 
  
            said=nint(satid) 
-           if(((said > 739) .and.(said < 746)).or.(said == 820) .or. &
+           if(((said > 739) .and.(said < 746)).or.(said == 820) .or. (said == 825) .or. &
                (said == 786).or. (said == 4)  .or.(said == 3).or. &
                (said == 421).or. (said == 440).or.(said == 821)) then
              lexist=.true. 
@@ -629,6 +651,8 @@ subroutine read_obs(ndata,mype)
 !                         Changed the dsis entries for l2rwbufr and radarbufr to
 !                         l2rw and l3rw respectively. Also make use of nml
 !                         option vadwnd_l2rw_qc. 
+!   2017-08-31  Li      - move gsi_nstcoupler_init & gsi_nstcoupler_read to getsfc in sathin.F90
+!                       - move gsi_nstcoupler_final from create_sfc_grids to here
 !   
 !
 !   input argument list:
@@ -652,6 +676,7 @@ subroutine read_obs(ndata,mype)
            dtype,dval,dmesh,obsfile_all,ref_obs,nprof_gps,dsis,ditype,&
            perturb_obs,lobserver,lread_obs_save,obs_input_common, &
            reduce_diag,nobs_sub,dval_use
+    use gsi_nstcouplermod, only: nst_gsi,gsi_nstcoupler_final
     use qcmod, only: njqc,vadwnd_l2rw_qc
     use gsi_4dvar, only: l4dvar
     use satthin, only: super_val,super_val1,superp,makegvals,getsfc,destroy_sfc
@@ -677,8 +702,6 @@ subroutine read_obs(ndata,mype)
     use convinfo, only: nconvtype,ioctype,icuse,diag_conv,ithin_conv
     use chemmod, only : oneobtest_chem,oneob_type_chem,oneobschem
     use aircraftinfo, only: aircraft_t_bc,aircraft_t_bc_pof,aircraft_t_bc_ext,mype_airobst
-    use gsi_nstcouplermod, only: nst_gsi
-    use gsi_nstcouplermod, only: gsi_nstcoupler_set,gsi_nstcoupler_final
     use gsi_io, only: mype_io
     use rapidrefresh_cldsurf_mod, only: i_gsdcldanal_type
     use radiance_mod, only: rad_obs_type,radiance_obstype_search
@@ -826,6 +849,8 @@ subroutine read_obs(ndata,mype)
            obstype=='lcbas' .or. obstype=='cldch' .or. obstype == 'larcglb' .or. &
            obstype=='uwnd10m' .or. obstype=='vwnd10m') then
           ditype(i) = 'conv'
+       else if (obstype == 'swcp' .or. obstype == 'lwcp') then
+          ditype(i) = 'wcp'
        else if( hirs   .or. sndr      .or.  seviri .or. &
                obstype == 'airs'      .or. obstype == 'amsua'     .or.  &
                obstype == 'msu'       .or. obstype == 'iasi'      .or.  &
@@ -1205,6 +1230,7 @@ subroutine read_obs(ndata,mype)
 
 !   Create full horizontal surface fields from local fields in guess_grids
     call getsfc(mype,mype_io_sfc,use_sfc,use_sfc_any)
+
     if(mype == mype_io) call prt_guessfc2('sfcges2',use_sfc)
 
 !   Get guess 3d pressure on full grid
@@ -1258,10 +1284,6 @@ subroutine read_obs(ndata,mype)
     end if
     deallocate(work1,prslsm)
 
-!   Create full horizontal nst fields from local fields in guess_grids/read it from nst file
-    if (nst_gsi > 0) then
-      call gsi_nstcoupler_set(mype_io_sfc)         ! Set NST fields (each proc needs full NST fields)
-    endif
 !   Create moored buoy station ID
     call mbuoy_info(mype)
 
@@ -1498,7 +1520,13 @@ subroutine read_obs(ndata,mype)
                     nobs_sub1(1,i))
                 string='READ_PBLH'
              end if conv_obstype_select
-
+!            Process swcp and lwcp
+          else if (ditype(i) == 'wcp') then
+             if ( obstype == 'swcp' .or. obstype == 'lwcp' ) then
+                call read_wcpbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis, &
+                   prsl_full,nobs_sub1(1,i),read_rec(i))
+                string='READ_WCPBUFR'
+             end if
           else if (ditype(i) == 'rad')then
 
              call radiance_obstype_search(obstype,radmod)

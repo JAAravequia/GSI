@@ -33,6 +33,8 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
 !  2016-04-28  jung - added logic for RARS and direct broadcast from NESDIS/UW
 !  2016-10-20  collard - fix to allow monitoring and limited assimilation of spectra when key 
 !                         channels are missing.
+!  2016-10-25  zhu - add changes for assimilating radiances affected by non-precipitating clouds
+!  2018-02-05  collard - get orbit height from BUFR file
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -75,7 +77,7 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
       use_edges,radedge1,radedge2,nusis,radstart,radstep,newpc4pred,maxscan
   use radinfo, only: adp_anglebc
   use gridmod, only: diagnostic_reg,regional,nlat,nlon,tll2xy,txy2ll,rlats,rlons
-  use constants, only: deg2rad,zero,one,two,three,rad2deg,r60inv,r100
+  use constants, only: deg2rad,zero,one,two,three,rad2deg,r60inv,r100,rearth_equator
   use crtm_module, only : max_sensor_zenith_angle
   use calc_fov_crosstrk, only : instrument_init, fov_cleanup, fov_check
   use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,thin4d
@@ -109,7 +111,7 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
 ! Declare local parameters
 
   character(8),parameter:: fov_flag="crosstrk"
-  integer(i_kind),parameter:: n1bhdr=12
+  integer(i_kind),parameter:: n1bhdr=13
   integer(i_kind),parameter:: n2bhdr=4
   integer(i_kind),parameter:: maxobs = 800000
   integer(i_kind),parameter:: max_chanl = 22
@@ -119,8 +121,6 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
   ! The next two are one minute in hours
   real(r_kind),parameter:: one_minute=0.01666667_r_kind
   real(r_kind),parameter:: minus_one_minute=-0.01666667_r_kind
-  real(r_kind),parameter:: rato=1.1363987_r_kind ! ratio of satellite height to 
-                                                 ! distance from Earth's centre
 
 ! Declare local variables
   logical outside,iuse,assim,valid
@@ -153,6 +153,7 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
   real(r_kind),dimension(0:3):: ts
   real(r_kind) :: tsavg,vty,vfr,sty,stp,sm,sn,zz,ff10
   real(r_kind) :: zob,tref,dtw,dtc,tz_tr
+  real(r_kind) :: satellite_height, rato
 
   real(r_kind) pred
   real(r_kind) dlat,panglr,dlon,tdiff
@@ -279,8 +280,8 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
 
 ! IFSCALC setup
   if (isfcalc==1) then
-     instr=14                    ! This section isn't really updated.
-     ichan=15                    ! pick a surface sens. channel
+     instr=20                    
+     ichan=16                    ! pick a surface sens. channel
      expansion=2.9_r_kind        ! use almost three for microwave sensors.
   endif
 !   Set rlndsea for types we would prefer selecting
@@ -364,7 +365,7 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
      if(ierr /= 0) cycle ears_db_loop
 
      call openbf(lnbufr,'IN',lnbufr)
-     hdr1b ='SAID FOVN YEAR MNTH DAYS HOUR MINU SECO CLAT CLON CLATH CLONH'
+     hdr1b ='SAID FOVN YEAR MNTH DAYS HOUR MINU SECO CLAT CLON CLATH CLONH HMSL'
      hdr2b ='SAZA SOZA BEARAZ SOLAZI'
    
 !    Loop to read bufr file
@@ -442,6 +443,11 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
            if(ifov <= 48)    lza=-lza
 
            panglr=(start+float(ifov-1)*step)*deg2rad
+           satellite_height=bfr1bhdr(13)
+!          Ensure orbit height is reasonable
+           if (satellite_height < 780000.0_r_kind .OR. &
+              satellite_height > 900000.0_r_kind) satellite_height = 824000.0_r_kind
+           rato = one + satellite_height/rearth_equator
            lzaest = asin(rato*sin(panglr))
 
            if(abs(lza)*rad2deg > MAX_SENSOR_ZENITH_ANGLE) then
@@ -639,18 +645,27 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
               if (adp_anglebc .and. newpc4pred) then
                  ch1 = bt_in(ich1)-ang_rad(ichan1)*cbias(ifovmod,ichan1)
                  ch2 = bt_in(ich2)-ang_rad(ichan2)*cbias(ifovmod,ichan2)
+                 ch16= bt_in(ich16)-ang_rad(ichan16)*cbias(ifovmod,ichan16)
               else
                  ch1 = bt_in(ich1)-ang_rad(ichan1)*cbias(ifovmod,ichan1)+ &
                       air_rad(ichan1)*cbias(nadir,ichan1)
                  ch2 = bt_in(ich2)-ang_rad(ichan2)*cbias(ifovmod,ichan2)+ &
                       air_rad(ichan2)*cbias(nadir,ichan2)   
+                 ch16= bt_in(ich16)-ang_rad(ichan16)*cbias(ifovmod,ichan16)+ &
+                      air_rad(ichan16)*cbias(nadir,ichan16)
               end if
               if (isflg == 0 .and. ch1<285.0_r_kind .and. ch2<285.0_r_kind) then
                  cosza = cos(lza)
-                 d0    = 8.24_r_kind - 2.622_r_kind*cosza + 1.846_r_kind*cosza*cosza
                  if (radmod%lcloud_fwd) then
-                    qval  = zero 
+                    qval=-113.2_r_kind+(2.41_r_kind-0.0049_r_kind*ch1)*ch1 +  &
+                               0.454_r_kind*ch2-ch16
+                    if (qval>=9.0_r_kind) then
+                       qval=1000.0_r_kind*qval
+                    else
+                       qval  = zero
+                    end if
                  else 
+                    d0    = 8.24_r_kind - 2.622_r_kind*cosza + 1.846_r_kind*cosza*cosza
                     qval  = cosza*(d0+d1*log(285.0_r_kind-ch1)+d2*log(285.0_r_kind-ch2))
                  endif
                  pred  = max(zero,qval)*100.0_r_kind
@@ -659,12 +674,9 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
 !          and ATMS Ch16 is at a slightly different frequency to AMSU-A Ch 15.
                  if (adp_anglebc .and. newpc4pred) then
                     ch3 = bt_in(ich3)-ang_rad(ichan3)*cbias(ifovmod,ichan3)
-                    ch16 = bt_in(ich16)-ang_rad(ichan16)*cbias(ifovmod,ichan16)
                  else
                     ch3  = bt_in(ich3)-ang_rad(ichan3)*cbias(ifovmod,ichan3)+ &
                          air_rad(ichan3)*cbias(nadir,ichan3)   
-                    ch16 = bt_in(ich16)-ang_rad(ichan16)*cbias(ifovmod,ichan16)+ &
-                         air_rad(ichan16)*cbias(nadir,ichan16)
                  end if
                  pred = abs(ch1-ch16)
                  if(ch1-ch16 >= three) then
