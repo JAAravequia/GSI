@@ -12,10 +12,13 @@ case $machine in
 	   sub_cmd="sub_wcoss_c -a GDAS-T2O -d $PWD"
     ;;
 	WCOSS_D)
-	   export sub_cmd="sub_wcoss_d -a ibm -d $PWD"
+	   sub_cmd="sub_wcoss_d -a ibm -d $PWD"
     ;;
 	discover)
-	   export sub_cmd="sub_discover"
+	   sub_cmd="sub_discover"
+    ;;
+	s4)
+	   sub_cmd="sub_s4"
     ;;
 	s4)
 	   sub_cmd="sub_s4"
@@ -182,6 +185,9 @@ case $regtest in
         elif [[ "$machine" = "WCOSS" ]]; then
            topts[1]="1:59:00" ; popts[1]="6/8/" ; ropts[1]="/1"
            topts[2]="0:35:00" ; popts[2]="6/10/" ; ropts[2]="/2"
+        elif [[ "$machine" = "discover" ]]; then
+           topts[1]="0:30:00" ; popts[1]="48/2"  ; ropts[1]="/1"
+           topts[2]="0:30:00" ; popts[2]="60/3"  ; ropts[2]="/2"
         elif [[ "$machine" = "Cheyenne" ]]; then
            topts[1]="1:59:00" ; popts[1]="6/8/" ; ropts[1]="/1"
            topts[2]="0:35:00" ; popts[2]="6/10/" ; ropts[2]="/2"
@@ -224,12 +230,6 @@ case $regtest in
         elif [[ "$machine" = "s4" ]]; then
            topts[1]="0:30:00" ; popts[1]="16/2/" ; ropts[1]="/1"
            topts[2]="0:30:00" ; popts[2]="16/4/" ; ropts[2]="/2"
-        elif [[ "$machine" = "WCOSS_D" ]]; then
-           topts[1]="0:15:00" ; popts[1]="28/2/" ; ropts[1]="/1"
-           topts[2]="0:15:00" ; popts[2]="28/4/" ; ropts[2]="/2"
-        elif [[ "$machine" = "discover" ]]; then
-           topts[1]="0:30:00" ; popts[1]="48/2"  ; ropts[1]="/1"
-           topts[2]="0:30:00" ; popts[2]="60/3"  ; ropts[2]="/2"
         fi
 
         if [ "$debug" = ".true." ] ; then
@@ -535,13 +535,14 @@ elif [[ "$machine" = "Cheyenne" ]]; then
    export MPI_BUFS_PER_PROC=256
    export MPI_BUFS_PER_HOST=256
    export MPI_GROUP_MAX=256
-#  export APRUN="mpiexec_mpt "
    export APRUN="mpirun -v -np \$NCPUS"
-#  export APRUN="mpirun -v -np \$PBS_NP"
 elif [[ "$machine" = "WCOSS" ]]; then
    export MP_USE_BULK_XFER=yes
    export MP_BULK_MIN_MSG_SIZE=64k
    export APRUN="mpirun.lsf"
+   if [ "$debug" = ".true." ] ; then
+      export MP_DEBUG_NOTIMEOUT=yes
+   fi
 elif [[ "$machine" = "WCOSS_C" ]]; then
    export KMP_AFFINITY=disabled
    export OMP_STACKSIZE=2G
@@ -549,9 +550,6 @@ elif [[ "$machine" = "WCOSS_C" ]]; then
    export APRUN="mpirun -v -np \$PBS_NP"
 elif [[ "$machine" = "WCOSS_D" ]]; then
    export OMP_STACKSIZE=1024M
-#  export MP_USE_BULK_XFER=yes
-#  export MP_BULK_MIN_MSG_SIZE=64k
-#  export APRUN="mpirun -np \$NCPUS "
    export APRUN="mpirun"
 elif [[ "$machine" = "s4" ]]; then
    export APRUN="srun"
