@@ -165,7 +165,7 @@ elif [[ "$machine" = "s4" ]]; then
    export check_resource="no"
 
    export accnt="star"
-elif [ "$machine" == "Discover" ]; then
+elif [ "$machine" == "discover" ]; then
    if [[ "$cmaketest" = "false" ]]; then
        echo "Regression tests on Discover need to be run via ctest"
        exit 1
