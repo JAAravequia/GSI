@@ -132,6 +132,8 @@ echo "" >>$cfile
 echo "module use -a $gsisrc/modulefiles"   >> $cfile
 echo "module load modulefile.ProdGSI.discover" >> $cfile
 echo "" >>$cfile
+echo "jobname=$jobname" >>$cfile
+echo "" >>$cfile
 
 cat $exec >> $cfile
 
