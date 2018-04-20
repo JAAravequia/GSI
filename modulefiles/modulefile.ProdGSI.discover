@@ -6,8 +6,6 @@ proc ModulesHelp { } {
 }
 module-whatis "Initialize GSI build/test environment"
 
-module purge
-
 module load comp/intel-15.0.2.164
 module load mpi/sgi-mpt-2.14
 module load lib/mkl-15.0.2.164
