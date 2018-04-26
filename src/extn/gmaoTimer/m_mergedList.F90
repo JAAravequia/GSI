@@ -64,12 +64,9 @@ contains
 ! !INTERFACE:
 
     subroutine merge_(names,merged,root,comm)
-      use m_die ,only : MP_die,die
-      use m_mall,only : mall_ison,mall_mci,mall_mco
-      use m_mpif90,only : MP_comm_size
-      use m_mpif90,only : MP_comm_rank
-      use m_mpif90,only : MP_type
-      use m_mpif90,only : MP_MAX
+      use mpeu_util,only: mpiproc_die,die
+      use mpeu_mpif,only: MPI_type
+      use mpeu_mpif,only: MPI_MAX
       implicit none
 
       character(len=*),dimension(:),intent(in) :: names
@@ -113,28 +110,28 @@ contains
   nullify(merged%indx)
 !________________________________________
 
-  call MP_comm_size(comm,nPEs,ier)
-	if(ier/=0) call MP_die(myname_,'MP_comm_size()',ier)
+  call MPI_comm_size(comm,nPEs,ier)
+	if(ier/=0) call mpiproc_die(myname_,'MPI_comm_size()',ier)
 
-  call MP_comm_rank(comm,myID,ier)
-	if(ier/=0) call MP_die(myname_,'MP_comm_rank()',ier)
+  call MPI_comm_rank(comm,myID,ier)
+	if(ier/=0) call mpiproc_die(myname_,'MPI_comm_rank()',ier)
 !________________________________________
 
 	! Share the len(names) of the root PE, with all PEs.
 
 	lenx=len(names)
-	mptype=MP_type(lenx)
+	mptype=MPI_type(lenx)
 
   call MPI_bcast(lenx,1,mptype,root,comm,ier)
-	if(ier/=0) call MP_die(myname_,'MPI_bcast(lenx)',ier)
+	if(ier/=0) call mpiproc_die(myname_,'MPI_bcast(lenx)',ier)
 
 	! Get the max(size(names))
 
 	lsize=size(names)
-	mptype=MP_type(lsize)
+	mptype=MPI_type(lsize)
 
-  call MPI_allreduce(lsize,nmax,1,mptype,MP_MAX,comm,ier)
-	if(ier/=0) call MP_die(myname_,'MPI_allreduce(nmax)',ier)
+  call MPI_allreduce(lsize,nmax,1,mptype,MPI_MAX,comm,ier)
+	if(ier/=0) call mpiproc_die(myname_,'MPI_allreduce(nmax)',ier)
 
 !________________________________________
 
@@ -145,37 +142,25 @@ contains
   if(myID==root) then
 	allocate( nname(0:nPEs-1),nameA(lenx,nmax,0:nPEs-1),indxA(nmax,0:nPEs-1), stat=ier)
 		if(ier/=0) call die(myname_,'allocate(nameA)',ier)
-		if(mall_ison()) then
-		  call mall_mci(nname,myname)
-		  call mall_mci(nameA,myname)
-		  call mall_mci(indxA,myname)
-		endif
 
 	allocate( name0(lenx,nmax*nPEs),stat=ier)
 		if(ier/=0) call die(myname_,'allocate(name0)',ier)
-		if(mall_ison()) call mall_mci(name0,myname)
   else
 	allocate( nname(0), nameA(lenx,0,0), indxA(0,0), stat=ier)
 		if(ier/=0) call die(myname_,'allocate(nameA)',ier)
-		if(mall_ison()) then
-		  call mall_mci(nname,myname)
-		  call mall_mci(nameA,myname)
-		  call mall_mci(indxA,myname)
-		endif
 
 	allocate( name0(lenx,nmax),stat=ier)
 		if(ier/=0) call die(myname_,'allocate(name0)',ier)
-		if(mall_ison()) call mall_mci(name0,myname)
   endif
 !________________________________________
 
 	! Collect list sizes from all PEs, to root.
 
-	mptype=MP_type(lsize)
+	mptype=MPI_type(lsize)
 
   call MPI_gather(lsize,1,mptype,	&
 		  nname,1,mptype, root,comm,ier)
-	if(ier/=0) call MP_die(myname_,'MPI_gather(lsize)',ier)
+	if(ier/=0) call mpiproc_die(myname_,'MPI_gather(lsize)',ier)
 
 	! Use a subsection of name0(:,:) as a buffer for names(:).
 
@@ -189,11 +174,11 @@ contains
 	! Collect name lists on all PEs to the root PE.
 
 	mcount=nmax*lenx	! a subsection of name0(:,:)
-	mptype=MP_type(name0)
+	mptype=MPI_type(name0)
 
   call MPI_gather( name0,mcount,mptype,		&
 		   nameA,mcount,mptype, root,comm,ier)
-	if(ier/=0) call MP_die(myname_,'MPI_gather(name0)',ier)
+	if(ier/=0) call mpiproc_die(myname_,'MPI_gather(name0)',ier)
 
 	! Merge the gathered lists on the root PE.
 
@@ -238,8 +223,6 @@ contains
 	allocate(merged%list(lenx,msize),stat=ier)
 		if(ier/=0) call die(myname_,'allocate(%list)',ier)
 
-		if(mall_ison()) call mall_mci(merged%list,myname)
-
     do i=1,msize
       merged%list(:,i)=name0(:,i)
     end do
@@ -250,10 +233,10 @@ contains
 
 	! Let the merged size known by all PEs.
 
-	mptype=MP_type(msize)
+	mptype=MPI_type(msize)
 
   call MPI_bcast(msize,1,mptype,root,comm,ier)
-	if(ier/=0) call MP_die(myname_,'MPI_bcast()',ier)
+	if(ier/=0) call mpiproc_die(myname_,'MPI_bcast()',ier)
 
   merged%msize=msize	! merged size of %list(:) on the root PE.
   merged%lsize=lsize	! local logical size of %indx(:)
@@ -264,28 +247,20 @@ contains
 	allocate(merged%indx(nmax),stat=ier)
 		if(ier/=0) call die(myname_,'allocate(indx)',ier)
 
-		if(mall_ison()) call mall_mci(merged%indx,myname)
-
 	! Let every processor to know the locations of its own name
 	! list entries in the merged name list on the root (name0(:)).
 
-	mptype=MP_type(merged%indx)
+	mptype=MPI_type(merged%indx)
 	mcount=size(merged%indx,1)
 
   call MPI_scatter(       indxA,mcount,mptype,	&
 		    merged%indx,mcount,mptype,	&
 		    root,comm,ier)
-		if(ier/=0) call MP_die(myname_,'MPI_scatter()',ier)
+		if(ier/=0) call mpiproc_die(myname_,'MPI_scatter()',ier)
 
-		if(mall_ison()) then
-		  call mall_mco(nname,myname)
-		  call mall_mco(nameA,myname)
-		  call mall_mco(indxA,myname)
-		endif
 	deallocate(nname,nameA,indxA,stat=ier)
 		if(ier/=0) call die(myname_,'deallocate(nameA)',ier)
 
-		if(mall_ison()) call mall_mco(name0,myname)
 	deallocate(name0,stat=ier)
 		if(ier/=0) call die(myname_,'deallocate(name0)',ier)
 !________________________________________
@@ -302,8 +277,7 @@ end subroutine merge_
 ! !INTERFACE:
 
     subroutine clean_(merged)
-      use m_die ,only : die
-      use m_mall,only : mall_ison,mall_mco
+      use mpeu_util,only : die
       implicit none
       type(mergedList),intent(inout) :: merged
 
@@ -316,12 +290,10 @@ end subroutine merge_
   integer :: ier
 
   if(associated(merged%list)) then
-	if(mall_ison()) call mall_mco(merged%list,myname)
     deallocate(merged%list,stat=ier)
 	if(ier/=0) call die(myname_,'deallocate(%list)',ier)
   endif
 
-	if(mall_ison()) call mall_mco(merged%indx,myname)
     deallocate(merged%indx,stat=ier)
 	if(ier/=0) call die(myname_,'deallocate(%indx)',ier)
 
@@ -367,7 +339,7 @@ end function ptr_indx_
 ! !INTERFACE:
 
     function ptr_list_(obj)
-      use m_die,only : die
+      use mpeu_util,only : die
       implicit none
       type(mergedList),intent(in) :: obj
       character(len=1),pointer,dimension(:,:) :: ptr_list_

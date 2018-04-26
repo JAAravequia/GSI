@@ -246,9 +246,8 @@ contains
 ! !INTERFACE:
 
     subroutine ci_(name,usrtime,mytime)
-      use m_stdio ,only : stderr
-      use m_die   ,only : die
-      use m_mpif90,only : MP_wtime
+      use mpeu_util,only: stderr
+      use mpeu_util,only: die
       use m_sysclocks, only: get_zeits => sysclocks_get
       implicit none
       character(len=*), intent(in) :: name
@@ -292,7 +291,7 @@ contains
     zts(2:)=0.
   else
     call get_zeits(zts(1:5))
-    zts(0)=MP_wtime()
+    zts(0)=MPI_wtime()
   endif
 
 	!--------------------------------------------------------
@@ -358,10 +357,9 @@ end subroutine ci_
 ! !INTERFACE:
 
     subroutine co_(name,tms,usrtime,mytime)
-      use m_stdio ,only : stderr
-      use m_die   ,only : die
-      use m_mpif90,only : MP_wtime
-      use m_sysclocks, only: get_zeits => sysclocks_get
+      use mpeu_util,only: stderr
+      use mpeu_util,only: die
+      use m_sysclocks,only: get_zeits => sysclocks_get
       implicit none
       character(len=*), intent(in) :: name	! account name
       real*8,optional,dimension(0:5,0:1),intent(out) :: tms ! timings
@@ -411,7 +409,7 @@ end subroutine ci_
     zts(2:)=0.
   else
     call get_zeits(zts(1:5))
-    zts(0)=MP_wtime()
+    zts(0)=MPI_wtime()
   endif
 
 	! need special handling if ndep is too large or too small.
@@ -475,7 +473,6 @@ end subroutine co_
 ! !INTERFACE:
 
     subroutine reset_(usrtime,mytime)
-      use m_mpif90,only : MP_wtime
       use m_sysclocks, only: get_zeits => sysclocks_get
       implicit none
       real*8, optional,intent(in)::usrtime
@@ -505,7 +502,7 @@ end subroutine co_
     zts_sv(2:)=0.
   else
     call get_zeits(zts_sv(1:5))
-    zts_sv(0)=MP_wtime()
+    zts_sv(0)=MPI_wtime()
   endif
 
 	! Sign in the module name for the overheads (.eqv. ci_(ZEIT))
@@ -599,9 +596,8 @@ end function lookup_
 ! !INTERFACE:
 
     subroutine flush_(lu,umask,usrtime,mytime,subname_at_end,scale)
-      use m_stdio ,only : stderr
-      use m_die   ,only : die
-      use m_mpif90,only : MP_wtime
+      use mpeu_util,only: stderr
+      use mpeu_util,only: die
       use m_sysclocks, only: get_zeits => sysclocks_get
       implicit none
       integer,intent(in) :: lu	! logical unit for the output
@@ -661,7 +657,7 @@ end function lookup_
     zts(2:)=0.
   else
     call get_zeits(zts(1:5))
-    zts(0)=MP_wtime()
+    zts(0)=MPI_wtime()
   endif
 
 	! Print selected tables
@@ -850,11 +846,9 @@ end subroutine sp_balances_
 ! !INTERFACE:
 
     subroutine allflush_(comm,root,lu,umask,mytime,subname_at_end,scale)
-      use m_stdio ,only : stderr
-      use m_die   ,only : die,MP_die
-      use m_mall  ,only : mall_ison,mall_mci,mall_mco
-      use m_mpif90,only : MP_wtime,MP_type
-      use m_mpif90,only : MP_comm_size,MP_comm_rank
+      use mpeu_util,only: stderr
+      use mpeu_util,only: die,mpiproc_die
+      use mpeu_mpif,only: MPI_type
       use m_mergedList,only : mergedList
       use m_mergedList,only : mergedList_init
       use m_mergedList,only : msize
@@ -915,7 +909,7 @@ end subroutine sp_balances_
     zts(ntm+1:)=zts(ntm)
   else
     call get_zeits(zts(1:5))
-    zts(0)=MP_wtime()
+    zts(0)=MPI_wtime()
   endif
 
   scale_=1._zeit_kind
@@ -988,7 +982,7 @@ end subroutine sp_balances_
     zts(ntm+1:)=zts(ntm)
   else
     call get_zeits(zts(1:5))
-    zts(0)=MP_wtime()
+    zts(0)=MPI_wtime()
   endif
 
 			! For the account of ZEIT,
@@ -1006,11 +1000,11 @@ end subroutine sp_balances_
 
 	! Compute global statisticis through reducation.
 
-  call MP_comm_rank(comm,myID,ier)
-	if(ier /= 0) call MP_die(myname_,'MP_comm_rank()',ier)
+  call MPI_comm_rank(comm,myID,ier)
+	if(ier /= 0) call mpiproc_die(myname_,'MPI_comm_rank()',ier)
 
-  call MP_comm_size(comm,nPEs,ier)
-	if(ier /= 0) call MP_die(myname_,'MP_comm_size()',ier)
+  call MPI_comm_size(comm,nPEs,ier)
+	if(ier /= 0) call mpiproc_die(myname_,'MPI_comm_size()',ier)
 
   call allreduce_(ztmp(    0:5,0:1,0:nlist),	&
 		  zsum(    0:5,0:1,0:nlist),	&
@@ -1240,11 +1234,11 @@ end subroutine mp_balances_
 ! !INTERFACE:
 
     subroutine allreduce_(ztmp,zsum,zavg,zabv,zmax,ktmp,ksum,myID,nPEs,comm)
-      use m_mpif90,only : MP_type
-      use m_mpif90,only : MP_2type
-      use m_mpif90,only : MP_MAXLOC
-      use m_mpif90,only : MP_SUM
-      use m_die   ,only : MP_die
+      use mpeu_mpif,only: MPI_type
+      use mpeu_mpif,only: MPI_2type
+      use mpeu_mpif,only: MPI_MAXLOC
+      use mpeu_mpif,only: MPI_SUM
+      use mpeu_util,only: mpiproc_die
       implicit none
       real*8,dimension(0:,0:,0:   ),intent(in ) :: ztmp
       real*8,dimension(0:,0:,0:   ),intent(out) :: zsum
@@ -1274,26 +1268,26 @@ end subroutine mp_balances_
 		! Locate the maximum timing values on all PEs.
 
 	mcount=size(zmax)/2
-	mptype=MP_2type(zmax(0,0,0,0))
+	mptype=MPI_2type(zmax(0,0,0,0))
 
-  call MPI_allreduce((zmax),zmax,mcount,mptype,MP_MAXLOC,comm,ier)
-	if(ier/=0) call MP_die(myname_,'MPI_allreduce(zmax)',ier)
+  call MPI_allreduce((zmax),zmax,mcount,mptype,MPI_MAXLOC,comm,ier)
+	if(ier/=0) call mpiproc_die(myname_,'MPI_allreduce(zmax)',ier)
 
 		! Compute global summations on all PEs.
 
 	mcount=size(ztmp)
-	mptype=MP_type(ztmp(0,0,0))
+	mptype=MPI_type(ztmp(0,0,0))
 
-  call MPI_allreduce(ztmp,zsum,mcount,mptype,MP_SUM,comm,ier)
-	if(ier/=0) call MP_die(myname_,'MPI_allreduce(zsum)',ier)
+  call MPI_allreduce(ztmp,zsum,mcount,mptype,MPI_SUM,comm,ier)
+	if(ier/=0) call mpiproc_die(myname_,'MPI_allreduce(zsum)',ier)
 
 		! Compute global counts summations on all PEs.
 
 	mcount=size(ktmp)
-	mptype=MP_type(ktmp(0))
+	mptype=MPI_type(ktmp(0))
 
-  call MPI_allreduce(ktmp,ksum,mcount,mptype,MP_SUM,comm,ier)
-	if(ier/=0) call MP_die(myname_,'MPI_allreduce(ksum)',ier)
+  call MPI_allreduce(ktmp,ksum,mcount,mptype,MPI_SUM,comm,ier)
+	if(ier/=0) call mpiproc_die(myname_,'MPI_allreduce(ksum)',ier)
 
 		! Compute global averages on all PEs.
 
@@ -1316,54 +1310,12 @@ end subroutine mp_balances_
 		! averages.
 
 	mcount=size(zabv)
-	mptype=MP_type(zabv(0,0,0))
+	mptype=MPI_type(zabv(0,0,0))
 
-  call MPI_allreduce((zabv),zabv,mcount,mptype,MP_SUM,comm,ier)
-	if(ier/=0) call MP_die(myname_,'MPI_allreduce(zabv)',ier)
+  call MPI_allreduce((zabv),zabv,mcount,mptype,MPI_SUM,comm,ier)
+	if(ier/=0) call mpiproc_die(myname_,'MPI_allreduce(zabv)',ier)
 
 end subroutine allreduce_
 !=======================================================================
 end module m_zeit
-
-!_UTC_program tc_zeit
-!_UTC_  use m_zeit, only: zeit_ci,zeit_co,zeit_flush,zeit_allflush
-!_UTC_  use m_zeit, only: MWTIME,PUTIME
-!_UTC_  use m_die , only: warn
-!_UTC_  use m_mpif90, only: mp_init
-!_UTC_  use m_mpif90, only: mp_finalize
-!_UTC_  use m_mpif90, only: mp_comm_world
-!_UTC_  use m_mpif90, only: mp_comm_rank
-!_UTC_  implicit none
-!_UTC_  character(len=*),parameter:: myname='tc_zeit'
-!_UTC_  integer,parameter:: MAXI=(huge(MAXI)/1024+1023)/1024*1024
-!_UTC_  integer,parameter:: TMASK=ior(MWTIME,PUTIME)
-!_UTC_  integer:: i,j,ier,mype
-!_UTC_  integer,parameter:: ROOT=0
-!_UTC_
-!_UTC_  call mp_init(ier)
-!_UTC_  call mp_comm_rank(mp_comm_world,mype,ier)
-!_UTC_
-!_UTC_  call zeit_ci(myname//'.allPErun')
-!_UTC_  j=0
-!_UTC_  do i=1,maxi*100
-!_UTC_    j=2*sin(j+.1)
-!_UTC_  enddo
-!_UTC_  if(j>5) call warn(myname,'unexpected value, j =',j)	! this should never happen
-!_UTC_  call zeit_co(myname//'.allPErun')
-!_UTC_
-!_UTC_  call zeit_ci(myname//'.rootonly')
-!_UTC_  j=0
-!_UTC_  if(mype==ROOT) then
-!_UTC_    do i=1,maxi*100
-!_UTC_      j=2*sin(j+.1)
-!_UTC_    enddo
-!_UTC_  endif
-!_UTC_  if(j>5) call warn(myname,'unexpected value, j =',j)	! this should never happen
-!_UTC_  call zeit_co(myname//'.rootonly')
-!_UTC_
-!_UTC_  if(mype==ROOT) call zeit_flush(6,umask=TMASK,subname_at_end=.true.) !,scale=1000.D+00)
-!_UTC_  call zeit_allflush(mp_comm_world,0,6,umask=TMASK,subname_at_end=.true.) !,scale=1000.D+00)
-!_UTC_
-!_UTC_  call mp_finalize(ier)
-!_UTC_end program tc_zeit
 !.

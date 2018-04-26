@@ -58,6 +58,12 @@ module mpeu_mpif
      type_r3_of_real16
    end interface
 
+   interface MPI_2type; module procedure    &   
+     type_2integer_,      & ! MPI_2INTEGER
+     type_2real_   ,      & ! MPI_2REAL
+     type_2double_          ! MPI_2DOUBLE_PRECISION
+   end interface
+
    public :: MPI_IKIND
    public :: MPI_ADDRESS_KIND
 
@@ -159,6 +165,7 @@ include "mpif.h"
 !_______________________________________________________________________
 
     integer, parameter:: MPI_IKIND=kind(MPI_COMM_WORLD)
+    integer, parameter:: MPI_RKIND=kind(MPI_
 
     character(len=*),parameter :: myname='mpeu_mpif'
 
@@ -394,6 +401,27 @@ function type_r3_of_real16(mold) result(mtype)
   dummymold=kind(mold)
   mtype=MPI_real16
 end function type_r3_of_real16
+
+function type_2integer_(val)
+  implicit none
+  integer(kind=mpi_ikind):: type_2integer_
+  integer(kind=mpi_ikind),intent(in):: val
+  type_2integer_=MPI_2INTERGER
+end function type_2integer_
+
+function type_2real_(val)
+  implicit none
+  integer(kind=mpi_ikind):: type_2real_
+  real*4,intent(in):: val
+  type_2real_=MPI_2REAL
+end function type_2real_
+
+function type_2double_(val)
+  implicit none
+  integer(kind=mpi_ikind):: type_2double_
+  real*8,intent(in):: val
+  type_2double_=MPI_2DOUBLE_PRECISION
+end function type_2double_
 
 end module mpeu_mpif
 !.
