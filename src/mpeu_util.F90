@@ -135,7 +135,6 @@ module mpeu_util
       private   ! except
 
       public :: die, perr, warn, tell, assert_
-      public :: mpiproc_die, mpiproc_perr
       public :: mesg_prefix
       public :: luavail
       public :: stdin, stdout, stderr

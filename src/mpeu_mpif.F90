@@ -28,6 +28,10 @@ module mpeu_mpif
 
    public :: MPI_type
    interface MPI_type; module procedure &
+     type_c0            , &
+     type_c1            , &
+     type_c2            , &
+     type_c3            , &
      type_r0_of_integer1, &
      type_r0_of_integer2, &
      type_r0_of_integer4, &
@@ -58,11 +62,21 @@ module mpeu_mpif
      type_r3_of_real16
    end interface
 
+   public :: MPI_2type
    interface MPI_2type; module procedure    &   
      type_2integer_,      & ! MPI_2INTEGER
      type_2real_   ,      & ! MPI_2REAL
      type_2double_          ! MPI_2DOUBLE_PRECISION
    end interface
+
+   public :: MPI_wtime
+   public :: MPI_wtick
+!   interface; function MPI_wtime()
+!       double precision :: MPI_wtime
+!   end function MPI_wtime; end interface
+!   interface; function MPI_wtick()
+!       double precision :: MPI_wtick
+!   end function MPI_wtick; end interface
 
    public :: MPI_IKIND
    public :: MPI_ADDRESS_KIND
@@ -165,11 +179,34 @@ include "mpif.h"
 !_______________________________________________________________________
 
     integer, parameter:: MPI_IKIND=kind(MPI_COMM_WORLD)
-    integer, parameter:: MPI_RKIND=kind(MPI_
 
     character(len=*),parameter :: myname='mpeu_mpif'
 
 contains
+function type_c0(mold) result(mtype)
+  implicit none
+  integer(kind=MPI_IKIND):: mtype
+  character(len=*),intent(in):: mold
+  mtype=MPI_CHARACTER
+end function type_c0
+function type_c1(mold) result(mtype)
+  implicit none
+  integer(kind=MPI_IKIND):: mtype
+  character(len=*),dimension(:),intent(in):: mold
+  mtype=MPI_CHARACTER
+end function type_c1
+function type_c2(mold) result(mtype)
+  implicit none
+  integer(kind=MPI_IKIND):: mtype
+  character(len=*),dimension(:,:),intent(in):: mold
+  mtype=MPI_CHARACTER
+end function type_c2
+function type_c3(mold) result(mtype)
+  implicit none
+  integer(kind=MPI_IKIND):: mtype
+  character(len=*),dimension(:,:,:),intent(in):: mold
+  mtype=MPI_CHARACTER
+end function type_c3
 function type_r0_of_integer1(mold) result(mtype)
   implicit none
   integer(kind=MPI_IKIND):: mtype
@@ -406,7 +443,7 @@ function type_2integer_(val)
   implicit none
   integer(kind=mpi_ikind):: type_2integer_
   integer(kind=mpi_ikind),intent(in):: val
-  type_2integer_=MPI_2INTERGER
+  type_2integer_=MPI_2INTEGER
 end function type_2integer_
 
 function type_2real_(val)

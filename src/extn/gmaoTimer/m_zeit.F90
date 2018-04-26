@@ -248,6 +248,7 @@ contains
     subroutine ci_(name,usrtime,mytime)
       use mpeu_util,only: stderr
       use mpeu_util,only: die
+      use mpeu_mpif,only: MPI_wtime
       use m_sysclocks, only: get_zeits => sysclocks_get
       implicit none
       character(len=*), intent(in) :: name
@@ -359,6 +360,7 @@ end subroutine ci_
     subroutine co_(name,tms,usrtime,mytime)
       use mpeu_util,only: stderr
       use mpeu_util,only: die
+      use mpeu_mpif,only: MPI_wtime
       use m_sysclocks,only: get_zeits => sysclocks_get
       implicit none
       character(len=*), intent(in) :: name	! account name
@@ -474,6 +476,7 @@ end subroutine co_
 
     subroutine reset_(usrtime,mytime)
       use m_sysclocks, only: get_zeits => sysclocks_get
+      use mpeu_mpif,only: MPI_wtime
       implicit none
       real*8, optional,intent(in)::usrtime
       real*8, optional,dimension(0:),intent(in) :: mytime
@@ -598,6 +601,7 @@ end function lookup_
     subroutine flush_(lu,umask,usrtime,mytime,subname_at_end,scale)
       use mpeu_util,only: stderr
       use mpeu_util,only: die
+      use mpeu_mpif,only: MPI_wtime
       use m_sysclocks, only: get_zeits => sysclocks_get
       implicit none
       integer,intent(in) :: lu	! logical unit for the output
@@ -847,8 +851,9 @@ end subroutine sp_balances_
 
     subroutine allflush_(comm,root,lu,umask,mytime,subname_at_end,scale)
       use mpeu_util,only: stderr
-      use mpeu_util,only: die,mpiproc_die
+      use mpeu_util,only: die,perr,mpiproc_die
       use mpeu_mpif,only: MPI_type
+      use mpeu_mpif,only: MPI_wtime
       use m_mergedList,only : mergedList
       use m_mergedList,only : mergedList_init
       use m_mergedList,only : msize
@@ -917,8 +922,13 @@ end subroutine sp_balances_
 
   ! Check MPI status in case this call has fell out the MPI regime.
 
-  mpi_inited_=MPI_initialized()
-  if(.not. mpi_inited_) call MPI_initialize()
+  call MPI_initialized(mpi_inited_,ier)
+	if(ier/=0) call mpiproc_die(myname_,'MPI_initialized',ier)
+
+  if(.not.mpi_inited_) then
+    call MPI_init(ier)
+	if(ier/=0) call mpiproc_die(myname_,'MPI_init',ier)
+  endif
 
   mname=min(MXN,nname)
   call mergedList_init(name_l(0:mname),merged,root,comm)
@@ -935,16 +945,6 @@ end subroutine sp_balances_
 		  ksum(            0:nlist),	&
 		  stat=ier)
 		if(ier/=0) call die(myname_,'allocate()',ier)
-
-		if(mall_ison()) then
-		  call mall_mci(ztmp,myname)
-		  call mall_mci(zsum,myname)
-		  call mall_mci(zavg,myname)
-		  call mall_mci(zabv,myname)
-		  call mall_mci(zmax,myname)
-		  call mall_mci(ktmp,myname)
-		  call mall_mci(ksum,myname)
-		endif
 
 	! Prepare the information for all accounts as in the merged
 	! account list.
@@ -1020,7 +1020,11 @@ end subroutine sp_balances_
 	! write a <newline>
 
     write(lu,*,iostat=ier)
-	if(ier/=0) call die(myname_,'write()',ier,'unit',lu)
+	if(ier/=0) then
+          call perr(myname_,'not writable, unit =',lu )
+          call perr(myname_,'            iostat =',ier)
+          call  die(myname_)
+        endif
 
     flush(lu)
 
@@ -1036,21 +1040,15 @@ end subroutine sp_balances_
     flush(lu)
   endif
 
-	if(mall_ison()) then
-	  call mall_mco(ztmp,myname)
-	  call mall_mco(zsum,myname)
-	  call mall_mco(zavg,myname)
-	  call mall_mco(zabv,myname)
-	  call mall_mco(zmax,myname)
-	  call mall_mco(ktmp,myname)
-	  call mall_mco(ksum,myname)
-	endif
   deallocate(ztmp,zsum,zavg,zabv,zmax,ktmp,ksum,stat=ier)
 	if(ier/=0) call die(myname_,'deallocate()',ier)
 
   call clean(merged)
-  if(.not. mpi_inited_) call MPI_finalize() ! finalize MPI if initialized by me
-
+  if(.not. mpi_inited_) then
+    call MPI_finalize(ier) ! finalize MPI if it is initialized here
+	if(ier/=0) call mpiproc_die(myname_,'MPI_finalize',ier)
+  endif
+return
 end subroutine allflush_
 
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
