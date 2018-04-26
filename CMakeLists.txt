@@ -197,7 +197,7 @@ project(GSI)
   find_package( W3NCO )
 
   add_subdirectory(src)
-  add_subdirectory(extn/gmaoTimer)
+  add_subdirectory(src/extn/gmaoTimer)
   if(BUILD_ENKF)
     add_subdirectory(src/enkf)
   endif(BUILD_ENKF) 
