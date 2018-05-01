@@ -167,9 +167,9 @@ do jj=1,ntlevs_ens
 
    call self_add(mval,eval(jj))
 
-!$omp parallel sections private(ic,id,istatus)
+!!$omp parallel sections private(ic,id,istatus)
 
-!$omp section
+!!$omp section
 
 !  Convert RHS calculations for u,v to st/vp
    if (do_getuv) then
@@ -183,14 +183,14 @@ do jj=1,ntlevs_ens
       end if
    end if
 
-!$omp section
+!!$omp section
 
    call gsi_bundlegetpointer (eval(jj),'oz'  ,rv_oz , istatus)
    call gsi_bundlegetpointer (eval(jj),'sst' ,rv_sst, istatus)
    call gsi_bundleputvar ( wbundle_c, 'oz',  rv_oz,  istatus )
    call gsi_bundleputvar ( wbundle_c, 'sst', rv_sst, istatus )
 
-!$omp section
+!!$omp section
 
    if (do_cw_to_hydro_ad .and. .not.do_cw_to_hydro_ad_hwrf) then
 !     Case when cloud-vars do not map one-to-one
@@ -228,7 +228,7 @@ do jj=1,ntlevs_ens
    call gsi_bundleputvar ( wbundle_c, 't' ,  rv_tv,  istatus )
    call gsi_bundleputvar ( wbundle_c, 'ps',  rv_ps,  istatus )
 !  call gsi_bundleputvar ( wbundle_c, 'q' ,  zero,   istatus )  !mjk                    
-!$omp end parallel sections
+!!$omp end parallel sections
 
    if(dual_res) then
       call ensemble_forward_model_ad_dual_res(wbundle_c,grad%aens(1,:),jj)
