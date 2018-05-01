@@ -18,6 +18,9 @@ if [ $target = wcoss ]; then
 elif [ $target = cray -o $target = wcoss_c ]; then
     . $MODULESHOME/init/sh
     conf_target=nco
+elif [ $target = gaea ]; then
+#    . $MODULESHOME/init/sh
+    conf_target=gaea
 elif [ $target = theia ]; then
     . /apps/lmod/lmod/init/sh
     conf_target=theia
@@ -35,17 +38,19 @@ fi
 
 # First build GSI
 if [ $BUILD_GSI = "YES" -o $BUILD_ENKF = "YES" ]; then
-
-    clean=YES
+        clean=no
+     $dir_root/ush/build_gsi.sh $target $pwd $clean
+    clean=no
     [[ $BUILD_ENKF = "YES" ]] && clean=NO
-    $dir_root/ush/build_gsi.sh $target $pwd $clean
+
+#####################################################    $dir_root/ush/build_gsi.sh $target $pwd $clean
 
 fi
 
 # Next build EnKF
 if [ $BUILD_ENKF = "YES" ]; then
 
-    clean=YES
+    clean=no 
     $dir_root/ush/build_enkf.sh $target $pwd $clean
 
 fi
@@ -53,9 +58,10 @@ fi
 # Next build EnKF utilities
 if [ $BUILD_UTILS = "YES" ]; then
 
-    clean=YES
+    clean=no  
     $dir_root/ush/build_enkf_utils.sh $target $pwd $clean
 
+    pwd
 fi
 
 exit 0

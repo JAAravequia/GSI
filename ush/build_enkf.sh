@@ -15,6 +15,9 @@ if [ $target = wcoss ]; then
 elif [ $target = cray -o $target = wcoss_c ]; then
     . $MODULESHOME/init/sh
     conf_target=nco
+elif [ $target = gaea  ]; then
+#    . $MODULESHOME/init/sh
+    conf_target=gaea
 elif [ $target = theia ]; then
     . /apps/lmod/lmod/init/sh
     conf_target=theia
@@ -31,7 +34,15 @@ fi
 [ -d $dir_root/exec ] || mkdir -p $dir_root/exec
 
 module purge
-if [ $target = wcoss -o $target = cray ]; then
+    unset _LMFILES_
+    unset _LMFILES_000
+    unset _LMFILES_001
+    unset LOADEDMODULES
+    module use -a /opt/cray/ari/modulefiles
+    module use -a /opt/cray/pe/ari/modulefiles
+    module use -a /opt/cray/pe/craype/default/modulefiles
+    source /etc/opt/cray/pe/admin-pe/site-config
+if [ $target = wcoss -o $target = cray -o $target = gaea  ]; then
     module load $dir_modules/modulefile.gdas_enkf.$target
 else
     source $dir_modules/modulefile.gdas_enkf.$target
@@ -42,7 +53,7 @@ cd $dir_root/src/enkf
 ./configure clean
 ./configure $conf_target
 make -f Makefile clean
-make -f Makefile -j 8
+make -f Makefile -j 1
 cp -p global_enkf $dir_root/exec
 
 if [ $clean = YES ]; then

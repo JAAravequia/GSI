@@ -1,4 +1,5 @@
 include(${CMAKE_CURRENT_LIST_DIR}/platforms/WCOSS.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/platforms/Gaea.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/platforms/WCOSS-Cray.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/platforms/S4.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/platforms/Theia.cmake)

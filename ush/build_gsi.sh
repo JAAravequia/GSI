@@ -18,12 +18,16 @@ elif [ $target = cray -o $target = wcoss_c ]; then
 elif [ $target = theia ]; then
     . /apps/lmod/lmod/init/sh
     conf_target=theia
+elif [ $target = gaea                      ]; then
+#    . $MODULESHOME/init/sh
+    conf_target=gaea
 else
     echo "unknown target = $target"
     exit 9
 fi
 
 dir_modules=$dir_root/modulefiles
+echo $dir_modules
 if [ ! -d $dir_modules ]; then
     echo "modulefiles does not exist in $dir_modules"
     exit 10
@@ -31,7 +35,17 @@ fi
 [ -d $dir_root/exec ] || mkdir -p $dir_root/exec
 
 module purge
-if [ $target = wcoss -o $target = cray ]; then
+    module purge
+    unset _LMFILES_
+    unset _LMFILES_000
+    unset _LMFILES_001
+    unset LOADEDMODULES
+
+    module use -a /opt/cray/ari/modulefiles
+    module use -a /opt/cray/pe/ari/modulefiles
+    module use -a /opt/cray/pe/craype/default/modulefiles
+    source /etc/opt/cray/pe/admin-pe/site-config
+if [ $target = wcoss -o $target = cray -o $target = gaea ]; then
     module load $dir_modules/modulefile.global_gsi.$target
 else
     source $dir_modules/modulefile.global_gsi.$target
