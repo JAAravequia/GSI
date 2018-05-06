@@ -48,6 +48,10 @@ cmake_minimum_required(VERSION 2.8)
    "${CMAKE_CURRENT_SOURCE_DIR}/gsimod.F90" 
    "${CMAKE_CURRENT_SOURCE_DIR}/gsimain.f90")
 
+# Specify files of GSIEXEC main
+  set( GSIEXEC_SRC "${CMAKE_CURRENT_SOURCE_DIR}/gsimain.f90")
+  set_source_files_properties( ${GSIEXEC_SRC} PROPERTIES COMPILE_FLAGS ${GSI_Fortran_FLAGS} )
+
 # remove all stub, cplr and linked files from the rest of the source files
   list( REMOVE_ITEM GSI_SRC ${LINKED_SRC} )
   list( REMOVE_ITEM GSI_SRC ${STUB_SRC} )
@@ -63,6 +67,7 @@ cmake_minimum_required(VERSION 2.8)
   if(USE_WRF)
     set( REGIONAL_SRC ${CPLR_SRC} )
     list( APPEND REGIONAL_SRC ${LINKED_SRC} )
+    list( REMOVE_ITEM REGIONAL_SRC "${GSIEXEC_SRC}" )
     set_source_files_properties( ${REGIONAL_SRC} PROPERTIES COMPILE_FLAGS ${GSI_Fortran_FLAGS} )
   endif()
 
@@ -70,6 +75,7 @@ cmake_minimum_required(VERSION 2.8)
   set( GLOBAL_SRC ${CPLR_SRC} )
   set( GLOBAL_SRC ${STUB_SRC} )
   list( APPEND GLOBAL_SRC ${LINKED_SRC} )
+  list( REMOVE_ITEM GLOBAL_SRC "${GSIEXEC_SRC}" )
   
   list( APPEND GSI_SRC  ${GSI_C_SRC} )
 
@@ -77,7 +83,6 @@ cmake_minimum_required(VERSION 2.8)
   set_source_files_properties( ${GSI_SRC} PROPERTIES COMPILE_FLAGS ${GSI_Fortran_FLAGS} )
   set_source_files_properties( ${GLOBAL_SRC} PROPERTIES COMPILE_FLAGS ${GSI_Fortran_FLAGS} )
   set_source_files_properties( ${GSI_C_SRC} PROPERTIES COMPILE_FLAGS ${GSI_CFLAGS} )
-# set_source_files_properties( ${CMAKE_CURRENT_SOURCE_DIR}/blockIO.c  PROPERTIES COMPILE_FLAGS ${GSI_CFLAGS} )
 
 # Add the include paths
   message("MPI include PATH  ${MPI_Fortran_INCLUDE_PATH}")
@@ -107,7 +112,7 @@ cmake_minimum_required(VERSION 2.8)
 # Set names, libs, and properties depending on if we are building with WRF or not
   if(USE_WRF) 
     set(GSIEXEC "${GSIBASE}${debug_suffix}${GSISUFFIX}" CACHE INTERNAL "GSI Executable Name")
-    add_executable(${GSIEXEC} ${CMAKE_CURRENT_SOURCE_DIR}/gsimain.f90 ${CMAKE_CURRENT_SOURCE_DIR}/gsimod.F90 )
+    add_executable(${GSIEXEC} ${GSIEXEC_SRC} )
     set(GSILIB "gsilib_wrf${debug_suffix}" CACHE INTERNAL "")
     add_library(${GSILIB} STATIC ${REGIONAL_SRC} )
     set_target_properties(${GSILIB} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include/wrf")
@@ -118,18 +123,35 @@ cmake_minimum_required(VERSION 2.8)
 
   if(BUILD_GLOBAL)
     set(GSIEXEC "${GSIBASE}${debug_suffix}${GSISUFFIX}" CACHE INTERNAL "GSI Executable Name")
-    add_executable(${GSIEXEC} ${CMAKE_CURRENT_SOURCE_DIR}/gsimain.f90 ${CMAKE_CURRENT_SOURCE_DIR}/gsimod.F90 )
+    add_executable(${GSIEXEC} ${GSIEXEC_SRC} )
+
     set(GSILIB "gsilib_global${debug_suffix}" CACHE INTERNAL "")
-    set(WRF_LIBRARIES "")
     add_library(${GSILIB} STATIC ${GLOBAL_SRC} )
     target_link_libraries( ${GSISHAREDLIB} ${GSILIB} ${CORE_LIBRARIES})
     target_link_libraries( ${GSILIB} ${CORE_LIBRARIES})
-    set_target_properties(gsilib_global PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
-    target_include_directories(gsilib_global PUBLIC "${PROJECT_BINARY_DIR}/include")
-    add_dependencies(${GSILIB} ${GSISHAREDLIB} )
-    set_target_properties(${GSIEXEC} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
+    set_target_properties( ${GSILIB} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
+    target_include_directories(${GSILIB} PUBLIC "${PROJECT_BINARY_DIR}/include")
+
+    add_dependencies(${GSIEXEC}
+	gmaoTimer
+	${GSILIB}
+	${GSISHAREDLIB}
+    )
+    target_include_directories(${GSIEXEC}
+	PUBLIC ${CMAKE_CURRENT_BINARY_DIR}
+    	PUBLIC ${PROJECT_BINARY_DIR}/include
+    	PUBLIC ${PROJECT_BINARY_DIR}/include/gmaoTimer
+    )
+    set_target_properties(${GSIEXEC} PROPERTIES
+    	Fortran_MODULE_DIRECTORY	${PROJECT_BINARY_DIR}/include
+    )
+
+    set(WRF_LIBRARIES "")
   endif()
 
+  # GSILIB entries are muturally referenced with ${GSISHAREDLIB entries}.  However, it seems all
+  # dependencies of ${GSILIB} on ${GSISHAREDLIB} are implicit, but explicit in inversed references
+  # to ${GSILIB} by ${GSISHAREDLIB}.
   add_dependencies(${GSILIB} ${GSISHAREDLIB} )
 
 # Add dependencies if we are building the core libs or are just using pre-built libs 
@@ -137,11 +159,24 @@ cmake_minimum_required(VERSION 2.8)
     add_dependencies(${GSILIB} ${GSISHAREDLIB} ${CORE_BUILT} )
     add_dependencies(${GSISHAREDLIB} ${bacio} ${CORE_BUILT} )
     add_dependencies(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${CORE_BUILT} )
-  else()
-    add_dependencies(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} )
   endif()
-# Specify all the libraries to be linked into the executable
-  target_link_libraries(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${GSISHAREDLIB} ${WRF_LIBRARIES} ${CORE_LIBRARIES} ${CORE_BUILT}
-         ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES} 
-         ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${CORE_LIBRARIES} ${CORE_BUILT}
-         ${GSI_LDFLAGS} ${NCDIAG_LIBRARIES} ${ZLIB_LIBRARIES} ${wrflib} )
+
+# Specify all non-GSI libraries to be linked for the executable.
+  set(GSIEXEC_EXTERNAL_LIBRARIES                                          ${WRF_LIBRARIES} ${CORE_LIBRARIES} ${CORE_BUILT}
+	${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES} 
+	${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${CORE_LIBRARIES} ${CORE_BUILT}
+	${GSI_LDFLAGS} ${NCDIAG_LIBRARIES} ${ZLIB_LIBRARIES} ${wrflib}
+	CACHE INTERNAL ""
+  )
+
+# To build GSIEXEC, note the interleaving referencings between two GSI libraries.
+  target_link_libraries(${GSIEXEC}		# including both gsimain.f90
+  	gmaoTimer				# see src/extn/
+	${GSILIB}				# resolving gsimod, and whatnots
+  	${GSISHAREDLIB}				# resolving gsisub, and whatnots
+	${GSILIB}				# resolving gesinfo, and whatnots
+	${GSISHAREDLIB}				# now resolving all remaining unresolved GSI symbols
+  	${GSIEXEC_EXTERNAL_LIBRARIES}		# finally everything else external
+  )
+
+#.

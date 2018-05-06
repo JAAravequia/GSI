@@ -166,16 +166,18 @@ elif [[ "$machine" = "s4" ]]; then
 
    export accnt="star"
 elif [ "$machine" == "discover" ]; then
-   export basedir="/gpfsm/dnb31/pchakrab/code/ext/gsi"
-   export group="global"
-   export queue="batch"
+   if [[ "$cmaketest" = "false" ]]; then
+       echo "Regression tests on Discover need to be run via ctest"
+       exit 1
+   fi
    export ptmp=$basedir
    export noscrub=$basedir
    export fixcrtm="/discover/nobackup/projects/gmao/share/gmao_ops/fvInput_4dvar/gsi/etc/fix_ncep20170329/REL-2.2.3-r60152_local-rev_1/CRTM_Coeffs/$endianness"
    export casesdir="/discover/nobackup/projects/gmao/obsdev/wrmccart/NCEP_regression/CASES"
-   export ndate="$basedir/$updat/scripts/ndate"
+   export ndate="/home/pchakrab/.local/bin/ndate"
    export check_resource="no"
    export accnt="g0613"
+   export queue="compute"
    export clean=".false."
 fi
 

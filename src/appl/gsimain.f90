@@ -10,11 +10,12 @@
    program gsi
 
    use gsimod, only: gsimain_initialize,gsimain_run,gsimain_finalize
+   use mpimod, only: mype
    use gsi_4dvar, only: l4dvar
    use gsi_4dcouplermod, only: gsi_4dcoupler_init_traj
    use gsi_4dcouplermod, only: gsi_4dcoupler_final_traj
    use kinds, only: i_kind
-   use mpeu_util, only: die
+   use mpeu_util, only: die, stdout
 
         ! Interfaces for a full GSI timermod usecase.
    use timermod, only: timer_typedef
@@ -23,6 +24,10 @@
    use timermod, only: timer_flush
    use timermod, only: timer_allflush
 
+   use m_gmaoTimer, only: gmaoTimer_typemold   => timer_typemold
+        ! The name of this function is not forced to be the same in a
+        ! customized extension, since it is not a type-bound-procedure.
+
    ! use m_stubTimer, only: stubTimer_typemold => timer_typemold
         ! Although stubTimer is not intended to be used here, its typemold() can
         ! be declared here anyway to highlight the fact that this may be the place
@@ -30,11 +35,6 @@
         ! choose to comment out some of these lines to avoid unnecessary linkage
         ! requirments.
 
-   use m_gmaoTimer, only: gmaoTimer_typemold   => timer_typemold
-        ! Notice the name of this function is not forced to be the same style in
-        ! all customized extensions, since it is not a type-bound-procedure.
-
-   use intrinsic
    implicit none
 
 !$$$  main program documentation block
@@ -143,7 +143,7 @@
 !			  and gsi_4dcoupler_final_traj() from gsimain_finalize(),
 !   2011-08-01  lueken  - replaced F90 with f90 (no machine logic)
 !   2013-07-02  parrish - remove error message 328 - tlnmc_type > 2 not allowed
-!   2018-04-19  guo, j. - Added user-extensible timer utilization
+!   2018-04-19  guo, j. - Add user-defined extensible timer
 !
 ! usage:
 !   input files:
@@ -622,10 +622,11 @@
 
    integer(i_kind):: ier
    character(len=*),parameter:: myname='gsimain'
+
+   call gsimain_initialize      ! mpi should have been defined here
+
    call timer_typedef(gmaoTimer_typemold())      ! use gmaoTimer extension
    call timer_on(myname)
-
-   call gsimain_initialize
 
 ! Initialize atmospheric AD and TL model trajectory
 !  if(l4dvar) then
@@ -641,10 +642,11 @@
       if(ier/=0) call die(myname,'gsi_4dcoupler_final_traj(), rc =',ier)
    endif
 
-   call gsimain_finalize
-
    call timer_off(myname)
-   call timer_pri(6)
+   if(mype==0) call timer_flush(stdout)
+   call timer_allflush(stdout,root=0)
+
+   call gsimain_finalize
 
    end program gsi
 
