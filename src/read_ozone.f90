@@ -257,54 +257,54 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 
      if(iret/=0) goto 160
      
-110  continue
-     call readsb(lunin,iret)
-     if (iret/=0) then
-        call readmg(lunin,subset,jdate,iret)
-        if (iret/=0) goto 150
-        goto 110
-     endif
+     read_loop1: do
+        call readsb(lunin,iret)
+        if (iret/=0) then
+           call readmg(lunin,subset,jdate,iret)
+           if (iret/=0) goto 150
+           cycle read_loop1
+        endif
      
 !    extract header information
 !    BUFR code values for satellite identifiers are listed in
 !    Dennis Keyser's website,
 !    http://www.emc.ncep.noaa.gov/mmb/papers/keyser/Satellite_Historical.txt
 
-     call ufbint(lunin,hdroz,10,1,iret,ozstr)
-     rsat = hdroz(1); ksatid=rsat
-     if(jsatid == 'nim07') kidsat = 767
-     if(jsatid == 'n09') kidsat = 201
-     if(jsatid == 'n11') kidsat = 203
-     if(jsatid == 'n14') kidsat = 205
-     if(jsatid == 'n16') kidsat = 207
-     if(jsatid == 'n17') kidsat = 208
-     if(jsatid == 'n18') kidsat = 209
-     if(jsatid == 'n19') kidsat = 223
+        call ufbint(lunin,hdroz,10,1,iret,ozstr)
+        rsat = hdroz(1); ksatid=rsat
+        if(jsatid == 'nim07') kidsat = 767
+        if(jsatid == 'n09') kidsat = 201
+        if(jsatid == 'n11') kidsat = 203
+        if(jsatid == 'n14') kidsat = 205
+        if(jsatid == 'n16') kidsat = 207
+        if(jsatid == 'n17') kidsat = 208
+        if(jsatid == 'n18') kidsat = 209
+        if(jsatid == 'n19') kidsat = 223
 
-     if (ksatid /= kidsat) go to 110
+        if (ksatid /= kidsat) cycle read_loop1
 
      nmrecs=nmrecs+nloz+1
     
-!    Convert observation location to radians
-     slats0= hdroz(2)
-     slons0= hdroz(3)
-     if(abs(slats0)>90._r_kind .or. abs(slons0)>r360) go to 110  
-     if(slons0< zero) slons0=slons0+r360
-     if(slons0==r360) slons0=zero
-     dlat_earth_deg = slats0
-     dlon_earth_deg = slons0
-     dlat_earth = slats0 * deg2rad
-     dlon_earth = slons0 * deg2rad
+!       Convert observation location to radians
+        slats0= hdroz(2)
+        slons0= hdroz(3)
+        if(abs(slats0)>90._r_kind .or. abs(slons0)>r360) cycle read_loop1
+        if(slons0< zero) slons0=slons0+r360
+        if(slons0==r360) slons0=zero
+        dlat_earth_deg = slats0
+        dlon_earth_deg = slons0
+        dlat_earth = slats0 * deg2rad
+        dlon_earth = slons0 * deg2rad
 
-     if(regional)then
-        call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
-        if(outside) go to 110
-     else
-        dlat = dlat_earth
-        dlon = dlon_earth
-        call grdcrd1(dlat,rlats,nlat,1)
-        call grdcrd1(dlon,rlons,nlon,1)
-     endif
+        if(regional)then
+           call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
+           if(outside) cycle read_loop1
+        else
+           dlat = dlat_earth
+           dlon = dlon_earth
+           call grdcrd1(dlat,rlats,nlat,1)
+           call grdcrd1(dlon,rlons,nlon,1)
+        endif
      
 !    Special check for NOAA-17 version 6
 !    Before July 2007 NOAA-17 SBUV/2 has a stray light problem which produces
@@ -313,53 +313,54 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 !    in the Southern Hemisphere and only for Solar Zenith
 !    Angles (SZA) greater than 76 Degrees.
 
-     if (version6) then
-        solzen = hdroz(9)    ! solar zenith angle
-        solzenp= hdroz(10)   ! profile solar zenith angle
-        if (ksatid==208 .and. dlat_earth<zero .and. solzenp > r76) goto 110
-     else if(version8)then
-        solzen = hdroz(10)    ! solar zenith angle
-     endif
+        if (version6) then
+           solzen = hdroz(9)    ! solar zenith angle
+           solzenp= hdroz(10)   ! profile solar zenith angle
+           if (ksatid==208 .and. dlat_earth<zero .and. solzenp > r76) cycle
+read_loop1
+        else if(version8)then
+           solzen = hdroz(10)    ! solar zenith angle
+        endif
 
-!    Convert observation time to relative time
-     idate5(1) = hdroz(4)  !year
-     idate5(2) = hdroz(5)  !month
-     idate5(3) = hdroz(6)  !day
-     idate5(4) = hdroz(7)  !hour
-     idate5(5) = hdroz(8)  !minute
-     call w3fs21(idate5,nmind)
-     t4dv=real((nmind-iwinbgn),r_kind)*r60inv
-     sstime=real(nmind,r_kind)
-     tdiff=(sstime-gstime)*r60inv
-     if (l4dvar.or.l4densvar) then
-        if(t4dv<zero .OR. t4dv>winlen) goto 110
-     else
-        if(abs(tdiff) > twind) goto 110
-     end if
+!       Convert observation time to relative time
+        idate5(1) = hdroz(4)  !year
+        idate5(2) = hdroz(5)  !month
+        idate5(3) = hdroz(6)  !day
+        idate5(4) = hdroz(7)  !hour
+        idate5(5) = hdroz(8)  !minute
+        call w3fs21(idate5,nmind)
+        t4dv=real((nmind-iwinbgn),r_kind)*r60inv
+        sstime=real(nmind,r_kind)
+        tdiff=(sstime-gstime)*r60inv
+        if (l4dvar.or.l4densvar) then
+           if(t4dv<zero .OR. t4dv>winlen) cycle read_loop1
+        else
+           if(abs(tdiff) > twind) cycle read_loop1
+        end if
      
-!    Extract layer ozone values and compute profile total ozone
-     if (version8) then
-        call ufbseq(lunin,ozone_v8,29,21,iret,'OZOPQLSQ')
-        totoz=zero
-        do k=1,nloz
-           kk=nloz-k+1
-           poz(k) = ozone_v8(6,kk)
-           totoz=totoz+ozone_v8(6,k)
-        end do
-        poz(nloz+1) = totoz
-     endif
+!       Extract layer ozone values and compute profile total ozone
+        if (version8) then
+           call ufbseq(lunin,ozone_v8,29,21,iret,'OZOPQLSQ')
+           totoz=zero
+           do k=1,nloz
+              kk=nloz-k+1
+              poz(k) = ozone_v8(6,kk)
+              totoz=totoz+ozone_v8(6,k)
+           end do
+           poz(nloz+1) = totoz
+        endif
  
-     if (version6) then
-        call ufbint(lunin,ozone_v6,nloz,1,iret,lozstr)
-        do k=1,nloz
-           kk=nloz-k+1
-           poz(k) = ozone_v6(kk)
-        end do
+        if (version6) then
+           call ufbint(lunin,ozone_v6,nloz,1,iret,lozstr)
+           do k=1,nloz
+              kk=nloz-k+1
+              poz(k) = ozone_v6(kk)
+           end do
 
-!       extract total ozone
-        call ufbint(lunin,totoz,1,1,iret,'OTSP')
-        poz(nloz+1) = totoz
-     endif
+!          extract total ozone
+           call ufbint(lunin,totoz,1,1,iret,'OTSP')
+           poz(nloz+1) = totoz
+        endif
 
 
 !    Extract and apply version 8 total and profile ozone quaility information
@@ -374,38 +375,38 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 !      3) We do not use the version 6 error flags.   Thus, initialize toq and
 !         poq to 0 (use the data)
 
-     toq=0._r_double
-     poq=0._r_double
-     if (version8) then
-        call ufbint(lunin,toq,1,1,iret,'SBUVTOQ')
-        call ufbint(lunin,poq,1,1,iret,'SBUVPOQ')
-        if (toq/=0 .and. toq/=2) goto 110
-        if (poq/=0 .and. poq/=1 .and. poq/=ipoq7) goto 110
-     endif
+        toq=0._r_double
+        poq=0._r_double
+        if (version8) then
+           call ufbint(lunin,toq,1,1,iret,'SBUVTOQ')
+           call ufbint(lunin,poq,1,1,iret,'SBUVPOQ')
+           if (toq/=0 .and. toq/=2) cycle read_loop1
+           if (poq/=0 .and. poq/=1 .and. poq/=ipoq7) cycle read_loop1
+        endif
 
-!    Check ozone layer values.  If any layer value is bad, toss entire profile
-     do k=1,nloz
-        if (poz(k)>badoz) goto 110
-     end do
+!       Check ozone layer values.  If any layer value is bad, toss entire profile
+        do k=1,nloz
+           if (poz(k)>badoz) cycle read_loop1
+        end do
      
-!    Write ozone record to output file
-     ndata=min(ndata+1,maxobs)
-     nodata=nodata+nloz+1
-     ozout(1,ndata)=rsat
-     ozout(2,ndata)=t4dv
-     ozout(3,ndata)=dlon               ! grid relative longitude
-     ozout(4,ndata)=dlat               ! grid relative latitude
-     ozout(5,ndata)=dlon_earth_deg     ! earth relative longitude (degrees)
-     ozout(6,ndata)=dlat_earth_deg     ! earth relative latitude (degrees)
-     ozout(7,ndata)=toq                ! total ozone error flag
-     ozout(8,ndata)=poq                ! profile ozone error flag
-     ozout(9,ndata)=solzen             ! solar zenith angle
-     do k=1,nloz+1
-        ozout(k+9,ndata)=poz(k)
-     end do
+!       Write ozone record to output file
+        ndata=min(ndata+1,maxobs)
+        nodata=nodata+nloz+1
+        ozout(1,ndata)=rsat
+        ozout(2,ndata)=t4dv
+        ozout(3,ndata)=dlon               ! grid relative longitude
+        ozout(4,ndata)=dlat               ! grid relative latitude
+        ozout(5,ndata)=dlon_earth_deg     ! earth relative longitude (degrees)
+        ozout(6,ndata)=dlat_earth_deg     ! earth relative latitude (degrees)
+        ozout(7,ndata)=toq                ! total ozone error flag
+        ozout(8,ndata)=poq                ! profile ozone error flag
+        ozout(9,ndata)=solzen             ! solar zenith angle
+        do k=1,nloz+1
+           ozout(k+9,ndata)=poz(k)
+        end do
 
-!    Loop back to read next profile
-     goto 110
+!       Loop back to read next profile
+     end do read_loop1
 
 !    End of bufr ozone block
 
@@ -607,12 +608,12 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      ihh=0
      if(iret/=0) goto 160
 
-130  continue
+     read_loop2: do
      call readsb(lunin,iret)
      if (iret/=0) then
         call readmg(lunin,subset,jdate,iret)
         if (iret/=0) goto 150
-        goto 130
+        cycle read_loop2
      endif
 
 !    extract header information
@@ -621,7 +622,7 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      rsat = hdrozo(1); ksatid=rsat
 
      if(jsatid == 'aura')kidsat = 785
-     if (ksatid /= kidsat) go to 130
+     if (ksatid /= kidsat) cycle read_loop2
 
 
      nmrecs=nmrecs+nloz+1
@@ -629,7 +630,7 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 !    Convert observation location to radians
      slats0= hdrozo(2)
      slons0= hdrozo(3)
-     if(abs(slats0)>90._r_kind .or. abs(slons0)>r360) go to 130  
+     if(abs(slats0)>90._r_kind .or. abs(slons0)>r360) cycle read_loop2
      if(slons0< zero) slons0=slons0+r360
      if(slons0==r360) slons0=zero
      dlat_earth_deg = slats0
@@ -639,7 +640,7 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 
      if(regional)then
         call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
-        if(outside) go to 130
+        if(outside) cycle read_loop2
      else
         dlat = dlat_earth
         dlon = dlon_earth
@@ -659,31 +660,30 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      sstime=real(nmind,r_kind)
      tdiff=(sstime-gstime)*r60inv
      if (l4dvar.or.l4densvar) then
-        if (t4dv<zero .OR. t4dv>winlen) go to 130
+        if (t4dv<zero .OR. t4dv>winlen) cycle read_loop2
      else
-        if(abs(tdiff) > twind) go to 130
+        if(abs(tdiff) > twind) cycle read_loop2
      end if
 
 !    extract total ozone
      call ufbint(lunin,totoz,1,1,iret,'OZON')
-     if (totoz > badoz ) goto 130
+     if (totoz > badoz ) cycle read_loop2
 
 !    Bit 10 in TOQF represents row anomaly. 
      decimal=int(hdrozo2(6))
      call dec2bin(decimal,binary,14)
-     if (binary(10) == 1 ) then
-        goto 130
-     endif
+     if (binary(10) == 1 ) cycle read_loop2
 
 !    only accept flag 0 1, flag 2 is high SZA data which is not used for now
      toq=hdrozo2(5)
-     if (toq/=0 .and. toq/=1) goto 130
+     if (toq/=0 .and. toq/=1) cycle read_loop2
 
 !    remove the bad scan position data: fovn beyond 25
-     if (hdrozo2(7) >=25.0_r_double) goto 130
+     if (hdrozo2(7) >=25.0_r_double) cycle read_loop2
 
 !    remove the data in which the C-pair algorithm ((331 and 360 nm) is used. 
-     if (hdrozo2(8) == 3_r_double .or. hdrozo2(8) == 13_r_double) goto 130
+     if (hdrozo2(8) == 3_r_double .or. hdrozo2(8) == 13_r_double) cycle
+read_loop2
 
 
 !    thin OMI data
@@ -695,10 +695,10 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      endif 
      crit1 = 0.01_r_kind+timedif
      call map2tgrid(dlat_earth,dlon_earth,dist1,crit1,itx,ithin,itt,iuse,sis)
-     if(.not. iuse)go to 130
+     if(.not. iuse)cycle read_loop2
  
      call finalcheck(dist1,crit1,itx,iuse)
-     if(.not. iuse)go to 130
+     if(.not. iuse)gcycle read_loop2
    
      ndata=ndata+1
      nodata=ndata
@@ -722,7 +722,7 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      ozout(15,itx)=totoz
 
 !    End of loop over observations
-     go to 130
+     end do read_loop2
 
 ! End of OMI block
 
@@ -829,68 +829,68 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      call datelen(10)
      call readmg(lunin,subset,idate,iret)
 
-140  continue
-     call readsb(lunin,iret)
-     if (iret/=0) then
-        call readmg(lunin,subset,jdate,iret)
-        if (iret/=0) goto 150
-        goto 140
-     endif
-
-     do k=1,nloz
-        if (iuse_oz(ipos(k)) < 0) then
-           usage1(k) = 100._r_kind
-        else
-           usage1(k) = zero
+     read_loop4: do
+        call readsb(lunin,iret)
+        if (iret/=0) then
+           call readmg(lunin,subset,jdate,iret)
+           if (iret/=0) goto 150
+           cycle read_loop4
         endif
-     end do
 
-!    extract header information
-     call ufbint(lunin,hdrmls,13,1,iret,mlstr)
-     rsat = hdrmls(1); ksatid=rsat
+        do k=1,nloz
+           if (iuse_oz(ipos(k)) < 0) then
+              usage1(k) = 100._r_kind
+           else
+              usage1(k) = zero
+           endif
+        end do
 
-     if(jsatid == 'aura')kidsat = 785
-     if (ksatid /= kidsat) go to 140
+!       extract header information
+        call ufbint(lunin,hdrmls,13,1,iret,mlstr)
+        rsat = hdrmls(1); ksatid=rsat
 
-     nmrecs=nmrecs+nloz
+        if(jsatid == 'aura')kidsat = 785
+        if (ksatid /= kidsat) cycle read_loop4
 
-!    Convert observation location to radians
-     slats0= hdrmls(2)
-     slons0= hdrmls(3)
-     if(abs(slats0)>90._r_kind .or. abs(slons0)>r360) go to 140  
-     if(slons0< zero) slons0=slons0+r360
-     if(slons0==r360) slons0=zero
-     dlat_earth_deg = slats0
-     dlon_earth_deg = slons0
-     dlat_earth = slats0 * deg2rad
-     dlon_earth = slons0 * deg2rad
+        nmrecs=nmrecs+nloz
 
-     if(regional)then
-        call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
-        if(outside) go to 140
-     else
-        dlat = dlat_earth
-        dlon = dlon_earth
-        call grdcrd1(dlat,rlats,nlat,1)
-        call grdcrd1(dlon,rlons,nlon,1)
-     endif
+!       Convert observation location to radians
+        slats0= hdrmls(2)
+        slons0= hdrmls(3)
+        if(abs(slats0)>90._r_kind .or. abs(slons0)>r360) cycle read_loop4
+        if(slons0< zero) slons0=slons0+r360
+        if(slons0==r360) slons0=zero
+        dlat_earth_deg = slats0
+        dlon_earth_deg = slons0
+        dlat_earth = slats0 * deg2rad
+        dlon_earth = slons0 * deg2rad
 
-! convert observation time to relative time
-     idate5(1) = hdrmls(4)  !year
-     idate5(2) = hdrmls(5)  !month
-     idate5(3) = hdrmls(6)  !day
-     idate5(4) = hdrmls(7)  !hour
-     idate5(5) = hdrmls(8)  !minute
-     call w3fs21(idate5,nmind)
+        if(regional)then
+           call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
+           if(outside) cycle read_loop4
+        else
+           dlat = dlat_earth
+           dlon = dlon_earth
+           call grdcrd1(dlat,rlats,nlat,1)
+           call grdcrd1(dlon,rlons,nlon,1)
+        endif
 
-     t4dv=real((nmind-iwinbgn),r_kind)*r60inv
-     sstime=real(nmind,r_kind)
-     tdiff=(sstime-gstime)*r60inv
-     if (l4dvar.or.l4densvar) then
-        if (t4dv<zero .OR. t4dv>winlen) go to 140
-     else
-        if(abs(tdiff) > twind) go to 140
-     end if
+!    convert observation time to relative time
+        idate5(1) = hdrmls(4)  !year
+        idate5(2) = hdrmls(5)  !month
+        idate5(3) = hdrmls(6)  !day
+        idate5(4) = hdrmls(7)  !hour
+        idate5(5) = hdrmls(8)  !minute
+        call w3fs21(idate5,nmind)
+
+        t4dv=real((nmind-iwinbgn),r_kind)*r60inv
+        sstime=real(nmind,r_kind)
+        tdiff=(sstime-gstime)*r60inv
+        if (l4dvar.or.l4densvar) then
+           if (t4dv<zero .OR. t4dv>winlen) cycle read_loop4
+        else
+           if(abs(tdiff) > twind) cycle read_loop4
+        end if
 
 !    v2.2 data screening, only accept:
 !    Pressure range(PRLC):       215-0.02mb (lev5-27)
@@ -916,105 +916,105 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 !    status: Bit 1 in MLST represents data should not be used
 !    Note: in BUFR bits are defined from left to right as: 123456789...
 !    whereas in HDF5 (and the nasa document) bits are defined from right to left as: ...876543210
-     decimal=int(hdrmls(12))
-     call dec2bin(decimal,binary_mls,18)
-     if (binary_mls(1) == 1 ) goto 140
+        decimal=int(hdrmls(12))
+        call dec2bin(decimal,binary_mls,18)
+        if (binary_mls(1) == 1 ) cycle read_loop4
 
 !    v2.2 data, remove data when convergence>1.8 
 !    v3 NRT data,remove data when convergence>1.2 
-     if(mlsv==22) then
-        if(hdrmls(11) >= 1.8_r_kind) go to 140
-     else if(mlsv==30) then
-        if(hdrmls(11) >= 1.2_r_kind) go to 140
-     end if
+        if(mlsv==22) then
+           if(hdrmls(11) >= 1.8_r_kind) cycle read_loop4
+        else if(mlsv==30) then
+           if(hdrmls(11) >= 1.2_r_kind) cycle read_loop4
+        end if
 
-!    extract pressure, ozone mixing ratio and precision
-     call ufbrep(lunin,hdrmlsl,3,nloz,iret,mlstrl)
+!       extract pressure, ozone mixing ratio and precision
+        call ufbrep(lunin,hdrmlsl,3,nloz,iret,mlstrl)
 
-     do k=1,nloz
-        mlspres(k)=log(hdrmlsl(1,k)*0.001_r_kind)    ! mls pressure in Pa, coverted to log(cb)
-        mlsoz(k)=hdrmlsl(2,k)                     ! ozone mixing ratio in ppmv
-        mlsozpc(k)=hdrmlsl(3,k)                   ! ozone mixing ratio precision in ppmv
+        do k=1,nloz
+           mlspres(k)=log(hdrmlsl(1,k)*0.001_r_kind)    ! mls pressure in Pa, coverted to log(cb)
+           mlsoz(k)=hdrmlsl(2,k)                     ! ozone mixing ratio in ppmv
+           mlsozpc(k)=hdrmlsl(3,k)                   ! ozone mixing ratio precision in ppmv
 !       there is possibility that mlsoz in bufr is 0 or negative or larger than 100 which are not reasonable values.
-        if(mlsoz(k)<1.0e-8_r_kind .or. mlsoz(k)>100.0_r_kind ) then 
-          usage1(k)=1000._r_kind
+           if(mlsoz(k)<1.0e-8_r_kind .or. mlsoz(k)>100.0_r_kind ) then 
+             usage1(k)=1000._r_kind
 !         for v2.2 data, if this unreasonable value happens between 215mb (lev5) and 0.02mb (lev27), throw the whole profile
 !         for v2 NRT data, if this unreasonable value happens between 68mb (lev8) and 0.2mb (lev23), throw the whole profile
 !         for v3 NRT data, if this unreasonable value happens between 261mb (lev8) and 0.1mb (lev43), throw the whole profile
-          if(mlsv==22 .and. (k<=27 .and. k>=5)) go to 140
-          if(mlsv==20 .and. (k<=23 .and. k>=8)) go to 140
-          if(mlsv==30 .and. (k<=43 .and. k>=8)) go to 140
-        end if
-     end do
+             if(mlsv==22 .and. (k<=27 .and. k>=5)) cycle read_loop4
+             if(mlsv==20 .and. (k<=23 .and. k>=8)) cycle read_loop4
+             if(mlsv==30 .and. (k<=43 .and. k>=8)) cycle read_loop4
+           end if
+        end do
         
-     do k=1,nloz
-!       pressure range
-        if(mlsv==22) then
-          if(hdrmlsl(1,k)>21700._r_kind .or. hdrmlsl(1,k)<1._r_kind) usage1(k)=1000._r_kind
-        else if(mlsv==20) then
-          if(hdrmlsl(1,k)>6900._r_kind .or. hdrmlsl(1,k)<10._r_kind) usage1(k)=1000._r_kind
-        else if(mlsv==30) then
-          if(hdrmlsl(1,k)>26500._r_kind .or. hdrmlsl(1,k)<10._r_kind) usage1(k)=1000._r_kind
-        end if
-!       only positive precision accepted
-        if(hdrmlsl(3,k)<=0._r_kind) usage1(k)=1000._r_kind
-     end do
+        do k=1,nloz
+!          pressure range
+           if(mlsv==22) then
+             if(hdrmlsl(1,k)>21700._r_kind .or. hdrmlsl(1,k)<1._r_kind) usage1(k)=1000._r_kind
+           else if(mlsv==20) then
+             if(hdrmlsl(1,k)>6900._r_kind .or. hdrmlsl(1,k)<10._r_kind) usage1(k)=1000._r_kind
+           else if(mlsv==30) then
+             if(hdrmlsl(1,k)>26500._r_kind .or. hdrmlsl(1,k)<10._r_kind) usage1(k)=1000._r_kind
+           end if
+!          only positive precision accepted
+           if(hdrmlsl(3,k)<=0._r_kind) usage1(k)=1000._r_kind
+        end do
 
-!   status screening
-     hdrmls13=hdrmls(13)*0.1_r_kind
-     if(mlsv==22) then
-        if (abs(slats0)<30._r_kind) then
-           do k=1,nloz
-              if(hdrmlsl(1,k)>10100._r_kind .and. hdrmlsl(1,k)<21700._r_kind) then
-                 if(hdrmls13 <= 1.2_r_kind) usage1(k)=1000._r_kind
-              else
-                 if(hdrmls13 <= 0.4_r_kind) usage1(k)=1000._r_kind
-              endif
-           end do
-        else
+!      status screening
+        hdrmls13=hdrmls(13)*0.1_r_kind
+        if(mlsv==22) then
+           if (abs(slats0)<30._r_kind) then
+              do k=1,nloz
+                 if(hdrmlsl(1,k)>10100._r_kind .and. hdrmlsl(1,k)<21700._r_kind) then
+                    if(hdrmls13 <= 1.2_r_kind) usage1(k)=1000._r_kind
+                 else
+                    if(hdrmls13 <= 0.4_r_kind) usage1(k)=1000._r_kind
+                 endif
+              end do
+           else
+              if(hdrmls13 <= 0.4_r_kind) then
+                 do k=1,nloz
+                    usage1(k)=1000._r_kind
+                 end do
+              end if
+           end if
+        else if(mlsv==20) then
+           if(hdrmls13 <= 1.2_r_kind .or. hdrmls13 >= 3.0_r_kind) then
+              do k=1,nloz
+                 usage1(k)=1000._r_kind
+              end do
+           end if
+        else if(mlsv==30) then
            if(hdrmls13 <= 0.4_r_kind) then
               do k=1,nloz
                  usage1(k)=1000._r_kind
               end do
            end if
         end if
-     else if(mlsv==20) then
-        if(hdrmls13 <= 1.2_r_kind .or. hdrmls13 >= 3.0_r_kind) then
-           do k=1,nloz
-              usage1(k)=1000._r_kind
-           end do
-        end if
-     else if(mlsv==30) then
-        if(hdrmls13 <= 0.4_r_kind) then
-           do k=1,nloz
-              usage1(k)=1000._r_kind
-           end do
-        end if
-     end if
 
-     do k=1,nloz
+        do k=1,nloz
 
-        ndata=min(ndata+1,maxobs)
-        nodata=ndata
-!       if(ndata >= nloz) goto 140
+           ndata=min(ndata+1,maxobs)
+           nodata=ndata
+!          if(ndata >= nloz) cycle read_loop4
 
-        ozout(1,ndata)=rsat
-        ozout(2,ndata)=t4dv
-        ozout(3,ndata)=dlon               ! grid relative longitude
-        ozout(4,ndata)=dlat               ! grid relative latitude
-        ozout(5,ndata)=dlon_earth_deg     ! earth relative longitude (degrees)
-        ozout(6,ndata)=dlat_earth_deg     ! earth relative latitude (degrees)
-        ozout(7,ndata)=hdrmls(10)         ! solar zenith angle
+           ozout(1,ndata)=rsat
+           ozout(2,ndata)=t4dv
+           ozout(3,ndata)=dlon               ! grid relative longitude
+           ozout(4,ndata)=dlat               ! grid relative latitude
+           ozout(5,ndata)=dlon_earth_deg     ! earth relative longitude (degrees)
+           ozout(6,ndata)=dlat_earth_deg     ! earth relative latitude (degrees)
+           ozout(7,ndata)=hdrmls(10)         ! solar zenith angle
 
-        ozout(8,ndata)=usage1(k)          ! 
-        ozout(9,ndata)=mlspres(k)         ! mls pressure in log(cb)
-        ozout(10,ndata)=mlsozpc(k)        ! ozone mixing ratio precision in ppmv
-        ozout(11,ndata)=float(ipos(k))    ! pointer of obs level index in ozinfo.txt
-        ozout(12,ndata)=nloz              ! # of mls vertical levels
-        ozout(nreal+1,ndata)=mlsoz(k)     ! ozone mixing ratio in ppmv
-     end do
+           ozout(8,ndata)=usage1(k)          ! 
+           ozout(9,ndata)=mlspres(k)         ! mls pressure in log(cb)
+           ozout(10,ndata)=mlsozpc(k)        ! ozone mixing ratio precision in ppmv
+           ozout(11,ndata)=float(ipos(k))    ! pointer of obs level index in ozinfo.txt
+           ozout(12,ndata)=nloz              ! # of mls vertical levels
+           ozout(nreal+1,ndata)=mlsoz(k)     ! ozone mixing ratio in ppmv
+        end do
 
-     go to 140
+     end do read_loop4
 
 !    End of MLS bufr loop
 

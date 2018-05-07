@@ -4775,7 +4775,7 @@ DO i=1,3
    ENDDO
 ENDDO
 
-DO it=1,100 ! 4000       !  this should be ample
+ITER_LOOP:DO it=1,100 ! 4000       !  this should be ample
    DO l=1,3
       IF(wtriad(l)<bcmins)THEN
 	 k=kl(l)
@@ -4795,7 +4795,7 @@ DO it=1,100 ! 4000       !  this should be ample
             ENDDO
             wtriad(j)=wtriad(j)+wl*n
 	 ENDDO
-	 GOTO 300
+	 CYCLE ITER_LOOP
       ENDIF
    ENDDO
    kt=it		   !  report back how many iterations were needed
@@ -4818,8 +4818,7 @@ DO it=1,100 ! 4000       !  this should be ample
       wtriad(3)=wl
    ENDIF
    RETURN
-300 CONTINUE
-ENDDO
+ENDDO ITER_LOOP
 write(6,*)'GETTRI3:  ALL 40 ITERATIONS USED UP.  This should never happen'
 call stop2(68)
 END SUBROUTINE gettri3

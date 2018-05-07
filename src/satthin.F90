@@ -1192,17 +1192,19 @@ contains
     loop0: do 
     
        if(ir-l<m)then
-          do j=l+1,ir
+          loop: do j=l+1,ir
              indxt=indx(j)
              a=arr(indxt)
              do i=j-1,l,-1
-                if(arr(indx(i))<=a)goto 2
+                if(arr(indx(i))<=a)then   
+                   indx(i+1)=indxt
+                   cycle loop
+                end if
                 indx(i+1)=indx(i)
              end do
              i=l-1
-2            continue
              indx(i+1)=indxt
-          end do
+          end do loop
           if(jstack==0)return
           ir=istack(jstack)
           l=istack(jstack-1)
