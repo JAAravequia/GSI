@@ -277,6 +277,7 @@
 	m_srwNode.o \
 	m_sstNode.o \
 	m_stats.o \
+        m_stubTimer.o \
 	m_tNode.o \
 	m_tcamtNode.o \
 	m_tcpNode.o \
@@ -507,7 +508,6 @@
         stub_ensmod.o  \
         stub_pertmod.o  \
         stub_set_crtm_aerosol.o  \
-        stub_timermod.o  \
 	sub2fslab_mod.o \
 	support_2dvar.o \
 	tendsmod.o \

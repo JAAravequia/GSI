@@ -127,6 +127,10 @@ module mpeu_util
       use kinds, only: SP => r_single   ! default REAL kind
       use kinds, only: DP => r_double   ! DOUBLE PRECISION kind
 #endif
+
+      use, intrinsic :: iso_fortran_env, only: stdin  =>  input_unit
+      use, intrinsic :: iso_fortran_env, only: stdout => output_unit
+      use, intrinsic :: iso_fortran_env, only: stderr =>  error_unit
       implicit none
       private   ! except
 
@@ -149,19 +153,25 @@ module mpeu_util
       public :: lowercase               ! convert a string to all lower cases
       public :: basename
 
+      public :: mpiproc_perr
+      public :: mpiproc_die
+                interface mpiproc_perr; module procedure mpip_perr_; end interface
+                interface mpiproc_die ; module procedure mpip_pdie_; end interface
+
+
 #ifdef INCLUDE_MPOUT
       public :: stdout_open
       public :: stdout_close
       public :: stdout_lead
 #endif
 
-    integer,parameter :: STDIN = 5
-    integer,parameter :: STDOUT= 6
-#ifdef sysHP_UX
-    integer,parameter :: STDERR= 7
-#else
-    integer,parameter :: STDERR= 0
-#endif
+!    integer,parameter :: STDIN = 5
+!    integer,parameter :: STDOUT= 6
+!#ifdef sysHP_UX
+!    integer,parameter :: STDERR= 7
+!#else
+!    integer,parameter :: STDERR= 0
+!#endif
     interface luavail; module procedure luavail_; end interface
 
     interface die; module procedure &
@@ -640,6 +650,32 @@ subroutine mype_get_(mype,npes,who,comm)
     endif
 #endif
 end subroutine mype_get_
+
+subroutine mpip_pdie_(proc,mpiproc,ierror)
+!-- perr() then die()
+  implicit none
+  character(len=*),intent(in) :: proc
+  character(len=*),intent(in) :: mpiproc
+  integer(kind=IK),intent(in) :: ierror
+  call mpip_perr_(proc,mpiproc,ierror)
+  call        die(proc,trim(mpiproc)//"() error, ierror =",ierror)
+end subroutine mpip_pdie_
+
+subroutine mpip_perr_(proc,mpiproc,ierror)
+  use mpeu_mpif, only: MPI_MAX_ERROR_STRING
+  implicit none
+  character(len=*),intent(in) :: proc
+  character(len=*),intent(in) :: mpiproc
+  integer(kind=IK),intent(in) :: ierror
+
+  integer:: ln,ier
+#ifdef USE_MPI
+  character(len=MPI_MAX_ERROR_STRING) :: estr
+  call MPI_error_string(ierror,estr,ln,ier)
+  if(ier==0) call perr(proc,trim(mpiproc)//"() message:",estr(1:ln))
+#endif
+return
+end subroutine mpip_perr_
 
 function basename(path)
   implicit none
