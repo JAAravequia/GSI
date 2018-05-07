@@ -1,4 +1,4 @@
-module statevec
+module statevec_efsoi
 !$$$  module documentation block
 !
 ! module: statevec            read ensemble members, distribute each
@@ -431,4 +431,4 @@ if (nproc <= nanals-1 .and. allocated(qsat)) deallocate(qsat)
 deallocate(displs,scounts,rcounts)
 end subroutine statevec_cleanup
 
-end module statevec
+end module statevec_efsoi

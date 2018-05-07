@@ -335,7 +335,7 @@ if (.not. letkf_flag .or. lupd_obspace_serial) then
    enddo
    ! set up kd-trees for serial filter to search only the subset
    ! of gridpoints, obs to be updated on this processor..
-   if (numptsperproc(nproc+1) >= 3 .and. .not. lupd_obspace_serial) then
+   if (numptsperproc(nproc+1) >= 3 .and. .not. lupd_obspace_serial .and. .not. efsoi_flag) then
       kdtree_grid => kdtree2_create(grdloc_chunk,sort=.false.,rearrange=.true.)
    endif
    if (numobsperproc(nproc+1) >= 3) then

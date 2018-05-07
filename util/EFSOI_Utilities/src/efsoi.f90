@@ -1,8 +1,8 @@
-module fso
+module efsoi
 !$$$  module documentation block
 !
-! module: fso                          Update observation impact estimates
-!                                      with the EnSRF framework.
+! module: efsoi                          Update observation impact estimates
+!                                        with the EnSRF framework.
 !
 ! prgmmr: ota              org: np23                   date: 2011-12-01
 !
@@ -12,10 +12,10 @@ module fso
 !  Parallel processing is following the way of the serial EnSRF.
 !
 ! Public Subroutines:
-!  fso_update: performs the Forecast Sensitivity to Observations update within
-!              the EnSRF framework. The EnKF other than the serial EnSRF 
-!              (e.g. the LETKF) can be also used here (the method is 
-!              independent on the type of EnKF).
+!  efsoi_update: performs the Forecast Sensitivity to Observations update within
+!                the EnSRF framework. The EnKF other than the serial EnSRF 
+!                (e.g. the LETKF) can be also used here (the method is 
+!                independent on the type of EnKF).
 !
 ! Public Variables: None
 !
@@ -58,11 +58,11 @@ use enkf_obs_sensitivity, only: obsense_kin, obsense_dry, obsense_moist, covar_s
 implicit none
 
 private
-public :: fso_update
+public :: efsoi_update
 
 contains
 
-subroutine fso_update()
+subroutine efsoi_update()
 implicit none
 real(r_kind),allocatable,dimension(:) :: djdy_kin, djdy_dry, djdy_moist
 !!!!!!!!!!!EFSR
@@ -95,7 +95,7 @@ real(r_kind) :: ef_sum, eg_sum, efg_sum
 real(r_kind) :: eg_max, eg_min, ef_max, ef_min
 real(r_single) :: lnsig
 real(r_double) :: t1, t2, t3, t4, tbegin, tend
-! efso verification variables
+! efsoi verification variables
 real(r_single) :: kinetic_reduction, mass_reduction, shum_reduction
 real(r_single) :: true_kinetic_reduction, true_mass_reduction, true_shum_reduction
 real(r_single) :: true_dry_reduction, true_moist_reduction
@@ -106,7 +106,7 @@ integer(i_kind) :: ierr
 logical :: kdgrid
 
   ! Calculate true forecast error
-  ! reduction quantities (efso verification)
+  ! reduction quantities (efsoi verification)
   ! (e_t|0 - e_t|-6)*(e_t|0 + e_t|-6)
 !  kinetic_reduction = zero
 !  mass_reduction = zero
@@ -473,7 +473,7 @@ obsloop: do nob=1,nobstot
    end if
    t4 = t4 + mpi_wtime() - t1
    t1 = mpi_wtime()
-  ! PRINT *, covar_dry(nob), 'covar_dry in fso code'
+  ! PRINT *, covar_dry(nob), 'covar_dry in efsoi code'
   ! PRINT *, eg_max, eg_min, ef_max, ef_min 
    ! PRINT *, ferror_post_rlow(nob), ferror_post_rhigh(nob), ferror_prior_rlow(nob), ferror_prior_rhigh(nob)
 end do obsloop
@@ -538,5 +538,5 @@ deallocate(djdy_kin,djdy_dry,djdy_moist,taper_disgrd,uvwork,tpwork,qwork)!,uvwor
 deallocate(covar_dry_work)
 !deallocate(covar_sh_work,covar_mass_work,covar_kin_work,covar_dry_work,covar_moist_work)
 return
-end subroutine fso_update
-end module fso
+end subroutine efsoi_update
+end module efsoi

@@ -1,4 +1,4 @@
- module gridio_efso
+ module gridio_efsoi
 !$$$  module documentation block
 !
 ! module: gridio                     subroutines for reading and writing

@@ -25,6 +25,8 @@ module params
 !   2016-05-02  shlyaeva - Modification for reading state vector from table
 !   2016-11-29  shlyaeva - added nhr_state (hours for state fields to 
 !                          calculate Hx; nhr_anal is for IAU)
+!   2018-05-07  groff - Added ancillary parameters
+!                       for EFSOI calculations
 !
 ! attributes:
 !   language: f95
@@ -81,6 +83,8 @@ logical, public :: lupp
 integer(i_kind),public ::  iassim_order,nlevs,nanals,numiter,&
                            nlons,nlats,nbackgrounds,nstatefields
 integer(i_kind),public :: nsats_rad,nsats_oz,imp_physics
+integer(i_kind),public :: evalft
+integer(i_kind),public :: tar_minlev,tar_maxlev
 ! random seed for perturbed obs (deterministic=.false.)
 ! if zero, system clock is used.  Also used when
 ! iassim_order=1 (random shuffling of obs for serial assimilation).
@@ -95,6 +99,8 @@ real(r_single),public ::  lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh,&
 real(r_single),public :: analpertwtnh,analpertwtsh,analpertwttr,sprd_tol,saterrfact
 real(r_single),public ::  paoverpb_thresh,latbound,delat,p5delat,delatinv
 real(r_single),public ::  latboundpp,latboundpm,latboundmp,latboundmm
+real(r_single),public :: wmoist,adrate
+real(r_single),public :: tar_minlat,tar_maxlat,tar_minlon,tar_maxlon
 real(r_single),public :: covl_minfact, covl_efold
 ! if npefiles=0, diag files are read (concatenated pe* files written by gsi)
 ! if npefiles>0, npefiles+1 pe* files read directly
@@ -134,11 +140,8 @@ logical,public :: massbal_adjust = .false.
 integer(i_kind),public :: nvars = -1 
 
 ! if true generate additional input files
-! required for EFSO calculations
-logical,public :: fso_cycling = .false.
-
-! if true perform efso calculations
-logical,public :: fso_calculate = .false.
+! required for EFSOI calculations
+logical,public :: efsoi_cycling = .false.
 
 ! if true, use ensemble mean qsat in definition of
 ! normalized humidity analysis variable (instead of
@@ -153,7 +156,7 @@ logical,public :: lobsdiag_forenkf = .false.
 ! if true, use netcdf diag files, otherwise use binary diags
 logical,public :: netcdf_diag = .false.
 
-namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
+namelist /nam_enkf/datestring,gdatestring,datapath,iassim_order,nvars,&
                    covinflatemax,covinflatemin,deterministic,sortinc,&
                    corrlengthnh,corrlengthtr,corrlengthsh,&
                    varqc,huber,nlons,nlats,smoothparm,use_qsatensmean,&
@@ -171,7 +174,9 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    newpc4pred,nmmb,nhr_anal,nhr_state, fhr_assim,nbackgrounds,nstatefields, &
                    save_inflation,nobsl_max,lobsdiag_forenkf,netcdf_diag,&
                    letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
-                   fso_cycling,fso_calculate,imp_physics,lupp,write_spread_diag
+                   efsoi_cycling,imp_physics,lupp,write_spread_diag,&
+                   evalft,wmoist,adrate,andataname,tar_minlat,tar_maxlat,&
+                   tar_minlon,tar_maxlon,tar_minlev,tar_maxlev
 
 namelist /nam_wrf/arw,nmm,nmm_restart
 namelist /satobs_enkf/sattypes_rad,dsis
@@ -187,6 +192,7 @@ integer i,nb
 ! defaults
 ! time (analysis time YYYYMMDDHH)
 datestring = "0000000000" ! if 0000000000 will not be used.
+gdatestring = "0000000000" ! if 0000000000 will not be used.
 ! corrlength (length for horizontal localization in km)
 corrlengthnh = 2800
 corrlengthtr = 2800
@@ -260,6 +266,9 @@ nlats = 0
 nlevs = 0
 ! number of ensemble members
 nanals = 0
+! nvars is numer of 3d variables to update.
+! for hydrostatic models, typically 5 (u,v,T,q,ozone).
+nvars = 5
 ! background error variance for rad bias coeffs  (used in radbias.f90)
 ! default is (old) GSI value.
 ! if negative, bias coeff error variace is set to -biasvar/N, where
@@ -268,6 +277,23 @@ nanals = 0
 ! analysis error variance from the previous cycle is used instead
 ! (same as in the GSI).
 biasvar = 0.1_r_single
+
+! Evaluation FT for EFSOI
+evalft = 24
+! Weigt for moist total energy norm (0 when dry total energy)
+! applied in EFSOI calculation
+wmoist = 0.0_r_single
+! Advection coefficient for localization function
+adrate = 0.0_r_single
+! Name of analysis file at EFSOI evaluation time
+andataname=''
+! Target area for observation impact computation
+tar_minlat = -90.0_r_single
+tar_maxlat = 90.0_r_single
+tar_minlon = 0.0_r_single
+tar_maxlon = 360.0_r_single
+tar_minlev = 0
+tar_maxlev = 0
 
 ! factor to multiply sat radiance errors.
 saterrfact = 1._r_single
@@ -476,6 +502,23 @@ end if
 corrlengthnh = corrlengthnh * 1.e3_r_single/rearth
 corrlengthtr = corrlengthtr * 1.e3_r_single/rearth
 corrlengthsh = corrlengthsh * 1.e3_r_single/rearth
+
+if(efsoi_cycling) then
+   letkf_flag = .false.
+end if
+
+! convert targe area boundary into radians
+tar_minlat = tar_minlat * deg2rad
+tar_maxlat = tar_maxlat * deg2rad
+tar_minlon = tar_minlon * deg2rad
+tar_maxlon = tar_maxlon * deg2rad
+
+! use default vertical levels
+tar_maxlev = min(nlevs,tar_maxlev)
+if(tar_minlev < 1 .or. tar_maxlev < 1 .or. tar_maxlev < tar_minlev) then
+   tar_minlev = 1
+   tar_maxlev = nlevs
+end if
 
 ! this var is .false. until this routine is called.
 params_initialized = .true.
