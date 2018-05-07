@@ -1,6 +1,8 @@
 function (setDiscover)
   message("Setting paths for Discover")
 
+  set(host "Discover" CACHE INTERNAL "")
+  
   set(HDF5_USE_STATIC_LIBRARIES "OFF")
   set(COREPATH $ENV{COREPATH} PARENT_SCOPE )
   if( NOT DEFINED ENV{NETCDF_VER} )
