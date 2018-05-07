@@ -2075,12 +2075,11 @@ subroutine adjust_error(alon,alat,oberr,oberr2)
         if (rsign1*rsign2<zero_single) then
            oberr=oberr*oberrinflfact
            oberr2=oberr2*oberrinflfact
-           goto 100 
+           return 
         endif
      enddo 
   enddo 
-100 continue
-! print*,'in adjust_error: after, oberr,oberr2=',oberr,oberr2
+  return
 end subroutine adjust_error
 !****************************************************************
 subroutine relocsfcob(rlon8,rlat8,cobtypein,cstationin,kxin)
@@ -3084,7 +3083,7 @@ subroutine getwdir(ue,ve,wdir)
   wspd2=ue*ue+ve*ve
   if (wspd2.eq.zero) then
        wdir=zero 
-       goto 100
+       return
   endif
 
   if (ve.eq.zero) then
@@ -3098,7 +3097,7 @@ subroutine getwdir(ue,ve,wdir)
      if (ue.ge.zero .and. ve.le.zero ) wdir = angle + r360
   endif
 
-100 continue
+  return
 end subroutine getwdir
 !************************************************************
 !------------------------------------------------------

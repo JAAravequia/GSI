@@ -236,7 +236,9 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
         write(6,*)'READ_OZONE:  *** WARNING: unknown sbuv version type, subset=',subset
         write(6,*)' infile=',trim(infile), ', lunin=',lunin, ', obstype=',obstype,', jsatid=',jsatid
         write(6,*)' SKIP PROCESSING OF THIS SBUV FILE'
-        goto 170
+        call closbf(lunin)
+        close(lunin)
+        return
      endif
 
 !    Set dependent variables and allocate arrays
@@ -425,7 +427,10 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      else
         write(6,*)'READ_OZONE:  *** WARNING: unknown ozone data type, subset=',subset
         write(6,*)' infile=',trim(infile), ', lunin=',lunin, ', obstype=',obstype,', jsatid=',jsatid
-        goto 170
+        call closbf(lunin)
+        close(lunin)
+        call destroygrids
+        return
      endif
 
 !    Set dependent variables and allocate arrays
@@ -445,119 +450,119 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      ihh=0
      if(iret/=0) goto 160
 
-120  continue
-     call readsb(lunin,iret)
-     if (iret/=0) then
-        call readmg(lunin,subset,jdate,iret)
-        if (iret/=0) goto 150
-        goto 120
-     endif
+     obsloop: do 
+        call readsb(lunin,iret)
+        if (iret/=0) then
+           call readmg(lunin,subset,jdate,iret)
+           if (iret/=0) goto 150
+           cycle obsloop
+        endif
      
-!    extract header information
-     call ufbint(lunin,hdrozg,10,1,iret,ozgstr)
-     call ufbint(lunin,hdrozg2,5,1,iret,ozgstr2)
-     rsat = hdrozg(1); ksatid=rsat
+!       extract header information
+        call ufbint(lunin,hdrozg,10,1,iret,ozgstr)
+        call ufbint(lunin,hdrozg2,5,1,iret,ozgstr2)
+        rsat = hdrozg(1); ksatid=rsat
 
-     if(jsatid == 'metop-a')kidsat = 4
-     if(jsatid == 'metop-b')kidsat = 3
-     if(jsatid == 'metop-c')kidsat = 5
+        if(jsatid == 'metop-a')kidsat = 4
+        if(jsatid == 'metop-b')kidsat = 3
+        if(jsatid == 'metop-c')kidsat = 5
 
-     if (ksatid /= kidsat) go to 120
+        if (ksatid /= kidsat) cycle obsloop
 
-!    NESDIS does not put a flag for high SZA gome-2 data (SZA > 84 degree)
-     if ( hdrozg(9) > r84 ) go to 120
+!       NESDIS does not put a flag for high SZA gome-2 data (SZA > 84 degree)
+        if ( hdrozg(9) > r84 ) cycle obsloop
 
-     nmrecs=nmrecs+nloz+1
+        nmrecs=nmrecs+nloz+1
     
-!    Convert observation location to radians
-     slats0= hdrozg(2)
-     slons0= hdrozg(3)
-     if(abs(slats0)>90._r_kind .or. abs(slons0)>r360) go to 120  
-     if(slons0< zero) slons0=slons0+r360
-     if(slons0==r360) slons0=zero
-     dlat_earth_deg = slats0
-     dlon_earth_deg = slons0
-     dlat_earth = slats0 * deg2rad
-     dlon_earth = slons0 * deg2rad
+!       Convert observation location to radians
+        slats0= hdrozg(2)
+        slons0= hdrozg(3)
+        if(abs(slats0)>90._r_kind .or. abs(slons0)>r360) cycle obsloop
+        if(slons0< zero) slons0=slons0+r360
+        if(slons0==r360) slons0=zero
+        dlat_earth_deg = slats0
+        dlon_earth_deg = slons0
+        dlat_earth = slats0 * deg2rad
+        dlon_earth = slons0 * deg2rad
 
-     if(regional)then
-        call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
-        if(outside) go to 120
-     else
-        dlat = dlat_earth
-        dlon = dlon_earth
-        call grdcrd1(dlat,rlats,nlat,1)
-        call grdcrd1(dlon,rlons,nlon,1)
-     endif
+        if(regional)then
+           call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
+           if(outside) cycle obsloop
+        else
+           dlat = dlat_earth
+           dlon = dlon_earth
+           call grdcrd1(dlat,rlats,nlat,1)
+           call grdcrd1(dlon,rlons,nlon,1)
+        endif
      
-!    Convert observation time to relative time
-     idate5(1) = hdrozg(4)  !year
-     IDAYYR = hdrozg(5)     ! Day of year
-     JULIAN = -31739 + 1461 * (idate5(1) + 4799) /4 &
-              -3 * ((idate5(1) + 4899) / 100) / 4 + IDAYYR
-     call w3fs26(JULIAN,idate5(1),idate5(2),idate5(3),IDAYWK,IDAYYR)
-!    idate5(2) month
-!    idate5(3) day
-     idate5(4) = hdrozg(6)  !hour
-     idate5(5) = hdrozg(7)  !minute
-     call w3fs21(idate5,nmind)
-     t4dv=real((nmind-iwinbgn),r_kind)*r60inv
-     sstime=real(nmind,r_kind)
-     tdiff=(sstime-gstime)*r60inv
-     if (l4dvar.or.l4densvar) then
-        if(t4dv<zero .OR. t4dv>winlen) goto 120
-     else
-        if(abs(tdiff) > twind) goto 120
-     end if
+!       Convert observation time to relative time
+        idate5(1) = hdrozg(4)  !year
+        IDAYYR = hdrozg(5)     ! Day of year
+        JULIAN = -31739 + 1461 * (idate5(1) + 4799) /4 &
+                 -3 * ((idate5(1) + 4899) / 100) / 4 + IDAYYR
+        call w3fs26(JULIAN,idate5(1),idate5(2),idate5(3),IDAYWK,IDAYYR)
+!       idate5(2) month
+!       idate5(3) day
+        idate5(4) = hdrozg(6)  !hour
+        idate5(5) = hdrozg(7)  !minute
+        call w3fs21(idate5,nmind)
+        t4dv=real((nmind-iwinbgn),r_kind)*r60inv
+        sstime=real(nmind,r_kind)
+        tdiff=(sstime-gstime)*r60inv
+        if (l4dvar.or.l4densvar) then
+           if(t4dv<zero .OR. t4dv>winlen) cycle obsloop
+        else
+           if(abs(tdiff) > twind) cycle obsloop
+        end if
 
-!    extract total ozone
-     call ufbint(lunin,totoz,1,1,iret,'OZON')
+!       extract total ozone
+        call ufbint(lunin,totoz,1,1,iret,'OZON')
 
-     if (totoz > badoz ) goto 120
+        if (totoz > badoz ) cycle obsloop
 
-!    only accept flag 0 (good) data
-     toq=0._r_double
-     call ufbint(lunin,toq,1,1,iret,'GOMEEF')
-     if (toq/=0) goto 120
+!       only accept flag 0 (good) data
+        toq=0._r_double
+        call ufbint(lunin,toq,1,1,iret,'GOMEEF')
+        if (toq/=0) cycle obsloop
 
-!    only accept scan positions from 2 to 25
-     if( hdrozg2(5) < two .or. hdrozg2(5) > 25.0_r_kind ) goto 120
+!       only accept scan positions from 2 to 25
+        if( hdrozg2(5) < two .or. hdrozg2(5) > 25.0_r_kind ) cycle obsloop
 
-!    thin GOME data
-!    GOME data has bias when the satellite looks to the east. Consider QC out this data.
+!       thin GOME data
+!       GOME data has bias when the satellite looks to the east. Consider QC out this data.
 
-     if (thin4d) then
-        timedif = zero 
-     else 
-        timedif = r6*abs(tdiff)        ! range:  0 to 18
-     endif 
-     crit1 = 0.01_r_kind+timedif
-     call map2tgrid(dlat_earth,dlon_earth,dist1,crit1,itx,ithin,itt,iuse,sis)
-     if(.not. iuse) goto 120
+        if (thin4d) then
+           timedif = zero 
+        else 
+           timedif = r6*abs(tdiff)        ! range:  0 to 18
+        endif 
+        crit1 = 0.01_r_kind+timedif
+        call map2tgrid(dlat_earth,dlon_earth,dist1,crit1,itx,ithin,itt,iuse,sis)
+        if(.not. iuse) cycle obsloop
 
-     call finalcheck(dist1,crit1,itx,iuse)
-     if(.not. iuse) goto 120
+        call finalcheck(dist1,crit1,itx,iuse)
+        if(.not. iuse) cycle obsloop
 
-     ndata=ndata+1
-     nodata=ndata
+        ndata=ndata+1
+        nodata=ndata
 
-     ozout(1,itx)=rsat
-     ozout(2,itx)=t4dv
-     ozout(3,itx)=dlon               ! grid relative longitude
-     ozout(4,itx)=dlat               ! grid relative latitude
-     ozout(5,itx)=dlon_earth_deg     ! earth relative longitude (degrees)
-     ozout(6,itx)=dlat_earth_deg     ! earth relative latitude (degrees)
-     ozout(7,itx)=toq                ! total ozone error flag
-     ozout(8,itx)=hdrozg(9)          ! solar zenith angle
-     ozout(9,itx)=hdrozg(10)         ! solar azimuth angle
-     ozout(10,itx)=hdrozg2(1)        ! CLOUD AMOUNT IN SEGMENT
-     ozout(11,itx)=hdrozg2(2)        ! SNOW COVER
-     ozout(12,itx)=hdrozg2(3)        ! AEROSOL CONTAMINATION INDEX
-     ozout(13,itx)=hdrozg2(4)        ! ASCENDING/DESCENDING ORBIT QUALIFIER
-     ozout(14,itx)=hdrozg2(5)        ! scan position (fovn)
-     ozout(15,itx)=totoz
+        ozout(1,itx)=rsat
+        ozout(2,itx)=t4dv
+        ozout(3,itx)=dlon               ! grid relative longitude
+        ozout(4,itx)=dlat               ! grid relative latitude
+        ozout(5,itx)=dlon_earth_deg     ! earth relative longitude (degrees)
+        ozout(6,itx)=dlat_earth_deg     ! earth relative latitude (degrees)
+        ozout(7,itx)=toq                ! total ozone error flag
+        ozout(8,itx)=hdrozg(9)          ! solar zenith angle
+        ozout(9,itx)=hdrozg(10)         ! solar azimuth angle
+        ozout(10,itx)=hdrozg2(1)        ! CLOUD AMOUNT IN SEGMENT
+        ozout(11,itx)=hdrozg2(2)        ! SNOW COVER
+        ozout(12,itx)=hdrozg2(3)        ! AEROSOL CONTAMINATION INDEX
+        ozout(13,itx)=hdrozg2(4)        ! ASCENDING/DESCENDING ORBIT QUALIFIER
+        ozout(14,itx)=hdrozg2(5)        ! scan position (fovn)
+        ozout(15,itx)=totoz
        
-     goto 120
+     end do obsloop
 
 !    End of GOME bufr block
 
@@ -578,7 +583,10 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      else
         write(6,*)'READ_OZONE:  *** WARNING: unknown ozone data type, subset=',subset
         write(6,*)' infile=',trim(infile), ', lunin=',lunin, ', obstype=',obstype,', jsatid=',jsatid
-        goto 170
+        call closbf(lunin)
+        close(lunin)
+        call destroygrids
+        return
      endif
 
 !    Set dependent variables and allocate arraysn
@@ -732,7 +740,9 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      else
         write(6,*)'READ_OZONE:  *** WARNING: unknown ozone data type, subset=',subset
         write(6,*)' infile=',trim(infile), ', lunin=',lunin, ', obstype=',obstype,', jsatid=',jsatid
-        goto 170
+        call closbf(lunin)
+        close(lunin)
+        return
      endif
 
      if(iret/=0) goto 160
@@ -1048,7 +1058,6 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   end if
 
 ! Close unit to input data file
-170 continue
   call closbf(lunin)
   close(lunin)
 
