@@ -243,7 +243,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
 ! modulated ensemble.
            if (neigv > 0) then
               anal_ob_modens(:,nob) = anal_ob_modens(:,nob)-ensmean_ob(nob)
-              sprd_ob(nob) = sum(anal_ob_modens(:,nob)**2)/float(nanals*neigv- 1) !*analsim1
+              sprd_ob(nob) = sum(anal_ob_modens(:,nob)**2)*analsim1
            endif
         enddo
 !$omp end parallel do
@@ -267,7 +267,9 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
 
     if (nproc == 0) t1 = mpi_wtime()
     call mpi_bcast(ensmean_ob,nobs_tot,mpi_real4,0,mpi_comm_world,ierr)
+    print *, nproc, 'after first bcast'
     call mpi_bcast(sprd_ob,nobs_tot,mpi_real4,0,mpi_comm_world,ierr)
+    print *, nproc, 'after 2nd bcast'
     if (nproc == 0) then
         t2 = mpi_wtime()
         print *,'time to broadcast ob prior ensemble mean and spread = ',t2-t1
