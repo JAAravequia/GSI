@@ -316,8 +316,7 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
         if (version6) then
            solzen = hdroz(9)    ! solar zenith angle
            solzenp= hdroz(10)   ! profile solar zenith angle
-           if (ksatid==208 .and. dlat_earth<zero .and. solzenp > r76) cycle
-read_loop1
+           if (ksatid==208 .and. dlat_earth<zero .and. solzenp > r76) cycle read_loop1
         else if(version8)then
            solzen = hdroz(10)    ! solar zenith angle
         endif
@@ -682,8 +681,7 @@ read_loop1
      if (hdrozo2(7) >=25.0_r_double) cycle read_loop2
 
 !    remove the data in which the C-pair algorithm ((331 and 360 nm) is used. 
-     if (hdrozo2(8) == 3_r_double .or. hdrozo2(8) == 13_r_double) cycle
-read_loop2
+     if (hdrozo2(8) == 3_r_double .or. hdrozo2(8) == 13_r_double) cycle read_loop2
 
 
 !    thin OMI data
@@ -698,7 +696,7 @@ read_loop2
      if(.not. iuse)cycle read_loop2
  
      call finalcheck(dist1,crit1,itx,iuse)
-     if(.not. iuse)gcycle read_loop2
+     if(.not. iuse)cycle read_loop2
    
      ndata=ndata+1
      nodata=ndata
@@ -747,12 +745,14 @@ read_loop2
 
      if(iret/=0) goto 160
 
-180  continue
      call readsb(lunin,iret)
      if (iret/=0) then
-        call readmg(lunin,subset,jdate,iret)
-        if (iret/=0) goto 150
-        goto 180
+        do 
+           call readmg(lunin,subset,jdate,iret)
+           if (iret/=0) goto 150
+            call readsb(lunin,iret)
+            if(iret == 0) exit
+        end do
      endif
 
 !    Get # of vertical pressure levels nloz and MLS NRT data version which depends on nloz
