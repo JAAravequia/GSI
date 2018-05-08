@@ -5,21 +5,23 @@ set -ex
 cd ..
 pwd=$(pwd)
 
-target=$1
-dir_root=${2:-$pwd}
+dir_root=${1:-$pwd}
 
-if [ $target = wcoss ]; then
+if [[ -d /dcom && -d /hwrf ]] ; then
     . /usrx/local/Modules/3.2.10/init/sh
-    conf_target=nco
-elif [ $target = cray -o $target = wcoss_c ]; then
+    target=wcoss
+    . $MODULESHOME/init/sh
+elif [[ -d /cm ]] ; then
     . $MODULESHOME/init/sh
     conf_target=nco
-elif [ $target = theia ]; then
+    target=cray
+elif [[ -d /ioddev_dell ]]; then
+    . $MODULESHOME/init/sh
+    conf_target=nco
+    target=wcoss_d
+elif [[ -d /scratch3 ]] ; then
     . /apps/lmod/lmod/init/sh
-    conf_target=theia
-elif [ $target = gaea                      ]; then
-    . $MODULESHOME/init/sh
-    conf_target=gaea
+    target=theia
 else
     echo "unknown target = $target"
     exit 9
@@ -36,34 +38,32 @@ rm -rf $dir_root/build
 mkdir -p $dir_root/build
 cd $dir_root/build
 
-module purge
-if [ $target = gaea ]; then
-    unset _LMFILES_
-    unset _LMFILES_000
-    unset _LMFILES_001
-    unset LOADEDMODULES
-
-    #module use -a /opt/cray/ari/modulefiles
-    #module use -a /opt/cray/pe/ari/modulefiles
-    #module use -a /opt/cray/pe/craype/default/modulefiles
-    #source /etc/opt/cray/pe/admin-pe/site-config
-
-    module use $dir_modules
-    module load modulefile.global_gsi.$target
-    module load cmake
-    FV3GFS_BUILD='-DBUILD_UTIL=OFF -DBUILD_CORELIBS=OFF'
-else
-    FV3GFS_BUILD='-DBUILD_UTIL=ON'
-fi
-
-if [ $target = wcoss -o $target = cray -o $target = gaea ]; then
+if [ $target = wcoss -o $target = cray ]; then
+    module purge
     module load $dir_modules/modulefile.ProdGSI.$target
-else
+elif [ $target = theia ]; then
+    module purge
     source $dir_modules/modulefile.ProdGSI.$target
+elif [ $target = wcoss_d ]; then
+    module purge
+    source $dir_modules/modulefile.ProdGSI.$target
+    export NETCDF_INCLUDE=-I/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/include
+    export NETCDF_CFLAGS=-I/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/include
+    export NETCDF_LDFLAGS_CXX="-L/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/lib -lnetcdf -lnetcdf_c++"
+    export NETCDF_LDFLAGS_CXX4="-L/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/lib -lnetcdf -lnetcdf_c++4"
+    export NETCDF_CXXFLAGS=-I/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/include
+    export NETCDF_FFLAGS=-I/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/include
+    export NETCDF_ROOT=/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0
+    export NETCDF_LIB=/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/lib
+    export NETCDF_LDFLAGS_F="-L/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/lib -lnetcdff"
+    export NETCDF_LDFLAGS_C="-L/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/lib -lnetcdf"
+    export NETCDF_LDFLAGS="-L/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/lib -lnetcdff"
+    export NETCDF=/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0
+    export NETCDF_INC=/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/include
+    export NETCDF_CXX4FLAGS=-I/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/include
 fi
-module list
 
-cmake $DONOT_BUILD_CORE $FV3GFS_BUILD -DCMAKE_BUILD_TYPE=PRODUCTION ..
+cmake -DBUILD_UTIL=ON -DCMAKE_BUILD_TYPE=PRODUCTION ..
 
 make -j 8
 
