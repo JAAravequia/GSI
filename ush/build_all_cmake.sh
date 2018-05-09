@@ -7,7 +7,19 @@ pwd=$(pwd)
 
 dir_root=${1:-$pwd}
 
-if [[ -d /dcom && -d /hwrf ]] ; then
+if [[ -d /lustre && -d /ncrc ]] ; then
+    # We are on GAEA. 
+    if ( ! eval module help > /dev/null 2>&1 ) ; then
+        # We cannot simply load the module command.  The GAEA
+        # /etc/profile modifies a number of module-related variables
+        # before loading the module command.  Without those variables,
+        # the module command fails.  Hence we actually have to source
+        # /etc/profile here.
+	echo load the module command 1>&2
+        source /etc/profile
+    fi
+    target=gaea
+elif [[ -d /dcom && -d /hwrf ]] ; then
     . /usrx/local/Modules/3.2.10/init/sh
     target=wcoss
     . $MODULESHOME/init/sh
@@ -38,7 +50,26 @@ rm -rf $dir_root/build
 mkdir -p $dir_root/build
 cd $dir_root/build
 
-if [ $target = wcoss -o $target = cray ]; then
+UTIL=ON
+
+if [ $target = gaea ]; then
+    module purge
+    unset _LMFILES_
+    unset _LMFILES_000
+    unset _LMFILES_001
+    unset LOADEDMODULES
+
+    # Use this or Use set(CMAKE_SYSTEM_NAME "CrayLinuxEnvironment")
+    module use -a /opt/cray/ari/modulefiles
+    module use -a /opt/cray/pe/ari/modulefiles
+    module use -a /opt/cray/pe/craype/default/modulefiles
+    source /etc/opt/cray/pe/admin-pe/site-config
+
+    module load $dir_modules/modulefile.global_gsi.$target
+    module load $dir_modules/modulefile.ProdGSI.$target
+    module load cmake
+    UTIL=OFF
+elif [ $target = wcoss -o $target = cray ]; then
     module purge
     module load $dir_modules/modulefile.ProdGSI.$target
 elif [ $target = theia ]; then
@@ -63,7 +94,7 @@ elif [ $target = wcoss_d ]; then
     export NETCDF_CXX4FLAGS=-I/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/include
 fi
 
-cmake -DBUILD_UTIL=ON -DCMAKE_BUILD_TYPE=PRODUCTION ..
+cmake -DBUILD_UTIL=$UTIL -DCMAKE_BUILD_TYPE=PRODUCTION ..
 
 make -j 8
 
