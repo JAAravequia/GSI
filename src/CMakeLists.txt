@@ -117,6 +117,7 @@ cmake_minimum_required(VERSION 2.8)
     add_library(${GSILIB} STATIC ${REGIONAL_SRC} )
     set_target_properties(${GSILIB} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include/wrf")
     target_include_directories(${GSILIB} PUBLIC "${PROJECT_BINARY_DIR}/include/wrf")
+
     set_target_properties(${GSIEXEC} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
     set_target_properties(${GSIEXEC} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include/wrf")
   endif()
@@ -159,12 +160,15 @@ cmake_minimum_required(VERSION 2.8)
     add_dependencies(${GSILIB} ${GSISHAREDLIB} ${CORE_BUILT} )
     add_dependencies(${GSISHAREDLIB} ${bacio} ${CORE_BUILT} )
     add_dependencies(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${CORE_BUILT} )
+  else()
+    add_dependencies(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} )
   endif()
+
 # Specify all non-GSI libraries to be linked for the executable.
   set(GSIEXEC_EXTERNAL_LIBRARIES                                             ${WRF_LIBRARIES}
-         ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES} 
-         ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${CORE_LIBRARIES} ${CORE_BUILT}
-	 ${GSI_LDFLAGS} ${NCDIAG_LIBRARIES} ${ZLIB_LIBRARIES} ${wrflib}
+	${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES} 
+	${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${CORE_LIBRARIES} ${CORE_BUILT}
+	${GSI_LDFLAGS} ${NCDIAG_LIBRARIES} ${ZLIB_LIBRARIES} ${wrflib}
 	CACHE INTERNAL ""
   )
 
