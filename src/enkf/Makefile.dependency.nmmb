@@ -1,6 +1,7 @@
 covlocal.o : covlocal.f90 params.o 
 enkf.o : enkf.f90 rnorm.o gridinfo_nmmb.o radbias.o  params.o  enkf_obsmod.o statevec.o loadbal.o kdtree2.o covlocal.o mpisetup.o sorting.o
-enkf_main.o : enkf_main.f90 inflation.o  enkf.o letkf.o loadbal.o statevec.o gridinfo_nmmb.o innovstats.o enkf_obsmod.o mpisetup.o params.o 
+enkf_obs_sensitivity.o : enkf_obs_sensitivity.f90 kdtree2.o covlocal.o loadbal.o gridinfo_gfs.o enkf_obsmod.o params.o mpisetup.o
+enkf_main.o : enkf_main.f90 enkf_obs_sensitivity.o inflation.o letkf.o enkf.o loadbal.o statevec.o gridinfo_gfs.o innovstats.o enkf_obsmod.o mpisetup.o params.o
 fftpack.o : fftpack.f90 
 genqsat1.o : genqsat1.f90  
 gridinfo_nmmb.o : gridinfo_nmmb.f90  mpisetup.o enkf_obsmod.o params.o specmod.o reducedgrid.o netcdf_io_wrf.o

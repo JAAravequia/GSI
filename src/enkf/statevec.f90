@@ -470,7 +470,7 @@ if (nproc <= nanals-1) then
          grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb)*qsat(:,:,nb)
       enddo
    end if
-   call writegriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,grdin,no_inflate_flag)
+   call writegriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,grdin)
    if (nproc == 0) then
      t2 = mpi_wtime()
      print *,'time in writegriddata on root',t2-t1,'secs'
