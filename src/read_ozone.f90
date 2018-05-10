@@ -173,7 +173,7 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 
   real(r_double) totoz,hdrmls13
   integer(i_kind) :: k0
-  logical :: first
+  logical :: first,read_success
 
 ! MLS data version: mlsv=22 is version 2.2 standard data; 
 !                   mlsv=20 is v2 near-real-time data
@@ -255,13 +255,11 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
         ozstr='SAID CLAT CLON YEAR MNTH DAYS HOUR MINU SECO SOZA'
      endif
 
-     if(iret/=0) goto 160
-     
      read_loop1: do
         call readsb(lunin,iret)
         if (iret/=0) then
            call readmg(lunin,subset,jdate,iret)
-           if (iret/=0) goto 150
+           if (iret/=0) exit read_loop1
            cycle read_loop1
         endif
      
@@ -283,7 +281,7 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 
         if (ksatid /= kidsat) cycle read_loop1
 
-     nmrecs=nmrecs+nloz+1
+        nmrecs=nmrecs+nloz+1
     
 !       Convert observation location to radians
         slats0= hdroz(2)
@@ -413,8 +411,6 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 
   else if ( obstype == 'gome') then
 
-!    Make thinning grids
-     call makegrids(rmesh,ithin)
 
      open(lunin,file=trim(infile),form='unformatted')
      nmrecs=0
@@ -429,9 +425,11 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
         write(6,*)' infile=',trim(infile), ', lunin=',lunin, ', obstype=',obstype,', jsatid=',jsatid
         call closbf(lunin)
         close(lunin)
-        call destroygrids
         return
      endif
+
+!    Make thinning grids
+     call makegrids(rmesh,ithin)
 
 !    Set dependent variables and allocate arrays
      nreal=14
@@ -448,13 +446,12 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      iy=0
      idd=0
      ihh=0
-     if(iret/=0) goto 160
 
      obsloop: do 
         call readsb(lunin,iret)
         if (iret/=0) then
            call readmg(lunin,subset,jdate,iret)
-           if (iret/=0) goto 150
+           if (iret/=0) exit obsloop
            cycle obsloop
         endif
      
@@ -570,8 +567,6 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 ! Process OMI data
   else if ( obstype == 'omi') then
 
-!    Make thinning grids
-     call makegrids(rmesh,ithin)
 
      nmrecs=0
      open(lunin,file=trim(infile),form='unformatted')
@@ -585,9 +580,11 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
         write(6,*)' infile=',trim(infile), ', lunin=',lunin, ', obstype=',obstype,', jsatid=',jsatid
         call closbf(lunin)
         close(lunin)
-        call destroygrids
         return
      endif
+
+!    Make thinning grids
+     call makegrids(rmesh,ithin)
 
 !    Set dependent variables and allocate arraysn
      nreal=14
@@ -605,121 +602,117 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      im=0
      idd=0
      ihh=0
-     if(iret/=0) goto 160
 
      read_loop2: do
-     call readsb(lunin,iret)
-     if (iret/=0) then
-        call readmg(lunin,subset,jdate,iret)
-        if (iret/=0) goto 150
-        cycle read_loop2
-     endif
+        call readsb(lunin,iret)
+        if (iret/=0) then
+           call readmg(lunin,subset,jdate,iret)
+           if (iret/=0) exit read_loop2
+           cycle read_loop2
+        endif
 
-!    extract header information
-     call ufbint(lunin,hdrozo,10,1,iret,ozostr)
-     call ufbint(lunin,hdrozo2,8,1,iret,ozostr2)
-     rsat = hdrozo(1); ksatid=rsat
+!       extract header information
+        call ufbint(lunin,hdrozo,10,1,iret,ozostr)
+        call ufbint(lunin,hdrozo2,8,1,iret,ozostr2)
+        rsat = hdrozo(1); ksatid=rsat
 
-     if(jsatid == 'aura')kidsat = 785
-     if (ksatid /= kidsat) cycle read_loop2
+        if(jsatid == 'aura')kidsat = 785
+        if (ksatid /= kidsat) cycle read_loop2
 
 
-     nmrecs=nmrecs+nloz+1
+        nmrecs=nmrecs+nloz+1
 
 !    Convert observation location to radians
-     slats0= hdrozo(2)
-     slons0= hdrozo(3)
-     if(abs(slats0)>90._r_kind .or. abs(slons0)>r360) cycle read_loop2
-     if(slons0< zero) slons0=slons0+r360
-     if(slons0==r360) slons0=zero
-     dlat_earth_deg = slats0
-     dlon_earth_deg = slons0
-     dlat_earth = slats0 * deg2rad
-     dlon_earth = slons0 * deg2rad
+        slats0= hdrozo(2)
+        slons0= hdrozo(3)
+        if(abs(slats0)>90._r_kind .or. abs(slons0)>r360) cycle read_loop2
+        if(slons0< zero) slons0=slons0+r360
+        if(slons0==r360) slons0=zero
+        dlat_earth_deg = slats0
+        dlon_earth_deg = slons0
+        dlat_earth = slats0 * deg2rad
+        dlon_earth = slons0 * deg2rad
 
-     if(regional)then
-        call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
-        if(outside) cycle read_loop2
-     else
-        dlat = dlat_earth
-        dlon = dlon_earth
-        call grdcrd1(dlat,rlats,nlat,1)
-        call grdcrd1(dlon,rlons,nlon,1)
-     endif
+        if(regional)then
+           call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
+           if(outside) cycle read_loop2
+        else
+           dlat = dlat_earth
+           dlon = dlon_earth
+           call grdcrd1(dlat,rlats,nlat,1)
+           call grdcrd1(dlon,rlons,nlon,1)
+        endif
 
-! convert observation time to relative time
-     idate5(1) = hdrozo(4)  !year
-     idate5(2) = hdrozo(5)  !month
-     idate5(3) = hdrozo(6)  !day
-     idate5(4) = hdrozo(7)  !hour
-     idate5(5) = hdrozo(8)  !minute
-     call w3fs21(idate5,nmind)
+!    convert observation time to relative time
+        idate5(1) = hdrozo(4)  !year
+        idate5(2) = hdrozo(5)  !month
+        idate5(3) = hdrozo(6)  !day
+        idate5(4) = hdrozo(7)  !hour
+        idate5(5) = hdrozo(8)  !minute
+        call w3fs21(idate5,nmind)
 
-     t4dv=real((nmind-iwinbgn),r_kind)*r60inv
-     sstime=real(nmind,r_kind)
-     tdiff=(sstime-gstime)*r60inv
-     if (l4dvar.or.l4densvar) then
-        if (t4dv<zero .OR. t4dv>winlen) cycle read_loop2
-     else
-        if(abs(tdiff) > twind) cycle read_loop2
-     end if
+        t4dv=real((nmind-iwinbgn),r_kind)*r60inv
+        sstime=real(nmind,r_kind)
+        tdiff=(sstime-gstime)*r60inv
+        if (l4dvar.or.l4densvar) then
+           if (t4dv<zero .OR. t4dv>winlen) cycle read_loop2
+        else
+           if(abs(tdiff) > twind) cycle read_loop2
+        end if
 
-!    extract total ozone
-     call ufbint(lunin,totoz,1,1,iret,'OZON')
-     if (totoz > badoz ) cycle read_loop2
+!       extract total ozone
+        call ufbint(lunin,totoz,1,1,iret,'OZON')
+        if (totoz > badoz ) cycle read_loop2
 
-!    Bit 10 in TOQF represents row anomaly. 
-     decimal=int(hdrozo2(6))
-     call dec2bin(decimal,binary,14)
-     if (binary(10) == 1 ) cycle read_loop2
+!       Bit 10 in TOQF represents row anomaly. 
+        decimal=int(hdrozo2(6))
+        call dec2bin(decimal,binary,14)
+        if (binary(10) == 1 ) cycle read_loop2
 
-!    only accept flag 0 1, flag 2 is high SZA data which is not used for now
-     toq=hdrozo2(5)
-     if (toq/=0 .and. toq/=1) cycle read_loop2
-
-!    remove the bad scan position data: fovn beyond 25
-     if (hdrozo2(7) >=25.0_r_double) cycle read_loop2
-
-!    remove the data in which the C-pair algorithm ((331 and 360 nm) is used. 
-     if (hdrozo2(8) == 3_r_double .or. hdrozo2(8) == 13_r_double) cycle read_loop2
-
-
-!    thin OMI data
-
-     if (thin4d) then
-        timedif = zero 
-     else 
-        timedif = r6*abs(tdiff)        ! range:  0 to 18
-     endif 
-     crit1 = 0.01_r_kind+timedif
-     call map2tgrid(dlat_earth,dlon_earth,dist1,crit1,itx,ithin,itt,iuse,sis)
-     if(.not. iuse)cycle read_loop2
- 
-     call finalcheck(dist1,crit1,itx,iuse)
-     if(.not. iuse)cycle read_loop2
+!       only accept flag 0 1, flag 2 is high SZA data which is not used for now
+        toq=hdrozo2(5)
+        if (toq/=0 .and. toq/=1) cycle read_loop2
    
-     ndata=ndata+1
-     nodata=ndata
+!       remove the bad scan position data: fovn beyond 25
+        if (hdrozo2(7) >=25.0_r_double) cycle read_loop2
 
+!       remove the data in which the C-pair algorithm ((331 and 360 nm) is used. 
+        if (hdrozo2(8) == 3_r_double .or. hdrozo2(8) == 13_r_double) cycle read_loop2
 
+!       thin OMI data
 
-     ozout(1,itx)=rsat
-     ozout(2,itx)=t4dv
-     ozout(3,itx)=dlon               ! grid relative longitude
-     ozout(4,itx)=dlat               ! grid relative latitude
-     ozout(5,itx)=dlon_earth_deg     ! earth relative longitude (degrees)
-     ozout(6,itx)=dlat_earth_deg     ! earth relative latitude (degrees)
-     ozout(7,itx)=hdrozo2(5)         ! total ozone quality code
-     ozout(8,itx)=hdrozo(10)         ! solar zenith angle
-     ozout(9,itx)=binary(10)         ! row anomaly flag
-     ozout(10,itx)=hdrozo2(1)        !  cloud amount
-     ozout(11,itx)=hdrozo2(4)        !  vzan
-     ozout(12,itx)=hdrozo2(2)        !  aerosol index
-     ozout(13,itx)=hdrozo2(3)        !  ascending/descending
-     ozout(14,itx)=hdrozo2(7)        !  scan position
-     ozout(15,itx)=totoz
+        if (thin4d) then
+           timedif = zero 
+        else 
+           timedif = r6*abs(tdiff)        ! range:  0 to 18
+        endif 
+        crit1 = 0.01_r_kind+timedif
+        call map2tgrid(dlat_earth,dlon_earth,dist1,crit1,itx,ithin,itt,iuse,sis)
+        if(.not. iuse)cycle read_loop2
+ 
+        call finalcheck(dist1,crit1,itx,iuse)
+        if(.not. iuse)cycle read_loop2
+   
+        ndata=ndata+1
+        nodata=ndata
 
-!    End of loop over observations
+        ozout(1,itx)=rsat
+        ozout(2,itx)=t4dv
+        ozout(3,itx)=dlon               ! grid relative longitude
+        ozout(4,itx)=dlat               ! grid relative latitude
+        ozout(5,itx)=dlon_earth_deg     ! earth relative longitude (degrees)
+        ozout(6,itx)=dlat_earth_deg     ! earth relative latitude (degrees)
+        ozout(7,itx)=hdrozo2(5)         ! total ozone quality code
+        ozout(8,itx)=hdrozo(10)         ! solar zenith angle
+        ozout(9,itx)=binary(10)         ! row anomaly flag
+        ozout(10,itx)=hdrozo2(1)        !  cloud amount
+        ozout(11,itx)=hdrozo2(4)        !  vzan
+        ozout(12,itx)=hdrozo2(2)        !  aerosol index
+        ozout(13,itx)=hdrozo2(3)        !  ascending/descending
+        ozout(14,itx)=hdrozo2(7)        !  scan position
+        ozout(15,itx)=totoz
+
+!       End of loop over observations
      end do read_loop2
 
 ! End of OMI block
@@ -743,97 +736,105 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
         return
      endif
 
-     if(iret/=0) goto 160
+     read_success=.false.
+     if(iret==0) then
 
-     call readsb(lunin,iret)
-     if (iret/=0) then
-        do 
-           call readmg(lunin,subset,jdate,iret)
-           if (iret/=0) goto 150
-            call readsb(lunin,iret)
-            if(iret == 0) exit
-        end do
+        call readsb(lunin,iret)
+        if (iret/=0) then
+           do 
+              call readmg(lunin,subset,jdate,iret)
+              if (iret/=0) exit
+                 call readsb(lunin,iret)
+                 if(iret == 0)then
+                    read_success=.true.
+                    exit
+                 end if
+           end do
+        endif
      endif
 
-!    Get # of vertical pressure levels nloz and MLS NRT data version which depends on nloz
-     allocate(hdrmlsl(3,100))
-     call ufbrep(lunin,hdrmlsl,3,100,iret,mlstrl)
-     nloz=iret
-!    for NRT data, mlsv=20 or 30 depending on the nloz
-     mlsv=-999
-     if(nloz==37) then
-        if(index(sis,'mls22')/=0 ) then       !mls v2.2 data
-           mlsv=22
-        else if(index(sis,'mls20')/=0 ) then  !mls v2 nrt data
-           mlsv=20
+     if(read_success)then
+!       Get # of vertical pressure levels nloz and MLS NRT data version which depends on nloz
+        allocate(hdrmlsl(3,100))
+        call ufbrep(lunin,hdrmlsl,3,100,iret,mlstrl)
+        nloz=iret
+!       for NRT data, mlsv=20 or 30 depending on the nloz
+        mlsv=-999
+        if(nloz==37) then
+           if(index(sis,'mls22')/=0 ) then       !mls v2.2 data
+              mlsv=22
+           else if(index(sis,'mls20')/=0 ) then  !mls v2 nrt data
+              mlsv=20
+           end if
+        else if (nloz==55) then                !mls v3 nrt data
+           if (index(sis,'mls30')/=0 ) then
+              mlsv=30
+           endif
+        else
+           write(6,*) 'invalid vertical level number: ', nloz
+           write(6,*) '******STOP*******: error reading MLS vertical levels in read_ozone.f90'
+           call stop2(338)
         end if
-     else if (nloz==55) then                !mls v3 nrt data
-        if (index(sis,'mls30')/=0 ) then
-           mlsv=30
-        endif
-     else
-        write(6,*) 'invalid vertical level number: ', nloz
-        write(6,*) '******STOP*******: error reading MLS vertical levels in read_ozone.f90'
-        call stop2(338)
-     end if
-     deallocate(hdrmlsl)
+        deallocate(hdrmlsl)
 
-     write(6,*) 'READ_OZONE: MLS data version=',mlsv
-     write(6,*) 'READ_OZONE: MLS vertical level number=',nloz
+        write(6,*) 'READ_OZONE: MLS data version=',mlsv
+        write(6,*) 'READ_OZONE: MLS vertical level number=',nloz
 
-     if (mlsv<0) then
-        write(6,*) 'inconsistent MLS versions.  bufr nloz=',nloz,' obsinput sis= ',trim(sis)
-        write(6,*) '******STOP*******: error bufr and specified MLS versions'
-        call stop2(338)
-     end if
+        if (mlsv<0) then
+           write(6,*) 'inconsistent MLS versions.  bufr nloz=',nloz,' obsinput sis= ',trim(sis)
+           write(6,*) '******STOP*******: error bufr and specified MLS versions'
+           call stop2(338)
+        end if
 
-!    Allocate arrays
-     allocate(hdrmlsl(3,nloz))
-     allocate (mlspres(nloz))
-     allocate (mlsoz(nloz))
-     allocate (mlsozpc(nloz))
-     allocate(ipos(nloz))
-     allocate (usage1(nloz))
+!       Allocate arrays
+        allocate(hdrmlsl(3,nloz))
+        allocate (mlspres(nloz))
+        allocate (mlsoz(nloz))
+        allocate (mlsozpc(nloz))
+        allocate(ipos(nloz))
+        allocate (usage1(nloz))
  
-!    Set dependent variables and allocate arrays
-     nreal=12
-     nchanl=1
-     nozdat=nreal+nchanl
-     allocate (ozout(nozdat,maxobs))
+!       Set dependent variables and allocate arrays
+        nreal=12
+        nchanl=1
+        nozdat=nreal+nchanl
+        allocate (ozout(nozdat,maxobs))
 
-     do k=1,maxobs
-        do i=1,nozdat
-           ozout(i,k)=rmiss
+        do k=1,maxobs
+           do i=1,nozdat
+              ozout(i,k)=rmiss
+           end do
         end do
-     end do
 
-     ikx=0
-     k0=0
-     ipos=999
-     first=.false.
-     do k=1,jpch_oz
-        if( (.not. first) .and. index(nusis_oz(k),sis)/=0 ) then
-           k0=k
-           first=.true.
-        end if
-        if(first .and. index(nusis_oz(k),sis)/=0 ) then
-           ikx=ikx+1
-           ipos(ikx)=k0+ikx-1
-        end if
-     end do
+        ikx=0
+        k0=0
+        ipos=999
+        first=.false.
+        do k=1,jpch_oz
+           if( (.not. first) .and. index(nusis_oz(k),sis)/=0 ) then
+              k0=k
+              first=.true.
+           end if
+           if(first .and. index(nusis_oz(k),sis)/=0 ) then
+              ikx=ikx+1
+              ipos(ikx)=k0+ikx-1
+           end if
+        end do
 
-!    Reopen unit to bufr file
-     call closbf(lunin)
-     open(lunin,file=trim(infile),form='unformatted')
-     call openbf(lunin,'IN',lunin)
-     call datelen(10)
-     call readmg(lunin,subset,idate,iret)
+!       Reopen unit to bufr file
+        call closbf(lunin)
+        open(lunin,file=trim(infile),form='unformatted')
+        call openbf(lunin,'IN',lunin)
+        call datelen(10)
+        call readmg(lunin,subset,idate,iret)
+     end if
 
      read_loop4: do
+        if(.not. read_success) exit
         call readsb(lunin,iret)
         if (iret/=0) then
            call readmg(lunin,subset,jdate,iret)
-           if (iret/=0) goto 150
+           if (iret/=0) exit read_loop4
            cycle read_loop4
         endif
 
@@ -1020,41 +1021,39 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 
   endif
 
-! Jump here when eof detected
-150 continue
+  if(nmrecs > 0)then
+!    If gome or omi data, compress ozout array to thinned data
+     if (obstype=='omi' .or. obstype=='gome') then
+        kk=0
+        do k=1,itxmax
+           if (ozout(1,k)>zero) then
+              kk=kk+1
+              do i=1,nozdat
+                 ozout(i,kk)=ozout(i,k)
+              end do
+           endif
+        end do
+        ndata=kk
+        nodata=ndata
+     endif
 
-! If gome or omi data, compress ozout array to thinned data
-  if (obstype=='omi' .or. obstype=='gome') then
-     kk=0
-     do k=1,itxmax
-        if (ozout(1,k)>zero) then
-           kk=kk+1
-           do i=1,nozdat
-              ozout(i,kk)=ozout(i,k)
-           end do
-        endif
-     end do
-     ndata=kk
-     nodata=ndata
-  endif
-
-! Write header record and data to output file for further processing
-  call count_obs(ndata,nozdat,ilat,ilon,ozout,nobs)
-  write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
-  write(lunout) ((ozout(k,i),k=1,nozdat),i=1,ndata)
-  nread=nmrecs
+!    Write header record and data to output file for further processing
+     call count_obs(ndata,nozdat,ilat,ilon,ozout,nobs)
+     write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
+     write(lunout) ((ozout(k,i),k=1,nozdat),i=1,ndata)
+     nread=nmrecs
+   end if
 
 ! Deallocate local arrays
-160 continue
-  deallocate(ozout)
+  if(allocated(ozout))deallocate(ozout)
   if (obstype == 'sbuv2') deallocate(poz)
   if (index(obstype,'mls')/=0) then
-     deallocate(hdrmlsl)
-     deallocate(mlspres)
-     deallocate(mlsoz)
-     deallocate(mlsozpc)
-     deallocate(ipos)
-     deallocate(usage1)
+     if(allocated(hdrmlsl))deallocate(hdrmlsl)
+     if(allocated(mlspres))deallocate(mlspres)
+     if(allocated(mlsoz))deallocate(mlsoz)
+     if(allocated(mlsozpc))deallocate(mlsozpc)
+     if(allocated(ipos))deallocate(ipos)
+     if(allocated(usage1))deallocate(usage1)
   end if
 
 ! Close unit to input data file
