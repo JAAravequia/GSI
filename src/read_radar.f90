@@ -1694,7 +1694,7 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
      call openbf(lnbufr,'IN',lnbufr)
      call datelen(10)
      call readmg(lnbufr,subset,idate,iret)
-     if(iret/=0) then
+     if(iret==0) then
 
 !       Time offset
         call time_4dvar(idate,toff)
