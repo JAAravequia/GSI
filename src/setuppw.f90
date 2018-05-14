@@ -712,7 +712,7 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(17,ii) = dpw                ! total precipitable water obs (kg/m**2)
         rdiagbuf(18,ii) = ddiff              ! obs-ges used in analysis (kg/m**2)
         rdiagbuf(19,ii) = dpw-pwges          ! obs-ges w/o bias correction (kg/m**2) (future slot)
-        rdiagbuf(20,ii) = 1.e+10             ! ensemble ges spread (filled in by EnKF)
+        rdiagbuf(20,ii) = 1.e+10_r_single    ! ensemble ges spread (filled in by EnKF)
 
         ioff=ioff0
         if (lobsdiagsave) then
@@ -747,7 +747,7 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   subroutine contents_netcdf_diag_
 ! Observation class
   character(7),parameter     :: obsclass = '     pw'
-  real(r_single),parameter::     missing = -9.99e9
+  real(r_single),parameter::     missing = -9.99e9_r_single
   real(r_kind),dimension(miter) :: obsdiag_iuse
 
            call nc_diag_metadata("Station_ID",                    station_id              )

@@ -514,7 +514,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
      rdiagbuf(11,i)        = data(iuse,i)       ! data usage flag
      rdiagbuf(17,i)        = data(igps,i)       ! bending angle observation (radians)
      rdiagbuf(19,i)        = hob                ! model vertical grid (interface) if monotone grid
-     rdiagbuf(22,i)        = 1.e+10             ! spread (filled in by EnKF)
+     rdiagbuf(22,i)        = 1.e+10_r_kind      ! spread (filled in by EnKF)
 
      if(ratio_errors(i) > tiny_r_kind)  then ! obs inside model grid
 

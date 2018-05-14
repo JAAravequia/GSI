@@ -609,7 +609,7 @@ contains
   subroutine contents_netcdf_diag_
 ! Observation class
   character(7),parameter     :: obsclass = '    sst'
-  real(r_single),parameter::     missing = -9.99e9
+  real(r_single),parameter::     missing = -9.99e9_r_single
   real(r_kind),dimension(miter) :: obsdiag_iuse
            call nc_diag_metadata("Station_ID",              station_id             )
            call nc_diag_metadata("Observation_Class",       obsclass               )

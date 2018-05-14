@@ -146,9 +146,6 @@ $ncp $btable_uv           ./btable_uv
 
 # Copy ensemble data to $tmpdir
 list="cnvstat oznstat radstat"
-if [[ $exp == *"updat"* ]]; then
-   global_enkf_T62_datobs=/scratch3/BMC/gsienkf/ashlyaeva/CASES/global/sigmap/2014092912/obs/
-fi
 
 for type in $list; do
    $ncp $global_enkf_T62_datobs/${type}_${adate}_ensmean ./${type}_ensmean

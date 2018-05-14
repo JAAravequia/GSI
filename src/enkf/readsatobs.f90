@@ -520,8 +520,6 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
                hx(nobs) = x_obs(nobs) - data_chan2(n)%omgnbc
             ! run linearized Hx
             else
-
-
                vscale = 1._r_double
                call calc_linhx(hx_mean_nobc(nobs), state_d,       &
                              real(x_lat(nobs)*deg2rad,r_single),  &
@@ -865,7 +863,6 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
               dhx_dx_read%val = Observation_Operator_Jacobian_val(:,i)
               dhx_dx = dhx_dx_read
               t1 = mpi_wtime()
-
               vscale = 1._r_double
               call calc_linhx(hx_mean_nobc(iob), state_d,       &
                              real(x_lat(iob)*deg2rad,r_single),  &

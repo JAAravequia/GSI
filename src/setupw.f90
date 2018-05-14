@@ -1598,9 +1598,9 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            rdiagbuf(22,ii) = vob_e-vges_e  ! earth relative v obs-ges w/o bias correction (m/s) (future slot)
         end if
 
-        rdiagbuf(23,ii) = factw              ! 10m wind reduction factor
-        rdiagbuf(24,ii) = 1.e+10             ! u spread (filled in by EnKF)
-        rdiagbuf(25,ii) = 1.e+10             ! v spread (filled in by EnKF)
+        rdiagbuf(23,ii) = factw            ! 10m wind reduction factor
+        rdiagbuf(24,ii) = 1.e+10_r_single  ! u spread (filled in by EnKF)
+        rdiagbuf(25,ii) = 1.e+10_r_single  ! v spread (filled in by EnKF)
 
         ioff=ioff0
         if (lobsdiagsave) then
@@ -1654,7 +1654,6 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   subroutine contents_netcdf_diag_
 ! Observation class
   character(7),parameter     :: obsclass = '     uv'
-  real(r_kind),parameter::     missing = -9.99e9
   real(r_kind),dimension(miter) :: obsdiag_iuse
 
            call nc_diag_metadata("Station_ID",              station_id             )
