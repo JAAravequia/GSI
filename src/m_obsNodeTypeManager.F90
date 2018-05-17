@@ -65,6 +65,9 @@ module m_obsNodeTypeManager
 
   use obsmod, only: iobsType_pm10  =>  i_pm10_ob_type
   use obsmod, only: iobsType_cldch => i_cldch_ob_type
+
+  use obsmod, only: iobsType_swcp  => i_swcp_ob_type
+  use obsmod, only: iobsType_lwcp  => i_lwcp_ob_type
   use obsmod, only: iobsType_dbz   => i_dbz_ob_type
 
   use m_psNode   , only:    psNode !  1
@@ -103,7 +106,10 @@ module m_obsNodeTypeManager
   use m_lcbasNode, only: lcbasNode ! 31
   use m_pm10Node , only:  pm10Node ! 32
   use m_cldchNode, only: cldchNode ! 33
-  use m_dbzNode,   only: dbzNode ! 34
+
+  use m_swcpNode , only:  swcpNode ! 34
+  use m_lwcpNode , only:  lwcpNode ! 35
+  use m_dbzNode,   only:  dbzNode  ! 36
 
   use kinds, only: i_kind
   use m_obsNode, only: obsNode
@@ -161,7 +167,10 @@ module m_obsNodeTypeManager
   type(  lcbasNode), target, save::   lcbas_mold ! 31
   type(   pm10Node), target, save::    pm10_mold ! 32
   type(  cldchNode), target, save::   cldch_mold ! 33
-  type(  dbzNode),   target, save::   dbz_mold   ! 34
+
+  type(   swcpNode), target, save::    swcp_mold ! 34
+  type(   lwcpNode), target, save::    lwcp_mold ! 35
+  type(  dbzNode),   target, save::   dbz_mold   ! 36
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   character(len=*),parameter :: myname='m_obsNodeTypeManager'
 
@@ -238,6 +247,9 @@ function vname2index_(vname) result(index_)
 
   case("pm10" , "[pm10node]"); index_ = iobsType_pm10
   case("cldch","[cldchnode]"); index_ = iobsType_cldch
+
+  case("swcp" , "[swcpnode]"); index_ = iobsType_swcp
+  case("lwcp" , "[lwcpnode]"); index_ = iobsType_lwcp
   case("dbz","[dbznode]");     index_ = iobsType_dbz
 
   end select
@@ -296,7 +308,11 @@ function vmold2index_select_(mold) result(index_)
 
   type is( pm10Node); index_ = iobsType_pm10
   type is(cldchNode); index_ = iobsType_cldch
+
+  type is( swcpNode); index_ = iobsType_swcp
+  type is( lwcpNode); index_ = iobsType_lwcp
   type is(dbzNode); index_ = iobsType_dbz
+
   end select
 end function vmold2index_select_
 
@@ -347,7 +363,11 @@ function index2vmold_(i_obType) result(obsmold_)
 
   case(iobsType_pm10 ); obsmold_ =>    pm10_mold
   case(iobsType_cldch); obsmold_ =>   cldch_mold
+
+  case(iobsType_swcp ); obsmold_ =>    swcp_mold
+  case(iobsType_lwcp ); obsmold_ =>    lwcp_mold
   case(iobsType_dbz);   obsmold_ =>     dbz_mold
+
   end select
 end function index2vmold_
 

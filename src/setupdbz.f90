@@ -60,8 +60,11 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use m_obsLList, only: obsLList_appendNode
                      
   use hybrid_ensemble_parameters,only: l_hyb_ens
-  use obsmod, only: luse_obsdiag
+  use obsmod, only: luse_obsdiag, netcdf_diag, binary_diag, dirname, ianldate
   use obsmod, only: obs_diag ,doradaroneob,oneobddiff,oneobvalue
+  use nc_diag_write_mod, only: nc_diag_init, nc_diag_header, nc_diag_metadata, &
+       nc_diag_write, nc_diag_data2d
+  use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_get_dim,nc_diag_read_close
   use oneobmod, only: oneobtest
   use oneobmod, only: maginnov
   use oneobmod, only: magoberr
@@ -82,6 +85,8 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use obsmod, only   : if_model_dbz, inflate_obserr
   use setupdbz_lib, only:hx_dart,jqr_dart,jqs_dart,jqg_dart 
   use gridmod, only: wrf_mass_regional,nems_nmmb_regional 
+  use sparsearr, only: sparr2, new, size, writearray, fullarray
+  use state_vectors, only: nsdim
  
   implicit none
 ! Declare passed variables
@@ -149,7 +154,11 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) wrange
   integer(i_kind) numequal,numnotequal,kminmin,kmaxmax,istat
  
-  logical:: in_curbin, in_anybin,debugging
+  logical:: in_curbin, in_anybin,debugging,save_jacobian
+
+  type(sparr2) :: dhx_dx
+  real(r_single), dimension(nsdim) :: dhx_dx_array
+
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
   class(obsNode),pointer:: my_node
@@ -209,8 +218,8 @@ character(len=8) :: cpe
   if(conv_diagsave)then
      ii=izero
      nchar=1_i_kind
-     ioff0=25
-     nreal=25_i_kind                                                             
+     ioff0=25+2
+     nreal=27_i_kind                                                             
      if (lobsdiagsave) nreal=nreal+4*miter+1
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
   end if
@@ -639,25 +648,6 @@ character(len=8) :: cpe
 
         ii=ii+1
         rstation_id     = data(id,i)
-        cdiagbuf(ii)    = station_id         ! station id
-
-        rdiagbuf(1,ii)  = ictype(ikx)        ! observation type
-        rdiagbuf(2,ii)  = icsubtype(ikx)     ! observation subtype
-   
-        rdiagbuf(3,ii)  = data(ilate,i)      ! observation latitude (degrees)
-        rdiagbuf(4,ii)  = data(ilone,i)      ! observation longitude (degrees)
-        rdiagbuf(5,ii)  = data(ielev,i)      ! station elevation (meters)
-        rdiagbuf(6,ii)  = presw              ! observation pressure (hPa)
-        rdiagbuf(7,ii)  = data(ihgt,i)       ! observation height (meters)
-        rdiagbuf(8,ii)  = (dtime*r60)-time_offset  ! obs time (sec relative to analysis time)
-        rdiagbuf(9,ii)  = rmiss_single       ! input prepbufr qc or event mark
-        rdiagbuf(10,ii) = rmiss_single       ! setup qc or event mark
-        rdiagbuf(11,ii) = data(iuse,i)       ! read_prepbufr data usage flag
-        if(muse(i)) then
-           rdiagbuf(12,ii) = one             ! analysis usage flag (1=use, -1=not used)
-        else
-           rdiagbuf(12,ii) = -one
-        endif
         err_input = data(ier2,i)
         err_adjst = data(ier,i)
         if (ratio_errors*error>tiny_r_kind) then
@@ -671,44 +661,11 @@ character(len=8) :: cpe
         if (err_input>tiny_r_kind) errinv_input = one/err_input
         if (err_adjst>tiny_r_kind) errinv_adjst = one/err_adjst
         if (err_final>tiny_r_kind) errinv_final = one/err_final
-        rdiagbuf(13,ii) = rwgt                 ! nonlinear qc relative weight
-        rdiagbuf(14,ii) = errinv_input         ! prepbufr inverse obs error (dBZ)**-1
-        rdiagbuf(15,ii) = errinv_adjst         ! read_prepbufr inverse obs error (dBZ)**-1
-        rdiagbuf(16,ii) = errinv_final         ! final inverse observation error (dBZ)**-1
-        rdiagbuf(17,ii) = data(idbzob,i)       ! radar reflectivity observation (dBZ)
-        rdiagbuf(18,ii) = ddiff                ! obs-ges (dBZ)
-        rdiagbuf(19,ii) = data(idbzob,i)-rdBZ  ! obs-ges w/o bias correction (dBZ) (future slot)
-        rdiagbuf(20,ii)=data(iazm,i)*rad2deg   ! azimuth angle
-        rdiagbuf(21,ii)=data(itilt,i)*rad2deg  ! tilt angle
-        rdiagbuf(22,ii)=data(irange,i) !clt the range in km
-        rdiagbuf(23,ii)=data(idmiss2opt,i) !clt the range in km
-        rdiagbuf(24,ii)=data(19,i)
-        rdiagbuf(25,ii)=data(20,i)
-        if (lobsdiagsave) then
-            write(6,*)'wrong here, stop in setupdbz.f90 '
-            stop
-           ioff=23
-           do jj=1,miter
-              ioff=ioff+1
-              if (obsdiags(i_dbz_ob_type,ibin)%tail%muse(jj)) then
-                 rdiagbuf(ioff,ii) = one
-              else
-                 rdiagbuf(ioff,ii) = -one
-              endif
-           enddo
-           do jj=1,miter+1
-              ioff=ioff+1
-              rdiagbuf(ioff,ii) = obsdiags(i_dbz_ob_type,ibin)%tail%nldepart(jj)
-           enddo
-           do jj=1,miter
-              ioff=ioff+1
-              rdiagbuf(ioff,ii) = obsdiags(i_dbz_ob_type,ibin)%tail%tldepart(jj)
-           enddo
-           do jj=1,miter
-              ioff=ioff+1
-              rdiagbuf(ioff,ii) = obsdiags(i_dbz_ob_type,ibin)%tail%obssen(jj)
-           enddo
-        endif
+
+        if(binary_diag) call contents_binary_diag_
+        if(netcdf_diag) call contents_netcdf_diag_
+
+
      end if
   end do
 
@@ -911,6 +868,163 @@ character(len=8) :: cpe
      call stop2(999)
   endif
   end subroutine init_vars_
+
+  subroutine init_netcdf_diag_
+  character(len=80) string
+  character(len=128) diag_conv_file
+  integer(i_kind) ncd_fileid,ncd_nobs
+  logical append_diag
+  logical,parameter::verbose=.false.
+     write(string,900) jiter
+900  format('conv_dbz_',i2.2,'.nc4')
+     diag_conv_file=trim(dirname) // trim(string)
+
+     inquire(file=diag_conv_file, exist=append_diag)
+
+     if (append_diag) then
+        call nc_diag_read_init(diag_conv_file,ncd_fileid)
+        ncd_nobs = nc_diag_read_get_dim(ncd_fileid,'nobs')
+        call nc_diag_read_close(diag_conv_file)
+
+        if (ncd_nobs > 0) then
+           if(verbose) print *,'file ' // trim(diag_conv_file) // ' exists. Appending.  nobs,mype=',ncd_nobs,mype
+        else
+           if(verbose) print *,'file ' // trim(diag_conv_file) // ' exists but contains no obs.  Not appending. nobs,mype=',ncd_nobs,mype
+           append_diag = .false. ! if there are no obs in existing file, then do not try to append
+        endif
+     end if
+
+     call nc_diag_init(diag_conv_file, append=append_diag)
+
+     if (.not. append_diag) then ! don't write headers on append - the module will break?
+        call nc_diag_header("date_time",ianldate )
+        call nc_diag_header("Number_of_state_vars", nsdim          )
+     endif
+  end subroutine init_netcdf_diag_
+  subroutine contents_binary_diag_
+
+        cdiagbuf(ii)    = station_id         ! station id
+
+        rdiagbuf(1,ii)  = ictype(ikx)        ! observation type
+        rdiagbuf(2,ii)  = icsubtype(ikx)     ! observation subtype
+
+        rdiagbuf(3,ii)  = data(ilate,i)      ! observation latitude (degrees)
+        rdiagbuf(4,ii)  = data(ilone,i)      ! observation longitude (degrees)
+        rdiagbuf(5,ii)  = data(ielev,i)      ! station elevation (meters)
+        rdiagbuf(6,ii)  = presw              ! observation pressure (hPa)
+        rdiagbuf(7,ii)  = data(ihgt,i)       ! observation height (meters)
+        rdiagbuf(8,ii)  = (dtime*r60)-time_offset  ! obs time (sec relative to analysis time)
+        rdiagbuf(9,ii)  = rmiss_single       ! input prepbufr qc or event mark
+        rdiagbuf(10,ii) = rmiss_single       ! setup qc or event mark
+        rdiagbuf(11,ii) = data(iuse,i)       ! read_prepbufr data usage flag
+        if(muse(i)) then
+           rdiagbuf(12,ii) = one             ! analysis usage flag (1=use,-1=not used)
+        else
+           rdiagbuf(12,ii) = -one
+        endif
+
+        rdiagbuf(13,ii) = rwgt                 ! nonlinear qc relative weight
+        rdiagbuf(14,ii) = errinv_input         ! prepbufr inverse obs error (dBZ)**-1
+        rdiagbuf(15,ii) = errinv_adjst         ! read_prepbufr inverse obs error (dBZ)**-1
+        rdiagbuf(16,ii) = errinv_final         ! final inverse observation error (dBZ)**-1
+        rdiagbuf(17,ii) = data(idbzob,i)       ! radar reflectivity observation (dBZ)
+        rdiagbuf(18,ii) = ddiff                ! obs-ges (dBZ)
+        rdiagbuf(19,ii) = data(idbzob,i)-rdBZ  ! obs-ges w/o bias correction (dBZ) (future slot)
+        rdiagbuf(20,ii)=data(iazm,i)*rad2deg   ! azimuth angle
+        rdiagbuf(21,ii)=data(itilt,i)*rad2deg  ! tilt angle
+        rdiagbuf(22,ii)=data(irange,i) ! the range in km
+        rdiagbuf(23,ii)=data(idmiss2opt,i) ! the range in km
+
+        rdiagbuf(23,ii) = 1.e+10_r_single    ! ges ensemble spread (filled in EnKF)
+        rdiagbuf(24,ii) = 1.e+10_r_single    ! ges ensemble spread (filled in EnKF)
+
+        rdiagbuf(25,ii)=data(19,i)
+        rdiagbuf(26,ii)=data(20,i)
+        if (lobsdiagsave) then
+            write(6,*)'wrong here, stop in setupdbz.f90 '
+            stop
+           ioff=nreal
+           do jj=1,miter
+              ioff=ioff+1
+              if (obsdiags(i_dbz_ob_type,ibin)%tail%muse(jj)) then
+                 rdiagbuf(ioff,ii) = one
+              else
+                 rdiagbuf(ioff,ii) = -one
+              endif
+           enddo
+           do jj=1,miter+1
+              ioff=ioff+1
+              rdiagbuf(ioff,ii) = obsdiags(i_dbz_ob_type,ibin)%tail%nldepart(jj)
+           enddo
+           do jj=1,miter
+              ioff=ioff+1
+              rdiagbuf(ioff,ii) = obsdiags(i_dbz_ob_type,ibin)%tail%tldepart(jj)
+           enddo
+           do jj=1,miter
+              ioff=ioff+1
+              rdiagbuf(ioff,ii) = obsdiags(i_dbz_ob_type,ibin)%tail%obssen(jj)
+           enddo
+        endif
+        if (save_jacobian) then
+           call writearray(dhx_dx, rdiagbuf(ioff+1:nreal,ii))
+           ioff = ioff + size(dhx_dx)
+        endif
+
+  end subroutine contents_binary_diag_
+  subroutine contents_netcdf_diag_
+! Observation class
+  character(7),parameter     :: obsclass = '    dbz'
+  real(r_kind),dimension(miter) :: obsdiag_iuse
+           call nc_diag_metadata("Station_ID",              station_id          )
+           call nc_diag_metadata("Observation_Class",       obsclass            )
+           call nc_diag_metadata("Observation_Type",        ictype(ikx)         )
+           call nc_diag_metadata("Observation_Subtype",     icsubtype(ikx)      )
+           call nc_diag_metadata("Latitude",                sngl(data(ilate,i)) )
+           call nc_diag_metadata("Longitude",               sngl(data(ilone,i)) )
+           call nc_diag_metadata("Station_Elevation",       sngl(data(ielev,i)) )
+           call nc_diag_metadata("Pressure",                sngl(presw)         )
+           call nc_diag_metadata("Height",                  sngl(data(ihgt,i))  )
+           call nc_diag_metadata("Time",                    sngl(dtime-time_offset))
+           call nc_diag_metadata("Prep_QC_Mark",            sngl(zero)          )
+           call nc_diag_metadata("Prep_Use_Flag",           sngl(data(iuse,i))  )
+!          call nc_diag_metadata("Nonlinear_QC_Var_Jb",     var_jb   !          )
+           call nc_diag_metadata("Nonlinear_QC_Rel_Wgt",    sngl(rwgt)          )
+           if(muse(i)) then
+              call nc_diag_metadata("Analysis_Use_Flag",    sngl(one)           )
+           else
+              call nc_diag_metadata("Analysis_Use_Flag",    sngl(-one)          )
+           endif
+
+           call nc_diag_metadata("Errinv_Input",            sngl(errinv_input)  )
+           call nc_diag_metadata("Errinv_Adjust",           sngl(errinv_adjst)  )
+           call nc_diag_metadata("Errinv_Final",            sngl(errinv_final)  )
+
+           call nc_diag_metadata("Observation",             sngl(data(idbzob,i)) )
+           call nc_diag_metadata("Obs_Minus_Forecast_adjusted",   sngl(ddiff)   )
+           call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", sngl(data(idbzob,i)-rdBZ) )
+           call nc_diag_metadata("Horizontal_local",  data(19,i)                )
+           call nc_diag_metadata("Vertical_local",    data(20,i)                )
+
+           if (lobsdiagsave) then
+              do jj=1,miter
+                 if (obsdiags(i_dbz_ob_type,ibin)%tail%muse(jj)) then
+                       obsdiag_iuse(jj) =  one
+                 else
+                       obsdiag_iuse(jj) = -one
+                 endif
+              enddo
+
+              call nc_diag_data2d("ObsDiagSave_iuse",     obsdiag_iuse              )
+              call nc_diag_data2d("ObsDiagSave_nldepart", obsdiags(i_dbz_ob_type,ibin)%tail%nldepart )
+              call nc_diag_data2d("ObsDiagSave_tldepart", obsdiags(i_dbz_ob_type,ibin)%tail%tldepart )
+              call nc_diag_data2d("ObsDiagSave_obssen", obsdiags(i_dbz_ob_type,ibin)%tail%obssen   )
+           endif
+           if (save_jacobian) then
+              call fullarray(dhx_dx, dhx_dx_array)
+              call nc_diag_data2d("Observation_Operator_Jacobian", dhx_dx_array)
+           endif
+
+  end subroutine contents_netcdf_diag_
 
   subroutine final_vars_
     if(allocated(ges_z )) deallocate(ges_z )

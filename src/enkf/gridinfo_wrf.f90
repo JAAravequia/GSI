@@ -35,9 +35,8 @@ module gridinfo
   use constants, only: rearth_equator, omega, pi, deg2rad, zero, rad2deg,    &
                        rearth,max_varname_length
   use kinds,     only: i_kind, r_kind, r_single, i_long, r_double
-  use enkf_obsmod,    only: obloc, obloclat, obloclon, nobstot
   use params,    only: datapath, nlevs, nlons, nlats,           &
-                       arw, nmm, nbackgrounds, fgfileprefixes
+                       arw, nmm
   use mpisetup
   use netcdf_io
 
@@ -76,16 +75,19 @@ module gridinfo
   public :: cross2dot
   public :: dot2cross
   ! supported variable names in anavinfo
-  character(len=max_varname_length),public, dimension(15) :: cvars3d_supported = (/'u', 'v', 'tv', 'q', 'cw', 'w', 'ph', 'qr', 'qs', 'qg', 'qi', 'qni', 'qnr', 'qnc', 'dbz' /)
-  character(len=max_varname_length),public, dimension(2) :: cvars2d_supported = (/ 'pd', 'mu' /)
+  character(len=max_varname_length),public, dimension(18) :: vars3d_supported = (/'u', 'v', 'tv', 'q', 'cw', 'w', 'ph', 'qr', 'qs', 'qg', 'qi', 'qni', 'qnr', 'qnc', 'dbz', 'oz', 'tsen', 'prse' /)
+  character(len=max_varname_length),public, dimension(2)  :: vars2d_supported = (/ 'ps', 'sst' /)
 
 contains
 
-  subroutine getgridinfo()
+  subroutine getgridinfo(fileprefix, reducedgrid)
+  character(len=120), intent(in) :: fileprefix
+  logical, intent(in)            :: reducedgrid
+
     if (arw) then
-       call getgridinfo_arw()
+       call getgridinfo_arw(fileprefix)
     else
-       call getgridinfo_nmm()
+       call getgridinfo_nmm(fileprefix)
     end if
   end subroutine getgridinfo
 
@@ -104,54 +106,37 @@ contains
 
   !-------------------------------------------------------------------------
 
-  subroutine getgridinfo_arw()
+  subroutine getgridinfo_arw(fileprefix)
+    character(len=120), intent(in) :: fileprefix
 
     ! Define variables ingested from external file
-
     real,      dimension(:,:,:),  allocatable :: wrfarw_mu
     real,      dimension(:,:,:),  allocatable :: wrfarw_mub
     real,      dimension(:,:,:),  allocatable :: wrfarw_znu
 
    ! Define variables returned by subroutine
-
     real(r_kind),      dimension(:,:),    allocatable :: presslmn
     real(r_kind),      dimension(:),      allocatable :: spressmn
     
     ! Define variables computed within subroutine
-
     character(len=500)                                :: filename
     real,      dimension(:,:,:),  allocatable :: workgrid
-    real(r_kind)                                      :: radlon
-    real(r_kind)                                      :: radlat
-    real(r_kind)                                      :: dlon
-    real(r_kind)                                      :: dlat
-    real(r_kind)                                      :: recenter_xlat
-    real                                              :: recenter_dx
-    real(r_kind)                                      :: lonsgrdmin
-    real(r_kind)                                      :: lonsgrdmax
-    real(r_kind)                                      :: latsgrdmin
-    real(r_kind)                                      :: latsgrdmax
     integer                                           :: nlevsin
     integer                                           :: nlonsin
     integer                                           :: nlatsin
     integer                                           :: nn
     integer                                           :: ierr
-    integer                                           :: nvar
 
     ! Define variables required for netcdf I/O
-
     character(len=12)                                 :: varstringname
-    character(len=50)                                 :: attstringname
     character(len=20), dimension(3)                   :: dimstring
     integer,           dimension(3)                   :: dims
 
     ! Define counting variables 
-    
     integer                                           :: i, j, k
-    integer                                           :: count, nob
+    integer                                           :: count
 
     !======================================================================
-
     if(.not. arw .and. .not. nmm) then
        ! Print message to user
        write(6,*) '!!! USER !!! You have not defined the logical variables appropriately which '
@@ -159,342 +144,225 @@ contains
        write(6,*) '             within the namelist. Aborting routine.'
 
        ! Exit routine
-
        call stop2(22)
  
     end if ! if(.not. arw .and. .not. nmm)
-
-
     ! Define local values and prepare for array dimension definitions
-
     dimstring(1) = "west_east"
     dimstring(2) = "south_north"
     dimstring(3) = "bottom_top"
 
     ! Build the ensemble mean filename expected by routine
-
-    filename = trim(adjustl(datapath))//trim(adjustl(fgfileprefixes(nbackgrounds/2+1)))//"ensmean"
+    filename = trim(adjustl(datapath))//trim(adjustl(fileprefix))//"ensmean"
 
     ! Obtain unstaggered grid dimensions from ingested variable file
-
     call netcdfdimension(filename,3,dimstring,dims)
 
     ! Define array dimension structure type
-
     dimensions = griddimensions(dims(1),dims(2),dims(3))
 
     ! Compute all variables required by subsequent routines
-
     npts = dimensions%xdim*dimensions%ydim
     nlevsin = dimensions%zdim
     nlonsin = dimensions%xdim
     nlatsin = dimensions%ydim
 
     !----------------------------------------------------------------------
-
     ! Perform sanity and error checks for variable dimensions; proceed
     ! accordingly
-
     if (nlons .ne. nlonsin) then
-       
-       ! Print message to user
-
        write(6,*) 'Error reading input file in gridinfo...' 
        write(6,*) '      nlons ingested from file = ', nlonsin
        write(6,*) '      nlons specified in namelist = ', nlons
        write(6,*) 'Failed in subroutine getgridinfo_arw; Aborting!'
 
        ! Exit routine
-
        call stop2(22)
-
     end if ! if (nlons .ne. nlonsin)
 
-    ! Perform sanity and error checks for variable dimensions; proceed
-    ! accordingly
-
     if (nlats .ne. nlatsin) then
-
-       ! Print message to user
-
        write(6,*) 'Error reading input file in gridinfo...' 
        write(6,*) '      nlats ingested from file = ', nlatsin
        write(6,*) '      nlats specified in namelist = ', nlats
        write(6,*) 'Failed in subroutine getgridinfo_arw; Aborting!'
 
        ! Exit routine
-
        call stop2(22)
-
     end if ! if (nlats .ne. nlatsin)
 
-    ! Perform sanity and error checks for variable dimensions; proceed
-    ! accordingly
-
     if (nlevs .ne. nlevsin) then
-
-       ! Print message to user
-
        write(6,*) 'Error reading input file in gridinfo...' 
        write(6,*) '      nlevs ingested from file = ', nlevsin
        write(6,*) '      nlevs specified in namelist = ', nlevs
        write(6,*) 'Failed in subroutine getgridinfo_arw; Aborting!'
 
        ! Exit routine
-
        call stop2(22)
-
     end if ! if (nlevs .ne. nlevsin)
 
     !----------------------------------------------------------------------
-
     ! Compute local variable; number of model levels plus surface
     ! (levels at which ens. mean log pressure defined for localization
     ! via array logp)
-
     nlevs_pres=dimensions%zdim+1
 
     ! Allocate memory for global arrays
-
     if(.not. allocated(lonsgrd)) allocate(lonsgrd(npts))
     if(.not. allocated(latsgrd)) allocate(latsgrd(npts))
     if(.not. allocated(logp))    allocate(logp(npts,nlevs_pres))
 
     !======================================================================
-
     ! Begin: Ingest all grid variables required for EnKF routines and
     ! perform necessary conversions; the data is only ingested on the
     ! master node and then subsequently passed to the slave nodes
-
     !----------------------------------------------------------------------
-
     if (nproc  .eq. 0) then ! only read data on root.
-
        ! Allocate memory for all global arrays
-
        if(.not. allocated(presslmn)) allocate(presslmn(npts,nlevs))
        if(.not. allocated(spressmn)) allocate(spressmn(npts))
-
        ! Allocate memory for all local arrays
-
        if(.not. allocated(wrfarw_mu))                                       &
             & allocate(wrfarw_mu(dimensions%xdim,dimensions%ydim,1))
        if(.not. allocated(wrfarw_mub))                                      &
             & allocate(wrfarw_mub(dimensions%xdim,dimensions%ydim,1))
        if(.not. allocated(wrfarw_znu))                                      &
             & allocate(wrfarw_znu(1,1,dimensions%zdim))
-
-    !----------------------------------------------------------------------
-
-
        ! Allocate memory for local variable grid
-
        if(.not. allocated(workgrid)) allocate(workgrid(dimensions%xdim,  &
             & dimensions%ydim,1))
 
        ! Ingest variable from external file
-
        varstringname = 'XLONG'
        call readnetcdfdata(filename,workgrid,varstringname,              &
             & dimensions%xdim,dimensions%ydim,1)
 
        ! Initialize counting variable
-
        count = 1
 
        ! Loop through meridional horizontal coordinate
-
        do j = 1, dimensions%ydim
-
           ! Loop through zonal horizontal coordinate
-
           do i = 1, dimensions%xdim
-       
              ! Convert from degrees to radians and update the
              ! global longitude array
-
              lonsgrd(count) = workgrid(i,j,1)*deg2rad
           
-             ! Update counting variable
-
              count = count + 1
-
           end do ! do i = 1, dimensions%xdim
-
        end do ! do j = 1, dimensions%ydim
 
        ! Deallocate memory for local variable grid
-
        if(allocated(workgrid)) deallocate(workgrid)
 
        ! Allocate memory for local variable grid
-
        if(.not. allocated(workgrid)) allocate(workgrid(dimensions%xdim,  &
             & dimensions%ydim,1))
        
        ! Ingest variable from external file
-
        varstringname = 'XLAT'
        call readnetcdfdata(filename,workgrid,varstringname,              &
             & dimensions%xdim,dimensions%ydim,1)
 
        ! Initialize counting variable
-
        count = 1
 
        ! Loop through meridional horizontal coordinate
-
        do j = 1, dimensions%ydim
-
           ! Loop through zonal horizontal coordinate
-
           do i = 1, dimensions%xdim
-       
              ! Convert from degrees to radians and update the
              ! global latitude array
-             
              latsgrd(count) = workgrid(i,j,1)*deg2rad
 
-             ! Update counting variable
-
              count = count + 1
-
           end do ! do i = 1, dimensions%xdim
-
        end do ! do j = 1, dimensions%ydim
 
        ! Deallocate memory for local variable grid
-
        if(allocated(workgrid)) deallocate(workgrid)
 
     !----------------------------------------------------------------------
        
        ! Ingest the model vertical (eta) levels from the external file
-
        varstringname = 'ZNU'
        call readnetcdfdata(filename,wrfarw_znu,varstringname,1,1,           &
             & dimensions%zdim)
 
        ! Ingest the model perturbation dry air mass from the external
        ! file
-
        varstringname = 'MU'
        call readnetcdfdata(filename,wrfarw_mu,varstringname,                &
             & dimensions%xdim,dimensions%ydim,1)
 
        ! Ingest the model base state dry air mass from the external
        ! file
-
        varstringname = 'MUB'
        call readnetcdfdata(filename,wrfarw_mub,varstringname,               &
             & dimensions%xdim,dimensions%ydim,1)
 
        ! Allocate memory for local variable grid
-
        if(.not. allocated(workgrid)) allocate(workgrid(1,1,1))
 
        ! Ingest variable from external file
-
        varstringname = 'P_TOP'
        call readnetcdfdata(filename,workgrid,varstringname,1,1,1)
     
        ! Define local variable
-
        ptop = workgrid(1,1,1)
 
        ! Rescale pressure from Pa to hPa
-
        ptop = ptop/100.0
 
        ! Deallocate memory for local variable grid
-       
        if(allocated(workgrid)) deallocate(workgrid)
 
     !----------------------------------------------------------------------
 
        ! Initialize counting variable
-
        count = 1
 
        ! Loop through meridional horizontal coordinate
-
        do j = 1, dimensions%ydim
-
           ! Loop through zonal horizontal coordinate
-
           do i = 1, dimensions%xdim
-          
              ! Convert from Pa to hPa and update the global surface
              ! pressure array
-
              spressmn(count) = (wrfarw_mu(i,j,1) + &
                                 wrfarw_mub(i,j,1) + ptop*100.0)/100.0
 
-             ! Update counting variable
-
              count = count + 1
-             
           end do ! do i = 1, dimensions%xdim
-          
        end do ! do j = 1, dimensions%ydim
 
     !----------------------------------------------------------------------
 
-
-       ! Initialize counting variable
-
-       nn = 0
-
        ! Loop through vertical coordinate
-
        do k = 1, dimensions%zdim
-       
-          ! Update counting variable
-
-          nn = nn + 1
-    
           ! Initialize counting variable
-       
           count = 1
-       
           ! Loop through meridional horizontal coordinate
-          
           do j = 1, dimensions%ydim
-          
              ! Loop through zonal horizontal coordinate
-          
              do i = 1, dimensions%xdim
-             
                 ! Compute the pressure within the respective layer
                 ! (dry hydrostatic pressure)
-             
                 presslmn(count,k) = wrfarw_znu(1,1,k)*(wrfarw_mu(i,j,1) +   &
                      & wrfarw_mub(i,j,1)) + ptop*100.0
              
                 ! Rescale pressure from Pa to hPa
-             
                 presslmn(count,k) = presslmn(count,k)/100.0
              
                 ! Compute the log of the pressure within the
                 ! respective layer
-             
                 logp(count,k) = -log(presslmn(count,k))
 
-                ! Update counting variable
-
                 count = count + 1
-
              end do ! do i = 1, dimensions%xdim
-       
           end do ! do j = 1, dimensions%ydim
-
        end do ! do k = 1, dimensions%zdim
 
        ! Compute local variable
-
        logp(:,nlevs_pres) = -log(spressmn(:))
-
-       ! Print message to user
 
        write(6,*) 'Surface pressure (spressmn) min/max range:',             &
             & minval(spressmn),maxval(spressmn)
@@ -502,7 +370,6 @@ contains
     !----------------------------------------------------------------------
 
        ! Deallocate memory for all local arrays
-
        if(allocated(wrfarw_mu))  deallocate(wrfarw_mu)
        if(allocated(wrfarw_mub)) deallocate(wrfarw_mub)
        if(allocated(wrfarw_znu)) deallocate(wrfarw_znu)
@@ -522,7 +389,6 @@ contains
     !======================================================================
 
     ! Broadcast all common variables these out to all nodes
-
     call MPI_Bcast(logp,npts*nlevs_pres,mpi_real4,0,MPI_COMM_WORLD,ierr)
     call MPI_Bcast(lonsgrd,npts,mpi_real4,0,MPI_COMM_WORLD,ierr)
     call MPI_Bcast(latsgrd,npts,mpi_real4,0,MPI_COMM_WORLD,ierr)
@@ -530,28 +396,17 @@ contains
 
     !----------------------------------------------------------------------
 
-
     ! Allocate memory for local variable
-
     if(.not. allocated(gridloc)) allocate(gridloc(3,npts))
 
     ! Loop through each grid coordinate and perform the coordinate
     ! transform for regular simulation domains 
 
     do nn = 1, npts
-
-       ! Compute local variable
-
+       ! Compute local variables
        gridloc(1,nn) = cos(latsgrd(nn))*cos(lonsgrd(nn))
-
-       ! Compute local variable
-
        gridloc(2,nn) = cos(latsgrd(nn))*sin(lonsgrd(nn))
-
-       ! Compute local variable
-
        gridloc(3,nn) = sin(latsgrd(nn))
-
     end do ! do nn = 1, npts
 
   end subroutine getgridinfo_arw
@@ -567,10 +422,10 @@ contains
 
   !-------------------------------------------------------------------------
 
-  subroutine getgridinfo_nmm()
+  subroutine getgridinfo_nmm(fileprefix)
+    character(len=120), intent(in) :: fileprefix
 
     ! Define variables ingested from external file
-
     real,      dimension(:,:,:),  allocatable :: wrfnmm_eta
     real,      dimension(:,:,:),  allocatable :: wrfnmm_pd
     real,      dimension(:,:,:),  allocatable :: wrfnmm_pdtop
@@ -578,37 +433,31 @@ contains
     real,      dimension(:,:,:),  allocatable :: wrfnmm_aeta1
     real,      dimension(:,:,:),  allocatable :: wrfnmm_aeta2
 
-   ! Define variables returned by subroutine
-
+    ! Define variables returned by subroutine
     real(r_kind),      dimension(:,:),    allocatable :: presslmn
     real(r_kind),      dimension(:),      allocatable :: spressmn
     
     ! Define variables computed within subroutine
-
     character(len=500)                                :: filename
-    real,      dimension(:,:,:),  allocatable :: workgrid
+    real,      dimension(:,:,:),  allocatable         :: workgrid
     integer                                           :: nlevsin
     integer                                           :: nlonsin
     integer                                           :: nlatsin
     integer                                           :: nn
     integer                                           :: ierr
-    integer                                           :: nvar
 
     ! Define variables required for netcdf I/O
-
     character(len=12)                                 :: varstringname
     character(len=20), dimension(3)                   :: dimstring
     integer,           dimension(3)                   :: dims
 
     ! Define counting variables 
-    
     integer                                           :: i, j, k
     integer                                           :: count
 
     !======================================================================
 
     if(.not. arw .and. .not. nmm) then
-       ! Print message to user
        write(6,*) '!!! USER !!! You have not defined the logical variables appropriately which '
        write(6,*) '             state that you are using the WRF ARW or NMM dynamical cores    '
        write(6,*) '             within the namelist. Aborting routine.'
@@ -616,27 +465,21 @@ contains
        call stop2(22)
     end if ! if(.not. arw .and. .not. nmm)
 
-
     ! Define local values and prepare for array dimension definitions
-
     dimstring(1) = "west_east"
     dimstring(2) = "south_north"
     dimstring(3) = "bottom_top"
 
     ! Build the ensemble mean filename expected by routine
-
-    filename = trim(adjustl(datapath))//trim(adjustl(fgfileprefixes(nbackgrounds/2+1)))//"ensmean"
+    filename = trim(adjustl(datapath))//trim(adjustl(fileprefix))//"ensmean"
 
     ! Obtain unstaggered grid dimensions from ingested variable file
-
     call netcdfdimension(filename,3,dimstring,dims)
 
     ! Define array dimension structure type
-
     dimensions = griddimensions(dims(1),dims(2),dims(3))
 
     ! Compute all variables required by subsequent routines
-
     npts = dimensions%xdim*dimensions%ydim
     nlevsin = dimensions%zdim
     nlonsin = dimensions%xdim
@@ -646,56 +489,34 @@ contains
 
     ! Perform sanity and error checks for variable dimensions; proceed
     ! accordingly
-
     if (nlons .ne. nlonsin) then
-       
-       ! Print message to user
-
        write(6,*) 'Error reading input file in gridinfo...' 
        write(6,*) '      nlons ingested from file = ', nlonsin
        write(6,*) '      nlons specified in namelist = ', nlons
        write(6,*) 'Failed in subroutine getgridinfo_nmm; Aborting!'
 
        ! Exit routine
-
        call stop2(22)
-
     end if ! if (nlons .ne. nlonsin)
 
-    ! Perform sanity and error checks for variable dimensions; proceed
-    ! accordingly
-
     if (nlats .ne. nlatsin) then
-
-       ! Print message to user
-
        write(6,*) 'Error reading input file in gridinfo...' 
        write(6,*) '      nlats ingested from file = ', nlatsin
        write(6,*) '      nlats specified in namelist = ', nlats
        write(6,*) 'Failed in subroutine getgridinfo_nmm; Aborting!'
 
        ! Exit routine
-
        call stop2(22)
-
     end if ! if (nlats .ne. nlatsin)
 
-    ! Perform sanity and error checks for variable dimensions; proceed
-    ! accordingly
-
     if (nlevs .ne. nlevsin) then
-
-       ! Print message to user
-
        write(6,*) 'Error reading input file in gridinfo...' 
        write(6,*) '      nlevs ingested from file = ', nlevsin
        write(6,*) '      nlevs specified in namelist = ', nlevs
        write(6,*) 'Failed in subroutine getgridinfo_nmm; Aborting!'
 
        ! Exit routine
-
        call stop2(22)
-
     end if ! if (nlevs .ne. nlevsin)
 
     !----------------------------------------------------------------------
@@ -703,11 +524,9 @@ contains
     ! Compute local variable; number of model levels plus surface
     ! (levels at which ens. mean log pressure defined for localization
     ! via array logp)
-
     nlevs_pres=dimensions%zdim+1
 
     ! Allocate memory for global arrays
-
     if(.not. allocated(lonsgrd)) allocate(lonsgrd(npts))
     if(.not. allocated(latsgrd)) allocate(latsgrd(npts))
     if(.not. allocated(logp))    allocate(logp(npts,nlevs_pres))
@@ -721,14 +540,11 @@ contains
     !----------------------------------------------------------------------
 
     if (nproc  .eq. 0) then ! only read data on root.
-
        ! Allocate memory for all global arrays
-
        if(.not. allocated(presslmn)) allocate(presslmn(npts,nlevs))
        if(.not. allocated(spressmn)) allocate(spressmn(npts))
 
        ! Allocate memory for all local arrays
-
        if(.not. allocated(wrfnmm_eta))                                      &
             & allocate(wrfnmm_eta(1,1,dimensions%zdim))
        if(.not. allocated(wrfnmm_pd))                                       &
@@ -745,201 +561,128 @@ contains
     !----------------------------------------------------------------------
 
        ! Allocate memory for local variable grid
-
        if(.not. allocated(workgrid)) allocate(workgrid(dimensions%xdim,     &
             & dimensions%ydim,1))
 
        ! Ingest variable from external file
-
        varstringname = 'GLON'
        call readnetcdfdata(filename,workgrid,varstringname,dimensions%xdim, &
             & dimensions%ydim,1)
 
        ! Initialize counting variable
-
        count = 1
 
        ! Loop through meridional horizontal coordinate
-
        do j = 1, dimensions%ydim
-
           ! Loop through zonal horizontal coordinate
-
           do i = 1, dimensions%xdim
-          
              ! Convert from degrees to radians and update the global
              ! longitude array
-
              lonsgrd(count) = workgrid(i,j,1)
              
-             ! Update counting variable
-             
              count = count + 1
-
           end do ! do i = 1, dimensions%xdim
-
        end do ! do j = 1, dimensions%ydim
 
        ! Deallocate memory for local variable grid
-
        if(allocated(workgrid)) deallocate(workgrid)
 
        ! Allocate memory for local variable grid
-
        if(.not. allocated(workgrid)) allocate(workgrid(dimensions%xdim,     &
             & dimensions%ydim,1))
        
        ! Ingest variable from external file
-
        varstringname = 'GLAT'
        call readnetcdfdata(filename,workgrid,varstringname,                 &
             & dimensions%xdim,dimensions%ydim,1)
 
        ! Initialize counting variable
-
        count = 1
 
        ! Loop through meridional horizontal coordinate
-
        do j = 1, dimensions%ydim
-
           ! Loop through zonal horizontal coordinate
-
           do i = 1, dimensions%xdim
-          
              ! Convert from degrees to radians and update the global
              ! latitude array
-                
              latsgrd(count) = workgrid(i,j,1)
 
-             ! Update counting variable
-
              count = count + 1
-
           end do ! do i = 1, dimensions%xdim
-
        end do ! do j = 1, dimensions%ydim
 
        ! Deallocate memory for local variable grid
-
        if(allocated(workgrid)) deallocate(workgrid)
 
     !----------------------------------------------------------------------
 
-       ! Ingest variable from external file
-
+       ! Ingest variables from external file
        varstringname = 'PD'
        call readnetcdfdata(filename,wrfnmm_pd,varstringname,                &
             & dimensions%xdim,dimensions%ydim,1)
 
-       ! Ingest variable from external file
-
        varstringname = 'PDTOP'
        call readnetcdfdata(filename,wrfnmm_pdtop,varstringname,1,1,1)
-
-       ! Ingest variable from external file
 
        varstringname = 'PT'
        call readnetcdfdata(filename,wrfnmm_pt,varstringname,1,1,1)
 
-       ! Ingest variable from external file
-
        varstringname = 'AETA1'
        call readnetcdfdata(filename,wrfnmm_aeta1,varstringname,1,1,dimensions%zdim)
-
-       ! Ingest variable from external file
 
        varstringname = 'AETA2'
        call readnetcdfdata(filename,wrfnmm_aeta2,varstringname,1,1,dimensions%zdim)
 
        ! Initialize counting variable
-
        count = 1
 
        ! Loop through meridional horizontal coordinate
-
        do j = 1, dimensions%ydim
-
           ! Loop through zonal horizontal coordinate
-
           do i = 1, dimensions%xdim
-          
              ! Convert from Pa to hPa and update the global surface
              ! pressure array
-
              spressmn(count) = (wrfnmm_pd(i,j,1) + wrfnmm_pdtop(1,1,1) +    &
                   & wrfnmm_pt(1,1,1))/100.0
 
-             ! Update counting variable
-
              count = count + 1
-             
           end do ! do i = 1, dimensions%xdim
-          
        end do ! do j = 1, dimensions%ydim
 
        ! Define local variable and rescale pressure from Pa to hPa
-
        ptop = wrfnmm_pt(1,1,1)/100.0
 
     !----------------------------------------------------------------------
 
-       ! Initialize counting variable
-
-       nn = 0
-
        ! Loop through vertical coordinate
-
        do k = 1, dimensions%zdim
-       
-          ! Update counting variable
-
-          nn = nn + 1
-    
           ! Initialize counting variable
-       
           count = 1
-       
           ! Loop through meridional horizontal coordinate
-          
           do j = 1, dimensions%ydim
-          
              ! Loop through zonal horizontal coordinate
-          
              do i = 1, dimensions%xdim
-             
                 ! Compute the pressure within the respective layer
                 ! (dry hydrostatic pressure)
-             
                 presslmn(count,k) = (wrfnmm_aeta1(1,1,k)*                   &
                      & wrfnmm_pdtop(1,1,1)) + wrfnmm_aeta2(1,1,k)*(         &
                      & spressmn(count)*100.0 - wrfnmm_pdtop(1,1,1) -        &
                      & wrfnmm_pt(1,1,1)) + wrfnmm_pt(1,1,1)
              
                 ! Rescale pressure from Pa to hPa
-             
                 presslmn(count,k) = presslmn(count,k)/100.0
              
                 ! Compute the log of the pressure within the
                 ! respective layer
-             
                 logp(count,k) = -log(presslmn(count,k))
 
-                ! Update counting variable
-
                 count = count + 1
-
              end do ! do i = 1, dimensions%xdim
-       
           end do ! do j = 1, dimensions%ydim
-
        end do ! do k = 1, dimensions%zdim
 
        ! Compute local variable
-
        logp(:,nlevs_pres) = -log(spressmn(:))
-
-       ! Print message to user
 
        write(6,*) 'Surface pressure (spressmn) min/max range:',             &
             & minval(spressmn),maxval(spressmn)
@@ -951,7 +694,6 @@ contains
     !----------------------------------------------------------------------
 
        ! Deallocate memory for all local arrays
-
        if(allocated(wrfnmm_pd))    deallocate(wrfnmm_pd)
        if(allocated(wrfnmm_pdtop)) deallocate(wrfnmm_pdtop)
        if(allocated(wrfnmm_pt))    deallocate(wrfnmm_pt)
@@ -973,7 +715,6 @@ contains
     !======================================================================
 
     ! Broadcast all common variables these out to all nodes
-
     call MPI_Bcast(logp,npts*nlevs_pres,mpi_real4,0,MPI_COMM_WORLD,ierr)
     call MPI_Bcast(lonsgrd,npts,mpi_real4,0,MPI_COMM_WORLD,ierr)
     call MPI_Bcast(latsgrd,npts,mpi_real4,0,MPI_COMM_WORLD,ierr)
@@ -982,26 +723,16 @@ contains
     !----------------------------------------------------------------------
 
     ! Allocate memory for local variable
-
     if(.not. allocated(gridloc)) allocate(gridloc(3,npts))
 
     ! Loop through each grid coordinate and perform the coordinate
     ! transform for regular simulation domains
 
     do nn = 1, npts
-
-       ! Compute local variable
-
+       ! Compute local variables
        gridloc(1,nn) = cos(latsgrd(nn))*cos(lonsgrd(nn))
-
-       ! Compute local variable
-
        gridloc(2,nn) = cos(latsgrd(nn))*sin(lonsgrd(nn))
-
-       ! Compute local variable
-
        gridloc(3,nn) = sin(latsgrd(nn))
-
     end do ! do nn = 1, npts
 
   end subroutine getgridinfo_nmm
@@ -1017,16 +748,13 @@ contains
   subroutine cross2dot(varin,sxdim,sydim,szdim,xdim,ydim,zdim,varout)
 
     ! Define array dimension variables
-
     integer,                                        intent(in)  :: sxdim, sydim, szdim
     integer,                                        intent(in)  :: xdim, ydim, zdim
     
     ! Define variables passed to subroutine
-    
     real,     dimension(sxdim,sydim,szdim), intent(in)  :: varin
 
     ! Define variables returned by subroutine
-
     real,     dimension(xdim,ydim,zdim),    intent(out) :: varout    
 
     !======================================================================
@@ -1035,21 +763,13 @@ contains
     ! interpolate from staggered grid to unstaggered grid
 
     if (sxdim .gt. xdim) then
-
        varout = 0.5*(varin(1:xdim,:,:)+varin(2:xdim+1,:,:))
-       
     else if (sydim .gt. ydim) then
-
        varout = 0.5*(varin(:,1:ydim,:)+varin(:,2:ydim+1,:))
-       
     else if (szdim .gt. zdim) then
-
        varout = 0.5*(varin(:,:,1:zdim)+varin(:,:,2:zdim+1))
-
     else
-
        varout = varin
-
     end if
 
     !======================================================================
@@ -1095,26 +815,20 @@ contains
        varout(1,:,:) = 1.5*varin(1,:,:) - 0.5*varin(2,:,:)
        ! linear extrapolation to outer points (outside of mass grid)
        varout(sxdim,:,:)  = 1.5*varin(xdim,:,:) - 0.5*varin(xdim-1,:,:)
-
     else if(sydim .gt. ydim) then
        ! inverse of:
        ! varout = 0.5*(varin(:,1:ydim,:)+varin(:,2:ydim+1,:))
        varout(:,2:sydim-1,:) = 0.5*(varin(:,1:ydim-1,:) + varin(:,2:ydim,:))
        varout(:,1,:) = 1.5*varin(:,1,:) - 0.5*varin(:,2,:)
        varout(:,sydim,:)  = 1.5*varin(:,ydim,:) - 0.5*varin(:,ydim-1,:)
-    
     else if(szdim .gt. zdim) then
-
        ! inverse of:
        ! varout = 0.5*(varin(:,:,1:zdim)+varin(:,:,2:zdim+1))
        varout(:,:,2:szdim-1) = 0.5*(varin(:,:,1:zdim-1) + varin(:,:,2:zdim))
        varout(:,:,1) = 1.5*varin(:,:,1) - 0.5*varin(:,:,2)
        varout(:,:,szdim)  = 1.5*varin(:,:,zdim) - 0.5*varin(:,:,zdim-1)
-
     else
-       
        varout = varin
-
     end if ! if(sxdim .gt. xdim)
 
     !=======================================================================

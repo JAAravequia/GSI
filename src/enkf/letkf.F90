@@ -62,6 +62,9 @@ module letkf
 !   2016-07-05  whitaker: remove buggy code for observation space update.
 !               Rely on serial EnSRF to perform observation space update
 !               using logical lupd_obspace_serial.
+!   2016-11-29  shlyaeva: Modification for using control vector (control and
+!               state used to be the same) and the "chunks" come from loadbal
+
 !
 ! attributes:
 !   language: f95
@@ -76,8 +79,9 @@ use covlocal, only:  taper, latval
 use kinds, only: r_double,i_kind,r_kind,r_single,num_bytes_for_r_single
 use loadbal, only: numptsperproc, npts_max, &
                    indxproc, lnp_chunk, &
-                   grdloc_chunk, kdtree_obs2
-use statevec, only: ensmean_chunk, anal_chunk, ndim, index_pres
+                   grdloc_chunk, kdtree_obs2, &
+                   ensmean_chunk, anal_chunk
+use controlvec, only: ncdim, index_pres
 use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, oblnp, &
                   nobstot, nobs_conv, nobs_oz, nobs_sat,&
                   obfit_prior, obfit_post, obsprd_prior, obsprd_post,&
@@ -363,6 +367,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
    corrlength=latval(deglat,corrlengthnh,corrlengthtr,corrlengthsh)
    corrsq = corrlength**2
    ! kd-tree fixed range search
+   if (allocated(sresults)) deallocate(sresults)
    if (nobsl_max > 0) then ! only use nobsl_max nearest obs (sorted by distance).
        allocate(sresults(nobsl_max))
        call kdtree2_n_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),nn=nobsl_max,&
@@ -370,32 +375,15 @@ grdloop: do npt=1,numptsperproc(nproc+1)
        nobsl = nobsl_max
    else ! find all obs within localization radius (sorted by distance).
        allocate(sresults(nobstot))
-       ! use brute force search (for debugging and for single ob test).
-       ! (kdtree does not work for less than 3 obs)
-       if (nobstot < 3) then
-          nobsl = 0
-          do nob=1,nobstot
-             dist = sum( (obloc(:,nob)-grdloc_chunk(:,npt))**2, 1 )
-             if (dist < corrsq) then
-                 nobsl = nobsl + 1
-                 sresults(nobsl)%idx = nob
-                 sresults(nobsl)%dis = dist
-             end if     
-          end do
-       else 
-          call kdtree2_r_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),r2=corrsq,&
-               nfound=nobsl,nalloc=nobstot,results=sresults)
-       endif
+       call kdtree2_r_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),r2=corrsq,&
+            nfound=nobsl,nalloc=nobstot,results=sresults)
    endif
 
    t2 = t2 + mpi_wtime() - t1
    t1 = mpi_wtime()
 
    ! Skip when no observations in local area
-   if(nobsl == 0) then
-      deallocate(sresults)      
-      cycle grdloop
-   endif
+   if(nobsl == 0) cycle grdloop
 
    ! Loop through vertical levels (nnmax=1 if no vertical localization)
    verloop: do nn=1,nnmax
@@ -473,7 +461,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
 
       ! Update analysis ensembles (all time levels)
       do nb=1,nbackgrounds
-      do i=1,ndim
+      do i=1,ncdim
          ! if not vlocal, update all state variables in column.
          if(vlocal .and. index_pres(i) /= nn) cycle
          if (deterministic) then
@@ -518,7 +506,7 @@ end do grdloop
 !$omp parallel do schedule(dynamic) private(npt,nb,i)
 do npt=1,npts_max
    do nb=1,nbackgrounds
-      do i=1,ndim
+      do i=1,ncdim
          anal_chunk(1:nanals,npt,i,nb) = anal_chunk(1:nanals,npt,i,nb)-&
          sum(anal_chunk(1:nanals,npt,i,nb),1)*r_nanals
       end do

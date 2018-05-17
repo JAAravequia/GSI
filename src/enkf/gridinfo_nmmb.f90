@@ -21,21 +21,25 @@ real(r_single),public, allocatable, dimension(:,:) :: gridloc
 real(r_single),public, allocatable, dimension(:,:) :: logp
 integer,public :: npts
 ! supported variable names in anavinfo
-character(len=max_varname_length),public, dimension(11) :: cvars3d_supported = (/ 'u', 'v', 'tv', 'q', 'oz','qi',&
-                                                                                 'ql', 'qr', 'qli', 'dbz', 'w' /)
-character(len=max_varname_length),public, dimension(1) :: cvars2d_supported = (/ 'ps' /)
+character(len=max_varname_length),public, dimension(14) :: vars3d_supported = (/ 'u', 'v', 'tv', 'tsen', 'q', 'oz', &
+                                                                                'cw', 'prse', 'ql', 'qr', 'qi',    &
+                                                                                'qli', 'dbz', 'w'/)
+character(len=max_varname_length),public, dimension(2) :: vars2d_supported = (/ 'ps', 'sst' /)
 contains
 
-subroutine getgridinfo()
+subroutine getgridinfo(fileprefix, reducedgrid)
 ! read latitudes, longitudes and pressures for analysis grid,
 ! broadcast to each task.
 use nemsio_module, only: nemsio_gfile,nemsio_open,nemsio_close,&
                          nemsio_getfilehead,nemsio_getheadvar,&
                          nemsio_readrecv,nemsio_init,nemsio_realkind
 implicit none
-character(len=500) filename
+character(len=120), intent(in) :: fileprefix
+logical, intent(in)            :: reducedgrid
+
 integer(i_kind) iret,nlatsin,nlonsin,nlevsin,nlon_test,&
  ierr,nlon_test_with_halo,nlat_test_with_halo,nlat_test,k,nn
+character(len=500) filename
 real(nemsio_realkind) pt,pdtop
 real(r_kind), allocatable, dimension(:) :: spressmn
 real(r_kind), allocatable, dimension(:,:) :: presslmn
@@ -55,7 +59,7 @@ if (nproc .eq. 0) then
 
    ! Build the ensemble mean filename expected by routine
   
-   filename = trim(adjustl(datapath))//trim(adjustl(fgfileprefixes(nbackgrounds/2+1)))//"ensmean"
+   filename = trim(adjustl(datapath))//trim(adjustl(fileprefix))//"ensmean"
   
    call nemsio_init(iret=iret)
    if(iret/=0) then
@@ -64,11 +68,11 @@ if (nproc .eq. 0) then
    end if
    call nemsio_open(gfile,filename,'READ',iret=iret)
    if (iret/=0) then
-      write(6,*)'gridinfo: nmmb model: problem with nemsio_open, iret=',iret
+      write(6,*)'gridinfo: nmmb model: problem with nemsio_open,iret=',iret,trim(filename)
       call stop2(24)
    end if
    call nemsio_getfilehead(gfile,iret=iret,dimx=nlonsin,dimy=nlatsin, &
-                           dimz=nlevsin,lat=lats,lon=lons)
+                           dimz=nlevsin,lat=lats,lon=lons) 
    if (iret/=0) then
       write(6,*)'gridinfo: nmmb model: problem with nemsio_getfilehead, iret=',iret
       call stop2(24)
@@ -121,7 +125,7 @@ if (nproc .eq. 0) then
    lonsgrd = lons; latsgrd = lats
    print *,'min/max lonsgrd',minval(lonsgrd),maxval(lonsgrd)
    print *,'min/max latsgrd',minval(latsgrd),maxval(latsgrd)
-  
+
    call nemsio_getheadvar(gfile,'PT',pt,iret)
    pt = 0.01*pt
    ptop = pt
@@ -241,3 +245,4 @@ subroutine mass2wind(dat,nlons,nlats)
 end subroutine mass2wind
 
 end module gridinfo
+

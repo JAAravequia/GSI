@@ -92,6 +92,7 @@ module enkf_obsmod
 !     NOTE: this requires anavinfo file to be present at running directory
 !   2017-05-12  Johnson, Y. Wang and X. Wang - add variable-dependent
 !               localization and observation-dependent localization, POC: xuguang.wang@ou.edu
+!   2016-11-29  shlyaeva: Added the option of writing out ensemble spread in diag files
 !
 ! attributes:
 !   language: f95
@@ -115,7 +116,7 @@ use mpi_readobs, only:  mpi_getobs
 
 implicit none
 private
-public :: readobs, obsmod_cleanup
+public :: readobs, obsmod_cleanup, write_obsstats
 
 real(r_single), public, allocatable, dimension(:) :: obsprd_prior, ensmean_obnobc,&
  ensmean_ob, ob, oberrvar, obloclon, obloclat, &
@@ -123,6 +124,7 @@ real(r_single), public, allocatable, dimension(:) :: obsprd_prior, ensmean_obnob
  oblnp, obfit_prior, prpgerr, oberrvarmean, probgrosserr, &
  lnsigl,corrlengthsq,obtimel
 integer(i_kind), public, allocatable, dimension(:) :: numobspersat
+integer(i_kind), allocatable, dimension(:)         :: diagused
 ! posterior stats computed in enkf_update
 real(r_single), public, allocatable, dimension(:) :: obfit_post, obsprd_post
 real(r_single), public, allocatable, dimension(:,:) :: biaspreds
@@ -133,9 +135,9 @@ integer(i_kind), public, allocatable, dimension(:) :: stattype, indxsat
 real(r_single), public, allocatable, dimension(:) :: biasprednorm,biasprednorminv
 character(len=20), public, allocatable, dimension(:) :: obtype
 integer(i_kind), public ::  nobs_sat, nobs_oz, nobs_conv, nobstot
+integer(i_kind) :: nobs_convdiag, nobs_ozdiag, nobs_satdiag, nobstotdiag
 
 real(r_single), public, allocatable, dimension(:) :: hlocal,vlocal
-
 ! for serial enkf, anal_ob is only used here and in loadbal. It is deallocated in loadbal.
 ! for letkf, anal_ob used on all tasks in letkf_update (bcast from root in loadbal), deallocated
 ! in letkf_update.
@@ -186,8 +188,8 @@ allocate(biasprednorm(npred),biasprednorminv(npred))
 !biasprednorm(4) = 1.1e-3_r_single
 !biasprednorm(4) = zero   ! don't use this predictor (too co-linear)?
 ! what the heck, just scale them all by 0.01!
-biasprednorm = 0.01_r_single
-!biasprednorm=one
+!biasprednorm = 0.01_r_single
+biasprednorm=one
 biasprednorminv=zero
 do n=1,npred
    if (nproc == 0) print *,n,'biasprednorm = ',biasprednorm(n)
@@ -201,11 +203,13 @@ enddo
 allocate(deltapredx(npred,jpch_rad))
 deltapredx = zero
 t1 = mpi_wtime()
-call mpi_getobs(datapath, datestring, nobs_conv, nobs_oz, nobs_sat, nobstot, &
-                obsprd_prior, ensmean_obnobc, ensmean_ob, ob, &
-                oberrvar, obloclon, obloclat, obpress,hlocal,vlocal,&
-                obtime, oberrvar_orig, stattype, obtype, biaspreds,&
+call mpi_getobs(datapath, datestring, nobs_conv, nobs_oz, nobs_sat, nobstot,  &
+                nobs_convdiag,nobs_ozdiag, nobs_satdiag, nobstotdiag,         &
+                obsprd_prior, ensmean_obnobc, ensmean_ob, ob,                 &
+                oberrvar, obloclon, obloclat, obpress, hlocal,vlocal,         &
+                obtime, oberrvar_orig, stattype, obtype, biaspreds, diagused, &
                 anal_ob,indxsat,nanals)
+
 tdiff = mpi_wtime()-t1
 call mpi_reduce(tdiff,tdiffmax,1,mpi_real4,mpi_max,0,mpi_comm_world,ierr)
 if (nproc == 0) then
@@ -328,6 +332,66 @@ allocate(obsprd_post(nobstot))
 obsprd_post = zero
 end subroutine readobs
 
+subroutine write_obsstats()
+use readconvobs, only: write_convobs_data
+use readozobs,   only: write_ozobs_data
+use readsatobs,  only: write_satobs_data
+character(len=10) :: id,id2,gesid2
+
+  id = 'ensmean'
+  id2 = 'enssprd'
+  if (nproc==0) then
+    if (nobs_conv > 0) then
+       print *, 'obsprd, conv: ', minval(obsprd_prior(1:nobs_conv)),    &
+              maxval(obsprd_prior(1:nobs_conv))
+       gesid2 = 'ges'
+       call write_convobs_data(datapath, datestring, nobs_conv, nobs_convdiag,  &
+             obfit_prior(1:nobs_conv), obsprd_prior(1:nobs_conv),               &
+             diagused(1:nobs_convdiag),                                         &
+             id, id2, gesid2)
+       gesid2 = 'anl'
+       call write_convobs_data(datapath, datestring, nobs_conv, nobs_convdiag,  &
+             obfit_post(1:nobs_conv), obsprd_post(1:nobs_conv),                 &
+             diagused(1:nobs_convdiag),                                         &
+             id, id2, gesid2)
+    end if
+    if (nobs_oz > 0) then
+       print *, 'obsprd, oz: ', minval(obsprd_prior(nobs_conv+1:nobs_conv+nobs_oz)), &
+              maxval(obsprd_prior(nobs_conv+1:nobs_conv+nobs_oz))
+       gesid2 = 'ges'
+       call write_ozobs_data(datapath, datestring, nobs_oz, nobs_ozdiag,  &
+             obfit_prior(nobs_conv+1:nobs_conv+nobs_oz),                  &
+             obsprd_prior(nobs_conv+1:nobs_conv+nobs_oz),                 &
+             diagused(nobs_convdiag+1:nobs_convdiag+nobs_ozdiag),         &
+             id, id2, gesid2)
+       gesid2 = 'anl'
+       call write_ozobs_data(datapath, datestring, nobs_oz, nobs_ozdiag,  &
+             obfit_post(nobs_conv+1:nobs_conv+nobs_oz),                   &
+             obsprd_post(nobs_conv+1:nobs_conv+nobs_oz),                  &
+             diagused(nobs_convdiag+1:nobs_convdiag+nobs_ozdiag),         &
+             id, id2, gesid2)
+    end if
+    if (nobs_sat > 0) then
+       print *, 'obsprd, sat: ', minval(obsprd_prior(nobs_conv+nobs_oz+1:nobstot)), &
+              maxval(obsprd_prior(nobs_conv+nobs_oz+1:nobstot))
+       gesid2 = 'ges'
+       call write_satobs_data(datapath, datestring, nobs_sat, nobs_satdiag, &
+             obfit_prior(nobs_conv+nobs_oz+1:nobstot),                      &
+             obsprd_prior(nobs_conv+nobs_oz+1:nobstot),                     & 
+             diagused(nobs_convdiag+nobs_ozdiag+1:nobstotdiag),             &
+             id, id2, gesid2)
+       gesid2 = 'anl'
+       call write_satobs_data(datapath, datestring, nobs_sat, nobs_satdiag, &
+             obfit_post(nobs_conv+nobs_oz+1:nobstot),                       &
+             obsprd_post(nobs_conv+nobs_oz+1:nobstot),                      &
+             diagused(nobs_convdiag+nobs_ozdiag+1:nobstotdiag),             &
+             id, id2, gesid2)
+    end if
+  endif
+
+
+end subroutine write_obsstats
+
 subroutine screenobs()
 ! screen out obs with large observation errors or 
 ! that fail background check.  For screened obs oberrvar is set to 1.e31_r_single
@@ -447,6 +511,7 @@ if (allocated(prpgerr)) deallocate(prpgerr)
 if (allocated(biasprednorm)) deallocate(biasprednorm)
 if (allocated(biasprednorminv)) deallocate(biasprednorminv)
 if (allocated(anal_ob)) deallocate(anal_ob)
+if (allocated(diagused)) deallocate(diagused)
 end subroutine obsmod_cleanup
 
 

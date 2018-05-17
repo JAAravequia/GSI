@@ -42,7 +42,7 @@ subroutine mpi_initialize()
 use mpimod, only : mpi_comm_world,npe,mype
 integer ierr
 #ifdef MPI3
-integer nuse,new_group,old_group,nshmemroot
+integer nuse,new_group,old_group,nshmemroot,np
 integer, dimension(:), allocatable :: useprocs, itasks
 #endif
 call mpi_init(ierr)
