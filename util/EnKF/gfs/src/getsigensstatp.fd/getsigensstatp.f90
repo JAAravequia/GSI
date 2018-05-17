@@ -151,6 +151,8 @@ program getsigensstatp
                 call mpi_abort(mpi_comm_world,99,iret)
                 stop
             endif
+            do_icmr = variable_exist('icmr')
+            do_icmr = .false. ! keep this .false. to keep file size small until we actually analyze ice mr
         endif
 
         if ( mype == 0 ) then
@@ -230,12 +232,6 @@ program getsigensstatp
                 krecrwmr = 1 + 7*nlevs + k
                 krecsnmr = 1 + 8*nlevs + k
                 krecgrle = 1 + 9*nlevs + k
-                call nemsio_readrecv(gfile,'ugrd', 'mid layer',k,rwork_mem(:,krecu),   iret=iret)
-                call nemsio_readrecv(gfile,'vgrd', 'mid layer',k,rwork_mem(:,krecv),   iret=iret)
-                call nemsio_readrecv(gfile,'tmp',  'mid layer',k,rwork_mem(:,krect),   iret=iret)
-                call nemsio_readrecv(gfile,'spfh', 'mid layer',k,rwork_mem(:,krecq),   iret=iret)
-                call nemsio_readrecv(gfile,'o3mr', 'mid layer',k,rwork_mem(:,krecoz),  iret=iret)
-                call nemsio_readrecv(gfile,'clwmr','mid layer',k,rwork_mem(:,kreccwmr),iret=iret)
                 call nemsio_readrecv(gfile,'icmr', 'mid layer',k,rwork_mem(:,krecicmr),iret=iret)
                 call nemsio_readrecv(gfile,'rwmr', 'mid layer',k,rwork_mem(:,krecrwmr),iret=iret)
                 call nemsio_readrecv(gfile,'snmr', 'mid layer',k,rwork_mem(:,krecsnmr),iret=iret)
@@ -454,5 +450,22 @@ SUBROUTINE nc_check(ierr,subr_name,context)
 
   return
 END SUBROUTINE nc_check
+
+function variable_exist(varname) result(varexist)
+
+  character(len=*) :: varname
+  logical :: varexist
+
+  integer :: n
+
+  varexist = .false.
+  do n=1,nrec
+    if ( trim(recnam(n)) == trim(varname) ) then
+      varexist = .true.
+      return
+    endif
+  enddo
+
+end function variable_exist
 
 end program getsigensstatp

@@ -702,7 +702,7 @@ subroutine parallel_read_nemsio_state_(en_full,m_cvars2d,m_cvars3d,nlon,nlat,nsi
    use ncepnems_io, only: error_msg
    use nemsio_module, only: nemsio_gfile,nemsio_getfilehead,nemsio_readrecv
    use nemsio_module, only: nemsio_getrechead
-   use control_vectors, only: cvars2d,cvars3d,nc2d,nc3d
+   use control_vectors, only: cvars2d,cvars3d,nc2d,nc3d,imp_physics
    use general_sub2grid_mod, only: sub2grid_info
 
    implicit none
@@ -730,7 +730,7 @@ subroutine parallel_read_nemsio_state_(en_full,m_cvars2d,m_cvars3d,nlon,nlat,nsi
    integer(i_kind) nrec
    character(len=120) :: myname_ = 'parallel_read_nemsio_state_'
    character(len=1)   :: null = ' '
-   real(r_single),allocatable,dimension(:) :: work, work2
+   real(r_single),allocatable,dimension(:) :: work,work2
 ! NOTE:  inportant to keep 8 byte precision for work array, even though what is
 ! on ensemble NEMS file is 4 byte precision.  The NEMSIO automatically (through
 ! interfaces presumably) must be able to read 4 byte and 8 byte records and pass
