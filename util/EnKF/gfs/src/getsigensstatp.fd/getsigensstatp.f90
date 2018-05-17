@@ -151,8 +151,6 @@ program getsigensstatp
                 call mpi_abort(mpi_comm_world,99,iret)
                 stop
             endif
-            do_icmr = variable_exist('icmr')
-            do_icmr = .false. ! keep this .false. to keep file size small until we actually analyze ice mr
         endif
 
         if ( mype == 0 ) then
@@ -232,6 +230,12 @@ program getsigensstatp
                 krecrwmr = 1 + 7*nlevs + k
                 krecsnmr = 1 + 8*nlevs + k
                 krecgrle = 1 + 9*nlevs + k
+                call nemsio_readrecv(gfile,'ugrd', 'mid layer',k,rwork_mem(:,krecu),   iret=iret)
+                call nemsio_readrecv(gfile,'vgrd', 'mid layer',k,rwork_mem(:,krecv),   iret=iret)
+                call nemsio_readrecv(gfile,'tmp',  'mid layer',k,rwork_mem(:,krect),   iret=iret)
+                call nemsio_readrecv(gfile,'spfh', 'mid layer',k,rwork_mem(:,krecq),   iret=iret)
+                call nemsio_readrecv(gfile,'o3mr', 'mid layer',k,rwork_mem(:,krecoz),  iret=iret)
+                call nemsio_readrecv(gfile,'clwmr','mid layer',k,rwork_mem(:,kreccwmr),iret=iret)
                 call nemsio_readrecv(gfile,'icmr', 'mid layer',k,rwork_mem(:,krecicmr),iret=iret)
                 call nemsio_readrecv(gfile,'rwmr', 'mid layer',k,rwork_mem(:,krecrwmr),iret=iret)
                 call nemsio_readrecv(gfile,'snmr', 'mid layer',k,rwork_mem(:,krecsnmr),iret=iret)
@@ -241,10 +245,7 @@ program getsigensstatp
 
         endif
 
-        !call mpi_allreduce(rwork_mem,rwork_avg,nsize,mpi_real4,mpi_sum,new_comm,iret)
-        do k = 1,nflds
-           call mpi_allreduce(rwork_mem(:,k),rwork_avg(:,k),npts,mpi_real4,mpi_sum,new_comm,iret)
-        enddo
+        call mpi_allreduce(rwork_mem,rwork_avg,nsize,mpi_real4,mpi_sum,new_comm,iret)
 
         rwork_avg = rwork_avg * rnanals
 
@@ -252,10 +253,7 @@ program getsigensstatp
 
         rwork_mem = (rwork_mem - rwork_avg) * (rwork_mem - rwork_avg)
 
-        !call mpi_allreduce(rwork_mem,rwork_avg,nsize,mpi_real4,mpi_sum,new_comm,iret)
-        do k = 1,nflds
-          call mpi_allreduce(rwork_mem(:,k),rwork_avg(:,k),npts,mpi_real4,mpi_sum,new_comm,iret)
-        enddo
+        call mpi_allreduce(rwork_mem,rwork_avg,nsize,mpi_real4,mpi_sum,new_comm,iret)
 
         rwork_avg = sqrt(rwork_avg * rnanalsm1)
 

@@ -30,6 +30,8 @@ subroutine calctends(mype,teta,pri,guess,xderivative,yderivative,tendency)
 !   2013-10-19  todling - revamp interface with fields now in bundles; still
 !                         needs generalization
 !   2013-10-28  todling - rename p3d to prse
+!   2018-05-17  tong - modified to use derivative variable (dvars3d) to
+!                      determine if cw tendency needs to be calculated.
 !
 ! usage:
 !   input argument list:
@@ -53,7 +55,7 @@ subroutine calctends(mype,teta,pri,guess,xderivative,yderivative,tendency)
   use constants, only: zero,half,one,two,rearth,rd,rcp,omega,grav
   use tendsmod, only: what9,prsth9,r_prsum9,r_prdif9,prdif9,pr_xsum9,pr_xdif9,pr_ysum9,&
      pr_ydif9,curvx,curvy,coriolis
-  use control_vectors, only: cvars3d
+  use derivsmod, only: dvars3d
   use mpeu_util, only: getindex
 
   use gsi_bundlemod, only: gsi_bundle
@@ -283,7 +285,7 @@ subroutine calctends(mype,teta,pri,guess,xderivative,yderivative,tendency)
 
 !   Compute tendencies for wind components & Temperature
 
-    icw=getindex(cvars3d,'cw')
+    icw=getindex(dvars3d,'cw')
     do k=1,nsig
       do j=jtstart(kk),jtstop(kk)
         do i=1,lat2
@@ -392,7 +394,7 @@ subroutine calctends(mype,teta,pri,guess,xderivative,yderivative,tendency)
 !      of the main code in the subroutine above - TO BE DONE.
 
 ! If require guess vars available, extract from bundle ...
-  icw=getindex(cvars3d,'cw')
+  icw=getindex(dvars3d,'cw')
   if (trim(thiscase)=='guess') then
      ier=0
      call gsi_bundlegetpointer(bundle,'z' ,z   ,istatus)

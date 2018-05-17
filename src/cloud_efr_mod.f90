@@ -364,7 +364,7 @@ subroutine set_cloud_lower_bound(g_qx)
 !
 ! program history log:
 !   2011-11-01 eliu   set minimum value for cloud water mixing ratio 
-!   2011-12-21 mtong  change the input arrage to be 2D
+!   2017-12-21 tong   generalize to all hydrometeors
 
   use gridmod, only: lat2,lon2,nsig
   use constants, only: qcmin

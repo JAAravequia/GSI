@@ -251,10 +251,9 @@ program getsigensmeanp_smooth
            if ( index(recnam(n),'dpres') /= 0 ) then
               smooth_fld(n) = .false.
            endif
-           call mpi_allreduce(rwork_mem(:,n),rwork_avg(:,n),npts,mpi_real,mpi_sum,new_comm,iret)
         enddo
 
-        !call mpi_allreduce(rwork_mem,rwork_avg,nsize,mpi_real,mpi_sum,new_comm,iret)
+        call mpi_allreduce(rwork_mem,rwork_avg,nsize,mpi_real,mpi_sum,new_comm,iret)
         rwork_avg = rwork_avg * rnanals
 
         allocate(rwork_hgt(npts))
