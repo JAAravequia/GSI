@@ -106,6 +106,8 @@ module guess_grids
 !                         all tendencies now in a bundle (see tendsmod)
 !                         all derivaties now in a bundle (see derivsmod)
 !   2015-01-15  Hu      - Add coast_prox to hold coast proximity
+!   2017-05-12  Y. Wang and X. Wang - add bottom and top levels of w and rho for
+!                                     radar DA later, POC: xuguang.wang@ou.edu
 !
 ! !AUTHOR: 
 !   kleist           org: np20                date: 2003-12-01
@@ -156,6 +158,9 @@ module guess_grids
   public :: ntguessig_ref
   public :: ntguessfc_ref
   public :: ntguesnst_ref
+
+  public :: ges_w_btlev
+  public :: ges_rho
 
   logical:: sfcmod_gfs = .false.    ! .true. = recompute 10m wind factor using gfs physics
   logical:: sfcmod_mm5 = .false.    ! .true. = recompute 10m wind factor using mm5 physics
@@ -247,6 +252,9 @@ module guess_grids
 
   real(r_kind),allocatable,dimension(:,:,:):: fact_tv      ! 1./(one+fv*ges_q) for virt to sen calc.
   real(r_kind),allocatable,dimension(:,:,:,:):: ges_qsat   ! 4d qsat array
+
+  real(r_kind),allocatable,dimension(:,:,:,:):: ges_w_btlev
+  real(r_kind),allocatable,dimension(:,:,:,:):: ges_rho
 
   interface guess_grids_print
      module procedure print1r8_
@@ -391,6 +399,7 @@ contains
 
 ! !USES:
 
+    use control_vectors, only : w_exist
     use constants,only: zero,one
     use gridmod, only: lat2,lon2,nsig
     implicit none
@@ -453,11 +462,17 @@ contains
             ges_lnprsl(lat2,lon2,nsig,nfldsig),ges_lnprsi(lat2,lon2,nsig+1,nfldsig),&
             ges_tsen(lat2,lon2,nsig,nfldsig),&
             ges_teta(lat2,lon2,nsig,nfldsig),&
+            ges_rho(lat2,lon2,nsig,nfldsig), &  
             geop_hgtl(lat2,lon2,nsig,nfldsig), &
             geop_hgti(lat2,lon2,nsig+1,nfldsig),ges_prslavg(nsig),&
             tropprs(lat2,lon2),fact_tv(lat2,lon2,nsig),&
             pbl_height(lat2,lon2,nfldsig),wgt_lcbas(lat2,lon2), &
             ges_qsat(lat2,lon2,nsig,nfldsig),stat=istatus)
+
+       if(w_exist)then
+         allocate(ges_w_btlev(lat2,lon2,2,nfldsig),stat=istatus)
+       endif
+
        if (istatus/=0) write(6,*)'CREATE_GES_GRIDS(ges_prsi,..):  allocate error, istatus=',&
             istatus,lat2,lon2,nsig,nfldsig
 
@@ -496,6 +511,7 @@ contains
                 do i=1,lat2
                    ges_prsl(i,j,k,n)=zero
                    ges_lnprsl(i,j,k,n)=zero
+                   ges_rho(i,j,k,n)=zero
                    ges_qsat(i,j,k,n)=zero
                    ges_tsen(i,j,k,n)=zero
                    ges_teta(i,j,k,n)=zero
@@ -519,6 +535,10 @@ contains
              wgt_lcbas(i,j)=0.01_r_kind
           end do
        end do
+
+       if(w_exist) then
+         ges_w_btlev=zero
+       endif
 
     end if ! ges_initialized
     
@@ -759,6 +779,7 @@ contains
   subroutine destroy_ges_grids
 
 ! !USES:
+    use control_vectors, only : w_exist
 
     implicit none
 
@@ -795,8 +816,9 @@ contains
     call destroy_ges_tendencies
 !
     deallocate(ges_prsi,ges_prsl,ges_lnprsl,ges_lnprsi,&
-         ges_tsen,ges_teta,geop_hgtl,geop_hgti,ges_prslavg,&
+         ges_tsen,ges_teta,geop_hgtl,geop_hgti,ges_prslavg,ges_rho,&
          tropprs,fact_tv,pbl_height,wgt_lcbas,ges_qsat,stat=istatus)
+    if(w_exist) deallocate(ges_w_btlev,stat=istatus)
     if (istatus/=0) &
          write(6,*)'DESTROY_GES_GRIDS(ges_prsi,..):  deallocate error, istatus=',&
          istatus
@@ -992,7 +1014,7 @@ contains
 
 ! !USES:
 
-    use constants,only: zero,one,rd_over_cp,one_tenth,half,ten
+    use constants,only: zero,one,rd_over_cp,one_tenth,half,ten,rd,r1000
     use gridmod, only: lat2,lon2,nsig,ak5,bk5,ck5,tref5,idvc5,&
          regional,wrf_nmm_regional,nems_nmmb_regional,wrf_mass_regional,&
          cmaq_regional,pt_ll,aeta2_ll,&
@@ -1174,6 +1196,22 @@ contains
        endif
 
     end if  !  end regional/global block
+
+!   Compute density for dBZ assimilation purposes - multiply by 1000 to convert
+!   to Pa
+    do jj=1,nfldsig
+       call gsi_bundlegetpointer(gsi_metguess_bundle(jj),'tv' ,ges_tv,itv)
+       if(idvc5==3) then
+          if(itv/=0) call die(myname_,': tv must be present when idvc5=3,abort',itv)
+       endif
+       do j=1,lon2
+          do i=1,lat2
+             do k=1,nsig
+                  ges_rho(i,j,k,jj)=(ges_prsl(i,j,k,jj)/(ges_tv(i,j,k)*rd))*r1000
+             end do
+          end do
+       end do
+    end do
 
 ! For regional applications only, load variables containing mean
 ! surface pressure and pressure profile at the layer midpoints

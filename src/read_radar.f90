@@ -1,7 +1,7 @@
 !  SUBSET=NC006001 -- level 3 superobs
 !  SUBSET=NC006002 -- level 2.5 superobs
 !  SUBSET=NC006070 -- RADIAL WIND FROM P3 RADAR
-subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_full,nobs)
+subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_full,nobs,hloc,vloc)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_radar                    read radar radial winds
@@ -103,13 +103,14 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
   character(len=20),intent(in  ) :: sis
   real(r_kind)    ,intent(in   ) :: twind
   integer(i_kind) ,intent(in   ) :: lunout
+  real(r_kind)    ,intent(in   ) :: hloc,vloc
   integer(i_kind) ,intent(inout) :: nread,ndata,nodata
   integer(i_kind),dimension(npe) ,intent(inout) :: nobs
   real(r_kind),dimension(nlat,nlon,nsig),intent(in):: hgtl_full
 
 ! Declare local parameters
   integer(i_kind),parameter:: maxlevs=1500
-  integer(i_kind),parameter:: maxdat=22
+  integer(i_kind),parameter:: maxdat=24
   integer(i_kind),parameter:: maxvad=500
 ! integer(i_kind),parameter:: maxvadbins=20
   integer(i_kind),parameter:: maxvadbins=15
@@ -792,11 +793,9 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
            cdata(20)=zsges              ! model elevation at radar site
            cdata(21)=thiserr
            cdata(22)=two
+           cdata(23)=hloc
+           cdata(24)=vloc
 
-!          if(vadid(ivad)=='0303LWX') then
-!             dist2max=max(dist2max,dist)
-!             dist2min=min(dist2min,dist)
-!          end if
 
            do i=1,maxdat
               cdata_all(i,ndata)=cdata(i)
@@ -1903,6 +1902,8 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
            cdata(20)=zsges              ! model elevation at radar site
            cdata(21)=thiserr
            cdata(22)=hdr(1)+three+one   ! tail Doppler radar
+           cdata(23)=hloc
+           cdata(24)=vloc
            do j=1,maxdat
               cdata_all(j,iout)=cdata(j)
            end do
@@ -2217,6 +2218,8 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
            cdata(20)=zsges              ! model elevation at radar site
            cdata(21)=thiserr
            cdata(22)=three+two          ! tail Doppler radar
+           cdata(23)=hloc
+           cdata(24)=vloc
            do j=1,maxdat
               cdata_all(j,iout)=cdata(j)
            end do
@@ -2306,6 +2309,7 @@ subroutine getvrlocalinfo(thisrange,thisazimuth,this_stahgt,aactual,a43,selev0,c
 
   use kinds, only: r_kind,r_single,i_kind
   use constants, only: one,half,two,deg2rad,rad2deg,zero_single,rearth
+  use read_l2bufr_mod, only : invtllv
 
   implicit none
 

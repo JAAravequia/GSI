@@ -20,6 +20,8 @@ module readconvobs
 !   2009-02-23  Initial version.
 !   2016-11-29  shlyaeva - updated read routine to calculate linearized H(x)
 !                          added write_convobs_data to output ensemble spread
+!   2017-05-12  Y. Wang and X. Wang - add to read dbz and rw for radar
+!                       reflectivity and radial velocity assimilation. POC: xuguang.wang@ou.edu
 !   2017-12-13  shlyaeva - added netcdf diag read/write capability
 !
 ! attributes:
@@ -37,9 +39,9 @@ public :: get_num_convobs, get_convobs_data, write_convobs_data
 
 
 !> observation types to read from netcdf files
-integer(i_kind), parameter :: nobtype = 10
+integer(i_kind), parameter :: nobtype = 11
 character(len=3), dimension(nobtype), parameter :: obtypes = (/'  t', '  q', ' ps', ' uv', 'tcp', &
-                                                               'gps', 'spd', ' pw', ' dw', ' rw' /)
+                                                               'gps', 'spd', ' pw', ' dw', ' rw', 'dbz' /)
 
 contains
 
@@ -73,7 +75,8 @@ subroutine get_num_convobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id
     character(len=3) :: obtype
     integer(i_kind)  :: iunit, nchar, nreal, ii, mype, ios, idate, i, ipe, ioff0
     integer(i_kind),dimension(2) :: nn,nobst, nobsps, nobsq, nobsuv, nobsgps, &
-         nobstcp,nobstcx,nobstcy,nobstcz,nobssst, nobsspd, nobsdw, nobsrw, nobspw
+         nobstcp,nobstcx,nobstcy,nobstcz,nobssst, nobsspd, nobsdw, nobsrw, nobspw, &
+         nobsdbz
     character(8),allocatable,dimension(:):: cdiagbuf
     real(r_single),allocatable,dimension(:,:)::rdiagbuf
     real(r_kind) :: errorlimit,errorlimit2,error,pres,obmax
@@ -94,9 +97,9 @@ subroutine get_num_convobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id
     nobssst = 0
     nobsspd = 0
     nobsdw = 0
-    nobsrw = 0
     nobspw = 0
     nobsgps = 0
+    nobsdbz = 0
     nobstcp = 0; nobstcx = 0; nobstcy = 0; nobstcz = 0
     init_pass = .true.
     peloop: do ipe=0,npefiles
@@ -177,6 +180,9 @@ subroutine get_num_convobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id
        else if (obtype == ' rw') then
           nobsrw = nobsrw + nn
           num_obs_tot = num_obs_tot + nn(2)
+       else if (obtype == 'dbz') then
+          nobsdbz = nobsdbz + nn
+          num_obs_tot = num_obs_tot + nn(2)
        else if (obtype == 'gps') then
           nobsgps = nobsgps + nn
           num_obs_tot = num_obs_tot + nn(2)
@@ -220,6 +226,7 @@ subroutine get_num_convobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id
           write(6,100) 'pw',nobspw(1),nobspw(2)
           write(6,100) 'dw',nobsdw(1),nobsdw(2)
           write(6,100) 'rw',nobsrw(1),nobsrw(2)
+          write(6,100) 'dbz',nobsdbz(1),nobsdbz(2)
           write(6,100) 'tcp',nobstcp(1),nobstcp(2)
           if (nobstcx(2) .gt. 0) then
              write(6,100) 'tcx',nobstcx(1),nobstcx(2)
@@ -395,8 +402,8 @@ end subroutine get_num_convobs_nc
 ! read conventional observations
 subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
-                            x_lon, x_lat, x_press, x_time, x_code,         &
-                            x_errorig, x_type, x_used, id, nanal)
+                            x_lon, x_lat, x_press, x_hloc, x_vloc,         &
+                            x_time, x_code,x_errorig, x_type, x_used, id, nanal)
   implicit none
 
   character*500,   intent(in) :: obspath
@@ -410,6 +417,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
   real(r_single), dimension(nobs_max), intent(out)    :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out)    :: x_lon, x_lat
   real(r_single), dimension(nobs_max), intent(out)    :: x_press, x_time
+  real(r_single), dimension(nobs_max), intent(out)    :: x_hloc, x_vloc
   integer(i_kind), dimension(nobs_max), intent(out)   :: x_code
   character(len=20), dimension(nobs_max), intent(out) :: x_type
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
@@ -420,21 +428,21 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
   if (netcdf_diag) then
     call get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
-                            x_lon, x_lat, x_press, x_time, x_code,         &
-                            x_errorig, x_type, x_used, id, nanal)
+                            x_lon, x_lat, x_press, x_hloc, x_vloc, &
+                            x_time, x_code,x_errorig, x_type, x_used, id, nanal)
   else
     call get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
-                            x_lon, x_lat, x_press, x_time, x_code,         &
-                            x_errorig, x_type, x_used, id, nanal)
+                            x_lon, x_lat, x_press, x_hloc, x_vloc, &
+                            x_time, x_code,x_errorig, x_type, x_used, id, nanal)
   endif
 end subroutine get_convobs_data
 
 ! read conventional observations from netcdf file
 subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
-                            x_lon, x_lat, x_press, x_time, x_code,         &
-                            x_errorig, x_type, x_used, id, nanal)
+                            x_lon, x_lat, x_press, x_hloc, x_vloc, &
+                            x_time, x_code,x_errorig, x_type, x_used, id, nanal)
   use sparsearr, only: sparr, delete, assignment(=)
   use params, only: nanals, lobsdiag_forenkf
   use statevec, only: state_d
@@ -457,6 +465,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
   real(r_single), dimension(nobs_max), intent(out)    :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out)    :: x_lon, x_lat
   real(r_single), dimension(nobs_max), intent(out)    :: x_press, x_time
+  real(r_single), dimension(nobs_max), intent(out)    :: x_hloc, x_vloc
   integer(i_kind), dimension(nobs_max), intent(out)   :: x_code
   character(len=20), dimension(nobs_max), intent(out) :: x_type
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
@@ -479,7 +488,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
   real(r_kind) :: errorlimit2_obs,errorlimit2_bnd
   logical fexist
   logical twofiles, fexist2
-  real(r_single), allocatable, dimension (:) :: Latitude, Longitude, Pressure, Time
+  real(r_single), allocatable, dimension (:) :: Latitude, Longitude, Pressure, Time, Hlocal, Vlocal
   integer(i_kind), allocatable, dimension (:) :: Observation_Type
   real(r_single), allocatable, dimension (:) :: Errinv_Input, Errinv_Final, Analysis_Use_Flag, GPS_Type
   real(r_single), allocatable, dimension (:) :: Observation, v_Observation
@@ -541,6 +550,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
                  Analysis_Use_Flag(nobs), Errinv_Input(nobs), Errinv_Final(nobs), &
                  Observation_Type(nobs), Observation(nobs), &
                  Obs_Minus_Forecast_adjusted(nobs), Obs_Minus_Forecast_unadjusted(nobs))
+        allocate(Hlocal(nobs),Vlocal(nobs))
         call nc_diag_read_get_var(iunit, 'Latitude', Latitude)
         call nc_diag_read_get_var(iunit, 'Longitude', Longitude)
         call nc_diag_read_get_var(iunit, 'Pressure', Pressure)
@@ -549,6 +559,8 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
         call nc_diag_read_get_var(iunit, 'Errinv_Input', Errinv_Input)
         call nc_diag_read_get_var(iunit, 'Errinv_Final', Errinv_Final)
         call nc_diag_read_get_var(iunit, 'Observation_Type', Observation_Type)
+        call nc_diag_read_get_var(iunit, "Horizontal_local", Hlocal)
+        call nc_diag_read_get_var(iunit, "Vertical_local", Vlocal)
 
         if (obtype == ' uv') then
            call nc_diag_read_get_var(iunit, 'u_Observation', Observation)
@@ -659,6 +671,8 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
            x_lon(nob)   = Longitude(i)
            x_press(nob) = pres
            x_time(nob)  = Time(i)
+           x_hloc(nob)  = Hlocal(i)
+           x_vloc(nob)  = Vlocal(i)
 
            ! observation errors
            if (errororig > 1.e-5_r_kind) then
@@ -687,6 +701,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
            if (x_type(nob) == ' uv')  x_type(nob) = '  u'
            if (x_type(nob) == 'tcp')  x_type(nob) = ' ps'
            if (x_type(nob) == ' rw')  x_type(nob) = '  u'
+           if (x_type(nob) == 'dbz')  x_type(nob) = '  u'
 
            ! get Hx
            if (nanal <= nanals) then
@@ -782,6 +797,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
                    Errinv_Input, Errinv_Final, Observation_Type, &
                    Observation, Obs_Minus_Forecast_adjusted, Obs_Minus_Forecast_unadjusted)
 
+        deallocate(Hlocal, Vlocal)
         if (obtype == ' uv') then
            deallocate(v_Observation, v_Obs_Minus_Forecast_adjusted, &
                       v_Obs_Minus_Forecast_unadjusted)
@@ -829,8 +845,8 @@ end subroutine get_convobs_data_nc
 ! read conventional observation from binary files
 subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
-                            x_lon, x_lat, x_press, x_time, x_code,         &
-                            x_errorig, x_type, x_used, id, nanal)
+                            x_lon, x_lat, x_press, x_hloc, x_vloc,         &
+                            x_time, x_code,x_errorig, x_type, x_used, id, nanal)
   use sparsearr, only: sparr2, sparr, readarray, delete, assignment(=), size
   use params, only: nanals, lobsdiag_forenkf
   use statevec, only: state_d
@@ -849,6 +865,7 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
   real(r_single), dimension(nobs_max), intent(out)    :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out)    :: x_lon, x_lat
   real(r_single), dimension(nobs_max), intent(out)    :: x_press, x_time
+  real(r_single), dimension(nobs_max), intent(out)    :: x_hloc, x_vloc
   integer(i_kind), dimension(nobs_max), intent(out)   :: x_code
   character(len=20), dimension(nobs_max), intent(out) :: x_type
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
@@ -885,6 +902,9 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
   errorlimit2_bnd = 1.e3_r_kind*errorlimit2_obs
   iunit = 7
   iunit2 = 17
+
+  x_hloc = 0.0
+  x_vloc = 0.0
 
   twofiles = (.not. lobsdiag_forenkf) .and. (nanal <= nanals)
   id2 = 'ensmean'
@@ -968,7 +988,7 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
     if (obtype == '  t' .or. obtype == ' uv' .or. obtype == ' ps' .or. &
         obtype == 'tcp' .or. obtype == '  q' .or. obtype == 'spd' .or. &
-        obtype == 'sst' .or. obtype == ' rw' .or. &
+        obtype == 'sst' .or. obtype == ' rw' .or. obtype == 'dbz' .or. &
         obtype == 'gps' .or. obtype == ' dw' .or. obtype == ' pw')  then
 
        allocate(cdiagbuf(ii),rdiagbuf(nreal,ii))

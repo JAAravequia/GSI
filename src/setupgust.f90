@@ -26,6 +26,9 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !   2016-06-24  guo     - fixed the default value of obsdiags(:,:)%tail%luse to luse(i)
 !                       . removed (%dlat,%dlon) debris.
+!   2016-09-23 Johnson, Y. Wang, X. Wang - write observation dependent horizontal and vertical
+!                                          localization scales into diag file,
+!                                          POC: xuguang.wang@ou.edu
 !   2016-10-07  pondeca - if(.not.proceed) advance through input file first
 !   2017-02-06  todling - add netcdf_diag capability; hidden as contained code
 !
@@ -231,7 +234,7 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=22
+     ioff0=22+2
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
@@ -792,6 +795,10 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
         rdiagbuf(21,ii) = data(idomsfc,i)    ! dominate surface type
         rdiagbuf(22,ii) = zsges              ! model terrain at ob location
+
+        rdiagbuf(23,ii) = data(22,i)
+        rdiagbuf(24,ii) = data(23,i)
+
         r_prvstg        = data(iprvd,i)
         cprvstg(ii)     = c_prvstg           ! provider name
         r_sprvstg       = data(isprvd,i)
@@ -855,6 +862,8 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
  
            call nc_diag_metadata("Dominant_Sfc_Type", data(idomsfc,i)              )
            call nc_diag_metadata("Model_Terrain",     zsges                        )
+           call nc_diag_metadata("Horizontal_local",  data(22,i)                   )
+           call nc_diag_metadata("Vertical_local",    data(23,i)                   )
            r_prvstg            = data(iprvd,i)
            call nc_diag_metadata("Provider_Name",     c_prvstg                     )    
            r_sprvstg           = data(isprvd,i)
