@@ -988,7 +988,7 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
     if (obtype == '  t' .or. obtype == ' uv' .or. obtype == ' ps' .or. &
         obtype == 'tcp' .or. obtype == '  q' .or. obtype == 'spd' .or. &
-        obtype == 'sst' .or. obtype == ' rw' .or. &
+        obtype == 'sst' .or. obtype == ' rw' .or. obtype == 'dbz' .or. &
         obtype == 'gps' .or. obtype == ' dw' .or. obtype == ' pw')  then
 
        allocate(cdiagbuf(ii),rdiagbuf(nreal,ii))
