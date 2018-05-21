@@ -4,52 +4,53 @@ cmake_minimum_required(VERSION 2.8)
     cmake_policy(SET CMP0046 NEW)
   endif()
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+  set(GSI_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
 # get a list of all the fortran source files
-  file(GLOB GSI_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*90 )
+  file(GLOB GSI_SRC ${GSI_SRC_DIR}/*90 )
 # get a list of all the c source files
-  file(GLOB GSI_C_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*c )
+  file(GLOB GSI_C_SRC ${GSI_SRC_DIR}/*c )
 # get a list of all cplr files
-  file(GLOB CLASS_SRC ${CMAKE_CURRENT_SOURCE_DIR}/class*90 )
+  file(GLOB CLASS_SRC ${GSI_SRC_DIR}/class*90 )
 # create a list of all corresponding stub files
   string(REGEX REPLACE "class" "stub" STUB_SRC "${CLASS_SRC}") 
 # create a list of all corresponding class files
   string(REGEX REPLACE "class" "cplr" CPLR_SRC "${CLASS_SRC}") 
 
 # these files use the cplr or stub modules, so they need to be compiled for all versions of GSI (WRF, no-WRF, etc)
-  set(LINKED_SRC "${CMAKE_CURRENT_SOURCE_DIR}/gesinfo.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/get_gefs_ensperts_dualres.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/get_gefs_for_regional.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/read_guess.F90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/bkgcov.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/bicglanczos.F90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/bicg.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/set_crtm_cloudmod.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/crtm_interface.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/gsi_nemsio_mod.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/ensctl2model_ad.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/ensctl2model.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/ensctl2state.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/ensctl2state_ad.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/lanczos.F90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/getsiga.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/test_obsens.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/sqrtmin.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/evaljgrad.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/pcgsoi.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/en_perts_io.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/bkerror.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/hybrid_ensemble_isotropic.F90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/write_all.F90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/glbsoi.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/setupaod.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/setuprad.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/general_read_nmmb.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/get_nmmb_ensperts.f90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/gsimod.F90" 
-   "${CMAKE_CURRENT_SOURCE_DIR}/gsimain.f90")
+  set(LINKED_SRC "${GSI_SRC_DIR}/gesinfo.f90" 
+   "${GSI_SRC_DIR}/get_gefs_ensperts_dualres.f90" 
+   "${GSI_SRC_DIR}/get_gefs_for_regional.f90" 
+   "${GSI_SRC_DIR}/read_guess.F90" 
+   "${GSI_SRC_DIR}/bkgcov.f90" 
+   "${GSI_SRC_DIR}/bicglanczos.F90" 
+   "${GSI_SRC_DIR}/bicg.f90" 
+   "${GSI_SRC_DIR}/set_crtm_cloudmod.f90" 
+   "${GSI_SRC_DIR}/crtm_interface.f90" 
+   "${GSI_SRC_DIR}/gsi_nemsio_mod.f90" 
+   "${GSI_SRC_DIR}/ensctl2model_ad.f90" 
+   "${GSI_SRC_DIR}/ensctl2model.f90" 
+   "${GSI_SRC_DIR}/ensctl2state.f90" 
+   "${GSI_SRC_DIR}/ensctl2state_ad.f90" 
+   "${GSI_SRC_DIR}/lanczos.F90" 
+   "${GSI_SRC_DIR}/getsiga.f90" 
+   "${GSI_SRC_DIR}/test_obsens.f90" 
+   "${GSI_SRC_DIR}/sqrtmin.f90" 
+   "${GSI_SRC_DIR}/evaljgrad.f90" 
+   "${GSI_SRC_DIR}/pcgsoi.f90" 
+   "${GSI_SRC_DIR}/en_perts_io.f90" 
+   "${GSI_SRC_DIR}/bkerror.f90" 
+   "${GSI_SRC_DIR}/hybrid_ensemble_isotropic.F90" 
+   "${GSI_SRC_DIR}/write_all.F90" 
+   "${GSI_SRC_DIR}/glbsoi.f90" 
+   "${GSI_SRC_DIR}/setupaod.f90" 
+   "${GSI_SRC_DIR}/setuprad.f90" 
+   "${GSI_SRC_DIR}/general_read_nmmb.f90" 
+   "${GSI_SRC_DIR}/get_nmmb_ensperts.f90" 
+   "${GSI_SRC_DIR}/gsimod.F90" 
+   "${GSI_SRC_DIR}/gsimain.f90")
 
 # Specify files of GSIEXEC main
-  set( GSIEXEC_SRC "${CMAKE_CURRENT_SOURCE_DIR}/gsimain.f90")
+  set( GSIEXEC_SRC "${GSI_SRC_DIR}/gsimain.f90")
   set_source_files_properties( ${GSIEXEC_SRC} PROPERTIES COMPILE_FLAGS ${GSI_Fortran_FLAGS} )
 
 # remove all stub, cplr and linked files from the rest of the source files
@@ -58,10 +59,10 @@ cmake_minimum_required(VERSION 2.8)
   list( REMOVE_ITEM GSI_SRC ${CPLR_SRC} )
 
 # remove stub_nstmod from the rest of the source files
-  list( REMOVE_ITEM GSI_SRC "${CMAKE_CURRENT_SOURCE_DIR}/stub_nstmod.f90" )
+  list( REMOVE_ITEM GSI_SRC "${GSI_SRC_DIR}/stub_nstmod.f90" )
   if( BUILD_NCDIAG )
-    list( REMOVE_ITEM GSI_SRC "${CMAKE_CURRENT_SOURCE_DIR}/nc_diag_read_mod.f90" )
-    list( REMOVE_ITEM GSI_SRC "${CMAKE_CURRENT_SOURCE_DIR}/nc_diag_write_mod.f90" )
+    list( REMOVE_ITEM GSI_SRC "${GSI_SRC_DIR}/nc_diag_read_mod.f90" )
+    list( REMOVE_ITEM GSI_SRC "${GSI_SRC_DIR}/nc_diag_write_mod.f90" )
   endif( BUILD_NCDIAG )
 # The specific regional/WRF source files
   if(USE_WRF)
@@ -109,6 +110,8 @@ cmake_minimum_required(VERSION 2.8)
     set(GSISUFFIX ".x" CACHE INTERNAL "Executable suffix")
   endif()
 
+  add_subdirectory(${CMAKE_SOURCE_DIR}/src/extn/gmaoTimer ${PROJECT_BINARY_DIR}/src/extn/gmaoTimer)
+
 # Set names, libs, and properties depending on if we are building with WRF or not
   if(USE_WRF) 
     set(GSIEXEC "${GSIBASE}${debug_suffix}${GSISUFFIX}" CACHE INTERNAL "GSI Executable Name")
@@ -120,6 +123,7 @@ cmake_minimum_required(VERSION 2.8)
 
     set_target_properties(${GSIEXEC} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
     set_target_properties(${GSIEXEC} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include/wrf")
+    target_include_directories(${GSIEXEC} PUBLIC "${PROJECT_BINARY_DIR}/include/wrf")
   endif()
 
   if(BUILD_GLOBAL)
@@ -133,22 +137,19 @@ cmake_minimum_required(VERSION 2.8)
     set_target_properties( ${GSILIB} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
     target_include_directories(${GSILIB} PUBLIC "${PROJECT_BINARY_DIR}/include")
 
-    add_dependencies(${GSIEXEC}
+    set(WRF_LIBRARIES "")
+  endif()
+
+  add_dependencies(${GSIEXEC}
 	gmaoTimer
 	${GSILIB}
 	${GSISHAREDLIB}
-    )
-    target_include_directories(${GSIEXEC}
+  )
+  target_include_directories(${GSIEXEC}
 	PUBLIC ${CMAKE_CURRENT_BINARY_DIR}
     	PUBLIC ${PROJECT_BINARY_DIR}/include
     	PUBLIC ${PROJECT_BINARY_DIR}/include/gmaoTimer
-    )
-    set_target_properties(${GSIEXEC} PROPERTIES
-    	Fortran_MODULE_DIRECTORY	${PROJECT_BINARY_DIR}/include
-    )
-
-    set(WRF_LIBRARIES "")
-  endif()
+  )
 
   # GSILIB entries are muturally referenced with ${GSISHAREDLIB entries}.  However, it seems all
   # dependencies of ${GSILIB} on ${GSISHAREDLIB} are implicit, but explicit in inversed references
