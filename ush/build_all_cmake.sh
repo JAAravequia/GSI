@@ -22,6 +22,9 @@ elif [[ -d /ioddev_dell ]]; then
 elif [[ -d /scratch3 ]] ; then
     . /apps/lmod/lmod/init/sh
     target=theia
+elif [[ -d /jetmon ]] ; then
+    . $MODULESHOME/init/sh
+    target=jet
 else
     echo "unknown target = $target"
     exit 9
@@ -44,12 +47,12 @@ if [ $target = wcoss -o $target = cray ]; then
 elif [ $target = theia ]; then
     module purge
     source $dir_modules/modulefile.ProdGSI.$target
-elif [ $target = wcoss_d ]; then
+else 
     module purge
     source $dir_modules/modulefile.ProdGSI.$target
 fi
 
-cmake -DBUILD_UTIL=ON -DCMAKE_BUILD_TYPE=PRODUCTION ..
+cmake -DBUILD_UTIL=ON -DCMAKE_BUILD_TYPE=PRODUCTION -DBUILD_CORELIBS=OFF ..
 
 make -j 8
 
