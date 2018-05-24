@@ -25,6 +25,9 @@ elif [[ -d /scratch3 ]] ; then
 elif [[ -d /jetmon ]] ; then
     . $MODULESHOME/init/sh
     target=jet
+elif [[ -d /sw/gaea ]] ; then
+    . /opt/cray/pe/modules/3.2.10.5/init/sh
+    target=gaea
 else
     echo "unknown target = $target"
     exit 9
@@ -41,7 +44,7 @@ rm -rf $dir_root/build
 mkdir -p $dir_root/build
 cd $dir_root/build
 
-if [ $target = wcoss -o $target = cray ]; then
+if [ $target = wcoss -o $target = cray -o $target = gaea ]; then
     module purge
     module load $dir_modules/modulefile.ProdGSI.$target
 elif [ $target = theia ]; then
