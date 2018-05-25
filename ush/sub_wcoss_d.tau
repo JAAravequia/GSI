@@ -32,7 +32,7 @@ Usage:  $0 [options] executable [args]
                         Thh[mm] (full, incremental, today or tomorrow) format
                         (default: now)
 
-       You can also export variables and
+       You can also export variables \"TASK_GEOMETRY\" (default:-\"NONE\") and
         \"INHERIT_ENV\" (default:-\"YES\") - Set this variable to \"NO\" and
         export it if you do not want the next job to inherit current job
         environment.
@@ -51,7 +51,7 @@ Usage:  $0 [options] executable [args]
           \"MP_MPILIB\"               (default:-\"NULL\")
           \"MP_LABELIO\"              (default:-\"NULL\")
           \"MP_STDOUTMODE\"           (default:-\"NULL\")
-          \"DATA\"                    (default:-\"/stmp/$LOGNAME/sub\"
+          \"DATA\"                    (default:-\"/stmpp1/$LOGNAME/sub\"
                                        - deleted at the end if created)
 
 Function:  This command submits a job to the batch queue."
@@ -69,12 +69,12 @@ mpiver=""
 output=""
 procs=0
 nodes=""
-ppreq="NONE"
+ppreq=""
 queue=""
 qpreq=""
 rmem="1024"
 rcpu="1"
-pe_node=${pe_node:-24}
+pe_node="16"
 timew="900"
 userid=""
 verbose=NO
@@ -88,7 +88,7 @@ while getopts a:b:d:e:g:ij:m:no:p:q:r:t:u:vw: opt;do
     g) group="$OPTARG";;
     i) stdin=YES;;
     j) jobname=$OPTARG;;
-    m) machine="$OPTARG";;
+#   m) machine="$OPTARG";;
     m) mpiver="$OPTARG";;
     n) nosub=YES;;
     o) output=$OPTARG;;
@@ -114,87 +114,111 @@ shift
 args="$*"
 bn=$(basename $exec)
 export jobname=${jobname:-$bn}
-machine=${machine:-""}
 output=${output:-$jobname.out}
 myuser=$LOGNAME
 myhost=$(hostname)
-#mpiver=${mpiver:-poe}
+#mpiver=${mpiver:-intelmpi}
 envars=$envars
 
-#DATA=/lustre/fs/scratch/$LOGNAME/stmp
-pext=${pext:-""}
-PTMP=${PTMP:-/gpfs/hps/stmp}
-DATA=${DATA:-$PTMP/$LOGNAME/sub}
+#DATA=/lustre/fs/scratch/$LOGNAME/stmpp1
+DATA=${DATA:-/gpfs/dell2/ptmp/$LOGNAME/sub}
 if [ -s $DATA ] ; then
   MKDATA=NO
 else
   mkdir -p $DATA
   MKDATA=YES
 fi
-dirin=${dirin:-$(pwd)}
 
 queue=${queue:-dev}
 timew=${timew:-01:20}
 timew=$(echo $timew |cut -d: -f1):$(echo $timew |cut -d: -f2)
 threads=${rcpu:-1}
-nthreads=$threads
 
 
-max_core=${max_core:-24}
-ptile=$((procs/nodes))
-pe_node=${pe_ndoe:-$ptile}
+max_core=${max_core:-16}
 task_node=${pe_node:-${task_node:-$max_core}}
 
 export INHERIT_ENV=${INHERIT_ENV:-YES}
-if [ $nodes -eq 1 ] ; then
+export TASK_GEOMETRY=${TASK_GEOMETRY:-NONE}
+if [ "$TASK_GEOMETRY" = NONE ] ; then
+ if [ $nodes -eq 1 ] ; then
   task_node=$procs
+ fi
+ tot_size=$((procs*nodes))
+else
+ tot_size=$((task_node*nodes))
 fi
-tot_size=$procs
-max_tasks=$((max_core*nodes))
-#tot_size=$procs
 if [ $((task_node*threads)) -gt $max_core ]; then
-   core_typ=cpu
-   nthreads=$threads
-   threads=$((2*max_core/task_node))
-   echo "Hyper-threading is used - setting core_typ=$corei_typ"
+   core=cpu
+   echo "Hyper-threading is used - setting core=$core"
 fi
-export core_typ=${core_typ:-core}
+export core=${core:-core}
 
-if [ $pe_node -eq $max_tasks -a $nthreads -gt 1 ] ; then
-  pe_node=$((npe_node/nthreads))
-fi
-
-
-export OMP_STACKSIZE=${OMP_STACKSIZE:-1024m}
-export KMP_AFFINITY=${KMP_AFFINITY:-disabled}
-export OMP_NUM_THREADS=$nthreads
+#export KMP_STACKSIZE=${KMP_STACKSIZE:-1024m}
 
 export TZ=GMT
 cfile=sub$$
 > $cfile
 
 if [ $INHERIT_ENV = YES ] ; then
- echo "#!/bin/ksh"                                                >> $cfile
+ echo "#!/bin/bash"                                                >> $cfile
 else
- echo "#!/bin/sh --login"                                         >> $cfile
- echo "#BSUB -L /bin/sh"                                          >> $cfile
+ echo "#!/bin/bash "                                        >> $cfile
+ echo "#BSUB -L /bin/bash"                                         >> $cfile
 fi
+#echo "#BSUB -a $mpiver"                                           >> $cfile
 echo "#BSUB -P $account"                                          >> $cfile
 echo "#BSUB -e $output"                                           >> $cfile
 echo "#BSUB -o $output"                                           >> $cfile
+echo "#BSUB -cwd $dirin"                                          >> $cfile
+##echo "#BSUB -o $output.%J"                                      >> $cfile
 echo "#BSUB -J $jobname"                                          >> $cfile
 #echo "#BSUB -network type=sn_all:mode=US"                         >> $cfile
 echo "#BSUB -q $queue"                                            >> $cfile
-#echo "#BSUB -n $tot_size"                                         >> $cfile
-if [ $queue = dev_transfer ] ; then
-   echo "#BSUB -R rusage[mem=$rmem]"                                 >> $cfile
+echo "#BSUB -n $tot_size"                                         >> $cfile
+if [ $mpiver = openmp ] ; then
+ echo "#BSUB -R span[ptile=$procs]"                               >> $cfile
+ echo "#BSUB -R affinity[$core]"                                  >> $cfile
+ echo "#BSUB -R rusage[mem=$rmem]"                                >> $cfile
+else
+ echo "#BSUB -R span[ptile=$procs]"                               >> $cfile
 fi
-if [ $queue != dev_transfer ] ; then
-   echo "#BSUB -M $rmem"                                                >> $cfile
-   echo "#BSUB -extsched 'CRAYLINUX[]' -R '1*{select[craylinux && !vnode]} + $max_tasks*{select[craylinux && vnode]span[ptile=24] cu[type=cabinet]}'" >> $cfile
+if [ $threads -gt 1 ] ; then
+  if [ $core = core ] ; then
+    echo "#BSUB -R affinity[core($threads)]"   >> $cfile
+    if [ $queue = shared -o $ppreq = S ] ; then
+      echo "#BSUB -R rusage[mem=$rmem]"                           >> $cfile
+    else
+      echo "#BSUB -x"                                             >> $cfile
+    fi
+  else
+    if [ $queue = shared -o $ppreq = S ] ; then
+      echo "#BSUB -R affinity[cpu($threads):distribute=balance]"  >> $cfile
+      echo "#BSUB -R rusage[mem=$rmem]"                           >> $cfile
+    else
+      echo "#BSUB -R affinity[cpu($threads):distribute=balance]"  >> $cfile
+      echo "#BSUB -x"                                             >> $cfile
+    fi
+  fi
+else
+  if [ $core = core ] ; then
+    echo "#BSUB -R affinity[$core]"            >> $cfile
+    if [ $queue = shared -o $ppreq = S ] ; then
+      echo "#BSUB -R rusage[mem=$rmem]"                           >> $cfile
+    else
+      echo "#BSUB -x"                                             >> $cfile
+    fi
+  else
+    if [ $queue = shared -o $ppreq = S ] ; then
+      echo "#BSUB -R affinity[cpu:distribute=balance]"            >> $cfile
+      echo "#BSUB -R rusage[mem=$rmem]"                           >> $cfile
+    else
+      echo "#BSUB -R affinity[cpu:distribute=balance]"            >> $cfile
+      echo "#BSUB -x"                                             >> $cfile
+    fi
+  fi
 fi
 echo "#BSUB -W $timew"                                            >> $cfile
-echo "#BSUB -cwd $dirin"                                          >> $cfile
 
 if [[ -n $when ]];then
   whena=$when
@@ -206,7 +230,7 @@ if [[ -n $when ]];then
     ((mn+=$(echo $now|cut -c11-12)))
     [[ $mn -ge 60 ]] && ((hr+=1)) && ((mn-=60))
     [[ $mn -lt 10 ]] && mn=0$mn
-    whena=$($NDATE +$hr $(echo $now|cut -c1-10))$mn
+    whena=$(/nwprod/util/exec/ndate +$hr $(echo $now|cut -c1-10))$mn
   elif [[ $when = t* ]];then
     hr=$(echo $when|cut -c2-3)
     mn=$(echo $when|cut -c4-5)
@@ -218,7 +242,7 @@ if [[ -n $when ]];then
     mn=$(echo $when|cut -c4-5)
     [[ -n $mn ]] || mn=00
     now=$(date -u +"%Y%m%d%H")
-    whena=$($NDATE +24 $now|cut -c1-8)$hr$mn
+    whena=$(/nwprod/util/exec/ndate +24 $now|cut -c1-8)$hr$mn
   fi
   yr=$(echo $whena|cut -c1-4)
   mo=$(echo $whena|cut -c5-6)
@@ -238,34 +262,65 @@ fi
 #echo "export MP_EUILIB=$MP_EUILIB"                             >> $cfile
 #fi
 
-if [ ${KMP_AFFINITY:-NULL} != NULL ] ; then
- echo "export KMP_AFFINITY=$KMP_AFFINITY"                       >> $cfile
+if [ ${MP_EUIDEVELOP:-NULL} != NULL ] ; then
+ echo "export MP_EUIDEVELOP=$MP_EUIDEVELOP"                     >> $cfile
+fi
+#echo "export KMP_STACKSIZE=$KMP_STACKSIZE"                      >> $cfile
+if [ ${F_UFMTENDIAN:-NULL} != NULL ] ; then
+ echo "export F_UFMTENDIAN=$F_UFMTENDIAN"                       >> $cfile
+fi
+if [ ${MPICH_ALLTOALL_THROTTLE:-NULL} != NULL ] ; then
+ echo "export MPICH_ALLTOALL_THROTTLE=$MPICH_ALLTOALL_THROTTLE" >> $cfile
+fi
+if [ ${MP_SINGLE_THREAD:-NULL} != NULL ] ; then
+ echo "export MP_SINGLE_THREAD=$MP_SINGLE_THREAD"               >> $cfile
+fi
+if [ ${MP_EAGER_LIMIT:-NULL} != NULL ] ; then
+ echo "export MP_EAGER_LIMIT=$MP_EAGER_LIMIT"                   >> $cfile
 fi
 
-echo "export OMP_STACKSIZE=$OMP_STACKSIZE"                      >> $cfile
-echo "export OMP_NUM_THREADS=$OMP_NUM_THREADS"                  >> $cfile
-echo "export FORT_BUFFERED=true"                                >> $cfile
-
+if [ ${MP_USE_BULK_XFER:-NULL} != NULL ] ; then
+ echo "export MP_USE_BULK_XFER=$MP_USE_BULK_XFER"               >> $cfile
+fi
+if [ ${MP_COLLECTIVE_OFFLOAD:-NULL} != NULL ] ; then
+ echo "export MP_COLLECTIVE_OFFLOAD=$MP_COLLECTIVE_OFFLOAD"     >> $cfile
+fi
+if [ ${MP_SHARED_MEMORY:-NULL} != NULL ] ; then
+ echo "export MP_SHARED_MEMORY=$MP_SHARED_MEMORY"               >> $cfile
+fi
+if [ ${MP_MPILIB:-NULL} != NULL ] ; then
+ echo "export MP_MPILIB=$MP_MPILIB"                             >> $cfile
+fi
 if [ ${MP_LABELIO:-NULL} != NULL ] ; then
  echo "export MP_LABELIO=$MP_LABELIO"                           >> $cfile
 fi
 if [ ${MP_STDOUTMODE:-NULL} != NULL ] ; then
  echo "export MP_STDOUTMODE=$MP_STDOUTMODE "                    >> $cfile
 fi
+if [ "$TASK_GEOMETRY" != NONE ] ; then
+ echo "export LSB_PJL_TASK_GEOMETRY=\"$TASK_GEOMETRY\""         >> $cfile
+fi
 for var in $(eval echo $envars | tr , ' ') ; do
  echo "export $var"                                             >> $cfile
 done
 
-APRUN="aprun -j1 -n $procs -N $pe_node -d $nthreads -cc depth"
-echo "export APRUN='$APRUN tau_exec '"                                    >> $cfile
+echo "export OMP_NUM_THREADS=$threads"                          >> $cfile
+echo "" >>$cfile
+echo ". "$(awk '{ print $1, $2, $3, $4, $5, $6, $7, $8, $9 }' $regdir/regression_var.out) >> $cfile 
+echo "" >>$cfile
 
 echo "module purge"    >> $cfile
-echo "module load /gpfs/hps3/emc/global/noscrub/Mark.Potts/ProdGSI/modulefiles/modulefile.ProdGSI.cray"    >> $cfile
+echo "module load EnvVars/1.0.2"    >> $cfile
+echo "module load lsf/10.1"    >> $cfile
+echo "module load ips/18.0.1.163"    >> $cfile
+echo "module load impi/18.0.1"    >> $cfile
+echo "module load NetCDF/4.5.0"    >> $cfile
+#echo "module load smpi/10.1.1.0"    >> $cfile
 
-echo " export TAU_MAKEFILE=/gpfs/hps3/emc/global/noscrub/Mark.Potts/taumpi/x86_64/lib/Makefile.tau-icpc-papi-mpi-pdt-openmp-opari"   >> $cfile
-echo " export PATH=$PATH:/gpfs/hps3/emc/global/noscrub/Mark.Potts/taumpi/x86_64/bin"   >> $cfile
-echo " export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/gpfs/hps3/emc/global/noscrub/Mark.Potts/papi/lib"   >> $cfile
-echo " export LD_LIBRARY_PATH=/opt/intel/composer_xe_2015.3.187/compiler/lib/intel64:$LD_LIBRARY_PATH"   >> $cfile
+echo " export TAU_MAKEFILE=/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/taumpi/x86_64/lib/Makefile.tau-icpc-papi-ompt-mpi-pdt-openmp"   >> $cfile
+#echo " export TAU_MAKEFILE=/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/taumpi/x86_64/lib/Makefile.tau-icpc-papi-mpi-pdt-openmp-opari" >> $cfile
+echo " export PATH=$PATH:/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/taumpi/x86_64/bin"   >> $cfile
+echo " export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/papi/lib"   >> $cfile
 echo " export TAU_PROFILE=1"   >> $cfile
 echo " export TAU_TRACE=0"   >> $cfile
 echo " export TAU_CALLPATH=1"   >> $cfile
@@ -276,10 +331,10 @@ echo " export TAU_THROTTLE=1"   >> $cfile
 echo " export TAU_THROTTLE_NUMCALLS=150000"   >> $cfile
 echo " export TAU_THROTTLE_PERCALL=10"   >> $cfile
 echo " export TAU_COMPENSATE=1"   >> $cfile
+echo " export TAU_METRICS=PAPI_TLB_DM"   >> $cfile
+echo " export TAU_METRICS=PAPI_FP_OPS"   >> $cfile
+echo " export TAU_METRICS=PAPI_VEC_DP"   >> $cfile
 echo " export TAU_PROFILE_FORMAT=merged"   >> $cfile
-#echo " export TAU_METRICS=PAPI_TLB_DM"   >> $cfile
-#echo " export TAU_METRICS=PAPI_FP_OPS"   >> $cfile
-#echo " export TAU_METRICS=PAPI_VEC_DP"   >> $cfile
 
 echo "$exec"                                                    >> $cfile
 
@@ -295,7 +350,7 @@ elif [[ $verbose = YES ]];then
 fi
 bsub=${bsub:-$LSF_BINDIR/bsub}
 
-ofile=$DATA/subout$$
+ofile=subout$$
 >$ofile
 chmod 777 $ofile
 $bsub < $cfile
@@ -306,5 +361,5 @@ if [[ -w $SUBLOG ]];then
   date +"%Y%m%d%H%M%S : $subcmd : $jobn" >>$SUBLOG
 fi
 #rm $cfile $ofile
-#[[ $MKDATA = YES ]] && rmdir $DATA
+[[ $MKDATA = YES ]] && rmdir $DATA
 exit $rc

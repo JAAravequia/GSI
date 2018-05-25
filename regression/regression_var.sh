@@ -147,8 +147,8 @@ case $machine in
    export ptmp="/gpfs/hps/ptmp/$LOGNAME/$ptmpName"
 
    export fixcrtm="/gpfs/hps/nco/ops/nwprod/lib/crtm/v2.2.4/fix"
-   export casesdir="/gpfs/hps/emc/da/noscrub/Michael.Lueken/CASES"
-   export ndate=$NDATE
+   export casesdir="/gpfs/hps3/emc/da/noscrub/Michael.Lueken/CASES"
+   export ndate="/gpfs/hps/nco/ops/nwprod/prod_util.v1.0.21/exec/ndate"
 
    export check_resource="no"
 
