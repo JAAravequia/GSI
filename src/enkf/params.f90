@@ -363,15 +363,15 @@ if (neigv > 0) then
   endif
   ! neigv>0 implies letkf_flag=denkf=letkf_novlocal=lobsdiag_forenkf=.true. and
   ! lnsigcutoff* = 1.e30
-  if (.not. letkf_flag) then
-    if (nproc .eq. 0) print *,"re-setting letkf_flag to true"
-    letkf_flag = .true.
-  endif
-  if (.not. letkf_novlocal) then
+  !if (.not. letkf_flag) then
+  !  if (nproc .eq. 0) print *,"re-setting letkf_flag to true"
+  !  letkf_flag = .true.
+  !endif
+  if (letkf_flag .and. .not. letkf_novlocal) then
      if (nproc .eq. 0) print *,"re-setting letkf_novlocal to true"
      letkf_novlocal = .true.
   endif
-  if (letkf_novlocal .and. .not. denkf) then
+  if (letkf_flag .and. letkf_novlocal .and. .not. denkf) then
      if (nproc .eq. 0) print *,"re-setting denkf to true"
      denkf = .true.
   endif

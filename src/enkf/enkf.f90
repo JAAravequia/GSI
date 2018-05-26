@@ -103,7 +103,7 @@ use loadbal, only: numobsperproc, numptsperproc, indxproc_obs, iprocob, &
                    ensmean_obchunk, indxob_chunk, oblnp_chunk, nobs_max, &
                    obtime_chunk, grdloc_chunk, obloc_chunk, &
                    npts_max, anal_obchunk_prior, ensmean_chunk, anal_chunk, &
-                   ensmean_chunk_prior
+                   anal_obchunk_modens_prior, ensmean_chunk_prior
 use controlvec, only: cvars3d,  ncdim, index_pres
 use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, oblnp, &
                   nobstot, nobs_conv, nobs_oz, nobs_sat,&
@@ -117,7 +117,8 @@ use params, only: sprd_tol, paoverpb_thresh, datapath, nanals,&
                   iassim_order,sortinc,deterministic,numiter,nlevs,&
                   zhuberleft,zhuberright,varqc,lupd_satbiasc,huber,univaroz,&
                   covl_minfact,covl_efold,nbackgrounds,nhr_anal,fhr_assim,&
-                  iseed_perturbed_obs,lupd_obspace_serial,fso_cycling
+                  iseed_perturbed_obs,lupd_obspace_serial,fso_cycling,&
+                  neigv,vlocal_evecs,denkf
 use radinfo, only: npred,nusis,nuchan,jpch_rad,predx
 use radbias, only: apply_biascorr, update_biascorr
 use gridinfo, only: nlevs_pres
@@ -147,10 +148,13 @@ real(r_single) hxpost(nanals),hxprior(nanals),hxinc(nanals),&
 real(r_single) corrsqr,covl_fact
 real(r_double) :: t1,t2,t3,t4,t5,t6,tbegin,tend
 real(r_single) kfgain,hpfht,hpfhtoberrinv,r_nanals,r_nanalsm1,hpfhtcon
-real(r_single) anal_obtmp(nanals),obinc_tmp,obens(nanals),obganl(nanals)
+real(r_single) anal_obtmp(nanals),obinc_tmp,obens(nanals),obganl(nanals),&
+               obganl_modens(nanals*neigv)
+real(r_single) anal_obtmp_modens(nanals*neigv)
 real(r_single) normdepart, pnge, width
-real(r_single) buffer(nanals+2)
-real(r_single),allocatable, dimension(:,:) :: anal_obchunk, buffertmp3
+real(r_single) buffer(nanals+2),ens_tmp(nanals*neigv)
+real(r_single),allocatable, dimension(:,:) :: anal_obchunk, buffertmp3,&
+                                              anal_obchunk_modens
 real(r_single),dimension(nobstot):: oberrvaruse
 real(r_single) r,paoverpb
 real(r_single) taper1,taper3
@@ -162,12 +166,13 @@ real(r_single), allocatable, dimension(:) :: paoverpb_min, paoverpb_min1, paover
 integer(i_kind) ierr
 ! kd-tree search results
 type(kdtree2_result),dimension(:),allocatable :: sresults1,sresults2 
-integer(i_kind) nanal,nn,nnn,nobm,nsame,nn1,nn2,oz_ind
+integer(i_kind) nanal,nn,nnn,nobm,nsame,nn1,nn2,oz_ind,nlev
 real(r_single),dimension(nlevs_pres):: taperv
 logical lastiter, kdgrid, kdobs
 
 ! allocate temporary arrays.
 allocate(anal_obchunk(nanals,nobs_max))
+if (neigv > 0) allocate(anal_obchunk_modens(nanals*neigv,nobs_max))
 allocate(sresults1(numptsperproc(nproc+1)),taper_disgrd(numptsperproc(nproc+1)))
 allocate(sresults2(numobsperproc(nproc+1)),taper_disob(numobsperproc(nproc+1)))
 allocate(buffertmp(nobstot))
@@ -238,6 +243,7 @@ end if
 obfit_post(1:nobstot) = obfit_prior(1:nobstot)
 obsprd_post(1:nobstot) = obsprd_prior(1:nobstot)
 anal_obchunk = anal_obchunk_prior
+if (neigv > 0) anal_obchunk_modens = anal_obchunk_modens_prior
 corrlengthsq_orig = corrlengthsq
 lnsigl_orig = lnsigl
 
@@ -398,12 +404,20 @@ do niter=1,numiter
       ! send to other processors.
       if (nproc == npob) then
           nob1 = indxob_chunk(nob); 
-          hpfht = sum(anal_obchunk(:,nob1)**2)*r_nanalsm1
+          if (neigv > 0) then
+              hpfht = sum(anal_obchunk_modens(:,nob1)**2)*r_nanalsm1
+              anal_obtmp_modens(:) = anal_obchunk_modens(:,nob1)
+          else
+              hpfht = sum(anal_obchunk(:,nob1)**2)*r_nanalsm1
+          endif
           buffer(1:nanals) = anal_obchunk(:,nob1)
           buffer(nanals+1) = ob(nob)-ensmean_obchunk(nob1)
           buffer(nanals+2) = hpfht
       end if
       call mpi_bcast(buffer,nanals+2,mpi_real4,npob,mpi_comm_world,ierr)
+      if (neigv > 0) then 
+         call mpi_bcast(anal_obtmp_modens,nanals*neigv,mpi_real4,npob,mpi_comm_world,ierr)
+      endif
 
       t2 = t2 + mpi_wtime() - t1
       t1 = mpi_wtime()
@@ -432,7 +446,13 @@ do niter=1,numiter
 
       if (deterministic) then
          ! EnSRF.
-         obganl = -anal_obtmp/(one+sqrt(oberrvaruse(nob)*hpfhtoberrinv))
+         if (denkf) then
+             obganl = -anal_obtmp/2.
+             if (neigv > 0) obganl_modens = -anal_obtmp_modens/2.
+         else
+             obganl = -anal_obtmp/(one+sqrt(oberrvaruse(nob)*hpfhtoberrinv))
+             if (neigv > 0) obganl_modens = -anal_obtmp_modens/(one+sqrt(oberrvaruse(nob)*hpfhtoberrinv))
+         endif
       else
          ! perturbed obs EnKF.
          sqrtoberr=sqrt(oberrvaruse(nob))
@@ -553,33 +573,52 @@ do niter=1,numiter
           nn2 = ncdim
       end if
       if (nf2 > 0) then
-!$omp parallel do schedule(dynamic,1) private(ii,i,nb,obt,nn,nnn,lnsig,kfgain,taper1,taper3,taperv)
+!$omp parallel do schedule(dynamic,1) private(ii,i,nb,obt,nn,nnn,nlev,lnsig,kfgain,ens_tmp,taper1,taper3,taperv)
           do ii=1,nf2 ! loop over nearby horiz grid points
              do nb=1,nbackgrounds ! loop over background time levels
              obt = abs(obtime(nob)-(nhr_anal(nb)-fhr_assim))
              taper3=taper(obt*obtimelinv)*hpfhtcon
              taper1=taper_disgrd(ii)*taper3
              i = sresults1(ii)%idx
-             do nn=1,nlevs_pres
-               lnsig = abs(lnp_chunk(i,nn)-oblnp(nob))
-               if(lnsig < lnsigl(nob))then
-                 taperv(nn)=taper1*taper(lnsig*lnsiglinv)
-               else
-                 taperv(nn)=-2._r_single      ! negative number is a flag to not use
-               end if
-             end do
-             do nn=nn1,nn2
-                nnn=index_pres(nn)
-                if (taperv(nnn) > zero) then
-                    ! gain includes covariance localization.
-                    ! update all time levels
-                    kfgain=taperv(nnn)*sum(anal_chunk(:,i,nn,nb)*anal_obtmp)
-                    ! update mean.
-                    ensmean_chunk(i,nn,nb) = ensmean_chunk(i,nn,nb) + kfgain*obinc_tmp
-                    ! update perturbations.
-                    anal_chunk(:,i,nn,nb) = anal_chunk(:,i,nn,nb) + kfgain*obganl(:)
-                end if
-             end do
+             if (neigv > 0) then ! modulated ensemble, no vertical localizatoin
+                 if (taper1 > zero) then
+                    do nn=nn1,nn2 
+                       nlev = index_pres(nn) ! vertical index for nn'th control variable
+                       if (nlev .eq. nlevs+1) nlev=1 ! 2d fields, assume surface
+                       call expand_ens(neigv,nanals, &
+                                       anal_chunk(:,i,nn,nb), &
+                                       ens_tmp(:),vlocal_evecs(:,nlev))
+                       kfgain=taper1*sum(ens_tmp*anal_obtmp_modens)
+                       ! update mean.
+                       ensmean_chunk(i,nn,nb) = ensmean_chunk(i,nn,nb) + &
+                                                kfgain*obinc_tmp
+                       ! update perturbations.
+                       anal_chunk(:,i,nn,nb) = anal_chunk(:,i,nn,nb) + &
+                                               kfgain*obganl(:)
+                    enddo
+                 endif
+             else
+                 do nn=1,nlevs_pres
+                   lnsig = abs(lnp_chunk(i,nn)-oblnp(nob))
+                   if(lnsig < lnsigl(nob))then
+                     taperv(nn)=taper1*taper(lnsig*lnsiglinv)
+                   else
+                     taperv(nn)=-2._r_single      ! negative number is a flag to not use
+                   end if
+                 end do
+                 do nn=nn1,nn2
+                    nnn=index_pres(nn)
+                    if (taperv(nnn) > zero) then
+                        ! gain includes covariance localization.
+                        ! update all time levels
+                        kfgain=taperv(nnn)*sum(anal_chunk(:,i,nn,nb)*anal_obtmp)
+                        ! update mean.
+                        ensmean_chunk(i,nn,nb) = ensmean_chunk(i,nn,nb) + kfgain*obinc_tmp
+                        ! update perturbations.
+                        anal_chunk(:,i,nn,nb) = anal_chunk(:,i,nn,nb) + kfgain*obganl(:)
+                    end if
+                 end do
+             endif
           end do ! end loop over background time levels. 
           end do ! end loop over nearby horiz grid points
 !$omp end parallel do
@@ -595,30 +634,56 @@ do niter=1,numiter
            ! Note: only really need to do obs that have not yet been processed unless sat data
            ! for bias correction update.
            nob2 = sresults2(nob1)%idx
-           lnsig = abs(oblnp(nob)-oblnp_chunk(nob2))
-           if (lnsig < lnsigl(nob) .and. taper_disob(nob1) > zero) then
-             obt = abs(obtime(nob)-obtime_chunk(nob2))
-             if (obt < obtimel(nob)) then
-               ! gain includes covariance localization.
-               kfgain = taper_disob(nob1)* &
-                        taper(lnsig*lnsiglinv)*taper(obt*obtimelinv)* &
-                        sum(anal_obchunk(:,nob2)*anal_obtmp)*hpfhtcon
-               ! update mean.
-               ensmean_obchunk(nob2) = ensmean_obchunk(nob2) + kfgain*obinc_tmp
-               ! update perturbations.
-               anal_obchunk(:,nob2) = anal_obchunk(:,nob2) + kfgain*obganl
-               nob3 = indxproc_obs(nproc+1,nob2) ! index in 1,....,nobstot
-               ! recompute ob space spread ratio  for unassimlated obs
-               if (iassim_order == 2 .and. niter == 1) then
-                 if (indxassim2(nob3) /= 0) then
-                   paoverpb_chunk(nob2) = &
-                   oberrvar(nob3)/(oberrvar(nob3)+&
-                   sum(anal_obchunk(:,nob2)**2)*r_nanalsm1)
-                 else
-                   paoverpb_chunk(nob2) = 1.e10
+           if (neigv > 0) then ! modulated ensemble, no vertical localizatoin
+               obt = abs(obtime(nob)-obtime_chunk(nob2))
+               if (obt < obtimel(nob)) then
+                 ! gain includes covariance localization.
+                 kfgain = taper_disob(nob1)* &
+                          taper(obt*obtimelinv)* &
+                          sum(anal_obchunk_modens(:,nob2)*anal_obtmp_modens)*hpfhtcon
+                 ! update mean.
+                 ensmean_obchunk(nob2) = ensmean_obchunk(nob2) + kfgain*obinc_tmp
+                 ! update perturbations.
+                 anal_obchunk(:,nob2) = anal_obchunk(:,nob2) + kfgain*obganl
+                 anal_obchunk_modens(:,nob2) = anal_obchunk_modens(:,nob2) + kfgain*obganl_modens
+                 nob3 = indxproc_obs(nproc+1,nob2) ! index in 1,....,nobstot
+                 ! recompute ob space spread ratio  for unassimlated obs
+                 if (iassim_order == 2 .and. niter == 1) then
+                   if (indxassim2(nob3) /= 0) then
+                     paoverpb_chunk(nob2) = &
+                     oberrvar(nob3)/(oberrvar(nob3)+&
+                     sum(anal_obchunk_modens(:,nob2)**2)*r_nanalsm1)
+                   else
+                     paoverpb_chunk(nob2) = 1.e10
+                   endif
                  endif
-               endif
-             end if
+               end if
+           else
+              lnsig = abs(oblnp(nob)-oblnp_chunk(nob2))
+              if (lnsig < lnsigl(nob) .and. taper_disob(nob1) > zero) then
+                obt = abs(obtime(nob)-obtime_chunk(nob2))
+                if (obt < obtimel(nob)) then
+                  ! gain includes covariance localization.
+                  kfgain = taper_disob(nob1)* &
+                           taper(lnsig*lnsiglinv)*taper(obt*obtimelinv)* &
+                           sum(anal_obchunk(:,nob2)*anal_obtmp)*hpfhtcon
+                  ! update mean.
+                  ensmean_obchunk(nob2) = ensmean_obchunk(nob2) + kfgain*obinc_tmp
+                  ! update perturbations.
+                  anal_obchunk(:,nob2) = anal_obchunk(:,nob2) + kfgain*obganl
+                  nob3 = indxproc_obs(nproc+1,nob2) ! index in 1,....,nobstot
+                  ! recompute ob space spread ratio  for unassimlated obs
+                  if (iassim_order == 2 .and. niter == 1) then
+                    if (indxassim2(nob3) /= 0) then
+                      paoverpb_chunk(nob2) = &
+                      oberrvar(nob3)/(oberrvar(nob3)+&
+                      sum(anal_obchunk(:,nob2)**2)*r_nanalsm1)
+                    else
+                      paoverpb_chunk(nob2) = 1.e10
+                    endif
+                  endif
+                end if
+              end if
            end if
         end do
 !$omp end parallel do
@@ -705,7 +770,11 @@ t1 = mpi_wtime()
 buffertmp=zero
 do nob1=1,numobsperproc(nproc+1)
   nob2=indxproc_obs(nproc+1,nob1)
-  buffertmp(nob2) = sum(anal_obchunk(:,nob1)**2)*r_nanalsm1
+  if (neigv > 0) then
+     buffertmp(nob2) = sum(anal_obchunk_modens(:,nob1)**2)*r_nanalsm1
+  else
+     buffertmp(nob2) = sum(anal_obchunk(:,nob1)**2)*r_nanalsm1
+  endif
 end do
 call mpi_allreduce(buffertmp,obsprd_post,nobstot,mpi_real4,mpi_sum,mpi_comm_world,ierr)
 if (nproc == 0) print *,'time to broadcast obsprd_post = ',mpi_wtime()-t1
