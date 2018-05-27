@@ -157,7 +157,7 @@ real(r_single),allocatable, dimension(:,:) :: anal_obchunk, buffertmp3,&
                                               anal_obchunk_modens
 real(r_single),dimension(nobstot):: oberrvaruse
 real(r_single) r,paoverpb
-real(r_single) taper1,taper3
+real(r_single) taper1,taper3,taper_thresh
 real(r_single),allocatable, dimension(:) :: rannum,corrlengthsq_orig,lnsigl_orig
 integer(i_kind), allocatable, dimension(:) :: indxassim,iskip,indxassim2,indxassim3
 real(r_single), allocatable, dimension(:) :: buffertmp,taper_disob,taper_disgrd
@@ -184,6 +184,7 @@ allocate(corrlengthsq_orig(nobstot),lnsigl_orig(nobstot))
 ! define a few frequently used parameters
 r_nanals=one/float(nanals)
 r_nanalsm1=one/float(nanals-1)
+taper_thresh = tiny(taper1)
 
 ! default is to assimilate in order they are read in.
 
@@ -581,7 +582,7 @@ do niter=1,numiter
              taper1=taper_disgrd(ii)*taper3
              i = sresults1(ii)%idx
              if (neigv > 0) then ! modulated ensemble, no vertical localizatoin
-                 if (taper1 > zero) then
+                 if (taper1 > taper_thresh) then
                     do nn=nn1,nn2 
                        nlev = index_pres(nn) ! vertical index for nn'th control variable
                        if (nlev .eq. nlevs+1) nlev=1 ! 2d fields, assume surface
@@ -598,17 +599,16 @@ do niter=1,numiter
                     enddo
                  endif
              else
+                 taperv = zero
                  do nn=1,nlevs_pres
                    lnsig = abs(lnp_chunk(i,nn)-oblnp(nob))
                    if(lnsig < lnsigl(nob))then
                      taperv(nn)=taper1*taper(lnsig*lnsiglinv)
-                   else
-                     taperv(nn)=-2._r_single      ! negative number is a flag to not use
                    end if
                  end do
                  do nn=nn1,nn2
                     nnn=index_pres(nn)
-                    if (taperv(nnn) > zero) then
+                    if (taperv(nnn) > taper_thresh) then
                         ! gain includes covariance localization.
                         ! update all time levels
                         kfgain=taperv(nnn)*sum(anal_chunk(:,i,nn,nb)*anal_obtmp)
