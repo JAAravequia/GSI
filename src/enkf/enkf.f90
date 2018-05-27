@@ -142,8 +142,10 @@ use random_normal, only : rnorm, set_random_seed
 integer(i_kind) nob,nob1,nob2,nob3,npob,nf,nf2,ii,nobx,nskip,&
                 niter,i,nrej,npt,nuse,ncount,nb,np
 integer(i_kind) indxens1(nanals),indxens2(nanals)
+integer(i_kind) indxens1_modens(nanals*neigv),indxens2_modens(nanals*neigv)
 real(r_single) hxpost(nanals),hxprior(nanals),hxinc(nanals),&
-             dist,lnsig,obt,&
+             hxpost_modens(nanals*neigv),hxprior_modens(nanals*neigv),&
+             hxinc_modens(nanals*neigv),dist,lnsig,obt,&
              sqrtoberr,corrlengthinv,lnsiglinv,obtimelinv
 real(r_single) corrsqr,covl_fact
 real(r_double) :: t1,t2,t3,t4,t5,t6,tbegin,tend
@@ -462,6 +464,13 @@ do niter=1,numiter
          enddo
          ! make sure mean is zero
          obens = obens - sum(obens)*r_nanals
+         if (neigv > 0) then
+            do nanal=1,nanals*neigv
+                ens_tmp(nanal) = sqrtoberr*rnorm()
+            enddo
+            ! make sure mean is zero
+            ens_tmp = ens_tmp - sum(ens_tmp)*r_nanals
+         endif
          if (sortinc) then
            ! To minimize regression errors, sort to minimize increments.
            ! ref - Anderson (2003) "A Least-Squares Framework for Ensemble Filtering"
@@ -476,8 +485,20 @@ do niter=1,numiter
            end do
            ! re-order ob perturbations to minimize increments.
            obens = hxinc/kfgain + hxprior
+           if (neigv > 0) then
+              hxprior_modens = anal_obtmp_modens
+              hxpost_modens = hxprior_modens+kfgain*(ens_tmp-hxprior_modens)
+              call quicksort(nanals*neigv, hxprior_modens, indxens1_modens)
+              call quicksort(nanals*neigv, hxpost_modens, indxens2_modens)
+              do nanal=1,nanals*neigv
+                 hxinc_modens(indxens1_modens(nanal)) = hxpost_modens(indxens2_modens(nanal)) - hxprior_modens(indxens1_modens(nanal))
+              end do
+              ! re-order ob perturbations to minimize increments.
+              ens_tmp = hxinc_modens/kfgain + hxprior_modens
+           endif 
          end if
          obganl = obens - anal_obtmp
+         if (neigv > 0) obganl_modens = ens_tmp - anal_obtmp_modens
       end if
 
       t3 = t3 + mpi_wtime() - t1
@@ -646,9 +667,9 @@ do niter=1,numiter
                  ! update perturbations.
                  anal_obchunk(:,nob2) = anal_obchunk(:,nob2) + kfgain*obganl
                  anal_obchunk_modens(:,nob2) = anal_obchunk_modens(:,nob2) + kfgain*obganl_modens
-                 nob3 = indxproc_obs(nproc+1,nob2) ! index in 1,....,nobstot
                  ! recompute ob space spread ratio  for unassimlated obs
                  if (iassim_order == 2 .and. niter == 1) then
+                   nob3 = indxproc_obs(nproc+1,nob2) ! index in 1,....,nobstot
                    if (indxassim2(nob3) /= 0) then
                      paoverpb_chunk(nob2) = &
                      oberrvar(nob3)/(oberrvar(nob3)+&
@@ -671,9 +692,9 @@ do niter=1,numiter
                   ensmean_obchunk(nob2) = ensmean_obchunk(nob2) + kfgain*obinc_tmp
                   ! update perturbations.
                   anal_obchunk(:,nob2) = anal_obchunk(:,nob2) + kfgain*obganl
-                  nob3 = indxproc_obs(nproc+1,nob2) ! index in 1,....,nobstot
                   ! recompute ob space spread ratio  for unassimlated obs
                   if (iassim_order == 2 .and. niter == 1) then
+                    nob3 = indxproc_obs(nproc+1,nob2) ! index in 1,....,nobstot
                     if (indxassim2(nob3) /= 0) then
                       paoverpb_chunk(nob2) = &
                       oberrvar(nob3)/(oberrvar(nob3)+&
