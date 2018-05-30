@@ -33,6 +33,7 @@ subroutine gesinfo
 !                                 conversion from enthalpy w/ cpi is needed)
 !   2017-05-12 Y. Wang and X. Wang - forecast length in minute unit is included in analysis time calculation
 !                                    for subhourly DA, POC: xuguang.wang@ou.edu
+!   2017-10-10  wu,w    - setup for FV3
 !
 !   input argument list:
 !
@@ -73,7 +74,7 @@ subroutine gesinfo
   use gsi_4dvar, only: nhr_assimilation,min_offset
   use mpimod, only: npe,mype
   use gridmod, only: idvc5,ak5,bk5,ck5,tref5,&
-      regional,nsig,regional_fhr,regional_time,&
+      regional,nsig,regional_fhr,regional_time,fv3_regional,&
       wrf_nmm_regional,wrf_mass_regional,twodvar_regional,nems_nmmb_regional,cmaq_regional,&
       ntracer,ncloud,idvm5,&
       ncepgfs_head,ncepgfs_headv,idpsfc5,idthrm5,idsl5,cp5,jcap_b, use_gfs_nemsio, &
@@ -85,6 +86,7 @@ subroutine gesinfo
 
   use constants, only: zero,h300,r60,r3600,i_missing
 
+  use gsi_rfv3io_mod, only: read_fv3_files
   use read_wrf_mass_files_mod, only: read_wrf_mass_files_class
   use read_wrf_nmm_files_mod, only: read_wrf_nmm_files_class
   use gsi_io, only: verbose
@@ -133,12 +135,14 @@ subroutine gesinfo
   print_verbose=.false.
   if(verbose)print_verbose=.true.
 ! Handle non-GMAO interface (ie, NCEP interface)
-  write(filename,'("sigf",i2.2)')nhr_assimilation
-  inquire(file=filename,exist=fexist)
-  if(.not.fexist) then
-     write(6,*)' GESINFO:  ***ERROR*** ',trim(filename),' NOT AVAILABLE: PROGRAM STOPS'
-     call stop2(99)
-     stop
+  if(.not. fv3_regional) then
+     write(filename,'("sigf",i2.2)')nhr_assimilation
+     inquire(file=filename,exist=fexist)
+     if(.not.fexist) then
+        write(6,*)' GESINFO:  ***ERROR*** ',trim(filename),' NOT AVAILABLE: PROGRAM STOPS'
+        call stop2(99)
+        stop
+     end if
   end if
 
 ! Handle NCEP regional case
@@ -520,6 +524,8 @@ subroutine gesinfo
         call wrf_nmm_files%read_nems_nmmb_files(mype)
      else if(wrf_mass_regional) then
         call wrf_mass_files%read_wrf_mass_files(mype)
+     else if(fv3_regional) then
+        call read_fv3_files(mype)
      else if(twodvar_regional) then
         call read_2d_files(mype)
      else if(cmaq_regional) then
