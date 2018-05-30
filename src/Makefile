@@ -278,6 +278,7 @@ clean:
         cplr_wrwrfmassa.f90 \
         cplr_wrwrfnmma.f90 \
 	crtm_interface.f90 \
+        fv3_regional_interface.f90 \
 	cvsection.f90 \
 	cwhydromod.f90 \
 	dtast.f90 \
@@ -296,7 +297,6 @@ clean:
 	fill_mass_grid2.f90 \
 	fill_nmm_grid2.f90 \
 	fpvsx_ad.f90 \
-        fv3_regional_interface.f90 \
         general_commvars_mod.f90 \
 	general_read_gfsatm.f90 \
         general_read_nmmb.f90 \
@@ -343,6 +343,7 @@ clean:
 	gsi_metguess_mod.F90 \
 	gsi_nemsio_mod.f90 \
         gsi_rfv3io_mod.f90 \
+        mod_fv3_lola.f90 \
 	gsimain.f90 \
 	gsimod.F90 \
 	gsisub.F90 \
@@ -426,7 +427,6 @@ clean:
 	mpeu_mpif.F90 \
 	mpeu_util.F90 \
 	mod_nmmb_to_a.f90 \
-        mod_fv3_lola.f90 \
 	mod_strong.f90 \
 	mod_vtrans.f90 \
         mod_wrfmass_to_a.f90 \
@@ -689,6 +689,7 @@ clean:
 	read_ssmi.f90 \
 	read_ssmis.f90 \
 	read_tcps.f90 \
+        sparsearr.f90 \
 	setupbend.f90 \
 	setupco.f90 \
 	setupdw.f90 \

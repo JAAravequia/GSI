@@ -1,7 +1,8 @@
 controlvec.o : controlvec.f90 gridinfo_wrf.o gridio_wrf.o params.o mpisetup.o
 covlocal.o : covlocal.f90 params.o 
 enkf.o : enkf.f90 rnorm.o gridinfo_wrf.o radbias.o  params.o  enkf_obsmod.o controlvec.o loadbal.o kdtree2.o covlocal.o mpisetup.o sorting.o
-enkf_main.o : enkf_main.f90 inflation.o  enkf.o letkf.o loadbal.o statevec.o controlvec.o gridinfo_wrf.o innovstats.o enkf_obsmod.o mpisetup.o params.o observer_reg.o
+enkf_obs_sensitivity.o : enkf_obs_sensitivity.f90 kdtree2.o covlocal.o loadbal.o gridinfo_wrf.o enkf_obsmod.o params.o mpisetup.o 
+enkf_main.o : enkf_main.f90 inflation.o enkf_obs_sensitivity.o enkf.o letkf.o loadbal.o statevec.o controlvec.o gridinfo_wrf.o innovstats.o enkf_obsmod.o mpisetup.o params.o observer_reg.o
 fftpack.o : fftpack.f90 
 genqsat1.o : genqsat1.f90  
 gridinfo_wrf.o : gridinfo_wrf.f90  mpisetup.o params.o specmod.o reducedgrid.o netcdf_io_wrf.o

@@ -742,7 +742,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
            endif
 
            ! for wind, also read v-component
-           if (obtype == ' uv' .or. obtype == ' rw') then
+           if (obtype == ' uv') then
               nob = nob + 1
               x_code(nob)  = Observation_Type(i)
 
@@ -1134,7 +1134,7 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
           endif
 
           ! for wind, also read v-component
-          if (obtype == ' uv' .or. obtype == ' rw') then
+          if (obtype == ' uv') then
              nob = nob + 1
              x_code(nob)  = rdiagbuf(1,n)
 
