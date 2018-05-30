@@ -1,0 +1,59 @@
+apply_scaledepwgts.f90:  use hybrid_ensemble_parameters, only: nsclgrp
+apply_scaledepwgts.f90:   do ig=1,nsclgrp
+apply_scaledepwgts.f90:!   write(121,111)(totwvlength(i)),((spc_multwgt(i,j)),j=1,nsclgrp)
+en_perts_io.f90:  use hybrid_ensemble_parameters, only: nsclgrp
+en_perts_io.f90:  if(nsclgrp.gt.1) then
+en_perts_io.f90:    write(6,*)"nsclgrp >1 is not considerred in this part, stop"
+get_gefs_ensperts_dualres.f90:  use hybrid_ensemble_parameters, only: nsclgrp,sp_ens,spc_multwgt
+get_gefs_ensperts_dualres.f90:  allocate(en_bar(nsclgrp,ntlevs_ens))
+get_gefs_ensperts_dualres.f90:    do ig=1,nsclgrp
+get_gefs_ensperts_dualres.f90:  if(nsclgrp.gt.1) then
+get_gefs_ensperts_dualres.f90:       do ig=1,nsclgrp
+get_gefs_ensperts_dualres.f90:   do ig=2,nsclgrp 
+get_gefs_ensperts_dualres.f90:     do ig=1,nsclgrp
+gsimod.F90:  use hybrid_ensemble_parameters,only:nsclgrp,naensgrp,para_covwithsclgrp,l_sum_spc_weights
+gsimod.F90:                i_en_perts_io,l_ens_in_diff_time,ensemble_path,ens_fast_read,nsclgrp,naensgrp,l_sum_spc_weights,para_covwithsclgrp
+gsimod.F90:  naensgrp=nsclgrp 
+hybrid_ensemble_isotropic.F90:    use hybrid_ensemble_parameters, only: nsclgrp
+hybrid_ensemble_isotropic.F90:    allocate(en_perts(n_ens,nsclgrp,ntlevs_ens))
+hybrid_ensemble_isotropic.F90:      do ig=1,nsclgrp
+hybrid_ensemble_isotropic.F90:    allocate(ps_bar(grd_ens%lat2,grd_ens%lon2,nsclgrp,ntlevs_ens) )
+hybrid_ensemble_isotropic.F90:       write(6,*)' in create_ensemble, grd_ens%latlon11,grd_ens%latlon1n,n_ens,nsclgrp,ntlevs_ens=', &
+hybrid_ensemble_isotropic.F90:                                 grd_ens%latlon11,grd_ens%latlon1n,n_ens,nsclgrp,ntlevs_ens
+hybrid_ensemble_isotropic.F90:       write(6,*)' in create_ensemble, total bytes allocated=',4*nelen*n_ens*nsclgrp,ntlevs_ens
+hybrid_ensemble_isotropic.F90:  use hybrid_ensemble_parameters, only: nsclgrp
+hybrid_ensemble_isotropic.F90:     if(nsclgrp.gt.1) then 
+hybrid_ensemble_isotropic.F90:       allocate(en_bar(nsclgrp,ntlevs_ens))
+hybrid_ensemble_isotropic.F90:        do ig=1,nsclgrp
+hybrid_ensemble_isotropic.F90:        do ig=1,nsclgrp
+hybrid_ensemble_isotropic.F90:         do ig=1,nsclgrp
+hybrid_ensemble_isotropic.F90:         do ig=1,nsclgrp
+hybrid_ensemble_isotropic.F90:           if(nsclgrp.gt. 1) then 
+hybrid_ensemble_isotropic.F90:           write(6,*)"nsclgrpd.gt. 1 is not available for this part"
+hybrid_ensemble_isotropic.F90:  use hybrid_ensemble_parameters, only: nsclgrp
+hybrid_ensemble_isotropic.F90:     do ig=1,nsclgrp
+hybrid_ensemble_isotropic.F90:     use hybrid_ensemble_parameters, only: nsclgrp
+hybrid_ensemble_isotropic.F90:         do ig=1,nsclgrp
+hybrid_ensemble_isotropic.F90:    use hybrid_ensemble_parameters, only: nsclgrp
+hybrid_ensemble_isotropic.F90:    type(gsi_bundle),intent(in)    :: a_en(nsclgrp,n_ens)
+hybrid_ensemble_isotropic.F90:            do ig=1,nsclgrp
+hybrid_ensemble_isotropic.F90:                 do ig=1,nsclgrp
+hybrid_ensemble_isotropic.F90:               do ig=1,nsclgrp
+hybrid_ensemble_isotropic.F90:    use hybrid_ensemble_parameters, only: nsclgrp
+hybrid_ensemble_isotropic.F90:           do ig=1,nsclgrp
+hybrid_ensemble_isotropic.F90:               do ig=1,nsclgrp
+hybrid_ensemble_isotropic.F90:               do ig=1,nsclgrp
+hybrid_ensemble_isotropic.F90:    use hybrid_ensemble_parameters, only: nsclgrp
+hybrid_ensemble_isotropic.F90:   do ig=1,nsclgrp
+hybrid_ensemble_isotropic.F90:    use hybrid_ensemble_parameters, only: nsclgrp
+hybrid_ensemble_isotropic.F90:  do ig=1,nsclgrp
+hybrid_ensemble_isotropic.F90:  use hybrid_ensemble_parameters, only:nsclgrp, spc_multwgt,spcwgt_params
+hybrid_ensemble_isotropic.F90:  allocate(spc_multwgt(0:jcap_ens,nsclgrp))
+hybrid_ensemble_isotropic.F90:  allocate(spcwgt_params(4,nsclgrp))
+hybrid_ensemble_isotropic.F90:  if(nsclgrp.gt.1) then
+hybrid_ensemble_isotropic.F90:  if(nsclgrp.gt.1) then
+hybrid_ensemble_isotropic.F90:    use hybrid_ensemble_parameters, only: nsclgrp
+hybrid_ensemble_isotropic.F90:    do iens=1,nsclgrp
+hybrid_ensemble_parameters.f90:  public :: naensgrp,nsclgrp
+hybrid_ensemble_parameters.f90:   integer(i_kind)::  nsclgrp=1
+hybrid_ensemble_parameters.f90:  allocate(ensgrp2aensgrp(nsclgrp))

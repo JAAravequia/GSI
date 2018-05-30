@@ -171,7 +171,6 @@ subroutine get_gefs_ensperts_dualres
   sst2=zero        !    for now, sst not used in ensemble perturbations, so if sst array is called for
                    !      then sst part of en_perts will be zero when sst2=zero
 
-  nenstot=n_ens*nsclgrp
      ig0=1
   ntlevs_ens_loop: do m=1,ntlevs_ens
 
