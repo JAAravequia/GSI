@@ -107,6 +107,8 @@ integer,public :: npefiles = 0
 ! only the first nobsl_max closest obs within the
 ! localization radius will be used. Ignored
 ! if letkf_flag = .false.
+! If dfs_sort=T, DFS is used instead of distance
+! for ob selection.
 integer,public :: nobsl_max = -1
 ! for modulated ensemble, neigv is the number of
 ! eigenvectors of the vertical localization matrix
