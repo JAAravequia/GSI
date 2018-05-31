@@ -31,14 +31,15 @@ module enkf_obs_sensitivity
 ! -----------------------------------------------------------------------------
 use mpisetup
 use kinds, only: r_single,r_kind,r_double,i_kind
-use params, only: fso_calculate,latbound,nlevs,nanals,datestring, &
+use params, only: efsoi_flag,latbound,nlevs,nanals,datestring, &
                   lnsigcutoffsatnh,lnsigcutoffsattr,lnsigcutoffsatsh, &
                   lnsigcutoffpsnh,lnsigcutoffpstr,lnsigcutoffpssh, &
                   lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh, &
                   corrlengthnh,corrlengthtr,corrlengthsh, &
                   obtimelnh,obtimeltr,obtimelsh,letkf_flag, &
-                  nbackgrounds
+                  nbackgrounds,adrate,evalft
 use constants, only: zero,one,half,rearth,pi,deg2rad,rad2deg
+use scatter_chunks, only: ensmean_chunk
 use enkf_obsmod, only: nobstot,nobs_conv,nobs_oz,nobs_sat,obtype,obloclat, &
                        obloclon,obpress,indxsat,oberrvar,stattype,obtime,ob, &
                        ensmean_ob,ensmean_obnobc,obsprd_prior,obfit_prior, &
@@ -47,7 +48,7 @@ use enkf_obsmod, only: nobstot,nobs_conv,nobs_oz,nobs_sat,obtype,obloclat, &
 use convinfo, only: convinfo_read,init_convinfo
 use ozinfo, only: ozinfo_read,init_oz
 use radinfo, only: radinfo_read,jpch_rad,nusis,nuchan,npred
-use gridinfo, only: latsgrd,lonsgrd,nlevs_pres,npts
+use gridinfo, only: latsgrd,lonsgrd,nlevs_pres,npts,id_u,id_v
 use loadbal, only: indxproc,grdloc_chunk,numptsperproc,npts_max,kdtree_grid
 use covlocal, only: latval
 use kdtree2_module, only: kdtree2_create
@@ -412,7 +413,7 @@ subroutine print_ob_sens
   type(obsense_info) :: outdata
   iunit = 10
   ! Gather observation sensitivity informations to the root
-  if(fso_calculate) then
+  if(efsoi_flag) then
      allocate(recbuf(nobstot))
      call mpi_reduce(obsense_kin,recbuf,nobstot,mpi_realkind,mpi_sum,0, &
           & mpi_comm_world,ierr)
@@ -500,7 +501,7 @@ subroutine print_ob_sens
         outdata%stattype = stattype(nob)
         outdata%obtype = obtype(nob)
         outdata%indxsat = 0
-        if(fso_calculate) then
+        if(efsoi_flag) then
            outdata%osense_kin = real(obsense_kin(nob),r_single)
            outdata%osense_dry = real(obsense_dry(nob),r_single)
            outdata%osense_moist = real(obsense_moist(nob),r_single)
@@ -511,7 +512,7 @@ subroutine print_ob_sens
         end if
         tmpanal_ob(1:nanals) = real(anal_ob(1:nanals,nob),r_single)
         write(iunit) outdata,tmpanal_ob
-        if(.not. fso_calculate) cycle
+        if(.not. efsoi_flag) cycle
         ! Sum up
         nob_conv(iobtyp,ireg) = nob_conv(iobtyp,ireg) + 1
         sumsense_conv(iobtyp,ireg,stkin) = sumsense_conv(iobtyp,ireg,stkin) &
@@ -528,7 +529,7 @@ subroutine print_ob_sens
              rate_conv(iobtyp,ireg,stmoist) = rate_conv(iobtyp,ireg,stmoist) + one
      end do
      ! print out
-     if(fso_calculate) then
+     if(efsoi_flag) then
         print *,'observation impact for conventional obs'
         print *,'region, obtype, nobs, dJ, positive rate[%]:'
         do iobtyp=1,8
@@ -571,7 +572,7 @@ subroutine print_ob_sens
         outdata%obtype = obtype(nob)
         outdata%indxsat = nuchan(nchan)
         tmpbiaspreds(1:npred+1) = real(biaspreds(1:npred+1,nn),r_single)
-        if(fso_calculate) then
+        if(efsoi_flag) then
            outdata%osense_kin = real(obsense_kin(nob),r_single)
            outdata%osense_dry = real(obsense_dry(nob),r_single)
            outdata%osense_moist = real(obsense_moist(nob),r_single)
@@ -582,7 +583,7 @@ subroutine print_ob_sens
         end if
         tmpanal_ob(1:nanals) = real(anal_ob(1:nanals,nob),r_single)
         write(iunit) outdata,tmpanal_ob,tmpbiaspreds
-        if(.not. fso_calculate) cycle
+        if(.not. efsoi_flag) cycle
         ! Sum up
         if (oberrvar(nob) < 1.e10_r_kind .and. nchan > 0) then
            nob_sat(nchan) = nob_sat(nchan) + 1
@@ -601,7 +602,7 @@ subroutine print_ob_sens
         end if
      end do
      ! print out
-     if(fso_calculate) then
+     if(efsoi_flag) then
         print *,'observation impact for satellite brightness temp'
         print *,'instrument, channel #, nobs, dJ, positive rate[%]:'
         do nchan=1,jpch_rad

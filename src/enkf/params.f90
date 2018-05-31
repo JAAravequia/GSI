@@ -72,6 +72,8 @@ character(len=120),dimension(7),public :: statefileprefixes
 character(len=120),dimension(7),public :: anlfileprefixes
 ! analysis date string (YYYYMMDDHH)
 character(len=10), public ::  datestring
+character(len=10), public ::  gdatestring
+character(len=10), public ::  andataname
 ! filesystem path to input files (first-guess, GSI diagnostic files).
 character(len=500),public :: datapath
 ! if deterministic=.true., the deterministic square-root filter
