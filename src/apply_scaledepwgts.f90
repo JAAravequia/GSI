@@ -150,17 +150,17 @@
   work1=work
 ! Transfer work to spectral space
   do kk=1,grd_in%nlevs_alloc      
-
+!clt  nvar_id is not supposed to be used for ensemble-related structures fr !being now
 ! Shut off this bit if univariate ozone or surface temperature
-     if ( (nrf_var(nvar_id(kk))=='oz').or.(nrf_var(nvar_id(kk))=='OZ').and.oz_univ_static ) then
-        cycle
-     elseif ( (nrf_var(nvar_id(kk))=='sst').or.(nrf_var(nvar_id(kk))=='SST') ) then
-        cycle
-     elseif ( (nrf_var(nvar_id(kk))=='stl').or.(nrf_var(nvar_id(kk))=='STL') ) then
-        cycle
-     elseif ( (nrf_var(nvar_id(kk))=='sti').or.(nrf_var(nvar_id(kk))=='STI') ) then
-        cycle
-     end if
+!clt      if ( (nrf_var(nvar_id(kk))=='oz').or.(nrf_var(nvar_id(kk))=='OZ').and.oz_univ_static ) then
+!clt        cycle
+!clt    elseif ( (nrf_var(nvar_id(kk))=='sst').or.(nrf_var(nvar_id(kk))=='SST') ) then
+!clt        cycle
+!clt     elseif ( (nrf_var(nvar_id(kk))=='stl').or.(nrf_var(nvar_id(kk))=='STL') ) then
+!clt        cycle
+!clt     elseif ( (nrf_var(nvar_id(kk))=='sti').or.(nrf_var(nvar_id(kk))=='STI') ) then
+!clt        cycle
+!clt     end if
 !   if(mype==0) then
      do j=1,grd_in%nlon
         do i=1,grd_in%nlat
