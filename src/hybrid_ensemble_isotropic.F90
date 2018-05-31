@@ -302,7 +302,7 @@ subroutine init_rf_z(z_len)
                            pt_ll)
                  endif
                  if (fv3_regional) then
-                    p_interface(k)=eta1_ll(k)+ eta2_ll(k)*ps_bar(ii,jj,1)
+                    p_interface(k)=eta1_ll(k)+ eta2_ll(k)*ps_bar(ii,jj,1,1)
                  endif
                  if (twodvar_regional) then
                     p_interface(k)=one_tenth*(eta1_ll(k)*(ten*ps_bar(ii,jj,1,1)-pt_ll)+pt_ll)
