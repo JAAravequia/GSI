@@ -64,6 +64,9 @@ module letkf
 !               using logical lupd_obspace_serial.
 !   2016-11-29  shlyaeva: Modification for using control vector (control and
 !               state used to be the same) and the "chunks" come from loadbal
+!   2018-05-31  whitaker:  add modulated ensemble model-space vertical
+!               localization (when neigv=0) and ob selection using DFS 
+!               (when dfs_sort=T).
 
 !
 ! attributes:

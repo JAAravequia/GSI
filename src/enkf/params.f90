@@ -25,6 +25,10 @@ module params
 !   2016-05-02  shlyaeva - Modification for reading state vector from table
 !   2016-11-29  shlyaeva - added nhr_state (hours for state fields to 
 !                          calculate Hx; nhr_anal is for IAU)
+!   2018-05-31  whitaker - added neigv (for model-space localization using
+!                          modulated ensembles), nobsl_max (for ob selection
+!                          in LETKF, denkf (for Sakov's DEnKF), and dfs_sort
+!                          (for using DFS in LETKF ob selection).
 !
 ! attributes:
 !   language: f95
