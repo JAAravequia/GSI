@@ -143,6 +143,10 @@ integer(i_kind),public :: nvars = -1
 ! required for EFSOI calculations
 logical,public :: efsoi_cycling = .false.
 
+! Ancillary flag, applied only for
+! EFSOI calculation applications
+logical,public :: efsoi_flag = .false.
+
 ! if true, use ensemble mean qsat in definition of
 ! normalized humidity analysis variable (instead of
 ! qsat for each member, which is the default behavior
@@ -174,7 +178,7 @@ namelist /nam_enkf/datestring,gdatestring,datapath,iassim_order,nvars,&
                    newpc4pred,nmmb,nhr_anal,nhr_state, fhr_assim,nbackgrounds,nstatefields, &
                    save_inflation,nobsl_max,lobsdiag_forenkf,netcdf_diag,&
                    letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
-                   efsoi_cycling,imp_physics,lupp,write_spread_diag,&
+                   efsoi_cycling,efsoi_flag,imp_physics,lupp,write_spread_diag,&
                    evalft,wmoist,adrate,andataname,tar_minlat,tar_maxlat,&
                    tar_minlon,tar_maxlon,tar_minlev,tar_maxlev
 

@@ -54,22 +54,24 @@ program efsoi_main
 
  use kinds, only: r_double,i_kind
  ! reads namelist parameters.
- use efsoi_params, only : read_efsoi_namelist,nanals
+ ! applying enkf namelist apparatus
+ use params, only : read_namelist,nanals
  ! mpi functions and variables.
  use mpisetup, only:  mpi_initialize, mpi_initialize_io, mpi_cleanup, nproc, &
                       mpi_wtime
- ! grid information
- use gridinfo, only: getgridinfo, gridinfo_cleanup
  ! model state vector 
- use statevec, only: read_ensemble, statevec_cleanup
+ use statevec_efsoi, only: read_state_efsoi, statevec_cleanup_efsoi, init_statevec_efsoi
  ! load balancing
  use loadbal, only: load_balance, loadbal_cleanup
  ! efsoi update
  use efsoi, only: efsoi_update
  ! Observation sensitivity usage
  use enkf_obs_sensitivity, only: init_ob_sens, print_ob_sens, destroy_ob_sens
-
+ ! Scatter chunks for EFSOI
+ use scatter_chunks_efsoi
+ 
  implicit none
+ integer, ierr
  real(r_double) t1,t2
 
  ! initialize MPI.
@@ -77,33 +79,45 @@ program efsoi_main
  if (nproc==0) call w3tagb('EFSOI_CALC',2018,0319,0055,'NP25')
 
  ! read namelist.
- call read_efsoi_namelist()
+ call read_namelist()
 
  ! initialize MPI communicator for IO tasks.
  call mpi_initialize_io(nanals)
 
- ! read horizontal grid information and pressure fields from
- ! 6-h forecast ensemble mean file.
- call getgridinfo()
-
  ! read the necessary inputs for
  ! the EFSOI calculation from file
+ t1 = mpi_wtime()
  call read_ob_sens()
+ t2 = mpi_wtime()
+ if (nproc == 0) print *, 'time in read_ob_sens = ',t2-t1,'on proc', nproc
 
+ ! Halt processors until all are completed
+ call mpi_barrier(mpi_comm_world, ierr)
 
- ! do load balancing (partitioning of grid points 
+ ! Initialize state vector 
+ ! information
+ call init_statevec_efsoi()
+
+ ! read in ensemble forecast members, 
+ ! valid at the evaluation forecast
+ ! time, distribute pieces to each task.
+ t1 = mpi_wtime()
+ call read_state_efsoi()
+ t2 = mpi_wtime()
+ if (nproc == 0) print *,'time in read_stae_efsoi =',t2-t1,'on proc',nproc
+
+ ! do load balancing (partitioning of grid points
  ! and observations among processors)
  t1 = mpi_wtime()
  call load_balance()
  t2 = mpi_wtime()
  if (nproc == 0) print *,'time in load_balance =',t2-t1,'on proc',nproc
 
- ! read in ensemble members, 
- ! distribute pieces to each task.
- t1 = mpi_wtime()
- call read_ensemble()
+ ! apply scattering of efsoi chunks
+ t1 = mpi_wtim()
+ call scatter_chunks_ob_impact()  ! ensemble scattering
  t2 = mpi_wtime()
- if (nproc == 0) print *,'time in read_ensemble =',t2-t1,'on proc',nproc
+ if (nproc == 0) print *,'time to scatter observation impact chunks =',t2-t1,'on proc',nproc
 
  ! Initialize EFSOI variables
  t1 = mpi_wtime()
@@ -131,8 +145,7 @@ program efsoi_main
  if (nproc == 0) print *,'time needed to write observation impact file =',t2-t1,'on proc',nproc 
 
  ! Cleanup for EFSOI configuration
- call gridinfo_cleanup()
- call statevec_cleanup()
+ call statevec_cleanup_efsoi()
  call loadbal_cleanup()
  call destroy_ob_sens()
 
@@ -140,4 +153,4 @@ program efsoi_main
  if (nproc==0) call w3tage('EFSOI_CALC')
  call mpi_cleanup()
 
-end program efso_main
+end program efsoi_main

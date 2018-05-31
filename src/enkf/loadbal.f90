@@ -98,7 +98,8 @@ module loadbal
 
 use mpisetup
 use params, only: datapath, nanals, simple_partition, letkf_flag,&
-                  corrlengthnh, corrlengthsh, corrlengthtr, lupd_obspace_serial
+                  corrlengthnh, corrlengthsh, corrlengthtr, lupd_obspace_serial,&
+                  efsoi_flag
 use enkf_obsmod, only: nobstot, obloc, oblnp, ensmean_ob, obtime, anal_ob, corrlengthsq
 use kinds, only: r_kind, i_kind, r_double, r_single
 use kdtree2_module, only: kdtree2, kdtree2_create, kdtree2_destroy, &
@@ -436,8 +437,6 @@ enddo ! loop over nbackgrounds
 deallocate(sendbuf, recvbuf)
 
 end subroutine scatter_chunks
-
-
 
 subroutine gather_chunks
 ! gather chunks into grdin to write out the ensemble members
