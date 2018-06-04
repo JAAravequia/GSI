@@ -116,7 +116,7 @@ implicit none
 ! LETKF update.
 
 ! local variables.
-integer(i_kind) nob,nf,nanal,&
+integer(i_kind) nob,nf,nanal,nens,&
                 i,nlev,nrej,npt,nn,nnmax,ierr
 integer(i_kind) nobsl, ngrd1, nobsl2, nthreads, nb, &
                 nobslocal_min,nobslocal_max, &
@@ -134,7 +134,7 @@ logical vlocal, kdobs
 ! For LETKF core processes
 real(r_kind),allocatable,dimension(:,:) :: hxens
 real(r_single),allocatable,dimension(:,:,:) :: ens_tmp
-real(r_single),allocatable,dimension(:,:) :: obperts,obens
+real(r_single),allocatable,dimension(:,:) :: obperts,obens,hxenss
 real(r_single),allocatable,dimension(:) :: kfgain, dfs
 real(r_kind),allocatable,dimension(:) :: rdiag,dep,rloc,statesprd_prior
 real(r_kind),allocatable,dimension(:,:) :: trans
@@ -192,6 +192,11 @@ t1 = mpi_wtime()
 disp_unit = num_bytes_for_r_single ! anal_ob is r_single
 nsize = nobstot*nanals
 nsize2 = nobstot*nanals*neigv
+if (neigv > 0) then
+   nens = nanals*neigv
+else
+   nens = nanals
+endif
 if (nproc_shm == 0) then
    win_size = nsize*disp_unit
    win_size2 = nsize2*disp_unit
@@ -398,7 +403,7 @@ endif
 !$omp parallel do schedule(dynamic) private(npt,nob,nobsl, &
 !$omp                  gain,nobsl2,oberrfact,ngrd1,corrlength,ens_tmp, &
 !$omp                  nf,vdist,kfgain,obens,indxassim,indxob, &
-!$omp                  nn,hxens,dfs,rdiag,dep,rloc,i,work,work2,trans, &
+!$omp                  nn,hxens,hxenss,dfs,rdiag,dep,rloc,i,work,work2,trans, &
 !$omp                  oindex,deglat,dist,corrsq,nb,sresults) &
 !$omp  reduction(+:t1,t2,t3,t4,t5) &
 !$omp  reduction(max:nobslocal_max) &
@@ -406,13 +411,8 @@ endif
 grdloop: do npt=1,numptsperproc(nproc+1)
 
    t1 = mpi_wtime()
-   if (neigv > 0) then
-      if (.not. allocated(ens_tmp)) allocate(ens_tmp(nanals*neigv,ncdim,nbackgrounds))
-      if (.not. allocated(trans)) allocate(trans(nanals*neigv,nanals*neigv))
-   else
-      if (.not. allocated(ens_tmp)) allocate(ens_tmp(nanals,ncdim,nbackgrounds))
-      if (.not. allocated(trans)) allocate(trans(nanals,nanals))
-   endif
+   if (.not. allocated(ens_tmp)) allocate(ens_tmp(nens,ncdim,nbackgrounds))
+   if (.not. allocated(trans)) allocate(trans(nens,nens))
    ! find obs close to this grid point (using kdtree)
    ngrd1=indxproc(nproc+1,npt)
    deglat = latsgrd(ngrd1)*rad2deg
@@ -557,11 +557,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
          deallocate(rloc,oindex)
          cycle verloop
       end if
-      if (neigv > 0) then
-         allocate(hxens(nanals*neigv,nobsl2))
-      else
-         allocate(hxens(nanals,nobsl2))
-      endif
+      allocate(hxens(nens,nobsl2))
       allocate(rdiag(nobsl2))
       allocate(dep(nobsl2))
       do nob=1,nobsl2
@@ -620,11 +616,14 @@ grdloop: do npt=1,numptsperproc(nproc+1)
          call letkf_core(nobsl2,hxens,rdiag,dep,rloc(1:nobsl2),trans,nanals,1)
       endif
       deallocate(rloc,rdiag)
-      ! if perturbed obs or denkf not used, these arrays no longer needed.
-      if (deterministic .and. .not. denkf) then
-         deallocate(hxens,dep)
+
+      ! save single precision copy of hxens for DEnKF, deallocate
+      if (.not. deterministic .or. (deterministic .and. denkf)) then
+         allocate(hxenss(nens,nobsl2)); hxenss = hxens
+      else
+         deallocate(dep)
       endif
-      
+      deallocate(hxens)
 
       t4 = t4 + mpi_wtime() - t1
       t1 = mpi_wtime()
@@ -636,9 +635,11 @@ grdloop: do npt=1,numptsperproc(nproc+1)
          if(vlocal .and. index_pres(i) /= nn) cycle
          if (deterministic) then
             if (denkf) then
-               do nob=1,nobsl2
-                  kfgain(nob) = sum(hxens(:,nob)*ens_tmp(:,i,nb))
-               enddo
+               !do nob=1,nobsl2
+               !   kfgain(nob) = sum(hxenss(:,nob)*ens_tmp(:,i,nb))
+               !enddo
+               call sgemv('t',nens,nobsl2,1.e0,hxenss,nens,&
+                          ens_tmp(:,i,nb),1,0.e0,kfgain,1)
                ensmean_chunk(npt,i,nb) = ensmean_chunk(npt,i,nb) + sum(kfgain*dep)
                do nanal=1,nanals
                   anal_chunk(nanal,npt,i,nb) = anal_chunk(nanal,npt,i,nb) - &
@@ -658,9 +659,11 @@ grdloop: do npt=1,numptsperproc(nproc+1)
                anal_chunk(1:nanals,npt,i,nb) = work2(1:nanals)-ensmean_chunk(npt,i,nb)
             endif
          else ! perturbed obs using LETKF gain.
-            do nob=1,nobsl2
-               kfgain(nob) = sum(hxens(:,nob)*ens_tmp(:,i,nb))
-            enddo
+            !do nob=1,nobsl2
+            !   kfgain(nob) = sum(hxenss(:,nob)*ens_tmp(:,i,nb))
+            !enddo
+            call sgemv('t',nens,nobsl2,1.e0,hxenss,nens,&
+                       ens_tmp(:,i,nb),1,0.e0,kfgain,1)
             ensmean_chunk(npt,i,nb) = ensmean_chunk(npt,i,nb) + sum(kfgain*dep)
             do nanal=1,nanals
                anal_chunk(nanal,npt,i,nb) = anal_chunk(nanal,npt,i,nb) - &
@@ -670,7 +673,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
       enddo
       enddo
       ! deallocate arrays needed for perturbed obs LETKF and DENKF
-      if (allocated(hxens)) deallocate(hxens)
+      if (allocated(hxenss)) deallocate(hxenss)
       if (allocated(kfgain)) deallocate(kfgain)
       if (allocated(dep)) deallocate(dep)
       if (allocated(obens)) deallocate(obens)
