@@ -417,8 +417,8 @@ case $regtest in
             topts[1]="0:25:00" ; popts[1]="8/6/"  ; ropts[1]="/1"
             topts[2]="0:25:00" ; popts[2]="8/8/"  ; ropts[2]="/1"
         elif [[ "$machine" = "WCOSS_D" ]]; then
-           topts[1]="0:30:00" ; popts[1]="14/8/" ; ropts[1]="/1"
-           topts[2]="0:30:00" ; popts[2]="14/14/" ; ropts[2]="/2"
+           topts[1]="2:30:00" ; popts[1]="14/8/" ; ropts[1]="/1"
+           topts[2]="2:30:00" ; popts[2]="14/14/" ; ropts[2]="/2"
         fi
 
         if [ "$debug" = ".true." ] ; then

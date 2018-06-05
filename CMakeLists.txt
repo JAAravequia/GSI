@@ -160,6 +160,7 @@ project(GSI)
     message(" trying to find lapack, ${host}, ${HOST-Luna}")
     find_package( LAPACK )
   endif()
+  find_package( LAPACK )
 # build the WRF I/O libraries
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/libsrc/wrflib)
     add_subdirectory(libsrc/wrflib)

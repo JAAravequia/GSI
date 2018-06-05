@@ -747,11 +747,12 @@ subroutine read_obs(ndata,mype)
     integer(i_kind),allocatable,dimension(:):: nrnd
     integer(i_kind):: nmls_type,mype_io_sfc
     integer(i_kind):: iread,ipuse,iouse
+    integer(i_kind):: profReq,nobsReq,superReq
 
     real(r_kind) gstime,val_dat,rmesh,twind,rseed
     real(r_kind),allocatable,dimension(:) :: prslsm,hgtlsm,work1
     real(r_kind),allocatable,dimension(:,:,:):: prsl_full,hgtl_full
-    integer(i_kind):: readRecReq,readEarsReq,readDbReq,istatus
+    integer(i_kind):: readRecReq,readEarsReq,readDbReq,istatus,taskReq
 
     type(rad_obs_type) :: radmod
 
@@ -1068,7 +1069,7 @@ subroutine read_obs(ndata,mype)
 
 
 !   Distribute optimal number of reader tasks to all mpi tasks
-    call mpi_allreduce(ntasks1,ntasks,ndat,mpi_integer,mpi_sum,mpi_comm_world,ierror)
+    call mpi_Iallreduce(ntasks1,ntasks,ndat,mpi_integer,mpi_sum,mpi_comm_world,taskReq,ierror)
     call mpi_Iallreduce(read_rec1,read_rec,ndat,mpi_integer,mpi_sum,mpi_comm_world,readRecReq,ierror) 
     call mpi_Iallreduce(read_ears_rec1,read_ears_rec,ndat,mpi_integer,mpi_sum,mpi_comm_world,readEarsReq,ierror) 
     call mpi_Iallreduce(read_db_rec1,read_db_rec,ndat,mpi_integer,mpi_sum,mpi_comm_world,readDbReq,ierror) 
@@ -1076,6 +1077,7 @@ subroutine read_obs(ndata,mype)
 !   Limit number of requested tasks per type to be <= total available tasks
     npemax=0
     npetot=0
+    call MPI_Wait(taskReq,istatus,ierror)
     do i=1,ndat
        if (ntasks(i)>npe) then
           write(6,*)'read_obs:  ***WARNING*** i=',i,' dtype=',dtype(i),' dsis=',dsis(i),&
@@ -1781,27 +1783,31 @@ subroutine read_obs(ndata,mype)
 !   Deallocate arrays containing full horizontal nsst fields
     if (nst_gsi > 0) call gsi_nstcoupler_final()
 !   Sum and distribute number of obs read and used for each input ob group
-    call mpi_allreduce(ndata1,ndata,ndat*3,mpi_integer,mpi_sum,mpi_comm_world,&
-       ierror)
+!   call mpi_allreduce(ndata1,ndata,ndat*3,mpi_integer,mpi_sum,mpi_comm_world,&
+    call mpi_Iallreduce(ndata1,ndata,ndat*3,mpi_integer,mpi_sum,mpi_comm_world,&
+       taskReq,ierror)
 
 !   Collect super obs factors
     if(mype == 0)write(6,*) ' dval_use = ',dval_use
     if(dval_use)then
-       call mpi_allreduce(super_val,super_val1,superp+1,mpi_rtype,&
-            mpi_sum,mpi_comm_world,ierror)
+       call mpi_Iallreduce(super_val,super_val1,superp+1,mpi_rtype,&
+            mpi_sum,mpi_comm_world,superReq,ierror)
     else
        super_val1=zero
     end if
-    super_val1(0)=one
-    deallocate(super_val)
 
 !   Collect number of gps profiles (needed later for qc)
-    call mpi_allreduce(nprof_gps1,nprof_gps,1,mpi_integer,mpi_sum,mpi_comm_world,ierror)
-    call mpi_allreduce(nobs_sub1,nobs_sub,npe*ndat,mpi_integer,mpi_sum,mpi_comm_world,& 
+    call mpi_Iallreduce(nprof_gps1,nprof_gps,1,mpi_integer,mpi_sum,mpi_comm_world,profReq,ierror)
+    call mpi_Iallreduce(nobs_sub1,nobs_sub,npe*ndat,mpi_integer,mpi_sum,mpi_comm_world,nobsReq,& 
          ierror)
 
 !   Write collective obs selection information to scratch file.
     if (lread_obs_save .and. mype==0) then
+       call MPI_Wait(superReq,istatus,ierror)
+       super_val1(0)=one
+       deallocate(super_val)
+       call MPI_Wait(profReq,istatus,ierror)
+       call MPI_Wait(nobsReq,istatus,ierror)
        write(6,*)'READ_OBS:  write collective obs selection info to ',trim(obs_input_common)
        call unformatted_open(lunsave,file=obs_input_common,class=".obs_input.")
        write(lunsave) ndata,ndat,npe,superp,nprof_gps,ditype
