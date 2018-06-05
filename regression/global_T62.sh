@@ -384,6 +384,7 @@ fi
 # Run GSI
 cd $tmpdir
 echo "run gsi now"
+eval "ldd $tmpdir/gsi.x"
 eval "$APRUN $tmpdir/gsi.x > stdout 2>&1"
 rc=$?
 

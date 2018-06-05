@@ -154,10 +154,10 @@ if [ $((task_node*threads)) -gt $max_core ]; then
 fi
 export core=${core:-core}
 
-export KMP_STACKSIZE=${KMP_STACKSIZE:-1024m}
+#export KMP_STACKSIZE=${KMP_STACKSIZE:-1024m}
 
 export TZ=GMT
-cfile=$DATA/sub$$
+cfile=sub$$
 > $cfile
 
 if [ $INHERIT_ENV = YES ] ; then
@@ -265,7 +265,7 @@ fi
 if [ ${MP_EUIDEVELOP:-NULL} != NULL ] ; then
  echo "export MP_EUIDEVELOP=$MP_EUIDEVELOP"                     >> $cfile
 fi
-echo "export KMP_STACKSIZE=$KMP_STACKSIZE"                      >> $cfile
+#echo "export KMP_STACKSIZE=$KMP_STACKSIZE"                      >> $cfile
 if [ ${F_UFMTENDIAN:-NULL} != NULL ] ; then
  echo "export F_UFMTENDIAN=$F_UFMTENDIAN"                       >> $cfile
 fi
@@ -314,7 +314,22 @@ echo "module load EnvVars/1.0.2"    >> $cfile
 echo "module load lsf/10.1"    >> $cfile
 echo "module load ips/18.0.1.163"    >> $cfile
 echo "module load impi/18.0.1"    >> $cfile
+echo "module load NetCDF/4.5.0"    >> $cfile
 #echo "module load smpi/10.1.1.0"    >> $cfile
+
+echo " export TAU_MAKEFILE=/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/taumpi/x86_64/lib/Makefile.tau-icpc-papi-ompt-mpi-openmp-opari"   >> $cfile
+echo " export PATH=$PATH:/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/taumpi/x86_64/bin"   >> $cfile
+echo " export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/papi/lib"   >> $cfile
+echo " export TAU_PROFILE=1"   >> $cfile
+echo " export TAU_TRACE=0"   >> $cfile
+echo " export TAU_CALLPATH=1"   >> $cfile
+echo " export TAU_VERBOSECALLPATH=1"   >> $cfile
+echo " export TAU_OPTIONS=\"-optKeepFiles -optVerbose -optRevert -optPreProcess  -optTauSelectFile=$NS/select.tau -optMemDbg -optDetectMemoryLeaks \""   >> $cfile
+echo " export TAU_CALLPATH_DEPTH=100"   >> $cfile
+echo " export TAU_THROTTLE=1"   >> $cfile
+echo " export TAU_THROTTLE_NUMCALLS=150000"   >> $cfile
+echo " export TAU_THROTTLE_PERCALL=10"   >> $cfile
+echo " export TAU_PROFILE_FORMAT=merged"   >> $cfile
 
 echo "$exec"                                                    >> $cfile
 
@@ -340,6 +355,6 @@ if [[ -w $SUBLOG ]];then
   jobn=$(grep -i submitted $ofile|head -n1|cut -d\" -f2)
   date +"%Y%m%d%H%M%S : $subcmd : $jobn" >>$SUBLOG
 fi
-rm $cfile $ofile
+#rm $cfile $ofile
 [[ $MKDATA = YES ]] && rmdir $DATA
 exit $rc

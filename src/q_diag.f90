@@ -66,6 +66,7 @@ subroutine q_diag(it,mype)
   real(r_kind),pointer,dimension(:,:  ):: ges_ps=>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_q =>NULL()
   real(r_kind),pointer,dimension(:,:,:):: ges_cwmr_it=>NULL()
+  integer(i_kind):: qrmsReq,pwmReq,psmReq
 
   mype_out=0
   mm1=mype+1
@@ -115,15 +116,16 @@ subroutine q_diag(it,mype)
   call strip(ges_ps,psm)
   call strip(pw,pwm)
 
-  call mpi_reduce(qrms,qrms0,6,mpi_rtype,mpi_sum,mype_out,mpi_comm_world,ierror)
+  call mpi_Ireduce(qrms,qrms0,6,mpi_rtype,mpi_sum,mype_out,mpi_comm_world,qrmsReq,ierror)
 
-  call mpi_gatherv(psm,ijn(mm1),mpi_rtype,work_ps,ijn,displs_g,mpi_rtype,&
-       mype_out,mpi_comm_world,ierror)
-  call mpi_gatherv(pwm,ijn(mm1),mpi_rtype,work_pw,ijn,displs_g,mpi_rtype,&
-       mype_out,mpi_comm_world,ierror)
+  call mpi_Igatherv(psm,ijn(mm1),mpi_rtype,work_ps,ijn,displs_g,mpi_rtype,&
+       mype_out,mpi_comm_world,psmReq,ierror)
+  call mpi_Igatherv(pwm,ijn(mm1),mpi_rtype,work_pw,ijn,displs_g,mpi_rtype,&
+       mype_out,mpi_comm_world,pwmReq,ierror)
 
 
   if(mype == mype_out) then
+     call MPI_Wait(qrmsReq,istatus,ierror)
      qrms_neg  = zero
      qrms_sat  = zero
      rhrms_neg = zero
@@ -139,7 +141,9 @@ subroutine q_diag(it,mype)
             '     SUPERSAT Q  COUNT,RMS=',i9,1x,g13.6,/, &
             '     SUPERSAT RH COUNT,RMS=',i9,1x,g13.6)
 
+     call MPI_Wait(psmReq,istatus,ierror)
      call load_grid(work_ps,grid_ps)
+     call MPI_Wait(pwmReq,istatus,ierror)
      call load_grid(work_pw,grid_pw)
      globps=zero
      globpw=zero
