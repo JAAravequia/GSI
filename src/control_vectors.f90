@@ -876,7 +876,7 @@ real(r_quad) function qdot_prod_sub(xcv,ycv)
            partsum(m3d+i) = dplevs(xcv%step(ii)%r2(i)%q,ycv%step(ii)%r2(i)%q,ihalo=1)
         enddo
         if(l_hyb_ens) then
-!$omp parallel do  schedule(dynamic,1) private(i)
+!$omp parallel do  schedule(dynamic,1) private(i,ig,nigtmp)
          do ig=1,naensgrp
          nigtmp=n_ens*(ig-1)
            do i = 1,n_ens
