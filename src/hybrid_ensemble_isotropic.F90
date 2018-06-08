@@ -48,7 +48,9 @@ module hybrid_ensemble_isotropic
 !   2015-04-07  carley  - bug fix to allow grd_loc%nlat=grd_loc%nlon
 !   2016-05-13  parrish - remove beta12mult
 !   2018-02-15  wu      - add code for fv3_regional option
-!   2018-03-28  T. Lei  - added  SDL related coded
+!   2018-03-28  T. Lei  - added  SDL related codaes
+!   2018-06-01  T. Lei  - added  SDL for vertical direction in global
+!                         applications
 !
 ! subroutines included:
 !   sub init_rf_z                         - initialize localization recursive filter (z direction)
@@ -162,13 +164,13 @@ module hybrid_ensemble_isotropic
 !      following variables are filter parameters for isotropic
 !       homogeneous localization of hybrid control variable a_en
 
-  real(r_kind),allocatable:: fmatz(:,:,:,:)
-  real(r_kind),allocatable:: fmat0z(:,:,:)
+  real(r_kind),allocatable:: fmatz(:,:,:,:,:)
+  real(r_kind),allocatable:: fmat0z(:,:,:,:)
   real(r_kind),allocatable:: fmatx(:,:,:,:,:)
   real(r_kind),allocatable:: fmat0x(:,:,:,:)
   real(r_kind),allocatable:: fmaty(:,:,:,:)
   real(r_kind),allocatable:: fmat0y(:,:,:)
-  real(r_kind),allocatable:: znorm_new(:,:)
+  real(r_kind),allocatable:: znorm_new(:,:,:)
   real(r_kind),allocatable:: xnorm_new(:,:,:)
   real(r_kind),allocatable:: ynorm_new(:,:)
   real(r_kind),allocatable:: psbar(:)
@@ -235,12 +237,13 @@ subroutine init_rf_z(z_len)
   use constants, only: half,one,rd_over_cp,zero,one_tenth,ten,two
   use hybrid_ensemble_parameters, only: grd_ens,s_ens_v
   use hybrid_ensemble_parameters, only: ps_bar
+  use hybrid_ensemble_parameters, only: naensloc
 
   implicit none
 
-  real(r_kind)   ,intent(in) :: z_len(grd_ens%nsig)
+  real(r_kind)   ,intent(in) :: z_len(grd_ens%nsig,naensloc)
 
-  integer(i_kind) k,nxy,i,ii,jj,j,l
+  integer(i_kind) k,nxy,i,ii,jj,j,l,ig
   real(r_kind) aspect(nsig),p_interface(nsig+1),ln_p_int(nsig+1)
   real(r_kind) dlnp,kap1,kapr,d1,rnsig
   real(r_kind),dimension(:,:,:),allocatable:: fmatz_tmp
@@ -253,14 +256,15 @@ subroutine init_rf_z(z_len)
 
 !    use new factorization:
 
-  allocate(fmatz(nxy,2,nsig,2),fmat0z(nxy,nsig,2))
+  allocate(fmatz(nxy,2,nsig,2,naensloc),fmat0z(nxy,nsig,2,naensloc))
   allocate(fmatz_tmp(2,nsig,2),fmat0z_tmp(nsig,2))
+do ig=1,naensloc
 !   for z_len < zero, use abs val z_len and assume localization scale is in units of ln(p)
-  if(s_ens_v > zero) then
+  if(s_ens_v(ig) > zero) then
 
 !  z_len is in grid units
      do k=1,nsig
-        aspect(k)=z_len(k)**2
+        aspect(k)=z_len(k,ig)**2
      enddo
 
      do i=1,nxy
@@ -268,13 +272,13 @@ subroutine init_rf_z(z_len)
        do l=1,2
          do k=1,nsig
            do j=1,2
-             fmatz(i,j,k,l)=fmatz_tmp(j,k,l)
+             fmatz(i,j,k,l,ig)=fmatz_tmp(j,k,l)
            enddo
          enddo
        enddo
        do l=1,2
          do k=1,nsig
-           fmat0z(i,k,l)=fmat0z_tmp(k,l)
+           fmat0z(i,k,l,ig)=fmat0z_tmp(k,l)
          enddo
        enddo
      enddo
@@ -323,7 +327,7 @@ subroutine init_rf_z(z_len)
 
            do k=1,nsig
               dlnp=abs(ln_p_int(k)-ln_p_int(k+1))
-              d1=abs(z_len(k))/dlnp
+              d1=abs(z_len(k,ig))/dlnp
               d1=min(rnsig,d1)
               aspect(k)=d1**2
 !!            if(mype == 0) write(400,'(" k, vertical localization in grid units for ln(p) scaling =",i4,f10.2,f10.2,f10.2)') &
@@ -334,18 +338,19 @@ subroutine init_rf_z(z_len)
            do l=1,2
              do k=1,nsig
                do j=1,2
-                 fmatz(i,j,k,l)=fmatz_tmp(j,k,l)
+                 fmatz(i,j,k,l,ig)=fmatz_tmp(j,k,l)
                enddo
              enddo
            enddo
            do l=1,2
              do k=1,nsig
-               fmat0z(i,k,l)=fmat0z_tmp(k,l)
+               fmat0z(i,k,l,ig)=fmat0z_tmp(k,l)
              enddo
            enddo
         enddo
      enddo
   end if
+ enddo !ig loop
   deallocate(fmatz_tmp,fmat0z_tmp)
   return
 
@@ -465,7 +470,7 @@ subroutine init_rf_y(y_len,kl)
 
 end subroutine init_rf_y
 
-subroutine new_factorization_rf_z(f,iadvance,iback)
+subroutine new_factorization_rf_z(f,iadvance,iback,iaensgrplocin)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    new_factorization_rf_z
@@ -496,7 +501,7 @@ subroutine new_factorization_rf_z(f,iadvance,iback)
   use hybrid_ensemble_parameters, only: grd_ens
   implicit none
 
-  integer(i_kind),intent(in   ) :: iadvance,iback
+  integer(i_kind),intent(in   ) :: iadvance,iback,iaensgrplocin
   real(r_kind)   ,intent(inout) :: f(grd_ens%latlon11,grd_ens%nsig)
 
   integer(i_kind) i,k,l,nxy,nz
@@ -505,34 +510,34 @@ subroutine new_factorization_rf_z(f,iadvance,iback)
   if(iadvance == 1) then
      do k=1,nz
         do i=1,nxy
-           f(i,k)=znorm_new(i,k)*f(i,k)
+           f(i,k)=znorm_new(i,k,iaensgrplocin)*f(i,k)
         enddo
      enddo
   end if
   do k=1,nz
      do l=1,min(2,k-1)
         do i=1,nxy
-           f(i,k)=f(i,k)-fmatz(i,l,k,iadvance)*f(i,k-l)
+           f(i,k)=f(i,k)-fmatz(i,l,k,iadvance,iaensgrplocin)*f(i,k-l)
         enddo
      enddo
      do i=1,nxy
-        f(i,k)=fmat0z(i,k,iadvance)*f(i,k)
+        f(i,k)=fmat0z(i,k,iadvance,iaensgrplocin)*f(i,k)
      enddo
   enddo
   do k=nz,1,-1
      do l=1,min(2,nz-k)
         do i=1,nxy
-           f(i,k)=f(i,k)-fmatz(i,l,k+l,iback)*f(i,k+l)
+           f(i,k)=f(i,k)-fmatz(i,l,k+l,iback,iaensgrplocin)*f(i,k+l)
         enddo
      enddo
      do i=1,nxy
-        f(i,k)=fmat0z(i,k,iback)*f(i,k)
+        f(i,k)=fmat0z(i,k,iback,iaensgrplocin)*f(i,k)
      enddo
   enddo
   if(iadvance == 2) then
      do k=1,nz
         do i=1,nxy
-           f(i,k)=znorm_new(i,k)*f(i,k)
+           f(i,k)=znorm_new(i,k,iaensgrplocin)*f(i,k)
         enddo
      enddo
   end if
@@ -775,6 +780,7 @@ subroutine new_factorization_rf_y(f,iadvance,iback,nlevs)
   return
 end subroutine new_factorization_rf_y
 
+
 subroutine normal_new_factorization_rf_z
 !$$$  subprogram documentation block
 !                .      .    .
@@ -801,45 +807,49 @@ subroutine normal_new_factorization_rf_z
 
   use kinds, only: r_kind,i_kind
   use hybrid_ensemble_parameters, only: grd_ens
+  use hybrid_ensemble_parameters, only: naensloc
   use constants, only: zero,one
   implicit none
 
   integer(i_kind) k,iadvance,iback,nxy
   real(r_kind) f(grd_ens%latlon11,grd_ens%nsig),diag(grd_ens%latlon11,grd_ens%nsig)
+  integer(i_kind)iaensgrploc,ig0 
+
 
   if(allocated(znorm_new)) deallocate(znorm_new)
-  allocate(znorm_new(grd_ens%latlon11,grd_ens%nsig))
+  allocate(znorm_new(grd_ens%latlon11,grd_ens%nsig,naensloc))
 
   nxy=grd_ens%latlon11
 
   znorm_new=one
-
+do iaensgrploc=1,naensloc
   do k=1,grd_ens%nsig
       f=zero
       f(:,k)=one
 
       iadvance=1 ; iback=2
-      call new_factorization_rf_z(f,iadvance,iback)
+      call new_factorization_rf_z(f,iadvance,iback,iaensgrploc)
       iadvance=2 ; iback=1
-      call new_factorization_rf_z(f,iadvance,iback)
+      call new_factorization_rf_z(f,iadvance,iback,iaensgrploc)
 
       diag(:,k)=sqrt(one/f(:,k))
   enddo
 
   do k=1,grd_ens%nsig
-      znorm_new(:,k)=diag(:,k)
+      znorm_new(:,k,iaensgrploc)=diag(:,k)
   enddo
-
+enddo !iaens loop
 ! Check result:
   if(debug)then
+  ig0=1
     do k=1,grd_ens%nsig
        f=zero
        f(:,k)=one
 
        iadvance=1 ; iback=2
-       call new_factorization_rf_z(f,iadvance,iback)
+       call new_factorization_rf_z(f,iadvance,iback,ig0)
        iadvance=2 ; iback=1
-       call new_factorization_rf_z(f,iadvance,iback)
+       call new_factorization_rf_z(f,iadvance,iback,ig0)
 
        diag(:,k)=sqrt(one/f(:,k))
     enddo
@@ -849,7 +859,6 @@ subroutine normal_new_factorization_rf_z
   return
 
 end subroutine normal_new_factorization_rf_z
-
 subroutine normal_new_factorization_rf_x
 !$$$  subprogram documentation block
 !                .      .    .
@@ -1098,6 +1107,7 @@ end subroutine normal_new_factorization_rf_y
     use hybrid_ensemble_parameters, only: n_ens,grd_ens,ntlevs_ens
     use hybrid_ensemble_parameters, only: nelen,en_perts,ps_bar
     use hybrid_ensemble_parameters, only: nsclgrp
+    use hybrid_ensemble_parameters, only: naensloc
 
     implicit none
 
@@ -3658,7 +3668,7 @@ endif
   return
 end subroutine bkerror_a_en
 
-subroutine bkgcov_a_en_new_factorization(iaensgrpin,a_en)
+subroutine bkgcov_a_en_new_factorization(iaensgrplocin,a_en)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    bkgcov_a_en copy of bkgcov for hybrid ens var a_en 
@@ -3697,7 +3707,7 @@ subroutine bkgcov_a_en_new_factorization(iaensgrpin,a_en)
 
 ! Passed Variables
 ! real(r_kind),dimension(grd_loc%latlon1n,n_ens),intent(inout) :: a_en
-  integer(i_kind),intent(in   ) :: iaensgrpin 
+  integer(i_kind),intent(in   ) :: iaensgrplocin 
   type(gsi_bundle),intent(inout) :: a_en(n_ens)
 
 ! Local Variables
@@ -3724,7 +3734,7 @@ subroutine bkgcov_a_en_new_factorization(iaensgrpin,a_en)
   iadvance=1 ; iback=2
 !$omp parallel do schedule(dynamic,1) private(k,ii,is,ie)
   do k=1,n_ens
-     call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback)
+     call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback,iaensgrplocin)
      ii=(k-1)*a_en(1)%ndim
      is=ii+1
      ie=ii+a_en(1)%ndim
@@ -3743,7 +3753,7 @@ subroutine bkgcov_a_en_new_factorization(iaensgrpin,a_en)
      call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
      call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
   else
-     call sf_xy(iaensgrpin,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
+     call sf_xy(iaensgrplocin,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
   end if
 
 ! Put back onto subdomains
@@ -3758,14 +3768,14 @@ subroutine bkgcov_a_en_new_factorization(iaensgrpin,a_en)
      is=ii+1
      ie=ii+a_en(1)%ndim
      a_en(k)%values(1:a_en(k)%ndim)=a_en_work(is:ie)
-     call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback)
+     call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback,iaensgrplocin)
   enddo
   deallocate(a_en_work)
 
   return
 end subroutine bkgcov_a_en_new_factorization
 
-subroutine ckgcov_a_en_new_factorization(iaensgrpin,z,a_en)
+subroutine ckgcov_a_en_new_factorization(iaensgrplocin,z,a_en)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    ckgcov_a_en_new_factorization sqrt(bkgcov_a_en_new_factorization)
@@ -3799,7 +3809,7 @@ subroutine ckgcov_a_en_new_factorization(iaensgrpin,z,a_en)
   implicit none
 
 ! Passed Variables
-  integer(i_kind),intent(in   ) :: iaensgrpin 
+  integer(i_kind),intent(in   ) :: iaensgrplocin 
   type(gsi_bundle),intent(inout) :: a_en(n_ens)
   real(r_kind),dimension(nval_lenz_en),intent(in   ) :: z
 
@@ -3835,7 +3845,7 @@ subroutine ckgcov_a_en_new_factorization(iaensgrpin,z,a_en)
         call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
      else
 #ifdef LATER
-        call sqrt_sf_xy(iaensgrpin,z,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
+        call sqrt_sf_xy(iaensgrplocin,z,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
 #else
         write(6,*) ' problem with ibm compiler with "use hybrid_ensemble_isotropic, only: sqrt_sf_xy"'
 #endif /*LATER*/
@@ -3864,13 +3874,13 @@ subroutine ckgcov_a_en_new_factorization(iaensgrpin,z,a_en)
   do k=1,n_ens
 
      iadvance=2 ; iback=1
-     call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback)
+     call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback,iaensgrplocin)
 
   enddo
 
   return
 end subroutine ckgcov_a_en_new_factorization
-subroutine ckgcov_a_en_new_factorization2(iaensgrpin,a_ens_in,a_en)
+subroutine ckgcov_a_en_new_factorization2(iaensgrplocin,a_ens_in,a_en)
 !clt modified from ckgcov_a_en_new_factorization , now use the input on
 !grids(a_ens)
 !$$$  subprogram documentation block
@@ -3907,7 +3917,7 @@ subroutine ckgcov_a_en_new_factorization2(iaensgrpin,a_ens_in,a_en)
   implicit none
 
 ! Passed Variables
-  integer(i_kind),intent(in   ) :: iaensgrpin 
+  integer(i_kind),intent(in   ) :: iaensgrplocin 
   type(gsi_bundle),intent(inout) :: a_en(n_ens)
   type(gsi_bundle),intent(in) :: a_ens_in(n_ens)
 
@@ -3979,7 +3989,7 @@ subroutine ckgcov_a_en_new_factorization2(iaensgrpin,a_ens_in,a_en)
         call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
      else
 #ifdef LATER
-        call sqrt_sf_xy(iaensgrpin,z,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
+        call sqrt_sf_xy(iaensgrplocin,z,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
 #else
         write(6,*) ' problem with ibm compiler with "use hybrid_ensemble_isotropic, only: sqrt_sf_xy"'
 #endif /*LATER*/
@@ -4003,14 +4013,14 @@ subroutine ckgcov_a_en_new_factorization2(iaensgrpin,a_ens_in,a_en)
   do k=1,n_ens
 
      iadvance=2 ; iback=1
-     call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback)
+     call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback,iaensgrplocin)
 
   enddo
 
   return
 end subroutine ckgcov_a_en_new_factorization2
 
-subroutine ckgcov_a_en_new_factorization_ad(iaensgrpin,z,a_en)
+subroutine ckgcov_a_en_new_factorization_ad(iaensgrplocin,z,a_en)
 
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -4050,7 +4060,7 @@ subroutine ckgcov_a_en_new_factorization_ad(iaensgrpin,z,a_en)
   implicit none
 
 ! Passed Variables
-  integer(i_kind),intent(in   ) :: iaensgrpin 
+  integer(i_kind),intent(in   ) :: iaensgrplocin 
   type(gsi_bundle),intent(inout) :: a_en(n_ens)
   real(r_kind),dimension(nval_lenz_en),intent(inout) :: z
 
@@ -4075,7 +4085,7 @@ subroutine ckgcov_a_en_new_factorization_ad(iaensgrpin,z,a_en)
   do k=1,n_ens
 
      iadvance=1 ; iback=2
-     call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback)
+     call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback,iaensgrplocin)
  
   enddo
 
@@ -4110,13 +4120,14 @@ subroutine ckgcov_a_en_new_factorization_ad(iaensgrpin,z,a_en)
         call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
         z=hwork
      else
-        call sqrt_sf_xy_ad(iaensgrpin,z,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
+        call sqrt_sf_xy_ad(iaensgrplocin,z,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
      end if
   end if
 
   return
 end subroutine ckgcov_a_en_new_factorization_ad
-subroutine ckgcov_a_en_new_factorization_ad2(iaensgrpin,a_en_out,a_en)
+
+subroutine ckgcov_a_en_new_factorization_ad2(iaensgrplocin,a_en_out,a_en)
 !clt modified from ckgcov_a_en_new_factorization_ad , adding converting of the
 !clt results z in the spectral space to grid space in the local domains. 
 
@@ -4165,7 +4176,7 @@ subroutine ckgcov_a_en_new_factorization_ad2(iaensgrpin,a_en_out,a_en)
   implicit none
 
 ! Passed Variables
-  integer(i_kind),intent(in   ) :: iaensgrpin 
+  integer(i_kind),intent(in   ) :: iaensgrplocin 
   type(gsi_bundle),intent(inout) :: a_en(n_ens)
   type(gsi_bundle),intent(inout) :: a_en_out(n_ens)
   real(r_kind),dimension(nval_lenz_en) :: z
@@ -4203,7 +4214,7 @@ subroutine ckgcov_a_en_new_factorization_ad2(iaensgrpin,a_en_out,a_en)
   do k=1,n_ens
 
      iadvance=1 ; iback=2
-     call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback)
+     call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback,iaensgrplocin)
  
   enddo
 
@@ -4238,7 +4249,7 @@ subroutine ckgcov_a_en_new_factorization_ad2(iaensgrpin,a_en_out,a_en)
         z=hwork
      else
         dwork=hwork
-        call sqrt_sf_xy_ad(iaensgrpin,z,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
+        call sqrt_sf_xy_ad(iaensgrplocin,z,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
         d2work=hwork
      end if
   end if
@@ -4271,7 +4282,6 @@ subroutine ckgcov_a_en_new_factorization_ad2(iaensgrpin,a_en_out,a_en)
 
   return
 end subroutine ckgcov_a_en_new_factorization_ad2
-
 ! ------------------------------------------------------------------------------
 ! ------------------------------------------------------------------------------
 
@@ -4480,7 +4490,7 @@ subroutine hybens_localization_setup
    use hybrid_ensemble_parameters, only: readin_localization,create_hybens_localization_parameters, &
                                          vvlocal,s_ens_h,s_ens_hv,s_ens_v,s_ens_vv
    use gsi_io, only: verbose
-    use hybrid_ensemble_parameters, only: naensgrp
+    use hybrid_ensemble_parameters, only: naensloc
 
    implicit none
 
@@ -4518,21 +4528,22 @@ subroutine hybens_localization_setup
          endif
          if(print_verbose) write(6,'(" LOCALIZATION, BETA_S, BETA_E VERTICAL PROFILES FOLLOW")')
          do k = 1,grd_ens%nsig
-            read(lunin,101) s_ens_hv(k,1), s_ens_vv(k), beta_s(k), beta_e(k)
-            if(mype==0) write(6,101) s_ens_hv(k,1), s_ens_vv(k), beta_s(k), beta_e(k)
+            read(lunin,101) s_ens_hv(k,1), s_ens_vv(k,1), beta_s(k), beta_e(k)
+            if(mype==0) write(6,101) s_ens_hv(k,1), s_ens_vv(k,1), beta_s(k), beta_e(k)
          enddo
-         do iaens=2,naensgrp
+         do iaens=2,naensloc
          do k = 1,grd_ens%nsig
-            read(lunin,101,end=300) s_ens_hv(k,iaens)
+            read(lunin,101,end=300) s_ens_hv(k,iaens),s_ens_vv(k,iaens)
          enddo
          enddo
          l_read_success=.True.
          close(lunin)
       300 continue  
          if(.not.l_read_success) then 
-         do iaens=2,naensgrp
+         do iaens=2,naensloc
          do k = 1,grd_ens%nsig
              s_ens_hv(k,iaens)=s_ens_hv(k,1)
+             s_ens_vv(k,iaens)=s_ens_vv(k,1)
          enddo
          enddo
          endif
@@ -4574,10 +4585,10 @@ subroutine hybens_localization_setup
       nz = 1
       kl = 1
       allocate(s_ens_h_gu_x(1),s_ens_h_gu_y(1))
-      do iaens=1,naensgrp
+      do iaens=1,naensloc
       s_ens_hv(:,iaens) = s_ens_h(iaens)
+      s_ens_vv(:,iaens) = s_ens_v(iaens)
       enddo
-      s_ens_vv = s_ens_v
    endif
 
    ! Set up localization filters
@@ -4623,7 +4634,7 @@ subroutine hybens_localization_setup
    if ( print_verbose ) then
       write(6,*) 'HYBENS_LOCALIZATION_SETUP: s_ens_hv(:,1),s_ens_vv,beta_s,beta_e'
       do k=1,grd_ens%nsig
-         write(6,101) s_ens_hv(k,1), s_ens_vv(k), beta_s(k), beta_e(k)
+         write(6,101) s_ens_hv(k,1), s_ens_vv(k,1), beta_s(k), beta_e(k)
       enddo
    endif
    call setup_ensgrp2aensgrp
