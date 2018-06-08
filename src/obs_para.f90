@@ -59,10 +59,14 @@ subroutine obs_para(ndata,mype)
   use jfunc, only: factqmin,factqmax
   use mpimod, only: npe,mpi_itype,mpi_comm_world,ierror
   use obsmod, only: obs_setup,dtype,mype_diaghdr,ndat,nsat1, &
-              obsfile_all,dplat,nobs_sub,obs_sub_comm 
+              obsfile_all,dplat,nobs_sub,obs_sub_comm,&
+              obs_input_common,superReq,nobsReq,profReq,dataReq,&
+              nobs_sub1,nprof_gps,lread_obs_save,ditype
   use gridmod, only: twodvar_regional 
   use qcmod, only: buddycheck_t,buddydiag_save 
   use gsi_io, only: verbose
+  use satthin, only: super_val1,superp
+  use gsi_unformatted, only: unformatted_open
   implicit none
 
 ! Declare passed variables
@@ -70,12 +74,13 @@ subroutine obs_para(ndata,mype)
   integer(i_kind),dimension(ndat,3),intent(in   ) :: ndata
 
 ! Declare local variables
-  integer(i_kind) lunout,is,ii
+  integer(i_kind) lunout,is,ii,istatus
   integer(i_kind) mm1
   integer(i_kind) ndatax_all,ikey_yes,ikey_no,newprocs,newrank 
   integer(i_kind),dimension(npe):: ikey,icolor 
   integer(i_kind) nobs_s
   logical print_verbose
+  integer(i_kind):: lunsave
 
   print_verbose=.false.
   if(verbose)print_verbose=.true.
@@ -90,7 +95,21 @@ subroutine obs_para(ndata,mype)
   mm1=mype+1
   ndatax_all=0
   lunout=55
+  lunsave=82
 
+  call MPI_Wait(nobsReq,istatus,ierror)
+  call MPI_Wait(dataReq,istatus,ierror)
+!   Write collective obs selection information to scratch file.
+    if (lread_obs_save .and. mype==0) then
+       write(6,*)'READ_OBS:  write collective obs selection info to ',trim(obs_input_common)
+       call unformatted_open(lunsave,file=obs_input_common,class=".obs_input.")
+       write(lunsave) ndata,ndat,npe,superp,nprof_gps,ditype
+       write(lunsave) super_val1
+       write(lunsave) nobs_sub
+       close(lunsave)
+    endif
+  deallocate(nobs_sub1)
+! write(6,*) 'Hey, mype is ',mype,' and nobs_sub(1,1) is ',nobs_sub(1,1)
 !
 ! Set number of obs on each pe for each data type
   open(lunout,file=obs_setup,form='unformatted')
@@ -169,7 +188,7 @@ subroutine obs_para(ndata,mype)
      if (mype==0) write(6,*)'OBS_PARA:  ***WARNING*** no observations to be  ',&
           ' assimilated. reset factqmin,factqmax=',factqmin,factqmax
   endif
-
+  call MPI_Wait(profReq,istatus,ierror)
 
   return
 end subroutine obs_para
