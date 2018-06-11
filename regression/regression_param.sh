@@ -549,11 +549,12 @@ elif [[ "$machine" = "WCOSS_D" ]]; then
    export OMP_STACKSIZE=1024M
    export PATH=$PATH:$NS/taumpi/x86_64/bin
    export LD_LIBRARY_PATH=/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/lib:/usrx/local/prod/intel/2018UP01/itac_latest/slib:/usrx/local/prod/intel/2018UP01/compilers_and_libraries/linux/lib/intel64_lin:/usrx/local/prod/intel/2018UP01/compilers_and_libraries/linux/mpi/lib64:/usrx/local/prod/intel/2018UP01/compilers_and_libraries/linux/ipp/lib/intel64_lin:/usrx/local/prod/intel/2018UP01/compilers_and_libraries/linux/mkl/lib/intel64_lin:/usrx/local/prod/intel/2018UP01/compilers_and_libraries/linux/tbb/lib/intel64_lin/gcc4.7:/usrx/local/prod/intel/2018UP01/debugger_2018/iga/lib:/usrx/local/prod/intel/2018UP01/debugger_2018/libipt/intel64/lib:/usrx/local/prod/intel/2018UP01/compilers_and_libraries/linux/daal/lib/intel64_lin:/usrx/local/prod/intel/2018UP01/compilers_and_libraries/linux/tbb/lib/intel64_lin/gcc4.4:/gpfs/lsf/10.1/linux3.10-glibc2.17-x86_64/lib
-   export TAU_MAKEFILE=/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/taumpi/x86_64/lib/Makefile.tau-icpc-papi-mpi-openmp-opari
-   export TAU_OPTIONS="-optKeepFiles -optVerbose -optRevert -optTauSelectFile=$NS/select.tau -optPdtF90Parser=/scratch/mpotts/pdt/x86_64/bin/f95parse -optMemDbg -optDetectMemoryLeaks "
-   export TAU_PROFILE=1
-   export TAU_PROFILE_FORMAT=merged
-   export APRUN="mpirun tau_exec -io "
+#  export TAU_MAKEFILE=/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/taumpi/x86_64/lib/Makefile.tau-icpc-papi-mpi-openmp-opari
+#  export TAU_OPTIONS="-optKeepFiles -optVerbose -optRevert -optTauSelectFile=$NS/select.tau -optPdtF90Parser=/scratch/mpotts/pdt/x86_64/bin/f95parse -optMemDbg -optDetectMemoryLeaks "
+#  export TAU_PROFILE=1
+#  export TAU_PROFILE_FORMAT=merged
+#  export APRUN="mpirun tau_exec -io "
+   export APRUN="mpirun  "
 elif [[ "$machine" = "s4" ]]; then
    export APRUN="srun"
    export MPI_BUFS_PER_PROC=2048

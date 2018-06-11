@@ -81,7 +81,8 @@ subroutine obs_para(ndata,mype)
   integer(i_kind) nobs_s
   logical print_verbose
   integer(i_kind):: lunsave
-
+  integer(i_kind):: mmdat
+  integer(i_kind),allocatable:: nobsStat(:)
   print_verbose=.false.
   if(verbose)print_verbose=.true.
 !
@@ -97,8 +98,13 @@ subroutine obs_para(ndata,mype)
   lunout=55
   lunsave=82
 
-  call MPI_Wait(nobsReq,istatus,ierror)
+  mmdat = size(nobsReq)
+  allocate(nobsStat(mmdat))
+! call MPI_Wait(nobsReq,istatus,ierror)
   call MPI_Wait(dataReq,istatus,ierror)
+! call mpi_WaitAll(mmdat,nobsReq,nobsStat,ierror) 
+! write(6,*) 'HEYYY mype is ',mype,' and I am done waiting ',nobs_sub(:,1)
+! write(6,*) 'HEYYY mype is ',mype,' and my wait status is ',nobsStat(mype),ierror
 !   Write collective obs selection information to scratch file.
     if (lread_obs_save .and. mype==0) then
        write(6,*)'READ_OBS:  write collective obs selection info to ',trim(obs_input_common)

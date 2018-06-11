@@ -565,7 +565,8 @@ module obsmod
   integer(i_kind),allocatable :: nobs_sub(:,:)
   integer(i_kind),allocatable :: obscounts(:,:)
   integer(i_kind),allocatable :: obs_sub_comm(:)
-  integer(i_kind) profReq,nobsReq,superReq,dataReq
+  integer(i_kind),allocatable :: nobsReq(:)
+  integer(i_kind) profReq,superReq,dataReq
   integer(i_kind),allocatable :: nobs_sub1(:,:)
   
   character(128) obs_setup

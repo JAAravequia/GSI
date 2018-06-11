@@ -747,13 +747,15 @@ subroutine read_obs(ndata,mype)
     integer(i_kind),dimension(npe,ndat):: mype_sub
     integer(i_kind),allocatable,dimension(:):: nrnd
     integer(i_kind):: nmls_type,mype_io_sfc
-    integer(i_kind):: iread,ipuse,iouse
+    integer(i_kind):: iread,ipuse,iouse,reqCount
 
     real(r_kind) gstime,val_dat,rmesh,twind,rseed
     real(r_kind),allocatable,dimension(:) :: prslsm,hgtlsm,work1
     real(r_kind),allocatable,dimension(:,:,:):: prsl_full,hgtl_full
     integer(i_kind):: readRecReq,readEarsReq,readDbReq,istatus,taskReq
-
+    integer(i_kind),allocatable,dimension(:):: nobsStat 
+    integer(i_kind),allocatable,dimension(:):: comm_chans
+    
     type(rad_obs_type) :: radmod
 
     data lunout / 81 /
@@ -1302,15 +1304,18 @@ subroutine read_obs(ndata,mype)
     call read_ship_info(mype)
 
 !   Loop over data files.  Each data file is read by a sub-communicator
-    write(6,*) 'HEY!! mmdat and ndat are ',mmdat,ndat
-    write(6,*) 'HEY!! npe is ',npe
+!   write(6,*) 'HEY!! mmdat and ndat are ',mmdat,ndat
+!   allocate(comm_chans(mmdat))
+    allocate(nobsReq(mmdat))
+    allocate(nobsStat(mmdat))
+    reqCount = 0
     loop_of_obsdata_files: &
     do ii=1,mmdat
-
+!      call mpi_comm_dup(mpi_comm_world,comm_chans(ii),ierror)
        i=npe_order(ii)
+!      write(6,*) 'HEY!! list for mype is ',mype,ii,i
        task_belongs: &
        if (i > 0 .and. belong(i)) then
-
           platid=dplat(i)                    !     platid   - satellites to read
           obstype=dtype(i)                   !     obstype  - observation types to process
           infile=trim(dfile(i))              !     infile   - units from which to read data
@@ -1699,7 +1704,6 @@ subroutine read_obs(ndata,mype)
           else if (ditype(i) == 'ozone')then
              ozone_obstype_select: &
              if (is_extOzone(infile,obstype,dplat(i))) then
-
                 call extOzone_read(infile,obstype,dplat(i),dsis(i), &
                    iread,ipuse,iouse, platid,gstime,lunout,twind,ithin,rmesh, &
                    nobs_sub1(:,i))
@@ -1771,7 +1775,10 @@ subroutine read_obs(ndata,mype)
 
           endif
        endif task_belongs
-
+!      call mpi_Iallreduce(nobs_sub1(:,i),nobs_sub(:,i),npe,mpi_integer,mpi_sum,comm_chans(ii),nobsReq(ii), ierror)
+       call mpi_Iallreduce(nobs_sub1(:,i),nobs_sub(:,i),npe,mpi_integer,mpi_sum,mpi_comm_world,nobsReq(ii), ierror)
+!      call mpi_allreduce(nobs_sub1(:,i),nobs_sub(:,i),npe,mpi_integer,mpi_sum,mpi_comm_world,ierror)
+!      write(6,*) 'mype is ',mype,' nobsreq(',ii,') is ',nobsReq(ii)
     end do loop_of_obsdata_files
     deallocate(prsl_full)
     deallocate(hgtl_full)
@@ -1807,9 +1814,10 @@ subroutine read_obs(ndata,mype)
 
 !   Collect number of gps profiles (needed later for qc)
     call mpi_Iallreduce(nprof_gps1,nprof_gps,1,mpi_integer,mpi_sum,mpi_comm_world,profReq,ierror)
-    call mpi_Iallreduce(nobs_sub1,nobs_sub,npe*ndat,mpi_integer,mpi_sum,mpi_comm_world,nobsReq, ierror)
-
-
+!   call mpi_Iallreduce(nobs_sub1,nobs_sub,npe*ndat,mpi_integer,mpi_sum,mpi_comm_world,nobsReq, ierror)
+!   call mpi_allreduce(nobs_sub1,nobs_sub,npe*ndat,mpi_integer,mpi_sum,mpi_comm_world, ierror)
+!   call mpi_Barrier(mpi_comm_world,ierror)
+!   call mpi_WaitAll(mmdat,nobsReq,nobsStat) 
 !   End of routine
     return
 end subroutine read_obs

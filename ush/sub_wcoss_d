@@ -319,18 +319,6 @@ echo "module load NetCDF/4.5.0"    >> $cfile
 
 echo " export TAU_MAKEFILE=/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/taumpi/x86_64/lib/Makefile.tau-icpc-papi-ompt-mpi-openmp-opari"   >> $cfile
 echo " export PATH=$PATH:/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/taumpi/x86_64/bin"   >> $cfile
-echo " export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/papi/lib"   >> $cfile
-echo " export TAU_PROFILE=1"   >> $cfile
-echo " export TAU_TRACE=0"   >> $cfile
-echo " export TAU_CALLPATH=1"   >> $cfile
-echo " export TAU_VERBOSECALLPATH=1"   >> $cfile
-echo " export TAU_OPTIONS=\"-optTrackIO -optVerbose  \""   >> $cfile
-echo " export TAU_TRACK_IO_PARAMS=1 "   >> $cfile
-echo " export TAU_CALLPATH_DEPTH=100"   >> $cfile
-echo " export TAU_THROTTLE=1"   >> $cfile
-echo " export TAU_THROTTLE_NUMCALLS=150000"   >> $cfile
-echo " export TAU_THROTTLE_PERCALL=10"   >> $cfile
-echo " export TAU_PROFILE_FORMAT=merged"   >> $cfile
 
 echo "$exec"                                                    >> $cfile
 
