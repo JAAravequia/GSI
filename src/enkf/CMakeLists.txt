@@ -75,6 +75,7 @@ if(BUILD_ENKF)
   target_link_libraries(${ENKFEXEC} enkflib enkfdeplib ${GSISHAREDLIB} ${GSILIB} ${CORE_LIBRARIES}
   ${MPI_Fortran_LIBRARIES} ${LAPACK_LIBRARIES} ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES}  ${HDF5_Fortran_HL_LIBRARIES}
   ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${GSI_LDFLAGS} ${CORE_BUILT} ${CORE_LIBRARIES} ${CORE_BUILT} ${NCDIAG_LIBRARIES} )
-  message("HEY in enkf, enkflib is ${enkflib}, and enkfdeplib is ${enkfdeplib}")
+  set(TESTVAR enkflib CACHE INTERNAL "")
+  message("HEY in enkf, enkflib is ${TESTVAR}, and enkfdeplib is ${gsisharedlib}")
 
 endif()
