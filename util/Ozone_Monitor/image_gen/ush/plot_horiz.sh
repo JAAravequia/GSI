@@ -58,7 +58,7 @@ for type in ${SATYPE2}; do
 
 cat << EOF > ${type}_${var}.gs
 'open ${type}.ctl'
-'run ${OZN_IG_GSCRPTS}/plot_horiz_${string}.gs ${type} ${var} x800 y700'
+'run ${OZN_IG_GSCRPTS}/plot_horiz_${string}.gs ${OZNMON_SUFFIX} ${RUN} ${type} ${var} x800 y700'
 'quit'
 EOF
       $GRADS -blc "run ${tmpdir}/${type}_${var}.gs"   
@@ -98,7 +98,7 @@ EOF
  
 
 #   if [[ $transfer_plot -eq 1 ]] ; then
-##     transfer plots from ibm to rzdm
+##     transfer plots from wcoss to rzdm
 #      rm -f $LOGDIR/transfer_horiz_${SATYPE2}.log
 #      export subdir=horiz
 #      export listvar1=PDATE,webpsw,webmch,webid,WEBDIR,LOGDIR,USER,SUB,SUFFIX,SATYPE2,string,PVAR,subdir,tmpdir,listvar1

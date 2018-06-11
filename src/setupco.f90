@@ -66,6 +66,10 @@ subroutine setupco(lunin,mype,stats_co,nlevs,nreal,nobs,&
   use obsmod, only : i_colvk_ob_type,dplat,nobskeep
   use obsmod, only : mype_diaghdr,dirname,time_offset,ianldate
   use obsmod, only : obsdiags,lobsdiag_allocated,lobsdiagsave
+  use obsmod, only: dirname
+  use nc_diag_write_mod, only: nc_diag_init, nc_diag_header, nc_diag_metadata, &
+       nc_diag_write, nc_diag_data2d
+  use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_get_dim, nc_diag_read_close
   use m_obsNode, only: obsNode
   use m_colvkNode, only : colvkNode, colvkNode_typecast
   use m_obsLList , only : obsLList_appendNode
@@ -188,11 +192,6 @@ subroutine setupco(lunin,mype,stats_co,nlevs,nreal,nobs,&
      pobs(j)=1.e10_r_kind
   end do
 
-  if(co_diagsave)then
-     irdim1=3
-     if(lobsdiagsave) irdim1=irdim1+4*miter+1
-     allocate(rdiagbuf(irdim1,nlevs,nobs))
-  end if
 
 ! Locate data for satellite in coinfo arrays
   itoss =1
@@ -244,17 +243,27 @@ subroutine setupco(lunin,mype,stats_co,nlevs,nreal,nobs,&
 ! Handle error conditions
   if (nlevs>nlev) write(6,*)'SETUPCO:  level number reduced for ',obstype,' ', &
        nlevs,' --> ',nlev
-  if (nlev == 0) then
-     if (mype==0) write(6,*)'SETUPCO:  no levels found for ',isis
-     if (nobs>0) read(lunin) 
-     goto 135
-  endif
-  if (itoss==1) then
-     if (mype==0) write(6,*)'SETUPCO:  all obs variances > 1.e4.  Do not use ',&
-          'data from satellite ',isis
+  if (nlev == 0 .or. itoss==1)then
+     if (nlev == 0) then
+        if (mype==0) write(6,*)'SETUPCO:  no levels found for ',isis
+     end if
+     if (itoss==1) then
+        if (mype==0) write(6,*)'SETUPCO:  all obs variances > 1.e4.  Do not use ',&
+             'data from satellite ',isis
+     end if
      if (nobs>0) read(lunin)
-     goto 135
+
+!    Release memory of local guess arrays
+     call final_vars_
+
+     return
   endif
+
+  if(co_diagsave)then
+     irdim1=3
+     if(lobsdiagsave) irdim1=irdim1+4*miter+1
+     allocate(rdiagbuf(irdim1,nlevs,nobs))
+  end if
 
 ! Read and transform co data
   read(lunin) data,luse,ioid
@@ -708,9 +717,6 @@ endif   ! (in_curbin)
      close(4)
   endif
 
-! Jump to this line if problem with data
-135 continue        
-
 ! Release memory of local guess arrays
   call final_vars_
 
@@ -760,6 +766,15 @@ endif   ! (in_curbin)
      call stop2(999)
   endif
   end subroutine init_vars_
+
+  subroutine init_netcdf_diag_
+  end subroutine init_netcdf_diag_
+  subroutine contents_binary_diag_
+  end subroutine contents_binary_diag_
+  subroutine contents_netcdf_diag_
+! Observation class
+  character(7),parameter     :: obsclass = '     co'
+  end subroutine contents_netcdf_diag_
 
   subroutine final_vars_
     if(allocated(ges_co)) deallocate(ges_co)

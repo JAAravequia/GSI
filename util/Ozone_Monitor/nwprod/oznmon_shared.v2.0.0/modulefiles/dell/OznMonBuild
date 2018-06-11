@@ -1,9 +1,9 @@
 #%Module#################################################################
 proc ModulesHelp { } {
-  puts stderr "Set environment variables for WCOSS(cray) ozmon build"
+  puts stderr "Set environment variables for WCOSS(dell) ozmon build"
 }
 
-module-whatis "Set environment variables for WCOSS(cray) ozmon build"
+module-whatis "Set environment variables for WCOSS(dell) ozmon build"
 
 set ver 2.0.2
 set FCOMP ifort

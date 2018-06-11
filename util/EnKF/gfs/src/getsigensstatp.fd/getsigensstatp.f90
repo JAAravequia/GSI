@@ -151,6 +151,7 @@ program getsigensstatp
                 stop
             endif
             do_icmr = variable_exist('icmr')
+            do_icmr = .false. ! keep this .false. to keep file size small until we actually analyze ice mr
         endif
 
         if ( mype == 0 ) then

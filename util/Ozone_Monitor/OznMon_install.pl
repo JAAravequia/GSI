@@ -5,7 +5,7 @@
 #
 #  This script makes sets all necessary configuration definitions
 #  and calls the makeall.sh script to build all the necessary
-#  executables.  This script works for zeus, theia, and ibm 
+#  executables.  This script works for zeus, theia, and wcoss 
 #  machines.
 #
 #-------------------------------------------------------------------
@@ -16,7 +16,7 @@
    my $machine = `/usr/bin/perl get_hostname.pl`;
    my $my_machine="export MY_MACHINE=$machine";
 
-   if( $machine ne "cray" && $machine ne "theia" && $machine ne "ibm" ) {
+   if( $machine ne "cray" && $machine ne "theia" && $machine ne "wcoss" ) {
       die( "ERROR --- Unrecognized machine hostname, $machine.  Exiting now...\n" );
    }
    else {
@@ -24,7 +24,7 @@
    }
 
    #
-   #  surge, theia, and ibm are all little endian machines, and all run linux
+   #  surge, theia, and wcoss are all little endian machines, and all run linux
    # 
    my $little_endian = "export LITTLE_ENDIAN=\${LITTLE_ENDIAN:-0}";
    my $my_os = "linux";
@@ -123,17 +123,19 @@
    #
    #  Web directory
    #
-#   my $webdir = "/home/people/emc/www/htdocs/gmb/gdas/radiance/${webuser}";
-#   print "Please specify the top level web site directory $server.\n";
-#   print "  Return to accept default directory location or enter new location.\n";
-#   print " \n";
-#   print "  Default directory on $server:  $webdir\n";
-#   print "    ?\n";
-#   my $new_webdir =<>;
-#   $new_webdir =~ s/^\s+|\s+$//g;
-#   if( length($new_webdir ) > 0 ) {
-#      $webdir = $new_webdir;
-#   }
+   my $webdir = "/home/people/emc/www/htdocs/gmb/gdas/es_ozn";
+
+   print "Please specify the top level web site directory $server.\n";
+   print "  Return to accept default directory location or enter new location.\n";
+   print " \n";
+   print "  Default directory on $server:  $webdir\n";
+   print "    ?\n";
+   my $new_webdir =<>;
+   $new_webdir =~ s/^\s+|\s+$//g;
+   if( length($new_webdir ) > 0 ) {
+      $webdir = $new_webdir;
+   }
+
    my $my_webdir="export WEBDIR=\${WEBDIR:-$webdir}";
    print "my_webdir = $my_webdir\n";
    print "\n\n";
@@ -146,7 +148,7 @@
    my $my_ptmp;
    my $my_stmp;
 
-   if( $machine eq "ibm" ) {
+   if( $machine eq "wcoss" ) {
       $ptmp = "/ptmpd1";
       print "Please specify PTMP location.  This is used for temporary work space.\n";
       print "  Available options are: \n";
@@ -261,14 +263,14 @@
    }
 
    my $project = "export PROJECT=\${PROJECT:-GDAS-T2O}";
-   if( $machine ne "ibm" && $machine ne "cray" ) {
+   if( $machine ne "wcoss" && $machine ne "cray" ) {
       $project="export PROJECT=";
    } 
 
    my $job_queue="export JOB_QUEUE=";
    if( $machine eq "cray" ) {
       $job_queue="export JOB_QUEUE=\${JOB_QUEUE:-dev}";
-   } elsif( $machine eq "ibm" ){
+   } elsif( $machine eq "wcoss" ){
       $job_queue = "export JOB_QUEUE=\${JOB_QUEUE:-dev_shared}";
    }
 

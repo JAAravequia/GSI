@@ -112,7 +112,7 @@ env
 # Set necessary environment variables
 ########################################
 export RAD_AREA=${RAD_AREA:-glb}
-
+export CYCLE_INTERVAL=${CYCLE_INTERVAL:-6}
 export biascr=${biascr:-$COMIN/gdas.t${cyc}z.abias}
 export radstat=${radstat:-$COMIN/gdas.t${cyc}z.radstat}
 
@@ -132,6 +132,7 @@ else
    msg="JOB COMPLETED NORMALLY"
 fi
 postmsg "$jlogfile" "$msg"
+
 
 ################################
 # Remove the Working Directory
