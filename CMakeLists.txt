@@ -226,6 +226,9 @@ project(GSI)
   if(BUILD_UTIL)
     add_subdirectory(util/EnKF/gfs/src)
   endif(BUILD_UTIL) 
+  
+  message("HEY in, enkflib is ${enkflib}, and enkfdeplib is ${enkfdeplib}")
+
   if(BUILD_EFSOI)
     add_subdirectory(util/EFSOI_Utilities/src)
   endif(BUILD_EFSOI) 

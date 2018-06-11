@@ -85,7 +85,7 @@ logical, public :: lupp
 integer(i_kind),public ::  iassim_order,nlevs,nanals,numiter,&
                            nlons,nlats,nbackgrounds,nstatefields
 integer(i_kind),public :: nsats_rad,nsats_oz,imp_physics
-integer(i_kind),public :: evalft
+integer(i_kind),public :: evalft, ft
 integer(i_kind),public :: tar_minlev,tar_maxlev
 ! random seed for perturbed obs (deterministic=.false.)
 ! if zero, system clock is used.  Also used when
@@ -271,7 +271,7 @@ nlats = 0
 ! total number of levels
 nlevs = 0
 ! number of ensemble members
-nanals = 0
+nanals = 80
 ! nvars is numer of 3d variables to update.
 ! for hydrostatic models, typically 5 (u,v,T,q,ozone).
 nvars = 5
@@ -283,7 +283,7 @@ nvars = 5
 ! analysis error variance from the previous cycle is used instead
 ! (same as in the GSI).
 biasvar = 0.1_r_single
-
+ft = 6
 ! Evaluation FT for EFSOI
 evalft = 24
 ! Weigt for moist total energy norm (0 when dry total energy)

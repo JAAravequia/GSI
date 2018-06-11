@@ -45,7 +45,7 @@ module gridinfo_efsoi
 !$$$
 
 use mpisetup, only: nproc, mpi_integer, mpi_real4, mpi_comm_world
-use params, only: datapath,nlevs,nlons,nlats,fgfileprefixes
+use params, only: datapath,nlevs,nlons,nlats,fgfileprefixes,nvars
 use kinds, only: r_kind, i_kind, r_double, r_single
 use constants, only: one,zero,pi,cp,rd,grav,rearth,max_varname_length
 use specmod, only: sptezv_s, sptez_s, init_spec_vars, isinitialized, asin_gaulats, &
@@ -64,7 +64,7 @@ real(r_single),public, allocatable, dimension(:,:) :: logp
 integer,public :: npts
 integer,public :: ntrunc
 integer(i_kind),public, allocatable, dimension(:) :: id_u, id_v, id_t, id_q
-integer(i_kind),public :: id_ps
+integer(i_kind),public :: id_ps, ncdim
 ! supported variable names in anavinfo
 character(len=max_varname_length),public, dimension(10) :: vars3d_supported = (/'u   ', 'v   ', 'tv  ', 'q   ', 'oz  ', 'cw  ', 'tsen', 'prse', 'ql  ', 'qi  '/)
 character(len=max_varname_length),public, dimension(3)  :: vars2d_supported = (/'ps ', 'pst', 'sst' /)

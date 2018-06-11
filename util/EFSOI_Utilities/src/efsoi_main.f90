@@ -57,8 +57,9 @@ program efsoi_main
  ! applying enkf namelist apparatus
  use params, only : read_namelist,nanals
  ! mpi functions and variables.
- use mpisetup, only:  mpi_initialize, mpi_initialize_io, mpi_cleanup, nproc, &
-                      mpi_wtime
+! use mpisetup, only:  mpi_initialize, mpi_initialize_io, mpi_cleanup, nproc, &
+!                      mpi_wtime
+ use mpisetup
  ! model state vector 
  use statevec_efsoi, only: read_state_efsoi, statevec_cleanup_efsoi, init_statevec_efsoi
  ! load balancing
@@ -71,7 +72,7 @@ program efsoi_main
  use scatter_chunks_efsoi
  
  implicit none
- integer, ierr
+ integer :: ierr
  real(r_double) t1,t2
 
  ! initialize MPI.
@@ -114,7 +115,7 @@ program efsoi_main
  if (nproc == 0) print *,'time in load_balance =',t2-t1,'on proc',nproc
 
  ! apply scattering of efsoi chunks
- t1 = mpi_wtim()
+ t1 = mpi_wtime()
  call scatter_chunks_ob_impact()  ! ensemble scattering
  t2 = mpi_wtime()
  if (nproc == 0) print *,'time to scatter observation impact chunks =',t2-t1,'on proc',nproc
@@ -123,7 +124,7 @@ program efsoi_main
  t1 = mpi_wtime()
  call init_ob_sens()
  t2 = mpi_wtime() 
- if (nproc = 0) print *,'time to allocate ob sensitivity variables =',t2-t1,'on proc',nproc
+ if (nproc == 0) print *,'time to allocate ob sensitivity variables =',t2-t1,'on proc',nproc
 
  ! Calculate the estimated location of observation
  ! response at evaluation time

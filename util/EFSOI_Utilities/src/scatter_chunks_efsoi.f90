@@ -1,17 +1,30 @@
 module scatter_chunks_efsoi
 
-! Fill in documentation here
+use mpisetup !, only: numproc, nproc, mpi_real4
+use kinds, only: i_kind, r_single
+use loadbal!, only: npts_max, numptsperproc, indxproc
+use params, only: nanals
+use gridio_efsoi
 
+! Fill in documentation here
+implicit none
+private
+public :: scatter_chunks_ob_impact
+!real(r_kind),public, allocatable, dimension(:,:,:,:) :: anal_chunk, anal_chunk_prior
+!real(r_single),public, allocatable, dimension(:,:,:) :: ensmean_chunk, ensmean_chunk_prior !, analmean_chunk
+real(r_single),public, allocatable, dimension(:,:) :: fcerror_chunk, analmean_chunk
+contains
 
 subroutine scatter_chunks_ob_impact
 ! distribute chunks from grdin (read in controlvec) according to
 ! decomposition from load_balance
-use controlvec, only: ncdim, grdin
+use statevec_efsoi, only: grdin,grdin2,grdin3
+use gridinfo_efsoi, only: ncdim
 use params, only: nbackgrounds
 implicit none
 
 integer(i_kind), allocatable, dimension(:) :: scounts, displs, rcounts
-real(r_single), allocatable, dimension(:) :: sendbuf,recvbuf
+real(r_single), allocatable, dimension(:) :: sendbuf,recvbuf,sendbuf2,recvbuf2
 integer(i_kind) :: np, nb, nn, n, nanal, i, ierr
 
 allocate(scounts(0:numproc-1))
@@ -93,35 +106,35 @@ deallocate(sendbuf, recvbuf)
 
 ! Get forecast error at the evaluation time and distribute them to all
 ! processors
-allocate(fcerror_chunk(npts_max,ndim))
-allocate(analmean_chunk(npts_max,ndim))
-allocate(sendbuf(numproc*npts_max*ndim))
-allocate(sendbuf2(numproc*npts_max*ndim))
-allocate(recvbuf(npts_max*ndim))
-allocate(recvbuf2(npts_max*ndim))
+allocate(fcerror_chunk(npts_max,ncdim))
+allocate(analmean_chunk(npts_max,ncdim))
+allocate(sendbuf(numproc*npts_max*ncdim))
+allocate(sendbuf2(numproc*npts_max*ncdim))
+allocate(recvbuf(npts_max*ncdim))
+allocate(recvbuf2(npts_max*ncdim))
 if(nproc == 0) then
    ! Assign sendbuf recbuf from state variables
    do np=1,numproc
-      do nn=1,ndim
+      do nn=1,ncdim
          do i=1,numptsperproc(np)
-            n = ((np-1)*ndim + (nn-1))*npts_max + i
-            sendbuf(n) = grdin2(indxproc(np,i),nn)
-            sendbuf2(n) = grdin3(indxproc(np,i),nn)
+            n = ((np-1)*ncdim + (nn-1))*npts_max + i
+            sendbuf(n) = grdin2(indxproc(np,i),nn,nb)
+            sendbuf2(n) = grdin3(indxproc(np,i),nn,nb)
          end do
       end do
    end do
-   call mpi_scatter(sendbuf,ndim*npts_max,mpi_realkind,recvbuf, &
-        & ndim*npts_max,mpi_realkind,0,mpi_comm_world,ierr)
-   call mpi_scatter(sendbuf2,ndim*npts_max,mpi_realkind,recvbuf2, &
-        & ndim*npts_max,mpi_realkind,0,mpi_comm_world,ierr)
+   call mpi_scatter(sendbuf,ncdim*npts_max,mpi_realkind,recvbuf, &
+        & ncdim*npts_max,mpi_realkind,0,mpi_comm_world,ierr)
+   call mpi_scatter(sendbuf2,ncdim*npts_max,mpi_realkind,recvbuf2, &
+        & ncdim*npts_max,mpi_realkind,0,mpi_comm_world,ierr)
 else
-   call mpi_scatter(sendbuf,ndim*npts_max,mpi_realkind,recvbuf, &
-        & ndim*npts_max,mpi_realkind,0,mpi_comm_world,ierr)
-   call mpi_scatter(sendbuf2,ndim*npts_max,mpi_realkind,recvbuf2, &
-        & ndim*npts_max,mpi_realkind,0,mpi_comm_world,ierr)
+   call mpi_scatter(sendbuf,ncdim*npts_max,mpi_realkind,recvbuf, &
+        & ncdim*npts_max,mpi_realkind,0,mpi_comm_world,ierr)
+   call mpi_scatter(sendbuf2,ncdim*npts_max,mpi_realkind,recvbuf2, &
+        & ncdim*npts_max,mpi_realkind,0,mpi_comm_world,ierr)
 end if
 !$omp parallel do schedule(dynamic,1)  private(nn,i,n) 
-   do nn=1,ndim
+   do nn=1,ncdim
       do i=1,numptsperproc(nproc+1)
          n = (nn-1)*npts_max + i
          fcerror_chunk(i,nn) = recvbuf2(n)
@@ -131,8 +144,8 @@ end if
    deallocate(sendbuf,recvbuf,sendbuf2,recvbuf2)
    if(allocated(grdin2)) deallocate(grdin2)
    call divide_weight(analmean_chunk)
-   call divide_weight(ensmean_chunk)
-end if
+   call divide_weight(ensmean_chunk(:,:,nb))
+!end if
 
 call destroy_weight()
 

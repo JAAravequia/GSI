@@ -39,15 +39,16 @@ use kinds, only: r_double, i_kind, r_kind
 use kdtree2_module, only: kdtree2_r_nearest, kdtree2_result
 use loadbal, only: numptsperproc, indxproc, lnp_chunk, kdtree_grid, &
                    iprocob, indxob_chunk, anal_obchunk_prior, numobsperproc, &
-                   indxproc_obs, nobs_max
-use statevec, only: anal_chunk, fcerror_chunk
+                   indxproc_obs, nobs_max, anal_chunk
+!use statevec_efsoi, only: anal_chunk, fcerror_chunk
+use scatter_chunks_efsoi, only: fcerror_chunk
 use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, obloclon, obloclat, oblnp, &
                        obtime, nobstot, corrlengthsq, lnsigl, obtimel, anal_ob
 use constants, only: constants_initialized, pi, zero, one
 use params, only: nanals, corrlengthnh, corrlengthtr, corrlengthsh, &
                   tar_minlon, tar_maxlon, tar_minlat, tar_maxlat, &
                   tar_minlev, tar_maxlev, nbackgrounds
-use gridinfo, only: nlevs_pres, lonsgrd, latsgrd, id_u, id_v, id_t, id_q, id_ps
+use gridinfo_efsoi, only: nlevs_pres, lonsgrd, latsgrd, id_u, id_v, id_t, id_q, id_ps
 use enkf_obs_sensitivity, only: obsense_kin, obsense_dry, obsense_moist, adloc_chunk
 
 implicit none

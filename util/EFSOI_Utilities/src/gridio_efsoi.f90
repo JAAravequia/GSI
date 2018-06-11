@@ -41,16 +41,19 @@
 !   language: f95
 !
 !$$$
- use constants, only: zero,one,cp,fv,rd,tiny_r_kind,max_varname_length,t0c,r0_05,tref,pref
+ use constants, only: zero,one,cp,fv,rd,tiny_r_kind,max_varname_length,t0c,r0_05,tref,pref,constants_initialized,hvap
  use params, only: nlons,nlats,nlevs,use_gfs_nemsio,pseudo_rh,wmoist,andataname,gdatestring, &
-                   cliptracers,datapath,imp_physics
+                   cliptracers,datapath,imp_physics,nvars,datestring ! reducedgrid
  use kinds, only: i_kind,r_double,r_kind,r_single
- use gridinfo_efsoi, only: ntrunc,npts,latsgrd  ! getgridinfo_efsoi must be called first!
+ use gridinfo_efsoi, only: ntrunc,npts,latsgrd,ncdim  ! getgridinfo_efsoi must be called first!
  use specmod, only: sptezv_s, sptez_s, init_spec_vars, ndimspec => nc, &
-                    isinitialized
+                    isinitialized, gaulats
  use reducedgrid_mod, only: regtoreduced, reducedtoreg, lonsperlat, nlonsfull
  use mpisetup, only: nproc
  use mpeu_util, only: getindex
+ use sigio_module
+ use nemsio_module
+ use loadbal!, only: numptsperproc
  implicit none
  private
  public :: readgriddata_efsoi, get_weight, destroy_weight, divide_weight
@@ -59,21 +62,25 @@
  contains
 
  subroutine get_weight 
-  use sigio_module 
+  use nemsio_module 
+  use sigio_module
   implicit none 
  
   character(len=500) :: filename 
  
   real(r_kind), dimension(npts,nlevs+1) :: pressi 
   real(r_kind), dimension(nlons*nlats) :: ug 
-  real(r_kind), dimension(npts) :: tmpgrd 
+  real(r_single), dimension(npts) :: tmpgrd 
   type(sigio_data) sigdata 
- 
+  type(nemsio_gfile) :: gfile
+  real(nemsio_realkind), dimension(nlons*nlats) :: nems_wrk
+  real(r_kind), dimension(nlons*nlats) :: psfc
+  real(r_single),allocatable,dimension(:,:,:)   :: nems_vcoord 
   real(r_kind), allocatable, dimension(:) :: ak,bk 
   real(r_kind) :: sumcoslat 
  
-  integer(i_kind) nlevsin,ntrunc 
-  integer(i_kind) i,j,k,iunitsig,iret 
+  integer(i_kind) :: nlevsin,ntrunc,nlonsin,nlatsin,idvc 
+  integer(i_kind) :: i,j,k,iunitsig,iret 
  
   allocate(weight(npts,nlevs)) 
   allocate(grweight(npts)) 
@@ -106,7 +113,7 @@
 
   ! calculate weight on the grid point
   sumcoslat = zero
-  if(reducedgrid) then
+ ! if(reducedgrid) then
      k=0
      do i=1,nlats 
         do j=1,lonsperlat(i) 
@@ -116,12 +123,12 @@
            sumcoslat = sumcoslat + grweight(k) 
         end do 
      end do 
-  else 
-     do i=1,nlons*nlats 
-        grweight(i) = cos(latsgrd(i)) 
-        sumcoslat = sumcoslat + grweight(i) 
-     end do 
-  end if 
+ ! else 
+ !    do i=1,nlons*nlats 
+ !       grweight(i) = cos(latsgrd(i)) 
+ !       sumcoslat = sumcoslat + grweight(i) 
+ !    end do 
+ ! end if 
   sumcoslat = 1.0_r_kind / sumcoslat 
   grweight(:) = sqrt(grweight(:)*sumcoslat)
  
@@ -137,11 +144,11 @@
 
   ! Extract surface pressure
   ! on reduced gaussian grid
-  if (reducedgrid) then
+!  if (reducedgrid) then
      call regtoreduced(psfc,tmpgrd)
-  else
-     tmpgrd(:) = ug(:)
-  end if
+!  else
+!     tmpgrd(:) = ug(:)
+!  end if
 
   ! calculate half level pressures 
   if (allocated(nems_vcoord))     deallocate(nems_vcoord)
@@ -188,8 +195,8 @@
  
  subroutine divide_weight(grdin) 
   implicit none 
-  real(r_kind), dimension(npts_max,ndim), intent(inout) :: grdin 
-  real(r_kind) cptr,qweight,rdtrpr 
+  real(r_single), dimension(npts_max,ncdim), intent(inout) :: grdin 
+  real(r_single) cptr,qweight,rdtrpr 
   integer(i_kind) :: k,npt 
   cptr = real(sqrt(tref/cp),r_kind) 
   qweight = real(sqrt(cp*tref/wmoist)/hvap,r_kind) 
@@ -209,7 +216,7 @@
   return 
  end subroutine divide_weight 
 
- subroutine readgriddata_efsoi(nanal,vars3d,vars2d,n3d,n2d,levels,ndim,ntimes,fileprefixes,reducedgrid,mode,grdin,infilename)
+ subroutine readgriddata_efsoi(nanal,vars3d,vars2d,n3d,n2d,levels,ndim,ntimes,fileprefixes,reducedgrid,mode,grdin,ft,infilename,qsat)
   use nemsio_module, only: nemsio_gfile,nemsio_open,nemsio_close,&
                            nemsio_getfilehead,nemsio_getheadvar,nemsio_realkind,&
                            nemsio_readrecv,nemsio_init,nemsio_setheadvar,nemsio_writerecv
@@ -225,14 +232,14 @@
   integer, intent(in) :: ft
   integer, intent(in) :: mode ! 0: first guess, 1: analysis
   character(len=120), dimension(7), intent(in)  :: fileprefixes
-  character(*), intent(in), optional, infilename
+  character(*), intent(in), optional :: infilename
   logical, intent(in) :: reducedgrid
   real(r_single), dimension(npts,ndim,ntimes), intent(out) :: grdin
-  real(r_double), dimension(npts,nlevs,ntimes), intent(out) :: qsat
-  real(r_kind) kap,kapr,kap1,cptr,qweight,rdtrpr
+  real(r_double), dimension(npts,nlevs,ntimes), intent(out), optional :: qsat
+  real(r_kind) cptr,qweight,rdtrpr
 
   character(len=500) :: filename
-  character(len=7) charnanal
+ ! character(len=7) charnanal
   character(len=2) charft
 
   real(r_kind) :: kap,kapr,kap1,clip,qi_coef
@@ -265,16 +272,12 @@
   else
     charnanal = 'ensmean'
   endif
-  if(present(infilenae)) then
+  if(present(infilename)) then
      filename=trim(adjustl(datapath))//infilename
   else if(mode == 0) then
      filename = trim(adjustl(datapath))//"sfg_"//gdatestring//"_fhr"//charft &
           & //"_"//trim(adjustl(charnanal))
   else if(mode == 1) then
-     if(ft == 0) then
-        filename = trim(adjustl(datapath))//"sfg_"//gdatestring//"_fhr"//charft &
-             & //"_"//trim(adjustl(charnanal))
-    else if(mode == 1) then 
      if(ft == 0) then 
         filename = trim(adjustl(datapath))//"sanl_"//datestring & 
              & //"_"//trim(adjustl(charnanal)) 
@@ -410,8 +413,8 @@
      ! Transformation to EFSOI relevant quantities
      ! Assign weighted kinetic energy components
      if(.not. present(qsat)) then
-        grdin(:,levels(u_ind-1) + k) = weight(:,levels(u_ind-1) + k) * grdin(:,levels(u_ind-1) + k)
-        grdin(:,levels(v_ind-1) + k) = weight(:,levels(v_ind-1) + k) * grdin(:,levels(v_ind-1) + k)
+        grdin(:,levels(u_ind-1) + k,nb) = weight(:,levels(u_ind-1) + k) * grdin(:,levels(u_ind-1) + k,nb)
+        grdin(:,levels(v_ind-1) + k,nb) = weight(:,levels(v_ind-1) + k) * grdin(:,levels(v_ind-1) + k,nb)
      end if
   
      ! calculate vertical integral of mass flux div (ps tendency)
@@ -488,7 +491,7 @@
 
   ! Transformation to EFSOI relevant quantities
   ! Surface pressure contribution
-  grdin(:,levels(n3d) + ps_ind) = rdtrpr * grweight(:) * 100._r_kind * grdin(:,levels(n3d) + ps_ind)
+  grdin(:,levels(n3d) + ps_ind,nb) = rdtrpr * grweight(:) * 100._r_kind * grdin(:,levels(n3d) + ps_ind,nb)
 
   ! surface pressure tendency
   if (pst_ind > 0) then
@@ -552,14 +555,14 @@
   real(r_kind), dimension(:), intent(in)      :: field
   real(r_single), dimension(:), intent(inout) :: grdin
 
-  if (reducedgrid) then
+!  if (reducedgrid) then
     call regtoreduced(field, grdin)
-  else
-    grdin = field
-  endif
+!  else
+!    grdin = field
+!  endif
 
   end subroutine copytogrdin
 
  end subroutine readgriddata_efsoi
 
-end module gridio
+end module gridio_efsoi

@@ -49,12 +49,12 @@ module statevec_efsoi
 !$$$
 
 use mpisetup
-use gridio_efsoi,    only: readgriddata, get_weight
+use gridio_efsoi,    only: readgriddata_efsoi, get_weight
 use gridinfo_efsoi,  only: getgridinfo_efsoi, gridinfo_cleanup_efsoi,              &
-                     npts, vars3d_supported, vars2d_supported
+                     npts, vars3d_supported, vars2d_supported, ncdim
 use params,    only: nlevs, nbackgrounds, fgfileprefixes, reducedgrid, &
                      nanals, pseudo_rh, use_qsatensmean, nlons, nlats, &
-                     evalft, andataname, evalft
+                     evalft, andataname, ft
 use kinds,     only: r_kind, i_kind, r_double, r_single
 use mpeu_util, only: gettablesize, gettable, getindex
 use constants, only: max_varname_length
@@ -63,10 +63,10 @@ implicit none
 private
 
 public :: read_state_efsoi, statevec_cleanup_efsoi, init_statevec_efsoi
-real(r_single), public, allocatable, dimension(:,:,:) :: grdin, grdin2
+real(r_single), public, allocatable, dimension(:,:,:) :: grdin, grdin2, grdin3
 real(r_double), public, allocatable, dimension(:,:,:) :: qsat
 
-integer(i_kind), public :: nc2d, nc3d, ncdim
+integer(i_kind), public :: nc2d, nc3d
 character(len=max_varname_length), allocatable, dimension(:), public :: cvars3d
 character(len=max_varname_length), allocatable, dimension(:), public :: cvars2d
 integer(i_kind), public, allocatable, dimension(:) :: index_pres
@@ -183,7 +183,7 @@ if (nproc == 0) then
   print *, 'nc2d: ', nc2d, ', nc3d: ', nc3d, ', ncdim: ', ncdim
 endif
 
-call getgridinfo_efsoi(fgfileprefixes, reducedgrid)
+call getgridinfo_efsoi(fgfileprefixes(1), reducedgrid)
 
 ! Get grid weights for EFSOI
 ! calculation and evaluation
@@ -222,7 +222,7 @@ if (nproc <= nanals-1) then
    t1 = mpi_wtime()
    ! Read ensemble member forecasts needed to obtain
    ! the forecast perturbations at evaluation forecast time (EFT)
-   call readgriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,reducedgrid,evalft,1,grdin)
+   call readgriddata_efsoi(nanal,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,fgfileprefixes,reducedgrid,1,grdin,ft,qsat=qsat)
    !print *,'min/max qsat',nanal,'=',minval(qsat),maxval(qsat)
    if (use_qsatensmean) then
        ! convert qsat to ensemble mean.
@@ -253,21 +253,23 @@ if (nproc <= nanals-1) then
    ! Read the relevant ensemble mean quantities
    ! ------------------------------------------
    ! Ensemble mean forecast from analysis
-   call readgriddata(0,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,reducedgrid,evalft,1,grdin2)
+   call readgriddata_efsoi(0,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,fgfileprefixes,reducedgrid,1,grdin2,ft,qsat=qsat)
    ! Ensemble mean Forecast from first guess
-   call readgriddata(0,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,reducedgrid,evalft+nhr_anal,1,grdin3)
+   call readgriddata_efsoi(0,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,fgfileprefixes,reducedgrid,1,grdin3,ft,qsat=qsat)
    ! Compute One half the sum of ensemble mean forecast quantities
    grdin3 = 0.5_r_kind * (grdin2 + grdin)
    ! Verification at evaluation time
-   call readgriddata(0,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,reducedgrid,0,1,grdin2,infilename=andataname)
+   call readgriddata_efsoi(0,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,fgfileprefixes,reducedgrid,1,grdin2,ft,infilename=andataname)
    ! Assign the sum of ensemble mean forecast errors at
    ! the evaluation time by subtracting
    ! verification from the forecast quantities
    grdin3 = (grdin3 - grdin2) / real(nanals-1,r_kind)
    ! Normalize for surface pressure
-   grdin3 = grdin3(:,ndim) / grdin(:,ndim)
+   grdin3(:,ncdim,nb) = grdin3(:,ncdim,nb) / grdin(:,ncdim,nb)
    ! Analysis at initial time
-   call readgriddata(0,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,reducedgrid,0,1,grdin2)
+   call readgriddata_efsoi(0,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,fgfileprefixes,reducedgrid,1,grdin2,ft)
+
+end if
    
 end subroutine read_state_efsoi
 
