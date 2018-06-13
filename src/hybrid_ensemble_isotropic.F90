@@ -51,6 +51,7 @@ module hybrid_ensemble_isotropic
 !   2018-03-28  T. Lei  - added  SDL related codaes
 !   2018-06-01  T. Lei  - added  SDL for vertical direction in global
 !                         applications
+!   2018-06-13  T. Lei  - added  SDL for regional applicationsl
 !
 ! subroutines included:
 !   sub init_rf_z                         - initialize localization recursive filter (z direction)
@@ -166,13 +167,13 @@ module hybrid_ensemble_isotropic
 
   real(r_kind),allocatable:: fmatz(:,:,:,:,:)
   real(r_kind),allocatable:: fmat0z(:,:,:,:)
-  real(r_kind),allocatable:: fmatx(:,:,:,:,:)
-  real(r_kind),allocatable:: fmat0x(:,:,:,:)
-  real(r_kind),allocatable:: fmaty(:,:,:,:)
-  real(r_kind),allocatable:: fmat0y(:,:,:)
+  real(r_kind),allocatable:: fmatx(:,:,:,:,:,:)
+  real(r_kind),allocatable:: fmat0x(:,:,:,:,:)
+  real(r_kind),allocatable:: fmaty(:,:,:,:,:)
+  real(r_kind),allocatable:: fmat0y(:,:,:,:)
   real(r_kind),allocatable:: znorm_new(:,:,:)
-  real(r_kind),allocatable:: xnorm_new(:,:,:)
-  real(r_kind),allocatable:: ynorm_new(:,:)
+  real(r_kind),allocatable:: xnorm_new(:,:,:,:)
+  real(r_kind),allocatable:: ynorm_new(:,:,:)
   real(r_kind),allocatable:: psbar(:)
 
 ! Other local variables for horizontal/spectral localization
@@ -356,6 +357,7 @@ do ig=1,naensloc
 
 end subroutine init_rf_z
 
+
 subroutine init_rf_x(x_len,kl)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -385,36 +387,44 @@ subroutine init_rf_x(x_len,kl)
   use hybrid_ensemble_parameters, only: grd_loc
   use hybrid_ensemble_parameters, only: region_dx_ens,region_dy_ens
   use constants, only: half
+  use hybrid_ensemble_parameters, only: naensloc
 
   implicit none
 
-  real(r_kind),intent(in   ) :: x_len(kl)
+  real(r_kind),intent(in   ) :: x_len(kl,naensloc)
   integer(i_kind),intent(in   ) :: kl
 
-  integer(i_kind) i,j,k,l,kk
+  integer(i_kind) i,j,k,l,kk,ig,ig0
   real(r_kind) aspect(grd_loc%nlon)
   real(r_kind) fmatc(2,grd_loc%nlon,2),fmat0c(grd_loc%nlon,2)
+  ig0=1
 
 !    use new factorization:
   if(allocated(fmatx)) deallocate(fmatx)
   if(allocated(fmat0x)) deallocate(fmat0x)
-  allocate(fmatx(grd_loc%nlat,2,grd_loc%nlon,2,kl),fmat0x(grd_loc%nlat,grd_loc%nlon,2,kl))
+  allocate(fmatx(grd_loc%nlat,2,grd_loc%nlon,2,kl,naensloc),fmat0x(grd_loc%nlat,grd_loc%nlon,2,kl,naensloc))
   do k=1,kl
      do i=1,grd_loc%nlat
         do j=1,grd_loc%nlon
-           aspect(j)=(x_len(k)*region_dy_ens(grd_loc%nlat/2,grd_loc%nlon/2)/region_dx_ens(i,j))**2 ! only works for rotated lat-lon grids
+           aspect(j)=(x_len(k,ig0)*region_dy_ens(grd_loc%nlat/2,grd_loc%nlon/2)/region_dx_ens(i,j))**2 ! only works for rotated lat-lon grids
         enddo
         call get_new_alpha_beta(aspect,grd_loc%nlon,fmatc,fmat0c)
         do kk=1,2
            do j=1,grd_loc%nlon
               do l=1,2
-                 fmatx(i,l,j,kk,k)=fmatc(l,j,kk)
+                 fmatx(i,l,j,kk,k,ig0)=fmatc(l,j,kk)
               enddo
-              fmat0x(i,j,kk,k)=fmat0c(j,kk)
+              fmat0x(i,j,kk,k,ig0)=fmat0c(j,kk)
            enddo
         enddo
      enddo
   enddo
+ do ig=1,naensloc
+   if(ig.ne.ig0) then
+   fmatx(:,:,:,:,:,ig)=fmatx(:,:,:,:,:,ig0)
+   fmat0x(:,:,:,:,ig)=fmat0x(:,:,:,:,ig0)
+   endif
+ enddo
   return
 
 end subroutine init_rf_x
@@ -447,25 +457,33 @@ subroutine init_rf_y(y_len,kl)
 
   use hybrid_ensemble_parameters, only: grd_loc
   use constants, only: half
+  use hybrid_ensemble_parameters, only: naensloc
 
   implicit none
 
-  real(r_kind),intent(in   ) :: y_len(kl)
+  real(r_kind),intent(in   ) :: y_len(kl,naensloc)
   integer(i_kind),intent(in   ) :: kl
 
   real(r_kind) aspect(grd_loc%nlat)
-  integer(i_kind) i,k
+  integer(i_kind) i,k,ig0,ig
+  ig0=1
 
 !    use new factorization:
   if(allocated(fmaty)) deallocate(fmaty)
   if(allocated(fmat0y)) deallocate(fmat0y)
-  allocate(fmaty(2,grd_loc%nlat,2,kl),fmat0y(grd_loc%nlat,2,kl))
+  allocate(fmaty(2,grd_loc%nlat,2,kl,naensloc),fmat0y(grd_loc%nlat,2,kl,naensloc))
   do k=1,kl
      do i=1,grd_loc%nlat
-        aspect(i)=y_len(k)**2
+        aspect(i)=y_len(k,ig0)**2
      enddo
-     call get_new_alpha_beta(aspect,grd_loc%nlat,fmaty(1,1,1,k),fmat0y(1,1,k))
+     call get_new_alpha_beta(aspect,grd_loc%nlat,fmaty(1,1,1,k,ig0),fmat0y(1,1,k,ig0))
   enddo
+ do ig=1,naensloc
+   if(ig.ne.ig0) then
+   fmaty(:,:,:,:,ig)=fmaty(:,:,:,:,ig0)
+   fmat0y(:,:,:,ig)=fmat0y(:,:,:,ig0)
+   endif
+ enddo
   return
 
 end subroutine init_rf_y
@@ -545,7 +563,7 @@ subroutine new_factorization_rf_z(f,iadvance,iback,iaensgrplocin)
 
 end subroutine new_factorization_rf_z
 
-subroutine new_factorization_rf_x(f,iadvance,iback,nlevs)
+subroutine new_factorization_rf_x(f,iadvance,iback,nlevs,iaensgrplocin)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    new_factorization_rf_x
@@ -576,12 +594,15 @@ subroutine new_factorization_rf_x(f,iadvance,iback,nlevs)
   use hybrid_ensemble_parameters, only: grd_loc,vvlocal
   implicit none
 
-  integer(i_kind),intent(in   ) :: iadvance,iback,nlevs
+  integer(i_kind),intent(in   ) :: iadvance,iback,nlevs,iaensgrplocin
   real(r_kind)   ,intent(inout) :: f(grd_loc%nlat,grd_loc%nlon,max(nlevs,1))
 
   integer(i_kind) i,j,k,l,ny,nx,nz
+  integer(i_kind) ig0
 
+  ig0=1
   ny=grd_loc%nlat ; nx=grd_loc%nlon ; nz=nlevs
+
 
   if(vvlocal)then
 !$omp parallel do schedule(dynamic,1) private(k,j,i,l)
@@ -590,7 +611,7 @@ subroutine new_factorization_rf_x(f,iadvance,iback,nlevs)
         if(iadvance == 1) then
            do j=1,nx
               do i=1,ny
-                 f(i,j,k)=xnorm_new(i,j,k)*f(i,j,k)
+                 f(i,j,k)=xnorm_new(i,j,k,iaensgrplocin)*f(i,j,k)
               enddo
            enddo
         end if
@@ -598,29 +619,29 @@ subroutine new_factorization_rf_x(f,iadvance,iback,nlevs)
         do j=1,nx
            do l=1,min(2,j-1)
               do i=1,ny
-                 f(i,j,k)=f(i,j,k)-fmatx(i,l,j,iadvance,k)*f(i,j-l,k)
+                 f(i,j,k)=f(i,j,k)-fmatx(i,l,j,iadvance,k,iaensgrplocin)*f(i,j-l,k)
               enddo
            enddo
            do i=1,ny
-              f(i,j,k)=fmat0x(i,j,iadvance,k)*f(i,j,k)
+              f(i,j,k)=fmat0x(i,j,iadvance,k,iaensgrplocin)*f(i,j,k)
            enddo
         enddo
 
         do j=nx,1,-1
            do l=1,min(2,nx-j)
               do i=1,ny
-                 f(i,j,k)=f(i,j,k)-fmatx(i,l,j+l,iback,k)*f(i,j+l,k)
+                 f(i,j,k)=f(i,j,k)-fmatx(i,l,j+l,iback,k,iaensgrplocin)*f(i,j+l,k)
               enddo
            enddo
            do i=1,ny
-              f(i,j,k)=fmat0x(i,j,iback,k)*f(i,j,k)
+              f(i,j,k)=fmat0x(i,j,iback,k,iaensgrplocin)*f(i,j,k)
            enddo
         enddo
 
         if(iadvance == 2) then
            do j=1,nx
               do i=1,ny
-                 f(i,j,k)=xnorm_new(i,j,k)*f(i,j,k)
+                 f(i,j,k)=xnorm_new(i,j,k,iaensgrplocin)*f(i,j,k)
               enddo
            enddo
         end if
@@ -633,7 +654,7 @@ subroutine new_factorization_rf_x(f,iadvance,iback,nlevs)
         if(iadvance == 1) then
            do j=1,nx
               do i=1,ny
-                 f(i,j,k)=xnorm_new(i,j,1)*f(i,j,k)
+                 f(i,j,k)=xnorm_new(i,j,1,iaensgrplocin)*f(i,j,k)
               enddo
            enddo
         end if
@@ -641,29 +662,29 @@ subroutine new_factorization_rf_x(f,iadvance,iback,nlevs)
         do j=1,nx
            do l=1,min(2,j-1)
               do i=1,ny
-                 f(i,j,k)=f(i,j,k)-fmatx(i,l,j,iadvance,1)*f(i,j-l,k)
+                 f(i,j,k)=f(i,j,k)-fmatx(i,l,j,iadvance,1,iaensgrplocin)*f(i,j-l,k)
               enddo
            enddo
            do i=1,ny
-              f(i,j,k)=fmat0x(i,j,iadvance,1)*f(i,j,k)
+              f(i,j,k)=fmat0x(i,j,iadvance,1,iaensgrplocin)*f(i,j,k)
            enddo
         enddo
 
         do j=nx,1,-1
            do l=1,min(2,nx-j)
               do i=1,ny
-                 f(i,j,k)=f(i,j,k)-fmatx(i,l,j+l,iback,1)*f(i,j+l,k)
+                 f(i,j,k)=f(i,j,k)-fmatx(i,l,j+l,iback,1,iaensgrplocin)*f(i,j+l,k)
               enddo
            enddo
            do i=1,ny
-              f(i,j,k)=fmat0x(i,j,iback,1)*f(i,j,k)
+              f(i,j,k)=fmat0x(i,j,iback,1,iaensgrplocin)*f(i,j,k)
            enddo
         enddo
 
         if(iadvance == 2) then
            do j=1,nx
               do i=1,ny
-                 f(i,j,k)=xnorm_new(i,j,1)*f(i,j,k)
+                 f(i,j,k)=xnorm_new(i,j,1,iaensgrplocin)*f(i,j,k)
               enddo
            enddo
         end if
@@ -673,7 +694,7 @@ subroutine new_factorization_rf_x(f,iadvance,iback,nlevs)
   return
 end subroutine new_factorization_rf_x
 
-subroutine new_factorization_rf_y(f,iadvance,iback,nlevs)
+subroutine new_factorization_rf_y(f,iadvance,iback,nlevs,iaensgrplocin)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    new_factorization_rf_y
@@ -705,7 +726,7 @@ subroutine new_factorization_rf_y(f,iadvance,iback,nlevs)
                       !                  use mpimod, only: mype
   implicit none
 
-  integer(i_kind),intent(in   ) :: iadvance,iback,nlevs
+  integer(i_kind),intent(in   ) :: iadvance,iback,nlevs,iaensgrplocin
   real(r_kind)   ,intent(inout) :: f(grd_loc%nlat,grd_loc%nlon,max(nlevs,1))
 
   integer(i_kind) i,j,k,l,nx,ny,nz
@@ -718,27 +739,27 @@ subroutine new_factorization_rf_y(f,iadvance,iback,nlevs)
 
            if(iadvance == 1) then
               do i=1,ny
-                 f(i,j,k)=ynorm_new(i,k)*f(i,j,k)
+                 f(i,j,k)=ynorm_new(i,k,iaensgrplocin)*f(i,j,k)
               enddo
            end if
 
            do i=1,ny
               do l=1,min(2,i-1)
-                 f(i,j,k)=f(i,j,k)-fmaty(l,i,iadvance,k)*f(i-l,j,k)
+                 f(i,j,k)=f(i,j,k)-fmaty(l,i,iadvance,k,iaensgrplocin)*f(i-l,j,k)
               enddo
-              f(i,j,k)=fmat0y(i,iadvance,k)*f(i,j,k)
+              f(i,j,k)=fmat0y(i,iadvance,k,iaensgrplocin)*f(i,j,k)
            enddo
 
            do i=ny,1,-1
               do l=1,min(2,ny-i)
-                 f(i,j,k)=f(i,j,k)-fmaty(l,i+l,iback,k)*f(i+l,j,k)
+                 f(i,j,k)=f(i,j,k)-fmaty(l,i+l,iback,k,iaensgrplocin)*f(i+l,j,k)
               enddo
-              f(i,j,k)=fmat0y(i,iback,k)*f(i,j,k)
+              f(i,j,k)=fmat0y(i,iback,k,iaensgrplocin)*f(i,j,k)
            enddo
 
            if(iadvance == 2) then
               do i=1,ny
-                 f(i,j,k)=ynorm_new(i,k)*f(i,j,k)
+                 f(i,j,k)=ynorm_new(i,k,iaensgrplocin)*f(i,j,k)
               enddo
            end if
 
@@ -750,27 +771,27 @@ subroutine new_factorization_rf_y(f,iadvance,iback,nlevs)
 
            if(iadvance == 1) then
               do i=1,ny
-                 f(i,j,k)=ynorm_new(i,1)*f(i,j,k)
+                 f(i,j,k)=ynorm_new(i,1,iaensgrplocin)*f(i,j,k)
               enddo
            end if
 
            do i=1,ny
               do l=1,min(2,i-1)
-                 f(i,j,k)=f(i,j,k)-fmaty(l,i,iadvance,1)*f(i-l,j,k)
+                 f(i,j,k)=f(i,j,k)-fmaty(l,i,iadvance,1,iaensgrplocin)*f(i-l,j,k)
               enddo
-              f(i,j,k)=fmat0y(i,iadvance,1)*f(i,j,k)
+              f(i,j,k)=fmat0y(i,iadvance,1,iaensgrplocin)*f(i,j,k)
            enddo
 
            do i=ny,1,-1
               do l=1,min(2,ny-i)
-                 f(i,j,k)=f(i,j,k)-fmaty(l,i+l,iback,1)*f(i+l,j,k)
+                 f(i,j,k)=f(i,j,k)-fmaty(l,i+l,iback,1,iaensgrplocin)*f(i+l,j,k)
               enddo
-              f(i,j,k)=fmat0y(i,iback,1)*f(i,j,k)
+              f(i,j,k)=fmat0y(i,iback,1,iaensgrplocin)*f(i,j,k)
            enddo
 
            if(iadvance == 2) then
               do i=1,ny
-                 f(i,j,k)=ynorm_new(i,1)*f(i,j,k)
+                 f(i,j,k)=ynorm_new(i,1,iaensgrplocin)*f(i,j,k)
               enddo
            end if
 
@@ -779,7 +800,6 @@ subroutine new_factorization_rf_y(f,iadvance,iback,nlevs)
   endif
   return
 end subroutine new_factorization_rf_y
-
 
 subroutine normal_new_factorization_rf_z
 !$$$  subprogram documentation block
@@ -859,6 +879,7 @@ enddo !iaens loop
   return
 
 end subroutine normal_new_factorization_rf_z
+
 subroutine normal_new_factorization_rf_x
 !$$$  subprogram documentation block
 !                .      .    .
@@ -889,17 +910,21 @@ subroutine normal_new_factorization_rf_x
   use kinds, only: r_kind,i_kind
   use hybrid_ensemble_parameters, only: grd_loc,vvlocal
   use constants, only: zero,one
+  use hybrid_ensemble_parameters, only: naensloc
 
   implicit none
 
   integer(i_kind) i,j,k,iadvance,iback,kl
   real(r_kind) f(grd_loc%nlat,grd_loc%nlon,grd_loc%kend_alloc+1-grd_loc%kbegin_loc)
   real(r_kind),allocatable:: diag(:,:,:)
+  integer(i_kind) ig,ig0,ig0loc
 !  real(r_kind) diag(grd_loc%nlat,grd_loc%nlon)
 
 !                       possible to have kend_loc - kbegin_loc-1 for processors not involved
 !                          which results in infinite loops
 
+  ig0=1
+  ig0loc=ig0
   if(grd_loc%kend_loc < grd_loc%kbegin_loc) return
 
   if(vvlocal)then
@@ -908,7 +933,7 @@ subroutine normal_new_factorization_rf_x
      kl=1
   endif
   if(allocated(xnorm_new)) deallocate(xnorm_new)
-  allocate(xnorm_new(grd_loc%nlat,grd_loc%nlon,kl))
+  allocate(xnorm_new(grd_loc%nlat,grd_loc%nlon,kl,naensloc))
   if(allocated(diag)) deallocate(diag)
   allocate(diag(grd_loc%nlat,grd_loc%nlon,kl))
   xnorm_new=one
@@ -921,9 +946,9 @@ subroutine normal_new_factorization_rf_x
         enddo
      enddo
      iadvance=1 ; iback=2
-     call new_factorization_rf_x(f,iadvance,iback,kl)
+     call new_factorization_rf_x(f,iadvance,iback,kl,ig0loc)
      iadvance=2 ; iback=1
-     call new_factorization_rf_x(f,iadvance,iback,kl)
+     call new_factorization_rf_x(f,iadvance,iback,kl,ig0loc)
      do k=1,kl
         do i=1,grd_loc%nlat
            diag(i,j,k)=sqrt(one/f(i,j,k))
@@ -933,9 +958,14 @@ subroutine normal_new_factorization_rf_x
   do k=1,kl
      do j=1,grd_loc%nlon
         do i=1,grd_loc%nlat
-           xnorm_new(i,j,k)=diag(i,j,k)
+           xnorm_new(i,j,k,ig0)=diag(i,j,k)
         enddo
      enddo
+  enddo
+  do ig=1,naensloc
+   if(ig.ne.ig0) then
+     xnorm_new(:,:,:,ig)=xnorm_new(:,:,:,ig0)
+   endif
   enddo
 !           check accuracy of xnorm
   if(debug) then
@@ -947,9 +977,9 @@ subroutine normal_new_factorization_rf_x
            enddo
         enddo
         iadvance=1 ; iback=2
-        call new_factorization_rf_x(f,iadvance,iback,kl)
+        call new_factorization_rf_x(f,iadvance,iback,kl,ig0loc)
         iadvance=2 ; iback=1
-        call new_factorization_rf_x(f,iadvance,iback,kl)
+        call new_factorization_rf_x(f,iadvance,iback,kl,ig0loc)
         do k=1,kl
            do i=1,grd_loc%nlat
               diag(i,j,k)=f(i,j,k)
@@ -990,12 +1020,14 @@ subroutine normal_new_factorization_rf_y
   use kinds, only: r_kind,i_kind
   use hybrid_ensemble_parameters, only: grd_loc,vvlocal
   use constants, only: zero,one
+  use hybrid_ensemble_parameters, only: naensloc
   implicit none
 
-  integer(i_kind) i,k,lend,lcount,iadvance,iback,kl,loop,ll,iend
+  integer(i_kind) i,k,lend,lcount,iadvance,iback,kl,loop,ll,iend,ig,ig0
 !  real(r_kind) f(grd_loc%nlat,grd_loc%nlon*(grd_loc%kend_alloc+1-grd_loc%kbegin_loc)),diag(grd_loc%nlat)
   real(r_kind) f(grd_loc%nlat,grd_loc%nlon,grd_loc%kend_alloc+1-grd_loc%kbegin_loc)
   real(r_kind),allocatable:: diag(:,:)
+  integer(i_kind):: ig0loc
 
 !                       possible to have kend_loc - kbegin_loc-1 for processors not involved
 !                          which results in infinite loops
@@ -1009,7 +1041,7 @@ subroutine normal_new_factorization_rf_y
   endif
 
   if(allocated(ynorm_new)) deallocate(ynorm_new)
-  allocate(ynorm_new(grd_loc%nlat,kl))
+  allocate(ynorm_new(grd_loc%nlat,kl,naensloc))
 
   if(allocated(diag)) deallocate(diag)
   allocate(diag(grd_loc%nlat,kl))
@@ -1035,19 +1067,26 @@ subroutine normal_new_factorization_rf_y
         enddo
      enddo
 
+     ig0=1
+     ig0loc=ig0
      iadvance=1 ; iback=2
-     call new_factorization_rf_y(f,iadvance,iback,kl)
+     call new_factorization_rf_y(f,iadvance,iback,kl,ig0loc)
      iadvance=2 ; iback=1
-     call new_factorization_rf_y(f,iadvance,iback,kl)
+     call new_factorization_rf_y(f,iadvance,iback,kl,ig0loc)
 
      do k=1,kl
         do i=1,iend
            lcount=ll+i
            diag(lcount,k)=sqrt(one/f(lcount,i,k))
-           ynorm_new(lcount,k)=diag(lcount,k)
+           ynorm_new(lcount,k,ig0)=diag(lcount,k)
            if(lcount == grd_loc%nlat) exit
         enddo
      enddo
+  enddo
+  do ig=1,naensloc
+     if(ig0.ne.ig) then
+     ynorm_new(:,:,ig)=ynorm_new(:,:,ig0)
+     endif
   enddo
 !               check that ynorm is corect
   if(debug) then
@@ -1063,9 +1102,9 @@ subroutine normal_new_factorization_rf_y
         enddo
 
         iadvance=1 ; iback=2
-        call new_factorization_rf_y(f,iadvance,iback,kl)
+        call new_factorization_rf_y(f,iadvance,iback,kl,ig0loc)
         iadvance=2 ; iback=1
-        call new_factorization_rf_y(f,iadvance,iback,kl) 
+        call new_factorization_rf_y(f,iadvance,iback,kl,ig0loc) 
 
         do k=1,kl
            do i=1,iend
@@ -1107,7 +1146,6 @@ end subroutine normal_new_factorization_rf_y
     use hybrid_ensemble_parameters, only: n_ens,grd_ens,ntlevs_ens
     use hybrid_ensemble_parameters, only: nelen,en_perts,ps_bar
     use hybrid_ensemble_parameters, only: nsclgrp
-    use hybrid_ensemble_parameters, only: naensloc
 
     implicit none
 
@@ -2968,7 +3006,7 @@ subroutine init_sf_xy(jcap_in)
   use general_sub2grid_mod, only: sub2grid_info
   use gsi_enscouplermod, only: gsi_enscoupler_localization_grid
   use gsi_io, only: verbose
-  use hybrid_ensemble_parameters,only: naensgrp
+  use hybrid_ensemble_parameters,only: naensloc
   implicit none
 
   integer(i_kind),intent(in   ) :: jcap_in
@@ -2989,7 +3027,7 @@ subroutine init_sf_xy(jcap_in)
   integer(i_kind) nord_sploc2ens
   integer(i_kind) nlon_sploc0,nlon_sploc,nlat_sploc,num_fields
   logical print_verbose
-  integer(i_kind) iaens 
+  integer(i_kind) iaensgrploc ,ig0,ig0loc
 
   print_verbose = .false. .and. mype == 0
   if(verbose .and. mype == 0)print_verbose=.true.
@@ -3000,16 +3038,16 @@ subroutine init_sf_xy(jcap_in)
 
   s_ens_h_min=pi*rearth*.001_r_kind/jcap_in
   do k=1,grd_ens%nsig
-    do iaens=1,naensgrp
-     if(s_ens_hv(k,iaens) <  s_ens_h_min) then
-        if(mype == 0) write(6,*)' s_ens_hv(',k,') = ',s_ens_hv(k,iaens),' km--too small, min value = ', &
+    do iaensgrploc=1,naensloc
+     if(s_ens_hv(k,iaensgrploc) <  s_ens_h_min) then
+        if(mype == 0) write(6,*)' s_ens_hv(',k,') = ',s_ens_hv(k,iaensgrploc),' km--too small, min value = ', &
                                         s_ens_h_min,' km.'
         if(mype == 0) write(6,*)' s_ens_hv(',k,') reset to min value'
-        s_ens_hv(k,iaens)=s_ens_h_min
-     else if(s_ens_hv(k,iaens) >  5500._r_kind.and.1.gt.2) then
-        if(mype == 0) write(6,*)' s_ens_hv(',k,') = ',s_ens_hv(k,iaens),' km--too large, max value = 5500 km.'
+        s_ens_hv(k,iaensgrploc)=s_ens_h_min
+     else if(s_ens_hv(k,iaensgrploc) >  5500._r_kind.and.1.gt.2) then
+        if(mype == 0) write(6,*)' s_ens_hv(',k,') = ',s_ens_hv(k,iaensgrploc),' km--too large, max value = 5500 km.'
         if(mype == 0) write(6,*)' s_ens_hv(',k,') reset to max value'
-        s_ens_hv(k,iaens)=5500._r_kind
+        s_ens_hv(k,iaensgrploc)=5500._r_kind
      end if
    enddo 
   enddo
@@ -3136,24 +3174,24 @@ subroutine init_sf_xy(jcap_in)
            rkm(1+(grd_sploc%nlat-2)/2), &
           -rkm(grd_sploc%nlat-(grd_sploc%nlat-2)/2)+rkm(1+(grd_sploc%nlat-2)/2),' km'
 
-  allocate(spectral_filter(naensgrp,sp_loc%nc,grd_sploc%nsig))
-  allocate(sqrt_spectral_filter(naensgrp,sp_loc%nc,grd_sploc%nsig))
+  allocate(spectral_filter(naensloc,sp_loc%nc,grd_sploc%nsig))
+  allocate(sqrt_spectral_filter(naensloc,sp_loc%nc,grd_sploc%nsig))
   allocate(g(sp_loc%nc),gsave(sp_loc%nc))
   allocate(pn0_npole(0:sp_loc%jcap))
   allocate(ksame(grd_sploc%nsig))
     do 333, k=1,grd_sploc%nsig
   333 continue
-  do 250 iaens=1,naensgrp
+  do 250 iaensgrploc=1,naensloc
   ksame=.false.
   do k=2,grd_sploc%nsig
-     if(s_ens_hv(k,iaens) == s_ens_hv(k-1,iaens))ksame(k)=.true.
+     if(s_ens_hv(k,iaensgrploc) == s_ens_hv(k-1,iaensgrploc))ksame(k)=.true.
   enddo
   do k=1,grd_sploc%nsig
      if(ksame(k))then
-        spectral_filter(iaens,:,k)=spectral_filter(iaens,:,k-1)
+        spectral_filter(iaensgrploc,:,k)=spectral_filter(iaensgrploc,:,k-1)
      else
         do i=1,grd_sploc%nlat
-           f0(i,1)=exp(-half*(rkm(i)/s_ens_hv(k,iaens))**2)
+           f0(i,1)=exp(-half*(rkm(i)/s_ens_hv(k,iaensgrploc))**2)
         enddo
 
         do j=2,grd_sploc%nlon
@@ -3174,10 +3212,10 @@ subroutine init_sf_xy(jcap_in)
         if(mype == 0)then
            nsigend=k
            do kk=k+1,grd_sploc%nsig
-              if(s_ens_hv(kk,iaens) /= s_ens_hv(k,iaens)) exit
+              if(s_ens_hv(kk,iaensgrploc) /= s_ens_hv(k,iaensgrploc)) exit
               nsigend=nsigend+1
            enddo
-           write(6,900)k,nsigend,sp_loc%jcap,s_ens_hv(k,iaens),maxval(abs(f0-f))
+           write(6,900)k,nsigend,sp_loc%jcap,s_ens_hv(k,iaensgrploc),maxval(abs(f0-f))
   900      format(' in init_sf_xy, jcap,s_ens_hv(',i5,1x,'-',i5,'), max diff(f0-f)=', &
                                         i10,f10.2,e20.10)
         end if
@@ -3207,27 +3245,27 @@ subroutine init_sf_xy(jcap_in)
            do n=l,sp_loc%jcap
               ii=ii+1
               if(sp_loc%factsml(ii)) then
-                 spectral_filter(iaens,ii,k)=zero
+                 spectral_filter(iaensgrploc,ii,k)=zero
               else
-                 spectral_filter(iaens,ii,k)=factor*g(2*n+1)
+                 spectral_filter(iaensgrploc,ii,k)=factor*g(2*n+1)
               end if
               ii=ii+1
               if(l == 0 .or. sp_loc%factsml(ii)) then
-                 spectral_filter(iaens,ii,k)=zero
+                 spectral_filter(iaensgrploc,ii,k)=zero
               else
-                 spectral_filter(iaens,ii,k)=factor*g(2*n+1)
+                 spectral_filter(iaensgrploc,ii,k)=factor*g(2*n+1)
               end if
            enddo
         enddo
      end if
   enddo
   
-         spectral_filter(iaens,:,:)=max(spectral_filter(iaens,:,:),0.0)
-         sqrt_spectral_filter(iaens,:,:)=sqrt(spectral_filter(iaens,:,:))
+         spectral_filter(iaensgrploc,:,:)=max(spectral_filter(iaensgrploc,:,:),0.0)
+         sqrt_spectral_filter(iaensgrploc,:,:)=sqrt(spectral_filter(iaensgrploc,:,:))
   
 
 !  assign array k_index for each processor, based on grd_loc%kbegin_loc,grd_loc%kend_loc
-  250 continue  !loop over iaens
+  250 continue  !loop over iaensgrploc
   deallocate(g,gsave,pn0_npole,ksame)
 
   allocate(k_index(grd_loc%kbegin_loc:grd_loc%kend_alloc))
@@ -3238,11 +3276,13 @@ subroutine init_sf_xy(jcap_in)
   enddo
 
   if(make_test_maps) then
+   ig0=1
+   ig0loc=ig0
    ftest=zero
    do k=grd_loc%kbegin_loc,grd_loc%kend_loc
       ftest(grd_ens%nlat/2,grd_ens%nlon/2,k)=one
    enddo
-   call sf_xy(1,ftest,grd_loc%kbegin_loc,grd_loc%kend_loc)
+   call sf_xy(ig0loc,ftest,grd_loc%kbegin_loc,grd_loc%kend_loc)
    if(mype==0) then
       do j=1,grd_ens%nlon
         do i=1,grd_ens%nlat
@@ -3258,7 +3298,7 @@ subroutine init_sf_xy(jcap_in)
 
 end subroutine init_sf_xy
 
-subroutine sf_xy(iaensgrpin,f,k_start,k_end)
+subroutine sf_xy(iaensgrplocin,f,k_start,k_end)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    sf_xy       spectral isotropic localization for global domain
@@ -3294,7 +3334,7 @@ subroutine sf_xy(iaensgrpin,f,k_start,k_end)
   use egrid2agrid_mod,only: g_egrid2agrid,g_egrid2agrid_ad  
   implicit none
 
-  integer(i_kind),intent(in   ) :: iaensgrpin 
+  integer(i_kind),intent(in   ) :: iaensgrplocin 
   integer(i_kind),intent(in   ) :: k_start,k_end
   real(r_kind)   ,intent(inout) :: f(grd_ens%nlat,grd_ens%nlon,k_start:max(k_start,k_end))
 
@@ -3306,7 +3346,7 @@ subroutine sf_xy(iaensgrpin,f,k_start,k_end)
 
 !$omp parallel do schedule(dynamic,1) private(k)
     do k=k_start,k_end
-       call sfilter(grd_ens,sp_loc,spectral_filter(iaensgrpin,:,k_index(k)),f(1,1,k))
+       call sfilter(grd_ens,sp_loc,spectral_filter(iaensgrplocin,:,k_index(k)),f(1,1,k))
     enddo
 
   else
@@ -3315,7 +3355,7 @@ subroutine sf_xy(iaensgrpin,f,k_start,k_end)
 !$omp parallel do schedule(dynamic,1) private(k,work)
     do k=k_start,k_end
        call g_egrid2agrid_ad(p_sploc2ens,work,f(:,:,k:k),k,k,vector(k:k))
-       call sfilter(grd_ens,sp_loc,spectral_filter(iaensgrpin,:,k_index(k)),f(1,1,k))
+       call sfilter(grd_ens,sp_loc,spectral_filter(iaensgrplocin,:,k_index(k)),f(1,1,k))
        call g_egrid2agrid(p_sploc2ens,work,f(:,:,k:k),k,k,vector(k:k))
     enddo
 
@@ -3324,7 +3364,7 @@ subroutine sf_xy(iaensgrpin,f,k_start,k_end)
 
 end subroutine sf_xy
 
-subroutine sqrt_sf_xy(iaensgrpin,z,f,k_start,k_end)
+subroutine sqrt_sf_xy(iaensgrplocin,z,f,k_start,k_end)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    sqrt_sf_xy  sqrt(sf_xy)
@@ -3358,7 +3398,7 @@ subroutine sqrt_sf_xy(iaensgrpin,z,f,k_start,k_end)
   use egrid2agrid_mod,only: g_egrid2agrid
   implicit none
 
-  integer(i_kind),intent(in   ) :: iaensgrpin 
+  integer(i_kind),intent(in   ) :: iaensgrplocin 
   integer(i_kind),intent(in   ) :: k_start,k_end
   real(r_kind)   ,intent(in   ) :: z(sp_loc%nc,k_start:max(k_start,k_end))
   real(r_kind)   ,intent(  out) :: f(grd_ens%nlat,grd_ens%nlon,k_start:max(k_start,k_end))
@@ -3371,7 +3411,7 @@ subroutine sqrt_sf_xy(iaensgrpin,z,f,k_start,k_end)
   if(.not.use_localization_grid) then
 
     do k=k_start,k_end
-       g(:)=z(:,k)*sqrt_spectral_filter(iaensgrpin,:,k_index(k))
+       g(:)=z(:,k)*sqrt_spectral_filter(iaensgrplocin,:,k_index(k))
        call general_s2g0(grd_ens,sp_loc,g,f(:,:,k))
     enddo
 
@@ -3379,7 +3419,7 @@ subroutine sqrt_sf_xy(iaensgrpin,z,f,k_start,k_end)
 
      vector=.false.
      do k=k_start,k_end
-        g(:)=z(:,k)*sqrt_spectral_filter(iaensgrpin,:,k_index(k))
+        g(:)=z(:,k)*sqrt_spectral_filter(iaensgrplocin,:,k_index(k))
         call general_s2g0(grd_sploc,sp_loc,g,work)
         call g_egrid2agrid(p_sploc2ens,work,f(:,:,k:k),k,k,vector(k:k))
      enddo
@@ -3389,7 +3429,7 @@ subroutine sqrt_sf_xy(iaensgrpin,z,f,k_start,k_end)
 
 end subroutine sqrt_sf_xy
 
-subroutine sqrt_sf_xy_ad(iaensgrpin,z,f,k_start,k_end)
+subroutine sqrt_sf_xy_ad(iaensgrplocin,z,f,k_start,k_end)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    sqrt_sf_xy_ad  adjoint of sqrt_sf_xy
@@ -3424,7 +3464,7 @@ subroutine sqrt_sf_xy_ad(iaensgrpin,z,f,k_start,k_end)
   use egrid2agrid_mod,only: g_egrid2agrid_ad
   implicit none
 
-  integer(i_kind),intent(in   ) :: iaensgrpin 
+  integer(i_kind),intent(in   ) :: iaensgrplocin 
   integer(i_kind),intent(in   ) :: k_start,k_end
   real(r_kind)   ,intent(inout) :: z(sp_loc%nc,k_start:max(k_start,k_end))
   real(r_kind)   ,intent(inout) :: f(grd_ens%nlat,grd_ens%nlon,k_start:max(k_start,k_end))
@@ -3438,7 +3478,7 @@ subroutine sqrt_sf_xy_ad(iaensgrpin,z,f,k_start,k_end)
 
     do k=k_start,k_end
        call general_s2g0_ad(grd_ens,sp_loc,g,f(:,:,k))
-       z(:,k)=g(:)*sqrt_spectral_filter(iaensgrpin,:,k_index(k))
+       z(:,k)=g(:)*sqrt_spectral_filter(iaensgrplocin,:,k_index(k))
     enddo
 
   else
@@ -3447,7 +3487,7 @@ subroutine sqrt_sf_xy_ad(iaensgrpin,z,f,k_start,k_end)
      do k=k_start,k_end
         call g_egrid2agrid_ad(p_sploc2ens,work,f(:,:,k:k),k,k,vector(k:k))
         call general_s2g0_ad(grd_sploc,sp_loc,g,work)
-        z(:,k)=g(:)*sqrt_spectral_filter(iaensgrpin,:,k_index(k))
+        z(:,k)=g(:)*sqrt_spectral_filter(iaensgrplocin,:,k_index(k))
      enddo
 
   end if
@@ -3548,12 +3588,13 @@ subroutine bkerror_a_en(gradx,grady)
   use hybrid_ensemble_parameters, only: nval_lenz_en 
 use hybrid_ensemble_parameters, only: l_sum_spc_weights
   use gsi_bundlemod, only: assignment(=)
+  use jfunc, only: jiter
   implicit none
 
 ! Declare passed variables
   type(control_vector),intent(inout) :: gradx
   type(control_vector),intent(inout) :: grady
-  integer(i_kind) :: iaens
+  integer(i_kind) :: iaens,iaensgrploc
   integer(i_kind) :: iaensgrp,ig
 type(gsi_bundle),allocatable :: ebundle(:,:)
 type(gsi_bundle),allocatable :: ebundle2(:,:)
@@ -3621,7 +3662,9 @@ enddo
     !        write(6,*)' using bkgcov_a_en_new_factorization'
   if (l_sum_spc_weights.ne.0) then
       do iaensgrp=1,naensgrp
-       call bkgcov_a_en_new_factorization(iaensgrp,grady%aens(ii,iaensgrp,1:n_ens))
+        
+       iaensgrploc=iaensgrp 
+       call bkgcov_a_en_new_factorization(iaensgrploc,grady%aens(ii,iaensgrp,1:n_ens))
       enddo  
    else  
    do nn=1,n_ens
@@ -3630,14 +3673,17 @@ enddo
     enddo
    enddo
   do iaensgrp=1,naensgrp
-   call ckgcov_a_en_new_factorization_ad2(iaensgrp,ebundle2(iaensgrp,:),ebundle(iaensgrp,:))
+     iaensgrploc=iaensgrp
+     write(6,*)'think thinkdeb666 iaensgrploc is ',jiter,iaensgrploc,iaens
+     call ckgcov_a_en_new_factorization_ad2(iaensgrploc,ebundle2(iaensgrp,:),ebundle(iaensgrp,:))
   enddo
   if (l_sum_spc_weights.eq.0) then
   call  covsclgrp_a_en_multmatrix(ebundle2,alphacvarsclgrpmat)
   endif
 ! the second applying of the sqrt matrix
   do iaensgrp=1,naensgrp
-   call ckgcov_a_en_new_factorization2(iaensgrp,ebundle2(iaensgrp,:),grady%aens(ii,iaensgrp,:))
+     iaensgrploc=iaensgrp
+   call ckgcov_a_en_new_factorization2(iaensgrploc,ebundle2(iaensgrp,:),grady%aens(ii,iaensgrp,:))
   enddo
 endif
     !end if
@@ -3667,7 +3713,6 @@ endif
 
   return
 end subroutine bkerror_a_en
-
 subroutine bkgcov_a_en_new_factorization(iaensgrplocin,a_en)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -3747,11 +3792,11 @@ subroutine bkgcov_a_en_new_factorization(iaensgrplocin,a_en)
 ! Apply horizontal smoother for number of horizontal scales
   if(regional) then
      iadvance=1 ; iback=2
-     call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
-     call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
+     call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
+     call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
      iadvance=2 ; iback=1
-     call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
-     call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
+     call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
+     call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
   else
      call sf_xy(iaensgrplocin,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
   end if
@@ -3841,8 +3886,8 @@ subroutine ckgcov_a_en_new_factorization(iaensgrplocin,z,a_en)
 ! Make a copy of input variable z to hwork
         hwork=z
         iadvance=2 ; iback=1
-        call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
-        call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
+        call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
+        call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
      else
 #ifdef LATER
         call sqrt_sf_xy(iaensgrplocin,z,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
@@ -3880,6 +3925,7 @@ subroutine ckgcov_a_en_new_factorization(iaensgrplocin,z,a_en)
 
   return
 end subroutine ckgcov_a_en_new_factorization
+
 subroutine ckgcov_a_en_new_factorization2(iaensgrplocin,a_ens_in,a_en)
 !clt modified from ckgcov_a_en_new_factorization , now use the input on
 !grids(a_ens)
@@ -3985,8 +4031,8 @@ subroutine ckgcov_a_en_new_factorization2(iaensgrplocin,a_ens_in,a_en)
 ! Make a copy of input variable z to hwork
         hwork=z
         iadvance=2 ; iback=1
-        call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
-        call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
+        call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
+        call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
      else
 #ifdef LATER
         call sqrt_sf_xy(iaensgrplocin,z,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
@@ -4116,8 +4162,8 @@ subroutine ckgcov_a_en_new_factorization_ad(iaensgrplocin,z,a_en)
 ! Apply horizontal smoother for number of horizontal scales
      if(regional) then
         iadvance=1 ; iback=2
-        call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
-        call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
+        call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
+        call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
         z=hwork
      else
         call sqrt_sf_xy_ad(iaensgrplocin,z,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
@@ -4126,7 +4172,6 @@ subroutine ckgcov_a_en_new_factorization_ad(iaensgrplocin,z,a_en)
 
   return
 end subroutine ckgcov_a_en_new_factorization_ad
-
 subroutine ckgcov_a_en_new_factorization_ad2(iaensgrplocin,a_en_out,a_en)
 !clt modified from ckgcov_a_en_new_factorization_ad , adding converting of the
 !clt results z in the spectral space to grid space in the local domains. 
@@ -4244,8 +4289,8 @@ subroutine ckgcov_a_en_new_factorization_ad2(iaensgrplocin,a_en_out,a_en)
 ! Apply horizontal smoother for number of horizontal scales
      if(regional) then
         iadvance=1 ; iback=2
-        call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
-        call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
+        call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
+        call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
         z=hwork
      else
         dwork=hwork
@@ -4282,6 +4327,7 @@ subroutine ckgcov_a_en_new_factorization_ad2(iaensgrplocin,a_en_out,a_en)
 
   return
 end subroutine ckgcov_a_en_new_factorization_ad2
+
 ! ------------------------------------------------------------------------------
 ! ------------------------------------------------------------------------------
 
@@ -4498,9 +4544,10 @@ subroutine hybens_localization_setup
    character(len=40),parameter :: fname = 'hybens_info'
    integer(i_kind) :: k,msig,istat,nz,kl
    logical         :: lexist,print_verbose
-   real(r_kind),allocatable:: s_ens_h_gu_x(:),s_ens_h_gu_y(:)
+   real(r_kind),allocatable:: s_ens_h_gu_x(:,:),s_ens_h_gu_y(:,:)
    integer(i_kind):: iaens,i
    logical :: l_read_success
+   integer(i_kind):: iaensgrploc
    l_read_success=.false.
    print_verbose=.false. .and. mype == 0
    if(verbose .and. mype == 0)print_verbose=.true.
@@ -4518,7 +4565,7 @@ subroutine hybens_localization_setup
          if ( istat /= 0 ) then
             write(6,*) 'HYBENS_LOCALIZATION_SETUP:  ***ERROR*** error in ',trim(fname)
             write(6,*) 'HYBENS_LOCALIZATION_SETUP:  error reading file, iostat = ',istat
-            call stop2(123)
+            stop(123)
          endif
          if ( msig /= grd_ens%nsig ) then 
             write(6,*) 'HYBENS_LOCALIZATION_SETUP:  ***ERROR*** error in ',trim(fname)
@@ -4531,19 +4578,19 @@ subroutine hybens_localization_setup
             read(lunin,101) s_ens_hv(k,1), s_ens_vv(k,1), beta_s(k), beta_e(k)
             if(mype==0) write(6,101) s_ens_hv(k,1), s_ens_vv(k,1), beta_s(k), beta_e(k)
          enddo
-         do iaens=2,naensloc
+         do iaensgrploc=2,naensloc
          do k = 1,grd_ens%nsig
-            read(lunin,101,end=300) s_ens_hv(k,iaens),s_ens_vv(k,iaens)
+            read(lunin,101,end=300) s_ens_hv(k,iaensgrploc),s_ens_vv(k,iaensgrploc)
          enddo
          enddo
          l_read_success=.True.
          close(lunin)
       300 continue  
          if(.not.l_read_success) then 
-         do iaens=2,naensloc
+         do iaensgrploc=2,naensloc
          do k = 1,grd_ens%nsig
-             s_ens_hv(k,iaens)=s_ens_hv(k,1)
-             s_ens_vv(k,iaens)=s_ens_vv(k,1)
+             s_ens_hv(k,iaensgrploc)=s_ens_hv(k,1)
+             s_ens_vv(k,iaensgrploc)=s_ens_vv(k,1)
          enddo
          enddo
          endif
@@ -4559,7 +4606,7 @@ subroutine hybens_localization_setup
          vvlocal = .true.
          nz = msig
          kl = grd_loc%kend_alloc-grd_loc%kbegin_loc+1
-         allocate(s_ens_h_gu_x(grd_loc%nsig*n_ens),s_ens_h_gu_y(grd_loc%nsig*n_ens))
+         allocate(s_ens_h_gu_x(grd_loc%nsig*n_ens,naensloc),s_ens_h_gu_y(grd_loc%nsig*n_ens,naensloc))
       endif
 
    endif ! if ( readin_localization .or. readin_beta )
@@ -4584,10 +4631,10 @@ subroutine hybens_localization_setup
    if ( .not. readin_localization ) then ! assign all levels to same value, s_ens_h, s_ens_v
       nz = 1
       kl = 1
-      allocate(s_ens_h_gu_x(1),s_ens_h_gu_y(1))
-      do iaens=1,naensloc
-      s_ens_hv(:,iaens) = s_ens_h(iaens)
-      s_ens_vv(:,iaens) = s_ens_v(iaens)
+      allocate(s_ens_h_gu_x(1,1),s_ens_h_gu_y(1,1))
+      do iaensgrploc=1,naensloc
+      s_ens_hv(:,iaensgrploc) = s_ens_h(iaensgrploc)
+      s_ens_vv(:,iaensgrploc) = s_ens_v(iaensgrploc)
       enddo
    endif
 
@@ -4599,8 +4646,9 @@ subroutine hybens_localization_setup
    if ( regional ) then ! convert s_ens_h from km to grid units.
       call convert_km_to_grid_units(s_ens_h_gu_x,s_ens_h_gu_y,nz)
       if ( vvlocal ) then
-         call init_rf_x(s_ens_h_gu_x(grd_loc%kbegin_loc:grd_loc%kend_alloc),kl)
-         call init_rf_y(s_ens_h_gu_y(grd_loc%kbegin_loc:grd_loc%kend_alloc),kl)
+!clttobemerge for regional sdl
+         call init_rf_x(s_ens_h_gu_x(grd_loc%kbegin_loc:grd_loc%kend_alloc,:),kl)
+         call init_rf_y(s_ens_h_gu_y(grd_loc%kbegin_loc:grd_loc%kend_alloc,:),kl)
       else
          call init_rf_x(s_ens_h_gu_x,kl)
          call init_rf_y(s_ens_h_gu_y,kl)
@@ -4672,16 +4720,16 @@ subroutine convert_km_to_grid_units(s_ens_h_gu_x,s_ens_h_gu_y,nz)
   use hybrid_ensemble_parameters, only: grd_loc,n_ens,s_ens_hv
   use hybrid_ensemble_parameters, only: region_dx_ens,region_dy_ens
   use gsi_io, only: verbose
+  use hybrid_ensemble_parameters, only: naensloc
   implicit none
 
   integer(i_kind) ,intent(in   ) ::nz
-  real(r_kind),intent(  out) ::s_ens_h_gu_x(nz),s_ens_h_gu_y(nz)
+  real(r_kind),intent(  out) ::s_ens_h_gu_x(nz,naensloc),s_ens_h_gu_y(nz,naensloc)
   logical :: print_verbose
   real(r_kind) dxmax,dymax
-  integer(i_kind) k,n,nk,iaens0
+  integer(i_kind) k,n,nk
 
   print_verbose=.false.
-  iaens0=1  !clt a plaee holder
   if(verbose) print_verbose=.true.
   dxmax=maxval(region_dx_ens)
   dymax=maxval(region_dy_ens)
@@ -4692,20 +4740,22 @@ subroutine convert_km_to_grid_units(s_ens_h_gu_x,s_ens_h_gu_y,nz)
                  .001_r_kind*minval(region_dy_ens),.001_r_kind*dymax
   end if
 
+!clttobemerge for regional sdl
   do k=1,nz
-     s_ens_h_gu_x(k)=s_ens_hv(k,iaens0)/(.001_r_kind*dxmax)
-     s_ens_h_gu_y(k)=s_ens_hv(k,iaens0)/(.001_r_kind*dymax)
+     s_ens_h_gu_x(k,:)=s_ens_hv(k,:)/(.001_r_kind*dxmax)
+     s_ens_h_gu_y(k,:)=s_ens_hv(k,:)/(.001_r_kind*dymax)
      if(print_verbose) write(6,*)' in convert_km_to_grid_units,s_ens_h(1),s_ens_h_gu_x,y=', &
-                    s_ens_hv(k,1),s_ens_h_gu_x(k),s_ens_h_gu_y(k)
+                    s_ens_hv(k,1),s_ens_h_gu_x(k,1),s_ens_h_gu_y(k,1)
 
   enddo
 
+!clttobemerge for regional sdl
   if(nz>1)then
   do n=2,n_ens
      nk=(n-1)*grd_loc%nsig
      do k=1,grd_loc%nsig
-        s_ens_h_gu_x(nk+k)=s_ens_h_gu_x(k)
-        s_ens_h_gu_y(nk+k)=s_ens_h_gu_y(k)
+        s_ens_h_gu_x(nk+k,:)=s_ens_h_gu_x(k,:)
+        s_ens_h_gu_y(nk+k,:)=s_ens_h_gu_y(k,:)
      enddo
   enddo
   endif
@@ -5717,5 +5767,4 @@ subroutine setup_ensgrp2aensgrp
 
 
 end subroutine setup_ensgrp2aensgrp
-
 end module hybrid_ensemble_isotropic
