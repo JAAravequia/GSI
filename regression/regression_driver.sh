@@ -24,6 +24,7 @@ fi
 if [ -z "$REND" ]; then
     export REND=4
 fi  
+if [ $
 # Launch the individual control and update runs, one-after-another
 for jn in `seq ${RSTART} ${REND}`; do
 

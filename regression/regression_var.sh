@@ -4,7 +4,7 @@
 #  To run with hybrid ensemble option on, change HYBENS_GLOBAL and/or HYBENS_REGIONAL from "false" to "true".
 #  These are located at the end of this script.
 
-if [ "$#" = 8 ] ; then
+if [ "$#" = 9 ] ; then
   export machine=$1
   export basedir=$2
   export builddir=$3
@@ -13,6 +13,7 @@ if [ "$#" = 8 ] ; then
   export enkfexec_updat=$6
   export gsiexec_contrl=$7
   export enkfexec_contrl=$8
+  export =$8
   export fixgsi="$gsisrc/fix"
   export scripts="$gsisrc/regression"
   export ush="$gsisrc/ush"
@@ -20,7 +21,11 @@ if [ "$#" = 8 ] ; then
   export clean="false"
   export ptmpName=`echo $builddir | sed -e "s/\//_/g"`
   echo $ptmpName
-else
+  if [ "$9" = "1" ]; then #USE BASELINE
+    echo "using baseline"
+    export USE_BASELINE=1;
+  fi
+else 
   # Name of the branch being tested
   updat="XXXXXXXX"
   contrl="XXXXXXXX"
@@ -61,6 +66,7 @@ case $machine in
    export fixcrtm="/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/fix_update"
    export casesdir="/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/CASES"
    export ndate="$builddir/bin/ndate.x"
+   export baselinedir="/gpfs/dell2/ptmp/Mark.Potts/_gpfs_dell2_emc_modeling_noscrub_Mark.Potts_GSI-Baseline_build"
 
    export check_resource="yes"
 
@@ -83,6 +89,7 @@ case $machine in
    export fixcrtm="/da/save/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix_update"
    export casesdir="/da/noscrub/Michael.Lueken/CASES"
    export ndate="/nwprod/util/exec/ndate"
+   export baselinedir="/ptmpp1/Mark.Potts/_global_noscrub_Mark.Potts_GSI-Baseline_build"
 
    export check_resource="yes"
 
@@ -149,6 +156,7 @@ case $machine in
    export fixcrtm="/gpfs/hps/nco/ops/nwprod/lib/crtm/v2.2.4/fix"
    export casesdir="/gpfs/hps3/emc/da/noscrub/Michael.Lueken/CASES"
    export ndate=$NDATE
+   export baselinedir="/gpfs/hps/ptmp/Mark.Potts/_gpfs_hps3_emc_global_noscrub_Mark.Potts_GSI-Baseline_build"
 
    export check_resource="no"
 
