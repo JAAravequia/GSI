@@ -111,7 +111,7 @@
                          readin_localization,write_ens_sprd,eqspace_ensgrid,grid_ratio_ens,&
                          readin_beta,use_localization_grid,use_gfs_ens,q_hyb_ens,i_en_perts_io, &
                          l_ens_in_diff_time,ensemble_path,ens_fast_read
-  use hybrid_ensemble_parameters,only:nsclgrp,naensgrp,para_covwithsclgrp,l_sum_spc_weights
+  use hybrid_ensemble_parameters,only:nsclgrp,naensgrp,naensloc,para_covwithsclgrp,l_sum_spc_weights
   use rapidrefresh_cldsurf_mod, only: init_rapidrefresh_cldsurf, &
                             dfi_radar_latent_heat_time_period,metar_impact_radius,&
                             metar_impact_radius_lowcloud,l_gsd_terrain_match_surftobs, &
@@ -885,7 +885,7 @@
                 jcap_ens_test,beta_s0,s_ens_h,s_ens_v,readin_localization,eqspace_ensgrid,readin_beta,&
                 grid_ratio_ens, &
                 oz_univ_static,write_ens_sprd,use_localization_grid,use_gfs_ens, &
-                i_en_perts_io,l_ens_in_diff_time,ensemble_path,ens_fast_read,nsclgrp,naensgrp,l_sum_spc_weights,para_covwithsclgrp
+                i_en_perts_io,l_ens_in_diff_time,ensemble_path,ens_fast_read,nsclgrp,naensgrp,naensloc,l_sum_spc_weights,para_covwithsclgrp
 
 ! rapidrefresh_cldsurf (options for cloud analysis and surface 
 !                             enhancement for RR appilcation  ):
@@ -1249,6 +1249,7 @@
   endif
 
   naensgrp=nsclgrp 
+  if(naensloc.lt.nsclgrp) naensloc=nsclgrp
   call gsi_4dcoupler_setservices(rc=ier)
   if(ier/=0) call die(myname_,'gsi_4dcoupler_setServices(), rc =',ier)
 
