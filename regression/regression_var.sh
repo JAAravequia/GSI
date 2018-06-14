@@ -65,9 +65,13 @@ case $machine in
 
    export fixcrtm="/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/fix_update"
    export casesdir="/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/CASES"
-   export ndate="$builddir/bin/ndate.x"
    export baselinedir="/gpfs/dell2/ptmp/Mark.Potts/_gpfs_dell2_emc_modeling_noscrub_Mark.Potts_GSI-Baseline_build"
 
+   if [ -e "$builddir/bin/ndate.x" ]; then
+     export ndate="$builddir/bin/ndate.x"
+   else
+     export ndate="$builddir/../exec/ndate.x"
+   fi
    export check_resource="yes"
 
    export accnt=""

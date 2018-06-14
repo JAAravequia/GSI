@@ -48,7 +48,7 @@ if( NOT CRTM_LIBRARY ) # didn't find the library, so build it from source
         findSrc( "crtm" CRTM_VER CRTM_DIR )
         set(CRTMINC  "${CMAKE_BINARY_DIR}/include")
     else()
-      set( CRTM_DIR "$ENV{CRTM_SRC}/libsrc" CACHE STRING "CRTM Source Location")
+      set( CRTM_DIR "$ENV{CRTM_SRC}" CACHE STRING "CRTM Source Location")
       set(CRTMINC  "${CORECRTM}/crtm/${CRTM_VER}/incmod/crtm_v${CRTM_VER}")
     endif()
     set( libsuffix "_v${CRTM_VER}${debug_suffix}" )

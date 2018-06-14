@@ -38,7 +38,7 @@ if( NOT SIGIO_LIBRARY ) # didn't find the library, so build it from source
         findSrc( "sigio" SIGIO_VER SIGIO_DIR )
         set(SIGIOINC  "${CMAKE_BINARY_DIR}/include")
     else()
-      set( SIGIO_DIR "$ENV{SIGIO_SRC}/libsrc" CACHE STRING "SIGIO Source Location")
+      set( SIGIO_DIR "$ENV{SIGIO_SRC}" CACHE STRING "SIGIO Source Location")
       set(SIGIOINC  "${CORESIGIO}/sigio/${SIGIO_VER}/incmod/sigio_v${SIGIO_VER}")
     endif()
     set( libsuffix "_v${SIGIO_VER}${debug_suffix}" )
