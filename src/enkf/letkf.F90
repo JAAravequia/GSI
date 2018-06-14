@@ -1238,7 +1238,7 @@ real(r_single),dimension(nobsl      ),intent(out) :: reducedgain
 real(r_single),dimension(nanals) :: work1
 real(r_single),dimension(nanals,nanals) :: worku
 real(r_single),dimension(nsvals,nobsl) :: workvt
-integer(i_kind) i,j
+!integer(i_kind) i,j
 
 ! single precision copies of u,vt
 worku = u; workvt = vt
