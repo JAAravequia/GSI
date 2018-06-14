@@ -29,11 +29,24 @@ module letkf
 !  operator calcuation, is performed by a separate program using the GSI
 !  forward operator code).  Although all the observation variable ensemble
 !  members sometimes cannot fit in memory, they are necessary before LETKF core
-!  process. So they are saved in all processors.
+!  process. So they are saved in all processors. If the code is compiled with
+!  -DMPI3, a single copy of the observation space ensemble is stored on each
+!  compute node and shared among processors.
 !
 !  Adaptive observation thinning implemented in the serial EnSRF is not 
-!  implemented here in the current version.
-
+!  implemented here in the current version. The parameter nobsl_max controls
+!  the maximum number of obs that will be assimilated in each local patch.
+!  (the nobsl_max closest are chosen by default, if dfs_sort=T then they
+!   are ranked by decreasing DFS).
+!
+!  Vertical covariance localization can be turned off with letkf_novlocal.
+!  (this is done automatically when model space vertical localization 
+!   with modulated ensembles is enabled via neigv>0)
+!  If neigv>0, then either the DEnKF or gain form of the LETKF must be used
+!  (denkf or gletkf must be .true.) and the eigenvectors of the localization
+!  matrix are read from a file called 'vlocal_eig.dat' (created by an external
+!  python utility).
+!
 !  Updating the state in observation space is not supported in the LETKF - 
 !  use lupd_obspace_serial=.true. to perform the observation space update
 !  using the serial EnSRF.
@@ -857,6 +870,18 @@ subroutine letkf_core(nobsl,hxens,rdiaginv,dep,rloc,trans,nanals,neigv,compute_w
 !   machine:
 !
 !$$$ end documentation block
+! equivalent python code:
+!   Rinv = (1./oberrvar)*np.eye(nobs)
+!   YbRinv = np.dot(hxprime,Rinv)
+!   pa = (nanals/neigv-1)*np.eye(nanals)+np.dot(YbRinv,hxprime.T)
+!   evals, eigs = np.linalg.eigh(pa)
+!   pasqrt_inv =  (eigs * (1./np.sqrt(np.maximum(evals,0)))).dot(eigs.T)
+!   painv =  (eigs * (1./np.maximum(evals,0))).dot(eigs.T)
+!   kfgain = np.dot(xprime.T,np.dot(painv,YbRinv))
+!   enswts = np.sqrt(nanals/neigv-1)*pasqrt_inv
+!   xmean = xmean + np.dot(kfgain, obs-hxmean)
+!   xprime = np.dot(enswts.T,xprime)
+!
 implicit none
 integer(i_kind)                      ,intent(in ) :: nobsl,nanals,neigv
 real(r_kind),dimension(nanals,nobsl ),intent(inout) :: hxens
@@ -1049,7 +1074,8 @@ subroutine gletkf_core(nobsl,hxens,rdiaginv,rloc,nanals,neigv,nsvals,u,vt)
 !                model space vertical localization)
 !     vt       - right singular vectors of YbRsqrtinv
 !                (dimension (nsvals,nobsl)) scaled by
-!                inverse singular values times R ** -1/2 (including ob error localzation).
+!                inverse singular values times R ** -1/2
+!                (including ob error localzation).
 !
 ! attributes:
 !   language:  f95
@@ -1060,9 +1086,9 @@ subroutine gletkf_core(nobsl,hxens,rdiaginv,rloc,nanals,neigv,nsvals,u,vt)
 ! equivalent python code:
 !   sqrtoberrvar_inv = 1./np.sqrt(oberrvar) # with ob error localization
 !   YbRsqrtinv = hxprime * sqrtoberrvar_inv
-!   u, svals, v = svd(YbRsqrtinv,full_matrices=False,lapack_driver='gesvd')
+!   u, svals, v = np.linalg.svd(YbRsqrtinv,full_matrices=False,lapack_driver='gesvd')
 !   eigvals = svals**2+(nanals/neigv)-1
-! for ETKF weights: enswts =  (u * (np.sqrt((nanals-1)/eigvals))).dot(u.T)
+! for ETKF weights: enswts =  (u * (np.sqrt((nanals/neigv-1)/eigvals))).dot(u.T)
 !                   xprime = np.dot(enswts.T, xprime)
 !   painv =  (u * (1./eigvals)).dot(u.T)
 !   kfgain = np.dot(xprime.T,np.dot(painv,YbRsqrtinv*sqrtoberrvar_inv))
@@ -1142,10 +1168,6 @@ eigval(1:nsvals) = svals(1:nsvals)**2+(nanals/neigv)-1
 do nanal=1,nanals
    work3(nanal,:) = u(nanal,:)/eigval
 enddo
-! scaling needed for reduced gain
-do nob=1,nobsl
-   vt(:,nob) = vt(:,nob)*rrloc(nob)/svals
-enddo
 ! painv
 if(r_kind == kind(1.d0)) then
    call dgemm('n','t',nanals,nanals,nanals,1.d0,work3,nanals,u,&
@@ -1157,6 +1179,9 @@ end if
 ! scaling needed for reduced gain
 do nanal=1,nanals
    u(nanal,:) = u(nanal,:)*(1.-sqrt((nanals/neigv-1)/eigval))
+enddo
+do nob=1,nobsl
+   vt(:,nob) = vt(:,nob)*rrloc(nob)/svals
 enddo
 ! convert hxens * Rinv^T from hxens * sqrt(Rinv)^T
 do nanal=1,nanals
@@ -1208,9 +1233,9 @@ subroutine gletkf_gain(nanals,nobsl,nsvals,u,vt,xens,reducedgain)
 !                model space vertical localization)
 !     vt       - right singular vectors of YbRsqrtinv
 !                (dimension (nsvals,nobsl)) scaled by
-!                R ** -1/2 (including ob error localzation)
-!                and inverse singular values (svals).
-!     xens - model space ensemble perturbations (dimension nanals)
+!                inverse singular values time R ** -1/2 
+!                (including ob error localzation).
+!     xens     - model space ensemble perturbations (dimension nanals)
 !
 !   output argument list:
 !     reducedgain - modified gain for ensemble perturbations (dimension nobsl)

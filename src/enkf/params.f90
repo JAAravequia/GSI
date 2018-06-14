@@ -25,7 +25,7 @@ module params
 !   2016-05-02  shlyaeva - Modification for reading state vector from table
 !   2016-11-29  shlyaeva - added nhr_state (hours for state fields to 
 !                          calculate Hx; nhr_anal is for IAU)
-!   2018-05-31  whitaker - added neigv (for model-space localization using
+!   2018-05-31  whitaker - added modelspace_vloc (for model-space localization using
 !                          modulated ensembles), nobsl_max (for ob selection
 !                          in LETKF, denkf (for Sakov's DEnKF), 
 !                          gletkf (for gain form of LETKF) and dfs_sort
@@ -115,9 +115,14 @@ integer,public :: npefiles = 0
 ! If dfs_sort=T, DFS is used instead of distance
 ! for ob selection.
 integer,public :: nobsl_max = -1
-! for modulated ensemble, neigv is the number of
-! eigenvectors of the vertical localization matrix
-! if neigv=0, ob space localization is used
+! do model-space vertical localization
+! if .true., eigenvectors of the localization
+! matrix are read from a file called 'vlocal_eig.dat'
+! (created by an external python utility).
+logical,public :: modelspace_vloc=.false.
+! number of eigenvectors of vertical localization
+! used.  Zero if modelspace_vloc=.false., read from
+! file 'vlocal_eig.dat' if modelspace_vloc=.true.
 integer,public :: neigv = 0
 real(r_double) :: vlocal_eval
 real(r_double),public,dimension(:,:), allocatable :: vlocal_evecs
@@ -192,7 +197,8 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    newpc4pred,nmmb,nhr_anal,nhr_state, fhr_assim,nbackgrounds,nstatefields, &
                    save_inflation,nobsl_max,lobsdiag_forenkf,netcdf_diag,&
                    letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
-                   neigv,denkf,gletkf,dfs_sort,write_spread_diag,fso_cycling,fso_calculate,imp_physics,lupp
+                   modelspace_vloc,denkf,gletkf,dfs_sort,write_spread_diag,&
+                   fso_cycling,fso_calculate,imp_physics,lupp
 
 namelist /nam_wrf/arw,nmm,nmm_restart
 namelist /satobs_enkf/sattypes_rad,dsis
@@ -204,6 +210,7 @@ contains
 subroutine read_namelist()
 integer i,j,nb
 logical fexist
+real(r_single) modelspace_vloc_cutoff, modelspace_vloc_thresh
 ! have all processes read namelist from file enkf.nml
 
 ! defaults
@@ -361,47 +368,31 @@ latboundmp=-latbound+p5delat
 latboundmm=-latbound-p5delat
 delatinv=1.0_r_single/delat
 
-! if neigv > 0, use modulated ensemble to compute Kalman gain (but use
-! this K to update only original ensemble). Only works with LETKF/DENKF.
-allocate(vlocal_evecs(neigv,nlevs+1))
-if (neigv > 0) then
-  if (.not. lobsdiag_forenkf) then
-    if (nproc .eq. 0) then
-       print *,'lobsdiag_forenkf must be true if neigv>0'
-    endif
-    call stop2(19)
-  endif
-  if (letkf_flag .and. .not. letkf_novlocal) then
-     if (nproc .eq. 0) print *,"neigv>0 and letkf=T, re-setting letkf_novlocal to true"
-     letkf_novlocal = .true.
-  endif
-  if (letkf_flag .and. letkf_novlocal .and. (.not. denkf .and. .not. gletkf .and. deterministic)) then
-     if (nproc .eq. 0) then
-         print *,"warning: for neigv>0, either denkf or gletkf must be T, or determinstic F"
-         call stop2(19)
-     endif
-  endif
-  ! set vertical localization parameters to very large values
-  ! (turns vertical localization off)
-  lnsigcutoffnh = 1.e30
-  lnsigcutoffsh = 1.e30
-  lnsigcutofftr = 1.e30
-  lnsigcutoffsatnh = 1.e30
-  lnsigcutoffsatsh = 1.e30
-  lnsigcutoffsattr = 1.e30
-  lnsigcutoffpsnh = 1.e30
-  lnsigcutoffpssh = 1.e30
-  lnsigcutoffpstr = 1.e30
-! read in eigenvalues/vectors of vertical localization matrix on all tasks
-! (text file vlocal_eig.dat must exist)
+! if modelspace_vloc, use modulated ensemble to compute Kalman gain (but use
+! this gain to update only original ensemble). 
+if (modelspace_vloc) then
+  ! read in eigenvalues/vectors of vertical localization matrix on all tasks
+  ! (text file vlocal_eig.dat must exist)
   inquire(file='vlocal_eig.dat',exist=fexist)
   if ( fexist ) then
      open(7,file='vlocal_eig.dat',status="old",action="read")
   else
-     if (nproc .eq. 0) print *, 'error vlocal_eig.dat does not exist'
+     if (nproc .eq. 0) print *, 'error: vlocal_eig.dat does not exist'
      call stop2(19)
   endif
-  if (nproc .eq. 0) print *,'vertical localization eigenvalues'
+  read(7,*) neigv,modelspace_vloc_thresh,modelspace_vloc_cutoff
+  if (neigv < 1) then
+     if (nproc .eq. 0) print *, 'error: neigv must be greater than zero'
+     call stop2(19)
+  endif
+  allocate(vlocal_evecs(neigv,nlevs+1))
+  if (nproc .eq. 0) then
+     print *,'neigv = ',neigv
+     print *,'vertical localization cutoff distance (lnp units) =',&
+            modelspace_vloc_cutoff
+     print *,'eigenvector truncation threshold = ',modelspace_vloc_thresh
+     print *,'vertical localization eigenvalues'
+  endif
   do i = 1,neigv
      read(7,*) vlocal_eval
      if (nproc .eq. 0) print *,i,vlocal_eval
@@ -412,6 +403,33 @@ if (neigv > 0) then
      vlocal_evecs(i,nlevs+1) = vlocal_evecs(i,1)
   enddo
   close(7)
+  if (.not. lobsdiag_forenkf) then
+    if (nproc .eq. 0) then
+       print *,'lobsdiag_forenkf must be true if modelspace_vloc==.true.'
+    endif
+    call stop2(19)
+  endif
+  if (letkf_flag .and. .not. letkf_novlocal) then
+     if (nproc .eq. 0) print *,"modelspace_vloc=T and letkf=T, re-setting letkf_novlocal to true"
+     letkf_novlocal = .true.
+  endif
+  if (letkf_flag .and. letkf_novlocal .and. (.not. denkf .and. .not. gletkf .and. deterministic)) then
+     if (nproc .eq. 0) then
+         print *,"warning: for modelspace_vloc=T, either denkf or gletkf must be T, or determinstic F"
+         call stop2(19)
+     endif
+  endif
+  ! set vertical localization parameters to very large values
+  ! (turns vertical localization off for serial filter)
+  lnsigcutoffnh = 1.e30
+  lnsigcutoffsh = 1.e30
+  lnsigcutofftr = 1.e30
+  lnsigcutoffsatnh = 1.e30
+  lnsigcutoffsatsh = 1.e30
+  lnsigcutoffsattr = 1.e30
+  lnsigcutoffpsnh = 1.e30
+  lnsigcutoffpssh = 1.e30
+  lnsigcutoffpstr = 1.e30
 endif
 
 ! have to do ob space update for serial filter (not for LETKF).

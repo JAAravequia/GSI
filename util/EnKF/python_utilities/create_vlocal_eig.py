@@ -77,6 +77,7 @@ print 'neig = ',neig
 zz = (eigs*np.sqrt(evals/frac)).T
 print evals
 f = open('vlocal_eig.dat','w')
+f.write('%s %s %s\n' % (neig,thresh,cutoff))
 for j in range(neig):
     f.write('%s\n' % evals[nlevs-j-1])
     print j,evals[nlevs-j-1]
@@ -88,6 +89,7 @@ f.close()
 f = open('vlocal_eig.dat','r')
 evals2 = np.zeros(neig,np.float)
 evecs2 = np.zeros((neig,nlevs),np.float)
+f.readline()
 for j in range(neig):
     evals2[j] = float(f.readline())
     print j,evals2[j]/frac
