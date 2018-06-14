@@ -27,7 +27,8 @@ module params
 !                          calculate Hx; nhr_anal is for IAU)
 !   2018-05-31  whitaker - added neigv (for model-space localization using
 !                          modulated ensembles), nobsl_max (for ob selection
-!                          in LETKF, denkf (for Sakov's DEnKF), and dfs_sort
+!                          in LETKF, denkf (for Sakov's DEnKF), 
+!                          gletkf (for gain form of LETKF) and dfs_sort
 !                          (for using DFS in LETKF ob selection).
 !
 ! attributes:
@@ -147,6 +148,9 @@ integer(i_kind),public :: nvars = -1
 
 ! Use Sakov's 'deterministic EnKF' approx. (K/2 used for pert update)
 logical,public :: denkf = .false.
+! Use gain form of LETKF
+! (https://journals.ametsoc.org/doi/pdf/10.1175/MWR-D-17-0102.1)
+logical,public :: gletkf = .false.
 ! sort obs in LETKF in order of decreasing DFS
 logical,public :: dfs_sort = .false.
 
@@ -188,7 +192,7 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    newpc4pred,nmmb,nhr_anal,nhr_state, fhr_assim,nbackgrounds,nstatefields, &
                    save_inflation,nobsl_max,lobsdiag_forenkf,netcdf_diag,&
                    letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
-                   neigv,denkf,dfs_sort,write_spread_diag,fso_cycling,fso_calculate,imp_physics,lupp
+                   neigv,denkf,gletkf,dfs_sort,write_spread_diag,fso_cycling,fso_calculate,imp_physics,lupp
 
 namelist /nam_wrf/arw,nmm,nmm_restart
 namelist /satobs_enkf/sattypes_rad,dsis
@@ -367,19 +371,15 @@ if (neigv > 0) then
     endif
     call stop2(19)
   endif
-  ! neigv>0 implies letkf_flag=denkf=letkf_novlocal=lobsdiag_forenkf=.true. and
-  ! lnsigcutoff* = 1.e30
-  !if (.not. letkf_flag) then
-  !  if (nproc .eq. 0) print *,"re-setting letkf_flag to true"
-  !  letkf_flag = .true.
-  !endif
   if (letkf_flag .and. .not. letkf_novlocal) then
-     if (nproc .eq. 0) print *,"re-setting letkf_novlocal to true"
+     if (nproc .eq. 0) print *,"neigv>0 and letkf=T, re-setting letkf_novlocal to true"
      letkf_novlocal = .true.
   endif
-  if (letkf_flag .and. letkf_novlocal .and. .not. denkf) then
-     if (nproc .eq. 0) print *,"re-setting denkf to true"
-     denkf = .true.
+  if (letkf_flag .and. letkf_novlocal .and. (.not. denkf .and. .not. gletkf .and. deterministic)) then
+     if (nproc .eq. 0) then
+         print *,"warning: for neigv>0, either denkf or gletkf must be T, or determinstic F"
+         call stop2(19)
+     endif
   endif
   ! set vertical localization parameters to very large values
   ! (turns vertical localization off)
