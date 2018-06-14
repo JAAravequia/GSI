@@ -8,10 +8,10 @@ export regtest=$1
 # source the necessary files to setup
 if [ "$#" -eq 2 ]; then
   export regdir=$2
-  . $(awk '{ print $1, $2, $3, $4, $5, $6, $7, $8, $9 }' $regdir/regression_var.out)
+  . $(awk '{ print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10 }' $regdir/regression_var.out)
 else
   export regdir=$(pwd)
-  . $(awk '{ print $1, $2, $3, $4, $5, $6, $7, $8, $9 }' regression_var.out)
+  . $(awk '{ print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10 }' regression_var.out)
 fi
 
 export scripts=${scripts_updat:-$scripts}
@@ -24,10 +24,20 @@ fi
 if [ -z "$REND" ]; then
     export REND=4
 fi  
-if [ $
+if [ "$USE_BASELINE" = "1" ]; then
+  echo "setting rend to 2"
+  export REND=2
+fi  
 # Launch the individual control and update runs, one-after-another
 for jn in `seq ${RSTART} ${REND}`; do
 
+   if [ "$USE_BASELINE" = "1" ]; then
+      #soft link to baseline results
+      export linksrc=$baselinedir/${tmpregdir}/${job[$jn+2]}   
+      export linkdest=$tmpdir/${tmpregdir}/${job[$jn+2]}   
+      rm -rf $linkdest
+      ln -s $linksrc $linkdest
+   fi
    if [ $jn -le 2 ]; then
       export scripts=${scripts_updat:-$scripts}
       export fixgsi=${fixgsi_updat:-$fixgsi}
@@ -46,7 +56,8 @@ for jn in `seq ${RSTART} ${REND}`; do
      rm -f ${rcname}
      exit 1
    fi
-   done
+done
+
 # When all done, test the results of the regression test
 if [ "$debug" == ".false." ]; then
 
