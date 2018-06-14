@@ -387,6 +387,7 @@ if (modelspace_vloc) then
   endif
   allocate(vlocal_evecs(neigv,nlevs+1))
   if (nproc .eq. 0) then
+     print *,'model-space vertical localization enabled'
      print *,'neigv = ',neigv
      print *,'vertical localization cutoff distance (lnp units) =',&
             modelspace_vloc_cutoff
