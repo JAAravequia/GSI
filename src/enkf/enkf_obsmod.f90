@@ -137,6 +137,7 @@ integer(i_kind) :: nobs_convdiag, nobs_ozdiag, nobs_satdiag, nobstotdiag
 ! for serial enkf, anal_ob is only used here and in loadbal. It is deallocated in loadbal.
 ! for letkf, anal_ob used on all tasks in letkf_update (bcast from root in loadbal), deallocated
 ! in letkf_update.
+! same goes for anal_ob_modens when modelspace_vloc=T.
 real(r_single), public, allocatable, dimension(:,:) :: anal_ob, anal_ob_modens
 
 contains

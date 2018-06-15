@@ -407,7 +407,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean_nobc
   real(r_single), dimension(nobs_max), intent(out)    :: hx
-  ! hx_modens holds modulated ensemble in ob space (zero size if neigv=0)
+  ! hx_modens holds modulated ensemble in ob space (zero size and not referenced if neigv=0)
   real(r_single), dimension(nobs_max,neigv), intent(out) :: hx_modens
   real(r_single), dimension(nobs_max), intent(out)    :: x_obs
   real(r_single), dimension(nobs_max), intent(out)    :: x_err, x_errorig
@@ -456,7 +456,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean_nobc
   real(r_single), dimension(nobs_max), intent(out)    :: hx
-  ! hx_modens holds modulated ensemble in ob space (zero size if neigv=0)
+  ! hx_modens holds modulated ensemble in ob space (zero size and not referenced if neigv=0)
   real(r_single), dimension(nobs_max,neigv), intent(out) :: hx_modens
 
   real(r_single), dimension(nobs_max), intent(out)    :: x_obs
@@ -878,7 +878,7 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean_nobc
   real(r_single), dimension(nobs_max), intent(out)    :: hx
-  ! hx_modens holds modulated ensemble in ob space (zero size if neigv=0)
+  ! hx_modens holds modulated ensemble in ob space (zero size and not referenced if neigv=0)
   real(r_single), dimension(nobs_max,neigv), intent(out) :: hx_modens
   real(r_single), dimension(nobs_max), intent(out)    :: x_obs
   real(r_single), dimension(nobs_max), intent(out)    :: x_err, x_errorig

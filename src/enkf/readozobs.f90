@@ -241,7 +241,7 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
 
   integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
   real(r_single), dimension(nobs_max), intent(out)      :: hx_mean, hx_mean_nobc, hx
-  ! hx_modens holds modulated ensemble in ob space (zero size if neigv=0)
+  ! hx_modens holds modulated ensemble in ob space (zero size and not referenced if neigv=0)
   real(r_single), dimension(nobs_max,neigv), intent(out) :: hx_modens
   real(r_single), dimension(nobs_max), intent(out)      :: x_obs
   real(r_single), dimension(nobs_max), intent(out)      :: x_err, x_errorig
@@ -280,7 +280,7 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
 
   integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
   real(r_single), dimension(nobs_max), intent(out)      :: hx_mean, hx_mean_nobc, hx
-  ! hx_modens holds modulated ensemble in ob space (zero size if neigv=0)
+  ! hx_modens holds modulated ensemble in ob space (zero size and not referenced if neigv=0)
   real(r_single), dimension(nobs_max,neigv), intent(out) :: hx_modens
   real(r_single), dimension(nobs_max), intent(out)      :: x_obs
   real(r_single), dimension(nobs_max), intent(out)      :: x_err, x_errorig
@@ -545,7 +545,7 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
 
   integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
   real(r_single), dimension(nobs_max), intent(out)      :: hx_mean, hx_mean_nobc, hx
-  ! hx_modens holds modulated ensemble in ob space (zero size if neigv=0)
+  ! hx_modens holds modulated ensemble in ob space (zero size and not referenced if neigv=0)
   real(r_single), dimension(nobs_max,neigv), intent(out) :: hx_modens
   real(r_single), dimension(nobs_max), intent(out)      :: x_obs
   real(r_single), dimension(nobs_max), intent(out)      :: x_err, x_errorig

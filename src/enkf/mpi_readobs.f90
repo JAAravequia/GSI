@@ -94,11 +94,12 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
        if (nproc == 0) then
           ! this array only needed on root.
           allocate(anal_ob(nanals,nobs_tot))
+          ! note: if neigv=0 (ob space localization), this array is size zero.
           allocate(anal_ob_modens(nanals*neigv,nobs_tot))
        end if
        ! these arrays needed on all processors.
        allocate(mem_ob(nobs_tot)) 
-       allocate(mem_ob_modens(nobs_tot,neigv)) 
+       allocate(mem_ob_modens(nobs_tot,neigv))  ! zero size if neigv=0
        allocate(sprd_ob(nobs_tot),ob(nobs_tot),oberr(nobs_tot),oblon(nobs_tot),&
        oblat(nobs_tot),obpress(nobs_tot),obtime(nobs_tot),oberrorig(nobs_tot),obcode(nobs_tot),&
        obtype(nobs_tot),ensmean_ob(nobs_tot),ensmean_obbc(nobs_tot),&
@@ -201,6 +202,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
                          1,mpi_comm_io,mpi_status,ierr)
            anal_ob(nanal,:) = mem_ob(:)
         enddo
+        ! mem_ob_modens and anal_ob_modens not referenced unless neigv>0
         if (neigv > 0) then
            nanal = 1
            do neig=1,neigv

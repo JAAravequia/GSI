@@ -63,6 +63,9 @@ module loadbal
 !   hours).
 !  anal_obchunk_prior(nanals,nobs_max): (serial enkf only) real array of observation prior 
 !   ensemble perturbations to be updated on this task (not used in LETKF).
+!  anal_obchunk_modens_prior(nanals*neigv,nobs_max): (serial enkf only) real array of observation prior 
+!   modulate ensemble perturbations to be updated on this task when model space localization
+!   is enabled (modelspace_vloc=T, neigv > 0, not used in LETKF).
 !  kdtree_grid: pointer to kd-tree structure used for nearest neighbor searches
 !   for model grid points (only searches grid points assigned to this task).
 !  kdtree_obs: pointer to kd-tree structure used for nearest neighbor searches
@@ -318,6 +321,8 @@ if (.not. letkf_flag .or. lupd_obspace_serial) then
            1,mpi_comm_world,mpi_status,ierr)
    end if
    if (neigv > 0) then
+      ! if model space vertical localization is enabled, 
+      ! distribute ensemble perturbations in ob space for serial filter.
       allocate(anal_obchunk_modens_prior(nanals*neigv,nobs_max)) 
       if(nproc == 0) then
          print *,'sending out modens observation prior ensemble perts from root ...'

@@ -66,11 +66,18 @@ module enkf
 !  module readobs, and only those needed on this task are read in by
 !  subroutine enkf_update.
 !
+!  If the namelist paramater modelspac_vloc is set to .true., the parameter
+!  neigv will be greater than zero, and model space vertical localization
+!  via modulated ensembles will be used.  In this case, the vertical
+!  location of an observation is not used (this generally improves the 
+!  assimilation of radiance observations but increases the cost).
+
+!
 !  Adaptive observation thinning can be done via the parameter paoverpb_thresh.
 !  If this parameter >= 1 (1 is the default) no thinning is done.  If < 1, an 
 !  observation is not assimilated unless it will reduce the observation
-!  variable ensemble variance by paoverpb_thresh (e.g. if paoverpb_thresh = 0.9,
-!  only obs that will reduce the variance by 10% will be assimilated).
+!  variable ensemble variance by paoverpb_thresh (e.g. if paoverpb_thresh = 0.99,
+!  only obs that will reduce the variance by 1% will be assimilated).
 !
 ! Public Subroutines:
 !  enkf_update: performs the EnKF update (calls update_biascorr to perform
@@ -89,7 +96,7 @@ module enkf
 !   2016-11-29:  shlyaeva: Modification for using control vector (control and state 
 !                used to be the same) and the "chunks" come from loadbal
 !   2018-05-31:  whitaker:  add modulated ensemble model-space vertical
-!               localization (when neigv=0).
+!                localization (when neigv>0).
 !
 ! attributes:
 !   language: f95
@@ -146,7 +153,7 @@ integer(i_kind) nob,nob1,nob2,nob3,npob,nf,nf2,ii,nobx,nskip,&
 integer(i_kind) indxens1(nanals),indxens2(nanals)
 integer(i_kind) indxens1_modens(nanals*neigv),indxens2_modens(nanals*neigv)
 real(r_single) hxpost(nanals),hxprior(nanals),hxinc(nanals),&
-             hxpost_modens(nanals*neigv),hxprior_modens(nanals*neigv),&
+               hxpost_modens(nanals*neigv),hxprior_modens(nanals*neigv),&
              hxinc_modens(nanals*neigv),dist,lnsig,obt,&
              sqrtoberr,corrlengthinv,lnsiglinv,obtimelinv
 real(r_single) corrsqr,covl_fact
@@ -188,7 +195,7 @@ allocate(corrlengthsq_orig(nobstot),lnsigl_orig(nobstot))
 ! define a few frequently used parameters
 r_nanals=one/float(nanals)
 r_nanalsm1=one/float(nanals-1)
-taper_thresh = tiny(taper1)
+taper_thresh = epsilon(taper1)
 
 ! default is to assimilate in order they are read in.
 
@@ -364,7 +371,7 @@ do niter=1,numiter
                 indxassim(nobx:nobstot) = pack(indxassim2,indxassim2 /= 0)
                 do nob=nobx,nobstot
                    nob1 = indxassim(nob)
-                   paoverpb_save(nob1) = paoverpb_thresh + tiny(paoverpb_thresh)
+                   paoverpb_save(nob1) = paoverpb_thresh + taper_thresh
                    iskip(nob1) = 1
                 enddo
                 ! check to see that all obs accounted for.
@@ -523,9 +530,9 @@ do niter=1,numiter
 
 !  Only need to recalculate nearest points when lat/lon is different
       if(nobx == 1 .or. &
-         abs(obloclat(nob)-obloclat(nobm)) .gt. tiny(obloclat(nob)) .or. &
-         abs(obloclon(nob)-obloclon(nobm)) .gt. tiny(obloclon(nob)) .or. &
-         abs(corrlengthsq(nob)-corrlengthsq(nobm)) .gt. tiny(corrlengthsq(nob))) then
+         abs(obloclat(nob)-obloclat(nobm)) .gt. taper_thresh .or. &
+         abs(obloclon(nob)-obloclon(nobm)) .gt. taper_thresh .or. &
+         abs(corrlengthsq(nob)-corrlengthsq(nobm)) .gt. taper_thresh) then
        nobm=nob
        ! determine localization length scales based on latitude of ob.
        nf2=0
@@ -604,7 +611,7 @@ do niter=1,numiter
              taper3=taper(obt*obtimelinv)*hpfhtcon
              taper1=taper_disgrd(ii)*taper3
              i = sresults1(ii)%idx
-             if (neigv > 0) then ! modulated ensemble, no vertical localizatoin
+             if (neigv > 0) then ! modulated ensemble, no explicit vertical localizatoin
                  if (taper1 > taper_thresh) then
                     do nn=nn1,nn2 
                        nlev = index_pres(nn) ! vertical index for nn'th control variable
@@ -612,6 +619,8 @@ do niter=1,numiter
                        call expand_ens(neigv,nanals, &
                                        anal_chunk(:,i,nn,nb), &
                                        ens_tmp(:),vlocal_evecs(:,nlev))
+                       ! note:  factor of 1/(nanals-1) included in taper1
+                       ! (through hpfhtcon)
                        kfgain=taper1*sum(ens_tmp*anal_obtmp_modens)
                        ! update mean.
                        ensmean_chunk(i,nn,nb) = ensmean_chunk(i,nn,nb) + &
@@ -634,6 +643,8 @@ do niter=1,numiter
                     if (taperv(nnn) > taper_thresh) then
                         ! gain includes covariance localization.
                         ! update all time levels
+                        ! factor of 1/(nanals-1) included in taperv
+                        ! (through hpfhtcon)
                         kfgain=taperv(nnn)*sum(anal_chunk(:,i,nn,nb)*anal_obtmp)
                         ! update mean.
                         ensmean_chunk(i,nn,nb) = ensmean_chunk(i,nn,nb) + kfgain*obinc_tmp
