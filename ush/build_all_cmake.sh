@@ -6,7 +6,7 @@ cd ..
 pwd=$(pwd)
 
 dir_root=${1:-$pwd}
-
+prod=${2:-1}
 if [[ -d /dcom && -d /hwrf ]] ; then
     . /usrx/local/Modules/3.2.10/init/sh
     target=wcoss
@@ -70,8 +70,11 @@ else
     export NETCDF_CXX4FLAGS=-I/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/include
 fi
 
-cmake -DBUILD_UTIL=ON -DCMAKE_BUILD_TYPE=PRODUCTION -DBUILD_CORELIBS=OFF ..
-
+if [ $prod = 1 ]; then
+  cmake -DBUILD_UTIL=ON -DCMAKE_BUILD_TYPE=PRODUCTION -DBUILD_CORELIBS=OFF ..
+else
+  cmake -DBUILD_UTIL=ON -DBUILD_CORELIBS=OFF ..
+fi
 make -j 8
 
 exit

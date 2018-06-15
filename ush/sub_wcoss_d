@@ -307,7 +307,7 @@ done
 
 echo "export OMP_NUM_THREADS=$threads"                          >> $cfile
 echo "" >>$cfile
-echo ". "$(awk '{ print $1, $2, $3, $4, $5, $6, $7, $8, $9 }' $regdir/regression_var.out) >> $cfile 
+echo ". "$(awk '{ print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10 }' $regdir/regression_var.out) >> $cfile 
 echo "" >>$cfile
 
 echo "module purge"    >> $cfile

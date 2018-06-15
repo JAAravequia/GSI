@@ -238,7 +238,6 @@ project(GSI)
     add_subdirectory(util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radtime.fd)
   endif(BUILD_UTIL) 
   add_subdirectory(util/ndate)
-
   if(BUILD_UNIT_TESTING)
     set(CTEST_TEST_TIMEOUT 400 )
     find_package(GSICONTROL)
