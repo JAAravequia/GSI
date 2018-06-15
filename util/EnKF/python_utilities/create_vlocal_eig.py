@@ -1,6 +1,8 @@
-from numpy.linalg import eigh
 import numpy as np
 import sys
+
+# utility to create vlocal_eig.dat for modulated ensemble model-space
+# vertical localization in EnKF
 
 if len(sys.argv) < 4:
     sys.stdout.write('python create_vlocal_eig.py <cutoff> <thresh> <hyblev_file>\n')
@@ -10,11 +12,11 @@ if len(sys.argv) < 4:
     sys.stdout.write('eigenvectors written to vlocal_eig.dat\n')
     raise SystemExit
 
-# read in localization cutoff distance
+# read in localization cutoff distance in (units on lnp)
 cutoff = float(sys.argv[1])
-# read in threshold for truncating eigenspace of localization matrix
+# read in threshold for truncating eigenspace of localization matrix (95 = 95% var explained)
 thresh = 0.01*float(sys.argv[2])
-# read in hybrid levels (hyblevs file)
+# read in hybrid levels (hyblevs file from fix/fix_am)
 siglev = sys.argv[3]
 
 # get ak,bk from hyblevs file
@@ -43,7 +45,7 @@ def localization(r):
     #taper = np.exp(-(r**2/0.15)) # Gaussian
     return taper
 
-# set mean surface pressure
+# set mean surface pressure (has to be a global constant)
 psgmean = 1.e5
 
 pressimn = np.empty((nlevs+1),'d')  # interface pressure
@@ -51,8 +53,13 @@ presslmn = np.empty((nlevs),'d')  # mid-layer pressure
 for k in range(nlevs+1):
     pressimn[k] = ak[k] + bk[k]*psgmean
 for k in range(nlevs):
+    # phillips vertical interpolation from guess_grids.F90 in GSI (used for global model)
     presslmn[k] = ((pressimn[k]**kap1-pressimn[k+1]**kap1)/(kap1*(pressimn[k]-pressimn[k+1])))**kapr
-    #print k,presslmn[k]
+    # simple average of interface pressures (used by fv3_regional in GSI)
+    #presslmn[k] = 0.5*(pressimn[k]+pressimn[k+1])
+    # linear in logp interpolation from interface pressures
+    #presslmn[k] = np.exp(0.5*(np.log(pressimn[k])+np.log(pressimn[k+1])))
+    print k,presslmn[k]
 logp = -np.log(presslmn) # (ranges from -2 to -11)
 
 
@@ -65,25 +72,30 @@ for j in range(nlevs):
 #imgplot=plt.imshow(covlocal)
 #plt.colorbar()
 
-evals,eigs=eigh(covlocal)
+evals,eigs=np.linalg.eigh(covlocal)
 evalsum = evals.sum(); neig = 0
 evals = np.where(evals > 1.e-10, evals, 1.e-10)
-#evalsum = evals.sum(); neig = 0
 frac = 0.0
 while frac < thresh:
     frac = evals[nlevs-neig-1:nlevs].sum()/evalsum
     neig += 1
 print 'neig = ',neig
 zz = (eigs*np.sqrt(evals/frac)).T
-print evals
+#print evals
 f = open('vlocal_eig.dat','w')
 f.write('%s %s %s\n' % (neig,thresh,cutoff))
+print 'rescaled eigenvalues'
+eigsum = 0.
 for j in range(neig):
     f.write('%s\n' % evals[nlevs-j-1])
-    print j,evals[nlevs-j-1]
+    print j+1,evals[nlevs-j-1]/frac
+    eigsum += evals[nlevs-j-1]/frac
     for k in range(nlevs):
         f.write('%s\n' % zz[nlevs-j-1,k])
 f.close()
+print 'sum of scaled truncated eigvals should equal sum of original evals'
+print '(difference below should be nearly zero)'
+print np.abs(eigsum-evals.sum())
 
 # check data
 f = open('vlocal_eig.dat','r')
@@ -92,19 +104,20 @@ evecs2 = np.zeros((neig,nlevs),np.float)
 f.readline()
 for j in range(neig):
     evals2[j] = float(f.readline())
-    print j,evals2[j]/frac
+#   print j,evals2[j]/frac
     for k in range(nlevs):
         evecs2[j,k] = float(f.readline())
 # this should be a diagonal matrix with eigvals on diagonal
 covlocal2 = np.dot(evecs2,evecs2.T)
-print covlocal2.shape
+print 'diagonal elements of scaled dot(E,E^T), should be scaled evals'
 print np.diag(covlocal2)
 mask = np.ones(covlocal2.shape, dtype=bool)
 np.fill_diagonal(mask, 0)
-print covlocal2[mask].max(),covlocal2[mask].min()
+print 'max/min off diagonal elements (should be zero)',covlocal2[mask].max(),covlocal2[mask].min()
 # this should be the (truncated) localization matrix
 covlocal2 = np.dot(evecs2.T,evecs2)
-print covlocal2.shape
+#print covlocal2.shape
+print 'diagonal of localization matrix (should be ones)'
 print np.diag(covlocal2)
 #print covlocal2[nlevs/2,:]
 
