@@ -147,11 +147,11 @@ logical vlocal, kdobs, compute_weights
 ! For LETKF core processes
 real(r_kind),allocatable,dimension(:,:) :: hxens
 real(r_single),allocatable,dimension(:,:,:) :: ens_tmp
-real(r_single),allocatable,dimension(:,:) :: obperts,obens,hxenss
+real(r_single),allocatable,dimension(:,:) :: obperts,obens,painv
 real(r_single),allocatable,dimension(:) :: kfgain, dfs, reducedgain
 real(r_kind),allocatable,dimension(:) :: rdiag,dep,rloc,statesprd_prior
-real(r_kind),allocatable,dimension(:,:) :: trans,u,vt
-real(r_kind),dimension(nanals) :: work,work2
+real(r_single),allocatable,dimension(:,:) :: trans,u,vt
+real(r_single),dimension(nanals) :: work
 ! kdtree stuff
 type(kdtree2_result),dimension(:),allocatable :: sresults
 integer(i_kind), dimension(:), allocatable :: indxassim, indxob
@@ -426,7 +426,7 @@ endif
 !$omp parallel do schedule(dynamic) private(npt,nob,nobsl, &
 !$omp                  gain,nobsl2,oberrfact,ngrd1,corrlength,ens_tmp, &
 !$omp                  nf,vdist,kfgain,obens,indxassim,indxob, &
-!$omp                  nn,hxens,hxenss,dfs,rdiag,dep,rloc,i,work,work2,trans, &
+!$omp                  nn,hxens,painv,dfs,rdiag,dep,rloc,i,work,trans, &
 !$omp                  oindex,deglat,dist,corrsq,nb,sresults, &
 !$omp                  nsvals,u,vt,reducedgain) &
 !$omp  reduction(+:t1,t2,t3,t4,t5) &
@@ -582,6 +582,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
          cycle verloop
       end if
       allocate(hxens(nens,nobsl2))
+      allocate(painv(nens,nobsl2))
       allocate(rdiag(nobsl2))
       allocate(dep(nobsl2))
       do nob=1,nobsl2
@@ -638,12 +639,8 @@ grdloop: do npt=1,numptsperproc(nproc+1)
          ! use gain form
          nsvals = min(nens,nobsl2)
          allocate(u(nens,nens),vt(nsvals,nobsl2),reducedgain(nobsl2))
-         call gletkf_core(nobsl2,hxens,rdiag,rloc(1:nobsl2),nens,nens/nanals,nsvals,u,vt)
-         deallocate(rloc,rdiag)
-
-         ! save single precision copy of hxens, deallocate
-         allocate(hxenss(nens,nobsl2)); hxenss = hxens
-         deallocate(hxens)
+         call gletkf_core(nobsl2,hxens,painv,rdiag,rloc(1:nobsl2),nens,nens/nanals,nsvals,u,vt)
+         deallocate(rloc,rdiag,hxens)
 
          t4 = t4 + mpi_wtime() - t1
          t1 = mpi_wtime()
@@ -653,7 +650,10 @@ grdloop: do npt=1,numptsperproc(nproc+1)
          do i=1,ncdim
             ! if not vlocal, update all state variables in column.
             if(vlocal .and. index_pres(i) /= nn) cycle
-            call sgemv('t',nens,nobsl2,1.e0,hxenss,nens,&
+            !do nob=1,nobsl2
+            !   kfgain(nob) = sum(painv(:,nob)*ens_tmp(:,i,nb))
+            !enddo
+            call sgemv('t',nens,nobsl2,1.e0,painv,nens,&
                        ens_tmp(:,i,nb),1,0.e0,kfgain,1)
             ensmean_chunk(npt,i,nb) = ensmean_chunk(npt,i,nb) + sum(kfgain*dep)
             call gletkf_gain(nens,nobsl2,nsvals,u,vt,ens_tmp(:,i,nb),reducedgain)
@@ -663,19 +663,12 @@ grdloop: do npt=1,numptsperproc(nproc+1)
             enddo
          enddo
          enddo
-         deallocate(u,vt,reducedgain,hxenss)
+         deallocate(u,vt,reducedgain)
 
       else
-         call letkf_core(nobsl2,hxens,rdiag,dep,rloc(1:nobsl2),trans,nens,nens/nanals,compute_weights)
-         deallocate(rloc,rdiag)
+         call letkf_core(nobsl2,hxens,painv,rdiag,dep,rloc(1:nobsl2),trans,nens,nens/nanals,compute_weights)
+         deallocate(rloc,rdiag,hxens)
 
-         ! save single precision copy of hxens for perturbed obs LETKF/DeNKF, deallocate
-         if (.not. deterministic .or. (deterministic .and. denkf)) then
-            allocate(hxenss(nens,nobsl2)); hxenss = hxens
-         else
-            deallocate(dep)
-         endif
-         deallocate(hxens)
 
          t4 = t4 + mpi_wtime() - t1
          t1 = mpi_wtime()
@@ -688,9 +681,9 @@ grdloop: do npt=1,numptsperproc(nproc+1)
             if (deterministic) then
                if (denkf) then
                   !do nob=1,nobsl2
-                  !   kfgain(nob) = sum(hxenss(:,nob)*ens_tmp(:,i,nb))
+                  !   kfgain(nob) = sum(painv(:,nob)*ens_tmp(:,i,nb))
                   !enddo
-                  call sgemv('t',nens,nobsl2,1.e0,hxenss,nens,&
+                  call sgemv('t',nens,nobsl2,1.e0,painv,nens,&
                              ens_tmp(:,i,nb),1,0.e0,kfgain,1)
                   ensmean_chunk(npt,i,nb) = ensmean_chunk(npt,i,nb) + sum(kfgain*dep)
                   do nanal=1,nanals
@@ -705,23 +698,20 @@ grdloop: do npt=1,numptsperproc(nproc+1)
                     endif
                     call stop2(911)
                   endif
-                  work(1:nanals) = anal_chunk(1:nanals,npt,i,nb)
-                  work2(1:nanals) = ensmean_chunk(npt,i,nb)
-                  if(r_kind == kind(1.d0)) then
-                     call dgemv('t',nanals,nanals,1.d0,trans,nanals,work,1,1.d0, &
-                          & work2,1)
-                  else
-                     call sgemv('t',nanals,nanals,1.e0,trans,nanals,work,1,1.e0, &
-                          & work2,1)
-                  end if
-                  ensmean_chunk(npt,i,nb) = sum(work2(1:nanals)) * r_nanals
-                  anal_chunk(1:nanals,npt,i,nb) = work2(1:nanals)-ensmean_chunk(npt,i,nb)
+                  !work(1:nanals) = ensmean_chunk(npt,i,nb)
+                  !do nanal=1,nanals
+                  !   work(nanal) = work(nanal) + sum(trans(:,nanal)*anal_chunk(1:nanals,npt,i,nb))
+                  !enddo
+                  call sgemv('t',nanals,nanals,1.e0,trans,nanals,&
+                              anal_chunk(1:nanals,npt,i,nb),1,1.e0,work,1)
+                  ensmean_chunk(npt,i,nb) = sum(work(1:nanals)) * r_nanals
+                  anal_chunk(1:nanals,npt,i,nb) = work(1:nanals)-ensmean_chunk(npt,i,nb)
                endif
             else ! perturbed obs using LETKF gain.
                !do nob=1,nobsl2
-               !   kfgain(nob) = sum(hxenss(:,nob)*ens_tmp(:,i,nb))
+               !   kfgain(nob) = sum(painv(:,nob)*ens_tmp(:,i,nb))
                !enddo
-               call sgemv('t',nens,nobsl2,1.e0,hxenss,nens,&
+               call sgemv('t',nens,nobsl2,1.e0,painv,nens,&
                           ens_tmp(:,i,nb),1,0.e0,kfgain,1)
                ensmean_chunk(npt,i,nb) = ensmean_chunk(npt,i,nb) + sum(kfgain*dep)
                do nanal=1,nanals
@@ -733,7 +723,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
          enddo
       endif
       ! deallocate arrays needed for perturbed obs LETKF and DENKF
-      if (allocated(hxenss)) deallocate(hxenss)
+      if (allocated(painv)) deallocate(painv)
       if (allocated(kfgain)) deallocate(kfgain)
       if (allocated(dep)) deallocate(dep)
       if (allocated(obens)) deallocate(obens)
@@ -820,7 +810,7 @@ return
 
 end subroutine letkf_update
 
-subroutine letkf_core(nobsl,hxens,rdiaginv,dep,rloc,trans,nanals,neigv,compute_weights)
+subroutine letkf_core(nobsl,hxens,painv,rdiaginv,dep,rloc,trans,nanals,neigv,compute_weights)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    letkf_core
@@ -845,12 +835,8 @@ subroutine letkf_core(nobsl,hxens,rdiaginv,dep,rloc,trans,nanals,neigv,compute_w
 !
 !   input argument list:
 !     nobsl    - number of observations in the local patch
-!     hxens    - on input: first-guess ensembles on observation space
-!                on output: overwritten with Painv*YbRinv^T, where
-!                Painv is inverse of analysis error cov in ensemble space 
-!                and YbRinv is hxens * R **-1 (including ob error localization).
-!                this is used to compute kalman gain by pre-multiplying with
-!                model space ensemble perts.
+!     hxens    - on input: first-guess ensembles on observation space (Yb)
+!                on output: overwritten with YbRinv
 !     rdiaginv - inverse of diagonal element of observation error covariance
 !     dep      - observation departure from first guess mean
 !     rloc     - localization function to each observations
@@ -864,6 +850,11 @@ subroutine letkf_core(nobsl,hxens,rdiaginv,dep,rloc,trans,nanals,neigv,compute_w
 !   output argument list:
 !     trans    - transform matrix for this point. Not created if
 !                compute_weights=F
+!     painv    - Painv*YbRinv^T, where
+!                Painv is inverse of analysis error cov in ensemble space 
+!                and YbRinv is hxens * R **-1 (including ob error localization).
+!                this is used to compute kalman gain by pre-multiplying with
+!                model space ensemble perts.
 !
 ! attributes:
 !   language:  f95
@@ -885,15 +876,16 @@ subroutine letkf_core(nobsl,hxens,rdiaginv,dep,rloc,trans,nanals,neigv,compute_w
 implicit none
 integer(i_kind)                      ,intent(in ) :: nobsl,nanals,neigv
 real(r_kind),dimension(nanals,nobsl ),intent(inout) :: hxens
+real(r_single),dimension(nanals,nobsl ),intent(out) :: painv
 logical, intent(in) :: compute_weights
 real(r_kind),dimension(nobsl        ),intent(in ) :: rdiaginv
 real(r_kind),dimension(nobsl        ),intent(in ) :: dep
 real(r_kind),dimension(nobsl        ),intent(in ) :: rloc
-real(r_kind),dimension(nanals,nanals),intent(out) :: trans
+real(r_single),dimension(nanals,nanals),intent(out) :: trans
 real(r_kind), allocatable, dimension(:,:) :: work1,work2,eivec,pa
 real(r_kind), allocatable, dimension(:) :: rrloc,eival,work3
 real(r_kind) :: rho
-integer(i_kind) :: i,j,nob,nanal,ierr,lwork
+integer(i_kind) :: i,j,nob,nanal,ierr
 !for dsyevr
 integer(i_kind) iwork(10*nanals),isuppz(2*nanals)
 real(r_kind) vl,vu,work(70*nanals)
@@ -933,10 +925,10 @@ do nanal=1,nanals
 end do
 ! eigenvalues and eigenvectors of [ hdxb^T Rinv hdxb + (m-1) I ]
 ! use LAPACK dsyev
-!eivec(:,:) = work1(:,:); lwork = -1
-!call dsyev('V','L',nanals,eivec,nanals,eival,work1(1,1),lwork,ierr)
-!lwork = min(nanals*nanals, int(work1(1,1)))
-!call dsyev('V','L',nanals,eivec,nanals,eival,work1(1,1),lwork,ierr)
+!eivec(:,:) = work1(:,:)
+!call dsyev('V','L',nanals,eivec,nanals,eival,work1(1,1),-1,ierr)
+!call dsyev('V','L',nanals,eivec,nanals,eival,work1(1,1),&
+!           min(nanals*nanals, int(work1(1,1))),ierr)
 ! use LAPACK dsyevd
 !call dsyevd('V','L',nanals,eivec,nanals,eival,work,size(work),iwork,size(iwork),ierr)
 ! use LAPACK dsyevr 
@@ -987,7 +979,7 @@ end if
 ! over-write hxens with Pa hdxb_rinv
 ! (pre-multiply with ensemble perts to compute Kalman gain - 
 !  eqns 20-23 in Hunt et al 2007 paper)
-hxens = work2
+painv = work2
 
 ! for DEnKF or perturbed obs the rest is not needed
 if (compute_weights) then
@@ -1005,12 +997,13 @@ if (compute_weights) then
         work1(i,j) = eivec(i,j) * rho
      end do
   end do
+  deallocate(work2); allocate(work2(nanals,nanals))
   if(r_kind == kind(1.d0)) then
      call dgemm('n','t',nanals,nanals,nanals,1.d0,work1,nanals,eivec,&
-          & nanals,0.d0,trans,nanals)
+          & nanals,0.d0,work2,nanals)
   else
      call sgemm('n','t',nanals,nanals,nanals,1.e0,work1,nanals,eivec,&
-          & nanals,0.e0,trans,nanals)
+          & nanals,0.e0,work2,nanals)
   end if
   !do j=1,nanals
   !   do i=1,nanals
@@ -1023,9 +1016,10 @@ if (compute_weights) then
   ! T + Pa hdxb_rinv^T dep
   do j=1,nanals
      do i=1,nanals
-        trans(i,j) = trans(i,j) + work3(i)
+        work2(i,j) = work2(i,j) + work3(i)
      end do
   end do
+  trans = work2
 endif ! compute_weights = T
 
 deallocate(work2,eivec,pa,work1,rrloc,eival,work3)
@@ -1033,7 +1027,7 @@ deallocate(work2,eivec,pa,work1,rrloc,eival,work3)
 return
 end subroutine letkf_core
 
-subroutine gletkf_core(nobsl,hxens,rdiaginv,rloc,nanals,neigv,nsvals,u,vt)
+subroutine gletkf_core(nobsl,hxens,painv,rdiaginv,rloc,nanals,neigv,nsvals,u,vt)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    gletkf_core
@@ -1048,12 +1042,8 @@ subroutine gletkf_core(nobsl,hxens,rdiaginv,rloc,nanals,neigv,nsvals,u,vt)
 !
 !   input argument list:
 !     nobsl    - number of observations in the local patch
-!     hxens    - on input: first-guess ensembles on observation space
-!                on output: overwritten with Painv*YbRinv^T, where
-!                Painv is inverse of analysis error cov in ensemble space 
-!                and YbRinv is hxens * R **-1 (including ob error localization).
-!                this is used to compute kalman gain by pre-multiplying with
-!                model space ensemble perts.
+!     hxens    - on input: first-guess ensembles on observation space (Yb)
+!                on output: overwritten with YbRinv
 !     rdiaginv - inverse of diagonal element of observation error covariance
 !     rloc     - localization function to each observations
 !     nanals   - number of ensemble members
@@ -1076,6 +1066,11 @@ subroutine gletkf_core(nobsl,hxens,rdiaginv,rloc,nanals,neigv,nsvals,u,vt)
 !                (dimension (nsvals,nobsl)) scaled by
 !                inverse singular values times R ** -1/2
 !                (including ob error localzation).
+!     painv   - Painv*YbRinv^T, where
+!                Painv is inverse of analysis error cov in ensemble space 
+!                and YbRinv is hxens * R **-1 (including ob error localization).
+!                this is used to compute kalman gain by pre-multiplying with
+!                model space ensemble perts.
 !
 ! attributes:
 !   language:  f95
@@ -1100,11 +1095,14 @@ subroutine gletkf_core(nobsl,hxens,rdiaginv,rloc,nanals,neigv,nsvals,u,vt)
 implicit none
 integer(i_kind)                      ,intent(in ) :: nobsl,nsvals,nanals,neigv
 real(r_kind),dimension(nanals,nobsl ),intent(inout)  :: hxens
-real(r_kind),dimension(nanals,nanals),intent(inout) :: u
-real(r_kind),dimension(nsvals,nobsl),intent(inout) :: vt
+real(r_single),dimension(nanals,nobsl ),intent(out)  :: painv
+real(r_single),dimension(nanals,nanals),intent(inout) :: u
+real(r_single),dimension(nsvals,nobsl),intent(inout) :: vt
 real(r_kind),dimension(nobsl        ),intent(in ) :: rdiaginv
 real(r_kind),dimension(nobsl        ),intent(in ) :: rloc
-real(r_kind), allocatable, dimension(:,:) :: work2,painv,work3
+real(r_kind), allocatable, dimension(:,:) :: work2,pa_inv,work3
+real(r_kind),dimension(nanals,nanals) :: lsv
+real(r_kind),dimension(nsvals,nobsl) :: rsvt
 real(r_kind), allocatable, dimension(:) :: work1,rrloc,svals,eigval
 integer(i_kind), allocatable, dimension(:) :: iwork
 real(r_kind) eps
@@ -1113,7 +1111,7 @@ if (nobsl < nanals) then
   print *,'warning: nobsl < nanals',nanals,nobsl,nsvals
 endif
 allocate(work2(nanals,nobsl),work3(nanals,nanals))
-allocate(painv(nanals,nanals))
+allocate(pa_inv(nanals,nanals))
 allocate(svals(nsvals),rrloc(nobsl),eigval(nanals))
 ! hxens sqrt(Rinv)
 rrloc = rdiaginv * rloc
@@ -1124,7 +1122,7 @@ do nanal=1,nanals
    hxens(nanal,1:nobsl) = hxens(nanal,1:nobsl) * rrloc(1:nobsl)
 end do
 ! SVD of YbRsqrtinv (with ob error localization)
-! svals are singular values, u are left singular vecs (nanals,nanals), vt
+! svals are singular values, lsv are left singular vecs (nanals,nanals), rsvt
 ! are right singular vecs (nanals,nobsl) if nanals<nobsl or (nobsl,nobsl) if
 ! nobsl<nanals
 work2 = hxens
@@ -1133,31 +1131,31 @@ work2 = hxens
 if(r_kind == kind(1.d0)) then
    if (nobsl < nanals) then
       allocate(work1(1))
-      call dgesvd('a','s',nanals,nobsl,work2,nanals,svals,u,nanals,vt,nsvals,work1,-1,ierr)
+      call dgesvd('a','s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,-1,ierr)
       lwork = work1(1); deallocate(work1); allocate(work1(lwork))
-      call dgesvd('a','s',nanals,nobsl,work2,nanals,svals,u,nanals,vt,nsvals,work1,lwork,ierr)
+      call dgesvd('a','s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,lwork,ierr)
       deallocate(work1)
    else
       allocate(work1(1))
       allocate(iwork(8*nsvals))
-      call dgesdd('s',nanals,nobsl,work2,nanals,svals,u,nanals,vt,nsvals,work1,-1,iwork,ierr)
+      call dgesdd('s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,-1,iwork,ierr)
       lwork = work1(1); deallocate(work1); allocate(work1(lwork))
-      call dgesdd('s',nanals,nobsl,work2,nanals,svals,u,nanals,vt,nsvals,work1,lwork,iwork,ierr)
+      call dgesdd('s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,lwork,iwork,ierr)
       deallocate(iwork,work1)
    endif
 else
    if (nobsl < nanals) then
       allocate(work1(1))
-      call sgesvd('a','s',nanals,nobsl,work2,nanals,svals,u,nanals,vt,nsvals,work1,-1,ierr)
+      call sgesvd('a','s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,-1,ierr)
       lwork = work1(1); deallocate(work1); allocate(work1(lwork))
-      call sgesvd('a','s',nanals,nobsl,work2,nanals,svals,u,nanals,vt,nsvals,work1,lwork,ierr)
+      call sgesvd('a','s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,lwork,ierr)
       deallocate(work1)
    else
       allocate(work1(1))
       allocate(iwork(8*nsvals))
-      call sgesdd('s',nanals,nobsl,work2,nanals,svals,u,nanals,vt,nsvals,work1,-1,iwork,ierr)
+      call sgesdd('s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,-1,iwork,ierr)
       lwork = work1(1); deallocate(work1); allocate(work1(lwork))
-      call sgesdd('s',nanals,nobsl,work2,nanals,svals,u,nanals,vt,nsvals,work1,lwork,iwork,ierr)
+      call sgesdd('s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,lwork,iwork,ierr)
       deallocate(iwork,work1)
    endif
 endif
@@ -1166,22 +1164,22 @@ where (svals < eps) svals = eps
 eigval = eps+(nanals/neigv)-1
 eigval(1:nsvals) = svals(1:nsvals)**2+(nanals/neigv)-1
 do nanal=1,nanals
-   work3(nanal,:) = u(nanal,:)/eigval
+   work3(nanal,:) = lsv(nanal,:)/eigval
 enddo
-! painv
+! pa_inv
 if(r_kind == kind(1.d0)) then
-   call dgemm('n','t',nanals,nanals,nanals,1.d0,work3,nanals,u,&
-        nanals,0.d0,painv,nanals)
+   call dgemm('n','t',nanals,nanals,nanals,1.d0,work3,nanals,lsv,&
+        nanals,0.d0,pa_inv,nanals)
 else
-   call sgemm('n','t',nanals,nanals,nanals,1.e0,work3,nanals,u,&
-        nanals,0.e0,painv,nanals)
+   call sgemm('n','t',nanals,nanals,nanals,1.e0,work3,nanals,lsv,&
+        nanals,0.e0,pa_inv,nanals)
 end if
 ! scaling needed for reduced gain
 do nanal=1,nanals
-   u(nanal,:) = u(nanal,:)*(1.-sqrt((nanals/neigv-1)/eigval))
+   u(nanal,:) = lsv(nanal,:)*(1.-sqrt((nanals/neigv-1)/eigval))
 enddo
 do nob=1,nobsl
-   vt(:,nob) = vt(:,nob)*rrloc(nob)/svals
+   vt(:,nob) = rsvt(:,nob)*rrloc(nob)/svals
 enddo
 ! convert hxens * Rinv^T from hxens * sqrt(Rinv)^T
 do nanal=1,nanals
@@ -1189,19 +1187,19 @@ do nanal=1,nanals
 end do
 ! Painv hdxb_rinv^T
 if(r_kind == kind(1.d0)) then
-   call dgemm('n','n',nanals,nobsl,nanals,1.d0,painv,nanals,hxens,&
+   call dgemm('n','n',nanals,nobsl,nanals,1.d0,pa_inv,nanals,hxens,&
         nanals,0.d0,work2,nanals)
 else
    call sgemm('n','n',nanals,nobsl,nanals,1.e0,painv,nanals,hxens,&
         nanals,0.e0,work2,nanals)
 end if
-! over-write hxens with Painv hdxb_rinv^T
-! pre-multiply with ensemble perts to compute Kalman gain - 
+! painv = pa_inv hdxb_rinv^T
+! pre-multiply with ensemble perts to compute Kalman gain 
 ! (eqns 20-23 in Hunt et al 2007 paper)
-hxens = work2 
-! return hxens to compute kfgain, u,v to compute reducedgain
+painv = work2 
+! return painv to compute kfgain, u,v to compute reducedgain
 ! clean up
-deallocate(work2,work3,painv,svals,eigval,rrloc)
+deallocate(work2,work3,pa_inv,svals,eigval,rrloc)
 
 return
 end subroutine gletkf_core
@@ -1255,30 +1253,24 @@ subroutine gletkf_gain(nanals,nobsl,nsvals,u,vt,xens,reducedgain)
 !     ( vt contains (v.T/svals)*sqrtoberrvar_inv )
 implicit none
 integer(i_kind),intent(in) :: nanals,nobsl,nsvals
-real(r_kind),dimension(nanals,nanals),intent(in) :: u
-real(r_kind),dimension(nsvals,nobsl ),intent(in) :: vt
+real(r_single),dimension(nanals,nanals),intent(in) :: u
+real(r_single),dimension(nsvals,nobsl ),intent(in) :: vt
 real(r_single),dimension(nanals     ),intent(in) :: xens
 real(r_single),dimension(nobsl      ),intent(out) :: reducedgain
 ! local vars
 real(r_single),dimension(nanals) :: work1
-real(r_single),dimension(nanals,nanals) :: worku
-real(r_single),dimension(nsvals,nobsl) :: workvt
+
 !integer(i_kind) i,j
-
-! single precision copies of u,vt
-worku = u; workvt = vt
-
 !do j=1,nanals
-!   work1(j) = sum(worku(:,j)*xens(:))
+!   work1(j) = sum(u(:,j)*xens(:))
 !enddo
 !do i=1,nobsl
-!   reducedgain(i) = sum(workvt(1:nsvals,i)*work1(1:nsvals))
+!   reducedgain(i) = sum(vt(1:nsvals,i)*work1(1:nsvals))
 !enddo
 
-! using BLAS
-call sgemv('t',nanals,nanals,1.e0,worku,nanals,&
+call sgemv('t',nanals,nanals,1.e0,u,nanals,&
            xens,1,0.e0,work1,1)
-call sgemv('t',nsvals,nobsl,1.e0,workvt,nsvals,&
+call sgemv('t',nsvals,nobsl,1.e0,vt,nsvals,&
            work1(1:nsvals),1,0.e0,reducedgain,1)
 
 end subroutine gletkf_gain
