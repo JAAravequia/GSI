@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-  $baselineDir = "$NS/GSI-Baseline";
+  $baselineDir = "$ENV{'NS'}/GSI-Baseline";
   chdir ($baselineDir);
   $hashcmd = 'git log --pretty=oneline | head -1 | awk \'{print $1}\'';
   $lasthash = `$hashcmd`;

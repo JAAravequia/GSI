@@ -314,6 +314,9 @@ case $regtest in
         elif [[ "$machine" = "WCOSS_C" ]]; then
             topts[1]="0:15:00" ; popts[1]="20/2/" ; ropts[1]="1024/1"  # sub_wcoss_c popts are "#tasks/#nodes/"
             topts[2]="0:15:00" ; popts[2]="16/4/" ; ropts[2]="1024/1"
+        elif [[ "$machine" = "WCOSS_D" ]]; then
+            topts[1]="0:15:00" ; popts[1]="28/2/" ; ropts[1]="1"  
+            topts[2]="0:15:00" ; popts[2]="28/4/" ; ropts[2]="1"
         elif [[ "$machine" = "s4" ]]; then
            topts[1]="0:25:00" ; popts[1]="16/1/" ; ropts[1]="/1"
            topts[2]="0:25:00" ; popts[2]="16/2/" ; ropts[2]="/1"
