@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-  $baselineDir = "/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/GSI-Baseline";
+  $baselineDir = "$NS/GSI-Baseline";
   chdir ($baselineDir);
   $hashcmd = 'git log --pretty=oneline | head -1 | awk \'{print $1}\'';
   $lasthash = `$hashcmd`;
@@ -15,9 +15,9 @@
     # rebuild new master    
     # this is just for mars until it gets added to the master
 #   $sedcmd = 'sed -i \'s/v\\[0-9/m\\[0-9/g\' CMakeLists.txt';
-    system($sedcmd);
+#   system($sedcmd);
     $buildcmd = "./ush/build_all_cmake.sh $baselineDir 0";
-#   system($buildcmd); 
+    system($buildcmd); 
     chdir ("$baselineDir/build");
     system("REND=2 ctest -j 14");
   }
