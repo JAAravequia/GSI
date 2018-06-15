@@ -1106,10 +1106,14 @@ real(r_kind),dimension(nsvals,nobsl) :: rsvt
 real(r_kind), allocatable, dimension(:) :: work1,rrloc,svals,eigval
 integer(i_kind), allocatable, dimension(:) :: iwork
 real(r_kind) eps
+logical use_gesvd
 integer(i_kind) :: nanal,ierr,lwork,nob
-if (nobsl < nanals) then
-  print *,'warning: nobsl < nanals',nanals,nobsl,nsvals
-endif
+!if (nobsl < nanals) then
+!  print *,'warning: nobsl < nanals',nanals,nobsl,nsvals
+!endif
+! force the use of gesvd to save memory (workspace is smaller)
+! otherwise gesdd will be used except when nobsl < nanals
+use_dgesvd = .false.
 allocate(work2(nanals,nobsl),work3(nanals,nanals))
 allocate(pa_inv(nanals,nanals))
 allocate(svals(nsvals),rrloc(nobsl),eigval(nanals))
@@ -1129,7 +1133,7 @@ work2 = hxens
 ! divide and conquer algorithmm (gesdd) should be faster, use it if possible
 ! (as long as there as many obs than ens members).
 if(r_kind == kind(1.d0)) then
-   if (nobsl < nanals) then
+   if (nobsl < nanals .or. use_gesvd) then
       allocate(work1(1))
       call dgesvd('a','s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,-1,ierr)
       lwork = work1(1); deallocate(work1); allocate(work1(lwork))
@@ -1144,7 +1148,7 @@ if(r_kind == kind(1.d0)) then
       deallocate(iwork,work1)
    endif
 else
-   if (nobsl < nanals) then
+   if (nobsl < nanals .or. use_gesvd) then
       allocate(work1(1))
       call sgesvd('a','s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,-1,ierr)
       lwork = work1(1); deallocate(work1); allocate(work1(lwork))
