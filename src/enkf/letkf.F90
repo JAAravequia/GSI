@@ -1113,7 +1113,7 @@ integer(i_kind) :: nanal,ierr,lwork,nob
 !endif
 ! force the use of gesvd to save memory (workspace is smaller)
 ! otherwise gesdd will be used except when nobsl < nanals
-use_dgesvd = .false.
+use_gesvd = .false.
 allocate(work2(nanals,nobsl),work3(nanals,nanals))
 allocate(pa_inv(nanals,nanals))
 allocate(svals(nsvals),rrloc(nobsl),eigval(nanals))
