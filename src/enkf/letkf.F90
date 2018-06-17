@@ -702,10 +702,12 @@ grdloop: do npt=1,numptsperproc(nproc+1)
                   !do nanal=1,nanals
                   !   work(nanal) = work(nanal) + sum(trans(:,nanal)*anal_chunk(1:nanals,npt,i,nb))
                   !enddo
+                  work(1:nanals) = ensmean_chunk(npt,i,nb)
                   call sgemv('t',nanals,nanals,1.e0,trans,nanals,&
-                              anal_chunk(1:nanals,npt,i,nb),1,1.e0,work,1)
+                             anal_chunk(1:nanals,npt,i,nb),1,1.e0,work,1)
                   ensmean_chunk(npt,i,nb) = sum(work(1:nanals)) * r_nanals
-                  anal_chunk(1:nanals,npt,i,nb) = work(1:nanals)-ensmean_chunk(npt,i,nb)
+                  anal_chunk(1:nanals,npt,i,nb) = &
+                  work(1:nanals)-ensmean_chunk(npt,i,nb)
                endif
             else ! perturbed obs using LETKF gain.
                !do nob=1,nobsl2
@@ -885,9 +887,12 @@ real(r_single),dimension(nanals,nanals),intent(out) :: trans
 real(r_kind), allocatable, dimension(:,:) :: work1,work2,eivec,pa
 real(r_kind), allocatable, dimension(:) :: rrloc,eival,work3
 real(r_kind) :: rho
-integer(i_kind) :: i,j,nob,nanal,ierr
+integer(i_kind) :: i,j,nob,nanal,ierr,lwork,liwork
 !for dsyevr
-integer(i_kind) iwork(10*nanals),isuppz(2*nanals)
+!integer(i_kind), dimension(:), allocatable :: iwork
+!real(r_kind),dimension(:),allocatable :: work
+integer(i_kind) isuppz(2*nanals)
+integer(i_kind) iwork(10*nanals)
 real(r_kind) vl,vu,work(70*nanals)
 !for dsyevd
 !integer(i_kind) iwork(5*nanals+3)
@@ -924,16 +929,22 @@ do nanal=1,nanals
    work1(nanal,nanal) = work1(nanal,nanal) + real(nanals/neigv-1,r_kind)
 end do
 ! eigenvalues and eigenvectors of [ hdxb^T Rinv hdxb + (m-1) I ]
-! use LAPACK dsyev
-!eivec(:,:) = work1(:,:)
-!call dsyev('V','L',nanals,eivec,nanals,eival,work1(1,1),-1,ierr)
-!call dsyev('V','L',nanals,eivec,nanals,eival,work1(1,1),&
-!           min(nanals*nanals, int(work1(1,1))),ierr)
+lwork = size(work); liwork = size(iwork)
 ! use LAPACK dsyevd
-!call dsyevd('V','L',nanals,eivec,nanals,eival,work,size(work),iwork,size(iwork),ierr)
+!eivec(:,:) = work1(:,:)
+!if(r_kind == kind(1.d0)) then
+!  call dsyevd('V','L',nanals,eivec,nanals,eival,work,lwork,iwork,liwork,ierr)
+!else
+!  call ssyevd('V','L',nanals,eivec,nanals,eival,work,lwork,iwork,liwork,ierr)
+!endif
 ! use LAPACK dsyevr 
-call dsyevr('V','A','L',nanals,work1,nanals,vl,vu,1,nanals,-1.d0,nanals,eival,eivec, &
-            nanals,isuppz,work,size(work),iwork,size(iwork),ierr)
+if(r_kind == kind(1.d0)) then
+   call dsyevr('V','A','L',nanals,work1,nanals,vl,vu,1,nanals,-1.d0,nanals,eival,eivec, &
+               nanals,isuppz,work,lwork,iwork,liwork,ierr)
+else
+   call ssyevr('V','A','L',nanals,work1,nanals,vl,vu,1,nanals,-1.e0,nanals,eival,eivec, &
+               nanals,isuppz,work,lwork,iwork,liwork,ierr)
+end if
 if (ierr .ne. 0) print *,'warning: dsyev* failed, ierr=',ierr
 ! Pa = [ hdxb^T Rinv hdxb + (m-1) I ]inv
 do j=1,nanals
@@ -1103,20 +1114,23 @@ real(r_kind),dimension(nobsl        ),intent(in ) :: rloc
 real(r_kind), allocatable, dimension(:,:) :: work2,pa_inv,work3
 real(r_kind),dimension(nanals,nanals) :: lsv
 real(r_kind),dimension(nsvals,nobsl) :: rsvt
-real(r_kind), allocatable, dimension(:) :: work1,rrloc,svals,eigval
-integer(i_kind), allocatable, dimension(:) :: iwork
+real(r_kind), allocatable, dimension(:) :: rrloc,svals,eigval
 real(r_kind) eps
-logical use_gesvd
-integer(i_kind) :: nanal,ierr,lwork,nob
+!logical use_gesvd
+integer(i_kind) :: nanal,ierr,lwork,nob,liwork
+!for dsyevr
+integer(i_kind) isuppz(2*nanals)
+real(r_kind) vl,vu
+!real(r_kind), dimension(:), allocatable :: work1
+!integer(i_kind), allocatable, dimension(:) :: iwork
+integer(i_kind) iwork(10*nanals)
+real(r_kind) work1(70*nanals)
 !if (nobsl < nanals) then
 !  print *,'warning: nobsl < nanals',nanals,nobsl,nsvals
 !endif
-! force the use of gesvd to save memory (workspace is smaller)
-! otherwise gesdd will be used except when nobsl < nanals
-use_gesvd = .false.
 allocate(work2(nanals,nobsl),work3(nanals,nanals))
 allocate(pa_inv(nanals,nanals))
-allocate(svals(nsvals),rrloc(nobsl),eigval(nanals))
+allocate(rrloc(nobsl),eigval(nanals))
 ! hxens sqrt(Rinv)
 rrloc = rdiaginv * rloc
 eps = epsilon(0.0_r_single)
@@ -1125,48 +1139,89 @@ rrloc = sqrt(rrloc)
 do nanal=1,nanals
    hxens(nanal,1:nobsl) = hxens(nanal,1:nobsl) * rrloc(1:nobsl)
 end do
+
 ! SVD of YbRsqrtinv (with ob error localization)
 ! svals are singular values, lsv are left singular vecs (nanals,nanals), rsvt
 ! are right singular vecs (nanals,nobsl) if nanals<nobsl or (nobsl,nobsl) if
 ! nobsl<nanals
-work2 = hxens
-! divide and conquer algorithmm (gesdd) should be faster, use it if possible
-! (as long as there as many obs than ens members).
+!allocate(svals(nsvals))
+!work2 = hxens
+! force the use of gesvd to save memory (workspace is smaller)
+! otherwise gesdd will be used except when nobsl < nanals
+!use_gesvd = .false.
+!! divide and conquer algorithmm (gesdd) should be faster, use it if possible
+!! (as long as there as many obs than ens members).
+!if(r_kind == kind(1.d0)) then
+!   if (nobsl < nanals .or. use_gesvd) then
+!      allocate(work1(1))
+!      call dgesvd('a','s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,-1,ierr)
+!      lwork = work1(1); deallocate(work1); allocate(work1(lwork))
+!      call dgesvd('a','s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,lwork,ierr)
+!      deallocate(work1)
+!   else
+!      allocate(work1(1))
+!      allocate(iwork(8*nsvals))
+!      call dgesdd('s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,-1,iwork,ierr)
+!      lwork = work1(1); deallocate(work1); allocate(work1(lwork))
+!      call dgesdd('s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,lwork,iwork,ierr)
+!      deallocate(iwork,work1)
+!   endif
+!else
+!   if (nobsl < nanals .or. use_gesvd) then
+!      allocate(work1(1))
+!      call sgesvd('a','s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,-1,ierr)
+!      lwork = work1(1); deallocate(work1); allocate(work1(lwork))
+!      call sgesvd('a','s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,lwork,ierr)
+!      deallocate(work1)
+!   else
+!      allocate(work1(1))
+!      allocate(iwork(8*nsvals))
+!      call sgesdd('s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,-1,iwork,ierr)
+!      lwork = work1(1); deallocate(work1); allocate(work1(lwork))
+!      call sgesdd('s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,lwork,iwork,ierr)
+!      deallocate(iwork,work1)
+!   endif
+!endif
+!if (ierr .ne. 0) print *,'warning: lapack svd failed, ierr=',ierr
+!where (svals < eps) svals = eps
+!eigval = eps+(nanals/neigv)-1
+!eigval(1:nsvals) = svals(1:nsvals)**2+(nanals/neigv)-1
+
+! use symmetric eigensolver to get left SV, infer right SV
+! first compute eigenvectors/eigenvalues of Ybsqrtinv^T Ybsqrtinv
+allocate(svals(nanals))
+lwork = size(work1); liwork = size(iwork)
 if(r_kind == kind(1.d0)) then
-   if (nobsl < nanals .or. use_gesvd) then
-      allocate(work1(1))
-      call dgesvd('a','s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,-1,ierr)
-      lwork = work1(1); deallocate(work1); allocate(work1(lwork))
-      call dgesvd('a','s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,lwork,ierr)
-      deallocate(work1)
-   else
-      allocate(work1(1))
-      allocate(iwork(8*nsvals))
-      call dgesdd('s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,-1,iwork,ierr)
-      lwork = work1(1); deallocate(work1); allocate(work1(lwork))
-      call dgesdd('s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,lwork,iwork,ierr)
-      deallocate(iwork,work1)
-   endif
+   call dgemm('n','t',nanals,nanals,nobsl,1.d0,hxens,nanals, &
+        hxens,nanals,0.d0,work3,nanals)
+   call dsyevr('V','A','L',nanals,work3,nanals,vl,vu,1,nanals,-1.d0,nanals,svals,lsv, &
+               nanals,isuppz,work1,lwork,iwork,liwork,ierr)
 else
-   if (nobsl < nanals .or. use_gesvd) then
-      allocate(work1(1))
-      call sgesvd('a','s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,-1,ierr)
-      lwork = work1(1); deallocate(work1); allocate(work1(lwork))
-      call sgesvd('a','s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,lwork,ierr)
-      deallocate(work1)
-   else
-      allocate(work1(1))
-      allocate(iwork(8*nsvals))
-      call sgesdd('s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,-1,iwork,ierr)
-      lwork = work1(1); deallocate(work1); allocate(work1(lwork))
-      call sgesdd('s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,lwork,iwork,ierr)
-      deallocate(iwork,work1)
-   endif
-endif
-if (ierr .ne. 0) print *,'warning: lapack svd failed, ierr=',ierr
-where (svals < eps) svals = eps
+   call sgemm('n','t',nanals,nanals,nobsl,1.e0,hxens,nanals, &
+        hxens,nanals,0.e0,work3,nanals)
+   call ssyevr('V','A','L',nanals,work3,nanals,vl,vu,1,nanals,-1.e0,nanals,svals,lsv, &
+               nanals,isuppz,work1,lwork,iwork,liwork,ierr)
+end if
+if (ierr .ne. 0) print *,'warning: dsyev* failed, ierr=',ierr
+where (svals < eps**2) svals = eps**2
+svals = sqrt(svals)
 eigval = eps+(nanals/neigv)-1
 eigval(1:nsvals) = svals(1:nsvals)**2+(nanals/neigv)-1
+! infer right singular vectors from left singular vectors
+! (eigenvectors of Ybsqrtinv^T Ybsqrtinv)
+if(r_kind == kind(1.d0)) then
+   call dgemm('t','n',nanals,nobsl,nanals,1.d0,lsv,nanals,hxens,&
+              nanals,0.d0,work2,nanals)
+else
+   call sgemm('t','n',nanals,nobsl,nanals,1.e0,lsv,nanals,hxens,&
+              nanals,0.e0,work2,nanals)
+end if
+! work2 should be svals*rsv
+! Note: if nsvals<nanals (nobsl<nanals), not all rows of work2 are used
+do nob=1,nobsl
+   rsvt(:,nob) = work2(1:nsvals,nob)/svals(1:nsvals)
+enddo
+
 do nanal=1,nanals
    work3(nanal,:) = lsv(nanal,:)/eigval
 enddo
@@ -1183,7 +1238,7 @@ do nanal=1,nanals
    u(nanal,:) = lsv(nanal,:)*(1.-sqrt((nanals/neigv-1)/eigval))
 enddo
 do nob=1,nobsl
-   vt(:,nob) = rsvt(:,nob)*rrloc(nob)/svals
+   vt(:,nob) = rsvt(:,nob)*rrloc(nob)/svals(1:nsvals)
 enddo
 ! convert hxens * Rinv^T from hxens * sqrt(Rinv)^T
 do nanal=1,nanals
