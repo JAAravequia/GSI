@@ -33,7 +33,7 @@ for jn in `seq ${RSTART} ${REND}`; do
 
    if [ "$USE_BASELINE" = "1" ]; then
       #soft link to baseline results
-      export linksrc=$baselinedir/${tmpregdir}/${job[$jn+2]}   
+      export linksrc=$baselinedir/${tmpregdir}/${job[$jn]}   
       export linkdest=$tmpdir/${tmpregdir}/${job[$jn+2]}   
       rm -rf $linkdest
       ln -s $linksrc $linkdest
