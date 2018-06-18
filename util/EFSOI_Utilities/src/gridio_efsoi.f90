@@ -69,9 +69,9 @@
   character(len=500) :: filename 
  
   real(r_kind), dimension(npts,nlevs+1) :: pressi 
-  real(r_kind), dimension(nlons*nlats) :: ug 
+!  real(r_kind), dimension(nlons*nlats) :: ug 
   real(r_single), dimension(npts) :: tmpgrd 
-  type(sigio_data) sigdata 
+ ! type(sigio_data) sigdata 
   type(nemsio_gfile) :: gfile
   real(nemsio_realkind), dimension(nlons*nlats) :: nems_wrk
   real(r_kind), dimension(nlons*nlats) :: psfc
@@ -79,8 +79,8 @@
   real(r_kind), allocatable, dimension(:) :: ak,bk 
   real(r_kind) :: sumcoslat 
  
-  integer(i_kind) :: nlevsin,ntrunc,nlonsin,nlatsin,idvc 
-  integer(i_kind) :: i,j,k,iunitsig,iret 
+  integer(i_kind) :: nlevsin,nlonsin,nlatsin,idvc 
+  integer(i_kind) :: i,j,k,iret!iunitsig,iret 
  
   allocate(weight(npts,nlevs)) 
   allocate(grweight(npts)) 
@@ -216,7 +216,7 @@
   return 
  end subroutine divide_weight 
 
- subroutine readgriddata_efsoi(nanal,vars3d,vars2d,n3d,n2d,levels,ndim,ntimes,fileprefixes,reducedgrid,mode,grdin,ft,infilename,qsat)
+ subroutine readgriddata_efsoi(nanal,vars3d,vars2d,n3d,n2d,levels,ndim,ntimes,fileprefixes,mode,grdin,ft,infilename,qsat)
   use nemsio_module, only: nemsio_gfile,nemsio_open,nemsio_close,&
                            nemsio_getfilehead,nemsio_getheadvar,nemsio_realkind,&
                            nemsio_readrecv,nemsio_init,nemsio_setheadvar,nemsio_writerecv
@@ -233,7 +233,7 @@
   integer, intent(in) :: mode ! 0: first guess, 1: analysis
   character(len=120), dimension(7), intent(in)  :: fileprefixes
   character(*), intent(in), optional :: infilename
-  logical, intent(in) :: reducedgrid
+ ! logical, intent(in) :: reducedgrid
   real(r_single), dimension(npts,ndim,ntimes), intent(out) :: grdin
   real(r_double), dimension(npts,nlevs,ntimes), intent(out), optional :: qsat
   real(r_kind) cptr,qweight,rdtrpr
@@ -253,8 +253,8 @@
   
   real(r_single),allocatable,dimension(:,:,:)   :: nems_vcoord
   real(nemsio_realkind), dimension(nlons*nlats) :: nems_wrk,nems_wrk2
-  type(sigio_head)   :: sighead
-  type(sigio_data)   :: sigdata
+! type(sigio_head)   :: sighead
+ ! type(sigio_data)   :: sigdata
   type(nemsio_gfile) :: gfile
 
   integer(i_kind) :: u_ind, v_ind, tv_ind, q_ind, oz_ind, cw_ind

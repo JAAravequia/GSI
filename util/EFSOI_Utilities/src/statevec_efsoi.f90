@@ -222,7 +222,7 @@ if (nproc <= nanals-1) then
    t1 = mpi_wtime()
    ! Read ensemble member forecasts needed to obtain
    ! the forecast perturbations at evaluation forecast time (EFT)
-   call readgriddata_efsoi(nanal,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,fgfileprefixes,reducedgrid,1,grdin,ft,qsat=qsat)
+   call readgriddata_efsoi(nanal,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,fgfileprefixes,1,grdin,ft,qsat=qsat)
    !print *,'min/max qsat',nanal,'=',minval(qsat),maxval(qsat)
    if (use_qsatensmean) then
        ! convert qsat to ensemble mean.
@@ -253,13 +253,13 @@ if (nproc <= nanals-1) then
    ! Read the relevant ensemble mean quantities
    ! ------------------------------------------
    ! Ensemble mean forecast from analysis
-   call readgriddata_efsoi(0,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,fgfileprefixes,reducedgrid,1,grdin2,ft,qsat=qsat)
+   call readgriddata_efsoi(0,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,fgfileprefixes,1,grdin2,ft,qsat=qsat)
    ! Ensemble mean Forecast from first guess
-   call readgriddata_efsoi(0,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,fgfileprefixes,reducedgrid,1,grdin3,ft,qsat=qsat)
+   call readgriddata_efsoi(0,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,fgfileprefixes,1,grdin3,ft,qsat=qsat)
    ! Compute One half the sum of ensemble mean forecast quantities
    grdin3 = 0.5_r_kind * (grdin2 + grdin)
    ! Verification at evaluation time
-   call readgriddata_efsoi(0,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,fgfileprefixes,reducedgrid,1,grdin2,ft,infilename=andataname)
+   call readgriddata_efsoi(0,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,fgfileprefixes,1,grdin2,ft,infilename=andataname)
    ! Assign the sum of ensemble mean forecast errors at
    ! the evaluation time by subtracting
    ! verification from the forecast quantities
@@ -267,7 +267,7 @@ if (nproc <= nanals-1) then
    ! Normalize for surface pressure
    grdin3(:,ncdim,nb) = grdin3(:,ncdim,nb) / grdin(:,ncdim,nb)
    ! Analysis at initial time
-   call readgriddata_efsoi(0,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,fgfileprefixes,reducedgrid,1,grdin2,ft)
+   call readgriddata_efsoi(0,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,fgfileprefixes,1,grdin2,ft)
 
 end if
    

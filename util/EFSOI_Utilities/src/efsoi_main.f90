@@ -57,9 +57,8 @@ program efsoi_main
  ! applying enkf namelist apparatus
  use params, only : read_namelist,nanals
  ! mpi functions and variables.
-! use mpisetup, only:  mpi_initialize, mpi_initialize_io, mpi_cleanup, nproc, &
-!                      mpi_wtime
- use mpisetup
+ use mpisetup, only:  mpi_initialize, mpi_initialize_io, mpi_cleanup, nproc, &
+                      mpi_wtime, mpi_comm_world
  ! model state vector 
  use statevec_efsoi, only: read_state_efsoi, statevec_cleanup_efsoi, init_statevec_efsoi
  ! load balancing
@@ -67,9 +66,10 @@ program efsoi_main
  ! efsoi update
  use efsoi, only: efsoi_update
  ! Observation sensitivity usage
- use enkf_obs_sensitivity, only: init_ob_sens, print_ob_sens, destroy_ob_sens
+ use enkf_obs_sensitivity, only: init_ob_sens, print_ob_sens, destroy_ob_sens, read_ob_sens
+ use loc_advection, only: loc_advection_efsoi
  ! Scatter chunks for EFSOI
- use scatter_chunks_efsoi
+ use scatter_chunks_efsoi, only: scatter_chunks_ob_impact
  
  implicit none
  integer :: ierr
@@ -99,7 +99,7 @@ program efsoi_main
  ! information
  call init_statevec_efsoi()
 
- ! read in ensemble forecast members, 
+ ! read in ensemble forecast members,
  ! valid at the evaluation forecast
  ! time, distribute pieces to each task.
  t1 = mpi_wtime()
@@ -129,9 +129,9 @@ program efsoi_main
  ! Calculate the estimated location of observation
  ! response at evaluation time
  t1 = mpi_wtime()
- call loc_advection()
+ call loc_advection_efsoi()
  t2 = mpi_wtime()
- if (nproc == 0) print *,'time in loc_advection =',t2-t1,'on proc',nproc
+ if (nproc == 0) print *,'time in loc_advection_efsoi =',t2-t1,'on proc',nproc
 
  ! Perform the EFSOI calcs
  t1 = mpi_wtime()
@@ -143,7 +143,7 @@ program efsoi_main
  t1 = mpi_wtime()
  call print_ob_sens()
  t2 = mpi_wtime()
- if (nproc == 0) print *,'time needed to write observation impact file =',t2-t1,'on proc',nproc 
+ if (nproc == 0) print *,'time needed to write observation impact file =',t2-t1,'on proc',nproc
 
  ! Cleanup for EFSOI configuration
  call statevec_cleanup_efsoi()

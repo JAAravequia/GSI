@@ -49,9 +49,10 @@ use convinfo, only: convinfo_read,init_convinfo
 use ozinfo, only: ozinfo_read,init_oz
 use radinfo, only: radinfo_read,jpch_rad,nusis,nuchan,npred
 !use gridinfo_efsoi, only: latsgrd,lonsgrd,nlevs_pres,npts,id_u,id_v
-use loadbal, only: indxproc,grdloc_chunk,numptsperproc,npts_max,kdtree_grid
+use loadbal!, only: indxproc,grdloc_chunk,numptsperproc,npts_max,kdtree_grid
 use covlocal, only: latval
 use kdtree2_module, only: kdtree2_create
+!use scatter_chunks_efsoi!, only: ensmean_chunk, analmean_chunk
 
 implicit none
 
@@ -97,6 +98,7 @@ type obsense_info
 end type obsense_info
 
 contains
+
 
 subroutine init_ob_sens
 !$$$  subprogram documentation block
