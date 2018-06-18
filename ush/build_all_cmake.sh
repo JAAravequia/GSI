@@ -40,8 +40,8 @@ if [ ! -d $dir_modules ]; then
 fi
 [ -d $dir_root/exec ] || mkdir -p $dir_root/exec
 
-rm -rf $dir_root/build
-mkdir -p $dir_root/build
+#rm -rf $dir_root/build
+#mkdir -p $dir_root/build
 cd $dir_root/build
 
 if [ $target = wcoss -o $target = cray -o $target = gaea ]; then

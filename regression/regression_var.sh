@@ -13,7 +13,6 @@ if [ "$#" = 9 ] ; then
   export enkfexec_updat=$6
   export gsiexec_contrl=$7
   export enkfexec_contrl=$8
-  export =$8
   export fixgsi="$gsisrc/fix"
   export scripts="$gsisrc/regression"
   export ush="$gsisrc/ush"
