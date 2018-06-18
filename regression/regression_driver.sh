@@ -26,7 +26,9 @@ if [ -z "$REND" ]; then
 fi  
 if [ "$USE_BASELINE" = "1" ]; then
   echo "setting rend to 2"
-  export REND=2
+  if [ "$REND" -gt "2" ]; then
+    export REND=2
+  fi
 fi  
 # Launch the individual control and update runs, one-after-another
 for jn in `seq ${RSTART} ${REND}`; do
