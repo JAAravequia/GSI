@@ -8,7 +8,8 @@ module letkf
 !         updates, optimizations by whitaker
 !
 ! abstract: Updates the model state using the LETKF (Hunt et al 2007,
-!  Physica D, 112-126).
+!  Physica D, 112-126). Uses 'gain form' of LETKF algorithm described
+!  Bishop et al 2017 (https://doi.org/10.1175/MWR-D-17-0102.1).
 !
 !  Covariance localization is used in the state update to limit the impact 
 !  of observations to a specified distance from the observation in the
@@ -42,8 +43,7 @@ module letkf
 !  Vertical covariance localization can be turned off with letkf_novlocal.
 !  (this is done automatically when model space vertical localization 
 !   with modulated ensembles is enabled via neigv>0)
-!  If neigv>0, then either the DEnKF or gain form of the LETKF must be used
-!  (denkf or gletkf must be .true.) and the eigenvectors of the localization
+!  If neigv > 0 the eigenvectors of the localization
 !  matrix are read from a file called 'vlocal_eig.dat' (created by an external
 !  python utility).
 !
@@ -52,8 +52,7 @@ module letkf
 !  using the serial EnSRF.
 !
 ! Public Subroutines:
-!  letkf_update: performs the LETKF update (calls update_biascorr to perform
-!   the bias coefficient update).  
+!  letkf_update: performs the LETKF update
 !
 ! Public Variables: None
 !
@@ -101,21 +100,20 @@ use controlvec, only: ncdim, index_pres
 use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, oblnp, &
                   nobstot, nobs_conv, nobs_oz, nobs_sat,&
                   obfit_prior, obfit_post, obsprd_prior, obsprd_post,&
-                  numobspersat, deltapredx, biaspreds, corrlengthsq,&
-                  biasprednorm, probgrosserr, prpgerr, obtype, obpress,&
+                  numobspersat, biaspreds, corrlengthsq,&
+                  probgrosserr, prpgerr, obtype, obpress,&
                   lnsigl, anal_ob, anal_ob_modens, obloclat, obloclon, stattype
 use constants, only: pi, one, zero, rad2deg, deg2rad
 use params, only: sprd_tol, datapath, nanals, iseed_perturbed_obs,&
                   iassim_order,sortinc,deterministic,nlevs,&
                   zhuberleft,zhuberright,varqc,lupd_satbiasc,huber,letkf_novlocal,&
                   lupd_obspace_serial,corrlengthnh,corrlengthtr,corrlengthsh,&
-                  nbackgrounds,nobsl_max,neigv,vlocal_evecs,denkf,gletkf,dfs_sort
-use radinfo, only: npred,nusis,nuchan,jpch_rad,predx
-use radbias, only: apply_biascorr, update_biascorr
+                  nbackgrounds,nobsl_max,neigv,vlocal_evecs,dfs_sort
 use gridinfo, only: nlevs_pres,lonsgrd,latsgrd,logp,npts,gridloc
 use kdtree2_module, only: kdtree2, kdtree2_create, kdtree2_destroy, &
                           kdtree2_result, kdtree2_n_nearest, kdtree2_r_nearest
-use sorting, only: quicksort, isort
+use sorting, only: quicksort
+use radbias, only: apply_biascorr
 
 implicit none
 
@@ -142,16 +140,15 @@ real(r_kind) normdepart, pnge, width
 real(r_kind),dimension(nobstot):: oberrvaruse
 real(r_kind) vdist
 real(r_kind) corrlength
-real(r_kind) sqrtoberr
-logical vlocal, kdobs, compute_weights
+logical vlocal, kdobs
 ! For LETKF core processes
 real(r_kind),allocatable,dimension(:,:) :: hxens
+real(r_single),allocatable,dimension(:,:) :: obens
 real(r_single),allocatable,dimension(:,:,:) :: ens_tmp
-real(r_single),allocatable,dimension(:,:) :: obperts,obens,painv
-real(r_single),allocatable,dimension(:) :: kfgain, dfs, reducedgain
-real(r_kind),allocatable,dimension(:) :: rdiag,dep,rloc,statesprd_prior
-real(r_single),allocatable,dimension(:,:) :: trans,u,vt
-real(r_single),dimension(nanals) :: work
+real(r_single),allocatable,dimension(:,:) :: wts_ensperts
+real(r_single),allocatable,dimension(:) :: dfs,wts_ensmean
+real(r_kind),allocatable,dimension(:) :: rdiag,rloc,statesprd_prior
+real(r_single),allocatable,dimension(:) :: dep
 ! kdtree stuff
 type(kdtree2_result),dimension(:),allocatable :: sresults
 integer(i_kind), dimension(:), allocatable :: indxassim, indxob
@@ -161,9 +158,7 @@ real(r_single), pointer, dimension(:,:) :: anal_ob_fp ! Fortran pointer
 type(c_ptr)                             :: anal_ob_cp ! C pointer
 real(r_single), pointer, dimension(:,:) :: anal_ob_modens_fp ! Fortran pointer
 type(c_ptr)                             :: anal_ob_modens_cp ! C pointer
-real(r_single), pointer, dimension(:,:) :: obperts_fp ! Fortran pointer
-type(c_ptr)                             :: obperts_cp ! C pointer
-integer disp_unit, shm_win, shm_win2, shm_win3
+integer disp_unit, shm_win, shm_win2
 integer(MPI_ADDRESS_KIND) :: win_size, nsize, nsize2, win_size2
 integer(MPI_ADDRESS_KIND) :: segment_size
 #endif
@@ -176,35 +171,13 @@ eps = epsilon(0.0_r_single) ! real(4) machine precision
 nthreads = omp_get_num_threads()
 !$omp end parallel
 
-compute_weights = .not. denkf .and. deterministic
 if (nproc == 0) print *,'using',nthreads,' openmp threads'
-if (nproc == 0 .and. gletkf) print *,'using gain form of LETKF'
-if (nproc == 0 .and. denkf) print *,'using DEnKF form of LETKF'
-if (nproc == 0 .and. .not. deterministic) print *,'using perturbed obs form of LETKF'
-if (nproc == 0 .and. .not. compute_weights) print *,'LETKF transformation matrix will not be computed'
-
 
 ! define a few frequently used parameters
 r_nanals=one/float(nanals)
 r_nanalsm1=one/float(nanals-1)
 
 kdobs=associated(kdtree_obs2)
-
-! create random numbers for perturbed obs on root task.
-if (.not. deterministic .and. nproc .eq. 0) then
-   call set_random_seed(iseed_perturbed_obs,nproc)
-   allocate(obperts(nanals, nobstot))
-   do nob=1,nobstot
-      sqrtoberr=sqrt(oberrvar(nob))
-      do nanal=1,nanals
-         obperts(nanal,nob) = sqrtoberr*rnorm()
-      enddo
-      ! make mean/variance are exact.
-      obperts(1:nanals,nob) = obperts(1:nanals,nob) - &
-                              sum(obperts(:,nob))*r_nanals
-      obperts(1:nanals,nob) = obperts(1:nanals,nob)*sqrtoberr/(sqrt(sum(obperts(:,nob)**2)*r_nanalsm1))
-   enddo
-endif
 
 t1 = mpi_wtime()
 #ifdef MPI3
@@ -216,7 +189,7 @@ disp_unit = num_bytes_for_r_single ! anal_ob is r_single
 nsize = nobstot*nanals
 nsize2 = nobstot*nanals*neigv
 if (neigv > 0) then
-   nens = nanals*neigv
+   nens = nanals*neigv ! modulated ensemble size
 else
    nens = nanals
 endif
@@ -231,11 +204,7 @@ call MPI_Win_allocate_shared(win_size, disp_unit, MPI_INFO_NULL,&
                              mpi_comm_shmem, anal_ob_cp, shm_win, ierr)
 if (neigv > 0) then
    call MPI_Win_allocate_shared(win_size2, disp_unit, MPI_INFO_NULL,&
-                                mpi_comm_shmem, anal_ob_modens_cp, shm_win3, ierr)
-endif
-if (.not. deterministic) then
-   call MPI_Win_allocate_shared(win_size, disp_unit, MPI_INFO_NULL,&
-                                mpi_comm_shmem, obperts_cp, shm_win2, ierr)
+                                mpi_comm_shmem, anal_ob_modens_cp, shm_win2, ierr)
 endif
 if (nproc_shm == 0) then
    ! create shared memory segment on each shared mem comm
@@ -253,7 +222,7 @@ if (nproc_shm == 0) then
       end if 
    end do
    if (neigv > 0) then
-      call MPI_Win_lock(MPI_LOCK_EXCLUSIVE,0,MPI_MODE_NOCHECK,shm_win3,ierr)
+      call MPI_Win_lock(MPI_LOCK_EXCLUSIVE,0,MPI_MODE_NOCHECK,shm_win2,ierr)
       call c_f_pointer(anal_ob_modens_cp, anal_ob_modens_fp, [nens, nobstot])
       do nanal=1,nens
          if (nproc == 0) buffer(1:nobstot) = anal_ob_modens(nanal,1:nobstot)
@@ -263,31 +232,14 @@ if (nproc_shm == 0) then
          end if 
       end do
    endif
-   if (.not. deterministic) then
-      call MPI_Win_lock(MPI_LOCK_EXCLUSIVE,0,MPI_MODE_NOCHECK,shm_win2,ierr)
-      call c_f_pointer(obperts_cp, obperts_fp, [nanals, nobstot])
-      do nanal=1,nanals
-         if (nproc == 0) buffer(1:nobstot) = obperts(nanal,1:nobstot)
-         if (nproc_shm == 0) then
-            call mpi_bcast(buffer,nobstot,mpi_real4,0,mpi_comm_shmemroot,ierr)
-            obperts_fp(nanal,1:nobstot) = buffer(1:nobstot)
-         end if 
-      end do
-   endif
    deallocate(buffer)
    call MPI_Win_unlock(0, shm_win, ierr)
-   if (neigv > 0) call MPI_Win_unlock(0, shm_win3, ierr)
+   if (neigv > 0) call MPI_Win_unlock(0, shm_win2, ierr)
    nullify(anal_ob_fp)
    if (neigv > 0) nullify(anal_ob_modens_fp)
    ! don't need anal_ob anymore
    if (allocated(anal_ob)) deallocate(anal_ob)
    if (allocated(anal_ob_modens)) deallocate(anal_ob_modens)
-   if (.not. deterministic) then
-      ! don't need obperts anymore
-      call MPI_Win_unlock(0, shm_win2, ierr)
-      nullify(obperts_fp)
-      if (allocated(obperts)) deallocate(obperts)
-   endif
 endif
 ! barrier here to make sure no tasks try to access shared
 ! memory segment before it is created.
@@ -297,12 +249,8 @@ call mpi_barrier(mpi_comm_world, ierr)
 call MPI_Win_shared_query(shm_win, 0, segment_size, disp_unit, anal_ob_cp, ierr)
 call c_f_pointer(anal_ob_cp, anal_ob_fp, [nanals, nobstot])
 if (neigv > 0) then
-   call MPI_Win_shared_query(shm_win3, 0, segment_size, disp_unit, anal_ob_modens_cp, ierr)
+   call MPI_Win_shared_query(shm_win2, 0, segment_size, disp_unit, anal_ob_modens_cp, ierr)
    call c_f_pointer(anal_ob_modens_cp, anal_ob_modens_fp, [nens, nobstot])
-endif
-if (.not. deterministic) then
-   call MPI_Win_shared_query(shm_win2, 0, segment_size, disp_unit, obperts_cp, ierr)
-   call c_f_pointer(obperts_cp, obperts_fp, [nanals, nobstot])
 endif
 #else
 ! if MPI3 not available, need anal_ob on every MPI task
@@ -324,14 +272,6 @@ if (neigv > 0) then
       if (nproc .ne. 0) anal_ob_modens(nanal,1:nobstot) = buffer(1:nobstot)
    end do
 endif
-if (.not. deterministic) then
-   if (nproc .ne. 0) allocate(obperts(nanals,nobstot))
-   do nanal=1,nanals
-      buffer(1:nobstot) = obperts(nanal,1:nobstot)
-      call mpi_bcast(buffer,nobstot,mpi_real4,0,mpi_comm_world,ierr)
-      if (nproc .ne. 0) obperts(nanal,1:nobstot) = buffer(1:nobstot)
-   end do
-endif
 deallocate(buffer)
 #endif
 t2 = mpi_wtime()
@@ -351,6 +291,9 @@ else
    ! if vertical localization on, analysis weights
    ! need to be computed for every vertical level.
    nnmax = nlevs_pres
+endif
+if (nproc == 0 .and. .not. deterministic) then
+   print *,'warning - perturbed obs not used in LETKF (deterministic=F ignored)'
 endif
 
 ! apply bias correction with latest estimate of bias coeffs
@@ -425,10 +368,10 @@ endif
 ! Loop for each horizontal grid points on this task.
 !$omp parallel do schedule(dynamic) private(npt,nob,nobsl, &
 !$omp                  gain,nobsl2,oberrfact,ngrd1,corrlength,ens_tmp, &
-!$omp                  nf,vdist,kfgain,obens,indxassim,indxob, &
-!$omp                  nn,hxens,painv,dfs,rdiag,dep,rloc,i,work,trans, &
+!$omp                  nf,vdist,obens,indxassim,indxob, &
+!$omp                  nn,hxens,wts_ensmean,dfs,rdiag,dep,rloc,i, &
 !$omp                  oindex,deglat,dist,corrsq,nb,sresults, &
-!$omp                  nsvals,u,vt,reducedgain) &
+!$omp                  nsvals,wts_ensperts) &
 !$omp  reduction(+:t1,t2,t3,t4,t5) &
 !$omp  reduction(max:nobslocal_max) &
 !$omp  reduction(min:nobslocal_min) 
@@ -436,7 +379,6 @@ grdloop: do npt=1,numptsperproc(nproc+1)
 
    t1 = mpi_wtime()
    if (.not. allocated(ens_tmp)) allocate(ens_tmp(nens,ncdim,nbackgrounds))
-   if (.not. allocated(trans)) allocate(trans(nens,nens))
    ! find obs close to this grid point (using kdtree)
    ngrd1=indxproc(nproc+1,npt)
    deglat = latsgrd(ngrd1)*rad2deg
@@ -457,7 +399,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
       enddo
    enddo
    ! kd-tree fixed range search
-!   if (allocated(sresults)) deallocate(sresults)
+   !if (allocated(sresults)) deallocate(sresults)
    if (nobsl_max > 0) then ! only use nobsl_max nearest obs (sorted by distance).
        if (dfs_sort) then ! sort by DFS instead of distance.
           do i=1,ncdim ! state space ensemble spread for column being updated
@@ -546,7 +488,6 @@ grdloop: do npt=1,numptsperproc(nproc+1)
    ! Skip when no observations in local area
    if(nobsl == 0) then
       if (allocated(sresults)) deallocate(sresults)
-      if (allocated(trans)) deallocate(trans)
       if (allocated(ens_tmp)) deallocate(ens_tmp)
       cycle grdloop
    endif
@@ -582,7 +523,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
          cycle verloop
       end if
       allocate(hxens(nens,nobsl2))
-      allocate(painv(nens,nobsl2))
+      allocate(obens(nanals,nobsl2))
       allocate(rdiag(nobsl2))
       allocate(dep(nobsl2))
       do nob=1,nobsl2
@@ -600,135 +541,49 @@ grdloop: do npt=1,numptsperproc(nproc+1)
          hxens(1:nens,nob)=anal_ob(1:nens,nf) 
 #endif
          endif
+         obens(1:nanals,nob) = &
+#ifdef MPI3
+         anal_ob_fp(1:nanals,nf) 
+#else
+         anal_ob(1:nanals,nf) 
+#endif
          rdiag(nob)=one/oberrvaruse(nf)
          dep(nob)=ob(nf)-ensmean_ob(nf)
       end do
-
+      deallocate(oindex)
       t3 = t3 + mpi_wtime() - t1
       t1 = mpi_wtime()
-
-      if (.not. deterministic .or. denkf .or. gletkf) then
-         allocate(kfgain(nobsl2),obens(nobsl2,nanals))
-         if (.not. deterministic) then
-            ! add ob perts to observation priors
-            do nob=1,nobsl2
-               nf = oindex(nob)
-               obens(nob,1:nanals) = &
-#ifdef MPI3
-               obperts_fp(1:nanals,nf) + anal_ob_fp(1:nanals,nf) 
-#else
-               obperts(1:nanals,nf) + anal_ob(1:nanals,nf) 
-#endif
-            enddo
-         else
-            do nob=1,nobsl2
-               nf = oindex(nob)
-               obens(nob,1:nanals) = &
-#ifdef MPI3
-               anal_ob_fp(1:nanals,nf) 
-#else
-               anal_ob(1:nanals,nf) 
-#endif
-            enddo
-         endif
-      endif
-      deallocate(oindex)
   
-      ! Compute transformation matrix of LETKF
-      if (gletkf) then
-         ! use gain form
-         nsvals = min(nens,nobsl2)
-         allocate(u(nens,nens),vt(nsvals,nobsl2),reducedgain(nobsl2))
-         call gletkf_core(nobsl2,hxens,painv,rdiag,rloc(1:nobsl2),nens,nens/nanals,nsvals,u,vt)
-         deallocate(rloc,rdiag,hxens)
+      ! use gain form of LETKF (to make modulated ensemble vertical localization
+      ! possible)
+      nsvals = min(nens,nobsl2)
+      allocate(wts_ensperts(nens,nanals),wts_ensmean(nens))
+      ! compute analysis weights for mean and ensemble perturbations given 
+      ! ensemble in observation space, ob departures and ob errors.
+      ! note: if modelspace_vloc=F, hxens and obens are identical (but hxens is
+      ! is used as workspace and is modified on output)
+      call letkf_core(nobsl2,hxens,obens,dep,wts_ensmean,wts_ensperts,&
+                      rdiag,rloc(1:nobsl2),nens,nens/nanals,nsvals)
 
-         t4 = t4 + mpi_wtime() - t1
-         t1 = mpi_wtime()
+      t4 = t4 + mpi_wtime() - t1
+      t1 = mpi_wtime()
 
-         ! Update analysis ensembles (all time levels)
-         do nb=1,nbackgrounds
-         do i=1,ncdim
-            ! if not vlocal, update all state variables in column.
-            if(vlocal .and. index_pres(i) /= nn) cycle
-            !do nob=1,nobsl2
-            !   kfgain(nob) = sum(painv(:,nob)*ens_tmp(:,i,nb))
-            !enddo
-            call sgemv('t',nens,nobsl2,1.e0,painv,nens,&
-                       ens_tmp(:,i,nb),1,0.e0,kfgain,1)
-            ensmean_chunk(npt,i,nb) = ensmean_chunk(npt,i,nb) + sum(kfgain*dep)
-            call gletkf_gain(nens,nobsl2,nsvals,u,vt,ens_tmp(:,i,nb),reducedgain)
-            do nanal=1,nanals
-               anal_chunk(nanal,npt,i,nb) = anal_chunk(nanal,npt,i,nb) - &
-               sum(reducedgain*obens(:,nanal))
-            enddo
+      ! Update analysis ensembles (all time levels)
+      ! analysis increments represented as a linear combination
+      ! of (modulated) prior ensemble perturbations.
+      do nb=1,nbackgrounds
+      do i=1,ncdim
+         ! if not vlocal, update all state variables in column.
+         if(vlocal .and. index_pres(i) /= nn) cycle
+         ensmean_chunk(npt,i,nb) = ensmean_chunk(npt,i,nb) + &
+         sum(wts_ensmean*ens_tmp(:,i,nb))
+         do nanal=1,nanals 
+             anal_chunk(nanal,npt,i,nb) = anal_chunk(nanal,npt,i,nb) + &
+             sum(wts_ensperts(:,nanal)*ens_tmp(:,i,nb))
          enddo
-         enddo
-         deallocate(u,vt,reducedgain)
-
-      else
-         call letkf_core(nobsl2,hxens,painv,rdiag,dep,rloc(1:nobsl2),trans,nens,nens/nanals,compute_weights)
-         deallocate(rloc,rdiag,hxens)
-
-
-         t4 = t4 + mpi_wtime() - t1
-         t1 = mpi_wtime()
-
-         ! Update analysis ensembles (all time levels)
-         do nb=1,nbackgrounds
-         do i=1,ncdim
-            ! if not vlocal, update all state variables in column.
-            if(vlocal .and. index_pres(i) /= nn) cycle
-            if (deterministic) then
-               if (denkf) then
-                  !do nob=1,nobsl2
-                  !   kfgain(nob) = sum(painv(:,nob)*ens_tmp(:,i,nb))
-                  !enddo
-                  call sgemv('t',nens,nobsl2,1.e0,painv,nens,&
-                             ens_tmp(:,i,nb),1,0.e0,kfgain,1)
-                  ensmean_chunk(npt,i,nb) = ensmean_chunk(npt,i,nb) + sum(kfgain*dep)
-                  do nanal=1,nanals
-                     anal_chunk(nanal,npt,i,nb) = anal_chunk(nanal,npt,i,nb) - &
-                     sum(0.5*kfgain*obens(:,nanal))
-                  enddo
-               else
-                  ! if compute_weights=F there is a problem!
-                  if (.not. compute_weights) then
-                    if (nproc .eq. 0) then
-                       print *,'compute_weights=F and LETKF trans matrix needed!'
-                    endif
-                    call stop2(911)
-                  endif
-                  !work(1:nanals) = ensmean_chunk(npt,i,nb)
-                  !do nanal=1,nanals
-                  !   work(nanal) = work(nanal) + sum(trans(:,nanal)*anal_chunk(1:nanals,npt,i,nb))
-                  !enddo
-                  work(1:nanals) = ensmean_chunk(npt,i,nb)
-                  call sgemv('t',nanals,nanals,1.e0,trans,nanals,&
-                             anal_chunk(1:nanals,npt,i,nb),1,1.e0,work,1)
-                  ensmean_chunk(npt,i,nb) = sum(work(1:nanals)) * r_nanals
-                  anal_chunk(1:nanals,npt,i,nb) = &
-                  work(1:nanals)-ensmean_chunk(npt,i,nb)
-               endif
-            else ! perturbed obs using LETKF gain.
-               !do nob=1,nobsl2
-               !   kfgain(nob) = sum(painv(:,nob)*ens_tmp(:,i,nb))
-               !enddo
-               call sgemv('t',nens,nobsl2,1.e0,painv,nens,&
-                          ens_tmp(:,i,nb),1,0.e0,kfgain,1)
-               ensmean_chunk(npt,i,nb) = ensmean_chunk(npt,i,nb) + sum(kfgain*dep)
-               do nanal=1,nanals
-                  anal_chunk(nanal,npt,i,nb) = anal_chunk(nanal,npt,i,nb) - &
-                  sum(kfgain*obens(:,nanal))
-               enddo
-            endif
-         enddo
-         enddo
-      endif
-      ! deallocate arrays needed for perturbed obs LETKF and DENKF
-      if (allocated(painv)) deallocate(painv)
-      if (allocated(kfgain)) deallocate(kfgain)
-      if (allocated(dep)) deallocate(dep)
-      if (allocated(obens)) deallocate(obens)
+      enddo
+      enddo
+      deallocate(wts_ensperts,wts_ensmean,dep,obens,rloc,rdiag,hxens)
 
       t5 = t5 + mpi_wtime() - t1
       t1 = mpi_wtime()
@@ -736,7 +591,6 @@ grdloop: do npt=1,numptsperproc(nproc+1)
    end do verloop
 
    if (allocated(sresults)) deallocate(sresults)
-   if (allocated(trans)) deallocate(trans)
    if (allocated(ens_tmp)) deallocate(ens_tmp)
 end do grdloop
 !$omp end parallel do
@@ -793,295 +647,70 @@ if (nrej > 0 .and. nproc == 0) print *, nrej,' obs rejected by varqc'
 #ifdef MPI3
 nullify(anal_ob_fp)
 call MPI_Win_free(shm_win, ierr)
-if (.not. deterministic) then
-   nullify(obperts_fp)
-   call MPI_Win_free(shm_win2, ierr)
-endif
 if (neigv > 0) then
    nullify(anal_ob_modens_fp)
-   call MPI_Win_free(shm_win3, ierr)
+   call MPI_Win_free(shm_win2, ierr)
 endif
 #endif
 ! deallocate anal_ob on non-root tasks.
 if (nproc .ne. 0 .and. allocated(anal_ob)) deallocate(anal_ob)
 if (nproc .ne. 0 .and. allocated(anal_ob_modens)) deallocate(anal_ob_modens)
-if (allocated(obperts)) deallocate(obperts)
 if (allocated(ens_tmp)) deallocate(ens_tmp)
 
 return
 
 end subroutine letkf_update
 
-subroutine letkf_core(nobsl,hxens,painv,rdiaginv,dep,rloc,trans,nanals,neigv,compute_weights)
+subroutine letkf_core(nobsl,hxens,hxens_orig,dep,wts_ensmean,wts_ensperts,&
+                      rdiaginv,rloc,nanals,neigv,nsvals)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    letkf_core
 !
-!   prgmmr: ota
-!
-! abstract:  LETKF core subroutine computing transform matrix. BLAS subroutines
-!            are used for the computational efficiency.
-!
-! program history log:
-!   2011-06-03  ota: created from miyoshi's LETKF core subroutine
-!   2014-06-20  whitaker: optimization for case when no vertical localization
-!               is used. Fixed missing openmp private declarations in obsloop and grdloop.
-!               Use openmp reductions for profiling openmp loops. Use LAPACK
-!               routine dsyev for eigenanalysis.
-!   2016-02-01  whitaker: Use LAPACK dsyevr for eigenanalysis (faster
-!               than dsyev in most cases). 
-!   2018-05-31  whitaker:  Modify hxens on output so it can
-!               be used to explicitly compute kalman gain. Mods
-!               to use model-space vertical localization with
-!               modulated ensemble.
-!
-!   input argument list:
-!     nobsl    - number of observations in the local patch
-!     hxens    - on input: first-guess ensembles on observation space (Yb)
-!                on output: overwritten with YbRinv
-!     rdiaginv - inverse of diagonal element of observation error covariance
-!     dep      - observation departure from first guess mean
-!     rloc     - localization function to each observations
-!     nanals   - number of ensemble members
-!     neigv    - for modulated ensemble model-space localization, number
-!                of eigenvectors of vertical localization (1 not using
-!                model space localization)
-!     compute_weights - logical flag, if .false. transform matrix
-!                not computed (not needed for DEnKF or perturbed obs LETKF).
-!
-!   output argument list:
-!     trans    - transform matrix for this point. Not created if
-!                compute_weights=F
-!     painv    - Painv*YbRinv^T, where
-!                Painv is inverse of analysis error cov in ensemble space 
-!                and YbRinv is hxens * R **-1 (including ob error localization).
-!                this is used to compute kalman gain by pre-multiplying with
-!                model space ensemble perts.
-!
-! attributes:
-!   language:  f95
-!   machine:
-!
-!$$$ end documentation block
-! equivalent python code:
-!   Rinv = (1./oberrvar)*np.eye(nobs)
-!   YbRinv = np.dot(hxprime,Rinv)
-!   pa = (nanals/neigv-1)*np.eye(nanals)+np.dot(YbRinv,hxprime.T)
-!   evals, eigs = np.linalg.eigh(pa)
-!   pasqrt_inv =  (eigs * (1./np.sqrt(np.maximum(evals,0)))).dot(eigs.T)
-!   painv =  (eigs * (1./np.maximum(evals,0))).dot(eigs.T)
-!   kfgain = np.dot(xprime.T,np.dot(painv,YbRinv))
-!   enswts = np.sqrt(nanals/neigv-1)*pasqrt_inv
-!   xmean = xmean + np.dot(kfgain, obs-hxmean)
-!   xprime = np.dot(enswts.T,xprime)
-!
-implicit none
-integer(i_kind)                      ,intent(in ) :: nobsl,nanals,neigv
-real(r_kind),dimension(nanals,nobsl ),intent(inout) :: hxens
-real(r_single),dimension(nanals,nobsl ),intent(out) :: painv
-logical, intent(in) :: compute_weights
-real(r_kind),dimension(nobsl        ),intent(in ) :: rdiaginv
-real(r_kind),dimension(nobsl        ),intent(in ) :: dep
-real(r_kind),dimension(nobsl        ),intent(in ) :: rloc
-real(r_single),dimension(nanals,nanals),intent(out) :: trans
-real(r_kind), allocatable, dimension(:,:) :: work1,work2,eivec,pa
-real(r_kind), allocatable, dimension(:) :: rrloc,eival,work3
-real(r_kind) :: rho
-integer(i_kind) :: i,j,nob,nanal,ierr,lwork,liwork
-!for dsyevr
-!integer(i_kind), dimension(:), allocatable :: iwork
-!real(r_kind),dimension(:),allocatable :: work
-integer(i_kind) isuppz(2*nanals)
-integer(i_kind) iwork(10*nanals)
-real(r_kind) vl,vu,work(70*nanals)
-!for dsyevd
-!integer(i_kind) iwork(5*nanals+3)
-!real(r_kind) work(2*nanals*nanals+6*nanals+1)
-allocate(work3(nanals),work2(nanals,nobsl))
-allocate(eivec(nanals,nanals),pa(nanals,nanals))
-allocate(work1(nanals,nanals),eival(nanals),rrloc(nobsl))
-! hxens sqrt(Rinv)
-rrloc(1:nobsl) = rdiaginv(1:nobsl) * rloc(1:nobsl)
-rho = epsilon(0.0_r_single)
-where (rrloc < rho) rrloc = rho
-rrloc = sqrt(rrloc)
-do nanal=1,nanals
-   hxens(nanal,1:nobsl) = hxens(nanal,1:nobsl) * rrloc(1:nobsl)
-end do
-! hxens^T Rinv hxens
-!do j=1,nanals
-!   do i=1,nanals
-!      work1(i,j) = hxens(i,1) * hxens(j,1)
-!      do nob=2,nobsl
-!         work1(i,j) = work1(i,j) + hxens(i,nob) * hxens(j,nob)
-!      end do
-!   end do
-!end do
-if(r_kind == kind(1.d0)) then
-   call dgemm('n','t',nanals,nanals,nobsl,1.d0,hxens,nanals, &
-        hxens,nanals,0.d0,work1,nanals)
-else
-   call sgemm('n','t',nanals,nanals,nobsl,1.e0,hxens,nanals, &
-        hxens,nanals,0.e0,work1,nanals)
-end if
-! hdxb^T Rinv hdxb + (m-1) I
-do nanal=1,nanals
-   work1(nanal,nanal) = work1(nanal,nanal) + real(nanals/neigv-1,r_kind)
-end do
-! eigenvalues and eigenvectors of [ hdxb^T Rinv hdxb + (m-1) I ]
-lwork = size(work); liwork = size(iwork)
-! use LAPACK dsyevd
-!eivec(:,:) = work1(:,:)
-!if(r_kind == kind(1.d0)) then
-!  call dsyevd('V','L',nanals,eivec,nanals,eival,work,lwork,iwork,liwork,ierr)
-!else
-!  call ssyevd('V','L',nanals,eivec,nanals,eival,work,lwork,iwork,liwork,ierr)
-!endif
-! use LAPACK dsyevr 
-if(r_kind == kind(1.d0)) then
-   call dsyevr('V','A','L',nanals,work1,nanals,vl,vu,1,nanals,-1.d0,nanals,eival,eivec, &
-               nanals,isuppz,work,lwork,iwork,liwork,ierr)
-else
-   call ssyevr('V','A','L',nanals,work1,nanals,vl,vu,1,nanals,-1.e0,nanals,eival,eivec, &
-               nanals,isuppz,work,lwork,iwork,liwork,ierr)
-end if
-if (ierr .ne. 0) print *,'warning: dsyev* failed, ierr=',ierr
-! Pa = [ hdxb^T Rinv hdxb + (m-1) I ]inv
-do j=1,nanals
-   do i=1,nanals
-      work1(i,j) = eivec(i,j) / eival(j)
-   end do
-end do
-!do j=1,nanals
-!   do i=1,nanals
-!      pa(i,j) = work1(i,1) * eivec(j,1)
-!      do k=2,nanals
-!         pa(i,j) = pa(i,j) + work1(i,k) * eivec(j,k)
-!      end do
-!   end do
-!end do
-if(r_kind == kind(1.d0)) then
-   call dgemm('n','t',nanals,nanals,nanals,1.d0,work1,nanals,eivec,&
-        nanals,0.d0,pa,nanals)
-else
-   call sgemm('n','t',nanals,nanals,nanals,1.e0,work1,nanals,eivec,&
-        nanals,0.e0,pa,nanals)
-end if
-! convert hxens * Rinv^T from hxens * sqrt(Rinv)^T
-do nanal=1,nanals
-   hxens(nanal,1:nobsl) = hxens(nanal,1:nobsl) * rrloc(1:nobsl)
-end do
-! Pa hdxb_rinv^T
-!do nob=1,nobsl
-!   do nanal=1,nanals
-!      work2(nanal,nob) = pa(nanal,1) * hxens(1,nob)
-!      do k=2,nanals
-!         work2(nanal,nob) = work2(nanal,nob) + pa(nanal,k) * hxens(k,nob)
-!      end do
-!   end do
-!end do
-if(r_kind == kind(1.d0)) then
-   call dgemm('n','n',nanals,nobsl,nanals,1.d0,pa,nanals,hxens,&
-        nanals,0.d0,work2,nanals)
-else
-   call sgemm('n','n',nanals,nobsl,nanals,1.e0,pa,nanals,hxens,&
-        nanals,0.e0,work2,nanals)
-end if
-! over-write hxens with Pa hdxb_rinv
-! (pre-multiply with ensemble perts to compute Kalman gain - 
-!  eqns 20-23 in Hunt et al 2007 paper)
-painv = work2
-
-! for DEnKF or perturbed obs the rest is not needed
-if (compute_weights) then
-  ! work3 = Pa hdxb_rinv^T dep
-  do nanal=1,nanals
-     work3(nanal) = work2(nanal,1) * dep(1)
-     do nob=2,nobsl
-        work3(nanal) = work3(nanal) + work2(nanal,nob) * dep(nob)
-     end do
-  end do
-  ! T = sqrt[(m-1)Pa]
-  do j=1,nanals
-     rho = sqrt( real(nanals/neigv-1,r_kind) / eival(j) )
-     do i=1,nanals
-        work1(i,j) = eivec(i,j) * rho
-     end do
-  end do
-  deallocate(work2); allocate(work2(nanals,nanals))
-  if(r_kind == kind(1.d0)) then
-     call dgemm('n','t',nanals,nanals,nanals,1.d0,work1,nanals,eivec,&
-          & nanals,0.d0,work2,nanals)
-  else
-     call sgemm('n','t',nanals,nanals,nanals,1.e0,work1,nanals,eivec,&
-          & nanals,0.e0,work2,nanals)
-  end if
-  !do j=1,nanals
-  !   do i=1,nanals
-  !      trans(i,j) = work1(i,1) * eivec(j,1)
-  !      do k=2,nanals
-  !         trans(i,j) = trans(i,j) + work1(i,k) * eivec(j,k)
-  !      end do
-  !   end do
-  !end do
-  ! T + Pa hdxb_rinv^T dep
-  do j=1,nanals
-     do i=1,nanals
-        work2(i,j) = work2(i,j) + work3(i)
-     end do
-  end do
-  trans = work2
-endif ! compute_weights = T
-
-deallocate(work2,eivec,pa,work1,rrloc,eival,work3)
-
-return
-end subroutine letkf_core
-
-subroutine gletkf_core(nobsl,hxens,painv,rdiaginv,rloc,nanals,neigv,nsvals,u,vt)
-!$$$  subprogram documentation block
-!                .      .    .
-! subprogram:    gletkf_core
-!
 !   prgmmr: whitaker
 !
-! abstract:  gain form of LETKF core subroutine
+! abstract:  LETKF core subroutine. Returns analysis weights
+! for ensemble mean update and ensemble perturbation update (increments
+! represented as a linear combination of prior ensemble perturbations).
+! Uses 'gain form' LETKF, which works when ensemble used to estimate
+! covariances not the same as ensemble being updated.
 !
 ! program history log:
-!   2018-07-01  whitaker: add gain form of LETKF
+!   2018-07-01  whitaker: implement gain form of LETKF from Bishop et al 2017
 !   (https://doi.org/10.1175/MWR-D-17-0102.1)
 !
 !   input argument list:
 !     nobsl    - number of observations in the local patch
-!     hxens    - on input: first-guess ensembles on observation space (Yb)
-!                on output: overwritten with YbRinv
+!     hxens    - on input: first-guess modulated ensemble in observation space (Yb)
+!                on output: overwritten with Yb * R**-1/2.
+!     hxens_orig  - on input: first-guess original ensembles in observation space 
+!     dep      - nobsl observation departures (y-Hxmean)
 !     rdiaginv - inverse of diagonal element of observation error covariance
-!     rloc     - localization function to each observations
-!     nanals   - number of ensemble members
+!     rloc     - localization function for each ob (based on distance to
+!                analysis point)
+!     nanals   - number of ensemble members (1st dimension of hxens)
 !     neigv    - for modulated ensemble model-space localization, number
 !                of eigenvectors of vertical localization (1 if not using
-!                model space localization)
+!                model space localization).  1st dimension of hxens_orig is 
+!                nanals/neigv.
 !     nsvals   - number of singular values of YbRsqrtinv=hxens * R **-1/2
 !                (and R includes ob error localization)
 !                (= nanals if nanals<=nobsl, = nobsl if nobsl<nanals)
 !
 !   output argument list:
-!     u        - left singular vectors of YbRsqrtinv
-!                (dimension (nanals,nanals)) scaled by
-!                (1.-sqrt((nanals/neigv)-1)/eigvals)
-!                where eigvals = svals**2+(nanals/neigv)-1.
-!                svals are singular values and neigv is the number
-!                of eigenvectors of vertical localization (1 if not using
-!                model space vertical localization)
-!     vt       - right singular vectors of YbRsqrtinv
-!                (dimension (nsvals,nobsl)) scaled by
-!                inverse singular values times R ** -1/2
-!                (including ob error localzation).
-!     painv   - Painv*YbRinv^T, where
-!                Painv is inverse of analysis error cov in ensemble space 
-!                and YbRinv is hxens * R **-1 (including ob error localization).
-!                this is used to compute kalman gain by pre-multiplying with
-!                model space ensemble perts.
+!     wts_ensmean - Factor used to compute ens mean analysis increment by pre-multiplying with
+!                model space ensemble perts. In notation from Bishop et al 2017,
+!                wts_ensmean = C (Gamma + I)**-1 C^T (HZ)^ T R**-1/2 (y - Hxmean)
+!                where HZ^T = HXb*R**-1/2 (YbRinvsqrt), C are eigenvectors of (HZ)^T HZ and Gamma are eigenvalues
+!                Has dimension (nanals) - increment is weighted average of ens
+!                perts, wts_ensmean are weights
+!     wts_ensperts  - same as above, but for computing increments to ensemble perturbations
+!                From Bishop et al 2017 eqn 29
+!                wts_ensperts = -C [ (I - (Gamma+I)**-1/2)*Gamma**-1 ] C^T (HZ)^T R**-1/2 Hxprime
+!                Has dimension (nanals,nanals/neigv), analysis weights for each
+!                member. Hxprime (hxens_orig) is the original, unmodulated
+!                ensemble in observation space, HZ is the modulated ensemble in
+!                ob space times R**-1/2.
 !
 ! attributes:
 !   language:  f95
@@ -1089,49 +718,32 @@ subroutine gletkf_core(nobsl,hxens,painv,rdiaginv,rloc,nanals,neigv,nsvals,u,vt)
 !
 !$$$ end documentation block
 
-! equivalent python code:
-!   sqrtoberrvar_inv = 1./np.sqrt(oberrvar) # with ob error localization
-!   YbRsqrtinv = hxprime * sqrtoberrvar_inv
-!   u, svals, v = np.linalg.svd(YbRsqrtinv,full_matrices=False,lapack_driver='gesvd')
-!   eigvals = svals**2+(nanals/neigv)-1
-! for ETKF weights: enswts =  (u * (np.sqrt((nanals/neigv-1)/eigvals))).dot(u.T)
-!                   xprime = np.dot(enswts.T, xprime)
-!   painv =  (u * (1./eigvals)).dot(u.T)
-!   kfgain = np.dot(xprime.T,np.dot(painv,YbRsqrtinv*sqrtoberrvar_inv))
-!   xmean = xmean + np.dot(kfgain, obs-hxmean)
-! u,vt returned as
-!     u*(1.-np.sqrt((nanals/neigv)-1)/eigvals)) 
-!     (v.T/sval)*sqrtoberrvar_inv 
-
 implicit none
-integer(i_kind)                      ,intent(in ) :: nobsl,nsvals,nanals,neigv
-real(r_kind),dimension(nanals,nobsl ),intent(inout)  :: hxens
-real(r_single),dimension(nanals,nobsl ),intent(out)  :: painv
-real(r_single),dimension(nanals,nanals),intent(inout) :: u
-real(r_single),dimension(nsvals,nobsl),intent(inout) :: vt
-real(r_kind),dimension(nobsl        ),intent(in ) :: rdiaginv
-real(r_kind),dimension(nobsl        ),intent(in ) :: rloc
-real(r_kind), allocatable, dimension(:,:) :: work2,pa_inv,work3
-real(r_kind),dimension(nanals,nanals) :: lsv
-real(r_kind),dimension(nsvals,nobsl) :: rsvt
-real(r_kind), allocatable, dimension(:) :: rrloc,svals,eigval
+integer(i_kind), intent(in) :: nobsl,nsvals,nanals,neigv
+real(r_kind),dimension(nobsl),intent(in ) :: rdiaginv,rloc
+real(r_kind),dimension(nanals,nobsl),intent(inout)  :: hxens
+real(r_single),dimension(nanals/neigv,nobsl),intent(in)  :: hxens_orig
+real(r_single),dimension(nobsl),intent(in)  :: dep
+real(r_single),dimension(nanals),intent(out)  :: wts_ensmean
+real(r_single),dimension(nanals,nanals/neigv),intent(out)  :: wts_ensperts
+! local variables.
+real(r_kind),allocatable,dimension(:,:) :: work3,lsv
+real(r_single),allocatable,dimension(:,:) :: swork2,pa,swork3,shxens
+real(r_single),allocatable,dimension(:) :: swork1
+real(r_kind),allocatable,dimension(:) :: rrloc,svals,eigval
 real(r_kind) eps
-!logical use_gesvd
-integer(i_kind) :: nanal,ierr,lwork,nob,liwork
-!for dsyevr
+integer(i_kind) :: nanal,ierr,lwork,liwork
+!for LAPACK dsyevr
 integer(i_kind) isuppz(2*nanals)
 real(r_kind) vl,vu
-!real(r_kind), dimension(:), allocatable :: work1
-!integer(i_kind), allocatable, dimension(:) :: iwork
-integer(i_kind) iwork(10*nanals)
-real(r_kind) work1(70*nanals)
-!if (nobsl < nanals) then
-!  print *,'warning: nobsl < nanals',nanals,nobsl,nsvals
-!endif
-allocate(work2(nanals,nobsl),work3(nanals,nanals))
-allocate(pa_inv(nanals,nanals))
-allocate(rrloc(nobsl),eigval(nanals))
-! hxens sqrt(Rinv)
+integer(i_kind), allocatable, dimension(:) :: iwork
+real(r_kind), dimension(:), allocatable :: work1
+
+allocate(work3(nanals,nanals),lsv(nanals,nanals))
+allocate(rrloc(nobsl),eigval(nanals),svals(nanals))
+allocate(iwork(10*nanals),work1(70*nanals))
+
+! HZ^T = hxens sqrt(Rinv)
 rrloc = rdiaginv * rloc
 eps = epsilon(0.0_r_single)
 where (rrloc < eps) rrloc = eps
@@ -1140,198 +752,104 @@ do nanal=1,nanals
    hxens(nanal,1:nobsl) = hxens(nanal,1:nobsl) * rrloc(1:nobsl)
 end do
 
-! SVD of YbRsqrtinv (with ob error localization)
-! svals are singular values, lsv are left singular vecs (nanals,nanals), rsvt
-! are right singular vecs (nanals,nobsl) if nanals<nobsl or (nobsl,nobsl) if
-! nobsl<nanals
-!allocate(svals(nsvals))
-!work2 = hxens
-! force the use of gesvd to save memory (workspace is smaller)
-! otherwise gesdd will be used except when nobsl < nanals
-!use_gesvd = .false.
-!! divide and conquer algorithmm (gesdd) should be faster, use it if possible
-!! (as long as there as many obs than ens members).
-!if(r_kind == kind(1.d0)) then
-!   if (nobsl < nanals .or. use_gesvd) then
-!      allocate(work1(1))
-!      call dgesvd('a','s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,-1,ierr)
-!      lwork = work1(1); deallocate(work1); allocate(work1(lwork))
-!      call dgesvd('a','s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,lwork,ierr)
-!      deallocate(work1)
-!   else
-!      allocate(work1(1))
-!      allocate(iwork(8*nsvals))
-!      call dgesdd('s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,-1,iwork,ierr)
-!      lwork = work1(1); deallocate(work1); allocate(work1(lwork))
-!      call dgesdd('s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,lwork,iwork,ierr)
-!      deallocate(iwork,work1)
-!   endif
-!else
-!   if (nobsl < nanals .or. use_gesvd) then
-!      allocate(work1(1))
-!      call sgesvd('a','s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,-1,ierr)
-!      lwork = work1(1); deallocate(work1); allocate(work1(lwork))
-!      call sgesvd('a','s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,lwork,ierr)
-!      deallocate(work1)
-!   else
-!      allocate(work1(1))
-!      allocate(iwork(8*nsvals))
-!      call sgesdd('s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,-1,iwork,ierr)
-!      lwork = work1(1); deallocate(work1); allocate(work1(lwork))
-!      call sgesdd('s',nanals,nobsl,work2,nanals,svals,lsv,nanals,rsvt,nsvals,work1,lwork,iwork,ierr)
-!      deallocate(iwork,work1)
-!   endif
-!endif
-!if (ierr .ne. 0) print *,'warning: lapack svd failed, ierr=',ierr
-!where (svals < eps) svals = eps
-!eigval = eps+(nanals/neigv)-1
-!eigval(1:nsvals) = svals(1:nsvals)**2+(nanals/neigv)-1
-
-! use symmetric eigensolver to get left SV, infer right SV
-! first compute eigenvectors/eigenvalues of Ybsqrtinv^T Ybsqrtinv
-allocate(svals(nanals))
+! compute eigenvectors/eigenvalues of HZ^T HZ (left SV)
+! (in Bishop paper HZ is nobsl, nanals, here is it nanals, nobsl)
 lwork = size(work1); liwork = size(iwork)
-if(r_kind == kind(1.d0)) then
+if(r_kind == kind(1.d0)) then ! double precision 
+   !work3 = matmul(hxens,transpose(hxens))
    call dgemm('n','t',nanals,nanals,nobsl,1.d0,hxens,nanals, &
         hxens,nanals,0.d0,work3,nanals)
    call dsyevr('V','A','L',nanals,work3,nanals,vl,vu,1,nanals,-1.d0,nanals,svals,lsv, &
                nanals,isuppz,work1,lwork,iwork,liwork,ierr)
-else
+else ! single precision
    call sgemm('n','t',nanals,nanals,nobsl,1.e0,hxens,nanals, &
         hxens,nanals,0.e0,work3,nanals)
    call ssyevr('V','A','L',nanals,work3,nanals,vl,vu,1,nanals,-1.e0,nanals,svals,lsv, &
                nanals,isuppz,work1,lwork,iwork,liwork,ierr)
 end if
 if (ierr .ne. 0) print *,'warning: dsyev* failed, ierr=',ierr
+deallocate(work1,iwork,work3) ! no longer needed
 where (svals < eps**2) svals = eps**2
 svals = sqrt(svals)
 eigval = eps+(nanals/neigv)-1
 eigval(1:nsvals) = svals(1:nsvals)**2+(nanals/neigv)-1
-! infer right singular vectors from left singular vectors
-! (eigenvectors of Ybsqrtinv^T Ybsqrtinv)
-if(r_kind == kind(1.d0)) then
-   call dgemm('t','n',nanals,nobsl,nanals,1.d0,lsv,nanals,hxens,&
-              nanals,0.d0,work2,nanals)
-else
-   call sgemm('t','n',nanals,nobsl,nanals,1.e0,lsv,nanals,hxens,&
-              nanals,0.e0,work2,nanals)
-end if
-! work2 should be svals*rsv
-! Note: if nsvals<nanals (nobsl<nanals), not all rows of work2 are used
-do nob=1,nobsl
-   rsvt(:,nob) = work2(1:nsvals,nob)/svals(1:nsvals)
-enddo
 
+! create HZ^T R**-1/2 
+allocate(shxens(nanals,nobsl))
 do nanal=1,nanals
-   work3(nanal,:) = lsv(nanal,:)/eigval
-enddo
-! pa_inv
-if(r_kind == kind(1.d0)) then
-   call dgemm('n','t',nanals,nanals,nanals,1.d0,work3,nanals,lsv,&
-        nanals,0.d0,pa_inv,nanals)
-else
-   call sgemm('n','t',nanals,nanals,nanals,1.e0,work3,nanals,lsv,&
-        nanals,0.e0,pa_inv,nanals)
-end if
-! scaling needed for reduced gain
-do nanal=1,nanals
-   u(nanal,:) = lsv(nanal,:)*(1.-sqrt((nanals/neigv-1)/eigval))
-enddo
-do nob=1,nobsl
-   vt(:,nob) = rsvt(:,nob)*rrloc(nob)/svals(1:nsvals)
-enddo
-! convert hxens * Rinv^T from hxens * sqrt(Rinv)^T
-do nanal=1,nanals
-   hxens(nanal,1:nobsl) = hxens(nanal,1:nobsl) * rrloc(1:nobsl)
+   shxens(nanal,1:nobsl) = hxens(nanal,1:nobsl) * rrloc(1:nobsl)
 end do
-! Painv hdxb_rinv^T
-if(r_kind == kind(1.d0)) then
-   call dgemm('n','n',nanals,nobsl,nanals,1.d0,pa_inv,nanals,hxens,&
-        nanals,0.d0,work2,nanals)
-else
-   call sgemm('n','n',nanals,nobsl,nanals,1.e0,painv,nanals,hxens,&
-        nanals,0.e0,work2,nanals)
-end if
-! painv = pa_inv hdxb_rinv^T
-! pre-multiply with ensemble perts to compute Kalman gain 
-! (eqns 20-23 in Hunt et al 2007 paper)
-painv = work2 
-! return painv to compute kfgain, u,v to compute reducedgain
+deallocate(rrloc)
+
+! compute factor to multiply with model space ensemble perturbations
+! to compute analysis increment(for mean update), save in single precision.
+! This is the factor C (Gamma + I)**-1 C^T (HZ)^ T R**-1/2 (y - HXmean)
+! in Bishop paper (eqs 10-12).
+
+allocate(swork3(nanals,nanals),swork2(nanals,nanals),pa(nanals,nanals))
+allocate(swork1(nanals))
+do nanal=1,nanals
+   swork3(nanal,:) = lsv(nanal,:)/eigval
+enddo
+swork2 = lsv
+! pa = C (Gamma + I)**-1 C^T (analysis error cov in ensemble space)
+!pa = matmul(swork2,transpose(swork2))
+call sgemm('n','t',nanals,nanals,nanals,1.e0,swork3,nanals,swork2,&
+     nanals,0.e0,pa,nanals)
+! work1 = (HZ)^ T R**-1/2 (y - HXmean)
+! (nanals, nobsl) x (nobsl,) = (nanals,)
+! in Bishop paper HZ is nobsl, nanals, here is it nanals, nobsl
+do nanal=1,nanals
+   swork1(nanal) = sum(shxens(nanal,:)*dep(:))
+end do
+! wts_ensmean = C (Gamma + I)**-1 C^T (HZ)^ T R**-1/2 (y - HXmean)
+! (nanals, nanals) x (nanals,) = (nanals,)
+do nanal=1,nanals
+   wts_ensmean(nanal) = sum(pa(nanal,:)*swork1(:))
+end do
+deallocate(swork1,swork2,swork3)
+
+! compute factor to multiply with model space ensemble perturbations
+! to compute analysis increment (for perturbation update), save in single precision.
+! This is -C [ (I - (Gamma+I)**-1/2)*Gamma**-1 ] C^T (HZ)^T R**-1/2 HXprime
+! in Bishop paper (eqn 29).
+! Note that the factor (I - (Gamma+I)**-1/2)*Gamma**-1 can be rewritten as
+!  [ (Gamma + I - sqrt(Gamma + I))*Gamma**-1 ]*(Gamma + I)**-1.  The term in
+! square brackets tends to 1/2 when Gamma << 1 (which means Tr (HZ^T HZ) << 1,
+! or ens spread in observation space << R).
+
+allocate(swork3(nanals,nsvals),swork2(nanals,nsvals))
+do nanal=1,nanals
+   swork3(nanal,:) = &
+   lsv(nanal,1:nsvals)*(1.-sqrt((nanals/neigv-1)/eigval(1:nsvals)))/svals(1:nsvals)**2
+   swork2(nanal,1:nsvals) = lsv(nanal,1:nsvals)
+enddo
+deallocate(lsv,eigval,svals)
+! swork2 contains lsv, over-write pa
+! pa = C [ (I - (Gamma+I)**-1/2)*Gamma**-1 ] C^T
+!pa = matmul(swork3,transpose(swork2))
+call sgemm('n','t',nanals,nanals,nsvals,1.e0,swork3,nanals,swork2,&
+     nanals,0.e0,pa,nanals)
+deallocate(swork2,swork3)
+
+! work2 = (HZ)^ T R**-1/2 HXprime
+! (nanals, nobsl) x (nobsl, nanals/neigv) = (nanals, nanals/neigv)
+! in Bishop paper HZ is nobsl, nanals, here is it nanals, nobsl
+! HXprime in paper is nobsl, nanals/neigv here it is nanals/neigv, nobsl
+allocate(swork2(nanals,nanals/neigv))
+!swork2 = matmul(shxens,transpose(hxens_orig))
+call sgemm('n','t',nanals,nanals/neigv,nobsl,1.e0,shxens,nanals,hxens_orig,&
+            nanals/neigv,0.e0,swork2,nanals) 
+! wts_ensperts = -C [ (I - (Gamma+I)**-1/2)*Gamma**-1 ] C^T (HZ)^T R**-1/2 HXprime
+! (nanals, nanals) x (nanals, nanals/eigv) = (nanals, nanals/neigv)
+!wts_ensperts = -matmul(pa, swork2)
+call sgemm('n','n',nanals,nanals/neigv,nanals,-1.e0,pa,nanals,swork2,&
+           nanals,0.e0,wts_ensperts,nanals)
+
 ! clean up
-deallocate(work2,work3,pa_inv,svals,eigval,rrloc)
+deallocate(shxens,swork2,pa)
 
 return
-end subroutine gletkf_core
-
-subroutine gletkf_gain(nanals,nobsl,nsvals,u,vt,xens,reducedgain)
-!$$$  subprogram documentation block
-!                .      .    .
-! subprogram:    gletkf_gain
-!
-!   prgmmr: whitaker
-!
-! abstract:  compute modified (reduced) gain for ensemble perturbation update
-!            using results from gletkf_core
-!
-! program history log:
-!   2018-07-01  whitaker: add gain form of LETKF
-!   (https://doi.org/10.1175/MWR-D-17-0102.1)
-!
-!   input argument list:
-!     nanals   - number of ensemble members
-!     nobsl    - number of observations in the local patch
-!     nsvals   - number of singular values of YbRsqrtinv=hxens * R **-1/2
-!     u        - left singular vectors of YbRsqrtinv
-!                (dimension (nanals,nanals)) scaled by
-!                (1.-sqrt((nanals/neigv)-1)/eigval)
-!                where eigval = svals**2+(nanals/neigv)-1.
-!                svals are singular values and neigv is the number
-!                of eigenvectors of vertical localization (1 if not using
-!                model space vertical localization)
-!     vt       - right singular vectors of YbRsqrtinv
-!                (dimension (nsvals,nobsl)) scaled by
-!                inverse singular values time R ** -1/2 
-!                (including ob error localzation).
-!     xens     - model space ensemble perturbations (dimension nanals)
-!
-!   output argument list:
-!     reducedgain - modified gain for ensemble perturbations (dimension nobsl)
-!
-! attributes:
-!   language:  f95
-!   machine:
-!
-!$$$ end documentation block
-! equivalent python code:
-!   eigvals = svals**2+(nanals/neigv)-1
-!   where neigv is number of eigenvectors of vertical localization matrix
-!   (=1 for no modulated ensemble model space vertical localization)
-!   reducedgain = np.dot(xprime.T,u)
-!     ( u contains u*(1.-np.sqrt((nanals/neigv-1)/eigvals)) )
-!   reducedgain = np.dot(reducedgain,v)
-!     ( vt contains (v.T/svals)*sqrtoberrvar_inv )
-implicit none
-integer(i_kind),intent(in) :: nanals,nobsl,nsvals
-real(r_single),dimension(nanals,nanals),intent(in) :: u
-real(r_single),dimension(nsvals,nobsl ),intent(in) :: vt
-real(r_single),dimension(nanals     ),intent(in) :: xens
-real(r_single),dimension(nobsl      ),intent(out) :: reducedgain
-! local vars
-real(r_single),dimension(nanals) :: work1
-
-!integer(i_kind) i,j
-!do j=1,nanals
-!   work1(j) = sum(u(:,j)*xens(:))
-!enddo
-!do i=1,nobsl
-!   reducedgain(i) = sum(vt(1:nsvals,i)*work1(1:nsvals))
-!enddo
-
-call sgemv('t',nanals,nanals,1.e0,u,nanals,&
-           xens,1,0.e0,work1,1)
-call sgemv('t',nsvals,nobsl,1.e0,vt,nsvals,&
-           work1(1:nsvals),1,0.e0,reducedgain,1)
-
-end subroutine gletkf_gain
+end subroutine letkf_core
 
 end module letkf
