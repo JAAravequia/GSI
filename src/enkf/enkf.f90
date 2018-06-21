@@ -118,7 +118,7 @@ use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, oblnp, &
                   nobstot, nobs_conv, nobs_oz, nobs_sat,&
                   obfit_prior, obfit_post, obsprd_prior, obsprd_post, obtime,&
                   obtype, oberrvarmean, numobspersat, deltapredx, biaspreds,&
-                  biasprednorm, oberrvar_orig, probgrosserr, prpgerr,&
+                  oberrvar_orig, probgrosserr, prpgerr,&
                   corrlengthsq,lnsigl,obtimel,obloclat,obloclon,obpress,stattype,&
                   anal_ob
 use constants, only: pi, one, zero
@@ -127,7 +127,7 @@ use params, only: sprd_tol, paoverpb_thresh, datapath, nanals,&
                   zhuberleft,zhuberright,varqc,lupd_satbiasc,huber,univaroz,&
                   covl_minfact,covl_efold,nbackgrounds,nhr_anal,fhr_assim,&
                   iseed_perturbed_obs,lupd_obspace_serial,fso_cycling,&
-                  neigv,vlocal_evecs,denkf
+                  neigv,vlocal_evecs
 use radinfo, only: npred,nusis,nuchan,jpch_rad,predx
 use radbias, only: apply_biascorr, update_biascorr
 use gridinfo, only: nlevs_pres
@@ -458,13 +458,8 @@ do niter=1,numiter
 
       if (deterministic) then
          ! EnSRF.
-         if (denkf) then
-             obganl = -anal_obtmp/2.
-             if (neigv > 0) obganl_modens = -anal_obtmp_modens/2.
-         else
-             obganl = -anal_obtmp/(one+sqrt(oberrvaruse(nob)*hpfhtoberrinv))
-             if (neigv > 0) obganl_modens = -anal_obtmp_modens/(one+sqrt(oberrvaruse(nob)*hpfhtoberrinv))
-         endif
+         obganl = -anal_obtmp/(one+sqrt(oberrvaruse(nob)*hpfhtoberrinv))
+         if (neigv > 0) obganl_modens = -anal_obtmp_modens/(one+sqrt(oberrvaruse(nob)*hpfhtoberrinv))
       else
          ! perturbed obs EnKF.
          sqrtoberr=sqrt(oberrvaruse(nob))

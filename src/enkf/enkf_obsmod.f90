@@ -70,6 +70,7 @@ module enkf_obsmod
 !   biaspreds(npred+1, nobs_sat):  real array of bias predictors for 
 !     each satellite radiance ob (includes non-adaptive scan angle
 !     bias correction term in biaspreds(1,1:nobs_sat)).
+!     npred from radinfo module
 !   deltapredx(npred,jpch_rad): real array of bias coefficient increments
 !     (initialized to zero, updated by analysis).
 !   obloc(3,nobstot): real array of spherical cartesian coordinates
@@ -129,7 +130,6 @@ real(r_kind), public, allocatable, dimension(:,:) :: deltapredx
 ! arrays passed to kdtree2 routines must be single.
 real(r_single), public, allocatable, dimension(:,:) :: obloc
 integer(i_kind), public, allocatable, dimension(:) :: stattype, indxsat
-real(r_single), public, allocatable, dimension(:) :: biasprednorm,biasprednorminv
 character(len=20), public, allocatable, dimension(:) :: obtype
 integer(i_kind), public ::  nobs_sat, nobs_oz, nobs_conv, nobstot
 integer(i_kind) :: nobs_convdiag, nobs_ozdiag, nobs_satdiag, nobstotdiag
@@ -174,26 +174,6 @@ call radinfo_read()
 ! so bias coefficents have same units as radiance obs.
 ! (by computing RMS values over many analyses)
 if (nproc == 0) print*, 'npred  = ', npred
-allocate(biasprednorm(npred),biasprednorminv(npred))
-!biasprednorm(1) = 0.01_r_single   ! constant term
-!biasprednorm(2) = 2.6e-2_r_single ! scan angle path
-!biasprednorm(3) = 1.6e-2_r_single ! total column water
-!biasprednorm(5) = 1.9e-2_r_single ! integrated weighted (by weighting fns) lapse rate
-!biasprednorm(4) = zero   ! IWLR**2, don't use this predictor (too co-linear)?
-!biasprednorm(4) = 1.1e-3_r_single
-!biasprednorm(4) = zero   ! don't use this predictor (too co-linear)?
-! what the heck, just scale them all by 0.01!
-!biasprednorm = 0.01_r_single
-biasprednorm=one
-biasprednorminv=zero
-do n=1,npred
-   if (nproc == 0) print *,n,'biasprednorm = ',biasprednorm(n)
-   if (biasprednorm(n) > 1.e-7_r_single) biasprednorminv(n)=one/biasprednorm(n)
-enddo
-! scale bias coefficients.
-do j=1,jpch_rad
-   predx(:,j) = biasprednorm(:)*predx(:,j)
-enddo 
 ! allocate array for bias correction increments, initialize to zero.
 allocate(deltapredx(npred,jpch_rad))
 deltapredx = zero
@@ -249,11 +229,6 @@ if (varqc .and. .not. huber) then
 endif
 ! compute number of usuable obs, average ob error for each satellite sensor/channel.
 if (nobs_sat > 0) then
-  do nob=1,nobs_sat
-     do n=2,npred+1
-       biaspreds(n,nob)=biaspreds(n,nob)* biasprednorminv(n-1)
-     end do
-  end do
   call channelstats()
 end if
 
@@ -467,8 +442,6 @@ if (allocated(indxsat)) deallocate(indxsat)
 if (allocated(obtype)) deallocate(obtype)
 if (allocated(probgrosserr)) deallocate(probgrosserr)
 if (allocated(prpgerr)) deallocate(prpgerr)
-if (allocated(biasprednorm)) deallocate(biasprednorm)
-if (allocated(biasprednorminv)) deallocate(biasprednorminv)
 if (allocated(anal_ob)) deallocate(anal_ob)
 if (allocated(anal_ob_modens)) deallocate(anal_ob_modens)
 if (allocated(diagused)) deallocate(diagused)
