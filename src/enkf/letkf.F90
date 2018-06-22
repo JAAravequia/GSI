@@ -682,11 +682,22 @@ subroutine letkf_core(nobsl,hxens,hxens_orig,dep,wts_ensmean,wts_ensperts,&
 ! for ensemble mean update and ensemble perturbation update (increments
 ! represented as a linear combination of prior ensemble perturbations).
 ! Uses 'gain form' LETKF, which works when ensemble used to estimate
-! covariances not the same as ensemble being updated.
+! covariances not the same as ensemble being updated.  If neigv=1
+! (no modulated ensemble model-space localization), then the 
+! traditional form of the LETKF analysis weights for ensemble
+! perturbations are returned (which represents posterior
+! ensemble perturbations, not analysis increments, as a linear
+! combination of prior ensemble perturbations).
 !
 ! program history log:
+!   2011-06-03  ota: created from miyoshi's LETKF core subroutine
+!   2014-06-20  whitaker: Use LAPACK routine dsyev for eigenanalysis.
+!   2016-02-01  whitaker: Use LAPACK dsyevr for eigenanalysis (faster
+!               than dsyev in most cases). 
 !   2018-07-01  whitaker: implement gain form of LETKF from Bishop et al 2017
-!   (https://doi.org/10.1175/MWR-D-17-0102.1)
+!   (https://doi.org/10.1175/MWR-D-17-0102.1), allow for use of modulated 
+!   ensemble vert localization (ensemble used to estimate posterior covariance
+!   in ensemble space different than ensemble being updated).
 !
 !   input argument list:
 !     nobsl    - number of observations in the local patch
