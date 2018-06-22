@@ -4,16 +4,16 @@
    implicit none
 
    integer np,mregion,nobs
-   integer ntype_ps,ntype_q,ntype_t,ntype_uv
+   integer ntype_ps,ntype_q,ntype_t,ntype_uv,ntype_gps
 
    parameter(np=13)
    parameter(mregion=10)
    real(4),dimension(np) :: ptop,pbot,ptopq,pbotq
-   integer,dimension(100) :: iotype_ps,iotype_q,iotype_uv,iotype_t
-   integer,dimension(100) :: iosubtype_ps,iosubtype_q,iosubtype_uv,iosubtype_t
-   integer,dimension(100) :: ituse_ps,ituse_q,ituse_uv,ituse_t
-   real(4),dimension(100,2) :: varqc_ps,varqc_q,varqc_uv,varqc_t
-   character(len=7) dtype_ps,dtype_uv,dtype_t,dtype_q
+   integer,dimension(100) :: iotype_ps,iotype_q,iotype_uv,iotype_t,iotype_gps
+   integer,dimension(100) :: iosubtype_ps,iosubtype_q,iosubtype_uv,iosubtype_t,iosubtype_gps
+   integer,dimension(100) :: ituse_ps,ituse_q,ituse_uv,ituse_t,ituse_gps
+   real(4),dimension(100,2) :: varqc_ps,varqc_q,varqc_uv,varqc_t,varqc_gps
+   character(len=7) dtype_ps,dtype_uv,dtype_t,dtype_q,dtype_gps
 
    character(20) :: filein
    character(40),dimension(mregion):: region
@@ -36,7 +36,7 @@
    dtype_uv='uv'
    dtype_t='t'
    dtype_q='q'
-
+   dtype_gps='gps'
 
    nobs=0
    ptop(1)= 0.0;     pbot(1)= 2000.0
@@ -69,12 +69,13 @@
 
 
    print *,'start to call convinfo'
-   call convinfo(iotype_ps,iotype_q,iotype_t,iotype_uv,ntype_ps,ntype_q,ntype_t,ntype_uv,&
-                varqc_ps,varqc_q,varqc_t,varqc_uv,&
-                ituse_ps,ituse_q,ituse_t,ituse_uv,&
-                iosubtype_ps,iosubtype_q,iosubtype_t,iosubtype_uv)
+   call convinfo(iotype_ps,iotype_q,iotype_t,iotype_uv,iotype_gps,&
+		ntype_ps,ntype_q,ntype_t,ntype_uv,ntype_gps,&
+                varqc_ps,varqc_q,varqc_t,varqc_uv,varqc_gps,&
+                ituse_ps,ituse_q,ituse_t,ituse_uv,ituse_gps,&
+                iosubtype_ps,iosubtype_q,iosubtype_t,iosubtype_uv,iosubtype_gps)
 
-   print *,ntype_ps,ntype_q,ntype_t,ntype_uv
+   print *,ntype_ps,ntype_q,ntype_t,ntype_uv,ntype_gps
    print *,'finish to call convinfo'
 
    print *,'start to call read_conv'

@@ -46,7 +46,7 @@ export PATH=${PATH}:${NWPRODush}:${NWPRODexec}
 # Set user specific variables
 #############################################################
 export CMON_SUFFIX=${CMON_SUFFIX:-testcmon}
-export NWTEST=${NWTEST:-/scratch4/NCEPDEV/da/noscrub/${LOGNAME}/CMon_486/util/Conventional_Monitor/nwprod}
+export NWTEST=${NWTEST:-/scratch4/NCEPDEV/da/noscrub/${LOGNAME}/ProdGSI/util/Conventional_Monitor/nwprod}
 export HOMEgdascmon=${HOMEgdascmon:-${NWTEST}/gdas_cmon.${gdas_cmon_ver}}
 export JOBGLOBAL=${JOBGLOBAL:-${HOMEgdascmon}/jobs}
 export HOMEcmon=${HOMEcmon:-${NWTEST}/cmon_shared.${cmon_shared_ver}}

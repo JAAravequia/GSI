@@ -68,7 +68,7 @@ EOF
    cp uv_stas.ctl u_stas.ctl
    cp uv_stas.ctl v_stas.ctl
 
-   for type in ps t q uv u v; do
+   for type in gps ps t q uv u v; do
 
       for file2 in ${type}*stas; do
          mv -f $file2 ${savedir}/${cycle}_${file2}.${PDATE}

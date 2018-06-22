@@ -1,19 +1,19 @@
 !   the subroutine to read convention information file
 
-   subroutine convinfo(iotype_ps,iotype_q,iotype_t,iotype_uv,ntype_ps,&
-                       ntype_q,ntype_t,ntype_uv,varqc_ps,varqc_q,varqc_t,varqc_uv,&
-                       ituse_ps,ituse_q,ituse_t,ituse_uv,&
-                       iosubtype_ps,iosubtype_q,iosubtype_t,iosubtype_uv)
+   subroutine convinfo(iotype_ps,iotype_q,iotype_t,iotype_uv,iotype_gps,ntype_ps,&
+                       ntype_q,ntype_t,ntype_uv,ntype_gps,varqc_ps,varqc_q,varqc_t,varqc_uv,&
+                       varqc_gps,ituse_ps,ituse_q,ituse_t,ituse_uv,ituse_gps,&
+                       iosubtype_ps,iosubtype_q,iosubtype_t,iosubtype_uv,iosubtype_gps)
 
    implicit none
 
-   integer,dimension(100) :: iotype_ps,iotype_q,iotype_t,iotype_uv 
-   integer,dimension(100) :: iosubtype_ps,iosubtype_q,iosubtype_t,iosubtype_uv 
-   integer,dimension(100) :: ituse_ps,ituse_q,ituse_t,ituse_uv 
-   real(4),dimension(100,2) :: varqc_ps,varqc_q,varqc_t,varqc_uv
+   integer,dimension(100) :: iotype_ps,iotype_q,iotype_t,iotype_uv,iotype_gps 
+   integer,dimension(100) :: iosubtype_ps,iosubtype_q,iosubtype_t,iosubtype_uv,iosubtype_gps 
+   integer,dimension(100) :: ituse_ps,ituse_q,ituse_t,ituse_uv,ituse_gps
+   real(4),dimension(100,2) :: varqc_ps,varqc_q,varqc_t,varqc_uv,varqc_gps
 
    integer ittype,ituse,ntumgrp,ntgroup,ntmiter,isubtype
-   integer  lunin,ntype_ps,ntype_q,ntype_t,ntype_uv,iflag
+   integer  lunin,ntype_ps,ntype_q,ntype_t,ntype_uv,ntype_gps,iflag
    real(8) :: ttwind,gtross,etrmax,etrmin,vtar_b,vtar_pg
 
    character(120):: crecord
@@ -61,6 +61,15 @@
          varqc_ps(ntype_ps,1)=vtar_b
          varqc_ps(ntype_ps,2)=vtar_pg
          ituse_ps(ntype_ps)=ituse
+
+      else if(trim(ctype) == 'gps' ) then
+         ntype_gps=ntype_gps+1
+         iotype_gps(ntype_gps)=ittype
+         iosubtype_gps(ntype_gps)=isubtype
+
+         varqc_ps(ntype_gps,1)=vtar_b
+         varqc_ps(ntype_gps,2)=vtar_pg
+         ituse_ps(ntype_gps)=ituse
 
       else if(trim(ctype) == 'q') then
          ntype_q=ntype_q+1

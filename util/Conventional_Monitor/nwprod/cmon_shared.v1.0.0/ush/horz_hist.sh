@@ -18,6 +18,9 @@
    #----------------------------------------------------------
    # The list of data type, based on convinfo.txt file
    #----------------------------------------------------------
+   gps_TYPE=`${USHcmon}/get_typelist.pl --file $convinfo --type gps --mon`
+   echo "gps_TYPE = $gps_TYPE"
+
 #   ps_TYPE=" ps120_00 ps180_00 ps181_00 ps183_00 ps187_00 "
    ps_TYPE=`${USHcmon}/get_typelist.pl --file $convinfo --type ps --mon`
 
@@ -32,7 +35,6 @@
    uv_TYPE=`${USHcmon}/get_typelist.pl --file $convinfo --type uv --mon`
 #   echo "uv_TYPE = $uv_TYPE"
 
-
    echo TANKDIR_cmon = $TANKDIR_cmon
 
    mkdir -p ${TANKDIR_cmon}/horz_hist/ges
@@ -44,7 +46,7 @@
    export nreal_uv=${nreal_uv:-23} 
 
 
-   for type in ps q t uv; do
+   for type in gps ps q t uv; do
 
       eval stype=\${${type}_TYPE}
       eval nreal=\${nreal_${type}}
