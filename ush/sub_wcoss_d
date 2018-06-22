@@ -315,6 +315,13 @@ echo "module load lsf/10.1"    >> $cfile
 echo "module load ips/18.0.1.163"    >> $cfile
 echo "module load impi/18.0.1"    >> $cfile
 #echo "module load smpi/10.1.1.0"    >> $cfile
+#echo "export I_MPI_DEBUG=2"    >> $cfile
+#echo "export I_MPI_ADJUST_IALLREDUCE=3"    >> $cfile
+echo "export I_MPI_SHM_LMT_BUFFER_NUM=32"    >> $cfile
+echo "export I_MPI_DAPL_BUFFER_NUM=64"    >> $cfile
+#echo "export I_MPI_INTRANODE_EAGER_THRESHOLD=1"    >> $cfile
+echo "export I_MPI_SHM_LMT_BUFFER_SIZE=65536"    >> $cfile
+echo "export I_MPI_DAPL_BUFFER_SIZE=1048576"    >> $cfile
 
 echo "$exec"                                                    >> $cfile
 

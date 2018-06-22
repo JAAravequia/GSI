@@ -730,7 +730,7 @@ subroutine read_obs(ndata,mype)
     character(15):: infile
     character(20):: sis
     integer(i_kind) i,j,k,ii,nmind,lunout,isfcalc,ithinx,ithin,nread,npuse,nouse
-    integer(i_kind) nprof_gps1,npem1,krsize,len4file,npemax,ilarge,nlarge,npestart
+    integer(i_kind) nprof_gps1,npem1,npem2,krsize,len4file,npemax,ilarge,nlarge,npestart
     integer(i_llong) :: lenbytes
     integer(i_kind):: npetot,npeextra,mmdat
     integer(i_kind):: iworld,iworld_group,next_mype,mm1,iix
@@ -746,7 +746,9 @@ subroutine read_obs(ndata,mype)
     integer(i_kind),dimension(npe,ndat):: mype_sub
     integer(i_kind),allocatable,dimension(:):: nrnd
     integer(i_kind):: nmls_type,mype_io_sfc
-    integer(i_kind):: iread,ipuse,iouse
+    integer(i_kind):: iread,ipuse,iouse,recCount,sendCount
+    integer(i_kind),allocatable,dimension(:):: nobsStat,nobsReq,sendReq
+    integer(i_kind),allocatable,dimension(:):: comm_chans
 
     real(r_kind) gstime,val_dat,rmesh,twind,rseed
     real(r_kind),allocatable,dimension(:) :: prslsm,hgtlsm,work1
@@ -775,6 +777,7 @@ subroutine read_obs(ndata,mype)
        parallel_read=.false.
     end do
     npem1=npe-1
+    npem2=npe-2
     nprof_gps1=0
 
     if(njqc) then
@@ -1076,7 +1079,7 @@ subroutine read_obs(ndata,mype)
     npemax=0
     npetot=0
     do i=1,ndat
-       if (ntasks(i)>npe) then
+       if (ntasks(i)>(npem1)) then
           write(6,*)'read_obs:  ***WARNING*** i=',i,' dtype=',dtype(i),' dsis=',dsis(i),&
                ' requested ntasks=',ntasks(i),' > npe=',npe,' reset ntasks=',npe
           ntasks(i)=npe
@@ -1091,7 +1094,8 @@ subroutine read_obs(ndata,mype)
 !_RTod call getsfc(mype,use_sfc)
        return
     endif
-    
+
+    if(1.eq.1) then    
     npeextra=0
     if(mod(npetot,npe) > 0) npeextra=npe-mod(npetot,npe)
     maxproc=32
@@ -1120,6 +1124,7 @@ subroutine read_obs(ndata,mype)
           end do
        end do extraloop
     end if
+    end if
 
 !   Set up locations of first processor
 
@@ -1146,6 +1151,7 @@ subroutine read_obs(ndata,mype)
     end do loopx
 
 !   Define sub-communicators for each data file
+    npe_sub3=npe_sub
     mm1=mype+1
     belong=.false.
     mype_sub=-999
@@ -1160,7 +1166,7 @@ subroutine read_obs(ndata,mype)
              mype_sub(mype_work(k,i)+1,i)=k-1
              if(next_mype == mype)belong(i) = .true.
              next_mype = next_mype + 1
-             if (next_mype>npem1) next_mype=0
+             if (next_mype>npem2) next_mype=0
           end do               
 
           call setcomm(iworld,iworld_group,npe_sub(i),mype_work(1,i),&
@@ -1173,7 +1179,7 @@ subroutine read_obs(ndata,mype)
        i=npe_order(ii)
        if(mype == 0 .and. npe_sub(i) > 0) write(6,'(1x,a,i4,1x,a,1x,2a,2i4,1x,i6,1x,i6,1x,i6)') &
         'READ_OBS:  read ',i,dtype(i),dsis(i),' using ntasks=',ntasks(i),mype_root_sub(i), & 
-               read_rec(i),read_ears_rec(i),read_db_rec(i)
+               read_rec(i),read_ears_rec(i),npe_sub(i)
 
        acft_profl_file = index(dfile(i),'_profl')/=0
        if ((aircraft_t_bc_pof .or. aircraft_t_bc_ext .or. &
@@ -1191,6 +1197,7 @@ subroutine read_obs(ndata,mype)
     mype_io_sfc=mype_io
     do ii=1,mmdat
        i=npe_order(ii)
+!      if(mype.eq.0) write(6,*) 'npe_order(',ii,') is ',i
        if(ditype(i) =='conv')then
           obstype=dtype(i)
           if (obstype == 't' .or. obstype == 'q'  .or. &
@@ -1291,9 +1298,15 @@ subroutine read_obs(ndata,mype)
     call read_ship_info(mype)
 
 !   Loop over data files.  Each data file is read by a sub-communicator
+    allocate(nobsReq(mmdat))
+    allocate(sendReq(mmdat))
+    allocate(comm_chans(mmdat))
+    allocate(nobsStat(mmdat))
+    recCount = 0
+    sendCount = 0
     loop_of_obsdata_files: &
     do ii=1,mmdat
-
+!      call mpi_comm_dup(mpi_comm_world,comm_chans(ii),ierror)
        i=npe_order(ii)
        task_belongs: &
        if (i > 0 .and. belong(i)) then
@@ -1757,9 +1770,37 @@ subroutine read_obs(ndata,mype)
                   ' nkeep=',i10,' ntask=',i3)
 
           endif
+          if(mype_root_sub(i).eq.mype) then
+!         if (mype_sub(mm1,i)==mype_root) then
+!           write(6,*)'mype is ',mype,' and mype_sub(mm1,i) is ',mype_sub(mm1,i),' and mype_root is ',mype_root
+!           write(6,*)'mype is ',mype,' and I am sending my ',sendCount,' message to ',npem1,' with tag ',mype
+            call mpi_Isend(nobs_sub1(:,i),npe,mpi_integer,npem1,mype,mpi_comm_world,sendReq(sendCount),ierror)
+            sendCount = sendCount+1
+          endif
        endif task_belongs
+       if(mype.eq.npem1) then
+!         write(6,*)'mype is ',mype,' and I am asking for a message from ',mype_root_sub(i),' with tag ',mype_root_sub(i)
+          call mpi_Irecv(nobs_sub(:,i),npe,mpi_integer,mype_root_sub(i),mype_root_sub(i),mpi_comm_world,nobsReq(ii),ierror)
+       endif
+!      recCount = recCount + 1
+!      if(mype.eq.npem1) write(6,*) 'HEY, mype is ',mype,' and belongs is ',belong(i)
+!      call mpi_Ibcast(nobs_sub1(:,i),npe,mpi_integer,mype,mpi_comm_world,nobsReq(ii), ierror)
+!      call mpi_bcast(nobs_sub1(:,i),npe,mpi_integer,mype,mpi_comm_world,ierror)
+!      write(6,*) 'mype = ',mype,' calling ibcast, nobsReq is ',nobsReq(ii)
+!      call mpi_Iallreduce(nobs_sub1(:,i),nobs_sub(:,i),npe,mpi_integer,mpi_sum,mpi_comm_world,nobsReq(ii), ierror)
+!      call mpi_Iallreduce(nobs_sub1(:,i),nobs_sub(:,i),npe,mpi_integer,mpi_sum,comm_chans(ii),nobsReq(recCount), ierror)
+!      if(mype_root_sub(ii+1).eq.0) then
+!        call mpi_WaitAll(recCount,nobsReq,nobsStat,ierror) 
+!        recCount = 0
+!      endif
+!      call mpi_allreduce(nobs_sub1(:,i),nobs_sub(:,i),npe,mpi_integer,mpi_sum,comm_chans(ii), ierror)
+!      write(6,*) 'mype = ',mype,' done with allreduce, npe_order ',i
 
     end do loop_of_obsdata_files
+!   write(6,*) 'mype = ',mype,' start waiting'
+!   call mpi_WaitAll(mmdat,nobsReq,nobsStat,ierror) 
+!   call mpi_WaitAll(recCount,nobsReq,nobsStat,ierror) 
+!   write(6,*) 'mype = ',mype,' done waiting'
     deallocate(prsl_full)
     deallocate(hgtl_full)
 
@@ -1793,8 +1834,7 @@ subroutine read_obs(ndata,mype)
 
 !   Collect number of gps profiles (needed later for qc)
     call mpi_allreduce(nprof_gps1,nprof_gps,1,mpi_integer,mpi_sum,mpi_comm_world,ierror)
-    call mpi_allreduce(nobs_sub1,nobs_sub,npe*ndat,mpi_integer,mpi_sum,mpi_comm_world,& 
-         ierror)
+!   call mpi_allreduce(nobs_sub1,nobs_sub,npe*ndat,mpi_integer,mpi_sum,mpi_comm_world,ierror)
 
 !   Write collective obs selection information to scratch file.
     if (lread_obs_save .and. mype==0) then
@@ -1806,6 +1846,12 @@ subroutine read_obs(ndata,mype)
        close(lunsave)
     endif
 
+    if(mype.eq.npem1) then
+      write(6,*)'mype is ',mype,' and I am waiting for messages'
+      call mpi_WaitAll(mmdat,nobsReq,nobsStat,ierror) 
+      write(6,*)'mype is ',mype,' and I am DONE waiting for messages'
+    endif
+    call mpi_bcast(nobs_sub,ndat*npe,mpi_integer,npem1,mpi_comm_world,ierror)
 !   End of routine
     return
 end subroutine read_obs
