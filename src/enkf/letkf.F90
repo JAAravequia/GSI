@@ -561,7 +561,9 @@ grdloop: do npt=1,numptsperproc(nproc+1)
       ! compute analysis weights for mean and ensemble perturbations given 
       ! ensemble in observation space, ob departures and ob errors.
       ! note: if modelspace_vloc=F, hxens and obens are identical (but hxens is
-      ! is used as workspace and is modified on output)
+      ! is used as workspace and is modified on output), and analysis
+      ! weights for ensemble perturbations represent posterior ens perturbations, not
+      ! analysis increments for ensemble perturbations.
       call letkf_core(nobsl2,hxens,obens,dep,wts_ensmean,wts_ensperts,&
                       rdiag,rloc(1:nobsl2),nens,nens/nanals,nsvals)
 
@@ -577,10 +579,17 @@ grdloop: do npt=1,numptsperproc(nproc+1)
          if(vlocal .and. index_pres(i) /= nn) cycle
          ensmean_chunk(npt,i,nb) = ensmean_chunk(npt,i,nb) + &
          sum(wts_ensmean*ens_tmp(:,i,nb))
-         do nanal=1,nanals 
-             anal_chunk(nanal,npt,i,nb) = anal_chunk(nanal,npt,i,nb) + &
-             sum(wts_ensperts(:,nanal)*ens_tmp(:,i,nb))
-         enddo
+         if (neigv > 1) then ! gain formulation
+            do nanal=1,nanals 
+               anal_chunk(nanal,npt,i,nb) = anal_chunk(nanal,npt,i,nb) + &
+               sum(wts_ensperts(:,nanal)*ens_tmp(:,i,nb))
+            enddo
+         else ! original LETKF formulation
+            do nanal=1,nanals 
+               anal_chunk(nanal,npt,i,nb) = &
+               sum(wts_ensperts(:,nanal)*ens_tmp(:,i,nb))
+            enddo
+         endif
       enddo
       enddo
       deallocate(wts_ensperts,wts_ensmean,dep,obens,rloc,rdiag,hxens)
@@ -683,7 +692,8 @@ subroutine letkf_core(nobsl,hxens,hxens_orig,dep,wts_ensmean,wts_ensperts,&
 !     nobsl    - number of observations in the local patch
 !     hxens    - on input: first-guess modulated ensemble in observation space (Yb)
 !                on output: overwritten with Yb * R**-1/2.
-!     hxens_orig  - on input: first-guess original ensembles in observation space 
+!     hxens_orig  - first-guess original ensembles in observation space.
+!                   not used if neigv=1. 
 !     dep      - nobsl observation departures (y-Hxmean)
 !     rdiaginv - inverse of diagonal element of observation error covariance
 !     rloc     - localization function for each ob (based on distance to
@@ -739,6 +749,11 @@ real(r_kind) vl,vu
 integer(i_kind), allocatable, dimension(:) :: iwork
 real(r_kind), dimension(:), allocatable :: work1
 
+if (neigv < 1) then
+  print *,'neigv must be >=1 in letkf_core'
+  call stop2(992)
+endif
+
 allocate(work3(nanals,nanals),lsv(nanals,nanals))
 allocate(rrloc(nobsl),eigval(nanals),svals(nanals))
 allocate(iwork(10*nanals),work1(70*nanals))
@@ -758,12 +773,12 @@ lwork = size(work1); liwork = size(iwork)
 if(r_kind == kind(1.d0)) then ! double precision 
    !work3 = matmul(hxens,transpose(hxens))
    call dgemm('n','t',nanals,nanals,nobsl,1.d0,hxens,nanals, &
-        hxens,nanals,0.d0,work3,nanals)
+               hxens,nanals,0.d0,work3,nanals)
    call dsyevr('V','A','L',nanals,work3,nanals,vl,vu,1,nanals,-1.d0,nanals,svals,lsv, &
                nanals,isuppz,work1,lwork,iwork,liwork,ierr)
 else ! single precision
    call sgemm('n','t',nanals,nanals,nobsl,1.e0,hxens,nanals, &
-        hxens,nanals,0.e0,work3,nanals)
+               hxens,nanals,0.e0,work3,nanals)
    call ssyevr('V','A','L',nanals,work3,nanals,vl,vu,1,nanals,-1.e0,nanals,svals,lsv, &
                nanals,isuppz,work1,lwork,iwork,liwork,ierr)
 end if
@@ -818,18 +833,19 @@ deallocate(swork1,swork2,swork3)
 ! square brackets tends to 1/2 when Gamma << 1 (which means Tr (HZ^T HZ) << 1,
 ! or ens spread in observation space << R).
 
+if (neigv .ne. 1) then ! use Gain formulation of LETKF weights
+
 allocate(swork3(nanals,nsvals),swork2(nanals,nsvals))
 do nanal=1,nanals
    swork3(nanal,:) = &
    lsv(nanal,1:nsvals)*(1.-sqrt((nanals/neigv-1)/eigval(1:nsvals)))/svals(1:nsvals)**2
    swork2(nanal,1:nsvals) = lsv(nanal,1:nsvals)
 enddo
-deallocate(lsv,eigval,svals)
 ! swork2 contains lsv, over-write pa
 ! pa = C [ (I - (Gamma+I)**-1/2)*Gamma**-1 ] C^T
 !pa = matmul(swork3,transpose(swork2))
 call sgemm('n','t',nanals,nanals,nsvals,1.e0,swork3,nanals,swork2,&
-     nanals,0.e0,pa,nanals)
+            nanals,0.e0,pa,nanals)
 deallocate(swork2,swork3)
 
 ! work2 = (HZ)^ T R**-1/2 HXprime
@@ -844,10 +860,35 @@ call sgemm('n','t',nanals,nanals/neigv,nobsl,1.e0,shxens,nanals,hxens_orig,&
 ! (nanals, nanals) x (nanals, nanals/eigv) = (nanals, nanals/neigv)
 !wts_ensperts = -matmul(pa, swork2)
 call sgemm('n','n',nanals,nanals/neigv,nanals,-1.e0,pa,nanals,swork2,&
-           nanals,0.e0,wts_ensperts,nanals)
+            nanals,0.e0,wts_ensperts,nanals)
 
 ! clean up
 deallocate(shxens,swork2,pa)
+
+else  ! neigv=1, no modulated ensemble, use original LETKF formulation
+
+! compute sqrt(Pa) - analysis weights
+! (apply to prior ensemble to determine posterior ensemble,
+!  not analysis increments as in Gain formulation)
+! hxens_orig not used
+! saves two matrix multiplications (nanals, nobsl) x (nobsl, nanals) and
+! (nanals, nanals) x (nanals, nanals)
+deallocate(shxens,pa)
+allocate(swork3(nanals,nanals),swork2(nanals,nanals))
+eigval = sqrt(real(nanals-1,r_kind)/eigval); swork2=lsv
+do nanal=1,nanals
+   swork3(nanal,:) = lsv(nanal,:)*eigval
+enddo
+! wts_ensperts = 
+! C (Gamma + I)**-1/2 C^T (square root of analysis error cov in ensemble space)
+!wts_ensperts = matmul(swork3,transpose(swork2))
+call sgemm('n','t',nanals,nanals,nanals,1.e0,swork3,nanals,swork2,&
+            nanals,0.e0,wts_ensperts,nanals)
+deallocate(swork3,swork2)
+
+endif
+
+deallocate(lsv,eigval,svals)
 
 return
 end subroutine letkf_core
