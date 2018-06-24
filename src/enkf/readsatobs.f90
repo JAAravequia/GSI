@@ -331,7 +331,7 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
   use statevec, only: state_d
   use constants, only: deg2rad, zero
   use mpisetup, only: nproc, mpi_wtime
-  use observer_enkf, only: calc_linhx
+  use observer_enkf, only: calc_linhx, calc_linhx_modens, setup_linhx
   implicit none
 
   character*500, intent(in)     :: obspath
@@ -361,13 +361,15 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
 
   character(len=20) ::  sat_type
 
-  integer(i_kind) iunit, iflag,nobs,nobsdiag, n,nsat,ipe,i,jpchstart,indxsat,neig,nn
+  integer(i_kind) iunit, iflag,nob,nobdiag, n,nsat,ipe,i,jpchstart,indxsat,nn
   integer(i_kind) iunit2, iflag2
   integer(i_kind) npred_radiag
   logical fexist,lretrieval,lverbose,init_pass
   logical twofiles,fexist2,init_pass2
   real(r_kind) :: errorlimit,errorlimit2
-  real(r_double) t1,t2,tsum,tsum2,vscale(nlevs+1)
+  real(r_double) t1,t2,tsum,tsum2
+  integer(i_kind) :: ix, iy, it, ixp, iyp, itp
+  real(r_kind) :: delx, dely, delxp, delyp, delt, deltp
 
   type(diag_header_fix_list )         :: header_fix, header_fix2
   type(diag_header_chan_list),allocatable :: header_chan(:), header_chan2(:)
@@ -394,8 +396,8 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
   endif
 
   hx = zero
-  nobs = 0
-  nobsdiag = 0
+  nob = 0
+  nobdiag = 0
   x_used = 0
 
   do nsat=1,nsats_rad
@@ -483,7 +485,7 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
       end if
       chan:do n=1,header_fix%nchan
 
-         nobsdiag = nobsdiag + 1
+         nobdiag = nobdiag + 1
          if(header_chan(n)%iuse<1) cycle chan
          indxsat=header_chan(n)%iochan
          if(data_chan(n)%qcmark < 0. .or. data_chan(n)%errinv < errorlimit &
@@ -496,48 +498,47 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
          else
             if(abs(data_chan(n)%tbobs) > 1.e9_r_kind) cycle chan
          endif
-         nobs = nobs + 1 
+         nob = nob + 1 
 
-         x_used(nobsdiag) = 1
-         if (nobs > nobs_max) then
+         x_used(nobdiag) = 1
+         if (nob > nobs_max) then
              print *,'warning:  exceeding array bounds in readinfo_from_file',&
-             nobs,nobs_max
+             nob,nobs_max
          end if
-         x_type(nobs)= sat_type
-         x_channum(nobs) = n
-         x_indx(nobs) = indxsat
-         x_lon(nobs) = data_fix%lon
-         x_lat(nobs) = data_fix%lat
-         x_time(nobs) = data_fix%obstime
-         x_obs(nobs) = data_chan(n)%tbobs 
+         x_type(nob)= sat_type
+         x_channum(nob) = n
+         x_indx(nob) = indxsat
+         x_lon(nob) = data_fix%lon
+         x_lat(nob) = data_fix%lat
+         x_time(nob) = data_fix%obstime
+         x_obs(nob) = data_chan(n)%tbobs 
          ! bias corrected Hx
-         hx_mean(nobs) = x_obs(nobs) - data_chan(n)%omgbc 
+         hx_mean(nob) = x_obs(nob) - data_chan(n)%omgbc 
          ! un-bias corrected Hx
-         hx_mean_nobc(nobs) = x_obs(nobs) - data_chan(n)%omgnbc
+         hx_mean_nobc(nob) = x_obs(nob) - data_chan(n)%omgnbc
 
          if (nanal <= nanals) then
             ! read full Hx
             if (.not. lobsdiag_forenkf) then
-               hx(nobs) = x_obs(nobs) - data_chan2(n)%omgnbc
+               hx(nob) = x_obs(nob) - data_chan2(n)%omgnbc
             ! run linearized Hx
             else
-               vscale = 1._r_double
-               call calc_linhx(hx_mean_nobc(nobs), state_d,       &
-                             real(x_lat(nobs)*deg2rad,r_single),  &
-                             real(x_lon(nobs)*deg2rad,r_single),  &
-                             x_time(nobs),                        &
-                             data_chan(n)%dhx_dx, hx(nobs), vscale)
+               call setup_linhx(&
+                             real(x_lat(nob)*deg2rad,r_single),  &
+                             real(x_lon(nob)*deg2rad,r_single),  &
+                             x_time(nob),                        &
+                             ix, delx, ixp, delxp, iy, dely,      &
+                             iyp, delyp, it, delt, itp, deltp)
+               call calc_linhx(hx_mean_nobc(nob), state_d,       &
+                               data_chan(n)%dhx_dx, hx(nob),     &
+                               ix, delx, ixp, delxp, iy, dely,    &
+                               iyp, delyp, it, delt, itp, deltp)
                ! compute modulated ensemble in obs space
                if (neigv > 0) then
-                   do neig=1,neigv
-                      vscale = vlocal_evecs(neig,:)
-                      !if (nproc .eq. 10 .and. nobs .eq. 1) print *,neig,vscale
-                      call calc_linhx(hx_mean_nobc(nobs), state_d,   &
-                                real(x_lat(nobs)*deg2rad,r_single),  &
-                                real(x_lon(nobs)*deg2rad,r_single),  &
-                                x_time(nobs),                        &
-                                data_chan(n)%dhx_dx, hx_modens(nobs,neig), vscale)
-                   enddo
+                  call calc_linhx_modens(hx_mean_nobc(nob), state_d,         &
+                                  data_chan(n)%dhx_dx, hx_modens(nob,:),     &
+                                  ix, delx, ixp, delxp, iy, dely, iyp, delyp, &
+                                  it, delt, itp, deltp, vlocal_evecs)
                endif
                t2 = mpi_wtime()
                tsum = tsum + t2-t1
@@ -545,12 +546,12 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
          endif
 
          ! data_chan%errinv is inverse error variance.
-         x_errorig(nobs) = header_chan(n)%varch**2
-         x_err(nobs) = (1._r_kind/data_chan(n)%errinv)**2
+         x_errorig(nob) = header_chan(n)%varch**2
+         x_err(nob) = (1._r_kind/data_chan(n)%errinv)**2
          if (header_fix%iextra > 0) then
-           x_press(nobs) = data_extra(1,n)%extra
+           x_press(nob) = data_extra(1,n)%extra
          else
-           x_press(nobs) = 99999
+           x_press(nob) = 99999
          endif
 
 !! DTK:  **NOTE**
@@ -570,27 +571,27 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
 !  pred(10,:) = third order polynomial of angle bias correction
 !  pred(11,:) = second order polynomial of angle bias correction
 !  pred(12,:) = first order polynomial of angle bias correction
-         x_biaspred(1,nobs) = data_chan(n)%bicons ! constant bias correction
-         x_biaspred(2,nobs) = data_chan(n)%biang ! scan angle bias correction
-         x_biaspred(3,nobs) = data_chan(n)%biclw ! CLW bias correction
-         x_biaspred(4,nobs) = data_chan(n)%bilap2 ! square lapse rate bias corr
-         x_biaspred(5,nobs) = data_chan(n)%bilap ! lapse rate bias correction
-         x_biaspred(6,nobs) = data_chan(n)%bicos ! node*cos(lat) bias correction for SSMIS
-         x_biaspred(7,nobs) = data_chan(n)%bisin ! sin(lat) bias correction for SSMIS                    
+         x_biaspred(1,nob) = data_chan(n)%bicons ! constant bias correction
+         x_biaspred(2,nob) = data_chan(n)%biang ! scan angle bias correction
+         x_biaspred(3,nob) = data_chan(n)%biclw ! CLW bias correction
+         x_biaspred(4,nob) = data_chan(n)%bilap2 ! square lapse rate bias corr
+         x_biaspred(5,nob) = data_chan(n)%bilap ! lapse rate bias correction
+         x_biaspred(6,nob) = data_chan(n)%bicos ! node*cos(lat) bias correction for SSMIS
+         x_biaspred(7,nob) = data_chan(n)%bisin ! sin(lat) bias correction for SSMIS                    
          if (emiss_bc) then
-            x_biaspred(8,nobs) = data_chan(n)%biemis
+            x_biaspred(8,nob) = data_chan(n)%biemis
             nn = 9
          else
             nn = 8
          endif
 
          if (adp_anglebc) then
-            x_biaspred(nn  ,nobs)   = data_chan(n)%bifix(1) ! 4th order scan angle (predictor)
-            x_biaspred(nn+1,nobs)  = data_chan(n)%bifix(2) ! 3rd order scan angle (predictor)
-            x_biaspred(nn+2,nobs)  = data_chan(n)%bifix(3) ! 2nd order scan angle (predictor)
-            x_biaspred(nn+3,nobs)  = data_chan(n)%bifix(4) ! 1st order scan angle (predictor)
+            x_biaspred(nn  ,nob)   = data_chan(n)%bifix(1) ! 4th order scan angle (predictor)
+            x_biaspred(nn+1,nob)  = data_chan(n)%bifix(2) ! 3rd order scan angle (predictor)
+            x_biaspred(nn+2,nob)  = data_chan(n)%bifix(3) ! 2nd order scan angle (predictor)
+            x_biaspred(nn+3,nob)  = data_chan(n)%bifix(4) ! 1st order scan angle (predictor)
          endif
-         x_biaspred(npred+1,nobs) = data_chan(n)%bifix(1) ! fixed angle dependent bias
+         x_biaspred(npred+1,nob) = data_chan(n)%bifix(1) ! fixed angle dependent bias
 
       enddo chan
      enddo
@@ -603,12 +604,12 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
  if (nanal == nanals) print *,'time in calc_linhx for sat obs on proc',nproc,' = ',tsum
  if (nanal == nanals) print *,'time in read_raddiag_data for sat obs on proc',nproc,' = ',tsum2
 
-  if (nobs /= nobs_max) then
-      print *,'number of obs not what expected in get_satobs_data',nobs,nobs_max
+  if (nob /= nobs_max) then
+      print *,'number of obs not what expected in get_satobs_data',nob,nobs_max
       call stop2(92)
   end if
-  if (nobsdiag /= nobs_maxdiag) then
-      print *,'number of total diag obs not what expected in get_satobs_data',nobsdiag,nobs_maxdiag
+  if (nobdiag /= nobs_maxdiag) then
+      print *,'number of total diag obs not what expected in get_satobs_data',nobdiag,nobs_maxdiag
       call stop2(92)
   end if
 
@@ -626,7 +627,7 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   use statevec, only: state_d
   use constants, only: deg2rad, zero
   use mpisetup, only: nproc, mpi_wtime
-  use observer_enkf, only: calc_linhx
+  use observer_enkf, only: calc_linhx, calc_linhx_modens, setup_linhx
   use sparsearr, only: sparr, assignment(=), delete, sparr2, new
 
   implicit none
@@ -658,13 +659,13 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
 
   character(len=20) ::  sat_type
 
-  integer(i_kind) iunit, iob, iobdiag, i, nsat, ipe, jpchstart, nchans
-  integer(i_kind) iunit2, nobs, nobs2, nnz, nind, neig, nn
+  integer(i_kind) iunit, nobs, nobdiag, i, nsat, ipe, jpchstart, nchans
+  integer(i_kind) iunit2, nob, nobs2, nnz, nind, nn
   integer(i_kind) npred_radiag, angord
   logical fexist
   logical twofiles,fexist2
   real(r_kind) :: errorlimit,errorlimit2
-  real(r_double) t1,t2,tsum,tsum2,vscale(nlevs+1)
+  real(r_double) t1,t2,tsum,tsum2
 
   type(sparr2)    :: dhx_dx_read
   type(sparr)     :: dhx_dx
@@ -683,6 +684,8 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   real(r_single), dimension(:), allocatable :: BCPred_Cosine_Latitude_times_Node, BCPred_Sine_Latitude
   real(r_single), dimension(:), allocatable :: BCPred_Emissivity
   real(r_single), allocatable, dimension (:,:) :: BCPred_angord
+  integer(i_kind) :: ix, iy, it, ixp, iyp, itp
+  real(r_kind) :: delx, dely, delxp, delyp, delt, deltp
 
 ! make consistent with screenobs
   errorlimit=1._r_kind/sqrt(1.e9_r_kind)
@@ -698,8 +701,8 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   endif
 
   hx = zero
-  iob = 0
-  iobdiag = 0
+  nob = 0
+  nobdiag = 0
   x_used = 0
 
   do nsat=1,nsats_rad
@@ -838,7 +841,7 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
      end if
 
      do i = 1, nobs
-        iobdiag = iobdiag + 1
+        nobdiag = nobdiag + 1
         if (Use_Flag(chind(i)) < 1) cycle
         if (QC_Flag(i) < 0. .or. Inv_Error(i) < errorlimit &
                   .or. Inv_Error(i) > errorlimit2 &
@@ -847,27 +850,27 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
             Pressure(i) > 1200._r_kind  .or.  &
             abs(Observation(i)) > 1.e9_r_kind) cycle 
 
-        iob = iob + 1
+        nob = nob + 1
 
-        x_used(iobdiag) = 1
-        x_type(iob)= sat_type
+        x_used(nobdiag) = 1
+        x_type(nob)= sat_type
 
-        x_channum(iob) = chaninfoidx(chind(i))
-        x_indx(iob) = Satinfo_Chan(chind(i))
+        x_channum(nob) = chaninfoidx(chind(i))
+        x_indx(nob) = Satinfo_Chan(chind(i))
 
-        x_lon(iob) = Longitude(i)
-        x_lat(iob) = Latitude(i)
-        x_time(iob) = Time(i)
-        x_obs(iob) = Observation(i)
+        x_lon(nob) = Longitude(i)
+        x_lat(nob) = Latitude(i)
+        x_time(nob) = Time(i)
+        x_obs(nob) = Observation(i)
         ! bias corrected Hx
-        hx_mean(iob) = x_obs(iob) - Obs_Minus_Forecast_adjusted(i)
+        hx_mean(nob) = x_obs(nob) - Obs_Minus_Forecast_adjusted(i)
         ! un-bias corrected Hx
-        hx_mean_nobc(iob) = x_obs(iob) - Obs_Minus_Forecast_unadjusted(i)
+        hx_mean_nobc(nob) = x_obs(nob) - Obs_Minus_Forecast_unadjusted(i)
 
         if (nanal <= nanals) then
            ! read full Hx
            if (.not. lobsdiag_forenkf) then
-              hx(iob) = x_obs(iob) - Obs_Minus_Forecast_unadjusted2(i)
+              hx(nob) = x_obs(nob) - Obs_Minus_Forecast_unadjusted2(i)
            ! run linearized Hx
            else
               call new(dhx_dx_read, nnz, nind)
@@ -876,22 +879,22 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
               dhx_dx_read%val = Observation_Operator_Jacobian_val(:,i)
               dhx_dx = dhx_dx_read
               t1 = mpi_wtime()
-              vscale = 1._r_double
-              call calc_linhx(hx_mean_nobc(iob), state_d,       &
-                             real(x_lat(iob)*deg2rad,r_single),  &
-                             real(x_lon(iob)*deg2rad,r_single),  &
-                             x_time(iob),                        &
-                             dhx_dx, hx(iob), vscale)
+              call setup_linhx(&
+                            real(x_lat(nob)*deg2rad,r_single),  &
+                            real(x_lon(nob)*deg2rad,r_single),  &
+                            x_time(nob),                        &
+                            ix, delx, ixp, delxp, iy, dely,      &
+                            iyp, delyp, it, delt, itp, deltp)
+              call calc_linhx(hx_mean_nobc(nob), state_d,      &
+                              dhx_dx, hx(nob),    &
+                              ix, delx, ixp, delxp, iy, dely,   &
+                              iyp, delyp, it, delt, itp, deltp)
               ! compute modulated ensemble in obs space
               if (neigv > 0) then
-                  do neig=1,neigv
-                     vscale = vlocal_evecs(neig,:)
-                     call calc_linhx(hx_mean_nobc(iob), state_d,   &
-                               real(x_lat(iob)*deg2rad,r_single),  &
-                               real(x_lon(iob)*deg2rad,r_single),  &
-                               x_time(iob),                        &
-                               dhx_dx, hx_modens(iob,neig), vscale)
-                  enddo
+                 call calc_linhx_modens(hx_mean_nobc(nob), state_d,         &
+                                 dhx_dx, hx_modens(nob,:),     &
+                                 ix, delx, ixp, delxp, iy, dely, iyp, delyp, &
+                                 it, delt, itp, deltp, vlocal_evecs)
               endif
               t2 = mpi_wtime()
               tsum = tsum + t2-t1
@@ -900,10 +903,9 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
            endif
         endif
 
-        ! data_chan%errinv is inverse error variance.
-        x_errorig(iob) = error_variance(chind(i))**2
-        x_err(iob) = (1._r_kind/Inv_Error(i))**2
-        x_press(iob) = Pressure(i)
+        x_errorig(nob) = error_variance(chind(i))**2
+        x_err(nob) = (1._r_kind/Inv_Error(i))**2
+        x_press(nob) = Pressure(i)
 
 ! DTK:  **NOTE**
 !       The bifix term will need to be expanded if/when the GSI/GDAS goes to using
@@ -922,28 +924,28 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
 !  pred(10,:) = third order polynomial of angle bias correction
 !  pred(11,:) = second order polynomial of angle bias correction
 !  pred(12,:) = first order polynomial of angle bias correction
-         x_biaspred(1,iob) = BCPred_Constant(i) !  global offset
-         x_biaspred(2,iob) = BCPred_Scan_Angle(i) ! zenith angle predictor, not used
-         x_biaspred(3,iob) = BCPred_Cloud_Liquid_Water(i) ! CLW bias correction
-         x_biaspred(4,iob) = BCPred_Lapse_Rate_Squared(i) ! square lapse rate bias corr
-         x_biaspred(5,iob) = BCPred_Lapse_Rate(i) ! lapse rate bias correction
-         x_biaspred(6,iob) = BCPred_Cosine_Latitude_times_Node(i) ! node*cos(lat) bias correction for SSMIS
-         x_biaspred(7,iob) = BCPred_Sine_Latitude(i) ! sin(lat) bias correction for SSMIS
+         x_biaspred(1,nob) = BCPred_Constant(i) !  global offset
+         x_biaspred(2,nob) = BCPred_Scan_Angle(i) ! zenith angle predictor, not used
+         x_biaspred(3,nob) = BCPred_Cloud_Liquid_Water(i) ! CLW bias correction
+         x_biaspred(4,nob) = BCPred_Lapse_Rate_Squared(i) ! square lapse rate bias corr
+         x_biaspred(5,nob) = BCPred_Lapse_Rate(i) ! lapse rate bias correction
+         x_biaspred(6,nob) = BCPred_Cosine_Latitude_times_Node(i) ! node*cos(lat) bias correction for SSMIS
+         x_biaspred(7,nob) = BCPred_Sine_Latitude(i) ! sin(lat) bias correction for SSMIS
          if (emiss_bc) then
-            x_biaspred(8,nobs) = BCPred_Emissivity(i)
+            x_biaspred(8,nob) = BCPred_Emissivity(i)
             nn = 9
          else
             nn = 8
          endif
 
          if (adp_anglebc) then
-            x_biaspred(nn  ,iob)  = BCPred_angord(1,i) ! 4th order scan angle (predictor)
-            x_biaspred(nn+1,iob)  = BCPred_angord(2,i) ! 3rd order scan angle (predictor)
-            x_biaspred(nn+2,iob)  = BCPred_angord(3,i) ! 2nd order scan angle (predictor)
-            x_biaspred(nn+3,iob)  = BCPred_angord(4,i) ! 1st order scan angle (predictor)
+            x_biaspred(nn  ,nob)  = BCPred_angord(1,i) ! 4th order scan angle (predictor)
+            x_biaspred(nn+1,nob)  = BCPred_angord(2,i) ! 3rd order scan angle (predictor)
+            x_biaspred(nn+2,nob)  = BCPred_angord(3,i) ! 2nd order scan angle (predictor)
+            x_biaspred(nn+3,nob)  = BCPred_angord(4,i) ! 1st order scan angle (predictor)
          endif
          ! total angle dependent bias correction (sum of four terms)
-         x_biaspred(npred+1,iob) = BC_Fixed_Scan_Position(i) 
+         x_biaspred(npred+1,nob) = BC_Fixed_Scan_Position(i) 
 
      enddo
 
@@ -968,12 +970,12 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
  if (nanal == nanals) print *,'time in calc_linhx for sat obs on proc',nproc,' = ',tsum
  if (nanal == nanals) print *,'time in read_raddiag_data for sat obs on proc',nproc,' = ',tsum2
 
-  if (iob /= nobs_max) then
-      print *,'number of obs not what expected in get_satobs_data',iob,nobs_max
+  if (nob /= nobs_max) then
+      print *,'number of obs not what expected in get_satobs_data',nob,nobs_max
       call stop2(92)
   end if
-  if (iobdiag /= nobs_maxdiag) then
-      print *,'number of total diag obs not what expected in get_satobs_data',iobdiag,nobs_maxdiag
+  if (nobdiag /= nobs_maxdiag) then
+      print *,'number of total diag obs not what expected in get_satobs_data',nobdiag,nobs_maxdiag
       call stop2(92)
   end if
 

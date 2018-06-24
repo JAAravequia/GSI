@@ -272,7 +272,7 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   use params,only: nanals, lobsdiag_forenkf, nlevs, neigv, vlocal_evecs
   use statevec, only: state_d
   use mpisetup, only: mpi_wtime, nproc
-  use observer_enkf, only: calc_linhx
+  use observer_enkf, only: calc_linhx, calc_linhx_modens, setup_linhx
   implicit none
 
   character*500, intent(in) :: obspath
@@ -301,12 +301,12 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   character(20) :: isis,isis2        ! sensor/instrument/satellite id
   character(10) :: obstype,obstype2  !  type of ozone obs
   character(10) :: dplat,dplat2      ! sat sensor
-  integer(i_kind) nob, nobdiag, n, ios, nsat, k, neig
+  integer(i_kind) nob, nobdiag, n, ios, nsat, k
   integer(i_kind) iunit,jiter,ii,ireal,iint,irdim1,idate,ioff0
   integer(i_kind) iunit2,jiter2,ii2,ireal2,iint2,irdim12,idate2,ioff02,nlevsoz2
   integer(i_kind) ipe,ind
 
-  real(r_double) t1,t2,tsum,vscale(nlevs+1)
+  real(r_double) t1,t2,tsum
   type(sparr)   :: dhx_dx
   type(sparr2)  :: dhx_dx_read
 
@@ -319,6 +319,8 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   logical fexist, init_pass
   logical twofiles, fexist2, init_pass2
   real(r_kind) :: errorlimit,errorlimit2
+  integer(i_kind) :: ix, iy, it, ixp, iyp, itp
+  real(r_kind) :: delx, dely, delxp, delyp, delt, deltp
  
 ! make consistent with screenobs
   errorlimit=1._r_kind/sqrt(1.e9_r_kind)
@@ -471,24 +473,23 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
                   ! read dHx/dx profile
                   call readarray(dhx_dx_read, rdiagbuf(ind:irdim1,k,n))
                   dhx_dx = dhx_dx_read
-   
                   t1 = mpi_wtime()
-                  vscale = 1._r_double
-                  call calc_linhx(hx_mean_nobc(nob), state_d,       &
+                  call setup_linhx(&
                                 real(x_lat(nob)*deg2rad,r_single),  &
                                 real(x_lon(nob)*deg2rad,r_single),  &
                                 x_time(nob),                        &
-                                dhx_dx, hx(nob), vscale)
+                                ix, delx, ixp, delxp, iy, dely,     &
+                                iyp, delyp, it, delt, itp, deltp)
+                  call calc_linhx(hx_mean_nobc(nob), state_d,       &
+                                  dhx_dx, hx(nob),                  &
+                                  ix, delx, ixp, delxp, iy, dely,   &
+                                  iyp, delyp, it, delt, itp, deltp)
                   ! compute modulated ensemble in obs space
                   if (neigv > 0) then
-                      do neig=1,neigv
-                         vscale = vlocal_evecs(neig,:)
-                         call calc_linhx(hx_mean_nobc(nob), state_d,   &
-                                   real(x_lat(nob)*deg2rad,r_single),  &
-                                   real(x_lon(nob)*deg2rad,r_single),  &
-                                   x_time(nob),                        &
-                                   dhx_dx, hx_modens(nob,neig), vscale)
-                      enddo
+                     call calc_linhx_modens(hx_mean_nobc(nob), state_d, &
+                                     dhx_dx, hx_modens(nob,:),          &
+                                     ix, delx, ixp, delxp, iy, dely,    &
+                                     iyp, delyp, it, delt, itp, deltp, vlocal_evecs)
                   endif
                   t2 = mpi_wtime()
                   tsum = tsum + t2-t1
@@ -537,7 +538,7 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
   use params,only: nanals, lobsdiag_forenkf, nlevs, neigv, vlocal_evecs
   use statevec, only: state_d
   use mpisetup, only: mpi_wtime, nproc
-  use observer_enkf, only: calc_linhx
+  use observer_enkf, only: calc_linhx, calc_linhx_modens, setup_linhx
   implicit none
 
   character*500, intent(in) :: obspath
@@ -562,10 +563,10 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
   character(len=8) :: id2
   character(len=4) :: pe_name
 
-  integer(i_kind) :: nobs_curr, nob, nobdiag, i, nsat, ipe, nsdim, neig
+  integer(i_kind) :: nobs_curr, nob, nobdiag, i, nsat, ipe, nsdim
   integer(i_kind) :: iunit, iunit2
 
-  real(r_double) t1,t2,tsum, vscale(nlevs+1)
+  real(r_double) t1,t2,tsum
   type(sparr)   :: dhx_dx
 
   real(r_single),  allocatable, dimension (:) :: Latitude, Longitude, Pressure, Time
@@ -579,6 +580,9 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
   logical fexist
   logical twofiles, fexist2
   real(r_kind) :: errorlimit,errorlimit2
+
+  integer(i_kind) :: ix, iy, it, ixp, iyp, itp
+  real(r_kind) :: delx, dely, delxp, delyp, delt, deltp
 
 ! make consistent with screenobs
   errorlimit=1._r_kind/sqrt(1.e9_r_kind)
@@ -695,22 +699,22 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
              else
                 dhx_dx = Observation_Operator_Jacobian(1:nsdim,i)
                 t1 = mpi_wtime()
-                vscale = 1._r_double
+                call setup_linhx(&
+                              real(x_lat(nob)*deg2rad,r_single),  &
+                              real(x_lon(nob)*deg2rad,r_single),  &
+                              x_time(nob),                        &
+                              ix, delx, ixp, delxp, iy, dely,     &
+                              iyp, delyp, it, delt, itp, deltp)
                 call calc_linhx(hx_mean_nobc(nob), state_d,       &
-                               real(x_lat(nob)*deg2rad,r_single),  &
-                               real(x_lon(nob)*deg2rad,r_single),  &
-                               x_time(nob),                        &
-                               dhx_dx, hx(nob), vscale)
+                                dhx_dx, hx(nob),                  &
+                                ix, delx, ixp, delxp, iy, dely,   &
+                                iyp, delyp, it, delt, itp, deltp)
                 ! compute modulated ensemble in obs space
                 if (neigv > 0) then
-                    do neig=1,neigv
-                       vscale = vlocal_evecs(neig,:)
-                       call calc_linhx(hx_mean_nobc(nob), state_d,   &
-                                 real(x_lat(nob)*deg2rad,r_single),  &
-                                 real(x_lon(nob)*deg2rad,r_single),  &
-                                 x_time(nob),                        &
-                                 dhx_dx, hx_modens(nob,neig), vscale)
-                    enddo
+                   call calc_linhx_modens(hx_mean_nobc(nob), state_d, &
+                                   dhx_dx, hx_modens(nob,:),          &
+                                   ix, delx, ixp, delxp, iy, dely,    &
+                                   iyp, delyp, it, delt, itp, deltp, vlocal_evecs)
                 endif
                 t2 = mpi_wtime()
                 tsum = tsum + t2-t1
