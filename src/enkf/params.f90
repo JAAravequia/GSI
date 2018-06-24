@@ -127,6 +127,10 @@ real(r_double) :: vlocal_eval
 real(r_double),public,dimension(:,:), allocatable :: vlocal_evecs
 logical,public :: params_initialized = .true.
 logical,public :: save_inflation = .false.
+! turn on getkf inflation (when modelspace_vloc=T and
+! letkf_flag=T, posterior variance inflated to match
+! variance of modulated ensemble).
+logical, public :: getkf_inflation=.false.
 ! do sat bias correction update.
 logical,public :: lupd_satbiasc = .false.
 ! do ob space update with serial filter (only used if letkf_flag=.true.)
@@ -191,7 +195,7 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    newpc4pred,nmmb,nhr_anal,nhr_state, fhr_assim,nbackgrounds,nstatefields, &
                    save_inflation,nobsl_max,lobsdiag_forenkf,netcdf_diag,&
                    letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
-                   modelspace_vloc,dfs_sort,write_spread_diag,&
+                   getkf_inflation,modelspace_vloc,dfs_sort,write_spread_diag,&
                    fso_cycling,fso_calculate,imp_physics,lupp
 
 namelist /nam_wrf/arw,nmm,nmm_restart

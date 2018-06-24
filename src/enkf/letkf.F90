@@ -89,7 +89,7 @@ module letkf
 use mpisetup
 use random_normal, only : rnorm, set_random_seed
 use, intrinsic :: iso_c_binding
-use omp_lib, only: omp_get_num_threads
+use omp_lib, only: omp_get_num_threads,omp_get_thread_num
 use covlocal, only:  taper, latval
 use kinds, only: r_double,i_kind,r_kind,r_single,num_bytes_for_r_single
 use loadbal, only: numptsperproc, npts_max, &
@@ -108,7 +108,7 @@ use params, only: sprd_tol, datapath, nanals, iseed_perturbed_obs,&
                   iassim_order,sortinc,deterministic,nlevs,&
                   zhuberleft,zhuberright,varqc,lupd_satbiasc,huber,letkf_novlocal,&
                   lupd_obspace_serial,corrlengthnh,corrlengthtr,corrlengthsh,&
-                  nbackgrounds,nobsl_max,neigv,vlocal_evecs,dfs_sort
+                  getkf_inflation,nbackgrounds,nobsl_max,neigv,vlocal_evecs,dfs_sort
 use gridinfo, only: nlevs_pres,lonsgrd,latsgrd,logp,npts,gridloc
 use kdtree2_module, only: kdtree2, kdtree2_create, kdtree2_destroy, &
                           kdtree2_result, kdtree2_n_nearest, kdtree2_r_nearest
@@ -133,7 +133,7 @@ integer(i_kind) nobsl, ngrd1, nobsl2, nthreads, nb, &
                 nobslocal_min,nobslocal_max, &
                 nobslocal_minall,nobslocal_maxall
 integer(i_kind),allocatable,dimension(:) :: oindex
-real(r_single) :: deglat, dist, corrsq, oberrfact, gain, r
+real(r_single) :: deglat, dist, corrsq, oberrfact, gain, r, trpa, trpa_raw
 real(r_double) :: t1,t2,t3,t4,t5,tbegin,tend,tmin,tmax,tmean
 real(r_kind) r_nanals,r_nanalsm1
 real(r_kind) normdepart, pnge, width
@@ -145,10 +145,10 @@ logical vlocal, kdobs
 real(r_kind),allocatable,dimension(:,:) :: hxens
 real(r_single),allocatable,dimension(:,:) :: obens
 real(r_single),allocatable,dimension(:,:,:) :: ens_tmp
-real(r_single),allocatable,dimension(:,:) :: wts_ensperts
+real(r_single),allocatable,dimension(:,:) :: wts_ensperts,pa
 real(r_single),allocatable,dimension(:) :: dfs,wts_ensmean
 real(r_kind),allocatable,dimension(:) :: rdiag,rloc,statesprd_prior
-real(r_single),allocatable,dimension(:) :: dep
+real(r_single),allocatable,dimension(:) :: dep,work
 ! kdtree stuff
 type(kdtree2_result),dimension(:),allocatable :: sresults
 integer(i_kind), dimension(:), allocatable :: indxassim, indxob
@@ -371,7 +371,7 @@ endif
 !$omp                  nf,vdist,obens,indxassim,indxob, &
 !$omp                  nn,hxens,wts_ensmean,dfs,rdiag,dep,rloc,i, &
 !$omp                  oindex,deglat,dist,corrsq,nb,sresults, &
-!$omp                  nsvals,wts_ensperts) &
+!$omp                  nsvals,wts_ensperts,pa,trpa,trpa_raw,work) &
 !$omp  reduction(+:t1,t2,t3,t4,t5) &
 !$omp  reduction(max:nobslocal_max) &
 !$omp  reduction(min:nobslocal_min) 
@@ -557,15 +557,15 @@ grdloop: do npt=1,numptsperproc(nproc+1)
       ! use gain form of LETKF (to make modulated ensemble vertical localization
       ! possible)
       nsvals = min(nens,nobsl2)
-      allocate(wts_ensperts(nens,nanals),wts_ensmean(nens))
+      allocate(wts_ensperts(nens,nanals),wts_ensmean(nens),work(nens))
       ! compute analysis weights for mean and ensemble perturbations given 
       ! ensemble in observation space, ob departures and ob errors.
       ! note: if modelspace_vloc=F, hxens and obens are identical (but hxens is
       ! is used as workspace and is modified on output), and analysis
       ! weights for ensemble perturbations represent posterior ens perturbations, not
       ! analysis increments for ensemble perturbations.
-      call letkf_core(nobsl2,hxens,obens,dep,wts_ensmean,wts_ensperts,&
-                      rdiag,rloc(1:nobsl2),nens,nens/nanals,nsvals)
+      call letkf_core(nobsl2,hxens,obens,dep,wts_ensmean,wts_ensperts,pa,&
+                      rdiag,rloc(1:nobsl2),nens,nens/nanals,nsvals,getkf_inflation)
 
       t4 = t4 + mpi_wtime() - t1
       t1 = mpi_wtime()
@@ -584,6 +584,18 @@ grdloop: do npt=1,numptsperproc(nproc+1)
                anal_chunk(nanal,npt,i,nb) = anal_chunk(nanal,npt,i,nb) + &
                sum(wts_ensperts(:,nanal)*ens_tmp(:,i,nb))
             enddo
+            if (getkf_inflation) then
+               ! inflate posterior perturbations so analysis variance 
+               ! in original low-rank ensemble is the same as modulated ensemble
+               ! (eqn 30 in https://doi.org/10.1175/MWR-D-17-0102.1)
+               do nanal=1,nens
+                  work(nanal) = sum(pa(:,nanal)*ens_tmp(:,i,nb))
+               enddo
+               trpa = max(eps,sum(work*ens_tmp(:,i,nb)))
+               trpa_raw = max(eps,r_nanalsm1*sum(anal_chunk(:,npt,i,nb)**2))
+               anal_chunk(:,npt,i,nb) = sqrt(trpa/trpa_raw)*anal_chunk(:,npt,i,nb)
+               !if (nproc == 0 .and. omp_get_thread_num() == 0 .and. i .eq. ncdim) print *,'i,trpa,trpa_raw,inflation = ',i,trpa,trpa_raw,sqrt(trpa/trpa_raw)
+            endif
          else ! original LETKF formulation
             do nanal=1,nanals 
                anal_chunk(nanal,npt,i,nb) = &
@@ -592,7 +604,8 @@ grdloop: do npt=1,numptsperproc(nproc+1)
          endif
       enddo
       enddo
-      deallocate(wts_ensperts,wts_ensmean,dep,obens,rloc,rdiag,hxens)
+      deallocate(wts_ensperts,wts_ensmean,dep,obens,rloc,rdiag,hxens,work)
+      if (getkf_inflation) deallocate(pa)
 
       t5 = t5 + mpi_wtime() - t1
       t1 = mpi_wtime()
@@ -670,8 +683,8 @@ return
 
 end subroutine letkf_update
 
-subroutine letkf_core(nobsl,hxens,hxens_orig,dep,wts_ensmean,wts_ensperts,&
-                      rdiaginv,rloc,nanals,neigv,nsvals)
+subroutine letkf_core(nobsl,hxens,hxens_orig,dep,wts_ensmean,wts_ensperts,paens,&
+                      rdiaginv,rloc,nanals,neigv,nsvals,getkf_inflation)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    letkf_core
@@ -717,6 +730,9 @@ subroutine letkf_core(nobsl,hxens,hxens_orig,dep,wts_ensmean,wts_ensperts,&
 !     nsvals   - number of singular values of YbRsqrtinv=hxens * R **-1/2
 !                (and R includes ob error localization)
 !                (= nanals if nanals<=nobsl, = nobsl if nobsl<nanals)
+!     getkf_inflation - if true, return posterior covariance matrix in
+!                needed to compute getkf inflation (eqn 30 in Bishop et al
+!                2017).
 !
 !   output argument list:
 !     wts_ensmean - Factor used to compute ens mean analysis increment by pre-multiplying with
@@ -732,6 +748,9 @@ subroutine letkf_core(nobsl,hxens,hxens_orig,dep,wts_ensmean,wts_ensperts,&
 !                member. Hxprime (hxens_orig) is the original, unmodulated
 !                ensemble in observation space, HZ is the modulated ensemble in
 !                ob space times R**-1/2.
+!     paens       - posterior covariance matrix in (modulated) ensemble space 
+!                dimension (nanals,nanals) - only allocated and returned
+!                if getkf_inflation=T
 !
 ! attributes:
 !   language:  f95
@@ -747,6 +766,7 @@ real(r_single),dimension(nanals/neigv,nobsl),intent(in)  :: hxens_orig
 real(r_single),dimension(nobsl),intent(in)  :: dep
 real(r_single),dimension(nanals),intent(out)  :: wts_ensmean
 real(r_single),dimension(nanals,nanals/neigv),intent(out)  :: wts_ensperts
+real(r_single),dimension(:,:),allocatable, intent(inout) :: paens
 ! local variables.
 real(r_kind),allocatable,dimension(:,:) :: work3,lsv
 real(r_single),allocatable,dimension(:,:) :: swork2,pa,swork3,shxens
@@ -759,6 +779,7 @@ integer(i_kind) isuppz(2*nanals)
 real(r_kind) vl,vu
 integer(i_kind), allocatable, dimension(:) :: iwork
 real(r_kind), dimension(:), allocatable :: work1
+logical, intent(in) :: getkf_inflation
 
 if (neigv < 1) then
   print *,'neigv must be >=1 in letkf_core'
@@ -833,6 +854,10 @@ end do
 do nanal=1,nanals
    wts_ensmean(nanal) = sum(pa(nanal,:)*swork1(:))
 end do
+if (getkf_inflation) then
+   allocate(paens(nanals,nanals))
+   paens = pa
+endif
 deallocate(swork1,swork2,swork3)
 
 ! compute factor to multiply with model space ensemble perturbations
