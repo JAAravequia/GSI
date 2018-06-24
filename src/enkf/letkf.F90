@@ -148,7 +148,7 @@ real(r_single),allocatable,dimension(:,:,:) :: ens_tmp
 real(r_single),allocatable,dimension(:,:) :: wts_ensperts,pa
 real(r_single),allocatable,dimension(:) :: dfs,wts_ensmean
 real(r_kind),allocatable,dimension(:) :: rdiag,rloc,statesprd_prior
-real(r_single),allocatable,dimension(:) :: dep,work
+real(r_single),allocatable,dimension(:) :: dep
 ! kdtree stuff
 type(kdtree2_result),dimension(:),allocatable :: sresults
 integer(i_kind), dimension(:), allocatable :: indxassim, indxob
@@ -371,7 +371,7 @@ endif
 !$omp                  nf,vdist,obens,indxassim,indxob, &
 !$omp                  nn,hxens,wts_ensmean,dfs,rdiag,dep,rloc,i, &
 !$omp                  oindex,deglat,dist,corrsq,nb,sresults, &
-!$omp                  nsvals,wts_ensperts,pa,trpa,trpa_raw,work) &
+!$omp                  nsvals,wts_ensperts,pa,trpa,trpa_raw) &
 !$omp  reduction(+:t1,t2,t3,t4,t5) &
 !$omp  reduction(max:nobslocal_max) &
 !$omp  reduction(min:nobslocal_min) 
@@ -557,7 +557,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
       ! use gain form of LETKF (to make modulated ensemble vertical localization
       ! possible)
       nsvals = min(nens,nobsl2)
-      allocate(wts_ensperts(nens,nanals),wts_ensmean(nens),work(nens))
+      allocate(wts_ensperts(nens,nanals),wts_ensmean(nens))
       ! compute analysis weights for mean and ensemble perturbations given 
       ! ensemble in observation space, ob departures and ob errors.
       ! note: if modelspace_vloc=F, hxens and obens are identical (but hxens is
@@ -588,10 +588,12 @@ grdloop: do npt=1,numptsperproc(nproc+1)
                ! inflate posterior perturbations so analysis variance 
                ! in original low-rank ensemble is the same as modulated ensemble
                ! (eqn 30 in https://doi.org/10.1175/MWR-D-17-0102.1)
+               trpa = 0.0_r_single
                do nanal=1,nens
-                  work(nanal) = sum(pa(:,nanal)*ens_tmp(:,i,nb))
+                  trpa = trpa + &
+                  sum(pa(:,nanal)*ens_tmp(:,i,nb))*ens_tmp(nanal,i,nb)
                enddo
-               trpa = max(eps,sum(work*ens_tmp(:,i,nb)))
+               trpa = max(eps,trpa)
                trpa_raw = max(eps,r_nanalsm1*sum(anal_chunk(:,npt,i,nb)**2))
                anal_chunk(:,npt,i,nb) = sqrt(trpa/trpa_raw)*anal_chunk(:,npt,i,nb)
                !if (nproc == 0 .and. omp_get_thread_num() == 0 .and. i .eq. ncdim) print *,'i,trpa,trpa_raw,inflation = ',i,trpa,trpa_raw,sqrt(trpa/trpa_raw)
@@ -604,7 +606,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
          endif
       enddo
       enddo
-      deallocate(wts_ensperts,wts_ensmean,dep,obens,rloc,rdiag,hxens,work)
+      deallocate(wts_ensperts,wts_ensmean,dep,obens,rloc,rdiag,hxens)
       if (getkf_inflation) deallocate(pa)
 
       t5 = t5 + mpi_wtime() - t1
