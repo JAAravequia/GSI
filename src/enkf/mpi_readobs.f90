@@ -99,7 +99,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
        end if
        ! these arrays needed on all processors.
        allocate(mem_ob(nobs_tot)) 
-       allocate(mem_ob_modens(nobs_tot,neigv))  ! zero size if neigv=0
+       allocate(mem_ob_modens(neigv,nobs_tot))  ! zero size if neigv=0
        allocate(sprd_ob(nobs_tot),ob(nobs_tot),oberr(nobs_tot),oblon(nobs_tot),&
        oblat(nobs_tot),obpress(nobs_tot),obtime(nobs_tot),oberrorig(nobs_tot),obcode(nobs_tot),&
        obtype(nobs_tot),ensmean_ob(nobs_tot),ensmean_obbc(nobs_tot),&
@@ -125,7 +125,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
 ! first nobs_conv are conventional obs.
       call get_convobs_data(obspath, datestring, nobs_conv, nobs_convdiag, &
         ensmean_obbc(1:nobs_conv), ensmean_ob(1:nobs_conv),                &
-        mem_ob(1:nobs_conv), mem_ob_modens(1:nobs_conv,1:neigv),           &
+        mem_ob(1:nobs_conv), mem_ob_modens(1:neigv,1:nobs_conv),           &
         ob(1:nobs_conv),                                                   &
         oberr(1:nobs_conv), oblon(1:nobs_conv), oblat(1:nobs_conv),        &
         obpress(1:nobs_conv), obtime(1:nobs_conv), obcode(1:nobs_conv),    &
@@ -138,7 +138,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
         ensmean_obbc(nobs_conv+1:nobs_conv+nobs_oz),                  &
         ensmean_ob(nobs_conv+1:nobs_conv+nobs_oz),                    &
         mem_ob(nobs_conv+1:nobs_conv+nobs_oz),                        &
-        mem_ob_modens(nobs_conv+1:nobs_conv+nobs_oz,1:neigv),         &
+        mem_ob_modens(1:neigv,nobs_conv+1:nobs_conv+nobs_oz),         &
         ob(nobs_conv+1:nobs_conv+nobs_oz),               &
         oberr(nobs_conv+1:nobs_conv+nobs_oz),            &
         oblon(nobs_conv+1:nobs_conv+nobs_oz),            &
@@ -158,7 +158,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
         ensmean_obbc(nobs_conv+nobs_oz+1:nobs_tot),       &
         ensmean_ob(nobs_conv+nobs_oz+1:nobs_tot),         &
         mem_ob(nobs_conv+nobs_oz+1:nobs_tot),                &
-        mem_ob_modens(nobs_conv+nobs_oz+1:nobs_tot,1:neigv),            &
+        mem_ob_modens(1:neigv,nobs_conv+nobs_oz+1:nobs_tot),            &
         ob(nobs_conv+nobs_oz+1:nobs_tot),                 &
         oberr(nobs_conv+nobs_oz+1:nobs_tot),              &
         oblon(nobs_conv+nobs_oz+1:nobs_tot),              &
@@ -207,14 +207,14 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
            nanal = 1
            do neig=1,neigv
               nanalo = neigv*(nanal-1) + neig
-              anal_ob_modens(nanalo,:) = mem_ob_modens(:,neig)
+              anal_ob_modens(nanalo,:) = mem_ob_modens(neig,:)
            enddo
            do nanal=2,nanals
               call mpi_recv(mem_ob_modens,neigv*nobs_tot,mpi_real4,nanal-1, &
                             2,mpi_comm_io,mpi_status,ierr)
               do neig=1,neigv
                  nanalo = neigv*(nanal-1) + neig
-                 anal_ob_modens(nanalo,:) = mem_ob_modens(:,neig)
+                 anal_ob_modens(nanalo,:) = mem_ob_modens(neig,:)
               enddo
            enddo
         endif
