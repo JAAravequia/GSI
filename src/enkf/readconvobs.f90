@@ -736,7 +736,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
                  ! compute modulated ensemble in obs space
                  if (neigv > 0) then
                     call calc_linhx_modens(hx_mean_nobc(nob), state_d, &
-                                    dhx_dx, hx_modens(nob,:),          &
+                                    dhx_dx, hx_modens(:,nob),          &
                                     ix, delx, ixp, delxp, iy, dely,    &
                                     iyp, delyp, it, delt, itp, delxp,  &
                                     vlocal_evecs)
@@ -800,6 +800,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
                  else
                     t1 = mpi_wtime()
                     dhx_dx = v_Observation_Operator_Jacobian(1:nsdim,i)
+                    ! don't need this since we know ob location is the same?
                     rlat = x_lat(nob)*deg2rad
                     rlon = x_lon(nob)*deg2rad
                     rtim = x_time(nob)
@@ -822,7 +823,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
                     ! compute modulated ensemble in obs space
                     if (neigv > 0) then
                        call calc_linhx_modens(hx_mean_nobc(nob), state_d, &
-                                       dhx_dx, hx_modens(nob,:),          &
+                                       dhx_dx, hx_modens(:,nob),          &
                                        ix, delx, ixp, delxp, iy, dely,    &
                                        iyp, delyp, it, delt, itp, delxp,  &
                                        vlocal_evecs)
@@ -1237,8 +1238,9 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
                 else
                    call readarray(dhx_dx_read, rdiagbuf(ind:nreal,n))
                    dhx_dx = dhx_dx_read
-  
+
                    t1 = mpi_wtime()
+                   ! don't need this since we know ob location is the same?
                    rlat = x_lat(nob)*deg2rad
                    rlon = x_lon(nob)*deg2rad
                    rtim = x_time(nob)
