@@ -326,6 +326,7 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
 ! make consistent with screenobs
   errorlimit=1._r_kind/sqrt(1.e9_r_kind)
   errorlimit2=1._r_kind/sqrt(1.e-6_r_kind)
+  eps = 1.e-3
 
   twofiles = (.not. lobsdiag_forenkf) .and. (nanal <= nanals)
   id2 = 'ensmean'
@@ -599,6 +600,7 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
 ! make consistent with screenobs
   errorlimit=1._r_kind/sqrt(1.e9_r_kind)
   errorlimit2=1._r_kind/sqrt(1.e-6_r_kind)
+  eps = 1.e-3
 
   twofiles = (.not. lobsdiag_forenkf) .and. (nanal <= nanals)
   id2 = 'ensmean'

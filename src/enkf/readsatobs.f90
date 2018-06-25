@@ -382,7 +382,7 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
 ! make consistent with screenobs
   errorlimit=1._r_kind/sqrt(1.e9_r_kind)
   errorlimit2=1._r_kind/sqrt(1.e-6_r_kind)
-  eps = epsilon(rlat)
+  eps = 1.e-3
 
   tsum = 0; tsum2 = 0
   iunit = 7
