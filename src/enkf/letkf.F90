@@ -717,7 +717,7 @@ subroutine letkf_core(nobsl,hxens,hxens_orig,dep,wts_ensmean,wts_ensperts,paens,
 !   input argument list:
 !     nobsl    - number of observations in the local patch
 !     hxens    - on input: first-guess modulated ensemble in observation space (Yb)
-!                on output: overwritten with Yb * R**-1/2.
+!                on output: overwritten with Yb * R**-1.
 !     hxens_orig  - first-guess original ensembles in observation space.
 !                   not used if neigv=1. 
 !     dep      - nobsl observation departures (y-Hxmean)
@@ -782,6 +782,11 @@ real(r_kind) vl,vu
 integer(i_kind), allocatable, dimension(:) :: iwork
 real(r_kind), dimension(:), allocatable :: work1
 logical, intent(in) :: getkf_inflation
+logical denkf
+
+
+!denkf = .true. ! use DEnKF approximation
+denkf = .false.
 
 if (neigv < 1) then
   print *,'neigv must be >=1 in letkf_core'
@@ -842,7 +847,7 @@ do nanal=1,nanals
 enddo
 swork2 = lsv
 ! pa = C (Gamma + I)**-1 C^T (analysis error cov in ensemble space)
-!pa = matmul(swork2,transpose(swork2))
+!pa = matmul(swork3,transpose(swork2))
 call sgemm('n','t',nanals,nanals,nanals,1.e0,swork3,nanals,swork2,&
      nanals,0.e0,pa,nanals)
 ! work1 = (HZ)^ T R**-1/2 (y - HXmean)
@@ -873,17 +878,28 @@ deallocate(swork1,swork2,swork3)
 
 if (neigv .ne. 1) then ! use Gain formulation of LETKF weights
 
-allocate(swork3(nanals,nsvals),swork2(nanals,nsvals))
-do nanal=1,nanals
-   swork3(nanal,:) = &
-   lsv(nanal,1:nsvals)*(1.-sqrt((nanals/neigv-1)/eigval(1:nsvals)))/svals(1:nsvals)**2
-   swork2(nanal,1:nsvals) = lsv(nanal,1:nsvals)
-enddo
-! swork2 contains lsv, over-write pa
-! pa = C [ (I - (Gamma+I)**-1/2)*Gamma**-1 ] C^T
-!pa = matmul(swork3,transpose(swork2))
-call sgemm('n','t',nanals,nanals,nsvals,1.e0,swork3,nanals,swork2,&
-            nanals,0.e0,pa,nanals)
+if (denkf) then
+   allocate(swork3(nanals,nanals),swork2(nanals,nanals))
+   do nanal=1,nanals
+      swork3(nanal,:) = 0.5*lsv(nanal,:)/sqrt(eigval)
+   enddo
+   swork2 = lsv
+   !pa = matmul(swork3,transpose(swork2))
+   call sgemm('n','t',nanals,nanals,nanals,1.e0,swork3,nanals,swork2,&
+               nanals,0.e0,pa,nanals)
+else
+   allocate(swork3(nanals,nsvals),swork2(nanals,nsvals))
+   do nanal=1,nanals
+      swork3(nanal,:) = &
+      lsv(nanal,1:nsvals)*(1.-sqrt((nanals/neigv-1)/eigval(1:nsvals)))/svals(1:nsvals)**2
+      swork2(nanal,1:nsvals) = lsv(nanal,1:nsvals)
+   enddo
+   ! swork2 contains lsv, over-write pa
+   ! pa = C [ (I - (Gamma+I)**-1/2)*Gamma**-1 ] C^T
+   !pa = matmul(swork3,transpose(swork2))
+   call sgemm('n','t',nanals,nanals,nsvals,1.e0,swork3,nanals,swork2,&
+               nanals,0.e0,pa,nanals)
+endif
 deallocate(swork2,swork3)
 
 ! work2 = (HZ)^ T R**-1/2 HXprime
