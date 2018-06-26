@@ -783,15 +783,11 @@ real(r_kind) vl,vu
 integer(i_kind), allocatable, dimension(:) :: iwork
 real(r_kind), dimension(:), allocatable :: work1
 logical, intent(in) :: getkf_inflation
-logical denkf
 
 ! nsvals - rank (# of nonzero sing values)) of YbRsqrtinv=hxens * R **-1/2
 !          (and R includes ob error localization)
 !          (= nanals if nanals<=nobsl, = nobsl if nobsl<nanals)
 nsvals = min(nanals,nobsl)
-
-!denkf = .true. ! use DEnKF approximation
-denkf = .false.
 
 if (neigv < 1) then
   print *,'neigv must be >=1 in letkf_core'
@@ -886,17 +882,10 @@ deallocate(swork1)
 
 if (neigv .ne. 1) then ! use Gain formulation of LETKF weights
 
-if (denkf) then
-   do nanal=1,nanals
-      swork3(nanal,:) = &
-      0.5*lsv(nanal,1:nsvals)/sqrt(gammapI(1:nsvals))
-   enddo
-else
-   do nanal=1,nanals
-      swork3(nanal,:) = &
-      lsv(nanal,1:nsvals)*(1.-sqrt((nanals/neigv-1)/gammapI(1:nsvals)))/svals(1:nsvals)**2
-   enddo
-endif
+do nanal=1,nanals
+   swork3(nanal,:) = &
+   lsv(nanal,1:nsvals)*(1.-sqrt((nanals/neigv-1)/gammapI(1:nsvals)))/svals(1:nsvals)**2
+enddo
 ! swork2 still contains eigenvectors, over-write pa
 ! pa = C [ (I - (Gamma+I)**-1/2)*Gamma**-1 ] C^T
 !pa = matmul(swork3,transpose(swork2))
@@ -934,6 +923,7 @@ gammapI = sqrt(real(nanals-1,r_kind)/gammapI)
 do nanal=1,nanals
    swork3(nanal,1:nsvals) = lsv(nanal,1:nsvals)*gammapI
 enddo
+! swork2 already contains lsv
 ! wts_ensperts = 
 ! C (Gamma + I)**-1/2 C^T (square root of analysis error cov in ensemble space)
 !wts_ensperts = matmul(swork3,transpose(swork2))
