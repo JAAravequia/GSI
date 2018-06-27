@@ -285,7 +285,6 @@ subroutine disobs(ndata,nobs,mm1,lunout,obsfile,obstypeall)
   close(lunin)
 
   ndata_s=0
-  write(6,*) 'Hey, mype is ',mype,' and nn_obs and nobs are ',nn_obs,nobs
 ! allocate(data1_s(nn_obs,nobs),luse_s(nobs),ioid_s(nobs))
   allocate(data1_s(nn_obs,nobs))
   allocate(luse_s(nobs))
