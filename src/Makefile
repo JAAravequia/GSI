@@ -343,7 +343,6 @@ clean:
 	gsi_metguess_mod.F90 \
 	gsi_nemsio_mod.f90 \
         gsi_rfv3io_mod.f90 \
-        mod_fv3_lola.f90 \
 	gsimain.f90 \
 	gsimod.F90 \
 	gsisub.F90 \
@@ -427,6 +426,7 @@ clean:
 	mpeu_mpif.F90 \
 	mpeu_util.F90 \
 	mod_nmmb_to_a.f90 \
+        mod_fv3_lola.f90 \
 	mod_strong.f90 \
 	mod_vtrans.f90 \
         mod_wrfmass_to_a.f90 \

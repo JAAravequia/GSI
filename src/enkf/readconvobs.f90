@@ -700,8 +700,8 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
            x_type(nob)  = obtype
            if (x_type(nob) == ' uv')  x_type(nob) = '  u'
            if (x_type(nob) == 'tcp')  x_type(nob) = ' ps'
-           if (x_type(nob) == ' rw')  x_type(nob) = '  u'
-           if (x_type(nob) == 'dbz')  x_type(nob) = '  u'
+           if (x_type(nob) == ' rw')  x_type(nob) = ' rw'
+           if (x_type(nob) == 'dbz')  x_type(nob) = 'dbz'
 
            ! get Hx
            if (nanal <= nanals) then
@@ -1083,7 +1083,7 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
           x_type(nob)  = obtype
           if (obtype == ' uv')   x_type(nob) = '  u'
           if (obtype == 'tcp')   x_type(nob) = ' ps'
-          if (obtype == ' rw')   x_type(nob) = '  u'
+          if (obtype == ' rw')   x_type(nob) = ' rw'
 
           ! get Hx
           if (nanal <= nanals) then
