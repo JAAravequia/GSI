@@ -322,6 +322,8 @@ echo "export I_MPI_DAPL_BUFFER_NUM=64"    >> $cfile
 #echo "export I_MPI_INTRANODE_EAGER_THRESHOLD=1"    >> $cfile
 echo "export I_MPI_SHM_LMT_BUFFER_SIZE=65536"    >> $cfile
 echo "export I_MPI_DAPL_BUFFER_SIZE=1048576"    >> $cfile
+echo "export MP_STDOUTMODE=ORDERED"    >> $cfile
+echo "export MP_STDERRMODE=ORDERED"    >> $cfile
 
 echo "$exec"                                                    >> $cfile
 

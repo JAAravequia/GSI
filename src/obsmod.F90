@@ -433,8 +433,10 @@ module obsmod
   public :: obsmod_init_instr_table
   public :: obsmod_final_instr_table
   public :: nobs_sub
+  public :: nobs_sub1
 
   public :: l_wcp_cwm
+  public :: profReq,nobsReq,superReq,dataReq
 
   interface obsmod_init_instr_table
           module procedure init_instr_table_
@@ -563,6 +565,9 @@ module obsmod
   integer(i_kind),allocatable :: nobs_sub(:,:)
   integer(i_kind),allocatable :: obscounts(:,:)
   integer(i_kind),allocatable :: obs_sub_comm(:)
+  integer(i_kind),allocatable :: nobsReq(:)
+  integer(i_kind) profReq,superReq,dataReq
+  integer(i_kind),allocatable :: nobs_sub1(:,:)
   
   character(128) obs_setup
   character(128) dirname

@@ -35,7 +35,7 @@ module observermod
 
   use kinds, only: i_kind
   use constants, only: rearth
-  use mpimod, only: mype,npe
+  use mpimod, only: mype,npe,ierror,mpi_integer,mpi_comm_world,mpi_status_size
   use jfunc, only: miter,jiter,jiterstart,&
        switch_on_derivatives,tendsflag
   use gridmod, only: nlat,nlon,rlats,regional,twodvar_regional,wgtlats,nsig,&
@@ -44,7 +44,7 @@ module observermod
        destroy_ges_grids,destroy_sfc_grids,nfldsig
   use cloud_efr_mod, only: cloud_init,cloud_final
   use obsmod, only: write_diag,obs_setup,ndat,dirname,lobserver,ndat,nobs_sub, &
-       lread_obs_skip,nprof_gps,ditype,obs_input_common,iadate,luse_obsdiag
+       lread_obs_skip,nprof_gps,ditype,obs_input_common,iadate,luse_obsdiag,nobsReq
   use satthin, only: superp,super_val1,getsfc,destroy_sfc
   use gsi_4dvar, only: l4dvar
   use convinfo, only: convinfo_destroy
@@ -316,7 +316,8 @@ subroutine set_
 
 ! Declare local variables
   logical:: lhere
-  integer(i_kind):: lunsave,istat1,istat2,istat3,ndat_old,npe_old
+  integer(i_kind):: lunsave,istat1,istat2,istat3,ndat_old,npe_old,npem1,mmdat
+  integer(i_kind),allocatable,dimension(:,:) :: nobsStat
   
   data lunsave  / 22 /
 _ENTRY_(Iam)
@@ -380,6 +381,17 @@ _ENTRY_(Iam)
   endif
   
 ! Locate observations within each subdomain (not to call in 4dvar inner loop)
+! npem1 = npe - 1
+! if(mype.eq.npem1) then
+!     write(6,*)'mype is ',mype,' and I am waiting for messages, size of nobsReq is ',size(nobsReq)
+!     mmdat=size(nobsReq)
+!     allocate(nobsStat(mpi_status_size,mmdat))
+!     call mpi_WaitAll(mmdat,nobsReq,nobsStat,ierror) 
+!     write(6,*)'mype is ',mype,' and I am DONE waiting for messages'
+!     deallocate(nobsStat)
+! endif
+! call mpi_bcast(nobs_sub,ndat*npe,mpi_integer,npem1,mpi_comm_world,ierror)
+  
   if(lobserver.or.(.not.l4dvar)) call obs_para(ndata,mype)
 
   iamset_ = .true.

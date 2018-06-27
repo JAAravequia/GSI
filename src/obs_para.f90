@@ -57,12 +57,15 @@ subroutine obs_para(ndata,mype)
   use kinds, only: i_kind
   use constants, only: zero
   use jfunc, only: factqmin,factqmax
-  use mpimod, only: npe,mpi_itype,mpi_comm_world,ierror
+  use mpimod, only: npe,mpi_itype,mpi_comm_world,ierror,mpi_integer,mpi_status_size
   use obsmod, only: obs_setup,dtype,mype_diaghdr,ndat,nsat1, &
-              obsfile_all,dplat,nobs_sub,obs_sub_comm 
+              obsfile_all,dplat,nobs_sub,obs_sub_comm,nobsReq,ditype,&
+              obs_input_common,nprof_gps,lread_obs_save,obs_input_common
+  use satthin, only: super_val,super_val1,superp
   use gridmod, only: twodvar_regional 
   use qcmod, only: buddycheck_t,buddydiag_save 
   use gsi_io, only: verbose
+  use gsi_unformatted, only: unformatted_open
   implicit none
 
 ! Declare passed variables
@@ -70,12 +73,13 @@ subroutine obs_para(ndata,mype)
   integer(i_kind),dimension(ndat,3),intent(in   ) :: ndata
 
 ! Declare local variables
-  integer(i_kind) lunout,is,ii
-  integer(i_kind) mm1
+  integer(i_kind) lunout,is,ii,lunsave
+  integer(i_kind) mm1,npem1
   integer(i_kind) ndatax_all,ikey_yes,ikey_no,newprocs,newrank 
   integer(i_kind),dimension(npe):: ikey,icolor 
-  integer(i_kind) nobs_s
+  integer(i_kind) nobs_s,mmdat
   logical print_verbose
+  integer(i_kind),allocatable,dimension(:,:):: nobsStat
 
   print_verbose=.false.
   if(verbose)print_verbose=.true.
@@ -88,8 +92,27 @@ subroutine obs_para(ndata,mype)
   obs_sub_comm=0 
   mype_diaghdr = -999
   mm1=mype+1
+  npem1 = npe - 1
   ndatax_all=0
   lunout=55
+  lunsave=82
+  
+  if(mype.eq.npem1) then
+      mmdat=size(nobsReq)
+      allocate(nobsStat(mpi_status_size,mmdat))
+      call mpi_WaitAll(mmdat,nobsReq,nobsStat,ierror) 
+      deallocate(nobsStat)
+  endif
+  call mpi_bcast(nobs_sub,ndat*npe,mpi_integer,npem1,mpi_comm_world,ierror)
+!  Write collective obs selection information to scratch file.
+   if (lread_obs_save .and. mype==0) then
+      write(6,*)'READ_OBS:  write collective obs selection info to ',trim(obs_input_common)
+      call unformatted_open(lunsave,file=obs_input_common,class=".obs_input.")
+      write(lunsave) ndata,ndat,npe,superp,nprof_gps,ditype
+      write(lunsave) super_val1
+      write(lunsave) nobs_sub
+      close(lunsave)
+   endif
 
 !
 ! Set number of obs on each pe for each data type
@@ -211,6 +234,7 @@ subroutine disobs(ndata,nobs,mm1,lunout,obsfile,obstypeall)
 !
 !$$$
   use kinds, only: r_kind,i_kind
+  use mpimod, only: mype
   use gridmod, only: periodic_s,nlon,nlat,jlon1,ilat1,istart,jstart
   implicit none
 
@@ -261,7 +285,11 @@ subroutine disobs(ndata,nobs,mm1,lunout,obsfile,obstypeall)
   close(lunin)
 
   ndata_s=0
-  allocate(data1_s(nn_obs,nobs),luse_s(nobs),ioid_s(nobs))
+  write(6,*) 'Hey, mype is ',mype,' and nn_obs and nobs are ',nn_obs,nobs
+! allocate(data1_s(nn_obs,nobs),luse_s(nobs),ioid_s(nobs))
+  allocate(data1_s(nn_obs,nobs))
+  allocate(luse_s(nobs))
+  allocate(ioid_s(nobs))
 
 ! Loop over all observations.  Locate each observation with respect
 ! to subdomains.
