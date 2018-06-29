@@ -44,7 +44,8 @@ else
 fi
 module list
 
-dlist="adderrspec_nmcmeth_spec.fd getsfcensmeanp.fd getsigensstatp.fd getnstensmeanp.fd getsfcnstensupdp.fd getsigensmeanp_smooth_ncep.fd recentersigp.fd calc_increment_ens.fd gribmean.fd"
+##dlist="adderrspec_nmcmeth_spec.fd getsfcensmeanp.fd getsigensstatp.fd getnstensmeanp.fd getsfcnstensupdp.fd getsigensmeanp_smooth_ncep.fd recentersigp.fd calc_increment_ens.fd gribmean.fd"
+dlist="calc_increment_ens.fd"
 
 for dir in $dlist; do
 
