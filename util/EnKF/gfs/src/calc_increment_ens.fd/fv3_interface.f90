@@ -95,7 +95,7 @@ module fv3_interface
   !! NetCDF file.  The input names are in input_vars.
   character(len=11), dimension(n_inc_vars) :: output_vars=(/       &
        'u_inc      ', 'v_inc      ', 'delp_inc   ', 'delz_inc   ', &
-       'temp_inc   ', 'sphum_inc  ', 'liq_wat_inc', 'o3mr_inc   ', &
+       'T_inc      ', 'sphum_inc  ', 'liq_wat_inc', 'o3mr_inc   ', &
        'icmr_inc   ' /)
 
   !! Synonyms for output_vars needed to be backward-compatible with
@@ -136,21 +136,16 @@ contains
     ! Formats for print statements:
 100 format(A,': ',A)
 
-    write(0,*) 'top of fv3_calc_increment'
     ! ------------------------------------------------------------------
     ! Initialize memory, read metadata, and read 1D arrays.
-    write(0,*) 'Initialize memory, read metadata, and read 1D arrays.'
 
     ! Calculate constants
-    write(0,*) 'Calculate constants'
     call init_constants_derived()
 
     ! Allocate grids for analysis and first guess
-    write(0,*) 'Allocate grids for analysis and first guess'
     call fv3_grid_allocate(an_grid,fg_grid)
 
     ! Read the analysis and first guess non-increment vars and pressure:
-    write(0,*) 'Read the analysis and first guess non-increment vars and pressure'
     an_grid%filename = analysis_filename
     fg_grid%filename = firstguess_filename
     call fv3_analysis_read_non_inc_vars(an_grid)
@@ -159,19 +154,17 @@ contains
     ! ------------------------------------------------------------------
     ! Deal with everything that is NOT a 3D array:
 
-    write(0,*) 'Copy horizontal dimensions from analysis grid'
     ! Copy horizontal dimensions from analysis grid
     grid%nlons   = an_grid%nx
     grid%nlats   = an_grid%ny
 
     ! Read the nemsio header
-    write(0,*) 'Read the nemsio header'
+    call gfs_nems_initialize(meta_nemsio, analysis_filename)
     call gfs_grid_initialize(grid, meta_nemsio)
 
     an_grid%lon = grid%rlon(:,1)
 
     ! reverse latitudes (so they are in increasing order, S to N)
-    write(0,*) 'reverse latitudes (so they are in increasing order, S to N)'
     if (grid%rlat(1,1) > grid%rlat(1,grid%nlats)) then
        do j=1,grid%nlats
           an_grid%lat(j) = grid%rlat(1,grid%nlats-j+1)
@@ -181,7 +174,6 @@ contains
     endif
 
     ! Fill 1D vertical arrays with level numbers:
-    write(0,*) 'Fill 1D vertical arrays with level numbers:'
 
     nz_init: do k = 1, an_grid%nz
        an_grid%lev(k)   = real(k)
@@ -195,14 +187,13 @@ contains
     end do nzp1_init
 
     ! Deallocate entire grid.
-    write(0,*) 'Deallocate entire grid.'
     call gfs_grid_cleanup(grid)
+    call gfs_nems_finalize()
 
     ! ------------------------------------------------------------------
     ! Start the NetCDF file creation.  Define vars and write
     ! non-increment vars.
 
-    write(0,*) 'start netcdf file'
     call fv3_increment_def_start(an_grid,ncdat)
 
     var_def_loop: do ivar=1,n_inc_vars
@@ -219,52 +210,47 @@ contains
     ! ------------------------------------------------------------------
     ! Deal with 3D arrays
 
-    ! Pressure is already in var3d, so write it out unless we're skipping it
-    call fv3_netcdf_write_var3d(ncdat,output_vars(ivar),an_grid%var3d)
-
     var_loop: do ivar=1,n_inc_vars
-       ! Skip this var if it is to be zero.  No point in reading it...
-       if(should_zero_increments_for(var_zero_synonyms(ivar))) then
-          print 100, output_vars(ivar), &
-               'is in incvars_to_zero; setting increments to zero'
-          an_grid%var3d = 0
-          cycle var_loop
-       endif
-
        ! Skip this var if it is icmr and we're told not to do_icmr:
        if(trim(input_vars(ivar)) == 'icmr' .and. .not. do_icmr) then
-          print 100, output_vars(ivar), &
+          print 100, trim(output_vars(ivar)), &
                'do_icmr = F so will not diff this var'
           cycle var_loop
        endif
 
-       ! This var should not be skipped.  Let's get the analysis and
-       ! first guess from the input files.
-       if(trim(input_vars(ivar)) == 'dpres') then
-          ! Special case.  We may have to calculate the 3D pressure
-          ! from the 2D surface pressure and coordinate system using
-          ! the hydrostatic approximation.
-          write(0,*) 'read pressure'
-          call fv3_analysis_read_or_calc_dpres(an_grid)
-          call fv3_analysis_read_or_calc_dpres(fg_grid)
+       ! Skip this var if it is to be zero.  No point in reading it...
+       zero_or_read: if(should_zero_increments_for(var_zero_synonyms(ivar))) then
+          print 100, trim(output_vars(ivar)), &
+               'is in incvars_to_zero; setting increments to zero'
+          an_grid%var3d = 0
        else
-          ! Read the variable from the files directly.
-          write(0,*) 'read ',input_vars(ivar)
-          call fv3_analysis_read_var(an_grid,input_vars(ivar))
-          call fv3_analysis_read_var(fg_grid,input_vars(ivar))
-       endif
 
-       ! Subtract and write
-       write(0,*) 'subtract'
-       an_grid%var3d = an_grid%var3d - fg_grid%var3d
-       write(0,*) 'write'
+          ! This var should not be skipped.  Let's get the analysis and
+          ! first guess from the input files.
+          if(trim(input_vars(ivar)) == 'dpres') then
+             ! Special case.  We may have to calculate the 3D pressure
+             ! from the 2D surface pressure and coordinate system using
+             ! the hydrostatic approximation.
+             call fv3_analysis_read_or_calc_dpres(an_grid)
+             call fv3_analysis_read_or_calc_dpres(fg_grid)
+          else
+             ! Read the variable from the files directly.
+             print 100, trim(output_vars(ivar)), 'read variable'
+             call fv3_analysis_read_var(an_grid,input_vars(ivar))
+             call fv3_analysis_read_var(fg_grid,input_vars(ivar))
+          endif
+          
+          ! Subtract and write
+          an_grid%var3d = an_grid%var3d - fg_grid%var3d
+       endif zero_or_read
+
        call fv3_netcdf_write_var3d(ncdat,output_vars(ivar),an_grid%var3d)
     enddo var_loop
 
-    write(0,*) 'close'
     call fv3_increment_write_end(ncdat)
 
-    write(0,*) 'end of fv3_calc_increment'
+    call fv3_grid_deallocate(an_grid,fg_grid)
+
   end subroutine fv3_calc_increment  
 
   !=======================================================================
@@ -358,7 +344,7 @@ contains
     ! Define variables passed to routine
 
     type(increment_netcdf) :: ncdat
-    character(len=*) :: varname
+    character(len=*),intent(in) :: varname
     real(r_kind), intent(in), dimension(:,:,:) :: values
 
     ! Define variables computed within routine
@@ -366,7 +352,7 @@ contains
     integer :: ncvarid
 
     call netcdf_check(nf90_inq_varid(ncdat%ncfileid,varname,ncvarid),&
-                      'nf90_inq_varid',context=varname)
+         'nf90_inq_varid',context=varname)
     call netcdf_check(nf90_put_var(ncdat%ncfileid,ncvarid,values),&
                       'nf90_put_var',context=varname)
 
@@ -444,8 +430,8 @@ contains
 
     ncdat%dimid_lon=fv3_netcdf_def_dim(ncdat,'lon',grid%nx)
     ncdat%dimid_lat=fv3_netcdf_def_dim(ncdat,'lat',grid%ny)
-    ncdat%dimid_lon=fv3_netcdf_def_dim(ncdat,'lev',grid%nz)
-    ncdat%dimid_lon=fv3_netcdf_def_dim(ncdat,'ilev',grid%nzp1)
+    ncdat%dimid_lev=fv3_netcdf_def_dim(ncdat,'lev',grid%nz)
+    ncdat%dimid_ilev=fv3_netcdf_def_dim(ncdat,'ilev',grid%nzp1)
 
     if (debug) print *,'dims',grid%nx,grid%ny,grid%nz,grid%nzp1
 
@@ -521,7 +507,7 @@ contains
 
     ! Close the NetCDF file.  This also flushes buffers.
     call netcdf_check(nf90_close(ncdat%ncfileid),'nf90_close',&
-         context=increment_filename)
+         context=trim(increment_filename))
   end subroutine fv3_increment_write_end
 
   !=======================================================================
@@ -554,6 +540,7 @@ contains
        call variable_lookup(var_info)
        call gfs_nems_read(workgrid,var_info%nems_name, &
                           var_info%nems_levtyp,k)
+
        grid%var3d(:,:,grid%nz-k+1)=reshape(workgrid,(/grid%nx,grid%ny/))
        if (grid%flip_lats) then
           call gfs_nems_flip_xlat_axis( &
@@ -609,7 +596,7 @@ contains
        endif
 
        ! Read the A, B, and surface pressure
-       call gfs_nems_vcoord(meta_nemsio,grid%filename,vcoord)
+       call gfs_nems_vcoord(meta_nemsio,trim(grid%filename),vcoord)
        grid%ak           = vcoord(:,1,1)
        grid%bk           = vcoord(:,2,1)
        var_info%var_name = 'psfc'
@@ -624,7 +611,7 @@ contains
           pressi(:,:,k) = grid%ak(k) + grid%bk(k)*grid%psfc(:,:)
        end do ! do k = 1, meta_nemsio%dimz + 1
     else
-       print 100,'dpres','read file file; do not calculate'
+       print 100,'dpres','read from file; do not calculate'
     endif
 
     ! Calculate or read the mid-level 3D pressure:
@@ -643,13 +630,14 @@ contains
           grid%var3d(:,:,meta_nemsio%dimz - k + 1) = &
                pressi(:,:,k) - pressi(:,:,k+1)
        endif
+
+       ! Flip the pressure in the latitude direction if needed
+       if (grid%flip_lats) then
+          call gfs_nems_flip_xlat_axis( &
+               meta_nemsio, grid%var3d(:,:,meta_nemsio%dimz - k + 1) )
+       endif
     enddo
 
-    ! Flip the pressure in the latitude direction if needed
-    if (grid%flip_lats) then
-       call gfs_nems_flip_xlat_axis( &
-            meta_nemsio, grid%var3d(:,:,meta_nemsio%dimz - k + 1) )
-    endif
 
     ! Deallocate memory for work arrays
 
