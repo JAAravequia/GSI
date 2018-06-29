@@ -617,7 +617,7 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
      if (twofiles) call close_radiag(obsfile2,iunit2)
      enddo peloop ! ipe
  enddo ! satellite
- if (nanal == nanals) print *,'time in calc_linhx for sat obs on proc',nproc,' = ',tsum
+ if (nanal == nanals .and. lobsdiag_forenkf) print *,'time in calc_linhx for sat obs on proc',nproc,' = ',tsum
  if (nanal == nanals) print *,'time in read_raddiag_data for sat obs on proc',nproc,' = ',tsum2
 
   if (nob /= nobs_max) then
@@ -1003,7 +1003,7 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
 
      enddo peloop ! ipe
  enddo ! satellite
- if (nanal == nanals) print *,'time in calc_linhx for sat obs on proc',nproc,' = ',tsum
+ if (nanal == nanals .and. lobsdiag_forenkf) print *,'time in calc_linhx for sat obs on proc',nproc,' = ',tsum
  if (nanal == nanals) print *,'time in read_raddiag_data for sat obs on proc',nproc,' = ',tsum2
 
   if (nob /= nobs_max) then

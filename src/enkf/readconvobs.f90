@@ -872,7 +872,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
      enddo peloop ! ipe loop
   enddo obtypeloop
 
-  if (nanal == nanals) print *,'time in calc_linhx for conv obs on proc',nproc,' =',tsum
+  if (nanal == nanals .and. lobsdiag_forenkf) print *,'time in calc_linhx for conv obs on proc',nproc,' =',tsum
   if (nob .ne. nobs_max) then
       print *,'nc: number of obs not what expected in get_convobs_data',nob,nobs_max
       call stop2(94)
@@ -1338,7 +1338,7 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
   
   enddo peloop ! ipe loop
 
-  if (nanal == nanals) print *,'time in calc_linhx for conv obs on proc',nproc,' =',tsum
+  if (nanal == nanals .and. lobsdiag_forenkf) print *,'time in calc_linhx for conv obs on proc',nproc,' =',tsum
   if (nob .ne. nobs_max) then
       print *,'bin: number of obs not what expected in get_convobs_data',nob,nobs_max
       call stop2(94)

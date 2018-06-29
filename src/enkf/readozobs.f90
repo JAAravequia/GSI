@@ -523,7 +523,7 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
          if(twofiles) close(iunit2)
       enddo peloop ! ipe
   enddo ! satellite
-  if (nanal == nanals) print *,'time in calc_linhx for oz obs on proc',nproc,' = ',tsum
+  if (nanal == nanals .and. lobsdiag_forenkf) print *,'time in calc_linhx for oz obs on proc',nproc,' = ',tsum
 
   if (nob /= nobs_max) then
       print *,'number of obs not what expected in get_ozobs_data',nob,nobs_max
@@ -760,7 +760,7 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
          endif
       enddo peloop ! ipe
   enddo ! satellite
-  if (nanal == nanals) print *, 'time in calc_linhx for oz obs on proc',nproc,' =',tsum
+  if (nanal == nanals .and. lobsdiag_forenkf) print *, 'time in calc_linhx for oz obs on proc',nproc,' =',tsum
 
   if (nob /= nobs_max) then
       print *,'number of obs not what expected in get_ozobs_data',nob,nobs_max
