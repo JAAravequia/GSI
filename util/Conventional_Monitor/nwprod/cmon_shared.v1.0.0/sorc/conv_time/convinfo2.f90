@@ -1,19 +1,20 @@
 !   the subroutine to read convention information file
 
-   subroutine convinfo(iotype_ps,iotype_q,iotype_t,iotype_uv,iotype_gps,ntype_ps,&
-                       ntype_q,ntype_t,ntype_uv,ntype_gps,varqc_ps,varqc_q,varqc_t,varqc_uv,&
-                       varqc_gps,ituse_ps,ituse_q,ituse_t,ituse_uv,ituse_gps,&
-                       iosubtype_ps,iosubtype_q,iosubtype_t,iosubtype_uv,iosubtype_gps)
+   subroutine convinfo(iotype_gps,iotype_ps,iotype_q,iotype_t,iotype_uv,&
+                       ntype_gps,ntype_ps,ntype_q,ntype_t,ntype_uv,&
+                       varqc_gps,varqc_ps,varqc_q,varqc_t,varqc_uv,&
+                       ituse_gps,ituse_ps,ituse_q,ituse_t,ituse_uv,&
+                       iosubtype_gps,iosubtype_ps,iosubtype_q,iosubtype_t,iosubtype_uv)
 
    implicit none
 
-   integer,dimension(100) :: iotype_ps,iotype_q,iotype_t,iotype_uv,iotype_gps 
-   integer,dimension(100) :: iosubtype_ps,iosubtype_q,iosubtype_t,iosubtype_uv,iosubtype_gps 
-   integer,dimension(100) :: ituse_ps,ituse_q,ituse_t,ituse_uv,ituse_gps
-   real(4),dimension(100,2) :: varqc_ps,varqc_q,varqc_t,varqc_uv,varqc_gps
+   integer,dimension(100) :: iotype_gps,iotype_ps,iotype_q,iotype_t,iotype_uv 
+   integer,dimension(100) :: iosubtype_gps,iosubtype_ps,iosubtype_q,iosubtype_t,iosubtype_uv 
+   integer,dimension(100) :: ituse_gps,ituse_ps,ituse_q,ituse_t,ituse_uv 
+   real(4),dimension(100,2) :: varqc_gps,varqc_ps,varqc_q,varqc_t,varqc_uv
 
    integer ittype,ituse,ntumgrp,ntgroup,ntmiter,isubtype
-   integer  lunin,ntype_ps,ntype_q,ntype_t,ntype_uv,ntype_gps,iflag
+   integer  lunin,ntype_gps,ntype_ps,ntype_q,ntype_t,ntype_uv,iflag
    real(8) :: ttwind,gtross,etrmax,etrmin,vtar_b,vtar_pg
 
    character(120):: crecord
@@ -21,18 +22,22 @@
    character(1) :: cflg
 
    lunin=11
+   ntype_gps=0
    ntype_ps=0
    ntype_q=0
    ntype_t=0
    ntype_uv=0
+   iotype_gps=0
    iotype_ps=0
    iotype_q=0
    iotype_t=0
    iotype_uv=0
+   ituse_gps=0
    ituse_ps=0
    ituse_q=0
    ituse_t=0
    ituse_uv=0
+   varqc_gps=0.0
    varqc_ps=0.0
    varqc_q=0.0
    varqc_t=0.0
@@ -53,7 +58,16 @@
       read(crecord,*)ittype,isubtype,ituse,ttwind,ntumgrp,ntgroup,ntmiter,&
                       gtross,etrmax,etrmin,vtar_b,vtar_pg
 
-      if(trim(ctype) == 'ps' ) then
+      if(trim(ctype) == 'gps' ) then
+         ntype_gps=ntype_gps+1
+         iotype_gps(ntype_gps)=ittype
+         iosubtype_gps(ntype_gps)=isubtype
+
+         varqc_gps(ntype_gps,1)=vtar_b
+         varqc_gps(ntype_gps,2)=vtar_pg
+         ituse_gps(ntype_gps)=ituse
+
+      else if(trim(ctype) == 'ps' ) then
          ntype_ps=ntype_ps+1
          iotype_ps(ntype_ps)=ittype
          iosubtype_ps(ntype_ps)=isubtype
@@ -61,15 +75,6 @@
          varqc_ps(ntype_ps,1)=vtar_b
          varqc_ps(ntype_ps,2)=vtar_pg
          ituse_ps(ntype_ps)=ituse
-
-      else if(trim(ctype) == 'gps' ) then
-         ntype_gps=ntype_gps+1
-         iotype_gps(ntype_gps)=ittype
-         iosubtype_gps(ntype_gps)=isubtype
-
-         varqc_ps(ntype_gps,1)=vtar_b
-         varqc_ps(ntype_gps,2)=vtar_pg
-         ituse_ps(ntype_gps)=ituse
 
       else if(trim(ctype) == 'q') then
          ntype_q=ntype_q+1

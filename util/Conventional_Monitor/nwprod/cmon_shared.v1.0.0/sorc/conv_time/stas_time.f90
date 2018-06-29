@@ -33,12 +33,13 @@ subroutine stascal(dtype,rdiag,nreal,n,iotype,varqc,ntype,work,worku,&
    tiny=1.0e-10
 
  
-!   print *,'start to call stascal'
-!   print *,n,nreal,ntype
-!   print *,rdiag(itype,1),rdiag(ilat,1),rdiag(ilon,1),rdiag(ipress,1)
-!   print *,rdiag(iqc,1),rdiag(iuse,1),rdiag(imuse,1),rdiag(ierr1,1),rdiag(iobg,1)
-!   print *,rlatmin(1),rlatmax(1),rlonmin(1),rlonmax(1),np,nregion,ntype 
-!   print *,iotype(1),iotype(2),iotype(3),iotype(4),iotype(5),iotype(6)
+   print *,'--> stascal'
+   print *,'     dtype,n,nreal,ntype = ', dtype, n, nreal, ntype  
+
+   print *,rdiag(itype,1),rdiag(ilat,1),rdiag(ilon,1),rdiag(ipress,1)
+   print *,rdiag(iqc,1),rdiag(iuse,1),rdiag(imuse,1),rdiag(ierr1,1),rdiag(iobg,1)
+   print *,rlatmin(1),rlatmax(1),rlonmin(1),rlonmax(1),np,nregion,ntype 
+   print *,iotype(1),iotype(2),iotype(3),iotype(4),iotype(5),iotype(6)
    
    do i=1,n
       if(trim(dtype) ==  ' uv') then
@@ -61,7 +62,7 @@ subroutine stascal(dtype,rdiag,nreal,n,iotype,varqc,ntype,work,worku,&
          rat_err2 =0.0
       endif
   
-!     print *,rdiag(imuse,i),rdiag(iobg,i),rdiag(ierr1,i),rdiag(ierr3,i),rat_err2,val2 
+!      print *,'rdiag imuse, iobg, ierr1, ierr3, rad_err2, val2 ', rdiag(imuse,i),rdiag(iobg,i),rdiag(ierr1,i),rdiag(ierr3,i),rat_err2,val2 
       if(rdiag(imuse,i) >0.0) then
          nn=1
       else
@@ -69,15 +70,30 @@ subroutine stascal(dtype,rdiag,nreal,n,iotype,varqc,ntype,work,worku,&
          if(rdiag(ierr3,i) >tiny) nn=3
       endif
 
-!     print *,rdiag(itype,i),rdiag(ierr1,i),rdiag(ierr3,i),rdiag(imuse,i),nn
+
+!      print *,rdiag(itype,i),rdiag(ierr1,i),rdiag(ierr3,i),rdiag(imuse,i),nn
       do ltype=1,ntype
+!         print *, 'top of do loop: ', ltype, ' of',  ntype
          intype=int(rdiag(itype,i))
          insubtype=int(rdiag(isubtype,i))
+         
+         if( (trim(dtype) ==  'gps') ) then
+            print *, 'INTYPE,INSUBTYPE for gps = ', intype, insubtype
           
-!        print *,intype,iotype(ltype),ltype
-         if(intype == iotype(ltype) .and. insubtype == iosubtype(ltype)) then
+!            print *, intype,iotype(ltype),ltype
+            print *, 'intype, iotype(ltype),ltype : ', intype, iotype(ltype), ltype
+            print *, 'insubtype, iosubtype(ltype) :', insubtype, iosubtype(ltype)
+            print *, ' '
+         end if
 
-!           print *,intype,iotype(ltype),ltype,nn,insubtype,iosubtype(ltype)
+         if( (intype == iotype(ltype)) .and. (( insubtype == iosubtype(ltype) ) &
+               .or. ( trim(dtype) == 'gps' )) )then
+
+            if( trim(dtype) == 'gps' ) then
+               print *, 'Processing GPS, intype = ', intype
+            end if
+
+!            print *,intype,iotype(ltype),ltype,nn,insubtype,iosubtype(ltype)
             cvar_pg=varqc(ltype,2)
             cvar_b=varqc(ltype,1)
             if (cvar_pg > 0.0 .and. rdiag(imuse,i) >0.0) then
@@ -90,16 +106,30 @@ subroutine stascal(dtype,rdiag,nreal,n,iotype,varqc,ntype,work,worku,&
                term = exp_arg
             endif
             valqc = -2.0*rat_err2*term
-!           print *, cg_term,cg_t,cvar_pg,term,valqc
+!            print *, cg_term,cg_t,cvar_pg,term,valqc
+
             do j=1,nregion
-!              print *,rdiag(ilon,i),rdiag(ilat,i),rlonmin(j),rlatmax(j)
+!               print *,rdiag(ilon,i),rdiag(ilat,i),rlonmin(j),rlatmax(j)
                if(rdiag(ilon,i) >180.0) rdiag(ilon,i)=rdiag(ilon,i)-360.0
                if(rdiag(ilon,i)>=rlonmin(j) .and. rdiag(ilon,i)<=rlonmax(j) .and. &
                   rdiag(ilat,i)>=rlatmin(j) .and. rdiag(ilat,i)<=rlatmax(j) ) then
-!              print *,'j=',j
+!               print *,'j=',j
 
                do k=1,np
                   if(rdiag(ipress,i) >=ptop(k) .and. rdiag(ipress,i) <= pbot(k))then
+                      if( trim(dtype) == 'gps' ) then
+                         print *, 'in k loop, processing GPS, rdiag values :'
+                         print *, '   rdiag(itype,i),rdiag(isubtype,i) = ', rdiag(itype,i), rdiag(isubtype,i)
+                         print *, '   rdiag(ilat,i), rdiag(ilon,i) = ', rdiag(ilat,i), rdiag(ilon,i) 
+                         print *, '   rdiag(ipress,i), rdiag(iqc,i) = ', rdiag(ipress,i), rdiag(iqc,i) 
+                         print *, '   rdiag(iuse,i), rdiag(imuse,i) = ', rdiag(iuse, i), rdiag(imuse,i)
+                         print *, '   rdiag(iwgt,i), rdiag(ierr1,i) = ', rdiag(iwgt,i), rdiag(ierr1,i)
+                         print *, '   rdiag(ierr2,i), rdiag(ierr3,i) = ', rdiag(ierr2,i),rdiag(ierr3,i)
+                         print *, '   rdiag(iobg,i), rdiag(iobg+1,i) = ', rdiag(iobg,i), rdiag(iobg+1,i)
+                         print *, '   rdiag(iobgv,i), rdiag(iqsges,i) = ', rdiag(iobgv,i), rdiag(iqsges,i)
+
+                      end if
+
                       work(k,ltype,1,j,nn)=work(k,ltype,1,j,nn)+1.0
 
                      if(rdiag(iwgt,i) <1.0) work(k,ltype,2,j,nn)=work(k,ltype,2,j,nn)+1.0
@@ -118,14 +148,19 @@ subroutine stascal(dtype,rdiag,nreal,n,iotype,varqc,ntype,work,worku,&
                      else
                         ress=rdiag(iobg,i)
                         work(k,ltype,3,j,nn)=work(k,ltype,3,j,nn)+ress
+                        if( trim(dtype) == 'gps' ) then
+                           print *,'ress = ', ress
+                           print *, 'work(k,ltype,3,j,nn) = ', work(k,ltype,3,j,nn)
+                        end if
                      endif
 
                      work(k,ltype,4,j,nn)=work(k,ltype,4,j,nn)+ress*ress
-                     if(ltype ==1) then
-!                       print *,rdiag(iobg,i),ress,work(k,ltype,4,j,nn),ltype,j,nn,work(k,ltype,1,j,nn) 
-                     endif
-                        work(k,ltype,5,j,nn)=work(k,ltype,5,j,nn)+val2*rat_err2
-                        work(k,ltype,6,j,nn)=work(k,ltype,6,j,nn)+valqc
+!                     if(ltype ==1) then
+!                        print *,rdiag(iobg,i),ress,work(k,ltype,4,j,nn),ltype,j,nn,work(k,ltype,1,j,nn) 
+!                     endif
+
+                     work(k,ltype,5,j,nn)=work(k,ltype,5,j,nn)+val2*rat_err2
+                     work(k,ltype,6,j,nn)=work(k,ltype,6,j,nn)+valqc
                   endif       !!! endif k
                enddo        !!! enddo k
             endif     !!! endif region
@@ -136,5 +171,6 @@ subroutine stascal(dtype,rdiag,nreal,n,iotype,varqc,ntype,work,worku,&
    enddo            !!! enddo i
 
 
+   print *, '<-- stascal'
    return
 end

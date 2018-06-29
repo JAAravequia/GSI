@@ -4,16 +4,16 @@
    implicit none
 
    integer np,mregion,nobs
-   integer ntype_ps,ntype_q,ntype_t,ntype_uv,ntype_gps
+   integer ntype_gps,ntype_ps,ntype_q,ntype_t,ntype_uv
 
    parameter(np=13)
    parameter(mregion=10)
    real(4),dimension(np) :: ptop,pbot,ptopq,pbotq
-   integer,dimension(100) :: iotype_ps,iotype_q,iotype_uv,iotype_t,iotype_gps
-   integer,dimension(100) :: iosubtype_ps,iosubtype_q,iosubtype_uv,iosubtype_t,iosubtype_gps
-   integer,dimension(100) :: ituse_ps,ituse_q,ituse_uv,ituse_t,ituse_gps
-   real(4),dimension(100,2) :: varqc_ps,varqc_q,varqc_uv,varqc_t,varqc_gps
-   character(len=7) dtype_ps,dtype_uv,dtype_t,dtype_q,dtype_gps
+   integer,dimension(100) :: iotype_gps,iotype_ps,iotype_q,iotype_uv,iotype_t
+   integer,dimension(100) :: iosubtype_gps,iosubtype_ps,iosubtype_q,iosubtype_uv,iosubtype_t
+   integer,dimension(100) :: ituse_gps,ituse_ps,ituse_q,ituse_uv,ituse_t
+   real(4),dimension(100,2) :: varqc_gps,varqc_ps,varqc_q,varqc_uv,varqc_t
+   character(len=7) dtype_gps,dtype_ps,dtype_uv,dtype_t,dtype_q
 
    character(20) :: filein
    character(40),dimension(mregion):: region
@@ -32,11 +32,12 @@
 
    print *,nregion,np
 
-   dtype_ps='ps'
-   dtype_uv='uv'
-   dtype_t='t'
-   dtype_q='q'
-   dtype_gps='gps'
+   dtype_gps = 'gps'
+   dtype_ps  = 'ps'
+   dtype_uv  = 'uv'
+   dtype_t   = 't'
+   dtype_q   = 'q'
+
 
    nobs=0
    ptop(1)= 0.0;     pbot(1)= 2000.0
@@ -69,24 +70,28 @@
 
 
    print *,'start to call convinfo'
-   call convinfo(iotype_ps,iotype_q,iotype_t,iotype_uv,iotype_gps,&
-		ntype_ps,ntype_q,ntype_t,ntype_uv,ntype_gps,&
-                varqc_ps,varqc_q,varqc_t,varqc_uv,varqc_gps,&
-                ituse_ps,ituse_q,ituse_t,ituse_uv,ituse_gps,&
-                iosubtype_ps,iosubtype_q,iosubtype_t,iosubtype_uv,iosubtype_gps)
+   call convinfo(iotype_gps,iotype_ps,iotype_q,iotype_t,iotype_uv,&
+                ntype_gps,ntype_ps,ntype_q,ntype_t,ntype_uv,&
+                varqc_gps,varqc_ps,varqc_q,varqc_t,varqc_uv,&
+                ituse_gps,ituse_ps,ituse_q,ituse_t,ituse_uv,&
+                iosubtype_gps,iosubtype_ps,iosubtype_q,iosubtype_t,iosubtype_uv)
 
-   print *,ntype_ps,ntype_q,ntype_t,ntype_uv,ntype_gps
+   print *,ntype_gps,ntype_ps,ntype_q,ntype_t,ntype_uv
    print *,'finish to call convinfo'
 
    print *,'start to call read_conv'
    call read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
-                 rlatmin,rlatmax,rlonmin,rlonmax,iotype_ps,iotype_q,&
-                 iotype_t,iotype_uv,varqc_ps,varqc_q,varqc_t,varqc_uv,&
-                 ntype_ps,ntype_q,ntype_t,ntype_uv,&
-                 iosubtype_ps,iosubtype_q,iosubtype_t,iosubtype_uv) 
+                 rlatmin,rlatmax,rlonmin,rlonmax,iotype_gps,iotype_ps,iotype_q,&
+                 iotype_t,iotype_uv,varqc_gps,varqc_ps,varqc_q,varqc_t,varqc_uv,&
+                 ntype_gps,ntype_ps,ntype_q,ntype_t,ntype_uv,&
+                 iosubtype_gps,iosubtype_ps,iosubtype_q,iosubtype_t,iosubtype_uv) 
    
-   print *,'finish to call read_conv'
-
+   print *,'FINISH to call read_conv'
+   print *,'iotype_gps, ntype_gps, varqc_gps, iosubtype_gps = ', &
+                iotype_gps, ntype_gps, varqc_gps, iosubtype_gps
+ 
+   call creatstas_ctl(dtype_gps,iotype_gps,ituse_gps,100,ntype_gps,1,nregion,18,region,&
+                     rlatmin,rlatmax,rlonmin,rlonmax,iosubtype_gps) 
    call creatstas_ctl(dtype_ps,iotype_ps,ituse_ps,100,ntype_ps,1,nregion,18,region,&
                      rlatmin,rlatmax,rlonmin,rlonmax,iosubtype_ps) 
    call creatstas_ctl(dtype_q,iotype_q,ituse_q,100,ntype_q,np,nregion,18,region,&

@@ -9,10 +9,11 @@
 !             1, used, 2, rejected, 3, monited
 
 subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
-           rlatmin,rlatmax,rlonmin,rlonmax,iotype_ps,iotype_q,&
-           iotype_t,iotype_uv,varqc_ps,varqc_q,varqc_t,varqc_uv,&
-           ntype_ps,ntype_q,ntype_t,ntype_uv,&
-           iosubtype_ps,iosubtype_q,iosubtype_t,iosubtype_uv)
+           rlatmin,rlatmax,rlonmin,rlonmax,iotype_gps,iotype_ps,iotype_q,&
+           iotype_t,iotype_uv,varqc_gps,varqc_ps,varqc_q,varqc_t,varqc_uv,&
+           ntype_gps,ntype_ps,ntype_q,ntype_t,ntype_uv,&
+           iosubtype_gps,iosubtype_ps,iosubtype_q,iosubtype_t,iosubtype_uv)
+
 
    implicit none
 
@@ -21,12 +22,13 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
    character(8),allocatable,dimension(:)  :: cdiag 
    real(4),dimension(np) :: ptop,pbot,ptopq,pbotq
    real(4),dimension(np,100,6,nregion,3) :: twork,qwork,uwork,vwork,uvwork
+   real(4),dimension(np,100,6,nregion,3) :: gpswork
    real(4),dimension(1,100,6,nregion,3) :: pswork
    real,dimension(mregion):: rlatmin,rlatmax,rlonmin,rlonmax
 
-   integer,dimension(100) :: iotype_ps,iotype_q,iotype_t,iotype_uv
-   integer,dimension(100) :: iosubtype_ps,iosubtype_q,iosubtype_uv,iosubtype_t
-   real(4),dimension(100,2) :: varqc_ps,varqc_q,varqc_t,varqc_uv
+   integer,dimension(100) :: iotype_gps,iotype_ps,iotype_q,iotype_t,iotype_uv
+   integer,dimension(100) :: iosubtype_gps,iosubtype_ps,iosubtype_q,iosubtype_uv,iosubtype_t
+   real(4),dimension(100,2) :: varqc_gps,varqc_ps,varqc_q,varqc_t,varqc_uv
    character(20) :: filein
    character(3) :: dtype
 
@@ -35,7 +37,7 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
    integer ilat,ilon,ipress,iqc,iuse,imuse,iwgt,ierr1
    integer ierr2,ierr3,ipsobs,iqobs,ioff02
    integer i,j,k,np,nregion,ltype,iregion,ntype_uv
-   integer iobg,iobgu,iobgv,ntype_ps,ntype_q,ntype_t
+   integer iobg,iobgu,iobgv,ntype_gps,ntype_ps,ntype_q,ntype_t
 
    real(4) ::  bmiss
    
@@ -45,7 +47,8 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
 
 
 
-   twork=0.0;qwork=0.0;uwork=0.0;vwork=0.0;uvwork=0.0
+   print *, '--> read_conv'
+   twork=0.0;qwork=0.0;uwork=0.0;vwork=0.0;uvwork=0.0;gpswork=0.0
    pswork=0.0
 
    itype=1;ilat=3;ilon=4;ipress=6;iqc=9;iuse=11;imuse=12
@@ -58,35 +61,49 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
    read(lunin) idate
 
    print *, 'idate=',idate 
-   print *,ptop(1),ptop(5)
-   print *,pbot(1),pbot(5)
+   print *,'ptop(1), ptop(5) = ', ptop(1),ptop(5)
+   print *,'pbot(1), pbot(5) = ', pbot(1),pbot(5)
 
    loopd: do  
       read(lunin,IOSTAT=iflag) dtype,nchar,nreal,ii,mype,ioff02
       if( iflag /= 0 ) exit loopd
-!        print *, dtype,nchar,nreal,ii,mype
+      print *, 'dtype, nchar, nreal, ii, mpye = ', dtype,nchar,nreal,ii,mype
+
       allocate(cdiag(ii),rdiag(nreal,ii))
       read(lunin,IOSTAT=iflag) cdiag,rdiag
 
       if( iflag /= 0 ) exit loopd
 
-      if(trim(dtype) == ' ps') then
-!        print *, dtype,nchar,nreal,ii,mype
+      if(trim(dtype) == 'gps') then
+         print *, 'case gps, calling stascal'
+         call stascal(dtype,rdiag,nreal,ii,iotype_gps,varqc_gps,ntype_gps,&
+                         gpswork,uwork,vwork,1,ptop,pbot,nregion,mregion,&
+                         rlatmin,rlatmax,rlonmin,rlonmax,iosubtype_ps)
+         print *, 'case gps, returned from stascal'
+      else if(trim(dtype) == ' ps') then
+         print *, 'case ps, calling stascal'
          call stascal(dtype,rdiag,nreal,ii,iotype_ps,varqc_ps,ntype_ps,&
                          pswork,uwork,vwork,1,ptop,pbot,nregion,mregion,&
                          rlatmin,rlatmax,rlonmin,rlonmax,iosubtype_ps)
+         print *, 'case ps, returned from stascal'
       else if(trim(dtype) == '  q') then
+         print *, 'case q, calling stascal' 
          call stascal(dtype,rdiag,nreal,ii,iotype_q,varqc_q,ntype_q,&
                          qwork,uwork,vwork,np,ptopq,pbotq,nregion,mregion,&
                          rlatmin,rlatmax,rlonmin,rlonmax,iosubtype_q)
+         print *, 'case q, returned from stascal'
       else if(trim(dtype) == '  t') then
+         print *, 'case t, calling stascal' 
          call stascal(dtype,rdiag,nreal,ii,iotype_t,varqc_t,ntype_t,&
                          twork,uwork,vwork,np,ptop,pbot,nregion,mregion,&
                          rlatmin,rlatmax,rlonmin,rlonmax,iosubtype_t)
+         print *, 'case t, returned from stascal'
       else if(trim(dtype) == ' uv') then
+         print *, 'case uv, calling stascal' 
          call stascal(dtype,rdiag,nreal,ii,iotype_uv,varqc_uv,ntype_uv,&
                          uvwork,uwork,vwork,np,ptop,pbot,nregion,mregion,&
                          rlatmin,rlatmax,rlonmin,rlonmax,iosubtype_uv)
+         print *, 'case uv, returned from stascal'
       endif
           
       deallocate(cdiag,rdiag)
@@ -291,6 +308,44 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
                                   /vwork(k,ntype_uv+1,1,iregion,j))
             endif
    
+            do ltype=1,ntype_gps
+               gpswork(k,ntype_gps+1,1,iregion,j) = &
+                        gpswork(k,ntype_gps+1,1,iregion,j)+gpswork(k,ltype,1,iregion,j)
+               gpswork(k,ntype_gps+1,2,iregion,j) = &
+                        gpswork(k,ntype_gps+1,2,iregion,j)+gpswork(k,ltype,2,iregion,j)
+               gpswork(k,ntype_gps+1,3,iregion,j) = &
+                        gpswork(k,ntype_gps+1,3,iregion,j)+gpswork(k,ltype,3,iregion,j)
+               gpswork(k,ntype_gps+1,4,iregion,j) = &
+                        gpswork(k,ntype_gps+1,4,iregion,j)+gpswork(k,ltype,4,iregion,j)
+
+               gpswork(k,ntype_gps+1,5,iregion,j) = &
+                        gpswork(k,ntype_gps+1,5,iregion,j)+gpswork(k,ltype,5,iregion,j)
+               gpswork(k,ntype_gps+1,6,iregion,j) = &
+                        gpswork(k,ntype_gps+1,6,iregion,j)+gpswork(k,ltype,6,iregion,j)
+
+               if(gpswork(k,ltype,1,iregion,j) >=1.0) then
+                  gpswork(k,ltype,3,iregion,j) = &
+                        gpswork(k,ltype,3,iregion,j)/gpswork(k,ltype,1,iregion,j)
+                  gpswork(k,ltype,4,iregion,j) = &
+                        sqrt(gpswork(k,ltype,4,iregion,j)/gpswork(k,ltype,1,iregion,j))
+                  gpswork(k,ltype,5,iregion,j) = &
+                        gpswork(k,ltype,5,iregion,j)/gpswork(k,ltype,1,iregion,j)
+                  gpswork(k,ltype,6,iregion,j) = &
+                        gpswork(k,ltype,6,iregion,j)/gpswork(k,ltype,1,iregion,j)
+               endif
+            enddo
+
+            if(gpswork(k,ntype_gps+1,1,iregion,j) >=1.0) then
+               gpswork(k,ntype_gps+1,3,iregion,j) = gpswork(k,ntype_gps+1,3,iregion,j)/&
+                                 gpswork(k,ntype_gps+1,1,iregion,j)
+               gpswork(k,ntype_gps+1,4,iregion,j)=sqrt(gpswork(k,ntype_gps+1,4,iregion,j)/&
+                                 gpswork(k,ntype_gps+1,1,iregion,j))
+               gpswork(k,ntype_gps+1,5,iregion,j)=gpswork(k,ntype_gps+1,5,iregion,j)/&
+                                 gpswork(k,ntype_gps+1,1,iregion,j)
+               gpswork(k,ntype_gps+1,6,iregion,j)=gpswork(k,ntype_gps+1,6,iregion,j)/&
+                                 gpswork(k,ntype_gps+1,1,iregion,j)
+            endif
+
          enddo    !!! enddo k height
       enddo       !!! enddo j, j=1 assimilated, j=2 rejected, j=3 monitored 
    enddo          !!! enddo iregion region 
@@ -308,6 +363,7 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
          write(21) ((pswork(1,ltype,i,iregion,j),ltype=1,ntype_ps+1),iregion=1,nregion)
       enddo
    enddo
+   close(21)
 
    open(31,file='q_stas',form='unformatted')
    do j=1,3
@@ -317,6 +373,7 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
          enddo
       enddo
    enddo
+   close(31)
 
    open(41,file='t_stas',form='unformatted')
    do j=1,3
@@ -329,6 +386,7 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
 
    write(6,900) (twork(k,1,1,1,1),k=1,np) 
    900 format(13f10.1)
+   close(41)
 
    open(51,file='u_stas',form='unformatted')
    do j=1,3
@@ -338,6 +396,7 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
          enddo
       enddo
    enddo
+   close(51)
 
    open(61,file='v_stas',form='unformatted')
    do j=1,3
@@ -347,6 +406,7 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
          enddo
       enddo
    enddo
+   close(61)
      
    open(71,file='uv_stas',form='unformatted')
    do j=1,3
@@ -357,14 +417,28 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
          enddo
       enddo
    enddo
-
-
-   close(21)
-   close(31)
-   close(41)
-   close(51)
-   close(61)
    close(71)
 
+   open(81,file='gps_stas',form='unformatted')
+   do j=1,3
+      do i=1,6
+         do k=1,np
+            write(81) ((gpswork(k,ltype,i,iregion,j),ltype=1,ntype_gps+1),iregion=1,nregion)
+         enddo
+      enddo
+   enddo
+
+   print *, 'gpswork RESULTS:'
+   write(6,900) (gpswork(k,1,1,1,1),k=1,np) 
+   close(81)
+
+
+!   close(31)
+!   close(41)
+!   close(51)
+!   close(61)
+!   close(71)
+
+   print *, '<-- read_conv'
    return 
 end 

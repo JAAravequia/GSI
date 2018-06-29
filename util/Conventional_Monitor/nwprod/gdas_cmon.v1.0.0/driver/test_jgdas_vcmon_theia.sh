@@ -4,7 +4,7 @@
 #PBS -e gdas_vcmon.err
 #PBS -N gdas_vcmon
 #PBS -A fv3-cpu
-#PBS -l procs=1,walltime=0:15:00
+#PBS -l procs=1,walltime=0:25:00
 #PBS -V
 
 set -x
