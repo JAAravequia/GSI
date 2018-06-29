@@ -738,7 +738,7 @@ subroutine letkf_core(nobsl,hxens,hxens_orig,dep,wts_ensmean,wts_ensperts,paens,
 !       by pre-multiplying with
 !       model space ensemble perts. In notation from Bishop et al 2017,
 !       wts_ensmean = C (Gamma + I)**-1 C^T (HZ)^ T R**-1/2 (y - Hxmean)
-!       where HZ^T = HXb*R**-1/2 (YbRinvsqrt), 
+!       where HZ^T = Yb*R**-1/2 (YbRinvsqrt),
 !       C are eigenvectors of (HZ)^T HZ and Gamma are eigenvalues
 !       Has dimension (nanals) - increment is weighted average of ens
 !       perts, wts_ensmean are weights

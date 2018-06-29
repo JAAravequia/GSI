@@ -268,7 +268,7 @@ do niter=1,numiter
   lastiter = niter == numiter
   ! apply bias correction with latest estimate of bias coeffs.
   ! (already done for first iteration)
-  if (nobs_sat > 0 .and. niter > 1 ) call apply_biascorr()
+  if (nobs_sat > 0 .and. lupd_satbiasc .and.  niter > 1 ) call apply_biascorr()
 
   ! reset first guess perturbations at start of each iteration.
   nrej=0
