@@ -127,7 +127,7 @@ use params, only: sprd_tol, paoverpb_thresh, datapath, nanals,&
                   zhuberleft,zhuberright,varqc,lupd_satbiasc,huber,univaroz,&
                   covl_minfact,covl_efold,nbackgrounds,nhr_anal,fhr_assim,&
                   iseed_perturbed_obs,lupd_obspace_serial,fso_cycling,&
-                  neigv,vlocal_evecs
+                  neigv,vlocal_evecs,denkf
 use radinfo, only: npred,nusis,nuchan,jpch_rad,predx
 use radbias, only: apply_biascorr, update_biascorr
 use gridinfo, only: nlevs_pres
@@ -458,8 +458,13 @@ do niter=1,numiter
 
       if (deterministic) then
          ! EnSRF.
-         obganl = -anal_obtmp/(one+sqrt(oberrvaruse(nob)*hpfhtoberrinv))
-         if (neigv > 0) obganl_modens = -anal_obtmp_modens/(one+sqrt(oberrvaruse(nob)*hpfhtoberrinv))
+         if (denkf) then
+            obganl = -0.5*anal_obtmp
+            if (neigv > 0) obganl_modens = -0.5*anal_obtmp_modens
+         else
+            obganl = -anal_obtmp/(one+sqrt(oberrvaruse(nob)*hpfhtoberrinv))
+            if (neigv > 0) obganl_modens = -anal_obtmp_modens/(one+sqrt(oberrvaruse(nob)*hpfhtoberrinv))
+         endif
       else
          ! perturbed obs EnKF.
          sqrtoberr=sqrt(oberrvaruse(nob))
