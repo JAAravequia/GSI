@@ -1145,7 +1145,7 @@ end subroutine normal_new_factorization_rf_y
 !$$$
     use hybrid_ensemble_parameters, only: n_ens,grd_ens,ntlevs_ens
     use hybrid_ensemble_parameters, only: nelen,en_perts,ps_bar
-    use hybrid_ensemble_parameters, only: nsclgrp
+    use hybrid_ensemble_parameters, only: ntotensgrp
 
     implicit none
 
@@ -1157,12 +1157,11 @@ end subroutine normal_new_factorization_rf_y
 
     nelen=grd_ens%latlon11*(max(0,nc3d)*grd_ens%nsig+max(0,nc2d))
 !   create ensemble perturbations bundles (using newly added r_single capability
-
-    allocate(en_perts(n_ens,nsclgrp,ntlevs_ens))
+    allocate(en_perts(n_ens,ntotensgrp,ntlevs_ens))
     call gsi_gridcreate(grid_ens,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)
  
     do m=1,ntlevs_ens
-      do ig=1,nsclgrp
+      do ig=1,ntotensgrp
        do n=1,n_ens
           call gsi_bundlecreate(en_perts(n,ig,m),grid_ens,'ensemble perts',istatus, &
                                 names2d=cvars2d,names3d=cvars3d,bundle_kind=r_single)
@@ -1175,11 +1174,11 @@ end subroutine normal_new_factorization_rf_y
     enddo
 
 
-    allocate(ps_bar(grd_ens%lat2,grd_ens%lon2,nsclgrp,ntlevs_ens) )
+    allocate(ps_bar(grd_ens%lat2,grd_ens%lon2,ntotensgrp,ntlevs_ens) )
     if(debug) then
-       write(6,*)' in create_ensemble, grd_ens%latlon11,grd_ens%latlon1n,n_ens,nsclgrp,ntlevs_ens=', &
-                                 grd_ens%latlon11,grd_ens%latlon1n,n_ens,nsclgrp,ntlevs_ens
-       write(6,*)' in create_ensemble, total bytes allocated=',4*nelen*n_ens*nsclgrp,ntlevs_ens
+       write(6,*)' in create_ensemble, grd_ens%latlon11,grd_ens%latlon1n,n_ens,ntotensgrp,ntlevs_ens=', &
+                                 grd_ens%latlon11,grd_ens%latlon1n,n_ens,ntotensgrp,ntlevs_ens
+       write(6,*)' in create_ensemble, total bytes allocated=',4*nelen*n_ens*ntotensgrp,ntlevs_ens
     end if
     return
 
@@ -1230,7 +1229,7 @@ end subroutine normal_new_factorization_rf_y
     use get_wrf_mass_ensperts_mod, only: get_wrf_mass_ensperts_class
     use get_wrf_nmm_ensperts_mod, only: get_wrf_nmm_ensperts_class
   use hybrid_ensemble_parameters, only: region_lat_ens,region_lon_ens
-  use hybrid_ensemble_parameters, only: nsclgrp
+  use hybrid_ensemble_parameters, only: ntotensgrp
 
     implicit none
 
@@ -1251,7 +1250,7 @@ end subroutine normal_new_factorization_rf_y
 !      create simple regular grid
 
     if(generate_ens) then
-     if(nsclgrp.gt.1) then 
+     if(ntotensgrp.gt.1) then 
         write(6,*)'the nsclrgp is not available in this option stop'
         stop
      endif
@@ -1260,10 +1259,10 @@ end subroutine normal_new_factorization_rf_y
        call gsi_gridcreate(grid_anl,grd_anl%lat2,grd_anl%lon2,grd_anl%nsig)
        call gsi_gridcreate(grid_ens,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)
 
-       allocate(en_bar(nsclgrp,ntlevs_ens))
+       allocate(en_bar(ntotensgrp,ntlevs_ens))
 
        do m=1,ntlevs_ens
-        do ig=1,nsclgrp
+        do ig=1,ntotensgrp
           call gsi_bundlecreate(en_bar(ig,m),grid_ens,'ensemble',istatus, &
                                 names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
         enddo
@@ -1282,7 +1281,7 @@ end subroutine normal_new_factorization_rf_y
        seed=-one
  
        do m=1,ntlevs_ens
-        do ig=1,nsclgrp
+        do ig=1,ntotensgrp
          en_bar(ig,m)%values=zero
         enddo
        enddo
@@ -1303,7 +1302,7 @@ end subroutine normal_new_factorization_rf_y
        endif
 
        do m=1,ntlevs_ens
-         do ig=1,nsclgrp
+         do ig=1,ntotensgrp
           do n=1,n_ens
              call generate_one_ensemble_perturbation(bundle_anl,bundle_ens,seed)
              do ii=1,nelen
@@ -1337,7 +1336,7 @@ end subroutine normal_new_factorization_rf_y
 !                           with real ensembles, the mean of the actual sample will be removed.
 
        do m=1,ntlevs_ens
-         do ig=1,nsclgrp
+         do ig=1,ntotensgrp
           do n=1,n_ens
              do ii=1,nelen
                 en_perts(n,ig,m)%valuesr4(ii)=(en_perts(n,ig,m)%valuesr4(ii)-en_bar(ig,m)%values(ii)*bar_norm)*sig_norm
@@ -1368,8 +1367,8 @@ end subroutine normal_new_factorization_rf_y
           call get_gefs_ensperts_dualres
 
        else
-           if(nsclgrp.gt. 1) then 
-           write(6,*)"nsclgrpd.gt. 1 is not available for this part"
+           if(ntotensgrp.gt. 1) then 
+           write(6,*)"ntotensgrpd.gt. 1 is not available for this part"
             stop
            endif
 
@@ -1698,7 +1697,7 @@ end subroutine normal_new_factorization_rf_y
     use hybrid_ensemble_parameters, only: en_perts
     use general_sub2grid_mod, only: general_suba2sube
     use berror, only: qvar3d
-  use hybrid_ensemble_parameters, only: nsclgrp
+  use hybrid_ensemble_parameters, only: ntotensgrp
     implicit none
 
     integer(i_kind) i,j,k,n,istatus,m
@@ -1720,7 +1719,7 @@ end subroutine normal_new_factorization_rf_y
     end if
     do m=1,ntlevs_ens
 !$omp parallel do schedule(dynamic,1) private(n,i,j,k,w3,istatus,ig)
-     do ig=1,nsclgrp
+     do ig=1,ntotensgrp
        do n=1,n_ens
           call gsi_bundlegetpointer(en_perts(n,ig,m),'q',w3,istatus)
           if(istatus/=0) then
@@ -1766,7 +1765,7 @@ end subroutine normal_new_factorization_rf_y
 !$$$
     use hybrid_ensemble_parameters, only: l_hyb_ens,n_ens,ntlevs_ens
     use hybrid_ensemble_parameters, only: en_perts,ps_bar
-     use hybrid_ensemble_parameters, only: nsclgrp
+     use hybrid_ensemble_parameters, only: ntotensgrp
     implicit none
 
     integer(i_kind) istatus,n,m
@@ -1774,7 +1773,7 @@ end subroutine normal_new_factorization_rf_y
 
     if(l_hyb_ens) then
        do m=1,ntlevs_ens
-         do ig=1,nsclgrp
+         do ig=1,ntotensgrp
           do n=1,n_ens
              call gsi_bundleunset(en_perts(n,ig,m),istatus)
              if(istatus/=0) then
@@ -1832,11 +1831,11 @@ end subroutine normal_new_factorization_rf_y
     use hybrid_ensemble_parameters, only: en_perts
     use constants, only: zero
 
-    use hybrid_ensemble_parameters, only: nsclgrp
+    use hybrid_ensemble_parameters, only: ntotensgrp
     use hybrid_ensemble_parameters, only: ensgrp2aensgrp 
     implicit none
     type(gsi_bundle),intent(inout) :: cvec
-    type(gsi_bundle),intent(in)    :: a_en(nsclgrp,n_ens)
+    type(gsi_bundle),intent(in)    :: a_en(ntotensgrp,n_ens)
     integer,intent(in)             :: ibin
 
     character(len=*),parameter :: myname_=trim(myname)//'*ensemble_forward_model'
@@ -1889,14 +1888,17 @@ end subroutine normal_new_factorization_rf_y
              enddo
           enddo
           do n=1,n_ens
-            do ig=1,nsclgrp
-            iaens=ensgrp2aensgrp(ig)
+            do ig=1,ntotensgrp
+            iaens=ensgrp2aensgrp(ig,ic3,ibin)
+            if(iaens.gt.0) then         
+
              do j=1,jm
                 do i=1,im
                    cvec%r3(ipic)%q(i,j,k)=cvec%r3(ipic)%q(i,j,k) &
                          +a_en(iaens,n)%r3(ipx)%q(i,j,k)*en_perts(n,ig,ibin)%r3(ipic)%qr4(i,j,k)
                 enddo
              enddo
+            endif !iaens.gt.0
            enddo
           enddo
        enddo
@@ -1923,14 +1925,17 @@ end subroutine normal_new_factorization_rf_y
 
              do n=1,n_ens
                 do j=1,jm
-                 do ig=1,nsclgrp
-                   iaens=ensgrp2aensgrp(ig)
+                 do ig=1,ntotensgrp
+!cltorg                   iaens=ensgrp2aensgrp(ig)
+              iaens=ensgrp2aensgrp(ig,ic2+nc3d,ibin)
+            if(iaens.gt.0) then         
                    do k=1,km_tmp
                       do i=1,im
                          cvec%r2(ipic)%q(i,j)=cvec%r2(ipic)%q(i,j) &
                             +a_en(iaens,n)%r3(ipx)%q(i,j,k)*en_perts(n,ig,ibin)%r2(ipic)%qr4(i,j)*pwgt(i,j,k)
                       enddo
                    enddo
+            endif !iaens.gt.0
                  enddo
                 enddo
              enddo ! enddo n_ens
@@ -1938,14 +1943,16 @@ end subroutine normal_new_factorization_rf_y
           case('SST')
  
              do n=1,n_ens
-               do ig=1,nsclgrp
-                iaens=ensgrp2aensgrp(ig)
+               do ig=1,ntotensgrp
+            iaens=ensgrp2aensgrp(ig,ic2+nc3d,ibin)
+            if(iaens.gt.0) then         
                 do j=1,jm
                    do i=1,im
                       cvec%r2(ipic)%q(i,j)=cvec%r2(ipic)%q(i,j) &
                          +a_en(iaens,n)%r3(ipx)%q(i,j,1)*en_perts(n,ig,ibin)%r2(ipic)%qr4(i,j)
                    enddo
                 enddo
+            endif !iaens.gt.0
               enddo
              enddo ! enddo n_ens
  
@@ -2002,7 +2009,7 @@ end subroutine normal_new_factorization_rf_y
     use general_sub2grid_mod, only: general_sube2suba
     use gridmod,only: regional
     use constants, only: zero
-    use hybrid_ensemble_parameters, only: nsclgrp
+    use hybrid_ensemble_parameters, only: ntotensgrp
     use hybrid_ensemble_parameters, only: naensgrp
     use hybrid_ensemble_parameters, only: ensgrp2aensgrp 
     implicit none
@@ -2062,14 +2069,17 @@ end subroutine normal_new_factorization_rf_y
              enddo
           enddo
           do n=1,n_ens
-           do ig=1,nsclgrp
-            iaens=ensgrp2aensgrp(ig)
+           do ig=1,ntotensgrp
+!cltorg            iaens=ensgrp2aensgrp(ig)
+            iaens=ensgrp2aensgrp(ig,ic3,ibin)
+            if(iaens.gt.0) then         
              do j=1,jm
                 do i=1,im
                    work_ens%r3(ipic)%q(i,j,k)=work_ens%r3(ipic)%q(i,j,k) &
                       +a_en(iaens,n)%r3(ipx)%q(i,j,k)*en_perts(n,ig,ibin)%r3(ipic)%qr4(i,j,k)
                 enddo
              enddo
+            endif !iaens.gt.0
            enddo 
         enddo
        enddo
@@ -2094,8 +2104,9 @@ end subroutine normal_new_factorization_rf_y
              endif
 
              do n=1,n_ens
-               do ig=1,nsclgrp
-                iaens=ensgrp2aensgrp(ig)
+               do ig=1,ntotensgrp
+            iaens=ensgrp2aensgrp(ig,ic2+nc3d,ibin)
+            if(iaens.gt.0) then         
                 do k=1,km_tmp
                    do j=1,jm
                       do i=1,im
@@ -2104,20 +2115,23 @@ end subroutine normal_new_factorization_rf_y
                       enddo
                    enddo
                 enddo
+            endif !iaens.gt.0
               enddo
              enddo ! enddo n_ens
 
           case('SST')
 
              do n=1,n_ens
-               do ig=1,nsclgrp
-               iaens=ensgrp2aensgrp(ig)
+               do ig=1,ntotensgrp
+            iaens=ensgrp2aensgrp(ig,ic2+nc3d,ibin)
+            if(iaens.gt.0) then         
                 do j=1,jm
                    do i=1,im
                       work_ens%r2(ipic)%q(i,j)=work_ens%r2(ipic)%q(i,j) &
                          +a_en(iaens,n)%r3(ipx)%q(i,j,1)*en_perts(n,ig,ibin)%r2(ipic)%qr4(i,j)
                    enddo
                 enddo
+            endif !iaens.gt.0
               enddo
              enddo ! enddo n_ens
 
@@ -2185,7 +2199,7 @@ end subroutine normal_new_factorization_rf_y
 
     use hybrid_ensemble_parameters, only: n_ens,pwgtflg,pwgt
     use hybrid_ensemble_parameters, only: en_perts
-    use hybrid_ensemble_parameters, only: nsclgrp
+    use hybrid_ensemble_parameters, only: ntotensgrp
     use hybrid_ensemble_parameters, only: naensgrp
     use hybrid_ensemble_parameters, only: ensgrp2aensgrp 
     implicit none
@@ -2227,11 +2241,12 @@ end subroutine normal_new_factorization_rf_y
 
     ipx=1
 !$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ic2,ipic,ig,iaens)
-   do ig=1,nsclgrp
-    iaens=ensgrp2aensgrp(ig)
+   do ig=1,ntotensgrp
     do n=1,n_ens
        do ic3=1,nc3d
           ipic=ipc3d(ic3)
+            iaens=ensgrp2aensgrp(ig,ic3,ibin)
+            if(iaens.gt.0) then         
           do k=1,km
              do j=1,jm
                 do i=1,im
@@ -2240,9 +2255,12 @@ end subroutine normal_new_factorization_rf_y
                 enddo
              enddo
           enddo
+            endif !iaens.gt.0
        enddo
        do ic2=1,nc2d
 
+            iaens=ensgrp2aensgrp(ig,ic2+nc3d,ibin)
+          if(iaens.gt.0) then
           ipic=ipc2d(ic2)
           select case ( trim(StrUpCase(cvars2d(ic2))) )
  
@@ -2273,6 +2291,7 @@ end subroutine normal_new_factorization_rf_y
                 enddo
  
           end select
+         endif !iaens>0
        enddo
     enddo ! enddo n_ens
    enddo ! enddo ig
@@ -2326,7 +2345,7 @@ end subroutine normal_new_factorization_rf_y
     use general_sub2grid_mod, only: general_sube2suba_ad
     use gridmod,only: regional
     use constants, only: zero
-    use hybrid_ensemble_parameters, only: nsclgrp
+    use hybrid_ensemble_parameters, only: ntotensgrp
     use hybrid_ensemble_parameters, only: naensgrp
     use hybrid_ensemble_parameters, only: ensgrp2aensgrp 
     implicit none
@@ -2391,11 +2410,13 @@ end subroutine normal_new_factorization_rf_y
     jm=a_en(1,1)%grid%jm
     km=a_en(1,1)%grid%km
 !$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ic2,ipic,iaens)
-  do ig=1,nsclgrp
-    iaens=ensgrp2aensgrp(ig)
+  do ig=1,ntotensgrp
+!cltorg    iaens=ensgrp2aensgrp(ig)
     do n=1,n_ens
        do ic3=1,nc3d
           ipic=ipc3d(ic3)
+            iaens=ensgrp2aensgrp(ig,ic3,ibin)
+            if(iaens.gt.0) then         
           do k=1,km
              do j=1,jm
                 do i=1,im
@@ -2404,8 +2425,11 @@ end subroutine normal_new_factorization_rf_y
                 enddo
              enddo
           enddo
+            endif
        enddo
        do ic2=1,nc2d
+            iaens=ensgrp2aensgrp(ig,ic2+nc3d,ibin)
+            if(iaens.gt.0) then         
 
           ipic=ipc2d(ic2)
           select case ( trim(StrUpCase(cvars2d(ic2))) )
@@ -2437,6 +2461,7 @@ end subroutine normal_new_factorization_rf_y
                 enddo
 
           end select
+        endif !iaens>0
        enddo
     enddo ! enddo n_ens
  enddo ! loop ig
@@ -3584,7 +3609,7 @@ subroutine bkerror_a_en(gradx,grady)
   use hybrid_ensemble_parameters, only: n_ens
   use gsi_bundlemod,only: gsi_bundlegetpointer
   use hybrid_ensemble_parameters, only: naensgrp,alphacvarsclgrpmat
-  use hybrid_ensemble_parameters, only: naensgrp,alphacvarsclgrpmat
+  use hybrid_ensemble_parameters, only: ntotensgrp
   use hybrid_ensemble_parameters, only: nval_lenz_en 
 use hybrid_ensemble_parameters, only: l_sum_spc_weights
   use gsi_bundlemod, only: assignment(=)
@@ -3627,8 +3652,7 @@ type(gsi_bundle),allocatable :: ebundle2(:,:)
 
 !  multiply by sqrt_beta_e_mult
   call sqrt_beta_e_mult(grady)
- 
-  if (l_sum_spc_weights.eq.0) then
+  if(naensgrp.gt.1) then 
    allocate(ebundle(naensgrp,n_ens))
    allocate(ebundle2(naensgrp,n_ens))
  do iaensgrp=1,naensgrp
@@ -3649,7 +3673,7 @@ enddo
       endif
    enddo
 enddo
-  endif !l_sum_spc_weights
+    endif !naensgrp>1
 ! Apply variances, as well as vertical & horizontal parts of background error
   do ii=1,nsubwin
     !if(test_sqrt_localization) then
@@ -3660,13 +3684,14 @@ enddo
     !   deallocate(z)
     !else
     !        write(6,*)' using bkgcov_a_en_new_factorization'
-  if (l_sum_spc_weights.ne.0) then
+  if (naensgrp.eq.1) then
       do iaensgrp=1,naensgrp
-        
-       iaensgrploc=iaensgrp 
+
+       iaensgrploc=iaensgrp
        call bkgcov_a_en_new_factorization(iaensgrploc,grady%aens(ii,iaensgrp,1:n_ens))
-      enddo  
-   else  
+      enddo
+   else
+
    do nn=1,n_ens
    do ig=1,naensgrp
     ebundle(ig,nn)%values=grady%aens(ii,ig,nn)%values
@@ -3674,26 +3699,22 @@ enddo
    enddo
   do iaensgrp=1,naensgrp
      iaensgrploc=iaensgrp
-     write(6,*)'think thinkdeb666 iaensgrploc is ',jiter,iaensgrploc,iaens
      call ckgcov_a_en_new_factorization_ad2(iaensgrploc,ebundle2(iaensgrp,:),ebundle(iaensgrp,:))
   enddo
-  if (l_sum_spc_weights.eq.0) then
   call  covsclgrp_a_en_multmatrix(ebundle2,alphacvarsclgrpmat)
-  endif
 ! the second applying of the sqrt matrix
   do iaensgrp=1,naensgrp
      iaensgrploc=iaensgrp
    call ckgcov_a_en_new_factorization2(iaensgrploc,ebundle2(iaensgrp,:),grady%aens(ii,iaensgrp,:))
   enddo
-endif
-    !end if
+    end if  !naensgrp >1
   enddo
 
 
 
 !  multiply by sqrt_beta_e_mult
   call sqrt_beta_e_mult(grady)
-  if (l_sum_spc_weights.eq.0) then
+  if(naensgrp.gt.1) then
  do iaensgrp=1,naensgrp
    do nn=n_ens,1,-1 ! first in; last out
       call gsi_bundledestroy(ebundle(iaensgrp,nn),istatus)
@@ -3706,7 +3727,7 @@ endif
  enddo
     deallocate(ebundle)
     deallocate(ebundle2)
-  endif
+   endif
 
 ! Finalize timer
   call timer_fnl('bkerror_a_en')
@@ -4369,7 +4390,7 @@ subroutine hybens_grid_setup
   use constants, only: zero,one
   use control_vectors, only: cvars3d,nc2d,nc3d
   use gridmod, only: region_lat,region_lon,region_dx,region_dy
-  use hybrid_ensemble_parameters, only:nsclgrp, spc_multwgt,spcwgt_params
+  use hybrid_ensemble_parameters, only:ntotensgrp, spc_multwgt,spcwgt_params
 
   implicit none
 
@@ -4469,10 +4490,10 @@ subroutine hybens_grid_setup
         region_dy_ens=region_dy
      end if
   end if
-  allocate(spc_multwgt(0:jcap_ens,nsclgrp))
-  allocate(spcwgt_params(4,nsclgrp))
+  allocate(spc_multwgt(0:jcap_ens,ntotensgrp))
+  allocate(spcwgt_params(4,ntotensgrp))
   spc_multwgt=1.0
-  if(nsclgrp.gt.1) then
+  if(ntotensgrp.gt.1) then
   spcwgt_params(1,1)=1.E+4
   spcwgt_params(2,1)=1.0E+8
   spcwgt_params(3,1)=1.0
@@ -4494,7 +4515,7 @@ subroutine hybens_grid_setup
 !  spcwgt_params(2,4)=10000000.0
 !  spcwgt_params(3,4)=1.0
 !  spcwgt_params(4,4)=00.0  !clt this should not be used hence, set up as 0 for warning 
-  if(nsclgrp.gt.1) then
+  if(ntotensgrp.gt.1) then
     call init_mult_spc_wgts(jcap_ens)
   endif
   return
@@ -5734,6 +5755,7 @@ subroutine covsclgrp_a_en_multmatrix(a_en,cmatrix)
     jm=a_en(1,1)%grid%jm
     km=a_en(1,1)%grid%km
     ipe(1)=1
+!cltthinkdeb some reshape of the arays should be done here
     do n=1,n_ens
        do k=1,km
           do j=1,jm
@@ -5741,9 +5763,10 @@ subroutine covsclgrp_a_en_multmatrix(a_en,cmatrix)
                 rtem1=0
                 do ia_en=1,naensgrp
                    do ia_en2=1,naensgrp
-                      rtem1(ia_en)=rtem1(ia_en)+a_en(ia_en2,n)%r3(ipe(1))%q(i,j,k)*cmatrix(ia_en,ia_en2)
+                    rtem1(ia_en)=rtem1(ia_en)+a_en(ia_en2,n)%r3(ipe(1))%q(i,j,k)*cmatrix(ia_en,ia_en2)
                    enddo
-                enddo 
+                enddo
+              
                 do ia_en=1,naensgrp
                    a_en(ia_en,n)%r3(ipe(1))%q(i,j,k)=rtem1(ia_en)
                 enddo
@@ -5755,16 +5778,80 @@ subroutine covsclgrp_a_en_multmatrix(a_en,cmatrix)
 end subroutine covsclgrp_a_en_multmatrix
 
 subroutine setup_ensgrp2aensgrp
-    use hybrid_ensemble_parameters, only: nsclgrp
+    use hybrid_ensemble_parameters, only: l_timloc_opt,l_sum_spc_weights
+    use hybrid_ensemble_parameters, only: ensloccov4tim,ensloccov4var,ensloccov4scl
+    use hybrid_ensemble_parameters, only: ntotensgrp,naensgrp,ntlevs_ens,nsclgrp,ngvarloc
     use hybrid_ensemble_parameters, only: ensgrp2aensgrp 
+    use hybrid_ensemble_parameters, only: idaen2d,idaen3d
+  use hybrid_ensemble_parameters, only: alphacvarsclgrpmat
     implicit none
 
-    integer (i_kind):: iens,iaens
-    do iens=1,nsclgrp
-     ensgrp2aensgrp(iens)=iens
-    enddo 
+    integer (i_kind):: i,j
+    integer (i_kind):: ig,ibin,ic,iscl,itim1,itim2,igvar1,igvar2,iscl1,iscl2,ivargrp
+    integer (i_kind):: ntimloc,interval4aens_nsclandngvarloc,interval4aens_nscl
+    integer (i_kind):: nsclandngvarloc
+    if (l_timloc_opt ) then
+    ntimloc=ntlevs_ens
+   interval4aens_nsclandngvarloc =  ngvarloc*nsclgrp
+    else
+    ntimloc=1
+   interval4aens_nsclandngvarloc = 0 
+    endif
+    ensgrp2aensgrp=-999
+    
+   interval4aens_nscl=nsclgrp
+    do ibin=1,ntlevs_ens 
+       do ic=1,nc3d+nc2d
+          if(ic.le.nc3d) ivargrp=idaen3d(ic)
+          if(ic.gt.nc3d) ivargrp=idaen2d(ic-nc3d)
+          do iscl=1,nsclgrp
+            ig=(ivargrp-1)*nsclgrp+iscl 
+               
+           ensgrp2aensgrp(ig,ic,ibin)=(ibin-1)*interval4aens_nsclandngvarloc+(ivargrp-1)*nsclgrp+iscl
+!clt          write(6,*)'thinkdeb555 ensgrp2aens is ',ig,ic,ibin,' ',ensgrp2aensgrp(ig,ic,ibin)   
+          enddo
+       enddo
+    enddo
+    if( naensgrp .ne. ntimloc*ngvarloc*nsclgrp) then
+      write(6,*)'something wrong in setup_ensgrp2aensgrp'
+    endif
+    if( ntotensgrp .ne. ntlevs_ens*ngvarloc*nsclgrp) then
+      write(6,*)'something on ntotensgrp are  wrong  in setup_ensgrp2aensgrp'
+    endif
+    if (l_sum_spc_weights.eq.0) then 
+      ensloccov4scl=1    
+    elseif (l_sum_spc_weights.eq.1)then
+      ensloccov4scl=0    
+      ensloccov4scl(1)=1.0    
+   
+    else 
+     write(6,*)'stop , unknown option for this branch'
+     call stop2(666)
+    endif
+     ensloccov4tim=1 ! a place-holder
+     ensloccov4var=1 ! a place-holder 
+     
+
+     nsclandngvarloc =  ngvarloc*nsclgrp
+    
+!clt symmetric conditions should be made use of
 
 
+ do itim2=1,ntimloc
+ do itim1=1,ntimloc
+    do igvar1=1,ngvarloc 
+    do igvar2=1,ngvarloc 
+      do iscl1=1,nsclgrp
+      do iscl2=1,nsclgrp
+          i=(itim1-1)**nsclandngvarloc+(igvar1-1)*nsclgrp+iscl1
+          j=(itim2-1)**nsclandngvarloc+(igvar2-1)*nsclgrp+iscl2
+          alphacvarsclgrpmat(i,j)=ensloccov4tim(abs(itim1-itim2)+1)* ensloccov4var( abs(igvar1-igvar2)+1)* ensloccov4scl( abs(iscl1-iscl2)+1) !first for ttime covariance
+      enddo
+      enddo
+   enddo
+   enddo
+ enddo
+ enddo
 
 end subroutine setup_ensgrp2aensgrp
 end module hybrid_ensemble_isotropic

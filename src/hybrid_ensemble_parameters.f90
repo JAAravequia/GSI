@@ -284,16 +284,20 @@ module hybrid_ensemble_parameters
   public :: en_perts,ps_bar
   public :: region_lat_ens,region_lon_ens
   public :: region_dx_ens,region_dy_ens
-  public :: naensgrp,nsclgrp,naensloc
+  public :: naensgrp,ntotensgrp,nsclgrp,naensloc,ngvarloc
   public :: ensgrp2aensgrp 
+  public :: ensloccov4tim,ensloccov4var,ensloccov4scl 
   public :: alphacvarsclgrpmat
   public ::  para_covwithsclgrp
   public :: spc_multwgt 
   public :: spcwgt_params 
+  public::  l_timloc_opt
   public :: l_sum_spc_weights 
+  public :: idaen3d,idaen2d
   public :: ens_fast_read
 
   logical l_hyb_ens,uv_hyb_ens,q_hyb_ens,oz_univ_static
+  logical l_timloc_opt
   logical aniso_a_en
   logical full_ensemble,pwgtflg
   logical generate_ens
@@ -313,6 +317,7 @@ module hybrid_ensemble_parameters
   integer(i_kind) n_ens,nlon_ens,nlat_ens,jcap_ens,jcap_ens_test
   real(r_kind) beta_s0,grid_ratio_ens
   integer(i_kind),parameter::max_naensloc=20
+  integer(i_kind),parameter::max_nvars=100
   real(r_kind) s_ens_h(max_naensloc)
   real(r_kind) s_ens_v(max_naensloc)
 
@@ -337,14 +342,18 @@ module hybrid_ensemble_parameters
   integer(i_kind) regional_ensemble_option
   character(len=512),save :: ensemble_path
   real(r_kind),allocatable,dimension(:,:) :: alphacvarsclgrpmat
-  integer(i_kind),allocatable,dimension(:) :: ensgrp2aensgrp
+  integer(i_kind),allocatable,dimension(:,:,:) :: ensgrp2aensgrp
+  integer(i_kind),allocatable,dimension(:) :: ensloccov4tim,ensloccov4var,ensloccov4scl
   real(r_kind),allocatable,dimension(:,:) ::  spc_multwgt 
   real(r_kind),allocatable,dimension(:,:) ::  spcwgt_params
   real (r_kind) ::  para_covwithsclgrp=1
    integer(i_kind)::  nsclgrp=1
    integer(i_kind)::  naensgrp=1
+   integer(i_kind)::  ntotensgrp=1
    integer(i_kind)::  naensloc=1
+   integer(i_kind)::  ngvarloc=1
    integer(i_kind)::  l_sum_spc_weights=0
+   integer(i_kind)    ,allocatable,dimension(:) :: idaen3d,idaen2d
 
 
 ! following is for storage of ensemble perturbations:
@@ -393,6 +402,8 @@ subroutine init_hybrid_ensemble_parameters
   implicit none
 
   l_hyb_ens=.false.
+  l_timloc_opt=.false.
+  
   full_ensemble=.false.
   pwgtflg=.false.
   uv_hyb_ens=.false.
@@ -442,7 +453,8 @@ subroutine create_hybens_localization_parameters
   allocate( sqrt_beta_s(grd_ens%nsig),sqrt_beta_e(grd_ens%nsig) )
   allocate( pwgt(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig) )
   allocate(alphacvarsclgrpmat(naensgrp,naensgrp))
-  allocate(ensgrp2aensgrp(nsclgrp))
+  allocate(ensgrp2aensgrp(ntotensgrp,max_nvars,ntlevs_ens))
+  allocate(ensloccov4tim(ntlevs_ens),ensloccov4var(ngvarloc),ensloccov4scl(nsclgrp))
   beta_s  =one
   beta_e  =zero
   sqrt_beta_s=one
@@ -450,6 +462,9 @@ subroutine create_hybens_localization_parameters
   pwgt=zero
   alphacvarsclgrpmat=one
   ensgrp2aensgrp=1
+  ensloccov4tim=1.0
+  ensloccov4var=1.0
+  ensloccov4scl=1.0
   
 end subroutine create_hybens_localization_parameters
 

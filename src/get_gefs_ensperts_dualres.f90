@@ -96,7 +96,7 @@ subroutine get_gefs_ensperts_dualres
   type(get_gfs_ensmod_class) :: enscoupler
   logical ice
   type(sub2grid_info) :: grd_tmp
-  integer(i_kind) :: ig,ig0,nenstot
+  integer(i_kind) :: ig,ig0
 
 ! Create perturbations grid and get variable names from perturbations
   if(en_perts(1,1,1)%grid%im/=grd_ens%lat2.or. &

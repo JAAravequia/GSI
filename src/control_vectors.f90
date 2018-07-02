@@ -283,6 +283,8 @@ subroutine init_anacv
 !   language: f90
 !   machine:  ibm rs/6000 sp
 !
+use hybrid_ensemble_parameters,only:ngvarloc
+use hybrid_ensemble_parameters,only:idaen3d,idaen2d
 implicit none
 !character(len=*),parameter:: rcname='anavinfo.txt'
 character(len=*),parameter:: rcname='anavinfo'  ! filename should have extension
@@ -332,6 +334,7 @@ allocate(as3d(nc3d),as2d(nc2d))
 allocate(cvarsmd(mvars))
 allocate(atsfc_sdv(mvars))
 allocate(an_amp0(nvars))
+allocate(idaen3d(nc3d),idaen2d(nc2d))
 
 ! want to rid code from the following ...
 nrf=nc2d+nc3d
@@ -367,7 +370,36 @@ do ii=1,nvars
    else
       an_amp0(ii)=one/three
    endif
+   if(ngvarloc.gt.1) then !now, noly consider ngvarloc=2 if it is not 1,and
+                          !,now,only for ngvarloc=2 in this block
+
+   if(itracer.gt.10) then
+      if(ilev.gt.1) then
+      idaen3d(nc3d)=2
+      else
+      idaen2d(nc2d)=2
+      endif
+    else
+      if(ilev.gt.1) then
+      idaen3d(nc3d)=1
+      else
+      idaen2d(nc2d)=1
+      endif
+
+    endif
+  endif
+
+
+
+
+
+
 enddo
+ if(ngvarloc.eq.1) then
+ idaen3d=1
+ idaen2d=1
+ endif
+
 
 deallocate(utable)
 
@@ -430,7 +462,7 @@ subroutine allocate_cv(ycv)
 !$$$ end documentation block
 
   use hybrid_ensemble_parameters, only: grd_ens
-  use hybrid_ensemble_parameters, only: naensgrp,naensgrp
+  use hybrid_ensemble_parameters, only: naensgrp
   implicit none
   type(control_vector), intent(  out) :: ycv
   integer(i_kind) :: ii,jj,nn,ndim,ierror,n_step,n_aens
