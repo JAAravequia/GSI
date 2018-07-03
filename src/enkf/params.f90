@@ -127,6 +127,8 @@ real(r_double) :: vlocal_eval
 real(r_double),public,dimension(:,:), allocatable :: vlocal_evecs
 logical,public :: params_initialized = .true.
 logical,public :: save_inflation = .false.
+! use gain form of LETKF (reset to true if modelspace_vloc=T)
+logical,public :: getkf = .false.
 ! turn on getkf inflation (when modelspace_vloc=T and
 ! letkf_flag=T, posterior variance inflated to match
 ! variance of modulated ensemble).
@@ -199,7 +201,7 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    newpc4pred,nmmb,nhr_anal,nhr_state, fhr_assim,nbackgrounds,nstatefields, &
                    save_inflation,nobsl_max,lobsdiag_forenkf,netcdf_diag,&
                    letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
-                   getkf_inflation,denkf,modelspace_vloc,dfs_sort,write_spread_diag,&
+                   getkf,getkf_inflation,denkf,modelspace_vloc,dfs_sort,write_spread_diag,&
                    fso_cycling,fso_calculate,imp_physics,lupp
 
 namelist /nam_wrf/arw,nmm,nmm_restart
@@ -413,8 +415,12 @@ if (modelspace_vloc) then
     call stop2(19)
   endif
   if (letkf_flag .and. .not. letkf_novlocal) then
-     if (nproc .eq. 0) print *,"modelspace_vloc=T and letkf=T, re-setting letkf_novlocal to true"
+     if (nproc .eq. 0) print *,"modelspace_vloc=T and letkf_flag=T, re-setting letkf_novlocal to T"
      letkf_novlocal = .true.
+  endif
+  if (letkf_flag .and. .not. getkf) then
+     if (nproc .eq. 0) print *,"modelspace_vloc=T and getkf=F, re-setting getkf to T"
+     getkf = .true.
   endif
   ! set vertical localization parameters to very large values
   ! (turns vertical localization off for serial filter)
