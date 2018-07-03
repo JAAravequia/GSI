@@ -159,7 +159,7 @@ contains
     grid%nlats   = an_grid%ny
 
     ! Read the nemsio header
-    call gfs_nems_initialize(meta_nemsio, analysis_filename)
+    call gfs_nems_initialize(meta_nemsio, firstguess_filename)
     call gfs_grid_initialize(grid, meta_nemsio)
 
     an_grid%lon = grid%rlon(:,1)
