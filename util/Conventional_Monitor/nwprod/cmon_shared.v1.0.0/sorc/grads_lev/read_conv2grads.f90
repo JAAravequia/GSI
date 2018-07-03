@@ -52,6 +52,8 @@ subroutine read_conv2grads(ctype,stype,intype,target_nreal,nobs,isubtype,subtype
 
       read(lunin,IOSTAT=iflag) dtype,nchar,file_nreal,ii,mype,ioff02
 !      print *, 'iflag from header read = ', iflag
+!      print *, 'dtype, nchar, file_nreal, ii, mype, ioff02 = ', dtype, nchar, file_nreal, ii, mype, ioff02
+
       if( iflag /= 0 ) exit loopd
 
       if( trim(dtype) == trim(ctype) .and. file_nreal /= target_nreal ) then
@@ -59,6 +61,8 @@ subroutine read_conv2grads(ctype,stype,intype,target_nreal,nobs,isubtype,subtype
          exit 
       endif
 
+
+      print *, 'trim(dtype), trim(ctype) = ', trim(dtype), trim(ctype)
       if(trim(dtype) /= trim(ctype))  then
          cycle
       endif
@@ -66,7 +70,7 @@ subroutine read_conv2grads(ctype,stype,intype,target_nreal,nobs,isubtype,subtype
       allocate(cdiag(ii),rdiag(file_nreal,ii))
       read(lunin,IOSTAT=iflag) cdiag,rdiag
       if( iflag /= 0 ) then
-!         print *, 'iflag from cdiag,rdiag read = ', iflag
+         print *, 'iflag from cdiag,rdiag read = ', iflag
          deallocate( cdiag,rdiag )
          exit loopd
       end if
@@ -84,7 +88,9 @@ subroutine read_conv2grads(ctype,stype,intype,target_nreal,nobs,isubtype,subtype
 !            print *, 'and jsubtype == isubtype ', itype, intype
 !         end if
 
-         if(itype == intype .AND. jsubtype == isubtype)  then 
+         if( (itype == intype .AND. jsubtype == isubtype) .OR. &
+             (itype == intype .AND. trim(ctype) == 'gps') )  then 
+
 !         if( itype == intype )  then 
             nobs=nobs+1
 

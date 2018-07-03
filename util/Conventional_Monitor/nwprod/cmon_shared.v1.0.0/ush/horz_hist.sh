@@ -44,6 +44,7 @@
    export nreal_q=${nreal_q:-20} 
    export nreal_t=${nreal_t:-24} 
    export nreal_uv=${nreal_uv:-23} 
+   export nreal_gps=${nreal_gps:-21}
 
 
    for type in gps ps q t uv; do
