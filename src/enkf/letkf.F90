@@ -108,7 +108,7 @@ use params, only: sprd_tol, datapath, nanals, iseed_perturbed_obs,&
                   iassim_order,sortinc,deterministic,nlevs,&
                   zhuberleft,zhuberright,varqc,lupd_satbiasc,huber,letkf_novlocal,&
                   lupd_obspace_serial,corrlengthnh,corrlengthtr,corrlengthsh,&
-                  getkf_inflation,denkf,nbackgrounds,nobsl_max,neigv,vlocal_evecs,dfs_sort
+                  getkf,getkf_inflation,denkf,nbackgrounds,nobsl_max,neigv,vlocal_evecs,dfs_sort
 use gridinfo, only: nlevs_pres,lonsgrd,latsgrd,logp,npts,gridloc
 use kdtree2_module, only: kdtree2, kdtree2_create, kdtree2_destroy, &
                           kdtree2_result, kdtree2_n_nearest, kdtree2_r_nearest
@@ -577,7 +577,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
       ! weights for ensemble perturbations represent posterior ens perturbations, not
       ! analysis increments for ensemble perturbations.
       call letkf_core(nobsl2,hxens,obens,dep,wts_ensmean,wts_ensperts,pa,&
-                      rdiag,rloc(1:nobsl2),nens,nens/nanals,getkf_inflation,denkf)
+                      rdiag,rloc(1:nobsl2),nens,nens/nanals,getkf_inflation,denkf,getkf)
 
       t4 = t4 + mpi_wtime() - t1
       t1 = mpi_wtime()
@@ -610,7 +610,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
          else
             ensmean_chunk(npt,i,nb) = ensmean_chunk(npt,i,nb) + &
             sum(wts_ensmean*ens_tmp(:,i,nb))
-            if (neigv > 1) then ! gain formulation
+            if (getkf) then ! gain formulation
                do nanal=1,nanals 
                   anal_chunk(nanal,npt,i,nb) = anal_chunk(nanal,npt,i,nb) + &
                   sum(wts_ensperts(:,nanal)*ens_tmp(:,i,nb))
@@ -718,7 +718,7 @@ return
 end subroutine letkf_update
 
 subroutine letkf_core(nobsl,hxens,hxens_orig,dep,wts_ensmean,wts_ensperts,paens,&
-                      rdiaginv,rloc,nanals,neigv,getkf_inflation,denkf)
+                      rdiaginv,rloc,nanals,neigv,getkf_inflation,denkf,getkf)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    letkf_core
@@ -764,6 +764,7 @@ subroutine letkf_core(nobsl,hxens,hxens_orig,dep,wts_ensmean,wts_ensperts,paens,
 !     getkf_inflation - if true, return posterior covariance matrix in
 !                needed to compute getkf inflation (eqn 30 in Bishop et al
 !                2017).
+!     getkf - if true, use gain formulation
 !
 !   output argument list:
 !
@@ -821,7 +822,7 @@ integer(i_kind) isuppz(2*nanals)
 real(r_kind) vl,vu
 integer(i_kind), allocatable, dimension(:) :: iwork
 real(r_kind), dimension(:), allocatable :: work1
-logical, intent(in) :: getkf_inflation,denkf
+logical, intent(in) :: getkf_inflation,denkf,getkf
 
 ! nsvals - rank (# of nonzero sing values)) of YbRsqrtinv=hxens * R **-1/2
 !          (and R includes ob error localization)
@@ -867,9 +868,9 @@ if (ierr .ne. 0) print *,'warning: dsyev* failed, ierr=',ierr
 deallocate(work1,iwork,work3) ! no longer needed
 where (svals < eps**2) svals = eps**2
 svals = sqrt(svals) ! convert eigenvalues to sing values
-! gammaPI used in calculation of posterior cov in ensemble space
-gammapI = eps+(nanals/neigv)-1
-gammapI(1:nsvals) = svals(1:nsvals)**2+(nanals/neigv)-1
+! gammapI used in calculation of posterior cov in ensemble space
+gammapI = eps+real((nanals/neigv)-1,r_kind)
+gammapI(1:nsvals) = svals(1:nsvals)**2+real((nanals/neigv)-1,r_kind)
 
 ! create HZ^T R**-1/2 
 allocate(shxens(nanals,nobsl))
@@ -883,14 +884,14 @@ deallocate(rrloc)
 ! This is the factor C (Gamma + I)**-1 C^T (HZ)^ T R**-1/2 (y - HXmean)
 ! in Bishop paper (eqs 10-12).
 
-allocate(swork3(nanals,nsvals),swork2(nanals,nsvals),pa(nanals,nanals))
+allocate(swork3(nanals,nanals),swork2(nanals,nanals),pa(nanals,nanals))
 do nanal=1,nanals
-   swork3(nanal,1:nsvals) = lsv(nanal,1:nsvals)/gammapI(1:nsvals)
-   swork2(nanal,1:nsvals) = lsv(nanal,1:nsvals)
+   swork3(nanal,:) = lsv(nanal,:)/gammapI
+   swork2(nanal,:) = lsv(nanal,:)
 enddo
 ! pa = C (Gamma + I)**-1 C^T (analysis error cov in ensemble space)
 !pa = matmul(swork3,transpose(swork2))
-call sgemm('n','t',nanals,nanals,nsvals,1.e0,swork3,nanals,swork2,&
+call sgemm('n','t',nanals,nanals,nanals,1.e0,swork3,nanals,swork2,&
             nanals,0.e0,pa,nanals)
 if (denkf) then
    ! for DEnKF, return only factor needed to compute Kalman gain
@@ -927,11 +928,15 @@ deallocate(swork1)
 ! This is -C [ (I - (Gamma+I)**-1/2)*Gamma**-1 ] C^T (HZ)^T R**-1/2 HXprime
 ! in Bishop paper (eqn 29).
 
-if (neigv .ne. 1) then ! use Gain formulation of LETKF weights
+if (getkf) then ! use Gain formulation for LETKF weights
 
+deallocate(swork2,swork3)
+allocate(swork3(nanals,nsvals),swork2(nanals,nsvals))
+gammapI = sqrt(real((nanals/neigv)-1,r_kind)/gammapI)
 do nanal=1,nanals
+   swork2(nanal,1:nsvals) = lsv(nanal,1:nsvals)
    swork3(nanal,:) = &
-   lsv(nanal,1:nsvals)*(1.-sqrt((nanals/neigv-1)/gammapI(1:nsvals)))/svals(1:nsvals)**2
+   lsv(nanal,1:nsvals)*(1.-gammapI(1:nsvals))/svals(1:nsvals)**2
 enddo
 ! swork2 still contains eigenvectors, over-write pa
 ! pa = C [ (I - (Gamma+I)**-1/2)*Gamma**-1 ] C^T
@@ -957,8 +962,12 @@ call sgemm('n','n',nanals,nanals/neigv,nanals,-1.e0,pa,nanals,swork2,&
 ! clean up
 deallocate(shxens,swork2,pa)
 
-else  ! neigv=1, no modulated ensemble, use original LETKF formulation
+else  ! use original LETKF formulation (won't work if neigv != 1)
 
+if (neigv > 1) then
+  print *,'neigv must be 1 in letkf_core if getkf=F'
+  call stop2(993)
+endif
 ! compute sqrt(Pa) - analysis weights
 ! (apply to prior ensemble to determine posterior ensemble,
 !  not analysis increments as in Gain formulation)
@@ -966,15 +975,15 @@ else  ! neigv=1, no modulated ensemble, use original LETKF formulation
 ! saves two matrix multiplications (nanals, nobsl) x (nobsl, nanals) and
 ! (nanals, nanals) x (nanals, nanals)
 deallocate(shxens,pa)
-gammapI = sqrt(real(nanals-1,r_kind)/gammapI)
+gammapI = sqrt(real((nanals/neigv)-1,r_kind)/gammapI)
 do nanal=1,nanals
-   swork3(nanal,1:nsvals) = lsv(nanal,1:nsvals)*gammapI
+   swork3(nanal,:) = lsv(nanal,:)*gammapI
 enddo
 ! swork2 already contains lsv
 ! wts_ensperts = 
 ! C (Gamma + I)**-1/2 C^T (square root of analysis error cov in ensemble space)
 !wts_ensperts = matmul(swork3,transpose(swork2))
-call sgemm('n','t',nanals,nanals,nsvals,1.e0,swork3,nanals,swork2,&
+call sgemm('n','t',nanals,nanals,nanals,1.e0,swork3,nanals,swork2,&
             nanals,0.e0,wts_ensperts,nanals)
 deallocate(swork3,swork2)
 
