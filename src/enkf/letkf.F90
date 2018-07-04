@@ -523,11 +523,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
          cycle verloop
       end if
       allocate(hxens(nens,nobsl2))
-      if (denkf) then
-         allocate(obens(nobsl2,nanals))
-      else
-         allocate(obens(nanals,nobsl2))
-      endif
+      allocate(obens(nanals,nobsl2))
       allocate(rdiag(nobsl2))
       allocate(dep(nobsl2))
       do nob=1,nobsl2
@@ -545,21 +541,12 @@ grdloop: do npt=1,numptsperproc(nproc+1)
          hxens(1:nens,nob)=anal_ob(1:nens,nf) 
 #endif
          endif
-         if (denkf) then
-         obens(nob,1:nanals) = &
-#ifdef MPI3
-         anal_ob_fp(1:nanals,nf) 
-#else
-         anal_ob(1:nanals,nf) 
-#endif
-         else
          obens(1:nanals,nob) = &
 #ifdef MPI3
          anal_ob_fp(1:nanals,nf) 
 #else
          anal_ob(1:nanals,nf) 
 #endif
-         endif
          rdiag(nob)=one/oberrvaruse(nf)
          dep(nob)=ob(nf)-ensmean_ob(nf)
       end do
@@ -589,57 +576,37 @@ grdloop: do npt=1,numptsperproc(nproc+1)
       do i=1,ncdim
          ! if not vlocal, update all state variables in column.
          if(vlocal .and. index_pres(i) /= nn) cycle
-         if (denkf) then
-            ! compute kalman gain, approximate
-            ! perturbation update using DEnKF approx (Sakov and Oke
-            ! 2008 https://doi.org/10.1111/j.1600-0870.2007.00299.x)
-            ! approximation is valid when HPbHT << R (accurate background,
-            ! small increments)
-            allocate(kfgain(nobsl2))
-            do nob=1,nobsl2
-               kfgain(nob) = sum(pa(:,nob)*ens_tmp(:,i,nb))
-            enddo
-            ensmean_chunk(npt,i,nb) = ensmean_chunk(npt,i,nb) + &
-            sum(kfgain*dep)
-            ! use gain/2 to update ens perts
+         ensmean_chunk(npt,i,nb) = ensmean_chunk(npt,i,nb) + &
+         sum(wts_ensmean*ens_tmp(:,i,nb))
+         if (getkf) then ! gain formulation
             do nanal=1,nanals 
-               anal_chunk(nanal,npt,i,nb) = anal_chunk(nanal,npt,i,nb) - &
-               0.5*sum(kfgain*obens(:,nanal))
+               anal_chunk(nanal,npt,i,nb) = anal_chunk(nanal,npt,i,nb) + &
+               sum(wts_ensperts(:,nanal)*ens_tmp(:,i,nb))
             enddo
-            deallocate(kfgain)
-         else
-            ensmean_chunk(npt,i,nb) = ensmean_chunk(npt,i,nb) + &
-            sum(wts_ensmean*ens_tmp(:,i,nb))
-            if (getkf) then ! gain formulation
-               do nanal=1,nanals 
-                  anal_chunk(nanal,npt,i,nb) = anal_chunk(nanal,npt,i,nb) + &
-                  sum(wts_ensperts(:,nanal)*ens_tmp(:,i,nb))
+            if (.not. denkf .and. getkf_inflation) then
+               ! inflate posterior perturbations so analysis variance 
+               ! in original low-rank ensemble is the same as modulated ensemble
+               ! (eqn 30 in https://doi.org/10.1175/MWR-D-17-0102.1)
+               trpa = 0.0_r_single
+               do nanal=1,nens
+                  trpa = trpa + &
+                  sum(pa(:,nanal)*ens_tmp(:,i,nb))*ens_tmp(nanal,i,nb)
                enddo
-               if (getkf_inflation) then
-                  ! inflate posterior perturbations so analysis variance 
-                  ! in original low-rank ensemble is the same as modulated ensemble
-                  ! (eqn 30 in https://doi.org/10.1175/MWR-D-17-0102.1)
-                  trpa = 0.0_r_single
-                  do nanal=1,nens
-                     trpa = trpa + &
-                     sum(pa(:,nanal)*ens_tmp(:,i,nb))*ens_tmp(nanal,i,nb)
-                  enddo
-                  trpa = max(eps,trpa)
-                  trpa_raw = max(eps,r_nanalsm1*sum(anal_chunk(:,npt,i,nb)**2))
-                  anal_chunk(:,npt,i,nb) = sqrt(trpa/trpa_raw)*anal_chunk(:,npt,i,nb)
-                  !if (nproc == 0 .and. omp_get_thread_num() == 0 .and. i .eq. ncdim) print *,'i,trpa,trpa_raw,inflation = ',i,trpa,trpa_raw,sqrt(trpa/trpa_raw)
-               endif
-            else ! original LETKF formulation
-               do nanal=1,nanals 
-                  anal_chunk(nanal,npt,i,nb) = &
-                  sum(wts_ensperts(:,nanal)*ens_tmp(:,i,nb))
-               enddo
+               trpa = max(eps,trpa)
+               trpa_raw = max(eps,r_nanalsm1*sum(anal_chunk(:,npt,i,nb)**2))
+               anal_chunk(:,npt,i,nb) = sqrt(trpa/trpa_raw)*anal_chunk(:,npt,i,nb)
+               !if (nproc == 0 .and. omp_get_thread_num() == 0 .and. i .eq. ncdim) print *,'i,trpa,trpa_raw,inflation = ',i,trpa,trpa_raw,sqrt(trpa/trpa_raw)
             endif
+         else ! original LETKF formulation
+            do nanal=1,nanals 
+               anal_chunk(nanal,npt,i,nb) = &
+               sum(wts_ensperts(:,nanal)*ens_tmp(:,i,nb))
+            enddo
          endif
       enddo
       enddo
       deallocate(wts_ensperts,wts_ensmean,dep,obens,rloc,rdiag,hxens)
-      if (getkf_inflation .or. denkf) deallocate(pa)
+      if (getkf_inflation) deallocate(pa)
 
       t5 = t5 + mpi_wtime() - t1
       t1 = mpi_wtime()
@@ -764,6 +731,8 @@ subroutine letkf_core(nobsl,hxens,hxens_orig,dep,wts_ensmean,wts_ensperts,paens,
 !     getkf_inflation - if true, return posterior covariance matrix in
 !                needed to compute getkf inflation (eqn 30 in Bishop et al
 !                2017).
+!     denkf - if true, use DEnKF approximation (implies getkf=T)
+!             See Sakov and Oke 2008 https://doi.org/10.1111/j.1600-0870.2007.00299.x
 !     getkf - if true, use gain formulation
 !
 !   output argument list:
@@ -775,25 +744,21 @@ subroutine letkf_core(nobsl,hxens,hxens_orig,dep,wts_ensmean,wts_ensperts,paens,
 !       where HZ^T = Yb*R**-1/2 (YbRinvsqrt),
 !       C are eigenvectors of (HZ)^T HZ and Gamma are eigenvalues
 !       Has dimension (nanals) - increment is weighted average of ens
-!       perts, wts_ensmean are weights. Not computed if denkf=T
-
+!       perts, wts_ensmean are weights. 
+!
 !     wts_ensperts  - same as above, but for computing increments to 
 !       ensemble perturbations. From Bishop et al 2017 eqn 29
 !       wts_ensperts = -C [ (I - (Gamma+I)**-1/2)*Gamma**-1 ] C^T (HZ)^T R**-1/2 Hxprime
 !       Has dimension (nanals,nanals/neigv), analysis weights for each
 !       member. Hxprime (hxens_orig) is the original, unmodulated
 !       ensemble in observation space, HZ is the modulated ensemble in
-!       ob space times R**-1/2. Not computed if denkf=T
+!       ob space times R**-1/2. If denkf=T, wts_ensperts is approximated
+!       as wts_ensperts = -0.5*C (Gamma + I)**-1 C^T (HZ)^ T R**-1/2 Hxprime
 !
 !     pa - only allocated and returned
-!       if getkf_inflation=T or denkf=T.  If getkf_inflation=T then
-!       pa is dimension (nanals,nanals) and contains posterior 
-!       covariance matrix in (modulated) ensemble space.  If denkf=T,
-!       pa is dimension (nanals, nobsl) and contains posterior
-!       cov in ensemble space times HZ^T R**-1/2 = Yb^T R**-1 .  This matrix
-!       can be left-multiplied by (modulated) ensemble in state space
-!       to obtain kalman gain. If denkf=T wts_ensmean and wts_ensperts
-!       are not computed.
+!       if getkf_inflation=T (and denkf=F).  In this case
+!       pa is allocated dimension (nanals,nanals) and contains posterior 
+!       covariance matrix in (modulated) ensemble space.
 !
 ! attributes:
 !   language:  f95
@@ -897,19 +862,6 @@ enddo
 !pa = matmul(swork3,transpose(swork2))
 call sgemm('n','t',nanals,nanals,nanals,1.e0,swork3,nanals,swork2,&
             nanals,0.e0,pa,nanals)
-if (denkf) then
-   ! for DEnKF, return only factor needed to compute Kalman gain
-   ! paens = C (Gamma + I)**-1 C^T (HZ)^ T R**-1/2
-   ! (nanals, nanals) x (nanals, nobsl) = (nanals, nobsl)
-   ! kalman gain is then  K = Z paens
-   ! Note: this is expensive if nobsl >> nanals
-   allocate(paens(nanals,nobsl))
-   ! paens = matmul(pa, shxens)
-   call sgemm('n','n',nanals,nobsl,nanals,1.e0,pa,nanals,shxens,&
-              nanals,0.e0,paens,nanals)
-   paens = paens/normfact
-   return ! all done, don't compute wts_ensmean and wts_ensperts
-endif
 ! work1 = (HZ)^ T R**-1/2 (y - HXmean)
 ! (nanals, nobsl) x (nobsl,) = (nanals,)
 ! in Bishop paper HZ is nobsl, nanals, here is it nanals, nobsl
@@ -922,7 +874,8 @@ end do
 do nanal=1,nanals
    wts_ensmean(nanal) = sum(pa(nanal,:)*swork1(:))/normfact
 end do
-if (getkf_inflation) then
+
+if (.not. denkf .and. getkf_inflation) then
    allocate(paens(nanals,nanals))
    paens = pa
 endif
@@ -932,32 +885,31 @@ deallocate(swork1)
 ! to compute analysis increment (for perturbation update), save in single precision.
 ! This is -C [ (I - (Gamma+I)**-1/2)*Gamma**-1 ] C^T (HZ)^T R**-1/2 HXprime
 ! in Bishop paper (eqn 29).
+! For DEnKF factor is -0.5*C (Gamma + I)**-1 C^T (HZ)^ T R**-1/2 HXprime
+! = -0.5 Pa (HZ)^ T R**-1/2 HXprime (Pa already computed)
 
-if (getkf) then ! use Gain formulation for LETKF weights
+if (getkf .or. denkf) then ! use Gain formulation for LETKF weights
 
 deallocate(swork2,swork3)
-allocate(swork3(nanals,nsvals),swork2(nanals,nsvals))
-gammapI = sqrt(1.0/gammapI)
-do nanal=1,nanals
-   swork2(nanal,1:nsvals) = lsv(nanal,1:nsvals)
-   swork3(nanal,:) = &
-   lsv(nanal,1:nsvals)*(1.-gammapI(1:nsvals))/svals(1:nsvals)**2
-   ! (1 - (Gamma+I)**-1/2)*Gamma**-1 = 
-   ! [ ((Gamma + I) - (Gamma + I)**-1/2)*Gamma**-1 ]*(Gamma + I)**-1/2
-   ! ~ 0.5*(Gamma + I)**-1/2 when Gamma << I
-   ! less spread is removed from ensemble by perturbation update
-   ! if this approx is used (so less inflation is needed).
-   ! (jsw - nice idea, but doesn't work: posterior variance
-   ! is larger than prior for NH ps, max gamma is ~20, not << 1)
-   !swork3(nanal,:) = &
-   !0.5*lsv(nanal,1:nsvals)*gammapI(1:nsvals)
-enddo
-! swork2 still contains eigenvectors, over-write pa
-! pa = C [ (I - (Gamma+I)**-1/2)*Gamma**-1 ] C^T
-!pa = matmul(swork3,transpose(swork2))
-call sgemm('n','t',nanals,nanals,nsvals,1.e0,swork3,nanals,swork2,&
-            nanals,0.e0,pa,nanals)
-deallocate(swork2,swork3)
+if (denkf) then
+   ! use Pa = C (Gamma + I)**-1 C^T (already computed)
+   ! wts_ensperts = -0.5 Pa (HZ)^ T R**-1/2 HXprime
+   pa = 0.5*pa
+else
+   allocate(swork3(nanals,nsvals),swork2(nanals,nsvals))
+   gammapI = sqrt(1.0/gammapI)
+   do nanal=1,nanals
+      swork2(nanal,1:nsvals) = lsv(nanal,1:nsvals)
+      swork3(nanal,:) = &
+      lsv(nanal,1:nsvals)*(1.-gammapI(1:nsvals))/svals(1:nsvals)**2
+   enddo
+   ! swork2 still contains eigenvectors, over-write pa
+   ! pa = C [ (I - (Gamma+I)**-1/2)*Gamma**-1 ] C^T
+   !pa = matmul(swork3,transpose(swork2))
+   call sgemm('n','t',nanals,nanals,nsvals,1.e0,swork3,nanals,swork2,&
+               nanals,0.e0,pa,nanals)
+   deallocate(swork2,swork3)
+endif
 
 ! work2 = (HZ)^ T R**-1/2 HXprime
 ! (nanals, nobsl) x (nobsl, nanals/neigv) = (nanals, nanals/neigv)
@@ -969,7 +921,8 @@ call sgemm('n','t',nanals,nanals/neigv,nobsl,1.e0,&
             shxens,nanals,hxens_orig,nanals/neigv,0.e0,swork2,nanals)
 ! wts_ensperts = -C [ (I - (Gamma+I)**-1/2)*Gamma**-1 ] C^T (HZ)^T R**-1/2 HXprime
 ! (nanals, nanals) x (nanals, nanals/eigv) = (nanals, nanals/neigv)
-!wts_ensperts = -matmul(pa, swork2)
+! if denkf, wts_ensperts = -0.5 C (Gamma + I)**-1 C^T (HZ)^T R**-1/2 HXprime
+!wts_ensperts = -matmul(pa, swork2)/normfact
 call sgemm('n','n',nanals,nanals/neigv,nanals,-1.e0,&
             pa,nanals,swork2,nanals,0.e0,wts_ensperts,nanals)
 wts_ensperts = wts_ensperts/normfact
