@@ -869,6 +869,7 @@ else ! single precision
 end if
 if (ierr .ne. 0) print *,'warning: dsyev* failed, ierr=',ierr
 deallocate(work1,iwork,work3) ! no longer needed
+!print *,'eigenvalues',svals(nsvals:nsvals-4:-1),svals(1),sum(svals)
 where (svals < eps**2) svals = eps**2
 svals = sqrt(svals) ! convert eigenvalues to sing values
 ! gammapI used in calculation of posterior cov in ensemble space
@@ -883,7 +884,7 @@ end do
 deallocate(rrloc)
 
 ! compute factor to multiply with model space ensemble perturbations
-! to compute analysis increment(for mean update), save in single precision.
+! to compute analysis increment (for mean update), save in single precision.
 ! This is the factor C (Gamma + I)**-1 C^T (HZ)^ T R**-1/2 (y - HXmean)
 ! in Bishop paper (eqs 10-12).
 
@@ -947,7 +948,7 @@ do nanal=1,nanals
    ! less spread is removed from ensemble by perturbation update
    ! if this approx is used (so less inflation is needed).
    ! (jsw - nice idea, but doesn't work: posterior variance
-   ! is larger than prior for NH ps, max gamma is ~20)
+   ! is larger than prior for NH ps, max gamma is ~20, not << 1)
    !swork3(nanal,:) = &
    !0.5*lsv(nanal,1:nsvals)*gammapI(1:nsvals)
 enddo
