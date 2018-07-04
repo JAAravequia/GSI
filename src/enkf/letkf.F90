@@ -819,7 +819,7 @@ real(r_kind) eps
 integer(i_kind) :: nanal,ierr,lwork,liwork,nsvals
 !for LAPACK dsyevr
 integer(i_kind) isuppz(2*nanals)
-real(r_kind) vl,vu
+real(r_kind) vl,vu,normfact
 integer(i_kind), allocatable, dimension(:) :: iwork
 real(r_kind), dimension(:), allocatable :: work1
 logical, intent(in) :: getkf_inflation,denkf,getkf
@@ -843,8 +843,11 @@ rrloc = rdiaginv * rloc
 eps = epsilon(0.0_r_single)
 where (rrloc < eps) rrloc = eps
 rrloc = sqrt(rrloc)
+normfact = sqrt(real((nanals/neigv)-1,r_kind))
+! normalize so dot product is covariance
 do nanal=1,nanals
-   hxens(nanal,1:nobsl) = hxens(nanal,1:nobsl) * rrloc(1:nobsl)
+   hxens(nanal,1:nobsl) = hxens(nanal,1:nobsl) * &
+   rrloc(1:nobsl)/normfact
 end do
 
 ! compute eigenvectors/eigenvalues of HZ^T HZ (left SV)
@@ -869,8 +872,8 @@ deallocate(work1,iwork,work3) ! no longer needed
 where (svals < eps**2) svals = eps**2
 svals = sqrt(svals) ! convert eigenvalues to sing values
 ! gammapI used in calculation of posterior cov in ensemble space
-gammapI = eps+real((nanals/neigv)-1,r_kind)
-gammapI(1:nsvals) = svals(1:nsvals)**2+real((nanals/neigv)-1,r_kind)
+gammapI = eps+1.0
+gammapI(1:nsvals) = svals(1:nsvals)**2+1.0
 
 ! create HZ^T R**-1/2 
 allocate(shxens(nanals,nobsl))
@@ -903,6 +906,7 @@ if (denkf) then
    ! paens = matmul(pa, shxens)
    call sgemm('n','n',nanals,nobsl,nanals,1.e0,pa,nanals,shxens,&
               nanals,0.e0,paens,nanals)
+   paens = paens/normfact
    return ! all done, don't compute wts_ensmean and wts_ensperts
 endif
 ! work1 = (HZ)^ T R**-1/2 (y - HXmean)
@@ -915,7 +919,7 @@ end do
 ! wts_ensmean = C (Gamma + I)**-1 C^T (HZ)^ T R**-1/2 (y - HXmean)
 ! (nanals, nanals) x (nanals,) = (nanals,)
 do nanal=1,nanals
-   wts_ensmean(nanal) = sum(pa(nanal,:)*swork1(:))
+   wts_ensmean(nanal) = sum(pa(nanal,:)*swork1(:))/normfact
 end do
 if (getkf_inflation) then
    allocate(paens(nanals,nanals))
@@ -932,11 +936,20 @@ if (getkf) then ! use Gain formulation for LETKF weights
 
 deallocate(swork2,swork3)
 allocate(swork3(nanals,nsvals),swork2(nanals,nsvals))
-gammapI = sqrt(real((nanals/neigv)-1,r_kind)/gammapI)
+gammapI = sqrt(1.0/gammapI)
 do nanal=1,nanals
    swork2(nanal,1:nsvals) = lsv(nanal,1:nsvals)
    swork3(nanal,:) = &
    lsv(nanal,1:nsvals)*(1.-gammapI(1:nsvals))/svals(1:nsvals)**2
+   ! (1 - (Gamma+I)**-1/2)*Gamma**-1 = 
+   ! [ ((Gamma + I) - (Gamma + I)**-1/2)*Gamma**-1 ]*(Gamma + I)**-1/2
+   ! ~ 0.5*(Gamma + I)**-1/2 when Gamma << I
+   ! less spread is removed from ensemble by perturbation update
+   ! if this approx is used (so less inflation is needed).
+   ! (jsw - nice idea, but doesn't work: posterior variance
+   ! is larger than prior for NH ps, max gamma is ~20)
+   !swork3(nanal,:) = &
+   !0.5*lsv(nanal,1:nsvals)*gammapI(1:nsvals)
 enddo
 ! swork2 still contains eigenvectors, over-write pa
 ! pa = C [ (I - (Gamma+I)**-1/2)*Gamma**-1 ] C^T
@@ -951,13 +964,14 @@ deallocate(swork2,swork3)
 ! HXprime in paper is nobsl, nanals/neigv here it is nanals/neigv, nobsl
 allocate(swork2(nanals,nanals/neigv))
 !swork2 = matmul(shxens,transpose(hxens_orig))
-call sgemm('n','t',nanals,nanals/neigv,nobsl,1.e0,shxens,nanals,hxens_orig,&
-            nanals/neigv,0.e0,swork2,nanals) 
+call sgemm('n','t',nanals,nanals/neigv,nobsl,1.e0,&
+            shxens,nanals,hxens_orig,nanals/neigv,0.e0,swork2,nanals)
 ! wts_ensperts = -C [ (I - (Gamma+I)**-1/2)*Gamma**-1 ] C^T (HZ)^T R**-1/2 HXprime
 ! (nanals, nanals) x (nanals, nanals/eigv) = (nanals, nanals/neigv)
 !wts_ensperts = -matmul(pa, swork2)
-call sgemm('n','n',nanals,nanals/neigv,nanals,-1.e0,pa,nanals,swork2,&
-            nanals,0.e0,wts_ensperts,nanals)
+call sgemm('n','n',nanals,nanals/neigv,nanals,-1.e0,&
+            pa,nanals,swork2,nanals,0.e0,wts_ensperts,nanals)
+wts_ensperts = wts_ensperts/normfact
 
 ! clean up
 deallocate(shxens,swork2,pa)
@@ -975,7 +989,7 @@ endif
 ! saves two matrix multiplications (nanals, nobsl) x (nobsl, nanals) and
 ! (nanals, nanals) x (nanals, nanals)
 deallocate(shxens,pa)
-gammapI = sqrt(real((nanals/neigv)-1,r_kind)/gammapI)
+gammapI = sqrt(1.0/gammapI)
 do nanal=1,nanals
    swork3(nanal,:) = lsv(nanal,:)*gammapI
 enddo
@@ -983,7 +997,7 @@ enddo
 ! wts_ensperts = 
 ! C (Gamma + I)**-1/2 C^T (square root of analysis error cov in ensemble space)
 !wts_ensperts = matmul(swork3,transpose(swork2))
-call sgemm('n','t',nanals,nanals,nanals,1.e0,swork3,nanals,swork2,&
+call sgemm('n','t',nanals,nanals,nanals,1.0,swork3,nanals,swork2,&
             nanals,0.e0,wts_ensperts,nanals)
 deallocate(swork3,swork2)
 
