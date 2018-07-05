@@ -711,7 +711,8 @@ subroutine letkf_core(nobsl,hxens,hxens_orig,dep,wts_ensmean,wts_ensperts,paens,
 !   2018-07-01  whitaker: implement gain form of LETKF from Bishop et al 2017
 !   (https://doi.org/10.1175/MWR-D-17-0102.1), allow for use of modulated 
 !   ensemble vert localization (ensemble used to estimate posterior covariance
-!   in ensemble space different than ensemble being updated).
+!   in ensemble space different than ensemble being updated). Add denkf,
+!   getkf,getkf_inflation options.
 !
 !   input argument list:
 !     nobsl    - number of observations in the local patch
@@ -728,7 +729,8 @@ subroutine letkf_core(nobsl,hxens,hxens_orig,dep,wts_ensmean,wts_ensperts,paens,
 !                of eigenvectors of vertical localization (1 if not using
 !                model space localization).  1st dimension of hxens_orig is 
 !                nanals/neigv.
-!     getkf_inflation - if true, return posterior covariance matrix in
+!     getkf_inflation - if true (and getkf=T,denkf=F), 
+!                return posterior covariance matrix in
 !                needed to compute getkf inflation (eqn 30 in Bishop et al
 !                2017).
 !     denkf - if true, use DEnKF approximation (implies getkf=T)
@@ -822,8 +824,8 @@ if(r_kind == kind(1.d0)) then ! double precision
    !work3 = matmul(hxens,transpose(hxens))
    call dgemm('n','t',nanals,nanals,nobsl,1.d0,hxens,nanals, &
                hxens,nanals,0.d0,work3,nanals)
-   ! lsv contains eigenvectors of HZ^T HZ, or left sing vectors of HZ
-   ! svals contains eigenvalues (sing values squared)
+   ! lsv contains eigenvectors of HZ^T HZ, or left singular vectors of HZ
+   ! svals contains eigenvalues (singular values squared)
    call dsyevr('V','A','L',nanals,work3,nanals,vl,vu,1,nanals,-1.d0,nanals,svals,lsv, &
                nanals,isuppz,work1,lwork,iwork,liwork,ierr)
 else ! single precision
