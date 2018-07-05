@@ -133,8 +133,8 @@ logical,public :: getkf = .false.
 ! letkf_flag=T, posterior variance inflated to match
 ! variance of modulated ensemble).
 logical, public :: getkf_inflation=.false.
-! use denkf approx to EnKF perturbation update (only used if letkf_flag=T or
-! letkf_flag=F and determinstic=T)
+! use DEnKF approx to EnKF perturbation update.
+! Implies getkf=T if letkf_flag=T
 ! See Sakov and Oke 2008 https://doi.org/10.1111/j.1600-0870.2007.00299.x
 logical, public :: denkf=.false.
 ! do sat bias correction update.
