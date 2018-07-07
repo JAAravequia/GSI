@@ -100,7 +100,7 @@ module loadbal
 !$$$
 
 use mpisetup
-use params, only: datapath, nanals, simple_partition, letkf_flag,&
+use params, only: datapath, nanals, simple_partition, letkf_flag, nobsl_max,&
                   neigv, corrlengthnh, corrlengthsh, corrlengthtr, lupd_obspace_serial
 use enkf_obsmod, only: nobstot, obloc, oblnp, ensmean_ob, obtime, anal_ob, anal_ob_modens, corrlengthsq
 use kinds, only: r_kind, i_kind, r_double, r_single
@@ -166,6 +166,9 @@ t1 = mpi_wtime()
 call estimate_work_enkf1(numobs) ! fill numobs array with number of obs per horiz point
 ! distribute the results of estimate_work to all processors.
 call mpi_allreduce(mpi_in_place,numobs,npts,mpi_integer,mpi_sum,mpi_comm_world,ierr)
+if (letkf_flag .and. nobsl_max > 0) then
+  where(numobs > nobsl_max) numobs = nobsl_max
+endif
 if (nproc == 0) print *,'time in estimate_work_enkf1 = ',mpi_wtime()-t1,' secs'
 if (nproc == 0) print *,'min/max numobs',minval(numobs),maxval(numobs)
 ! loop over horizontal grid points on analysis grid.
@@ -572,7 +575,6 @@ obsloop: do i=n1,n2
          call kdtree2_r_nearest(tp=kdtree_obs2,qv=gridloc(:,i),r2=corrsq,&
               nfound=numobs(i),nalloc=nobstot,results=sresults)
        else
-         numobs(i) = 0
          do nob = 1, nobstot
             r = sum( (gridloc(:,i)-obloc(:,nob))**2, 1)
             if (r < corrsq) then
