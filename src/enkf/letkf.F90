@@ -879,7 +879,7 @@ end do
 
 if (.not. denkf .and. getkf_inflation) then
    allocate(paens(nanals,nanals))
-   paens = pa/normfact
+   paens = pa/normfact**2
 endif
 deallocate(swork1)
 
