@@ -47,7 +47,7 @@ program recentersigp
   integer nsigi,nsigo,iret,mype,mype1,npe,nanals,ierr
   integer:: nrec,latb,lonb,levs,npts,n,i,k,nn
   real,allocatable,dimension(:):: rwork1d
-  real,allocatable,dimension(:,:)   :: rwork1di,rwork1do,rwork1dmi,rwork1dmo
+  real,allocatable,dimension(:)   :: rwork1di,rwork1do,rwork1dmi,rwork1dmo
 
   type(nemsio_gfile) :: gfilei, gfileo, gfilemi, gfilemo
 
@@ -133,51 +133,66 @@ program recentersigp
         write(6,*)'task mype=',mype,' process ',trim(filenameout)//"_mem"//charnanal,' iret=',iret
 
      elseif (nemsio) then
+        print *,'open ',trim(filename_meano)
         call nemsio_open(gfilemo,trim(filename_meano),'READ',iret=iret)
         write(charnanal,'(i3.3)') mype1
+        print *,'open ',trim(filenamein)
         call nemsio_open(gfilei,trim(filenamein)//"_mem"//charnanal,'READ',iret=iret)
 
         gfileo=gfilemo
+        print *,'open for write ',trim(filenameout)
         call nemsio_open(gfileo,trim(filenameout)//"_mem"//charnanal,'WRITE',iret=iret)
 
+        print *,'allocate'
         npts=lonb*latb
-        allocate(rwork1di(npts,nrec))
-        allocate(rwork1dmi(npts,nrec))
-        allocate(rwork1dmo(npts,nrec))
-        allocate(rwork1do(npts,nrec))
+        allocate(rwork1di(npts))
+        allocate(rwork1dmi(npts))
+        allocate(rwork1dmo(npts))
+        allocate(rwork1do(npts))
 
         allocate(fieldname_di(nrec), fieldlevtyp_di(nrec),fieldlevel_di(nrec))
         allocate(fieldname_mi(nrec),fieldlevtyp_mi(nrec),fieldlevel_mi(nrec))
         allocate(fieldname_mo(nrec),fieldlevtyp_mo(nrec),fieldlevel_mo(nrec))
         allocate(orderdi(nrec),ordermi(nrec))
 
-        do n=1,nrec
-           call nemsio_readrec(gfilei, n,rwork1di(:,n),iret=iret) ! member analysis
-           call nemsio_getrechead(gfilei,n,fieldname_di(n),fieldlevtyp_di(n),fieldlevel_di(n),iret=iret)
-        end do
-        do n=1,nrec
-           call nemsio_readrec(gfilemi,n,rwork1dmi(:,n),iret=iret) ! ensemble mean analysis
-           call nemsio_getrechead(gfilemi,n,fieldname_mi(n),fieldlevtyp_mi(n),fieldlevel_mi(n),iret=iret)
-        end do
-        do n=1,nrec
-           call nemsio_readrec(gfilemo,n,rwork1dmo(:,n),iret=iret) ! chgres hi-res analysis
-           call nemsio_getrechead(gfilemo,n,fieldname_mo(n),fieldlevtyp_mo(n),fieldlevel_mo(n),iret=iret)
-        end do
+        print *,'read member analysis headers (i)'
+        call nemsio_getfilehead(gfilei,recname=fieldname_di,reclevtyp=fieldlevtyp_di,reclev=fieldlevel_di,iret=iret)
+        if(iret/=0) then
+           print *,'cannot read header info for member analysis: iret=',iret
+           call MPI_Abort(MPI_Comm_world,13,iret)
+        end if
+
+        print *,'read ensemble mean analysis headers (mi)'
+        call nemsio_getfilehead(gfilemi,recname=fieldname_mi,reclevtyp=fieldlevtyp_mi,reclev=fieldlevel_mi,iret=iret)
+        if(iret/=0) then
+           print *,'cannot read header info for ensemble mean analysis: iret=',iret
+           call MPI_Abort(MPI_Comm_world,14,iret)
+        end if
+
+        print *,'read chgres hi-res analysis headers (mo)'
+        call nemsio_getfilehead(gfilemo,recname=fieldname_mo,reclevtyp=fieldlevtyp_mo,reclev=fieldlevel_mo,iret=iret)
+        if(iret/=0) then
+           print *,'cannot read header info for chgres hi-res analysis: iret=',iret
+           call MPI_Abort(MPI_Comm_world,15,iret)
+        end if
 
 
+        print *,'get ordering of records in each file'
         call getorder(fieldname_mo,fieldname_di,fieldlevtyp_mo,fieldlevtyp_di,fieldlevel_mo,fieldlevel_di,nrec,orderdi)
         call getorder(fieldname_mo,fieldname_mi,fieldlevtyp_mo,fieldlevtyp_mi,fieldlevel_mo,fieldlevel_mi,nrec,ordermi)
 
+        print *,'read, recenter, and write, record-by-record'
 !       Recenter ensemble member about chgres hi-res analysis
         do n=1,nrec
-           do i=1,npts
-              rwork1do(i,n) = rwork1di(i,orderdi(n)) - rwork1dmi(i,ordermi(n)) + rwork1dmo(i,n)
-           end do
+          call nemsio_readrec(gfilemo,n,rwork1dmo,iret=iret) ! chgres hi-res analysis
+          call nemsio_readrec(gfilei, orderdi(n),rwork1di,iret=iret) ! member analysis
+          call nemsio_readrec(gfilemi,ordermi(n),rwork1dmi,iret=iret) ! ensemble mean analysis 
+          rwork1do=rwork1di-rwork1dmi+rwork1dmo
+          call nemsio_writerec(gfileo,n,rwork1do,iret=iret)
         end do
 
 !       Write recentered member analysis using ordering of chgres hi-res analysis fields
         do n=1,nrec
-           call nemsio_writerec(gfileo,n,rwork1do(:,n),iret=iret)
         end do
         deallocate(rwork1di)
         deallocate(rwork1dmi)
@@ -190,10 +205,13 @@ program recentersigp
 !       Preserve orography
         allocate(rwork1d(npts))
         rwork1d=zero
+        print *,'write read oro'
         call nemsio_readrecv(gfilei,'hgt','sfc',1,rwork1d,iret=iret)
+        print *,'write write oro'
         call nemsio_writerecv(gfileo,'hgt','sfc',1,rwork1d,iret=iret)
         deallocate(rwork1d)
 
+        print *,'close'
         call nemsio_close(gfilei,iret=iret)
         call nemsio_close(gfileo,iret=iret)
         write(6,*)'task mype=',mype,' process ',trim(filenameout)//"_mem"//charnanal,' iret=',iret
