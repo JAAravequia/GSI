@@ -748,7 +748,7 @@ subroutine letkf_core(nobsl,hxens,hxens_orig,dep,wts_ensmean,wts_ensperts,paens,
 !       Has dimension (nanals) - increment is weighted average of ens
 !       perts, wts_ensmean are weights. 
 !
-!     wts_ensperts  - same as above, but for computing increments to 
+!     wts_ensperts  - if getkf=T same as above, but for computing increments to 
 !       ensemble perturbations. From Bishop et al 2017 eqn 29
 !       wts_ensperts = -C [ (I - (Gamma+I)**-1/2)*Gamma**-1 ] C^T (HZ)^T R**-1/2 Hxprime
 !       Has dimension (nanals,nanals/neigv), analysis weights for each
@@ -756,6 +756,14 @@ subroutine letkf_core(nobsl,hxens,hxens_orig,dep,wts_ensmean,wts_ensperts,paens,
 !       ensemble in observation space, HZ is the modulated ensemble in
 !       ob space times R**-1/2. If denkf=T, wts_ensperts is approximated
 !       as wts_ensperts = -0.5*C (Gamma + I)**-1 C^T (HZ)^ T R**-1/2 Hxprime
+!       If getkf=F and denkf=F, then the original LETKF formulation is used with
+!       wts_ensperts = 
+!       C (Gamma + I)**-1/2 C^T (square root of analysis error cov in ensemble space)
+!       and these weights are applied to transform the background ensemble into an
+!       analysis ensemble.  Note that modulated ensemble vertical localization
+!       requires the gain form (getkf=T and/or denkf=T) since this form of the weights 
+!       requires that the background ensemble used to compute covariances is the same ensemble 
+!       being updated.
 !
 !     pa - only allocated and returned
 !       if getkf_inflation=T (and denkf=F).  In this case
