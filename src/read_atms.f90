@@ -503,7 +503,6 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
      write(*,*) 'Error Calling ATMS_Spatial_Average from READ_ATMS'
      RETURN
   END IF
-
 ! Complete Read_ATMS thinning and QC steps
 
   ObsLoop: do iob = 1, num_obs  

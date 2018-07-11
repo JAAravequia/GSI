@@ -746,6 +746,7 @@ subroutine read_obs(ndata,mype)
     integer(i_kind),dimension(npe,ndat):: mype_sub
     integer(i_kind),allocatable,dimension(:):: nrnd
     integer(i_kind):: nmls_type,mype_io_sfc
+    real(r_kind) startTime,endTime,mpi_wtime
     integer(i_kind):: iread,ipuse,iouse,recCount,sendCount
 !   integer(i_kind),allocatable,dimension(:):: nobsStat,nobsReq,sendReq
     integer(i_kind),allocatable,dimension(:):: nobsStat,sendReq
@@ -946,10 +947,10 @@ subroutine read_obs(ndata,mype)
              else if(sndr )then
                 parallel_read(i)= .true.
 ! N.B. ATMS must be run on one processor for the filtering code to work.
-             else if(obstype == 'atms')then
+!            else if(obstype == 'atms')then
 !                 parallel_read(i)= .true.
              else if(ssmis)then
-!               parallel_read(i)= .true.  
+                parallel_read(i)= .true.  
              else if(seviri)then
                 parallel_read(i)= .true.
              else if(obstype == 'cris' .or. obstype == 'cris-fsr')then
@@ -1045,7 +1046,7 @@ subroutine read_obs(ndata,mype)
                read_db_rec1(i) = 999999
              end if
 
- 
+             write(6,*) 'obstype is ',obstype,' and lexist is ',lexist 
              if(lexist) then
 !      Initialize number of reader tasks to 1.  For the time being
 !      only allow number of reader tasks >= 1 for select obstype.
@@ -1054,7 +1055,8 @@ subroutine read_obs(ndata,mype)
                 if(parallel_read(i)) then
 
 !  Allow up to 16 processors/file increase loop bounds to increase number of processors allowed
-                   do j=1,5
+                   do j=1,4
+!                     write(6,*) 'obstype is ',obstype,' and j is ',j,' and len4file/lenbuf are ',len4file,lenbuf
                       if(len4file < lenbuf)exit
                       ntasks1(i)=2*ntasks1(i)
                       len4file=len4file/2
@@ -1131,7 +1133,7 @@ subroutine read_obs(ndata,mype)
 
     ilarge=0
     npestart=0
-    npe_sub3=npe_sub
+    npe_sub=npe_sub3
     mype_root_sub=0
     mmdat=0
     loopx: do j=1,ndat
@@ -1181,6 +1183,7 @@ subroutine read_obs(ndata,mype)
        if(mype == 0 .and. npe_sub(i) > 0) write(6,'(1x,a,i4,1x,a,1x,2a,2i4,1x,i6,1x,i6,1x,i6)') &
         'READ_OBS:  read ',i,dtype(i),dsis(i),' using ntasks=',ntasks(i),mype_root_sub(i), & 
                read_rec(i),read_ears_rec(i),npe_sub(i)
+       if(mype == 0 .and. npe_sub(i) > 0) write(6,*) 'READ_OBS: npetot is ',npetot,' and npe is ',npe
 
        acft_profl_file = index(dfile(i),'_profl')/=0
        if ((aircraft_t_bc_pof .or. aircraft_t_bc_ext .or. &
@@ -1305,6 +1308,7 @@ subroutine read_obs(ndata,mype)
     allocate(nobsStat(mmdat))
     recCount = 0
     sendCount = 0
+    startTime = mpi_wtime()
     loop_of_obsdata_files: &
     do ii=1,mmdat
 !      call mpi_comm_dup(mpi_comm_world,comm_chans(ii),ierror)
@@ -1429,6 +1433,7 @@ subroutine read_obs(ndata,mype)
                        prsl_full,nobs_sub1(1,i))
                   string='READ_FL_HDOB'
                 else
+                  write(6,*) 'HEY!! mype is ',mype,' and I am calling prepbuf for type ',obstype
                   call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
                      prsl_full,nobs_sub1(1,i),read_rec(i))
                   string='READ_PREPBUFR'
@@ -1784,6 +1789,8 @@ subroutine read_obs(ndata,mype)
        endif
 
     end do loop_of_obsdata_files
+    endTime = mpi_wtime()
+    write(6,*) 'READ_TIME for mype= ',mype,' is ',endTime-startTime
     deallocate(prsl_full)
     deallocate(hgtl_full)
 

@@ -36,6 +36,8 @@ module convthin
   public :: del3grids
 ! set passed variables to public
   public :: use_all
+  public:: mlon,icount,icount_fore,icount_aft,ibest_obs,ibest_save
+  public:: glat,glon,hll,score_crit,score_crit_fore,score_crit_aft
 
   integer(i_kind):: mlat
   integer(i_kind),allocatable,dimension(:):: mlon
@@ -96,6 +98,7 @@ contains
     real(r_quad) delat
 
 !   If there is to be no thinning, simply return to calling routine
+!$omp threadprivate(mlon,icount,icount_fore,icount_aft,ibest_obs,ibest_save,glon,hll,score_crit,score_crit_fore,score_crit_aft,glat)
     use_all=.false.
     if(abs(rmesh) <= one)then
        use_all=.true.

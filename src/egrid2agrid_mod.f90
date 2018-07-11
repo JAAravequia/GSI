@@ -1646,8 +1646,8 @@ module egrid2agrid_mod
 
 !           construct e_ex from input array e
 
-!!$omp parallel do  schedule(dynamic,1) private(kk,j,i,k,jr,j1) &
-!!$omp private(e_ex,w_ex,w1,w,factor)
+!$omp parallel do  schedule(dynamic,1) private(kk,j,i,k,jr,j1) &
+!$omp private(e_ex,w_ex,w1,w,factor)
         do kk=kb,ke
          factor=one
          if(vector(kk)) factor=-one
