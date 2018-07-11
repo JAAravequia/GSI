@@ -128,7 +128,7 @@ module gridmod
   public :: nnnn1o,iglobal,itotsub,ijn,ijn_s,lat2,lon2,lat1,lon1,nsig,nsig_soil
   public :: ncloud,nlat,nlon,ntracer,displs_s,displs_g
   public :: bk5,regional,latlon11,latlon1n,twodvar_regional
-  public :: netcdf,nems_nmmb_regional,wrf_mass_regional,wrf_nmm_regional,cmaq_regional
+  public :: netcdf,nems_nmmb_regional,wrf_mass_regional,wrf_nmm_regional,cmaq_regional,global_l2rw
   public :: aeta2_ll,pdtop_ll,pt_ll,eta1_ll,eta2_ll,aeta1_ll,idsl5,ck5,ak5
   public :: tref5,idvc5,nlayers,msig,jstart,istart,region_lat,vlevs,nsig1o,rlats
   public :: region_dy,region_dx,region_lon,rlat_min_dd,rlat_max_dd,rlon_max_dd
@@ -169,6 +169,7 @@ module gridmod
   logical wrf_mass_regional !
   logical wrf_mass_hybridcord
   logical cmaq_regional     ! .t. to run with cmaq
+  logical global_l2rw
   logical twodvar_regional  ! .t. to run code in regional 2D-var mode
   logical use_gfs_ozone     ! .t. to use gfs ozone in regional analysis
   logical check_gfs_ozone_date ! .t. to date check gfs ozone against regional
@@ -429,6 +430,7 @@ contains
     wrf_mass_hybridcord = .false.
     cmaq_regional=.false.
     nems_nmmb_regional = .false.
+    global_l2rw = .false.
     twodvar_regional = .false. 
     use_gfs_ozone = .false.
     check_gfs_ozone_date = .false.

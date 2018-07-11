@@ -7,7 +7,7 @@ pwd=$(pwd)
 
 target=${1:-cray}
 dir_root=${2:-$pwd}
-clean=${3:-"YES"}
+clean=${3:-"NO"}
 
 if [ $target = wcoss ]; then
     . /usrx/local/Modules/3.2.10/init/sh

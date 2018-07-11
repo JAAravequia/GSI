@@ -9,10 +9,10 @@ target=$1
 dir_root=${2:-$pwd}
 
 BUILD_GSI=${BUILD_GSI:-"YES"}
-BUILD_ENKF=${BUILD_ENKF:-"YES"}
-BUILD_UTILS=${BUILD_UTILS:-"YES"}
-BUILD_RADMON=${BUILD_RADMON:-"YES"}
-BUILD_OZNMON=${BUILD_OZNMON:-"YES"}
+BUILD_ENKF=${BUILD_ENKF:-"NO"}
+BUILD_UTILS=${BUILD_UTILS:-"NO"}
+BUILD_RADMON=${BUILD_RADMON:-"NO"}
+BUILD_OZNMON=${BUILD_OZNMON:-"NO"}
 
 BUILD_RADMON_VER=2.0.4
 BUILD_OZNMON_VER=2.0.0
@@ -44,7 +44,7 @@ fi
 # First build GSI
 if [ $BUILD_GSI = "YES" -o $BUILD_ENKF = "YES" ]; then
 
-    clean=YES
+    clean=NO
     [[ $BUILD_ENKF = "YES" ]] && clean=NO
     $dir_root/ush/build_gsi.sh $target $pwd $clean
 
