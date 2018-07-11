@@ -33,8 +33,10 @@ module crtm_interface
 !                      assimilation. use n_clouds_jac,cloud_names_jac,n_aerosols_jac,aerosol_names_jac, 
 !                      n_clouds_fwd,cloud_names_fwd, etc for difference sensors and channels
 !                    - add handling of mixed_use of channels in a sensor (some are clear-sky, others all-sky)
-!   2016-06-03  Collard - Added changes to allow for historical naming conventions
+!   2016-06-03  collard - Added changes to allow for historical naming conventions
 !   2017-02-24  zhu/todling  - remove gmao cloud fraction treatment
+!   2018-01-12  collard - Force all satellite and solar zenith angles to be >= 0.
+!   
 !
 ! subroutines included:
 !   sub init_crtm
@@ -966,7 +968,6 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
       ges_prsl,ges_prsi,tropprs,dsfct,add_rtm_layers, &
       hrdifsig,nfldsig,hrdifsfc,nfldsfc,ntguessfc,isli2,sno2
   use cloud_efr_mod, only: efr_ql,efr_qi,efr_qr,efr_qs,efr_qg,efr_qh
-  use ncepgfs_ghg, only: co2vmr_def,ch4vmr_def,n2ovmr_def,covmr_def
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gsi_chemguess_mod, only: gsi_chemguess_bundle   ! for now, a common block
   use gsi_chemguess_mod, only: gsi_chemguess_get
@@ -1413,12 +1414,12 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
         if ( trim(obstype) /= 'modis_aod' ) then
            panglr = data_s(iscan_ang)
            if(obstype == 'goes_img' .or. obstype == 'seviri')panglr = zero
-           geometryinfo(1)%sensor_zenith_angle = data_s(ilzen_ang)*rad2deg  ! local zenith angle
-           geometryinfo(1)%source_zenith_angle = data_s(iszen_ang)          ! solar zenith angle
-           geometryinfo(1)%sensor_azimuth_angle = data_s(ilazi_ang)         ! local zenith angle
-           geometryinfo(1)%source_azimuth_angle = data_s(isazi_ang)         ! solar zenith angle
-           geometryinfo(1)%sensor_scan_angle   = panglr*rad2deg             ! scan angle
-           geometryinfo(1)%ifov                = nint(data_s(iscan_pos))    ! field of view position
+           geometryinfo(1)%sensor_zenith_angle = abs(data_s(ilzen_ang)*rad2deg) ! local zenith angle
+           geometryinfo(1)%source_zenith_angle = abs(data_s(iszen_ang))        ! solar zenith angle
+           geometryinfo(1)%sensor_azimuth_angle = data_s(ilazi_ang)            ! local azimuth angle
+           geometryinfo(1)%source_azimuth_angle = data_s(isazi_ang)            ! solar azimuth angle
+           geometryinfo(1)%sensor_scan_angle   = panglr*rad2deg                ! scan angle
+           geometryinfo(1)%ifov                = nint(data_s(iscan_pos))       ! field of view position
 
 !        For some microwave instruments the solar and sensor azimuth angles can be
 !        missing  (given a value of 10^11).  Set these to zero to get past CRTM QC.
@@ -2172,11 +2173,10 @@ subroutine get_lai(data_s,nchanl,nreal,itime,ilate,lai_type,lai)
         IF(RJDAY.GE.DAYHF(MMM).AND.RJDAY.LT.DAYHF(MMP)) THEN
             N1=MMM
             N2=MMP
-            GO TO 10
+            EXIT
         ENDIF
+        if(mm == 2)PRINT *,'WRONG RJDAY',RJDAY
       ENDDO
-      PRINT *,'WRONG RJDAY',RJDAY
-   10 CONTINUE
       WEI1S = (DAYHF(N2)-RJDAY)/(DAYHF(N2)-DAYHF(N1))
       WEI2S = (RJDAY-DAYHF(N1))/(DAYHF(N2)-DAYHF(N1))
       IF(N2.EQ.3) N2=1

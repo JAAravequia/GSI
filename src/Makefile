@@ -296,6 +296,7 @@ clean:
 	fill_mass_grid2.f90 \
 	fill_nmm_grid2.f90 \
 	fpvsx_ad.f90 \
+        fv3_regional_interface.f90 \
         general_commvars_mod.f90 \
 	general_read_gfsatm.f90 \
         general_read_nmmb.f90 \
@@ -340,6 +341,7 @@ clean:
 	gsi_io.f90 \
 	gsi_metguess_mod.F90 \
 	gsi_nemsio_mod.f90 \
+        gsi_rfv3io_mod.f90 \
 	gsimain.f90 \
 	gsimod.F90 \
 	gsisub.F90 \
@@ -390,6 +392,8 @@ clean:
 	intwspd10m.f90 \
 	intuwnd10m.f90 \
 	intvwnd10m.f90 \
+        intswcp.f90 \
+        intlwcp.f90 \
 	jcmod.f90 \
 	jfunc.f90 \
 	jgrad.f90 \
@@ -420,6 +424,7 @@ clean:
 	mpeu_mpif.F90 \
 	mpeu_util.F90 \
 	mod_nmmb_to_a.f90 \
+        mod_fv3_lola.f90 \
 	mod_strong.f90 \
 	mod_vtrans.f90 \
         mod_wrfmass_to_a.f90 \
@@ -470,6 +475,8 @@ clean:
 	m_wspd10mNode.F90 \
 	m_uwnd10mNode.F90 \
 	m_vwnd10mNode.F90 \
+        m_swcpNode.F90 \
+        m_lwcpNode.F90 \
 	mp_compact_diffs_mod1.f90 \
 	mp_compact_diffs_support.f90 \
 	mpimod.F90 \
@@ -582,6 +589,8 @@ clean:
 	stpwspd10m.f90 \
 	stpuwnd10m.f90 \
 	stpvwnd10m.f90 \
+        stpswcp.f90 \
+        stplwcp.f90 \
 	strong_bal_correction.f90 \
 	strong_baldiag_inc.f90 \
 	strong_fast_global_mod.f90 \
@@ -661,6 +670,7 @@ clean:
 	read_pblh.f90 \
 	read_pcp.f90 \
 	read_prepbufr.f90 \
+	read_wcpbufr.f90 \
 	read_radar.f90 \
 	read_saphir.f90 \
 	read_satwnd.f90 \
@@ -704,6 +714,8 @@ clean:
 	setupwspd10m.f90 \
 	setupuwnd10m.f90 \
 	setupvwnd10m.f90 \
+        setupswcp.f90 \
+        setuplwcp.f90 \
 	sst_retrieval.f90 \
         read_NASA_LaRC_cloud.f90
 
