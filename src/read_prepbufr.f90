@@ -137,6 +137,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !                         is found in non linear qc error tables and b table
 !   2016-05-05  pondeca - add 10-m u-wind and v-wind (uwnd10m, vwnd10m)
 !   2016-06-01  zhu    - use errormod_aircraft
+!   2018-07-13  Su     - error table for surface pressure 180 is for ship surface
+!                        pressure observations, the error for buoy serface pressure is reduced.
+!                         
 !
 
 !   input argument list:
@@ -2121,7 +2124,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 
 !             Surface pressure 
               else if(psob) then
-
+                 if(kx ==180 .and. icsubtype(nc) ==0) obserr(1,k)=0.7_r_kind*obserr(1,k)
+!  reduce observation error for buoy surface pressure observations
                  poe=obserr(1,k)*one_tenth                  ! convert from mb to cb
                  if (inflate_error) poe=poe*r1_2
                  cdata_all(1,iout)=poe                     ! surface pressure error (cb)
