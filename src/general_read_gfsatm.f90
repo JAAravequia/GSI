@@ -180,7 +180,7 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
       endif
       call stop2(999)
    endif
-   allocate(g_u(grd%lat2,grd%lon2,grd%nsig),g_v(grd%lat2,grd%lon2,grd%nsig))!,g_w(grd%lat2,grd%lon2,grd%nsig))
+   allocate(g_u(grd%lat2,grd%lon2,grd%nsig),g_v(grd%lat2,grd%lon2,grd%nsig))
    allocate(g_z(grd%lat2,grd%lon2))
 
    ! Process guess fields according to type of input file.   NCEP_SIGIO files
@@ -687,9 +687,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
    real(r_kind),pointer,dimension(:,:)       :: ptr2d
    real(r_kind),pointer,dimension(:,:,:)     :: ptr3d
    real(r_kind),pointer,dimension(:,:)       :: g_ps
-   real(r_kind),pointer,dimension(:,:,:)     :: g_vor,g_div,&
-                                                g_cwmr,g_q,g_oz,g_tv,g_w
-
+   real(r_kind),pointer,dimension(:,:,:)     :: g_vor,g_div,g_cwmr,g_q,g_oz,g_tv,g_w
    real(r_kind),allocatable,dimension(:,:)   :: g_z
    real(r_kind),allocatable,dimension(:,:,:) :: g_u,g_v
 
@@ -880,7 +878,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
       endif
       call stop2(999)
    endif
-   allocate(g_u(grd%lat2,grd%lon2,grd%nsig),g_v(grd%lat2,grd%lon2,grd%nsig)) !,g_w(grd%lat2,grd%lon2,grd%nsig))
+   allocate(g_u(grd%lat2,grd%lon2,grd%nsig),g_v(grd%lat2,grd%lon2,grd%nsig))
    allocate(g_z(grd%lat2,grd%lon2))
 
    icount=0
@@ -1360,7 +1358,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
 
    ! Clean up
    deallocate(g_z)
-   deallocate(g_u,g_v) !,g_w)
+   deallocate(g_u,g_v)
 
    ! Print date/time stamp
    if ( mype == 0 ) then

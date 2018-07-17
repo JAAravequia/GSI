@@ -1243,7 +1243,6 @@
 ! Set regional parameters
   if(filled_grid.and.half_grid) filled_grid=.false.
   regional=wrf_nmm_regional.or.wrf_mass_regional.or.twodvar_regional.or.nems_nmmb_regional .or. cmaq_regional
-  regional=regional.or.global_l2rw
 
 ! Currently only able to have use_gfs_stratosphere=.true. for nems_nmmb_regional=.true.
   use_gfs_stratosphere=use_gfs_stratosphere.and.(nems_nmmb_regional.or.wrf_nmm_regional)   
