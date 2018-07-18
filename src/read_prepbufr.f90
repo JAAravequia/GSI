@@ -226,6 +226,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   real(r_kind),parameter:: r0_75 = 0.75_r_kind
   real(r_kind),parameter:: r0_7 = 0.7_r_kind
   real(r_kind),parameter:: r1_2 = 1.2_r_kind
+  real(r_kind),parameter:: r1_02 = 1.02_r_kind
   real(r_kind),parameter:: r3_33= three + one/three
   real(r_kind),parameter:: r6   = 6.0_r_kind
   real(r_kind),parameter:: r20  = 20.0_r_kind
@@ -2369,8 +2370,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !      visoe is in NLTR space, and is read in from the namelist. Is this OK?  
 !......................................................................
                  visoe=estvisoe
-                 if ((kx==283).or.(kx==183)) visoe=visoe*1.02
-                 if (inflate_error) visoe=visoe*1.02
+                 if ((kx==283).or.(kx==183)) visoe=visoe*r1_02
+                 if (inflate_error) visoe=visoe*r1_02
 
                  cdata_all(1,iout)=visoe                   ! visibility error (cb)
                  cdata_all(2,iout)=dlon                    ! grid relative longitude
@@ -2384,9 +2385,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 ! visthres is much smaller than bmiss
 ! i.e: this holds: (obsdat(9,k)> zero .and. obsdat(9,k)<=vis_thres)
 !......................................................................
-                 if (obsdat(9,k) .lt. zero) cdata_all(4,iout) = bmiss
-                 if (obsdat(9,k) .gt. vis_thres) obsdat(9,k)=vis_thres
-                 if (obsdat(9,k) .eq. zero) obsdat(9,k)=1.0
+                 if (obsdat(9,k) < zero) cdata_all(4,iout) = bmiss
+                 if (obsdat(9,k) > vis_thres) obsdat(9,k)=vis_thres
+                 if (obsdat(9,k) == zero) obsdat(9,k)=one
 !Applying NLTR 
                  if(obsdat(9,k)> zero .and. obsdat(9,k)<=vis_thres)then
                    tempvis=obsdat(9,k)
@@ -2717,7 +2718,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !      cldchoe is in NLTR space, and is read in via the namelist. Is this OK?
 !......................................................................
                  cldchoe=estcldchoe
-                 if (inflate_error) cldchoe=cldchoe*1.02
+                 if (inflate_error) cldchoe=cldchoe*r1_02
 
                  cdata_all(1,iout)=cldchoe                 ! cloud ceiling height error 
                  cdata_all(2,iout)=dlon                    ! grid relative longitude
@@ -2734,9 +2735,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 ! i.e: this holds: (obsdat(x,k)> zero .and. obsdat(x,k)<=cldch_thres)
 !......................................................................
 
-                 if (cldceilh(1,k) .lt. zero) cdata_all(4,iout)=bmiss
-                 if (cldceilh(1,k) .ge. cldch_thres) cldceilh(1,k)=cldch_thres
-                 if (cldceilh(1,k) .eq. zero) cldceilh(1,k)=1.0 
+                 if (cldceilh(1,k) < zero) cdata_all(4,iout)=bmiss
+                 if (cldceilh(1,k) >= cldch_thres) cldceilh(1,k)=cldch_thres
+                 if (cldceilh(1,k) == zero) cldceilh(1,k)=one
 
                  if (cldceilh(1,k)> zero .and. cldceilh(1,k)<=cldch_thres)then
                    tempcldch=cldceilh(1,k)

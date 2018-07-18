@@ -106,7 +106,7 @@ subroutine setupvis(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) vis_errmax
   real(r_kind) scale,val2,ratio,ressw2,ress,residual
   real(r_kind) obserrlm,obserror,val,valqc
-  real(r_kind) term,halfpi,rwgt
+  real(r_kind) term,rwgt
   real(r_kind) cg_vis,wgross,wnotgross,wgt,arg,exp_arg,rat_err2
   real(r_kind) ratio_errors,tfact
   real(r_kind) errinv_input,errinv_adjst,errinv_final
@@ -162,7 +162,7 @@ subroutine setupvis(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   n_alloc(:)=0
   m_alloc(:)=0
-  vis_errmax=20.0
+  vis_errmax=20.0_r_kind
 !*********************************************************************************
 ! Read and reformat observations in work arrays.
   read(lunin)data,luse,ioid
@@ -195,8 +195,8 @@ subroutine setupvis(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   do i=1,nobs
     if (data(ivis,i) > r0_1_bmiss)  then
        muse(i)=.false.
-       data(ivis,i)=rmiss_single   ! for diag output
-       data(iobshgt,i)=rmiss_single! for diag output
+       data(ivis,i)=rmiss_single    ! for diag output
+       data(iobshgt,i)=rmiss_single ! for diag output
     end if
   end do
 
@@ -236,7 +236,6 @@ subroutine setupvis(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      if(netcdf_diag) call init_netcdf_diag_
   end if
 
-  halfpi = half*pi
   mm1=mype+1
   scale=one
 

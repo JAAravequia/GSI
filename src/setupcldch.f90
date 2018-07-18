@@ -157,7 +157,7 @@ subroutine setupcldch(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   n_alloc(:)=0
   m_alloc(:)=0
-  cldch_errmax=10000.0_r_kind
+  cldch_errmax=20.0_r_kind
 !*********************************************************************************
 ! Read and reformat observations in work arrays.
   read(lunin)data,luse,ioid
