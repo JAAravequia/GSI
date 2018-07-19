@@ -757,13 +757,13 @@ subroutine letkf_core(nobsl,hxens,hxens_orig,dep,wts_ensmean,wts_ensperts,paens,
 !       ob space times R**-1/2. If denkf=T, wts_ensperts is approximated
 !       as wts_ensperts = -0.5*C (Gamma + I)**-1 C^T (HZ)^ T R**-1/2 Hxprime
 !       If getkf=F and denkf=F, then the original LETKF formulation is used with
-!       wts_ensperts = 
+!       wts_ensperts =
 !       C (Gamma + I)**-1/2 C^T (square root of analysis error cov in ensemble space)
 !       and these weights are applied to transform the background ensemble into an
 !       analysis ensemble.  Note that modulated ensemble vertical localization
-!       requires the gain form (getkf=T and/or denkf=T) since this form of the weights 
-!       requires that the background ensemble used to compute covariances is the same ensemble 
-!       being updated.
+!       requires the gain form (getkf=T and/or denkf=T) since this form of the weights
+!       requires that the background ensemble used to compute covariances is
+!       the same ensemble being updated.
 !
 !     pa - only allocated and returned
 !       if getkf_inflation=T (and denkf=F).  In this case
@@ -786,12 +786,12 @@ real(r_single),dimension(nanals),intent(out)  :: wts_ensmean
 real(r_single),dimension(nanals,nanals/neigv),intent(out)  :: wts_ensperts
 real(r_single),dimension(:,:),allocatable, intent(inout) :: paens
 ! local variables.
-real(r_kind),allocatable,dimension(:,:) :: work3,lsv
+real(r_kind),allocatable,dimension(:,:) :: work3,evecs
 real(r_single),allocatable,dimension(:,:) :: swork2,pa,swork3,shxens
 real(r_single),allocatable,dimension(:) :: swork1
-real(r_kind),allocatable,dimension(:) :: rrloc,svals,gammapI
+real(r_kind),allocatable,dimension(:) :: rrloc,evals,gammapI,gamma_inv
 real(r_kind) eps
-integer(i_kind) :: nanal,ierr,lwork,liwork,nsvals
+integer(i_kind) :: nanal,ierr,lwork,liwork
 !for LAPACK dsyevr
 integer(i_kind) isuppz(2*nanals)
 real(r_kind) vl,vu,normfact
@@ -799,18 +799,13 @@ integer(i_kind), allocatable, dimension(:) :: iwork
 real(r_kind), dimension(:), allocatable :: work1
 logical, intent(in) :: getkf_inflation,denkf,getkf
 
-! nsvals - rank (# of nonzero sing values)) of YbRsqrtinv=hxens * R **-1/2
-!          (and R includes ob error localization)
-!          (= nanals if nanals<=nobsl, = nobsl if nobsl<nanals)
-nsvals = min(nanals,nobsl)
-
 if (neigv < 1) then
   print *,'neigv must be >=1 in letkf_core'
   call stop2(992)
 endif
 
-allocate(work3(nanals,nanals),lsv(nanals,nanals))
-allocate(rrloc(nobsl),gammapI(nanals),svals(nanals))
+allocate(work3(nanals,nanals),evecs(nanals,nanals))
+allocate(rrloc(nobsl),gammapI(nanals),evals(nanals),gamma_inv(nanals))
 allocate(iwork(10*nanals),work1(70*nanals))
 
 ! HZ^T = hxens sqrt(Rinv)
@@ -832,24 +827,29 @@ if(r_kind == kind(1.d0)) then ! double precision
    !work3 = matmul(hxens,transpose(hxens))
    call dgemm('n','t',nanals,nanals,nobsl,1.d0,hxens,nanals, &
                hxens,nanals,0.d0,work3,nanals)
-   ! lsv contains eigenvectors of HZ^T HZ, or left singular vectors of HZ
-   ! svals contains eigenvalues (singular values squared)
-   call dsyevr('V','A','L',nanals,work3,nanals,vl,vu,1,nanals,-1.d0,nanals,svals,lsv, &
+   ! evecs contains eigenvectors of HZ^T HZ, or left singular vectors of HZ
+   ! evals contains eigenvalues (singular values squared)
+   call dsyevr('V','A','L',nanals,work3,nanals,vl,vu,1,nanals,-1.d0,nanals,evals,evecs, &
                nanals,isuppz,work1,lwork,iwork,liwork,ierr)
 else ! single precision
    call sgemm('n','t',nanals,nanals,nobsl,1.e0,hxens,nanals, &
                hxens,nanals,0.e0,work3,nanals)
-   call ssyevr('V','A','L',nanals,work3,nanals,vl,vu,1,nanals,-1.e0,nanals,svals,lsv, &
+   call ssyevr('V','A','L',nanals,work3,nanals,vl,vu,1,nanals,-1.e0,nanals,evals,evecs, &
                nanals,isuppz,work1,lwork,iwork,liwork,ierr)
 end if
 if (ierr .ne. 0) print *,'warning: dsyev* failed, ierr=',ierr
 deallocate(work1,iwork,work3) ! no longer needed
-!print *,'eigenvalues',svals(nsvals:nsvals-4:-1),svals(1),sum(svals)
-where (svals < eps**2) svals = eps**2
-svals = sqrt(svals) ! convert eigenvalues to sing values
+gamma_inv = 0.0_r_kind
+do nanal=1,nanals
+   if (evals(nanal) > eps) then
+       gamma_inv(nanal) = 1./evals(nanal)
+   else
+       evals(nanal) = 0.0_r_kind
+   endif
+enddo
 ! gammapI used in calculation of posterior cov in ensemble space
-gammapI = eps+1.0
-gammapI(1:nsvals) = svals(1:nsvals)**2+1.0
+gammapI = evals+1.0
+deallocate(evals)
 
 ! create HZ^T R**-1/2 
 allocate(shxens(nanals,nobsl))
@@ -865,9 +865,10 @@ deallocate(rrloc)
 
 allocate(swork3(nanals,nanals),swork2(nanals,nanals),pa(nanals,nanals))
 do nanal=1,nanals
-   swork3(nanal,:) = lsv(nanal,:)/gammapI
-   swork2(nanal,:) = lsv(nanal,:)
+   swork3(nanal,:) = evecs(nanal,:)/gammapI
+   swork2(nanal,:) = evecs(nanal,:)
 enddo
+
 ! pa = C (Gamma + I)**-1 C^T (analysis error cov in ensemble space)
 !pa = matmul(swork3,transpose(swork2))
 call sgemm('n','t',nanals,nanals,nanals,1.e0,swork3,nanals,swork2,&
@@ -900,26 +901,23 @@ deallocate(swork1)
 
 if (getkf .or. denkf) then ! use Gain formulation for LETKF weights
 
-deallocate(swork2,swork3)
 if (denkf) then
    ! use Pa = C (Gamma + I)**-1 C^T (already computed)
    ! wts_ensperts = -0.5 Pa (HZ)^ T R**-1/2 HXprime
    pa = 0.5*pa
 else
-   allocate(swork3(nanals,nsvals),swork2(nanals,nsvals))
    gammapI = sqrt(1.0/gammapI)
    do nanal=1,nanals
-      swork2(nanal,1:nsvals) = lsv(nanal,1:nsvals)
       swork3(nanal,:) = &
-      lsv(nanal,1:nsvals)*(1.-gammapI(1:nsvals))/svals(1:nsvals)**2
+      evecs(nanal,:)*(1.-gammapI(:))*gamma_inv(:)
    enddo
    ! swork2 still contains eigenvectors, over-write pa
    ! pa = C [ (I - (Gamma+I)**-1/2)*Gamma**-1 ] C^T
    !pa = matmul(swork3,transpose(swork2))
-   call sgemm('n','t',nanals,nanals,nsvals,1.e0,swork3,nanals,swork2,&
+   call sgemm('n','t',nanals,nanals,nanals,1.e0,swork3,nanals,swork2,&
                nanals,0.e0,pa,nanals)
-   deallocate(swork2,swork3)
 endif
+deallocate(swork2,swork3)
 
 ! work2 = (HZ)^ T R**-1/2 HXprime
 ! (nanals, nobsl) x (nobsl, nanals/neigv) = (nanals, nanals/neigv)
@@ -955,9 +953,9 @@ endif
 deallocate(shxens,pa)
 gammapI = sqrt(1.0/gammapI)
 do nanal=1,nanals
-   swork3(nanal,:) = lsv(nanal,:)*gammapI
+   swork3(nanal,:) = evecs(nanal,:)*gammapI
 enddo
-! swork2 already contains lsv
+! swork2 already contains evecs
 ! wts_ensperts = 
 ! C (Gamma + I)**-1/2 C^T (square root of analysis error cov in ensemble space)
 !wts_ensperts = matmul(swork3,transpose(swork2))
@@ -967,7 +965,7 @@ deallocate(swork3,swork2)
 
 endif
 
-deallocate(lsv,gammapI,svals)
+deallocate(evecs,gammapI,gamma_inv)
 
 return
 end subroutine letkf_core
