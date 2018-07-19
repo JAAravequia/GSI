@@ -197,9 +197,6 @@ subroutine setupmxtm(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               else
                   muse(k)=.false.
               endif
-!              write(*,'(a,2f10.5,2I8,2L10)') 'chech obs
-!              time==',data(itime,k)-hr_offset,data(itime,l)-hr_offset,k,l,&
-!                           muse(k),muse(l)
            else
               tfact=min(one,abs(data(itime,k)-data(itime,l))/dfact1)
               dup(k)=dup(k)+one-tfact*tfact*(one-dfact)

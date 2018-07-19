@@ -534,13 +534,13 @@ subroutine init_rjlists
     read(meso_unit,'(a16,i2)',end=191) ch16,nbins
     allocate(nwbaccpts(max(1,nbins)))
     nwbaccpts(:)=0
-    do         
+    do
        read(meso_unit,'(a8,3x,a8,3x,f7.4,2x,f9.4,3x,i2)',end=191) ach8,bch8,aa1,aa2,ibin
-       nwbaccpts(ibin)=nwbaccpts(ibin)+1 
+       nwbaccpts(ibin)=nwbaccpts(ibin)+1
     end do
 191 continue
     if(verbose)then
-       print*,'wdirbinuselist: number of bins=',nbins 
+       print*,'wdirbinuselist: number of bins=',nbins
        print*,'wdirbinuselist: (nwbaccpts(ibin),ibin=1,nbins)=',(nwbaccpts(ibin),ibin=1,nbins)
     endif
 
@@ -553,9 +553,9 @@ subroutine init_rjlists
     rewind(meso_unit)
     read(meso_unit,'(a16,i2)',end=193) ch16,nbins
     nwbaccpts(:)=0
-    do     
+    do
        read(meso_unit,'(a8,3x,a8,3x,f7.4,2x,f9.4,3x,i2)',end=193) ach8,bch8,aa1,aa2,ibin
-       nwbaccpts(ibin)=nwbaccpts(ibin)+1 
+       nwbaccpts(ibin)=nwbaccpts(ibin)+1
        csta_windbin(nwbaccpts(ibin),ibin)=ach8
     end do
 193 continue
@@ -567,13 +567,13 @@ subroutine init_rjlists
  if(vis_uselistexist) then
     open (meso_unit,file='mesonet_stnuselist_for_vis',form='formatted')
     ncount=0
-195 continue
-    ncount=ncount+1
-    read(meso_unit,'(a5,a80)',end=196) csta_visuse(ncount),cstring
-    goto 195
-196 continue
+    do
+      ncount=ncount+1
+      read(meso_unit,'(a5,a80)',end=194) csta_visuse(ncount),cstring
+    end do
+194 continue
     nsta_mesovis_use=ncount-1
-    if(verbose)&
+!    if(verbose)&
     print*,'mesonet_stnuselist_for_vis: nsta_mesovis_use=',nsta_mesovis_use
  endif
  close(meso_unit)
@@ -843,7 +843,6 @@ subroutine get_usagerj(kx,obstype,c_station_id,c_prvstg,c_sprvstg, &
         usage_rj=r6000
         if (listexist) then !note that uselists must precede the rejectlist
            do m=1,nprov
-!             if (trim(c_prvstg//c_sprvstg) == trim(cprovider(m))) then
               if (cprovider(m)(1:7)=='allprvs' .or. & 
                  (c_prvstg(1:8) == cprovider(m)(1:8) .and. (c_sprvstg(1:8) == cprovider(m)(9:16)  &
                                                       .or. cprovider(m)(9:16) == 'allsprvs')) ) then
@@ -899,7 +898,7 @@ subroutine get_usagerj(kx,obstype,c_station_id,c_prvstg,c_sprvstg, &
   if (obstype=='vis' .and.( kx==188.or.kx==288.or.kx==195.or.kx==295) )then
      usage_rj=r6000
      if (vis_uselistexist .and. usage_rj/=usage_rj0) then !note that usage_rj could differ from usage_rj0 after the rejectlist application
-        do m=1,nsta_mesowind_use                          !which happens to be currently unavailable for vis
+        do m=1,nsta_mesovis_use                          !which happens to be currently unavailable for vis
            nlen=len_trim(csta_visuse(m))
            if (c_station_id(1:nlen) == csta_visuse(m)(1:nlen)) then
               usage_rj=usage_rj0
@@ -938,7 +937,6 @@ subroutine get_gustqm(kx,c_station_id,c_prvstg,c_sprvstg,gustqm)
   gustqm=9
   if (listexist) then
      do m=1,nprov
-!       if (trim(c_prvstg//c_sprvstg) == trim(cprovider(m))) then
         if (cprovider(m)(1:7)=='allprvs' .or. &
            (c_prvstg(1:8) == cprovider(m)(1:8) .and. (c_sprvstg(1:8) == cprovider(m)(9:16)  &
                                                .or. cprovider(m)(9:16) == 'allsprvs')) ) then
@@ -1030,6 +1028,7 @@ subroutine readin_rjlists(clistname,fexist,clist,ndim,ncount)
     end do
 131 continue
     ncount=n-1
+
     close(meso_unit)
  endif
 end subroutine readin_rjlists
