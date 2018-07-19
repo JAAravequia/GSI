@@ -51,6 +51,12 @@ if(BUILD_ENKF)
   if( NOT HOST-Luna )
     find_package( LAPACK REQUIRED )
   endif()
+
+# i wish i knew why jet needed this. all of the lapack libraries are found
+# automatically on theia.
+  if( ( intelComp ) AND ( HOST-Jet ) )
+    list(APPEND LAPACK_LIBRARIES "$ENV{MKLROOT}/../compiler/lib/intel64/libiomp5.a")
+  endif()
   
   add_definitions(${MPI_Fortran_FLAGS})
   

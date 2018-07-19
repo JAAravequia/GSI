@@ -24,7 +24,8 @@ if((NOT BUILD_W3EMC ) AND ( NOT DEFINED W3EMC_LIBRARY ))
   else()
     find_path( W3EMCINC 
       NAMES mersenne_twister.mod 
-      HINTS 
+      HINTS
+        $ENV{COREPATH}/incmod/w3emc_4 
         $ENV{COREPATH}/lib/incmod/w3emc_4 
         $ENV{COREPATH}/include 
         /usr/local/jcsda/nwprod_gdas_2014/lib/incmod/w3emc_4 
