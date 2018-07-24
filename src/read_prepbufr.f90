@@ -795,9 +795,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   ilon=2
   ilat=3
   if(uvob) then
-!$omp parallel do schedule(static,1) default(firstprivate) shared(cdata_all) reduction(+:ndata)
+!$omp parallel do schedule(static,1) default(firstprivate) shared(cdata_all) reduction(+:ndata) reduction(+:nodata) reduction(+:iicount) shared(isort)
   loop_convinfo: do nx=1, ntread
-  write(6,*) 'HEY prepbufr-mype ',mype,' and num threads is ',ntread,omp_get_num_threads()
+! write(6,*) 'HEY prepbufr-mype ',mype,' and num threads is ',ntread,omp_get_num_threads()
      th_id = omp_get_thread_num();
      lunint = lunin+th_id
 !    lunint = lunin
@@ -806,7 +806,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
      ithin=0
      if(nx > 1) then
         nc=ntx(nx)
-        write(6,*) 'hey! nc is ',nc,' my thread number is ',th_id
+!       write(6,*) 'hey! nc is ',nc,' my thread number is ',th_id
         ithin=ithin_conv(nc)
         if (ithin > 0 ) then
            rmesh=rmesh_conv(nc)
@@ -821,14 +821,14 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
            endif
            xmesh=rmesh
 
-           write(6,*) 'hey! calling make3grids my thread number is ',th_id,nlevp
+!          write(6,*) 'hey! calling make3grids my thread number is ',th_id,nlevp
 !!$omp ordered
 !        if(th_id == 0) then
            call make3grids(xmesh,nlevp)
 !        endif
 !!$omp end ordered
            if (.not.use_all) then
-              write(6,*) 'hey! nx is ',nlevp,' my thread number is ',th_id
+!             write(6,*) 'hey! nx is ',nlevp,' my thread number is ',th_id
 !!$omp ordered
 !         if(th_id == 0) then
 !              allocate(presl_thin(nlevp))
@@ -847,13 +847,13 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
      endif
        
      call closbf(lunint)
-     write(6,*) 'my thread is ',th_id,' and I am opening lunint ',lunint
-     write(6,*) 'my thread is ',th_id,' and infile is ',infile
+!    write(6,*) 'my thread is ',th_id,' and I am opening lunint ',lunint
+!    write(6,*) 'my thread is ',th_id,' and infile is ',infile
      open(lunint,file=infile,form='unformatted')
      call openbf(lunint,'IN',lunint)
-     write(6,*) 'my thread is ',th_id,' and I am calling datelen'
+!    write(6,*) 'my thread is ',th_id,' and I am calling datelen'
      call datelen(10)
-     write(6,*) 'my thread is ',th_id,' and I am DONE calling datelen'
+!    write(6,*) 'my thread is ',th_id,' and I am DONE calling datelen'
 
 !    Big loop over prepbufr file	
 
@@ -864,7 +864,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
      disterrmax=-9999.0_r_kind
      irec = 0
      loop_msg: do while (ireadmg(lunint,subset,idate)== 0)
-        write(6,*) 'my thread is ',th_id,' and I am in loop_msg'
+!       write(6,*) 'my thread is ',th_id,' and I am in loop_msg'
         irec = irec + 1
         if(irec < nrec_start) cycle loop_msg
         if(.not.use_prepb_satwnd .and. trim(subset) =='SATWND') cycle loop_msg
@@ -1399,18 +1399,22 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  isort(icntpnt)=iout
 
               else
+!!$omp critical
                  ndata=ndata+1
                  nodata=nodata+1
                  if(uvob)nodata=nodata+1
                  iout=ndata
                  isort(icntpnt)=iout
+!!$omp end critical
               endif
-
+!             if(mype == 45) write(6,*) 'isort(',icntpnt,') is ',iout
               if(ndata > maxobs) then
                  write(6,*)'READ_PREPBUFR:  ***WARNING*** ndata > maxobs for ',obstype
+!!$omp critical
                  ndata = maxobs
+!!$omp end critical
               end if
-
+!             write(6,*) 'HEY ndata and iicount are ',ndata,iicount
 !             Set usage variable              
               usage = zero
 
@@ -1611,7 +1615,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
      endif
 
 ! Normal exit
-!$omp barrier
+!!!$omp barrier
   enddo loop_convinfo! loops over convinfo entry matches
 !$omp end parallel do 
   else
@@ -2660,6 +2664,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  iout=ndata
                  isort(icntpnt)=iout
               endif
+!             if(mype == 45) write(6,*) 'second isort(',icntpnt,') is ',iout
 
               if(ndata > maxobs) then
                  write(6,*)'READ_PREPBUFR:  ***WARNING*** ndata > maxobs for ',obstype
@@ -3537,6 +3542,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   endif! (not uvob)
   endTime = mpi_wtime()
   write(6,*) 'HEY!! mype is ',mype,' and prepbufr 2nd read took ',endTime-startTime
+! write(6,*) 'HEY2 before ndata and iicount are ',ndata,iicount
   startTime = mpi_wtime()
   deallocate(lmsg,tab,nrep)
 
@@ -3548,14 +3554,17 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 ! Write header record and data to output file for further processing
   allocate(iloc(ndata))
   iicount=0
+  write(6,*) 'HEY2 mype is, ',mype,' maxobs for ',obstype,' is ',maxobs
   do i=1,maxobs
+!    write(6,*) 'looking through isort(',i,') = ',isort(i)
      if(isort(i) > 0)then
        iicount=iicount+1
        iloc(iicount)=isort(i)
      end if
   end do
+  write(6,*) 'HEY2 ndata and iicount are ',ndata,iicount
   if(ndata /= iicount)then
-     write(6,*) ' PREPBUFR: mix up in read_prepbufr ,ndata,iicount ',ndata,iicount
+     write(6,*) ' PREPBUFR: mix up in read_prepbufr ,ndata,iicount ',ndata,iicount,obstype,mype
      call stop2(50)
   end if
   allocate(cdata_out(nreal,ndata))
