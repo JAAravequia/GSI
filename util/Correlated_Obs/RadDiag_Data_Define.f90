@@ -84,8 +84,8 @@ MODULE RadDiag_Data_Define
     REAL(sp) :: veg_frac   = ZERO  ! vegetation fraction
     REAL(sp) :: snow_depth = ZERO  ! snow depth
     REAL(sp) :: sfc_wndspd = ZERO  ! surface wind speed
-    REAL(sp) :: qcdiag1    = ZERO  ! ir=cloud fraction, mw=cloud liquid water
-    REAL(sp) :: qcdiag2    = ZERO  ! ir=cloud top pressure, mw=total column water
+    REAL(sp) :: qcdiag1    = ZERO  ! ir=cloud fraction, mw=cloud liquid water clwp_amsua
+    REAL(sp) :: qcdiag2    = ZERO  ! ir=cloud top pressure, mw=total column water clw_guess
     REAL(sp) :: tref       = ZERO  ! reference temperature
     REAL(sp) :: dtw        = ZERO  ! diurnal warming: d(Tw) at depth zob
     REAL(sp) :: dtc        = ZERO  ! sub-layer cooling: d(Tc) at depth zob

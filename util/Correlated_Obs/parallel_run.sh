@@ -17,7 +17,7 @@ savdir=$diagdir
 #4 for mixed (recommended to use 0 for mixed)
 #5 for ice and 6 for snow and ice combined (recommended when using ice)
 type=1
-#cloud 1 for clear FOVs, 2 for clear channels
+#cloud 1 for clear FOVs, 2 for clear channels, 3 for cloudy FOVs (ATMS and AMSUA only)
 cloud=2
 #absolute value of the maximum allowable sensor zenith angle (degrees)
 angle=30

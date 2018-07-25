@@ -77,6 +77,7 @@ integer, parameter:: Mixed=4
 integer, parameter:: Ice=5
 integer, parameter:: Snow_and_Ice=6
 integer, parameter:: Clear_FOV=1
+integer(i_kind), parameter:: Cloud_FOV=3 !KAB
 integer, parameter:: Clear_Channel=2
 real(r_kind), parameter:: clear_threshold=0.01_r_kind     !if using clear sky data, do not use if above this threshold
 real(r_kind), parameter:: sea_threshold=0.99_r_kind       !if using sea data, do not use if below this threshold
@@ -88,6 +89,9 @@ real(r_kind), parameter:: land_threshold=0.99_r_kind      !if using land data, d
 real(r_kind), parameter:: ice_threshold=0.95_r_kind       !if using ice data, do not use if below this threshold
 real(r_kind), parameter:: snow_threshold=0.99_r_kind      !if using snow data, do not use if below this threshold
 real(r_kind):: satang
+!KAB
+real(r_kind), dimension(:), allocatable:: ccld, cclr
+real(r_kind):: clw
 
 !Data times
 real(r_kind):: time_min                                  !time of obs, relative to time of corresponding diag file
@@ -133,6 +137,9 @@ real(r_kind), parameter:: errt=0.0001_r_kind
 
 read(5,*) ntimes, Surface_Type, Cloud_Type, satang, instr, out_wave, out_err,  &
    out_corr, kreq, rec_method, cov_method, chan_choice, timeth, bin_size, bin_center
+!KAB
+clw=0.0_r_kind
+
 if (cov_method==desroziers) then
    allocate(bin_dist(1))
    bin_dist(1)=bin_size
@@ -213,6 +220,11 @@ do tim=1,ntimes
       allocate(divider(nch_active,nch_active))
       allocate(ges_ave(nch_active,nch_active))
       allocate(chaninfo(nch_active),errout(nch_active))
+!KAB
+      if (Cloud_Type==Cloud_FOV) then
+         allocate(ccld(nch_active),cclr(nch_active))
+         call cld_params(no_chn,ccld,cclr)
+      end if
       if (bin_size<five) then
          allocate(obs_pairs(1))
       else
@@ -284,6 +296,9 @@ do tim=1,ntimes
       if ((Cloud_Type==Clear_FOV).and.(RadDiag_Data%Scalar%qcdiag1>clear_threshold)) &
          cycle ges_read_loop
       if (abs(RadDiag_Data%Scalar%satzen_ang)>satang) cycle ges_read_loop
+!KAB
+      clw=RadDiag_Data%Scalar%qcdiag1+RadDiag_Data%Scalar%qcdiag2
+      clw=clw/2
       nc=0
       ng=ng+1
       if (ng>dsize) then
@@ -293,6 +308,8 @@ do tim=1,ntimes
       end if
       ges_channel_loop: do jj=1,nch_active
          j=indR(jj)
+!KAB
+         if ((Cloud_Type==Cloud_FOV).and.(clw<ccld(jj))) cycle ges_read_loop
          if (((abs(RadDiag_Data%Channel(j)%qcmark)<one)).and. &
             (abs(RadDiag_Data%Channel(j)%errinv)>errt)) then 
             ges(ng,jj)=RadDiag_Data%Channel(j)%omgbc
@@ -360,9 +377,13 @@ do tim=1,ntimes
          if ((Cloud_Type==Clear_FOV).and.(RadDiag_Data%Scalar%qcdiag1>clear_threshold)) &
             cycle anl_read_loop
          if (abs(RadDiag_Data%Scalar%satzen_ang)>satang) cycle anl_read_loop
+         clw=RadDiag_Data%Scalar%qcdiag1+RadDiag_Data%Scalar%qcdiag2
+         clw=clw/2
          nc=0
          anl_channel_loop: do jj=1,nch_active
             j=indR(jj)
+!KAB
+            if ((Cloud_Type==Cloud_FOV).and.(clw<ccld(jj))) cycle anl_read_loop
             if (((abs(RadDiag_Data%Channel(j)%qcmark)<one)).and.&
                (abs(RadDiag_Data%Channel(j)%errinv)>errt)) then 
                anl(jj)=RadDiag_Data%Channel(j)%omgbc

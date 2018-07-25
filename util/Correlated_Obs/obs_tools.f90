@@ -4,7 +4,7 @@
 
 module obs_tools
 
-use kinds, only: r_kind
+use kinds, only: r_kind,i_kind
 
 implicit none
 public:: dist
@@ -51,7 +51,62 @@ d1=(x1-x2)**2+(y1-y2)**2+(z1-z2)**2
 dist=rad*sqrt(d1)
 end function dist
 
+!KAB
+subroutine cld_params(no_chn,ccld,cclr)
+implicit none
+integer(i_kind), intent(in):: no_chn
+real(r_kind), dimension(:), intent(inout):: ccld, cclr
+integer(i_kind):: i
 
+ccld=0.0_r_kind
+cclr=0.0_r_kind
+if (no_chn==15) then !amsua
+  cclr(1)=0.05_r_kind
+  cclr(2)=0.03_r_kind
+  cclr(3)=0.03_r_kind
+  cclr(4)=0.02_r_kind
+  cclr(6)=0.1_r_kind
+  cclr(15)=0.03_r_kind
+
+  ccld(1)=0.6_r_kind
+  ccld(2)=0.45_r_kind
+  ccld(3)=0.4_r_kind
+  ccld(4)=0.45_r_kind
+  ccld(5)=1.0_r_kind
+  ccld(6)=1.5_r_kind
+  ccld(15)=0.2_r_kind
+
+elseif (no_chn==22) then !atms
+  cclr(1)=0.03_r_kind
+  cclr(2)=0.03_r_kind
+  cclr(3)=0.03_r_kind
+  cclr(4)=0.02_r_kind
+  cclr(5)=0.03_r_kind
+  cclr(6)=0.08_r_kind
+  cclr(7)=0.15_r_kind
+  cclr(16)=0.02_r_kind
+  cclr(17)=0.03_r_kind
+  cclr(18)=0.03_r_kind
+  cclr(19)=0.03_r_kind
+  cclr(20)=0.03_r_kind
+  cclr(21)=0.05_r_kind
+  cclr(22)=0.1_r_kind
+
+  ccld(1)=0.35_r_kind
+  ccld(2)=0.38_r_kind
+  ccld(3)=0.4_r_kind
+  ccld(4)=0.45_r_kind
+  ccld(5)=0.5_r_kind
+  ccld(6)=1.0_r_kind
+  ccld(7)=1.0_r_kind
+  ccld(16)=0.35_r_kind
+  do i=17,22
+    ccld(i)=0.5_r_kind
+  end do
+ccld=ccld/5
+end if
+
+end subroutine cld_params
 subroutine get_filename(T,ext,filename)
 !At a given time step T, this subroutine outputs the name of the file to be read
 !in.  The file will either be an analysis diag file or a ges diag file
