@@ -794,10 +794,10 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   nchanl=0
   ilon=2
   ilat=3
+  write(6,*) 'HEY prepbufr-mype ',mype,' and num threads is ',ntread,omp_get_num_threads()
   if(uvob) then
 !$omp parallel do schedule(static,1) default(firstprivate) shared(cdata_all) reduction(+:ndata) reduction(+:nodata) reduction(+:iicount) shared(isort)
   loop_convinfo: do nx=1, ntread
-! write(6,*) 'HEY prepbufr-mype ',mype,' and num threads is ',ntread,omp_get_num_threads()
      th_id = omp_get_thread_num();
      lunint = lunin+th_id
 !    lunint = lunin
