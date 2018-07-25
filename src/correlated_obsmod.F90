@@ -54,23 +54,22 @@ have a declared interface procedure.
 usually embedded in the {\it anavinfo} file. An example of such table follows:
 \begin{verbatim}
 correlated_observations::
-! isis       method   kreq   type    cov_file
-  airs281_aqua  1      60.   ice     airs_rcov.bin
-  airs281_aqua  1      60.   land    airs_rcov.bin
-  airs281_aqua  1      60.   sea     airs_rcov.bin
-  airs281_aqua  1      60.   snow    airs_rcov.bin
-  airs281_aqua  1      60.   mixed   airs_rcov.bin
-# cris_npp      1     -99.   snow    cris_rcov.bin
-# cris_npp      1     -99.   land    cris_rcov.bin
-# cris_npp      1     -99.   sea     cris_rcov.bin
-  iasi_metop-a  2      0.12  snow    iasi_sea_rcov.bin
-  iasi_metop-a  2      0.22  land    iasi_land_rcov.bin
-  iasi_metop-a  2      0.05  sea     iasi_sea_rcov.bin
-  iasi_metop-a  2      0.12  ice     iasi_sea_rcov.bin
-  iasi_metop-a  2      0.12  mixed   iasi_sea_rcov.bin
-# ssmis_f17     1     -99.   mixed   ssmis_rcov.bin
-# ssmis_f17     1     -99.   land    ssmis_rcov.bin
-# ssmis_f17     1     -99.   sea     ssmis_rcov.bin
+! isis       method   kreq   type    Scene      cov_file
+  airs_aqua     1      60.   ice     clear   Rcov_airs_aqua_ice
+  airs_aqua     1      60.   land    clear   Rcov_airs_aqua_land
+  airs_aqua     1      60.   sea     clear   Rcov_airs_aqua_sea
+  airs_aqua     1      60.   snow    clear   Rcov_airs_aqua_snow
+  airs_aqua     1      60.   mixed   clear   Rcov_airs_aqua_mixed
+# cris_npp      1     -99.   snow    clear   Rcov_cris_npp_snow
+# cris_npp      1     -99.   land    clear   Rcov_cris_npp_land
+# cris_npp      1     -99.   sea     clear   Rcov_cris_npp_sea
+  iasi_metop-a  2      0.22  land    clear   Rcov_iasi_metop-a_land
+  iasi_metop-a  2      0.05  sea     clear   Rcov_iasi_metop-a_sea
+  iasi_metop-a  2      0.12  ice     clear   Rcov_iasi_metop-a_ice
+  iasi_metop-a  2      0.12  mixed   clear   Rcov_iasi_metop-a_mixed
+# atms_npp      1     -99.   mixed   clear   Rcov_atms_npp_mixed
+# atms_npp      1     -99.   land    clear   Rcov_atms_npp_land
+# atms_npp      1     -99.   sea     allsky  Rcov_atms_npp_sea
 
 ::
 \end{verbatim}
@@ -114,7 +113,9 @@ Column 3: kreq   - level of required condition for the corresponding cov(R)
                                      diagional so that R_{r,r}=(sqrt{R_{r,r}+kreq)^2
                                      Note that kreq should be specified as 0<kreq<1
 Column 4: type - determines whether to apply covariance over ocean, land, ice, snow or mixed FOVs
-Column 5: cov_file - name of file holding estimate of error covariance for the
+Column 5: Scene - either clear or allsky.  For clear, correlated error will be
+used for all channels not affected by the presence of a cloud
+Column 6: cov_file - name of file holding estimate of error covariance for the
                      instrument specified in column 1
 \end{verbatim}
 
@@ -200,6 +201,8 @@ type ObsErrorCov
      integer(i_kind)   :: method    =-1               ! define method of computation
      real(r_kind)      :: kreq      =-99.             ! Weston et al-like spectrum adjustment factor
      character(len=20) :: mask      ='global'         ! Apply covariance for profiles over all globe
+!KAB
+     character(len=20) :: scene     ='clear'          ! Apply covariance in all sky, or for clear channels
      integer(i_kind),pointer :: indxR(:)   =>NULL()   ! indexes of active channels
      real(r_kind),   pointer :: R(:,:)     =>NULL()   ! nch_active x nch_active
      real(r_kind),   pointer :: Revals(:)  =>NULL()   ! eigenvalues of R
@@ -253,7 +256,8 @@ character(len=*),parameter:: rcname='anavinfo'  ! filename should have extension
 character(len=*),parameter:: tbname='correlated_observations::'
 integer(i_kind) luin,ii,ntot,nrows,method
 character(len=MAXSTR),allocatable,dimension(:):: utable
-character(len=20) instrument, mask
+character(len=20) instrument, mask, scene
+!KAB, scene
 character(len=30) filename
 real(r_single) kreq4
 real(r_kind) kreq
@@ -292,18 +296,21 @@ allocate(GSI_BundleErrorCov(ninstr))
 ! Count variables first
 if(iamroot_) write(6,*) myname_,': Correlated-Obs for the following instruments'
 do ii=1,ninstr
-   read(utable(ii),*) instrument, method, kreq4, mask, filename ! if adding col to table leave fname as last
+!KAB
+   read(utable(ii),*) instrument, method, kreq4, mask, scene filename ! if adding col to table leave fname as last
    instruments(ii) = trim(instrument)
    idnames(ii) = trim(instrument)//':'//trim(mask)
    kreq=kreq4
    if(iamroot_) then
-      write(6,'(1x,2(a,1x),i4,1x,f7.2,1x,a)') trim(instrument), trim(mask), method, kreq4, trim(filename)
+!KAB
+      write(6,'(1x,2(a,1x),i4,1x,f7.2,1x,a)') trim(instrument), trim(mask), method, kreq4, trim(scene), trim(filename)
    endif
 !  check method validity
    if(ALL(methods_avail/=method)) then
      call die(myname_,' invalid choice of method, aborting')
    endif
-   call set_(trim(instrument),trim(filename),mask,method,kreq,GSI_BundleErrorCov(ii))
+!KAB
+   call set_(trim(instrument),trim(filename),mask,scene,method,kreq,GSI_BundleErrorCov(ii))
 enddo
 
 ! release table
@@ -327,6 +334,8 @@ implicit none
 character(len=*),intent(in) :: instrument  ! name of instrument
 character(len=*),intent(in) :: fname       ! filename holding cov(R)
 character(len=*),intent(in) :: mask        ! land/sea/etc mask
+!KAB
+character(len=*),intent(in) :: scene       ! allsky or clear radiances
 integer,intent(in):: method                ! method to apply when using this cov(R)
 real(r_kind),intent(in) :: kreq            ! conditioning factor for cov(R)
 type(ObsErrorCov) :: ErrorCov              ! cov(R) for this instrument
@@ -364,6 +373,8 @@ real(r_kind),allocatable, dimension(:) :: diag
    if(verbose .and. iamroot_)print_verbose=.true.
    ErrorCov%instrument = trim(instrument)
    ErrorCov%mask = trim(mask)
+!KAB
+   ErrorCov%scene = trim(scene)
    ErrorCov%name = trim(instrument)//':'//trim(mask)
    ErrorCov%method = method
    ErrorCov%kreq   = kreq
