@@ -2124,9 +2124,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 
 !             Surface pressure 
               else if(psob) then
-                 if(kx ==180 .and. icsubtype(nc) ==0) obserr(1,k)=0.7_r_kind*obserr(1,k)
-!  reduce observation error for buoy surface pressure observations
                  poe=obserr(1,k)*one_tenth                  ! convert from mb to cb
+!  reduce observation error for buoy surface pressure observations
                  if (inflate_error) poe=poe*r1_2
                  cdata_all(1,iout)=poe                     ! surface pressure error (cb)
                  cdata_all(2,iout)=dlon                    ! grid relative longitude
