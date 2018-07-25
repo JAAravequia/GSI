@@ -325,8 +325,19 @@ echo "export I_MPI_SHM_LMT_BUFFER_SIZE=65536"    >> $cfile
 echo "export I_MPI_DAPL_BUFFER_SIZE=1048576"    >> $cfile
 echo "export MP_STDOUTMODE=ORDERED"    >> $cfile
 echo "export MP_STDERRMODE=ORDERED"    >> $cfile
+echo "export TAU_MAKEFILE=/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/taumpi/x86_64/lib/Makefile.tau-icpc-papi-mpi-pdt-openmp-opari" >> $cfile
+echo "export PATH=$PATH:/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/taumpi/x86_64/bin" >> $cfile
+echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/papi/lib" >> $cfile
+echo "export TAU_VERBOSE=0" >> $cfile
+echo "export TAU_PROFILE=1" >> $cfile
+echo "export TAU_CALLPATH=1" >> $cfile
+echo "export TAU_CALLPATH_DEPTH=100" >> $cfile
+echo "export TAU_THROTTLE=1" >> $cfile
+echo "export TAU_THROTTLE_NUMCALLS=50000" >> $cfile
+echo "export TAU_THROTTLE_PERCALL=10" >> $cfile
+echo "export TAU_PROFILE_FORMAT=merged" >> $cfile
 
-echo "$exec"                                                    >> $cfile
+echo "$exec tau_exec -TPROFILE,MPI,OPENMP,PDT "                                                    >> $cfile
 
 if [[ $stdin = YES ]];then
   cat

@@ -189,8 +189,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   use gsi_4dvar, only: l4dvar,l4densvar,time_4dvar,winlen,thin4d
   use qcmod, only: errormod,errormod_aircraft,noiqc,newvad,njqc
   use convthin, only: make3grids,map3grids,del3grids,use_all
-  use convthin, only: mlon,icount,icount_fore,icount_aft,ibest_obs,ibest_save
-  use convthin, only: glat,glon,hll,score_crit,score_crit_fore,score_crit_aft
+! use convthin, only: mlon,icount,icount_fore,icount_aft,ibest_obs,ibest_save
+! use convthin, only: glat,glon,hll,score_crit,score_crit_fore,score_crit_aft
 
   use blacklist, only : blacklist_read,blacklist_destroy
   use blacklist, only : blkstns,blkkx,ibcnt
