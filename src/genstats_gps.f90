@@ -288,6 +288,7 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
 
   real(r_single),allocatable,dimension(:,:)::sdiag
   character(8),allocatable,dimension(:):: cdiag
+  real(r_single), dimension(nsdim) :: dhx_dx_array
   integer(i_kind):: highGPSreq,superReq,istatus(mpi_status_size)
   logical:: first_loop
   

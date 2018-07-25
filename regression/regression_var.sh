@@ -186,8 +186,6 @@ case $machine in
    export clean=".false."
    ;;
 esac
-   ;;
-esac
 
 if [[ "$cmaketest" = "false" ]]; then
   export builddir=$noscrub/build
