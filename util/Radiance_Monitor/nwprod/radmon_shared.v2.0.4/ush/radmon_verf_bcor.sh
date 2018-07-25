@@ -196,19 +196,15 @@ EOF
 #  move data, control, and stdout files to $TANKverf_rad and compress
 #
 
-            if [[ -s ${data_file} ]]; then
-               mv ${data_file} ${bcor_file}
-               mv ${bcor_file} $TANKverf_rad/.
-               ${COMPRESS} -f $TANKverf_rad/${bcor_file}
+            if [[ -s ${bcor_file} ]]; then
+               ${COMPRESS} ${bcor_file}
             fi
 
-            if [[ -s ${ctl_file} ]]; then
-               mv ${ctl_file} ${bcor_ctl}
-               mv ${bcor_ctl}  ${TANKverf_rad}/.
-               ${COMPRESS} -f ${TANKverf_rad}/${bcor_ctl}
+            if [[ -s ${bcor_ctl} ]]; then
+               ${COMPRESS} ${bcor_ctl}
             fi
 
-            if [[ -s ${stdout_file} ]]; then
+         fi
                mv ${stdout_file} ${bcor_stdout}
                mv ${bcor_stdout}  ${TANKverf_rad}/.
                ${COMPRESS} -f ${TANKverf_rad}/${bcor_stdout}
@@ -218,6 +214,18 @@ EOF
     
       done  # dtype in $gesanl loop
    done     # type in $SATYPE loop
+
+   cwd=`pwd`
+   tar_file=radmon_bcor.tar
+
+   tar -cf $tar_file bcor*.ieee_d* bcor*.ctl*
+   mv $tar_file ${TANKverf_rad}
+   cd ${TANKverf_rad}
+   tar -xf ${tar_file}
+   rm ${tar_file}
+
+   cd $cwd
+
 
 
    if [[ $fail -eq $ctr || $fail -gt $ctr ]]; then

@@ -643,19 +643,18 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
            call ufbint(lunin,hdrtsb,1,1,iret,'TSB')
            if(hdrtsb(1)==2) then
               newvad=.true.
-              go to 288
-           end if
-           call ufbint(lunin,obsdat,13,255,levs,obstr)
-           if(levs>1)then
-              do k=1, levs-1
-                diffuu=abs(obsdat(4,k+1)-obsdat(4,k))
-                if(diffuu==50.0) then
+           else
+              call ufbint(lunin,obsdat,13,255,levs,obstr)
+              if(levs>1)then
+                 do k=1, levs-1
+                   diffuu=abs(obsdat(4,k+1)-obsdat(4,k))
+                   if(diffuu==50.0) then
                       newvad=.true.
-                      go to 288
-                end if
-              end do
+                      exit
+                   end if
+                 end do
+              end if
            end if
-288        continue
            if(newvad)write(6,*)'new vad flag::', newvad 
         end if
         !* END new vad wind
@@ -764,7 +763,12 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   enddo msg_report
   endTime = mpi_wtime()
   write(6,*) 'HEY!! mype is ',mype,' and prepbufr 1st read took ',endTime-startTime
-  if (nmsg==0) goto 900
+  if (nmsg==0) then
+     call closbf(lunin)
+     close(lunin)
+     if(print_verbose)write(6,*)'READ_PREPBUFR: no messages/reports '
+     return
+  end if
   if(print_verbose)write(6,*)'READ_PREPBUFR: messages/reports = ',nmsg,'/',ntb,' ntread = ',ntread
 
 
@@ -3603,20 +3607,15 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   if (lhilbert) call destroy_hilbertcurve
   if (twodvar_regional) call destroy_ndfdgrid
 
-900 continue
   if(diagnostic_reg .and. ntest>0) write(6,*)'READ_PREPBUFR:  ',&
      'ntest,disterrmax=',ntest,disterrmax
   if(diagnostic_reg .and. nvtest>0) write(6,*)'READ_PREPBUFR:  ',&
      'nvtest,vdisterrmax=',ntest,vdisterrmax
 
-  if (ndata == 0) then 
-     call closbf(lunin)
-     if(print_verbose)write(6,*)'READ_PREPBUFR:  closbf(',lunin,')'
-  endif
+  call closbf(lunin)
+  if(print_verbose)write(6,*)'READ_PREPBUFR:  closbf(',lunin,')'
 
   close(lunin)
-
-  close(55)
 
   endTime = mpi_wtime()
   write(6,*) 'HEY!! mype is ',mype,' and prepbufr 3rd read took ',endTime-startTime

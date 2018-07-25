@@ -244,39 +244,51 @@ cat << EOF > input
   rad_area='${RAD_AREA}',
  /
 EOF
-	startmsg
+	 startmsg
 
-        ./${time_exec} < input >>   stdout.${type} 2>>errfile
-        export err=$?; err_chk
+         ./${time_exec} < input >>   stdout.${type} 2>>errfile
+         export err=$?; err_chk
 
-        #
-        #  stdout.${type} is needed by radmon_ck_stdout.sh 
-        #  NCO requirement is executable output goes to jlogfile, so 
-        #  cat it there now:
-        cat stdout.${type} >> ${pgmout}
+         #
+         #  stdout.${type} is needed by radmon_ck_stdout.sh 
+         #  NCO requirement is executable output goes to jlogfile, so 
+         #  cat it there now:
+         cat stdout.${type} >> ${pgmout}
 
-        if [[ $err -ne 0 ]]; then
+         if [[ $err -ne 0 ]]; then
             fail=`expr $fail + 1`
-        fi
+         fi
 
 #-------------------------------------------------------------------
 #  move data, control, and stdout files to $TANKverf_rad and compress
 #-------------------------------------------------------------------
 
-         if [[ -s ${data_file} ]]; then
-            mv ${data_file} ${time_file}
-            ${COMPRESS} -f  ${time_file}
-            mv ${time_file}* $TANKverf_rad/.
+
+         if [[ -s ${time_file} ]]; then
+            ${COMPRESS} ${time_file}
          fi
 
-         if [[ -s ${ctl_file} ]]; then
-            $NCP ${ctl_file} ${time_ctl}
-            ${COMPRESS} -f   ${time_ctl}
-            $NCP ${time_ctl}*  ${TANKverf_rad}/.
+         if [[ -s ${time_ctl} ]]; then
+            ${COMPRESS} ${time_ctl}
          fi
-
+         
       done
    done
+
+
+   cwd=`pwd`
+   tar_file=radmon_time.tar
+
+   tar -cf $tar_file time*.ieee_d* time*.ctl*
+   mv $tar_file ${TANKverf_rad}
+   cd ${TANKverf_rad}
+   tar -xf ${tar_file}
+   rm ${tar_file}
+
+   cd $cwd
+  
+
+
    if [[ $fail -eq $ctr || $fail -gt $ctr  ]]; then
       echo "fail, ctr = $fail, $ctr"
       err=10
@@ -538,7 +550,7 @@ if [[ "$VERBOSE" = "YES" ]]; then
    echo $(date) EXITING $0 error code ${err} >&2
 fi
 
-msg="${scr} HAS ENDED"
+msg="${scr} HAS ENDED, err code = $err"
 postmsg "$jlogfile" "$msg"
 
 exit ${err}
