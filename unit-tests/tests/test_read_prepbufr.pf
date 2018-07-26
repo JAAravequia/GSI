@@ -1,0 +1,105 @@
+module Test_read_prepbufr_mod
+!  use read_prepbufr_files_mod
+   use pfunit_mod
+   implicit none
+
+   public :: Test_read_prepbufr      
+
+@TestCase
+   type, extends(TestCase) :: Test_read_prepbufr
+!     type (read_prepbufr_files_class) :: reader
+   contains
+      procedure :: setUp     ! overides generic
+      procedure :: tearDown  ! overrides generic
+   end type Test_read_prepbufr      
+
+contains
+
+   ! No need to annotate setUp() when _extending_ TestCase
+   subroutine setUp(this)
+!     use mpimod, only: npe,mpi_comm_world,ierror,mype
+!     use obsmod, only: iadate,time_offset
+      use gridmod, only: create_grid_vars
+      use convinfo, only: init_convinfo,convinfo_read
+      use guess_grids, only: create_sfc_grids,create_gesfinfo,nfldsfc
+      use gsi_4dvar, only: setup_4dvar
+      use constants, only: init_constants,init_constants_derived
+      use gridmod, only: rlats_sfc, rlons_sfc, nlat_sfc, nlon_sfc, nlat, nlon
+      use satthin, only: isli_full,sst_full,zs_full,fact10_full,sno_full,soil_temp_full,soil_type_full
+      use satthin, only: sfc_rough_full,isli_anl,sno_anl,soil_moi_full,veg_frac_full,veg_type_full
+      use satthin, only: dlat_grid,dlon_grid
+      use satthin, only: rlat_min,rlon_min
+
+      class (Test_read_prepbufr), intent(inout) :: this
+
+      dlat_grid = 1.0
+      dlon_grid = 1.0
+      rlat_min = 1.0
+      rlon_min = 1.0
+      call init_constants_derived
+      call init_constants(.true.)
+      call create_grid_vars
+      call init_convinfo
+      call convinfo_read
+      call create_sfc_grids
+      call create_gesfinfo
+      call setup_4dvar(0)
+      allocate(rlats_sfc(nlat_sfc),rlons_sfc(nlon_sfc))
+      allocate(isli_full(nlat_sfc,nlon_sfc),fact10_full(nlat_sfc,nlon_sfc,nfldsfc))
+      allocate(sst_full(nlat_sfc,nlon_sfc,nfldsfc),sno_full(nlat_sfc,nlon_sfc,nfldsfc))
+      allocate(zs_full(nlat,nlon))
+      allocate(sfc_rough_full(nlat_sfc,nlon_sfc,nfldsfc))
+      allocate(isli_anl(nlat,nlon))
+      allocate(sno_anl(nlat,nlon,nfldsfc))
+
+      allocate(soil_moi_full(nlat_sfc,nlon_sfc,nfldsfc),soil_temp_full(nlat_sfc,nlon_sfc,nfldsfc))
+      allocate(veg_frac_full(nlat_sfc,nlon_sfc,nfldsfc),soil_type_full(nlat_sfc,nlon_sfc))
+      allocate(veg_type_full(nlat_sfc,nlon_sfc))
+
+!     call gesinfo(0)
+!     call getsfc(0,0,.false.,.false.)
+
+   end subroutine setUp
+
+   ! No need to annotate tearDown() _extending_ TestCase
+   subroutine tearDown(this)
+      use gridmod, only: destroy_grid_vars
+      class (Test_read_prepbufr), intent(inout) :: this
+      call destroy_grid_vars
+   end subroutine tearDown
+
+@Test
+   subroutine testReadPrepbufr(this)
+      use kinds, only: r_kind,i_kind
+!     use mpimod, only: npe,mype
+      use gridmod, only: nlon,nlat,nsig
+      class (Test_read_prepbufr), intent(inout) :: this
+      integer(i_kind)                        :: nread,ndata,nodata
+      character(len=20)                      :: sis
+      character(len=15)                      :: infile
+      character(len=10)                      :: obstype
+      integer(i_kind)                        :: lunout,nrec_start
+      integer(i_kind),dimension(1)           :: nobs
+      real(r_kind)                           :: twindin
+      real(r_kind),dimension(96,192,64)      :: prsl_full
+
+      nread = 0
+      ndata = 0
+      nodata = 0
+      infile = "prepbufr"
+      obstype = "uv"
+      lunout = 81
+      twindin = 3.0
+      sis = "uv"
+      nobs(1) = 0
+      nrec_start = 1 
+      call read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
+                     prsl_full,nobs,nrec_start)
+
+!     @assertEqual(999, ntguessfc)
+!     @assertEqual(3, ifilesfc(1))
+!     @assertEqual(3.0, hrdifsfc(1))
+
+   end subroutine testReadPrepbufr
+
+end module Test_read_prepbufr_mod

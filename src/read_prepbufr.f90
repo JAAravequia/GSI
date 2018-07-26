@@ -443,6 +443,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
             tdob .or. mxtmob .or. mitmob .or. pmob .or. howvob .or. &
             tcamtob .or. lcbasob .or. cldchob
   aircraftobst=.false.
+  write(6,*) 'HEY uvob is ',uvob
   if(tob)then
      nreal=25
   else if(uvob) then 
@@ -588,6 +589,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 
 ! Open, then read date from bufr data
   call closbf(lunin)
+  write(6,*) 'HEY! opening lunin =',lunin
   open(lunin,file=trim(infile),form='unformatted')
   call openbf(lunin,'IN',lunin)
   call datelen(10)
@@ -800,7 +802,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   ilat=3
   write(6,*) 'HEY prepbufr-mype ',mype,' and num threads is ',ntread,omp_get_num_threads()
   if(uvob) then
-!$omp parallel do schedule(static,1) default(firstprivate) shared(cdata_all) reduction(+:ndata) reduction(+:nodata) reduction(+:iicount) shared(isort)
+!!!$omp parallel do schedule(static,1) default(firstprivate) shared(cdata_all) reduction(+:ndata) reduction(+:nodata) reduction(+:iicount) shared(isort)
+!$omp parallel do default(shared) shared(cdata_all) reduction(+:ndata) reduction(+:nodata) reduction(+:iicount) shared(isort)
   loop_convinfo: do nx=1, ntread
      th_id = omp_get_thread_num();
      lunint = lunin+th_id
