@@ -2078,8 +2078,8 @@ subroutine dec2bin(dec,bin,ndim)
     END DO
     RETURN
 END subroutine dec2bin
-
- logical function adjust_jac_ (iinstr,isis,isfctype,nchanl,nsigradjac,ich,varinv,&
+!KAB
+ logical function adjust_jac_ (iinstr,isis,isfctype,iscene,nchanl,nsigradjac,ich,varinv,&
                                depart,obvarinv,adaptinf,wgtjo,jacobian,Rinv,rsqrtinv)
 !$$$  subprogram documentation block
 !                .      .    .
@@ -2111,6 +2111,8 @@ END subroutine dec2bin
 
    character(len=*),intent(in) :: isis
    integer(i_kind), intent(in) :: isfctype
+!KAB
+   integer(i_kind), intent(in) :: iscene
    integer(i_kind), intent(in) :: nchanl
    integer(i_kind), intent(in) :: nsigradjac
    integer(i_kind), intent(in) :: ich(nchanl)
@@ -2135,20 +2137,26 @@ END subroutine dec2bin
    iinstr=-1
    if(isfctype==0)then
       covtype = trim(isis)//':sea'
-      iinstr=getindex(idnames,trim(covtype))
+!      iinstr=getindex(idnames,trim(covtype))
    else if(isfctype==1)then
       covtype = trim(isis)//':land'
-      iinstr=getindex(idnames,trim(covtype))
+!      iinstr=getindex(idnames,trim(covtype))
    else if(isfctype==2)then
       covtype = trim(isis)//':ice'
-      iinstr=getindex(idnames,trim(covtype))
+!      iinstr=getindex(idnames,trim(covtype))
    else if(isfctype==3)then
       covtype = trim(isis)//':snow'
-      iinstr=getindex(idnames,trim(covtype))
+!      iinstr=getindex(idnames,trim(covtype))
    else if(isfctype==4)then
       covtype = trim(isis)//':mixed'
-      iinstr=getindex(idnames,trim(covtype))
+!      iinstr=getindex(idnames,trim(covtype))
    endif
+   if(iscene=0) then
+      covtype=trim(covtype)//':clear'
+   else if (iscene=1) then
+      covtype=trim(covtype)//':allsky'
+   end if
+   iinstr=getindex(idnames,trim(covtype))
    if(iinstr<0) return  ! do not use the correlated errors
 
    if(.not.corr_ob_amiset(GSI_BundleErrorCov(iinstr))) then

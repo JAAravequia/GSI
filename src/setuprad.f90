@@ -1534,7 +1534,8 @@
               wgtjo= varinv     ! weight used in Jo term
               adaptinf = varinv ! on input
               obvarinv = error0 ! on input
-              account_for_corr_obs = radinfo_adjust_jacobian (iinstr,isis,isfctype,nchanl,nsigradjac,ich,varinv,&
+!KAB
+              account_for_corr_obs = radinfo_adjust_jacobian (iinstr,isis,isfctype,iscene,nchanl,nsigradjac,ich,varinv,&
                                                               utbc,obvarinv,adaptinf,wgtjo,jacobian,Rinv,rsqrtinv)
               iii=0
               do ii=1,nchanl

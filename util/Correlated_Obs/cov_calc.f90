@@ -90,7 +90,7 @@ real(r_kind), parameter:: ice_threshold=0.95_r_kind       !if using ice data, do
 real(r_kind), parameter:: snow_threshold=0.99_r_kind      !if using snow data, do not use if below this threshold
 real(r_kind):: satang
 !KAB
-real(r_kind), dimension(:), allocatable:: ccld, cclr
+real(r_kind), dimension(:), allocatable:: ccld, cclr !do I even need cclr?
 real(r_kind):: clw
 
 !Data times
