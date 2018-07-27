@@ -139,7 +139,7 @@ use random_normal, only : rnorm, set_random_seed
 
 ! local variables.
 integer(i_kind) nob,nob1,nob2,nob3,npob,nf,nf2,ii,nobx,nskip,&
-                niter,i,nrej,npt,nuse,ncount,nb,np
+                niter,i,nrej,npt,nuse,ncount,ncount_check,nb,np
 integer(i_kind) indxens1(nanals),indxens2(nanals)
 real(r_single) hxpost(nanals),hxprior(nanals),hxinc(nanals),&
              dist,lnsig,obt,&
@@ -654,9 +654,13 @@ do niter=1,numiter
   tend = mpi_wtime()
   if (nproc .eq. 0) then
       write(6,8003) niter,'timing on proc',nproc,' = ',tend-tbegin,t2,t3,t4,t5,t6,nrej
-
+      if (iassim_order == 2) then
+          ncount_check = ncount
+      else
+          ncount_check = nobstot
+      endif
       nuse = 0; covl_fact = 0.
-      do nob1=1,ncount
+      do nob1=1,ncount_check
          nob = indxassim(nob1)
          if (iskip(nob) .ne. 1) then
             covl_fact = covl_fact + sqrt(corrlengthsq(nob)/corrlengthsq_orig(nob))
