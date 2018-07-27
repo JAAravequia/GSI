@@ -2178,9 +2178,10 @@ end subroutine normal_new_factorization_rf_y
     endif
 
     ipx=1
-!$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ic2,ipic,ig,iaens)
+!cltthinkdeb !$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ic2,ipic,ig,iaens)
    do ig=1,nsclgrp
     iaens=ensgrp2aensgrp(ig)
+    write(6,*)'thinkdeb iaens ig are ',iaens,ig
     do n=1,n_ens
        do ic3=1,nc3d
           ipic=ipc3d(ic3)
@@ -2298,6 +2299,7 @@ end subroutine normal_new_factorization_rf_y
 !   Request ensemble-corresponding fields from control vector
 !    NOTE:  because ensemble perturbation bundle structure is same as control vector, use same ipc3d and
 !             ipc2d indices for cvec and en_perts bundles.
+    write(6,*)'thinkdeb this is dual run'
     call gsi_bundlegetpointer (cvec,cvars3d,ipc3d,istatus)
     if(istatus/=0) then
       write(6,*) myname_,': cannot find 3d pointers'
@@ -4416,6 +4418,11 @@ subroutine hybens_grid_setup
   allocate(spc_multwgt(0:jcap_ens,nsclgrp))
   allocate(spcwgt_params(4,nsclgrp))
   spc_multwgt=1.0
+  if(nsclgrp.gt.1) then
+  spc_multwgt(0,2:nsclgrp)=0.0
+  endif
+  spc_multwgt(0,1)=1
+
   if(nsclgrp.gt.1) then
   spcwgt_params(1,1)=1.E+4
   spcwgt_params(2,1)=1.0E+8

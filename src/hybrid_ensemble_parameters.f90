@@ -285,6 +285,7 @@ module hybrid_ensemble_parameters
   public :: region_lat_ens,region_lon_ens
   public :: region_dx_ens,region_dy_ens
   public :: naensgrp,nsclgrp
+  public :: l_nsclgrpone_test
   public :: ensgrp2aensgrp 
   public :: alphacvarsclgrpmat
   public ::  para_covwithsclgrp
@@ -340,6 +341,7 @@ module hybrid_ensemble_parameters
    integer(i_kind)::  nsclgrp=1
    integer(i_kind)::  naensgrp=1
    integer(i_kind)::  l_sum_spc_weights=0
+   logical::  l_nsclgrpone_test=.false.
 
 
 ! following is for storage of ensemble perturbations:

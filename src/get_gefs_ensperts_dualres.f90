@@ -66,6 +66,7 @@ subroutine get_gefs_ensperts_dualres
   use get_gfs_ensmod_mod, only: get_gfs_ensmod_class
   use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sub2grid_destroy_info
   use hybrid_ensemble_parameters, only: nsclgrp,sp_ens,spc_multwgt
+  use hybrid_ensemble_parameters, only: l_nsclgrpone_test,sp_ens,spc_multwgt
   implicit none
 
   real(r_kind),pointer,dimension(:,:)   :: ps
@@ -411,8 +412,15 @@ subroutine get_gefs_ensperts_dualres
       do n=1,n_ens
         en_pertstmp1%values=en_perts(n,ig0,m)%valuesr4
        do ig=1,nsclgrp
+        write(6,*)'thinkdeb ig is before apply_scale ',ig
         call apply_scaledepwgts(grd_ens,sp_ens,en_pertstmp1,spc_multwgt(:,ig),en_pertstmp2,ig,n)
+        write(6,*)'thinkdeb ig is after apply_scale ',ig
         en_perts(n,ig,m)%valuesr4=en_pertstmp2%values
+!test        if(ig.eq.1) then
+!        en_perts(n,ig,m)%valuesr4=en_pertstmp1%values
+!        else
+!        en_perts(n,ig,m)%valuesr4=0.0
+!        endif
        enddo  !clt ig
       enddo
      
@@ -421,6 +429,22 @@ subroutine get_gefs_ensperts_dualres
    enddo
   enddo
               
+  endif
+  if(nsclgrp.eq.1.and.l_nsclgrpone_test) then
+    write(6,*)'thinkdebl_nsclgrpone_test is ',l_nsclgrpone_test
+    do m=1,ntlevs_ens
+      do n=1,n_ens
+        en_pertstmp1%values=en_perts(n,1,m)%valuesr4
+        call apply_scaledepwgts_test(grd_ens,sp_ens,en_pertstmp1,en_pertstmp2)
+        en_perts(n,1,m)%valuesr4=en_pertstmp2%values
+!test        if(ig.eq.1) then
+!        en_perts(n,ig,m)%valuesr4=en_pertstmp1%values
+!        else
+!        en_perts(n,ig,m)%valuesr4=0.0
+!        endif
+       enddo  !clt ig
+      enddo
+
   endif
 
 !  since initial version is ignoring sst perturbations, skip following code for now.  revisit

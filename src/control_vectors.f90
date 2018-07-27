@@ -876,7 +876,7 @@ real(r_quad) function qdot_prod_sub(xcv,ycv)
            partsum(m3d+i) = dplevs(xcv%step(ii)%r2(i)%q,ycv%step(ii)%r2(i)%q,ihalo=1)
         enddo
         if(l_hyb_ens) then
-!$omp parallel do  schedule(dynamic,1) private(i,ig,nigtmp)
+!cltthinkdeb !$omp parallel do  schedule(dynamic,1) private(i,ig,nigtmp)
          do ig=1,naensgrp
          nigtmp=n_ens*(ig-1)
            do i = 1,n_ens
@@ -988,7 +988,7 @@ subroutine qdot_prod_vars_eb(xcv,ycv,prods,eb)
            allocate(partsum(n_ens*naensgrp))
           do ig=1,naensgrp
               ngtmp=(ig-1)*n_ens
-!$omp parallel do  schedule(dynamic,1) private(nn,m3d,m2d)
+!clthinkdeb !$omp parallel do  schedule(dynamic,1) private(nn,m3d,m2d)
              do nn=1,n_ens
                 nn0=nn+ngtmp
                 partsum(nn0) = zero_quad
