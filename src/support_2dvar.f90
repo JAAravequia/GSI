@@ -28,7 +28,6 @@ subroutine convert_binary_2d
 !   2014-06-16  carley/zhu - add tcamt and ceiling
 !   2015-07-10  pondeca - add cloud ceiling height (cldch)
 !   2016-05-03  pondeca - add uwnd10m, vwnd10m
-!   2018-01-23  yang    - using 16000 as threshold value for first guess vis
 !
 !   input argument list:
 !
@@ -319,9 +318,9 @@ subroutine convert_binary_2d
 !...........................................................
 
      do j=1,nlon_regional
-        do i=1,nlat_regional
-           if (field2(j,i) .le. 0.0) field2(j,i)=1.0_r_single
-           if (field2(j,i) .gt. vis_thres) field2(j,i)=vis_thres
+        do i=1,nlat_regional   
+           if (field2(j,i) <= 0.0_r_single) field2(j,i)=one_single
+           if (field2(j,i) >= vis_thres) field2(j,i)=vis_thres
          enddo
      enddo
      if(print_verbose)then
@@ -343,8 +342,8 @@ subroutine convert_binary_2d
 !...........................................................
      do j=1,nlon_regional
         do i=1,nlat_regional
-           if (field2(j,i) .le. 0.0) field2(j,i)=1.0_r_single
-           if (field2(j,i) .gt. cldch_thres) field2(j,i)=cldch_thres
+           if (field2(j,i) <= 0.0_r_single) field2(j,i)=one_single
+           if (field2(j,i) > cldch_thres) field2(j,i)=cldch_thres
         enddo
      enddo
      if(print_verbose)then
@@ -666,7 +665,7 @@ subroutine read_2d_guess(mype)
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use mpeu_util, only: die
   use gsi_io, only: verbose
-  use qcmod, only: nltrcv,pvis,pcldch,vis_thres,cldch_thres
+  use qcmod, only: pvis,pcldch,scale_cv,vis_thres,cldch_thres
   use nltransf, only: nltransf_forward
   
   implicit none
@@ -1139,13 +1138,11 @@ subroutine read_2d_guess(mype)
               if (ihave_vis) then
 !..............................................................
 !NOTE:  input data come from sigf06, already using vis_thres, 
-!       min=1.0m and max=vis_thres
+!       min=1.0 m and max=vis_thres
 !..............................................................
                  dummy=real(all_loc(j,i,i_0+i_vis),r_kind)
-                 if (nltrcv) then
-                   call nltransf_forward(dummy,dummyout,pvis)
-                   ges_vis(j,i)=dummyout
-                 endif
+                 call nltransf_forward(dummy,dummyout,pvis,scale_cv)
+                 ges_vis(j,i)=dummyout
               endif
 
               if(ihave_pblh) &
@@ -1154,13 +1151,11 @@ subroutine read_2d_guess(mype)
               if(ihave_cldch) then 
 !..............................................................
 !NOTE:  input data come from sigf06, already using cldch_thres, 
-!       min=1.0m and max=cldch_thres
+!       min=1.0 m and max=cldch_thres
 !..............................................................
                  dummy=real(all_loc(j,i,i_0+i_cldch),r_kind)
-                 if (nltrcv) then
-                   call nltransf_forward(dummy,dummyout,pcldch)
-                   ges_cldch(j,i)=dummyout
-                 endif
+                 call nltransf_forward(dummy,dummyout,pcldch,scale_cv)
+                 ges_cldch(j,i)=dummyout
               endif
 
               if (ihave_wspd10m) & 
@@ -1258,7 +1253,7 @@ subroutine wr2d_binary(mype)
   use jfunc, only: jiter,miter
   use gsi_metguess_mod, only: gsi_metguess_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
-  use qcmod, only: nltrcv,pvis,pcldch,vis_thres,cldch_thres
+  use qcmod, only: pvis,pcldch,scale_cv,vis_thres,cldch_thres
   use nltransf, only: nltransf_inverse 
   use mpeu_util, only: die
   use gsi_io, only: verbose
@@ -1570,22 +1565,16 @@ subroutine wr2d_binary(mype)
               if (trim(caux(k))=='pmsl') then 
                  all_loc(j,i,iaux(k))=r100*r10*ptr2d(j,i)
               elseif(trim(caux(k))=='vis') then
-                 all_loc(j,i,iaux(k))=ptr2d(j,i)
-                 if(nltrcv) then
-                    tempvis=ptr2d(j,i)
-                    call nltransf_inverse(tempvis,visout,pvis) 
-                    all_loc(j,i,iaux(k))=max(min(visout,vis_thres),one)
-                 endif
+                 tempvis=ptr2d(j,i)
+                 call nltransf_inverse(tempvis,visout,pvis,scale_cv) 
+                 all_loc(j,i,iaux(k))=max(min(visout,vis_thres),one)
               elseif(trim(caux(k))=='cldch') then
+                 tempcldch=ptr2d(j,i)
+                 call nltransf_inverse(tempcldch,cldchout,pcldch,scale_cv)
+                 all_loc(j,i,iaux(k))=max(min(cldchout,cldch_thres),one)
+              else
                  all_loc(j,i,iaux(k))=ptr2d(j,i)
-                 if(nltrcv) then
-                    tempcldch=ptr2d(j,i)
-                    call nltransf_inverse(tempcldch,cldchout,pcldch)
-                    all_loc(j,i,iaux(k))=max(min(cldchout,cldch_thres),one)
-                 endif
-             else
-                 all_loc(j,i,iaux(k))=ptr2d(j,i)
-             endif
+              endif
            end do
         end do
         if(mype==0) read(iog)temp1
@@ -3108,7 +3097,7 @@ subroutine apply_hilbertcurve(maxobs,obstype,cdata_usage)
                  ncvcount(n)=ncvcount(n)+1
               endif
            enddo
-           print*,'n,ncvcount(n)=',n,ncvcount(n)
+        if(print_verbose)print*,'n,ncvcount(n)=',n,ncvcount(n)
         enddo
 
         ! write all groups to a file

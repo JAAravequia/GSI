@@ -189,7 +189,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   use convb_uv,only: btabl_uv
   use gsi_4dvar, only: l4dvar,l4densvar,time_4dvar,winlen,thin4d
   use qcmod, only: errormod,errormod_aircraft,noiqc,newvad,njqc
-  use qcmod, only: nltrcv,pvis,pcldch,estvisoe,estcldchoe,vis_thres,cldch_thres
+  use qcmod, only: pvis,pcldch,scale_cv,estvisoe,estcldchoe,vis_thres,cldch_thres
   use nltransf, only: nltransf_forward
   use convthin, only: make3grids,map3grids,del3grids,use_all
   use blacklist, only : blacklist_read,blacklist_destroy
@@ -693,7 +693,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
           endif
         endif
 ! Su suggested to keep both 289 and 290.  But trunk only keep 290
-! ???       if(kx == 289 .or. kx == 290) iobsub=hdr(2)
+!       if(kx == 289 .or. kx == 290) iobsub=hdr(2)
 
         if(kx == 290) iobsub=hdr(2)
         if(use_prepb_satwnd .and. (kx >= 240 .and. kx <=260 )) iobsub = hdr(2)
@@ -769,7 +769,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
      return
   end if
   if(print_verbose)write(6,*)'READ_PREPBUFR: messages/reports = ',nmsg,'/',ntb,' ntread = ',ntread
-
 
 
   if(tob .and. print_verbose) write(6,*)'READ_PREPBUFR: time offset is ',toff,' hours.'
@@ -2377,7 +2376,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(2,iout)=dlon                    ! grid relative longitude
                  cdata_all(3,iout)=dlat                    ! grid relative latitude
 !......................................................................
-! simple QC check: if an observation vis is negative, do not use this data
+! simple QC check: if an observation vis is negative, assign it as bmiss
+! if obs. = zero, reassign it as one_r_kind
 ! about bmiss:  
 ! #ifdef ibm_sp !  real(r_kind), parameter:: bmiss = 1.0e11_r_kind !#else
 !  real(r_kind), parameter:: bmiss = 1.0e9_r_kind !#endif
@@ -2385,13 +2385,18 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 ! visthres is much smaller than bmiss
 ! i.e: this holds: (obsdat(9,k)> zero .and. obsdat(9,k)<=vis_thres)
 !......................................................................
-                 if (obsdat(9,k) < zero) cdata_all(4,iout) = bmiss
-                 if (obsdat(9,k) > vis_thres) obsdat(9,k)=vis_thres
-                 if (obsdat(9,k) == zero) obsdat(9,k)=one
-!Applying NLTR 
+                 if(obsdat(9,k) < zero) then
+                   cdata_all(4,iout)=bmiss          
+                 elseif(obsdat(9,k)> r0_1_bmiss)then
+                   cdata_all(4,iout)=obsdat(9,k)
+                 elseif(obsdat(9,k)> vis_thres .and. obsdat(9,k)<= r0_1_bmiss )then
+                   obsdat(9,k)=vis_thres
+                 else
+                   obsdat(9,k)=max(obsdat(9,k),one)
+                 endif
                  if(obsdat(9,k)> zero .and. obsdat(9,k)<=vis_thres)then
                    tempvis=obsdat(9,k)
-                   call nltransf_forward(tempvis,visout,pvis)
+                   call nltransf_forward(tempvis,visout,pvis,scale_cv)
                    cdata_all(4,iout) = visout
                  endif
 
@@ -2725,8 +2730,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(3,iout)=dlat                    ! grid relative latitude
 !......................................................................
 ! NLTRCV:
-! simple QC check and designate bad observation, if obs. cldch < zero
-! cldch can be zero denoting fog, right?
+! simple QC check and designate bad observation.
+! if obs. cldch < zero, assign it bmiss
+! if obs/first cldch guess is zero, assigne it as one
 ! about bmiss:
 ! #ifdef ibm_sp !  real(r_kind), parameter:: bmiss = 1.0e11_r_kind !#else
 !  real(r_kind), parameter:: bmiss = 1.0e9_r_kind !#endif
@@ -2734,17 +2740,20 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 ! cldchthres is much smaller than bmiss
 ! i.e: this holds: (obsdat(x,k)> zero .and. obsdat(x,k)<=cldch_thres)
 !......................................................................
-
-                 if (cldceilh(1,k) < zero) cdata_all(4,iout)=bmiss
-                 if (cldceilh(1,k) >= cldch_thres) cldceilh(1,k)=cldch_thres
-                 if (cldceilh(1,k) == zero) cldceilh(1,k)=one
-
+                 if(cldceilh(1,k) < zero) then
+                   cdata_all(4,iout)=bmiss
+                 elseif (cldceilh(1,k)> r0_1_bmiss) then
+                   cdata_all(4,iout)=cldceilh(1,k) 
+                 elseif (cldceilh(1,k)>=cldch_thres .and. cldceilh(1,k)<= r0_1_bmiss) then
+                    cldceilh(1,k)=cldch_thres
+                 else
+                   cldceilh(1,k)=max(cldceilh(1,k),one)  !consider cldceilh(1,k)=zero a valid data
+                 endif
                  if (cldceilh(1,k)> zero .and. cldceilh(1,k)<=cldch_thres)then
                    tempcldch=cldceilh(1,k)
-                   call nltransf_forward(tempcldch,cldchout,pcldch)
+                   call nltransf_forward(tempcldch,cldchout,pcldch,scale_cv)
                    cdata_all(4,iout) = cldchout
                  endif                                     ! ceiling height obs
-
                  cdata_all(5,iout)=rstation_id             ! station id
                  cdata_all(6,iout)=t4dv                    ! time
                  cdata_all(7,iout)=nc                      ! type

@@ -9,7 +9,7 @@ module nltransf
 !                .      .    .                                       .
 
   use kinds, only: r_kind, i_kind
-  use constants, only: zero,one
+  use constants, only: zero
 
   implicit none
   private
@@ -23,7 +23,7 @@ module nltransf
 
 CONTAINS
 
-subroutine forward(zin,zout,powerp)
+subroutine forward(zin,zout,powerp,scale_cv)
 
 !--------------------------------------------------------------
 ! input argument:
@@ -35,45 +35,45 @@ subroutine forward(zin,zout,powerp)
   implicit none
   real(r_kind),intent(in):: zin
   real(r_kind),intent(in):: powerp
+  real(r_kind),intent(in):: scale_cv
   real(r_kind)           :: zout
 
 ! local variable
-  real(r_kind) :: scaling
   real(r_kind) :: temp                      ! after the nltransformation
-  scaling=1.0
-  if (powerp == zero) then
-! log conversion
-     zout=log(zin/scaling)
+! do not choose negative powerp 
+  if (abs(powerp) > zero) then
+    !non-log conversion
+     temp =(zin/scale_cv)**powerp
+     zout =(temp-1.0)/powerp
   else
-! non log transformation
-     temp =(zin/scaling)**powerp
-     zout =(temp-one)/powerp
+    !log conversion
+     zout=log(zin/scale_cv)
   endif
   return
 end subroutine forward
 
-subroutine inverse(zin,zout,powerp)
+subroutine inverse(zin,zout,powerp,scale_cv)
   implicit none
   real(r_kind),intent(in):: zin
   real(r_kind),intent(in):: powerp
+  real(r_kind),intent(in):: scale_cv
   real(r_kind)           :: zout
 
 ! Local variable
-  real(4) :: scaling
   real(4) :: temp      ! apply inverse nltr to it
   real(4) :: powerpinv
   real(4) :: z1
 
 !change zin from nltr space back to physical space
-  scaling=one
-! NLTR transformation
-  if (powerp  == zero) then
-    zout=exp(zin)/scaling
-  else
-     powerpinv=one/powerp
-     z1=(powerp*zin + one)
+  if (abs(powerp)> zero) then
+    ! non-log conversion
+     powerpinv=1.0/powerp
+     z1=(powerp*zin + 1.0)
      z1=z1**powerpinv
-     zout=z1*scaling
+     zout=z1*scale_cv
+  else
+    ! log conversion
+    zout=exp(zin)*scale_cv
   endif
   return
 end subroutine inverse

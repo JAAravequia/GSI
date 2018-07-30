@@ -68,7 +68,7 @@ module qcmod
 !   2016-11-22  sienkiewicz - fix a couple of typos in HIRS qc
 !   2016-12-14  lippi   - add nml option vadwnd_l2rw_qc.
 !   2016-10-13  zhu     - modified qc_amsua for all-sky ATMS
-!   2018-02-21  yang    - add nltrcv namelist variables
+!   2018-02-21  yang    - add namelist variables used in module nltransf 
 !   2018-03-22  yang    - remove "logical closest_obs", previously applied to the analysis
 !                         of vis and cldch. the option to use the closest ob to the
 !                         analysis time only is now handled by Ming Hu's "logical l_closeobs"
@@ -115,10 +115,9 @@ module qcmod
 !   def noiqc        - logic flag for oiqc, noiqc='false' with oiqc on
 !
 ! following used for NonLinear TRansformation to visibility and ceiling height
-!   def nltrcv       - logic flag: must set nltrcv=.true., i.e., using  NonLinear TRansformation to i
-!                      visibility and cloud ceiling height. Note: no other choice. 
 !   def pvis         - power value in non-linear transformation for vis
 !   def pcldch       - power value in non-linear transformation for cldch
+!   def scale_cv     - scaling constant in meter
 !   def estvisoe     - prescribed obs vis error 
 !   def estcldchoe   - prescribed obs cldch error 
 !   def vis_thres    - threshold value for vis
@@ -175,7 +174,7 @@ module qcmod
 
   public :: buddycheck_t,buddydiag_save
   public :: vadwnd_l2rw_qc
-  public :: nltrcv,pvis,pcldch,estvisoe,estcldchoe,vis_thres,cldch_thres
+  public :: pvis,pcldch,scale_cv,estvisoe,estcldchoe,vis_thres,cldch_thres
 
   logical nlnqc_iter,njqc,vqc
   logical noiqc
@@ -188,13 +187,12 @@ module qcmod
   logical buddycheck_t
   logical buddydiag_save
   logical vadwnd_l2rw_qc
-  logical nltrcv
 
   character(10):: vadfile
   integer(i_kind) npres_print
   real(r_kind) dfact,dfact1,erradar_inflate,c_varqc
   real(r_kind) varqc_iter
-  real(r_kind) pvis,pcldch,estvisoe,estcldchoe,vis_thres,cldch_thres
+  real(r_kind) pvis,pcldch,scale_cv,estvisoe,estcldchoe,vis_thres,cldch_thres
   real(r_kind),allocatable,dimension(:)::ptop,pbot,ptopq,pbotq,ptopo3,pboto3
 
 ! Declare variables for QC with Tz retrieval
@@ -385,9 +383,9 @@ contains
                            !  obs run through the buddy check
 
     vadwnd_l2rw_qc=.true.  ! When false, DO NOT run the vadwnd qc on level 2 radial wind obs.
-    nltrcv=.true.          ! must use true, since no switch choice from non-linear transformation
     pvis=one
     pcldch=one
+    scale_cv=one
     estvisoe=one
     estcldchoe=one
     vis_thres=16000.0_r_kind

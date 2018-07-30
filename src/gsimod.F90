@@ -59,7 +59,7 @@
       erradar_inflate,tdrerr_inflate,use_poq7,qc_satwnds,&
       init_qcvars,vadfile,noiqc,c_varqc,qc_noirjaco3,qc_noirjaco3_pole,&
       buddycheck_t,buddydiag_save,njqc,vqc,vadwnd_l2rw_qc, &
-      nltrcv,pvis,pcldch,estvisoe,estcldchoe,vis_thres,cldch_thres
+      pvis,pcldch,scale_cv,estvisoe,estcldchoe,vis_thres,cldch_thres
   use pcpinfo, only: npredp,diag_pcp,dtphys,deltim,init_pcp
   use jfunc, only: iout_iter,iguess,miter,factqmin,factqmax, &
      factv,factl,factp,factg,factw10m,facthowv,factcldch,niter,niter_no_qc,biascor,&
@@ -764,9 +764,9 @@
 !     closest_obs- when true, choose the timely closest surface observation from
 !     multiple observations at a station.  Currently only applied to Ceiling
 !     height and visibility.
-!     nltrcv - set to true, apply nonlinear transformation to vis and cldch 
 !     pvis   - power parameter in nonlinear transformation for vis 
 !     pcldch - power parameter in nonlinear transformation for cldch
+!     scale_cv - scaling constant in meter
 !     estvisoe - estimate of vis observation error
 !     estcldchoe - estimate of cldch observation error
 !     vis_thres  - threshold value for both vis observation and input first guess
@@ -777,7 +777,7 @@
        tcp_ermin,tcp_ermax,qc_noirjaco3,qc_noirjaco3_pole,qc_satwnds,njqc,vqc,&
        aircraft_t_bc_pof,aircraft_t_bc,aircraft_t_bc_ext,biaspredt,upd_aircraft,cleanup_tail,&
        hdist_aircraft,buddycheck_t,buddydiag_save,vadwnd_l2rw_qc,  &
-       nltrcv,pvis,pcldch,estvisoe,estcldchoe,vis_thres,cldch_thres
+       pvis,pcldch,scale_cv,estvisoe,estcldchoe,vis_thres,cldch_thres
 
 ! OBS_INPUT (controls input data):
 !      dmesh(max(dthin))- thinning mesh for each group
@@ -1174,8 +1174,6 @@
   if(ios/=0) call die(myname_,'read(strongopts)',ios)
 
   read(11,obsqc,iostat=ios)
-!RY
-     write(6,obsqc)
 
   if(ios/=0) call die(myname_,'read(obsqc)',ios)
 
