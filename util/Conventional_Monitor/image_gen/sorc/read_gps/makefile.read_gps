@@ -1,0 +1,44 @@
+SHELL=/bin/sh
+
+#-------------------
+#  makefile.read_gps
+#-------------------
+
+BINDIR = ../../exec
+
+SRCS=   mainread_gps.f90 read_gps.f90 read_gps_mor.f90 histgram.f90 rm_dups.f90 convinfo.f90 
+
+OBJS=   mainread_gps.o read_gps.o read_gps_mor.o histgram.o rm_dups.o convinfo.o 
+
+
+CMD=    read_gps.x
+
+all:    $(CMD)
+
+clean:
+	rm -f *.o
+	rm -f *.mod
+	rm -f *.x
+
+check_prereqs:
+	$(PRE_REQ) $(LIBS)
+
+install:
+	cp $(CMD) $(BINDIR)/
+
+$(CMD):         $(OBJS)
+	$(FC)    -o $(@) $(OBJS) $(FFLAGS)
+
+mainread_gps.o : mainread_gps.f90
+	$(CF) $(FFLAGS) -c $(*).f90
+read_gps.o : read_gps.f90
+	$(CF) $(FFLAGS) -c $(*).f90
+read_gps_mor.o : read_gps_mor.f90
+	$(CF) $(FFLAGS) -c $(*).f90
+histgram.o : histgram.f90
+	$(CF) $(FFLAGS) -c $(*).f90
+rm_dups.o : rm_dups.f90
+	$(CF) $(FFLAGS) -c $(*).f90
+convinfo.o : convinfo.f90
+	$(CF) $(FFLAGS) -c $(*).f90
+

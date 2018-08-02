@@ -22,7 +22,7 @@ subroutine grads_lev(fileo,ifileo,nobs,nreal,nlev,plev,iscater,igrads,&
    integer ifileo 
    real(4),allocatable,dimension(:,:)    :: rdiag_m2
    character(8),allocatable,dimension(:) :: cdiag
-   real(4),dimension(nlev) :: plev,plev2
+   real(4),dimension(nlev) :: plev,plev2,plev_ctr
    character(8) :: stid
    character(3) ::  subtype
    character(ifileo) :: fileo 
@@ -44,15 +44,13 @@ subroutine grads_lev(fileo,ifileo,nobs,nreal,nlev,plev,iscater,igrads,&
    nlev0=0
    stid='        '
    plev2=plev-hint
+   plev_ctr=0.0
 
    print *, '--> BEGIN grads_lev.x'  
    print *, 'nobs=',nobs
    print *, 'fileo=',fileo
    print *, 'nreal=', nreal
 
-   do i=1,nlev
-      print *, 'i, plev2(i) = ', i, plev2(i)
-   enddo
 
    if( nobs > 0 ) then
 
@@ -73,7 +71,7 @@ subroutine grads_lev(fileo,ifileo,nobs,nreal,nlev,plev,iscater,igrads,&
 
       do while ( associated( next ) == .TRUE. )
          ptr = transfer(list_get( next ), ptr)
-!         print *, 'node data:', ptr%p
+         print *, 'node data:', ptr%p
          next => list_next( next )
 
          obs_ctr = obs_ctr + 1
@@ -98,6 +96,12 @@ subroutine grads_lev(fileo,ifileo,nobs,nreal,nlev,plev,iscater,igrads,&
          open(51,file=files,form='unformatted')
          write(51) nobs,nreal_m2
          write(51) rdiag_m2
+
+!         if( trim(fileo) == 'gps004' ) then
+!            print *, nobs,nreal_m2
+!            print *, rdiag_m2
+!         endif
+ 
          close(51)
 
          print *, 'end writing scatter data file'
@@ -136,6 +140,7 @@ subroutine grads_lev(fileo,ifileo,nobs,nreal,nlev,plev,iscater,igrads,&
                   ! the station id info
                   write(31) plev2(k),(rdiag_m2(j,i),j=3,nreal_m2)
                   ctr = ctr + 1
+                  plev_ctr(k) = plev_ctr(k) + 1.0
 !              else
 !                 print *, 'rdiag_m2(ipres,i), no match: ', rdiag_m2(ipres,i)
                endif
@@ -160,6 +165,11 @@ subroutine grads_lev(fileo,ifileo,nobs,nreal,nlev,plev,iscater,igrads,&
 
    end if
 
+   print *, 'Levels:'
+   do i=1,nlev
+      print *, '   i, plev2(i),plev_ctr(i) = ', i, plev2(i),plev_ctr(i)
+   enddo
+ 
    print *, '<-- END grads_lev.x'  
    return 
 end

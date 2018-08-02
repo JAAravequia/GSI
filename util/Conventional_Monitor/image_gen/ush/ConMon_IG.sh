@@ -49,7 +49,10 @@ export NUM_CYCLES=${NUM_CYCLES:-121}	# number of cycles in plot
 export JOBNAME=${JOBNAME:-CMon_plt_${CMON_SUFFIX}}
 export grib2=${grib2:-0}		# 1 = grib2 (true), 0 = grib
 
+#  for theia:
+module load grads
 export GRADS=/apps/grads/2.0.1a/bin/grads
+
 #--------------------------------------------------------------------
 #  Set plot_time if it's included as an argument
 #--------------------------------------------------------------------

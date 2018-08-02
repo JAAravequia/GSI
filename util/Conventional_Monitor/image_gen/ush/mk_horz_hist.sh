@@ -24,6 +24,8 @@ set -ax
    #----------------------------------------------------------
    # The list of data types, based on convinfo.txt file
    #----------------------------------------------------------
+   export gps_TYPE=" gps003_00 gps004_00 gps722_00 gps042_00 "
+
    export ps_TYPE=" ps120_00 ps180_00 ps181_00 ps183_00 ps187_00 "
 
    export q_TYPE=" q120_00 q130_00 q132_00 q133_00 q134_00 q135_00 q180_00 q181_00 q182_00 q183_00 q187_00 "
@@ -37,7 +39,7 @@ set -ax
    export nreal_q=${nreal_q:-18}
    export nreal_t=${nreal_t:-22}
    export nreal_uv=${nreal_uv:-21}
-
+   export nreal_gps=${nreal_gps:-19}
 
 #------------------------------
 # submit the plot_hist job

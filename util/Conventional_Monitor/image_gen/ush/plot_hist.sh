@@ -31,7 +31,7 @@ cd $workdir
 #echo "C_TANKDIR = $C_TANKDIR"
 
 
-for type in ps q t uv; do  
+for type in gps ps q t uv; do  
 
    eval stype=\${${type}_TYPE} 
    eval nreal=\${nreal_${type}} 
@@ -44,8 +44,7 @@ for type in ps q t uv; do
 
       mtype=`echo ${dtype} | cut -f1 -d_`
       subtype=`echo ${dtype} | cut -f2 -d_`
-      rm -f ./fileout
-
+!      rm -f ./fileout
 
       for cycle in ges anl; do
 
@@ -59,7 +58,7 @@ for type in ps q t uv; do
          if [  -s $C_TANKDIR/cmon.${PDY}/horz_hist/$cycle/${dtype}.scater.${PDATE} ];then
             cp ${C_IG_FIX}/hist_${type}.ctl ./hist_${dtype}.ctl
 
-            nlev_str=`cat stdout_${dtype}_${cycle}.${PDATE} | grep nlev`
+            nlev_str=`cat stdout_${dtype}_${cycle}.${PDATE} | grep -a 'nlev'`
             nlev=`echo $nlev_str | gawk '{print $2}'`
             echo "DEBUG:  nlev = $nlev"
 
@@ -100,11 +99,15 @@ for type in ps q t uv; do
             rm -f tmp1.ctl
             rm -f tmp2.ctl
 
-            tail -3 stdout_${dtype}_${cycle}.${PDATE} >>fileout
+!            tail -3 stdout_${dtype}_${cycle}.${PDATE} >>fileout
+  	    cat hist_out >>${dtype}_fileout
+            rm -f hist_out
 
          fi
 
       done         ## done with cycle
+
+!      mv fileout ${dtype}_fileout
 
       ### set up plot variables
 
@@ -113,6 +116,8 @@ for type in ps q t uv; do
          cp ${C_IG_GSCRIPTS}/plot_hist.gs ./plot_hist.gs 
          cp ${C_IG_GSCRIPTS}/setvpage.gs ./setvpage.gs
 
+         ln -s ${dtype}_fileout fileout
+
          sed -e "s/XSIZE/$xsize/" \
              -e "s/YSIZE/$ysize/" \
              -e "s/PLOTFILE/$dtype/" \
@@ -120,6 +125,9 @@ for type in ps q t uv; do
             plot_hist.gs >plothist_${dtype}.gs
 
          echo 'quit' |grads -blc " run plothist_${dtype}.gs" 
+
+         rm fileout
+
 
          if [ "${type}" = 'uv' ]; then
 
@@ -175,7 +183,6 @@ for type in ps q t uv; do
                   rm -f tmp2.ctl
 
                   tail -3 stdout_${dtype}_${uvtype}_${cycle}.${PDATE} >>fileout
-
                done
 
 
@@ -201,7 +208,7 @@ for type in ps q t uv; do
    mkdir -p ${C_IMGNDIR}/pngs/hist/${CYC}
    cp -f *hist*.png ${C_IMGNDIR}/pngs/hist/${CYC}/.
 
-#   #rm -f *hist*.png
+#   rm -f *hist*.png
 
 done      ### type loop
 
