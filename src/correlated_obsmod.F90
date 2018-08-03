@@ -301,7 +301,8 @@ do ii=1,ninstr
 !KAB
    read(utable(ii),*) instrument, method, kreq4, mask, scene filename ! if adding col to table leave fname as last
    instruments(ii) = trim(instrument)
-   idnames(ii) = trim(instrument)//':'//trim(mask)
+!KAB
+   idnames(ii) = trim(instrument)//':'//trim(mask)//':'trim(scene)
    kreq=kreq4
    if(iamroot_) then
 !KAB
@@ -1064,7 +1065,8 @@ end function scale_jac_
 !
 ! !INTERFACE:
 !
-subroutine upd_varqc_(jpch_rad,iuse_rad,nusis,varch)
+!KAB surf
+subroutine upd_varqc_(jpch_rad,iuse_rad,nusis,surf,varch)
 ! !USES:
    use mpeu_util, only: die
    use mpeu_util, only: getindex
@@ -1072,6 +1074,8 @@ implicit none
 ! !INPUT PARAMETERS:
    integer(i_kind),intent(in) :: jpch_rad
    integer(i_kind),dimension(0:jpch_rad),intent(in) :: iuse_rad
+!KAB surf
+   character(len=*),intent(in):: surf
    character(len=*),dimension(jpch_rad),intent(in) :: nusis
 ! !INPUT/OUTPUT PARAMETERS:
    real(r_kind),dimension(jpch_rad),intent(inout) :: varch
@@ -1099,7 +1103,7 @@ implicit none
    integer(i_kind),allocatable,dimension(:)   :: ijac
    integer(i_kind),allocatable,dimension(:)   :: IRsubset
    integer(i_kind),allocatable,dimension(:)   :: IJsubset
-   integer(i_kind) iinstr,indR
+   integer(i_kind) iinstr,indR,isurf !KAB
    integer(i_kind),allocatable,dimension(:) :: ich1,tblidx   ! true channel numeber
    integer(i_kind) :: nchanl1,jc   ! total number of channels in instrument
    if(.not.allocated(idnames)) then
@@ -1112,7 +1116,12 @@ implicit none
    do jj0=1,ntrow
       covtype=trim(idnames(jj0))
       iinstr=len_trim(covtype)
-      if(covtype(iinstr-6:iinstr)==':global')then
+!KAB
+      isurf=-1
+      isurf=getindex(trim(covtype),trim(surf))
+      if (isurf>=0) then
+!      if(covtype(iinstr-6:iinstr)==trim(surf))then
+!      if(covtype(iinstr-6:iinstr)==':global')then
          nsatype=nsatype+1
          tblidx(nsatype)=jj0
       endif
@@ -1124,8 +1133,12 @@ implicit none
      itbl=tblidx(jj0)
      jc=0
      do ii=1,jpch_rad
-       covtype = trim(nusis(ii))//':global'
-       if(trim(idnames(itbl))==trim(covtype)) then
+!KAB
+       isurf=-1
+       isurf=getindex(trim(covtype),trim(surf))
+       if (isurf>=0) then
+!       covtype = trim(nusis(ii))//':global'
+!       if(trim(idnames(itbl))==trim(covtype)) then
          jc=jc+1
          ich1(jc)=ii
        endif

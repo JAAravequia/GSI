@@ -2156,7 +2156,7 @@ END subroutine dec2bin
    if(iscene=0) then
       covtype=trim(covtype)//':clear'
    else if (iscene=1) then
-      covtype=trim(covtype)//':allsky'
+      covtype=trim(covtype)//':cloud'
    end if
    iinstr=getindex(idnames,trim(covtype))
    if(iinstr<0) return  ! do not use the correlated errors

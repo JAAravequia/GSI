@@ -463,6 +463,8 @@
   l_may_be_passive = .false.
   toss = .true.
   jc=0
+!KAB
+!  call corr_oberr_qc(jpch_rad,iuse_rad,surf,nusis,varch)
 
   do j=1,jpch_rad
      if(isis == nusis(j))then 
@@ -749,15 +751,22 @@
 
         if(sea) then
           isfctype=0
+          surf='sea'
         else if(land) then
           isfctype=1
+          surf='land'
         else if(ice) then
           isfctype=2
+          surf='ice'
         else if(snow) then
           isfctype=3
+          surf='snow'
         else if(mixed) then
           isfctype=4
+          surf='mixed'
         endif
+!KAB
+        call corr_oberr_qc(jpch_rad,iuse_rad,surf,nusis,varch)
 
 !       Count data of different surface types
         if(luse(n))then
@@ -1031,7 +1040,9 @@
 
 !       End of loop over channels
         end do
- 
+!KAB
+        call corr_oberr_qc(jpch_rad,iuse_rad,surf,nusis,varch)
+
 !       Compute retrieved microwave cloud liquid water and 
 !       assign cld_rbc_idx for bias correction in allsky conditions
         cld_rbc_idx=one
