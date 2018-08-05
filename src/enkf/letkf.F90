@@ -806,7 +806,10 @@ endif
 
 allocate(work3(nanals,nanals),evecs(nanals,nanals))
 allocate(rrloc(nobsl),gammapI(nanals),evals(nanals),gamma_inv(nanals))
+! for dsyevr
 allocate(iwork(10*nanals),work1(70*nanals))
+! for dsyevd
+!allocate(iwork(3+5*nanals),work1(1+6*nanals+2*nanals*nanals))
 
 ! HZ^T = hxens sqrt(Rinv)
 rrloc = rdiaginv * rloc
@@ -831,11 +834,17 @@ if(r_kind == kind(1.d0)) then ! double precision
    ! evals contains eigenvalues (singular values squared)
    call dsyevr('V','A','L',nanals,work3,nanals,vl,vu,1,nanals,-1.d0,nanals,evals,evecs, &
                nanals,isuppz,work1,lwork,iwork,liwork,ierr)
+! use LAPACK dsyevd instead of dsyevr
+   !evecs = work3
+   !call dsyevd('V','L',nanals,evecs,nanals,evals,work1,lwork,iwork,liwork,ierr)
 else ! single precision
    call sgemm('n','t',nanals,nanals,nobsl,1.e0,hxens,nanals, &
                hxens,nanals,0.e0,work3,nanals)
    call ssyevr('V','A','L',nanals,work3,nanals,vl,vu,1,nanals,-1.e0,nanals,evals,evecs, &
                nanals,isuppz,work1,lwork,iwork,liwork,ierr)
+! use LAPACK dsyevd instead of dsyevr
+   !evecs = work3
+   !call ssyevd('V','L',nanals,evecs,nanals,evals,work1,lwork,iwork,liwork,ierr)
 end if
 if (ierr .ne. 0) print *,'warning: dsyev* failed, ierr=',ierr
 deallocate(work1,iwork,work3) ! no longer needed
