@@ -92,6 +92,7 @@ MODULE RadDiag_Hdr_Define
     INTEGER       :: inewpc  = 0
     INTEGER       :: ioff0  = 0
     INTEGER       :: ijacob = 0
+    INTEGER       :: isens=0 !KAB
   END TYPE RadDiag_Hdr_Scalar_type
 
   ! Channel dependent part of header

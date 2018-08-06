@@ -1119,7 +1119,7 @@ contains
 !   instruments we account for inter-channel correlations
     if (present(miter)) then
        call corr_ob_initialize(miter)
-       if (miter>0)  call corr_oberr_qc(jpch_rad,iuse_rad,nusis,varch)
+!       if (miter>0)  call corr_oberr_qc(jpch_rad,iuse_rad,nusis,varch)
     end if
 
 !   Close unit for runtime output.  Return to calling routine
@@ -2081,7 +2081,7 @@ subroutine dec2bin(dec,bin,ndim)
     RETURN
 END subroutine dec2bin
 !KAB
- logical function adjust_jac_ (iinstr,isis,isfctype,iscene,nchanl,nsigradjac,ich,varinv,&
+ logical function adjust_jac_ (iinstr,isis,isfctype,nchanl,nsigradjac,ich,varinv,&
                                depart,obvarinv,adaptinf,wgtjo,jacobian,Rinv,rsqrtinv)
 !$$$  subprogram documentation block
 !                .      .    .
@@ -2114,7 +2114,7 @@ END subroutine dec2bin
    character(len=*),intent(in) :: isis
    integer(i_kind), intent(in) :: isfctype
 !KAB
-   integer(i_kind), intent(in) :: iscene
+!   integer(i_kind), intent(in) :: iscene
    integer(i_kind), intent(in) :: nchanl
    integer(i_kind), intent(in) :: nsigradjac
    integer(i_kind), intent(in) :: ich(nchanl)
@@ -2153,11 +2153,11 @@ END subroutine dec2bin
       covtype = trim(isis)//':mixed'
 !      iinstr=getindex(idnames,trim(covtype))
    endif
-   if(iscene=0) then
-      covtype=trim(covtype)//':clear'
-   else if (iscene=1) then
-      covtype=trim(covtype)//':cloud'
-   end if
+!   if(iscene==0) then
+!      covtype=trim(covtype)//':clear'
+!   else if (iscene==1) then
+!      covtype=trim(covtype)//':cloud'
+!   end if
    iinstr=getindex(idnames,trim(covtype))
    if(iinstr<0) return  ! do not use the correlated errors
 
