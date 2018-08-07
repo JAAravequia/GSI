@@ -69,7 +69,7 @@ correlated_observations::
   iasi_metop-a  2      0.12  mixed   clear   Rcov_iasi_metop-a_mixed
 # atms_npp      1     -99.   mixed   clear   Rcov_atms_npp_mixed
 # atms_npp      1     -99.   land    clear   Rcov_atms_npp_land
-# atms_npp      1     -99.   sea     allsky  Rcov_atms_npp_sea
+# atms_npp      1     -99.   sea     cloud   Rcov_atms_npp_sea
 
 ::
 \end{verbatim}
@@ -89,7 +89,7 @@ As usual, this table follows INPAK/ESMF convention, begining with a name
 ending with double colons.  Any line starting with an exclamation mark or a pound sign 
 is taken as a comment.
 
-The current {\it correlated\_observations} table has four columns defined as follows:
+The current {\it correlated\_observations} table has five columns defined as follows:
 
 \begin{verbatim}
 Column 1: isis   - refers to instrument/platform type (follows, typical GSI nomenclature)
@@ -113,8 +113,10 @@ Column 3: kreq   - level of required condition for the corresponding cov(R)
                                      diagional so that R_{r,r}=(sqrt{R_{r,r}+kreq)^2
                                      Note that kreq should be specified as 0<kreq<1
 Column 4: type - determines whether to apply covariance over ocean, land, ice, snow or mixed FOVs
-Column 5: Scene - either clear or allsky.  For clear, correlated error will be
+Column 5: Scene - either clear or cloud.  For clear, correlated error will be
 used for all channels not affected by the presence of a cloud
+If cloud is chosen, there must be a corresponding entry for clear sky.
+The cloud option is only viable for instruments that are assimilated in allsky
 Column 6: cov_file - name of file holding estimate of error covariance for the
                      instrument specified in column 1
 \end{verbatim}
@@ -1118,7 +1120,7 @@ implicit none
    ntrow = size(idnames)
 !   allocate(ich1(jpch_rad),tblidx(ntrow))
 !KAB
-   allocate(tblidx(5,ntrow))
+   allocate(ich1(jpch_rad),tblidx(5,ntrow))
    nsatype=0
    do jj0=1,ntrow
       covtype=trim(idnames(jj0))

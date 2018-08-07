@@ -2153,6 +2153,7 @@ END subroutine dec2bin
       covtype = trim(isis)//':mixed'
 !      iinstr=getindex(idnames,trim(covtype))
    endif
+   covtype=trim(covtype)//':clear'
 !   if(iscene==0) then
 !      covtype=trim(covtype)//':clear'
 !   else if (iscene==1) then

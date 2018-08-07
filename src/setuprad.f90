@@ -761,31 +761,27 @@
         if(sea) then
           isfctype=0
           do i=1,nchanl
-             varch(ich(i))=varch_sea(ich(i))
              tnoise(i)=varch_sea(ich(i))
           enddo
         else if(land) then
           isfctype=1
           do i=1,nchanl
-             varch(ich(i))=varch_land(ich(i))
              tnoise(i)=varch_land(ich(i))
           enddo
         else if(ice) then
           isfctype=2
           do i=1,nchanl
-             varch(ich(i))=varch_ice(ich(i))
              tnoise(i)=varch_ice(ich(i))
           enddo
         else if(snow) then
           isfctype=3
           do i=1,nchanl
-             varch(ich(i))=varch_snow(ich(i))
              tnoise(i)=varch_snow(ich(i))
           enddo
         else if(mixed) then
           isfctype=4
           do i=1,nchanl
-             varch(ich(i))=varch_mixed(ich(i))
+!             varch(ich(i))=varch_mixed(ich(i))
              tnoise(i)=varch_mixed(ich(i))
           enddo
         endif
