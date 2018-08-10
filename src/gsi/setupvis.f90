@@ -24,6 +24,9 @@ subroutine setupvis(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !   2016-06-24  guo     - fixed the default value of obsdiags(:,:)%tail%luse to luse(i)
 !                       . removed (%dlat,%dlon) debris.
+!   2016-09-23 Johnson, Y. Wang, X. Wang - write observation dependent horizontal and vertical
+!                                          localization scales into diag file,
+!                                          POC: xuguang.wang@ou.edu
 !   2016-10-07  pondeca - if(.not.proceed) advance through input file first
 !                          before retuning to setuprhsall.f90
 !   2017-02-06  todling - add netcdf_diag capability; hidden as contained code
@@ -228,7 +231,7 @@ subroutine setupvis(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=22
+     ioff0=22+2
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
@@ -653,6 +656,8 @@ subroutine setupvis(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(20,ii) = rmiss_single       ! type of measurement
         rdiagbuf(21,ii) = data(idomsfc,i)    ! dominate surface type
         rdiagbuf(22,ii) = data(izz,i)        ! model terrain at observation location
+        rdiagbuf(23,ii) = data(19,i)
+        rdiagbuf(24,ii) = data(20,i)
         r_prvstg        = data(iprvd,i)
         cprvstg(ii)     = c_prvstg           ! provider name
         r_sprvstg       = data(isprvd,i)
@@ -714,6 +719,9 @@ subroutine setupvis(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            call nc_diag_metadata("Observation",                   data(ivis,i)     )
            call nc_diag_metadata("Obs_Minus_Forecast_adjusted",   ddiff            )
            call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", data(ivis,i)-visges )
+
+           call nc_diag_metadata("Horizontal_local",  data(19,i) )
+           call nc_diag_metadata("Vertical_local",    data(20,i) )
            call nc_diag_metadata("Dominant_Sfc_Type", data(idomsfc,i))
            call nc_diag_metadata("Model_Terrain",     data(izz,i))
            r_prvstg            = data(iprvd,i)

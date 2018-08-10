@@ -146,7 +146,7 @@ subroutine setupsst(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   class(obsNode),pointer:: my_node
   type(sstNode),pointer:: my_head
   type(obs_diag),pointer:: my_diag
-  integer, parameter:: maxinfo = 20
+  integer, parameter:: maxinfo = 20+2
   character(len=*),parameter:: myname='setupsst'
 
 
@@ -178,11 +178,11 @@ subroutine setupsst(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   ilone=16    ! index of longitude (degrees)
   ilate=17    ! index of latitude (degrees)
   istnelv=18  ! index of station elevation (m)
-  itref=19    ! index of Tr
-  idtw=20     ! index of dtw
-  idtc=21     ! index of dtc
-  itz_tr=22   ! index of tz_tr
-  idatamax=22 ! set to largest value in list above
+  itref=21    ! index of Tr
+  idtw=22     ! index of dtw
+  idtc=23     ! index of dtc
+  itz_tr=24   ! index of tz_tr
+  idatamax=24 ! set to largest value in list above
 
   if(nst_gsi>0) then
      if(nele<idatamax) then
@@ -574,6 +574,8 @@ contains
         rdiagbuf(19,ii) = data(isst,i)-sstges! obs-ges w/o bias correction (K) (future slot)
  
         rdiagbuf(20,ii) = data(iotype,i)     ! type of measurement
+        rdiagbuf(21,ii) = data(19,i)
+        rdiagbuf(22,ii) = data(20,i)
 
         if (nst_gsi>0) then
           rdiagbuf(maxinfo+1,ii) = data(itref,i)    ! Tr

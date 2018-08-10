@@ -244,7 +244,7 @@
   !==> get U,V,temp,q,ps on gaussian grid.
   ! u is first nlevs, v is second, t is third, then tracers.
   if (use_gfs_nemsio) then
-     clip=tiny_r_kind
+     clip=tiny(vg(1))
      do k=1,nlevs
         call nemsio_readrecv(gfile,'ugrd','mid layer',k,nems_wrk,iret=iret)
         if (iret/=0) then
@@ -505,7 +505,7 @@
   kapr = cp/rd
   kap = rd/cp
   kap1 = kap+one
-  clip = tiny_r_kind
+  clip = tiny(vg(1))
 
   write(charnanal,'(i3.3)') nanal
 
@@ -1189,7 +1189,7 @@
   if (.not. use_gfs_nemsio) then
   ! clip tracers.
      if (cliptracers) then
-        clip = tiny_r_kind
+        clip = tiny(vg(1))
 !$omp parallel do private(k,nt,vg,divspec)  shared(sigdata,clip)
         do k=1,nlevs
            if (q_ind > 0) then
