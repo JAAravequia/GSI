@@ -64,7 +64,8 @@ ln -s ${C_IG_GSCRIPTS}/defint.gs ./defint.gs
 ln -s ${C_IG_GSCRIPTS}/setvpage.gs ./setvpage.gs
 
 
-for type in ps q t; do
+#for type in gps ps q t; do
+for type in gps t; do
 
    eval stype=\${${type}_TYPE} 
    eval nreal=\${nreal_${type}} 
@@ -80,7 +81,14 @@ for type in ps q t; do
          #---------------------------------------
          #  build the control file for the data
          #---------------------------------------
-         if [ "$mtype" = 'ps180' -o "$mtype" = 'ps181' -o  "$mtype" = 'ps183' -o "$mtype" = 'ps187'  ]; then
+         if [ "$mtype" = 'gps004' ]; then
+
+            echo " placeholder for gps004 "
+
+            cp ${C_IG_FIX}/gpsallev.ctl ./${dtype}.ctl
+            cp ${C_IG_GSCRIPTS}/plot_gpsallev_horz.gs ./plot_${dtype}.gs
+
+         elif [ "$mtype" = 'ps180' -o "$mtype" = 'ps181' -o  "$mtype" = 'ps183' -o "$mtype" = 'ps187'  ]; then
 
             cp ${C_IG_FIX}/pstime.ctl ./${dtype}.ctl
             cp ${C_IG_GSCRIPTS}/plot_ps_horz.gs ./plot_${dtype}.gs

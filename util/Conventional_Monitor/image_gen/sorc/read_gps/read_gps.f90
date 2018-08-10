@@ -150,6 +150,8 @@ subroutine read_gps(nreal,dtype,fname,fileo,gtross,rlev)
 
       if( rdiag(iqc,i) <= 0.0 ) then
 
+         print *, 'press = ', rdiag(ipres,i)
+
          if( rdiag(iibend,i) < min_bend ) then
             min_bend = rdiag(iibend,i)
          end if

@@ -39,11 +39,11 @@ echo "--> diag2grad_gps_case.sh"
    fi
 
 #
-#  start with all cases using grads_lev and see whate that gets us
+#  start with all cases using grads_gpslev and see whate that gets us
 #
 #   if [ "$mtype" = 't130' -o "$mtype" = 't131' -o "$mtype" = 't132' -o "$mtype" = 't133' -o "$mtype" = 't134' -o "$mtype" = 't135' ]; then
 
-      cp $EXECcmon/grads_lev.x ./diag2grads
+      cp $EXECcmon/grads_gpslev.x ./diag2grads
 
       cat <<EOF >input
          &input

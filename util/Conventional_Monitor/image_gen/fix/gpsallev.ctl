@@ -1,13 +1,11 @@
 DTYPE  station 
 options big_endian sequential
-STNMAP tupair.map
+STNMAP gpsair.map
 UNDEF  -999.0
 TITLE  Station Data Sample
 TDEF   1 linear 00z27may2006 12hr 
 *ZDEF pressure 915.,840.,690.,590.,490.,390.,290.,240.,190.,90. 
-VARS  20
-lat      1  0   lat in degrees
-lon      1  0   lon in degrees
+VARS  17
 bend     1  0   incremental bending angle (x100 %)
 press    1  0   pressure at obs location
 ohgt     1  0   impact height(meters)
@@ -25,5 +23,4 @@ trefges  1  0   temp at obs location (Kelvin)
 hob      1  0   model vertical grid (interface) 
 fish     1  0   uses gps_ref (one = uses)
 qrefges  1  0   spedific humidity at obs !location (kg/kg) 
-spread   1  0   spread (filled in by EnKF)
 ENDVARS
