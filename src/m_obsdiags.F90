@@ -84,8 +84,10 @@ module m_obsdiags
   use m_uwnd10mNode , only:  uwnd10mNode
   use m_vwnd10mNode , only:  vwnd10mNode
 
+
   use m_pm10Node , only:  pm10Node ! 32
   use m_cldchNode, only:  cldchNode ! 33
+  use m_dbzNode, only:  dbzNode ! 34
 
   use m_swcpNode , only:  swcpNode ! 34
   use m_lwcpNode , only:  lwcpNode ! 35
@@ -175,6 +177,7 @@ module m_obsdiags
   public ::     qhead
   public ::   spdhead
   public ::    rwhead
+  public ::   dbzhead
   public ::    dwhead
   public ::   ssthead
   public ::   pcphead
@@ -217,6 +220,7 @@ module m_obsdiags
   type(obsLList),dimension(:),pointer :: qhead => null()
   type(obsLList),dimension(:),pointer :: spdhead => null()
   type(obsLList),dimension(:),pointer :: rwhead => null()
+  type(obsLList),dimension(:),pointer :: dbzhead => null()
   type(obsLList),dimension(:),pointer :: dwhead => null()
   type(obsLList),dimension(:),pointer :: ssthead => null()
   type(obsLList),dimension(:),pointer :: pcphead => null()
@@ -694,6 +698,7 @@ _ENTRY_(myname_)
        qhead => ptr_obsbins_(obsllists,'q')
      spdhead => ptr_obsbins_(obsllists,'spd')
       rwhead => ptr_obsbins_(obsllists,'rw')
+     dbzhead => ptr_obsbins_(obsllists,'dbz')
       dwhead => ptr_obsbins_(obsllists,'dw')
      ssthead => ptr_obsbins_(obsllists,'sst')
       pwhead => ptr_obsbins_(obsllists,'pw')
@@ -746,6 +751,7 @@ _ENTRY_(myname_)
        qhead => null()
      spdhead => null()
       rwhead => null()
+     dbzhead => null()
       dwhead => null()
      ssthead => null()
       pwhead => null()
