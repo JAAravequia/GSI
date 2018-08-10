@@ -173,6 +173,9 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !   2016-06-24  guo     - fixed the default value of obsdiags(:,:)%tail%luse to luse(i)
 !                       . removed (%dlat,%dlon) debris.
+!   2016-09-23 Johnson, Y. Wang, X. Wang - write observation dependent horizontal and vertical
+!                                          localization scales into diag file,
+!                                          POC: xuguang.wang@ou.edu
 !   2016-11-29  shlyaeva - save linearized H(x) for EnKF
 !   2016-12-09  mccarty - add netcdf_diag capability
 !   2017-03-31  Hu      -  addd option l_closeobs to use closest obs to analysis
@@ -334,12 +337,12 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   icat=24     ! index of data level category
   ijb=25      ! index of non linear qc parameter
   if (aircraft_t_bc_pof .or. aircraft_t_bc .or. aircraft_t_bc_ext) then
-     ipof=26     ! index of data pof
-     ivvlc=27    ! index of data vertical velocity
-     idx=28      ! index of tail number
-     iptrb=29    ! index of t perturbation
+     ipof=28     ! index of data pof
+     ivvlc=29    ! index of data vertical velocity
+     idx=30      ! index of tail number
+     iptrb=31    ! index of t perturbation
   else
-     iptrb=26    ! index of t perturbation
+     iptrb=28    ! index of t perturbation
   end if
 
   do i=1,nobs
@@ -382,7 +385,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      ii=0
      iip=0
      nchar=1
-     nreal=20
+     nreal=20+2
      if (aircraft_t_bc_pof .or. aircraft_t_bc .or. aircraft_t_bc_ext) &
           nreal=nreal+npredt+2
      idia0=nreal
@@ -1449,11 +1452,13 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
     rdiagbuf(18,ii) = ddiff              ! obs-ges used in analysis (K)
     rdiagbuf(19,ii) = tob-tges           ! obs-ges w/o bias correction (K) (future slot)
     rdiagbuf(20,ii) = 1.e10_r_single     ! spread (filled in by EnKF)
+    rdiagbuf(21,ii) = data(26,i)
+    rdiagbuf(22,ii) = data(27,i)
     if (aircraft_t_bc_pof .or. aircraft_t_bc .or. aircraft_t_bc_ext) then
-       rdiagbuf(20,ii) = data(ipof,i)       ! data pof
-       rdiagbuf(21,ii) = data(ivvlc,i)      ! data vertical velocity
+       rdiagbuf(23,ii) = data(ipof,i)       ! data pof
+       rdiagbuf(24,ii) = data(ivvlc,i)      ! data vertical velocity
        do j=1,npredt
-          rdiagbuf(21+j,ii) = predbias(j)
+          rdiagbuf(23+j,ii) = predbias(j)
        end do
     end if
     
@@ -1593,6 +1598,8 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
           call nc_diag_metadata("Bias_Correction_Terms", missing                )
        endif
     endif
+    call nc_diag_metadata("Horizontal_local",  data(26,i)                    )
+    call nc_diag_metadata("Vertical_local",    data(27,i)                    )
 
     if (lobsdiagsave) then
        do jj=1,miter

@@ -68,6 +68,7 @@ module m_obsNodeTypeManager
 
   use obsmod, only: iobsType_swcp  => i_swcp_ob_type
   use obsmod, only: iobsType_lwcp  => i_lwcp_ob_type
+  use obsmod, only: iobsType_dbz   => i_dbz_ob_type
 
   use m_psNode   , only:    psNode !  1
   use m_tNode    , only:     tNode !  2
@@ -108,6 +109,7 @@ module m_obsNodeTypeManager
 
   use m_swcpNode , only:  swcpNode ! 34
   use m_lwcpNode , only:  lwcpNode ! 35
+  use m_dbzNode,   only:  dbzNode  ! 36
 
   use kinds, only: i_kind
   use m_obsNode, only: obsNode
@@ -168,6 +170,7 @@ module m_obsNodeTypeManager
 
   type(   swcpNode), target, save::    swcp_mold ! 34
   type(   lwcpNode), target, save::    lwcp_mold ! 35
+  type(  dbzNode),   target, save::   dbz_mold   ! 36
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   character(len=*),parameter :: myname='m_obsNodeTypeManager'
 
@@ -247,6 +250,7 @@ function vname2index_(vname) result(index_)
 
   case("swcp" , "[swcpnode]"); index_ = iobsType_swcp
   case("lwcp" , "[lwcpnode]"); index_ = iobsType_lwcp
+  case("dbz","[dbznode]");     index_ = iobsType_dbz
 
   end select
 end function vname2index_
@@ -307,6 +311,7 @@ function vmold2index_select_(mold) result(index_)
 
   type is( swcpNode); index_ = iobsType_swcp
   type is( lwcpNode); index_ = iobsType_lwcp
+  type is(dbzNode); index_ = iobsType_dbz
 
   end select
 end function vmold2index_select_
@@ -361,6 +366,7 @@ function index2vmold_(i_obType) result(obsmold_)
 
   case(iobsType_swcp ); obsmold_ =>    swcp_mold
   case(iobsType_lwcp ); obsmold_ =>    lwcp_mold
+  case(iobsType_dbz);   obsmold_ =>     dbz_mold
 
   end select
 end function index2vmold_
