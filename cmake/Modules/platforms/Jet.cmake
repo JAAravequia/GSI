@@ -8,6 +8,10 @@ function (setJET)
     set(COREPATH $ENV{COREPATH} PARENT_SCOPE )
   endif()
 
+  if ( NOT BUILD_CORELIBS )
+    set( W3NCO_DIR $ENV{COREPATH}/w3nco_v2.0.6/ CACHE STRING "W3NCO Source Location")
+  endif()
+
   if( NOT DEFINED ENV{NETCDF_VER} )
     set(NETCDF_VER "3.6.3" PARENT_SCOPE)
   endif()
