@@ -42,7 +42,7 @@
 !
 !$$$
  use constants, only: zero,one,cp,fv,rd,tiny_r_kind,max_varname_length,t0c,r0_05,tref,pref,constants_initialized,hvap
- use params, only: nlons,nlats,nlevs,use_gfs_nemsio,pseudo_rh,wmoist,andataname,gdatestring, &
+ use params, only: nlons,nlats,nlevs,use_gfs_nemsio,pseudo_rh,wmoist,andataname,datehr, &
                    cliptracers,datapath,imp_physics,nvars,datestring ! reducedgrid
  use kinds, only: i_kind,r_double,r_kind,r_single
  use gridinfo_efsoi, only: ntrunc,npts,latsgrd,ncdim  ! getgridinfo_efsoi must be called first!
@@ -216,7 +216,7 @@
   return 
  end subroutine divide_weight 
 
- subroutine readgriddata_efsoi(nanal,vars3d,vars2d,n3d,n2d,levels,ndim,ntimes,fileprefixes,mode,grdin,ft,infilename,qsat)
+ subroutine readgriddata_efsoi(nanal,vars3d,vars2d,n3d,n2d,levels,ndim,ntimes,mode,grdin,ft,infilename,qsat)
   use nemsio_module, only: nemsio_gfile,nemsio_open,nemsio_close,&
                            nemsio_getfilehead,nemsio_getheadvar,nemsio_realkind,&
                            nemsio_readrecv,nemsio_init,nemsio_setheadvar,nemsio_writerecv
@@ -231,7 +231,6 @@
   integer, intent(in) :: ndim, ntimes
   integer, intent(in) :: ft
   integer, intent(in) :: mode ! 0: first guess, 1: analysis
-  character(len=120), dimension(7), intent(in)  :: fileprefixes
   character(*), intent(in), optional :: infilename
  ! logical, intent(in) :: reducedgrid
   real(r_single), dimension(npts,ndim,ntimes), intent(out) :: grdin
@@ -266,31 +265,47 @@
 
   ! Construct the File name based on
   ! input arguments
-  write(charft, '(i2.2)') ft
+  write(charft, '(i3.3)') ft
   if (nanal > 0) then
     write(charnanal,'(a3, i3.3)') 'mem', nanal
   else
     charnanal = 'ensmean'
   endif
-  if(present(infilename)) then
-     filename=trim(adjustl(datapath))//infilename
-  else if(mode == 0) then
-     filename = trim(adjustl(datapath))//"sfg_"//gdatestring//"_fhr"//charft &
-          & //"_"//trim(adjustl(charnanal))
-  else if(mode == 1) then
-     if(ft == 0) then 
-        filename = trim(adjustl(datapath))//"sanl_"//datestring & 
-             & //"_"//trim(adjustl(charnanal)) 
-     else 
-        filename = trim(adjustl(datapath))//"sfg_"//datestring//"_fhr"//charft & 
-             & //"_"//trim(adjustl(charnanal)) 
-     end if 
-  else 
-     print *,'This mode is not supported: mode=',mode 
-     call stop2(23) 
-  end if 
+
+  !if(analysis_impact == .true.) then
+     if(present(infilename)) then
+        filename=trim(adjustl(datapath))//infilename
+     else if(mode == 0) then
+        filename = trim(adjustl(datapath))//"gdas.t"//datehr//"z.atmf"//charft//".ensmean.nemsio"
+     else if(mode == 1) then
+        if(ft == 0) then 
+           filename = trim(adjustl(datapath))//"gdas.t"//datehr//"z.atmanl.ensmean.nemsio"
+        else
+           filename = trim(adjustl(datapath))//trim(adjustl(charnanal))//"/"// &
+                "gdas.t"//datehr//"z.atmf"//charft//".nemsio"
+        end if 
+     else
+        print *,'This mode is not supported: mode=',mode
+        call stop2(23)
+     end if
+ ! else
+ !    if(present(infilename)) then
+ !       filename=trim(adjustl(datapath))//infilename
+ !    else if(mode == 0) then
+ !       filename = trim(adjustl(datapath))//"gdas.t"//datehr//"z.atmf"//ft//".ensmean.nemsio"
+ !    else if(mode == 1) then
+ !       if(ft == 0) then
+ !          filename = trim(adjustl(datapath))//"gdas.t"//datehr//"z.atmanl.ensmean.nemsio"
+ !       else
+ !          filename = trim(adjustl(datapath))//trim(adjustl(charnanal))//"/"// &
+ !               "gdas.t"//datehr//"z.atmf"//ft//".nemsio"
+ !       end if
+ !    else
+ !       print *,'This mode is not supported: mode=',mode
+ !       call stop2(23)
+ !    end if
+ ! end if
            
-  filename = trim(adjustl(datapath))//trim(adjustl(fileprefixes(nb)))//trim(charnanal)
   call nemsio_init(iret=iret)
   if(iret/=0) then
      write(6,*)'gridio/readgriddata_efsoi: gfs model: problem with nemsio_init, iret=',iret

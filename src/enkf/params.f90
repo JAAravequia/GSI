@@ -72,8 +72,10 @@ character(len=120),dimension(7),public :: statefileprefixes
 character(len=120),dimension(7),public :: anlfileprefixes
 ! analysis date string (YYYYMMDDHH)
 character(len=10), public ::  datestring
-character(len=10), public ::  gdatestring
-character(len=10), public ::  andataname
+! Hour for datestring
+character(len=2), public :: datehr
+! analysis filename, needed for EFSOI calcs
+character(len=100), public ::  andataname
 ! filesystem path to input files (first-guess, GSI diagnostic files).
 character(len=500),public :: datapath
 ! if deterministic=.true., the deterministic square-root filter
@@ -162,7 +164,7 @@ logical,public :: lobsdiag_forenkf = .false.
 ! if true, use netcdf diag files, otherwise use binary diags
 logical,public :: netcdf_diag = .false.
 
-namelist /nam_enkf/datestring,gdatestring,datapath,iassim_order,nvars,&
+namelist /nam_enkf/datestring,datehr,datapath,iassim_order,nvars,&
                    covinflatemax,covinflatemin,deterministic,sortinc,&
                    corrlengthnh,corrlengthtr,corrlengthsh,&
                    varqc,huber,nlons,nlats,smoothparm,use_qsatensmean,&
@@ -198,7 +200,8 @@ integer i,nb
 ! defaults
 ! time (analysis time YYYYMMDDHH)
 datestring = "0000000000" ! if 0000000000 will not be used.
-gdatestring = "0000000000" ! if 0000000000 will not be used.
+! default hour
+datehr = "00"
 ! corrlength (length for horizontal localization in km)
 corrlengthnh = 2800
 corrlengthtr = 2800

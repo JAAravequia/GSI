@@ -70,9 +70,10 @@ program efsoi_main
  use loc_advection, only: loc_advection_efsoi
  ! Scatter chunks for EFSOI
  use scatter_chunks_efsoi, only: scatter_chunks_ob_impact
+ use omp_lib, only: omp_get_max_threads
  
  implicit none
- integer :: ierr
+ integer :: ierr, nth
  real(r_double) t1,t2
 
  ! initialize MPI.
@@ -91,6 +92,9 @@ program efsoi_main
  call read_ob_sens()
  t2 = mpi_wtime()
  if (nproc == 0) print *, 'time in read_ob_sens = ',t2-t1,'on proc', nproc
+
+ nth= omp_get_max_threads()
+ if(nproc== 0)write(6,*) 'efsoi_main:  number of threads ',nth
 
  ! Halt processors until all are completed
  call mpi_barrier(mpi_comm_world, ierr)
