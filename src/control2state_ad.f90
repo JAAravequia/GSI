@@ -39,6 +39,7 @@ subroutine control2state_ad(rval,bval,grad)
 !   2014-12-03  derber   - introduce parallel regions for optimization
 !   2015-07-10  pondeca  - add cloud ceiling height (cldch)
 !   2016-05-03  pondeca  - add uwnd10m, and vwnd10m
+!   2017-05-12  Y. Wang and X. Wang - add w as state variable for rw DA, POC: xuguang.wang@ou.edu
 !   2016-08-12  lippi    - add vertical velocity (w) to mycvars and mysvars.
 !   2016-05-03  pondeca  - add uwnd10m, and vwnd10m
 !
@@ -68,6 +69,7 @@ use gsi_chemguess_mod, only: gsi_chemguess_get
 use gsi_metguess_mod, only: gsi_metguess_get
 use mpeu_util, only: getindex
 use constants, only: max_varname_length,zero
+use gridmod, only: wrf_mass_regional,nems_nmmb_regional
 
 implicit none
 
@@ -118,8 +120,8 @@ logical :: ls_qr,ls_qs,ls_qg,ls_qh
 real(r_kind),pointer,dimension(:,:)   :: rv_ps,rv_sst
 real(r_kind),pointer,dimension(:,:)   :: rv_gust,rv_vis,rv_pblh,rv_wspd10m,rv_tcamt,rv_lcbas
 real(r_kind),pointer,dimension(:,:)   :: rv_td2m,rv_mxtm,rv_mitm,rv_pmsl,rv_howv,rv_cldch
+real(r_kind),pointer,dimension(:,:,:) :: rv_u,rv_v,rv_prse,rv_q,rv_tsen,rv_tv,rv_oz,rv_w,rv_dw
 real(r_kind),pointer,dimension(:,:)   :: rv_uwnd10m,rv_vwnd10m
-real(r_kind),pointer,dimension(:,:,:) :: rv_u,rv_v,rv_w,rv_prse,rv_q,rv_tsen,rv_tv,rv_oz
 real(r_kind),pointer,dimension(:,:,:) :: rv_rank3
 real(r_kind),pointer,dimension(:,:)   :: rv_rank2
 
@@ -374,6 +376,10 @@ do jj=1,nsubwin
    if (icw>0) then
       call gsi_bundlegetpointer (rval(jj),'w' ,rv_w, istatus)
       call gsi_bundleputvar ( wbundle, 'w', rv_w, istatus )
+      if(nems_nmmb_regional)then
+         call gsi_bundlegetpointer (rval(jj),'dw' ,rv_dw, istatus)
+         call gsi_bundleputvar ( wbundle, 'dw', rv_dw, istatus )
+       end if
    end if
    if (ictcamt>0) then
       call gsi_bundlegetpointer (rval(jj),'tcamt',rv_tcamt, istatus)

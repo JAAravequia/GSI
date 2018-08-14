@@ -945,6 +945,7 @@
         ! ug is Tv increment, nems_wrk is background Tv, nems_wrk2 is background spfh
         ug = ug + nems_wrk 
         vg = vg + nems_wrk2 
+        clip = tiny(vg(1))
         if (cliptracers)  where (vg < clip) vg = clip
         if (lupp) then
            call nemsio_readrecv(gfilein,'pres','sfc',1,nems_wrk2,iret=iret)

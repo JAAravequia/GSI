@@ -43,6 +43,8 @@ module inflation
 !   2016-05-02:  shlyaeva: Modification for reading state vector from table
 !   2016-11-29:  shlyaeva: Modification for using control vector (control and state
 !                used to be the same) and the "chunks" come from loadbal 
+!   2017-05-12: Johnson, Y. Wang and X. Wang - Add height-dependent inflation,
+!                                              POC:xuguang.wang@ou.edu
 ! attributes:
 !   language: f95
 !
@@ -51,12 +53,13 @@ module inflation
 use mpisetup
 use params, only: analpertwtnh,analpertwtsh,analpertwttr,nanals,nlevs,&
                   latbound, delat, datapath, covinflatemax, save_inflation, &
-                  covinflatemin, nlons, nlats, smoothparm, nbackgrounds
+                  covinflatemin, nlons, nlats, smoothparm, nbackgrounds,&
+                  covinflatenh,covinflatesh,covinflatetr,lnsigcovinfcutoff
 use kinds, only: r_single, i_kind
 use constants, only: one, zero, rad2deg, deg2rad
-use covlocal, only: latval
+use covlocal, only: latval, taper
 use controlvec, only: ncdim, cvars3d, cvars2d, nc3d, nc2d
-use gridinfo, only: latsgrd, logp, npts
+use gridinfo, only: latsgrd, logp, npts, nlevs_pres
 use loadbal, only: indxproc, numptsperproc, npts_max, anal_chunk, anal_chunk_prior
 use smooth_mod, only: smooth
 
@@ -80,9 +83,11 @@ real(r_single) sprdmin, sprdmax, sprdmaxall, &
 real(r_single),dimension(ndiag) :: sumcoslat,suma,suma2,sumi,sumf,sumitot,sumatot, &
      sumcoslattot,suma2tot,sumftot
 real(r_single) fnanalsml,coslat
-integer(i_kind) i,nn,iunit,ierr,nb
+integer(i_kind) i,nn,iunit,ierr,nb,k,nnlvl
 character(len=500) filename
-real(r_single), allocatable, dimension(:,:) :: tmp_chunk2,covinfglobal
+real(r_single), allocatable, dimension(:,:) :: tmp_chunk2,covinfglobal,tmp_chunk3
+real, allocatable, dimension(:) :: covinfglobal2,covinfglobal3
+real(r_single) r
 
 ! if no inflation called for, do nothing.
 if (abs(analpertwtnh) < 1.e-5_r_single .and. &
@@ -115,6 +120,7 @@ end if
 
 ! adaptive posterior inflation based upon ratio of posterior to prior spread.
 allocate(tmp_chunk2(npts_max,ncdim))
+allocate(tmp_chunk3(npts_max,ncdim))
 tmp_chunk2 = covinflatemin
 
 ! compute inflation.
@@ -166,6 +172,22 @@ do nn=1,ncdim
    asprd = max(asprd,tiny(asprd))
    fsprd = max(fsprd,tiny(fsprd))
    tmp_chunk2(i,nn) = analpertwt*((fsprd-asprd)/asprd) + 1.0
+
+   if ( nn == ncdim ) then
+      nnlvl=nlevs_pres
+   else
+       nnlvl=nn - nn/nlevs*nlevs
+   end if
+   if( nnlvl == 0 ) nnlvl = nlevs
+
+   r=abs((logp(indxproc(nproc+1,i),nnlvl)-logp(indxproc(nproc+1,i),nlevs_pres))/lnsigcovinfcutoff)
+   if ( r > 0.75 ) then
+       r=1.0
+   endif
+
+   tmp_chunk3(i,nn)=taper(r)*latval(deglat,covinflatenh,covinflatetr,covinflatesh)
+   tmp_chunk2(i,nn) = tmp_chunk2(i,nn) + &
+            taper(r)*latval(deglat,covinflatenh,covinflatetr,covinflatesh)
 
    ! min/max inflation set by covinflatemin/covinflatemax.
    tmp_chunk2(i,nn) = max(covinflatemin,min(tmp_chunk2(i,nn),covinflatemax))

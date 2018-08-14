@@ -42,6 +42,7 @@ subroutine control2state(xhat,sval,bval)
 !   2014-12-03  derber   - introduce parallel regions for optimization
 !   2015-07-10  pondeca  - add cldch
 !   2016-05-03  pondeca  - add uwnd10m and vwnd10m
+!   2017-05-12  Y. Wang and X. Wang - add w as state variable for rw DA, POC: xuguang.wang@ou.edu
 !   2016-08-12  lippi    - add vertical velocity (w) to mycvars and mysvars.
 !
 !   input argument list:
@@ -76,6 +77,7 @@ use mpeu_util, only: getindex
 use constants, only : max_varname_length, zero
 use general_sub2grid_mod, only: general_sub2grid,general_grid2sub
 use general_commvars_mod, only: s2g_cv
+use gridmod, only: wrf_mass_regional,nems_nmmb_regional
 implicit none
   
 ! Declare passed variables  
@@ -128,7 +130,7 @@ real(r_kind),pointer,dimension(:,:)   :: sv_ps,sv_sst
 real(r_kind),pointer,dimension(:,:)   :: sv_gust,sv_vis,sv_pblh,sv_wspd10m,sv_tcamt,sv_lcbas
 real(r_kind),pointer,dimension(:,:)   :: sv_td2m,sv_mxtm,sv_mitm,sv_pmsl,sv_howv,sv_cldch
 real(r_kind),pointer,dimension(:,:)   :: sv_uwnd10m,sv_vwnd10m
-real(r_kind),pointer,dimension(:,:,:) :: sv_u,sv_v,sv_w,sv_prse,sv_q,sv_tsen,sv_tv,sv_oz
+real(r_kind),pointer,dimension(:,:,:) :: sv_u,sv_v,sv_w,sv_prse,sv_q,sv_tsen,sv_tv,sv_oz,sv_dw
 real(r_kind),pointer,dimension(:,:,:) :: sv_rank3
 real(r_kind),pointer,dimension(:,:)   :: sv_rank2
 
@@ -372,6 +374,10 @@ do jj=1,nsubwin
    if (icw>0) then 
       call gsi_bundlegetpointer (sval(jj),'w' ,sv_w, istatus)
       call gsi_bundlegetvar ( wbundle, 'w', sv_w, istatus )
+      if(nems_nmmb_regional)then
+         call gsi_bundlegetpointer (sval(jj),'dw'  ,sv_dw,  istatus)
+         call gsi_bundlegetvar ( wbundle, 'dw' , sv_dw,  istatus )
+      end if
    end if
    if (ictcamt>0) then 
       call gsi_bundlegetpointer (sval(jj),'tcamt' ,sv_tcamt, istatus)

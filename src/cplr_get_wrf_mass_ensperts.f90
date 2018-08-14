@@ -5,7 +5,6 @@ use abstract_get_wrf_mass_ensperts_mod
   contains
     procedure, pass(this) :: get_wrf_mass_ensperts => get_wrf_mass_ensperts_wrf
     procedure, pass(this) :: ens_spread_dualres_regional => ens_spread_dualres_regional_wrf
-    procedure, pass(this) :: general_read_wrf_mass
     procedure, nopass :: fill_regional_2d
   end type get_wrf_mass_ensperts_class
 contains
@@ -50,8 +49,12 @@ contains
       use gsi_bundlemod, only: gsi_bundlegetpointer
       use gsi_bundlemod, only: gsi_bundledestroy
       use gsi_bundlemod, only: gsi_gridcreate
+      use control_vectors, only : w_exist
+      use mpeu_util, only: getindex
       use guess_grids,   only: ntguessig,ifilesig
       use gsi_4dvar,     only: nhr_assimilation
+      use get_arw_ensmod_mod,  only: get_arw_ensmod_class
+      use general_sub2grid_mod, only: general_sub2grid_destroy_info
   
       implicit none
       class(get_wrf_mass_ensperts_class), intent(inout) :: this
@@ -61,17 +64,25 @@ contains
   
       real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig):: u,v,tv,cwmr,oz,rh
       real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2):: ps
+      real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)::w,qr,qi,qg,qs,qni,qnc,qnr
+      real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)::dbz
   
       real(r_single),pointer,dimension(:,:,:):: w3
       real(r_single),pointer,dimension(:,:):: w2
       real(r_kind),pointer,dimension(:,:,:):: x3
+      real(r_kind),pointer,dimension(:,:,:):: p3
       real(r_kind),pointer,dimension(:,:):: x2
+      real(r_kind),pointer,dimension(:,:):: p2
       type(gsi_bundle):: en_bar
+      type(gsi_bundle),allocatable,dimension(:) :: en_read
       type(gsi_grid):: grid_ens
       real(r_kind):: bar_norm,sig_norm,kapr,kap1
+      type(sub2grid_info) :: grid_tmp
+
+      type(get_arw_ensmod_class) :: enscoupler
   
-      integer(i_kind):: i,j,k,n,mm1,istatus
-      integer(i_kind):: ic2,ic3
+      integer(i_kind):: i,j,k,n,istatus, iret
+      integer(i_kind):: ic2,ic3,i_radar_qr,i_radar_qg
       integer(i_kind):: its,ite, it
 
       character(255) filelists(ntlevs_ens)
@@ -83,27 +94,20 @@ contains
          write(6,*)' get_wrf_mass_ensperts_netcdf: trouble creating en_bar bundle'
          call stop2(999)
       endif
+
+      grid_tmp = grd_ens
+
+      ! Allocate bundle used for reading members
+      allocate(en_read(n_ens))
+      do n=1,n_ens
+        call gsi_bundlecreate(en_read(n),grid_ens,'ensemble member',istatus,names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
+        if ( istatus /= 0 ) then
+           write(6,*)'get_wrf_mass_ensperts_netcdf',': trouble creating en_read bundle, istatus =',istatus
+           call stop2(998)
+        end if
+      end do
   
-      if(ntlevs_ens > 1) then
-         do i=1,ntlevs_ens
-            write(filelists(i),'("filelist",i2.2)')ifilesig(i)
-         enddo
-         its=1
-         ite=ntlevs_ens
-      else
-         write(filelists(1),'("filelist",i2.2)')nhr_assimilation
-         its=ntguessig
-         ite=ntguessig
-      endif
-
-      do it=its,ite
-         if (mype == 0) write(*,*) 'ensemble file==',it,its,ite,ntlevs_ens,n_ens
-         if(ntlevs_ens > 1) then
-            open(10,file=trim(filelists(it)),form='formatted',err=30)
-         else
-            open(10,file=trim(filelists(1)),form='formatted',err=30)
-         endif
-
+  do it=1,ntlevs_ens
 
   !
   ! INITIALIZE ENSEMBLE MEAN ACCUMULATORS
@@ -113,23 +117,24 @@ contains
             en_perts(n,it)%valuesr4 = zero
          enddo
   
-         mm1=mype+1
-         kap1=rd_over_cp+one
-         kapr=one/rd_over_cp
+      kap1=rd_over_cp+one
+      kapr=one/rd_over_cp
   !
-  ! LOOP OVER ENSEMBLE MEMBERS 
-         do n=1,n_ens
-  !
-  ! DEFINE INPUT FILE NAME
-             read(10,'(a)',err=20,end=20)filename
-             filename=trim(ensemble_path) // trim(filename)
   ! 
   ! READ ENEMBLE MEMBERS DATA
-            if (mype == 0) write(6,'(a,a)') 'CALL READ_WRF_MASS_ENSPERTS FOR ENS DATA : ',trim(filename)
-            call this%general_read_wrf_mass(filename,ps,u,v,tv,rh,cwmr,oz,mype) 
-  
+
+      call enscoupler%get_user_ens_(grid_tmp,it,en_read,iret)
+
+  ! LOOP OVER ENSEMBLE MEMBERS 
+         do n=1,n_ens
   ! SAVE ENSEMBLE MEMBER DATA IN COLUMN VECTOR
             do ic3=1,nc3d
+
+               call gsi_bundlegetpointer(en_read(n),trim(cvars3d(ic3)),p3,istatus)
+               if(istatus/=0) then
+                 write(6,*)' error retrieving pointer to ',trim(cvars3d(ic3)),' from read in member ',n
+                 call stop2(999)
+               end if
   
                call gsi_bundlegetpointer(en_perts(n,it),trim(cvars3d(ic3)),w3,istatus)
                if(istatus/=0) then
@@ -141,79 +146,25 @@ contains
                   write(6,*)' error retrieving pointer to ',trim(cvars3d(ic3)),' for en_bar'
                   call stop2(999)
                end if
+
+               do k=1,grd_ens%nsig
+                 do i=1,grd_ens%lon2
+                   do j=1,grd_ens%lat2
+                     w3(j,i,k) = p3(j,i,k)
+                     x3(j,i,k)=x3(j,i,k)+p3(j,i,k)
+                   end do
+                 end do
+               end do
   
-               select case (trim(cvars3d(ic3)))
-  
-                  case('sf','SF')
-     
-                     do k=1,grd_ens%nsig
-                        do i=1,grd_ens%lon2
-                           do j=1,grd_ens%lat2
-                              w3(j,i,k) = u(j,i,k)
-                              x3(j,i,k)=x3(j,i,k)+u(j,i,k)
-                           end do
-                        end do
-                     end do
-  
-                  case('vp','VP')
-  
-                     do k=1,grd_ens%nsig
-                        do i=1,grd_ens%lon2
-                           do j=1,grd_ens%lat2
-                              w3(j,i,k) = v(j,i,k)
-                              x3(j,i,k)=x3(j,i,k)+v(j,i,k)
-                           end do
-                        end do
-                     end do
-  
-                  case('t','T')
-  
-                     do k=1,grd_ens%nsig
-                        do i=1,grd_ens%lon2
-                           do j=1,grd_ens%lat2
-                              w3(j,i,k) = tv(j,i,k)
-                              x3(j,i,k)=x3(j,i,k)+tv(j,i,k)
-                           end do
-                        end do
-                     end do
-  
-                  case('q','Q')
-  
-                     do k=1,grd_ens%nsig
-                        do i=1,grd_ens%lon2
-                           do j=1,grd_ens%lat2
-                              w3(j,i,k) = rh(j,i,k)
-                              x3(j,i,k)=x3(j,i,k)+rh(j,i,k)
-                           end do
-                        end do
-                     end do
-  
-                  case('oz','OZ')
-  
-                     do k=1,grd_ens%nsig
-                        do i=1,grd_ens%lon2
-                           do j=1,grd_ens%lat2
-                              w3(j,i,k) = oz(j,i,k)
-                              x3(j,i,k)=x3(j,i,k)+oz(j,i,k)
-                           end do
-                        end do
-                     end do
-  
-                  case('cw','CW')
-  
-                     do k=1,grd_ens%nsig
-                        do i=1,grd_ens%lon2
-                           do j=1,grd_ens%lat2
-                              w3(j,i,k) = cwmr(j,i,k)
-                              x3(j,i,k)=x3(j,i,k)+cwmr(j,i,k)
-                           end do
-                        end do
-                     end do
-  
-               end select
             end do
   
             do ic2=1,nc2d
+
+               call gsi_bundlegetpointer(en_read(n),trim(cvars2d(ic2)),p2,istatus)
+               if(istatus/=0) then
+                 write(6,*)' error retrieving pointer to ',trim(cvars2d(ic2)),' from read in member ',n
+                 call stop2(999)
+               end if
      
                call gsi_bundlegetpointer(en_perts(n,it),trim(cvars2d(ic2)),w2,istatus)
                if(istatus/=0) then
@@ -226,28 +177,13 @@ contains
                   call stop2(999)
                end if
   
-               select case (trim(cvars2d(ic2)))
-  
-                  case('ps','PS')
-  
                      do i=1,grd_ens%lon2
                         do j=1,grd_ens%lat2
-                           w2(j,i) = ps(j,i)
-                           x2(j,i)=x2(j,i)+ps(j,i)
+                           w2(j,i) = p2(j,i)
+                           x2(j,i)=x2(j,i)+p2(j,i)
                         end do
                      end do
   
-                  case('sst','SST')
-  ! IGNORE SST IN HYBRID for now
-  
-                     do i=1,grd_ens%lon2
-                        do j=1,grd_ens%lat2
-                           w2(j,i) = zero
-                           x2(j,i)=zero
-                        end do
-                     end do
-  
-               end select
             end do
          enddo 
   !
@@ -297,7 +233,18 @@ contains
      if(istatus/=0) then
         write(6,*)' in get_wrf_mass_ensperts_netcdf: trouble destroying en_bar bundle'
                call stop2(999)
-            endif
+     endif
+
+     do n=1,n_ens
+     call gsi_bundledestroy(en_read(n),istatus)
+     if(istatus/=0) then
+        write(6,*)' in get_wrf_mass_ensperts_netcdf: trouble destroying en_read bundle'
+               call stop2(999)
+     endif
+     end do
+     deallocate(en_read)
+
+     call general_sub2grid_destroy_info(grid_tmp)
   
   return
 
@@ -307,431 +254,6 @@ contains
    call stop2(555)
 
   end subroutine get_wrf_mass_ensperts_wrf
-  
-  subroutine general_read_wrf_mass(this,filename,g_ps,g_u,g_v,g_tv,g_rh,g_cwmr,g_oz,mype)
-  !$$$  subprogram documentation block
-  !                .      .    .                                       .
-  ! subprogram:    general_read_wrf_mass  read arw model ensemble members
-  !   prgmmr: mizzi            org: ncar/mmm            date: 2010-08-11
-  !
-  ! abstract: read ensemble members from the arw model in "wrfout" netcdf format
-  !           for use with hybrid ensemble option. 
-  !
-  ! program history log:
-  !   2010-08-11  parrish, initial documentation
-  !   2010-09-10  parrish, modify so ensemble variables are read in the same way as in
-  !               subroutines convert_netcdf_mass and read_wrf_mass_binary_guess.
-  !               There were substantial differences due to different opinion about what
-  !               to use for surface pressure.  This issue should be resolved by coordinating
-  !               with Ming Hu (ming.hu@noaa.gov).  At the moment, these changes result in
-  !               agreement to single precision between this input method and the guess input
-  !               procedure when the same file is read by both methods.
-  !   2012-03-12  whitaker:  read data on root, distribute with scatterv.
-  !                          remove call to general_reload.
-  !                          simplify, fix memory leaks, reduce memory footprint.
-  !                          use genqsat, remove genqsat2_regional.
-  !                          replace bare 'stop' statements with call stop2(999).
-  !   2017-03-23  Hu      - add code to use hybrid vertical coodinate in WRF MASS core
-  !
-  !   input argument list:
-  !
-  !   output argument list:
-  !
-  ! attributes:
-  !   language: f90
-  !   machine:  ibm RS/6000 SP
-  !
-  !$$$ end documentation block
-  
-      use netcdf, only: nf90_nowrite
-      use netcdf, only: nf90_open,nf90_close
-      use netcdf, only: nf90_inq_dimid,nf90_inquire_dimension
-      use netcdf, only: nf90_inq_varid,nf90_inquire_variable,nf90_get_var
-      use kinds, only: r_kind,r_single,i_kind
-      use gridmod, only: nsig,eta1_ll,pt_ll,aeta1_ll,eta2_ll,aeta2_ll
-      use constants, only: zero,one,fv,zero_single,rd_over_cp_mass,one_tenth,h300
-      use hybrid_ensemble_parameters, only: grd_ens,q_hyb_ens
-      use mpimod, only: mpi_comm_world,ierror,mpi_rtype
-      use netcdf_mod, only: nc_check
-  
-      implicit none
-  !
-  ! Declare passed variables
-      class(get_wrf_mass_ensperts_class), intent(inout) :: this
-      real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig),intent(out):: &
-                                                    g_u,g_v,g_tv,g_rh,g_cwmr,g_oz
-      real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2),intent(out):: g_ps
-      character(255),intent(in):: filename
-  !
-  ! Declare local parameters
-      real(r_kind),parameter:: r0_01 = 0.01_r_kind
-      real(r_kind),parameter:: r10   = 10.0_r_kind
-      real(r_kind),parameter:: r100  = 100.0_r_kind
-  !
-  !   Declare local variables
-      real(r_single),allocatable,dimension(:):: temp_1d
-      real(r_single),allocatable,dimension(:,:):: temp_2d,temp_2d2
-      real(r_single),allocatable,dimension(:,:,:):: temp_3d
-      real(r_kind),allocatable,dimension(:):: p_top
-      real(r_kind),allocatable,dimension(:,:):: q_integral,gg_ps,q_integralc4h
-      real(r_kind),allocatable,dimension(:,:,:):: tsn,qst,prsl,&
-       gg_u,gg_v,gg_tv,gg_rh
-      real(r_kind),allocatable,dimension(:):: wrk_fill_2d
-      integer(i_kind),allocatable,dimension(:):: dim,dim_id
-  
-      integer(i_kind):: nx,ny,nz,i,j,k,d_max,file_id,var_id,ndim,mype
-      integer(i_kind):: Time_id,s_n_id,w_e_id,b_t_id,s_n_stag_id,w_e_stag_id,b_t_stag_id
-      integer(i_kind):: Time_len,s_n_len,w_e_len,b_t_len,s_n_stag_len,w_e_stag_len,b_t_stag_len
-      integer(i_kind) iderivative
-  
-      real(r_kind):: deltasigma
-      real(r_kind) psfc_this_dry,psfc_this
-      real(r_kind) work_prslk,work_prsl
-  
-      logical ice
-
-      character(len=24),parameter :: myname_ = 'general_read_wrf_mass'
-
-
-  !
-  ! OPEN ENSEMBLE MEMBER DATA FILE
-    if (mype==0) then ! only read data on root proc
-      allocate(gg_u(grd_ens%nlat,grd_ens%nlon,grd_ens%nsig))
-      allocate(gg_v(grd_ens%nlat,grd_ens%nlon,grd_ens%nsig))
-      allocate(gg_tv(grd_ens%nlat,grd_ens%nlon,grd_ens%nsig))
-      allocate(gg_rh(grd_ens%nlat,grd_ens%nlon,grd_ens%nsig))
-      allocate(gg_ps(grd_ens%nlat,grd_ens%nlon))
-      call nc_check( nf90_open(trim(filename),nf90_nowrite,file_id),&
-          myname_,'open '//trim(filename) )
-  !
-  ! WRF FILE DIMENSIONS
-      call nc_check( nf90_inq_dimid(file_id,'Time',Time_id),&
-          myname_,'inq_dimid Time '//trim(filename) )
-      call nc_check( nf90_inq_dimid(file_id,'south_north',s_n_id),&
-          myname_,'inq_dimid south_north '//trim(filename) )
-      call nc_check( nf90_inq_dimid(file_id,'west_east',w_e_id),&
-          myname_,'inq_dimid west_east '//trim(filename) )
-      call nc_check( nf90_inq_dimid(file_id,'bottom_top',b_t_id),&
-          myname_,'inq_dimid bottom_top '//trim(filename) )
-      call nc_check( nf90_inq_dimid(file_id,'south_north_stag',s_n_stag_id),&
-          myname_,'inq_dimid south_north_stag '//trim(filename) )
-      call nc_check( nf90_inq_dimid(file_id,'west_east_stag',w_e_stag_id),&
-          myname_,'inq_dimid west_east_stag '//trim(filename) )
-      call nc_check( nf90_inq_dimid(file_id,'bottom_top_stag',b_t_stag_id),&
-          myname_,'inq_dimid bottom_top_stag '//trim(filename) )
-  
-      d_max=max(Time_id, s_n_id, w_e_id, b_t_id, s_n_stag_id, w_e_stag_id, b_t_stag_id)
-      allocate(dim(d_max))
-      dim(:)=-999
-  
-      call nc_check( nf90_inquire_dimension(file_id,Time_id,len=Time_len),&
-          myname_,'inquire_dimension Time '//trim(filename) )
-      call nc_check( nf90_inquire_dimension(file_id,s_n_id,len=s_n_len),&
-          myname_,'inquire_dimension south_north '//trim(filename) )
-      call nc_check( nf90_inquire_dimension(file_id,w_e_id,len=w_e_len),&
-          myname_,'inquire_dimension west_east '//trim(filename) )
-      call nc_check( nf90_inquire_dimension(file_id,b_t_id,len=b_t_len),&
-          myname_,'inquire_dimension bottom_top '//trim(filename) )
-      call nc_check( nf90_inquire_dimension(file_id,s_n_stag_id,len=s_n_stag_len),&
-          myname_,'inquire_dimension south_north_stag '//trim(filename) )
-      call nc_check( nf90_inquire_dimension(file_id,w_e_stag_id,len=w_e_stag_len),&
-          myname_,'inquire_dimension west_east_stag '//trim(filename) )
-      call nc_check( nf90_inquire_dimension(file_id,b_t_stag_id,len=b_t_stag_len),&
-          myname_,'inquire_dimension bottom_top_stag '//trim(filename) )
-  
-      nx=w_e_len
-      ny=s_n_len
-      nz=b_t_len
-      if (nx /= grd_ens%nlon .or. ny /= grd_ens%nlat .or. nz /= grd_ens%nsig) then
-       print *,'incorrect grid size in netcdf file'
-       print *,'nx,ny,nz,nlon,nlat,nsig',nx,ny,nz,grd_ens%nlon,grd_ens%nlat,grd_ens%nsig
-       call stop2(999)
-      endif
-  
-      dim(Time_id)=Time_len
-      dim(s_n_id)=s_n_len
-      dim(w_e_id)=w_e_len
-      dim(b_t_id)=b_t_len
-      dim(s_n_stag_id)=s_n_stag_len
-      dim(w_e_stag_id)=w_e_stag_len
-      dim(b_t_stag_id)=b_t_stag_len
-  !
-  ! READ PERTURBATION POTENTIAL TEMPERATURE (K)
-  !    print *, 'read T ',filename
-      call nc_check( nf90_inq_varid(file_id,'T',var_id),&
-          myname_,'inq_varid T '//trim(filename) )
-  
-      call nc_check( nf90_inquire_variable(file_id,var_id,ndims=ndim),&
-          myname_,'inquire_variable T '//trim(filename) )
-      allocate(dim_id(ndim))
-  
-      call nc_check( nf90_inquire_variable(file_id,var_id,dimids=dim_id),&
-          myname_,'inquire_variable T '//trim(filename) )
-      allocate(temp_3d(dim(dim_id(1)),dim(dim_id(2)),dim(dim_id(3))))
-  
-      call nc_check( nf90_get_var(file_id,var_id,temp_3d),&
-          myname_,'get_var T '//trim(filename) )
-      allocate(tsn(dim(dim_id(2)),dim(dim_id(1)),dim(dim_id(3))))
-      tsn = reshape(temp_3d,(/dim(dim_id(2)),dim(dim_id(1)),dim(dim_id(3))/),order=(/2,1,3/))
-      deallocate(temp_3d)
-      deallocate(dim_id)
-  
-  !  READ MU, MUB, P_TOP  (construct psfc as done in gsi--gives different result compared to PSFC)
-  
-      call nc_check( nf90_inq_varid(file_id,'P_TOP',var_id),&
-          myname_,'inq_varid P_TOP '//trim(filename) )
-  
-      call nc_check( nf90_inquire_variable(file_id,var_id,ndims=ndim),&
-          myname_,'inquire_variable P_TOP '//trim(filename) )
-      allocate(dim_id(ndim))
-  
-      call nc_check( nf90_inquire_variable(file_id,var_id,dimids=dim_id),&
-          myname_,'inquire_variable P_TOP '//trim(filename) )
-      allocate(temp_1d(dim(dim_id(1))))
-  
-      call nc_check( nf90_get_var(file_id,var_id,temp_1d),&
-          myname_,'get_var P_TOP '//trim(filename) )
-      allocate(p_top(dim(dim_id(1))))
-      do i=1,dim(dim_id(1))
-         p_top(i)=temp_1d(i)
-      enddo
-      deallocate(dim_id)
-  
-      call nc_check( nf90_inq_varid(file_id,'MUB',var_id),&
-          myname_,'inq_varid MUB '//trim(filename) )
-  
-      call nc_check( nf90_inquire_variable(file_id,var_id,ndims=ndim),&
-          myname_,'inquire_variable MUB '//trim(filename) )
-      allocate(dim_id(ndim))
-  
-      call nc_check( nf90_inquire_variable(file_id,var_id,dimids=dim_id),&
-          myname_,'inquire_variable MUB '//trim(filename) )
-      allocate(temp_2d(dim(dim_id(1)),dim(dim_id(2))))
-  
-      call nc_check( nf90_get_var(file_id,var_id,temp_2d),&
-          myname_,'get_var MUB '//trim(filename) )
-      deallocate(dim_id)
-  
-      call nc_check( nf90_inq_varid(file_id,'MU',var_id),&
-          myname_,'inq_varid MU '//trim(filename) )
-  
-      call nc_check( nf90_inquire_variable(file_id,var_id,ndims=ndim),&
-          myname_,'inquire_variable MU '//trim(filename) )
-      allocate(dim_id(ndim))
-  
-      call nc_check( nf90_inquire_variable(file_id,var_id,dimids=dim_id),&
-          myname_,'inquire_variable MU '//trim(filename) )
-      allocate(temp_2d2(dim(dim_id(1)),dim(dim_id(2))))
-  
-      call nc_check( nf90_get_var(file_id,var_id,temp_2d2),&
-          myname_,'get_var MU '//trim(filename) )
-  
-      do j=1,dim(dim_id(2))
-         do i=1,dim(dim_id(1))
-            temp_2d2(i,j)=temp_2d(i,j)+temp_2d2(i,j)+temp_1d(1)
-            gg_ps(j,i)=temp_2d2(i,j)
-         enddo
-      enddo
-      print *,'min/max ps',minval(gg_ps),maxval(gg_ps)
-      deallocate(temp_2d,temp_2d2,temp_1d,dim_id)
-  
-  !
-  ! READ U (m/s)
-      !print *, 'read U ',filename
-      call nc_check( nf90_inq_varid(file_id,'U',var_id),&
-          myname_,'inq_varid U '//trim(filename) )
-  
-      call nc_check( nf90_inquire_variable(file_id,var_id,ndims=ndim),&
-          myname_,'inquire_variable U '//trim(filename) )
-      allocate(dim_id(ndim))
-  
-      call nc_check( nf90_inquire_variable(file_id,var_id,dimids=dim_id),&
-          myname_,'inquire_variable U '//trim(filename) )
-      allocate(temp_3d(dim(dim_id(1)),dim(dim_id(2)),dim(dim_id(3))))
-  
-      call nc_check( nf90_get_var(file_id,var_id,temp_3d),&
-          myname_,'get_var U '//trim(filename) )
-  !
-  ! INTERPOLATE TO MASS GRID
-      do k=1,dim(dim_id(3))
-         do j=1,dim(dim_id(2))
-            do i=1,dim(dim_id(1))-1
-               gg_u(j,i,k)=.5*(temp_3d(i,j,k)+temp_3d(i+1,j,k))
-            enddo
-         enddo
-      enddo
-      deallocate(temp_3d)
-      deallocate(dim_id)
-  !
-  ! READ V (m/s)
-      !print *, 'read V ',filename
-      call nc_check( nf90_inq_varid(file_id,'V',var_id),&
-          myname_,'inq_varid V '//trim(filename) )
-  
-      call nc_check( nf90_inquire_variable(file_id,var_id,ndims=ndim),&
-          myname_,'inquire_variable V '//trim(filename) )
-      allocate(dim_id(ndim))
-  
-      call nc_check( nf90_inquire_variable(file_id,var_id,dimids=dim_id),&
-          myname_,'inquire_variable V '//trim(filename) )
-      allocate(temp_3d(dim(dim_id(1)),dim(dim_id(2)),dim(dim_id(3))))
-  
-      call nc_check( nf90_get_var(file_id,var_id,temp_3d),&
-          myname_,'get_var V '//trim(filename) )
-  !
-  ! INTERPOLATE TO MASS GRID
-      do k=1,dim(dim_id(3))
-         do j=1,dim(dim_id(2))-1
-            do i=1,dim(dim_id(1))
-               gg_v(j,i,k)=.5*(temp_3d(i,j,k)+temp_3d(i,j+1,k))
-            enddo
-         enddo
-      enddo
-      deallocate(temp_3d)
-      deallocate(dim_id)
-      print *,'min/max u',minval(gg_u),maxval(gg_u)
-      print *,'min/max v',minval(gg_v),maxval(gg_v)
-  !
-  ! READ QVAPOR (kg/kg)
-      !print *, 'read QVAPOR ',filename
-      call nc_check( nf90_inq_varid(file_id,'QVAPOR',var_id),&
-          myname_,'inq_varid QVAPOR '//trim(filename) )
-  
-      call nc_check( nf90_inquire_variable(file_id,var_id,ndims=ndim),&
-          myname_,'inquire_variable QVAPOR '//trim(filename) )
-      allocate(dim_id(ndim))
-  
-      call nc_check( nf90_inquire_variable(file_id,var_id,dimids=dim_id),&
-          myname_,'inquire_variable QVAPOR '//trim(filename) )
-      allocate(temp_3d(dim(dim_id(1)),dim(dim_id(2)),dim(dim_id(3))))
-  
-      call nc_check( nf90_get_var(file_id,var_id,temp_3d),&
-          myname_,'get_var QVAPOR '//trim(filename) )
-      gg_rh = reshape(temp_3d,(/dim(dim_id(2)),dim(dim_id(1)),dim(dim_id(3))/),order=(/2,1,3/))
-      deallocate(temp_3d)
-      deallocate(dim_id,dim)
-  
-      call nc_check( nf90_close(file_id),&
-          myname_,'close '//trim(filename) )
-  !
-  ! CALCULATE TOTAL POTENTIAL TEMPERATURE (K)
-      !print *, 'calculate total temperature ',filename
-      do i=1,nx
-         do j=1,ny
-            do k=1,nz
-              tsn(j,i,k)=tsn(j,i,k)+h300
-            enddo
-         enddo
-      enddo   
-  !
-  ! INTEGRATE {1 + WATER VAPOR} TO CONVERT DRY AIR PRESSURE    
-      !print *, 'integrate 1 + q vertically ',filename
-      allocate(q_integral(ny,nx))
-      allocate(q_integralc4h(ny,nx))
-      q_integral(:,:)=one
-      q_integralc4h=0.0_r_single
-      do i=1,nx
-         do j=1,ny
-            do k=1,nz
-               deltasigma=eta1_ll(k)-eta1_ll(k+1)
-               q_integral(j,i)=q_integral(j,i)+deltasigma*gg_rh(j,i,k)
-               q_integralc4h(j,i)=q_integralc4h(j,i)+(eta2_ll(k)-eta2_ll(k+1))*gg_rh(j,i,k)
-            enddo
-         enddo
-      enddo
-  !
-  ! CONVERT WATER VAPOR MIXING RATIO TO SPECIFIC HUMIDITY
-      do i=1,nx
-         do j=1,ny
-            do k=1,nz
-               gg_rh(j,i,k)=gg_rh(j,i,k)/(one+gg_rh(j,i,k))
-            enddo
-         enddo
-      enddo
-  
-  !  obtaining psfc as done in subroutine read_wrf_mass_netcdf_guess
-      do i=1,nx
-         do j=1,ny
-            psfc_this_dry=r0_01*gg_ps(j,i)
-            psfc_this=(psfc_this_dry-pt_ll)*q_integral(j,i)+pt_ll+q_integralc4h(j,i)
-            gg_ps(j,i)=one_tenth*psfc_this  ! convert from mb to cb
-         end do
-      end do
-  !
-  ! CONVERT POTENTIAL TEMPERATURE TO VIRTUAL TEMPERATURE
-      !print *, 'convert potential temp to virtual temp ',filename
-      allocate(prsl(ny,nx,nz))
-      do k=1,nz
-         do i=1,nx
-            do j=1,ny
-               work_prsl  = one_tenth*(aeta1_ll(k)*(r10*gg_ps(j,i)-pt_ll)+&
-                                       aeta2_ll(k) + pt_ll)
-               prsl(j,i,k)=work_prsl
-               work_prslk = (work_prsl/r100)**rd_over_cp_mass
-               ! sensible temp from pot temp
-               tsn(j,i,k)     = tsn(j,i,k)*work_prslk
-               ! virtual temp from sensible temp
-               gg_tv(j,i,k) = tsn(j,i,k) * (one+fv*gg_rh(j,i,k))
-               ! recompute sensible temp from virtual temp
-               tsn(j,i,k)= gg_tv(j,i,k)/(one+fv*max(zero,gg_rh(j,i,k)))
-            end do
-         end do
-      end do
-      print *,'min/max tv',minval(gg_tv),maxval(gg_tv)
-  
-  !
-  ! CALCULATE PSEUDO RELATIVE HUMIDITY IF USING RH VARIABLE
-      if (.not.q_hyb_ens) then
-         allocate(qst(ny,nx,nz))
-         ice=.true. 
-         iderivative=0
-         call genqsat(qst,tsn,prsl,ny,nx,nsig,ice,iderivative)
-         do k=1,nz
-            do i=1,nx
-               do j=1,ny
-                  gg_rh(j,i,k)=gg_rh(j,i,k)/qst(j,i,k)
-               enddo
-            enddo
-         enddo
-         print *,'min/max rh',minval(gg_rh),maxval(gg_rh)
-         deallocate(qst)
-      else
-         print *,'min/max q',minval(gg_rh),maxval(gg_rh)
-      end if
-  
-  ! DEALLOCATE REMAINING TEMPORARY STORAGE
-      deallocate(tsn,prsl,q_integral,p_top)
-    endif ! done netcdf read on root
-  
-  ! transfer data from root to subdomains on each task
-  ! scatterv used, since full grids exist only on root task.
-    allocate(wrk_fill_2d(grd_ens%itotsub))
-  ! first PS (output from fill_regional_2d is a column vector with a halo)
-    if(mype==0) call this%fill_regional_2d(gg_ps,wrk_fill_2d)
-    call mpi_scatterv(wrk_fill_2d,grd_ens%ijn_s,grd_ens%displs_s,mpi_rtype, &
-    g_ps,grd_ens%ijn_s(mype+1),mpi_rtype,0,mpi_comm_world,ierror)       
-  ! then TV,U,V,RH
-    do k=1,grd_ens%nsig
-       if (mype==0) call this%fill_regional_2d(gg_tv(1,1,k),wrk_fill_2d)
-       call mpi_scatterv(wrk_fill_2d,grd_ens%ijn_s,grd_ens%displs_s,mpi_rtype, &
-       g_tv(1,1,k),grd_ens%ijn_s(mype+1),mpi_rtype,0,mpi_comm_world,ierror)       
-       if (mype==0) call this%fill_regional_2d(gg_u(1,1,k),wrk_fill_2d)
-       call mpi_scatterv(wrk_fill_2d,grd_ens%ijn_s,grd_ens%displs_s,mpi_rtype, &
-       g_u(1,1,k),grd_ens%ijn_s(mype+1),mpi_rtype,0,mpi_comm_world,ierror)       
-       if (mype==0) call this%fill_regional_2d(gg_v(1,1,k),wrk_fill_2d)
-       call mpi_scatterv(wrk_fill_2d,grd_ens%ijn_s,grd_ens%displs_s,mpi_rtype, &
-       g_v(1,1,k),grd_ens%ijn_s(mype+1),mpi_rtype,0,mpi_comm_world,ierror)       
-       if (mype==0) call this%fill_regional_2d(gg_rh(1,1,k),wrk_fill_2d)
-       call mpi_scatterv(wrk_fill_2d,grd_ens%ijn_s,grd_ens%displs_s,mpi_rtype, &
-       g_rh(1,1,k),grd_ens%ijn_s(mype+1),mpi_rtype,0,mpi_comm_world,ierror)       
-    enddo
-  ! for now, don't do anything with oz, cwmr
-    g_oz = 0.; g_cwmr = 0.
-    deallocate(wrk_fill_2d)
-    if (mype==0) deallocate(gg_u,gg_v,gg_tv,gg_rh,gg_ps)
-  
-  return       
-  end subroutine general_read_wrf_mass
   
   subroutine fill_regional_2d(fld_in,fld_out)
   !$$$  subprogram documentation block

@@ -278,6 +278,7 @@ clean:
         cplr_wrwrfmassa.f90 \
         cplr_wrwrfnmma.f90 \
 	crtm_interface.f90 \
+        fv3_regional_interface.f90 \
 	cvsection.f90 \
 	cwhydromod.f90 \
 	dtast.f90 \
@@ -296,10 +297,10 @@ clean:
 	fill_mass_grid2.f90 \
 	fill_nmm_grid2.f90 \
 	fpvsx_ad.f90 \
-        fv3_regional_interface.f90 \
         general_commvars_mod.f90 \
 	general_read_gfsatm.f90 \
         general_read_nmmb.f90 \
+        general_read_nmmb_radar.f90 \
 	general_specmod.f90 \
 	general_spectral_transforms.f90 \
 	general_sub2grid_mod.f90 \
@@ -381,6 +382,7 @@ clean:
 	intrp2a.f90 \
 	intrp3oz.f90 \
 	intrw.f90 \
+	intdbz.f90 \
 	intspd.f90 \
 	intsst.f90 \
 	intt.f90 \
@@ -473,6 +475,8 @@ clean:
         m_visNode.F90 \
         m_wNode.F90 \
 	m_wspd10mNode.F90 \
+        m_dbzNode.F90 \
+        mrmsmod.f90 \
 	m_uwnd10mNode.F90 \
 	m_vwnd10mNode.F90 \
         m_swcpNode.F90 \
@@ -578,6 +582,7 @@ clean:
 	stpq.f90 \
 	stprad.f90 \
 	stprw.f90 \
+	stpdbz.f90 \
 	stpspd.f90 \
 	stpsst.f90 \
 	stpt.f90 \
@@ -672,6 +677,9 @@ clean:
 	read_prepbufr.f90 \
 	read_wcpbufr.f90 \
 	read_radar.f90 \
+        read_radar_wind_ascii.f90 \
+        read_dbz_nc.f90 \
+        read_dbz_netcdf.f90 \
 	read_saphir.f90 \
 	read_satwnd.f90 \
 	read_satmar.f90 \
@@ -681,6 +689,7 @@ clean:
 	read_ssmi.f90 \
 	read_ssmis.f90 \
 	read_tcps.f90 \
+        sparsearr.f90 \
 	setupbend.f90 \
 	setupco.f90 \
 	setupdw.f90 \
@@ -711,6 +720,8 @@ clean:
 	setuptd2m.f90 \
 	setupvis.f90 \
 	setupw.f90 \
+        setupdbz.f90 \
+        setupdbz_lib.f90 \
 	setupwspd10m.f90 \
 	setupuwnd10m.f90 \
 	setupvwnd10m.f90 \
