@@ -13,7 +13,7 @@ include_directories(
       ${PROJECT_SOURCE_DIR}
       ${PFUNIT_DIR}/mod
 )
-set(UNIT_TEST_LIST "test_setupps")
+set(UNIT_TEST_LIST "test_read_prepbufr")
 # set(UNIT_TEST_LIST "test_read_wrf_nmm;test_read_wrf_mass;test_adjoint")
 #set(UNIT_TEST_LIST "test_read_wrf_nmm")
 #foreach(_sample ${UNIT_TEST_LIST})
