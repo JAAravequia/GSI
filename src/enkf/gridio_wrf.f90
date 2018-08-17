@@ -781,8 +781,10 @@ contains
     read(datestring(9:10),'(i2)') ihour
     if (nmm .and. nmm_restart) then
        varstrname = 'NSTART_HOUR'
+       allocate(vargrid_native(1,1,1))
        vargrid_native(1,1,1) = ihour
        call writenetcdfdata(filename,vargrid_native,varstrname,1,1,1)
+       deallocate(vargrid_native)
     end if
     !
     !  update START_DATE, SIMULATION_START_DATE, GMT, JULYR, JULDAY 
