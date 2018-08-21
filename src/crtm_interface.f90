@@ -506,7 +506,8 @@ subroutine init_crtm(init_pass,mype_diaghdr,mype,nchanl,isis,obstype,radmod)
 
 ! Are there aerosols to affect CRTM?
  if (radmod%laerosol_fwd) then 
-    allocate(aero(nsig,n_actual_aerosols),aero_conc(msig,n_actual_aerosols),auxrh(msig))
+    if(.not.allocated(aero)) allocate(aero(nsig,n_actual_aerosols))
+    if(.not.allocated(aero_conc)) allocate(aero_conc(msig,n_actual_aerosols),auxrh(msig))
     n_actual_aerosols_wk=n_actual_aerosols
     n_aerosols_fwd_wk=n_aerosols_fwd
     n_aerosols_jac_wk=n_aerosols_jac
@@ -644,7 +645,7 @@ endif
 
 ! Allocate structures for radiative transfer
 
- if (radmod%lcloud_fwd .and. (.not. mixed_use)) & 
+ if (radmod%lcloud_fwd .and. (.not. mixed_use) .and. (.not. allocated(rtsolution0)) ) & 
     allocate(rtsolution0(channelinfo(sensorindex)%n_channels,1))       
 
  allocate(&
