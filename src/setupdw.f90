@@ -174,7 +174,7 @@ subroutine setupdw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) mm1,ikxx,nn,isli,ibin,ioff,ioff0
   integer(i_kind) jsig
   integer(i_kind) i,nchar,nreal,k,j,k1,jj,l,ii,k2
-  integer(i_kind) ier,ilon,ilat,ihgt,ilob,id,itime,ikx,iatd,inls,incls
+  integer(i_kind) ier,ilon,ilat,ihgt,ilob,id,itime,ikx,iatd,inls,incls,isatid
   integer(i_kind) iazm,ielva,iuse,ilate,ilone,istat
   integer(i_kind) idomsfc,isfcr,iff10,iskint
 
@@ -221,26 +221,27 @@ subroutine setupdw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   read(lunin)data,luse,ioid
 
 !    index information for data array (see reading routine)
-  ikxx=1      ! index of ob type
-  ilon=2      ! index of grid relative obs location (x)
-  ilat=3      ! index of grid relative obs location (y)
-  itime=4     ! index of observation time in data array
-  ihgt=5      ! index of obs vertical coordinate in data array(height-m)
-  ielva=6     ! index of elevation angle(radians)
-  iazm=7      ! index of azimuth angle(radians) in data array
-  inls=8      ! index of number of laser shots
-  incls=9     ! index of number of cloud laser shots
-  iatd=10     ! index of atmospheric depth     
-  ilob=11     ! index of lidar observation
-  ier=12      ! index of obs error
-  id=13       ! index of station id
-  iuse=14     ! index of use parameter
-  idomsfc=15  ! index of dominate surface type
-  iskint=16   ! index of skin temperature
-  iff10 = 17  ! index of 10 m wind factor
-  isfcr = 18  ! index of surface roughness
-  ilone=19    ! index of longitude (degrees)
-  ilate=20    ! index of latitude (degrees)
+  ikxx   =  1  ! index of ob type
+  ilon   =  2  ! index of grid relative obs location (x)
+  ilat   =  3  ! index of grid relative obs location (y)
+  itime  =  4  ! index of observation time in data array
+  ihgt   =  5  ! index of obs vertical coordinate in data array(height-m)
+  ielva  =  6  ! index of elevation angle(radians)
+  iazm   =  7  ! index of azimuth angle(radians) in data array
+  inls   =  8  ! index of number of laser shots
+  incls  =  9  ! index of number of cloud laser shots
+  iatd   = 10  ! index of atmospheric depth     
+  ilob   = 11  ! index of lidar observation
+  ier    = 12  ! index of obs error
+  id     = 13  ! index of station id
+  isatid = 14  ! index of satellite id
+  iuse   = 15  ! index of use parameter
+  idomsfc= 16  ! index of dominate surface type
+  iskint = 17  ! index of skin temperature
+  iff10  = 18  ! index of 10 m wind factor
+  isfcr  = 19  ! index of surface roughness
+  ilone  = 20  ! index of longitude (degrees)
+  ilate  = 21  ! index of latitude (degrees)
 
   do i=1,nobs
      muse(i)=nint(data(iuse,i)) <= jiter
@@ -932,34 +933,40 @@ subroutine setupdw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   character(7),parameter     :: obsclass = '     dw'
   real(r_single),parameter::     missing = -9.99e9_r_single
   real(r_kind),dimension(miter) :: obsdiag_iuse
-           call nc_diag_metadata("Station_ID",              station_id             )
-           call nc_diag_metadata("Observation_Class",       obsclass               )
-           call nc_diag_metadata("Observation_Type",        ictype(ikx)            )
-           call nc_diag_metadata("Observation_Subtype",     icsubtype(ikx)         )
-           call nc_diag_metadata("Latitude",                sngl(data(ilate,i))    )
-           call nc_diag_metadata("Longitude",               sngl(data(ilone,i))    )
-           call nc_diag_metadata("Station_Elevation",       missing                )
-           call nc_diag_metadata("Pressure",                sngl(presw)            )
-           call nc_diag_metadata("Height",                  sngl(data(ihgt,i))     )
-           call nc_diag_metadata("Time",                    sngl(dtime-time_offset))
-           call nc_diag_metadata("Prep_QC_Mark",            missing                )
-           call nc_diag_metadata("Prep_Use_Flag",           sngl(data(iuse,i))     )
-!          call nc_diag_metadata("Nonlinear_QC_Var_Jb",     var_jb                 )
-           call nc_diag_metadata("Nonlinear_QC_Rel_Wgt",    sngl(rwgt)             )                 
+           call nc_diag_metadata("Station_ID",              station_id                        )
+           call nc_diag_metadata("Observation_Class",       obsclass                          )
+           call nc_diag_metadata("Observation_Type",        ictype(ikx)                       )
+           call nc_diag_metadata("Observation_Subtype",     icsubtype(ikx)                    )
+           call nc_diag_metadata("Latitude",                sngl(data(ilate,i))               )
+           call nc_diag_metadata("Longitude",               sngl(data(ilone,i))               )
+           call nc_diag_metadata("Station_Elevation",       missing                           )
+           call nc_diag_metadata("Pressure",                sngl(presw)                       )
+           call nc_diag_metadata("Height",                  sngl(data(ihgt,i))                )
+           call nc_diag_metadata("Time",                    sngl(dtime-time_offset)           )
+           call nc_diag_metadata("Prep_QC_Mark",            missing                           )
+           call nc_diag_metadata("Prep_Use_Flag",           sngl(data(iuse,i))                )
+!          call nc_diag_metadata("Nonlinear_QC_Var_Jb",     var_jb                            )
+           call nc_diag_metadata("Nonlinear_QC_Rel_Wgt",    sngl(rwgt)                        )                 
            if(muse(i)) then
-              call nc_diag_metadata("Analysis_Use_Flag",    sngl(one)              )
+              call nc_diag_metadata("Analysis_Use_Flag",    sngl(one)                         )
            else
-              call nc_diag_metadata("Analysis_Use_Flag",    sngl(-one)             )              
+              call nc_diag_metadata("Analysis_Use_Flag",    sngl(-one)                        )              
            endif
 
-           call nc_diag_metadata("Errinv_Input",            sngl(errinv_input)     )
-           call nc_diag_metadata("Errinv_Adjust",           sngl(errinv_adjst)     )
-           call nc_diag_metadata("Errinv_Final",            sngl(errinv_final)     )
+           call nc_diag_metadata("Errinv_Input",            sngl(errinv_input)                )
+           call nc_diag_metadata("Errinv_Adjust",           sngl(errinv_adjst)                )
+           call nc_diag_metadata("Errinv_Final",            sngl(errinv_final)                )
 
-           call nc_diag_metadata("Observation",                   sngl(data(ilob,i)))
-           call nc_diag_metadata("Obs_Minus_Forecast_adjusted",   sngl(ddiff)      )
-           call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", sngl(data(ilob,i)-dwwind))
+           call nc_diag_metadata("Observation",                   sngl(data(ilob,i))          )
+           call nc_diag_metadata("Obs_Minus_Forecast_adjusted",   sngl(ddiff)                 )
+           call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", sngl(data(ilob,i)-dwwind)   )
 
+           call nc_diag_metadata("Wind_Reduction_Factor_at_10m", sngl(factw)                  )
+           call nc_diag_metadata("Elevation_Angle",              sngl(data(ielva,i)*rad2deg)  )
+           call nc_diag_metadata("Wind_Azimuth_Angle",           sngl(data(iazm,i)*rad2deg)   )
+           call nc_diag_metadata("Laser_Shot_Count",             sngl(data(inls,i))           )
+           call nc_diag_metadata("Cloud_Laser_Shot_Count",       sngl(data(incls,i))          )
+           call nc_diag_metadata("Atmospheric_Depth",            sngl(data(iatd,i))           )
 !_RT_NC4_TODO
 !_RT    rdiagbuf(20,ii) = factw                ! 10m wind reduction factor
 !_RT    rdiagbuf(21,ii) = data(ielva,i)*rad2deg! elevation angle (degrees)
