@@ -1259,7 +1259,8 @@ implicit none
                   mm=ich1(nn)
                   if(iamroot_)write(6,'(1x,a20,2i6,2f15.5)')idnames(itbl),ii,nn, &
                      sqrt(GSI_BundleErrorCov(itbl)%R(IRsubset(ii),IRsubset(ii)))
-!KAB              if(isurf==1) varch_sea(mm)= sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
+!KAB              
+                  if(isurf==1) varch_sea(mm)= sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
                   if(isurf==2) varch_land(mm)= sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
                   if(isurf==3) varch_ice(mm)= sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
                   if(isurf==4) varch_snow(mm)= sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))

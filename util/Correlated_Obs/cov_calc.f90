@@ -315,7 +315,9 @@ do tim=1,ntimes
       ges_channel_loop: do jj=1,nch_active
          j=indR(jj)
 !KAB
-         if ((Cloud_Type==Cloud_FOV).and.(clw<ccld(jj))) cycle ges_read_loop
+         if (Cloud_Type==Cloud_FOV) then
+            if (clw<ccld(jj)) cycle ges_read_loop
+         end if
          if (((abs(RadDiag_Data%Channel(j)%qcmark)<one)).and. &
             (abs(RadDiag_Data%Channel(j)%errinv)>errt)) then 
             ges(ng,jj)=real(RadDiag_Data%Channel(j)%omgbc,r_kind)
@@ -389,7 +391,9 @@ do tim=1,ntimes
          anl_channel_loop: do jj=1,nch_active
             j=indR(jj)
 !KAB
-            if ((Cloud_Type==Cloud_FOV).and.(clw<ccld(jj))) cycle anl_read_loop
+            if (Cloud_Type==Cloud_FOV) then
+               if (clw<ccld(jj)) cycle anl_read_loop
+            end if
             if (((abs(RadDiag_Data%Channel(j)%qcmark)<one)).and.&
                (abs(RadDiag_Data%Channel(j)%errinv)>errt)) then 
                anl(jj)=real(RadDiag_Data%Channel(j)%omgbc,r_kind)

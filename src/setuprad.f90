@@ -369,7 +369,8 @@
   logical channel_passive
   logical,dimension(nobs):: luse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
-
+!KAB
+  logical:: clrsky
   character(10) filex
   character(12) string
 
@@ -758,33 +759,35 @@
            eff_area=(radmod%cld_sea_only .and. sea) .or. (.not.  radmod%cld_sea_only)
         end if
 !KAB
-        if(sea) then
-          isfctype=0
-          do i=1,nchanl
-             tnoise(i)=varch_sea(ich(i))
-          enddo
-        else if(land) then
-          isfctype=1
-          do i=1,nchanl
-             tnoise(i)=varch_land(ich(i))
-          enddo
-        else if(ice) then
-          isfctype=2
-          do i=1,nchanl
-             tnoise(i)=varch_ice(ich(i))
-          enddo
-        else if(snow) then
-          isfctype=3
-          do i=1,nchanl
-             tnoise(i)=varch_snow(ich(i))
-          enddo
-        else if(mixed) then
-          isfctype=4
-          do i=1,nchanl
-!             varch(ich(i))=varch_mixed(ich(i))
-             tnoise(i)=varch_mixed(ich(i))
-          enddo
-        endif
+!add if statement
+!if clear sky
+!        if(sea) then
+!          isfctype=0
+!          do i=1,nchanl
+!             tnoise(i)=varch_sea(ich(i))
+!          enddo
+!        else if(land) then
+!          isfctype=1
+!          do i=1,nchanl
+!             tnoise(i)=varch_land(ich(i))
+!          enddo
+!        else if(ice) then
+!          isfctype=2
+!          do i=1,nchanl
+!             tnoise(i)=varch_ice(ich(i))
+!          enddo
+!        else if(snow) then
+!          isfctype=3
+!          do i=1,nchanl
+!             tnoise(i)=varch_snow(ich(i))
+!          enddo
+!        else if(mixed) then
+!          isfctype=4
+!          do i=1,nchanl
+!!             varch(ich(i))=varch_mixed(ich(i))
+!             tnoise(i)=varch_mixed(ich(i))
+!          enddo
+!        endif
 
 !       Count data of different surface types
         if(luse(n))then
@@ -1097,20 +1100,55 @@
                 id_qc(1:nchanl) = ifail_cloud_qc
              endif
            endif
-        end if ! radmod%lcloud_fwd .and. radmod%ex_biascor
-        
+        end if ! radmod%lcloud_fwd .and. radmod%ex_biascor        
         do i=1,nchanl
            error0(i) = tnoise(i) 
            errf0(i) = error0(i)
         end do
 
 !       Assign observation error for all-sky radiances 
+!KAB clrsky
+        clrsky=.true.
         if (radmod%lcloud_fwd .and. eff_area)  then   
            if (radmod%ex_obserr=='ex_obserr1') & 
-              call radiance_ex_obserr(radmod,nchanl,clwp_amsua,clw_guess_retrieval,tnoise,tnoise_cld,error0)
+              call radiance_ex_obserr(radmod,nchanl,clwp_amsua,clw_guess_retrieval,tnoise,tnoise_cld,error0,clrsky)
 !          if (radmod%ex_obserr=='ex_obserr2') &  ! comment out for now, waiting for more tests
 !             call radiance_ex_obserr(radmod,nchanl,cldeff_obs,cldeff_fg,tnoise,tnoise_cld,error0)
         end if
+!move varch_surf stuff here
+        if (clrsky) then
+           if(sea) then
+             isfctype=0
+             do i=1,nchanl
+                tnoise(i)=varch_sea(ich(i))
+             enddo
+           end if
+           else if(land) then
+             isfctype=1
+             do i=1,nchanl
+                tnoise(i)=varch_land(ich(i))
+             enddo
+           else if(ice) then
+             isfctype=2
+             do i=1,nchanl
+                tnoise(i)=varch_ice(ich(i))
+             enddo
+           else if(snow) then
+             isfctype=3
+             do i=1,nchanl
+                tnoise(i)=varch_snow(ich(i))
+             enddo 
+           else if(mixed) then
+             isfctype=4
+             do i=1,nchanl
+                tnoise(i)=varch_mixed(ich(i))
+             enddo
+           endif
+           do i=1,nchanl
+             error0(i) = tnoise(i)
+             errf0(i) = error0(i)
+           end do
+        endif
 
         do i=1,nchanl
            mm=ich(i)

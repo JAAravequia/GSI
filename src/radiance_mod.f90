@@ -797,7 +797,7 @@ contains
   end subroutine radiance_parameter_aerosol_init
 
   subroutine radiance_ex_obserr_1(radmod,nchanl,clwp_amsua,clw_guess_retrieval, &
-                                tnoise,tnoise_cld,error0)
+                                tnoise,tnoise_cld,error0,clrsky)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    radiance_ex_obserr_1
@@ -827,6 +827,8 @@ contains
     real(r_kind),dimension(nchanl),intent(in):: tnoise,tnoise_cld
     real(r_kind),dimension(nchanl),intent(inout) :: error0
     type(rad_obs_type),intent(in) :: radmod 
+!KAB clrsky
+    logical,intent(inout):: clrsky
 
     integer(i_kind) :: i
     real(r_kind) :: clwtmp
@@ -845,8 +847,10 @@ contains
        else if(clwtmp > cclr(i) .and. clwtmp < ccld(i)) then
           error0(i) = tnoise(i) + (clwtmp-cclr(i))* &
                       (tnoise_cld(i)-tnoise(i))/(ccld(i)-cclr(i))
+          clrsky=.false.
        else
           error0(i) = tnoise_cld(i)
+          clrsky=.false.
        endif
     end do
     return
