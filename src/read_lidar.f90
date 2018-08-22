@@ -40,6 +40,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
 !   2015-02-23  Rancic/Thomas - add l4densvar to time window logical
 !   2015-10-01  guo     - consolidate use of ob location (in deg
+!   2018-08-22  mccarty - restructuring/modifications to read Aeolus L2B bufr data
 !
 !   input argument list:
 !     infile   - unit from which to read BUFR data

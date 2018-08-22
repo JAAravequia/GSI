@@ -128,6 +128,7 @@ subroutine setupdw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !                       . removed (%dlat,%dlon) debris.
 !   2016-11-29  shlyaeva - save linearized H(x) for EnKF
 !   2017-02-06  todling - add netcdf_diag capability; hidden as contained code
+!   2018-08-22  mccarty - updates/extensions to handle Aeolus L2B bufr data
 !
 ! !REMARKS:
 !   language: f90
