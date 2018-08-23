@@ -28,7 +28,8 @@ set -x
 # GSI_EXE  = path and name of the gsi executable 
 # ENS_ROOT = path where ensemble background files exist
   ANAL_TIME=2017051318
-  JOB_DIR=the_directory_name_where_you_submit_this_script
+  JOB_DIR=the_job_directory
+     #normally you put run scripts here and submit jobs form here, require a copy of gsi.exe at this directory
   RUN_NAME=a_descriptive_run_name_such_as_case05_3denvar_etc
   OBS_ROOT=the_directory_where_observation_files_are_located
   BK_ROOT=the_directory_where_background_files_are_located
@@ -40,7 +41,7 @@ set -x
   GSI_EXE=${JOB_DIR}/gsi.exe  #assume you have a copy of gsi.exe here
   WORK_ROOT=${JOB_DIR}/${RUN_NAME}
   FIX_ROOT=${GSI_ROOT}/fix
-  GSI_NAMELIST=${GSI_ROOT}/scripts/comgsi.ksh/comgsi_namelist.sh
+  GSI_NAMELIST=${GSI_ROOT}/scripts/comgsi_namelist.sh
   PREPBUFR=${OBS_ROOT}/nam.t${HH}z.prepbufr.tm00
   BK_FILE=${BK_ROOT}/wrfinput_d01.${ANAL_TIME}
 #
@@ -401,8 +402,8 @@ done
 
 # for satellite bias correction
 # Users may need to use their own satbias files for correct bias correction
-cp ${GSI_ROOT}/scripts/comgsi.ksh/comgsi_satbias_in ./satbias_in
-cp ${GSI_ROOT}/scripts/comgsi.ksh/comgsi_satbias_pc_in ./satbias_pc_in 
+cp ${GSI_ROOT}/fix/comgsi_satbias_in ./satbias_in
+cp ${GSI_ROOT}/fix/comgsi_satbias_pc_in ./satbias_pc_in 
 
 #
 ##################################################################################
