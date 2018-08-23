@@ -391,6 +391,11 @@ subroutine read_airs(mype,val_airs,ithin,isfcalc,rmesh,jsatid,gstime,&
 
 !       Get the size of the channels and radiance (allchan) array
         call ufbint(lnbufr,crchn_reps,1,1,iret, '(SCBTSEQN)')
+        if(iret<=0) call ufbint(lnbufr,crchn_reps,1,1,iret, '(AIRSCHAN)') 
+        if(iret<=0) then 
+          print *, "read_airs cant get # of airs channels"
+          call stop2(789)
+        endif
         bufr_nchan = int(crchn_reps) + 24  ! 4 AIRS imager + 15 amsu + 5 HSB
                                            ! (In the bufr format HSB has 5 not 4
                                            ! channels!) 
