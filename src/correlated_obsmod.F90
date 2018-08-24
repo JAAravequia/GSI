@@ -1103,7 +1103,7 @@ implicit none
    character(len=80) covtype
    integer(i_kind) :: nch_active,ii,jj,iii,jjj,mm,nn,ncp,ifound,jj0,itbl,ntrow!nsatype,ntrow
 !KAB
-   integer(i_kind),dimension(5) ::nsatype
+   integer(i_kind),dimension(6) ::nsatype
    integer(i_kind)::nsat,isurf,rr
    integer(i_kind),allocatable,dimension(:)   :: ircv
    integer(i_kind),allocatable,dimension(:)   :: ijac
@@ -1132,27 +1132,32 @@ implicit none
 !      if(covtype(iinstr-6:iinstr)==trim(surf))then
       if(covtype(iinstr-9:iinstr-6)==':sea')then
          nsatype(1)=nsatype(1)+1
+         nsatype(6)=nsatype(6)+1
          tblidx(1,nsatype(1))=jj0
       endif
       if(covtype(iinstr-10:iinstr-6)==':land')then
          nsatype(2)=nsatype(2)+1
+         nsatype(6)=nsatype(6)+1
          tblidx(2,nsatype(2))=jj0
       endif
       if(covtype(iinstr-9:iinstr-6)==':ice')then
          nsatype(3)=nsatype(3)+1
+         nsatype(6)=nsatype(6)+1
          tblidx(3,nsatype(3))=jj0
       endif
       if(covtype(iinstr-10:iinstr-6)==':snow')then
          nsatype(4)=nsatype(4)+1
+         nsatype(6)=nsatype(6)+1
          tblidx(4,nsatype(4))=jj0
       endif
       if(covtype(iinstr-11:iinstr-6)==':mixed')then
          nsatype(5)=nsatype(5)+1
+         nsatype(6)=nsatype(6)+1
          tblidx(5,nsatype(5))=jj0
       endif
 
    enddo
-!   if(nsatype==0) return
+   if(nsatype(6)==0) return
    do isurf=1,5
       nsat=nsatype(isurf)
       if (nsat>0) then
@@ -1258,7 +1263,7 @@ implicit none
                   rr=IRsubset(ii)
                   mm=ich1(nn)
                   if(iamroot_)write(6,'(1x,a20,2i6,2f15.5)')idnames(itbl),ii,nn, &
-                     sqrt(GSI_BundleErrorCov(itbl)%R(IRsubset(ii),IRsubset(ii)))
+                     sqrt(GSI_BundleErrorCov(itbl)%R(IRsubset(ii),IRsubset(ii))), trim(covtype)
 !KAB              
                   if(isurf==1) varch_sea(mm)= sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
                   if(isurf==2) varch_land(mm)= sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))

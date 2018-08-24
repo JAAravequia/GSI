@@ -565,8 +565,8 @@ contains
 !$$$ end documentation block
 
 ! !USES:
-
-    use correlated_obsmod, only: corr_ob_initialize,corr_oberr_qc
+!KAB
+    use correlated_obsmod, only: corr_ob_initialize!,corr_oberr_qc
     use obsmod, only: iout_rad
     use constants, only: zero,one,zero_quad
     use mpimod, only: mype
@@ -1119,6 +1119,7 @@ contains
 !   instruments we account for inter-channel correlations
     if (present(miter)) then
        call corr_ob_initialize(miter)
+!KAB
 !       if (miter>0)  call corr_oberr_qc(jpch_rad,iuse_rad,nusis,varch)
     end if
 

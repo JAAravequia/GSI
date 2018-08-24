@@ -847,9 +847,11 @@ contains
        else if(clwtmp > cclr(i) .and. clwtmp < ccld(i)) then
           error0(i) = tnoise(i) + (clwtmp-cclr(i))* &
                       (tnoise_cld(i)-tnoise(i))/(ccld(i)-cclr(i))
+!KAB
           clrsky=.false.
        else
           error0(i) = tnoise_cld(i)
+!KAB
           clrsky=.false.
        endif
     end do
