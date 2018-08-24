@@ -63,7 +63,7 @@ elif [ $target = dell ]; then
     export NETCDF_CXX4FLAGS=-I/usrx/local/prod/packages/ips/18.0.1/netcdf/4.5.0/include
 fi
 
-cmake -DBUILD_UTIL=ON -DCMAKE_BUILD_TYPE=PRODUCTION ..
+cmake -DCMAKE_BUILD_TYPE=PRODUCTION ..
 
 make -j 8
 

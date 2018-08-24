@@ -1122,7 +1122,7 @@
              do i=1,nchanl
                 tnoise(i)=varch_sea(ich(i))
              enddo
-           end if
+ !          end if
            else if(land) then
              isfctype=1
              do i=1,nchanl
