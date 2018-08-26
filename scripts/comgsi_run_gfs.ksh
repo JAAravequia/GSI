@@ -27,8 +27,8 @@ set -x
 # OBS_ROOT = path of observations files
 # FIX_ROOT = path of fix files
 # GSI_EXE  = path and name of the gsi executable 
-  ANAL_TIME=2014070706
-  GFSCASE=T254
+  ANAL_TIME=2014080400
+  GFSCASE=T62
   JOB_DIR=the_job_directory
      #normally you put run scripts here and submit jobs form here, require a copy of gsi.exe at this directory
   RUN_NAME=a_descriptive_run_name_such_as_case05_3denvar_etc
@@ -194,8 +194,8 @@ fi
 ## Given the analysis date, compute the date from which the
 # first guess comes.  Extract cycle and set prefix
 # for guess and observation data files
-hha=`echo $ANAL_TIME | cut -c9-10`
-# hhg=`echo $GUESS_TIME | cut -c9-10`
+#hha=`echo $ANAL_TIME | cut -c9-10`
+#hhg=`echo $GUESS_TIME | cut -c9-10`
 
 #
 ##################################################################################
@@ -437,6 +437,12 @@ fi
 if [ -r "${OBS_ROOT}//airsbufr" ]; then
    ln -s ${OBS_ROOT}/airsbufr .
 fi
+if [ -r "${OBS_ROOT}//atmsbufr" ]; then
+   ln -s ${OBS_ROOT}/atmsbufr .
+fi
+if [ -r "${OBS_ROOT}//crisbufr" ]; then
+   ln -s ${OBS_ROOT}/crisbufr .
+fi
 if [ -r "${OBS_ROOT}//seviribufr" ]; then
    ln -s ${OBS_ROOT}/seviribufr .
 fi
@@ -473,6 +479,9 @@ fi
 if [ -r "${OBS_ROOT}/tcvitl" ]; then
    ln -s ${OBS_ROOT}/tcvitl .
 fi
+if [ -r "${OBS_ROOT}/satwndbufr" ]; then
+   ln -s ${OBS_ROOT}/satwndbufr .
+fi
 
 
 #
@@ -502,10 +511,12 @@ SATINFO=${FIX_ROOT}/global_satinfo.txt
 scaninfo=${FIX_ROOT}/global_scaninfo.txt
 SATANGL=${FIX_ROOT}/global_satangbias.txt
 atmsbeamdat=${FIX_ROOT}/atms_beamwidth.txt
-CONVINFO=${FIX_ROOT}/global_convinfo.txt
+CONVINFO=${FIX_ROOT}/global_convinfo_reg_test.txt
 OZINFO=${FIX_ROOT}/global_ozinfo.txt
 PCPINFO=${FIX_ROOT}/global_pcpinfo.txt
 OBERROR=${FIX_ROOT}/prepobs_errtable.global
+CLOUDYRADINFO=${FIX_ROOT}/cloudy_radiance_info.txt
+HYBENSINFO=${FIX_ROOT}/global_hybens_info.l64.txt 
 
 # Only need this file for single obs test
 bufrtable=${FIX_ROOT}/prepobs_prep.bufrtable
@@ -524,6 +535,8 @@ bftab_sst=${FIX_ROOT}/bufrtab.012
  cp $OZINFO   ozinfo
  cp $PCPINFO  pcpinfo
  cp $OBERROR  errtable
+ cp $CLOUDYRADINFO cloudy_radiance_info.txt
+ cp $HYBENSINFO hybens_info
 
  cp $bufrtable ./prepobs_prep.bufrtable
  cp $bftab_sst ./bftab_sstphr

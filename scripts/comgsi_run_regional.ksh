@@ -109,7 +109,7 @@ case $ARCH in
 
    'LINUX_PBS')
       #### Linux cluster PBS (Portable Batch System)
-      RUN_COMMAND="mpiexec -np ${GSIPROC} " ;;
+      RUN_COMMAND="mpirun -np ${GSIPROC} " ;;
 
    'DARWIN_PGI')
       ### Mac - mpi run

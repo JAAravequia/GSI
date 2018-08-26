@@ -24,32 +24,34 @@ set -x
 # ANAL_TIME= analysis time  (YYYYMMDDHH)
 # WORK_ROOT= working directory, where GSI runs
 # PREPBURF = path of PreBUFR conventional obs
-# BK_FILE  = path and name of background file
 # OBS_ROOT = path of observations files
 # FIX_ROOT = path of fix files
 # GSI_EXE  = path and name of the gsi executable 
-
-  ANAL_TIME=2012102506
-  WORK_ROOT=enkf/regional/enkf_arw
-  diag_ROOT=enkf/regional/gsidiag_arw
-  BK_ROOT=enkf/enkfdata/arw/bk
-  BK_FILE=${BK_ROOT}/wrfarw.ensmean
-  GSI_ROOT=/enkf/code/comGSIv3.4_EnKFv1.0
+  ANAL_TIME=2014021300  #used by comenkf_namelist.sh
+  JOB_DIR=the_job_directory
+     #normally you put run scripts here and submit jobs form here, require a copy of gsi.exe at this directory
+  RUN_NAME=a_descriptive_run_name_such_as_case05_3denvar_etc
+  OBS_ROOT=the_directory_where_observation_files_are_located
+  BK_ROOT=the_directory_where_background_files_are_located
+  GSI_ROOT=the_comgsi_main directory where src/ scripts/ fix/ etc are located
+  CRTM_ROOT=the_CRTM_directory
+  diag_ROOT=the_observer_directory_where_diag_files_exist
+  ENKF_EXE=${JOB_DIR}/enkf.exe
+  WORK_ROOT=${JOB_DIR}/${RUN_NAME}
   FIX_ROOT=${GSI_ROOT}/fix
-  ENKF_EXE=${GSI_ROOT}/src/main/enkf/wrf_enkf
-  CRTM_ROOT=CRTM_REL-2.2.3
-  ENKF_NAMELIST=${GSI_ROOT}/run/enkf_wrf_namelist.sh
+  ENKF_NAMELIST=${GSI_ROOT}/scripts/comenkf_namelist.sh
 
 # ensemble parameters
 #
   NMEM_ENKF=20
   BK_FILE_mem=${BK_ROOT}/wrfarw
-  NLONS=111
-  NLATS=111
-  NLEVS=56
+  NLONS=129
+  NLATS=70 
+  NLEVS=50
   IF_ARW=.true.
   IF_NMM=.false.
-  list="conv amsua_n18 hirs4_n19"
+#  list="conv amsua_n18 hirs4_n19"
+  list="conv"
 #  list="conv amsua_n18 mhs_n19 hirs4_n19"
 #
 #####################################################
@@ -77,8 +79,7 @@ case $ARCH in
 
    'LINUX_PBS')
       #### Linux cluster PBS (Portable Batch System)
-#      RUN_COMMAND="mpirun -np ${GSIPROC} " ;;
-      RUN_COMMAND="mpiexec_mpt -n ${GSIPROC} " ;;
+      RUN_COMMAND="mpirun -np ${GSIPROC} " ;;
 
    'DARWIN_PGI')
       ### Mac - mpi run
@@ -99,9 +100,9 @@ esac
 # first guess comes.  Extract cycle and set prefix and suffix
 # for guess and observation data files
 # gdate=`$ndate -06 $adate`
-gdate=$ANAL_TIME
-YYYYMMDD=`echo $adate | cut -c1-8`
-HH=`echo $adate | cut -c9-10`
+#gdate=$ANAL_TIME
+#YYYYMMDD=`echo $adate | cut -c1-8`
+#HH=`echo $adate | cut -c9-10`
 
 # Fixed files
 # CONVINFO=${FIX_ROOT}/global_convinfo.txt

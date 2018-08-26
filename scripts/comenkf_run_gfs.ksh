@@ -19,17 +19,20 @@ set -x
 # OBS_ROOT = path of observations files
 # FIX_ROOT = path of fix files
 # GSI_EXE  = path and name of the gsi executable 
-  ANAL_TIME=2014040506
+  ANAL_TIME=2014040512
   GFSCASE=enkf_glb_t254
-  WORK_ROOT=enkf_GFS
-  DIAG_ROOT=gsidiag_GFS
-  BK_ROOT=data/bk
-  GSI_ROOT=gsiroot
-  OBS_ROOT=data/obs
+  JOB_DIR=the_job_directory
+     #normally you put run scripts here and submit jobs form here, require a copy of gsi.exe at this directory
+  RUN_NAME=a_descriptive_run_name_such_as_case05_3denvar_etc
+  OBS_ROOT=the_directory_where_observation_files_are_located
+  BK_ROOT=the_directory_where_background_files_are_located
+  GSI_ROOT=the_comgsi_main directory where src/ scripts/ fix/ etc are located
+  CRTM_ROOT=the_CRTM_directory
+  diag_ROOT=the_observer_directory_where_diag_files_exist
+  WORK_ROOT=${JOB_DIR}/${RUN_NAME}
   FIX_ROOT=${GSI_ROOT}/fix
-  ENKF_EXE=${GSI_ROOT}/src/enkf/global_enkf
-  CRTM_ROOT=CRTM_2.2.3
-  ENKF_NAMELIST=${GSI_ROOT}/dtc/run/enkf_gfs_namelist.sh
+  ENKF_EXE=${JOB_DIR}/enkf.exe
+  ENKF_NAMELIST=${GSI_ROOT}/scripts/comenkf_namelist_gfs.sh
 
 # Note:  number of pe >= NMEM_ENKF
 NMEM_ENKF=10
