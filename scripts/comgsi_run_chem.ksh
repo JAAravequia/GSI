@@ -51,7 +51,7 @@ set -x
   BK_ROOT=the_directory_where_background_files_are_located
   GSI_ROOT=the_comgsi_main directory where src/ scripts/ fix/ etc are located
   CRTM_ROOT=the_CRTM_directory
-  gsi.x=${JOB_DIR}/gsi.x  #assume you have a copy of gsi.x here
+  GSI_EXE=${JOB_DIR}/gsi.x  #assume you have a copy of gsi.x here
   WORK_ROOT=${JOB_DIR}/${RUN_NAME}
   FIX_ROOT=${GSI_ROOT}/fix
   GSI_NAMELIST=${GSI_ROOT}/scripts/comgsi_namelist_chem.sh

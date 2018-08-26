@@ -2,9 +2,12 @@
 #####################################################
 # machine set up (users should change this part)
 #####################################################
+
 set -x
 
-#module load intel netcdf mpt
+#--------------------------------------------------
+  GSIPROC=32
+  ARCH='LINUX_LSF'
 
 #####################################################
 ##case set up (users should change this part)
@@ -93,21 +96,58 @@ else
 fi
 NLAT=` expr $LATA + 2 `
 
-ndate=/glade/p/ral/jnt/DAtask/code/UPPV2.0/src/ndate/ndate.exe
 ncp=/bin/cp
+#####################################################
+# Users should NOT change script after this point
+#####################################################
+#
+case $ARCH in
+   'IBM_LSF')
+      ###### IBM LSF (Load Sharing Facility)
+      RUN_COMMAND="mpirun.lsf " ;;
 
+   'LINUX')
+      if [ $GSIPROC = 1 ]; then
+         #### Linux workstation - single processor
+         RUN_COMMAND=""
+      else
+         ###### Linux workstation -  mpi run
+        RUN_COMMAND="mpirun -np ${GSIPROC} -machinefile ~/mach "
+      fi ;;
+
+   'LINUX_LSF')
+      ###### LINUX LSF (Load Sharing Facility)
+      RUN_COMMAND="mpirun.lsf " ;;
+
+   'LINUX_PBS')
+      #### Linux cluster PBS (Portable Batch System)
+      RUN_COMMAND="mpirun -np ${GSIPROC} " ;;
+
+   'DARWIN_PGI')
+      ### Mac - mpi run
+      if [ $GSIPROC = 1 ]; then
+         #### Mac workstation - single processor
+         RUN_COMMAND=""
+      else
+         ###### Mac workstation -  mpi run
+         RUN_COMMAND="mpirun -np ${GSIPROC} -machinefile ~/mach "
+      fi ;;
+
+   * )
+     print "error: $ARCH is not a supported platform configuration."
+     exit 1 ;;
+esac
 
 # Given the analysis date, compute the date from which the
 # first guess comes.  Extract cycle and set prefix and suffix
 # for guess and observation data files
-gdate=`$ndate -06 $ANAL_TIME`
-#gdate=$ANAL_TIME
 PDYa=`echo $ANAL_TIME | cut -c1-8`
 cyca=`echo $ANAL_TIME | cut -c9-10`
+gdate=`date -u -d "$PDYa $cyca -6 hour" +%Y%m%d%H` #6hr ago
+
 PDYg=`echo $gdate | cut -c1-8`
 cycg=`echo $gdate | cut -c9-10`
 prefix_tbc=gdas1.t${cycg}z
-
 
 # Directories for test case
 dirtbc=$BK_ROOT
@@ -131,37 +171,51 @@ cd $WORK_ROOT
 #$ncp $ENKF_EXE        ./enkf.x
 cp $ENKF_EXE enkf.x
 
-$ncp $ANAVINFO        ./anavinfo
-$ncp $CONVINFO        ./convinfo
-$ncp $SATINFO         ./satinfo
-$ncp $SCANINFO        ./scaninfo
-$ncp $OZINFO          ./ozinfo
-$ncp $LOCINFO         ./hybens_info
+cp $ANAVINFO        ./anavinfo
+cp $CONVINFO        ./convinfo
+cp $SATINFO         ./satinfo
+cp $SCANINFO        ./scaninfo
+cp $OZINFO          ./ozinfo
+cp $LOCINFO         ./hybens_info
 
-$ncp $DIAG_ROOT/satbias_in ./satbias_in
-$ncp $DIAG_ROOT/satbias_pc ./satbias_pc
-$ncp $DIAG_ROOT/satbias_angle ./satbias_angle
+cp $diag_ROOT/satbias_in ./satbias_in
+cp $diag_ROOT/satbias_pc ./satbias_pc
+cp $diag_ROOT/satbias_angle ./satbias_angle
 
 # get mean
-$ncp $BK_ROOT/sfg_${gdate}_fhr06_ensmean ./sfg_${ANAL_TIME}_fhr06_ensmean
+ln -s $BK_ROOT/sfg_${gdate}_fhr06_ensmean ./sfg_${ANAL_TIME}_fhr06_ensmean
 list="conv amsua_metop-a amsua_n18 amsua_n15"
 for type in $list; do
-   $ncp $DIAG_ROOT/diag_${type}_ges.ensmean .
+   ln -s $diag_ROOT/diag_${type}_ges.ensmean .
 done
 
 # get each member
 imem=1
 while [[ $imem -le $NMEM_ENKF ]]; do
    member="mem"`printf %03i $imem`
-   $ncp $BK_ROOT/sfg_${gdate}_fhr06_${member} ./sfg_${ANAL_TIME}_fhr06_${member}
+   ln -s $BK_ROOT/sfg_${gdate}_fhr06_${member} ./sfg_${ANAL_TIME}_fhr06_${member}
    list="conv amsua_metop-a amsua_n18 amsua_n15"
    for type in $list; do
-      $ncp $DIAG_ROOT/diag_${type}_ges.${member} .
+      ln -s $diag_ROOT/diag_${type}_ges.${member} .
    done
    (( imem = $imem + 1 ))
 done
+#
+###################################################
+#  run  EnKF
+###################################################
+echo ' Run EnKF'
 
-eval "mpirun.lsf ${WORK_ROOT}/enkf.x < enkf.nml > stdout"
-rc=$?
+${RUN_COMMAND} ./enkf.x < enkf.nml > stdout 2>&1
+
+##################################################################
+#  run time error check
+##################################################################
+error=$?
+
+if [ ${error} -ne 0 ]; then
+  echo "ERROR: ${ENKF_EXE} crashed  Exit status=${error}"
+  exit ${error}
+fi
 
 exit
