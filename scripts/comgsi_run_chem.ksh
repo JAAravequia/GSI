@@ -45,13 +45,13 @@ set -x
 # GSI_EXE  = path and name of the gsi executable 
   ANAL_TIME=2012060318
   JOB_DIR=the_job_directory
-     #normally you put run scripts here and submit jobs form here, require a copy of gsi.exe at this directory
+     #normally you put run scripts here and submit jobs form here, require a copy of gsi.x at this directory
   RUN_NAME=a_descriptive_run_name_such_as_case05_3denvar_etc
   OBS_ROOT=the_directory_where_observation_files_are_located
   BK_ROOT=the_directory_where_background_files_are_located
   GSI_ROOT=the_comgsi_main directory where src/ scripts/ fix/ etc are located
   CRTM_ROOT=the_CRTM_directory
-  GSI_EXE=${JOB_DIR}/gsi.exe  #assume you have a copy of gsi.exe here
+  gsi.x=${JOB_DIR}/gsi.x  #assume you have a copy of gsi.x here
   WORK_ROOT=${JOB_DIR}/${RUN_NAME}
   FIX_ROOT=${GSI_ROOT}/fix
   GSI_NAMELIST=${GSI_ROOT}/scripts/comgsi_namelist_chem.sh

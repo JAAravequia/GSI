@@ -29,7 +29,7 @@ set -x
 # ENS_ROOT = path where ensemble background files exist
   ANAL_TIME=2017051318
   JOB_DIR=the_job_directory
-     #normally you put run scripts here and submit jobs form here, require a copy of gsi.exe at this directory
+     #normally you put run scripts here and submit jobs form here, require a copy of gsi.x at this directory
   RUN_NAME=a_descriptive_run_name_such_as_case05_3denvar_etc
   OBS_ROOT=the_directory_where_observation_files_are_located
   BK_ROOT=the_directory_where_background_files_are_located
@@ -38,7 +38,7 @@ set -x
   ENS_ROOT=the_directory_where_ensemble_backgrounds_are_located
       #ENS_ROOT is not required if not running hybrid EnVAR 
   HH=`echo $ANAL_TIME | cut -c9-10`
-  GSI_EXE=${JOB_DIR}/gsi.exe  #assume you have a copy of gsi.exe here
+  GSI_EXE=${JOB_DIR}/gsi.x  #assume you have a copy of gsi.x here
   WORK_ROOT=${JOB_DIR}/${RUN_NAME}
   FIX_ROOT=${GSI_ROOT}/fix
   GSI_NAMELIST=${GSI_ROOT}/scripts/comgsi_namelist.sh

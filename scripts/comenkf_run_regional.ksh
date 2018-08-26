@@ -26,17 +26,17 @@ set -x
 # PREPBURF = path of PreBUFR conventional obs
 # OBS_ROOT = path of observations files
 # FIX_ROOT = path of fix files
-# GSI_EXE  = path and name of the gsi executable 
+# ENKF_EXE  = path and name of the EnKF executable 
   ANAL_TIME=2014021300  #used by comenkf_namelist.sh
   JOB_DIR=the_job_directory
-     #normally you put run scripts here and submit jobs form here, require a copy of gsi.exe at this directory
+     #normally you put run scripts here and submit jobs form here, require a copy of enkf_wrf.x at this directory
   RUN_NAME=a_descriptive_run_name_such_as_case05_3denvar_etc
   OBS_ROOT=the_directory_where_observation_files_are_located
   BK_ROOT=the_directory_where_background_files_are_located
   GSI_ROOT=the_comgsi_main directory where src/ scripts/ fix/ etc are located
   CRTM_ROOT=the_CRTM_directory
   diag_ROOT=the_observer_directory_where_diag_files_exist
-  ENKF_EXE=${JOB_DIR}/enkf.exe
+  ENKF_EXE=${JOB_DIR}/enkf_wrf.x
   WORK_ROOT=${JOB_DIR}/${RUN_NAME}
   FIX_ROOT=${GSI_ROOT}/fix
   ENKF_NAMELIST=${GSI_ROOT}/scripts/comenkf_namelist.sh
