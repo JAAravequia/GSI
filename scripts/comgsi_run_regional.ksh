@@ -211,7 +211,7 @@ cd ${workdir}
 echo " Copy GSI executable, background file, and link observation bufr to working directory"
 
 # Save a copy of the GSI executable in the workdir
-cp ${GSI_EXE} gsi.exe
+cp ${GSI_EXE} gsi.x
 
 # Bring over background field (it's modified by GSI so we can't link to it)
 cp ${BK_FILE} ./wrf_inout
@@ -472,10 +472,10 @@ echo ' Run GSI with' ${bk_core} 'background'
 
 case $ARCH in
    'IBM_LSF')
-      ${RUN_COMMAND} ./gsi.exe < gsiparm.anl > stdout 2>&1  ;;
+      ${RUN_COMMAND} ./gsi.x < gsiparm.anl > stdout 2>&1  ;;
 
    * )
-      ${RUN_COMMAND} ./gsi.exe > stdout 2>&1  ;;
+      ${RUN_COMMAND} ./gsi.x > stdout 2>&1  ;;
 esac
 
 ##################################################################
@@ -603,10 +603,10 @@ if [ ${if_observer} = Yes ] ; then
 
      case $ARCH in
         'IBM_LSF')
-           ${RUN_COMMAND} ./gsi.exe < gsiparm.anl > stdout_mem${ensmemid} 2>&1  ;;
+           ${RUN_COMMAND} ./gsi.x < gsiparm.anl > stdout_mem${ensmemid} 2>&1  ;;
 
         * )
-           ${RUN_COMMAND} ./gsi.exe > stdout_mem${ensmemid} 2>&1 ;;
+           ${RUN_COMMAND} ./gsi.x > stdout_mem${ensmemid} 2>&1 ;;
      esac
 
 #  run time error check and save run time file status

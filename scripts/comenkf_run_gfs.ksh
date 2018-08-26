@@ -128,7 +128,8 @@ cd $WORK_ROOT
 #Build EnKF namelist on-the-fly
 . $ENKF_NAMELIST
 
-$ncp $ENKF_EXE        ./enkf.x
+#$ncp $ENKF_EXE        ./enkf.x
+cp $ENKF_EXE enkf.x
 
 $ncp $ANAVINFO        ./anavinfo
 $ncp $CONVINFO        ./convinfo

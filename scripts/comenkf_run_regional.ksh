@@ -121,8 +121,7 @@ rm -rf $WORK_ROOT
 mkdir -p $WORK_ROOT
 cd $WORK_ROOT
 
-cp $ENKF_EXE        ./enkf.x
-
+cp $ENKF_EXE enkf.x
 
 cp $ANAVINFO        ./anavinfo
 cp $CONVINFO        ./convinfo
