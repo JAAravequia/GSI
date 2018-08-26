@@ -13,7 +13,7 @@ cat <<EOF > gsiparm.anl
    use_gfs_nemsio=.false.,lrun_subdirs=.false.,
    newpc4pred=.true.,adp_anglebc=.true.,angord=4,passive_bc=.true.,use_edges=.false.,diag_precon=.true.,step_start=1.0e-3,emiss_bc=.true.,cwoption=3,
    deltim=$DELTIM,
-!  lread_obs_save=${if_read_obs_save},lread_obs_skip=${if_read_obs_skip},
+   lread_obs_save=${if_read_obs_save},lread_obs_skip=${if_read_obs_skip},
  /
  &GRIDOPTS
    JCAP=$JCAP,JCAP_B=$JCAP_B,NLAT=$NLAT,NLON=$LONA,nsig=$LEVS,
