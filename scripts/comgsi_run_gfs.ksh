@@ -19,7 +19,7 @@ set -x
 #####################################################
 #
 # GFSCASE = cases used for DTC test
-#           T574, T254, T126, T62, enkf_glb_t254 
+#           T574, T254, T126, T62, enkf_glb_t62
 # ANAL_TIME= analysis time  (YYYYMMDDHH)
 # WORK_ROOT= working directory, where GSI runs
 # PREPBURF = path of PreBUFR conventional obs
@@ -54,7 +54,11 @@ set -x
 # BK_FILE_mem   path and base for ensemble members
   if_observer=No  # Yes ,or, No -- case sensitive!!!
   no_member=10
-  BK_FILE_mem=${BK_ROOT}/sfg_2014040506
+  PDYa=`echo $ANAL_TIME | cut -c1-8`
+  cyca=`echo $ANAL_TIME | cut -c9-10`
+  gdate=`date -u -d "$PDYa $cyca -6 hour" +%Y%m%d%H` #guess date is 6hr ago
+  BK_FILE_mem=${BK_ROOT}/sfg_${gdate}
+
 #
 # Set the JCAP resolution which you want.
 # All resolutions use LEVS=64
@@ -64,9 +68,9 @@ if [[ "$GFSCASE" = "T62" ]]; then
 elif [[ "$GFSCASE" = "T126" ]]; then
   JCAP=126
   JCAP_B=126
-elif [[ "$GFSCASE" = "enkf_glb_t254" ]]; then
-  JCAP=254
-  JCAP_B=254
+elif [[ "$GFSCASE" = "enkf_glb_t62" ]]; then
+  JCAP=62
+  JCAP_B=62
 elif [[ "$GFSCASE" = "T254" ]]; then
   JCAP=254
   JCAP_B=574
@@ -355,15 +359,14 @@ cp ${GSI_EXE} gsi.x
 
 # Bring over background field (it's modified by GSI so we can't link to it)
 # Copy bias correction, atmospheric and surface files
-if [[ "$GFSCASE" = "enkf_glb_t254" ]]; then
+if [[ "$GFSCASE" = "enkf_glb_t62" ]]; then
+  cp $BK_ROOT/bfg_${gdate}_fhr03_ensmean  ./sfcf03
+  cp $BK_ROOT/bfg_${gdate}_fhr06_ensmean  ./sfcf06
+  cp $BK_ROOT/bfg_${gdate}_fhr09_ensmean  ./sfcf09
 
-  cp $BK_ROOT/sfcanl_2014040506_fhr03_ensmean  ./sfcf03
-  cp $BK_ROOT/sfcanl_2014040506_fhr06_ensmean  ./sfcf06
-  cp $BK_ROOT/sfcanl_2014040506_fhr06_ensmean  ./sfcf09
-
-  cp $BK_ROOT/sfg_2014040506_fhr03_mem001    ./sigf03
-  cp $BK_ROOT/sfg_2014040506_fhr06_mem001    ./sigf06
-  cp $BK_ROOT/sfg_2014040506_fhr09_mem001    ./sigf09
+  cp $BK_ROOT/sfg_${gdate}_fhr03_mem001    ./sigf03
+  cp $BK_ROOT/sfg_${gdate}_fhr06_mem001    ./sigf06
+  cp $BK_ROOT/sfg_${gdate}_fhr09_mem001    ./sigf09
 else
 
   cp $BK_ROOT/sfcf03  ./sfcf03
@@ -386,15 +389,6 @@ cp ${GSI_ROOT}/fix/comgsi_satbias_pc_in ./satbias_pc_in
 ln -s ${PREPBUFR} ./prepbufr
 
 # Link to the other observation data
-
-if [[ "$GFSCASE" = "enkf_glb_t254" ]]; then
-  obsfile_amua=gdas1.t12z.1bamua.tm00.bufr_d
-  obsfile_amub=gdas1.t12z.1bamub.tm00.bufr_d
-else
-  obsfile_amua=amsuabufr
-  obsfile_amub=amsubbufr
-fi
-
 if [ -r "${OBS_ROOT}/satwnd" ]; then
    ln -s ${OBS_ROOT}/satwnd .
 fi
@@ -413,11 +407,11 @@ fi
 if [ -r "${OBS_ROOT}/gsnd1bufr" ]; then
    ln -s ${OBS_ROOT}/gsnd1bufr .
 fi
-if [ -r "${OBS_ROOT}/${obsfile_amua}" ]; then
-   ln -s ${OBS_ROOT}/${obsfile_amua} amsuabufr 
+if [ -r "${OBS_ROOT}/amsuabufr" ]; then
+   ln -s ${OBS_ROOT}/amsuabufr amsuabufr 
 fi
-if [ -r "${OBS_ROOT}/${obsfile_amub}" ]; then
-   ln -s ${OBS_ROOT}/${obsfile_amub} amsubbufr 
+if [ -r "${OBS_ROOT}/amsubbufr" ]; then
+   ln -s ${OBS_ROOT}/amsubbufr amsubbufr 
 fi
 if [ -r "${OBS_ROOT}/hirs2bufr" ]; then
    ln -s ${OBS_ROOT}/hirs2bufr .

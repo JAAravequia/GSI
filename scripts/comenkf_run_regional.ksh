@@ -50,9 +50,8 @@ set -x
   NLEVS=50
   IF_ARW=.true.
   IF_NMM=.false.
-#  list="conv amsua_n18 hirs4_n19"
   list="conv"
-#  list="conv amsua_n18 mhs_n19 hirs4_n19"
+#  list="conv amsua_n18 mhs_n18 hirs4_n19"
 #
 #####################################################
 # Users should NOT change script after this point

@@ -11,6 +11,8 @@ cat <<EOF > gsiparm.anl
    nhr_assimilation=3,l_foto=.false.,
    use_pbl=.false.,
    offtime_data=.true.,diag_aero=.false.,
+   newpc4pred=.true.,adp_anglebc=.true.,angord=4,passive_bc=.true.,
+   use_edges=.false.,diag_precon=.false.,
  /
  &GRIDOPTS
    JCAP=62,JCAP_B=62,NLAT=60,NLON=60,nsig=60,regional=.true.,
