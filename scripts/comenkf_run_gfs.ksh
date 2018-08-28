@@ -153,12 +153,12 @@ prefix_tbc=gdas1.t${cycg}z
 dirtbc=$BK_ROOT
 
 # Fixed files
-ANAVINFO=${FIX_ROOT}/global_anavinfo.txt
-CONVINFO=${FIX_ROOT}/global_convinfo.txt
-SATINFO=${FIX_ROOT}/global_satinfo.txt
-SCANINFO=${FIX_ROOT}/global_scaninfo.txt
-OZINFO=${FIX_ROOT}/global_ozinfo.txt
-LOCINFO=${FIX_ROOT}/global_hybens_info.l64.txt
+ANAVINFO=${diag_ROOT}/global_anavinfo.txt
+CONVINFO=${diag_ROOT}/global_convinfo.txt
+SATINFO=${diag_ROOT}/global_satinfo.txt
+SCANINFO=${diag_ROOT}/global_scaninfo.txt
+OZINFO=${diag_ROOT}/global_ozinfo.txt
+LOCINFO=${diag_ROOT}/global_hybens_info.l64.txt
 
 # Set up workdir
 rm -rf $WORK_ROOT
