@@ -183,7 +183,8 @@ cp $diag_ROOT/satbias_pc ./satbias_pc
 cp $diag_ROOT/satbias_angle ./satbias_angle
 
 # get mean
-ln -s $BK_ROOT/sfg_${gdate}_fhr06_ensmean ./sfg_${gdate}_fhr06_ensmean
+#ln -s $BK_ROOT/sfg_${gdate}_fhr06_ensmean ./sfg_${gdate}_fhr06_ensmean
+ln -s $BK_ROOT/sfg_${gdate}_fhr06_ensmean ./sfg_${ANAL_TIME}_fhr06_ensmean #enkf_gfs requires sfg_ValidTime.fhr06_ensmean
 list="conv amsua_metop-a amsua_n18 amsua_n15"
 for type in $list; do
    ln -s $diag_ROOT/diag_${type}_ges.ensmean .
@@ -193,7 +194,8 @@ done
 imem=1
 while [[ $imem -le $NMEM_ENKF ]]; do
    member="mem"`printf %03i $imem`
-   ln -s $BK_ROOT/sfg_${gdate}_fhr06_${member} ./sfg_${gdate}_fhr06_${member}
+   #ln -s $BK_ROOT/sfg_${gdate}_fhr06_${member} ./sfg_${gdate}_fhr06_${member}
+   ln -s $BK_ROOT/sfg_${gdate}_fhr06_${member} ./sfg_${ANAL_TIME}_fhr06_${member} ##enkf_gfs requires sfg_ValidTime.fhr06_MEMBER
    list="conv amsua_metop-a amsua_n18 amsua_n15"
    for type in $list; do
       ln -s $diag_ROOT/diag_${type}_ges.${member} .
