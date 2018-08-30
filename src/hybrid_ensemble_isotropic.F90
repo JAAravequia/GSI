@@ -4390,7 +4390,7 @@ subroutine hybens_grid_setup
   use constants, only: zero,one
   use control_vectors, only: cvars3d,nc2d,nc3d
   use gridmod, only: region_lat,region_lon,region_dx,region_dy
-  use hybrid_ensemble_parameters, only:ntotensgrp, spc_multwgt,spcwgt_params
+  use hybrid_ensemble_parameters, only:ntotensgrp,nsclgrp, spc_multwgt,spcwgt_params
 
   implicit none
 
@@ -4493,6 +4493,11 @@ subroutine hybens_grid_setup
   allocate(spc_multwgt(0:jcap_ens,ntotensgrp))
   allocate(spcwgt_params(4,ntotensgrp))
   spc_multwgt=1.0
+  if(nsclgrp.gt.1) then
+  spc_multwgt(0,2:nsclgrp)=0.0
+  endif
+  spc_multwgt(0,1)=1
+
   if(ntotensgrp.gt.1) then
   spcwgt_params(1,1)=1.E+4
   spcwgt_params(2,1)=1.0E+8

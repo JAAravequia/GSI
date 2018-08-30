@@ -1,59 +1,1126 @@
-apply_scaledepwgts.f90:  use hybrid_ensemble_parameters, only: nsclgrp
-apply_scaledepwgts.f90:   do ig=1,nsclgrp
-apply_scaledepwgts.f90:!   write(121,111)(totwvlength(i)),((spc_multwgt(i,j)),j=1,nsclgrp)
-en_perts_io.f90:  use hybrid_ensemble_parameters, only: nsclgrp
-en_perts_io.f90:  if(nsclgrp.gt.1) then
-en_perts_io.f90:    write(6,*)"nsclgrp >1 is not considerred in this part, stop"
-get_gefs_ensperts_dualres.f90:  use hybrid_ensemble_parameters, only: nsclgrp,sp_ens,spc_multwgt
-get_gefs_ensperts_dualres.f90:  allocate(en_bar(nsclgrp,ntlevs_ens))
-get_gefs_ensperts_dualres.f90:    do ig=1,nsclgrp
-get_gefs_ensperts_dualres.f90:  if(nsclgrp.gt.1) then
-get_gefs_ensperts_dualres.f90:       do ig=1,nsclgrp
-get_gefs_ensperts_dualres.f90:   do ig=2,nsclgrp 
-get_gefs_ensperts_dualres.f90:     do ig=1,nsclgrp
-gsimod.F90:  use hybrid_ensemble_parameters,only:nsclgrp,naensgrp,para_covwithsclgrp,l_sum_spc_weights
-gsimod.F90:                i_en_perts_io,l_ens_in_diff_time,ensemble_path,ens_fast_read,nsclgrp,naensgrp,l_sum_spc_weights,para_covwithsclgrp
-gsimod.F90:  naensgrp=nsclgrp 
-hybrid_ensemble_isotropic.F90:    use hybrid_ensemble_parameters, only: nsclgrp
-hybrid_ensemble_isotropic.F90:    allocate(en_perts(n_ens,nsclgrp,ntlevs_ens))
-hybrid_ensemble_isotropic.F90:      do ig=1,nsclgrp
-hybrid_ensemble_isotropic.F90:    allocate(ps_bar(grd_ens%lat2,grd_ens%lon2,nsclgrp,ntlevs_ens) )
-hybrid_ensemble_isotropic.F90:       write(6,*)' in create_ensemble, grd_ens%latlon11,grd_ens%latlon1n,n_ens,nsclgrp,ntlevs_ens=', &
-hybrid_ensemble_isotropic.F90:                                 grd_ens%latlon11,grd_ens%latlon1n,n_ens,nsclgrp,ntlevs_ens
-hybrid_ensemble_isotropic.F90:       write(6,*)' in create_ensemble, total bytes allocated=',4*nelen*n_ens*nsclgrp,ntlevs_ens
-hybrid_ensemble_isotropic.F90:  use hybrid_ensemble_parameters, only: nsclgrp
-hybrid_ensemble_isotropic.F90:     if(nsclgrp.gt.1) then 
-hybrid_ensemble_isotropic.F90:       allocate(en_bar(nsclgrp,ntlevs_ens))
-hybrid_ensemble_isotropic.F90:        do ig=1,nsclgrp
-hybrid_ensemble_isotropic.F90:        do ig=1,nsclgrp
-hybrid_ensemble_isotropic.F90:         do ig=1,nsclgrp
-hybrid_ensemble_isotropic.F90:         do ig=1,nsclgrp
-hybrid_ensemble_isotropic.F90:           if(nsclgrp.gt. 1) then 
-hybrid_ensemble_isotropic.F90:           write(6,*)"nsclgrpd.gt. 1 is not available for this part"
-hybrid_ensemble_isotropic.F90:  use hybrid_ensemble_parameters, only: nsclgrp
-hybrid_ensemble_isotropic.F90:     do ig=1,nsclgrp
-hybrid_ensemble_isotropic.F90:     use hybrid_ensemble_parameters, only: nsclgrp
-hybrid_ensemble_isotropic.F90:         do ig=1,nsclgrp
-hybrid_ensemble_isotropic.F90:    use hybrid_ensemble_parameters, only: nsclgrp
-hybrid_ensemble_isotropic.F90:    type(gsi_bundle),intent(in)    :: a_en(nsclgrp,n_ens)
-hybrid_ensemble_isotropic.F90:            do ig=1,nsclgrp
-hybrid_ensemble_isotropic.F90:                 do ig=1,nsclgrp
-hybrid_ensemble_isotropic.F90:               do ig=1,nsclgrp
-hybrid_ensemble_isotropic.F90:    use hybrid_ensemble_parameters, only: nsclgrp
-hybrid_ensemble_isotropic.F90:           do ig=1,nsclgrp
-hybrid_ensemble_isotropic.F90:               do ig=1,nsclgrp
-hybrid_ensemble_isotropic.F90:               do ig=1,nsclgrp
-hybrid_ensemble_isotropic.F90:    use hybrid_ensemble_parameters, only: nsclgrp
-hybrid_ensemble_isotropic.F90:   do ig=1,nsclgrp
-hybrid_ensemble_isotropic.F90:    use hybrid_ensemble_parameters, only: nsclgrp
-hybrid_ensemble_isotropic.F90:  do ig=1,nsclgrp
-hybrid_ensemble_isotropic.F90:  use hybrid_ensemble_parameters, only:nsclgrp, spc_multwgt,spcwgt_params
-hybrid_ensemble_isotropic.F90:  allocate(spc_multwgt(0:jcap_ens,nsclgrp))
-hybrid_ensemble_isotropic.F90:  allocate(spcwgt_params(4,nsclgrp))
-hybrid_ensemble_isotropic.F90:  if(nsclgrp.gt.1) then
-hybrid_ensemble_isotropic.F90:  if(nsclgrp.gt.1) then
-hybrid_ensemble_isotropic.F90:    use hybrid_ensemble_parameters, only: nsclgrp
-hybrid_ensemble_isotropic.F90:    do iens=1,nsclgrp
-hybrid_ensemble_parameters.f90:  public :: naensgrp,nsclgrp
-hybrid_ensemble_parameters.f90:   integer(i_kind)::  nsclgrp=1
-hybrid_ensemble_parameters.f90:  allocate(ensgrp2aensgrp(nsclgrp))
+50,54c50
+< !   2018-02-15  wu      - add code for fv3_regional option
+< !   2018-03-28  T. Lei  - added  SDL related codaes
+< !   2018-06-01  T. Lei  - added  SDL for vertical direction in global
+< !                         applications
+< !   2018-06-13  T. Lei  - added  SDL for regional applicationsl
+---
+> !   2018-03-28  T. Lei  - added  SDL related coded
+168,176c164,172
+<   real(r_kind),allocatable:: fmatz(:,:,:,:,:)
+<   real(r_kind),allocatable:: fmat0z(:,:,:,:)
+<   real(r_kind),allocatable:: fmatx(:,:,:,:,:,:)
+<   real(r_kind),allocatable:: fmat0x(:,:,:,:,:)
+<   real(r_kind),allocatable:: fmaty(:,:,:,:,:)
+<   real(r_kind),allocatable:: fmat0y(:,:,:,:)
+<   real(r_kind),allocatable:: znorm_new(:,:,:)
+<   real(r_kind),allocatable:: xnorm_new(:,:,:,:)
+<   real(r_kind),allocatable:: ynorm_new(:,:,:)
+---
+>   real(r_kind),allocatable:: fmatz(:,:,:,:)
+>   real(r_kind),allocatable:: fmat0z(:,:,:)
+>   real(r_kind),allocatable:: fmatx(:,:,:,:,:)
+>   real(r_kind),allocatable:: fmat0x(:,:,:,:)
+>   real(r_kind),allocatable:: fmaty(:,:,:,:)
+>   real(r_kind),allocatable:: fmat0y(:,:,:)
+>   real(r_kind),allocatable:: znorm_new(:,:)
+>   real(r_kind),allocatable:: xnorm_new(:,:,:)
+>   real(r_kind),allocatable:: ynorm_new(:,:)
+237c233
+<                      regional,fv3_regional
+---
+>                      regional
+241d236
+<   use hybrid_ensemble_parameters, only: naensloc
+245c240
+<   real(r_kind)   ,intent(in) :: z_len(grd_ens%nsig,naensloc)
+---
+>   real(r_kind)   ,intent(in) :: z_len(grd_ens%nsig)
+247c242
+<   integer(i_kind) k,nxy,i,ii,jj,j,l,ig
+---
+>   integer(i_kind) k,nxy,i,ii,jj,j,l
+260c255
+<   allocate(fmatz(nxy,2,nsig,2,naensloc),fmat0z(nxy,nsig,2,naensloc))
+---
+>   allocate(fmatz(nxy,2,nsig,2),fmat0z(nxy,nsig,2))
+262d256
+< do ig=1,naensloc
+264c258
+<   if(s_ens_v(ig) > zero) then
+---
+>   if(s_ens_v > zero) then
+268c262
+<         aspect(k)=z_len(k,ig)**2
+---
+>         aspect(k)=z_len(k)**2
+276c270
+<              fmatz(i,j,k,l,ig)=fmatz_tmp(j,k,l)
+---
+>              fmatz(i,j,k,l)=fmatz_tmp(j,k,l)
+282c276
+<            fmat0z(i,k,l,ig)=fmat0z_tmp(k,l)
+---
+>            fmat0z(i,k,l)=fmat0z_tmp(k,l)
+309,311d302
+<                  if (fv3_regional) then
+<                     p_interface(k)=eta1_ll(k)+ eta2_ll(k)*ps_bar(ii,jj,1,1)
+<                  endif
+331c322
+<               d1=abs(z_len(k,ig))/dlnp
+---
+>               d1=abs(z_len(k))/dlnp
+342c333
+<                  fmatz(i,j,k,l,ig)=fmatz_tmp(j,k,l)
+---
+>                  fmatz(i,j,k,l)=fmatz_tmp(j,k,l)
+348c339
+<                fmat0z(i,k,l,ig)=fmat0z_tmp(k,l)
+---
+>                fmat0z(i,k,l)=fmat0z_tmp(k,l)
+354d344
+<  enddo !ig loop
+360d349
+< 
+390d378
+<   use hybrid_ensemble_parameters, only: naensloc
+394c382
+<   real(r_kind),intent(in   ) :: x_len(kl,naensloc)
+---
+>   real(r_kind),intent(in   ) :: x_len(kl)
+397c385
+<   integer(i_kind) i,j,k,l,kk,ig,ig0
+---
+>   integer(i_kind) i,j,k,l,kk
+400d387
+<   ig0=1
+405c392
+<   allocate(fmatx(grd_loc%nlat,2,grd_loc%nlon,2,kl,naensloc),fmat0x(grd_loc%nlat,grd_loc%nlon,2,kl,naensloc))
+---
+>   allocate(fmatx(grd_loc%nlat,2,grd_loc%nlon,2,kl),fmat0x(grd_loc%nlat,grd_loc%nlon,2,kl))
+409c396
+<            aspect(j)=(x_len(k,ig0)*region_dy_ens(grd_loc%nlat/2,grd_loc%nlon/2)/region_dx_ens(i,j))**2 ! only works for rotated lat-lon grids
+---
+>            aspect(j)=(x_len(k)*region_dy_ens(grd_loc%nlat/2,grd_loc%nlon/2)/region_dx_ens(i,j))**2 ! only works for rotated lat-lon grids
+415c402
+<                  fmatx(i,l,j,kk,k,ig0)=fmatc(l,j,kk)
+---
+>                  fmatx(i,l,j,kk,k)=fmatc(l,j,kk)
+417c404
+<               fmat0x(i,j,kk,k,ig0)=fmat0c(j,kk)
+---
+>               fmat0x(i,j,kk,k)=fmat0c(j,kk)
+422,427d408
+<  do ig=1,naensloc
+<    if(ig.ne.ig0) then
+<    fmatx(:,:,:,:,:,ig)=fmatx(:,:,:,:,:,ig0)
+<    fmat0x(:,:,:,:,ig)=fmat0x(:,:,:,:,ig0)
+<    endif
+<  enddo
+460d440
+<   use hybrid_ensemble_parameters, only: naensloc
+464c444
+<   real(r_kind),intent(in   ) :: y_len(kl,naensloc)
+---
+>   real(r_kind),intent(in   ) :: y_len(kl)
+468,469c448
+<   integer(i_kind) i,k,ig0,ig
+<   ig0=1
+---
+>   integer(i_kind) i,k
+474c453
+<   allocate(fmaty(2,grd_loc%nlat,2,kl,naensloc),fmat0y(grd_loc%nlat,2,kl,naensloc))
+---
+>   allocate(fmaty(2,grd_loc%nlat,2,kl),fmat0y(grd_loc%nlat,2,kl))
+477c456
+<         aspect(i)=y_len(k,ig0)**2
+---
+>         aspect(i)=y_len(k)**2
+479c458
+<      call get_new_alpha_beta(aspect,grd_loc%nlat,fmaty(1,1,1,k,ig0),fmat0y(1,1,k,ig0))
+---
+>      call get_new_alpha_beta(aspect,grd_loc%nlat,fmaty(1,1,1,k),fmat0y(1,1,k))
+481,486d459
+<  do ig=1,naensloc
+<    if(ig.ne.ig0) then
+<    fmaty(:,:,:,:,ig)=fmaty(:,:,:,:,ig0)
+<    fmat0y(:,:,:,ig)=fmat0y(:,:,:,ig0)
+<    endif
+<  enddo
+491c464
+< subroutine new_factorization_rf_z(f,iadvance,iback,iaensgrplocin)
+---
+> subroutine new_factorization_rf_z(f,iadvance,iback)
+522c495
+<   integer(i_kind),intent(in   ) :: iadvance,iback,iaensgrplocin
+---
+>   integer(i_kind),intent(in   ) :: iadvance,iback
+531c504
+<            f(i,k)=znorm_new(i,k,iaensgrplocin)*f(i,k)
+---
+>            f(i,k)=znorm_new(i,k)*f(i,k)
+538c511
+<            f(i,k)=f(i,k)-fmatz(i,l,k,iadvance,iaensgrplocin)*f(i,k-l)
+---
+>            f(i,k)=f(i,k)-fmatz(i,l,k,iadvance)*f(i,k-l)
+542c515
+<         f(i,k)=fmat0z(i,k,iadvance,iaensgrplocin)*f(i,k)
+---
+>         f(i,k)=fmat0z(i,k,iadvance)*f(i,k)
+548c521
+<            f(i,k)=f(i,k)-fmatz(i,l,k+l,iback,iaensgrplocin)*f(i,k+l)
+---
+>            f(i,k)=f(i,k)-fmatz(i,l,k+l,iback)*f(i,k+l)
+552c525
+<         f(i,k)=fmat0z(i,k,iback,iaensgrplocin)*f(i,k)
+---
+>         f(i,k)=fmat0z(i,k,iback)*f(i,k)
+558c531
+<            f(i,k)=znorm_new(i,k,iaensgrplocin)*f(i,k)
+---
+>            f(i,k)=znorm_new(i,k)*f(i,k)
+566c539
+< subroutine new_factorization_rf_x(f,iadvance,iback,nlevs,iaensgrplocin)
+---
+> subroutine new_factorization_rf_x(f,iadvance,iback,nlevs)
+597c570
+<   integer(i_kind),intent(in   ) :: iadvance,iback,nlevs,iaensgrplocin
+---
+>   integer(i_kind),intent(in   ) :: iadvance,iback,nlevs
+601d573
+<   integer(i_kind) ig0
+603d574
+<   ig0=1
+606d576
+< 
+614c584
+<                  f(i,j,k)=xnorm_new(i,j,k,iaensgrplocin)*f(i,j,k)
+---
+>                  f(i,j,k)=xnorm_new(i,j,k)*f(i,j,k)
+622c592
+<                  f(i,j,k)=f(i,j,k)-fmatx(i,l,j,iadvance,k,iaensgrplocin)*f(i,j-l,k)
+---
+>                  f(i,j,k)=f(i,j,k)-fmatx(i,l,j,iadvance,k)*f(i,j-l,k)
+626c596
+<               f(i,j,k)=fmat0x(i,j,iadvance,k,iaensgrplocin)*f(i,j,k)
+---
+>               f(i,j,k)=fmat0x(i,j,iadvance,k)*f(i,j,k)
+633c603
+<                  f(i,j,k)=f(i,j,k)-fmatx(i,l,j+l,iback,k,iaensgrplocin)*f(i,j+l,k)
+---
+>                  f(i,j,k)=f(i,j,k)-fmatx(i,l,j+l,iback,k)*f(i,j+l,k)
+637c607
+<               f(i,j,k)=fmat0x(i,j,iback,k,iaensgrplocin)*f(i,j,k)
+---
+>               f(i,j,k)=fmat0x(i,j,iback,k)*f(i,j,k)
+644c614
+<                  f(i,j,k)=xnorm_new(i,j,k,iaensgrplocin)*f(i,j,k)
+---
+>                  f(i,j,k)=xnorm_new(i,j,k)*f(i,j,k)
+657c627
+<                  f(i,j,k)=xnorm_new(i,j,1,iaensgrplocin)*f(i,j,k)
+---
+>                  f(i,j,k)=xnorm_new(i,j,1)*f(i,j,k)
+665c635
+<                  f(i,j,k)=f(i,j,k)-fmatx(i,l,j,iadvance,1,iaensgrplocin)*f(i,j-l,k)
+---
+>                  f(i,j,k)=f(i,j,k)-fmatx(i,l,j,iadvance,1)*f(i,j-l,k)
+669c639
+<               f(i,j,k)=fmat0x(i,j,iadvance,1,iaensgrplocin)*f(i,j,k)
+---
+>               f(i,j,k)=fmat0x(i,j,iadvance,1)*f(i,j,k)
+676c646
+<                  f(i,j,k)=f(i,j,k)-fmatx(i,l,j+l,iback,1,iaensgrplocin)*f(i,j+l,k)
+---
+>                  f(i,j,k)=f(i,j,k)-fmatx(i,l,j+l,iback,1)*f(i,j+l,k)
+680c650
+<               f(i,j,k)=fmat0x(i,j,iback,1,iaensgrplocin)*f(i,j,k)
+---
+>               f(i,j,k)=fmat0x(i,j,iback,1)*f(i,j,k)
+687c657
+<                  f(i,j,k)=xnorm_new(i,j,1,iaensgrplocin)*f(i,j,k)
+---
+>                  f(i,j,k)=xnorm_new(i,j,1)*f(i,j,k)
+697c667
+< subroutine new_factorization_rf_y(f,iadvance,iback,nlevs,iaensgrplocin)
+---
+> subroutine new_factorization_rf_y(f,iadvance,iback,nlevs)
+729c699
+<   integer(i_kind),intent(in   ) :: iadvance,iback,nlevs,iaensgrplocin
+---
+>   integer(i_kind),intent(in   ) :: iadvance,iback,nlevs
+742c712
+<                  f(i,j,k)=ynorm_new(i,k,iaensgrplocin)*f(i,j,k)
+---
+>                  f(i,j,k)=ynorm_new(i,k)*f(i,j,k)
+748c718
+<                  f(i,j,k)=f(i,j,k)-fmaty(l,i,iadvance,k,iaensgrplocin)*f(i-l,j,k)
+---
+>                  f(i,j,k)=f(i,j,k)-fmaty(l,i,iadvance,k)*f(i-l,j,k)
+750c720
+<               f(i,j,k)=fmat0y(i,iadvance,k,iaensgrplocin)*f(i,j,k)
+---
+>               f(i,j,k)=fmat0y(i,iadvance,k)*f(i,j,k)
+755c725
+<                  f(i,j,k)=f(i,j,k)-fmaty(l,i+l,iback,k,iaensgrplocin)*f(i+l,j,k)
+---
+>                  f(i,j,k)=f(i,j,k)-fmaty(l,i+l,iback,k)*f(i+l,j,k)
+757c727
+<               f(i,j,k)=fmat0y(i,iback,k,iaensgrplocin)*f(i,j,k)
+---
+>               f(i,j,k)=fmat0y(i,iback,k)*f(i,j,k)
+762c732
+<                  f(i,j,k)=ynorm_new(i,k,iaensgrplocin)*f(i,j,k)
+---
+>                  f(i,j,k)=ynorm_new(i,k)*f(i,j,k)
+774c744
+<                  f(i,j,k)=ynorm_new(i,1,iaensgrplocin)*f(i,j,k)
+---
+>                  f(i,j,k)=ynorm_new(i,1)*f(i,j,k)
+780c750
+<                  f(i,j,k)=f(i,j,k)-fmaty(l,i,iadvance,1,iaensgrplocin)*f(i-l,j,k)
+---
+>                  f(i,j,k)=f(i,j,k)-fmaty(l,i,iadvance,1)*f(i-l,j,k)
+782c752
+<               f(i,j,k)=fmat0y(i,iadvance,1,iaensgrplocin)*f(i,j,k)
+---
+>               f(i,j,k)=fmat0y(i,iadvance,1)*f(i,j,k)
+787c757
+<                  f(i,j,k)=f(i,j,k)-fmaty(l,i+l,iback,1,iaensgrplocin)*f(i+l,j,k)
+---
+>                  f(i,j,k)=f(i,j,k)-fmaty(l,i+l,iback,1)*f(i+l,j,k)
+789c759
+<               f(i,j,k)=fmat0y(i,iback,1,iaensgrplocin)*f(i,j,k)
+---
+>               f(i,j,k)=fmat0y(i,iback,1)*f(i,j,k)
+794c764
+<                  f(i,j,k)=ynorm_new(i,1,iaensgrplocin)*f(i,j,k)
+---
+>                  f(i,j,k)=ynorm_new(i,1)*f(i,j,k)
+830d799
+<   use hybrid_ensemble_parameters, only: naensloc
+836,837d804
+<   integer(i_kind)iaensgrploc,ig0 
+< 
+840c807
+<   allocate(znorm_new(grd_ens%latlon11,grd_ens%nsig,naensloc))
+---
+>   allocate(znorm_new(grd_ens%latlon11,grd_ens%nsig))
+845c812
+< do iaensgrploc=1,naensloc
+---
+> 
+851c818
+<       call new_factorization_rf_z(f,iadvance,iback,iaensgrploc)
+---
+>       call new_factorization_rf_z(f,iadvance,iback)
+853c820
+<       call new_factorization_rf_z(f,iadvance,iback,iaensgrploc)
+---
+>       call new_factorization_rf_z(f,iadvance,iback)
+859c826
+<       znorm_new(:,k,iaensgrploc)=diag(:,k)
+---
+>       znorm_new(:,k)=diag(:,k)
+861c828
+< enddo !iaens loop
+---
+> 
+864d830
+<   ig0=1
+870c836
+<        call new_factorization_rf_z(f,iadvance,iback,ig0)
+---
+>        call new_factorization_rf_z(f,iadvance,iback)
+872c838
+<        call new_factorization_rf_z(f,iadvance,iback,ig0)
+---
+>        call new_factorization_rf_z(f,iadvance,iback)
+913d878
+<   use hybrid_ensemble_parameters, only: naensloc
+920d884
+<   integer(i_kind) ig,ig0,ig0loc
+926,927d889
+<   ig0=1
+<   ig0loc=ig0
+936c898
+<   allocate(xnorm_new(grd_loc%nlat,grd_loc%nlon,kl,naensloc))
+---
+>   allocate(xnorm_new(grd_loc%nlat,grd_loc%nlon,kl))
+949c911
+<      call new_factorization_rf_x(f,iadvance,iback,kl,ig0loc)
+---
+>      call new_factorization_rf_x(f,iadvance,iback,kl)
+951c913
+<      call new_factorization_rf_x(f,iadvance,iback,kl,ig0loc)
+---
+>      call new_factorization_rf_x(f,iadvance,iback,kl)
+961c923
+<            xnorm_new(i,j,k,ig0)=diag(i,j,k)
+---
+>            xnorm_new(i,j,k)=diag(i,j,k)
+965,969d926
+<   do ig=1,naensloc
+<    if(ig.ne.ig0) then
+<      xnorm_new(:,:,:,ig)=xnorm_new(:,:,:,ig0)
+<    endif
+<   enddo
+980c937
+<         call new_factorization_rf_x(f,iadvance,iback,kl,ig0loc)
+---
+>         call new_factorization_rf_x(f,iadvance,iback,kl)
+982c939
+<         call new_factorization_rf_x(f,iadvance,iback,kl,ig0loc)
+---
+>         call new_factorization_rf_x(f,iadvance,iback,kl)
+1023d979
+<   use hybrid_ensemble_parameters, only: naensloc
+1026c982
+<   integer(i_kind) i,k,lend,lcount,iadvance,iback,kl,loop,ll,iend,ig,ig0
+---
+>   integer(i_kind) i,k,lend,lcount,iadvance,iback,kl,loop,ll,iend
+1030d985
+<   integer(i_kind):: ig0loc
+1044c999
+<   allocate(ynorm_new(grd_loc%nlat,kl,naensloc))
+---
+>   allocate(ynorm_new(grd_loc%nlat,kl))
+1070,1071d1024
+<      ig0=1
+<      ig0loc=ig0
+1073c1026
+<      call new_factorization_rf_y(f,iadvance,iback,kl,ig0loc)
+---
+>      call new_factorization_rf_y(f,iadvance,iback,kl)
+1075c1028
+<      call new_factorization_rf_y(f,iadvance,iback,kl,ig0loc)
+---
+>      call new_factorization_rf_y(f,iadvance,iback,kl)
+1081c1034
+<            ynorm_new(lcount,k,ig0)=diag(lcount,k)
+---
+>            ynorm_new(lcount,k)=diag(lcount,k)
+1086,1090d1038
+<   do ig=1,naensloc
+<      if(ig0.ne.ig) then
+<      ynorm_new(:,:,ig)=ynorm_new(:,:,ig0)
+<      endif
+<   enddo
+1105c1053
+<         call new_factorization_rf_y(f,iadvance,iback,kl,ig0loc)
+---
+>         call new_factorization_rf_y(f,iadvance,iback,kl)
+1107c1055
+<         call new_factorization_rf_y(f,iadvance,iback,kl,ig0loc) 
+---
+>         call new_factorization_rf_y(f,iadvance,iback,kl) 
+1148c1096
+<     use hybrid_ensemble_parameters, only: ntotensgrp
+---
+>     use hybrid_ensemble_parameters, only: nsclgrp
+1160c1108,1109
+<     allocate(en_perts(n_ens,ntotensgrp,ntlevs_ens))
+---
+> 
+>     allocate(en_perts(n_ens,nsclgrp,ntlevs_ens))
+1164c1113
+<       do ig=1,ntotensgrp
+---
+>       do ig=1,nsclgrp
+1177c1126
+<     allocate(ps_bar(grd_ens%lat2,grd_ens%lon2,ntotensgrp,ntlevs_ens) )
+---
+>     allocate(ps_bar(grd_ens%lat2,grd_ens%lon2,nsclgrp,ntlevs_ens) )
+1179,1181c1128,1130
+<        write(6,*)' in create_ensemble, grd_ens%latlon11,grd_ens%latlon1n,n_ens,ntotensgrp,ntlevs_ens=', &
+<                                  grd_ens%latlon11,grd_ens%latlon1n,n_ens,ntotensgrp,ntlevs_ens
+<        write(6,*)' in create_ensemble, total bytes allocated=',4*nelen*n_ens*ntotensgrp,ntlevs_ens
+---
+>        write(6,*)' in create_ensemble, grd_ens%latlon11,grd_ens%latlon1n,n_ens,nsclgrp,ntlevs_ens=', &
+>                                  grd_ens%latlon11,grd_ens%latlon1n,n_ens,nsclgrp,ntlevs_ens
+>        write(6,*)' in create_ensemble, total bytes allocated=',4*nelen*n_ens*nsclgrp,ntlevs_ens
+1232c1181
+<   use hybrid_ensemble_parameters, only: ntotensgrp
+---
+>   use hybrid_ensemble_parameters, only: nsclgrp
+1253c1202
+<      if(ntotensgrp.gt.1) then 
+---
+>      if(nsclgrp.gt.1) then 
+1262c1211
+<        allocate(en_bar(ntotensgrp,ntlevs_ens))
+---
+>        allocate(en_bar(nsclgrp,ntlevs_ens))
+1265c1214
+<         do ig=1,ntotensgrp
+---
+>         do ig=1,nsclgrp
+1284c1233
+<         do ig=1,ntotensgrp
+---
+>         do ig=1,nsclgrp
+1305c1254
+<          do ig=1,ntotensgrp
+---
+>          do ig=1,nsclgrp
+1339c1288
+<          do ig=1,ntotensgrp
+---
+>          do ig=1,nsclgrp
+1370,1371c1319,1320
+<            if(ntotensgrp.gt. 1) then 
+<            write(6,*)"ntotensgrpd.gt. 1 is not available for this part"
+---
+>            if(nsclgrp.gt. 1) then 
+>            write(6,*)"nsclgrpd.gt. 1 is not available for this part"
+1700c1649
+<   use hybrid_ensemble_parameters, only: ntotensgrp
+---
+>   use hybrid_ensemble_parameters, only: nsclgrp
+1722c1671
+<      do ig=1,ntotensgrp
+---
+>      do ig=1,nsclgrp
+1768c1717
+<      use hybrid_ensemble_parameters, only: ntotensgrp
+---
+>      use hybrid_ensemble_parameters, only: nsclgrp
+1776c1725
+<          do ig=1,ntotensgrp
+---
+>          do ig=1,nsclgrp
+1834c1783
+<     use hybrid_ensemble_parameters, only: ntotensgrp
+---
+>     use hybrid_ensemble_parameters, only: nsclgrp
+1838c1787
+<     type(gsi_bundle),intent(in)    :: a_en(ntotensgrp,n_ens)
+---
+>     type(gsi_bundle),intent(in)    :: a_en(nsclgrp,n_ens)
+1891,1894c1840,1841
+<             do ig=1,ntotensgrp
+<             iaens=ensgrp2aensgrp(ig,ic3,ibin)
+<             if(iaens.gt.0) then         
+< 
+---
+>             do ig=1,nsclgrp
+>             iaens=ensgrp2aensgrp(ig)
+1901d1847
+<             endif !iaens.gt.0
+1928,1931c1874,1875
+<                  do ig=1,ntotensgrp
+< !cltorg                   iaens=ensgrp2aensgrp(ig)
+<               iaens=ensgrp2aensgrp(ig,ic2+nc3d,ibin)
+<             if(iaens.gt.0) then         
+---
+>                  do ig=1,nsclgrp
+>                    iaens=ensgrp2aensgrp(ig)
+1938d1881
+<             endif !iaens.gt.0
+1946,1948c1889,1890
+<                do ig=1,ntotensgrp
+<             iaens=ensgrp2aensgrp(ig,ic2+nc3d,ibin)
+<             if(iaens.gt.0) then         
+---
+>                do ig=1,nsclgrp
+>                 iaens=ensgrp2aensgrp(ig)
+1955d1896
+<             endif !iaens.gt.0
+2012c1953
+<     use hybrid_ensemble_parameters, only: ntotensgrp
+---
+>     use hybrid_ensemble_parameters, only: nsclgrp
+2072,2075c2013,2014
+<            do ig=1,ntotensgrp
+< !cltorg            iaens=ensgrp2aensgrp(ig)
+<             iaens=ensgrp2aensgrp(ig,ic3,ibin)
+<             if(iaens.gt.0) then         
+---
+>            do ig=1,nsclgrp
+>             iaens=ensgrp2aensgrp(ig)
+2082d2020
+<             endif !iaens.gt.0
+2107,2109c2045,2046
+<                do ig=1,ntotensgrp
+<             iaens=ensgrp2aensgrp(ig,ic2+nc3d,ibin)
+<             if(iaens.gt.0) then         
+---
+>                do ig=1,nsclgrp
+>                 iaens=ensgrp2aensgrp(ig)
+2118d2054
+<             endif !iaens.gt.0
+2125,2127c2061,2062
+<                do ig=1,ntotensgrp
+<             iaens=ensgrp2aensgrp(ig,ic2+nc3d,ibin)
+<             if(iaens.gt.0) then         
+---
+>                do ig=1,nsclgrp
+>                iaens=ensgrp2aensgrp(ig)
+2134d2068
+<             endif !iaens.gt.0
+2202c2136
+<     use hybrid_ensemble_parameters, only: ntotensgrp
+---
+>     use hybrid_ensemble_parameters, only: nsclgrp
+2244c2178,2179
+<    do ig=1,ntotensgrp
+---
+>    do ig=1,nsclgrp
+>     iaens=ensgrp2aensgrp(ig)
+2248,2249d2182
+<             iaens=ensgrp2aensgrp(ig,ic3,ibin)
+<             if(iaens.gt.0) then         
+2258d2190
+<             endif !iaens.gt.0
+2262,2263d2193
+<             iaens=ensgrp2aensgrp(ig,ic2+nc3d,ibin)
+<           if(iaens.gt.0) then
+2294d2223
+<          endif !iaens>0
+2348c2277
+<     use hybrid_ensemble_parameters, only: ntotensgrp
+---
+>     use hybrid_ensemble_parameters, only: nsclgrp
+2413,2414c2342,2343
+<   do ig=1,ntotensgrp
+< !cltorg    iaens=ensgrp2aensgrp(ig)
+---
+>   do ig=1,nsclgrp
+>     iaens=ensgrp2aensgrp(ig)
+2418,2419d2346
+<             iaens=ensgrp2aensgrp(ig,ic3,ibin)
+<             if(iaens.gt.0) then         
+2428d2354
+<             endif
+2431,2432d2356
+<             iaens=ensgrp2aensgrp(ig,ic2+nc3d,ibin)
+<             if(iaens.gt.0) then         
+2464d2387
+<         endif !iaens>0
+3034c2957
+<   use hybrid_ensemble_parameters,only: naensloc
+---
+>   use hybrid_ensemble_parameters,only: naensgrp
+3055c2978
+<   integer(i_kind) iaensgrploc ,ig0,ig0loc
+---
+>   integer(i_kind) iaens 
+3066,3068c2989,2991
+<     do iaensgrploc=1,naensloc
+<      if(s_ens_hv(k,iaensgrploc) <  s_ens_h_min) then
+<         if(mype == 0) write(6,*)' s_ens_hv(',k,') = ',s_ens_hv(k,iaensgrploc),' km--too small, min value = ', &
+---
+>     do iaens=1,naensgrp
+>      if(s_ens_hv(k,iaens) <  s_ens_h_min) then
+>         if(mype == 0) write(6,*)' s_ens_hv(',k,') = ',s_ens_hv(k,iaens),' km--too small, min value = ', &
+3071,3073c2994,2996
+<         s_ens_hv(k,iaensgrploc)=s_ens_h_min
+<      else if(s_ens_hv(k,iaensgrploc) >  5500._r_kind.and.1.gt.2) then
+<         if(mype == 0) write(6,*)' s_ens_hv(',k,') = ',s_ens_hv(k,iaensgrploc),' km--too large, max value = 5500 km.'
+---
+>         s_ens_hv(k,iaens)=s_ens_h_min
+>      else if(s_ens_hv(k,iaens) >  5500._r_kind.and.1.gt.2) then
+>         if(mype == 0) write(6,*)' s_ens_hv(',k,') = ',s_ens_hv(k,iaens),' km--too large, max value = 5500 km.'
+3075c2998
+<         s_ens_hv(k,iaensgrploc)=5500._r_kind
+---
+>         s_ens_hv(k,iaens)=5500._r_kind
+3202,3203c3125,3126
+<   allocate(spectral_filter(naensloc,sp_loc%nc,grd_sploc%nsig))
+<   allocate(sqrt_spectral_filter(naensloc,sp_loc%nc,grd_sploc%nsig))
+---
+>   allocate(spectral_filter(naensgrp,sp_loc%nc,grd_sploc%nsig))
+>   allocate(sqrt_spectral_filter(naensgrp,sp_loc%nc,grd_sploc%nsig))
+3209c3132
+<   do 250 iaensgrploc=1,naensloc
+---
+>   do 250 iaens=1,naensgrp
+3212c3135
+<      if(s_ens_hv(k,iaensgrploc) == s_ens_hv(k-1,iaensgrploc))ksame(k)=.true.
+---
+>      if(s_ens_hv(k,iaens) == s_ens_hv(k-1,iaens))ksame(k)=.true.
+3216c3139
+<         spectral_filter(iaensgrploc,:,k)=spectral_filter(iaensgrploc,:,k-1)
+---
+>         spectral_filter(iaens,:,k)=spectral_filter(iaens,:,k-1)
+3219c3142
+<            f0(i,1)=exp(-half*(rkm(i)/s_ens_hv(k,iaensgrploc))**2)
+---
+>            f0(i,1)=exp(-half*(rkm(i)/s_ens_hv(k,iaens))**2)
+3240c3163
+<               if(s_ens_hv(kk,iaensgrploc) /= s_ens_hv(k,iaensgrploc)) exit
+---
+>               if(s_ens_hv(kk,iaens) /= s_ens_hv(k,iaens)) exit
+3243c3166
+<            write(6,900)k,nsigend,sp_loc%jcap,s_ens_hv(k,iaensgrploc),maxval(abs(f0-f))
+---
+>            write(6,900)k,nsigend,sp_loc%jcap,s_ens_hv(k,iaens),maxval(abs(f0-f))
+3273c3196
+<                  spectral_filter(iaensgrploc,ii,k)=zero
+---
+>                  spectral_filter(iaens,ii,k)=zero
+3275c3198
+<                  spectral_filter(iaensgrploc,ii,k)=factor*g(2*n+1)
+---
+>                  spectral_filter(iaens,ii,k)=factor*g(2*n+1)
+3279c3202
+<                  spectral_filter(iaensgrploc,ii,k)=zero
+---
+>                  spectral_filter(iaens,ii,k)=zero
+3281c3204
+<                  spectral_filter(iaensgrploc,ii,k)=factor*g(2*n+1)
+---
+>                  spectral_filter(iaens,ii,k)=factor*g(2*n+1)
+3288,3289c3211,3212
+<          spectral_filter(iaensgrploc,:,:)=max(spectral_filter(iaensgrploc,:,:),0.0)
+<          sqrt_spectral_filter(iaensgrploc,:,:)=sqrt(spectral_filter(iaensgrploc,:,:))
+---
+>          spectral_filter(iaens,:,:)=max(spectral_filter(iaens,:,:),0.0)
+>          sqrt_spectral_filter(iaens,:,:)=sqrt(spectral_filter(iaens,:,:))
+3293c3216
+<   250 continue  !loop over iaensgrploc
+---
+>   250 continue  !loop over iaens
+3304,3305d3226
+<    ig0=1
+<    ig0loc=ig0
+3310c3231
+<    call sf_xy(ig0loc,ftest,grd_loc%kbegin_loc,grd_loc%kend_loc)
+---
+>    call sf_xy(1,ftest,grd_loc%kbegin_loc,grd_loc%kend_loc)
+3326c3247
+< subroutine sf_xy(iaensgrplocin,f,k_start,k_end)
+---
+> subroutine sf_xy(iaensgrpin,f,k_start,k_end)
+3362c3283
+<   integer(i_kind),intent(in   ) :: iaensgrplocin 
+---
+>   integer(i_kind),intent(in   ) :: iaensgrpin 
+3374c3295
+<        call sfilter(grd_ens,sp_loc,spectral_filter(iaensgrplocin,:,k_index(k)),f(1,1,k))
+---
+>        call sfilter(grd_ens,sp_loc,spectral_filter(iaensgrpin,:,k_index(k)),f(1,1,k))
+3383c3304
+<        call sfilter(grd_ens,sp_loc,spectral_filter(iaensgrplocin,:,k_index(k)),f(1,1,k))
+---
+>        call sfilter(grd_ens,sp_loc,spectral_filter(iaensgrpin,:,k_index(k)),f(1,1,k))
+3392c3313
+< subroutine sqrt_sf_xy(iaensgrplocin,z,f,k_start,k_end)
+---
+> subroutine sqrt_sf_xy(iaensgrpin,z,f,k_start,k_end)
+3426c3347
+<   integer(i_kind),intent(in   ) :: iaensgrplocin 
+---
+>   integer(i_kind),intent(in   ) :: iaensgrpin 
+3439c3360
+<        g(:)=z(:,k)*sqrt_spectral_filter(iaensgrplocin,:,k_index(k))
+---
+>        g(:)=z(:,k)*sqrt_spectral_filter(iaensgrpin,:,k_index(k))
+3447c3368
+<         g(:)=z(:,k)*sqrt_spectral_filter(iaensgrplocin,:,k_index(k))
+---
+>         g(:)=z(:,k)*sqrt_spectral_filter(iaensgrpin,:,k_index(k))
+3457c3378
+< subroutine sqrt_sf_xy_ad(iaensgrplocin,z,f,k_start,k_end)
+---
+> subroutine sqrt_sf_xy_ad(iaensgrpin,z,f,k_start,k_end)
+3492c3413
+<   integer(i_kind),intent(in   ) :: iaensgrplocin 
+---
+>   integer(i_kind),intent(in   ) :: iaensgrpin 
+3506c3427
+<        z(:,k)=g(:)*sqrt_spectral_filter(iaensgrplocin,:,k_index(k))
+---
+>        z(:,k)=g(:)*sqrt_spectral_filter(iaensgrpin,:,k_index(k))
+3515c3436
+<         z(:,k)=g(:)*sqrt_spectral_filter(iaensgrplocin,:,k_index(k))
+---
+>         z(:,k)=g(:)*sqrt_spectral_filter(iaensgrpin,:,k_index(k))
+3612c3533
+<   use hybrid_ensemble_parameters, only: ntotensgrp
+---
+>   use hybrid_ensemble_parameters, only: naensgrp,alphacvarsclgrpmat
+3616d3536
+<   use jfunc, only: jiter
+3622c3542
+<   integer(i_kind) :: iaens,iaensgrploc
+---
+>   integer(i_kind) :: iaens
+3655c3575,3576
+<   if(naensgrp.gt.1) then 
+---
+>  
+>   if (l_sum_spc_weights.eq.0) then
+3676c3597
+<     endif !naensgrp>1
+---
+>   endif !l_sum_spc_weights
+3687c3608
+<   if (naensgrp.eq.1) then
+---
+>   if (l_sum_spc_weights.ne.0) then
+3689,3694c3610,3612
+< 
+<        iaensgrploc=iaensgrp
+<        call bkgcov_a_en_new_factorization(iaensgrploc,grady%aens(ii,iaensgrp,1:n_ens))
+<       enddo
+<    else
+< 
+---
+>        call bkgcov_a_en_new_factorization(iaensgrp,grady%aens(ii,iaensgrp,1:n_ens))
+>       enddo  
+>    else  
+3701,3702c3619
+<      iaensgrploc=iaensgrp
+<      call ckgcov_a_en_new_factorization_ad2(iaensgrploc,ebundle2(iaensgrp,:),ebundle(iaensgrp,:))
+---
+>    call ckgcov_a_en_new_factorization_ad2(iaensgrp,ebundle2(iaensgrp,:),ebundle(iaensgrp,:))
+3703a3621
+>   if (l_sum_spc_weights.eq.0) then
+3704a3623
+>   endif
+3707,3708c3626
+<      iaensgrploc=iaensgrp
+<    call ckgcov_a_en_new_factorization2(iaensgrploc,ebundle2(iaensgrp,:),grady%aens(ii,iaensgrp,:))
+---
+>    call ckgcov_a_en_new_factorization2(iaensgrp,ebundle2(iaensgrp,:),grady%aens(ii,iaensgrp,:))
+3710c3628,3629
+<     end if  !naensgrp >1
+---
+> endif
+>     !end if
+3717c3636
+<   if(naensgrp.gt.1) then
+---
+>   if (l_sum_spc_weights.eq.0) then
+3730c3649
+<    endif
+---
+>   endif
+3737c3656,3657
+< subroutine bkgcov_a_en_new_factorization(iaensgrplocin,a_en)
+---
+> 
+> subroutine bkgcov_a_en_new_factorization(iaensgrpin,a_en)
+3776c3696
+<   integer(i_kind),intent(in   ) :: iaensgrplocin 
+---
+>   integer(i_kind),intent(in   ) :: iaensgrpin 
+3803c3723
+<      call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback,iaensgrplocin)
+---
+>      call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback)
+3816,3817c3736,3737
+<      call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
+<      call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
+---
+>      call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
+>      call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
+3819,3820c3739,3740
+<      call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
+<      call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
+---
+>      call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
+>      call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
+3822c3742
+<      call sf_xy(iaensgrplocin,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
+---
+>      call sf_xy(iaensgrpin,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
+3837c3757
+<      call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback,iaensgrplocin)
+---
+>      call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback)
+3844c3764
+< subroutine ckgcov_a_en_new_factorization(iaensgrplocin,z,a_en)
+---
+> subroutine ckgcov_a_en_new_factorization(iaensgrpin,z,a_en)
+3878c3798
+<   integer(i_kind),intent(in   ) :: iaensgrplocin 
+---
+>   integer(i_kind),intent(in   ) :: iaensgrpin 
+3910,3911c3830,3831
+<         call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
+<         call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
+---
+>         call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
+>         call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
+3914c3834
+<         call sqrt_sf_xy(iaensgrplocin,z,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
+---
+>         call sqrt_sf_xy(iaensgrpin,z,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
+3943c3863
+<      call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback,iaensgrplocin)
+---
+>      call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback)
+3949,3950c3869
+< 
+< subroutine ckgcov_a_en_new_factorization2(iaensgrplocin,a_ens_in,a_en)
+---
+> subroutine ckgcov_a_en_new_factorization2(iaensgrpin,a_ens_in,a_en)
+3987c3906
+<   integer(i_kind),intent(in   ) :: iaensgrplocin 
+---
+>   integer(i_kind),intent(in   ) :: iaensgrpin 
+4055,4056c3974,3975
+<         call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
+<         call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
+---
+>         call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
+>         call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
+4059c3978
+<         call sqrt_sf_xy(iaensgrplocin,z,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
+---
+>         call sqrt_sf_xy(iaensgrpin,z,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
+4083c4002
+<      call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback,iaensgrplocin)
+---
+>      call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback)
+4090c4009
+< subroutine ckgcov_a_en_new_factorization_ad(iaensgrplocin,z,a_en)
+---
+> subroutine ckgcov_a_en_new_factorization_ad(iaensgrpin,z,a_en)
+4130c4049
+<   integer(i_kind),intent(in   ) :: iaensgrplocin 
+---
+>   integer(i_kind),intent(in   ) :: iaensgrpin 
+4155c4074
+<      call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback,iaensgrplocin)
+---
+>      call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback)
+4186,4187c4105,4106
+<         call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
+<         call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
+---
+>         call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
+>         call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
+4190c4109
+<         call sqrt_sf_xy_ad(iaensgrplocin,z,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
+---
+>         call sqrt_sf_xy_ad(iaensgrpin,z,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
+4196c4115
+< subroutine ckgcov_a_en_new_factorization_ad2(iaensgrplocin,a_en_out,a_en)
+---
+> subroutine ckgcov_a_en_new_factorization_ad2(iaensgrpin,a_en_out,a_en)
+4245c4164
+<   integer(i_kind),intent(in   ) :: iaensgrplocin 
+---
+>   integer(i_kind),intent(in   ) :: iaensgrpin 
+4283c4202
+<      call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback,iaensgrplocin)
+---
+>      call new_factorization_rf_z(a_en(k)%r3(ipnt)%q,iadvance,iback)
+4313,4314c4232,4233
+<         call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
+<         call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc,iaensgrplocin)
+---
+>         call new_factorization_rf_x(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
+>         call new_factorization_rf_y(hwork,iadvance,iback,grd_loc%kend_loc+1-grd_loc%kbegin_loc)
+4318c4237
+<         call sqrt_sf_xy_ad(iaensgrplocin,z,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
+---
+>         call sqrt_sf_xy_ad(iaensgrpin,z,hwork,grd_loc%kbegin_loc,grd_loc%kend_loc)
+4393c4312
+<   use hybrid_ensemble_parameters, only:ntotensgrp,nsclgrp, spc_multwgt,spcwgt_params
+---
+>   use hybrid_ensemble_parameters, only:nsclgrp, spc_multwgt,spcwgt_params
+4493,4494c4412,4413
+<   allocate(spc_multwgt(0:jcap_ens,ntotensgrp))
+<   allocate(spcwgt_params(4,ntotensgrp))
+---
+>   allocate(spc_multwgt(0:jcap_ens,nsclgrp))
+>   allocate(spcwgt_params(4,nsclgrp))
+4497,4501d4415
+<   spc_multwgt(0,2:nsclgrp)=0.0
+<   endif
+<   spc_multwgt(0,1)=1
+< 
+<   if(ntotensgrp.gt.1) then
+4523c4437
+<   if(ntotensgrp.gt.1) then
+---
+>   if(nsclgrp.gt.1) then
+4565c4479
+<     use hybrid_ensemble_parameters, only: naensloc
+---
+>     use hybrid_ensemble_parameters, only: naensgrp
+4573c4487
+<    real(r_kind),allocatable:: s_ens_h_gu_x(:,:),s_ens_h_gu_y(:,:)
+---
+>    real(r_kind),allocatable:: s_ens_h_gu_x(:),s_ens_h_gu_y(:)
+4576d4489
+<    integer(i_kind):: iaensgrploc
+4604,4605c4517,4518
+<             read(lunin,101) s_ens_hv(k,1), s_ens_vv(k,1), beta_s(k), beta_e(k)
+<             if(mype==0) write(6,101) s_ens_hv(k,1), s_ens_vv(k,1), beta_s(k), beta_e(k)
+---
+>             read(lunin,101) s_ens_hv(k,1), s_ens_vv(k), beta_s(k), beta_e(k)
+>             if(mype==0) write(6,101) s_ens_hv(k,1), s_ens_vv(k), beta_s(k), beta_e(k)
+4607c4520
+<          do iaensgrploc=2,naensloc
+---
+>          do iaens=2,naensgrp
+4609c4522
+<             read(lunin,101,end=300) s_ens_hv(k,iaensgrploc),s_ens_vv(k,iaensgrploc)
+---
+>             read(lunin,101,end=300) s_ens_hv(k,iaens)
+4616c4529
+<          do iaensgrploc=2,naensloc
+---
+>          do iaens=2,naensgrp
+4618,4619c4531
+<              s_ens_hv(k,iaensgrploc)=s_ens_hv(k,1)
+<              s_ens_vv(k,iaensgrploc)=s_ens_vv(k,1)
+---
+>              s_ens_hv(k,iaens)=s_ens_hv(k,1)
+4635c4547
+<          allocate(s_ens_h_gu_x(grd_loc%nsig*n_ens,naensloc),s_ens_h_gu_y(grd_loc%nsig*n_ens,naensloc))
+---
+>          allocate(s_ens_h_gu_x(grd_loc%nsig*n_ens),s_ens_h_gu_y(grd_loc%nsig*n_ens))
+4660,4663c4572,4574
+<       allocate(s_ens_h_gu_x(1,1),s_ens_h_gu_y(1,1))
+<       do iaensgrploc=1,naensloc
+<       s_ens_hv(:,iaensgrploc) = s_ens_h(iaensgrploc)
+<       s_ens_vv(:,iaensgrploc) = s_ens_v(iaensgrploc)
+---
+>       allocate(s_ens_h_gu_x(1),s_ens_h_gu_y(1))
+>       do iaens=1,naensgrp
+>       s_ens_hv(:,iaens) = s_ens_h(iaens)
+4664a4576
+>       s_ens_vv = s_ens_v
+4675,4677c4587,4588
+< !clttobemerge for regional sdl
+<          call init_rf_x(s_ens_h_gu_x(grd_loc%kbegin_loc:grd_loc%kend_alloc,:),kl)
+<          call init_rf_y(s_ens_h_gu_y(grd_loc%kbegin_loc:grd_loc%kend_alloc,:),kl)
+---
+>          call init_rf_x(s_ens_h_gu_x(grd_loc%kbegin_loc:grd_loc%kend_alloc),kl)
+>          call init_rf_y(s_ens_h_gu_y(grd_loc%kbegin_loc:grd_loc%kend_alloc),kl)
+4711c4622
+<          write(6,101) s_ens_hv(k,1), s_ens_vv(k,1), beta_s(k), beta_e(k)
+---
+>          write(6,101) s_ens_hv(k,1), s_ens_vv(k), beta_s(k), beta_e(k)
+4749d4659
+<   use hybrid_ensemble_parameters, only: naensloc
+4753c4663
+<   real(r_kind),intent(  out) ::s_ens_h_gu_x(nz,naensloc),s_ens_h_gu_y(nz,naensloc)
+---
+>   real(r_kind),intent(  out) ::s_ens_h_gu_x(nz),s_ens_h_gu_y(nz)
+4756c4666
+<   integer(i_kind) k,n,nk
+---
+>   integer(i_kind) k,n,nk,iaens0
+4758a4669
+>   iaens0=1  !clt a plaee holder
+4769d4679
+< !clttobemerge for regional sdl
+4771,4772c4681,4682
+<      s_ens_h_gu_x(k,:)=s_ens_hv(k,:)/(.001_r_kind*dxmax)
+<      s_ens_h_gu_y(k,:)=s_ens_hv(k,:)/(.001_r_kind*dymax)
+---
+>      s_ens_h_gu_x(k)=s_ens_hv(k,iaens0)/(.001_r_kind*dxmax)
+>      s_ens_h_gu_y(k)=s_ens_hv(k,iaens0)/(.001_r_kind*dymax)
+4774c4684
+<                     s_ens_hv(k,1),s_ens_h_gu_x(k,1),s_ens_h_gu_y(k,1)
+---
+>                     s_ens_hv(k,1),s_ens_h_gu_x(k),s_ens_h_gu_y(k)
+4778d4687
+< !clttobemerge for regional sdl
+4783,4784c4692,4693
+<         s_ens_h_gu_x(nk+k,:)=s_ens_h_gu_x(k,:)
+<         s_ens_h_gu_y(nk+k,:)=s_ens_h_gu_y(k,:)
+---
+>         s_ens_h_gu_x(nk+k)=s_ens_h_gu_x(k)
+>         s_ens_h_gu_y(nk+k)=s_ens_h_gu_y(k)
+5763d5671
+< !cltthinkdeb some reshape of the arays should be done here
+5771c5679
+<                     rtem1(ia_en)=rtem1(ia_en)+a_en(ia_en2,n)%r3(ipe(1))%q(i,j,k)*cmatrix(ia_en,ia_en2)
+---
+>                       rtem1(ia_en)=rtem1(ia_en)+a_en(ia_en2,n)%r3(ipe(1))%q(i,j,k)*cmatrix(ia_en,ia_en2)
+5773,5774c5681
+<                 enddo
+<               
+---
+>                 enddo 
+5786,5788c5693
+<     use hybrid_ensemble_parameters, only: l_timloc_opt,l_sum_spc_weights
+<     use hybrid_ensemble_parameters, only: ensloccov4tim,ensloccov4var,ensloccov4scl
+<     use hybrid_ensemble_parameters, only: ntotensgrp,naensgrp,ntlevs_ens,nsclgrp,ngvarloc
+---
+>     use hybrid_ensemble_parameters, only: nsclgrp
+5790,5791d5694
+<     use hybrid_ensemble_parameters, only: idaen2d,idaen3d
+<   use hybrid_ensemble_parameters, only: alphacvarsclgrpmat
+5794,5838c5697,5700
+<     integer (i_kind):: i,j
+<     integer (i_kind):: ig,ibin,ic,iscl,itim1,itim2,igvar1,igvar2,iscl1,iscl2,ivargrp
+<     integer (i_kind):: ntimloc,interval4aens_nsclandngvarloc,interval4aens_nscl
+<     integer (i_kind):: nsclandngvarloc
+<     if (l_timloc_opt ) then
+<     ntimloc=ntlevs_ens
+<    interval4aens_nsclandngvarloc =  ngvarloc*nsclgrp
+<     else
+<     ntimloc=1
+<    interval4aens_nsclandngvarloc = 0 
+<     endif
+<     ensgrp2aensgrp=-999
+<     
+<    interval4aens_nscl=nsclgrp
+<     do ibin=1,ntlevs_ens 
+<        do ic=1,nc3d+nc2d
+<           if(ic.le.nc3d) ivargrp=idaen3d(ic)
+<           if(ic.gt.nc3d) ivargrp=idaen2d(ic-nc3d)
+<           do iscl=1,nsclgrp
+<             ig=(ivargrp-1)*nsclgrp+iscl 
+<                
+<            ensgrp2aensgrp(ig,ic,ibin)=(ibin-1)*interval4aens_nsclandngvarloc+(ivargrp-1)*nsclgrp+iscl
+< !clt          write(6,*)'thinkdeb555 ensgrp2aens is ',ig,ic,ibin,' ',ensgrp2aensgrp(ig,ic,ibin)   
+<           enddo
+<        enddo
+<     enddo
+<     if( naensgrp .ne. ntimloc*ngvarloc*nsclgrp) then
+<       write(6,*)'something wrong in setup_ensgrp2aensgrp'
+<     endif
+<     if( ntotensgrp .ne. ntlevs_ens*ngvarloc*nsclgrp) then
+<       write(6,*)'something on ntotensgrp are  wrong  in setup_ensgrp2aensgrp'
+<     endif
+<     if (l_sum_spc_weights.eq.0) then 
+<       ensloccov4scl=1    
+<     elseif (l_sum_spc_weights.eq.1)then
+<       ensloccov4scl=0    
+<       ensloccov4scl(1)=1.0    
+<    
+<     else 
+<      write(6,*)'stop , unknown option for this branch'
+<      call stop2(666)
+<     endif
+<      ensloccov4tim=1 ! a place-holder
+<      ensloccov4var=1 ! a place-holder 
+<      
+---
+>     integer (i_kind):: iens,iaens
+>     do iens=1,nsclgrp
+>      ensgrp2aensgrp(iens)=iens
+>     enddo 
+5840,5842d5701
+<      nsclandngvarloc =  ngvarloc*nsclgrp
+<     
+< !clt symmetric conditions should be made use of
+5845,5860d5703
+<  do itim2=1,ntimloc
+<  do itim1=1,ntimloc
+<     do igvar1=1,ngvarloc 
+<     do igvar2=1,ngvarloc 
+<       do iscl1=1,nsclgrp
+<       do iscl2=1,nsclgrp
+<           i=(itim1-1)**nsclandngvarloc+(igvar1-1)*nsclgrp+iscl1
+<           j=(itim2-1)**nsclandngvarloc+(igvar2-1)*nsclgrp+iscl2
+<           alphacvarsclgrpmat(i,j)=ensloccov4tim(abs(itim1-itim2)+1)* ensloccov4var( abs(igvar1-igvar2)+1)* ensloccov4scl( abs(iscl1-iscl2)+1) !first for ttime covariance
+<       enddo
+<       enddo
+<    enddo
+<    enddo
+<  enddo
+<  enddo
+< 
+5861a5705
+> 
