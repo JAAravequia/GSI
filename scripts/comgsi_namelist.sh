@@ -7,7 +7,7 @@ cat <<EOF > gsiparm.anl
    gencode=78,qoption=2,
    factqmin=0.0,factqmax=0.0,
    iguess=-1,
-   oneobtest=.false.,retrieval=.false.,
+   oneobtest=${if_oneobtest},retrieval=.false.,
    nhr_assimilation=2,l_foto=.false.,
    use_pbl=.false.,
    lread_obs_save=${if_read_obs_save},lread_obs_skip=${if_read_obs_skip},
@@ -15,6 +15,7 @@ cat <<EOF > gsiparm.anl
    passive_bc=.true.,use_edges=.false.,emiss_bc=.true.,
    diag_precon=.true.,step_start=1.e-3,
    l4densvar=${if4d},nhr_obsbin=1,min_offset=60,
+   use_gfs_nemsio=${if_gfs_nemsio},
  /
  &GRIDOPTS
    JCAP=62,JCAP_B=62,NLAT=60,NLON=60,nsig=60,regional=.true.,

@@ -54,24 +54,52 @@ set -x
 # if_observer = Yes  : only used as observation operater for enkf
 # if_hybrid   = Yes  : Run GSI as 3D/4D EnVar
 # if_4DEnVar  = Yes  : Run GSI as 4D EnVar
+# if_nemsio = Yes    : The GFS background files are in NEMSIO format
+# if_oneob  = Yes    : Do single observation test
   if_hybrid=No     # Yes, or, No -- case sensitive !
   if_4DEnVar=No    # Yes, or, No -- case sensitive (set if_hybrid=Yes first)!
   if_observer=No   # Yes, or, No -- case sensitive !
+  if_nemsio=No     # Yes, or, No -- case sensitive !
+  if_oneob=No      # Yes, or, No -- case sensitive !
 
   bk_core=ARW
   bkcv_option=NAM
   if_clean=clean
 #
+# setup whether to do single obs test
+  if [ ${if_oneob} = Yes ]; then
+    if_oneobtest='.true.'
+  else
+    if_oneobtest='.false.'
+  fi
+#
 # setup for GSI 3D/4D EnVar hybrid
   if [ ${if_hybrid} = Yes ] ; then
-    ENSEMBLE_FILE_mem=${ENS_ROOT}/sfg_2017051312_fhr06s 
+    PDYa=`echo $ANAL_TIME | cut -c1-8`
+    cyca=`echo $ANAL_TIME | cut -c9-10`
+    gdate=`date -u -d "$PDYa $cyca -6 hour" +%Y%m%d%H` #guess date is 6hr ago
+    gHH=`echo $gdate |cut -c9-10`
+    datem1=`date -u -d "$PDYa $cyca -1 hour" +%Y-%m-%d_%H:%M:%S` #1hr ago
+    datep1=`date -u -d "$PDYa $cyca 1 hour"  +%Y-%m-%d_%H:%M:%S`  #1hr later
+    if [ ${if_nemsio} = Yes ]; then
+      ENSEMBLE_FILE_mem=${ENS_ROOT}/gdas.t${gHH}z.atmf006s.mem
+    else
+      ENSEMBLE_FILE_mem=${ENS_ROOT}/sfg_${gdate}_fhr06s_mem
+    fi
 
     if [ ${if_4DEnVar} = Yes ] ; then
-      BK_FILE_P1=${BK_ROOT}/wrfout_d01_2017-05-13_19:00:00
-      BK_FILE_M1=${BK_ROOT}/wrfout_d01_2017-05-13_17:00:00
+      BK_FILE_P1=${BK_ROOT}/wrfout_d01_${datep1}
+      BK_FILE_M1=${BK_ROOT}/wrfout_d01_${datem1}
 
-      ENSEMBLE_FILE_mem_p1=${ENS_ROOT}/sfg_2017051312_fhr09s
-      ENSEMBLE_FILE_mem_m1=${ENS_ROOT}/sfg_2017051312_fhr03s
+      if [ ${if_nemsio} = Yes ]; then
+        if_gfs_nemsio='.true.'
+        ENSEMBLE_FILE_mem_p1=${ENS_ROOT}/gdas.t${gHH}z.atmf009s.mem
+        ENSEMBLE_FILE_mem_m1=${ENS_ROOT}/gdas.t${gHH}z.atmf003s.mem
+      else
+        if_gfs_nemsio='.false.'
+        ENSEMBLE_FILE_mem_p1=${ENS_ROOT}/sfg_${gdate}_fhr09s_mem
+        ENSEMBLE_FILE_mem_m1=${ENS_ROOT}/sfg_${gdate}_fhr03s_mem
+      fi
     fi
   fi
 
@@ -282,10 +310,10 @@ done
 
 ifhyb=.false.
 if [ ${if_hybrid} = Yes ] ; then
-  ls ${ENSEMBLE_FILE_mem}_mem* > filelist02
+  ls ${ENSEMBLE_FILE_mem}* > filelist02
   if [ ${if_4DEnVar} = Yes ] ; then
-    ls ${ENSEMBLE_FILE_mem_p1}_mem* > filelist03
-    ls ${ENSEMBLE_FILE_mem_m1}_mem* > filelist01
+    ls ${ENSEMBLE_FILE_mem_p1}* > filelist03
+    ls ${ENSEMBLE_FILE_mem_m1}* > filelist01
   fi
   
   nummem=`more filelist02 | wc -l`
