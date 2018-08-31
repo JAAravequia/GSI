@@ -84,6 +84,12 @@ find_library (NETCDF_LIBRARIES_C
     HINTS ${NETCDF_DIR}/lib )
 mark_as_advanced(NETCDF_LIBRARIES_C)
 
+if("${NETCDF_DIR}" STREQUAL "")
+  message(FATAL_ERROR "
+         Cannot find NETCDF!!!!
+
+         ")
+endif()
 find_file (NETCDF_NCDUMP
     NAMES ncdump
     HINTS ${NETCDF_DIR}/bin )
