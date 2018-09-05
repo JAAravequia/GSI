@@ -85,6 +85,7 @@ subroutine setup_linhx(rlat, rlon, time, ix, delx, ixp, delxp, iy, dely,  &
   use gridinfo, only: npts, latsgrd, lonsgrd
   use statevec, only: nsdim
   use constants, only: zero,one,pi
+  use general_tll2xy_mod, only: general_tll2xy
   use mpisetup
   implicit none
 
@@ -103,9 +104,6 @@ subroutine setup_linhx(rlat, rlon, time, ix, delx, ixp, delxp, iy, dely,  &
 
   delx = max(zero, min(dx - float(ix), one))
   dely = max(zero, min(dy - float(iy), one))
-
-  delxp = one - delx
-  delyp = one - dely
 
   ixp = min(ix + 1, nlons)
   iyp = min(iy + 1, nlats)
@@ -142,8 +140,6 @@ subroutine calc_linhx(hx, dens, dhx_dx, hx_ens, &
 !
 ! program history log:
 !   2016-11-29  shlyaeva
-!   2018-09-05  Guoqing Ge
-!     Made similar changes here according to changes in observer_gfs.f90
 !
 !   input argument list:
 !
@@ -177,15 +173,15 @@ subroutine calc_linhx(hx, dens, dhx_dx, hx_ens, &
   do i = 1, dhx_dx%nnz
      j = dhx_dx%ind(i)
      k = kindx(j)
-     hx_ens = hx_ens + dhx_dx%val(i) *                              &
-             (( dens( iy*nlons  + ix , j, it) *delyp*delxp          &
-              + dens( iyp*nlons + ix , j, it) *dely *delxp          &
-              + dens( iy*nlons  + ixp, j, it) *delyp*delx           &
-              + dens( iyp*nlons + ixp, j, it) *dely *delx )*deltp   &
-            + ( dens( iy*nlons  + ix , j, itp)*delyp*delxp          &
-              + dens( iyp*nlons + ix , j, itp)*dely *delxp          &
-              + dens( iy*nlons  + ixp, j, itp)*delyp*delx           &
-              + dens( iyp*nlons + ixp, j, itp)*dely *delx )*delt)
+     hx_ens = hx_ens + dhx_dx%val(i) *                                        &
+             (( dens( ix*nlons  + iy , j, it) *delxp*delyp          &
+              + dens( ixp*nlons + iy , j, it) *delx *delyp          &
+              + dens( ix*nlons  + iyp, j, it) *delxp*dely           &
+              + dens( ixp*nlons + iyp, j, it) *delx *dely )*deltp   &
+            + ( dens( ix*nlons  + iy , j, itp)*delxp*delyp          &
+              + dens( ixp*nlons + iy , j, itp)*delx *delyp          &
+              + dens( ix*nlons  + iyp, j, itp)*delxp*dely           &
+              + dens( ixp*nlons + iyp, j, itp)*delx *dely )*delt)
   enddo
 
   return
