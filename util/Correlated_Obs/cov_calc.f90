@@ -228,7 +228,7 @@ do tim=1,ntimes
       allocate(chaninfo(nch_active),errout(nch_active))
 !KAB
       if (Cloud_Type==Cloud_FOV) then
-         allocate(ccld(nch_active),cclr(nch_active))
+         allocate(ccld(no_chn),cclr(no_chn))
          call cld_params(no_chn,ccld,cclr)
       end if
       if (bin_size<five) then
@@ -559,6 +559,10 @@ if (out_corr) then
    end do
    Rcorr=(Rcorr+TRANSPOSE(Rcorr))/two
 end if
+!KAB
+do r=1,nch_active
+print *, r, divider(r,r), Rcov(r,r)
+end do
 call RadDiag_Hdr_Destroy(RadDiag_Hdr)
 call RadDiag_Data_Destroy(RadDiag_Data)
 deallocate(ges_times,gesloc,ges,gesuse, ges_ave,bin_dist,obs_pairs)

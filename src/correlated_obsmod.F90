@@ -308,7 +308,7 @@ do ii=1,ninstr
    kreq=kreq4
    if(iamroot_) then
 !KAB
-      write(6,'(1x,2(a,1x),i4,1x,f7.2,1x,a)') trim(instrument), trim(mask), method, kreq4, trim(scene), trim(filename)
+      write(6,'(1x,2(a,1x),i4,1x,f7.2,1x,a,a)') trim(instrument), trim(mask), method, kreq4, trim(scene), trim(filename)
    endif
 !  check method validity
    if(ALL(methods_avail/=method)) then
@@ -380,7 +380,7 @@ real(r_kind),allocatable, dimension(:) :: diag
    ErrorCov%mask = trim(mask)
 !KAB
    ErrorCov%scene = trim(scene)
-   ErrorCov%name = trim(instrument)//':'//trim(mask)
+   ErrorCov%name = trim(instrument)//':'//trim(mask)//':'//trim(scene)
    ErrorCov%method = method
    ErrorCov%kreq   = kreq
 
@@ -1101,7 +1101,7 @@ implicit none
 
    character(len=*),parameter :: myname_=myname//'*upd_varqc'
    character(len=80) covtype
-   integer(i_kind) :: nch_active,ii,jj,iii,jjj,mm,nn,ncp,ifound,jj0,itbl,ntrow!nsatype,ntrow
+   integer(i_kind) :: nch_active,ii,jj,iii,jjj,mm,nn,ncp,ifound,jj0,itbl,ntrow
 !KAB
    integer(i_kind),dimension(6) ::nsatype
    integer(i_kind)::nsat,isurf,rr
@@ -1262,8 +1262,9 @@ implicit none
                   nn=IJsubset(ii)
                   rr=IRsubset(ii)
                   mm=ich1(nn)
-                  if(iamroot_)write(6,'(1x,a20,2i6,2f15.5)')idnames(itbl),ii,nn, &
-                     sqrt(GSI_BundleErrorCov(itbl)%R(IRsubset(ii),IRsubset(ii))), trim(covtype)
+!KAB print
+!                  if(iamroot_)write(6,'(1x,a22,2i6,2f15.5)')idnames(itbl),ii,nn, &
+!                     sqrt(GSI_BundleErrorCov(itbl)%R(IRsubset(ii),IRsubset(ii))), trim(covtype)
 !KAB              
                   if(isurf==1) varch_sea(mm)= sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
                   if(isurf==2) varch_land(mm)= sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
