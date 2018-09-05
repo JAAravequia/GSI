@@ -11,8 +11,11 @@ import socket,os
 hostname=socket.gethostname()
 if hostname.startswith("cheyenne"):  ## Cheyenne
   python3Location="/usr/bin/python3"
-  os.system("ln -sf pyrunconfig.py_cheyenne pyrunconfig.py")
-
+  confile = "pyrunconfig.py"
+  if os.path.isfile(confile) and os.access(confile, os.R_OK):
+    print(" pyrunconfig.py already exists so do not overwrite it")
+  else:
+    os.system("ln -sf pyrunconfig.py_cheyenne pyrunconfig.py")
 elif hostname.startswith("tfe"):  ## THEIA
   python3Location="/apps/intel/intelpython3/bin/python3"
   os.system("ln -sf pyrunconfig.py_theia pyrunconfig.py")

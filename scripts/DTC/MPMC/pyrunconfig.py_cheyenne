@@ -16,9 +16,9 @@ build_directory_location = '/glade/work/geguo/MPMC/build_v3.7b' # Location for c
 build_directory_root = '/glade/work/geguo/MPMC/MPMCtest'  # Location of python scripts
 gsi_src_directory = '/glade/work/geguo/git_local/ProdGSI'       # Location of GSI source code
 #platform_username = "stark"
-#build_directory_location = '/glade2/scratch2/stark/GSI/Regression/build' # Location for creation of build directories.
-#build_directory_root = '/glade2/scratch2/stark/GSI/gsi_regression_test'  # Location of python scripts
-#gsi_src_directory = '/glade2/scratch2/stark/GSI/ProdGSI'                 # Location of GSI source code
+#build_directory_location = '/gpfs/fs1/p/ral/jntp/stark/Regression' # Location for creation of build directories.
+#build_directory_root = '/gpfs/fs1/p/ral/jntp/stark/gsi_regression_test_svn'  # Location of python scripts
+#gsi_src_directory = '/gpfs/fs1/p/ral/jntp/stark/ProdGSI'                 # Location of GSI source code
 # ---------------------------------------------------------------------------------------------------------------------------------------------------
 # Each line is a compiler test configuration, add or remove lines as needed. Syntax note: last line has no comma at the end of the line. 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------
