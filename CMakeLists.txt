@@ -80,8 +80,6 @@ project(GSI)
   string(REGEX MATCH "discover" HOST-Discover ${HOSTNAME})
   string(REGEX MATCH "cheyenne" HOST-Cheyenne ${HOSTNAME} )
   if ( BUILD_CORELIBS )
-    ###G.Ge 2018/8/10: If user specify BUILD_CORELIBS explicitly
-    ###in CMAKE command line, bypass the HOST checking 
     MESSAGE(STATUS "BUILD_CORELIBS manually-specified as ON")
     set( host "GENERIC" )
     setGeneric()
