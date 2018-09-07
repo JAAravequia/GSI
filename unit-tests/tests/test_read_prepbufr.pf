@@ -29,9 +29,12 @@ contains
       use satthin, only: sfc_rough_full,isli_anl,sno_anl,soil_moi_full,veg_frac_full,veg_type_full
       use satthin, only: dlat_grid,dlon_grid
       use satthin, only: rlat_min,rlon_min
-
+      integer ierror,omp_get_num_threads
       class (Test_read_prepbufr), intent(inout) :: this
 
+  write(6,*) 'HEY BEFORE prepbufr-num threads is ',omp_get_num_threads()
+      call MPI_Init(ierror)
+  write(6,*) 'HEY BEFORE prepbufr-num threads is ',omp_get_num_threads()
       dlat_grid = 1.0
       dlon_grid = 1.0
       rlat_min = 1.0
@@ -82,6 +85,7 @@ contains
       integer(i_kind),dimension(1)           :: nobs
       real(r_kind)                           :: twindin
       real(r_kind),dimension(96,192,64)      :: prsl_full
+      integer ierror,omp_get_num_threads
 
       nread = 0
       ndata = 0
@@ -99,7 +103,7 @@ contains
 !     @assertEqual(999, ntguessfc)
 !     @assertEqual(3, ifilesfc(1))
 !     @assertEqual(3.0, hrdifsfc(1))
-
+      call MPI_Finalize(ierror)
    end subroutine testReadPrepbufr
 
 end module Test_read_prepbufr_mod
