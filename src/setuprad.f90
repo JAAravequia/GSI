@@ -474,7 +474,7 @@
      varch_snow(j)=varch(j)
      varch_mixed(j)=varch(j)
   end do
-  call corr_oberr_qc(jpch_rad,iuse_rad,nusis,varch_sea,varch_land,varch_ice,varch_snow,varch_mixed)
+  if (miter>0) call corr_oberr_qc(jpch_rad,iuse_rad,nusis,varch_sea,varch_land,varch_ice,varch_snow,varch_mixed)
 
   do j=1,jpch_rad
      if(isis == nusis(j))then 
@@ -758,36 +758,18 @@
         if (radmod%lcloud_fwd) then
            eff_area=(radmod%cld_sea_only .and. sea) .or. (.not.  radmod%cld_sea_only)
         end if
-!KAB
-!add if statement
-!if clear sky
-!        if(sea) then
-!          isfctype=0
-!          do i=1,nchanl
-!             tnoise(i)=varch_sea(ich(i))
-!          enddo
-!        else if(land) then
-!          isfctype=1
-!          do i=1,nchanl
-!             tnoise(i)=varch_land(ich(i))
-!          enddo
-!        else if(ice) then
-!          isfctype=2
-!          do i=1,nchanl
-!             tnoise(i)=varch_ice(ich(i))
-!          enddo
-!        else if(snow) then
-!          isfctype=3
-!          do i=1,nchanl
-!             tnoise(i)=varch_snow(ich(i))
-!          enddo
-!        else if(mixed) then
-!          isfctype=4
-!          do i=1,nchanl
-!!             varch(ich(i))=varch_mixed(ich(i))
-!             tnoise(i)=varch_mixed(ich(i))
-!          enddo
-!        endif
+
+        if(sea) then
+          isfctype=0
+        else if(land) then
+          isfctype=1
+        else if(ice) then
+          isfctype=2
+        else if(snow) then
+          isfctype=3
+        else if(mixed) then
+          isfctype=4
+        endif
 
 !       Count data of different surface types
         if(luse(n))then
@@ -1115,31 +1097,25 @@
 !          if (radmod%ex_obserr=='ex_obserr2') &  ! comment out for now, waiting for more tests
 !             call radiance_ex_obserr(radmod,nchanl,cldeff_obs,cldeff_fg,tnoise,tnoise_cld,error0)
         end if
-!move varch_surf stuff here
         if (clrsky) then
            if(sea) then
-             isfctype=0
              do i=1,nchanl
                 tnoise(i)=varch_sea(ich(i))
              enddo
  !          end if
            else if(land) then
-             isfctype=1
              do i=1,nchanl
                 tnoise(i)=varch_land(ich(i))
              enddo
            else if(ice) then
-             isfctype=2
              do i=1,nchanl
                 tnoise(i)=varch_ice(ich(i))
              enddo
            else if(snow) then
-             isfctype=3
              do i=1,nchanl
                 tnoise(i)=varch_snow(ich(i))
              enddo 
            else if(mixed) then
-             isfctype=4
              do i=1,nchanl
                 tnoise(i)=varch_mixed(ich(i))
              enddo

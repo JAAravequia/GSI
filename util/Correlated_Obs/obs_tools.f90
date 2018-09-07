@@ -104,7 +104,7 @@ elseif (no_chn==22) then !atms
   do i=17,22
     ccld(i)=0.5_r_kind
   end do
-ccld=ccld
+ccld=ccld/4
 end if
 
 end subroutine cld_params
