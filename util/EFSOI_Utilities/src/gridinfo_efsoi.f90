@@ -52,6 +52,8 @@ use specmod, only: sptezv_s, sptez_s, init_spec_vars, isinitialized, asin_gaulat
     ndimspec => nc
 use reducedgrid_mod, only: reducedgrid_init, regtoreduced, reducedtoreg,&
                            nptsred, lonsred, latsred
+use mpeu_util, only: getindex
+!use statevec_efsoi, only: clevels !, cvars2d, cvars3d, nc3d
 implicit none
 private
 public :: getgridinfo_efsoi, gridinfo_cleanup_efsoi
@@ -71,11 +73,9 @@ character(len=max_varname_length),public, dimension(3)  :: vars2d_supported = (/
 ! supported variable names in anavinfo
 contains
 
-subroutine getgridinfo_efsoi(fileprefix, reducedgrid)
+subroutine getgridinfo_efsoi(fileprefix, reducedgrid, clevels, nc3d)
 ! read latitudes, longitudes and pressures for analysis grid,
 ! broadcast to each task.
-use sigio_module, only: sigio_head, sigio_data, sigio_sclose, sigio_sropen, &
-                        sigio_srohdc, sigio_sclose, sigio_srhead, sigio_axdata
 use nemsio_module, only: nemsio_gfile,nemsio_open,nemsio_close,&
                          nemsio_getfilehead,nemsio_getheadvar,&
                          nemsio_readrecv,nemsio_init, nemsio_realkind
@@ -83,17 +83,16 @@ implicit none
 
 character(len=120), intent(in) :: fileprefix
 logical, intent(in)            :: reducedgrid
-
+integer, intent(in) :: nc3d
+integer, dimension(0:nc3d), intent(in) :: clevels
 integer(i_kind) nlevsin, ierr, iunit, k, nn, idvc 
 character(len=500) filename
-integer(i_kind) iret,i,j,nlonsin,nlatsin
+integer(i_kind) iret,i,j,nlonsin,nlatsin,u_ind,v_ind,tv_ind,q_ind,ps_ind
 real(r_kind), allocatable, dimension(:) :: ak,bk,spressmn,tmpspec
 real(r_kind), allocatable, dimension(:,:) :: pressimn,presslmn
 real(r_single),allocatable,dimension(:,:,:) :: nems_vcoord
 real(r_kind) kap,kapr,kap1
 real(nemsio_realkind), dimension(nlons*nlats) :: nems_wrk
-type(sigio_data) sigdata
-type(sigio_head) sighead
 type(nemsio_gfile) :: gfile
 
 iunit = 77
@@ -192,7 +191,7 @@ if (nproc .eq. 0) then
 
    if (reducedgrid) then
       call reducedgrid_init(nlons,nlats,asin_gaulats)
-      npts = nptsred
+      npts = nptsred 
    else
       npts = nlons*nlats
    end if
@@ -271,18 +270,25 @@ do nn=1,npts
    gridloc(3,nn) = sin(latsgrd(nn))
 end do
 
+! Identify EFSOI relevant state variable indices
+u_ind   = getindex(vars3d_supported, 'u')   !< indices in the state var arrays
+v_ind   = getindex(vars3d_supported, 'v')   ! U and V (3D)
+tv_ind  = getindex(vars3d_supported, 'tv')  ! Tv (3D)
+q_ind   = getindex(vars3d_supported, 'q')   ! Q (3D)
+ps_ind  = getindex(vars2d_supported, 'ps')  ! Ps (2D)
+
 ! Index of each elements
 allocate(id_u(nlevs))
 allocate(id_v(nlevs))
 allocate(id_t(nlevs))
 allocate(id_q(nlevs))
 do k=1,nlevs
-   id_u(k) = k
-   id_v(k) = nlevs + k
-   id_t(k) = 2*nlevs + k
-   id_q(k) = 3*nlevs + k
+   id_u(k) = clevels(u_ind-1) + k
+   id_v(k) = clevels(v_ind-1) + k
+   id_t(k) = clevels(tv_ind-1) + k
+   id_q(k) = clevels(q_ind-1) + k
 end do
-id_ps = nvars*nlevs + 1
+id_ps = clevels(nc3d) + ps_ind
 
 end subroutine getgridinfo_efsoi
 

@@ -62,7 +62,7 @@ program efsoi_main
  ! model state vector 
  use statevec_efsoi, only: read_state_efsoi, statevec_cleanup_efsoi, init_statevec_efsoi
  ! load balancing
- use loadbal, only: load_balance, loadbal_cleanup
+ use loadbal_efsoi, only: load_balance_efsoi, loadbal_cleanup_efsoi
  ! efsoi update
  use efsoi, only: efsoi_update
  ! Observation sensitivity usage
@@ -114,9 +114,9 @@ program efsoi_main
  ! do load balancing (partitioning of grid points
  ! and observations among processors)
  t1 = mpi_wtime()
- call load_balance()
+ call load_balance_efsoi()
  t2 = mpi_wtime()
- if (nproc == 0) print *,'time in load_balance =',t2-t1,'on proc',nproc
+ if (nproc == 0) print *,'time in load_balance_efsoi =',t2-t1,'on proc',nproc
 
  ! apply scattering of efsoi chunks
  t1 = mpi_wtime()
@@ -151,7 +151,7 @@ program efsoi_main
 
  ! Cleanup for EFSOI configuration
  call statevec_cleanup_efsoi()
- call loadbal_cleanup()
+ call loadbal_cleanup_efsoi()
  call destroy_ob_sens()
 
  ! finalize MPI.

@@ -2,7 +2,7 @@ module scatter_chunks_efsoi
 
 use mpisetup !, only: numproc, nproc, mpi_real4
 use kinds, only: i_kind, r_single
-use loadbal!, only: npts_max, numptsperproc, indxproc
+use loadbal_efsoi, only: npts_max, numptsperproc, indxproc
 use params, only: nanals
 use gridio_efsoi
 
@@ -20,7 +20,6 @@ subroutine scatter_chunks_ob_impact
 ! decomposition from load_balance
 use statevec_efsoi, only: grdin,grdin2,grdin3
 use gridinfo_efsoi, only: ncdim
-use params, only: nbackgrounds
 implicit none
 
 integer(i_kind), allocatable, dimension(:) :: scounts, displs, rcounts

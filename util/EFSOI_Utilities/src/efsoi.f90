@@ -47,7 +47,7 @@ use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, obloclon, obloclat, obln
 use constants, only: constants_initialized, pi, zero, one
 use params, only: nanals, corrlengthnh, corrlengthtr, corrlengthsh, &
                   tar_minlon, tar_maxlon, tar_minlat, tar_maxlat, &
-                  tar_minlev, tar_maxlev, nbackgrounds
+                  tar_minlev, tar_maxlev
 use gridinfo_efsoi, only: nlevs_pres, lonsgrd, latsgrd, id_u, id_v, id_t, id_q, id_ps
 use enkf_obs_sensitivity, only: obsense_kin, obsense_dry, obsense_moist, adloc_chunk
 
@@ -209,18 +209,18 @@ obsloop: do nob=1,nobstot
          if(nn == nlevs_pres) then
             do nanal=1,nanals
                tpwork(nanal) = tpwork(nanal) + taperv &
-                    & * anal_chunk(nanal,i,id_ps,nbackgrounds) * fcerror_chunk(i,id_ps)
+                    & * anal_chunk(nanal,i,id_ps) * fcerror_chunk(i,id_ps)
             end do
             cycle
          end if
          do nanal=1,nanals
             uvwork(nanal) = uvwork(nanal) + taperv &
-                 & * (anal_chunk(nanal,i,id_u(nn),nbackgrounds) * fcerror_chunk(i,id_u(nn)) &
-                 & + anal_chunk(nanal,i,id_v(nn),nbackgrounds) * fcerror_chunk(i,id_v(nn)))
+                 & * (anal_chunk(nanal,i,id_u(nn)) * fcerror_chunk(i,id_u(nn)) &
+                 & + anal_chunk(nanal,i,id_v(nn)) * fcerror_chunk(i,id_v(nn)))
             tpwork(nanal) = tpwork(nanal) + taperv &
-                 & * anal_chunk(nanal,i,id_t(nn),nbackgrounds) * fcerror_chunk(i,id_t(nn))
+                 & * anal_chunk(nanal,i,id_t(nn)) * fcerror_chunk(i,id_t(nn))
             if(id_q(nn) > 0) qwork(nanal) = qwork(nanal) + taperv &
-                 & * anal_chunk(nanal,i,id_q(nn),nbackgrounds) * fcerror_chunk(i,id_q(nn))
+                 & * anal_chunk(nanal,i,id_q(nn)) * fcerror_chunk(i,id_q(nn))
          end do
       end do
       ! R^-1 HX_a [rho * X_f^T (e_t|0 + e_t|-6) / 2]
