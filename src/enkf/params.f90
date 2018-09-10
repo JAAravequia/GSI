@@ -56,6 +56,13 @@ integer(i_kind), public, parameter :: nsatmax_rad = 200
 integer(i_kind), public, parameter :: nsatmax_oz = 100
 character(len=20), public, dimension(nsatmax_rad) ::sattypes_rad, dsis
 character(len=20), public, dimension(nsatmax_oz) ::sattypes_oz
+! EFSOI file type identifiers
+integer(i_kind), public, parameter :: read_ensmean_forecast = 0
+integer(i_kind), public, parameter :: read_analysis_mean = 1
+integer(i_kind), public, parameter :: read_member_forecasts = 2
+integer(i_kind), public, parameter :: read_verification = 3
+! Analysis impact specific file type identifier
+integer(i_kind), public, parameter :: read_member_analyses = 1
 ! forecast times for first-guess forecasts to be updated (in hours)
 integer,dimension(7),public ::  nhr_anal  = (/6,-1,-1,-1,-1,-1,-1/)
 integer,dimension(7),public ::  nhr_state = (/6,-1,-1,-1,-1,-1,-1/)
@@ -77,7 +84,7 @@ character(len=120),dimension(7),public :: anlfileprefixes
 ! analysis date string (YYYYMMDDHH)
 character(len=10), public ::  datestring
 ! Hour for datestring
-character(len=2), public :: datehr
+character(len=2), public :: datehr, gdatehr
 ! analysis filename, needed for EFSOI calcs
 character(len=100), public ::  andataname
 ! filesystem path to input files (first-guess, GSI diagnostic files).
@@ -91,7 +98,7 @@ logical, public :: lupp
 integer(i_kind),public ::  iassim_order,nlevs,nanals,numiter,&
                            nlons,nlats,nbackgrounds,nstatefields
 integer(i_kind),public :: nsats_rad,nsats_oz,imp_physics
-integer(i_kind),public :: evalft, ft
+integer(i_kind),public :: eft
 integer(i_kind),public :: tar_minlev,tar_maxlev
 ! random seed for perturbed obs (deterministic=.false.)
 ! if zero, system clock is used.  Also used when
@@ -165,6 +172,9 @@ logical,public :: nmm = .true.
 logical,public :: nmm_restart = .true.
 logical,public :: nmmb = .false.
 logical,public :: letkf_flag = .false.
+! EFSOI ancillary flag to determine
+! type of impact estimate/calculation
+logical,public :: forecast_impact = .true.
 
 ! next two are no longer used, instead they are inferred from anavinfo
 logical,public :: massbal_adjust = .false. 
@@ -194,7 +204,7 @@ logical,public :: lobsdiag_forenkf = .false.
 ! if true, use netcdf diag files, otherwise use binary diags
 logical,public :: netcdf_diag = .false.
 
-namelist /nam_enkf/datestring,datehr,datapath,iassim_order,nvars,&
+namelist /nam_enkf/datestring,datehr,gdatehr,datapath,iassim_order,nvars,&
                    covinflatemax,covinflatemin,deterministic,sortinc,&
                    corrlengthnh,corrlengthtr,corrlengthsh,&
                    varqc,huber,nlons,nlats,smoothparm,use_qsatensmean,&
@@ -210,10 +220,10 @@ namelist /nam_enkf/datestring,datehr,datapath,iassim_order,nvars,&
                    paoverpb_thresh,latbound,delat,pseudo_rh,numiter,biasvar,&
                    lupd_satbiasc,cliptracers,simple_partition,adp_anglebc,angord,&
                    newpc4pred,nmmb,nhr_anal,nhr_state, fhr_assim,nbackgrounds,nstatefields, &
-                   save_inflation,nobsl_max,lobsdiag_forenkf,netcdf_diag,&
+                   save_inflation,nobsl_max,lobsdiag_forenkf,netcdf_diag,forecast_impact,&
                    letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
                    getkf,getkf_inflation,denkf,modelspace_vloc,dfs_sort,write_spread_diag,lupp,&
-                   efsoi_cycling,efsoi_flag,imp_physics,evalft,wmoist,adrate,andataname,&
+                   efsoi_cycling,efsoi_flag,imp_physics,eft,wmoist,adrate,andataname,&
                    tar_minlat,tar_maxlat,tar_minlon,tar_maxlon,tar_minlev,tar_maxlev
 
 namelist /nam_wrf/arw,nmm,nmm_restart
@@ -232,8 +242,10 @@ real(r_single) modelspace_vloc_cutoff, modelspace_vloc_thresh
 ! defaults
 ! time (analysis time YYYYMMDDHH)
 datestring = "0000000000" ! if 0000000000 will not be used.
-! default hour
+! default analysis hour
 datehr = "00"
+! Initial hour for background forecasts
+gdatehr = "00"
 ! corrlength (length for horizontal localization in km)
 corrlengthnh = 2800
 corrlengthtr = 2800
@@ -318,9 +330,8 @@ nvars = 5
 ! analysis error variance from the previous cycle is used instead
 ! (same as in the GSI).
 biasvar = 0.1_r_single
-ft = 6
 ! Evaluation FT for EFSOI
-evalft = 24
+eft = 24
 ! Weigt for moist total energy norm (0 when dry total energy)
 ! applied in EFSOI calculation
 wmoist = 0.0_r_single

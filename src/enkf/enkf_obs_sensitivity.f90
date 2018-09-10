@@ -37,7 +37,7 @@ use params, only: efsoi_flag,latbound,nlevs,nanals,datestring, &
                   lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh, &
                   corrlengthnh,corrlengthtr,corrlengthsh, &
                   obtimelnh,obtimeltr,obtimelsh,letkf_flag, &
-                  nbackgrounds,adrate,evalft
+                  nbackgrounds,adrate,eft
 use constants, only: zero,one,half,rearth,pi,deg2rad,rad2deg
 !use scatter_chunks, only: ensmean_chunk
 use enkf_obsmod, only: nobstot,nobs_conv,nobs_oz,nobs_sat,obtype,obloclat, &
