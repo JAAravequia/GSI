@@ -54,8 +54,10 @@ use gridio_efsoi,    only: readgriddata_efsoi, get_weight
 use gridinfo_efsoi,  only: getgridinfo_efsoi, gridinfo_cleanup_efsoi,              &
                      npts, vars3d_supported, vars2d_supported, ncdim
 use params,    only: nlevs, fgfileprefixes, reducedgrid, &
-                     nanals, nlons, nlats, &
-                     eft, andataname, datehr
+                     nanals, nlons, nlats, read_member_forecasts, &
+                     read_verification, read_ensmean_forecast, &
+                     read_analysis_mean, eft, andataname, &
+                     datehr, forecast_impact, gdatehr
 use kinds,     only: r_kind, i_kind, r_double, r_single
 use mpeu_util, only: gettablesize, gettable, getindex
 use constants, only: max_varname_length
@@ -64,7 +66,7 @@ implicit none
 private
 
 public :: read_state_efsoi, statevec_cleanup_efsoi, init_statevec_efsoi
-real(r_single), public, allocatable, dimension(:,:,:) :: grdin, grdin2, grdin3, grdin4, grdin5
+real(r_single), public, allocatable, dimension(:,:) :: grdin, grdin2, grdin3, grdin4, grdin5
 
 integer(i_kind), public :: nc2d, nc3d
 character(len=max_varname_length), allocatable, dimension(:), public :: cvars3d
@@ -222,7 +224,7 @@ if (nproc <= nanals-1) then
    t1 = mpi_wtime()
    ! Read ensemble member forecasts needed to obtain
    ! the forecast perturbations at evaluation forecast time (EFT)
-   call readgriddata_efsoi(cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,grdin,read_member_forecast,nanal=nanal,ft=eft,hr=datehr) 
+   call readgriddata_efsoi(cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,grdin,read_member_forecasts,nanal=nanal,ft=eft,hr=datehr) 
 
    if (nproc == 0) then
      t2 = mpi_wtime()
@@ -244,7 +246,7 @@ if (nproc <= nanals-1) then
       ! [(0.5*(e_f + e_g)) / (nanals - 1)]
       grdin3 = (grdin3 - grdin4) / real(nanals-1,r_kind)
       ! Normalize for surface pressure ----- (This needs to be corrected) -----
-      grdin3(:,ncdim,nb) = grdin3(:,ncdim) / grdin4(:,3)
+      grdin3(:,ncdim) = grdin3(:,ncdim) / grdin4(:,3)
       ! Read ensemble mean analysis, used in evolving localization     
       if(forecast_impact) call readgriddata_efsoi(cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,grdin5, &
                                   read_analysis_mean,nanal=0,ft=0,hr=datehr)

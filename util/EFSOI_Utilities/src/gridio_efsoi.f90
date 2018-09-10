@@ -43,7 +43,10 @@
 !$$$
  use constants, only: zero,one,cp,rd,max_varname_length,tref,pref,constants_initialized,hvap
  use params, only: nlons,nlats,nlevs,wmoist,andataname, &
-                   datapath,nvars,forecast_impact ! reducedgrid
+                   datapath,nvars,forecast_impact,read_member_forecasts, &
+                   read_ensmean_forecast, read_analysis_mean, &
+                   read_member_forecasts, read_verification, &
+                   read_member_analyses
  use kinds, only: i_kind,r_kind,r_single
  use gridinfo_efsoi, only: ntrunc,npts,ncdim  ! getgridinfo_efsoi must be called first!
  use specmod, only: init_spec_vars, &
@@ -143,11 +146,7 @@
 
   ! Extract surface pressure
   ! on reduced gaussian grid
-!  if (reducedgrid) then
-     call regtoreduced(psfc,tmpgrd)
-!  else
-!     tmpgrd(:) = ug(:)
-!  end if
+  call regtoreduced(psfc,tmpgrd)
 
   ! calculate half level pressures 
   if (allocated(nems_vcoord))     deallocate(nems_vcoord)
@@ -223,8 +222,8 @@
 
   integer, intent(in), optional :: nanal
   integer, intent(in), optional :: ft
-  integer, intent(in), optional :: datehr
-  integer, intent(in), optional :: infilename
+  character, intent(in), optional :: hr
+  character, intent(in), optional :: infilename
   integer, intent(in) :: mode
   character(len=max_varname_length), dimension(n2d), intent(in) :: vars2d
   character(len=max_varname_length), dimension(n3d), intent(in) :: vars3d
@@ -232,7 +231,7 @@
   integer, intent(in) :: n2d, n3d
   integer, dimension(0:n3d), intent(in) :: levels
   integer, intent(in) :: ndim
-  real(r_single), dimension(npts,ndim,ntimes), intent(out) :: grdin
+  real(r_single), dimension(npts,ndim), intent(out) :: grdin
   real(r_kind) cptr,qweight,rdtrpr
   character(len=500) :: filename
   character(len=3) charft
@@ -257,7 +256,7 @@
 
   ! Construct the Filename based on
   ! input arguments
-  if(not present(infilename)) then
+  if(.not. present(infilename)) then
      write(charft, '(i3.3)') ft
      write(charhr, '(i2.2)') hr
      if (nanal > 0) then
@@ -275,7 +274,7 @@
      else if(mode == read_analysis_mean) then
          filename = trim(adjustl(datapath))//"gdas.t"//charhr//"z.atmanl."// &
                trim(adjustl(charnanal))//".nemsio"
-     else if(mode == read_member_forecasts)
+     else if(mode == read_member_forecasts) then
         filename = trim(adjustl(datapath))//trim(adjustl(charnanal))//"/"// &
               "gdas.t"//charhr//"z.atmf"//charft//".nemsio"
      else if(mode == read_verification) then
@@ -435,11 +434,7 @@
   real(r_kind), dimension(:), intent(in)      :: field
   real(r_single), dimension(:), intent(inout) :: grdin
 
-  if (reducedgrid) then
-     call regtoreduced(field, grdin)
-  else
-     grdin = field
-  endif
+  call regtoreduced(field, grdin)
 
   end subroutine copytogrdin
 

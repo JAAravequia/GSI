@@ -15,7 +15,6 @@ module loadbal_efsoi
 !   The decomposition uses "Graham's rule", which simply
 !   stated, assigns each new work item to the task that currently has the 
 !   smallest load.
-!  scatter_chunks: distribute ensemble members according to decomposition
 !  loadbal_cleanup_efsoi: deallocate allocated arrays.
 !
 ! Private Subroutines:
@@ -105,7 +104,7 @@ use constants, only: zero, rad2deg, deg2rad
 
 implicit none
 private
-public :: load_balance_efsoi, loadbal_cleanup_efsoi, scatter_chunks
+public :: load_balance_efsoi, loadbal_cleanup_efsoi
 
 real(r_single),public, allocatable, dimension(:,:) :: lnp_chunk, &
                                                       anal_obchunk_prior
@@ -335,9 +334,8 @@ numobs = 1 ! set min # of obs to 1, not 0 (so single ob test behaves)
 obsloop: do i=n1,n2
        do nob=1,nobstot
           if (sum((obloc(1:3,nob)-gridloc(1:3,i))**2,1) < corrlengthsq(nob)) &
-          numobs(i) = numobs(i) + 1
+            numobs(i) = numobs(i) + 1
        end do 
-    endif
 end do obsloop
 !$omp end parallel do
 

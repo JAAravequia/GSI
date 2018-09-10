@@ -10,8 +10,8 @@ use gridio_efsoi
 implicit none
 private
 public :: scatter_chunks_ob_impact
-!real(r_kind),public, allocatable, dimension(:,:,:,:) :: anal_chunk, anal_chunk_prior
-!real(r_single),public, allocatable, dimension(:,:,:) :: ensmean_chunk, ensmean_chunk_prior !, analmean_chunk
+real(r_kind),public, allocatable, dimension(:,:,:) :: anal_chunk, anal_chunk_prior
+real(r_single),public, allocatable, dimension(:,:) :: ensmean_chunk, ensmean_chunk_prior 
 real(r_single),public, allocatable, dimension(:,:) :: fcerror_chunk, analmean_chunk
 contains
 
@@ -24,7 +24,7 @@ implicit none
 
 integer(i_kind), allocatable, dimension(:) :: scounts, displs, rcounts
 real(r_single), allocatable, dimension(:) :: sendbuf,recvbuf,sendbuf2,recvbuf2
-integer(i_kind) :: np, nb, nn, n, nanal, i, ierr
+integer(i_kind) :: np, nn, n, nanal, i, ierr
 
 allocate(scounts(0:numproc-1))
 allocate(displs(0:numproc-1))
@@ -53,26 +53,24 @@ do np=0,numproc-1
 enddo
 
 ! allocate array to hold pieces of state vector on each proc.
-allocate(anal_chunk(nanals,npts_max,ncdim,nbackgrounds))
+allocate(anal_chunk(nanals,npts_max,ncdim))
 if (nproc == 0) print *,'anal_chunk size = ',size(anal_chunk)
 
-allocate(anal_chunk_prior(nanals,npts_max,ncdim,nbackgrounds))
-allocate(ensmean_chunk(npts_max,ncdim,nbackgrounds))
-allocate(ensmean_chunk_prior(npts_max,ncdim,nbackgrounds))
+allocate(anal_chunk_prior(nanals,npts_max,ncdim))
+allocate(ensmean_chunk(npts_max,ncdim))
+allocate(ensmean_chunk_prior(npts_max,ncdim))
 ensmean_chunk = 0.
 allocate(sendbuf(numproc*npts_max*ncdim))
 allocate(recvbuf(numproc*npts_max*ncdim))
 
 ! send and receive buffers.
-do nb=1,nbackgrounds ! loop over time levels in background
-
 if (nproc <= nanals-1) then
    ! fill up send buffer.
    do np=1,numproc
      do nn=1,ncdim
       do i=1,numptsperproc(np)
        n = ((np-1)*ncdim + (nn-1))*npts_max + i
-       sendbuf(n) = grdin(indxproc(np,i),nn,nb)
+       sendbuf(n) = grdin(indxproc(np,i),nn)
      enddo
     enddo
    enddo
@@ -86,20 +84,18 @@ do nn=1,ncdim
    do i=1,numptsperproc(nproc+1)
       do nanal=1,nanals
          n = ((nanal-1)*ncdim + (nn-1))*npts_max + i
-         anal_chunk(nanal,i,nn,nb) = recvbuf(n)
+         anal_chunk(nanal,i,nn) = recvbuf(n)
       enddo
-      ensmean_chunk(i,nn,nb) = sum(anal_chunk(:,i,nn,nb))/float(nanals)
-      ensmean_chunk_prior(i,nn,nb) = ensmean_chunk(i,nn,nb)
+      ensmean_chunk(i,nn) = sum(anal_chunk(:,i,nn))/float(nanals)
+      ensmean_chunk_prior(i,nn) = ensmean_chunk(i,nn)
 ! remove mean from ensemble.
       do nanal=1,nanals
-         anal_chunk(nanal,i,nn,nb) = anal_chunk(nanal,i,nn,nb)-ensmean_chunk(i,nn,nb)
-         anal_chunk_prior(nanal,i,nn,nb)=anal_chunk(nanal,i,nn,nb)
+         anal_chunk(nanal,i,nn) = anal_chunk(nanal,i,nn)-ensmean_chunk(i,nn)
+         anal_chunk_prior(nanal,i,nn)=anal_chunk(nanal,i,nn)
       end do
    end do
 end do
 !$omp end parallel do
-
-enddo ! loop over nbackgrounds
 
 deallocate(sendbuf, recvbuf)
 
@@ -117,8 +113,8 @@ if(nproc == 0) then
       do nn=1,ncdim
          do i=1,numptsperproc(np)
             n = ((np-1)*ncdim + (nn-1))*npts_max + i
-            sendbuf(n) = grdin2(indxproc(np,i),nn,nb)
-            sendbuf2(n) = grdin3(indxproc(np,i),nn,nb)
+            sendbuf(n) = grdin2(indxproc(np,i),nn)
+            sendbuf2(n) = grdin3(indxproc(np,i),nn)
          end do
       end do
    end do
@@ -143,8 +139,7 @@ end if
    deallocate(sendbuf,recvbuf,sendbuf2,recvbuf2)
    if(allocated(grdin2)) deallocate(grdin2)
    call divide_weight(analmean_chunk)
-   call divide_weight(ensmean_chunk(:,:,nb))
-!end if
+   call divide_weight(ensmean_chunk(:,:))
 
 call destroy_weight()
 

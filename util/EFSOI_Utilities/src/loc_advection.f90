@@ -2,7 +2,7 @@ module loc_advection
 
 use mpisetup
 use gridinfo_efsoi, only: latsgrd,lonsgrd,nlevs_pres,npts,id_u,id_v
-use loadbal
+use loadbal_efsoi, only: numptsperproc, indxproc, kdtree_grid
 use scatter_chunks_efsoi
 use kinds
 use params
@@ -43,7 +43,7 @@ subroutine loc_advection_efsoi
   integer(i_kind) :: npt, nn, nnu, nnv, nnpt
   allocate(adloc_chunk(3,numptsperproc(nproc+1)*nlevs_pres))
   allocate(coslat(numptsperproc(nproc+1)))
-  adtime = adrate*real(evalft,r_kind)*3600._r_kind/rearth
+  adtime = adrate*real(eft,r_kind)*3600._r_kind/rearth
   halfpi = half * pi
   pi2 = 2._r_kind * pi
 !$omp parallel private(npt)
@@ -66,10 +66,10 @@ subroutine loc_advection_efsoi
      do npt=1,numptsperproc(nproc+1)
         nnpt = nlevs_pres * (npt-1) + nn
         adlon = lonsgrd(indxproc(nproc+1,npt)) &
-             & - half * (ensmean_chunk(npt,nnu,nbackgrounds) + analmean_chunk(npt,nnu)) &
+             & - half * (ensmean_chunk(npt,nnu) + analmean_chunk(npt,nnu)) &
              & * coslat(npt) * adtime
         adlat = latsgrd(indxproc(nproc+1,npt)) &
-             & - half * (ensmean_chunk(npt,nnv,nbackgrounds) + analmean_chunk(npt,nnv)) &
+             & - half * (ensmean_chunk(npt,nnv) + analmean_chunk(npt,nnv)) &
              & * adtime
         if(adlat > halfpi) then
            adlat = pi - adlat

@@ -37,7 +37,7 @@ use mpisetup
 use covlocal, only:  taper
 use kinds, only: r_double, i_kind, r_kind
 use kdtree2_module, only: kdtree2_r_nearest, kdtree2_result
-use loadbal, only: numptsperproc, indxproc, lnp_chunk, kdtree_grid, &
+use loadbal_efsoi, only: numptsperproc, indxproc, lnp_chunk, kdtree_grid, &
                    iprocob, indxob_chunk, anal_obchunk_prior, numobsperproc, &
                    indxproc_obs, nobs_max, anal_chunk
 !use statevec_efsoi, only: anal_chunk, fcerror_chunk
