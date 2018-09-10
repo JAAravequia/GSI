@@ -1,0 +1,2064 @@
++ export sdate=2018050100
++ sdate=2018050100
++ export edate=2018063018
++ edate=2018063018
++ export ppdate=201805-06
++ ppdate=201805-06
++ export scripts=/u/Xiujuan.Su/home/gsiqc3/opr_scripts
++ scripts=/u/Xiujuan.Su/home/gsiqc3/opr_scripts
++ export gscripts=/u/Xiujuan.Su/home/gsiqc3/grads
++ gscripts=/u/Xiujuan.Su/home/gsiqc3/grads
++ export exec=/u/Xiujuan.Su/home/gsiqc3/exec
++ exec=/u/Xiujuan.Su/home/gsiqc3/exec
++ export datadir=/com/gfs/prod
++ datadir=/com/gfs/prod
++ export exefile1=post_cnvdiag
++ exefile1=post_cnvdiag
++ export exefile2=prepbufr.x
++ exefile2=prepbufr.x
++ export exefile3=readdata.x
++ exefile3=readdata.x
++ export exefile4=stas.x
++ exefile4=stas.x
++ export exefile5=select.x
++ exefile5=select.x
++ export exefile6=readwrite_list_glb.x
++ exefile6=readwrite_list_glb.x
++ export exefile7=make_list_time.x
++ exefile7=make_list_time.x
++ export exefile8=make_sdmlist.x
++ exefile8=make_sdmlist.x
++ export savedir=/u/Xiujuan.Su/nbns/postevent/post
++ savedir=/u/Xiujuan.Su/nbns/postevent/post
++ export savedir2=/u/Xiujuan.Su/nbns/postevent/data_global
++ savedir2=/u/Xiujuan.Su/nbns/postevent/data_global
++ export stasdir=/ptmpp1/Xiujuan.Su/gsiqc3/bufrstas
++ stasdir=/ptmpp1/Xiujuan.Su/gsiqc3/bufrstas
++ export selectdir=/ptmpp1/Xiujuan.Su/gsiqc3/select
++ selectdir=/ptmpp1/Xiujuan.Su/gsiqc3/select
++ export listdir=/ptmpp1/Xiujuan.Su/gsiqc3/make_list_global
++ listdir=/ptmpp1/Xiujuan.Su/gsiqc3/make_list_global
++ export fixfile=/nwprod/fix/global_convinfo.txt
++ fixfile=/nwprod/fix/global_convinfo.txt
++ export htmldir=/u/Xiujuan.Su/home/gsiqc3/html
++ htmldir=/u/Xiujuan.Su/home/gsiqc3/html
++ export mappngdir=/u/Xiujuan.Su/home/gsiqc3/mappng
++ mappngdir=/u/Xiujuan.Su/home/gsiqc3/mappng
++ export bashdir=/u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3
++ bashdir=/u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3
++ export savedir3=/u/Xiujuan.Su/home/gsiqc3/data/201805-06
++ savedir3=/u/Xiujuan.Su/home/gsiqc3/data/201805-06
++ export sdmlistdir=/ptmpp1/Xiujuan.Su/gsiqc3/make_global_sdmlist
++ sdmlistdir=/ptmpp1/Xiujuan.Su/gsiqc3/make_global_sdmlist
++ export WSHOME=/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06
++ WSHOME=/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06
++ export WSUSER=wd20xs
++ WSUSER=wd20xs
++ export WS=emc-lw-xsu.ncep.noaa.gov
++ WS=emc-lw-xsu.ncep.noaa.gov
++ export NDATE=/nwprod/util/exec/ndate
++ NDATE=/nwprod/util/exec/ndate
++ export ACCOUNT=GDAS-T2O
++ ACCOUNT=GDAS-T2O
++ export SUB=/global/save/emc.glopara/svn/gfs/trunk.r42957/para/bin/psub
++ SUB=/global/save/emc.glopara/svn/gfs/trunk.r42957/para/bin/psub
++ export 'sub=ADPUPA PROFLR VADWND ADPSFC SFCSHP'
++ sub='ADPUPA PROFLR VADWND ADPSFC SFCSHP'
++ export 'dtype1=ps120 q120 t120 uv220 uv221'
++ dtype1='ps120 q120 t120 uv220 uv221'
++ export 'dtype2=ps120 uv221'
++ dtype2='ps120 uv221'
++ export dtype3=uv223
++ dtype3=uv223
++ export 'dtype4=uv224 uv229'
++ dtype4='uv224 uv229'
++ export 'dtype5=ps181 ps187 q181 q187 t181 t187 uv281 uv287'
++ dtype5='ps181 ps187 q181 q187 t181 t187 uv281 uv287'
++ export 'dtype6=ps180 q180 t180 uv280'
++ dtype6='ps180 q180 t180 uv280'
++ export 'sfctype=ps120 ps180 ps181 ps187 q180 q181 q187 t180 t181 t187'
++ sfctype='ps120 ps180 ps181 ps187 q180 q181 q187 t180 t181 t187'
++ export 'sondtype=q120 t120'
++ sondtype='q120 t120'
++ export 'uvsfctype=uv280 uv281 uv287'
++ uvsfctype='uv280 uv281 uv287'
++ export 'uvsondtype=uv220 uv221 uv223 uv224 uv228 uv229'
++ uvsondtype='uv220 uv221 uv223 uv224 uv228 uv229'
++ export 'datatype=120 180 181 187 121 123 124 128 129'
++ datatype='120 180 181 187 121 123 124 128 129'
++ /bin/sh /u/Xiujuan.Su/home/gsiqc3/opr_scripts/process_global_maps.bash 201805-06 /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global /export/emc-lw-xsu/wd20xs/gsiqc3/201805-06 wd20xs emc-lw-xsu.ncep.noaa.gov 'ps120 ps180 ps181 ps187 q180 q181 q187 t180 t181 t187' 'q120 t120' 'uv280 uv281 uv287' 'uv220 uv221 uv223 uv224 uv228 uv229' /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3
++ export ppdate=201805-06
++ ppdate=201805-06
++ export CTL_DIR=/ptmpp1/Xiujuan.Su/gsiqc3/make_list_global
++ CTL_DIR=/ptmpp1/Xiujuan.Su/gsiqc3/make_list_global
++ export WSHOME=/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06
++ WSHOME=/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06
++ export WSUSER=wd20xs
++ WSUSER=wd20xs
++ export WS=emc-lw-xsu.ncep.noaa.gov
++ WS=emc-lw-xsu.ncep.noaa.gov
++ export 'sfctype=ps120 ps180 ps181 ps187 q180 q181 q187 t180 t181 t187'
++ sfctype='ps120 ps180 ps181 ps187 q180 q181 q187 t180 t181 t187'
++ export 'sondtype=q120 t120'
++ sondtype='q120 t120'
++ export 'uvsfctype=uv280 uv281 uv287'
++ uvsfctype='uv280 uv281 uv287'
++ export 'uvsondtype=uv220 uv221 uv223 uv224 uv228 uv229'
++ uvsondtype='uv220 uv221 uv223 uv224 uv228 uv229'
++ export bashdir=/u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3
++ bashdir=/u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3
++ export googlemap_time=/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
++ googlemap_time=/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
++ export googlemap_vert=/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls
++ googlemap_vert=/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls
++ CWD=/ptmpp1/Xiujuan.Su/gsiqc3/googlemap_global
++ mkdir -p /ptmpp1/Xiujuan.Su/gsiqc3/googlemap_global
++ CREATE_MARKERS_MULTILEVEL=/u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_multilevel
++ CREATE_MARKERS_MULTILEVEL_WIND=/u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_multilevel_wind
++ CREATE_MARKERS_SURFACE=/u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_surface
++ CREATE_MARKERS_VERT_SOUNDINGS=/u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Vertical/tools/create_markers_vert_soundings
++ CREATE_MARKERS_VERT_WIND=/u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Vertical/tools/create_markers_vert_wind
++ export CREATE_HTML=/u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash
++ CREATE_HTML=/u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash
++ export CREATE_HTML_WIND=/u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash
++ CREATE_HTML_WIND=/u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash
++ export CREATE_HTML_SFC=/u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_surface_html.bash
++ CREATE_HTML_SFC=/u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_surface_html.bash
++ export CREATE_HTML_SOND=/u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Vertical/tools/create_vertical_html.bash
++ CREATE_HTML_SOND=/u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Vertical/tools/create_vertical_html.bash
++ cd /ptmpp1/Xiujuan.Su/gsiqc3/googlemap_global
++ for datatype in ssfctype ssondtype suvsfctype suvsondtype
++ '[' ssfctype = ssfctype ']'
++ dstype='ps120 ps180 ps181 ps187 q180 q181 q187 t180 t181 t187'
++ for type in '$dstype'
++ rm -f ps120_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/ps120_stationlist ps120_stationlist
++ for type in '$dstype'
++ rm -f ps180_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/ps180_stationlist ps180_stationlist
++ for type in '$dstype'
++ rm -f ps181_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/ps181_stationlist ps181_stationlist
++ for type in '$dstype'
++ rm -f ps187_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/ps187_stationlist ps187_stationlist
++ for type in '$dstype'
++ rm -f q180_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/q180_stationlist q180_stationlist
++ for type in '$dstype'
++ rm -f q181_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/q181_stationlist q181_stationlist
++ for type in '$dstype'
++ rm -f q187_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/q187_stationlist q187_stationlist
++ for type in '$dstype'
++ rm -f t180_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/t180_stationlist t180_stationlist
++ for type in '$dstype'
++ rm -f t181_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/t181_stationlist t181_stationlist
++ for type in '$dstype'
++ rm -f t187_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/t187_stationlist t187_stationlist
++ for datatype in ssfctype ssondtype suvsfctype suvsondtype
++ '[' ssondtype = ssfctype ']'
++ '[' ssondtype = ssondtype ']'
++ dstype='q120 t120'
++ for type in '$dstype'
++ rm -f q120_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/q120_stationlist q120_stationlist
++ for type in '$dstype'
++ rm -f t120_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/t120_stationlist t120_stationlist
++ for datatype in ssfctype ssondtype suvsfctype suvsondtype
++ '[' suvsfctype = ssfctype ']'
++ '[' suvsfctype = ssondtype ']'
++ '[' suvsfctype = suvsfctype ']'
++ dstype='uv280 uv281 uv287'
++ for type in '$dstype'
++ rm -f uv280_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/uv280_stationlist uv280_stationlist
++ for type in '$dstype'
++ rm -f uv281_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/uv281_stationlist uv281_stationlist
++ for type in '$dstype'
++ rm -f uv287_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/uv287_stationlist uv287_stationlist
++ for datatype in ssfctype ssondtype suvsfctype suvsondtype
++ '[' suvsondtype = ssfctype ']'
++ '[' suvsondtype = ssondtype ']'
++ '[' suvsondtype = suvsfctype ']'
++ '[' suvsondtype = suvsondtype ']'
++ dstype='uv220 uv221 uv223 uv224 uv228 uv229'
++ for type in '$dstype'
++ rm -f uv220_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/uv220_stationlist uv220_stationlist
++ for type in '$dstype'
++ rm -f uv221_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/uv221_stationlist uv221_stationlist
++ for type in '$dstype'
++ rm -f uv223_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/uv223_stationlist uv223_stationlist
+cp: cannot stat `/ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/uv223_stationlist': No such file or directory
++ for type in '$dstype'
++ rm -f uv224_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/uv224_stationlist uv224_stationlist
++ for type in '$dstype'
++ rm -f uv228_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/uv228_stationlist uv228_stationlist
+cp: cannot stat `/ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/uv228_stationlist': No such file or directory
++ for type in '$dstype'
++ rm -f uv229_stationlist
++ cp /ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/uv229_stationlist uv229_stationlist
+cp: cannot stat `/ptmpp1/Xiujuan.Su/gsiqc3/make_list_global/uv229_stationlist': No such file or directory
++ for type in '$sondtype'
++ file=q120_stationlist
++ '[' -s q120_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_multilevel q120_stationlist
+ Total number of stations:          917
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv q120_5mb.php q120_5mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv q120_30mb.php q120_30mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv q120_125mb.php q120_125mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv q120_225mb.php q120_225mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv q120_325mb.php q120_325mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv q120_425mb.php q120_425mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv q120_525mb.php q120_525mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv q120_625mb.php q120_625mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv q120_725mb.php q120_725mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv q120_825mb.php q120_825mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv q120_925mb.php q120_925mb.js
++ sleep 2
++ for type in '$sondtype'
++ file=t120_stationlist
++ '[' -s t120_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_multilevel t120_stationlist
+ Total number of stations:          917
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv t120_5mb.php t120_5mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv t120_30mb.php t120_30mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv t120_125mb.php t120_125mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv t120_225mb.php t120_225mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv t120_325mb.php t120_325mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv t120_425mb.php t120_425mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv t120_525mb.php t120_525mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv t120_625mb.php t120_625mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv t120_725mb.php t120_725mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv t120_825mb.php t120_825mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv t120_925mb.php t120_925mb.js
++ sleep 2
++ echo 'finish php files for multilevel CREATE_MARKERS_MULTILEVEL'
+finish php files for multilevel CREATE_MARKERS_MULTILEVEL
++ sleep 10
++ for datatype in ssfctype suvsfctype
++ '[' ssfctype = ssfctype ']'
++ dstype='ps120 ps180 ps181 ps187 q180 q181 q187 t180 t181 t187'
++ for type in '$dstype'
++ file=ps120_stationlist
++ '[' -s ps120_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_surface ps120_stationlist
+ Total number of stations:          810
++ mv ps120.php ps120.js
++ sleep 2
++ for type in '$dstype'
++ file=ps180_stationlist
++ '[' -s ps180_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_surface ps180_stationlist
+ Total number of stations:         2607
++ mv ps180.php ps180.js
++ sleep 2
++ for type in '$dstype'
++ file=ps181_stationlist
++ '[' -s ps181_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_surface ps181_stationlist
+ Total number of stations:         7608
++ mv ps181.php ps181.js
++ sleep 2
++ for type in '$dstype'
++ file=ps187_stationlist
++ '[' -s ps187_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_surface ps187_stationlist
+ Total number of stations:         5001
++ mv ps187.php ps187.js
++ sleep 2
++ for type in '$dstype'
++ file=q180_stationlist
++ '[' -s q180_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_surface q180_stationlist
+ Total number of stations:         1617
++ mv q180.php q180.js
++ sleep 2
++ for type in '$dstype'
++ file=q181_stationlist
++ '[' -s q181_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_surface q181_stationlist
+ Total number of stations:         7674
++ mv q181.php q181.js
++ sleep 2
++ for type in '$dstype'
++ file=q187_stationlist
++ '[' -s q187_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_surface q187_stationlist
+ Total number of stations:         4975
++ mv q187.php q187.js
++ sleep 2
++ for type in '$dstype'
++ file=t180_stationlist
++ '[' -s t180_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_surface t180_stationlist
+ Total number of stations:         2394
++ mv t180.php t180.js
++ sleep 2
++ for type in '$dstype'
++ file=t181_stationlist
++ '[' -s t181_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_surface t181_stationlist
+ Total number of stations:         7773
++ mv t181.php t181.js
++ sleep 2
++ for type in '$dstype'
++ file=t187_stationlist
++ '[' -s t187_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_surface t187_stationlist
+ Total number of stations:         4991
++ mv t187.php t187.js
++ sleep 2
++ for datatype in ssfctype suvsfctype
++ '[' suvsfctype = ssfctype ']'
++ '[' suvsfctype = suvsfctype ']'
++ dstype='uv280 uv281 uv287'
++ for type in '$dstype'
++ file=uv280_stationlist
++ '[' -s uv280_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_surface uv280_stationlist
+ Total number of stations:         2339
++ mv uv280.php uv280.js
++ sleep 2
++ for type in '$dstype'
++ file=uv281_stationlist
++ '[' -s uv281_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_surface uv281_stationlist
+ Total number of stations:         7665
++ mv uv281.php uv281.js
++ sleep 2
++ for type in '$dstype'
++ file=uv287_stationlist
++ '[' -s uv287_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_surface uv287_stationlist
+ Total number of stations:         4965
++ mv uv287.php uv287.js
++ sleep 2
++ echo 'finish php files for CREATE_MARKERS_SURFACE'
+finish php files for CREATE_MARKERS_SURFACE
++ sleep 10
++ for type in '$uvsondtype'
++ file=uv220_stationlist
++ '[' -s uv220_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_multilevel_wind uv220_stationlist
+ Total number of stations:          917
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv220_5mb.php uv220_5mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv220_30mb.php uv220_30mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv220_125mb.php uv220_125mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv220_225mb.php uv220_225mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv220_325mb.php uv220_325mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv220_425mb.php uv220_425mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv220_525mb.php uv220_525mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv220_625mb.php uv220_625mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv220_725mb.php uv220_725mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv220_825mb.php uv220_825mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv220_925mb.php uv220_925mb.js
++ sleep 2
++ for type in '$uvsondtype'
++ file=uv221_stationlist
++ '[' -s uv221_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_multilevel_wind uv221_stationlist
+ Total number of stations:          244
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv221_5mb.php uv221_5mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv221_30mb.php uv221_30mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv221_125mb.php uv221_125mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv221_225mb.php uv221_225mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv221_325mb.php uv221_325mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv221_425mb.php uv221_425mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv221_525mb.php uv221_525mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv221_625mb.php uv221_625mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv221_725mb.php uv221_725mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv221_825mb.php uv221_825mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv221_925mb.php uv221_925mb.js
++ sleep 2
++ for type in '$uvsondtype'
++ file=uv223_stationlist
++ '[' -s uv223_stationlist ']'
++ for type in '$uvsondtype'
++ file=uv224_stationlist
++ '[' -s uv224_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_markers_multilevel_wind uv224_stationlist
+ Total number of stations:          159
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv224_5mb.php uv224_5mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv224_30mb.php uv224_30mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv224_125mb.php uv224_125mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv224_225mb.php uv224_225mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv224_325mb.php uv224_325mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv224_425mb.php uv224_425mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv224_525mb.php uv224_525mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv224_625mb.php uv224_625mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv224_725mb.php uv224_725mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv224_825mb.php uv224_825mb.js
++ for level in 5mb 30mb 125mb 225mb 325mb 425mb 525mb 625mb 725mb 825mb 925mb
++ mv uv224_925mb.php uv224_925mb.js
++ sleep 2
++ for type in '$uvsondtype'
++ file=uv228_stationlist
++ '[' -s uv228_stationlist ']'
++ for type in '$uvsondtype'
++ file=uv229_stationlist
++ '[' -s uv229_stationlist ']'
++ echo 'finish php files for CREATE_MARKERS_MULTILEVEL_WIND'
+finish php files for CREATE_MARKERS_MULTILEVEL_WIND
++ for type in '$sondtype'
++ file=q120_stationlist
++ '[' -s q120_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Vertical/tools/create_markers_vert_soundings q120_stationlist
+ Total number of stations:          917
++ mv q120.php q120.js
++ sleep 2
++ for type in '$sondtype'
++ file=t120_stationlist
++ '[' -s t120_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Vertical/tools/create_markers_vert_soundings t120_stationlist
+ Total number of stations:          917
++ mv t120.php t120.js
++ sleep 2
++ echo 'finish php files for CREATE_MARKERS_VERT_SOUNDINGS'
+finish php files for CREATE_MARKERS_VERT_SOUNDINGS
++ sleep 10
++ for type in '$uvsondtype'
++ file=uv220_stationlist
++ '[' -s uv220_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Vertical/tools/create_markers_vert_wind uv220_stationlist
+ Total number of stations:          917
++ mv uv220.php uv220.js
++ sleep 2
++ for type in '$uvsondtype'
++ file=uv221_stationlist
++ '[' -s uv221_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Vertical/tools/create_markers_vert_wind uv221_stationlist
+ Total number of stations:          244
++ mv uv221.php uv221.js
++ sleep 2
++ for type in '$uvsondtype'
++ file=uv223_stationlist
++ '[' -s uv223_stationlist ']'
++ for type in '$uvsondtype'
++ file=uv224_stationlist
++ '[' -s uv224_stationlist ']'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Vertical/tools/create_markers_vert_wind uv224_stationlist
+ Total number of stations:          159
++ mv uv224.php uv224.js
++ sleep 2
++ for type in '$uvsondtype'
++ file=uv228_stationlist
++ '[' -s uv228_stationlist ']'
++ for type in '$uvsondtype'
++ file=uv229_stationlist
++ '[' -s uv229_stationlist ']'
++ echo 'finish php files for CREATE_MARKERS_VERT_WIND'
+finish php files for CREATE_MARKERS_VERT_WIND
++ for type in '$sondtype'
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash q120 5
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash q120 30
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash q120 125
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash q120 225
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash q120 325
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash q120 425
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash q120 525
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash q120 625
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash q120 725
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash q120 825
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash q120 925
++ for type in '$sondtype'
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash t120 5
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash t120 30
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash t120 125
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash t120 225
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash t120 325
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash t120 425
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash t120 525
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash t120 625
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash t120 725
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash t120 825
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html.bash t120 925
++ sleep 2
++ for type in '$uvsondtype'
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv220 5
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv220 30
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv220 125
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv220 225
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv220 325
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv220 425
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv220 525
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv220 625
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv220 725
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv220 825
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv220 925
++ for type in '$uvsondtype'
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv221 5
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv221 30
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv221 125
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv221 225
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv221 325
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv221 425
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv221 525
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv221 625
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv221 725
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv221 825
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv221 925
++ for type in '$uvsondtype'
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv223 5
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv223 30
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv223 125
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv223 225
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv223 325
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv223 425
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv223 525
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv223 625
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv223 725
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv223 825
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv223 925
++ for type in '$uvsondtype'
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv224 5
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv224 30
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv224 125
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv224 225
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv224 325
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv224 425
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv224 525
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv224 625
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv224 725
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv224 825
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv224 925
++ for type in '$uvsondtype'
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv228 5
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv228 30
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv228 125
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv228 225
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv228 325
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv228 425
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv228 525
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv228 625
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv228 725
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv228 825
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv228 925
++ for type in '$uvsondtype'
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv229 5
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv229 30
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv229 125
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv229 225
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv229 325
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv229 425
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv229 525
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv229 625
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv229 725
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv229 825
++ for level in 5 30 125 225 325 425 525 625 725 825 925
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_multilevel_html_wind.bash uv229 925
++ sleep 2
++ for datatype in ssfctype suvsfctype
++ '[' ssfctype = ssfctype ']'
++ dstype='ps120 ps180 ps181 ps187 q180 q181 q187 t180 t181 t187'
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_surface_html.bash ps120
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_surface_html.bash ps180
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_surface_html.bash ps181
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_surface_html.bash ps187
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_surface_html.bash q180
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_surface_html.bash q181
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_surface_html.bash q187
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_surface_html.bash t180
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_surface_html.bash t181
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_surface_html.bash t187
++ for datatype in ssfctype suvsfctype
++ '[' suvsfctype = ssfctype ']'
++ '[' suvsfctype = suvsfctype ']'
++ dstype='uv280 uv281 uv287'
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_surface_html.bash uv280
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_surface_html.bash uv281
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Time/tools/create_surface_html.bash uv287
++ sleep 2
++ for datatype in ssondtype suvsondtype
++ '[' ssondtype = ssondtype ']'
++ dstype='q120 t120'
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Vertical/tools/create_vertical_html.bash q120
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Vertical/tools/create_vertical_html.bash t120
++ for datatype in ssondtype suvsondtype
++ '[' suvsondtype = ssondtype ']'
++ '[' suvsondtype = suvsondtype ']'
++ dstype='uv220 uv221 uv223 uv224 uv228 uv229'
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Vertical/tools/create_vertical_html.bash uv220
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Vertical/tools/create_vertical_html.bash uv221
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Vertical/tools/create_vertical_html.bash uv223
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Vertical/tools/create_vertical_html.bash uv224
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Vertical/tools/create_vertical_html.bash uv228
++ for type in '$dstype'
++ /u/Xiujuan.Su/home/gsiqc3/google_maps/google_v3/global/Vertical/tools/create_vertical_html.bash uv229
++ sleep 2
++ echo 'finish html files for TIME'
+finish html files for TIME
++ ssh -l wd20xs emc-lw-xsu.ncep.noaa.gov 'mkdir -p /export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls'
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ ssh -l wd20xs emc-lw-xsu.ncep.noaa.gov 'mkdir -p /export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls'
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ ssh -l wd20xs emc-lw-xsu.ncep.noaa.gov 'rm -f /export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls/*'
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
+rm: cannot remove `/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls/css': Is a directory
+rm: cannot remove `/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls/markers': Is a directory
++ ssh -l wd20xs emc-lw-xsu.ncep.noaa.gov 'rm -f /export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls/*'
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
+rm: cannot remove `/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls/css': Is a directory
+rm: cannot remove `/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls/markers': Is a directory
++ for datatype in ssfctype suvsfctype
++ '[' ssfctype = ssfctype ']'
++ dstype='ps120 ps180 ps181 ps187 q180 q181 q187 t180 t181 t187'
++ for stype in '$dstype'
++ scp ps120.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp ps120.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ for stype in '$dstype'
++ scp ps180.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp ps180.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ for stype in '$dstype'
++ scp ps181.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp ps181.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ for stype in '$dstype'
++ scp ps187.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp ps187.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ for stype in '$dstype'
++ scp q180.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp q180.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ for stype in '$dstype'
++ scp q181.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp q181.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ for stype in '$dstype'
++ scp q187.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp q187.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ for stype in '$dstype'
++ scp t180.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp t180.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ for stype in '$dstype'
++ scp t181.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp t181.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ for stype in '$dstype'
++ scp t187.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp t187.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ for datatype in ssfctype suvsfctype
++ '[' suvsfctype = ssfctype ']'
++ '[' suvsfctype = suvsfctype ']'
++ dstype='uv280 uv281 uv287'
++ for stype in '$dstype'
++ scp uv280.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp uv280.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ for stype in '$dstype'
++ scp uv281.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp uv281.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ for stype in '$dstype'
++ scp uv287.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp uv287.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ for datatype in ssondtype suvsondtype
++ '[' ssondtype = ssondtype ']'
++ dstype='q120 t120'
++ for type in '$dstype'
++ scp q120_125mb.html q120_225mb.html q120_30mb.html q120_325mb.html q120_425mb.html q120_525mb.html q120_5mb.html q120_625mb.html q120_725mb.html q120_825mb.html q120_925mb.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp q120_125mb.js q120_225mb.js q120_30mb.js q120_325mb.js q120_425mb.js q120_525mb.js q120_5mb.js q120_625mb.js q120_725mb.js q120_825mb.js q120_925mb.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp q120.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp q120.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ for type in '$dstype'
++ scp t120_125mb.html t120_225mb.html t120_30mb.html t120_325mb.html t120_425mb.html t120_525mb.html t120_5mb.html t120_625mb.html t120_725mb.html t120_825mb.html t120_925mb.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp t120_125mb.js t120_225mb.js t120_30mb.js t120_325mb.js t120_425mb.js t120_525mb.js t120_5mb.js t120_625mb.js t120_725mb.js t120_825mb.js t120_925mb.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp t120.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp t120.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ for datatype in ssondtype suvsondtype
++ '[' suvsondtype = ssondtype ']'
++ '[' suvsondtype = suvsondtype ']'
++ dstype='uv220 uv221 uv223 uv224 uv228 uv229'
++ for type in '$dstype'
++ scp uv220_125mb.html uv220_225mb.html uv220_30mb.html uv220_325mb.html uv220_425mb.html uv220_525mb.html uv220_5mb.html uv220_625mb.html uv220_725mb.html uv220_825mb.html uv220_925mb.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp uv220_125mb.js uv220_225mb.js uv220_30mb.js uv220_325mb.js uv220_425mb.js uv220_525mb.js uv220_5mb.js uv220_625mb.js uv220_725mb.js uv220_825mb.js uv220_925mb.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp uv220.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp uv220.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ for type in '$dstype'
++ scp uv221_125mb.html uv221_225mb.html uv221_30mb.html uv221_325mb.html uv221_425mb.html uv221_525mb.html uv221_5mb.html uv221_625mb.html uv221_725mb.html uv221_825mb.html uv221_925mb.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp uv221_125mb.js uv221_225mb.js uv221_30mb.js uv221_325mb.js uv221_425mb.js uv221_525mb.js uv221_5mb.js uv221_625mb.js uv221_725mb.js uv221_825mb.js uv221_925mb.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp uv221.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp uv221.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ for type in '$dstype'
++ scp uv223_125mb.html uv223_225mb.html uv223_30mb.html uv223_325mb.html uv223_425mb.html uv223_525mb.html uv223_5mb.html uv223_625mb.html uv223_725mb.html uv223_825mb.html uv223_925mb.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp 'uv223_*.js' wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
+uv223_*.js: No such file or directory
++ scp uv223.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp uv223.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
+uv223.js: No such file or directory
++ for type in '$dstype'
++ scp uv224_125mb.html uv224_225mb.html uv224_30mb.html uv224_325mb.html uv224_425mb.html uv224_525mb.html uv224_5mb.html uv224_625mb.html uv224_725mb.html uv224_825mb.html uv224_925mb.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp uv224_125mb.js uv224_225mb.js uv224_30mb.js uv224_325mb.js uv224_425mb.js uv224_525mb.js uv224_5mb.js uv224_625mb.js uv224_725mb.js uv224_825mb.js uv224_925mb.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp uv224.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp uv224.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ for type in '$dstype'
++ scp uv228_125mb.html uv228_225mb.html uv228_30mb.html uv228_325mb.html uv228_425mb.html uv228_525mb.html uv228_5mb.html uv228_625mb.html uv228_725mb.html uv228_825mb.html uv228_925mb.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp 'uv228_*.js' wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
+uv228_*.js: No such file or directory
++ scp uv228.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp uv228.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
+uv228.js: No such file or directory
++ for type in '$dstype'
++ scp uv229_125mb.html uv229_225mb.html uv229_30mb.html uv229_325mb.html uv229_425mb.html uv229_525mb.html uv229_5mb.html uv229_625mb.html uv229_725mb.html uv229_825mb.html uv229_925mb.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp 'uv229_*.js' wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
+uv229_*.js: No such file or directory
++ scp uv229.html wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp uv229.js wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
+uv229.js: No such file or directory
++ scp -r /u/Xiujuan.Su/home/gsiqc3/css wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp -r /u/Xiujuan.Su/home/gsiqc3/markers wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/vert/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp -r /u/Xiujuan.Su/home/gsiqc3/css wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ scp -r /u/Xiujuan.Su/home/gsiqc3/markers wd20xs@emc-lw-xsu.ncep.noaa.gov:/export/emc-lw-xsu/wd20xs/gsiqc3/201805-06/web/global/time/googlemap_htmls
+******************WARNING**WARNING**WARNING******************
+
+This is a National Weather Service (NWS) computer system. NWS 
+computer systems are provided for the processing of Official 
+U.S. Government information only. All data contained on NWS 
+computer systems is owned by the NWS and may be monitored, 
+intercepted, recorded, read, copied, or captured in any manner 
+and disclosed in any manner, by authorized personnel.
+
+	THERE IS NO RIGHT OF PRIVACY IN THIS SYSTEM
+
+System personnel may give to law enforcement officials any 
+potential evidence of crime found on NWS computer systems. 
+USE OF THIS SYSTEM BY ANY USER, AUTHORIZED OR UNAUTHORIZED, 
+CONSTITUTES CONSENT TO THIS MONITORING, INTERCEPTION, RECORDING, 
+READING, COPYING, OR CAPTURING and DISCLOSURE.
+
+******************WARNING**WARNING**WARNING******************
++ exit
++ exit

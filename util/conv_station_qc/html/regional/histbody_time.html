@@ -1,0 +1,154 @@
+<HTML>
+<head>
+<!--  Rewritten by Guy Middleton on 12/11/98 12:18:06 --><TITLE>
+Radiance Monitoring
+</TITLE>
+<BODY TEXT="#000000" BGCOLOR="#FFFFFF" LINK="#3366FF" VLINK="#51188E" ALINK="#FF0000"
+>
+<TABLE BORDER=0 CELLPADDING=0>
+<tr align=center>
+<b> <i> Experiment Run QC4</i> </b>
+<TD ALIGN=LEFT><font size=4>Monitoring Plots</TD></TR><TR>
+</table>
+
+<SCRIPT LANGUAGE="JavaScript">
+function analmap() {
+var smon_index = document.timesel.selmon.selectedIndex;
+var smon = document.timesel.selmon.options[smon_index].value; 
+var sday_index = document.timesel.selday.selectedIndex;
+var sday = document.timesel.selday.options[sday_index].value; 
+var shour_index = document.timesel.selhour.selectedIndex;
+var shour = document.timesel.selhour.options[shour_index].value;
+var smap_index = document.timesel.selelem.selectedIndex;
+var smap = document.timesel.selelem.options[smap_index].value;
+var parentnew="hist/gdas/map/2006"+smon+sday+shour+"/"+smap+"_hist.png";
+parent.fmain.document.location.href=parentnew;
+}
+
+</SCRIPT></HEAD>
+<TABLE BORDER=0 CELLPADDING=0>
+<FORM NAME="timesel" >
+<TR><TD ALIGN=LEFT><B> 2006: Month<br>
+<SELECT name=selmon size=1  OnChange=analmap()>
+                <OPTION value=06>06</OPTION>
+</SELECT><P>
+</TD></TR>
+
+
+<TR><TD ALIGN=LEFT><B> 2006: Day<br>
+<SELECT name=selday size=1  OnChange=analmap()>
+                <OPTION value=18>18</OPTION>
+</SELECT><P>
+</TD></TR>
+<TR><TD ALIGN=LEFT><B> Hour<br>
+                <SELECT name=selhour size=1  OnChange=analmap()>
+                <OPTION value=00>00</OPTION>
+
+</SELECT><P>
+</TD></TR>
+
+<TR><TD ALIGN=LEFT><B> Observation Type<br>
+                <SELECT name=selelem size=15  OnChange=analmap()>
+<OPTION VALUE="ps120">PS120
+<OPTION VALUE="ps180">PS180
+<OPTION VALUE="ps181">PS181
+<OPTION VALUE="ps183">PS183
+<OPTION VALUE="ps187">PS187
+<OPTION VALUE="q120">Q120
+<OPTION VALUE="q130">Q130
+<OPTION VALUE="q132">Q132
+<OPTION VALUE="q133">Q133
+<OPTION VALUE="q180">Q180
+<OPTION VALUE="q181">Q181
+<OPTION VALUE="q182">Q182
+<OPTION VALUE="q183">Q183
+<OPTION VALUE="q187">Q187
+<OPTION VALUE="t120">T120
+<OPTION VALUE="t130">T130
+<OPTION VALUE="t131">T131
+<OPTION VALUE="t132">T132
+<OPTION VALUE="t133">T133
+<OPTION VALUE="t180">T180
+<OPTION VALUE="t181">T181
+<OPTION VALUE="t182">T182
+<OPTION VALUE="t183">T183
+<OPTION VALUE="t187">T187
+<OPTION VALUE="uv220">UV220
+<OPTION VALUE="uv220_u">UV220_u
+<OPTION VALUE="uv220_v">UV220_v
+<OPTION VALUE="uv221">UV221
+<OPTION VALUE="uv221_u">UV221_u
+<OPTION VALUE="uv221_v">UV221_v
+<OPTION VALUE="uv223">UV223
+<OPTION VALUE="uv223_u">UV223_u
+<OPTION VALUE="uv223_v">UV223_v
+<OPTION VALUE="uv224">UV224
+<OPTION VALUE="uv224_u">UV224_u
+<OPTION VALUE="uv224_v">UV224_v
+<OPTION VALUE="uv228_u">UV228_u
+<OPTION VALUE="uv228_v">UV228_v
+<OPTION VALUE="uv229_u">UV229_u
+<OPTION VALUE="uv229_v">UV229_v
+<OPTION VALUE="uv230">UV230
+<OPTION VALUE="uv230_u">UV230_u
+<OPTION VALUE="uv230_v">UV230_v
+<OPTION VALUE="uv231">UV231
+<OPTION VALUE="uv231_u">UV231_u
+<OPTION VALUE="uv231_v">UV231_v
+<OPTION VALUE="uv232">UV232
+<OPTION VALUE="uv232_u">UV232_u
+<OPTION VALUE="uv232_v">UV232_v
+<OPTION VALUE="uv233">UV233
+<OPTION VALUE="uv233_u">UV233_u
+<OPTION VALUE="uv233_v">UV233_v
+<OPTION VALUE="uv242">UV242
+<OPTION VALUE="uv242_u">UV242_u
+<OPTION VALUE="uv242_v">UV242_v
+<OPTION VALUE="uv243">UV243
+<OPTION VALUE="uv243_u">UV243_u
+<OPTION VALUE="uv243_v">UV243_v
+<OPTION VALUE="uv245">UV245
+<OPTION VALUE="uv245_u">UV245_u
+<OPTION VALUE="uv245_v">UV245_v
+<OPTION VALUE="uv246">UV246
+<OPTION VALUE="uv246_u">UV246_u
+<OPTION VALUE="uv246_v">UV246_v
+<OPTION VALUE="uv252">UV252
+<OPTION VALUE="uv252_u">UV252_u
+<OPTION VALUE="uv252_v">UV252_v
+<OPTION VALUE="uv253">UV253
+<OPTION VALUE="uv253_u">UV253_u
+<OPTION VALUE="uv253_v">UV253_v
+<OPTION VALUE="uv255">UV255
+<OPTION VALUE="uv255_u">UV255_u
+<OPTION VALUE="uv255_v">UV255_v
+<OPTION VALUE="uv257">UV257
+<OPTION VALUE="uv257_u">UV257_u
+<OPTION VALUE="uv257_v">UV257_v
+<OPTION VALUE="uv258">UV258
+<OPTION VALUE="uv258_u">UV258_u
+<OPTION VALUE="uv258_v">UV258_v
+<OPTION VALUE="uv280">UV280
+<OPTION VALUE="uv280_u">UV280_u
+<OPTION VALUE="uv280_v">UV280_v
+<OPTION VALUE="uv281">UV281
+<OPTION VALUE="uv281_u">UV281_u
+<OPTION VALUE="uv281_v">UV281_v
+<OPTION VALUE="uv282">UV282
+<OPTION VALUE="uv282_u">UV282_u
+<OPTION VALUE="uv282_v">UV282_v
+<OPTION VALUE="uv284">UV284
+<OPTION VALUE="uv284_u">UV284_u
+<OPTION VALUE="uv284_v">UV284_v
+<OPTION VALUE="uv287">UV287
+<OPTION VALUE="uv287_u">UV287_u
+<OPTION VALUE="uv287_v">UV287_v
+</SELECT><P>
+</TD></TR>
+</TABLE>
+<TR><TD ALIGN=LEFT><B>
+<INPUT TYPE="button" VALUE="view" onClick="analmap(); return true;"> <BR></b>
+</B></TD></TR>  
+</FORM>
+</TABLE>
+</BODY></HTML>

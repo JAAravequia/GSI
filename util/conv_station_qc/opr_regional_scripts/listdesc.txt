@@ -1,0 +1,10 @@
+I already had bias correction and rejection lists for regional model,
+they locate at  /global/save/wx20xs/gsiqc3/regional_data/20120205,
+the file name as dtype_rej (or bias)_list_final
+
+The data format is :  station id, longitude, latitude,O-B, O-A, standard deviation of O-B, standard deviation of O-A
+for surface pressure, humidity, and temperature
+For wind:  station id, longitude, latitude,O-B 0f direction, O-A of direction, O-B 0f speed, O-A of speed, standard deviation
+of O-B of direction, standard deviation of O-A of direction, standard deviation of O-B of speed, standard deviation of O-A of speed
+
+For the sounding data

@@ -1,0 +1,192 @@
+#!/bin/sh
+set -xa
+
+### define the script, data directory and excutable
+### file for each run
+
+export dtime=$1
+export scripts=$2
+export datadir=$3
+export datadir2=$4
+export exec=$5
+export execfile=$6
+export execfile1=$7
+export savedir=$8
+export sfctype=${9}
+ export sondtype=${10}
+ export uvsfctype=${11}
+ export uvsondtype=${12}
+ export alltm=${13}
+# dtime=20120103
+# export scripts=/u/Xiujuan.Su/home/gsiqc3/regional_scripts
+# export datadir=/u/Xiujuan.Su/nbns/select_reg_20120103
+# export datadir2=/u/Xiujuan.Su/nbns/bufrstas_regional_20120103 
+# export exec=/u/Xiujuan.Su/home/gsiqc3/exec
+# export execfile=compare_list.x
+# export execfile1=compare_list_sp.x
+# export savedir=/u/Xiujuan.Su/home/gsiqc3/regional_data/$dtime
+
+export tmpdir=/ptmpp1/$USER/gsiqc3/compare_list
+
+mkdir -p $savedir
+mkdir -p $tmpdir
+
+cd $tmpdir
+
+rm -f $tmpdir/*
+
+cp $exec/$execfile ./$execfile
+cp $exec/$execfile1 ./$execfile1
+   
+#stype="ps120 ps180 ps181 ps187 ps188 q120 q180 q181 q187 q188 t120 t180 t181 t187 t188 uv220 uv221 uv223 uv224 uv229 uv280 uv281 uv287 uv288"
+#stype="ps120 ps180 ps181 ps187 ps188 q120 q180 q181 q187 q188 t120 t180 t181 t187 t188"
+#stype="q120 t120 "
+#stype="t188 "
+#sstype="uv220 uv221 uv223 uv224 uv280 uv281 uv287 uv288"
+#sstype="uv220 uv221 uv223 uv224 " 
+
+
+  for datatype in ssfctype ssondtype
+   do
+    if [ "${datatype}" = "ssfctype" ]; then
+      dstype=$sfctype
+      itype=0
+    elif [ "${datatype}" = "ssondtype" ]; then
+      dstype=$sondtype
+      itype=1
+    fi
+
+   notm=0
+  for tm in ${alltm}; do
+     notm=`expr $notm + 1`
+  done
+
+  if [ $notm = 1 ]; then
+     for ttm in ${alltm};do
+       for dtype in $dstype;do
+          for filetype in bias rej;do
+              cp ${datadir}/${ttm}/${dtype}_${filetype}_list $savedir/${dtype}_rej_${ftype}_list 
+          done
+       done
+     done
+  else
+   for dtype in $dstype 
+   do
+     notm=0
+      for tm in ${alltm} 
+      do
+          notm=`expr $notm + 1`
+          cp ${datadir2}/${tm}/${dtype}_station ./${dtype}_station_${tm} 
+          cp ${datadir2}/${tm}/${dtype}_stas ./${dtype}_stas_${tm} 
+      done 
+
+
+   for filetype in bias rej
+   do
+      if [ -s ${datadir}/00/${dtype}_${filetype}_list ]; then
+         export fexist2=.true.
+         cp ${datadir}/00/${dtype}_${filetype}_list ./${dtype}_${filetype}_list_00
+     else
+       export fexist2=.false.
+     fi
+     if [ -s ${datadir}/03/${dtype}_${filetype}_list ]; then
+        export fexist3=.true.
+        cp ${datadir}/03/${dtype}_${filetype}_list ./${dtype}_${filetype}_list_03
+     else
+       export fexist3=.false.
+     fi
+     if [ -s ${datadir}/06/${dtype}_${filetype}_list ]; then
+        export fexist4=.true.
+        cp ${datadir}/06/${dtype}_${filetype}_list ./${dtype}_${filetype}_list_06
+     else
+        export fexist4=.false.
+     fi
+
+    rm -f input
+
+cat << EOF > input
+ &input
+  fileexist(1)=${fexist2},fileexist(2)=${fexist3},fileexist(3)=${fexist4},
+  tm(1)='00',tm(2)='03',tm(3)='06',dtype='${dtype}',
+  filetype='${filetype}',itype=${itype}
+/
+EOF
+
+  ./$execfile <input >stdout 2>&1 
+  mv stdout ${dtype}_${filetype}_stdout
+  mv ${dtype}_${filetype}_list $savedir
+
+done
+done
+done
+
+fi
+
+for datatype in suvsfctype suvsondtype
+do
+if [ "${datatype}" = "suvsfctype" ]; then
+dstype=$uvsfctype
+itype=0
+elif [ "${datatype}" = "suvsondtype" ]; then
+dstype=$uvsondtype
+itype=1
+fi
+
+for dtype in $dstype
+
+do
+   for tm in ${alltm} 
+   do
+   if [ $notm =1 ];then
+     for ftype in dir sp ; do
+        cp ${datadir}/${tm}/${dtype}_rej_${ftype}_list $savedir/${dtype}_rej_${ftype}_list
+     done
+   else
+        
+      cp ${datadir2}/${tm}/${dtype}_station ./${dtype}_station_${tm}
+      cp ${datadir2}/${tm}/${dtype}_stas ./${dtype}_stas_${tm} 
+#   done
+    for ftype in dir sp 
+     do
+     if [ -s ${datadir}/${tm}/${dtype}_rej_${ftype}_list ]; then
+        export    fexist${tm}=.true.
+#        echo ${fexist1}
+        cp ${datadir}/${tm}/${dtype}_rej_${ftype}_list ./${dtype}_rej_${ftype}_list_${tm}
+     else
+        export  fexist${tm}=.false.
+     fi
+#     if [ -s ${datadir}/03/${dtype}_rej_${ftype}_list ]; then
+#        export fexist2=.true.
+#        cp ${datadir}/03/${dtype}_rej_${ftype}_list ./${dtype}_rej_${ftype}_list_03
+#     else
+#       export fexist2=.false.
+#     fi
+#     if [ -s ${datadir}/06/${dtype}_rej_${ftype}_list ]; then
+#        export fexist3=.true.
+#        cp ${datadir}/06/${dtype}_rej_${ftype}_list ./${dtype}_rej_${ftype}_list_06
+#     else
+#        export fexist3=.false.
+#     fi
+#    rm -f input
+ done
+
+cat << EOF > input
+ &input
+  fileexist(1)=${fexist1},fileexist(2)=${fexist2},fileexist(3)=${fexist3},
+  tm(1)='00',tm(2)='03',tm(3)='06',dtype='${dtype}',
+  filetype='rej',itype=${itype}
+/
+EOF
+
+  if [ "${ftype}" = 'sp' ]; then
+    ./$execfile1<input >stdout 2>&1
+  else
+    ./$execfile <input >stdout 2>&1
+  fi
+  mv stdout ${dtype}_rej_${ftype}_stdout
+  mv ${dtype}_rej_list $savedir/${dtype}_rej_${ftype}_list
+fi
+done
+done
+done  
+

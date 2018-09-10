@@ -1,0 +1,85 @@
+<HTML>
+<head>
+<!--  Rewritten by Guy Middleton on 12/11/98 12:18:06 --><TITLE>
+Experiment Monitoring
+</TITLE>
+<BODY TEXT="#000000" BGCOLOR="#FFFFFF" LINK="#3366FF" VLINK="#51188E" ALINK="#FF0000"
+>
+<Font size=4>Time Series</font>
+
+<SCRIPT LANGUAGE="JavaScript">
+
+function analmap() {
+var sdtype_index = document.timesel.seldtype.selectedIndex;
+var sdtype = document.timesel.seldtype.options[sdtype_index].value;
+var slev_index = document.timesel.sellev.selectedIndex;
+var slev = document.timesel.sellev.options[slev_index].value;
+var parentnew='./time_2/googlemap_htmls/'+sdtype+slev+'.html'
+parent.fmain.document.location.href=parentnew;
+}
+
+</SCRIPT></HEAD>
+
+
+<TABLE BORDER=0 CELLPADDING=0>
+<FORM NAME="timesel" >
+
+
+</TD></TR>
+ 
+<TR><TD ALIGN=LEFT><B>Obs. Type<br>
+<SELECT name=seldtype size=7 >
+                <OPTION value="ps120">PS120(Rawn PRES)</OPTION>
+                <OPTION value="ps180">PS180(Marn PRES)</OPTION>
+                <OPTION value="ps181">PS181(Syno PRES)</OPTION>
+                <OPTION value="ps187">PS187(META PRES)</OPTION>
+                <OPTION value="q120">Q120(Rawn HUMD)</OPTION>
+                <OPTION value="q180">Q180(Marn Humd.)</OPTION>
+                <OPTION value="q181">Q181(Syno Humd.)</OPTION>
+                <OPTION value="q187">Q187(METAR Humd.)</OPTION>
+                <OPTION value="t120">T120(Rawn TEMP)</OPTION>
+                <OPTION value="t180">T180(Marn TEMP)</OPTION>
+                <OPTION value="t181">t181(Syno TEMP)</OPTION>
+                <OPTION value="t187">t187(METAR TEMP)</OPTION>
+                <OPTION value="uv220">W220((Rawn WIND)</OPTION>
+                <OPTION value="uv221">W221(Pibl WIND)</OPTION>
+                <OPTION value="uv223">W223(Profl WIND)</OPTION>
+                <OPTION value="uv224">W224(VADW WIND)</OPTION>
+                <OPTION value="uv228">W228 (Jap. Profl WIND)</OPTION>
+                <OPTION value="uv229">W229 (Eur. Profl WIND)</OPTION>
+                <OPTION value="uv280">W280 (Marn WIND)</OPTION>
+                <OPTION value="uv281">W281 (SNOP WIND)</OPTION>
+                <OPTION value="uv287">W287 (METAR WIND)</OPTION>
+</SELECT><P>
+</TD></TR>
+
+
+<TR><TD ALIGN=LEFT><B> Level <br>
+<SELECT name=sellev size=12 >
+                     <OPTION value=""> Surface</OPTION>
+                <OPTION value="_925mb">1000-912.5mb </OPTION>
+                <OPTION value="_825mb">912.5-812.5mb </OPTION>
+                <OPTION value="_725mb">812.5-712.5mb </OPTION>
+                <OPTION value="_625mb">712.5-612.5mb </OPTION>
+                <OPTION value="_525mb">612.5-512.5mb </OPTION>
+                <OPTION value="_425mb">512.5-412.5mb </OPTION>
+                <OPTION value="_325mb">412.5-312.5mb </OPTION>
+                <OPTION value="_225mb">312.5-212.5mb </OPTION>
+                <OPTION value="_125mb">212.5-112.5mb </OPTION>
+                <OPTION value="_30mb">112.5-25mb </OPTION>
+                <OPTION value="_5mb">25-0mb </OPTION>
+
+</SELECT><P>
+</TD></TR>
+
+
+</TABLE>
+
+<TR><TD ALIGN=LEFT><B>
+<INPUT TYPE="button" VALUE="view" onClick="analmap(); return true;"> <BR></b>
+</B></TD></TR>  
+
+</FORM>
+</TABLE>
+</BODY></HTML>
+

@@ -1,0 +1,141 @@
+<HTML>
+<head>
+<!--  written by Xiujuan Su on 07/13/2011 12:18:06 --><TITLE>
+Station observation monitor
+</TITLE>
+<BODY TEXT="#000000" BGCOLOR="#FFFFFF" LINK="#3366FF" VLINK="#51188E" ALINK="#FF0000"
+>
+<TABLE BORDER=0 CELLPADDING=0>
+<tr align=center>
+<b> <i> Station Observation Monitor</i> </b><br>
+<a target="_parent" href="./index.html"> Station Observation Monitor page </a><br>
+<a target=_parent href="index_time.html"> Time series plots  </a> <br>
+<a target=_parent href="index_horz.html"> Horizontal plots  </a><br>
+<a target=_parent href="index_vert.html"> Vertical plots  </a><br>
+
+<TD ALIGN=LEFT><B><font size=4>Histgram Plots</TD></TR>
+</table>
+<SCRIPT LANGUAGE="JavaScript">
+function analmap() {
+var shor_index = document.timesel.selhor.selectedIndex;
+var shor = document.timesel.selhor.options[shor_index].value;
+var smap_index = document.timesel.selmap.selectedIndex;
+var smap = document.timesel.selmap.options[smap_index].value;
+var slev_index = document.timesel.sellev.selectedIndex;
+var slev = document.timesel.sellev.options[slev_index].value;
+var parentnew="./hist/"+shor+"/"+smap+"/"+smap+"_"+slev+".png";
+parent.fmain.document.location.href=parentnew;
+}
+</SCRIPT></HEAD>
+<FORM NAME="timesel" >
+
+<TR><TD ALIGN=LEFT><B> Hour Delay analysis<br>
+                <SELECT name=selhor size=3  >
+<OPTION VALUE="00">00 hr delay </OPTION>
+<OPTION VALUE="03">03 hr delay </OPTION>
+<OPTION VALUE="06">06 hr delay </OPTION>
+</SELECT><P>
+</TD></TR>
+</TABLE>
+
+
+<TR><TD ALIGN=LEFT><B> Observation Type<br>
+                <SELECT name=selmap size=5  >
+<OPTION VALUE="ps120">PS120 </OPTION>
+<OPTION VALUE="ps180">PS180 </OPTION>
+<OPTION VALUE="ps181">PS181 </OPTION>
+<OPTION VALUE="ps183">PS183 </OPTION>
+<OPTION VALUE="ps187">PS187 </OPTION>
+<OPTION VALUE="ps188">PS188 </OPTION>
+<OPTION VALUE="q120">Q120 </OPTION>
+<OPTION VALUE="q180">Q180 </OPTION>
+<OPTION VALUE="q181">Q181 </OPTION>
+<OPTION VALUE="q187">Q187 </OPTION>
+<OPTION VALUE="q188">Q188 </OPTION>
+<OPTION VALUE="t120">T120 </OPTION>
+<OPTION VALUE="t180">T180 </OPTION>
+<OPTION VALUE="t181">T181 </OPTION>
+<OPTION VALUE="t187">T187 </OPTION>
+<OPTION VALUE="t188">T188 </OPTION>
+<OPTION VALUE="uv220_dir">UV220 DIR </OPTION> 
+<OPTION VALUE="uv220_sp">UV220 SP  </OPTION>
+<OPTION VALUE="uv221_dir">UV221 DIR </OPTION>
+<OPTION VALUE="uv221_sp">UV221 SP  </OPTION>
+<OPTION VALUE="uv221_dir">UV221 DIR </OPTION>
+<OPTION VALUE="uv221_sp">UV221 SP </OPTION>
+<OPTION VALUE="uv223_dir">UV223 DIR </OPTION>
+<OPTION VALUE="uv223_sp">UV223 SP </OPTION>
+<OPTION VALUE="uv224_dir">UV224 DIR </OPTION>
+<OPTION VALUE="uv224_sp">UV224 SP </OPTION>
+<OPTION VALUE="uv228_dir">UV228 DIR</OPTION>
+<OPTION VALUE="uv228_sp">UV228 SP</OPTION>
+<OPTION VALUE="uv229_dir">UV229 DIR </OPTION>
+<OPTION VALUE="uv229_sp">UV229 SP </OPTION>
+<OPTION VALUE="uv280_dir">UV280 DIR</OPTION>
+<OPTION VALUE="uv280_sp">UV280 SP</OPTION>
+<OPTION VALUE="uv281_dir">UV281 DIR</OPTION>
+<OPTION VALUE="uv281_sp">UV281 SP</OPTION>
+<OPTION VALUE="uv287_dir">UV287 DIR</OPTION>
+<OPTION VALUE="uv287_sp">UV287 SP</OPTION>
+<OPTION VALUE="uv288_dir">UV288 DIR</OPTION>
+<OPTION VALUE="uv288_sp">UV288 SP</OPTION>
+</SELECT><P>
+</TD></TR>
+</TABLE>
+
+
+<TR><TD ALIGN=LEFT><B> Observation Lev<br>
+       <SELECT name=sellev size=5  >
+<OPTION VALUE="lev1">Surface </OPTION>
+<OPTION VALUE="lev2">987.5-962.5mb </OPTION>
+<OPTION VALUE="lev3">962.5-937.5mb </OPTION>
+<OPTION VALUE="lev4">937.5-912.5mb </OPTION>
+<OPTION VALUE="lev5">912.5-887.5mb </OPTION>
+<OPTION VALUE="lev6">887.5-862.5mb </OPTION>
+<OPTION VALUE="lev7">862.5-837.5mb </OPTION>
+<OPTION VALUE="lev8">837.5-812.5mb </OPTION>
+<OPTION VALUE="lev9">812.5-787.5mb </OPTION>
+<OPTION VALUE="lev10">787.5-762.5mb </OPTION>
+<OPTION VALUE="lev11">762.5-737.5mb </OPTION>
+<OPTION VALUE="lev12">737.5-712.5mb </OPTION>
+<OPTION VALUE="lev13">712.5-687.5mb </OPTION>
+<OPTION VALUE="lev14">687.5-662.5mb </OPTION>
+<OPTION VALUE="lev15">662.5-637.5mb </OPTION>
+<OPTION VALUE="lev16">637.5-612.5mb </OPTION>
+<OPTION VALUE="lev17">612.5-587.5mb </OPTION>
+<OPTION VALUE="lev18">587.5-562.5mb </OPTION>
+<OPTION VALUE="lev19">562.5-537.5mb </OPTION>
+<OPTION VALUE="lev20">537.5-512.5mb </OPTION>
+<OPTION VALUE="lev21">512.5-487.5mb </OPTION>
+<OPTION VALUE="lev22">487.5-462.5mb </OPTION>
+<OPTION VALUE="lev23">462.5-437.5mb </OPTION>
+<OPTION VALUE="lev24">437.5-412.5mb </OPTION>
+<OPTION VALUE="lev25">412.5-387.5mb </OPTION>
+<OPTION VALUE="lev26">387.5-362.5mb </OPTION>
+<OPTION VALUE="lev27">362.5-337.5mb </OPTION>
+<OPTION VALUE="lev28">337.5-312.5mb </OPTION>
+<OPTION VALUE="lev29">312.5-287.5mb </OPTION>
+<OPTION VALUE="lev30">287.5-262.5mb </OPTION>
+<OPTION VALUE="lev31">262.5-237.5mb </OPTION>
+<OPTION VALUE="lev32">237.5-212.5mb </OPTION>
+<OPTION VALUE="lev33">212.5-187.5mb </OPTION>
+<OPTION VALUE="lev34">187.5-162.5mb </OPTION>
+<OPTION VALUE="lev35">162.5-137.5mb </OPTION>
+<OPTION VALUE="lev36">137.5-112.5mb </OPTION>
+<OPTION VALUE="lev37">112.5-85mb </OPTION>
+<OPTION VALUE="lev38">85-60mb </OPTION>
+<OPTION VALUE="lev39">60-40mb </OPTION>
+<OPTION VALUE="lev40">40-25mb </OPTION>
+<OPTION VALUE="lev41">25-15mb </OPTION>
+<OPTION VALUE="lev42">15-7.5mb </OPTION>
+<OPTION VALUE="lev43">7.5-0mb </OPTION>
+</SELECT><P>
+</TD></TR>
+</TABLE>
+
+<TR><TD ALIGN=LEFT><B>
+<INPUT TYPE="button" VALUE="view" onClick="analmap(); return true;"> <BR></b>
+</B></TD></TR>  
+</FORM>
+</TABLE>
+</BODY></HTML>

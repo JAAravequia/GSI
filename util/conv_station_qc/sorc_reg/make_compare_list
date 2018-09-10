@@ -1,0 +1,41 @@
+SHELL=/bin/sh
+#
+#
+.SUFFIXES: .f90 .mod
+%.o: %.mod
+
+OBJS=crite_constnt_reg.o main_compare_list.o compare_list_sfc.o check_list_sfc.o \
+     check_std_sfc.o read_list2_sfc.o read_listw_sfc.o check_data_sfc_ttm2.o \
+     check_data_sfc_ttm3.o check_data_sfc_ttm4.o get_crit_sfc.o compare_list.o  \
+     check_list.o check_std.o read_list2.o read_listw.o check_data_ttm2.o \
+     check_data_ttm3.o check_data_ttm4.o get_crit.o
+CMD=compare_list.x
+
+FC=ifort
+
+
+FFLAGS = -O2 -convert big_endian -assume byterecl
+
+LDFLAGS = 
+
+
+$(CMD):		$(OBJS) 
+	$(FC) $(LDFLAGS) ${FFLAGS} -o $(@) $(OBJS) 
+
+
+clean:
+	-rm -f *.o ${CMD}
+
+clobber:	clean
+	-rm -f $(CMD) $(CMD).prof
+
+void:	clobber
+	-rm -f $(SRCS)
+
+.f.o:
+	${FC} -c ${FFLAGS} $*.f
+
+.f90.o:
+	${FC} -c ${FFLAGS} $*.f90
+
+

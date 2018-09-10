@@ -1,0 +1,41 @@
+SHELL=/bin/sh
+#
+#
+.SUFFIXES: .f90
+
+OBJS=main_prepbufr.o read_prepbufr_raw.o read_prepbufr_sfc_ps.o read_prepbufr_sfc_ps_mor.o \
+      read_prepbufr_sfc_q.o read_prepbufr_sfc_t.o read_prepbufr_sfc_w.o\
+      read_prepbufr_sfc_q_mor.o read_prepbufr_sfc_t_mor.o read_prepbufr_sfc_w_mor.o\
+      read_prepbufr_wind.o winds.o convinfo.o convinfo_adpupa.o read_prepbufr_wind_mor.o
+
+CMD=prepbufr.x
+
+FC=ifort
+
+LIBS = -L/nwprod/lib -lw3nco_4 -lw3emc_4 -lbufr_4_64
+
+FFLAGS = -O2 -convert big_endian -assume byterecl -debug
+
+LDFLAGS = 
+
+
+$(CMD):		$(OBJS) 
+	$(FC) $(LDFLAGS) ${FFLAGS} -o $(@) $(OBJS) ${LIBS}
+
+
+clean:
+	-rm -f *.o ${CMD}
+
+clobber:	clean
+	-rm -f $(CMD) $(CMD).prof
+
+void:	clobber
+	-rm -f $(SRCS)
+
+.f.o:
+	${FC} -c ${FFLAGS} $*.f
+
+.f90.o:
+	${FC} -c ${FFLAGS} $*.f90
+
+

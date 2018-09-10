@@ -1,0 +1,38 @@
+SHELL=/bin/sh
+#
+#
+.SUFFIXES: .f90
+
+OBJS=         main_compare_list_qlyrej.o compare_list_sfc_qlyrej.o check_list_sfc_qlyrej.o read_list2_sfc.o read_listw_sfc.o compare_list_qlyrej.o check_list_qlyrej.o read_list2.o read_listw.o
+
+CMD=compare_list_qlyrej.x
+
+FC=ifort
+
+LIBS = -L/nwprod/lib -lw3nco_4 -lw3emc_4 -lbufr_4_64
+
+FFLAGS = -O2 -convert big_endian -assume byterecl
+
+LDFLAGS = 
+
+
+$(CMD):		$(OBJS) 
+	$(FC) $(LDFLAGS) ${FFLAGS} -o $(@) $(OBJS) ${LIBS}
+
+
+clean:
+	-rm -f *.o ${CMD}
+
+clobber:	clean
+	-rm -f $(CMD) $(CMD).prof
+
+void:	clobber
+	-rm -f $(SRCS)
+
+.f.o:
+	${FC} -c ${FFLAGS} $*.f
+
+.f90.o:
+	${FC} -c ${FFLAGS} $*.f90
+
+

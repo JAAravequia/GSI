@@ -1,0 +1,459 @@
+!   read statistics files from different cycle delay (tm00,tm03 ..)
+!   compare their values  
+
+
+      subroutine check_data_sfc(dtype,filetype,tm,filetm,n,stdid,&
+                 cid,rmean,std,std_no,tno,xmed,break,ncount) 
+
+       character(5) dtype,tm,tm1,tm2,tm3,tm4,filetype
+       character(1) ddtype
+       character(8) stdid_input
+
+      character(5),dimension(4) :: filetm
+      character(8),dimension(n) :: stdid,stdid_00
+      real(4),dimension(n,2) :: cid,cid_00
+      real(4),dimension(n,2) :: rmean,rmean_00
+      real(4),dimension(n,2) :: std,std_00
+      real(4),dimension(n) :: std_no,std_no_00
+      real(4),dimension(n,2) :: tno,tno_00
+      real(4),dimension(n,4) :: xmed,xmed_00 
+      real(4),dimension(n,4) :: break,break_00 
+      real(4),dimension(2) :: std_out,rmean_out,std_out2,rmean_out2
+      real(4),dimension(2) :: std_out3,rmean_out3,std_out4,rmean_out4
+      real(4),dimension(2) :: tno_out,tno_out2,tno_out3
+      real(4),dimension(2) :: tno_out4,tno_input,std_input,rmean_input
+      real(4),dimension(4) :: xmed_out,xmed_out2,xmed_out3,xmed_input 
+      real(4),dimension(4) :: xmed_out4,break_out,break_input 
+      real(4),dimension(4) :: break_out2,break_out3,break_out4 
+
+      logical std_exist,std2_exist,std3_exist,std4_exist 
+      logical list_true,list2_true,list3_true,list4_true 
+
+        character(50) file1,file2,file3,file4,file5
+
+
+!!  read bias or rejection list 
+
+     file1=trim(dtype)//'_'//trim(filetype)//'_list_'//trim(tm)
+     print *,' check_data_sfc: file1=',file1,n
+     call read_list2_sfc(dtype,file1,n,ndata,stdid_00,cid_00,rmean_00,&
+                         std_00,xmed_00,break_00,std_no_00,tno_00)
+
+     print *,' check_data_sfc: ndata=',ndata
+!      do i=1,ndata
+!        write(6,100) stdid_00(i),cid_00(i,1),cid_00(i,2),rmean_00(i,1),rmean_00(i,2),&
+!                     std_00(i,1),std_00(i,2),break_00(i,1),break_00(i,2),std_no_00(i)
+!        write(6,106) break_00(i,3),break_00(i,4),xmed_00(i,1),xmed_00(i,2),xmed_00(i,3),&
+!                     xmed_00(i,4),tno_00(i,1),tno_00(i,2)
+!      enddo
+
+!100  format(a8,9f7.2)
+!106 format(8f7.2)
+
+!  compare all tm list, get smallest rmean and std values for all tm
+
+      tm1=filetm(1) 
+      tm2=filetm(2)
+      tm3=filetm(3)
+      tm4=filetm(4)
+
+    print *,'tm,tm1,tm2,tm3,tm4=',tm,tm1,tm2,tm3,tm4
+
+  
+     ncount=0
+     do i=1,ndata                          !  tm 00
+        stdid_input=stdid_00(i)
+        rmean_input(1:2)=rmean_00(i,1:2)
+        std_input(1:2)=std_00(i,1:2)
+        std_no_input=std_no_00(i)
+        xmed_input(1:4)=xmed_00(i,1:4)
+        break_input(1:4)=break_00(i,1:4)
+        tno_input(1:2)=tno_00(i,1:2)
+        call check_std_sfc(dtype,tm1,filetype,stdid_input,rmean_input,std_input, &  
+                    std_no_input,xmed_input,break_input,tno_input,& 
+                    rmean_out,std_out,xmed_out,break_out,&     
+                    std_no_out,tno_out,std_exist,list_true)
+        if(std_exist .and. list_true ) then
+           rmean_input(1:2)=rmean_out(1:2)
+           std_input(1:2)=std_out(1:2)
+           std_no_input=std_no_out
+           xmed_input(1:4)=xmed_out(1:4)
+           break_input(1:4)=break_out(1:4)
+           tno_input(1:2)=tno_out(1:2)
+           print *,'1,check_data_sfc:',tm1,rmean_input(1),std_input(1),std_no_input
+           call check_std_sfc(dtype,tm2,filetype,stdid_input,rmean_input,std_input, &  
+                    std_no_input,xmed_input,break_input,tno_input,& 
+                    rmean_out2,std_out2,xmed_out2,break_out2,&     
+                    std_no_out2,tno_out2,std2_exist,list2_true)
+           if(std2_exist .and. list2_true ) then
+              rmean_input(1:2)=rmean_out2(1:2)
+              std_input(1:2)=std_out2(1:2)
+              std_no_input=std_no_out2
+              xmed_input(1:4)=xmed_out2(1:4)
+              break_input(1:4)=break_out2(1:4)
+              tno_input(1:2)=tno_out2(1:2)
+!              print *,'2,check_data_sfc:',tm2,rmean_input(1),std_input(1),std_no_input
+              call check_std_sfc(dtype,tm3,filetype,stdid_input,rmean_input,std_input,&   
+                        std_no_input,xmed_input,break_input,tno_input,& 
+                        rmean_out3,std_out3,xmed_out3,break_out3,& 
+                        std_no_out3,tno_out3,std3_exist,list3_true)
+              if(std3_exist .and. list3_true ) then
+                 rmean_input(1:2)=rmean_out3(1:2)
+                 std_input(1:2)=std_out3(1:2)
+                 std_no_input=std_no_out3
+                 xmed_input(1:4)=xmed_out3(1:4)
+                 break_input(1:4)=break_out3(1:4)
+                 tno_input(1:2)=tno_out3(1:2)
+!              print *,'3,check_data_sfc:',tm3,rmean_input(1),std_input(1),std_no_input
+                 call check_std_sfc(dtype,tm4,filetype,stdid_input,rmean_input,std_input,&   
+                         std_no_input,xmed_input,break_input,tno_input,& 
+                         rmean_out4,std_out4,xmed_out4,break_out4,& 
+                          std_no_out4,tno_out4,std4_exist,list4_true)
+                 if(std4_exist .and. list4_true ) then
+                    ncount=ncount+1
+                    stdid(ncount) = stdid_00(i)
+                    cid(ncount,1:2) = cid_00(i,1:2)
+                    rmean(ncount,1:2) = rmean_out4(1:2)
+                    std(ncount,1:2) = std_out4(1:2)
+                    xmed(ncount,1:4) = xmed_out4(1:4)
+                    break(ncount,1:4) = break_out4(1:4)
+                    std_no(ncount) = std_no_out4
+                    tno(ncount,1:2)=tno_out4(1:2)
+                 else if( .not. std4_exist  ) then
+                    ncount=ncount+1
+                    stdid(ncount) = stdid_00(i)
+                    cid(ncount,1:2) = cid_00(i,1:2)
+                    rmean(ncount,1:2) = rmean_out3(1:2)
+                    std(ncount,1:2) = std_out3(1:2)
+                    xmed(ncount,1:4) = xmed_out3(1:4)
+                    break(ncount,1:4) = break_out3(1:4)
+                    std_no(ncount) = std_no_out3
+                    tno(ncount,1:2)=tno_out3(1:2)
+                 endif 
+!                   print *,'4,check_data_sfc:',tm3,ncount,break(ncount,1),break(ncount,2),&
+!                              break(ncount,3),break(ncount,4)
+!                   print *,'4,check_data_sfc:',xmed(ncount,1),xmed(ncount,2), &
+!                              xmed(ncount,3),xmed(ncount,4)
+              else if(.not. std3_exist ) then
+!                 print *,'10,check_data_sfc:',stdid_input,rmean_input,std_input
+                 call check_std_sfc(dtype,tm4,filetype,stdid_input,rmean_input,std_input,&
+                          std_no_input,xmed_input,break_input,tno_input,& 
+                          rmean_out4,std_out4,xmed_out4,break_out4,&
+                          std_no_out4,tno_out4,std4_exist,list4_true)
+                 if(std4_exist .and. list4_true ) then  
+                    ncount=ncount+1
+                    stdid(ncount) = stdid_00(i)
+                    cid(ncount,1:2) = cid_00(i,1:2)
+                    rmean(ncount,1:2) = rmean_out4(1:2)
+                    std(ncount,1:2) = std_out4(1:2)
+                    xmed(ncount,1:4) = xmed_out4(1:4)
+                    break(ncount,1:4) = break_out4(1:4)
+                    std_no(ncount) = std_no_out4
+                    tno(ncount,1:2)=tno_out4(1:2)
+                 else if( .not. std4_exist ) then
+                    ncount=ncount+1
+                    stdid(ncount) = stdid_00(i)
+                    cid(ncount,1:2) = cid_00(i,1:2)
+                    rmean(ncount,1:2) = rmean_out2(1:2)
+                    std(ncount,1:2) = std_out2(1:2)
+                    xmed(ncount,1:4) = xmed_out2(1:4)
+                    break(ncount,1:4) = break_out2(1:4)
+                    std_no(ncount) = std_no_out2
+                    tno(ncount,1:2)=tno_out2(1:2)
+                 endif
+!                   print *,'12,check_data_sfc:',tm3,ncount,break(ncount,1),break(ncount,2),&
+!                              break(ncount,3),break(ncount,4)
+!                   print *,'12,check_data_sfc:',xmed(ncount,1),xmed(ncount,2), &
+!                              xmed(ncount,3),xmed(ncount,4)
+              endif
+           else if(  .not. std2_exist ) then
+              call check_std_sfc(dtype,tm3,filetype,stdid_input,rmean_input,std_input,&
+                      std_no_input,xmed_input,break_input,tno_input,& 
+                      rmean_out3,std_out3,xmed_out3,break_out3,&
+                      std_no_out3,tno_out3,std3_exist,list3_true)
+              if( std3_exist .and. list3_true) then
+                    rmean_input(1:2)=rmean_out3(1:2)
+                    std_input(1:2)=std_out3(1:2)
+                    std_no_input=std_no_out3
+                    xmed_input(1:4)=xmed_out3(1:4)
+                    break_input(1:4)=break_out3(1:4)
+                    tno_input(1:2)=tno_out3(1:2)
+                    call check_std_sfc(dtype,tm4,filetype,stdid_input,rmean_input,std_input,&
+                              std_no_input,xmed_input,break_input,tno_input,& 
+                              rmean_out4,std_out4,xmed_out4,break_out4,&
+                              std_no_out4,tno_out4,std4_exist,list4_true)
+                 if( std4_exist .and. list4_true) then
+                    ncount=ncount+1
+                    stdid(ncount) = stdid_00(i)
+                    cid(ncount,1:2) = cid_00(i,1:2)
+                    rmean(ncount,1:2) = rmean_out4(1:2)
+                    std(ncount,1:2) = std_out4(1:2)
+                    xmed(ncount,1:4) = xmed_out4(1:4)
+                    break(ncount,1:4) = break_out4(1:4)
+                    std_no(ncount) = std_no_out4
+                    tno(ncount,1:2)=tno_out4(1:2)
+!                   print *,'14,check_data_sfc:',tm3,ncount,break(ncount,1),break(ncount,2),&
+!                              break(ncount,3),break(ncount,4)
+!                   print *,'14,check_data_sfc:',xmed(ncount,1),xmed(ncount,2), &
+!                              xmed(ncount,3),xmed(ncount,4)
+                 else if( .not. std4_exist) then 
+                    ncount=ncount+1
+                    stdid(ncount) = stdid_00(i)
+                    cid(ncount,1:2) = cid_00(i,1:2)
+                    rmean(ncount,1:2) = rmean_out3(1:2)
+                    std(ncount,1:2) = std_out3(1:2)
+                    xmed(ncount,1:4) = xmed_out3(1:4)
+                    break(ncount,1:4) = break_out3(1:4)
+                    std_no(ncount) = std_no_out3
+                    tno(ncount,1:2)=tno_out3(1:2)
+!                   print *,'25,check_data_sfc:',tm3,ncount,break(ncount,1),break(ncount,2),&
+!                              break(ncount,3),break(ncount,4)
+!                   print *,'25,check_data_sfc:',xmed(ncount,1),xmed(ncount,2), &
+!                              xmed(ncount,3),xmed(ncount,4)
+                 endif
+              else if(.not. std3_exist ) then
+                 call check_std_sfc(dtype,tm4,filetype,stdid_input,rmean_input,std_input,&
+                         std_no_input,xmed_input,break_input,tno_input,& 
+                         rmean_out4,std_out4,xmed_out4,break_out4,&
+                          std_no_out4,tno_out4,std4_exist,list4_true)
+                 if(std4_exist .and. list4_true ) then
+                    ncount=ncount+1
+                    stdid(ncount) = stdid_00(i)
+                    cid(ncount,1:2) = cid_00(i,1:2)
+                    rmean(ncount,1:2) = rmean_out4(1:2)
+                    std(ncount,1:2) = std_out4(1:2)
+                    xmed(ncount,1:4) = xmed_out4(1:4)
+                    break(ncount,1:4) = break_out4(1:4)
+                    std_no(ncount) = std_no_out4
+                    tno(ncount,1:2)=tno_out4(1:2)
+!                   print *,'26,check_data_sfc:',tm3,ncount,break(ncount,1),break(ncount,2),&
+!                              break(ncount,3),break(ncount,4)
+!                   print *,'26,check_data_sfc:',xmed(ncount,1),xmed(ncount,2), &
+!                              xmed(ncount,3),xmed(ncount,4)
+                 else if( .not. std4_exist) then
+                    ncount=ncount+1
+                    stdid(ncount) = stdid_00(i)
+                    cid(ncount,1:2) = cid_00(i,1:2)
+                    rmean(ncount,1:2) = rmean_out(1:2)
+                    std(ncount,1:2) = std_out(1:2)
+                    xmed(ncount,1:4) = xmed_out(1:4)
+                    break(ncount,1:4) = break_out(1:4)
+                    std_no(ncount) = std_no_out
+                    tno(ncount,1:2)=tno_out(1:2)
+!                   print *,'27,check_data_sfc:',tm3,ncount,break(ncount,1),break(ncount,2),&
+!                              break(ncount,3),break(ncount,4)
+!                   print *,'27,check_data_sfc:',xmed(ncount,1),xmed(ncount,2), &
+!                              xmed(ncount,3),xmed(ncount,4)
+                 endif
+              endif
+           endif
+        else if( .not. std_exist) then
+           call check_std_sfc(dtype,tm2,filetype,stdid_input,rmean_input,std_input,&
+                     std_no_input,xmed_input,break_input,tno_input,& 
+                     rmean_out2,std_out2,xmed_out2,break_out2,&
+                     std_no_out2,tno_out2,std2_exist,list2_true)
+           if(std2_exist .and. list2_true ) then
+              rmean_input(1:2)=rmean_out2(1:2)
+              std_input(1:2)=std_out2(1:2)
+              std_no_input=std_no_out2
+              xmed_input(1:4)=xmed_out2(1:4)
+              break_input(1:4)=break_out2(1:4)
+              tno_input(1:2)=tno_out2(1:2)
+!                   print *,'28,check_data_sfc:',tm3,ncount,break_input(1),break_input(2),&
+!                              break_input(3),break_input(4),tno_input(1),tno_input(2)
+!                   print *,'28,check_data_sfc:',xmed_input(1),xmed_input(2), &
+!                              xmed_input(3),xmed_input(4)
+              call check_std_sfc(dtype,tm3,filetype,stdid_input,rmean_input,std_input,&
+                          std_no_input,xmed_input,break_input,tno_input,& 
+                           rmean_out3,std_out3,xmed_out3,break_out3,&
+                           std_no_out3,tno_out3,std3_exist,list3_true)
+              if(std3_exist .and. list3_true ) then
+                 rmean_input(1:2)=rmean_out3(1:2)
+                 std_input(1:2)=std_out3(1:2)
+                 std_no_input=std_no_out3
+                 xmed_input(1:4)=xmed_out3(1:4)
+                 break_input(1:4)=break_out3(1:4)
+                 tno_input(1:2)=tno_out3(1:2)
+!                   print *,'29,check_data_sfc:',tm3,ncount,break(ncount,1),break(ncount,2),&
+!                              break(ncount,3),break(ncount,4)
+!                   print *,'29,check_data_sfc:',xmed(ncount,1),xmed(ncount,2), &
+!                              xmed(ncount,3),xmed(ncount,4)
+                 call check_std_sfc(dtype,tm4,filetype,stdid_input,rmean_input,std_input,&
+                            std_no_input,xmed_input,break_input,tno_input,& 
+                            rmean_out4,std_out4,xmed_out4,break_out4,&
+                             std_no_out4,tno_out4,std4_exist,list4_true)
+                 if(std4_exist .and. list4_true ) then
+                    ncount=ncount+1
+                    stdid(ncount) = stdid_00(i)
+                    cid(ncount,1:2) = cid_00(i,1:2)
+                    rmean(ncount,1:2) = rmean_out4(1:2)
+                    std(ncount,1:2) = std_out4(1:2)
+                    xmed(ncount,1:4) = xmed_out4(1:4)
+                    break(ncount,1:4) = break_out4(1:4)
+                    std_no(ncount) = std_no_out4
+                    tno(ncount,1:2)=tno_out4(1:2)
+!                   print *,'35,check_data_sfc:',tm3,ncount,break(ncount,1),break(ncount,2),&
+!                              break(ncount,3),break(ncount,4)
+!                   print *,'35,check_data_sfc:',xmed(ncount,1),xmed(ncount,2), &
+!                              xmed(ncount,3),xmed(ncount,4)
+                 else if (.not. std4_exist) then
+                    ncount=ncount+1
+                    stdid(ncount) = stdid_00(i)
+                    cid(ncount,1:2) = cid_00(i,1:2)
+                    rmean(ncount,1:2) = rmean_out3(1:2)
+                    std(ncount,1:2) = std_out3(1:2)
+                    xmed(ncount,1:4) = xmed_out3(1:4)
+                    break(ncount,1:4) = break_out3(1:4)
+                    std_no(ncount) = std_no_out3
+                    tno(ncount,1:2)=tno_out3(1:2)
+!                   print *,'39,check_data_sfc:',tm3,ncount,break(ncount,1),break(ncount,2),&
+!                              break(ncount,3),break(ncount,4)
+!                   print *,'39,check_data_sfc:',xmed(ncount,1),xmed(ncount,2), &
+!                              xmed(ncount,3),xmed(ncount,4)
+                 endif
+              else if( .not. std3_exist) then
+                 call check_std_sfc(dtype,tm4,filetype,stdid_input,rmean_input,std_input,&
+                             std_no_input,xmed_input,break_input,tno_input,& 
+                             rmean_out4,std_out4,xmed_out4,break_out4,&
+                             std_no_out4,tno_out4,std4_exist,list4_true)
+                 if(std4_exist .and. list4_true ) then
+                    ncount=ncount+1
+                    stdid(ncount) = stdid_00(i)
+                    cid(ncount,1:2) = cid_00(i,1:2)
+                    rmean(ncount,1:2) = rmean_out4(1:2)
+                    std(ncount,1:2) = std_out4(1:2)
+                    xmed(ncount,1:4) = xmed_out4(1:4)
+                    break(ncount,1:4) = break_out4(1:4)
+                    std_no(ncount) = std_no_out4
+                    tno(ncount,1) =tno_out4(1)
+                    tno(ncount,2) =tno_out4(2)
+!                   print *,'42,check_data_sfc:',tm4,ncount,break(ncount,1),break(ncount,2),&
+!                              break(ncount,3),break(ncount,4),tno(ncount,1),tno(ncount,2)
+!                   print *,'42,check_data_sfc:',xmed(ncount,1),xmed(ncount,2), &
+!                              xmed(ncount,3),xmed(ncount,4),tno_out4(1),tno_out4(2)
+                 else if( .not. std4_exist) then
+                    ncount=ncount+1
+                    stdid(ncount) = stdid_00(i)
+                    cid(ncount,1:2) = cid_00(i,1:2)
+                    rmean(ncount,1:2) = rmean_out2(1:2)
+                    std(ncount,1:2) = std_out2(1:2)
+                    xmed(ncount,1:4) = xmed_out2(1:4)
+                    break(ncount,1:4) = break_out2(1:4)
+                    std_no(ncount) = std_no_out2
+                    tno(ncount,1:2)=tno_out2(1:2)
+!                   print *,'45,check_data_sfc:',tm3,ncount,break(ncount,1),break(ncount,2),&
+!                              break(ncount,3),break(ncount,4)
+!                   print *,'45,check_data_sfc:',xmed(ncount,1),xmed(ncount,2), &
+!                              xmed(ncount,3),xmed(ncount,4)
+!              print *,'45,check_data_sfc:',tm2,rmean(ncount,1),std(ncount,1),std_no(ncount)
+                 endif
+              endif           
+           else if( .not.std2_exist) then
+              call check_std_sfc(dtype,tm3,filetype,stdid_input,rmean_input,std_input,&
+                           std_no_input,xmed_input,break_input,tno_input,& 
+                           rmean_out3,std_out3,xmed_out3,break_out3,&
+                           std_no_out3,tno_out3,std3_exist,list3_true)
+              if(std3_exist .and. list3_true ) then
+                 rmean_input(1:2)=rmean_out3(1:2)
+                 std_input(1:2)=std_out3(1:2)
+                 std_no_input=std_no_out3
+                 xmed_input(1:4)=xmed_out3(1:4)
+                 break_input(1:4)=break_out3(1:4)
+                 tno_input(1:2)=tno_out3(1:2)
+!                   print *,'47,check_data_sfc:',tm3,ncount,break(ncount,1),break(ncount,2),&
+!                              break(ncount,3),break(ncount,4)
+!                   print *,'47,check_data_sfc:',xmed(ncount,1),xmed(ncount,2), &
+!                              xmed(ncount,3),xmed(ncount,4)
+!              print *,'47,check_data_sfc:',tm3,rmean_input(1),std_input(1),std_no_input
+                 call check_std_sfc(dtype,tm4,filetype,stdid_input,rmean_input,std_input,&
+                             std_no_input,xmed_input,break_input,tno_input,& 
+                             rmean_out4,std_out4,xmed_out4,break_out4,&
+                             std_no_out4,tno_out4,std4_exist,list4_true)
+                 if(std4_exist .and. list4_true ) then
+                    ncount=ncount+1
+                    stdid(ncount) = stdid_00(i)
+                    cid(ncount,1:2) = cid_00(i,1:2)
+                    rmean(ncount,1:2) = rmean_out4(1:2)
+                    std(ncount,1:2) = std_out4(1:2)
+                    xmed(ncount,1:4) = xmed_out4(1:4)
+                    break(ncount,1:4) = break_out4(1:4)
+                    std_no(ncount) = std_no_out4
+                    tno(ncount,1:2)=tno_out4(1:2)
+!                   print *,'49,check_data_sfc:',tm3,ncount,break(ncount,1),break(ncount,2),&
+!                              break(ncount,3),break(ncount,4)
+!                   print *,'49,check_data_sfc:',xmed(ncount,1),xmed(ncount,2), &
+!                              xmed(ncount,3),xmed(ncount,4)
+!              print *,'49,check_data_sfc:',tm3,rmean(ncount,1),std(ncount,1),std_no(ncount)
+                 else if(.not. std4_exist) then
+                    ncount=ncount+1
+                    stdid(ncount) = stdid_00(i)
+                    cid(ncount,1:2) = cid_00(i,1:2)
+                    rmean(ncount,1:2) = rmean_out3(1:2)
+                    std(ncount,1:2) = std_out3(1:2)
+                    xmed(ncount,1:4) = xmed_out3(1:4)
+                    break(ncount,1:4) = break_out3(1:4)
+                    std_no(ncount) = std_no_out3
+                    tno(ncount,1:2)=tno_out3(1:2)
+!                   print *,'50,check_data_sfc:',tm3,ncount,break(ncount,1),break(ncount,2),&
+!                              break(ncount,3),break(ncount,4)
+!                   print *,'50,check_data_sfc:',xmed(ncount,1),xmed(ncount,2), &
+!                              xmed(ncount,3),xmed(ncount,4)
+!              print *,'50,check_data_sfc:',tm3,rmean(ncount,1),std(ncount,1),std_no(ncount)
+                 endif 
+              else if( .not. std3_exist) then
+                 call check_std_sfc(dtype,tm4,filetype,stdid_input,rmean_input,std_input,&
+                             std_no_input,xmed_input,break_input,tno_input,& 
+                             rmean_out4,std_out4,xmed_out4,break_out4,&
+                             std_no_out4,tno_out4,std4_exist,list4_true)
+                 if(std4_exist .and. list4_true ) then
+                    ncount=ncount+1
+                    stdid(ncount) = stdid_00(i)
+                    cid(ncount,1:2) = cid_00(i,1:2)
+                    rmean(ncount,1:2) = rmean_out4(1:2)
+                    std(ncount,1:2) = std_out4(1:2)
+                    xmed(ncount,1:4) = xmed_out4(1:4)
+                    break(ncount,1:4) = break_out4(1:4)
+                    std_no(ncount) = std_no_out4
+                    tno(ncount,1:2)=tno_out4(1:2)
+!                   print *,'52,check_data_sfc:',tm3,ncount,break(ncount,1),break(ncount,2),&
+!                              break(ncount,3),break(ncount,4)
+!                   print *,'52,check_data_sfc:',xmed(ncount,1),xmed(ncount,2), &
+!                              xmed(ncount,3),xmed(ncount,4)
+!              print *,'52,check_data_sfc:',tm4,rmean(ncount,1),std(ncount,1),std_no(ncount)
+                 else if( .not. std4_exist) then
+                    ncount=ncount+1
+                    stdid(ncount) = stdid_00(i)
+                    cid(ncount,1:2) = cid_00(i,1:2)
+                    rmean(ncount,1:2) = rmean_00(i,1:2)
+                    std(ncount,1:2) = std_00(i,1:2)
+                    xmed(ncount,1:4) = xmed_00(i,1:4)
+                    break(ncount,1:4) = break_00(i,1:4)
+                    std_no(ncount) = std_no_00(i)
+                    tno(ncount,1:2)=tno_00(i,1:2)
+!                   print *,'53,check_data_sfc:',tm3,ncount,break(ncount,1),break(ncount,2),&
+!                              break(ncount,3),break(ncount,4)
+!                   print *,'53,check_data_sfc:',xmed(ncount,1),xmed(ncount,2), &
+!                              xmed(ncount,3),xmed(ncount,4)
+!              print *,'53,check_data_sfc:',tm,rmean(ncount,1),std(ncount,1),std_no(ncount)
+                 endif
+              endif
+           endif
+        endif
+    enddo            
+
+     print *,'check_data_sfc: tm,ncount=',tm,ncount 
+!             do i=1,ncount
+!                write(6,200) stdid(i),cid(i,1),cid(i,2),rmean(i,1),rmean(i,2),&
+!                std(i,1),std(i,2),std_no(i),tno(i,1),tno(i,2)
+!                write(6,210) break(i,1),break(i,2),break(i,3),break(i,4),&
+!                             xmed(i,1),xmed(i,2),xmed(i,3),xmed(i,4)
+!      enddo
+
+!200  format(a8,9f7.2)
+!210   format(8f7.2)
+
+
+
+              return
+              end
+

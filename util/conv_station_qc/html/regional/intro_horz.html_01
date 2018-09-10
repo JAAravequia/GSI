@@ -1,0 +1,277 @@
+<!doctype html public "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+   <meta name="GENERATOR" content="Mozilla/4.5 [en] (Win98; U) [Netscape]">
+   <title>Horizontal </title>
+   <base target="rightframe">
+</head>
+<body text="#000000" bgcolor="#FFFFFF">
+
+<style type="text/case">
+boyd{margin-left: 10%;margin-right: 10%;}
+p{ text-indent: 2em;}
+</style>
+<h2>Introduction</h2>
+<P>     The purpose of horizontal statistic map is to compare the statistics of
+different stations in the area to determine whether the bias and the variations
+of differences between observation and background are from forecast model or from
+observations.  
+
+  </P>
+
+<br>
+<h2>Horizontal plot region distribution</h2>
+Click on the thumbnail to see the full image
+<br>
+<br>
+
+<table border=0 cellpadding=1>
+<tr>
+ <td>
+  <center>
+   <a href="./horz/mappng/t120_map.png" target="fmain"><img src="./horz/mappng/t120_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>PS120</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/180_map.png" target="fmain"><img src="./horz/mappng/180_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>PS180</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/181_map.png" target="fmain"><img src="./horz/mappng/181_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>PS181</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/183_map.png" target="fmain"><img src="./horz/mappng/183_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>PS183</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/181_map.png" target="fmain"><img src="./horz/mappng/181_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>PS187</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/q180_map.png" target="fmain"><img src="./horz/mappng/q180_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>Q180</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/181_map.png" target="fmain"><img src="./horz/mappng/181_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>Q181</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/q180_map.png" target="fmain"><img src="./horz/mappng/q180_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>Q183</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/181_map.png" target="fmain"><img src="./horz/mappng/181_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>Q187</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/180_map.png" target="fmain"><img src="./horz/mappng/180_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>T180</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/tsfc_map.png" target="fmain"><img src="./horz/mappng/tsfc_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>T181</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/tsfc_map.png" target="fmain"><img src="./horz/mappng/tsfc_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>T182</center>
+   <br>
+ </td>
+</tr>
+
+<tr>
+ <td>
+  <center>
+   <a href="./horz/mappng/tsfc_map.png" target="fmain"><img src="./horz/mappng/tsfc_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>T183</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/tsfc_map.png" target="fmain"><img src="./horz/mappng/tsfc_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>T187</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/180_map.png" target="fmain"><img src="./horz/mappng/180_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>W280</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/181_map.png" target="fmain"><img src="./horz/mappng/181_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>W281</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/region1_map.png" target="fmain"><img src="./horz/mappng/region1_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>W282</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/284_map.png" target="fmain"><img src="./horz/mappng/284_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>W284</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/181_map.png" target="fmain"><img src="./horz/mappng/181_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>W287</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/t120_map.png" target="fmain"><img src="./horz/mappng/t120_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>Q120</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/region1_map.png" target="fmain"><img src="./horz/mappng/region1_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>Q130</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/region1_map.png" target="fmain"><img src="./horz/mappng/region1_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>Q132</center>
+   <br>
+ </td>
+
+<tr>
+ <td>
+  <center>
+   <a href="./horz/mappng/t120_map.png" target="fmain"><img src="./horz/mappng/t120_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>T120</center>
+   <br>
+ </td>
+
+
+ <td>
+  <center>
+   <a href="./horz/mappng/region1_map.png" target="fmain"><img src="./horz/mappng/region1_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>T132</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/t120_map.png" target="fmain"><img src="./horz/mappng/t120_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>W220</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/221_map.png" target="fmain"><img src="./horz/mappng/221_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>W221</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/223_map.png" target="fmain"><img src="./horz/mappng/223_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>W223</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/224_map.png" target="fmain"><img src="./horz/mappng/224_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>W224</center>
+   <br>
+ </td>
+
+ <td>
+  <center>
+   <a href="./horz/mappng/228_map.png" target="fmain"><img src="./horz/mappng/228_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>W228</center>
+   <br>
+ </td>
+
+
+ <td>
+  <center>
+   <a href="./horz/mappng/region1_map.png" target="fmain"><img src="./horz/mappng/region1_map.png"
+    width="60" height="80" border="1"></a></center>
+   <center>W232</center>
+   <br>
+ </td>
+
+</body>
+</html>

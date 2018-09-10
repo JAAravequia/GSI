@@ -1,0 +1,38 @@
+SHELL=/bin/sh
+#
+#
+.SUFFIXES: .f90
+
+OBJS=main_readwrite_list.o readwrite_list.o readwrite_list_sfc.o 
+
+CMD=readwrite_list_reg.x
+
+FC=ifort
+
+LIBS = -L/nwprod/lib -lw3nco_4 -lw3emc_4 -lbufr_4_64
+
+FFLAGS = -O2 -convert big_endian -assume byterecl
+
+LDFLAGS = 
+
+
+$(CMD):		$(OBJS) 
+	$(FC) $(LDFLAGS) ${FFLAGS} -o $(@) $(OBJS) ${LIBS}
+
+
+clean:
+	-rm -f *.o ${CMD}
+
+clobber:	clean
+	-rm -f $(CMD) $(CMD).prof
+
+void:	clobber
+	-rm -f $(SRCS)
+
+.f.o:
+	${FC} -c ${FFLAGS} $*.f
+
+.f90.o:
+	${FC} -c ${FFLAGS} $*.f90
+
+
