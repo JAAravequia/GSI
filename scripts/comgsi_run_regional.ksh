@@ -82,8 +82,10 @@ set -x
     datem1=`date -u -d "$PDYa $cyca -1 hour" +%Y-%m-%d_%H:%M:%S` #1hr ago
     datep1=`date -u -d "$PDYa $cyca 1 hour"  +%Y-%m-%d_%H:%M:%S`  #1hr later
     if [ ${if_nemsio} = Yes ]; then
+      if_gfs_nemsio='.true.'
       ENSEMBLE_FILE_mem=${ENS_ROOT}/gdas.t${gHH}z.atmf006s.mem
     else
+      if_gfs_nemsio='.false.'
       ENSEMBLE_FILE_mem=${ENS_ROOT}/sfg_${gdate}_fhr06s_mem
     fi
 
@@ -92,11 +94,9 @@ set -x
       BK_FILE_M1=${BK_ROOT}/wrfout_d01_${datem1}
 
       if [ ${if_nemsio} = Yes ]; then
-        if_gfs_nemsio='.true.'
         ENSEMBLE_FILE_mem_p1=${ENS_ROOT}/gdas.t${gHH}z.atmf009s.mem
         ENSEMBLE_FILE_mem_m1=${ENS_ROOT}/gdas.t${gHH}z.atmf003s.mem
       else
-        if_gfs_nemsio='.false.'
         ENSEMBLE_FILE_mem_p1=${ENS_ROOT}/sfg_${gdate}_fhr09s_mem
         ENSEMBLE_FILE_mem_m1=${ENS_ROOT}/sfg_${gdate}_fhr03s_mem
       fi
