@@ -1,0 +1,93 @@
+
+
+
+ &SETUP
+   miter=2,niter(1)=10,niter(2)=10,
+   write_diag(1)=.true.,write_diag(2)=.true.,write_diag(3)=.true.,
+   gencode=78,qoption=1,tsensible=.true.
+   factqmin=1.0,factqmax=1.0,factv=0.1,factcldch=0.1,factw10m=1.0,deltim=1200,
+   iguess=-1,
+   oneobtest=.false.,retrieval=.false.,
+   diag_rad=.false.,diag_pcp=.false.,diag_ozone=.false.,diag_aero=.false.,
+   nhr_assimilation=6,min_offset=180,use_compress=.false.,lrun_subdirs=.true.,
+   use_prepb_satwnd=.false.,
+   
+ /
+ &GRIDOPTS
+   JCAP=62,JCAP_B=62,NLAT=,NLON=,nsig=60,
+   wrf_nmm_regional=.false.,wrf_mass_regional=.false.,twodvar_regional=.true.,
+   diagnostic_reg=.false.,
+   filled_grid=.false.,half_grid=.true.,netcdf=.false.,
+ /
+ &BKGERR
+   hzscl=1.414,1.000,0.707,
+   vs=0.5,bw=0.0,
+ /
+ &ANBKGERR
+   anisotropic=.true.,an_vs=0.5,ngauss=1,
+   an_flen_u=-5.,an_flen_t=3.,an_flen_z=-200.,
+   ifilt_ord=2,npass=3,normal=-200,grid_ratio=1.,nord_f2a=4,
+   rtma_subdomain_option=.true.,triad4=.true.,nsmooth=0,nsmooth_shapiro=0,lreadnorm=.true.,
+ /
+ &JCOPTS
+ /
+ &STRONGOPTS
+   nstrong=1,nvmodes_keep=20,period_max=3.,
+   baldiag_full=.true.,baldiag_inc=.true.,
+ /
+ &OBSQC
+   dfact=0.75,dfact1=3.0,noiqc=.true.,c_varqc=0.02,vadfile='prepbufr',hilbert_curve=.true.,
+   buddycheck_t=.false.,buddydiag_save=.false.,oberrflg=.true.,njqc=.true.,vqc=.false.,
+   closest_obs=.false.
+ /
+ &OBS_INPUT
+   dmesh(1)=60.0,dmesh(2)=60.0,dmesh(3)=60.0,dmesh(4)=60.0,time_window_max=3.0,
+ /
+OBS_INPUT::
+!  dfile          dtype     dplat     dsis     dval    dthin  dsfcalc
+   prepbufr       ps        null      ps       1.0     0      0
+   prepbufr       t         null      t        1.0     0      0
+   prepbufr       q         null      q        1.0     0      0
+   prepbufr       uv        null      uv       1.0     0      0
+   satwndbufr     uv        null      uv       1.0     0      0
+   prepbufr       spd       null      spd      1.0     0      0
+   prepbufr       wspd10m   null      wspd10m  1.0     0      0
+   satwnd         wspd10m   null      wspd10m  1.0     0      0
+   prepbufr       uwnd10m   null      uwnd10m  1.0     0      0
+   satwnd         uwnd10m   null      uwnd10m  1.0     0      0
+   prepbufr       vwnd10m   null      vwnd10m  1.0     0      0
+   satwnd         vwnd10m   null      vwnd10m  1.0     0      0
+   prepbufr       gust      null      gust     1.0     0      0
+   prepbufr       vis       null      vis      1.0     0      0
+   prepbufr       td2m      null      td2m     1.0     0      0
+   mxtmdat        mxtm      null      mxtm     1.0     0      0
+   mitmdat        mitm      null      mitm     1.0     0      0
+   prepbufr       mxtm      null      mxtm     1.0     0      0
+   prepbufr       mitm      null      mitm      1.0     0      0
+   prepbufr       pmsl      null      pmsl     1.0     0      0
+   prepbufr       howv      null      howv     1.0     0      0
+   satmar         howv      null      howv     1.0     0      0
+   prepbufr       tcamt     null      tcamt    1.0     0      0
+   goessky        tcamt     null      tcamt    1.0     0      0
+   prepbufr       cldch     null      cldch    1.0     0      0
+::
+ &SUPEROB_RADAR
+ /
+ &LAG_DATA
+ /
+ &HYBRID_ENSEMBLE
+ /
+ &RAPIDREFRESH_CLDSURF
+   dfi_radar_latent_heat_time_period=30.0,
+ /
+ &CHEM
+ /
+ &SINGLEOB_TEST
+   maginnov=0.1,magoberr=0.1,oneob_type='t',
+   oblat=36.,oblon=260.,obpres=1000.,obdattim=,
+   obhourset=0.,
+ /
+ &NST
+ /
+
+

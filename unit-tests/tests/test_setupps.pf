@@ -1,0 +1,247 @@
+module Test_setupps_mod
+   use adjtest
+   use pfunit_mod
+   implicit none
+
+   public :: Test_setupps
+
+@TestCase
+   type, extends(TestCase) :: Test_setupps
+   contains
+      procedure :: setUp     ! overides generic
+      procedure :: tearDown  ! overrides generic
+   end type Test_setupps
+
+contains
+
+   ! No need to annotate setUp() when _extending_ TestCase
+   subroutine setUp(this)
+
+      class (Test_setupps), intent(inout) :: this
+
+
+   end subroutine setUp
+
+   ! No need to annotate tearDown() _extending_ TestCase
+   subroutine tearDown(this)
+      class (Test_setupps), intent(inout) :: this
+   end subroutine tearDown
+
+@Test
+   subroutine testSetupps(this)
+      use gsimod, only: gsimain_initialize
+      use kinds, only: i_kind,r_kind
+      use mpeu_util, only: die
+      use obsmod, only: obs_setup
+      use mpimod, only: mpi_comm_world,ierror
+      use gridmod, only: create_grid_vars,nsig
+      use observermod, only: observer_init,ndata
+      use setupcldch_mod, only: setupcldch_class
+      use setupbend_mod, only: setupbend_class
+      use setupco_mod, only: setupco_class
+      use setupdw_mod, only: setupdw_class
+      use setupgust_mod, only: setupgust_class
+      use setuphowv_mod, only: setuphowv_class
+      use setuplcbas_mod, only: setuplcbas_class
+      use setupmitm_mod, only: setupmitm_class
+      use setupmxtm_mod, only: setupmxtm_class
+      use setupoz_mod, only: setupoz_class
+      use setuppblh_mod, only: setuppblh_class
+      use setuppm10_mod, only: setuppm10_class
+      use setuppm2_5_mod, only: setuppm2_5_class
+      use setuppmsl_mod, only: setuppmsl_class
+!     use setuppcp_mod, only: setuppcp_class
+      use setuppw_mod, only: setuppw_class
+      use setupps_mod, only: setupps_class
+      use setupq_mod, only: setupq_class
+      use setupref_mod, only: setupref_class
+      use setuprw_mod, only: setuprw_class
+      use setupspd_mod, only: setupspd_class
+      use setupt_mod, only: setupt_class
+      use setuptcamt_mod, only: setuptcamt_class
+      use setuptcp_mod, only: setuptcp_class
+      use setupvis_mod, only: setupvis_class
+      use setupw_mod, only: setupw_class
+      use setupwspd10m_mod, only: setupwspd10m_class
+      use m_rhs, only: rhs_alloc
+      use m_rhs, only: rhs_dealloc
+      use m_rhs, only: rhs_allocated
+      use m_rhs, only: bwork  => rhs_bwork
+      use m_rhs, only: awork  => rhs_awork
+      use m_rhs, only: stats_oz => rhs_stats_oz
+      use m_rhs, only: aivals => rhs_aivals
+      use m_rhs, only: toss_gps_sub => rhs_toss_gps
+      use m_rhs, only: toss_gps_sub => rhs_toss_gps
+      use m_rhs, only: stats_co => rhs_stats_co
+ 
+      class (Test_setupps), intent(inout) :: this
+      integer(i_kind) :: mype
+      type(setupcldch_class) :: cldch
+      type(setupbend_class) :: bend
+      type(setupco_class) :: co
+      type(setupdw_class) :: dw
+      type(setupgust_class) :: gust
+      type(setuphowv_class) :: howv
+      type(setuplcbas_class) :: lcbas
+      type(setupmitm_class) :: mitm
+      type(setupmxtm_class) :: mxtm
+      type(setupoz_class) :: ozlay
+      type(setupoz_class) :: ozlev
+      type(setuppblh_class) :: pblh 
+!     type(setuppcp_class) :: pcp  
+      type(setuppm10_class) :: pm10 
+      type(setuppm2_5_class) :: pm2_5
+      type(setuppmsl_class) :: pmsl
+      type(setupps_class) :: ps
+      type(setuppw_class) :: pw
+      type(setupq_class) :: q
+      type(setupref_class) :: ref
+      type(setuprw_class) :: rw
+      type(setupspd_class) :: spd
+      type(setupt_class) :: t
+      type(setuptcamt_class) :: tcamt
+      type(setuptcp_class) :: tcp
+      type(setupvis_class) :: vis
+      type(setupw_class) :: w
+      type(setupwspd10m_class) :: wspd10m
+      logical conv_diagsave, ozone_diagsave, init_pass, last_pass
+      integer(i_kind) lunin,nobs,nele,is
+      character(20)::isis
+      character(10)::obstype
+      integer(i_kind) ier,nreal,nchanl,i
+      integer(i_kind) i_dw,i_rw,i_sst,i_tcp,i_gps,i_uv,i_ps,i_lag,&
+       i_t,i_pw,i_q,i_co,i_gust,i_vis,i_ref,i_pblh,i_wspd10m,i_td2m,&
+       i_mxtm,i_mitm,i_pmsl,i_howv,i_tcamt,i_lcbas,i_cldch,i_uwnd10m,i_vwnd10m,&
+       i_swcp,i_lwcp,iobs,nprt
+      real(r_kind),allocatable,dimension(:,:):: awork1
+      i_ps = 1
+      i_uv = 2
+      i_t  = 3
+      i_q  = 4
+      i_pw = 5
+      i_rw = 6
+      i_dw = 7
+      i_gps= 8
+      i_sst= 9 
+      i_tcp= 10
+      i_lag= 11
+      i_co = 12
+      i_gust=13
+      i_vis =14
+      i_pblh=15
+      i_wspd10m=16
+      i_td2m=17
+      i_mxtm=18
+      i_mitm=19
+      i_pmsl=20
+      i_howv=21
+      i_tcamt=22
+      i_lcbas=23
+      i_cldch=24
+      i_uwnd10m=26
+      i_vwnd10m=27
+      i_swcp=28
+      i_lwcp=29
+      i_ref =i_lwcp
+
+      init_pass = .true.
+      last_pass = .true.
+      ozone_diagsave = .false.
+      conv_diagsave = .false.
+      write(6,*) "HEY, calling initialize"
+      call gsimain_initialize
+      write(6,*) ' done with initialize'      
+      call mpi_comm_rank(mpi_comm_world,mype,ierror)
+! Allocate grid arrays.
+      call create_grid_vars
+
+! Get date, grid, and other information from model guess files
+      call gesinfo(mype)
+      call observer_init()
+      obs_setup = 'dir.0000/obs_setup'
+      allocate(awork1(7*nsig+100,29))
+      if(.not.rhs_allocated) call rhs_alloc(aworkdim2=size(awork1,2))
+      cldch = setupcldch_class('setupcldch','var::ps','var::z','var::cldch')
+      bend = setupbend_class('setupbend', 'var::z', 'var::tv', 'var::q')
+      co = setupco_class('setupco', 'var::co' )
+      dw = setupdw_class('setupdw', 'var::ps', 'var::z', 'var::u', 'var::v')
+      gust = setupgust_class('setupgust', 'var::ps', 'var::z', 'var::gust')
+      howv = setuphowv_class('setuphowv', 'var::ps', 'var::z', 'var::howv')
+      lcbas = setuplcbas_class('setuplcbas', 'var::lcbas', 'var::z')
+      mitm = setupmitm_class('setupmitm', 'var::ps', 'var::z', 'var::mitm')
+      mxtm = setupmxtm_class('setupmxtm', 'var::ps', 'var::z', 'var::mxtm')
+      ozlay = setupoz_class('setupozlay', 'var::oz' )
+      ozlev = setupoz_class('setupozlev', 'var::oz', 'var::ps' )
+      pblh = setuppblh_class('setuppblh', 'var::z', 'var::ps' )
+!     pcp = setuppcp_class('setuppcp', 'var::ps', 'var::u', 'var::v', 'var::div', 'var::q',&
+!                  'var::prs_ten', 'var::tv_ten', 'var::q_ten', 'var::ps_lon', 'var::ps_lat')
+      pm10 = setuppm10_class('setuppm10', 'var::ps', 'var::z', 'var::pm10', 'var::tv')
+      pm2_5 = setuppm2_5_class('setuppm2_5', 'var::ps', 'var::z', 'var::pm2_5', 'var::tv')
+      wspd10m = setupwspd10m_class('var::wspd10m', 'var::ps', 'var::z', 'var::u', 'var::v', 'var::tv')
+      pmsl = setuppmsl_class('setuppmsl', 'var::ps', 'var::z', 'var::pmsl')
+      ps = setupps_class('setupps','var::ps','var::z ','var::tv')
+      pw = setuppw_class('setuppw','var::tv','var::z ','var::q')
+      q = setupq_class('setupq','var::ps','var::q2m ','var::q')
+      ref = setupref_class('setupref','var::tv','var::z','var::q')
+      rw = setuprw_class('setuprw','var::ps','var::z','var::u','var::v','var::w')
+      spd = setupspd_class('setupspd','var::ps','var::z','var::u','var::v','var::tv')
+      tcamt = setuptcamt_class('setuptcamt','var::tcamt')
+      tcp = setuptcp_class('setuptcp','var::ps', 'var::z', 'var::tv')
+      t = setupt_class('setupt','var::ps', 'var::v', 'var::u', 'var::q', 'var::tv')
+      vis = setupvis_class('setupvis','var::ps', 'var::z', 'var::vis')
+      w = setupw_class('setupw','var::ps', 'var::z', 'var::v', 'var::u', 'var::tv')
+
+
+      write(6,*) 'obsname is ',cldch%myname
+      write(6,*) 'varnames are  ',cldch%varnames(1:cldch%numvars)
+      lunin = 1 
+      open(lunin,file=obs_setup,form='unformatted')
+      read(lunin,iostat=ier) obstype,isis,nreal,nchanl
+      do i = 1,10
+        write(6,*) 'HEY!!! STARTING LOOP NUMBER ',i
+        rewind lunin 
+        write(6,*) 'calling cldch'
+        call cldch%setup(lunin,mype,bwork,awork(1,i_cldch),nele,nobs,is,conv_diagsave)
+        write(6,*) 'calling bend'
+!       call bend%setup(lunin,mype,bwork,awork(1,i_gps),nele,nobs,is,conv_diagsave)
+        call bend%setupbend(lunin,mype,awork(1,8),nele,nobs,toss_gps_sub,is,.false.,.false.)
+!       call co%setup(lunin,mype,bwork,awork(1,i_co),nele,nobs,is,conv_diagsave)
+        call co%setupco(lunin,mype,stats_co,nchanl,nreal,nobs,&
+                   obstype,isis,is,conv_diagsave,.false.)
+        call dw%setup(lunin,mype,bwork,awork(1,i_dw),nele,nobs,is,conv_diagsave)
+        call gust%setup(lunin,mype,bwork,awork(1,i_gust),nele,nobs,is,conv_diagsave)
+        call mitm%setup(lunin,mype,bwork,awork(1,i_mitm),nele,nobs,is,conv_diagsave)
+        call mxtm%setup(lunin,mype,bwork,awork(1,i_mxtm),nele,nobs,is,conv_diagsave)
+        call ozlev%setupozlev(lunin,mype,stats_oz,nchanl,nreal,nobs,&
+                        obstype,isis,is,ozone_diagsave,init_pass)
+        call ozlay%setupozlay(lunin,mype,stats_oz,nchanl,nreal,nobs,&
+                        obstype,isis,is,ozone_diagsave,init_pass)
+        call pblh%setup(lunin,mype,bwork,awork(1,i_pblh),nele,nobs,is,conv_diagsave)
+!       call pcp%setuppcp(lunin,mype,bwork,awork(1,i_pcp),nele,nobs,is,conv_diagsave)
+!       call setuppcp(lunin,mype,aivals,nele,nobs,obstype,isis,is,conv_diagsave,init_pass)
+        call pm10%setuppm10(lunin,mype,nreal,nobs,isis,is,conv_diagsave)
+!       call pm2_5%setup(lunin,mype,bwork,awork(1,i_pm2_5),nele,nobs,is,conv_diagsave)
+        call pm2_5%setuppm2_5(lunin,mype,nele,nobs,isis,is,conv_diagsave)
+        call pmsl%setup(lunin,mype,bwork,awork(1,i_pmsl),nele,nobs,is,conv_diagsave)
+        call ps%setup(lunin,mype,bwork,awork(1,i_ps),nele,nobs,is,conv_diagsave)
+        call pw%setup(lunin,mype,bwork,awork(1,i_pw),nele,nobs,is,conv_diagsave)
+        call q%setup(lunin,mype,bwork,awork(1,i_q),nele,nobs,is,conv_diagsave)
+  !     call ref%setupref(lunin,mype,awork(1,8),nele,nobs,toss_gps_sub,is,.false.,last_pass)
+        call rw%setup(lunin,mype,bwork,awork(1,i_rw),nele,nobs,is,conv_diagsave)
+        call spd%setup(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
+        call tcamt%setup(lunin,mype,bwork,awork(1,i_tcamt),nele,nobs,is,conv_diagsave)
+        call tcp%setup(lunin,mype,bwork,awork(1,i_tcp),nele,nobs,is,conv_diagsave)
+        call t%setup(lunin,mype,bwork,awork(1,i_t),nele,nobs,is,conv_diagsave)
+        call vis%setup(lunin,mype,bwork,awork(1,i_vis),nele,nobs,is,conv_diagsave)
+        call w%setup(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
+        call wspd10m%setup(lunin,mype,bwork,awork(1,i_wspd10m),nele,nobs,is,conv_diagsave)
+      enddo     
+!     call setuprhsall(ndata,mype,.true.,.true.)
+
+      @assertEqual(1, 1)
+!     @assertEqual(3, ifilesfc(1))
+!     @assertEqual(2.0, hrdifsfc(1))
+
+   end subroutine testSetupps
+
+end module Test_setupps_mod
