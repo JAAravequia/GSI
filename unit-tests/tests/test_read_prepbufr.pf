@@ -29,12 +29,26 @@ contains
       use satthin, only: sfc_rough_full,isli_anl,sno_anl,soil_moi_full,veg_frac_full,veg_type_full
       use satthin, only: dlat_grid,dlon_grid
       use satthin, only: rlat_min,rlon_min
-      integer ierror,omp_get_num_threads
+!     integer ierror,omp_get_num_threads
       class (Test_read_prepbufr), intent(inout) :: this
+      INTEGER NTHREADS, TID, OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
+  
+!!!$OMP PARALLEL PRIVATE(NTHREADS, TID)
+
+
+      TID = OMP_GET_THREAD_NUM()
+      PRINT *, 'Hello World from thread = ', TID
+
+      IF (TID .EQ. 0) THEN
+        NTHREADS = OMP_GET_NUM_THREADS()
+        PRINT *, 'Number of threads = ', NTHREADS
+      END IF
+
+
 
   write(6,*) 'HEY BEFORE prepbufr-num threads is ',omp_get_num_threads()
-      call MPI_Init(ierror)
-  write(6,*) 'HEY BEFORE prepbufr-num threads is ',omp_get_num_threads()
+!     call MPI_Init(ierror)
+! write(6,*) 'HEY BEFORE prepbufr-num threads is ',omp_get_num_threads()
       dlat_grid = 1.0
       dlon_grid = 1.0
       rlat_min = 1.0
@@ -61,6 +75,7 @@ contains
 
 !     call gesinfo(0)
 !     call getsfc(0,0,.false.,.false.)
+!!!$OMP END PARALLEL
 
    end subroutine setUp
 
@@ -85,7 +100,8 @@ contains
       integer(i_kind),dimension(1)           :: nobs
       real(r_kind)                           :: twindin
       real(r_kind),dimension(96,192,64)      :: prsl_full
-      integer ierror,omp_get_num_threads
+!     integer ierror,omp_get_num_threads
+      INTEGER NTHREADS, TID, OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
 
       nread = 0
       ndata = 0
@@ -97,13 +113,17 @@ contains
       sis = "uv"
       nobs(1) = 0
       nrec_start = 1 
+!!$OMP PARALLEL PRIVATE(NTHREADS, TID)
+!        NTHREADS = OMP_GET_NUM_THREADS()
+!      PRINT *, 'Number of threads = ', NTHREADS
       call read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                      prsl_full,nobs,nrec_start)
 
 !     @assertEqual(999, ntguessfc)
 !     @assertEqual(3, ifilesfc(1))
 !     @assertEqual(3.0, hrdifsfc(1))
-      call MPI_Finalize(ierror)
+!     call MPI_Finalize(ierror)
+!!$OMP END PARALLEL
    end subroutine testReadPrepbufr
 
 end module Test_read_prepbufr_mod
