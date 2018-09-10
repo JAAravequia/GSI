@@ -12,7 +12,7 @@ module variables
   integer,allocatable,dimension(:):: na,nb
 
 ! from GSI gridmod:
-  logical hybrid,db_prec,biasrm,vertavg
+  logical hybrid,db_prec,biasrm,vertavg,use_gfs_nemsio
   integer nlat,nlon,nsig,dimbig,option,noq,lat1,lon1
   integer ntrac5,idvc5,idvm5,idpsfc5,idthrm5
   real(r_kind),allocatable,dimension(:):: rlons,ak5,bk5,ck5,cp5
@@ -99,6 +99,42 @@ module variables
 ! Derived constants
   parameter(fv = rv/rd-1._r_kind)       ! used in virtual temp. equation   ()
 
+  type:: ncepgfs_head
+     integer:: ivs
+     integer:: version
+     real(r_kind) :: fhour
+     integer:: idate(4)
+     integer:: nrec
+     integer:: latb
+     integer:: lonb
+     integer:: levs
+     integer:: jcap
+     integer:: itrun
+     integer:: iorder
+     integer:: irealf
+     integer:: igen
+     integer:: latf
+     integer:: lonf
+     integer:: latr
+     integer:: lonr
+     integer:: ntrac
+     integer:: icen2
+     integer:: iens(2)
+     integer:: idpp
+     integer:: idsl
+     integer:: idvc
+     integer:: idvm
+     integer:: idvt
+     integer:: idrun
+     integer:: idusr
+     real(r_kind) :: pdryini
+     integer:: ncldt
+     integer:: ixgr
+     integer:: nvcoord
+     integer:: idrt
+  end type ncepgfs_head
+
+
 contains 
 
   subroutine init_defaults
@@ -115,6 +151,7 @@ contains
     smoothdeg=4.0
     dimbig=5000
     noq=5
+    use_gfs_nemsio=.false.
 
   end subroutine init_defaults
 
@@ -210,7 +247,8 @@ contains
 
   subroutine destroy_variables
     deallocate(rlats,rlons)
-    deallocate(ak5,bk5,ck5,cp5)
+    deallocate(ak5,bk5,ck5)
+    if (.not. use_gfs_nemsio) deallocate(cp5)
     deallocate(coef)
     deallocate(coriolis)
 
