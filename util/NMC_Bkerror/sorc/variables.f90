@@ -51,14 +51,17 @@ module variables
 ! Bias correction arrays
   real(r_kind),allocatable,dimension(:,:,:):: bbiasz,bbiasd,bbiast,bcorrz,bcorrd,bcorrt
   real(r_kind),allocatable,dimension(:,:):: bbiasp,bcorrp
+  real(r_kind),allocatable,dimension(:,:):: bbiasaod,bcorraod
 
 ! variances
   real(r_kind),allocatable,dimension(:,:):: sfvar,vpvar,tvar,qvar,ozvar,cvar,nrhvar
   real(r_kind),allocatable,dimension(:):: psvar
+  real(r_kind),allocatable,dimension(:):: aodvar
 
 ! horizontal length scales
   real(r_kind),allocatable,dimension(:,:):: sfhln,vphln,thln,qhln,ozhln,chln
   real(r_kind),allocatable,dimension(:):: pshln
+  real(r_kind),allocatable,dimension(:):: aodhln
 
 ! vertical length scales
   real(r_kind),allocatable,dimension(:,:):: sfvln,vpvln,tvln,qvln,ozvln,cvln
@@ -167,13 +170,15 @@ contains
 
     allocate(sfvar(nlat,nsig),vpvar(nlat,nsig),&
              tvar(nlat,nsig),qvar(nlat,nsig),&
-             ozvar(nlat,nsig),cvar(nlat,nsig),psvar(nlat))
+             ozvar(nlat,nsig),cvar(nlat,nsig),psvar(nlat),&
+             aodvar(nlat))
 
     allocate(nrhvar(nlat,nsig))
 
     allocate(sfhln(nlat,nsig),vphln(nlat,nsig),&
              thln(nlat,nsig),qhln(nlat,nsig),&
-             ozhln(nlat,nsig),chln(nlat,nsig),pshln(nlat))
+             ozhln(nlat,nsig),chln(nlat,nsig),pshln(nlat),&
+             aodhln(nlat))
 
     allocate(sfvln(nlat,nsig),vpvln(nlat,nsig),&
              tvln(nlat,nsig),qvln(nlat,nsig),&
@@ -190,6 +195,7 @@ contains
     sfvln=zero ; vpvln=zero ; tvln=zero ; qvln=zero ; ozvln=zero
     cvln=zero
     tcon=zero ; vpcon=zero ; pscon=zero
+    aodvar=zero; aodhln=zero
 
   end subroutine create_grids
 
@@ -247,6 +253,7 @@ contains
     deallocate(sfvln,vpvln,tvln,qvln,ozvln,cvln)
     deallocate(tcon,vpcon,pscon)
     deallocate(nrhvar)
+    deallocate(aodvar,aodhln)
   end subroutine destroy_grids
 
   subroutine destroy_variables
