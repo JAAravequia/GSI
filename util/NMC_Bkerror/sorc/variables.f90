@@ -11,6 +11,9 @@ module variables
   character(100),allocatable,dimension(:):: filename
   integer,allocatable,dimension(:):: na,nb
 
+! for AOD Bkerror
+  logical calc_aod
+
 ! from GSI gridmod:
   logical hybrid,db_prec,biasrm,vertavg,use_gfs_nemsio
   integer nlat,nlon,nsig,dimbig,option,noq,lat1,lon1
@@ -135,12 +138,12 @@ module variables
   end type ncepgfs_head
 
 
-contains 
+contains
 
   subroutine init_defaults
 
     implicit none
-    
+
     nsig=64
     maxcases=10
     nlat=258
@@ -152,12 +155,13 @@ contains
     dimbig=5000
     noq=5
     use_gfs_nemsio=.false.
+    calc_aod=.false.
 
   end subroutine init_defaults
 
   subroutine create_grids
     implicit none
-    
+
     allocate(coef(3*nlat+4*(2*(noq+5)+1)*(nlat+nlon/2)))
     allocate(coriolis(nlat))
 
@@ -181,10 +185,10 @@ contains
 ! initialize all variables to zero
     sfvar=zero ; vpvar=zero ; tvar=zero ; qvar=zero ; ozvar=zero
     cvar=zero ; psvar =zero ; nrhvar=zero
-    sfhln=zero ; vphln=zero ; thln=zero ; qhln=zero ; ozhln=zero 
+    sfhln=zero ; vphln=zero ; thln=zero ; qhln=zero ; ozhln=zero
     chln=zero ; pshln=zero
     sfvln=zero ; vpvln=zero ; tvln=zero ; qvln=zero ; ozvln=zero
-    cvln=zero 
+    cvln=zero
     tcon=zero ; vpcon=zero ; pscon=zero
 
   end subroutine create_grids
@@ -236,7 +240,7 @@ contains
 
   subroutine destroy_grids
     implicit none
- 
+
     deallocate(filename,na,nb)
     deallocate(sfvar,vpvar,tvar,qvar,ozvar,cvar,psvar)
     deallocate(sfhln,vphln,thln,qhln,ozhln,chln,pshln)

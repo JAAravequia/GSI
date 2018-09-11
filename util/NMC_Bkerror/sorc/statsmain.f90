@@ -11,8 +11,8 @@ program statsmain
 !                        to create byte addressable files for viewing using
 !                        GRADS, compute variances for pseudo-RH and normalized
 !                        RH, use IO on gridded fields to reduce memory usage
-!   2009-02-xx  kleist   perform complete overhaul of MPI usage to use 
-!                        subdomain structure of GSI and significanlty reduce 
+!   2009-02-xx  kleist   perform complete overhaul of MPI usage to use
+!                        subdomain structure of GSI and significanlty reduce
 !                        memory requirements
 !   2017-10-25  Razvan Stefanescu (Spire)
 !                        added the capability of reading nemsio files using
@@ -20,7 +20,7 @@ program statsmain
 !
 ! abstract:
 !   This code computes background error statistics to be used with the
-!   GSI analysis code.  The NMC method, utilizing 24/48 hour forecast 
+!   GSI analysis code.  The NMC method, utilizing 24/48 hour forecast
 !   pairs valid at the same time, is used to compute variance, length
 !   scale, and linear balance projection estimates.
 !
@@ -30,12 +30,12 @@ program statsmain
 !
 ! output files:
 !   gsi.berror_stats - double precision stats output (serves as input to GSI)
-!   bgstats_sp.grd   - single precision byte-addressable file for latidude 
+!   bgstats_sp.grd   - single precision byte-addressable file for latidude
 !                      dependent variables
 !   sststats_sp.grd  - single precision byte-addressable file SST statistics
 !
 ! remarks:
-!   This code is primarily a research code, and has not been well tested.  If 
+!   This code is primarily a research code, and has not been well tested.  If
 !   problems are found, please contact Daryl (daryl.kleist@noaa.gov)
 !
 ! attributes:
@@ -47,7 +47,7 @@ program statsmain
       smoothdeg,init_defaults,create_grids,destroy_grids,&
       destroy_variables,rearth,rlats,wgtlats,mype,npe,&
       create_mapping,destroy_mapping,biasrm,destroy_biasrm,&
-      vertavg,use_gfs_nemsio
+      vertavg,use_gfs_nemsio,calc_aod
   use specgrid, only: jcap,jcapin,jcapsmooth,init_spec_vars,destroy_spec_vars
   use postmod, only: writefiles
   use comm_mod, only: init_mpi_vars,destroy_mpi_vars
@@ -71,9 +71,10 @@ program statsmain
 !   hybrid    - logical for hybrid vertical coordinate
 !   smoothdeg - degree of horizontal smoothing to apply in latitudinal direction
 !   use_gfs_nemsio - if T, NEMS I/O file format is used
+!   calc_aod   - if T, and if use_gfs_nemsio=T, will read in AOD as a variable from separate input files and output to same file
 
   namelist/namstat/jcap,jcapin,jcapsmooth,nsig,nlat,nlon,maxcases, &
-                   hybrid,smoothdeg,biasrm,vertavg,use_gfs_nemsio
+                   hybrid,smoothdeg,biasrm,vertavg,use_gfs_nemsio,calc_aod
 
 ! MPI initial setup
   call mpi_init(ierror)
@@ -120,7 +121,7 @@ program statsmain
 
 ! Read in spectral coeffs and right out subdomain grids to scratch files
   call readpairs(npe,mype,numcases)
-  
+
   if(biasrm) call biascor(numcases,mype)
 
 ! Get balance projection matrices
@@ -155,4 +156,4 @@ program statsmain
   if (mype==0) write(6,*) '*** STATS CODE COMPLETE! ***'
   call mpi_finalize(ierror)
 
-end program statsmain 
+end program statsmain
