@@ -5,7 +5,7 @@ subroutine initvars(mype,npe)
       dimbig,filename,nlat,sweight,&
       na,nb,pi,db_prec,coriolis, &
       two,omega,idpsfc5,idvm5,idvc5,idthrm5, &
-      naoda,naodb
+      naoda,naodb,aodfilename
   use specgrid, only: wlat,slat,jb,je
   implicit none
 
@@ -17,6 +17,7 @@ subroutine initvars(mype,npe)
 
   allocate(filename(dimbig))
   allocate(aodfilename(dimbig))
+
   allocate(na(dimbig),nb(dimbig))
   allocate(naoda(dimbig),naodb(dimbig))
 

@@ -4,7 +4,8 @@ subroutine readpairs(npe,mype,numcases)
       na,nb,filename,hybrid,db_prec,zero,one,fv,&
       idpsfc5,idthrm5,cp5,ntrac5,idvc5,idvm5,lat1,lon1,&
       iglobal,ijn_s,displs_s,filunit1,filunit2,&
-      ird_s,irc_s,displs_g, ijn
+      ird_s,irc_s,displs_g, ijn,&
+      naoda,naodb,aodfilename
   use variables, only: use_gfs_nemsio
   use specgrid, only: sptez_s,nc,ncin,factvml,&
       factsml,enn1,ncd2,jcaptrans,jcap,jcapin,unload_grid,&
@@ -31,6 +32,7 @@ subroutine readpairs(npe,mype,numcases)
   real(r_kind),dimension(lat1,lon1,nsig):: sf1,sf2,vp1,vp2,t1,t2,&
        rh1,rh2,oz1,oz2,cw1,cw2,q1,q2,ts1,ts2,qs1,qs2
   real(r_kind),dimension(lat1,lon1):: ps1,ps2
+  real(r_kind),dimension(lat1,lon1):: aod1,aod2
   real(r_kind),dimension(lat1,lon1,nsig,ntrac5):: trac1,trac2
   real(r_kind),dimension(lat1,lon1,nsig):: p3d1, p3d2
   real(r_kind),dimension(lat1,lon1,nsig):: q3d1, q3d2
@@ -39,7 +41,7 @@ subroutine readpairs(npe,mype,numcases)
 !  real(r_single),dimension(ncin,nsig1o):: z41,z42
 !  real(r_single),dimension(ncin,6*nsig+1):: z4all, z4all2
   real(r_kind),dimension(ncin,nsig1o):: z41,z42
-  real(r_kind),dimension(ncin,6*nsig+1):: z4all, z4all2
+  real(r_kind),dimension(ncin,6*nsig+2):: z4all, z4all2
 
   real(r_kind),dimension(nlon,nlat-2):: grid1,grid2
   real(r_kind),dimension(iglobal,nsig1o):: work1,work2
@@ -68,7 +70,7 @@ subroutine readpairs(npe,mype,numcases)
   z4all  = 0.0
   z4all2 = 0.0
 
-  nfields = 1+5*nsig !ps, (u,v), t, q, oz, cw
+  nfields = 2+5*nsig !aod, ps, (u,v), t, q, oz, cw
   allocate(taskid(nfields))
   call create_task_info(nfields, npe, taskid)
 
@@ -287,7 +289,7 @@ subroutine readpairs(npe,mype,numcases)
      if (mype==0)  write(6,*)'opening=', inges,filename(na(n))
      if (mype==0)  write(6,*)'opening=', inge2,filename(nb(n))
 
-     ! Get spectral information from 
+     ! Get spectral information from
      if (mype==proc1)   call sigio_srohdc(inges,filename(na(n)),sighead1,sigdata1,iret)
      if (mype==proc2)   call sigio_srohdc(inge2,filename(nb(n)),sighead1,sigdata1,iret)
      call mpi_barrier(mpi_comm_world,iret2)
@@ -323,7 +325,7 @@ subroutine readpairs(npe,mype,numcases)
 
   call mpi_barrier(mpi_comm_world,iret2)
 
-  work1=zero ; work2=zero 
+  work1=zero ; work2=zero
 
   do k=1,nsig1o
      ! Check: Streamfunction level?
@@ -419,14 +421,16 @@ subroutine readpairs(npe,mype,numcases)
            call unload_grid(grid1,work1(1,k))
            call unload_grid(grid2,work2(1,k))
         end if
+     else if(nvar_id(k).eq.8) then ! aod
+       ! CRM placeholder for now CRM
      else ! No nsig1o level to process
 !!        write(6,*) 'READPAIRS:  No Level to process, k,mype,levs_id,nvar_id = ',k,mype,levs_id(k),nvar_id(k)
      endif
   end do  !End do nsig1o levs
 
 ! CALL GRID2SUB HERE
-    call grid2sub(work1,sf1,vp1,t1,q1,oz1,cw1,ps1)
-    call grid2sub(work2,sf2,vp2,t2,q2,oz2,cw2,ps2)
+    call grid2sub(work1,sf1,vp1,t1,q1,oz1,cw1,ps1,aod1)
+    call grid2sub(work2,sf2,vp2,t2,q2,oz2,cw2,ps2,aod2)
 
     if ( use_gfs_nemsio ) then
        !replace with original grid values from nemsio file
@@ -535,8 +539,8 @@ subroutine readpairs(npe,mype,numcases)
 
 
 ! Write out the grids
-    write(filunit1) sf1,vp1,t1,rh1,oz1,cw1,ps1
-    write(filunit2) sf2,vp2,t2,rh2,oz2,cw2,ps2
+    write(filunit1) sf1,vp1,t1,rh1,oz1,cw1,ps1,aod1
+    write(filunit2) sf2,vp2,t2,rh2,oz2,cw2,ps2,aod2
 
     call mpi_barrier(mpi_comm_world,iret2)
 
@@ -614,4 +618,3 @@ end subroutine reload
     return
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   end subroutine sigio_cnvtdv2
-
