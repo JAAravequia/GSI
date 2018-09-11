@@ -92,7 +92,8 @@ subroutine writefiles
 
    use variables,only: sfvar,vpvar,tvar,qvar,ozvar,cvar,psvar,sfhln,vphln,&
        thln,qhln,ozhln,chln,pshln,sfvln,vpvln,tvln,qvln,ozvln,cvln,tcon,vpcon,pscon,&
-       nlat,nlon,nsig,nrhvar
+       nlat,nlon,nsig,nrhvar,&
+       aodvar,aodhln
    use sstmod
 
    implicit none
@@ -103,6 +104,7 @@ subroutine writefiles
    real(r_single),allocatable,dimension(:,:) :: nrhvar4,vpcon4,pscon4,pscon4_tmp
    real(r_single),allocatable,dimension(:,:) :: varsst4,corlsst4
    real(r_single),allocatable,dimension(:) :: psvar4,pshln4
+   real(r_single),allocatable,dimension(:) :: aodvar4,aodhln4
    real(r_kind),dimension(nlat) :: slat,glat
 
    integer :: i,j,k,m,outf,ncfggg,iret,isig,n
@@ -122,6 +124,7 @@ subroutine writefiles
    allocate(varsst4(nlat,nlon),corlsst4(nlat,nlon))
    allocate(tcon4(nlat,nsig,nsig))
    allocate(psvar4(nlat),pshln4(nlat))
+   allocate(aodvar4(nlat),aodhln4(nlat))
 
    ! Load single precision arrays for visualization
    stdev3d4(:,:,1) = real(sqrt(sfvar),r_single)
@@ -149,6 +152,9 @@ subroutine writefiles
 
    psvar4 = real(sqrt(psvar),r_single)
    pshln4 = real(pshln,      r_single)
+
+   aodvar4 = real(sqrt(aodvar),r_single)
+   aodhln4 = real(aodhln,      r_single)
 
    varsst4  = real(varsst, r_single)
    corlsst4 = real(corlsst,r_single)
@@ -179,6 +185,7 @@ subroutine writefiles
    var(6) = 'cw'
    var(7) = 'ps'
    var(8) = 'sst'
+   if(calc_aod) var(9) = 'aod'
 
    pscon4_tmp = pscon4
    do k=2,nsig
@@ -219,6 +226,14 @@ subroutine writefiles
    write(outf) varsst4
    write(outf) corlsst4
 
+   if(calc_aod) then
+     i=9
+     write(6,*) i,var(i),isig
+     write(outf) var(7),isig
+     write(outf) aodvar4
+     write(outf) aodhln4
+   end if
+
    close(outf)
 
    vscale3d4 = 1.0_r_single / vscale3d4
@@ -253,10 +268,12 @@ subroutine writefiles
    call wryte(22,4*nlat*nsig,stdev3d4(:,:,5))
    call wryte(22,4*nlat*nsig,stdev3d4(:,:,6))
    call wryte(22,4*nlat,psvar4)
+   call wryte(22,4*nlat,aodvar4)
    do n=1,6
       call wryte(22,4*nlat*nsig,hscale3d4(:,:,n))
    end do
    call wryte(22,4*nlat,pshln4)
+   call wryte(22,4*nlat,aodhln4)
    do n=1,6
       call wryte(22,4*nlat*nsig,vscale3d4(:,:,n))
    end do
@@ -284,6 +301,7 @@ subroutine writefiles
    write(24,'("OZ    ",i3," 0 OZ VAR")') nsig
    write(24,'("CW    ",i3," 0 CW VAR")') nsig
    write(24,'("PS    ",i3," 0 PS VAR")') 1
+   write(24,'("AOD   ",i3," 0 AOD VAR")') 1
    write(24,'("HSF   ",i3," 0 SF HCOR")') nsig
    write(24,'("HVP   ",i3," 0 VP HCOR")') nsig
    write(24,'("HT    ",i3," 0 T  HCOR")') nsig
@@ -291,6 +309,7 @@ subroutine writefiles
    write(24,'("HOZ   ",i3," 0 OZ HCOR")') nsig
    write(24,'("HCW   ",i3," 0 CW HCOR")') nsig
    write(24,'("HPS   ",i3," 0 PS HCOR")') 1
+   write(24,'("HAOD  ",i3," 0 AOD HCOR")') 1
    write(24,'("VSF   ",i3," 0 SF VCOR")') nsig
    write(24,'("VVP   ",i3," 0 VP VCOR")') nsig
    write(24,'("VT    ",i3," 0 T  VCOR")') nsig
@@ -334,6 +353,7 @@ subroutine writefiles
    deallocate(stdev3d4,nrhvar4,hscale3d4,vscale3d4,&
               tcon4,vpcon4,pscon4,varsst4,corlsst4)
    deallocate(psvar4,pshln4)
+   deallocate(aodvar4,aodhln4)
 
    call destroy_sstvars
 
