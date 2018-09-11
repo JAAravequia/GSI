@@ -254,6 +254,7 @@ contains
     deallocate(tcon,vpcon,pscon)
     deallocate(nrhvar)
     deallocate(aodvar,aodhln)
+
   end subroutine destroy_grids
 
   subroutine destroy_variables

@@ -32,7 +32,7 @@ contains
     integer(i_kind),intent(in):: mype    ! task identifier
 
     integer n,vlevs,sfs,vps,tvs,rhs,ozs,cws,pss,&
-         kk,kchk,mm1,k,varcnt
+         kk,kchk,mm1,k,varcnt,aods
 
     allocate(iscnt_g(npe),isdsp_g(npe),ircnt_g(npe),&
        irdsp_g(npe),iscnt_s(npe),isdsp_s(npe),ircnt_s(npe),&
@@ -58,7 +58,7 @@ contains
 
 ! Initialize nsig1o to distribute levs/variables
 ! as evenly as possible over the tasks
-    vlevs=(6*nsig)+1
+    vlevs=(6*nsig)+2
     nsig1o=vlevs/npe
     if(mod(vlevs,npe)/=0) nsig1o=nsig1o+1
 
@@ -73,13 +73,14 @@ contains
     ozs=rhs+nsig
     cws=ozs+nsig
     pss=cws+nsig
+    aods=pss+nsig
 
 ! Need to use a variable to know which tasks have a full nsig1o
 ! array, and which one have the last level irrelevant
-    if (mod((6*nsig)+1,npe)==izero) then
+    if (mod((6*nsig)+2,npe)==izero) then
       kchk=npe
     else
-      kchk=mod((nsig*6)+1,npe)
+      kchk=mod((nsig*6)+2,npe)
     end if
 
     nvar_id=izero
@@ -114,8 +115,11 @@ contains
           else if (varcnt.ge.cws .and. varcnt.lt.pss) then
             nvar_id(k)=6
             levs_id(k)=varcnt-cws+1
-          else
+          else if (varcnt.ge.pss .and. varcnt.lt.aods) then
             nvar_id(k)=7
+            levs_id(k)=1
+          else
+            nvar_id(k)=8
             levs_id(k)=1
           end if ! end if for varcnt
         end if ! end if for task id
@@ -247,7 +251,7 @@ contains
 
     return
   end subroutine vectosub
- 
+
   subroutine reload(work_in,work_out)
     use kinds, only: r_kind
     use variables, only: lat1,lon1,nsig
@@ -270,7 +274,7 @@ contains
     return
   end subroutine reload
 
-  subroutine sub2grid(workout,st,vp,tv,rh,oz,cw,ps)
+  subroutine sub2grid(workout,st,vp,tv,rh,oz,cw,ps,aod)
     use kinds, only: r_kind,i_kind
     use variables, only: iglobal,lat1,lon1,nlat,nlon,nsig,&
          ltosi,ltosj,zero,db_prec
@@ -279,13 +283,13 @@ contains
 
 ! Passed variables
     real(r_kind),dimension(lat1,lon1,nsig),intent(in):: st,vp,tv,rh,oz,cw
-    real(r_kind),dimension(lat1,lon1),intent(in):: ps
+    real(r_kind),dimension(lat1,lon1),intent(in):: ps,aod
     real(r_kind),dimension(nlat,nlon,nsig1o),intent(out):: workout
 
 ! Declare local variables
     integer(i_kind) j,k,l,ni1,ni2,ierror,mpi_rtype,displ,i,npt
-    integer(i_kind) sts,vps,tvs,rhs,ozs,cws,pss
-    real(r_kind),dimension(lat1*lon1*(nsig*6+1)):: vector
+    integer(i_kind) sts,vps,tvs,rhs,ozs,cws,pss,aods
+    real(r_kind),dimension(lat1*lon1*(nsig*6+2)):: vector
     real(r_kind),dimension(iglobal,nsig1o):: work1  !  contain nsig1o slab of any variables
 
   if (db_prec) then
@@ -310,6 +314,7 @@ contains
     ozs=rhs+(displ*nsig)
     cws=ozs+(displ*nsig)
     pss=cws+(displ*nsig)
+    aods=pss+(displ) ! CRM - check this, make sure it's right
 
 
     npt=0
@@ -331,6 +336,7 @@ contains
     do j=1,lon1
       do i=1,lat1
         vector(pss+npt)=ps(i,j)
+        vector(aods+npt)=aod(i,j)
         npt=npt+1
       end do
     end do
@@ -353,7 +359,7 @@ contains
     return
   end subroutine sub2grid
 
-  subroutine grid2sub(workin,st,vp,tv,rh,oz,cw,ps)
+  subroutine grid2sub(workin,st,vp,tv,rh,oz,cw,ps,aod)
     use kinds, only: r_kind,i_kind
     use variables, only: iglobal,lat1,lon1,nlat,nlon,nsig,&
          ltosi,ltosj,zero,db_prec
@@ -363,13 +369,13 @@ contains
 ! Passed variables
     real(r_kind),dimension(nlat,nlon,nsig1o),intent(in):: workin
     real(r_kind),dimension(lat1,lon1,nsig),intent(out):: st,vp,tv,rh,oz,cw
-    real(r_kind),dimension(lat1,lon1),intent(out):: ps
+    real(r_kind),dimension(lat1,lon1),intent(out):: ps, aod
 
 ! Declare local variables
     integer(i_kind) j,k,l,ni1,ni2,ierror,mpi_rtype,i,npt
-    integer(i_kind) sts,vps,tvs,rhs,ozs,cws,pss,displ
+    integer(i_kind) sts,vps,tvs,rhs,ozs,cws,pss,displ,aods
 
-    real(r_kind),dimension(lat1*lon1*(nsig*6+1)):: vector
+    real(r_kind),dimension(lat1*lon1*(nsig*6+2)):: vector
     real(r_kind),dimension(iglobal,nsig1o):: work1  !  contain nsig1o slab of any variables
 
     if (db_prec) then
@@ -402,6 +408,7 @@ contains
     ozs=rhs+(displ*nsig)
     cws=ozs+(displ*nsig)
     pss=cws+(displ*nsig)
+    aods=pss+(displ) ! CRM - again double check this is right
 
 ! load the received subdomain vector
     call vectosub(vector(sts),nsig,st)
@@ -411,6 +418,7 @@ contains
     call vectosub(vector(ozs),nsig,oz)
     call vectosub(vector(cws),nsig,cw)
     call vectosub(vector(pss),1,ps)
+    call vectosub(vector(aods),1,aod)
 
     return
   end subroutine grid2sub
