@@ -5,22 +5,24 @@ subroutine getcases(numcases,mype)
   use kinds, only: r_kind
   use variables, only: ak5,bk5,ck5,maxcases,nsig,dimbig,hybrid,&
       filename,na,nb,zero,idpsfc5,idvm5,idthrm5,idvc5,ntrac5,cp5,&
-      use_gfs_nemsio,ncepgfs_head
+      use_gfs_nemsio,ncepgfs_head,naoda,naodb
   use sigio_module, only: sigio_head,sigio_srhead,sigio_sclose,&
        sigio_sropen
   use nemsio_module, only:  nemsio_init,nemsio_open,nemsio_close
   use nemsio_module, only:  nemsio_gfile,nemsio_getfilehead
   implicit none
 
-  integer,parameter:: i_missing=-9999 
+  integer,parameter:: i_missing=-9999
   integer,dimension(4):: idate4
   integer nmin24(dimbig),nmin48(dimbig),idate5(5)
   integer nmina,nminb
+  integer nminaod24(dimbig),nminaod48(dimbig)
 
   real*4 fhour4
 
   integer i24,ierror,j48,ncount,ncases,loop,numcases,&
-       mype,nming,ncase,inges,i,j,k,iret,iret2
+       mype,nming,ncase,inges,i,j,k,iret,iret2,&
+       naodcase,naodcases,numaodcases
   integer nvcoord5
   real(r_kind) fhour5,ps0
   real(r_kind),allocatable,dimension(:,:):: vcoord5
@@ -45,6 +47,18 @@ subroutine getcases(numcases,mype)
   end do
 20  continue
   close(10)
+
+  if (calc_aod) then
+    open(unit=13,file='aodfiles',status='old')
+    naodcases=0
+    do loop=1,dimbig
+      read(13,'(a)',err=21,end=21) aodfilename(loop)
+      naodcases=naodcases+1
+    end do
+21  continue
+    close(13)
+  end if
+
 
   nmin24=-1
   nmin48=-1
@@ -88,7 +102,7 @@ subroutine getcases(numcases,mype)
 
        call sigio_sropen(inges,filename(loop),iret)
        call sigio_srhead(inges,sighead,iret2)
-    
+
        if (iret==0 .and. iret2==0) then
          fhour4=sighead%fhour
          idate4=sighead%idate
@@ -111,7 +125,7 @@ subroutine getcases(numcases,mype)
     nming=nming+60*fhour5
     if(nint(fhour5).eq.24) nmin24(loop)=nming
     if(nint(fhour5).eq.48) nmin48(loop)=nming
-25 continue
+!25 continue ! CRM - why is this here?
   enddo
 
 
@@ -141,7 +155,85 @@ subroutine getcases(numcases,mype)
     end if    ! endif nmin24(loop)
   enddo       ! end loop to ncases
 
-  if(mype==0)write(6,*)' number of cases available = ',ncase
+
+    ! below for AOD files
+  if (calc_aod) then
+    nminaod24=-1
+    nminaod48=-1
+    inges=50
+    do loop=1,naodcases
+      call nemsio_init(iret=iret2)
+      if ( iret2 /= 0 ) then
+          write(6,*)' getcases:  ***ERROR*** problem nemsio_init file = ', &
+                trim(filename(loop)),', Status = ',iret2
+          !stop ! let's not stop if we can't read AOD file
+      end if
+      call nemsio_open(gfile,filename(loop),'READ',iret=iret2)
+      if ( iret2 /= 0 ) then
+          write(6,*)' getcases:  ***ERROR*** problem opening file = ', &
+                trim(filename(loop)),', Status = ',iret2
+          !stop
+      end if
+
+      idate         = i_missing
+      nfhour        = i_missing
+      nfminute      = i_missing
+      nfsecondn     = i_missing
+      nfsecondd     = i_missing
+      gfshead%idsl  = i_missing
+      call nemsio_getfilehead(gfile, idate=idate, gtype=filetype,  &
+             modelname=mdlname, nfhour=nfhour, nfminute=nfminute,       &
+             nfsecondn=nfsecondn, nfsecondd=nfsecondd,                  &
+             dimx=gfshead%lonb, dimy=gfshead%latb,   dimz=gfshead%levs, &
+             jcap=gfshead%jcap, ntrac=gfshead%ntrac, idvc=gfshead%idvc, &
+             idsl=gfshead%idsl,   ncldt=gfshead%ncldt, iret=iret2)
+      fhour5 = float(nfhour) + float(nfminute)/60.0 + &
+              float(nfsecondn)/float(nfsecondd)/3600.0
+      idate5(1) = idate(1)  !year
+      idate5(2) = idate(2)  !month
+      idate5(3) = idate(3)  !day
+      idate5(4) = idate(4)  !hour
+      idate5(5) = 0
+      call nemsio_close(gfile,iret=iret2)
+
+      call w3fs21(idate5,nming)
+      nming=nming+60*fhour5
+      if(nint(fhour5).eq.24) nminaod24(loop)=nming
+      if(nint(fhour5).eq.48) nminaod48(loop)=nming
+    enddo
+
+
+    naodcase=0
+    ncount=0
+    do loop=1,naodcases
+      i24=-1
+      nmina=-1
+      nminb=-1
+      if(nminaod24(loop).gt.0) then
+        ncount=ncount+1
+        if(ncount.eq.1)then
+          nmina=nminaod24(loop)
+          i24=loop
+          j48=-1
+          do j=1,naodcases
+            if(nminaod48(j).eq.nminaod24(loop)) then
+              nminb=nminaod48(j)
+              ncase=ncase+1
+              naoda(ncase)=i24
+              naodb(ncase)=j
+    ! write(6,*) 'nmin,na,nb=',ncase,nmin24(loop),na(ncase),nb(ncase)
+            end if
+          end do
+          ncount=0
+        end if  ! endif ncount
+      end if    ! endif nmin24(loop)
+    enddo       ! end loop to ncases
+  end if        ! end if for calc_aod
+
+  if(mype==0) then
+    write(6,*)' number of cases available = ',ncase
+    if(calc_aod)write(6,*)' number of AOD cases available = ',naodcase
+  end if
   if(ncase.eq.0) then
     write(6,*)' no cases to process'
     call mpi_finalize(ierror)
@@ -149,7 +241,11 @@ subroutine getcases(numcases,mype)
   end if
 
   numcases=min(ncase,maxcases)
-  if(mype==0)write(6,*)' number of cases to process for generating background stats = ',numcases
+  numaodcases=min(naodcase,maxcases)
+  if(mype==0) then
+    write(6,*)' number of cases to process for generating background stats = ',numcases
+    if(calc_aod)write(6,*)' number of AOD cases to process for generating background stats = ',numaodcases
+  end if
 
   if ( use_gfs_nemsio ) then
      ! hardwired for now
@@ -158,11 +254,11 @@ subroutine getcases(numcases,mype)
      idthrm5 = 2
      ntrac5  = 3
   else ! not use_gfs_nemsio
-  
+
 ! DTK NEW  EXTRACT SOME STUFF FROM THE FIRST LISTED FILE
      call sigio_sropen(inges,filename(1),iret)
      call sigio_srhead(inges,sighead,iret2)
-  
+
      idvc5=sighead%idvc
      idvm5=sighead%idvm
      ntrac5=sighead%ntrac
@@ -196,7 +292,7 @@ subroutine getcases(numcases,mype)
      deallocate(vcoord5)
 
      allocate(cp5(ntrac5+1))
-  
+
      if (idthrm5==3) then
        do k=1,sighead%ntrac+1
          cp5(k)=sighead%cpi(k)
@@ -215,5 +311,3 @@ subroutine getcases(numcases,mype)
 
   return
 end subroutine getcases
-
-

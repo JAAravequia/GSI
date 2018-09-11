@@ -4,7 +4,8 @@ subroutine initvars(mype,npe)
       deg2rad,rlons,nsig,&
       dimbig,filename,nlat,sweight,&
       na,nb,pi,db_prec,coriolis, &
-      two,omega,idpsfc5,idvm5,idvc5,idthrm5
+      two,omega,idpsfc5,idvm5,idvc5,idthrm5, &
+      naoda,naodb
   use specgrid, only: wlat,slat,jb,je
   implicit none
 
@@ -15,7 +16,9 @@ subroutine initvars(mype,npe)
   real(r_double) onedouble
 
   allocate(filename(dimbig))
+  allocate(aodfilename(dimbig))
   allocate(na(dimbig),nb(dimbig))
+  allocate(naoda(dimbig),naodb(dimbig))
 
   allocate(rlats(nlat),rlons(nlon),wgtlats(nlat))
   allocate(ak5(nsig+1),bk5(nsig+1),ck5(nsig+1))
@@ -72,4 +75,3 @@ subroutine initvars(mype,npe)
 
   return
 end subroutine initvars
-

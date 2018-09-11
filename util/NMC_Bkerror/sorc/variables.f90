@@ -9,6 +9,7 @@ module variables
 
 ! forecast pair file variables
   character(100),allocatable,dimension(:):: filename
+  character(100),allocatable,dimension(:):: aodfilename
   integer,allocatable,dimension(:):: na,nb
 
 ! for AOD Bkerror
