@@ -33,13 +33,13 @@ set -x
   RUN_NAME=a_descriptive_run_name_such_as_case05_3denvar_etc
   OBS_ROOT=the_directory_where_observation_files_are_located
   BK_ROOT=the_directory_where_background_files_are_located
-  GSI_ROOT=the_comgsi_main directory where src/ scripts/ fix/ etc are located
+  GSI_ROOT=the_comgsi_main directory where src/ ush/ fix/ etc are located
   CRTM_ROOT=the_CRTM_directory
   diag_ROOT=the_observer_directory_where_diag_files_exist
   ENKF_EXE=${JOB_DIR}/enkf_wrf.x
   WORK_ROOT=${JOB_DIR}/${RUN_NAME}
   FIX_ROOT=${GSI_ROOT}/fix
-  ENKF_NAMELIST=${GSI_ROOT}/scripts/comenkf_namelist.sh
+  ENKF_NAMELIST=${GSI_ROOT}/ush/comenkf_namelist.sh
 
 # ensemble parameters
 #

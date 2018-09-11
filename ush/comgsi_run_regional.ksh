@@ -33,7 +33,7 @@ set -x
   RUN_NAME=a_descriptive_run_name_such_as_case05_3denvar_etc
   OBS_ROOT=the_directory_where_observation_files_are_located
   BK_ROOT=the_directory_where_background_files_are_located
-  GSI_ROOT=the_comgsi_main directory where src/ scripts/ fix/ etc are located
+  GSI_ROOT=the_comgsi_main directory where src/ ush/ fix/ etc are located
   CRTM_ROOT=the_CRTM_directory
   ENS_ROOT=the_directory_where_ensemble_backgrounds_are_located
       #ENS_ROOT is not required if not running hybrid EnVAR 
@@ -41,7 +41,7 @@ set -x
   GSI_EXE=${JOB_DIR}/gsi.x  #assume you have a copy of gsi.x here
   WORK_ROOT=${JOB_DIR}/${RUN_NAME}
   FIX_ROOT=${GSI_ROOT}/fix
-  GSI_NAMELIST=${GSI_ROOT}/scripts/comgsi_namelist.sh
+  GSI_NAMELIST=${GSI_ROOT}/ush/comgsi_namelist.sh
   PREPBUFR=${OBS_ROOT}/nam.t${HH}z.prepbufr.tm00
   BK_FILE=${BK_ROOT}/wrfinput_d01.${ANAL_TIME}
 #
