@@ -268,12 +268,12 @@ subroutine writefiles
    call wryte(22,4*nlat*nsig,stdev3d4(:,:,5))
    call wryte(22,4*nlat*nsig,stdev3d4(:,:,6))
    call wryte(22,4*nlat,psvar4)
-   call wryte(22,4*nlat,aodvar4)
+   if(calc_aod) call wryte(22,4*nlat,aodvar4)
    do n=1,6
       call wryte(22,4*nlat*nsig,hscale3d4(:,:,n))
    end do
    call wryte(22,4*nlat,pshln4)
-   call wryte(22,4*nlat,aodhln4)
+   if(calc_aod) call wryte(22,4*nlat,aodhln4)
    do n=1,6
       call wryte(22,4*nlat*nsig,vscale3d4(:,:,n))
    end do
@@ -301,7 +301,7 @@ subroutine writefiles
    write(24,'("OZ    ",i3," 0 OZ VAR")') nsig
    write(24,'("CW    ",i3," 0 CW VAR")') nsig
    write(24,'("PS    ",i3," 0 PS VAR")') 1
-   write(24,'("AOD   ",i3," 0 AOD VAR")') 1
+   if(calc_aod)  write(24,'("AOD   ",i3," 0 AOD VAR")') 1
    write(24,'("HSF   ",i3," 0 SF HCOR")') nsig
    write(24,'("HVP   ",i3," 0 VP HCOR")') nsig
    write(24,'("HT    ",i3," 0 T  HCOR")') nsig
@@ -309,7 +309,7 @@ subroutine writefiles
    write(24,'("HOZ   ",i3," 0 OZ HCOR")') nsig
    write(24,'("HCW   ",i3," 0 CW HCOR")') nsig
    write(24,'("HPS   ",i3," 0 PS HCOR")') 1
-   write(24,'("HAOD  ",i3," 0 AOD HCOR")') 1
+   if(calc_aod)  write(24,'("HAOD  ",i3," 0 AOD HCOR")') 1
    write(24,'("VSF   ",i3," 0 SF VCOR")') nsig
    write(24,'("VVP   ",i3," 0 VP VCOR")') nsig
    write(24,'("VT    ",i3," 0 T  VCOR")') nsig
