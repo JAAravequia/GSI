@@ -475,6 +475,7 @@ subroutine read_files(mype)
   endif
   if (l4densvar .and. nfldsig/=ntlevs_ens) then
      write(6,*)'READ_FILES: ***ERROR*** insufficient atm fcst for 4densvar:  PROGRAM STOPS'
+     write(6,*)'READ_FILES: ***ERROR*** nfldsig and ntlevs_ens are:  ',nfldsig,ntlevs_ens
      call stop2(99)
   endif
 

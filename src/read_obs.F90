@@ -675,7 +675,7 @@ subroutine read_obs(ndata,mype)
     use obsmod, only: iadate,ndat,time_window,dplat,dsfcalc,dfile,dthin, &
            dtype,dval,dmesh,obsfile_all,ref_obs,nprof_gps,dsis,ditype,&
            perturb_obs,lobserver,lread_obs_save,obs_input_common, &
-           reduce_diag,nobs_sub,dval_use,nobsReq
+           reduce_diag,nobs_sub,dval_use
     use gsi_nstcouplermod, only: nst_gsi,gsi_nstcoupler_final
     use qcmod, only: njqc,vadwnd_l2rw_qc
     use gsi_4dvar, only: l4dvar
@@ -746,11 +746,7 @@ subroutine read_obs(ndata,mype)
     integer(i_kind),dimension(npe,ndat):: mype_sub
     integer(i_kind),allocatable,dimension(:):: nrnd
     integer(i_kind):: nmls_type,mype_io_sfc
-    real(r_kind) startTime,endTime,mpi_wtime
-    integer(i_kind):: iread,ipuse,iouse,recCount,sendCount
-!   integer(i_kind),allocatable,dimension(:):: nobsStat,nobsReq,sendReq
-    integer(i_kind),allocatable,dimension(:):: nobsStat,sendReq
-    integer(i_kind),allocatable,dimension(:):: comm_chans
+    integer(i_kind):: iread,ipuse,iouse
 
     real(r_kind) gstime,val_dat,rmesh,twind,rseed
     real(r_kind),allocatable,dimension(:) :: prslsm,hgtlsm,work1
@@ -779,7 +775,6 @@ subroutine read_obs(ndata,mype)
        parallel_read=.false.
     end do
     npem1=npe-1
-    npem2=npe-2
     nprof_gps1=0
 
     if(njqc) then
@@ -947,10 +942,10 @@ subroutine read_obs(ndata,mype)
              else if(sndr )then
                 parallel_read(i)= .true.
 ! N.B. ATMS must be run on one processor for the filtering code to work.
-!            else if(obstype == 'atms')then
+             else if(obstype == 'atms')then
 !                 parallel_read(i)= .true.
              else if(ssmis)then
-                parallel_read(i)= .true.  
+!               parallel_read(i)= .true.  
              else if(seviri)then
                 parallel_read(i)= .true.
              else if(obstype == 'cris' .or. obstype == 'cris-fsr')then
@@ -1046,7 +1041,7 @@ subroutine read_obs(ndata,mype)
                read_db_rec1(i) = 999999
              end if
 
-             write(6,*) 'obstype is ',obstype,' and lexist is ',lexist 
+ 
              if(lexist) then
 !      Initialize number of reader tasks to 1.  For the time being
 !      only allow number of reader tasks >= 1 for select obstype.
@@ -1056,7 +1051,6 @@ subroutine read_obs(ndata,mype)
 
 !  Allow up to 16 processors/file increase loop bounds to increase number of processors allowed
                    do j=1,4
-!                     write(6,*) 'obstype is ',obstype,' and j is ',j,' and len4file/lenbuf are ',len4file,lenbuf
                       if(len4file < lenbuf)exit
                       ntasks1(i)=2*ntasks1(i)
                       len4file=len4file/2
@@ -1082,7 +1076,7 @@ subroutine read_obs(ndata,mype)
     npemax=0
     npetot=0
     do i=1,ndat
-       if (ntasks(i)>(npem1)) then
+       if (ntasks(i)>npem1) then
           write(6,*)'read_obs:  ***WARNING*** i=',i,' dtype=',dtype(i),' dsis=',dsis(i),&
                ' requested ntasks=',ntasks(i),' > npe=',npe,' reset ntasks=',npe
           ntasks(i)=npe
@@ -1097,8 +1091,7 @@ subroutine read_obs(ndata,mype)
 !_RTod call getsfc(mype,use_sfc)
        return
     endif
-
-    if(1.eq.1) then    
+    
     npeextra=0
     if(mod(npetot,npe) > 0) npeextra=npe-mod(npetot,npe)
     maxproc=32
@@ -1127,13 +1120,13 @@ subroutine read_obs(ndata,mype)
           end do
        end do extraloop
     end if
-    end if
 
 !   Set up locations of first processor
 
     ilarge=0
     npestart=0
     npe_sub=npe_sub3
+!   npe_sub3=npe_sub
     mype_root_sub=0
     mmdat=0
     loopx: do j=1,ndat
@@ -1154,7 +1147,6 @@ subroutine read_obs(ndata,mype)
     end do loopx
 
 !   Define sub-communicators for each data file
-    npe_sub3=npe_sub
     mm1=mype+1
     belong=.false.
     mype_sub=-999
@@ -1169,7 +1161,8 @@ subroutine read_obs(ndata,mype)
              mype_sub(mype_work(k,i)+1,i)=k-1
              if(next_mype == mype)belong(i) = .true.
              next_mype = next_mype + 1
-             if (next_mype>npem2) next_mype=0
+             if (next_mype>npem1) next_mype=0
+!            if (next_mype>npem1) next_mype=0
           end do               
 
           call setcomm(iworld,iworld_group,npe_sub(i),mype_work(1,i),&
@@ -1182,8 +1175,7 @@ subroutine read_obs(ndata,mype)
        i=npe_order(ii)
        if(mype == 0 .and. npe_sub(i) > 0) write(6,'(1x,a,i4,1x,a,1x,2a,2i4,1x,i6,1x,i6,1x,i6)') &
         'READ_OBS:  read ',i,dtype(i),dsis(i),' using ntasks=',ntasks(i),mype_root_sub(i), & 
-               read_rec(i),read_ears_rec(i),npe_sub(i)
-       if(mype == 0 .and. npe_sub(i) > 0) write(6,*) 'READ_OBS: npetot is ',npetot,' and npe is ',npe
+               read_rec(i),read_ears_rec(i),read_db_rec(i)
 
        acft_profl_file = index(dfile(i),'_profl')/=0
        if ((aircraft_t_bc_pof .or. aircraft_t_bc_ext .or. &
@@ -1201,7 +1193,6 @@ subroutine read_obs(ndata,mype)
     mype_io_sfc=mype_io
     do ii=1,mmdat
        i=npe_order(ii)
-!      if(mype.eq.0) write(6,*) 'npe_order(',ii,') is ',i
        if(ditype(i) =='conv')then
           obstype=dtype(i)
           if (obstype == 't' .or. obstype == 'q'  .or. &
@@ -1302,16 +1293,9 @@ subroutine read_obs(ndata,mype)
     call read_ship_info(mype)
 
 !   Loop over data files.  Each data file is read by a sub-communicator
-    allocate(nobsReq(mmdat))
-    allocate(sendReq(mmdat))
-    allocate(comm_chans(mmdat))
-    allocate(nobsStat(mmdat))
-    recCount = 0
-    sendCount = 0
-    startTime = mpi_wtime()
     loop_of_obsdata_files: &
     do ii=1,mmdat
-!      call mpi_comm_dup(mpi_comm_world,comm_chans(ii),ierror)
+
        i=npe_order(ii)
        task_belongs: &
        if (i > 0 .and. belong(i)) then
@@ -1433,7 +1417,6 @@ subroutine read_obs(ndata,mype)
                        prsl_full,nobs_sub1(1,i))
                   string='READ_FL_HDOB'
                 else
-                  write(6,*) 'HEY!! mype is ',mype,' and I am calling prepbuf for type ',obstype
                   call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
                      prsl_full,nobs_sub1(1,i),read_rec(i))
                   string='READ_PREPBUFR'
@@ -1776,23 +1759,20 @@ subroutine read_obs(ndata,mype)
                   ' nkeep=',i10,' ntask=',i3)
 
           endif
-          if(mype_root_sub(i).eq.mype) then
-!         if (mype_sub(mm1,i)==mype_root) then
-!           write(6,*)'mype is ',mype,' and mype_sub(mm1,i) is ',mype_sub(mm1,i),' and mype_root is ',mype_root
-!           write(6,*)'mype is ',mype,' and I am sending my ',sendCount,' message to ',npem1,' with tag ',mype
-            sendCount = sendCount+1
-            call mpi_Isend(nobs_sub1(:,i),npe,mpi_integer,npem1,mype,mpi_comm_world,sendReq(sendCount),ierror)
-          endif
        endif task_belongs
-       if(mype.eq.npem1) then
-          call mpi_Irecv(nobs_sub(:,i),npe,mpi_integer,mype_root_sub(i),mype_root_sub(i),mpi_comm_world,nobsReq(ii),ierror)
-       endif
 
     end do loop_of_obsdata_files
-    endTime = mpi_wtime()
-    write(6,*) 'READ_TIME for mype= ',mype,' is ',endTime-startTime
     deallocate(prsl_full)
     deallocate(hgtl_full)
+
+!   Broadcast aircraft new tail numbers for aircraft
+!   temperature bias correction
+!   if (aircraft_t_bc) then
+!      call mpi_barrier(mpi_comm_world,ierror)
+!      call mpi_bcast(ntail_update,1,mpi_itype,mype_airobst,mpi_comm_world,ierror)
+!      call mpi_bcast(idx_tail,max_tail,mpi_itype,mype_airobst,mpi_comm_world,ierror)
+!      call mpi_bcast(taillist,max_tail,MPI_CHARACTER,mype_airobst,mpi_comm_world,ierror)
+!   end if
 
 !   Deallocate arrays containing full horizontal surface fields
     call destroy_sfc
@@ -1815,6 +1795,19 @@ subroutine read_obs(ndata,mype)
 
 !   Collect number of gps profiles (needed later for qc)
     call mpi_allreduce(nprof_gps1,nprof_gps,1,mpi_integer,mpi_sum,mpi_comm_world,ierror)
+    call mpi_allreduce(nobs_sub1,nobs_sub,npe*ndat,mpi_integer,mpi_sum,mpi_comm_world,& 
+         ierror)
+
+!   Write collective obs selection information to scratch file.
+    if (lread_obs_save .and. mype==0) then
+       write(6,*)'READ_OBS:  write collective obs selection info to ',trim(obs_input_common)
+       call unformatted_open(lunsave,file=obs_input_common,class=".obs_input.")
+       write(lunsave) ndata,ndat,npe,superp,nprof_gps,ditype
+       write(lunsave) super_val1
+       write(lunsave) nobs_sub
+       close(lunsave)
+    endif
+
 !   End of routine
     return
 end subroutine read_obs

@@ -37,7 +37,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <time.h>
 
 #define MAXLUN 1000
 static int lunTableInit=0;
@@ -192,6 +191,3 @@ void
  return;
  
 }
-double wtime_()
-/* printf("Here we are:\n clock=%f12.8\n",(float)clock()); */ 
-{return (double)clock()/CLOCKS_PER_SEC;}

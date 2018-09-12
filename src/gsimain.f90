@@ -16,7 +16,6 @@
    use timermod, only: timer_pri
    use kinds, only: i_kind
    use mpeu_util, only: die
-   use mpimod, only: npe,mype
    implicit none
 
 !$$$  main program documentation block
@@ -604,12 +603,9 @@
 !==================================================================================================
 
    integer(i_kind):: ier
-   integer(i_kind) omp_get_thread_num,omp_get_num_threads
    character(len=*),parameter:: myname='gsimain'
 
-   write(6,*) 'HEY STARTING UP- num threads is ',omp_get_num_threads()
    call gsimain_initialize
-   write(6,*) 'HEY after init mype ',mype,' and num threads is ',omp_get_num_threads()
 
 ! Initialize atmospheric AD and TL model trajectory
 !  if(l4dvar) then
