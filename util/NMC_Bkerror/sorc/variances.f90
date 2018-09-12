@@ -6,20 +6,20 @@ subroutine variances(numcases,numaodcases,mype)
       bbiasz,bbiasd,bbiast,bcorrz,bcorrd,bcorrt,bbiasp,bcorrp,&
       sfvar,vpvar,tvar,qvar,ozvar,cvar,nrhvar,psvar,tcon,vpcon,pscon,&
       iglobal,ltosi,ltosj,half,one,ione,two,smoothdeg,vertavg,&
-      bbiasaod,bcorraod,aodfilunit1,aodfilunit2
+      bbiasaod,bcorraod,aodfilunit1,aodfilunit2,calc_aod,aodvar
   implicit none
   include 'mpif.h'
 
   integer(i_kind),intent(in):: numcases,numaodcases,mype
 
   real(r_kind),dimension(lat1,lon1,nsig):: sf1,vp1,t1,rh1,oz1,cw1
-  real(r_kind),dimension(lat1,lon1):: ps1,bal1
+  real(r_kind),dimension(lat1,lon1):: ps1,aod1,bal1
   real(r_kind),dimension(lat1,lon1,nsig):: sf2,vp2,t2,rh2,oz2,cw2
-  real(r_kind),dimension(lat1,lon1):: ps2
+  real(r_kind),dimension(lat1,lon1):: ps2,aod2
   real(r_kind),dimension(lat1,lon1,nsig):: rhave
 
   real(r_kind),dimension(lat1,lon1,nsig):: sf3,vp3,t3,rh3,oz3,cw3
-  real(r_kind),dimension(lat1,lon1):: ps3
+  real(r_kind),dimension(lat1,lon1):: ps3,aod3
   real(r_kind),dimension(iglobal):: work1
   real(r_kind),dimension(nlat,nlon):: workgrd
 
@@ -47,8 +47,9 @@ subroutine variances(numcases,numaodcases,mype)
 
 ! Initialize subdomain variance arrays
   sfvar=zero ; vpvar=zero ; tvar=zero ; qvar=zero ; ozvar=zero ; cvar=zero ; 
-  nrhvar=zero ; psvar=zero
+  nrhvar=zero ; psvar=zero; aodvar=zero
   sf3=zero ; vp3=zero ; t3=zero ; rh3=zero ; oz3=zero ; cw3=zero ; ps3=zero
+  aod3=zero
   qcount=zero ; qamp=zero ; qcount2=zero ; qamp2=zero
 
 
@@ -71,7 +72,7 @@ subroutine variances(numcases,numaodcases,mype)
       end do
     end do
 
-    call delvars(sf1,vp1,t1,rh1,oz1,cw1,ps1,sf2,vp2,t2,rh2,oz2,cw2,ps2,mype)
+    call delvars(sf1,vp1,t1,rh1,oz1,cw1,ps1,aod1,sf2,vp2,t2,rh2,oz2,cw2,ps2,aod2,mype)
 
     do k=1,nsig
       do j=1,lon1
@@ -114,6 +115,28 @@ subroutine variances(numcases,numaodcases,mype)
   end do ! end do over ncases
   close(filunit1)
   close(filunit2)
+
+  if (calc_aod) then
+    open(aodfilunit1,form='unformatted',action='read')
+    rewind(aodfilunit1)
+    open(aodfilunit2,form='unformatted',action='read')
+    rewind(aodfilunit2)
+
+    do n=1,numaodcases
+      if (mype==0)  write(6,*) 'VARIANCES, PROCESSING AOD PAIR # ',n
+! Read in subdomain grids
+      read(aodfilunit1) aod1
+      read(aodfilunit2) aod2
+      call delvars(sf1,vp1,t1,rh1,oz1,cw1,ps1,aod1,sf2,vp2,t2,rh2,oz2,cw2,ps2,aod2,mype)
+      do j=1,lon1
+        do i=1,lat1
+          aod3(i,j) = aod3(i,j) + (aod1(i,j)*aod1(i,j))*r_norm
+        end do
+      end do
+    end do
+    close(aodfilunit1)
+    close(aodfilunit2)
+  end if ! end if calc_aod
 
   do k=1,nsig
     call mpi_gatherv(sf3(1,1,k),ijn(mm1),mpi_rtype,&
@@ -232,6 +255,23 @@ subroutine variances(numcases,numaodcases,mype)
     end do
   end if
 
+  if (calc_aod) then
+    call mpi_gatherv(aod3,ijn(mm1),mpi_rtype,&
+         work1,ijn,displs_g,mpi_rtype,&
+         mype_work,mpi_comm_world,ierror)
+    if (mype==mype_work) then
+      do kk=1,iglobal
+        ni1=ltosi(kk); ni2=ltosj(kk)
+        workgrd(ni1,ni2)=work1(kk)
+      end do
+      do i=1,nlat
+        do j=1,nlon
+          aodvar(i) = aodvar(i) + workgrd(i,j)/float(nlon)
+        end do
+      end do
+    end if
+  end if ! end if calc_aod
+
   call mpi_reduce(qamp,qamp2,ibin*nsig,mpi_rtype,mpi_sum,mype_work, &
        mpi_comm_world,ierror)
   qamp = qamp2
@@ -294,6 +334,7 @@ subroutine variances(numcases,numaodcases,mype)
     call smoothlat(ozvar,nsig,smoothdeg)
     call smoothlat(cvar,nsig,smoothdeg)
     call smoothlat(psvar,1,smoothdeg)
+    if (calc_aod) call smoothlat(aodvar,1,smoothdeg)
   end if
 
   call mpi_bcast(sfvar,nlat*nsig,mpi_rtype,mype_work,mpi_comm_world,ierror)
@@ -304,6 +345,7 @@ subroutine variances(numcases,numaodcases,mype)
   call mpi_bcast(ozvar,nlat*nsig,mpi_rtype,mype_work,mpi_comm_world,ierror)
   call mpi_bcast(cvar,nlat*nsig,mpi_rtype,mype_work,mpi_comm_world,ierror)
   call mpi_bcast(psvar,nlat,mpi_rtype,mype_work,mpi_comm_world,ierror)
+  if (calc_aod) call mpi_bcast(aodvar,nlat,mpi_rtype,mype_work,mpi_comm_world,ierror)
 
 
   return

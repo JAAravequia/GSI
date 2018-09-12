@@ -30,7 +30,7 @@ setenv LEVS 64
 setenv MAXCASES 10
 
 # Create a temporary working directory
-setenv DATA /scratch3/NCEPDEV/stmp1/$USER/tmp/nmcstats_T${JCAP}_n${MAXCASES}_new
+setenv DATA /scratch3/NCEPDEV/stmp1/$USER/tmp/nmcstats_T${JCAP}_n${MAXCASES}_new_test
 if ( -d $DATA ) rm -rf $DATA
 mkdir -p $DATA
 cd $DATA
