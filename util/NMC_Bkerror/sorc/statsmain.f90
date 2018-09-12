@@ -54,7 +54,7 @@ program statsmain
   implicit none
   include 'mpif.h'
 
-  integer k,n,total,numcases,mycases,ierror
+  integer k,n,total,numcases,mycases,ierror,numaodcases
   integer :: namelist_unit
 
   character*10        :: variable
@@ -120,24 +120,24 @@ program statsmain
   call getcases(numcases,mype)
 
 ! Read in spectral coeffs and right out subdomain grids to scratch files
-  call readpairs(npe,mype,numcases)
+  call readpairs(npe,mype,numcases,numaodcases)
 
-  if(biasrm) call biascor(numcases,mype)
+  if(biasrm) call biascor(numcases,numaodcases,mype)
 
 ! Get balance projection matrices
   call balprojs(numcases,mype)
 
 ! Compute Three-Dimensional Variances (Full variables
-!!  call variances3d(numcases,mype)
+!!  call variances3d(numcases,numaodcases,mype)
 
 ! Get lat-dependend variances
-  call variances(numcases,mype)
+  call variances(numcases,numaodcases,mype)
 
 ! Vertical length scales
   call vertsc(numcases,mype)
 
 ! Horizontal length scales
-  call horizsc(numcases,mype)
+  call horizsc(numcases,numaodcases,mype)
 
 ! post Processing
   if (mype==0) then

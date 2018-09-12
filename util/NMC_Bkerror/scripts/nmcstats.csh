@@ -1,14 +1,19 @@
 #!/bin/csh -x
 
 #PBS -N nmcstats
-#PBS -l walltime=03:00:00
-#PBS -l nodes=150:ppn=3
-#PBS -q urgent
+#PBS -l walltime=00:20:00
+#PBS -l nodes=1:ppn=12
 #PBS -A da-cpu
 #PBS -j oe
+#PBS -m bea
+#PBS -M cory.r.martin@noaa.gov
+
+# add advance time to $PATH
+#setenv PATH $PATH\:/home/Cory.R.Martin/local/bin
+source ~Cory.R.Martin/.tcshrc
 
 # Set NMC statistics utility directory and executable
-setenv GSIDIR /scratch4/NCEPDEV/global/save/$USER/svn/gsi/branches/EXP-fv3gsi
+setenv GSIDIR /scratch4/NCEPDEV/da/save/$USER/GSI/ProdGSI
 setenv CALCSTATS_EXEC $GSIDIR/util/NMC_Bkerror/sorc/calcstats.exe
 
 # Set Input Resolution and path to lagged pairs database
@@ -16,13 +21,13 @@ setenv JCAPIN 574
 setenv PERTURBDIR /scratch4/NCEPDEV/stmp4/Daryl.Kleist/bkerrdat
 
 # Set Output Resolution
-setenv JCAP 766
-setenv NLAT 770
-setenv NLON 1536
+setenv JCAP 62
+setenv NLAT 94
+setenv NLON 192
 setenv LEVS 64
 
 # Number of cases to calculate statistics from
-setenv MAXCASES 450
+setenv MAXCASES 10
 
 # Create a temporary working directory
 setenv DATA /scratch3/NCEPDEV/stmp1/$USER/tmp/nmcstats_T${JCAP}_n${MAXCASES}_new
@@ -82,9 +87,11 @@ setenv MPI_BUFS_PER_HOST 1024
 setenv MPI_GROUP_MAX     1024
 setenv OMP_NUM_THREADS   1
 
+
 setenv APRUN "mpirun -np $PBS_NP"
 
-$APRUN calcstats.exe |& tee calcstats.out
+#mpirun ./calcstats.exe |& tee calcstats.out
+$APRUN ./calcstats.exe |& tee calcstats.out
 if ( $status ) exit $status
 
 rm -f fort.[0-9]*

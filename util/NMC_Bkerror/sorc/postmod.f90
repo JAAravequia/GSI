@@ -93,7 +93,7 @@ subroutine writefiles
    use variables,only: sfvar,vpvar,tvar,qvar,ozvar,cvar,psvar,sfhln,vphln,&
        thln,qhln,ozhln,chln,pshln,sfvln,vpvln,tvln,qvln,ozvln,cvln,tcon,vpcon,pscon,&
        nlat,nlon,nsig,nrhvar,&
-       aodvar,aodhln
+       aodvar,aodhln,calc_aod
    use sstmod
 
    implicit none

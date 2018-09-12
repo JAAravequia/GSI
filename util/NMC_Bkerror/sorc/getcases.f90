@@ -5,7 +5,8 @@ subroutine getcases(numcases,mype)
   use kinds, only: r_kind
   use variables, only: ak5,bk5,ck5,maxcases,nsig,dimbig,hybrid,&
       filename,na,nb,zero,idpsfc5,idvm5,idthrm5,idvc5,ntrac5,cp5,&
-      use_gfs_nemsio,ncepgfs_head,naoda,naodb
+      use_gfs_nemsio,ncepgfs_head,&
+      naoda,naodb,calc_aod,aodfilename
   use sigio_module, only: sigio_head,sigio_srhead,sigio_sclose,&
        sigio_sropen
   use nemsio_module, only:  nemsio_init,nemsio_open,nemsio_close

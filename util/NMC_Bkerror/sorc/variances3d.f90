@@ -1,28 +1,29 @@
-subroutine variances3d(numcases,mype)
+subroutine variances3d(numcases,numaodcases,mype)
   use kinds, only: r_kind,r_single,i_kind
   use postmod, only: smoothlat
   use variables,only: nlat,nlon,nsig,lat1,lon1,filunit1,filunit2,zero,&
       displs_g,ijn,two,db_prec,biasrm,iglobal,ltosi,ltosj,&
-      bbiasz,bbiasd,bbiast,bcorrz,bcorrd,bcorrt,bbiasp,bcorrp
+      bbiasz,bbiasd,bbiast,bcorrz,bcorrd,bcorrt,bbiasp,bcorrp,&
+      bbiasaod,bcorraod,aodfilunit1,aodfilunit2,calc_aod
   implicit none
   include 'mpif.h'
 
-  integer(i_kind),intent(in):: numcases,mype
+  integer(i_kind),intent(in):: numcases,numaodcases,mype
 
   real(r_kind),dimension(lat1,lon1,nsig):: sf1,vp1,t1,rh1,oz1,cw1
-  real(r_kind),dimension(lat1,lon1):: ps1
+  real(r_kind),dimension(lat1,lon1):: ps1,aod1
   real(r_kind),dimension(lat1,lon1,nsig):: sf2,vp2,t2,rh2,oz2,cw2
-  real(r_kind),dimension(lat1,lon1):: ps2
+  real(r_kind),dimension(lat1,lon1):: ps2,aod2
   real(r_kind),dimension(lat1,lon1,nsig):: sfvar,vpvar,tvar,qvar,ozvar,cwvar
-  real(r_kind),dimension(lat1,lon1):: psvar3
+  real(r_kind),dimension(lat1,lon1):: psvar3,aodvar3
 
 ! Global Grid
   real(r_kind),dimension(iglobal):: work
   real(r_kind),dimension(nlat,nlon,nsig):: sfg,vpg,tg,qg,ozg,cwg
-  real(r_kind),dimension(nlat,nlon):: psg
+  real(r_kind),dimension(nlat,nlon):: psg,aodg
 ! Variables for grads file (re-ordered)
   real(r_kind),dimension(nlon,nlat,nsig):: sf4,vp4,t4,q4,oz4,cw4
-  real(r_kind),dimension(nlon,nlat):: ps4
+  real(r_kind),dimension(nlon,nlat):: ps4,aod4
 
   integer(i_kind) i,j,k,n,mype_post,ncfggg,mm1,ierror,iret,i1,i2,kk
   integer(i_kind) mpi_rtype
@@ -38,7 +39,7 @@ subroutine variances3d(numcases,mype)
   mm1=mype+1
 
 ! Initialize subdomain variance arrays
-  sfvar=zero ; vpvar=zero ; tvar=zero ; qvar=zero ; ozvar=zero ; cwvar=zero ; psvar3=zero
+  sfvar=zero ; vpvar=zero ; tvar=zero ; qvar=zero ; ozvar=zero ; cwvar=zero ; psvar3=zero ; aodvar3=zero
 
 ! Each mpi task will carry two files, which contains all variables, for each of the time levels
   open(filunit1,form='unformatted',action='read')
@@ -51,7 +52,7 @@ subroutine variances3d(numcases,mype)
     read(filunit1) sf1,vp1,t1,rh1,oz1,cw1,ps1
     read(filunit2) sf2,vp2,t2,rh2,oz2,cw2,ps2
 
-    call delvars(sf1,vp1,t1,rh1,oz1,cw1,ps1,sf2,vp2,t2,rh2,oz2,cw2,ps2,mype)
+    call delvars(sf1,vp1,t1,rh1,oz1,cw1,ps1,aod1,sf2,vp2,t2,rh2,oz2,cw2,ps2,aod2,mype)
 
     do k=1,nsig
       do j=1,lon1
@@ -73,6 +74,31 @@ subroutine variances3d(numcases,mype)
   end do !End do over number of cases to process
   close(filunit1)
   close(filunit2)
+
+  if (calc_aod) then
+    open(aodfilunit1,form='unformatted',action='read')
+    rewind(aodfilunit1)
+    open(aodfilunit2,form='unformatted',action='read')
+    rewind(aodfilunit2)
+
+
+    do n=1,numaodcases
+      if (mype==0)  write(6,*) 'VARIANCES3D, PROCESSING AOD PAIR # ',n
+      ! Read in subdomain grids
+      read(aodfilunit1) aod1
+      read(aodfilunit2) aod2
+
+      call delvars(sf1,vp1,t1,rh1,oz1,cw1,ps1,aod1,sf2,vp2,t2,rh2,oz2,cw2,ps2,aod2,mype)
+
+      do j=1,lon1
+        do i=1,lat1
+          aodvar3(i,j) = aodvar3(i,j) + (aod1(i,j)*aod1(i,j))/float(numaodcases)
+        end do
+      end do
+    end do !End do over number of cases to process
+    close(aodfilunit1)
+    close(aodfilunit2)
+  end if ! end if calculating AOD
 
 ! Create global grid by gathering from subdomains
   do k=1,nsig
@@ -141,6 +167,18 @@ subroutine variances3d(numcases,mype)
     end do
   end if
 
+  if (calc_aod) then
+    call mpi_gatherv(aodvar3,ijn(mm1),mpi_rtype,&
+           work,ijn,displs_g,mpi_rtype,&
+           mype_post,mpi_comm_world,ierror)
+    if (mype==mype_post) then
+      do kk=1,iglobal
+        i1=ltosi(kk); i2=ltosj(kk)
+        aodg(i1,i2)=work(kk)
+      end do
+    end if
+  end if
+
   if (mype==mype_post) then
     do k=1,nsig
       do j=1,nlon
@@ -157,6 +195,7 @@ subroutine variances3d(numcases,mype)
     do j=1,nlon
       do i=1,nlat
         ps4(j,i)=sqrt(psg(i,j))
+        aod4(j,i)=sqrt(aodg(i,j))
       end do
     end do
 
@@ -170,6 +209,7 @@ subroutine variances3d(numcases,mype)
     call wryte(22,4*nlat*nlon*nsig,oz4)
     call wryte(22,4*nlat*nlon*nsig,cw4)
     call wryte(22,4*nlat*nlon,ps4)
+    if (calc_aod) call wryte(22,4*nlat*nlon,aod4)
     call baclose(22,iret)
 
   end if

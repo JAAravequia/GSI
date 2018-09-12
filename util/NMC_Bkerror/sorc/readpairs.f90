@@ -1,11 +1,11 @@
-subroutine readpairs(npe,mype,numcases)
+subroutine readpairs(npe,mype,numcases,numaodcases)
 !   2017-10-25  Gael Descombes (NCAR) - capability to read nemsio files
   use variables, only: nlat,nlon,nsig,ak5,bk5,ck5,&
       na,nb,filename,hybrid,db_prec,zero,one,fv,&
       idpsfc5,idthrm5,cp5,ntrac5,idvc5,idvm5,lat1,lon1,&
       iglobal,ijn_s,displs_s,filunit1,filunit2,&
       ird_s,irc_s,displs_g, ijn,&
-      naoda,naodb,aodfilename
+      naoda,naodb,aodfilename,aodfilunit1,aodfilunit2,calc_aod
   use variables, only: use_gfs_nemsio
   use specgrid, only: sptez_s,nc,ncin,factvml,&
       factsml,enn1,ncd2,jcaptrans,jcap,jcapin,unload_grid,&
@@ -23,6 +23,7 @@ subroutine readpairs(npe,mype,numcases)
   include 'mpif.h'
 
   integer npe,mype,numcases,ierror,mpi_rtype,iret,iret2
+  integer numaodcases
   integer mm1,kk,proc1,proc2
   integer i,j,k,m,n,inges,inge2,i2,i2m1
   integer k1,k2,k3,k4,k5,k6,jj
@@ -421,8 +422,6 @@ subroutine readpairs(npe,mype,numcases)
            call unload_grid(grid1,work1(1,k))
            call unload_grid(grid2,work2(1,k))
         end if
-     else if(nvar_id(k).eq.8) then ! aod
-       ! CRM placeholder for now CRM
      else ! No nsig1o level to process
 !!        write(6,*) 'READPAIRS:  No Level to process, k,mype,levs_id,nvar_id = ',k,mype,levs_id(k),nvar_id(k)
      endif
@@ -539,17 +538,89 @@ subroutine readpairs(npe,mype,numcases)
 
 
 ! Write out the grids
-    write(filunit1) sf1,vp1,t1,rh1,oz1,cw1,ps1,aod1
-    write(filunit2) sf2,vp2,t2,rh2,oz2,cw2,ps2,aod2
+    write(filunit1) sf1,vp1,t1,rh1,oz1,cw1,ps1
+    write(filunit2) sf2,vp2,t2,rh2,oz2,cw2,ps2
 
     call mpi_barrier(mpi_comm_world,iret2)
 
   end do   ! END DO LOOP OVER CASES
   close(filunit1)
   close(filunit2)
-  deallocate(taskid)
 
   call mpi_barrier(mpi_comm_world,iret2)
+
+  ! now read in AOD pairs, which is a separate list
+  if (calc_aod) then
+    aodfilunit1=(100000+(mype+1))
+    aodfilunit2=(200000+(mype+1))
+
+    ! Each mpi task will carry two files, which contains all variables, for each of the time levels
+    open(aodfilunit1,form='unformatted',action='write')
+    rewind(aodfilunit1)
+    open(aodfilunit2,form='unformatted',action='write')
+    rewind(aodfilunit2)
+
+    call nemsio_init(iret=iret)
+    if(iret/=0) then
+       write(6,*)'readpairs: problem with nemsio_init, iret=',iret
+       stop
+    end if
+
+    do n=1,numaodcases
+      if (mype==0)  write(6,*)'reading from', trim(aodfilename(naoda(n)))
+      call nemsio_open(gfile1,trim(adjustl(aodfilename(naoda(n)))),'read',iret=iret)
+      if (iret/=0) then
+        write(6,*)'readpairs_1: problem with nemsio_open, mype, iret=',mype,iret
+        stop
+      endif
+      if (mype==0)  write(6,*)'reading from', trim(aodfilename(naodb(n)))
+      call nemsio_open(gfile2,trim(adjustl(aodfilename(naodb(n)))),'read',iret=iret)
+      if (iret/=0) then
+        write(6,*)'readpairs_2: problem with nemsio_open, mype, iret=',mype,iret
+        stop
+      endif
+
+      ! convert from grid to wave
+      icount = 0
+      icount = icount + 1
+      !aod
+      if ( mype == taskid(icount) ) then
+         ! CRM - what are the variable names for NEMS I/O for NGAC AOD???
+         call nemsio_readrecv(gfile1,'pres','sfc',lev=1,data=nems_wk(:),iret=iret)
+         grid1 = reshape(nems_wk(:),(/nlon,nlat-2/))
+         call nemsio_readrecv(gfile2,'pres','sfc',lev=1,data=nems_wk(:),iret=iret)
+         grid2 = reshape(nems_wk(:),(/nlon,nlat-2/))
+         call sptez_s(z4all (:,6*nsig+2),grid1,-1)
+         call sptez_s(z4all2(:,6*nsig+2),grid2,-1)
+      end if
+
+      call mpi_scatterv(z4all,spec_send,disp_spec,mpi_rtype,&
+         z41,spec_send(mm1),mpi_rtype,0,mpi_comm_world,ierror)
+      call mpi_scatterv(z4all2,spec_send,disp_spec,mpi_rtype,&
+         z42,spec_send(mm1),mpi_rtype,0,mpi_comm_world,ierror)
+      call mpi_barrier(mpi_comm_world,iret2)
+ 
+      call nemsio_close(gfile1,iret=iret)
+      call nemsio_close(gfile2,iret=iret)
+
+      call grid2sub(work1,sf1,vp1,t1,q1,oz1,cw1,ps1,aod1)
+      call grid2sub(work2,sf2,vp2,t2,q2,oz2,cw2,ps2,aod2)
+
+      write(aodfilunit1) aod1
+      write(aodfilunit2) aod2
+
+      call mpi_barrier(mpi_comm_world,iret2)
+
+    end do ! end loop over numaodcases
+
+    close(aodfilunit1)
+    close(aodfilunit2)
+
+    call mpi_barrier(mpi_comm_world,iret2)
+
+  end if ! end AOD pairs
+
+  deallocate(taskid)
 
   return
 end subroutine readpairs

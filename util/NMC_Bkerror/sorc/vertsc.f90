@@ -11,9 +11,9 @@ subroutine vertsc(numcases,mype)
   integer(i_kind),intent(in):: numcases,mype
 
   real(r_kind),dimension(lat1,lon1,nsig):: sf1,vp1,t1,rh1,oz1,cw1
-  real(r_kind),dimension(lat1,lon1):: ps1
+  real(r_kind),dimension(lat1,lon1):: ps1,aod1
   real(r_kind),dimension(lat1,lon1,nsig):: sf2,vp2,t2,rh2,oz2,cw2
-  real(r_kind),dimension(lat1,lon1):: ps2
+  real(r_kind),dimension(lat1,lon1):: ps2,aod2
 
   real(r_kind),dimension(lat1,lon1,nsig,nsig):: sf4,vp4,t4,rh4,oz4,cw4
   real(r_kind),dimension(iglobal):: work1
@@ -50,13 +50,16 @@ subroutine vertsc(numcases,mype)
   open(filunit2,form='unformatted',action='read')
   rewind(filunit2)
 
+  ! aod placeholders for delvars
+  aod1 = 0. ; aod2 = 0.; 
+  
   do n=1,numcases
     if (mype==0)  write(6,*) 'VERTSC, PROCESSING PAIR # ',n
 ! Read in subdomain grids
     read(filunit1) sf1,vp1,t1,rh1,oz1,cw1,ps1
     read(filunit2) sf2,vp2,t2,rh2,oz2,cw2,ps2
 
-    call delvars(sf1,vp1,t1,rh1,oz1,cw1,ps1,sf2,vp2,t2,rh2,oz2,cw2,ps2,mype)
+    call delvars(sf1,vp1,t1,rh1,oz1,cw1,ps1,aod1,sf2,vp2,t2,rh2,oz2,cw2,ps2,aod2,mype)
 
     do m=1,nsig
       do k=1,nsig

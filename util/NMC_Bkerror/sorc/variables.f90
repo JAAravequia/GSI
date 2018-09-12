@@ -14,6 +14,7 @@ module variables
 
 ! for AOD Bkerror
   logical calc_aod
+  integer aodfilunit1,aodfilunit2
 
 ! from GSI gridmod:
   logical hybrid,db_prec,biasrm,vertavg,use_gfs_nemsio

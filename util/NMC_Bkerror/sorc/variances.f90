@@ -1,15 +1,16 @@
-subroutine variances(numcases,mype)
+subroutine variances(numcases,numaodcases,mype)
   use kinds, only: r_kind,r_single,i_kind
   use postmod, only: smoothlat
   use variables,only: nlat,nlon,nsig,lat1,lon1,filunit1,filunit2,zero,&
       displs_g,ijn,two,db_prec,istart,ilat1,jstart,npe,&
       bbiasz,bbiasd,bbiast,bcorrz,bcorrd,bcorrt,bbiasp,bcorrp,&
       sfvar,vpvar,tvar,qvar,ozvar,cvar,nrhvar,psvar,tcon,vpcon,pscon,&
-      iglobal,ltosi,ltosj,half,one,ione,two,smoothdeg,vertavg
+      iglobal,ltosi,ltosj,half,one,ione,two,smoothdeg,vertavg,&
+      bbiasaod,bcorraod,aodfilunit1,aodfilunit2
   implicit none
   include 'mpif.h'
 
-  integer(i_kind),intent(in):: numcases,mype
+  integer(i_kind),intent(in):: numcases,numaodcases,mype
 
   real(r_kind),dimension(lat1,lon1,nsig):: sf1,vp1,t1,rh1,oz1,cw1
   real(r_kind),dimension(lat1,lon1):: ps1,bal1

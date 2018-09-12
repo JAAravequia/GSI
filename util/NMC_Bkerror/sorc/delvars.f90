@@ -1,4 +1,4 @@
-subroutine delvars(sf1,vp1,t1,rh1,oz1,cw1,ps1,sf2,vp2,t2,rh2,oz2,cw2,ps2,mype)
+subroutine delvars(sf1,vp1,t1,rh1,oz1,cw1,ps1,aod1,sf2,vp2,t2,rh2,oz2,cw2,ps2,aod2,mype)
   use kinds, only: r_kind,r_single,i_kind
   use variables,only: nlat,nlon,nsig,lat1,lon1,zero,biasrm,&
       bbiasz,bbiasd,bbiast,bcorrz,bcorrd,bcorrt,bbiasp,bcorrp,&
@@ -6,9 +6,9 @@ subroutine delvars(sf1,vp1,t1,rh1,oz1,cw1,ps1,sf2,vp2,t2,rh2,oz2,cw2,ps2,mype)
   implicit none
 
   real(r_kind),dimension(lat1,lon1,nsig),intent(inout):: sf1,vp1,t1,rh1,oz1,cw1
-  real(r_kind),dimension(lat1,lon1),intent(inout):: ps1
+  real(r_kind),dimension(lat1,lon1),intent(inout):: ps1,aod1
   real(r_kind),dimension(lat1,lon1,nsig),intent(inout):: sf2,vp2,t2,rh2,oz2,cw2
-  real(r_kind),dimension(lat1,lon1),intent(inout):: ps2
+  real(r_kind),dimension(lat1,lon1),intent(inout):: ps2,aod2
   integer(i_kind),intent(in):: mype
 
   real(r_kind),dimension(lat1,lon1):: bal1
@@ -31,6 +31,7 @@ subroutine delvars(sf1,vp1,t1,rh1,oz1,cw1,ps1,sf2,vp2,t2,rh2,oz2,cw2,ps2,mype)
       do j=1,lon1
         do i=1,lat1
           ps1(i,j) = ps1(i,j)-bcorrp(i,j)*ps2(i,j)-bbiasp(i,j)
+          aod1(i,j) = aod1(i,j)-bcorrp(i,j)*aod2(i,j)-bbiasp(i,j)
         end do
       end do
     else
@@ -46,6 +47,7 @@ subroutine delvars(sf1,vp1,t1,rh1,oz1,cw1,ps1,sf2,vp2,t2,rh2,oz2,cw2,ps2,mype)
       do j=1,lon1
         do i=1,lat1
           ps1(i,j) = ps1(i,j)-ps2(i,j)
+          aod1(i,j) = aod1(i,j)-aod2(i,j)
         end do
       end do
     end if

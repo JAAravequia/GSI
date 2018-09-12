@@ -1,30 +1,31 @@
-subroutine biascor(numcases,mype)
+subroutine biascor(numcases,numaodcases,mype)
   use kinds, only: r_kind,r_single,i_kind,r_double
   use variables,only: nlat,nlon,nsig,lat1,lon1,filunit1,filunit2,zero,&
       displs_g,ijn,two,db_prec,one,&
       bbiasz,bbiasd,bbiast,bcorrz,bcorrd,bcorrt,bbiasp,bcorrp,&
-      istart,ilat1,jstart,iglobal,ltosi,ltosj
+      istart,ilat1,jstart,iglobal,ltosi,ltosj,&
+      bcorraod,bbiasaod,aodfilunit1,aodfilunit2,calc_aod
   implicit none
   include 'mpif.h'
 
-  integer(i_kind),intent(in):: numcases,mype
+  integer(i_kind),intent(in):: numcases,numaodcases,mype
 
   real(r_kind),dimension(lat1,lon1,nsig):: sf1,vp1,t1,rh1,oz1,cw1
-  real(r_kind),dimension(lat1,lon1):: ps1
+  real(r_kind),dimension(lat1,lon1):: ps1,aod1
   real(r_kind),dimension(lat1,lon1,nsig):: sf2,vp2,t2,rh2,oz2,cw2
-  real(r_kind),dimension(lat1,lon1):: ps2
+  real(r_kind),dimension(lat1,lon1):: ps2,aod2
 
   real(r_double),dimension(lat1,lon1,nsig,4):: bfactz,bfactd,bfactt
-  real(r_double),dimension(lat1,lon1,4):: bfactp
+  real(r_double),dimension(lat1,lon1,4):: bfactp,bfactaod
   real(r_kind),dimension(iglobal):: work1
   real(r_kind),dimension(nlat,nlon):: workgrd
 
   real(r_kind),dimension(nlat,nlon,nsig):: bcz,bcd,bct,bbz,bbd,bbt
-  real(r_kind),dimension(nlat,nlon):: bbp,bcp
+  real(r_kind),dimension(nlat,nlon):: bbp,bcp,bbaod,bcaod
 !  real(r_single),dimension(nlon,nlat,nsig):: bcz4,bcd4,bct4,bbz4,bbd4,bbt4
 !  real(r_single),dimension(nlon,nlat):: bcp4,bbp4
   real(r_kind),dimension(nlon,nlat,nsig):: bcz4,bcd4,bct4,bbz4,bbd4,bbt4
-  real(r_kind),dimension(nlon,nlat):: bcp4,bbp4
+  real(r_kind),dimension(nlon,nlat):: bcp4,bbp4,bcaod4,bbaod4
 
   character(255) grdfile
   integer ncfggg,ifile
@@ -35,6 +36,7 @@ subroutine biascor(numcases,mype)
   allocate( bbiasz(lat1,lon1,nsig),bbiasd(lat1,lon1,nsig),bbiast(lat1,lon1,nsig) )
   allocate( bcorrz(lat1,lon1,nsig),bcorrd(lat1,lon1,nsig),bcorrt(lat1,lon1,nsig) )
   allocate( bbiasp(lat1,lon1),bcorrp(lat1,lon1) )
+  allocate( bbiasaod(lat1,lon1),bcorraod(lat1,lon1) )
 
   if (db_prec) then
     mpi_rtype=mpi_real8
@@ -46,9 +48,10 @@ subroutine biascor(numcases,mype)
   mm1=mype+1
 
 ! Initialize arrays
-  bcorrp=one ; bcorrt=one ; bcorrd=one ; bcorrz=one
-  bbiasp=zero ; bbiast=zero ; bbiasd=zero ; bbiasz=zero
+  bcorrp=one ; bcorrt=one ; bcorrd=one ; bcorrz=one; bcorraod=one
+  bbiasp=zero ; bbiast=zero ; bbiasd=zero ; bbiasz=zero; bbiasaod=zero
   bfactp=0._r_double ; bfactz=0._r_double ; bfactd=0._r_double ; bfactt=0._r_double
+  bfactaod=0._r_double
   
 ! BIAS CORR ARRAYS
   open(filunit1,form='unformatted',action='read')
@@ -96,6 +99,31 @@ subroutine biascor(numcases,mype)
   close(filunit1)
   close(filunit2)
 
+  if (calc_aod) then
+    open(aodfilunit1,form='unformatted',action='read')
+    rewind(aodfilunit1)
+    open(aodfilunit2,form='unformatted',action='read')
+    rewind(aodfilunit2)
+
+    do n=1,numaodcases
+      if (mype==0)  write(6,*) 'BIASCOR, PROCESSING AOD PAIR # ',n
+! Read in subdomain grids
+      read(aodfilunit1) aod1
+      read(aodfilunit2) aod2
+
+      do j=1,lon1
+        do i=1,lat1
+          bfactaod(i,j,1)=bfactaod(i,j,1)+(aod1(i,j)*aod2(i,j))
+          bfactaod(i,j,2)=bfactaod(i,j,2)+(aod2(i,j)*aod2(i,j))
+          bfactaod(i,j,3)=bfactaod(i,j,3)+aod1(i,j)
+          bfactaod(i,j,4)=bfactaod(i,j,4)+aod2(i,j)
+        end do
+      end do
+    end do ! END DO NUMCASES
+    close(aodfilunit1)
+    close(aodfilunit2)
+  end if ! end if calc_aod
+
   do k=1,nsig
     do j=1,lon1
       do i=1,lat1
@@ -140,6 +168,22 @@ subroutine biascor(numcases,mype)
       bbiasp(i,j)=bfactp(i,j,3)-bcorrp(i,j)*bfactp(i,j,4)
     end do
   end do
+
+  if (calc_aod) then
+    do j=1,lon1
+      do i=1,lat1
+        do n=1,4
+          bfactaod(i,j,n) = bfactaod(i,j,n)/float(numcases)
+        end do
+
+        if(abs(bfactaod(i,j,2)-bfactaod(i,j,4)**2) > 1.e-26)then
+          bcorraod(i,j)=(bfactaod(i,j,1)-bfactaod(i,j,3)*bfactaod(i,j,4)) &
+                      /(bfactaod(i,j,2)-bfactaod(i,j,4)**2.)
+        end if
+        bbiasaod(i,j)=bfactaod(i,j,3)-bcorraod(i,j)*bfactaod(i,j,4)
+      end do
+    end do
+  end if
 
 
   do k=1,nsig
@@ -234,6 +278,28 @@ subroutine biascor(numcases,mype)
      end do
   end if
 
+  if (calc_aod) then
+    call mpi_gatherv(bbiasaod,ijn(mm1),mpi_rtype,&
+         work1,ijn,displs_g,mpi_rtype,&
+         mype_work,mpi_comm_world,ierror)
+    if (mype==mype_work) then
+       do kk=1,iglobal
+          ni1=ltosi(kk); ni2=ltosj(kk)
+          bbaod(ni1,ni2)=work1(kk)
+       end do
+    end if
+
+    call mpi_gatherv(bcorraod,ijn(mm1),mpi_rtype,&
+         work1,ijn,displs_g,mpi_rtype,&
+         mype_work,mpi_comm_world,ierror)
+    if (mype==mype_work) then
+       do kk=1,iglobal
+          ni1=ltosi(kk); ni2=ltosj(kk)
+          bcaod(ni1,ni2)=work1(kk)
+       end do
+    end if
+  end if ! calc aod
+
   if (mype==mype_work) then
       write(6,*) 'REVERSE LAT/LON'
       do k=1,nsig
@@ -253,6 +319,8 @@ subroutine biascor(numcases,mype)
         do i=1,nlat
           bcp4(j,i) = bcp(i,j)
           bbp4(j,i) = bbp(i,j)
+          bcaod4(j,i) = bcaod(i,j)
+          bbaod4(j,i) = bbaod(i,j)
         end do
       end do
 
@@ -269,6 +337,11 @@ subroutine biascor(numcases,mype)
       call wryte(22,4*nlat*nlon*nsig,bbt4)
       call wryte(22,4*nlat*nlon,bcp4)
       call wryte(22,4*nlat*nlon,bbp4)
+      if (calc_aod) then
+        call wryte(22,4*nlat*nlon,bcaod4)
+        call wryte(22,4*nlat*nlon,bbaod4)
+      end if
+
 
     end if
 
