@@ -586,9 +586,9 @@ subroutine readpairs(npe,mype,numcases,numaodcases)
       !aod
       if ( mype == taskid(icount) ) then
          ! CRM - what are the variable names for NEMS I/O for NGAC AOD???
-         call nemsio_readrecv(gfile1,'AOTK','Entire_atmosphere',lev=1,data=nems_wk(:),iret=iret)
+         call nemsio_readrecv(gfile1,'AOTK','entire_atmosphere',lev=1,data=nems_wk(:),iret=iret)
          grid1 = reshape(nems_wk(:),(/nlon,nlat-2/))
-         call nemsio_readrecv(gfile2,'AOTK','Entire_atmosphere',lev=1,data=nems_wk(:),iret=iret)
+         call nemsio_readrecv(gfile2,'AOTK','entire_atmosphere',lev=1,data=nems_wk(:),iret=iret)
          grid2 = reshape(nems_wk(:),(/nlon,nlat-2/))
          call sptez_s(z4all (:,6*nsig+2),grid1,-1)
          call sptez_s(z4all2(:,6*nsig+2),grid2,-1)

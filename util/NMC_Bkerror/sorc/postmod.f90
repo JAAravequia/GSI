@@ -292,7 +292,11 @@ subroutine writefiles
    write(24,'(5f12.6)') slat
    write(24,'("ZDEF",i6," LINEAR 1 1")') nsig
    write(24,'("TDEF",i6,1x,"LINEAR",1x,"00Z01Jan2000",1x,i3,"hr")') 1,12
-   write(24,'("VARS",i6)') 87
+   if (calc_aod) then
+     write(24,'("VARS",i6)') 89
+   else
+     write(24,'("VARS",i6)') 87
+   end if
    write(24,'("SF    ",i3," 0 SF VAR")') nsig
    write(24,'("VP    ",i3," 0 VP VAR")') nsig
    write(24,'("T     ",i3," 0 T  VAR")') nsig
