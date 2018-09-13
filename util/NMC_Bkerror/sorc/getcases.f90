@@ -166,13 +166,13 @@ subroutine getcases(numcases,mype)
       call nemsio_init(iret=iret2)
       if ( iret2 /= 0 ) then
           write(6,*)' getcases:  ***ERROR*** problem nemsio_init file = ', &
-                trim(filename(loop)),', Status = ',iret2
+                trim(aodfilename(loop)),', Status = ',iret2
           !stop ! let's not stop if we can't read AOD file
       end if
-      call nemsio_open(gfile,filename(loop),'READ',iret=iret2)
+      call nemsio_open(gfile,aodfilename(loop),'READ',iret=iret2)
       if ( iret2 /= 0 ) then
           write(6,*)' getcases:  ***ERROR*** problem opening file = ', &
-                trim(filename(loop)),', Status = ',iret2
+                trim(aodfilename(loop)),', Status = ',iret2
           !stop
       end if
 
