@@ -83,7 +83,6 @@ subroutine horizsc(numcases,numaodcases,mype)
       do i=1,lat1
         ix=istart(mype+1)+i-1
         ps1(i,j) = ps1(i,j)/sqrt(psvar(ix))
-        aod1(i,j) = aod1(i,j)/sqrt(aodvar(ix))
       end do
     end do
 
@@ -145,7 +144,6 @@ subroutine horizsc(numcases,numaodcases,mype)
     do j=1,lon1
       do i=1,lat1
         ps3(i,j) = ps3(i,j) + ps1(i,j)*ps1(i,j)*r_norm
-        aod3(i,j) = aod3(i,j) + aod1(i,j)*aod1(i,j)*r_norm
       end do
     end do           
   end do ! end do over numcases
@@ -156,7 +154,7 @@ subroutine horizsc(numcases,numaodcases,mype)
     open(aodfilunit1,form='unformatted',action='read')
     rewind(aodfilunit1)
     open(aodfilunit2,form='unformatted',action='read')
-    rewind(filunit2)
+    rewind(aodfilunit2)
 
     do n=1,numaodcases
       if (mype==0)  write(6,*) 'HORIZSC, PROCESSING AOD PAIR # ',n
@@ -357,6 +355,7 @@ subroutine horizsc(numcases,numaodcases,mype)
       do i=1,nlat
         do j=1,nlon
           aodlap(i) = aodlap(i) + workgrd(i,j)/float(nlon)
+          write (6,*) "aodlap",i,aodlap(i)
         end do
       end do
     end if
@@ -376,6 +375,8 @@ subroutine horizsc(numcases,numaodcases,mype)
     do i=1,nlat
       pshln(i)=(eight/pslap(i))**quarter
       aodhln(i)=(eight/aodlap(i))**quarter
+      write (6,*) "aodhln",i,aodhln(i)
+      write (6,*) "pshln",i,pshln(i)
     end do
 
 !! Put bounds on cloud water horizontal scales

@@ -1,4 +1,4 @@
-subroutine getcases(numcases,mype)
+subroutine getcases(numcases,numaodcases,mype)
 !   2017-10-25  Gael Descombes (NCAR) - capability to read nemsio files
 ! This routine gets the names and number of available
 ! forecast pairs
@@ -231,6 +231,7 @@ subroutine getcases(numcases,mype)
     enddo       ! end loop to ncases
   end if        ! end if for calc_aod
 
+  naodcase = 1 ! CRM test
   if(mype==0) then
     write(6,*)' number of cases available = ',ncase
     if(calc_aod)write(6,*)' number of AOD cases available = ',naodcase

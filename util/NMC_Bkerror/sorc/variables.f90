@@ -256,6 +256,7 @@ contains
     deallocate(tcon,vpcon,pscon)
     deallocate(nrhvar)
     deallocate(aodvar,aodhln)
+    deallocate(aodfilename,naoda,naodb)
 
   end subroutine destroy_grids
 

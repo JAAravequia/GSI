@@ -54,6 +54,7 @@ subroutine readpairs(npe,mype,numcases,numaodcases)
   type(nemsio_gfile) :: gfile1
   type(nemsio_gfile) :: gfile2
   real(nemsio_realkind),dimension((nlat-2)*nlon):: nems_wk
+  real(nemsio_realkind),dimension((nlat-2)*nlon):: aod_wk
 
   logical ice
   if (db_prec) then
@@ -567,14 +568,18 @@ subroutine readpairs(npe,mype,numcases,numaodcases)
     end if
 
     do n=1,numaodcases
-      if (mype==0)  write(6,*)'reading from', trim(aodfilename(naoda(n)))
-      call nemsio_open(gfile1,trim(adjustl(aodfilename(naoda(n)))),'read',iret=iret)
+      if (mype==0)  write(6,*)'reading from', trim(aodfilename(1))! CRM test
+      !if (mype==0)  write(6,*)'reading from', trim(aodfilename(naoda(n)))
+      call nemsio_open(gfile1,trim(adjustl(aodfilename(1))),'read',iret=iret)
+      !call nemsio_open(gfile1,trim(adjustl(aodfilename(naoda(n)))),'read',iret=iret)
       if (iret/=0) then
         write(6,*)'readpairs_1: problem with nemsio_open, mype, iret=',mype,iret
         stop
       endif
-      if (mype==0)  write(6,*)'reading from', trim(aodfilename(naodb(n)))
-      call nemsio_open(gfile2,trim(adjustl(aodfilename(naodb(n)))),'read',iret=iret)
+      if (mype==0)  write(6,*)'reading from', trim(aodfilename(2))! CRM test
+      !if (mype==0)  write(6,*)'reading from', trim(aodfilename(naodb(n)))
+      call nemsio_open(gfile2,trim(adjustl(aodfilename(2))),'read',iret=iret)
+      !call nemsio_open(gfile2,trim(adjustl(aodfilename(naodb(n)))),'read',iret=iret)
       if (iret/=0) then
         write(6,*)'readpairs_2: problem with nemsio_open, mype, iret=',mype,iret
         stop
@@ -585,11 +590,34 @@ subroutine readpairs(npe,mype,numcases,numaodcases)
       icount = icount + 1
       !aod
       if ( mype == taskid(icount) ) then
-         ! CRM - what are the variable names for NEMS I/O for NGAC AOD???
-         call nemsio_readrecv(gfile1,'ducmassacol','entire_atmosphere',lev=1,data=nems_wk(:),iret=iret)
-         grid1 = reshape(nems_wk(:),(/nlon,nlat-2/))
-         call nemsio_readrecv(gfile2,'ducmassacol','entire_atmosphere',lev=1,data=nems_wk(:),iret=iret)
-         grid2 = reshape(nems_wk(:),(/nlon,nlat-2/))
+         ! CRM - these aer diagnostic files have column mass per species/type,
+         ! so we need to sum them up 
+         aod_wk(:) = 0
+         call nemsio_readrecv(gfile1,'ducmassacol',lev=1,data=nems_wk(:),iret=iret) ! dust
+         aod_wk(:) = aod_wk(:) + nems_wk(:)
+         call nemsio_readrecv(gfile1,'sscmassacol',lev=1,data=nems_wk(:),iret=iret) ! sea salt
+         aod_wk(:) = aod_wk(:) + nems_wk(:)
+         call nemsio_readrecv(gfile1,'bccmassacol',lev=1,data=nems_wk(:),iret=iret) ! black C
+         aod_wk(:) = aod_wk(:) + nems_wk(:)
+         call nemsio_readrecv(gfile1,'occmassacol',lev=1,data=nems_wk(:),iret=iret) ! organic C
+         aod_wk(:) = aod_wk(:) + nems_wk(:)
+         call nemsio_readrecv(gfile1,'sucmassacol',lev=1,data=nems_wk(:),iret=iret) ! sulfate
+         aod_wk(:) = aod_wk(:) + nems_wk(:)
+         grid1 = reshape(aod_wk(:),(/nlon,nlat-2/))
+         aod_wk(:) = 0
+         call nemsio_readrecv(gfile2,'ducmassacol',lev=1,data=nems_wk(:),iret=iret) ! dust
+         aod_wk(:) = aod_wk(:) + nems_wk(:)
+         call nemsio_readrecv(gfile2,'sscmassacol',lev=1,data=nems_wk(:),iret=iret) ! sea salt
+         aod_wk(:) = aod_wk(:) + nems_wk(:)
+         call nemsio_readrecv(gfile2,'bccmassacol',lev=1,data=nems_wk(:),iret=iret) ! black C
+         aod_wk(:) = aod_wk(:) + nems_wk(:)
+         call nemsio_readrecv(gfile2,'occmassacol',lev=1,data=nems_wk(:),iret=iret) ! organic C
+         aod_wk(:) = aod_wk(:) + nems_wk(:)
+         call nemsio_readrecv(gfile2,'sucmassacol',lev=1,data=nems_wk(:),iret=iret) ! sulfate
+         aod_wk(:) = aod_wk(:) + nems_wk(:)
+         grid2 = reshape(aod_wk(:),(/nlon,nlat-2/))
+         !call nemsio_readrecv(gfile2,'ducmassacol','entire_atmosphere',lev=1,data=nems_wk(:),iret=iret)
+         !grid2 = reshape(nems_wk(:),(/nlon,nlat-2/))
          call sptez_s(z4all (:,6*nsig+2),grid1,-1)
          call sptez_s(z4all2(:,6*nsig+2),grid2,-1)
       end if

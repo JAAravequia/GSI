@@ -117,7 +117,7 @@ program statsmain
 
 ! Make call to see how many available files there are
   if(mype==0) write(6,*) 'COUNT NUMBER OF AVAILABLE CASES'
-  call getcases(numcases,mype)
+  call getcases(numcases,numaodcases,mype)
 
 ! Read in spectral coeffs and right out subdomain grids to scratch files
   call readpairs(npe,mype,numcases,numaodcases)
