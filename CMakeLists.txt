@@ -241,6 +241,7 @@ project(GSI)
     add_subdirectory(util/Analysis_Utilities/read_diag)
     add_subdirectory(util/radar_process/radialwind)
     add_subdirectory(util/radar_process/reflectivity)
+    add_subdirectory(util/EnKF/arw/src)
   endif(BUILD_UTIL_COM) 
   add_subdirectory(util/ndate)
 
