@@ -132,12 +132,12 @@ else
      ! define sighead on all tasks.
      call sigio_sropen(iunit,trim(filename),iret)
      if (iret /= 0) then
-        print *,'error reading file in gridinfo',trim(filename),' on task',nproc
+        print *,'error reading file in gridinfo ',trim(filename),' on task',nproc
         call stop2(24)
      end if
      call sigio_srhead(iunit,sighead,iret)
      if (iret /= 0) then
-        print *,'error reading file in gridinfo',trim(filename),' on task',nproc
+        print *,'error reading file in gridinfo ',trim(filename),' on task',nproc
         call stop2(24)
      end if
      call sigio_sclose(iunit,iret)
@@ -209,7 +209,7 @@ if (nproc .eq. 0) then
       call sigio_srohdc(iunit,trim(filename), &
                        sighead,sigdata,iret)
       if (iret /= 0) then
-         print *,'error reading file in gridinfo',trim(filename)
+         print *,'error reading file in gridinfo ',trim(filename)
          call stop2(24)
       end if
       nlevsin = sighead%levs
