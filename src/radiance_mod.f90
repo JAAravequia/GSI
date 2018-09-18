@@ -820,6 +820,8 @@ contains
 !
 !$$$ end documentation block
     use kinds, only: i_kind,r_kind
+!KAB
+    use correlated_obsmod, only: cloudy_R
     implicit none
 !KAB
     character(len=*),intent(in):: isis    
@@ -828,9 +830,10 @@ contains
     real(r_kind),dimension(nchanl),intent(in):: tnoise,tnoise_cld
     real(r_kind),dimension(nchanl),intent(inout) :: error0
     type(rad_obs_type),intent(in) :: radmod 
+    real(r_kind),dimension(nchanl,nchanl):: Rmat
 !KAB clrsky
     logical,intent(inout):: clrsky
-
+    logical:: interpR
     integer(i_kind) :: i
     real(r_kind) :: clwtmp
     real(r_kind),dimension(nchanl) :: cclr,ccld
@@ -843,9 +846,9 @@ contains
 !but only if there is a supplied cloudy R
 !store this matrix where? temporary array to be an optional argument in next 
 !corr_obs routine?
-   allocate(Rmat(nchanl,nchanl))
+!   allocate(Rmat(nchanl,nchanl))
    clwtmp=half*(clwp_amsua+clw_guess_retrieval)
-   call cloudy_R_(clwtmp,cclr(1),ccld(1),nchanl,isis,Rmat)
+   interpR= cloudy_R(clwtmp,cclr(1),ccld(1),nchanl,isis,Rmat)
 !if returned from corr routine, do regular error assignment
     do i=1,nchanl
        if (radmod%lcloud4crtm(i)<0) cycle
@@ -864,7 +867,7 @@ contains
        endif
     end do
     return
-
+!    deallocate(Rmat)
   end subroutine radiance_ex_obserr_1
 
   subroutine radiance_ex_obserr_2(radmod,nchanl,cldeff1,cldeff2,tnoise,tnoise_cld,error0)

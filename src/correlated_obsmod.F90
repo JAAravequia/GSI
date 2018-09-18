@@ -167,13 +167,15 @@ public idnames
 public ObsErrorCov
 public GSI_BundleErrorCov
 public corr_oberr_qc
-
+public cloudy_R
 ! !METHOD OVERLOADING:
 
 interface corr_ob_initialize; module procedure ini_; end interface
 interface corr_ob_amiset; module procedure amIset_; end interface
 interface corr_oberr_qc; module procedure upd_varqc_; end interface
 interface corr_ob_scale_jac; module procedure scale_jac_; end interface
+!KAB
+!interface interp_R; module procedure cloudy_R_; end interface
 interface corr_ob_finalize; module procedure fnl_; end interface
 
 ! !REVISION HISTORY:
@@ -1310,22 +1312,22 @@ end subroutine upd_varqc_
 !EOP
 !-------------------------------------------------------------------------
 !BOC
-logical function cloudy_R_(clw,cclr,ccld,nchanl,isis,Rout)
+logical function cloudy_R(clw,cclr,ccld,nchanl,isis,Rout)
    implicit none
    character(len=*),parameter :: myname_=myname//'*cloudy_R'
    real(r_kind),intent(in):: clw,cclr,ccld
    integer(i_kind), intent(in)::nchanl
    character(len=*),intent(in):: isis
    real(r_kind),dimension(:,:),intent(out):: Rout
-   integer(i_kind):: r,c,jj0,jcld,jclr
+   integer(i_kind):: r,c,jj0,jcld,jclr,rr
    integer(i_kind)::ntrow,iinstr,iisis
    integer(i_kind)::nch_active
    character(len=80) covtype
    real(r_kind) :: Rcld,Rclr !maybe not needed
-   real(r_kind) :: Aint, Bint
+   real(r_kind) :: Aintr, Bint
    real(r_kind),dimension(:),allocatable:: dclr, dcld
-   cloudy_R_=.false.
-   if(.non.allocated(idnames)) return
+   cloudy_R=.false.
+   if(.not.allocated(idnames)) return
 
 !   allocate(Rcld(nchanl,nchanl)
    allocate(dclr(nchanl),dcld(nchanl))
@@ -1338,11 +1340,11 @@ logical function cloudy_R_(clw,cclr,ccld,nchanl,isis,Rout)
       covtype=trim(idnames(jj0))
       iinstr=len_trim(covtype)
       iisis=len_trim(isis)
-      if(covtype(iinstr-9:iinstr-6)=':sea' then
-         if(covtype(iinstr-iisis+1:instr-10)=isis then !CHECK THIS
-            if(covtype(iinstr-4:iinstr)='cloud') then
+      if(covtype(iinstr-9:iinstr-6)==':sea') then
+         if(covtype(iinstr-iisis+1:iinstr-10)==isis) then !CHECK THIS
+            if(covtype(iinstr-4:iinstr)=='cloud') then
                jcld=jj0
-            elseif(covtype(iinstr-4:iinstr)='clear') then
+            elseif(covtype(iinstr-4:iinstr)=='clear') then
                jclr=jj0
             endif
          endif
@@ -1350,11 +1352,11 @@ logical function cloudy_R_(clw,cclr,ccld,nchanl,isis,Rout)
    enddo
    if (jcld==0) return
    nch_active=GSI_BundleErrorCov(jcld)%nch_active
-   if (nch_active=\GSI_BundleErrorCov(jclr)%nch_active) then
-      call die(myname_', 'inconsistency between clear and cloudy channel counts')
+   if (nch_active/=GSI_BundleErrorCov(jclr)%nch_active) then
+      call die(myname_, 'inconsistency between clear and cloudy channel counts')
    endif
    if (nch_active>nchanl) then
-      call die(myname_', 'inconsistency between nchanl and nch_active')
+      call die(myname_, 'inconsistency between nchanl and nch_active')
    endif
 !figure out the indices
 !not sure I need nchanl, just use nch_active
@@ -1370,20 +1372,20 @@ logical function cloudy_R_(clw,cclr,ccld,nchanl,isis,Rout)
       end do
       do c=1,nch_active
          do r=c,nch_active
-            Rclr=GSI_BundleErrorCov(jclr)%R(r,c))*dclr(r)*dclr(c)
-            Rcld=GSI_BundleErrorCov(jcld)%R(r,c))*dcld(r)*dcld(c)
-            Aint=(Rclr-Rcld)/(cclr-ccld)
-            Bint=Rclr-(Aint*cclr)
-            Rout(r,c)=Aint*clw+Bint
+            Rclr=(GSI_BundleErrorCov(jclr)%R(r,c))*dclr(r)*dclr(c)
+            Rcld=(GSI_BundleErrorCov(jcld)%R(r,c))*dcld(r)*dcld(c)
+            Aintr=(Rclr-Rcld)/(cclr-ccld)
+            Bint=Rclr-(Aintr*cclr)
+            Rout(r,c)=Aintr*clw+Bint
          enddo
       end do
       do c=1,nch_active
          dcld(c)=one/(dcld(c)*dcld(c))
          dclr(c)=one/(dclr(c)*dclr(c))
-         Aint=(dclr(c)-dcld(c))/(cclr-ccld)
-         Bint=dclr(c)-(Aint*cclr)
-         dclr(c)=Aint*cld+Bint
-         dclr(c)=sqrt(dclr)
+         Aintr=(dclr(c)-dcld(c))/(cclr-ccld)
+         Bint=dclr(c)-(Aintr*cclr)
+         dclr(c)=Aintr*clw+Bint
+         dclr(c)=sqrt(dclr(c))
       enddo
       do c=1,nch_active
          do r=c,nch_active
@@ -1398,9 +1400,9 @@ logical function cloudy_R_(clw,cclr,ccld,nchanl,isis,Rout)
       enddo
    endif
 !deallocate
-   deallocate(Rcld) 
-   cloudy_R_=.true.
-end function cloudy_R_
+!   deallocate(Rcld) 
+   cloudy_R=.true.
+end function cloudy_R
 !EOC
 
 !-------------------------------------------------------------------------
