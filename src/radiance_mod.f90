@@ -797,7 +797,7 @@ contains
   end subroutine radiance_parameter_aerosol_init
 
   subroutine radiance_ex_obserr_1(radmod,nchanl,clwp_amsua,clw_guess_retrieval, &
-                                tnoise,tnoise_cld,error0,clrsky)
+                                tnoise,tnoise_cld,error0,clrsky,isis)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    radiance_ex_obserr_1
@@ -821,7 +821,8 @@ contains
 !$$$ end documentation block
     use kinds, only: i_kind,r_kind
     implicit none
-    
+!KAB
+    character(len=*),intent(in):: isis    
     integer(i_kind),intent(in) :: nchanl
     real(r_kind),intent(in) :: clwp_amsua,clw_guess_retrieval
     real(r_kind),dimension(nchanl),intent(in):: tnoise,tnoise_cld
@@ -838,10 +839,17 @@ contains
        cclr(i)=radmod%cclr(i)
        ccld(i)=radmod%ccld(i)
     end do
-
+!make a correlated_obsmod routine to average the clear and cloudy covariances, 
+!but only if there is a supplied cloudy R
+!store this matrix where? temporary array to be an optional argument in next 
+!corr_obs routine?
+   allocate(Rmat(nchanl,nchanl))
+   clwtmp=half*(clwp_amsua+clw_guess_retrieval)
+   call cloudy_R_(clwtmp,cclr(1),ccld(1),nchanl,isis,Rmat)
+!if returned from corr routine, do regular error assignment
     do i=1,nchanl
        if (radmod%lcloud4crtm(i)<0) cycle
-       clwtmp=half*(clwp_amsua+clw_guess_retrieval)
+!KAB       clwtmp=half*(clwp_amsua+clw_guess_retrieval)
        if(clwtmp <= cclr(i)) then
           error0(i) = tnoise(i)
        else if(clwtmp > cclr(i) .and. clwtmp < ccld(i)) then

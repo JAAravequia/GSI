@@ -1287,6 +1287,125 @@ end subroutine upd_varqc_
 !-------------------------------------------------------------------------
 !BOP
 !
+! !IROUTINE:  cloudy_R_ --- for allsky assimilation, model R as a function of
+!                           cloud amount
+!
+! !INTERFACE:
+!
+
+! !DESCRIPTION: In allsky assimilation, if a cloudy R matrix is supplied, this
+!               subroutine will interpolate between the clear and cloudy R
+!               matrices based on the cloud amount
+!
+! !REVISION HISTORY:
+!   2018-09-13  kbathmann  initial code
+!
+! !REMARKS:
+!   language: f90
+!   machine:  discover
+!
+! !AUTHOR:
+!   Kristen Bathmann  org: emc      date: 2018-09-13
+!
+!EOP
+!-------------------------------------------------------------------------
+!BOC
+logical function cloudy_R_(clw,cclr,ccld,nchanl,isis,Rout)
+   implicit none
+   character(len=*),parameter :: myname_=myname//'*cloudy_R'
+   real(r_kind),intent(in):: clw,cclr,ccld
+   integer(i_kind), intent(in)::nchanl
+   character(len=*),intent(in):: isis
+   real(r_kind),dimension(:,:),intent(out):: Rout
+   integer(i_kind):: r,c,jj0,jcld,jclr
+   integer(i_kind)::ntrow,iinstr,iisis
+   integer(i_kind)::nch_active
+   character(len=80) covtype
+   real(r_kind) :: Rcld,Rclr !maybe not needed
+   real(r_kind) :: Aint, Bint
+   real(r_kind),dimension(:),allocatable:: dclr, dcld
+   cloudy_R_=.false.
+   if(.non.allocated(idnames)) return
+
+!   allocate(Rcld(nchanl,nchanl)
+   allocate(dclr(nchanl),dcld(nchanl))
+!find clear and cloudy R's in table
+   ntrow=size(idnames)
+   Rout=0.0_r_kind
+   jcld=0
+   jclr=0
+   do jj0=1,ntrow
+      covtype=trim(idnames(jj0))
+      iinstr=len_trim(covtype)
+      iisis=len_trim(isis)
+      if(covtype(iinstr-9:iinstr-6)=':sea' then
+         if(covtype(iinstr-iisis+1:instr-10)=isis then !CHECK THIS
+            if(covtype(iinstr-4:iinstr)='cloud') then
+               jcld=jj0
+            elseif(covtype(iinstr-4:iinstr)='clear') then
+               jclr=jj0
+            endif
+         endif
+      endif
+   enddo
+   if (jcld==0) return
+   nch_active=GSI_BundleErrorCov(jcld)%nch_active
+   if (nch_active=\GSI_BundleErrorCov(jclr)%nch_active) then
+      call die(myname_', 'inconsistency between clear and cloudy channel counts')
+   endif
+   if (nch_active>nchanl) then
+      call die(myname_', 'inconsistency between nchanl and nch_active')
+   endif
+!figure out the indices
+!not sure I need nchanl, just use nch_active
+!store in Rclr and Rcld (but not Rclr if tclw=true)
+
+!interpolate
+   if (clw>ccld) then 
+      Rout=(GSI_BundleErrorCov(jcld)%R(rr,rr))
+   else
+      do c=1,nch_active
+         dclr(c)=one/sqrt(GSI_BundleErrorCov(jclr)%R(c,c))
+         dcld(c)=one/sqrt(GSI_BundleErrorCov(jcld)%R(c,c))
+      end do
+      do c=1,nch_active
+         do r=c,nch_active
+            Rclr=GSI_BundleErrorCov(jclr)%R(r,c))*dclr(r)*dclr(c)
+            Rcld=GSI_BundleErrorCov(jcld)%R(r,c))*dcld(r)*dcld(c)
+            Aint=(Rclr-Rcld)/(cclr-ccld)
+            Bint=Rclr-(Aint*cclr)
+            Rout(r,c)=Aint*clw+Bint
+         enddo
+      end do
+      do c=1,nch_active
+         dcld(c)=one/(dcld(c)*dcld(c))
+         dclr(c)=one/(dclr(c)*dclr(c))
+         Aint=(dclr(c)-dcld(c))/(cclr-ccld)
+         Bint=dclr(c)-(Aint*cclr)
+         dclr(c)=Aint*cld+Bint
+         dclr(c)=sqrt(dclr)
+      enddo
+      do c=1,nch_active
+         do r=c,nch_active
+            Rout(r,c)=Rout(r,c)*dclr(r)*dclr(c)
+         enddo
+      enddo
+
+      do c=2,nch_active
+         do r=1,c-1
+            Rout(r,c)=Rout(c,r)
+         enddo
+      enddo
+   endif
+!deallocate
+   deallocate(Rcld) 
+   cloudy_R_=.true.
+end function cloudy_R_
+!EOC
+
+!-------------------------------------------------------------------------
+!BOP
+!
 ! !IROUTINE:  decompose_subset_ --- extract subset cov(R) and decompose it
 !
 ! !INTERFACE:

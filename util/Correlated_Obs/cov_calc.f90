@@ -80,7 +80,8 @@ integer(i_kind), parameter:: Snow_and_Ice=6
 integer(i_kind), parameter:: Clear_FOV=1
 integer(i_kind), parameter:: Cloud_FOV=3 !KAB
 integer(i_kind), parameter:: Clear_Channel=2
-real(r_kind), parameter:: clear_threshold=0.01_r_kind     !if using clear sky data, do not use if above this threshold
+!KAB decrease the threshold
+real(r_kind), parameter:: clear_threshold=0.005_r_kind     !if using clear sky data, do not use if above this threshold
 real(r_kind), parameter:: sea_threshold=0.99_r_kind       !if using sea data, do not use if below this threshold
 real(r_kind), parameter:: lower_sea_threshold=0.9_r_kind  !if using mixed data, do not use if above this threshold
 real(r_kind), parameter:: lower_land_threshold=0.9_r_kind !if using mixed data, do not use if above this threshold
@@ -91,7 +92,8 @@ real(r_kind), parameter:: ice_threshold=0.95_r_kind       !if using ice data, do
 real(r_kind), parameter:: snow_threshold=0.99_r_kind      !if using snow data, do not use if below this threshold
 real(r_kind):: satang
 !KAB
-real(r_kind), dimension(:), allocatable:: ccld, cclr !do I even need cclr?
+real(r_kind), dimension(:), allocatable:: ccld, cclr !need to add this for clear FOV allsky
+logical:: allskyinstr
 real(r_kind):: clw
 
 !Data times
@@ -141,7 +143,7 @@ read(5,*) ntimes, Surface_Type, Cloud_Type, satang, instr, out_wave, out_err, &
    bin_center, radver
 !KAB
 clw=0.0_r_kind
-
+allskyinstr=.false.
 if (cov_method==desroziers) then
    allocate(bin_dist(1))
    bin_dist(1)=bin_size
@@ -227,7 +229,8 @@ do tim=1,ntimes
       allocate(ges_ave(nch_active,nch_active))
       allocate(chaninfo(nch_active),errout(nch_active))
 !KAB
-      if (Cloud_Type==Cloud_FOV) then
+      if ((instr(1:4)=='atms').or.(instr(1:5)=='amsua')) then
+         allskyinstr=.true.
          allocate(ccld(no_chn),cclr(no_chn))
          call cld_params(no_chn,ccld,cclr)
       end if
@@ -299,8 +302,9 @@ do tim=1,ntimes
          cycle ges_read_loop
       if ((Surface_Type==Mixed).and.(RadDiag_Data%Scalar%Snow_Frac>=lower_snow_threshold)) &
          cycle ges_read_loop
+!KAB
       if ((Cloud_Type==Clear_FOV).and.(RadDiag_Data%Scalar%qcdiag1>clear_threshold)) &
-         cycle ges_read_loop
+          cycle ges_read_loop
       if (abs(RadDiag_Data%Scalar%satzen_ang)>satang) cycle ges_read_loop
 !KAB
       clw=RadDiag_Data%Scalar%qcdiag1+RadDiag_Data%Scalar%qcdiag2
@@ -312,11 +316,16 @@ do tim=1,ntimes
          print *, 'Warning:  Number of obs meeting criteria exceeds dsize. Consider increasing dsize'
          cycle ges_read_loop
       end if
+         if (Cloud_Type==Cloud_FOV) then
+            if (clw<ccld(1)) cycle ges_read_loop
+         end if
       ges_channel_loop: do jj=1,nch_active
          j=indR(jj)
 !KAB
          if (Cloud_Type==Cloud_FOV) then
             if (clw<ccld(jj)) cycle ges_read_loop
+         elseif ((Cloud_Type==Clear_Channel).and.(allskyinstr)) then
+            if (clw>cclr(jj)) cycle ges_read_loop
          end if
          if (((abs(RadDiag_Data%Channel(j)%qcmark)<one)).and. &
             (abs(RadDiag_Data%Channel(j)%errinv)>errt)) then 
@@ -388,11 +397,17 @@ do tim=1,ntimes
          clw=RadDiag_Data%Scalar%qcdiag1+RadDiag_Data%Scalar%qcdiag2
          clw=clw/2
          nc=0
+            if (Cloud_Type==Cloud_FOV) then
+               if (clw<ccld(1)) cycle anl_read_loop
+            end if
+
          anl_channel_loop: do jj=1,nch_active
             j=indR(jj)
 !KAB
             if (Cloud_Type==Cloud_FOV) then
                if (clw<ccld(jj)) cycle anl_read_loop
+            elseif ((Cloud_Type==Clear_Channel).and.(allskyinstr)) then
+               if (clw>cclr(jj)) cycle anl_read_loop
             end if
             if (((abs(RadDiag_Data%Channel(j)%qcmark)<one)).and.&
                (abs(RadDiag_Data%Channel(j)%errinv)>errt)) then 

@@ -474,6 +474,8 @@
      varch_snow(j)=varch(j)
      varch_mixed(j)=varch(j)
   end do
+!make corr_oberr_qc a logical function
+!also need to do this for cloudy scences in allsky
   if (miter>0) call corr_oberr_qc(jpch_rad,iuse_rad,nusis,varch_sea,varch_land,varch_ice,varch_snow,varch_mixed)
 
   do j=1,jpch_rad
@@ -1092,8 +1094,9 @@
 !KAB clrsky
         clrsky=.true.
         if (radmod%lcloud_fwd .and. eff_area)  then   
+!pass in the logical corr,isis
            if (radmod%ex_obserr=='ex_obserr1') & 
-              call radiance_ex_obserr(radmod,nchanl,clwp_amsua,clw_guess_retrieval,tnoise,tnoise_cld,error0,clrsky)
+              call radiance_ex_obserr(radmod,nchanl,clwp_amsua,clw_guess_retrieval,tnoise,tnoise_cld,error0,clrsky,isis)
 !          if (radmod%ex_obserr=='ex_obserr2') &  ! comment out for now, waiting for more tests
 !             call radiance_ex_obserr(radmod,nchanl,cldeff_obs,cldeff_fg,tnoise,tnoise_cld,error0)
         end if
@@ -1576,6 +1579,7 @@
               adaptinf = varinv ! on input
               obvarinv = error0 ! on input
 !KAB
+!add optional input argument which is the cloudy R
               if ((miter>0).and.(clrsky)) then
                  account_for_corr_obs = radinfo_adjust_jacobian (iinstr,isis,isfctype,nchanl,nsigradjac,ich,varinv,&
                                                                  utbc,obvarinv,adaptinf,wgtjo,jacobian,Rinv,rsqrtinv)
