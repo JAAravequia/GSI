@@ -51,7 +51,7 @@ if(BUILD_ENKF)
   gridinfo_${ENKF_SUFFIX}.f90
   enkf_obs_sensitivity.f90 
   )
-  if( NOT HOST-Luna )
+  if( (NOT HOST-Luna) AND (NOT HOST-Venus) )
     find_package( LAPACK REQUIRED )
   endif()
   
