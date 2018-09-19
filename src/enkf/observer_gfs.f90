@@ -1,13 +1,43 @@
 module observer_enkf
 
 private
-public init_observer_enkf, calc_linhx, calc_interp
+public init_observer_enkf, calc_interp, calc_linhx, calc_linhx_modens,&
+       destroy_observer_enkf
+integer, allocatable, dimension(:) ::  kindx
 
 contains
 
 subroutine init_observer_enkf
+   use statevec, only: slevels, nsdim, ns2d, ns3d
+   use params,   only: nlevs
+   implicit none
+   integer nn,n,k,nl
+   allocate(kindx(nsdim))
+   nn = 0
+   do n=1,ns3d
+     if (n .eq. 1) then
+       nl = slevels(n)
+     else
+       nl = slevels(n)-slevels(n-1)
+     endif
+     !print *,'ns3d,levs',n,nl
+     do k=1,nl
+        nn = nn + 1
+        kindx(nn) = k
+        ! FIXME - deal with state variables with nlevs+1 levels (like prse)
+        if (kindx(nn) > nlevs) kindx(nn)=nlevs
+     enddo
+   enddo
+   do n=1,ns2d ! 2d fields are treated as surface fields.
+     nn = nn + 1
+     kindx(nn) = 1
+   enddo
    return
 end subroutine init_observer_enkf
+
+subroutine destroy_observer_enkf
+ if (allocated(kindx)) deallocate(kindx)
+end subroutine destroy_observer_enkf
 
 subroutine calc_interp(rlat, rlon, time, interp)
 !$$$  subprogram documentation block
@@ -30,10 +60,9 @@ subroutine calc_interp(rlat, rlon, time, interp)
 !$$$
   use kinds, only: r_kind,i_kind,r_single
   use params, only: nstatefields, nlons, nlats, nlevs, nhr_state, fhr_assim
-  use gridinfo, only: npts, latsgrd, lonsgrd
+  use gridinfo, only: latsgrd, lonsgrd
   use constants, only: zero,one,pi
   use intweight
-  use mpisetup
   implicit none
 
 ! Declare passed variables
@@ -109,7 +138,7 @@ subroutine calc_interp(rlat, rlon, time, interp)
   return
 end subroutine calc_interp
 
-subroutine calc_linhx(hx, dens, interp, dhx_dx, hx_ens, nx, ny, nz, iobs)
+subroutine calc_linhx(hx, dens, interp, dhx_dx, hx_ens, nx, ny, nz)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    calc_linhx
@@ -129,19 +158,14 @@ subroutine calc_linhx(hx, dens, interp, dhx_dx, hx_ens, nx, ny, nz, iobs)
 !
 !$$$
   use kinds, only: r_kind,i_kind,r_single
-!  use params, only: nstatefields, nlons, nlats, nlevs, nhr_state, fhr_assim
-!  use gridinfo, only: npts, latsgrd, lonsgrd
-!  use statevec, only: nsdim
   use sparsearr, only: sparr
   use intweight
-  use mpisetup
   implicit none
 
 ! Declare passed variables
-  integer(i_kind), optional, intent(in) :: iobs
   integer(i_kind), intent(in) :: nx, ny, nz
   real(r_single), intent(in)  :: hx           ! H(x_mean)
-  real(r_single), dimension(nx, ny, nz), intent(in) :: dens !npts,nsdim,nstatefields), intent(in) :: dens         ! x_ens - x_mean, state vector space
+  real(r_single), dimension(nx, ny, nz), intent(in) :: dens !npts,nsdim,nstatefields
   type(intw),     intent(in)  :: interp
   type(sparr),    intent(in)  :: dhx_dx       ! dH(x)/dx |x_mean profiles
   real(r_single), intent(out) :: hx_ens       ! H (x_ens)
@@ -152,29 +176,69 @@ subroutine calc_linhx(hx, dens, interp, dhx_dx, hx_ens, nx, ny, nz, iobs)
   ! interpolate state horizontally and in time and do  dot product with dHx/dx profile
   ! saves from calculating interpolated x_ens for each state variable
   hx_ens = hx
-!  if (nproc == 0) print *, dhx_dx%nnz
-!  print *, nproc, ' in calc_hx: ', hx_ens
   do i = 1, dhx_dx%nnz
      j = dhx_dx%ind(i)
-!     print *, nproc, ' in calc_hx: ', i, j
      do k = 1, 4
-!       print *, nproc, ' in calc_hx: ', i, j, k
-!       print *, nproc, ' in calc_hx: dhx: ', dhx_dx%val(i)
-!       print *, nproc, ' in calc_hx: interpw: ', interp%w(k)
-!       print *, nproc, ' in calc_hx: interpi: ', interp%ind(k)
-!       print *, nproc, ' in calc_hx: interpti: ', interp%tind(1), interp%tind(2)
-!       print *, nproc, ' in calc_hx: dens size: ', nx ,ny,nz
-!       print *, nproc, ' in calc_hx: dens i: ', interp%ind(k), j, interp%tind(1)
        hx_ens = hx_ens + dhx_dx%val(i) * interp%w(k) *                      &
              ( dens( interp%ind(k), j, interp%tind(1) ) * interp%tw(1)  +   &
                dens( interp%ind(k), j, interp%tind(2) ) * interp%tw(2) )
-!       if (present(iobs)) then
-!         if (iobs ==1) print *, 'observer: ', i, k, nproc+1, dhx_dx%val(i), interp%w(k), dens(interp%ind(k), j, interp%tind(1) )
-!       endif
      enddo
   enddo
 
   return
 end subroutine calc_linhx
+
+subroutine calc_linhx_modens(hx, dens, interp, dhx_dx, hx_ens, nx, ny, nz, vscale) 
+!$$$  subprogram documentation block
+!                .      .    .                                       .
+! subprogram:    calc_linhx
+!   prgmmr: shlyaeva         org: esrl/psd            date: 2016-11-29
+!
+! abstract:
+!
+! program history log:
+!   2016-11-29  shlyaeva
+!
+!   input argument list:
+!
+!   output argument list:
+!
+! attributes:
+!   language: f95
+!
+!$$$
+  use kinds, only: r_kind,i_kind,r_single,r_double
+  use params, only: neigv, nlevs
+  use sparsearr, only: sparr
+  use intweight
+  implicit none
+
+! Declare passed variables
+  integer(i_kind)                        ,intent(in   ) :: nx, ny, nz
+  real(r_single)                         ,intent(in   ) :: hx   ! H(x_mean)
+  real(r_single), dimension(nx, ny, nz),  intent(in   ) :: dens  ! x_ens - x_mean, state vector space
+  type(intw),                             intent(in   ) :: interp
+  type(sparr)                            ,intent(in   ) :: dhx_dx   ! dH(x)/dx |x_mean profiles
+  real(r_single)                         ,intent(  out) :: hx_ens(neigv)   ! H (x_ens)
+  real(r_double),dimension(neigv,nlevs+1),intent(in   ) :: vscale
+! vertical scaling (for modulated ens)
+  integer(i_kind) i,j,k,klev
+
+  ! interpolate state horizontally and in time and do  dot product with dHx/dx profile
+  ! saves from calculating interpolated x_ens for each state variable
+  hx_ens = hx
+  do i = 1, dhx_dx%nnz
+     j = dhx_dx%ind(i)
+     klev = kindx(j)
+     do k = 1, 4
+       hx_ens(:) = hx_ens(:) + dhx_dx%val(i) * interp%w(k) *                                  &
+             ( dens( interp%ind(k), j, interp%tind(1) ) * vscale(:,klev) * interp%tw(1)  +   &
+               dens( interp%ind(k), j, interp%tind(2) ) * vscale(:,klev) * interp%tw(2) )
+     enddo
+  enddo
+
+  return
+end subroutine calc_linhx_modens
+
 
 end module observer_enkf

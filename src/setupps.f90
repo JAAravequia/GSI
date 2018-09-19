@@ -161,6 +161,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) ier2,iuse,ilate,ilone,istnelv,idomsfc,izz,iprvd,isprvd
   integer(i_kind) ikxx,nn,istat,ibin,ioff,ioff0
   integer(i_kind) i,nchar,nreal,ii,jj,k,l,mm1
+  integer(i_kind) itype,isubtype 
 
   logical,dimension(nobs):: luse,muse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
@@ -190,7 +191,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   type(sparr2) :: dhx_dx
   real(r_single), dimension(nsdim) :: dhx_dx_array
-  integer :: ps_ind, nnz, nind
+  integer(i_kind) :: ps_ind, nnz, nind
 
   save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
   n_alloc(:)=0
@@ -299,6 +300,14 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      if(.not.in_anybin) cycle
 
      if(in_curbin) then
+        ikx=nint(data(ikxx,i))
+        itype=ictype(ikx) 
+        isubtype=icsubtype(ikx)
+!  reduce observation error for buoy surface pressure observations
+        if( itype ==180 .and. isubtype == 0) then
+           data(ier2,i)=data(ier2,i)*0.7_r_kind
+           data(ier,i)=data(ier,i)*0.7_r_kind
+        endif
         error=data(ier2,i)
         dlon=data(ilon,i)
         dlat=data(ilat,i)
@@ -306,7 +315,6 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
  
         dhgt=data(ihgt,i)
         dtemp=data(itemp,i)
-        ikx  = nint(data(ikxx,i))
         var_jb=data(ijb,i)
      endif
  
@@ -837,7 +845,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(17,ii) = pob                ! surface pressure observation (hPa)
         rdiagbuf(18,ii) = pob-pges           ! obs-ges used in analysis (coverted to hPa)
         rdiagbuf(19,ii) = pob-pgesorig       ! obs-ges w/o adjustment to guess surface pressure (hPa)
-        rdiagbuf(20,ii) = 1.e+10             ! spread (filled in by EnKF)
+        rdiagbuf(20,ii) = 1.e+10_r_single    ! spread (filled in by EnKF)
 
         ioff=ioff0
         if (lobsdiagsave) then
@@ -882,7 +890,6 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   subroutine contents_netcdf_diag_
 ! Observation class
   character(7),parameter     :: obsclass = '     ps'
-  real(r_kind),parameter::     missing = -9.99e9
   real(r_kind),dimension(miter) :: obsdiag_iuse
            call nc_diag_metadata("Station_ID",              station_id             )
            call nc_diag_metadata("Observation_Class",       obsclass               )

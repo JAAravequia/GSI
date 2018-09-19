@@ -626,6 +626,5 @@ contains
   subroutine contents_netcdf_diag_
 ! Observation class
   character(7),parameter     :: obsclass = '    lag'
-  real(r_kind),parameter::     missing = -9.99e9
   end subroutine contents_netcdf_diag_
 end subroutine setuplag

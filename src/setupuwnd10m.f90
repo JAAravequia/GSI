@@ -978,7 +978,6 @@ subroutine setupuwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   subroutine contents_netcdf_diag_
 ! Observation class
   character(7),parameter     :: obsclass = 'uwnd10m'
-  real(r_kind),parameter::     missing = -9.99e9
   real(r_kind),dimension(miter) :: obsdiag_iuse
 
         call nc_diag_metadata("Station_ID",              station_id             )

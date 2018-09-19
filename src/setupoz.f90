@@ -253,21 +253,6 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
      pobs(j)=1.e10_r_kind
   end do
 
-  if(ozone_diagsave)then
-     irdim1=7
-     ioff0=irdim1
-     if(lobsdiagsave) irdim1=irdim1+4*miter+1
-     if (save_jacobian) then
-       nnz   = nsig                   ! number of non-zero elements in dH(x)/dx profile
-       nind   = 1
-       call new(dhx_dx, nnz, nind)
-       irdim1 = irdim1 + size(dhx_dx)
-     endif
-
-     allocate(rdiagbuf(irdim1,nlevs,nobs))
-     if(netcdf_diag) call init_netcdf_diag_
-  end if
-
 ! Locate data for satellite in ozinfo arrays
   itoss =1
   l_may_be_passive=.false.
@@ -305,17 +290,36 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 ! Handle error conditions
   if (nlevs>nlev) write(6,*)'SETUPOZLAY:  level number reduced for ',obstype,' ', &
        nlevs,' --> ',nlev
-  if (nlev == 0) then
-     if (mype==0) write(6,*)'SETUPOZLAY:  no levels found for ',isis
-     if (nobs>0) read(lunin) 
-     goto 135
-  endif
-  if (itoss==1) then
-     if (mype==0) write(6,*)'SETUPOZLAY:  all obs variances > 1.e4.  Do not use ',&
-          'data from satellite ',isis
+  if(nlev == 0 .or. itoss == 1)then
+     if (nlev == 0 .and. mype == 0) then
+        write(6,*)'SETUPOZLAY:  no levels found for ',isis
+     endif
+     if (itoss==1 .and. mype == 0) then
+        if (mype==0) write(6,*)'SETUPOZLAY:  all obs variances > 1.e4.  Do not use ',&
+             'data from satellite ',isis
+     endif
      if (nobs>0) read(lunin)
-     goto 135
+
+!    Release memory of local guess arrays
+     call final_vars_
+
+     return
   endif
+  if(ozone_diagsave)then
+     irdim1=7
+     ioff0=irdim1
+     if(lobsdiagsave) irdim1=irdim1+4*miter+1
+     if (save_jacobian) then
+       nnz   = nsig                   ! number of non-zero elements in dH(x)/dx profile
+       nind   = 1
+       call new(dhx_dx, nnz, nind)
+       irdim1 = irdim1 + size(dhx_dx)
+     endif
+
+     allocate(rdiagbuf(irdim1,nlevs,nobs))
+     if(netcdf_diag) call init_netcdf_diag_
+  end if
+
 
 ! Read and transform ozone data
   read(lunin) data,luse,ioid
@@ -527,7 +531,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
               else
                  rdiagbuf(6,k,ii) = rmiss                
               endif
-              rdiagbuf(7,k,ii) = 1.e+10             ! spread (filled in by EnKF)
+              rdiagbuf(7,k,ii) = 1.e+10_r_single          ! spread (filled in by EnKF)
 
               idia = ioff0
               if (save_jacobian) then
@@ -855,9 +859,6 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
      endif ! binary_diag
   endif ! ozone_diagsave
 
-! Jump to this line if problem with data
-135 continue        
-
 ! Release memory of local guess arrays
   call final_vars_
 
@@ -951,7 +952,6 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   subroutine contents_netcdf_diag_
 ! Observation class
   character(7),parameter     :: obsclass = '  ozlay'
-  real(r_kind),parameter::     missing = -9.99e9
 ! contents interleafed above should be moved here (RTodling)
   end subroutine contents_netcdf_diag_
 
@@ -1632,7 +1632,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
         rdiagbuf(4,1,ii) = preso3l             ! override solar zenith angle with a reference pressure (in hPa)
         rdiagbuf(5,1,ii) = rmiss               ! fovn
         rdiagbuf(6,1,ii) = obserror            ! ozone mixing ratio precision
-        rdiagbuf(7,1,ii) = 1.e+10              ! spread (filled in by EnKF)
+        rdiagbuf(7,1,ii) = 1.e+10_r_single     ! spread (filled in by EnKF)
 
         if (lobsdiagsave) then
            idia=6
@@ -1666,7 +1666,6 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   subroutine contents_netcdf_diag_
 ! Observation class
   character(7),parameter     :: obsclass = '  ozlev'
-  real(r_kind),parameter::     missing = -9.99e9
   real(r_kind),dimension(miter) :: obsdiag_iuse
            call nc_diag_metadata("Latitude",                     sngl(data(ilate,i))            )
            call nc_diag_metadata("Longitude",                    sngl(data(ilone,i))            )

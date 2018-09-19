@@ -16,6 +16,8 @@ function usage {
 #--------------------------------------------------------------------
 #  OznMon_DE.sh begins here
 #--------------------------------------------------------------------
+set -ax
+
 nargs=$#
 if [[ $nargs -lt 1 || $nargs -gt 5 ]]; then
    usage
@@ -55,7 +57,7 @@ echo "OZNMON_SUFFIX = $OZNMON_SUFFIX"
 echo "RUN           = $RUN"
 echo "PDATE         = $PDATE"
 
-top_parm=${this_dir}/../parm
+top_parm=${this_dir}/../../parm
 
 oznmon_version_file=${oznmon_version:-${top_parm}/OznMon.ver}
 if [[ -s ${oznmon_version_file} ]]; then
@@ -143,7 +145,7 @@ export jobid=${jobid:-${job}.${cyc}.${pid}}
 export COMROOT=${PTMP_USER}
 
 #-------------------------------------------------------------
-#  This is default for ibm/cray machines.  Need to reset 
+#  This is default for wcoss/cray machines.  Need to reset 
 #  COM_IN in parm files for theia.
 #
 export COM_IN=${COM_IN:-/gpfs/hps/nco/ops/com/gfs/prod}
@@ -186,7 +188,7 @@ echo "jobfile = $jobfile"
 #---------------------------------------------------------------
 #  expand OZN_WORK_DIR to make unique for this cycle time
 #
-export OZN_WORK_DIR=${OZN_WORK_DIR}.DE.${PDY}.${cyc}
+export OZN_WORK_DIR=${OZN_WORK_DIR}/DE.${PDY}.${cyc}
 if [[ -e $OZN_WORK_DIR ]]; then
    rm -rf ${OZN_WORK_DIR}
 fi
@@ -203,7 +205,7 @@ if [[ $MY_MACHINE = "theia" ]]; then
         -o ${OZN_LOGdir}/DE.${PDY}.${cyc}.log \
         -e ${OZN_LOGdir}/DE.${PDY}.${cyc}.err ${jobfile}
 
-elif [[ $MY_MACHINE = "ibm" ]]; then
+elif [[ $MY_MACHINE = "wcoss" ]]; then
 
    $SUB -q $JOB_QUEUE -P $PROJECT -M 50 -R affinity[core] \
         -o ${OZN_LOGdir}/DE.${PDY}.${cyc}.log \

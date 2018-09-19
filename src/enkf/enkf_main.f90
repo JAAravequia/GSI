@@ -75,14 +75,14 @@ program enkf_main
  ! reads namelist parameters.
  use params, only : read_namelist,letkf_flag,readin_localization,lupd_satbiasc,&
                     numiter, nanals, lupd_obspace_serial, write_spread_diag,   &
-                    lobsdiag_forenkf, netcdf_diag, fso_cycling
+                    lobsdiag_forenkf, netcdf_diag, fso_cycling, ensrf_modloc
  ! mpi functions and variables.
  use mpisetup, only:  mpi_initialize, mpi_initialize_io, mpi_cleanup, nproc, &
                        mpi_wtime, mpi_comm_world
  ! obs and ob priors, associated metadata.
  use enkf_obsmod, only : readobs, write_obsstats, obfit_prior, obsprd_prior, &
-                    nobs_sat, obfit_post, obsprd_post, &
-                    obsmod_cleanup, biasprednorminv, calc_obsstats
+                    nobs_sat, obfit_post, obsprd_post, obsmod_cleanup,       &
+                    calc_obsstats
  ! innovation statistics.
  use innovstats, only: print_innovstats
  ! model control vector 
@@ -91,12 +91,13 @@ program enkf_main
  ! model state vector
  use statevec, only: read_state, statevec_cleanup, init_statevec
  ! EnKF linhx observer
- use observer_enkf, only: init_observer_enkf
+ use observer_enkf, only: init_observer_enkf, destroy_observer_enkf
  ! load balancing
  use loadbal, only: load_balance, loadbal_cleanup, scatter_chunks, gather_chunks
  ! enkf update
  use enkf, only: enkf_update
- ! letkf update
+ use enkf_modloc, only: enkf_modloc_update 
+! letkf update
  use letkf, only: letkf_update
  ! radiance bias correction coefficients.
  use radinfo, only: radinfo_write, predx, jpch_rad, npred
@@ -110,7 +111,7 @@ program enkf_main
  use enkf_obs_sensitivity, only: init_ob_sens, print_ob_sens, destroy_ob_sens
 
  implicit none
- integer(i_kind) j,n,nth,ierr
+ integer(i_kind) nth,ierr
  real(r_double) t1,t2
  logical no_inflate_flag
 
@@ -163,6 +164,7 @@ program enkf_main
  ! cleanup state vectors after observation operator is done if lin Hx
  if (lobsdiag_forenkf) then
     call statevec_cleanup()
+    call destroy_observer_enkf()
  endif
 
  ! print innovation statistics for prior on root task.
@@ -208,7 +210,11 @@ program enkf_main
     if (lupd_obspace_serial) call enkf_update()
     call letkf_update()
  else
-    call enkf_update()
+    if (ensrf_modloc) then
+       call enkf_modloc_update()
+    else
+       call enkf_update()
+    endif
  end if
  t2 = mpi_wtime()
  if (nproc == 0) print *,'time in enkf_update =',t2-t1,'on proc',nproc
@@ -231,10 +237,11 @@ program enkf_main
  t2 = mpi_wtime()
  if (nproc == 0) print *,'time in inflate_ens =',t2-t1,'on proc',nproc
 
- t1 = mpi_wtime()
- call gather_chunks()
- t2 = mpi_wtime()
- if (nproc == 0) print *,'time in gather_chunks =',t2-t1,'on proc',nproc
+!AS: moving to later in the code?
+! t1 = mpi_wtime()
+! call gather_chunks()
+! t2 = mpi_wtime()
+! if (nproc == 0) print *,'time in gather_chunks =',t2-t1,'on proc',nproc
 
  t1 = mpi_wtime()
  call calc_obsstats()
@@ -245,11 +252,11 @@ program enkf_main
     ! print innovation statistics for prior on root task.
     print *,'innovation statistics for prior:'
     call print_innovstats(obfit_prior, obsprd_prior)
-end if
+ end if
 
  if (write_spread_diag) then
     t1 = mpi_wtime()
-!    call write_obsstats()
+    call write_obsstats()
     t2 = mpi_wtime()
     if (nproc == 0) print *,'time in write_obsstats =',t2-t1,'on proc',nproc
   endif
@@ -263,12 +270,6 @@ end if
     call print_innovstats(obfit_post, obsprd_post)
  ! write out bias coeffs on root.
     if (nobs_sat > 0 .and. lupd_satbiasc) then
-       ! re-scale bias coefficients.
-       do j=1,jpch_rad
-           do n=1,npred
-              predx(n,j) = predx(n,j)*biasprednorminv(n)
-           enddo
-       enddo
        call radinfo_write()
     end if
  end if
@@ -276,6 +277,11 @@ end if
  ! free memory (radinfo memory freed in radinfo_write)
  ! and write out analysis ensemble.
  call obsmod_cleanup()
+
+ t1 = mpi_wtime()
+ call gather_chunks()
+ t2 = mpi_wtime()
+ if (nproc == 0) print *,'time in gather_chunks =',t2-t1,'on proc',nproc
 
  t1 = mpi_wtime()
  call write_control(no_inflate_flag)

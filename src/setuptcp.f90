@@ -651,7 +651,7 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(17,ii) = pob                ! surface pressure observation (hPa)
         rdiagbuf(18,ii) = pob-pges           ! obs-ges used in analysis (coverted to hPa)
         rdiagbuf(19,ii) = pob-pgesorig       ! obs-ges w/o adjustment to guess surface pressure (hPa)
-        rdiagbuf(20,ii) = 1.e+10             ! spread (filled in by EnKF)
+        rdiagbuf(20,ii) = 1.e+10_r_single    ! spread (filled in by EnKF)
 
         idia=idia0
         if (lobsdiagsave) then
@@ -685,7 +685,6 @@ subroutine setuptcp(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   subroutine contents_netcdf_diag_
 ! Observation class
   character(7),parameter     :: obsclass = '    tcp'
-  real(r_kind),parameter::     missing = -9.99e9
   real(r_kind),dimension(miter) :: obsdiag_iuse
            call nc_diag_metadata("Station_ID",              station_id             )
            call nc_diag_metadata("Observation_Class",       obsclass               )

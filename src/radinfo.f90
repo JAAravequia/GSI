@@ -105,8 +105,6 @@ module radinfo
   public :: ssmis_precond
   public :: radinfo_adjust_jacobian
   public :: icloud4crtm,iaerosol4crtm
-  public :: radinfo_get_rsqrtinv
-
   public :: dec2bin
 
   integer(i_kind),parameter:: numt = 33   ! size of AVHRR bias correction file
@@ -205,7 +203,6 @@ module radinfo
   logical,save :: newpc4pred ! controls preconditioning due to sat-bias correction term 
 
   interface radinfo_adjust_jacobian; module procedure adjust_jac_; end interface
-  interface radinfo_get_rsqrtinv; module procedure get_rsqrtinv_; end interface
 
   character(len=*),parameter :: myname='radinfo'
 contains
@@ -497,7 +494,7 @@ contains
   end subroutine final_rad_vars
 
 
-  subroutine radinfo_read
+  subroutine radinfo_read(miter)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    radinfo_read
@@ -578,7 +575,7 @@ contains
 
 ! !INPUT PARAMETERS:
 
-
+    integer(i_kind), optional, intent(in):: miter
     integer(i_kind) i,j,k,ich,lunin,lunout,nlines
     integer(i_kind) ip,istat,n,ichan,nstep,edge1,edge2,ntlapupdate,icw,iaeros
     real(r_kind),dimension(npred):: predr
@@ -727,10 +724,10 @@ contains
 !   Read in information for data number and preconditioning
 
     if (newpc4pred) then
-       allocate(ostats(jpch_rad), rstats(npred,jpch_rad),varA(npred,jpch_rad))
+       allocate(ostats(jpch_rad),rstats(npred,jpch_rad),varA(npred,jpch_rad))
        varA = zero
        ostats = zero
-       rstats = zero_quad
+       rstats = zero_quad 
 
        inquire(file='satbias_pc',exist=pcexist)
        if (pcexist) then
@@ -1120,8 +1117,10 @@ contains
 
 !   Initialize observation error covariance for 
 !   instruments we account for inter-channel correlations
-    call corr_ob_initialize
-    call corr_oberr_qc(jpch_rad,iuse_rad,nusis,varch)
+    if (present(miter)) then
+       call corr_ob_initialize(miter)
+       if (miter>0)  call corr_oberr_qc(jpch_rad,iuse_rad,nusis,varch)
+    end if
 
 !   Close unit for runtime output.  Return to calling routine
     if(mype==mype_rad)close(iout_rad)
@@ -2083,7 +2082,7 @@ subroutine dec2bin(dec,bin,ndim)
 END subroutine dec2bin
 
  logical function adjust_jac_ (iinstr,isis,isfctype,nchanl,nsigradjac,ich,varinv,&
-                               depart,obvarinv,adaptinf,wgtjo,jacobian)
+                               depart,obvarinv,adaptinf,wgtjo,jacobian,Rinv,rsqrtinv)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    adjust_jac_
@@ -2123,6 +2122,8 @@ END subroutine dec2bin
    real(r_kind), intent(inout) :: adaptinf(nchanl)
    real(r_kind), intent(inout) :: wgtjo(nchanl)
    real(r_kind), intent(inout) :: jacobian(nsigradjac,nchanl)
+   real(r_kind), intent(inout) :: Rinv(:)
+   real(r_kind), intent(inout) :: rsqrtinv(:,:)
    integer(i_kind), intent(out) :: iinstr
    character(len=*),parameter::myname_ = myname//'*adjust_jac_'
    character(len=80) covtype
@@ -2159,45 +2160,6 @@ END subroutine dec2bin
    if( GSI_BundleErrorCov(iinstr)%nch_active < 0) return
 
    adjust_jac_ = corr_ob_scale_jac(depart,obvarinv,adaptinf,jacobian,nchanl,jpch_rad,varinv,wgtjo, &
-                                    iuse_rad,ich,GSI_BundleErrorCov(iinstr))
+                                    iuse_rad,ich,GSI_BundleErrorCov(iinstr),Rinv,rsqrtinv)
 end function adjust_jac_
-
-subroutine get_rsqrtinv_ (nchanl,iinstr,nchasm,ich,ichasm,varinv,rsqrtinv)
-!$$$  subprogram documentation block
-!                .      .    .
-! subprogram:    get_rsqrtinv_
-!
-!   prgrmmr:     Wei  org: gmao                date: 2015-03-11
-!
-! abstract:  provide hook to obtain the inverse of the square-root of R
-!
-! program history log:
-!   2015-03-11  W. Gu - initial code
-!
-! attributes:
-!   language: f90
-!   machine:  ibm rs/6000 sp; SGI Origin 2000; Compaq/HP
-!
-!$$$ end documentation block
-   use constants, only: zero,one
-   use correlated_obsmod, only: corr_ob_rsqrtinv
-   use correlated_obsmod, only: GSI_BundleErrorCov
-   use mpeu_util, only: getindex
-   use mpeu_util, only: die
-   implicit none
-   integer(i_kind), intent(in) :: iinstr
-   integer(i_kind), intent(in) :: nchasm
-   integer(i_kind), intent(in) :: nchanl
-   integer(i_kind), intent(in) :: ich(nchasm)
-   integer(i_kind), intent(in) :: ichasm(nchasm)
-   real(r_kind), intent(in) :: varinv(nchasm)    ! inverse of specified ob-error-variance
-   real(r_kind), intent(inout) :: rsqrtinv(nchasm,nchasm)
-
-   character(len=*),parameter::myname_ = myname//'*get_rsqrtinv_'
-
-   call corr_ob_rsqrtinv (nchanl,jpch_rad,iuse_rad,nchasm,ich,ichasm,varinv,&
-                          rsqrtinv,GSI_BundleErrorCov(iinstr))
-
-end subroutine get_rsqrtinv_
-
 end module radinfo

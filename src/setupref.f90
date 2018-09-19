@@ -506,7 +506,7 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
         rdiagbuf(9,i)         = elev-zsges     ! height above model terrain (m)      
         rdiagbuf(11,i)        = data(iuse,i)   ! data usage flag
         rdiagbuf(19,i)        = hobl           ! model vertical grid  (midpoint)
-        rdiagbuf(22,i)        = 1.e+10         ! spread (filled in by EnKF)
+        rdiagbuf(22,i)        = 1.e+10_r_kind  ! spread (filled in by EnKF)
 
         if (ratio_errors(i) > tiny_r_kind) then  ! obs inside vertical grid
 

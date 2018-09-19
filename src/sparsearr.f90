@@ -24,7 +24,7 @@ module sparsearr
 !
 !$$$
 
-use kinds
+use kinds, only: r_single, r_kind, i_kind
 implicit none
 private
 
@@ -108,7 +108,7 @@ contains
 ! constructor for sparr2
 subroutine init_sparr2(this, nnz, nind)
   type(sparr2), intent(inout) :: this
-  integer, intent(in) :: nnz, nind
+  integer(i_kind), intent(in) :: nnz, nind
 
   this%nnz  = nnz
   this%nind = nind
@@ -122,8 +122,8 @@ end subroutine init_sparr2
 
 ! constructor for sparr
 subroutine init_sparr(this, nnz)
-  type(sparr), intent(inout) :: this
-  integer, intent(in) :: nnz
+  type(sparr), intent(inout)  :: this
+  integer(i_kind), intent(in) :: nnz
 
   this%nnz  = nnz
   if (allocated(this%ind))   deallocate(this%ind)
@@ -214,14 +214,14 @@ end subroutine cleanup_sparr
 
 
 ! returns "size" (2 + 2*nind + nnz) of sparr2
-integer function size_sparr2(this)
+integer(i_kind) function size_sparr2(this)
   type(sparr2), intent(in) :: this
 
   size_sparr2 = 2 + this%nnz + 2*this%nind
 end function size_sparr2
 
 ! returns "size" (1 + 2*nnz) of sparr
-integer function size_sparr(this)
+integer(i_kind) function size_sparr(this)
   type(sparr), intent(in) :: this
 
   size_sparr = 1 + 2*this%nnz
@@ -307,8 +307,6 @@ subroutine writearray_sparr(this, array, ierr)
   array(ind:ind+this%nnz-1) = this%val
 
 end subroutine writearray_sparr
-
-
 
 ! reading sparse array from array
 subroutine readarray_sparr2(this, array)
