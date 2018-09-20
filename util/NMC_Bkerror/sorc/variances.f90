@@ -28,7 +28,7 @@ subroutine variances(numcases,numaodcases,mype)
   real(r_kind),dimension(25):: qcavg
   real(r_kind) qctot,qdiff
 
-  real(r_kind) r_norm,r025
+  real(r_kind) r_norm,r025,r_norm_aod
 
   integer(i_kind) i,j,k,m,n,mype_work,mm1,ierror,iret
   integer(i_kind) mpi_rtype,ix,ni1,ni2,kk,ll,ibin
@@ -42,6 +42,7 @@ subroutine variances(numcases,numaodcases,mype)
   mype_work=npe-1
   mm1=mype+1
   r_norm=1./float(numcases)
+  r_norm_aod=1./float(numaodcases)
   ibin=25
   r025=0.25_r_kind
 
@@ -130,7 +131,7 @@ subroutine variances(numcases,numaodcases,mype)
       call delvars(sf1,vp1,t1,rh1,oz1,cw1,ps1,aod1,sf2,vp2,t2,rh2,oz2,cw2,ps2,aod2,mype)
       do j=1,lon1
         do i=1,lat1
-          aod3(i,j) = aod3(i,j) + (aod1(i,j)*aod1(i,j))*r_norm
+          aod3(i,j) = aod3(i,j) + (aod1(i,j)*aod1(i,j))*r_norm_aod
         end do
       end do
     end do
@@ -316,14 +317,14 @@ subroutine variances(numcases,numaodcases,mype)
         end if
       end do
     end do
-    write(6,*) qctot
-    do k=1,nsig
-      write(6,*) k,(qcount(ll,k),ll=1,ibin)
-      write(6,*) k,(qcount2(ll,k),ll=1,ibin)
-      write(6,*) k,(qcount2(ll,k)/qctot,ll=1,ibin)
-      write(6,*) k,(qamp(ll,k),ll=1,ibin)
-      write(6,*) k,(nrhvar(ll,k),ll=1,ibin)
-    end do
+    !write(6,*) qctot
+    !do k=1,nsig
+      !write(6,*) k,(qcount(ll,k),ll=1,ibin)
+      !write(6,*) k,(qcount2(ll,k),ll=1,ibin)
+      !write(6,*) k,(qcount2(ll,k)/qctot,ll=1,ibin)
+      !write(6,*) k,(qamp(ll,k),ll=1,ibin)
+      !write(6,*) k,(nrhvar(ll,k),ll=1,ibin)
+    !end do
   end if
 
   if (mype==mype_work) then

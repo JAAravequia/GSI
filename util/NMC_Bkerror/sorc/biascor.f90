@@ -173,7 +173,7 @@ subroutine biascor(numcases,numaodcases,mype)
     do j=1,lon1
       do i=1,lat1
         do n=1,4
-          bfactaod(i,j,n) = bfactaod(i,j,n)/float(numcases)
+          bfactaod(i,j,n) = bfactaod(i,j,n)/float(numaodcases)
         end do
 
         if(abs(bfactaod(i,j,2)-bfactaod(i,j,4)**2) > 1.e-26)then

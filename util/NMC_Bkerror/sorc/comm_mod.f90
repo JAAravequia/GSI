@@ -73,7 +73,7 @@ contains
     ozs=rhs+nsig
     cws=ozs+nsig
     pss=cws+nsig
-    aods=pss+nsig
+    aods=pss+1
 
 ! Need to use a variable to know which tasks have a full nsig1o
 ! array, and which one have the last level irrelevant
@@ -125,6 +125,7 @@ contains
         end if ! end if for task id
       end do ! enddo over levs
     end do ! enddo over npe
+
 
 !    do k=1,nsig1o
 !      write(300+mype,*) 'COMM-MOD: k,nvar_id,levs_id = ',k,nvar_id(k),levs_id(k)

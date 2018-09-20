@@ -219,9 +219,9 @@ subroutine getcases(numcases,numaodcases,mype)
           do j=1,naodcases
             if(nminaod48(j).eq.nminaod24(loop)) then
               nminb=nminaod48(j)
-              ncase=ncase+1
-              naoda(ncase)=i24
-              naodb(ncase)=j
+              naodcase=naodcase+1
+              naoda(naodcase)=i24
+              naodb(naodcase)=j
     ! write(6,*) 'nmin,na,nb=',ncase,nmin24(loop),na(ncase),nb(ncase)
             end if
           end do
@@ -231,7 +231,6 @@ subroutine getcases(numcases,numaodcases,mype)
     enddo       ! end loop to ncases
   end if        ! end if for calc_aod
 
-  naodcase = 1 ! CRM test
   if(mype==0) then
     write(6,*)' number of cases available = ',ncase
     if(calc_aod)write(6,*)' number of AOD cases available = ',naodcase

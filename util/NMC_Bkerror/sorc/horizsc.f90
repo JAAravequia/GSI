@@ -30,7 +30,7 @@ subroutine horizsc(numcases,numaodcases,mype)
   real(r_kind),dimension(iglobal):: work1
   real(r_kind),dimension(nlon,nlat-2):: grid
   real(r_kind),dimension(nc):: wrkspec
-  real(r_kind) eight,quarter,r_norm
+  real(r_kind) eight,quarter,r_norm,r_norm_aod
 
   integer(i_kind) i,j,k,m,n,ix,mpi_rtype,mm1,mype_work,ierror
   integer(i_kind) i2,i2m1,jj,j2,kk,ni1,ni2
@@ -44,6 +44,7 @@ subroutine horizsc(numcases,numaodcases,mype)
   mype_work=npe/2
   mm1=mype+1
   r_norm=1./float(numcases)
+  r_norm_aod=1./float(numaodcases)
   eight=8.0_r_kind
   quarter=0.25_r_kind
 
@@ -215,7 +216,7 @@ subroutine horizsc(numcases,numaodcases,mype)
 ! Load into average laplacian arrays
       do j=1,lon1
         do i=1,lat1
-          aod3(i,j) = aod3(i,j) + aod1(i,j)*aod1(i,j)*r_norm
+          aod3(i,j) = aod3(i,j) + aod1(i,j)*aod1(i,j)*r_norm_aod
         end do
       end do
     end do ! end do over numcases
@@ -355,7 +356,6 @@ subroutine horizsc(numcases,numaodcases,mype)
       do i=1,nlat
         do j=1,nlon
           aodlap(i) = aodlap(i) + workgrd(i,j)/float(nlon)
-          write (6,*) "aodlap",i,aodlap(i)
         end do
       end do
     end if
@@ -375,8 +375,6 @@ subroutine horizsc(numcases,numaodcases,mype)
     do i=1,nlat
       pshln(i)=(eight/pslap(i))**quarter
       aodhln(i)=(eight/aodlap(i))**quarter
-      write (6,*) "aodhln",i,aodhln(i)
-      write (6,*) "pshln",i,pshln(i)
     end do
 
 !! Put bounds on cloud water horizontal scales

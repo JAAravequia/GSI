@@ -89,10 +89,10 @@ subroutine init_commvars(mype)
   isdsp_s(1)=izero
   irdsp_s(1)=izero
 
-  if (mod((6*nsig)+1,npe)==izero) then
+  if (mod((6*nsig)+2,npe)==izero) then
     kchk=npe
   else
-    kchk=mod((nsig*6)+1,npe)
+    kchk=mod((nsig*6)+2,npe)
   end if
 
   do n=1,npe

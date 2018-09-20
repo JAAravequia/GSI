@@ -72,7 +72,7 @@ subroutine readpairs(npe,mype,numcases,numaodcases)
   z4all  = 0.0
   z4all2 = 0.0
 
-  nfields = 2+5*nsig !aod, ps, (u,v), t, q, oz, cw
+  nfields = 1+5*nsig !ps, (u,v), t, q, oz, cw
   allocate(taskid(nfields))
   call create_task_info(nfields, npe, taskid)
 
@@ -424,7 +424,7 @@ subroutine readpairs(npe,mype,numcases,numaodcases)
            call unload_grid(grid2,work2(1,k))
         end if
      else ! No nsig1o level to process
-!!        write(6,*) 'READPAIRS:  No Level to process, k,mype,levs_id,nvar_id = ',k,mype,levs_id(k),nvar_id(k)
+        !write(6,*) 'READPAIRS:  No Level to process, k,mype,levs_id,nvar_id = ',k,mype,levs_id(k),nvar_id(k)
      endif
   end do  !End do nsig1o levs
 
@@ -568,18 +568,14 @@ subroutine readpairs(npe,mype,numcases,numaodcases)
     end if
 
     do n=1,numaodcases
-      if (mype==0)  write(6,*)'reading from', trim(aodfilename(1))! CRM test
-      !if (mype==0)  write(6,*)'reading from', trim(aodfilename(naoda(n)))
-      call nemsio_open(gfile1,trim(adjustl(aodfilename(1))),'read',iret=iret)
-      !call nemsio_open(gfile1,trim(adjustl(aodfilename(naoda(n)))),'read',iret=iret)
+      if (mype==0)  write(6,*)'reading from', trim(aodfilename(naoda(n)))
+      call nemsio_open(gfile1,trim(adjustl(aodfilename(naoda(n)))),'read',iret=iret)
       if (iret/=0) then
         write(6,*)'readpairs_1: problem with nemsio_open, mype, iret=',mype,iret
         stop
       endif
-      if (mype==0)  write(6,*)'reading from', trim(aodfilename(2))! CRM test
-      !if (mype==0)  write(6,*)'reading from', trim(aodfilename(naodb(n)))
-      call nemsio_open(gfile2,trim(adjustl(aodfilename(2))),'read',iret=iret)
-      !call nemsio_open(gfile2,trim(adjustl(aodfilename(naodb(n)))),'read',iret=iret)
+      if (mype==0)  write(6,*)'reading from', trim(aodfilename(naodb(n)))
+      call nemsio_open(gfile2,trim(adjustl(aodfilename(naodb(n)))),'read',iret=iret)
       if (iret/=0) then
         write(6,*)'readpairs_2: problem with nemsio_open, mype, iret=',mype,iret
         stop
@@ -593,34 +589,41 @@ subroutine readpairs(npe,mype,numcases,numaodcases)
          ! CRM - these aer diagnostic files have column mass per species/type,
          ! so we need to sum them up 
          aod_wk(:) = 0
-         call nemsio_readrecv(gfile1,'ducmassacol',lev=1,data=nems_wk(:),iret=iret) ! dust
+         call nemsio_readrecv(gfile1,'ducmass',lev=1,data=nems_wk(:),iret=iret) ! dust
          aod_wk(:) = aod_wk(:) + nems_wk(:)
-         call nemsio_readrecv(gfile1,'sscmassacol',lev=1,data=nems_wk(:),iret=iret) ! sea salt
+         call nemsio_readrecv(gfile1,'sscmass',lev=1,data=nems_wk(:),iret=iret) ! sea salt
          aod_wk(:) = aod_wk(:) + nems_wk(:)
-         call nemsio_readrecv(gfile1,'bccmassacol',lev=1,data=nems_wk(:),iret=iret) ! black C
+         call nemsio_readrecv(gfile1,'bccmass',lev=1,data=nems_wk(:),iret=iret) ! black C
          aod_wk(:) = aod_wk(:) + nems_wk(:)
-         call nemsio_readrecv(gfile1,'occmassacol',lev=1,data=nems_wk(:),iret=iret) ! organic C
+         call nemsio_readrecv(gfile1,'occmass',lev=1,data=nems_wk(:),iret=iret) ! organic C
          aod_wk(:) = aod_wk(:) + nems_wk(:)
-         call nemsio_readrecv(gfile1,'sucmassacol',lev=1,data=nems_wk(:),iret=iret) ! sulfate
+         call nemsio_readrecv(gfile1,'sucmass',lev=1,data=nems_wk(:),iret=iret) ! sulfate
          aod_wk(:) = aod_wk(:) + nems_wk(:)
          grid1 = reshape(aod_wk(:),(/nlon,nlat-2/))
          aod_wk(:) = 0
-         call nemsio_readrecv(gfile2,'ducmassacol',lev=1,data=nems_wk(:),iret=iret) ! dust
+         call nemsio_readrecv(gfile2,'ducmass','atmos col',lev=1,data=nems_wk(:),iret=iret) ! dust
          aod_wk(:) = aod_wk(:) + nems_wk(:)
-         call nemsio_readrecv(gfile2,'sscmassacol',lev=1,data=nems_wk(:),iret=iret) ! sea salt
+         call nemsio_readrecv(gfile2,'sscmass',lev=1,data=nems_wk(:),iret=iret) ! sea salt
          aod_wk(:) = aod_wk(:) + nems_wk(:)
-         call nemsio_readrecv(gfile2,'bccmassacol',lev=1,data=nems_wk(:),iret=iret) ! black C
+         call nemsio_readrecv(gfile2,'bccmass',lev=1,data=nems_wk(:),iret=iret) ! black C
          aod_wk(:) = aod_wk(:) + nems_wk(:)
-         call nemsio_readrecv(gfile2,'occmassacol',lev=1,data=nems_wk(:),iret=iret) ! organic C
+         call nemsio_readrecv(gfile2,'occmass',lev=1,data=nems_wk(:),iret=iret) ! organic C
          aod_wk(:) = aod_wk(:) + nems_wk(:)
-         call nemsio_readrecv(gfile2,'sucmassacol',lev=1,data=nems_wk(:),iret=iret) ! sulfate
+         call nemsio_readrecv(gfile2,'sucmass',lev=1,data=nems_wk(:),iret=iret) ! sulfate
          aod_wk(:) = aod_wk(:) + nems_wk(:)
          grid2 = reshape(aod_wk(:),(/nlon,nlat-2/))
          !call nemsio_readrecv(gfile2,'ducmassacol','entire_atmosphere',lev=1,data=nems_wk(:),iret=iret)
-         !grid2 = reshape(nems_wk(:),(/nlon,nlat-2/))
+         grid2 = reshape(nems_wk(:),(/nlon,nlat-2/))
          call sptez_s(z4all (:,6*nsig+2),grid1,-1)
          call sptez_s(z4all2(:,6*nsig+2),grid2,-1)
+         print *, 'grid2(aod)',grid2
       end if
+
+
+      call mpi_bcast(z4all(:,6*nsig+2),ncin,mpi_rtype,taskid(icount), &
+                & mpi_comm_world,ierror)
+      call mpi_bcast(z4all2(:,6*nsig+2),ncin,mpi_rtype,taskid(icount), &
+                & mpi_comm_world,ierror)
 
       call mpi_scatterv(z4all,spec_send,disp_spec,mpi_rtype,&
          z41,spec_send(mm1),mpi_rtype,0,mpi_comm_world,ierror)
@@ -631,9 +634,25 @@ subroutine readpairs(npe,mype,numcases,numaodcases)
       call nemsio_close(gfile1,iret=iret)
       call nemsio_close(gfile2,iret=iret)
 
+     do k=1,nsig1o
+        if(nvar_id(k).eq.8) then ! AOD 
+           kk=levs_id(k)
+           if (kk.eq.1) then
+              call jcaptrans(z,factsml,z41(1,k))
+              call jcaptrans(z2,factsml,z42(1,k))
+              call sptez_s(z,grid1,1)
+              call sptez_s(z2,grid2,1)
+              call unload_grid(grid1,work1(1,k))
+              call unload_grid(grid2,work2(1,k))
+           end if
+        endif
+      end do  !End do nsig1o levs
+
+
       call grid2sub(work1,sf1,vp1,t1,q1,oz1,cw1,ps1,aod1)
       call grid2sub(work2,sf2,vp2,t2,q2,oz2,cw2,ps2,aod2)
 
+      print *,'aodout',aod1
       write(aodfilunit1) aod1
       write(aodfilunit2) aod2
 

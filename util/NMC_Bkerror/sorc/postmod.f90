@@ -282,6 +282,9 @@ subroutine writefiles
    call wryte(22,4*nlat*nsig,pscon4)
    call baclose(22,iret)
 
+   print *,'ps',psvar4
+   print *,'aod',aodvar4
+
    ! ALSO CREATE GRADS CTL FILE
    open(24,file='bgstats_sp.ctl',form='formatted',status='replace',iostat=iret)
    write(24,'("DSET ",a)') trim(grdfile)
