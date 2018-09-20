@@ -97,6 +97,7 @@ real(r_single),public ::  lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh,&
                lnsigcutoffsatnh,lnsigcutoffsattr,lnsigcutoffsatsh,&
                lnsigcutoffpsnh,lnsigcutoffpstr,lnsigcutoffpssh
 real(r_single),public :: analpertwtnh,analpertwtsh,analpertwttr,sprd_tol,saterrfact
+real(r_single),public :: analpertwtnh_rtpp,analpertwtsh_rtpp,analpertwttr_rtpp
 real(r_single),public ::  paoverpb_thresh,latbound,delat,p5delat,delatinv
 real(r_single),public ::  latboundpp,latboundpm,latboundmp,latboundmm
 real(r_single),public :: covl_minfact, covl_efold
@@ -195,6 +196,7 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    fgfileprefixes,anlfileprefixes,statefileprefixes,&
                    covl_minfact,covl_efold,lupd_obspace_serial,letkf_novlocal,&
                    analpertwtnh,analpertwtsh,analpertwttr,sprd_tol,&
+                   analpertwtnh_rtpp,analpertwtsh_rtpp,analpertwttr_rtpp,&
                    nlevs,nanals,saterrfact,univaroz,regional,use_gfs_nemsio,&
                    paoverpb_thresh,latbound,delat,pseudo_rh,numiter,biasvar,&
                    lupd_satbiasc,cliptracers,simple_partition,adp_anglebc,angord,&
@@ -262,10 +264,14 @@ sprd_tol = 9.9e31_r_single
 ! definition of tropics and mid-latitudes (for inflation).
 latbound = 25._r_single ! this is where the tropics start
 delat = 10._r_single    ! width of transition zone.
-! adaptive posterior inflation parameter.
+! RTPS inflation coefficients.
 analpertwtnh = 0.0_r_single ! no inflation (1 means inflate all the way back to prior spread)
 analpertwtsh = 0.0_r_single
 analpertwttr = 0.0_r_single
+! RTPP inflation coefficients.
+analpertwtnh_rtpp = 0.0_r_single ! no inflation (1 means inflate all the way back to prior perturbation)
+analpertwtsh_rtpp = 0.0_r_single
+analpertwttr_rtpp = 0.0_r_single
 ! if ob space posterior variance divided by prior variance
 ! less than this value, ob is skipped during serial processing.
 paoverpb_thresh = 1.0_r_single! don't skip any obs
