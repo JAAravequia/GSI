@@ -81,9 +81,7 @@ for type in gps t; do
          #---------------------------------------
          #  build the control file for the data
          #---------------------------------------
-         if [ "$mtype" = 'gps004' ]; then
-
-            echo " placeholder for gps004 "
+         if [ "$type" = 'gps' ]; then
 
             cp ${C_IG_FIX}/gpsallev.ctl ./${dtype}.ctl
             cp ${C_IG_GSCRIPTS}/plot_gpsallev_horz.gs ./plot_${dtype}.gs
@@ -93,74 +91,53 @@ for type in gps t; do
             cp ${C_IG_FIX}/pstime.ctl ./${dtype}.ctl
             cp ${C_IG_GSCRIPTS}/plot_ps_horz.gs ./plot_${dtype}.gs
 
-#            if [ -s ${hh_tankdir}/${cycle}/nt_${dtype}.${PDATE} ]; then
-#               echo "LOCATED nt file"
-#               nt=`cat ${hh_tankdir}/${cycle}/nt_${dtype}.${PDATE}`
-#               echo "nt set to $nt"
-#            fi
-
          elif [ "$mtype" = 'ps120' ]; then
 
             cp ${C_IG_FIX}/pssfc.ctl ./${dtype}.ctl
             cp ${C_IG_GSCRIPTS}/plot_ps_horz.gs ./plot_${dtype}.gs
-#            nt=1
 
          elif [ "$mtype" = 't120' ]; then
 
             cp ${C_IG_FIX}/tmandlev.ctl ./${dtype}.ctl
             cp ${C_IG_GSCRIPTS}/plot_tallev_horz.gs ./plot_${dtype}.gs
-#            nt=1
 
          elif [ "$mtype" = 't180' -o "$mtype" = 't181' -o "$mtype" = 't182' -o "$mtype" = 't183' -o "$mtype" = 't187'  ]; then
 
             cp ${C_IG_FIX}/tsfc.ctl ./${dtype}.ctl
             cp ${C_IG_GSCRIPTS}/plot_tsfc_horz.gs ./plot_${dtype}.gs
-#            nt=1
 
          elif [ "$mtype" = 't130' -o "$mtype" = 't131' -o "$mtype" = 't132' -o "$mtype" = 't133' -o "$mtype" = 't134' -o "$mtype" = 't135' ]; then
 
             cp ${C_IG_FIX}/tallev.ctl ./${dtype}.ctl
             cp ${C_IG_GSCRIPTS}/plot_tallev_horz.gs ./plot_${dtype}.gs
-#            nt=1
 
          elif [ "$mtype" = 'q120' ]; then
 
             cp ${C_IG_FIX}/qmandlev.ctl ./${dtype}.ctl
             cp ${C_IG_GSCRIPTS}/plot_qallev_horz.gs ./plot_${dtype}.gs
-#            nt=1
 
          elif [ "$mtype" = 'q180' -o "$mtype" = 'q181' -o  "$mtype" = 'q183' -o "$mtype" = 'q187'  ];then
             cp ${C_IG_FIX}/qsfc.ctl ./${dtype}.ctl
             cp ${C_IG_GSCRIPTS}/plot_qsfc_horz.gs ./plot_${dtype}.gs
-#            if [ -s ${hh_tankdir}/${cycle}/nt_${dtype}.${PDATE} ]; then
-#               echo "LOCATED nt file"
-#               nt=`cat ${hh_tankdir}/${cycle}/nt_${dtype}.${PDATE}`
-#               nt=1
-#               echo "nt set to $nt"
-#            fi
 
          elif [ "$mtype" = 'q130' -o "$mtype" = 'q131' -o "$mtype" = 'q132' -o "$mtype" = 'q133' -o "$mtype" = 't134' ]; then
             cp ${C_IG_FIX}/qallev.ctl ./${dtype}.ctl
             cp ${C_IG_GSCRIPTS}/plot_qallev_horz.gs ./plot_${dtype}.gs
-#            nt=1
 
          elif [ "$mtype" = 'uv220' ]; then
 
             cp $CTLDIR/uvmandlev.ctl ./${dtype}.ctl
             cp $GSCRIPTS/plot_uvallev_horz.gs ./plot_${dtype}.gs
-#            nt=1
 
          elif  [ "$mtype" = 'uv223' -o "$mtype" = 'uv224' -o "$mtype" = 'uv228' ]; then
 
             cp $CTLDIR/uvsig.ctl ./${dtype}.ctl
             cp $GSCRIPTS/plot_uvallev_horz.gs ./plot_${dtype}.gs
-#            nt=1
 
          elif  [ "$mtype" = 'uv221' -o "$mtype" = 'uv230' -o "$mtype" = 'uv231' -o "$mtype" = 'uv232' -o "$mtype" = 'uv233' -o "$mtype" = 'uv234' -o "$mtype" = 'uv235' ]; then
 
             cp $CTLDIR/uvallev.ctl  ./${dtype}.ctl
             cp $GSCRIPTS/plot_uvallev_horz.gs ./plot_${dtype}.gs
-#            nt=1
 
          fi
 
@@ -192,7 +169,7 @@ for type in gps t; do
 
 
       ### set up plot variables
-#      hint=0
+
       sed -e "s/XSIZE/$xsize/" \
           -e "s/YSIZE/$ysize/" \
           -e "s/PLOTFILE/$mtype/" \

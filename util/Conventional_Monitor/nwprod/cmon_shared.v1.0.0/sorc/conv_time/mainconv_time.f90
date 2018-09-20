@@ -76,8 +76,9 @@
                 ituse_gps,ituse_ps,ituse_q,ituse_t,ituse_uv,&
                 iosubtype_gps,iosubtype_ps,iosubtype_q,iosubtype_t,iosubtype_uv)
 
-   print *,ntype_gps,ntype_ps,ntype_q,ntype_t,ntype_uv
    print *,'finish to call convinfo'
+   print *,' ntype_gps,ntype_ps,ntype_q,ntype_t,ntype_uv = ', ntype_gps, ntype_ps, ntype_q, ntype_t, ntype_uv
+   print *,' varqc_gps = ', varqc_gps
 
    print *,'start to call read_conv'
    call read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
@@ -87,8 +88,10 @@
                  iosubtype_gps,iosubtype_ps,iosubtype_q,iosubtype_t,iosubtype_uv) 
    
    print *,'FINISH to call read_conv'
-   print *,'iotype_gps, ntype_gps, varqc_gps, iosubtype_gps = ', &
-                iotype_gps, ntype_gps, varqc_gps, iosubtype_gps
+!   print *,'iotype_gps, ntype_gps, iosubtype_gps = ', &
+!                iotype_gps, ntype_gps, iosubtype_gps
+!   print *,' varqc_gps = ', varqc_gps
+
  
    call creatstas_ctl(dtype_gps,iotype_gps,ituse_gps,100,ntype_gps,1,nregion,18,region,&
                      rlatmin,rlatmax,rlonmin,rlonmax,iosubtype_gps) 

@@ -107,7 +107,7 @@ export ysize=y600
       num_pngs=`ls -1 *.png | wc -l`
       echo "num_pngs = ${num_pngs}"
 
-      rm -f ./*.png
+#      rm -f ./*.png
 
    done
 

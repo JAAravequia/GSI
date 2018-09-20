@@ -248,9 +248,10 @@ if [[ -s ${cnvstat} && -s ${pgrbf00} && -s ${pgrbf06} ]]; then
    #---------------------------------------
    #  run the horz-hist extraction script
    #
-   ${USHcmon}/horz_hist.sh # ${PDATE}
-   rc_horz_hist=$?
-   echo "rc_horz_hist = $rc_horz_hist"
+#   ${USHcmon}/horz_hist.sh # ${PDATE}
+#   rc_horz_hist=$?
+   rc_horz_hist=0
+#   echo "rc_horz_hist = $rc_horz_hist"
 
    #---------------------------------------
    #  run the time-vert extraction script

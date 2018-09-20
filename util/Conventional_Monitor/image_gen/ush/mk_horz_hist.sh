@@ -45,19 +45,19 @@ set -ax
 # submit the plot_hist job
 #------------------------------
 
-#jobname="${JOBNAME}_hist"
-#plot_hist="${C_IG_SCRIPTS}/plot_hist.sh"
-#logfile="${C_LOGDIR}/plothist_${CMON_SUFFIX}.${PDY}.${CYC}.log"
-#errfile="${C_LOGDIR}/plothist_${CMON_SUFFIX}.${PDY}.${CYC}.err"
-#rm -f $logfile
-#rm -f $errfile
-#
-#if [[ $MY_MACHINE = "wcoss" ]]; then
-#   $SUB -q $JOB_QUEUE -P $PROJECT -o ${logfile} -M 100 -R affinity[core] -W 0:20 -J ${jobname} -cwd ${PWD} ${plot_hist}
-#
-#elif [[ $MY_MACHINE = "theia" ]]; then
-#   ${SUB} -A ${ACCOUNT} -l procs=1,walltime=0:15:00 -N ${jobname} -V -o ${logfile} -e ${errfile} ${plot_hist}
-#fi
+jobname="${JOBNAME}_hist"
+plot_hist="${C_IG_SCRIPTS}/plot_hist.sh"
+logfile="${C_LOGDIR}/plothist_${CMON_SUFFIX}.${PDY}.${CYC}.log"
+errfile="${C_LOGDIR}/plothist_${CMON_SUFFIX}.${PDY}.${CYC}.err"
+rm -f $logfile
+rm -f $errfile
+
+if [[ $MY_MACHINE = "wcoss" ]]; then
+   $SUB -q $JOB_QUEUE -P $PROJECT -o ${logfile} -M 100 -R affinity[core] -W 0:20 -J ${jobname} -cwd ${PWD} ${plot_hist}
+
+elif [[ $MY_MACHINE = "theia" ]]; then
+   ${SUB} -A ${ACCOUNT} -l procs=1,walltime=0:15:00 -N ${jobname} -V -o ${logfile} -e ${errfile} ${plot_hist}
+fi
 
 
 #------------------------------
@@ -83,19 +83,19 @@ fi
 # submit the plot_horz_uv job
 #------------------------------
 
-#jobname="${JOBNAME}_horz_uv"
-#plot_horz_uv="${C_IG_SCRIPTS}/plot_horz_uv.sh"
-#logfile="${C_LOGDIR}/plothorz_uv_${CMON_SUFFIX}.${PDY}.${CYC}.log"
-#errfile="${C_LOGDIR}/plothorz_uv_${CMON_SUFFIX}.${PDY}.${CYC}.err"
-#rm -f $logfile
-#rm -f $errfile
-#
-#if [[ $MY_MACHINE = "wcoss" ]]; then
-#   $SUB -q $JOB_QUEUE -P $PROJECT -o ${logfile} -M 100 -R affinity[core] -W 0:20 -J ${jobname} ${plot_horz_uv}
-#
-#elif [[ $MY_MACHINE = "theia" ]]; then
-#   ${SUB} -A ${ACCOUNT} -l procs=1,walltime=0:15:00 -N ${jobname} -V -o ${logfile} -e ${errfile} ${plot_horz_uv}
-#fi
+jobname="${JOBNAME}_horz_uv"
+plot_horz_uv="${C_IG_SCRIPTS}/plot_horz_uv.sh"
+logfile="${C_LOGDIR}/plothorz_uv_${CMON_SUFFIX}.${PDY}.${CYC}.log"
+errfile="${C_LOGDIR}/plothorz_uv_${CMON_SUFFIX}.${PDY}.${CYC}.err"
+rm -f $logfile
+rm -f $errfile
+
+if [[ $MY_MACHINE = "wcoss" ]]; then
+   $SUB -q $JOB_QUEUE -P $PROJECT -o ${logfile} -M 100 -R affinity[core] -W 0:20 -J ${jobname} ${plot_horz_uv}
+
+elif [[ $MY_MACHINE = "theia" ]]; then
+   ${SUB} -A ${ACCOUNT} -l procs=1,walltime=0:15:00 -N ${jobname} -V -o ${logfile} -e ${errfile} ${plot_horz_uv}
+fi
 
 echo "<-- mk_horz_hist.sh"
 

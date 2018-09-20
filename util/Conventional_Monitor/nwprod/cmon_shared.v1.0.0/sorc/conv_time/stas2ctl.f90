@@ -126,7 +126,7 @@ subroutine creatstas_ctl(dtype,itype,ituse,nt,nc,nlev,nregion,nvar,&
 130 format('title  conventional stats  jiter')
 140 format('*XDEF is data type')
 150 format('*YDEF is region')
-141 format('* ', a7,'x= ',i4,' dtype= ',i6,' subtype= ',i6,' iuse= ',i2) 
+141 format('* ', a7,'x= ',i4,' dtype= ',i3.3,' subtype= ',i6,' iuse= ',i2) 
 142 format('* ',a7,'x= ',i4,' dtype=    all    ','subtype=   0   iuse=   1 ') 
 160 format('*ZDEF is vertical level')
 143 format('xdef ',i3,' linear 1.0 1.0')

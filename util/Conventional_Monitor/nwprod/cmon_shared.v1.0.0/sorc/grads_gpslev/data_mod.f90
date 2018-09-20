@@ -21,8 +21,8 @@ module data
   integer, parameter, public :: idx_time        = 8     ! obs time (hrs relative to analysis time)
   integer, parameter, public :: idx_zsges       = 9     ! model terrain (m) 
   integer, parameter, public :: idx_iqc         = 10    ! prepbufr qc or event mark (0=good)
-  integer, parameter, public :: idx_iuse        = 11    ! data usage flag
-  integer, parameter, public :: idx_imuse       = 12    ! muse data usage flag
+  integer, parameter, public :: idx_iuse        = 11    ! data usage flag (read_prepbufr)
+  integer, parameter, public :: idx_imuse       = 12    ! muse data usage flag (analysis)
   integer, parameter, public :: idx_rwgt        = 13    ! non-linear qc relative weight
   integer, parameter, public :: idx_err_input   = 14    ! original invers obs error (rad**-1)
   integer, parameter, public :: idx_errinv      = 15    ! original + represent  invers gps obs error (rad**-1)

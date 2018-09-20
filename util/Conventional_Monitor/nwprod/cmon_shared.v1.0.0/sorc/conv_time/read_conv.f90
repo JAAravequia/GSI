@@ -1,12 +1,21 @@
 !   intype  : the observarion type like t for tem., uv for wind
 !   stype   : the observation sub type, like t120 uv220
-!   twork   : the array to hold statistics for temperature: the first variable of 
-!             array is vertical level, the second variable is the number of data type
-!             the third variable tatistics variable: 1: the total number
-!             2:the number of data rejected by variational qc
-!             3:bias,4:rms, 5: penalty,6: variational penalty 
-!             the fourth variable is region, the fifth variable is the data usuage type
-!             1, used, 2, rejected, 3, monited
+!   *work   : the arrays hold statistics for each obs type: 
+!               1st variable = vertical level 
+!               2nd variable = is the number of data types
+!               3rd variable = statistics variable where: 
+!                       1 = count 
+!                       2 = count rejected by variational qc
+!                       3 = bias
+!                       4 = rms 
+!                       5 = penalty
+!                       6 = variational penalty 
+!               4th variable = region 
+!               5th variable = data usuage type where:
+!                       1 = used 
+!                       2 = rejected 
+!                       3 = monited
+
 
 subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
            rlatmin,rlatmax,rlonmin,rlonmax,iotype_gps,iotype_ps,iotype_q,&
@@ -38,6 +47,7 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
    integer ierr2,ierr3,ipsobs,iqobs,ioff02
    integer i,j,k,np,nregion,ltype,iregion,ntype_uv
    integer iobg,iobgu,iobgv,ntype_gps,ntype_ps,ntype_q,ntype_t
+   integer iclass
 
    real(4) ::  bmiss
    
@@ -74,12 +84,30 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
 
       if( iflag /= 0 ) exit loopd
 
+
       if(trim(dtype) == 'gps') then
          print *, 'case gps, calling stascal'
          call stascal(dtype,rdiag,nreal,ii,iotype_gps,varqc_gps,ntype_gps,&
-                         gpswork,uwork,vwork,1,ptop,pbot,nregion,mregion,&
-                         rlatmin,rlatmax,rlonmin,rlonmax,iosubtype_ps)
-         print *, 'case gps, returned from stascal'
+                         gpswork,uwork,vwork,np,ptop,pbot,nregion,mregion,&
+                         rlatmin,rlatmax,rlonmin,rlonmax,iosubtype_gps)
+
+!         print *, 'case gps, returned from stascal'
+!         print *, ' count: '
+!         print *, 'gpswork(1,1,1,1,1) = ', gpswork(1,1,1,1,1)
+!         print *, 'gpswork(1,1,1,1,2) = ', gpswork(1,1,1,1,2)
+!         print *, 'gpswork(1,1,1,1,3) = ', gpswork(1,1,1,1,3)
+!         print *, ' count_vqc: '
+!         print *, 'gpswork(1,1,2,1,1) = ', gpswork(1,1,2,1,1)
+!         print *, 'gpswork(1,1,2,1,2) = ', gpswork(1,1,2,1,2)
+!         print *, 'gpswork(1,1,2,1,3) = ', gpswork(1,1,2,1,3)
+!         print *, ' bias: '
+!         print *, 'gpswork(1,1,3,1,1) = ', gpswork(1,1,2,1,1)
+!         print *, 'gpswork(1,1,3,1,2) = ', gpswork(1,1,2,1,2)
+!         print *, 'gpswork(1,1,3,1,3) = ', gpswork(1,1,2,1,3)
+!         print *, ' rms:
+!         print *, ' pen:
+!         print *, ' qc_pen:
+
       else if(trim(dtype) == ' ps') then
          print *, 'case ps, calling stascal'
          call stascal(dtype,rdiag,nreal,ii,iotype_ps,varqc_ps,ntype_ps,&
@@ -110,6 +138,9 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
    enddo   loopd               !  ending read data do loop
    print *,'end of loopd'
 
+   print *, 'gpswork(1,1,1,1,1), gpswork(1,1,2,1,1) = ', gpswork(1,1,1,1,1), gpswork(1,1,2,1,1)
+   print *, 'gpswork(1,1,1,1,2), gpswork(1,1,2,1,2) = ', gpswork(1,1,1,1,2), gpswork(1,1,2,1,2)
+   print *, 'gpswork(1,1,1,1,3), gpswork(1,1,2,1,3) = ', gpswork(1,1,1,1,3), gpswork(1,1,2,1,3)
     
    close(lunin)
 
@@ -308,43 +339,43 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
                                   /vwork(k,ntype_uv+1,1,iregion,j))
             endif
    
-            do ltype=1,ntype_gps
-               gpswork(k,ntype_gps+1,1,iregion,j) = &
-                        gpswork(k,ntype_gps+1,1,iregion,j)+gpswork(k,ltype,1,iregion,j)
-               gpswork(k,ntype_gps+1,2,iregion,j) = &
-                        gpswork(k,ntype_gps+1,2,iregion,j)+gpswork(k,ltype,2,iregion,j)
-               gpswork(k,ntype_gps+1,3,iregion,j) = &
-                        gpswork(k,ntype_gps+1,3,iregion,j)+gpswork(k,ltype,3,iregion,j)
-               gpswork(k,ntype_gps+1,4,iregion,j) = &
-                        gpswork(k,ntype_gps+1,4,iregion,j)+gpswork(k,ltype,4,iregion,j)
+!            do ltype=1,ntype_gps
+!               gpswork(k,ntype_gps+1,1,iregion,j) = &
+!                        gpswork(k,ntype_gps+1,1,iregion,j)+gpswork(k,ltype,1,iregion,j)
+!               gpswork(k,ntype_gps+1,2,iregion,j) = &
+!                        gpswork(k,ntype_gps+1,2,iregion,j)+gpswork(k,ltype,2,iregion,j)
+!               gpswork(k,ntype_gps+1,3,iregion,j) = &
+!                        gpswork(k,ntype_gps+1,3,iregion,j)+gpswork(k,ltype,3,iregion,j)
+!               gpswork(k,ntype_gps+1,4,iregion,j) = &
+!                        gpswork(k,ntype_gps+1,4,iregion,j)+gpswork(k,ltype,4,iregion,j)
+!
+!               gpswork(k,ntype_gps+1,5,iregion,j) = &
+!                        gpswork(k,ntype_gps+1,5,iregion,j)+gpswork(k,ltype,5,iregion,j)
+!               gpswork(k,ntype_gps+1,6,iregion,j) = &
+!                        gpswork(k,ntype_gps+1,6,iregion,j)+gpswork(k,ltype,6,iregion,j)
+!
+!               if(gpswork(k,ltype,1,iregion,j) >=1.0) then
+!                  gpswork(k,ltype,3,iregion,j) = &
+!                        gpswork(k,ltype,3,iregion,j)/gpswork(k,ltype,1,iregion,j)
+!                  gpswork(k,ltype,4,iregion,j) = &
+!                        sqrt(gpswork(k,ltype,4,iregion,j)/gpswork(k,ltype,1,iregion,j))
+!                  gpswork(k,ltype,5,iregion,j) = &
+!                        gpswork(k,ltype,5,iregion,j)/gpswork(k,ltype,1,iregion,j)
+!                  gpswork(k,ltype,6,iregion,j) = &
+!                        gpswork(k,ltype,6,iregion,j)/gpswork(k,ltype,1,iregion,j)
+!               endif
+!            enddo
 
-               gpswork(k,ntype_gps+1,5,iregion,j) = &
-                        gpswork(k,ntype_gps+1,5,iregion,j)+gpswork(k,ltype,5,iregion,j)
-               gpswork(k,ntype_gps+1,6,iregion,j) = &
-                        gpswork(k,ntype_gps+1,6,iregion,j)+gpswork(k,ltype,6,iregion,j)
-
-               if(gpswork(k,ltype,1,iregion,j) >=1.0) then
-                  gpswork(k,ltype,3,iregion,j) = &
-                        gpswork(k,ltype,3,iregion,j)/gpswork(k,ltype,1,iregion,j)
-                  gpswork(k,ltype,4,iregion,j) = &
-                        sqrt(gpswork(k,ltype,4,iregion,j)/gpswork(k,ltype,1,iregion,j))
-                  gpswork(k,ltype,5,iregion,j) = &
-                        gpswork(k,ltype,5,iregion,j)/gpswork(k,ltype,1,iregion,j)
-                  gpswork(k,ltype,6,iregion,j) = &
-                        gpswork(k,ltype,6,iregion,j)/gpswork(k,ltype,1,iregion,j)
-               endif
-            enddo
-
-            if(gpswork(k,ntype_gps+1,1,iregion,j) >=1.0) then
-               gpswork(k,ntype_gps+1,3,iregion,j) = gpswork(k,ntype_gps+1,3,iregion,j)/&
-                                 gpswork(k,ntype_gps+1,1,iregion,j)
-               gpswork(k,ntype_gps+1,4,iregion,j)=sqrt(gpswork(k,ntype_gps+1,4,iregion,j)/&
-                                 gpswork(k,ntype_gps+1,1,iregion,j))
-               gpswork(k,ntype_gps+1,5,iregion,j)=gpswork(k,ntype_gps+1,5,iregion,j)/&
-                                 gpswork(k,ntype_gps+1,1,iregion,j)
-               gpswork(k,ntype_gps+1,6,iregion,j)=gpswork(k,ntype_gps+1,6,iregion,j)/&
-                                 gpswork(k,ntype_gps+1,1,iregion,j)
-            endif
+!            if(gpswork(k,ntype_gps+1,1,iregion,j) >=1.0) then
+!               gpswork(k,ntype_gps+1,3,iregion,j) = gpswork(k,ntype_gps+1,3,iregion,j)/&
+!                                 gpswork(k,ntype_gps+1,1,iregion,j)
+!               gpswork(k,ntype_gps+1,4,iregion,j)=sqrt(gpswork(k,ntype_gps+1,4,iregion,j)/&
+!                                 gpswork(k,ntype_gps+1,1,iregion,j))
+!               gpswork(k,ntype_gps+1,5,iregion,j)=gpswork(k,ntype_gps+1,5,iregion,j)/&
+!                                 gpswork(k,ntype_gps+1,1,iregion,j)
+!               gpswork(k,ntype_gps+1,6,iregion,j)=gpswork(k,ntype_gps+1,6,iregion,j)/&
+!                                 gpswork(k,ntype_gps+1,1,iregion,j)
+!            endif
 
          enddo    !!! enddo k height
       enddo       !!! enddo j, j=1 assimilated, j=2 rejected, j=3 monitored 
@@ -384,7 +415,7 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
       enddo
    enddo
 
-   write(6,900) (twork(k,1,1,1,1),k=1,np) 
+!   write(6,900) (twork(k,1,1,1,1),k=1,np) 
    900 format(13f10.1)
    close(41)
 
@@ -429,7 +460,59 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
    enddo
 
    print *, 'gpswork RESULTS:'
-   write(6,900) (gpswork(k,1,1,1,1),k=1,np) 
+   print *, ' '
+   print *, '    np = ', np
+   print *, ' '
+!   write(6,900) ((gpswork(k,1,1,1,iclass),k=1,np),iclass=1,3) 
+!   do k=1,3
+      print *, '   iotype_gps = ', iotype_gps
+      k=1
+
+!      write(6,900) ((gpswork(k,ltype,1,1,iclass),ltype=1,ntype_gps+1),iclass=1,3) 
+
+       print *, ' '
+       print *, 'case gps, at end :'
+       print *, ' count: '
+       print *, 'gpswork(1,1,1,1,1) = ', gpswork(1,1,1,1,1)
+       print *, 'gpswork(1,1,1,1,2) = ', gpswork(1,1,1,1,2)
+       print *, 'gpswork(1,1,1,1,3) = ', gpswork(1,1,1,1,3)
+       print *, ' count_vqc: '
+       print *, 'gpswork(1,1,2,1,1) = ', gpswork(1,1,2,1,1)
+       print *, 'gpswork(1,1,2,1,2) = ', gpswork(1,1,2,1,2)
+       print *, 'gpswork(1,1,2,1,3) = ', gpswork(1,1,2,1,3)
+       print *, ' bias: '
+       print *, 'gpswork(1,1,3,1,1) = ', gpswork(1,1,3,1,1)
+       print *, 'gpswork(1,1,3,1,2) = ', gpswork(1,1,3,1,2)
+       print *, 'gpswork(1,1,3,1,3) = ', gpswork(1,1,3,1,3)
+       print *, ' rms: '
+       print *, 'gpswork(1,1,4,1,1) = ', gpswork(1,1,4,1,1)
+       print *, 'gpswork(1,1,4,1,2) = ', gpswork(1,1,4,1,2)
+       print *, 'gpswork(1,1,4,1,3) = ', gpswork(1,1,4,1,3)
+       print *, ' pen: '
+       print *, 'gpswork(1,1,5,1,1) = ', gpswork(1,1,5,1,1)
+       print *, 'gpswork(1,1,5,1,2) = ', gpswork(1,1,5,1,2)
+       print *, 'gpswork(1,1,5,1,3) = ', gpswork(1,1,5,1,3)
+       print *, ' qc_pen: '
+       print *, 'gpswork(1,1,6,1,1) = ', gpswork(1,1,6,1,1)
+       print *, 'gpswork(1,1,6,1,2) = ', gpswork(1,1,6,1,2)
+       print *, 'gpswork(1,1,6,1,3) = ', gpswork(1,1,6,1,3)
+
+       print *, ' '
+       print *, '  gps counts, all pressure bins, dtype 1, region 1, used :'
+       write(6,900) (gpswork(k,1,1,1,1),k=1,np) 
+       print *, ' '
+       print *, '  gps bias/count, all pressure bins, dtype 1, region 1, used :'
+       write(6,900) ( gpswork(k,1,3,1,1) / gpswork(k,1,1,1,1), k=1,np ) 
+       print *, ' '
+       print *, '  gps rms/count, all pressure bins, dtype 1, region 1, used :'
+       write(6,900) ( gpswork(k,1,4,1,1) / gpswork(k,1,1,1,1), k=1,np ) 
+       print *, ' '
+       print *, '  gps pen/count, all pressure bins, dtype 1, region 1, used :'
+!       write(6,900) ( gpswork(k,1,5,1,1) / gpswork(k,1,1,1,1), k=1,np ) 
+       write(6,900) ( gpswork(k,1,5,1,1), k=1,np ) 
+
+!   enddo
+
    close(81)
 
 

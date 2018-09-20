@@ -81,7 +81,7 @@ function plot_horz(plotfile,plotfile2,xsize,ysize,he,rdate,levx,levx1,hint)
    'd TMPprs.1-TMPprs.2'
 *   *'cbarb'
 *   *'set ccolor 98'
-   'set ccolor 6'
+*   'set ccolor 6'
    'set digsiz 0.12'
    levy=levx-hint
    say 'levy now = 'levy
@@ -93,13 +93,18 @@ function plot_horz(plotfile,plotfile2,xsize,ysize,he,rdate,levx,levx1,hint)
    'set dfile 4'
    'set lev 'levy
 
+   'set ccolor 6'
 *   'd maskout(maskout(obg.4(t=1),'ley1'-press.4(t=1)),muse.4(t=1))'
-   'd maskout(maskout(10*bend.4(t=1),'ley1'-press.4(t=1)),muse.4(t=1))'
+*   'd maskout(maskout(10*bend.4(t=1),'ley1'-press.4(t=1)),muse.4(t=1))'
+   'd maskout(maskout(10*bend.4(t=1),'ley1'),muse.4(t=1))'
+
    'set ccolor 4'
-*   'd maskout(maskout(obg.4(t=1),'ley1'-press.4(t=1)),-muse.4(t=1))'
-   'd maskout(maskout(10*bend.4(t=1),'ley1'-press.4(t=1)),-muse.4(t=1))'
+
+**   'd maskout(maskout(obg.4(t=1),'ley1'-press.4(t=1)),-muse.4(t=1))'
+*   'd maskout(maskout(10*bend.4(t=1),'ley1'-press.4(t=1)),-muse.4(t=1))'
+   'd maskout(maskout(10*bend.4(t=1),'ley1'),-muse.4(t=1))'
    'set ccolor 98'
-   'draw title 'plotfile2' BEND (red-used,blue-rej,C) '
+   'draw title 'plotfile2' Temp and ges BEND*10 (red-used, blue-rej) '
    
    'run setvpage 2 2 2 2 0.9'
    setmap(plotfile,he)
@@ -116,12 +121,15 @@ function plot_horz(plotfile,plotfile2,xsize,ysize,he,rdate,levx,levx1,hint)
    'set dfile 3'
    'set lev 'levy
 *   'd maskout(maskout(obg.3(t=1),'ley1'-press.3(t=1)),muse.3(t=1))'
-   'd maskout(maskout(bend.3(t=1),'ley1'-press.3(t=1)),muse.3(t=1))'
+*   'd maskout(maskout(10*bend.3(t=1),'ley1'-press.3(t=1)),muse.3(t=1))'
+   'd maskout(maskout(10*bend.3(t=1),'ley1'),muse.3(t=1))'
+
    'set ccolor 4'
-*   'd maskout(maskout(obg.3(t=1),'ley1'-press.3(t=1)),-muse.3(t=1))'
-   'd maskout(maskout(bend.3(t=1),'ley1'-press.3(t=1)),-muse.3(t=1))'
+**   'd maskout(maskout(obg.3(t=1),'ley1'-press.3(t=1)),-muse.3(t=1))'
+*   'd maskout(maskout(10*bend.3(t=1),'ley1'-press.3(t=1)),-muse.3(t=1))'
+   'd maskout(maskout(10*bend.3(t=1),'ley1'),-muse.3(t=1))'
    'set ccolor 98'
-   'draw title 'plotfile2' BEND (used,C) at 'rdate'z'
+   'draw title 'plotfile2' Temp and anl BEND*10 (red-used, blue-rej) at 'rdate'z'
 
    'run setvpage 1 1 2 2 0.9'
    setmap(plotfile,he)
@@ -131,7 +139,7 @@ function plot_horz(plotfile,plotfile2,xsize,ysize,he,rdate,levx,levx1,hint)
    'd (TMPprs.1-TMPprs.2)'
 *   'cbarb'
    'set ccolor 98'
-   'draw title BEND 'levx'mb at 'rdate'z' 
+   'draw title Temperature INCT(C) 'levx'mb at 'rdate'z' 
 
    'run setvpage 2 1 2 2 0.9'
    setmap(plotfile,he)
