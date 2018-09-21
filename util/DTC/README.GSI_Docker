@@ -106,14 +106,11 @@ f278376baef3        comgsi/docker       "/bin/bash"         12 minutes ago      
 
 Depends on your host computer, it takes up to 10~20 minutes to complete the compiling.
 
-If you don't want to compile from source codes, you can skip step (1), (2) and download pre-compiled
+If you don't want to compile from source codes, you can skip (2) and download pre-compiled
 executables from DTC website:
   
       wget http://dtcenter.org/com-GSI/MPMC/precompiled.tar.gz
       tar xvfz precompiled.tar.gz
-      mkdir -p build/bin
-      mv gsi.x buld/bin
-      mv enkf_wrf.x build/bin
  
   (3) Link executables into run/
 
@@ -123,7 +120,7 @@ executables from DTC website:
 
   (4) Now you can run all tutorial cases under the run/ directory following instructions on the DTC website
       NOTE1: You can download all case data into /tutorial/case_data directory
-      NOTE2: On the comgsi/docker, you can run executables in MPI mode if you host computer has multiple cores.
+      NOTE2: On the comgsi/docker, you can run executables in MPI mode if it is assigned multiple cores
                e.g.:   mpirun -n 2 run.case03-conv.ksh
 
 
