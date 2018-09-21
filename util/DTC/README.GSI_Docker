@@ -83,7 +83,7 @@ f278376baef3        comgsi/docker       "/bin/bash"         12 minutes ago      
 
       -- Now you know that the comgsi/docker container ID is: f278376baef3, type:
 
-          docker exec --it f278376baef3 bash
+          docker exec -it f278376baef3 bash
 
        and you are now in a new shell of comgsi/docker
 
