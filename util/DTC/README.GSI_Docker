@@ -54,7 +54,20 @@ Docker on Windows directly.
 
     Be sure you have enough free space in this directory (10GB is preferred) 
 
-  (2) start the comgsi/docker:
+  (2) Obtain the comgsi/docker image:
+    
+      There are two methods to get the comgsi/docker image:
+       a. run the command "docker pull comgsi/docker"
+         docker will download comgsi/docker from hub.docker.com automatically. 
+         The comgsi/docker container is 695MB in size.
+         If you download speed from hub.docker.com is too slow, consider the method b
+
+       b. download a compressed tarball (262MB) from DTC website
+         https://dtcenter.org/com-GSI/MPMC/comgsi_docker.tar.gz
+         then "gzip comgsi_docker.tar.gz"
+         and then "docker load -i comgsi_docker.tar"
+
+  (3) start the comgsi/docker:
 
    First, run the following command to generate a run script "rungsidocker":
 
@@ -62,7 +75,7 @@ Docker on Windows directly.
 
    Now, you can just type "./rungsidocker" to start the comgsi/docker each time
 
-  (3) Once the comgsi/docker is started sucessfully, you will be in the docker and see ouputs similar as:
+  (4) Once the comgsi/docker is started sucessfully, you will be in the docker and see outputs similar as:
 
      comgsi@GSI_Docker:/tutorial$
 
@@ -106,7 +119,7 @@ f278376baef3        comgsi/docker       "/bin/bash"         12 minutes ago      
 
 Depends on your host computer, it takes up to 10~20 minutes to complete the compiling.
 
-If you don't want to compile from source codes, you can skip (2) and download pre-compiled
+If you don't want to compile from source codes, you can skip step (2) and download pre-compiled
 executables from DTC website:
   
       wget http://dtcenter.org/com-GSI/MPMC/precompiled.tar.gz
