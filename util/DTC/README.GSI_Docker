@@ -85,7 +85,7 @@ Docker on Windows directly.
 
     NOTE2: Four directories build/ case_data/ run/ will be created automatically under /tutorial.
 
-  (4) Lauch more shells of comgsi/docker:
+  (5) Lauch more shells of comgsi/docker:
       This step is not required, but very helpful if you want to open two or more shells of comgsi/docker.
       
       -- From a shell of your host system, type "docker ps". This lists all running containers.
