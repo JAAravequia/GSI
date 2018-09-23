@@ -64,7 +64,7 @@ Docker on Windows directly.
 
        b. download a compressed tarball (262MB) from DTC website
          https://dtcenter.org/com-GSI/MPMC/comgsi_docker.tar.gz
-         then "gzip comgsi_docker.tar.gz"
+         then "gunzip comgsi_docker.tar.gz"
          and then "docker load -i comgsi_docker.tar"
 
   (3) start the comgsi/docker:
