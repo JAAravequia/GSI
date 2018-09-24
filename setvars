@@ -1,0 +1,15 @@
+export SSEC_NETCDF4_DIR=/opt/netcdf4/4.3.3-intel-15.0-2
+export SSEC_NETCDF4_BIN=/opt/netcdf4/4.3.3-intel-15.0-2/bin
+export SSEC_NETCDF4_INC=/opt/netcdf4/4.3.3-intel-15.0-2/include
+export SSEC_NETCDF_BIN=/opt/netcdf4/4.3.3-intel-15.0-2/bin
+export SSEC_NETCDF_LIB=/opt/netcdf4/4.3.3-intel-15.0-2/lib
+export SSEC_NETCDF_INC=/opt/netcdf4/4.3.3-intel-15.0-2/include
+export SSEC_NETCDF_DIR=/opt/netcdf4/4.3.3-intel-15.0-2
+export SSEC_NETCDF4_LIB=/opt/netcdf4/4.3.3-intel-15.0-2/lib
+export SSEC_HDF5_LIB=/opt/hdf5/1.8.14-intel-15.0-2/lib
+export SSEC_HDF5_INC=/opt/hdf5/1.8.14-intel-15.0-2/include
+export SSEC_HDF5_DIR=/opt/hdf5/1.8.14-intel-15.0-2
+export SSEC_HDF5_BIN=/opt/hdf5/1.8.14-intel-15.0-2/bin
+export FFLAGS="-L/opt/intel/18/compilers_and_libraries_2018.3.222/linux/compiler/lib/intel64_lin -lifcore"
+export I_MPI_ROOT=/opt/intel/18/compilers_and_libraries_2018.3.222/linux/mpi
+
