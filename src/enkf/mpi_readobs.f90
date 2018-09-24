@@ -290,7 +290,9 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     if (nproc == 0) t1 = mpi_wtime()
     call mpi_bcast(ensmean_ob,nobs_tot,mpi_real4,0,mpi_comm_world,ierr)
     call mpi_bcast(sprd_ob,nobs_tot,mpi_real4,0,mpi_comm_world,ierr)
-    call mpi_bcast(ensmean_ob_linerr,nobs_tot,mpi_real4,0,mpi_comm_world,ierr)
+    if (ensrf_modloc) then
+      call mpi_bcast(ensmean_ob_linerr,nobs_tot,mpi_real4,0,mpi_comm_world,ierr)
+    endif
     if (nproc == 0) then
         t2 = mpi_wtime()
         print *,'time to broadcast ob prior ensemble mean and spread = ',t2-t1

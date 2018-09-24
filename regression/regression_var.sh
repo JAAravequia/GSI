@@ -26,7 +26,7 @@ else
   contrl="XXXXXXXX"
   export cmaketest="false"
   export clean="false"
-  export ptmpName="regression/gsi"
+  export ptmpName=""
 fi
 echo "beginning regression_var.sh, machine is $machine"
 # If we don't know already determine what machine are we on:
@@ -113,16 +113,17 @@ case $machine in
      export noscrub="/scratch3/BMC/gsienkf/$LOGNAME"
    fi
    export group="global"
-   export queue="debug"
+   export queue="batch"
    if [[ "$cmaketest" = "false" ]]; then
      export basedir="/scratch4/NCEPDEV/da/save/$LOGNAME/git/gsi"
-   fi
+   fi 
 
    if [ -d /scratch4/NCEPDEV/stmp3/$LOGNAME ]; then
      export ptmp="/scratch4/NCEPDEV/stmp3/$LOGNAME/$ptmpName"
    elif [ -d /scratch3/BMC/gsienkf/$LOGNAME ]; then
      export ptmp="/scratch3/BMC/gsienkf/$LOGNAME/tmp/$ptmpName"
    fi
+
 
    export fixcrtm="/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update"
    export casesdir="/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES"
@@ -132,7 +133,6 @@ case $machine in
 
    export accnt="da-cpu"
    export accnt="gsienkf"
-
    #  On Theia, there are no scrubbers to remove old contents from stmp* directories.
    #  After completion of regression tests, will remove the regression test subdirecories
    export clean=".true."
@@ -197,14 +197,13 @@ esac
 if [[ "$cmaketest" = "false" ]]; then
   export builddir=$noscrub/build
   export gsisrc="$basedir/$updat/src"
-  export gsiexec_updat="$basedir/$updat/bld/bin/gsi_global.x"
-  export gsiexec_contrl="$basedir/$contrl/bld/bin/gsi_global.x"
+  export gsiexec_updat="$gsisrc/global_gsi"
+  export gsiexec_contrl="$basedir/$contrl/src/global_gsi"
   export enkfexec_updat="$gsisrc/enkf/global_enkf"
   export enkfexec_contrl="$basedir/$contrl/src/enkf/global_enkf"
-  export fixgsi_updat="$basedir/$updat/fix"
-  export scripts_updat="$basedir/$updat/scripts"
-  export fixgsi_contrl="$basedir/$contrl/fix"
-  export scripts_contrl="$basedir/$contrl/scripts"
+  export fixgsi="$basedir/$updat/fix"
+  export scripts="$basedir/$updat/regression"
+  export ush="$basedir/$updat/ush"
 fi
 
 # We are dealing with *which* endian files
@@ -272,7 +271,7 @@ export fv3_netcdf_ges="$casesdir/regional/fv3_netcdf/$fv3_netcdf_adate"
 export gps_dtype="gps_bnd"
 
 # Regression vfydir
-export regression_vfydir="$noscrub/regression/$updat"
+export regression_vfydir="$noscrub/regression"
 
 # Define debug variable - If you want to run the debug tests, set this variable to .true.  Default is .false.
 export debug=".false."

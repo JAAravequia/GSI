@@ -268,16 +268,17 @@ end do
 
 ! these allocated here, but not computed till after the state 
 ! update in enkf_update.
-!allocate(obfit_post(nobstot))
-!allocate(obsprd_post(nobstot))
-!obsprd_post = zero
+if (.not. ensrf_modloc) then
+  allocate(obfit_post(nobstot))
+  allocate(obsprd_post(nobstot))
+  obsprd_post = zero
+endif
 end subroutine readobs
 
 subroutine calc_obsstats()
 implicit none
 
 !  print *, nproc, ' alloc? ', allocated(dhx_dx), allocated(interp)
-
   call mpi_obsstats(nobs_conv, nobs_oz, nobs_sat, nobstot, &
                      mem_ob, ensmean_ob-ensmean_obnobc, interp, dhx_dx, obfit_post, obsprd_post, nanals)
 !_linerr, interp, dhx_dx, obfit_post, obsprd_post, nanals)

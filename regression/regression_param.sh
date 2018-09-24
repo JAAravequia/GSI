@@ -3,13 +3,13 @@ regtest=$1
 case $machine in
 
 	Theia)
-	   export sub_cmd="sub_zeus"
+	   sub_cmd="sub_zeus"
     ;;
 	WCOSS)
-	   export sub_cmd="sub_wcoss -a GDAS-T2O -d $PWD"
+	   sub_cmd="sub_wcoss -a GDAS-T2O -d $PWD"
     ;;
 	WCOSS_C)
-	   export sub_cmd="sub_wcoss_c -a GDAS-T2O -d $PWD"
+	   sub_cmd="sub_wcoss_c -a GDAS-T2O -d $PWD"
     ;;
 	WCOSS_D)
 	   sub_cmd="sub_wcoss_d -a ibm -d $PWD"
@@ -18,10 +18,7 @@ case $machine in
 	   sub_cmd="sub_discover"
     ;;
 	s4)
-	   export sub_cmd="sub_s4"
-    ;;
-	discover)
-	   export sub_cmd="sub_discover"
+	   sub_cmd="sub_s4"
     ;;
 	Cheyenne)
 	   sub_cmd="sub_ncar -a p48503002 -q economy -d $PWD"
@@ -90,9 +87,6 @@ case $regtest in
         elif [[ "$machine" = "s4" ]]; then
            topts[1]="0:25:00" ; popts[1]="16/2/" ; ropts[1]="/1"
            topts[2]="0:25:00" ; popts[2]="16/4/" ; ropts[2]="/2"
-        elif [[ "$machine" = "discover" ]]; then
-           topts[1]="0:30:00" ; popts[1]="16/2"  ; ropts[1]="/1"
-           topts[2]="0:30:00" ; popts[2]="16/1"  ; ropts[2]="/2"
         fi
 
         if [ "$debug" = ".true." ] ; then
@@ -115,8 +109,8 @@ case $regtest in
             topts[1]="0:35:00" ; popts[1]="16/2/" ; ropts[1]="/1"
             topts[2]="0:25:00" ; popts[2]="16/4/" ; ropts[2]="/2"
         elif [[ "$machine" = "WCOSS_C" ]]; then
-            topts[1]="1:35:00" ; popts[1]="48/12/"; ropts[1]="1024/1"  # sub_wcoss_c popts are "#tasks/#nodes/"
-            topts[2]="1:25:00" ; popts[2]="60/15/"; ropts[2]="1024/2"
+            topts[1]="1:35:00" ; popts[1]="48/12/" ; ropts[1]="1024/1"  # sub_wcoss_c popts are "#tasks/#nodes/"
+            topts[2]="1:25:00" ; popts[2]="60/15/" ; ropts[2]="1024/2"
         elif [[ "$machine" = "s4" ]]; then
             topts[1]="0:55:00" ; popts[1]="16/2/" ; ropts[1]="/1"
             topts[2]="0:45:00" ; popts[2]="16/4/" ; ropts[2]="/2"
@@ -233,9 +227,6 @@ case $regtest in
         elif [[ "$machine" = "s4" ]]; then
            topts[1]="0:30:00" ; popts[1]="16/2/" ; ropts[1]="/1"
            topts[2]="0:30:00" ; popts[2]="16/4/" ; ropts[2]="/2"
-        elif [[ "$machine" = "discover" ]]; then
-           topts[1]="0:30:00" ; popts[1]="48/2"  ; ropts[1]="/1"
-           topts[2]="0:30:00" ; popts[2]="60/3"  ; ropts[2]="/2"
         fi
 
         if [ "$debug" = ".true." ] ; then
@@ -326,9 +317,6 @@ case $regtest in
         elif [[ "$machine" = "s4" ]]; then
            topts[1]="0:25:00" ; popts[1]="16/1/" ; ropts[1]="/1"
            topts[2]="0:25:00" ; popts[2]="16/2/" ; ropts[2]="/1"
-        elif [[ "$machine" = "discover" ]]; then
-           topts[1]="0:30:00" ; popts[1]="16/1"  ; ropts[1]="/1"
-           topts[2]="0:30:00" ; popts[2]="20/2"  ; ropts[2]="/2"
         fi
 
         if [ "$debug" = ".true." ] ; then
@@ -547,6 +535,7 @@ tmpregdir="tmpreg_$regtest"
 rcname="return_code_${regtest}.out"
 result="${regtest}_regression_results.txt"
 
+export sub_cmd
 export job
 export topts
 export popts

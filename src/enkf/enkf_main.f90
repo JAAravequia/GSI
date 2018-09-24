@@ -243,10 +243,12 @@ program enkf_main
 ! t2 = mpi_wtime()
 ! if (nproc == 0) print *,'time in gather_chunks =',t2-t1,'on proc',nproc
 
- t1 = mpi_wtime()
- call calc_obsstats()
- t2 = mpi_wtime()
- if (nproc == 0) print *,'time in calc_obsstats =',t2-t1,'on proc',nproc
+ if (ensrf_modloc) then 
+   t1 = mpi_wtime()
+   call calc_obsstats()
+   t2 = mpi_wtime()
+   if (nproc == 0) print *,'time in calc_obsstats =',t2-t1,'on proc',nproc
+  endif
 
  if (nproc == 0) then
     ! print innovation statistics for prior on root task.
