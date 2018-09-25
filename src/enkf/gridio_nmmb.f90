@@ -333,8 +333,8 @@ end do backgroundloop ! loop over backgrounds to read in
 
 end subroutine readgriddata
 
-subroutine writegriddata(nanal,vars3d,vars2d,n3d,n2d,levels,ndim,grdin)
-use params, only: nbackgrounds, anlfileprefixes
+subroutine writegriddata(nanal,vars3d,vars2d,n3d,n2d,levels,ndim,grdin,no_inflate_flag)
+use params, only: nbackgrounds, anlfileprefixes,fgfileprefixes
 
 implicit none
 
@@ -344,6 +344,8 @@ character(len=max_varname_length), dimension(n3d), intent(in) :: vars3d
 integer, intent(in) :: n2d,n3d,ndim
 integer, dimension(0:n3d), intent(in) :: levels
 real(r_single), dimension(npts,ndim,nbackgrounds), intent(inout) :: grdin
+logical, intent(in) :: no_inflate_flag 
+  !Not used here, but added to make writegriddata(...) consistent with gridio_gfs.f90
 
 character(len=500):: filename
 
