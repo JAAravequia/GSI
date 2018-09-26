@@ -70,7 +70,7 @@ subroutine statslight(mype,i_light,bwork,awork,i_ref,ndata)
 
 ! Generate summary statistics
 
- pflag=zero 
+ pflag=.FALSE.
 
 ! Summary report for lightning flash rate
 
