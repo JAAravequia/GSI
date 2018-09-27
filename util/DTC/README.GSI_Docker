@@ -48,7 +48,7 @@ Docker on Windows directly.
 2. ** Get and run comgsi/docker **
 -----------------------------------------------------------
 
-  (1) On you computer, create a direcoty for running GSI/EnKF in docker, e.g:
+  (1) On you computer, create a directory for running GSI/EnKF in docker, e.g:
 
         mkdir GSI-Docker; cd GSI-Docker
 
@@ -62,8 +62,7 @@ Docker on Windows directly.
          The comgsi/docker container is 695MB in size.
          If you download speed from hub.docker.com is too slow, consider the method b
 
-       b. download a compressed tarball (262MB) from DTC website
-         https://dtcenter.org/com-GSI/MPMC/comgsi_docker.tar.gz
+       b. download comgsi_docker.tar.gz (262MB) from DTC website
          then "gunzip comgsi_docker.tar.gz"
          and then "docker load -i comgsi_docker.tar"
 
@@ -79,7 +78,7 @@ Docker on Windows directly.
 
      comgsi@GSI_Docker:/tutorial$
 
-    NOTE1: This /tutorail is a mapping of the direcoty under your host system where you execute the "rungsidocker" command.
+    NOTE1: This /tutorail is a mapping of the directoryy under your host system where you execute the "rungsidocker" command.
      This mapping enables you to access files inside docker from your host system and your works will not disappear
      after you exit the docker.
 
@@ -88,7 +87,7 @@ Docker on Windows directly.
   (5) Lauch more shells of comgsi/docker:
       This step is not required, but very helpful if you want to open two or more shells of comgsi/docker.
       
-      -- From a shell of your host system, type "docker ps". This lists all running containers.
+      -- open a new shell window in your host system (NOT in docker), type "docker ps". This lists all running containers.
       You will get outputs similar as follows:
 
  CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
@@ -106,9 +105,10 @@ f278376baef3        comgsi/docker       "/bin/bash"         12 minutes ago      
 
   All the following steps are done in the shell of the comgsi/docker container.
 
-  (1) Get the GSI/EnKF release tarball from the DTC website:
+  (1) Download the GSI/EnKF release tarball from the DTC website and move it to the directory created in step 2.1:
 
-     wget http://dtcenter.org/com-GSI/MPMC/comGSIv3.7_EnKFv1.3.tar.gz
+  (2) In the docker, at the /tutorial directory, you should be able to "ls comGSIv3.7_EnKFv1.3.tar.gz" now
+
      tar xvfz comGSIv3.7_EnKFv1.3.tar.gz
 
   (2) Compile GSI/EnKF
