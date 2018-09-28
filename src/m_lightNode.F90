@@ -630,7 +630,7 @@ _ENTRY_(myname_)
                   return
                 end if
 
-    aNode%diags => obsdiagLookup_locate(diagLookup,aNode%idv,aNode%iob,1_i_kind)
+     aNode%diags => obsdiagLookup_locate(diagLookup,aNode%idv,aNode%iob,1_i_kind)
                 if(.not.associated(aNode%diags)) then
                   call perr(myname_,'obsdiagLookup_locate(), %idv =',aNode%idv)
                   call perr(myname_,'                        %iob =',aNode%iob)

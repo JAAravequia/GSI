@@ -37,6 +37,7 @@ subroutine sumslightbias(dlight,lightges0,mype,nobs,nobs_loc,sum_loc)
 !   machine:  
 !
   use kinds, only: r_kind,r_single,r_double,i_kind
+  use constants, only: zero
   implicit none
 
 ! Declare local variables
@@ -63,10 +64,10 @@ subroutine sumslightbias(dlight,lightges0,mype,nobs,nobs_loc,sum_loc)
 
 !-- set initial bias parameter values
 
-     eps0=1.
+     eps0=1._r_kind
 
-     sum_loc=0.
-     nobs_loc=0.
+     sum_loc=zero
+     nobs_loc=zero
       
 !-- save sums here
 !-- for each i there is an associated error(i), lightges0(i), and dlight(i)
@@ -85,7 +86,7 @@ subroutine sumslightbias(dlight,lightges0,mype,nobs,nobs_loc,sum_loc)
 
         nobs=nobs_loc
         
-        if(((eps0*lightges0).gt.0).and.(lightges0.gt.0).and.(dlight.gt.0)) then
+        if(((eps0*lightges0) > 0_r_kind).and.(lightges0 > 0_r_kind).and.(dlight >0_r_kind)) then
          
           nobs_loc=nobs_loc+1
           sum_loc=sum_loc+log(dlight/(eps0*lightges0))

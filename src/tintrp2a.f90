@@ -448,14 +448,6 @@ subroutine tintrp2a11_indx(dx,dy,obstime,gridtime, &
      itimep=nflds
      delt=one
   end if
-!--
-! deltp=one-delt
-! delxp=one-delx; delyp=one-dely
-! g=(f(ix,iy,itime)*delxp*delyp+f(ixp,iy,itime)*delx*delyp &
-!       +  f(ix,iyp,itime)*delxp*dely+f(ixp,iyp,itime)*delx*dely)*delt &
-!       +(f(ix,iy,itimep)*delxp*delyp+f(ixp,iy,itimep)*delx*delyp &
-!       + f(ix,iyp,itimep)*delxp*dely +f(ixp,iyp,itimep)*delx*dely)*deltp
-!--
 
   return
 end subroutine tintrp2a11_indx

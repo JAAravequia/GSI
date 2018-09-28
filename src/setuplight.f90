@@ -458,8 +458,6 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
            dlon=data(ilon,i)
 
 ! Only for post-processing in real earth coordinates
-!           dlon=data(11,i)
-!           dlat=data(12,i)
 
            dlight=data(ilight,i)
            ikx = nint(data(ikxx,i))
@@ -527,24 +525,20 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
 !            w0=0.5   - diagonal element of an uncertainty weight matrix of the guess [diag(W)=w0]
 !            eps0     - guess value of lightning flash rate
 
-                 if(nobs_gbl .gt. 0) then
+                 if(nobs_gbl > 0) then
                     eps=eps0*exp( (one/ float(nobs_gbl))*sum_gbl/(one+r0/w0) )
                  else
                     eps=eps0
                  endif  !! if(nobs_gbl .gt. 0) then
               !enddo !do i=1,nobs
 
-        if (miter.eq.1) then
-           eps0=1.
+        if (miter==1) then
+           eps0=1._r_kind
         else
            eps0=eps
         endif
 
 !      Uncomment for testing
-
-!        if (mype.eq.0) then
-!           write(*,*)miter,"setuplight: eps=",eps
-!        endif
 
 !--
 ! Bias-corrected flashrate: Use epsilon to adjust flash rate 
@@ -568,8 +562,6 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
            dlon=data(ilon,i)
 
 ! Only for post-processing in real earth coordinates
-!           dlon=data(11,i)
-!           dlat=data(12,i)
 
            dlight=data(ilight,i)
            ikx = nint(data(ikxx,i))
@@ -1857,21 +1849,20 @@ end subroutine setuplight
 
 ! Parameters used in McCaul et al. (2009)
 
-  real(r_kind),parameter :: k1=0.042                 !! Calibrated coefficient
-  real(r_kind),parameter :: k2=0.20                  !! ||
-  real(r_kind),parameter :: k3=0.95                  !!From various weight choices
-  real(r_kind),parameter :: graupel_density=300.     !! (kg/m**3)from McCaul et al. (2009)
+  real(r_kind),parameter :: k1=0.042_r_kind         !! Calibrated coefficient
+  real(r_kind),parameter :: k2=0.20_r_kind          !! ||
+  real(r_kind),parameter :: k3=0.95_r_kind          !!From various weight choices
+  real(r_kind),parameter :: graupel_density=300._r_kind     !! (kg/m**3)from McCaul et al. (2009)
 
-  !real(r_kind), parameter    :: cwm_threshold=1.e-5 !threshold condition for cloud det.
-  real(r_kind), parameter    :: cwm_threshold=1.e-15 !threshold condition for cloud det.
+  real(r_kind), parameter    :: cwm_threshold=1.e-15_r_kind !threshold condition for cloud det.
   integer(i_kind),dimension(1:imax,1:jmax,1:kmax_q)    :: cldflag
   logical,intent(out),dimension(1:imax,1:jmax)   :: wmaxflag
   integer(i_kind) :: numcld
 !------------------------------------------------------
 !  wmax, obs_ges
 
-  real(r_kind),parameter :: wpower=4.5      !! regression power parameter
-  real(r_kind),parameter :: wcnst=5.e-6     !! regression multiplication parameter
+  real(r_kind),parameter :: wpower=4.5_r_kind      !! regression power parameter
+  real(r_kind),parameter :: wcnst=5.e-6_r_kind     !! regression multiplication parameter
   real(r_kind)           :: wmax
 
 !  Optional output file(s)
@@ -1990,10 +1981,10 @@ end subroutine setuplight
 
           sum1=zero
           do k=1,kmax_q
-             pu1(i,j,k)=((ps(i+1,j)*1000)-(pt_ll*100))*u(i+1,j,k)
-             pu2(i,j,k)=((ps(i-1,j)*1000)-(pt_ll*100))*u(i-1,j,k)
-             pv1(i,j,k)=((ps(i,j+1)*1000)-(pt_ll*100))*v(i,j+1,k)
-             pv2(i,j,k)=((ps(i,j-1)*1000)-(pt_ll*100))*v(i,j-1,k)
+             pu1(i,j,k)=((ps(i+1,j)*1000_r_kind)-(pt_ll*100_r_kind))*u(i+1,j,k)
+             pu2(i,j,k)=((ps(i-1,j)*1000_r_kind)-(pt_ll*100_r_kind))*u(i-1,j,k)
+             pv1(i,j,k)=((ps(i,j+1)*1000_r_kind)-(pt_ll*100_r_kind))*v(i,j+1,k)
+             pv2(i,j,k)=((ps(i,j-1)*1000_r_kind)-(pt_ll*100_r_kind))*v(i,j-1,k)
              sum1=sum1+((((pu1(i,j,k)-pu2(i,j,k))*ddx(i,j))+&
                           ((pv1(i,j,k)-pv2(i,j,k))*ddy(i,j)))*deltasigma(k))
           enddo  ! k=1,kmax_q loop
@@ -2010,8 +2001,8 @@ end subroutine setuplight
 !--  Sigmadot
 
           do k=1,kmax_q
-             sigmadot(i,j,k)=((sigma(k)/((ps(i,j)*1000)-(pt_ll*100)))*sum1)-&
-                             ((1/((ps(i,j)*1000)-(pt_ll*100)))*sum2)
+             sigmadot(i,j,k)=((sigma(k)/((ps(i,j)*1000_r_kind)-(pt_ll*100_r_kind)))*sum1)-&
+                             ((1/((ps(i,j)*1000_r_kind)-(pt_ll*100_r_kind)))*sum2)
 
              sigmadot(i,j,1)=sigmadot(i,j,2)
           enddo
@@ -2084,7 +2075,7 @@ end subroutine setuplight
 ! Mixed-phase level
 
                loop_kbot: do k=1,kmax_q-1
-                             if ( 0.5*(t(i,j,k)+t(i,j,k+1)) .lt. 258.15 ) then
+                             if ( half*(t(i,j,k)+t(i,j,k+1)) .lt. 258.15_r_kind ) then
                                   kbot(i,j)=k
                exit loop_kbot
                              endif
@@ -2093,8 +2084,8 @@ end subroutine setuplight
 
                if (kbot(i,j).gt.zero) then
                    jac_qgma(i,j,kbot(i,j))=2*k1*k3*graupel_density*qg(i,j,kbot(i,j))
-                   jac_qgmb(i,j,kbot(i,j))=k1*k3*graupel_density*(0.5*(w(i,j,kbot(i,j))+w(i,j,kbot(i,j)+1)))
-                   h1(i,j)=k1*k3*(0.5*(w(i,j,kbot(i,j))+w(i,j,kbot(i,j)+1)))*qg(i,j,kbot(i,j))*graupel_density
+                   jac_qgmb(i,j,kbot(i,j))=k1*k3*graupel_density*(half*(w(i,j,kbot(i,j))+w(i,j,kbot(i,j)+1)))
+                   h1(i,j)=k1*k3*(half*(w(i,j,kbot(i,j))+w(i,j,kbot(i,j)+1)))*qg(i,j,kbot(i,j))*graupel_density
                    h1(i,j)=abs(h1(i,j))
                else
                    h1(i,j)=zero
@@ -2158,13 +2149,13 @@ end subroutine setuplight
               do ii=max(1,i-idiff),min(imax,i+idiff)
                 do jj=max(1,j-jdiff),min(jmax,j+jdiff)
                   do kk=1,kmax_q
-                     if(cwm(ii,jj,kk) .gt. cwm_threshold) then
+                     if(cwm(ii,jj,kk) >  cwm_threshold) then
                         numcld= numcld+1
                      endif
                   enddo  !! kk
                 enddo  !! jj
               enddo  !! ii
-                    if(numcld .gt. one) then     !! if clouds exist
+                    if(numcld >  one) then     !! if clouds exist
                        wmaxflag(i,j)=.true.
                     else
                        wmaxflag(i,j)=.false.
@@ -2180,13 +2171,13 @@ end subroutine setuplight
          do i=1,imax
            do j=1,jmax
               if (wmaxflag(i,j)) then
-                  wmax=-1.e+10
+                  wmax=-1.e+10_r_kind
                   do k=1,kmax_q
-                     if (w(i,j,k).gt.wmax) then
+                     if (w(i,j,k) > wmax) then
                          wmax=w(i,j,k)
                          kvert(i,j)=k
                      endif
-                     if (wmax .lt. zero) then
+                     if (wmax < zero) then
                          wmax=zero
                      endif
                   enddo ! k loop

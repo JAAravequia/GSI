@@ -148,7 +148,7 @@ subroutine intlight_(lighthead,rval,sval)
   real(r_kind),dimension(1:nsig)            :: diffz
 !  wmax variables for lightning flash rate
    real(r_kind)                             :: wmax   
-   real(r_kind),parameter                   :: k3=0.95
+   real(r_kind),parameter                   :: k3=0.95_r_kind
   
 !  Output files
 !  character :: tlh_file*40
@@ -361,37 +361,37 @@ subroutine intlight_(lighthead,rval,sval)
 ! (-15 lightptr%jac_qgmbi1(lightptr%kboti1) deg C)
 
 
-               if (lightptr%kboti1.gt.zero) then
+               if (lightptr%kboti1 > zero) then
                    h1i1_TL=lightptr%jac_qgmai1(lightptr%kboti1)*sqg(i1(lightptr%kboti1))+&
                            lightptr%jac_qgmbi1(lightptr%kboti1)*&
-                           (0.5*(w_TL(i1(lightptr%kboti1))+w_TL(i1(lightptr%kboti1+1))))
+                           (half*(w_TL(i1(lightptr%kboti1))+w_TL(i1(lightptr%kboti1+1))))
                    h1i1_TL=h1i1_TL/(abs(h1i1_TL))
                 else
                    h1i1_TL=zero
                 endif
 
-                if (lightptr%kboti2.gt.zero) then
+                if (lightptr%kboti2 > zero) then
                     h1i2_TL=lightptr%jac_qgmai2(lightptr%kboti2)*sqg(i2(lightptr%kboti2))+&
                             lightptr%jac_qgmbi2(lightptr%kboti2)*&
-                            (0.5*(w_TL(i2(lightptr%kboti2))+w_TL(i2(lightptr%kboti2+1))))
+                            (half*(w_TL(i2(lightptr%kboti2))+w_TL(i2(lightptr%kboti2+1))))
                     h1i2_TL=h1i2_TL/(abs(h1i2_TL))
                 else
                     h1i2_TL=zero
                 endif
 
-                if (lightptr%kboti3.gt.zero) then
+                if (lightptr%kboti3 > zero) then
                     h1i3_TL=lightptr%jac_qgmai3(lightptr%kboti3)*sqg(i3(lightptr%kboti3))+&
                             lightptr%jac_qgmbi3(lightptr%kboti3)*&
-                            (0.5*(w_TL(i3(lightptr%kboti3))+w_TL(i3(lightptr%kboti3+1))))
+                            (half*(w_TL(i3(lightptr%kboti3))+w_TL(i3(lightptr%kboti3+1))))
                     h1i3_TL=h1i3_TL/(abs(h1i3_TL))
                  else
                     h1i3_TL=zero
                  endif
         
-                 if (lightptr%kboti4.gt.zero) then
+                 if (lightptr%kboti4 > zero) then
                      h1i4_TL=lightptr%jac_qgmai4(lightptr%kboti4)*sqg(i4(lightptr%kboti4))+&
                              lightptr%jac_qgmbi4(lightptr%kboti4)*&
-                             (0.5*(w_TL(i4(lightptr%kboti4))+w_TL(i4(lightptr%kboti4+1))))
+                             (half*(w_TL(i4(lightptr%kboti4))+w_TL(i4(lightptr%kboti4+1))))
                      h1i4_TL=h1i4_TL/(abs(h1i4_TL))
                  else
                      h1i4_TL=zero
@@ -466,52 +466,52 @@ subroutine intlight_(lighthead,rval,sval)
        wmaxi4_TL=zero
 
            if (lightptr%jac_wmaxflagi1) then
-               wmax=-1.e+10
+               wmax=-1.e+10_r_kind
                do k=1,nsig-1
-                  if (w_TL(i1(k)).gt.wmax) then
+                  if (w_TL(i1(k)) > wmax) then
                       lightptr%jac_kverti1=k
                       wmaxi1_TL=w_TL(i1(lightptr%jac_kverti1))
                   endif
-                  if (wmaxi1_TL .lt. zero) then
+                  if (wmaxi1_TL < zero) then
                       wmaxi1_TL=zero
                   endif
                enddo ! k loop
            endif
 
            if (lightptr%jac_wmaxflagi2) then
-               wmax=-1.e+10
+               wmax=-1.e+10_r_kind
                do k=1,nsig-1
-                  if (w_TL(i2(k)).gt.wmax) then
+                  if (w_TL(i2(k)) > wmax) then
                       lightptr%jac_kverti2=k
                       wmaxi2_TL=w_TL(i2(lightptr%jac_kverti2))
                   endif
-                  if (wmaxi2_TL .lt. zero) then
+                  if (wmaxi2_TL <  zero) then
                       wmaxi2_TL=zero
                   endif
                enddo ! k loop
            endif
 
           if (lightptr%jac_wmaxflagi3) then
-               wmax=-1.e+10
+               wmax=-1.e+10_r_kind
                do k=1,nsig-1
-                  if (w_TL(i3(k)).gt.wmax) then
+                  if (w_TL(i3(k)) > wmax) then
                       lightptr%jac_kverti3=k
                       wmaxi3_TL=w_TL(i3(lightptr%jac_kverti3))
                   endif
-                  if (wmaxi3_TL .lt. zero) then
+                  if (wmaxi3_TL <  zero) then
                       wmaxi3_TL=zero
                   endif
                enddo ! k loop
            endif
 
            if (lightptr%jac_wmaxflagi4) then
-               wmax=-1.e+10
+               wmax=-1.e+10_r_kind
                do k=1,nsig-1
-                  if (w_TL(i4(k)).gt.wmax) then
+                  if (w_TL(i4(k)) > wmax) then
                       lightptr%jac_kverti4=k
                       wmaxi4_TL=w_TL(i4(lightptr%jac_kverti4))
                   endif
-                  if (wmaxi4_TL .lt. zero) then
+                  if (wmaxi4_TL < zero) then
                       wmaxi4_TL=zero
                   endif
                enddo ! k loop
@@ -649,14 +649,14 @@ subroutine intlight_(lighthead,rval,sval)
 ! vertical graupel flux within the mixed-phase region
 ! (-15 deg C)
 
-               if (lightptr%kboti1.gt.zero) then
+               if (lightptr%kboti1 > zero) then
                    h1i1_AD=h1i1_AD+(h1i1_AD/abs(h1i1_AD))
                    rqg(i1(lightptr%kboti1))=rqg(i1(lightptr%kboti1))+&
                                             lightptr%jac_qgmai1(lightptr%kboti1)*h1i1_AD
                    w_AD(i1(lightptr%kboti1))=w_AD(i1(lightptr%kboti1))+&
-                                             0.5*lightptr%jac_qgmbi1(lightptr%kboti1)*h1i1_AD
+                                             half*lightptr%jac_qgmbi1(lightptr%kboti1)*h1i1_AD
                    w_AD(i1(lightptr%kboti1+1))=w_AD(i1(lightptr%kboti1+1))+&
-                                               0.5*lightptr%jac_qgmbi1(lightptr%kboti1)*h1i1_AD
+                                               half*lightptr%jac_qgmbi1(lightptr%kboti1)*h1i1_AD
                else
                    h1i1_AD=zero
                    rqg(i1(lightptr%kboti1))=zero
@@ -664,42 +664,42 @@ subroutine intlight_(lighthead,rval,sval)
                    w_AD(i1(lightptr%kboti1+1))=zero
                endif
 
-               if (lightptr%kboti2.gt.zero) then
+               if (lightptr%kboti2 > zero) then
                    h1i2_AD=h1i2_AD+(h1i2_AD/abs(h1i2_AD))
                    rqg(i2(lightptr%kboti2))=rqg(i2(lightptr%kboti2))+&
                                             lightptr%jac_qgmai2(lightptr%kboti2)*h1i2_AD
                    w_AD(i2(lightptr%kboti2))=w_AD(i2(lightptr%kboti2))+&
-                                             0.5*lightptr%jac_qgmbi2(lightptr%kboti2)*h1i2_AD
+                                             half*lightptr%jac_qgmbi2(lightptr%kboti2)*h1i2_AD
                    w_AD(i2(lightptr%kboti2+1))=w_AD(i2(lightptr%kboti2+1))+&
-                                               0.5*lightptr%jac_qgmbi2(lightptr%kboti2)*h1i2_AD
+                                               half*lightptr%jac_qgmbi2(lightptr%kboti2)*h1i2_AD
                else
                    h1i2_AD=zero
                    rqg(i2(lightptr%kboti2))=zero
                    w_AD(i2(lightptr%kboti2+1))=zero
                endif
 
-               if (lightptr%kboti3.gt.zero) then
+               if (lightptr%kboti3 > zero) then
                    h1i3_AD=h1i3_AD+(h1i3_AD/abs(h1i3_AD))
                    rqg(i3(lightptr%kboti3))=rqg(i3(lightptr%kboti3))+&
                                             lightptr%jac_qgmai3(lightptr%kboti3)*h1i3_AD
                    w_AD(i3(lightptr%kboti3))=w_AD(i3(lightptr%kboti3))+&
-                                             0.5*lightptr%jac_qgmbi3(lightptr%kboti3)*h1i3_AD
+                                             half*lightptr%jac_qgmbi3(lightptr%kboti3)*h1i3_AD
                    w_AD(i3(lightptr%kboti3+1))=w_AD(i3(lightptr%kboti3+1))+&
-                                               0.5*lightptr%jac_qgmbi3(lightptr%kboti3)*h1i3_AD
+                                               half*lightptr%jac_qgmbi3(lightptr%kboti3)*h1i3_AD
                else
                    h1i3_AD=zero
                    rqg(i3(lightptr%kboti3))=zero
                    w_AD(i3(lightptr%kboti3+1))=zero
                endif
 
-               if (lightptr%kboti4.gt.zero) then
+               if (lightptr%kboti4 > zero) then
                    h1i4_AD=h1i4_AD+(h1i4_AD/abs(h1i4_AD))
                    rqg(i4(lightptr%kboti4))=rqg(i4(lightptr%kboti4))+&
                                             lightptr%jac_qgmai4(lightptr%kboti4)*h1i4_AD
                    w_AD(i4(lightptr%kboti4))=w_AD(i4(lightptr%kboti4))+&
-                                             0.5*lightptr%jac_qgmbi4(lightptr%kboti4)*h1i4_AD
+                                             half*lightptr%jac_qgmbi4(lightptr%kboti4)*h1i4_AD
                    w_AD(i4(lightptr%kboti4+1))=w_AD(i4(lightptr%kboti4+1))+&
-                                               0.5*lightptr%jac_qgmbi4(lightptr%kboti4)*h1i4_AD
+                                               half*lightptr%jac_qgmbi4(lightptr%kboti4)*h1i4_AD
                else
                    h1i4_AD=zero
                    rqg(i4(lightptr%kboti4))=zero
@@ -734,12 +734,12 @@ subroutine intlight_(lighthead,rval,sval)
             wmaxi4_AD=wmaxi3_AD+lightptr%jac_fratei4*flashratei4_AD
 
             if (lightptr%jac_wmaxflagi1) then
-                wmax=-1.e+10
+                wmax=-1.e+10_r_kind
                 do k=nsig-1,1,-1
-                   if (wmaxi1_AD .lt. zero) then
+                   if (wmaxi1_AD <  zero) then
                        wmaxi1_AD=zero
                    endif
-                   if (wmaxi1_AD.gt.wmax) then
+                   if (wmaxi1_AD > wmax) then
                        lightptr%jac_kverti1=k
                        w_AD(i1(lightptr%jac_kverti1))=w_AD(i1(lightptr%jac_kverti1))+wmaxi1_AD
                    endif
@@ -747,12 +747,12 @@ subroutine intlight_(lighthead,rval,sval)
             endif
                 
             if (lightptr%jac_wmaxflagi2) then
-                wmax=-1.e+10
+                wmax=-1.e+10_r_kind
                 do k=nsig-1,1,-1
-                   if (wmaxi2_AD .lt. zero) then
+                   if (wmaxi2_AD <  zero) then
                        wmaxi2_AD=zero
                    endif
-                   if (wmaxi2_AD.gt.wmax) then
+                   if (wmaxi2_AD > wmax) then
                        lightptr%jac_kverti2=k
                        w_AD(i2(lightptr%jac_kverti2))=w_AD(i2(lightptr%jac_kverti2))+wmaxi2_AD
                    endif
@@ -760,12 +760,12 @@ subroutine intlight_(lighthead,rval,sval)
             endif
 
             if (lightptr%jac_wmaxflagi3) then
-                wmax=-1.e+10
+                wmax=-1.e+10_r_kind
                 do k=nsig-1,1,-1
-                   if (wmaxi3_AD .lt. zero) then
+                   if (wmaxi3_AD <  zero) then
                        wmaxi3_AD=zero
                    endif
-                   if (wmaxi3_AD.gt.wmax) then
+                   if (wmaxi3_AD > wmax) then
                        lightptr%jac_kverti3=k
                        w_AD(i3(lightptr%jac_kverti3))=w_AD(i3(lightptr%jac_kverti3))+wmaxi3_AD
                    endif
@@ -773,12 +773,12 @@ subroutine intlight_(lighthead,rval,sval)
             endif
 
             if (lightptr%jac_wmaxflagi4) then
-                wmax=-1.e+10
+                wmax=-1.e+10_r_kind
                 do k=nsig-1,1,-1
-                   if (wmaxi4_AD .lt. zero) then
+                   if (wmaxi4_AD <  zero) then
                        wmaxi4_AD=zero
                    endif
-                   if (wmaxi4_AD.gt.wmax) then
+                   if (wmaxi4_AD > wmax) then
                        lightptr%jac_kverti4=k
                        w_AD(i4(lightptr%jac_kverti4))=w_AD(i4(lightptr%jac_kverti4))+wmaxi4_AD
                    endif

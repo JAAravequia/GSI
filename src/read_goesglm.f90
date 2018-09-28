@@ -450,7 +450,7 @@ subroutine convert_to_flash_rate   &
 
   use kinds, only: r_single,r_kind,r_double,i_kind
   use constants, only: zero,one_tenth,one,deg2rad,&
-      three,rad2deg,&
+      three,rad2deg,half,zero,&
       r60inv,r10,r100,ten, r1000, rearth
   use gridmod, only: diagnostic_reg,wrf_mass_regional,regional,nlon,nlat,nsig,&
       tll2xy,txy2ll,&
@@ -522,7 +522,7 @@ subroutine convert_to_flash_rate   &
            delta_lon=ges_xlon(jj0,ii0+1,1)-ges_xlon(jj0,ii0,1)
            delta_lat=ges_xlat(jj0+1,ii0,1)-ges_xlat(jj0,ii0,1)
   
-           lat_ref  =0.5*(cdata_strike(13,iobs)+cdata_strike(13,iobs-1))
+           lat_ref  =half*(cdata_strike(13,iobs)+cdata_strike(13,iobs-1))
 
            cosine=cos(lat_ref*deg2rad)
 
@@ -532,8 +532,8 @@ subroutine convert_to_flash_rate   &
         end do  !! do iobs=2,ndata_strike
 
         darea=darea_sum/float(ndata_strike)
-        else   !! ndata_strike=0
-        darea=0.
+     else   !! ndata_strike=0
+        darea=zero
 
      end if  !! if(ndata_strike>0) then
 
@@ -642,22 +642,22 @@ subroutine convert_to_flash_rate   &
       allocate(ind_min(1:ngridh))
       ind_min(:)=-99
 
-      dist_min=1.e10
+      dist_min=1.e10_r_kind
       do iobs=1,ndata_strike
 
-      xx=cdata_strike(2,iobs)   !! glon
-      yy=cdata_strike(3,iobs)   !! glat
-      ii0=INT(cdata_strike(2,iobs))
-      jj0=INT(cdata_strike(3,iobs))
-      index=(jj0-1)*nxdim+ii0
+         xx=cdata_strike(2,iobs)   !! glon
+         yy=cdata_strike(3,iobs)   !! glat
+         ii0=INT(cdata_strike(2,iobs))
+         jj0=INT(cdata_strike(3,iobs))
+         index=(jj0-1)*nxdim+ii0
 
-      if (lcount(index)>0) then
-         dist2=(xx-glon_central(index))**2+(yy-glat_central(index))**2
-         if (dist2<dist_min) then
-            dist_min=dist2
-            ind_min(index)=iobs
-         end if
-      end if  !! if(lcount(index)>0) then
+         if (lcount(index)>0) then
+            dist2=(xx-glon_central(index))**2+(yy-glat_central(index))**2
+            if (dist2<dist_min) then
+               dist_min=dist2
+               ind_min(index)=iobs
+            end if
+         end if  !! if(lcount(index)>0) then
 
       enddo  !! do iobs=1,ndata_strike
 
@@ -668,7 +668,7 @@ subroutine convert_to_flash_rate   &
 !-- count the non-zero flash rates and assign a temporary domain cdata_flash_h
 !-- Note: it is assumed that only non-zero flash rates are true observations
 
-      icount=0.
+      icount=0
       do index=1,ngridh
         if (lcount(index)>0) then
            icount=icount+1
@@ -676,7 +676,7 @@ subroutine convert_to_flash_rate   &
            cdata_flash_h( 2,icount)=glon_central(index)
            cdata_flash_h( 3,icount)=glat_central(index)
 
-        if (darea>0.) then
+        if (darea>0._r_kind) then
            cdata_flash_h( 4,icount)=float(lcount(index))/(darea*dtime)
         else 
            cdata_flash_h( 4,icount)=0. 
@@ -750,43 +750,35 @@ subroutine convert_time (date_old,date_new,nmax)
      xdate(1:nmax-1) = date_old
      xdate(nmax) = date_new
     
-     sumidd=0
+     sumidd=0._r_kind
      do i=1,nmax
-        xccyy = INT(1e-8*xdate(i))*1e8  
+        xccyy = INT(1.0e-8_r_kind*xdate(i))*1.0e8_r_kind 
         xdate(i) = INT(xdate(i))-xccyy   
 
-       jdd=INT(0.0001*xdate(i))
+       jdd=INT(0.0001_r_kind*xdate(i))
        idd=INT(xdate(i))-jdd*10000
 
        ysumidd=float(idd)
-       dd=float(INT(0.01*ysumidd))
-       hh=ysumidd-dd*100.
+       dd=float(INT(0.01_r_kind*ysumidd))
+       hh=ysumidd-dd*100._r_kind
 
-       sumidd=sumidd+dd*24.+hh
+       sumidd=sumidd+dd*24._r_kind+hh
 
      enddo  !! do i=1,nmax
 
      xsumidd=float(sumidd)/nmax
      ysumidd=float(INT(xsumidd))
 
-     kdd=INT(xsumidd/24)
+     kdd=INT(xsumidd/24._r_kind)
      xdd=float(kdd)
-     xhh=ysumidd-float(kdd)*24.
+     xhh=ysumidd-float(kdd)*24._r_kind
 
-     ydate=float(jdd)*10000.+xdd*100.+xhh+xccyy
+     ydate=float(jdd)*10000._r_kind+xdd*100._r_kind+xhh+xccyy
       
      date_old=ydate 
        
       
      deallocate(xdate)
-
-
-     !if (nmax==100) then
-     !stop
-     !endif
-!
-!! End of routine
-!  return
 
 end subroutine convert_time
 

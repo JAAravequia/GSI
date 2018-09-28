@@ -134,8 +134,6 @@ contains
     !   Check the status of input file
  
     inquire(file=trim(fname),exist=lexist)
-    !write(*,*)'File exist : ',trim(fname),lexist
-  
  
     if ( lexist ) then
  

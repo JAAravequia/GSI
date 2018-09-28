@@ -97,9 +97,7 @@ subroutine statslight(mype,i_light,bwork,awork,i_ref,ndata)
            pflag(j)=trim(nulight(j)) == 'light'
        enddo  
         
-!stop
-          !call dtast(bwork,1,pbotall,ptopall,mesage,jiter,iout_light,pflag)
-          call dtast(bwork,1,pbot,ptop,mesage,jiter,iout_light,pflag)
+        call dtast(bwork,1,pbot,ptop,mesage,jiter,iout_light,pflag)
 
         numgrslight=nint(awork(6,i_light))
         numfailqc=nint(awork(21,i_light))

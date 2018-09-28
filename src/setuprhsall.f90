@@ -249,7 +249,6 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
        i_t,i_pw,i_q,i_co,i_gust,i_vis,i_ref,i_pblh,i_wspd10m,i_td2m,&
        i_mxtm,i_mitm,i_pmsl,i_howv,i_tcamt,i_lcbas,i_cldch,i_uwnd10m,i_vwnd10m,&
        i_swcp,i_lwcp,iobs,nprt,ii,jj
-  integer(i_kind) i
   integer(i_kind) it,ier,istatus
 
   real(r_quad):: zjo
