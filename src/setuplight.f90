@@ -457,8 +457,6 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
            dlat=data(ilat,i)
            dlon=data(ilon,i)
 
-! Only for post-processing in real earth coordinates
-
            dlight=data(ilight,i)
            ikx = nint(data(ikxx,i))
            error=data(ier2,i)
@@ -538,8 +536,6 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
            eps0=eps
         endif
 
-!      Uncomment for testing
-
 !--
 ! Bias-corrected flashrate: Use epsilon to adjust flash rate 
 ! from the min/max values of the nonlinear lightning flash rate
@@ -560,8 +556,6 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
         if (in_curbin) then
            dlat=data(ilat,i)
            dlon=data(ilon,i)
-
-! Only for post-processing in real earth coordinates
 
            dlight=data(ilight,i)
            ikx = nint(data(ikxx,i))
@@ -2083,7 +2077,7 @@ end subroutine setuplight
 
 
                if (kbot(i,j).gt.zero) then
-                   jac_qgma(i,j,kbot(i,j))=2*k1*k3*graupel_density*qg(i,j,kbot(i,j))
+                   jac_qgma(i,j,kbot(i,j))=two*k1*k3*graupel_density*qg(i,j,kbot(i,j))
                    jac_qgmb(i,j,kbot(i,j))=k1*k3*graupel_density*(half*(w(i,j,kbot(i,j))+w(i,j,kbot(i,j)+1)))
                    h1(i,j)=k1*k3*(half*(w(i,j,kbot(i,j))+w(i,j,kbot(i,j)+1)))*qg(i,j,kbot(i,j))*graupel_density
                    h1(i,j)=abs(h1(i,j))

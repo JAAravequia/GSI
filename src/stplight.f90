@@ -39,7 +39,7 @@ subroutine stplight(lighthead,rval,sval,out,sges,nstep)
 !            lightning flash rate model and finds an optimal estimate 
 !            of step size as done in steepest descent or conjugate 
 !            gradient algorithms. Note that in the case for lightning
-!            flash rate, dk=-delJ(h(xk)) 
+!            flash rate dk=-delJ(h(xk)) 
 !            This version includes nonlinear qc.
 !
 ! program history log:

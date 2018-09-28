@@ -97,7 +97,7 @@ subroutine intlight_(lighthead,rval,sval)
   use gridmod,       only: nsig
   use gridmod,       only: wrf_mass_regional,regional
   use qcmod,         only: nlnqc_iter,varqc_iter
-  use constants,     only: zero,fv,one,half,tiny_r_kind,cg_term
+  use constants,     only: zero,fv,one,half,two,tiny_r_kind,cg_term
   use jfunc,         only: jiter
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -358,7 +358,7 @@ subroutine intlight_(lighthead,rval,sval)
 
 ! Tangent linear - Lightning flash rate as a function of
 ! vertical graupel flux within the mixed-phase region
-! (-15 lightptr%jac_qgmbi1(lightptr%kboti1) deg C)
+! (-15 deg C)
 
 
                if (lightptr%kboti1 > zero) then
@@ -625,25 +625,25 @@ subroutine intlight_(lighthead,rval,sval)
                rqi(i1(k))=rqi(i1(k))+lightptr%jac_icei1(k)*totice_colinti1_AD
                rqs(i1(k))=rqs(i1(k))+lightptr%jac_icei1(k)*totice_colinti1_AD
                rqg(i1(k))=rqg(i1(k))+lightptr%jac_icei1(k)*totice_colinti1_AD
-               totice_colinti1_AD=2*totice_colinti1_AD
+               totice_colinti1_AD=two*totice_colinti1_AD
 
                z_AD(i2(k))=z_AD(i2(k))+lightptr%jac_zicei2(k)*totice_colinti2_AD
                rqi(i2(k))=rqi(i2(k))+lightptr%jac_icei2(k)*totice_colinti2_AD
                rqs(i2(k))=rqs(i2(k))+lightptr%jac_icei2(k)*totice_colinti2_AD
                rqg(i2(k))=rqg(i2(k))+lightptr%jac_icei2(k)*totice_colinti2_AD
-               totice_colinti2_AD=2*totice_colinti2_AD
+               totice_colinti2_AD=two*totice_colinti2_AD
 
                z_AD(i3(k))=z_AD(i3(k))+lightptr%jac_zicei3(k)*totice_colinti3_AD
                rqi(i3(k))=rqi(i3(k))+lightptr%jac_icei3(k)*totice_colinti3_AD
                rqs(i3(k))=rqs(i3(k))+lightptr%jac_icei3(k)*totice_colinti3_AD
                rqg(i3(k))=rqg(i3(k))+lightptr%jac_icei3(k)*totice_colinti3_AD
-               totice_colinti3_AD=2*totice_colinti3_AD
+               totice_colinti3_AD=two*totice_colinti3_AD
 
                z_AD(i4(k))=z_AD(i4(k))+lightptr%jac_zicei4(k)*totice_colinti4_AD
                rqi(i4(k))=rqi(i4(k))+lightptr%jac_icei4(k)*totice_colinti4_AD
                rqs(i4(k))=rqs(i4(k))+lightptr%jac_icei4(k)*totice_colinti4_AD
                rqg(i4(k))=rqg(i4(k))+lightptr%jac_icei4(k)*totice_colinti4_AD
-               totice_colinti4_AD=2*totice_colinti4_AD
+               totice_colinti4_AD=two*totice_colinti4_AD
 
 ! Adjoint - Lightning flash rate as a function of
 ! vertical graupel flux within the mixed-phase region
