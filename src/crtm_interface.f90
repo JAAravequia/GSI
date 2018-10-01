@@ -36,6 +36,7 @@ module crtm_interface
 !   2016-06-03  collard - Added changes to allow for historical naming conventions
 !   2017-02-24  zhu/todling  - remove gmao cloud fraction treatment
 !   2018-01-12  collard - Force all satellite and solar zenith angles to be >= 0.
+!   2018-09-25  Orescanin - optional TELSEM2 for emissivity background 
 !   
 !
 ! subroutines included:
@@ -983,6 +984,10 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   use crtm_module, only: limit_exp,o3_id
   use obsmod, only: iadate
   use aeroinfo, only: nsigaerojac
+  use obsmod, only: ianldate        
+  use mod_mwatlas_m2               
+  use crtm_spccoeff, only: sc     
+
 
   implicit none
 
@@ -1075,7 +1080,16 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
 
   integer(i_kind),parameter,dimension(12):: mday=(/0,31,59,90,&
        120,151,181,212,243,273,304,334/)
-  real(r_kind) ::   lai
+
+  real(r_kind)                     :: lai
+  integer                          :: iem, month4tlsm
+  type(telsem2_atlas_data)         :: atlas
+  integer(SELECTED_INT_KIND(9))    :: error_status_tlsm2
+  real(SELECTED_REAL_KIND(13,300)) :: ev_tlsm2tmp, eh_tlsm2tmp, stdv_tlsm2tmp,stdh_tlsm2tmp, covvh_tlsm2tmp
+  real(SELECTED_REAL_KIND(13,300)) :: lon4tlsm2, lat4tlsm2,resol4tlsm2,theta4tlsm2,freq4tlsm2
+  real(SELECTED_INT_KIND(9)),dimension(nchanl) :: eh_tlsm2
+  character(len=150)               ::  file_time
+  logical                          :: pcexist
 
   m1=mype+1
 
@@ -1827,8 +1841,59 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
                              atmosphere(1)%aerosol )
   endif
 
-! Call CRTM K Matrix model
+! Here TELSEM2 atlas is opened and emissivity is read in for all frequencies
+  ! (channels) of the current sensor.
+  if(trim(obstype)=='atms') then
+  
+    write(file_time,'(i10)') ianldate
+  
+    if(adjustl(trim(file_time(5:6))) .eq. '01') month4tlsm=1
+    if(adjustl(trim(file_time(5:6))) .eq. '02') month4tlsm=2
+    if(adjustl(trim(file_time(5:6))) .eq. '03') month4tlsm=3
+    if(adjustl(trim(file_time(5:6))) .eq. '04') month4tlsm=4
+    if(adjustl(trim(file_time(5:6))) .eq. '05') month4tlsm=5
+    if(adjustl(trim(file_time(5:6))) .eq. '06') month4tlsm=6
+    if(adjustl(trim(file_time(5:6))) .eq. '07') month4tlsm=7
+    if(adjustl(trim(file_time(5:6))) .eq. '08') month4tlsm=8
+    if(adjustl(trim(file_time(5:6))) .eq. '09') month4tlsm=9
+    if(adjustl(trim(file_time(5:6))) .eq. '10') month4tlsm=10
+    if(adjustl(trim(file_time(5:6))) .eq. '11') month4tlsm=11
+    if(adjustl(trim(file_time(5:6))) .eq. '12') month4tlsm=12
 
+    inquire(file='atlas_telsem2',exist=pcexist)
+    if (pcexist) then
+      CALL rttov_readmw_atlas('atlas_telsem2', month4tlsm, atlas, .FALSE. , error_status_tlsm2)
+    else
+       write(6,*) '***WARNING TELSEM2 atlas not found'
+    end if  ! if pcexist
+  
+    lat4tlsm2=nint(data_s(ilate))*1.-0.5  ! lat for current obs
+    lon4tlsm2=nint(data_s(ilone))*1.-0.5  ! lon for current obs
+    resol4tlsm2=0.25
+    theta4tlsm2=geometryinfo(1)%sensor_scan_angle
+  
+    do iem=1,nchanl
+      freq4tlsm2 =sc(sensorindex)%frequency(iem)
+      CALL emis_interp_int_sing(lat4tlsm2  ,lon4tlsm2  ,resol4tlsm2  ,theta4tlsm2  ,freq4tlsm2    ,atlas, &
+                                ev_tlsm2tmp,eh_tlsm2tmp,stdv_tlsm2tmp,stdh_tlsm2tmp,covvh_tlsm2tmp, 0)
+      eh_tlsm2(iem)=eh_tlsm2tmp
+      if (eh_tlsm2(iem) .ge.  1.00) eh_tlsm2(iem) = 0.999
+    enddo
+  
+    options(1)%Emissivity = eh_tlsm2
+  
+    CALL rttov_closemw_atlas(atlas)
+  
+    !! We want only pure land points!
+    if (data_s(ifrac_lnd).lt.0.99_r_kind .or. minval(options(1)%Emissivity) .lt.0.6) then
+        Options(1)%Use_Emissivity=.FALSE.
+    else
+      ! Options(1)%Use_Emissivity=.FALSE.
+        Options(1)%Use_Emissivity=.TRUE.
+    endif
+  endif ! (if atms)
+
+! Call CRTM K Matrix model
 
   error_status = 0
   if ( trim(obstype) /= 'modis_aod' ) then

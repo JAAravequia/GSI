@@ -292,6 +292,7 @@
         m_lwcpNode.o \
 	mpeu_mpif.o \
 	mpeu_util.o \
+	mod_mwatlas_m2.o \
 	mod_nmmb_to_a.o \
 	mod_strong.o \
 	mod_vtrans.o \

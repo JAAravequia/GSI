@@ -423,6 +423,7 @@ clean:
 	m_uniq.f90 \
 	mpeu_mpif.F90 \
 	mpeu_util.F90 \
+	mod_mwatlas_m2.F90 \
 	mod_nmmb_to_a.f90 \
         mod_fv3_lola.f90 \
 	mod_strong.f90 \

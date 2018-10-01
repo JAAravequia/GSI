@@ -240,6 +240,8 @@
 #                   defaults to ${FIXgsm}/global_scaninfo.txt
 #     HYBENSINFO    Input hybrid ensemble localization information file
 #                   defaults to ${FIXgsm}/global_hybens_locinfo.l${LEVS}.txt
+#     ATLASTELSEM2  Optional Backround TELSEM2 atlas for Emissivity over Land 
+#                   defaults to ${FIXgsi}/TELSEM2/
 #     PREPQC        Input QC-ed observation BUFR file
 #                   defaults to ${COMIN}/${PREINP}prepbufr${SUFINP}
 #     PREPQCPF      Input QC-ed observation profile BUFR file
@@ -445,6 +447,7 @@
 #                  $AEROINFO
 #                  $SCANINFO
 #                  $HYBENSINFO
+#                  $ATLASTELSEM2
 #
 #     input data : $SFCGES
 #                  $SIGGES
@@ -636,6 +639,7 @@ export PCPINFO=${PCPINFO:-${FIXgsi}/global_pcpinfo.txt}
 export AEROINFO=${AEROINFO:-${FIXgsi}/global_aeroinfo.txt}
 export SCANINFO=${SCANINFO:-${FIXgsi}/global_scaninfo.txt}
 export HYBENSINFO=${HYBENSINFO:-${FIXgsi}/global_hybens_locinfo.l${LEVS}.txt}
+export ATLASTELSEM2=${ATLASTELSEM2:-${FIXgsi}/TELSEM_2/}
 export OBERROR=${OBERROR:-${FIXgsi}/prepobs_errtable.global}
 export PREPQC=${PREPQC:-${COMIN}/${PREINP}prepbufr${SUFINP}}
 export PREPQCPF=${PREPQCPF:-${COMIN}/${PREINP}prepbufr.acft_profiles${SUFINP}}
@@ -922,6 +926,7 @@ $FCPLN $PCPINFO  pcpinfo
 $FCPLN $AEROINFO aeroinfo
 $FCPLN $SCANINFO scaninfo
 $FCPLN $HYBENSINFO hybens_info
+$FCPLN $ATLASTELSEM2 atlas_telsem2
 $FCPLN $OBERROR  errtable
 
 # CRTM Spectral and Transmittance coefficients

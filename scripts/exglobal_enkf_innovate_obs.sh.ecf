@@ -150,6 +150,8 @@
 #                   defaults to ${FIXgsm}/global_scaninfo.txt
 #     HYBENSINFO    Input hybrid ensemble localization information file
 #                   defaults to ${FIXgsm}/global_hybens_locinfo.l${LEVS}.txt
+#     ATLASTELSEM2  Optional Backround TELSEM2 atlas for Emissivity over Land 
+#                   defaults to ${FIXgsi}/TELSEM2/
 #                   defaults to ${COMIN}/${PREINP}syndata.tcvitals.tm00
 #     INISCRIPT     Preprocessing script
 #                   defaults to none
@@ -236,6 +238,7 @@
 #                  $AEROINFO
 #                  $SCANINFO
 #                  $HYBENSINFO
+#                  $ATLASTELSEM2
 #
 #     input data : $SFCGESMEAN
 #                  $SIGGESMEAN
@@ -367,6 +370,7 @@ export PCPINFO=${PCPINFO:-${FIXgsi}/global_pcpinfo.txt}
 export AEROINFO=${AEROINFO:-${FIXgsi}/global_aeroinfo.txt}
 export SCANINFO=${SCANINFO:-${FIXgsi}/global_scaninfo.txt}
 export HYBENSINFO=${HYBENSINFO:-${FIXgsi}/global_hybens_locinfo.l${LEVS}.txt}
+export ATLASTELSEM2=${ATLASTELSEM2:-${FIXgsi}/TELSEM_2/}
 export OBERROR=${OBERROR:-${FIXgsi}/prepobs_errtable.global}
 export SELECT_OBS=${SELECT_OBS:-${COMIN}/obsinput_${CDATE}_ensmean}
 export SFCG03=${SFCG03:-${COMOUT}/sfcf03}
