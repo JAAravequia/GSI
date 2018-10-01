@@ -681,7 +681,7 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
         if (binary(10) == 1 ) cycle read_loop2
 
 !    remove the bad scan position data: fovn beyond 25
-     if (hdrozo2(7) >=25.0_r_double) goto 130
+     if (hdrozo2(7) >=25.0_r_double) cycle read_loop2
 
    end if
 !       only accept flag 0 1, flag 2 is high SZA data which is not used for now
