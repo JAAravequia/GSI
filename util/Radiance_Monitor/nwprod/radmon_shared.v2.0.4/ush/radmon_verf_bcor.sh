@@ -205,6 +205,13 @@ EOF
             fi
 
          fi
+               mv ${stdout_file} ${bcor_stdout}
+               mv ${bcor_stdout}  ${TANKverf_rad}/.
+               ${COMPRESS} -f ${TANKverf_rad}/${bcor_stdout}
+            fi
+
+         fi # -s $data_file 
+    
       done  # dtype in $gesanl loop
    done     # type in $SATYPE loop
 

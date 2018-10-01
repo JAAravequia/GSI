@@ -232,7 +232,6 @@ EOF
             ${COMPRESS} -f ${angle_ctl}
          fi 
 
-
       done    # for dtype in ${gesanl} loop
 
    done    # for type in ${SATYPE} loop

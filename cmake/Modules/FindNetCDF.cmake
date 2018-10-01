@@ -26,6 +26,8 @@
 #  target_link_libraries (only_uses_c_interface ${NETCDF_LIBRARIES_C})
 
 
+set(NETCDF_DIR $ENV{NETCDF})
+
 if (NETCDF_INCLUDES AND NETCDF_LIBRARIES)
   # Already in cache, be silent
   set (NETCDF_FIND_QUIETLY TRUE)
@@ -38,6 +40,7 @@ elseif(DEFINED ENV{NETCDF_DIR})
 elseif(DEFINED ENV{NETCDF_HOME})
   set(NETCDF_DIR $ENV{NETCDF_HOME})
 elseif( DEFINED ENV{NETCDF} )
+if( DEFINED ENV{NETCDF} )
   set(NETCDF_DIR $ENV{NETCDF})
 elseif( DEFINED ENV{NETCDF4} )
   set(NETCDF_DIR $ENV{NETCDF4})

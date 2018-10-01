@@ -4,12 +4,12 @@
 #PBS -e gdas_verfrad.err
 #PBS -N gdas_verfrad
 #PBS -A fv3-cpu
-#PBS -l procs=1,walltime=0:10:00
+#PBS -l procs=1,walltime=0:15:00
 #PBS -V
 
 set -x
 
-export PDATE=${PDATE:-2017020612}
+export PDATE=${PDATE:-2018091718}
 
 #############################################################
 # Specify whether the run is production or development
@@ -46,10 +46,10 @@ export PATH=${PATH}:${NWPRODush}:${NWPRODexec}
 #############################################################
 
 export RADMON_SUFFIX=${RADMON_SUFFIX:-testrad}
-export NWTEST=${NWTEST:-/scratch4/NCEPDEV/da/noscrub/${LOGNAME}/ProdGSI/util/Radiance_Monitor/nwprod}
+#export NWTEST=${NWTEST:-/scratch4/NCEPDEV/da/noscrub/${LOGNAME}/gfs_q3fy17}
+export NWTEST=${NWTEST:-/scratch4/NCEPDEV/da/noscrub/Edward.Safford/ProdGSI/util/Radiance_Monitor/nwprod}
+
 export HOMEgdas=${HOMEgdas:-${NWTEST}/gdas_radmon.${gdas_radmon_ver}}
-export HOMEgfs=${HOMEgfs:-${HOMEgdas}}
-export FIXgdas=${FIXgdas:-${HOMEgdas}/fix}
 export JOBGLOBAL=${JOBGLOBAL:-${HOMEgdas}/jobs}
 export HOMEradmon=${HOMEradmon:-${NWTEST}/radmon_shared.${radmon_shared_ver}}
 export COM_IN=${COM_IN:-${DATAROOT}}
