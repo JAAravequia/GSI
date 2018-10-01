@@ -1595,7 +1595,9 @@ end subroutine get_iuse_pe
       real(r_double),     intent(  out) :: sub_vars(s%inner_vars,s%lat2,s%lon2,s%num_fields)
 
       real(r_double) :: temp(s%inner_vars,s%itotsub*(s%kend_loc-s%kbegin_loc+1))
-      integer(i_kind) iloc,icount,i,ii,k,n,ilat,jlon,ierror
+      real(r_double) :: temp2(s%inner_vars,s%itotsub*(s%kend_loc-s%kbegin_loc+1))
+      real(r_double) :: sub_vars2(s%inner_vars*s%lat2*s%lon2*s%num_fields)
+      integer(i_kind) iloc,icount,i,ii,k,n,ilat,jlon,ierror,pe
       integer(i_long) mpi_string
       integer(i_kind),dimension(s%npe)::iskip
 
@@ -1609,6 +1611,8 @@ end subroutine get_iuse_pe
          icount=0
          do n=1,s%npe
             iloc=iskip(n)+(k-s%kbegin_loc)*s%ijn_s(n)
+            if(s%mype == 0) write(6,*) 'HEY, s%innervars is ',s%inner_vars
+            if(s%mype == 0) write(6,*) 'HEY, mype is ',s%mype,'sendcounts(3) and recvcounts(3) are',s%sendcounts_s(3),s%recvcounts(3)
             do i=1,s%ijn_s(n)
                iloc=iloc+1
                icount=icount+1
@@ -1616,16 +1620,44 @@ end subroutine get_iuse_pe
                jlon=s%ltosj_s(icount)
                do ii=1,s%inner_vars
                   temp(ii,iloc)=grid_vars(ii,ilat,jlon,k)
+                  temp2(ii,iloc)=grid_vars(ii,ilat,jlon,k)
                end do
             end do
          end do
       end do
-
       call mpi_type_contiguous(s%inner_vars,mpi_real8,mpi_string,ierror)
       call mpi_type_commit(mpi_string,ierror)
-
+      if(s%mype == 0) then
+           iloc = s%sdispls_s(3)
+           write(6,*) 'sending this to pe 3 -- ',temp(1,iloc:iloc+10)
+      endif
+      do pe=0,(s%npe-1)
+        n = pe+1
+        iloc=iskip(1)
+!       write(6,*) 'HEY, mype is ',s%mype,'iloc, counts, disp, rcounts ',iloc,s%sendcounts_s(pe),s%sdispls_s(pe),s%recvcounts_s(pe)
+        call mpi_scatterv(temp,s%sendcounts_s,s%sdispls_s,mpi_string, &
+                        sub_vars2,s%recvcounts_s,mpi_string,pe,mpi_comm_world,ierror)
+      enddo
+      if(s%mype == 3) then
+           write(6,*) 'scounts(0), s_disp, rcounts(0), rdisps ',iloc,s%sendcounts_s(0),s%sdispls_s(3),s%recvcounts_s(0),s%rdispls_s(3)
+           iloc = s%rdispls_s(3)
+           write(6,*) 'receive this from pe 0 -- ',sub_vars2(iloc:iloc+10)
+           iloc = s%sdispls_s(3)
+           write(6,*) 'receive this from pe 0 -- ',sub_vars2(iloc:iloc+10)
+      endif
+!     if(s%mype == 0) then
+!       write(6,*) 'temp is ',temp
+!       write(6,*) 'counts ',s%sendcounts_s
+!       write(6,*) 'sdisp ',s%sdispls_s
+!       write(6,*) 'rcounts ',s%recvcounts_s
+!       write(6,*) 'rdisp ',s%rdispls_s
+!     endif
       call mpi_alltoallv(temp,s%sendcounts_s,s%sdispls_s,mpi_string, &
                         sub_vars,s%recvcounts_s,s%rdispls_s,mpi_string,mpi_comm_world,ierror)
+      if(s%mype == 3) then
+        write(6,*) 'sub_vars is ',sub_vars(1:10,1,1,1)
+        write(6,*) 'sub_vars2 is ',sub_vars2(1:10)
+      endif
       call mpi_type_free(mpi_string,ierror)
 
    end subroutine general_grid2sub_r_double_rank4
