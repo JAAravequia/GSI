@@ -1407,6 +1407,16 @@
      baldiag_inc =.false.
   end if
 
+! If reflectivity is intended to be assimilated, beta_s0 should be zero.
+  if ( beta_s0 > 0.0 )then
+    do i=1,ndat
+      if ( index(dtype(i), 'dbz') == 0 )then
+        write(6,*)'beta_s0 needs to be set to zero in this GSI version, when reflectivity is directly assimilated. Static B extended for radar reflectivity assimilation will be included in future version.'
+        call stop2(8888)
+      end if
+    end do
+  end if
+
 ! Turn off uv option if hybrid/ensemble options is false for purposes 
 ! of TLNMC 
   if (.not.l_hyb_ens) uv_hyb_ens=.false.
