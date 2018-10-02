@@ -176,6 +176,7 @@ case $machine in
    if [[ "$cmaketest" = "false" ]]; then
        echo "Regression tests on Discover need to be run via ctest"
        exit 1
+   fi
    export ptmp=$basedir
    export ptmp=$basedir
    export noscrub=$basedir
