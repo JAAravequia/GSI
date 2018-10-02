@@ -20,6 +20,9 @@ module load intel/15.6.233
 # Loading impi
 module load impi/5.1.2.150
 
+# Loading production utilities (ndate)
+module load prod_util/v1.1.0
+
 # Loading netcdf and hdf5
 module load hdf5/1.8.14
 module load netcdf/4.3.0
