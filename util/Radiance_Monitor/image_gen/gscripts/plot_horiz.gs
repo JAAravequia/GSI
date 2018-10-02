@@ -43,10 +43,10 @@ if (field = cor)
  type="bias correction (K)"
 endif
 if (field = obsges)
- type="obs (K) - ges_(w/bias cor)"
+ type="ges_(w/bias cor) - obs (K)"
 endif
 if (field = obsnbc)
- type="obs (K) - ges_(w/o bias cor)"
+ type="ges_(w/o bias cor) - obs (K)"
 endif
 
 * Set (lat,lon) box to plot

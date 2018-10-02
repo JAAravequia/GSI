@@ -60,7 +60,6 @@ export POE=YES
 #############################################################
 export RADMON_SUFFIX=testrad
 export NWTEST=/gpfs/td2/emc/da/noscrub/Edward.Safford/ProdGSI/util/Radiance_Monitor/nwprod
-export NWTEST=/gpfs/td2/emc/da/noscrub/Edward.Safford/ProdGSI/util/Radiance_Monitor/nwprod
 export HOMEgdas=${NWTEST}/gdas_radmon.${gdas_radmon_ver}
 export JOBGLOBAL=${HOMEgdas}/jobs
 export HOMEradmon=${NWTEST}/radmon_shared.${radmon_shared_ver}

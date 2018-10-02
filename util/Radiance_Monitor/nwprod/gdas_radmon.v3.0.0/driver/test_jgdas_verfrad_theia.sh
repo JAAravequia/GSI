@@ -55,7 +55,6 @@ export HOMEradmon=${HOMEradmon:-${NWTEST}/radmon_shared.${radmon_shared_ver}}
 export COM_IN=${COM_IN:-${DATAROOT}}
 export TANKverf=${TANKverf:-${COMROOT}/${RADMON_SUFFIX}}
 
-export PARMmon=${PARMmon:-${HOMEgdas}/parm}
 export SUB=${SUB:-/apps/torque/default/bin/qsub}
 export NDATE=${NDATE:-ndate}
 
