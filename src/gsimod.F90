@@ -40,7 +40,7 @@
   use mpimod, only: npe,mpi_comm_world,ierror,mype
   use radinfo, only: retrieval,diag_rad,init_rad,init_rad_vars,adp_anglebc,angord,upd_pred,&
                        biaspredvar,use_edges,passive_bc,newpc4pred,final_rad_vars,emiss_bc,&
-                       ssmis_method,ssmis_precond,gmi_method,amsr2_method
+                       ssmis_method,ssmis_precond,gmi_method,amsr2_method,bias_zero_start
   use radinfo, only: tzr_qc,tzr_bufrsave
   use radinfo, only: crtm_coeffs_path
   use ozinfo, only: diag_ozone,init_oz
@@ -354,6 +354,7 @@
 !                              from GSD (for RAP/HRRR application)
 !  08-31-2017 Li        add sfcnst_comb for option to read sfc & nst combined file 
 !  10-10-2017 Wu,W      added option fv3_regional and rid_ratio_fv3_regional, setup FV3, earthuv
+!  08-25-2018 Collard   Introduce bias_zero_start
 !
 !EOP
 !-------------------------------------------------------------------------
@@ -513,6 +514,8 @@
 !     ssmis_precond - weighting factor for SSMIS preconditioning (if not using newpc4pred)
 !     gmi_method - choose method for GMI noise reduction. 0=no smoothing, 4=default
 !     amsr2_method - choose method for AMSR2 noise reduction. 0=no smoothing, 5=default
+!     bias_zero_start - Initialise bias correction from zero (default=true,
+!                        false=mode start method)
 !     R_option   - Option to use variable correlation length for lcbas based on data
 !                    density - follows Hayden and Purser (1995) (twodvar_regional only)
 !     thin4d - if true, removes thinning of observations due to the location in
@@ -545,7 +548,7 @@
        perturb_obs,perturb_fact,oberror_tune,preserve_restart_date, &
        crtm_coeffs_path,berror_stats, &
        newpc4pred,adp_anglebc,angord,passive_bc,use_edges,emiss_bc,upd_pred, &
-       ssmis_method, ssmis_precond, gmi_method, amsr2_method, &
+       ssmis_method, ssmis_precond, gmi_method, amsr2_method, bias_zero_start, &
        lobsdiagsave, lobsdiag_forenkf, &
        l4dvar,lbicg,lsqrtb,lcongrad,lbfgsmin,ltlint,nhr_obsbin,nhr_subwin,&
        mPES_observer,&
