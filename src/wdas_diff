@@ -1,0 +1,747 @@
+Index: Makefile.conf.theia
+===================================================================
+--- Makefile.conf.theia	(revision 95198)
++++ Makefile.conf.theia	(working copy)
+@@ -43,7 +43,7 @@
+ WRFLIB = $(LIBwrfio_int) $(LIBwrfio_netcdf) $(OBJwrf_frame_pk) $(OBJwrf_sizeof_int)
+ 
+ INCnetcdf  = ${NETCDF}/include
+-LIBnetcdf  = -L${NETCDF}/lib -lnetcdf
++LIBnetcdf  = -L${NETCDF}/lib -lnetcdf -lnetcdff
+ 
+ # Empty out definition of libs use by GMAO GSI building structure
+ LIBtransf = #-L$(CORELIB) -ltransf
+Index: crtm_interface.f90
+===================================================================
+--- crtm_interface.f90	(revision 95198)
++++ crtm_interface.f90	(working copy)
+@@ -62,7 +62,7 @@
+     crtm_irlandcoeff_classification, &
+     crtm_kind => fp, &
+     crtm_microwave_sensor => microwave_sensor
+-use gridmod, only: lat2,lon2,nsig,msig,nvege_type,regional,wrf_mass_regional,netcdf,use_gfs_ozone
++use gridmod, only: lat2,lon2,nsig,msig,nvege_type,regional,wrf_mass_regional,netcdf,use_gfs_ozone,lsidea
+ use mpeu_util, only: die
+ use crtm_aod_module, only: crtm_aod_k
+ use radiance_mod, only: n_actual_clouds,cloud_names,n_clouds_fwd,cloud_names_fwd, &
+@@ -1019,6 +1019,9 @@
+   integer(i_kind):: error_status_clr
+   integer(i_kind),dimension(8)::obs_time,anal_time
+   integer(i_kind),dimension(msig) :: klevel
++  integer(i_kind):: nsig_wam !msig+1
++  integer(i_kind), parameter :: nsig_wamdec=10
++  real(r_kind)   :: jacwam_decay(nsig)
+ 
+ ! ****************************** 
+ ! Constrained indexing for lai
+@@ -1102,6 +1105,14 @@
+   w00=delx1*dely1; w10=delx*dely1; w01=delx1*dely; w11=delx*dely
+ ! w_weights = (/w00,w10,w01,w11/)
+ 
++! lsidea related stuff
++  if (lsidea) then
++     do k=1,nsig
++        jacwam_decay(k) = 1.0_r_kind
++        if (k > msig) jacwam_decay(k)=exp(-float(abs(k-msig))*.75_r_kind)
++        if (jacwam_decay(k).lt.1.e-3_r_kind) jacwam_decay(k)=sqrt_tiny_r_kind
++     enddo
++  endif
+ 
+ ! Get time interpolation factors for sigma files
+   if(obstime > hrdifsig(1) .and. obstime < hrdifsig(nfldsig))then
+@@ -1945,6 +1956,12 @@
+ !   wmix  - moisture sensitivity
+ !   omix  - ozone sensitivity
+ !   ptau5 - layer transmittance
++  
++       if (lsidea) then
++          ptau5(1:nsig,i)= 1.0 !   1. - should
++       end if
++
++
+        do k=1,msig
+           kk = klevel(msig-k+1)
+           temp(kk,i) = temp(kk,i) + atmosphere_k(i,1)%temperature(k)
+@@ -1959,6 +1976,9 @@
+ 
+ !  Small sensitivities for temp
+           if (abs(temp(k,i))<sqrt_tiny_r_kind) temp(k,i)=sign(sqrt_tiny_r_kind,temp(k,i))
++          if (lsidea) then
++             if(k > msig) temp(k,i) = temp(k,i)*jacwam_decay(k)
++          end if
+        end do ! <nsig>
+ 
+ !  Deflate moisture jacobian above the tropopause.
+@@ -1965,6 +1985,9 @@
+        if (itv>=0) then
+           do k=1,nsig
+              jacobian(itv+k,i)=temp(k,i)*c2(k)               ! virtual temperature sensitivity
++             if (lsidea) then
++                if(k > msig) jacobian(itv+k,i)= jacobian(itv+k,i)*jacwam_decay(k)
++             endif
+           end do ! <nsig>
+        endif
+        if (iqv>=0) then
+@@ -1975,12 +1998,18 @@
+                 term = (prsi(k)-trop5)/(trop5-prsi(nsig))
+                 jacobian(iqv+k,i) = exp(ifactq(m)*term)*jacobian(iqv+k,i)
+              endif
++             if (lsidea) then
++                if(k > msig) jacobian(iqv+k,i)= jacobian(iqv+k,i)*jacwam_decay(k)
++             endif
+           end do ! <nsig>
+        endif
+        if (ioz>=0) then
+ !        if (.not. regional .or. use_gfs_ozone)then
+           do k=1,nsig
+-             jacobian(ioz+k,i)=omix(k,i)*constoz       ! ozone sensitivity
++             jacobian(ioz+k,i)=omix(k,i)*constoz       ! ozone sensitivity 
++             if (lsidea) then
++                if(k > msig) jacobian(ioz+k,i)= jacobian(ioz+k,i)*jacwam_decay(k)
++             endif
+           end do ! <nsig>
+ !        end if
+        endif
+Index: general_read_gfsatm.f90
+===================================================================
+--- general_read_gfsatm.f90	(revision 95198)
++++ general_read_gfsatm.f90	(working copy)
+@@ -45,7 +45,7 @@
+    use kinds, only: r_kind,r_single,i_kind
+    use mpimod, only: mype
+    use gridmod, only: ncepgfs_head,idpsfc5,idthrm5,&
+-                      ntracer,idvc5,cp5,idvm5
++                      ntracer,idvc5,cp5,idvm5,lsidea
+    use general_sub2grid_mod, only: sub2grid_info
+    use general_specmod, only: spec_vars
+    use mpimod, only: npe
+@@ -90,7 +90,7 @@
+    real(r_kind),pointer,dimension(:,:,:)     :: ptr3d
+    real(r_kind),pointer,dimension(:,:)       :: g_ps
+    real(r_kind),pointer,dimension(:,:,:)     :: g_vor,g_div,&
+-                                                g_cwmr,g_q,g_oz,g_tv
++                                                g_cwmr,g_q,g_oz,g_tv,g_o,g_o2
+    real(r_kind),allocatable,dimension(:,:)   :: g_z
+    real(r_kind),allocatable,dimension(:,:,:) :: g_u,g_v
+ 
+@@ -172,6 +172,10 @@
+    call gsi_bundlegetpointer(gfs_bundle,'q' ,g_q   ,ier);istatus=istatus+ier
+    call gsi_bundlegetpointer(gfs_bundle,'oz',g_oz  ,ier);istatus=istatus+ier
+    call gsi_bundlegetpointer(gfs_bundle,'cw',g_cwmr,ier);istatus=istatus+ier
++   if (lsidea) then ! require o, o2
++      call gsi_bundlegetpointer(gfs_bundle,'o' ,g_o   ,ier);istatus=istatus+ier
++      call gsi_bundlegetpointer(gfs_bundle,'o2',g_o2  ,ier);istatus=istatus+ier
++   endif
+    if ( istatus /= 0 ) then
+       if ( mype == 0 ) then
+          write(6,*) 'general_read_gfsatm: ERROR'
+@@ -212,7 +216,7 @@
+       endif
+       if ( icount == icm ) then
+          call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+-              icount,iflag,ilev,work,uvflag,vordivflag)
++              icount,iflag,ilev,work,uvflag,vordivflag,g_o,g_o2)
+       endif
+    endif ! if ( zflag )
+ 
+@@ -237,7 +241,7 @@
+    endif
+    if ( icount == icm ) then
+       call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+-           icount,iflag,ilev,work,uvflag,vordivflag)
++           icount,iflag,ilev,work,uvflag,vordivflag,g_o,g_o2)
+    endif
+ 
+    ! Thermodynamic variable:  s-->g transform, communicate to all tasks
+@@ -268,7 +272,7 @@
+       endif
+       if ( icount == icm ) then
+          call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+-              icount,iflag,ilev,work,uvflag,vordivflag)
++              icount,iflag,ilev,work,uvflag,vordivflag,g_o,g_o2)
+       endif
+ 
+       if ( vordivflag .or. .not. uvflag ) then
+@@ -295,7 +299,7 @@
+          endif
+          if ( icount == icm ) then
+             call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+-                 icount,iflag,ilev,work,uvflag,vordivflag)
++                 icount,iflag,ilev,work,uvflag,vordivflag,g_o,g_o2)
+          endif
+ 
+          icount=icount+1
+@@ -320,7 +324,7 @@
+          endif
+          if ( icount == icm ) then
+             call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+-                 icount,iflag,ilev,work,uvflag,vordivflag)
++                 icount,iflag,ilev,work,uvflag,vordivflag,g_o,g_o2)
+          endif
+ 
+       endif ! if ( vordivflag .or. .not. uvflag ) then
+@@ -358,7 +362,7 @@
+          endif
+          if ( icount == icm ) then
+             call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+-                 icount,iflag,ilev,work,uvflag,vordivflag)
++                 icount,iflag,ilev,work,uvflag,vordivflag,g_o,g_o2)
+          endif
+ 
+          icount=icount+1
+@@ -392,7 +396,7 @@
+          endif
+          if ( icount == icm ) then
+             call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+-                 icount,iflag,ilev,work,uvflag,vordivflag)
++                 icount,iflag,ilev,work,uvflag,vordivflag,g_o,g_o2)
+          endif
+ 
+       endif ! if ( uvflag )
+@@ -417,7 +421,7 @@
+       endif
+       if ( icount == icm ) then
+          call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+-              icount,iflag,ilev,work,uvflag,vordivflag)
++              icount,iflag,ilev,work,uvflag,vordivflag,g_o,g_o2)
+       endif
+ 
+       icount=icount+1
+@@ -440,7 +444,7 @@
+       endif
+       if ( icount == icm ) then
+          call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+-              icount,iflag,ilev,work,uvflag,vordivflag)
++              icount,iflag,ilev,work,uvflag,vordivflag,g_o,g_o2)
+       endif
+ 
+       icount=icount+1
+@@ -467,9 +471,67 @@
+       endif
+       if ( icount == icm .or. k == nlevs ) then
+          call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+-              icount,iflag,ilev,work,uvflag,vordivflag)
++              icount,iflag,ilev,work,uvflag,vordivflag,g_o,g_o2)
+       endif
+ 
++      if (lsidea) then      
++
++         icount=icount+1
++         iflag(icount)=11
++         ilev(icount)=k
++
++         if (mype==mype_use(icount)) then
++!   O mixing ratio
++             if (sighead%ntrac>3) then
++                sigdati%i = nlevs * (2+4) + 2 + k ! o, 4th tracer
++                sigdati%f => specwrk_4
++                call sigio_rrdbti(lunges,sighead,sigdati,iret)
++
++                do i=1,sp_b%nc
++                   spec_work(i)=sp_b%test_mask(i)*specwrk_4(i)
++                end do
++                do i=1,sp_b%nc
++                   if(sp_b%factsml(i))spec_work(i)=zero
++                end do
++                call general_sptez_s_b(sp_a,sp_b,spec_work,grid,1)
++                call general_fill_ns(grd,grid,work)
++             else
++                work=zero
++             endif
++          endif
++          if (icount == icm) then
++             call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
++                 &icount,iflag,ilev,work,uvflag,vordivflag,g_o,g_o2)
++          end if
++
++          icount=icount+1
++          iflag(icount)=12
++          ilev(icount)=k
++          if (mype==mype_use(icount)) then
++!   O2 mixing ratio
++             if (sighead%ntrac>4) then
++                sigdati%i = nlevs * (2+5) + 2 + k    ! o2, 5th tracer
++                sigdati%f => specwrk_4
++                call sigio_rrdbti(lunges,sighead,sigdati,iret)
++
++                do i=1,sp_b%nc
++                   spec_work(i)=sp_b%test_mask(i)*specwrk_4(i)
++                end do
++                do i=1,sp_b%nc
++                   if(sp_b%factsml(i))spec_work(i)=zero
++                end do
++                call general_sptez_s_b(sp_a,sp_b,spec_work,grid,1)
++                call general_fill_ns(grd,grid,work)
++             else
++                work=zero
++             endif
++          endif
++          if (icount == icm .or. k == nlevs)then
++             call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
++                 &icount,iflag,ilev,work,uvflag,vordivflag,g_o,g_o2)
++          end if
++       end if
++
+    enddo ! do k=1,nlevs
+ 
+    if ( procuse ) then
+@@ -1292,7 +1354,7 @@
+ end subroutine general_read_gfsatm_nems
+ 
+ subroutine general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+-           icount,iflag,ilev,work,uvflag,vdflag)
++           icount,iflag,ilev,work,uvflag,vdflag,g_o,g_o2)
+ 
+ ! !USES:
+ 
+@@ -1315,6 +1377,7 @@
+   real(r_kind),dimension(grd%lat2,grd%lon2),         intent(inout) :: g_z
+   real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),intent(  out) :: g_u,g_v,&
+        g_vor,g_div,g_cwmr,g_q,g_oz,g_tv
++  real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),optional,intent(out)::g_o,g_o2
+ 
+ 
+ ! !DESCRIPTION: Transfer contents of 2-d array global to 3-d subdomain array
+@@ -1460,6 +1523,25 @@
+                g_cwmr(i,j,klev)=sub(ij,k)
+             enddo
+          enddo
++      elseif ( iflag(k) == 11 ) then
++         klev=ilev(k)
++         ij=0
++         do j=1,grd%lon2
++            do i=1,grd%lat2
++               ij=ij+1
++               g_o(i,j,klev)=sub(ij,k)
++            enddo
++         enddo
++      elseif ( iflag(k) == 12 ) then
++         klev=ilev(k)
++         ij=0
++         do j=1,grd%lon2
++            do i=1,grd%lat2
++               ij=ij+1
++               g_o2(i,j,klev)=sub(ij,k)
++            enddo
++         enddo
++      
+       endif
+    enddo ! do k=1,icount
+ 
+Index: general_write_gfsatm.f90
+===================================================================
+--- general_write_gfsatm.f90	(revision 95198)
++++ general_write_gfsatm.f90	(working copy)
+@@ -38,7 +38,7 @@
+     use obsmod, only: iadate
+     use mpimod, only: npe,mype
+     use general_specmod, only: spec_vars
+-    use gridmod, only: ntracer,ncepgfs_head,idpsfc5,idthrm5,cp5,idvc5,idvm5
++    use gridmod, only: ntracer,ncepgfs_head,idpsfc5,idthrm5,cp5,idvc5,idvm5,lsidea
+     use general_commvars_mod, only: load_grid
+     use ncepgfs_io, only: sigio_cnvtdv8,sighead
+     use constants, only: zero,zero_single,one,fv,qcmin
+@@ -67,6 +67,7 @@
+     real(r_kind),pointer,dimension(:,:) :: sub_ps
+     real(r_kind),pointer,dimension(:,:,:) :: sub_vor,sub_div,sub_tv
+     real(r_kind),pointer,dimension(:,:,:) :: sub_q,sub_oz,sub_cwmr
++    real(r_kind),pointer,dimension(:,:,:) :: sub_o,sub_o2
+ 
+     real(r_kind),dimension(grd%itotsub):: work
+     real(r_kind),dimension(grd%nlon,grd%nlat-2):: grid,grid2
+@@ -94,7 +95,11 @@
+     ! Initialize local variables
+     iret_write=0
+     nlatm2=grd%nlat-2
+-    itotflds=6*grd%nsig+2  ! Hardwired for now!  vor,div,tv,q,oz,cwmr,ps,z
++    if (lsidea) then
++       itotflds=8*grd%nsig+2  ! Hardwired for now!  vor,div,tv,q,oz,cwmr,ps,z,o,o2
++    else
++       itotflds=6*grd%nsig+2  ! Hardwired for now!  vor,div,tv,q,oz,cwmr,ps,z
++    endif
+     lloop=.true.
+ 
+     istatus=0
+@@ -105,6 +110,10 @@
+     call gsi_bundlegetpointer(gfs_bundle,'q',  sub_q,   iret); istatus=istatus+iret
+     call gsi_bundlegetpointer(gfs_bundle,'oz', sub_oz,  iret); istatus=istatus+iret
+     call gsi_bundlegetpointer(gfs_bundle,'cw', sub_cwmr,iret); istatus=istatus+iret
++    if (lsidea) then
++       call gsi_bundlegetpointer(gfs_bundle,'o' , sub_oz,  iret); istatus=istatus+iret
++       call gsi_bundlegetpointer(gfs_bundle,'o2', sub_oz,  iret); istatus=istatus+iret
++    endif
+     if ( istatus /= 0 ) then
+        if ( mype == 0 ) then
+          write(6,*) 'general_write_gfsatm: ERROR'
+@@ -216,8 +225,13 @@
+     gfsfields: do while (lloop)
+ 
+         ! First, perform sub2grid for up to npe
++        if ( lsidea ) then
++           call general_gather(grd,work_ps,work_tv,sub_vor,sub_div,sub_q,sub_oz,&
++                sub_cwmr,icount,ivar,ilev,work,sub_o,sub_o2)
++        else
+         call general_gather(grd,work_ps,work_tv,sub_vor,sub_div,sub_q,sub_oz,&
+              sub_cwmr,icount,ivar,ilev,work)
++        endif
+ 
+         pe_loop: do k=1,npe  ! loop over pe distributed data
+ 
+@@ -242,6 +256,10 @@
+                    sigdati%i = sighead%levs * (2+2) + 2 + klev
+                 else if ( kvar == 8 ) then ! cw, 3rd tracer
+                    sigdati%i = sighead%levs * (2+3) + 2 + klev
++                else if ( lsidea .and. kvar==9 ) then
++                   sigdati%i = sighead%levs * (2+4) + 2 + klev       ! O, 4th tracer
++                else if ( lsidea .and. kvar==10 ) then
++                   sigdati%i = sighead%levs * (2+5) + 2 + klev       ! O2, 5th tracer
+                 endif
+ 
+                 if ( klev > 0 ) then
+@@ -340,7 +358,7 @@
+ end subroutine general_write_gfsatm
+ 
+ subroutine general_gather(grd,g_ps,g_tv,g_vor,g_div,g_q,g_oz,g_cwmr, &
+-           icountx,ivar,ilev,work)
++           icountx,ivar,ilev,work,g_o,g_o2)
+ 
+ ! !USES:
+ 
+@@ -347,7 +365,7 @@
+   use kinds, only: r_kind,i_kind
+   use mpimod, only: npe,mpi_comm_world,ierror,mpi_rtype
+   use general_sub2grid_mod, only: sub2grid_info
+-  use gridmod, only: strip
++  use gridmod, only: strip,lsidea
+   use constants, only: zero
+   implicit none
+ 
+@@ -363,6 +381,7 @@
+   real(r_kind),dimension(grd%lat2,grd%lon2)     ,intent(  in) :: g_ps
+   real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),intent(  in) :: g_tv,&
+        g_vor,g_div,g_q,g_oz,g_cwmr
++  real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),optional,intent(in)::g_o,g_o2
+ 
+ ! !DESCRIPTION: Transfer contents of 3d subdomains to 2d work arrays over pes
+ !
+@@ -433,6 +452,17 @@
+         klev=icount-2-5*(grd%nsig)
+         ilev(k)=klev
+         call strip(g_cwmr(:,:,klev) ,sub(:,k))
++    ! IDEA tracers here
++    else if( lsidea .and. ( icount>=6*(grd%nsig)+3 .and. icount<=7*(grd%nsig)+2 ) )then
++        ivar(k)=9
++        klev=icount-2-6*(grd%nsig)
++        ilev(k)=klev
++        call strip(g_o(:,:,klev) ,sub(:,k))
++    else if( lsidea .and. ( icount>=7*(grd%nsig)+3 .and. icount<=8*(grd%nsig)+2 ) )then
++        ivar(k)=10
++        klev=icount-2-7*(grd%nsig)
++        ilev(k)=klev
++        call strip(g_o2(:,:,klev) ,sub(:,k))
+     else
+ ! NULL, No work to be done for this pe
+         ivar(k)=-1
+Index: gridmod.F90
+===================================================================
+--- gridmod.F90	(revision 95198)
++++ gridmod.F90	(working copy)
+@@ -85,6 +85,14 @@
+ !   2015-02-03 todling - update max nlayers to 200
+ !   2016-03-02  s.liu/carley - remove use_reflectivity and use i_gsdcldanal_type
+ !   2017-03-23  Hu      - add code to get eta2_ll and aeta2_ll ready for hybrid vertical coodinate in WRF MASS CORE
++!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
++!   2015-01-13 wanghj   - add lsidea flag for IDEA/WAM model
++!                         extend the dimension of nlayers for use with WAM
++!   
++!   
++!   2016-11-24 VAY        WAM-lsidea related setup for radiance data analysis and CRTM, msig=64 ~ 43 km top
++!                                                                                       msig=70 ~ GFS-64L top lid
++!                         first step in NEMS/GSM-128L => extend rad-DA as needed > 54 km GFS-64L top lid
+ !
+ !                        
+ !
+@@ -148,6 +156,7 @@
+   public :: jcap_gfs,nlat_gfs,nlon_gfs
+   public :: use_sp_eqspace,jcap_cut
+   public :: wrf_mass_hybridcord
++  public :: lsidea
+ 
+   interface strip
+      module procedure strip_single_rank33_
+@@ -179,6 +188,7 @@
+   logical hires_b           ! .t. when jcap_b requires double FFT
+   logical use_gfs_nemsio    ! .t. for using NEMSIO to real global first guess
+   logical use_sp_eqspace    ! .t. use equally-space grid in spectral transforms
++  logical lsidea            ! .t. for using IDEA/WAM model first guess
+ 
+   logical use_readin_anl_sfcmask        ! .t. for using readin surface mask
+   character(1) nmmb_reference_grid      ! ='H': use nmmb H grid as reference for analysis grid
+@@ -463,6 +473,7 @@
+     nthreads = 1  ! initialize the number of threads
+ 
+     use_gfs_nemsio = .false.
++    lsidea = .false.
+     use_readin_anl_sfcmask = .false.
+ 
+     use_sp_eqspace = .false.
+@@ -564,6 +575,23 @@
+        msig = msig + nlayers(k)
+     end do
+ 
++!   2014-01-29 wanghj   - modify msig for use with the IDEA/WAM model;
++!                         this is kind of ad hoc since the vertical extension
++!                         of WAM exceeds current CRTM: TOA_PRESSURE=0.005 (hPa)
++!                         for current CRTM, which is just above the WAM model
++!                         level 92 - this is the limit for using CRTM with WAM;
++!                         set it model level 90 for now, as 'levr' in IDEA/WAM;
++!                         (msig should be <= 200 for current CRTM)
++!========================================================================================
++! CRTM: TOA_PRESSURE=0.005 (hPa), print, -7.*alog(0.005/1000.)= 85.444 km
++!         CRTM-top = 91   Zkm7_log=85,203 km
++! vay for WAM klev = 64   Zkm7_log=43.304 km
++!         GFS klev = 64   Zkm7_log=51.451 km
++!=========================================================================================
++  if (lsidea) msig = 64      ! reasons CRTM were tested only for 64 layers  not for 90
++
++  if (mype==0) write(6,*) 'INIT_GRID_VARS:  msig set to ', msig
++
+ ! Initialize structure(s) for spectral <--> grid transforms
+     if (.not.regional) then
+ !      Call general specmod for analysis grid
+Index: gsimod.F90
+===================================================================
+--- gsimod.F90	(revision 95198)
++++ gsimod.F90	(working copy)
+@@ -88,7 +88,7 @@
+      twodvar_regional,regional,init_grid,init_reg_glob_ll,init_grid_vars,netcdf,&
+      nlayers,use_gfs_ozone,check_gfs_ozone_date,regional_ozone,jcap,jcap_b,vlevs,&
+      use_gfs_nemsio,use_readin_anl_sfcmask,use_sp_eqspace,final_grid_vars,&
+-     jcap_gfs,nlat_gfs,nlon_gfs,jcap_cut,wrf_mass_hybridcord
++     jcap_gfs,nlat_gfs,nlon_gfs,jcap_cut,wrf_mass_hybridcord,lsidea
+   use guess_grids, only: ifact10,sfcmod_gfs,sfcmod_mm5,use_compress,nsig_ext,gpstop
+   use gsi_io, only: init_io,lendian_in
+   use regional_io_mod, only: regional_io_class
+@@ -574,12 +574,13 @@
+ !     use_sp_eqspac     - if .true., then ensemble grid is equal spaced, staggered 1/2 grid unit off
+ !                         poles.  if .false., then gaussian grid assumed for ensemble (global only)
+ !     wrf_mass_hybridcord - logical for using WRF MASS CORE with hybrid vertical coordinate
++!     lsidea     - logical for IDEA/WAM analysis
+ 
+ 
+   namelist/gridopts/jcap,jcap_b,nsig,nlat,nlon,nlat_regional,nlon_regional,&
+        diagnostic_reg,update_regsfc,netcdf,regional,wrf_nmm_regional,nems_nmmb_regional,&
+        wrf_mass_regional,twodvar_regional,filled_grid,half_grid,nvege_type,nlayers,cmaq_regional,&
+-       nmmb_reference_grid,grid_ratio_nmmb,grid_ratio_wrfmass,jcap_gfs,jcap_cut,wrf_mass_hybridcord
++       nmmb_reference_grid,grid_ratio_nmmb,grid_ratio_wrfmass,jcap_gfs,jcap_cut,wrf_mass_hybridcord,lsidea
+ 
+ ! BKGERR (background error related variables):
+ !     vs       - scale factor for vertical correlation lengths for background error
+Index: guess_grids.F90
+===================================================================
+--- guess_grids.F90	(revision 95198)
++++ guess_grids.F90	(working copy)
+@@ -1576,7 +1576,7 @@
+ ! !USES:
+ 
+     use constants, only: half,ten,one_tenth
+-    use gridmod, only: nsig,msig,nlayers
++    use gridmod, only: nsig,msig,nlayers,lsidea
+     use crtm_module, only: toa_pressure
+ 
+     implicit none
+@@ -1609,7 +1609,7 @@
+ !-------------------------------------------------------------------------
+ 
+ !   Declare local variables
+-    integer(i_kind) k,kk,l
++    integer(i_kind) k,kk,l,nsigx
+     real(r_kind) dprs,toa_prs_kpa
+ 
+ !   Convert toa_pressure to kPa
+@@ -1618,7 +1618,7 @@
+ 
+ !   Check if model top pressure above rtm top pressure, where prsitmp
+ !   is in kPa and toa_pressure is in hPa.
+-    if (prsitmp(nsig) < toa_prs_kpa)then
++    if (prsitmp(nsig) < toa_prs_kpa .and. (.not.lsidea) )then
+        write(6,*)'ADD_RTM_LAYERS:  model top pressure(hPa)=', &
+             ten*prsitmp(nsig),&
+             ' above rtm top pressure(hPa)=',toa_pressure
+@@ -1625,9 +1625,15 @@
+        call stop2(35)
+     end if
+ 
++    if (lsidea) then
++       nsigx = msig
++    else
++       nsigx = nsig
++    end if
++
+ !   Linear in pressure sub-divsions
+     kk=0
+-    do k = 1,nsig
++    do k = 1,nsigx
+        if (nlayers(k)<=1) then
+           kk = kk + 1
+           prsltmp_ext(kk) = prsltmp(k)
+Index: ncepgfs_io.f90
+===================================================================
+--- ncepgfs_io.f90	(revision 95198)
++++ ncepgfs_io.f90	(working copy)
+@@ -106,7 +106,7 @@
+ !$$$ end documentation block
+ 
+     use kinds, only: i_kind,r_kind
+-    use gridmod, only: hires_b,sp_a,grd_a,jcap_b,nlon,nlat,lat2,lon2,nsig,regional
++    use gridmod, only: hires_b,sp_a,grd_a,jcap_b,nlon,nlat,lat2,lon2,nsig,regional,lsidea
+     use guess_grids, only: ifilesig,nfldsig
+     use gsi_metguess_mod, only: gsi_metguess_bundle
+     use gsi_bundlemod, only: gsi_bundlegetpointer
+@@ -130,12 +130,9 @@
+     type(gsi_bundle) :: atm_bundle
+     type(gsi_grid)   :: atm_grid
+     integer(i_kind),parameter :: n2d=2
+-    integer(i_kind),parameter :: n3d=8
++    integer(i_kind)           :: n3d
+     character(len=4), parameter :: vars2d(n2d) = (/ 'z   ', 'ps  ' /)
+-    character(len=4), parameter :: vars3d(n3d) = (/ 'u   ', 'v   ', &
+-                                                    'vor ', 'div ', &
+-                                                    'tv  ', 'q   ', &
+-                                                    'cw  ', 'oz  ' /)
++    character(len=4),dimension(:),allocatable :: vars3d
+ 
+     real(r_kind),pointer,dimension(:,:):: ptr2d   =>null()
+     real(r_kind),pointer,dimension(:,:,:):: ptr3d =>null()
+@@ -152,11 +149,28 @@
+     real(r_kind),pointer,dimension(:,:,:):: ges_cwmr_it => null()
+     real(r_kind),pointer,dimension(:,:,:):: ges_ql_it   => null()
+     real(r_kind),pointer,dimension(:,:,:):: ges_qi_it   => null()
++    real(r_kind),pointer,dimension(:,:,:):: ges_o_it    => null()
++    real(r_kind),pointer,dimension(:,:,:):: ges_o2_it   => null()
+ 
+     type(spec_vars):: sp_b
+     type(sub2grid_info) :: grd_t
+ 
++! lsidea stuff
+ 
++    if (lsidea) then
++       n3d = 10
++       allocate(vars3d(n3d))
++       vars3d = (/ 'u   ', 'v   ', 'vor ', 'div ', &
++                   'tv  ', 'q   ', 'cw  ', 'oz  ', &
++                   'o   ', 'o2  ' /)
++    else
++       n3d = 8
++       allocate(vars3d(n3d))
++       vars3d = (/ 'u   ', 'v   ', 'vor ', 'div ', &
++                   'tv  ', 'q   ', 'cw  ', 'oz  '  /)
++    endif
++
++
+ !   If needed, initialize for hires_b transforms
+     nlon_b=((2*jcap_b+1)/nlon+1)*nlon
+     if (nlon_b /= sp_a%imax) then
+@@ -295,6 +309,19 @@
+      if (mype==0) write(6,*)'READ_GFS: cannot get pointer to qi,iret_qi= ',iret_qi 
+   endif
+ 
++  if (lsidea) then  
++     call gsi_bundlegetpointer (atm_bundle,'o',ptr3d,istatus)
++     if (istatus==0) then
++        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'o',ges_o_it  ,istatus)
++        if(istatus==0) ges_o_it = ptr3d
++     endif
++     call gsi_bundlegetpointer (atm_bundle,'o2',ptr3d,istatus)
++     if (istatus==0) then
++        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'o2',ges_o2_it  ,istatus)
++        if(istatus==0) ges_o2_it = ptr3d
++     endif
++  end if
++
+   end subroutine set_guess_
+ 
+   end subroutine read_gfs
+@@ -1149,7 +1176,7 @@
+     use mpimod, only: mype
+     use guess_grids, only: dsfct
+     use guess_grids, only: ntguessig,ntguessfc,ifilesig,nfldsig
+-    use gridmod, only: hires_b,sp_a,grd_a,jcap_b,nlon,nlat,use_gfs_nemsio
++    use gridmod, only: hires_b,sp_a,grd_a,jcap_b,nlon,nlat,use_gfs_nemsio,lsidea
+     use gsi_metguess_mod, only: gsi_metguess_bundle
+     use gsi_bundlemod, only: gsi_bundlegetpointer
+     use gsi_bundlemod, only: gsi_grid
+@@ -1181,6 +1208,8 @@
+     real(r_kind),pointer,dimension(:,:,:):: aux_q
+     real(r_kind),pointer,dimension(:,:,:):: aux_oz
+     real(r_kind),pointer,dimension(:,:,:):: aux_cwmr
++    real(r_kind),pointer,dimension(:,:,:):: aux_o
++    real(r_kind),pointer,dimension(:,:,:):: aux_o2
+ 
+     real(r_kind),pointer,dimension(:,:  ):: ges_ps_it  =>null()
+     real(r_kind),pointer,dimension(:,:,:):: ges_u_it   =>null()
+@@ -1191,20 +1220,34 @@
+     real(r_kind),pointer,dimension(:,:,:):: ges_q_it   =>null()
+     real(r_kind),pointer,dimension(:,:,:):: ges_oz_it  =>null()
+     real(r_kind),pointer,dimension(:,:,:):: ges_cwmr_it=>null()
++    real(r_kind),pointer,dimension(:,:,:):: ges_o_it   =>null()
++    real(r_kind),pointer,dimension(:,:,:):: ges_o2_it  =>null()
+ 
+     type(gsi_bundle) :: atm_bundle
+     type(gsi_grid)   :: atm_grid
+     integer(i_kind),parameter :: n2d=2
+-    integer(i_kind),parameter :: n3d=8
+-    character(len=4), parameter :: vars2d(n2d) = (/ 'z   ', 'ps  ' /)
+-    character(len=4), parameter :: vars3d(n3d) = (/ 'u   ', 'v   ', &
+-                                                    'vor ', 'div ', &
+-                                                    'tv  ', 'q   ', &
+-                                                    'cw  ', 'oz  ' /)
++    integer(i_kind)           :: n3d
++    character(len=4),parameter :: vars2d(n2d) = (/ 'z   ', 'ps  ' /)
++    character(len=4),dimension(:),allocatable :: vars3d
+ 
+     logical :: inithead
+     type(spec_vars):: sp_b
+ 
++! lsidea stuff
++
++    if (lsidea) then
++       n3d=10
++       allocate(vars3d(n3d))
++       vars3d = (/ 'u   ', 'v   ', 'vor ', 'div ', &
++                   'tv  ', 'q   ', 'cw  ', 'oz  ', &
++                   'o   ', 'o   ', 'o2  ' /)
++    else
++       n3d=8
++       allocate(vars3d(n3d))
++       vars3d = (/ 'u   ', 'v   ', 'vor ', 'div ', &
++                   'tv  ', 'q   ', 'cw  ', 'oz  ' /)
++    endif
++
+     ! Write atmospheric analysis file
+     if ( lwrite4danl ) then
+        ntlevs=nfldsig
+@@ -1238,6 +1281,10 @@
+     if ( istatus == 0 ) aux_oz = zero
+     call gsi_bundlegetpointer(atm_bundle,'cw',aux_cwmr,istatus)
+     if ( istatus == 0 ) aux_cwmr = zero
++    call gsi_bundlegetpointer(atm_bundle,'o',aux_o,istatus)
++    if ( istatus == 0 ) aux_oz = zero
++    call gsi_bundlegetpointer(atm_bundle,'o2',aux_o2,istatus)
++    if ( istatus == 0 ) aux_oz = zero
+ 
+     inithead=.true.
+     do it=1,ntlevs
+@@ -1292,6 +1339,12 @@
+         if ( istatus == 0 ) aux_oz = ges_oz_it
+         call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'cw',ges_cwmr_it,istatus) 
+         if ( istatus == 0 ) aux_cwmr = ges_cwmr_it
++        if (lsidea) then
++           call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'o',ges_o_it  ,istatus) 
++           if ( istatus == 0 ) aux_o = ges_oz_it
++           call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'o2',ges_o2_it  ,istatus) 
++           if ( istatus == 0 ) aux_o2 = ges_oz_it
++        endif
+ 
+         if ( use_gfs_nemsio ) then
+ 
