@@ -75,7 +75,7 @@ lupp=${lupp:-".true."}
 lobsdiag_forenkf=${lobsdiag_forenkf:-".false"}
 write_spread_diag=${write_spread_diag:-".false"}
 netcdf_diag=${netcdf_diag:-".false."}
-
+fso_cycling=${fso_cycling:-".false."}
 ################################################################################
 ATMGES_ENSMEAN=$COMIN_GES_ENS/${GPREFIX}atmf006.ensmean${GSUFFIX}
 LEVS_ENKF=${LEVS_ENKF:-$($NEMSIOGET $ATMGES_ENSMEAN dimz | awk '{print $2}')}
@@ -202,7 +202,7 @@ cat > enkf.nml << EOFnml
    univaroz=.false.,adp_anglebc=.true.,angord=4,use_edges=.false.,emiss_bc=.true.,
    lobsdiag_forenkf=$lobsdiag_forenkf,
    write_spread_diag=$write_spread_diag,
-   netcdf_diag=$netcdf_diag,
+   netcdf_diag=$netcdf_diag,fso_cycling=$fso_cycling,
    $NAM_ENKF
 /
 &satobs_enkf
