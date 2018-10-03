@@ -87,19 +87,18 @@ fi
 #############################################
 #  determine PDY and cyc for previous cycle
 #############################################
-export COM_IN=${COM_IN:-${COMROOT}/${NET}/${envir}}
 
-M_TANKverf=${M_TANKverf:-${COM_IN}}
 cdate=`${NDATE} -6 ${PDY}${cyc}`
 echo 'pdate = ${pdate}'
+
 export P_PDY=`echo ${cdate} | cut -c1-8`
 export p_cyc=`echo ${cdate} | cut -c9-10`
-M_TANKverfM0=${M_TANKverfM0:-${M_TANKverf}/${RUN}.${PDY}/minmon}
-export M_TANKverfM1=${M_TANKverfM1:-${M_TANKverf}/${RUN}.${PDYm1}/minmon}
+
 
 #############################################
 # TANKverf - WHERE OUTPUT DATA WILL RESIDE
 #############################################
+export COM_IN=${COM_IN:-${COMROOT}/${NET}/${envir}}
 
 M_TANKverf=${M_TANKverf:-${COM_IN}}
 M_TANKverfM0=${M_TANKverfM0:-${M_TANKverf}/${RUN}.${PDY}/${cyc}/minmon}
