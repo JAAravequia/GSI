@@ -1,0 +1,9 @@
+# The fortran modules provided by this target.
+provides
+ efsoi
+ gridinfo_efsoi
+ gridio_efsoi
+ loadbal_efsoi
+ loc_advection
+ scatter_chunks_efsoi
+ statevec_efsoi
