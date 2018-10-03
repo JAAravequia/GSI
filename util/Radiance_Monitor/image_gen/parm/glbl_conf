@@ -11,31 +11,17 @@
 #
 # web server resources
 #
-WEBDIR=${WEBDIR}/${RADMON_SUFFIX}
-if [[ $TANK_USE_RUN -eq 1 ]]; then
-   WEBDIR=${WEBDIR}/${RUN}
-fi
-export WEBDIR=${WEBDIR}/pngs
+export WEBDIR=${WEBDIR}/${RADMON_SUFFIX}
 
 
 #
 # internal package reference
 #
-#export TOP_IMGNDIR=${MY_TANKDIR}/imgn/${RADMON_SUFFIX}
+export TOP_IMGNDIR=${MY_TANKDIR}/imgn/${RADMON_SUFFIX}
+export IMGNDIR=${MY_TANKDIR}/imgn/${RADMON_SUFFIX}/pngs
 export TANKDIR=${MY_TANKDIR}/stats/${RADMON_SUFFIX}
 export TOP_ARCHIVE_DIR=${ARCHIVE_DIR}
 export ARCHIVE_DIR=${ARCHIVE_DIR}/${RADMON_SUFFIX}
-
-#
-# set IMGNDIR for old or new image file location based
-# on TANK_USE_RUN value
-#
-IMGNDIR=${MY_TANKDIR}/imgn/${RADMON_SUFFIX}
-if [[ $TANK_USE_RUN -eq 1 ]]; then
-   IMGNDIR=${IMGNDIR}/${RUN}/radmon
-fi
-export IMGNDIR=${IMGNDIR}/pngs
-
 
 #
 #  GrADS script definitions
