@@ -752,7 +752,7 @@ end subroutine decompose_
 ! !INTERFACE:
 !
 logical function scale_jac_(depart,obvarinv,adaptinf,jacobian, nchanl,&
-                            jpch_rad,varinv,wgtjo,iuse,ich,ErrorCov,Rinv,rsqrtinv)
+                            jpch_rad,varinv,wgtjo,iuse,ich,ErrorCov,Rinv,rsqrtinv,Rmat)
 ! !USES:
 use constants, only: tiny_r_kind
 use mpeu_util, only: die
@@ -763,6 +763,7 @@ integer(i_kind),intent(in) :: jpch_rad ! total number of channels in GSI
 integer(i_kind),intent(in) :: ich(:)   ! true channel numeber
 integer(i_kind),intent(in) :: iuse(0:jpch_rad) ! flag indicating whether channel used or not
 real(r_kind),   intent(in) :: varinv(:)    ! inverse of specified ob-error-variance 
+real(r_kind),intent(in),optional:: Rmat(:,:)
 ! !INPUT/OUTPUT PARAMETERS:
 real(r_kind),intent(inout) :: depart(:)    ! observation-minus-guess departure
 real(r_kind),intent(inout) :: obvarinv(:)  ! inverse of eval(diag(R))
@@ -772,7 +773,8 @@ real(r_kind),intent(inout) :: jacobian(:,:)! Jacobian matrix
 real(r_kind),intent(inout) :: rsqrtinv(:,:)! R^-1/2
 real(r_kind),intent(inout) :: Rinv(:)      ! diagonal of R^-1
 type(ObsErrorCov) :: ErrorCov              ! ob error covariance for given instrument
-
+!KAB
+type(ObsErrorCov) :: ErrorCovcld
 ! !DESCRIPTION: This routine is the main entry-point to the outside world. 
 !               It redefines the Jacobian matrix so it embeds the inverse of the square root 
 !               observation error covariance matrix. Only the sub-matrix related
@@ -800,7 +802,7 @@ type(ObsErrorCov) :: ErrorCov              ! ob error covariance for given instr
 !BOC
 
 character(len=*),parameter :: myname_=myname//'*scale_jac'
-integer(i_kind) :: nch_active,ii,jj,kk,iii,jjj,mm,nn,ncp,ifound,nsigjac,indR
+integer(i_kind) :: nch_active,ii,jj,kk,iii,jjj,mm,nn,ncp,ifound,nsigjac,indR,r,c
 integer(i_kind),allocatable,dimension(:)   :: ircv
 integer(i_kind),allocatable,dimension(:)   :: ijac
 integer(i_kind),allocatable,dimension(:)   :: IRsubset
@@ -815,7 +817,14 @@ Rinv=zero
 nch_active=ErrorCov%nch_active
 if(nch_active<0) return
 call timer_ini('scljac')
-
+!KAB
+if (present(Rmat)) then
+   do c=1,nch_active
+      do r=1,nch_active
+         ErrorCovcld%R(r,c)=Rmat(r,c)
+      enddo
+   enddo
+endif
 ! get indexes for the internal channels matching those
 ! used in estimating the observation error covariance
 allocate(ircv(nchanl))
@@ -882,7 +891,11 @@ endif
 ! decompose the sub-matrix - returning the result in the 
 !                            structure holding the full covariance
 if( ErrorCov%method==1 .or. ErrorCov%method==2 ) then
-   subset = decompose_subset_ (IRsubset,ErrorCov)
+   if (present(Rmat)) then
+      subset=decompose_subset_ (IRsubset,ErrorCovcld)
+   else
+      subset = decompose_subset_ (IRsubset,ErrorCov)
+   endif
    if(.not.subset) then
       call die(myname_,' failed to decompose correlated R')
    endif
@@ -920,27 +933,47 @@ else
        do jj=1,ncp
           mm=IJsubset(jj)
           qcadjusted = obvarinv(mm)**2*adaptinf(mm)
-          obvarinv(mm) = one/ErrorCov%R(IRsubset(jj),IRsubset(jj))
+!KAB
+          if (present(Rmat)) then
+             obvarinv(mm)=one/Rmat(IRsubset(jj),IRsubset(jj))
+          else
+             obvarinv(mm) = one/ErrorCov%R(IRsubset(jj),IRsubset(jj))
+          endif
           adaptinf(mm) = qcadjusted
-          wgtjo(mm)    = qcadjusted/ErrorCov%R(IRsubset(jj),IRsubset(jj))
-          Rinv(jj)=1/ErrorCov%R(IRsubset(jj),IRsubset(jj))
-          rsqrtinv(jj,jj)=sqrt(Rinv(IRsubset(jj)))
+!          wgtjo(mm)    = qcadjusted/ErrorCov%R(IRsubset(jj),IRsubset(jj))
+          wgtjo(mm)=qcadjusted*obvarinv(mm)
+          Rinv(jj)=obvarinv(mm)
+!          Rinv(jj)=1/ErrorCov%R(IRsubset(jj),IRsubset(jj))
+          rsqrtinv(jj,jj)=sqrt(Rinv(jj))
        enddo
 
      case (2) ! case=2: uses full Re;
               !    Re = U De U^T  (Evals/Evecs eigen-pairs of full Re)
               !    inv(Rg) = U De^(-1/2) U^T U De^(-1/2) U^T
        do ii=1,ncp
-         coeff2 = one/ErrorCov%Revals(IRsubset(ii))
+         if (present(Rmat)) then
+            coeff2 = one/ErrorCovcld%Revals(IRsubset(ii))
+         else
+            coeff2 = one/ErrorCov%Revals(IRsubset(ii))
+         endif
          coeff = sqrt(coeff2)
          do jj=1,ncp
             nn=IJsubset(jj)
+            if (present(Rmat)) then !KAB
+            col0(ii)   = col0(ii)   + ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))* depart(nn)
+            Ri(jj,ii)   =  coeff2*ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))
+            Rs(jj,ii)   =  coeff*ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))
+            do kk=1,nsigjac
+               row0(kk,ii) = row0(kk,ii)+ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii)) * jacobian(kk,nn)
+            end do
+            else
             col0(ii)   = col0(ii)   + ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) * depart(nn)
             Ri(jj,ii)   =  coeff2*ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) 
             Rs(jj,ii)   =  coeff*ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) 
             do kk=1,nsigjac
                row0(kk,ii) = row0(kk,ii) +ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) * jacobian(kk,nn)
             end do
+            endif
          enddo
          col0(ii)   =   coeff * col0(ii) 
          do kk=1,nsigjac
@@ -949,20 +982,35 @@ else
        enddo
        do jj=1,ncp 
          do ii=1,ncp 
+            if (present(Rmat)) then !KAB
+            col(ii)   = col(ii)   + ErrorCovcld%Revecs(IRsubset(ii),IRsubset(jj)) *col0(jj)
+            do kk=1,nsigjac
+               row(kk,ii) = row(kk,ii) +ErrorCovcld%Revecs(IRsubset(ii),IRsubset(jj)) * row0(kk,jj)
+            end do
+            else
             col(ii)   = col(ii)   + ErrorCov%Revecs(IRsubset(ii),IRsubset(jj)) * col0(jj)
             do kk=1,nsigjac
                row(kk,ii) = row(kk,ii) + ErrorCov%Revecs(IRsubset(ii),IRsubset(jj)) * row0(kk,jj)
             end do
+            endif
          enddo
        enddo
       do kk=1,ncp
          do jj=1,ncp 
             do ii=jj,ncp
+                  if (present(Rmat)) then !KAB
+                  rsqrtinv(ii,jj)=rsqrtinv(ii,jj)+ErrorCovcld%Revecs(IRsubset(ii),IRsubset(kk))*Rs(jj,kk)
+                  else
                   rsqrtinv(ii,jj)=rsqrtinv(ii,jj)+ErrorCov%Revecs(IRsubset(ii),IRsubset(kk))*Rs(jj,kk)
+                  endif
             end do
          end do
          do jj=1,ncp
+            if (present(Rmat)) then !KAB
+            Rinv(jj) =Rinv(jj)+ErrorCovcld%Revecs(IRsubset(jj),IRsubset(kk))*Ri(jj,kk)
+            else
             Rinv(jj) = Rinv(jj)+ErrorCov%Revecs(IRsubset(jj),IRsubset(kk))*Ri(jj,kk)
+            endif
          end do
       end do
       do ii=2,ncp
@@ -1323,14 +1371,11 @@ logical function cloudy_R(clw,cclr,ccld,nchanl,isis,Rout)
    integer(i_kind)::ntrow,iinstr,iisis
    integer(i_kind)::nch_active
    character(len=80) covtype
-   real(r_kind) :: Rcld,Rclr !maybe not needed
-   real(r_kind) :: Aintr, Bint
-   real(r_kind),dimension(:),allocatable:: dclr, dcld
+   real(r_kind) :: Rcld,Rclr
+   real(r_kind) :: Aintr
    cloudy_R=.false.
    if(.not.allocated(idnames)) return
 
-!   allocate(Rcld(nchanl,nchanl)
-   allocate(dclr(nchanl),dcld(nchanl))
 !find clear and cloudy R's in table
    ntrow=size(idnames)
    Rout=0.0_r_kind
@@ -1367,32 +1412,19 @@ logical function cloudy_R(clw,cclr,ccld,nchanl,isis,Rout)
       Rout=(GSI_BundleErrorCov(jcld)%R(rr,rr))
    else
       do c=1,nch_active
-         dclr(c)=one/sqrt(GSI_BundleErrorCov(jclr)%R(c,c))
-         dcld(c)=one/sqrt(GSI_BundleErrorCov(jcld)%R(c,c))
-      end do
-      do c=1,nch_active
          do r=c,nch_active
-            Rclr=(GSI_BundleErrorCov(jclr)%R(r,c))*dclr(r)*dclr(c)
-            Rcld=(GSI_BundleErrorCov(jcld)%R(r,c))*dcld(r)*dcld(c)
-            Aintr=(Rclr-Rcld)/(cclr-ccld)
-            Bint=Rclr-(Aintr*cclr)
-            Rout(r,c)=Aintr*clw+Bint
+            Rclr=(GSI_BundleErrorCov(jclr)%R(r,c))
+            Rcld=(GSI_BundleErrorCov(jcld)%R(r,c))
+            if (clw<cclr) then
+               Aintr=1
+            elseif (clw>ccld) then
+               Aintr=0
+            else
+               Aintr=(clw-ccld)/(cclr-ccld)
+            endif
+            Rout(r,c)=Aintr*Rclr+(1-Aintr)*Rcld
          enddo
       end do
-      do c=1,nch_active
-         dcld(c)=one/(dcld(c)*dcld(c))
-         dclr(c)=one/(dclr(c)*dclr(c))
-         Aintr=(dclr(c)-dcld(c))/(cclr-ccld)
-         Bint=dclr(c)-(Aintr*cclr)
-         dclr(c)=Aintr*clw+Bint
-         dclr(c)=sqrt(dclr(c))
-      enddo
-      do c=1,nch_active
-         do r=c,nch_active
-            Rout(r,c)=Rout(r,c)*dclr(r)*dclr(c)
-         enddo
-      enddo
-
       do c=2,nch_active
          do r=1,c-1
             Rout(r,c)=Rout(c,r)

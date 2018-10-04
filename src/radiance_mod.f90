@@ -797,7 +797,7 @@ contains
   end subroutine radiance_parameter_aerosol_init
 
   subroutine radiance_ex_obserr_1(radmod,nchanl,clwp_amsua,clw_guess_retrieval, &
-                                tnoise,tnoise_cld,error0,clrsky,isis)
+                                tnoise,tnoise_cld,error0,clrsky,isis,Rmat)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    radiance_ex_obserr_1
@@ -830,8 +830,10 @@ contains
     real(r_kind),dimension(nchanl),intent(in):: tnoise,tnoise_cld
     real(r_kind),dimension(nchanl),intent(inout) :: error0
     type(rad_obs_type),intent(in) :: radmod 
-    real(r_kind),dimension(nchanl,nchanl):: Rmat
-!KAB clrsky
+    real(r_kind),dimension(nchanl,nchanl),intent(out):: Rmat
+!KAB clrsky,cclds,cclrs
+    real(r_kind),parameter::cclds=0.21
+    real(r_kind),parameter::cclrs=0.02
     logical,intent(inout):: clrsky
     logical:: interpR
     integer(i_kind) :: i
@@ -848,26 +850,37 @@ contains
 !corr_obs routine?
 !   allocate(Rmat(nchanl,nchanl))
    clwtmp=half*(clwp_amsua+clw_guess_retrieval)
-   interpR= cloudy_R(clwtmp,cclr(1),ccld(1),nchanl,isis,Rmat)
+   interpR= cloudy_R(clwtmp,cclrs,cclds,nchanl,isis,Rmat)
 !if returned from corr routine, do regular error assignment
     do i=1,nchanl
        if (radmod%lcloud4crtm(i)<0) cycle
 !KAB       clwtmp=half*(clwp_amsua+clw_guess_retrieval)
        if(clwtmp <= cclr(i)) then
-          error0(i) = tnoise(i)
+          if (interpR) then
+             error0(i)=sqrt(Rmat(i,i))
+          else
+             error0(i) = tnoise(i)
+          endif
        else if(clwtmp > cclr(i) .and. clwtmp < ccld(i)) then
-          error0(i) = tnoise(i) + (clwtmp-cclr(i))* &
-                      (tnoise_cld(i)-tnoise(i))/(ccld(i)-cclr(i))
+          if (interpR) then
+             error0(i)=sqrt(Rmat(i,i))
+          else
+             error0(i) = tnoise(i) + (clwtmp-cclr(i))* &
+                         (tnoise_cld(i)-tnoise(i))/(ccld(i)-cclr(i))
+          endif
 !KAB
           clrsky=.false.
        else
-          error0(i) = tnoise_cld(i)
+          if (interpR) then
+             error0(i)=sqrt(Rmat(i,i))
+          else
+             error0(i) = tnoise_cld(i)
+          endif
 !KAB
           clrsky=.false.
        endif
     end do
     return
-!    deallocate(Rmat)
   end subroutine radiance_ex_obserr_1
 
   subroutine radiance_ex_obserr_2(radmod,nchanl,cldeff1,cldeff2,tnoise,tnoise_cld,error0)
