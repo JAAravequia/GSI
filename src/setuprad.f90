@@ -379,7 +379,8 @@
   type(radNode),pointer:: my_head,my_headm
   type(obs_diag),pointer:: my_diag
   type(rad_obs_type) :: radmod
-
+!KAB
+Rmat=0.0
   save_jacobian = rad_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
   if (save_jacobian) then
      ijacob = 1 ! flag to indicate jacobian saved in diagnostic file

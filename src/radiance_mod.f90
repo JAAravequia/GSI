@@ -830,7 +830,7 @@ contains
     real(r_kind),dimension(nchanl),intent(in):: tnoise,tnoise_cld
     real(r_kind),dimension(nchanl),intent(inout) :: error0
     type(rad_obs_type),intent(in) :: radmod 
-    real(r_kind),dimension(nchanl,nchanl),intent(out):: Rmat
+    real(r_kind),dimension(nchanl,nchanl),intent(inout):: Rmat
 !KAB clrsky,cclds,cclrs
     real(r_kind),parameter::cclds=0.21
     real(r_kind),parameter::cclrs=0.02

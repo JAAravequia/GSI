@@ -819,6 +819,9 @@ if(nch_active<0) return
 call timer_ini('scljac')
 !KAB
 if (present(Rmat)) then
+!print *, 'Rmat', Rmat
+   allocate(ErrorCovcld%R(nch_active,nch_active),ErrorCovcld%Revals(nch_active))
+   allocate(ErrorCovcld%Revecs(nch_active,nch_active))
    do c=1,nch_active
       do r=1,nch_active
          ErrorCovcld%R(r,c)=Rmat(r,c)
@@ -1180,27 +1183,27 @@ implicit none
 !      isurf=getindex(trim(covtype),trim(surf))
 !      if (isurf>=0) then
 !      if(covtype(iinstr-6:iinstr)==trim(surf))then
-      if(covtype(iinstr-9:iinstr-6)==':sea')then
+      if(covtype(iinstr-9:iinstr)==':sea:clear')then
          nsatype(1)=nsatype(1)+1
          nsatype(6)=nsatype(6)+1
          tblidx(1,nsatype(1))=jj0
       endif
-      if(covtype(iinstr-10:iinstr-6)==':land')then
+      if(covtype(iinstr-10:iinstr)==':land:clear')then
          nsatype(2)=nsatype(2)+1
          nsatype(6)=nsatype(6)+1
          tblidx(2,nsatype(2))=jj0
       endif
-      if(covtype(iinstr-9:iinstr-6)==':ice')then
+      if(covtype(iinstr-9:iinstr)==':ice:clear')then
          nsatype(3)=nsatype(3)+1
          nsatype(6)=nsatype(6)+1
          tblidx(3,nsatype(3))=jj0
       endif
-      if(covtype(iinstr-10:iinstr-6)==':snow')then
+      if(covtype(iinstr-10:iinstr)==':snow:clear')then
          nsatype(4)=nsatype(4)+1
          nsatype(6)=nsatype(6)+1
          tblidx(4,nsatype(4))=jj0
       endif
-      if(covtype(iinstr-11:iinstr-6)==':mixed')then
+      if(covtype(iinstr-11:iinstr)==':mixed:clear')then
          nsatype(5)=nsatype(5)+1
          nsatype(6)=nsatype(6)+1
          tblidx(5,nsatype(5))=jj0
@@ -1238,7 +1241,7 @@ implicit none
 
             nchanl1=jc
             if(nchanl1==0)then
-               call die(myname_,' improperly set GSI_BundleErrorCov')
+               call die(myname_,' improperly set GSI_BundleErrorCov channel')
             endif
             if(.not.amiset_(GSI_BundleErrorCov(itbl))) then
                call die(myname_,' improperly set GSI_BundleErrorCov')
@@ -1337,7 +1340,7 @@ end subroutine upd_varqc_
 !-------------------------------------------------------------------------
 !BOP
 !
-! !IROUTINE:  cloudy_R_ --- for allsky assimilation, model R as a function of
+! !IROUTINE:  cloudy_R --- for allsky assimilation, model R as a function of
 !                           cloud amount
 !
 ! !INTERFACE:
@@ -1366,7 +1369,7 @@ logical function cloudy_R(clw,cclr,ccld,nchanl,isis,Rout)
    real(r_kind),intent(in):: clw,cclr,ccld
    integer(i_kind), intent(in)::nchanl
    character(len=*),intent(in):: isis
-   real(r_kind),dimension(:,:),intent(out):: Rout
+   real(r_kind),dimension(:,:),intent(inout):: Rout
    integer(i_kind):: r,c,jj0,jcld,jclr,rr
    integer(i_kind)::ntrow,iinstr,iisis
    integer(i_kind)::nch_active
@@ -1386,7 +1389,7 @@ logical function cloudy_R(clw,cclr,ccld,nchanl,isis,Rout)
       iinstr=len_trim(covtype)
       iisis=len_trim(isis)
       if(covtype(iinstr-9:iinstr-6)==':sea') then
-         if(covtype(iinstr-iisis+1:iinstr-10)==isis) then !CHECK THIS
+         if(covtype(1:iisis)==isis) then !CHECK THIS
             if(covtype(iinstr-4:iinstr)=='cloud') then
                jcld=jj0
             elseif(covtype(iinstr-4:iinstr)=='clear') then
@@ -1417,8 +1420,8 @@ logical function cloudy_R(clw,cclr,ccld,nchanl,isis,Rout)
             Rcld=(GSI_BundleErrorCov(jcld)%R(r,c))
             if (clw<cclr) then
                Aintr=1
-            elseif (clw>ccld) then
-               Aintr=0
+!            elseif (clw>ccld) then
+!               Aintr=0
             else
                Aintr=(clw-ccld)/(cclr-ccld)
             endif
