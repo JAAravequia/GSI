@@ -479,7 +479,6 @@ Rmat=0.0
 !make corr_oberr_qc a logical function
 !also need to do this for cloudy scences in allsky
   if (miter>0) call corr_oberr_qc(jpch_rad,iuse_rad,nusis,varch_sea,varch_land,varch_ice,varch_snow,varch_mixed)
-
   do j=1,jpch_rad
      if(isis == nusis(j))then 
         jc=jc+1
@@ -1102,6 +1101,7 @@ Rmat=0.0
                                       clrsky,isis,Rmat)
 !          if (radmod%ex_obserr=='ex_obserr2') &  ! comment out for now, waiting for more tests
 !             call radiance_ex_obserr(radmod,nchanl,cldeff_obs,cldeff_fg,tnoise,tnoise_cld,error0)
+if (atms) print *, 'clrsky ', clrsky
         end if
         if (clrsky) then
            if(sea) then

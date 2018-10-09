@@ -752,7 +752,7 @@ end subroutine decompose_
 ! !INTERFACE:
 !
 logical function scale_jac_(depart,obvarinv,adaptinf,jacobian, nchanl,&
-                            jpch_rad,varinv,wgtjo,iuse,ich,ErrorCov,Rinv,rsqrtinv,Rmat)
+                            jpch_rad,varinv,wgtjo,iuse,ich,ErrorCov,Rinv,rsqrtinv,Rmat) !KAB Rmat
 ! !USES:
 use constants, only: tiny_r_kind
 use mpeu_util, only: die
@@ -763,7 +763,7 @@ integer(i_kind),intent(in) :: jpch_rad ! total number of channels in GSI
 integer(i_kind),intent(in) :: ich(:)   ! true channel numeber
 integer(i_kind),intent(in) :: iuse(0:jpch_rad) ! flag indicating whether channel used or not
 real(r_kind),   intent(in) :: varinv(:)    ! inverse of specified ob-error-variance 
-real(r_kind),intent(in),optional:: Rmat(:,:)
+real(r_kind),intent(in),optional:: Rmat(:,:) !KAB
 ! !INPUT/OUTPUT PARAMETERS:
 real(r_kind),intent(inout) :: depart(:)    ! observation-minus-guess departure
 real(r_kind),intent(inout) :: obvarinv(:)  ! inverse of eval(diag(R))
@@ -819,7 +819,6 @@ if(nch_active<0) return
 call timer_ini('scljac')
 !KAB
 if (present(Rmat)) then
-!print *, 'Rmat', Rmat
    allocate(ErrorCovcld%R(nch_active,nch_active),ErrorCovcld%Revals(nch_active))
    allocate(ErrorCovcld%Revecs(nch_active,nch_active))
    do c=1,nch_active
@@ -963,19 +962,19 @@ else
          do jj=1,ncp
             nn=IJsubset(jj)
             if (present(Rmat)) then !KAB
-            col0(ii)   = col0(ii)   + ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))* depart(nn)
-            Ri(jj,ii)   =  coeff2*ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))
-            Rs(jj,ii)   =  coeff*ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))
-            do kk=1,nsigjac
-               row0(kk,ii) = row0(kk,ii)+ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii)) * jacobian(kk,nn)
-            end do
+               col0(ii)   = col0(ii)   + ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))* depart(nn)
+               Ri(jj,ii)   =  coeff2*ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))
+               Rs(jj,ii)   =  coeff*ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))
+               do kk=1,nsigjac
+                  row0(kk,ii) = row0(kk,ii)+ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii)) * jacobian(kk,nn)
+               end do
             else
-            col0(ii)   = col0(ii)   + ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) * depart(nn)
-            Ri(jj,ii)   =  coeff2*ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) 
-            Rs(jj,ii)   =  coeff*ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) 
-            do kk=1,nsigjac
-               row0(kk,ii) = row0(kk,ii) +ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) * jacobian(kk,nn)
-            end do
+               col0(ii)   = col0(ii)   + ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) * depart(nn)
+               Ri(jj,ii)   =  coeff2*ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) 
+               Rs(jj,ii)   =  coeff*ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) 
+               do kk=1,nsigjac
+                  row0(kk,ii) = row0(kk,ii) +ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) * jacobian(kk,nn)
+               end do
             endif
          enddo
          col0(ii)   =   coeff * col0(ii) 
@@ -986,15 +985,15 @@ else
        do jj=1,ncp 
          do ii=1,ncp 
             if (present(Rmat)) then !KAB
-            col(ii)   = col(ii)   + ErrorCovcld%Revecs(IRsubset(ii),IRsubset(jj)) *col0(jj)
-            do kk=1,nsigjac
-               row(kk,ii) = row(kk,ii) +ErrorCovcld%Revecs(IRsubset(ii),IRsubset(jj)) * row0(kk,jj)
-            end do
+               col(ii)   = col(ii)   + ErrorCovcld%Revecs(IRsubset(ii),IRsubset(jj)) *col0(jj)
+               do kk=1,nsigjac
+                  row(kk,ii) = row(kk,ii) +ErrorCovcld%Revecs(IRsubset(ii),IRsubset(jj)) * row0(kk,jj)
+               end do
             else
-            col(ii)   = col(ii)   + ErrorCov%Revecs(IRsubset(ii),IRsubset(jj)) * col0(jj)
-            do kk=1,nsigjac
-               row(kk,ii) = row(kk,ii) + ErrorCov%Revecs(IRsubset(ii),IRsubset(jj)) * row0(kk,jj)
-            end do
+               col(ii)   = col(ii)   + ErrorCov%Revecs(IRsubset(ii),IRsubset(jj)) * col0(jj)
+               do kk=1,nsigjac
+                  row(kk,ii) = row(kk,ii) + ErrorCov%Revecs(IRsubset(ii),IRsubset(jj)) * row0(kk,jj)
+               end do
             endif
          enddo
        enddo
@@ -1002,17 +1001,17 @@ else
          do jj=1,ncp 
             do ii=jj,ncp
                   if (present(Rmat)) then !KAB
-                  rsqrtinv(ii,jj)=rsqrtinv(ii,jj)+ErrorCovcld%Revecs(IRsubset(ii),IRsubset(kk))*Rs(jj,kk)
+                     rsqrtinv(ii,jj)=rsqrtinv(ii,jj)+ErrorCovcld%Revecs(IRsubset(ii),IRsubset(kk))*Rs(jj,kk)
                   else
-                  rsqrtinv(ii,jj)=rsqrtinv(ii,jj)+ErrorCov%Revecs(IRsubset(ii),IRsubset(kk))*Rs(jj,kk)
+                     rsqrtinv(ii,jj)=rsqrtinv(ii,jj)+ErrorCov%Revecs(IRsubset(ii),IRsubset(kk))*Rs(jj,kk)
                   endif
             end do
          end do
          do jj=1,ncp
             if (present(Rmat)) then !KAB
-            Rinv(jj) =Rinv(jj)+ErrorCovcld%Revecs(IRsubset(jj),IRsubset(kk))*Ri(jj,kk)
+               Rinv(jj) =Rinv(jj)+ErrorCovcld%Revecs(IRsubset(jj),IRsubset(kk))*Ri(jj,kk)
             else
-            Rinv(jj) = Rinv(jj)+ErrorCov%Revecs(IRsubset(jj),IRsubset(kk))*Ri(jj,kk)
+               Rinv(jj) = Rinv(jj)+ErrorCov%Revecs(IRsubset(jj),IRsubset(kk))*Ri(jj,kk)
             endif
          end do
       end do
@@ -1105,6 +1104,10 @@ else
    deallocate(Ri,Rs)
 endif
 ! clean up
+!KAB
+if (present(Rmat)) then
+   deallocate(ErrorCov%Revecs,ErrorCov%Revals,ErrorCov%R)
+endif
 deallocate(IJsubset)
 deallocate(IRsubset)
 deallocate(ijac)
@@ -1315,9 +1318,6 @@ implicit none
                   nn=IJsubset(ii)
                   rr=IRsubset(ii)
                   mm=ich1(nn)
-!KAB print
-!                  if(iamroot_)write(6,'(1x,a22,2i6,2f15.5)')idnames(itbl),ii,nn, &
-!                     sqrt(GSI_BundleErrorCov(itbl)%R(IRsubset(ii),IRsubset(ii))), trim(covtype)
 !KAB              
                   if(isurf==1) varch_sea(mm)= sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
                   if(isurf==2) varch_land(mm)= sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
@@ -1420,8 +1420,8 @@ logical function cloudy_R(clw,cclr,ccld,nchanl,isis,Rout)
             Rcld=(GSI_BundleErrorCov(jcld)%R(r,c))
             if (clw<cclr) then
                Aintr=1
-!            elseif (clw>ccld) then
-!               Aintr=0
+            elseif (clw>ccld) then
+               Aintr=0
             else
                Aintr=(clw-ccld)/(cclr-ccld)
             endif

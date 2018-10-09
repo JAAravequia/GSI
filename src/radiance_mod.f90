@@ -858,6 +858,7 @@ contains
        if(clwtmp <= cclr(i)) then
           if (interpR) then
              error0(i)=sqrt(Rmat(i,i))
+             if (clwtmp<cclrs) clrsky=.true.
           else
              error0(i) = tnoise(i)
           endif

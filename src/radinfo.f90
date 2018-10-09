@@ -2165,6 +2165,7 @@ END subroutine dec2bin
    if(iinstr<0) return  ! do not use the correlated errors
 
    if(.not.corr_ob_amiset(GSI_BundleErrorCov(iinstr))) then
+if (present(Rmat)) print *, 'Rmat present',Rmat(1,1),trim(covtype),isfctype,iinstr
       call die(myname_,' improperly set GSI_BundleErrorCov')
    endif
 
