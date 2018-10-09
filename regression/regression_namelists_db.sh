@@ -117,6 +117,7 @@ OBS_INPUT::
    seviribufr       seviri      m08       seviri_m08          0.0     1     0
    seviribufr       seviri      m09       seviri_m09          0.0     1     0
    seviribufr       seviri      m10       seviri_m10          0.0     1     0
+   seviribufr       seviri      m11       seviri_m11          0.0     1     0
    hirs4bufr        hirs4       metop-b   hirs4_metop-b       0.0     1     0
    amsuabufr        amsua       metop-b   amsua_metop-b       0.0     1     0
    mhsbufr          mhs         metop-b   mhs_metop-b         0.0     1     0
@@ -293,6 +294,7 @@ OBS_INPUT::
    seviribufr       seviri      m08       seviri_m08          0.0      5      0
    seviribufr       seviri      m09       seviri_m09          0.0      5      0
    seviribufr       seviri      m10       seviri_m10          0.0      5      0
+   seviribufr       seviri      m11       seviri_m11          0.0      5      0
    ompsnpbufr       ompsnp      npp       ompsnp_npp          0.0     0     0
    ompstcbufr       ompstc8     npp       ompstc8_npp         0.0     2     0
 ::
@@ -451,6 +453,7 @@ OBS_INPUT::
    seviribufr     seviri      m08       seviri_m08          0.0      1     0
    seviribufr     seviri      m09       seviri_m09          0.0      1     0
    seviribufr     seviri      m10       seviri_m10          0.0      1     0
+   seviribufr     seviri      m11       seviri_m11          0.0      1     0
    hirs4bufr      hirs4       metop-b   hirs4_metop-b       0.0      1     0
    amsuabufr      amsua       metop-b   amsua_metop-b       0.0      1     0
    mhsbufr        mhs         metop-b   mhs_metop-b         0.0      1     0
@@ -622,6 +625,7 @@ OBS_INPUT::
    seviribufr     seviri      m08         seviri_m08          0.0     1     0
    seviribufr     seviri      m09         seviri_m09          0.0     1     0
    seviribufr     seviri      m10         seviri_m10          0.0     1     0
+   seviribufr     seviri      m11         seviri_m11          0.0     1     0
    hirs4bufr      hirs4       metop-b     hirs4_metop-b       0.0     1     1
    amsuabufr      amsua       metop-b     amsua_metop-b       0.0     1     1
    mhsbufr        mhs         metop-b     mhs_metop-b         0.0     1     1
@@ -1452,6 +1456,7 @@ OBS_INPUT::
    seviribufr     seviri      m08         seviri_m08            0.0     1     0
    seviribufr     seviri      m09         seviri_m09            0.0     1     0
    seviribufr     seviri      m10         seviri_m10            0.0     1     0
+   seviribufr     seviri      m11         seviri_m11            0.0     1     0
    gsnd1bufr      sndrd1      g15         sndrD1_g15            0.0      1      0
    gsnd1bufr      sndrd2      g15         sndrD2_g15            0.0      1      0
    gsnd1bufr      sndrd3      g15         sndrD3_g15            0.0      1      0
@@ -2000,6 +2005,7 @@ OBS_INPUT::
    seviribufr     seviri      m08       seviri_m08          0.0      1     0
    seviribufr     seviri      m09       seviri_m09          0.0      1     0
    seviribufr     seviri      m10       seviri_m10          0.0      1     0
+   seviribufr     seviri      m11       seviri_m11          0.0      1     0
    hirs4bufr      hirs4       metop-b   hirs4_metop-b       0.0      1     0
    amsuabufr      amsua       metop-b   amsua_metop-b       0.0      2     0
    mhsbufr        mhs         metop-b   mhs_metop-b         0.0      3     0
