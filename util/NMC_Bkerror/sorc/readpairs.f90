@@ -616,7 +616,6 @@ subroutine readpairs(npe,mype,numcases,numaodcases)
          grid2 = reshape(nems_wk(:),(/nlon,nlat-2/))
          call sptez_s(z4all (:,6*nsig+2),grid1,-1)
          call sptez_s(z4all2(:,6*nsig+2),grid2,-1)
-         print *, 'grid2(aod)',grid2
       end if
 
 
@@ -652,7 +651,6 @@ subroutine readpairs(npe,mype,numcases,numaodcases)
       call grid2sub(work1,sf1,vp1,t1,q1,oz1,cw1,ps1,aod1)
       call grid2sub(work2,sf2,vp2,t2,q2,oz2,cw2,ps2,aod2)
 
-      print *,'aodout',aod1
       write(aodfilunit1) aod1
       write(aodfilunit2) aod2
 
