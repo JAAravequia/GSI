@@ -2165,7 +2165,7 @@ END subroutine dec2bin
    if(iinstr<0) return  ! do not use the correlated errors
 
    if(.not.corr_ob_amiset(GSI_BundleErrorCov(iinstr))) then
-if (present(Rmat)) print *, 'Rmat present',Rmat(1,1),trim(covtype),isfctype,iinstr
+!if (present(Rmat)) print *, 'Rmat present',Rmat(1,1),trim(covtype),isfctype,iinstr
       call die(myname_,' improperly set GSI_BundleErrorCov')
    endif
 
@@ -2174,6 +2174,7 @@ if (present(Rmat)) print *, 'Rmat present',Rmat(1,1),trim(covtype),isfctype,iins
    if (present(Rmat)) then
    adjust_jac_ = corr_ob_scale_jac(depart,obvarinv,adaptinf,jacobian,nchanl,jpch_rad,varinv,wgtjo,&
                                     iuse_rad,ich,GSI_BundleErrorCov(iinstr),Rinv,rsqrtinv,Rmat)
+!print *, 'here Rmat ',Rmat(1,1)
    else
    adjust_jac_ = corr_ob_scale_jac(depart,obvarinv,adaptinf,jacobian,nchanl,jpch_rad,varinv,wgtjo, &
                                     iuse_rad,ich,GSI_BundleErrorCov(iinstr),Rinv,rsqrtinv)

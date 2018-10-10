@@ -797,7 +797,7 @@ contains
   end subroutine radiance_parameter_aerosol_init
 
   subroutine radiance_ex_obserr_1(radmod,nchanl,clwp_amsua,clw_guess_retrieval, &
-                                tnoise,tnoise_cld,error0,clrsky,isis,Rmat)
+                                tnoise,tnoise_cld,error0,mwclrsky,isis,Rmat)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    radiance_ex_obserr_1
@@ -834,12 +834,12 @@ contains
 !KAB clrsky,cclds,cclrs
     real(r_kind),parameter::cclds=0.21
     real(r_kind),parameter::cclrs=0.02
-    logical,intent(inout):: clrsky
+    logical,intent(inout):: mwclrsky
     logical:: interpR
     integer(i_kind) :: i
     real(r_kind) :: clwtmp
     real(r_kind),dimension(nchanl) :: cclr,ccld
-
+    mwclrsky=.true.
     do i=1,nchanl
        cclr(i)=radmod%cclr(i)
        ccld(i)=radmod%ccld(i)
@@ -851,6 +851,9 @@ contains
 !   allocate(Rmat(nchanl,nchanl))
    clwtmp=half*(clwp_amsua+clw_guess_retrieval)
    interpR= cloudy_R(clwtmp,cclrs,cclds,nchanl,isis,Rmat)
+!if (interpR) print *, 'interpR'
+!mwclrsky if true, there are no clouds, or, no cloudy R supplied
+!if false, there is a cloud present, as well as a cloudy R
 !if returned from corr routine, do regular error assignment
     do i=1,nchanl
        if (radmod%lcloud4crtm(i)<0) cycle
@@ -858,27 +861,32 @@ contains
        if(clwtmp <= cclr(i)) then
           if (interpR) then
              error0(i)=sqrt(Rmat(i,i))
-             if (clwtmp<cclrs) clrsky=.true.
+             mwclrsky=.false.
+             if (clwtmp<=cclrs) mwclrsky=.true.
           else
              error0(i) = tnoise(i)
+             mwclrsky=.true.
           endif
        else if(clwtmp > cclr(i) .and. clwtmp < ccld(i)) then
           if (interpR) then
              error0(i)=sqrt(Rmat(i,i))
+             mwclrsky=.false.
+             if (clwtmp<=cclrs) mwclrsky=.true.
           else
              error0(i) = tnoise(i) + (clwtmp-cclr(i))* &
                          (tnoise_cld(i)-tnoise(i))/(ccld(i)-cclr(i))
+             mwclrsky=.true.
           endif
 !KAB
-          clrsky=.false.
        else
           if (interpR) then
              error0(i)=sqrt(Rmat(i,i))
+             mwclrsky=.false.
           else
              error0(i) = tnoise_cld(i)
+             mwclrsky=.true.
           endif
 !KAB
-          clrsky=.false.
        endif
     end do
     return

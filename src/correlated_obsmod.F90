@@ -1106,7 +1106,7 @@ endif
 ! clean up
 !KAB
 if (present(Rmat)) then
-   deallocate(ErrorCov%Revecs,ErrorCov%Revals,ErrorCov%R)
+   deallocate(ErrorCovcld%Revecs,ErrorCovcld%Revals,ErrorCovcld%R)
 endif
 deallocate(IJsubset)
 deallocate(IRsubset)
@@ -1425,6 +1425,7 @@ logical function cloudy_R(clw,cclr,ccld,nchanl,isis,Rout)
             else
                Aintr=(clw-ccld)/(cclr-ccld)
             endif
+!print *, 'Aint clw ccld cclr',Aintr,clw,ccld,cclr
             Rout(r,c)=Aintr*Rclr+(1-Aintr)*Rcld
          enddo
       end do
@@ -1433,6 +1434,11 @@ logical function cloudy_R(clw,cclr,ccld,nchanl,isis,Rout)
             Rout(r,c)=Rout(c,r)
          enddo
       enddo
+!do r=1,nch_active
+!if (Rout(r,r)<0.001) then
+!print *, 'Rout Aint, Rclr,Rcld ',Rout(r,r),Aintr,GSI_BundleErrorCov(jclr)%R(r,r),GSI_BundleErrorCov(jcld)%R(r,r)
+!endif
+!enddo
    endif
 !deallocate
 !   deallocate(Rcld) 

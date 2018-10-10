@@ -371,7 +371,7 @@
   logical,dimension(nobs):: luse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
 !KAB
-  logical:: clrsky
+  logical:: mwclrsky
   character(10) filex
   character(12) string
 
@@ -1093,17 +1093,17 @@ Rmat=0.0
 
 !       Assign observation error for all-sky radiances 
 !KAB clrsky
-        clrsky=.true.
+        mwclrsky=.true.
         if (radmod%lcloud_fwd .and. eff_area)  then   
 !pass in the logical corr,isis
            if (radmod%ex_obserr=='ex_obserr1') & 
               call radiance_ex_obserr(radmod,nchanl,clwp_amsua,clw_guess_retrieval,tnoise,tnoise_cld,error0,&
-                                      clrsky,isis,Rmat)
+                                      mwclrsky,isis,Rmat)
 !          if (radmod%ex_obserr=='ex_obserr2') &  ! comment out for now, waiting for more tests
-!             call radiance_ex_obserr(radmod,nchanl,cldeff_obs,cldeff_fg,tnoise,tnoise_cld,error0)
-if (atms) print *, 'clrsky ', clrsky
+!             call
+!             radiance_ex_obserr(radmod,nchanl,cldeff_obs,cldeff_fg,tnoise,tnoise_cld,error0)
         end if
-        if (clrsky) then
+        if (mwclrsky) then
            if(sea) then
              do i=1,nchanl
                 tnoise(i)=varch_sea(ich(i))
@@ -1583,7 +1583,7 @@ if (atms) print *, 'clrsky ', clrsky
               obvarinv = error0 ! on input
 !KAB
 !add optional input argument which is the cloudy R
-              if ((miter>0).and.(clrsky)) then
+              if ((miter>0).and.(mwclrsky)) then
                  account_for_corr_obs = radinfo_adjust_jacobian (iinstr,isis,isfctype,nchanl,nsigradjac,ich,varinv,&
                                                                  utbc,obvarinv,adaptinf,wgtjo,jacobian,Rinv,rsqrtinv)
               elseif (miter>0) then
@@ -1593,6 +1593,7 @@ if (atms) print *, 'clrsky ', clrsky
               else
                  account_for_corr_obs =.false.
               end if
+!if ((account_for_corr_obs).and.(.not.mwclrsky)) print *, 'clrsky Rmat,Rinv,Rsq ',mwclrsky,Rmat(1,1),rsqrtinv(1,1)
               iii=0
               do ii=1,nchanl
                  m=ich(ii)
