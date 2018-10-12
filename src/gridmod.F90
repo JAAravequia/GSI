@@ -85,6 +85,14 @@ module gridmod
 !   2015-02-03 todling - update max nlayers to 200
 !   2016-03-02  s.liu/carley - remove use_reflectivity and use i_gsdcldanal_type
 !   2017-03-23  Hu      - add code to get eta2_ll and aeta2_ll ready for hybrid vertical coodinate in WRF MASS CORE
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!   2015-01-13 wanghj   - add lsidea flag for IDEA/WAM model
+!                         extend the dimension of nlayers for use with WAM
+!   
+!   
+!   2016-11-24 VAY        WAM-lsidea related setup for radiance data analysis and CRTM, msig=64 ~ 43 km top
+!                                                                                       msig=70 ~ GFS-64L top lid
+!                         first step in NEMS/GSM-128L => extend rad-DA as needed > 54 km GFS-64L top lid
 !   2017-08-31  Li      - add sfcnst_comb to handle surface and nsst combined file
 !   2018-02-15  wu      - add fv3_regional & grid_ratio_fv3_regional
 !
@@ -152,6 +160,7 @@ module gridmod
   public :: jcap_gfs,nlat_gfs,nlon_gfs
   public :: use_sp_eqspace,jcap_cut
   public :: wrf_mass_hybridcord
+  public :: lsidea  
 
   interface strip
      module procedure strip_single_rank33_
@@ -185,6 +194,7 @@ module gridmod
   logical use_gfs_nemsio    ! .t. for using NEMSIO to real global first guess
   logical sfcnst_comb       ! .t. for using combined sfc & nst file
   logical use_sp_eqspace    ! .t. use equally-space grid in spectral transforms
+  logical lsidea            ! .t. for using IDEA/WAM model first guess
 
   logical use_readin_anl_sfcmask        ! .t. for using readin surface mask
   character(1) nmmb_reference_grid      ! ='H': use nmmb H grid as reference for analysis grid
@@ -475,6 +485,7 @@ contains
 
     use_gfs_nemsio  = .false.
     sfcnst_comb = .false.
+    lsidea = .false.
     use_readin_anl_sfcmask = .false.
 
     use_sp_eqspace = .false.
@@ -579,6 +590,23 @@ contains
     do k=1,nsig
        msig = msig + nlayers(k)
     end do
+
+!   2014-01-29 wanghj   - modify msig for use with the IDEA/WAM model;
+!                         this is kind of ad hoc since the vertical extension
+!                         of WAM exceeds current CRTM: TOA_PRESSURE=0.005 (hPa)
+!                         for current CRTM, which is just above the WAM model
+!                         level 92 - this is the limit for using CRTM with WAM;
+!                         set it model level 90 for now, as 'levr' in IDEA/WAM;
+!                         (msig should be <= 200 for current CRTM)
+!========================================================================================
+! CRTM: TOA_PRESSURE=0.005 (hPa), print, -7.*alog(0.005/1000.)= 85.444 km
+!         CRTM-top = 91   Zkm7_log=85,203 km
+! vay for WAM klev = 64   Zkm7_log=43.304 km
+!         GFS klev = 64   Zkm7_log=51.451 km
+!=========================================================================================
+  if (lsidea) msig = 64      ! reasons CRTM were tested only for 64 layers  not for 90
+
+  if (mype==0) write(6,*) 'INIT_GRID_VARS:  msig set to ', msig
 
 ! Initialize structure(s) for spectral <--> grid transforms
     if (.not.regional) then

@@ -38,7 +38,7 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
     use obsmod, only: iadate
     use mpimod, only: npe,mype
     use general_specmod, only: spec_vars
-    use gridmod, only: ntracer,ncepgfs_head,idpsfc5,idthrm5,cp5,idvc5,idvm5
+    use gridmod, only: ntracer,ncepgfs_head,idpsfc5,idthrm5,cp5,idvc5,idvm5,lsidea
     use general_commvars_mod, only: load_grid
     use ncepgfs_io, only: sigio_cnvtdv8,sighead
     use constants, only: zero,zero_single,one,fv,qcmin
@@ -67,6 +67,7 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
     real(r_kind),pointer,dimension(:,:) :: sub_ps
     real(r_kind),pointer,dimension(:,:,:) :: sub_vor,sub_div,sub_tv
     real(r_kind),pointer,dimension(:,:,:) :: sub_q,sub_oz,sub_cwmr
+    real(r_kind),pointer,dimension(:,:,:) :: sub_o,sub_o2
 
     real(r_kind),dimension(grd%itotsub):: work
     real(r_kind),dimension(grd%nlon,grd%nlat-2):: grid,grid2
@@ -94,7 +95,11 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
     ! Initialize local variables
     iret_write=0
     nlatm2=grd%nlat-2
-    itotflds=6*grd%nsig+2  ! Hardwired for now!  vor,div,tv,q,oz,cwmr,ps,z
+    if (lsidea) then
+        itotflds=8*grd%nsig+2 ! Hardwired for now!  vor,div,tv,q,oz,cwmr,ps,z,o,o2
+    else
+        itotflds=6*grd%nsig+2  ! Hardwired for now!  vor,div,tv,q,oz,cwmr,ps,z
+    end if
     lloop=.true.
 
     istatus=0
@@ -105,6 +110,10 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
     call gsi_bundlegetpointer(gfs_bundle,'q',  sub_q,   iret); istatus=istatus+iret
     call gsi_bundlegetpointer(gfs_bundle,'oz', sub_oz,  iret); istatus=istatus+iret
     call gsi_bundlegetpointer(gfs_bundle,'cw', sub_cwmr,iret); istatus=istatus+iret
+    if (lsidea) then
+       call gsi_bundlegetpointer(gfs_bundle,'o' , sub_o,  iret); istatus=istatus+iret
+       call gsi_bundlegetpointer(gfs_bundle,'o2', sub_o2,  iret); istatus=istatus+iret
+    endif
     if ( istatus /= 0 ) then
        if ( mype == 0 ) then
          write(6,*) 'general_write_gfsatm: ERROR'
@@ -220,8 +229,13 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
     gfsfields: do while (lloop)
 
         ! First, perform sub2grid for up to npe
-        call general_gather(grd,work_ps,work_tv,sub_vor,sub_div,sub_q,sub_oz,&
-             sub_cwmr,icount,ivar,ilev,work)
+        if ( lsidea ) then
+           call general_gather(grd,work_ps,work_tv,sub_vor,sub_div,sub_q,sub_oz,&
+                sub_cwmr,icount,ivar,ilev,work,sub_o,sub_o2)
+        else
+            call general_gather(grd,work_ps,work_tv,sub_vor,sub_div,sub_q,sub_oz,&
+                sub_cwmr,icount,ivar,ilev,work)
+        end if
 
         pe_loop: do k=1,npe  ! loop over pe distributed data
 
@@ -246,6 +260,10 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
                    sigdati%i = sighead%levs * (2+2) + 2 + klev
                 else if ( kvar == 8 ) then ! cw, 3rd tracer
                    sigdati%i = sighead%levs * (2+3) + 2 + klev
+                else if ( lsidea .and. kvar==9 ) then
+                   sigdati%i = sighead%levs * (2+4) + 2 + klev       ! O, 4th tracer
+                else if ( lsidea .and. kvar==10 ) then
+                   sigdati%i = sighead%levs * (2+5) + 2 + klev       ! O2, 5th tracer
                 endif
 
                 if ( klev > 0 ) then
@@ -340,14 +358,14 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
 end subroutine general_write_gfsatm
 
 subroutine general_gather(grd,g_ps,g_tv,g_vor,g_div,g_q,g_oz,g_cwmr, &
-           icountx,ivar,ilev,work)
+           icountx,ivar,ilev,work,g_o,g_o2)
 
 ! !USES:
 
   use kinds, only: r_kind,i_kind
   use mpimod, only: npe,mpi_comm_world,ierror,mpi_rtype
   use general_sub2grid_mod, only: sub2grid_info
-  use gridmod, only: strip
+  use gridmod, only: strip,lsidea
   use constants, only: zero
   implicit none
 
@@ -363,6 +381,7 @@ subroutine general_gather(grd,g_ps,g_tv,g_vor,g_div,g_q,g_oz,g_cwmr, &
   real(r_kind),dimension(grd%lat2,grd%lon2)     ,intent(  in) :: g_ps
   real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),intent(  in) :: g_tv,&
        g_vor,g_div,g_q,g_oz,g_cwmr
+  real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),optional,intent(in)::g_o,g_o2
 
 ! !DESCRIPTION: Transfer contents of 3d subdomains to 2d work arrays over pes
 !
@@ -433,6 +452,17 @@ subroutine general_gather(grd,g_ps,g_tv,g_vor,g_div,g_q,g_oz,g_cwmr, &
         klev=icount-2-5*(grd%nsig)
         ilev(k)=klev
         call strip(g_cwmr(:,:,klev) ,sub(:,k))
+    ! IDEA tracers here
+    else if( lsidea .and. ( icount>=6*(grd%nsig)+3 .and. icount<=7*(grd%nsig)+2 ) )then
+        ivar(k)=9
+        klev=icount-2-6*(grd%nsig)
+        ilev(k)=klev
+        call strip(g_o(:,:,klev) ,sub(:,k))
+    else if( lsidea .and. ( icount>=7*(grd%nsig)+3 .and. icount<=8*(grd%nsig)+2 ) )then
+        ivar(k)=10
+        klev=icount-2-7*(grd%nsig)
+        ilev(k)=klev
+        call strip(g_o2(:,:,klev) ,sub(:,k))
     else
 ! NULL, No work to be done for this pe
         ivar(k)=-1

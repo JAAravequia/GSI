@@ -122,6 +122,7 @@ function (setIntel)
     set( NCDIAG_Fortran_FLAGS "-free -assume byterecl -convert big_endian" PARENT_SCOPE )
     set(WRFLIB_Fortran_FLAGS "-DPOUND_FOR_STRINGIFY -O1 -g -fp-model source -assume byterecl -convert big_endian -g -traceback -D_REAL8_ ${MPI_Fortran_COMPILE_FLAGS}" PARENT_SCOPE)
     set(WRFLIB_C_FLAGS "-I. -DFortranByte=char -DFortranInt=int -DFortranLlong='long long'  -g  -Dfunder" PARENT_SCOPE )
+    set (NDATE_Fortran_FLAGS "-fp-model source -ftz -assume byterecl -convert big_endian -heap-arrays  -DCOMMCODE -DLINUX -DUPPLITTLEENDIAN -O3 -Wl,-noinhibit-exec" PARENT_SCOPE )
   endif()
 endfunction()
 
