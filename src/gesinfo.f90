@@ -1,4 +1,4 @@
-subroutine gesinfo(mype)
+subroutine gesinfo
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:  gesinfo                  get information from model guess files
@@ -31,9 +31,9 @@ subroutine gesinfo(mype)
 !                             (1) remove idvm(5) and derivation of idpsfc5 and idthrm5
 !                             (2) remove cpi, NEMSIO input always is dry tempersture (no
 !                                 conversion from enthalpy w/ cpi is needed)
+!   2017-10-10  wu,w    - setup for FV3
 !
 !   input argument list:
-!     mype - mpi task id
 !
 !   comments:
 !     The difference of time Info between operational GFS IO (gfshead%, sfc_head%),
@@ -70,9 +70,9 @@ subroutine gesinfo(mype)
   use obsmod, only: iadate,ianldate,time_offset,iadatemn
   use gsi_4dvar, only: ibdate, iedate, iadatebgn, iadateend, iwinbgn,time_4dvar
   use gsi_4dvar, only: nhr_assimilation,min_offset
-  use mpimod, only: npe
+  use mpimod, only: npe,mype
   use gridmod, only: idvc5,ak5,bk5,ck5,tref5,&
-      regional,nsig,regional_fhr,regional_time,&
+      regional,nsig,regional_fhr,regional_time,fv3_regional,&
       wrf_nmm_regional,wrf_mass_regional,twodvar_regional,nems_nmmb_regional,cmaq_regional,&
       ntracer,ncloud,idvm5,&
       ncepgfs_head,ncepgfs_headv,idpsfc5,idthrm5,idsl5,cp5,jcap_b, use_gfs_nemsio
@@ -83,13 +83,13 @@ subroutine gesinfo(mype)
 
   use constants, only: zero,h300,r60,r3600,i_missing
 
+  use gsi_rfv3io_mod, only: read_fv3_files
   use read_wrf_mass_files_mod, only: read_wrf_mass_files_class
   use read_wrf_nmm_files_mod, only: read_wrf_nmm_files_class
   use gsi_io, only: verbose
   implicit none
 
 ! Declare passed variables
-  integer(i_kind), intent(in   ) :: mype
 
 ! Declare local parameters
   integer(i_kind),parameter:: lunges=11
@@ -132,12 +132,14 @@ subroutine gesinfo(mype)
   print_verbose=.false.
   if(verbose)print_verbose=.true.
 ! Handle non-GMAO interface (ie, NCEP interface)
-  write(filename,'("sigf",i2.2)')nhr_assimilation
-  inquire(file=filename,exist=fexist)
-  if(.not.fexist) then
-     write(6,*)' GESINFO:  ***ERROR*** ',trim(filename),' NOT AVAILABLE: PROGRAM STOPS'
-     call stop2(99)
-     stop
+  if(.not. fv3_regional) then
+     write(filename,'("sigf",i2.2)')nhr_assimilation
+     inquire(file=filename,exist=fexist)
+     if(.not.fexist) then
+        write(6,*)' GESINFO:  ***ERROR*** ',trim(filename),' NOT AVAILABLE: PROGRAM STOPS'
+        call stop2(99)
+        stop
+     end if
   end if
 
 ! Handle NCEP regional case
@@ -389,15 +391,18 @@ subroutine gesinfo(mype)
         if (gfshead%jcap/=jcap_b.and..not.regional ) then
            if (gfshead%jcap < 0) then
               ! FV3GFS write component does not write JCAP to the NEMSIO file
-              write(6,*)'GESINFO:  ***WARNING*** guess jcap inconsistent with namelist'
-              write(6,*)'GESINFO:  ***WARNING*** this is a FV3GFS NEMSIO file'
+              if ( mype == mype_out ) then
+                 write(6,*)'GESINFO:  ***WARNING*** guess jcap inconsistent with namelist'
+                 write(6,*)'GESINFO:  ***WARNING*** this is a FV3GFS NEMSIO file'
+              endif
               fatal = .false.
            else
-              write(6,*)'GESINFO:  ***ERROR*** guess jcap inconsistent with namelist'
+              if ( mype == mype_out ) &
+                 write(6,*)'GESINFO:  ***ERROR*** guess jcap inconsistent with namelist'
               fatal = .true.
            endif
-           write(6,*)'      guess jcap_b=',gfshead%jcap
-           write(6,*)'   namelist jcap_b=',jcap_b
+           if ( mype == mype_out ) &
+              write(6,*)'GESINFO:  guess jcap_b, namelist jcap_b = ',gfshead%jcap, jcap_b
         endif
         if ( fatal ) call stop2(85)
      endif
@@ -512,6 +517,8 @@ subroutine gesinfo(mype)
         call wrf_nmm_files%read_nems_nmmb_files(mype)
      else if(wrf_mass_regional) then
         call wrf_mass_files%read_wrf_mass_files(mype)
+     else if(fv3_regional) then
+        call read_fv3_files(mype)
      else if(twodvar_regional) then
         call read_2d_files(mype)
      else if(cmaq_regional) then

@@ -76,6 +76,7 @@ subroutine get_gefs_for_regional
   use nemsio_module, only: nemsio_gfile,nemsio_getfilehead
   use get_wrf_mass_ensperts_mod, only: get_wrf_mass_ensperts_class
   use gsi_io, only: verbose
+  use obsmod, only: l_wcp_cwm
   implicit none
 
   type(sub2grid_info) grd_gfs,grd_mix,grd_gfst
@@ -274,6 +275,7 @@ subroutine get_gefs_for_regional
      nsig_gfs=levs
      jcap_gfs=njcap
 
+     if(allocated(nems_vcoord)) deallocate(nems_vcoord)
      allocate(nems_vcoord(levs+1,3,2))
      call nemsio_getfilehead(gfile,iret=iret,vcoord=nems_vcoord)
      if ( iret /= 0 ) call error_msg(trim(my_name),trim(filename),' ', &
@@ -296,6 +298,7 @@ subroutine get_gefs_for_regional
         call stop2(85)
      endif
 
+     if(allocated(vcoord)) deallocate(vcoord)
      allocate(vcoord(levs+1,nvcoord))
      vcoord(:,1:nvcoord) = nems_vcoord(:,1:nvcoord,1)
      deallocate(nems_vcoord)
@@ -1221,16 +1224,25 @@ subroutine get_gefs_for_regional
               end do
 
            case('cw','CW')
-!          temporarily ignore cloud water perturbations
+!          open cloud water perturbations for regional analysis
 
-              do k=1,grd_ens%nsig
-                 do j=1,grd_ens%lon2
-                    do i=1,grd_ens%lat2
-                   !   w3(i,j,k) = cwt(i,j,k)*sig_norm
-                       w3(i,j,k) = zero
+              if(l_wcp_cwm) then
+                 do k=1,grd_ens%nsig
+                    do j=1,grd_ens%lon2
+                       do i=1,grd_ens%lat2
+                          w3(i,j,k) = cwt(i,j,k)*sig_norm
+                       end do
                     end do
                  end do
-              end do
+              else
+                 do k=1,grd_ens%nsig
+                    do j=1,grd_ens%lon2
+                       do i=1,grd_ens%lat2
+                          w3(i,j,k) = zero
+                       end do
+                    end do
+                 end do
+              endif
 
         end select
      end do

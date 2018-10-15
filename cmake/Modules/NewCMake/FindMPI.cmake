@@ -1030,7 +1030,7 @@ macro(MPI_search_mpi_prefix_folder PREFIX_FOLDER)
   endif()
 endmacro()
 
-set(MPI_HINT_DIRS ${MPI_HOME} $ENV{MPI_HOME} $ENV{I_MPI_ROOT})
+set(MPI_HINT_DIRS ${MPI_HOME} $ENV{MPI_ROOT} $ENV{MPI_HOME} $ENV{I_MPI_ROOT})
 if("${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Linux")
   # SUSE Linux Enterprise Server stores its MPI implementations under /usr/lib64/mpi/gcc/<name>
   # We enumerate the subfolders and append each as a prefix

@@ -47,6 +47,7 @@ module hybrid_ensemble_isotropic
 !   2014-12-02  derber  - many optimization changes
 !   2015-04-07  carley  - bug fix to allow grd_loc%nlat=grd_loc%nlon
 !   2016-05-13  parrish - remove beta12mult
+!   2018-02-15  wu      - add code for fv3_regional option
 !
 ! subroutines included:
 !   sub init_rf_z                         - initialize localization recursive filter (z direction)
@@ -226,7 +227,7 @@ subroutine init_rf_z(z_len)
 
   use gridmod, only: nsig,ak5,bk5,eta1_ll,eta2_ll,pt_ll,pdtop_ll,twodvar_regional, &
                      wrf_nmm_regional,nems_nmmb_regional,wrf_mass_regional,cmaq_regional, &
-                     regional
+                     regional,fv3_regional
   use constants, only: half,one,rd_over_cp,zero,one_tenth,ten,two
   use hybrid_ensemble_parameters, only: grd_ens,s_ens_v
   use hybrid_ensemble_parameters, only: ps_bar
@@ -295,6 +296,9 @@ subroutine init_rf_z(z_len)
                           (eta1_ll(k)*pdtop_ll + &
                            eta2_ll(k)*(ten*ps_bar(ii,jj,1)-pdtop_ll-pt_ll) + &
                            pt_ll)
+                 endif
+                 if (fv3_regional) then
+                    p_interface(k)=eta1_ll(k)+ eta2_ll(k)*ps_bar(ii,jj,1)
                  endif
                  if (twodvar_regional) then
                     p_interface(k)=one_tenth*(eta1_ll(k)*(ten*ps_bar(ii,jj,1)-pt_ll)+pt_ll)
@@ -3036,6 +3040,7 @@ subroutine init_sf_xy(jcap_in)
   do k=2,grd_sploc%nsig
      if(s_ens_hv(k) == s_ens_hv(k-1))ksame(k)=.true.
   enddo
+  spectral_filter=zero
   do k=1,grd_sploc%nsig
      if(ksame(k))then
         spectral_filter(:,k)=spectral_filter(:,k-1)
@@ -3111,7 +3116,14 @@ subroutine init_sf_xy(jcap_in)
   enddo
   deallocate(g,gsave,pn0_npole,ksame)
 
-  sqrt_spectral_filter=sqrt(spectral_filter)
+! Compute sqrt(spectral_filter).  Ensure spectral_filter >=0 zero
+!$omp parallel do schedule(dynamic,1) private(k,i)
+  do k=1,grd_sploc%nsig
+     do i=1,sp_loc%nc
+        if (spectral_filter(i,k) < zero) spectral_filter(i,k)=zero
+        sqrt_spectral_filter(i,k) = sqrt(spectral_filter(i,k))
+     end do
+  end do
 
 !  assign array k_index for each processor, based on grd_loc%kbegin_loc,grd_loc%kend_loc
 
@@ -4001,7 +4013,7 @@ subroutine hybens_localization_setup
          if ( istat /= 0 ) then
             write(6,*) 'HYBENS_LOCALIZATION_SETUP:  ***ERROR*** error in ',trim(fname)
             write(6,*) 'HYBENS_LOCALIZATION_SETUP:  error reading file, iostat = ',istat
-            stop(123)
+            call stop2(123)
          endif
          if ( msig /= grd_ens%nsig ) then 
             write(6,*) 'HYBENS_LOCALIZATION_SETUP:  ***ERROR*** error in ',trim(fname)

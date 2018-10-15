@@ -58,6 +58,7 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
 !   2015-02-23  Rancic/Thomas - add l4densvar to time window logical
 !   2015-10-01  guo     - consolidate use of ob location (in deg)
+!   2017-11-16  dutta   - addition of profile quality flags for KOMPSAT5 GPSRO.
 !
 !   input argument list:
 !     infile   - unit from which to read BUFR data
@@ -168,6 +169,18 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
      return
   end if
 
+! Open file for input, then read bufr data
+  open(lnbufr,file=trim(infile),form='unformatted')
+  call openbf(lnbufr,'IN',lnbufr)
+  call datelen(10)
+  call readmg(lnbufr,subset,idate,iret)
+  if (iret/=0) then
+     call closbf(lnbufr)
+     write(6,*)' GPS file not read '
+     write(6,1020)'READ_GPS:  ref_obs,nprof_gps= ',ref_obs,nprof_gps
+     return
+  end if
+
 ! Allocate and load arrays to contain gpsro types.
   ngpsro_type=ikx
   allocate(gpsro_ctype(ngpsro_type), gpsro_itype(ngpsro_type), &
@@ -183,13 +196,6 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
      endif
   end do
 
-
-! Open file for input, then read bufr data
-  open(lnbufr,file=trim(infile),form='unformatted')
-  call openbf(lnbufr,'IN',lnbufr)
-  call datelen(10)
-  call readmg(lnbufr,subset,idate,iret)
-  if (iret/=0) goto 1010
 
 ! Allocate work array to hold observations
   allocate(cdata_all(nreal,maxobs))
@@ -250,7 +256,8 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
         endif
  
 ! Check profile quality flags
-        if ( ((said > 739).and.(said < 746)).or.(said == 820).or.(said == 786)) then  !CDAAC processing
+        if ( ((said > 739).and.(said < 746)).or.(said == 820).or.(said == 786).or.&
+              (said == 825)) then  !CDAAC processing
            if(pcc==zero) then
 !             write(6,*)'READ_GPS:  bad profile said=',said,'ptid=',ptid,&
 !                 ' SKIP this report'
@@ -448,7 +455,6 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
   deallocate(cdata_all)
   
 ! Close unit to input file
-1010 continue
   call closbf(lnbufr)
 
   nprof_gps = nmrecs

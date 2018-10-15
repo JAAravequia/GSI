@@ -360,7 +360,7 @@ macro( _HDF5_parse_compile_line
     libraries
     libraries_hl)
 
-  separate_arguments(_HDF5_COMPILE_ARGS NATIVE_COMMAND "${${compile_line_var}}")
+  separate_arguments(_HDF5_COMPILE_ARGS UNIX_COMMAND "${${compile_line_var}}")
 
   foreach(arg IN LISTS _HDF5_COMPILE_ARGS)
     if("${arg}" MATCHES "^-I(.*)$")

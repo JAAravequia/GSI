@@ -6,6 +6,8 @@ cmake_minimum_required(VERSION 2.8)
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 # get a list of all the fortran source files
   file(GLOB GSI_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*90 )
+# get a list of all the c source files
+  file(GLOB GSI_C_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*c )
 # get a list of all cplr files
   file(GLOB CLASS_SRC ${CMAKE_CURRENT_SOURCE_DIR}/class*90 )
 # create a list of all corresponding stub files
@@ -53,7 +55,10 @@ cmake_minimum_required(VERSION 2.8)
 
 # remove stub_nstmod from the rest of the source files
   list( REMOVE_ITEM GSI_SRC "${CMAKE_CURRENT_SOURCE_DIR}/stub_nstmod.f90" )
-
+  if( BUILD_NCDIAG )
+    list( REMOVE_ITEM GSI_SRC "${CMAKE_CURRENT_SOURCE_DIR}/nc_diag_read_mod.f90" )
+    list( REMOVE_ITEM GSI_SRC "${CMAKE_CURRENT_SOURCE_DIR}/nc_diag_write_mod.f90" )
+  endif( BUILD_NCDIAG )
 # The specific regional/WRF source files
   if(USE_WRF)
     set( REGIONAL_SRC ${CPLR_SRC} )
@@ -65,33 +70,40 @@ cmake_minimum_required(VERSION 2.8)
   set( GLOBAL_SRC ${CPLR_SRC} )
   set( GLOBAL_SRC ${STUB_SRC} )
   list( APPEND GLOBAL_SRC ${LINKED_SRC} )
-  list( APPEND GSI_SRC  "${CMAKE_CURRENT_SOURCE_DIR}/blockIO.c")
+  
+  list( APPEND GSI_SRC  ${GSI_C_SRC} )
 
 # set up the compiler flags
   set_source_files_properties( ${GSI_SRC} PROPERTIES COMPILE_FLAGS ${GSI_Fortran_FLAGS} )
   set_source_files_properties( ${GLOBAL_SRC} PROPERTIES COMPILE_FLAGS ${GSI_Fortran_FLAGS} )
-  set_source_files_properties( ${CMAKE_CURRENT_SOURCE_DIR}/blockIO.c  PROPERTIES COMPILE_FLAGS ${GSI_CFLAGS} )
+  set_source_files_properties( ${GSI_C_SRC} PROPERTIES COMPILE_FLAGS ${GSI_CFLAGS} )
+# set_source_files_properties( ${CMAKE_CURRENT_SOURCE_DIR}/blockIO.c  PROPERTIES COMPILE_FLAGS ${GSI_CFLAGS} )
 
 # Add the include paths
-  include_directories( ${CORE_INCS} ${NETCDF_INCLUDES} ${MPI_Fortran_INCLUDE_PATH} "./" )
+  message("MPI include PATH  ${MPI_Fortran_INCLUDE_PATH}")
+  include_directories( ${CORE_INCS} ${NETCDF_INCLUDES} ${MPI_Fortran_INCLUDE_PATH} "./"  )
 
 #define the name used for GSI Shared lib and add it with properties and include dirs
   set(GSISHAREDLIB "gsilib_shrd${debug_suffix}" CACHE INTERNAL "")
   add_library(${GSISHAREDLIB} STATIC ${GSI_SRC} )
   set_target_properties(${GSISHAREDLIB} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
   target_include_directories(${GSISHAREDLIB} PUBLIC "${PROJECT_BINARY_DIR}/include")
+  if( BUILD_NCDIAG )
+      add_dependencies(${GSISHAREDLIB} ${NCDIAG_LIBRARIES} )
+  endif( BUILD_NCDIAG )
 
 # Definte the base name of the executable 
   if(BUILD_PRODUCTION)
-    set(GSIBASE "global_gsi")
+    set(GSIBASE "global_gsi.x")
   else()
     if(BUILD_GLOBAL)
       set(GSIBASE "gsi_global")
     else()
       set(GSIBASE "gsi")
     endif()
-    set(GSISUFFIX ".x")
+    set(GSISUFFIX ".x" CACHE INTERNAL "Executable suffix")
   endif()
+
 # Set names, libs, and properties depending on if we are building with WRF or not
   if(USE_WRF) 
     set(GSIEXEC "${GSIBASE}${debug_suffix}${GSISUFFIX}" CACHE INTERNAL "GSI Executable Name")
@@ -121,15 +133,15 @@ cmake_minimum_required(VERSION 2.8)
   add_dependencies(${GSILIB} ${GSISHAREDLIB} )
 
 # Add dependencies if we are building the core libs or are just using pre-built libs 
-  if(BUILD_CORELIBS )
-    add_dependencies(${GSILIB} ${GSISHAREDLIB} ${bacio} ${crtm} ${bufr} ${nemsio} ${sigio} ${sfcio} ${sp} ${w3emc} ${w3nco} )
-    add_dependencies(${GSISHAREDLIB} ${bacio} ${crtm} ${bufr} ${nemsio} ${sigio} ${sfcio} ${sp} ${w3emc} ${w3nco} )
-    add_dependencies(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${w3nco} ${bacio} ${crtm} ${bufr} ${nemsio} ${sigio} ${sfcio} ${sp} ${w3emc} )
+  if(CORE_BUILT)
+    add_dependencies(${GSILIB} ${GSISHAREDLIB} ${CORE_BUILT} )
+    add_dependencies(${GSISHAREDLIB} ${bacio} ${CORE_BUILT} )
+    add_dependencies(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${CORE_BUILT} )
   else()
     add_dependencies(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} )
   endif()
 # Specify all the libraries to be linked into the executable
-  target_link_libraries(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${GSISHAREDLIB} ${WRF_LIBRARIES} ${CORE_LIBRARIES}
+  target_link_libraries(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${GSISHAREDLIB} ${WRF_LIBRARIES} 
          ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES} 
-         ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${GSI_LDFLAGS}
-         ${ZLIB_LIBRARIES} )
+         ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${CORE_LIBRARIES} ${CORE_BUILT}
+         ${GSI_LDFLAGS} ${NCDIAG_LIBRARIES} ${ZLIB_LIBRARIES} ${wrflib} ${EXTRA_LINKER_FLAGS} )

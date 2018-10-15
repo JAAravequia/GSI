@@ -130,6 +130,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
 !   2014-10-01  ejones   - add gmi and amsr2
 !   2015-01-16  ejones   - add saphir
 !   2016-09-19  guo      - properly initialized nread, in case of for quick-return cases.
+!   2017-11-16  dutta    - adding KOMPSAT5 bufr i.d for reading the data.
 !                           
 !
 !   input argument list:
@@ -219,6 +220,8 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
          kidsat = 56 
        else if(jsatid == 'm10')then
          kidsat = 57 
+       else if(jsatid == 'm11')then
+         kidsat = 70 
        else if(jsatid == 'n08')then
          kidsat=200
        else if(jsatid == 'n09')then
@@ -343,6 +346,21 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
           end do 
           nread = nread + 1
          end do fileloop
+        else if(trim(filename) == 'wcpbufr')then
+         lexist = .false.
+         file2loop: do while(ireadmg(lnbufr,subset,idate2) >= 0)
+          do while(ireadsb(lnbufr)>=0)
+           call ufbint(lnbufr,rtype,1,1,iret,'TYP')
+           kx=nint(rtype)
+           do nc=1,nconvtype
+             if(trim(ioctype(nc)) == trim(dtype) .and. kx == ictype(nc) .and. icuse(nc) > minuse)then
+               lexist = .true.
+               exit file2loop
+             end if
+           end do
+          end do
+          nread = nread + 1
+         end do file2loop
        else if(trim(filename) == 'gps_ref' .or.  trim(filename) == 'gps_bnd')then
          lexist = .false.
          gpsloop: do while(ireadmg(lnbufr,subset,idate2) >= 0)
@@ -351,7 +369,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
            end if 
  
            said=nint(satid) 
-           if(((said > 739) .and.(said < 746)).or.(said == 820) .or. &
+           if(((said > 739) .and.(said < 746)).or.(said == 820) .or. (said == 825) .or. &
                (said == 786).or. (said == 4)  .or.(said == 3).or. &
                (said == 421).or. (said == 440).or.(said == 821)) then
              lexist=.true. 
@@ -831,6 +849,8 @@ subroutine read_obs(ndata,mype)
            obstype=='lcbas' .or. obstype=='cldch' .or. obstype == 'larcglb' .or. &
            obstype=='uwnd10m' .or. obstype=='vwnd10m') then
           ditype(i) = 'conv'
+       else if (obstype == 'swcp' .or. obstype == 'lwcp') then
+          ditype(i) = 'wcp'
        else if( hirs   .or. sndr      .or.  seviri .or. &
                obstype == 'airs'      .or. obstype == 'amsua'     .or.  &
                obstype == 'msu'       .or. obstype == 'iasi'      .or.  &
@@ -847,6 +867,8 @@ subroutine read_obs(ndata,mype)
           ditype(i) = 'ozone'
        else if (obstype == 'sbuv2' &
            .or. obstype == 'omi' &
+           .or. obstype == 'ompstc8' &
+           .or. obstype == 'ompsnp' &
            .or. obstype == 'gome' &
            .or. mls &
            ) then
@@ -1500,7 +1522,13 @@ subroutine read_obs(ndata,mype)
                     nobs_sub1(1,i))
                 string='READ_PBLH'
              end if conv_obstype_select
-
+!            Process swcp and lwcp
+          else if (ditype(i) == 'wcp') then
+             if ( obstype == 'swcp' .or. obstype == 'lwcp' ) then
+                call read_wcpbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis, &
+                   prsl_full,nobs_sub1(1,i),read_rec(i))
+                string='READ_WCPBUFR'
+             end if
           else if (ditype(i) == 'rad')then
 
              call radiance_obstype_search(obstype,radmod)

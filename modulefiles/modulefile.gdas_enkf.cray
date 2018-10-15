@@ -23,6 +23,7 @@ set COMPILER intel
 
 setenv FFLAGS_COM "-fp-model strict"
 setenv LDFLAGS_COM " "
+setenv OMPFLAG "-openmp"
 
 set WRF_SHARED_VER v1.1.0
 set WRF_SHARED_ROOT /gpfs/hps/nco/ops/nwprod/wrf_shared
@@ -52,7 +53,7 @@ module load sigio-intel/2.0.1
 module load sp-intel/2.0.2
 module load w3nco-intel/2.0.6
 module load w3emc-intel/2.2.0
-module load crtm-intel/2.2.3
+module load crtm-intel/2.2.6
 
 module use /usrx/local/nceplibs/modulefiles
 module load bacio-intel/2.0.2
