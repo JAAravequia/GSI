@@ -74,10 +74,8 @@ if( NOT SP_LIBRARY ) # didn't find the library, so build it from source
 else( NOT SP_LIBRARY )
   if( CORE_LIBRARIES )
     list( APPEND CORE_LIBRARIES ${SP_LIBRARY} )
-    list( APPEND CORE_LIBRARIES ${SP_4_LIBRARY} )
   else()
     set( CORE_LIBRARIES ${SP_LIBRARY} )
-    list( APPEND CORE_LIBRARIES ${SP_4_LIBRARY} )
   endif()
 endif( NOT SP_LIBRARY )
 
