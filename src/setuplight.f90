@@ -251,55 +251,54 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
      
 ! Regional 
 
-     if (regional) then
+  if (regional) then
 
 !-- WRF-ARW
 
-        if (wrf_mass_regional) then
-            nsig_read=nsig 
+     if (wrf_mass_regional) then
+        nsig_read=nsig 
 
-          if (ier==zero) then
-             do jj=1,nfldsig
-               do k=1,nsig
-                 do j=1,lon2
-                   do i=1,lat2
-                      cwgues(i,j,k,jj)=ges_ql(i,j,k,jj)+ges_qi(i,j,k,jj)+&
-                                       ges_qr(i,j,k,jj)+ges_qs(i,j,k,jj)+&
-                                       ges_qg(i,j,k,jj)
-                   enddo
+        if (ier==zero) then
+           do jj=1,nfldsig
+             do k=1,nsig
+               do j=1,lon2
+                 do i=1,lat2
+                    cwgues(i,j,k,jj)=ges_ql(i,j,k,jj)+ges_qi(i,j,k,jj)+&
+                                     ges_qr(i,j,k,jj)+ges_qs(i,j,k,jj)+&
+                                     ges_qg(i,j,k,jj)
                  enddo
-               enddo
-              enddo
-          end if
-
-          do k=1,nsig_read
-             deltasigma(k)=eta1_ll(k)-eta1_ll(k+1)
-             sigma(k)=aeta1_ll(k)
-          enddo
-
-     
-          dx(:,:)=region_dx(:,:)
-          dy(:,:)=region_dy(:,:)
-
-        endif ! wrf_mass_regional
-
-     endif !if (regional) then 
-
-! Global
-
-     if (.not. regional) then 
-
-         nsig_read=nsig_save ! for GFS
-
-         do jj=1,nfldsig
-           do j=1,lon2
-             do i=1,lat2
-               do k=1,nsig
-                  cwgues(i,j,k,jj)=ges_cwmr_it(i,j,k,jj)
                enddo
              enddo
            enddo
-         enddo
+        end if
+
+        do k=1,nsig_read
+           deltasigma(k)=eta1_ll(k)-eta1_ll(k+1)
+           sigma(k)=aeta1_ll(k)
+        enddo
+     
+        dx(:,:)=region_dx(:,:)
+        dy(:,:)=region_dy(:,:)
+
+     endif ! wrf_mass_regional
+
+  endif !if (regional) then 
+
+! Global
+
+  if (.not. regional) then 
+
+     nsig_read=nsig_save ! for GFS
+
+     do jj=1,nfldsig
+        do j=1,lon2
+          do i=1,lat2
+            do k=1,nsig
+               cwgues(i,j,k,jj)=ges_cwmr_it(i,j,k,jj)
+            enddo
+          enddo
+        enddo
+     enddo
 
 !--
 ! Define local indices
@@ -312,62 +311,62 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
 ! Retrieve the model's sigma levels and the values for the difference between them
 !--
 
-         do k=1,nsig_read
+     do k=1,nsig_read
 
-            deltasigma(k)=deta1_save(k)
-            sigma(k)=aeta1_save(k)
+        deltasigma(k)=deta1_save(k)
+        sigma(k)=aeta1_save(k)
 
-         enddo
+     enddo
 !--
 !  Resolution of the GFS grid in degrees for both, the latitudinal 
 !  and longitudinal directions
 !--
-         allocate(dx(1:im,1:jm))
-         allocate(dy(1:im,1:jm))
+     allocate(dx(1:im,1:jm))
+     allocate(dy(1:im,1:jm))
    
-         do j=2,nlat_sfc/2
+     do j=2,nlat_sfc/2
  
-            dx(:,j)=dx_gfs(j)
-            dy(:,j)=dx_gfs(j)
+        dx(:,j)=dx_gfs(j)
+        dy(:,j)=dx_gfs(j)
 
-         enddo
+     enddo
 
 
-     endif !  end global block
+  endif !  end global block
 
 !-- 
 ! Allocate local variables
 !--
 
-     allocate(flashrate  (1:im,1:jm,1:nfldsig))
-     allocate(flashrate_h(1:im,1:jm,1:nfldsig))
-     allocate(htot_h    (1:im,1:jm,1:nfldsig))
+  allocate(flashrate  (1:im,1:jm,1:nfldsig))
+  allocate(flashrate_h(1:im,1:jm,1:nfldsig))
+  allocate(htot_h    (1:im,1:jm,1:nfldsig))
 
-     allocate(jac_frate  (1:im,1:jm,1:nfldsig))
-     allocate(kvert      (1:im,1:jm,1:nfldsig))
-     allocate(wmaxflag   (1:im,1:jm,1:nfldsig))
-     allocate(sigmadot   (1:im,1:jm,1:km-1,1:nfldsig))
-     allocate(jac_vert   (1:km-1))
-     allocate(jac_zdx    (1:im,1:jm,1:km-1,1:nfldsig))
-     allocate(jac_zdy    (1:im,1:jm,1:km-1,1:nfldsig))
-     allocate(jac_udx    (1:im,1:jm,1:km-1,1:nfldsig))
-     allocate(jac_vdy    (1:im,1:jm,1:km-1,1:nfldsig))
-     allocate(jac_vertt  (1:im,1:jm,1:km-1,1:nfldsig))
-     allocate(jac_vertq  (1:im,1:jm,1:km-1,1:nfldsig))
+  allocate(jac_frate  (1:im,1:jm,1:nfldsig))
+  allocate(kvert      (1:im,1:jm,1:nfldsig))
+  allocate(wmaxflag   (1:im,1:jm,1:nfldsig))
+  allocate(sigmadot   (1:im,1:jm,1:km-1,1:nfldsig))
+  allocate(jac_vert   (1:km-1))
+  allocate(jac_zdx    (1:im,1:jm,1:km-1,1:nfldsig))
+  allocate(jac_zdy    (1:im,1:jm,1:km-1,1:nfldsig))
+  allocate(jac_udx    (1:im,1:jm,1:km-1,1:nfldsig))
+  allocate(jac_vdy    (1:im,1:jm,1:km-1,1:nfldsig))
+  allocate(jac_vertt  (1:im,1:jm,1:km-1,1:nfldsig))
+  allocate(jac_vertq  (1:im,1:jm,1:km-1,1:nfldsig))
 
-     allocate(jac_qgma   (1:im,1:jm,1:km,1:nfldsig))
-     allocate(jac_qgmb   (1:im,1:jm,1:km,1:nfldsig))
-     allocate(jac_ice    (1:im,1:jm,1:km,1:nfldsig))
-     allocate(jac_zice   (1:im,1:jm,1:km,1:nfldsig))
+  allocate(jac_qgma   (1:im,1:jm,1:km,1:nfldsig))
+  allocate(jac_qgmb   (1:im,1:jm,1:km,1:nfldsig))
+  allocate(jac_ice    (1:im,1:jm,1:km,1:nfldsig))
+  allocate(jac_zice   (1:im,1:jm,1:km,1:nfldsig))
      !allocate(kbot       (1:km,1:nfldsig))
-     allocate(kbot      (1:im,1:jm,1:nfldsig))
+  allocate(kbot      (1:im,1:jm,1:nfldsig))
 
 !******************************************************************************
 ! Read and reformat lightning observations in work arrays.
 ! Forward model for lightning flash rate
 !-- loop over FGAT time
-     do it=1,nfldsig
-        call lightflashrate(im,jm,km,km-1,nfldsig,pt_ll,sigma(1:km-1),&
+  do it=1,nfldsig
+     call lightflashrate(im,jm,km,km-1,nfldsig,pt_ll,sigma(1:km-1),&
              deltasigma(1:km-1),dx(:,:),dy(:,:),ges_ps(:,:,it),&
              ges_z(:,:,it),cwgues(:,:,:,it),ges_tv(:,:,:,it),&
              ges_q(:,:,:,it),ges_qi(:,:,:,it),ges_qs(:,:,:,it),&
@@ -378,7 +377,7 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
              jac_qgmb(:,:,:,it),jac_zice(:,:,:,it),jac_ice(:,:,:,it),&
              sigmadot(:,:,:,it),kvert(:,:,it),&
              kbot(:,:,it),wmaxflag(:,:,it),flashrate_h(:,:,it),htot_h(:,:,it))
-     enddo
+  enddo
 
 !-- 
 ! Prepare observed and modeled lightning flash rate at obs location
@@ -402,71 +401,69 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
 
 !    Initialize variables used for lightning bias correction
 
-     r0=half
-     w0=half
-     eps0=one
-     sum_loc=zero
-     nobs_loc=zero
+  r0=half
+  w0=half
+  eps0=one
+  sum_loc=zero
+  nobs_loc=zero
 
-     do i=1,nobs
-        muse(i)=nint(data(11,i)) <= jiter
-     enddo
+  do i=1,nobs
+     muse(i)=nint(data(11,i)) <= jiter
+  enddo
 
-     dup=one
-     do k=1,nobs
-       do l=k+1,nobs
-         if (data(ilat,k) == data(ilat,l) .and.  &
+  dup=one
+  do k=1,nobs
+     do l=k+1,nobs
+        if (data(ilat,k) == data(ilat,l) .and.  &
             data(ilon,k) == data(ilon,l) .and. &
             data(ier,k) < r1000 .and. data(ier,l) < r1000 .and. &
             muse(k) .and. muse(l)) then
             tfact=min(one,abs(data(itime,k)-data(itime,l))/dfact1)
             dup(k)=dup(k)+one-tfact*tfact*(one-dfact)
             dup(l)=dup(l)+one-tfact*tfact*(one-dfact)
-         end if
-       enddo
+        end if
      enddo
+  enddo
 
 ! If requested, save selected data output into a diagnostic file
-     if (light_diagsave) then
-        nchar=1
-        nreal=16
+  if (light_diagsave) then
+     nchar=1
+     nreal=16
      if (lobsdiagsave) nreal=nreal+4*miter+1
-        allocate(diagbuf(nreal,nobs))
-        ii=0
-        if(netcdf_diag) call init_netcdf_diag_
-     end if
+     allocate(diagbuf(nreal,nobs))
+     ii=0
+     if(netcdf_diag) call init_netcdf_diag_
+  end if
 !--
 ! Save some lightning flash rate values (observed, guess, no. of obs.)
 ! to compute the local sums inside "sumlightbias.f90," These are used 
 ! for bias correction.
 !--
-     write(post_file,199)mype
+  write(post_file,199)mype
 199 format('sums_lfr_',i3.3,'.bin')
-     open(unit=200,file=trim(post_file),form='formatted',action='write')
-
+  open(unit=200,file=trim(post_file),form='formatted',action='write')
 !--
 ! Interpolation to obs location (for each observation)
 !--
+  do i=1,nobs
+     dtime=data(itime,i)
+     call dtime_check(dtime, in_curbin, in_anybin)
+     if (.not.in_anybin) cycle
 
-     do i=1,nobs
-        dtime=data(itime,i)
-        call dtime_check(dtime, in_curbin, in_anybin)
-        if (.not.in_anybin) cycle
+     if (in_curbin) then
+        dlat=data(ilat,i)
+        dlon=data(ilon,i)
 
-        if (in_curbin) then
-           dlat=data(ilat,i)
-           dlon=data(ilon,i)
+        dlight=data(ilight,i)
+        ikx = nint(data(ikxx,i))
+        error=data(ier2,i)
 
-           dlight=data(ilight,i)
-           ikx = nint(data(ikxx,i))
-           error=data(ier2,i)
+        ratio_errors=error/data(ier,i)
+        error=one/error
 
-           ratio_errors=error/data(ier,i)
-           error=one/error
+     endif ! (in_curbin)
 
-        endif ! (in_curbin)
-
-        if (.not.in_curbin) cycle
+     if (.not.in_curbin) cycle
 
 
 ! Interpolate (horizontally) model lightning flash rate to obs location
@@ -481,7 +478,7 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
         if (wrf_mass_regional) then
 
             flashrate_h=htot_h
-           
+        
         endif ! wrf_mass_regional
 
      endif !if (regional) then
@@ -489,17 +486,17 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
 ! Global
 
      if (.not.regional) then
-        
-         flashrate_h=flashrate_h
      
+        flashrate_h=flashrate_h
+  
      endif !  end global block
- 
-            call tintrp2a11(flashrate_h,lightges0,dlat,dlon,dtime, &
-                            hrdifsig,mype,nfldsig)
+
+     call tintrp2a11(flashrate_h,lightges0,dlat,dlon,dtime, &
+                     hrdifsig,mype,nfldsig)
 
 ! Write lightning output to a file for bias correction
 
-        write(200,*)i,dlight,lightges0
+     write(200,*)i,dlight,lightges0
 !--
 ! Optimal Var bias correction parameter for the lightning flash rate.
 !--
@@ -507,13 +504,12 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
 !          the online bias correction applied to the forward operator for
 !          lightning flash rate.
 
-              !do i=1,nobs
-                 call mpi_barrier(mpi_comm_world,ierror)
-                 call sumslightbias(dlight,lightges0,mype,nobs,nobs_loc,sum_loc)
-                 call mpi_allreduce(nobs_loc,nobs_gbl,1,mpi_itype,mpi_sum,&
-                               mpi_comm_world,ierror)
-                 call mpi_allreduce(sum_loc,sum_gbl,1,mpi_rtype,mpi_sum,&
-                               mpi_comm_world,ierror)
+     call mpi_barrier(mpi_comm_world,ierror)
+     call sumslightbias(dlight,lightges0,mype,nobs,nobs_loc,sum_loc)
+     call mpi_allreduce(nobs_loc,nobs_gbl,1,mpi_itype,mpi_sum,&
+                        mpi_comm_world,ierror)
+     call mpi_allreduce(sum_loc,sum_gbl,1,mpi_rtype,mpi_sum,&
+                        mpi_comm_world,ierror)
 
 !           Calculation of an optimal multiplicative bias correction parameter
 !           eps=eps0*exp[(1/nobs)*sum[log(y/(eps0*h(x)))]/(1+r0/w0)], as in
@@ -523,49 +519,46 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
 !            w0=0.5   - diagonal element of an uncertainty weight matrix of the guess [diag(W)=w0]
 !            eps0     - guess value of lightning flash rate
 
-                 if(nobs_gbl > 0) then
-                    eps=eps0*exp( (one/ float(nobs_gbl))*sum_gbl/(one+r0/w0) )
-                 else
-                    eps=eps0
-                 endif  !! if(nobs_gbl .gt. 0) then
-              !enddo !do i=1,nobs
+     if(nobs_gbl > 0) then
+         eps=eps0*exp( (one/ float(nobs_gbl))*sum_gbl/(one+r0/w0) )
+     else
+         eps=eps0
+     endif  !! if(nobs_gbl .gt. 0) then
 
-        if (miter==1) then
-           eps0=1._r_kind
-        else
-           eps0=eps
-        endif
+     if (miter==1) then
+        eps0=1._r_kind
+     else
+        eps0=eps
+     endif
 
 !--
 ! Bias-corrected flashrate: Use epsilon to adjust flash rate 
 ! from the min/max values of the nonlinear lightning flash rate
 ! observation operator.
 !-- 
-        flashrate(:,:,:)=eps0*flashrate_h(:,:,:)
+     flashrate(:,:,:)=eps0*flashrate_h(:,:,:)
 
-     enddo ! end loop over observations
+  enddo ! end loop over observations
 
 ! Interpolation to obs location (for each observation)
 
-     call dtime_setup()
-     do i=1,nobs
-        dtime=data(itime,i)
-        call dtime_check(dtime, in_curbin, in_anybin)
-        if (.not.in_anybin) cycle
+  call dtime_setup()
+  do i=1,nobs
+     dtime=data(itime,i)
+     call dtime_check(dtime, in_curbin, in_anybin)
+     if (.not.in_anybin) cycle
 
-        if (in_curbin) then
-           dlat=data(ilat,i)
-           dlon=data(ilon,i)
+     if (in_curbin) then
+        dlat=data(ilat,i)
+        dlon=data(ilon,i)
 
-           dlight=data(ilight,i)
-           ikx = nint(data(ikxx,i))
-           error=data(ier2,i)
+        dlight=data(ilight,i)
+        ikx = nint(data(ikxx,i))
+        error=data(ier2,i)
 
-           ratio_errors=error/data(ier,i)
-           error=one/error
-
-
-        endif ! (in_curbin)
+        ratio_errors=error/data(ier,i)
+        error=one/error
+     endif ! (in_curbin)
 
 
 !    Link observation to appropriate observation bin
@@ -951,11 +944,6 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
         my_head%jac_vertqi3(:)=zero
         my_head%jac_vertqi4(:)=zero
 
-        !my_head%kboti1(:)=zero
-        !my_head%kboti2(:)=zero
-        !my_head%kboti3(:)=zero
-        !my_head%kboti4(:)=zero
-
         my_head%jac_qgmai1(:)=zero
         my_head%jac_qgmai2(:)=zero
         my_head%jac_qgmai3(:)=zero
@@ -976,142 +964,135 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
         my_head%jac_zicei3(:)=zero
         my_head%jac_zicei4(:)=zero       
 
-     do k=1,nsig_read
-        my_head%jac_qi1(k)=ges_q(ix ,iy ,k,jtime)
-        my_head%jac_qi2(k)=ges_q(ix ,iyp,k,jtime)
-        my_head%jac_qi3(k)=ges_q(ixp,iy ,k,jtime)
-        my_head%jac_qi4(k)=ges_q(ixp,iyp,k,jtime)
-        my_head%jac_ti1(k)=ges_tv(ix ,iy ,k,jtime)
-        my_head%jac_ti2(k)=ges_tv(ix ,iyp,k,jtime)
-        my_head%jac_ti3(k)=ges_tv(ixp,iy ,k,jtime)
-        my_head%jac_ti4(k)=ges_tv(ixp,iyp,k,jtime)
-        my_head%jac_sigdoti1(k)=sigmadot(ix ,iy ,k,jtime)
-        my_head%jac_sigdoti2(k)=sigmadot(ix ,iyp,k,jtime)
-        my_head%jac_sigdoti3(k)=sigmadot(ixp,iy ,k,jtime)
-        my_head%jac_sigdoti4(k)=sigmadot(ixp,iyp,k,jtime)
-        my_head%jac_zdxi1(k)=jac_zdx(ix ,iy ,k,jtime)
-        my_head%jac_zdxi2(k)=jac_zdx(ix ,iyp,k,jtime)
-        my_head%jac_zdxi3(k)=jac_zdx(ixp,iy ,k,jtime)
-        my_head%jac_zdxi4(k)=jac_zdx(ixp,iyp,k,jtime)
-        my_head%jac_zdyi1(k)=jac_zdy(ix ,iy ,k,jtime)
-        my_head%jac_zdyi2(k)=jac_zdy(ix ,iyp,k,jtime)
-        my_head%jac_zdyi3(k)=jac_zdy(ixp,iy ,k,jtime)
-        my_head%jac_zdyi4(k)=jac_zdy(ixp,iyp,k,jtime)
-        my_head%jac_udxi1(k)=jac_udx(ix ,iy ,k,jtime)
-        my_head%jac_udxi2(k)=jac_udx(ix ,iyp,k,jtime)
-        my_head%jac_udxi3(k)=jac_udx(ixp,iy ,k,jtime)
-        my_head%jac_udxi4(k)=jac_udx(ixp,iyp,k,jtime)
-        my_head%jac_vdyi1(k)=jac_vdy(ix ,iy ,k,jtime)
-        my_head%jac_vdyi2(k)=jac_vdy(ix ,iyp,k,jtime)
-        my_head%jac_vdyi3(k)=jac_vdy(ixp,iy ,k,jtime)
-        my_head%jac_vdyi4(k)=jac_vdy(ixp,iyp,k,jtime)
-        my_head%jac_vertti1(k)=jac_vertt(ix ,iy ,k,jtime)
-        my_head%jac_vertti2(k)=jac_vertt(ix ,iyp,k,jtime)
-        my_head%jac_vertti3(k)=jac_vertt(ixp,iy ,k,jtime)
-        my_head%jac_vertti4(k)=jac_vertt(ixp,iyp,k,jtime)
-     enddo ! k=1,nsig_read
+        do k=1,nsig_read
+           my_head%jac_qi1(k)=ges_q(ix ,iy ,k,jtime)
+           my_head%jac_qi2(k)=ges_q(ix ,iyp,k,jtime)
+           my_head%jac_qi3(k)=ges_q(ixp,iy ,k,jtime)
+           my_head%jac_qi4(k)=ges_q(ixp,iyp,k,jtime)
+           my_head%jac_ti1(k)=ges_tv(ix ,iy ,k,jtime)
+           my_head%jac_ti2(k)=ges_tv(ix ,iyp,k,jtime)
+           my_head%jac_ti3(k)=ges_tv(ixp,iy ,k,jtime)
+           my_head%jac_ti4(k)=ges_tv(ixp,iyp,k,jtime)
+           my_head%jac_sigdoti1(k)=sigmadot(ix ,iy ,k,jtime)
+           my_head%jac_sigdoti2(k)=sigmadot(ix ,iyp,k,jtime)
+           my_head%jac_sigdoti3(k)=sigmadot(ixp,iy ,k,jtime)
+           my_head%jac_sigdoti4(k)=sigmadot(ixp,iyp,k,jtime)
+           my_head%jac_zdxi1(k)=jac_zdx(ix ,iy ,k,jtime)
+           my_head%jac_zdxi2(k)=jac_zdx(ix ,iyp,k,jtime)
+           my_head%jac_zdxi3(k)=jac_zdx(ixp,iy ,k,jtime)
+           my_head%jac_zdxi4(k)=jac_zdx(ixp,iyp,k,jtime)
+           my_head%jac_zdyi1(k)=jac_zdy(ix ,iy ,k,jtime)
+           my_head%jac_zdyi2(k)=jac_zdy(ix ,iyp,k,jtime)
+           my_head%jac_zdyi3(k)=jac_zdy(ixp,iy ,k,jtime)
+           my_head%jac_zdyi4(k)=jac_zdy(ixp,iyp,k,jtime)
+           my_head%jac_udxi1(k)=jac_udx(ix ,iy ,k,jtime)
+           my_head%jac_udxi2(k)=jac_udx(ix ,iyp,k,jtime)
+           my_head%jac_udxi3(k)=jac_udx(ixp,iy ,k,jtime)
+           my_head%jac_udxi4(k)=jac_udx(ixp,iyp,k,jtime)
+           my_head%jac_vdyi1(k)=jac_vdy(ix ,iy ,k,jtime)
+           my_head%jac_vdyi2(k)=jac_vdy(ix ,iyp,k,jtime)
+           my_head%jac_vdyi3(k)=jac_vdy(ixp,iy ,k,jtime)
+           my_head%jac_vdyi4(k)=jac_vdy(ixp,iyp,k,jtime)
+           my_head%jac_vertti1(k)=jac_vertt(ix ,iy ,k,jtime)
+           my_head%jac_vertti2(k)=jac_vertt(ix ,iyp,k,jtime)
+           my_head%jac_vertti3(k)=jac_vertt(ixp,iy ,k,jtime)
+           my_head%jac_vertti4(k)=jac_vertt(ixp,iyp,k,jtime)
+        enddo ! k=1,nsig_read
 
-     do k=1,nsig_read-1
-        my_head%jac_vertqi1(k)=jac_vertq(ix ,iy ,k,jtime)
-        my_head%jac_vertqi2(k)=jac_vertq(ix ,iyp,k,jtime)
-        my_head%jac_vertqi3(k)=jac_vertq(ixp,iy ,k,jtime)
-        my_head%jac_vertqi4(k)=jac_vertq(ixp,iyp,k,jtime)
-     enddo ! k=1,nsig_read-1
+        do k=1,nsig_read-1
+           my_head%jac_vertqi1(k)=jac_vertq(ix ,iy ,k,jtime)
+           my_head%jac_vertqi2(k)=jac_vertq(ix ,iyp,k,jtime)
+           my_head%jac_vertqi3(k)=jac_vertq(ixp,iy ,k,jtime)
+           my_head%jac_vertqi4(k)=jac_vertq(ixp,iyp,k,jtime)
+        enddo ! k=1,nsig_read-1
 
-     do k=1,nsig_read-1
-        my_head%jac_qgmai1(k)=jac_qgma(ix ,iy ,k,jtime)
-        my_head%jac_qgmai2(k)=jac_qgma(ix ,iyp,k,jtime)
-        my_head%jac_qgmai3(k)=jac_qgma(ixp,iy ,k,jtime)
-        my_head%jac_qgmai4(k)=jac_qgma(ixp,iyp,k,jtime)
-        my_head%jac_qgmbi1(k)=jac_qgmb(ix ,iy ,k,jtime)
-        my_head%jac_qgmbi2(k)=jac_qgmb(ix ,iyp,k,jtime)
-        my_head%jac_qgmbi3(k)=jac_qgmb(ixp,iy ,k,jtime)
-        my_head%jac_qgmbi4(k)=jac_qgmb(ixp,iyp,k,jtime)
-        my_head%jac_icei1(k)=jac_ice(ix ,iy ,k,jtime)
-        my_head%jac_icei2(k)=jac_ice(ix ,iyp,k,jtime)
-        my_head%jac_icei3(k)=jac_ice(ixp,iy ,k,jtime)
-        my_head%jac_icei4(k)=jac_ice(ixp,iyp,k,jtime)
-        my_head%jac_zicei1(k)=jac_zice(ix ,iy ,k,jtime)
-        my_head%jac_zicei2(k)=jac_zice(ix ,iyp,k,jtime)
-        my_head%jac_zicei3(k)=jac_zice(ixp,iy ,k,jtime)
-        my_head%jac_zicei4(k)=jac_zice(ixp,iyp,k,jtime)
-     enddo ! k=1,nsig_read-1
-
-     !do k=1,nsig_read-1
-     !   my_head%kboti1(k)=kbot(k,jtime)
-     !   my_head%kboti2(k)=kbot(k,jtime)
-     !   my_head%kboti3(k)=kbot(k,jtime)
-     !   my_head%kboti4(k)=kbot(k,jtime)
-     !enddo ! k=1,nsig_read-1
+        do k=1,nsig_read-1
+           my_head%jac_qgmai1(k)=jac_qgma(ix ,iy ,k,jtime)
+           my_head%jac_qgmai2(k)=jac_qgma(ix ,iyp,k,jtime)
+           my_head%jac_qgmai3(k)=jac_qgma(ixp,iy ,k,jtime)
+           my_head%jac_qgmai4(k)=jac_qgma(ixp,iyp,k,jtime)
+           my_head%jac_qgmbi1(k)=jac_qgmb(ix ,iy ,k,jtime)
+           my_head%jac_qgmbi2(k)=jac_qgmb(ix ,iyp,k,jtime)
+           my_head%jac_qgmbi3(k)=jac_qgmb(ixp,iy ,k,jtime)
+           my_head%jac_qgmbi4(k)=jac_qgmb(ixp,iyp,k,jtime)
+           my_head%jac_icei1(k)=jac_ice(ix ,iy ,k,jtime)
+           my_head%jac_icei2(k)=jac_ice(ix ,iyp,k,jtime)
+           my_head%jac_icei3(k)=jac_ice(ixp,iy ,k,jtime)
+           my_head%jac_icei4(k)=jac_ice(ixp,iyp,k,jtime)
+           my_head%jac_zicei1(k)=jac_zice(ix ,iy ,k,jtime)
+           my_head%jac_zicei2(k)=jac_zice(ix ,iyp,k,jtime)
+           my_head%jac_zicei3(k)=jac_zice(ixp,iy ,k,jtime)
+           my_head%jac_zicei4(k)=jac_zice(ixp,iyp,k,jtime)
+        enddo ! k=1,nsig_read-1
 
 !-- (2) south quadrant
 
-     call tintrp2a11_indx(dlat-one,dlon,dtime, &
-          hrdifsig,mype,nfldsig,ix,ixp,iy,iyp,jtime,jtimep)
+        call tintrp2a11_indx(dlat-one,dlon,dtime, &
+             hrdifsig,mype,nfldsig,ix,ixp,iy,iyp,jtime,jtimep)
 
 
 !-- save coefficients
 
-     do k=1,nsig_read-1
-        my_head%jac_z0i5=ges_z(ix ,iy ,jtime)
-        my_head%jac_z0i7=ges_z(ixp,iyp ,jtime)
-        my_head%jac_vertti5(k)=jac_vertt(ix ,iy, k,jtime)
-        my_head%jac_vertti7(k)=jac_vertt(ixp ,iy, k,jtime)
-        my_head%jac_vertqi5(k)=jac_vertq(ix ,iy, k,jtime)
-        my_head%jac_vertqi7(k)=jac_vertq(ixp ,iy, k,jtime)
-     enddo ! k=1,nsig_read-1
+        do k=1,nsig_read-1
+           my_head%jac_z0i5=ges_z(ix ,iy ,jtime)
+           my_head%jac_z0i7=ges_z(ixp,iyp ,jtime)
+           my_head%jac_vertti5(k)=jac_vertt(ix ,iy, k,jtime)
+           my_head%jac_vertti7(k)=jac_vertt(ixp ,iy, k,jtime)
+           my_head%jac_vertqi5(k)=jac_vertq(ix ,iy, k,jtime)
+           my_head%jac_vertqi7(k)=jac_vertq(ixp ,iy, k,jtime)
+        enddo ! k=1,nsig_read-1
 
 !----------------------
 !-- (3) north quadrant
 
-     call tintrp2a11_indx(dlat+one,dlon,dtime, &
-          hrdifsig,mype,nfldsig,ix,ixp,iy,iyp,jtime,jtimep)
+        call tintrp2a11_indx(dlat+one,dlon,dtime, &
+             hrdifsig,mype,nfldsig,ix,ixp,iy,iyp,jtime,jtimep)
 
 
 !-- save coefficients
 
-     do k=1,nsig_read-1
-        my_head%jac_z0i6=ges_z(ix ,iyp,jtime)
-        my_head%jac_z0i8=ges_z(ixp,iyp,jtime)
-        my_head%jac_vertti6(k)=jac_vertt(ix ,iyp,k,jtime)
-        my_head%jac_vertti8(k)=jac_vertt(ixp,iyp,k,jtime)
-        my_head%jac_vertqi6(k)=jac_vertq(ix ,iyp,k,jtime)
-        my_head%jac_vertqi8(k)=jac_vertq(ixp,iyp,k,jtime)
-     enddo ! k=1,nsig_read-1
+        do k=1,nsig_read-1
+           my_head%jac_z0i6=ges_z(ix ,iyp,jtime)
+           my_head%jac_z0i8=ges_z(ixp,iyp,jtime)
+           my_head%jac_vertti6(k)=jac_vertt(ix ,iyp,k,jtime)
+           my_head%jac_vertti8(k)=jac_vertt(ixp,iyp,k,jtime)
+           my_head%jac_vertqi6(k)=jac_vertq(ix ,iyp,k,jtime)
+           my_head%jac_vertqi8(k)=jac_vertq(ixp,iyp,k,jtime)
+        enddo ! k=1,nsig_read-1
 
 !----------------------
 !-- (4) west quadrant
 
-     call tintrp2a11_indx(dlat,dlon-one,dtime, &
-          hrdifsig,mype,nfldsig,ix,ixp,iy,iyp,jtime,jtimep)
+        call tintrp2a11_indx(dlat,dlon-one,dtime, &
+             hrdifsig,mype,nfldsig,ix,ixp,iy,iyp,jtime,jtimep)
 
 !-- save coefficients
 
-     do k=1,nsig_read-1
-        my_head%jac_z0i9 =ges_z(ix ,iy ,jtime)
-        my_head%jac_z0i10=ges_z(ix ,iyp,jtime)
-        my_head%jac_vertti9(k)=jac_vertt(ix ,iy,k ,jtime)
-        my_head%jac_vertti10(k)=jac_vertt(ix ,iy,k ,jtime)
-        my_head%jac_vertqi9(k)=jac_vertq(ix ,iy,k ,jtime)
-        my_head%jac_vertqi10(k)=jac_vertq(ix ,iy,k ,jtime)
-     enddo ! k=1,nsig_read-1
+        do k=1,nsig_read-1
+           my_head%jac_z0i9 =ges_z(ix ,iy ,jtime)
+           my_head%jac_z0i10=ges_z(ix ,iyp,jtime)
+           my_head%jac_vertti9(k)=jac_vertt(ix ,iy,k ,jtime)
+           my_head%jac_vertti10(k)=jac_vertt(ix ,iy,k ,jtime)
+           my_head%jac_vertqi9(k)=jac_vertq(ix ,iy,k ,jtime)
+           my_head%jac_vertqi10(k)=jac_vertq(ix ,iy,k ,jtime)
+        enddo ! k=1,nsig_read-1
 
 !----------------------
 !-- (5) east quadrant
 
-     call tintrp2a11_indx(dlat,dlon+one,dtime, &
-          hrdifsig,mype,nfldsig,ix,ixp,iy,iyp,jtime,jtimep)
+        call tintrp2a11_indx(dlat,dlon+one,dtime, &
+             hrdifsig,mype,nfldsig,ix,ixp,iy,iyp,jtime,jtimep)
 
 !-- save coefficients
 
-     do k=1,nsig_read-1
-        my_head%jac_z0i11=ges_z(ixp,iy ,jtime)
-        my_head%jac_z0i12=ges_z(ixp,iyp,jtime)
-        my_head%jac_vertti11(k)=jac_vertt(ixp,iy,k ,jtime)
-        my_head%jac_vertti12(k)=jac_vertt(ixp,iyp,k,jtime)
-        my_head%jac_vertqi11(k)=jac_vertq(ixp,iy,k ,jtime)
-        my_head%jac_vertqi12(k)=jac_vertq(ixp,iyp,k,jtime)
-     enddo ! k=1,nsig_read-1
+        do k=1,nsig_read-1
+           my_head%jac_z0i11=ges_z(ixp,iy ,jtime)
+           my_head%jac_z0i12=ges_z(ixp,iyp,jtime)
+           my_head%jac_vertti11(k)=jac_vertt(ixp,iy,k ,jtime)
+           my_head%jac_vertti12(k)=jac_vertt(ixp,iyp,k,jtime)
+           my_head%jac_vertqi11(k)=jac_vertq(ixp,iy,k ,jtime)
+           my_head%jac_vertqi12(k)=jac_vertq(ixp,iyp,k,jtime)
+        enddo ! k=1,nsig_read-1
 
 !--------------------------------------------------
         my_head%res    = ddiff
@@ -1139,7 +1120,7 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
         endif
 
         my_head => null()
-    endif  !( .not. last .and. muse(i))
+     endif  !( .not. last .and. muse(i))
 
 !    Save selected output to a diagnostics file
      if (light_diagsave .and. luse(i)) then
@@ -1171,10 +1152,9 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
 ! Release memory of local guess arrays
   call final_vars_
 
-
 ! Close file with lightning information for bias correction
 
-     close(unit=200,status='keep')
+  close(unit=200,status='keep')
    
 ! Write information to a diagnostics file
   if(light_diagsave .and. ii>0)then
@@ -1187,29 +1167,29 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
      end if
   end if
 
-      deallocate(flashrate)
-      deallocate(flashrate_h)
-      deallocate(jac_frate)
-      deallocate(kvert)
-      deallocate(wmaxflag)
-      deallocate(sigmadot)
-      deallocate(dx)
-      deallocate(dy)
+  deallocate(flashrate)
+  deallocate(flashrate_h)
+  deallocate(jac_frate)
+  deallocate(kvert)
+  deallocate(wmaxflag)
+  deallocate(sigmadot)
+  deallocate(dx)
+  deallocate(dy)
 
-      deallocate(jac_vertt)
-      deallocate(jac_vertq)
-      deallocate(jac_zdx)
-      deallocate(jac_zdy)
-      deallocate(jac_udx)
-      deallocate(jac_vdy)
+  deallocate(jac_vertt)
+  deallocate(jac_vertq)
+  deallocate(jac_zdx)
+  deallocate(jac_zdy)
+  deallocate(jac_udx)
+  deallocate(jac_vdy)
 
-      deallocate(htot_h )
-      deallocate(jac_qgma)
-      deallocate(jac_qgmb)
-      deallocate(jac_ice)
-      deallocate(jac_zice)
-      deallocate(kbot)
-      
+  deallocate(htot_h )
+  deallocate(jac_qgma)
+  deallocate(jac_qgmb)
+  deallocate(jac_ice)
+  deallocate(jac_zice)
+  deallocate(kbot)
+   
 ! End of routine
 
   return
@@ -1217,7 +1197,7 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
 
 !                .      .    .                                       .
 
- subroutine check_vars_ (proceed)
+subroutine check_vars_ (proceed)
   logical,intent(inout) :: proceed
   integer(i_kind) ivar, istatus
 ! Check to see if required guess fields are available
@@ -1243,41 +1223,41 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
 
      ! Regional
 
-     if (regional) then
+  if (regional) then
 
 !-- WRF-ARW
 
-        if (wrf_mass_regional) then
+     if (wrf_mass_regional) then
 
-            call gsi_metguess_get ('var::qv' , ivar, istatus )
-            proceed=ivar>0
-            call gsi_metguess_get ('var::ql' , ivar, istatus )
-            proceed=ivar>0
-            call gsi_metguess_get ('var::qr', ivar, istatus )
-            proceed=proceed.and.ivar>0
-            call gsi_metguess_get ('var::qi' , ivar, istatus )
-            proceed=ivar>0
-            call gsi_metguess_get ('var::qs', ivar, istatus )
-            proceed=proceed.and.ivar>0
-            call gsi_metguess_get ('var::qg', ivar, istatus )
-            proceed=proceed.and.ivar>0
+         call gsi_metguess_get ('var::qv' , ivar, istatus )
+         proceed=ivar>0
+         call gsi_metguess_get ('var::ql' , ivar, istatus )
+         proceed=ivar>0
+         call gsi_metguess_get ('var::qr', ivar, istatus )
+         proceed=proceed.and.ivar>0
+         call gsi_metguess_get ('var::qi' , ivar, istatus )
+         proceed=ivar>0
+         call gsi_metguess_get ('var::qs', ivar, istatus )
+         proceed=proceed.and.ivar>0
+         call gsi_metguess_get ('var::qg', ivar, istatus )
+         proceed=proceed.and.ivar>0
 
-        endif ! wrf_mass_regional
+     endif ! wrf_mass_regional
 
-     endif !if (regional) then
+  endif !if (regional) then
 
 ! Global
 
-     if (.not. regional) then 
+  if (.not. regional) then 
 
-         call gsi_metguess_get ('var::cw', ivar, istatus )
+     call gsi_metguess_get ('var::cw', ivar, istatus )
               proceed=proceed.and.ivar>0
 
-     endif !  end global block 
+  endif !  end global block 
 
-  end subroutine check_vars_ 
+end subroutine check_vars_ 
   
-  subroutine init_vars_
+subroutine init_vars_
 
   real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
   real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
@@ -1346,348 +1326,348 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
      call stop2(999)
   endif
 !    get ps ...
-     varname='ps'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
-     if (istatus==0) then
-         if(allocated(ges_ps))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-         endif
-         allocate(ges_ps(size(rank2,1),size(rank2,2),nfldsig))
-         ges_ps(:,:,1)=rank2
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
-            ges_ps(:,:,ifld)=rank2
-         enddo
-     else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+  varname='ps'
+  call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
+  if (istatus==0) then
+      if(allocated(ges_ps))then
+         write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
          call stop2(999)
-     endif
+      endif
+      allocate(ges_ps(size(rank2,1),size(rank2,2),nfldsig))
+      ges_ps(:,:,1)=rank2
+      do ifld=2,nfldsig
+         call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
+         ges_ps(:,:,ifld)=rank2
+      enddo
+  else
+      write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+      call stop2(999)
+  endif
 !    get u ...
-     varname='u'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-     if (istatus==0) then
-         if(allocated(ges_u))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-         endif
-         allocate(ges_u(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         ges_u(:,:,:,1)=rank3
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_u(:,:,:,ifld)=rank3
-         enddo
-     else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+  varname='u'
+  call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+  if (istatus==0) then
+      if(allocated(ges_u))then
+         write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
          call stop2(999)
-     endif
+      endif
+      allocate(ges_u(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+      ges_u(:,:,:,1)=rank3
+      do ifld=2,nfldsig
+         call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+         ges_u(:,:,:,ifld)=rank3
+      enddo
+  else
+      write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+      call stop2(999)
+  endif
 !    get v ...
-     varname='v'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-     if (istatus==0) then
-         if(allocated(ges_v))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-         endif
-         allocate(ges_v(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         ges_v(:,:,:,1)=rank3
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_v(:,:,:,ifld)=rank3
-         enddo
-     else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+  varname='v'
+  call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+  if (istatus==0) then
+      if(allocated(ges_v))then
+         write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
          call stop2(999)
-     endif
+      endif
+      allocate(ges_v(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+      ges_v(:,:,:,1)=rank3
+      do ifld=2,nfldsig
+         call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+         ges_v(:,:,:,ifld)=rank3
+      enddo
+  else
+      write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+      call stop2(999)
+  endif
 
 ! Regional, non-hydrostatic with 6-class hydrometeor  microphysics
 
-     if (regional) then
+  if (regional) then
 
 !-- WRF-ARW
 
-        if (wrf_mass_regional) then
-     
-           !    get qv ...
-           varname='qv'
-           call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-           if (istatus==0) then
-             if(allocated(ges_qv))then
-                write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-                call stop2(999)
-             endif
-             allocate(ges_qv(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-             ges_qv(:,:,:,1)=rank3
-             do ifld=2,nfldsig
-                call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-                ges_qv(:,:,:,ifld)=rank3
-             enddo
-           else
-             write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-             call stop2(999)
-           endif
-       
-           !    get ql ...
-           varname='ql'
-           call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-           if (istatus==0) then
-             if(allocated(ges_ql))then
-                write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-                call stop2(999)
-             endif
-             allocate(ges_ql(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-             ges_ql(:,:,:,1)=rank3
-             do ifld=2,nfldsig
-                call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-                ges_ql(:,:,:,ifld)=rank3
-             enddo
-           else
-               write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-               call stop2(999)
-           endif
-
-           !    get qr ...
-           varname='qr'
-           call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-           if (istatus==0) then
-               if(allocated(ges_qr))then
-                  write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-                  call stop2(999)
-               endif
-               allocate(ges_qr(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-               ges_qr(:,:,:,1)=rank3
-               do ifld=2,nfldsig
-                  call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-                  ges_qr(:,:,:,ifld)=rank3
-               enddo
-           else
-               write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-               call stop2(999)
-           endif
-
-          !    get qi ...
-          varname='qi'
-          call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-          if (istatus==0) then
-            if(allocated(ges_qi))then
-               write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-               call stop2(999)
-             endif
-             allocate(ges_qi(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-             ges_qi(:,:,:,1)=rank3
-             do ifld=2,nfldsig
-                call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-                ges_qi(:,:,:,ifld)=rank3
-             enddo
-          else
-             write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-             call stop2(999)
-          endif
-
-          !    get qs ...
-          varname='qs'
-          call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-          if (istatus==0) then
-            if(allocated(ges_qs))then
-               write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-               call stop2(999)
-            endif
-            allocate(ges_qs(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-            ges_qs(:,:,:,1)=rank3
-            do ifld=2,nfldsig
-               call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-               ges_qs(:,:,:,ifld)=rank3
-            enddo
-          else
-            write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-            call stop2(999)
-          endif
-
-          !    get qg ...
-          varname='qg'
-          call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-          if (istatus==0) then
-            if(allocated(ges_qg))then
-               write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-               call stop2(999)
-            endif
-            allocate(ges_qg(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-            ges_qg(:,:,:,1)=rank3
-            do ifld=2,nfldsig
-               call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-               ges_qg(:,:,:,ifld)=rank3
-            enddo
-          else
-            write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-            call stop2(999)
-          endif
-
-        endif ! wrf_mass_regional
-
-     endif !if (regional) then
-
-! Global
-
-     if (.not. regional) then
-
-        !    get cw ...
-        varname='cw'
+     if (wrf_mass_regional) then
+  
+        !    get qv ...
+        varname='qv'
         call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
         if (istatus==0) then
-            if(allocated(ges_cwmr_it))then
+          if(allocated(ges_qv))then
+             write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+             call stop2(999)
+          endif
+          allocate(ges_qv(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+          ges_qv(:,:,:,1)=rank3
+          do ifld=2,nfldsig
+             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+             ges_qv(:,:,:,ifld)=rank3
+          enddo
+        else
+          write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+          call stop2(999)
+        endif
+    
+        !    get ql ...
+        varname='ql'
+        call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+        if (istatus==0) then
+          if(allocated(ges_ql))then
+             write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+             call stop2(999)
+          endif
+          allocate(ges_ql(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+          ges_ql(:,:,:,1)=rank3
+          do ifld=2,nfldsig
+             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+             ges_ql(:,:,:,ifld)=rank3
+          enddo
+        else
+            write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+            call stop2(999)
+        endif
+
+        !    get qr ...
+        varname='qr'
+        call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+        if (istatus==0) then
+            if(allocated(ges_qr))then
                write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
                call stop2(999)
             endif
-            allocate(ges_cwmr_it(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-            ges_cwmr_it(:,:,:,1)=rank3
+            allocate(ges_qr(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+            ges_qr(:,:,:,1)=rank3
             do ifld=2,nfldsig
                call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-               ges_cwmr_it(:,:,:,ifld)=rank3
+               ges_qr(:,:,:,ifld)=rank3
             enddo
         else
             write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
             call stop2(999)
-        endif       
+        endif
 
-     endif !  end global block
+       !    get qi ...
+       varname='qi'
+       call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+       if (istatus==0) then
+         if(allocated(ges_qi))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+          endif
+          allocate(ges_qi(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+          ges_qi(:,:,:,1)=rank3
+          do ifld=2,nfldsig
+             call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+             ges_qi(:,:,:,ifld)=rank3
+          enddo
+       else
+          write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+          call stop2(999)
+       endif
 
-  end subroutine init_vars_
+       !    get qs ...
+       varname='qs'
+       call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+       if (istatus==0) then
+         if(allocated(ges_qs))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_qs(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         ges_qs(:,:,:,1)=rank3
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+            ges_qs(:,:,:,ifld)=rank3
+         enddo
+       else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+       endif
+
+       !    get qg ...
+       varname='qg'
+       call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+       if (istatus==0) then
+         if(allocated(ges_qg))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_qg(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         ges_qg(:,:,:,1)=rank3
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+            ges_qg(:,:,:,ifld)=rank3
+         enddo
+       else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+       endif
+
+     endif ! wrf_mass_regional
+
+  endif !if (regional) then
+
+! Global
+
+  if (.not. regional) then
+
+     !    get cw ...
+     varname='cw'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+     if (istatus==0) then
+         if(allocated(ges_cwmr_it))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_cwmr_it(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+         ges_cwmr_it(:,:,:,1)=rank3
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+            ges_cwmr_it(:,:,:,ifld)=rank3
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif       
+
+  endif !  end global block
+
+end subroutine init_vars_
 
 !                .      .    .                                       .
 
 ! Capability to write diagnostic-related information in NetCDF 
 
-  subroutine init_netcdf_diag_
+subroutine init_netcdf_diag_
   character(len=80) string
   character(len=128) diag_light_file
   integer(i_kind) ncd_fileid,ncd_nobs
   logical append_diag
   logical,parameter::verbose=.false.
 
-     write(string,900) jiter
+  write(string,900) jiter
 900  format('glm_light_',i2.2,'.nc4')
-     diag_light_file=trim(dirname) // trim(string)
+  diag_light_file=trim(dirname) // trim(string)
 
-     inquire(file=diag_light_file, exist=append_diag)
+  inquire(file=diag_light_file, exist=append_diag)
 
-     if (append_diag) then
-        call nc_diag_read_init(diag_light_file,ncd_fileid)
-        ncd_nobs = nc_diag_read_get_dim(ncd_fileid,'nobs')
-        call nc_diag_read_close(diag_light_file)
+  if (append_diag) then
+     call nc_diag_read_init(diag_light_file,ncd_fileid)
+     ncd_nobs = nc_diag_read_get_dim(ncd_fileid,'nobs')
+     call nc_diag_read_close(diag_light_file)
 
-        if (ncd_nobs > 0) then
-           if(verbose) print *,'file ' // trim(diag_light_file) // ' exists.  Appending.  nobs,mype=',ncd_nobs,mype
-        else
-           if(verbose) print *,'file ' // trim(diag_light_file) // ' exists but contains no obs.  Not appending. nobs,mype=',ncd_nobs,mype
-           append_diag = .false. ! if there are no obs in existing file, then do not try to append
-        endif
-     end if
-
-     call nc_diag_init(diag_light_file, append=append_diag)
-
-     if (.not. append_diag) then ! don't write headers on append - the module will break?
-        call nc_diag_header("date_time",ianldate )
+     if (ncd_nobs > 0) then
+        if(verbose) print *,'file ' // trim(diag_light_file) // ' exists.  Appending.  nobs,mype=',ncd_nobs,mype
+     else
+        if(verbose) print *,'file ' // trim(diag_light_file) // ' exists but contains no obs.  Not appending. nobs,mype=',ncd_nobs,mype
+        append_diag = .false. ! if there are no obs in existing file, then do not try to append
      endif
-  end subroutine init_netcdf_diag_
+  end if
+
+  call nc_diag_init(diag_light_file, append=append_diag)
+
+  if (.not. append_diag) then ! don't write headers on append - the module will break?
+     call nc_diag_header("date_time",ianldate )
+  endif
+end subroutine init_netcdf_diag_
 
 !                .      .    .                                       .
 
-  subroutine contents_binary_diag_
-        diagbuf(1,ii)  = data(ier,i)        ! observation error
-        diagbuf(2,ii)  = data(ilate,i)      ! observation latitude (degrees)
-        diagbuf(3,ii)  = data(ilone,i)      ! observation longitude (degrees)
-        diagbuf(4,ii)  = dlight             ! total lightning obs (#hits/km**2*hr)
-        diagbuf(5,ii)  = dtime              ! observation time
-        diagbuf(6,ii)  = data(iqc,i)        ! input glmbufr qc or event mark
-        diagbuf(7,ii)  = data(ier2,i)       ! index of original-original obs error
-        diagbuf(8,ii)  = data(iuse,i)       ! read_glmbufr data usage flag
+subroutine contents_binary_diag_
+     diagbuf(1,ii)  = data(ier,i)        ! observation error
+     diagbuf(2,ii)  = data(ilate,i)      ! observation latitude (degrees)
+     diagbuf(3,ii)  = data(ilone,i)      ! observation longitude (degrees)
+     diagbuf(4,ii)  = dlight             ! total lightning obs (#hits/km**2*hr)
+     diagbuf(5,ii)  = dtime              ! observation time
+     diagbuf(6,ii)  = data(iqc,i)        ! input glmbufr qc or event mark
+     diagbuf(7,ii)  = data(ier2,i)       ! index of original-original obs error
+     diagbuf(8,ii)  = data(iuse,i)       ! read_glmbufr data usage flag
 
-        if(muse(i)) then
-           diagbuf(9,ii) = one              ! analysis usage flag (1=use, -1=not used)
-        else
-           diagbuf(9,ii) = -one
-        endif
+     if(muse(i)) then
+        diagbuf(9,ii) = one              ! analysis usage flag (1=use, -1=not used)
+     else
+        diagbuf(9,ii) = -one
+     endif
 
-        diagbuf(10,ii) = rwgt               ! nonlinear qc relative weight
-        diagbuf(11,ii) = errinv_input       ! glmbufr inverse obs error
-        diagbuf(12,ii) = errinv_adjst       ! read_glmbufr inverse obs error
-        diagbuf(13,ii) = errinv_final       ! final inverse observation error
+     diagbuf(10,ii) = rwgt               ! nonlinear qc relative weight
+     diagbuf(11,ii) = errinv_input       ! glmbufr inverse obs error
+     diagbuf(12,ii) = errinv_adjst       ! read_glmbufr inverse obs error
+     diagbuf(13,ii) = errinv_final       ! final inverse observation error
 
-        diagbuf(14,ii) = ddiff              ! obs-ges used in analysis (#hits/km2*hr)
-        diagbuf(15,ii) = dlight-lightges0   ! obs-ges w/o bias correction (#hits/km2*hr)
+     diagbuf(14,ii) = ddiff              ! obs-ges used in analysis (#hits/km2*hr)
+     diagbuf(15,ii) = dlight-lightges0   ! obs-ges w/o bias correction (#hits/km2*hr)
 
-        ioff=16
-        if (lobsdiagsave) then
-           do jj=1,miter
-              ioff=ioff+1
-              if (obsdiags(i_light_ob_type,ibin)%tail%muse(jj)) then
-                 diagbuf(ioff,ii) = one
-              else
-                 diagbuf(ioff,ii) = -one
-              endif
-           enddo
-           do jj=1,miter+1
-              ioff=ioff+1
-              diagbuf(ioff,ii) = obsdiags(i_light_ob_type,ibin)%tail%nldepart(jj)
-           enddo
-           do jj=1,miter
-              ioff=ioff+1
-              diagbuf(ioff,ii) = obsdiags(i_light_ob_type,ibin)%tail%tldepart(jj)
-           enddo
-           do jj=1,miter
-              ioff=ioff+1
-              diagbuf(ioff,ii) = obsdiags(i_light_ob_type,ibin)%tail%obssen(jj)
-           enddo
-        endif
-  end subroutine contents_binary_diag_
+     ioff=16
+     if (lobsdiagsave) then
+        do jj=1,miter
+           ioff=ioff+1
+           if (obsdiags(i_light_ob_type,ibin)%tail%muse(jj)) then
+              diagbuf(ioff,ii) = one
+           else
+              diagbuf(ioff,ii) = -one
+           endif
+        enddo
+        do jj=1,miter+1
+           ioff=ioff+1
+           diagbuf(ioff,ii) = obsdiags(i_light_ob_type,ibin)%tail%nldepart(jj)
+        enddo
+        do jj=1,miter
+           ioff=ioff+1
+           diagbuf(ioff,ii) = obsdiags(i_light_ob_type,ibin)%tail%tldepart(jj)
+        enddo
+        do jj=1,miter
+           ioff=ioff+1
+           diagbuf(ioff,ii) = obsdiags(i_light_ob_type,ibin)%tail%obssen(jj)
+        enddo
+     endif
+end subroutine contents_binary_diag_
 
 !                .      .    .                                       . 
 
-  subroutine contents_netcdf_diag_
+subroutine contents_netcdf_diag_
 ! Observation class
   character(7),parameter     :: obsclass = '     light'
   real(r_single),parameter::     missing = -9.99e9_r_single
   real(r_kind),dimension(miter) :: obsdiag_iuse
 
-           call nc_diag_metadata("GLM_Detect_Err",                sngl(data(ier,i))       )
-           call nc_diag_metadata("Latitude",                      sngl(data(ilate,i))     )
-           call nc_diag_metadata("Longitude",                     sngl(data(ilone,i))     )
-           call nc_diag_metadata("Lightning_FR_Obs",              sngl(dlight )           )
-           call nc_diag_metadata("Time",                          sngl(dtime)             )
-           call nc_diag_metadata("GLM_QC_Mark",                   sngl(data(iqc,i))       )
-           call nc_diag_metadata("GLM_Orig_Detect_Err",           sngl(data(ier2,i))      )
-           call nc_diag_metadata("GLM_Use_Flag",                  sngl(data(iuse,i))      )
-           if(muse(i)) then
-              call nc_diag_metadata("Analysis_Use_Flag",          1._r_single             )
-           else
-              call nc_diag_metadata("Analysis_Use_Flag",          -1._r_single            )
-           endif
-           call nc_diag_metadata("Nonlinear_QC_Rel_Wgt",          sngl(rwgt)              )
-           call nc_diag_metadata("Errinv_Input",                  sngl(errinv_input)      )
-           call nc_diag_metadata("Errinv_Adjust",                 sngl(errinv_adjst)      )
-           call nc_diag_metadata("Errinv_Final",                  sngl(errinv_final)      )
-           call nc_diag_metadata("Obs_Minus_Forecast_VarBC",      sngl(ddiff)             )
-           call nc_diag_metadata("Obs_Minus_Forecast_NoVarBC",    sngl(dlight-lightges0)  )
-           if (lobsdiagsave) then
-              do jj=1,miter
-                 if (obsdiags(i_light_ob_type,ibin)%tail%muse(jj)) then
-                    obsdiag_iuse(jj) =  one
-                 else
-                    obsdiag_iuse(jj) = -one
-                 endif
-              enddo
+  call nc_diag_metadata("GLM_Detect_Err",                sngl(data(ier,i))       )
+  call nc_diag_metadata("Latitude",                      sngl(data(ilate,i))     )
+  call nc_diag_metadata("Longitude",                     sngl(data(ilone,i))     )
+  call nc_diag_metadata("Lightning_FR_Obs",              sngl(dlight )           )
+  call nc_diag_metadata("Time",                          sngl(dtime)             )
+  call nc_diag_metadata("GLM_QC_Mark",                   sngl(data(iqc,i))       )
+  call nc_diag_metadata("GLM_Orig_Detect_Err",           sngl(data(ier2,i))      )
+  call nc_diag_metadata("GLM_Use_Flag",                  sngl(data(iuse,i))      )
+  if(muse(i)) then
+     call nc_diag_metadata("Analysis_Use_Flag",          1._r_single             )
+  else
+     call nc_diag_metadata("Analysis_Use_Flag",          -1._r_single            )
+  endif
+  call nc_diag_metadata("Nonlinear_QC_Rel_Wgt",          sngl(rwgt)              )
+  call nc_diag_metadata("Errinv_Input",                  sngl(errinv_input)      )
+  call nc_diag_metadata("Errinv_Adjust",                 sngl(errinv_adjst)      )
+  call nc_diag_metadata("Errinv_Final",                  sngl(errinv_final)      )
+  call nc_diag_metadata("Obs_Minus_Forecast_VarBC",      sngl(ddiff)             )
+  call nc_diag_metadata("Obs_Minus_Forecast_NoVarBC",    sngl(dlight-lightges0)  )
+  if (lobsdiagsave) then
+     do jj=1,miter
+        if (obsdiags(i_light_ob_type,ibin)%tail%muse(jj)) then
+           obsdiag_iuse(jj) =  one
+        else
+           obsdiag_iuse(jj) = -one
+        endif
+     enddo
 
-              call nc_diag_data2d("ObsDiagSave_iuse",     obsdiag_iuse                             )
-              call nc_diag_data2d("ObsDiagSave_nldepart", obsdiags(i_light_ob_type,ibin)%tail%nldepart )
-              call nc_diag_data2d("ObsDiagSave_tldepart", obsdiags(i_light_ob_type,ibin)%tail%tldepart )
-              call nc_diag_data2d("ObsDiagSave_obssen",   obsdiags(i_light_ob_type,ibin)%tail%obssen   )         
-           endif
+     call nc_diag_data2d("ObsDiagSave_iuse",     obsdiag_iuse                             )
+     call nc_diag_data2d("ObsDiagSave_nldepart", obsdiags(i_light_ob_type,ibin)%tail%nldepart )
+     call nc_diag_data2d("ObsDiagSave_tldepart", obsdiags(i_light_ob_type,ibin)%tail%tldepart )
+     call nc_diag_data2d("ObsDiagSave_obssen",   obsdiags(i_light_ob_type,ibin)%tail%obssen   )         
+  endif
 
-  end subroutine contents_netcdf_diag_
+end subroutine contents_netcdf_diag_
 
 !                .      .    .                                       .
 
-  subroutine final_vars_
+subroutine final_vars_
     if(allocated(ges_z )) deallocate(ges_z  )
     if(allocated(ges_tv)) deallocate(ges_tv )
     if(allocated(ges_q )) deallocate(ges_q  )
@@ -1701,14 +1681,14 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
     if(allocated(ges_qs)) deallocate(ges_qs )    
     if(allocated(ges_qv)) deallocate(ges_qv )
     if(allocated(ges_cwmr_it)) deallocate(ges_cwmr_it )
-  end subroutine final_vars_
+end subroutine final_vars_
 
 end subroutine setuplight
 
 
 !                .      .    .                                       .
 
-  subroutine lightflashrate(imax,jmax,kmax,kmax_q,ntime,pt_ll,sigma,deltasigma, &
+subroutine lightflashrate(imax,jmax,kmax,kmax_q,ntime,pt_ll,sigma,deltasigma, &
                            dx,dy,ps,z0,cwm,t,q,qi,qs,qg,u,v,jac_frate,jac_vert,jac_vertt,&
                            jac_vertq,jac_zdi,jac_zdy,jac_udx,jac_vdy,jac_qgma,&
                            jac_qgmb,jac_zice,jac_ice,sigmadot,kvert,kbot,wmaxflag,&
@@ -1864,178 +1844,178 @@ end subroutine setuplight
 
 !-- prepare some coefficients
 
-     do i=1,imax
-       do j=1,jmax
-          ddx(i,j)=one/(two*dx(i,j))
-          ddy(i,j)=one/(two*dy(i,j))
-       enddo !! do j=1,jmax
-     enddo !! do i=1,imax
+  do i=1,imax
+    do j=1,jmax
+       ddx(i,j)=one/(two*dx(i,j))
+       ddy(i,j)=one/(two*dy(i,j))
+    enddo !! do j=1,jmax
+  enddo !! do i=1,imax
 
 
-     jac_vert(:)=zero
+  jac_vert(:)=zero
 
-     do k=1,kmax_q
-        jac_vert(k)=(rd/grav)*(deltasigma(k)/sigma(k))
-     enddo  !! do k=1,kmax_q
+  do k=1,kmax_q
+     jac_vert(k)=(rd/grav)*(deltasigma(k)/sigma(k))
+  enddo  !! do k=1,kmax_q
 
-     jac_vertt(:,:,:)=zero
-     jac_vertq(:,:,:)=zero
+  jac_vertt(:,:,:)=zero
+  jac_vertq(:,:,:)=zero
 
-     do i=1,imax
-       do j=1,jmax
-         do k=1,kmax_q
-            jac_vertt(i,j,k)=jac_vert(k)*(one+fv*q(i,j,k))
-            jac_vertq(i,j,k)=jac_vert(k)*(fv*t(i,j,k))
-         enddo  !! do k=1,kmax_q
-       enddo !! do j=1,jmax
-     enddo !! do i=1,imax
+  do i=1,imax
+    do j=1,jmax
+      do k=1,kmax_q
+         jac_vertt(i,j,k)=jac_vert(k)*(one+fv*q(i,j,k))
+         jac_vertq(i,j,k)=jac_vert(k)*(fv*t(i,j,k))
+      enddo  !! do k=1,kmax_q
+    enddo !! do j=1,jmax
+  enddo !! do i=1,imax
 
 ! Virtual Temperature (Tv) is given by: tv=t*(1+0.61*q)
 ! Discretization of the height derivative
 
-     z(:,:,:)=zero
+  z(:,:,:)=zero
 
-     do i=1,imax
-       do j=1,jmax
-          z(i,j,1) = z0(i,j)
-         do k=2,kmax_q
-            z(i,j,k) = z(i,j,k-1)+jac_vert(k)*t(i,j,k)*(one+fv*q(i,j,k))
-         enddo
-       enddo !! do j=1,jmax
-     enddo !! do i=1,imax
+  do i=1,imax
+    do j=1,jmax
+       z(i,j,1) = z0(i,j)
+      do k=2,kmax_q
+         z(i,j,k) = z(i,j,k-1)+jac_vert(k)*t(i,j,k)*(one+fv*q(i,j,k))
+      enddo
+    enddo !! do j=1,jmax
+  enddo !! do i=1,imax
 
-     ismooth=1
-     jsmooth=1
-     istart=1+ismooth
-     iend=imax-ismooth
-     jstart=1+jsmooth
-     jend=jmax-jsmooth
+  ismooth=1
+  jsmooth=1
+  istart=1+ismooth
+  iend=imax-ismooth
+  jstart=1+jsmooth
+  jend=jmax-jsmooth
 
 ! Horizontal advection in the vertical velocity calculation
 
-     horiz_adv(:,:,:)=zero
-     do i=istart,iend
-       do j=jstart,jend
-         do k=2,kmax_q
-            horiz_adv(i,j,k)=(u(i,j,k)*ddx(i,j))*(z(i+1,j,k)-z(i-1,j,k)) &
-                            +(v(i,j,k)*ddy(i,j))*(z(i,j+1,k)-z(i,j-1,k))
-         enddo  !! do k=1,kmax_q
-         horiz_adv(i,j,1) = horiz_adv(i,j,2)
-       enddo  !! do j=jstart,jend
-     enddo  !! do i=istart,iend
-         horiz_adv(1,:,:) = horiz_adv(2,:,:)
-         horiz_adv(imax,:,:) = horiz_adv(imax-1,:,:)
-         horiz_adv(:,1,:) = horiz_adv(:,2,:)
-         horiz_adv(:,jmax,:) = horiz_adv(:,jmax-1,:)
+  horiz_adv(:,:,:)=zero
+  do i=istart,iend
+    do j=jstart,jend
+      do k=2,kmax_q
+         horiz_adv(i,j,k)=(u(i,j,k)*ddx(i,j))*(z(i+1,j,k)-z(i-1,j,k)) &
+                         +(v(i,j,k)*ddy(i,j))*(z(i,j+1,k)-z(i,j-1,k))
+      enddo  !! do k=1,kmax_q
+      horiz_adv(i,j,1) = horiz_adv(i,j,2)
+    enddo  !! do j=jstart,jend
+  enddo  !! do i=istart,iend
+  horiz_adv(1,:,:) = horiz_adv(2,:,:)
+  horiz_adv(imax,:,:) = horiz_adv(imax-1,:,:)
+  horiz_adv(:,1,:) = horiz_adv(:,2,:)
+  horiz_adv(:,jmax,:) = horiz_adv(:,jmax-1,:)
 
 ! Additional coefficients
 
-     jac_zdi(:,:,:)=zero
-     jac_zdy(:,:,:)=zero
-     jac_udx(:,:,:)=zero
-     jac_vdy(:,:,:)=zero
+  jac_zdi(:,:,:)=zero
+  jac_zdy(:,:,:)=zero
+  jac_udx(:,:,:)=zero
+  jac_vdy(:,:,:)=zero
 
-     do i=istart,iend
-       do j=jstart,jend
-         do k=2,kmax_q
-            jac_zdi(i,j,k)=(z(i+1,j,k)-z(i-1,j,k))*ddx(i,j)
-            jac_zdy(i,j,k)=(z(i,j+1,k)-z(i,j-1,k))*ddy(i,j)
-            jac_udx(i,j,k)=u(i,j,k)*ddx(i,j)
-            jac_vdy(i,j,k)=v(i,j,k)*ddy(i,j)
-            jac_zdi(i,j,1)=jac_zdi(i,j,2)
-            jac_zdy(i,j,1)=jac_zdy(i,j,2)
-            jac_udx(i,j,1)=jac_udx(i,j,2)
-            jac_vdy(i,j,1)=jac_vdy(i,j,2)
-         enddo  !! do k=1,kmax_q
-       enddo  !! do j=jstart,jend
-     enddo  !! do i=istart,iend
-            jac_zdi(1,:,:)=jac_zdi(2,:,:)
-            jac_zdi(imax,:,:)=jac_zdi(imax-1,:,:)
-            jac_zdi(:,1,:)=jac_zdi(:,2,:)
-            jac_zdi(:,jmax,:)=jac_zdi(:,jmax-1,:)
-            jac_zdy(1,:,:)=jac_zdy(2,:,:)
-            jac_zdy(imax,:,:)=jac_zdy(imax-1,:,:)
-            jac_zdy(:,1,:)=jac_zdy(:,2,:)
-            jac_zdy(:,jmax,:)=jac_zdy(:,jmax-1,:)
-            jac_udx(1,:,:)=jac_udx(2,:,:)
-            jac_udx(imax,:,:)=jac_udx(imax-1,:,:)
-            jac_udx(:,1,:)=jac_udx(:,2,:)
-            jac_udx(:,jmax,:)=jac_udx(:,jmax-1,:)
-            jac_vdy(1,:,:)=jac_vdy(2,:,:)
-            jac_vdy(imax,:,:)=jac_vdy(imax-1,:,:)
-            jac_vdy(:,1,:)=jac_vdy(:,2,:)
-            jac_vdy(:,jmax,:)=jac_vdy(:,jmax-1,:)
+  do i=istart,iend
+    do j=jstart,jend
+      do k=2,kmax_q
+         jac_zdi(i,j,k)=(z(i+1,j,k)-z(i-1,j,k))*ddx(i,j)
+         jac_zdy(i,j,k)=(z(i,j+1,k)-z(i,j-1,k))*ddy(i,j)
+         jac_udx(i,j,k)=u(i,j,k)*ddx(i,j)
+         jac_vdy(i,j,k)=v(i,j,k)*ddy(i,j)
+         jac_zdi(i,j,1)=jac_zdi(i,j,2)
+         jac_zdy(i,j,1)=jac_zdy(i,j,2)
+         jac_udx(i,j,1)=jac_udx(i,j,2)
+         jac_vdy(i,j,1)=jac_vdy(i,j,2)
+      enddo  !! do k=1,kmax_q
+    enddo  !! do j=jstart,jend
+  enddo  !! do i=istart,iend
+  jac_zdi(1,:,:)=jac_zdi(2,:,:)
+  jac_zdi(imax,:,:)=jac_zdi(imax-1,:,:)
+  jac_zdi(:,1,:)=jac_zdi(:,2,:)
+  jac_zdi(:,jmax,:)=jac_zdi(:,jmax-1,:)
+  jac_zdy(1,:,:)=jac_zdy(2,:,:)
+  jac_zdy(imax,:,:)=jac_zdy(imax-1,:,:)
+  jac_zdy(:,1,:)=jac_zdy(:,2,:)
+  jac_zdy(:,jmax,:)=jac_zdy(:,jmax-1,:)
+  jac_udx(1,:,:)=jac_udx(2,:,:)
+  jac_udx(imax,:,:)=jac_udx(imax-1,:,:)
+  jac_udx(:,1,:)=jac_udx(:,2,:)
+  jac_udx(:,jmax,:)=jac_udx(:,jmax-1,:)
+  jac_vdy(1,:,:)=jac_vdy(2,:,:)
+  jac_vdy(imax,:,:)=jac_vdy(imax-1,:,:)
+  jac_vdy(:,1,:)=jac_vdy(:,2,:)
+  jac_vdy(:,jmax,:)=jac_vdy(:,jmax-1,:)
 
 ! Sigmadot calculation: 2 integrals in Sigmadot
 
-     do j=jstart,jend
-       do i=istart,iend
+  do j=jstart,jend
+    do i=istart,iend
 
 !--  Sum 1 in sigmadot
 
-          sum1=zero
-          do k=1,kmax_q
-             pu1(i,j,k)=((ps(i+1,j)*1000_r_kind)-(pt_ll*100_r_kind))*u(i+1,j,k)
-             pu2(i,j,k)=((ps(i-1,j)*1000_r_kind)-(pt_ll*100_r_kind))*u(i-1,j,k)
-             pv1(i,j,k)=((ps(i,j+1)*1000_r_kind)-(pt_ll*100_r_kind))*v(i,j+1,k)
-             pv2(i,j,k)=((ps(i,j-1)*1000_r_kind)-(pt_ll*100_r_kind))*v(i,j-1,k)
-             sum1=sum1+((((pu1(i,j,k)-pu2(i,j,k))*ddx(i,j))+&
-                          ((pv1(i,j,k)-pv2(i,j,k))*ddy(i,j)))*deltasigma(k))
-          enddo  ! k=1,kmax_q loop
+       sum1=zero
+       do k=1,kmax_q
+          pu1(i,j,k)=((ps(i+1,j)*1000_r_kind)-(pt_ll*100_r_kind))*u(i+1,j,k)
+          pu2(i,j,k)=((ps(i-1,j)*1000_r_kind)-(pt_ll*100_r_kind))*u(i-1,j,k)
+          pv1(i,j,k)=((ps(i,j+1)*1000_r_kind)-(pt_ll*100_r_kind))*v(i,j+1,k)
+          pv2(i,j,k)=((ps(i,j-1)*1000_r_kind)-(pt_ll*100_r_kind))*v(i,j-1,k)
+          sum1=sum1+((((pu1(i,j,k)-pu2(i,j,k))*ddx(i,j))+&
+                       ((pv1(i,j,k)-pv2(i,j,k))*ddy(i,j)))*deltasigma(k))
+       enddo  ! k=1,kmax_q loop
 
 !--  Sum 2 in sigmadot
 
-          sum2=zero
-          do k=kmax_q,1,-1
-             sum2=sum2+((((pu1(i,j,k)-pu2(i,j,k))*ddx(i,j))+&
-                         ((pv1(i,j,k)-pv2(i,j,k))*ddy(i,j)))*deltasigma(k))
-          enddo
+       sum2=zero
+       do k=kmax_q,1,-1
+          sum2=sum2+((((pu1(i,j,k)-pu2(i,j,k))*ddx(i,j))+&
+                      ((pv1(i,j,k)-pv2(i,j,k))*ddy(i,j)))*deltasigma(k))
+       enddo
 
 
 !--  Sigmadot
 
-          do k=1,kmax_q
-             sigmadot(i,j,k)=((sigma(k)/((ps(i,j)*1000_r_kind)-(pt_ll*100_r_kind)))*sum1)-&
-                             ((1/((ps(i,j)*1000_r_kind)-(pt_ll*100_r_kind)))*sum2)
+       do k=1,kmax_q
+          sigmadot(i,j,k)=((sigma(k)/((ps(i,j)*1000_r_kind)-(pt_ll*100_r_kind)))*sum1)-&
+                          ((1/((ps(i,j)*1000_r_kind)-(pt_ll*100_r_kind)))*sum2)
 
-             sigmadot(i,j,1)=sigmadot(i,j,2)
-          enddo
-             sigmadot(1,:,:)=sigmadot(2,:,:)
-             sigmadot(imax,:,:)=sigmadot(imax-1,:,:)
-             sigmadot(:,1,:)=sigmadot(:,2,:)
-             sigmadot(:,jmax,:)=sigmadot(:,jmax-1,:)
+          sigmadot(i,j,1)=sigmadot(i,j,2)
+       enddo
+       sigmadot(1,:,:)=sigmadot(2,:,:)
+       sigmadot(imax,:,:)=sigmadot(imax-1,:,:)
+       sigmadot(:,1,:)=sigmadot(:,2,:)
+       sigmadot(:,jmax,:)=sigmadot(:,jmax-1,:)
 
 
 ! Vertical advection
 
-          do k=1,kmax_q
-             vert_adv(i,j,k)=-sigmadot(i,j,k)*jac_vert(k)*t(i,j,k)*(one+fv*q(i,j,k))
-          enddo   ! k loop   
-             vert_adv(i,j,1)=vert_adv(i,j,2)
+       do k=1,kmax_q
+          vert_adv(i,j,k)=-sigmadot(i,j,k)*jac_vert(k)*t(i,j,k)*(one+fv*q(i,j,k))
+       enddo   ! k loop   
+       vert_adv(i,j,1)=vert_adv(i,j,2)
 
-       enddo  !! do i=istart,iend
-     enddo  ! do j=jstart,jend
-             vert_adv(1,:,:)=vert_adv(2,:,:)
-             vert_adv(imax,:,:)=vert_adv(imax-1,:,:)
-             vert_adv(:,1,:)=vert_adv(:,2,:)
-             vert_adv(:,jmax,:)=vert_adv(:,jmax-1,:)
+    enddo  !! do i=istart,iend
+  enddo  ! do j=jstart,jend
+  vert_adv(1,:,:)=vert_adv(2,:,:)
+  vert_adv(imax,:,:)=vert_adv(imax-1,:,:)
+  vert_adv(:,1,:)=vert_adv(:,2,:)
+  vert_adv(:,jmax,:)=vert_adv(:,jmax-1,:)
 !----
 ! Vertical velocity calculation
 !----
 
-      w(:,:,:)=zero
-      do i=istart,iend
-        do j=jstart,jend
-          do k=1,kmax_q
-             w(i,j,k)=horiz_adv(i,j,k)+vert_adv(i,j,k)
-          enddo
-             w(i,j,1)=w(i,j,2)
-        enddo  !! do i=istart,iend
-      enddo  ! do j=jstart,jend
-            w(1,:,:)=w(2,:,:)
-            w(imax,:,:)=w(imax-1,:,:)
-            w(:,1,:)=w(:,2,:)
-            w(:,jmax,:)=w(:,jmax-1,:)
+  w(:,:,:)=zero
+  do i=istart,iend
+     do j=jstart,jend
+       do k=1,kmax_q
+          w(i,j,k)=horiz_adv(i,j,k)+vert_adv(i,j,k)
+       enddo
+          w(i,j,1)=w(i,j,2)
+     enddo  !! do i=istart,iend
+  enddo  ! do j=jstart,jend
+  w(1,:,:)=w(2,:,:)
+  w(imax,:,:)=w(imax-1,:,:)
+  w(:,1,:)=w(:,2,:)
+  w(:,jmax,:)=w(:,jmax-1,:)
 
 !------------------------------------------------------
 !------------------------------------------------------
@@ -2050,147 +2030,144 @@ end subroutine setuplight
 
 !- Initialize local variables
 
-     h1(:,:)=zero
-     kbot(:,:)=zero
-     totice_colint(:,:)=zero
-     h2(:,:)=zero
-     htot(:,:)=zero
+  h1(:,:)=zero
+  kbot(:,:)=zero
+  totice_colint(:,:)=zero
+  h2(:,:)=zero
+  htot(:,:)=zero
 
-     if (regional) then
+  if (regional) then
 
-         if (wrf_mass_regional) then
+      if (wrf_mass_regional) then
 
 ! Lightning flash rate as a function of vertical graupel flux
 ! within the mixed-phase region (-15 deg C)
 
-           do i=1,imax
-             do j=1,jmax
+        do i=1,imax
+          do j=1,jmax
 
 ! Mixed-phase level
 
-               loop_kbot: do k=1,kmax_q-1
-                             if ( half*(t(i,j,k)+t(i,j,k+1)) .lt. 258.15_r_kind ) then
-                                  kbot(i,j)=k
-               exit loop_kbot
-                             endif
-               enddo loop_kbot
-
-
-               if (kbot(i,j).gt.zero) then
-                   jac_qgma(i,j,kbot(i,j))=two*k1*k3*graupel_density*qg(i,j,kbot(i,j))
-                   jac_qgmb(i,j,kbot(i,j))=k1*k3*graupel_density*(half*(w(i,j,kbot(i,j))+w(i,j,kbot(i,j)+1)))
-                   h1(i,j)=k1*k3*(half*(w(i,j,kbot(i,j))+w(i,j,kbot(i,j)+1)))*qg(i,j,kbot(i,j))*graupel_density
-                   h1(i,j)=abs(h1(i,j))
-               else
-                   h1(i,j)=zero
+ loop_kbot: do k=1,kmax_q-1
+               if ( half*(t(i,j,k)+t(i,j,k+1)) < 258.15_r_kind ) then
+                  kbot(i,j)=k
+                  exit loop_kbot
                endif
+            enddo loop_kbot
 
-             enddo
-           enddo
+            if (kbot(i,j) > zero) then
+                jac_qgma(i,j,kbot(i,j))=two*k1*k3*graupel_density*qg(i,j,kbot(i,j))
+                jac_qgmb(i,j,kbot(i,j))=k1*k3*graupel_density*(half*(w(i,j,kbot(i,j))+w(i,j,kbot(i,j)+1)))
+                h1(i,j)=k1*k3*(half*(w(i,j,kbot(i,j))+w(i,j,kbot(i,j)+1)))*qg(i,j,kbot(i,j))*graupel_density
+                h1(i,j)=abs(h1(i,j))
+            else
+                h1(i,j)=zero
+            endif
+
+          enddo
+        enddo
 
 
 ! Lightning flash rate as a function of total column-integrated
 ! ice-phase hydrometeors
 
-           do i=1,imax
-             do j=1,jmax
-               do k=1,kmax_q-1
-                  jac_ice(i,j,k)=k2*z(i,j,k)
-                  jac_zice(i,j,k)=k2*(qi(i,j,k)+qs(i,j,k)+qg(i,j,k))
-                  totice_colint(i,j) = totice_colint(i,j)+k2*(qi(i,j,k) &
-                                     + qs(i,j,k) + qg(i,j,k))*z(i,j,k)
-               enddo
-             enddo
-           enddo
+        do i=1,imax
+          do j=1,jmax
+            do k=1,kmax_q-1
+               jac_ice(i,j,k)=k2*z(i,j,k)
+               jac_zice(i,j,k)=k2*(qi(i,j,k)+qs(i,j,k)+qg(i,j,k))
+               totice_colint(i,j) = totice_colint(i,j)+k2*(qi(i,j,k) &
+                                  + qs(i,j,k) + qg(i,j,k))*z(i,j,k)
+            enddo
+          enddo
+        enddo
 
-           do i=1,imax
-             do j=1,jmax
-                h2(i,j) = (1-k3)*totice_colint(i,j)
-             enddo
-           enddo
+        do i=1,imax
+          do j=1,jmax
+             h2(i,j) = (1-k3)*totice_colint(i,j)
+          enddo
+        enddo
 
 ! Total lightning flash rate
-           do i=1,imax
-             do j=1,jmax
-                htot(i,j)=h1(i,j)+h2(i,j)
-             enddo
-           enddo
+        do i=1,imax
+          do j=1,jmax
+             htot(i,j)=h1(i,j)+h2(i,j)
+          enddo
+        enddo
 
-         endif ! wrf_mass_regional   
+      endif ! wrf_mass_regional   
 
-     endif !if (regional) then
+  endif !if (regional) then
 
 !------------------------------------------------------
 !- Global
 
-     if (.not. regional) then
+  if (.not. regional) then
 
 !------------------------------------------------------
 ! Cloud mask flag
 !------------------------------------------------------
 
-         ismooth=1
-         jsmooth=1
-         istart=1+ismooth
-         iend=imax-ismooth
-         jstart=1+jsmooth
-         jend=jmax-jsmooth
+      ismooth=1
+      jsmooth=1
+      istart=1+ismooth
+      iend=imax-ismooth
+      jstart=1+jsmooth
+      jend=jmax-jsmooth
 
-         do j=jstart,jend
-           do i=istart,iend
+      do j=jstart,jend
+        do i=istart,iend
+           wmaxflag(i,j)=.false.
+           numcld=zero
+           do ii=max(1,i-idiff),min(imax,i+idiff)
+             do jj=max(1,j-jdiff),min(jmax,j+jdiff)
+               do kk=1,kmax_q
+                  if(cwm(ii,jj,kk) >  cwm_threshold) then
+                     numcld= numcld+1
+                  endif
+               enddo  !! kk
+             enddo  !! jj
+           enddo  !! ii
+           if(numcld >  one) then     !! if clouds exist
+              wmaxflag(i,j)=.true.
+           else
               wmaxflag(i,j)=.false.
-              numcld=zero
-              do ii=max(1,i-idiff),min(imax,i+idiff)
-                do jj=max(1,j-jdiff),min(jmax,j+jdiff)
-                  do kk=1,kmax_q
-                     if(cwm(ii,jj,kk) >  cwm_threshold) then
-                        numcld= numcld+1
-                     endif
-                  enddo  !! kk
-                enddo  !! jj
-              enddo  !! ii
-                    if(numcld >  one) then     !! if clouds exist
-                       wmaxflag(i,j)=.true.
-                    else
-                       wmaxflag(i,j)=.false.
-                    endif
-            enddo  !! do i=istart,iend
-         enddo  !! do j=jstart,jend
+           endif
+         enddo  !! do i=istart,iend
+      enddo  !! do j=jstart,jend
 
-                       wmaxflag(1,:)=wmaxflag(2,:)
-                       wmaxflag(imax,:)=wmaxflag(imax-1,:)
-                       wmaxflag(:,1)=wmaxflag(:,2)
-                       wmaxflag(:,jmax)=wmaxflag(:,jmax-1)
+      wmaxflag(1,:)=wmaxflag(2,:)
+      wmaxflag(imax,:)=wmaxflag(imax-1,:)
+      wmaxflag(:,1)=wmaxflag(:,2)
+      wmaxflag(:,jmax)=wmaxflag(:,jmax-1)
 
-         do i=1,imax
-           do j=1,jmax
-              if (wmaxflag(i,j)) then
-                  wmax=-1.e+10_r_kind
-                  do k=1,kmax_q
-                     if (w(i,j,k) > wmax) then
-                         wmax=w(i,j,k)
-                         kvert(i,j)=k
-                     endif
-                     if (wmax < zero) then
-                         wmax=zero
-                     endif
-                  enddo ! k loop
-                  jac_frate(i,j)=wcnst*wpower*(wmax**(wpower-1))
-                  flashrate(i,j)=wcnst*(wmax**wpower)
-                  flashrate(i,j)=abs(flashrate(i,j))
-               else   ! wmaxflag
-                  jac_frate(i,j)=zero
-                  flashrate(i,j)=zero
-                endif  ! wmaxflag
-           enddo ! j loop
-         enddo ! i loop
+      do i=1,imax
+        do j=1,jmax
+           if (wmaxflag(i,j)) then
+               wmax=-1.e+10_r_kind
+               do k=1,kmax_q
+                  if (w(i,j,k) > wmax) then
+                      wmax=w(i,j,k)
+                      kvert(i,j)=k
+                  endif
+                  if (wmax < zero) then
+                      wmax=zero
+                  endif
+               enddo ! k loop
+               jac_frate(i,j)=wcnst*wpower*(wmax**(wpower-1))
+               flashrate(i,j)=wcnst*(wmax**wpower)
+               flashrate(i,j)=abs(flashrate(i,j))
+            else   ! wmaxflag
+               jac_frate(i,j)=zero
+               flashrate(i,j)=zero
+             endif  ! wmaxflag
+        enddo ! j loop
+      enddo ! i loop
 
 
-     endif ! global block
+  endif ! global block
 
 
 
-     end subroutine lightflashrate
+end subroutine lightflashrate
 
-
-!-----

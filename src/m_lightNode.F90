@@ -225,7 +225,7 @@ function typecast_(aNode) result(ptr_)
   class default
     call die(myname_,'unexpected type, aNode%mytype() =',aNode%mytype())
   end select
-return
+  return
 end function typecast_
 
 function nextcast_(aNode) result(ptr_)
@@ -238,7 +238,7 @@ function nextcast_(aNode) result(ptr_)
   class(obsNode),pointer:: anode_
   anode_ => obsNode_next(aNode)
   ptr_ => typecast_(anode_)
-return
+  return
 end function nextcast_
 
 
@@ -270,7 +270,7 @@ _ENTRY_(myname_)
     call  die(myname_)
   endif
 _EXIT_(myname_)
-return
+  return
 end subroutine obsHeader_read_
 
 subroutine obsHeader_write_(junit,mobs,jwrite,jstat)
@@ -285,7 +285,7 @@ subroutine obsHeader_write_(junit,mobs,jwrite,jstat)
 _ENTRY_(myname_)
   write(junit,iostat=jstat) mobs,jwrite, nsig
 _EXIT_(myname_)
-return
+  return
 end subroutine obsHeader_write_
 
 subroutine obsNode_init_(aNode)
@@ -365,7 +365,7 @@ _ENTRY_(myname_)
            aNode%jac_wmaxflagi3,    aNode%jac_wmaxflagi4,     &
            aNode%ij(12,nsig)                                  )
 _EXIT_(myname_)
-return
+  return
 end subroutine obsNode_init_
 
 subroutine obsNode_clean_(aNode)
@@ -492,7 +492,7 @@ _ENTRY_(myname_)
      if(associated(aNode%jac_wmaxflagi4)) deallocate(aNode%jac_wmaxflagi4)
      if(associated(aNode%ij            )) deallocate(aNode%ij            )    
 _EXIT_(myname_)
-return
+  return
 end subroutine obsNode_clean_
 
 subroutine obsNode_xread_(aNode,iunit,istat,diagLookup,skip)
@@ -513,11 +513,11 @@ _ENTRY_(myname_)
   istat=0
   if(skip_) then
     read(iunit,iostat=istat)
-                if(istat/=0) then
-                  call perr(myname_,'skipping read(%(res,err2,...)), iostat =',istat)
-                  _EXIT_(myname_)
-                  return
-                endif
+    if(istat/=0) then
+       call perr(myname_,'skipping read(%(res,err2,...)), iostat =',istat)
+       _EXIT_(myname_)
+       return
+    endif
 
   else
     read(iunit,iostat=istat)    aNode%res           , &
@@ -624,21 +624,21 @@ _ENTRY_(myname_)
                                 aNode%jac_wmaxflagi4, &
                                 aNode%wij           , & !(4)
                                 aNode%ij                !(12,nsig)
-                if (istat/=0) then
-                  call perr(myname_,'read(%(res,err2,...)), iostat =',istat)
-                  _EXIT_(myname_)
-                  return
-                end if
+    if (istat/=0) then
+       call perr(myname_,'read(%(res,err2,...)), iostat =',istat)
+       _EXIT_(myname_)
+       return
+    end if
 
-     aNode%diags => obsdiagLookup_locate(diagLookup,aNode%idv,aNode%iob,1_i_kind)
-                if(.not.associated(aNode%diags)) then
-                  call perr(myname_,'obsdiagLookup_locate(), %idv =',aNode%idv)
-                  call perr(myname_,'                        %iob =',aNode%iob)
-                  call  die(myname_)
-                endif
+    aNode%diags => obsdiagLookup_locate(diagLookup,aNode%idv,aNode%iob,1_i_kind)
+    if(.not.associated(aNode%diags)) then
+       call perr(myname_,'obsdiagLookup_locate(), %idv =',aNode%idv)
+       call perr(myname_,'                        %iob =',aNode%iob)
+       call  die(myname_)
+    endif
   endif
 _EXIT_(myname_)
-return
+  return
 end subroutine obsNode_xread_
 
 subroutine obsNode_xwrite_(aNode,junit,jstat)
@@ -755,13 +755,13 @@ _ENTRY_(myname_)
                                 aNode%jac_wmaxflagi4, &
                                 aNode%wij           , & !(4)
                                 aNode%ij                !(12,nsig)
-               if (jstat/=0) then
-                  call perr(myname_,'write(%(res,err2,...)), iostat =',jstat)
-                  _EXIT_(myname_)
-                  return
-                end if
+  if (jstat/=0) then
+     call perr(myname_,'write(%(res,err2,...)), iostat =',jstat)
+     _EXIT_(myname_)
+     return
+  end if
 _EXIT_(myname_)
-return
+  return
 end subroutine obsNode_xwrite_
 
 subroutine obsNode_setHop_(aNode)
@@ -782,7 +782,7 @@ _ENTRY_(myname_)
     aNode%ij(:,k) = aNode%ij(:,1)+(k-1)*latlon11
   enddo
 _EXIT_(myname_)
-return
+  return
 end subroutine obsNode_setHop_
 
 function obsNode_isvalid_(aNode) result(isvalid_)
@@ -806,7 +806,7 @@ pure subroutine gettlddp_(aNode,jiter,tlddp,nob)
 
   tlddp = tlddp + aNode%diags%tldepart(jiter)*aNode%diags%tldepart(jiter)
   if(present(nob)) nob=nob+1
-return
+  return
 end subroutine gettlddp_
 
 end module m_lightNode

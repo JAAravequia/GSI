@@ -64,10 +64,10 @@ subroutine sumslightbias(dlight,lightges0,mype,nobs,nobs_loc,sum_loc)
 
 !-- set initial bias parameter values
 
-     eps0=1._r_kind
+  eps0=1._r_kind
 
-     sum_loc=zero
-     nobs_loc=zero
+  sum_loc=zero
+  nobs_loc=zero
       
 !-- save sums here
 !-- for each i there is an associated error(i), lightges0(i), and dlight(i)
@@ -76,24 +76,24 @@ subroutine sumslightbias(dlight,lightges0,mype,nobs,nobs_loc,sum_loc)
 
 ! Open file with lightning output for local sums
 
-    write(post_file,199)mype
+  write(post_file,199)mype
 199 format('sums_lfr_',i3.3,'.bin')
-    open(unit=200,file=trim(post_file),form='formatted',action='read')
+  open(unit=200,file=trim(post_file),form='formatted',action='read')
 
-     do i=1,nobs
+  do i=1,nobs
         
-        read(200,*)nobs_loc,dlight,lightges0
+     read(200,*)nobs_loc,dlight,lightges0
 
-        nobs=nobs_loc
+     nobs=nobs_loc
         
-        if(((eps0*lightges0) > 0_r_kind).and.(lightges0 > 0_r_kind).and.(dlight >0_r_kind)) then
+     if(((eps0*lightges0) > 0_r_kind).and.(lightges0 > 0_r_kind).and.(dlight >0_r_kind)) then
          
-          nobs_loc=nobs_loc+1
-          sum_loc=sum_loc+log(dlight/(eps0*lightges0))
+        nobs_loc=nobs_loc+1
+        sum_loc=sum_loc+log(dlight/(eps0*lightges0))
 
-        endif
+     endif
 
-     enddo
+  enddo
 
 close(unit=200)
 

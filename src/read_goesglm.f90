@@ -156,7 +156,7 @@ subroutine read_goesglm(nread,ndata,nodata,infile,obstype,lunout,twindin,sis)
 !                .      .    .                                       .
 ! Big loop over glmbufr file : READING THE BUFR FILE
      
-     loop_msg: do while (ireadmg(lunin,subset,idate)== 0) 
+  loop_msg: do while (ireadmg(lunin,subset,idate)== 0) 
      nmsg = nmsg+1 
      write(*,'(3a,i10)') 'subset=',subset,' cycle time =',idate 
 
@@ -180,22 +180,21 @@ subroutine read_goesglm(nread,ndata,nodata,infile,obstype,lunout,twindin,sis)
 
 !-- WRF-ARW
 
-            if (wrf_mass_regional) then
+           if (wrf_mass_regional) then
 
+              call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)    ! convert to rotated coordinates
+              if(diagnostic_reg) then
+                 call txy2ll(dlon,dlat,rlon00,rlat00)
+                 ntest=ntest+1
+                 cdist=sin(dlat_earth)*sin(rlat00)+cos(dlat_earth)*cos(rlat00)* &
+                       (sin(dlon_earth)*sin(rlon00)+cos(dlon_earth)*cos(rlon00))
+                 cdist=max(-one,min(cdist,one))
+                 disterr=acos(cdist)*rad2deg
+                 disterrmax=max(disterrmax,disterr)
+              end if
+              if(outside) cycle loop_readsb   ! check to see if outside regional domain
 
-                call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)    ! convert to rotated coordinates
-                if(diagnostic_reg) then
-                   call txy2ll(dlon,dlat,rlon00,rlat00)
-                        ntest=ntest+1
-                        cdist=sin(dlat_earth)*sin(rlat00)+cos(dlat_earth)*cos(rlat00)* &
-                             (sin(dlon_earth)*sin(rlon00)+cos(dlon_earth)*cos(rlon00))
-                        cdist=max(-one,min(cdist,one))
-                        disterr=acos(cdist)*rad2deg
-                        disterrmax=max(disterrmax,disterr)
-                end if
-                if(outside) cycle loop_readsb   ! check to see if outside regional domain
-
-            endif ! wrf_mass_regional
+           endif ! wrf_mass_regional
 
         endif !if (regional) then
 
@@ -233,22 +232,22 @@ subroutine read_goesglm(nread,ndata,nodata,infile,obstype,lunout,twindin,sis)
             time_correction=zero
         end if
 
-              timeobs=real(real(hdr(3),r_single),r_double)
-              t4dv=timeobs + toff
-              zeps=1.0e-8_r_kind
-              if (t4dv<zero  .and.t4dv>      -zeps) t4dv=zero
-              if (t4dv>winlen.and.t4dv<winlen+zeps) t4dv=winlen
-              t4dv=t4dv + time_correction
-              time=timeobs + time_correction
+        timeobs=real(real(hdr(3),r_single),r_double)
+        t4dv=timeobs + toff
+        zeps=1.0e-8_r_kind
+        if (t4dv<zero  .and.t4dv>      -zeps) t4dv=zero
+        if (t4dv>winlen.and.t4dv<winlen+zeps) t4dv=winlen
+        t4dv=t4dv + time_correction
+        time=timeobs + time_correction
 
 
-              if (l4dvar.or.l4densvar) then
-                 if (t4dv<zero.or.t4dv>winlen) cycle loop_readsb ! outside time window
-              else
-                 if((real(abs(time)) > real(twindin)))cycle loop_readsb ! outside time window
-              endif
+        if (l4dvar.or.l4densvar) then
+           if (t4dv<zero.or.t4dv>winlen) cycle loop_readsb ! outside time window
+        else
+           if((real(abs(time)) > real(twindin)))cycle loop_readsb ! outside time window
+        endif
 
-              timex=time
+        timex=time
 
 
 !       Note: An assessment of the GLM detection error is still a work in
@@ -276,39 +275,39 @@ subroutine read_goesglm(nread,ndata,nodata,infile,obstype,lunout,twindin,sis)
 
 !       Data counter
 
-            nread=nread+1
-            icntpnt=icntpnt+1
+        nread=nread+1
+        icntpnt=icntpnt+1
 
-            ndata=ndata+1
-            nodata=nodata+1
-            iout=ndata
-            isort(icntpnt)=iout
+        ndata=ndata+1
+        nodata=nodata+1
+        iout=ndata
+        isort(icntpnt)=iout
 
-            if (ndata > maxobs) then
-               write(6,*)'READ_GOESGLM:  ***WARNING*** ndata > maxobs for ',obstype
-               ndata = maxobs
-            end if
+        if (ndata > maxobs) then
+           write(6,*)'READ_GOESGLM:  ***WARNING*** ndata > maxobs for ',obstype
+           ndata = maxobs
+        end if
 
              
-!           Set usage variable              
-            usage = zero
+!       Set usage variable              
+        usage = zero
 
-            if (iuse_light(nlighttype) <= 0)usage=100._r_kind
-            if (lob) then
-               cdata_all(1,iout) =loe                  ! lightning observation error
-               cdata_all(2,iout) =dlon                 ! grid relative longitude
-               cdata_all(3,iout) =dlat                 ! grid relative latitude
-               cdata_all(4,iout) =iout                 ! lightning obs
-               cdata_all(5,iout) =rstation_id          ! station id
-               cdata_all(6,iout) =t4dv                 ! analysis time
-               cdata_all(7,iout) =nlighttype           ! type
-               cdata_all(8,iout) =lmerr                ! lightning max error
-               cdata_all(9,iout) =lqm                  ! quality mark
-               cdata_all(10,iout)=loe                  ! original lightning obs error loe 
-               cdata_all(11,iout)=usage                ! usage parameter
-               cdata_all(12,iout)=dlon_earth*rad2deg   ! earth relative lon (degrees)
-               cdata_all(13,iout)=dlat_earth*rad2deg   ! earth relative lat (degrees)
-            end if
+        if (iuse_light(nlighttype) <= 0)usage=100._r_kind
+        if (lob) then
+           cdata_all(1,iout) =loe                  ! lightning observation error
+           cdata_all(2,iout) =dlon                 ! grid relative longitude
+           cdata_all(3,iout) =dlat                 ! grid relative latitude
+           cdata_all(4,iout) =iout                 ! lightning obs
+           cdata_all(5,iout) =rstation_id          ! station id
+           cdata_all(6,iout) =t4dv                 ! analysis time
+           cdata_all(7,iout) =nlighttype           ! type
+           cdata_all(8,iout) =lmerr                ! lightning max error
+           cdata_all(9,iout) =lqm                  ! quality mark
+           cdata_all(10,iout)=loe                  ! original lightning obs error loe 
+           cdata_all(11,iout)=usage                ! usage parameter
+           cdata_all(12,iout)=dlon_earth*rad2deg   ! earth relative lon (degrees)
+           cdata_all(13,iout)=dlat_earth*rad2deg   ! earth relative lat (degrees)
+        end if
 
 
 ! end loop on read line BUFR
@@ -317,7 +316,7 @@ subroutine read_goesglm(nread,ndata,nodata,infile,obstype,lunout,twindin,sis)
 
 ! end of BUFR read loop
 
-     enddo loop_msg   !Uncomment if reading messeges in a loop
+  enddo loop_msg   !Uncomment if reading messeges in a loop
 
 !                .      .    .                                       .
 
@@ -361,25 +360,22 @@ subroutine read_goesglm(nread,ndata,nodata,infile,obstype,lunout,twindin,sis)
    
      ndata_flash_h=ndata
   
-      allocate(cdata_flash_h(nreal,ndata_flash_h))
+     allocate(cdata_flash_h(nreal,ndata_flash_h))
 
-      call convert_to_flash_rate   &
+     call convert_to_flash_rate   &
               (nreal,ndata,cdata_out,ndata_flash_h,cdata_flash_h,ndata_flash)
  
-      deallocate(cdata_out)
-      ndata=ndata_flash
-      allocate(cdata_flash(nreal,ndata))
+     deallocate(cdata_out)
+     ndata=ndata_flash
+     allocate(cdata_flash(nreal,ndata))
 
-      do i=1,ndata
+     do i=1,ndata
         do k=1,nreal
            cdata_flash(k,i)=cdata_flash_h(k,i)
         end do
-      end do
+     end do
 
-
-
-      deallocate(cdata_flash_h)
-
+     deallocate(cdata_flash_h)
 
      write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
      write(lunout) cdata_flash
@@ -389,14 +385,13 @@ subroutine read_goesglm(nread,ndata,nodata,infile,obstype,lunout,twindin,sis)
 !!! cdata_flash_h(2,iout),cdata_flash_h(3,iout),cdata_flash_h(4,iout), &
 !!! cdata_flash_h(6,iout)cdata_flash(4,:)
 
-
-    deallocate(cdata_flash)
+     deallocate(cdata_flash)
 
   else  ! ndata=0
 
-    write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
-    write(lunout) cdata_out
-    deallocate(cdata_out)
+     write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
+     write(lunout) cdata_out
+     deallocate(cdata_out)
 
   end if  !!  if(ndata =/ 0) then
 
@@ -507,159 +502,152 @@ subroutine convert_to_flash_rate   &
 !! darea = (r*cos(lat)*dlon)*(dlat)
 
 
-     rearth2=(rearth/r1000)**2  !! squared earth radius in km (need for darea calculation)
+  rearth2=(rearth/r1000)**2  !! squared earth radius in km (need for darea calculation)
 
-     if (ndata_strike>0) then
+  if (ndata_strike>0) then
  
-        darea_sum=0.
-        do iobs=1,ndata_strike
+     darea_sum=0._r_kind
+     do iobs=1,ndata_strike
 
+        ii0=INT(cdata_strike(2,iobs))
+        jj0=INT(cdata_strike(3,iobs))
 
-
-           ii0=INT(cdata_strike(2,iobs))
-           jj0=INT(cdata_strike(3,iobs))
-
-           delta_lon=ges_xlon(jj0,ii0+1,1)-ges_xlon(jj0,ii0,1)
-           delta_lat=ges_xlat(jj0+1,ii0,1)-ges_xlat(jj0,ii0,1)
+        delta_lon=ges_xlon(jj0,ii0+1,1)-ges_xlon(jj0,ii0,1)
+        delta_lat=ges_xlat(jj0+1,ii0,1)-ges_xlat(jj0,ii0,1)
   
-           lat_ref  =half*(cdata_strike(13,iobs)+cdata_strike(13,iobs-1))
+        lat_ref  =half*(cdata_strike(13,iobs)+cdata_strike(13,iobs-1))
 
-           cosine=cos(lat_ref*deg2rad)
+        cosine=cos(lat_ref*deg2rad)
 
-           darea_sum=darea_sum+rearth2*cos(lat_ref*deg2rad)*(abs(delta_lon)*deg2rad)*&
-                     (abs(delta_lat)*deg2rad)
+        darea_sum=darea_sum+rearth2*cos(lat_ref*deg2rad)*(abs(delta_lon)*deg2rad)*&
+                  (abs(delta_lat)*deg2rad)
 
-        end do  !! do iobs=2,ndata_strike
+     end do  !! do iobs=2,ndata_strike
 
-        darea=darea_sum/float(ndata_strike)
-     else   !! ndata_strike=0
-        darea=zero
+     darea=darea_sum/float(ndata_strike)
+  else   !! ndata_strike=0
+     darea=zero
 
-     end if  !! if(ndata_strike>0) then
+  end if  !! if(ndata_strike>0) then
 
-     dtime=float(nhr_assimilation)
+  dtime=float(nhr_assimilation)
 
-     ! Regional
+  ! Regional
 
-     if (regional) then
+  if (regional) then
 
 !-- WRF-ARW
 
-        if (wrf_mass_regional) then
+     if (wrf_mass_regional) then
       
-            nxdim=lon2
-            nydim=lat2
+        nxdim=lon2
+        nydim=lat2
 
-        endif ! wrf_mass_regional
+     endif ! wrf_mass_regional
 
-     endif !if (regional) then
+  endif !if (regional) then
 
 ! Global
 
-     if (.not. regional) then
+  if (.not. regional) then
 
-         nxdim=nlon
-         nydim=nlat
+     nxdim=nlon
+     nydim=nlat
 
-     endif !  end global block 
+  endif !  end global block 
 
 !!! Allocate new var for flash rate here (nxdim,nydim)
 ! asign zero to all points
 ! update the relevant points in the loop
 
-      ngridh=nxdim*nydim
+  ngridh=nxdim*nydim
 
 
-      allocate(gtim_central(1:ngridh))
-      allocate(glon_central(1:ngridh))
-      allocate(glat_central(1:ngridh))
-      allocate( lon_central(1:ngridh))
-      allocate( lat_central(1:ngridh))
-      allocate(      lcount(1:ngridh))
+  allocate(gtim_central(1:ngridh))
+  allocate(glon_central(1:ngridh))
+  allocate(glat_central(1:ngridh))
+  allocate( lon_central(1:ngridh))
+  allocate( lat_central(1:ngridh))
+  allocate(      lcount(1:ngridh))
 
-      lcount(:)=0.
-      glon_central(:)=0.
-      glat_central(:)=0.
-      lon_central(:)=0.
-      lat_central(:)=0.
-      gtim_central(:)=0.
+  lcount(:)=0
+  glon_central(:)=zero
+  glat_central(:)=zero
+  lon_central(:) =zero
+  lat_central(:) =zero
+  gtim_central(:)=zero
      
-      do iobs=1,ndata_strike
+  do iobs=1,ndata_strike
 
-         xx=cdata_strike(2,iobs)   !! glon
-         yy=cdata_strike(3,iobs)   !! glat
-         ii0=INT(cdata_strike(2,iobs))
-         jj0=INT(cdata_strike(3,iobs))
-
-
+     xx=cdata_strike(2,iobs)   !! glon
+     yy=cdata_strike(3,iobs)   !! glat
+     ii0=INT(cdata_strike(2,iobs))
+     jj0=INT(cdata_strike(3,iobs))
 
 !!   find lightning strikes near the (ii0,jj0) point
 
+     xbound=float(ii0)
+     ybound=float(jj0)
 
-        xbound=float(ii0)
-        ybound=float(jj0)
+     xflag=(xx>xbound) .AND. (xx<xbound+1.)
+     yflag=(yy>ybound) .AND. (yy<ybound+1.)
 
-        xflag=(xx>xbound) .AND. (xx<xbound+1.)
-        yflag=(yy>ybound) .AND. (yy<ybound+1.)
+     if (xflag .AND. yflag ) then
 
-        if (xflag .AND. yflag ) then
-
-           index=(jj0-1)*nxdim+ii0
-           lcount(index)=lcount(index)+1
+        index=(jj0-1)*nxdim+ii0
+        lcount(index)=lcount(index)+1
        
-           glon_central(index)=glon_central(index)+cdata_strike(2,iobs)
-           glat_central(index)=glat_central(index)+cdata_strike(3,iobs)
-           lon_central(index)= lon_central(index)+cdata_strike(12,iobs) 
-           lat_central(index)= lat_central(index)+cdata_strike(13,iobs)
+        glon_central(index)=glon_central(index)+cdata_strike(2,iobs)
+        glat_central(index)=glat_central(index)+cdata_strike(3,iobs)
+        lon_central(index)= lon_central(index)+cdata_strike(12,iobs) 
+        lat_central(index)= lat_central(index)+cdata_strike(13,iobs)
 
+        if (lcount(index)<2) then
+            gtim_central(index)=cdata_strike(6,iobs)
+        else
+            call convert_time (gtim_central(index),cdata_strike(6,iobs),lcount(index))
+        end if 
 
-           if (lcount(index)<2) then
-              gtim_central(index)=cdata_strike(6,iobs)
-           else
-              call convert_time (gtim_central(index),cdata_strike(6,iobs),lcount(index))
-          
-           end if 
-
-        end if  !! if(xflag .AND. yflag ) 
+     end if  !! if(xflag .AND. yflag ) 
       
-      enddo  !! do iobs=1,ndata_strike
+  enddo !! do iobs=1,ndata_strike
 
 
 
 !-- find the center of mass
 
-      do index=1,ngridh
-        if (lcount(index)>0) then
-           glon_central(index)=glon_central(index)/float(lcount(index))
-           glat_central(index)=glat_central(index)/float(lcount(index))
-           lon_central(index)= lon_central(index)/float(lcount(index))
-           lat_central(index)= lat_central(index)/float(lcount(index))
-        endif  !! if(lcount(index)>0) then
-      enddo  !! do index=1,ngridh
+  do index=1,ngridh
+     if (lcount(index)>0) then
+        glon_central(index)=glon_central(index)/float(lcount(index))
+        glat_central(index)=glat_central(index)/float(lcount(index))
+        lon_central(index)= lon_central(index)/float(lcount(index))
+        lat_central(index)= lat_central(index)/float(lcount(index))
+     endif  !! if(lcount(index)>0) then
+  enddo  !! do index=1,ngridh
 
 !-- find the original index of the nearest strike (need for transfer of input obs)
 
-      allocate(ind_min(1:ngridh))
-      ind_min(:)=-99
+  allocate(ind_min(1:ngridh))
+  ind_min(:)=-99
 
-      dist_min=1.e10_r_kind
-      do iobs=1,ndata_strike
+  dist_min=1.e10_r_kind
+  do iobs=1,ndata_strike
 
-         xx=cdata_strike(2,iobs)   !! glon
-         yy=cdata_strike(3,iobs)   !! glat
-         ii0=INT(cdata_strike(2,iobs))
-         jj0=INT(cdata_strike(3,iobs))
-         index=(jj0-1)*nxdim+ii0
+     xx=cdata_strike(2,iobs)   !! glon
+     yy=cdata_strike(3,iobs)   !! glat
+     ii0=INT(cdata_strike(2,iobs))
+     jj0=INT(cdata_strike(3,iobs))
+     index=(jj0-1)*nxdim+ii0
 
-         if (lcount(index)>0) then
-            dist2=(xx-glon_central(index))**2+(yy-glat_central(index))**2
-            if (dist2<dist_min) then
-               dist_min=dist2
-               ind_min(index)=iobs
-            end if
-         end if  !! if(lcount(index)>0) then
+     if (lcount(index)>0) then
+        dist2=(xx-glon_central(index))**2+(yy-glat_central(index))**2
+        if (dist2<dist_min) then
+           dist_min=dist2
+           ind_min(index)=iobs
+        end if
+     end if  !! if(lcount(index)>0) then
 
-      enddo  !! do iobs=1,ndata_strike
+  enddo  !! do iobs=1,ndata_strike
 
 !----
 !---- Output
@@ -668,13 +656,13 @@ subroutine convert_to_flash_rate   &
 !-- count the non-zero flash rates and assign a temporary domain cdata_flash_h
 !-- Note: it is assumed that only non-zero flash rates are true observations
 
-      icount=0
-      do index=1,ngridh
-        if (lcount(index)>0) then
-           icount=icount+1
-           cdata_flash_h( 1,icount)=cdata_strike( 1,ind_min(index))
-           cdata_flash_h( 2,icount)=glon_central(index)
-           cdata_flash_h( 3,icount)=glat_central(index)
+  icount=0
+  do index=1,ngridh
+     if (lcount(index)>0) then
+        icount=icount+1
+        cdata_flash_h( 1,icount)=cdata_strike( 1,ind_min(index))
+        cdata_flash_h( 2,icount)=glon_central(index)
+        cdata_flash_h( 3,icount)=glat_central(index)
 
         if (darea>0._r_kind) then
            cdata_flash_h( 4,icount)=float(lcount(index))/(darea*dtime)
@@ -682,34 +670,29 @@ subroutine convert_to_flash_rate   &
            cdata_flash_h( 4,icount)=0. 
         end if
 
-           cdata_flash_h( 5,icount)=cdata_strike( 5,ind_min(index))
-           cdata_flash_h( 6,icount)=gtim_central(index)
-           cdata_flash_h( 7,icount)=cdata_strike( 7,ind_min(index))
-           cdata_flash_h( 8,icount)=cdata_strike( 8,ind_min(index))
-           cdata_flash_h( 9,icount)=cdata_strike( 9,ind_min(index))
-           cdata_flash_h(10,icount)=cdata_strike(10,ind_min(index))
-           cdata_flash_h(11,icount)=usage                 
-           cdata_flash_h(12,icount)=lon_central(index)
-           cdata_flash_h(13,icount)=lat_central(index)
+        cdata_flash_h( 5,icount)=cdata_strike( 5,ind_min(index))
+        cdata_flash_h( 6,icount)=gtim_central(index)
+        cdata_flash_h( 7,icount)=cdata_strike( 7,ind_min(index))
+        cdata_flash_h( 8,icount)=cdata_strike( 8,ind_min(index))
+        cdata_flash_h( 9,icount)=cdata_strike( 9,ind_min(index))
+        cdata_flash_h(10,icount)=cdata_strike(10,ind_min(index))
+        cdata_flash_h(11,icount)=usage                 
+        cdata_flash_h(12,icount)=lon_central(index)
+        cdata_flash_h(13,icount)=lat_central(index)
 
-        endif  !! if(lcount(index)>0) then
+     endif  !! if(lcount(index)>0) then
 
+  enddo  !! do index=1,ngridh
 
-      enddo  !! do index=1,ngridh
+  ndata_flash=icount
 
-
-      ndata_flash=icount
-
-
-
-
-      deallocate(ind_min)
-      deallocate(lcount)
-      deallocate(gtim_central)
-      deallocate(glon_central) 
-      deallocate(glat_central)
-      deallocate(lon_central) 
-      deallocate(lat_central)
+  deallocate(ind_min)
+  deallocate(lcount)
+  deallocate(gtim_central)
+  deallocate(glon_central) 
+  deallocate(glat_central)
+  deallocate(lon_central) 
+  deallocate(lat_central)
 
 !-----
 ! End of routine
@@ -745,40 +728,39 @@ subroutine convert_time (date_old,date_new,nmax)
   real(r_kind) :: xdd,xhh,ydate,xddhh
   real(r_kind) :: xccyy
 
-     allocate(xdate(1:nmax))
+  allocate(xdate(1:nmax))
 
-     xdate(1:nmax-1) = date_old
-     xdate(nmax) = date_new
+  xdate(1:nmax-1) = date_old
+  xdate(nmax) = date_new
     
-     sumidd=0._r_kind
-     do i=1,nmax
-        xccyy = INT(1.0e-8_r_kind*xdate(i))*1.0e8_r_kind 
-        xdate(i) = INT(xdate(i))-xccyy   
+  sumidd=0._r_kind
+  do i=1,nmax
+     xccyy = INT(1.0e-8_r_kind*xdate(i))*1.0e8_r_kind 
+     xdate(i) = INT(xdate(i))-xccyy   
 
-       jdd=INT(0.0001_r_kind*xdate(i))
-       idd=INT(xdate(i))-jdd*10000
+     jdd=INT(0.0001_r_kind*xdate(i))
+     idd=INT(xdate(i))-jdd*10000
 
-       ysumidd=float(idd)
-       dd=float(INT(0.01_r_kind*ysumidd))
-       hh=ysumidd-dd*100._r_kind
+     ysumidd=float(idd)
+     dd=float(INT(0.01_r_kind*ysumidd))
+     hh=ysumidd-dd*100._r_kind
 
-       sumidd=sumidd+dd*24._r_kind+hh
+     sumidd=sumidd+dd*24._r_kind+hh
 
-     enddo  !! do i=1,nmax
+  enddo  !! do i=1,nmax
 
-     xsumidd=float(sumidd)/nmax
-     ysumidd=float(INT(xsumidd))
+  xsumidd=float(sumidd)/nmax
+  ysumidd=float(INT(xsumidd))
 
-     kdd=INT(xsumidd/24._r_kind)
-     xdd=float(kdd)
-     xhh=ysumidd-float(kdd)*24._r_kind
+  kdd=INT(xsumidd/24._r_kind)
+  xdd=float(kdd)
+  xhh=ysumidd-float(kdd)*24._r_kind
 
-     ydate=float(jdd)*10000._r_kind+xdd*100._r_kind+xhh+xccyy
+  ydate=float(jdd)*10000._r_kind+xdd*100._r_kind+xhh+xccyy
       
-     date_old=ydate 
-       
+  date_old=ydate 
       
-     deallocate(xdate)
+  deallocate(xdate)
 
 end subroutine convert_time
 

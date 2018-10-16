@@ -70,11 +70,11 @@ subroutine statslight(mype,i_light,bwork,awork,i_ref,ndata)
 
 ! Generate summary statistics
 
- pflag=.FALSE.
+  pflag=.FALSE.
 
 ! Summary report for lightning flash rate
 
-   if(mype==mype_light) then
+  if(mype==mype_light) then
      if(first)then
         open(iout_light)
      else
@@ -93,9 +93,9 @@ subroutine statslight(mype,i_light,bwork,awork,i_ref,ndata)
      end do
      if(nkeep > 0)then
         mesage='current fit of lightning  data, range in #hits km-2 hr-1$'
-       do j=1,nlighttype
+        do j=1,nlighttype
            pflag(j)=trim(nulight(j)) == 'light'
-       enddo  
+        enddo  
         
         call dtast(bwork,1,pbot,ptop,mesage,jiter,iout_light,pflag)
 

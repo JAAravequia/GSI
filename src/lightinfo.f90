@@ -87,10 +87,10 @@ contains
 
     real(r_kind),parameter:: r1200=1200.0_r_kind
 
- nlighttype = 0       ! number of entries read from lightinfo, 
- deltiml    = r1200   ! model timestep
- diag_light =.true.   ! flag to toggle creation of lightning diagnostic file
- mype_light = 0       ! task to print light info. Note that mype_light 
+    nlighttype = 0       ! number of entries read from lightinfo, 
+    deltiml    = r1200   ! model timestep
+    diag_light =.true.   ! flag to toggle creation of lightning diagnostic file
+    mype_light = 0       ! task to print light info. Note that mype_light 
                       ! MUST equal mype_rad (see radinfo.f90) in order for 
                       ! statspcp.f90 to print out the correct information          
   end subroutine init_light
@@ -141,79 +141,78 @@ contains
 ! Determine number of entries in light information file
 !-----------------------------------------------------------
 
-    open(lunin,file='lightinfo',form='formatted')
+       open(lunin,file='lightinfo',form='formatted')
  
 
-    j=0
-    nlines=0
-    read1:  do
-       read(lunin,100,iostat=istat,end=120) cflg,crecord
-       if (istat /= 0) exit
-       nlines=nlines+1
-       if (cflg == '!') cycle
-       j=j+1
-    end do read1
-    120 continue
+       j=0
+       nlines=0
+       read1:  do
+          read(lunin,100,iostat=istat,end=120) cflg,crecord
+          if (istat /= 0) exit
+          nlines=nlines+1
+          if (cflg == '!') cycle
+          j=j+1
+       end do read1
+   120 continue
 
-    if (istat>0) then
-       write(6,*)'LIGHTINFO_READ:  ***ERROR*** error reading lightinfo, istat=',istat
-       close(lunin)
-       write(6,*)'LIGHTINFO_READ:  stop program execution'
-       call stop2(79)
-    endif
-    nlighttype=j
+       if (istat>0) then
+          write(6,*)'LIGHTINFO_READ:  ***ERROR*** error reading lightinfo, istat=',istat
+          close(lunin)
+          write(6,*)'LIGHTINFO_READ:  stop program execution'
+          call stop2(79)
+       endif
+       nlighttype=j
 
 
     ! Allocate arrays to hold lightning information
-    allocate(nulight(nlighttype),iuse_light(nlighttype),loberr(nlighttype), gross_light(nlighttype), &
+       allocate(nulight(nlighttype),iuse_light(nlighttype),loberr(nlighttype), gross_light(nlighttype), &
              glermin(nlighttype),glermax(nlighttype),b_light(nlighttype),pg_light(nlighttype))
 
 
     ! All mpi tasks open and read lightinfo information file.
     ! Task mype_light writes information to light runtime file
  
-    if (mype==mype_light) then
-       open(iout_light)
-       write(iout_light,110) nlighttype
-110    format('LIGHTINFO_READ:  nlighttype=',1x,i6)
-    endif
-    rewind(lunin)
+       if (mype==mype_light) then
+          open(iout_light)
+          write(iout_light,110) nlighttype
+110       format('LIGHTINFO_READ:  nlighttype=',1x,i6)
+       endif
+       rewind(lunin)
 
 !----------------------------------------------------------
 ! READ INFO FILE
 !----------------------------------------------------------
-    j=0
-    do k=1,nlines
-       read(lunin,100)  cflg,crecord
-       if (cflg == '!') cycle
-       j=j+1
-       read(crecord,*) nulight(j),iuse_light(j),loberr(j),&
-            gross_light(j),glermin(j),glermax(j),b_light(j),pg_light(j)
-       if (mype==mype_light)  write(iout_light,130) nulight(j),&
-           iuse_light(j),loberr(j),gross_light(j),glermax(j),&
-           glermin(j),b_light(j),pg_light(j)
-    end do
+       j=0
+       do k=1,nlines
+          read(lunin,100)  cflg,crecord
+          if (cflg == '!') cycle
+          j=j+1
+          read(crecord,*) nulight(j),iuse_light(j),loberr(j),&
+               gross_light(j),glermin(j),glermax(j),b_light(j),pg_light(j)
+          if (mype==mype_light)  write(iout_light,130) nulight(j),&
+              iuse_light(j),loberr(j),gross_light(j),glermax(j),&
+              glermin(j),b_light(j),pg_light(j)
+       end do
 
-    close(lunin)
-    if (mype==mype_light) close(iout_light)
+       close(lunin)
+       if (mype==mype_light) close(iout_light)
 
-100 format(a1,a120)
-130 format(a20,' iuse_light = ',i2, ' err = ',&
-         f7.3,' gross = ',f7.3,' glermax = ',f7.3,' glermin = ',f7.3, ' b_light = ',f7.3, ' pg_light = ',f7.3)
+100    format(a1,a120)
+130    format(a20,' iuse_light = ',i2, ' err = ',&
+            f7.3,' gross = ',f7.3,' glermax = ',f7.3,' glermin = ',f7.3, ' b_light = ',f7.3, ' pg_light = ',f7.3)
 
         ! Successful read, return to calling routine
     
-     else    
+    else    
         ! File does not exist, write warning message to alert users
-        if (mype==mype_light) then
-           open(iout_light)
-           write(iout_light,*)'LIGHTINFO_READ:  ***WARNING*** FILE ',trim(fname),'does not exist'
-           close(iout_light)
-        endif
-     end if
+       if (mype==mype_light) then
+          open(iout_light)
+          write(iout_light,*)'LIGHTINFO_READ:  ***WARNING*** FILE ',trim(fname),'does not exist'
+          close(iout_light)
+       endif
+    end if
 
-
-     return
+    return
   end subroutine lightinfo_read
 
   

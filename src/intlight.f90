@@ -147,8 +147,8 @@ subroutine intlight_(lighthead,rval,sval)
   real(r_kind),dimension(1:nsig)            :: difft
   real(r_kind),dimension(1:nsig)            :: diffz
 !  wmax variables for lightning flash rate
-   real(r_kind)                             :: wmax   
-   real(r_kind),parameter                   :: k3=0.95_r_kind
+  real(r_kind)                             :: wmax   
+  real(r_kind),parameter                   :: k3=0.95_r_kind
   
 !  Output files
 !  character :: tlh_file*40
@@ -307,7 +307,7 @@ subroutine intlight_(lighthead,rval,sval)
                            +lightptr%jac_udxi4(k)*(z_TL(i12(k))-z_TL(i2(k))) &
                            +lightptr%jac_vdyi4(k)*(z_TL(i8 (k))-z_TL(i3(k)))
 
-       enddo ! do k=2,nsig-1
+     enddo ! do k=2,nsig-1
 
 ! Tangent Linear of the Vertical Advection Section
 
@@ -361,98 +361,97 @@ subroutine intlight_(lighthead,rval,sval)
 ! (-15 deg C)
 
 
-               if (lightptr%kboti1 > zero) then
-                   h1i1_TL=lightptr%jac_qgmai1(lightptr%kboti1)*sqg(i1(lightptr%kboti1))+&
-                           lightptr%jac_qgmbi1(lightptr%kboti1)*&
-                           (half*(w_TL(i1(lightptr%kboti1))+w_TL(i1(lightptr%kboti1+1))))
-                   h1i1_TL=h1i1_TL/(abs(h1i1_TL))
-                else
-                   h1i1_TL=zero
-                endif
+           if (lightptr%kboti1 > zero) then
+               h1i1_TL=lightptr%jac_qgmai1(lightptr%kboti1)*sqg(i1(lightptr%kboti1))+&
+                       lightptr%jac_qgmbi1(lightptr%kboti1)*&
+                       (half*(w_TL(i1(lightptr%kboti1))+w_TL(i1(lightptr%kboti1+1))))
+               h1i1_TL=h1i1_TL/(abs(h1i1_TL))
+           else
+               h1i1_TL=zero
+           endif
 
-                if (lightptr%kboti2 > zero) then
-                    h1i2_TL=lightptr%jac_qgmai2(lightptr%kboti2)*sqg(i2(lightptr%kboti2))+&
-                            lightptr%jac_qgmbi2(lightptr%kboti2)*&
-                            (half*(w_TL(i2(lightptr%kboti2))+w_TL(i2(lightptr%kboti2+1))))
-                    h1i2_TL=h1i2_TL/(abs(h1i2_TL))
-                else
-                    h1i2_TL=zero
-                endif
+           if (lightptr%kboti2 > zero) then
+               h1i2_TL=lightptr%jac_qgmai2(lightptr%kboti2)*sqg(i2(lightptr%kboti2))+&
+                       lightptr%jac_qgmbi2(lightptr%kboti2)*&
+                       (half*(w_TL(i2(lightptr%kboti2))+w_TL(i2(lightptr%kboti2+1))))
+               h1i2_TL=h1i2_TL/(abs(h1i2_TL))
+           else
+               h1i2_TL=zero
+           endif
 
-                if (lightptr%kboti3 > zero) then
-                    h1i3_TL=lightptr%jac_qgmai3(lightptr%kboti3)*sqg(i3(lightptr%kboti3))+&
-                            lightptr%jac_qgmbi3(lightptr%kboti3)*&
-                            (half*(w_TL(i3(lightptr%kboti3))+w_TL(i3(lightptr%kboti3+1))))
-                    h1i3_TL=h1i3_TL/(abs(h1i3_TL))
-                 else
-                    h1i3_TL=zero
-                 endif
+           if (lightptr%kboti3 > zero) then
+               h1i3_TL=lightptr%jac_qgmai3(lightptr%kboti3)*sqg(i3(lightptr%kboti3))+&
+                       lightptr%jac_qgmbi3(lightptr%kboti3)*&
+                       (half*(w_TL(i3(lightptr%kboti3))+w_TL(i3(lightptr%kboti3+1))))
+               h1i3_TL=h1i3_TL/(abs(h1i3_TL))
+           else
+               h1i3_TL=zero
+           endif
         
-                 if (lightptr%kboti4 > zero) then
-                     h1i4_TL=lightptr%jac_qgmai4(lightptr%kboti4)*sqg(i4(lightptr%kboti4))+&
-                             lightptr%jac_qgmbi4(lightptr%kboti4)*&
-                             (half*(w_TL(i4(lightptr%kboti4))+w_TL(i4(lightptr%kboti4+1))))
-                     h1i4_TL=h1i4_TL/(abs(h1i4_TL))
-                 else
-                     h1i4_TL=zero
-                 endif
+           if (lightptr%kboti4 > zero) then
+               h1i4_TL=lightptr%jac_qgmai4(lightptr%kboti4)*sqg(i4(lightptr%kboti4))+&
+                       lightptr%jac_qgmbi4(lightptr%kboti4)*&
+                       (half*(w_TL(i4(lightptr%kboti4))+w_TL(i4(lightptr%kboti4+1))))
+               h1i4_TL=h1i4_TL/(abs(h1i4_TL))
+           else
+               h1i4_TL=zero
+           endif
 
 
 ! Tangent Linear - Lightning flash rate as a function of total column-integrated
 ! ice-phase hydrometeors
 
-                 totice_colinti1_TL=zero
-                 totice_colinti2_TL=zero
-                 totice_colinti3_TL=zero
-                 totice_colinti4_TL=zero
+           totice_colinti1_TL=zero
+           totice_colinti2_TL=zero
+           totice_colinti3_TL=zero
+           totice_colinti4_TL=zero
 
-                 do k=1,nsig-1
+           do k=1,nsig-1
 
-                    totice_colinti1_TL = totice_colinti1_TL+lightptr%jac_icei1(k) * &
-                                        (sqi(i1(k))+sqs(i1(k))+sqg(i1(k)))+&
-                                         lightptr%jac_zicei1(k)*z_TL(i1(k))
+               totice_colinti1_TL = totice_colinti1_TL+lightptr%jac_icei1(k) * &
+                                   (sqi(i1(k))+sqs(i1(k))+sqg(i1(k)))+&
+                                    lightptr%jac_zicei1(k)*z_TL(i1(k))
 
-                    totice_colinti2_TL = totice_colinti2_TL+lightptr%jac_icei2(k) * &
-                                        (sqi(i2(k))+sqs(i2(k))+sqg(i2(k)))+&
-                                         lightptr%jac_zicei2(k)*z_TL(i2(k))
+               totice_colinti2_TL = totice_colinti2_TL+lightptr%jac_icei2(k) * &
+                                   (sqi(i2(k))+sqs(i2(k))+sqg(i2(k)))+&
+                                    lightptr%jac_zicei2(k)*z_TL(i2(k))
 
-                    totice_colinti3_TL = totice_colinti3_TL+lightptr%jac_icei3(k) * &
-                                        (sqi(i3(k))+sqs(i3(k))+sqg(i3(k)))+&
-                                         lightptr%jac_zicei3(k)*z_TL(i3(k))
+               totice_colinti3_TL = totice_colinti3_TL+lightptr%jac_icei3(k) * &
+                                   (sqi(i3(k))+sqs(i3(k))+sqg(i3(k)))+&
+                                    lightptr%jac_zicei3(k)*z_TL(i3(k))
 
-                    totice_colinti4_TL = totice_colinti4_TL+lightptr%jac_icei4(k) * &
-                                        (sqi(i4(k))+sqs(i4(k))+sqg(i4(k)))+&
-                                         lightptr%jac_zicei4(k)*z_TL(i4(k))
+               totice_colinti4_TL = totice_colinti4_TL+lightptr%jac_icei4(k) * &
+                                   (sqi(i4(k))+sqs(i4(k))+sqg(i4(k)))+&
+                                    lightptr%jac_zicei4(k)*z_TL(i4(k))
 
-                 enddo !do k=1,nsig-1
+           enddo !do k=1,nsig-1
 
-                 h2i1_TL=(1-k3)*totice_colinti1_TL
-                 h2i2_TL=(1-k3)*totice_colinti2_TL
-                 h2i3_TL=(1-k3)*totice_colinti3_TL
-                 h2i4_TL=(1-k3)*totice_colinti4_TL
+           h2i1_TL=(1-k3)*totice_colinti1_TL
+           h2i2_TL=(1-k3)*totice_colinti2_TL
+           h2i3_TL=(1-k3)*totice_colinti3_TL
+           h2i4_TL=(1-k3)*totice_colinti4_TL
 
 
-                 htoti1_TL= h1i1_TL+h2i1_TL
-                 htoti2_TL= h1i2_TL+h2i2_TL
-                 htoti3_TL= h1i3_TL+h2i3_TL
-                 htoti4_TL= h1i4_TL+h2i4_TL
+           htoti1_TL= h1i1_TL+h2i1_TL
+           htoti2_TL= h1i2_TL+h2i2_TL
+           htoti3_TL= h1i3_TL+h2i3_TL
+           htoti4_TL= h1i4_TL+h2i4_TL
 
 !  Interpolation of lightning flash rate to observation location (2D field)
 !  Forward Model
 
-                 htot_TL = (w1*htoti1_TL + w2*htoti2_TL + &
-                            w3*htoti3_TL + w4*htoti4_TL)
-                 val = htot_TL
+           htot_TL = (w1*htoti1_TL + w2*htoti2_TL + &
+                      w3*htoti3_TL + w4*htoti4_TL)
+           val = htot_TL
 
+        endif ! wrf_mass_regional      
 
-     endif ! wrf_mass_regional      
-
-   endif !if (regional) then
+     endif !if (regional) then
    
 !                .      .    .                                       .
 ! Global 
    
-   if (.not. regional) then ! Global
+     if (.not. regional) then ! Global
 
 ! Cloud Mask
 
@@ -460,78 +459,78 @@ subroutine intlight_(lighthead,rval,sval)
 ! (wmax_TL) at four points sorounding an observation (+)
 ! and amongst all vertical levels, otherwise set wmax_TL to zero.
 
-       wmaxi1_TL=zero
-       wmaxi2_TL=zero
-       wmaxi3_TL=zero
-       wmaxi4_TL=zero
+        wmaxi1_TL=zero
+        wmaxi2_TL=zero
+        wmaxi3_TL=zero
+        wmaxi4_TL=zero
 
-           if (lightptr%jac_wmaxflagi1) then
-               wmax=-1.e+10_r_kind
-               do k=1,nsig-1
-                  if (w_TL(i1(k)) > wmax) then
-                      lightptr%jac_kverti1=k
-                      wmaxi1_TL=w_TL(i1(lightptr%jac_kverti1))
-                  endif
-                  if (wmaxi1_TL < zero) then
-                      wmaxi1_TL=zero
-                  endif
-               enddo ! k loop
-           endif
+        if (lightptr%jac_wmaxflagi1) then
+            wmax=-1.e+10_r_kind
+            do k=1,nsig-1
+               if (w_TL(i1(k)) > wmax) then
+                   lightptr%jac_kverti1=k
+                   wmaxi1_TL=w_TL(i1(lightptr%jac_kverti1))
+               endif
+               if (wmaxi1_TL < zero) then
+                   wmaxi1_TL=zero
+               endif
+            enddo ! k loop
+        endif
 
-           if (lightptr%jac_wmaxflagi2) then
-               wmax=-1.e+10_r_kind
-               do k=1,nsig-1
-                  if (w_TL(i2(k)) > wmax) then
-                      lightptr%jac_kverti2=k
-                      wmaxi2_TL=w_TL(i2(lightptr%jac_kverti2))
-                  endif
-                  if (wmaxi2_TL <  zero) then
-                      wmaxi2_TL=zero
-                  endif
-               enddo ! k loop
-           endif
+        if (lightptr%jac_wmaxflagi2) then
+           wmax=-1.e+10_r_kind
+           do k=1,nsig-1
+              if (w_TL(i2(k)) > wmax) then
+                 lightptr%jac_kverti2=k
+                 wmaxi2_TL=w_TL(i2(lightptr%jac_kverti2))
+              endif
+              if (wmaxi2_TL <  zero) then
+                 wmaxi2_TL=zero
+              endif
+           enddo ! k loop
+        endif
 
-          if (lightptr%jac_wmaxflagi3) then
-               wmax=-1.e+10_r_kind
-               do k=1,nsig-1
-                  if (w_TL(i3(k)) > wmax) then
-                      lightptr%jac_kverti3=k
-                      wmaxi3_TL=w_TL(i3(lightptr%jac_kverti3))
-                  endif
-                  if (wmaxi3_TL <  zero) then
-                      wmaxi3_TL=zero
-                  endif
-               enddo ! k loop
-           endif
+        if (lightptr%jac_wmaxflagi3) then
+            wmax=-1.e+10_r_kind
+            do k=1,nsig-1
+               if (w_TL(i3(k)) > wmax) then
+                   lightptr%jac_kverti3=k
+                   wmaxi3_TL=w_TL(i3(lightptr%jac_kverti3))
+               endif
+               if (wmaxi3_TL <  zero) then
+                   wmaxi3_TL=zero
+               endif
+            enddo ! k loop
+        endif
 
-           if (lightptr%jac_wmaxflagi4) then
-               wmax=-1.e+10_r_kind
-               do k=1,nsig-1
-                  if (w_TL(i4(k)) > wmax) then
-                      lightptr%jac_kverti4=k
-                      wmaxi4_TL=w_TL(i4(lightptr%jac_kverti4))
-                  endif
-                  if (wmaxi4_TL < zero) then
-                      wmaxi4_TL=zero
-                  endif
-               enddo ! k loop
-           endif
+        if (lightptr%jac_wmaxflagi4) then
+            wmax=-1.e+10_r_kind
+            do k=1,nsig-1
+               if (w_TL(i4(k)) > wmax) then
+                   lightptr%jac_kverti4=k
+                   wmaxi4_TL=w_TL(i4(lightptr%jac_kverti4))
+               endif
+               if (wmaxi4_TL < zero) then
+                   wmaxi4_TL=zero
+               endif
+            enddo ! k loop
+        endif
 
 ! Tangent Linear of Lightning Flash Rate
     
-     flashratei1_TL=lightptr%jac_fratei1*wmaxi1_TL
-     flashratei2_TL=lightptr%jac_fratei1*wmaxi2_TL
-     flashratei3_TL=lightptr%jac_fratei1*wmaxi3_TL
-     flashratei4_TL=lightptr%jac_fratei1*wmaxi4_TL
+        flashratei1_TL=lightptr%jac_fratei1*wmaxi1_TL
+        flashratei2_TL=lightptr%jac_fratei1*wmaxi2_TL
+        flashratei3_TL=lightptr%jac_fratei1*wmaxi3_TL
+        flashratei4_TL=lightptr%jac_fratei1*wmaxi4_TL
 
 !  Interpolation of lightning flash rate to observation location (2D field)
 !  Forward Model
 
-     flashrate_TL = (w1*flashratei1_TL + w2*flashratei2_TL + & 
+        flashrate_TL = (w1*flashratei1_TL + w2*flashratei2_TL + & 
                      w3*flashratei3_TL + w4*flashratei4_TL)
-     val =  flashrate_TL
+        val =  flashrate_TL
 
-   end if ! global block
+     end if ! global block
 
      if (luse_obsdiag)then
          if (lsaveobsens) then
@@ -976,7 +975,7 @@ subroutine intlight_(lighthead,rval,sval)
 
      lightptr => lightNode_nextcast(lightptr)
 
-     enddo
+  enddo  ! do while (associated(lightptr))
     
   
   return
