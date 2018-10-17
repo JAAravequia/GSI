@@ -406,8 +406,8 @@ subroutine tintrp2a11_indx(dx,dy,obstime,gridtime, &
 ! Declare local variables
   integer(i_kind) m1,ix1,iy1
   integer(i_kind) j
-  real(r_kind) delx,delyp,delxp
-  real(r_kind) dely,delt,deltp
+  real(r_kind) delx
+  real(r_kind) dely,delt
 
   m1=mype+1
 

@@ -48,7 +48,6 @@ subroutine sumslightbias(dlight,lightges0,mype,nobs,nobs_loc,sum_loc)
   integer(i_kind)                 :: i,nobs
   integer(i_kind),intent(inout)   :: nobs_loc,mype
   real(r_kind),intent(out)        :: sum_loc
-  integer(i_kind)                 :: sums_lfr
 
 ! File(s) for postprocessing
   character :: post_file*40

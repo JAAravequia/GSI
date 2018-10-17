@@ -70,7 +70,6 @@ subroutine read_goesglm(nread,ndata,nodata,infile,obstype,lunout,twindin,sis)
 !--- Declare local variables
   logical lob
   logical outside
-  logical luse
 
   character(40) hdstr,oestr,qcstr
   character(10) date
@@ -78,10 +77,10 @@ subroutine read_goesglm(nread,ndata,nodata,infile,obstype,lunout,twindin,sis)
   character(1)  sidchr(8)
 
   integer(i_kind) ireadmg,ireadsb,icntpnt,icount
-  integer(i_kind) lunin,i,j
-  integer(i_kind) nc,id,ntread,itx,ii,ncsave
+  integer(i_kind) lunin,i
+  integer(i_kind) itx
   integer(i_kind) ihh,idd,idate,iret,im,iy,k
-  integer(i_kind) kx,nchanl,nreal,ilat,ilon
+  integer(i_kind) nchanl,nreal,ilat,ilon
   integer(i_kind) lqm
   integer(i_kind) iout
   integer(i_kind) ntest,nvtest
@@ -109,7 +108,6 @@ subroutine read_goesglm(nread,ndata,nodata,infile,obstype,lunout,twindin,sis)
 
   real(r_double),dimension(3):: hdr
   real(r_double),dimension(1,1):: qcmark,obserr
-  real(r_double),dimension(1,1):: obsdat
 
 !  equivalence to handle character names
   equivalence(rstation_id,sidchr)
@@ -480,8 +478,7 @@ subroutine convert_to_flash_rate   &
   real(r_kind)      :: xx,yy
   real(r_kind)      :: dist2,dist_min
   integer(i_kind)   :: ii0,jj0
-  integer(i_kind)   :: i,j,k  
-  integer(i_kind)   :: nxgrid,nygrid,ngridh
+  integer(i_kind)   :: ngridh
   integer(i_kind)   :: index
   integer(i_kind)   :: iobs,usage 
   logical           :: xflag,yflag
@@ -489,10 +486,8 @@ subroutine convert_to_flash_rate   &
   real(r_kind)      :: xbound,ybound
   integer(i_kind)   :: nxdim,nydim
   integer(i_kind)   :: icount
-  real(r_kind)      :: flashrate_obs
   
   !  Output files
-  character :: filename*40
 !----
 
 
@@ -718,14 +713,12 @@ subroutine convert_time (date_old,date_new,nmax)
 
   integer(i_kind), intent(in) :: nmax
   real(r_kind), intent(inout) :: date_old
-  real(r_kind) :: date_old0,date_old1
   real(r_kind), intent(in)  :: date_new
   integer(i_kind) :: i,sumidd
   integer(i_kind) :: idd,jdd,kdd
   real(r_kind), allocatable :: xdate(:) 
   real(r_kind) :: dd,hh,ysumidd,xsumidd
-  real(r_kind) :: sumhh
-  real(r_kind) :: xdd,xhh,ydate,xddhh
+  real(r_kind) :: xdd,xhh,ydate
   real(r_kind) :: xccyy
 
   allocate(xdate(1:nmax))

@@ -114,7 +114,7 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
 ! Declare local variables
   real(r_kind):: lightges0,lightges,grsmlt,dlat,dlon,dtime,obserror, &
                  obserrlm,residual,ratio,dlight
-  real(r_kind) error,ddiff, light_diff, newdiff
+  real(r_kind) error,ddiff 
   real(r_kind) ressw2,ress,scale,val2,val,valqc
   real(r_kind) rat_err2,exp_arg,term,ratio_errors,rwgt
   real(r_kind) cg_light,wgross,wnotgross,wgt,arg
@@ -124,16 +124,12 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
   real(r_kind),dimension(nsig_save) ::  sigma !For GFS
   real(r_kind),dimension(nobs)::dup
   real(r_kind),dimension(nele,nobs):: data
-  real(r_kind),dimension(lat2,lon2,nfldsig)::rp2
-  real(r_kind),dimension(nsig+1):: prsitmp
   real(r_single),allocatable,dimension(:,:)::diagbuf
-  real(r_kind) tem4,indexw
 ! Local variables
   integer(i_kind)                   :: it,k,istatus,ier,nsig_read
   real(r_kind), pointer             :: flashrate  (:,:,:)  ! lightning flash rate
   real(r_kind), pointer             :: flashrate_h(:,:,:)  ! lightning flash rate
   real(r_kind), pointer             :: htot_h    (:,:,:)  ! lightning flash rate, non-h, cloud-res
-  real(r_kind), pointer             :: flashrate_tmp(:,:,:)  !
   real(r_kind), pointer             :: dx  (:,:)  ! 
   real(r_kind), pointer             :: dy  (:,:)  ! 
   real(r_kind),allocatable          :: sigmadot(:,:,:,:)  !! vert. vel in sigma
@@ -164,17 +160,14 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
   real(r_kind)                      :: eps0
   real(r_kind),dimension(lat2,lon2,nsig,nfldsig)      :: cwgues
 
-  real(r_kind),allocatable          :: wij(:)
-  integer(i_kind),allocatable       :: ij(:)
   integer(i_kind),dimension(12)     :: light_ij
   integer(i_kind)                   :: ix,ixp,iy,iyp
   integer(i_kind)                   :: jtime,jtimep
 !---
   integer(i_kind) ikxx,nn,ibin,ioff
   integer(i_kind) i,nchar,nreal,j,jj,ii,l,mm1,im,jm,km
-  integer(i_kind) iret,iret_cw,nguess,ilon,ilat,ilight,id,itime,ikx,ilightmax,iqc
-  integer(i_kind) ier2,iuse,ilate,ilone,istnelv,iobshgt,iobsprs
-  integer(i_kind) idomsfc,iskint,iff10,isfcr
+  integer(i_kind) ilon,ilat,ilight,itime,ikx,ilightmax,iqc
+  integer(i_kind) ier2,iuse,ilate,ilone
   integer(i_kind) nobs_loc,nobs_gbl
 
   logical,allocatable               :: wmaxflag(:,:,:)
@@ -192,7 +185,6 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
 	
 ! File(s) for postprocessing
   character :: post_file*40
-  character :: post_file2*40
 
   logical:: in_curbin, in_anybin
   integer(i_kind),dimension(nobs_bins) :: n_alloc
@@ -215,7 +207,6 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
 
 !-- Regional
 
-  real(r_kind),allocatable,dimension(:,:,:,:):: ges_cwmr
   real(r_kind),allocatable,dimension(:,:,:,:):: ges_qv
   real(r_kind),allocatable,dimension(:,:,:,:):: ges_ql
   real(r_kind),allocatable,dimension(:,:,:,:):: ges_qr
@@ -366,7 +357,7 @@ subroutine setuplight(lunin,mype,bwork,awork,nele,nobs,is,light_diagsave)
 ! Forward model for lightning flash rate
 !-- loop over FGAT time
   do it=1,nfldsig
-     call lightflashrate(im,jm,km,km-1,nfldsig,pt_ll,sigma(1:km-1),&
+     call lightflashrate(im,jm,km-1,pt_ll,sigma(1:km-1),&
              deltasigma(1:km-1),dx(:,:),dy(:,:),ges_ps(:,:,it),&
              ges_z(:,:,it),cwgues(:,:,:,it),ges_tv(:,:,:,it),&
              ges_q(:,:,:,it),ges_qi(:,:,:,it),ges_qs(:,:,:,it),&
@@ -1688,7 +1679,7 @@ end subroutine setuplight
 
 !                .      .    .                                       .
 
-subroutine lightflashrate(imax,jmax,kmax,kmax_q,ntime,pt_ll,sigma,deltasigma, &
+subroutine lightflashrate(imax,jmax,kmax_q,pt_ll,sigma,deltasigma, &
                            dx,dy,ps,z0,cwm,t,q,qi,qs,qg,u,v,jac_frate,jac_vert,jac_vertt,&
                            jac_vertq,jac_zdi,jac_zdy,jac_udx,jac_vdy,jac_qgma,&
                            jac_qgmb,jac_zice,jac_ice,sigmadot,kvert,kbot,wmaxflag,&
@@ -1732,9 +1723,8 @@ subroutine lightflashrate(imax,jmax,kmax,kmax_q,ntime,pt_ll,sigma,deltasigma, &
 !------------------------------------------------------
 
 !-- input
-  integer(i_kind)                                           :: imax,jmax,kmax
+  integer(i_kind)                                           :: imax,jmax
   integer(i_kind)                                           :: kmax_q
-  integer(i_kind)                                           :: ntime
   real(r_kind),intent(out),dimension(1:imax,1:jmax)         :: kvert
   real(r_kind),intent(in),dimension(1:imax,1:jmax,1:kmax_q) :: cwm    !! Total cloud condensate
   real(r_kind),intent(in),dimension(1:imax,1:jmax,1:kmax_q) :: t      !! Temperature
@@ -1807,7 +1797,6 @@ subroutine lightflashrate(imax,jmax,kmax,kmax_q,ntime,pt_ll,sigma,deltasigma, &
   integer(i_kind)                                :: ismooth,jsmooth
   integer(i_kind)                                :: istart,iend
   integer(i_kind)                                :: jstart,jend
-  integer(i_kind)                                :: nsig_read
 !------------------------------------------------------
 ! Variable declaration for the cloud mask flag
 !------------------------------------------------------
@@ -1819,7 +1808,6 @@ subroutine lightflashrate(imax,jmax,kmax,kmax_q,ntime,pt_ll,sigma,deltasigma, &
 
   integer(i_kind), parameter :: idiff=2  !for avg and cloud detec. (=0=>no averaging)
   integer(i_kind), parameter :: jdiff=2  !for avg and cloud detec. (=0=>no averaging)
-  integer(i_kind)            :: kdiff    !for avg and cloud detec. (=0=>no averaging)
 
 ! Parameters used in McCaul et al. (2009)
 
@@ -1829,7 +1817,6 @@ subroutine lightflashrate(imax,jmax,kmax,kmax_q,ntime,pt_ll,sigma,deltasigma, &
   real(r_kind),parameter :: graupel_density=300._r_kind     !! (kg/m**3)from McCaul et al. (2009)
 
   real(r_kind), parameter    :: cwm_threshold=1.e-15_r_kind !threshold condition for cloud det.
-  integer(i_kind),dimension(1:imax,1:jmax,1:kmax_q)    :: cldflag
   logical,intent(out),dimension(1:imax,1:jmax)   :: wmaxflag
   integer(i_kind) :: numcld
 !------------------------------------------------------
@@ -1840,7 +1827,6 @@ subroutine lightflashrate(imax,jmax,kmax,kmax_q,ntime,pt_ll,sigma,deltasigma, &
   real(r_kind)           :: wmax
 
 !  Optional output file(s)
-  character :: nonlh_file*40
 
 !-- prepare some coefficients
 

@@ -110,7 +110,7 @@ subroutine intlight_(lighthead,rval,sval)
   type(gsi_bundle),        intent(inout) :: rval
 
 ! Declare local variables
-  integer(i_kind) k,kk,ier,istatus
+  integer(i_kind) k,ier,istatus
   integer(i_kind),dimension(nsig)           :: i1,i2,i3,i4,i5,i6,i7,i8,i9,i10,i11,i12
   real(r_kind) val,w1,w2,w3,w4
   real(r_kind) cg_light,grad,p0,wnotgross,wgross,pg_light
@@ -134,7 +134,6 @@ subroutine intlight_(lighthead,rval,sval)
   real(r_kind)                              :: flashrate_AD,flashratei1_AD,flashratei2_AD
   real(r_kind)                              :: flashratei3_AD,flashratei4_AD
   real(r_kind)                              :: wmaxi1_AD,wmaxi2_AD,wmaxi3_AD,wmaxi4_AD
-  real(r_kind)                              :: wmax_AD  
   real(r_kind)                              :: h1i1_AD,h1i2_AD,h1i3_AD,h1i4_AD
   real(r_kind)                              :: h2i1_AD,h2i2_AD,h2i3_AD,h2i4_AD
   real(r_kind)                              :: totice_colinti1_AD,totice_colinti2_AD

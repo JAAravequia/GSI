@@ -99,7 +99,7 @@ subroutine stplight(lighthead,rval,sval,out,sges,nstep)
   real(r_kind),dimension(max(1,nstep)),intent(in   ) :: sges
 
 ! Declare local variables
-  integer(i_kind) j,k,kk,ier,istatus
+  integer(i_kind) k,kk,ier,istatus
   integer(i_kind),dimension(nsig) :: i1,i2,i3,i4,i5,i6,i7,i8,i9,i10,i11,i12
   real(r_kind) :: val,val2
   real(r_kind) :: w1,w2,w3,w4
@@ -129,8 +129,8 @@ subroutine stplight(lighthead,rval,sval,out,sges,nstep)
   real(r_kind)                     :: rwmaxi1_tl,rwmaxi2_tl,rwmaxi3_tl,rwmaxi4_tl
   real(r_kind)                     :: rflashrate_tl,rflashratei1_tl,rflashratei2_tl
   real(r_kind)                     :: rflashratei3_tl,rflashratei4_tl
-  real(r_kind)                     :: rh1_TL,rh1i1_TL,rh1i2_TL,rh1i3_TL,rh1i4_TL
-  real(r_kind)                     :: rh2_TL,rh2i1_TL,rh2i2_TL,rh2i3_TL,rh2i4_TL
+  real(r_kind)                     :: rh1i1_TL,rh1i2_TL,rh1i3_TL,rh1i4_TL
+  real(r_kind)                     :: rh2i1_TL,rh2i2_TL,rh2i3_TL,rh2i4_TL
   real(r_kind)                     :: rhtot_TL
   real(r_kind)                     :: rhtoti1_TL,rhtoti2_TL,rhtoti3_TL,rhtoti4_TL
   real(r_kind)                     :: rtotice_colinti1_TL,rtotice_colinti2_TL,rtotice_colinti3_TL

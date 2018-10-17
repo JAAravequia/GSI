@@ -51,16 +51,14 @@ subroutine statslight(mype,i_light,bwork,awork,i_ref,ndata)
 ! Declare local variables
   character(100) mesage
 
-  integer(i_kind) k,i,j
-  integer(i_kind) numgross,numfailqc,nread,nkeep
-  integer(i_kind),dimension(nsig)::num
+  integer(i_kind) i,j
+  integer(i_kind) numfailqc,nread,nkeep
 
-  real(r_kind) grsmlt,light,tlight
-  real(r_kind) tlight3,light3
+  real(r_kind) grsmlt,tlight
+  real(r_kind) tlight3
   real(r_kind),dimension(1):: pbotall,ptopall
   
   logical,dimension(nlighttype):: pflag
-  character(7):: ctype
 
 !*********************************************************************************
 ! Initialize constants and variables.
