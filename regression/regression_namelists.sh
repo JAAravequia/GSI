@@ -117,6 +117,7 @@ OBS_INPUT::
    seviribufr     seviri      m08       seviri_m08           0.0     1     0
    seviribufr     seviri      m09       seviri_m09           0.0     1     0
    seviribufr     seviri      m10       seviri_m10           0.0     1     0
+   seviribufr     seviri      m11       seviri_m11           0.0     1     0
    hirs4bufr      hirs4       metop-b   hirs4_metop-b        0.0     1     0
    amsuabufr      amsua       metop-b   amsua_metop-b        0.0     1     0
    mhsbufr        mhs         metop-b   mhs_metop-b          0.0     1     0
@@ -372,6 +373,7 @@ OBS_INPUT::
    seviribufr     seviri      m08       seviri_m08            0.0     7     0
    seviribufr     seviri      m09       seviri_m09            0.0     7     0
    seviribufr     seviri      m10       seviri_m10            0.0     7     0
+   seviribufr     seviri      m11       seviri_m11            0.0     7     0
    oscatbufr      uv          null      uv                    1.0     0     0
    ompsnpbufr     ompsnp      npp       ompsnp_npp            1.0     0     0
    ompstcbufr     ompstc8     npp       ompstc8_npp           1.0     6     0
@@ -518,6 +520,7 @@ OBS_INPUT::
    seviribufr     seviri      m08       seviri_m08          0.0      1     0
    seviribufr     seviri      m09       seviri_m09          0.0      1     0
    seviribufr     seviri      m10       seviri_m10          0.0      1     0
+   seviribufr     seviri      m11       seviri_m11          0.0      1     0
    hirs4bufr      hirs4       metop-b   hirs4_metop-b       0.0      1     0
    amsuabufr      amsua       metop-b   amsua_metop-b       0.0      1     0
    mhsbufr        mhs         metop-b   mhs_metop-b         0.0      1     0
@@ -689,6 +692,7 @@ OBS_INPUT::
    seviribufr     seviri      m08         seviri_m08          0.0     1     0
    seviribufr     seviri      m09         seviri_m09          0.0     1     0
    seviribufr     seviri      m10         seviri_m10          0.0     1     0
+   seviribufr     seviri      m11         seviri_m11          0.0     1     0
    hirs4bufr      hirs4       metop-b     hirs4_metop-b       0.0     1     1
    amsuabufr      amsua       metop-b     amsua_metop-b       0.0     1     1
    mhsbufr        mhs         metop-b     mhs_metop-b         0.0     1     1
@@ -758,7 +762,7 @@ export gsi_namelist="
    miter=2,niter(1)=10,niter(2)=10,
    write_diag(1)=.true.,write_diag(2)=.true.,write_diag(3)=.true.,
    gencode=78,qoption=1,tsensible=.true.
-   factqmin=1.0,factqmax=1.0,factv=0.1,factcldch=0.1,factw10m=1.0,deltim=$DELTIM,
+   factqmin=1.0,factqmax=1.0,factv=0.0,factcldch=0.0,factw10m=1.0,deltim=$DELTIM,
    iguess=-1,
    oneobtest=.false.,retrieval=.false.,
    diag_rad=.false.,diag_pcp=.false.,diag_ozone=.false.,diag_aero=.false.,
@@ -1538,6 +1542,7 @@ OBS_INPUT::
    seviribufr     seviri      m08         seviri_m08            0.0     1     0
    seviribufr     seviri      m09         seviri_m09            0.0     1     0
    seviribufr     seviri      m10         seviri_m10            0.0     1     0
+   seviribufr     seviri      m11         seviri_m11            0.0     1     0
    gsnd1bufr      sndrd1      g15         sndrD1_g15            0.0      1      0
    gsnd1bufr      sndrd2      g15         sndrD2_g15            0.0      1      0
    gsnd1bufr      sndrd3      g15         sndrD3_g15            0.0      1      0
@@ -2090,6 +2095,7 @@ OBS_INPUT::
    seviribufr     seviri      m08       seviri_m08          0.0      1     0
    seviribufr     seviri      m09       seviri_m09          0.0      1     0
    seviribufr     seviri      m10       seviri_m10          0.0      1     0
+   seviribufr     seviri      m11       seviri_m11          0.0      1     0
    hirs4bufr      hirs4       metop-b   hirs4_metop-b       0.0      1     0
    amsuabufr      amsua       metop-b   amsua_metop-b       0.0      2     0
    mhsbufr        mhs         metop-b   mhs_metop-b         0.0      3     0
@@ -2258,6 +2264,7 @@ OBS_INPUT::
    seviribufr     seviri      m08       seviri_m08          0.0      1     0
    seviribufr     seviri      m09       seviri_m09          0.0      1     0
    seviribufr     seviri      m10       seviri_m10          0.0      1     0
+   seviribufr     seviri      m11       seviri_m11          0.0      1     0
    hirs4bufr      hirs4       metop-b   hirs4_metop-b       0.0      1     0
    amsuabufr      amsua       metop-b   amsua_metop-b       0.0      2     0
    mhsbufr        mhs         metop-b   mhs_metop-b         0.0      3     0
@@ -2394,6 +2401,7 @@ export gsi_namelist="
   sattypes_rad(60)= 'cris_npp',      dsis(60)= 'cris_npp',
   sattypes_rad(61)= 'cris-fsr_npp',  dsis(61)= 'cris-fsr_npp',
   sattypes_rad(62)= 'cris-fsr_n20',  dsis(62)= 'cris-fsr_n20',
+  sattypes_rad(63)= 'seviri_m11',    dsis(63)= 'seviri_m11',
   $SATOBS_ENKF
  /
  &ozobs_enkf

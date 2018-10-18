@@ -280,9 +280,9 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
         if(jsatid == 'n17') kidsat = 208
         if(jsatid == 'n18') kidsat = 209
         if(jsatid == 'n19') kidsat = 223
-     if(jsatid == 'npp') kidsat = 224
-     if(jsatid == 'n20') kidsat = 225
-     if(jsatid == 'n21') kidsat = 226
+        if(jsatid == 'npp') kidsat = 224
+        if(jsatid == 'n20') kidsat = 225
+        if(jsatid == 'n21') kidsat = 226
 
         if (ksatid /= kidsat) cycle read_loop1
 
@@ -623,9 +623,10 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
         rsat = hdrozo(1); ksatid=rsat
 
         if(jsatid == 'aura')kidsat = 785
+        if(jsatid == 'npp') kidsat = 224
+        if(jsatid == 'n20')kidsat = 225
+        if(jsatid == 'n21')kidsat = 226
         if (ksatid /= kidsat) cycle read_loop2
-     if(jsatid == 'n20')kidsat = 225
-     if(jsatid == 'n21')kidsat = 226
 
 
         nmrecs=nmrecs+nloz+1

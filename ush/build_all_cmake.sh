@@ -14,7 +14,7 @@ if [[ -d /dcom && -d /hwrf ]] ; then
 elif [[ -d /cm ]] ; then
     . $MODULESHOME/init/sh
     conf_target=nco
-    target=cray
+    target=wcoss_c
 elif [[ -d /ioddev_dell ]]; then
     . $MODULESHOME/init/sh
     conf_target=nco
@@ -47,8 +47,7 @@ rm -rf $dir_root/build
 mkdir -p $dir_root/build
 cd $dir_root/build
 
-if [ $target = wcoss -o $target = cray -o $target = gaea ]; then
-    module purge
+if [ $target = wcoss -o $target = wcoss_c -o $target = gaea ]; then
     module purge
     module load $dir_modules/modulefile.ProdGSI.$target
 elif [ $target = theia -o $target = cheyenne ]; then

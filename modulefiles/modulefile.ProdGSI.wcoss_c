@@ -23,7 +23,6 @@ set COMPILER intel
 
 setenv FFLAGS_COM "-fp-model strict"
 setenv LDFLAGS_COM " "
-setenv OMPFLAG "-openmp"
 
 set WRF_SHARED_VER v1.1.0
 set WRF_SHARED_ROOT /gpfs/hps/nco/ops/nwprod/wrf_shared
@@ -33,6 +32,7 @@ setenv WRF_SHARED_PATH ${WRF_SHARED_ROOT}.${WRF_SHARED_VER}-${COMPILER}
 
 # Loading ncep environment
 module load ncep/1.0
+module load prod_util/1.0.29
 
 # Loading Intel Compiler Suite
 module load PrgEnv-intel/5.2.56
@@ -41,15 +41,21 @@ module load PrgEnv-intel/5.2.56
 module load cray-mpich/7.2.0
 module load craype-haswell
 
-# Loading nceplibs modules
-module use /usrx/local/prod/modulefiles
-module load NetCDF-intel-haswell/3.6.3
+module use /usrx/local/dev/modulefiles
+module load cmake/3.6.2
+module unuse /usrx/local/dev/modulefiles
 
+# Loading netcdf modules
+module use /usrx/local/prod/modulefiles
+module load HDF5-serial-intel-haswell/1.8.9
+module load NetCDF-intel-haswell/4.2
+
+# Loading nceplibs modules
 module use /gpfs/hps/nco/ops/nwprod/lib/modulefiles
 module load bufr-intel/11.0.1
 module load nemsio-intel/2.2.2
 module load sfcio-intel/1.0.0
-module load sigio-intel/2.0.1
+module load sigio-intel/2.1.0
 module load sp-intel/2.0.2
 module load w3nco-intel/2.0.6
 module load w3emc-intel/2.2.0
@@ -57,3 +63,4 @@ module load crtm-intel/2.2.6
 
 module use /usrx/local/nceplibs/modulefiles
 module load bacio-intel/2.0.2
+
