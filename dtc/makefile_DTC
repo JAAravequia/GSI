@@ -1,0 +1,25 @@
+#SHELL=/bin/sh
+#  
+
+include ./configure.gsi
+
+
+SUBDIRS = ../libsrc ../util ../src
+#SUBDIRS = ../lib/libsrc 
+
+all: $(SUBDIRS)
+	@for dir in $(SUBDIRS); do \
+           ( cd $$dir; echo "Making $@ in `pwd`" ; make -f makefile_DTC ); \
+        done
+#	( cd ../src/enkf; ls; echo "Making $@ in `pwd`" ; cp Makefile_WRF Makefile; \
+#	 cp Makefile.dependency_WRF Makefile.dependency; cp Makefile.conf_WRF Makefile.conf; make ) ;
+#	( cd ../src/enkf; ls; echo "Making $@ in `pwd`" ; cp Makefile_GFS Makefile; \
+#	 cp Makefile.dependency_GFS Makefile.dependency; cp Makefile.conf_GFS Makefile.conf; make ) ;
+
+clean: $(SUBDIRS)
+	echo "subdirs is: $(SUBDIRS)"
+	@for dir in $(SUBDIRS); do \
+           ( cd $$dir; echo "Making $@ in `pwd`" ; \
+                make -f makefile_DTC clean) ; \
+        done
+#	( cd ../src/enkf; ls; echo "Making $@ in `pwd`" ; make -f Makefile clean ) ;

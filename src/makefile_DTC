@@ -34,7 +34,7 @@ LIBtransf   = -L$(CORELIB) -ltransf
 LIBhermes   = -L$(CORELIB) -lhermes
 LIBnemsio   = -L$(CORELIB) -lnemsio
 LIBrrcld    = -L$(CORELIB) -lgsdcloud
-LIBprpdcdr  = -L$(CORELIB) -lprepdecode_i4r8
+#LIBprpdcdr  = -L$(CORELIB) -lprepdecode_i4r8
 
 # --------------------------
 # Default Baselibs Libraries
@@ -77,6 +77,7 @@ LIBsys          = $(MYLIBsys)
 
 LIB =   libgsi.a
 
+
 # ------------------------
 # Call compiler and linker
 # ------------------------
@@ -89,7 +90,7 @@ $(LIB):	 $(OBJS)
 	$(AR) -ruv $(LIB) $(OBJS)
 
 $(EXE_FILE):  $(OBJS) $(LIB) gsimain.o
-	$(F90) $(LDFLAGS) $(OMP) -o gsi.exe gsimain.o libgsi.a $(LIBcrtm) $(LIBsfcio) $(LIBsigio) $(LIBnemsio) $(LIBw3) $(LIBbacio) $(LIBbufr) $(LIBsp) $(LIBmpeu) $(LIBwrf) $(LIBnetcdf) $(LIBsys) $(LIBprpdcdr)
+	$(F90) $(LDFLAGS) $(OMP) -o gsi.exe gsimain.o libgsi.a $(LIBcrtm) $(LIBsfcio) $(LIBsigio) $(LIBnemsio) $(LIBw3) $(LIBbacio) $(LIBbufr) $(LIBsp) $(LIBmpeu) $(LIBwrf) $(LIBnetcdf) $(LIBsys) 
 	cp $(EXE_FILE) $(COREBIN)
 
 # DEPENDENCIES : only dependencies after this line (don't remove the word DEPENDENCIES)
