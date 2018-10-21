@@ -1,0 +1,20 @@
+#SHELL=/bin/sh
+#  
+
+include ../dtc/configure.gsi
+
+
+SUBDIRS = libsrc
+
+all: $(SUBDIRS)
+	@for dir in $(SUBDIRS); do \
+           ( cd $$dir; echo "Making $@ in `pwd`" ; make -f makefile_DTC ); \
+        done
+
+clean: $(SUBDIRS)
+	$(RM) *.a
+	echo "subdirs is: $(SUBDIRS)"
+	@for dir in $(SUBDIRS); do \
+           ( cd $$dir; echo "Making $@ in `pwd`" ; \
+                make -f makefile_DTC $@) ; \
+        done

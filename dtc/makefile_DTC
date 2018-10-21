@@ -4,7 +4,7 @@
 include ./configure.gsi
 
 
-SUBDIRS = ../libsrc ../util ../src
+SUBDIRS = ../lib ../src
 #SUBDIRS = ../lib/libsrc 
 
 all: $(SUBDIRS)

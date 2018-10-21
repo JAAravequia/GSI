@@ -1,0 +1,55 @@
+The DTC GSI provides its own copy of the needed NCEPLIBS for compilation.
+
+As of Janaury 26, 2015 the NCEPLIBS are the following
+All libs from 
+/scratch3/NCEPDEV/nwprod/lib/sorc/
+   BACIO  verions is v2.0.1
+   BUFR   version is v10.2.5
+   NEMSIO version is v2.2.1
+   SFCIO  version is v1.1.0
+   SIGIO  version is v2.0.1  
+   SP     version is v2.0.2
+   W3EMC  version is v2.0.5
+   W3NCO  version is v2.0.6
+
+
+As of April 21, 2015 the NCEPLIBS are the following
+
+BACIO      
+The DTC version is V2.0.1 (identical to the EMC version), taken from the tag:
+https://svnemc.ncep.noaa.gov/projects/nceplibs/bacio/tags/bacio_v2.0.1_r22370/src
+
+----
+BUFR 
+The DTC version is V10.2.5 (which is newer that the EMC version V10.2.3), taken from the tag:
+https://svnemc.ncep.noaa.gov/projects/nceplibs/bufr/tags/bufr_v10.2.5
+
+----
+NEMSIO
+The DTC version is V2.2.1 (identical to the EMC version), taken from the tag:
+https://svnemc.ncep.noaa.gov/projects/nceplibs/nemsio/tags/nemsio_v2.2.1_r23459
+
+----
+SFCIO
+The DTC version is V1.1.0 (identical to the EMC version), taken from the tag:
+https://svnemc.ncep.noaa.gov/projects/nceplibs/sfcio/tags/sfcio_v1.1.0
+
+----
+SIGIO 
+The DTC version is V1.1.0b (which is newer than the EMC version V1.0.1), taken from Zeus NWPROD directory sigio_v1.1.0-beta
+NO TAG CREATED
+
+----
+SP
+The DTC version is V2.0.1 (identical to the EMC version), taken from the tag:
+https://svnemc.ncep.noaa.gov/projects/nceplibs/sp/tags/v2.0.1
+
+----
+W3EMC
+The DTC version is V2.0.5 (which is newer than the EMC version V2.0.4), taken from Zeus NWPROD directory w3emc_v2.0.5.
+NO TAG CREATED
+
+----
+W3NCO
+The DTC version is V2.0.6 (identical to the EMC version), taken from the tag:
+https://svnemc.ncep.noaa.gov/projects/nceplibs/w3nco/tags/v2.0.6
