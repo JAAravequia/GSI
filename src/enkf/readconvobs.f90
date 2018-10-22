@@ -410,7 +410,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean_nobc
-  real(r_single), dimension(nobs_max), intent(out)    :: hx, hx_linerr
+  real(r_single), dimension(nobs_max), intent(out)    :: hx
   ! hx_modens holds modulated ensemble in ob space (zero size and not referenced if neigv=0)
   real(r_single), dimension(neigv,nobs_max), intent(out) :: hx_modens
   real(r_single), dimension(nobs_max), intent(out)    :: x_obs
@@ -421,8 +421,9 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
   character(len=20), dimension(nobs_max), intent(out) :: x_type
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
 
-  type(sparr), dimension(nobs_max), intent(out) :: dhx_dx
-  type(intw),  dimension(nobs_max), intent(out) :: interp
+  type(sparr), dimension(:), pointer, intent(out) :: dhx_dx
+  type(intw),  dimension(:), pointer, intent(out) :: interp
+  real(r_single), dimension(:), pointer, intent(out) :: hx_linerr
 
   character(len=10), intent(in) :: id
   integer, intent(in)           :: nanal
@@ -445,7 +446,7 @@ end subroutine get_convobs_data
 ! read conventional observations from netcdf file
 subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             hx_mean, hx_mean_nobc, hx, hx_modens, hx_linerr,  &
-                            interp, dhx_dx, x_obs, x_err,       &
+                            interp_arr, dhx_dx_arr, x_obs, x_err,       &
                             x_lon, x_lat, x_press, x_time, x_code,         &
                             x_errorig, x_type, x_used, id, nanal)
   use sparsearr, only: sparr, delete, assignment(=)
@@ -468,7 +469,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean_nobc
-  real(r_single), dimension(nobs_max), intent(out)    :: hx, hx_linerr
+  real(r_single), dimension(nobs_max), intent(out)    :: hx
   ! hx_modens holds modulated ensemble in ob space (zero size and not referenced if neigv=0)
   real(r_single), dimension(neigv,nobs_max), intent(out) :: hx_modens
   real(r_single), dimension(nobs_max), intent(out)    :: x_obs
@@ -479,10 +480,14 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
   character(len=20), dimension(nobs_max), intent(out) :: x_type
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
 
-  type(sparr), dimension(nobs_max), intent(out) :: dhx_dx
-  type(intw),  dimension(nobs_max), intent(out) :: interp
+  type(sparr), dimension(:), pointer, intent(out) :: dhx_dx_arr
+  type(intw),  dimension(:), pointer, intent(out) :: interp_arr
+  real(r_single), dimension(:), pointer, intent(out) :: hx_linerr
 
-  real(r_single), dimension(nobs_max) :: hx_mean_lin
+  type(sparr) :: dhx_dx
+  type(intw)  :: interp
+
+  real(r_single) :: hx_mean_lin
 
   character(len=10), intent(in) :: id
   integer, intent(in)           :: nanal
@@ -725,7 +730,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
              endif
            ! run the linearized Hx
            else
-             dhx_dx(nob) = Observation_Operator_Jacobian(1:nsdim,i)
+             dhx_dx = Observation_Operator_Jacobian(1:nsdim,i)
 
              t1 = mpi_wtime()
              rlat = x_lat(nob)*deg2rad
@@ -739,24 +744,27 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
              if (abs(rlat-rlat_prev) > eps .or. &
                  abs(rlon-rlon_prev) > eps .or. &
                  abs(rtim-rtim_prev) > eps) then
-               call calc_interp(rlat, rlon, rtim, interp(nob))
-             else
-               interp(nob) = interp(nob-1)
+               call calc_interp(rlat, rlon, rtim, interp)
+             endif
+
+             if (ensrf_modloc) then
+                dhx_dx_arr(nob) = dhx_dx
+                interp_arr(nob) = interp
              endif
 
              if (nanal <= nanals) then
                 call calc_linhx(hx_mean_nobc(nob), state_d,             &
-                                interp(nob), dhx_dx(nob),hx(nob),npts,nsdim,nstatefields)
+                                interp, dhx_dx,hx(nob),npts,nsdim,nstatefields)
                 if (ensrf_modloc) then
                   call calc_linhx(0._r_single, state_mean,             &
-                               interp(nob),dhx_dx(nob),hx_mean_lin(nob),npts,nsdim,nstatefields)
-                  hx_linerr(nob) = hx_mean(nob)-hx_mean_lin(nob)
+                               interp,dhx_dx,hx_mean_lin,npts,nsdim,nstatefields)
+                  hx_linerr(nob) = hx_mean(nob)-hx_mean_lin
                 endif
 
                 ! compute modulated ensemble in obs space
                 if (neigv > 0) then
                    call calc_linhx_modens(hx_mean_nobc(nob), state_d, &
-                                    interp(nob), dhx_dx(nob), hx_modens(:,nob), &
+                                    interp, dhx_dx, hx_modens(:,nob), &
                                     npts,nsdim,nstatefields,vlocal_evecs)
                 endif
 
@@ -816,23 +824,26 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
                endif
              ! run linearized Hx
              else
-                dhx_dx(nob) = v_Observation_Operator_Jacobian(1:nsdim,i)
+                dhx_dx = v_Observation_Operator_Jacobian(1:nsdim,i)
 
                 t1 = mpi_wtime()
                 ! know that location is the same
-                interp(nob) = interp(nob - 1)
+                if (ensrf_modloc) then
+                   dhx_dx_arr(nob) = dhx_dx
+                   interp_arr(nob) = interp
+                endif
 
                 if (nanal <= nanals) then
                    call calc_linhx(hx_mean_nobc(nob), state_d,           &
-                                 interp(nob), dhx_dx(nob),hx(nob),npts,nsdim,nstatefields)
+                                 interp, dhx_dx,hx(nob),npts,nsdim,nstatefields)
                    if (ensrf_modloc) then
                       call calc_linhx(0._r_single, state_mean,             &
-                                interp(nob),dhx_dx(nob),hx_mean_lin(nob),npts,nsdim,nstatefields)
-                      hx_linerr(nob) = hx_mean(nob)-hx_mean_lin(nob)
+                                interp,dhx_dx,hx_mean_lin,npts,nsdim,nstatefields)
+                      hx_linerr(nob) = hx_mean(nob)-hx_mean_lin
                    endif
                    if (neigv > 0) then
                       call calc_linhx_modens(hx_mean_nobc(nob), state_d, &
-                                      interp(nob), dhx_dx(nob), hx_modens(:,nob), &
+                                      interp, dhx_dx, hx_modens(:,nob), &
                                       npts,nsdim,nstatefields,vlocal_evecs)
                    endif
                 endif
@@ -894,8 +905,8 @@ end subroutine get_convobs_data_nc
 
 ! read conventional observation from binary files
 subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
-                            hx_mean, hx_mean_nobc, hx, hx_modens, hx_linerr, interp, &
-                            dhx_dx, x_obs, x_err,       &
+                            hx_mean, hx_mean_nobc, hx, hx_modens, hx_linerr, interp_arr, &
+                            dhx_dx_arr, x_obs, x_err,       &
                             x_lon, x_lat, x_press, x_time, x_code,         &
                             x_errorig, x_type, x_used, id, nanal)
   use sparsearr, only: sparr2, sparr, readarray, delete, assignment(=), size
@@ -914,7 +925,7 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean
   real(r_single), dimension(nobs_max), intent(out)    :: hx_mean_nobc
-  real(r_single), dimension(nobs_max), intent(out)    :: hx, hx_linerr
+  real(r_single), dimension(nobs_max), intent(out)    :: hx
   ! hx_modens holds modulated ensemble in ob space (zero size and not referenced if neigv=0)
   real(r_single), dimension(neigv,nobs_max), intent(out) :: hx_modens
   real(r_single), dimension(nobs_max), intent(out)    :: x_obs
@@ -925,10 +936,14 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
   character(len=20), dimension(nobs_max), intent(out) :: x_type
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
 
-  type(sparr), dimension(nobs_max), intent(out) :: dhx_dx
-  type(intw),  dimension(nobs_max), intent(out) :: interp
+  type(sparr), dimension(:), pointer, intent(out) :: dhx_dx_arr
+  type(intw),  dimension(:), pointer, intent(out) :: interp_arr
+  real(r_single), dimension(:), pointer, intent(out) :: hx_linerr
 
-  real(r_single), dimension(nobs_max) :: hx_mean_lin
+  type(sparr) :: dhx_dx
+  type(intw)  :: interp
+
+  real(r_single) :: hx_mean_lin
 
   character(len=10), intent(in) :: id
   integer, intent(in)           :: nanal
@@ -1163,7 +1178,7 @@ do n=1,ii
      ind = ioff0 + 1
      call readarray(dhx_dx_read, rdiagbuf(ind:nreal,n))
      ind = ind + size(dhx_dx_read)
-     dhx_dx(nob) = dhx_dx_read
+     dhx_dx = dhx_dx_read
 
      t1 = mpi_wtime()
 
@@ -1179,23 +1194,25 @@ do n=1,ii
         abs(rlon-rlon_prev) > eps .or. &
         abs(rtim-rtim_prev) > eps) then
 
-        call calc_interp(rlat, rlon, rtim, interp(nob))
-     else
-        interp(nob) = interp(nob - 1)
+        call calc_interp(rlat, rlon, rtim, interp)
+     endif
+     if (ensrf_modloc) then
+        dhx_dx_arr(nob) = dhx_dx
+        interp_arr(nob) = interp
      endif
 
      if (nanal <= nanals) then
         call calc_linhx(hx_mean_nobc(nob), state_d,             &
-                        interp(nob), dhx_dx(nob),hx(nob),npts,nsdim,nstatefields)
+                        interp, dhx_dx, hx(nob),npts,nsdim,nstatefields)
         if (ensrf_modloc) then
           call calc_linhx(0._r_single, state_mean,             &
-                       interp(nob),dhx_dx(nob),hx_mean_lin(nob),npts,nsdim,nstatefields)
-          hx_linerr(nob) = hx_mean(nob)-hx_mean_lin(nob)
+                       interp, dhx_dx, hx_mean_lin, npts,nsdim,nstatefields)
+          hx_linerr(nob) = hx_mean(nob)-hx_mean_lin
         endif
         ! compute modulated ensemble in obs space
         if (neigv > 0) then
            call calc_linhx_modens(hx_mean_nobc(nob), state_d, &
-                           interp(nob), dhx_dx(nob), hx_modens(:,nob),          &
+                           interp, dhx_dx, hx_modens(:,nob),          &
                            npts,nsdim,nstatefields,vlocal_evecs)
         endif
         ! normalize q by qsatges
@@ -1257,7 +1274,7 @@ do n=1,ii
              ! run linearized Hx
              else
                 call readarray(dhx_dx_read, rdiagbuf(ind:nreal,n))
-                dhx_dx(nob) = dhx_dx_read
+                dhx_dx = dhx_dx_read
 
                 t1 = mpi_wtime()
 
@@ -1272,22 +1289,24 @@ do n=1,ii
                 if (abs(rlat-rlat_prev) > eps .or. &
                     abs(rlon-rlon_prev) > eps .or. &
                     abs(rtim-rtim_prev) > eps) then
-                   call calc_interp(rlat, rlon, rtim, interp(nob))
-                else
-                   interp(nob) = interp(nob-1)
+                   call calc_interp(rlat, rlon, rtim, interp)
+                endif
+                if (ensrf_modloc) then
+                   dhx_dx_arr(nob) = dhx_dx
+                   interp_arr(nob) = interp
                 endif
                 if (nanal <= nanals) then
                    call calc_linhx(hx_mean_nobc(nob), state_d,           &
-                                 interp(nob),dhx_dx(nob),hx(nob),npts,nsdim,nstatefields)
+                                 interp, dhx_dx, hx(nob),npts,nsdim,nstatefields)
                    if (ensrf_modloc) then
                        call calc_linhx(0._r_single, state_mean,             &
-                                interp(nob),dhx_dx(nob),hx_mean_lin(nob),npts,nsdim,nstatefields)
-                       hx_linerr(nob) = hx_mean(nob)-hx_mean_lin(nob)
+                                interp, dhx_dx,hx_mean_lin,npts,nsdim,nstatefields)
+                       hx_linerr(nob) = hx_mean(nob)-hx_mean_lin
                    endif
                    ! compute modulated ensemble in obs space
                    if (neigv > 0) then
                       call calc_linhx_modens(hx_mean_nobc(nob), state_d, &
-                                      interp(nob), dhx_dx(nob), hx_modens(:,nob),  &
+                                      interp, dhx_dx, hx_modens(:,nob),  &
                                       npts,nsdim,nstatefields,vlocal_evecs)
                    endif
                 endif

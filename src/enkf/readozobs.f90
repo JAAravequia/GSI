@@ -234,11 +234,11 @@ end subroutine get_num_ozobs_nc
 
 ! read ozone observation data
 subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, &
-           hx_modens, interp, dhx_dx, x_obs, x_err, &
+           hx_modens, hx_linerr, interp_arr, dhx_dx_arr, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
   use sparsearr, only: sparr
   use intweight, only: intw
-  use params, only: neigv
+  use params, only: neigv, ensrf_modloc
   implicit none
   character*500, intent(in) :: obspath
   character*10, intent(in)  :: datestring
@@ -255,19 +255,20 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
   character(len=20), dimension(nobs_max), intent(out)   ::  x_type
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
 
-  type(intw),  dimension(nobs_max), intent(out) :: interp
-  type(sparr), dimension(nobs_max), intent(out) :: dhx_dx
+  real(r_single), dimension(:), pointer, intent(out) :: hx_linerr
+  type(intw),  dimension(:), pointer, intent(out) :: interp_arr
+  type(sparr), dimension(:), pointer, intent(out) :: dhx_dx_arr
 
   character(len=8), intent(in) :: id
   integer(i_kind), intent(in)  :: nanal
 
    if (netcdf_diag) then
       call get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, &
-           hx_modens, interp, dhx_dx, x_obs, x_err, &
+           hx_modens, hx_linerr, interp_arr, dhx_dx_arr, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
    else
       call get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, &
-           hx_modens, interp, dhx_dx, x_obs, x_err, &
+           hx_modens, hx_linerr, interp_arr, dhx_dx_arr, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
    endif
 
@@ -275,13 +276,13 @@ end subroutine get_ozobs_data
 
 ! read ozone observation data from binary file
 subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, &
-           hx_modens, interp, dhx_dx, x_obs, x_err, &
+           hx_modens, hx_linerr, interp_arr, dhx_dx_arr, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
 
   use sparsearr,only:sparr, sparr2, readarray, delete, assignment(=)
   use params,only: nanals, lobsdiag_forenkf, nstatefields
-  use params, only: nlevs, neigv, vlocal_evecs
-  use statevec, only: state_d,nsdim
+  use params, only: nlevs, neigv, vlocal_evecs, ensrf_modloc
+  use statevec, only: state_d,nsdim,state_mean
   use gridinfo, only: npts
   use mpisetup, only: mpi_wtime, nproc
   use observer_enkf, only: calc_linhx, calc_linhx_modens, calc_interp
@@ -303,8 +304,12 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   character(len=20), dimension(nobs_max), intent(out)   ::  x_type
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
 
-  type(intw),  dimension(nobs_max), intent(out) :: interp
-  type(sparr), dimension(nobs_max), intent(out) :: dhx_dx
+  real(r_single), dimension(:), pointer, intent(out) :: hx_linerr
+  type(intw),  dimension(:), pointer, intent(out) :: interp_arr
+  type(sparr), dimension(:), pointer, intent(out) :: dhx_dx_arr
+
+  type(intw) :: interp
+  type(sparr) :: dhx_dx
 
   character(len=8), intent(in) :: id
   integer(i_kind), intent(in)  :: nanal
@@ -324,6 +329,7 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
 
   real(r_double) t1,t2,tsum
   type(sparr2)  :: dhx_dx_read
+  real(r_single) :: hx_mean_lin
 
   real(r_single),allocatable,dimension(:,:)::diagbuf,diagbuf2
   real(r_single),allocatable,dimension(:,:,:)::rdiagbuf,rdiagbuf2
@@ -490,7 +496,7 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
                 ind = ioff0 + 1
                 ! read dHx/dx profile
                 call readarray(dhx_dx_read, rdiagbuf(ind:irdim1,k,n))
-                dhx_dx(nob) = dhx_dx_read
+                dhx_dx = dhx_dx_read
 
                 t1 = mpi_wtime()
                 rlat = x_lat(nob)*deg2rad
@@ -504,16 +510,23 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
                 if (abs(rlat-rlat_prev) > eps .or. &
                    abs(rlon-rlon_prev) > eps .or. &
                    abs(rtim-rtim_prev) > eps) then
-                   call calc_interp(rlat, rlon, rtim, interp(nob))
-                else
-                   interp(nob) = interp(nob-1)
+                   call calc_interp(rlat, rlon, rtim, interp)
+                endif
+                if (ensrf_modloc) then
+                   dhx_dx_arr(nob) = dhx_dx
+                   interp_arr(nob) = interp
                 endif
                 if (nanal <= nanals) then
                    call calc_linhx(hx_mean_nobc(nob), state_d,            &
-                                  interp(nob), dhx_dx(nob),hx(nob),npts,nsdim,nstatefields)
+                                  interp, dhx_dx,hx(nob),npts,nsdim,nstatefields)
+                   if (ensrf_modloc) then
+                      call calc_linhx(0._r_single, state_mean,             &
+                               interp,dhx_dx,hx_mean_lin,npts,nsdim,nstatefields)
+                      hx_linerr(nob) = hx_mean(nob)-hx_mean_lin
+                   endif
                    if (neigv > 0) then
                      call calc_linhx_modens(hx_mean_nobc(nob), state_d, &
-                                     interp(nob), dhx_dx(nob), hx_modens(:,nob), &
+                                     interp, dhx_dx, hx_modens(:,nob), &
                                      npts,nsdim,nstatefields,vlocal_evecs)
                   endif
 
@@ -554,16 +567,16 @@ subroutine get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
 
 ! read ozone observation data from netcdf file
 subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, &
-           hx_modens, interp, dhx_dx, x_obs, x_err, &
+           hx_modens, hx_linerr, interp_arr, dhx_dx_arr, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal)
   use nc_diag_read_mod, only: nc_diag_read_get_var
   use nc_diag_read_mod, only: nc_diag_read_get_dim, nc_diag_read_get_global_attr
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
 
   use sparsearr,only:sparr, sparr2, readarray, delete, assignment(=)
-  use params,only: nanals, lobsdiag_forenkf, nstatefields, nlevs, neigv, vlocal_evecs
+  use params,only: nanals, lobsdiag_forenkf, nstatefields, nlevs, neigv, vlocal_evecs, ensrf_modloc
   use gridinfo, only: npts
-  use statevec, only: state_d
+  use statevec, only: state_d,state_mean
   use mpisetup, only: mpi_wtime, nproc
   use observer_enkf, only: calc_linhx, calc_linhx_modens, calc_interp
   use intweight
@@ -584,8 +597,13 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
   character(len=20), dimension(nobs_max), intent(out)   :: x_type
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
 
-  type(intw),  dimension(nobs_max), intent(out) :: interp
-  type(sparr), dimension(nobs_max), intent(out) :: dhx_dx
+  type(intw),  dimension(:), pointer, intent(out) :: interp_arr
+  type(sparr), dimension(:), pointer, intent(out) :: dhx_dx_arr
+  real(r_single), dimension(:), pointer, intent(out) :: hx_linerr
+
+  type(intw) :: interp
+  type(sparr) :: dhx_dx
+  real(r_single) :: hx_mean_lin
 
   character(len=8), intent(in) :: id
   integer(i_kind), intent(in)  :: nanal
@@ -730,7 +748,7 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
               endif
            ! run linearized Hx
            else
-              dhx_dx(nob) = Observation_Operator_Jacobian(1:nsdim,i)
+              dhx_dx = Observation_Operator_Jacobian(1:nsdim,i)
 
               t1 = mpi_wtime()
               rlat = x_lat(nob)*deg2rad
@@ -744,17 +762,25 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
               if (abs(rlat-rlat_prev) > eps .or. &
                  abs(rlon-rlon_prev) > eps .or. &
                  abs(rtim-rtim_prev) > eps) then
-                 call calc_interp(rlat, rlon, rtim, interp(nob))
-              else
-                 interp(nob) = interp(nob-1)
+                 call calc_interp(rlat, rlon, rtim, interp)
+              endif
+              if (ensrf_modloc) then
+                 dhx_dx_arr(nob) = dhx_dx
+                 interp_arr(nob) = interp
               endif
               if (nanal <= nanals) then
                  call calc_linhx(hx_mean_nobc(nob), state_d,            &
-                                 interp(nob), dhx_dx(nob),hx(nob),npts,nsdim,nstatefields)
+                                 interp, dhx_dx,hx(nob),npts,nsdim,nstatefields)
+                 if (ensrf_modloc) then
+                    call calc_linhx(0._r_single, state_mean,             &
+                               interp, dhx_dx,hx_mean_lin,npts,nsdim,nstatefields)
+                    hx_linerr(nob) = hx_mean(nob)-hx_mean_lin
+                 endif
+
                  ! compute modulated ensemble in obs space
                  if (neigv > 0) then
                     call calc_linhx_modens(hx_mean_nobc(nob), state_d, &
-                                   interp(nob), dhx_dx(nob), hx_modens(:,nob),          &
+                                   interp, dhx_dx, hx_modens(:,nob),          &
                                    npts,nsdim,nstatefields, vlocal_evecs)
                 endif
               endif

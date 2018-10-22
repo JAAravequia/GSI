@@ -303,7 +303,7 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
   integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
 
   real(r_single), dimension(nobs_max), intent(out) :: hx_mean,hx_mean_nobc, hx
-  real(r_single), dimension(nobs_max), intent(out) :: x_obs, hx_linerr
+  real(r_single), dimension(nobs_max), intent(out) :: x_obs
   ! hx_modens holds modulated ensemble in ob space (zero size and not referenced if neigv=0)
   real(r_single), dimension(neigv, nobs_max), intent(out) :: hx_modens
   real(r_single), dimension(nobs_max), intent(out) :: x_err, x_errorig
@@ -314,8 +314,9 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
   real(r_single), dimension(npred+1,nobs_max), intent(out) :: x_biaspred
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
 
-  type(intw),  dimension(nobs_max), intent(out) :: interp
-  type(sparr), dimension(nobs_max), intent(out) :: dhx_dx
+  type(intw),  dimension(:), pointer, intent(out) :: interp
+  type(sparr), dimension(:), pointer, intent(out) :: dhx_dx
+  real(r_single), dimension(:), pointer, intent(out) :: hx_linerr
 
   character(len=10), intent(in) :: id
   integer(i_kind), intent(in)   :: nanal
@@ -334,7 +335,7 @@ end subroutine get_satobs_data
 
 ! read radiance data from binary file
 subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, &
-           hx_linerr, interp, dhx_dx, x_obs, x_err, &
+           hx_linerr, interp_arr, dhx_dx_arr, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
   use radinfo, only: iuse_rad,nusis,jpch_rad,npred,adp_anglebc,emiss_bc
   use params, only: nanals, lobsdiag_forenkf, nstatefields, nlevs, neigv, vlocal_evecs, ensrf_modloc
@@ -353,7 +354,7 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
   integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
 
   real(r_single), dimension(nobs_max), intent(out) :: hx_mean,hx_mean_nobc, hx
-  real(r_single), dimension(nobs_max), intent(out) :: x_obs, hx_linerr
+  real(r_single), dimension(nobs_max), intent(out) :: x_obs
   ! hx_modens holds modulated ensemble in ob space (zero size and not referenced if neigv=0)
   real(r_single), dimension(neigv, nobs_max), intent(out) :: hx_modens
   real(r_single), dimension(nobs_max), intent(out) :: x_err, x_errorig
@@ -364,10 +365,13 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
   real(r_single), dimension(npred+1,nobs_max), intent(out) :: x_biaspred
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
 
-  type(intw),  dimension(nobs_max), intent(out) :: interp
-  type(sparr), dimension(nobs_max), intent(out) :: dhx_dx
+  type(intw),  dimension(:), pointer, intent(out) :: interp_arr
+  type(sparr), dimension(:), pointer, intent(out) :: dhx_dx_arr
+  real(r_single), dimension(:), pointer, intent(out) :: hx_linerr
 
-  real(r_single), dimension(nobs_max) :: hx_mean_lin
+  type(intw)  :: interp
+  type(sparr) :: dhx_dx
+  real(r_single) :: hx_mean_lin
 
   character(len=10), intent(in) :: id
   integer(i_kind), intent(in)   :: nanal
@@ -542,8 +546,7 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
          ! run linearized Hx
          else
             t1 = mpi_wtime()
-            dhx_dx(nob) = data_chan(n)%dhx_dx
-
+            dhx_dx = data_chan(n)%dhx_dx
             rlat = x_lat(nob)*deg2rad
             rlon = x_lon(nob)*deg2rad
             rtim = x_time(nob)
@@ -556,22 +559,24 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
                 abs(rlon-rlon_prev) > eps .or. &
                 abs(rtim-rtim_prev) > eps) then
 
-               call calc_interp(rlat, rlon, rtim, interp(nob))
-            else
-               interp(nob) = interp(nob-1)
+               call calc_interp(rlat, rlon, rtim, interp)
+            endif
+            if (ensrf_modloc) then
+               dhx_dx_arr(nob) = dhx_dx
+               interp_arr(nob) = interp
             endif
             if (nanal <= nanals) then
                call calc_linhx(hx_mean_nobc(nob), state_d,              &
-                               interp(nob),dhx_dx(nob),hx(nob),npts,nsdim,nstatefields)
+                               interp, dhx_dx,hx(nob),npts,nsdim,nstatefields)
                if (ensrf_modloc) then
                   call calc_linhx(0._r_single, state_mean,             &
-                                  interp(nob),dhx_dx(nob),hx_mean_lin(nob),npts,nsdim,nstatefields)
-                  hx_linerr(nob) = hx_mean(nob)-hx_mean_lin(nob)
+                                  interp, dhx_dx,hx_mean_lin,npts,nsdim,nstatefields)
+                  hx_linerr(nob) = hx_mean(nob)-hx_mean_lin
                endif
                ! compute modulated ensemble in obs space
                if (neigv > 0) then
                   call calc_linhx_modens(hx_mean_nobc(nob), state_d,         &
-                                  interp(nob), dhx_dx(nob), hx_modens(:,nob),     &
+                                  interp, dhx_dx, hx_modens(:,nob),     &
                                   npts,nsdim,nstatefields, vlocal_evecs)
                endif
            
@@ -658,7 +663,7 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
 
 ! read radiance data from netcdf file
 subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens,&
-           hx_linerr, interp, dhx_dx, x_obs, x_err, &
+           hx_linerr, interp_arr, dhx_dx_arr, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal)
   use nc_diag_read_mod, only: nc_diag_read_get_var
   use nc_diag_read_mod, only: nc_diag_read_get_dim, nc_diag_read_get_global_attr
@@ -682,7 +687,7 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
 
   real(r_single), dimension(nobs_max), intent(out) :: hx_mean,hx_mean_nobc, hx
-  real(r_single), dimension(nobs_max), intent(out) :: x_obs, hx_linerr
+  real(r_single), dimension(nobs_max), intent(out) :: x_obs
   ! hx_modens holds modulated ensemble in ob space (zero size and not referenced if neigv=0)
   real(r_single), dimension(neigv,nobs_max), intent(out) :: hx_modens
   real(r_single), dimension(nobs_max), intent(out) :: x_err, x_errorig
@@ -693,8 +698,12 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   real(r_single), dimension(npred+1,nobs_max), intent(out) :: x_biaspred
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
 
-  type(intw),  dimension(nobs_max), intent(out) :: interp
-  type(sparr), dimension(nobs_max), intent(out) :: dhx_dx
+  type(intw),  dimension(:), pointer, intent(out) :: interp_arr
+  type(sparr), dimension(:), pointer, intent(out) :: dhx_dx_arr
+  real(r_single), dimension(:), pointer, intent(out) :: hx_linerr
+
+  type(intw) :: interp
+  type(sparr) :: dhx_dx
 
   real(r_single), dimension(nobs_max) :: hx_mean_lin
 
@@ -929,8 +938,7 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
             dhx_dx_read%st_ind = Observation_Operator_Jacobian_stind(:,i)
             dhx_dx_read%end_ind = Observation_Operator_Jacobian_endind(:,i)
             dhx_dx_read%val = Observation_Operator_Jacobian_val(:,i)
-            dhx_dx(nob) = dhx_dx_read
-
+            dhx_dx = dhx_dx_read
             rlat = x_lat(nob)*deg2rad
             rlon = x_lon(nob)*deg2rad
             rtim = x_time(nob)
@@ -942,22 +950,24 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
             if (abs(rlat-rlat_prev) > eps .or. &
                abs(rlon-rlon_prev) > eps .or. &
                abs(rtim-rtim_prev) > eps) then
-                  call calc_interp(rlat, rlon, rtim, interp(nob))
-            else
-               interp(nob) = interp(nob - 1)
+                  call calc_interp(rlat, rlon, rtim, interp)
+            endif
+            if (ensrf_modloc) then
+               dhx_dx_arr(nob) = dhx_dx
+               interp_arr(nob) = interp
             endif
             if (nanal <= nanals) then
                call calc_linhx(hx_mean_nobc(nob), state_d,              &
-                               interp(nob), dhx_dx(nob),hx(nob),npts,nsdim,nstatefields)
+                               interp, dhx_dx,hx(nob),npts,nsdim,nstatefields)
                if (ensrf_modloc) then
                  call calc_linhx(0._r_single, state_mean,             &
-                               interp(nob), dhx_dx(nob),hx_mean_lin(nob),npts,nsdim,nstatefields)
+                               interp, dhx_dx,hx_mean_lin(nob),npts,nsdim,nstatefields)
                  hx_linerr(nob) = hx_mean(nob)-hx_mean_lin(nob)
                endif
               ! compute modulated ensemble in obs space
               if (neigv > 0) then
                  call calc_linhx_modens(hx_mean_nobc(nob), state_d,         &
-                                 interp(nob), dhx_dx(nob), hx_modens(:,nob),     &
+                                 interp, dhx_dx, hx_modens(:,nob),     &
                                  npts,nsdim,nstatefields, vlocal_evecs)
               endif
             endif

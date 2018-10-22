@@ -61,14 +61,18 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     character(len=10) :: id,id2
     real(r_single), allocatable, dimension(:)   :: ensmean_ob,ob,oberr,oblon,oblat
     real(r_single), allocatable, dimension(:)   :: obpress,obtime,oberrorig,ensmean_obbc,sprd_ob
-    real(r_single), allocatable, dimension(:)   :: ensmean_ob_linerr
     integer(i_kind), allocatable, dimension(:)  :: obcode,indxsat
     integer(i_kind), allocatable, dimension(:)  :: diagused
     real(r_single), allocatable, dimension(:,:) :: biaspreds
     real(r_single), allocatable, dimension(:,:) :: anal_ob, anal_ob_modens
     real(r_single), allocatable, dimension(:)   :: mem_ob
-    type(sparr), allocatable, dimension(:)      :: dhx_dx
-    type(intw),  allocatable, dimension(:)      :: interp
+    type(sparr), allocatable, dimension(:), target :: dhx_dx
+    type(intw),  allocatable, dimension(:), target :: interp
+    real(r_single), allocatable, dimension(:), target :: ensmean_ob_linerr
+
+    type(sparr), dimension(:), pointer :: dhx_dx_p
+    type(intw), dimension(:),  pointer :: interp_p
+    real(r_single), dimension(:), pointer :: ensmean_ob_linerr_p
 
     real(r_single) :: analsi,analsim1
     real(r_double) t1,t2
@@ -110,8 +114,8 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
        oblat(nobs_tot),obpress(nobs_tot),obtime(nobs_tot),oberrorig(nobs_tot),obcode(nobs_tot),&
        obtype(nobs_tot),ensmean_ob(nobs_tot),ensmean_obbc(nobs_tot),&
        biaspreds(npred+1, nobs_sat),indxsat(nobs_sat), diagused(nobs_totdiag))
-       allocate(dhx_dx(nobs_tot), interp(nobs_tot))
        if (ensrf_modloc) then
+         allocate(dhx_dx(nobs_tot), interp(nobs_tot))
          allocate(ensmean_ob_linerr(nobs_tot))
       endif
     else
@@ -131,13 +135,19 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
 ! only thing that is different on each task is mem_ob.  All other
 ! fields are defined from ensemble mean.
 ! individual members read on 1st nanals tasks, ens mean read on all tasks.
+    nullify(dhx_dx_p, interp_p, ensmean_ob_linerr_p)
     if (nobs_conv > 0) then
 ! first nobs_conv are conventional obs.
+      if (ensrf_modloc) then
+         dhx_dx_p => dhx_dx(1:nobs_conv)
+         interp_p => interp(1:nobs_conv)
+         ensmean_ob_linerr_p => ensmean_ob_linerr(1:nobs_conv)
+      endif
       call get_convobs_data(obspath, datestring, nobs_conv, nobs_convdiag, &
         ensmean_obbc(1:nobs_conv), ensmean_ob(1:nobs_conv),                &
         mem_ob(1:nobs_conv), mem_ob_modens(1:neigv,1:nobs_conv),           &
-        ensmean_ob_linerr(1:nobs_conv),                                    &
-        interp(1:nobs_conv), dhx_dx(1:nobs_conv), ob(1:nobs_conv),         &
+        ensmean_ob_linerr_p, interp_p, dhx_dx_p,                           &
+        ob(1:nobs_conv),         &
         oberr(1:nobs_conv), oblon(1:nobs_conv), oblat(1:nobs_conv),        &
         obpress(1:nobs_conv), obtime(1:nobs_conv), obcode(1:nobs_conv),    &
         oberrorig(1:nobs_conv), obtype(1:nobs_conv),                       &
@@ -145,13 +155,17 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     end if
     if (nobs_oz > 0) then
 ! second nobs_oz are conventional obs.
+      if (ensrf_modloc) then
+         dhx_dx_p => dhx_dx(nobs_conv+1:nobs_conv+nobs_oz)
+         interp_p => interp(nobs_conv+1:nobs_conv+nobs_oz)
+         ensmean_ob_linerr_p => ensmean_ob_linerr(nobs_conv+1:nobs_conv+nobs_oz)
+      endif
       call get_ozobs_data(obspath, datestring, nobs_oz, nobs_ozdiag,  &
         ensmean_obbc(nobs_conv+1:nobs_conv+nobs_oz),     &
         ensmean_ob(nobs_conv+1:nobs_conv+nobs_oz),       &
         mem_ob(nobs_conv+1:nobs_conv+nobs_oz),              &
-        mem_ob_modens(1:neigv,nobs_conv+1:nobs_conv+nobs_oz),         &
-        interp(nobs_conv+1:nobs_conv+nobs_oz),               &
-        dhx_dx(nobs_conv+1:nobs_conv+nobs_oz),               &
+        mem_ob_modens(1:neigv,nobs_conv+1:nobs_conv+nobs_oz), &
+        ensmean_ob_linerr_p, interp_p, dhx_dx_p,         &
         ob(nobs_conv+1:nobs_conv+nobs_oz),               &
         oberr(nobs_conv+1:nobs_conv+nobs_oz),            &
         oblon(nobs_conv+1:nobs_conv+nobs_oz),            &
@@ -167,14 +181,17 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     if (nobs_sat > 0) then
       biaspreds = 0. ! initialize bias predictor array to zero.
 ! last nobs_sat are satellite radiance obs.
+      if (ensrf_modloc) then
+         dhx_dx_p => dhx_dx(nobs_conv+nobs_oz+1:nobs_tot)
+         interp_p => interp(nobs_conv+nobs_oz+1:nobs_tot)
+         ensmean_ob_linerr_p => ensmean_ob_linerr(nobs_conv+nobs_oz+1:nobs_tot)
+      endif
       call get_satobs_data(obspath, datestring, nobs_sat, nobs_satdiag, &
         ensmean_obbc(nobs_conv+nobs_oz+1:nobs_tot),       &
         ensmean_ob(nobs_conv+nobs_oz+1:nobs_tot),         &
         mem_ob(nobs_conv+nobs_oz+1:nobs_tot),                &
         mem_ob_modens(1:neigv,nobs_conv+nobs_oz+1:nobs_tot),            &
-        ensmean_ob_linerr(nobs_conv+nobs_oz+1:nobs_tot),     &
-        interp(nobs_conv+nobs_oz+1:nobs_tot),                &
-        dhx_dx(nobs_conv+nobs_oz+1:nobs_tot),                &
+        ensmean_ob_linerr_p, interp_p, dhx_dx_p,             &
         ob(nobs_conv+nobs_oz+1:nobs_tot),                 &
         oberr(nobs_conv+nobs_oz+1:nobs_tot),              &
         oblon(nobs_conv+nobs_oz+1:nobs_tot),              &
@@ -282,8 +299,6 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
 
     if (.not. ensrf_modloc) then
       if (allocated(mem_ob)) deallocate(mem_ob)
-      if (allocated(interp)) deallocate(interp)
-      if (allocated(dhx_dx)) deallocate(dhx_dx)
     endif
     if (allocated(mem_ob_modens)) deallocate(mem_ob_modens)
 
