@@ -71,7 +71,7 @@ program statsmain
 !   hybrid    - logical for hybrid vertical coordinate
 !   smoothdeg - degree of horizontal smoothing to apply in latitudinal direction
 !   use_gfs_nemsio - if T, NEMS I/O file format is used
-!   calc_aod   - if T, and if use_gfs_nemsio=T, will read in AOD as a variable from separate input files and output to same file
+!   calc_aod   - if T, will read in AOD as a variable from separate input files and output to same file
 
   namelist/namstat/jcap,jcapin,jcapsmooth,nsig,nlat,nlon,maxcases, &
                    hybrid,smoothdeg,biasrm,vertavg,use_gfs_nemsio,calc_aod

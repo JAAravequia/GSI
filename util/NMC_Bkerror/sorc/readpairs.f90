@@ -24,6 +24,7 @@ subroutine readpairs(npe,mype,numcases,numaodcases)
 
   integer npe,mype,numcases,ierror,mpi_rtype,iret,iret2
   integer numaodcases
+  integer aodinunit1, aodinunit2
   integer mm1,kk,proc1,proc2
   integer i,j,k,m,n,inges,inge2,i2,i2m1
   integer k1,k2,k3,k4,k5,k6,jj
@@ -54,7 +55,8 @@ subroutine readpairs(npe,mype,numcases,numaodcases)
   type(nemsio_gfile) :: gfile1
   type(nemsio_gfile) :: gfile2
   real(nemsio_realkind),dimension((nlat-2)*nlon):: nems_wk
-  real(nemsio_realkind),dimension((nlat-2)*nlon):: aod_wk
+  !real(r_kind),dimension((nlat-2)*nlon):: aod_wk
+  real(r_single), allocatable :: aodtmp_wk(:,:)
 
   logical ice
   if (db_prec) then
@@ -554,6 +556,8 @@ subroutine readpairs(npe,mype,numcases,numaodcases)
   if (calc_aod) then
     aodfilunit1=(100000+(mype+1))
     aodfilunit2=(200000+(mype+1))
+    aodinunit1=(110000+(mype+1))
+    aodinunit2=(220000+(mype+1))
 
     ! Each mpi task will carry two files, which contains all variables, for each of the time levels
     open(aodfilunit1,form='unformatted',action='write')
@@ -561,63 +565,40 @@ subroutine readpairs(npe,mype,numcases,numaodcases)
     open(aodfilunit2,form='unformatted',action='write')
     rewind(aodfilunit2)
 
-    call nemsio_init(iret=iret)
-    if(iret/=0) then
-       write(6,*)'readpairs: problem with nemsio_init, iret=',iret
-       stop
-    end if
-
+    ! these are binary files extracted from GRIB2 files using wgrib2
     do n=1,numaodcases
-      if (mype==0)  write(6,*)'reading from', trim(aodfilename(naoda(n)))
-      call nemsio_open(gfile1,trim(adjustl(aodfilename(naoda(n)))),'read',iret=iret)
-      if (iret/=0) then
-        write(6,*)'readpairs_1: problem with nemsio_open, mype, iret=',mype,iret
-        stop
-      endif
-      if (mype==0)  write(6,*)'reading from', trim(aodfilename(naodb(n)))
-      call nemsio_open(gfile2,trim(adjustl(aodfilename(naodb(n)))),'read',iret=iret)
-      if (iret/=0) then
-        write(6,*)'readpairs_2: problem with nemsio_open, mype, iret=',mype,iret
-        stop
-      endif
-
-      ! convert from grid to wave
       icount = 0
-      icount = icount + 1
-      !aod
       if ( mype == taskid(icount) ) then
-         ! CRM - these aer diagnostic files have column mass per species/type,
-         ! so we need to sum them up 
-         aod_wk(:) = 0
-         call nemsio_readrecv(gfile1,'ducmass',lev=1,data=nems_wk(:),iret=iret) ! dust
-         aod_wk(:) = aod_wk(:) + nems_wk(:)
-         call nemsio_readrecv(gfile1,'sscmass',lev=1,data=nems_wk(:),iret=iret) ! sea salt
-         aod_wk(:) = aod_wk(:) + nems_wk(:)
-         call nemsio_readrecv(gfile1,'bccmass',lev=1,data=nems_wk(:),iret=iret) ! black C
-         aod_wk(:) = aod_wk(:) + nems_wk(:)
-         call nemsio_readrecv(gfile1,'occmass',lev=1,data=nems_wk(:),iret=iret) ! organic C
-         aod_wk(:) = aod_wk(:) + nems_wk(:)
-         call nemsio_readrecv(gfile1,'sucmass',lev=1,data=nems_wk(:),iret=iret) ! sulfate
-         aod_wk(:) = aod_wk(:) + nems_wk(:)
-         grid1 = reshape(aod_wk(:),(/nlon,nlat-2/))
-         aod_wk(:) = 0
-         call nemsio_readrecv(gfile2,'ducmass','atmos col',lev=1,data=nems_wk(:),iret=iret) ! dust
-         aod_wk(:) = aod_wk(:) + nems_wk(:)
-         call nemsio_readrecv(gfile2,'sscmass',lev=1,data=nems_wk(:),iret=iret) ! sea salt
-         aod_wk(:) = aod_wk(:) + nems_wk(:)
-         call nemsio_readrecv(gfile2,'bccmass',lev=1,data=nems_wk(:),iret=iret) ! black C
-         aod_wk(:) = aod_wk(:) + nems_wk(:)
-         call nemsio_readrecv(gfile2,'occmass',lev=1,data=nems_wk(:),iret=iret) ! organic C
-         aod_wk(:) = aod_wk(:) + nems_wk(:)
-         call nemsio_readrecv(gfile2,'sucmass',lev=1,data=nems_wk(:),iret=iret) ! sulfate
-         aod_wk(:) = aod_wk(:) + nems_wk(:)
-         grid2 = reshape(aod_wk(:),(/nlon,nlat-2/))
-         !call nemsio_readrecv(gfile2,'ducmassacol','entire_atmosphere',lev=1,data=nems_wk(:),iret=iret)
-         grid2 = reshape(nems_wk(:),(/nlon,nlat-2/))
-         call sptez_s(z4all (:,6*nsig+2),grid1,-1)
-         call sptez_s(z4all2(:,6*nsig+2),grid2,-1)
+        write(6,*)'reading from', trim(aodfilename(naoda(n)))
+        ! open file 1
+        open(unit=aodinunit1,file=trim(aodfilename(naoda(n))),form='unformatted',access='sequential',status='old')
+        ! allocate array
+        allocate(aodtmp_wk(nlon,nlat))
+        ! read in AOD
+        read(aodinunit1) aodtmp_wk
+        ! reshape, etc.
+        grid1 = aodtmp_wk(:,2:nlat-1)
+        ! deallocate array
+        deallocate(aodtmp_wk)
+        ! close file
+        close(aodinunit1)
+        write(6,*)'reading from', trim(aodfilename(naodb(n)))
+        ! open file 2
+        open(unit=aodinunit2,file=trim(aodfilename(naodb(n))),form='unformatted',access='sequential',status='old')
+        ! allocate array
+        allocate(aodtmp_wk(nlon,nlat))
+        ! read in AOD
+        read(aodinunit2) aodtmp_wk
+        ! reshape, etc.
+        grid2 = aodtmp_wk(:,2:nlat-1)
+        ! deallocate array
+        deallocate(aodtmp_wk)
+        ! close file
+        close(aodinunit2)
+        ! convert from grid to wave
+        call sptez_s(z4all (:,6*nsig+2),grid1,-1)
+        call sptez_s(z4all2(:,6*nsig+2),grid2,-1)
       end if
-
 
       call mpi_bcast(z4all(:,6*nsig+2),ncin,mpi_rtype,taskid(icount), &
                 & mpi_comm_world,ierror)
@@ -629,9 +610,6 @@ subroutine readpairs(npe,mype,numcases,numaodcases)
       call mpi_scatterv(z4all2,spec_send,disp_spec,mpi_rtype,&
          z42,spec_send(mm1),mpi_rtype,0,mpi_comm_world,ierror)
       call mpi_barrier(mpi_comm_world,iret2)
- 
-      call nemsio_close(gfile1,iret=iret)
-      call nemsio_close(gfile2,iret=iret)
 
      do k=1,nsig1o
         if(nvar_id(k).eq.8) then ! AOD 

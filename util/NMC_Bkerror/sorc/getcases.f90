@@ -24,6 +24,9 @@ subroutine getcases(numcases,numaodcases,mype)
   integer i24,ierror,j48,ncount,ncases,loop,numcases,&
        mype,nming,ncase,inges,i,j,k,iret,iret2,&
        naodcase,naodcases,numaodcases
+  logical aodexist
+  character(len=100) :: aodfnametmp
+  integer lenfname
   integer nvcoord5
   real(r_kind) fhour5,ps0
   real(r_kind),allocatable,dimension(:,:):: vcoord5
@@ -163,44 +166,18 @@ subroutine getcases(numcases,numaodcases,mype)
     nminaod48=-1
     inges=50
     do loop=1,naodcases
-      call nemsio_init(iret=iret2)
-      if ( iret2 /= 0 ) then
-          write(6,*)' getcases:  ***ERROR*** problem nemsio_init file = ', &
-                trim(aodfilename(loop)),', Status = ',iret2
-          !stop ! let's not stop if we can't read AOD file
+      ! check if file exists
+      inquire(file=aodfilename(loop),exist=aodexist)
+      if (aodexist) then
+        aodfnametmp = trim(aodfilename(loop))
+        lenfname=len(trim(aodfnametmp))
+        ! assume forecast and valid times are from the filename
+        ! assumes the format a2dfFH.ngac.YYYYMMDDHH
+        read(aodfnametmp(lenfname-9:lenfname),*) nming
+        read(aodfnametmp(lenfname-17:lenfname-16),*) fhour5
+        if(nint(fhour5).eq.24) nminaod24(loop)=nming
+        if(nint(fhour5).eq.48) nminaod48(loop)=nming
       end if
-      call nemsio_open(gfile,aodfilename(loop),'READ',iret=iret2)
-      if ( iret2 /= 0 ) then
-          write(6,*)' getcases:  ***ERROR*** problem opening file = ', &
-                trim(aodfilename(loop)),', Status = ',iret2
-          !stop
-      end if
-
-      idate         = i_missing
-      nfhour        = i_missing
-      nfminute      = i_missing
-      nfsecondn     = i_missing
-      nfsecondd     = i_missing
-      gfshead%idsl  = i_missing
-      call nemsio_getfilehead(gfile, idate=idate, gtype=filetype,  &
-             modelname=mdlname, nfhour=nfhour, nfminute=nfminute,       &
-             nfsecondn=nfsecondn, nfsecondd=nfsecondd,                  &
-             dimx=gfshead%lonb, dimy=gfshead%latb,   dimz=gfshead%levs, &
-             jcap=gfshead%jcap, ntrac=gfshead%ntrac, idvc=gfshead%idvc, &
-             idsl=gfshead%idsl,   ncldt=gfshead%ncldt, iret=iret2)
-      fhour5 = float(nfhour) + float(nfminute)/60.0 + &
-              float(nfsecondn)/float(nfsecondd)/3600.0
-      idate5(1) = idate(1)  !year
-      idate5(2) = idate(2)  !month
-      idate5(3) = idate(3)  !day
-      idate5(4) = idate(4)  !hour
-      idate5(5) = 0
-      call nemsio_close(gfile,iret=iret2)
-
-      call w3fs21(idate5,nming)
-      nming=nming+60*fhour5
-      if(nint(fhour5).eq.24) nminaod24(loop)=nming
-      if(nint(fhour5).eq.48) nminaod48(loop)=nming
     enddo
 
 

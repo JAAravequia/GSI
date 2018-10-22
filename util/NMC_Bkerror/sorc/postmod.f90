@@ -229,7 +229,7 @@ subroutine writefiles
    if(calc_aod) then
      i=9
      write(6,*) i,var(i),isig
-     write(outf) var(7),isig
+     write(outf) var(9),isig
      write(outf) aodvar4
      write(outf) aodhln4
    end if
