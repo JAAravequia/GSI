@@ -45,6 +45,7 @@ echo " "
 #
 mkdir -p ./include
 mkdir -p ./lib
+mkdir -p ./run
 
 ( make -i -f makefile_DTC all )
 
