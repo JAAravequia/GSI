@@ -573,11 +573,11 @@ subroutine readpairs(npe,mype,numcases,numaodcases)
         ! open file 1
         open(unit=aodinunit1,file=trim(aodfilename(naoda(n))),form='unformatted',access='sequential',status='old')
         ! allocate array
-        allocate(aodtmp_wk(nlon,nlat))
+        allocate(aodtmp_wk(nlon,nlat-2))
         ! read in AOD
         read(aodinunit1) aodtmp_wk
-        ! reshape, etc.
-        grid1 = aodtmp_wk(:,2:nlat-1)
+        ! reshape, copy, whatever, etc.
+        grid1 = aodtmp_wk
         ! deallocate array
         deallocate(aodtmp_wk)
         ! close file
@@ -586,11 +586,11 @@ subroutine readpairs(npe,mype,numcases,numaodcases)
         ! open file 2
         open(unit=aodinunit2,file=trim(aodfilename(naodb(n))),form='unformatted',access='sequential',status='old')
         ! allocate array
-        allocate(aodtmp_wk(nlon,nlat))
+        allocate(aodtmp_wk(nlon,nlat-2))
         ! read in AOD
         read(aodinunit2) aodtmp_wk
         ! reshape, etc.
-        grid2 = aodtmp_wk(:,2:nlat-1)
+        grid2 = aodtmp_wk
         ! deallocate array
         deallocate(aodtmp_wk)
         ! close file
