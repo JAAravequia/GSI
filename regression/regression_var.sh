@@ -52,14 +52,14 @@ fi
 
 case $machine in
    WCOSS_D)
-   export noscrub=/gpfs/dell2/emc/noscrub/$LOGNAME
+   export noscrub=/gpfs/dell2/emc/modeling/noscrub/$LOGNAME
    export group="dev"
    export queue="dev"
 
    export ptmp="/gpfs/dell2/ptmp/$LOGNAME/$ptmpName"
 
-   export fixcrtm="/gpfs/dell2/emc/noscrub/Mark.Potts/fix_update"
-   export casesdir="/gpfs/dell2/emc/noscrub/Mark.Potts/CASES"
+   export fixcrtm="/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/fix_update"
+   export casesdir="/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/CASES"
    export ndate="$builddir/bin/ndate.x"
 
    export check_resource="yes"
@@ -97,8 +97,8 @@ case $machine in
    fi 
    export ptmp="/glade/scratch/$LOGNAME/$ptmpName"
 
-   export fixcrtm="/glade/p/ral/jnt/tools/crtm/2.2.3/fix_update"
-   export casesdir="/glade/p/ral/jnt/tools/CASES"
+   export fixcrtm="/glade/p/ral/jntp/tools/crtm/2.2.3/fix_update"
+   export casesdir="/glade/p/ral/jntp/tools/CASES"
    export ndate="$builddir/bin/ndate.x"
 
    export check_resource="no"
@@ -214,7 +214,7 @@ export savdir="$ptmp"
 export JCAP="62"
 
 # Case Study analysis dates
-export global_T62_adate="2014080400"
+export global_T62_adate="2016120300"
 export global_4dvar_T62_adate="2014080400"
 export global_hybrid_T126_adate="2014092912"
 export global_4denvar_T126_adate="2016120300"
