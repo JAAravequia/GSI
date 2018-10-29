@@ -797,7 +797,7 @@ contains
   end subroutine radiance_parameter_aerosol_init
 
   subroutine radiance_ex_obserr_1(radmod,nchanl,clwp_amsua,clw_guess_retrieval, &
-                                tnoise,tnoise_cld,error0,mwclrsky,isis,Rmat)
+                                tnoise,tnoise_cld,error0,mwclrsky,isis,Rmat)!KAB
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    radiance_ex_obserr_1
@@ -839,56 +839,36 @@ contains
     integer(i_kind) :: i
     real(r_kind) :: clwtmp
     real(r_kind),dimension(nchanl) :: cclr,ccld
-    mwclrsky=.true.
+    mwclrsky=.true. !KAB
+    interpR=.false.
     do i=1,nchanl
        cclr(i)=radmod%cclr(i)
        ccld(i)=radmod%ccld(i)
     end do
-!make a correlated_obsmod routine to average the clear and cloudy covariances, 
-!but only if there is a supplied cloudy R
-!store this matrix where? temporary array to be an optional argument in next 
-!corr_obs routine?
-!   allocate(Rmat(nchanl,nchanl))
-   clwtmp=half*(clwp_amsua+clw_guess_retrieval)
-   interpR= cloudy_R(clwtmp,cclrs,cclds,nchanl,isis,Rmat)
-!if (interpR) print *, 'interpR'
-!mwclrsky if true, there are no clouds, or, no cloudy R supplied
-!if false, there is a cloud present, as well as a cloudy R
-!if returned from corr routine, do regular error assignment
-    do i=1,nchanl
-       if (radmod%lcloud4crtm(i)<0) cycle
-!KAB       clwtmp=half*(clwp_amsua+clw_guess_retrieval)
-       if(clwtmp <= cclr(i)) then
-          if (interpR) then
-             error0(i)=sqrt(Rmat(i,i))
-             mwclrsky=.false.
-             if (clwtmp<=cclrs) mwclrsky=.true.
-          else
+    clwtmp=half*(clwp_amsua+clw_guess_retrieval)
+    if (clwtmp>cclrs) then
+       interpR= cloudy_R(clwtmp,cclrs,cclds,nchanl,isis,Rmat) !KAB
+       if (interpR) then
+          mwclrsky=.false.
+       endif
+    endif
+    if (.not.(interpR)) then
+       do i=1,nchanl
+          if (radmod%lcloud4crtm(i)<0) cycle
+          if(clwtmp <= cclr(i)) then
              error0(i) = tnoise(i)
-             mwclrsky=.true.
-          endif
-       else if(clwtmp > cclr(i) .and. clwtmp < ccld(i)) then
-          if (interpR) then
-             error0(i)=sqrt(Rmat(i,i))
-             mwclrsky=.false.
-             if (clwtmp<=cclrs) mwclrsky=.true.
-          else
+!             mwclrsky=.true.
+          else if(clwtmp > cclr(i) .and. clwtmp < ccld(i)) then
              error0(i) = tnoise(i) + (clwtmp-cclr(i))* &
-                         (tnoise_cld(i)-tnoise(i))/(ccld(i)-cclr(i))
-             mwclrsky=.true.
-          endif
-!KAB
-       else
-          if (interpR) then
-             error0(i)=sqrt(Rmat(i,i))
+                      (tnoise_cld(i)-tnoise(i))/(ccld(i)-cclr(i))
              mwclrsky=.false.
           else
              error0(i) = tnoise_cld(i)
-             mwclrsky=.true.
-          endif
+             mwclrsky=.false.
 !KAB
-       endif
-    end do
+          endif
+       end do
+    endif
     return
   end subroutine radiance_ex_obserr_1
 

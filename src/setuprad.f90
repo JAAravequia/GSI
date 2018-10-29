@@ -1098,7 +1098,7 @@ Rmat=0.0
 !pass in the logical corr,isis
            if (radmod%ex_obserr=='ex_obserr1') & 
               call radiance_ex_obserr(radmod,nchanl,clwp_amsua,clw_guess_retrieval,tnoise,tnoise_cld,error0,&
-                                      mwclrsky,isis,Rmat)
+                                      mwclrsky,isis,Rmat) !KAB
 !          if (radmod%ex_obserr=='ex_obserr2') &  ! comment out for now, waiting for more tests
 !             call
 !             radiance_ex_obserr(radmod,nchanl,cldeff_obs,cldeff_fg,tnoise,tnoise_cld,error0)
@@ -1108,7 +1108,6 @@ Rmat=0.0
              do i=1,nchanl
                 tnoise(i)=varch_sea(ich(i))
              enddo
- !          end if
            else if(land) then
              do i=1,nchanl
                 tnoise(i)=varch_land(ich(i))
@@ -1130,6 +1129,14 @@ Rmat=0.0
              error0(i) = tnoise(i)
              errf0(i) = error0(i)
            end do
+        elseif (Rmat(1,1)>0) then
+           do i=1,nchanl
+              if (iuse_rad(ich(i))>0) then
+                 error0(i)=sqrt(Rmat(i,i))
+                 tnoise(i)=error0(i)
+                 errf0(i) = error0(i)
+              endif
+           enddo
         endif
 
         do i=1,nchanl
@@ -1583,17 +1590,16 @@ Rmat=0.0
               obvarinv = error0 ! on input
 !KAB
 !add optional input argument which is the cloudy R
-              if ((miter>0).and.(mwclrsky)) then
+              if ((miter>0).and.(Rmat(1,1)>0.0)) then
                  account_for_corr_obs = radinfo_adjust_jacobian (iinstr,isis,isfctype,nchanl,nsigradjac,ich,varinv,&
-                                                                 utbc,obvarinv,adaptinf,wgtjo,jacobian,Rinv,rsqrtinv)
-              elseif (miter>0) then
+                                                                 utbc,obvarinv,adaptinf,wgtjo,jacobian,Rinv,rsqrtinv,Rmat)
+              elseif ((miter>0).and.(mwclrsky)) then
                  account_for_corr_obs = radinfo_adjust_jacobian(iinstr,isis,isfctype,nchanl,nsigradjac,ich,varinv,&
                                                                  utbc,obvarinv,adaptinf,wgtjo,jacobian,Rinv,&
-                                                                 rsqrtinv,Rmat)
+                                                                 rsqrtinv)
               else
                  account_for_corr_obs =.false.
               end if
-!if ((account_for_corr_obs).and.(.not.mwclrsky)) print *, 'clrsky Rmat,Rinv,Rsq ',mwclrsky,Rmat(1,1),rsqrtinv(1,1)
               iii=0
               do ii=1,nchanl
                  m=ich(ii)

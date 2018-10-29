@@ -167,7 +167,7 @@ public idnames
 public ObsErrorCov
 public GSI_BundleErrorCov
 public corr_oberr_qc
-public cloudy_R
+public cloudy_R !KAB
 ! !METHOD OVERLOADING:
 
 interface corr_ob_initialize; module procedure ini_; end interface
@@ -802,7 +802,7 @@ type(ObsErrorCov) :: ErrorCovcld
 !BOC
 
 character(len=*),parameter :: myname_=myname//'*scale_jac'
-integer(i_kind) :: nch_active,ii,jj,kk,iii,jjj,mm,nn,ncp,ifound,nsigjac,indR,r,c
+integer(i_kind) :: nch_active,ii,jj,kk,iii,jjj,mm,nn,ncp,ifound,nsigjac,indR,r,c !KAB r,c
 integer(i_kind),allocatable,dimension(:)   :: ircv
 integer(i_kind),allocatable,dimension(:)   :: ijac
 integer(i_kind),allocatable,dimension(:)   :: IRsubset
@@ -893,7 +893,7 @@ endif
 ! decompose the sub-matrix - returning the result in the 
 !                            structure holding the full covariance
 if( ErrorCov%method==1 .or. ErrorCov%method==2 ) then
-   if (present(Rmat)) then
+   if (present(Rmat)) then !KAB
       subset=decompose_subset_ (IRsubset,ErrorCovcld)
    else
       subset = decompose_subset_ (IRsubset,ErrorCov)
@@ -953,7 +953,7 @@ else
               !    Re = U De U^T  (Evals/Evecs eigen-pairs of full Re)
               !    inv(Rg) = U De^(-1/2) U^T U De^(-1/2) U^T
        do ii=1,ncp
-         if (present(Rmat)) then
+         if (present(Rmat)) then !KAB
             coeff2 = one/ErrorCovcld%Revals(IRsubset(ii))
          else
             coeff2 = one/ErrorCov%Revals(IRsubset(ii))
@@ -962,16 +962,16 @@ else
          do jj=1,ncp
             nn=IJsubset(jj)
             if (present(Rmat)) then !KAB
-               col0(ii)   = col0(ii)   + ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))* depart(nn)
-               Ri(jj,ii)   =  coeff2*ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))
-               Rs(jj,ii)   =  coeff*ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))
+               col0(ii) = col0(ii) + ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))* depart(nn)
+               Ri(jj,ii) = coeff2*ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))
+               Rs(jj,ii) = coeff*ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))
                do kk=1,nsigjac
                   row0(kk,ii) = row0(kk,ii)+ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii)) * jacobian(kk,nn)
                end do
             else
-               col0(ii)   = col0(ii)   + ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) * depart(nn)
-               Ri(jj,ii)   =  coeff2*ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) 
-               Rs(jj,ii)   =  coeff*ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) 
+               col0(ii) = col0(ii)   + ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) * depart(nn)
+               Ri(jj,ii) = coeff2*ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) 
+               Rs(jj,ii) = coeff*ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) 
                do kk=1,nsigjac
                   row0(kk,ii) = row0(kk,ii) +ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) * jacobian(kk,nn)
                end do
@@ -979,18 +979,18 @@ else
          enddo
          col0(ii)   =   coeff * col0(ii) 
          do kk=1,nsigjac
-             row0(kk,ii) =   coeff * row0(kk,ii)
+             row0(kk,ii) = coeff * row0(kk,ii)
          end do
        enddo
        do jj=1,ncp 
          do ii=1,ncp 
             if (present(Rmat)) then !KAB
-               col(ii)   = col(ii)   + ErrorCovcld%Revecs(IRsubset(ii),IRsubset(jj)) *col0(jj)
+               col(ii) = col(ii) + ErrorCovcld%Revecs(IRsubset(ii),IRsubset(jj)) *col0(jj)
                do kk=1,nsigjac
                   row(kk,ii) = row(kk,ii) +ErrorCovcld%Revecs(IRsubset(ii),IRsubset(jj)) * row0(kk,jj)
                end do
             else
-               col(ii)   = col(ii)   + ErrorCov%Revecs(IRsubset(ii),IRsubset(jj)) * col0(jj)
+               col(ii) = col(ii) + ErrorCov%Revecs(IRsubset(ii),IRsubset(jj)) * col0(jj)
                do kk=1,nsigjac
                   row(kk,ii) = row(kk,ii) + ErrorCov%Revecs(IRsubset(ii),IRsubset(jj)) * row0(kk,jj)
                end do
@@ -1000,11 +1000,11 @@ else
       do kk=1,ncp
          do jj=1,ncp 
             do ii=jj,ncp
-                  if (present(Rmat)) then !KAB
-                     rsqrtinv(ii,jj)=rsqrtinv(ii,jj)+ErrorCovcld%Revecs(IRsubset(ii),IRsubset(kk))*Rs(jj,kk)
-                  else
-                     rsqrtinv(ii,jj)=rsqrtinv(ii,jj)+ErrorCov%Revecs(IRsubset(ii),IRsubset(kk))*Rs(jj,kk)
-                  endif
+               if (present(Rmat)) then !KAB
+                  rsqrtinv(ii,jj)=rsqrtinv(ii,jj)+ErrorCovcld%Revecs(IRsubset(ii),IRsubset(kk))*Rs(jj,kk)
+               else
+                  rsqrtinv(ii,jj)=rsqrtinv(ii,jj)+ErrorCov%Revecs(IRsubset(ii),IRsubset(kk))*Rs(jj,kk)
+               endif
             end do
          end do
          do jj=1,ncp
@@ -1182,10 +1182,6 @@ implicit none
       covtype=trim(idnames(jj0))
       iinstr=len_trim(covtype)
 !KAB
-!      isurf=-1
-!      isurf=getindex(trim(covtype),trim(surf))
-!      if (isurf>=0) then
-!      if(covtype(iinstr-6:iinstr)==trim(surf))then
       if(covtype(iinstr-9:iinstr)==':sea:clear')then
          nsatype(1)=nsatype(1)+1
          nsatype(6)=nsatype(6)+1
@@ -1389,7 +1385,7 @@ logical function cloudy_R(clw,cclr,ccld,nchanl,isis,Rout)
       iinstr=len_trim(covtype)
       iisis=len_trim(isis)
       if(covtype(iinstr-9:iinstr-6)==':sea') then
-         if(covtype(1:iisis)==isis) then !CHECK THIS
+         if(covtype(1:iisis)==isis) then 
             if(covtype(iinstr-4:iinstr)=='cloud') then
                jcld=jj0
             elseif(covtype(iinstr-4:iinstr)=='clear') then
@@ -1406,9 +1402,6 @@ logical function cloudy_R(clw,cclr,ccld,nchanl,isis,Rout)
    if (nch_active>nchanl) then
       call die(myname_, 'inconsistency between nchanl and nch_active')
    endif
-!figure out the indices
-!not sure I need nchanl, just use nch_active
-!store in Rclr and Rcld (but not Rclr if tclw=true)
 
 !interpolate
    if (clw>ccld) then 
@@ -1425,7 +1418,6 @@ logical function cloudy_R(clw,cclr,ccld,nchanl,isis,Rout)
             else
                Aintr=(clw-ccld)/(cclr-ccld)
             endif
-!print *, 'Aint clw ccld cclr',Aintr,clw,ccld,cclr
             Rout(r,c)=Aintr*Rclr+(1-Aintr)*Rcld
          enddo
       end do
@@ -1434,14 +1426,7 @@ logical function cloudy_R(clw,cclr,ccld,nchanl,isis,Rout)
             Rout(r,c)=Rout(c,r)
          enddo
       enddo
-!do r=1,nch_active
-!if (Rout(r,r)<0.001) then
-!print *, 'Rout Aint, Rclr,Rcld ',Rout(r,r),Aintr,GSI_BundleErrorCov(jclr)%R(r,r),GSI_BundleErrorCov(jcld)%R(r,r)
-!endif
-!enddo
    endif
-!deallocate
-!   deallocate(Rcld) 
    cloudy_R=.true.
 end function cloudy_R
 !EOC

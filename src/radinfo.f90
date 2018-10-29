@@ -2141,31 +2141,25 @@ END subroutine dec2bin
    iinstr=-1
    if(isfctype==0)then
       covtype = trim(isis)//':sea'
-!      iinstr=getindex(idnames,trim(covtype))
+!KAB      iinstr=getindex(idnames,trim(covtype))
    else if(isfctype==1)then
       covtype = trim(isis)//':land'
-!      iinstr=getindex(idnames,trim(covtype))
+!KAB      iinstr=getindex(idnames,trim(covtype))
    else if(isfctype==2)then
       covtype = trim(isis)//':ice'
-!      iinstr=getindex(idnames,trim(covtype))
+!KAB      iinstr=getindex(idnames,trim(covtype))
    else if(isfctype==3)then
       covtype = trim(isis)//':snow'
-!      iinstr=getindex(idnames,trim(covtype))
+!KAB      iinstr=getindex(idnames,trim(covtype))
    else if(isfctype==4)then
       covtype = trim(isis)//':mixed'
-!      iinstr=getindex(idnames,trim(covtype))
+!KAB      iinstr=getindex(idnames,trim(covtype))
    endif
-   covtype=trim(covtype)//':clear'
-!   if(iscene==0) then
-!      covtype=trim(covtype)//':clear'
-!   else if (iscene==1) then
-!      covtype=trim(covtype)//':cloud'
-!   end if
-   iinstr=getindex(idnames,trim(covtype))
+   covtype=trim(covtype)//':clear' !KAB
+   iinstr=getindex(idnames,trim(covtype)) !KAB
    if(iinstr<0) return  ! do not use the correlated errors
 
    if(.not.corr_ob_amiset(GSI_BundleErrorCov(iinstr))) then
-!if (present(Rmat)) print *, 'Rmat present',Rmat(1,1),trim(covtype),isfctype,iinstr
       call die(myname_,' improperly set GSI_BundleErrorCov')
    endif
 
@@ -2174,7 +2168,6 @@ END subroutine dec2bin
    if (present(Rmat)) then
    adjust_jac_ = corr_ob_scale_jac(depart,obvarinv,adaptinf,jacobian,nchanl,jpch_rad,varinv,wgtjo,&
                                     iuse_rad,ich,GSI_BundleErrorCov(iinstr),Rinv,rsqrtinv,Rmat)
-!print *, 'here Rmat ',Rmat(1,1)
    else
    adjust_jac_ = corr_ob_scale_jac(depart,obvarinv,adaptinf,jacobian,nchanl,jpch_rad,varinv,wgtjo, &
                                     iuse_rad,ich,GSI_BundleErrorCov(iinstr),Rinv,rsqrtinv)
