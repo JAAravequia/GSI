@@ -48,7 +48,8 @@ program statsmain
       destroy_variables,rearth,rlats,wgtlats,mype,npe,&
       create_mapping,destroy_mapping,biasrm,destroy_biasrm,&
       vertavg,use_gfs_nemsio
-  use specgrid, only: jcap,jcapin,jcapsmooth,init_spec_vars,destroy_spec_vars
+  use specgrid, only: jcap,jcapin,jcapsmooth,init_spec_vars,&
+                      destroy_spec_vars,destroy_spec_varsin
   use postmod, only: writefiles
   use comm_mod, only: init_mpi_vars,destroy_mpi_vars
   implicit none
@@ -148,6 +149,7 @@ program statsmain
   call destroy_grids
   call destroy_mapping
   call destroy_spec_vars
+  if (use_gfs_nemsio) call destroy_spec_varsin
   call destroy_mpi_vars
   call destroy_variables
   if(biasrm) call destroy_biasrm

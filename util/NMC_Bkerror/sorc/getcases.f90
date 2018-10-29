@@ -2,10 +2,10 @@ subroutine getcases(numcases,mype)
 !   2017-10-25  Gael Descombes (NCAR) - capability to read nemsio files
 ! This routine gets the names and number of available
 ! forecast pairs
-  use kinds, only: r_kind
+  use kinds, only: r_kind,r_single
   use variables, only: ak5,bk5,ck5,maxcases,nsig,dimbig,hybrid,&
       filename,na,nb,zero,idpsfc5,idvm5,idthrm5,idvc5,ntrac5,cp5,&
-      use_gfs_nemsio,ncepgfs_head
+      use_gfs_nemsio,ncepgfs_head,nlonin,nlatin
   use sigio_module, only: sigio_head,sigio_srhead,sigio_sclose,&
        sigio_sropen
   use nemsio_module, only:  nemsio_init,nemsio_open,nemsio_close
@@ -29,6 +29,7 @@ subroutine getcases(numcases,mype)
   character(8) filetype, mdlname
   integer,dimension(7):: idate
   integer :: nfhour, nfminute, nfsecondn, nfsecondd
+  real(r_single),allocatable,dimension(:,:,:) :: nems_vcoord
 
   type(sigio_head):: sighead
   type(ncepgfs_head):: gfshead
@@ -84,6 +85,10 @@ subroutine getcases(numcases,mype)
         idate5(4) = idate(4)  !hour
         idate5(5) = 0
         call nemsio_close(gfile,iret=iret2)
+
+        nlonin=gfshead%lonb
+        nlatin=gfshead%latb
+
     else ! not use_gfs_nemsio
 
        call sigio_sropen(inges,filename(loop),iret)
@@ -133,7 +138,6 @@ subroutine getcases(numcases,mype)
             ncase=ncase+1
             na(ncase)=i24
             nb(ncase)=j
-! write(6,*) 'nmin,na,nb=',ncase,nmin24(loop),na(ncase),nb(ncase)
           end if
         end do
         ncount=0
@@ -157,6 +161,45 @@ subroutine getcases(numcases,mype)
      idvc5   = 2
      idthrm5 = 2
      ntrac5  = 3
+
+     call nemsio_init(iret=iret2)
+     if ( iret2 /= 0 ) then
+        write(6,*)' GESINFO:  ***ERROR*** problem nemsio_init file = ', &
+           trim(filename(1)),', Status = ',iret2
+        stop
+     end if
+     call nemsio_open(gfile,filename(1),'READ',iret=iret2)
+     if ( iret2 /= 0 ) then
+        write(6,*)' GESINFO:  ***ERROR*** problem opening file = ', &
+           trim(filename(1)),', Status = ',iret2
+        stop
+     end if
+
+     allocate(nems_vcoord(nsig+1,3,2))
+     call nemsio_getfilehead(gfile,iret=iret2,vcoord=nems_vcoord)
+     if ( iret2 /= 0 ) then
+        write(6,*)' GESINFO:  ***ERROR*** problem reading header ', &
+           'vcoord, Status = ',iret2
+        stop
+     endif
+
+!    Determine the type of vertical coordinate used by model because that
+!    gfshead%nvcoord is no longer part of NEMSIO header output.
+     nvcoord5=3
+     if(maxval(nems_vcoord(:,3,1))==zero .and. &
+        minval(nems_vcoord(:,3,1))==zero ) then
+        nvcoord5=2
+        if(maxval(nems_vcoord(:,2,1))==zero .and. &
+           minval(nems_vcoord(:,2,1))==zero ) then
+           nvcoord5=1
+        end if
+     end if
+
+     allocate(vcoord5(nsig+1,nvcoord5))
+     vcoord5(:,1:nvcoord5)=nems_vcoord(:,1:nvcoord5,1)
+
+     deallocate(nems_vcoord)
+
   else ! not use_gfs_nemsio
   
 ! DTK NEW  EXTRACT SOME STUFF FROM THE FIRST LISTED FILE
@@ -168,32 +211,14 @@ subroutine getcases(numcases,mype)
      ntrac5=sighead%ntrac
      nvcoord5=sighead%nvcoord
 
+     allocate(vcoord5(nsig+1,nvcoord5))
+     vcoord5=sighead%vcoord
+
      idpsfc5 = mod ( sighead%idvm,10 )
      idthrm5 = mod ( sighead%idvm/10,10 )
 
      write(6,*) 'GETCASES: idpsfc5,idthrm5 = ',idpsfc5,idthrm5
 
-     allocate(vcoord5(nsig+1,nvcoord5))
-     vcoord5=sighead%vcoord
-
-     do k=1,nsig+1
-        ak5(k)=zero
-       bk5(k)=zero
-       ck5(k)=zero
-     end do
-
-     do k=1,nsig+1
-       if (nvcoord5 ==1 ) then
-         bk5(k)=vcoord5(k,1)
-       else if (nvcoord5 >= 2) then
-         ak5(k)=vcoord5(k,1)*0.001_r_kind
-         bk5(k)=vcoord5(k,2)
-       else if (nvcoord5 >= 3) then
-         ck5(k)=vcoord5(k,3)*0.001_r_kind
-       end if
-     end do
-
-     deallocate(vcoord5)
 
      allocate(cp5(ntrac5+1))
   
@@ -210,6 +235,26 @@ subroutine getcases(numcases,mype)
 
      call sigio_sclose(inges,iret)
   endif !no use_gfs_nemsio
+
+  do k=1,nsig+1
+     ak5(k)=zero
+     bk5(k)=zero
+     ck5(k)=zero
+  end do
+
+  do k=1,nsig+1
+     if (nvcoord5 ==1 ) then
+        bk5(k)=vcoord5(k,1)
+     else if (nvcoord5 >= 2) then
+        ak5(k)=vcoord5(k,1)*0.001_r_kind
+        bk5(k)=vcoord5(k,2)
+     else if (nvcoord5 >= 3) then
+        ck5(k)=vcoord5(k,3)*0.001_r_kind
+     end if
+  end do
+ 
+  deallocate(vcoord5)
+
 
   if (mype==0) write(6,*) 'END GETCASES'
 

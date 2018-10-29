@@ -14,6 +14,7 @@ module variables
 ! from GSI gridmod:
   logical hybrid,db_prec,biasrm,vertavg,use_gfs_nemsio
   integer nlat,nlon,nsig,dimbig,option,noq,lat1,lon1
+  integer nlatin,nlonin
   integer ntrac5,idvc5,idvm5,idpsfc5,idthrm5
   real(r_kind),allocatable,dimension(:):: rlons,ak5,bk5,ck5,cp5
   real(r_double),allocatable,dimension(:):: wgtlats,rlats
@@ -145,6 +146,8 @@ contains
     maxcases=10
     nlat=258
     nlon=512
+    nlatin=258
+    nlonin=512
     hybrid=.false.
     biasrm=.false.
     vertavg=.false.
