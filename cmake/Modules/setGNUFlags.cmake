@@ -1,4 +1,5 @@
 function (setGNU)
+  set(COMPILER_TYPE "gnu" CACHE INTERNAL "Compiler brand")
   message("Setting GNU Compiler Flags")
   if( (BUILD_RELEASE) OR (BUILD_PRODUCTION) )
     set(GSI_Fortran_FLAGS " -O3 -fconvert=big-endian -ffast-math -fno-second-underscore -frecord-marker=4 -funroll-loops -ggdb -static -Wall -fno-range-check -D_REAL8_ -fopenmp -ffree-line-length-0" CACHE INTERNAL "")
