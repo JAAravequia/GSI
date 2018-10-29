@@ -45,9 +45,9 @@ export NDATE=${NDATE:-/$NWPROD/util/exec/ndate}
 FORECASTSH=${FORECASTSH:-$HOMEgfs/scripts/exglobal_fcst_nemsfv3gfs.sh.ecf}
 
 # Enemble group, begin and end
-ENSGRP=${ENSGRP:-1}
-ENSBEG=${ENSBEG:-1}
-ENSEND=${ENSEND:-1}
+EFSOIGRP=${EFSOIGRP:-1}
+EFSOIBEG=${EFSOIBEG:-1}
+EFSOIEND=${EFSOIEND:-1}
 
 # Model builds
 export FCSTEXECDIR=${FCSTEXECDIR:-$HOMEgfs/sorc/fv3gfs.fd/BUILD/bin}
@@ -77,13 +77,13 @@ DATATOP=$DATA
 # Set output data
 cymd=$(echo $CDATE | cut -c1-8)
 chh=$(echo  $CDATE | cut -c9-10)
-EFSOIGRP=$ROTDIR/enkf.${CDUMP}.${cymd}/$chh/efsoi.grp${ENSGRP}
-if [ -f $EFSOIGRP ]; then
+EFCSOIGRP=$ROTDIR/enkf.${CDUMP}.${cymd}/$chh/efsoi.grp${EFSOIGRP}
+if [ -f $EFCSOIGRP ]; then
    if [ $RERUN_EFSOIGRP = "YES" ]; then
-      rm -f $EFSOIGRP
+      rm -f $EFCSOIGRP
    else
       echo "RERUN_EFSOIGRP = $RERUN_EFSOIGRP, will re-run FAILED members only!"
-      $NMV $EFSOIGRP ${EFSOIGRP}.fail
+      $NMV $EFCSOIGRP ${EFCSOIGRP}.fail
    fi
 fi
 
@@ -124,7 +124,7 @@ export IAER=${IAER_ENKF:-${IAER:-111}}
 export ICO2=${ICO2_ENKF:-${ICO2:-2}}
 export cdmbgwd=${cdmbgwd_ENKF:-${cdmbgwd:-"3.5,0.25"}}
 export dspheat=${dspheat_ENKF:-${dspheat:-".true."}}
-export shal_cnv=${shal_cnv_ENKF:-${shal_cnv:-".true."}}
+export shal_cnv=${shal_cnv_ENKF:-${shal_cnv:-".false."}}
 export FHZER=${FHZER_ENKF:-${FHZER:-6}}
 export FHCYC=${FHCYC_ENKF:-${FHCYC:-6}}
 
@@ -135,7 +135,7 @@ export NTHREADS_FV3=${NTHREADS_FV3:-${NTHREADS:-1}}
 ################################################################################
 # Run forecast for ensemble member
 rc=0
-for imem in $(seq $ENSBEG $ENSEND); do
+for imem in $(seq $EFSOIBEG $EFSOIEND); do
 
    cd $DATATOP
 
@@ -147,8 +147,8 @@ for imem in $(seq $ENSBEG $ENSEND); do
    ra=0
 
    skip_mem="NO"
-   if [ -f ${EFSOIGRP}.fail ]; then
-      memstat=$(cat ${EFSOIGRP}.fail | grep "MEMBER $cmem" | grep "PASS" | wc -l)
+   if [ -f ${EFCSOIGRP}.fail ]; then
+      memstat=$(cat ${EFCSOIGRP}.fail | grep "MEMBER $cmem" | grep "PASS" | wc -l)
       [[ $memstat -eq 1 ]] && skip_mem="YES"
    fi
 
@@ -175,7 +175,7 @@ for imem in $(seq $ENSBEG $ENSEND); do
 
    cd $DATATOP
 
-   $NCP $EFSOIGRP log_old
+   $NCP $EFCSOIGRP log_old
    rm log log_new
    if [ $ra -ne 0 ]; then
       echo "MEMBER $cmem : FAIL" > log
@@ -183,16 +183,16 @@ for imem in $(seq $ENSBEG $ENSEND); do
       echo "MEMBER $cmem : PASS" > log
    fi
    cat log_old log > log_new
-   $NCP log_new $EFSOIGRP
+   $NCP log_new $EFCSOIGRP
 
 done
 
 ################################################################################
 # Echo status of ensemble group
 cd $DATATOP
-echo "Status of ensemble members in group $ENSGRP:"
-cat $EFSOIGRP
-rm ${EFSOIGRP}.fail
+echo "Status of ensemble members in group $EFSOIGRP:"
+cat $EFCSOIGRP
+rm ${EFCSOIGRP}.fail
 
 ################################################################################
 # If any members failed, error out

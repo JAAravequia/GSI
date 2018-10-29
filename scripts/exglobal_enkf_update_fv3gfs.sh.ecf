@@ -45,6 +45,9 @@ APRUNCFP=${APRUNCFP:-""}
 APRUN_ENKF=${APRUN_ENKF:-${APRUN:-""}}
 NTHREADS_ENKF=${NTHREADS_ENKF:-${NTHREADS:-1}}
 
+# FSOI related environment variables
+FSOI_CYCLING=${FSOI_CYCLING:-".false."}
+
 # Executables
 ENKFEXEC=${ENKFEXEC:-$HOMEgsi/exec/global_enkf}
 
@@ -142,6 +145,18 @@ EOFuntar
    chmod 755 $DATA/untar.sh
 fi
 
+if [ $FSOI_CYCLING = .true. ]; then
+  # export osense variables to aid
+  # in the linking of observation
+  export OSENSE=${OSENSE:-${COMOUT}/osense_}
+  # Turn off data discarding
+  export PAOVERPB_THRESHOLD=1.00
+else
+  # Set operational data
+  # discarding threshold
+  export PAOVERPB_THRESHOLD=0.98
+fi
+
 ################################################################################
 # Ensemble guess, observational data and analysis
 
@@ -166,7 +181,16 @@ for imem in $(seq 1 $NMEM_ENKF); do
    fi
    $NLN $COMIN_GES_ENS/$memchar/${GPREFIX}atmf006${ENKF_SUFFIX}${GSUFFIX}  sfg_${CDATE}_fhr06_${memchar}
    $NLN $COMOUT_ANL_ENS/$memchar/${APREFIX}atmanl${ASUFFIX}               sanl_${CDATE}_fhr06_${memchar}
+   if [ $FSOI_CYCLING = .true. ]; then
+     memberni="_nimem"`printf %03i $imem`
+     $NCP sanl_${CDATE}${memberni} ${SIGANLENS}${memberni}
+   fi
+
 done
+
+if [ $FSOI_CYCLING = .true. ]; then
+  $NLN ${OSENSE}${CDATE}.dat osense_${CDATE}.dat
+fi
 
 # Ensemble mean guess
 $NLN $COMIN_GES_ENS/${GPREFIX}atmf006.ensmean${GSUFFIX} sfg_${CDATE}_fhr06_ensmean
@@ -194,7 +218,7 @@ cat > enkf.nml << EOFnml
    lnsigcutoffsatnh=2.0,lnsigcutoffsatsh=2.0,lnsigcutoffsattr=2.0,
    obtimelnh=1.e30,obtimelsh=1.e30,obtimeltr=1.e30,
    saterrfact=1.0,numiter=1,
-   sprd_tol=1.e30,paoverpb_thresh=0.98,
+   sprd_tol=1.e30,paoverpb_thresh=$PAOVERPB_THRESHOLD,
    nlons=$LONA_ENKF,nlats=$LATA_ENKF,nlevs=$LEVS_ENKF,nanals=$NMEM_ENKF,
    deterministic=.true.,sortinc=.true.,lupd_satbiasc=.false.,
    reducedgrid=.true.,readin_localization=.true.,
@@ -203,6 +227,7 @@ cat > enkf.nml << EOFnml
    lobsdiag_forenkf=$lobsdiag_forenkf,
    write_spread_diag=$write_spread_diag,
    netcdf_diag=$netcdf_diag,
+   fso_cycling=$FSOI_CYCLING,
    $NAM_ENKF
 /
 &satobs_enkf
