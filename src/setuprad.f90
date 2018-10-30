@@ -372,6 +372,7 @@
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
 !KAB
   logical:: mwclrsky
+  integer(i_kind):: coun
   character(10) filex
   character(12) string
 
@@ -380,7 +381,7 @@
   type(obs_diag),pointer:: my_diag
   type(rad_obs_type) :: radmod
 !KAB
-Rmat=0.0
+Rmat=0.0_r_kind
   save_jacobian = rad_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
   if (save_jacobian) then
      ijacob = 1 ! flag to indicate jacobian saved in diagnostic file
@@ -1095,7 +1096,6 @@ Rmat=0.0
 !KAB clrsky
         mwclrsky=.true.
         if (radmod%lcloud_fwd .and. eff_area)  then   
-!pass in the logical corr,isis
            if (radmod%ex_obserr=='ex_obserr1') & 
               call radiance_ex_obserr(radmod,nchanl,clwp_amsua,clw_guess_retrieval,tnoise,tnoise_cld,error0,&
                                       mwclrsky,isis,Rmat) !KAB
@@ -1129,10 +1129,12 @@ Rmat=0.0
              error0(i) = tnoise(i)
              errf0(i) = error0(i)
            end do
-        elseif (Rmat(1,1)>0) then
+        elseif (Rmat(1,1)>0.01) then
+           coun=0
            do i=1,nchanl
               if (iuse_rad(ich(i))>0) then
-                 error0(i)=sqrt(Rmat(i,i))
+                 coun=coun+1
+                 error0(i)=sqrt(Rmat(coun,coun))
                  tnoise(i)=error0(i)
                  errf0(i) = error0(i)
               endif
@@ -1590,7 +1592,7 @@ Rmat=0.0
               obvarinv = error0 ! on input
 !KAB
 !add optional input argument which is the cloudy R
-              if ((miter>0).and.(Rmat(1,1)>0.0)) then
+              if ((miter>0).and.(Rmat(1,1)>0.01)) then
                  account_for_corr_obs = radinfo_adjust_jacobian (iinstr,isis,isfctype,nchanl,nsigradjac,ich,varinv,&
                                                                  utbc,obvarinv,adaptinf,wgtjo,jacobian,Rinv,rsqrtinv,Rmat)
               elseif ((miter>0).and.(mwclrsky)) then
