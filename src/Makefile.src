@@ -120,6 +120,7 @@
 	fpvsx_ad.o \
         general_commvars_mod.o \
 	general_read_gfsatm.o \
+	general_read_nemsaero.o \
 	general_read_nmmb.o \
 	general_specmod.o \
 	general_spectral_transforms.o \

@@ -88,6 +88,10 @@ contains
 
     out=zero_quad
 
+!>swei
+   
+!<swei
+
     naero = size(aerojacnames)
     if ( naero <= 0 ) return
 
@@ -101,9 +105,9 @@ contains
        call stop2(460)
 
     endif
-
-    if (wrf_mass_regional) then
-
+!>swei: remove it for global AODDA
+!    if (wrf_mass_regional) then
+!<swei
        tdir=zero
        rdir=zero
 
@@ -213,9 +217,9 @@ contains
           aeroptr => aeroNode_nextcast(aeroptr)
 
        end do
-
-    endif
-
+!>swei
+!    endif
+!<swei
     return
 
   end subroutine stpaod

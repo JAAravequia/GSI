@@ -11,6 +11,7 @@ endif()
 if(NOT BUILD_BACIO )
   if(DEFINED ENV{BACIO_LIB4})
     set(BACIO_LIBRARY $ENV{BACIO_LIB4} )
+    message("BACIO library ${BACIO_LIBRARY} set via Environment variable")
   else()
     find_library( BACIO_LIBRARY 
       NAMES libbacio.a libbacio_4.a libbacio_v${BACIO_VER}_4.a 

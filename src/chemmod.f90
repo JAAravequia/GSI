@@ -50,6 +50,10 @@ module chemmod
   public :: luse_deepblue
 
   public :: wrf_pm2_5
+!>swei
+  public :: lread_ext_aerosol
+  logical :: lread_ext_aerosol
+!<swei
 
   public :: aero_ratios
   public :: upper2lower,lower2upper
@@ -234,6 +238,9 @@ contains
 
     wrf_pm2_5=.false.
     aero_ratios=.false.
+!>swei
+    lread_ext_aerosol = .false.
+!<swei
 
   end subroutine init_chem
 

@@ -393,7 +393,6 @@ subroutine pcgsoi()
         end if
 
      end if
-
      if(iorthomax>0) then
 !       save gradients
         if (iter <= iortho) then

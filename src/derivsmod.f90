@@ -422,8 +422,10 @@ drv_set_=.true.
     implicit none
 
     integer(i_kind) i,j,k
-
-    if (getindex(svars3d,'q')>0) then
+!>swei: Remove it to allocate qgues even there is no q variable in state
+!       variables, because compute_derived.f90 call genqsat anyway.
+!    if (getindex(svars3d,'q')>0) then
+!<swei
        allocate(qsatg(lat2,lon2,nsig),&
             dqdt(lat2,lon2,nsig),dqdrh(lat2,lon2,nsig),&
             dqdp(lat2,lon2,nsig),&
@@ -440,8 +442,9 @@ drv_set_=.true.
              end do
           end do
        end do
-    endif
-
+!>swei
+!    endif
+!<swei
     allocate(cwgues(lat2,lon2,nsig))
     do k=1,nsig
        do j=1,lon2

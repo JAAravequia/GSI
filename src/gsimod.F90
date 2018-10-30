@@ -134,7 +134,11 @@
        oneob_type_chem,oblat_chem,&
        oblon_chem,obpres_chem,diag_incr,elev_tolerance,tunable_error,&
        in_fname,out_fname,incr_fname, &
-       laeroana_gocart, l_aoderr_table, aod_qa_limit, luse_deepblue
+!>swei: Add the logical flag for reading external aerosol forecast sigma files.
+!       laeroana_gocart, l_aoderr_table, aod_qa_limit, luse_deepblue
+       laeroana_gocart, l_aoderr_table, aod_qa_limit, luse_deepblue, &
+       lread_ext_aerosol
+!<swei
   use chemmod, only : wrf_pm2_5,aero_ratios
   use gfs_stratosphere, only: init_gfs_stratosphere,use_gfs_stratosphere,pblend0,pblend1
   use gfs_stratosphere, only: broadcast_gfs_stratosphere_vars
@@ -1008,7 +1012,10 @@
        diag_incr,elev_tolerance,tunable_error,&
        in_fname,out_fname,incr_fname,&
        laeroana_gocart, l_aoderr_table, aod_qa_limit, luse_deepblue,&
-       aero_ratios,wrf_pm2_5
+!>swei: Add logical flag for reading external aerosol files (NEMSIO format, GOCART species).
+!       aero_ratios,wrf_pm2_5
+       aero_ratios,wrf_pm2_5, lread_ext_aerosol
+!<swei
 
 ! NST (NSST control namelist) :
 !     nst_gsi  - indicator to control the Tr Analysis mode: 0 = no nst info ingsi at all;
