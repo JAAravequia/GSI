@@ -475,7 +475,7 @@ contains
        ptr3d = p_co2
     enddo
 
-    if (laeroana_gocart) ! if using aerosols
+    if (laeroana_gocart) then! if using aerosols
        if ( mype == 0 ) write(6,*) 'n_aerosols_fwd and aerosol_names_fwd',n_aerosols_fwd,aerosol_names_fwd
 ! Read in Aerosol field via nemsio
        if ( n_aerosols_fwd > 0 ) then
