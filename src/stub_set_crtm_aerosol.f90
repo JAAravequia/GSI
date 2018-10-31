@@ -15,7 +15,7 @@ subroutine Set_CRTM_Aerosol_ ( km, na, na_crtm, aero_name, aero_conc, rh, aeroso
 ! 2013-11-17 Todling   - Brought HCLin implementation into stub - it live
 !                        outside GSI, but to not break DTC usage it's placed
 !                        here temporarily. 
-! 2018-10-31  Wei/Martin - Moved aerosol effective radius to GOCART_Aerosol_size
+! 2018-10-31 Wei/Martin - Moved aerosol effective radius to GOCART_Aerosol_size
 !
 !   input argument list:
 !     km        : number of CRTM levels
