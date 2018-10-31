@@ -23,6 +23,7 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 !   2013-01-26  parrish - change from grdcrd to grdcrd1 (to allow successful debug compile on WCOSS)
 !   2015-02-23  Rancic/Thomas - add thin4d to time window logical
 !   2015-10-01  guo      - calc ob location once in deg
+!   2018-10-31  Wei/Martin - added VIIRS AOD capability (code from Q. Zhao)
 !
 !   input argument list:
 !     obstype  - observation type to process
@@ -57,12 +58,8 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   use kinds,     only: r_kind, r_double, i_kind
   use gridmod,   only: nlat, nlon, regional, tll2xy, rlats, rlons
   use chemmod,   only: aod_qa_limit, luse_deepblue
-!>swei
   use constants, only: deg2rad, zero, one, two, three, four, five, r0_01, rad2deg, r60inv
   use obsmod,    only: iadate, rmiss_single
-!  use constants, only: deg2rad, zero, two, three, four, r60inv
-!  use obsmod,    only: rmiss_single
-!<swei
   use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,thin4d
   use satthin,   only: itxmax,makegrids,destroygrids,checkob, &
       finalcheck,map2tgrid,score_crit
@@ -140,24 +137,21 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   character (len=53) :: aerogstr = &
       'SAID CLATH CLONH YEAR MNTH DAYS HOUR MINU SOZA SOLAZI'
   character (len=14)  :: flagstr = 'STYP DBCF QAOD'
-!>swei: viirs_aod related code (by Q. Zhao)
+! VIIRS AOD code
   character (len= 9) :: vaodchstr  = 'CHWL AOPT'
   character (len=69) :: vaodgstr = &
       'SAID CLATH CLONH YEAR MNTH DAYS HOUR MINU SOZA SOLAZI RSST VAOTQ QPLR'
   integer(i_kind), parameter :: mxib  = 20
   integer(i_kind) :: nib
   integer(i_kind) :: ibit(mxib)
-!<swei
+
   integer(i_kind) :: itx, itt, irec
 
   real(r_kind) :: tdiff, sstime, dlon, dlat, t4dv, timedif, crit1, dist1
   real(r_kind) :: slons0, slats0, rsat, solzen, azimuth, dlat_earth, dlon_earth
   real(r_kind) :: dlat_earth_deg, dlon_earth_deg
-!>swei: viirs_aod related code (by Q. Zhao) 
-!  real(r_kind) :: styp, dbcf, qaod
   real(r_kind) :: styp, dbcf, qaod, smask, qcall
   real(r_kind) :: qcall_limit  ! qcall >= qcall_limit will be retained
-!<swei
   real(r_kind),dimension(0:6):: rlndsea
 
   real(r_kind), allocatable, dimension(:,:) :: aeroout
@@ -166,11 +160,10 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   real(r_double), dimension( 10) :: hdraerog
   real(r_double)                 :: aod_550
   real(r_double), dimension(3)   :: aod_flags
-!>swei: viirs_aod related code (by Q. Zhao) 
+! for VIIRS
   real(r_double), dimension(13) :: hdrvaodg
   real(r_double), dimension(2,12) :: vaodch
   real(r_double)                 :: aod_lb,aod_ub
-!<swei
 
 !**************************************************************************
 ! Set constants.  Initialize variables
@@ -381,9 +374,7 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      call closbf(lunin)
      close(lunin)
 
-!>swei: viirs_aod related code (by Q. Zhao)
   else if ( obstype == 'viirs_aod' ) then
-!
      open(lunin,file=trim(infile),form='unformatted')
      call openbf(lunin,'IN',lunin)
      call datelen(10)
@@ -401,10 +392,7 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
            allocate (dataaod(nchanl))
 
 !          set qcall_limit
-!>swei
-!           qcall_limit = two - r0_01
            qcall_limit = aod_qa_limit - r0_01
-!<swei
 
 !          set valid range of AOD to ingest
            aod_lb = zero
@@ -576,7 +564,6 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      end if
      call closbf(lunin)
      close(lunin)
-!<swei
   else             ! obstype /= 'modis_aod' or 'viirs_aod'
      write(6,*)'READ_AEROSOL:  *** WARNING: unknown aerosol input type, obstype=',obstype
   endif

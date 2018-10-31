@@ -15,6 +15,7 @@ subroutine Set_CRTM_Aerosol_ ( km, na, na_crtm, aero_name, aero_conc, rh, aeroso
 ! 2013-11-17 Todling   - Brought HCLin implementation into stub - it live
 !                        outside GSI, but to not break DTC usage it's placed
 !                        here temporarily. 
+! 2018-10-31  Wei/Martin - Moved aerosol effective radius to GOCART_Aerosol_size
 !
 !   input argument list:
 !     km        : number of CRTM levels
@@ -114,13 +115,12 @@ subroutine Set_CRTM_Aerosol_ ( km, na, na_crtm, aero_name, aero_conc, rh, aeroso
         aerosol(i)%effective_radius(k) &
            = GOCART_Aerosol_size(i, aerosol(i)%type, rh(k))
         ! 5 dust bins
-!>swei: move this section into function GOCART_Aerosol_size
+! this section moved into function GOCART_Aerosol_size
 !        aerosol(indx_dust1)%effective_radius(k) = 0.55_r_kind
 !        aerosol(indx_dust2)%effective_radius(k) = 1.4_r_kind
 !        aerosol(indx_dust3)%effective_radius(k) = 2.4_r_kind
 !        aerosol(indx_dust4)%effective_radius(k) = 4.5_r_kind
 !        aerosol(indx_dust5)%effective_radius(k) = 8.0_r_kind
-!<swei
      enddo
 
   enddo  ! na
@@ -143,7 +143,6 @@ subroutine Set_CRTM_Aerosol_ ( km, na, na_crtm, aero_name, aero_conc, rh, aeroso
   real(r_kind)    :: R_eff
 
   if ( itype==DUST_AEROSOL ) then
-!>swei: Move the R_eff assignment to here
      if (kk==indx_dust1) then
           R_eff = 0.55_r_kind
      else if (kk==indx_dust2) then
@@ -155,7 +154,6 @@ subroutine Set_CRTM_Aerosol_ ( km, na, na_crtm, aero_name, aero_conc, rh, aeroso
      else if (kk==indx_dust5) then
           R_eff = 8.0_r_kind
      end if
-!<swei
      return
   else if ( itype==BLACK_CARBON_AEROSOL .and. kk==indx_bc1 ) then
      R_eff = AeroC%Reff(1,itype )

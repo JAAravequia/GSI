@@ -743,7 +743,7 @@ contains
     hwlb=ihwlb*tin
 !   tin=(hwle-hwlb)/float(nta-1)
     ntax=(hwle-hwlb)/tin+2
-!   write(6,*)'INIT_RFTABLE:  tin ',ntax,ihwlb,tin,hwlb,hwle
+   !write(6,*)'INIT_RFTABLE:  tin ',ntax,ihwlb,tin,hwlb,hwle
 
     allocate(iuse(ntax))
 

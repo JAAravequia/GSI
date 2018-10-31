@@ -14,6 +14,7 @@ module chemmod
 ! NB: keep aerosol names capital for consistency with cmaq output names
 ! 2011-09-09 pagowski - add codes for PM2.5 for prepbufr and bufr dump files
 ! 2013-11-01 pagowski - add code for PM2.5 assimilation with wrf-chem
+! 2018-10-31 wei/martin - logical if to read in aerosols from ext. file (default F)
 
 
   use kinds, only : i_kind, r_kind, r_single
@@ -50,10 +51,8 @@ module chemmod
   public :: luse_deepblue
 
   public :: wrf_pm2_5
-!>swei
+
   public :: lread_ext_aerosol
-  logical :: lread_ext_aerosol
-!<swei
 
   public :: aero_ratios
   public :: upper2lower,lower2upper
@@ -66,6 +65,8 @@ module chemmod
   integer(i_kind) :: aod_qa_limit  ! qa >=  aod_qa_limit will be retained
   real(r_kind)    :: ppmv_conv = 96.06_r_kind/28.964_r_kind*1.0e+3_r_kind
   logical :: wrf_pm2_5
+
+  logical :: lread_ext_aerosol ! if true, will read in aerosols from aerfXX rather than from sigfXX
 
 
   real(r_kind),parameter :: s_2_5=0.942_r_kind,d_2_5=0.286_r_kind,&
@@ -213,6 +214,9 @@ contains
   subroutine init_chem
 
 !   prgmmr: pagowski                date: 2010-09-13
+!   revisions: 
+!           martin                        2018-10-31
+!                       cleaned up contribution from swei at Albany
 
 !initialiazes default values to &CHEM namelist parameters
     
@@ -238,9 +242,7 @@ contains
 
     wrf_pm2_5=.false.
     aero_ratios=.false.
-!>swei
     lread_ext_aerosol = .false.
-!<swei
 
   end subroutine init_chem
 

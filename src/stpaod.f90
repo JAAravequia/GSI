@@ -10,6 +10,7 @@ module stpaodmod
 ! program history log:
 !   2016-02-20  pagowski - a module for aod 
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
+!   2018-10-31  Wei/Martin - changed if in stpaod from wrf_mass_regional to laeroana_gocart
 !
 ! subroutines included:
 !   sub stpaod
@@ -42,6 +43,7 @@ contains
 !
 ! program history log:
 !   2016-01-15  pagowski - original routine 
+!   2018-10-31  Wei/Martin - changed if from wrf_mass_regional to laeroana_gocart
 !
 !   input argument list:
 !     aerohead
@@ -65,7 +67,8 @@ contains
     use constants, only: half,one,two,tiny_r_kind,cg_term,zero_quad,zero
     use gsi_bundlemod, only: gsi_bundle
     use gsi_bundlemod, only: gsi_bundlegetpointer
-    use gridmod, only: cmaq_regional,wrf_mass_regional,latlon11,nsig
+    use gridmod, only: cmaq_regional,latlon11,nsig
+    use chemmod, only: laeroana_gocart
     implicit none
     
 ! declare passed variables
@@ -88,9 +91,6 @@ contains
 
     out=zero_quad
 
-!>swei
-   
-!<swei
 
     naero = size(aerojacnames)
     if ( naero <= 0 ) return
@@ -105,9 +105,7 @@ contains
        call stop2(460)
 
     endif
-!>swei: remove it for global AODDA
-!    if (wrf_mass_regional) then
-!<swei
+     if (laeroana_gocart) then
        tdir=zero
        rdir=zero
 
@@ -217,9 +215,7 @@ contains
           aeroptr => aeroNode_nextcast(aeroptr)
 
        end do
-!>swei
-!    endif
-!<swei
+    endif
     return
 
   end subroutine stpaod

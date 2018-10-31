@@ -1133,6 +1133,7 @@ end subroutine write_ghg_grid
 !                        gues while original cw gues still have negative values.
 !   2013-10-19  todling - update cloud_efr module name
 !   2013-10-29  todling - revisit write to allow skipping vars not in MetGuess
+!   2018-10-31  Wei/Martin - modified to write global aerosol arrays if needed 
 !
 !   input argument list:
 !     increment          - when >0 will write increment from increment-index slot
@@ -1165,11 +1166,9 @@ end subroutine write_ghg_grid
     use general_specmod, only: general_init_spec_vars,general_destroy_spec_vars,spec_vars
     use gsi_4dvar, only: lwrite4danl
     use ncepnems_io, only: write_nemsatm,write_nemssfc,write_nems_sfc_nst
-!>swei: Add chemistry related routine for output aerosol fields
     use gsi_chemguess_mod, only: gsi_chemguess_get,gsi_chemguess_bundle
     use chemmod, only: laeroana_gocart
     use radiance_mod, only: aerosol_names
-!<swei
 
 
     implicit none
@@ -1199,11 +1198,10 @@ end subroutine write_ghg_grid
     real(r_kind),pointer,dimension(:,:,:):: ges_oz_it  =>null()
     real(r_kind),pointer,dimension(:,:,:):: ges_cwmr_it=>null()
 
-!>swei: Declare aerosol fields
+!   for aerosols
     real(r_kind),pointer,dimension(:,:,:):: aux_du1,aux_du2,aux_du3,aux_du4,aux_du5
     real(r_kind),pointer,dimension(:,:,:):: aux_ss1,aux_ss2,aux_ss3,aux_ss4,aux_so4
     real(r_kind),pointer,dimension(:,:,:):: aux_oc1,aux_oc2,aux_bc1,aux_bc2
-!
     real(r_kind),pointer,dimension(:,:,:):: ges_du1_it=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_du2_it=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_du3_it=>NULL()
@@ -1219,7 +1217,6 @@ end subroutine write_ghg_grid
     real(r_kind),pointer,dimension(:,:,:):: ges_bc1_it=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_bc2_it=>NULL()
     type(gsi_bundle) :: chem_bundle
-!<swei
 
     type(gsi_bundle) :: atm_bundle
     type(gsi_grid)   :: atm_grid
@@ -1267,7 +1264,8 @@ end subroutine write_ghg_grid
     if ( istatus == 0 ) aux_oz = zero
     call gsi_bundlegetpointer(atm_bundle,'cw',aux_cwmr,istatus)
     if ( istatus == 0 ) aux_cwmr = zero
-!>swei
+    
+    ! if aerosols
     if ( laeroana_gocart ) then
        call gsi_bundlecreate(chem_bundle,atm_grid,'aux-chem-write',istatus,names3d=aerosol_names)
        if ( istatus /= 0 ) then
@@ -1302,8 +1300,7 @@ end subroutine write_ghg_grid
        if ( istatus == 0 ) aux_ss3 = zero
        call gsi_bundlegetpointer(chem_bundle,'seas4',aux_ss4,istatus)
        if ( istatus == 0 ) aux_ss4 = zero
-    end if
-!<swei    
+    end if ! laeroana_gocart
 
     inithead=.true.
     do it=1,ntlevs
@@ -1358,7 +1355,8 @@ end subroutine write_ghg_grid
         if ( istatus == 0 ) aux_oz = ges_oz_it
         call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'cw',ges_cwmr_it,istatus) 
         if ( istatus == 0 ) aux_cwmr = ges_cwmr_it
-!>swei: get the data from chem bundle to output
+
+! if aerosols, get the data from chem bundle to output
         if ( laeroana_gocart ) then
            call gsi_bundlegetpointer(gsi_chemguess_bundle(itoutsig),'dust1',ges_du1_it,istatus)
            if( istatus==0 ) aux_du1 = ges_du1_it
@@ -1388,21 +1386,18 @@ end subroutine write_ghg_grid
            if( istatus==0 ) aux_bc1 = ges_bc1_it
            call gsi_bundlegetpointer (gsi_chemguess_bundle(itoutsig),'bc2',ges_bc2_it,istatus)
            if( istatus==0 ) aux_bc2 = ges_bc2_it
-        end if
-!<swei
+        end if ! laeroana_gocart
 
         if ( use_gfs_nemsio ) then
-!>swei
+            ! if using aerosols, optional chem_bundle argument
             if ( laeroana_gocart ) then
                 call write_nemsatm(grd_a,sp_a,filename,mype_atm, &
                      atm_bundle,itoutsig,chem_bundle)
             else
+            ! otherwise, just atm_bundle
                 call write_nemsatm(grd_a,sp_a,filename,mype_atm, &
                      atm_bundle,itoutsig)
-            end if
-!            call write_nemsatm(grd_a,sp_a,filename,mype_atm, &
-!                 atm_bundle,itoutsig)
-!<swei
+            end if ! laeroana_gocart
 
         else
 

@@ -19,6 +19,7 @@
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !   2016-06-24  guo     - fixed the default value of obsdiags(:,:)%tail%luse to luse(i)
 !                       . removed (%dlat,%dlon) debris.
+!   2018-10-31  Wei/Martin - added VIIRS AOD in addition to MODIS AOD
 !
 !  input argument list:
 !     lunin   - unit from which to read radiance (brightness temperature, tb) obs
@@ -143,10 +144,8 @@
   real(r_kind), dimension(nchanl) :: total_aod, aod_obs, aod
 
   integer(i_kind) :: istyp, idbcf, ilone, ilate
-!>swei
   integer(i_kind) :: iqcall, ismask, nestat
   real(r_kind)    :: qcall, smask
-!<swei
   real(r_kind)    :: styp, dbcf
 
   real(r_kind),dimension(nchanl):: emissivity,ts,emissivity_k
@@ -177,9 +176,7 @@
   ilate     = 6  ! index of earth relative latitude (degrees)
   iszen_ang = 8  ! index of solar zenith angle (degrees)
   isazi_ang = 9  ! index of solar azimuth angle (degrees)
-!>swei
-!  istyp     = 10 ! index of surface type
-!  idbcf     = 11 ! index of deep blue confidence flag
+
   if ( obstype == 'modis_aod' ) then
      istyp     = 10 ! index of surface type
      idbcf     = 11 ! index of deep blue confidence flag
@@ -189,8 +186,6 @@
   else              ! obstype /= 'modis_aod' or 'viirs_aod'
      write(6,*)'SETUP_AOD:  *** WARNING: unknown aerosol input type, obstype=',obstype
   end if
-
-!<swei
 
 ! Determine cloud & aerosol usages in radiance assimilation
   call radiance_obstype_search(obstype,radmod)
@@ -308,9 +303,6 @@
         cenlon = data_s(ilone,n)   ! earth relative longitude (degrees)
         cenlat = data_s(ilate,n)   ! earth relative latitude (degrees)                       
         pangs  = data_s(iszen_ang,n)
-!>swei
-!        styp   = data_s(istyp,n)
-!        dbcf   = data_s(idbcf,n)
         if ( obstype == 'modis_aod' ) then
            styp   = data_s(istyp,n)
            dbcf   = data_s(idbcf,n)
@@ -318,7 +310,6 @@
            qcall  = data_s(iqcall,n)
            smask  = data_s(ismask,n)
         end if
-!<swei
  
 !       Set relative weight value
         val_obs=one
@@ -331,9 +322,7 @@
 
         if ( .not. l_aoderr_table ) then
 !          set observation error
-!>swei
            if ( obstype == 'modis_aod' ) then
-!<swei
            select case ( nint(styp) )
               case ( 0 )        ! water
                  tnoise = 0.03_r_kind+0.05_r_kind*aod_obs
@@ -348,7 +337,6 @@
               case ( 6 )  ! nnr land
                  tnoise = 0.2_r_kind*(aod_obs+0.01_r_kind)
            end select
-!>swei
            else if ( obstype == 'viirs_aod' ) then
 
               nestat = nint(qcall)+nint(smask)*10
@@ -368,7 +356,6 @@
                end select
 
             end if
-!<swei
         end if
  
 !       Interpolate model fields to observation location, call crtm and create jacobians

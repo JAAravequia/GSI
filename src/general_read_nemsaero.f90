@@ -2,24 +2,14 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
        naero,aeroname,init_head,iret_read)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:    general_read_gfsatm  adaptation of read_gfsatm for
-! general resolutions
-!   prgmmr: parrish          org: np22                date: 1990-10-10
+! subprogram:    general_read_nemsaero   adaptation of general_read_gfsatm
+!                                        for reading in aerosols from NEMSI/O
 !
-! abstract: copied from read_gfsatm, primarily for reading in gefs sigma
-! files, where the
-!            input resolution and the grid that variables are
-!            reconstructed on can be
-!            different from the analysis grid/resolution.
+! abstract: copied from general_read_gfsatm, primarily for reading in aerosol
+!           tracer variables from NEMS GFS I/O files 
 !
 ! program history log:
-!   2010-02-25  parrish
-!   2010-03-29  kleist     - modifications to allow for st/vp
-!   perturbations instead of u,v
-!   2012-01-17  wu         - increase character length for variable
-!   "filename"
-!   2014-12-03  derber     - introduce vordivflag, zflag and optimize
-!   routines
+!   2018-10-31  Wei/Martin - modifications to read in aerosol arrays
 !
 !   input argument list:
 !     grd      - structure variable containing information about grid
@@ -31,12 +21,16 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
 !                    general_specmod.f90)
 !     filename - input sigma file name
 !     mype     - mpi task id
+!     naero    - number of aerosol tracers to read
+!     aeroname - len(naero) character strings of aerosol tracers to read
 !     init_head- flag to read header record.  Usually .true. unless
 !     repeatedly
 !                reading similar files (ensembles)
 !
+!   input/output list:
+!     gfschem_bundle - GSI bundle containing chem/aerosol arrays
+!
 !   output argument list:
-!     g_*      - guess fields
 !     iret_read - return code, 0 for successful read.
 !
 ! attributes:
@@ -328,6 +322,7 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
           end select
 
 ! Convert NGAC mixing ratio unit from kg/kg( 10^3 g/kg ) to ug/kg( 10^-6 g/kg )
+! CRM are we sure we want to do this here?
           rwork1d0=rwork1d0*1.0e+9_r_kind
 
 !          rwork1d0=zero
@@ -358,9 +353,7 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
     end do
     end do
 
-!>swei: test output to make sure the data be read in properly
 !   write(9999,*) sp_a%rlats,sp_a%rlons,ae_d1(:,:,10)
-!<swei
     
     if(procuse)then
 !       if(diff_res) deallocate(grid_b,grid_b2,grid_c,grid_c2,grid2)
