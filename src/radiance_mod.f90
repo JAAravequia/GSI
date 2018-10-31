@@ -305,7 +305,7 @@ contains
 !   2015-07-20  zhu -- initial code    
 !   2018-04-04  zhu -- move rad_type_info(k)%cclr and rad_type_info(k)%ccld to this subroutine
 !   2018-04-06  derber -- change rad_type_info(k)%cclr default value from zero to a large number
-!   2018-10-31  Wei/Martin -- added capability for AOD assimilation
+!   2018-10-31  Wei/Martin -- fixed capability for AOD assimilation
 !
 !   input argument list:
 !
