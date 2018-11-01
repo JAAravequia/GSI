@@ -121,7 +121,7 @@ fi
 
 # Look for wrf libs
 if test -z "$WRF_DIR" ; then
-  for p in `pwd`/../../WRFV3
+  for p in `pwd`/../../WRF
   do
     if test -d $p ; then
       WRF_DIR=$p
@@ -140,7 +140,7 @@ if  test -z "$WRF_DIR"  ; then
       read resp
       if [ "$resp" = "y" -o -z "$resp" ]  ; then
         if [ -z "$wrfpath" ] ; then
-          echo 'Enter full path to WRF install directory on your system (i.e. $HOME/WRFV3)'
+          echo 'Enter full path to WRF install directory on your system (i.e. $HOME/WRF)'
           read resp
           if [ ! -d "$resp" ] ; then
             echo "invalid path: $resp. Try again? [y]" ; continue
