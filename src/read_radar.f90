@@ -561,6 +561,8 @@ subroutine read_radar(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_fu
   do
      read(lnbufr,iostat=iret)this_staid,this_stalat,this_stalon,this_stahgt, &
         thistime,thislat,thislon,thishgt,thisvr,corrected_azimuth,thiserr,corrected_tilt
+
+
      if(iret/=0) exit
      nsuper2_in=nsuper2_in+1
 
@@ -2346,6 +2348,7 @@ subroutine getvrlocalinfo(thisrange,thisazimuth,this_stahgt,aactual,a43,selev0,c
      end if
      elev=rad2deg*atan2(selev,celev)
      gamma=half*thisrange*(celev0+celev)
+     gamma=thisrange
 
 ! Get earth lat lon at obs location
      thisazimuthr=thisazimuth*deg2rad
@@ -2663,6 +2666,8 @@ subroutine read_radar_l2rw_novadqc(ndata,nodata,lunout,obstype,sis,nobs)
      end if 
 
      error = erradar_inflate*thiserr
+     if(error<=zero) error=1.0
+     if(thiserr<=zero) thiserr=1.0
      errmax=max(error,errmax)
 
      if(thiserr>zero) errmin=min(error,errmin)

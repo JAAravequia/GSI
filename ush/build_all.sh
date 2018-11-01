@@ -44,7 +44,7 @@ fi
 # First build GSI
 if [ $BUILD_GSI = "YES" -o $BUILD_ENKF = "YES" ]; then
 
-    clean=NO
+    clean=YES
     [[ $BUILD_ENKF = "YES" ]] && clean=NO
     $dir_root/ush/build_gsi.sh $target $pwd $clean
 

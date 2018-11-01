@@ -7,7 +7,7 @@ pwd=$(pwd)
 
 target=${1:-cray}
 dir_root=${2:-$pwd}
-clean=${3:-"NO"}
+clean=${3:-"YES"}
 
 if [ $target = wcoss ]; then
     . /usrx/local/Modules/3.2.10/init/sh
@@ -47,12 +47,12 @@ module list
 cd $dir_root/src
 ./configure clean
 ./configure $conf_target
-make -f Makefile clean
+#make -f Makefile clean
 make -f Makefile -j 8
 cp -p global_gsi $dir_root/exec
 
 if [ $clean = "YES" ]; then
-    make -f Makefile clean
+#    make -f Makefile clean
     ./configure clean
 fi
 

@@ -145,7 +145,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) val,valqc,rwgt
   real(r_kind) cg_w,wgross,wnotgross,wgt,arg,exp_arg,term,rat_err2
   real(r_double) rstation_id
-  real(r_kind) dlat,dlon,dtime,dpres,ddiff,error,slat
+  real(r_kind) dlat,dlon,dtime,dpres,ddiff,error,slat,ddiffmin,ddiffmax
   real(r_kind) sinazm,cosazm,sintilt,costilt,cosazm_costilt,sinazm_costilt
   real(r_kind) ratio_errors,qcgross
   real(r_kind) ugesin,vgesin,wgesin,factw,skint,sfcr
@@ -153,9 +153,9 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) errinv_input,errinv_adjst,errinv_final
   real(r_kind) err_input,err_adjst,err_final
   real(r_kind),dimension(nele,nobs):: data
-  real(r_single),allocatable,dimension(:,:)::rdiagbuf
+  real(r_kind),allocatable,dimension(:,:)::rdiagbuf
 
-  integer(i_kind) i,nchar,nreal,k,j,k1,ii
+  integer(i_kind) i,nchar,nreal,k,j,k1,ii,iii,jjj,m,n
   integer(i_kind) mm1,jj,k2,isli
   integer(i_kind) jsig,ikxx,nn,ibin,ioff,ioff0
   integer(i_kind) ier,ilat,ilon,ihgt,irwob,ikx,itime,iuse
@@ -198,6 +198,8 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! If require guess vars available, extract from bundle ...
   call init_vars_
 
+  ddiffmin=huge_single
+  ddiffmax=-huge_single
   n_alloc(:)=0
   m_alloc(:)=0
 !*******************************************************************************
@@ -263,7 +265,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      if(in_curbin) then
         dlat=data(ilat,i)
         dlon=data(ilon,i)
- 
+         
         dpres=data(ihgt,i)
         ikx = nint(data(ikxx,i))
         error=data(ier2,i)
@@ -358,7 +360,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         write(6,*) 'SETUPRW: zsges = ',zsges,'is greater than dpres ',dpres,'. Rejecting ob.'
         cycle
      endif
-     dpres=dpres-zsges
+     dpres=dpres -zsges
      call tintrp2a11(ges_ps,psges,dlat,dlon,dtime,hrdifsig,&
           mype,nfldsig)
      call tintrp2a1(ges_lnprsl,prsltmp,dlat,dlon,dtime,hrdifsig,&
@@ -547,22 +549,35 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            kminmin=k
         end if
      end do
-     rwwind=data(irwob,i)
-     if(data(irwob,i)<uminmin) then
-        rwwind=uminmin
-        dpres=kminmin
-     end if
-     if(data(irwob,i)>umaxmax) then
-        rwwind=umaxmax
-        dpres=kmaxmax
-     end if
-     if(rwwind==data(irwob,i)) then
-        numequal=numequal+1
-     else
-        numnotequal=numnotequal+1
-     end if
+     !rwwind=data(irwob,i)
+     rwwind=ugesin*cosazm_costilt + vgesin*sinazm_costilt + wgesin*sintilt
+     rwwind=nint(rwwind*10.0_r_kind)/10.0_r_kind !since bufr data is rounded.
+     !if(data(irwob,i)<uminmin) then
+     !   rwwind=uminmin
+     !   dpres=kminmin
+     !end if
+     !if(data(irwob,i)>umaxmax) then
+     !   rwwind=umaxmax
+     !   dpres=kmaxmax
+     !end if
+     !if(rwwind==data(irwob,i)) then
+     !   numequal=numequal+1
+     !else
+     !   numnotequal=numnotequal+1
+     !end if
      
      ddiff = data(irwob,i) - rwwind
+     if(abs(ddiff) > 0.1) then
+        write(6,*)'ugesin',ugesin
+        write(6,*)'vgesin',vgesin
+        write(6,*)'wgesin',wgesin
+        write(6,*)'ddiff  ',ddiff
+        write(6,*)'rwob   ',data(irwob,1)
+        write(6,*)'rwwind ',rwwind
+        write(6,*)'-------'
+     endif
+     if(ddiff < ddiffmin) ddiffmin=ddiff
+     if(ddiff > ddiffmax) ddiffmax=ddiff
 
 !    If requested, setup for single obs test.
      if(oneobtest) then
@@ -787,6 +802,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
      end if
   end do
+  write(6,*)'ddiffmin,ddiffmax=',ddiffmin,ddiffmax
 
 ! Release memory of local guess arrays
   call final_vars_

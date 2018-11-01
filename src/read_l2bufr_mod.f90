@@ -683,7 +683,7 @@ contains
              do i=1,6
                binsx(i)=binsx(i)*thiscount
              end do
-	     thisrange=  binsx(1)
+	     thisrange=binsx(1)
 	     thisazimuth=binsx(2)
 	     thistilt=binsx(3)
 	     thisvr=binsx(4)
@@ -720,9 +720,11 @@ contains
 		selev=(thisrange*thisrange+h*h+two*a43*h)/(two*thisrange*(a43+h))
 	     end if
 	     corrected_tilt=atan2(selev,celev)*rad2deg
+             corrected_tilt=thistilt
 	     deltiltmax=max(corrected_tilt-thistilt,deltiltmax)
 	     deltiltmin=min(corrected_tilt-thistilt,deltiltmin)
 	     gamma=half*thisrange*(celev0+celev)
+             gamma=thisrange
 	     deldistmax=max(gamma-thisrange,deldistmax)
 	     deldistmin=min(gamma-thisrange,deldistmin)
 
@@ -746,6 +748,7 @@ contains
              caz1=clat0*caz0/clat1
              saz1=saz0*cdlon-caz0*sdlon*slat0
              corrected_azimuth=atan2(saz1,caz1)*rad2deg
+             corrected_azimuth=thisazimuth
              delazmmax=max(min(abs(corrected_azimuth-thisazimuth-r720),&
                   abs(corrected_azimuth-thisazimuth-r360),&
                   abs(corrected_azimuth-thisazimuth     ),&
