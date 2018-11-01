@@ -161,6 +161,7 @@ project(GSI)
         FORCE)
   endif (NOT CMAKE_BUILD_TYPE)
   
+  STRING(COMPARE EQUAL ${CMAKE_BUILD_TYPE} "RelWithDebInfo" BUILD_RELEASE)
   STRING(COMPARE EQUAL ${CMAKE_BUILD_TYPE} "PRODUCTION" BUILD_PRODUCTION)
   if( BUILD_PRODUCTION )
     set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/exec )
@@ -215,8 +216,8 @@ project(GSI)
 
   # default installation
   get_filename_component (default_prefix ".." ABSOLUTE)
-  set (CMAKE_INSTALL_PREFIX ${default_prefix} CACHE STRING "set prefix"
-        FORCE)
+# set (CMAKE_INSTALL_PREFIX ${default_prefix} CACHE STRING "set prefix"
+#       FORCE)
 
 
   # FFLAGS depend on the compiler
