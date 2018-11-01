@@ -588,6 +588,7 @@ subroutine sptranf_v(waved,wavez,gridun,gridus,gridvn,gridvs,idir)
 !    ncin=(jcapin+1)*(jcapin+2)
 !    ncd2=nc/2
      ncd2in=ncin/2
+
 !   Allocate more arrays related to transforms
 !    allocate(factsml(nc),factvml(nc))
 !   Set up factsml and factvml
@@ -675,7 +676,7 @@ subroutine sptranf_v(waved,wavez,gridun,gridus,gridvn,gridvs,idir)
     endif
 
 ! Call spectral <--> grid transform
-    call sptranf_s(wave,grid,grid,idir)
+    call sptranf_sin(wave,grid,grid,idir)
 
     return
   end subroutine sptez_sin
@@ -840,7 +841,7 @@ subroutine sptezv_sin(waved,wavez,gridu,gridv,idir)
   endif
 
 ! Call spectral <--> grid transform
-  call sptranf_v(waved,wavez,gridu,gridu,gridv,gridv,idir)
+  call sptranf_vin(waved,wavez,gridu,gridu,gridv,gridv,idir)
 
 end subroutine sptezv_sin
 
