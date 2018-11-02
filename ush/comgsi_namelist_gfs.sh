@@ -8,7 +8,7 @@ cat <<EOF > gsiparm.anl
    gencode=82,qoption=2,cwoption=3,
    factqmin=5.0,factqmax=5.0,deltim=1200,
    iguess=-1,
-   oneobtest=.false.,retrieval=.false.,l_foto=.false.,
+   oneobtest=.false.,retrieval=.false.,l_foto=.false.,verbose=.true., 
    use_pbl=.false.,use_compress=.true.,nsig_ext=12,gpstop=50.,
    use_gfs_nemsio=.false.,lrun_subdirs=.false.,
    newpc4pred=.true.,adp_anglebc=.true.,angord=4,passive_bc=.true.,use_edges=.false.,diag_precon=.true.,step_start=1.0e-3,emiss_bc=.true.,cwoption=3,
