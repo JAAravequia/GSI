@@ -15,6 +15,7 @@ module chemmod
 ! 2011-09-09 pagowski - add codes for PM2.5 for prepbufr and bufr dump files
 ! 2013-11-01 pagowski - add code for PM2.5 assimilation with wrf-chem
 ! 2018-10-31 wei/martin - logical if to read in aerosols from ext. file (default F)
+! 2018-11-01 Martin   - add logical for 2D-Var AOD analysis
 
 
   use kinds, only : i_kind, r_kind, r_single
@@ -53,6 +54,7 @@ module chemmod
   public :: wrf_pm2_5
 
   public :: lread_ext_aerosol
+  public :: l2d_aod
 
   public :: aero_ratios
   public :: upper2lower,lower2upper
@@ -67,6 +69,7 @@ module chemmod
   logical :: wrf_pm2_5
 
   logical :: lread_ext_aerosol ! if true, will read in aerosols from aerfXX rather than from sigfXX
+  logical :: l2d_aod ! if true, will use 2D AOD for analysis and then redistribute to aerosols
 
 
   real(r_kind),parameter :: s_2_5=0.942_r_kind,d_2_5=0.286_r_kind,&
@@ -243,6 +246,7 @@ contains
     wrf_pm2_5=.false.
     aero_ratios=.false.
     lread_ext_aerosol = .false.
+    l2d_aod = .false.
 
   end subroutine init_chem
 

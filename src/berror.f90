@@ -716,8 +716,8 @@ contains
     enddo
 
 ! factor from multi-Gaussian RF
-!   write(6,*)'INIT_RFTABLE:  hwlmax...=',hwlmax,hwlmin,&
-!        hzscl(1),hzscl(2),hzscl(3),mype,nynx,nnn
+    !write(6,*)'INIT_RFTABLE:  hwlmax...=',hwlmax,hwlmin,&
+    !    hzscl(1),hzscl(2),hzscl(3),mype,nynx,nnn
     hzsmax=-r999
     hzsmin=r999
     do j=1,nhscrf
@@ -743,7 +743,7 @@ contains
     hwlb=ihwlb*tin
 !   tin=(hwle-hwlb)/float(nta-1)
     ntax=(hwle-hwlb)/tin+2
-   !write(6,*)'INIT_RFTABLE:  tin ',ntax,ihwlb,tin,hwlb,hwle
+    !write(6,*)'INIT_RFTABLE:  tin ',ntax,ihwlb,tin,hwlb,hwle
 
     allocate(iuse(ntax))
 

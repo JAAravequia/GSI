@@ -504,6 +504,7 @@ subroutine read_wgt(corz,corp,hwll,hwllp,vz,corsst,hsst,varq,qoption,varcw,cwopt
       end if
    endif
 
+
    ! need simliar general template for undefined 2d variables ...
 
    deallocate(found3d,found2d)

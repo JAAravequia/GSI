@@ -129,6 +129,7 @@ end if
 
 ! Inquire about chemistry
 call gsi_chemguess_get('dim',ngases,istatus)
+print *,'ngases',ngases
 if (ngases>0) then
     allocate(gases(ngases))
     call gsi_chemguess_get('gsinames',gases,istatus)
@@ -197,6 +198,7 @@ do jj=1,nsubwin
 
 !  Same one-to-one map for chemistry-vars; take care of them together
    do ic=1,ngases
+      print *,'gases',gases(ic)
       id=getindex(cvars3d,gases(ic))
       if (id>0) then
          call gsi_bundlegetpointer (sval(jj),gases(ic),sv_rank3,istatus)

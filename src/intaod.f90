@@ -73,6 +73,7 @@ contains
     use gsi_bundlemod, only: gsi_bundleputvar
     use gsi_chemguess_mod, only: gsi_chemguess_get
     use mpeu_util, only: getindex
+    use chemmod, only: l2d_aod
     implicit none
 
 ! Declare passed variables
@@ -84,7 +85,7 @@ contains
     integer(i_kind) j1,j2,j3,j4,i1,i2,i3,i4,n,k,ic,nn
     integer(i_kind) istatus,naero
     integer(i_kind),dimension(nsig) :: i1n,i2n,i3n,i4n
-    real(r_kind) val
+    real(r_kind) val,grad
     real(r_kind) w1,w2,w3,w4
 !   real(r_kind) cg_aero,p0,wnotgross,wgross
     type(aeroNode), pointer :: aeroptr
@@ -119,43 +120,60 @@ contains
        i2n(1) = j2
        i3n(1) = j3
        i4n(1) = j4
-       do k=2,nsig
-          i1n(k) = i1n(k-1)+latlon11
-          i2n(k) = i2n(k-1)+latlon11
-          i3n(k) = i3n(k-1)+latlon11
-          i4n(k) = i4n(k-1)+latlon11
-       enddo
-       do ic = 1, naero
-          call gsi_bundlegetpointer (sval,trim(aerojacnames(ic)),sv_chem,istatus)
-          do k=1,nsig
-             i1 = i1n(k)
-             i2 = i2n(k)
-             i3 = i3n(k)
-             i4 = i4n(k)
-             tdir(k+nsig*(ic-1))=  w1* sv_chem(i1)+w2* sv_chem(i2)+ &
-                                   w3* sv_chem(i3)+w4* sv_chem(i4)
+
+       if (l2d_aod) then
+          ! forward model
+          call gsi_bundlegetpointer (sval,'aod',sv_chem,istatus)
+          if (istatus/=0) return
+          !call gsi_bundlegetpointer (rval,'aod',rv_chem,istatus)
+          !if (istatus/=0) return
+          tdir(1) = w1*sv_chem(j1)+w2*sv_chem(j2)+&
+                    w3*sv_chem(j3)+w4*sv_chem(j4)
+       else ! 3D AOD
+          do k=2,nsig
+             i1n(k) = i1n(k-1)+latlon11
+             i2n(k) = i2n(k-1)+latlon11
+             i3n(k) = i3n(k-1)+latlon11
+             i4n(k) = i4n(k-1)+latlon11
+          enddo
+          do ic = 1, naero
+             call gsi_bundlegetpointer (sval,trim(aerojacnames(ic)),sv_chem,istatus)
+             do k=1,nsig
+                i1 = i1n(k)
+                i2 = i2n(k)
+                i3 = i3n(k)
+                i4 = i4n(k)
+                tdir(k+nsig*(ic-1))=  w1* sv_chem(i1)+w2* sv_chem(i2)+ &
+                                      w3* sv_chem(i3)+w4* sv_chem(i4)
+             end do
+             nullify(sv_chem)
           end do
-          nullify(sv_chem)
-       end do
+       end if
 
 !  begin channel specific calculations
        do nn=1,aeroptr%nlaero
           ic=aeroptr%icx(nn)
 
-!       include observation increment
+!         include observation increment
           val=zero
 
-!       Include contributions from atmospheric jacobian
-          do k=1,nsigaerojac
-             val=val+tdir(k)*aeroptr%daod_dvar(k,nn)
-          end do
+          if (l2d_aod) then
+             val=val+tdir(1)
+          else
+!            Include contributions from atmospheric jacobian
+             do k=1,nsigaerojac
+                val=val+tdir(k)*aeroptr%daod_dvar(k,nn)
+             end do
+          end if
 
           if(luse_obsdiag)then
              if (lsaveobsens) then
-                val = val*aeroptr%err2(nn)*aeroptr%raterr2(nn)
-                aeroptr%diags(nn)%ptr%obssen(jiter) = val
+                grad = val*aeroptr%err2(nn)*aeroptr%raterr2(nn)
+                aeroptr%diags(nn)%ptr%obssen(jiter) = grad 
              else
-                if (aeroptr%luse) aeroptr%diags(nn)%ptr%tldepart(jiter) = val
+                if (aeroptr%luse) then
+                   aeroptr%diags(nn)%ptr%tldepart(jiter) = val
+                end if
              endif
           endif
 
@@ -165,56 +183,73 @@ contains
                 val=val-aeroptr%res(nn)
 
 !             Multiply by variance.
-              !if (nlnqc_iter .and. pg_aero(ic) > tiny_r_kind .and. &
-              !                     b_aero(ic)  > tiny_r_kind) then
-              !   cg_aero=cg_term/b_aero(ic)
-              !   wnotgross= one-pg_aero(ic)*varqc_iter
-              !   wgross = varqc_iter*pg_aero(ic)*cg_aero/wnotgross
-              !   p0   = wgross/(wgross+exp(-half*aeroptr%err2(nn)*val*val))
-              !   val = val*(one-p0)
-              !endif
+            !if (nlnqc_iter .and. pg_aero(ic) > tiny_r_kind .and. &
+            !                     b_aero(ic)  > tiny_r_kind) then
+            !   cg_aero=cg_term/b_aero(ic)
+            !   wnotgross= one-pg_aero(ic)*varqc_iter
+            !   wgross = varqc_iter*pg_aero(ic)*cg_aero/wnotgross
+            !   p0   = wgross/(wgross+exp(-half*aeroptr%err2(nn)*val*val))
+            !   val = val*(one-p0)
+            !endif
 
-                val = val*aeroptr%err2(nn)*aeroptr%raterr2(nn)
+                grad = val*aeroptr%err2(nn)*aeroptr%raterr2(nn)
              endif
 
 !          Begin adjoint
 
+             if (l2d_aod) then
+                tval(1)=grad
+             else
 !          Extract contributions from atmospheric jacobian
-             do k=1,nsigaerojac
-                tval(k)=tval(k)+aeroptr%daod_dvar(k,nn)*val
-             end do
+                do k=1,nsigaerojac
+                   tval(k)=tval(k)+aeroptr%daod_dvar(k,nn)*val
+                end do
+             end if
  
           endif
        end do
 
        if (l_do_adjoint) then
 !    Distribute adjoint contributions over surrounding grid points
- 
-          do ic = 1, naero
-             call gsi_bundlegetpointer (rval,trim(aerojacnames(ic)),rv_chem,istatus)
-             if ( istatus /= 0 ) then
-                write(6,*) 'error gsi_bundlegetpointer in intaod for ', aerojacnames(ic)
+          if (l2d_aod) then
+             call gsi_bundlegetpointer(rval,'aod',rv_chem,istatus)
+             if ( istatus /= 0 ) then 
+                write(6,*) 'error gsi_bundlegetpointer in intaod for 2-D AOD' 
              end if
-             do k=1,nsig
-                n = k + nsig*(ic-1)
-                i1 = i1n(k)
-                i2 = i2n(k)
-                i3 = i3n(k)
-                i4 = i4n(k)
-                rv_chem(i1) = rv_chem(i1) + w1*tval(n)
-                rv_chem(i2) = rv_chem(i2) + w2*tval(n)
-                rv_chem(i3) = rv_chem(i3) + w3*tval(n)
-                rv_chem(i4) = rv_chem(i4) + w4*tval(n)
-             end do
+             rv_chem(j1) = rv_chem(j1) + w1*tval(1)
+             rv_chem(j2) = rv_chem(j2) + w2*tval(1)
+             rv_chem(j3) = rv_chem(j3) + w3*tval(1)
+             rv_chem(j4) = rv_chem(j4) + w4*tval(1)
              nullify(rv_chem)
-          end do
+          else
+             do ic = 1, naero
+                call gsi_bundlegetpointer (rval,trim(aerojacnames(ic)),rv_chem,istatus)
+                if ( istatus /= 0 ) then
+                   write(6,*) 'error gsi_bundlegetpointer in intaod for ', aerojacnames(ic)
+                end if
+                do k=1,nsig
+                   n = k + nsig*(ic-1)
+                   i1 = i1n(k)
+                   i2 = i2n(k)
+                   i3 = i3n(k)
+                   i4 = i4n(k)
+                   rv_chem(i1) = rv_chem(i1) + w1*tval(n)
+                   rv_chem(i2) = rv_chem(i2) + w2*tval(n)
+                   rv_chem(i3) = rv_chem(i3) + w3*tval(n)
+                   rv_chem(i4) = rv_chem(i4) + w4*tval(n)
+                end do
+                nullify(rv_chem)
+             end do
+          end if ! end if l2d_aod
        endif ! < l_do_adjoint >
+
 
        !aeroptr => aeroptr%llpoint
        aeroptr => aeroNode_nextcast(aeroptr)
 !       call stop2(999)
     end do
 
+   
     return
   end subroutine intaod_
 

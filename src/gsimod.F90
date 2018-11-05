@@ -135,7 +135,7 @@
        oblon_chem,obpres_chem,diag_incr,elev_tolerance,tunable_error,&
        in_fname,out_fname,incr_fname, &
        laeroana_gocart, l_aoderr_table, aod_qa_limit, luse_deepblue, &
-       lread_ext_aerosol
+       lread_ext_aerosol,l2d_aod
   use chemmod, only : wrf_pm2_5,aero_ratios
   use gfs_stratosphere, only: init_gfs_stratosphere,use_gfs_stratosphere,pblend0,pblend1
   use gfs_stratosphere, only: broadcast_gfs_stratosphere_vars
@@ -356,6 +356,7 @@
 !  08-31-2017 Li        add sfcnst_comb for option to read sfc & nst combined file 
 !  10-10-2017 Wu,W      added option fv3_regional and rid_ratio_fv3_regional, setup FV3, earthuv
 !  10-31-2018 Wei/Martin   added option lread_ext_aerosol to read in aerfXX file for NEMS aerosols 
+!  11-01-2018 Martin    added 2D-Var AOD option to namelist
 !
 !EOP
 !-------------------------------------------------------------------------
@@ -1005,13 +1006,14 @@
 !     aod_qa_limit      - minimum acceptable value of error flag for total column AOD
 !     luse_deepblue     - whether to use MODIS AOD from the deepblue   algorithm
 !     lread_ext_aerosol - if true, reads aerfNN file for aerosol arrays rather than sigfNN (NGAC NEMS IO)
+!     l2d_aod           - if true, performs 2D-Var AOD analysis
 
   namelist/chem/berror_chem,oneobtest_chem,maginnov_chem,magoberr_chem,&
        oneob_type_chem,oblat_chem,oblon_chem,obpres_chem,&
        diag_incr,elev_tolerance,tunable_error,&
        in_fname,out_fname,incr_fname,&
        laeroana_gocart, l_aoderr_table, aod_qa_limit, luse_deepblue,&
-       aero_ratios,wrf_pm2_5, lread_ext_aerosol
+       aero_ratios,wrf_pm2_5, lread_ext_aerosol, l2d_aod
 
 ! NST (NSST control namelist) :
 !     nst_gsi  - indicator to control the Tr Analysis mode: 0 = no nst info ingsi at all;

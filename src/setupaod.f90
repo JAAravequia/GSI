@@ -392,6 +392,8 @@
            endif
         end do
 
+        ! uncomment this section out to print out AOD from model, from obs, and
+        ! O-B, this should eventually probably be written to a diagnostic file
         !do i = 1, nchanl
         !   if ( aod_obs(i) > zero ) then
         !     write(6,'(A,3i6,4f8.3,2f8.2)') 'mype, iobs, ichan, aod_crtm, aod_obs, omb, err, lat, lon : ',  &

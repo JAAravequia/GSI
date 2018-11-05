@@ -68,7 +68,7 @@ contains
     use gsi_bundlemod, only: gsi_bundle
     use gsi_bundlemod, only: gsi_bundlegetpointer
     use gridmod, only: cmaq_regional,latlon11,nsig
-    use chemmod, only: laeroana_gocart
+    use chemmod, only: laeroana_gocart,l2d_aod
     implicit none
     
 ! declare passed variables
@@ -81,7 +81,7 @@ contains
 ! declare local variables
     integer(i_kind) istatus,naero
     integer(i_kind) j1,j2,j3,j4,kk,k,ic,nn
-    real(r_kind) cg_aero,val,val2,wgross,wnotgross
+    real(r_kind) cg_aero,val,val2,wgross,wnotgross,aods
     integer(i_kind),dimension(nsig) :: j1n,j2n,j3n,j4n
     real(r_kind),dimension(max(1,nstep)):: term,rad
     real(r_kind) w1,w2,w3,w4
@@ -105,7 +105,7 @@ contains
        call stop2(460)
 
     endif
-     if (laeroana_gocart) then
+    if (laeroana_gocart) then
        tdir=zero
        rdir=zero
 
@@ -125,65 +125,81 @@ contains
                 w3=aeroptr%wij(3)
                 w4=aeroptr%wij(4)
 
-                j1n(1) = j1
-                j2n(1) = j2
-                j3n(1) = j3
-                j4n(1) = j4
 
-                do k=2,nsig
-                   j1n(k) = j1n(k-1)+latlon11
-                   j2n(k) = j2n(k-1)+latlon11
-                   j3n(k) = j3n(k-1)+latlon11
-                   j4n(k) = j4n(k-1)+latlon11
-                enddo
+                if (l2d_aod) then
+                
+                   call gsi_bundlegetpointer(sval,'aod',sv_chem,istatus)
+                   if (istatus/=0) return
+                   call gsi_bundlegetpointer(rval,'aod',rv_chem,istatus)
+                   if (istatus/=0) return
 
-                do ic = 1, naero
-                   call gsi_bundlegetpointer (sval,trim(aerojacnames(ic)),sv_chem,istatus)
-                   call gsi_bundlegetpointer (rval,trim(aerojacnames(ic)),rv_chem,istatus)
+                   rdir(1)  = w1*rv_chem(j1) + w2*rv_chem(j2) +&
+                              w3*rv_chem(j3) + w4*rv_chem(j4)
+                   tdir(1)  = w1*sv_chem(j1) + w2*sv_chem(j2) +&
+                              w3*sv_chem(j3) + w4*sv_chem(j4)
+                   
+                else
 
-                   do k=1,nsig
-                      j1 = j1n(k)
-                      j2 = j2n(k)
-                      j3 = j3n(k)
-                      j4 = j4n(k)
-                      tdir(k+nsig*(ic-1))=&
-                           w1* sv_chem(j1)+w2* sv_chem(j2)+ &
-                           w3* sv_chem(j3)+w4* sv_chem(j4)
-
-                      rdir(k+nsig*(ic-1))=&
-                           w1* rv_chem(j1)+w2* rv_chem(j2)+ &
-                           w3* rv_chem(j3)+w4* rv_chem(j4)
-
+                   j1n(1) = j1
+                   j2n(1) = j2
+                   j3n(1) = j3
+                   j4n(1) = j4
+   
+                   do k=2,nsig
+                      j1n(k) = j1n(k-1)+latlon11
+                      j2n(k) = j2n(k-1)+latlon11
+                      j3n(k) = j3n(k-1)+latlon11
+                      j4n(k) = j4n(k-1)+latlon11
+                   enddo
+   
+                   do ic = 1, naero
+                      call gsi_bundlegetpointer (sval,trim(aerojacnames(ic)),sv_chem,istatus)
+                      call gsi_bundlegetpointer (rval,trim(aerojacnames(ic)),rv_chem,istatus)
+   
+                      do k=1,nsig
+                         j1 = j1n(k)
+                         j2 = j2n(k)
+                         j3 = j3n(k)
+                         j4 = j4n(k)
+                         tdir(k+nsig*(ic-1))=&
+                              w1* sv_chem(j1)+w2* sv_chem(j2)+ &
+                              w3* sv_chem(j3)+w4* sv_chem(j4)
+   
+                         rdir(k+nsig*(ic-1))=&
+                              w1* rv_chem(j1)+w2* rv_chem(j2)+ &
+                              w3* rv_chem(j3)+w4* rv_chem(j4)
+   
+                      end do
+                      nullify(sv_chem,rv_chem)
                    end do
-                   nullify(sv_chem,rv_chem)
-                end do
-
-             endif
-
+                end if ! if l2d_aod
+             endif ! nstep >0
 
              do nn=1,aeroptr%nlaero
                 ic=aeroptr%icx(nn)
 
                 val2=-aeroptr%res(nn)
-
                 if(nstep > 0)then
                    val = zero
-
-                   do k=1,nsigaerojac
-                      val2=val2+tdir(k)*aeroptr%daod_dvar(k,nn)
-                      val =val +rdir(k)*aeroptr%daod_dvar(k,nn)
-                   end do
-
+                
+                   if ( l2d_aod ) then
+                      val2=val2+tdir(1)
+                      val =val +rdir(1)
+                   else
+                      do k=1,nsigaerojac
+                         val2=val2+tdir(k)*aeroptr%daod_dvar(k,nn)
+                         val =val +rdir(k)*aeroptr%daod_dvar(k,nn)
+                      end do
+                   end if
                    do kk=1,nstep
                       rad(kk)=val2+sges(kk)*val
                    end do
-
                 else
-                   rad(kk)= val2
+!                   rad(1) = val2
+                   rad(1) = aeroptr%res(nn)
                 end if
 
 !          calculate contribution to j
-
                 do kk=1,max(1,nstep)
                    term(kk)  = aeroptr%err2(nn)*rad(kk)*rad(kk)
                 end do
@@ -204,10 +220,10 @@ contains
                 out(1) = out(1) + term(1)*aeroptr%raterr2(nn)
 
                 do kk=2,nstep
+                   !print *,'kk,out(kk),term(kk),term(1),raterr',kk,out(kk),term(kk),term(1),aeroptr%raterr2(nn)
                    out(kk) = out(kk) + (term(kk)-term(1))*aeroptr%raterr2(nn)
                 end do
-
-             end do
+             end do ! nlaero
 
           endif
 
