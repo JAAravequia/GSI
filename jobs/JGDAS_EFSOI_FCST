@@ -29,7 +29,7 @@ status=$?
 ##############################################
 # Obtain unique process id (pid) and make temp directory
 ##############################################
-export job=${job:-"efsoi.grp${ENSGRP}"}
+export job=${job:-"efsoi.grp${EFSOIGRP}"}
 export pid=${pid:-$$}
 export outid=${outid:-"LL$job"}
 export jobid=${jobid:-"${outid}.o${pid}"}
@@ -37,7 +37,7 @@ if [ $RUN_ENVIR = "nco" ]; then
     export DATA="$DATAROOT/$jobid"
 else
     export DATAROOT="$RUNDIR/$CDATE/$CDUMP"
-    export DATA="$DATAROOT/$job.grp$ENSGRP"
+    export DATA="$DATAROOT/$job.grp$EFSOIGRP"
 fi
 [[ -d $DATA ]] && rm -rf $DATA
 mkdir -p $DATA
@@ -105,16 +105,16 @@ status=$?
 [[ $status -ne 0 ]] && exit $status
 
 
-# Double check the status of members in EFSOIGRP
-EFSOIGRP=$ROTDIR/enkf.${CDUMP}.$PDY/$cyc/efsoi.grp${ENSGRP}
+# Double check the status of members in EFCSOIGRP
+EFCSOIGRP=$ROTDIR/enkf.${CDUMP}.$PDY/$cyc/efsoi.grp${EFSOIGRP}
 npass=0
-if [ -f $EFSOIGRP ]; then
-    npass=$(grep "PASS" $EFSOIGRP | wc -l)
+if [ -f $EFCSOIGRP ]; then
+    npass=$(grep "PASS" $EFCSOIGRP | wc -l)
 fi
 echo "$npass/$NMEM_EFSOIGRP members successfull in efcs.grp$EFSOIGRP"
 if [ $npass -ne $NMEM_EFSOIGRP ]; then
     echo "FATAL ERROR: Failed members in group $EFSOIGRP, ABORT!"
-    cat $EFSOIGRP
+    cat $EFCSOIGRP
     exit 99
 fi
 
