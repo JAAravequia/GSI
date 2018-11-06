@@ -1,0 +1,167 @@
+<head>
+<!--  written by Xiujuan Su 07/13/2011 12:18:06 --><TITLE>
+Horizontal map
+</TITLE>
+<BODY TEXT="#000000" BGCOLOR="#FFFFFF" LINK="#3366FF" VLINK="#51188E" ALINK="#FF0000"
+>
+<h4>Horizontal plots</h4>
+
+<SCRIPT LANGUAGE="JavaScript">
+
+function analmap() {
+var sdtype_index = document.timesel.seldtype.selectedIndex;
+var sdtype = document.timesel.seldtype.options[sdtype_index].value;
+var sstype_index = document.timesel.selstype.selectedIndex;
+var sstype = document.timesel.selstype.options[sstype_index].value;
+var ssreg_index = document.timesel.selsreg.selectedIndex;
+var ssreg = document.timesel.selsreg.options[ssreg_index].value;
+var slev_index = document.timesel.sellev.selectedIndex;
+var slev = document.timesel.sellev.options[slev_index].value;
+var parentnew="./horz/"+sdtype+"/"+sdtype+"_"+sstype+"_region"+ssreg+slev+".png";
+parent.fmain.document.location.href=parentnew;
+}
+
+</SCRIPT></HEAD>
+
+
+<TABLE BORDER=0 CELLPADDING=0>
+
+<FORM NAME="timesel" >
+
+<TR><TD ALIGN=LEFT><B> Stas type  <br>
+<SELECT name=selstype size=6 >
+         <OPTION value=rmeanb>Mean of O-B</OPTION>
+                 <OPTION value=rmeana>Mean of O-A</OPTION>
+                <OPTION value=rstdb>RMS of O-B</OPTION>
+                <OPTION value=rstda>RMS of O-A</OPTION>
+                <OPTION value=nob>Data samples</OPTION>
+                <OPTION value=no_rej>No rejted by GSI</OPTION>
+</SELECT><P>
+</TD></TR>
+
+ 
+<TR><TD ALIGN=LEFT><B>Obs. Type<br>
+<SELECT name=seldtype size=4 >
+                <OPTION value="ps120">PS120(Rawn. Pres.)</OPTION>
+                <OPTION value="ps180">PS180(Marn Pres.)</OPTION>
+                <OPTION value="ps181">PS181(Syno Pres.)</OPTION>
+                <OPTION value="ps187">PS187(META Pres.)</OPTION>
+                <OPTION value="q120">Q120(Rawn Humd.)</OPTION>
+                <OPTION value="q180">Q180(Marn Humd.)</OPTION>
+                <OPTION value="q181">Q181(SYNO Humd.)</OPTION>
+                <OPTION value="q187">Q187(METAR Humd.)</OPTION>
+                <OPTION value="t120">T120(Rawn Temp.)</OPTION>
+                <OPTION value="t180">T180(Marn Temp.)</OPTION>
+                <OPTION value="t181">T181(SNOP Temp.)</OPTION>
+                <OPTION value="t187">T187(METAR Temp.)</OPTION>
+                <OPTION value="uv220_dir">W220 DIR(Rawn wind)</OPTION>
+                <OPTION value="uv220_sp">W220 SP(Rawn wind)</OPTION>
+                <OPTION value="uv221_dir">W221 DIR(Pibal wind)</OPTION>
+                <OPTION value="uv221_sp">W221 SP(Pibal wind)</OPTION>
+                <OPTION value="uv222_dir">W222 DIR(Sondn wind)</OPTION>
+                <OPTION value="uv222_sp">W222 SP(Sondn wind)</OPTION>
+                <OPTION value="uv223_dir">W223 DIR(Profl wind)</OPTION>
+                <OPTION value="uv223_sp">W223 SP(Profl wind)</OPTION>
+                <OPTION value="uv224_dir">W224 DIR(VADW wind)</OPTION>
+                <OPTION value="uv224_sp">W224 SP(VADW wind)</OPTION>
+                <OPTION value="uv228_dir">W228 DIR(JAP. Profl wind)</OPTION>
+                <OPTION value="uv228_sp">W228 SP(JAP. Profl wind)</OPTION>
+                <OPTION value="uv229_dir">W229 DIR(EUP. Profl wind)</OPTION>
+                <OPTION value="uv229_sp">W229 SP(EUP. Profl wind)</OPTION>
+                <OPTION value="uv280_dir">W280 DIR(Marn wind)</OPTION>
+                <OPTION value="uv280_sp">W280 SP(Marn wind)</OPTION>
+                <OPTION value="uv281_dir">W281 DIR(SNOP wind)</OPTION>
+                <OPTION value="uv281_sp">W281 SP(SNOP wind)</OPTION>
+                <OPTION value="uv287_dir">W287 DIR(METAR wind)</OPTION>
+                <OPTION value="uv287_sp">W287 SP(METAR wind)</OPTION>
+</SELECT>
+</TD></TR>
+
+<TR><TD ALIGN=LEFT><B> Region<br>
+<SELECT name=selsreg size=4 >
+                <OPTION value="1"> region 1</OPTION>
+                <OPTION value="2"> region 2</OPTION>
+                <OPTION value="3"> region 3</OPTION>
+                <OPTION value="4"> region 4</OPTION>
+                <OPTION value="5"> region 5</OPTION>
+                <OPTION value="6"> region 6</OPTION>
+                <OPTION value="7"> region 7</OPTION>
+                <OPTION value="8"> region 8</OPTION>
+                <OPTION value="9"> region 9</OPTION>
+                <OPTION value="10"> region 10</OPTION>
+                <OPTION value="11"> region 11</OPTION>
+                <OPTION value="12"> region 12</OPTION>
+                <OPTION value="13"> region 13</OPTION>
+                <OPTION value="14"> region 14</OPTION>
+                <OPTION value="15"> region 15</OPTION>
+                <OPTION value="16"> region 16</OPTION>
+                <OPTION value="17"> region 17</OPTION>
+                <OPTION value="18"> region 18</OPTION>
+                <OPTION value="19"> region 19</OPTION>
+                <OPTION value="20"> region 20</OPTION>
+                <OPTION value="21"> region 21</OPTION>
+                <OPTION value="22"> region 22</OPTION>
+                <OPTION value="23"> region 23</OPTION>
+                <OPTION value="24"> region 24</OPTION>
+</TD></TR>
+
+<TR><TD ALIGN=LEFT><B> Level <br>
+<SELECT name=sellev size=4 >
+                <OPTION value=""> Surface</OPTION>
+                <OPTION value="_lev1000">1200-987.5mb </OPTION>
+                <OPTION value="_lev975">987.5-962.5mb </OPTION>
+                <OPTION value="_lev950">962.5-937.5mb </OPTION>
+                <OPTION value="_lev925">937.5-912.5mb </OPTION>
+                <OPTION value="_lev900">912.5-887.5mb </OPTION>
+                <OPTION value="_lev875">887.5-862.5mb </OPTION>
+                <OPTION value="_lev850">862.5-837.5mb </OPTION>
+                <OPTION value="_lev825">837.5-812.5mb </OPTION>
+                <OPTION value="_lev800">812.5-787.5mb </OPTION>
+                <OPTION value="_lev775">787.5-762.5mb </OPTION>
+                <OPTION value="_lev750">762.5-737.5mb </OPTION>
+                <OPTION value="_lev725">737.5-712.5mb </OPTION>
+                <OPTION value="_lev700">712.5-687.5mb </OPTION>
+                <OPTION value="_lev675">687.5-662.5mb </OPTION>
+                <OPTION value="_lev650">662.5-637.5mb </OPTION>
+                <OPTION value="_lev625">637.5-612.5mb </OPTION>
+                <OPTION value="_lev600">612.5-587.5mb </OPTION>
+                <OPTION value="_lev575">587.5-562.5mb </OPTION>
+                <OPTION value="_lev550">562.5-537.5mb </OPTION>
+                <OPTION value="_lev525">537.5-512.5mb </OPTION>
+                <OPTION value="_lev500">512.5-487.5mb </OPTION>
+                <OPTION value="_lev475">487.5-462.5mb </OPTION>
+                <OPTION value="_lev450">462.5-437.5mb </OPTION>
+                <OPTION value="_lev425">437.5-412.5mb </OPTION>
+                <OPTION value="_lev400">412.5-387.5mb </OPTION>
+                <OPTION value="_lev375">387.5-362.5mb </OPTION>
+                <OPTION value="_lev350">362.5-337.5mb </OPTION>
+                <OPTION value="_lev325">337.5-312.5mb </OPTION>
+                <OPTION value="_lev300">312.5-287.5mb </OPTION>
+                <OPTION value="_lev275">287.5-262.5mb </OPTION>
+                <OPTION value="_lev250">262.5-237.5mb </OPTION>
+                <OPTION value="_lev225">237.5-212.5mb </OPTION>
+                <OPTION value="_lev200">212.5-187.5mb </OPTION>
+                <OPTION value="_lev175">187.5-162.5mb </OPTION>
+                <OPTION value="_lev150">162.5-137.5mb </OPTION>
+                <OPTION value="_lev125">137.5-112.5mb </OPTION>
+                <OPTION value="_lev100">112.5-85mb </OPTION>
+                <OPTION value="_lev70">85-60mb </OPTION>
+                <OPTION value="_lev50">60-40mb </OPTION>
+                <OPTION value="_lev30">40-25mb </OPTION>
+                <OPTION value="_lev20">25-15mb </OPTION>
+                <OPTION value="_lev10">15-7.5mb </OPTION>
+                <OPTION value="_lev5">7.5-0mb </OPTION>
+</SELECT><P>
+</TD></TR>
+
+
+</TABLE>
+
+<TR><TD ALIGN=LEFT><B>
+<INPUT TYPE="button" VALUE="view" onClick="analmap(); return true;"> <BR></b>
+</B></TD></TR>  
+
+</FORM>
+</TABLE>
+</BODY></HTML>
+

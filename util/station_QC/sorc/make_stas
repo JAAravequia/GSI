@@ -1,0 +1,41 @@
+SHELL=/bin/sh
+#
+#
+.SUFFIXES: .f90
+
+OBJS=main_stas.o stas.o stas_sfc.o stas_sfc_spdir.o stas_spdir.o \
+     stas_hist.o stas_hist_sfc.o stas_hist_spdir.o sort1.o  med_a_mad.o \
+     biweightstas.o breakpoint.o create_ctl_stas.o stas_wscal.o \
+     create_ctl_station.o create_ctl_time.o create_ctl_time_sfc.o \
+     stas_hist_spdir_sfc.o creat_stas_hist_ctl.o stas_wscal_sfc.o
+CMD=stas.x
+
+FC=ifort
+
+LIBS = -L/nwprod/lib -lw3nco_4 -lw3emc_4 -lbufr_4_64
+
+FFLAGS = -O2 -convert big_endian -assume byterecl
+
+LDFLAGS = 
+
+
+$(CMD):		$(OBJS) 
+	$(FC) $(LDFLAGS) ${FFLAGS} -o $(@) $(OBJS) ${LIBS}
+
+
+clean:
+	-rm -f *.o ${CMD}
+
+clobber:	clean
+	-rm -f $(CMD) $(CMD).prof
+
+void:	clobber
+	-rm -f $(SRCS)
+
+.f.o:
+	${FC} -c ${FFLAGS} $*.f
+
+.f90.o:
+	${FC} -c ${FFLAGS} $*.f90
+
+

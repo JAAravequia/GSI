@@ -1,0 +1,107 @@
+<HTML>
+<head>
+<!--  Rewritten by Guy Middleton on 12/11/98 12:18:06 --><TITLE>
+Experiment Monitoring
+</TITLE>
+<BODY TEXT="#000000" BGCOLOR="#FFFFFF" LINK="#3366FF" VLINK="#51188E" ALINK="#FF0000"
+>
+<h4>Surface Horizontal Plots</h4>
+
+<SCRIPT LANGUAGE="JavaScript">
+
+function analmap() {
+var shour_index = document.timesel.selhour.selectedIndex;
+var shour = document.timesel.selhour.options[shour_index].value;
+var sdtype_index = document.timesel.seldtype.selectedIndex;
+var sdtype = document.timesel.seldtype.options[sdtype_index].value;
+var sstype_index = document.timesel.selstype.selectedIndex;
+var sstype = document.timesel.selstype.options[sstype_index].value;
+var parentnew="pngs/horz/"+shour+"/"+sdtype+"_region"+sstype+".png";
+parent.fmain.document.location.href=parentnew;
+}
+
+</SCRIPT></HEAD>
+
+
+<TABLE BORDER=0 CELLPADDING=0>
+<FORM NAME="timesel" >
+
+
+<TR><TD ALIGN=LEFT><B> Hour<br>
+<SELECT name=selhour size=4 OnChange=analmap()>
+                <OPTION value=00>00</OPTION>
+                <OPTION value=06>06</OPTION>
+                <OPTION value=12>12</OPTION>
+                <OPTION value=18>18</OPTION>
+</SELECT><P>
+</TD></TR>
+ 
+<TR><TD ALIGN=LEFT><B>Obs. Type<br>
+<SELECT name=seldtype size=4 OnChange=analmap()>
+                <OPTION value="ps120_00">PS120(Rawinsonde)</OPTION>
+               <OPTION value="ps180_00">PS180(Surface Marine)</OPTION>
+               <OPTION value="ps181_00">PS181(Surface Land)</OPTION>
+               <OPTION value="ps183_00">PS183(Surface Marine)</OPTION>
+               <OPTION value="ps187_00">PS187(Surface Metar)</OPTION>
+                <OPTION value="q180_00">Q180(Surface Marine)</OPTION>
+                <OPTION value="q181_00">Q181(Surface Land)</OPTION>
+                <OPTION value="q182_00">Q182(Ocean Surface)</OPTION>
+                <OPTION value="q183_00">Q183(Surface Marine)</OPTION>
+                <OPTION value="q187_00">Q187(Surface Metar)</OPTION>
+                <OPTION value="t180_00">T180(Surface Marine)</OPTION>
+                <OPTION value="t181_00">T181(Surface Land)</OPTION>
+                <OPTION value="t182_00">T182(Ocean Surface)</OPTION>
+                <OPTION value="t183_00">T183(Surface Marine)</OPTION>
+                <OPTION value="t187_00">T187(Surface Metar)</OPTION>
+                <OPTION value="uv280_u_00">W280_U(Surface Marine)</OPTION>
+                <OPTION value="uv280_v_00">W280_V(Surface Marine)</OPTION>
+                <OPTION value="uv281_u_00">W281_U(Surface Land)</OPTION>
+                <OPTION value="uv281_v_00">W281_V(Surface Land)</OPTION>
+                <OPTION value="uv282_u_00">W282_U(Atlas Buoy)</OPTION>
+                <OPTION value="uv282_v_00">W282_V(Atlas Buoy)</OPTION>
+                <OPTION value="uv284_u_00">W284_U(Surface Marine)</OPTION>
+                <OPTION value="uv284_v_00">W284_V(Surface Marine)</OPTION>
+                <OPTION value="uv287_u_00">W287_U(Surface Metar)</OPTION>
+                <OPTION value="uv287_v_00">W287_V(Surface Metar)</OPTION>
+</SELECT><P
+</TD></TR>
+
+<TR><TD ALIGN=LEFT><B> Region<br>
+<SELECT name=selstype size=3 OnChange=analmap()>
+                <OPTION value="1"> region 1</OPTION>
+                <OPTION value="2"> region 2</OPTION>
+                <OPTION value="3"> region 3</OPTION>
+                <OPTION value="4"> region 4</OPTION>
+                <OPTION value="5"> region 5</OPTION>
+                <OPTION value="6"> region 6</OPTION>
+                <OPTION value="7"> region 7</OPTION>
+                <OPTION value="8"> region 8</OPTION>
+                <OPTION value="9"> region 9</OPTION>
+                <OPTION value="10"> region 10</OPTION>
+                <OPTION value="11"> region 11</OPTION>
+                <OPTION value="12"> region 12</OPTION>
+                <OPTION value="13"> region 13</OPTION>
+                <OPTION value="14"> region 14</OPTION>
+                <OPTION value="15"> region 15</OPTION>
+                <OPTION value="16"> region 16</OPTION>
+                <OPTION value="17"> region 17</OPTION>
+                <OPTION value="18"> region 18</OPTION>
+                <OPTION value="19"> region 19</OPTION>
+                <OPTION value="20"> region 20</OPTION>
+                <OPTION value="21"> region 21</OPTION>
+                <OPTION value="22"> region 22</OPTION>
+                <OPTION value="23"> region 23</OPTION>
+
+</SELECT><P>
+</TD></TR>
+
+</TABLE>
+
+<TR><TD ALIGN=LEFT><B>
+<INPUT TYPE="button" VALUE="view" onClick="analmap(); return true;"> <BR></b>
+</B></TD></TR>  
+
+</FORM>
+</TABLE>
+</BODY></HTML>
+

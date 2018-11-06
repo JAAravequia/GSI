@@ -1,0 +1,239 @@
+<head>
+<!--  written by Xiujuan Su 07/13/2011 12:18:06 --><TITLE>
+Horizontal map
+</TITLE>
+<BODY TEXT="#000000" BGCOLOR="#FFFFFF" LINK="#3366FF" VLINK="#51188E" ALINK="#FF0000"
+>
+<h4>Horizontal plots</h4>
+
+<SCRIPT LANGUAGE="JavaScript">
+
+function analmap() {
+var shor_index = document.timesel.selhor.selectedIndex;
+var shor = document.timesel.selhor.options[shor_index].value;
+var sdtype_index = document.timesel.seldtype.selectedIndex;
+var sdtype = document.timesel.seldtype.options[sdtype_index].value;
+var sstype_index = document.timesel.selstype.selectedIndex;
+var sstype = document.timesel.selstype.options[sstype_index].value;
+var ssreg_index = document.timesel.selsreg.selectedIndex;
+var ssreg = document.timesel.selsreg.options[ssreg_index].value;
+var slev_index = document.timesel.sellev.selectedIndex;
+var slev = document.timesel.sellev.options[slev_index].value;
+var parentnew="./horz/"+shor+"/"+sdtype+"/"+sdtype+"_"+sstype+"_region"+ssreg+slev+".png";
+parent.fmain.document.location.href=parentnew;
+}
+
+</SCRIPT></HEAD>
+
+
+<TABLE BORDER=0 CELLPADDING=0>
+
+<FORM NAME="timesel" >
+
+<TR><TD ALIGN=LEFT><B> Hour Delay analysis<br>
+                <SELECT name=selhor size=3  >
+<OPTION VALUE="00">00 hr delay </OPTION>
+<OPTION VALUE="03">03 hr delay </OPTION>
+<OPTION VALUE="06">06 hr delay </OPTION>
+</SELECT><P>
+</TD></TR>
+
+
+<TR><TD ALIGN=LEFT><B> Stas type  <br>
+<SELECT name=selstype size=6 >
+        <OPTION value=rmeanb>Mean of O-B</OPTION>
+                 <OPTION value=rmeana>Mean of O-A</OPTION>
+                <OPTION value=rstdb>RMS of O-B</OPTION>
+                <OPTION value=rstda>RMS of O-A</OPTION>
+                <OPTION value=nob>Data samples</OPTION>
+                <OPTION value=no_rej>No rejted by GSI</OPTION>
+</SELECT><P>
+</TD></TR>
+
+ 
+<TR><TD ALIGN=LEFT><B>Obs. Type<br>
+<SELECT name=seldtype size=4 >
+                <OPTION value="ps120">PS120(Rawn. Pres.)</OPTION>
+                <OPTION value="ps180">PS180(Marn Pres.)</OPTION>
+                <OPTION value="ps181">PS181(Syno Pres.)</OPTION>
+                <OPTION value="ps187">PS187(META Pres.)</OPTION>
+                <OPTION value="ps188">PS188(Mson Pres.)</OPTION>
+                <OPTION value="q120">Q120(Rawn Humd.)</OPTION>
+                <OPTION value="q180">Q180(Marn Humd.)</OPTION>
+                <OPTION value="q181">Q181(Syno Humd.)</OPTION>
+                <OPTION value="q187">Q187(META Humd.)</OPTION>
+                <OPTION value="q188">Q188(Mson Humd.)</OPTION> 
+                <OPTION value="t120">T120(Rawn Temp.)</OPTION>
+                <OPTION value="t180">T180(Marn Temp.)</OPTION>
+                 <OPTION value="t181">T181(Syno Temp.)</OPTION>
+                <OPTION value="t187">T187(META Temp.)</OPTION>
+                <OPTION value="t188">T188(Mson Temp.)</OPTION>
+                <OPTION value="uv220_dir">W220 DIR(Rawn wind)</OPTION>
+                <OPTION value="uv220_sp">W220 SP(Rawn wind)</OPTION>
+                <OPTION value="uv221_dir">W221 DIR(Pibal wind)</OPTION>
+                <OPTION value="uv221_sp">W221 SP(Pibal wind)</OPTION>
+                <OPTION value="uv222_dir">W222 DIR(Sondn wind)</OPTION>
+                <OPTION value="uv222_sp">W222 SP(Sondn wind)</OPTION>
+                <OPTION value="uv223_dir">W223 DIR(Profl wind)</OPTION>
+                <OPTION value="uv223_sp">W223 SP(Profl wind)</OPTION>
+                <OPTION value="uv224_dir">W224 DIR(VADW wind)</OPTION>
+                <OPTION value="uv224_sp">W224 SP(VADW wind)</OPTION>
+                <OPTION value="uv228_dir">W228 DIR(JAP. Profl wind)</OPTION>
+                <OPTION value="uv228_sp">W228 SP(JAP. Profl wind)</OPTION>
+                <OPTION value="uv229_dir">W229 DIR(EUP. Profl wind)</OPTION>
+                <OPTION value="uv229_sp">W229 SP(EUP. Profl wind)</OPTION>
+                <OPTION value="uv280_dir">W280 DIR(Marn wind)</OPTION>
+                <OPTION value="uv280_sp">W280 SP(Marn wind)</OPTION>
+                <OPTION value="uv281_dir">W281 DIR(Syno wind)</OPTION>
+                <OPTION value="uv281_sp">W281 SP(Syno wind)</OPTION>
+                <OPTION value="uv287_dir">W287 DIR(Meta wind)</OPTION>
+                <OPTION value="uv287_sp">W287 SP(Meta wind)</OPTION>
+                <OPTION value="uv288_dir">W288 DIR(Mson wind)</OPTION>
+                <OPTION value="uv288_sp">W288 SP(Mson wind)</OPTION>
+</SELECT>
+</TD></TR>
+
+<TR><TD ALIGN=LEFT><B> Region<br>
+<SELECT name=selsreg size=4 >
+                <OPTION value="1"> region 1</OPTION>
+                <OPTION value="2"> region 2</OPTION>
+                <OPTION value="3"> region 3</OPTION>
+                <OPTION value="4"> region 4</OPTION>
+                <OPTION value="5"> region 5</OPTION>
+                <OPTION value="6"> region 6</OPTION>
+                <OPTION value="7"> region 7</OPTION>
+                <OPTION value="8"> region 8</OPTION>
+                <OPTION value="9"> region 9</OPTION>
+                <OPTION value="10"> region 10</OPTION>
+                <OPTION value="11"> region 11</OPTION>
+                <OPTION value="12"> region 12</OPTION>
+                <OPTION value="13"> region 13</OPTION>
+                <OPTION value="14"> region 14</OPTION>
+                <OPTION value="15"> region 15</OPTION>
+                <OPTION value="16"> region 16</OPTION>
+                <OPTION value="17"> region 17</OPTION>
+                <OPTION value="18"> region 18</OPTION>
+                <OPTION value="19"> region 19</OPTION>
+                <OPTION value="20"> region 20</OPTION>
+                <OPTION value="21"> region 21</OPTION>
+                <OPTION value="22"> region 22</OPTION>
+                <OPTION value="23"> region 23</OPTION>
+                <OPTION value="24"> region 24</OPTION>
+                <OPTION value="25"> region 25</OPTION>
+                <OPTION value="26"> region 26</OPTION>
+                <OPTION value="27"> region 27</OPTION>
+                <OPTION value="28"> region 28</OPTION>
+                <OPTION value="29"> region 29</OPTION>
+                <OPTION value="30"> region 30</OPTION>
+                <OPTION value="31"> region 31</OPTION>
+                <OPTION value="32"> region 32</OPTION>
+                <OPTION value="33"> region 33</OPTION>
+                <OPTION value="34"> region 34</OPTION>
+                <OPTION value="35"> region 35</OPTION>
+                <OPTION value="36"> region 36</OPTION>
+                <OPTION value="37"> region 37</OPTION>
+                <OPTION value="38"> region 38</OPTION>
+                <OPTION value="39"> region 39</OPTION>
+                <OPTION value="40"> region 40</OPTION>
+                <OPTION value="41"> region 41</OPTION>
+                <OPTION value="42"> region 42</OPTION>
+                <OPTION value="43"> region 43</OPTION>
+                <OPTION value="44"> region 44</OPTION>
+                <OPTION value="45"> region 45</OPTION>
+                <OPTION value="46"> region 46</OPTION>
+                <OPTION value="47"> region 47</OPTION>
+               <OPTION value="48"> region 48</OPTION>
+                <OPTION value="49"> region 49</OPTION>
+                <OPTION value="50"> region 50</OPTION>
+                <OPTION value="51"> region 51</OPTION>
+                <OPTION value="52"> region 52</OPTION>
+                <OPTION value="53"> region 53</OPTION>
+                <OPTION value="54"> region 54</OPTION>
+                <OPTION value="55"> region 55</OPTION>
+                <OPTION value="56"> region 56</OPTION>
+                <OPTION value="57"> region 57</OPTION>
+                <OPTION value="58"> region 58</OPTION>
+                <OPTION value="59"> region 59</OPTION>
+                <OPTION value="60"> region 60</OPTION>
+                <OPTION value="61"> region 61</OPTION>
+                <OPTION value="62"> region 62</OPTION>
+                <OPTION value="63"> region 63</OPTION>
+                <OPTION value="64"> region 64</OPTION>
+                <OPTION value="65"> region 65</OPTION>
+                <OPTION value="66"> region 66</OPTION>
+                <OPTION value="67"> region 67</OPTION>
+                <OPTION value="68"> region 68</OPTION>
+                <OPTION value="69"> region 69</OPTION>
+                <OPTION value="70"> region 70</OPTION>
+                <OPTION value="71"> region 71</OPTION>
+                <OPTION value="72"> region 72</OPTION>
+                <OPTION value="73"> region 73</OPTION>
+                <OPTION value="74"> region 74</OPTION>
+                <OPTION value="75"> region 75</OPTION>
+                <OPTION value="76"> region 76</OPTION>
+                <OPTION value="77"> region 77</OPTION>
+                <OPTION value="78"> region 78</OPTION>
+                <OPTION value="79"> region 79</OPTION>
+
+</TD></TR>
+
+<TR><TD ALIGN=LEFT><B> Level <br>
+<SELECT name=sellev size=4 >
+                <OPTION value=""> Surface</OPTION>
+                <OPTION value="_lev1000">1200-987.5mb </OPTION>
+                <OPTION value="_lev975">987.5-962.5mb </OPTION>
+                <OPTION value="_lev950">962.5-937.5mb </OPTION>
+                <OPTION value="_lev925">937.5-912.5mb </OPTION>
+                <OPTION value="_lev900">912.5-887.5mb </OPTION>
+                <OPTION value="_lev875">887.5-862.5mb </OPTION>
+                <OPTION value="_lev850">862.5-837.5mb </OPTION>
+                <OPTION value="_lev825">837.5-812.5mb </OPTION>
+                <OPTION value="_lev800">812.5-787.5mb </OPTION>
+                <OPTION value="_lev775">787.5-762.5mb </OPTION>
+                <OPTION value="_lev750">762.5-737.5mb </OPTION>
+                <OPTION value="_lev725">737.5-712.5mb </OPTION>
+                <OPTION value="_lev700">712.5-687.5mb </OPTION>
+                <OPTION value="_lev675">687.5-662.5mb </OPTION>
+                <OPTION value="_lev650">662.5-637.5mb </OPTION>
+                <OPTION value="_lev625">637.5-612.5mb </OPTION>
+                <OPTION value="_lev600">612.5-587.5mb </OPTION>
+                <OPTION value="_lev575">587.5-562.5mb </OPTION>
+                <OPTION value="_lev550">562.5-537.5mb </OPTION>
+                <OPTION value="_lev525">537.5-512.5mb </OPTION>
+                <OPTION value="_lev500">512.5-487.5mb </OPTION>
+                <OPTION value="_lev475">487.5-462.5mb </OPTION>
+                <OPTION value="_lev450">462.5-437.5mb </OPTION>
+                <OPTION value="_lev425">437.5-412.5mb </OPTION>
+                <OPTION value="_lev400">412.5-387.5mb </OPTION>
+                <OPTION value="_lev375">387.5-362.5mb </OPTION>
+                <OPTION value="_lev350">362.5-337.5mb </OPTION>
+                <OPTION value="_lev325">337.5-312.5mb </OPTION>
+                <OPTION value="_lev300">312.5-287.5mb </OPTION>
+                <OPTION value="_lev275">287.5-262.5mb </OPTION>
+                <OPTION value="_lev250">262.5-237.5mb </OPTION>
+                <OPTION value="_lev225">237.5-212.5mb </OPTION>
+                <OPTION value="_lev200">212.5-187.5mb </OPTION>
+                <OPTION value="_lev175">187.5-162.5mb </OPTION>
+                <OPTION value="_lev150">162.5-137.5mb </OPTION>
+                <OPTION value="_lev125">137.5-112.5mb </OPTION>
+                <OPTION value="_lev100">112.5-85mb </OPTION>
+                <OPTION value="_lev70">85-60mb </OPTION>
+                <OPTION value="_lev50">60-40mb </OPTION>
+                <OPTION value="_lev30">40-25mb </OPTION>
+                <OPTION value="_lev20">25-15mb </OPTION>
+                <OPTION value="_lev10">15-7.5mb </OPTION>
+                <OPTION value="_lev5">7.5-0mb </OPTION>
+</SELECT><P>
+</TD></TR>
+
+
+</TABLE>
+
+<TR><TD ALIGN=LEFT><B>
+<INPUT TYPE="button" VALUE="view" onClick="analmap(); return true;"> <BR></b>
+</B></TD></TR>  
+
+</FORM>
+</TABLE>
+</BODY></HTML>
+

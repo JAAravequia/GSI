@@ -1,0 +1,40 @@
+SHELL=/bin/sh
+#
+#
+.SUFFIXES: .f90 .mod
+
+OBJS= crite_constnt_reg.o main_select_reg.o q_selet_reg.o q_selet_sfc_reg.o t_selet_reg.o  \
+      t_selet_sfc_reg.o w_selet_reg.o w_selet_sfc_reg.o ps_selet_reg.o
+CMD=select_reg.x
+
+FC=ifort
+
+LIBS = -L/nwprod/lib -lw3nco_4 -lw3emc_4 -lbufr_4_64
+
+FFLAGS = -O2 -convert big_endian -assume byterecl
+
+LDFLAGS = 
+
+
+$(CMD):		$(OBJS) 
+	$(FC) $(LDFLAGS) ${FFLAGS} -o $(@) $(OBJS) ${LIBS}
+
+
+clean:
+	-rm -f *.o ${CMD}
+
+clobber:	clean
+	-rm -f $(CMD) $(CMD).prof
+
+void:	clobber
+	-rm -f $(SRCS)
+
+.f.o:
+	${FC} -c ${FFLAGS} $*.f
+
+.mod.o:
+	${FC} -c ${FFLAGS} $*.f90
+
+.f90.o:
+	${FC} -c ${FFLAGS} $*.f90
+

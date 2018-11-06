@@ -1,0 +1,15 @@
+dtype=   ps120  mean,std
+    15    10
+  1.50  1.00
+dtype=   ps180  mean,std
+    16    10
+  1.60  1.00
+dtype=   ps181  mean,std
+    11     8
+  1.10  0.80
+dtype=   ps187  mean,std
+     9     7
+  0.90  0.70
+dtype=   ps188  mean,std
+    25     8
+  2.50  0.80

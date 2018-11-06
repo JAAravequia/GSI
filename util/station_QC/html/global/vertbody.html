@@ -1,0 +1,60 @@
+<HTML>
+<head>
+<!--  Rewritten by Guy Middleton on 12/11/98 12:18:06 --><TITLE>
+Experiment Monitoring
+</TITLE>
+<BODY TEXT="#000000" BGCOLOR="#FFFFFF" LINK="#3366FF" VLINK="#51188E" ALINK="#FF0000"
+>
+<TABLE BORDER=0 CELLPADDING=0>
+<tr align=center>
+<b> <i> Parallel GDAS</i> </b><br>
+<a target="_parent" href="../../index.html">GDAS home page</a><br>
+<a target="_parent" href="../index.html"> Convention data monitoring page </a><br>
+<a target=_parent href="index_time.html"> Time series plots  </a> <br>
+<a target=_parent href="index_hist.html"> Histogram plots  </a><br>
+<a target=_parent href="index_horz.html"> Horizontal plots  </a><br>
+
+<TD ALIGN=LEFT><font size=4>Vertical plots</TD></TR>
+</table>
+
+
+<SCRIPT LANGUAGE="JavaScript">
+
+function analmap() {
+var sdtype_index = document.timesel.seldtype.selectedIndex;
+var sdtype = document.timesel.seldtype.options[sdtype_index].value;
+var parentnew="./vert/googlemap_htmls/"+sdtype+".html";
+parent.fmain.document.location.href=parentnew;
+}
+
+</SCRIPT></HEAD>
+
+
+<TABLE BORDER=0 CELLPADDING=0>
+<FORM NAME="timesel" >
+
+
+ 
+<TR><TD ALIGN=LEFT><B>Obs. Type<br>
+<SELECT name=seldtype size=8 >
+                <OPTION value="q120">Q120(Rawn HUMD)</OPTION>
+                <OPTION value="t120">T120(Rawn TEMP)</OPTION>
+                <OPTION value="uv220">W220((Rawn WIND)</OPTION>
+                <OPTION value="uv221">W221(Pibl WIND)</OPTION>
+                <OPTION value="uv223">W223(Profl WIND)</OPTION>
+                <OPTION value="uv224">W224(VADW WIND)</OPTION>
+                <OPTION value="uv228">W228 (Jap. Profl WIND)</OPTION>
+                <OPTION value="uv229">W229 (Eur. Profl WIND)</OPTION>
+</SELECT><P>
+</TD></TR>
+
+</TABLE>
+
+<TR><TD ALIGN=LEFT><B>
+<INPUT TYPE="button" VALUE="view" onClick="analmap(); return true;"> <BR></b>
+</B></TD></TR>  
+
+</FORM>
+</TABLE>
+</BODY></HTML>
+

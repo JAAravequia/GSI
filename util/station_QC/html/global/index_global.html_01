@@ -1,0 +1,36 @@
+<!doctype html public "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+   <meta name="GENERATOR" content="Mozilla/4.5 [en] (Win98; U) [Netscape]">
+   <title>Station Observation Performance</title>
+   <base target="rightframe">
+</head>
+<body text="#000000" bgcolor="#FFFFFF">
+
+<h2>
+Convention Observation Data Assimilation Monitoring</h2>
+The statistics or history of conventional station observation are based
+on the records of relationship between observations, background, and analysis
+for each stations. The rejection and bias correction list of stations
+are based on these statistics. And also these plots may provide some information
+for daily quality control decision.
+<p>
+
+To access statistics for each system, click on the appropriate button below:
+
+<p>
+
+<center>
+<table BORDER cellpadding=10>
+<tr>
+   <td> 
+      <center>
+      <b> <i> <font size=4>GLOBAL Station Observation Monitor
+      <center > <LI> <a target=_parent href="index_hist.html"> HISTOGRAM PLOTS  </a> 
+      <center > <LI> <a target=_parent href="index_horz.html"> HORIZONTAL PLOTS  </a> 
+      <center > <LI> <a target=_parent href="index_time.html"> TIME SERIES PLOTS  </a> 
+      <center > <LI> <a target=_parent href="index_time2.html"> TIME SERIES PLOTS(Diurnal process)  </a> 
+      <center > <LI> <a target=_parent href="index_vert.html"> VERTICAL PROFILE PLOTS  </a> 
+</body>
+</html>
