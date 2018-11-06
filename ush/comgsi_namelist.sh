@@ -2,7 +2,7 @@
 cat <<EOF > gsiparm.anl
 
  &SETUP
-   miter=${nummiter},niter(1)=10,niter(2)=10,
+   miter=${nummiter},niter(1)=50,niter(2)=50,
    write_diag(1)=.true.,write_diag(2)=.false.,write_diag(3)=.true.,
    gencode=78,qoption=2,
    factqmin=0.0,factqmax=0.0,
