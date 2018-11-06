@@ -40,11 +40,8 @@ project(GSI)
   option(BUILD_NMMB "Build the Enkf with NMMB module " OFF)
   option(BUILD_WRF "Build the Enkf with WRF module " OFF)
   option(BUILD_UTIL "Build the Enkf utilities " OFF)
-<<<<<<< HEAD
   option(BUILD_EFSOI "Build the EFSOI utility " OFF)
-=======
   option(BUILD_UTIL_COM "Build community utilities " OFF)
->>>>>>> master
   option(BUILD_NCDIAG "Build the NCDIAG libraries" ON)
   option(BUILD_REG_TESTING "Build the Regression Testing Suite" ON)
   option(BUILD_UNIT_TESTING "Build the Unit Testing Suite" OFF)
@@ -252,19 +249,16 @@ project(GSI)
     add_subdirectory(util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radbcor.fd)
     add_subdirectory(util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radtime.fd)
   endif(BUILD_UTIL) 
-<<<<<<< HEAD
   
   if(BUILD_EFSOI)
     add_subdirectory(util/EFSOI_Utilities/src)
   endif(BUILD_EFSOI) 
-=======
   if(BUILD_UTIL_COM)
     add_subdirectory(util/Analysis_Utilities/read_diag)
     add_subdirectory(util/radar_process/radialwind)
     add_subdirectory(util/radar_process/reflectivity)
     add_subdirectory(util/EnKF/arw/src)
   endif(BUILD_UTIL_COM) 
->>>>>>> master
   add_subdirectory(util/ndate)
   if(BUILD_UNIT_TESTING)
     set(CTEST_TEST_TIMEOUT 400 )

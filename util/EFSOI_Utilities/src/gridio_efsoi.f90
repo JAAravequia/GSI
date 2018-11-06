@@ -222,7 +222,7 @@
 
   integer, intent(in), optional :: nanal
   integer, intent(in), optional :: ft
-  character, intent(in), optional :: hr
+  integer, intent(in), optional :: hr
   character, intent(in), optional :: infilename
   integer, intent(in) :: mode
   character(len=max_varname_length), dimension(n2d), intent(in) :: vars2d
@@ -308,7 +308,6 @@
      write(6,*)'gridio/readgriddata_efsoi: GFS: problem with nemsio_init, iret=',iret
      call stop2(23)
   end if
-!PRINT *, filename, 'Is the filename right??'
   call nemsio_open(gfile,filename,'READ',iret=iret)
   if (iret/=0) then
      write(6,*)'gridio/readgriddata_efsoi: GFS: problem with nemsio_open, iret=',iret
