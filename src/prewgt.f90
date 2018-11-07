@@ -72,6 +72,7 @@ subroutine prewgt(mype)
 !   2014-02-05  mkim/todling - move cw overwrite w/ q to m_berror_stats
 !   2014-08-02  zhu     - set up new background error variance and correlation lengths of cw 
 !                         for all-sky radiance assimilation
+!   2018-11-07  Martin  - added horizontal length scales for 2d vars besides psfc
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -319,12 +320,19 @@ subroutine prewgt(mype)
   if(nrf3_oz>0) hwll(:,:,nrf3_oz)=hwll(:,:,nrf3_oz)*three   !inflate scale
 
 ! surface pressure
-  if(nrf2_ps>0) then
-     do i=1,nlat
-        hwllp(i,nrf2_ps)=hwllinp(i,nrf2_ps)
-     end do
-  endif
+!  if(nrf2_ps>0) then
+!     do i=1,nlat
+!        hwllp(i,nrf2_ps)=hwllinp(i,nrf2_ps)
+!     end do
+!  endif
 
+! generalized horizontal length scales for all 2d vars
+  hwllp=zero
+  do j=1,nc2d
+     do i=1,nlat
+        hwllp(i,j) = hwllinp(i,j)
+     enddo
+  enddo
 
 ! sea surface temperature, convert from km to m
 ! also calculate a minimum horizontal length scale for
@@ -517,6 +525,18 @@ subroutine prewgt(mype)
               end if
            end do
         end do
+     else
+     !  other 2d variables
+        do j=1,lat2
+           jx=istart(mm1)+j-2
+           jx=max(jx,2)
+           jx=min(nlat-1,jx)
+           do i=1,lon2
+              dssvs(j,i,n)=corp(jx,n)
+           end do
+        end do
+
+
      end if
   end do
 

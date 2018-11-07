@@ -729,7 +729,7 @@ contains
     hwlmin=hwlmin*hzsmin
 
 ! setup smoother coef and scale
-    if (nnn>0 .and. (hwlmax<=zero .or. hwlmin<=zero)) then
+    if (nnn>0 .and. (hwlmax<=zero .or. hwlmin<=zero .or. isnan(hwlmin) .or. isnan(hwlmax))) then
        write(6,*)'INIT_RFTABLE:  ***ERROR*** illegal value for min,max scale.',&
             '  hwlmin,hwlmax=',hwlmin,hwlmax,mype
        call stop2(41)
@@ -743,7 +743,7 @@ contains
     hwlb=ihwlb*tin
 !   tin=(hwle-hwlb)/float(nta-1)
     ntax=(hwle-hwlb)/tin+2
-    !write(6,*)'INIT_RFTABLE:  tin ',ntax,ihwlb,tin,hwlb,hwle
+!   write(6,*)'INIT_RFTABLE:  tin ',ntax,ihwlb,tin,hwlb,hwle,mype
 
     allocate(iuse(ntax))
 

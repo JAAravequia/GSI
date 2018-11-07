@@ -174,6 +174,7 @@ subroutine bkerror(gradx,grady)
            call gsi_bundlegetpointer(mbundle,trim(nrf_var(i)),rank2a,istatus)
            call gsi_bundlegetpointer(grady%step(ii),trim(nrf_var(i)),rank2b,istatus)
            rank2b=rank2a
+           !if (trim(nrf_var(i))=='aod') print *, 'grady',trim(nrf_var(i)),rank2b
         end if
      end do
 

@@ -168,8 +168,8 @@ contains
 
           if(luse_obsdiag)then
              if (lsaveobsens) then
-                grad = val*aeroptr%err2(nn)*aeroptr%raterr2(nn)
-                aeroptr%diags(nn)%ptr%obssen(jiter) = grad 
+                val = val*aeroptr%err2(nn)*aeroptr%raterr2(nn)
+                aeroptr%diags(nn)%ptr%obssen(jiter) = val 
              else
                 if (aeroptr%luse) then
                    aeroptr%diags(nn)%ptr%tldepart(jiter) = val
@@ -182,23 +182,23 @@ contains
 
                 val=val-aeroptr%res(nn)
 
-!             Multiply by variance.
-            !if (nlnqc_iter .and. pg_aero(ic) > tiny_r_kind .and. &
-            !                     b_aero(ic)  > tiny_r_kind) then
-            !   cg_aero=cg_term/b_aero(ic)
-            !   wnotgross= one-pg_aero(ic)*varqc_iter
-            !   wgross = varqc_iter*pg_aero(ic)*cg_aero/wnotgross
-            !   p0   = wgross/(wgross+exp(-half*aeroptr%err2(nn)*val*val))
-            !   val = val*(one-p0)
-            !endif
+!                Multiply by variance.
+!               if (nlnqc_iter .and. pg_aero(ic) > tiny_r_kind .and. &
+!                                 b_aero(ic)  > tiny_r_kind) then
+!                  cg_aero=cg_term/b_aero(ic)
+!                  wnotgross= one-pg_aero(ic)*varqc_iter
+!                  wgross = varqc_iter*pg_aero(ic)*cg_aero/wnotgross
+!                  p0   = wgross/(wgross+exp(-half*aeroptr%err2(nn)*val*val))
+!                  val = val*(one-p0)
+!               endif
 
-                grad = val*aeroptr%err2(nn)*aeroptr%raterr2(nn)
+                val = val*aeroptr%err2(nn)*aeroptr%raterr2(nn)
              endif
 
 !          Begin adjoint
 
              if (l2d_aod) then
-                tval(1)=grad
+                tval(1)=val
              else
 !          Extract contributions from atmospheric jacobian
                 do k=1,nsigaerojac

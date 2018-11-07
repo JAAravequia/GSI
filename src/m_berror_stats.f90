@@ -445,6 +445,22 @@ subroutine read_wgt(corz,corp,hwll,hwllp,vz,corsst,hsst,varq,qoption,varcw,cwopt
    enddo readloop 
    close(inerr)
 
+   ! corp and hwllp for undefined 2d variables
+   ! just a placeholder for now
+   do n=1,size(cvars2d)
+      if ( .not. found2d(n) ) then
+         if ( n>0 ) then
+            if ( cvars2d(n) == 'aod' ) then
+               print *, 'fakin aod',n
+               do i=1,nlat
+                  corp(i,n) = 0.1
+                  hwllp(i,n) = 100.+(1*.1)
+               end do
+            end if
+         end if
+      end if
+   end do
+
    ! corz, hwll & vz for undefined 3d variables
    do n=1,size(cvars3d)
       if ( .not.found3d(n) ) then

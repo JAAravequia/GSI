@@ -117,6 +117,7 @@ subroutine bkgvar(cvec,iflg)
         do i=1,lon2
            do j=1,lat2
               ptr2d(j,i)=ptr2d(j,i)*dssvs(j,i,n)
+              !print *, cvec%r2(n)%shortname,ptr2d(j,i),dssvs(j,i,n)
            end do
         end do
      elseif(i_sst>0) then

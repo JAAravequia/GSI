@@ -74,6 +74,7 @@ subroutine Set_CRTM_Aerosol_ ( km, na, na_crtm, aero_name, aero_conc, rh, aeroso
   indx_bc1   = getindex(aero_name,'bc1')
   indx_oc1   = getindex(aero_name,'oc1')
 
+
   do i = 1, na
 
      if ( trim(aero_name(i)) == 'p25' ) cycle
