@@ -12,6 +12,9 @@ INTEL: 18.1.163 18.0.3.222 18.0.1.163 18.0.1 18.0.0.128 17.0.5.239 17.0.1 16.1.1
 1. ** How to compile comGSIv3.7_EnKFv1.3 ? **
 -----------------------------------------------------------
 
+NOTE: WRF I/O interface is self-included in this release as a library.
+      Users no longer need to compile WRF separately. 
+
 (1). Determine the directory to do compiling. This directory can be either inside 
 or outside the comGSIv3.7_EnKFv1.3 directory.
 The following is an example to do compiling inside comGSIv3.7_EnKFv1.3:
