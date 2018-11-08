@@ -133,24 +133,19 @@ for x in build_options:
   rmfiles1="CMakeCache.txt CMakeFiles Makefile DartConfiguration.tcl src done.compiling"
   rmfiles2="include lib libsrc util Testing regression_var.out cmake_install.cmake CTestTestfile.cmake"
   cmake1="cmake -DENKF_MODE=GFS -DBUILD_CORELIBS=ON -DCMAKE_C_COMPILER="+cc_name+" -DCMAKE_CXX_COMPILER="+cxx_name
-  cmake2="cmake -DENKF_MODE=WRF -DBUILD_GSDCLOUD_ARW=ON -DBUILD_CORELIBS=ON -DCMAKE_C_COMPILER="+cc_name+" -DCMAKE_CXX_COMPILER="+cxx_name
-  cmake3="cmake -DBUILD_UTIL_COM=ON -DCMAKE_C_COMPILER="+cc_name+" -DCMAKE_CXX_COMPILER="+cxx_name
+  cmake2="cmake -DENKF_MODE=WRF -DBUILD_GSDCLOUD_ARW=ON -DBUILD_UTIL_COM=ON -DBUILD_CORELIBS=ON -DCMAKE_C_COMPILER="+cc_name+" -DCMAKE_CXX_COMPILER="+cxx_name
 
   job_script=q_ready+'\n'+modules+'\n'
   job_script=job_script+"cd "+build_root+"/"+bld_fullname+'\n\n'
-  #### to build enkf_gfs.x
+  #### to build enkf_gfs.x, gsi.x
   job_script=job_script+"rm -rf "+rmfiles1+' '+rmfiles2+" bin\n"  #to get a clean start
   job_script=job_script+cmake1+" "+ProdGSI_root+"\n"
   job_script=job_script+"make -j8\n"
   job_script=job_script+"make -j2\n\n"  ### some build options require to do this to get enkf executables
-  #### to build enkf_arw.x
+  #### to build enkf_arw.x, gsi.x and all community utilities
   #job_script=job_script+"rm -rf CMakeCache.txt CMakeFiles\n"  # don't remove bin/ directory at this step
   job_script=job_script+"rm -rf "+rmfiles1+' '+rmfiles2+"\n"  # don't remove bin/ directory at this step
   job_script=job_script+cmake2+" "+ProdGSI_root+"\n"
-  job_script=job_script+"make -j8\n"
-  job_script=job_script+"make -j2\n\n"  ### some build options require to do this to get enkf executables
-  ### to build utils
-  job_script=job_script+cmake3+" "+ProdGSI_root+"\n"  #compile community utilities
   job_script=job_script+"make -j8\n"
   job_script=job_script+"make -j2\n\n"  ### some build options require to do this to get enkf executables
   ### link executables to get ready for case running test
