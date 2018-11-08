@@ -413,7 +413,7 @@ contains
     use guess_grids, only: ifilesig,ifileaer,nfldaer
     use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sub2grid_destroy_info
     use mpimod, only: npe
-    use chemmod, only: lread_ext_aerosol,laeroana_gocart
+    use chemmod, only: lread_ext_aerosol
 
     implicit none
 
@@ -476,7 +476,11 @@ contains
     enddo
 
     if ( mype == 0 ) write(6,*) 'n_aerosols_fwd and aerosol_names_fwd',n_aerosols_fwd,aerosol_names_fwd
+<<<<<<< HEAD
 !   Read in Aerosol field via nemsio
+=======
+! Read in Aerosol field via nemsio
+>>>>>>> 80d5903a957e0c6b2ab6969517e6739dbce0d054
     if ( n_aerosols_fwd > 0 ) then
        if ( mype == 0 ) write(6,*) n_aerosols_fwd,aerosol_names_fwd
        call gsi_gridcreate(chem_grid,lat2,lon2,nsig)
@@ -484,6 +488,7 @@ contains
 
        inner_vars=1
        num_fields=min(n_aerosols_fwd*grd_a%nsig,npe)
+<<<<<<< HEAD
 !      Create temporary communication information fore read routines
        call general_sub2grid_create_info(grd_ae,inner_vars,grd_a%nlat,grd_a%nlon,grd_a%nsig,num_fields,regional)
 
@@ -497,6 +502,21 @@ contains
 
        do it=1,anfld
 !         Get pointer to aerosol field
+=======
+!  Create temporary communication information fore read routines
+       call general_sub2grid_create_info(grd_ae,inner_vars,grd_a%nlat,grd_a%nlon,grd_a%nsig,num_fields,regional)
+
+       if (mype==0) write(6,*) "after sub2grid_create",num_fields,grd_a%nlat,grd_a%nlon,grd_a%nsig
+       
+       if (lread_ext_aerosol) then 
+          anfld=nfldaer
+       else
+          anfld=nfldsig
+       end if
+
+       do it=1,anfld
+!      Get pointer to aerosol field
+>>>>>>> 80d5903a957e0c6b2ab6969517e6739dbce0d054
           if (lread_ext_aerosol) then
              write(filename,'(''aerf'',i2.2)') ifileaer(it)
           else
@@ -560,14 +580,22 @@ contains
                       call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'seas4',ae_ss004_it,iret)
                       if (iret==0) ae_ss004_it=ptr3d
                 end select ! different aerosol tracers
+<<<<<<< HEAD
        
+=======
+          
+>>>>>>> 80d5903a957e0c6b2ab6969517e6739dbce0d054
                 if(iret/=0 .and. mype==0 ) write(6,*) trim(aerosol_names_fwd(ia))," getpointer fail"
                 ier=ier+iret
              endif ! end if successfully able to get pointer
           end do ! n_aerosols_fwd
 
           if (ier/=0) then
+<<<<<<< HEAD
               write(6,*) "before call read_ngac_aerosol ier=",ier
+=======
+!             write(6,*) "before call read_ngac_aerosol ier=",ier
+>>>>>>> 80d5903a957e0c6b2ab6969517e6739dbce0d054
              cycle ! this allows code to be free from met-fields
           end if
        end do ! nfldaer

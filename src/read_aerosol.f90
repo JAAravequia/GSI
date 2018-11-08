@@ -391,6 +391,10 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
            allocate (aeroout(naerodat,itxmax),nrec(itxmax))
            allocate (dataaod(nchanl))
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 80d5903a957e0c6b2ab6969517e6739dbce0d054
            iy = 0
            im = 0
            idd= 0
@@ -399,18 +403,28 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
            read (date,'(i4,3i2)') iy,im,idd,ihh
            write(6,'(''READ_AEROSOL: aerosol bufr file '',a,''  date is '',i4,3i2.2)') trim(infile),iy,im,idd,ihh
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 80d5903a957e0c6b2ab6969517e6739dbce0d054
 !          set qcall_limit
            if (idate >= 2018021300) then
               qcall_limit = aod_qa_limit + r0_01 ! for the viirs data after 2018/02/13
            else
               qcall_limit = aod_qa_limit - r0_01
            end if
+<<<<<<< HEAD
 !          set valid range of AOD to ingest
            aod_lb = zero
            aod_ub = five
 
+=======
+
+!          set valid range of AOD to ingest
+           aod_lb = zero
+           aod_ub = five
+>>>>>>> 80d5903a957e0c6b2ab6969517e6739dbce0d054
            nrec=999999
            irec=0
            read_viirs: do

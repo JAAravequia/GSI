@@ -1902,7 +1902,6 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
      do i=1,nchanl
         rtsolution_k(i,1)%layer_optical_depth(:) = jac_pert
      enddo
-
      error_status = crtm_aod_k(atmosphere,rtsolution_k,&
         channelinfo(sensorindex:sensorindex),rtsolution,atmosphere_k)
   end if

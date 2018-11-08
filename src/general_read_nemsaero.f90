@@ -123,7 +123,11 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
        end if
     end do
     icm=icount
+<<<<<<< HEAD
     allocate( work(grd%itotsub)) 
+=======
+    allocate( work(grd%itotsub) )
+>>>>>>> 80d5903a957e0c6b2ab6969517e6739dbce0d054
     work=zero
     if(procuse)then
 
@@ -183,7 +187,11 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
       end if
 
       if (mype==0) write(6,*) "after check the resolution"
+<<<<<<< HEAD
 
+=======
+!
+>>>>>>> 80d5903a957e0c6b2ab6969517e6739dbce0d054
       allocate( grid(grd%nlon,nlatm2), grid_v(grd%nlon,nlatm2) )
       if(diff_res)then
          allocate( grid_b(lonb,latb),grid_c(latb+2,lonb,1),grid2(grd%nlat,grd%nlon,1))
@@ -350,8 +358,6 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
     end do
     end do
 
-!   write(9999,*) sp_a%rlats,sp_a%rlons,ae_d1(:,:,10)
-    
     if(procuse)then
 !       if(diff_res) deallocate(grid_b,grid_b2,grid_c,grid_c2,grid2)
        if(diff_res) deallocate(grid_b,grid_c,grid2)
@@ -435,7 +441,11 @@ subroutine aerosol_reload(grd,ae_d1,ae_d2,ae_d3,ae_d4,ae_d5, &
   integer(i_kind) i,j,k,ij,klev
   real(r_kind),dimension(grd%lat2*grd%lon2,npe):: sub
 
+<<<<<<< HEAD
   call mpi_alltoallv(work,grd%sendcounts_s,grd%displs_s,mpi_rtype,&
+=======
+  call mpi_alltoallv(work,grd%sendcounts_s,grd%sdispls_s,mpi_rtype,&
+>>>>>>> 80d5903a957e0c6b2ab6969517e6739dbce0d054
        sub,grd%recvcounts_s,grd%rdispls_s,mpi_rtype,&
        mpi_comm_world,ierror)
 !$omp parallel do  schedule(dynamic,1) private(k,i,j,ij,klev)
@@ -545,7 +555,6 @@ subroutine aerosol_reload(grd,ae_d1,ae_d2,ae_d3,ae_d4,ae_d5, &
   end do
   icount=0
   ilev=0
-!  iflag=0
   return
 end subroutine aerosol_reload
 
