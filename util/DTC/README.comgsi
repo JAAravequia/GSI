@@ -59,7 +59,6 @@ If you want to get global EnKF (enkf_gfs.x), do the following in the build direc
 -----------------------------------------------------------
 4. ** How to compile GSI/EnKF utilities ? **
 -----------------------------------------------------------
-Be sure to do step 1 or step 2 before this step
 
 (1). cmake -DBUILD_UTIL_COM path_to_GSI
 (2). make (or make -jn) as in step 1.3
