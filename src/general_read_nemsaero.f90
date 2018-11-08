@@ -123,9 +123,8 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
        end if
     end do
     icm=icount
-    allocate( work(grd%itotsub) )!,work_v(grd%itotsub) )
+    allocate( work(grd%itotsub)) 
     work=zero
-!    work_v=zero
     if(procuse)then
 
       if (mype==0) write(6,*) "before nemsio init"
@@ -184,12 +183,10 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
       end if
 
       if (mype==0) write(6,*) "after check the resolution"
-!
-!      allocate( spec_vor(sp_a%nc), spec_div(sp_a%nc) )
+
       allocate( grid(grd%nlon,nlatm2), grid_v(grd%nlon,nlatm2) )
       if(diff_res)then
          allocate( grid_b(lonb,latb),grid_c(latb+2,lonb,1),grid2(grd%nlat,grd%nlon,1))
-!         allocate( grid_b2(lonb,latb),grid_c2(latb+2,lonb,1))
       end if
       allocate( rwork1d0(latb*lonb) )
       allocate(rlats(latb+2),rlons(lonb),clons(lonb),slons(lonb),r4lats(lonb*latb),r4lons(lonb*latb))
@@ -339,7 +336,7 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
              end do
           else
              grid=reshape(rwork1d0,(/size(grid,1),size(grid,2)/))
-             call fill_ns(grid,work)
+             call general_fill_ns(grd,grid,work)
           end if
 
        end if
@@ -438,8 +435,8 @@ subroutine aerosol_reload(grd,ae_d1,ae_d2,ae_d3,ae_d4,ae_d5, &
   integer(i_kind) i,j,k,ij,klev
   real(r_kind),dimension(grd%lat2*grd%lon2,npe):: sub
 
-  call mpi_alltoallv(work,grd%ijn_s,grd%displs_s,mpi_rtype,&
-       sub,grd%irc_s,grd%ird_s,mpi_rtype,&
+  call mpi_alltoallv(work,grd%sendcounts_s,grd%displs_s,mpi_rtype,&
+       sub,grd%recvcounts_s,grd%rdispls_s,mpi_rtype,&
        mpi_comm_world,ierror)
 !$omp parallel do  schedule(dynamic,1) private(k,i,j,ij,klev)
   do k=1,icount

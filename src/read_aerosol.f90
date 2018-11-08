@@ -391,13 +391,6 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
            allocate (aeroout(naerodat,itxmax),nrec(itxmax))
            allocate (dataaod(nchanl))
 
-!          set qcall_limit
-           qcall_limit = aod_qa_limit - r0_01
-
-!          set valid range of AOD to ingest
-           aod_lb = zero
-           aod_ub = five
-
            iy = 0
            im = 0
            idd= 0
@@ -405,6 +398,18 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
            write(date,'( i10)') idate
            read (date,'(i4,3i2)') iy,im,idd,ihh
            write(6,'(''READ_AEROSOL: aerosol bufr file '',a,''  date is '',i4,3i2.2)') trim(infile),iy,im,idd,ihh
+
+
+
+!          set qcall_limit
+           if (idate >= 2018021300) then
+              qcall_limit = aod_qa_limit + r0_01 ! for the viirs data after 2018/02/13
+           else
+              qcall_limit = aod_qa_limit - r0_01
+           end if
+!          set valid range of AOD to ingest
+           aod_lb = zero
+           aod_ub = five
 
            nrec=999999
            irec=0
@@ -480,7 +485,11 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 
               nread = nread + 1   !nread = nread + nchanl
 
-              if ( qcall < qcall_limit ) cycle read_viirs
+              if (idate >= 2018021300) then
+                 if ( qcall > qcall_limit ) cycle read_viirs
+              else
+                 if ( qcall < qcall_limit ) cycle read_viirs
+              end if
 
               !    extract VAODCH pairs 'CHWL AOPT' as defined in vaodchstr
               call ufbrep(lunin,vaodch,2,12,iret,vaodchstr)

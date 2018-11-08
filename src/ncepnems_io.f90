@@ -475,107 +475,105 @@ contains
        ptr3d = p_co2
     enddo
 
-    if (laeroana_gocart) then! if using aerosols
-       if ( mype == 0 ) write(6,*) 'n_aerosols_fwd and aerosol_names_fwd',n_aerosols_fwd,aerosol_names_fwd
-! Read in Aerosol field via nemsio
-       if ( n_aerosols_fwd > 0 ) then
-          if ( mype == 0 ) write(6,*) n_aerosols_fwd,aerosol_names_fwd
-          call gsi_gridcreate(chem_grid,lat2,lon2,nsig)
-          call gsi_bundlecreate(chem_bundle,chem_grid,'aux-chem-read',istatus,names3d=aerosol_names_fwd)
+    if ( mype == 0 ) write(6,*) 'n_aerosols_fwd and aerosol_names_fwd',n_aerosols_fwd,aerosol_names_fwd
+!   Read in Aerosol field via nemsio
+    if ( n_aerosols_fwd > 0 ) then
+       if ( mype == 0 ) write(6,*) n_aerosols_fwd,aerosol_names_fwd
+       call gsi_gridcreate(chem_grid,lat2,lon2,nsig)
+       call gsi_bundlecreate(chem_bundle,chem_grid,'aux-chem-read',istatus,names3d=aerosol_names_fwd)
 
-          inner_vars=1
-          num_fields=min(n_aerosols_fwd*grd_a%nsig,npe)
-!  Create temporary communication information fore read routines
-          call general_sub2grid_create_info(grd_ae,inner_vars,grd_a%nlat,grd_a%nlon,grd_a%nsig,num_fields,regional)
+       inner_vars=1
+       num_fields=min(n_aerosols_fwd*grd_a%nsig,npe)
+!      Create temporary communication information fore read routines
+       call general_sub2grid_create_info(grd_ae,inner_vars,grd_a%nlat,grd_a%nlon,grd_a%nsig,num_fields,regional)
 
-          if (mype==0) write(6,*) "after sub2grid_create",num_fields,grd_a%nlat,grd_a%nlon,grd_a%nsig
-       
-          if (lread_ext_aerosol) then 
-             anfld=nfldaer
+       if (mype==0) write(6,*) "after sub2grid_create",num_fields,grd_a%nlat,grd_a%nlon,grd_a%nsig
+    
+       if (lread_ext_aerosol) then 
+          anfld=nfldaer
+       else
+          anfld=nfldsig
+       end if
+
+       do it=1,anfld
+!         Get pointer to aerosol field
+          if (lread_ext_aerosol) then
+             write(filename,'(''aerf'',i2.2)') ifileaer(it)
           else
-             anfld=nfldsig
+             write(filename,'(''sigf'',i2.2)') ifilesig(it)
           end if
+          if (mype==0) write(6,*) "aerosol field come from ",filename
 
-          do it=1,anfld
-!      Get pointer to aerosol field
-             if (lread_ext_aerosol) then
-                write(filename,'(''aerf'',i2.2)') ifileaer(it)
-             else
-                write(filename,'(''sigf'',i2.2)') ifilesig(it)
-             end if
-             if (mype==0) write(6,*) "aerosol field come from ",filename
+          ier=0
+          call general_read_nemsaero(grd_ae,sp_a,filename,mype,chem_bundle,&
+            n_aerosols_fwd,aerosol_names_fwd,.true.,ier)
 
-             ier=0
-             call general_read_nemsaero(grd_ae,sp_a,filename,mype,chem_bundle,&
-               n_aerosols_fwd,aerosol_names_fwd,.true.,ier)
+          do ia=1,n_aerosols_fwd
 
-             do ia=1,n_aerosols_fwd
+             write(str_crtmuse,'(''i4crtm::'',a)') trim(aerosol_names_fwd(ia))
+             call gsi_chemguess_get ( str_crtmuse, i4crtm, iera )
+             if(mype==0) write(6,*) trim(aerosol_names_fwd(ia))," for crtm is ",i4crtm
 
-                write(str_crtmuse,'(''i4crtm::'',a)') trim(aerosol_names_fwd(ia))
-                call gsi_chemguess_get ( str_crtmuse, i4crtm, iera )
-                if(mype==0) write(6,*) trim(aerosol_names_fwd(ia))," for crtm is ",i4crtm
+             call gsi_bundlegetpointer (chem_bundle,trim(aerosol_names_fwd(ia)),ptr3d,istatus)
+             if (istatus==0) then
+                select case ( trim(aerosol_names_fwd(ia)) )
+                   case ('sulf')
+                      call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'sulf',ae_so4_it,iret)
+                      if (iret==0) ae_so4_it=ptr3d
+                   case ('bc1')
+                      call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'bc1',ae_bcpho_it,iret)
+                      if (iret==0) ae_bcpho_it=ptr3d
+                   case ('bc2')
+                      call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'bc2',ae_bcphi_it,iret)
+                      if (iret==0) ae_bcphi_it=ptr3d
+                   case ('oc1')
+                      call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'oc1',ae_ocpho_it,iret)
+                      if (iret==0) ae_ocpho_it=ptr3d
+                   case ('oc2')
+                      call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'oc2',ae_ocphi_it,iret)
+                      if (iret==0) ae_ocphi_it=ptr3d
+                   case ('dust1')
+                      call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'dust1',ae_du001_it,iret)
+                      if (iret==0) ae_du001_it=ptr3d
+                   case ('dust2')
+                      call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'dust2',ae_du002_it,iret)
+                      if (iret==0) ae_du002_it=ptr3d
+                   case ('dust3')
+                      call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'dust3',ae_du003_it,iret)
+                      if (iret==0) ae_du003_it=ptr3d
+                   case ('dust4')
+                      call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'dust4',ae_du004_it,iret)
+                      if (iret==0) ae_du004_it=ptr3d
+                   case ('dust5')
+                      call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'dust5',ae_du005_it,iret)
+                      if (iret==0) ae_du005_it=ptr3d
+                   case ('seas1')
+                      call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'seas1',ae_ss001_it,iret)
+                      if (iret==0) ae_ss001_it=ptr3d
+                   case ('seas2')
+                      call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'seas2',ae_ss002_it,iret)
+                      if (iret==0) ae_ss002_it=ptr3d
+                   case ('seas3')
+                      call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'seas3',ae_ss003_it,iret)
+                      if (iret==0) ae_ss003_it=ptr3d
+                   case ('seas4')
+                      call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'seas4',ae_ss004_it,iret)
+                      if (iret==0) ae_ss004_it=ptr3d
+                end select ! different aerosol tracers
+       
+                if(iret/=0 .and. mype==0 ) write(6,*) trim(aerosol_names_fwd(ia))," getpointer fail"
+                ier=ier+iret
+             endif ! end if successfully able to get pointer
+          end do ! n_aerosols_fwd
 
-                call gsi_bundlegetpointer (chem_bundle,trim(aerosol_names_fwd(ia)),ptr3d,istatus)
-                if (istatus==0) then
-                   select case ( trim(aerosol_names_fwd(ia)) )
-                      case ('sulf')
-                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'sulf',ae_so4_it,iret)
-                         if (iret==0) ae_so4_it=ptr3d
-                      case ('bc1')
-                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'bc1',ae_bcpho_it,iret)
-                         if (iret==0) ae_bcpho_it=ptr3d
-                      case ('bc2')
-                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'bc2',ae_bcphi_it,iret)
-                         if (iret==0) ae_bcphi_it=ptr3d
-                      case ('oc1')
-                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'oc1',ae_ocpho_it,iret)
-                         if (iret==0) ae_ocpho_it=ptr3d
-                      case ('oc2')
-                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'oc2',ae_ocphi_it,iret)
-                         if (iret==0) ae_ocphi_it=ptr3d
-                      case ('dust1')
-                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'dust1',ae_du001_it,iret)
-                         if (iret==0) ae_du001_it=ptr3d
-                      case ('dust2')
-                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'dust2',ae_du002_it,iret)
-                         if (iret==0) ae_du002_it=ptr3d
-                      case ('dust3')
-                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'dust3',ae_du003_it,iret)
-                         if (iret==0) ae_du003_it=ptr3d
-                      case ('dust4')
-                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'dust4',ae_du004_it,iret)
-                         if (iret==0) ae_du004_it=ptr3d
-                      case ('dust5')
-                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'dust5',ae_du005_it,iret)
-                         if (iret==0) ae_du005_it=ptr3d
-                      case ('seas1')
-                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'seas1',ae_ss001_it,iret)
-                         if (iret==0) ae_ss001_it=ptr3d
-                      case ('seas2')
-                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'seas2',ae_ss002_it,iret)
-                         if (iret==0) ae_ss002_it=ptr3d
-                      case ('seas3')
-                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'seas3',ae_ss003_it,iret)
-                         if (iret==0) ae_ss003_it=ptr3d
-                      case ('seas4')
-                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'seas4',ae_ss004_it,iret)
-                         if (iret==0) ae_ss004_it=ptr3d
-                   end select ! different aerosol tracers
-          
-                   if(iret/=0 .and. mype==0 ) write(6,*) trim(aerosol_names_fwd(ia))," getpointer fail"
-                   ier=ier+iret
-                endif ! end if successfully able to get pointer
-             end do ! n_aerosols_fwd
-
-             if (ier/=0) then
-!                write(6,*) "before call read_ngac_aerosol ier=",ier
-                cycle ! this allows code to be free from met-fields
-             end if
-          end do ! nfldaer
-          call general_sub2grid_destroy_info(grd_ae)
-          call gsi_bundledestroy(chem_bundle,istatus)
-       end if ! end if n_aerosols_fwd > 0
-    end if ! end if laeroana_gocart
+          if (ier/=0) then
+              write(6,*) "before call read_ngac_aerosol ier=",ier
+             cycle ! this allows code to be free from met-fields
+          end if
+       end do ! nfldaer
+       call general_sub2grid_destroy_info(grd_ae)
+       call gsi_bundledestroy(chem_bundle,istatus)
+    end if ! end if n_aerosols_fwd > 0
 
   end subroutine read_chem_
 

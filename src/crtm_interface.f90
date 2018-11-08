@@ -1022,6 +1022,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   real(r_kind),parameter:: quadcof  (4, 2  ) =      &
       reshape((/0.0_r_kind, 1.0_r_kind, 1.0_r_kind, 2.0_r_kind, 1.0_r_kind, &
                -1.0_r_kind, 1.0_r_kind, -1.0_r_kind/), (/4, 2/))
+  real(r_kind),parameter:: jac_pert = 1.0_r_kind
 
 ! Declare local variables  
   integer(i_kind):: iquadrant  
@@ -1747,6 +1748,14 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
        end if ! lread_ext_aerosol
     end if ! n_actual_aerosols_wk > 0
     do k=1,nsig
+        qs(k) = (gesqsat(ix ,iy ,k,itsig )*w00+ &
+                 gesqsat(ixp,iy ,k,itsig )*w10+ &
+                 gesqsat(ix ,iyp,k,itsig )*w01+ &
+                 gesqsat(ixp,iyp,k,itsig )*w11)*dtsig + &
+                (gesqsat(ix ,iy ,k,itsigp)*w00+ &
+                 gesqsat(ixp,iy ,k,itsigp)*w10+ &
+                 gesqsat(ix ,iyp,k,itsigp)*w01+ &
+                 gesqsat(ixp,iyp,k,itsigp)*w11)*dtsigp
         rh(k) = q(k)/qs(k)
     end do
   endif
@@ -1890,6 +1899,10 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
            surface_k_clr,rtsolution_clr,options=options)
      end if
   else
+     do i=1,nchanl
+        rtsolution_k(i,1)%layer_optical_depth(:) = jac_pert
+     enddo
+
      error_status = crtm_aod_k(atmosphere,rtsolution_k,&
         channelinfo(sensorindex:sensorindex),rtsolution,atmosphere_k)
   end if
