@@ -1,5 +1,11 @@
 function (setWCOSS_D)
   message("Setting paths for ")
+  set(HOST_FLAG "-xHOST" CACHE INTERNAL "Host Flag")
+  set(MKL_FLAG "-mkl"  CACHE INTERNAL "MKL Flag")
+  set(GSI_Platform_FLAGS "-DPOUND_FOR_STRINGIFY -fp-model strict -assume byterecl -convert big_endian -implicitnone -D_REAL8_ ${OMPFLAG} ${MPI_Fortran_COMPILE_FLAGS} -O3" CACHE INTERNAL "GSI Fortran Flags")
+  set(GSI_LDFLAGS "${OMPFLAG} ${MKL_FLAG}" CACHE INTERNAL "")
+  set(ENKF_Platform_FLAGS "-O3 -fp-model strict -convert big_endian -assume byterecl -implicitnone  -DGFS -D_REAL8_ ${MPI3FLAG} ${OMPFLAG} " CACHE INTERNAL "ENKF Fortran Flags")
+
   set(HDF5_USE_STATIC_LIBRARIES "ON" CACHE INTERNAL "" )
   if( NOT DEFINED ENV{COREPATH} )
     set(COREPATH "/gpfs/dell1/nco/ops/nwprod/lib" PARENT_SCOPE )

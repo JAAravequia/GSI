@@ -2,9 +2,15 @@ function (setWCOSS)
   message("Setting paths for WCOSS")
   set(HDF5_USE_STATIC_LIBRARIES "OFF")
   #if ibmpe module is not loaded last, CMake tries to use intel mpi. Force use of ibmhpc
-  set( MPI_Fortran_COMPILER /opt/ibmhpc/pe13010/base/bin/mpif90 CACHE FILEPATH "Forced use of ibm wrapper" FORCE )
-  set( MPI_C_COMPILER /opt/ibmhpc/pe13010/base/bin/mpicc CACHE FILEPATH "Forced use of ibm wrapper" FORCE )
-  set( MPI_CXX_COMPILER /opt/ibmhpc/pe13010/base/bin/mpicxx CACHE FILEPATH "Forced use of ibm wrapper" FORCE )
+  set(HOST_FLAG "-xHOST" CACHE INTERNAL "Host Flag")
+  set( MKL_FLAG "-mkl"  CACHE INTERNAL "MKL Flag")
+  set(GSI_Platform_FLAGS "-DPOUND_FOR_STRINGIFY -traceback -O3 -fp-model source -convert big_endian -assume byterecl -implicitnone -D_REAL8_ ${OMPFLAG} ${MPI_Fortran_COMPILE_FLAGS}" CACHE INTERNAL "")
+  set(ENKF_Platform_FLAGS "-O3 -fp-model source -convert big_endian -assume byterecl -implicitnone  -DGFS -D_REAL8_ ${OMPFLAG} ${HOST_FLAG} " CACHE INTERNAL "")
+
+  set(MPI_Fortran_COMPILER /opt/ibmhpc/pe13010/base/bin/mpif90 CACHE FILEPATH "Forced use of ibm wrapper" FORCE )
+  set(MPI_C_COMPILER /opt/ibmhpc/pe13010/base/bin/mpicc CACHE FILEPATH "Forced use of ibm wrapper" FORCE )
+  set(MPI_CXX_COMPILER /opt/ibmhpc/pe13010/base/bin/mpicxx CACHE FILEPATH "Forced use of ibm wrapper" FORCE )
+
   if( NOT DEFINED ENV{COREPATH} )
     set(COREPATH "/nwprod/lib" PARENT_SCOPE )
   else()

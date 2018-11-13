@@ -1,5 +1,11 @@
 function (setCRAY)
-  message("Setting paths for Cray")
+
+  message("Setting flags and paths for Cray")
+  set(HOST_FLAG "-xHOST" CACHE INTERNAL "Host Flag")
+  set(MKL_FLAG "" CACHE INTERNAL "MKL flag" )
+  set(GSI_Platform_FLAGS "-DPOUND_FOR_STRINGIFY -fp-model strict -assume byterecl -convert big_endian -implicitnone -D_REAL8_ ${OMPFLAG} ${MPI_Fortran_COMPILE_FLAGS} -O3" CACHE INTERNAL "")
+  set(ENKF_Platform_FLAGS "-O3 -fp-model strict -convert big_endian -assume byterecl -implicitnone  -DGFS -D_REAL8_ ${OMPFLAG} " CACHE INTERNAL "")
+  set(GSI_LDFLAGS "${OMPFLAG}" CACHE INTERNAL "")
   set(HDF5_USE_STATIC_LIBRARIES "ON" CACHE INTERNAL "HDF5_Static" )
 # set( OMPFLAG "-openmp" PARENT_SCOPE )
   if( NOT DEFINED ENV{COREPATH} )
