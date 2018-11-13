@@ -135,9 +135,11 @@ echo "" >>$cfile
 echo ". "$(awk '{ print $1, $2, $3, $4, $5, $6, $7, $8, $9 }' $regdir/regression_var.out)  >>$cfile
 echo "" >>$cfile
 
-#echo "module use -a $gsisrc/modulefiles"   >> $cfile
-#echo "module load modulefile.ProdGSI.theia" >> $cfile
-#echo "" >>$cfile
+echo ". /apps/lmod/lmod/init/sh"                           >> $cfile
+echo "module purge"                                        >> $cfile
+echo "source $gsisrc/modulefiles/modulefile.ProdGSI.theia" >> $cfile
+echo "module list"                                         >> $cfile
+echo "" >>$cfile
 
 cat $exec >> $cfile
 

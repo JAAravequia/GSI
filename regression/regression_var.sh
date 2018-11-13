@@ -59,8 +59,12 @@ case $machine in
    export ptmp="/gpfs/dell2/ptmp/$LOGNAME/$ptmpName"
 
    export fixcrtm="/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/fix_update"
-   export casesdir="/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/CASES"
-   export ndate="$builddir/bin/ndate.x"
+   if [ -d /gpfs/td2 ]; then
+       export casesdir="/gpfs/td2/emc/da/noscrub/Michael.Lueken/CASES"
+   elif [ -d /gpfs/gd2 ]; then
+       export casesdir="/gpfs/gd2/emc/da/noscrub/Michael.Lueken/CASES"
+   fi
+   export ndate=${NDATE:-"$builddir/bin/ndate.x"}
 
    export check_resource="yes"
 

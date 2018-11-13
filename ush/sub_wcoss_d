@@ -309,8 +309,11 @@ echo "" >>$cfile
 echo ". "$(awk '{ print $1, $2, $3, $4, $5, $6, $7, $8, $9 }' $regdir/regression_var.out) >> $cfile 
 echo "" >>$cfile
 
-echo "module use -a $gsisrc/modulefiles"   >> $cfile
+echo ". $MODULESHOME/init/bash"               >> $cfile
+echo "module purge"                           >> $cfile
+echo "module use -a $gsisrc/modulefiles"      >> $cfile
 echo "module load modulefile.ProdGSI.wcoss_d" >> $cfile
+echo "module list"                            >> $cfile
 echo "" >>$cfile
 
 echo "$exec"                                                    >> $cfile

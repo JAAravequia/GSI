@@ -5,19 +5,19 @@ set -ex
 cd ..
 pwd=$(pwd)
 
-dir_root=${1:-$pwd}
-baseline_build=${2:-0}
+build_type=${1:-'PRODUCTION'}
+dir_root=${2:-$pwd}
+baseline_build=${3:-0}
+
 if [[ -d /dcom && -d /hwrf ]] ; then
     . /usrx/local/Modules/3.2.10/init/sh
     target=wcoss
     . $MODULESHOME/init/sh
 elif [[ -d /cm ]] ; then
     . $MODULESHOME/init/sh
-    conf_target=nco
     target=wcoss_c
 elif [[ -d /ioddev_dell ]]; then
     . $MODULESHOME/init/sh
-    conf_target=nco
     target=wcoss_d
 elif [[ -d /scratch3 ]] ; then
     . /apps/lmod/lmod/init/sh
@@ -58,11 +58,8 @@ else
     source $dir_modules/modulefile.ProdGSI.$target
 fi
 
-if [[ $baseline_build = 1 ]] ; then
-  cmake ..
-else 
-  cmake -DBUILD_UTIL=ON -DCMAKE_BUILD_TYPE=PRODUCTION -DBUILD_CORELIBS=OFF ..
-fi
+cmake -DBUILD_UTIL=ON -DCMAKE_BUILD_TYPE=$build_type -DBUILD_CORELIBS=OFF ..
+
 make -j 8
 
 exit

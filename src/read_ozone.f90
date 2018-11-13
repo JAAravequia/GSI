@@ -719,9 +719,9 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
         ozout(6,itx)=dlat_earth_deg     ! earth relative latitude (degrees)
         ozout(7,itx)=hdrozo2(5)         ! total ozone quality code
         ozout(8,itx)=hdrozo(10)         ! solar zenith angle
-     if (obstype == 'omi') then
-        ozout(9,itx)=binary(10)         ! row anomaly flag
-     end if
+        if (obstype == 'omi') then
+           ozout(9,itx)=binary(10)         ! row anomaly flag
+        end if
         ozout(10,itx)=hdrozo2(1)        !  cloud amount
         ozout(11,itx)=hdrozo2(4)        !  vzan
         ozout(12,itx)=hdrozo2(2)        !  aerosol index
