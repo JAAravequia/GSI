@@ -7,7 +7,6 @@ pwd=$(pwd)
 
 build_type=${1:-'PRODUCTION'}
 dir_root=${2:-$pwd}
-baseline_build=${3:-0}
 
 if [[ -d /dcom && -d /hwrf ]] ; then
     . /usrx/local/Modules/3.2.10/init/sh
@@ -58,7 +57,11 @@ else
     source $dir_modules/modulefile.ProdGSI.$target
 fi
 
-cmake -DBUILD_UTIL=ON -DCMAKE_BUILD_TYPE=$build_type -DBUILD_CORELIBS=OFF ..
+if [[ $build_type = PRODUCTION ]] ; then
+  cmake -DBUILD_UTIL=ON -DCMAKE_BUILD_TYPE=PRODUCTION -DBUILD_CORELIBS=OFF ..
+else 
+  cmake ..
+fi
 
 make -j 8
 
