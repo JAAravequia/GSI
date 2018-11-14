@@ -890,7 +890,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
                    trop5,tzbgr,dtsavg,sfc_speed,&
                    tsim,emissivity,ptau5,ts, &
                    emissivity_k,temp,wmix,jacobian,error_status,tsim_clr, &
-                   layer_od,jacobian_aero)  
+                   layer_od,jacobian_aero,radsim_overcast,radsim_clear)  
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    call_crtm   creates vertical profile of t,q,oz,p,zs,etc., 
@@ -942,6 +942,8 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
 !     uu5          - interpolated bottom sigma level zonal wind    
 !     vv5          - interpolated bottom sigma level meridional wind  
 !     tsim         - simulated brightness temperatures
+!     radsim_overcast - simulated overcast radiance
+!     radsim_clear    - simulated clear radiance
 !     emissivity   - surface emissivities
 !     ptau5        - level transmittances
 !     ts           - skin temperature sensitivities
@@ -1005,6 +1007,10 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   real(r_kind),dimension(nchanl)        ,intent(  out), optional  :: tsim_clr      
   real(r_kind),dimension(nsigaerojac,nchanl),intent(out),optional :: jacobian_aero
   real(r_kind),dimension(nsig,nchanl)   ,intent(  out)  ,optional :: layer_od
+  real(r_kind),dimension(nchanl,msig),   intent(  out), optional  ::
+radsim_overcast
+  real(r_kind),dimension(nchanl),        intent(  out), optional  ::
+radsim_clear
 
 ! Declare local parameters
   character(len=*),parameter::myname_=myname//'*call_crtm'
@@ -1913,6 +1919,15 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
           else
              tsim_clr(i)=rtsolution0(i,1)%brightness_temperature  
           end if
+       end if
+
+!  Simulated clear-sky and overcast radiance
+       if (present(radsim_clear)) radsim_clear(i)=rtsolution(i,1)%radiance
+       if (present(radsim_overcast)) then
+         do k=1,msig
+            kk = klevel(msig-k+1)
+            radsim_overcast(i,kk)=rtsolution(i,1)%upwelling_overcast_radiance(k)
+         end do
        end if
 
 !  Estimated emissivity
