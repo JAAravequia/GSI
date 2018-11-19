@@ -246,6 +246,7 @@
 ! Initialize radiative transfer
   call init_crtm(init_pass,mype_diaghdr(is),mype,nchanl,isis,obstype,radmod)
 
+
 ! If diagnostic file requested, open unit to file and write header.
   if (aero_diagsave) then
      filex=obstype

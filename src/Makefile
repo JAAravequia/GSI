@@ -203,6 +203,7 @@ clean:
 	antcorr_application.f90 \
 	antest_maps0.f90 \
 	antest_maps0_glb.f90 \
+	aodmod.f90 \
 	atms_spatial_average_mod.f90 \
 	balmod.f90 \
 	berror.f90 \

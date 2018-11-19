@@ -413,7 +413,8 @@ contains
     use guess_grids, only: ifilesig,ifileaer,nfldaer
     use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sub2grid_destroy_info
     use mpimod, only: npe
-    use chemmod, only: lread_ext_aerosol
+    use chemmod, only: lread_ext_aerosol,l2d_aod
+    use aodmod, only: calc_2d_aod
 
     implicit none
 
@@ -452,6 +453,8 @@ contains
     type(gsi_bundle) :: chem_bundle
     type(gsi_grid)   :: chem_grid
 
+
+    ! Do we really want to be so dependent on CO2 in the chemguess bundle???
     if(.not.associated(gsi_chemguess_bundle)) return
     call gsi_bundlegetpointer(gsi_chemguess_bundle(1),'co2',p_co2,iret)
     if(iret /= 0) return
@@ -567,12 +570,19 @@ contains
           end do ! n_aerosols_fwd
 
           if (ier/=0) then
-!             write(6,*) "before call read_ngac_aerosol ier=",ier
+             write(6,*) "before call read_ngac_aerosol ier=",ier
              cycle ! this allows code to be free from met-fields
           end if
+
+          ! if 2d_AOD compute the guess aod field
+          !if ( l2d_aod) then
+          !   call calc_2d_aod(it)
+          !end if ! l2d_aod
+
        end do ! nfldaer
        call general_sub2grid_destroy_info(grd_ae)
        call gsi_bundledestroy(chem_bundle,istatus)
+
     end if ! end if n_aerosols_fwd > 0
 
   end subroutine read_chem_
@@ -1989,7 +1999,7 @@ contains
     use gsi_bundlemod, only: gsi_bundlegetpointer
     use control_vectors, only: imp_physics,lupp
     use cloud_efr_mod, only: cloud_calc_gfs
-    use chemmod, only: laeroana_gocart
+    use chemmod, only: laeroana_gocart, l2d_aod
 
     implicit none
 
@@ -2027,6 +2037,7 @@ contains
     real(r_kind),pointer,dimension(:,:,:) :: sub_du1,sub_du2,sub_du3,sub_du4,sub_du5
     real(r_kind),pointer,dimension(:,:,:) :: sub_ss1,sub_ss2,sub_ss3,sub_ss4,sub_so4
     real(r_kind),pointer,dimension(:,:,:) :: sub_oc1,sub_oc2,sub_bc1,sub_bc2
+    real(r_kind),pointer,dimension(:,:) :: sub_aod
 
 
     real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig) :: sub_dzb,sub_dza
@@ -2045,6 +2056,8 @@ contains
                          du001sm,du002sm,du003sm,du004sm,du005sm, &
                          ss001sm,ss002sm,ss003sm,ss004sm, &
                          so4sm,ocphosm,ocphism,bcphosm,bcphism
+    real(r_kind),dimension(grd%lat1*grd%lon1) :: aodsm
+    real(4),dimension(grd%nlon,grd%nlat-2):: aodout
     real(r_kind) :: lmax,lmin
     integer(i_kind) :: m
 
@@ -2097,6 +2110,7 @@ contains
        call gsi_bundlegetpointer(gfschem_bundle,'seas2', sub_ss2,  iret); istatus=istatus+iret
        call gsi_bundlegetpointer(gfschem_bundle,'seas3', sub_ss3,  iret); istatus=istatus+iret
        call gsi_bundlegetpointer(gfschem_bundle,'seas4', sub_ss4,  iret); istatus=istatus+iret
+       if ( l2d_aod ) call gsi_bundlegetpointer(gfschem_bundle,'aod', sub_aod,iret); istatus=istatus+iret
     end if
 
     if ( sp_a%jcap /= jcap_b ) then
@@ -2264,6 +2278,7 @@ contains
        call strip(sub_oc2   ,ocphism   ,grd%nsig)
        call strip(sub_bc1   ,bcphosm   ,grd%nsig)
        call strip(sub_bc2   ,bcphism   ,grd%nsig)
+       if ( l2d_aod ) call strip(sub_aod   ,aodsm   )
     end if
 
     ! Thermodynamic variable
@@ -3289,6 +3304,53 @@ contains
        endif
     end do
     if (mype==0) write(6,*) "after write out bcphilic"
+    ! if outputting 2D AOD analysis
+    if ( l2d_aod ) then
+       lmax=0.
+       lmin=0.
+       call mpi_gatherv(aodsm,grd%ijn(mm1),mpi_rtype,&
+            work1,grd%ijn,grd%displs_g,mpi_rtype,&
+            mype_out,mpi_comm_world,ierror)
+       if (mype == mype_out) then
+          if(diff_res)then
+             call nemsio_readrecv(gfile,'aod','atmos col',1,rwork1d,iret=iret)
+             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'aod','read',istop,iret)
+             grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
+             vector(1)=.false.
+             call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+             call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
+             do kk=1,grd%iglobal
+                i=grd%ltosi(kk)
+                j=grd%ltosj(kk)
+                grid3(i,j,1)=work1(kk)-grid3(i,j,1)
+             end do
+             call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
+             do j=1,latb
+                do i=1,lonb
+                   grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+                end do
+             end do
+             rwork1d = reshape(grid_b,(/size(rwork1d)/))
+          else
+             call load_grid(work1,grid)
+             rwork1d = reshape(grid,(/size(rwork1d)/))
+             aodout = real(grid)
+          end if
+          lmax=maxval(rwork1d)
+          lmin=minval(rwork1d)
+          write(301,*) "aod max= ",lmax," min= ",lmin
+          write(301,*) rwork1d(12345)
+          !call nemsio_writerecv(gfileo,'aod','atmos col',1,rwork1d,iret=iret)
+          !if (iret /= 0) call error_msg(trim(my_name),trim(filename),'aod','write',istop,iret)
+          if (mype==0) then
+            open(302,file='aodanl',status='new',form='unformatted',access='sequential')
+            write(302) aodout 
+            close(302)
+          end if
+       endif
+    if (mype==0) write(6,*) "after write out 2D AOD"
+    end if ! end l2d_aod
+    
     end if ! laeroana_gocart
 !
 ! Deallocate local array

@@ -2516,6 +2516,7 @@ CONTAINS
     call GSI_BundleGetPointer ( Bundle, fldname, ipnt, istatus, irank=irank )
     if(istatus/=0) return
 
+
 !   retrieve variable
     if( irank==3 ) then
         Bundle%r3(ipnt)%qr8 = fld

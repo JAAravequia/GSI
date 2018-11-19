@@ -433,7 +433,7 @@ subroutine aerosol_reload(grd,ae_d1,ae_d2,ae_d3,ae_d4,ae_d5, &
   integer(i_kind) i,j,k,ij,klev
   real(r_kind),dimension(grd%lat2*grd%lon2,npe):: sub
 
-  call mpi_alltoallv(work,grd%sendcounts_s,grd%displs_s,mpi_rtype,&
+  call mpi_alltoallv(work,grd%sendcounts_s,grd%sdispls_s,mpi_rtype,&
        sub,grd%recvcounts_s,grd%rdispls_s,mpi_rtype,&
        mpi_comm_world,ierror)
 !$omp parallel do  schedule(dynamic,1) private(k,i,j,ij,klev)

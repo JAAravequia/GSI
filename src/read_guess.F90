@@ -108,6 +108,8 @@ subroutine read_guess(iyear,month,idd,mype)
   use read_wrf_mass_guess_mod, only: read_wrf_mass_guess_class
   use read_wrf_nmm_guess_mod, only: read_wrf_nmm_guess_class
   use gsi_rfv3io_mod, only: read_fv3_netcdf_guess
+  use chemmod, only: l2d_aod
+  use aodmod, only: calc_2d_aod
 
   implicit none
 
@@ -253,5 +255,10 @@ subroutine read_guess(iyear,month,idd,mype)
   if(regional.and.use_gfs_ozone.and..not.use_gfs_stratosphere) &
               call read_gfs_ozone_for_regional
   
+!  Calculate AOD using CRTM for the guess if 2d_AOD
+  do it=1,nfldsig
+    if ( l2d_aod) call calc_2d_aod(it)
+  end do
+
   return
 end subroutine read_guess

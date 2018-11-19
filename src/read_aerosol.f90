@@ -241,6 +241,7 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
               if(slons0>=r360) slons0=slons0-r360
               dlat_earth_deg = slats0
               dlon_earth_deg = slons0
+
               dlat_earth = slats0 * deg2rad
               dlon_earth = slons0 * deg2rad
 
@@ -433,6 +434,8 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
               slons0= hdrvaodg(3)
               if(slons0< zero) slons0=slons0+r360
               if(slons0>=r360) slons0=slons0-r360
+              dlat_earth_deg = slats0
+              dlon_earth_deg = slons0
               dlat_earth = slats0 * deg2rad
               dlon_earth = slons0 * deg2rad
 
@@ -527,8 +530,8 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
               aeroout( 2,itx) = tdiff
               aeroout( 3,itx) = dlon               ! grid relative longitude
               aeroout( 4,itx) = dlat               ! grid relative latitude
-              aeroout( 5,itx) = dlon_earth*rad2deg ! earth relative longitude (degrees)
-              aeroout( 6,itx) = dlat_earth*rad2deg ! earth relative latitude (degrees)
+              aeroout( 5,itx) = dlon_earth_deg     ! earth relative longitude (degrees)
+              aeroout( 6,itx) = dlat_earth_deg     ! earth relative latitude (degrees)
               aeroout( 7,itx) = qcall              ! total column AOD error flag
               aeroout( 8,itx) = solzen             ! solar zenith angle
               aeroout( 9,itx) = azimuth            ! solar azimuth angle

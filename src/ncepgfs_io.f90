@@ -1167,7 +1167,7 @@ end subroutine write_ghg_grid
     use gsi_4dvar, only: lwrite4danl
     use ncepnems_io, only: write_nemsatm,write_nemssfc,write_nems_sfc_nst
     use gsi_chemguess_mod, only: gsi_chemguess_get,gsi_chemguess_bundle
-    use chemmod, only: laeroana_gocart
+    use chemmod, only: laeroana_gocart, l2d_aod
     use radiance_mod, only: aerosol_names
 
 
@@ -1216,6 +1216,8 @@ end subroutine write_ghg_grid
     real(r_kind),pointer,dimension(:,:,:):: ges_oc2_it=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_bc1_it=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_bc2_it=>NULL()
+    real(r_kind),pointer,dimension(:,:) :: ges_aod_it=>NULL()
+    real(r_kind),pointer,dimension(:,:) :: aux_aod
     type(gsi_bundle) :: chem_bundle
 
     type(gsi_bundle) :: atm_bundle
@@ -1267,7 +1269,11 @@ end subroutine write_ghg_grid
     
     ! if aerosols
     if ( laeroana_gocart ) then
-       call gsi_bundlecreate(chem_bundle,atm_grid,'aux-chem-write',istatus,names3d=aerosol_names)
+       if ( l2d_aod ) then
+         call gsi_bundlecreate(chem_bundle,atm_grid,'aux-chem-write',istatus,names3d=aerosol_names,names2d=(/ 'aod'/))
+       else
+         call gsi_bundlecreate(chem_bundle,atm_grid,'aux-chem-write',istatus,names3d=aerosol_names)
+       end if
        if ( istatus /= 0 ) then
           write(6,*)' write_gfs: trouble creating chem_bundle'
           call stop2(999)
@@ -1300,6 +1306,10 @@ end subroutine write_ghg_grid
        if ( istatus == 0 ) aux_ss3 = zero
        call gsi_bundlegetpointer(chem_bundle,'seas4',aux_ss4,istatus)
        if ( istatus == 0 ) aux_ss4 = zero
+       if ( l2d_aod ) then
+         call gsi_bundlegetpointer(chem_bundle,'aod',aux_aod,istatus)
+         if ( istatus == 0 ) aux_aod = zero
+       end if
     end if ! laeroana_gocart
 
     inithead=.true.
@@ -1386,6 +1396,11 @@ end subroutine write_ghg_grid
            if( istatus==0 ) aux_bc1 = ges_bc1_it
            call gsi_bundlegetpointer (gsi_chemguess_bundle(itoutsig),'bc2',ges_bc2_it,istatus)
            if( istatus==0 ) aux_bc2 = ges_bc2_it
+           if ( l2d_aod ) then
+              call gsi_bundlegetpointer (gsi_chemguess_bundle(itoutsig),'aod',ges_aod_it,istatus)
+              if( istatus==0 ) aux_aod = ges_aod_it
+           end if
+
         end if ! laeroana_gocart
 
         if ( use_gfs_nemsio ) then

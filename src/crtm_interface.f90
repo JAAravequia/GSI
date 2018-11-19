@@ -734,7 +734,6 @@ endif
  if (n_ghg>0) then
     do ig=1,n_ghg
        j = min_n_absorbers + ig
-        print *, trim(ghg_names(ig))
        select case(trim(ghg_names(ig)))
          case('co2'); atmosphere(1)%absorber_id(j) = CO2_ID
          case('ch4'); atmosphere(1)%absorber_id(j) = CH4_ID
@@ -2123,7 +2122,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
               else
                  jaero(kk,i,ii) = jaero(kk,i,ii) + atmosphere_k(i,1)%aerosol(ii)%concentration(k)
                  if (atmosphere_k(i,1)%aerosol(ii)%concentration(k) > 1e-9) then
-                 print *,'atmosphere_k(i,1)%aerosol(ii)%concentration(k)',atmosphere_k(i,1)%aerosol(ii)%concentration(k)
+                 !print *,'atmosphere_k(i,1)%aerosol(ii)%concentration(k)',atmosphere_k(i,1)%aerosol(ii)%concentration(k)
                  endif
               endif
            enddo

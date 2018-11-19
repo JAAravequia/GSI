@@ -18,6 +18,7 @@
 	antcorr_application.o \
 	antest_maps0.o \
 	antest_maps0_glb.o \
+	aodmod.o \
         atms_spatial_average_mod.o \
 	balmod.o \
 	berror.o \
