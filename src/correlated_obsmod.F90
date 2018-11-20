@@ -752,7 +752,7 @@ end subroutine decompose_
 ! !INTERFACE:
 !
 logical function scale_jac_(depart,obvarinv,adaptinf,jacobian, nchanl,&
-                            jpch_rad,varinv,wgtjo,iuse,ich,ErrorCov,Rinv,rsqrtinv,Rmat) !KAB Rmat
+                            jpch_rad,varinv,wgtjo,iuse,ich,ErrorCov,Rinv,rsqrtinv)!,Rmat) !KABh Rmat
 ! !USES:
 use constants, only: tiny_r_kind
 use mpeu_util, only: die
@@ -763,7 +763,7 @@ integer(i_kind),intent(in) :: jpch_rad ! total number of channels in GSI
 integer(i_kind),intent(in) :: ich(:)   ! true channel numeber
 integer(i_kind),intent(in) :: iuse(0:jpch_rad) ! flag indicating whether channel used or not
 real(r_kind),   intent(in) :: varinv(:)    ! inverse of specified ob-error-variance 
-real(r_kind),intent(in),optional:: Rmat(:,:) !KAB
+!real(r_kind),intent(in),optional:: Rmat(:,:) !KABh
 ! !INPUT/OUTPUT PARAMETERS:
 real(r_kind),intent(inout) :: depart(:)    ! observation-minus-guess departure
 real(r_kind),intent(inout) :: obvarinv(:)  ! inverse of eval(diag(R))
@@ -773,8 +773,8 @@ real(r_kind),intent(inout) :: jacobian(:,:)! Jacobian matrix
 real(r_kind),intent(inout) :: rsqrtinv(:,:)! R^-1/2
 real(r_kind),intent(inout) :: Rinv(:)      ! diagonal of R^-1
 type(ObsErrorCov) :: ErrorCov              ! ob error covariance for given instrument
-!KAB
-type(ObsErrorCov) :: ErrorCovcld
+!KABh
+!type(ObsErrorCov) :: ErrorCovcld
 ! !DESCRIPTION: This routine is the main entry-point to the outside world. 
 !               It redefines the Jacobian matrix so it embeds the inverse of the square root 
 !               observation error covariance matrix. Only the sub-matrix related
@@ -817,16 +817,16 @@ Rinv=zero
 nch_active=ErrorCov%nch_active
 if(nch_active<0) return
 call timer_ini('scljac')
-!KAB
-if (present(Rmat)) then
-   allocate(ErrorCovcld%R(nch_active,nch_active),ErrorCovcld%Revals(nch_active))
-   allocate(ErrorCovcld%Revecs(nch_active,nch_active))
-   do c=1,nch_active
-      do r=1,nch_active
-         ErrorCovcld%R(r,c)=Rmat(r,c)
-      enddo
-   enddo
-endif
+!KABh
+!if (present(Rmat)) then
+!   allocate(ErrorCovcld%R(nch_active,nch_active),ErrorCovcld%Revals(nch_active))
+!   allocate(ErrorCovcld%Revecs(nch_active,nch_active))
+!   do c=1,nch_active
+!      do r=1,nch_active
+!         ErrorCovcld%R(r,c)=Rmat(r,c)
+!      enddo
+!   enddo
+!endif
 ! get indexes for the internal channels matching those
 ! used in estimating the observation error covariance
 allocate(ircv(nchanl))
@@ -893,11 +893,11 @@ endif
 ! decompose the sub-matrix - returning the result in the 
 !                            structure holding the full covariance
 if( ErrorCov%method==1 .or. ErrorCov%method==2 ) then
-   if (present(Rmat)) then !KAB
-      subset=decompose_subset_ (IRsubset,ErrorCovcld)
-   else
+!   if (present(Rmat)) then !KABh
+!      subset=decompose_subset_ (IRsubset,ErrorCovcld)
+!   else
       subset = decompose_subset_ (IRsubset,ErrorCov)
-   endif
+!   endif
    if(.not.subset) then
       call die(myname_,' failed to decompose correlated R')
    endif
@@ -935,12 +935,12 @@ else
        do jj=1,ncp
           mm=IJsubset(jj)
           qcadjusted = obvarinv(mm)**2*adaptinf(mm)
-!KAB
-          if (present(Rmat)) then
-             obvarinv(mm)=one/Rmat(IRsubset(jj),IRsubset(jj))
-          else
+!KABh
+!          if (present(Rmat)) then
+!             obvarinv(mm)=one/Rmat(IRsubset(jj),IRsubset(jj))
+!          else
              obvarinv(mm) = one/ErrorCov%R(IRsubset(jj),IRsubset(jj))
-          endif
+!          endif
           adaptinf(mm) = qcadjusted
 !          wgtjo(mm)    = qcadjusted/ErrorCov%R(IRsubset(jj),IRsubset(jj))
           wgtjo(mm)=qcadjusted*obvarinv(mm)
@@ -953,29 +953,29 @@ else
               !    Re = U De U^T  (Evals/Evecs eigen-pairs of full Re)
               !    inv(Rg) = U De^(-1/2) U^T U De^(-1/2) U^T
        do ii=1,ncp
-         if (present(Rmat)) then !KAB
-            coeff2 = one/ErrorCovcld%Revals(IRsubset(ii))
-         else
+!         if (present(Rmat)) then !KABh
+!            coeff2 = one/ErrorCovcld%Revals(IRsubset(ii))
+!         else
             coeff2 = one/ErrorCov%Revals(IRsubset(ii))
-         endif
+!         endif
          coeff = sqrt(coeff2)
          do jj=1,ncp
             nn=IJsubset(jj)
-            if (present(Rmat)) then !KAB
-               col0(ii) = col0(ii) + ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))* depart(nn)
-               Ri(jj,ii) = coeff2*ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))
-               Rs(jj,ii) = coeff*ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))
-               do kk=1,nsigjac
-                  row0(kk,ii) = row0(kk,ii)+ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii)) * jacobian(kk,nn)
-               end do
-            else
+!            if (present(Rmat)) then !KABh
+!               col0(ii) = col0(ii) + ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))* depart(nn)
+!               Ri(jj,ii) = coeff2*ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))
+!               Rs(jj,ii) = coeff*ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii))
+!               do kk=1,nsigjac
+!                  row0(kk,ii) = row0(kk,ii)+ErrorCovcld%Revecs(IRsubset(jj),IRsubset(ii)) * jacobian(kk,nn)
+!               end do
+!            else
                col0(ii) = col0(ii)   + ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) * depart(nn)
                Ri(jj,ii) = coeff2*ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) 
                Rs(jj,ii) = coeff*ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) 
                do kk=1,nsigjac
                   row0(kk,ii) = row0(kk,ii) +ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) * jacobian(kk,nn)
                end do
-            endif
+!            endif
          enddo
          col0(ii)   =   coeff * col0(ii) 
          do kk=1,nsigjac
@@ -984,35 +984,35 @@ else
        enddo
        do jj=1,ncp 
          do ii=1,ncp 
-            if (present(Rmat)) then !KAB
-               col(ii) = col(ii) + ErrorCovcld%Revecs(IRsubset(ii),IRsubset(jj)) *col0(jj)
-               do kk=1,nsigjac
-                  row(kk,ii) = row(kk,ii) +ErrorCovcld%Revecs(IRsubset(ii),IRsubset(jj)) * row0(kk,jj)
-               end do
-            else
+ !           if (present(Rmat)) then !KABh
+!               col(ii) = col(ii) + ErrorCovcld%Revecs(IRsubset(ii),IRsubset(jj)) *col0(jj)
+!               do kk=1,nsigjac
+!                  row(kk,ii) = row(kk,ii) +ErrorCovcld%Revecs(IRsubset(ii),IRsubset(jj)) * row0(kk,jj)
+!               end do
+!            else
                col(ii) = col(ii) + ErrorCov%Revecs(IRsubset(ii),IRsubset(jj)) * col0(jj)
                do kk=1,nsigjac
                   row(kk,ii) = row(kk,ii) + ErrorCov%Revecs(IRsubset(ii),IRsubset(jj)) * row0(kk,jj)
                end do
-            endif
+!            endif
          enddo
        enddo
       do kk=1,ncp
          do jj=1,ncp 
             do ii=jj,ncp
-               if (present(Rmat)) then !KAB
-                  rsqrtinv(ii,jj)=rsqrtinv(ii,jj)+ErrorCovcld%Revecs(IRsubset(ii),IRsubset(kk))*Rs(jj,kk)
-               else
+!               if (present(Rmat)) then !KABh
+!                  rsqrtinv(ii,jj)=rsqrtinv(ii,jj)+ErrorCovcld%Revecs(IRsubset(ii),IRsubset(kk))*Rs(jj,kk)
+!               else
                   rsqrtinv(ii,jj)=rsqrtinv(ii,jj)+ErrorCov%Revecs(IRsubset(ii),IRsubset(kk))*Rs(jj,kk)
-               endif
+!               endif
             end do
          end do
          do jj=1,ncp
-            if (present(Rmat)) then !KAB
-               Rinv(jj) =Rinv(jj)+ErrorCovcld%Revecs(IRsubset(jj),IRsubset(kk))*Ri(jj,kk)
-            else
+!            if (present(Rmat)) then !KABh
+!               Rinv(jj) =Rinv(jj)+ErrorCovcld%Revecs(IRsubset(jj),IRsubset(kk))*Ri(jj,kk)
+!            else
                Rinv(jj) = Rinv(jj)+ErrorCov%Revecs(IRsubset(jj),IRsubset(kk))*Ri(jj,kk)
-            endif
+!            endif
          end do
       end do
       do ii=2,ncp
@@ -1104,10 +1104,10 @@ else
    deallocate(Ri,Rs)
 endif
 ! clean up
-!KAB
-if (present(Rmat)) then
-   deallocate(ErrorCovcld%Revecs,ErrorCovcld%Revals,ErrorCovcld%R)
-endif
+!KABh
+!if (present(Rmat)) then
+!   deallocate(ErrorCovcld%Revecs,ErrorCovcld%Revals,ErrorCovcld%R)
+!endif
 deallocate(IJsubset)
 deallocate(IRsubset)
 deallocate(ijac)

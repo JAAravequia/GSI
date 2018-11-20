@@ -1098,7 +1098,7 @@ Rmat=0.0_r_kind
         if (radmod%lcloud_fwd .and. eff_area)  then   
            if (radmod%ex_obserr=='ex_obserr1') & 
               call radiance_ex_obserr(radmod,nchanl,clwp_amsua,clw_guess_retrieval,tnoise,tnoise_cld,error0,&
-                                      mwclrsky,isis,Rmat) !KAB
+                                      mwclrsky,isis,Rmat,miter) !KAB
 !          if (radmod%ex_obserr=='ex_obserr2') &  ! comment out for now, waiting for more tests
 !             call
 !             radiance_ex_obserr(radmod,nchanl,cldeff_obs,cldeff_fg,tnoise,tnoise_cld,error0)

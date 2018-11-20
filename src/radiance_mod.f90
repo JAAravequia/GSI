@@ -797,7 +797,7 @@ contains
   end subroutine radiance_parameter_aerosol_init
 
   subroutine radiance_ex_obserr_1(radmod,nchanl,clwp_amsua,clw_guess_retrieval, &
-                                tnoise,tnoise_cld,error0,mwclrsky,isis,Rmat)!KAB
+                                tnoise,tnoise_cld,error0,mwclrsky,isis,Rmat,miter)!KAB
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    radiance_ex_obserr_1
@@ -825,7 +825,7 @@ contains
     implicit none
 !KAB
     character(len=*),intent(in):: isis    
-    integer(i_kind),intent(in) :: nchanl
+    integer(i_kind),intent(in) :: nchanl,miter !KABh
     real(r_kind),intent(in) :: clwp_amsua,clw_guess_retrieval
     real(r_kind),dimension(nchanl),intent(in):: tnoise,tnoise_cld
     real(r_kind),dimension(nchanl),intent(inout) :: error0
@@ -847,7 +847,7 @@ contains
     end do
     clwtmp=half*(clwp_amsua+clw_guess_retrieval)
     if (clwtmp>cclrs) then
-       interpR= cloudy_R(clwtmp,cclrs,cclds,nchanl,isis,Rmat) !KAB
+       if (miter>0) interpR= cloudy_R(clwtmp,cclrs,cclds,nchanl,isis,Rmat) !KAB
        if (interpR) then
           mwclrsky=.false.
        endif

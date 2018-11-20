@@ -2108,6 +2108,8 @@ END subroutine dec2bin
    use correlated_obsmod, only: corr_ob_amiset
    use correlated_obsmod, only: corr_ob_scale_jac
    use correlated_obsmod, only: GSI_BundleErrorCov 
+!KABh
+   use correlated_obsmod, only: ObsErrorCov
    use mpeu_util, only: getindex
    use mpeu_util, only: die
    implicit none
@@ -2131,7 +2133,10 @@ END subroutine dec2bin
    integer(i_kind), intent(out) :: iinstr
    character(len=*),parameter::myname_ = myname//'*adjust_jac_'
    character(len=80) covtype
-
+!KABh
+type(ObsErrorCov) :: ErrorCovcld
+integer(i_kind):: nch_active
+integer::ii,r,c
    adjust_jac_=.false.
 
    if(.not.allocated(idnames)) then
@@ -2166,8 +2171,29 @@ END subroutine dec2bin
    if( GSI_BundleErrorCov(iinstr)%nch_active < 0) return
 !KAB
    if (present(Rmat)) then
-   adjust_jac_ = corr_ob_scale_jac(depart,obvarinv,adaptinf,jacobian,nchanl,jpch_rad,varinv,wgtjo,&
-                                    iuse_rad,ich,GSI_BundleErrorCov(iinstr),Rinv,rsqrtinv,Rmat)
+!KABh
+   nch_active=GSI_BundleErrorCov(iinstr)%nch_active
+   allocate(ErrorCovcld%R(nch_active,nch_active),ErrorCovcld%Revals(nch_active))
+   allocate(ErrorCovcld%Revecs(nch_active,nch_active),ErrorCovcld%indxR(nch_active))
+   ErrorCovcld%Revals=0.0_r_kind
+   ErrorCovcld%Revecs=0.0_r_kind
+   do c=1,nch_active
+      do r=1,nch_active
+         ErrorCovcld%R(r,c)=Rmat(r,c)
+      enddo
+   enddo
+   ErrorCovcld%nch_active=nch_active
+   ErrorCovcld%nctot=GSI_BundleErrorCov(iinstr)%nctot
+   do ii=1,nch_active
+      ErrorCovcld%indxR(ii)=GSI_BundleErrorCov(iinstr)%indxR(ii)
+   enddo
+   ErrorCovcld%method=GSI_BundleErrorCov(iinstr)%method
+   adjust_jac_=corr_ob_scale_jac(depart,obvarinv,adaptinf,jacobian,nchanl,jpch_rad,varinv,wgtjo,&
+                                   iuse_rad,ich,ErrorCovcld,Rinv,rsqrtinv)
+   deallocate(ErrorCovcld%Revecs,ErrorCovcld%Revals,ErrorCovcld%R)
+
+!   adjust_jac_ = corr_ob_scale_jac(depart,obvarinv,adaptinf,jacobian,nchanl,jpch_rad,varinv,wgtjo,&
+!                                    iuse_rad,ich,GSI_BundleErrorCov(iinstr),Rinv,rsqrtinv,Rmat)
    else
    adjust_jac_ = corr_ob_scale_jac(depart,obvarinv,adaptinf,jacobian,nchanl,jpch_rad,varinv,wgtjo, &
                                     iuse_rad,ich,GSI_BundleErrorCov(iinstr),Rinv,rsqrtinv)
