@@ -1,4 +1,4 @@
-function (setCRAY)
+function (setWCOSS_C)
 
   message("Setting flags and paths for Cray")
   set(HOST_FLAG "-xHOST" CACHE INTERNAL "Host Flag")
