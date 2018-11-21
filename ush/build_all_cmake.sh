@@ -46,12 +46,14 @@ rm -rf $dir_root/build
 mkdir -p $dir_root/build
 cd $dir_root/build
 
-if [ $target = wcoss -o $target = wcoss_c -o $target = gaea ]; then
+if [ $target = wcoss -o $target = wcoss_d -o $target = gaea ]; then
     module purge
     module load $dir_modules/modulefile.ProdGSI.$target
 elif [ $target = theia -o $target = cheyenne ]; then
     module purge
     source $dir_modules/modulefile.ProdGSI.$target
+elif [ $target = wcoss_c ]; then
+    module load $dir_modules/modulefile.ProdGSI.$target
 else 
     module purge
     source $dir_modules/modulefile.ProdGSI.$target
