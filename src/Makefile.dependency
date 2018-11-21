@@ -402,7 +402,7 @@ rtlnmc_version3.o : rtlnmc_version3.f90 general_commvars_mod.o hybrid_ensemble_p
 satthin.o : satthin.F90 gsi_bundlemod.o gsi_metguess_mod.o ncepnems_io.o ncepgfs_io.o mpimod.o jfunc.o m_gsiBiases.o guess_grids.o general_commvars_mod.o gridmod.o obsmod.o constants.o mpeu_util.o kinds.o 
 set_crtm_aerosolmod.o : set_crtm_aerosolmod.f90 mpeu_util.o mpimod.o constants.o kinds.o 
 set_crtm_cloudmod.o : set_crtm_cloudmod.f90 wrf_params_mod.o gridmod.o mpeu_util.o constants.o kinds.o 
-setupaod.o : setupaod.f90 radiance_mod.o qcmod.o m_obsLList.o m_aeroNode.o m_obsNode.o m_obsdiags.o chemmod.o m_dtime.o jfunc.o constants.o gridmod.o gsi_4dvar.o obsmod.o kinds.o mpeu_util.o crtm_interface.o aeroinfo.o radinfo.o 
+setupaod.o : setupaod.f90 radiance_mod.o qcmod.o m_obsLList.o m_aeroNode.o m_obsNode.o m_obsdiags.o chemmod.o m_dtime.o jfunc.o constants.o gridmod.o gsi_4dvar.o obsmod.o kinds.o mpeu_util.o crtm_interface.o aeroinfo.o radinfo.o guess_grids.o gsi_bundlemod.o gsi_chemguess_mod.o 
 setupbend.o : setupbend.f90 gsi_metguess_mod.o gsi_bundlemod.o m_gpsrhs.o m_dtime.o convinfo.o jfunc.o lagmod.o constants.o gridmod.o guess_grids.o gsi_4dvar.o m_obsLList.o m_gpsNode.o m_obsNode.o obsmod.o m_obsdiags.o genstats_gps.o kinds.o mpeu_util.o sparsearr.o state_vectors.o 
 setupcldch.o : setupcldch.f90 gsi_metguess_mod.o gsi_bundlemod.o m_dtime.o convinfo.o qcmod.o jfunc.o constants.o gridmod.o oneobmod.o gsi_4dvar.o obsmod.o guess_grids.o m_obsLList.o m_obsdiags.o m_cldchNode.o m_obsNode.o kinds.o mpeu_util.o 
 setupco.o : setupco.f90 m_dtime.o jfunc.o coinfo.o gsi_chemguess_mod.o gsi_bundlemod.o guess_grids.o gridmod.o gsi_4dvar.o m_obsLList.o m_colvkNode.o m_obsNode.o obsmod.o m_obsdiags.o constants.o kinds.o mpeu_util.o 

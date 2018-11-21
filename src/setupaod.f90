@@ -60,7 +60,7 @@
   use constants, only: tiny_r_kind,zero,one,three,r10
   use jfunc, only: jiter,miter
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
-  use chemmod, only: laeroana_gocart, l_aoderr_table
+  use chemmod, only: laeroana_gocart, l_aoderr_table, l2d_aod
   use aeroinfo, only: jpch_aero, nusis_aero, nuchan_aero, iuse_aero, &
        error_aero, gross_aero
   use obsmod, only: i_aero_ob_type
@@ -72,6 +72,10 @@
   use obsmod, only: rmiss_single
   use qcmod, only: ifail_crtm_qc
   use radiance_mod, only: rad_obs_type,radiance_obstype_search
+  use guess_grids, only: nfldsig
+  use gsi_chemguess_mod, only: gsi_chemguess_bundle
+  use gsi_bundlemod, only: gsi_bundlegetpointer
+
 
   implicit none
 
@@ -156,9 +160,28 @@
   real(r_kind),dimension(nsig,nchanl):: layer_od
   real(r_kind) :: clw_guess, tzbgr, sfc_speed
 
+  ! arrays/vars for 2D AOD analysis
+  real(r_kind),allocatable,dimension(:,:,:) :: ges_aod
+  real(r_kind) :: aodges
+  real(r_kind),dimension(:,:),pointer:: rank2=>NULL()
+  integer(i_kind) ifld, istatus
+
+
+  ! arrays/vars to use to compute O-F statistics
+  real(r_kind),dimension(nobs,nchanl):: of_array
+  real(r_kind),dimension(nchanl):: of_min,of_max,of_mean,of_rmse
+  integer(i_kind),dimension(nchanl) :: of_count
+
   if ( .not. laeroana_gocart ) then
      return
   endif
+
+  of_array(:,:) = 0 
+  of_min(:) = rmiss_single
+  of_max(:) = rmiss_single
+  of_mean(:) = rmiss_single
+  of_rmse(:) = rmiss_single
+  of_count(:) = 0
 
   n_alloc(:)=0
   m_alloc(:)=0
@@ -189,6 +212,20 @@
 
 ! Determine cloud & aerosol usages in radiance assimilation
   call radiance_obstype_search(obstype,radmod)
+
+! if doing 2D AOD grab precomputed guess
+  if (l2d_aod) then
+     call gsi_bundlegetpointer(gsi_chemguess_bundle(1),'aod',rank2,istatus)
+     if (istatus==0) then
+        allocate(ges_aod(size(rank2,1),size(rank2,2),nfldsig))
+        ges_aod(:,:,1)=rank2
+        do ifld=2,nfldsig
+           call gsi_bundlegetpointer(gsi_chemguess_bundle(ifld),'aod',rank2,istatus)
+           ges_aod(:,:,ifld)=rank2
+        enddo
+     endif
+  end if
+
 
 ! Initialize channel related information
   tnoise = r1e10
@@ -360,11 +397,15 @@
         end if
  
 !       Interpolate model fields to observation location, call crtm and create jacobians
-        call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, &
-             tvp,qvp,clw_guess,prsltmp,prsitmp, &
-             trop5,tzbgr,dtsavg,sfc_speed, &
-             tsim,emissivity,ptau5,ts,emissivity_k, &
-             temp,wmix,jacobian,error_status,layer_od=layer_od,jacobian_aero=jacobian_aero)
+        if (l2d_aod) then
+          call tintrp2a11(ges_aod,aodges,slats,slons,dtime,1,mype,nfldsig)
+        else
+          call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, &
+               tvp,qvp,clw_guess,prsltmp,prsitmp, &
+               trop5,tzbgr,dtsavg,sfc_speed, &
+               tsim,emissivity,ptau5,ts,emissivity_k, &
+               temp,wmix,jacobian,error_status,layer_od=layer_od,jacobian_aero=jacobian_aero)
+        end if
 
 
 ! If the CRTM returns an error flag, do not assimilate any channels for this ob
@@ -378,7 +419,11 @@
 
         total_aod = zero
         do i = 1, nchanl
-           total_aod(i) =sum(layer_od(:,i))
+           if (l2d_aod) then
+             total_aod(i) = aodges
+           else
+             total_aod(i) =sum(layer_od(:,i))
+           end if
         enddo 
 
         do i = 1, nchanl
@@ -393,14 +438,13 @@
            endif
         end do
 
-        ! uncomment this section out to print out AOD from model, from obs, and
-        ! O-B, this should eventually probably be written to a diagnostic file
-        !do i = 1, nchanl
-        !   if ( aod_obs(i) > zero ) then
-        !     write(6,'(A,3i6,4f8.3,2f8.2)') 'mype, iobs, ichan, aod_crtm, aod_obs, omb, err, lat, lon : ',  &
-        !         mype, n, i, total_aod(i), aod_obs(i),aod(i), tnoise(i), cenlat, cenlon
-        !   end if
-        !end do
+         do i = 1, nchanl
+            !if ( aod_obs(i) > zero ) then
+              !write(6,'(A,3i6,4f8.3,2f8.2)') 'mype, iobs, ichan, aod_crtm, aod_obs, omb, err, lat, lon : ',  &
+              !    mype, n, i, total_aod(i), aod_obs(i),aod(i), tnoise(i), cenlat, cenlon
+              of_array(n,i) = aod(i)
+            !end if
+         end do
 
         icc = 0
         do i = 1, nchanl
@@ -662,6 +706,28 @@
 
 ! End of n-loop over obs
   end do
+
+! compute O-F stats and write to output file
+! get number to use for mean and RMSE
+  print *,'jiter,nobs,mype',jiter,nobs,mype
+  do n = 1,nobs
+    do i =1,nchanl
+      if ( of_array(n,i) /= 0) then
+        of_count(i) = of_count(i) + 1
+      end if
+        if (i==4) write(24000+mype,'(3i6,3f8.3)') jiter,mype,n,of_array(n,i),data_s(6,n),data_s(5,n)
+    end do
+  end do
+! calculate stats
+  do i = 1,nchanl
+    of_min(i) = minval(of_array(:,i))  
+    of_max(i) = maxval(of_array(:,i))  
+    of_mean(i) = sum(of_array(:,i))/of_count(i)
+    of_rmse(i) = sqrt(of_mean(i))
+    write(25000+mype,'(A,5i6,4f8.3)') 'jiter,miter,mype,ichanl,of_count,of_min,of_max,of_mean,of_rmse', &
+    jiter,miter,mype, i, of_count(i), of_min(i), of_max(i),of_mean(i), of_rmse(i)
+  end do
+    
 
 ! Jump here when there is no data to process for current satellite
 ! Deallocate arrays

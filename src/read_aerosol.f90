@@ -512,7 +512,12 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
               if ( .not. iuse ) cycle read_viirs
 
               crit1 = crit1 + 10.0_r_kind*smask
-              crit1 = crit1 + 10.0_r_kind*(four-qcall)
+              ! is below needed now because of the change in QC flags? CRM
+              if (idate >= 2018021300) then
+                crit1 = crit1 + 10.0_r_kind*(four+qcall)
+              else
+                crit1 = crit1 + 10.0_r_kind*(four-qcall)
+              end if
               call checkob(dist1,crit1,itx,iuse)
 
               if ( .not. iuse ) cycle read_viirs
