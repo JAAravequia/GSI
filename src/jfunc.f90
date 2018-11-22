@@ -131,6 +131,7 @@ module jfunc
   public :: switch_on_derivatives,jiterend,jiterstart,jiter,iter,niter,miter
   public :: diurnalbc,bcoption,biascor,nval2d,xhatsave,first
   public :: factqmax,factqmin,clip_supersaturation,last,yhatsave,nvals_len,nval_levs,iout_iter,nclen
+  public :: factql,factqi,factqr,factqs,factqg  
   public :: niter_no_qc,print_diag_pcg,lgschmidt,penorig,gnormorig,iguess
   public :: factg,factv,factp,factl,R_option,factw10m,facthowv,factcldch,diag_precon,step_start
   public :: pseudo_q2
@@ -149,6 +150,7 @@ module jfunc
   integer(i_kind),dimension(0:50):: niter,niter_no_qc
   real(r_kind) factqmax,factqmin,gnormorig,penorig,biascor(2),diurnalbc,factg,factv,factp,factl,&
                factw10m,facthowv,factcldch,step_start
+  real(r_kind) factql,factqi,factqr,factqs,factqg  
   integer(i_kind) bcoption
   real(r_kind),allocatable,dimension(:,:):: varq
   real(r_kind),allocatable,dimension(:,:):: varcw
@@ -200,6 +202,11 @@ contains
 
     factqmin=zero
     factqmax=zero
+    factql=zero
+    factqi=zero
+    factqr=zero
+    factqs=zero
+    factqg=zero
     clip_supersaturation=.false.
     factg=zero
     factv=zero

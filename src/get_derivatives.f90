@@ -67,6 +67,7 @@ subroutine get_derivatives (guess,xderivative,yderivative)
   use general_sub2grid_mod, only: general_sub2grid,general_grid2sub
   use general_commvars_mod, only: s2g_d
   use mpeu_util, only: die
+  use derivsmod, only: dlevs3d  
 
   implicit none
 
@@ -108,7 +109,8 @@ subroutine get_derivatives (guess,xderivative,yderivative)
   call gsi_gridcreate(grid,lat2,lon2,nsig)
 
      call gsi_bundlecreate (work_bundle,grid,'derivatives work',ier, &
-                            names2d=dvars2d,names3d=dvars3d,bundle_kind=r_kind)
+                            names2d=dvars2d,names3d=dvars3d,levels=dlevs3d,bundle_kind=r_kind)  
+                         !  names2d=dvars2d,names3d=dvars3d,bundle_kind=r_kind)                 !orig
      if(ier/=0) then
         write(6,*) myname, ': trouble creating work bundle'
         call stop2(999)
@@ -223,6 +225,8 @@ subroutine tget_derivatives(guess,xderivative,yderivative)
   use general_sub2grid_mod, only: general_sub2grid,general_grid2sub
   use general_commvars_mod, only: s2g_d
   use mpeu_util, only: die
+  use derivsmod, only: dlevs3d  
+
   implicit none
 
 ! Passed variables
@@ -293,7 +297,8 @@ subroutine tget_derivatives(guess,xderivative,yderivative)
   ier=0
   call gsi_gridcreate(grid,lat2,lon2,nsig)
   call gsi_bundlecreate (derivative,grid,'AD derivs work',ier, &
-                         names2d=dvars2d,names3d=dvars3d,bundle_kind=r_kind)
+                         names2d=dvars2d,names3d=dvars3d,levels=dlevs3d,bundle_kind=r_kind) 
+                       ! names2d=dvars2d,names3d=dvars3d,bundle_kind=r_kind)                !orig        
   if(ier/=0) then
      write(6,*) myname, ': trouble creating work bundle'
      call stop2(999)

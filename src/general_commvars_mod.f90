@@ -35,6 +35,7 @@ module general_commvars_mod
 
    use kinds, only: r_kind,i_kind
    use general_sub2grid_mod, only: sub2grid_info
+   use mpimod, only: mype 
 
    implicit none
 
@@ -106,12 +107,14 @@ contains
       use control_vectors, only: cvars2d,cvars3d,mvars,cvarsmd,nrf_var
       use general_sub2grid_mod, only: general_sub2grid_create_info
       use mpeu_util, only: getindex
+      use constants, only: zero,max_varname_length  
 
       implicit none
 
 !  Local Variables
       integer(i_kind) i,j,k,kk,num_fields,inner_vars,l,n,n_one,n2d,n3d
       character(len=64),allocatable,dimension(:,:) :: names_s2g_d,names_s2g_raf
+      integer(i_kind),allocatable,dimension(:,:) :: lnames_s2g_d    
       integer(i_kind),allocatable,dimension(:,:) :: lnames_s2g_raf
       logical,allocatable,dimension(:) :: vector_s2g_d
 !     character(len=8) names(4*nsig+2)
@@ -120,6 +123,9 @@ contains
       character(len=64) names3(1,4*nsig+1)
       integer(i_kind) lnames3(1,4*nsig+1)
 
+      character(len=max_varname_length),allocatable,dimension(:):: dvars2d
+      character(len=max_varname_length),allocatable,dimension(:):: dvars3d
+      integer(i_kind),allocatable,dimension(:):: dlevs3d 
 
 !  create general_sub2grid structure variable s2g_raf, which is used in sub2grid.f90
 !  NOTE:  the order of names and lnames corresponds to the order that the control + motley variables
@@ -204,29 +210,63 @@ contains
 
 !  create general_sub2grid structure variable s2g_d, which is used in get_derivatives.f90
 
+!>>orig
+!      inner_vars=1
+!      num_fields=size(cvars2d)+nsig*size(cvars3d)
+!
+!!  obtain pointer to each variable in bundle, then populate corresponding names in names_s2g_d for
+!!     general_sub2grid_create_info.  this is needed for replacing nvar_id.
+!      allocate(names_s2g_d(inner_vars,num_fields),vector_s2g_d(num_fields))
+!!             bundlemod stores 3d fields first, followed by 2d fields, followed by 1d fields
+!      i=0
+!      do k=1,size(cvars3d)
+!         do j=1,nsig
+!            i=i+1
+!            names_s2g_d(1,i)=cvars3d(k)
+!            vector_s2g_d(i)=names_s2g_d(1,i) == 'sf'.or.names_s2g_d(1,i) == 'vp'
+!         end do
+!      end do
+!      do k=1,size(cvars2d)
+!         i=i+1
+!         names_s2g_d(1,i)=cvars2d(k)
+!         vector_s2g_d(i)=names_s2g_d(1,i) == 'sf'.or.names_s2g_d(1,i) == 'vp'
+!      end do
+!      call general_sub2grid_create_info(s2g_d,inner_vars,nlat,nlon,nsig,num_fields,regional, &
+!                                        vector=vector_s2g_d,names=names_s2g_d,s_ref=s2g_raf)
+!      deallocate(names_s2g_d,vector_s2g_d)
+!<<orig
+      allocate(dvars2d(20),dvars3d(20),dlevs3d(20))
+
+      num_fields=0; n2d=0;n3d=0
+      call get_anadv(dvars2d,dvars3d,dlevs3d,num_fields,n2d,n3d)   
       inner_vars=1
-      num_fields=size(cvars2d)+nsig*size(cvars3d)
 
 !  obtain pointer to each variable in bundle, then populate corresponding names in names_s2g_d for
 !     general_sub2grid_create_info.  this is needed for replacing nvar_id.
-      allocate(names_s2g_d(inner_vars,num_fields),vector_s2g_d(num_fields))
+      allocate(lnames_s2g_d(inner_vars,num_fields),names_s2g_d(inner_vars,num_fields),vector_s2g_d(num_fields))
 !             bundlemod stores 3d fields first, followed by 2d fields, followed by 1d fields
       i=0
-      do k=1,size(cvars3d)
-         do j=1,nsig
+      do k=1,n3d
+         do j=1,dlevs3d(k)
             i=i+1
-            names_s2g_d(1,i)=cvars3d(k)
-            vector_s2g_d(i)=names_s2g_d(1,i) == 'sf'.or.names_s2g_d(1,i) == 'vp'
+             names_s2g_d(1,i)=dvars3d(k)
+            lnames_s2g_d(1,i)=j
+            vector_s2g_d(i)=trim(names_s2g_d(1,i))=='u' .or. trim(names_s2g_d(1,i))=='v'
          end do
       end do
-      do k=1,size(cvars2d)
+      do k=1,n2d
          i=i+1
-         names_s2g_d(1,i)=cvars2d(k)
-         vector_s2g_d(i)=names_s2g_d(1,i) == 'sf'.or.names_s2g_d(1,i) == 'vp'
+          names_s2g_d(1,i)=dvars2d(k)
+         lnames_s2g_d(1,i)=1
+         vector_s2g_d(i)=trim(names_s2g_d(1,i))=='u' .or. trim(names_s2g_d(1,i))=='v'
       end do
+
       call general_sub2grid_create_info(s2g_d,inner_vars,nlat,nlon,nsig,num_fields,regional, &
-                                        vector=vector_s2g_d,names=names_s2g_d,s_ref=s2g_raf)
-      deallocate(names_s2g_d,vector_s2g_d)
+                                        vector=vector_s2g_d,names=names_s2g_d,lnames=lnames_s2g_d,s_ref=s2g_raf)
+
+      deallocate(dvars2d,dvars3d,dlevs3d)
+      deallocate(names_s2g_d,lnames_s2g_d,vector_s2g_d)
+
 
 !  create general_sub2grid structure variable g1, which is used in get_derivatives.f90
 
@@ -858,4 +898,109 @@ contains
    
    return
  end subroutine filluv2_ns
+
+ subroutine get_anadv(dvars2d,dvars3d,dlevs3d,num_fields,n2d,n3d)
+
+ use constants, only: zero,max_varname_length
+ use file_utility, only: get_lun 
+ use mpeu_util, only: gettablesize,gettable,getindex
+
+ implicit none
+ 
+ character(len=max_varname_length),dimension(:),intent(inout):: dvars2d, dvars3d
+ integer(i_kind),dimension(:),intent(inout):: dlevs3d 
+ integer(i_kind),intent(inout):: num_fields,n2d,n3d
+
+ integer(i_kind),allocatable,dimension(:) :: lwork3d 
+ character(len=max_varname_length),allocatable,dimension(:) :: work2d, work3d
+ character(len=*),parameter:: rcname='anavinfo'  ! filename should have extension
+ character(len=*),parameter:: tbname='state_derivatives::'
+ character(len=20) var,source,funcof
+ character(len=*),parameter::myname_='*get_anadv'
+ character(len=256),allocatable,dimension(:):: utable
+ character(len=max_varname_length),allocatable,dimension(:):: vars
+ character(len=max_varname_length),allocatable,dimension(:):: sources
+ integer(i_kind) luin,ii,ilev,nrows,ntot,ipnt,istatus
+ integer(i_kind) i2d,i3d
+ integer(i_kind),allocatable,dimension(:)::nlevs
+
+ ! load file
+ luin=get_lun()
+ open(luin,file=trim(rcname),form='formatted')
+
+ ! Scan file for desired table first
+ ! and get size of table
+ call gettablesize(tbname,luin,ntot,nrows)
+ if(nrows==0) then
+   close(luin)
+   return
+ endif
+
+ ! Get contents of table
+ allocate(utable(nrows))
+ call gettable(tbname,luin,ntot,nrows,utable)
+
+ ! release file unit
+ close(luin)
+
+ ! allocate space for entries from table
+ allocate(vars(nrows),nlevs(nrows),sources(nrows))
+
+ ! Retrieve each token of interest from table and define
+ ! variables participating in state vector
+ n2d=0; n3d=0; num_fields=0
+ do ii=1,nrows
+   read(utable(ii),*) vars(ii),&  ! variable name
+                      nlevs(ii),& ! number of levels
+                      sources(ii) ! source
+   if (nlevs(ii)==1) then
+      n2d=n2d+1
+      num_fields=num_fields+nlevs(ii)
+   else
+      n3d=n3d+1
+      num_fields=num_fields+nlevs(ii)
+   endif
+ enddo
+
+ deallocate(utable)
+
+ allocate(work2d(n2d),work3d(n3d),lwork3d(n3d))
+
+ ! loop over variables and identify them by comparison
+ i2d=0; i3d=0
+ do ii=1,nrows
+    if(nlevs(ii)==1) then
+       i2d=i2d+1
+       work2d(i2d)=trim(vars(ii))
+    else 
+       i3d=i3d+1
+       work3d(i3d)=trim(vars(ii))
+      lwork3d(i3d)=nlevs(ii)
+    endif
+ enddo
+
+ dvars2d(1:n2d) = work2d
+ dvars3d(1:n3d) =  work3d
+ dlevs3d(1:n3d) = lwork3d 
+
+ if (mype==0) then
+    write(6,*) myname_,':  DERIVATIVE VARIABLES: '
+    write(6,*) myname_,':  n2d = ',n2d
+    write(6,*) myname_,':  n3d = ',n3d
+    write(6,*) myname_,':  num_fields = ',num_fields
+    write(6,*) myname_,':  2D-DERV STATE VARIABLES: '
+    do ii=1,n2d
+       write(6,*) trim(dvars2d(ii)) 
+    enddo
+    write(6,*) myname_,':  3D-DERV STATE VARIABLES:'
+    do ii=1,n3d
+       write(6,*) trim(dvars3d(ii)),dlevs3d(ii)
+    enddo
+ endif
+
+ deallocate(work2d,work3d,lwork3d)
+ deallocate(nlevs,vars,sources)
+
+ end subroutine get_anadv
+
 end module general_commvars_mod

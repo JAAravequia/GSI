@@ -175,18 +175,18 @@ subroutine intall(sval,sbias,rval,rbias)
   use kinds, only: i_kind,r_quad
   use gsi_4dvar, only: nobs_bins,ltlint,ibin_anl
   use constants, only: zero,zero_quad
-  use jcmod, only: ljcpdry,ljc4tlevs,ljcdfi
+  use jcmod, only: ljcpdry,ljc4tlevs,ljcdfi,ljclimqc 
   use jfunc, only: nrclen,nsclen,npclen,ntclen
   use intradmod, only: setrad
   use intjomod, only: intjo
   use bias_predictors, only : predictors,assignment(=)
   use state_vectors, only: allocate_state,deallocate_state
   use intjcmod, only: intlimq,intlimg,intlimv,intlimp,intlimw10m,intlimhowv,intlimcldch,&
-      intliml,intjcpdry1,intjcpdry2,intjcdfi
+      intliml,intjcpdry1,intjcpdry2,intjcdfi,intlimqc  
   use timermod, only: timer_ini,timer_fnl
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: assignment(=)
-  use state_vectors, only: svars2d
+  use state_vectors, only: svars2d, svars3d  
   use mpeu_util, only: getindex
   use guess_grids, only: ntguessig,nfldsig
   use mpl_allreducemod, only: mpl_allreduce
@@ -251,7 +251,28 @@ subroutine intall(sval,sbias,rval,rbias)
            call intlimq(rval(ibin),sval(ibin),it)
         end do
      end if
-
+     if (ljclimqc) then
+     if (.not.ljc4tlevs) then
+        if (getindex(svars3d,'ql')>0) call intlimqc(rval(ibin_anl),sval(ibin_anl),ntguessig,'ql')
+        if (getindex(svars3d,'qi')>0) call intlimqc(rval(ibin_anl),sval(ibin_anl),ntguessig,'qi')
+        if (getindex(svars3d,'qr')>0) call intlimqc(rval(ibin_anl),sval(ibin_anl),ntguessig,'qr')
+        if (getindex(svars3d,'qs')>0) call intlimqc(rval(ibin_anl),sval(ibin_anl),ntguessig,'qs')
+        if (getindex(svars3d,'qg')>0) call intlimqc(rval(ibin_anl),sval(ibin_anl),ntguessig,'qg')
+     else
+        do ibin=1,nobs_bins
+           if (nobs_bins /= nfldsig) then
+              it=ntguessig
+           else
+              it=ibin
+           end if
+           if (getindex(svars3d,'ql')>0) call intlimqc(rval(ibin),sval(ibin),it,'ql')
+           if (getindex(svars3d,'qi')>0) call intlimqc(rval(ibin),sval(ibin),it,'qi')
+           if (getindex(svars3d,'qr')>0) call intlimqc(rval(ibin),sval(ibin),it,'qr')
+           if (getindex(svars3d,'qs')>0) call intlimqc(rval(ibin),sval(ibin),it,'qs')
+           if (getindex(svars3d,'qg')>0) call intlimqc(rval(ibin),sval(ibin),it,'qg')
+        end do
+     end if
+     end if  ! ljclimqc
 ! RHS for gust constraint
      if (getindex(svars2d,'gust')>0)call intlimg(rval(1),sval(1))
 

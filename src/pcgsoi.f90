@@ -259,6 +259,7 @@ subroutine pcgsoi()
 ! Perform inner iteration
   inner_iteration: do iter=0,niter(jiter)
 
+
 ! Gradually turn on variational qc to avoid possible convergence problems
      if(vqc) then
         nlnqc_iter = iter >= niter_no_qc(jiter)
@@ -303,7 +304,7 @@ subroutine pcgsoi()
         end if
      end if
 
-     if (iter<=1 .and. print_diag_pcg) then
+     if (iter<=1 .and. print_diag_pcg) then 
         do ii=1,nobs_bins
            call prt_state_norms(sval(ii),'sval')
         enddo
@@ -312,7 +313,7 @@ subroutine pcgsoi()
 !    Compare obs to solution and transpose back to grid
      call intall(sval,sbias,rval,rbias)
 
-     if (iter<=1 .and. print_diag_pcg) then
+     if (iter<=1 .and. print_diag_pcg) then 
         do ii=1,nobs_bins
            call prt_state_norms(rval(ii),'rval')
         enddo
@@ -795,6 +796,7 @@ subroutine pcgsoi()
 
 ! Update guess (model background, bias correction) fields
 ! if (mype==0) write(6,*)'pcgsoi: Updating guess'
+  if (mype==0) write(6,*)'pcgsoi: calling update guess iwrtinc = ', iwrtinc !emil
   if(iwrtinc<=0) call update_guess(sval,sbias)
 
 ! cloud analysis  after iteration
