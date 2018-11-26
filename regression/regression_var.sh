@@ -152,8 +152,8 @@ case $machine in
 
    export fixcrtm="/gpfs/hps/nco/ops/nwprod/lib/crtm/v2.2.4/fix"
    export casesdir="/gpfs/hps3/emc/da/noscrub/Michael.Lueken/CASES"
-#  export ndate=$NDATE
-   export ndate="$builddir/bin/ndate.x"
+   export ndate=$NDATE
+#  export ndate="$builddir/bin/ndate.x"
 
    export check_resource="no"
 
