@@ -299,6 +299,12 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
               if ( aod_flags(2) < 1.0e+10_r_double ) dbcf = aod_flags(2)
               if ( aod_flags(3) < 1.0e+10_r_double ) qaod = aod_flags(3)
 
+              ! CRM - hard coding this because I cant figure out bufr table
+              ! entries for these 3 things...
+              styp = 3
+              dbcf = 3
+              qaod = 3
+
               if ( .not. luse_deepblue .and. nint(styp)==4 ) cycle read_modis
               if ( qaod < aod_qa_limit ) cycle read_modis
 

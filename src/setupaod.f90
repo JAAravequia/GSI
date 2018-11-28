@@ -168,7 +168,7 @@
 
 
   ! arrays/vars to use to compute O-F statistics
-  real(r_kind),dimension(nobs,nchanl):: of_array
+  real(r_kind),dimension(nobs,nchanl):: of_array,obs_array
   real(r_kind),dimension(nchanl):: of_min,of_max,of_mean,of_rmse
   integer(i_kind),dimension(nchanl) :: of_count
 
@@ -177,6 +177,7 @@
   endif
 
   of_array(:,:) = 0 
+  obs_array(:,:) = 0 
   of_min(:) = rmiss_single
   of_max(:) = rmiss_single
   of_mean(:) = rmiss_single
@@ -443,6 +444,7 @@
               !write(6,'(A,3i6,4f8.3,2f8.2)') 'mype, iobs, ichan, aod_crtm, aod_obs, omb, err, lat, lon : ',  &
               !    mype, n, i, total_aod(i), aod_obs(i),aod(i), tnoise(i), cenlat, cenlon
               of_array(n,i) = aod(i)
+              obs_array(n,i) = aod_obs(i)
             !end if
          end do
 
@@ -715,7 +717,7 @@
       if ( of_array(n,i) /= 0) then
         of_count(i) = of_count(i) + 1
       end if
-        if (i==4) write(24000+mype,'(3i6,3f8.3)') jiter,mype,n,of_array(n,i),data_s(6,n),data_s(5,n)
+        if (i==4) write(24000+mype,'(3i6,4f8.3)') jiter,mype,n,of_array(n,i),obs_array(n,i),data_s(6,n),data_s(5,n)
     end do
   end do
 ! calculate stats

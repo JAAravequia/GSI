@@ -532,7 +532,7 @@ subroutine prewgt(mype)
            jx=max(jx,2)
            jx=min(nlat-1,jx)
            do i=1,lon2
-              dssvs(j,i,n)=corp(jx,n)
+              dssvs(j,i,n)=corp(jx,n)*as2d(n)
            end do
         end do
 
