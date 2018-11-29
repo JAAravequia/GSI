@@ -6,9 +6,6 @@ set -xa
 echo `date` $0 `date -u` begin
 export PS4='$SECONDS + '
 
-export RUN_ENVIR=${RUN_ENVIR:-nco}
-export envir=${envir:-prod}
-
 ###############################
 # Specify NET and RUN name
 ##############################
@@ -21,11 +18,8 @@ export RUN=${RUN:-gdas}
 ###########################################################
 export pid=$$
 export outid=${outid:-"LL$job"}
-export jobid=${jobid:-"${outid}.o${pid}"}
 
-export DATAROOT=${DATAROOT:-/tmpnwprod2}
-export DATA=${DATA:-${DATAROOT}/${jobid}}
-
+export DATA=${DATA:-${DATAROOT}/${jobid:?}}
 mkdir -p $DATA
 cd $DATA
 
@@ -33,26 +27,8 @@ cd $DATA
 ########################################################### 
 # obtain unique process id (pid) and make temp directories
 ###########################################################
-export MINMON_SUFFIX=${MINMON_SUFFIX:-${RUN}}
+export MINMON_SUFFIX=${MINMON_SUFFIX:-${NET}}
 export m_job=${m_job:-${MINMON_SUFFIX}_mmDE}
-
-
-####################################
-# File To Log Msgs
-####################################
-export jlogfile=${jlogfile:-${COMROOT}/logs/jlogfiles/jlogfile.${m_job}.${pid}}
-
-
-##################################################
-# SENDECF  - Flag Events on ECF
-# SENDCOM  - Copy Files From TMPDIR to $COMOUT
-# SENDDBN  - Issue DBNet Client Calls
-# VERBOSE  - Specify Verbose Output 
-##################################################
-export SENDCOM=${SENDCOM:-YES}
-export SENDDBN=${SENDDBN:-NO}
-export SENDECF=${SENDECF:-NO}
-export VERBOSE=${VERBOSE:-YES}
 
 
 ##############################################
@@ -86,6 +62,7 @@ fi
 
 #############################################
 #  determine PDY and cyc for previous cycle
+<<<<<<< HEAD
 #############################################
 
 cdate=`${NDATE} -6 ${PDY}${cyc}`
@@ -98,13 +75,32 @@ export p_cyc=`echo ${cdate} | cut -c9-10`
 #############################################
 # TANKverf - WHERE OUTPUT DATA WILL RESIDE
 #############################################
-export COM_IN=${COM_IN:-${COMROOT}/${NET}/${envir}}
 
+M_TANKverfM0=${M_TANKverfM0:-${M_TANKverf}/${RUN}.${PDY}/${cyc}/minmon}
+export M_TANKverfM1=${M_TANKverfM1:-${M_TANKverf}/${RUN}.${P_PDY}/${p_cyc}/minmon}
+
+echo "M_TANKverfM0 = $M_TANKverfM0"
+echo "M_TANKverfM1 = $M_TANKverfM1"
+
+export M_TANKverf=$M_TANKverfM0
+
+cdate=`${NDATE} -6 ${PDY}${cyc}`
+echo 'pdate = ${pdate}'
+
+export P_PDY=`echo ${cdate} | cut -c1-8`
+export p_cyc=`echo ${cdate} | cut -c9-10`
+
+>>>>>>> master
+
+#############################################
+# TANKverf - WHERE OUTPUT DATA WILL RESIDE
+#############################################
 M_TANKverf=${M_TANKverf:-${COM_IN}}
 M_TANKverfM0=${M_TANKverfM0:-${M_TANKverf}/${RUN}.${PDY}/${cyc}/minmon}
 export M_TANKverfM1=${M_TANKverfM1:-${M_TANKverf}/${RUN}.${P_PDY}/${p_cyc}/minmon}
 export M_TANKverf=$M_TANKverfM0
 
+export COM_IN=${COM_IN:-${COMROOT}/${NET}/${envir}}
 export COMIN=${COMIN:-$COM_IN/${RUN}.${PDY}/${cyc}}
 
 mkdir -p -m 775 $M_TANKverf
