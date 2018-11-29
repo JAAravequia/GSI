@@ -51,9 +51,9 @@ if(BUILD_ENKF)
   gridinfo_${ENKF_SUFFIX}.f90
   enkf_obs_sensitivity.f90 
   )
-  if( (NOT HOST-WCOSS_C) AND (NOT HOST-WCOSS_D) )
-    find_package( LAPACK REQUIRED )
-  endif()
+# if( (NOT HOST-WCOSS_C) AND (NOT HOST-WCOSS_D) )
+#   find_package( LAPACK REQUIRED )
+# endif()
   
   add_definitions(${MPI_Fortran_FLAGS})
   
