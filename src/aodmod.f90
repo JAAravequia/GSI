@@ -165,11 +165,20 @@ contains
         if (error_status /=0) print *, 'CRTM error',error_status,i,j
         do k=1,nchanl
           aod2dch(i,j,k) = sum(layer_od(:,k))
+          !print *,i,j,k,aod2dch(i,j,k)
         end do
-        aod2d(i,j) = sum(aod2dch(i,j,:))/nchanl ! is this right?
-        !aod2d(i,j) = aod2dch(i,j,4) ! channel 4 hard coded for now?
+        !aod2d(i,j) = sum(aod2dch(i,j,:))/nchanl ! is this right?
+        aod2d(i,j) = aod2dch(i,j,4) ! channel 4 hard coded for now?
       end do
     end do
+    ! below temporary to figure out numbers for vertical redistribution
+    !do i=is,ie
+    ! do j=js,je-1
+    !   if (aod2d(i,j) < 0.05 .and. aod2d(i,j) > 0) then
+    !      write(27000+mype,'(2i6,1f8.3)') i,j,aod2d(i,j)
+    !   end if
+    ! enddo
+    !enddo 
     ! save AOD to chemguess bundle
     call destroy_crtm
     call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'aod',ptr2daod,iret)

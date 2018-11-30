@@ -272,82 +272,82 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
 !   to 
 !   sub-domains.
     do l=1,naero
-    do k=1,nlevs
-       icount=icount+1
-!       iflag(icount)=l
-       ilev(icount)=k
-       ch_aero(icount)=trim(aeroname(l))
-       vector(1)=.false.
-       if (mype==mype_use(icount)) then
-         
-          select case ( trim(aeroname(l)) )
-           case ('sulf')
-          call nemsio_readrecv(gfile,'so4','mid layer',k,rwork1d0,iret=iret)
-           case ('bc1')
-          call nemsio_readrecv(gfile,'bcphobic','mid layer',k,rwork1d0,iret=iret)
-           case ('bc2')
-          call nemsio_readrecv(gfile,'bcphilic','mid layer',k,rwork1d0,iret=iret)
-           case ('oc1')
-          call nemsio_readrecv(gfile,'ocphobic','mid layer',k,rwork1d0,iret=iret)
-           case ('oc2')
-          call nemsio_readrecv(gfile,'ocphilic','mid layer',k,rwork1d0,iret=iret)
-           case ('dust1')
-          call nemsio_readrecv(gfile,'du001','mid layer',k,rwork1d0,iret=iret)
-!               rwork1d0=rwork1d0*half
-           case ('dust2')
-          call nemsio_readrecv(gfile,'du002','mid layer',k,rwork1d0,iret=iret)
-!               rwork1d0=rwork1d0*half
-           case ('dust3')
-          call nemsio_readrecv(gfile,'du003','mid layer',k,rwork1d0,iret=iret)
-!               rwork1d0=rwork1d0*half
-           case ('dust4')
-          call nemsio_readrecv(gfile,'du004','mid layer',k,rwork1d0,iret=iret)
-!               rwork1d0=rwork1d0*half
-           case ('dust5')
-          call nemsio_readrecv(gfile,'du005','mid layer',k,rwork1d0,iret=iret)
-!               rwork1d0=rwork1d0*half
-           case ('seas1')
-          call nemsio_readrecv(gfile,'ss001','mid layer',k,rwork1d1,iret=iret)
-          call nemsio_readrecv(gfile,'ss002','mid layer',k,rwork1d2,iret=iret)
-           rwork1d0=rwork1d1+rwork1d2
-           case ('seas2')
-          call nemsio_readrecv(gfile,'ss003','mid layer',k,rwork1d0,iret=iret)
-           case ('seas3')
-          call nemsio_readrecv(gfile,'ss004','mid layer',k,rwork1d0,iret=iret)
-           case ('seas4')
-          call nemsio_readrecv(gfile,'ss005','mid layer',k,rwork1d0,iret=iret)
-          end select
-
-! Convert NGAC mixing ratio unit from kg/kg( 10^3 g/kg ) to ug/kg( 10^-6 g/kg )
-! CRM are we sure we want to do this here?
-          rwork1d0=rwork1d0*1.0e+9_r_kind
-
-!          rwork1d0=zero
-
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'tmp','read',istop+7,iret)
-          if(diff_res)then
-             grid_b=reshape(rwork1d0,(/size(grid_b,1),size(grid_b,2)/))
-             call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-             call g_egrid2agrid(p_high,grid_c,grid2,1,1,vector)
-             do kk=1,grd%itotsub
-               i=grd%ltosi_s(kk)
-               j=grd%ltosj_s(kk)
-               work(kk)=grid2(i,j,1)
-             end do
-          else
-             grid=reshape(rwork1d0,(/size(grid,1),size(grid,2)/))
-             call general_fill_ns(grd,grid,work)
-          end if
-
-       end if
-       if(icount == icm)then
-!          if(mype==0) write(6,*) "Before reload aerosol data, icount=",icount
-          call aerosol_reload(grd,ae_d1,ae_d2,ae_d3,ae_d4,ae_d5, &
-                 ae_s1,ae_s2,ae_s3,ae_s4,ae_so4,&
-                 ae_ocpho,ae_ocphi,ae_bcpho,ae_bcphi, &
-                 icount,ilev,ch_aero,work)
-       end if
-    end do
+      do k=1,nlevs
+         icount=icount+1
+  !       iflag(icount)=l
+         ilev(icount)=k
+         ch_aero(icount)=trim(aeroname(l))
+         vector(1)=.false.
+         if (mype==mype_use(icount)) then
+           
+            select case ( trim(aeroname(l)) )
+             case ('sulf')
+            call nemsio_readrecv(gfile,'so4','mid layer',k,rwork1d0,iret=iret)
+             case ('bc1')
+            call nemsio_readrecv(gfile,'bcphobic','mid layer',k,rwork1d0,iret=iret)
+             case ('bc2')
+            call nemsio_readrecv(gfile,'bcphilic','mid layer',k,rwork1d0,iret=iret)
+             case ('oc1')
+            call nemsio_readrecv(gfile,'ocphobic','mid layer',k,rwork1d0,iret=iret)
+             case ('oc2')
+            call nemsio_readrecv(gfile,'ocphilic','mid layer',k,rwork1d0,iret=iret)
+             case ('dust1')
+            call nemsio_readrecv(gfile,'du001','mid layer',k,rwork1d0,iret=iret)
+  !               rwork1d0=rwork1d0*half
+             case ('dust2')
+            call nemsio_readrecv(gfile,'du002','mid layer',k,rwork1d0,iret=iret)
+  !               rwork1d0=rwork1d0*half
+             case ('dust3')
+            call nemsio_readrecv(gfile,'du003','mid layer',k,rwork1d0,iret=iret)
+  !               rwork1d0=rwork1d0*half
+             case ('dust4')
+            call nemsio_readrecv(gfile,'du004','mid layer',k,rwork1d0,iret=iret)
+  !               rwork1d0=rwork1d0*half
+             case ('dust5')
+            call nemsio_readrecv(gfile,'du005','mid layer',k,rwork1d0,iret=iret)
+  !               rwork1d0=rwork1d0*half
+             case ('seas1')
+            call nemsio_readrecv(gfile,'ss001','mid layer',k,rwork1d1,iret=iret)
+            call nemsio_readrecv(gfile,'ss002','mid layer',k,rwork1d2,iret=iret)
+             rwork1d0=rwork1d1+rwork1d2
+             case ('seas2')
+            call nemsio_readrecv(gfile,'ss003','mid layer',k,rwork1d0,iret=iret)
+             case ('seas3')
+            call nemsio_readrecv(gfile,'ss004','mid layer',k,rwork1d0,iret=iret)
+             case ('seas4')
+            call nemsio_readrecv(gfile,'ss005','mid layer',k,rwork1d0,iret=iret)
+            end select
+  
+  ! Convert NGAC mixing ratio unit from kg/kg( 10^3 g/kg ) to ug/kg( 10^-6 g/kg )
+            rwork1d0=rwork1d0*1.0e+9_r_kind
+            !print *,k,trim(aeroname(l)),minval(rwork1d0),maxval(rwork1d0)
+  
+  !          rwork1d0=zero
+  
+            if (iret /= 0) call error_msg(trim(my_name),trim(filename),'tmp','read',istop+7,iret)
+            if(diff_res)then
+               grid_b=reshape(rwork1d0,(/size(grid_b,1),size(grid_b,2)/))
+               call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+               call g_egrid2agrid(p_high,grid_c,grid2,1,1,vector)
+               do kk=1,grd%itotsub
+                 i=grd%ltosi_s(kk)
+                 j=grd%ltosj_s(kk)
+                 work(kk)=grid2(i,j,1)
+               end do
+            else
+               grid=reshape(rwork1d0,(/size(grid,1),size(grid,2)/))
+               call general_fill_ns(grd,grid,work)
+            end if
+  
+         end if
+         if(icount == icm)then
+  !          if(mype==0) write(6,*) "Before reload aerosol data, icount=",icount
+            call aerosol_reload(grd,ae_d1,ae_d2,ae_d3,ae_d4,ae_d5, &
+                   ae_s1,ae_s2,ae_s3,ae_s4,ae_so4,&
+                   ae_ocpho,ae_ocphi,ae_bcpho,ae_bcphi, &
+                   icount,ilev,ch_aero,work)
+         end if
+      end do
     end do
 
     if(procuse)then
