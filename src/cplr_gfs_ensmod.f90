@@ -697,7 +697,7 @@ subroutine parallel_read_nemsio_state_(en_full,m_cvars2d,m_cvars3d,nlon,nlat,nsi
    use ncepnems_io, only: error_msg
    use nemsio_module, only: nemsio_gfile,nemsio_getfilehead,nemsio_readrecv
    use nemsio_module, only: nemsio_getrechead
-   use control_vectors, only: cvars2d,cvars3d,nc2d,nc3d
+   use control_vectors, only: cvars2d,cvars3d,nc2d,nc3d,imp_physics
    use general_sub2grid_mod, only: sub2grid_info
 
    implicit none
