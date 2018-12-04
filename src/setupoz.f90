@@ -253,21 +253,6 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
      pobs(j)=1.e10_r_kind
   end do
 
-  if(ozone_diagsave)then
-     irdim1=7
-     ioff0=irdim1
-     if(lobsdiagsave) irdim1=irdim1+4*miter+1
-     if (save_jacobian) then
-       nnz   = nsig                   ! number of non-zero elements in dH(x)/dx profile
-       nind   = 1
-       call new(dhx_dx, nnz, nind)
-       irdim1 = irdim1 + size(dhx_dx)
-     endif
-
-     allocate(rdiagbuf(irdim1,nlevs,nobs))
-     if(netcdf_diag) call init_netcdf_diag_
-  end if
-
 ! Locate data for satellite in ozinfo arrays
   itoss =1
   l_may_be_passive=.false.
@@ -285,7 +270,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
         iouse(jc)=iuse_oz(j)
         tnoise(jc)=error_oz(j)
         gross(jc)=min(r10*gross_oz(j),h300)
-        if (obstype == 'sbuv2' ) then
+        if (obstype == 'sbuv2' .or. obstype == 'ompsnp') then
            pobs(jc)=pob_oz(j) * 1.01325_r_kind
         else
            pobs(jc)=pob_oz(j)
@@ -305,17 +290,36 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 ! Handle error conditions
   if (nlevs>nlev) write(6,*)'SETUPOZLAY:  level number reduced for ',obstype,' ', &
        nlevs,' --> ',nlev
-  if (nlev == 0) then
-     if (mype==0) write(6,*)'SETUPOZLAY:  no levels found for ',isis
-     if (nobs>0) read(lunin) 
-     goto 135
-  endif
-  if (itoss==1) then
-     if (mype==0) write(6,*)'SETUPOZLAY:  all obs variances > 1.e4.  Do not use ',&
-          'data from satellite ',isis
+  if(nlev == 0 .or. itoss == 1)then
+     if (nlev == 0 .and. mype == 0) then
+        write(6,*)'SETUPOZLAY:  no levels found for ',isis
+     endif
+     if (itoss==1 .and. mype == 0) then
+        if (mype==0) write(6,*)'SETUPOZLAY:  all obs variances > 1.e4.  Do not use ',&
+             'data from satellite ',isis
+     endif
      if (nobs>0) read(lunin)
-     goto 135
+
+!    Release memory of local guess arrays
+     call final_vars_
+
+     return
   endif
+  if(ozone_diagsave)then
+     irdim1=7
+     ioff0=irdim1
+     if(lobsdiagsave) irdim1=irdim1+4*miter+1
+     if (save_jacobian) then
+       nnz   = nsig                   ! number of non-zero elements in dH(x)/dx profile
+       nind   = 1
+       call new(dhx_dx, nnz, nind)
+       irdim1 = irdim1 + size(dhx_dx)
+     endif
+
+     allocate(rdiagbuf(irdim1,nlevs,nobs))
+     if(netcdf_diag) call init_netcdf_diag_
+  end if
+
 
 ! Read and transform ozone data
   read(lunin) data,luse,ioid
@@ -349,7 +353,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
         dlon=data(ilon,i)
         dtime=data(itime,i)
  
-        if (obstype == 'sbuv2' ) then
+        if (obstype == 'sbuv2' .or. obstype == 'ompsnp') then
            if (nobskeep>0) then
 !             write(6,*)'setupozlay: nobskeep',nobskeep
               call stop2(259)
@@ -515,7 +519,8 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
               errorinv = sqrt(varinv3(k)*rat_err2)
               rdiagbuf(3,k,ii) = errorinv               ! inverse observation error
               if (obstype == 'gome' .or. obstype == 'omieff'  .or. &
-                  obstype == 'omi'  .or. obstype == 'tomseff' ) then
+                  obstype == 'omi'  .or. obstype == 'tomseff' .or. &
+                  obstype == 'ompstc8') then
                  rdiagbuf(4,k,ii) = data(isolz,i)       ! solar zenith angle
                  rdiagbuf(5,k,ii) = data(ifovn,i)       ! field of view number
               else
@@ -652,7 +657,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
               my_head%luse=luse(i)
               my_head%time=dtime
 
-              if (obstype == 'sbuv2' ) then
+              if (obstype == 'sbuv2'.or. obstype == 'ompsnp' ) then
                  do k=1,nlevs-1
                     my_head%prs(k) = ozp(k)
                  enddo
@@ -854,9 +859,6 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
         close(4)
      endif ! binary_diag
   endif ! ozone_diagsave
-
-! Jump to this line if problem with data
-135 continue        
 
 ! Release memory of local guess arrays
   call final_vars_
@@ -1444,8 +1446,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
 
 !       Set (i,j,k) indices of guess gridpoint that bound obs location
         my_head%dlev = dpres
-        call get_ijk(mm1,dlat,dlon,dpres,&
-        my_head%ij(1),my_head%wij(1))
+        call get_ijk(mm1,dlat,dlon,dpres,my_head%ij,my_head%wij)
 
         do k=1,8
            my_head%wij(k)=my_head%wij(k)*constoz

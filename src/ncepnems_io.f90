@@ -2525,11 +2525,19 @@ contains
                       if (iret /= 0) call error_msg(trim(my_name),trim(filename),'snmr','read',istop,iret)
                       call nemsio_writerecv(gfileo,'snmr','mid layer',k,rwork1d,iret=iret)
                       if (iret /= 0) call error_msg(trim(my_name),trim(filename),'snmr','write',istop,iret)
+
                       call nemsio_readrecv(gfile,'grle','mid layer',k,rwork1d,iret=iret)
                       if (iret /= 0) call error_msg(trim(my_name),trim(filename),'grle','read',istop,iret)
                       call nemsio_writerecv(gfileo,'grle','mid layer',k,rwork1d,iret=iret)
                       if (iret /= 0) call error_msg(trim(my_name),trim(filename),'grle','write',istop,iret)
                    endif
+
+                   call nemsio_readrecv(gfile,'cld_amt','mid layer',k,rwork1d,iret=iret)
+                   if (iret == 0) then
+                      call nemsio_writerecv(gfileo,'cld_amt','mid layer',k,rwork1d,iret=iret)
+                      if (iret /= 0) call error_msg(trim(my_name),trim(filename),'cld_amt','write',istop,iret)
+                   endif
+
                 endif
              endif !mype == mype_out
           enddo
@@ -2722,8 +2730,19 @@ contains
                 endif
              end do
           endif ! if (imp_physics /= 99) then
-       endif ! do_cw_to_hydro
 
+          if (imp_physics == 11) then
+             do k=1,grd%nsig
+                if (mype == mype_out) then
+                   call nemsio_readrecv(gfile,'cld_amt','mid layer',k,rwork1d,iret=iret)
+                   if (iret == 0) then
+                      call nemsio_writerecv(gfileo,'cld_amt','mid layer',k,rwork1d,iret=iret)
+                      if (iret /= 0) call error_msg(trim(my_name),trim(filename),'cld_amt','write',istop,iret)
+                   endif
+                endif !mype == mype_out
+             end do
+          endif
+       endif ! do_cw_to_hydro
     endif !ntracer
 
 ! Variables needed by the Unified Post Processor (dzdt, delz, delp)
@@ -3690,15 +3709,16 @@ contains
     endif
   end subroutine write_sfc_nst_
 
-  subroutine error_msg_(sub_name,file_name,var_name,action,stop_code,error_code)
+  subroutine error_msg_(sub_name,file_name,var_name,action,stop_code,error_code,lprint)
     use mpimod, only: mype
     use kinds, only: i_kind
     implicit none
 
     character(len=*), intent(in) :: sub_name,file_name,var_name,action
     integer(i_kind),  intent(in) :: stop_code, error_code
-
-    if ( mype == 0 ) then
+    logical, optional,intent(in) :: lprint
+    
+    if ( mype == 0 .or. present(lprint) ) then
        select case (trim(action))
        case('init')
           write(6,'(a,'':  PROBLEM with nemsio_init, Status = '', i3)') &

@@ -45,11 +45,7 @@ rm -f $cmdfile
 
 >$cmdfile
 for type in ${SATYPE}; do
-#   if [[ $type == 'omi_aura' || $type == 'gome_metop-a' ]] ; then
-#      list="obs ges obsges sza fovn"
-#   else
-      list="obs ges obsges"
-#   fi
+   list="obs ges obsges"
    echo "${OZN_IG_SCRIPTS}/plot_horiz.sh $type $suffix '$list'" >> $cmdfile
 done
 chmod a+x $cmdfile
@@ -69,7 +65,7 @@ if [[ -e $errf ]]; then
 fi
 
 
-if [[ ${MY_MACHINE} = "ibm" ]]; then
+if [[ ${MY_MACHINE} = "wcoss" ]]; then
 
   $SUB -q ${JOB_QUEUE} -P ${PROJECT} -M 50 -R affinity[core] \
         -o ${logf} -e ${errf} -W 0:05 -J ${job} -cwd ${WORKDIR} ${WORKDIR}/${cmdfile}

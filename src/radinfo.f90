@@ -90,7 +90,7 @@ module radinfo
   public :: air_rad,nuchan,numt,varch,varch_cld,fbias,ermax_rad,tlapmean
   public :: ifactq,mype_rad
   public :: ostats,rstats,varA
-  public :: adp_anglebc,angord,use_edges, maxscan
+  public :: adp_anglebc,angord,use_edges, maxscan, bias_zero_start
   public :: emiss_bc
   public :: passive_bc
   public :: upd_pred
@@ -105,8 +105,6 @@ module radinfo
   public :: ssmis_precond
   public :: radinfo_adjust_jacobian
   public :: icloud4crtm,iaerosol4crtm
-  public :: radinfo_get_rsqrtinv
-
   public :: dec2bin
 
   integer(i_kind),parameter:: numt = 33   ! size of AVHRR bias correction file
@@ -120,6 +118,7 @@ module radinfo
   logical emiss_bc    ! logical to turn off or on the emissivity predictor
   logical passive_bc  ! logical to turn off or on radiance bias correction for monitored channels
   logical use_edges   ! logical to use data on scan edges (.true.=to use)
+  logical bias_zero_start ! logical to start bias correction from zero (otherwise mode start)
 
   integer(i_kind) tzr_qc        ! indicator of Tz retrieval QC tzr
   integer(i_kind) ssmis_method  !  noise reduction method for SSMIS
@@ -205,7 +204,6 @@ module radinfo
   logical,save :: newpc4pred ! controls preconditioning due to sat-bias correction term 
 
   interface radinfo_adjust_jacobian; module procedure adjust_jac_; end interface
-  interface radinfo_get_rsqrtinv; module procedure get_rsqrtinv_; end interface
 
   character(len=*),parameter :: myname='radinfo'
 contains
@@ -237,6 +235,7 @@ contains
 !   2016-03-24  ejones  - add amsr2_method for using ssmis spatial averaging code
 !                         for amsr2
 !   2017-09-14  li      - change default value of tzr_qc = 1
+!   2018-08-25  collard - Add bias_zero_start
 !
 !   input argument list:
 !
@@ -263,6 +262,7 @@ contains
     newpc4pred = .false.  ! .true.=turn on new preconditioning for bias coefficients
     passive_bc = .false.  ! .true.=turn on bias correction for monitored channels
     adp_anglebc = .false. ! .true.=turn on angle bias correction
+    bias_zero_start = .true. ! .true.=Zero start; .false.=mode start
     emiss_bc = .false.    ! .true.=turn on emissivity bias correction
     angord = 0            ! order of polynomial for angle bias correction
     use_edges = .true.    ! .true.=to use data on scan edges
@@ -497,7 +497,7 @@ contains
   end subroutine final_rad_vars
 
 
-  subroutine radinfo_read
+  subroutine radinfo_read(miter)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    radinfo_read
@@ -578,7 +578,7 @@ contains
 
 ! !INPUT PARAMETERS:
 
-
+    integer(i_kind), optional, intent(in):: miter
     integer(i_kind) i,j,k,ich,lunin,lunout,nlines
     integer(i_kind) ip,istat,n,ichan,nstep,edge1,edge2,ntlapupdate,icw,iaeros
     real(r_kind),dimension(npred):: predr
@@ -727,10 +727,10 @@ contains
 !   Read in information for data number and preconditioning
 
     if (newpc4pred) then
-       allocate(ostats(jpch_rad), rstats(npred,jpch_rad),varA(npred,jpch_rad))
+       allocate(ostats(jpch_rad),rstats(npred,jpch_rad),varA(npred,jpch_rad))
        varA = zero
        ostats = zero
-       rstats = zero_quad
+       rstats = zero_quad 
 
        inquire(file='satbias_pc',exist=pcexist)
        if (pcexist) then
@@ -757,7 +757,7 @@ contains
              if( isis(1:6) == 'seviri' .and. ichan < 4 ) cold_start_seviri = .true.
 
 !            If not seviri or seviri channels are correct, proceed. 
-             if( .not. cold_start_seviri .or. isis(1:6) /= 'seviri' ) then
+             if( .not. cold_start_seviri .or. isis(1:6) /= 'seviri' .or. .not. bias_zero_start) then
                 do j =1,jpch_rad
                    if(trim(isis) == trim(nusis(j)) .and. ichan == nuchan(j))then
                       cfound = .true.
@@ -991,7 +991,7 @@ contains
           if( isis(1:6) == 'seviri' .and. ichan < 4 ) cold_start_seviri = .true.
 
 !         If not seviri or seviri channels are correct, proceed.
-          if(  .not. cold_start_seviri .or. isis(1:6) /= 'seviri' ) then
+          if(  .not. cold_start_seviri .or. isis(1:6) /= 'seviri' .or. .not. bias_zero_start ) then
              do j =1,jpch_rad
                 if(trim(isis) == trim(nusis(j)) .and. ichan == nuchan(j))then
                    cfound = .true.
@@ -1120,8 +1120,10 @@ contains
 
 !   Initialize observation error covariance for 
 !   instruments we account for inter-channel correlations
-    call corr_ob_initialize
-    call corr_oberr_qc(jpch_rad,iuse_rad,nusis,varch)
+    if (present(miter)) then
+       call corr_ob_initialize(miter)
+       if (miter>0)  call corr_oberr_qc(jpch_rad,iuse_rad,nusis,varch)
+    end if
 
 !   Close unit for runtime output.  Return to calling routine
     if(mype==mype_rad)close(iout_rad)
@@ -1472,7 +1474,7 @@ contains
       edge2 = 56
    else if (index(isis,'cris')/=0) then
       step  = 3.3331_r_kind
-      start = -48.33_r_kind
+      start = -48.330_r_kind
       nstep = 30
       edge1 = 1
       edge2 = 30
@@ -2083,7 +2085,7 @@ subroutine dec2bin(dec,bin,ndim)
 END subroutine dec2bin
 
  logical function adjust_jac_ (iinstr,isis,isfctype,nchanl,nsigradjac,ich,varinv,&
-                               depart,obvarinv,adaptinf,wgtjo,jacobian)
+                               depart,obvarinv,adaptinf,wgtjo,jacobian,Rinv,rsqrtinv)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    adjust_jac_
@@ -2123,6 +2125,8 @@ END subroutine dec2bin
    real(r_kind), intent(inout) :: adaptinf(nchanl)
    real(r_kind), intent(inout) :: wgtjo(nchanl)
    real(r_kind), intent(inout) :: jacobian(nsigradjac,nchanl)
+   real(r_kind), intent(inout) :: Rinv(:)
+   real(r_kind), intent(inout) :: rsqrtinv(:,:)
    integer(i_kind), intent(out) :: iinstr
    character(len=*),parameter::myname_ = myname//'*adjust_jac_'
    character(len=80) covtype
@@ -2159,45 +2163,6 @@ END subroutine dec2bin
    if( GSI_BundleErrorCov(iinstr)%nch_active < 0) return
 
    adjust_jac_ = corr_ob_scale_jac(depart,obvarinv,adaptinf,jacobian,nchanl,jpch_rad,varinv,wgtjo, &
-                                    iuse_rad,ich,GSI_BundleErrorCov(iinstr))
+                                    iuse_rad,ich,GSI_BundleErrorCov(iinstr),Rinv,rsqrtinv)
 end function adjust_jac_
-
-subroutine get_rsqrtinv_ (nchanl,iinstr,nchasm,ich,ichasm,varinv,rsqrtinv)
-!$$$  subprogram documentation block
-!                .      .    .
-! subprogram:    get_rsqrtinv_
-!
-!   prgrmmr:     Wei  org: gmao                date: 2015-03-11
-!
-! abstract:  provide hook to obtain the inverse of the square-root of R
-!
-! program history log:
-!   2015-03-11  W. Gu - initial code
-!
-! attributes:
-!   language: f90
-!   machine:  ibm rs/6000 sp; SGI Origin 2000; Compaq/HP
-!
-!$$$ end documentation block
-   use constants, only: zero,one
-   use correlated_obsmod, only: corr_ob_rsqrtinv
-   use correlated_obsmod, only: GSI_BundleErrorCov
-   use mpeu_util, only: getindex
-   use mpeu_util, only: die
-   implicit none
-   integer(i_kind), intent(in) :: iinstr
-   integer(i_kind), intent(in) :: nchasm
-   integer(i_kind), intent(in) :: nchanl
-   integer(i_kind), intent(in) :: ich(nchasm)
-   integer(i_kind), intent(in) :: ichasm(nchasm)
-   real(r_kind), intent(in) :: varinv(nchasm)    ! inverse of specified ob-error-variance
-   real(r_kind), intent(inout) :: rsqrtinv(nchasm,nchasm)
-
-   character(len=*),parameter::myname_ = myname//'*get_rsqrtinv_'
-
-   call corr_ob_rsqrtinv (nchanl,jpch_rad,iuse_rad,nchasm,ich,ichasm,varinv,&
-                          rsqrtinv,GSI_BundleErrorCov(iinstr))
-
-end subroutine get_rsqrtinv_
-
 end module radinfo

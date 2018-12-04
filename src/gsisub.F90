@@ -61,6 +61,8 @@ subroutine gsisub(init_pass,last_pass)
 !   2015-07-20  zhu     - centralize radiance info for the usages of clouds & aerosols
 !                       - add radiance_obstype_init,radiance_parameter_cloudy_init,radiance_parameter_aerosol_init 
 !   2016-07-28  lippi   - add oneobmakerwsupob if 'rw' single ob test and skips radar_bufr_read_all.
+!   2018-02-15  wu      - add code for fv3_regional option
+!   2018-01-04  Apodaca - add lightinfo_read call for GOES/GLM lightning observations  
 !
 !   input argument list:
 !
@@ -74,7 +76,7 @@ subroutine gsisub(init_pass,last_pass)
   use kinds, only: i_kind
   use obsmod, only: iadate,lobserver
   use observermod, only: observer_init,observer_run,observer_finalize
-  use gridmod, only: twodvar_regional,create_grid_vars,destroy_grid_vars
+  use gridmod, only: twodvar_regional,create_grid_vars,destroy_grid_vars,fv3_regional
   use gridmod, only: wrf_mass_regional,wrf_nmm_regional,nems_nmmb_regional,cmaq_regional
   use mpimod, only: mype,npe,mpi_comm_world,ierror
   use radinfo, only: radinfo_read
@@ -84,12 +86,14 @@ subroutine gsisub(init_pass,last_pass)
   use convinfo, only: convinfo_read
   use ozinfo, only: ozinfo_read
   use coinfo, only: coinfo_read
+  use lightinfo, only: lightinfo_read
   use read_l2bufr_mod, only: radar_bufr_read_all
   use oneobmod, only: oneobtest,oneobmakebufr,oneobmakerwsupob,oneob_type
   use aircraftinfo, only: aircraftinfo_read,aircraft_t_bc_pof,aircraft_t_bc,&
      aircraft_t_bc_ext
   use radiance_mod, only: radiance_obstype_init,radiance_parameter_cloudy_init,radiance_parameter_aerosol_init
   use gsi_io, only: verbose
+  use jfunc, only: miter
 #ifndef HAVE_ESMF
   use guess_grids, only: destroy_gesfinfo
 #endif
@@ -122,7 +126,6 @@ subroutine gsisub(init_pass,last_pass)
 ! Allocate grid arrays.
   call create_grid_vars
 
-
 ! Get date, grid, and other information from model guess files
   call gesinfo
 
@@ -139,7 +142,8 @@ subroutine gsisub(init_pass,last_pass)
   end if
 
 ! Process any level 2 bufr format land doppler radar winds and create radar wind superob file
-  if(wrf_nmm_regional.or.wrf_mass_regional.or.nems_nmmb_regional .or. cmaq_regional) then
+  if(wrf_nmm_regional.or.wrf_mass_regional.or.nems_nmmb_regional .or. cmaq_regional &
+          .or. fv3_regional) then
      if(.not. oneobtest) call radar_bufr_read_all(npe,mype)
   end if
 !at some point cmaq will become also an online met/chem model (?)
@@ -147,7 +151,7 @@ subroutine gsisub(init_pass,last_pass)
 ! Read info files for assimilation of various obs
   if (init_pass) then
      if (.not.twodvar_regional) then
-        call radinfo_read
+        call radinfo_read(miter)
         call radiance_obstype_init
         call radiance_parameter_cloudy_init
         call ozinfo_read
@@ -159,8 +163,10 @@ subroutine gsisub(init_pass,last_pass)
            call aircraftinfo_read
      endif
      call convinfo_read
+     call lightinfo_read
      if(print_verbose)then
         call tell('gsisub','returned from convinfo_read()')
+        call tell('gsisub','returned from lightinfo_read()')
      end if
   endif
 

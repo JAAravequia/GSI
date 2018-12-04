@@ -381,8 +381,10 @@ subroutine move2bundle_(grd,en_loc3,atm_bundle,m_cvars2d,m_cvars3d,iret,clons,sl
           write(6,'(A)') trim(myname_) // ': ERROR!'
           write(6,'(A)') trim(myname_) // ': For now, GFS requires all MetFields: ps,u,v,(sf,vp)tv,q,oz,cw'
           write(6,'(A)') trim(myname_) // ': but some have not been found. Aborting ... '
+          write(6,'(A)') trim(myname_) // ': WARNING!'
+          write(6,'(3A,I5)') trim(myname_) // ': Trouble reading ensemble file : ', trim(filename), ', IRET = ', iret
        endif
-       goto 100
+       return
     endif
 
     do m=1,nc2d
@@ -449,8 +451,10 @@ subroutine move2bundle_(grd,en_loc3,atm_bundle,m_cvars2d,m_cvars3d,iret,clons,sl
           write(6,'(A)') trim(myname_) // ': ERROR!'
           write(6,'(A)') trim(myname_) // ': For now, GFS needs to put all MetFields: ps,u,v,(sf,vp)tv,q,oz,cw'
           write(6,'(A)') trim(myname_) // ': but some have not been found. Aborting ... '
+          write(6,'(A)') trim(myname_) // ': WARNING!'
+          write(6,'(3A,I5)') trim(myname_) // ': Trouble reading ensemble file : ', trim(filename), ', IRET = ', iret
        endif
-       goto 100
+       return
     endif
 
     call general_sub2grid_destroy_info(grd2d,grd)
@@ -458,15 +462,6 @@ subroutine move2bundle_(grd,en_loc3,atm_bundle,m_cvars2d,m_cvars3d,iret,clons,sl
 
     if ( allocated(scr2) ) deallocate(scr2)
     if ( allocated(scr3) ) deallocate(scr3)
-
-100 continue
-
-    if ( iret /= 0 ) then
-       if ( mype == 0 ) then
-          write(6,'(A)') trim(myname_) // ': WARNING!'
-          write(6,'(3A,I5)') trim(myname_) // ': Trouble reading ensemble file : ', trim(filename), ', IRET = ', iret
-       endif
-    endif
 
     return
 
@@ -723,7 +718,8 @@ subroutine parallel_read_nemsio_state_(en_full,m_cvars2d,m_cvars3d,nlon,nlat,nsi
    integer(i_kind) i,ii,j,jj,k,lonb,latb,levs
    integer(i_kind) k2,k3,k3u,k3v,k3t,k3q,k3cw,k3oz,kf
    integer(i_kind) k3ql,k3qi,k3qr,k3qs,k3qg
-   integer(i_kind) iret,istop
+   integer(i_kind) iret
+   integer(i_kind) :: istop = 101
    integer(i_kind),dimension(7):: idate
    integer(i_kind),dimension(4):: odate
    integer(i_kind) nframe,nfhour,nfminute,nfsecondn,nfsecondd
@@ -745,10 +741,10 @@ subroutine parallel_read_nemsio_state_(en_full,m_cvars2d,m_cvars3d,nlon,nlat,nsi
    real(r_single),allocatable,dimension(:) ::r4lats,r4lons
 
    if ( init_head)call nemsio_init(iret=iret)
-   if (iret /= 0) call error_msg(trim(myname_),trim(filename),null,'init',istop,iret)
+   if (iret /= 0) call error_msg(trim(myname_),trim(filename),null,'init',istop,iret,.true.)
 
    call nemsio_open(gfile,filename,'READ',iret=iret)
-   if (iret /= 0) call error_msg(trim(myname_),trim(filename),null,'open',istop+1,iret)
+   if (iret /= 0) call error_msg(trim(myname_),trim(filename),null,'open',istop+1,iret,.true.)
 
    call nemsio_getfilehead(gfile,iret=iret, nframe=nframe, &
         nfhour=nfhour, nfminute=nfminute, nfsecondn=nfsecondn, nfsecondd=nfsecondd, &
@@ -812,49 +808,55 @@ subroutine parallel_read_nemsio_state_(en_full,m_cvars2d,m_cvars3d,nlon,nlat,nsi
       do k=1,nsig
          if(trim(cvars3d(k3))=='cw') then
             call nemsio_readrecv(gfile,'clwmr','mid layer',k,work,iret=iret)
-            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'clwmr','read',istop+6,iret)
-            call nemsio_readrecv(gfile,'icmr','mid layer',k,work2,iret=iret)
-            if (iret == 0) work=work+work2
+            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'clwmr','read',istop+6,iret,.true.)
+            if (imp_physics == 11) then
+               call nemsio_readrecv(gfile,'icmr','mid layer',k,work2,iret=iret)
+               if (iret /= 0) then
+                  call error_msg(trim(myname_),trim(filename),'icmr','read',istop+7,iret,.true.)
+               else
+                  work = work + work2
+               endif
+            end if
             call move1_(work,temp3(:,:,k,k3),nlon,nlat)
          elseif(trim(cvars3d(k3))=='ql') then
             call nemsio_readrecv(gfile,'clwmr','mid layer',k,work,iret=iret)
-            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'clwmr','read',istop+6,iret)
+            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'clwmr','read',istop+6,iret,.true.)
             call move1_(work,temp3(:,:,k,k3),nlon,nlat)
          elseif(trim(cvars3d(k3))=='qi') then
             call nemsio_readrecv(gfile,'icmr','mid layer',k,work,iret=iret)
-            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'icmr','read',istop+7,iret)
+            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'icmr','read',istop+7,iret,.true.)
             call move1_(work,temp3(:,:,k,k3),nlon,nlat)
          elseif(trim(cvars3d(k3))=='qr') then
             call nemsio_readrecv(gfile,'rwmr','mid layer',k,work,iret=iret)
-            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'rwmr','read',istop+8,iret)
+            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'rwmr','read',istop+8,iret,.true.)
             call move1_(work,temp3(:,:,k,k3),nlon,nlat)
          elseif(trim(cvars3d(k3))=='qs') then
             call nemsio_readrecv(gfile,'snmr','mid layer',k,work,iret=iret)
-            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'snmr','read',istop+9,iret)
+            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'snmr','read',istop+9,iret,.true.)
             call move1_(work,temp3(:,:,k,k3),nlon,nlat)
          elseif(trim(cvars3d(k3))=='qg') then
             call nemsio_readrecv(gfile,'grle','mid layer',k,work,iret=iret)
-            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'grle','read',istop+10,iret)
+            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'grle','read',istop+10,iret,.true.)
             call move1_(work,temp3(:,:,k,k3),nlon,nlat)
          elseif(trim(cvars3d(k3))=='oz') then
             call nemsio_readrecv(gfile,'o3mr','mid layer',k,work,iret=iret)
-            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'o3mr','read',istop+5,iret)
+            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'o3mr','read',istop+5,iret,.true.)
             call move1_(work,temp3(:,:,k,k3),nlon,nlat)
          elseif(trim(cvars3d(k3))=='q') then
             call nemsio_readrecv(gfile,'spfh','mid layer',k,work,iret=iret)
-            if (iret /= 0) call error_msg(trim(myname_),trim(filename),trim(cvars3d(k3)),'read',istop+4,iret)
+            if (iret /= 0) call error_msg(trim(myname_),trim(filename),trim(cvars3d(k3)),'read',istop+4,iret,.true.)
             call move1_(work,temp3(:,:,k,k3),nlon,nlat)
          elseif(trim(cvars3d(k3))=='t') then
             call nemsio_readrecv(gfile,'tmp','mid layer',k,work,iret=iret)
-            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'tmp','read',istop+3,iret)
+            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'tmp','read',istop+3,iret,.true.)
             call move1_(work,temp3(:,:,k,k3),nlon,nlat)
          elseif(trim(cvars3d(k3))=='sf') then
             call nemsio_readrecv(gfile,'ugrd','mid layer',k,work,iret=iret)
-            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'ugrd','read',istop+1,iret)
+            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'ugrd','read',istop+1,iret,.true.)
             call move1_(work,temp3(:,:,k,k3),nlon,nlat)
          elseif(trim(cvars3d(k3))=='vp') then
             call nemsio_readrecv(gfile,'vgrd','mid layer',k,work,iret=iret)
-            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'vgrd','read',istop+2,iret)
+            if (iret /= 0) call error_msg(trim(myname_),trim(filename),'vgrd','read',istop+2,iret,.true.)
             call move1_(work,temp3(:,:,k,k3),nlon,nlat)
          endif
       enddo
@@ -869,12 +871,12 @@ subroutine parallel_read_nemsio_state_(en_full,m_cvars2d,m_cvars3d,nlon,nlat,nsi
    do k2=1,nc2d
      !if(trim(cvars2d(k2))=='sst') then
      !   call nemsio_readrecv(gfile,'hgt','sfc',1,work,iret=iret)
-     !   if (iret /= 0) call error_msg(trim(myname_),trim(filename),'pres','read',istop+7,iret)
+     !   if (iret /= 0) call error_msg(trim(myname_),trim(filename),'pres','read',istop+7,iret,.true.)
      !   call move1_(work,temp2(:,:,k2),nlon,nlat)
      !elseif(trim(cvars2d(k2))=='ps') then
       if(trim(cvars2d(k2))=='ps') then
          call nemsio_readrecv(gfile,'pres','sfc',1,work,iret=iret)
-         if (iret /= 0) call error_msg(trim(myname_),trim(filename),'hgt','read',istop+8,iret)
+         if (iret /= 0) call error_msg(trim(myname_),trim(filename),'hgt','read',istop+8,iret,.true.)
          !work=r0_001*work  ! convert Pa to cb   !  postpone this calculation
          call move1_(work,temp2(:,:,k2),nlon,nlat)
       endif

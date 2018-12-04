@@ -6,9 +6,9 @@
 function usage {
   echo "Usage:  OznMon_DE.sh suffix [pdate]"
   echo "            Suffix is the indentifier for this data source."
-  echo "            -p | -pdate yyyymmddcc to specify the cycle to be plotted"
-  echo "              if unspecified the last available date will be plotted"
-  echo "            -r | -run   the gdas|gfs run to be plotted"
+  echo "            -p | -pdate yyyymmddcc to specify the cycle to be processed"
+  echo "              if unspecified the last available date will be processed"
+  echo "            -r | -run   the gdas|gfs run to be processed"
   echo "              use only if data in TANKdir stores both runs"
   echo " "
 }
@@ -145,7 +145,7 @@ export jobid=${jobid:-${job}.${cyc}.${pid}}
 export COMROOT=${PTMP_USER}
 
 #-------------------------------------------------------------
-#  This is default for ibm/cray machines.  Need to reset 
+#  This is default for wcoss/cray machines.  Need to reset 
 #  COM_IN in parm files for theia.
 #
 export COM_IN=${COM_IN:-/gpfs/hps/nco/ops/com/gfs/prod}
@@ -205,7 +205,7 @@ if [[ $MY_MACHINE = "theia" ]]; then
         -o ${OZN_LOGdir}/DE.${PDY}.${cyc}.log \
         -e ${OZN_LOGdir}/DE.${PDY}.${cyc}.err ${jobfile}
 
-elif [[ $MY_MACHINE = "ibm" ]]; then
+elif [[ $MY_MACHINE = "wcoss" ]]; then
 
    $SUB -q $JOB_QUEUE -P $PROJECT -M 50 -R affinity[core] \
         -o ${OZN_LOGdir}/DE.${PDY}.${cyc}.log \
