@@ -33,6 +33,9 @@ elif [[ -d /glade ]] ; then
 elif [[ -d /sw/gaea ]] ; then
     . /opt/cray/pe/modules/3.2.10.5/init/sh
     target=gaea
+elif [[ -d /discover ]] ; then
+#   . /opt/cray/pe/modules/3.2.10.5/init/sh
+    target=discover
 else
     echo "unknown target = $target"
     exit 9
@@ -60,6 +63,8 @@ elif [ $target = theia -o $target = cheyenne ]; then
     module purge
     source $dir_modules/modulefile.ProdGSI.$target
 elif [ $target = wcoss_c ]; then
+    module load $dir_modules/modulefile.ProdGSI.$target
+elif [ $target = discover ]; then
     module load $dir_modules/modulefile.ProdGSI.$target
 else 
     module purge
