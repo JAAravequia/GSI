@@ -1,5 +1,8 @@
 macro (setDiscover)
   message("Setting paths for Discover")
+  option(FIND_HDF5 "Try to Find HDF5 libraries" OFF)
+  option(FIND_HDF5_HL "Try to Find HDF5 libraries" OFF)
+  set(HDF5_USE_STATIC_LIBRARIES "OFF")
 
   set(HOST_FLAG "-xHOST" CACHE INTERNAL "Host Flag")
   set(MKL_FLAG "-mkl"  CACHE INTERNAL "MKL Flag")
@@ -7,7 +10,6 @@ macro (setDiscover)
   set(ENKF_Platform_FLAGS "-O3 ${HOST_FLAG} -warn all -implicitnone -traceback -fp-model strict -convert big_endian -DGFS -D_REAL8_ ${MPI3FLAG} ${OpenMP_Fortran_FLAGS}" CACHE INTERNAL "ENKF Fortran Flags")
   set(host "Discover" CACHE INTERNAL "")
   
-  set(HDF5_USE_STATIC_LIBRARIES "OFF")
   set(COREPATH $ENV{COREPATH}  )
   if( NOT DEFINED ENV{NETCDF_VER} )
     set(NETCDF_VER "3.6.3" )

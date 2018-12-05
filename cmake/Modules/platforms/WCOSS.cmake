@@ -1,6 +1,9 @@
 macro (setWCOSS)
   message("Setting paths for WCOSS")
+  option(FIND_HDF5 "Try to Find HDF5 libraries" OFF)
+  option(FIND_HDF5_HL "Try to Find HDF5 libraries" OFF)
   set(HDF5_USE_STATIC_LIBRARIES "OFF")
+
   #if ibmpe module is not loaded last, CMake tries to use intel mpi. Force use of ibmhpc
   set(HOST_FLAG "-xHOST" CACHE INTERNAL "Host Flag")
   set( MKL_FLAG "-mkl"  CACHE INTERNAL "MKL Flag")
