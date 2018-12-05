@@ -37,6 +37,7 @@ project(GSI)
   option(BUILD_ENKF "Build the Enkf executable " ON)
   option(USE_BASELINE "Use baseline control runs" ON)
   option(FIND_HDF5 "Try to Find HDF5 libraries" OFF)
+  option(FIND_HDF5_HL "Try to Find HDF5 libraries" OFF)
   SET(ENKF_MODE "GFS" CACHE STRING "EnKF build mode: GFS, WRF, NMMB")
   string(TOUPPER ${ENKF_MODE} ENKF_MODE)
   if (ENKF_MODE MATCHES "^GFS$")
@@ -119,9 +120,16 @@ project(GSI)
 
   cmake_policy(SET CMP0009 NEW)
   find_package(OpenMP)
+  message("found openmp with flag ${OPENMP_Fortran_FLAGS}")
+
+# Set Host specific flags and options
   setHOST()
 
-  message("found openmp with flag ${OPENMP_Fortran_FLAGS}")
+  if(FIND_HDF5_HL)
+    find_package(HDF5 COMPONENTS C HL Fortran_HL )
+  elseif(FIND_HDF5)
+    find_package(HDF5)
+  endif()
 
   MESSAGE(${CMAKE_CURRENT_SOURCE_DIR})
   # make sure that the default is a RELEASE
