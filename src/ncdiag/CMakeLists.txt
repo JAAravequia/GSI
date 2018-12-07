@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 if(BUILD_NCDIAG)
+  if(BUILD_NCDIAG_SERIAL)
+    add_subdirectory(serial)
+  endif(BUILD_NCDIAG_SERIAL)
 # set(CMAKE_Fortran_MODULE_DIRECTORY ${NCDIAG_INCS})
   set(Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
 
