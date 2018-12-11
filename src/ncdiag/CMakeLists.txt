@@ -3,16 +3,14 @@ if(BUILD_NCDIAG)
   if(BUILD_NCDIAG_SERIAL)
     add_subdirectory(serial)
   endif(BUILD_NCDIAG_SERIAL)
-# set(CMAKE_Fortran_MODULE_DIRECTORY ${NCDIAG_INCS})
+
   set(Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
 
   # NetCDF-4 library
-# include(./cmake/FindBaselibs.cmake)
   include_directories( ${NETCDF_INCLUDES} ${NCDIAG_INCS} )
 
   # 32-bit reals, for now
   add_definitions(-D_REAL4_ -DUSE_MPI)
-# add_definitions(-D_REAL8_)
   FILE(GLOB NCDIAG_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*90 )
   set_source_files_properties( ${NCDIAG_SRC} PROPERTIES COMPILE_FLAGS ${NCDIAG_Fortran_FLAGS} )
   LIST(REMOVE_ITEM NCDIAG_SRC ${CMAKE_CURRENT_SOURCE_DIR}/test_nc_unlimdims.F90 ) 
