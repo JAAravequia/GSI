@@ -118,6 +118,7 @@ module ncepnems_io
 !$$$ end documentation block
 
   use constants, only: zero,one,fv,r60,r3600
+  use kinds, only: i_kind,r_kind
   implicit none
 
   private
@@ -133,6 +134,8 @@ module ncepnems_io
   public intrp22
   public tran_gfssfc
   public error_msg
+
+  public aodratio
 
   interface read_nems
      module procedure read_
@@ -175,6 +178,7 @@ module ncepnems_io
   end interface
 
   character(len=*),parameter::myname='ncepnems_io'
+  real(r_kind), allocatable, dimension(:,:,:) :: aodratio
 
 contains
 
@@ -414,7 +418,6 @@ contains
     use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sub2grid_destroy_info
     use mpimod, only: npe
     use chemmod, only: lread_ext_aerosol,l2d_aod
-    use aodmod, only: calc_2d_aod
 
     implicit none
 
@@ -573,11 +576,6 @@ contains
              write(6,*) "before call read_ngac_aerosol ier=",ier
              cycle ! this allows code to be free from met-fields
           end if
-
-          ! if 2d_AOD compute the guess aod field
-          !if ( l2d_aod) then
-          !   call calc_2d_aod(it)
-          !end if ! l2d_aod
 
        end do ! nfldaer
        call general_sub2grid_destroy_info(grd_ae)
@@ -2061,6 +2059,12 @@ contains
     real(r_kind) :: lmax,lmin
     integer(i_kind) :: m
 
+! 2D AOD support variables
+    integer(i_kind) :: is,ie,js,je,ii,iir,jj
+    real(r_kind) :: aod_ratio,aod_change
+    real(r_kind) :: col_du1,col_du2,col_du3,col_du4,col_du5,col_so4
+    real(r_kind) :: col_ss1,col_ss2,col_ss3,col_ss4,col_oc1,col_oc2,col_bc1,col_bc2
+
     real(r_kind),dimension(max(grd%iglobal,grd%itotsub))     :: work1,work2
     real(r_kind),dimension(grd%nlon,grd%nlat-2):: grid
     real(r_kind),allocatable,dimension(:) :: rwork1d,rwork1d1,rlats,rlons,clons,slons
@@ -2119,6 +2123,77 @@ contains
             sp_a%jcap,jcap_b
         diff_res = .true.
     endif
+
+    ! for 2D AOD analysis we:
+    ! need to compute background column mass of each aerosol, modify it with the increment,
+    ! and redistribute the background column accordingly before output 
+    if ( l2d_aod ) then
+      ! read in the background AOD, compare it to the analysis aod, and use this
+      ! ratio to adjust the separate constituents
+      if (mype==0) then
+        open(302,file='aodguess',status='old',form='unformatted',access='sequential')
+        read(302) aodout
+        close(302)   
+      end if
+      call mpi_bcast(aodout,(grd%nlat-2)*grd%nlon,mpi_rtype,0,mpi_comm_world,ierror)
+      ! as a first trial run, lets compute the mean for the layer over the MPI tile
+      ! this should be similar to doing a real zonal average or whatever is
+      ! finally decided to do 
+      is = grd%istart(mype+1)-1 ; ie=grd%lat1+grd%istart(mype+1)
+      js = grd%jstart(mype+1)-1 ; je=grd%lon1+grd%jstart(mype+1)
+      print *, 'mype',mype,is,ie,js,je
+      !do i=is,ie
+      !   do j=js,je-1
+      do i=1,ie-is
+         iir=grd%nlat-(i+is-1)
+         ii=i+is-1
+         do j=1,je-js
+            jj=j+js-1
+            !if (sub_aod(i,j) < 0.001) sub_aod(i,j) = 0.001
+            !if (aodout(j+js-1,i+is-1) < 0.001)  aodout(j+js-1,i+is-1) = 0.001
+            aod_change = (sub_aod(i,j)-aodout(jj,iir))/aodout(jj,iir)
+            !write(99900+mype,'(5i6,3f10.2)') mype,j,i,jj,ii,sub_aod(i,j),aodout(jj,iir),((ii)*1000.+(jj))
+            write(99900+mype,'(4i6,4f10.5)') j,i,jj,ii,sub_aod(i,j),aodout(jj,iir),sub_aod(i,j)-aodout(jj,iir),aod_change
+            if (abs(aod_change) < 0.01) print *, jj,ii,aod_change 
+            !if (abs(aod_change) < 0.01) aod_change = 0 
+            !if (abs(aod_change) < 0.1) aod_change = -1e12 
+            col_so4 = sum(sub_so4(i,j,:))
+            col_oc1 = sum(sub_oc1(i,j,:))
+            col_oc2 = sum(sub_oc2(i,j,:))
+            col_bc1 = sum(sub_bc1(i,j,:))
+            col_bc2 = sum(sub_bc2(i,j,:))
+            col_du1 = sum(sub_du1(i,j,:))
+            col_du2 = sum(sub_du2(i,j,:))
+            col_du3 = sum(sub_du3(i,j,:))
+            col_du4 = sum(sub_du4(i,j,:))
+            col_du5 = sum(sub_du5(i,j,:))
+            col_ss1 = sum(sub_ss1(i,j,:))
+            col_ss2 = sum(sub_ss2(i,j,:))
+            col_ss3 = sum(sub_ss3(i,j,:))
+            col_ss4 = sum(sub_ss4(i,j,:))
+            do k=1,grd%nsig 
+               ! below should be the correct comparable indexing
+               aod_ratio = sum(aodratio(is:ie,js:je,k))/size(aodratio(is:ie,js:je,k))
+               sub_so4(i,j,k) = (col_so4*aod_change)*aod_ratio + sub_so4(i,j,k)
+               sub_oc1(i,j,k) = (col_oc1*aod_change)*aod_ratio + sub_oc1(i,j,k)
+               sub_oc2(i,j,k) = (col_oc2*aod_change)*aod_ratio + sub_oc2(i,j,k)
+               sub_bc1(i,j,k) = (col_bc1*aod_change)*aod_ratio + sub_bc1(i,j,k)
+               sub_bc2(i,j,k) = (col_bc2*aod_change)*aod_ratio + sub_bc2(i,j,k)
+               sub_du1(i,j,k) = (col_du1*aod_change)*aod_ratio + sub_du1(i,j,k)
+               sub_du2(i,j,k) = (col_du2*aod_change)*aod_ratio + sub_du2(i,j,k)
+               sub_du3(i,j,k) = (col_du3*aod_change)*aod_ratio + sub_du3(i,j,k)
+               sub_du4(i,j,k) = (col_du4*aod_change)*aod_ratio + sub_du4(i,j,k)
+               sub_du5(i,j,k) = (col_du5*aod_change)*aod_ratio + sub_du5(i,j,k)
+               sub_ss1(i,j,k) = (col_ss1*aod_change)*aod_ratio + sub_ss1(i,j,k)
+               sub_ss2(i,j,k) = (col_ss2*aod_change)*aod_ratio + sub_ss2(i,j,k)
+               sub_ss3(i,j,k) = (col_ss3*aod_change)*aod_ratio + sub_ss3(i,j,k)
+               sub_ss4(i,j,k) = (col_ss4*aod_change)*aod_ratio + sub_ss4(i,j,k)
+               !if ( k==1 .and. j+js-1==360 .and. mype==22) print *,'test',i,sub_du1(i,j,k),aod_change,aod_ratio
+            end do
+         end do
+      end do
+      ! each of these pointers are a 3D array on mype's subdomain
+    end if ! end l2d_aod
 
 
     ! Single task writes analysis data to analysis file

@@ -14,12 +14,12 @@ module aodmod
 !   sub calc_2d_aod     - calculate 2D aerosol from chemguess bundle aerosols
 !                          and puts the result in chemguess bundle for aod
 !$$$ end documentation block
+  use kinds, only: i_kind,r_kind
 
   implicit none
 
-  private
-  public calc_2d_aod
-
+  public :: calc_2d_aod
+  
   character(len=*),parameter::myname='aodmod'
 
 contains
@@ -56,6 +56,7 @@ contains
     use constants, only: rad2deg,deg2rad,zero
     use radinfo, only: nsigradjac
     use general_commvars_mod, only: load_grid
+    use ncepnems_io, only: aodratio
 
     implicit none
 
@@ -128,6 +129,8 @@ contains
     ! allocate arrays
     allocate(aod2d(is:ie,js:je),aod2dch(is:ie,js:je,nchanl)) 
     allocate(aodtmp(nlon,nlat-2),aodout(nlon,nlat-2))
+    allocate(aodratio(is:ie,js:je,nsig))
+    !allocate(aodratio(nlat-2,nlon,nsig))
 
     ! call CRTM for all gridpoints
     aodout = zero
@@ -167,6 +170,20 @@ contains
           aod2dch(i,j,k) = sum(layer_od(:,k))
           !print *,i,j,k,aod2dch(i,j,k)
         end do
+        ! to do vertical redistribution in the analysis, we need to know the
+        ! contribution of total AOD from each layer and redistribute it the same
+        ! afterwards and assume that each layer's AOD percentage change is
+        ! linearly related to the mass change
+        do k=1,nsig
+          if (aod2dch(i,j,4) /= 0) then
+            aodratio(i,j,k) = layer_od(k,4)/aod2dch(i,j,4)
+          else
+            aodratio(i,j,k) = 1/nsig ! evenly distribute if no AOD
+          end if
+          !if (k <= 20) then
+          !   aodratio(i,j,k) = 0.05
+          !end if
+        end do 
         !aod2d(i,j) = sum(aod2dch(i,j,:))/nchanl ! is this right?
         aod2d(i,j) = aod2dch(i,j,4) ! channel 4 hard coded for now?
       end do
@@ -183,6 +200,12 @@ contains
     call destroy_crtm
     call gsi_bundlegetpointer(gsi_chemguess_bundle(it),'aod',ptr2daod,iret)
     if (iret == 0) ptr2daod=aod2d
+    ! below for indexing diagnostics only
+    !do i=is,ie
+    ! do j=js,je-1
+    !   aod2d(i,j) = (i*1000)+j
+    ! enddo
+    !enddo 
     ! write out binary file
     call strip(aod2d   ,aodsm   )
     !aodsm = reshape(aod2d,(/size(aodsm)/))
