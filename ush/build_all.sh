@@ -8,8 +8,8 @@ pwd=$(pwd)
 target=$1
 dir_root=${2:-$pwd}
 
-BUILD_GSI=${BUILD_GSI:-"YES"}
-BUILD_ENKF=${BUILD_ENKF:-"YES"}
+BUILD_GSI=${BUILD_GSI:-"NO"}
+BUILD_ENKF=${BUILD_ENKF:-"NO"}
 BUILD_UTILS=${BUILD_UTILS:-"YES"}
 
 if [ $target = wcoss ]; then

@@ -63,6 +63,7 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 !                         implemented again in module m_extOzone, if ever needed.
 !   2015-02-23  Rancic/Thomas - add thin4d to time window logical
 !   2015-10-01  guo     - consolidate use of ob location (in deg
+!   2018-08-24  kouvaris- added section to read omps lp
 !
 !   input argument list:
 !     obstype  - observation type to process
@@ -104,6 +105,8 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   use qcmod, only: use_poq7
   use ozinfo, only: jpch_oz,nusis_oz,iuse_oz
   use mpimod, only: npe
+  use file_utility, only : get_lun
+  
   implicit none
 
 ! Declare passed variables
@@ -139,7 +142,7 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 
   integer(i_kind) maxobs,nozdat,nloz
   integer(i_kind) idate,jdate,ksatid,kk,iy,iret,im,ihh,idd,lunin
-  integer(i_kind) nmind,i
+  integer(i_kind) nmind,i,j
   integer(i_kind) nmrecs,k,ilat,ilon,nreal,nchanl
 ! integer(i_kind) ithin,kidsat
   integer(i_kind) kidsat
@@ -174,6 +177,15 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   real(r_double) totoz,hdrmls13
   integer(i_kind) :: k0
   logical :: first,read_success
+
+  integer(i_kind) lun
+  real(r_double),allocatable,dimension(:,:):: olpdtsq,rpseq14
+  real(r_double),allocatable,dimension(:):: press,omr,omrstd
+  real(r_double),allocatable,dimension(:,:)::rpseq3,rpseq12,rpseq13
+  real(r_kind) lats0,lons0
+
+  real(r_double) said, lat, lon, year, month, day, hour, minu
+  real(r_double) soza
 
 ! MLS data version: mlsv=22 is version 2.2 standard data; 
 !                   mlsv=20 is v2 near-real-time data
@@ -1019,8 +1031,180 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 
 !    End of MLS bufr loop
 
+!Process OMPS LP data
+  elseif(index(obstype,'omps_lp') /= 0 )then
+     print *,"XXX omps_lp"
+ 
+     nloz = 81
+     nreal=12
+     nchanl=1
+     nozdat=nreal+nchanl
+     read_success=.false.
+
+     !lun = get_lun()
+     lun = 91
+     open(lun,file="/home/Louis.Kouvaris/BUFR/OMPS-LP_BUFR_Table4",form='formatted',ACTION='READ')
+
+     open(lunin,file=trim(infile),form='unformatted')
+     CALL  ISETPRM ( 'MXBTMSE', 243)
+     !call openbf(lunin,'IN',lunin)
+     call openbf(lunin,'IN',lun)
+     write(6,*)"READ_OZONE: after openbf"
+     call datelen(10)
+     call readmg(lunin,subset,idate,iret)
+     if (iret .eq. 0 .and. subset == 'NC008019') then
+        write(6,*)'READ_OZONE:  OMPS LP data type, subset=',subset
+        read_success=.true.
+     else
+        write(6,*)'READ_OZONE:  *** WARNING: unknown ozone data type, subset=',subset
+        write(6,*)' infile=',trim(infile), ', lunin=',lunin, ', obstype=',obstype,', jsatid=',jsatid
+        call closbf(lunin)
+        close(lunin)
+        return
+     endif
+
+     write(6,*)"READ_OZONE: Before allocting arrays"
+     ! Allocate arrays
+     allocate(olpdtsq(12,81))
+     allocate(rpseq3(1,990))
+     allocate(rpseq12(110,9))
+     allocate(rpseq13(1,243))
+     allocate(rpseq14(1,243))
+     allocate(press(nloz))
+     allocate(omr(nloz))
+     allocate(omrstd(nloz))
+     allocate(usage1(nloz))
+     allocate(ipos(nloz))
+     allocate(ozout(nozdat,maxobs))
+     write(6,*)"READ_OZONE: Finished allocating array"
+
+     read_loop5: do
+       write(6,*)"READ_OZONE: read_loop5"
+       if(.not. read_success) exit
+        call readsb(lunin,iret)
+        if (iret/=0) then
+          call readmg(lunin,subset,jdate,iret)
+          if (iret/=0) exit read_loop5
+          cycle read_loop5
+        endif        
+
+       call ufbint(lunin,said,1,1,iret,"SAID")
+       print *,"READ_OZONE: Label 1",said,iret
+
+       !Convert observation location to radians
+       call ufbint(lunin,lat,1,1,iret,"CLATH")
+       print *,"READ_OZONE: Label 2",lat,iret
+       call ufbint(lunin,lon,1,1,iret,"CLONH")
+       print *,"READ_OZONE: Label 3",lon,iret
+       if(abs(lat)>90._r_kind .or. abs(lon)>r360) cycle read_loop5
+       if(lon< zero) lon=lon+r360
+       if(lon==r360) lon=zero
+       dlat_earth_deg = lat
+       dlon_earth_deg = lon
+       dlat_earth = lat * deg2rad
+       dlon_earth = lon * deg2rad
+
+       print *,"regional=",regional
+       if(regional)then
+         call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
+         if(outside) cycle read_loop5
+       else
+         dlat = dlat_earth
+         dlon = dlon_earth
+         call grdcrd1(dlat,rlats,nlat,1)
+         call grdcrd1(dlon,rlons,nlon,1)
+         print *,"nlon,nlat=",nlon,nlat
+       endif
+
+       !Convert observation time to relative time
+       call ufbint(lunin,year,1,1,iret,"YEAR")
+        print *,"iret=",year,iret
+       call ufbint(lunin,month,1,1,iret,"MNTH")
+        print *,"iret=",month,iret
+       call ufbint(lunin,day,1,1,iret,"DAYS")
+        print *,"iret=",day,iret
+       call ufbint(lunin,hour,1,1,iret,"HOUR")
+        print *,"iret=",hour,iret
+       call ufbint(lunin,minu,1,1,iret,"MINU")
+        print *,"iret=",minu,iret
+       idate5(1) = year 
+       idate5(2) = month
+       idate5(3) = day
+       idate5(4) = hour
+       idate5(5) = minu
+       call w3fs21(idate5,nmind)
+       print *,"nmind=",nmind
+       write(6,*)"READ_OZONE: idate5=",idate5(1:5)
+ 
+       t4dv=real((nmind-iwinbgn),r_kind)*r60inv
+       sstime=real(nmind,r_kind)
+       tdiff=(sstime-gstime)*r60inv
+       if (l4dvar.or.l4densvar) then
+         if (t4dv<zero .OR. t4dv>winlen) cycle read_loop5
+       else
+         if(abs(tdiff) > twind) cycle read_loop5
+       endif
+
+       !Read solar zenith angle
+       call ufbint(lunin,soza,1,1,iret,"SOZA")
+       print *,"soza=",soza
+
+       !Read Pressure and Ozone Mixing Ratio
+       call ufbseq(lunin, olpdtsq, 12, 81, iret, "OLPDTSQ")
+       print *,"READ_OZONE: olpdtsq",iret
+       print *,(olpdtsq(j,30),j=1,12)
+       !Read Ozone Mixing Ratio Standard Deviation
+       call ufbseq(lunin, rpseq14,1,243,iret,"RPSEQ14")
+       print *,"READ_OZONE: rpseq14",iret
+       print *,(rpseq14(1,(j-1)*3+3),j=1,81)
+       usage1(:) = 100._r_kind
+       j = 0
+       do k = 1, nloz
+         press(k) = olpdtsq(2,k)*0.001 ! centibars
+         omr(k) = olpdtsq(11,k) ! ppmv
+         omrstd(k) = rpseq14(1,(k-1)*3+3) !omr std
+         if(omr(k) .gt. 0. .and. omr(k) .lt. 100.) then
+            usage1(k) = zero
+            j = j + 1
+         endif
+         ipos(k) = k
+       enddo
+       print *,"READ_ZONE: Finished nloz do loop"
+
+       do k=1,nloz
+
+         if(omr(k) .gt. 0. .and. omr(k) .lt. 100.)then
+         ndata=min(ndata+1,maxobs)
+         nodata=ndata
+         nmrecs= ndata
+
+         ozout(1,ndata)=said
+         ozout(2,ndata)=t4dv
+         ozout(3,ndata)=dlon               ! grid relative longitude
+         ozout(4,ndata)=dlat               ! grid relative latitude
+         ozout(5,ndata)=dlon_earth_deg     ! earth relative longitude (degrees)
+         ozout(6,ndata)=dlat_earth_deg     ! earth relative latitude (degrees)
+         ozout(7,ndata)=soza               ! solar zenith angle
+
+         ozout(8,ndata)=usage1(k)          ! 
+         ozout(9,ndata)=log(press(k))      ! omps_lp pressure in log(cb)
+         ozout(10,ndata)=omrstd(k)         ! ozone mixing ratio precision in ppmv
+         ozout(11,ndata)=float(ipos(k))    ! pointer of obs level index in 
+                                           ! ozinfo.txt
+         ozout(12,ndata)=j !nloz              ! # of omps_lp vertical levels
+         ozout(13,ndata)=omr(k)            ! ozone mixing ratio in ppmv
+       write(6,*)"READ_OZONE: omr=", &
+          j,ndata,press(k),ozout(13,ndata),ozout(10,ndata)
+         endif
+       enddo
+
+    enddo read_loop5
+  write(6,*)"READ_OZONE: Finished OMPS LP"
+
+  ! end of OMPS LP bufr loop
   endif
 
+  print *,"Label 1",nmrecs
   if(nmrecs > 0)then
 !    If gome or omi data, compress ozout array to thinned data
      if (obstype=='omi' .or. obstype=='gome') then
@@ -1036,13 +1220,19 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
         ndata=kk
         nodata=ndata
      endif
+  print *,"Label 2"
 
 !    Write header record and data to output file for further processing
+  print *,"ndata=",ndata,nozdat,ilon,ilat
      call count_obs(ndata,nozdat,ilat,ilon,ozout,nobs)
+  print *,"Label 2.1",obstype,ndata,"nobs=",nobs
      write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
+  print *,"Label 2.2"
      write(lunout) ((ozout(k,i),k=1,nozdat),i=1,ndata)
+  print *,"Label 2.3"
      nread=nmrecs
    end if
+  print *,"Label 3"
 
 ! Deallocate local arrays
   if(allocated(ozout))deallocate(ozout)
@@ -1055,10 +1245,25 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      if(allocated(ipos))deallocate(ipos)
      if(allocated(usage1))deallocate(usage1)
   end if
+  if(index(obstype,'omps_lp')/=0) then
+     if(allocated(olpdtsq))deallocate(olpdtsq)
+     if(allocated(rpseq3))deallocate(rpseq3)
+     if(allocated(rpseq12))deallocate(rpseq12)
+     if(allocated(rpseq13))deallocate(rpseq13)
+     if(allocated(rpseq14))deallocate(rpseq14)
+     if(allocated(press))deallocate(press)
+     if(allocated(omr))deallocate(omr)
+     if(allocated(omrstd))deallocate(omrstd)
+     if(allocated(ipos))deallocate(ipos)
+     if(allocated(usage1))deallocate(usage1)
+  endif
+  print *,"Label 4"
 
 ! Close unit to input data file
   call closbf(lunin)
   close(lunin)
+  close(lun)
+  print *,"Label 5"
 
 ! Deallocate satthin arrays
   if (obstype == 'omi' .or. obstype == 'gome')call destroygrids

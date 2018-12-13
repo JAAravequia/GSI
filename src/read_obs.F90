@@ -154,6 +154,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   use convinfo, only: nconvtype,ictype,ioctype,icuse
   use chemmod, only : oneobtest_chem,oneob_type_chem,&
        code_pm25_ncbufr,code_pm25_anowbufr,code_pm10_ncbufr,code_pm10_anowbufr
+  use file_utility, only : get_lun
 
   implicit none
 
@@ -168,6 +169,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   integer(i_kind) :: ireadsb,ireadmg,kx,nc,said
   real(r_double) :: satid,rtype
   character(8) subset
+  integer(i_kind) :: lun
 
   satid=1      ! debug executable wants default value ???
   idate=0
@@ -183,7 +185,18 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   if(lexist)then
       lnbufr = 15
       open(lnbufr,file=trim(filename),form='unformatted',status ='unknown')
-      call openbf(lnbufr,'IN',lnbufr)
+
+      if(index(filename,"ompslp") /=0)then !Take this out
+        !lun=get_lun()
+        lun = 93
+        open(lun,file="/home/Louis.Kouvaris/BUFR/OMPS-LP_BUFR_Table4",ACTION='READ')
+        print *,"READ_OBS: Opening OMPS LP BUFR file"
+        !CALL  ISETPRM ( 'MXBTMSE', 243)
+        call openbf(lnbufr,'IN',lun)
+      else
+        call openbf(lnbufr,'IN',lnbufr)
+      endif
+
       call datelen(10)
       call readmg(lnbufr,subset,idate,iret)
       if(iret == 0)then
@@ -316,7 +329,12 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
 
        call closbf(lnbufr)
        open(lnbufr,file=trim(filename),form='unformatted',status ='unknown')
+       if(index(filename,"ompslp") /=0)then !Take this out
+        !CALL  ISETPRM ( 'MXBTMSE', 243)
+        call openbf(lnbufr,'IN',lun)
+       else
        call openbf(lnbufr,'IN',lnbufr)
+       endif
        call datelen(10)
 
        if(kidsat /= 0)then
@@ -531,6 +549,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
       end if
 
       call closbf(lnbufr)
+      close(lun)
   end if
   if(lexist)then
       write(6,*)'read_obs_check: bufr file date is ',idate,trim(filename),' ',dtype,jsatid
@@ -869,6 +888,7 @@ subroutine read_obs(ndata,mype)
            .or. obstype == 'omi' &
            .or. obstype == 'gome' &
            .or. mls &
+           .or. obstype == 'omps_lp' &
            ) then
           ditype(i) = 'ozone'
        else if (obstype == 'mopitt') then
