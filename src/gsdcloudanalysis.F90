@@ -76,7 +76,8 @@ subroutine  gsdcloudanalysis(mype)
                                       nesdis_npts_rad, &
                                       iclean_hydro_withRef, iclean_hydro_withRef_allcol, &
                                       l_use_hydroretrieval_all, &
-                                      i_lightpcp, l_numconc, qv_max_inc, ioption
+                                      i_lightpcp, l_numconc, qv_max_inc,ioption, &
+                                      l_precip_clear_only,l_fog_off 
 
   use gsi_metguess_mod, only: GSI_MetGuess_Bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -275,7 +276,7 @@ subroutine  gsdcloudanalysis(mype)
 
   if(mype==0) then
      write(6,*) '========================================'
-     write(6,*) 'gsdcloudanalysis: Start generalized cloud analysis '
+     write(6,*) 'gsdcloudanalysis: Start generalized cloud analysis'
      write(6,*) '========================================'
   endif
 !
@@ -857,7 +858,7 @@ subroutine  gsdcloudanalysis(mype)
 !  2013)
 !
 
-  if(l_use_hydroretrieval_all) then
+  if(l_use_hydroretrieval_all) then !RTMA
      qrlimit=15.0_r_kind*0.001_r_kind
      do k=1,nsig
         do j=2,lat2-1
@@ -899,6 +900,24 @@ subroutine  gsdcloudanalysis(mype)
         end do
         end do
      end do
+  elseif(l_precip_clear_only==.true.) then !only clear for HRRRE
+     do k=1,nsig
+        do j=2,lat2-1
+        do i=2,lon2-1
+           if( ref_mos_3d(i,j,k) <= zero .and. ref_mos_3d(i,j,k) > -100.0_r_kind ) then
+              rain_3d(i,j,k) = zero
+              nrain_3d(i,j,k) = zero
+              snow_3d(i,j,k) = zero
+              graupel_3d(i,j,k) = zero
+           else 
+              rain_3d(i,j,k) = ges_qr(j,i,k)
+              nrain_3d(i,j,k)= ges_qnr(j,i,k)
+              snow_3d(i,j,k) = ges_qs(j,i,k)
+              graupel_3d(i,j,k) = ges_qg(j,i,k)
+           endif
+        enddo
+        enddo
+     enddo
   else  ! hydrometeor anlysis for RAP forecast
      qrlimit=3.0_r_kind*0.001_r_kind
      qrlimit_lightpcp=1.0_r_kind*0.001_r_kind
@@ -1079,21 +1098,22 @@ subroutine  gsdcloudanalysis(mype)
 !
 !  add fog  (12/08/2015)
 !
-  do j=2,lat2-1
-     do i=2,lon2-1
-        if( vis2qc(i,j) > zero ) then
-
-           do k=1,2
-               Temp = t_bk(i,j,k)*(p_bk(i,j,k)/h1000)**rd_over_cp
-               watwgt = max(0._r_kind,min(1._r_kind,(Temp-263.15_r_kind)/&
+  if (.not. l_fog_off) then
+     do j=2,lat2-1
+        do i=2,lon2-1
+           if( vis2qc(i,j) > zero ) then
+              do k=1,2
+                 Temp = t_bk(i,j,k)*(p_bk(i,j,k)/h1000)**rd_over_cp
+                 watwgt = max(0._r_kind,min(1._r_kind,(Temp-263.15_r_kind)/&
                                      (268.15_r_kind - 263.15_r_kind)))
-              cldwater_3d(i,j,k) = max(watwgt*vis2qc(i,j),cldwater_3d(i,j,k))
-              cldice_3d(i,j,k)   = max((1.0_r_single-watwgt)*vis2qc(i,j),cldice_3d(i,j,k))
-           enddo
-        endif
-     end do
-  end do
-!
+                 cldwater_3d(i,j,k) = max(watwgt*vis2qc(i,j),cldwater_3d(i,j,k))
+                 cldice_3d(i,j,k)   = max((1.0_r_single-watwgt)*vis2qc(i,j),cldice_3d(i,j,k))
+              enddo
+           endif
+        enddo
+     enddo
+  endif
+
 !
 !  call check_cloud(mype,lat2,lon2,nsig,q_bk,rain_3d,snow_3d,graupel_3d, &
 !             cldwater_3d,cldice_3d,t_bk,p_bk,h_bk,                      &
