@@ -509,7 +509,7 @@ subroutine setupdw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 ! Next, convert wind components to line of sight value
 !wm     if (nint(data(isubtype,i))==100.or.nint(data(isubtype,i))==101) then
-     if (ictype(ikx)==100 .or. ictype(ikx)==101) then
+     if (ictype(ikx)==100 .or. ictype(ikx)==101 .or. ictype(ikx)==234) then
 !     KNMI  product  msq
         cosazm  = -cos(data(iazm,i))  ! cos(azimuth)  ! mccarty msq 
         sinazm  = -sin(data(iazm,i))  ! sin(azimuth)  ! mccarty msq
