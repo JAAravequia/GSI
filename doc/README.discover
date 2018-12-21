@@ -6,7 +6,10 @@ Building GSI on Discover
     > module use -a modulefiles
     > module load modulefile.ProdGSI.discover
 (2) mkdir bld && cd bld
+# To build with WRF library
 (3) cmake ..
+# To build without WRF library
+(3) cmake -DUSE_WRF=OFF -DBUILD_GLOBAL=ON ..
 (4) make -jN
 
 
