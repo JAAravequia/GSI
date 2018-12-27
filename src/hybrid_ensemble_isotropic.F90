@@ -4045,7 +4045,8 @@ subroutine hybens_localization_setup
    endif ! if ( readin_localization .or. readin_beta )
 
 100 format(I4)
-101 format(F8.1,3x,F5.1,2(3x,F8.4))
+!101 format(F8.1,3x,F5.1,2(3x,F8.4))
+101 format(F8.1,3x,F8.3,F8.4,3x,F8.4)
 
    if ( .not. readin_beta ) then ! assign all levels to same value, sum = 1.0
       beta_s = beta_s0
