@@ -54,7 +54,7 @@ module m_obsHeadBundle
 !   2014-06-20  carley/zhu - add tcamt and lcbas pointers
 !   2015-07-10  pondeca  - add cldch
 !   2016-03-17  pondeca  - add uwnd10m and vwnd10m (see setupuwnd10m)
-
+!   2018-01-23  Apodaca  - add lightning (light) pointers
 
 ! module interface:
 
@@ -100,7 +100,8 @@ module m_obsHeadBundle
 
   use m_swcpNode , only:  swcpNode  ! 37
   use m_lwcpNode , only:  lwcpNode  ! 38
-  use m_dbzNode,   only:   dbzNode  ! 39
+  use m_lightNode, only: lightNode ! 39
+  use m_dbzNode,   only:   dbzNode  ! 40
 
   use m_obsLList , only: obsLList_headNode
 
@@ -166,7 +167,8 @@ module m_obsHeadBundle
     class(obsNode),pointer:: vwnd10m => null()   ! 36
     class(obsNode),pointer::  swcp => null()   ! 37
     class(obsNode),pointer::  lwcp => null()   ! 38
-    class(obsNode),pointer:: dbz => null()     ! 39
+    class(obsNode),pointer:: light => null()   ! 39
+    class(obsNode),pointer:: dbz => null()     ! 40
 
   end type obsHeadBundle
 
@@ -275,7 +277,8 @@ subroutine init_(yobs,ibin)
   use m_obsdiags, only: vwnd10mhead     ! =36
   use m_obsdiags, only:  swcphead       ! =37
   use m_obsdiags, only:  lwcphead       ! =38
-  use m_obsdiags, only: dbzhead         ! =39
+  use m_obsdiags, only: lighthead       ! =39
+  use m_obsdiags, only: dbzhead         ! =40
 
   use kinds, only: i_kind
   use mpeu_util, only: assert_
@@ -321,7 +324,8 @@ subroutine init_(yobs,ibin)
   ASSERT(ibin<=size(vwnd10mhead))! =36
   ASSERT(ibin<=size( swcphead))  ! =37
   ASSERT(ibin<=size( lwcphead))  ! =38
-  ASSERT(ibin<=size(dbzhead))    ! =39
+  ASSERT(ibin<=size(lighthead))  ! =39
+  ASSERT(ibin<=size(dbzhead))    ! =40
 
   yobs%ps    => obsLList_headNode(   pshead(ibin))    ! = 1
   yobs%t     => obsLList_headNode(    thead(ibin))    ! = 2
@@ -363,7 +367,8 @@ subroutine init_(yobs,ibin)
 
   yobs%swcp  => obsLList_headNode( swcphead(ibin))    ! =37
   yobs%lwcp  => obsLList_headNode( lwcphead(ibin))    ! =38
-  yobs%dbz   => obsLList_headNode(dbzhead(ibin))      ! =39
+  yobs%light => obsLList_headNode(lighthead(ibin))    ! =39
+  yobs%dbz   => obsLList_headNode(dbzhead(ibin))      ! =40
 return
 end subroutine init_
 
