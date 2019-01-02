@@ -1,5 +1,5 @@
 subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis,&
-     prsl_full,nobs)
+     prsl_full,nobs,hloc,vloc)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_satwnd                    read satellite winds  
@@ -123,6 +123,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   integer(i_kind),dimension(npe)        ,intent(inout) :: nobs
   real(r_kind)                          ,intent(in   ) :: twind
   real(r_kind),dimension(nlat,nlon,nsig),intent(in   ) :: prsl_full
+  real(r_kind)                          ,intent(in   ) :: hloc,vloc
 
 ! Declare local parameters
 
@@ -260,7 +261,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
 ! Set lower limits for observation errors
   werrmin=one
   nsattype=0
-  nreal=25
+  nreal=27
   if(perturb_obs ) nreal=nreal+2
   ntread=1
   ntmatch=0
@@ -1319,6 +1320,8 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
            cdata_all(22,iout)=r_prvstg(1,1)       ! provider name
            cdata_all(23,iout)=r_sprvstg(1,1)      ! subprovider name
            cdata_all(25,iout)=var_jb              ! non linear qc parameter
+           cdata_all(26,iout)=hloc                ! horizontal localization
+           cdata_all(27,iout)=vloc                ! vertical localization
 
            if(perturb_obs)then
               cdata_all(26,iout)=ran01dom()*perturb_fact ! u perturbation

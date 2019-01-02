@@ -92,16 +92,13 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! Declare passed variables
   logical                                          ,intent(in   ) :: conv_diagsave
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
-  real(r_kind),dimension(100_i_kind+7_i_kind*nsig)               ,intent(inout) :: awork
-  real(r_kind),dimension(npres_print,nconvtype,5_i_kind,3_i_kind),intent(inout) :: bwork
+  real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
+  real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
   integer(i_kind)                                  ,intent(in   ) :: is ! ndat index
 ! Declare local parameters
   real(r_kind),parameter:: r0_001 = 0.001_r_kind
   real(r_kind),parameter:: r8     = 8.0_r_kind
   real(r_kind),parameter:: ten    = 10.0_r_kind
-
-  integer(i_kind),parameter:: izero=0_i_kind
- 
 
   real(r_kind) :: r,rr,dqr,thisdbz,iters,dqs,dqg
   
@@ -181,8 +178,8 @@ character(len=8) :: cpe
   real(r_kind)    :: Cr=3.6308e9_r_kind          ! Rain constant coef.
   real(r_kind)    :: Cli=3.268e9_r_kind          ! Precip. ice constant coef.
   !----------------------------------------------!
-  n_alloc(:)=izero
-  m_alloc(:)=izero
+  n_alloc(:)=0
+  m_alloc(:)=0
  
 !******************************************************************************* 
   ! Read and reformat observations in work arrays.
@@ -216,10 +213,10 @@ character(len=8) :: cpe
 !
 ! If requested, save select data for output to diagnostic file
   if(conv_diagsave)then
-     ii=izero
-     nchar=1_i_kind
+     ii=0
+     nchar=1
      ioff0=25+2
-     nreal=27_i_kind                                                             
+     nreal=27
      if (lobsdiagsave) nreal=nreal+4*miter+1
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
   end if
@@ -327,9 +324,9 @@ character(len=8) :: cpe
      call tintrp2a11(ges_z,zsges,dlat,dlon,dtime,hrdifsig,&
           mype,nfldsig)
      dpres=dpres-zsges
-     if(dpres > 10000) cycle !don't need obs above 10 km
+     if(dpres > 10000.0_r_kind) cycle !don't need obs above 10 km
      if (dpres<zero) then
-     cycle  !  temporary fix to prevent out of bounds array reference in zges,prsltmp
+       cycle  !  temporary fix to prevent out of bounds array reference in zges,prsltmp
      endif
      call tintrp2a11(ges_ps,psges,dlat,dlon,dtime,hrdifsig,&
           mype,nfldsig)
@@ -376,7 +373,7 @@ character(len=8) :: cpe
 
 
      presw  = ten*exp(pobl)
-    if( (k1 .eq. k2) .and. (k1 .eq. 1) ) presw=ten*exp(prsltmp(k1)) 
+    if( (k1 == k2) .and. (k1 == 1) ) presw=ten*exp(prsltmp(k1)) 
 !    solution to Nan in some members only for EnKF which causes problem?
 !    Determine location in terms of grid units for midpoint of
 !    first layer above surface
@@ -448,16 +445,16 @@ character(len=8) :: cpe
      endif !if_model_dbz
 
 
-     if(miter .eq. 0.or.l_hyb_ens) then !ie an enkf run
-       if(rDBZ .lt. 0) rDBZ=0.0 ! should be the same as in the read_dbz when nopcp=.true.
+     if(miter == 0.or.l_hyb_ens) then !ie an enkf run
+       if(rDBZ < 0_r_kind) rDBZ=0.0_r_kind ! should be the same as in the read_dbz when nopcp=.true.
      endif
-     if(miter .eq. 0.and.ens_hx_dbz_cut) then !ie an enkf run
-       if(rDBZ .gt. 60) rDBZ=60
+     if(miter == 0.and.ens_hx_dbz_cut) then !ie an enkf run
+       if(rDBZ > 60_r_kind) rDBZ=60_r_kind
      endif
 
-     jqr = 0.0
-     jqs = 0.0
-     jqg = 0.0 
+     jqr = 0.0_r_kind
+     jqs = 0.0_r_kind
+     jqg = 0.0_r_kind
 
      if( .not. if_model_dbz )then
      if( wrf_mass_regional ) then
@@ -481,7 +478,7 @@ character(len=8) :: cpe
 
      
      ddiff = data(idbzob,i) - rdBZ
-     if(miter .gt. 0.and..not.l_hyb_ens) ddiff = max(min(ddiff,20.0_r_kind),-20.0_r_kind)
+     if(miter > 0.and..not.l_hyb_ens) ddiff = max(min(ddiff,20.0_r_kind),-20.0_r_kind)
 
 
      if(debugging) print *, "DDIFF1: ",ddiff,data(idbzob,i),rdBZ
@@ -494,7 +491,7 @@ character(len=8) :: cpe
      endif
 
      if (doradaroneob) then
-       if(oneobvalue .gt. -900) then
+       if(oneobvalue > -900_r_kind) then
          data(idbzob,i) = oneobvalue
          ddiff = data(idbzob,i) - rdBZ
        else
@@ -502,7 +499,7 @@ character(len=8) :: cpe
          data(idbzob,i) = rdBZ+ddiff
        endif
      endif !oneob
-     if(rdBZ.le.5) irefsmlobs=irefsmlobs+1
+     if(rdBZ >= 5_r_kind) irefsmlobs=irefsmlobs+1
 
      if(debugging) print *, "DDIFF2: ",ddiff,data(idbzob,i),rdBZ
 
@@ -529,7 +526,7 @@ character(len=8) :: cpe
            error = zero 
            ratio_errors = zero 
        
-           if(rdBZ.le.5) irejrefsmlobs=irejrefsmlobs+1
+           if(rdBZ <= 5_r_kind) irejrefsmlobs=irejrefsmlobs+1
         end if
      end if
 
@@ -842,24 +839,24 @@ character(len=8) :: cpe
      end if
 
      if(nems_nmmb_regional)then
-!    get qli ...
-     varname='qli'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-     if (istatus==0) then
-         if(allocated(ges_qli))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-         endif
-         allocate(ges_qli(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         ges_qli(:,:,:,1)=rank3
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_qli(:,:,:,ifld)=rank3
-         enddo
-     else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-         call stop2(999)
-     endif
+!      get qli ...
+       varname='qli'
+       call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+       if (istatus==0) then
+           if(allocated(ges_qli))then
+              write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+              call stop2(999)
+           endif
+           allocate(ges_qli(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+           ges_qli(:,:,:,1)=rank3
+           do ifld=2,nfldsig
+              call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+              ges_qli(:,:,:,ifld)=rank3
+           enddo
+       else
+           write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+           call stop2(999)
+       endif
      end if
 
   else

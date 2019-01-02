@@ -587,7 +587,7 @@ end subroutine berror_read_bal_reg
       write(6,*)'not as expect,stop'
       stop
     endif
-    corz(:,:,nrf3_dbz)=10.0
+    corz(:,:,nrf3_dbz)=10.0_r_kind
     hwll(:,:,nrf3_dbz)=hwll(:,:,nrf3_t)
     vz(:,:,nrf3_dbz)=vz(:,:,nrf3_t)
   endif

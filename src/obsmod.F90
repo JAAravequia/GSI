@@ -712,28 +712,28 @@ contains
 
     oneobradid="KKKK"
     doradaroneob=.false.
-    oneoblat=-999
-    oneoblon=-999
-    oneobddiff=-999
-    oneobvalue=-999
-    oneobheight=-999
+    oneoblat=-999_r_kind
+    oneoblon=-999_r_kind
+    oneobddiff=-999_r_kind
+    oneobvalue=-999_r_kind
+    oneobheight=-999_r_kind
     radar_no_thinning=.false.
     ens_hx_dbz_cut=.false.
-    static_gsi_nopcp_dbz=0.0
-    rmesh_dbz=2   !default
-    rmesh_vr=2   !default
-    zmesh_dbz=500.0   !default
-    zmesh_vr=500.0   !default
-    minobrangedbz=10000.0
-    maxobrangedbz=200000.0
+    static_gsi_nopcp_dbz=0.0_r_kind
+    rmesh_dbz=2
+    rmesh_vr=2
+    zmesh_dbz=500.0_r_kind
+    zmesh_vr=500.0_r_kind
+    minobrangedbz=10000.0_r_kind
+    maxobrangedbz=200000.0_r_kind
     debugmode=.false.
 
-    mintiltdbz=0.0
-    maxtiltdbz=20.0
-    minobrangevr=10000.0
-    maxobrangevr=200000.0
-    mintiltvr=0.0
-    maxtiltvr=20.0
+    mintiltdbz=0.0_r_kind
+    maxtiltdbz=20.0_r_kind
+    minobrangevr=10000.0_r_kind
+    maxobrangevr=200000.0_r_kind
+    mintiltvr=0.0_r_kind
+    maxtiltvr=20.0_r_kind
     missing_to_nopcp=.false.
 
 !   Set logical flag
@@ -1384,25 +1384,25 @@ allocate(ditype(nall),ipoint(nall))
 dval_use = .false. 
 do ii=1,nrows0
    if( obs_dep_loc ) then
-   read(utable(ii),*) dfile(ii),& ! local file name from which to read observatinal data
-                      dtype(ii),& ! character string identifying type of observatio
-                      dplat(ii),& ! currently contains satellite id (no meaning for non-sat data)
-                      dsis(ii), & ! sensor/instrument/satellite identifier for info files
-                      dval(ii), & ! 
-                      dthin(ii),& ! thinning flag (1=thinning on; otherwise off)
-                      dsfcalc(ii),& ! use orig bilinear FOV surface calculation (routine deter_sfc)
-                      hlocal(ii), & !horizontal covariance localization for this ob
-                      vlocal(ii) !vertical covariance localization for this ob
+     read(utable(ii),*) dfile(ii),& ! local file name from which to read observatinal data
+                        dtype(ii),& ! character string identifying type of observatio
+                        dplat(ii),& ! currently contains satellite id (no meaning for non-sat data)
+                        dsis(ii), & ! sensor/instrument/satellite identifier for info files
+                        dval(ii), & ! 
+                        dthin(ii),& ! thinning flag (1=thinning on; otherwise off)
+                        dsfcalc(ii),& ! use orig bilinear FOV surface calculation (routine deter_sfc)
+                        hlocal(ii), & !horizontal covariance localization for this ob
+                        vlocal(ii) !vertical covariance localization for this ob
    else
-   read(utable(ii),*) dfile(ii),& ! local file name from which to read observatinal data
-                      dtype(ii),& ! character string identifying type of observatio
-                      dplat(ii),& ! currently contains satellite id (no meaning for non-sat data)
-                      dsis(ii), & ! sensor/instrument/satellite identifier for info files
-                      dval(ii), & !
-                      dthin(ii),& ! thinning flag (1=thinning on; otherwise off)
-                      dsfcalc(ii)
-                      hlocal(ii) = 100.0
-                      vlocal(ii) = 0.55
+     read(utable(ii),*) dfile(ii),& ! local file name from which to read observatinal data
+                        dtype(ii),& ! character string identifying type of observatio
+                        dplat(ii),& ! currently contains satellite id (no meaning for non-sat data)
+                        dsis(ii), & ! sensor/instrument/satellite identifier for info files
+                        dval(ii), & !
+                        dthin(ii),& ! thinning flag (1=thinning on; otherwise off)
+                        dsfcalc(ii)
+                        hlocal(ii) = 100.0
+                        vlocal(ii) = 0.55
    end if
 
    ! The following is to sort out some historical naming conventions

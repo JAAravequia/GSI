@@ -152,8 +152,7 @@ subroutine read_radar_wind_ascii(nread,ndata,nodata,infile,lunout,obstype,twind,
   real(r_kind),parameter :: r8     = 8.0_r_kind
   real(r_kind),parameter:: r6 = 6.0_r_kind
   real(r_kind),parameter:: r360=360.0_r_kind
-  integer(i_kind),parameter:: maxdat=24_i_kind         ! Used in generating cdata array
-  integer(i_kind),parameter:: izero=0_i_kind, ione=1_i_kind
+  integer(i_kind),parameter:: maxdat=24         ! Used in generating cdata array
   
 !--Derived data type declaration
 
@@ -180,9 +179,9 @@ subroutine read_radar_wind_ascii(nread,ndata,nodata,infile,lunout,obstype,twind,
   end type radar
 
 !--Counters for diagnostics
- integer(i_kind) :: num_missing=izero,numbadtime=izero, &   !counts
-                    num_badtilt=izero,num_badrange=izero, &
-                    ibadazm=izero 
+ integer(i_kind) :: num_missing=0,numbadtime=0, &   !counts
+                    num_badtilt=0,num_badrange=0, &
+                    ibadazm=0 
 
 integer(i_kind) :: ithin,zflag,nlevz,icntpnt,klon1,klat1,kk,klatp1,klonp1
 real(r_kind) :: rmesh,xmesh,zmesh,dx,dy,dx1,dy1,w00,w01,w10,w11
@@ -231,7 +230,7 @@ logical :: lzkdone2,shvdone2,twxdone2,sgfdone2,eaxdone2
 
 real(r_kind) :: mintilt,maxtilt,maxobrange,minobrange
 
-  integer(i_kind) :: thin_freq=1_i_kind     
+  integer(i_kind) :: thin_freq=1
 
   mintilt=mintiltvr
   maxtilt=maxtiltvr
@@ -242,15 +241,15 @@ real(r_kind) :: mintilt,maxtilt,maxobrange,minobrange
   
  ithin=1 !number of obs to keep per grid box
  if(radar_no_thinning) then
- ithin=-1
+   ithin=-1
  endif
 
   errmax=-huge(errmax)
   errmin=huge(errmin)
   
-  ikx=izero
-  do i=ione,nconvtype
-     if(trim(obstype) == trim(ioctype(i)) .and. abs(icuse(i))== ione) then
+  ikx=0
+  do i=1,nconvtype
+     if(trim(obstype) == trim(ioctype(i)) .and. abs(icuse(i))== 1) then
         ikx=i 
         radartwindow=ctwind(ikx)*r60         !Time window units converted to minutes 
 	                                     !  (default setting for dbz within convinfo is 0.05 hours)
@@ -270,11 +269,11 @@ real(r_kind) :: mintilt,maxtilt,maxobrange,minobrange
   end if
         
   !-next three values are dummy values for now
-  nchanl=izero
-  ilon=2_i_kind
-  ilat=3_i_kind
+  nchanl=0
+  ilon=2
+  ilat=3
   
-  maxobs=50000000_i_kind    !value taken from read_radar.f90 
+  maxobs=50000000    !value taken from read_radar.f90 
 
   !--Allocate cdata_all array
 
@@ -313,17 +312,13 @@ real(r_kind) :: mintilt,maxtilt,maxobrange,minobrange
   endif
 
        
-  lunrad=31_i_kind
+  lunrad=31
   open(lunrad,file=trim(infile),status='old',action='read', &
        iostat=ierror,form='formatted')
 
   
- fileopen: if (ierror == izero) then    
+ fileopen: if (ierror == 0) then    
   read(lunrad,'(2i8)') nelv,nvol               !read number of elevations and number of volumes
-  goto 123 !modified do this one at a time to save memory
-
-
-123 continue
     
      
      !*************************IMPORTANT***************************!
@@ -341,11 +336,11 @@ real(r_kind) :: mintilt,maxtilt,maxobrange,minobrange
   call w3fs21(iadate,mins_an)  !mins_an -integer number of mins snce 01/01/1978
   rmins_an=mins_an             !convert to real number
   
-  volumes: do v=ione,nvol 
+  volumes: do v=1,nvol 
    
     read(lunrad,'(i8)') nelv 
     allocate(strct_in_vel(1,nelv))
-    tilts: do k=ione,nelv
+    tilts: do k=1,nelv
 
          read(lunrad,'(a4)') strct_in_vel(1,k)%radid
         read(lunrad,'(i8)') strct_in_vel(1,k)%vcpnum
@@ -372,8 +367,8 @@ real(r_kind) :: mintilt,maxtilt,maxobrange,minobrange
         !******************************************************!
           
         read(lunrad,'(f8.3)') strct_in_vel(1,k)%nyq_vel
-        read(lunrad,'(15f6.1)') (strct_in_vel(1,k)%azim(j),j=ione,na)
-        read(lunrad,'(20f6.1)') ((strct_in_vel(1,k)%field(i,j),i=ione,nb),j=ione,na)
+        read(lunrad,'(15f6.1)') (strct_in_vel(1,k)%azim(j),j=1,na)
+        read(lunrad,'(20f6.1)') ((strct_in_vel(1,k)%field(i,j),i=1,nb),j=1,na)
 
 
         obdate(1)=strct_in_vel(1,k)%year
@@ -390,10 +385,10 @@ real(r_kind) :: mintilt,maxtilt,maxobrange,minobrange
         timeb = rmins_ob-rmins_an
 
 
-        if(doradaroneob .and. (oneobradid .ne. strct_in_vel(1,k)%radid)) cycle tilts
+        if(doradaroneob .and. (oneobradid /= strct_in_vel(1,k)%radid)) cycle tilts
 
         if(abs(timeb) > abs(radartwindow)) then
-	  numbadtime=numbadtime+ione	  
+	  numbadtime=numbadtime+1	  
 	  cycle tilts                           !If not in time window, cycle the loop
 	end if                  
       !--Time window check complete--!
@@ -401,19 +396,19 @@ real(r_kind) :: mintilt,maxtilt,maxobrange,minobrange
         thistilt=strct_in_vel(1,k)%elev_angle
         if (thistilt <= maxtilt .and. thistilt >= mintilt) then 
      
-          gates: do i=ione,strct_in_vel(1,k)%num_gate,thin_freq  
-   	      thisrange=strct_in_vel(1,k)%fstgatdis + float(i-ione)*strct_in_vel(1,k)%gateWidth
+          gates: do i=1,strct_in_vel(1,k)%num_gate,thin_freq  
+   	      thisrange=strct_in_vel(1,k)%fstgatdis + float(i-1)*strct_in_vel(1,k)%gateWidth
 	             
              !-Check to make sure observations are within specified range 
 
               if (thisrange <= maxobrange .and. thisrange >= minobrange) then	    
 	  	   
-	      azms: do j=ione,strct_in_vel(1,k)%num_beam
+	      azms: do j=1,strct_in_vel(1,k)%num_beam
 	   
 	           !-Check to see if this is a missing observation)
-		    nread=nread+ione
+		    nread=nread+1
 		    if ( strct_in_vel(1,k)%field(i,j) >= 999.0_r_kind ) then
-			  num_missing=num_missing+ione
+			  num_missing=num_missing+1
 	  	          cycle azms                        !No reason to process the ob if it is missing      	       
                     end if
 		    		                      			
@@ -613,17 +608,17 @@ real(r_kind) :: mintilt,maxtilt,maxobrange,minobrange
                     cdata_all(23,iout) = hloc
                     cdata_all(24,iout) = vloc
 
-                if(doradaroneob .and. (cdata_all(5,iout) .gt. -99) )goto 987
+                if(doradaroneob .and. (cdata_all(5,iout) > -99_r_kind) ) exit volumes
 
                 end do azms  !j
               else
-	         num_badrange=num_badrange+ione      !If outside acceptable range, increment
+	         num_badrange=num_badrange+1      !If outside acceptable range, increment
 	      end if   !Range check	
 		
 	   end do gates    !i
      
         else
-           num_badtilt=num_badtilt+ione           !If outside acceptable tilts, increment
+           num_badtilt=num_badtilt+1           !If outside acceptable tilts, increment
         end if         !Tilt check
   
      end do tilts       !k
@@ -635,7 +630,6 @@ real(r_kind) :: mintilt,maxtilt,maxobrange,minobrange
      deallocate(strct_in_vel)
   end do volumes      !v 
       
-987 continue
   close(lunrad) !modified to do one scan at a time 
 
   if (.not. use_all) then
@@ -658,7 +652,7 @@ real(r_kind) :: mintilt,maxtilt,maxobrange,minobrange
   
   call count_obs(ndata,maxdat,ilat,ilon,cdata_all,nobs)
   write(lunout) obstype,sis,maxdat,nchanl,ilat,ilon
-  write(lunout) ((cdata_all(k,i),k=ione,maxdat),i=ione,ndata)
+  write(lunout) ((cdata_all(k,i),k=1,maxdat),i=1,ndata)
  
   
   !---------------DEALLOCATE ARRAYS-------------!

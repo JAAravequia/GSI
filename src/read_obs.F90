@@ -1375,7 +1375,7 @@ subroutine read_obs(ndata,mype)
                     string='READ_SATMAR'
                  else 
                    call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
-                        prsl_full,nobs_sub1(1,i),read_rec(i))
+                        prsl_full,nobs_sub1(1,i),read_rec(i),hlocal(i),vlocal(i))
                    string='READ_PREPBUFR'
 
                  endif
@@ -1421,7 +1421,7 @@ subroutine read_obs(ndata,mype)
 !             Process satellite winds which seperate from prepbufr
                 if ( index(infile,'satwnd') /=0 ) then
                   call read_satwnd(nread,npuse,nouse,infile,obstype,lunout,gstime,twind,sis,&
-                     prsl_full,nobs_sub1(1,i))
+                     prsl_full,nobs_sub1(1,i),hlocal(i),vlocal(i))
                   string='READ_SATWND'
 !             Process oscat winds which seperate from prepbufr
                 elseif ( index(infile,'oscatbufr') /=0 ) then
@@ -1448,7 +1448,7 @@ subroutine read_obs(ndata,mype)
                 string="--"//trim(ditype(i))//":sst:"//trim(platid)
                 if ( platid == 'nsst') then
                    call read_nsstbufr(nread,npuse,nouse,gstime,infile,obstype, &
-                        lunout,twind,sis,nobs_sub1(1,i))
+                        lunout,twind,sis,nobs_sub1(1,i),hlocal(i),vlocal(i))
                    string='READ_NSSTBUFR'
                 elseif ( platid == 'mods') then
                    call read_modsbufr(nread,npuse,nouse,gstime,infile,obstype, &

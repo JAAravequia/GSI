@@ -900,6 +900,7 @@ contains
       use kinds, only: r_kind,r_single,i_kind
       use gridmod, only: nsig,eta1_ll,pt_ll,aeta1_ll,eta2_ll,aeta2_ll
       use constants, only: zero,one,fv,zero_single,rd_over_cp_mass,one_tenth,h300,rd,r1000
+      use constants, only: r0_01,r10,r100
       use hybrid_ensemble_parameters, only: grd_ens,q_hyb_ens
       use mpimod, only: mpi_comm_world,ierror,mpi_rtype
       use netcdf_mod, only: nc_check
@@ -917,11 +918,6 @@ contains
                                                     g_qnc,g_qni,g_qnr
       real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2),intent(out):: g_ps
       character(24),intent(in):: filename
-  !
-  ! Declare local parameters
-      real(r_kind),parameter:: r0_01 = 0.01_r_kind
-      real(r_kind),parameter:: r10   = 10.0_r_kind
-      real(r_kind),parameter:: r100  = 100.0_r_kind
   !
   !   Declare local variables
       real(r_single),allocatable,dimension(:):: temp_1d
@@ -1025,7 +1021,6 @@ contains
       dim(b_t_stag_id)=b_t_stag_len
   !
   ! READ PERTURBATION POTENTIAL TEMPERATURE (K)
-  !    print *, 'read T ',filename
       call nc_check( nf90_inq_varid(file_id,'T',var_id),&
           myname_,'inq_varid T '//trim(filename) )
 
@@ -1106,7 +1101,6 @@ contains
 
   !
   ! READ U (m/s)
-      !print *, 'read U ',filename
       call nc_check( nf90_inq_varid(file_id,'U',var_id),&
           myname_,'inq_varid U '//trim(filename) )
 
@@ -1133,7 +1127,6 @@ contains
       deallocate(dim_id)
   !
   ! READ V (m/s)
-      !print *, 'read V ',filename
       call nc_check( nf90_inq_varid(file_id,'V',var_id),&
           myname_,'inq_varid V '//trim(filename) )
 
@@ -1164,7 +1157,6 @@ contains
   if( w_exist )then
   !
   ! READ W (m/s)
-      !print *, 'read W ',filename
       call nc_check( nf90_inq_varid(file_id,'W',var_id),&
           myname_,'inq_varid W '//trim(filename) )
 
@@ -1388,7 +1380,6 @@ contains
 
   !
   ! READ QVAPOR (kg/kg)
-      !print *, 'read QVAPOR ',filename
       call nc_check( nf90_inq_varid(file_id,'QVAPOR',var_id),&
           myname_,'inq_varid QVAPOR '//trim(filename) )
 
@@ -1420,7 +1411,6 @@ contains
       enddo
   !
   ! INTEGRATE {1 + WATER VAPOR} TO CONVERT DRY AIR PRESSURE
-      !print *, 'integrate 1 + q vertically ',filename
       allocate(q_integral(ny,nx))
       allocate(q_integralc4h(ny,nx))
       q_integral(:,:)=one
@@ -1454,7 +1444,6 @@ contains
       end do
   !
   ! CONVERT POTENTIAL TEMPERATURE TO VIRTUAL TEMPERATURE
-      !print *, 'convert potential temp to virtual temp ',filename
       allocate(prsl(ny,nx,nz))
       do k=1,nz
          do i=1,nx
@@ -1477,11 +1466,11 @@ contains
   if( dbz_exist .and. (.not. if_model_dbz) )then
      gg_rho = (prsl/(gg_tv*rd))*r1000  
       do k=1,nz
-      do i=1,nx
-      do j=1,ny
-         call hx_dart(gg_qr(j,i,k),gg_qg(j,i,k),gg_qs(j,i,k),gg_rho(j,i,k),tsn(j,i,k),gg_dbz(j,i,k),.false.)
-      enddo
-      enddo
+        do i=1,nx
+          do j=1,ny
+            call hx_dart(gg_qr(j,i,k),gg_qg(j,i,k),gg_qs(j,i,k),gg_rho(j,i,k),tsn(j,i,k),gg_dbz(j,i,k),.false.)
+          enddo
+        enddo
       enddo
   end if
 
@@ -1566,7 +1555,7 @@ contains
        g_qnr(1,1,k),grd_ens%ijn_s(mype+1),mpi_rtype,0,mpi_comm_world,ierror)
     enddo
   ! for now, don't do anything with oz, cwmr
-    g_oz = 0.
+    g_oz = 0.0_r_kind
     deallocate(wrk_fill_2d)
     if (mype==0) deallocate(gg_u,gg_v,gg_tv,gg_rh,gg_ps,gg_dbz,gg_w,&
                             gg_qr,gg_qs,gg_qi,gg_qg,gg_cwmr,gg_qnc, &

@@ -2024,7 +2024,7 @@ contains
   
           q_integral=one
           q_integralc4h=zero
-          kw0 = kw + 1
+          if(w_exist) kw0 = kw + 1
           do k=1,nsig
              deltasigma=eta1_ll(k)-eta1_ll(k+1)
              deltasigmac4h=eta2_ll(k)-eta2_ll(k+1)

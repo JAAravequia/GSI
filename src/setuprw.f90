@@ -217,7 +217,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) nobdealising !
   integer(i_kind) d2n
   real(r_kind) robvr
-  real(r_kind):: maxvrdiff=50.0
+  real(r_kind):: maxvrdiff=50.0_r_kind
 
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
@@ -563,52 +563,52 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      call tintrp2a1(ges_v,vgesprofile,dlat,dlon,dtime,hrdifsig,&
           nsig,mype,nfldsig)
 
-    if( if_vterminal )then
+     if( if_vterminal )then
 
-     call tintrp31(ges_rho,rhogesin,dlat,dlon,dpres,dtime,&
-          hrdifsig,mype,nfldsig)
-     ! === In order to obtain the surface air density: rhogesin0
-     call tintrp31(ges_rho,rhogesin0,dlat,dlon,0.0,dtime,&
-          hrdifsig,mype,nfldsig)
-
-     if( if_model_dbz ) then
-       ! Interpolate guess reflectivity to observation location and time.
-       call tintrp31(ges_dbz,dbzgesin,dlat,dlon,dpres,dtime,&
-          hrdifsig,mype,nfldsig)
-       rdBZ = dbzgesin
+       call tintrp31(ges_rho,rhogesin,dlat,dlon,dpres,dtime,&
+            hrdifsig,mype,nfldsig)
+       ! === In order to obtain the surface air density: rhogesin0
+       call tintrp31(ges_rho,rhogesin0,dlat,dlon,0.0,dtime,&
+            hrdifsig,mype,nfldsig)
+  
+       if( if_model_dbz ) then
+         ! Interpolate guess reflectivity to observation location and time.
+         call tintrp31(ges_dbz,dbzgesin,dlat,dlon,dpres,dtime,&
+            hrdifsig,mype,nfldsig)
+         rdBZ = dbzgesin
+       else
+  
+         ! Interpolate guess qr, qs, qg, and rho to observation location and time.
+         call tintrp31(ges_qr,qrgesin,dlat,dlon,dpres,dtime,&
+              hrdifsig,mype,nfldsig)
+         call tintrp31(ges_qs,qsgesin,dlat,dlon,dpres,dtime,&
+              hrdifsig,mype,nfldsig)
+         call tintrp31(ges_qg,qggesin,dlat,dlon,dpres,dtime,&
+              hrdifsig,mype,nfldsig)
+         call tintrp31(ges_tsen,tempgesin,dlat,dlon,dpres,dtime,&
+              hrdifsig,mype,nfldsig)
+    
+         qrgesin  = max(qrgesin,1.e-6_r_kind)
+         qsgesin  = max(qsgesin,1.e-8_r_kind)
+         qggesin  = max(qggesin,1.e-9_r_kind)
+         debugging = .false.
+    
+         call hx_dart(qrgesin,qggesin,qsgesin,rhogesin,tempgesin,rdBZ,debugging)
+    
+       end if ! end if-block if_model_dbz
+  
+       if(miter == 0) then !ie an enkf run
+         if(rDBZ < 0.0_r_kind) rDBZ=0.0_r_kind ! should be the same as in the read_dbz when nopcp=.true.
+       endif
+       if(miter == 0 .and. ens_hx_dbz_cut) then !ie an enkf run
+         if(rDBZ > 60.0_r_kind) rDBZ=60.0_r_kind
+       endif
+  
+       ! === From (Atlas et al. 1973)
+       vterminal = 2.65_r_kind*(rhogesin0/rhogesin)*rdBZ**0.114_r_kind
      else
-
-!    Interpolate guess qr, qs, qg, and rho to observation location and time.
-     call tintrp31(ges_qr,qrgesin,dlat,dlon,dpres,dtime,&
-          hrdifsig,mype,nfldsig)
-     call tintrp31(ges_qs,qsgesin,dlat,dlon,dpres,dtime,&
-          hrdifsig,mype,nfldsig)
-     call tintrp31(ges_qg,qggesin,dlat,dlon,dpres,dtime,&
-          hrdifsig,mype,nfldsig)
-     call tintrp31(ges_tsen,tempgesin,dlat,dlon,dpres,dtime,&
-          hrdifsig,mype,nfldsig)
-
-    qrgesin  = max(qrgesin,1.e-6_r_kind)
-    qsgesin  = max(qsgesin,1.e-8_r_kind)
-    qggesin  = max(qggesin,1.e-9_r_kind)
-    debugging = .false.
-
-    call hx_dart(qrgesin,qggesin,qsgesin,rhogesin,tempgesin,rdBZ,debugging)
-
-    end if ! end if-block if_model_dbz
-
-   if(miter .eq. 0) then !ie an enkf run
-     if(rDBZ .lt. 0.) rDBZ=0.0 ! should be the same as in the read_dbz when nopcp=.true.
-   endif
-   if(miter .eq. 0.and.ens_hx_dbz_cut) then !ie an enkf run
-     if(rDBZ .gt. 60.) rDBZ=60.
-   endif
-
-    ! === From (Atlas et al. 1973)
-    vterminal = 2.65*(rhogesin0/rhogesin)*rdBZ**0.114
-   else
-    vterminal = 0.0_r_kind
-   end if
+       vterminal = 0.0_r_kind
+     end if
 
      if(include_w) then 
           call tintrp2a1(ges_w,wgesprofile,dlat,dlon,dtime,hrdifsig,&
@@ -623,7 +623,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      costilt = cos(data(itilt,i))
      if(include_w) then
        call dhdrange(data(itilt,i),data(irange,i),sintilt)
-       costilt=sqrt(1.0-sintilt*sintilt)
+       costilt=sqrt(1.0_r_kind-sintilt*sintilt)
        rwwind = (ugesin*cosazm+vgesin*sinazm)*costilt*factw+(wgesin-vterminal)*sintilt*factw
      endif
      else ! if_vrobs_raw
@@ -672,7 +672,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      ddiff = data(irwob,i) - rwwind
 
      if (doradaroneob) then
-       if(oneobvalue .gt. -900) then
+       if(oneobvalue > -900_r_kind) then
          data(irwob,i) = oneobvalue
          ddiff = data(irwob,i) - rwwind
        else
@@ -995,64 +995,64 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            call stop2(999)
          endif
        else
-!    get qr ...
-     varname='qr'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-     if (istatus==0) then
-         if(allocated(ges_qr))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
+         ! get qr ...
+         varname='qr'
+         call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+         if (istatus==0) then
+             if(allocated(ges_qr))then
+                write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+                call stop2(999)
+             endif
+             allocate(ges_qr(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+             ges_qr(:,:,:,1)=rank3
+             do ifld=2,nfldsig
+                call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+                ges_qr(:,:,:,ifld)=rank3
+             enddo
+         else
+             write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+             call stop2(999)
          endif
-         allocate(ges_qr(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         ges_qr(:,:,:,1)=rank3
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_qr(:,:,:,ifld)=rank3
-         enddo
-     else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-         call stop2(999)
-     endif
-
-!    get qs ...
-     varname='qs'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-     if (istatus==0) then
-         if(allocated(ges_qs))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
+    
+    !    get qs ...
+         varname='qs'
+         call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+         if (istatus==0) then
+             if(allocated(ges_qs))then
+                write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+                call stop2(999)
+             endif
+             allocate(ges_qs(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+             ges_qs(:,:,:,1)=rank3
+             do ifld=2,nfldsig
+                call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+                ges_qs(:,:,:,ifld)=rank3
+             enddo
+         else
+             write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+             call stop2(999)
          endif
-         allocate(ges_qs(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         ges_qs(:,:,:,1)=rank3
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_qs(:,:,:,ifld)=rank3
-         enddo
-     else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-         call stop2(999)
-     endif
-!    get qg ...
-     varname='qg'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-     if (istatus==0) then
-         if(allocated(ges_qg))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
+    !    get qg ...
+         varname='qg'
+         call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
+         if (istatus==0) then
+             if(allocated(ges_qg))then
+                write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+                call stop2(999)
+             endif
+             allocate(ges_qg(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
+             ges_qg(:,:,:,1)=rank3
+             do ifld=2,nfldsig
+                call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
+                ges_qg(:,:,:,ifld)=rank3
+             enddo
+         else
+             write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+             call stop2(999)
          endif
-         allocate(ges_qg(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         ges_qg(:,:,:,1)=rank3
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_qg(:,:,:,ifld)=rank3
-         enddo
-     else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-         call stop2(999)
-     endif
-
-
-     endif
+    
+    
+       endif
      endif
 
 
@@ -1265,11 +1265,11 @@ SUBROUTINE dhdrange(elvang,range,dhdr)
   REAL(r_kind), INTENT(OUT) :: dhdr
 !
   DOUBLE PRECISION :: eradius,frthrde,eighthre,fthsq,deg2rad
-  PARAMETER (eradius=6371.0,                                          &
-             frthrde=(4.*eradius/3.),                                   &
-             eighthre=(8.*eradius/3.),                                  &
+  PARAMETER (eradius=6371.0_r_kind,                                          &
+             frthrde=(4._r_kind*eradius/3._r_kind),                                   &
+             eighthre=(8._r_kind*eradius/3._r_kind),                                  &
              fthsq=(frthrde*frthrde),                                   &
-             deg2rad=(3.14592654/180.))
+             deg2rad=(3.14592654_r_kind/180._r_kind))
 !
   DOUBLE PRECISION :: sinelv,dhdrdb,drange
 !

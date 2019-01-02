@@ -2235,12 +2235,12 @@ contains
      enddo
 
      do k=1,nsig-1
-     kw=kw+1
-     do i=1,lon2
-        do j=1,lat2
+       kw=kw+1
+       do i=1,lon2
+          do j=1,lat2
            all_loc(j,i,kw)=0.5*(ges_w(j,i,k)+ges_w(j,i,k+1))
-        enddo
-     enddo
+          enddo
+       enddo
      enddo
 
      kw=kw+1
@@ -2368,25 +2368,25 @@ contains
        end if
     end do
 
- if(w_exist) then
-! Update w
-  kw=i_w-1
-  do k=1,nsig+1
-     kw=kw+1
-     if(mype == 0) read(lendian_in)temp1
-     call strip(all_loc(:,:,kw),strp)
-     call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
-          tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
-     if(mype == 0) then
-        call fill_mass_grid2t(temp1,im,jm,tempb,2)
-        do i=1,iglobal
-           tempa(i)=tempa(i)-tempb(i)
-        end do
-        call unfill_mass_grid2t(tempa,im,jm,temp1)
-        write(lendian_out)temp1
-     end if
-  end do
- endif ! for w_exist
+    if(w_exist) then
+    ! Update w
+      kw=i_w-1
+      do k=1,nsig+1
+        kw=kw+1
+        if(mype == 0) read(lendian_in)temp1
+        call strip(all_loc(:,:,kw),strp)
+        call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
+             tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
+        if(mype == 0) then
+           call fill_mass_grid2t(temp1,im,jm,tempb,2)
+           do i=1,iglobal
+              tempa(i)=tempa(i)-tempb(i)
+           end do
+           call unfill_mass_grid2t(tempa,im,jm,temp1)
+           write(lendian_out)temp1
+        end if
+      end do
+    endif ! for w_exist
 
     
   ! Load updated skin temperature array if writing out to analysis file
@@ -2809,25 +2809,25 @@ contains
           end if
        end do
    
-  if(dbz_exist.and.if_model_dbz)then
-  ! Update refl_10cm
-       kdbz=i_dbz-1
-       do k=1,nsig
-          kdbz=kdbz+1
-          if(mype == 0) read(lendian_in)temp1
-          call strip(all_loc(:,:,kdbz),strp)
-          call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
-               tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
-          if(mype == 0) then
-             call fill_mass_grid2t(temp1,im,jm,tempb,2)
-             do i=1,iglobal
-                tempa(i)=tempa(i)-tempb(i)
-             end do
-             call unfill_mass_grid2t(tempa,im,jm,temp1)
-             write(lendian_out)temp1
-          end if
-       end do
-  end if
+       if(dbz_exist.and.if_model_dbz)then
+       ! Update refl_10cm
+            kdbz=i_dbz-1
+            do k=1,nsig
+               kdbz=kdbz+1
+               if(mype == 0) read(lendian_in)temp1
+               call strip(all_loc(:,:,kdbz),strp)
+               call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
+                    tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
+               if(mype == 0) then
+                  call fill_mass_grid2t(temp1,im,jm,tempb,2)
+                  do i=1,iglobal
+                     tempa(i)=tempa(i)-tempb(i)
+                  end do
+                  call unfill_mass_grid2t(tempa,im,jm,temp1)
+                  write(lendian_out)temp1
+               end if
+            end do
+       end if
    
   ! Update tten     
        ktt=i_tt-1

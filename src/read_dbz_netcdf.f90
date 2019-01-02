@@ -142,7 +142,7 @@ subroutine read_dbz_mrms_netcdf(nread,ndata,nodata,infile,obstype,lunout,twind,s
   real(r_kind),parameter :: four_thirds = 4.0_r_kind / 3.0_r_kind
   real(r_kind),parameter :: r8     = 8.0_r_kind
   real(r_kind),parameter:: r360=360.0_r_kind
-  integer(i_kind),parameter:: maxdat=17_i_kind         ! Used in generating cdata array
+  integer(i_kind),parameter:: maxdat=17         ! Used in generating cdata array
   integer (i_kind):: iyear,imon,iday,ihour,imin,isec
   
 !--Derived data type declaration
@@ -204,9 +204,8 @@ subroutine read_dbz_mrms_netcdf(nread,ndata,nodata,infile,obstype,lunout,twind,s
   type(radar),allocatable :: strct_in_vel(:,:),strct_in_dbz(:,:),strct_in_rawvel(:,:)
 
   !---------SETTINGS FOR FUTURE NAMELIST---------!
-  integer(i_kind) :: maxobrange=999000_i_kind	 ! Range (m) *within* which to use observations - obs *outside* this range are not used
-  integer(i_kind) :: minobrange=-999_i_kind 	 ! Range (m) *outside* of which to use observatons - obs *inside* this range are not used
-!cltorg  real(r_kind)    :: mintilt=0.6_r_kind   	 ! Only use tilt(elevation) angles (deg) >= this number 
+  integer(i_kind) :: maxobrange=999000 ! Range (m) *within* which to use observations - obs *outside* this range are not used
+  integer(i_kind) :: minobrange=-999 ! Range (m) *outside* of which to use observatons - obs *inside* this range are not used
   real(r_kind)    :: mintilt=0.0_r_kind   	 ! Only use tilt(elevation) angles (deg) >= this number 
   real(r_kind)    :: maxtilt=20.0_r_kind         ! Do no use tilt(elevation) angles (deg) >= this number
   logical         :: missing_to_nopcp=.false.    ! Set missing observations to 'no precipitation' observations -> dbznoise (See Aksoy et al. 2009, MWR) 
@@ -214,7 +213,6 @@ subroutine read_dbz_mrms_netcdf(nread,ndata,nodata,infile,obstype,lunout,twind,s
   real(r_kind)    :: dbznoise=2.0_r_kind           ! dBZ obs must be >= dbznoise for assimilation
   logical         :: l_limmax=.true.             ! If true, observations > 60 dBZ are limited to be 60 dBZ.  This is
   logical         :: l_limmin=.true.             ! If true, observations <0 dBZ are limited to be 0 dBZ.  This is
-!clt var for netcdf reading
 
  character (len=4) :: radarsite_nc
  character (len=256) vcpstr_nc
@@ -233,7 +231,7 @@ real(r_single) :: elev_nc,firstgate_nc,lat_nc,lon_nc,height_nc
 real(r_single), allocatable :: azimuth_nc(:),beamwidth_nc(:),azimspacing_nc(:),gatewidth_nc(:)
 real(r_single), allocatable :: nyquist_nc(:),obdata_nc(:,:)
 real(r_single) nyquist_default_nc
-parameter(nyquist_default_nc=50.0)
+parameter(nyquist_default_nc=50.0_r_kind)
 !clg
   !                                              !  due to representativeness error associated with the model
   !----------------------------------------------!
@@ -270,16 +268,16 @@ parameter(nyquist_default_nc=50.0)
   ilon=2_i_kind
   ilat=3_i_kind
   
-  maxobs=2000000_i_kind    !value taken from read_radar.f90 
+  maxobs=2000000    !value taken from read_radar.f90 
 
   !--Allocate cdata_all array
 
   allocate(cdata_all(maxdat,maxobs))
        
-  lunrad=31_i_kind
-!cltdeb get the time from the file name
+  lunrad=31
+! get the time from the file name
 
-!clt to read the QC radar data in titls in netcdf format from K. Cooper.
+!read the QC radar data in titls in netcdf format from K. Cooper.
    nvol=1
    nelv=1
  v=1;k=1
@@ -289,50 +287,48 @@ parameter(nyquist_default_nc=50.0)
 !!READ RADAR DATA
 ierr =  NF90_OPEN(trim(infile),0,ncid)
 
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"open")
+if (ierr /= nf90_noerr) call handle_err(ierr,"open")
 
 ierr = NF90_INQ_DIMID(ncid,'Azimuth',dimid1)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"Azimuth")
+if (ierr /= nf90_noerr) call handle_err(ierr,"Azimuth")
 ierr = NF90_INQ_DIMID(ncid,'Gate',dimid2)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"Gate")
+if (ierr /= nf90_noerr) call handle_err(ierr,"Gate")
 
 
 
 ierr = NF90_INQ_VARID(ncid,'Azimuth',varid1)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"Azimuth")
+if (ierr /= nf90_noerr) call handle_err(ierr,"Azimuth")
 ierr = NF90_INQ_VARID(ncid,'BeamWidth',varid2)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"BeamWidth")
+if (ierr /= nf90_noerr) call handle_err(ierr,"BeamWidth")
 ierr = NF90_INQ_VARID(ncid,'AzimuthalSpacing',varid3)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"azimuthalspacing")
+if (ierr /= nf90_noerr) call handle_err(ierr,"azimuthalspacing")
 ierr = NF90_INQ_VARID(ncid,'GateWidth',varid4)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"gatewidth")
-!cltorg ierr = NF90_INQ_VARID(ncid,'NyquistVelocity',varid5)
-!cltorg if (ierr .ne. nf90_noerr) call handle_err(ierr,"nyquistvelocity")
+if (ierr /= nf90_noerr) call handle_err(ierr,"gatewidth")
 ierr = NF90_INQ_VARID(ncid,'ReflectivityQC',varid6)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"ReflectivityQC")
+if (ierr /= nf90_noerr) call handle_err(ierr,"ReflectivityQC")
 
 
 ierr = nf90_inquire_dimension(ncid, dimid1, len = numazim_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"numazim data")
+if (ierr /= nf90_noerr) call handle_err(ierr,"numazim data")
 ierr = nf90_inquire_dimension(ncid, dimid2, len = numgate_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"numgate data")
+if (ierr /= nf90_noerr) call handle_err(ierr,"numgate data")
 
 
 ierr = NF90_GET_ATT(ncid,nf90_global,'Elevation',elev_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"get elev")
+if (ierr /= nf90_noerr) call handle_err(ierr,"get elev")
 ierr = NF90_GET_ATT(ncid,nf90_global,'RangeToFirstGate',firstgate_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"get firstgate")
+if (ierr /= nf90_noerr) call handle_err(ierr,"get firstgate")
 ierr = NF90_GET_ATT(ncid,nf90_global,'Latitude',lat_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"get lat")
+if (ierr /= nf90_noerr) call handle_err(ierr,"get lat")
 ierr = NF90_GET_ATT(ncid,nf90_global,'Longitude',lon_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"get lon")
+if (ierr /= nf90_noerr) call handle_err(ierr,"get lon")
 ierr = NF90_GET_ATT(ncid,nf90_global,'radarName-value',radarsite_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"radarsite")
+if (ierr /= nf90_noerr) call handle_err(ierr,"radarsite")
 ierr = NF90_GET_ATT(ncid,nf90_global,'vcp-value',vcpstr_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"vcp")
+if (ierr /= nf90_noerr) call handle_err(ierr,"vcp")
 read(vcpstr_nc,*) vcp_nc
 ierr = NF90_GET_ATT(ncid,nf90_global,'Height',height_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"height")
+if (ierr /= nf90_noerr) call handle_err(ierr,"height")
 
 
 !reverse order of dimensions as stated in ncdump:
@@ -340,27 +336,24 @@ allocate(azimuth_nc(numazim_nc),beamwidth_nc(numazim_nc),azimspacing_nc(numazim_
 allocate(nyquist_nc(numazim_nc),obdata_nc(numgate_nc,numazim_nc))
 
 ierr = NF90_GET_VAR(ncid,varid1,azimuth_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"azimuth data")
+if (ierr /= nf90_noerr) call handle_err(ierr,"azimuth data")
 ierr = NF90_GET_VAR(ncid,varid2,beamwidth_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"beamwidth data")
+if (ierr /= nf90_noerr) call handle_err(ierr,"beamwidth data")
 ierr = NF90_GET_VAR(ncid,varid3,azimspacing_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"azimspacing data")
+if (ierr /= nf90_noerr) call handle_err(ierr,"azimspacing data")
 ierr = NF90_GET_VAR(ncid,varid4,gatewidth_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"gatewidth data")
-!cltorg ierr = NF90_GET_VAR(ncid,varid5,nyquist)
-!cltorg if (ierr .ne. nf90_noerr) call handle_err(ierr,"nyquist data")
+if (ierr /= nf90_noerr) call handle_err(ierr,"gatewidth data")
 ierr = NF90_GET_VAR(ncid,varid6,obdata_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"obdata data")
+if (ierr /= nf90_noerr) call handle_err(ierr,"obdata data")
 
 ierr = NF90_CLOSE(ncid)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"close")
+if (ierr /= nf90_noerr) call handle_err(ierr,"close")
 
 do i=1,numazim_nc
-if ( (beamwidth_nc(i) .ne. beamwidth_nc(1)) .or. (gatewidth_nc(i) .ne. gatewidth_nc(1)) )then
-print *, "stopping: non-uniform scan"
-endif
+  if ( (beamwidth_nc(i) /= beamwidth_nc(1)) .or. (gatewidth_nc(i) /= gatewidth_nc(1)) )then
+    print *, "stopping: non-uniform scan"
+  endif
 enddo
-!clt the file name should be like KTLX-ref_tilt_05.25-20030508-215813.netcdf
 read(infile(21:24),'(I4.4)')iyear
 read(infile(25:26),'(I2.2)')imon
 read(infile(27:28),'(I2.2)')iday
@@ -368,59 +361,42 @@ read(infile(30:31),'(I2.2)')ihour
 read(infile(32:33),'(I2.2)')imin
 read(infile(34:35),'(I2.2)')isec
 do i=1,numgate_nc
-do j=1,numazim_nc
-!lctorg write(6,*)'thinkmype i,j,is  =',i,j,'  obdata= ',obdata_nc(i,j)
-if(obdata_nc(i,j) .le. -999) obdata_nc(i,j)=-999
+  do j=1,numazim_nc
+    if(obdata_nc(i,j) <= -999_r_kind) obdata_nc(i,j)=-999_r_kind
+  enddo
 enddo
-enddo
 
 
-!clt transform the read-in ob to the intermidate  obs variables( radar obs  to be used in GSI
+!transform the read-in ob to the intermidate  obs variables( radar obs  to be used in GSI
 
-         strct_in_dbz(v,k)%radid=radarsite_nc
-         strct_in_dbz(v,k)%vcpnum=vcp_nc
-         strct_in_dbz(v,k)%year=iyear  !clt  to be defind from infile name              
-        strct_in_dbz(v,k)%month=imon                
-        strct_in_dbz(v,k)%day=iday                  
-        strct_in_dbz(v,k)%hour=ihour                 
-        strct_in_dbz(v,k)%minute=imin               
-        strct_in_dbz(v,k)%second=isec
-         strct_in_dbz(v,k)%radlat=lat_nc
-        strct_in_dbz(v,k)%radlon=lon_nc   
-        strct_in_dbz(v,k)%radhgt=height_nc
-         strct_in_dbz(v,k)%fstgatdis =firstgate_nc      
-        strct_in_dbz(v,k)%gateWidth=gatewidth_nc(1) ! always the same ??)
-         strct_in_dbz(v,k)%elev_angle=elev_nc
-        strct_in_dbz(v,k)%num_beam=numazim_nc          
-        strct_in_dbz(v,k)%num_gate=numgate_nc
-        na=strct_in_dbz(v,k)%num_beam
-        nb=strct_in_dbz(v,k)%num_gate
+strct_in_dbz(v,k)%radid=radarsite_nc
+strct_in_dbz(v,k)%vcpnum=vcp_nc
+strct_in_dbz(v,k)%year=iyear  !  to be defind from infile name              
+strct_in_dbz(v,k)%month=imon                
+strct_in_dbz(v,k)%day=iday                  
+strct_in_dbz(v,k)%hour=ihour                 
+strct_in_dbz(v,k)%minute=imin               
+strct_in_dbz(v,k)%second=isec
+strct_in_dbz(v,k)%radlat=lat_nc
+strct_in_dbz(v,k)%radlon=lon_nc   
+strct_in_dbz(v,k)%radhgt=height_nc
+strct_in_dbz(v,k)%fstgatdis =firstgate_nc      
+strct_in_dbz(v,k)%gateWidth=gatewidth_nc(1) ! always the same ??)
+strct_in_dbz(v,k)%elev_angle=elev_nc
+strct_in_dbz(v,k)%num_beam=numazim_nc          
+strct_in_dbz(v,k)%num_gate=numgate_nc
+na=strct_in_dbz(v,k)%num_beam
+nb=strct_in_dbz(v,k)%num_gate
      
-        !******allocate arrays within radar data type**********!
-           allocate(strct_in_dbz(v,k)%azim(na))
-           allocate(strct_in_dbz(v,k)%field(nb,na))
-        !******************************************************!
+!******allocate arrays within radar data type**********!
+allocate(strct_in_dbz(v,k)%azim(na))
+allocate(strct_in_dbz(v,k)%field(nb,na))
+!******************************************************!
           
-         strct_in_dbz(v,k)%azim(:)=azimuth_nc(:)
-         strct_in_dbz(v,k)%field(:,:)=obdata_nc(:,:)
-!clt end of netcdf reading
-  ierror=0
+strct_in_dbz(v,k)%azim(:)=azimuth_nc(:)
+strct_in_dbz(v,k)%field(:,:)=obdata_nc(:,:)
+ ierror=0
  fileopen: if (ierror == 0) then           !Check to make sure file is open - will also fail if file does not exist. Closing endif at end of subroutine.
-  if(1.gt.2) then
-  
-  read(lunrad,'(2i8)') nelv,nvol               !read number of elevations and number of volumes
-
-  allocate(strct_in_vel(nvol,nelv))
-  allocate(strct_in_rawvel(nvol,nelv))
-  
-!-----Code to read data is based heavily upon code provided by Kang Nai of OU----!
-!clt to insert the netcdf reading codes
-! a radar obs over a tilt will be obtained
-
-
-!------Reading radar data finished---------------!
-    
-endif  !1.gt.2
      
      !*************************IMPORTANT***************************!
      !                                                             !
@@ -433,12 +409,12 @@ endif  !1.gt.2
 
 
  !-Obtain analysis time in minutes since reference date
-  if(ndata.ne.0) then !clt for further thinking
+  if(ndata/=0) then ! for further thinking
    write(6,*)'ndata is not 0 in read_dbz_netcdf, its impact needs to be considered ,stop' 
   endif
  
   call w3fs21(iadate,mins_an)  !mins_an -integer number of mins snce 01/01/1978
-!clt w3movedat to help get a date from the time difference
+! w3movedat to help get a date from the time difference
   rmins_an=mins_an             !convert to real number
   
   volumes: do v=1,nvol 
@@ -460,13 +436,7 @@ endif  !1.gt.2
       !-Comparison is done in units of minutes
       
         timeb = rmins_ob-rmins_an
-        if(abs(timeb).gt.100) cycle  !thinkdev
-!clt now the window is controled by the preprocessing script starting from
-!5/14/2015
-!      clt  if(abs(timeb) > abs(radartwindow)) then
-!clt	  numbadtime=numbadtime+1	  
-!clt	  cycle tilts                           !If not in time window, cycle the loop
-!clt	end if
+        if(abs(timeb) > 100_r_kind) cycle 
         
         write(6,*) 'Processing obdate:',obdate,strct_in_dbz(v,k)%second                 
       !--Time window check complete--!
@@ -487,7 +457,6 @@ endif  !1.gt.2
 		    
 		    nread=nread+1
 		 
-!cltorg                    if ( abs(strct_in_dbz(v,k)%field(i,j)) >= 999.0_r_kind ) then
                     if ( abs(strct_in_dbz(v,k)%field(i,j)) >= 99.0_r_kind ) then
 	               		      
 		      !--Extend no precip observations to missing data fields?
@@ -511,28 +480,12 @@ endif  !1.gt.2
 		       end if    
 		    end if
 		    if (l_limmin) then
-!cltorg		       if ( strct_in_dbz(v,k)%field(i,j) > 60_r_kind ) then
 		       if ( strct_in_dbz(v,k)%field(i,j) < 0_r_kind ) then
 		          strct_in_dbz(v,k)%field(i,j) = 0_r_kind
 		          num_limmin=num_limmin+1
 		       end if    
 		    end if
 		    		    
-		   !-Special treatment for no-precip obs?	       			       
-
-!cltorg                    if ( strct_in_dbz(v,k)%field(i,j) < dbznoise ) then
-!cltorg		       if (nopcp) then
-                             !Aksoy et al. (2009, MWR) --> Even if the ob is below the noise
-		             !  threshold, it still indicates an observation of no-precipitation.
-		             !  Therefore increase the ob value to the noise threshold.
-!cltorg		          strct_in_dbz(v,k)%field(i,j) = dbznoise		    
-!cltorg		          num_nopcp=num_nopcp+1
-!cltorg                       else
-!cltorg		          num_noise=num_noise+1
-!cltorg		          cycle azms                        !No reason to process the ob if it is below noise threshold
-!cltorg                       end if
-!cltorg		    end if	  
-                                     			
 		   !--Find observation height using method from read_l2bufr_mod.f90										       
 	         
 		    this_stahgt=strct_in_dbz(v,k)%radhgt
@@ -663,17 +616,11 @@ endif  !1.gt.2
   deallocate(cdata_all)
   do v=1,nvol
      do k=1,nelv
-!cltorg        deallocate(strct_in_vel(v,k)%azim)
-!cltorg        deallocate(strct_in_vel(v,k)%field)
-!cltorg        deallocate(strct_in_rawvel(v,k)%azim)
-!cltorg        deallocate(strct_in_rawvel(v,k)%field)
         deallocate(strct_in_dbz(v,k)%azim)
         deallocate(strct_in_dbz(v,k)%field)
      end do
   end do
-!cltorg  deallocate(strct_in_vel)
   deallocate(strct_in_dbz)
-!cltorg  deallocate(strct_in_rawvel)
 
  else  !fileopen
   write(6,*) 'READ_dBZ: ERROR OPENING RADAR REFLECTIVITY FILE: ',trim(infile),' IOSTAT ERROR: ',ierror, ' SKIPPING...'
@@ -826,7 +773,7 @@ subroutine read_dbz_mrms_sparse_netcdf(nread,ndata,nodata,infile,obstype,lunout,
   real(r_kind),parameter :: four_thirds = 4.0_r_kind / 3.0_r_kind
   real(r_kind),parameter :: r8     = 8.0_r_kind
   real(r_kind),parameter:: r360=360.0_r_kind
-  integer(i_kind),parameter:: maxdat=17_i_kind         ! Used in generating cdata array
+  integer(i_kind),parameter:: maxdat=17         ! Used in generating cdata array
   integer (i_kind):: iyear,imon,iday,ihour,imin,isec
   
 !--Derived data type declaration
@@ -888,8 +835,8 @@ subroutine read_dbz_mrms_sparse_netcdf(nread,ndata,nodata,infile,obstype,lunout,
   type(radar),allocatable :: strct_in_vel(:,:),strct_in_dbz(:,:),strct_in_rawvel(:,:)
 
   !---------SETTINGS FOR FUTURE NAMELIST---------!
-  integer(i_kind) :: maxobrange=99900000_i_kind	 ! Range (m) *within* which to use observations - obs *outside* this range are not used
-  integer(i_kind) :: minobrange=-999.0_i_kind 	 ! Range (m) *outside* of which to use observatons - obs *inside* this range are not used
+  integer(i_kind) :: maxobrange=99900000 ! Range (m) *within* which to use observations - obs *outside* this range are not used
+  integer(i_kind) :: minobrange=-999 ! Range (m) *outside* of which to use observatons - obs *inside* this range are not used
   real(r_kind)    :: mintilt=0.0_r_kind   	 ! Only use tilt(elevation) angles (deg) >= this number 
   real(r_kind)    :: maxtilt=20.0_r_kind         ! Do no use tilt(elevation) angles (deg) >= this number
   logical         :: missing_to_nopcp=.false.    ! Set missing observations to 'no precipitation' observations -> dbznoise (See Aksoy et al. 2009, MWR) 
@@ -897,7 +844,6 @@ subroutine read_dbz_mrms_sparse_netcdf(nread,ndata,nodata,infile,obstype,lunout,
   real(r_kind)    :: dbznoise=2_r_kind           ! dBZ obs must be >= dbznoise for assimilation
   logical         :: l_limmax=.true.             ! If true, observations > 60 dBZ are limited to be 60 dBZ.  This is
   logical         :: l_limmin=.true.             ! If true, observations <0  dBZ are limited to be 0 dBZ.  This is
-!clt var for netcdf reading
 
  character (len=4) :: radarsite_nc
  character (len=256) vcpstr_nc
@@ -918,7 +864,7 @@ integer(i_short),allocatable :: pixel_x_nc(:),pixel_y_nc(:)
 real(r_single), allocatable :: azimuth_nc(:),beamwidth_nc(:),azimspacing_nc(:),gatewidth_nc(:)
 real(r_single), allocatable :: nyquist_nc(:),obdata_nc(:,:),obdata_pixel_nc(:)
 real(r_single) nyquist_default_nc
-parameter(nyquist_default_nc=50.0)
+parameter(nyquist_default_nc=50.0_r_kind)
 logical l_pixel_unlimited
 integer(i_kind):: ipix
 real (r_kind)::rtem1_a(1)
@@ -949,85 +895,81 @@ integer(i_kind)::real_numpixel,start_nc(1),count_nc(1)
 
   !-next three values are dummy values for now
   nchanl=0
-  ilon=2_i_kind
-  ilat=3_i_kind
+  ilon=2
+  ilat=3
   
-  maxobs=2000000_i_kind    !value taken from read_radar.f90 
+  maxobs=2000000    !value taken from read_radar.f90 
 
   !--Allocate cdata_all array
 
   allocate(cdata_all(maxdat,maxobs))
        
-  lunrad=31_i_kind
-!cltdeb get the time from the file name
+  lunrad=31
 
-!clt to read the QC radar data in titls in netcdf format from K. Cooper.
    nvol=1
    nelv=1
- v=1;k=1
+   v=1;k=1
    
   allocate(strct_in_dbz(nvol,nelv))
 
 !!READ RADAR DATA
 ierr =  NF90_OPEN(trim(infile),0,ncid)
 
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"open")
+if (ierr /= nf90_noerr) call handle_err(ierr,"open")
 
 ierr = NF90_INQ_DIMID(ncid,'Azimuth',dimid1)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"Azimuth")
+if (ierr /= nf90_noerr) call handle_err(ierr,"Azimuth")
 ierr = NF90_INQ_DIMID(ncid,'Gate',dimid2)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"Gate")
+if (ierr /= nf90_noerr) call handle_err(ierr,"Gate")
 ierr = NF90_INQ_DIMID(ncid,'pixel',dimid3)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"Pixel number")
+if (ierr /= nf90_noerr) call handle_err(ierr,"Pixel number")
 
 
 
 ierr = NF90_INQ_VARID(ncid,'Azimuth',varid1)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"Azimuth")
+if (ierr /= nf90_noerr) call handle_err(ierr,"Azimuth")
 ierr = NF90_INQ_VARID(ncid,'BeamWidth',varid2)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"BeamWidth")
+if (ierr /= nf90_noerr) call handle_err(ierr,"BeamWidth")
 ierr = NF90_INQ_VARID(ncid,'AzimuthalSpacing',varid3)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"azimuthalspacing")
+if (ierr /= nf90_noerr) call handle_err(ierr,"azimuthalspacing")
 ierr = NF90_INQ_VARID(ncid,'GateWidth',varid4)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"gatewidth")
+if (ierr /= nf90_noerr) call handle_err(ierr,"gatewidth")
 ierr = NF90_INQ_VARID(ncid,'pixel_x',pixel_x_varid)
 ierr = NF90_INQ_VARID(ncid,'pixel_y',pixel_y_varid)
-!cltorg ierr = NF90_INQ_VARID(ncid,'NyquistVelocity',varid5)
-!cltorg if (ierr .ne. nf90_noerr) call handle_err(ierr,"nyquistvelocity")
 ierr = NF90_INQ_VARID(ncid,'ReflectivityQC',varid6)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"ReflectivityQC")
+if (ierr /= nf90_noerr) call handle_err(ierr,"ReflectivityQC")
 
 
 ierr = nf90_inquire_dimension(ncid, dimid1, len = numazim_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"numazim data")
+if (ierr /= nf90_noerr) call handle_err(ierr,"numazim data")
 ierr = nf90_inquire_dimension(ncid, dimid2, len = numgate_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"numgate data")
+if (ierr /= nf90_noerr) call handle_err(ierr,"numgate data")
 ierr = nf90_inquire_dimension(ncid, dimid3, len = num_pixel_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"num_pixel_ncdata")
+if (ierr /= nf90_noerr) call handle_err(ierr,"num_pixel_ncdata")
 if(num_pixel_nc<=0 ) then !unlimited size
-num_pixel_nc=numazim_nc*numgate_nc
-l_pixel_unlimited=.true.
+  num_pixel_nc=numazim_nc*numgate_nc
+  l_pixel_unlimited=.true.
 else
-real_num_pixel=num_pixel_nc
-l_pixel_unlimited=.false.
+  real_num_pixel=num_pixel_nc
+  l_pixel_unlimited=.false.
 endif
 
 
 ierr = NF90_GET_ATT(ncid,nf90_global,'Elevation',elev_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"get elev")
+if (ierr /= nf90_noerr) call handle_err(ierr,"get elev")
 ierr = NF90_GET_ATT(ncid,nf90_global,'RangeToFirstGate',firstgate_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"get firstgate")
+if (ierr /= nf90_noerr) call handle_err(ierr,"get firstgate")
 ierr = NF90_GET_ATT(ncid,nf90_global,'Latitude',lat_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"get lat")
+if (ierr /= nf90_noerr) call handle_err(ierr,"get lat")
 ierr = NF90_GET_ATT(ncid,nf90_global,'Longitude',lon_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"get lon")
+if (ierr /= nf90_noerr) call handle_err(ierr,"get lon")
 ierr = NF90_GET_ATT(ncid,nf90_global,'radarName-value',radarsite_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"radarsite")
+if (ierr /= nf90_noerr) call handle_err(ierr,"radarsite")
 ierr = NF90_GET_ATT(ncid,nf90_global,'vcp-value',vcpstr_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"vcp")
+if (ierr /= nf90_noerr) call handle_err(ierr,"vcp")
 read(vcpstr_nc,*) vcp_nc
 ierr = NF90_GET_ATT(ncid,nf90_global,'Height',height_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"height")
+if (ierr /= nf90_noerr) call handle_err(ierr,"height")
 
 
 !reverse order of dimensions as stated in ncdump:
@@ -1038,48 +980,43 @@ allocate(pixel_x_nc(num_pixel_nc))
 allocate(pixel_y_nc(num_pixel_nc))
 
 ierr = NF90_GET_VAR(ncid,varid1,azimuth_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"azimuth data")
+if (ierr /= nf90_noerr) call handle_err(ierr,"azimuth data")
 ierr = NF90_GET_VAR(ncid,varid2,beamwidth_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"beamwidth data")
+if (ierr /= nf90_noerr) call handle_err(ierr,"beamwidth data")
 ierr = NF90_GET_VAR(ncid,varid3,azimspacing_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"azimspacing data")
+if (ierr /= nf90_noerr) call handle_err(ierr,"azimspacing data")
 ierr = NF90_GET_VAR(ncid,varid4,gatewidth_nc)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"gatewidth data")
-!cltorg ierr = NF90_GET_VAR(ncid,varid5,nyquist)
-!cltorg if (ierr .ne. nf90_noerr) call handle_err(ierr,"nyquist data")
-!cltorg  ierr = NF90_GET_VAR(ncid,varid6, bdata_nc)
+if (ierr /= nf90_noerr) call handle_err(ierr,"gatewidth data")
 if(.not.l_pixel_unlimited) then
-ierr = NF90_GET_VAR(ncid,varid6,obdata_pixel_nc)
-real_numpixel=num_pixel_nc
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"obdata_pixel data")
-ierr = NF90_GET_VAR(ncid,pixel_x_varid,pixel_x_nc)
-ierr = NF90_GET_VAR(ncid,pixel_y_varid,pixel_y_nc)
+  ierr = NF90_GET_VAR(ncid,varid6,obdata_pixel_nc)
+  real_numpixel=num_pixel_nc
+if (ierr /= nf90_noerr) call handle_err(ierr,"obdata_pixel data")
+  ierr = NF90_GET_VAR(ncid,pixel_x_varid,pixel_x_nc)
+  ierr = NF90_GET_VAR(ncid,pixel_y_varid,pixel_y_nc)
 else
-ierr=nf90_noerr
-ipix=1
-start_nc=(/1/)
-count_nc=(/1/)
-!clt for start/count use, see
-!https://www.unidata.ucar.edu/software/netcdf/docs/netcdf-tutorial/pres_005ftemp_005f4D_005frd_002ef90.html#pres_005ftemp_005f4D_005frd_002ef90https://www.unidata.ucar.edu/software/netcdf/docs/netcdf-tutorial/pres_005ftemp_005f4D_005frd_002ef90.html#pres_005ftemp_005f4D_005frd_002ef90
-ipix=1
-do 255, while (ierr.eq.nf90_noerr)
-start_nc(1)=ipix
-ierr = NF90_GET_VAR(ncid,varid6,obdata_pixel_nc(ipix:ipix),start=start_nc,count=count_nc)
-ierr = NF90_GET_VAR(ncid,pixel_x_varid,pixel_x_nc(ipix:ipix),start=start_nc,count=count_nc)
-ierr = NF90_GET_VAR(ncid,pixel_y_varid,pixel_y_nc(ipix:ipix),start=start_nc,count=count_nc)
-ipix=ipix+1
+  ierr=nf90_noerr
+  ipix=1
+  start_nc=(/1/)
+  count_nc=(/1/)
+  ipix=1
+  do 255, while (ierr.eq.nf90_noerr)
+    start_nc(1)=ipix
+    ierr = NF90_GET_VAR(ncid,varid6,obdata_pixel_nc(ipix:ipix),start=start_nc,count=count_nc)
+    ierr = NF90_GET_VAR(ncid,pixel_x_varid,pixel_x_nc(ipix:ipix),start=start_nc,count=count_nc)
+    ierr = NF90_GET_VAR(ncid,pixel_y_varid,pixel_y_nc(ipix:ipix),start=start_nc,count=count_nc)
+    ipix=ipix+1
 255 continue
-real_numpixel=ipix-2
+    real_numpixel=ipix-2
 
 endif
 
 ierr = NF90_CLOSE(ncid)
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"close")
+if (ierr /= nf90_noerr) call handle_err(ierr,"close")
 
 do i=1,numazim_nc
-if ( (beamwidth_nc(i) .ne. beamwidth_nc(1)) .or. (gatewidth_nc(i) .ne. gatewidth_nc(1)) )then
-print *, "stopping: non-uniform scan"
-endif
+  if ( (beamwidth_nc(i) /= beamwidth_nc(1)) .or. (gatewidth_nc(i) /= gatewidth_nc(1)) )then
+     print *, "stopping: non-uniform scan"
+  endif
 enddo
 read(infile(21:24),'(I4.4)')iyear
 read(infile(25:26),'(I2.2)')imon
@@ -1087,19 +1024,16 @@ read(infile(27:28),'(I2.2)')iday
 read(infile(30:31),'(I2.2)')ihour
 read(infile(32:33),'(I2.2)')imin
 read(infile(34:35),'(I2.2)')isec
-!cltdo i=1,numgate_nc
 do j=1,real_numpixel
-!lctorg write(6,*)'thinkmype i,j,is  =',i,j,'  obdata= ',obdata_nc(i,j)
-if(obdata_pixel_nc(j) .lt. -999) obdata_pixel_nc(j)=-999
+  if(obdata_pixel_nc(j) < -999_r_kind) obdata_pixel_nc(j)=-999_r_kind
 enddo
-!clt enddo
 
 
-!clt transform the read-in ob to the intermidate  obs variables( radar obs  to be used in GSI
+! transform the read-in ob to the intermidate  obs variables( radar obs  to be used in GSI
 
          strct_in_dbz(v,k)%radid=radarsite_nc
          strct_in_dbz(v,k)%vcpnum=vcp_nc
-         strct_in_dbz(v,k)%year=iyear  !clt  to be defind from infile name              
+         strct_in_dbz(v,k)%year=iyear  !  to be defind from infile name              
         strct_in_dbz(v,k)%month=imon                
         strct_in_dbz(v,k)%day=iday                  
         strct_in_dbz(v,k)%hour=ihour                 
@@ -1128,7 +1062,7 @@ enddo
  !-Obtain analysis time in minutes since reference date
  
   call w3fs21(iadate,mins_an)  !mins_an -integer number of mins snce 01/01/1978
-!clt w3movedat to help get a date from the time difference
+! w3movedat to help get a date from the time difference
   rmins_an=mins_an             !convert to real number
   
   volumes: do v=1,nvol 
@@ -1151,15 +1085,15 @@ enddo
       !-Comparison is done in units of minutes
       
         timeb = rmins_ob-rmins_an
-!clt now the window is controled by the preprocessing script starting from
+! now the window is controled by the preprocessing script starting from
 !5/14/2015
-!clthinkdeb        if(abs(timeb) > abs(radartwindow)) then
-!clt	  numbadtime=numbadtime+1	  
-!clt	  cycle tilts                           !If not in time window, cycle the loop
-!clt	end if
+!        if(abs(timeb) > abs(radartwindow)) then
+!  numbadtime=numbadtime+1	  
+!	  cycle tilts                           !If not in time window, cycle the loop
+!	end if
         
         write(6,*) 'Processing obdate:',obdate,strct_in_dbz(v,k)%second                 
-        if(abs(timeb).gt.99999) cycle
+        if(abs(timeb) > 99999_r_kind) cycle
       !--Time window check complete--!
       
         thistilt=strct_in_dbz(v,k)%elev_angle
@@ -1201,7 +1135,6 @@ enddo
 		    end if
 		    if (l_limmin) then
 		       if ( obdata_pixel_nc(ipix) < 0_r_kind ) then
-!cltorg		          strct_in_dbz(v,k)%field(i,j) = 60_r_kind
 		          obdata_pixel_nc(ipix) = 0_r_kind
 		          num_limmin=num_limmin+1
 		       end if    
@@ -1284,7 +1217,6 @@ enddo
 		    cdata_all(2,ndata) = dlon			      ! grid relative longitude
 		    cdata_all(3,ndata) = dlat			      ! grid relative latitude
 		    cdata_all(4,ndata) = thishgt		      ! obs absolute height (m)
-		!cltorg  cdata_all(5,ndata) = strct_in_dbz(v,k)%field(i,j) ! radar reflectivity factor 
 		    cdata_all(5,ndata) = obdata_pixel_nc(ipix)  !strct_in_dbz(v,k)%field(i,j) ! radar reflectivity factor 
 		    cdata_all(6,ndata) = thisazimuthr		      ! 90deg-azimuth angle (radians)
 		    cdata_all(7,ndata) = timeb*r60inv		      ! obs time (analyis relative hour)
@@ -1303,7 +1235,6 @@ enddo
 	         num_badrange=num_badrange+1      !If outside acceptable range, increment
 	      end if   !Range check	
 		
-!cltorg	   end do gates    !i
      
               end do pixel    !i
         else
@@ -1353,7 +1284,7 @@ enddo
 end subroutine read_dbz_mrms_sparse_netcdf
 
 subroutine read_dbz_mrms_detect_format(infile,l_sparse_netcdf)
-!clt to detect if it is sparse or not netcdf format by MRMS
+! to detect if it is sparse or not netcdf format by MRMS
 !$$$   subprogram documentation block
 !                .      .    .                                       .
 !   
@@ -1371,7 +1302,7 @@ subroutine read_dbz_mrms_detect_format(infile,l_sparse_netcdf)
   real(r_kind),parameter :: four_thirds = 4.0_r_kind / 3.0_r_kind
   real(r_kind),parameter :: r8     = 8.0_r_kind
   real(r_kind),parameter:: r360=360.0_r_kind
-  integer(i_kind),parameter:: maxdat=17_i_kind         ! Used in generating cdata array
+  integer(i_kind),parameter:: maxdat=17         ! Used in generating cdata array
   integer (i_kind):: iyear,imon,iday,ihour,imin,isec
   logical l_sparse_netcdf
   
@@ -1396,13 +1327,13 @@ integer(i_kind) :: ncid,ierr,dimid3
 !!READ RADAR DATA
 ierr =  NF90_OPEN(trim(infile),0,ncid)
 
-if (ierr .ne. nf90_noerr) call handle_err(ierr,"open")
+if (ierr /= nf90_noerr) call handle_err(ierr,"open")
 
 ierr = NF90_INQ_DIMID(ncid,'pixel',dimid3)
-if (ierr .ne. nf90_noerr) then 
-l_sparse_netcdf=.false.
+if (ierr /= nf90_noerr) then 
+  l_sparse_netcdf=.false.
 else
-l_sparse_netcdf=.true.
+  l_sparse_netcdf=.true.
 endif
 ierr = NF90_CLOSE(ncid)
 end subroutine read_dbz_mrms_detect_format
@@ -1412,7 +1343,7 @@ end subroutine read_dbz_mrms_detect_format
 subroutine handle_err(ierr,istring)
 use netcdf
 implicit none
-integer :: ierr
+integer(i_kind) :: ierr
 character (len=*) :: istring
 
 print *, ierr,trim(istring)
