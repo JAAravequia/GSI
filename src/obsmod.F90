@@ -532,7 +532,6 @@ module obsmod
   integer(i_kind),parameter:: i_lwcp_ob_type=37   ! lwcp_ob_type
   integer(i_kind),parameter:: i_light_ob_type=38  ! light_ob_type
 
-  integer(i_kind),parameter:: nobs_type = 38       ! number of observation types
   integer(i_kind),parameter:: i_dbz_ob_type=39    ! dbz_ob_type
   integer(i_kind),parameter:: nobs_type = 39      ! number of observation types
 

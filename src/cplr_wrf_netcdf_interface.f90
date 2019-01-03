@@ -3208,7 +3208,8 @@ contains
            start_index,end_index1,               & !mem
            start_index,end_index1,               & !pat
            ierr                                 )
-
+    end if ! l_cloud_analysis
+    
     if(dbz_exist .and. if_model_dbz)then
       do k=1,nsig_regional
          read(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional)   ! V

@@ -1342,6 +1342,7 @@ end subroutine read_dbz_mrms_detect_format
 
 subroutine handle_err(ierr,istring)
 use netcdf
+use kinds, only: i_kind
 implicit none
 integer(i_kind) :: ierr
 character (len=*) :: istring
@@ -1350,5 +1351,5 @@ print *, ierr,trim(istring)
 print *, trim(nf90_strerror(ierr))
 stop
 
-end
+end subroutine handle_err
 

@@ -522,7 +522,7 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_f
 
      end do    ! k
      end do    ! j
-     end do    ! i
+     end do ILOOP    ! i
 
      if (.not. use_all) then 
        deallocate(zl_thin) 
