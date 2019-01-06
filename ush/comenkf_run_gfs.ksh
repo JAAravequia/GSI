@@ -23,7 +23,7 @@ set -x
 # FIX_ROOT = path of fix files
 # ENKF_EXE  = path and name of the EnKF executable 
   ANAL_TIME=2014092918
-  GFSCASE=enkf_glb_t254
+  GFSCASE=T62
   JOB_DIR=the_job_directory
      #normally you put run scripts here and submit jobs form here, require a copy of enkf_gfs.x at this directory
   RUN_NAME=a_descriptive_run_name_such_as_case05_3denvar_etc
@@ -112,7 +112,7 @@ case $ARCH in
          RUN_COMMAND=""
       else
          ###### Linux workstation -  mpi run
-        RUN_COMMAND="mpirun -np ${GSIPROC} -machinefile ~/mach "
+        RUN_COMMAND="mpirun -np ${GSIPROC} "
       fi ;;
 
    'LINUX_LSF')
