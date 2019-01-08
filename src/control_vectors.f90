@@ -350,7 +350,7 @@ allocate(an_amp0(nvars))
 
 ! want to rid code from the following ...
 nrf=nc2d+nc3d
-allocate(nrf_3d(nrf),nrf2_loc(nc2d),nrf3_loc(nc3d),nmotl_loc(mvars))
+allocate(nrf_3d(nrf),nrf2_loc(nc2d),nrf3_loc(nc3d),nmotl_loc(max(1,mvars)))
 
 ! Now load information from table
 nc3d=0;nc2d=0;mvars=0
@@ -404,28 +404,28 @@ dbz_exist=.false.
 cloud_var="none"
 icloud=0
 do ii=1,nc3d
-if(mype.eq.0 ) write(6,*)"anacv cvars3d is ",cvars3d(ii)
-if(trim(cvars3d(ii)).eq.'w'.or.trim(cvars3d(ii)).eq.'W') w_exist=.true.
-if(trim(cvars3d(ii)).eq.'dbz'.or.trim(cvars3d(ii)).eq.'DBZ') then
+if(mype == 0 ) write(6,*)"anacv cvars3d is ",cvars3d(ii)
+if(trim(cvars3d(ii)) == 'w'.or.trim(cvars3d(ii))=='W') w_exist=.true.
+if(trim(cvars3d(ii))=='dbz'.or.trim(cvars3d(ii))=='DBZ') then
   dbz_exist=.true.
 endif
-if(trim(cvars3d(ii)).eq.'qr'.or.trim(cvars3d(ii)).eq.'QR') then
+if(trim(cvars3d(ii))=='qr'.or.trim(cvars3d(ii))=='QR') then
   icloud=icloud+1
   cloud_var(icloud)="qr"
 endif
-if(trim(cvars3d(ii)).eq.'ql'.or.trim(cvars3d(ii)).eq.'QL') then
+if(trim(cvars3d(ii))=='ql'.or.trim(cvars3d(ii))=='QL') then
   icloud=icloud+1
   cloud_var(icloud)="ql"
 endif
-if(trim(cvars3d(ii)).eq.'qs'.or.trim(cvars3d(ii)).eq.'QS') then
+if(trim(cvars3d(ii))=='qs'.or.trim(cvars3d(ii))=='QS') then
   icloud=icloud+1
   cloud_var(icloud)="qs"
 endif
-if(trim(cvars3d(ii)).eq.'qi'.or.trim(cvars3d(ii)).eq.'QI') then
+if(trim(cvars3d(ii))=='qi'.or.trim(cvars3d(ii))=='QI') then
   icloud=icloud+1
   cloud_var(icloud)="qi"
 endif
-if(trim(cvars3d(ii)).eq.'qg'.or.trim(cvars3d(ii)).eq.'QG') then
+if(trim(cvars3d(ii))=='qg'.or.trim(cvars3d(ii))=='QG') then
   icloud=icloud+1
   cloud_var(icloud)="qg"
 endif

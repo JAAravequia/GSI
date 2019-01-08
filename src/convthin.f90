@@ -148,8 +148,8 @@ contains
           glon(i,j) = rlon_min + (i-1)*delon
           glon(i,j) = glon(i,j)*deg2rad
 
-          if (glon(i,j) .gt. twopi) glon(i,j) = glon(i,j) - twopi
-          if (glon(i,j) .lt. 0) glon(i,j) = glon(i,j) + twopi
+          if (glon(i,j) > twopi) glon(i,j) = glon(i,j) - twopi
+          if (glon(i,j) < zero) glon(i,j) = glon(i,j) + twopi
 
           glon(i,j) = min(max(zero,glon(i,j)),twopi)
        enddo

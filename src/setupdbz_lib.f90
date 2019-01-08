@@ -21,41 +21,41 @@ real(r_kind) ::n0r,n0s,n0g,rhor,rhos,rhog,dielectric,pi
  qggesin=qggesin0
 
 
-pi=3.14159
-dielectric=0.224
-n0r=8e6
-n0s=3e6 !(2e6) !*exp(0.12*(min(273.15,tempgesin)-273.15)) !this is n0s in WSM6 paper, dif. from DART constant of 3e6
-n0g=4e6
-rhos=100
-rhor=1000
-rhog=500 !this is rhog in WSM6 paper, dif. from DART 400
+pi=3.14159_r_kind
+dielectric=0.224_r_kind
+n0r=8e6_r_kind
+n0s=3e6_r_kind !(2e6) !*exp(0.12*(min(273.15,tempgesin)-273.15)) !this is n0s in WSM6 paper, dif. from DART constant of 3e6
+n0g=4e6_r_kind
+rhos=100_r_kind
+rhor=1000_r_kind
+rhog=500_r_kind !this is rhog in WSM6 paper, dif. from DART 400
 
-param_r=(7.2e20)/(((pi*rhor)**1.75)*(n0r**0.75))
-param_dry_g=dielectric*(rhog/rhor)*(rhog/rhor)*(7.2e20)/(((pi*rhog)**1.75)*(n0g**0.75))
-param_wet_g=(7.2e20)/((((pi*rhog)**1.75)*(n0g**0.75))**0.95)
-param_wet_s=(7.2e20)/(((pi*rhos)**1.75)*(n0s**0.75))
+param_r=(7.2e20_r_kind)/(((pi*rhor)**1.75_r_kind)*(n0r**0.75_r_kind))
+param_dry_g=dielectric*(rhog/rhor)*(rhog/rhor)*(7.2e20_r_kind)/(((pi*rhog)**1.75_r_kind)*(n0g**0.75_r_kind))
+param_wet_g=(7.2e20_r_kind)/((((pi*rhog)**1.75_r_kind)*(n0g**0.75_r_kind))**0.95_r_kind)
+param_wet_s=(7.2e20_r_kind)/(((pi*rhos)**1.75_r_kind)*(n0s**0.75_r_kind))
 param_dry_s=dielectric*(rhos/rhor)*(rhos/rhor)*param_wet_s
 
 
-zqr=param_r*((rhogesin*qrgesin)**1.75)
-if (tempgesin .lt. 273.15) then
-zqr=0
-zqg=param_dry_g*((rhogesin*qggesin)**1.75)
-zqs=param_dry_s*((rhogesin*qsgesin)**1.75)
-else if(tempgesin .lt. 278.15) then
-zqg=param_wet_g*((rhogesin*qggesin)**1.6675)
-zqs=param_wet_s*((rhogesin*qsgesin)**1.75)
+zqr=param_r*((rhogesin*qrgesin)**1.75_r_kind)
+if (tempgesin < 273.15_r_kind) then
+  zqr=0_r_kind
+  zqg=param_dry_g*((rhogesin*qggesin)**1.75_r_kind)
+  zqs=param_dry_s*((rhogesin*qsgesin)**1.75_r_kind)
+else if(tempgesin < 278.15_r_kind) then
+  zqg=param_wet_g*((rhogesin*qggesin)**1.6675_r_kind)
+  zqs=param_wet_s*((rhogesin*qsgesin)**1.75_r_kind)
 else
-zqg=0
-zqs=0
+  zqg=0_r_kind
+  zqs=0_r_kind
 endif
 rDBZ=zqr+zqg+zqs
-if (rdBZ .gt. 1.0e-3) then
-rdBZ=10*log10(rdBZ)
+if (rdBZ > 1.0e-3_r_kind) then
+  rdBZ=10_r_kind*log10(rdBZ)
 else
-rdBZ=-30
+  rdBZ=-30_r_kind
 endif
-if(rdBZ.lt.static_gsi_nopcp_dbz) rdBZ=static_gsi_nopcp_dbz !notice, static_gsi_nopcp_dbz should be larger than -30
+if(rdBZ<static_gsi_nopcp_dbz) rdBZ=static_gsi_nopcp_dbz !notice, static_gsi_nopcp_dbz should be larger than -30
 
 if(debugging) print *, "ZQR=",zqr,zqs,zqg,tempgesin
 
@@ -76,44 +76,44 @@ real(r_kind) ::n0r,n0s,n0g,rhor,rhos,rhog,dielectric,pi,thisqrgesin
  qsgesin=qsgesin0
  qggesin=qggesin0
 
-pi=3.14159
-dielectric=0.224
-n0r=8e6
-n0s=3e6 !(2e6) !*exp(0.12*(min(273.15,tempgesin)-273.15)) !this is n0s in WSM6 paper, dif. from DART constant of 3e6
-n0g=4e6
-rhos=100
-rhor=1000
-rhog=500 !this is rhog in WSM6 paper, dif. from DART 400
+pi=3.14159_r_kind
+dielectric=0.224_r_kind
+n0r=8e6_r_kind
+n0s=3e6_r_kind !(2e6) !*exp(0.12*(min(273.15,tempgesin)-273.15)) !this is n0s in WSM6 paper, dif. from DART constant of 3e6
+n0g=4e6_r_kind
+rhos=100_r_kind
+rhor=1000_r_kind
+rhog=500_r_kind !this is rhog in WSM6 paper, dif. from DART 400
 
-param_r=(7.2e20)/(((pi*rhor)**1.75)*(n0r**0.75))
-param_dry_g=dielectric*(rhog/rhor)*(rhog/rhor)*(7.2e20)/(((pi*rhog)**1.75)*(n0g**0.75))
-param_wet_g=(7.2e20)/((((pi*rhog)**1.75)*(n0g**0.75))**0.95)
-param_wet_s=(7.2e20)/(((pi*rhos)**1.75)*(n0s**0.75))
+param_r=(7.2e20_r_kind)/(((pi*rhor)**1.75_r_kind)*(n0r**0.75_r_kind))
+param_dry_g=dielectric*(rhog/rhor)*(rhog/rhor)*(7.2e20_r_kind)/(((pi*rhog)**1.75_r_kind)*(n0g**0.75_r_kind))
+param_wet_g=(7.2e20_r_kind)/((((pi*rhog)**1.75_r_kind)*(n0g**0.75_r_kind))**0.95_r_kind)
+param_wet_s=(7.2e20_r_kind)/(((pi*rhos)**1.75_r_kind)*(n0s**0.75_r_kind))
 param_dry_s=dielectric*(rhos/rhor)*(rhos/rhor)*param_wet_s
 
 thisqrgesin=qrgesin
 !calculate actual reflectivity
-zqr=param_r*((rhogesin*qrgesin)**1.75)
-if (tempgesin .lt. 273.15) then
-zqr=0
-thisqrgesin=0
-zqg=param_dry_g*((rhogesin*qggesin)**1.75)
-zqs=param_dry_s*((rhogesin*qsgesin)**1.75)
-else if (tempgesin .lt. 278.15) then
-zqg=param_wet_g*((rhogesin*qggesin)**1.6675)
-zqs=param_wet_s*((rhogesin*qsgesin)**1.75)
+zqr=param_r*((rhogesin*qrgesin)**1.75_r_kind)
+if (tempgesin < 273.15_r_kind) then
+  zqr=0_r_kind
+  thisqrgesin=0_r_kind
+  zqg=param_dry_g*((rhogesin*qggesin)**1.75_r_kind)
+  zqs=param_dry_s*((rhogesin*qsgesin)**1.75_r_kind)
+else if (tempgesin < 278.15_r_kind) then
+  zqg=param_wet_g*((rhogesin*qggesin)**1.6675_r_kind)
+  zqs=param_wet_s*((rhogesin*qsgesin)**1.75_r_kind)
 else
-zqg=0
-zqs=0
+  zqg=0_r_kind
+  zqs=0_r_kind
 endif
 
 Ze = zqr+zqg+zqs 
 
-if (tempgesin .ge. 273.15) then !clt added
-jqr=(10*param_r*(rhogesin**1.75)*1.75*(thisqrgesin**0.75))/(log(10.0)*Ze)
+if (tempgesin >= 273.15_r_kind) then
+  jqr=(10_r_kind*param_r*(rhogesin**1.75_r_kind)*1.75_r_kind*(thisqrgesin**0.75_r_kind))/(log(10.0_r_kind)*Ze)
 else
-jqr=0.0
-endif !clt added
+  jqr=0.0_r_kind
+endif 
 
 end subroutine jqr_dart
 
@@ -131,42 +131,42 @@ real(r_kind) ::n0r,n0s,n0g,rhor,rhos,rhog,dielectric,pi,thisqsgesin
  qggesin=qggesin0
 
 
-pi=3.14159
-dielectric=0.224
-n0r=8e6
-n0s=3e6 !(2e6) !*exp(0.12*(min(273.15,tempgesin)-273.15)) !this is n0s in WSM6 paper, dif. from DART constant of 3e6
-n0g=4e6 !values taken from jung et al 2008/lfo83
-rhos=100
-rhor=1000
-rhog=500 !this is rhog in WSM6 paper, dif. from DART 400
+pi=3.14159_r_kind
+dielectric=0.224_r_kind
+n0r=8e6_r_kind
+n0s=3e6_r_kind !(2e6) !*exp(0.12*(min(273.15,tempgesin)-273.15)) !this is n0s in WSM6 paper, dif. from DART constant of 3e6
+n0g=4e6_r_kind !values taken from jung et al 2008/lfo83
+rhos=100_r_kind
+rhor=1000_r_kind
+rhog=500_r_kind !this is rhog in WSM6 paper, dif. from DART 400
 
-param_r=(7.2e20)/(((pi*rhor)**1.75)*(n0r**0.75))
-param_dry_g=dielectric*(rhog/rhor)*(rhog/rhor)*(7.2e20)/(((pi*rhog)**1.75)*(n0g**0.75))
-param_wet_g=(7.2e20)/((((pi*rhog)**1.75)*(n0g**0.75))**0.95)
-param_wet_s=(7.2e20)/(((pi*rhos)**1.75)*(n0s**0.75))
+param_r=(7.2e20_r_kind)/(((pi*rhor)**1.75_r_kind)*(n0r**0.75_r_kind))
+param_dry_g=dielectric*(rhog/rhor)*(rhog/rhor)*(7.2e20_r_kind)/(((pi*rhog)**1.75_r_kind)*(n0g**0.75_r_kind))
+param_wet_g=(7.2e20_r_kind)/((((pi*rhog)**1.75_r_kind)*(n0g**0.75_r_kind))**0.95_r_kind)
+param_wet_s=(7.2e20_r_kind)/(((pi*rhos)**1.75_r_kind)*(n0s**0.75_r_kind))
 param_dry_s=dielectric*(rhos/rhor)*(rhos/rhor)*param_wet_s
 
 thisqsgesin=qsgesin
 !calculate actual reflectivity
-zqr=param_r*((rhogesin*qrgesin)**1.75)
-if (tempgesin .lt. 273.15) then
-zqr=0
-zqg=param_dry_g*((rhogesin*qggesin)**1.75)
-zqs=param_dry_s*((rhogesin*qsgesin)**1.75)
-else if (tempgesin .lt. 278.15) then
-zqg=param_wet_g*((rhogesin*qggesin)**1.6675)
-zqs=param_wet_s*((rhogesin*qsgesin)**1.75)
+zqr=param_r*((rhogesin*qrgesin)**1.75_r_kind)
+if (tempgesin < 273.15_r_kind) then
+  zqr=0_r_kind
+  zqg=param_dry_g*((rhogesin*qggesin)**1.75_r_kind)
+  zqs=param_dry_s*((rhogesin*qsgesin)**1.75_r_kind)
+else if (tempgesin < 278.15_r_kind) then
+  zqg=param_wet_g*((rhogesin*qggesin)**1.6675_r_kind)
+  zqs=param_wet_s*((rhogesin*qsgesin)**1.75_r_kind)
 else
-zqg=0
-zqs=0
-thisqsgesin=0.0
+  zqg=0_r_kind
+  zqs=0_r_kind
+  thisqsgesin=0.0_r_kind
 endif
 
 Ze = zqr+zqg+zqs 
-if (tempgesin .lt. 273.15) then
-jqs=(10*param_dry_s*(rhogesin**1.75)*1.75*(thisqsgesin**0.75))/(log(10.0)*Ze)
+if (tempgesin < 273.15_r_kind) then
+  jqs=(10_r_kind*param_dry_s*(rhogesin**1.75_r_kind)*1.75_r_kind*(thisqsgesin**0.75_r_kind))/(log(10.0_r_kind)*Ze)
 else
-jqs=(10*param_wet_s*(rhogesin**1.75)*1.75*(thisqsgesin**0.75))/(log(10.0)*Ze)
+  jqs=(10_r_kind*param_wet_s*(rhogesin**1.75_r_kind)*1.75_r_kind*(thisqsgesin**0.75_r_kind))/(log(10.0_r_kind)*Ze)
 endif
 
 end subroutine jqs_dart
@@ -185,43 +185,43 @@ real(r_kind) ::n0r,n0s,n0g,rhor,rhos,rhog,dielectric,pi
  qggesin=qggesin0
 
 
-pi=3.14159
-dielectric=0.224
-n0r=8e6
-n0s=3e6 !(2e6) !*exp(0.12*(min(273.15,tempgesin)-273.15)) !this is n0s in WSM6 paper, dif. from DART constant of 3e6
-n0g=4e6
-rhos=100
-rhor=1000
-rhog=500 !this is rhog in WSM6 paper, dif. from DART 400
+pi=3.14159_r_kind
+dielectric=0.224_r_kind
+n0r=8e6_r_kind
+n0s=3e6_r_kind !(2e6) !*exp(0.12*(min(273.15,tempgesin)-273.15)) !this is n0s in WSM6 paper, dif. from DART constant of 3e6
+n0g=4e6_r_kind
+rhos=100_r_kind
+rhor=1000_r_kind
+rhog=500_r_kind !this is rhog in WSM6 paper, dif. from DART 400
 
-param_r=(7.2e20)/(((pi*rhor)**1.75)*(n0r**0.75))
-param_dry_g=dielectric*(rhog/rhor)*(rhog/rhor)*(7.2e20)/(((pi*rhog)**1.75)*(n0g**0.75))
-param_wet_g=(7.2e20)/((((pi*rhog)**1.75)*(n0g**0.75))**0.95)
-param_wet_s=(7.2e20)/(((pi*rhos)**1.75)*(n0s**0.75))
+param_r=(7.2e20_r_kind)/(((pi*rhor)**1.75_r_kind)*(n0r**0.75_r_kind))
+param_dry_g=dielectric*(rhog/rhor)*(rhog/rhor)*(7.2e20_r_kind)/(((pi*rhog)**1.75_r_kind)*(n0g**0.75_r_kind))
+param_wet_g=(7.2e20_r_kind)/((((pi*rhog)**1.75_r_kind)*(n0g**0.75_r_kind))**0.95_r_kind)
+param_wet_s=(7.2e20_r_kind)/(((pi*rhos)**1.75_r_kind)*(n0s**0.75_r_kind))
 param_dry_s=dielectric*(rhos/rhor)*(rhos/rhor)*param_wet_s
 
 thisqggesin=qggesin
 !calculate actual reflectivity
-zqr=param_r*((rhogesin*qrgesin)**1.75)
-if (tempgesin .lt. 273.15) then
-zqr=0
-zqg=param_dry_g*((rhogesin*qggesin)**1.75)
-zqs=param_dry_s*((rhogesin*qsgesin)**1.75)
-else if (tempgesin .lt. 278.15) then
-zqg=param_wet_g*((rhogesin*qggesin)**1.6675)
-zqs=param_wet_s*((rhogesin*qsgesin)**1.75)
+zqr=param_r*((rhogesin*qrgesin)**1.75_r_kind)
+if (tempgesin < 273.15_r_kind) then
+  zqr=0_r_kind
+  zqg=param_dry_g*((rhogesin*qggesin)**1.75_r_kind)
+  zqs=param_dry_s*((rhogesin*qsgesin)**1.75_r_kind)
+else if (tempgesin < 278.15_r_kind) then
+  zqg=param_wet_g*((rhogesin*qggesin)**1.6675_r_kind)
+  zqs=param_wet_s*((rhogesin*qsgesin)**1.75_r_kind)
 else
-zqg=0
-zqs=0
-thisqggesin=0.0
+  zqg=0_r_kind
+  zqs=0_r_kind
+  thisqggesin=0.0_r_kind
 endif
 
 Ze = zqr+zqg+zqs 
 
-if (tempgesin .lt. 273.15) then
-jqg=(10*param_dry_g*(rhogesin**1.75)*1.75*(thisqggesin**0.75))/(log(10.0)*Ze)
+if (tempgesin < 273.15_r_kind) then
+  jqg=(10_r_kind*param_dry_g*(rhogesin**1.75_r_kind)*1.75_r_kind*(thisqggesin**0.75_r_kind))/(log(10.0_r_kind)*Ze)
 else
-jqg=(10*param_wet_g*(rhogesin**1.6675)*1.6675*(thisqggesin**0.6675))/(log(10.0)*Ze)
+  jqg=(10_r_kind*param_wet_g*(rhogesin**1.6675_r_kind)*1.6675_r_kind*(thisqggesin**0.6675_r_kind))/(log(10.0_r_kind)*Ze)
 endif
 end subroutine jqg_dart
 
@@ -232,27 +232,23 @@ implicit none
 real(r_kind) :: qrgesin,qsgesin,qggesin,rhogesin,tempgesin,rDBZ
 real(r_kind) :: zqr,zqg,zqs
 
-!zqr=(3.63e9)*((rhogesin*qrgesin/1000.0)**1.75)
-zqr=(3.63e9)*((rhogesin*qrgesin)**1.75)
-!zqg=(4.33e10)*((rhogesin*qggesin/1000.0)**1.75)
-zqg=(4.33e10)*((rhogesin*qggesin)**1.75)
-if(tempgesin .lt. 273.15) then 
-!zqs=(9.8e8)*((rhogesin*qsgesin/1000.0)**1.75)
-zqs=(9.8e8)*((rhogesin*qsgesin)**1.75)
+zqr=(3.63e9_r_kind)*((rhogesin*qrgesin)**1.75_r_kind)
+zqg=(4.33e10_r_kind)*((rhogesin*qggesin)**1.75_r_kind)
+if(tempgesin < 273.15_r_kind) then 
+  zqs=(9.8e8_r_kind)*((rhogesin*qsgesin)**1.75_r_kind)
 else
-!zqs=(4.26e11)*((rhogesin*qsgesin/1000.0)**1.75)
-zqs=(4.26e11)*((rhogesin*qsgesin)**1.75)
+  zqs=(4.26e11_r_kind)*((rhogesin*qsgesin)**1.75_r_kind)
 endif
 rDBZ=zqr+zqg+zqs
-if (rdBZ .gt. 1) then
-rdBZ=10*log10(rdBZ)
+if (rdBZ > 1_r_kind) then
+  rdBZ=10_r_kind*log10(rdBZ)
 else
-rdBZ=0
+  rdBZ=0_r_kind
 endif
 
 
 !reflectivity threshold for no-precip:
-if (rdBZ .lt. 5) rdBZ=5
+if (rdBZ < 5_r_kind) rdBZ=5_r_kind
 
 end subroutine hx_gaostensrud2012
 end module setupdbz_lib

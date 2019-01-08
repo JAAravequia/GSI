@@ -1003,8 +1003,8 @@ contains
        call nemsio_readrecv(gfile,trim(varname_fice),trim(vartype),lev,work_b_fice,iret=iret)
        call nemsio_readrecv(gfile,trim(varname_clwmr),trim(vartype),lev,work_b_clwmr,iret=iret)
        call nemsio_readrecv(gfile,trim(varname_frimef),trim(vartype),lev,work_b_frimef,iret=iret)
-       if(iret.ne.0) then
-       write(6,*)'think reading frimef or other variables with errors, stop'
+       if(iret /= 0) then
+       write(6,*)'reading frimef or other variables with errors, stop'
        stop
        endif
 
@@ -1141,7 +1141,6 @@ contains
           work_sub_l(j,i)=var_l(j+1,i+1)
        end do
     end do
-!    write(6,*)'writeout1', maxval(work_sub_t),maxval(work_sub_i),maxval(work_sub_r)
     call mpi_gatherv(work_sub_s,ijn(mm1),mpi_rtype, &
                            work_s,ijn,displs_g,mpi_rtype,mype_io,mpi_comm_world,ierror)
     call mpi_gatherv(work_sub_i,ijn(mm1),mpi_rtype, &
@@ -1150,7 +1149,6 @@ contains
                            work_r,ijn,displs_g,mpi_rtype,mype_io,mpi_comm_world,ierror)
     call mpi_gatherv(work_sub_l,ijn(mm1),mpi_rtype, &
                            work_l,ijn,displs_g,mpi_rtype,mype_io,mpi_comm_world,ierror)
-!    write(6,*)'writeout2', maxval(work_t),maxval(work_i),maxval(work_r)
     if(mype==mype_io) then
        do n=1,iglobal
           i=ltosi(n)
@@ -1160,7 +1158,6 @@ contains
           work_a_r(i,j)=work_r(n)
           work_a_l(i,j)=work_l(n)
        end do
-!      write(6,*)'writeout3', maxval(work_a_r),maxval(work_a_l)
 
        call nmmb_a_to_h(work_a_s,work_b_s)
        call nmmb_a_to_h(work_a_i,work_b_i)
@@ -1176,8 +1173,6 @@ contains
 !      if(add_saved) work_b_i=work_b_i+work_saved_i
 !      if(add_saved) work_b_r=work_b_r+work_saved_r
 !      if(add_saved) work_b_l=work_b_l+work_saved_l
-!      write(6,*)'writeout4', maxval(work_b_r),maxval(work_b_l)
-!      write(6,*)'writeout44',nlon_regional,nlat_regional,nlon,nlat
        do n=1,nlon_regional*nlat_regional
              qfs=work_b_s(n)
            qfi=work_b_i(n)
@@ -1194,7 +1189,6 @@ contains
        call nemsio_writerecv(gfile,trim(varname_frain),trim(vartype),lev,work_b_frain,iret=iret)
        call nemsio_writerecv(gfile,trim(varname_fice),trim(vartype),lev,work_b_fice,iret=iret)
        call nemsio_writerecv(gfile,trim(varname_frimef),trim(vartype),lev,work_b_frimef,iret=iret)
-!      write(6,*)'writeout5', maxval(work_b_frain),maxval(work_b_fice)
 
        if(iret/=0) then
           write(6,*)'  problem writing varname=',trim(varname_frain),', vartype=',trim(vartype),', Status = ',iret
@@ -1256,8 +1250,8 @@ contains
    real(r_single) f_ice, f_rain,f_rimef
    real(r_single) onemf_ice, onemf_rain
     
-   onemf_ice=1-f_ice
-   onemf_rain=1-f_rain
+   onemf_ice=1.0_r_single-f_ice
+   onemf_rain=1.0_r_single-f_rain
    
    if(wc > 0.0_r_single) then
 
@@ -1337,7 +1331,7 @@ else
              f_ice=1.0_r_single
            end if
      end if
-     onemf_ice=1-f_ice
+     onemf_ice=1.0_r_single-f_ice
      if(qr < epsq) then
            f_rain=0.0_r_single
      else
@@ -1352,7 +1346,7 @@ else
            f_rimef=1.0_r_single
       else
            if(qs>epsq) then
-           f_rimef=min(qi/qs,50.0) 
+           f_rimef=min(qi/qs,50.0_r_single) 
            else
            f_rimef=1.0_r_single !cltthinkdeb
           endif

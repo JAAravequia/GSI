@@ -235,7 +235,7 @@ module constants
   real(r_kind),parameter:: qcmin  = 0.0_r_kind      ! lower bound on ges_cw
   real(r_kind),parameter:: tgmin  = 1.e-15_r_kind   ! lower bound on trace gases
 
-  integer(i_kind),parameter::  izero  = 0_i_kind
+  integer(i_kind),parameter::  izero  = 0
   real(r_kind),parameter:: qimin  = 0.0_r_kind
   real(r_kind),parameter:: qgmin  = 0.0_r_kind
   real(r_kind),parameter:: qsmin  = 0.0_r_kind

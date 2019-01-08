@@ -1,5 +1,5 @@
 subroutine read_nsstbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
-          twindin,sis,nobs)
+          twindin,sis,nobs,hloc,vloc)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:  read_nsstbufr                read sst obs from nsstbufr file 
@@ -59,9 +59,10 @@ subroutine read_nsstbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
   integer(i_kind),intent(inout):: nread,ndata,nodata
   integer(i_kind),dimension(npe),intent(inout):: nobs
   real(r_kind),intent(in):: gstime,twindin
+  real(r_kind)  ,intent(in   ) :: hloc,vloc
 
 ! Declare local parameters
-  integer(i_kind),parameter:: maxinfo = 18
+  integer(i_kind),parameter:: maxinfo = 20
   real(r_double),parameter:: d250 = 250.0_r_double
   real(r_double),parameter:: d350 = 350.0_r_double
   real(r_kind),parameter:: r0_1  = 0.10_r_kind
@@ -535,6 +536,8 @@ subroutine read_nsstbufr(nread,ndata,nodata,gstime,infile,obstype,lunout, &
            data_all(16,ndata) = dlon_earth_deg          ! earth relative longitude (degrees)
            data_all(17,ndata) = dlat_earth_deg          ! earth relative latitude (degrees)
            data_all(18,ndata) = hdr(6)                  ! station elevation
+           data_all(19,ndata) = hloc                    ! horizontal localization
+           data_all(20,ndata) = vloc                    ! vertical localization
  
 
            if(nst_gsi>0) then

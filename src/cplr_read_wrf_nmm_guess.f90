@@ -1973,46 +1973,46 @@ contains
        else ! i_radar_qli > 0
 
   !                          !  cloud liquid water,ice,snow,graupel,hail,rain for cloudy radiance
-       if (n_actual_clouds>0 .and. (i_gsdcldanal_type/=2) .and. i_radar_qh > 0 ) then
-  
-  !       Get pointer to cloud water mixing ratio
-          call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql,iret); ier=iret
-          call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi,iret); ier=ier+iret
-          call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qr',ges_qr,iret); ier=ier+iret
-          call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qs',ges_qs,iret); ier=ier+iret
-          call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qg',ges_qg,iret); ier=ier+iret
-          call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qh',ges_qh,iret); ier=ier+iret
-          if ((icw4crtm>0 .or. iqtotal>0) .and. ier==0) then
-             ges_ql=zero; ges_qi=zero; ges_qr=zero; ges_qs=zero; ges_qg=zero; ges_qh=zero
-             efr_ql=zero; efr_qi=zero; efr_qr=zero; efr_qs=zero; efr_qg=zero; efr_qh=zero
-             do kr=1,nsig_read
-                k=nsig_read+1-kr
-                call gsi_nemsio_read('clwmr', 'mid layer','H',kr,clwmr(:,:,k), mype,mype_input) !read total condensate
-                call gsi_nemsio_read('f_ice', 'mid layer','H',kr,fice(:,:,k),  mype,mype_input,good_fice) !read ice fraction
-                call gsi_nemsio_read('f_rain','mid layer','H',kr,frain(:,:,k), mype,mype_input,good_frain) !read rain fraction
-                call gsi_nemsio_read('f_rimef','mid layer','H',kr,frimef(:,:,k), mype,mype_input,good_frimef) !read rime factor
-                if (good_fice .and. good_frain .and. good_frimef) cold_start=.false.
-                if (.not. cold_start) then
-                   do i=1,lon2
-                      do j=1,lat2
-                         ges_prsl(j,i,k,it)=one_tenth* &
-                                     (aeta1_ll(k)*pdtop_ll + &
-                                      aeta2_ll(k)*(ten*ges_ps(j,i)-pdtop_ll-pt_ll) + &
-                                      pt_ll)
+          if (n_actual_clouds>0 .and. (i_gsdcldanal_type/=2) .and. i_radar_qh > 0 ) then
+   
+  !          Get pointer to cloud water mixing ratio
+             call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql,iret); ier=iret
+             call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi,iret); ier=ier+iret
+             call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qr',ges_qr,iret); ier=ier+iret
+             call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qs',ges_qs,iret); ier=ier+iret
+             call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qg',ges_qg,iret); ier=ier+iret
+             call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qh',ges_qh,iret); ier=ier+iret
+             if ((icw4crtm>0 .or. iqtotal>0) .and. ier==0) then
+                ges_ql=zero; ges_qi=zero; ges_qr=zero; ges_qs=zero; ges_qg=zero; ges_qh=zero
+                efr_ql=zero; efr_qi=zero; efr_qr=zero; efr_qs=zero; efr_qg=zero; efr_qh=zero
+                do kr=1,nsig_read
+                   k=nsig_read+1-kr
+                   call gsi_nemsio_read('clwmr', 'mid layer','H',kr,clwmr(:,:,k), mype,mype_input) !read total condensate
+                   call gsi_nemsio_read('f_ice', 'mid layer','H',kr,fice(:,:,k),  mype,mype_input,good_fice) !read ice fraction
+                   call gsi_nemsio_read('f_rain','mid layer','H',kr,frain(:,:,k), mype,mype_input,good_frain) !read rain fraction
+                   call gsi_nemsio_read('f_rimef','mid layer','H',kr,frimef(:,:,k), mype,mype_input,good_frimef) !read rime factor
+                   if (good_fice .and. good_frain .and. good_frimef) cold_start=.false.
+                   if (.not. cold_start) then
+                      do i=1,lon2
+                        do j=1,lat2
+                           ges_prsl(j,i,k,it)=one_tenth* &
+                                       (aeta1_ll(k)*pdtop_ll + &
+                                       aeta2_ll(k)*(ten*ges_ps(j,i)-pdtop_ll-pt_ll) + &
+                                       pt_ll)
+                        end do
                       end do
-                   end do
-                   call cloud_calc(ges_prsl(:,:,k,it),ges_q(:,:,k),ges_tsen(:,:,k,it),clwmr(:,:,k), &
-                        fice(:,:,k),frain(:,:,k),frimef(:,:,k), &
-                        ges_ql(:,:,k),ges_qi(:,:,k),ges_qr(:,:,k),ges_qs(:,:,k),ges_qg(:,:,k),ges_qh(:,:,k), &
-                        efr_ql(:,:,k,it),efr_qi(:,:,k,it),efr_qr(:,:,k,it),efr_qs(:,:,k,it),efr_qg(:,:,k,it),efr_qh(:,:,k,it))
-                end if
-             end do
-             if (cold_start) call cloud_calc_gfs(ges_ql,ges_qi,clwmr,ges_q,ges_tv,.true.)
+                      call cloud_calc(ges_prsl(:,:,k,it),ges_q(:,:,k),ges_tsen(:,:,k,it),clwmr(:,:,k), &
+                           fice(:,:,k),frain(:,:,k),frimef(:,:,k), &
+                           ges_ql(:,:,k),ges_qi(:,:,k),ges_qr(:,:,k),ges_qs(:,:,k),ges_qg(:,:,k),ges_qh(:,:,k), &
+                           efr_ql(:,:,k,it),efr_qi(:,:,k,it),efr_qr(:,:,k,it),efr_qs(:,:,k,it),efr_qg(:,:,k,it),efr_qh(:,:,k,it))
+                   end if
+                end do
+                if (cold_start) call cloud_calc_gfs(ges_ql,ges_qi,clwmr,ges_q,ges_tv,.true.)
   
-             call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ges_cwmr,iret)
-             if (iret==0) ges_cwmr=clwmr 
-          end if  ! icw4crtm>10 .or. iqtotal>0
-       end if    ! end of (n_actual_clouds>0)
+                call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ges_cwmr,iret)
+                if (iret==0) ges_cwmr=clwmr 
+             end if  ! icw4crtm>10 .or. iqtotal>0
+          end if    ! end of (n_actual_clouds>0)
 
        end if ! i_radar_qli > 0
   

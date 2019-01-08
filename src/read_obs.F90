@@ -658,6 +658,7 @@ subroutine read_obs(ndata,mype)
 !                         option vadwnd_l2rw_qc. 
 !   2017-08-31  Li      - move gsi_nstcoupler_init & gsi_nstcoupler_read to getsfc in sathin.F90
 !                       - move gsi_nstcoupler_final from create_sfc_grids to here
+!   2018-01-23 Apodaca  - add GOES/GLM lightning data
 !   
 !
 !   input argument list:
@@ -706,6 +707,7 @@ subroutine read_obs(ndata,mype)
     use pcpinfo, only: npcptype,nupcp,iusep,diag_pcp
     use convinfo, only: nconvtype,ioctype,icuse,diag_conv,ithin_conv
     use chemmod, only : oneobtest_chem,oneob_type_chem,oneobschem
+    use lightinfo, only: nlighttype,iuse_light,diag_light
     use aircraftinfo, only: aircraft_t_bc,aircraft_t_bc_pof,aircraft_t_bc_ext,mype_airobst
     use gsi_io, only: mype_io
     use rapidrefresh_cldsurf_mod, only: i_gsdcldanal_type
@@ -741,7 +743,7 @@ subroutine read_obs(ndata,mype)
     integer(i_kind) i,j,k,ii,nmind,lunout,isfcalc,ithinx,ithin,nread,npuse,nouse
     integer(i_kind) nprof_gps1,npem1,krsize,len4file,npemax,ilarge,nlarge,npestart
     integer(i_llong) :: lenbytes
-    integer(i_kind):: npetot,npeextra,mmdat
+    integer(i_kind):: npetot,npeextra,mmdat,nodata
     integer(i_kind):: iworld,iworld_group,next_mype,mm1,iix
     integer(i_kind):: mype_root
     integer(i_kind):: minuse,lunsave,maxproc,minproc
@@ -876,6 +878,8 @@ subroutine read_obs(ndata,mype)
           ditype(i) = 'ozone'
        else if (obstype == 'sbuv2' &
            .or. obstype == 'omi' &
+           .or. obstype == 'ompstc8' &
+           .or. obstype == 'ompsnp' &
            .or. obstype == 'gome' &
            .or. mls &
            ) then
@@ -888,6 +892,8 @@ subroutine read_obs(ndata,mype)
           ditype(i) = 'gps'
        else if ( index(obstype,'aod') /= 0 ) then
           ditype(i) = 'aero'
+       else if (obstype == 'goes_glm') then
+          ditype(i) = 'light'
        else
           write(6,*)'READ_OBS:  ***ERROR*** - unknown ob type ',trim(obstype)
        end if
@@ -924,6 +930,11 @@ subroutine read_obs(ndata,mype)
           if(diag_aero .and. .not. reduce_diag)minuse=-2
           do j=1,jpch_aero
              if(trim(dsis(i)) == trim(nusis_aero(j)) .and. iuse_aero(j) > minuse)nuse=.true.
+          end do
+        else if(ditype(i) == 'light')then
+          if(diag_light .and. .not. reduce_diag)minuse=-2
+          do j=1,nlighttype
+             if(iuse_light(j) > minuse) nuse=.true.
           end do
        else
           nuse=.true.
@@ -1364,7 +1375,7 @@ subroutine read_obs(ndata,mype)
                     string='READ_SATMAR'
                  else 
                    call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
-                        prsl_full,nobs_sub1(1,i),read_rec(i))
+                        prsl_full,nobs_sub1(1,i),read_rec(i),hlocal(i),vlocal(i))
                    string='READ_PREPBUFR'
 
                  endif
@@ -1410,7 +1421,7 @@ subroutine read_obs(ndata,mype)
 !             Process satellite winds which seperate from prepbufr
                 if ( index(infile,'satwnd') /=0 ) then
                   call read_satwnd(nread,npuse,nouse,infile,obstype,lunout,gstime,twind,sis,&
-                     prsl_full,nobs_sub1(1,i))
+                     prsl_full,nobs_sub1(1,i),hlocal(i),vlocal(i))
                   string='READ_SATWND'
 !             Process oscat winds which seperate from prepbufr
                 elseif ( index(infile,'oscatbufr') /=0 ) then
@@ -1437,7 +1448,7 @@ subroutine read_obs(ndata,mype)
                 string="--"//trim(ditype(i))//":sst:"//trim(platid)
                 if ( platid == 'nsst') then
                    call read_nsstbufr(nread,npuse,nouse,gstime,infile,obstype, &
-                        lunout,twind,sis,nobs_sub1(1,i))
+                        lunout,twind,sis,nobs_sub1(1,i),hlocal(i),vlocal(i))
                    string='READ_NSSTBUFR'
                 elseif ( platid == 'mods') then
                    call read_modsbufr(nread,npuse,nouse,gstime,infile,obstype, &
@@ -1763,7 +1774,14 @@ subroutine read_obs(ndata,mype)
                   mype_root,mype_sub(mm1,i),npe_sub(i),mpi_comm_sub(i), &
                   nobs_sub1(1,i))
              string='READ_AEROSOL'
-                     
+
+!         Process satellite lightning observations (e.g. GOES/GLM)                     
+          else if(ditype(i) == 'light')then
+               if (obstype == 'goes_glm' ) then
+             call read_goesglm(nread,ndata,nodata,infile,obstype,lunout,sis)
+             string='READ_GOESGLM'
+               endif
+
           end if ditype_select
 
 !         Close unit to data file

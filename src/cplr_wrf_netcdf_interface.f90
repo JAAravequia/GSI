@@ -655,34 +655,34 @@ contains
           write(iunit)((field3v(i,j,k),i=1,nlon_regional),j=1,nlat_regional+1)   ! V
        end do
 
-     if(w_exist) then
-       rmse_var='W'
-       call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
-          start_index,end_index, WrfType, ierr    )
-       if(print_verbose)then
-         write(6,*)' rmse_var=',trim(rmse_var)
-         write(6,*)' ordering=',ordering
-         write(6,*)' WrfType,WRF_REAL=',WrfType,WRF_REAL
-         write(6,*)' ndim1=',ndim1
-         write(6,*)' staggering=',staggering
-         write(6,*)' start_index=',start_index
-         write(6,*)' end_index=',end_index
+       if(w_exist) then
+          rmse_var='W'
+          call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
+             start_index,end_index, WrfType, ierr    )
+          if(print_verbose)then
+            write(6,*)' rmse_var=',trim(rmse_var)
+            write(6,*)' ordering=',ordering
+            write(6,*)' WrfType,WRF_REAL=',WrfType,WRF_REAL
+            write(6,*)' ndim1=',ndim1
+            write(6,*)' staggering=',staggering
+            write(6,*)' start_index=',start_index
+            write(6,*)' end_index=',end_index
+          end if
+          call ext_ncd_read_field(dh1,DateStr1,TRIM(rmse_var),              &
+             field3w,WRF_REAL,0,0,0,ordering,           &
+             staggering, dimnames ,               &
+             start_index,end_index,               & !dom
+             start_index,end_index,               & !mem
+             start_index,end_index,               & !pat
+             ierr                                 )
+          do k=1,nsig_regional+1
+            if(print_verbose)then
+              write(6,*)' k,max,min,mid W=',k,maxval(field3w(:,:,k)),minval(field3w(:,:,k)), &
+                  field3w(nlon_regional/2,nlat_regional/2,k)
+            end if
+            write(iunit)((field3w(i,j,k),i=1,nlon_regional),j=1,nlat_regional)   ! w
+          end do
        end if
-       call ext_ncd_read_field(dh1,DateStr1,TRIM(rmse_var),              &
-          field3w,WRF_REAL,0,0,0,ordering,           &
-          staggering, dimnames ,               &
-          start_index,end_index,               & !dom
-          start_index,end_index,               & !mem
-          start_index,end_index,               & !pat
-          ierr                                 )
-       do k=1,nsig_regional+1
-         if(print_verbose)then
-           write(6,*)' k,max,min,mid W=',k,maxval(field3w(:,:,k)),minval(field3w(:,:,k)), &
-               field3w(nlon_regional/2,nlat_regional/2,k)
-         end if
-         write(iunit)((field3w(i,j,k),i=1,nlon_regional),j=1,nlat_regional)   ! w
-       end do
-     endif
 
      
 !      rmse_var='LANDMASK'
@@ -1199,36 +1199,36 @@ contains
              write(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional) ! Qnc
           end do
 
-      if( dbz_exist .and. if_model_dbz ) then
-       rmse_var='REFL_10CM'
-       call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering,&
-            start_index,end_index, WrfType, ierr    )
-       if(print_verbose)then
-         write(6,*)' rmse_var = ',trim(rmse_var),' ndim1=',ndim1
-         write(6,*)' WrfType = ',WrfType,' WRF_REAL=',WRF_REAL,'ierr  = ',ierr !DEDE
-         write(6,*)' ordering = ',trim(ordering),' staggering = ',trim(staggering)
-         write(6,*)' start_index = ',start_index,' end_index = ',end_index
-       end if
-       call ext_ncd_read_field(dh1,DateStr1,TRIM(rmse_var),              &
-            field3,WRF_REAL,0,0,0,ordering,           &
-            staggering, dimnames ,               &
-            start_index,end_index,               & !dom
-            start_index,end_index,               & !mem
-            start_index,end_index,               & !pat
-            ierr                                 )
-       do k=1,nsig_regional
-            do i=1,nlon_regional
-            do j=1,nlat_regional
-              field3(i,j,k) = (max(field3(i,j,k),zero))
-            enddo
-            enddo
-            if(print_verbose)then
-              write(6,*)' k,max,min,mid Dbz=',k,maxval(field3(:,:,k)),minval(field3(:,:,k)), &
-                        field3(nlon_regional/2,nlat_regional/2,k)
-            end if
-            write(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional) !dBZ
-       end do
-      end if
+          if( dbz_exist .and. if_model_dbz ) then
+             rmse_var='REFL_10CM'
+             call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering,&
+                  start_index,end_index, WrfType, ierr    )
+             if(print_verbose)then
+               write(6,*)' rmse_var = ',trim(rmse_var),' ndim1=',ndim1
+               write(6,*)' WrfType = ',WrfType,' WRF_REAL=',WRF_REAL,'ierr  = ',ierr !DEDE
+               write(6,*)' ordering = ',trim(ordering),' staggering = ',trim(staggering)
+               write(6,*)' start_index = ',start_index,' end_index = ',end_index
+             end if
+             call ext_ncd_read_field(dh1,DateStr1,TRIM(rmse_var),              &
+                  field3,WRF_REAL,0,0,0,ordering,           &
+                  staggering, dimnames ,               &
+                  start_index,end_index,               & !dom
+                  start_index,end_index,               & !mem
+                  start_index,end_index,               & !pat
+                  ierr                                 )
+             do k=1,nsig_regional
+               do i=1,nlon_regional
+                 do j=2,nlat_regional
+                    field3(i,j,k) = (max(field3(i,j,k),zero))
+                 enddo
+               enddo
+               if(print_verbose)then
+                  write(6,*)' k,max,min,mid Dbz=',k,maxval(field3(:,:,k)),minval(field3(:,:,k)), &
+                              field3(nlon_regional/2,nlat_regional/2,k)
+               end if
+               write(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional) !dBZ
+             end do
+          end if
 
           rmse_var='RAD_TTEN_DFI'
           call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
@@ -3208,32 +3208,33 @@ contains
            start_index,end_index1,               & !mem
            start_index,end_index1,               & !pat
            ierr                                 )
-
+    end if ! l_cloud_analysis
+    
     if(dbz_exist .and. if_model_dbz)then
-    do k=1,nsig_regional
-       read(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional)   ! V
-       if(print_verbose) write(6,*)' k,max,min,mid dbz=',k,maxval(field3v(:,:,k)),minval(field3v(:,:,k)), &
-            field3v(nlon_regional/2,nlat_regional/2,k)
-    end do
-    rmse_var='REFL_10CM'
-    call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
-         start_index,end_index1, WrfType, ierr    )
-    if(print_verbose)then
-      write(6,*)' rmse_var=',trim(rmse_var)
-      write(6,*)' ordering=',ordering
-      write(6,*)' WrfType,WRF_REAL=',WrfType,WRF_REAL
-      write(6,*)' ndim1=',ndim1
-      write(6,*)' staggering=',staggering
-      write(6,*)' start_index=',start_index
-      write(6,*)' end_index1=',end_index1
-    end if
-    call ext_ncd_write_field(dh1,DateStr1,TRIM(rmse_var),              &
-         field3,WRF_REAL,0,0,0,ordering,           &
-         staggering, dimnames ,               &
-         start_index,end_index1,               & !dom
-         start_index,end_index1,               & !mem
-         start_index,end_index1,               & !pat
-         ierr                                 )
+      do k=1,nsig_regional
+         read(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional)   ! V
+         if(print_verbose) write(6,*)' k,max,min,mid dbz=',k,maxval(field3v(:,:,k)),minval(field3v(:,:,k)), &
+              field3v(nlon_regional/2,nlat_regional/2,k)
+      end do
+      rmse_var='REFL_10CM'
+      call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
+           start_index,end_index1, WrfType, ierr    )
+      if(print_verbose)then
+        write(6,*)' rmse_var=',trim(rmse_var)
+        write(6,*)' ordering=',ordering
+        write(6,*)' WrfType,WRF_REAL=',WrfType,WRF_REAL
+        write(6,*)' ndim1=',ndim1
+        write(6,*)' staggering=',staggering
+        write(6,*)' start_index=',start_index
+        write(6,*)' end_index1=',end_index1
+      end if
+      call ext_ncd_write_field(dh1,DateStr1,TRIM(rmse_var),              &
+           field3,WRF_REAL,0,0,0,ordering,           &
+           staggering, dimnames ,               &
+           start_index,end_index1,               & !dom
+           start_index,end_index1,               & !mem
+           start_index,end_index1,               & !pat
+           ierr                                 )
     end if
   
     if( l_cloud_analysis )then
@@ -3262,9 +3263,8 @@ contains
            start_index,end_index1,               & !mem
            start_index,end_index1,               & !pat
            ierr                                 )
-    end if
   
-    endif     ! l_cloud_analysis
+    end if     ! l_cloud_analysis
   
     if(laeroana_gocart) then
        call gsi_chemguess_get('aerosols::3d', n_gocart_var, ier)

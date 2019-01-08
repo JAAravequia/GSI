@@ -132,6 +132,7 @@ module obsmod
 !                                          POC: xuguang.wang@ou.edu
 !   2016-11-29 shlyaeva  - add lobsdiag_forenkf option for writing out linearized
 !                           H(x) for EnKF
+!   2018-01-01  apodaca  - add GOES/GLM lightning observations
 ! 
 ! Subroutines Included:
 !   sub init_obsmod_dflts   - initialize obs related variables to default values
@@ -257,6 +258,8 @@ module obsmod
 !   def swcptail     - solid-water content path linked list tail
 !   def lwcphead     - liquid-water content path linked list head
 !   def lwcptail     - liquid-water content path linked list tail
+!   def lighthead    - lightning linked list head
+!   def lighttail    - lightning linked list tail
 !   def lunobs_obs   - unit to save satellite observation
 !   def iout_rad     - output unit for satellite stats
 !   def iout_pcp     - output unit for precipitation stats
@@ -293,6 +296,7 @@ module obsmod
 !   def iout_pm10    - output unit for pm10 stats
 !   def iout_swcp    - output unit for swcp stats
 !   def iout_lwcp    - output unit for lwcp stats
+!   def iout_light   - output unit for lightning stats
 !   def mype_t       - task to handle temperature stats
 !   def mype_q       - task to handle moisture stats
 !   def mype_uv      - task to handle wind stats
@@ -322,6 +326,7 @@ module obsmod
 !   def mype_pm10    - task to handle pm10
 !   def mype_swcp    - task to handle swcp
 !   def mype_lwcp    - task to handle lwcp
+!   def mype_light   - task to lightning stats
 !   def oberrflg     - logical for reading in new observation error table
 !                      .true.  will read in obs errors from file 'errtable'
 !                      .false. will not read in new obs errors
@@ -399,6 +404,7 @@ module obsmod
   public :: i_pw_ob_type,i_pcp_ob_type,i_oz_ob_type,i_o3l_ob_type,i_colvk_ob_type,i_gps_ob_type
   public :: i_rad_ob_type,i_tcp_ob_type,i_lag_ob_type
   public :: i_swcp_ob_type, i_lwcp_ob_type
+  public :: i_light_ob_type
   public :: obscounts,nobs_type
   public :: cobstype,nprof_gps,time_offset,ianldate
   public :: iout_oz,iout_co,dsis,ref_obs,obsfile_all,lobserver,perturb_obs,ditype,dsfcalc,dplat
@@ -414,7 +420,7 @@ module obsmod
   public :: grids_dim,rmiss_single,nchan_total,mype_sst,mype_gps
   public :: mype_uv,mype_dw,mype_rw,mype_q,mype_tcp,mype_lag,mype_ps,mype_t
   public :: mype_pw,iout_rw,iout_dw,iout_sst,iout_pw,iout_t,iout_q,iout_tcp
-  public :: iout_lag,iout_uv,iout_gps,iout_ps
+  public :: iout_lag,iout_uv,iout_gps,iout_ps,iout_light,mype_light
   public :: mype_gust,mype_vis,mype_pblh,iout_gust,iout_vis,iout_pblh
   public :: mype_tcamt,mype_lcbas,iout_tcamt,iout_lcbas
   public :: mype_wspd10m,mype_td2m,iout_wspd10m,iout_td2m
@@ -524,9 +530,10 @@ module obsmod
 
   integer(i_kind),parameter:: i_swcp_ob_type=36   ! swcp_ob_type
   integer(i_kind),parameter:: i_lwcp_ob_type=37   ! lwcp_ob_type
-  integer(i_kind),parameter:: i_dbz_ob_type=38    ! dbz_ob_type
+  integer(i_kind),parameter:: i_light_ob_type=38  ! light_ob_type
 
-  integer(i_kind),parameter:: nobs_type = 38      ! number of observation types
+  integer(i_kind),parameter:: i_dbz_ob_type=39    ! dbz_ob_type
+  integer(i_kind),parameter:: nobs_type = 39      ! number of observation types
 
 ! Structure for diagnostics
 
@@ -588,6 +595,7 @@ module obsmod
   integer(i_kind) nlaero, iout_aero, mype_aero
   integer(i_kind) iout_pm2_5, mype_pm2_5
   integer(i_kind) iout_pm10, mype_pm10
+  integer(i_kind) iout_light, mype_light
   integer(i_kind),dimension(5):: iadate
   integer(i_kind),dimension(5):: iadatemn
   integer(i_kind),allocatable,dimension(:):: dsfcalc,dthin,ipoint
@@ -703,28 +711,28 @@ contains
 
     oneobradid="KKKK"
     doradaroneob=.false.
-    oneoblat=-999
-    oneoblon=-999
-    oneobddiff=-999
-    oneobvalue=-999
-    oneobheight=-999
+    oneoblat=-999_r_kind
+    oneoblon=-999_r_kind
+    oneobddiff=-999_r_kind
+    oneobvalue=-999_r_kind
+    oneobheight=-999_r_kind
     radar_no_thinning=.false.
     ens_hx_dbz_cut=.false.
-    static_gsi_nopcp_dbz=0.0
-    rmesh_dbz=2   !default
-    rmesh_vr=2   !default
-    zmesh_dbz=500.0   !default
-    zmesh_vr=500.0   !default
-    minobrangedbz=10000.0
-    maxobrangedbz=200000.0
+    static_gsi_nopcp_dbz=0.0_r_kind
+    rmesh_dbz=2
+    rmesh_vr=2
+    zmesh_dbz=500.0_r_kind
+    zmesh_vr=500.0_r_kind
+    minobrangedbz=10000.0_r_kind
+    maxobrangedbz=200000.0_r_kind
     debugmode=.false.
 
-    mintiltdbz=0.0
-    maxtiltdbz=20.0
-    minobrangevr=10000.0
-    maxobrangevr=200000.0
-    mintiltvr=0.0
-    maxtiltvr=20.0
+    mintiltdbz=0.0_r_kind
+    maxtiltdbz=20.0_r_kind
+    minobrangevr=10000.0_r_kind
+    maxobrangevr=200000.0_r_kind
+    mintiltvr=0.0_r_kind
+    maxtiltvr=20.0_r_kind
     missing_to_nopcp=.false.
 
 !   Set logical flag
@@ -795,7 +803,8 @@ contains
     iout_vwnd10m=234  ! 10-m vwnd
     iout_swcp=235  ! solid-water content path
     iout_lwcp=236  ! liquid-water content path
-    iout_dbz=237 ! radar reflectivity
+    iout_light=237 ! lightning
+    iout_dbz=238 ! radar reflectivity
 
     mype_ps = npe-1          ! surface pressure
     mype_t  = max(0,npe-2)   ! temperature
@@ -828,7 +837,8 @@ contains
     mype_vwnd10m= max(0,npe-29)! vwnd10m
     mype_swcp=max(0,npe-30)  ! solid-water content path
     mype_lwcp=max(0,npe-31)  ! liquid-water content path
-    mype_dbz=max(0,npe-32)   ! radar reflectivity
+    mype_light=max(0,npe-32)! GOES/GLM lightning
+    mype_dbz=max(0,npe-33)   ! radar reflectivity
 
 
 !   Initialize arrays used in namelist obs_input 
@@ -887,8 +897,8 @@ contains
     cobstype(i_vwnd10m_ob_type) ="vwnd10m          " ! vwnd10m_ob_type
     cobstype(i_swcp_ob_type) ="swcp                " ! swcp_ob_type
     cobstype(i_lwcp_ob_type) ="lwcp                " ! lwcp_ob_type
+    cobstype(i_light_ob_type) ="light              " ! light_ob_type
     cobstype( i_dbz_ob_type)  ="radar reflectivity " ! dbz_ob_type
-
 
     hilbert_curve=.false.
 
@@ -1373,25 +1383,25 @@ allocate(ditype(nall),ipoint(nall))
 dval_use = .false. 
 do ii=1,nrows0
    if( obs_dep_loc ) then
-   read(utable(ii),*) dfile(ii),& ! local file name from which to read observatinal data
-                      dtype(ii),& ! character string identifying type of observatio
-                      dplat(ii),& ! currently contains satellite id (no meaning for non-sat data)
-                      dsis(ii), & ! sensor/instrument/satellite identifier for info files
-                      dval(ii), & ! 
-                      dthin(ii),& ! thinning flag (1=thinning on; otherwise off)
-                      dsfcalc(ii),& ! use orig bilinear FOV surface calculation (routine deter_sfc)
-                      hlocal(ii), & !horizontal covariance localization for this ob
-                      vlocal(ii) !vertical covariance localization for this ob
+     read(utable(ii),*) dfile(ii),& ! local file name from which to read observatinal data
+                        dtype(ii),& ! character string identifying type of observatio
+                        dplat(ii),& ! currently contains satellite id (no meaning for non-sat data)
+                        dsis(ii), & ! sensor/instrument/satellite identifier for info files
+                        dval(ii), & ! 
+                        dthin(ii),& ! thinning flag (1=thinning on; otherwise off)
+                        dsfcalc(ii),& ! use orig bilinear FOV surface calculation (routine deter_sfc)
+                        hlocal(ii), & !horizontal covariance localization for this ob
+                        vlocal(ii) !vertical covariance localization for this ob
    else
-   read(utable(ii),*) dfile(ii),& ! local file name from which to read observatinal data
-                      dtype(ii),& ! character string identifying type of observatio
-                      dplat(ii),& ! currently contains satellite id (no meaning for non-sat data)
-                      dsis(ii), & ! sensor/instrument/satellite identifier for info files
-                      dval(ii), & !
-                      dthin(ii),& ! thinning flag (1=thinning on; otherwise off)
-                      dsfcalc(ii)
-                      hlocal(ii) = 100.0
-                      vlocal(ii) = 0.55
+     read(utable(ii),*) dfile(ii),& ! local file name from which to read observatinal data
+                        dtype(ii),& ! character string identifying type of observatio
+                        dplat(ii),& ! currently contains satellite id (no meaning for non-sat data)
+                        dsis(ii), & ! sensor/instrument/satellite identifier for info files
+                        dval(ii), & !
+                        dthin(ii),& ! thinning flag (1=thinning on; otherwise off)
+                        dsfcalc(ii)
+                        hlocal(ii) = 100.0
+                        vlocal(ii) = 0.55
    end if
 
    ! The following is to sort out some historical naming conventions

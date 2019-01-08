@@ -64,13 +64,6 @@ export NCP=${NCP:-/bin/cp}
 export NDATE=${NDATE:-/nwprod/util/exec/ndate}
 export pgm=exgdas_vrfminmon.sh.ecf
 
-#########################################################
-# M_TANKverf is storage location for generated files
-#########################################################
-export M_TANKverf=${M_TANKverf:-${COMROOT}/${NET}/${envir}/minmon.${PDY}}
-export M_TANKverfM1=${M_TANKverfM1:-${COMROOT}/${NET}/${envir}/minmmon.${PDYm1}}
-#####################################################################
-
 if [[ ! -d ${DATA} ]]; then
    mkdir $DATA
 fi
@@ -88,11 +81,10 @@ if [[ -s ${gsistat} ]]; then
    #  Copy the $MINMON_SUFFIX.gnorm_data.txt file to the working directory
    #  It's ok if it doesn't exist; we'll create a new one if needed.
    #------------------------------------------------------------------
-   if [[ -s ${M_TANKverf}/gnorm_data.txt ]]; then
-      $NCP ${M_TANKverf}/gnorm_data.txt gnorm_data.txt 
-   elif [[ -s ${M_TANKverfM1}/gnorm_data.txt ]]; then
+   if [[ -s ${M_TANKverfM1}/gnorm_data.txt ]]; then
       $NCP ${M_TANKverfM1}/gnorm_data.txt gnorm_data.txt
    fi
+
 
    #------------------------------------------------------------------
    #   Run the child sccripts.

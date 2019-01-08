@@ -1521,39 +1521,39 @@ contains
 
           if (i_radar_qr>0 .and. i_radar_qli>0)then
 
-           if( dbz_exist .and. if_model_dbz )then
-           ! refl_10cm
-           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'dbz',ges_dbz,iret)
-           if (iret==0) then
-             where( ges_dbz < zero )
-              ges_dbz = zero
-             end where
-             work_sub(:,:)=ges_dbz(:,:,k)
-             call gsi_nemsio_write('refl_10cm','mid layer','H',kr,work_sub(:,:),mype,mype_input,.false.)
-           endif
-           end if
-
-           do i=1,lon2
-           do j=1,lat2
-             work_sub_s(j,i)=ges_qli(j,i,k)
-             work_sub_r(j,i)=ges_qr(j,i,k)
-             work_sub_l(j,i)=ges_ql(j,i,k)
-             work_sub_i(j,i)=ges_qi(j,i,k)
-           end do
-           end do
-
-           add_saved=.false.
-           call gsi_nemsio_write_fractionnew('f_rain','f_ice','f_rimef','mid layer',kr,       &
-                work_sub_s(:,:),work_sub_i(:,:),work_sub_r(:,:),work_sub_l(:,:),mype,mype_input)
-           ges_qg=ges_ql+ges_qr+ges_qli
-
-           do i=1,lon2
-           do j=1,lat2
-              work_sub(j,i)=ges_qg(j,i,k)
-           end do
-           end do
-           call gsi_nemsio_write('clwmr','mid layer','H',kr,work_sub(:,:),mype,mype_input,add_saved)
-           
+             if( dbz_exist .and. if_model_dbz )then
+               ! refl_10cm
+               call gsi_bundlegetpointer (gsi_metguess_bundle(it),'dbz',ges_dbz,iret)
+               if (iret==0) then
+                 where( ges_dbz < zero )
+                   ges_dbz = zero
+                 end where
+                 work_sub(:,:)=ges_dbz(:,:,k)
+                 call gsi_nemsio_write('refl_10cm','mid layer','H',kr,work_sub(:,:),mype,mype_input,.false.)
+               endif
+             end if
+    
+             do i=1,lon2
+               do j=1,lat2
+                 work_sub_s(j,i)=ges_qli(j,i,k)
+                 work_sub_r(j,i)=ges_qr(j,i,k)
+                 work_sub_l(j,i)=ges_ql(j,i,k)
+                 work_sub_i(j,i)=ges_qi(j,i,k)
+               end do
+             end do
+    
+             add_saved=.false.
+             call gsi_nemsio_write_fractionnew('f_rain','f_ice','f_rimef','mid layer',kr,       &
+                  work_sub_s(:,:),work_sub_i(:,:),work_sub_r(:,:),work_sub_l(:,:),mype,mype_input)
+             ges_qg=ges_ql+ges_qr+ges_qli
+    
+             do i=1,lon2
+               do j=1,lat2
+                  work_sub(j,i)=ges_qg(j,i,k)
+               end do
+             end do
+             call gsi_nemsio_write('clwmr','mid layer','H',kr,work_sub(:,:),mype,mype_input,add_saved)
+               
           end if
 
        end if  ! end of nguess

@@ -100,14 +100,14 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_f
 ! Declare local parameters
   real(r_kind),parameter:: r6 = 6.0_r_kind
   real(r_kind),parameter:: r360=360.0_r_kind
-  integer(i_kind),parameter:: maxdat=20_i_kind, ione = 1_i_kind         ! Used in generating cdata array
+  integer(i_kind),parameter:: maxdat=20
   character(len=4), parameter :: radid = 'XXXX'
   
 ! === Grid dbz data declaration
 
-  real, allocatable, dimension(:)       :: data_r_1d, dbz_err, height,&
+  real(r_kind), allocatable, dimension(:)       :: data_r_1d, dbz_err, height,&
                                                    lon, lat, utime
-  real, allocatable, dimension(:,:,:)     :: data_r_3d, dbzQC
+  real(r_kind), allocatable, dimension(:,:,:)     :: data_r_3d, dbzQC
 
   integer(i_kind), parameter                  :: max_num_vars = 50, max_num_dims = 20
 
@@ -121,14 +121,13 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_f
   
   logical                                       :: if_input_exist
   integer(i_kind)                               ::  ivar, var_num, sec70
-  integer(i_kind),parameter:: izero=0_i_kind
 
 
 !--Counters for diagnostics
- integer(i_kind) :: num_missing=izero,num_nopcp=izero, &      !counts 
-                    numbadtime=izero, &    
-                    num_m2nopcp=izero, &
-                    num_noise=izero,num_limmax=izero     
+ integer(i_kind) :: num_missing=0,num_nopcp=0, &      !counts 
+                    numbadtime=0, &    
+                    num_m2nopcp=0, &
+                    num_noise=0,num_limmax=0     
  integer(i_kind)   num_dbz2mindbz,imissing2nopcp
   
 
@@ -194,10 +193,10 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_f
  ithin=-1
  endif
 
-  scount=izero
-  ikx=izero
-  do i=ione,nconvtype
-     if(trim(obstype) == trim(ioctype(i)) .and. abs(icuse(i))== ione) then
+  scount=0
+  ikx=0
+  do i=1,nconvtype
+     if(trim(obstype) == trim(ioctype(i)) .and. abs(icuse(i))== 1) then
         ikx=i 
         radartwindow=ctwind(ikx)*r60         !Time window units converted to minutes 
                                              !  (default setting for dbz within convinfo is 0.05 hours)
@@ -215,11 +214,11 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_f
   end if
         
   !-next three values are dummy values for now
-  nchanl=izero
+  nchanl=0
   ilon=2_i_kind
   ilat=3_i_kind
   
-  maxobs=50000000_i_kind    !value taken from read_radar.f90 
+  maxobs=50000000    !value taken from read_radar.f90 
 
   !--Allocate cdata_all array
    allocate(cdata_all(maxdat,maxobs),isort(maxobs))
@@ -257,7 +256,7 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_f
   endif
 !!end modified for thinning
 
-  var_list(1:4) = (/ "reflectivity", "height", "longitude", "latitude"/)
+  var_list(1:4) = (/ "reflectivity", "height      ", "longitude   ", "latitude    "/)
   var_num       = 4
 
   print *, "read_Dbz.f90: open ",trim(infile)       
@@ -274,17 +273,17 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_f
 
 
        ! Check variable is in file, and get variable id:
-       rcode = nf_inq_varid ( cdfid, var_list(ivar), id_var(ivar) )
+       rcode = nf_inq_varid ( cdfid, trim(var_list(ivar)), id_var(ivar) )
        if ( rcode /= 0 ) then
           write(6,FMT='(A,A)') &
-             var_list(ivar), ' variable is not in input file'
+             trim(var_list(ivar)), ' variable is not in input file'
        end if
 
     !   Get number of dimensions, and check of real type:
         dimids = 0
-        rcode = nf_inq_var( cdfid, id_var(ivar), var_list(ivar), ivtype, ndims(ivar), dimids, natts )
+        rcode = nf_inq_var( cdfid, id_var(ivar), trim(var_list(ivar)), ivtype, ndims(ivar), dimids, natts )
         if ( ivtype /= 5 ) then
-           write(6,FMT='(A,A)') var_list(ivar), ' variable is not real type'
+           write(6,FMT='(A,A)') trim(var_list(ivar)), ' variable is not real type'
         end if
 
     !   Get dimensions of field:
@@ -301,7 +300,7 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_f
     one_read = 1
 
     do ivar = 1, var_num
-       if( ivar .eq. 1 )then
+       if( ivar == 1 )then
          allocate( data_r_3d(dims(ivar,1),dims(ivar,2),dims(ivar,3)) )
 
          call ncvgt( cdfid, id_var(ivar), one_read, dims(ivar,:), data_r_3d, rcode )
@@ -337,6 +336,7 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_f
  
   ivar = 1
   
+  ILOOP : &
   do i = 1, dims(ivar,1)
   do j = 1, dims(ivar,2)
   do k = 1, dims(ivar,3)
@@ -345,7 +345,7 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_f
 !
 !       timeb = rmins_ob-rmins_an
 !       if(abs(timeb) > abs(radartwindow)) then
-!         numbadtime=numbadtime+ione
+!         numbadtime=numbadtime+1
 !         cycle
 !       end if
 
@@ -356,19 +356,19 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_f
           !  May help suppress spurious convection if a problem.
           if (missing_to_nopcp .and. dbzQC(i,j,k) > -100_r_kind ) then
             imissing2nopcp = 1
-            dbzQC(i,j,k)     = 0.0
-            num_m2nopcp    = num_m2nopcp + ione
+            dbzQC(i,j,k)     = 0.0_r_kind
+            num_m2nopcp    = num_m2nopcp + 1
           else
-            num_missing    = num_missing + ione
+            num_missing    = num_missing + 1
             cycle
           end if
        end if
 
-       if(miter .ne. 0 .and. (.not. l_hyb_ens) ) then ! For gsi 3DVar run
+       if(miter /= 0 .and. (.not. l_hyb_ens) ) then ! For gsi 3DVar run
          if (l_limmax) then
            if ( dbzQC(i,j,k) > 60_r_kind ) then
              dbzQC(i,j,k) = 60_r_kind
-             num_limmax = num_limmax + ione
+             num_limmax = num_limmax + 1
            end if
          end if
        end if
@@ -383,9 +383,9 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_f
        !  if ( dbzQC(i,j,k) < 10._r_kind .and. dbzQC(i,j,k) > 0.0_r_kind ) then
        !    if ( nopcp ) then
        !      dbzQC(i,j,k) = 0.0
-       !      num_nopcp = num_nopcp + ione
+       !      num_nopcp = num_nopcp + 1
        !    else
-       !      num_noise = num_noise + ione
+       !      num_noise = num_noise + 1
        !      cycle
        !    end if
        !  end if
@@ -425,7 +425,7 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_f
        thiserr = dbznoise
                 
 
-       nread = nread + ione
+       nread = nread + 1
 
 !####################       Data thinning       ###################
        icntpnt=icntpnt+1
@@ -518,44 +518,42 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_f
             cdata_all(19,iout)= hloc
             cdata_all(20,iout)= vloc
 
-            if(doradaroneob .and. (cdata_all(5,iout) .gt. -99) )goto 987
+            if(doradaroneob .and. (cdata_all(5,iout) > -99.0_r_kind) ) exit ILOOP
 
-     end do    ! i
-     end do    ! j
      end do    ! k
+     end do    ! j
+     end do ILOOP    ! i
 
-  987 continue      
-  if (.not. use_all) then 
-     deallocate(zl_thin) 
-     call del3grids
-  endif
+     if (.not. use_all) then 
+       deallocate(zl_thin) 
+       call del3grids
+     endif
 !---all looping done now print diagnostic output
 
-  write(6,*)'READ_dBZ: Reached eof on radar reflectivity file'
-  write(6,*)'READ_dBZ: # volumes in input file             =',nvol
-  write(6,*)'READ_dBZ: # read in obs. number               =',nread
-  write(6,*)'READ_dBZ: # elevations outside time window    =',numbadtime
-  write(6,*)'READ_dBZ: # of noise obs to no precip obs     =',num_nopcp
-  write(6,*)'READ_dBZ: # of missing data to no precip obs  =',num_m2nopcp
-  write(6,*)'READ_dBZ: # of rejected noise obs             =',num_noise
-  write(6,*)'READ_dBZ: # of missing data                   =',num_missing
-  write(6,*)'READ_dBZ: # changed to min dbz             =',num_dbz2mindbz
-  write(6,*)'READ_dBZ: # restricted to 60dBZ limit         =',num_limmax
+     write(6,*)'READ_dBZ: Reached eof on radar reflectivity file'
+     write(6,*)'READ_dBZ: # volumes in input file             =',nvol
+     write(6,*)'READ_dBZ: # read in obs. number               =',nread
+     write(6,*)'READ_dBZ: # elevations outside time window    =',numbadtime
+     write(6,*)'READ_dBZ: # of noise obs to no precip obs     =',num_nopcp
+     write(6,*)'READ_dBZ: # of missing data to no precip obs  =',num_m2nopcp
+     write(6,*)'READ_dBZ: # of rejected noise obs             =',num_noise
+     write(6,*)'READ_dBZ: # of missing data                   =',num_missing
+     write(6,*)'READ_dBZ: # changed to min dbz             =',num_dbz2mindbz
+     write(6,*)'READ_dBZ: # restricted to 60dBZ limit         =',num_limmax
 
 !---Write observation to scratch file---!
   
-  call count_obs(ndata,maxdat,ilat,ilon,cdata_all,nobs)
-  write(lunout) obstype,sis,maxdat,nchanl,ilat,ilon
-  write(lunout) ((cdata_all(k,i),k=ione,maxdat),i=ione,ndata)
+     call count_obs(ndata,maxdat,ilat,ilon,cdata_all,nobs)
+     write(lunout) obstype,sis,maxdat,nchanl,ilat,ilon
+     write(lunout) ((cdata_all(k,i),k=1,maxdat),i=1,ndata)
  
   
   !---------------DEALLOCATE ARRAYS-------------!
  
-  deallocate(cdata_all)
+     deallocate(cdata_all)
  else  !fileopen
-  write(6,*) 'READ_dBZ: ERROR OPENING RADAR REFLECTIVITY FILE: ',trim(infile),' IOSTAT ERROR: ',ierror, ' SKIPPING...'
+     write(6,*) 'READ_dBZ: ERROR OPENING RADAR REFLECTIVITY FILE: ',trim(infile),' IOSTAT ERROR: ',ierror, ' SKIPPING...'
  end if fileopen
 
-314 continue
 
 end subroutine read_dbz_nc

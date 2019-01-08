@@ -461,19 +461,23 @@ subroutine gesinfo
   end if
   fha=zero; ida=0; jda=0
   fha(2)=ihourg    ! relative time interval in hours
-  fha(3)=minuteg   ! relative time interval in minutes
+  if(regional) fha(3)=minuteg   ! relative time interval in minutes
   ida(1)=iyr       ! year
   ida(2)=idate4(2) ! month
   ida(3)=idate4(3) ! day
   ida(4)=0         ! time zone
   ida(5)=idate4(1) ! hour
-  ida(6)=idate4(5) ! minute
+  if(regional) ida(6)=idate4(5) ! minute
   call w3movdat(fha,ida,jda)
   iadate(1)=jda(1) ! year
   iadate(2)=jda(2) ! mon
   iadate(3)=jda(3) ! day
   iadate(4)=jda(5) ! hour
-  iadate(5)=jda(6) !regional_time(5)      ! minute
+  if(regional) then 
+     iadate(5)=jda(6) !regional_time(5)      ! minute
+  else
+     iadate(5)=0   ! minute
+  end if
   ianldate =jda(1)*1000000+jda(2)*10000+jda(3)*100+jda(5)
 
 ! Determine date and time at start of assimilation window

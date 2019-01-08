@@ -10,25 +10,26 @@ logical,save::l_new_cldvar=.false.
 character(len=*),parameter:: mrms_listfile='mrms_listfile'
 contains
 
- subroutine load_mrms_data_info (mrms_listfile,nrows0,ntot_mrms,nrows_mrms,nrows,obsfile_all,dfile,dtype,ditype,dplat,dsis,dval,dthin,ipoint,dsfcalc,time_window,rcname)
-         !$$$  subprogram documentation block
-         !                .      .    .                                       .
-         use kinds, only: r_kind,i_kind
-         use file_utility, only : get_lun
-         use mpeu_util, only: gettablesize
-         use mpeu_util, only: gettable
-         use mpeu_util, only: getindex
-         implicit none
+subroutine load_mrms_data_info (mrms_listfile,nrows0,ntot_mrms,nrows_mrms,nrows,obsfile_all,dfile,dtype,ditype,dplat,dsis,dval,dthin,ipoint,dsfcalc,time_window,rcname)
+
+   use kinds, only: r_kind,i_kind
+   use file_utility, only : get_lun
+   use mpeu_util, only: gettablesize
+   use mpeu_util, only: gettable
+   use mpeu_util, only: getindex
+
+   implicit none
+
    integer(i_kind),parameter::nobstype_mrms=2 ! first for vr, and the second for ref
    integer(i_kind),intent(in):: nrows0,ntot_mrms,nrows_mrms,nrows
    character(len=*),intent(in),optional ::mrms_listfile, rcname ! input filename
-     character(10),intent(inout),dimension(nrows):: dtype,ditype,dplat
-     character(20),intent(inout),dimension(nrows):: obsfile_all
-     character(*),intent(inout),dimension(nrows):: dfile
-     character(20),intent(inout),dimension(nrows):: dsis
-     real(r_kind) ,intent(inout),dimension(nrows):: dval
-     integer(i_kind),intent(inout),dimension(nrows):: dsfcalc,dthin,ipoint
-     real(r_kind) ,intent(inout),dimension(nrows):: time_window
+   character(10),intent(inout),dimension(nrows):: dtype,ditype,dplat
+   character(20),intent(inout),dimension(nrows):: obsfile_all
+   character(*),intent(inout),dimension(nrows):: dfile
+   character(20),intent(inout),dimension(nrows):: dsis
+   real(r_kind) ,intent(inout),dimension(nrows):: dval
+   integer(i_kind),intent(inout),dimension(nrows):: dsfcalc,dthin,ipoint
+   real(r_kind) ,intent(inout),dimension(nrows):: time_window
 
    character(len=*),parameter:: tbname_mrms='OBS_INPUT_MRMS::'
    integer(i_kind) luin_mrms,ii0,itype_mrms
@@ -38,16 +39,12 @@ contains
 
    real(r_kind),allocatable,dimension(:):: dmesh_mrms
    character(10),allocatable,dimension(:):: dtype_mrms,ditype_mrms,dplat_mrms
-  character(120),allocatable,dimension(:):: dfile_mrms
-  character(20),allocatable,dimension(:):: dsis_mrms
-  real(r_kind) ,allocatable,dimension(:):: dval_mrms
-  integer(i_kind) ,allocatable,dimension(:):: dsfcalc_mrms,dthin_mrms,ipoint_mrms
-  real(r_kind) ,allocatable,dimension(:):: time_window_mrms
-  real(r_kind) ,save:: time_window_mrms_max=3.0
-
-
-
-
+   character(120),allocatable,dimension(:):: dfile_mrms
+   character(20),allocatable,dimension(:):: dsis_mrms
+   real(r_kind) ,allocatable,dimension(:):: dval_mrms
+   integer(i_kind) ,allocatable,dimension(:):: dsfcalc_mrms,dthin_mrms,ipoint_mrms
+   real(r_kind) ,allocatable,dimension(:):: time_window_mrms
+   real(r_kind) ,save:: time_window_mrms_max=3.0_r_kind
 
    integer(i_kind):: ii,ier
 
@@ -60,9 +57,8 @@ contains
             dsis_mrms(nobstype_mrms),dval_mrms(nobstype_mrms),dthin_mrms(nobstype_mrms),dsfcalc_mrms(nobstype_mrms),&
             dmesh_mrms(nobstype_mrms), &
             time_window_mrms(nobstype_mrms))
-  allocate(ditype_mrms(nobstype_mrms),ipoint_mrms(nobstype_mrms))
+   allocate(ditype_mrms(nobstype_mrms),ipoint_mrms(nobstype_mrms))
    ! variables participating in state vector
-   !clt for mrms table
    if (present(rcname)) then
       luin_mrms=get_lun()
       open(luin_mrms,file=trim(rcname),form='formatted')
@@ -91,37 +87,36 @@ contains
    enddo
 
    deallocate(utable_mrms)
-   !clt now to read mrms list file
    do ii=1,nrows_mrms
       ii0=nrows0+ii
 
       read(utable_mrms_list(ii),*) dfile(ii0) ! ! local file name from which to read observatinal data
-      if(index(dfile(ii0),'vr').gt.0) then
-      itype_mrms=1 ! for vr
-      elseif(index(dfile(ii0),'ref').gt.0) then
-      itype_mrms=2 ! for ref
+      if(index(dfile(ii0),'vr') > 0) then
+        itype_mrms=1 ! for vr
+      elseif(index(dfile(ii0),'ref') > 0) then
+        itype_mrms=2 ! for ref
       else
-      write(6,*) 'the mrms files to be read not recognizable, stop'
-      call stop2(255)
+        write(6,*) 'the mrms files to be read not recognizable, stop'
+        call stop2(255)
       endif
 
-               dtype(ii0)=  dtype_mrms(itype_mrms) ! ! character string identifying type of observatio
-               dplat(ii0)=dplat_mrms(itype_mrms) ! currently contains satellite id (no meaning for non-sat data)
-               dsis (ii0)=          dsis_mrms(itype_mrms) !  sensor/instrument/satellite identifier for info files
-               dval(ii0)=dval_mrms(itype_mrms)  !
-               dthin(ii0)= dthin_mrms(itype_mrms) ! thinning flag (1=thinning on; otherwise off)
-               dsfcalc(ii0)=dsfcalc_mrms(itype_mrms) ! use orig bilinear FOV surface calculation (routine deter_sfc)
-
-               ditype(ii0)=ditype_mrms(itype_mrms)
-               ipoint(ii0)=ipoint_mrms(itype_mrms)
-               time_window(ii0)=time_window_mrms(itype_mrms)
+      dtype(ii0)=  dtype_mrms(itype_mrms) ! ! character string identifying type of observatio
+      dplat(ii0)=dplat_mrms(itype_mrms) ! currently contains satellite id (no meaning for non-sat data)
+      dsis (ii0)=          dsis_mrms(itype_mrms) !  sensor/instrument/satellite identifier for info files
+      dval(ii0)=dval_mrms(itype_mrms)  !
+      dthin(ii0)= dthin_mrms(itype_mrms) ! thinning flag (1=thinning on; otherwise off)
+      dsfcalc(ii0)=dsfcalc_mrms(itype_mrms) ! use orig bilinear FOV surface calculation (routine deter_sfc)
+      ditype(ii0)=ditype_mrms(itype_mrms)
+      ipoint(ii0)=ipoint_mrms(itype_mrms)
+      time_window(ii0)=time_window_mrms(itype_mrms)
       write(obsfile_all(ii0),'(a,i4.4)') 'obs_input.', ii0      ! name of scratch file to hold obs data
-     enddo
+   enddo
+
    deallocate(utable_mrms_list)
    deallocate(dfile_mrms,dtype_mrms,dplat_mrms,&
            dsis_mrms,dval_mrms,dthin_mrms,dsfcalc_mrms,dmesh_mrms,&
            time_window_mrms)
-deallocate(ditype_mrms,ipoint_mrms)
+   deallocate(ditype_mrms,ipoint_mrms)
 
 
 

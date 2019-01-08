@@ -587,7 +587,7 @@ end subroutine berror_read_bal_reg
       write(6,*)'not as expect,stop'
       stop
     endif
-    corz(:,:,nrf3_dbz)=10.0
+    corz(:,:,nrf3_dbz)=10.0_r_kind
     hwll(:,:,nrf3_dbz)=hwll(:,:,nrf3_t)
     vz(:,:,nrf3_dbz)=vz(:,:,nrf3_t)
   endif
@@ -686,7 +686,7 @@ end subroutine berror_read_bal_reg
      end if
      if (n==nrf2_vis) then
         do i=1,mlat
-           corp(i,n)=20000.0_r_kind
+           corp(i,n)=3.0_r_kind
         end do
         do i=0,mlat+1
            hwllp(i,n)=hwll(i,1,nrf3_t)
@@ -779,7 +779,7 @@ end subroutine berror_read_bal_reg
      end if
      if (n==nrf2_cldch) then
         do i=1,mlat
-           corp(i,n)=40000.0_r_kind
+           corp(i,n)=3.0_r_kind
         end do
         do i=0,mlat+1
            hwllp(i,n)=hwll(i,1,nrf3_t)
