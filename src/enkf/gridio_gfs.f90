@@ -450,7 +450,7 @@
 
  end subroutine readgriddata
 
- subroutine writegriddata(nanal,vars3d,vars2d,n3d,n2d,levels,ndim,grdin,no_inflate_flag)
+ subroutine writegriddata(nanal,vars3d,vars2d,n3d,n2d,levels,ndim,grdin)
   use sigio_module, only: sigio_head, sigio_data, sigio_sclose, sigio_sropen, &
                           sigio_srohdc, sigio_sclose, sigio_axdata, &
                           sigio_aldata, sigio_swohdc
@@ -469,7 +469,6 @@
   integer, intent(in) :: n2d,n3d,ndim
   integer, dimension(0:n3d), intent(in) :: levels
   real(r_single), dimension(npts,ndim,nbackgrounds), intent(inout) :: grdin
-  logical, intent(in) :: no_inflate_flag
 
   character(len=500):: filenamein, filenameout
   real(r_kind), allocatable, dimension(:,:) :: vmassdiv,dpanl,dpfg,pressi
@@ -511,11 +510,11 @@
 
   backgroundloop: do nb=1,nbackgrounds
 
-  if(no_inflate_flag) then
-    filenameout = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"nimem"//charnanal
-  else
+  !if(no_inflate_flag) then
+  !  filenameout = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"nimem"//charnanal
+  !else
     filenameout = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"mem"//charnanal
-  end if
+  !end if
   filenamein = trim(adjustl(datapath))//trim(adjustl(fgfileprefixes(nb)))//"mem"//charnanal
   ! for nemsio, analysis file must be copied from first guess at scripting
   ! level.  This file is read in and modified.
