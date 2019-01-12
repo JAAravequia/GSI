@@ -511,12 +511,17 @@
 
   backgroundloop: do nb=1,nbackgrounds
 
-  if(no_inflate_flag) then
-    filenameout = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"nimem"//charnanal
+  if (nanal .eq. 0) then
+     filenameout = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"ensmean"
+     filenamein = trim(adjustl(datapath))//trim(adjustl(fgfileprefixes(nb)))//"ensmean"
   else
-    filenameout = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"mem"//charnanal
-  end if
-  filenamein = trim(adjustl(datapath))//trim(adjustl(fgfileprefixes(nb)))//"mem"//charnanal
+     if(no_inflate_flag) then
+       filenameout = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"nimem"//charnanal
+     else
+       filenameout = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"mem"//charnanal
+     end if
+     filenamein = trim(adjustl(datapath))//trim(adjustl(fgfileprefixes(nb)))//"mem"//charnanal
+  endif
   ! for nemsio, analysis file must be copied from first guess at scripting
   ! level.  This file is read in and modified.
 

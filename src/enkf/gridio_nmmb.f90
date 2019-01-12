@@ -286,7 +286,11 @@ clip = tiny(grdin(1,1,1))
 backgroundloop: do nb=1,nbackgrounds
 
 write(charnanal,'(i3.3)') nanal
-filename = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"mem"//charnanal
+if (nanal .eq. 0) then
+   filename = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"ensmean"
+else
+   filename = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"mem"//charnanal
+endif
 
 call nemsio_init(iret=iret)
 if(iret/=0) then

@@ -134,6 +134,10 @@ logical,public :: getkf = .false.
 ! letkf_flag=T, posterior variance inflated to match
 ! variance of modulated ensemble).
 logical, public :: getkf_inflation=.false.
+! only updte ensemble mean in LETKF
+logical, public :: update_letkf_meanonly=.false.
+! use kdtree in letkf
+logical, public :: letkf_use_kdtree=.true.
 ! use DEnKF approx to EnKF perturbation update.
 ! Implies getkf=T if letkf_flag=T
 ! See Sakov and Oke 2008 https://doi.org/10.1111/j.1600-0870.2007.00299.x
@@ -204,6 +208,7 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    save_inflation,nobsl_max,lobsdiag_forenkf,netcdf_diag,&
                    letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
                    getkf,getkf_inflation,denkf,modelspace_vloc,dfs_sort,write_spread_diag,&
+                   letkf_use_kdtree,update_letkf_meanonly,&
                    fso_cycling,fso_calculate,imp_physics,lupp
 
 namelist /nam_wrf/arw,nmm,nmm_restart
@@ -377,6 +382,19 @@ latboundpm=latbound-p5delat
 latboundmp=-latbound+p5delat
 latboundmm=-latbound-p5delat
 delatinv=1.0_r_single/delat
+
+if (update_letkf_meanonly) then
+   if (letkf_flag) then
+       if (.not. use_qsatensmean .and. nproc .eq. 0) then
+          print *,'update_letkf_meanonly implies use_qsatmean=T'
+       endif
+       use_qsatensmean=.true.
+   else
+       if (nproc .eq. 0) then
+          print *,'update_letkf_meanonly ignored since letkf_flag=F'
+       endif
+   endif
+endif
 
 ! if modelspace_vloc, use modulated ensemble to compute Kalman gain (but use
 ! this gain to update only original ensemble). 

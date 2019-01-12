@@ -47,7 +47,8 @@ use gridio,    only: readgriddata, writegriddata
 use gridinfo,  only: getgridinfo, gridinfo_cleanup,                    &
                      npts, vars3d_supported, vars2d_supported
 use params,    only: nlevs, nbackgrounds, fgfileprefixes, reducedgrid, &
-                     nanals, pseudo_rh, use_qsatensmean, nlons, nlats
+                     nanals, pseudo_rh, use_qsatensmean, nlons, nlats, &
+                     letkf_flag, update_letkf_meanonly
 use kinds,     only: r_kind, i_kind, r_double, r_single
 use mpeu_util, only: gettablesize, gettable, getindex
 use constants, only: max_varname_length
@@ -279,6 +280,10 @@ if (nproc <= nanals-1) then
                 minval(grdin_mean(:,clevels(nc3d) + nvar)),                &
                 maxval(grdin_mean(:,clevels(nc3d) + nvar))
          enddo
+         if (letkf_flag .and. update_letkf_meanonly) then
+             ! grdin now holds ens mean on root task
+             grdin(:,:,nb) = grdin_mean
+         endif
       endif
    enddo
 
@@ -298,7 +303,14 @@ if (nproc <= nanals-1) then
          grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb)*qsat(:,:,nb)
       enddo
    end if
-   call writegriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,grdin,no_inflate_flag)
+   if (letkf_flag .and. update_letkf_meanonly) then
+      ! just write out ensemble mean on root task.
+      if (nproc .eq. 0) then
+         call writegriddata(0,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,grdin,no_inflate_flag)
+      endif
+   else
+      call writegriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,grdin,no_inflate_flag)
+   endif
    if (nproc == 0) then
      t2 = mpi_wtime()
      print *,'time in writegriddata on root',t2-t1,'secs'

@@ -101,7 +101,8 @@ module loadbal
 
 use mpisetup
 use params, only: datapath, nanals, simple_partition, letkf_flag, nobsl_max,&
-                  neigv, corrlengthnh, corrlengthsh, corrlengthtr, lupd_obspace_serial
+                  neigv, corrlengthnh, corrlengthsh, corrlengthtr,&
+                  letkf_use_kdtree, lupd_obspace_serial
 use enkf_obsmod, only: nobstot, obloc, oblnp, ensmean_ob, obtime, anal_ob, anal_ob_modens, corrlengthsq
 use kinds, only: r_kind, i_kind, r_double, r_single
 use kdtree2_module, only: kdtree2, kdtree2_create, kdtree2_destroy, &
@@ -147,7 +148,7 @@ integer(i_kind) np,i,n,nn,nob1,nob2,ierr
 real(r_double) t1
 logical test_loadbal
 
-if (letkf_flag) then
+if (letkf_flag .and. letkf_use_kdtree) then
    ! used for finding nearest obs to grid point in LETKF.
    ! results are sorted by distance.
    if (nobstot >= 3) then

@@ -75,7 +75,8 @@ program enkf_main
  ! reads namelist parameters.
  use params, only : read_namelist,letkf_flag,readin_localization,lupd_satbiasc,&
                     numiter, nanals, lupd_obspace_serial, write_spread_diag,   &
-                    lobsdiag_forenkf, netcdf_diag, fso_cycling
+                    lobsdiag_forenkf, netcdf_diag, fso_cycling,                &
+                    update_letkf_meanonly
  ! mpi functions and variables.
  use mpisetup, only:  mpi_initialize, mpi_initialize_io, mpi_cleanup, nproc, &
                        mpi_wtime, mpi_comm_world
@@ -227,7 +228,9 @@ program enkf_main
 
  ! posterior inflation.
  t1 = mpi_wtime()
- call inflate_ens()
+ if (.not. (letkf_flag .and. update_letkf_meanonly)) then
+    call inflate_ens()
+ endif
  t2 = mpi_wtime()
  if (nproc == 0) print *,'time in inflate_ens =',t2-t1,'on proc',nproc
 

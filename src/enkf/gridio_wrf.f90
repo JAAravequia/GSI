@@ -589,7 +589,11 @@ contains
     ! First guess file should be copied to analysis file at scripting
     ! level; only variables updated by EnKF are changed
     write(charnanal,'(i3.3)') nanal
-    filename = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"mem"//charnanal
+    if (nanal .eq. 0) then
+       filename = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"ensmean"
+    else
+       filename = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"mem"//charnanal
+    endif
 
     !----------------------------------------------------------------------
     ! Update u and v variables (same for NMM and ARW)
