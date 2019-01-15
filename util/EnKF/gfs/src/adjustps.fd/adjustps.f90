@@ -473,8 +473,8 @@ END program adjustps
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  COMPUTE LOG PRESSURE INTERPOLATING COORDINATE
 !  AND COPY INPUT WIND, TEMPERATURE, HUMIDITY AND OTHER TRACERS
-!$OMP PARALLEL DO DEFAULT(SHARED)
-!$OMP+ PRIVATE(K,I)
+!!$OMP PARALLEL DO DEFAULT(SHARED)
+!!$OMP+ PRIVATE(K,I)
       !print *,minval(u1),maxval(u1)
       !print *,minval(t1),maxval(t1)
       DO K=1,KM1
@@ -487,7 +487,7 @@ END program adjustps
           C1(I,K,5) =  Q1(I,K)
         ENDDO
       ENDDO
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
       DO N=2,NT
         DO K=1,KM1
           DO I=1,IM
@@ -497,14 +497,14 @@ END program adjustps
       ENDDO
 !      print *,' p2=',p2(1,:)
 !      print *,' im=',im,' km2=',km2,' ix=',ix,'nt=',nt
-!$OMP PARALLEL DO DEFAULT(SHARED)
-!$OMP+ PRIVATE(K,I)
+!!$OMP PARALLEL DO DEFAULT(SHARED)
+!!$OMP+ PRIVATE(K,I)
       DO K=1,KM2
         DO I=1,IM
           Z2(I,K) = -LOG(P2(I,K))
         ENDDO
       ENDDO
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !  PERFORM LAGRANGIAN ONE-DIMENSIONAL INTERPOLATION
 !  THAT IS 4TH-ORDER IN INTERIOR, 2ND-ORDER IN OUTSIDE INTERVALS
@@ -622,9 +622,9 @@ END program adjustps
 !  BUT WITHIN THE TWO EDGE INTERVALS INTERPOLATE LINEARLY.
 !  KEEP THE OUTPUT FIELDS CONSTANT OUTSIDE THE INPUT DOMAIN.
 
-!$OMP PARALLEL DO DEFAULT(PRIVATE) SHARED(IM,IXZ1,IXQ1,IXZ2)
-!$OMP+ SHARED(IXQ2,NM,NXQ1,NXQ2,KM1,KXZ1,KXQ1,Z1,Q1,KM2,KXZ2)
-!$OMP+ SHARED(KXQ2,Z2,Q2,J2,K1S)
+!!$OMP PARALLEL DO DEFAULT(PRIVATE) SHARED(IM,IXZ1,IXQ1,IXZ2)
+!!$OMP+ SHARED(IXQ2,NM,NXQ1,NXQ2,KM1,KXZ1,KXQ1,Z1,Q1,KM2,KXZ2)
+!!$OMP+ SHARED(KXQ2,Z2,Q2,J2,K1S)
 
       DO K2=1,KM2
         DO I=1,IM
@@ -728,7 +728,7 @@ END program adjustps
           ENDDO
         ENDDO
       ENDDO
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       END
 !-----------------------------------------------------------------------
