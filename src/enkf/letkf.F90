@@ -87,6 +87,7 @@ module letkf
 !$$$
 
 use mpisetup
+use mpeu_util, only: getindex
 use random_normal, only : rnorm, set_random_seed
 use, intrinsic :: iso_c_binding
 use omp_lib, only: omp_get_num_threads,omp_get_thread_num
@@ -96,7 +97,7 @@ use loadbal, only: numptsperproc, npts_max, &
                    indxproc, lnp_chunk, &
                    grdloc_chunk, kdtree_obs2, &
                    ensmean_chunk, anal_chunk
-use controlvec, only: ncdim, index_pres
+use controlvec, only: ncdim, index_pres, cvars3d, cvars2d
 use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, oblnp, &
                   nobstot, nobs_conv, nobs_oz, nobs_sat,&
                   obfit_prior, obfit_post, obsprd_prior, obsprd_post,&
@@ -128,8 +129,8 @@ implicit none
 ! LETKF update.
 
 ! local variables.
-integer(i_kind) nob,nf,nanal,nens,&
-                i,nlev,nrej,npt,nn,nnmax,ierr
+integer(i_kind) nob,nf,nanal,nens,u_ind,v_ind,t_ind,tv_ind,q_ind,ps_ind,&
+                i,nlev,nrej,npt,nn,nnmax,ierr,ncindx,ii
 integer(i_kind) nobsl, ngrd1, nobsl2, nthreads, nb, &
                 nobslocal_min,nobslocal_max, &
                 nobslocal_minall,nobslocal_maxall
@@ -141,6 +142,8 @@ real(r_kind) normdepart, pnge, width
 real(r_kind),dimension(nobstot):: oberrvaruse
 real(r_kind) vdist
 real(r_kind) corrlength
+integer(i_kind) cindx(ncdim)
+real(r_single) scalefact(ncdim)
 logical vlocal, kdobs
 ! For LETKF core processes
 real(r_kind),allocatable,dimension(:,:) :: hxens
@@ -367,6 +370,32 @@ nobslocal_min = nobstot
 if (nobsl_max > 0 .and. dfs_sort) then
     allocate(statesprd_prior(ncdim))
 endif
+if (dfs_sort) then
+    ! contral vars to use in DFS calculation.
+    u_ind = getindex(cvars3d, 'u')
+    v_ind = getindex(cvars3d, 'v')
+    t_ind = getindex(cvars3d, 't')
+    tv_ind = getindex(cvars3d, 'tv')
+    ps_ind = getindex(cvars2d, 'ps')
+    q_ind = getindex(cvars3d, 'q')
+    ncindx = 0
+    do i=1,ncdim
+       if (i .eq. u_ind .or. &
+           i .eq. v_ind .or. &
+           i .eq. t_ind .or. &
+           i .eq. tv_ind .or. &
+           i .eq. q_ind .or. &
+           i .eq. ps_ind) then
+          ncindx = ncindx + 1
+          cindx(ncindx) = i
+          if (i .eq. u_ind .or. i .eq. v_ind) then
+             scalefact(ncindx)=0.5
+          else
+             scalefact(ncindx)=1.0
+          endif
+       endif
+    enddo
+endif
 
 ! Update ensemble on model grid.
 ! Loop for each horizontal grid points on this task.
@@ -406,7 +435,9 @@ grdloop: do npt=1,numptsperproc(nproc+1)
    !if (allocated(sresults)) deallocate(sresults)
    if (nobsl_max > 0) then ! only use nobsl_max nearest obs (sorted by distance).
        if (dfs_sort) then ! sort by DFS instead of distance.
-          do i=1,ncdim ! state space ensemble spread for column being updated
+                          ! DFS computed at center of window.
+          do ii=1,ncindx ! state space ensemble spread for column being updated
+             i = cindx(ii)
              statesprd_prior(i) =  &
              sqrt(sum(ens_tmp(:,i,(nbackgrounds/2)+1)**2)*r_nanalsm1)
           enddo
@@ -424,16 +455,19 @@ grdloop: do npt=1,numptsperproc(nproc+1)
                 dfs(nobsl) = 0.
                 indxob(nobsl) = nob
                 oberrfact = taper(dist)
-                do i=1,ncdim
+                do ii=1,ncindx ! loop over all control variables used in norm.
+                    i = cindx(ii)
+! too expensive to use modulated ensemble
 #ifdef MPI3
-                    gain = sum(ens_tmp(1:nanals,i,(nbackgrounds/2)+1)*anal_ob_fp(1:nanals,nob))*r_nanalsm1
+                    gain = sum(anal_chunk(1:nanals,npt,i,(nbackgrounds/2)+1)*anal_ob_fp(1:nanals,nob))*r_nanalsm1
 #else
-                    gain = sum(ens_tmp(1:nanals,i,(nbackgrounds/2)+1)*anal_ob(1:nanals,nob))*r_nanalsm1
+                    gain = sum(anal_chunk(1:nanals,npt,i,(nbackgrounds/2)+1)*anal_ob(1:nanals,nob))*r_nanalsm1
 #endif
-! DFS is estimated increment normalized by spread, summed over all variables in column, for middle of window
+! DFS is estimated increment normalized by spread, summed over all variables in column,
+! for middle of window
                     gain = gain/(obsprd_prior(nob) + oberrvaruse(nob)/oberrfact)
                     gain = gain/statesprd_prior(i)
-                    dfs(nobsl) = dfs(nobsl)+abs(gain*(ob(nob)-ensmean_ob(nob)))
+                    dfs(nobsl) = dfs(nobsl)+scalefact(ii)*(gain*(ob(nob)-ensmean_ob(nob)))**2
                 enddo
              endif
           enddo
