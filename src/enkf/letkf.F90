@@ -639,7 +639,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
       enddo
       enddo
       deallocate(wts_ensperts,wts_ensmean,dep,obens,rloc,rdiag,hxens)
-      if (getkf_inflation) deallocate(pa)
+      if (allocated(pa)) deallocate(pa)
 
       t5 = t5 + mpi_wtime() - t1
       t1 = mpi_wtime()

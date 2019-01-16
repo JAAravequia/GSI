@@ -240,6 +240,7 @@ end subroutine read_control
 
 subroutine write_control(no_inflate_flag)
 ! write out each ensemble member to a separate file.
+! also write out ensemble mean on root task (nproc=0)
 ! for now, first nanals tasks are IO tasks.
 implicit none
 logical, intent(in) :: no_inflate_flag
@@ -254,21 +255,47 @@ if (nproc <= nanals-1) then
    nanal = nproc + 1
 
    if (nproc == 0) then
-      t1 = mpi_wtime()
       ! ensemble mean increment held on root task
+      t1 = mpi_wtime()
       allocate(grdin_mean(npts,ncdim,nbackgrounds))
    endif
 
+   ! gather ens. mean anal. increment on root.
    do nb=1,nbackgrounds
-      if (nproc == 0) then
-         print *,'time level ',nb
-         print *,'--------------'
-      endif
-      ! gather ens. mean anal. increment on root, print out max/mins.
       call mpi_reduce(grdin(:,:,nb), grdin_mean(:,:,nb), npts*ncdim, mpi_real4,   &
                       mpi_sum,0,mpi_comm_io,ierr)
-      if (nproc == 0) then
+      if (nproc .eq. 0) then
          grdin_mean(:,:,nb) = grdin_mean(:,:,nb)/real(nanals)
+      endif
+   enddo
+
+   if (nproc == 0) then
+      t2 = mpi_wtime()
+      print *,'time to gather ens mean increment on root',t2-t1,'secs'
+      t1 = mpi_wtime()
+   endif
+
+
+   q_ind = getindex(cvars3d, 'q')
+   ! re-scale normalized spfh with sat. sphf of first guess ens mean
+   if (pseudo_rh .and. q_ind > 0) then
+      do nb=1,nbackgrounds
+         grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb) = &
+         grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb)*qsat(:,:,nb)
+      enddo
+   endif
+
+   ! write out ensemble members
+   ! don't write out individual members if letkf_flag & update_letkf_meanonly
+   if (.not. letkf_flag .or. .not. update_letkf_meanonly) then
+      call writegriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,grdin,no_inflate_flag)
+   endif
+
+   ! write out ensemble mean on root task.
+   if (nproc .eq. 0) then
+      do nb=1,nbackgrounds
+         print *,'time level ',nb
+         print *,'--------------'
          do nvar=1,nc3d
             print *,'ens. mean anal. increment min/max ', cvars3d(nvar),   &
                 minval(grdin_mean(:,clevels(nvar-1)+1:clevels(nvar),nb)),     &
@@ -279,37 +306,13 @@ if (nproc <= nanals-1) then
                 minval(grdin_mean(:,clevels(nc3d) + nvar,nb)),                &
                 maxval(grdin_mean(:,clevels(nc3d) + nvar,nb))
          enddo
-      endif
-   enddo
-
-   if (nproc == 0) then
-      t2 = mpi_wtime()
-      print *,'time to gather ens mean increment on root',t2-t1,'secs'
-   endif
-
-
-   t1 = mpi_wtime()
-   q_ind = getindex(cvars3d, 'q')
-   if (pseudo_rh .and. q_ind > 0) then
-      ! re-scale normalized spfh with sat. sphf of first guess ens mean
-      do nb=1,nbackgrounds
-         grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb) = &
-         grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb)*qsat(:,:,nb)
-      enddo
-      if (nproc .eq. 0) then ! same for ens mean increment on root.
-         do nb=1,nbackgrounds
+         ! re-scale ens mean normalized spfh with sat. sphf of first guess ens mean
+         if (pseudo_rh .and. q_ind > 0) then
             grdin_mean(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb) = &
             grdin_mean(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb)*qsat(:,:,nb)
-         enddo
-      endif
-   end if
-   ! write out ensemble mean on root task.
-   if (nproc .eq. 0) then
+         endif
+      enddo
       call writegriddata(0,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,grdin_mean,no_inflate_flag)
-   endif
-   ! don't write out individual members if letkf_flag & update_letkf_meanonly
-   if (.not. letkf_flag .or. .not. update_letkf_meanonly) then
-      call writegriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,grdin,no_inflate_flag)
    endif
    if (nproc == 0) then
      deallocate(grdin_mean)
