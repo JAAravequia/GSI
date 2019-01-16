@@ -79,7 +79,7 @@ character(len=500),public :: datapath
 ! if deterministic=.true., the deterministic square-root filter
 ! update is used.  If .false, a perturbed obs (stochastic) update
 ! is used.
-logical, public :: deterministic, sortinc, pseudo_rh, &
+logical, public :: deterministic, sortinc, &
                    varqc, huber, cliptracers, readin_localization
 logical, public :: lupp
 integer(i_kind),public ::  iassim_order,nlevs,nanals,numiter,&
@@ -175,12 +175,11 @@ logical,public :: fso_cycling = .false.
 ! if true perform efso calculations
 logical,public :: fso_calculate = .false.
 
-! if true, use ensemble mean qsat in definition of
-! normalized humidity analysis variable (instead of
-! qsat for each member, which is the default behavior
-! when pseudo_rh=.true.  If pseudo_rh=.false, use_qsatensmean
-! is ignored.
-logical,public :: use_qsatensmean = .false.
+! if pseudo_rh, use normalized humidity
+! analysis variable (q/qsat), where qsat
+! is ensemble mean saturation specific humidity.
+logical,public :: pseudo_rh = .false.
+! write ens spread in diag files.
 logical,public :: write_spread_diag = .false.
 ! if true, use jacobian from GSI stored in diag file to compute
 ! ensemble perturbations in observation space.
@@ -191,7 +190,7 @@ logical,public :: netcdf_diag = .false.
 namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    covinflatemax,covinflatemin,deterministic,sortinc,&
                    corrlengthnh,corrlengthtr,corrlengthsh,&
-                   varqc,huber,nlons,nlats,smoothparm,use_qsatensmean,&
+                   varqc,huber,nlons,nlats,smoothparm,&
                    readin_localization, zhuberleft,zhuberright,&
                    obtimelnh,obtimeltr,obtimelsh,reducedgrid,&
                    lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh,&
@@ -283,8 +282,6 @@ paoverpb_thresh = 1.0_r_single! don't skip any obs
 ! set to to 0 for the order they are read in, 1 for random order, or 2 for
 ! order of predicted posterior variance reduction (based on prior)
 iassim_order = 0
-! use 'pseudo-rh' analysis variable, as in GSI.
-pseudo_rh = .false.
 ! if deterministic is true, use LETKF/EnSRF w/o perturbed obs.
 ! if false, use perturbed obs EnKF/LETKF.
 deterministic = .true.
@@ -384,12 +381,7 @@ latboundmm=-latbound-p5delat
 delatinv=1.0_r_single/delat
 
 if (update_letkf_meanonly) then
-   if (letkf_flag) then
-       if (.not. use_qsatensmean .and. nproc .eq. 0) then
-          print *,'update_letkf_meanonly implies use_qsatmean=T'
-       endif
-       use_qsatensmean=.true.
-   else
+   if (.not. letkf_flag) then
        if (nproc .eq. 0) then
           print *,'update_letkf_meanonly ignored since letkf_flag=F'
        endif

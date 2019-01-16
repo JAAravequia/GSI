@@ -47,7 +47,7 @@ use gridio,    only: readgriddata, writegriddata
 use gridinfo,  only: getgridinfo, gridinfo_cleanup,                    &
                      npts, vars3d_supported, vars2d_supported
 use params,    only: nlevs, nbackgrounds, fgfileprefixes, reducedgrid, &
-                     nanals, pseudo_rh, use_qsatensmean, nlons, nlats, &
+                     nanals, pseudo_rh, nlons, nlats, &
                      letkf_flag, update_letkf_meanonly
 use kinds,     only: r_kind, i_kind, r_double, r_single
 use mpeu_util, only: gettablesize, gettable, getindex
@@ -211,30 +211,28 @@ if (nproc <= nanals-1) then
    t1 = mpi_wtime()
    call readgriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,fgfileprefixes,reducedgrid,grdin,qsat)
    !print *,'min/max qsat',nanal,'=',minval(qsat),maxval(qsat)
-   if (use_qsatensmean) then
-       ! convert qsat to ensemble mean.
-       do nb=1,nbackgrounds
-       do nlev=1,nlevs
-          call mpi_allreduce(mpi_in_place,qsat(1,nlev,nb),npts,mpi_real8,mpi_sum,mpi_comm_io,ierr)
-       enddo
-       enddo
-       qsat = qsat/real(nanals)
-       !print *,'min/max qsat ensmean',nanal,'=',minval(qsat),maxval(qsat)
-   endif
-   if (nproc == 0) then
-     t2 = mpi_wtime()
-     print *,'time in readgridata on root',t2-t1,'secs'
-   end if
-   !print *,'min/max ps ens mem',nanal,'=',&
-   !         minval(grdin(:,ncdim,nbackgrounds/2+1)),maxval(grdin(:,ncdim,nbackgrounds/2+1))
+   ! convert qsat to ensemble mean.
    q_ind = getindex(cvars3d, 'q')
    if (pseudo_rh .and. q_ind > 0) then
+      do nb=1,nbackgrounds
+      do nlev=1,nlevs
+         call mpi_allreduce(mpi_in_place,qsat(1,nlev,nb),npts,mpi_real8,mpi_sum,mpi_comm_io,ierr)
+      enddo
+      enddo
+      qsat = qsat/real(nanals)
+      !print *,'min/max qsat ensmean',nanal,'=',minval(qsat),maxval(qsat)
       do nb=1,nbackgrounds
          ! create normalized humidity analysis variable.
          grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb) = &
          grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb)/qsat(:,:,nb)
       enddo
    end if
+   if (nproc == 0) then
+     t2 = mpi_wtime()
+     print *,'time in readgridata on root',t2-t1,'secs'
+   end if
+   !print *,'min/max ps ens mem',nanal,'=',&
+   !         minval(grdin(:,ncdim,nbackgrounds/2+1)),maxval(grdin(:,ncdim,nbackgrounds/2+1))
 
 endif
 
@@ -250,14 +248,15 @@ real(r_double)  :: t1,t2
 integer(i_kind) :: nanal
 integer(i_kind) :: nb, nvar
 integer(i_kind) :: q_ind, ierr
-real(r_single), allocatable, dimension(:,:) :: grdin_mean
+real(r_single), allocatable, dimension(:,:,:) :: grdin_mean
 
 if (nproc <= nanals-1) then
    nanal = nproc + 1
 
    if (nproc == 0) then
       t1 = mpi_wtime()
-      allocate(grdin_mean(npts,ncdim))
+      ! ensemble mean increment held on root task
+      allocate(grdin_mean(npts,ncdim,nbackgrounds))
    endif
 
    do nb=1,nbackgrounds
@@ -266,29 +265,24 @@ if (nproc <= nanals-1) then
          print *,'--------------'
       endif
       ! gather ens. mean anal. increment on root, print out max/mins.
-      call mpi_reduce(grdin(:,:,nb), grdin_mean, npts*ncdim, mpi_real4,   &
+      call mpi_reduce(grdin(:,:,nb), grdin_mean(:,:,nb), npts*ncdim, mpi_real4,   &
                       mpi_sum,0,mpi_comm_io,ierr)
       if (nproc == 0) then
-         grdin_mean = grdin_mean/real(nanals)
+         grdin_mean(:,:,nb) = grdin_mean(:,:,nb)/real(nanals)
          do nvar=1,nc3d
             print *,'ens. mean anal. increment min/max ', cvars3d(nvar),   &
-                minval(grdin_mean(:,clevels(nvar-1)+1:clevels(nvar))),     &
-                maxval(grdin_mean(:,clevels(nvar-1)+1:clevels(nvar)))
+                minval(grdin_mean(:,clevels(nvar-1)+1:clevels(nvar),nb)),     &
+                maxval(grdin_mean(:,clevels(nvar-1)+1:clevels(nvar),nb))
          enddo
          do nvar=1,nc2d
             print *,'ens. mean anal. increment min/max ', cvars2d(nvar),   &
-                minval(grdin_mean(:,clevels(nc3d) + nvar)),                &
-                maxval(grdin_mean(:,clevels(nc3d) + nvar))
+                minval(grdin_mean(:,clevels(nc3d) + nvar,nb)),                &
+                maxval(grdin_mean(:,clevels(nc3d) + nvar,nb))
          enddo
-         if (letkf_flag .and. update_letkf_meanonly) then
-             ! grdin now holds ens mean on root task
-             grdin(:,:,nb) = grdin_mean
-         endif
       endif
    enddo
 
    if (nproc == 0) then
-      deallocate(grdin_mean)
       t2 = mpi_wtime()
       print *,'time to gather ens mean increment on root',t2-t1,'secs'
    endif
@@ -297,21 +291,28 @@ if (nproc <= nanals-1) then
    t1 = mpi_wtime()
    q_ind = getindex(cvars3d, 'q')
    if (pseudo_rh .and. q_ind > 0) then
+      ! re-scale normalized spfh with sat. sphf of first guess ens mean
       do nb=1,nbackgrounds
-         ! re-scale normalized spfh with sat. sphf of first guess
          grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb) = &
          grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb)*qsat(:,:,nb)
       enddo
-   end if
-   if (letkf_flag .and. update_letkf_meanonly) then
-      ! just write out ensemble mean on root task.
-      if (nproc .eq. 0) then
-         call writegriddata(0,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,grdin,no_inflate_flag)
+      if (nproc .eq. 0) then ! same for ens mean increment on root.
+         do nb=1,nbackgrounds
+            grdin_mean(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb) = &
+            grdin_mean(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb)*qsat(:,:,nb)
+         enddo
       endif
-   else
+   end if
+   ! write out ensemble mean on root task.
+   if (nproc .eq. 0) then
+      call writegriddata(0,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,grdin_mean,no_inflate_flag)
+   endif
+   ! don't write out individual members if letkf_flag & update_letkf_meanonly
+   if (.not. letkf_flag .or. .not. update_letkf_meanonly) then
       call writegriddata(nanal,cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,grdin,no_inflate_flag)
    endif
    if (nproc == 0) then
+     deallocate(grdin_mean)
      t2 = mpi_wtime()
      print *,'time in writegriddata on root',t2-t1,'secs'
    endif 

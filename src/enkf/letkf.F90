@@ -152,7 +152,7 @@ real(r_single),allocatable,dimension(:,:,:) :: ens_tmp
 real(r_single),allocatable,dimension(:,:) :: wts_ensperts,pa
 real(r_single),allocatable,dimension(:) :: dfs,wts_ensmean
 real(r_kind),allocatable,dimension(:) :: rdiag,rloc,statesprd_prior
-real(r_single),allocatable,dimension(:) :: dep,kfgain
+real(r_single),allocatable,dimension(:) :: dep
 ! kdtree stuff
 type(kdtree2_result),dimension(:),allocatable :: sresults
 integer(i_kind), dimension(:), allocatable :: indxassim, indxob
@@ -404,7 +404,7 @@ endif
 !$omp                  nf,vdist,obens,indxassim,indxob, &
 !$omp                  nn,hxens,wts_ensmean,dfs,rdiag,dep,rloc,i, &
 !$omp                  oindex,deglat,dist,corrsq,nb,sresults, &
-!$omp                  wts_ensperts,pa,trpa,trpa_raw,kfgain) &
+!$omp                  wts_ensperts,pa,trpa,trpa_raw) &
 !$omp  reduction(+:t1,t2,t3,t4,t5) &
 !$omp  reduction(max:nobslocal_max) &
 !$omp  reduction(min:nobslocal_min) 
@@ -458,6 +458,12 @@ grdloop: do npt=1,numptsperproc(nproc+1)
                 do ii=1,ncindx ! loop over all control variables used in norm.
                     i = cindx(ii)
 ! too expensive to use modulated ensemble
+! (can't use if statements here, it slows the loop down too much)
+!#ifdef MPI3
+!                    gain = sum(ens_tmp(1:nens,i,(nbackgrounds/2)+1)*anal_ob_modens_fp(1:nens,nob))*r_nanalsm1
+!#else
+!                    gain = sum(ens_tmp(1:nens,i,(nbackgrounds/2)+1)*anal_ob_modens(1:nens,nob))*r_nanalsm1
+!#endif
 #ifdef MPI3
                     gain = sum(anal_chunk(1:nanals,npt,i,(nbackgrounds/2)+1)*anal_ob_fp(1:nanals,nob))*r_nanalsm1
 #else
