@@ -19,7 +19,7 @@ if(NOT BUILD_SP )
     NAMES libsp_d.a libsp_i4r8.a libsp_v${SP_VER}_d.a
     HINTS 
       $ENV{COREPATH}/lib 
-      /usr/local/jcsda/nwprod_gdas_2014	
+      /usr/local/jcsda/nwprod_gdas_2014/lib	
       ${COREPATH}/sp/v${SP_VER}
       ${COREPATH}/sp/v${SP_VER}/intel
       ${COREPATH}/sp/v${SP_VER}/ips/${COMPILER_VERSION}
@@ -37,7 +37,7 @@ if(NOT BUILD_SP )
     NAMES libsp_4.a libsp_i4r4.a libsp_v${SP_VER}_4.a
     HINTS 
       $ENV{COREPATH}/lib 
-      /usr/local/jcsda/nwprod_gdas_2014	
+      /usr/local/jcsda/nwprod_gdas_2014/lib	
       ${COREPATH}/sp/v${SP_VER}
       ${COREPATH}/sp/v${SP_VER}/intel
       ${COREPATH}/sp/v${SP_VER}/ips/${COMPILER_VERSION}
@@ -57,10 +57,13 @@ if( NOT SP_LIBRARY ) # didn't find the library, so build it from source
     endif()
     set( libsuffix "_v${SP_VER}${debug_suffix}" )
     set( SP_LIBRARY "${LIBRARY_OUTPUT_PATH}/libsp${libsuffix}.a" CACHE STRING "SP Library" )
+    set( SP_4_LIBRARY "${LIBRARY_OUTPUT_PATH}/libsp_4${libsuffix}.a" CACHE STRING "SP_4 Library" )
     set( sp "sp${libsuffix}")
+    set( sp4 "sp_4${libsuffix}")
     set( BUILD_SP "ON" CACHE INTERNAL "Build the SP library")
     add_subdirectory(${CMAKE_SOURCE_DIR}/libsrc/sp)
     set( SP_LIBRARY ${sp} )
+    set( SP_4_LIBRARY ${sp4} )
     if( CORE_BUILT )
       list( APPEND CORE_BUILT ${SP_LIBRARY} )
     else()
@@ -69,10 +72,8 @@ if( NOT SP_LIBRARY ) # didn't find the library, so build it from source
 else( NOT SP_LIBRARY )
   if( CORE_LIBRARIES )
     list( APPEND CORE_LIBRARIES ${SP_LIBRARY} )
-    list( APPEND CORE_LIBRARIES ${SP_4_LIBRARY} )
   else()
     set( CORE_LIBRARIES ${SP_LIBRARY} )
-    list( APPEND CORE_LIBRARIES ${SP_4_LIBRARY} )
   endif()
 endif( NOT SP_LIBRARY )
 
