@@ -37,7 +37,7 @@ program recentersigp_hybgain
   character(16),dimension(:),allocatable:: fieldlevtyp_anal1,fieldlevtyp_anal2,fieldlevtyp_fg
   integer,dimension(:),allocatable:: fieldlevel_anal1,fieldlevel_anal2,fieldlevel_fg,order_anal1,order_anal2
   integer mype,mype1,npe,nanals,iret,ialpha,ibeta
-  integer:: nrec,nlats,nlons,nlevs,npts,n,i,k,nn
+  integer:: nrec,nrec2,nlats,nlons,nlevs,npts,n,i,k,nn,nlats2,nlons2,nlevs2
   real alpha,beta
   real,allocatable,dimension(:,:) :: rwork_anal1,rwork_anal2,rwork_fg,rwork_anal
 
@@ -101,9 +101,23 @@ program recentersigp_hybgain
        call MPI_Abort(MPI_COMM_WORLD,98,iret)
        stop
      endif
+     call nemsio_getfilehead(gfile_anal1, nrec=nrec2, dimx=nlons2, dimy=nlats2, dimz=nlevs2, iret=iret)
+     if (nrec /= nrec2 .or. nlons /= nlons2 .or. nlats /= nlats2 .or. &
+         nlevs /= nlevs2) then
+       print *,'header does not match in ',trim(filename_anal1)
+       call MPI_Abort(MPI_COMM_WORLD,98,iret)
+       stop
+     endif
      call nemsio_open(gfile_anal2,trim(filename_anal2),'READ',iret=iret)
      if (iret /= 0) then
        print *,'error opening ',trim(filename_anal2)
+       call MPI_Abort(MPI_COMM_WORLD,98,iret)
+       stop
+     endif
+     call nemsio_getfilehead(gfile_anal2, nrec=nrec2, dimx=nlons2, dimy=nlats2, dimz=nlevs2, iret=iret)
+     if (nrec /= nrec2 .or. nlons /= nlons2 .or. nlats /= nlats2 .or. &
+         nlevs /= nlevs2) then
+       print *,'header does not match in ',trim(filename_anal2)
        call MPI_Abort(MPI_COMM_WORLD,98,iret)
        stop
      endif
@@ -127,7 +141,7 @@ program recentersigp_hybgain
      allocate(order_anal2(nrec))
 
      do n=1,nrec
-        call nemsio_readrec(gfile_fg,n,rwork_fg(:,n),iret=iret) ! member analysis
+        call nemsio_readrec(gfile_fg,n,rwork_fg(:,n),iret=iret) ! ens mean background
         if (iret /= 0) then
           print *,'error reading rec ',n,trim(filename_fg)
           call MPI_Abort(MPI_COMM_WORLD,98,iret)
@@ -136,7 +150,7 @@ program recentersigp_hybgain
         call nemsio_getrechead(gfile_fg,n,fieldname_fg(n),fieldlevtyp_fg(n),fieldlevel_fg(n),iret=iret)
      end do
      do n=1,nrec
-        call nemsio_readrec(gfile_anal1,n,rwork_anal1(:,n),iret=iret) ! member analysis
+        call nemsio_readrec(gfile_anal1,n,rwork_anal1(:,n),iret=iret) ! 3dvar analysis
         if (iret /= 0) then
           print *,'error reading rec ',n,trim(filename_anal1)
           call MPI_Abort(MPI_COMM_WORLD,98,iret)
@@ -145,7 +159,7 @@ program recentersigp_hybgain
         call nemsio_getrechead(gfile_anal1,n,fieldname_anal1(n),fieldlevtyp_anal1(n),fieldlevel_anal1(n),iret=iret)
      end do
      do n=1,nrec
-        call nemsio_readrec(gfile_anal2,n,rwork_anal2(:,n),iret=iret) ! member analysis
+        call nemsio_readrec(gfile_anal2,n,rwork_anal2(:,n),iret=iret) ! EnKF analysis
         if (iret /= 0) then
           print *,'error reading rec ',n,trim(filename_anal2)
           call MPI_Abort(MPI_COMM_WORLD,98,iret)
@@ -191,11 +205,18 @@ program recentersigp_hybgain
 
 
      call nemsio_open(gfilei,trim(filenamein)//"_mem"//charnanal,'READ',iret=iret)
+     call nemsio_getfilehead(gfilei, nrec=nrec2, dimx=nlons2, dimy=nlats2, dimz=nlevs2, iret=iret)
+     if (nrec /= nrec2 .or. nlons /= nlons2 .or. nlats /= nlats2 .or. &
+         nlevs /= nlevs2) then
+       print *,'header does not match in ',trim(filenamein)
+       call MPI_Abort(MPI_COMM_WORLD,98,iret)
+       stop
+     endif
      gfileo=gfile_anal
      call nemsio_open(gfileo,trim(filenameout)//"_mem"//charnanal,'WRITE',iret=iret)
 
      ! fill *_anal1 with 'old' ens members
-     do n=1,nrec
+     do n=1,nrec ! read member analyses
         call nemsio_readrec(gfilei, n,rwork_anal1(:,n),iret=iret) ! member analysis
         call nemsio_getrechead(gfilei,n,fieldname_anal1(n),fieldlevtyp_anal1(n),fieldlevel_anal1(n),iret=iret)
      end do
