@@ -5,8 +5,8 @@ program recentersigp_hybgain
 !
 ! prgmmr: whitaker         org: esrl/psd               date: 2009-02-23
 !
-! abstract:  Recenter nemsio ensemble analysis files about 
-!            new mean, computed from blended 3DVar and EnKF increments.
+! abstract:  Recentersio ensemble analysis files about 
+!            mean, computed from blended 3DVar and EnKF increments.
 !
 ! program history log:
 !   2019-02-10  Initial version.
@@ -36,7 +36,7 @@ program recentersigp_hybgain
   character(16),dimension(:),allocatable:: fieldname_anal1,fieldname_anal2,fieldname_fg
   character(16),dimension(:),allocatable:: fieldlevtyp_anal1,fieldlevtyp_anal2,fieldlevtyp_fg
   integer,dimension(:),allocatable:: fieldlevel_anal1,fieldlevel_anal2,fieldlevel_fg,order_anal1,order_anal2
-  integer iret,mype,mype1,npe,nanals,ierr,ialpha,ibeta
+  integer mype,mype1,npe,nanals,iret,ialpha,ibeta
   integer:: nrec,nlats,nlons,nlevs,npts,n,i,k,nn
   real alpha,beta
   real,allocatable,dimension(:,:) :: rwork_anal1,rwork_anal2,rwork_fg,rwork_anal
@@ -44,11 +44,11 @@ program recentersigp_hybgain
   type(nemsio_gfile) :: gfilei, gfileo, gfile_anal, gfile_fg, gfile_anal1, gfile_anal2
 
 ! Initialize mpi
-  call MPI_Init(ierr)
+  call MPI_Init(iret)
 
 ! mype is process number, npe is total number of processes.
-  call MPI_Comm_rank(MPI_COMM_WORLD,mype,ierr)
-  call MPI_Comm_size(MPI_COMM_WORLD,npe,ierr)
+  call MPI_Comm_rank(MPI_COMM_WORLD,mype,iret)
+  call MPI_Comm_size(MPI_COMM_WORLD,npe,iret)
 
   if (mype==0) call w3tagb('RECENTERSIGP_HYBGAIN',2011,0319,0055,'NP25')
 
@@ -96,23 +96,25 @@ program recentersigp_hybgain
 
      ! readin in 3dvar, enkf analyses, plus ens mean background, blend
      call nemsio_open(gfile_anal1,trim(filename_anal1),'READ',iret=iret)
-     if (iret .ne. 0) then
+     if (iret /= 0) then
        print *,'error opening ',trim(filename_anal1)
        call MPI_Abort(MPI_COMM_WORLD,98,iret)
        stop
      endif
      call nemsio_open(gfile_anal2,trim(filename_anal2),'READ',iret=iret)
-     if (iret .ne. 0) then
+     if (iret /= 0) then
        print *,'error opening ',trim(filename_anal2)
        call MPI_Abort(MPI_COMM_WORLD,98,iret)
        stop
      endif
      gfile_anal=gfile_anal2 ! use header for enkf analysis
-     call nemsio_open(gfile_anal,trim(filename_anal),'WRITE',iret=iret)
-     if (iret .ne. 0) then
-       print *,'error opening ',trim(filename_anal)
-       call MPI_Abort(MPI_COMM_WORLD,98,iret)
-       stop
+     if (mype == 0) then
+        call nemsio_open(gfile_anal,trim(filename_anal),'WRITE',iret=iret)
+        if (iret /= 0) then
+          print *,'error opening ',trim(filename_anal)
+          call MPI_Abort(MPI_COMM_WORLD,98,iret)
+          stop
+        endif
      endif
 
      npts=nlons*nlats
@@ -126,7 +128,7 @@ program recentersigp_hybgain
 
      do n=1,nrec
         call nemsio_readrec(gfile_fg,n,rwork_fg(:,n),iret=iret) ! member analysis
-        if (iret .ne. 0) then
+        if (iret /= 0) then
           print *,'error reading rec ',n,trim(filename_fg)
           call MPI_Abort(MPI_COMM_WORLD,98,iret)
           stop
@@ -135,7 +137,7 @@ program recentersigp_hybgain
      end do
      do n=1,nrec
         call nemsio_readrec(gfile_anal1,n,rwork_anal1(:,n),iret=iret) ! member analysis
-        if (iret .ne. 0) then
+        if (iret /= 0) then
           print *,'error reading rec ',n,trim(filename_anal1)
           call MPI_Abort(MPI_COMM_WORLD,98,iret)
           stop
@@ -144,7 +146,7 @@ program recentersigp_hybgain
      end do
      do n=1,nrec
         call nemsio_readrec(gfile_anal2,n,rwork_anal2(:,n),iret=iret) ! member analysis
-        if (iret .ne. 0) then
+        if (iret /= 0) then
           print *,'error reading rec ',n,trim(filename_anal2)
           call MPI_Abort(MPI_COMM_WORLD,98,iret)
           stop
@@ -166,10 +168,10 @@ program recentersigp_hybgain
      end do
    
      ! write out blended analysis on root task.
-     if (mype .eq. 0) then
+     if (mype == 0) then
         do n=1,nrec
            call nemsio_writerec(gfile_anal,n,rwork_anal(:,n),iret=iret)
-           if (iret .ne. 0) then
+           if (iret /= 0) then
              print *,'error writing rec ',n,trim(filename_anal)
              call MPI_Abort(MPI_COMM_WORLD,98,iret)
              stop
@@ -181,7 +183,7 @@ program recentersigp_hybgain
      call nemsio_close(gfile_anal1,iret=iret)
      call nemsio_close(gfile_anal2,iret=iret)
    
-     if (iret .ne. 0) then
+     if (iret /= 0) then
        print *,'error getting header info from ',trim(filename_fg)
        call MPI_Abort(MPI_COMM_WORLD,98,iret)
        stop
@@ -212,7 +214,7 @@ program recentersigp_hybgain
 !    Write recentered member analysies using ordering of first guess ensmean fields.
      do n=1,nrec
         call nemsio_writerec(gfileo,n,rwork_fg(:,n),iret=iret)
-        if (iret .ne. 0) then
+        if (iret /= 0) then
           print *,'error writing rec ',n,trim(filename_anal)
           call MPI_Abort(MPI_COMM_WORLD,98,iret)
           stop
@@ -224,7 +226,7 @@ program recentersigp_hybgain
      deallocate(fieldname_fg, fieldlevtyp_fg,fieldlevel_fg)
      deallocate(order_anal1,order_anal2)
 
-     call nemsio_close(gfile_anal,iret=iret)
+     if (mype == 0) call nemsio_close(gfile_anal,iret=iret)
      call nemsio_close(gfilei,iret=iret)
      call nemsio_close(gfileo,iret=iret)
      write(6,*)'task mype=',mype,' process ',trim(filenameout)//"_mem"//charnanal,' iret=',iret
@@ -235,13 +237,13 @@ program recentersigp_hybgain
   end if  ! end if mype
 
 100 continue
-  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+  call MPI_Barrier(MPI_COMM_WORLD,iret)
 
   if (mype==0) call w3tage('RECENTERSIGP_HYBGAIN')
 
-  call MPI_Finalize(ierr)
-  if (mype .eq. 0 .and. ierr .ne. 0) then
-     print *, 'MPI_Finalize error status = ',ierr
+  call MPI_Finalize(iret)
+  if (mype == 0 .and. iret /= 0) then
+     print *, 'MPI_Finalize error status = ',iret
   end if
 
 END program recentersigp_hybgain
