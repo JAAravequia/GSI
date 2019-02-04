@@ -721,14 +721,14 @@
     end do
   end do
 ! calculate stats
-  do i = 1,nchanl
-    of_min(i) = minval(of_array(:,i))  
-    of_max(i) = maxval(of_array(:,i))  
-    of_mean(i) = sum(of_array(:,i))/of_count(i)
-    of_rmse(i) = sqrt(of_mean(i))
-    write(25000+mype,'(A,5i6,4f8.3)') 'jiter,miter,mype,ichanl,of_count,of_min,of_max,of_mean,of_rmse', &
-    jiter,miter,mype, i, of_count(i), of_min(i), of_max(i),of_mean(i), of_rmse(i)
-  end do
+  !do i = 1,nchanl
+  !  of_min(i) = minval(of_array(:,i))  
+  !  of_max(i) = maxval(of_array(:,i))  
+  !  of_mean(i) = sum(of_array(:,i))/of_count(i)
+  !  of_rmse(i) = sqrt(of_mean(i))
+  !  write(25000+mype,'(A,5i6,4f8.3)') 'jiter,miter,mype,ichanl,of_count,of_min,of_max,of_mean,of_rmse', &
+  !  jiter,miter,mype, i, of_count(i), of_min(i), of_max(i),of_mean(i), of_rmse(i)
+  !end do
     
 
 ! Jump here when there is no data to process for current satellite

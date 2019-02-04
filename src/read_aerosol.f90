@@ -298,6 +298,8 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
               if ( aod_flags(1) < 1.0e+10_r_double ) styp = aod_flags(1)
               if ( aod_flags(2) < 1.0e+10_r_double ) dbcf = aod_flags(2)
               if ( aod_flags(3) < 1.0e+10_r_double ) qaod = aod_flags(3)
+              !print *,'iret',iret,flagstr
+              !print *, 'qaod',qaod,'aodflags',aod_flags
 
               ! CRM - hard coding this because I cant figure out bufr table
               ! entries for these 3 things...

@@ -219,6 +219,7 @@ contains
       open(302,file='aodguess',status='new',form='unformatted',access='sequential')
       write(302) aodout
       close(302)
+      write(6,*) 'Wrote out 2D AOD Guess to ./aodguess'
     end if
     deallocate(aodtmp,aodout,aod2d,aod2dch)
 

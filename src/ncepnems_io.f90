@@ -2141,7 +2141,7 @@ contains
       ! finally decided to do 
       is = grd%istart(mype+1)-1 ; ie=grd%lat1+grd%istart(mype+1)
       js = grd%jstart(mype+1)-1 ; je=grd%lon1+grd%jstart(mype+1)
-      print *, 'mype',mype,is,ie,js,je
+      !print *, 'mype',mype,is,ie,js,je
       !do i=is,ie
       !   do j=js,je-1
       do i=1,ie-is
@@ -2149,12 +2149,20 @@ contains
          ii=i+is-1
          do j=1,je-js
             jj=j+js-1
-            !if (sub_aod(i,j) < 0.001) sub_aod(i,j) = 0.001
             !if (aodout(j+js-1,i+is-1) < 0.001)  aodout(j+js-1,i+is-1) = 0.001
-            aod_change = (sub_aod(i,j)-aodout(jj,iir))/aodout(jj,iir)
+            if (aodout(jj,iir) < 0.001) aodout(jj,iir) = 0.001
+            if (sub_aod(i,j) < 0.001) sub_aod(i,j) = 0.001
+            !aod_change = (sub_aod(i,j)-aodout(jj,iir))/aodout(jj,iir)
+            aod_change = exp(aodout(jj,iir))*((sub_aod(i,j)-aodout(jj,iir))/aodout(jj,iir))
+            !aod_change = 2.465*log((1.+sub_aod(i,j))/(1.+aodout(jj,iir)))
+            !aod_change = log((sub_aod(i,j))/(aodout(jj,iir)))
+            !if (aod_change < -1.) aod_change = -1.
+            !if (aod_change > 50.) aod_change = 50.
+            if (sub_aod(i,j) < 0.001) aod_change = -1. ! remove all aerosols if aod is zero
+            !aod_change = 10.
             !write(99900+mype,'(5i6,3f10.2)') mype,j,i,jj,ii,sub_aod(i,j),aodout(jj,iir),((ii)*1000.+(jj))
             write(99900+mype,'(4i6,4f10.5)') j,i,jj,ii,sub_aod(i,j),aodout(jj,iir),sub_aod(i,j)-aodout(jj,iir),aod_change
-            if (abs(aod_change) < 0.01) print *, jj,ii,aod_change 
+            !if (abs(aod_change) < 0.01) print *, jj,ii,aod_change 
             !if (abs(aod_change) < 0.01) aod_change = 0 
             !if (abs(aod_change) < 0.1) aod_change = -1e12 
             col_so4 = sum(sub_so4(i,j,:))
@@ -2171,6 +2179,7 @@ contains
             col_ss2 = sum(sub_ss2(i,j,:))
             col_ss3 = sum(sub_ss3(i,j,:))
             col_ss4 = sum(sub_ss4(i,j,:))
+            write(99800+mype,'(4i6,1E10.2)')j,i,jj,ii,col_so4+col_oc1+col_oc2+col_bc1+col_bc2+col_du1+col_du2+col_du3+col_du4+col_du5+col_ss1+col_ss2+col_ss3+col_ss4
             do k=1,grd%nsig 
                ! below should be the correct comparable indexing
                aod_ratio = sum(aodratio(is:ie,js:je,k))/size(aodratio(is:ie,js:je,k))
@@ -2190,6 +2199,21 @@ contains
                sub_ss4(i,j,k) = (col_ss4*aod_change)*aod_ratio + sub_ss4(i,j,k)
                !if ( k==1 .and. j+js-1==360 .and. mype==22) print *,'test',i,sub_du1(i,j,k),aod_change,aod_ratio
             end do
+            col_so4 = sum(sub_so4(i,j,:))
+            col_oc1 = sum(sub_oc1(i,j,:))
+            col_oc2 = sum(sub_oc2(i,j,:))
+            col_bc1 = sum(sub_bc1(i,j,:))
+            col_bc2 = sum(sub_bc2(i,j,:))
+            col_du1 = sum(sub_du1(i,j,:))
+            col_du2 = sum(sub_du2(i,j,:))
+            col_du3 = sum(sub_du3(i,j,:))
+            col_du4 = sum(sub_du4(i,j,:))
+            col_du5 = sum(sub_du5(i,j,:))
+            col_ss1 = sum(sub_ss1(i,j,:))
+            col_ss2 = sum(sub_ss2(i,j,:))
+            col_ss3 = sum(sub_ss3(i,j,:))
+            col_ss4 = sum(sub_ss4(i,j,:))
+            write(99700+mype,'(4i6,1E14.4)')j,i,jj,ii,col_so4+col_oc1+col_oc2+col_bc1+col_bc2+col_du1+col_du2+col_du3+col_du4+col_du5+col_ss1+col_ss2+col_ss3+col_ss4
          end do
       end do
       ! each of these pointers are a 3D array on mype's subdomain
