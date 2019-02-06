@@ -30,14 +30,15 @@ program recenternemsiop_hybgain
 
   include "mpif.h"
 
-  character*500 filename_fg,filename_anal1,filename_anal2,filenamein,filenameout,filename_anal
+  character*500 filename_fg,filename_anal1,filename_anal2,filenamein,&
+                filenameout,filename_anal,filename
   character*3 charnanal
   character(len=4) charnin
   character(16),dimension(:),allocatable:: fieldname_anal1,fieldname_anal2,fieldname_fg
   character(16),dimension(:),allocatable:: fieldlevtyp_anal1,fieldlevtyp_anal2,fieldlevtyp_fg
   integer,dimension(:),allocatable:: fieldlevel_anal1,fieldlevel_anal2,fieldlevel_fg,order_anal1,order_anal2
   integer mype,mype1,npe,nanals,iret,ialpha,ibeta
-  integer:: nrec,nrec2,nlats,nlons,nlevs,npts,n,i,k,nn,nlats2,nlons2,nlevs2
+  integer:: nrec,nlats,nlons,nlevs,npts,n,i
   real alpha,beta
   real,allocatable,dimension(:,:) :: rwork_anal1,rwork_anal2,rwork_fg,rwork_anal
 
@@ -75,9 +76,9 @@ program recenternemsiop_hybgain
      write(6,*)'RECENTERSIGP_HYBGAIN:  PROCESS ',nanals,' ENSEMBLE MEMBERS'
      write(6,*)'ens mean background in ',trim(filename_fg)
      write(6,*)'3dvar analysis in ',trim(filename_anal1)
-     write(6,*)'EnKF mean analysis in',trim(filename_anal2)
+     write(6,*)'EnKF mean analysis in ',trim(filename_anal2)
      write(6,*)'Blended mean analysis to be written to ',trim(filename_anal)
-     write(6,*)'Prefix for member input files ',trim(filenameout)
+     write(6,*)'Prefix for member input files ',trim(filenamein)
      write(6,*)'Prefix for member output files ',trim(filenameout)
      write(6,*)'3dvar weight, EnKF weight =',alpha,beta
   endif
@@ -100,26 +101,16 @@ program recenternemsiop_hybgain
        print *,'error opening ',trim(filename_anal1)
        call MPI_Abort(MPI_COMM_WORLD,98,iret)
        stop
-     endif
-     call nemsio_getfilehead(gfile_anal1, nrec=nrec2, dimx=nlons2, dimy=nlats2, dimz=nlevs2, iret=iret)
-     if (nrec /= nrec2 .or. nlons /= nlons2 .or. nlats /= nlats2 .or. &
-         nlevs /= nlevs2) then
-       print *,'header does not match in ',trim(filename_anal1)
-       call MPI_Abort(MPI_COMM_WORLD,98,iret)
-       stop
+     else
+       call checkheader(gfile_anal1,filename_anal1,nrec,nlons,nlats,nlevs)
      endif
      call nemsio_open(gfile_anal2,trim(filename_anal2),'READ',iret=iret)
      if (iret /= 0) then
        print *,'error opening ',trim(filename_anal2)
        call MPI_Abort(MPI_COMM_WORLD,98,iret)
        stop
-     endif
-     call nemsio_getfilehead(gfile_anal2, nrec=nrec2, dimx=nlons2, dimy=nlats2, dimz=nlevs2, iret=iret)
-     if (nrec /= nrec2 .or. nlons /= nlons2 .or. nlats /= nlats2 .or. &
-         nlevs /= nlevs2) then
-       print *,'header does not match in ',trim(filename_anal2)
-       call MPI_Abort(MPI_COMM_WORLD,98,iret)
-       stop
+     else
+       call checkheader(gfile_anal2,filename_anal2,nrec,nlons,nlats,nlevs)
      endif
      gfile_anal=gfile_anal2 ! use header for enkf analysis
      if (mype == 0) then
@@ -204,16 +195,19 @@ program recenternemsiop_hybgain
      endif
 
 
-     call nemsio_open(gfilei,trim(filenamein)//"_mem"//charnanal,'READ',iret=iret)
-     call nemsio_getfilehead(gfilei, nrec=nrec2, dimx=nlons2, dimy=nlats2, dimz=nlevs2, iret=iret)
-     if (nrec /= nrec2 .or. nlons /= nlons2 .or. nlats /= nlats2 .or. &
-         nlevs /= nlevs2) then
-       print *,'header does not match in ',trim(filenamein)
+     write(charnanal,'(i3.3)') mype1
+     filename = trim(filenamein)//"_mem"//charnanal
+     call nemsio_open(gfilei,filename,'READ',iret=iret)
+     if (iret /= 0) then
+       print *,'error opening ',trim(filename)
        call MPI_Abort(MPI_COMM_WORLD,98,iret)
        stop
+     else
+       call checkheader(gfilei,filename,nrec,nlons,nlats,nlevs)
      endif
      gfileo=gfile_anal
-     call nemsio_open(gfileo,trim(filenameout)//"_mem"//charnanal,'WRITE',iret=iret)
+     filename = trim(filenameout)//"_mem"//charnanal
+     call nemsio_open(gfileo,trim(filename),'WRITE',iret=iret)
 
      ! fill *_anal1 with 'old' ens members
      do n=1,nrec ! read member analyses
@@ -270,6 +264,7 @@ program recenternemsiop_hybgain
 END program recenternemsiop_hybgain
 
 subroutine getorder(flnm1,flnm2,fllevtyp1,fllevtyp2,fllev1,fllev2,nrec,order)
+  implicit none
   integer nrec
   character(16):: flnm1(nrec),flnm2(nrec),fllevtyp1(nrec),fllevtyp2(nrec)
   integer ::  fllev1(nrec),fllev2(nrec)
@@ -286,5 +281,28 @@ subroutine getorder(flnm1,flnm2,fllevtyp1,fllevtyp2,fllev1,fllev2,nrec,order)
         endif
      enddo doloopj
   enddo
-
 end subroutine getorder
+
+subroutine checkheader(gfile,filename,nrec,nlons,nlats,nlevs)
+   use nemsio_module, only:  nemsio_gfile,nemsio_getfilehead
+   implicit none
+   include "mpif.h"
+   integer, intent(in) :: nrec,nlons,nlats,nlevs
+   integer nrec2,nlons2,nlats2,nlevs2,iret
+   character*500, intent(in) :: filename
+   type(nemsio_gfile) :: gfile
+   call nemsio_getfilehead(gfile, nrec=nrec2, dimx=nlons2, dimy=nlats2, dimz=nlevs2, iret=iret)
+   if (iret /= 0) then
+      print *,'error getting header from ',trim(filename)
+      call MPI_Abort(MPI_COMM_WORLD,98,iret)
+      stop
+   endif
+   if (nrec /= nrec2 .or. nlons /= nlons2 .or. nlats /= nlats2 .or. &
+       nlevs /= nlevs2) then
+     print *,'expecting nrec,nlons,nlats,nlevs =',nrec,nlons,nlats,nlevs
+     print *,'got nrec,nlons,nlats,nlevs =',nrec2,nlons2,nlats2,nlevs2
+     print *,'header does not match in ',trim(filename)
+     call MPI_Abort(MPI_COMM_WORLD,98,iret)
+     stop
+   endif
+end subroutine checkheader
