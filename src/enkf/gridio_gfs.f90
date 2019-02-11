@@ -289,15 +289,6 @@
         call copytogrdin(vg, q(:,k))
         if (tv_ind > 0)               grdin(:,levels(tv_ind-1)+k,nb) = tv(:,k)
         if (q_ind > 0)                grdin(:,levels( q_ind-1)+k,nb) =  q(:,k)
-        if (dpres_ind > 0) then
-           call nemsio_readrecv(gfile,'dpres','mid layer',k,nems_wrk2,iret=iret)
-           if (iret/=0) then
-              write(6,*)'gridio/readgriddata: gfs model: problem with nemsio_readrecv(dpres), iret=',iret
-              call stop2(23)
-           endif
-           ug = nems_wrk2
-           call copytogrdin(ug,grdin(:,levels(dpres_ind-1)+k,nb))
-        endif
         if (oz_ind > 0) then
            call nemsio_readrecv(gfile,'o3mr','mid layer',k,nems_wrk2,iret=iret)
            if (iret/=0) then
@@ -498,7 +489,7 @@
   character(len=3) charnanal
   character(8),allocatable:: recname(:)
   character(8) :: field
-  logical :: hasfield
+  logical :: hasfield,hasps
 
   real(r_kind) kap,kapr,kap1,clip
   real(nemsio_realkind), dimension(nlons*nlats) :: nems_wrk,nems_wrk2
@@ -775,43 +766,65 @@
 !    read/write orography
      call nemsio_readrecv(gfilein,'hgt','sfc',1,nems_wrk,iret=iret)
      call nemsio_writerecv(gfileout,'hgt','sfc',1,nems_wrk,iret=iret)
-
-     if (dpres_ind > 0) then
-        ! infer first-guess ps from vertical integral of dpres (plus ptop)
-        vg = 0.
-        do k=1,nlevs
-          call nemsio_readrecv(gfilein,'dpres','mid layer',k,nems_wrk,iret=iret)
-          vg = vg + nems_wrk
-        enddo
-        !call nemsio_readrecv(gfilein,'pres','sfc',1,nems_wrk,iret=iret)
-        !psfg = nems_wrk
-        !print *,'min/max psfg 1',minval(psfg),maxval(psfg)
-        psfg = vg + ptop ! infer first guess ps from delp and ptop
-        !print *,'min/max psfg 2',minval(psfg),maxval(psfg),ptop,ak(nlevs+1)
+! check if ps available
+     call nemsio_readrecv(gfilein,'pres','sfc',1,nems_wrk,iret=iret)
+     if (iret == 0) then
+        hasps = .true.
+        psfg = nems_wrk
      else
-        call nemsio_readrecv(gfilein,'pres','sfc',1,nems_wrk,iret=iret)
-        psfg = nems_wrk 
+        hasps = .false.
      endif
-     ! increment to reg grid.
-     ug = 0.
+
+     ! dpres in control vector, get increment and infer ps and ps increment from dpres
+     if (dpres_ind > 0) then
+        ug = 0. ! dpres increment
+        vg = 0. ! first-guess ps
+        do k=1,nlevs
+           call nemsio_readrecv(gfilein,'dpres','mid layer',k,nems_wrk,iret=iret)
+           if (iret/=0) then
+              write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(dpres), iret=',iret
+              call stop2(23)
+           endif
+           call copyfromgrdin(grdin(:,levels(dpres_ind-1) + k,nb),psg)
+           ug = ug + psg
+           vg = vg + nems_wrk
+           nems_wrk = nems_wrk + psg
+           call nemsio_writerecv(gfileout,'dpres','mid layer',k,nems_wrk,iret=iret)
+           if (iret/=0) then
+              write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(dpres), iret=',iret
+              call stop2(23)
+           endif
+        enddo
+        if (.not. hasps) psfg = vg + ptop ! infer first guess ps from delp and ptop
+     endif
+     ! ps in control vector
      if (ps_ind > 0) then
+        ! ps increment to reg grid.
+        ug = 0.
         call copyfromgrdin(grdin(:,levels(n3d) + ps_ind,nb),ug)
      endif
-     if (dpres_ind > 0) then
-        ! get ps increment from vertical integral of delp increment
-        ug = 0.
-        do k=1,nlevs
-           call copyfromgrdin(grdin(:,levels(dpres_ind-1) + k,nb),vg)
-           ug = ug + vg
-        enddo
+     if (dpres_ind > 0 .and. ps_ind < 0 .and. nanal .eq. 0) print *,'ens mean ps increment min/max',minval(ug),maxval(ug)
+     psg = psfg + ug ! first guess ps + increment
+     ! write out updated surface pressure.
+     if (hasps) then
+        nems_wrk = psg
+        call nemsio_writerecv(gfileout,'pres','sfc',1,nems_wrk,iret=iret)
+        if (iret/=0) then
+           write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(pres), iret=',iret
+           call stop2(23)
+        endif
      endif
-     if (nanal .eq. 0) print *,'ens mean ps increment min/max',minval(ug),maxval(ug)
-     !print *,'nanal,min/max psfg,min/max inc',nanal,minval(psfg),maxval(psfg),minval(ug),maxval(ug)
+     ! dpres in background, but not control vector
      field = 'dpres'; hasfield = checkfield(field,recname,nrecs)
-     if (hasfield) then
+     if (hasfield .and. dpres_ind < 0) then
         do k=1,nlevs
-           ! dpres increment inferred from ps increment
-           psg = ug*(bk(k)-bk(k+1))
+           ! dpres increment inferred from ps increment, if available
+           if (ps_ind > 0) then
+              psg = ug*(bk(k)-bk(k+1)) ! ug contains ps increment
+           else
+              psg = 0.
+           endif
+           ! psg contains dpres increment
            call nemsio_readrecv(gfilein,'dpres','mid layer',k,nems_wrk,iret=iret)
            if (iret/=0) then
               write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(dpres), iret=',iret
@@ -825,15 +838,7 @@
            endif
         enddo 
      endif
-     psg = psfg + ug ! first guess + increment
-     nems_wrk = psg
-     ! write out updated surface pressure.
-     call nemsio_writerecv(gfileout,'pres','sfc',1,nems_wrk,iret=iret)
-     if (iret/=0) then
-        write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(pres), iret=',iret
-        call stop2(23)
-     endif
-  endif
+  endif ! nemsio or sigio
 
   if (pst_ind > 0) then
      !==> first guess pressure at interfaces.
