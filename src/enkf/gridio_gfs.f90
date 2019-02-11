@@ -755,8 +755,8 @@
           idate=jdate, nfhour=nfhour, nfminute=nfminute, nfsecondn=nfsecondn, &
           nfsecondd=nfsecondd)
 
-     write(6,112) trim(filenameout),jdate,nfhour,nfminute,nfsecondn,nfsecondd
-112 format(a32,1x,'jdate=',7(i4,1x),' nfh=',i5,' nfm=',i5,' nfsn=',i5,' nfsd=',i5)
+!     write(6,112) trim(filenameout),jdate,nfhour,nfminute,nfsecondn,nfsecondd
+!112 format(a32,1x,'jdate=',7(i4,1x),' nfh=',i5,' nfm=',i5,' nfsn=',i5,' nfsd=',i5)
 
      if (iret/=0) then
         write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_open for output, iret=',iret
