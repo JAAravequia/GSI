@@ -167,7 +167,7 @@ implicit none
 integer(i_kind) nanal, i, nb
 real(r_double), allocatable, dimension(:,:,:) :: qsat
 real(r_single), allocatable, dimension(:) :: state_mean
-integer(i_kind) ierr
+integer(i_kind) ierr,ps_ind
 
 ! must at least nanals tasks allocated.
 if (numproc < nanals) then
@@ -188,6 +188,14 @@ if (nproc <= nanals-1) then
    nanal = nproc + 1
 
    call readgriddata(nanal,svars3d,svars2d,ns3d,ns2d,slevels,nsdim,nstatefields,statefileprefixes,.false.,state_d,qsat)
+   ! convert ps to hPa (linearized H from GSI assumes these units).
+   ps_ind  = getindex(svars2d, 'ps')  ! Ps (2D)
+   if (ps_ind > 0) then
+      do nb=1,nstatefields
+         state_d(:,slevels(ns3d) + ps_ind,nb) = &
+         0.01_r_single*state_d(:,slevels(ns3d) + ps_ind,nb)
+      enddo
+   endif
 
    ! subtract the mean
    allocate(state_mean(npts)) 
