@@ -798,6 +798,8 @@
            ug = ug + psg
            vg = vg + nems_wrk
            nems_wrk = nems_wrk + psg
+           ! clip so no negative layer thickness produced.
+           where (nems_wrk < clip) nems_wrk = clip
            call nemsio_writerecv(gfileout,'dpres','mid layer',k,nems_wrk,iret=iret)
            if (iret/=0) then
               write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(dpres), iret=',iret
@@ -840,6 +842,8 @@
               call stop2(23)
            endif
            nems_wrk = nems_wrk + psg
+           ! clip so no negative layer thickness produced.
+           where (nems_wrk < clip) nems_wrk = clip
            call nemsio_writerecv(gfileout,'dpres','mid layer',k,nems_wrk,iret=iret)
            if (iret/=0) then
               write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(dpres), iret=',iret

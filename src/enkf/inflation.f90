@@ -68,7 +68,8 @@ use params, only: analpertwtnh,analpertwtsh,analpertwttr,nanals,nlevs,&
 use kinds, only: r_single, i_kind
 use constants, only: one, zero, rad2deg, deg2rad
 use covlocal, only: latval
-use controlvec, only: ncdim, cvars3d, cvars2d, nc3d, nc2d
+use controlvec, only: ncdim, cvars3d, cvars2d, nc3d, nc2d, clevels
+use mpeu_util, only: getindex
 use gridinfo, only: latsgrd, logp, npts
 use loadbal, only: indxproc, numptsperproc, npts_max, anal_chunk, anal_chunk_prior
 use smooth_mod, only: smooth
@@ -93,7 +94,7 @@ real(r_single) sprdmin, sprdmax, sprdmaxall, &
 real(r_single),dimension(ndiag) :: sumcoslat,suma,suma2,sumi,sumf,sumitot,sumatot, &
      sumcoslattot,suma2tot,sumftot
 real(r_single) fnanalsml,coslat
-integer(i_kind) i,nn,iunit,ierr,nb
+integer(i_kind) i,nn,iunit,ierr,nb,ps_ind
 character(len=500) filename
 real(r_single), allocatable, dimension(:,:) :: tmp_chunk2,covinfglobal
 
@@ -143,6 +144,7 @@ suma = zero
 sumcoslat = zero
 sprdmax = -9.9e31_r_single
 sprdmin = 9.9e31_r_single
+ps_ind  = getindex(cvars2d, 'ps')  ! Ps (2D)
 
 do nn=1,ncdim
  do i=1,numptsperproc(nproc+1)
@@ -162,7 +164,7 @@ do nn=1,ncdim
 
    ! area mean surface pressure posterior and prior spread.
    ! (this diagnostic only makes sense for grids that are regular in longitude)
-   if (nn == ncdim) then 
+   if (ps_ind > 0 .and. nn == clevels(nc3d) + ps_ind) then 
       coslat=cos(latsgrd(indxproc(nproc+1,i)))
       if (fsprd > sprdmax) sprdmax = fsprd
       if (fsprd < sprdmin) sprdmin = fsprd
@@ -257,7 +259,7 @@ do nn=1,ncdim
 
    ! area mean surface pressure posterior spread, inflation.
    ! (this diagnostic only makes sense for grids that are regular in longitude)
-   if (nn == ncdim) then 
+   if (ps_ind > 0 .and. nn == clevels(nc3d) + ps_ind) then 
       coslat=cos(latsgrd(indxproc(nproc+1,i)))
       deglat = rad2deg*latsgrd(indxproc(nproc+1,i))
       if (deglat > latbound) then 
@@ -288,7 +290,7 @@ call mpi_reduce(sumi,sumitot,ndiag,mpi_real4,mpi_sum,0,mpi_comm_world,ierr)
 call mpi_reduce(suma,sumatot,ndiag,mpi_real4,mpi_sum,0,mpi_comm_world,ierr)
 call mpi_reduce(suma2,suma2tot,ndiag,mpi_real4,mpi_sum,0,mpi_comm_world,ierr)
 call mpi_reduce(sumcoslat,sumcoslattot,ndiag,mpi_real4,mpi_sum,0,mpi_comm_world,ierr)
-if (nproc == 0) then
+if (nproc == 0 .and. ps_ind > 0) then
    print *,'inflation stats, time level: ',nb
    print *,'---------------------------------'
    sumftot = sqrt(sumftot/sumcoslattot)
