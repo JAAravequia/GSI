@@ -309,9 +309,6 @@ contains
        ! Define local variable
        ptop = workgrid(1,1,1)
 
-       ! Rescale pressure from Pa to hPa
-       ptop = ptop/100.0
-
        ! Deallocate memory for local variable grid
        if(allocated(workgrid)) deallocate(workgrid)
 
@@ -324,11 +321,8 @@ contains
        do j = 1, dimensions%ydim
           ! Loop through zonal horizontal coordinate
           do i = 1, dimensions%xdim
-             ! Convert from Pa to hPa and update the global surface
-             ! pressure array
-             spressmn(count) = (wrfarw_mu(i,j,1) + &
-                                wrfarw_mub(i,j,1) + ptop*100.0)/100.0
-
+             spressmn(count) = wrfarw_mu(i,j,1) + &
+                               wrfarw_mub(i,j,1) + ptop
              count = count + 1
           end do ! do i = 1, dimensions%xdim
        end do ! do j = 1, dimensions%ydim
@@ -346,10 +340,9 @@ contains
                 ! Compute the pressure within the respective layer
                 ! (dry hydrostatic pressure)
                 presslmn(count,k) = wrfarw_znu(1,1,k)*(wrfarw_mu(i,j,1) +   &
-                     & wrfarw_mub(i,j,1)) + ptop*100.0
+                     & wrfarw_mub(i,j,1)) + ptop
              
-                ! Rescale pressure from Pa to hPa
-                presslmn(count,k) = presslmn(count,k)/100.0
+                presslmn(count,k) = presslmn(count,k)
              
                 ! Compute the log of the pressure within the
                 ! respective layer
@@ -639,17 +632,14 @@ contains
        do j = 1, dimensions%ydim
           ! Loop through zonal horizontal coordinate
           do i = 1, dimensions%xdim
-             ! Convert from Pa to hPa and update the global surface
-             ! pressure array
-             spressmn(count) = (wrfnmm_pd(i,j,1) + wrfnmm_pdtop(1,1,1) +    &
-                  & wrfnmm_pt(1,1,1))/100.0
+             spressmn(count) = wrfnmm_pd(i,j,1) + wrfnmm_pdtop(1,1,1) +    &
+                  & wrfnmm_pt(1,1,1)
 
              count = count + 1
           end do ! do i = 1, dimensions%xdim
        end do ! do j = 1, dimensions%ydim
 
-       ! Define local variable and rescale pressure from Pa to hPa
-       ptop = wrfnmm_pt(1,1,1)/100.0
+       ptop = wrfnmm_pt(1,1,1)
 
     !----------------------------------------------------------------------
 
@@ -665,11 +655,8 @@ contains
                 ! (dry hydrostatic pressure)
                 presslmn(count,k) = (wrfnmm_aeta1(1,1,k)*                   &
                      & wrfnmm_pdtop(1,1,1)) + wrfnmm_aeta2(1,1,k)*(         &
-                     & spressmn(count)*100.0 - wrfnmm_pdtop(1,1,1) -        &
+                     & spressmn(count) - wrfnmm_pdtop(1,1,1) -        &
                      & wrfnmm_pt(1,1,1)) + wrfnmm_pt(1,1,1)
-             
-                ! Rescale pressure from Pa to hPa
-                presslmn(count,k) = presslmn(count,k)/100.0
              
                 ! Compute the log of the pressure within the
                 ! respective layer
