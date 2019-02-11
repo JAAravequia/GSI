@@ -191,7 +191,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
         lun = 93
         open(lun,file="/home/Louis.Kouvaris/BUFR/OMPS-LP_BUFR_Table4",ACTION='READ')
         print *,"READ_OBS: Opening OMPS LP BUFR file"
-        !CALL  ISETPRM ( 'MXBTMSE', 243)
+        CALL  ISETPRM ( 'MXBTMSE', 243)
         call openbf(lnbufr,'IN',lun)
       else
         call openbf(lnbufr,'IN',lnbufr)
