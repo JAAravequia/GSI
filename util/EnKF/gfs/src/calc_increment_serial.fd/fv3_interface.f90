@@ -176,8 +176,6 @@ contains
     integer                                                              :: dimid_lev
     integer                                                              :: dimid_ilev
     integer                                                              :: ncfileid
-    integer                                                              :: ncvarid
-    integer                                                              :: ncdimid
     integer                                                              :: ncstatus
 
     !=====================================================================
@@ -480,8 +478,8 @@ contains
 
     ! Define counting variables
 
-    integer                                                              :: i, j, k
-    real(r_kind), allocatable, dimension(:,:,:) :: fg_dz, an_dz, pot_temp
+    real(r_kind), allocatable, dimension(:,:,:) :: fg_dz, an_dz
+    integer j,k
 
     !=====================================================================
 
@@ -583,12 +581,8 @@ contains
     real(r_kind),               dimension(:,:,:),            allocatable :: pressi
     real(r_kind),               dimension(:,:,:),            allocatable :: vcoord
     real(r_kind),               dimension(:),                allocatable :: workgrid
-    real(r_kind), allocatable, dimension(:,:) :: delz
     logical flip_lats
-
-    ! Define counting variables
-
-    integer                                                              :: i, j, k
+    integer k
 
     !=====================================================================
 
@@ -661,6 +655,16 @@ contains
             & reshape(workgrid,(/meta_nemsio%dimx,meta_nemsio%dimy/))
        if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
             & grid%tmp(:,:,meta_nemsio%dimz - k + 1))
+       if (ldpres) then ! if false, inferred from ps and ak,bk
+       var_info%var_name                        = 'dpres'
+       call variable_lookup(var_info)
+       call gfs_nems_read(workgrid,var_info%nems_name,                     &
+            & var_info%nems_levtyp,k)
+       grid%dpres(:,:,meta_nemsio%dimz - k + 1)   =                          &
+            & reshape(workgrid,(/meta_nemsio%dimx,meta_nemsio%dimy/))
+       if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
+            & grid%dpres(:,:,meta_nemsio%dimz - k + 1))
+       endif
        if (imp_physics .gt. 0) then
        var_info%var_name                        = 'clwmr'
        call variable_lookup(var_info)
@@ -692,17 +696,20 @@ contains
 
     end do ! do k = 1, meta_nemsio%dimz
 
+   
     do k = 1, meta_nemsio%dimz + 1
        pressi(:,:,k) = grid%ak(k) + grid%bk(k)*grid%psfc(:,:)
     end do ! do k = 1, meta_nemsio%dimz + 1
 
     do k = 1, meta_nemsio%dimz
        ! defined as higher pressure minus lower pressure
-       grid%dpres(:,:,meta_nemsio%dimz - k + 1) = pressi(:,:,k) -          &
-            & pressi(:,:,k+1)
+       if (.not. ldpres) then ! infer from pressi
+          grid%dpres(:,:,meta_nemsio%dimz - k + 1) = pressi(:,:,k) -          &
+               & pressi(:,:,k+1)
+       endif
        grid%dlnp(:,:,meta_nemsio%dimz - k + 1) = log(pressi(:,:,k))- &
             & log(pressi(:,:,k+1))
-       if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
+       if (flip_lats .and. .not. ldpres) call gfs_nems_flip_xlat_axis(meta_nemsio,  &
             & grid%dpres(:,:,meta_nemsio%dimz - k + 1))
        if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
             & grid%dlnp(:,:,meta_nemsio%dimz - k + 1))

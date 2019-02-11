@@ -122,10 +122,8 @@ if (nproc .eq. 0) then
    print *,'min/max latsgrd',minval(latsgrd),maxval(latsgrd)
 
    call nemsio_getheadvar(gfile,'PT',pt,iret)
-   pt = 0.01*pt
    ptop = pt
    call nemsio_getheadvar(gfile,'PDTOP',pdtop,iret)
-   pdtop = 0.01*pdtop
    call nemsio_getheadvar(gfile,'SGML1',field1,iret)
    do k=1,nlevs
      aeta1(k)=field1(nlevs+1-k)
@@ -141,7 +139,7 @@ if (nproc .eq. 0) then
       write(6,*)'gridinfo: nmmb model: problem with nemsio_readrecv(dpres), iret=',iret
       call stop2(24)
    endif
-   spressmn = 0.01*nems_wrk + pt ! surface pressure, units of hPa
+   spressmn = nems_wrk + pt ! surface pressure, units of Pa
    ! pressure on model levels
    do k=1,nlevs
       presslmn(:,k) = aeta1(k)*pdtop + aeta2(k)*(spressmn - pdtop - pt) + pt

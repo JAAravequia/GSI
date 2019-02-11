@@ -23,7 +23,7 @@ module gridinfo
 !   nlevs: number of analysis vertical levels (from module params).
 !   ntrac: number of 'tracer' model state variables (3 for GFS,
 !    specific humidity, ozone and cloud condensate).
-!   ptop: (real scalar) pressure (hPa) at top model layer interface.
+!   ptop: (real scalar) pressure (Pa) at top model layer interface.
 !   lonsgrd(npts): real array of analysis grid longitudes (radians).
 !   latsgrd(npts): real array of analysis grid latitudes (radians).
 !   logp(npts,ndim):  -log(press) for all 2d analysis grids. Assumed invariant
@@ -62,7 +62,7 @@ real(r_single),public, allocatable, dimension(:,:) :: logp
 integer,public :: npts
 integer,public :: ntrunc
 ! supported variable names in anavinfo
-character(len=max_varname_length),public, dimension(10) :: vars3d_supported = (/'u   ', 'v   ', 'tv  ', 'q   ', 'oz  ', 'cw  ', 'tsen', 'prse', 'ql  ', 'qi  '/)
+character(len=max_varname_length),public, dimension(11) :: vars3d_supported = (/'u   ', 'v   ', 'tv  ', 'q   ', 'oz  ', 'cw  ', 'tsen', 'dpres', 'prse', 'ql  ', 'qi  '/)
 character(len=max_varname_length),public, dimension(3)  :: vars2d_supported = (/'ps ', 'pst', 'sst' /)
 ! supported variable names in anavinfo
 contains
@@ -177,7 +177,7 @@ if (nproc .eq. 0) then
          call stop2(99)
       endif
 
-      spressmn = 0.01_r_kind*nems_wrk ! convert ps to millibars.
+      spressmn = nems_wrk 
       !print *,'min/max spressmn = ',minval(spressmn),maxval(spressmn)
 
       allocate(ak(nlevs+1),bk(nlevs+1))
@@ -189,7 +189,7 @@ if (nproc .eq. 0) then
          ak = zero
          bk = nems_vcoord(1:nlevs+1,2,1)
       elseif ( idvc == 2 .or. idvc == 3 ) then      ! hybrid coordinate
-         ak = 0.01_r_kind*nems_vcoord(1:nlevs+1,1,1) ! convert to mb
+         ak = nems_vcoord(1:nlevs+1,1,1) 
          bk = nems_vcoord(1:nlevs+1,2,1)
       else
          write(6,*)'gridinfo:  ***ERROR*** INVALID value for idvc=',idvc
@@ -225,7 +225,7 @@ if (nproc .eq. 0) then
          ak = zero
          bk = sighead%vcoord(1:nlevs+1,2)
       else if (sighead%idvc == 2 .or. sighead%idvc == 3) then ! hybrid coordinate
-         ak = 0.01_r_kind*sighead%vcoord(1:nlevs+1,1)          ! convert to mb
+         ak = sighead%vcoord(1:nlevs+1,1)          
          bk = sighead%vcoord(1:nlevs+1,2)
       else
          print *,'unknown vertical coordinate type',sighead%idvc

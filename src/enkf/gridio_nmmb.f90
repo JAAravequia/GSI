@@ -80,9 +80,7 @@ end if
 
 
 call nemsio_getheadvar(gfile,'PT',pt,iret)
-pt = 0.01*pt
 call nemsio_getheadvar(gfile,'PDTOP',pdtop,iret)
-pdtop = 0.01*pdtop
 call nemsio_getheadvar(gfile,'SGML1',field1,iret)
 do k=1,nlevs
   aeta1(k)=field1(nlevs+1-k)
@@ -97,7 +95,7 @@ if (iret/=0) then
    write(6,*)'gridio/readgriddata: nmmb model: problem with nemsio_readrecv(dpres), iret=',iret
    call stop2(23)
 endif
-psg = 0.01*nems_wrk + pt ! surface pressure, units of hPa
+psg = nems_wrk + pt ! surface pressure, units of Pa 
 ! pressure on model levels
 allocate(pslg(nlons*nlats,nlevs))
 do k=1,nlevs
@@ -113,7 +111,7 @@ enddo
 !   write(6,*)'NMMB gridio/readgriddata: NMMB model: problem with nemsio_readrecv(ps), iret=',iret
 !   call stop2(23)
 !endif
-!psg = 0.01_r_kind*nems_wrk ! convert ps to millibars.
+!psg = nems_wrk 
 !print *, 'read pres sfc: ', minval(psg), maxval(psg)
 
 !call nemsio_getfilehead(gfile,iret=iret,vcoord=nems_vcoord,idvc=idvc)
@@ -130,7 +128,7 @@ enddo
 !   ak = zero
 !   bk = nems_vcoord(1:nlevs,2,1)
 !elseif ( idvc == 2 .or. idvc == 3 ) then      ! hybrid coordinate
-!   ak = 0.01_r_kind*nems_vcoord(1:nlevs,1,1) ! convert to mb
+!   ak = nems_vcoord(1:nlevs,1,1) 
 !   bk = nems_vcoord(1:nlevs,2,1)
 !else
 !   write(6,*)'gridio:  ***ERROR*** INVALID value for idvc=',idvc

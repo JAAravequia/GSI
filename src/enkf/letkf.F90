@@ -135,7 +135,7 @@ integer(i_kind) nobsl, ngrd1, nobsl2, nthreads, nb, &
                 nobslocal_min,nobslocal_max, &
                 nobslocal_minall,nobslocal_maxall
 integer(i_kind),allocatable,dimension(:) :: oindex
-real(r_single) :: deglat, dist, corrsq, oberrfact, gain, r, trpa, trpa_raw
+real(r_single) :: deglat, dist, corrsq, oberrfact, gain, trpa, trpa_raw
 real(r_double) :: t1,t2,t3,t4,t5,tbegin,tend,tmin,tmax,tmean
 real(r_kind) r_nanals,r_nanalsm1
 real(r_kind) normdepart, pnge, width

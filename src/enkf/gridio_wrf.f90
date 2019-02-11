@@ -206,7 +206,7 @@ contains
     enddo 
 
     ! compute dry surface pressure
-    enkf_psfc = r0_01 * (enkf_mu + enkf_mub + ptop)
+    enkf_psfc = enkf_mu + enkf_mub + ptop
     ! compute full surface pressure
     enkf_psfc = (enkf_psfc - ptop) * enkf_qintegral + ptop
 
@@ -215,11 +215,11 @@ contains
 
     ! compute pressure 
     do k = 1, nlevs
-      enkf_pressure(:,k) = r0_01 * (znu(k) * (100 * enkf_psfc - ptop) + ptop)
+      enkf_pressure(:,k) = znu(k) * (enkf_psfc - ptop) + ptop
     enddo
 
     ! compute sensible temperature
-    enkf_temp = (enkf_temp + 300.0) * (0.001 * enkf_pressure)**rd_over_cp_mass
+    enkf_temp = (enkf_temp + 300.0) * (0.00001 * enkf_pressure)**rd_over_cp_mass
 
     ! compute virtual temperature
     enkf_virttemp = enkf_temp * (1. + fv*enkf_spechumd)
@@ -462,7 +462,7 @@ contains
     !----------------------------------------------------------------------
 
     ! calculate surface pressure
-    enkf_psfc = r0_01 * (enkf_pd + pdtop + pt)
+    enkf_psfc = enkf_pd + pdtop + pt
 
     if (ps_ind > 0) then
        vargrid(:,levels(n3d)+ps_ind,nb) = enkf_psfc
@@ -474,7 +474,7 @@ contains
 
     ! compute the pressure profile 
     do k = 1, nlevs
-       enkf_pressure(:,k) = r0_01 * (aeta1(k)*pdtop + aeta2(k)*enkf_pd + pt)
+       enkf_pressure(:,k) = aeta1(k)*pdtop + aeta2(k)*enkf_pd + pt
     end do 
 
     if (prse_ind > 0) then
@@ -680,8 +680,8 @@ contains
           varstrname = 'PD'
           call readwrfvar(filename, varstrname, enkf_psfc, 1)
 
-          ! add ps increment (mulitply by 100 since we're updating PD
-          enkf_psfc = enkf_psfc + 100.*vargrid(:,levels(n3d)+ps_ind,nb)
+          ! add ps increment 
+          enkf_psfc = enkf_psfc + vargrid(:,levels(n3d)+ps_ind,nb)
           call writewrfvar(filename, varstrname, enkf_psfc, 1)
        endif
     ! for ARW, update Tv and Q, but write out Tp and mix ratio
@@ -699,7 +699,7 @@ contains
           call readpressure_arw(filename, znu, znw, enkf_mu, enkf_mub, ptop)
 
           ! compute background dry surface pressure
-          enkf_psfc = r0_01*(enkf_mu + enkf_mub + ptop)
+          enkf_psfc = enkf_mu + enkf_mub + ptop
           ! compute background full surface pressure
           qintegral = one
           do k = 1, nlevs
@@ -712,9 +712,9 @@ contains
 
           ! compute background sensible temperature
           do k = 1, nlevs
-             pressure = r0_01 * (znu(k)*(100*enkf_psfc-ptop)+ptop)
+             pressure = znu(k)*(enkf_psfc-ptop)+ptop
              enkf_t(:,k) = (enkf_t(:,k) + 300.0) *  &
-                           (0.001 * pressure)**rd_over_cp_mass
+                           (0.00001 * pressure)**rd_over_cp_mass
           enddo
 
           ! compute background virtual temperature
@@ -746,9 +746,9 @@ contains
 
           ! compute analysis potential temperature
           do k = 1, nlevs
-             pressure = r0_01 * (znu(k)*(100*enkf_psfc-ptop)+ptop)
+             pressure = znu(k)*(enkf_psfc-ptop)+ptop
              enkf_t(:,k) = enkf_t(:,k) /  &
-                           (0.001 * pressure)**rd_over_cp_mass - 300.0
+                           (0.00001 * pressure)**rd_over_cp_mass - 300.0
           enddo
 
           ! compute analysis dry surface pressure
@@ -760,7 +760,7 @@ contains
           enkf_psfc = (enkf_psfc - ptop) / qintegral + ptop
 
           ! compute analysis mu
-          enkf_psfc = 100.*enkf_psfc - enkf_mub - ptop
+          enkf_psfc = enkf_psfc - enkf_mub - ptop
 
           ! write out analysis virtual temperature, specific humidity
           ! and surface pressure

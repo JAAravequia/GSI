@@ -1853,7 +1853,7 @@ contains
     use constants, only: two,pi,half,deg2rad
     use gsi_bundlemod, only: gsi_bundle
     use gsi_bundlemod, only: gsi_bundlegetpointer
-    use control_vectors, only: imp_physics,lupp
+    use control_vectors, only: imp_physics
     use cloud_efr_mod, only: cloud_calc_gfs
 
     implicit none
@@ -1875,7 +1875,7 @@ contains
     character(len=1)   :: null = ' '
     integer(i_kind),dimension(7):: idate, jdate
     integer(i_kind),dimension(4):: odate
-    integer(i_kind) :: k, mm1, nlatm2, nord_int, i, j, kk
+    integer(i_kind) :: k, mm1, nlatm2, nord_int, i, j, kk, nrec
     integer(i_kind) :: iret, lonb, latb, levs, istatus
     integer(i_kind) :: nfhour, nfminute, nfsecondn, nfsecondd
     integer(i_kind) :: istop = 104
@@ -1888,7 +1888,7 @@ contains
     real(r_kind),pointer,dimension(:,:,:) :: sub_u,sub_v,sub_tv
     real(r_kind),pointer,dimension(:,:,:) :: sub_q,sub_oz,sub_cwmr
 
-    real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig) :: sub_dzb,sub_dza
+    !real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig) :: sub_dzb,sub_dza
     real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig) :: sub_prsl
     real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig+1) :: sub_prsi
     real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig+1,ibin) :: ges_geopi
@@ -1904,6 +1904,9 @@ contains
     real(4),allocatable,dimension(:) :: r4lats,r4lons
     real(r_kind),allocatable,dimension(:,:) :: grid_b,grid_b2
     real(r_kind),allocatable,dimension(:,:,:) :: grid_c, grid3, grid_c2, grid3b
+    character(8),allocatable:: recname(:)
+    character(8) :: field
+    logical :: hasfield
 
     type(nemsio_gfile) :: gfile,gfileo
     logical diff_res,eqspace
@@ -1954,13 +1957,19 @@ contains
 
        call nemsio_getfilehead(gfile, iret=iret, nfhour=nfhour, &
             nfminute=nfminute, nfsecondn=nfsecondn, nfsecondd=nfsecondd, &
-            idate=idate, dimx=lonb, dimy=latb, dimz=levs)
+            idate=idate, dimx=lonb, dimy=latb, dimz=levs, nrec=nrec)
        if ( iret /= 0 ) then
           write(6,*) trim(my_name),': problem with nemsio_getfilehead, Status = ',iret
           call stop2(103)
        endif
        if ( levs /= grd%nsig ) then
           write(6,*) trim(my_name),': problem in data dimension background levs = ',levs,' nsig = ',grd%nsig
+          call stop2(103)
+       endif
+       allocate(recname(nrec))
+       call nemsio_getfilehead(gfile,iret=iret,recname=recname)
+       if ( iret /= 0 ) then
+          write(6,*) trim(my_name),': problem with nemsio_getfilehead, Status = ',iret
           call stop2(103)
        endif
 
@@ -2006,11 +2015,11 @@ contains
           idate=jdate, nfhour=nfhour, nfminute=nfminute, &
           nfsecondn=nfsecondn, nfsecondd=nfsecondd)
        if ( iret /= 0 ) call error_msg(trim(my_name),trim(filename),null,'open',istop,iret)
-
        ! Allocate structure arrays to hold data
        allocate(rwork1d(latb*lonb),rwork1d1(latb*lonb))
        if (imp_physics == 11) allocate(grid3b(grd%nlat,grd%nlon,1))
-       if ( diff_res .or. imp_physics == 11 .or. lupp) then
+       field = 'dpres'; hasfield = checkfield(field,recname,nrec)
+       if ( diff_res .or. imp_physics == 11 .or. hasfield) then
           allocate( grid_b(lonb,latb),grid_c(latb+2,lonb,1),grid3(grd%nlat,grd%nlon,1))
           allocate( grid_b2(lonb,latb),grid_c2(latb+2,lonb,1))
           allocate( rlats(latb+2),rlons(lonb),clons(lonb),slons(lonb),r4lats(lonb*latb),r4lons(lonb*latb))
@@ -2057,20 +2066,19 @@ contains
        sub_dp(:,:,k) = sub_prsi(:,:,k) - sub_prsi(:,:,k+1)
     end do
 
-    ! Calculate delz increment for UPP
-    if (lupp) then
-       if ((.not. lwrite4danl) .or. ibin == 1) ges_geopi = geop_hgti
-       do k=1,grd%nsig
-          sub_dzb(:,:,k) = ges_geopi(:,:,k+1,ibin) - ges_geopi(:,:,k,ibin)
-       enddo
+    ! Calculate delz increment if delz in background filt
+    ! (never actually used)
+    !  if ((.not. lwrite4danl) .or. ibin == 1) ges_geopi = geop_hgti
+    !  do k=1,grd%nsig
+    !     sub_dzb(:,:,k) = ges_geopi(:,:,k+1,ibin) - ges_geopi(:,:,k,ibin)
+    !  enddo
 
-       if ((.not. lwrite4danl) .or. ibin == 1) call load_geop_hgt
-       do k=1,grd%nsig
-          sub_dza(:,:,k) = geop_hgti(:,:,k+1,ibin) - geop_hgti(:,:,k,ibin)
-       enddo
+    !  if ((.not. lwrite4danl) .or. ibin == 1) call load_geop_hgt
+    !  do k=1,grd%nsig
+    !     sub_dza(:,:,k) = geop_hgti(:,:,k+1,ibin) - geop_hgti(:,:,k,ibin)
+    !  enddo
 
-       sub_dza = sub_dza - sub_dzb !sub_dza is increment
-    endif
+    !  sub_dza = sub_dza - sub_dzb !sub_dza is increment
     
     ! Strip off boundary points from subdomains
     call strip(sub_ps  ,psm)
@@ -2082,7 +2090,7 @@ contains
     call strip(sub_prsl,prslm ,grd%nsig)
     call strip(sub_u   ,usm   ,grd%nsig)
     call strip(sub_v   ,vsm   ,grd%nsig)
-    if (lupp) call strip(sub_dza ,dzsm  ,grd%nsig)
+    !call strip(sub_dza ,dzsm  ,grd%nsig)
 
     ! Thermodynamic variable
     ! The GSI analysis variable is virtual temperature (Tv).   For NEMSIO
@@ -2093,51 +2101,51 @@ contains
 
     ! Generate and write analysis fields
 
-    ! Surface pressure.
+    ! Surface pressure and dpres.
     call mpi_gatherv(psm,grd%ijn(mm1),mpi_rtype,&
          work1,grd%ijn,grd%displs_g,mpi_rtype,&
          mype_out,mpi_comm_world,ierror)
     if (mype==mype_out) then
-       if(diff_res .or. lupp)then
-          call nemsio_readrecv(gfile,'pres','sfc',1,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'pres','read',istop,iret)
-          rwork1d1 = r0_001*rwork1d
-          grid_b=reshape(rwork1d1,(/size(grid_b,1),size(grid_b,2)/))
-          vector(1)=.false.
-          call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-          call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
-          do kk=1,grd%iglobal
-             i=grd%ltosi(kk)
-             j=grd%ltosj(kk)
-             grid3(i,j,1)=work1(kk)-grid3(i,j,1)
-             if (lupp) work1(kk)=grid3(i,j,1)
-          end do
-          if (lupp) then
-             do k=1,grd%nsig
-                do kk=1,grd%iglobal
-                   i=grd%ltosi(kk)
-                   j=grd%ltosj(kk)
-                   grid3(i,j,1)=work1(kk)*(bk5(k)-bk5(k+1))
-                enddo
-                call g_egrid2agrid(p_high,grid3,grid_c2,1,1,vector)
-                call nemsio_readrecv(gfile,'dpres','mid layer',k,rwork1d,iret=iret)
-                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'dpres','read',istop,iret)
-                grid_b2=reshape(rwork1d,(/size(grid_b2,1),size(grid_b2,2)/))
-                do j=1,latb
-                   do i=1,lonb
-                      grid_b2(i,j)=grid_b2(i,j)+r1000*(grid_c2(latb-j+2,i,1))
-                   enddo
-                enddo
-                rwork1d = reshape(grid_b2,(/size(rwork1d)/))
-                call nemsio_writerecv(gfileo,'dpres','mid layer',k,rwork1d,iret=iret)
-                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'dpres','write',istop,iret)
-             enddo
+       call nemsio_readrecv(gfile,'pres','sfc',1,rwork1d,iret=iret)
+       if (iret /= 0) call error_msg(trim(my_name),trim(filename),'pres','read',istop,iret)
+       rwork1d1 = r0_001*rwork1d
+       grid_b=reshape(rwork1d1,(/size(grid_b,1),size(grid_b,2)/))
+       vector(1)=.false.
+       call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+       call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
+       do kk=1,grd%iglobal
+          i=grd%ltosi(kk)
+          j=grd%ltosj(kk)
+          grid3(i,j,1)=work1(kk)-grid3(i,j,1)
+          work1(kk)=grid3(i,j,1) ! only used for dpres
+       end do
+       ! write out incremented dpres if it was in the background file
+       field = 'dpres'; hasfield = checkfield(field,recname,nrec)
+       if (hasfield) then
+          do k=1,grd%nsig
              do kk=1,grd%iglobal
                 i=grd%ltosi(kk)
                 j=grd%ltosj(kk)
-                grid3(i,j,1)=work1(kk)
+                grid3(i,j,1)=work1(kk)*(bk5(k)-bk5(k+1))
              enddo
-          endif
+             call g_egrid2agrid(p_high,grid3,grid_c2,1,1,vector)
+             call nemsio_readrecv(gfile,'dpres','mid layer',k,rwork1d,iret=iret)
+             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'dpres','read',istop,iret)
+             grid_b2=reshape(rwork1d,(/size(grid_b2,1),size(grid_b2,2)/))
+             do j=1,latb
+                do i=1,lonb
+                   grid_b2(i,j)=grid_b2(i,j)+r1000*(grid_c2(latb-j+2,i,1))
+                enddo
+             enddo
+             rwork1d = reshape(grid_b2,(/size(rwork1d)/))
+             call nemsio_writerecv(gfileo,'dpres','mid layer',k,rwork1d,iret=iret)
+             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'dpres','write',istop,iret)
+          enddo
+          do kk=1,grd%iglobal
+             i=grd%ltosi(kk)
+             j=grd%ltosj(kk)
+             grid3(i,j,1)=work1(kk)
+          enddo
           call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
           do j=1,latb
              do i=1,lonb
@@ -2385,81 +2393,93 @@ contains
                 call nemsio_writerecv(gfileo,'icmr','mid layer',k,rwork1d1,iret=iret)
                 if (iret /= 0) call error_msg(trim(my_name),trim(filename),'icmr','write',istop,iret)
 
-                if (lupp) then
+                field = 'rwmr'; hasfield = checkfield(field,recname,nrec)
+                if (hasfield) then
                    call nemsio_readrecv(gfile,'rwmr','mid layer',k,rwork1d,iret=iret)
                    if (iret /= 0) call error_msg(trim(my_name),trim(filename),'rwmr','read',istop,iret)
                    call nemsio_writerecv(gfileo,'rwmr','mid layer',k,rwork1d,iret=iret)
                    if (iret /= 0) call error_msg(trim(my_name),trim(filename),'rwmr','write',istop,iret)
-
+                endif
+                field = 'snmr'; hasfield = checkfield(field,recname,nrec)
+                if (hasfield) then
                    call nemsio_readrecv(gfile,'snmr','mid layer',k,rwork1d,iret=iret)
                    if (iret /= 0) call error_msg(trim(my_name),trim(filename),'snmr','read',istop,iret)
                    call nemsio_writerecv(gfileo,'snmr','mid layer',k,rwork1d,iret=iret)
                    if (iret /= 0) call error_msg(trim(my_name),trim(filename),'snmr','write',istop,iret)
 
+                endif
+                field = 'grle'; hasfield = checkfield(field,recname,nrec)
+                if (hasfield) then
                    call nemsio_readrecv(gfile,'grle','mid layer',k,rwork1d,iret=iret)
                    if (iret /= 0) call error_msg(trim(my_name),trim(filename),'grle','read',istop,iret)
                    call nemsio_writerecv(gfileo,'grle','mid layer',k,rwork1d,iret=iret)
                    if (iret /= 0) call error_msg(trim(my_name),trim(filename),'grle','write',istop,iret)
                 endif
-
                 call nemsio_readrecv(gfile,'cld_amt','mid layer',k,rwork1d,iret=iret)
                 if (iret == 0) then
                    call nemsio_writerecv(gfileo,'cld_amt','mid layer',k,rwork1d,iret=iret)
                    if (iret /= 0) call error_msg(trim(my_name),trim(filename),'cld_amt','write',istop,iret)
                 endif
-
-             endif
+             endif ! imp_physics=11
           endif !mype == mype_out
        end do
     endif !ntracer
 
-! Variables needed by the Unified Post Processor (dzdt, delz, delp)
-    if (lupp) then
-       if (mype == mype_out) then
-          do k=1,grd%nsig
-             call nemsio_readrecv(gfile,'dzdt','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'dzdt','read',istop,iret)
-             call nemsio_writerecv(gfileo,'dzdt','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'dzdt','write',istop,iret)
-          enddo
-       endif
-       do k=1,grd%nsig
-          call mpi_gatherv(dzsm(1,k),grd%ijn(mm1),mpi_rtype,&
-               work1,grd%ijn,grd%displs_g,mpi_rtype,&
-               mype_out,mpi_comm_world,ierror)
-          if (mype == mype_out) then
-             call nemsio_readrecv(gfile,'delz','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'delz','read',istop,iret)
-             if(diff_res)then
-                grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
-                do kk=1,grd%iglobal
-                   i=grd%ltosi(kk)
-                   j=grd%ltosj(kk)
-                   grid3(i,j,1)=work1(kk)
-                end do
-                call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
-                do j=1,latb
-                   do i=1,lonb
-                      grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
-                   end do
-                end do
-                rwork1d = reshape(grid_b,(/size(rwork1d)/))
-             else
-                call load_grid(work1,grid)
-                rwork1d = rwork1d + reshape(grid,(/size(rwork1d)/))
-             end if
-             call nemsio_writerecv(gfileo,'delz','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'delz','write',istop,iret)
-          endif
-       end do
-    endif
+! Variables needed by the Unified Post Processor (dzdt, delz)
+    if (mype == mype_out) then
+        field = 'dzdt'; hasfield = checkfield(field,recname,nrec)
+        if (hasfield) then
+           do k=1,grd%nsig
+              call nemsio_readrecv(gfile,'dzdt','mid layer',k,rwork1d,iret=iret)
+              if (iret /= 0) call error_msg(trim(my_name),trim(filename),'dzdt','read',istop,iret)
+              call nemsio_writerecv(gfileo,'dzdt','mid layer',k,rwork1d,iret=iret)
+              if (iret /= 0) call error_msg(trim(my_name),trim(filename),'dzdt','write',istop,iret)
+           enddo
+        endif ! hasfield
+        field = 'delz'; hasfield = checkfield(field,recname,nrec)
+        if (hasfield) then
+           do k=1,grd%nsig
+              call mpi_gatherv(dzsm(1,k),grd%ijn(mm1),mpi_rtype,&
+                   work1,grd%ijn,grd%displs_g,mpi_rtype,&
+                   mype_out,mpi_comm_world,ierror)
+              call nemsio_readrecv(gfile,'delz','mid layer',k,rwork1d,iret=iret)
+              if (iret /= 0) call error_msg(trim(my_name),trim(filename),'delz','read',istop,iret)
+              if(diff_res)then
+                 grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
+                 do kk=1,grd%iglobal
+                    i=grd%ltosi(kk)
+                    j=grd%ltosj(kk)
+                    grid3(i,j,1)=work1(kk)
+                 end do
+                 call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
+                 do j=1,latb
+                    do i=1,lonb
+                       grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+                    end do
+                 end do
+                 rwork1d = reshape(grid_b,(/size(rwork1d)/))
+              else
+                 call load_grid(work1,grid)
+                 rwork1d = rwork1d + reshape(grid,(/size(rwork1d)/))
+              end if
+              call nemsio_writerecv(gfileo,'delz','mid layer',k,rwork1d,iret=iret)
+              if (iret /= 0) call error_msg(trim(my_name),trim(filename),'delz','write',istop,iret)
+           end do ! do k
+        endif ! hasfield
+    endif ! mype_out
     
 !
 ! Deallocate local array
 !
     if (mype==mype_out) then
-       if (diff_res .or. lupp .or. imp_physics == 11) deallocate(grid_b,grid_b2,grid_c,grid_c2,grid3,clons,slons)
-       if (imp_physics == 11) deallocate(grid3b)
+       if (allocated(grid_b)) deallocate(grid_b)
+       if (allocated(grid_c)) deallocate(grid_c)
+       if (allocated(grid_b2)) deallocate(grid_b2)
+       if (allocated(grid_c2)) deallocate(grid_c2)
+       if (allocated(grid3)) deallocate(grid3)
+       if (allocated(clons)) deallocate(clons)
+       if (allocated(slons)) deallocate(slons)
+       if (allocated(grid3b)) deallocate(grid3b)
 
        call nemsio_close(gfile,iret)
        if (iret /= 0) call error_msg(trim(my_name),trim(fname_ges),null,'close',istop,iret)
@@ -2470,6 +2490,7 @@ contains
 ! Deallocate local array
 !
        deallocate(rwork1d,rwork1d1)
+       if (allocated(recname)) deallocate(recname)
 !
        write(6,'(a,'': atm anal written for lonb,latb,levs= '',3i6,'',valid hour= '',f4.1,'',idate= '',4i5)') &
           trim(my_name),lonb,latb,levs,fhour,odate
@@ -3546,6 +3567,16 @@ contains
 
   return
   end subroutine tran_gfssfc
+
+  logical function checkfield(field,fields,nrec) result(hasfield)
+   integer, intent(in) :: nrec
+   character*8, intent(in) :: fields(nrec),field
+   integer n
+   hasfield = .false.
+   do n=1,nrec
+      if (field == fields(n)) hasfield=.true.
+   enddo
+  end function checkfield
 
 end module ncepnems_io
 

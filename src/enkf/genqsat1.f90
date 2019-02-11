@@ -1,7 +1,8 @@
 subroutine genqsat1(sph,qsat,ges_prsl,ges_tv,ice,npts,nlevs)
 ! this subroutine was extracted from the GSI version operational
 ! at NCEP in Dec. 2007. Only difference is that this version takes
-! single precision 2d arrays instead of default real 3d arrays.
+! single precision 2d arrays instead of default real 3d arrays and
+! uses Pa instead of hPa units for pressure.
 !
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -26,7 +27,7 @@ subroutine genqsat1(sph,qsat,ges_prsl,ges_tv,ice,npts,nlevs)
 !   2006-11-22  derber - correct bug:  es<esmax should be es<=esmax
 !
 !   input argument list:
-!     ges_prsl  - guess pressure (mb)
+!     ges_prsl  - guess pressure (Pa)
 !     ges_tv    - guess virtual temp (K)
 !     qsat      - guess specific humidity (in), saturation value (out)
 !     ice       - logical flag:  T=include ice and ice-water effects,
@@ -55,12 +56,10 @@ subroutine genqsat1(sph,qsat,ges_prsl,ges_tv,ice,npts,nlevs)
 
   integer(i_kind) k,i
   real(r_double) pw,tdry,tr,es
-  real(r_double) w,onep2,esmax
+  real(r_double) w,esmax
   real(r_double),dimension(npts):: mint,estmax
   real(r_double),dimension(npts,nlevs):: ges_tsen
   integer(i_kind),dimension(npts):: lmint
-
-  onep2 = 1.e2_r_double
 
   ! compute sensible from virtual temp.
   ges_tsen=ges_tv/(one+fv*sph)
@@ -73,8 +72,8 @@ subroutine genqsat1(sph,qsat,ges_prsl,ges_tv,ice,npts,nlevs)
   end do
   do k=1,nlevs
       do i=1,npts
-        if((ges_prsl(i,k) < 30._r_double .and.  &
-            ges_prsl(i,k) > 2._r_double) .and.  &
+        if((ges_prsl(i,k) < 3000._r_double .and.  &
+            ges_prsl(i,k) > 200._r_double) .and.  &
             ges_tsen(i,k) < mint(i))then
            lmint(i)=k
            mint(i)=ges_tsen(i,k)
@@ -98,7 +97,7 @@ subroutine genqsat1(sph,qsat,ges_prsl,ges_tv,ice,npts,nlevs)
     do k = 1,nlevs
         do i = 1,npts
 
-          pw = onep2*ges_prsl(i,k) ! convert to Pa from mb.
+          pw = ges_prsl(i,k)
               
           tdry = ges_tsen(i,k)
           tr = ttp/tdry
@@ -132,7 +131,7 @@ subroutine genqsat1(sph,qsat,ges_prsl,ges_tv,ice,npts,nlevs)
     do k = 1,nlevs
         do i = 1,npts
               
-          pw = onep2*ges_prsl(i,k)  ! convert to Pa from mb
+          pw = ges_prsl(i,k)
 
           tdry = ges_tsen(i,k)
           tr = ttp/tdry

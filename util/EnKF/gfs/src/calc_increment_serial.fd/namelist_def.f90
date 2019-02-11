@@ -12,6 +12,7 @@ module namelist_def
   character(len=500)                             :: datapath                                = './'
   logical                                        :: debug,zero_mpinc                        = .false.
   logical                                        :: write_delz_inc                          = .false.
+  logical                                        :: ldpres                                  = .false.
 ! 11 GFDLMP, 99 ZCMP, < 0 no microphysics vars in increment file
   integer                                        :: imp_physics = 11
   
