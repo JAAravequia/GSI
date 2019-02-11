@@ -289,6 +289,15 @@
         call copytogrdin(vg, q(:,k))
         if (tv_ind > 0)               grdin(:,levels(tv_ind-1)+k,nb) = tv(:,k)
         if (q_ind > 0)                grdin(:,levels( q_ind-1)+k,nb) =  q(:,k)
+        if (dpres_ind > 0) then
+           call nemsio_readrecv(gfile,'dpres','mid layer',k,nems_wrk2,iret=iret)
+           if (iret/=0) then
+              write(6,*)'gridio/readgriddata: gfs model: problem with nemsio_readrecv(dpres), iret=',iret
+              call stop2(23)
+           endif
+           ug = nems_wrk2
+           call copytogrdin(ug,grdin(:,levels(dpres_ind-1)+k,nb))
+        endif
         if (oz_ind > 0) then
            call nemsio_readrecv(gfile,'o3mr','mid layer',k,nems_wrk2,iret=iret)
            if (iret/=0) then
@@ -544,8 +553,8 @@
                              nfminute=nfminute, nfsecondn=nfsecondn, nfsecondd=nfsecondd,&
                              nrec=nrecs,&
                              vcoord=nems_vcoord,idvc=nems_idvc)
-     write(6,111) trim(filenamein),idat,nfhour,nfminute,nfsecondn,nfsecondd
-111  format(a32,1x,'idat=',7(i4,1x),' nfh=',i5,' nfm=',i5,' nfsn=',i5,' nfsd=',i5)
+!     write(6,111) trim(filenamein),idat,nfhour,nfminute,nfsecondn,nfsecondd
+!111  format(a32,1x,'idat=',7(i4,1x),' nfh=',i5,' nfm=',i5,' nfsn=',i5,' nfsd=',i5)
 
      if (iret/=0) then
         write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_getfilehead, iret=',iret
