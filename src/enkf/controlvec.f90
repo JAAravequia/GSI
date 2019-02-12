@@ -169,6 +169,12 @@ do i = 1, nc3d
     call stop2(502)
   endif
 enddo
+if (getindex(cvars2d, 'ps') > 0 .and. getindex(cvars3d,'dpres') > 0) then
+   if (nproc .eq. 0) then 
+      print *,'ps and dpres cannot both be in control vector - choose one or the other'
+   endif
+   call stop2(502)
+endif
 
 if (nproc == 0) then 
   print *, '2D control variables: ', cvars2d
