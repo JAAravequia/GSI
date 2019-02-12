@@ -245,7 +245,7 @@ contains
 
     real(r_kind) dlat1,dlon1,pob1
     real(r_kind) dx,dy,dp,dxx,dyy,dpp
-    real(r_kind) crit,dist1
+    real(r_kind) crit!,dist1
 
     logical foreswp, aftswp
 
@@ -291,7 +291,7 @@ contains
     itx=hll(ix,iy)
 
 !   Compute distance metric (smaller is closer to center of cube)
-    dist1=(dxx*dxx+dyy*dyy+dpp*dpp)*two/three+half
+!    dist1=(dxx*dxx+dyy*dyy+dpp*dpp)*two/three+half
 
 
 !   Examine various cases regarding what to do with current obs.
@@ -299,7 +299,8 @@ contains
     iuse=.true.
 
 !   Determine "score" for observation.  Lower score is better.
-    crit = crit1*dist1
+!    crit = crit1*dist1
+    crit = crit1
 
 
 !   TDR fore (Pseudo-dual-Doppler-radars)
@@ -473,7 +474,7 @@ contains
 
     real(r_kind) dlat1,dlon1,pob1
     real(r_kind) dx,dy,dp,dxx,dyy,dpp
-    real(r_kind) crit,dist1
+    real(r_kind) crit!,dist1
 
     logical foreswp, aftswp
 
@@ -520,7 +521,7 @@ contains
     itx=hll(ix,iy)
 
 !   Compute distance metric (smaller is closer to center of cube)
-    dist1=(dxx*dxx+dyy*dyy+dpp*dpp)*two/three+half
+!    dist1=(dxx*dxx+dyy*dyy+dpp*dpp)*two/three+half
 
 
 !   Examine various cases regarding what to do with current obs.
@@ -528,7 +529,8 @@ contains
     iuse=.true.
 
 !   Determine "score" for observation.  Lower score is better.
-    crit = crit1*dist1
+!    crit = crit1*dist1
+    crit = crit1
 
 !   TDR fore/aft (Pseudo-dual-Doppler-radars)
     if(foreswp) then   !   fore sweeps
