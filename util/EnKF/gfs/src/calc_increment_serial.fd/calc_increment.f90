@@ -2,7 +2,7 @@ program calc_increment
 
   use kinds
   use namelist_def, only : datapath, analysis_filename, firstguess_filename, increment_filename, debug,&
-   zero_mpinc, imp_physics, ldpres, write_delz_inc
+   zero_mpinc, imp_physics, write_delz_inc
   use calc_increment_interface
 
   implicit none
@@ -19,8 +19,6 @@ program calc_increment
   call getarg(6, bufchar)
   read(bufchar,'(i5)') imp_physics
   call getarg(7, bufchar)
-  read(bufchar,'(L)') ldpres
-  call getarg(8, bufchar)
   read(bufchar,'(L)') write_delz_inc
 
   !write(6,*) 'DATAPATH        = ', trim(datapath)
@@ -30,7 +28,6 @@ program calc_increment
   write(6,*) 'DEBUG           = ', debug
   write(6,*) 'ZERO_MPINC      = ', zero_mpinc
   write(6,*) 'IMP_PHYSICS     = ', imp_physics
-  write(6,*) 'LDPRES          = ', ldpres
   write(6,*) 'WRITE_DELZ_INC  = ', write_delz_inc
   call calculate_increment()
 

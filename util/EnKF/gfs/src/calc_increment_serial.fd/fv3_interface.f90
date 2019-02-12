@@ -571,6 +571,7 @@ contains
 
   subroutine fv3_increment_define_analysis(grid)
 
+    use nemsio_module, only: nemsio_charkind
     ! Define variables passed to routine
 
     type(analysis_grid) :: grid
@@ -581,8 +582,9 @@ contains
     real(r_kind),               dimension(:,:,:),            allocatable :: pressi
     real(r_kind),               dimension(:,:,:),            allocatable :: vcoord
     real(r_kind),               dimension(:),                allocatable :: workgrid
-    logical flip_lats
-    integer k
+    logical flip_lats,ldpres
+    integer k,n
+    character(nemsio_charkind) field
 
     !=====================================================================
 
@@ -590,6 +592,16 @@ contains
     ! Define local variables
 
     call gfs_nems_initialize(meta_nemsio,filename=grid%filename)
+    ! check to see if dpres in file.
+    ldpres = .false.
+    field = 'dpres'
+    do n=1,meta_nemsio%nrec
+       if (trim(field) == trim(meta_nemsio%recname(n))) then
+          ldpres = .true.
+          exit
+       endif
+    enddo
+    print *,'ldpres = ',ldpres
     ! Allocate memory for local variables
 
     if(.not. allocated(pressi))                                            &
@@ -656,14 +668,14 @@ contains
        if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
             & grid%tmp(:,:,meta_nemsio%dimz - k + 1))
        if (ldpres) then ! if false, inferred from ps and ak,bk
-       var_info%var_name                        = 'dpres'
-       call variable_lookup(var_info)
-       call gfs_nems_read(workgrid,var_info%nems_name,                     &
-            & var_info%nems_levtyp,k)
-       grid%dpres(:,:,meta_nemsio%dimz - k + 1)   =                          &
-            & reshape(workgrid,(/meta_nemsio%dimx,meta_nemsio%dimy/))
-       if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
-            & grid%dpres(:,:,meta_nemsio%dimz - k + 1))
+          var_info%var_name                        = 'dpres'
+          call variable_lookup(var_info)
+          call gfs_nems_read(workgrid,var_info%nems_name,                     &
+               & var_info%nems_levtyp,k)
+          grid%dpres(:,:,meta_nemsio%dimz - k + 1)   =                          &
+               & reshape(workgrid,(/meta_nemsio%dimx,meta_nemsio%dimy/))
+          if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
+               & grid%dpres(:,:,meta_nemsio%dimz - k + 1))
        endif
        if (imp_physics .gt. 0) then
        var_info%var_name                        = 'clwmr'
@@ -707,11 +719,11 @@ contains
           grid%dpres(:,:,meta_nemsio%dimz - k + 1) = pressi(:,:,k) -          &
                & pressi(:,:,k+1)
        endif
-       grid%dlnp(:,:,meta_nemsio%dimz - k + 1) = log(pressi(:,:,k))- &
-            & log(pressi(:,:,k+1))
+       grid%dlnp(:,:,meta_nemsio%dimz - k + 1) = &
+       log(grid%dpres(:,:,meta_nemsio%dimz - k + 1))
        if (flip_lats .and. .not. ldpres) call gfs_nems_flip_xlat_axis(meta_nemsio,  &
             & grid%dpres(:,:,meta_nemsio%dimz - k + 1))
-       if (flip_lats) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
+       if (flip_lats .and. .not. ldpres) call gfs_nems_flip_xlat_axis(meta_nemsio,            &
             & grid%dlnp(:,:,meta_nemsio%dimz - k + 1))
     end do ! do k = 1, meta_nemsio%dimz
 

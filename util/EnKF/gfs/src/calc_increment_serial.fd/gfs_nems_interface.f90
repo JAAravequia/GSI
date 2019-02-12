@@ -183,6 +183,13 @@ contains
       print *, 'problem with nemsio_getfilehead, iret=', nemsio_iret
       stop 3
     endif
+    if (.not. allocated(meta_nemsio%recname))  &
+    allocate(meta_nemsio%recname(meta_nemsio%nrec))
+    call nemsio_getfilehead(gfile,iret=nemsio_iret,recname=meta_nemsio%recname)
+    if (nemsio_iret /= 0) then
+      print *, 'problem with nemsio_getfilehead, iret=', nemsio_iret
+      stop 3
+    endif
 
     if (.not. allocated(meta_nemsio%lon)) &
     allocate(meta_nemsio%lon(meta_nemsio%dimx*meta_nemsio%dimy))
