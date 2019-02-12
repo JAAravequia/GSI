@@ -1846,7 +1846,7 @@ contains
     use obsmod, only: iadate
 
     use nemsio_module, only: nemsio_gfile,nemsio_open,nemsio_init,&
-         nemsio_getfilehead,nemsio_close,nemsio_writerecv,nemsio_readrecv
+         nemsio_charkind,nemsio_getfilehead,nemsio_close,nemsio_writerecv,nemsio_readrecv
     use gsi_4dvar, only: ibdate,nhr_obsbin,lwrite4danl
     use general_sub2grid_mod, only: sub2grid_info
     use egrid2agrid_mod,only: g_egrid2agrid,g_create_egrid2agrid,egrid2agrid_parm,destroy_egrid2agrid
@@ -1904,8 +1904,8 @@ contains
     real(4),allocatable,dimension(:) :: r4lats,r4lons
     real(r_kind),allocatable,dimension(:,:) :: grid_b,grid_b2
     real(r_kind),allocatable,dimension(:,:,:) :: grid_c, grid3, grid_c2, grid3b
-    character(8),allocatable:: recname(:)
-    character(8) :: field
+    character(nemsio_charkind),allocatable:: recname(:)
+    character(nemsio_charkind) :: field
     logical :: hasfield
 
     type(nemsio_gfile) :: gfile,gfileo
@@ -3569,8 +3569,9 @@ contains
   end subroutine tran_gfssfc
 
   logical function checkfield(field,fields,nrec) result(hasfield)
+   use nemsio_module, only: nemsio_charkind
    integer, intent(in) :: nrec
-   character*8, intent(in) :: fields(nrec),field
+   character(nemsio_charkind), intent(in) :: fields(nrec),field
    integer n
    hasfield = .false.
    do n=1,nrec
