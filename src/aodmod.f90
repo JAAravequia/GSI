@@ -57,6 +57,7 @@ contains
     use radinfo, only: nsigradjac
     use general_commvars_mod, only: load_grid
     use ncepnems_io, only: aodratio
+    use guess_grids, only: ges_tsen
 
     implicit none
 
@@ -159,13 +160,13 @@ contains
         data_s(11) = 3. ! deep blue confidence flag
         ! going to try it without anything in the channel rows
         ! and see if CRTM works for AOD generation anyways
-        !print *, i,j
         call call_crtm(obstype,tdiff,data_s,nchanl,nreal,ich, &
             tvp,qvp,clw_guess,prsltmp,prsitmp, &
             trop5,tzbgr,dtsavg,sfc_speed, &
             tsim,emissivity,ptau5,ts,emissivity_k, &
             temp,wmix,jacobian,error_status,layer_od=layer_od)
         if (error_status /=0) print *, 'CRTM error',error_status,i,j
+        !print *, j,i,gridlon,gridlat,tvp(1),qvp(1),prsltmp(1),ges_tsen(i,j,1,1)
         do k=1,nchanl
           aod2dch(i,j,k) = sum(layer_od(:,k))
           !print *,i,j,k,aod2dch(i,j,k)

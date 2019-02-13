@@ -1757,6 +1757,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
                  gesqsat(ixp,iyp,k,itsigp)*w11)*dtsigp
         rh(k) = q(k)/qs(k)
     end do
+    !print *, rh(1)
   endif
 
 
