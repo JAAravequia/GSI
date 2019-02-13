@@ -3,10 +3,11 @@ PROGRAM calc_increment_nemsio
 !
 ! program:  calc_increment_nemsio
 !
-! prgmmr: whitaker         org: esrl/psd               date: 2009-02-23
+! prgmmr: whitaker         org: esrl/psd               date: 2019-02-23
 !
 ! abstract:  difference two nemsio files, write out increment netcdf increment
-! file for ingest into FV3.
+! file for ingest into FV3.  The data in increment file must be oriented
+! from south to north and from top to bottom in the vertical.
 !
 ! program history log:
 !   2019-02-12  Initial version.
@@ -15,6 +16,11 @@ PROGRAM calc_increment_nemsio
 !   input files: filename_fg filename_anal (1st two command line args)
 !
 !   output files: filename_inc (3rd command line arg)
+
+!   4th command line arg is logical for controlling whether microphysics
+!   increment is computed.  5th command line argument is logical controlling
+!   whether delz increment is computed hydrostatically from temp, humidity
+!   and dpres.
 !
 ! attributes:
 !   language: f95
@@ -28,6 +34,7 @@ PROGRAM calc_increment_nemsio
   use netcdf
   implicit none
 
+  ! these are used in computation of delz increment
   real,parameter :: rgas   = 2.8705e+2
   real,parameter :: rvap   = 4.6150e+2
   real,parameter :: grav   = 9.8066
@@ -55,9 +62,9 @@ PROGRAM calc_increment_nemsio
   call getarg(2,filename_anal)  ! analysis nemsio file
   call getarg(3,filename_inc)   ! output increment file
   call getarg(4, bufchar)
-  read(bufchar,'(L)') no_mpinc
+  read(bufchar,'(L)') no_mpinc  ! if T, microsphysics increments computed
   call getarg(5, bufchar)
-  read(bufchar,'(L)') inc_delz
+  read(bufchar,'(L)') inc_delz  ! if T, delz increment computed
 
   write(6,*)'CALC_INCREMENT_NEMSIO:'
   write(6,*)'filename_fg=',trim(filename_fg)
@@ -270,12 +277,13 @@ PROGRAM calc_increment_nemsio
      print *, 'error writing ilev ',trim(nf90_strerror(ncstatus))
      stop
   endif
-  ncstatus = nf90_put_var(ncfileid,varid_hyai,vcoord(:,1,1))
+  ! note that levels go from top to bottom (opposite to nemsio files)
+  ncstatus = nf90_put_var(ncfileid,varid_hyai,vcoord(nlevs+1:1:-1,1,1))
   if (ncstatus /= nf90_noerr) then
      print *, 'error writing hyai ',trim(nf90_strerror(ncstatus))
      stop
   endif
-  ncstatus = nf90_put_var(ncfileid,varid_hybi,vcoord(:,2,1))
+  ncstatus = nf90_put_var(ncfileid,varid_hybi,vcoord(nlevs+1:1:-1,2,1))
   if (ncstatus /= nf90_noerr) then
      print *, 'error writing hybi ',trim(nf90_strerror(ncstatus))
      stop
@@ -317,8 +325,8 @@ PROGRAM calc_increment_nemsio
         print *,'neither dpres or surface pressure found'
         stop
      endif
-     do k=1,nlevs
-       incdata(:,:,k) = incdata2(:,:)*(vcoord(k,2,1)-vcoord(k+1,2,1))
+     do k=1,nlevs ! data goes from top to bottom
+       incdata(:,:,k) = incdata2(:,:)*(vcoord(nlevs-k+1,2,1)-vcoord(nlevs-k+2,2,1))
      enddo
   endif 
   call write_ncdata3d(rwork_inc,incdata,field,ncvarname,fieldlevel_fg,fieldname_fg,nlons,nlats,nlevs,nrec,ncfileid,dimid_3d,.false.)
@@ -328,7 +336,7 @@ PROGRAM calc_increment_nemsio
   endif
 
 ! compute hydrostatic delz increment if requested
-! hydrostatic equation g*dz = -R_d*T_v*dlnp
+! hydrostatic equation g*dz = -R_d*T_v*dlnp. This is untested code.
   if (inc_delz) then
     allocate(dpres_fg(nlons,nlats,nlevs),dpres_anal(nlons,nlats,nlevs))
     allocate(tmp_fg(nlons,nlats,nlevs),tmp_anal(nlons,nlats,nlevs))
@@ -345,18 +353,21 @@ PROGRAM calc_increment_nemsio
     call get3dfield(rwork_fg,spfh_fg,field,fieldlevel_fg,fieldname_fg,nlons,nlats,nlevs,nrec)
     call get3dfield(rwork_anal,spfh_anal,field,fieldlevel_anal,fieldname_anal,nlons,nlats,nlevs,nrec)
     ptop(:,:,nlevs) = vcoord(nlevs+1,1,1)
+    ! dpres goes from top to bottom, ptop/pbot go from bottom to top
     do k=1,nlevs-1
-       ptop(:,:,nlevs-k)=ptop(:,:,nlevs-k+1)+dpres_fg(:,:,nlevs-k+1)
+       ptop(:,:,nlevs-k)=ptop(:,:,nlevs-k+1)+dpres_fg(:,:,k)
        pbot(:,:,nlevs-k+1)=ptop(:,:,nlevs-k)
     enddo
-    pbot(:,:,1) = ptop(:,:,2)+dpres_fg(:,:,1)
-    fg_dz    = -rgas*tmp_fg*(1.+(rvap/rgas-1.)*spfh_fg)*(log(ptop)-log(pbot))/grav
+    pbot(:,:,1) = ptop(:,:,1)+dpres_fg(:,:,nlevs)
+    ! at this point ptop and pbot are bottom to top, all other vars are top to
+    ! bottom.    Need to flip pbot,ptop here.
+    fg_dz  = -rgas*tmp_fg*(1.+(rvap/rgas-1.)*spfh_fg)*(log(ptop(:,:,nlevs:1:-1))-log(pbot(:,:,nlevs:1:-1)))/grav
     do k=1,nlevs-1
-       ptop(:,:,nlevs-k)=ptop(:,:,nlevs-k+1)+dpres_anal(:,:,nlevs-k+1)
+       ptop(:,:,nlevs-k)=ptop(:,:,nlevs-k+1)+dpres_anal(:,:,k)
        pbot(:,:,nlevs-k+1)=ptop(:,:,nlevs-k)
     enddo
-    pbot(:,:,1) = ptop(:,:,2)+dpres_anal(:,:,1)
-    anal_dz  = -rgas*tmp_anal*(1.+(rvap/rgas-1.)*spfh_anal)*(log(ptop)-log(pbot))/grav
+    pbot(:,:,1) = ptop(:,:,1)+dpres_anal(:,:,nlevs)
+    anal_dz  = -rgas*tmp_anal*(1.+(rvap/rgas-1.)*spfh_anal)*(log(ptop(:,:,nlevs:1:-1))-log(pbot(:,:,nlevs:1:-1)))/grav
     incdata = anal_dz - fg_dz
     ncvarname = 'delz_inc'
     call write_ncdata3d(rwork_inc,incdata,field,ncvarname,fieldlevel_fg,fieldname_fg,nlons,nlats,nlevs,nrec,ncfileid,dimid_3d,.false.)
@@ -439,8 +450,10 @@ end subroutine getorder
                 data2(i,j) = datain(nn,n)
              enddo
              enddo
-             do j=1,nlats ! flip lats (from N to S to S to N)
-                incdata(:,nlats-j+1,k) = data2(:,j)
+             do j=1,nlats 
+! flip lats (from N to S to S to N)
+! flip vertical so data goes from top to bottom
+                incdata(:,nlats-j+1,nlevs-k+1) = data2(:,j)
              enddo
           endif
        enddo
