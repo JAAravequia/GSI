@@ -434,7 +434,7 @@ contains
     cmaq_regional=.false.
     fv3_regional=.false.
     nems_nmmb_regional = .false.
-    twodvar_regional = .false. 
+    twodvar_regional = .true. 
     use_gfs_ozone = .false.
     check_gfs_ozone_date = .false.
     regional_ozone = .false.
