@@ -160,7 +160,8 @@ PROGRAM calc_increment_nemsio
 
 ! write out netcdf increment file.
   ncstatus = nf90_create(trim(filename_inc),           &
-       cmode=ior(NF90_CLOBBER,NF90_64BIT_OFFSET),ncid=ncfileid)
+       cmode=ior(NF90_CLOBBER,NF90_NETCDF4),ncid=ncfileid)
+!      cmode=ior(NF90_CLOBBER,NF90_64BIT_OFFSET),ncid=ncfileid)
   if (ncstatus /= nf90_noerr) then
      print *, 'error opening file ',trim(nf90_strerror(ncstatus))
      stop
@@ -513,6 +514,12 @@ end subroutine getorder
         print *, 'error creating',trim(ncvarname),' ',trim(nf90_strerror(ncstatus))
         stop
      endif
+     ! turn on compression (level 4)
+     !ncstatus = nf90_def_var_deflate(ncfileid, varid, 1,1,4)
+     !if (ncstatus /= nf90_noerr) then
+     !   print *,'nc_def_var_deflate error ',trim(nf90_strerror(ncstatus))
+     !   stop
+     !endif
      ncstatus = nf90_enddef(ncfileid)
      if (ncstatus /= nf90_noerr) then
         print *,'enddef error ',trim(nf90_strerror(ncstatus))
