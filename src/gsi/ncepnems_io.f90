@@ -2106,46 +2106,48 @@ contains
          work1,grd%ijn,grd%displs_g,mpi_rtype,&
          mype_out,mpi_comm_world,ierror)
     if (mype==mype_out) then
-       call nemsio_readrecv(gfile,'pres','sfc',1,rwork1d,iret=iret)
-       if (iret /= 0) call error_msg(trim(my_name),trim(filename),'pres','read',istop,iret)
-       rwork1d1 = r0_001*rwork1d
-       grid_b=reshape(rwork1d1,(/size(grid_b,1),size(grid_b,2)/))
-       vector(1)=.false.
-       call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-       call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
-       do kk=1,grd%iglobal
-          i=grd%ltosi(kk)
-          j=grd%ltosj(kk)
-          grid3(i,j,1)=work1(kk)-grid3(i,j,1)
-          work1(kk)=grid3(i,j,1) ! only used for dpres
-       end do
-       ! write out incremented dpres if it was in the background file
        field = 'dpres'; hasfield = checkfield(field,recname,nrec)
-       if (hasfield) then
-          do k=1,grd%nsig
-             do kk=1,grd%iglobal
-                i=grd%ltosi(kk)
-                j=grd%ltosj(kk)
-                grid3(i,j,1)=work1(kk)*(bk5(k)-bk5(k+1))
-             enddo
-             call g_egrid2agrid(p_high,grid3,grid_c2,1,1,vector)
-             call nemsio_readrecv(gfile,'dpres','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'dpres','read',istop,iret)
-             grid_b2=reshape(rwork1d,(/size(grid_b2,1),size(grid_b2,2)/))
-             do j=1,latb
-                do i=1,lonb
-                   grid_b2(i,j)=grid_b2(i,j)+r1000*(grid_c2(latb-j+2,i,1))
-                enddo
-             enddo
-             rwork1d = reshape(grid_b2,(/size(rwork1d)/))
-             call nemsio_writerecv(gfileo,'dpres','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'dpres','write',istop,iret)
-          enddo
+       if (diff_res .or. hasfield) then
+          call nemsio_readrecv(gfile,'pres','sfc',1,rwork1d,iret=iret)
+          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'pres','read',istop,iret)
+          rwork1d1 = r0_001*rwork1d
+          grid_b=reshape(rwork1d1,(/size(grid_b,1),size(grid_b,2)/))
+          vector(1)=.false.
+          call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+          call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
           do kk=1,grd%iglobal
              i=grd%ltosi(kk)
              j=grd%ltosj(kk)
-             grid3(i,j,1)=work1(kk)
-          enddo
+             grid3(i,j,1)=work1(kk)-grid3(i,j,1)
+             if (hasfield) work1(kk)=grid3(i,j,1) ! only used for dpres
+          end do
+          ! write out incremented dpres if it was in the background file
+          if (hasfield) then
+             do k=1,grd%nsig
+                do kk=1,grd%iglobal
+                   i=grd%ltosi(kk)
+                   j=grd%ltosj(kk)
+                   grid3(i,j,1)=work1(kk)*(bk5(k)-bk5(k+1))
+                enddo
+                call g_egrid2agrid(p_high,grid3,grid_c2,1,1,vector)
+                call nemsio_readrecv(gfile,'dpres','mid layer',k,rwork1d,iret=iret)
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'dpres','read',istop,iret)
+                grid_b2=reshape(rwork1d,(/size(grid_b2,1),size(grid_b2,2)/))
+                do j=1,latb
+                   do i=1,lonb
+                      grid_b2(i,j)=grid_b2(i,j)+r1000*(grid_c2(latb-j+2,i,1))
+                   enddo
+                enddo
+                rwork1d = reshape(grid_b2,(/size(rwork1d)/))
+                call nemsio_writerecv(gfileo,'dpres','mid layer',k,rwork1d,iret=iret)
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'dpres','write',istop,iret)
+             enddo
+             do kk=1,grd%iglobal
+                i=grd%ltosi(kk)
+                j=grd%ltosj(kk)
+                grid3(i,j,1)=work1(kk)
+             enddo
+          endif
           call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
           do j=1,latb
              do i=1,lonb
@@ -2157,7 +2159,7 @@ contains
           call load_grid(work1,grid)
           grid = grid*r1000
           rwork1d = reshape(grid,(/size(rwork1d)/))
-       end if
+       endif
        call nemsio_writerecv(gfileo,'pres','sfc',1,rwork1d,iret=iret)
        if (iret /= 0) call error_msg(trim(my_name),trim(filename),'psfc','write',istop,iret)
     endif
