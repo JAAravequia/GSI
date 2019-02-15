@@ -38,7 +38,7 @@ subroutine read_locinfo()
       endif
       do k=1,nlevs
         read(iunit,101) hlength(k),vlength(k),tmp,tmp
-        hlength(k) = hlength(k)/0.388
+        hlength(k) = sqrt(2.0)*hlength(k)/0.388
         vlength(k) = abs(vlength(k))/0.388
         ! factor of 0.388 to convert from e-folding scale
         ! to distance Gaspari-Cohn function goes to zero.
