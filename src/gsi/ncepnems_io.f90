@@ -1888,7 +1888,7 @@ contains
     real(r_kind),pointer,dimension(:,:,:) :: sub_u,sub_v,sub_tv
     real(r_kind),pointer,dimension(:,:,:) :: sub_q,sub_oz,sub_cwmr
 
-    !real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig) :: sub_dzb,sub_dza
+    real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig) :: sub_dzb,sub_dza
     real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig) :: sub_prsl
     real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig+1) :: sub_prsi
     real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig+1,ibin) :: ges_geopi
@@ -2066,19 +2066,19 @@ contains
        sub_dp(:,:,k) = sub_prsi(:,:,k) - sub_prsi(:,:,k+1)
     end do
 
-    ! Calculate delz increment if delz in background filt
-    ! (never actually used)
-    !  if ((.not. lwrite4danl) .or. ibin == 1) ges_geopi = geop_hgti
-    !  do k=1,grd%nsig
-    !     sub_dzb(:,:,k) = ges_geopi(:,:,k+1,ibin) - ges_geopi(:,:,k,ibin)
-    !  enddo
+    ! Calculate delz increment for UPP
+    ! (only used if delz in background nemsio file)
+    if ((.not. lwrite4danl) .or. ibin == 1) ges_geopi = geop_hgti
+    do k=1,grd%nsig
+       sub_dzb(:,:,k) = ges_geopi(:,:,k+1,ibin) - ges_geopi(:,:,k,ibin)
+    enddo
 
-    !  if ((.not. lwrite4danl) .or. ibin == 1) call load_geop_hgt
-    !  do k=1,grd%nsig
-    !     sub_dza(:,:,k) = geop_hgti(:,:,k+1,ibin) - geop_hgti(:,:,k,ibin)
-    !  enddo
+    if ((.not. lwrite4danl) .or. ibin == 1) call load_geop_hgt
+    do k=1,grd%nsig
+       sub_dza(:,:,k) = geop_hgti(:,:,k+1,ibin) - geop_hgti(:,:,k,ibin)
+    enddo
 
-    !  sub_dza = sub_dza - sub_dzb !sub_dza is increment
+    sub_dza = sub_dza - sub_dzb !sub_dza is increment
     
     ! Strip off boundary points from subdomains
     call strip(sub_ps  ,psm)
@@ -2090,7 +2090,7 @@ contains
     call strip(sub_prsl,prslm ,grd%nsig)
     call strip(sub_u   ,usm   ,grd%nsig)
     call strip(sub_v   ,vsm   ,grd%nsig)
-    !call strip(sub_dza ,dzsm  ,grd%nsig)
+    call strip(sub_dza ,dzsm  ,grd%nsig)
 
     ! Thermodynamic variable
     ! The GSI analysis variable is virtual temperature (Tv).   For NEMSIO
