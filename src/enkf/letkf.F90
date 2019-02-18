@@ -438,8 +438,8 @@ grdloop: do npt=1,numptsperproc(nproc+1)
           do nob=1,nobsl2
              sresults(nob)%dis = rloc(indxob(indxassim(nob)))
              sresults(nob)%idx = indxob(indxassim(nob))
-             if (nproc == 0 .and. npt == 1) &
-             print *,nob,sresults(nob)%idx,dfs(indxassim(nob)),sqrt(sresults(nob)%dis/corrlengthsq(sresults(nob)%idx)),obtype(sresults(nob)%idx)
+             !if (nproc == 0 .and. npt == 1) &
+             !print *,nob,sresults(nob)%idx,dfs(indxassim(nob)),sqrt(sresults(nob)%dis/corrlengthsq(sresults(nob)%idx)),obtype(sresults(nob)%idx)
           enddo
           deallocate(rloc,dfs,indxassim,indxob)
           nobsl = nobsl2
@@ -453,6 +453,11 @@ grdloop: do npt=1,numptsperproc(nproc+1)
              call find_localobs(grdloc_chunk(:,npt),obloc,corrsq,nobstot,nobsl_max,sresults,nobsl)
              nobsl_max = nobsl
           endif
+          !if (nproc == 0 .and. npt == 1) then
+          !   do nob=1,nobsl
+          !       print *,nob,sresults(nob)%idx,sqrt(sresults(nob)%dis/corrlengthsq(sresults(nob)%idx)),obtype(sresults(nob)%idx)
+          !    enddo
+          !endif
        endif
    else ! find all obs within localization radius (sorted by distance).
        if (nobsl_max == -1) then ! use all obs
