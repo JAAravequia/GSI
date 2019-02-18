@@ -34,11 +34,11 @@ module letkf
 !  -DMPI3, a single copy of the observation space ensemble is stored on each
 !  compute node and shared among processors.
 !
-!  Adaptive observation thinning implemented in the serial EnSRF is not 
-!  implemented here in the current version. The parameter nobsl_max controls
+!  The parameter nobsl_max controls
 !  the maximum number of obs that will be assimilated in each local patch.
 !  (the nobsl_max closest are chosen by default, if dfs_sort=T then they
-!   are ranked by decreasing DFS).
+!   are ranked by decreasing DFS. If nobsl_max<-1, a random subset
+!   of -nobsl_max obs is used). nobsl_max=-1 (default) means all obs used.
 !
 !  Vertical covariance localization can be turned off with letkf_novlocal.
 !  (this is done automatically when model space vertical localization 
@@ -86,6 +86,7 @@ module letkf
 !
 !$$$
 
+use random_normal, only : rnorm, set_random_seed
 use mpisetup
 use mpeu_util, only: getindex
 use random_normal, only : rnorm, set_random_seed
@@ -97,7 +98,7 @@ use loadbal, only: numptsperproc, npts_max, &
                    indxproc, lnp_chunk, &
                    grdloc_chunk, kdtree_obs2, &
                    ensmean_chunk, anal_chunk
-use controlvec, only: ncdim, index_pres, cvars3d, cvars2d
+use controlvec, only: ncdim, index_pres, cvars3d, cvars2d, clevels, nc3d
 use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, oblnp, &
                   nobstot, nobs_conv, nobs_oz, nobs_sat,&
                   obfit_prior, obfit_post, obsprd_prior, obsprd_post,&
@@ -129,8 +130,8 @@ implicit none
 ! LETKF update.
 
 ! local variables.
-integer(i_kind) nob,nf,nanal,nens,u_ind,v_ind,t_ind,tv_ind,q_ind,ps_ind,&
-                i,nlev,nrej,npt,nn,nnmax,ierr,ncindx,ii
+integer(i_kind) nob,nf,nanal,nens,&
+                i,nlev,nrej,npt,nn,nnmax,ierr
 integer(i_kind) nobsl, ngrd1, nobsl2, nthreads, nb, &
                 nobslocal_min,nobslocal_max, &
                 nobslocal_minall,nobslocal_maxall
@@ -142,8 +143,6 @@ real(r_kind) normdepart, pnge, width
 real(r_kind),dimension(nobstot):: oberrvaruse
 real(r_kind) vdist
 real(r_kind) corrlength
-integer(i_kind) cindx(ncdim)
-real(r_single) scalefact(ncdim)
 logical vlocal, kdobs
 ! For LETKF core processes
 real(r_kind),allocatable,dimension(:,:) :: hxens
@@ -151,10 +150,10 @@ real(r_single),allocatable,dimension(:,:) :: obens
 real(r_single),allocatable,dimension(:,:,:) :: ens_tmp
 real(r_single),allocatable,dimension(:,:) :: wts_ensperts,pa
 real(r_single),allocatable,dimension(:) :: dfs,wts_ensmean
-real(r_kind),allocatable,dimension(:) :: rdiag,rloc,statesprd_prior
-real(r_single),allocatable,dimension(:) :: dep
+real(r_kind),allocatable,dimension(:) :: rdiag,rloc
+real(r_single),allocatable,dimension(:) :: dep,rannum
 ! kdtree stuff
-type(kdtree2_result),dimension(:),allocatable :: sresults
+type(kdtree2_result),dimension(:),allocatable :: sresults,sresults2
 integer(i_kind), dimension(:), allocatable :: indxassim, indxob
 #ifdef MPI3
 ! pointers used for MPI-3 shared memory manipulations.
@@ -170,6 +169,7 @@ real(r_single), allocatable, dimension(:) :: buffer
 real(r_kind) eps
 
 eps = epsilon(0.0_r_single) ! real(4) machine precision
+call set_random_seed(0, nproc)
 
 !$omp parallel
 nthreads = omp_get_num_threads()
@@ -367,43 +367,13 @@ tbegin = mpi_wtime()
 nobslocal_max = -999
 nobslocal_min = nobstot
 
-if (nobsl_max > 0 .and. dfs_sort) then
-    allocate(statesprd_prior(ncdim))
-endif
-if (dfs_sort) then
-    ! contral vars to use in DFS calculation.
-    u_ind = getindex(cvars3d, 'u')
-    v_ind = getindex(cvars3d, 'v')
-    t_ind = getindex(cvars3d, 't')
-    tv_ind = getindex(cvars3d, 'tv')
-    ps_ind = getindex(cvars2d, 'ps')
-    q_ind = getindex(cvars3d, 'q')
-    ncindx = 0
-    do i=1,ncdim
-       if (i .eq. u_ind .or. &
-           i .eq. v_ind .or. &
-           i .eq. t_ind .or. &
-           i .eq. tv_ind .or. &
-           i .eq. q_ind .or. &
-           i .eq. ps_ind) then
-          ncindx = ncindx + 1
-          cindx(ncindx) = i
-          if (i .eq. u_ind .or. i .eq. v_ind) then
-             scalefact(ncindx)=0.5
-          else
-             scalefact(ncindx)=1.0
-          endif
-       endif
-    enddo
-endif
-
 ! Update ensemble on model grid.
 ! Loop for each horizontal grid points on this task.
 !$omp parallel do schedule(dynamic) private(npt,nob,nobsl, &
 !$omp                  gain,nobsl2,oberrfact,ngrd1,corrlength,ens_tmp, &
-!$omp                  nf,vdist,obens,indxassim,indxob, &
+!$omp                  nf,vdist,obens,indxassim,indxob,rannum, &
 !$omp                  nn,hxens,wts_ensmean,dfs,rdiag,dep,rloc,i, &
-!$omp                  oindex,deglat,dist,corrsq,nb,sresults, &
+!$omp                  oindex,deglat,dist,corrsq,nb,sresults,sresults2, &
 !$omp                  wts_ensperts,pa,trpa,trpa_raw) &
 !$omp  reduction(+:t1,t2,t3,t4,t5) &
 !$omp  reduction(max:nobslocal_max) &
@@ -434,17 +404,11 @@ grdloop: do npt=1,numptsperproc(nproc+1)
    ! kd-tree fixed range search
    !if (allocated(sresults)) deallocate(sresults)
    if (nobsl_max > 0) then ! only use nobsl_max nearest obs (sorted by distance).
-       if (dfs_sort) then ! sort by DFS instead of distance.
-                          ! DFS computed at center of window.
-          do ii=1,ncindx ! state space ensemble spread for column being updated
-             i = cindx(ii)
-             statesprd_prior(i) =  &
-             sqrt(sum(ens_tmp(:,i,(nbackgrounds/2)+1)**2)*r_nanalsm1)
-          enddo
+       if (dfs_sort) then ! sort by 1-DFS in ob-space instead of distance.
           allocate(dfs(nobstot))
           allocate(rloc(nobstot))
           allocate(indxob(nobstot))
-          ! calculate integrated DFS for each ob in local volume
+          ! calculate integrated 1-DFS for each ob in local volume
           nobsl = 0
           do nob=1,nobstot
              rloc(nob) = sum((obloc(:,nob)-grdloc_chunk(:,npt))**2,1)
@@ -452,42 +416,30 @@ grdloop: do npt=1,numptsperproc(nproc+1)
              if (dist < 1.0 - eps .and. &
                  oberrvaruse(nob) < 1.e10_r_single) then
                 nobsl = nobsl + 1
-                dfs(nobsl) = 0.
                 indxob(nobsl) = nob
                 oberrfact = taper(dist)
-                do ii=1,ncindx ! loop over all control variables used in norm.
-                    i = cindx(ii)
-! too expensive to use modulated ensemble
-! (can't use if statements here, it slows the loop down too much)
-!#ifdef MPI3
-!                    gain = sum(ens_tmp(1:nens,i,(nbackgrounds/2)+1)*anal_ob_modens_fp(1:nens,nob))*r_nanalsm1
-!#else
-!                    gain = sum(ens_tmp(1:nens,i,(nbackgrounds/2)+1)*anal_ob_modens(1:nens,nob))*r_nanalsm1
-!#endif
-#ifdef MPI3
-                    gain = sum(anal_chunk(1:nanals,npt,i,(nbackgrounds/2)+1)*anal_ob_fp(1:nanals,nob))*r_nanalsm1
-#else
-                    gain = sum(anal_chunk(1:nanals,npt,i,(nbackgrounds/2)+1)*anal_ob(1:nanals,nob))*r_nanalsm1
-#endif
-! DFS is estimated increment normalized by spread, summed over all variables in column,
-! for middle of window
-                    gain = gain/(obsprd_prior(nob) + oberrvaruse(nob)/oberrfact)
-                    gain = gain/statesprd_prior(i)
-                    dfs(nobsl) = dfs(nobsl)+scalefact(ii)*(gain*(ob(nob)-ensmean_ob(nob)))**2
-                enddo
+                if (lupd_obspace_serial) then
+                   ! use updated ensemble in ob space to estimate DFS
+                   !dfs(nobsl) = obsprd_post(nob)/obsprd_prior(nob)
+                   ! weight by distance to analysis point
+                   dfs(nobsl) = oberrfact*obsprd_post(nob)/obsprd_prior(nob)
+                else
+                   ! estimate DFS assuming each ob assimilated independently, one
+                   ! at a time.
+                   ! 1-DFS = HP_aH^T/HP_bH^T = R/(HP_bH^T + R)
+                   dfs(nobsl) = (oberrvaruse(nob)/oberrfact)/((oberrvar(nob)/oberrfact)+obsprd_prior(nob))
+                endif
              endif
           enddo
-          ! sort on DFS
+          ! sort on 1-DFS
           allocate(indxassim(nobsl))
           call quicksort(nobsl,dfs(1:nobsl),indxassim)
-          nf = 0 ! results ordered by DFS, largest to smallest
           nobsl2 = min(nobsl_max,nobsl)
-          do nob=nobsl,nobsl-nobsl2+1,-1
-             nf = nf + 1
-             sresults(nf)%dis = rloc(indxob(indxassim(nob)))
-             sresults(nf)%idx = indxob(indxassim(nob))
-             !if (nproc == 0 .and. npt == 1) &
-             !print *,nf,sresults(nf)%idx,dfs(indxassim(nob)),sqrt(sresults(nf)%dis/corrlengthsq(sresults(nf)%idx)),obtype(sresults(nf)%idx)
+          do nob=1,nobsl2
+             sresults(nob)%dis = rloc(indxob(indxassim(nob)))
+             sresults(nob)%idx = indxob(indxassim(nob))
+             if (nproc == 0 .and. npt == 1) &
+             print *,nob,sresults(nob)%idx,dfs(indxassim(nob)),sqrt(sresults(nob)%dis/corrlengthsq(sresults(nob)%idx)),obtype(sresults(nob)%idx)
           enddo
           deallocate(rloc,dfs,indxassim,indxob)
           nobsl = nobsl2
@@ -503,13 +455,33 @@ grdloop: do npt=1,numptsperproc(nproc+1)
           endif
        endif
    else ! find all obs within localization radius (sorted by distance).
-       if (kdobs) then
-         call kdtree2_r_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),r2=corrsq,&
-              nfound=nobsl,nalloc=nobstot,results=sresults)
-       else
-         ! brute force search
-         call find_localobs(grdloc_chunk(:,npt),obloc,corrsq,nobstot,nobsl_max,sresults,nobsl)
-       endif
+       if (nobsl_max == -1) then ! use all obs
+          if (kdobs) then
+            call kdtree2_r_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),r2=corrsq,&
+                 nfound=nobsl,nalloc=nobstot,results=sresults)
+          else
+            ! brute force search
+            call find_localobs(grdloc_chunk(:,npt),obloc,corrsq,nobstot,-1,sresults,nobsl)
+          endif
+       else ! nobs_max < -1, use random subset of -nobsl_max obs
+          allocate(sresults2(nobstot))
+          if (kdobs) then
+            call kdtree2_r_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),r2=corrsq,&
+                 nfound=nobsl,nalloc=nobstot,results=sresults2)
+          else
+            ! brute force search
+            call find_localobs(grdloc_chunk(:,npt),obloc,corrsq,nobstot,-1,sresults2,nobsl)
+          endif
+          allocate(rannum(nobsl),indxassim(nobsl))
+          call random_number(rannum)
+          call quicksort(nobsl,rannum,indxassim)
+          nobsl = -nobsl_max
+          do nob=1,nobsl
+             sresults(nob)%dis = sresults2(indxassim(nob))%dis
+             sresults(nob)%idx = sresults2(indxassim(nob))%idx
+          enddo
+          deallocate(rannum,indxassim,sresults2)
+        end if
    endif
 
    t2 = t2 + mpi_wtime() - t1
@@ -650,8 +622,6 @@ grdloop: do npt=1,numptsperproc(nproc+1)
    if (allocated(ens_tmp)) deallocate(ens_tmp)
 end do grdloop
 !$omp end parallel do
-
-if (allocated(statesprd_prior)) deallocate(statesprd_prior)
 
 ! make sure posterior perturbations still have zero mean.
 ! (roundoff errors can accumulate)
@@ -1030,7 +1000,7 @@ subroutine find_localobs(grdloc,obloc,rsqmax,nobstot,nobsl_max,sresults,nobsl)
    ! obloc(3,nobstot) = x,y,z locations of nobstot obs to be
    ! searched.
    ! rsqmax = r=x**2+y**2+z**2 search radius (ignored if nobsl_max > 0)
-   ! nobsl_max = number of neighbors to find.
+   ! nobsl_max = number of neighbors to find (if -1 find all).
    ! nobstot = total number of obs to search.
    ! outputs:
    ! nobsl = number of neighbors found.
@@ -1054,7 +1024,7 @@ subroutine find_localobs(grdloc,obloc,rsqmax,nobstot,nobsl_max,sresults,nobsl)
    ! create index of sorted distances.
    call quicksort(nobstot,rsq,indxob)
    ! return all neigbhors closer than rsqmax
-   if (nobsl_max < 0) then 
+   if (nobsl_max == -1) then 
       nobsl = 0
       do nob=1,nobstot
          if (rsq(indxob(nob)) > rsqmax) then

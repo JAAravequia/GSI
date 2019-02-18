@@ -100,9 +100,10 @@ module loadbal
 !$$$
 
 use mpisetup
-use params, only: datapath, nanals, simple_partition, letkf_flag, nobsl_max,&
+use params, only: datapath, nanals, letkf_flag, nobsl_max,&
                   neigv, corrlengthnh, corrlengthsh, corrlengthtr,&
-                  letkf_use_kdtree, lupd_obspace_serial
+                  letkf_use_kdtree, lupd_obspace_serial,&
+                  simple_partition_obs, simple_partition_state
 use enkf_obsmod, only: nobstot, obloc, oblnp, ensmean_ob, obtime, anal_ob, anal_ob_modens, corrlengthsq
 use kinds, only: r_kind, i_kind, r_double, r_single
 use kdtree2_module, only: kdtree2, kdtree2_create, kdtree2_destroy, &
@@ -146,7 +147,6 @@ integer(i_kind), allocatable, dimension(:) :: rtmp,numobs
 !real(r_single), allocatable, dimension(:) :: buffer
 integer(i_kind) np,i,n,nn,nob1,nob2,ierr
 real(r_double) t1
-logical test_loadbal
 
 if (letkf_flag .and. letkf_use_kdtree) then
    ! used for finding nearest obs to grid point in LETKF.
@@ -164,22 +164,23 @@ allocate(numptsperproc(numproc))
 allocate(rtmp(numproc))
 t1 = mpi_wtime()
 ! assume work load proportional to number of 'nearby' obs
-call estimate_work_enkf1(numobs) ! fill numobs array with number of obs per horiz point
-! distribute the results of estimate_work to all processors.
-call mpi_allreduce(mpi_in_place,numobs,npts,mpi_integer,mpi_sum,mpi_comm_world,ierr)
-if (letkf_flag .and. nobsl_max > 0) then
-  where(numobs > nobsl_max) numobs = nobsl_max
+if (.not. simple_partition_state) then
+   call estimate_work_enkf1(numobs) ! fill numobs array with number of obs per horiz point
+   ! distribute the results of estimate_work to all processors.
+   call mpi_allreduce(mpi_in_place,numobs,npts,mpi_integer,mpi_sum,mpi_comm_world,ierr)
+   if (letkf_flag .and. nobsl_max > 0) then
+     where(numobs > nobsl_max) numobs = nobsl_max
+   endif
+   if (nproc == 0) print *,'time in estimate_work_enkf1 = ',mpi_wtime()-t1,' secs'
+   if (nproc == 0) print *,'min/max numobs',minval(numobs),maxval(numobs)
 endif
-if (nproc == 0) print *,'time in estimate_work_enkf1 = ',mpi_wtime()-t1,' secs'
-if (nproc == 0) print *,'min/max numobs',minval(numobs),maxval(numobs)
 ! loop over horizontal grid points on analysis grid.
 t1 = mpi_wtime()
 rtmp = 0
 numptsperproc = 0
 np = 0
-test_loadbal = .false. ! simple partition for testing
 do n=1,npts
-   if (test_loadbal) then
+   if (simple_partition_state) then
        ! use simple partition (does not use estimated workload) for testing
        np = np + 1
        if (np > numproc) np = 1
@@ -200,7 +201,7 @@ rtmp = 0
 numptsperproc = 0
 np = 0
 do n=1,npts
-   if (test_loadbal) then
+   if (simple_partition_state) then
        ! use simple partition (does not use estimated workload) for testing
        np = np + 1
        if (np > numproc) np = 1
@@ -212,7 +213,7 @@ do n=1,npts
    indxproc(np,numptsperproc(np)) = n
 end do
 ! print estimated workload for each task
-if (nproc == 0) then
+if (nproc == 0 .and. .not. simple_partition_state) then
    do np=1,numproc
       rtmp(np) = 0
       do n=1,numptsperproc(np)
@@ -245,7 +246,7 @@ if (.not. letkf_flag .or. lupd_obspace_serial) then
    ! default is to partition obs simply, since
    ! speed up from using Graham's rule for observation process
    ! often does not justify cost of estimating workload in ob space.
-   if (simple_partition) then
+   if (simple_partition_obs) then
      ! just distribute obs without trying to estimate workload
      t1 = mpi_wtime()
      numobsperproc = 0

@@ -108,10 +108,11 @@ real(r_single),public :: covl_minfact, covl_efold
 integer,public :: npefiles = 0
 ! for LETKF, max number of obs in local volume.
 ! default is -1, which means take all obs within
-! specified localization radius.  if nobsl_max > 0,
+! specified localization radius.  If nobsl_max > 0,
 ! only the first nobsl_max closest obs within the
-! localization radius will be used. Ignored
-! if letkf_flag = .false.
+! localization radius will be used. If nobsl_max < -1,
+! a random subset of -nobsl_max obs in local volume
+! are used.  Ignored if letkf_flag = .false.
 ! If dfs_sort=T, DFS is used instead of distance
 ! for ob selection.
 integer,public :: nobsl_max = -1
@@ -148,9 +149,12 @@ logical,public :: lupd_satbiasc = .false.
 logical,public :: lupd_obspace_serial = .false.
 ! disable vertical localization for letkf
 logical,public :: letkf_novlocal = .false.
-! simple_partition=.false. does more sophisticated
+! simple_partition_obs=.false. does more sophisticated
 ! load balancing for ob space update.
-logical,public :: simple_partition = .true.
+logical,public :: simple_partition_obs = .true.
+! simple_partition_state=.false. does more sophisticated
+! load balancing for state space update.
+logical,public :: simple_partition_state = .false.
 logical,public :: reducedgrid = .false.
 logical,public :: univaroz = .true.
 logical,public :: regional = .false.
@@ -202,12 +206,12 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    analpertwtnh_rtpp,analpertwtsh_rtpp,analpertwttr_rtpp,&
                    nlevs,nanals,saterrfact,univaroz,regional,use_gfs_nemsio,&
                    paoverpb_thresh,latbound,delat,pseudo_rh,numiter,biasvar,&
-                   lupd_satbiasc,cliptracers,simple_partition,adp_anglebc,angord,&
+                   lupd_satbiasc,cliptracers,simple_partition_obs,adp_anglebc,angord,&
                    newpc4pred,nmmb,nhr_anal,nhr_state, fhr_assim,nbackgrounds,nstatefields, &
                    save_inflation,nobsl_max,lobsdiag_forenkf,netcdf_diag,&
                    letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
                    getkf,getkf_inflation,denkf,modelspace_vloc,dfs_sort,write_spread_diag,&
-                   letkf_use_kdtree,update_letkf_meanonly,&
+                   letkf_use_kdtree,update_letkf_meanonly,simple_partition_state,&
                    fso_cycling,fso_calculate,imp_physics,lupp
 
 namelist /nam_wrf/arw,nmm,nmm_restart
