@@ -3,7 +3,7 @@
 ! 2017-05-12 Johnson, Y. Wang and X. Wang - define reflectivity opeator and its adjoint for WSM6 scheme, POC: xuguang.wang@ou.edu
 
 module setupdbz_lib
-public ::  hx_dart,hx_dart_dbz_state,jqr_dart,jqs_dart,jqg_dart
+public ::  hx_dart,jqr_dart,jqs_dart,jqg_dart
 contains
 subroutine hx_dart(qrgesin0,qggesin0,qsgesin0,rhogesin,tempgesin,rDBZ,debugging)
   use kinds, only: r_kind,r_double,i_kind
@@ -68,7 +68,7 @@ subroutine jqr_dart(qrgesin0,qsgesin0,qggesin0,rhogesin,tempgesin,jqr)
 implicit none
 real(r_kind) :: qrgesin0,qsgesin0,qggesin0
 real(r_kind) :: qrgesin,rhogesin,tempgesin,jqr
-real(r_kind) :: Ze,rDBZ,zqr,zqg,zqs,qsgesin,qggesin
+real(r_kind) :: Ze,zqr,zqg,zqs,qsgesin,qggesin
 
 real(r_kind) :: param_r,param_dry_g,param_wet_g,param_dry_s,param_wet_s
 real(r_kind) ::n0r,n0s,n0g,rhor,rhos,rhog,dielectric,pi,thisqrgesin
@@ -122,7 +122,7 @@ subroutine jqs_dart(qrgesin0,qsgesin0,qggesin0,rhogesin,tempgesin,jqs)
 implicit none
 real(r_kind) :: qsgesin0,qggesin0,qrgesin0
 real(r_kind) :: qsgesin,rhogesin,tempgesin,jqs
-real(r_kind) :: Ze,rDBZ,qrgesin,qggesin,zqr,zqs,zqg
+real(r_kind) :: Ze,qrgesin,qggesin,zqr,zqs,zqg
 
 real(r_kind) :: param_r,param_dry_g,param_wet_g,param_dry_s,param_wet_s
 real(r_kind) ::n0r,n0s,n0g,rhor,rhos,rhog,dielectric,pi,thisqsgesin
@@ -176,7 +176,7 @@ subroutine jqg_dart(qrgesin0,qsgesin0,qggesin0,rhogesin,tempgesin,jqg)
 implicit none
 real(r_kind) :: qggesin0,qsgesin0,qrgesin0
 real(r_kind) :: qggesin,rhogesin,tempgesin,jqg
-real(r_kind) :: Ze,rDBZ,qrgesin,qsgesin,zqr,zqs,zqg,thisqggesin
+real(r_kind) :: Ze,qrgesin,qsgesin,zqr,zqs,zqg,thisqggesin
 
 real(r_kind) :: param_r,param_dry_g,param_wet_g,param_dry_s,param_wet_s
 real(r_kind) ::n0r,n0s,n0g,rhor,rhos,rhog,dielectric,pi

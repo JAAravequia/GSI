@@ -100,8 +100,6 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),parameter:: r8     = 8.0_r_kind
   real(r_kind),parameter:: ten    = 10.0_r_kind
 
-  real(r_kind) :: r,rr,dqr,thisdbz,iters,dqs,dqg
-  
 ! Declare external calls for code analysis
   external:: tintrp2a1, tintrp2a11
   external:: tintrp3
@@ -110,8 +108,7 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! Declare local variables
   real(r_kind) rlow,rhgh,rsig
 !  real(r_kind) dz,denom,jqr_num,jqli_num,jqr,jqli !modified
-  real(r_kind) dz,denom,jqr_num,jqs_num,jqg_num,jqr,jqs,jqg, jqli,&
-                jqli_num !,jnr,jni,jnr_num,jni_num !modified
+  real(r_kind) dz,jqr,jqs,jqg
   real(r_kind) dlnp,pobl,zob
   real(r_kind) sin2,termg,termr,termrg
   real(r_kind) psges,zsges
@@ -126,22 +123,20 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) dlat,dlon,dtime,dpres,ddiff,error,slat
  
   real(r_kind) ratio_errors
-  real(r_kind)dbzgesin,qrgesin,qsgesin,qigesin,qggesin,rhogesin,tempgesin,qligesin
+  real(r_kind)dbzgesin,qrgesin,qsgesin,qggesin,rhogesin,tempgesin,qligesin
   real(r_kind) qrgesin1,qsgesin1,qggesin1, qligesin1
-  real(r_kind) Zer,Zeli,Ze,rdBZ,presw,dbznoise,dbznoise_runits
+  real(r_kind) rdBZ,presw,dbznoise
   real(r_kind) errinv_input,errinv_adjst,errinv_final
-  real(r_kind) err_input,err_adjst,err_final,qrexp,qsexp,qgexp
+  real(r_kind) err_input,err_adjst,err_final
   real(r_kind),dimension(nele,nobs):: data
   real(r_single),allocatable,dimension(:,:)::rdiagbuf
-  real(r_kind),pointer,dimension(:,:,:):: ges_qr_it,ges_qs_it,ges_qi_it,ges_qg_it,ges_qli_it,ges_dbz_it !,ges_ni_it
-  integer(i_kind) i,nchar,nreal,k,j,k1,ii
-  integer(i_kind) mm1,jj,k2,isli
+  integer(i_kind) i,nchar,nreal,k,k1,ii
+  integer(i_kind) mm1,jj,k2
   integer(i_kind) jsig,ikxx,nn,ibin,ioff, ioff0
   integer(i_kind) ier,ilat,ilon,ihgt,idbzob,ikx,itime,iuse
   integer(i_kind) ielev,id,itilt,iazm,ilone,ilate,irange
-  integer(i_kind) ier2,idbznoise,idmiss2opt,it,istatus
- real(r_kind) :: effectiverhoqr,minrhoqr
-  character(8) station_id,station_id2
+  integer(i_kind) ier2,idbznoise,idmiss2opt
+  character(8) station_id
   character(8),allocatable,dimension(:):: cdiagbuf
 
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
@@ -149,9 +144,9 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   logical,dimension(nobs):: luse,muse
   equivalence(rstation_id,station_id)
   real(r_kind) wrange
-  integer(i_kind) numequal,numnotequal,kminmin,kmaxmax,istat
+  integer(i_kind) numequal,numnotequal,istat
  
-  logical:: in_curbin, in_anybin,debugging,save_jacobian
+  logical:: debugging,save_jacobian
 
   type(sparr2) :: dhx_dx
   real(r_single), dimension(nsdim) :: dhx_dx_array
@@ -163,7 +158,6 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   type(obs_diag),pointer:: my_diag
   character(len=*),parameter:: myname='setupdbz'
   integer(i_kind) irefsmlobs, irejrefsmlobs
-character(len=8) :: cpe
 
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
@@ -174,10 +168,6 @@ character(len=8) :: cpe
   real(r_kind),allocatable,dimension(:,:,:,: ) :: ges_qli
   real(r_kind),allocatable,dimension(:,:,:,: ) :: ges_dbz
 
-  !---------SETTINGS FOR FUTURE NAMELIST---------!
-  real(r_kind)    :: Cr=3.6308e9_r_kind          ! Rain constant coef.
-  real(r_kind)    :: Cli=3.268e9_r_kind          ! Precip. ice constant coef.
-  !----------------------------------------------!
   n_alloc(:)=0
   m_alloc(:)=0
  
@@ -267,58 +257,58 @@ character(len=8) :: cpe
      IF (ibin<1.OR.ibin>nobs_bins) write(6,*)mype,'Error nobs_bins,ibin= ',nobs_bins,ibin
 !    Link obs to diagnostics structure
      if(luse_obsdiag)then
-     if (.not.lobsdiag_allocated) then
-        if (.not.associated(obsdiags(i_dbz_ob_type,ibin)%head)) then
-           obsdiags(i_dbz_ob_type,ibin)%n_alloc = 0
-           allocate(obsdiags(i_dbz_ob_type,ibin)%head,stat=istat)
-           
-           if (istat/=0) then
-              write(6,*)'setupdbz: failure to allocate obsdiags',istat
-              call stop2(286)
-           end if
-           obsdiags(i_dbz_ob_type,ibin)%tail => obsdiags(i_dbz_ob_type,ibin)%head
-        else
-           allocate(obsdiags(i_dbz_ob_type,ibin)%tail%next,stat=istat)
-           if (istat/=0) then
-              write(6,*)'setupdbz: failure to allocate obsdiags',istat
-              call stop2(286)
-           end if
-           obsdiags(i_dbz_ob_type,ibin)%tail => obsdiags(i_dbz_ob_type,ibin)%tail%next
-        end if
-        obsdiags(i_dbz_ob_type,ibin)%n_alloc = obsdiags(i_dbz_ob_type,ibin)%n_alloc +1
-        allocate(obsdiags(i_dbz_ob_type,ibin)%tail%muse(miter+1))
-        allocate(obsdiags(i_dbz_ob_type,ibin)%tail%nldepart(miter+1))
-        allocate(obsdiags(i_dbz_ob_type,ibin)%tail%tldepart(miter))
-        allocate(obsdiags(i_dbz_ob_type,ibin)%tail%obssen(miter))
-        obsdiags(i_dbz_ob_type,ibin)%tail%indxglb=ioid(i)
-        obsdiags(i_dbz_ob_type,ibin)%tail%nchnperobs=-99999
-        obsdiags(i_dbz_ob_type,ibin)%tail%luse=.false.
-        obsdiags(i_dbz_ob_type,ibin)%tail%muse(:)=.false.
-        obsdiags(i_dbz_ob_type,ibin)%tail%nldepart(:)=-huge(zero)
-        obsdiags(i_dbz_ob_type,ibin)%tail%tldepart(:)=zero
-        obsdiags(i_dbz_ob_type,ibin)%tail%wgtjo=-huge(zero)
-        obsdiags(i_dbz_ob_type,ibin)%tail%obssen(:)=zero
-        n_alloc(ibin) = n_alloc(ibin) +1
-        my_diag => obsdiags(i_dbz_ob_type,ibin)%tail
-        my_diag%idv = is
-        my_diag%iob = ioid(i)
-        my_diag%ich = 1
-        my_diag%elat= data(ilate,i)
-        my_diag%elon= data(ilone,i)
-     else
-        if (.not.associated(obsdiags(i_dbz_ob_type,ibin)%tail)) then
-           obsdiags(i_dbz_ob_type,ibin)%tail => obsdiags(i_dbz_ob_type,ibin)%head
-        else
-           obsdiags(i_dbz_ob_type,ibin)%tail => obsdiags(i_dbz_ob_type,ibin)%tail%next
-        end if
-        if (.not.associated(obsdiags(i_dbz_ob_type,ibin)%tail)) then
-          call die(myname,'.not.associated(obsdiags(i_dbz_ob_type,ibin)%tail)')
-        end if
-        if (obsdiags(i_dbz_ob_type,ibin)%tail%indxglb/=ioid(i)) then
-           write(6,*)'setupdbz: index error'
-           call stop2(288)
-        end if
-     endif
+       if (.not.lobsdiag_allocated) then
+          if (.not.associated(obsdiags(i_dbz_ob_type,ibin)%head)) then
+             obsdiags(i_dbz_ob_type,ibin)%n_alloc = 0
+             allocate(obsdiags(i_dbz_ob_type,ibin)%head,stat=istat)
+             
+             if (istat/=0) then
+                write(6,*)'setupdbz: failure to allocate obsdiags',istat
+                call stop2(286)
+             end if
+             obsdiags(i_dbz_ob_type,ibin)%tail => obsdiags(i_dbz_ob_type,ibin)%head
+          else
+             allocate(obsdiags(i_dbz_ob_type,ibin)%tail%next,stat=istat)
+             if (istat/=0) then
+                write(6,*)'setupdbz: failure to allocate obsdiags',istat
+                call stop2(286)
+             end if
+             obsdiags(i_dbz_ob_type,ibin)%tail => obsdiags(i_dbz_ob_type,ibin)%tail%next
+          end if
+          obsdiags(i_dbz_ob_type,ibin)%n_alloc = obsdiags(i_dbz_ob_type,ibin)%n_alloc +1
+          allocate(obsdiags(i_dbz_ob_type,ibin)%tail%muse(miter+1))
+          allocate(obsdiags(i_dbz_ob_type,ibin)%tail%nldepart(miter+1))
+          allocate(obsdiags(i_dbz_ob_type,ibin)%tail%tldepart(miter))
+          allocate(obsdiags(i_dbz_ob_type,ibin)%tail%obssen(miter))
+          obsdiags(i_dbz_ob_type,ibin)%tail%indxglb=ioid(i)
+          obsdiags(i_dbz_ob_type,ibin)%tail%nchnperobs=-99999
+          obsdiags(i_dbz_ob_type,ibin)%tail%luse=.false.
+          obsdiags(i_dbz_ob_type,ibin)%tail%muse(:)=.false.
+          obsdiags(i_dbz_ob_type,ibin)%tail%nldepart(:)=-huge(zero)
+          obsdiags(i_dbz_ob_type,ibin)%tail%tldepart(:)=zero
+          obsdiags(i_dbz_ob_type,ibin)%tail%wgtjo=-huge(zero)
+          obsdiags(i_dbz_ob_type,ibin)%tail%obssen(:)=zero
+          n_alloc(ibin) = n_alloc(ibin) +1
+          my_diag => obsdiags(i_dbz_ob_type,ibin)%tail
+          my_diag%idv = is
+          my_diag%iob = ioid(i)
+          my_diag%ich = 1
+          my_diag%elat= data(ilate,i)
+          my_diag%elon= data(ilone,i)
+       else
+          if (.not.associated(obsdiags(i_dbz_ob_type,ibin)%tail)) then
+             obsdiags(i_dbz_ob_type,ibin)%tail => obsdiags(i_dbz_ob_type,ibin)%head
+          else
+             obsdiags(i_dbz_ob_type,ibin)%tail => obsdiags(i_dbz_ob_type,ibin)%tail%next
+          end if
+          if (.not.associated(obsdiags(i_dbz_ob_type,ibin)%tail)) then
+            call die(myname,'.not.associated(obsdiags(i_dbz_ob_type,ibin)%tail)')
+          end if
+          if (obsdiags(i_dbz_ob_type,ibin)%tail%indxglb/=ioid(i)) then
+             write(6,*)'setupdbz: index error'
+             call stop2(288)
+          end if
+       endif
      endif
 
      call tintrp2a11(ges_z,zsges,dlat,dlon,dtime,hrdifsig,&
@@ -585,9 +575,9 @@ character(len=8) :: cpe
         end do
      end if
      if(luse_obsdiag)then
-     obsdiags(i_dbz_ob_type,ibin)%tail%muse(jiter)=muse(i)
-     obsdiags(i_dbz_ob_type,ibin)%tail%nldepart(jiter)=ddiff
-     obsdiags(i_dbz_ob_type,ibin)%tail%wgtjo= (error*ratio_errors)**2
+        obsdiags(i_dbz_ob_type,ibin)%tail%muse(jiter)=muse(i)
+        obsdiags(i_dbz_ob_type,ibin)%tail%nldepart(jiter)=ddiff
+        obsdiags(i_dbz_ob_type,ibin)%tail%wgtjo= (error*ratio_errors)**2
      end if
 
      

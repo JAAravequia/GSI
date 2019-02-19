@@ -244,7 +244,7 @@
   !==> get U,V,temp,q,ps on gaussian grid.
   ! u is first nlevs, v is second, t is third, then tracers.
   if (use_gfs_nemsio) then
-     clip=tiny_r_kind
+     clip=tiny(vg(1))
      do k=1,nlevs
         call nemsio_readrecv(gfile,'ugrd','mid layer',k,nems_wrk,iret=iret)
         if (iret/=0) then
@@ -450,7 +450,7 @@
 
  end subroutine readgriddata
 
- subroutine writegriddata(nanal,vars3d,vars2d,n3d,n2d,levels,ndim,grdin)
+ subroutine writegriddata(nanal,vars3d,vars2d,n3d,n2d,levels,ndim,grdin,no_inflate_flag)
   use sigio_module, only: sigio_head, sigio_data, sigio_sclose, sigio_sropen, &
                           sigio_srohdc, sigio_sclose, sigio_axdata, &
                           sigio_aldata, sigio_swohdc
@@ -469,6 +469,7 @@
   integer, intent(in) :: n2d,n3d,ndim
   integer, dimension(0:n3d), intent(in) :: levels
   real(r_single), dimension(npts,ndim,nbackgrounds), intent(inout) :: grdin
+  logical, intent(in) :: no_inflate_flag
 
   character(len=500):: filenamein, filenameout
   real(r_kind), allocatable, dimension(:,:) :: vmassdiv,dpanl,dpfg,pressi
@@ -504,17 +505,17 @@
   kapr = cp/rd
   kap = rd/cp
   kap1 = kap+one
-  clip = tiny_r_kind
+  clip = tiny(vg(1))
 
   write(charnanal,'(i3.3)') nanal
 
   backgroundloop: do nb=1,nbackgrounds
 
-  !if(no_inflate_flag) then
-  !  filenameout = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"nimem"//charnanal
-  !else
+  if(no_inflate_flag) then
+    filenameout = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"nimem"//charnanal
+  else
     filenameout = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"mem"//charnanal
-  !end if
+  end if
   filenamein = trim(adjustl(datapath))//trim(adjustl(fgfileprefixes(nb)))//"mem"//charnanal
   ! for nemsio, analysis file must be copied from first guess at scripting
   ! level.  This file is read in and modified.
@@ -944,7 +945,6 @@
         ! ug is Tv increment, nems_wrk is background Tv, nems_wrk2 is background spfh
         ug = ug + nems_wrk 
         vg = vg + nems_wrk2 
-        clip = tiny(vg(1))
         if (cliptracers)  where (vg < clip) vg = clip
         if (lupp) then
            call nemsio_readrecv(gfilein,'pres','sfc',1,nems_wrk2,iret=iret)
@@ -1189,7 +1189,7 @@
   if (.not. use_gfs_nemsio) then
   ! clip tracers.
      if (cliptracers) then
-        clip = tiny_r_kind
+        clip = tiny(vg(1))
 !$omp parallel do private(k,nt,vg,divspec)  shared(sigdata,clip)
         do k=1,nlevs
            if (q_ind > 0) then

@@ -1004,8 +1004,8 @@ contains
        call nemsio_readrecv(gfile,trim(varname_clwmr),trim(vartype),lev,work_b_clwmr,iret=iret)
        call nemsio_readrecv(gfile,trim(varname_frimef),trim(vartype),lev,work_b_frimef,iret=iret)
        if(iret /= 0) then
-       write(6,*)'reading frimef or other variables with errors, stop'
-       stop
+         write(6,*)'reading frimef or other variables with errors, stop'
+         stop
        endif
 
 
@@ -1317,7 +1317,7 @@ else
    real(r_single)  qs 
    real(r_single) f_ice, f_rain,f_rimef
    real(r_single),parameter:: epsq=1.e-12_r_single
-   real(r_single) onemf_ice, onemf_rain
+   real(r_single) onemf_ice
 
    wc=qs+qr+qw
    if(wc > 0.0_r_single) then

@@ -1,4 +1,4 @@
-subroutine read_dbz_mrms_netcdf(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
+subroutine read_dbz_mrms_netcdf(nread,ndata,nodata,infile,obstype,lunout,sis,nobs)
 !$$$   subprogram documentation block
 !                .      .    .                                       .
 !   subprogram: read_dbz        read level2 raw QC'd radar reflectivity files
@@ -23,7 +23,6 @@ subroutine read_dbz_mrms_netcdf(nread,ndata,nodata,infile,obstype,lunout,twind,s
 !     infile   - file from which to read data
 !     lunout   - unit to which to write data for further processing
 !     obstype  - observation type to process
-!     twind    - input group time window (hours)
 !
 !   output argument list:
 !     nread    - number of radar reflectivity observations read
@@ -133,7 +132,6 @@ subroutine read_dbz_mrms_netcdf(nread,ndata,nodata,infile,obstype,lunout,twind,s
 ! Declare passed variables
   character(len=*),intent(in   ) :: obstype,infile
   character(len=*),intent(in   ) :: sis
-  real(r_kind)    ,intent(in   ) :: twind
   integer(i_kind) ,intent(in   ) :: lunout
   integer(i_kind) ,intent(inout) :: nread,ndata,nodata
   integer(i_kind),dimension(npe),intent(inout) :: nobs
@@ -184,7 +182,7 @@ subroutine read_dbz_mrms_netcdf(nread,ndata,nodata,infile,obstype,lunout,twind,s
   
   integer(i_kind),dimension(5) :: obdate
   
-  real(r_kind) :: a,b,c,ha,epsh,h,aactual,a43,thistilt                             
+  real(r_kind) :: b,c,ha,epsh,h,aactual,a43,thistilt                             
   real(r_kind) :: thistiltr,selev0,celev0,thisrange,this_stahgt,thishgt                           
   real(r_kind) :: celev,selev,gamma,thisazimuthr,rlon0, &
                   clat0,slat0,dlat,dlon,thiserr,thislon,thislat, &
@@ -201,7 +199,7 @@ subroutine read_dbz_mrms_netcdf(nread,ndata,nodata,infile,obstype,lunout,twind,s
 
   logical      :: outside
     
-  type(radar),allocatable :: strct_in_vel(:,:),strct_in_dbz(:,:),strct_in_rawvel(:,:)
+  type(radar),allocatable :: strct_in_dbz(:,:)
 
   !---------SETTINGS FOR FUTURE NAMELIST---------!
   integer(i_kind) :: maxobrange=999000 ! Range (m) *within* which to use observations - obs *outside* this range are not used
@@ -209,7 +207,6 @@ subroutine read_dbz_mrms_netcdf(nread,ndata,nodata,infile,obstype,lunout,twind,s
   real(r_kind)    :: mintilt=0.0_r_kind   	 ! Only use tilt(elevation) angles (deg) >= this number 
   real(r_kind)    :: maxtilt=20.0_r_kind         ! Do no use tilt(elevation) angles (deg) >= this number
   logical         :: missing_to_nopcp=.false.    ! Set missing observations to 'no precipitation' observations -> dbznoise (See Aksoy et al. 2009, MWR) 
-  logical         :: nopcp=.true.                ! Set observations less than dbznoise = dbznoise ('no precip obs') (See Aksoy et al. 2009, MWR)
   real(r_kind)    :: dbznoise=2.0_r_kind           ! dBZ obs must be >= dbznoise for assimilation
   logical         :: l_limmax=.true.             ! If true, observations > 60 dBZ are limited to be 60 dBZ.  This is
   logical         :: l_limmin=.true.             ! If true, observations <0 dBZ are limited to be 0 dBZ.  This is
@@ -220,11 +217,9 @@ subroutine read_dbz_mrms_netcdf(nread,ndata,nodata,infile,obstype,lunout,twind,s
 
 !following the treatment on the precision issue for netcdf like in 
 !wrf_netcdf_interface.F90
-integer(i_kind) :: ncid,ierr,dimid1,dimid2,dimid3,dimid4,dimid5,dimid6
-integer(i_kind) :: varid1,varid2,varid3,varid4,varid5,varid6,varid7
-integer(i_kind) :: varid8,varid9,varid10,varid11,varid12,varid13,varid14,varid15
-integer(i_kind) :: numazim_nc,numgate_nc,vcp_nc,timeints(6),ii
-integer(i_kind) :: numelev_nc,numvol_nc,thiselev_nc(30) !max scans in any volume for this output file, num volumes in output file, num scans in each volume
+integer(i_kind) :: ncid,ierr,dimid1,dimid2
+integer(i_kind) :: varid1,varid2,varid3,varid4,varid6
+integer(i_kind) :: numazim_nc,numgate_nc,vcp_nc
 real(r_single) :: elev_nc,firstgate_nc,lat_nc,lon_nc,height_nc
 
 
@@ -258,15 +253,15 @@ parameter(nyquist_default_nc=50.0_r_kind)
   end do     
     
   if (minobrange >= maxobrange) then
-  write(6,*) 'MININMUM OB RANGE >= MAXIMUM OB RANGE FOR READING dBZ - PROGRAM STOPPING FROM READ_DBZ.F90'
-  call stop2(400)
+     write(6,*) 'MININMUM OB RANGE >= MAXIMUM OB RANGE FOR READING dBZ - PROGRAM STOPPING FROM READ_DBZ.F90'
+     call stop2(400)
   end if
         
 
   !-next three values are dummy values for now
   nchanl=0
-  ilon=2_i_kind
-  ilat=3_i_kind
+  ilon=2
+  ilat=3
   
   maxobs=2000000    !value taken from read_radar.f90 
 
@@ -629,7 +624,7 @@ strct_in_dbz(v,k)%field(:,:)=obdata_nc(:,:)
 end subroutine read_dbz_mrms_netcdf
 
 
-subroutine read_dbz_mrms_sparse_netcdf(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
+subroutine read_dbz_mrms_sparse_netcdf(nread,ndata,nodata,infile,obstype,lunout,sis,nobs)
 !$$$   subprogram documentation block
 !                .      .    .                                       .
 !   subprogram: read_dbz        read level2 raw QC'd radar reflectivity files
@@ -654,7 +649,6 @@ subroutine read_dbz_mrms_sparse_netcdf(nread,ndata,nodata,infile,obstype,lunout,
 !     infile   - file from which to read data
 !     lunout   - unit to which to write data for further processing
 !     obstype  - observation type to process
-!     twind    - input group time window (hours)
 !
 !   output argument list:
 !     nread    - number of radar reflectivity observations read
@@ -764,7 +758,6 @@ subroutine read_dbz_mrms_sparse_netcdf(nread,ndata,nodata,infile,obstype,lunout,
 ! Declare passed variables
   character(len=*),intent(in   ) :: obstype,infile
   character(len=*),intent(in   ) :: sis
-  real(r_kind)    ,intent(in   ) :: twind
   integer(i_kind) ,intent(in   ) :: lunout
   integer(i_kind) ,intent(inout) :: nread,ndata,nodata
   integer(i_kind),dimension(npe),intent(inout) :: nobs
@@ -815,7 +808,7 @@ subroutine read_dbz_mrms_sparse_netcdf(nread,ndata,nodata,infile,obstype,lunout,
   
   integer(i_kind),dimension(5) :: obdate
   
-  real(r_kind) :: a,b,c,ha,epsh,h,aactual,a43,thistilt                             
+  real(r_kind) :: b,c,ha,epsh,h,aactual,a43,thistilt                             
   real(r_kind) :: thistiltr,selev0,celev0,thisrange,this_stahgt,thishgt                           
   real(r_kind) :: celev,selev,gamma,thisazimuthr,rlon0, &
                   clat0,slat0,dlat,dlon,thiserr,thislon,thislat, &
@@ -832,7 +825,7 @@ subroutine read_dbz_mrms_sparse_netcdf(nread,ndata,nodata,infile,obstype,lunout,
 
   logical      :: outside
     
-  type(radar),allocatable :: strct_in_vel(:,:),strct_in_dbz(:,:),strct_in_rawvel(:,:)
+  type(radar),allocatable :: strct_in_dbz(:,:)
 
   !---------SETTINGS FOR FUTURE NAMELIST---------!
   integer(i_kind) :: maxobrange=99900000 ! Range (m) *within* which to use observations - obs *outside* this range are not used
@@ -840,7 +833,6 @@ subroutine read_dbz_mrms_sparse_netcdf(nread,ndata,nodata,infile,obstype,lunout,
   real(r_kind)    :: mintilt=0.0_r_kind   	 ! Only use tilt(elevation) angles (deg) >= this number 
   real(r_kind)    :: maxtilt=20.0_r_kind         ! Do no use tilt(elevation) angles (deg) >= this number
   logical         :: missing_to_nopcp=.false.    ! Set missing observations to 'no precipitation' observations -> dbznoise (See Aksoy et al. 2009, MWR) 
-  logical         :: nopcp=.true.                ! Set observations less than dbznoise = dbznoise ('no precip obs') (See Aksoy et al. 2009, MWR)
   real(r_kind)    :: dbznoise=2_r_kind           ! dBZ obs must be >= dbznoise for assimilation
   logical         :: l_limmax=.true.             ! If true, observations > 60 dBZ are limited to be 60 dBZ.  This is
   logical         :: l_limmin=.true.             ! If true, observations <0  dBZ are limited to be 0 dBZ.  This is
@@ -851,12 +843,10 @@ subroutine read_dbz_mrms_sparse_netcdf(nread,ndata,nodata,infile,obstype,lunout,
 
 !following the treatment on the precision issue for netcdf like in 
 !wrf_netcdf_interface.F90
-integer(i_kind) :: ncid,ierr,dimid1,dimid2,dimid3,dimid4,dimid5,dimid6
-integer(i_kind) :: varid1,varid2,varid3,varid4,varid5,varid6,varid7
-integer(i_kind) :: varid8,varid9,varid10,varid11,varid12,varid13,varid14,varid15
+integer(i_kind) :: ncid,ierr,dimid1,dimid2,dimid3
+integer(i_kind) :: varid1,varid2,varid3,varid4,varid6
 integer(i_kind) :: pixel_x_varid,pixel_y_varid 
-integer(i_kind) :: numazim_nc,numgate_nc,num_pixel_nc,real_num_pixel,vcp_nc,timeints(6),ii
-integer(i_kind) :: numelev_nc,numvol_nc,thiselev_nc(30) !max scans in any volume for this output file, num volumes in output file, num scans in each volume
+integer(i_kind) :: numazim_nc,numgate_nc,num_pixel_nc,real_num_pixel,vcp_nc
 real(r_single) :: elev_nc,firstgate_nc,lat_nc,lon_nc,height_nc
 integer(i_short),allocatable :: pixel_x_nc(:),pixel_y_nc(:)
 
@@ -867,7 +857,6 @@ real(r_single) nyquist_default_nc
 parameter(nyquist_default_nc=50.0_r_kind)
 logical l_pixel_unlimited
 integer(i_kind):: ipix
-real (r_kind)::rtem1_a(1)
 integer(i_kind)::real_numpixel,start_nc(1),count_nc(1)
    
   !-Check if reflectivity is in the convinfo file and extract necessary attributes 
@@ -999,7 +988,7 @@ else
   start_nc=(/1/)
   count_nc=(/1/)
   ipix=1
-  do 255, while (ierr.eq.nf90_noerr)
+  do 255, while (ierr == nf90_noerr)
     start_nc(1)=ipix
     ierr = NF90_GET_VAR(ncid,varid6,obdata_pixel_nc(ipix:ipix),start=start_nc,count=count_nc)
     ierr = NF90_GET_VAR(ncid,pixel_x_varid,pixel_x_nc(ipix:ipix),start=start_nc,count=count_nc)
@@ -1303,27 +1292,16 @@ subroutine read_dbz_mrms_detect_format(infile,l_sparse_netcdf)
   real(r_kind),parameter :: r8     = 8.0_r_kind
   real(r_kind),parameter:: r360=360.0_r_kind
   integer(i_kind),parameter:: maxdat=17         ! Used in generating cdata array
-  integer (i_kind):: iyear,imon,iday,ihour,imin,isec
   logical l_sparse_netcdf
   
-!--Derived data type declaration
-
-        	                                             							     
-
 !--General declarations
 
 integer(i_kind) :: ncid,ierr,dimid3
-
-
-  !                                              !  due to representativeness error associated with the model
-  !----------------------------------------------!
 
 !--------------------------------------------------------------------------------------!
 !                            END OF ALL DECLARATIONS                                   !
 !--------------------------------------------------------------------------------------!
    
-  !-Check if reflectivity is in the convinfo file and extract necessary attributes 
-
 !!READ RADAR DATA
 ierr =  NF90_OPEN(trim(infile),0,ncid)
 

@@ -1745,7 +1745,7 @@ contains
     character(len=*),parameter :: myname='read_nems_nmmb_guess:: '
     integer(i_kind) i,it,j,k,kr,mype_input
     integer(i_kind) isli_this,nsig_read
-    real(r_kind) pd,psfc_this,wmag,pd_to_ps,q_liquid
+    real(r_kind) pd,psfc_this,wmag,pd_to_ps
     integer(i_kind) num_doubtful_sfct,num_doubtful_sfct_all
     real(r_kind),dimension(lat2,lon2):: smthis,sicethis,u10this,v10this,sstthis,tskthis
 

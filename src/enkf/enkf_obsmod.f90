@@ -158,7 +158,7 @@ use convinfo, only: convinfo_read, init_convinfo, cvar_pg, nconvtype, ictype,&
 use ozinfo, only: init_oz, ozinfo_read, pg_oz, jpch_oz, nusis_oz, nulev
 use covlocal, only: latval,taper
 use constants, only: rearth
-integer nob,n,j,ierr
+integer nob,j,ierr
 real(r_double) t1
 real(r_single) tdiff,tdiffmax,deglat,radlat,radlon
 real(r_kind) rhor,rvert

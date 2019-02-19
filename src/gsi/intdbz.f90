@@ -95,11 +95,11 @@ subroutine intdbz_(dbzhead,rval,sval)
 ! real(r_kind) penalty
 !  real(r_kind),pointer,dimension(:) :: xhat_dt_u,xhat_dt_v
 !  real(r_kind),pointer,dimension(:) :: dhat_dt_u,dhat_dt_v
-  real(r_kind) val,w1,w2,w3,w4,w5,w6,w7,w8,valqr,valqli,valqs,valqg,valdbz
-  real(r_kind) cg_dbz,p0,grad,wnotgross,wgross,time_dbz,pg_dbz
-  real(r_kind) qrtl,qlitl, qstl, qgtl
-  real(r_kind),pointer,dimension(:) :: sqr,sqli,sqs,sqg,sdbz
-  real(r_kind),pointer,dimension(:) :: rqr,rqli,rqs,rqg,rdbz
+  real(r_kind) val,w1,w2,w3,w4,w5,w6,w7,w8,valqr,valqs,valqg,valdbz
+  real(r_kind) cg_dbz,p0,grad,wnotgross,wgross,pg_dbz
+  real(r_kind) qrtl,qstl, qgtl
+  real(r_kind),pointer,dimension(:) :: sqr,sqs,sqg,sdbz
+  real(r_kind),pointer,dimension(:) :: rqr,rqs,rqg,rdbz
   type(dbzNode), pointer :: dbzptr
 
 !  If no dbz data return

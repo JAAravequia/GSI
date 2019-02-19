@@ -1020,7 +1020,8 @@ contains
          regional,wrf_nmm_regional,nems_nmmb_regional,wrf_mass_regional,&
          cmaq_regional,pt_ll,aeta2_ll,fv3_regional,&
          aeta1_ll,eta2_ll,pdtop_ll,eta1_ll,twodvar_regional,idsl5
-  use mpimod, only: mype
+    use mpimod, only: mype
+    use obsmod, only: dtype,ndat
     implicit none
 
 ! !DESCRIPTION: populate guess pressure arrays
@@ -1059,7 +1060,7 @@ contains
     real(r_kind),dimension(:,:)  ,pointer::ges_ps=>NULL()
     real(r_kind),dimension(:,:,:),pointer::ges_tv=>NULL()
     real(r_kind) pinc(lat2,lon2)
-    integer(i_kind) i,j,k,jj,itv,ips,kp
+    integer(i_kind) i,j,k,ii,jj,itv,ips,kp
     logical ihaveprs(nfldsig)
 
     kap1=rd_over_cp+one
@@ -1235,18 +1236,22 @@ contains
 
 !   Compute density for dBZ assimilation purposes - multiply by 1000 to convert
 !   to Pa
-    do jj=1,nfldsig
-       call gsi_bundlegetpointer(gsi_metguess_bundle(jj),'tv' ,ges_tv,itv)
-       if(idvc5==3) then
-          if(itv/=0) call die(myname_,': tv must be present when idvc5=3,abort',itv)
-       endif
-       do j=1,lon2
-          do i=1,lat2
-             do k=1,nsig
-                  ges_rho(i,j,k,jj)=(ges_prsl(i,j,k,jj)/(ges_tv(i,j,k)*rd))*r1000
+    do ii=1,ndat
+       if ( index(dtype(ii), 'dbz') /= 0 )then
+          do jj=1,nfldsig
+             call gsi_bundlegetpointer(gsi_metguess_bundle(jj),'tv' ,ges_tv,itv)
+             if(idvc5==3) then
+                if(itv/=0) call die(myname_,': tv must be present when idvc5=3,abort',itv)
+             endif
+             do j=1,lon2
+                do i=1,lat2
+                   do k=1,nsig
+                        ges_rho(i,j,k,jj)=(ges_prsl(i,j,k,jj)/(ges_tv(i,j,k)*rd))*r1000
+                   end do
+                end do
              end do
           end do
-       end do
+       end if
     end do
 
 ! For regional applications only, load variables containing mean
