@@ -1,4 +1,4 @@
-subroutine read_radar_wind_ascii(nread,ndata,nodata,infile,lunout,obstype,twind,sis,hgtl_full,nobs,hloc,vloc)
+subroutine read_radar_wind_ascii(nread,ndata,nodata,infile,lunout,obstype,sis,hgtl_full,nobs,hloc,vloc)
 !$$$   subprogram documentation block
 !                .      .    .                                       .
 !   subprogram: read_dbz        read level2 raw QC'd radial velocity data
@@ -22,7 +22,6 @@ subroutine read_radar_wind_ascii(nread,ndata,nodata,infile,lunout,obstype,twind,
 !     infile   - file from which to read data
 !     lunout   - unit to which to write data for further processing
 !     obstype  - observation type to process
-!     twind    - input group time window (hours)
 !
 !   output argument list:
 !     nread    - number of radar reflectivity observations read
@@ -141,7 +140,6 @@ subroutine read_radar_wind_ascii(nread,ndata,nodata,infile,lunout,obstype,twind,
   character(len=*),intent(in   ) :: obstype,infile
   character(len=*),intent(in   ) :: sis
   real(r_kind)    ,intent(in   ) :: hloc,vloc
-  real(r_kind)    ,intent(in   ) :: twind
   integer(i_kind) ,intent(in   ) :: lunout
   integer(i_kind) ,intent(inout) :: nread,ndata,nodata
   real(r_kind),dimension(nlat,nlon,nsig),intent(in):: hgtl_full
@@ -202,7 +200,7 @@ logical :: luse
   
   integer(i_kind),dimension(5) :: obdate
   
-  real(r_kind) :: a,b,c,ha,epsh,h,aactual,a43,thistilt,ff10,sfcr,skint,zsges, &
+  real(r_kind) :: b,c,ha,epsh,h,aactual,a43,thistilt,ff10,sfcr,skint,zsges, &
                   radar_lon,radar_lat,dlon_radar,dlat_radar,errmax,errmin,error                             
   real(r_kind) :: thistiltr,selev0,celev0,thisrange,this_stahgt,thishgt                           
   real(r_kind) :: celev,selev,gamma,thisazimuthr,rlon0,t4dv, &
@@ -221,12 +219,7 @@ logical :: luse
 
   logical      :: outside
 
- logical :: fdrdone,tlxdone,vnxdone,inxdone,srxdone,fwsdone,ddcdone,ictdone
- logical :: fdrdone2,tlxdone2,vnxdone2,inxdone2,srxdone2,fwsdone2,ddcdone2,ictdone2
-logical :: lzkdone,shvdone,twxdone,sgfdone,eaxdone
-logical :: lzkdone2,shvdone2,twxdone2,sgfdone2,eaxdone2
-    
-  type(radar),allocatable :: strct_in_vel(:,:),strct_in_dbz(:,:),strct_in_rawvel(:,:)
+  type(radar),allocatable :: strct_in_vel(:,:)
 
 real(r_kind) :: mintilt,maxtilt,maxobrange,minobrange
 
@@ -264,8 +257,8 @@ real(r_kind) :: mintilt,maxtilt,maxobrange,minobrange
  
     
   if (minobrange >= maxobrange) then
-  write(6,*) 'MININMUM OB RANGE >= MAXIMUM OB RANGE FOR READING RADIAL VELOCITY - PROGRAM STOPPING FROM READ_RADAR_WIND_ASCII.F90'
-  call stop2(400)
+    write(6,*) 'MININMUM OB RANGE >= MAXIMUM OB RANGE FOR READING RADIAL VELOCITY - PROGRAM STOPPING FROM READ_RADAR_WIND_ASCII.F90'
+    call stop2(400)
   end if
         
   !-next three values are dummy values for now

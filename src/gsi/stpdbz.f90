@@ -71,14 +71,14 @@ subroutine stpdbz(dbzhead,rval,sval,out,sges,nstep)
 ! Declare local variables
   integer(i_kind) ier,istatus
   integer(i_kind) j1,j2,j3,j4,j5,j6,j7,j8,kk
-  real(r_kind) w1,w2,w3,w4,w5,w6,w7,w8,time_dbz
-  real(r_kind) valqr, valqs, valqg, valqli, valdbz
-  real(r_kind) qrcur, qscur, qgcur, qlicur, dbzcur
+  real(r_kind) w1,w2,w3,w4,w5,w6,w7,w8
+  real(r_kind) valqr, valqs, valqg, valdbz
+  real(r_kind) qrcur, qscur, qgcur, dbzcur
   real(r_kind) cg_dbz,dbz,wgross,wnotgross
   real(r_kind),dimension(max(1,nstep))::pen
   real(r_kind) pg_dbz
-  real(r_kind),pointer,dimension(:) :: sqr,sqli,sqs,sqg,sdbz
-  real(r_kind),pointer,dimension(:) :: rqr,rqli,rqs,rqg,rdbz
+  real(r_kind),pointer,dimension(:) :: sqr,sqs,sqg,sdbz
+  real(r_kind),pointer,dimension(:) :: rqr,rqs,rqg,rdbz
   type(dbzNode), pointer :: dbzptr
 
   out=zero_quad

@@ -1426,11 +1426,11 @@ enddo
 deallocate(utable)
 
 if (l_mrms_run) then
-if(present(rcname)) then
-call load_mrms_data_info(mrms_listfile,nrows0,ntot_mrms,nrows_mrms,nrows,obsfile_all,dfile,dtype,ditype,dplat,dsis,dval,dthin,ipoint,dsfcalc,time_window,rcname)
-else
-call load_mrms_data_info(mrms_listfile,nrows0,ntot_mrms,nrows_mrms,nrows,obsfile_all,dfile,dtype,ditype,dplat,dsis,dval,dthin,ipoint,dsfcalc,time_window)
-endif
+  if(present(rcname)) then
+    call load_mrms_data_info(mrms_listfile,nrows0,ntot_mrms,nrows_mrms,nrows,obsfile_all,dfile,dtype,ditype,dplat,dsis,dval,dthin,ipoint,dsfcalc,time_window,rcname)
+  else
+    call load_mrms_data_info(mrms_listfile,nrows0,ntot_mrms,nrows_mrms,nrows,obsfile_all,dfile,dtype,ditype,dplat,dsis,dval,dthin,ipoint,dsfcalc,time_window)
+  endif
 endif
 
 obs_instr_initialized_=.true.

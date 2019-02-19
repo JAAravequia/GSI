@@ -1497,7 +1497,7 @@ subroutine read_obs(ndata,mype)
 !            Process radar winds
              else if (obstype == 'rw') then
                 if( trim(infile) == 'vr_vol' )then
-                  call read_radar_wind_ascii(nread,npuse,nouse,infile,lunout,obstype,twind,sis,&
+                  call read_radar_wind_ascii(nread,npuse,nouse,infile,lunout,obstype,sis,&
                                   hgtl_full,nobs_sub1(1,i),hlocal(i),vlocal(i))
                 else
                  if (vadwnd_l2rw_qc) then
@@ -1517,15 +1517,15 @@ subroutine read_obs(ndata,mype)
              else if (obstype == 'dbz' ) then
                 print *, "calling read_dbz"
                 if(trim(infile)=='dbzobs.nc')then
-                  call read_dbz_nc(nread,npuse,nouse,infile,lunout,obstype,twind,sis,hgtl_full,nobs_sub1(1,i),hlocal(i),vlocal(i))
+                  call read_dbz_nc(nread,npuse,nouse,infile,lunout,obstype,sis,hgtl_full,nobs_sub1(1,i),hlocal(i),vlocal(i))
                   string='READ_dBZ'
                 else
                   call read_dbz_mrms_detect_format(infile,l_mrms_sparse_netcdf)
                   if(l_mrms_sparse_netcdf) then
-                     call read_dbz_mrms_sparse_netcdf(nread,npuse,nouse,infile,obstype,lunout,twind,sis,nobs_sub1(1,i))
+                     call read_dbz_mrms_sparse_netcdf(nread,npuse,nouse,infile,obstype,lunout,sis,nobs_sub1(1,i))
                      string='READ_dbz_mrms_sparse_netcdf'
                   else
-                     call read_dbz_mrms_netcdf(nread,npuse,nouse,infile,obstype,lunout,twind,sis,nobs_sub1(1,i))
+                     call read_dbz_mrms_netcdf(nread,npuse,nouse,infile,obstype,lunout,sis,nobs_sub1(1,i))
                      string='READ_dbz_mrms_netcdf'
                   endif
                 end if

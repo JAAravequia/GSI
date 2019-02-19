@@ -172,7 +172,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) sinazm,cosazm,sintilt,costilt,cosazm_costilt,sinazm_costilt
   real(r_kind) ratio_errors,qcgross
   real(r_kind) ugesin,vgesin,wgesin,factw,skint,sfcr
-  real(r_kind) rwwind,presw,Vr
+  real(r_kind) rwwind,presw
   real(r_kind) errinv_input,errinv_adjst,errinv_final
   real(r_kind) err_input,err_adjst,err_final
   real(r_kind),dimension(nele,nobs):: data
@@ -182,7 +182,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) mm1,jj,k2,isli
   integer(i_kind) jsig,ikxx,nn,ibin,ioff,ioff0
   integer(i_kind) ier,ilat,ilon,ihgt,irwob,ikx,itime,iuse
-  integer(i_kind):: ielev,id,itilt,iazm,ilone,ilate,irange,idir3
+  integer(i_kind):: ielev,id,itilt,iazm,ilone,ilate,irange
   integer(i_kind):: izsges,ier2,idomsfc,isfcr,iskint,iff10,iobs_type
   
   character(8) station_id
@@ -212,12 +212,6 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   type(rwNode),pointer:: my_head
   type(obs_diag),pointer:: my_diag
   character(len=*),parameter:: myname='setuprw'
-
-  integer(i_kind) inyq_vel ! index of the nyq velocity
-  integer(i_kind) nobdealising !
-  integer(i_kind) d2n
-  real(r_kind) robvr
-  real(r_kind):: maxvrdiff=50.0_r_kind
 
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z

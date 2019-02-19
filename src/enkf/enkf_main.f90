@@ -151,9 +151,6 @@ program enkf_main
     if (nproc == 0) print *,'time in read_state =',t2-t1,'on proc',nproc
  endif
 
- ! read state/control vector info from anavinfo
- call init_statevec()
-
  ! read obs, initial screening.
  t1 = mpi_wtime()
  call readobs()

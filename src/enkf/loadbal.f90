@@ -551,7 +551,7 @@ use covlocal, only:  latval
 
 implicit none
 integer(i_kind), dimension(:), intent(inout) :: numobs
-real(r_single) :: deglat,corrlength,corrsq,r,dist
+real(r_single) :: deglat,corrlength,corrsq,r
 type(kdtree2_result),dimension(:),allocatable :: sresults
 
 integer nob,n1,n2,i,ideln

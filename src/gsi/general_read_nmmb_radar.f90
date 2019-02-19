@@ -53,10 +53,10 @@ subroutine general_read_nmmb_radar(grd,filename,mype,g_z,g_ps,g_u,g_v,g_w,g_qr,g
 
 !   Declare local variables
     integer(i_kind) i,j,k,kr,nsig,lat2,lon2,mype_input,ierr
-    real(r_kind) pd,psfc_this,pd_to_ps,dumtv,q_liquid                                              
+    real(r_kind) pd,psfc_this,pd_to_ps,dumtv
     logical good_o3mr
     real(r_kind),dimension(grd%lat2,grd%lon2) :: g_pd
-    real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig) :: cwmr, frain, fice,dbz, &
+    real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig) :: dbz, &
                                       Ze, Zer, Zeli,g_prsl, g_rho
     real(r_kind)    :: Cr=3.6308e9_r_kind          ! Rain constant coef.
     real(r_kind)    :: Cli=3.268e9_r_kind          ! Precip. ice constant coef.

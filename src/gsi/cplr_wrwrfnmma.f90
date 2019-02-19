@@ -1150,15 +1150,14 @@ contains
     real(r_kind),dimension(lat2,lon2):: work_sub,pd_new,delu10,delv10,u10this,v10this,fact10_local
     real(r_kind),dimension(lat2,lon2):: work_sub_t,work_sub_i,work_sub_r,work_sub_l, work_sub_s
     real(r_kind),dimension(lat2,lon2):: delt2,delq2,t2this,q2this,fact2t_local,fact2q_local
-    real(r_kind),dimension(lat2,lon2,nsig)  :: clwmr,frain,fice
     real(r_kind),dimension(lat2,lon2,6):: delu,delv,delw,delt,delq,pott
     real(r_kind) hmin,hmax,hmin0,hmax0,ten,wgt1,wgt2
     logical use_fact10,use_fact2
     logical good_u10,good_v10,good_tshltr,good_qshltr,good_o3mr
   
   ! variables for cloud info
-    integer(i_kind) iret,ier_cloud,n_actual_clouds,istatus,ierr, temp_i, temp_j
-    real(r_kind) total_ice, temp
+    integer(i_kind) iret,ier_cloud,n_actual_clouds,istatus,ierr
+    real(r_kind) total_ice
     real(r_kind),dimension(lat2,lon2):: work_clwmr,work_fice,work_frain
     real(r_kind),pointer,dimension(:,:,:):: ges_cw  =>NULL()
     real(r_kind),pointer,dimension(:,:  ):: ges_pd  =>NULL()
