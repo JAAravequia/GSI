@@ -283,7 +283,7 @@ sortinc = .true.
 ! type of GFS microphyics.
 ! 99: Zhao-Carr, 11: GFDL
 imp_physics = 99
-! lupp, if true output extra variables
+! lupp, if true output extra variables (deprecated, does not do anything)
 lupp = .false.
 ! these are all mandatory.
 ! nlons and nlats are # of lons and lats

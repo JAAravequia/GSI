@@ -69,7 +69,7 @@
      clip_supersaturation
   use state_vectors, only: init_anasv,final_anasv
   use control_vectors, only: init_anacv,final_anacv,nrf,nvars,nrf_3d,cvars3d,cvars2d,&
-     nrf_var,imp_physics,lupp
+     nrf_var,imp_physics
   use berror, only: norh,ndeg,vs,bw,init_berror,hzscl,hswgt,pert_berr,pert_berr_fct,&
      bkgv_flowdep,bkgv_rewgtfct,bkgv_write,fpsproj,nhscrf,adjustozvar,fut2ps,cwcoveqqcov
   use anberror, only: anisotropic,ancovmdl,init_anberror,npass,ifilt_ord,triad4, &
@@ -370,7 +370,7 @@
 !-------------------------------------------------------------------------
 
 ! Declare variables.
-  logical:: writediag,l_foto
+  logical:: writediag,l_foto,lupp
   integer(i_kind) i,ngroup
 
 
@@ -536,7 +536,9 @@
 !     the EnKF to compute ensemble perturbations in observation space.
 !     luse_obsdiag - use obsdiags (useful when running EnKF observers; e.g., echo Jo table) 
 !     imp_physics - type of GFS microphysics
-!     lupp - if T, UPP is used and extra variables are output
+!     lupp - if T, UPP is used and extra variables are output (deprecated - no
+!     longer does anything.  These extra variables are now automatically
+!     detected and written out if they are in the background file).
 !     binary_diag - trigger binary diag-file output (being phased out)
 !     netcdf_diag - trigger netcdf diag-file output
 !

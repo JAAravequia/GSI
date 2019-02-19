@@ -74,6 +74,9 @@
 
   character(len=500) :: filename
   character(len=7) charnanal
+  character(8),allocatable:: recname(:)
+  character(8) :: field
+  logical :: hasfield,hasps
 
   real(r_kind) :: kap,kapr,kap1,clip,qi_coef
 
@@ -460,7 +463,6 @@
                            nemsio_readrecv,nemsio_init,nemsio_setheadvar,nemsio_writerecv
   use constants, only: grav
   use params, only: nbackgrounds,anlfileprefixes,fgfileprefixes,reducedgrid
-  use params, only: lupp
   implicit none
 
   integer, intent(in) :: nanal
@@ -600,7 +602,8 @@
      allocate(pstend1(nlons*nlats))
      allocate(pstend2(nlons*nlats),vmass(nlons*nlats))
   endif
-  if (lupp) allocate(delzb(nlons*nlats))
+  field = 'delz'; hasfield = checkfield(field,recname,nrecs)
+  if (hasfield) allocate(delzb(nlons*nlats))
   if (imp_physics == 11) allocate(work(nlons*nlats))
 
 ! Compute analysis time from guess date and forecast length.
@@ -758,7 +761,8 @@
        call copyfromgrdin(grdin(:,levels(n3d) + ps_ind,nb),ug)
      endif
      !print *,'nanal,min/max psfg,min/max inc',nanal,minval(psfg),maxval(psfg),minval(ug),maxval(ug)
-     if (lupp) then
+     field = 'dpres'; hasfield = checkfield(field,recname,nrecs)
+     if (hasfield) then
         do k=1,nlevs
            psg = ug*(bk(k)-bk(k+1))
            call nemsio_readrecv(gfilein,'dpres','mid layer',k,nems_wrk,iret=iret)
@@ -946,7 +950,8 @@
         ug = ug + nems_wrk 
         vg = vg + nems_wrk2 
         if (cliptracers)  where (vg < clip) vg = clip
-        if (lupp) then
+        field = 'delz'; hasfield = checkfield(field,recname,nrecs)
+        if (hasfield) then
            call nemsio_readrecv(gfilein,'pres','sfc',1,nems_wrk2,iret=iret)
            delzb=(rd/grav)*nems_wrk
            delzb=delzb*log((ak(k)+bk(k)*nems_wrk2)/(ak(k+1)+bk(k+1)*nems_wrk2))
@@ -971,7 +976,8 @@
            write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(spfh), iret=',iret
            call stop2(23)
         endif
-        if (lupp) then
+        field = 'delz'; hasfield = checkfield(field,recname,nrecs)
+        if (hasfield) then
            vg = 0.
            if (ps_ind > 0) then
               call copyfromgrdin(grdin(:,levels(n3d) + ps_ind,nb),vg)
@@ -1044,7 +1050,8 @@
               call stop2(23)
            endif
             
-           if (lupp) then
+           field = 'rwmr'; hasfield = checkfield(field,recname,nrecs)
+           if (hasfield) then
               call nemsio_readrecv(gfilein,'rwmr','mid layer',k,nems_wrk2,iret=iret)
               if (iret/=0) then
                  write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(rwmr), iret=',iret
@@ -1091,7 +1098,8 @@
         endif
 
         !Additional variables needed for Unified Post Processor
-        if (lupp) then
+        field = 'dzdt'; hasfield = checkfield(field,recname,nrecs)
+        if (hasfield) then
            call nemsio_readrecv(gfilein,'dzdt','mid layer',k,nems_wrk2,iret=iret)
            if (iret/=0) then
               write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(dzdt), iret=',iret
@@ -1106,7 +1114,8 @@
     enddo
   endif !if (.not. use_gfs_nemsio)
 
-  if (lupp) deallocate(delzb)
+  if (allocated(delzb)) deallocate(delzb)
+  if (allocated(recname)) deallocate(recname)
   if (imp_physics == 11) deallocate(work)
 
   if (pst_ind > 0) then
