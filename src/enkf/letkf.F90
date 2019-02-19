@@ -86,10 +86,8 @@ module letkf
 !
 !$$$
 
-use random_normal, only : rnorm, set_random_seed
 use mpisetup
 use mpeu_util, only: getindex
-use random_normal, only : rnorm, set_random_seed
 use, intrinsic :: iso_c_binding
 use omp_lib, only: omp_get_num_threads,omp_get_thread_num
 use covlocal, only:  taper, latval
@@ -151,7 +149,7 @@ real(r_single),allocatable,dimension(:,:,:) :: ens_tmp
 real(r_single),allocatable,dimension(:,:) :: wts_ensperts,pa
 real(r_single),allocatable,dimension(:) :: dfs,wts_ensmean
 real(r_kind),allocatable,dimension(:) :: rdiag,rloc
-real(r_single),allocatable,dimension(:) :: dep,rannum
+real(r_single),allocatable,dimension(:) :: dep
 ! kdtree stuff
 type(kdtree2_result),dimension(:),allocatable :: sresults,sresults2
 integer(i_kind), dimension(:), allocatable :: indxassim, indxob
@@ -169,7 +167,6 @@ real(r_single), allocatable, dimension(:) :: buffer
 real(r_kind) eps
 
 eps = epsilon(0.0_r_single) ! real(4) machine precision
-call set_random_seed(0, nproc)
 
 !$omp parallel
 nthreads = omp_get_num_threads()
@@ -371,7 +368,7 @@ nobslocal_min = nobstot
 ! Loop for each horizontal grid points on this task.
 !$omp parallel do schedule(dynamic) private(npt,nob,nobsl, &
 !$omp                  gain,nobsl2,oberrfact,ngrd1,corrlength,ens_tmp, &
-!$omp                  nf,vdist,obens,indxassim,indxob,rannum, &
+!$omp                  nf,vdist,obens,indxassim,indxob, &
 !$omp                  nn,hxens,wts_ensmean,dfs,rdiag,dep,rloc,i, &
 !$omp                  oindex,deglat,dist,corrsq,nb,sresults,sresults2, &
 !$omp                  wts_ensperts,pa,trpa,trpa_raw) &
@@ -460,33 +457,13 @@ grdloop: do npt=1,numptsperproc(nproc+1)
           !endif
        endif
    else ! find all obs within localization radius (sorted by distance).
-       if (nobsl_max == -1) then ! use all obs
-          if (kdobs) then
-            call kdtree2_r_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),r2=corrsq,&
-                 nfound=nobsl,nalloc=nobstot,results=sresults)
-          else
-            ! brute force search
-            call find_localobs(grdloc_chunk(:,npt),obloc,corrsq,nobstot,-1,sresults,nobsl)
-          endif
-       else ! nobs_max < -1, use random subset of -nobsl_max obs
-          allocate(sresults2(nobstot))
-          if (kdobs) then
-            call kdtree2_r_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),r2=corrsq,&
-                 nfound=nobsl,nalloc=nobstot,results=sresults2)
-          else
-            ! brute force search
-            call find_localobs(grdloc_chunk(:,npt),obloc,corrsq,nobstot,-1,sresults2,nobsl)
-          endif
-          allocate(rannum(nobsl),indxassim(nobsl))
-          call random_number(rannum)
-          call quicksort(nobsl,rannum,indxassim)
-          nobsl = -nobsl_max
-          do nob=1,nobsl
-             sresults(nob)%dis = sresults2(indxassim(nob))%dis
-             sresults(nob)%idx = sresults2(indxassim(nob))%idx
-          enddo
-          deallocate(rannum,indxassim,sresults2)
-        end if
+       if (kdobs) then
+         call kdtree2_r_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),r2=corrsq,&
+              nfound=nobsl,nalloc=nobstot,results=sresults)
+       else
+         ! brute force search
+         call find_localobs(grdloc_chunk(:,npt),obloc,corrsq,nobstot,-1,sresults,nobsl)
+       endif
    endif
 
    t2 = t2 + mpi_wtime() - t1
