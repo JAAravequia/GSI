@@ -37,8 +37,8 @@ module letkf
 !  The parameter nobsl_max controls
 !  the maximum number of obs that will be assimilated in each local patch.
 !  (the nobsl_max closest are chosen by default, if dfs_sort=T then they
-!   are ranked by decreasing DFS. If nobsl_max<-1, a random subset
-!   of -nobsl_max obs is used). nobsl_max=-1 (default) means all obs used.
+!   are ranked by decreasing DFS)
+!   nobsl_max=-1 (default) means all obs used.
 !
 !  Vertical covariance localization can be turned off with letkf_novlocal.
 !  (this is done automatically when model space vertical localization 
@@ -86,10 +86,7 @@ module letkf
 !
 !$$$
 
-use random_normal, only : rnorm, set_random_seed
 use mpisetup
-use mpeu_util, only: getindex
-use random_normal, only : rnorm, set_random_seed
 use, intrinsic :: iso_c_binding
 use omp_lib, only: omp_get_num_threads,omp_get_thread_num
 use covlocal, only:  taper, latval
@@ -98,7 +95,7 @@ use loadbal, only: numptsperproc, npts_max, &
                    indxproc, lnp_chunk, &
                    grdloc_chunk, kdtree_obs2, &
                    ensmean_chunk, anal_chunk
-use controlvec, only: ncdim, index_pres, cvars3d, cvars2d, clevels, nc3d
+use controlvec, only: ncdim, index_pres
 use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, oblnp, &
                   nobstot, nobs_conv, nobs_oz, nobs_sat,&
                   obfit_prior, obfit_post, obsprd_prior, obsprd_post,&
@@ -151,9 +148,9 @@ real(r_single),allocatable,dimension(:,:,:) :: ens_tmp
 real(r_single),allocatable,dimension(:,:) :: wts_ensperts,pa
 real(r_single),allocatable,dimension(:) :: dfs,wts_ensmean
 real(r_kind),allocatable,dimension(:) :: rdiag,rloc
-real(r_single),allocatable,dimension(:) :: dep,rannum
+real(r_single),allocatable,dimension(:) :: dep
 ! kdtree stuff
-type(kdtree2_result),dimension(:),allocatable :: sresults,sresults2
+type(kdtree2_result),dimension(:),allocatable :: sresults
 integer(i_kind), dimension(:), allocatable :: indxassim, indxob
 #ifdef MPI3
 ! pointers used for MPI-3 shared memory manipulations.
@@ -169,7 +166,6 @@ real(r_single), allocatable, dimension(:) :: buffer
 real(r_kind) eps
 
 eps = epsilon(0.0_r_single) ! real(4) machine precision
-call set_random_seed(0, nproc)
 
 !$omp parallel
 nthreads = omp_get_num_threads()
@@ -371,9 +367,9 @@ nobslocal_min = nobstot
 ! Loop for each horizontal grid points on this task.
 !$omp parallel do schedule(dynamic) private(npt,nob,nobsl, &
 !$omp                  gain,nobsl2,oberrfact,ngrd1,corrlength,ens_tmp, &
-!$omp                  nf,vdist,obens,indxassim,indxob,rannum, &
+!$omp                  nf,vdist,obens,indxassim,indxob, &
 !$omp                  nn,hxens,wts_ensmean,dfs,rdiag,dep,rloc,i, &
-!$omp                  oindex,deglat,dist,corrsq,nb,sresults,sresults2, &
+!$omp                  oindex,deglat,dist,corrsq,nb,sresults, &
 !$omp                  wts_ensperts,pa,trpa,trpa_raw) &
 !$omp  reduction(+:t1,t2,t3,t4,t5) &
 !$omp  reduction(max:nobslocal_max) &
@@ -460,33 +456,13 @@ grdloop: do npt=1,numptsperproc(nproc+1)
           !endif
        endif
    else ! find all obs within localization radius (sorted by distance).
-       if (nobsl_max == -1) then ! use all obs
-          if (kdobs) then
-            call kdtree2_r_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),r2=corrsq,&
-                 nfound=nobsl,nalloc=nobstot,results=sresults)
-          else
-            ! brute force search
-            call find_localobs(grdloc_chunk(:,npt),obloc,corrsq,nobstot,-1,sresults,nobsl)
-          endif
-       else ! nobs_max < -1, use random subset of -nobsl_max obs
-          allocate(sresults2(nobstot))
-          if (kdobs) then
-            call kdtree2_r_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),r2=corrsq,&
-                 nfound=nobsl,nalloc=nobstot,results=sresults2)
-          else
-            ! brute force search
-            call find_localobs(grdloc_chunk(:,npt),obloc,corrsq,nobstot,-1,sresults2,nobsl)
-          endif
-          allocate(rannum(nobsl),indxassim(nobsl))
-          call random_number(rannum)
-          call quicksort(nobsl,rannum,indxassim)
-          nobsl = -nobsl_max
-          do nob=1,nobsl
-             sresults(nob)%dis = sresults2(indxassim(nob))%dis
-             sresults(nob)%idx = sresults2(indxassim(nob))%idx
-          enddo
-          deallocate(rannum,indxassim,sresults2)
-        end if
+       if (kdobs) then
+         call kdtree2_r_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),r2=corrsq,&
+              nfound=nobsl,nalloc=nobstot,results=sresults)
+       else
+         ! brute force search
+         call find_localobs(grdloc_chunk(:,npt),obloc,corrsq,nobstot,-1,sresults,nobsl)
+       endif
    endif
 
    t2 = t2 + mpi_wtime() - t1
@@ -1041,6 +1017,9 @@ subroutine find_localobs(grdloc,obloc,rsqmax,nobstot,nobsl_max,sresults,nobsl)
    else
       if (nobsl_max > nobstot) then
          print *,'nobsl_max must be <= nobstot in find_localobs'
+         call stop2(992)
+      else if (nobsl_max < 1) then
+         print *,'nobsl_max must be -1 or >= 1 in find_localobs'
          call stop2(992)
       endif
       nobsl = nobsl_max
