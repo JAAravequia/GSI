@@ -538,13 +538,21 @@
                              nfminute=nfminute, nfsecondn=nfsecondn, nfsecondd=nfsecondd,&
                              nrec=nrecs,&
                              vcoord=nems_vcoord,idvc=nems_idvc)
-     write(6,111) trim(filenamein),idat,nfhour,nfminute,nfsecondn,nfsecondd
-111  format(a32,1x,'idat=',7(i4,1x),' nfh=',i5,' nfm=',i5,' nfsn=',i5,' nfsd=',i5)
+!     write(6,111) trim(filenamein),idat,nfhour,nfminute,nfsecondn,nfsecondd
+!111  format(a32,1x,'idat=',7(i4,1x),' nfh=',i5,' nfm=',i5,' nfsn=',i5,' nfsd=',i5)
 
      if (iret/=0) then
         write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_getfilehead, iret=',iret
         call stop2(23)
      endif
+
+     allocate(recname(nrecs))
+     call nemsio_getfilehead(gfilein,iret=iret,recname=recname)
+     if (iret/=0) then
+        write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_getfilehead, iret=',iret
+        call stop2(23)
+     endif
+
      if (nems_idvc == 1) then ! sigma coordinate
          ak = zero
          bk = nems_vcoord(1:nlevs+1,2,1)
@@ -741,8 +749,8 @@
           idate=jdate, nfhour=nfhour, nfminute=nfminute, nfsecondn=nfsecondn, &
           nfsecondd=nfsecondd)
 
-     write(6,112) trim(filenameout),jdate,nfhour,nfminute,nfsecondn,nfsecondd
-112 format(a32,1x,'jdate=',7(i4,1x),' nfh=',i5,' nfm=',i5,' nfsn=',i5,' nfsd=',i5)
+!     write(6,112) trim(filenameout),jdate,nfhour,nfminute,nfsecondn,nfsecondd
+!112 format(a32,1x,'jdate=',7(i4,1x),' nfh=',i5,' nfm=',i5,' nfsn=',i5,' nfsd=',i5)
 
      if (iret/=0) then
         write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_open for output, iret=',iret
