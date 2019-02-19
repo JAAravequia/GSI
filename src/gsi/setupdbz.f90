@@ -51,7 +51,7 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use mpeu_util, only: die,perr
   use kinds, only: r_kind,r_single,r_double,i_kind
   use m_obsdiags, only: dbzhead
-  use obsmod, only: rmiss_single,i_dbz_ob_type,obsdiags,&
+  use obsmod, only: rmiss_single,i_dbz_ob_type,obsdiags,lobsdiag_forenkf,&
                     lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset,&
                     ens_hx_dbz_cut
 
@@ -78,7 +78,7 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use constants, only: flattening,semi_major_axis,grav_ratio,zero,grav,wgtlim,&
        half,one,two,grav_equator,eccentricity,somigliana,rad2deg,deg2rad,&
        r60,tiny_r_kind,cg_term,huge_single
-  use jfunc, only: jiter,last,miter
+  use jfunc, only: jiter,last,miter,jiterstart
   use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype
   use convinfo, only: icsubtype
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
@@ -150,6 +150,7 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   type(sparr2) :: dhx_dx
   real(r_single), dimension(nsdim) :: dhx_dx_array
+  integer(i_kind) :: nnz, nind
 
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
@@ -171,6 +172,7 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   n_alloc(:)=0
   m_alloc(:)=0
  
+  save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 !******************************************************************************* 
   ! Read and reformat observations in work arrays.
   read(lunin)data,luse, ioid
@@ -208,6 +210,12 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      ioff0=25+2
      nreal=27
      if (lobsdiagsave) nreal=nreal+4*miter+1
+     if (save_jacobian) then
+        nnz = 0
+        nind = 0
+        call new(dhx_dx, nnz, nind)
+        nreal = nreal + size(dhx_dx)
+     endif
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
   end if
   mm1=mype+1
