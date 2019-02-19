@@ -366,7 +366,7 @@ nobslocal_min = nobstot
 ! Update ensemble on model grid.
 ! Loop for each horizontal grid points on this task.
 !$omp parallel do schedule(dynamic) private(npt,nob,nobsl, &
-!$omp                  gain,nobsl2,oberrfact,ngrd1,corrlength,ens_tmp, &
+!$omp                  nobsl2,oberrfact,ngrd1,corrlength,ens_tmp, &
 !$omp                  nf,vdist,obens,indxassim,indxob, &
 !$omp                  nn,hxens,wts_ensmean,dfs,rdiag,dep,rloc,i, &
 !$omp                  oindex,deglat,dist,corrsq,nb,sresults, &
