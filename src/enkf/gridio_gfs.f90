@@ -1283,4 +1283,14 @@
 
  end subroutine writegriddata
 
+ logical function checkfield(field,fields,nrec) result(hasfield)
+   integer, intent(in) :: nrec
+   character*8, intent(in) :: fields(nrec),field
+   integer n
+   hasfield = .false.
+   do n=1,nrec
+      if (field == fields(n)) hasfield=.true.
+   enddo
+ end function checkfield
+
 end module gridio
