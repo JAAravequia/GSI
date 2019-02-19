@@ -252,7 +252,7 @@ subroutine init_rf_z(z_len)
   allocate(fmatz(nxy,2,nsig,2),fmat0z(nxy,nsig,2))
   allocate(fmatz_tmp(2,nsig,2),fmat0z_tmp(nsig,2))
 !   for z_len < zero, use abs val z_len and assume localization scale is in units of ln(p)
-  if(s_ens_v > zero) then
+  if(maxval(z_len) > zero) then
 
 !  z_len is in grid units
      do k=1,nsig
@@ -3046,7 +3046,8 @@ subroutine init_sf_xy(jcap_in)
         spectral_filter(:,k)=spectral_filter(:,k-1)
      else
         do i=1,grd_sploc%nlat
-           f0(i,1)=exp(-half*(rkm(i)/s_ens_hv(k))**2)
+           !f0(i,1)=exp(-half*(rkm(i)/s_ens_hv(k))**2)
+           f0(i,1)=exp(-(rkm(i)/s_ens_hv(k))**2)
         enddo
 
         do j=2,grd_sploc%nlon
@@ -4045,7 +4046,8 @@ subroutine hybens_localization_setup
    endif ! if ( readin_localization .or. readin_beta )
 
 100 format(I4)
-101 format(F8.1,3x,F5.1,2(3x,F8.4))
+!101 format(F8.1,3x,F5.1,2(3x,F8.4))
+101 format(F8.1,3x,F8.3,F8.4,3x,F8.4)
 
    if ( .not. readin_beta ) then ! assign all levels to same value, sum = 1.0
       beta_s = beta_s0
