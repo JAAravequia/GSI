@@ -3046,8 +3046,7 @@ subroutine init_sf_xy(jcap_in)
         spectral_filter(:,k)=spectral_filter(:,k-1)
      else
         do i=1,grd_sploc%nlat
-           !f0(i,1)=exp(-half*(rkm(i)/s_ens_hv(k))**2)
-           f0(i,1)=exp(-(rkm(i)/s_ens_hv(k))**2)
+           f0(i,1)=exp(-half*(rkm(i)/s_ens_hv(k))**2)
         enddo
 
         do j=2,grd_sploc%nlon

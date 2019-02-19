@@ -38,10 +38,9 @@ subroutine read_locinfo()
       endif
       do k=1,nlevs
         read(iunit,101) hlength(k),vlength(k),tmp,tmp
-        hlength(k) = hlength(k)/0.388
-        !hlength(k) = sqrt(2.0)*hlength(k)/0.388
-        vlength(k) = abs(vlength(k))/0.388
-        ! factor of 0.388 to convert from e-folding scale
+        hlength(k) = sqrt(2./0.15)*hlength(k)
+        vlength(k) = sqrt(2./0.15)*abs(vlength(k))
+        ! factor of sqrt(2/0.15) to convert from scale that GSI uses
         ! to distance Gaspari-Cohn function goes to zero.
         if (nproc .eq. 0) print *,'level=',k,'localization scales (horiz,vert)=',hlength(k),vlength(k)
       end do
