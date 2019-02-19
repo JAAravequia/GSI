@@ -37,8 +37,8 @@ module letkf
 !  The parameter nobsl_max controls
 !  the maximum number of obs that will be assimilated in each local patch.
 !  (the nobsl_max closest are chosen by default, if dfs_sort=T then they
-!   are ranked by decreasing DFS. If nobsl_max<-1, a random subset
-!   of -nobsl_max obs is used). nobsl_max=-1 (default) means all obs used.
+!   are ranked by decreasing DFS)
+!  nobsl_max=-1 (default) means all obs used.
 !
 !  Vertical covariance localization can be turned off with letkf_novlocal.
 !  (this is done automatically when model space vertical localization 
@@ -965,7 +965,7 @@ end subroutine letkf_core
 
 subroutine find_localobs(grdloc,obloc,rsqmax,nobstot,nobsl_max,sresults,nobsl)
    ! brute force nearest neighbor search
-   ! if nobsl_max < 0, a r_nearest search is performed, finding
+   ! if nobsl_max == -1, a r_nearest search is performed, finding
    ! all neighbors with squared distance rsq.
    ! if nobsl_max > 0, a n_nearest search is performed, finding
    ! the nobsl_max nearest neighbors (rsq is ignored).
@@ -1011,6 +1011,9 @@ subroutine find_localobs(grdloc,obloc,rsqmax,nobstot,nobsl_max,sresults,nobsl)
    else
       if (nobsl_max > nobstot) then
          print *,'nobsl_max must be <= nobstot in find_localobs'
+         call stop2(992)
+      else if (nobsl_max < 1) then
+         print *,'nobsl_max must be -1 or >= 1 in find_localobs'
          call stop2(992)
       endif
       nobsl = nobsl_max
