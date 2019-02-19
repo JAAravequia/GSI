@@ -110,9 +110,8 @@ integer,public :: npefiles = 0
 ! default is -1, which means take all obs within
 ! specified localization radius.  If nobsl_max > 0,
 ! only the first nobsl_max closest obs within the
-! localization radius will be used. If nobsl_max < -1,
-! a random subset of -nobsl_max obs in local volume
-! are used.  Ignored if letkf_flag = .false.
+! localization radius will be used. 
+! Ignored if letkf_flag = .false.
 ! If dfs_sort=T, DFS is used instead of distance
 ! for ob selection.
 integer,public :: nobsl_max = -1
