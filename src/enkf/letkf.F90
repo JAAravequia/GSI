@@ -151,7 +151,7 @@ real(r_single),allocatable,dimension(:) :: dfs,wts_ensmean
 real(r_kind),allocatable,dimension(:) :: rdiag,rloc
 real(r_single),allocatable,dimension(:) :: dep
 ! kdtree stuff
-type(kdtree2_result),dimension(:),allocatable :: sresults,sresults2
+type(kdtree2_result),dimension(:),allocatable :: sresults
 integer(i_kind), dimension(:), allocatable :: indxassim, indxob
 #ifdef MPI3
 ! pointers used for MPI-3 shared memory manipulations.
@@ -370,7 +370,7 @@ nobslocal_min = nobstot
 !$omp                  gain,nobsl2,oberrfact,ngrd1,corrlength,ens_tmp, &
 !$omp                  nf,vdist,obens,indxassim,indxob, &
 !$omp                  nn,hxens,wts_ensmean,dfs,rdiag,dep,rloc,i, &
-!$omp                  oindex,deglat,dist,corrsq,nb,sresults,sresults2, &
+!$omp                  oindex,deglat,dist,corrsq,nb,sresults, &
 !$omp                  wts_ensperts,pa,trpa,trpa_raw) &
 !$omp  reduction(+:t1,t2,t3,t4,t5) &
 !$omp  reduction(max:nobslocal_max) &
