@@ -95,7 +95,7 @@ use loadbal, only: numptsperproc, npts_max, &
                    indxproc, lnp_chunk, &
                    grdloc_chunk, kdtree_obs2, &
                    ensmean_chunk, anal_chunk
-use controlvec, only: ncdim, index_pres, cvars3d, cvars2d, clevels, nc3d
+use controlvec, only: ncdim, index_pres
 use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, oblnp, &
                   nobstot, nobs_conv, nobs_oz, nobs_sat,&
                   obfit_prior, obfit_post, obsprd_prior, obsprd_post,&
