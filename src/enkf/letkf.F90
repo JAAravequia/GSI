@@ -136,7 +136,7 @@ integer(i_kind) nobsl, ngrd1, nobsl2, nthreads, nb, &
                 nobslocal_min,nobslocal_max, &
                 nobslocal_minall,nobslocal_maxall
 integer(i_kind),allocatable,dimension(:) :: oindex
-real(r_single) :: deglat, dist, corrsq, oberrfact, gain, trpa, trpa_raw
+real(r_single) :: deglat, dist, corrsq, oberrfact, trpa, trpa_raw
 real(r_double) :: t1,t2,t3,t4,t5,tbegin,tend,tmin,tmax,tmean
 real(r_kind) r_nanals,r_nanalsm1
 real(r_kind) normdepart, pnge, width
@@ -691,7 +691,7 @@ return
 end subroutine letkf_update
 
 subroutine letkf_core(nobsl,hxens,hxens_orig,dep,&
-                      wts_ensmean,wts_ensperts,update_meanonly,paens,&
+                      wts_ensmean,wts_ensperts,paens,&
                       rdiaginv,rloc,nanals,neigv,getkf_inflation,denkf,getkf)
 !$$$  subprogram documentation block
 !                .      .    .
@@ -772,8 +772,6 @@ subroutine letkf_core(nobsl,hxens,hxens_orig,dep,&
 !       requires that the background ensemble used to compute covariances is
 !       the same ensemble being updated.
 !    
-!     update_meanonly - logical, if true only wts_ensmean computed (default F)
-!
 !     paens - only allocated and returned
 !       if getkf_inflation=T (and denkf=F).  In this case
 !       paens is allocated dimension (nanals,nanals) and contains posterior 
@@ -806,7 +804,7 @@ integer(i_kind) isuppz(2*nanals)
 real(r_kind) vl,vu,normfact
 integer(i_kind), allocatable, dimension(:) :: iwork
 real(r_kind), dimension(:), allocatable :: work1
-logical, intent(in) :: getkf_inflation,denkf,getkf,update_meanonly
+logical, intent(in) :: getkf_inflation,denkf,getkf
 
 if (neigv < 1) then
   print *,'neigv must be >=1 in letkf_core'
@@ -909,9 +907,6 @@ if (.not. denkf .and. getkf_inflation) then
    paens = pa/normfact**2
 endif
 deallocate(swork1)
-
-! stop here if only update to ensemble mean needed.
-if (update_meanonly) return
 
 ! compute factor to multiply with model space ensemble perturbations
 ! to compute analysis increment (for perturbation update), save in single precision.

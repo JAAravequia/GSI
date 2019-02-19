@@ -74,9 +74,6 @@
 
   character(len=500) :: filename
   character(len=7) charnanal
-  character(8),allocatable:: recname(:)
-  character(8) :: field
-  logical :: hasfield,hasps
 
   real(r_kind) :: kap,kapr,kap1,clip,qi_coef
 
@@ -489,6 +486,9 @@
   type(sigio_head) sighead
   type(sigio_data) sigdata_inc
   character(len=3) charnanal
+  character(8),allocatable:: recname(:)
+  character(8) :: field
+  logical :: hasfield
 
   real(r_kind) kap,kapr,kap1,clip
   real(nemsio_realkind), dimension(nlons*nlats) :: nems_wrk,nems_wrk2
