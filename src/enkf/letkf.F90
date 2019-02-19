@@ -87,7 +87,6 @@ module letkf
 !$$$
 
 use mpisetup
-use mpeu_util, only: getindex
 use, intrinsic :: iso_c_binding
 use omp_lib, only: omp_get_num_threads,omp_get_thread_num
 use covlocal, only:  taper, latval
