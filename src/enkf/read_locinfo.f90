@@ -38,10 +38,19 @@ subroutine read_locinfo()
       endif
       do k=1,nlevs
         read(iunit,101) hlength(k),vlength(k),tmp,tmp
-        hlength(k) = sqrt(2./0.15)*hlength(k)
-        vlength(k) = sqrt(2./0.15)*abs(vlength(k))
         ! factor of sqrt(2/0.15) to convert from scale that GSI uses
         ! to distance Gaspari-Cohn function goes to zero.
+        hlength(k) = sqrt(2./0.15)*hlength(k)
+        ! although the comments in hybrid_ensemble_isotropic.F90 suggest
+        ! the vertical localization is scaled the same way, in fact 
+        ! the sqrt(2) factor is missing, so use sqrt(1./0.15) instead.
+        ! This was validated by comparing spectra of analysis increments
+        ! from GSI EnVar and the LETKF with model space localization.
+        ! *NOTE* if model space localization is used (modelspace_vloc=.true)
+        ! the vlength values read in here are ignored and the localization is
+        ! constant with height specified using the eigenvectors read in from the 
+        ! file vlocal_eig.dat
+        vlength(k) = sqrt(1./0.15)*abs(vlength(k))
         if (nproc .eq. 0) print *,'level=',k,'localization scales (horiz,vert)=',hlength(k),vlength(k)
       end do
       close(iunit)

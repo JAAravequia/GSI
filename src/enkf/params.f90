@@ -223,6 +223,11 @@ real(r_single) modelspace_vloc_cutoff, modelspace_vloc_thresh
 ! time (analysis time YYYYMMDDHH)
 datestring = "0000000000" ! if 0000000000 will not be used.
 ! corrlength (length for horizontal localization in km)
+! this corresponding GSI parameter is s_ens_h.
+! corrlength is the distance at which the Gaspari-Cohn
+! polynomial goes to zero.  s_ens_h is the scale of a 
+! Gaussian exp(-0.5*(r/L)**2) so
+! corrlength ~ sqrt(2/0.15)*s_ens_h
 corrlengthnh = 2800
 corrlengthtr = 2800
 corrlengthsh = 2800
@@ -232,6 +237,12 @@ readin_localization = .false.
 covinflatemin = 1.0_r_single
 covinflatemax = 1.e30_r_single
 ! lnsigcutoff (length for vertical localization in ln(p))
+! **these are ignored if modelspace_vloc=.true.**
+! this corresponding GSI parameter is -s_ens_v (if s_ens_v<0)
+! lnsigcutoff is the distance at which the Gaspari-Cohn
+! polynomial goes to zero.  s_ens_v is the scale of a 
+! Gaussian exp(-(r/L)**2) so
+! lnsigcutoff ~ s_ens_v/sqrt(0.15)
 lnsigcutoffnh = 2._r_single
 lnsigcutofftr = 2._r_single
 lnsigcutoffsh = 2._r_single
@@ -398,6 +409,7 @@ if (modelspace_vloc) then
   allocate(vlocal_evecs(neigv,nlevs+1))
   if (nproc .eq. 0) then
      print *,'model-space vertical localization enabled'
+     print *,'lnsigcutoff* values read from namelist ignored!'
      print *,'neigv = ',neigv
      print *,'vertical localization cutoff distance (lnp units) =',&
             modelspace_vloc_cutoff
