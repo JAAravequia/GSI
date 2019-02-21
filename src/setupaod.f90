@@ -19,7 +19,7 @@
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !   2016-06-24  guo     - fixed the default value of obsdiags(:,:)%tail%luse to luse(i)
 !                       . removed (%dlat,%dlon) debris.
-!   2018-10-31  Wei/Martin - added VIIRS AOD in addition to MODIS AOD
+!   2019-02-21  Wei/Martin - added VIIRS AOD and ncdiag capability from Pagowski 
 !
 !  input argument list:
 !     lunin   - unit from which to read radiance (brightness temperature, tb) obs
@@ -51,13 +51,13 @@
            dplat,obsdiags,obsptr,lobsdiagsave,lobsdiag_allocated,&
            dirname,time_offset
   use obsmod, only: obs_diag,luse_obsdiag
-  use obsmod, only: dirname
   use nc_diag_write_mod, only: nc_diag_init, nc_diag_header, nc_diag_metadata, &
-       nc_diag_write, nc_diag_data2d
+       nc_diag_write, nc_diag_data2d, nc_diag_chaninfo_dim_set, nc_diag_chaninfo
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_get_dim, nc_diag_read_close
   use gsi_4dvar, only: nobs_bins,hr_obsbin
   use gridmod, only: nsig,get_ij
   use constants, only: tiny_r_kind,zero,one,three,r10
+  use constants, only: max_varname_length
   use jfunc, only: jiter,miter
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
   use chemmod, only: laeroana_gocart, l_aoderr_table, l2d_aod
@@ -72,9 +72,13 @@
   use obsmod, only: rmiss_single
   use qcmod, only: ifail_crtm_qc
   use radiance_mod, only: rad_obs_type,radiance_obstype_search
-  use guess_grids, only: nfldsig
-  use gsi_chemguess_mod, only: gsi_chemguess_bundle
+  use radiance_mod, only: n_aerosols_fwd
+  use guess_grids, only: nfldsig,hrdifsig
+  use guess_grids, only: ges_prsl,ges_prsi,ges_tsen
+  use gsi_chemguess_mod, only: gsi_chemguess_bundle, gsi_chemguess_get
   use gsi_bundlemod, only: gsi_bundlegetpointer
+  use gsi_metguess_mod, only : gsi_metguess_bundle
+  use obsmod, only: netcdf_diag, binary_diag
 
 
   implicit none
@@ -92,11 +96,13 @@
 ! Declare local parameters
   integer(i_kind),parameter:: ipchan=4
   integer(i_kind),parameter:: ireal=5
+  integer(i_kind),parameter:: iversion_aerodiag=1
 
   real(r_kind),parameter:: r1e10=1.0e10_r_kind
 
 ! Declare local variables
-  character(128) diag_aero_file
+  character(128) diag_aero_file,guess_aero_file
+  integer(i_kind) :: nvars
 
   integer(i_kind) error_status,istat
   integer(i_kind) m,jc
@@ -122,12 +128,19 @@
   real(r_kind),dimension(nchanl):: var,ratio_aoderr,aodinv
   real(r_kind),dimension(nreal+nchanl,nobs)::data_s
   real(r_kind),dimension(nsig):: prsltmp
+  real(r_kind),dimension(nsig):: qsat,rh 
   real(r_kind),dimension(nsig):: qvp,tvp
   real(r_kind),dimension(nsig+1):: prsitmp
   real(r_kind) dtsavg
   real(r_single) :: psfc
 
   integer(i_kind),dimension(nchanl):: ich,id_qc
+
+  real(r_kind), dimension(:,:), allocatable :: aerosols
+  character(len=max_varname_length), dimension(:), allocatable :: &
+        &aerosol_names 
+! hardcoded to conform with ufo from Pagowski
+  character(len=56), dimension(:), allocatable :: varnames
 
   character(10) filex
   character(12) string
@@ -147,6 +160,7 @@
 
   real(r_kind), dimension(nchanl) :: total_aod, aod_obs, aod
 
+  integer(i_kind), parameter :: n_viirs_550nm=4
   integer(i_kind) :: istyp, idbcf, ilone, ilate
   integer(i_kind) :: iqcall, ismask, nestat
   real(r_kind)    :: qcall, smask
@@ -165,6 +179,10 @@
   real(r_kind) :: aodges
   real(r_kind),dimension(:,:),pointer:: rank2=>NULL()
   integer(i_kind) ifld, istatus
+
+  ! arrays/vars for diag file output interpolation
+  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tmp3
+  real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
 
 
   ! arrays/vars to use to compute O-F statistics
@@ -219,6 +237,7 @@
      call gsi_bundlegetpointer(gsi_chemguess_bundle(1),'aod',rank2,istatus)
      if (istatus==0) then
         allocate(ges_aod(size(rank2,1),size(rank2,2),nfldsig))
+        allocate(ges_tmp3(size(rank2,1),size(rank2,2),nsig,nfldsig))
         ges_aod(:,:,1)=rank2
         do ifld=2,nfldsig
            call gsi_bundlegetpointer(gsi_chemguess_bundle(ifld),'aod',rank2,istatus)
@@ -286,35 +305,20 @@
 
 
 ! If diagnostic file requested, open unit to file and write header.
-  if (aero_diagsave) then
-     filex=obstype
-     write(string,1976) jiter
-1976 format('_',i2.2)
-     diag_aero_file= trim(dirname) // trim(filex) // '_' // trim(dplat(is)) // trim(string)
-     if(init_pass) then
-        open(4,file=trim(diag_aero_file),form='unformatted',status='unknown',position='rewind')
-     else
-        open(4,file=trim(diag_aero_file),form='unformatted',status='old',position='append')
-     endif
+  allocate(aerosols(nsig,n_aerosols_fwd),aerosol_names(n_aerosols_fwd))
+  nvars=5+n_aerosols_fwd
+  allocate(varnames(nvars))
 
-!    Initialize/write parameters for satellite diagnostic file on
-!    first outer iteration.
-     if (init_pass .and. mype==mype_diaghdr(is)) then
-        write(4) isis,dplat(is),obstype,jiter,nchanl,ianldate,ireal,ipchan,nsig,ioff0
-        write(6,*)'setupaod:  write header record for ',&
-             isis,ireal,' to file ',trim(diag_aero_file),' ',ianldate
-        do i=1,nchanl
-           n=ich(i)
-           if( n < 1 )cycle
-           varch4=error_aero(n)
-           freq4=sc(sensorindex)%frequency(i)
-           pol4=sc(sensorindex)%polarization(i)
-           wave4=sc(sensorindex)%wavenumber(i)
-           write(4)freq4,pol4,wave4,varch4,iuse_aero(n),&
-                nuchan_aero(n),ich(i)
-        end do
-     endif
-  endif
+  call gsi_chemguess_get('aerosols::3d',aerosol_names,istat)
+  
+  varnames(1:5) = (/'air_temperature','humidity_mixing_ratio',&
+        &'relative_humidity','air_pressure','air_pressure_levels'/)
+  varnames(6:) = aerosol_names
+
+  if (aero_diagsave) then
+    if (binary_diag) call init_binary_diag_
+    if (netcdf_diag) call init_netcdf_diag_
+  end if
 
   idiag=ipchan
   if (lobsdiagsave) idiag=idiag+4*miter+1
@@ -356,6 +360,8 @@
 !       Load channel data into work array.
         aod_obs = rmiss_single
         do i = 1, nchanl
+!fix channel issue for VIIRS except channel 4
+           if (obstype == 'viirs_aod' .and. i /= n_viirs_550nm) cycle 
            aod_obs(i) = data_s(i+nreal,n)
         end do
 
@@ -378,6 +384,7 @@
            end select
            else if ( obstype == 'viirs_aod' ) then
 
+! NOTE: the below select case is not the same as setupaod from M. Pagowski
               nestat = nint(qcall)+nint(smask)*10
               select case (nestat)
                  case( 2 )     ! over water surface, medium-quality
@@ -393,13 +400,37 @@
                  case( 23 )     ! over bright land surface, high quality
                     tnoise = 0.0550472_r_kind+ 0.299558_r_kind*aod_obs
                end select
-
-            end if
+           else
+              if (mype == 0) then
+                 write(6,*),'unknown obstype = ',obstype
+                 call stop2(283)
+              endif
+           end if
         end if
  
 !       Interpolate model fields to observation location, call crtm and create jacobians
         if (l2d_aod) then
-          call tintrp2a11(ges_aod,aodges,slats,slons,dtime,1,mype,nfldsig)
+          ! interpolate the pre-generated AOD field to the observation location
+          call tintrp2a11(ges_aod,aodges,slats,slons,dtime,hrdifsig,mype,nfldsig)
+          ! NOTE the diag routines output arrays of T,q,RH,P, etc, at the
+          ! observation location, so let's grab the guess and interpolate
+          ! temperature
+          call tintrp2a1(ges_tsen,tvp,slats,slons,dtime,hrdifsig,nsig,mype,nfldsig)
+          ! water vapor
+          call gsi_bundlegetpointer(gsi_metguess_bundle(1),'q',rank3,istatus)
+          if (istatus==0) then
+            ges_tmp3(:,:,:,1)=rank3
+            do ifld=2,nfldsig
+              call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),'q',rank3,istatus)
+              ges_tmp3(:,:,:,ifld)=rank3
+            enddo
+          endif
+          call tintrp2a1(ges_tmp3,qvp,slats,slons,dtime,hrdifsig,nsig,mype,nfldsig)
+          ! layer pressure
+          call tintrp2a1(ges_prsl,prsltmp,slats,slons,dtime,hrdifsig,nsig,mype,nfldsig)
+          ! level pressure
+          call tintrp2a1(ges_prsi,prsitmp,slats,slons,dtime,hrdifsig,nsig+1,mype,nfldsig)
+          !if (allocated(ges_tmp3)) deallocate(ges_tmp3) 
         else
           call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, &
                tvp,qvp,clw_guess,prsltmp,prsitmp, &
@@ -407,6 +438,11 @@
                tsim,emissivity,ptau5,ts,emissivity_k, &
                temp,wmix,jacobian,error_status,layer_od=layer_od,jacobian_aero=jacobian_aero)
         end if
+        call genqsat(qsat,tvp,prsltmp,1,1,nsig,.true.,0)
+        rh = qvp/qsat
+        ! interpolate aerosols at observation locations for diag files here
+        call aero_guess_at_obs_locations(dtime,data_s(:,n),&
+             &nchanl,nreal,nsig, n_aerosols_fwd, aerosols, aerosol_names)
 
 
 ! If the CRTM returns an error flag, do not assimilate any channels for this ob
@@ -639,68 +675,8 @@
      if(in_curbin) then
 !       Write diagnostics to output file.
         if (aero_diagsave .and. luse(n)) then
-           diagbuf(1)  = cenlat                         ! observation latitude (degrees)
-           diagbuf(2)  = cenlon                         ! observation longitude (degrees)
-           diagbuf(3)  = dtime-time_offset              ! observation time (hours relative to analysis time)
-           diagbuf(4)  = pangs                          ! solar zenith angle (degrees)
-           diagbuf(5)  = data_s(isazi_ang,n)            ! solar azimuth angle (degrees)
- 
-           do i=1,nchanl
-              diagbufchan(1,i)=aod_obs(i)      ! observed brightness temperature (K)
-!              diagbufchan(2,i)=total_aod(i)   ! observed - simulated Tb with no bias corrrection (K) - this should be innovation
-              diagbufchan(2,i)=aod(i)          ! innovation
-              errinv = sqrt(varinv(i))
-              diagbufchan(3,i)=errinv          ! inverse observation error
-              useflag=one
-              if (iuse_aero(ich(i)) < 1) useflag=-one
-              diagbufchan(4,i)= id_qc(i)*useflag! quality control mark or event indicator
-           end do
-
-           if (lobsdiagsave) then
-              if (l_may_be_passive) then
-                 do ii=1,nchanl
-                    if (.not.associated(obsptr)) then
-                       write(6,*)'setupaod: error obsptr'
-                       call stop2(280)
-                    end if
-                    if (obsptr%indxglb/=(ioid(n)-1)*nchanl+ii) then
-                       write(6,*)'setupaod: error writing diagnostics'
-                       call stop2(281)
-                    end if
-
-                    ioff=ioff0
-                    do jj=1,miter
-                       ioff=ioff+1
-                       if (obsptr%muse(jj)) then
-                          diagbufchan(ioff,ii) = one
-                       else
-                          diagbufchan(ioff,ii) = -one
-                       endif
-                    enddo
-                    do jj=1,miter+1
-                       ioff=ioff+1
-                       diagbufchan(ioff,ii) = obsptr%nldepart(jj)
-                    enddo
-                    do jj=1,miter
-                       ioff=ioff+1
-                       diagbufchan(ioff,ii) = obsptr%tldepart(jj)
-                    enddo
-                    do jj=1,miter
-                       ioff=ioff+1
-                       diagbufchan(ioff,ii) = obsptr%obssen(jj)
-                    enddo
- 
-                    obsptr => obsptr%next
-                 enddo
-              else
-                 ioff=ioff0
-                 diagbufchan(ioff+1:ioff+4*miter+1,1:nchanl) = zero
-              endif
-           endif
-
-           psfc=prsitmp(1)*r10 ! convert to hPa
-           write(4) psfc,diagbuf,diagbufchan
-
+          if (binary_diag) call contents_binary_diag_
+          if (netcdf_diag) call contents_netcdf_diag_
         end if
      endif ! (in_curbin)
 
@@ -711,15 +687,17 @@
 
 ! compute O-F stats and write to output file
 ! get number to use for mean and RMSE
-  print *,'jiter,nobs,mype',jiter,nobs,mype
-  do n = 1,nobs
-    do i =1,nchanl
-      if ( of_array(n,i) /= 0) then
-        of_count(i) = of_count(i) + 1
-      end if
-        if (i==4) write(24000+mype,'(3i6,4f8.3)') jiter,mype,n,of_array(n,i),obs_array(n,i),data_s(6,n),data_s(5,n)
-    end do
-  end do
+! CRM - I think this has been replaced by diag files but keeping
+!       this here but commented out for now
+!  print *,'jiter,nobs,mype',jiter,nobs,mype
+!  do n = 1,nobs
+!    do i =1,nchanl
+!      if ( of_array(n,i) /= 0) then
+!        of_count(i) = of_count(i) + 1
+!      end if
+!        if (i==4) write(24000+mype,'(3i6,4f8.3)') jiter,mype,n,of_array(n,i),obs_array(n,i),data_s(6,n),data_s(5,n)
+!    end do
+!  end do
 ! calculate stats
   !do i = 1,nchanl
   !  of_min(i) = minval(of_array(:,i))  
@@ -737,7 +715,8 @@
 
   if (aero_diagsave) then
      call dtime_show(myname,'diagsave:aero',i_aero_ob_type)
-     close(4)
+     if (binary_diag) call final_binary_diag_
+     if (netcdf_diag) call nc_diag_write
   endif
 
   call destroy_crtm
@@ -747,12 +726,287 @@
   return
 
 contains
+  subroutine init_binary_diag_
+
+    filex=obstype
+    write(string,1976) jiter
+1976 format('_',i2.2)
+    diag_aero_file= trim(dirname) // trim(filex) // '_' // trim(dplat(is)) // trim(string)
+     guess_aero_file= TRIM(dirname) // TRIM(filex) // '_' // TRIM(dplat(is)) // '_vars' // TRIM(string)
+
+     if(init_pass) then
+        open(4,file=trim(diag_aero_file),form='unformatted',status='unknown',position='rewind')
+        open(41,file=trim(guess_aero_file),form='unformatted',status='unknown',position='rewind')
+
+     else
+        open(4,file=trim(diag_aero_file),form='unformatted',status='old',position='append')
+
+        open(41,file=trim(guess_aero_file),form='unformatted',status='old',position='append')
+
+     endif
+
+!    Initialize/write parameters for satellite diagnostic file on
+!    first outer iteration.
+    if (init_pass .and. mype==mype_diaghdr(is)) then
+       write(4)isis,dplat(is),obstype,jiter,nchanl,ianldate,ireal,ipchan,nsig,ioff0
+
+       WRITE(41)nsig,nvars,n_aerosols_fwd,ianldate
+       WRITE(41)varnames
+
+       write(6,*)'setupaod:  write header record for ',&
+            isis,ireal,' to file ',trim(diag_aero_file),' ',ianldate
+       do i=1,nchanl
+          n=ich(i)
+          if( n < 1 )cycle
+          varch4=error_aero(n)
+          freq4=sc(sensorindex)%frequency(i)
+          pol4=sc(sensorindex)%polarization(i)
+          wave4=sc(sensorindex)%wavenumber(i)
+          write(4)freq4,pol4,wave4,varch4,iuse_aero(n),&
+               nuchan_aero(n),ich(i)
+       end do
+    endif
+  end subroutine init_binary_diag_
+
   subroutine init_netcdf_diag_
+
+    CHARACTER(len=80) string
+
+    filex=obstype
+    WRITE(string,1976) jiter
+1976 FORMAT('_',i2.2)
+    diag_aero_file= TRIM(dirname) // TRIM(filex) // '_' // TRIM(dplat(is)) // TRIM(string) // '.nc4'
+    IF(init_pass .AND. nobs > 0) THEN
+       CALL nc_diag_init(diag_aero_file)
+!       call nc_diag_chaninfo_dim_set(nchanl)
+       call nc_diag_chaninfo_dim_set(1)
+    endif
+
+    IF (init_pass) THEN
+       call nc_diag_header("Satellite_Sensor",     isis           )
+       call nc_diag_header("Satellite",            dplat(is)      )
+       call nc_diag_header("Observation_type",     "aod"       )
+       call nc_diag_header("Number_of_channels",   1    )
+!       call nc_diag_header("Number_of_channels",   nchanl    )
+       call nc_diag_header("date_time",            ianldate       )
+
+       DO i=1,nchanl
+          n=ich(i)
+          if( iuse_aero(n) < 0 )cycle
+          call nc_diag_chaninfo("frequency",sngl(sc(sensorindex)%frequency(i))    )
+          call nc_diag_chaninfo("polarization",sc(sensorindex)%polarization(i) )
+          call nc_diag_chaninfo("wavenumber",sngl(sc(sensorindex)%wavenumber(i))   )
+          call nc_diag_chaninfo("use_flag",        iuse_aero(n))
+          call nc_diag_chaninfo("sensor_chan",     nuchan_aero(n))
+       END DO
+    ENDIF
   end subroutine init_netcdf_diag_
+
   subroutine contents_binary_diag_
+
+    diagbuf(1)  = cenlat                         ! observation latitude (degrees)
+    diagbuf(2)  = cenlon                         ! observation longitude (degrees)
+
+    diagbuf(3)  = dtime!-time_offset              ! observation time (hours relative to analysis time)
+    diagbuf(4)  = pangs                          ! solar zenith angle (degrees)
+    diagbuf(5)  = data_s(isazi_ang,n)            ! solar azimuth angle (degrees)
+
+    do i=1,nchanl
+       diagbufchan(1,i)=aod_obs(i)      ! observed brightness temperature (K)
+!              diagbufchan(2,i)=total_aod(i)   ! observed - simulated Tb with no
+!              bias corrrection (K) - this should be innovation
+       diagbufchan(2,i)=aod(i)          ! innovation
+       errinv = sqrt(varinv(i))
+       diagbufchan(3,i)=errinv          ! inverse observation error
+       useflag=one
+       if (iuse_aero(ich(i)) < 1) useflag=-one
+       diagbufchan(4,i)= id_qc(i)*useflag! quality control mark or event indicator
+    end do
+
+    if (lobsdiagsave) then
+       if (l_may_be_passive) then
+          do ii=1,nchanl
+             if (.not.associated(obsptr)) then
+                write(6,*)'setupaod: error obsptr'
+                call stop2(280)
+             end if
+             if (obsptr%indxglb/=(ioid(n)-1)*nchanl+ii) then
+                write(6,*)'setupaod: error writing diagnostics'
+                call stop2(281)
+             end if
+
+             ioff=ioff0
+             do jj=1,miter
+                ioff=ioff+1
+                if (obsptr%muse(jj)) then
+                   diagbufchan(ioff,ii) = one
+                else
+                   diagbufchan(ioff,ii) = -one
+                endif
+             enddo
+             do jj=1,miter+1
+                ioff=ioff+1
+                diagbufchan(ioff,ii) = obsptr%nldepart(jj)
+             enddo
+             do jj=1,miter
+                ioff=ioff+1
+                diagbufchan(ioff,ii) = obsptr%tldepart(jj)
+             enddo
+             do jj=1,miter
+                ioff=ioff+1
+                diagbufchan(ioff,ii) = obsptr%obssen(jj)
+             enddo
+
+             obsptr => obsptr%next
+          enddo
+       else
+          ioff=ioff0
+          diagbufchan(ioff+1:ioff+4*miter+1,1:nchanl) = zero
+       endif
+    endif
+
+    WRITE(4) diagbuf,diagbufchan
+    WRITE(41)REAL(tvp,r_single),REAL(qvp/(one-qvp),r_single),&
+         &REAL(rh,r_single),&
+         &REAL(prsltmp,r_single),REAL(prsitmp,r_single)
+    WRITE(41)REAL(aerosols,r_single)
+
   end subroutine contents_binary_diag_
+
   subroutine contents_netcdf_diag_
+
 ! Observation class
-  character(7),parameter     :: obsclass = '    aod'
+    character(7),parameter     :: obsclass = '    aod'
+    character(128) :: fieldname
+
+    INTEGER(i_kind) :: iabsorb, iaero,k,l
+    REAL(r_single), DIMENSION(nsig+1) :: tmp
+    REAL(r_kind) :: zsfc
+
+    REAL(r_single),PARAMETER::  missing = -9.99e9_r_single
+
+    DO i=1,nchanl
+
+       l=ich(i)
+
+       IF( iuse_aero(l) < 0 )CYCLE
+
+       CALL nc_diag_metadata("Channel_Index",         i)
+       call nc_diag_metadata("Observation_Class",     obsclass)
+       call nc_diag_metadata("Latitude",              sngl(cenlat)) ! observation latitude (degrees)
+       call nc_diag_metadata("Longitude",             sngl(cenlon)) ! observation longitude (degrees)
+
+       call nc_diag_metadata("Obs_Time",              sngl(dtime))!-time_offset)) ! observation time (hours relative to analysis time)
+
+       call nc_diag_metadata("Sol_Zenith_Angle",      sngl(pangs)) ! solar zenith angle (degrees)
+       call nc_diag_metadata("Sol_Azimuth_Angle",     sngl(data_s(isazi_ang,n))) ! solar azimuth angle (degrees)
+
+       CALL nc_diag_metadata("Surface_type", nint(data_s(istyp,n)))
+       CALL nc_diag_metadata("MODIS_deep_blue_flag", nint(dbcf) )
+
+       CALL nc_diag_metadata("Observation", sngl(diagbufchan(1,i))  )     ! observed aod
+       CALL nc_diag_metadata("Obs_Minus_Forecast_adjusted",&
+            &sngl(diagbufchan(2,i)))
+       CALL nc_diag_metadata("Obs_Minus_Forecast_unadjusted",&
+            &sngl(diagbufchan(2,i))  )     ! observed - simulated aod with no bias correction - no bias corr for noe
+
+       IF (diagbufchan(3,i) > tiny_r_kind) THEN
+          tmp(1)=1./diagbufchan(3,i)
+       ELSE
+          tmp(1)=missing
+       ENDIF
+
+       CALL nc_diag_metadata("Observation_Error",tmp(1))
+
+       CALL nc_diag_metadata("QC_Flag", sngl(diagbufchan(4,i))  )          !quality control mark or event indicator
+
+       tmp(1)=get_zsfc()
+
+       CALL nc_diag_metadata("sfc_height",tmp(1)) ! height in meters
+
+       DO k=1,nsig
+          tmp(k)=tvp(nsig-k+1)
+       ENDDO
+       CALL nc_diag_data2d("air_temperature", tmp(1:nsig))  ! K 
+
+       DO k=1,nsig
+          tmp(k)=1000_r_single*qvp(nsig-k+1)/(1_r_kind-qvp(nsig-k+1))
+       ENDDO
+       CALL nc_diag_data2d("humidity_mixing_ratio", tmp(1:nsig))  ! g/kg  
+
+       DO k=1,nsig
+          tmp(k)=rh(nsig-k+1)
+       ENDDO
+       CALL nc_diag_data2d("relative_humidity", tmp(1:nsig))  ! 0-1
+
+       DO k=1,nsig
+          tmp(k)=10_r_single*prsltmp(nsig-k+1)
+       ENDDO
+       CALL nc_diag_data2d("air_pressure", tmp(1:nsig))  ! hPa
+
+       DO k=1,nsig+1
+          tmp(k)=10_r_single*prsitmp(nsig-k+2)
+       ENDDO
+       CALL nc_diag_data2d("air_pressure_levels", tmp(1:nsig+1))  ! hPa
+
+       DO iaero = 1, n_aerosols_fwd
+          WRITE (fieldname, "(A,I0.2)") aerosol_names(iaero)
+          DO k=1,nsig
+             tmp(k)=aerosols(nsig-k+1,iaero)
+          ENDDO
+          CALL nc_diag_data2d(TRIM(fieldname), tmp(1:nsig)) !mixing ratios in ug/kg
+       ENDDO
+
+    ENDDO
+
   end subroutine contents_netcdf_diag_
+
+subroutine final_binary_diag_
+    close(4)
+    close(41)
+  end subroutine final_binary_diag_
+
+  FUNCTION get_zsfc() RESULT(zsfc)
+
+    USE gsi_bundlemod, ONLY : gsi_bundlegetpointer
+    USE gsi_metguess_mod, ONLY : gsi_metguess_get,gsi_metguess_bundle
+    USE guess_grids, ONLY: ntguessig,nfldsig
+
+    REAL(r_kind) :: zsfc
+    REAL(r_kind),DIMENSION(:,:  ),POINTER:: rank2
+    CHARACTER(len=5) :: varname
+    INTEGER(i_kind) :: istatus,ifld
+    REAL(r_kind),ALLOCATABLE,DIMENSION(:,:,:  ) :: ges_z
+
+    varname='z'
+
+    CALL gsi_bundlegetpointer(gsi_metguess_bundle(1),TRIM(varname)&
+         &,rank2,istatus)
+
+    IF (istatus==0) THEN
+
+       IF(ALLOCATED(ges_z))THEN
+          WRITE(6,*) TRIM(myname), ': ', TRIM(varname), ' already&
+               & incorrectly allocated '
+          CALL stop2(111)
+       ENDIF
+
+       ALLOCATE(ges_z(SIZE(rank2,1),SIZE(rank2,2),nfldsig))
+       ges_z(:,:,1)=rank2
+       DO ifld=2,nfldsig
+          CALL gsi_bundlegetpointer(gsi_metguess_bundle(ifld)&
+               &,TRIM(varname),rank2,istatus)
+          ges_z(:,:,ifld)=rank2
+       ENDDO
+
+       CALL intrp2a11(ges_z(1,1,ntguessig),zsfc,slats,slons,mype)
+
+    ELSE
+       WRITE(6,*) TRIM(myname),': ', TRIM(varname), ' not found in&
+            & met bundle, ier= ',istatus
+       CALL stop2(112)
+    ENDIF
+
+  END FUNCTION get_zsfc
+
 end subroutine setupaod
