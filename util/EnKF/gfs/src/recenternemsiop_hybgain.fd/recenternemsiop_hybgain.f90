@@ -1,11 +1,11 @@
 program recenternemsiop_hybgain
 !$$$  main program documentation block
 !
-! program:  recenternemsiop               recenter
+! program:  recenternemsiop_hybgain               recenter
 !
 ! prgmmr: whitaker         org: esrl/psd               date: 2009-02-23
 !
-! abstract:  Recentersio ensemble analysis files about 
+! abstract:  Recenter ensemble analysis files about new
 !            mean, computed from blended 3DVar and EnKF increments.
 !
 ! program history log:
