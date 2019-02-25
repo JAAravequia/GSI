@@ -55,6 +55,9 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !   2016-06-24  guo     - fixed the default value of obsdiags(:,:)%tail%luse to luse(i)
 !                       . removed (%dlat,%dlon) debris.
+!   2016-09-23 Johnson, Y. Wang, X. Wang - write observation dependent horizontal and vertical
+!                                          localization scales into diag file,
+!                                          POC: xuguang.wang@ou.edu
 !   2016-12-09  mccarty - add netcdf_diag capability
 !
 !   input argument list:
@@ -237,7 +240,7 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! If requested, save select data for output to diagnostic file
   if(conv_diagsave)then
      nchar=1
-     ioff0=20
+     ioff0=20+2
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (save_jacobian) then
@@ -713,6 +716,8 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(18,ii) = ddiff              ! obs-ges used in analysis (kg/m**2)
         rdiagbuf(19,ii) = dpw-pwges          ! obs-ges w/o bias correction (kg/m**2) (future slot)
         rdiagbuf(20,ii) = 1.e+10_r_single    ! ensemble ges spread (filled in by EnKF)
+        rdiagbuf(21,ii) = data(17,i)
+        rdiagbuf(22,ii) = data(18,i)
 
         ioff=ioff0
         if (lobsdiagsave) then
@@ -775,6 +780,10 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            call nc_diag_metadata("Observation",                   sngl(dpw)               )
            call nc_diag_metadata("Obs_Minus_Forecast_adjusted",   sngl(ddiff)             )
            call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", sngl(dpw-pwges)         )
+
+           call nc_diag_metadata("Horizontal_local",  data(17,i)                          )
+           call nc_diag_metadata("Vertical_local",    data(18,i)                          )
+
            if (lobsdiagsave) then
               do jj=1,miter
                  if (obsdiags(i_pw_ob_type,ibin)%tail%muse(jj)) then

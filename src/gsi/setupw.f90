@@ -160,6 +160,9 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !   2016-06-24  guo     - fixed the default value of obsdiags(:,:)%tail%luse to luse(i)
 !                       . removed (%dlat,%dlon) debris.
+!   2016-09-23 Johnson, Y. Wang, X. Wang - write observation dependent horizontal and vertical
+!                                          localization scales into diag file,
+!                                          POC: xuguang.wang@ou.edu
 !   2016-11-29  shlyaeva - save linearized H(x) for EnKF
 !   2016-12-09  mccarty - add netcdf_diag capability
 !   2016-12-13  pondeca - add Tyndall & Horel QC for mesonet winds (WAF 2013, Vol. 8, pg. 285) to GSI's 2dvar option
@@ -318,8 +321,8 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   isprvd=23   ! index of observation subprovider
   icat=24     ! index of data level category
   ijb=25      ! index of non linear qc parameter
-  iptrbu=26   ! index of u perturbation
-  iptrbv=27   ! index of v perturbation
+  iptrbu=28   ! index of u perturbation
+  iptrbv=29   ! index of v perturbation
 
   mm1=mype+1
   scale=one
@@ -335,7 +338,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=25
+     ioff0=25+2
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+7*miter+2
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
@@ -1611,6 +1614,8 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(23,ii) = factw            ! 10m wind reduction factor
         rdiagbuf(24,ii) = 1.e+10_r_single  ! u spread (filled in by EnKF)
         rdiagbuf(25,ii) = 1.e+10_r_single  ! v spread (filled in by EnKF)
+        rdiagbuf(26,ii) = data(26,i)
+        rdiagbuf(27,ii) = data(27,i)
 
         ioff=ioff0
         if (lobsdiagsave) then
@@ -1719,6 +1724,9 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               call nc_diag_metadata("v_Obs_Minus_Forecast_adjusted",              sngl(dvdiff_e)        )
               call nc_diag_metadata("v_Obs_Minus_Forecast_unadjusted",            sngl(vob_e-vges_e)    )
            endif
+
+           call nc_diag_metadata("Horizontal_local",  data(26,i) )
+           call nc_diag_metadata("Vertical_local",    data(27,i) )
 
            if (lobsdiagsave) then
               do jj=1,miter

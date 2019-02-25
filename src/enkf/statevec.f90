@@ -57,6 +57,11 @@ character(len=max_varname_length), allocatable, dimension(:), public :: svars3d
 character(len=max_varname_length), allocatable, dimension(:), public :: svars2d
 integer(i_kind), allocatable, dimension(:), public                   :: slevels
 
+integer(i_kind), public :: nc2d, nc3d, ndim
+character(len=max_varname_length), allocatable, dimension(:), public :: cvars3d
+character(len=max_varname_length), allocatable, dimension(:), public :: cvars2d
+integer(i_kind), allocatable, dimension(:), public:: index_pres
+
 contains
 
 subroutine init_statevec()
