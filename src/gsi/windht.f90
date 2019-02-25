@@ -37,8 +37,8 @@ module windht
   !variable declarations across routines go here
   logical listexist
   logical fexist
-  logical mwlistexist
-  logical htlistexist
+  !logical mwlistexist
+  !logical htlistexist
   !integer(i_kind),parameter::pmax=500
   !integer(i_kind),parameter::smax=100000
   integer(i_kind),parameter::nmax=60000_i_kind
@@ -204,6 +204,8 @@ contains
     filename='provider_windheight'
     inquire(file=trim(filename),exist=listexist)
     if(listexist) then
+       !allocate()
+       !allocate()
        call readin_windht_list(filename,fexist,numprovs)
        print*, "Second chance!  Number of provider/subprovider combinations=",numprovs
     else
@@ -273,10 +275,12 @@ contains
     !abstract: Destroy wind height arrays previously allocated
     
     implicit none
-    
-    deallocate(provlist)
-    !deallocate(csubprovs)
-    deallocate(heightlist)
+
+    if (listexist) then
+       deallocate(provlist)
+       !deallocate(csubprovs)
+       deallocate(heightlist)
+    endif
     
   end subroutine destroy_windht_lists
 
