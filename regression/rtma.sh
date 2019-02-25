@@ -141,6 +141,7 @@ t_day_rejectlist=$fixgsi/rtma_t_day_rejectlist
 t_night_rejectlist=$fixgsi/rtma_t_night_rejectlist
 q_day_rejectlist=$fixgsi/rtma_q_day_rejectlist
 q_night_rejectlist=$fixgsi/rtma_q_night_rejectlist
+provider_windht=$fixgsi/urma2p5_provider_windht #LEVINE
 
 if [[ "$endianness" = "Little_Endian" ]]; then
    random_flips=/scratch2/portfolios/NCEPDEV/meso/save/Manuel.Pondeca/folks/for_patrick/15Aug2012/hresext_rtma/fix.rtma/fixgsi_200609/normalization/random_flips_le
@@ -220,6 +221,7 @@ $ncp $t_day_rejectlist   ./t_day_rejectlist
 $ncp $t_night_rejectlist ./t_night_rejectlist
 $ncp $q_day_rejectlist   ./q_day_rejectlist
 $ncp $q_night_rejectlist ./q_night_rejectlist
+$ncp $provider_windht    ./provider_windheight #LEVINE
 
 $ncp $random_flips        ./random_flips
 
@@ -291,7 +293,7 @@ cd $tmpdir
 echo "run gsi now"
 eval "$APRUN $tmpdir/gsi.x > stdout 2>&1"
 rc=$?
-exit $rc
+#exit $rc #LEVINE remove to allow running of diagnostic files
 
 # Save output
 mkdir -p $savdir
@@ -388,7 +390,7 @@ esac
    done
 done
 
-exit
+exit $rc LEVINE modify to print diagnostic output
 # Standalone script used to pass namelist updates to the regression tests.
 
 # First, generate new variable to hole the first 6 characters of the experiment.
