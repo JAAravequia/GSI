@@ -569,7 +569,7 @@ contains
 
 ! !USES:
 
-    use correlated_obsmod, only: corr_ob_initialize,corr_oberr_qc
+    use correlated_obsmod, only: corr_ob_initialize
     use obsmod, only: iout_rad
     use constants, only: zero,one,zero_quad
     use mpimod, only: mype
@@ -1120,10 +1120,7 @@ contains
 
 !   Initialize observation error covariance for 
 !   instruments we account for inter-channel correlations
-    if (present(miter)) then
-       call corr_ob_initialize(miter)
-       if (miter>0)  call corr_oberr_qc(jpch_rad,iuse_rad,nusis,varch)
-    end if
+    if (present(miter)) call corr_ob_initialize(miter)
 
 !   Close unit for runtime output.  Return to calling routine
     if(mype==mype_rad)close(iout_rad)
@@ -2146,20 +2143,17 @@ END subroutine dec2bin
    iinstr=-1
    if(isfctype==0)then
       covtype = trim(isis)//':sea'
-      iinstr=getindex(idnames,trim(covtype))
    else if(isfctype==1)then
       covtype = trim(isis)//':land'
-      iinstr=getindex(idnames,trim(covtype))
    else if(isfctype==2)then
       covtype = trim(isis)//':ice'
-      iinstr=getindex(idnames,trim(covtype))
    else if(isfctype==3)then
       covtype = trim(isis)//':snow'
-      iinstr=getindex(idnames,trim(covtype))
    else if(isfctype==4)then
       covtype = trim(isis)//':mixed'
-      iinstr=getindex(idnames,trim(covtype))
    endif
+   iinstr=getindex(idnames,trim(covtype))
+
    if(iinstr<0) return  ! do not use the correlated errors
 
    if(.not.corr_ob_amiset(GSI_BundleErrorCov(iinstr))) then

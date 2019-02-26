@@ -129,7 +129,7 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
 ! Declare local variables
   integer(i_kind) istatus
   integer(i_kind) nn,n,ic,k,nx,j1,j2,j3,j4,kk, mm, ic1
-  real(r_kind) val2,val,w1,w2,w3,w4
+  real(r_kind) val2,val,w1,w2,w3,w4,Aval,Aval2
   real(r_kind),dimension(nsigradjac):: tdir,rdir
   real(r_kind) cg_rad,wgross,wnotgross
   integer(i_kind),dimension(nsig) :: j1n,j2n,j3n,j4n
@@ -275,12 +275,16 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
 !             contribution from bias corection
               ic=radptr%icx(nn)
               if (radptr%use_corr_obs) then  
-                 do mm=1,radptr%nchan 
+                 do mm=1,radptr%nchan
+                    Aval=0.0_r_kind
+                    Aval2=0.0_r_kind 
                     do nx=1,npred
                        ic1=radptr%icx(mm)
-                       val2=val2+spred(nx,ic1)*radptr%rsqrtinv(mm,nn)*radptr%pred(nx,mm)
-                       val=val+rpred(nx,ic1)*radptr%rsqrtinv(mm,nn)*radptr%pred(nx,mm)
+                       Aval2=Aval2+spred(nx,ic1)*radptr%pred(nx,mm)
+                       Aval=Aval+rpred(nx,ic1)*radptr%pred(nx,mm
                     end do
+                    val2=val2+Aval2*radptr%rsqrtinv(mm,nn)
+                    val=val+Aval*radptr%rsqrtinv(mm,nn)
                  end do
               else
                  do nx=1,npred

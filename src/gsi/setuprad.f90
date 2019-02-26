@@ -262,6 +262,7 @@
   use radinfo, only: radinfo_adjust_jacobian
   use radiance_mod, only: rad_obs_type,radiance_obstype_search,radiance_ex_obserr,radiance_ex_biascor
   use sparsearr, only: sparr2, new, writearray, size, fullarray
+  use correlated_obsmod, only: corr_oberr_qc
 
   implicit none
 
@@ -356,6 +357,7 @@
   real(r_kind) :: clw_guess,clw_guess_retrieval
 ! real(r_kind) :: predchan6_save   
 
+  real(r_kind),dimension(jpch_rad)::varch_sea,varch_land,varch_ice,varch_snow,varch_mixed
   integer(i_kind),dimension(nchanl):: ich,id_qc,ich_diag
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
@@ -463,6 +465,14 @@
   l_may_be_passive = .false.
   toss = .true.
   jc=0
+  do j=1,jpch_rad
+     varch_sea(j)=varch(j)
+     varch_land(j)=varch(j)
+     varch_ice(j)=varch(j)
+     varch_snow(j)=varch(j)
+     varch_mixed(j)=varch(j)
+  end do
+  if (miter>0) call corr_oberr_qc(jpch_rad,iuse_rad,nusis,varch_sea,varch_land,varch_ice,varch_snow,varch_mixed)
 
   do j=1,jpch_rad
      if(isis == nusis(j))then 
@@ -1084,6 +1094,31 @@
 !          if (radmod%ex_obserr=='ex_obserr2') &  ! comment out for now, waiting for more tests
 !             call radiance_ex_obserr(radmod,nchanl,cldeff_obs,cldeff_fg,tnoise,tnoise_cld,error0)
         end if
+        if(sea) then
+           do i=1,nchanl
+              tnoise(i)=varch_sea(ich(i))
+           enddo
+        else if(land) then
+           do i=1,nchanl
+              tnoise(i)=varch_land(ich(i))
+           enddo
+        else if(ice) then
+           do i=1,nchanl
+              tnoise(i)=varch_ice(ich(i))
+           enddo
+        else if(snow) then
+           do i=1,nchanl
+              tnoise(i)=varch_snow(ich(i))
+           enddo
+        else if(mixed) then
+           do i=1,nchanl
+              tnoise(i)=varch_mixed(ich(i))
+           enddo
+        endif
+           do i=1,nchanl
+             error0(i) = tnoise(i)
+             errf0(i) = error0(i)
+           end do
 
         do i=1,nchanl
            mm=ich(i)
