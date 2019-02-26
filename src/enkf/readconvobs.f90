@@ -1045,7 +1045,9 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
        endif
 
        ! special handling for error limits for GPS bend angle
-       if (obtype == 'gps' .and. rdiagbuf(20,1)==1) errorlimit2=errorlimit2_bnd
+       if (obtype == 'gps') then
+          if (rdiagbuf(20,1)==1) errorlimit2=errorlimit2_bnd
+       endif
 
        do n=1,ii
           nobdiag = nobdiag + 1

@@ -148,7 +148,7 @@ real(r_single),allocatable,dimension(:,:,:) :: ens_tmp
 real(r_single),allocatable,dimension(:,:) :: wts_ensperts,pa
 real(r_single),allocatable,dimension(:) :: dfs,wts_ensmean
 real(r_kind),allocatable,dimension(:) :: rdiag,rloc,statesprd_prior
-real(r_single),allocatable,dimension(:) :: dep,kfgain
+real(r_single),allocatable,dimension(:) :: dep!,kfgain
 ! kdtree stuff
 type(kdtree2_result),dimension(:),allocatable :: sresults
 integer(i_kind), dimension(:), allocatable :: indxassim, indxob
