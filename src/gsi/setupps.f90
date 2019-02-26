@@ -305,8 +305,8 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         isubtype=icsubtype(ikx)
 !  reduce observation error for buoy surface pressure observations
         if( itype ==180 .and. isubtype == 0) then
-           data(ier2,i)=data(ier2,i)*0.7_r_kind
-           data(ier,i)=data(ier,i)*0.7_r_kind
+!mhu           data(ier2,i)=data(ier2,i)*0.7_r_kind
+!mhu           data(ier,i)=data(ier,i)*0.7_r_kind
         endif
         error=data(ier2,i)
         dlon=data(ilon,i)

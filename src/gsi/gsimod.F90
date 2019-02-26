@@ -18,7 +18,7 @@
      time_window,perturb_obs,perturb_fact,sfcmodel,destroy_obsmod_vars,dsis,&
      dtbduv_on,time_window_max,offtime_data,init_directories,oberror_tune,ext_sonde, &
      blacklst,init_obsmod_vars,lobsdiagsave,lobskeep,lobserver,hilbert_curve,&
-     lread_obs_save,lread_obs_skip,obs_dep_loc
+     lread_obs_save,lread_obs_skip,obs_dep_loc,time_window_rad
 
   use obsmod, only: doradaroneob,oneoblat,oneoblon,oneobheight,oneobvalue,oneobddiff,oneobradid,&
      radar_no_thinning,ens_hx_dbz_cut,static_gsi_nopcp_dbz,rmesh_dbz,&
@@ -135,7 +135,7 @@
                             iclean_hydro_withRef,iclean_hydro_withRef_allcol, &
                             i_use_2mq4b,i_use_2mt4b,i_gsdcldanal_type,i_gsdsfc_uselist, &
                             i_lightpcp,i_sfct_gross,l_use_hydroretrieval_all,l_numconc,l_closeobs,&
-                            i_coastline,i_gsdqc
+                            i_coastline,i_gsdqc,qv_max_inc,ioption,l_precip_clear_only,l_fog_off
   use gsi_metguess_mod, only: gsi_metguess_init,gsi_metguess_final
   use gsi_chemguess_mod, only: gsi_chemguess_init,gsi_chemguess_final
   use tcv_mod, only: init_tcps_errvals,tcp_refps,tcp_width,tcp_ermin,tcp_ermax
@@ -375,6 +375,7 @@
 !  01-04-2018 Apodaca   add diag_light and lightinfo for GOES/GLM lightning
 !                           data assimilation
 !  08-25-2018 Collard   Introduce bias_zero_start
+!  09-12-2018 Ladwig    added option l_precip_clear_only
 !
 !EOP
 !-------------------------------------------------------------------------
@@ -805,10 +806,11 @@
 ! OBS_INPUT (controls input data):
 !      dmesh(max(dthin))- thinning mesh for each group
 !      time_window_max  - upper limit on time window for all input data
+!      time_window_rad  - upper limit on time window for certain radiance input data
 !      ext_sonde        - logical for extended forward model on sonde data
 !      l_foreaft_thin -   separate TDR fore/aft scan for thinning
 
-  namelist/obs_input/dmesh,time_window_max, &
+  namelist/obs_input/dmesh,time_window_max,time_window_rad, &
        ext_sonde,l_foreaft_thin
 
 ! SINGLEOB_TEST (one observation test case setup):
@@ -1002,6 +1004,9 @@
 !                              from GSD (for RAP/HRRR application)
 !                         =0 turn off
 !                         =2 turn on
+!      qv_max_inc        - threshold to limit the maximum water vapor increment
+!      l_precip_clear_only - the precipitation analysis only clears; it does not
+!                            make any updates for positive precipitating hydrometeors
 !
   namelist/rapidrefresh_cldsurf/dfi_radar_latent_heat_time_period, &
                                 metar_impact_radius,metar_impact_radius_lowcloud, &
@@ -1017,7 +1022,7 @@
                                 iclean_hydro_withRef,iclean_hydro_withRef_allcol,&
                                 i_use_2mq4b,i_use_2mt4b,i_gsdcldanal_type,i_gsdsfc_uselist, &
                                 i_lightpcp,i_sfct_gross,l_use_hydroretrieval_all,l_numconc,l_closeobs,&
-                                i_coastline,i_gsdqc
+                                i_coastline,i_gsdqc,qv_max_inc,ioption,l_precip_clear_only,l_fog_off
 
 ! chem(options for gsi chem analysis) :
 !     berror_chem       - .true. when background  for chemical species that require
@@ -1593,7 +1598,7 @@
      if (fv3_regional) then
         call convert_fv3_regional
      else
-        call regional_io%convert_regional_guess(mype,ctph0,stph0,tlm0)
+        if(i_gsdcldanal_type.ne.6) call regional_io%convert_regional_guess(mype,ctph0,stph0,tlm0)
      endif
   endif
             

@@ -1018,7 +1018,7 @@ contains
           write(iunit)field2   !TH2
        endif
 
-       if(l_cloud_analysis .or. n_actual_clouds>0) then
+       if(l_cloud_analysis .and. n_actual_clouds>0) then
           rmse_var='QCLOUD'
           call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
                start_index,end_index, WrfType, ierr    )
@@ -2431,6 +2431,7 @@ contains
     use kinds, only: r_single,i_kind,r_kind
     use constants, only: h300,tiny_single
     use rapidrefresh_cldsurf_mod, only: l_cloud_analysis,l_gsd_soilTQ_nudge
+    use rapidrefresh_cldsurf_mod, only: i_gsdcldanal_type
     use gsi_metguess_mod, only: gsi_metguess_get,GSI_MetGuess_Bundle
     use rapidrefresh_cldsurf_mod, only: i_use_2mt4b,i_use_2mq4b
     use gsi_bundlemod, only: GSI_BundleGetPointer
@@ -2464,6 +2465,7 @@ contains
     character (len= 3) :: ordering
   
     character (len=80), dimension(3)  ::  dimnames
+    character (len=80) :: SysDepInfo
     character(len=24),parameter :: myname_ = 'update_netcdf_mass'
   
   
@@ -2524,7 +2526,7 @@ contains
   
   ! transfer code from diffwrf for converting netcdf wrf nmm restart file
   ! to temporary binary format
-  
+    if( i_gsdcldanal_type==6 .or. i_gsdcldanal_type==3) call ext_ncd_ioinit(sysdepinfo,status)
   !
   !           update mass core netcdf file with analysis variables from 3dvar
   !
@@ -2992,7 +2994,7 @@ contains
             ierr                                 )
     endif
   
-    if (l_cloud_analysis .or. n_actual_clouds>0) then
+    if (l_cloud_analysis .and. n_actual_clouds>0) then
       do k=1,nsig_regional
          read(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional)   !  Qc
          if(print_verbose) &
