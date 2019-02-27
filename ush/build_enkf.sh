@@ -8,6 +8,7 @@ pwd=$(pwd)
 target=${1:-cray}
 dir_root=${2:-$pwd}
 clean=${3:-"YES"}
+clean="NO"
 
 if [ $target = wcoss ]; then
     . /usrx/local/Modules/3.2.10/init/sh
@@ -45,11 +46,11 @@ fi
 module list
 
 cd $dir_root/src/enkf
-./configure clean
+#./configure clean
 ./configure $conf_target
-make -f Makefile clean
+#make -f Makefile clean
 make -f Makefile -j 8
-cp -p global_enkf $dir_root/exec
+cp -p global_enkf.x $dir_root/exec
 
 if [ $clean = YES ]; then
     make -f Makefile clean

@@ -77,7 +77,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     if(nproc == 0)print *,'nobs_conv, nobs_oz, nobs_sat = ',nobs_conv,nobs_oz,nobs_sat
     nobs_tot = nobs_conv + nobs_oz + nobs_sat
 ! if nobs_tot != 0 (there were some obs to read)
-    if (nobs_tot > 0) then
+    if (nobs_tot > -1) then !lippi
        if (nproc == 0) then
           ! this array only needed on root.
           allocate(anal_ob(nanals,nobs_tot))

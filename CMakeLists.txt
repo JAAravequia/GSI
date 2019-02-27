@@ -32,16 +32,16 @@ endif()
 
 project(GSI)
   enable_language (Fortran)
-  option(USE_WRF "Find WRF object files and build regional GSI model" ON)
-  option(BUILD_GLOBAL "Build GSI without WRF (regional) module " OFF)
-  option(BUILD_ENKF "Build the Enkf executable " ON)
-  option(BUILD_GFS "Build the Enkf with GFS module " ON)
-  option(BUILD_NMMB "Build the Enkf with NMMB module " OFF)
-  option(BUILD_WRF "Build the Enkf with WRF module " OFF)
-  option(BUILD_UTIL "Build the Enkf utilities " OFF)
-  option(BUILD_NCDIAG "Build the NCDIAG libraries" OFF)
-  option(BUILD_REG_TESTING "Build the Regression Testing Suite" ON)
-  option(BUILD_UNIT_TESTING "Build the Unit Testing Suite" OFF)
+  option(USE_WRF "Find WRF object files and build regional GSI model" ON) #ON
+  option(BUILD_GLOBAL "Build GSI without WRF (regional) module " OFF)     #OFF
+  option(BUILD_ENKF "Build the Enkf executable " ON)                      #ON
+  option(BUILD_GFS "Build the Enkf with GFS module " ON)                  #ON
+  option(BUILD_NMMB "Build the Enkf with NMMB module " OFF)               #OFF
+  option(BUILD_WRF "Build the Enkf with WRF module " OFF)                 #OFF
+  option(BUILD_UTIL "Build the Enkf utilities " OFF)                      #OFF
+  option(BUILD_NCDIAG "Build the NCDIAG libraries" OFF)                   #OFF
+  option(BUILD_REG_TESTING "Build the Regression Testing Suite" ON)       #ON
+  option(BUILD_UNIT_TESTING "Build the Unit Testing Suite" OFF)           #OFF
   cmake_minimum_required(VERSION 2.8)
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")

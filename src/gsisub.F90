@@ -75,7 +75,7 @@ subroutine gsisub(init_pass,last_pass)
   use obsmod, only: iadate,lobserver
   use observermod, only: observer_init,observer_run,observer_finalize
   use gridmod, only: twodvar_regional,create_grid_vars,destroy_grid_vars
-  use gridmod, only: wrf_mass_regional,wrf_nmm_regional,nems_nmmb_regional,cmaq_regional
+  use gridmod, only: wrf_mass_regional,wrf_nmm_regional,nems_nmmb_regional,cmaq_regional,global_l2rw
   use mpimod, only: mype,npe,mpi_comm_world,ierror
   use radinfo, only: radinfo_read
   use pcpinfo, only: pcpinfo_read,create_pcp_random,&
@@ -139,7 +139,8 @@ subroutine gsisub(init_pass,last_pass)
   end if
 
 ! Process any level 2 bufr format land doppler radar winds and create radar wind superob file
-  if(wrf_nmm_regional.or.wrf_mass_regional.or.nems_nmmb_regional .or. cmaq_regional) then
+  if(wrf_nmm_regional.or.wrf_mass_regional.or.nems_nmmb_regional .or. cmaq_regional &
+          .or. global_l2rw) then
      if(.not. oneobtest) call radar_bufr_read_all(npe,mype)
   end if
 !at some point cmaq will become also an online met/chem model (?)

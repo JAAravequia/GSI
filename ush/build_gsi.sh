@@ -8,13 +8,14 @@ pwd=$(pwd)
 target=${1:-cray}
 dir_root=${2:-$pwd}
 clean=${3:-"YES"}
+clean="NO"
 
 if [ $target = wcoss ]; then
     . /usrx/local/Modules/3.2.10/init/sh
-    conf_target=nco
+    conf_target=cray
 elif [ $target = cray -o $target = wcoss_c ]; then
     . $MODULESHOME/init/sh
-    conf_target=nco
+    conf_target=cray
 elif [ $target = dell -o $target = wcoss_d ]; then
     . $MODULESHOME/init/sh
     conf_target=nco
@@ -47,9 +48,11 @@ module list
 cd $dir_root/src
 ./configure clean
 ./configure $conf_target
-make -f Makefile clean
+#make -f Makefile clean
 make -f Makefile -j 8
-cp -p global_gsi $dir_root/exec
+#cp -p global_gsi $dir_root/exec
+cp -p global_gsi global_gsi.x
+cp -p global_gsi.x $dir_root/exec
 
 if [ $clean = "YES" ]; then
     make -f Makefile clean

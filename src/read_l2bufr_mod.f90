@@ -136,7 +136,7 @@ contains
 
     integer(i_kind),intent(in):: npe,mype
 
-    integer(i_kind),parameter:: max_num_radars=150
+    integer(i_kind),parameter:: max_num_radars=170
     integer(i_kind),parameter:: n_gates_max=4000
     real(r_kind),parameter:: four_thirds = 4.0_r_kind / 3.0_r_kind
     real(r_kind),parameter:: r8     = 8.0_r_kind
@@ -280,6 +280,7 @@ contains
     if(iret/=0) then
        if(rite) write(6,*)'RADAR_BUFR_READ_ALL:  problem opening level 2 bufr file "l2rwbufr"'
        close(inbufr)                                       
+       call stop2(99)
        return
     end if
     rewind inbufr

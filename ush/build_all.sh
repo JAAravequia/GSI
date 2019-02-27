@@ -10,19 +10,19 @@ dir_root=${2:-$pwd}
 
 BUILD_GSI=${BUILD_GSI:-"YES"}
 BUILD_ENKF=${BUILD_ENKF:-"YES"}
-BUILD_UTILS=${BUILD_UTILS:-"YES"}
-BUILD_RADMON=${BUILD_RADMON:-"YES"}
-BUILD_OZNMON=${BUILD_OZNMON:-"YES"}
+BUILD_UTILS=${BUILD_UTILS:-"NO"}
+BUILD_RADMON=${BUILD_RADMON:-"NO"}
+BUILD_OZNMON=${BUILD_OZNMON:-"NO"}
 
 BUILD_RADMON_VER=3.0.0
 BUILD_OZNMON_VER=2.0.0
 
 if [ $target = wcoss ]; then
     . /usrx/local/Modules/3.2.10/init/sh
-    conf_target=nco
+    conf_target=cray
 elif [ $target = cray -o $target = wcoss_c ]; then
     . $MODULESHOME/init/sh
-    conf_target=nco
+    conf_target=cray
 elif [ $target = dell -o $target = wcoss_d ]; then
     . $MODULESHOME/init/sh
     conf_target=nco
@@ -44,7 +44,7 @@ fi
 # First build GSI
 if [ $BUILD_GSI = "YES" -o $BUILD_ENKF = "YES" ]; then
 
-    clean=YES
+    clean=NO
     [[ $BUILD_ENKF = "YES" ]] && clean=NO
     $dir_root/ush/build_gsi.sh $target $pwd $clean
 
@@ -53,7 +53,7 @@ fi
 # Next build EnKF
 if [ $BUILD_ENKF = "YES" ]; then
 
-    clean=YES
+    clean=NO
     $dir_root/ush/build_enkf.sh $target $pwd $clean
 
 fi

@@ -192,7 +192,7 @@ postmsg "$jlogfile" "$msg"
 # Remove the Temporary working directory
 ##########################################
 cd $DATAROOT
-[[ $KEEPDATA = "NO" ]] && rm -rf $DATA
+#[[ $KEEPDATA = "NO" ]] && rm -rf $DATA
 
 date
 exit 0

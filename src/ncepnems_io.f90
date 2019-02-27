@@ -230,6 +230,7 @@ contains
     real(r_kind),pointer,dimension(:,:  ):: ges_z_it   =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_u_it   =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_v_it   =>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_w_it   =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_div_it =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_vor_it =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_tv_it  =>NULL()
@@ -246,9 +247,9 @@ contains
     type(gsi_bundle) :: atm_bundle
     type(gsi_grid)   :: atm_grid
     integer(i_kind),parameter :: n2d=2
-    integer(i_kind),parameter :: n3d=8
+    integer(i_kind),parameter :: n3d=9
     character(len=4), parameter :: vars2d(n2d) = (/ 'z   ', 'ps  ' /)
-    character(len=4), parameter :: vars3d(n3d) = (/ 'u   ', 'v   ', &
+    character(len=4), parameter :: vars3d(n3d) = (/ 'u   ', 'v   ','w   ', &
                                                     'vor ', 'div ', &
                                                     'tv  ', 'q   ', &
                                                     'cw  ', 'oz  ' /)
@@ -257,7 +258,7 @@ contains
 
     regional=.false.
     inner_vars=1
-    num_fields=min(8*grd_a%nsig+2,npe)
+    num_fields=min(9*grd_a%nsig+2,npe)
 !  Create temporary communication information fore read routines
     call general_sub2grid_create_info(grd_t,inner_vars,grd_a%nlat,grd_a%nlon, &
           grd_a%nsig,num_fields,regional)
@@ -323,6 +324,11 @@ contains
     if (istatus==0) then
        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'v' ,ges_v_it ,istatus)
        if(istatus==0) ges_v_it = ptr3d
+    endif
+    call gsi_bundlegetpointer (atm_bundle,'w',ptr3d,istatus)
+    if (istatus==0) then
+       call gsi_bundlegetpointer (gsi_metguess_bundle(it),'w' ,ges_w_it ,istatus)
+       if(istatus==0) ges_w_it = ptr3d
     endif
     call gsi_bundlegetpointer (atm_bundle,'vor',ptr3d,istatus)
     if (istatus==0) then
