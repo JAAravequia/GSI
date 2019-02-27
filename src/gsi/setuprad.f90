@@ -1115,10 +1115,10 @@
               tnoise(i)=varch_mixed(ich(i))
            enddo
         endif
-           do i=1,nchanl
-             error0(i) = tnoise(i)
-             errf0(i) = error0(i)
-           end do
+        do i=1,nchanl
+           error0(i) = tnoise(i)
+           errf0(i) = error0(i)
+        end do
 
         do i=1,nchanl
            mm=ich(i)
