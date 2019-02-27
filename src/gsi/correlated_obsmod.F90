@@ -101,6 +101,7 @@ Column 2: method - specify different possibilities for handling the correspondin
            1 - correlations from estimated R with variances as established by GSI
            2 - as (1), but for full R covariance
            3 - diag of estimate R used as scaling factor to internally-defined errors
+           4 - as (2), but also use the diag of R in place of satinfo errors in qc
 Column 3: kreq   - level of required condition for the corresponding cov(R)
           at present:
           if<0 and method=0, 1 or 3  does not recondition matrix
@@ -110,7 +111,7 @@ Column 3: kreq   - level of required condition for the corresponding cov(R)
                                      Note that the resulting correlation matrix has
                                      condition number equal to approximatetly twice kreq.
           if>0 and method=0 or 3     recondition the (covariance) matrix using Westons 2nd method
-          if method=2                recondition the covariance matrix by inflating the
+          if method=2 or 4           recondition the covariance matrix by inflating the
                                      diagional so that R_{r,r}=(sqrt{R_{r,r}+kreq)^2
                                      Note that kreq should be specified as 0<kreq<1
 Column 4: type - determines whether to apply covariance over ocean, land, ice, snow or mixed FOVs
@@ -606,7 +607,7 @@ endif ! method=1
 
 ! This does the actual full eigendecomposition of the R matrix
 ! Here, recondioning is of covariance matrix
-if ( ErrorCov%method==2 ) then
+if ( (ErrorCov%method==2).or.(ErrorCov%method==4) ) then
 
    ErrorCov%Revecs=ErrorCov%R
    call decompose_(trim(ErrorCov%name),ErrorCov%Revals,ErrorCov%Revecs,ndim,.true.)
@@ -621,7 +622,7 @@ if ( ErrorCov%method==2 ) then
    ErrorCov%Revecsfull=ErrorCov%Revecs
    ErrorCov%Revals=zero
    ErrorCov%Revecs=zero
-endif ! method=2
+endif ! method=2,4
 
   contains
   subroutine westonEtAl_spectrum_boost_(adjspec)
@@ -799,6 +800,7 @@ integer(i_kind),allocatable,dimension(:)   :: IJsubset
 real(r_kind),   allocatable,dimension(:)   :: col,col0
 real(r_kind),   allocatable,dimension(:,:) :: row,row0,Ri,Rs
 real(r_kind) coeff,coeff2,qcadjusted
+integer(i_kind) :: method
 logical subset
 scale_jac_=.false.
 rsqrtinv=zero
@@ -872,7 +874,7 @@ endif
 
 ! decompose the sub-matrix - returning the result in the 
 !                            structure holding the full covariance
-if( ErrorCov%method==1 .or. ErrorCov%method==2 ) then
+if( ErrorCov%method==1 .or. ErrorCov%method==2 .or. ErrorCov%method==4 ) then
    if (ncp<ErrorCov%nch_active) then
       subset = decompose_subset_ (IRsubset,ErrorCov)
    else
@@ -905,7 +907,9 @@ else
    col=zero;col0=zero
    Ri=zero
    Rs=zero
-   select case ( ErrorCov%method )   ! Re: estimated ob error cov
+   method=ErrorCov%method
+   if (ErrorCov%method==4) method=2
+   select case ( method )   ! Re: estimated ob error cov
                                      !     De=diag(Re); Ce=corr(Re)
                                      ! Rg: ultimate matrix seen by GSI Jo-term
                                      ! D0: original (diag) ob-error variances
@@ -1099,7 +1103,7 @@ implicit none
 
    character(len=*),parameter :: myname_=myname//'*upd_varqc'
    character(len=80) covtype
-   integer(i_kind) :: nch_active,ii,jj,iii,jjj,mm,nn,ncp,ifound,jj0,itbl,nsatype,ntrow
+   integer(i_kind) :: nch_active,ii,jj,iii,jjj,mm,nn,ncp,ifound,jj0,itbl,ntrow
    integer(i_kind),dimension(6) ::nsatype
    integer(i_kind)::nsat,isurf,rr
    integer(i_kind),allocatable,dimension(:)   :: ircv
@@ -1239,7 +1243,7 @@ implicit none
                call die(myname_,' serious dimensions insconsistency, aborting')
             endif
 
-            if( GSI_BundleErrorCov(itbl)%method==2 ) then
+            if( GSI_BundleErrorCov(itbl)%method==4 ) then
                do ii=1,ncp
                   nn=IJsubset(ii)
                   mm=ich1(nn)

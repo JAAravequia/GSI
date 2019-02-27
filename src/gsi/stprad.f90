@@ -281,7 +281,7 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
                     do nx=1,npred
                        ic1=radptr%icx(mm)
                        Aval2=Aval2+spred(nx,ic1)*radptr%pred(nx,mm)
-                       Aval=Aval+rpred(nx,ic1)*radptr%pred(nx,mm
+                       Aval=Aval+rpred(nx,ic1)*radptr%pred(nx,mm)
                     end do
                     val2=val2+Aval2*radptr%rsqrtinv(mm,nn)
                     val=val+Aval*radptr%rsqrtinv(mm,nn)
