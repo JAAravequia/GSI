@@ -217,7 +217,7 @@ type(ObsErrorCov),pointer :: GSI_BundleErrorCov(:)
 ! strictly internal quantities
 character(len=*),parameter :: myname='correlated_obsmod'
 logical :: initialized_=.false.
-integer(i_kind),parameter :: methods_avail(5)=(/-1, & ! do nothing
+integer(i_kind),parameter :: methods_avail(6)=(/-1, & ! do nothing
                                                  0, & ! use dianonal of estimate(R)
                                                  1, & ! use full est(R), but decompose once for all
                                                  2, & ! use full est(R), but re-decomp at each profile
