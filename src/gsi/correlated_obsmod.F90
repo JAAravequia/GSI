@@ -200,7 +200,7 @@ type ObsErrorCov
      integer(i_kind)   :: nctot=-1                    ! total number of channels (active+passive)
      integer(i_kind)   :: method    =-1               ! define method of computation
      real(r_kind)      :: kreq      =-99.             ! Weston et al-like spectrum adjustment factor
-     character(len=20) :: mask      ='global'         ! Apply covariance for profiles over all globe
+     character(len=20) :: mask      ='sea'            ! Apply covariance for profiles over sea
      integer(i_kind),pointer :: indxR(:)   =>NULL()   ! indexes of active channels
      real(r_kind),   pointer :: R(:,:)     =>NULL()   ! nch_active x nch_active
      real(r_kind),   pointer :: Revals(:)  =>NULL()   ! eigenvalues of R subset
@@ -221,7 +221,8 @@ integer(i_kind),parameter :: methods_avail(5)=(/-1, & ! do nothing
                                                  0, & ! use dianonal of estimate(R)
                                                  1, & ! use full est(R), but decompose once for all
                                                  2, & ! use full est(R), but re-decomp at each profile
-                                                 3/)  ! use diag est(R), as scaling factor to GSI(R)
+                                                 3, & ! use diag est(R), as scaling factor to GSI(R)
+                                                 4/)  ! same as 2, but use diag of (R) in qc
 contains
 
 !-------------------------------------------------------------------------
