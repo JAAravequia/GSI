@@ -1081,19 +1081,6 @@
              endif
            endif
         end if ! radmod%lcloud_fwd .and. radmod%ex_biascor
-        
-        do i=1,nchanl
-           error0(i) = tnoise(i) 
-           errf0(i) = error0(i)
-        end do
-
-!       Assign observation error for all-sky radiances 
-        if (radmod%lcloud_fwd .and. eff_area)  then   
-           if (radmod%ex_obserr=='ex_obserr1') & 
-              call radiance_ex_obserr(radmod,nchanl,clwp_amsua,clw_guess_retrieval,tnoise,tnoise_cld,error0)
-!          if (radmod%ex_obserr=='ex_obserr2') &  ! comment out for now, waiting for more tests
-!             call radiance_ex_obserr(radmod,nchanl,cldeff_obs,cldeff_fg,tnoise,tnoise_cld,error0)
-        end if
         if(sea) then
            do i=1,nchanl
               tnoise(i)=varch_sea(ich(i))
@@ -1114,11 +1101,19 @@
            do i=1,nchanl
               tnoise(i)=varch_mixed(ich(i))
            enddo
-        endif
+        endif        
         do i=1,nchanl
-           error0(i) = tnoise(i)
+           error0(i) = tnoise(i) 
            errf0(i) = error0(i)
         end do
+
+!       Assign observation error for all-sky radiances 
+        if (radmod%lcloud_fwd .and. eff_area)  then   
+           if (radmod%ex_obserr=='ex_obserr1') & 
+              call radiance_ex_obserr(radmod,nchanl,clwp_amsua,clw_guess_retrieval,tnoise,tnoise_cld,error0)
+!          if (radmod%ex_obserr=='ex_obserr2') &  ! comment out for now, waiting for more tests
+!             call radiance_ex_obserr(radmod,nchanl,cldeff_obs,cldeff_fg,tnoise,tnoise_cld,error0)
+        end if
 
         do i=1,nchanl
            mm=ich(i)

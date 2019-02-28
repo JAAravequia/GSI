@@ -276,10 +276,10 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
               ic=radptr%icx(nn)
               if (radptr%use_corr_obs) then  
                  do mm=1,radptr%nchan
-                    Aval=0.0_r_kind
-                    Aval2=0.0_r_kind 
+                    Aval=zero
+                    Aval2=zero
+                    ic1=radptr%icx(mm)
                     do nx=1,npred
-                       ic1=radptr%icx(mm)
                        Aval2=Aval2+spred(nx,ic1)*radptr%pred(nx,mm)
                        Aval=Aval+rpred(nx,ic1)*radptr%pred(nx,mm)
                     end do

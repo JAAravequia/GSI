@@ -604,6 +604,8 @@ if ( ErrorCov%method==1 ) then
       enddo
       deallocate(invstd)
    endif
+   ErrorCov%Revalsfull=ErrorCov%Revals
+   ErrorCov%Revecsfull=ErrorCov%Revecs
 endif ! method=1
 
 ! This does the actual full eigendecomposition of the R matrix
@@ -1157,94 +1159,88 @@ implicit none
       if (nsat>0) then
          do jj0=1,nsat
             itbl=tblidx(isurf,jj0) !a row number
-            jc=0
-            covtype = ''
-            ich1=0
-            do ii=1,jpch_rad
-                if (isurf==1) then
-                  covtype = trim(nusis(ii))//':sea'
-               else if (isurf==2) then
-                  covtype = trim(nusis(ii))//':land'
-               else if (isurf==3) then
-                  covtype = trim(nusis(ii))//':ice'
-               else if (isurf==4) then
-                  covtype = trim(nusis(ii))//':snow'
-               else if (isurf==5) then
-                 covtype = trim(nusis(ii))//':mixed'
-               end if
-               if(trim(idnames(itbl))==trim(covtype)) then
-                  jc=jc+1
-                  ich1(jc)=ii
-               endif
-            enddo
-            nchanl1=jc
-            if(nchanl1==0) then
-               call die(myname_,' improperly set GSI_BundleErrorCov')
-            endif
-
-            if(.not.amiset_(GSI_BundleErrorCov(itbl))) then
-               call die(myname_,' improperly set GSI_BundleErrorCov')
-            endif
-            nch_active=GSI_BundleErrorCov(itbl)%nch_active
-            if(nch_active<0) return
+            if( GSI_BundleErrorCov(itbl)%method==4 ) then
+               jc=0
+               covtype = ''
+               ich1=0
+               do ii=1,jpch_rad
+                  if (isurf==1) then
+                     covtype = trim(nusis(ii))//':sea'
+                  else if (isurf==2) then
+                     covtype = trim(nusis(ii))//':land'
+                  else if (isurf==3) then
+                     covtype = trim(nusis(ii))//':ice'
+                  else if (isurf==4) then
+                     covtype = trim(nusis(ii))//':snow'
+                  else if (isurf==5) then
+                     covtype = trim(nusis(ii))//':mixed'
+                  end if
+                  if(trim(idnames(itbl))==trim(covtype)) then
+                     jc=jc+1
+                     ich1(jc)=ii
+                  endif
+               enddo
+               nchanl1=jc
+               if(nchanl1==0) call die(myname_,' improperly set GSI_BundleErrorCov')
+               if(.not.amiset_(GSI_BundleErrorCov(itbl)))call die(myname_,' improperly set GSI_BundleErrorCov')
+               nch_active=GSI_BundleErrorCov(itbl)%nch_active
+               if(nch_active<0) return
 ! get indexes for the internal channels matching those
 ! used in estimating the observation error covariance
-            allocate(ircv(nchanl1))
-            allocate(ijac(nchanl1))
-            ircv = -1
-            ijac = -1
-            do jj=1,nchanl1
-               mm=ich1(jj)       ! true channel number (has no bearing here except in iuse)
-               if (iuse_rad(mm)>=1) then
-                  ifound=-1
-                  do ii=1,nch_active
-                     if (GSI_BundleErrorCov(itbl)%nctot>nchanl1) then
-                        indR=ii
-                     else
-                        indR=GSI_BundleErrorCov(itbl)%indxR(ii)
-                     end if 
-                     if(jj==indR) then
-                        ifound=ii       
-                         exit
+               allocate(ircv(nchanl1))
+               allocate(ijac(nchanl1))
+               ircv = -1
+               ijac = -1
+               do jj=1,nchanl1
+                  mm=ich1(jj)       ! true channel number (has no bearing here except in iuse)
+                  if (iuse_rad(mm)>=1) then
+                     ifound=-1
+                     do ii=1,nch_active
+                        if (GSI_BundleErrorCov(itbl)%nctot>nchanl1) then
+                           indR=ii
+                        else
+                           indR=GSI_BundleErrorCov(itbl)%indxR(ii)
+                        end if 
+                        if(jj==indR) then
+                           ifound=ii       
+                           exit
+                        endif
+                     enddo
+                     if(ifound/=-1) then
+                        ijac(jj)=jj      ! index value in 1 to nchanl
+                        ircv(jj)=ifound  ! index value in 1 to nch_active 
                      endif
-                  enddo
-                  if(ifound/=-1) then
-                     ijac(jj)=jj      ! index value in 1 to nchanl
-                     ircv(jj)=ifound  ! index value in 1 to nch_active 
                   endif
+               enddo
+               ncp=count(ircv>0) ! number of active channels in profile
+               if(ncp/=nch_active) then
+                  call die(myname_,'serious inconsistency in handling correlated obs')
                endif
-            enddo
-            ncp=count(ircv>0) ! number of active channels in profile
-            if(ncp/=nch_active) then
-               call die(myname_,'serious inconsistency in handling correlated obs')
-            endif
-            allocate(IRsubset(ncp)) ! these indexes apply to the matrices/vec in ErrorCov
-            allocate(IJsubset(ncp)) ! these indexes in 1 to nchanl
-            iii=0;jjj=0
-            do ii=1,nchanl1
-               if(ircv(ii)>0) then
-                  iii=iii+1
-                  IRsubset(iii)=ircv(ii)  ! subset indexes in R presently in use
+               allocate(IRsubset(ncp)) ! these indexes apply to the matrices/vec in ErrorCov
+               allocate(IJsubset(ncp)) ! these indexes in 1 to nchanl
+               iii=0;jjj=0
+               do ii=1,nchanl1
+                  if(ircv(ii)>0) then
+                     iii=iii+1
+                     IRsubset(iii)=ircv(ii)  ! subset indexes in R presently in use
+                  endif
+                  if(ijac(ii)>0) then
+                     jjj=jjj+1
+                     IJsubset(iii)=ijac(ii)  ! subset indexes in channels presently in use
+                  endif
+               enddo
+               if (iii/=ncp) then
+                  if (iamroot_) then
+                     write(6,*) myname, ' iii,ncp= ',iii,ncp
+                  endif
+                  call die(myname_,' serious dimensions insconsistency, aborting')
                endif
-               if(ijac(ii)>0) then
-                  jjj=jjj+1
-                  IJsubset(iii)=ijac(ii)  ! subset indexes in channels presently in use
+              if (jjj/=ncp) then
+                  if (iamroot_) then
+                     write(6,*) myname, ' jjj,ncp= ',jjj,ncp
+                  endif
+                  call die(myname_,' serious dimensions insconsistency, aborting')
                endif
-            enddo
-            if (iii/=ncp) then
-               if (iamroot_) then
-                  write(6,*) myname, ' iii,ncp= ',iii,ncp
-               endif
-               call die(myname_,' serious dimensions insconsistency, aborting')
-            endif
-            if (jjj/=ncp) then
-               if (iamroot_) then
-                  write(6,*) myname, ' jjj,ncp= ',jjj,ncp
-               endif
-               call die(myname_,' serious dimensions insconsistency, aborting')
-            endif
-
-            if( GSI_BundleErrorCov(itbl)%method==4 ) then
                do ii=1,ncp
                   nn=IJsubset(ii)
                   mm=ich1(nn)
@@ -1255,12 +1251,12 @@ implicit none
                   if(isurf==4) varch_snow(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
                   if(isurf==5) varch_mixed(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
                enddo
-            endif
 ! clean up
-            deallocate(IJsubset)
-            deallocate(IRsubset)
-            deallocate(ijac)
-            deallocate(ircv)
+               deallocate(IJsubset)
+               deallocate(IRsubset)
+               deallocate(ijac)
+               deallocate(ircv)
+            endif      
          enddo !jj=1,nsat
       endif !nsat >0
    enddo !isurf=1,5

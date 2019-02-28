@@ -487,7 +487,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
               do mm=1,radptr%nchan
                  ic1=radptr%icx(mm)
                  ix1=(ic1-1)*npred
-                 Aval=0.0_r_kind
+                 Aval=zero
                  do n=1,npred
                     Aval=Aval+spred(ix1+n)*radptr%pred(n,mm)
                  enddo
