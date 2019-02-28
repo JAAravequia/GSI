@@ -1833,6 +1833,7 @@ contains
     use mpimod, only: mype
 
     use guess_grids, only: ifilesig
+    use guess_grids, only: ges_qsat ! hack for qsat
     use guess_grids, only: ges_prsl,ges_prsi
     use guess_grids, only: load_geop_hgt,geop_hgti
 
@@ -1890,6 +1891,7 @@ contains
 
     real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig) :: sub_dzb,sub_dza
     real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig) :: sub_prsl
+    real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig) :: sub_qsat ! hack for qsat
     real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig+1) :: sub_prsi
     real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig+1,ibin) :: ges_geopi
 
@@ -2052,6 +2054,7 @@ contains
 
     sub_prsl = ges_prsl(:,:,:,ibin)
     sub_prsi = ges_prsi(:,:,:,ibin)
+    sub_qsat = ges_qsat(:,:,:,ibin) ! hack for qsat
 
     do k=1,grd%nsig
        sub_dp(:,:,k) = sub_prsi(:,:,k) - sub_prsi(:,:,k+1)
@@ -2077,7 +2080,8 @@ contains
     call strip(sub_tv  ,tvsm  ,grd%nsig)
     call strip(sub_q   ,qsm   ,grd%nsig)
     call strip(sub_oz  ,ozsm  ,grd%nsig)
-    call strip(sub_cwmr,cwsm  ,grd%nsig)
+    !call strip(sub_cwmr,cwsm  ,grd%nsig)
+    call strip(sub_qsat,cwsm  ,grd%nsig) ! hack for qsat
     call strip(sub_dp  ,dpsm  ,grd%nsig)
     call strip(sub_prsl,prslm ,grd%nsig)
     call strip(sub_u   ,usm   ,grd%nsig)

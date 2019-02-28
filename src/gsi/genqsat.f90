@@ -59,6 +59,7 @@ subroutine genqsat(qsat,tsen,prsl,lat2,lon2,nsig,ice,iderivative)
   use gridmod, only:  wrf_nmm_regional,wrf_mass_regional,nems_nmmb_regional,aeta2_ll,regional,cmaq_regional
   use gridmod, only:  fv3_regional
   use guess_grids, only: tropprs,ges_prslavg,ges_psfcavg
+  use control_vectors, only: imp_physics
   implicit none
 
   logical                               ,intent(in   ) :: ice
