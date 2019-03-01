@@ -391,6 +391,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !          Apply 10-meter wind reduction factor to guess winds
            dx10=-goverrd*ten/tges(1)
            if (dpressave < dx10)then
+              print*, "LEVINE TEST: mype,dpresave,dx10=",mype,dpressave,dx10
               term=(prsln2-dpressave)/(prsln2-dx10)
               factw=one-term+factw*term
            end if
