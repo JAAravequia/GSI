@@ -1592,8 +1592,8 @@
 
 ! Weight factqmin/factqmax by grid size
   if( (factqmin>zero) .or. (factqmax>zero) )  then
-    factqmin=factqmin/iglobal
-    factqmax=factqmax/iglobal    
+    factqmin=factqmin/float(iglobal)
+    factqmax=factqmax/float(iglobal)    
   end if
 
   end subroutine gsimain_initialize

@@ -75,7 +75,7 @@ subroutine stplimq(rval,sval,sges,outmin,outmax,nstep,itbin)
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-  use gridmod, only: lat1,lon1,nsig,istart,wgtlats
+  use gridmod, only: lat1,lon1,nsig,istart,wgtlats,rlats
   use jfunc, only: factqmin,factqmax
   use guess_grids, only: ges_qsat
   use mpimod, only: mype
@@ -120,11 +120,11 @@ subroutine stplimq(rval,sval,sges,outmin,outmax,nstep,itbin)
               do kk=1,nstep
                  qx = q + sges(kk)*rq(i,j,k)
                  if(qx < zero)then
-                    outmin(kk)=outmin(kk)+(factqmin*wgtlats(ii))*qx*qx &
+                    outmin(kk)=outmin(kk)+(factqmin*cos(rlats(ii)))*qx*qx &
                                /(ges_qsat(i,j,k,itbin)*ges_qsat(i,j,k,itbin))
                  else
                     if(qx > ges_qsat(i,j,k,itbin))then
-                       outmax(kk)=outmax(kk)+(factqmax*wgtlats(ii))*(qx-ges_qsat(i,j,k,itbin))* &
+                       outmax(kk)=outmax(kk)+(factqmax*cos(rlats(ii)))*(qx-ges_qsat(i,j,k,itbin))* &
                             (qx-ges_qsat(i,j,k,itbin))/(ges_qsat(i,j,k,itbin)*ges_qsat(i,j,k,itbin))
                     end if
                  end if
@@ -136,14 +136,14 @@ subroutine stplimq(rval,sval,sges,outmin,outmax,nstep,itbin)
      do k = 1,nsig
         do j = 2,lon1+1
            do i = 2,lat1+1
-
+              ii=istart(mm1)+i-2
 !             Values for q using stepsizes
               q  = ges_q_it(i,j,k)
               if(q < zero)then
-                 outmin(1)=outmin(1)+factqmin*q*q/(ges_qsat(i,j,k,itbin)*ges_qsat(i,j,k,itbin))
+                 outmin(1)=outmin(1)+(factqmin*cos(rlats(ii)))*q*q/(ges_qsat(i,j,k,itbin)*ges_qsat(i,j,k,itbin))
               else
                  if(q > ges_qsat(i,j,k,itbin))then
-                    outmax(1)=outmax(1)+factqmax*(q-ges_qsat(i,j,k,itbin))*(q-ges_qsat(i,j,k,itbin))/ &
+                    outmax(1)=outmax(1)+(factqmax*cos(rlats(ii)))*(q-ges_qsat(i,j,k,itbin))*(q-ges_qsat(i,j,k,itbin))/ &
                              (ges_qsat(i,j,k,itbin)*ges_qsat(i,j,k,itbin))
                  end if
               end if
