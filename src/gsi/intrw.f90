@@ -92,6 +92,15 @@ subroutine intrw_(rwhead,rval,sval)
 !   language: f90
 !   machine:  ibm RS/6000 SP
 !
+! 2019-01-01 X. Liang add IVAP based operator
+!                     j1_32: the index for surrounding grid points
+!                     w1_32: the weight for surrounding grid points. The Gaussian Smoothing Filter is used
+!                     p_loop: a integer used to count the loop
+!                     p_latlon: as same as latlon11 in subroutine get_ijk for horizontal points in subdomian (with buffer)
+!                     p_lat2 : as same as lat2 in subroutine get_ijk for no. of lats on subdomain (buffer points on ends) 
+!                     rw_opr: an indicateor for choice of the operator
+!                     dx,dx1,dy,dy1,ds,ds1: same as those in the subroutine get_ijk
+!                     ss: coefficent for Gaussian Smoothing Filter
 !$$$
   use kinds, only: r_kind,i_kind
   use constants, only: half,one,tiny_r_kind,cg_term,r3600
@@ -118,6 +127,12 @@ subroutine intrw_(rwhead,rval,sval)
   real(r_kind),pointer,dimension(:) :: su,sv,sw
   real(r_kind),pointer,dimension(:) :: ru,rv,rw
   type(rwNode), pointer :: rwptr
+! for ivap operator
+  integer(i_kind),dimension(32) :: j1_32
+  real(r_kind),dimension(32) :: w1_32
+  integer(i_kind) p_latlon,p_lat2,p_loop
+  integer(i_kind) rw_opr
+  real(r_kind) ss,dx,dx1,dy,dy1,ds,ds1
 
 !  If no rw data return
   if(.not. associated(rwhead))return
@@ -164,9 +179,77 @@ subroutine intrw_(rwhead,rval,sval)
      w6=rwptr%wij(6)
      w7=rwptr%wij(7)
      w8=rwptr%wij(8)
+  
+     rw_opr=1  ! this indicator should be set in the namelist
+     if(rw_opr==1) then
+      p_latlon=j5-j1
+      p_lat2=j3-j1
+      j1_32(1 )=j1
+      j1_32(2 )=j2
+      j1_32(3 )=j3
+      j1_32(4 )=j4
+      j1_32(5 )=j5
+      j1_32(6 )=j6
+      j1_32(7 )=j7
+      j1_32(8 )=j8
+      j1_32(9 )=j1-p_lat2-1
+      j1_32(10)=j1_32(9 )+1
+      j1_32(11)=j1_32(10)+1
+      j1_32(12)=j1_32(11)+1
+      j1_32(13)=j1-1
+      j1_32(14)=j2+1
+      j1_32(15)=j3-1
+      j1_32(16)=j4+1
+      j1_32(17)=j3+p_lat2-1
+      j1_32(18)=j1_32(17)+1
+      j1_32(19)=j1_32(18)+1
+      j1_32(20)=j1_32(19)+1
+      do p_loop=21,32
+        j1_32(p_loop)=j1_32(p_loop-12)+p_latlon
+      enddo
+
+        ss=2.*16   ! this coefficient shoud be set in namelist
+      dx =w3/(w1+w3)
+      dx1=w1/(w1+w3)
+      dy =w2/(w1+w2)
+      dy1=w1/(w1+w2)
+      ds =w5/(w1+w5)
+      ds1=w1/(w1+w5)
+      w1_32(1 )=exp(-(dx **2+dy **2)/ss)
+      w1_32(2 )=exp(-(dx **2+dy1**2)/ss)
+      w1_32(3 )=exp(-(dx1**2+dy **2)/ss)
+      w1_32(4 )=exp(-(dx1**2+dy1**2)/ss)
+      w1_32(5 )=w1_32(1)
+      w1_32(6 )=w1_32(2)
+      w1_32(7 )=w1_32(3)
+      w1_32(8 )=w1_32(4)
+      w1_32(9 )=exp(-((dx +1)**2+(dy +1)**2)/ss)
+      w1_32(10)=exp(-((dx +1)**2+ dy    **2)/ss)
+      w1_32(11)=exp(-((dx +1)**2+ dy1   **2)/ss)
+      w1_32(12)=exp(-((dx +1)**2+(dy1+1)**2)/ss)
+      w1_32(13)=exp(- (dx    **2+(dy +1)**2)/ss)
+      w1_32(14)=exp(- (dx    **2+(dy1+1)**2)/ss)
+      w1_32(15)=exp(- (dx1   **2+ dy1   **2)/ss)
+      w1_32(16)=exp(- (dx1   **2+(dy1+1)**2)/ss)
+      w1_32(17)=exp(-((dx1+1)**2+(dy +1)**2)/ss)
+      w1_32(18)=exp(-((dx1+1)**2+ dy    **2)/ss)
+      w1_32(19)=exp(-((dx1+1)**2+ dy1   **2)/ss)
+      w1_32(20)=exp(-((dx1+1)**2+(dy1+1)**2)/ss)
+      do p_loop=21,32
+       w1_32(p_loop)=w1_32(p_loop-12)
+      enddo
+      ss=0.
+      do p_loop=1,32
+       ss=ss+w1_32(p_loop)
+      enddo
+      do p_loop=1,32
+       w1_32(p_loop)=w1_32(p_loop)/ss
+      enddo
+     endif 
 
 !    Forward model (Tangent Linear; TL)
 !    TLVr  =  TLu*costilt*cosazm  +  TLv*costilt*sinazm  +  TLw*sintilt
+     if(rw_opr/=1) then
      val=(w1*su(j1)+ w2*su(j2)+ w3*su(j3)+ w4*su(j4)+ w5*su(j5)+    &
           w6*su(j6)+ w7*su(j7)+ w8*su(j8))*rwptr%cosazm_costilt+    &
          (w1*sv(j1)+ w2*sv(j2)+ w3*sv(j3)+ w4*sv(j4)+ w5*sv(j5)+    &
@@ -175,6 +258,23 @@ subroutine intrw_(rwhead,rval,sval)
         val=val+(w1*sw(j1)+ w2*sw(j2)+ w3*sw(j3)+ w4*sw(j4)+ w5*sw(j5)+   &
                  w6*sw(j6)+ w7*sw(j7)+ w8*sw(j8))*rwptr%sintilt
      end if
+     else
+      val=0.
+      valu=0.
+      valv=0.
+      do p_loop=1,32
+        valu=valu+w1_32(p_loop)*su(j1_32(p_loop))
+        valv=valv+w1_32(p_loop)*sv(j1_32(p_loop))
+      enddo
+      val=valu*rwptr%cosazm_costilt+valv*rwptr%sinazm_costilt
+      if(include_w) then
+       valw=0.
+       do p_loop=1,32
+        valw=valw+w1_32(p_loop)*sw(j1_32(p_loop))
+       enddo
+       val=val+valw*rwptr%sintilt
+      end if
+     endif
 
 
      if(luse_obsdiag)then
@@ -213,6 +313,7 @@ subroutine intrw_(rwhead,rval,sval)
         valu=rwptr%cosazm_costilt*grad  ! ADVr_u = costilt*cosazm*ADVr
         valv=rwptr%sinazm_costilt*grad  ! ADVr_v = costilt*sinazm*ADVr
         if(include_w) valw=rwptr%sintilt*grad ! ADVr_w = sintilt*ADVr
+       if(rw_opr/=1) then
         ru(j1)=ru(j1)+w1*valu                 ! ADu = ADu + ADVr_u
         ru(j2)=ru(j2)+w2*valu
         ru(j3)=ru(j3)+w3*valu
@@ -239,6 +340,17 @@ subroutine intrw_(rwhead,rval,sval)
            rw(j7)=rw(j7)+w7*valw
            rw(j8)=rw(j8)+w8*valw
         end if
+       else
+         do p_loop=1,32
+          ru(j1_32(p_loop))=ru(j1_32(p_loop))+w1_32(p_loop)*valu
+          rv(j1_32(p_loop))=rv(j1_32(p_loop))+w1_32(p_loop)*valv
+         enddo
+         if(include_w) then
+          do p_loop=1,32
+           rw(j1_32(p_loop))=rw(j1_32(p_loop))+w1_32(p_loop)*valw
+          enddo
+         endif
+       endif
      endif
 
      !rwptr => rwptr%llpoint

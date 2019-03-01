@@ -14,6 +14,7 @@ module stprwmod
 !   2009-08-12  lueken - update documentation
 !   2010-05-13  todling - uniform interface across stp routines
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
+!   2019-03-01  x.Liang - add ivap based operator
 !
 ! subroutines included:
 !   sub stprw
@@ -62,6 +63,16 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
 !   2016-06-23  lippi   - add terms for vertical velocity, uses include_w, and
 !                         now multiplying by costilt here instead of being
 !                         factored into the wij term.
+!   2019-03-01  x.Liang - add ivap based operator
+!                     j1_32: the index for surrounding grid points
+!                     w1_32: the weight for surrounding grid points. The Gaussian Smoothing Filter is used
+!                     p_loop: a integer used to count the loop
+!                     p_latlon: as same as latlon11 in subroutine get_ijk for horizontal points in subdomian (with buffer)
+!                     p_lat2 : as same as lat2 in subroutine get_ijk for no. of lats on subdomain (buffer points on ends) 
+!                     rw_opr: an indicateor for choice of the operator
+!                     dx,dx1,dy,dy1,ds,ds1: same as those in the subroutine get_ijk
+!                     ss: coefficent for Gaussian Smoothing Filter
+!                     valu,valv,valw: temporary variable
 !
 !   input argument list:
 !     rwhead
@@ -113,6 +124,13 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
   real(r_kind),pointer,dimension(:) :: su,sv,sw
   real(r_kind),pointer,dimension(:) :: ru,rv,rw
   type(rwNode), pointer :: rwptr
+!  for ivap based operator
+  integer(i_kind),dimension(32) :: j1_32
+  real(r_kind),dimension(32) :: w1_32
+  integer(i_kind) p_latlon,p_lat2,p_loop
+  integer(i_kind) rw_opr
+  real(r_kind) ss,dx,dx1,dy,dy1,ds,ds1
+  real(r_kind) valu,valv,valw
 
   out=zero_quad
 
@@ -162,6 +180,75 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
            w7=rwptr%wij(7)
            w8=rwptr%wij(8)
 
+     rw_opr=1  ! this indicator should be set in the namelist
+     if(rw_opr==1) then
+      p_latlon=j5-j1
+      p_lat2=j3-j1
+      j1_32(1 )=j1
+      j1_32(2 )=j2
+      j1_32(3 )=j3
+      j1_32(4 )=j4
+      j1_32(5 )=j5
+      j1_32(6 )=j6
+      j1_32(7 )=j7
+      j1_32(8 )=j8
+      j1_32(9 )=j1-p_lat2-1
+      j1_32(10)=j1_32(9 )+1
+      j1_32(11)=j1_32(10)+1
+      j1_32(12)=j1_32(11)+1
+      j1_32(13)=j1-1
+      j1_32(14)=j2+1
+      j1_32(15)=j3-1
+      j1_32(16)=j4+1
+      j1_32(17)=j3+p_lat2-1
+      j1_32(18)=j1_32(17)+1
+      j1_32(19)=j1_32(18)+1
+      j1_32(20)=j1_32(19)+1
+      do p_loop=21,32
+        j1_32(p_loop)=j1_32(p_loop-12)+p_latlon
+      enddo
+
+        ss=2.*16   ! this coefficient shoud be set in namelist
+      dx =w3/(w1+w3)
+      dx1=w1/(w1+w3)
+      dy =w2/(w1+w2)
+      dy1=w1/(w1+w2)
+      ds =w5/(w1+w5)
+      ds1=w1/(w1+w5)
+      w1_32(1 )=exp(-(dx **2+dy **2)/ss)
+      w1_32(2 )=exp(-(dx **2+dy1**2)/ss)
+      w1_32(3 )=exp(-(dx1**2+dy **2)/ss)
+      w1_32(4 )=exp(-(dx1**2+dy1**2)/ss)
+      w1_32(5 )=w1_32(1)
+      w1_32(6 )=w1_32(2)
+      w1_32(7 )=w1_32(3)
+      w1_32(8 )=w1_32(4)
+      w1_32(9 )=exp(-((dx +1)**2+(dy +1)**2)/ss)
+      w1_32(10)=exp(-((dx +1)**2+ dy    **2)/ss)
+      w1_32(11)=exp(-((dx +1)**2+ dy1   **2)/ss)
+      w1_32(12)=exp(-((dx +1)**2+(dy1+1)**2)/ss)
+      w1_32(13)=exp(- (dx    **2+(dy +1)**2)/ss)
+      w1_32(14)=exp(- (dx    **2+(dy1+1)**2)/ss)
+      w1_32(15)=exp(- (dx1   **2+ dy1   **2)/ss)
+      w1_32(16)=exp(- (dx1   **2+(dy1+1)**2)/ss)
+      w1_32(17)=exp(-((dx1+1)**2+(dy +1)**2)/ss)
+      w1_32(18)=exp(-((dx1+1)**2+ dy    **2)/ss)
+      w1_32(19)=exp(-((dx1+1)**2+ dy1   **2)/ss)
+      w1_32(20)=exp(-((dx1+1)**2+(dy1+1)**2)/ss)
+      do p_loop=21,32
+       w1_32(p_loop)=w1_32(p_loop-12)
+      enddo
+      ss=0.
+      do p_loop=1,32
+       ss=ss+w1_32(p_loop)
+      enddo
+      do p_loop=1,32
+       w1_32(p_loop)=w1_32(p_loop)/ss
+      enddo
+     endif
+
+
+         if(rw_opr/=1) then
 !          Gradient
            valrw=(w1*ru(j1)+ w2*ru(j2)+ w3*ru(j3)+ &
                   w4*ru(j4)+ w5*ru(j5)+ w6*ru(j6)+ &
@@ -184,6 +271,39 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
               facrw=facrw+(w1*sw(j1)+ w2*sw(j2)+ w3*sw(j3)+ w4*sw(j4)+w5*sw(j5)+&
                            w6*sw(j6)+ w7*sw(j7)+ w8*sw(j8))*rwptr%sintilt
            end if
+         else
+!          Gradient
+          valu=0.
+          valv=0.
+          do p_loop=1,32
+            valu=valu+w1_32(p_loop)*ru(j1_32(p_loop))
+            valv=valv+w1_32(p_loop)*rv(j1_32(p_loop))
+          enddo
+          valrw=valu*rwptr%cosazm_costilt+valv*rwptr%sinazm_costilt
+          if(include_w) then
+            valw=0.
+            do p_loop=1,32
+             valw=valw+w1_32(p_loop)*rw(j1_32(p_loop))
+            enddo
+            valrw=valrw+valw*rwptr%sintilt
+          endif
+!       Gradient-residual
+          valu=0.
+          valv=0.
+          do p_loop=1,32
+           valu=valu+w1_32(p_loop)*su(j1_32(p_loop))
+           valv=valv+w1_32(p_loop)*sv(j1_32(p_loop))
+          enddo
+          facrw=valu*rwptr%cosazm_costilt+valv*rwptr%sinazm_costilt
+          if(include_w) then
+           valw=0.
+           do p_loop=1,32
+            valw=valw+w1_32(p_loop)*sw(j1_32(p_loop))
+           enddo
+           facrw=facrw+valw*rwptr%sintilt
+          endif
+         endif
+
            facrw=facrw-rwptr%res
 
            do kk=1,nstep
