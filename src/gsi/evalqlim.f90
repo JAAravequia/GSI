@@ -32,7 +32,7 @@ subroutine evalqlim(sval,pbc,rval)
 !$$$ end documentation block
   use kinds, only: r_kind,i_kind,r_quad
   use constants, only: zero,one,zero_quad
-  use gridmod, only: lat1,lon1,nsig,istart,wgtlats,rlats
+  use gridmod, only: lat1,lon1,nsig,istart,rlats
   use jfunc, only: factqmin,factqmax
   use derivsmod, only: qgues,qsatg
   use mpl_allreducemod, only: mpl_allreduce

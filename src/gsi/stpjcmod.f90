@@ -75,7 +75,7 @@ subroutine stplimq(rval,sval,sges,outmin,outmax,nstep,itbin)
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-  use gridmod, only: lat1,lon1,nsig,istart,wgtlats,rlats
+  use gridmod, only: lat1,lon1,nsig,istart,rlats
   use jfunc, only: factqmin,factqmax
   use guess_grids, only: ges_qsat
   use mpimod, only: mype
@@ -143,8 +143,8 @@ subroutine stplimq(rval,sval,sges,outmin,outmax,nstep,itbin)
                  outmin(1)=outmin(1)+(factqmin*cos(rlats(ii)))*q*q/(ges_qsat(i,j,k,itbin)*ges_qsat(i,j,k,itbin))
               else
                  if(q > ges_qsat(i,j,k,itbin))then
-                    outmax(1)=outmax(1)+(factqmax*cos(rlats(ii)))*(q-ges_qsat(i,j,k,itbin))*(q-ges_qsat(i,j,k,itbin))/ &
-                             (ges_qsat(i,j,k,itbin)*ges_qsat(i,j,k,itbin))
+                    outmax(1)=outmax(1)+(factqmax*cos(rlats(ii)))*(q-ges_qsat(i,j,k,itbin))*&
+                                (q-ges_qsat(i,j,k,itbin))/(ges_qsat(i,j,k,itbin)*ges_qsat(i,j,k,itbin))
                  end if
               end if
            end do
