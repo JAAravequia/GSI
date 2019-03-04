@@ -120,7 +120,7 @@ real(r_single), public, allocatable, dimension(:) :: obsprd_prior, ensmean_obnob
  ensmean_ob, ob, oberrvar, obloclon, obloclat, &
  obpress, obtime, oberrvar_orig,&
  oblnp, obfit_prior, prpgerr, oberrvarmean, probgrosserr, &
- lnsigl,corrlengthsq,obtimel
+ lnsigl,corrlengthsq,obtimel,obnyq_vel
 integer(i_kind), public, allocatable, dimension(:) :: numobspersat
 integer(i_kind), allocatable, dimension(:)         :: diagused
 ! posterior stats computed in enkf_update
@@ -183,7 +183,7 @@ call mpi_getobs(datapath, datestring, nobs_conv, nobs_oz, nobs_sat, nobstot,  &
                 obsprd_prior, ensmean_obnobc, ensmean_ob, ob,                 &
                 oberrvar, obloclon, obloclat, obpress,                        &
                 obtime, oberrvar_orig, stattype, obtype, biaspreds, diagused, &
-                anal_ob,anal_ob_modens,indxsat,nanals,neigv)
+                anal_ob,anal_ob_modens,obnyq_vel,indxsat,nanals,neigv)
 
 tdiff = mpi_wtime()-t1
 call mpi_reduce(tdiff,tdiffmax,1,mpi_real4,mpi_max,0,mpi_comm_world,ierr)
@@ -257,6 +257,9 @@ do nob=1,nobstot
    end if
    corrlengthsq(nob)=latval(deglat,corrlengthnh,corrlengthtr,corrlengthsh)**2
    obtimel(nob)=latval(deglat,obtimelnh,obtimeltr,obtimelsh)
+
+   !if (nproc == 0)  print*, 'OBS_MOD: ',  obtype(nob), oberrvar(nob), oberrvar_orig(nob)
+
 end do
 
 ! these allocated here, but not computed till after the state 
@@ -332,17 +335,37 @@ subroutine screenobs()
 !use radbias, only: apply_biascorr
 real(r_single) fail,failm
 integer nn,nob
+
+! RADAR VELOCITY UNFOLDING VARIABLES TAJ
+real(r_single) robvr_orig, robvr, ddiff, d2n
+
 fail=1.e31_r_single
 failm=1.e30_r_single
+
 ! apply bias correction here just for debugging purposes.
 !call apply_biascorr()
 !==> pre-process obs, obs metadata.
 do nob=1,nobstot
-  if (nob > nobs_conv+nobs_oz) oberrvar(nob) = saterrfact*oberrvar(nob)
+  !if (nob > nobs_conv+nobs_oz) oberrvar(nob) = saterrfact*oberrvar(nob)
   ! empirical adjustment of obs errors for Huber norm from ECMWF RD tech memo
   if (varqc) oberrvar(nob) = oberrvar(nob)*(min(one,0.5_r_single+0.125_r_single*(zhuberleft+zhuberright)))**2
 
   obfit_prior(nob) = ob(nob)-ensmean_ob(nob)
+
+  ! VELOCITY UNFOLDING (TAJ)
+  if (obtype(nob) == 'rw' ) then
+     robvr_orig = ob(nob)
+     ddiff = robvr_orig - ensmean_ob(nob)
+     robvr = robvr_orig
+     d2n = int(ddiff / (2.0 * obnyq_vel(nob)) )
+     if (d2n /= 0 .and. abs(obnyq_vel(nob)) > 0.0 ) then
+      robvr=robvr-2.0*d2n*obnyq_vel(nob)
+
+      obfit_prior(nob) = robvr-ensmean_ob(nob)
+      ddiff=robvr-ensmean_ob(nob)
+      if(nproc == 0) print '(A30, 6F8.2)', 'WARNING: RADIAL VELOCITY DEALISED: ', obloclon(nob), obloclat(nob), robvr_orig, robvr, ensmean_ob(nob), obnyq_vel(nob)
+     endif
+  endif
 
   ! gross error check.
   if (obsprd_prior(nob) > 1.e9) then

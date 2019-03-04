@@ -37,6 +37,8 @@ program enkf_main
 !   2016-11-29  shlyaeva: Initialize state vector separately from control; 
 !               separate routines for scatter and gather chunks; write out diag files
 !               with spread
+!   2016-09-25  Added function to read text file containing localization
+!                information for each variable type: Thomas Jones!
 !
 ! usage:
 !   input files:
@@ -81,7 +83,8 @@ program enkf_main
                        mpi_wtime, mpi_comm_world
  ! obs and ob priors, associated metadata.
  use enkf_obsmod, only : readobs, write_obsstats, obfit_prior, obsprd_prior, &
-                    nobs_sat, obfit_post, obsprd_post, obsmod_cleanup
+                    nobs_sat, obfit_post, obsprd_post, obsmod_cleanup,stattype, obtime, ensmean_obnobc
+ use enkf_obsmod, only: ob,nobstot,obtype,obloclat,obloclon,obpress, oberrvar, oberrvar_orig
  ! innovation statistics.
  use innovstats, only: print_innovstats
  ! model control vector 
@@ -109,9 +112,12 @@ program enkf_main
  use enkf_obs_sensitivity, only: init_ob_sens, print_ob_sens, destroy_ob_sens
 
  implicit none
- integer(i_kind) nth,ierr
+ integer(i_kind) nth,ierr,j
  real(r_double) t1,t2
  logical no_inflate_flag
+
+ logical readin_localobs
+ readin_localobs = .true.
 
  ! initialize MPI.
  call mpi_initialize()
@@ -151,6 +157,9 @@ program enkf_main
     if (nproc == 0) print *,'time in read_state =',t2-t1,'on proc',nproc
  endif
 
+ ! read state/control vector info from anavinfo
+ call init_statevec()
+
  ! read obs, initial screening.
  t1 = mpi_wtime()
  call readobs()
@@ -187,6 +196,12 @@ program enkf_main
  ! read in vertical profile of horizontal and vertical localization length
  ! scales, set values for each ob.
  if (readin_localization) call read_locinfo()
+
+ ! READ IN OBSERVATION SPECIFIC LOCALIZATIONS (TAJ)
+ if (readin_localobs) then
+  call read_locinfo_obs()
+  if (nproc == 0) print*, 'LOCALIZATIONS SET AS A FUNCTION OF OBS TYPE'
+ end if
 
  ! do load balancing (partitioning of grid points, observations among
  ! processors)
@@ -250,6 +265,20 @@ program enkf_main
        call radinfo_write()
     end if
  end if
+
+ ! WRITE SOME TEXT OUTPUT (TAJ)
+ if(nproc .eq. 0) then
+   open(unit=77,file="allobs_enkf")
+   do j=1,nobstot
+    if (abs(oberrvar(j)) .gt. 9000.0) then
+     oberrvar_orig(j) = -99.9    !NO OBSVAR MEANS IT IS CONSIDERED AN OUTLIER BY ENKF
+     oberrvar(j) = -99.9
+    endif
+    write(77,'(a6,i8,12f15.5)')obtype(j),stattype(j),ob(j),obfit_prior(j),obfit_post(j),obloclat(j),&
+          obloclon(j),obpress(j),oberrvar(j),oberrvar_orig(j),obsprd_prior(j),obsprd_post(j),ensmean_obnobc(j),obtime(j)
+   enddo
+ close(77)
+ endif
 
  ! free memory (radinfo memory freed in radinfo_write)
  ! and write out analysis ensemble.

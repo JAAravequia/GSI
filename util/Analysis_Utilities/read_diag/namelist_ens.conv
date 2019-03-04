@@ -1,0 +1,6 @@
+ &iosetup
+  numens=20,
+  infilenamebase='diag_conv_ges.mem',
+  outfilepath='./',
+ /     
+

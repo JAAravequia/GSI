@@ -29,6 +29,8 @@ module params
 !                          modulated ensembles), nobsl_max (for ob selection
 !                          in LETKF and dfs_sort
 !                          (for using DFS in LETKF ob selection).
+!   2018-05-01  Change default files names to wrfinput (TAJ)
+!   2018-09-14  Add in local partical filter code (JP, TAJ)  
 !
 ! attributes:
 !   language: f95
@@ -73,7 +75,7 @@ character(len=120),dimension(7),public :: fgfileprefixes
 character(len=120),dimension(7),public :: statefileprefixes
 character(len=120),dimension(7),public :: anlfileprefixes
 ! analysis date string (YYYYMMDDHH)
-character(len=10), public ::  datestring
+character(len=12), public ::  datestring
 ! filesystem path to input files (first-guess, GSI diagnostic files).
 character(len=500),public :: datapath
 ! if deterministic=.true., the deterministic square-root filter
@@ -502,7 +504,8 @@ do while (nhr_anal(nbackgrounds+1) > 0)
       if (nbackgrounds > 1) then
         fgfileprefixes(nbackgrounds+1)="firstguess_fhr"//charfhr_anal(nbackgrounds+1)//"."
       else
-        fgfileprefixes(nbackgrounds+1)="firstguess."
+        !fgfileprefixes(nbackgrounds+1)="firstguess."
+        fgfileprefixes(nbackgrounds+1)="wrfinput_d01."
       endif
      else  ! global
       fgfileprefixes(nbackgrounds+1)="sfg_"//datestring//"_fhr"//charfhr_anal(nbackgrounds+1)//"_"
@@ -521,7 +524,8 @@ do while (nhr_state(nstatefields+1) > 0)
       if (nstatefields > 1) then
         statefileprefixes(nstatefields+1)="firstguess_fhr"//charfhr_state(nstatefields+1)//"."
       else
-        statefileprefixes(nstatefields+1)="firstguess."
+        !statefileprefixes(nstatefields+1)="firstguess."
+        statefileprefixes(nstatefields+1)="wrfinput_d01."
       endif
      else  ! global
       statefileprefixes(nstatefields+1)="sfg_"//datestring//"_fhr"//charfhr_state(nstatefields+1)//"_"
@@ -537,7 +541,8 @@ do nb=1,nbackgrounds
       if (nbackgrounds > 1) then
         anlfileprefixes(nb)="analysis_fhr"//charfhr_anal(nb)//"."
       else
-        anlfileprefixes(nb)="analysis."
+        !anlfileprefixes(nb)="analysis."
+        anlfileprefixes(nb)="wrfinput_d01."
       endif
      else ! global
 !      if (nbackgrounds > 1) then

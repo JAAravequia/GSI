@@ -100,6 +100,7 @@ close(luin)
 nc2d=0; nc3d=0; ncdim=0;
 do ii=1,nvars
    read(utable(ii),*) var, ilev, itracer, source, funcof
+   !print*, var, ilev, itracer, source, funcof
    if(ilev==1) then
        nc2d=nc2d+1
        ncdim=ncdim+1

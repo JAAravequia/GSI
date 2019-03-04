@@ -51,12 +51,12 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
                       sprd_ob, ensmean_ob, ensmean_obbc, ob, &
                       oberr, oblon, oblat, obpress, &
                       obtime, oberrorig, obcode, obtype, &
-                      biaspreds, diagused,  anal_ob, anal_ob_modens, indxsat, nanals, neigv)
+                      biaspreds, diagused,  anal_ob, anal_ob_modens, obnyq_vel, indxsat, nanals, neigv)
     character*500, intent(in) :: obspath
     character*10, intent(in) :: datestring
     character(len=10) :: id,id2
     real(r_single), allocatable, dimension(:)   :: ensmean_ob,ob,oberr,oblon,oblat
-    real(r_single), allocatable, dimension(:)   :: obpress,obtime,oberrorig,ensmean_obbc,sprd_ob
+    real(r_single), allocatable, dimension(:)   :: obpress,obtime,oberrorig,ensmean_obbc,sprd_ob,obnyq_vel
     integer(i_kind), allocatable, dimension(:)  :: obcode,indxsat
     integer(i_kind), allocatable, dimension(:)  :: diagused
     real(r_single), allocatable, dimension(:,:) :: biaspreds
@@ -100,7 +100,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
        allocate(mem_ob_modens(neigv,nobs_tot))  ! zero size if neigv=0
        allocate(sprd_ob(nobs_tot),ob(nobs_tot),oberr(nobs_tot),oblon(nobs_tot),&
        oblat(nobs_tot),obpress(nobs_tot),obtime(nobs_tot),oberrorig(nobs_tot),obcode(nobs_tot),&
-       obtype(nobs_tot),ensmean_ob(nobs_tot),ensmean_obbc(nobs_tot),&
+       obtype(nobs_tot),ensmean_ob(nobs_tot),ensmean_obbc(nobs_tot),obnyq_vel(nobs_tot),&
        biaspreds(npred+1, nobs_sat),indxsat(nobs_sat), diagused(nobs_totdiag))
     else
 ! stop if no obs found (must be an error somewhere).
@@ -128,7 +128,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
         oberr(1:nobs_conv), oblon(1:nobs_conv), oblat(1:nobs_conv),        &
         obpress(1:nobs_conv), obtime(1:nobs_conv), obcode(1:nobs_conv),    &
         oberrorig(1:nobs_conv), obtype(1:nobs_conv),                       &
-        diagused(1:nobs_convdiag), id, nanal)
+        diagused(1:nobs_convdiag), obnyq_vel(1:nobs_conv),id, nanal)
     end if
     if (nobs_oz > 0) then
 ! second nobs_oz are conventional obs.

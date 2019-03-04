@@ -85,7 +85,7 @@ PROGRAM read_diag_rad
   integer(i_kind) :: nchanl
   integer(i_kind) :: npred
   integer(i_kind) :: idate
-  integer(i_kind) :: ireal
+  integer(i_kind) :: ireal, idiag, angord, iversion
   integer(i_kind) :: ipchan
   integer(i_kind) :: iextra,jextra
 
@@ -96,6 +96,7 @@ PROGRAM read_diag_rad
   
   integer(i_kind) :: ifirst
 
+  real(r_single),allocatable,dimension(:,:):: diagextra
   real(r_single),allocatable,dimension(:,:):: diagbufchan   !  ipchan+npred+1,nchanl
   real(r_single),allocatable,dimension(:):: diagbuf   ! ireal
 !
@@ -136,9 +137,9 @@ PROGRAM read_diag_rad
       write(*,*) ' no diag file availabe :', trim(infilename)
    endif
 
-   read(17) isis,dplat,obstype,jiter,nchanl,npred,idate,ireal,ipchan,iextra,jextra
+   read(17) isis,dplat,obstype,jiter,nchanl,npred,idate,ireal,ipchan,iextra,jextra, idiag, angord, iversion
    write(12,'(3a20)') isis,dplat,obstype
-   write(12,'(8I10)') jiter,nchanl,npred,idate,ireal,ipchan,iextra,jextra
+   write(12,'(8I10)') jiter,nchanl,npred,idate,ireal,ipchan,iextra,jextra, idiag, iversion
 
    allocate(ich(nchanl))
    do i=1,nchanl
@@ -147,18 +148,24 @@ PROGRAM read_diag_rad
                                     iuse_rad,nuchan,ich(i)
    end do
 
-   allocate(diagbufchan(ipchan+npred+1,nchanl))
+print*, ipchan+npred+1,idiag,nchanl, ireal, iextra,jextra
+
+   !allocate(diagbufchan(ipchan+npred+1,nchanl))
+   allocate(diagbufchan(idiag,nchanl))
+   allocate(diagextra(iextra,jextra))
    allocate(diagbuf(ireal))
 
 100  continue
-        read(17, ERR=999,end=110) diagbuf,diagbufchan
+        read(17, ERR=999,end=110) diagbuf,diagbufchan, diagextra
         rlat=diagbuf(1)     ! observation latitude (degrees)
-        rlon=diagbuf(2)     ! observation longitude (degrees)
+        rlon=diagbuf(2)-360.0     ! observation longitude (degrees)
         rprs=diagbuf(3)     ! observation pressure (hPa)
         rdhr=diagbuf(4)     ! obs time (hours relative to analysis time)
 !
 !  write out result for one observation
-         write (12,'(4F8.2)') rlat,rlon,rprs,rdhr
+!         write (12,'(26F9.2)') rlat,rlon,rprs,rdhr, diagbuf(5),diagbuf(6),diagbuf(7),diagbuf(8),diagbuf(9), diagbufchan(:,2) !, diagextra
+write (12,'(32F9.2)') rlat,rlon,rprs,rdhr, diagbuf(5),diagbuf(6),diagbuf(7),diagbuf(8),diagbuf(9),diagbufchan(1,1),diagbufchan(1,2),diagbufchan(1,3),diagbufchan(1,4), &
+         diagextra(1,1), diagextra(1,2), diagextra(1,3), diagextra(1,4), diagbufchan(2,1),diagbufchan(2,2),diagbufchan(2,3),diagbufchan(2,4), diagbufchan(7,8:13)
 !         write (12,*) diagbuf,diagbufchan
 
      goto 100  ! goto another record
@@ -168,7 +175,7 @@ PROGRAM read_diag_rad
       close(17)
       close(12)
 
-       deallocate(diagbufchan,diagbuf)
+       deallocate(diagbufchan,diagbuf, diagextra)
        deallocate(ich)
 
   STOP 9999

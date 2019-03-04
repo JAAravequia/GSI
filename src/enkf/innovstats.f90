@@ -42,6 +42,7 @@ subroutine print_innovstats(obfit,obsprd)
 real(r_single), intent(in) :: obfit(nobstot), obsprd(nobstot)
 integer(i_kind) nobst_nh,nobst_sh,nobst_tr,&
  nobspw_nh,nobspw_sh,nobspw_tr,&
+ nobstd_nh,nobstd_sh,nobstd_tr,& ! added by JJH, 2017-12-08, statistics for td
  nobsspd_nh,nobsspd_sh,nobsspd_tr,&
  nobsgps_nh,nobsgps_sh,nobsgps_tr,&
  nobsq_nh,nobsq_sh,nobsq_tr,nobswnd_nh,nobswnd_sh,nobswnd_tr,&
@@ -56,6 +57,9 @@ real(r_single) sumps_nh,biasps_nh,sumps_sh,biasps_sh,&
  sumq_nh,biasq_nh,sumq_spread_nh,sumq_oberr_nh,&
  sumq_sh,biasq_sh,sumq_spread_sh,sumq_oberr_sh,&
  sumq_tr,biasq_tr,sumq_spread_tr,sumq_oberr_tr,&
+ sumtd_nh,biastd_nh,sumtd_spread_nh,sumtd_oberr_nh,& ! added by JJH, 2017-12-08, statistics for td
+ sumtd_sh,biastd_sh,sumtd_spread_sh,sumtd_oberr_sh,& ! JJH td
+ sumtd_tr,biastd_tr,sumtd_spread_tr,sumtd_oberr_tr,& ! JJH td
  sumspd_nh,biasspd_nh,sumspd_spread_nh,sumspd_oberr_nh,&
  sumspd_sh,biasspd_sh,sumspd_spread_sh,sumspd_oberr_sh,&
  sumspd_tr,biasspd_tr,sumspd_spread_tr,sumspd_oberr_tr,&
@@ -86,6 +90,9 @@ if (nobs_conv+nobs_oz > 0) then
   nobst_nh = 0
   nobst_sh = 0
   nobst_tr = 0
+  nobstd_nh = 0 ! added by JJH, 2017-12-08
+  nobstd_sh = 0
+  nobstd_tr = 0
   nobsq_nh = 0
   nobsq_sh = 0
   nobsq_tr = 0
@@ -118,6 +125,12 @@ if (nobs_conv+nobs_oz > 0) then
                  sumt_nh,biast_nh,sumt_spread_nh,sumt_oberr_nh,nobst_nh,&
                  sumt_sh,biast_sh,sumt_spread_sh,sumt_oberr_sh,nobst_sh,&
                  sumt_tr,biast_tr,sumt_spread_tr,sumt_oberr_tr,nobst_tr)
+         else if (obtype(nob)(1:3) == ' td') then ! added by JJH, 2017-12-08 for td
+            call obstats(obfit(nob),oberrvar(nob),&
+                 obsprd(nob),obloclat(nob),&
+                 sumtd_nh,biastd_nh,sumtd_spread_nh,sumtd_oberr_nh,nobstd_nh,&
+                 sumtd_sh,biastd_sh,sumtd_spread_sh,sumtd_oberr_sh,nobstd_sh,&
+                 sumtd_tr,biastd_tr,sumtd_spread_tr,sumtd_oberr_tr,nobstd_tr)
         ! all winds
          else if (obtype(nob)(1:3) == '  u' .or. obtype(nob)(1:3) == '  v') then
         ! only in-situ winds (no sat winds)
@@ -172,6 +185,9 @@ if (nobs_conv+nobs_oz > 0) then
    call printstats('    all t',sumt_nh,biast_nh,sumt_spread_nh,sumt_oberr_nh,nobst_nh,&
         sumt_sh,biast_sh,sumt_spread_sh,sumt_oberr_sh,nobst_sh,&
         sumt_tr,biast_tr,sumt_spread_tr,sumt_oberr_tr,nobst_tr)
+   call printstats('   all td',sumtd_nh,biastd_nh,sumtd_spread_nh,sumtd_oberr_nh,nobstd_nh,&
+        sumtd_sh,biastd_sh,sumtd_spread_sh,sumtd_oberr_sh,nobstd_sh,&
+        sumtd_tr,biastd_tr,sumtd_spread_tr,sumtd_oberr_tr,nobstd_tr) ! td statistics, added by JJH, 2017-12-08
    call printstats('   all uv',sumwnd_nh,biaswnd_nh,sumwnd_spread_nh,sumwnd_oberr_nh,nobswnd_nh,&
         sumwnd_sh,biaswnd_sh,sumwnd_spread_sh,sumwnd_oberr_sh,nobswnd_sh,&
         sumwnd_tr,biaswnd_tr,sumwnd_spread_tr,sumwnd_oberr_tr,nobswnd_tr)

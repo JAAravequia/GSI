@@ -20,6 +20,7 @@ module gridinfo
   !               pressure profile (i.e., presslmn) is computed as it is in  
   !               within the GSI subroutine get_wrf_nmm_ensperts.F90.
   !               Henry R. Winterbottom
+  !  2018-12-05  Jones - Put hydrometeor variables back in. Also h_diabatic
   !
   ! attributes:
   !   language:  f95
@@ -73,8 +74,11 @@ module gridinfo
   public :: cross2dot
   public :: dot2cross
   ! supported variable names in anavinfo
-  character(len=max_varname_length),public, dimension(10) :: vars3d_supported = (/'u   ', 'v   ', 'tv  ', 'q   ', 'cw  ', 'w   ', 'ph  ', 'oz  ', 'tsen', 'prse' /)
-  character(len=max_varname_length),public, dimension(2)  :: vars2d_supported = (/ 'ps ', 'sst' /)
+!  character(len=max_varname_length),public, dimension(10) :: vars3d_supported = (/'u   ', 'v   ', 'tv  ', 'q   ', 'cw  ', 'w   ', 'ph  ', 'oz  ', 'tsen', 'prse' /)
+  character(len=max_varname_length),public, dimension(28) :: vars3d_supported = (/'u   ', 'v   ', 'tv  ', 't   ','q   ', 'w   ', 'cw  ', 'ph  ', 'mu ','oz  ', 'tsen', 'prse', &
+                                                                                  'ql  ', 'qr  ', 'qs  ', 'qi  ', 'qg  ', 'qh ', &
+                                                                                  'qnl ', 'qnr ', 'qns ', 'qni ', 'qng ', 'qnh ','qvg ', 'qvh ', 'dbz ', 'hd  ' /)
+  character(len=max_varname_length),public, dimension(6)  :: vars2d_supported = (/ 'ps ', 'sst','t2 ', 'q2 ', 'u10', 'v10' /)
 
 contains
 

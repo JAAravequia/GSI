@@ -1,5 +1,5 @@
  &iosetup
-  infilename='./diag_amsua_n15_anl',
-  outfilename='./results_amsua_n15_anl',
+  infilename='./diag_goes_img_g13_ges.ensmean',
+  outfilename='./results_img13_mean',
  /     
 

@@ -1,5 +1,5 @@
  &iosetup
-  infilename='./diag_conv_ges',
-  outfilename='./results_conv_ges',
+  infilename='./diag_conv_ges.mem001',
+  outfilename='./results_conv_anl',
  /     
 
