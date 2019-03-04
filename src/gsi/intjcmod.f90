@@ -13,7 +13,7 @@ module intjcmod
 !   2014-05-07  pondeca - add weak constraint subroutine for howv
 !   2014-06-17  carley/zhu - add intliml for lcbas + some cleanup
 !   2015-07-10  pondeca - add weak constraint subroutine for cldch
-!   2019-02-15  martin - update intlimq to weight factqmin/max by latitude
+!   2019-03-05  martin - update intlimq to weight factqmin/max by latitude
 !
 ! subroutines included:
 !
@@ -52,7 +52,7 @@ subroutine intlimq(rval,sval,itbin)
 !   2008-06-02  safford - rm unused vars
 !   2010-05-13  todling - update to use gsi_bundle
 !   2011-12-27  kleist - add multiple time level capability (for 4densvar option)
-!   2019-02-15  martin - update to weight factqmin/max by latitude
+!   2019-03-05  martin - update to weight factqmin/max by latitude
 !
 !   input argument list:
 !     sq       - increment in grid space

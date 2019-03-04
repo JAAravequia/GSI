@@ -365,7 +365,7 @@
 !  01-04-2018 Apodaca   add diag_light and lightinfo for GOES/GLM lightning
 !                           data assimilation
 !  08-25-2018 Collard   Introduce bias_zero_start
-!  02-15-2019 Martin    Add division by # of grid points to factqmin/factqmax
+!  03-05-2019 Martin    Add division by # of grid points to factqmin/factqmax
 !
 !EOP
 !-------------------------------------------------------------------------
@@ -1592,8 +1592,8 @@
 
 ! Weight factqmin/factqmax by grid size
   if( (factqmin>zero) .or. (factqmax>zero) )  then
-    factqmin=factqmin/iglobal
-    factqmax=factqmax/iglobal    
+    factqmin=factqmin/real(iglobal)
+    factqmax=factqmax/real(iglobal)    
   end if
 
   end subroutine gsimain_initialize

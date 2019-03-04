@@ -14,7 +14,7 @@ subroutine evalqlim(sval,pbc,rval)
 !   2010-03-23  derber - made consistent with stplimq and intlimq (but not checked)
 !   2010-05-05  derber - omp commands removed
 !   2010-05-13  todling - udpate to use gsi_bundle; interface change
-!   2019-02-15  martin - update to weight factqmin/max by latitude
+!   2019-03-05  martin - update to weight factqmin/max by latitude
 !
 !   input argument list:
 !    sq

@@ -12,7 +12,7 @@ module stpjcmod
 !   2014-05-07  pondeca - add stepzise calculation for howv weak constraint term
 !   2014-06-17  carley/zhu - add stepzise calculation for lcbas weak constraint term
 !   2015-07-10  pondeca - add stepzise calculation for cldch weak constraint term
-!   2019-02-15  martin - update stplimq to weight factqmin/max by latitude
+!   2019-03-05  martin - update stplimq to weight factqmin/max by latitude
 !
 ! subroutines included:
 !
@@ -57,7 +57,7 @@ subroutine stplimq(rval,sval,sges,outmin,outmax,nstep,itbin)
 !   2010-05-13  todling - update to use gsi_bundle
 !   2010-07-10  todling - merge w/ r8741 (trunk); qx(:)->qx (who made the change?)
 !   2011-12-27  kleist - add bins for 4d capability (4densvar option)
-!   2019-02-15  martin - update to weight factqmin/max by latitude
+!   2019-03-05  martin - update to weight factqmin/max by latitude
 !
 !   input argument list:
 !     rq       - search direction
@@ -136,15 +136,15 @@ subroutine stplimq(rval,sval,sges,outmin,outmax,nstep,itbin)
      do k = 1,nsig
         do j = 2,lon1+1
            do i = 2,lat1+1
-
+              ii=istart(mm1)+i-2
 !             Values for q using stepsizes
               q  = ges_q_it(i,j,k)
               if(q < zero)then
-                 outmin(1)=outmin(1)+factqmin*q*q/(ges_qsat(i,j,k,itbin)*ges_qsat(i,j,k,itbin))
+                 outmin(1)=outmin(1)+(factqmin*wgtlats(ii))*q*q/(ges_qsat(i,j,k,itbin)*ges_qsat(i,j,k,itbin))
               else
                  if(q > ges_qsat(i,j,k,itbin))then
-                    outmax(1)=outmax(1)+factqmax*(q-ges_qsat(i,j,k,itbin))*(q-ges_qsat(i,j,k,itbin))/ &
-                             (ges_qsat(i,j,k,itbin)*ges_qsat(i,j,k,itbin))
+                    outmax(1)=outmax(1)+(factqmax*wgtlats(ii)*(q-ges_qsat(i,j,k,itbin))*&
+                                (q-ges_qsat(i,j,k,itbin))/(ges_qsat(i,j,k,itbin)*ges_qsat(i,j,k,itbin))
                  end if
               end if
            end do
