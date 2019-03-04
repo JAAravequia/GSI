@@ -32,7 +32,7 @@ subroutine evalqlim(sval,pbc,rval)
 !$$$ end documentation block
   use kinds, only: r_kind,i_kind,r_quad
   use constants, only: zero,one,zero_quad
-  use gridmod, only: lat1,lon1,nsig,istart,wgtlats
+  use gridmod, only: lat1,lon1,nsig,istart,rlats
   use jfunc, only: factqmin,factqmax
   use derivsmod, only: qgues,qsatg
   use mpl_allreducemod, only: mpl_allreduce
@@ -73,7 +73,7 @@ subroutine evalqlim(sval,pbc,rval)
            q = qgues(i,j,k) + sq(i,j,k)
 !          Compute penalty for neg q
            if (q<zero) then
-              term = (factqmin*wgtlats(ii))*q&
+              term = (factqmin*cos(rlats(ii)))*q&
                      /(qsatg(i,j,k)*qsatg(i,j,k))
               zbc(1) = zbc(1) + term*q
 !             Adjoint
@@ -81,7 +81,7 @@ subroutine evalqlim(sval,pbc,rval)
            endif
 !          Compute penalty for excess q
            if (q>qsatg(i,j,k)) then
-              term=(factqmax*wgtlats(ii))*(q-qsatg(i,j,k))&
+              term=(factqmax*cos(rlats(ii)))*(q-qsatg(i,j,k))&
                    /(qsatg(i,j,k)*qsatg(i,j,k))
               zbc(2) = zbc(2) + term*(q-qsatg(i,j,k))
 !             Adjoint

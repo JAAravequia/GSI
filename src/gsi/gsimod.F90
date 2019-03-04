@@ -365,7 +365,7 @@
 !  01-04-2018 Apodaca   add diag_light and lightinfo for GOES/GLM lightning
 !                           data assimilation
 !  08-25-2018 Collard   Introduce bias_zero_start
-!  03-05-2019 Martin    Add division by # of grid points to factqmin/factqmax
+!  03-04-2019 Martin    Add division by # of grid points to factqmin/factqmax
 !
 !EOP
 !-------------------------------------------------------------------------
