@@ -1071,7 +1071,7 @@
              endif
            endif
         end if ! radmod%lcloud_fwd .and. radmod%ex_biascor
-        if(sea.and.(varch_sea(ich(1))>0) then
+        if(sea.and.(varch_sea(ich(1))>0)) then
            do i=1,nchanl
               tnoise(i)=varch_sea(ich(i))
            enddo
