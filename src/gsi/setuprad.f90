@@ -220,7 +220,8 @@
   use radinfo, only: nuchan,tlapmean,predx,cbias,ermax_rad,tzr_qc,&
       npred,jpch_rad,varch,varch_cld,iuse_rad,icld_det,nusis,fbias,retrieval,b_rad,pg_rad,&
       air_rad,ang_rad,adp_anglebc,angord,ssmis_precond,emiss_bc,upd_pred, &
-      passive_bc,ostats,rstats,newpc4pred,radjacnames,radjacindxs,nsigradjac,nvarjac
+      passive_bc,ostats,rstats,newpc4pred,radjacnames,radjacindxs,nsigradjac,nvarjac, &
+      varch_sea,varch_land,varch_ice,varch_snow,varch_mixed
   use gsi_nstcouplermod, only: nstinfo
   use read_diag, only: get_radiag,ireal_radiag,ipchan_radiag
   use guess_grids, only: sfcmod_gfs,sfcmod_mm5,comp_fact10
@@ -262,7 +263,6 @@
   use radinfo, only: radinfo_adjust_jacobian
   use radiance_mod, only: rad_obs_type,radiance_obstype_search,radiance_ex_obserr,radiance_ex_biascor
   use sparsearr, only: sparr2, new, writearray, size, fullarray
-  use correlated_obsmod, only: corr_oberr_qc
 
   implicit none
 
@@ -356,8 +356,6 @@
   real(r_kind) :: ptau5deriv, ptau5derivmax
   real(r_kind) :: clw_guess,clw_guess_retrieval
 ! real(r_kind) :: predchan6_save   
-
-  real(r_kind),dimension(jpch_rad)::varch_sea,varch_land,varch_ice,varch_snow,varch_mixed
   integer(i_kind),dimension(nchanl):: ich,id_qc,ich_diag
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
@@ -465,14 +463,6 @@
   l_may_be_passive = .false.
   toss = .true.
   jc=0
-  do j=1,jpch_rad
-     varch_sea(j)=varch(j)
-     varch_land(j)=varch(j)
-     varch_ice(j)=varch(j)
-     varch_snow(j)=varch(j)
-     varch_mixed(j)=varch(j)
-  end do
-  if (miter>0) call corr_oberr_qc(jpch_rad,iuse_rad,nusis,varch_sea,varch_land,varch_ice,varch_snow,varch_mixed)
 
   do j=1,jpch_rad
      if(isis == nusis(j))then 
@@ -1081,23 +1071,23 @@
              endif
            endif
         end if ! radmod%lcloud_fwd .and. radmod%ex_biascor
-        if(sea) then
+        if(sea.and.(varch_sea(ich(1))>0) then
            do i=1,nchanl
               tnoise(i)=varch_sea(ich(i))
            enddo
-        else if(land) then
+        else if(land.and.(varch_land(ich(1))>0)) then
            do i=1,nchanl
               tnoise(i)=varch_land(ich(i))
            enddo
-        else if(ice) then
+        else if(ice.and.(varch_ice(ich(1))>0)) then
            do i=1,nchanl
               tnoise(i)=varch_ice(ich(i))
            enddo
-        else if(snow) then
+        else if(snow.and.(varch_snow(ich(1))>0)) then
            do i=1,nchanl
               tnoise(i)=varch_snow(ich(i))
            enddo
-        else if(mixed) then
+        else if(mixed.and.(varch_mixed(ich(1))>0)) then
            do i=1,nchanl
               tnoise(i)=varch_mixed(ich(i))
            enddo

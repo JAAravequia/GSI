@@ -88,6 +88,7 @@ module radinfo
   public :: jpch_rad,npred,b_rad,pg_rad,diag_rad,iuse_rad,nusis,inew_rad
   public :: crtm_coeffs_path,retrieval,predx,ang_rad,newchn,cbias,icld_det
   public :: air_rad,nuchan,numt,varch,varch_cld,fbias,ermax_rad,tlapmean
+  public :: varch_sea, varch_land,varch_ice,varch_snow,varch_mixed
   public :: ifactq,mype_rad
   public :: ostats,rstats,varA
   public :: adp_anglebc,angord,use_edges, maxscan, bias_zero_start
@@ -135,6 +136,11 @@ module radinfo
   real(r_kind) :: ssmis_precond
 
   real(r_kind),allocatable,dimension(:):: varch       ! variance for clear radiance each satellite channel
+  real(r_kind),allocatable,dimension(:):: varch_sea   ! optional variance in case of correlated error over sea
+  real(r_kind),allocatable,dimension(:):: varch_land  ! optional variance in case of correlated error over land
+  real(r_kind),allocatable,dimension(:):: varch_ice   ! optional variance in case of correlated error over ice
+  real(r_kind),allocatable,dimension(:):: varch_snow  ! optional variance in case of correlated error over snow
+  real(r_kind),allocatable,dimension(:):: varch_mixed ! optional variance in case of correlated error over mixed surfaces
   real(r_kind),allocatable,dimension(:):: varch_cld   ! variance for cloudy radiance
   real(r_kind),allocatable,dimension(:):: ermax_rad   ! error maximum (qc)
   real(r_kind),allocatable,dimension(:):: b_rad       ! variational b value
@@ -569,7 +575,7 @@ contains
 
 ! !USES:
 
-    use correlated_obsmod, only: corr_ob_initialize
+    use correlated_obsmod, only: corr_ob_initialize,corr_oberr_qc
     use obsmod, only: iout_rad
     use constants, only: zero,one,zero_quad
     use mpimod, only: mype
@@ -664,6 +670,8 @@ contains
          ermax_rad(jpch_rad),b_rad(jpch_rad),pg_rad(jpch_rad), &
          ang_rad(jpch_rad),air_rad(jpch_rad),inew_rad(jpch_rad),&
          icld_det(jpch_rad),icloud4crtm(jpch_rad),iaerosol4crtm(jpch_rad))
+    allocate(varch_sea(jpch_rad),varch_land(jpch_rad),varch_ice(jpch_rad), &
+         varch_snow(jpch_rad),varch_mixed(jpch_rad))
     allocate(nfound(jpch_rad))
     iuse_rad(0)=-999
     inew_rad=.true.
@@ -1120,7 +1128,11 @@ contains
 
 !   Initialize observation error covariance for 
 !   instruments we account for inter-channel correlations
-    if (present(miter)) call corr_ob_initialize(miter)
+    if (present(miter)) then 
+       call corr_ob_initialize(miter)
+       if (miter>0) call corr_oberr_qc(jpch_rad,iuse_rad,nusis,varch_sea, &
+                         varch_land,varch_ice,varch_snow,varch_mixed)
+    endif
 
 !   Close unit for runtime output.  Return to calling routine
     if(mype==mype_rad)close(iout_rad)
@@ -1201,8 +1213,8 @@ contains
 !   information from satinfo file.
 
     deallocate (predx,cbias,tlapmean,nuchan,nusis,iuse_rad,air_rad,ang_rad, &
-         ifactq,varch,varch_cld,inew_rad,icld_det,icloud4crtm,iaerosol4crtm)
-
+         ifactq,varch,varch_cld,inew_rad,icld_det,icloud4crtm,iaerosol4crtm, &
+         varch_sea,varch_land,varch_ice,varch_snow,varch_mixed)
     if (adp_anglebc) deallocate(count_tlapmean,update_tlapmean,tsum_tlapmean)
     if (newpc4pred) deallocate(ostats,rstats,varA)
     deallocate (radstart,radstep,radnstep,radedge1,radedge2)

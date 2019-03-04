@@ -612,19 +612,21 @@ endif ! method=1
 ! Here, recondioning is of covariance matrix
 if ( (ErrorCov%method==2).or.(ErrorCov%method==4) ) then
 
-   ErrorCov%Revecs=ErrorCov%R
-   call decompose_(trim(ErrorCov%name),ErrorCov%Revals,ErrorCov%Revecs,ndim,.true.)
-   do jj=1,ndim
-       ErrorCov%R(jj,jj)=ErrorCov%R(jj,jj)+2*sqrt(ErrorCov%R(jj,jj))*ErrorCov%kreq+ErrorCov%kreq*ErrorCov%kreq
-   enddo
-   ErrorCov%Revecs=ErrorCov%R
-   call decompose_(trim(ErrorCov%name),ErrorCov%Revals,ErrorCov%Revecs,ndim,.true.)
-   ! In this case, we can wipe out the eigen-decomp since it will be redone for
-   ! each profile at each location at setup time.
-   ErrorCov%Revalsfull=ErrorCov%Revals
-   ErrorCov%Revecsfull=ErrorCov%Revecs
-   ErrorCov%Revals=zero
-   ErrorCov%Revecs=zero
+   ErrorCov%Revecsfull=ErrorCov%R
+   call decompose_(trim(ErrorCov%name),ErrorCov%Revalsfull,ErrorCov%Revecsfull,ndim,.true.)
+   if (ErrorCov%kreq>0) then
+      do jj=1,ndim
+          ErrorCov%R(jj,jj)=ErrorCov%R(jj,jj)+2*sqrt(ErrorCov%R(jj,jj))*ErrorCov%kreq+ErrorCov%kreq*ErrorCov%kreq
+      enddo
+      ErrorCov%Revecsfull=ErrorCov%R
+      call decompose_(trim(ErrorCov%name),ErrorCov%Revalsfull,ErrorCov%Revecsfull,ndim,.true.)
+      ! In this case, we can wipe out the eigen-decomp since it will be redone for
+      ! each profile at each location at setup time.
+!   ErrorCov%Revalsfull=ErrorCov%Revals
+!   ErrorCov%Revecsfull=ErrorCov%Revecs
+!   ErrorCov%Revals=zero
+!   ErrorCov%Revecs=zero
+   endif
 endif ! method=2,4
 
   contains
@@ -1115,7 +1117,7 @@ implicit none
    integer(i_kind),allocatable,dimension(:)   :: IJsubset
    integer(i_kind) iinstr,indR
    integer(i_kind),allocatable,dimension(:) :: ich1  ! true channel number
-  integer(i_kind),allocatable,dimension(:,:) :: tblidx
+   integer(i_kind),allocatable,dimension(:,:) :: tblidx
    integer(i_kind) :: nchanl1,jc   ! total number of channels in instrument
    if(.not.allocated(idnames)) then
      return
