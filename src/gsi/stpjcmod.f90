@@ -75,7 +75,7 @@ subroutine stplimq(rval,sval,sges,outmin,outmax,nstep,itbin)
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-  use gridmod, only: lat1,lon1,nsig,istart,wgtlats
+  use gridmod, only: lat1,lon1,nsig,istart,wgtfactlats
   use jfunc, only: factqmin,factqmax
   use guess_grids, only: ges_qsat
   use mpimod, only: mype
@@ -120,11 +120,11 @@ subroutine stplimq(rval,sval,sges,outmin,outmax,nstep,itbin)
               do kk=1,nstep
                  qx = q + sges(kk)*rq(i,j,k)
                  if(qx < zero)then
-                    outmin(kk)=outmin(kk)+(factqmin*wgtlats(ii))*qx*qx &
+                    outmin(kk)=outmin(kk)+(factqmin*wgtfactlats(ii))*qx*qx &
                                /(ges_qsat(i,j,k,itbin)*ges_qsat(i,j,k,itbin))
                  else
                     if(qx > ges_qsat(i,j,k,itbin))then
-                       outmax(kk)=outmax(kk)+(factqmax*wgtlats(ii))*(qx-ges_qsat(i,j,k,itbin))* &
+                       outmax(kk)=outmax(kk)+(factqmax*wgtfactlats(ii))*(qx-ges_qsat(i,j,k,itbin))* &
                             (qx-ges_qsat(i,j,k,itbin))/(ges_qsat(i,j,k,itbin)*ges_qsat(i,j,k,itbin))
                     end if
                  end if
@@ -140,10 +140,10 @@ subroutine stplimq(rval,sval,sges,outmin,outmax,nstep,itbin)
 !             Values for q using stepsizes
               q  = ges_q_it(i,j,k)
               if(q < zero)then
-                 outmin(1)=outmin(1)+(factqmin*wgtlats(ii))*q*q/(ges_qsat(i,j,k,itbin)*ges_qsat(i,j,k,itbin))
+                 outmin(1)=outmin(1)+(factqmin*wgtfactlats(ii))*q*q/(ges_qsat(i,j,k,itbin)*ges_qsat(i,j,k,itbin))
               else
                  if(q > ges_qsat(i,j,k,itbin))then
-                    outmax(1)=outmax(1)+(factqmax*wgtlats(ii))*(q-ges_qsat(i,j,k,itbin))*&
+                    outmax(1)=outmax(1)+(factqmax*wgtfactlats(ii))*(q-ges_qsat(i,j,k,itbin))*&
                                 (q-ges_qsat(i,j,k,itbin))/(ges_qsat(i,j,k,itbin)*ges_qsat(i,j,k,itbin))
                  end if
               end if

@@ -365,7 +365,6 @@
 !  01-04-2018 Apodaca   add diag_light and lightinfo for GOES/GLM lightning
 !                           data assimilation
 !  08-25-2018 Collard   Introduce bias_zero_start
-!  03-04-2019 Martin    Add division by # of grid points to factqmin/factqmax
 !
 !EOP
 !-------------------------------------------------------------------------
@@ -1590,11 +1589,6 @@
 ! Initialize values in aeroinfo
   call init_aero_vars
 
-! Weight factqmin/factqmax by grid size
-  if( (factqmin>zero) .or. (factqmax>zero) )  then
-    factqmin=factqmin/real(iglobal)
-    factqmax=factqmax/real(iglobal)    
-  end if
 
   end subroutine gsimain_initialize
 
