@@ -646,8 +646,10 @@ subroutine fv3uv2earth(u,v,nx,ny,u_out,v_out)
   real(r_kind),intent(  out) :: u_out(nx,ny),v_out(nx,ny)
   integer(i_kind) i,j
 
+  
   do j=1,ny
      do i=1,nx
+        !print*, i, j, u(i,j), v(i,j)
         u_out(i,j)=half *( (u(i,j)*sangv(i,j)-v(i,j)*sangu(i,j))/(cangu(i,j)*sangv(i,j)-sangu(i,j)*cangv(i,j)) &
                        +(u(i,j+1)*sangv(i+1,j)-v(i+1,j)*sangu(i,j+1))/(cangu(i,j+1)*sangv(i+1,j)-sangu(i,j+1)*cangv(i+1,j)))
         v_out(i,j)=half *( (u(i,j)*cangv(i,j)-v(i,j)*cangu(i,j))/(sangu(i,j)*cangv(i,j)-cangu(i,j)*sangv(i,j)) &

@@ -19,6 +19,14 @@
      dtbduv_on,time_window_max,offtime_data,init_directories,oberror_tune,ext_sonde, &
      blacklst,init_obsmod_vars,lobsdiagsave,lobskeep,lobserver,hilbert_curve,&
      lread_obs_save,lread_obs_skip
+
+  use obsmod, only: doradaroneob,oneoblat,oneoblon,oneobheight,oneobvalue,oneobddiff,oneobradid,&
+     radar_no_thinning,ens_hx_dbz_cut,static_gsi_nopcp_dbz,rmesh_dbz,&
+     rmesh_vr,zmesh_dbz,zmesh_vr,if_vterminal, if_model_dbz,if_vrobs_raw,&
+     minobrangedbz,maxobrangedbz,maxobrangevr,maxtiltvr,missing_to_nopcp,&
+     ntilt_radarfiles,whichradar,&
+     minobrangevr,maxtiltdbz,mintiltvr,mintiltdbz
+
   use obsmod, only: lwrite_predterms, &
      lwrite_peakwt,use_limit,lrun_subdirs,l_foreaft_thin,lobsdiag_forenkf,&
      obsmod_init_instr_table,obsmod_final_instr_table
@@ -47,8 +55,9 @@
   use aeroinfo, only: diag_aero, init_aero, init_aero_vars, final_aero_vars
   use coinfo, only: diag_co,init_co
   use convinfo, only: init_convinfo, &
-                      diag_conv,&
+                      diag_conv, &
                       use_prepb_satwnd,id_drifter
+
   use lightinfo, only: diag_light,init_light
 
   use oneobmod, only: oblon,oblat,obpres,obhourset,obdattim,oneob_type,&
@@ -572,7 +581,14 @@
        lwrite_peakwt,use_gfs_nemsio,sfcnst_comb,liauon,use_prepb_satwnd,l4densvar,ens_nstarthr,&
        use_gfs_stratosphere,pblend0,pblend1,step_start,diag_precon,lrun_subdirs,&
        use_sp_eqspace,lnested_loops,lsingleradob,thin4d,use_readin_anl_sfcmask,&
-       luse_obsdiag,id_drifter,verbose,lsingleradar,singleradar,lnobalance,imp_physics,&
+       luse_obsdiag,id_drifter,verbose,lsingleradar,singleradar,lnobalance,&
+       missing_to_nopcp,minobrangedbz,minobrangedbz,maxobrangedbz,&
+       maxobrangevr,maxtiltvr,whichradar,doradaroneob,oneoblat,&
+       oneoblon,oneobheight,oneobvalue,oneobddiff,oneobradid,&
+       rmesh_vr,zmesh_dbz,zmesh_vr, ntilt_radarfiles, whichradar,&
+       radar_no_thinning,ens_hx_dbz_cut,static_gsi_nopcp_dbz,rmesh_dbz,&
+       minobrangevr, maxtiltdbz, mintiltvr,mintiltdbz,if_vterminal,if_vrobs_raw,&
+       if_model_dbz,imp_physics, &
        lupp,netcdf_diag,binary_diag,l_wcp_cwm
 
 ! GRIDOPTS (grid setup variables,including regional specific variables):
@@ -1371,11 +1387,12 @@
      if (mype==0) write(6,*)'GSIMOD:  ***WARNING*** reset perturb_obs=',perturb_obs
   endif
 
+  l_cloud_analysis = .true.
 ! Force turn off cloud analysis and hydrometeor IO
-  if (i_gsdcldanal_type==0) then
-     l_cloud_analysis = .false.
-     if (mype==0) write(6,*)'GSIMOD:  ***WARNING*** set l_cloud_analysis=false'
-  endif
+  !if (i_gsdcldanal_type==0) then
+  !   l_cloud_analysis = .false.
+  !   if (mype==0) write(6,*)'GSIMOD:  ***WARNING*** set l_cloud_analysis=false'
+  !endif
   if((i_coastline == 1 .or. i_coastline == 3) .and. i_use_2mt4b==0) then
      i_coastline=0
      if (mype==0) write(6,*)'GSIMOD:  ***WARNING*** ',&

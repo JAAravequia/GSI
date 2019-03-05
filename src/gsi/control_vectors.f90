@@ -27,6 +27,9 @@ module control_vectors
 !   2010-05-28  todling  - remove all nrf2/3_VAR-specific "pointers"
 !   2011-07-04  todling  - fixes to run either single or double precision
 !   2013-05-20  zhu      - add aircraft temperature bias correction coefficients as control variables
+!   2016-02-15  Johnson, Y. Wang, X. Wang - add variables to control reading
+!                                           state variables for radar DA. POC:
+!                                           xuguang.wang@ou.edu
 !
 ! subroutines included:
 !   sub init_anacv   
@@ -127,6 +130,11 @@ public lupp        ! when .t., UPP is used and extra variables are output
 public nrf2_loc,nrf3_loc,nmotl_loc   ! what are these for??
 public ntracer
 
+public w_exist ! w will be used in the control variables ,only for
+                      ! wrf_mass_region =.true.
+public dbz_exist ! dbz will be used in the control variables ,only for
+                      ! wrf_mass_region =.true.
+
 type control_vector
    integer(i_kind) :: lencv
    real(r_kind), pointer :: values(:) => NULL()
@@ -168,6 +176,8 @@ real(r_kind)    ,allocatable,dimension(:) :: atsfc_sdv
 real(r_kind)    ,allocatable,dimension(:) :: an_amp0
 
 logical :: llinit = .false.
+logical w_exist !
+logical dbz_exist !
 
 ! ----------------------------------------------------------------------
 INTERFACE ASSIGNMENT (=)
@@ -370,6 +380,10 @@ do ii=1,nvars
 enddo
 
 deallocate(utable)
+
+!Default W and DZ in model fields TAJ
+w_exist=.true.
+dbz_exist=.true.
 
 ! right now, ens is made ideantical to static CV
 allocate(evars2d(nc2d),evars3d(nc3d))

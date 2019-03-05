@@ -11,6 +11,8 @@ module gsi_rfv3io_mod
 !                           gsi_nemsio_mod as a pattern.
 !   2017-10-10  wu      - setup A grid and interpolation coeff in generate_anl_grid
 !   2018-02-22  wu      - add subroutines for read/write fv3_ncdf
+!   2018-12-06  Jones   - add in hydrometoer (and related variables)
+!   2019-02-04  Jones   - More hydrpmeteor work (read in fv3_phy)
 !
 ! subroutines included:
 !   sub gsi_rfv3io_get_grid_specs
@@ -44,7 +46,8 @@ module gsi_rfv3io_mod
   character(len=*),parameter :: dynvars='fv3_dynvars'
   character(len=*),parameter :: tracers='fv3_tracer'
   character(len=*),parameter :: sfcdata='fv3_sfcdata'
-  integer(i_kind) gfile_grid_spec,gfile_ak_bk,gfile_dynvars
+  character(len=*),parameter :: phydata='fv3_phydata'
+  integer(i_kind) gfile_grid_spec,gfile_ak_bk,gfile_dynvars,gfile_phy
   integer(i_kind) gfile_tracers,gfile_sfcdata
   integer(i_kind) :: gfile
   save gfile
@@ -64,12 +67,15 @@ module gsi_rfv3io_mod
   public :: read_fv3_netcdf_guess
   public :: wrfv3_netcdf
 
-  public :: mype_u,mype_v,mype_t,mype_q,mype_p,mype_oz,mype_ql
+  public :: mype_u,mype_v,mype_w,mype_t,mype_q,mype_p,mype_oz,mype_hd,mype_ql, mype_qc
+  public :: mype_qi,mype_qs,mype_qg,mype_qh,mype_qnr,mype_qni,mype_qnl,mype_dbz
+
   public :: k_slmsk,k_tsea,k_vfrac,k_vtype,k_stype,k_zorl,k_smc,k_stc
   public :: k_snwdph,k_f10m,mype_2d,n2d,k_orog,k_psfc
   public :: ijns,ijns2d,displss,displss2d,ijnz,displsz_g
 
-  integer(i_kind) mype_u,mype_v,mype_t,mype_q,mype_p,mype_oz,mype_ql
+  integer(i_kind) mype_u,mype_v,mype_w,mype_t,mype_q,mype_p,mype_oz,mype_hd,mype_ql, mype_qc
+  integer(i_kind) mype_qr,mype_qi,mype_qs,mype_qg,mype_qh,mype_qnr,mype_qni,mype_qnl,mype_dbz
   integer(i_kind) k_slmsk,k_tsea,k_vfrac,k_vtype,k_stype,k_zorl,k_smc,k_stc
   integer(i_kind) k_snwdph,k_f10m,mype_2d,n2d,k_orog,k_psfc
 
@@ -188,6 +194,7 @@ subroutine gsi_rfv3io_get_grid_specs(grid_spec,ak_bk,ierr)
 
     iret=nf90_close(gfile_loc)
 
+!!! OPEN AK-BK FILE
     iret=nf90_open(ak_bk,nf90_nowrite,gfile_loc)
     if(iret/=nf90_noerr) then
        write(6,*)' problem opening ',trim(ak_bk),', Status = ',iret
@@ -519,8 +526,20 @@ subroutine read_fv3_netcdf_guess
     real(r_kind),dimension(:,:),pointer::ges_z=>NULL()
     real(r_kind),dimension(:,:,:),pointer::ges_u=>NULL()
     real(r_kind),dimension(:,:,:),pointer::ges_v=>NULL()
+    real(r_kind),dimension(:,:,:),pointer::ges_w=>NULL()
+!    real(r_kind),dimension(:,:,:),pointer::ges_hd=>NULL()
     real(r_kind),dimension(:,:,:),pointer::ges_q=>NULL()
-!   real(r_kind),dimension(:,:,:),pointer::ges_ql=>NULL()
+!    real(r_kind),dimension(:,:,:),pointer::ges_ql=>NULL()
+    real(r_kind),dimension(:,:,:),pointer::ges_qc=>NULL()
+    real(r_kind),dimension(:,:,:),pointer::ges_qr=>NULL()
+    real(r_kind),dimension(:,:,:),pointer::ges_qi=>NULL()
+    real(r_kind),dimension(:,:,:),pointer::ges_qs=>NULL()
+    real(r_kind),dimension(:,:,:),pointer::ges_qg=>NULL()
+    real(r_kind),dimension(:,:,:),pointer::ges_qh=>NULL()
+    real(r_kind),dimension(:,:,:),pointer::ges_qnr=>NULL()
+    real(r_kind),dimension(:,:,:),pointer::ges_qni=>NULL()
+    real(r_kind),dimension(:,:,:),pointer::ges_qnl=>NULL()
+    real(r_kind),dimension(:,:,:),pointer::ges_dbz=>NULL()
     real(r_kind),dimension(:,:,:),pointer::ges_oz=>NULL()
     real(r_kind),dimension(:,:,:),pointer::ges_tv=>NULL()
 
@@ -538,7 +557,7 @@ subroutine read_fv3_netcdf_guess
     k_orog =11  !terrain
     n2d=11
 
-    if(npe< 8) then
+    if(npe< 20) then
        call die('read_fv3_netcdf_guess','not enough PEs to read in fv3 fields' )
     endif
     mype_u=0           
@@ -547,9 +566,22 @@ subroutine read_fv3_netcdf_guess
     mype_p=3
     mype_q=4
     mype_ql=5
+!    mype_qc=5
     mype_oz=6
     mype_2d=7 
-      
+    
+    mype_w=8 
+    mype_qr=9
+    mype_qi=10
+    mype_qs=11
+    mype_qg=12
+    mype_qh=13
+    mype_qnr=14
+    mype_qni=15
+    mype_qnl=16
+    mype_dbz=17
+    mype_hd=18
+  
     allocate(ijns(npe),ijns2d(npe),ijnz(npe) )
     allocate(displss(npe),displss2d(npe),displsz_g(npe) )
 
@@ -576,10 +608,26 @@ subroutine read_fv3_netcdf_guess
     call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'z' , ges_z ,istatus );ier=ier+istatus
     call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'u' , ges_u ,istatus );ier=ier+istatus
     call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'v' , ges_v ,istatus );ier=ier+istatus
+    call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'w' , ges_w ,istatus );ier=ier+istatus
+!    call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'hd' , ges_hd ,istatus );ier=ier+istatus
     call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tv' ,ges_tv ,istatus );ier=ier+istatus
     call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q'  ,ges_q ,istatus );ier=ier+istatus
-!   call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql'  ,ges_ql ,istatus );ier=ier+istatus
+!    call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql'  ,ges_ql ,istatus );ier=ier+istatus
+    call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql'  ,ges_qc ,istatus );ier=ier+istatus
+    call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qr'  ,ges_qr ,istatus );ier=ier+istatus
+    call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qi'  ,ges_qi ,istatus );ier=ier+istatus
+    call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs'  ,ges_qs ,istatus );ier=ier+istatus
+    call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qg'  ,ges_qg ,istatus );ier=ier+istatus
+    call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qh'  ,ges_qh ,istatus );ier=ier+istatus
+    call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnr'  ,ges_qnr ,istatus );ier=ier+istatus
+    call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qni'  ,ges_qni ,istatus );ier=ier+istatus
+!    call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnl'  ,ges_qnl ,istatus );ier=ier+istatus
+!    print*, istatus
+    call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'dbz'  ,ges_dbz ,istatus );ier=ier+istatus
+!    print*, istatus
     call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'oz'  ,ges_oz ,istatus );ier=ier+istatus
+
+
     if (ier/=0) call die(trim(myname),'cannot get pointers for fv3 met-fields, ier =',ier)
 
     call gsi_fv3ncdf_readuv(ges_u,ges_v)
@@ -591,8 +639,12 @@ subroutine read_fv3_netcdf_guess
     enddo
     ges_ps(:,:)=ges_prsi(:,:,1,it)
     call gsi_fv3ncdf_read(tracers,'SPHUM','sphum',ges_q,mype_q)
-!   call gsi_fv3ncdf_read(tracers,'LIQ_WAT','liq_wat',ges_ql,mype_ql)
+!    call gsi_fv3ncdf_read(tracers,'LIQ_WAT','liq_wat',ges_ql,mype_ql)
+    call gsi_fv3ncdf_read(tracers,'LIQ_WAT','liq_wat',ges_qc,mype_ql)
     call gsi_fv3ncdf_read(tracers,'O3MR','o3mr',ges_oz,mype_oz)
+
+    ! GET HRRR MICROPHYSICS VARIABLES
+    call gsi_fv3ncdf_read(phydata,'QRAIN','phy_f3d_01',ges_qr,mype_qr)
 
 !!  tsen2tv  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     do k=1,nsig
@@ -847,6 +899,7 @@ subroutine gsi_fv3ncdf_read(filename,varname,varname2,work_sub,mype_io)
     allocate (work(itotsub*nsig))
 
     if(mype==mype_io ) then
+       print*, 'OPEN: ', filename, mype
        iret=nf90_open(trim(filename),nf90_nowrite,gfile_loc)
        if(iret/=nf90_noerr) then
           write(6,*)' problem opening ',trim(filename),gfile_loc,', Status = ',iret
@@ -876,6 +929,7 @@ subroutine gsi_fv3ncdf_read(filename,varname,varname2,work_sub,mype_io)
              exit
           endif
        enddo     !   k
+
        nz=nsig
        nzp1=nz+1
        do i=1,nz
@@ -970,6 +1024,8 @@ subroutine gsi_fv3ncdf_readuv(ges_u,ges_v)
           iret=nf90_inquire_dimension(gfile_loc,k,name,len)
           dim(k)=len
        enddo
+       
+       print*, 'DIMS: ', dim(:), ndimensions
 
        allocate(u(dim(1),dim(4)))
        allocate(v(dim(1),dim(4)))
@@ -1000,6 +1056,7 @@ subroutine gsi_fv3ncdf_readuv(ges_u,ges_v)
        nzp1=nz+1
        do i=1,nz
           ir=nzp1-i 
+          
           call fv3uv2earth(temp1(:,:,i),uu(:,:,i),nx,ny,u,v)
           if(mype==mype_u)then
              call fv3_h_to_ll(u,a,nx,ny,nxa,nya)

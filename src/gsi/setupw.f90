@@ -508,6 +508,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      z_height = .false.
      if ((itype>=221 .and. itype <= 229) .and. (data(ihgt,i)<r0_1_bmiss)) z_height = .true.
      if ((itype==261) .and. (data(ihgt,i)<r0_1_bmiss)) z_height = .true.
+     if (itype==299) z_height = .true.   ! OK Mesonet TAJ
 
 
 !    Process observations reported with height differently than those
@@ -1579,7 +1580,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(13,ii) = rwgt               ! nonlinear qc relative weight
         rdiagbuf(14,ii) = errinv_input       ! prepbufr inverse obs error (m/s)**-1
         rdiagbuf(15,ii) = errinv_adjst       ! read_prepbufr inverse obs error (m/s)**-1
-        rdiagbuf(16,ii) = errinv_final       ! final inverse observation error (m/s)**-1
+        rdiagbuf(16,ii) = errinv_input       ! final inverse observation error (m/s)**-1
 
         rdiagbuf(17,ii) = data(iuob,i)       ! u wind component observation (m/s)
         rdiagbuf(18,ii) = dudiff             ! u obs-ges used in analysis (m/s)
@@ -1689,7 +1690,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            call nc_diag_metadata("Nonlinear_QC_Rel_Wgt",    sngl(rwgt)             )
            call nc_diag_metadata("Errinv_Input",            sngl(errinv_input)     )
            call nc_diag_metadata("Errinv_Adjust",           sngl(errinv_adjst)     )
-           call nc_diag_metadata("Errinv_Final",            sngl(errinv_final)     )
+           call nc_diag_metadata("Errinv_Final",            sngl(errinv_input)     )
 
            call nc_diag_metadata("Wind_Reduction_Factor_at_10m", sngl(factw)       )
 

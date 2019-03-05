@@ -131,8 +131,8 @@ subroutine gsi_nstcoupler_init_nml
   nstinfo   = 0          ! number of nst fields used in Tr analysis
   zsea1     = 0          ! upper depth to do the mean
   zsea2     = 0          ! lower depth to do the mean
-  fac_dtl   = 1          ! indicator to apply DTL model
-  fac_tsl   = 1          ! indicator to apply TSL model
+  fac_dtl   = 0          ! indicator to apply DTL model
+  fac_tsl   = 0          ! indicator to apply TSL model
 
   return
 

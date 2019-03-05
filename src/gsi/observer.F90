@@ -335,7 +335,7 @@ _ENTRY_(Iam)
 
 !    Read observations from data files
      call read_obs(ndata,mype)
-
+     if(mype == 0) write(6,*) 'OBSERVER_SET: FINISHED READING OBS'
   else
 
 !    Read collective obs selection information to scratch file.

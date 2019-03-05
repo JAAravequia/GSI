@@ -90,6 +90,7 @@ subroutine tintrp2a1(f,g,dx,dy,obstime,gridtime, &
   deltp=one-delt
   delxp=one-delx; delyp=one-dely
   do k=1,nlevs
+     !print*, ix,iy,k,itime, f(ix,iy,k,itime) 
      g(k)=(f(ix,iy,k,itime)*delxp*delyp+f(ixp,iy,k,itime)*delx*delyp &
            +  f(ix,iyp,k,itime)*delxp*dely+f(ixp,iyp,k,itime)*delx*dely)*delt &
            +(f(ix,iy,k,itimep)*delxp*delyp+f(ixp,iy,k,itimep)*delx*delyp &

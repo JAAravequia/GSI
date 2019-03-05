@@ -73,6 +73,7 @@ module qcmod
 !                         of vis and cldch. the option to use the closest ob to the
 !                         analysis time only is now handled by Ming Hu's "logical l_closeobs"
 !                         for all variables
+!   2018-06-01  Jones	- Added GOES-ABI section
 !
 ! subroutines included:
 !   sub init_qcvars
@@ -87,6 +88,7 @@ module qcmod
 !   sub qc_ssu          - qc ssu data
 !   sub qc_avhrr        - qc avhrr data
 !   sub qc_goesimg      - qc goesimg data
+!   sub qc_abi          - qc abi data
 !   sub qc_msu          - qc msu data
 !   sub qc_irsnd        - qc ir sounder data (hirs,goesndr,iasi,airs,cris, cris-fsr)
 !   sub qc_amsua        - qc amsua data
@@ -153,6 +155,7 @@ module qcmod
   public :: qc_seviri
   public :: qc_ssu
   public :: qc_goesimg
+  public :: qc_abi
   public :: qc_msu
   public :: qc_irsnd
   public :: qc_avhrr
@@ -314,7 +317,7 @@ module qcmod
 !  ifail_sfcir_qc=53
 !  ifail_sfchgt=60
 
-! QC_goesimg          
+! QC_goesimg, QC_abi         
 !  Reject because of standard deviation in subroutine qc_goesimg
   integer(i_kind),parameter:: ifail_std_goesimg_qc=50 
 
@@ -524,7 +527,7 @@ contains
       tzchk = 0.85_r_kind
     elseif (  obstype == 'hirs2' .or. obstype == 'hirs3' .or. obstype == 'hirs4' .or. & 
               obstype == 'sndr' .or. obstype == 'sndrd1' .or. obstype == 'sndrd2'.or. &
-              obstype == 'sndrd3' .or. obstype == 'sndrd4' .or.  &
+              obstype == 'sndrd3' .or. obstype == 'sndrd4' .or. obstype == 'abi'.or. &
               obstype == 'goes_img' .or. obstype == 'ahi' .or. obstype == 'airs' .or. obstype == 'iasi' .or. &
               obstype == 'cris' .or. obstype == 'cris-fsr' .or. obstype == 'seviri' ) then
       tzchk = 0.85_r_kind
@@ -3780,6 +3783,151 @@ subroutine qc_seviri(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,   &
   return
 
 end subroutine qc_seviri
+
+!NEW ABI SECTION: TAJ
+subroutine qc_abi(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,   &
+     zsges,tzbgr,tbc,tnoise,temp,wmix,emissivity_k,ts,      &
+     id_qc,aivals,errf,varinv)
+
+  use kinds, only: r_kind, i_kind
+  implicit none
+
+  logical,                          intent(in   ) :: sea,land,ice,snow,luse
+  integer(i_kind),                  intent(in   ) :: nchanl,ndat,nsig,is
+  integer(i_kind),dimension(nchanl),intent(in   ) :: ich
+  integer(i_kind),dimension(nchanl),intent(inout) :: id_qc
+  real(r_kind),                     intent(in   ) :: zsges
+  real(r_kind),                     intent(in   ) :: tzbgr
+  real(r_kind),dimension(40,ndat),  intent(inout) :: aivals
+  real(r_kind),dimension(nchanl),   intent(in   ) :: tbc,tnoise,emissivity_k,ts
+  real(r_kind),dimension(nsig,nchanl),intent(in ) :: temp,wmix
+  real(r_kind),dimension(nchanl),   intent(inout) :: errf,varinv
+
+! Declare local parameters
+
+  integer(i_kind), dimension(nchanl) :: irday
+  real(r_kind) :: demisf,dtempf,efact,vfact,dtbf,term
+  integer(i_kind) :: i
+  real(r_kind) :: dtz,ts_ave,xindx,tzchks
+
+  irday = 1
+  if(sea)then
+     demisf = r0_01
+     dtempf = half
+  else if(land)then
+     demisf = r0_02
+     dtempf = two
+  else if(ice)then
+     demisf = r0_02
+     dtempf = three
+  else
+     demisf = r0_02
+     dtempf = five
+  end if
+  do i=1,nchanl
+
+!    use chn 2, 3 and 4 over both sea and land while other IR chns only over sea
+!    6.2, 6.9, 7.3 um
+     if (sea) then
+        efact=one
+        vfact=one
+     else if (land ) then
+        if (i == 2 .or. i ==3 .or. i == 4 ) then !WV CHANNELS
+           efact=one
+           vfact=one
+        else
+           efact=zero
+           vfact=zero
+           if(id_qc(i) == igood_qc)id_qc(i)=ifail_surface_qc
+        end if
+     else
+        efact=zero
+        vfact=zero
+        if(id_qc(i) == igood_qc)id_qc(i)=ifail_surface_qc
+     end if
+!    Reduce weight for obs over higher topography
+!    QC_terrain: If seviri and terrain height > 1km. do not use
+     if (zsges > 2500.0 ) then
+        efact   = zero
+        vfact   = zero
+!       QC2 in statsrad
+        if(luse) aivals(9,is)= aivals(9,is) + one
+        !if (i == 2 .or. i ==3 .or. i == 4 ) then
+        !  print*, 'QC2_ABI: ', i, zsges
+        !end if
+     end if
+
+!    QC_o-g: If abs(o-g) > 2.0 do not use
+     if ( abs(tbc(i)) > 5.0 ) then
+        vfact = zero
+        efact = zero
+        if(id_qc(i) == igood_qc ) id_qc(i)=ifail_gross_routine_qc   !hliu check
+
+!       QC1 in statsrad
+        if(luse) aivals(8,is)= aivals(8,is) + one  !hliu check
+
+        !if (i == 2 .or. i ==3 .or. i == 4 ) then
+        !  print*, 'QC1_ABI: ', i, tbc(i), id_qc(i)
+        !end if
+
+     end if
+
+
+!    modified variances.
+     errf(i)   = efact*errf(i)
+     varinv(i) = vfact*varinv(i)
+
+  end do
+
+!
+!    Apply Tz retrieval
+!
+     if(tzr_qc > 0)then
+        dtz = rmiss_single
+        if (luse .and. sea ) then
+           call tz_retrieval(nchanl,nsig,ich,irday,temp,wmix,tnoise,varinv,ts,tbc,tzbgr,1,0,dtz,ts_ave)
+        endif
+!       Apply QC with Tz retrieval
+!
+        if (dtz /= rmiss_single ) then
+          do i = 1, nchanl
+            if ( varinv(i) > tiny_r_kind .and. iuse_rad(ich(i)) >= 1 .and. ts(i)> tschk ) then
+              xindx = ((ts(i)-ts_ave)/(one-ts_ave))**3
+              tzchks = tzchk*(half)**xindx
+              if ( abs(dtz) > tzchks ) then
+                 varinv(i) = zero
+                 if (  id_qc(i) == igood_qc ) id_qc(i) = ifail_tzr_qc
+                 aivals(13,is) = aivals(13,is) + one
+
+                 !if (i == 2 .or. i ==3 .or. i == 4 ) then
+                 ! print*, 'QC3_ABI: ', i, abs(dtz), tzchks, id_qc(i)
+                 !end if
+
+              endif
+            endif
+          enddo
+        endif
+     endif
+
+   do i = 1, nchanl
+!    Modify error based on transmittance at top of model
+!    need this for SEVIRI??????
+!    varinv(i)=varinv(i)*ptau5(nsig,i)
+!    errf(i)=errf(i)*ptau5(nsig,i)
+
+!     if(varinv(i) > tiny_r_kind)then
+!        dtbf = demisf*abs(emissivity_k(i))+dtempf*abs(ts(i))
+!        term = dtbf*dtbf
+!        if(term > tiny_r_kind)varinv(i)=varinv(i)/(one+varinv(i)*term)
+!     end if
+      !print*, 'QC-ABI: ', i, tbc(i), id_qc(i), varinv(i), luse
+
+  end do
+
+  return
+end subroutine qc_abi
+
+
 subroutine qc_goesimg(nchanl,is,ndat,nsig,ich,dplat,sea,land,ice,snow,luse,   &
      zsges,cld,tzbgr,tb_obs,tb_obs_sdv,tbc,tnoise,temp,wmix,emissivity_k,ts,      &
      id_qc,aivals,errf,varinv)

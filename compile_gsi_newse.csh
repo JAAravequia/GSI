@@ -1,6 +1,6 @@
 #!/bin/csh
 
-source ~/.tcshrc
+#source ~/.tcshrc
 
 setenv CRAYOS_VERSION "6.0.4144"
 setenv LAPACK_PATH /opt/intel/compilers_and_libraries_2016.4.258/linux/mkl/lib/intel64

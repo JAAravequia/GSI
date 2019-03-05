@@ -168,7 +168,7 @@ contains
     integer(i_kind) idum
     logical print_verbose
 
-    print_verbose=.false.
+    print_verbose=.true.
     if(verbose)print_verbose=.true.
     lunin = 47
     open(lunin,file='convinfo',form='formatted')

@@ -93,6 +93,9 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !   2015-07-10  pondeca - add cldch
 !   2015-10-01  guo   - full res obvsr: index to allow redistribution of obsdiags
 !   2016-05-05  pondeca - add uwnd10m, vwund10m
+!   2017-01-01  Jones - Add Cloud water path
+!   2018-01-01  Jones/JJH - Add dewpoint
+!   2018-01-01  JJH - Add Doppler wind lidar
 !   2018-02-15  wu      - add code for fv3_regional 
 !   2018-01-01  Apodaca - add GOES/GLM lightning
 !
@@ -199,10 +202,14 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   external:: setupps
   external:: setuppw
   external:: setupq
+  external:: setuptd
+  external:: setupdlw !JJH
   external:: setuprad
   external:: setupref
   external:: setuprw
   external:: setupspd
+  external:: setupdbz !AJ radar
+  external:: setupcwp !TAJ
   external:: setupsst
   external:: setupt
   external:: setuptcp
@@ -248,6 +255,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
        is,idate,i_dw,i_rw,i_sst,i_tcp,i_gps,i_uv,i_ps,i_lag,i_light,&
        i_t,i_pw,i_q,i_co,i_gust,i_vis,i_ref,i_pblh,i_wspd10m,i_td2m,&
        i_mxtm,i_mitm,i_pmsl,i_howv,i_tcamt,i_lcbas,i_cldch,i_uwnd10m,i_vwnd10m,&
+       i_dbz,i_cwp, i_td,i_okt, i_okq, i_okuv, i_okps, i_oktd,&
        i_swcp,i_lwcp,iobs,nprt,ii,jj
   integer(i_kind) it,ier,istatus
 
@@ -319,7 +327,12 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   i_swcp=28
   i_lwcp=29
   i_light=30
-  i_ref =i_light
+  i_dbz=31
+  i_cwp=32
+  i_td=33
+
+  !i_ref =i_light
+  i_ref = i_td
 
   allocate(awork1(7*nsig+100,i_ref))
   if(.not.rhs_allocated) call rhs_alloc(aworkdim2=size(awork1,2))
@@ -527,11 +540,11 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !          Set up conventional data
            else if(ditype(is) == 'conv')then
 !             Set up temperature data
-              if(obstype=='t')then
+              if(obstype=='t' .or. obstype=='okt' .or. obstype=='aerit')then ! JJH added aerit, TAJ addded OK meso
                  call setupt(lunin,mype,bwork,awork(1,i_t),nele,nobs,is,conv_diagsave)
 
 !             Set up uv wind data
-              else if(obstype=='uv')then
+              else if(obstype=='uv' .or. obstype=='okuv')then
                  call setupw(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
 
 !             Set up wind speed data
@@ -539,7 +552,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
                  call setupspd(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
 
 !             Set up surface pressure data
-              else if(obstype=='ps')then
+              else if(obstype=='ps' .or. obstype=='okps')then
                  call setupps(lunin,mype,bwork,awork(1,i_ps),nele,nobs,is,conv_diagsave)
  
 !             Set up tc-mslp data
@@ -547,8 +560,16 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
                  call setuptcp(lunin,mype,bwork,awork(1,i_tcp),nele,nobs,is,conv_diagsave)
 
 !             Set up moisture data
-              else if(obstype=='q') then
+              else if(obstype=='q' .or. obstype=='okq' .or. obstype=='aeriq') then ! JJH added aeriq, TAJ addded OK meso
                  call setupq(lunin,mype,bwork,awork(1,i_q),nele,nobs,is,conv_diagsave)
+
+!             Set up dewpoint data (TAJ; JJH)
+              else if(obstype=='td'.or. obstype=='oktd' .or. obstype=='aeritd') then
+                 call setuptd(lunin,mype,bwork,awork(1,i_td),nele,nobs,is,conv_diagsave)
+
+!             Set up Dopper Lidar(DL) Wind profile - JJH
+              else if(obstype=='dlw')then
+                 call setupdlw(lunin,mype,bwork,awork(1,i_uv),nele,nobs,is,conv_diagsave)
 
 !             Set up lidar wind data
               else if(obstype=='dw')then
@@ -557,6 +578,15 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !             Set up radar wind data
               else if(obstype=='rw')then
                  call setuprw(lunin,mype,bwork,awork(1,i_rw),nele,nobs,is,conv_diagsave)
+
+!             Set up radar reflectivity data
+              else if(obstype=='dbz')then
+                 !print*, 'CALLING setupdbz'
+                 call setupdbz(lunin,mype,bwork,awork(1,i_dbz),nele,nobs,is,conv_diagsave)
+
+!             Set up cloud water path data
+              else if(obstype=='cwp')then
+                 call setupcwp(lunin,mype,bwork,awork(1,i_cwp),nele,nobs,is,conv_diagsave)
 
 !             Set up total precipitable water (total column water) data
               else if(obstype=='pw')then
@@ -795,7 +825,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
 !    Compute and print statistics for "conventional" data
      call statsconv(mype,&
-          i_ps,i_uv,i_t,i_q,i_pw,i_rw,i_dw,i_gps,i_sst,i_tcp,i_lag, &
+          i_ps,i_uv,i_t,i_q,i_pw,i_rw,i_dbz,i_cwp, i_td,i_dw,i_gps,i_sst,i_tcp,i_lag, &
           i_gust,i_vis,i_pblh,i_wspd10m,i_td2m,i_mxtm,i_mitm,i_pmsl,i_howv, &
           i_tcamt,i_lcbas,i_cldch,i_uwnd10m,i_vwnd10m,i_swcp,i_lwcp,i_ref,bwork1,awork1,ndata)
 

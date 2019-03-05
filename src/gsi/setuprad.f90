@@ -191,6 +191,7 @@
 !   2016-10-23  zhu     - add cloudy radiance assimilation for ATMS
 !   2017-07-27  kbathmann -introduce Rinv into the rstats computation for correlated error
 !   2018-04-04  zhu     - add additional radiance_ex_obserr and radiance_ex_biascor calls for all-sky
+!   2018-06-01  Jones   - Add GOES-16 Component
 !
 !  input argument list:
 !     lunin   - unit from which to read radiance (brightness temperature, tb) obs
@@ -255,7 +256,7 @@
   use clw_mod, only: calc_clw, ret_amsua
   use qcmod, only: qc_ssmi,qc_seviri,qc_ssu,qc_avhrr,qc_goesimg,qc_msu,qc_irsnd,qc_amsua,qc_mhs,qc_atms
   use qcmod, only: igood_qc,ifail_gross_qc,ifail_interchan_qc,ifail_crtm_qc,ifail_satinfo_qc,qc_noirjaco3,ifail_cloud_qc
-  use qcmod, only: qc_gmi,qc_saphir,qc_amsr2
+  use qcmod, only: qc_gmi,qc_saphir,qc_amsr2,qc_abi
   use qcmod, only: setup_tzr_qc,ifail_scanedge_qc,ifail_outside_range
   use state_vectors, only: svars3d, levels, svars2d, ns3d, nsdim
   use oneobmod, only: lsingleradob,obchan,oblat,oblon,oneob_type
@@ -313,7 +314,7 @@
   real(r_kind) bias       
   real(r_kind) factch6    
 
-  logical hirs2,msu,goessndr,hirs3,hirs4,hirs,amsua,amsub,airs,hsb,goes_img,ahi,mhs
+  logical hirs2,msu,goessndr,hirs3,hirs4,hirs,amsua,amsub,airs,hsb,goes_img,ahi,mhs,abi
   type(sparr2) :: dhx_dx
   real(r_single), dimension(nsdim) :: dhx_dx_array
   logical avhrr,avhrr_navy,lextra,ssu,iasi,cris,seviri,atms
@@ -426,6 +427,7 @@
   hsb        = obstype == 'hsb'
   goes_img   = obstype == 'goes_img'
   ahi        = obstype == 'ahi'
+  abi        = obstype == 'abi'
   avhrr      = obstype == 'avhrr'
   avhrr_navy = obstype == 'avhrr_navy'
   ssmi       = obstype == 'ssmi'
@@ -740,6 +742,9 @@
         land = data_s(ifrac_lnd,n)  >= 0.99_r_kind
         ice  = data_s(ifrac_ice,n)  >= 0.99_r_kind
         snow = data_s(ifrac_sno,n)  >= 0.99_r_kind
+
+        !print*, n,  data_s(ifrac_sea,n),  data_s(ifrac_lnd,n), data_s(ifrac_ice,n), data_s(ifrac_sno,n)
+
         mixed = .not. sea  .and. .not. ice .and.  &
                 .not. land .and. .not. snow
         eff_area=.false.
@@ -1203,7 +1208,15 @@
            call qc_goesimg(nchanl,is,ndat,nsig,ich,dplat(is),sea,land,ice,snow,luse(n), &
               zsges,cld,tzbgr,tb_obs,tb_obs_sdv,tbc,tnoise,temp,wmix,emissivity_k,ts,id_qc, &
               aivals,errf,varinv)
-           
+
+!  ---------- ABI  -------------------
+!       ABI Q C
+
+        else if (abi) then
+
+           cld = 100-data_s(iclr_sky,n)
+          call qc_abi(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse(n), &
+              zsges,tzbgr,tbc,tnoise,temp,wmix,emissivity_k,ts,id_qc,aivals,errf,varinv)           
 
 !  ---------- SEVIRI  -------------------
 !       SEVIRI Q C
@@ -1333,10 +1346,12 @@
 !                location is too large and difference at the 
 !                observation location is similarly large, then
 !                toss the observation.
-                 if(id_qc(i) == igood_qc)id_qc(i)=ifail_gross_qc
-                 varinv(i) = zero
-                 if(luse(n))stats(2,m) = stats(2,m) + one
-                 if(luse(n))aivals(7,is) = aivals(7,is) + one
+
+                 ! *** TURN OFF: TAJ...ALLOW ENKF TO TAKE CARE OF OUTLIERS
+!                 if(id_qc(i) == igood_qc)id_qc(i)=ifail_gross_qc
+!                 varinv(i) = zero
+!                 if(luse(n))stats(2,m) = stats(2,m) + one
+!                 if(luse(n))aivals(7,is) = aivals(7,is) + one
               end if
            end if
         end do

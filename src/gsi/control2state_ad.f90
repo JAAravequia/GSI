@@ -68,6 +68,7 @@ use gsi_chemguess_mod, only: gsi_chemguess_get
 use gsi_metguess_mod, only: gsi_metguess_get
 use mpeu_util, only: getindex
 use constants, only: max_varname_length,zero
+use gridmod, only: wrf_mass_regional,nems_nmmb_regional
 
 implicit none
 
@@ -118,7 +119,7 @@ real(r_kind),pointer,dimension(:,:)   :: rv_gust=>NULL(),rv_vis=>NULL(),rv_pblh=
 real(r_kind),pointer,dimension(:,:)   :: rv_wspd10m=>NULL(),rv_tcamt,rv_lcbas=>NULL()
 real(r_kind),pointer,dimension(:,:)   :: rv_td2m=>NULL(),rv_mxtm=>NULL(),rv_mitm=>NULL()
 real(r_kind),pointer,dimension(:,:)   :: rv_pmsl=>NULL(),rv_howv=>NULL(),rv_cldch=>NULL()
-real(r_kind),pointer,dimension(:,:)   :: rv_uwnd10m=>NULL(),rv_vwnd10m=>NULL()
+real(r_kind),pointer,dimension(:,:)   :: rv_uwnd10m=>NULL(),rv_vwnd10m=>NULL(),rv_dw=>NULL()
 real(r_kind),pointer,dimension(:,:,:) :: rv_u=>NULL(),rv_v=>NULL(),rv_w=>NULL(),rv_prse=>NULL()
 real(r_kind),pointer,dimension(:,:,:) :: rv_q=>NULL(),rv_tsen=>NULL(),rv_tv=>NULL(),rv_oz=>NULL()
 real(r_kind),pointer,dimension(:,:,:) :: rv_rank3=>NULL()
@@ -372,6 +373,10 @@ do jj=1,nsubwin
    if (icw>0) then
       call gsi_bundlegetpointer (rval(jj),'w' ,rv_w, istatus)
       call gsi_bundleputvar ( wbundle, 'w', rv_w, istatus )
+      if(nems_nmmb_regional)then
+         call gsi_bundlegetpointer (rval(jj),'dw' ,rv_dw, istatus)
+         call gsi_bundleputvar ( wbundle, 'dw', rv_dw, istatus )
+       end if
    end if
    if (ictcamt>0) then
       call gsi_bundlegetpointer (rval(jj),'tcamt',rv_tcamt, istatus)

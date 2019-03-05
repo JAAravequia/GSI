@@ -1513,6 +1513,7 @@ contains
 !   2015-10-22  jung    - changed from using satinfo information in the radstat file to
 !                         using information from the satinfo file.
 !   2016-07-14  jung    - mods to make SEVIRI channel numbers consistent with other instruments.
+!   2018-06-01  Jones   - Add abi type
 !
 ! attributes:
 !   language: f90
@@ -1526,12 +1527,12 @@ contains
    use mpimod, only:  npe,mype,mpi_comm_world,ierror
    use read_diag, only: read_radiag_header,read_radiag_data,diag_header_fix_list,&
         diag_header_chan_list,diag_data_fix_list,diag_data_chan_list,&
-        diag_data_extra_list,diag_data_name_list,open_radiag,close_radiag,set_netcdf_read
+        diag_data_extra_list,diag_data_name_list
    use constants, only: zero,one,deg2rad
-   use obsmod, only:  netcdf_diag
    implicit none
 
 !  Declare local parameters
+   integer(i_kind),parameter:: lndiag = 21
    integer(i_kind),parameter:: lntemp = 51
 
    integer(i_kind),parameter:: nthreshold = 100
@@ -1546,14 +1547,12 @@ contains
    logical mean_only
    logical ssmi,ssmis,amsre,amsre_low,amsre_mid,amsre_hig,tmi,gmi,amsr2,saphir
    logical ssmis_las,ssmis_uas,ssmis_env,ssmis_img
-   logical avhrr,avhrr_navy,goessndr,goes_img,ahi,seviri
+   logical avhrr,avhrr_navy,goessndr,goes_img,ahi,seviri,abi
 
    character(len=20):: obstype,platid
    character(len=20):: satsens,satsens_id
-   character(len=50):: dname,fname
-   character(len=500):: fdiag_rad
+   character(len=50):: fdiag_rad,dname,fname
 
-   integer(i_kind):: lndiag
    integer(i_kind):: ix,ii,iii,iich,ndatppe
    integer(i_kind):: i,j,jj,n_chan,k,lunout
    integer(i_kind):: istatus,ispot
@@ -1629,20 +1628,16 @@ contains
 !     Create diagnostic filename
       fdiag_rad = 'diag_' // trim(dtype(iii)) // '_' // trim(dplat(iii))
 
-!     Set diagnostic file type
-      call set_netcdf_read(netcdf_diag)
-
 !     See if diagnostic file exists
       inquire(file=fdiag_rad,exist=lexist)
       if (.not.lexist) cycle loopf
 
 !     Open file and read header
-      lndiag = 21
-      call open_radiag(fdiag_rad,lndiag,istatus)
+      open(lndiag,file=fdiag_rad,form='unformatted',status='old',iostat=istatus)
       if (istatus/=0) then
          write(6,'(''INIT_PREDX:  Task '',i5,'' problem opening file '',a,'' iostat='',i4)') &
              mype,trim(fdiag_rad),istatus
-         call close_radiag(fdiag_rad,lndiag)
+         close(lndiag)
          cycle loopf
       endif
 
@@ -1651,7 +1646,7 @@ contains
       if (istatus/=0) then
          write(6,'(''INIT_PREDX:  Task '',i5,'' problem reading file '',a,'' header, iostat='',i4)') &
               mype,trim(fdiag_rad),istatus
-         call close_radiag(fdiag_rad,lndiag)
+         close(lndiag)
          cycle loopf
       endif
 
@@ -1695,7 +1690,7 @@ contains
 !     Seviri channels should start at 4.  If the first seviri channel is less than 4
 !     do not use this diag* file
       if ( satsens(1:6) == 'seviri' .and. header_chan(1)%nuchan < 4) then
-        call close_radiag(fdiag_rad,lndiag)
+        close(lndiag)
         cycle loopf
       endif
 
@@ -1713,9 +1708,9 @@ contains
             endif
          end do 
       end do loop_a
-
+       
       if (.not. update .and. new_chan==0) then 
-         call close_radiag(fdiag_rad,lndiag)
+         close(lndiag)
          cycle loopf
       end if
 
@@ -1724,6 +1719,7 @@ contains
                    obstype == 'sndrd4'
       goes_img   = obstype == 'goes_img'
       ahi        = obstype == 'ahi'
+      abi        = obstype == 'abi'
       avhrr      = obstype == 'avhrr'
       avhrr_navy = obstype == 'avhrr_navy'
       ssmi       = obstype == 'ssmi'
@@ -1861,7 +1857,7 @@ contains
 !     End of loop over diagnostic file
       enddo loopd
 
-      call close_radiag(fdiag_rad,lndiag)
+      close(lndiag)
 
 !     Compute tlapmean
       if (update) then

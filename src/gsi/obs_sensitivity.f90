@@ -22,6 +22,7 @@ module obs_sensitivity
 !   2016-02-20 pagowski - add pm10
 !   2016-05-05 pondeca  - add reference to uwnd10m, vwnd10m
 !   2017-01-16 Apodaca  - add reference to lightning
+!   2018-06-01 Jones    - Add CWP and dewpoint
 !
 ! Subroutines Included:
 !   init_fc_sens  - Initialize computations
@@ -49,7 +50,8 @@ use obsmod, only: cobstype, nobs_type, obscounts, &
                   i_wspd10m_ob_type, i_td2m_ob_type, i_mxtm_ob_type, i_mitm_ob_type, &
                   i_pmsl_ob_type, i_howv_ob_type, i_tcamt_ob_type, i_lcbas_ob_type, &
                   i_cldch_ob_type, i_uwnd10m_ob_type, i_vwnd10m_ob_type, i_pm10_ob_type, &
-                  i_swcp_ob_type, i_lwcp_ob_type, i_light_ob_type
+                  i_swcp_ob_type, i_lwcp_ob_type, i_light_ob_type, &
+                  i_cwp_ob_type, i_dbz_ob_type,i_td_ob_type
 
 use mpimod, only: mype
 use control_vectors, only: control_vector,allocate_cv,read_cv,deallocate_cv, &
@@ -286,6 +288,9 @@ cobtype(i_vwnd10m_ob_type) ="v10m "
 cobtype(i_swcp_ob_type)  ="swcp "
 cobtype(i_lwcp_ob_type)  ="lwcp "
 cobtype(i_light_ob_type) ="light"
+cobtype(i_dbz_ob_type)  ="dbz  "
+cobtype(i_cwp_ob_type)  ="cwp  "
+cobtype(i_td_ob_type)   ="dewt  "
 
 
 return

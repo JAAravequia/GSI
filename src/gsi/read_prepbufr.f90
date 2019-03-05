@@ -138,8 +138,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !   2016-05-05  pondeca - add 10-m u-wind and v-wind (uwnd10m, vwnd10m)
 !   2016-06-01  zhu    - use errormod_aircraft
 !   2017-06-17  levine - add GLERL program code lookup
-!
-!   2017-03-21  Su      - add option to thin conventional data in 4 dimension 
+!   2018-01-01  Jones/JJH - Add dewpoint functionality
 
 !   input argument list:
 !     infile   - unit from which to read BUFR data
@@ -170,30 +169,32 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
       rlats,rlons,twodvar_regional
   use convinfo, only: nconvtype,ctwind, &
       ncmiter,ncgroup,ncnumgrp,icuse,ictype,icsubtype,ioctype, &
-      ithin_conv,rmesh_conv,pmesh_conv,pmot_conv,ptime_conv, &
+      ithin_conv,rmesh_conv,pmesh_conv, &
       use_prepb_satwnd
   use convinfo, only: id_drifter
 
-  use obsmod, only: iadate,oberrflg,perturb_obs,perturb_fact,ran01dom,hilbert_curve
+  use obsmod, only: iadate,iadatemn,oberrflg,perturb_obs,perturb_fact,ran01dom,hilbert_curve
   use obsmod, only: blacklst,offtime_data,bmiss,ext_sonde
+  use obsmod, only: LH_err
   use aircraftinfo, only: aircraft_t_bc,aircraft_t_bc_pof,ntail,taillist,idx_tail,npredt,predt, &
       aircraft_t_bc_ext,ntail_update,max_tail,nsort,itail_sort,idx_sort,timelist
   use converr,only: etabl
   use converr_ps,only: etabl_ps,isuble_ps,maxsub_ps
   use converr_q,only: etabl_q,isuble_q,maxsub_q
+!  use converr_td,only: etabl_td,isuble_td,maxsub_td ! td error can be included in errortable in future JJH
   use converr_t,only: etabl_t,isuble_t,maxsub_t
   use converr_uv,only: etabl_uv,isuble_uv,maxsub_uv
   use converr_pw,only: etabl_pw,isuble_pw,maxsub_pw
   use convb_ps,only: btabl_ps
   use convb_q,only: btabl_q
+!  use convb_td,only: btabl_td
   use convb_t,only: btabl_t
   use convb_uv,only: btabl_uv
   use gsi_4dvar, only: l4dvar,l4densvar,time_4dvar,winlen,thin4d
-  use convthin, only: make3grids,map3grids,map3grids_m,del3grids,use_all
-  use convthin_time, only: make3grids_tm,map3grids_tm,map3grids_m_tm,del3grids_tm,use_all_tm
   use qcmod, only: errormod,errormod_aircraft,noiqc,newvad,njqc
   use qcmod, only: pvis,pcldch,scale_cv,estvisoe,estcldchoe,vis_thres,cldch_thres
   use nltransf, only: nltransf_forward
+  use convthin, only: make3grids,map3grids,del3grids,use_all
   use blacklist, only : blacklist_read,blacklist_destroy
   use blacklist, only : blkstns,blkkx,ibcnt
   use sfcobsqc,only: init_rjlists,get_usagerj,get_gustqm,destroy_rjlists
@@ -210,6 +211,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   use adjust_cloudobs_mod, only: adjust_convcldobs,adjust_goescldobs
   use mpimod, only: npe
   use rapidrefresh_cldsurf_mod, only: i_gsdsfc_uselist,i_gsdqc
+  use dewpoint_obs_err_mod,only:dewpt_error_from_rh_and_temp,rh_error_from_dewpt_and_temp ! JJH
+  use met_mod, only: temp_and_dewpoint_to_rh !JJH
   use gsi_io, only: verbose
 
   implicit none
@@ -248,7 +251,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !  integer(i_kind),parameter:: nmsgmax=100000 ! max message count
 
 ! Declare local variables
-  logical tob,qob,uvob,spdob,sstob,pwob,psob,gustob,visob,tdob,mxtmob,mitmob,pmob,howvob,cldchob
+  logical tob,qob,uvob,spdob,sstob,pwob,psob,gustob,visob,tdob,mxtmob,mitmob,pmob,howvob,cldchob,tdpfob
   logical metarcldobs,goesctpobs,tcamtob,lcbasob
   logical outside,driftl,convobs,inflate_error
   logical sfctype
@@ -286,9 +289,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   integer(i_kind) lim_tqm,lim_qqm
   integer(i_kind) nlevp         ! vertical level for thinning
   integer(i_kind) ntmp,iout
-  integer(i_kind) pflag,irec,zflag
+  integer(i_kind) pflag,irec
   integer(i_kind) ntest,nvtest,iosub,ixsub,isubsub,iobsub
-  integer(i_kind) kl,k1,k2,k1_ps,k1_q,k1_t,k1_uv,k1_pw,k2_q,k2_t,k2_uv,k2_pw,k2_ps
+  integer(i_kind) kl,k1,k2,k1_ps,k1_q,k1_t,k1_uv,k1_pw,k2_q,k2_t,k2_uv,k2_pw,k2_ps,k1_td,k2_td
   integer(i_kind) itypex,itypey
   integer(i_kind) minobs,minan
   integer(i_kind) ntb,ntmatch,ncx
@@ -297,20 +300,19 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   integer(i_kind) tcamt_qc,lcbas_qc
   integer(i_kind) low_cldamt_qc,mid_cldamt_qc,hig_cldamt_qc
   integer(i_kind) iyyyymm
-  integer(i_kind) jj,start,next,ncount_ps,ncount_q,ncount_uv,ncount_t,ncount_pw
+  integer(i_kind) jj,start,next,ncount_ps,ncount_q,ncount_uv,ncount_t,ncount_pw,ncount_td
   integer(i_kind),dimension(5):: idate5
-  integer(i_kind),dimension(255):: pqm,qqm,tqm,wqm,pmq
+  integer(i_kind),dimension(255):: pqm,qqm,tqm,wqm,pmq,tdpfqm 
   integer(i_kind),dimension(nconvtype)::ntxall
   integer(i_kind),dimension(nconvtype+1)::ntx
   integer(i_kind),allocatable,dimension(:):: isort,iloc,nrep
   integer(i_kind),allocatable,dimension(:,:):: tab
   integer(i_kind) ibfms,thisobtype_usage
   integer(i_kind) iwmo,ios
-  integer(i_kind) ntime,itime 
   integer(i_kind) ierr_ps,ierr_q,ierr_t,ierr_uv,ierr_pw !  the position of error table collum
   integer(i_kind) idummy1,idummy2,glret,lindx !glret>0 means GLERL code exists.Others are dummy variables
   real(r_kind) time,timex,time_drift,timeobs,toff,t4dv,zeps
-  real(r_kind) qtflg,tdry,rmesh,ediff,usage,ediff_ps,ediff_q,ediff_t,ediff_uv,ediff_pw
+  real(r_kind) qtflg,tdry,rmesh,ediff,usage,ediff_ps,ediff_q,ediff_t,ediff_uv,ediff_pw,ediff_td
   real(r_kind) u0,v0,uob,vob,dx,dy,dx1,dy1,w00,w10,w01,w11
   real(r_kind) qoe,qobcon,pwoe,pwmerr,dlnpob,ppb,poe,gustoe,visoe,qmaxerr
   real(r_kind) toe,woe,errout,oelev,dlat,dlon,sstoe,dlat_earth,dlon_earth
@@ -319,10 +321,10 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   real(r_kind) selev,elev,stnelev
   real(r_kind) cdist,disterr,disterrmax,rlon00,rlat00
   real(r_kind) vdisterrmax,u00,v00
-  real(r_kind) del,terrmin,werrmin,perrmin,qerrmin,pwerrmin,del_ps,del_q,del_t,del_uv,del_pw
+  real(r_kind) del,terrmin,werrmin,perrmin,qerrmin,pwerrmin,del_ps,del_q,del_t,del_uv,del_pw,del_td
   real(r_kind) pjbmin,qjbmin,tjbmin,wjbmin
   real(r_kind) tsavg,ff10,sfcr,zz
-  real(r_kind) crit1,timedif,xmesh,pmesh,pmot,ptime             ! thinning parameter
+  real(r_kind) crit1,timedif,xmesh,pmesh
   real(r_kind) time_correction
   real(r_kind) tcamt,lcbas,ceiling
   real(r_kind) tcamt_oe,lcbas_oe
@@ -334,6 +336,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   real(r_kind),allocatable,dimension(:):: presl_thin
   real(r_kind),allocatable,dimension(:,:):: cdata_all,cdata_out
   real(r_kind) :: zob,tref,dtw,dtc,tz_tr
+  real(r_kind) :: tdew,tair,rh     ! added by JJH, dew point temperature and air temperature, relative humidity 
   real(r_kind) :: tempvis,visout
   real(r_kind) :: tempcldch,cldchout
 
@@ -420,8 +423,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 ! Initialize variables
 
   vdisterrmax=zero
-!  pflag=0                  !  dparrish debug compile run flags pflag as not defined ???????????
-  zflag=0
+  pflag=0                  !  dparrish debug compile run flags pflag as not defined ???????????
   nreal=0
   satqc=zero
   tob = obstype == 't'
@@ -429,6 +431,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   spdob = obstype == 'spd'
   psob = obstype == 'ps'
   qob = obstype == 'q'
+  tdpfob = obstype == 'td' ! td ob (profile and sfc) -JJH
   pwob = obstype == 'pw'
   sstob = obstype == 'sst'
   gustob = obstype == 'gust'
@@ -450,6 +453,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   aircraftobst=.false.
   if(tob)then
      nreal=25
+  else if(tdpfob)then ! added by JJH
+     nreal=26
   else if(uvob) then 
      nreal=25
   else if(spdob) then
@@ -499,12 +504,12 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   if (noiqc) then
      lim_qm=8
      if (psob)         lim_zqm=7
-     if (qob.or.tdob)  lim_tqm=7
+     if (qob.or.tdob .or. tdpfob)  lim_tqm=7
      if (tob)          lim_qqm=8
   else
      lim_qm=4
      if (psob)         lim_zqm=4
-     if (qob.or.tdob)  lim_tqm=4
+     if (qob.or.tdob .or. tdpfob)  lim_tqm=4
      if (tob)          lim_qqm=4
   endif
 
@@ -812,14 +817,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   nchanl=0
   ilon=2
   ilat=3
-  rmesh=zero
-  pmot=zero
-  pmesh=zero
-  ptime=zero
-  xmesh=zero
-  pflag=0
   loop_convinfo: do nx=1, ntread
-    use_all_tm = .true. 
+
      use_all = .true.
      ithin=0
      if(nx > 1) then
@@ -828,52 +827,29 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
         if (ithin > 0 ) then
            rmesh=rmesh_conv(nc)
            pmesh=pmesh_conv(nc)
-           pmot=pmot_conv(nc)
-           ptime=ptime_conv(nc)
-           if(pmesh > zero .and. ithin ==1) then
+           use_all = .false.
+           if(pmesh > zero) then
               pflag=1
-              zflag=-1
               nlevp=r1200/pmesh
-           else if(pmesh > zero .and. ithin ==2) then
-              pflag=1
-              zflag=1
-              nlevp=25000.00_r_kind/pmesh
            else
-              zflag=-1
               pflag=0
               nlevp=nsig
            endif
            xmesh=rmesh
-           if( ptime >zero) then
-              use_all_tm = .false.
-              ntime=6.0_r_kind/ptime                   !!  6 hour winddow
-              call make3grids_tm(xmesh,nlevp,ntime)
+
+           call make3grids(xmesh,nlevp)
+
+           if (.not.use_all) then
               allocate(presl_thin(nlevp))
-              if (zflag==-1 ) then
+              if (pflag==1) then
                  do k=1,nlevp
                     presl_thin(k)=(r1200-(k-1)*pmesh)*one_tenth
-                 enddo
-              else if(zflag==1 ) then
-                 do k=1,nlevp
-                    presl_thin(k)=k*pmesh
-                 enddo
-              endif
-           else
-              use_all = .false.
-              call make3grids(xmesh,nlevp)
-              allocate(presl_thin(nlevp))
-              if (zflag==-1 ) then
-                 do k=1,nlevp
-                    presl_thin(k)=(r1200-(k-1)*pmesh)*one_tenth
-                 enddo
-              else if(zflag==1 ) then
-                 do k=1,nlevp
-                    presl_thin(k)=k*pmesh
                  enddo
               endif
            endif
-           if(print_verbose) write(6,*)'READ_PREPBUFR: at line 779: obstype,ictype(nc),rmesh,pflag,nlevp,pmesh,pmot,ptime=',&
-              trim(ioctype(nc)),ictype(nc),rmesh,pflag,nlevp,pmesh,pmot,ptime,ithin
+     
+           if(print_verbose)write(6,*)'READ_PREPBUFR: at line 779: obstype,ictype(nc),rmesh,pflag,nlevp,pmesh=',&
+              trim(ioctype(nc)),ictype(nc),rmesh,pflag,nlevp,pmesh
         endif
      endif
        
@@ -1017,11 +993,17 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
               idate5(4)=ihh
               idate5(5)=0
               call w3fs21(idate5,minobs)    !  obs ref time in minutes relative to historic date
-              idate5(1)=iadate(1)
-              idate5(2)=iadate(2)
-              idate5(3)=iadate(3)
-              idate5(4)=iadate(4)
-              idate5(5)=0
+              !idate5(1)=iadate(1)
+              !idate5(2)=iadate(2)
+              !idate5(3)=iadate(3)
+              !idate5(4)=iadate(4)
+              !idate5(5)=0
+
+              idate5(1)=iadatemn(1)
+              idate5(2)=iadatemn(2)
+              idate5(3)=iadatemn(3)
+              idate5(4)=iadatemn(4)
+              idate5(5)=iadatemn(5)
               call w3fs21(idate5,minan)    !  analysis ref time in minutes relative to historic date
  
 !             Add obs reference time, then subtract analysis time to get obs time relative to analysis
@@ -1157,6 +1139,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                       var_jb(1,k)=(one-del_ps)*btabl_ps(itypex,k1_ps,ierr_ps)+del_ps*btabl_ps(itypex,k2_ps,ierr_ps)
                        var_jb(1,k)=max(var_jb(1,k),pjbmin)
                        if (var_jb(1,k) >=10.0_r_kind) var_jb(1,k)=zero
+                       if(itypey==180 .and. ierr_ps == 0  .and. print_verbose) then
+                          write(6,*) 'READ_PREPBUFR:180_ps,obserr,var_jb=',obserr(1,k),var_jb(1,k),ppb,k,hdr(2),hdr(3)
+                       endif
                     enddo
                  endif
                 if (tob) then
@@ -1208,6 +1193,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                        var_jb(3,k)=(one-del_t)*btabl_t(itypex,k1_t,ierr_t)+del_t*btabl_t(itypex,k2_t,ierr_t)
                        var_jb(3,k)=max(var_jb(3,k),tjbmin)
                        if (var_jb(3,k) >=10.0_r_kind) var_jb(3,k)=zero
+!                       if(itypey==180) then
+!                         write(6,*) 'READ_PREPBUFR:180_t,obserr,var_jb=',obserr(3,k),var_jb(3,k),ppb
+!                       endif
                     enddo
                  endif
                  if (qob) then
@@ -1569,7 +1557,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 
 !          If temperature ob, extract information regarding virtual
 !          versus sensible temperature
-           if(tob) then
+           if(tob .or. tdpfob) then !tdpfob by JJH
               if (.not. twodvar_regional .or. .not.tsensible) then
                  do k=1,levs
                     tvflg(k)=one                               ! initialize as sensible
@@ -1634,11 +1622,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
               endif
            end if
            LOOP_K_LEVS: do k=1,levs
-                 if( zflag ==-1) then
-                    ppb=obsdat(1,k)*one_tenth
-                 else if(zflag ==1) then
-                    ppb=obsdat(4,k)
-                 endif
                  if(kx==224 .and. newvad)then
                     if(mod(k,6)/=0) cycle LOOP_K_LEVS
                  end if
@@ -1676,6 +1659,10 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  if(obsdat(12,k) > r0_01_bmiss)cycle loop_k_levs
                  tdqm=qqm(k)
                  qm=tdqm
+              else if(tdpfob) then ! added by JJH, same as qqm
+                 if(obsdat(12,k) > r0_01_bmiss)cycle loop_k_levs !you have asimilar statement further down / MPondeca
+                 tdpfqm(k)=qqm(k)
+                 qm=tdpfqm(k)
               else if(mxtmob) then
                  mxtmqm=0
                  qm=mxtmqm
@@ -1847,8 +1834,63 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !             Missing Values ==>  Cycling! In this case for howv only.  #ww3 
               if (howvob  .and. owave(1,k) > r0_1_bmiss) cycle LOOP_K_LEVS
 
+!             Special block for data thinning - if requested
+              if (ithin > 0) then
+                 ntmp=ndata  ! counting moved to map3gridS
+           
+!                Set data quality index for thinning
+                 if (thin4d) then
+                    timedif = zero
+                 else
+                    timedif=abs(t4dv-toff)
+                 endif
+                 if(kx == 243 .or. kx == 253 .or. kx ==254) then
+                    call ufbint(lunin,satqc,1,1,iret,satqcstr)
+                    crit1 = timedif/r6+half + four*(one-satqc(1)/r100)*r3_33
+                 else
+                    crit1 = timedif/r6+half
+                 endif
+
+                 if (pflag==0) then
+                    do kk=1,nsig
+                       presl_thin(kk)=presl(kk)
+                    end do
+                 endif
+
+                 call map3grids(-1,pflag,presl_thin,nlevp,dlat_earth,dlon_earth,&
+                    plevs(k),crit1,ndata,iout,icntpnt,iiout,luse,.false.,.false.)
+
+                 if (.not. luse) then
+                    if(k==levs) then
+                       cycle loop_readsb
+                    else
+                       cycle LOOP_K_LEVS
+                    endif
+                 endif
+                 if(iiout > 0) isort(iiout)=0
+                 if(ndata >  ntmp)then
+                    nodata=nodata+1
+                    if(uvob)nodata=nodata+1
+                 end if
+                 isort(icntpnt)=iout
+
+              else
+                 ndata=ndata+1
+                 nodata=nodata+1
+                 if(uvob)nodata=nodata+1
+                 iout=ndata
+                 isort(icntpnt)=iout
+              endif
+
+              if(ndata > maxobs) then
+                 write(6,*)'READ_PREPBUFR:  ***WARNING*** ndata > maxobs for ',obstype
+                 ndata = maxobs
+              end if
+
 !             Set usage variable              
               usage = zero
+
+
               if(icuse(nc) <= 0)usage=100._r_kind
               if(qm == 15 .or. qm == 12 .or. qm == 9)usage=100._r_kind
               if(qm >=lim_qm )usage=101._r_kind
@@ -1856,7 +1898,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
               if((kx>=192.and.kx<=195) .and. psob )usage=r100
               if (gustob .and. obsdat(8,k) > r0_1_bmiss) usage=103._r_kind
               if (visob  .and. obsdat(9,k) > r0_1_bmiss) usage=103._r_kind
-              if (tdob  .and. obsdat(12,k) > r0_1_bmiss) usage=103._r_kind
+              if ((tdob .or. tdpfob ) .and. obsdat(12,k) > r0_1_bmiss) usage=103._r_kind !tdpfob --JJH
               if (pmob  .and. obsdat(13,k) > r0_1_bmiss) usage=103._r_kind
               if (mxtmob  .and. maxtmint(1,k) > r0_1_bmiss) usage=103._r_kind
               if (mitmob  .and. maxtmint(2,k) > r0_1_bmiss) usage=103._r_kind
@@ -1905,83 +1947,10 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 
 
 ! Get information from surface file necessary for conventional data here
-
-!             Special block for data thinning - if requested
-              if (ithin > 0 .and. usage <100.0_r_kind) then
-!              if (ithin > 0 ) then
-                 ntmp=ndata  ! counting moved to map3gridS
-           
-!                Set data quality index for thinning
-                 if (thin4d) then
-                    timedif = zero
-                 else
-                    timedif=abs(t4dv-toff)
-                 endif
-                 if(kx == 243 .or. kx == 253 .or. kx ==254) then
-                    call ufbint(lunin,satqc,1,1,iret,satqcstr)
-                    crit1 = timedif/r6+half + four*(one-satqc(1)/r100)*r3_33
-                 else
-                    crit1 = timedif/r6+half
-                 endif
-
-                 if (pflag==0) then
-                    do kk=1,nsig
-                       presl_thin(kk)=presl(kk)
-                    end do
-                 endif
-
-                 if (ptime >zero ) then
-                    itime=int((abs(timedif)+three)/ptime)+1
-                     if(itime >ntime) itime=ntime
-                       call map3grids_tm(zflag,pflag,presl_thin,nlevp,dlat_earth,dlon_earth,&
-                                       ppb,itime,crit1,ndata,iout,icntpnt,iiout,luse,.false.,.false.)
-                       if (.not. luse) then
-                          if(k==levs) then
-                             cycle loop_readsb
-                          else
-                             cycle LOOP_K_LEVS
-                          endif
-                       endif
-                       if(iiout > 0) isort(iiout)=0
-                       if (ndata > ntmp) then
-                          nodata=nodata+1
-                          if(uvob)nodata=nodata+1
-                       endif
-                       isort(icntpnt)=iout
-                 else
-                    call map3grids(zflag,pflag,presl_thin,nlevp,dlat_earth,dlon_earth,&
-                                  ppb,crit1,ndata,iout,icntpnt,iiout,luse,.false.,.false.)
-                    if (.not. luse) then
-                       if(k==levs) then
-                          cycle loop_readsb
-                       else
-                          cycle LOOP_K_LEVS
-                       endif
-                    endif
-                    if(iiout > 0) isort(iiout)=0
-                    if (ndata > ntmp) then
-                       nodata=nodata+1
-                       if(uvob)nodata=nodata+1
-                    endif
-                    isort(icntpnt)=iout
-                 endif
-              else
-                 ndata=ndata+1
-                 nodata=nodata+1
-                 if(uvob)nodata=nodata+1
-                 iout=ndata
-                 isort(icntpnt)=iout
-              endif
-
-              if(ndata > maxobs) then
-                 write(6,*)'READ_PREPBUFR:  ***WARNING*** ndata > maxobs for ',obstype
-                 ndata = maxobs
-              end if
-
               call deter_sfc2(dlat_earth,dlon_earth,t4dv,idomsfc,tsavg,ff10,sfcr,zz)
 
               if(lhilbert) & 
-                       call accum_hilbertcurve(usage,c_station_id,c_prvstg,c_sprvstg, &
+                  call accum_hilbertcurve(usage,c_station_id,c_prvstg,c_sprvstg, &
                        dlat_earth,dlon_earth,dlat,dlon,t4dv,toff,nc,kx,iout)
 
 
@@ -2038,6 +2007,87 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                     cdata_all(28,iout)=idx                 ! index of temperature bias
                  end if
                  if(perturb_obs)cdata_all(nreal,iout)=ran01dom()*perturb_fact ! t perturbation
+                 if (twodvar_regional) &
+                    call adjust_error(cdata_all(17,iout),cdata_all(18,iout),cdata_all(11,iout),cdata_all(1,iout))
+
+                    call adjust_error(cdata_all(17,iout),cdata_all(18,iout),cdata_all(11,iout),cdata_all(1,iout))
+! dew point profile observation, added by JJH
+              else if(tdpfob) then
+                 ppb=obsdat(1,k)
+                 !if (kx == id_bias_t) then  ! no bias correction as temperature
+                 !   tair = obsdat(3,k)+t0c !+conv_bias_t   !temperature ob.+bias,
+                    !K
+                 !   tdew = obsdat(12,k)+t0c  ! dew point
+                 !else
+                    tair = obsdat(3,k)+t0c               ! temperature ob.
+                    tdew = obsdat(12,k)+t0c              ! dew point temperature ob, read from prepbufr file
+                 !endif
+                 qobcon=obsdat(2,k)*convert
+                 qtflg=tvflg(k)
+                 if(qtflg == zero) tair = tair/(one+fv*qobcon) !virtual temperature converted to sensible temperature
+                 ! before we start computing things based on the dewpoint,make sure it isn't larger than the air temp.
+                 ! if it is  more than a degree larger, skip it completely.  if it is less, set them equal and continue.
+                 if(tdew > tair) then
+                    if(tdew > tair+1.0_r_kind) then
+                         usage=103._r_kind ! don't use it
+                         tdoe = 1.0e+6_r_kind
+                    else
+                         tdew = tair
+                    endif
+                 endif
+                 if(tdew <= tair) then
+                    if(LH_err .and. (.not. sfctype)) then! using LH err, sfctype always use toe
+                       ! obs error for dew point
+                       call temp_and_dewpoint_to_rh(tair,tdew, rh)
+                       if(rh<= 0.00_r_kind .or. rh > 1.00) then
+                          usage=103._r_kind ! don't use it
+                          tdoe = 1.0e+6_r_kind
+                       else
+                          tdoe = dewpt_error_from_rh_and_temp(tair,rh)
+                          call errormod(pqm,tdpfqm,levs,plevs,errout,k,presl,dpres,nsig,lim_qm)
+                          tdoe=tdoe*errout
+                       endif
+                    else ! not LH err, set it as toe, and will be included in the error table in future ! JJH 2017.11.30
+                       if (aircraftobs .and. aircraft_t_bc .and. acft_profl_file) then
+                            call errormod_aircraft(pqm,tqm,levs,plevs,errout,k,presl,dpres,nsig,lim_qm,hdr3)
+                       else
+                            call errormod(pqm,tqm,levs,plevs,errout,k,presl,dpres,nsig,lim_qm)
+                       end if
+                       toe=obserr(3,k)*errout
+                       if (inflate_error) toe=toe*r1_2
+                       if(ppb < r100)toe=toe*r1_2
+                       tdoe = toe
+                    endif
+                 endif
+                 cdata_all(1,iout)=tdoe                    ! dew point temperature error
+                 cdata_all(2,iout)=dlon                    ! grid relative longitude
+                 cdata_all(3,iout)=dlat                    ! grid relative latitude
+                 cdata_all(4,iout)=dlnpob                  ! ln(pressure in cb)
+
+                 cdata_all(5,iout)=tdew                    ! td ob 
+                 cdata_all(6,iout)=rstation_id             ! station id
+                 cdata_all(7,iout)=t4dv                    ! time
+                 cdata_all(8,iout)=nc                      ! type
+                 cdata_all(9,iout)=one                     ! qtflg (always sensible temperature)
+                 cdata_all(10,iout)=tdpfqm(k)                   ! quality mark
+                 cdata_all(11,iout)=tdoe                   ! original obs error             
+                 cdata_all(12,iout)=usage                  ! usage parameter
+                 if (lhilbert) thisobtype_usage=13         ! save INDEX of where usage is stored for hilbertcurve cross validation (if requested)
+                 cdata_all(13,iout)=idomsfc                ! dominate surface type
+                 cdata_all(14,iout)=tsavg                  ! skin temperature
+                 cdata_all(15,iout)=ff10                   ! 10 meter wind factor
+                 cdata_all(16,iout)=sfcr                   ! surface roughness
+                 cdata_all(17,iout)=dlon_earth*rad2deg     ! earth relative longitude (degrees)
+                 cdata_all(18,iout)=dlat_earth*rad2deg     ! earth relative latitude (degrees)
+                 cdata_all(19,iout)=stnelev                ! station elevation (m)
+                 cdata_all(20,iout)=obsdat(4,k)            ! observation height (m)
+                 cdata_all(21,iout)=zz                     ! terrain height at ob location
+                 cdata_all(22,iout)=r_prvstg(1,1)          ! provider name
+                 cdata_all(23,iout)=r_sprvstg(1,1)         ! subprovider name
+                 cdata_all(24,iout)=obsdat(10,k)           ! cat
+                 cdata_all(25,iout)=tair                   ! sensible air temperature
+                 cdata_all(26,iout)=0                      ! non linear qc for td
+                 if(perturb_obs)cdata_all(nreal,iout)=ran01dom()*perturb_fact !td perturbation
                  if (twodvar_regional) &
                     call adjust_error(cdata_all(17,iout),cdata_all(18,iout),cdata_all(11,iout),cdata_all(1,iout))
 
@@ -2838,11 +2888,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
         deallocate(presl_thin)
         call del3grids
      endif
-    if (.not.use_all_tm) then
-       deallocate(presl_thin)
-        call del3grids_tm
-     endif
-
 
 ! Normal exit
 

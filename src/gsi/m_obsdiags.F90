@@ -31,6 +31,8 @@ module m_obsdiags
 !                       . Locally renamed MPI_comm_world to gsi_comm_world.
 !   2018-01-23  k apodaca - Add a new observation type i.e. lightning (light) 
 !                           suitable for the GOES/GLM instrument
+!   2018-12-01  T Jones: Add CWP observation type
+!   2018-12-01  T Jones, JJH: Add dewpoint observation type
 !
 !   input argument list: see Fortran 90 style document below
 !
@@ -93,6 +95,10 @@ module m_obsdiags
   use m_lwcpNode , only:  lwcpNode ! 35
 
   use m_lightNode, only:  lightNode ! 36
+
+  use m_dbzNode    , only:  dbzNode ! 37
+  use m_cwpNode    , only:  cwpNode ! 38
+  use m_tdNode    , only:   tdNode ! 39 
 
   use m_obsNodeTypeManager, only: nobs_type
   use gsi_4dvar           , only: nobs_bins
@@ -216,6 +222,10 @@ module m_obsdiags
 
   public :: lighthead
 
+  public :: dbzhead
+  public :: cwphead
+  public :: tdhead
+
   type(obsLList),dimension(:),pointer :: pshead => null()
   type(obsLList),dimension(:),pointer :: tcphead => null()
   type(obsLList),dimension(:),pointer :: thead => null()
@@ -259,6 +269,10 @@ module m_obsdiags
   type(obsLList),dimension(:),pointer :: lwcphead => null()
 
   type(obsLList),dimension(:),pointer :: lighthead => null()
+
+  type(obsLList),dimension(:),pointer :: dbzhead => null()
+  type(obsLList),dimension(:),pointer :: cwphead => null()
+  type(obsLList),dimension(:),pointer :: tdhead => null()
 
   type(obsLList),dimension(:,:),pointer :: obsLLists => null()
 
@@ -740,6 +754,11 @@ _ENTRY_(myname_)
 
    lighthead => ptr_obsbins_(obsllists,'light')
 
+     dbzhead => ptr_obsbins_(obsllists,'dbz')
+     cwphead => ptr_obsbins_(obsllists,'cwp')
+      tdhead => ptr_obsbins_(obsllists,'td') !JJH
+
+
 _EXIT_(myname_)
 return
 end subroutine aliasesCreate_
@@ -793,6 +812,10 @@ _ENTRY_(myname_)
     lwcphead => null()
 
    lighthead => null()
+
+     dbzhead => null()
+     cwphead => null()
+     tdhead  => null() !JJH
 
 _EXIT_(myname_)
 return

@@ -68,6 +68,7 @@ subroutine statsrad(aivals,stats,ndata)
 
 ! Open unit to receive printout
   open(iout_rad,position='append')
+  open(unit=77, file='bias_info',status='replace')
 
 ! Loop over all observational data types
   penalty_all=zero
@@ -136,6 +137,8 @@ subroutine statsrad(aivals,stats,ndata)
         end if
         write(iout_rad,1102) i,nuchan(i),nusis(i),iasim,icerr,svar,&
              stats(6,i),stats(3,i),stats(5,i),stats(4,i),stdev
+
+        write(77,1117) i,nuchan(i),iasim,stats(6,i),stats(3,i),stats(5,i),stats(4,i),stdev, svar
      endif
   end do
 
@@ -166,10 +169,11 @@ subroutine statsrad(aivals,stats,ndata)
           '# read',t49,'# keep',t59,'# assim',&
           t68,'penalty',t81,'qcpnlty',t95,'cpen',t105,'qccpen')
 1115 format('o-g',1x,i2.2,1x,'rad',2x,2A10,2x,3(i11,2x),4(g12.5,1x))
+1117 format(i4,2(i5,1x),6(f9.4,1x))
 
 ! Close output unit
   close(iout_rad)
-
+  close(77)
 
 ! End of routine
   return

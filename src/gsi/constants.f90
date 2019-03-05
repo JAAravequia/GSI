@@ -28,6 +28,8 @@ module constants
 !   2011-10-27 Huang     - add i_missing and r_missing to detect missing values
 !   2011-11-01 eliu      - add minimum value for cloud water mixing ratio 
 !   2012-03-07 todling   - define lower bound for trace-gases (arbitrary unit as long as small)
+!   2016-02-15 Johnson, Y. Wang, X. Wang - define additional constant values for
+!                                          radar DA, POC: xuguang.wang@ou.edu
 !
 ! Subroutines Included:
 !   sub init_constants_derived - compute derived constants
@@ -71,7 +73,7 @@ module constants
   public :: ef_alpha, ef_beta, ef_gamma
   public :: max_varname_length
   public :: z_w_max,tfrozen
-  public :: qmin,qcmin,tgmin
+  public :: qmin,qcmin,tgmin,qimin, qsmin, qgmin,qrmin
   public :: i_missing, r_missing
 
 ! Declare derived constants
@@ -85,6 +87,27 @@ module constants
   real(r_kind):: eccentricity, grav, rearth, r60inv
   real(r_kind):: sqrt_tiny_r_kind
   real(r_kind):: n_a, n_b, n_c
+
+! Minimum values for water vapor, cloud water mixing ratio, and trace gases
+  real(r_kind),parameter:: qmin   = 1.e-07_r_kind   ! lower bound on ges_q
+  real(r_kind),parameter:: qcmin  = 0.0_r_kind      ! lower bound on ges_cw
+  real(r_kind),parameter:: tgmin  = 1.e-15_r_kind   ! lower bound on trace gases
+
+  !integer(i_kind),parameter::  izero  = 0_i_kind
+  real(r_kind),parameter:: qimin  = 0.0_r_kind
+  real(r_kind),parameter:: qgmin  = 0.0_r_kind
+  real(r_kind),parameter:: qsmin  = 0.0_r_kind
+  real(r_kind),parameter:: qrmin  = 0.0_r_kind
+  real(r_kind),parameter:: log10qcmin  = -10_r_single
+  real(r_kind),parameter:: r10log10qcmin  = 1.0e-10_r_single
+  real(r_kind),parameter:: log10qrmin  = -6.0_r_single
+  real(r_kind),parameter:: r10log10qrmin  = 1.0e-6_r_single
+  real(r_kind),parameter:: log10qimin  = -8_r_single
+  real(r_kind),parameter:: r10log10qimin  = 1.0e-8_r_single
+  real(r_kind),parameter:: log10qgmin  = -8_r_single
+  real(r_kind),parameter:: r10log10qgmin  = 1.0e-8_r_single
+  real(r_kind),parameter:: log10qsmin  = -9_r_single
+  real(r_kind),parameter:: r10log10qsmin  = 1.0e-9_r_single
 
 ! Define constants common to global and regional applications
   real(r_kind),parameter::  rearth_equator= 6.37813662e6_r_kind  ! equatorial earth radius          (m)
@@ -205,7 +228,7 @@ module constants
   real(r_kind),parameter::  ke2 = 0.00002_r_kind
   real(r_kind),parameter::  row = r1000
   real(r_kind),parameter::  rrow = one/row
-! real(r_kind),parameter::  qmin = 1.e-7_r_kind  !lower bound on ges_q
+
 
 ! Constant used to process ozone
   real(r_kind),parameter::  constoz = 604229.0_r_kind
@@ -226,10 +249,6 @@ module constants
                                      ! wgtlim does not alter the analysis, only
                                      ! the nonlinear qc data "count"
 
-! Minimum values for water vapor, cloud water mixing ratio, and trace gases
-  real(r_kind),parameter:: qmin   = 1.e-07_r_kind   ! lower bound on ges_q
-  real(r_kind),parameter:: qcmin  = 0.0_r_kind      ! lower bound on ges_cw
-  real(r_kind),parameter:: tgmin  = 1.e-15_r_kind   ! lower bound on trace gases
 
 ! Constant used to detect missing input value
   integer(i_kind),parameter:: i_missing=-9999

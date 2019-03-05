@@ -190,7 +190,9 @@ l4densvar = .false.
 lnested_loops=.false.
 
 nhr_assimilation=6
-min_offset=180
+min_offset=0  !TAJ CHANGE
+!min_offset=180
+
 
 nhr_subwin=-1
 nhr_obsbin=-1

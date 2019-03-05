@@ -130,6 +130,9 @@ module obsmod
 !   2016-09-19  guo      - moved function dfile_format() to m_extOzone.F90
 !   2016-11-29 shlyaeva  - add lobsdiag_forenkf option for writing out linearized
 !                           H(x) for EnKF
+!   2016-02-15 Johnson, Y. Wang, X. Wang - add dbz type for reflectivity DA POC: xuguang.wang@ou.edu
+!   2017-01-01 Thomas Jones - Add cloud water path
+!   2017-08-24 Thomas Jones  / JJH - Add dewpoint
 !   2018-01-01  apodaca  - add GOES/GLM lightning observations
 ! 
 ! Subroutines Included:
@@ -441,6 +444,37 @@ module obsmod
   public :: use_limit,lrun_subdirs
   public :: l_foreaft_thin,luse_obsdiag
 
+
+! RADAR STUFF
+  public :: ntilt_radarfiles
+  public :: whichradar
+  public :: i_dbz_ob_type
+  public :: vr_dealisingopt, if_vterminal, if_model_dbz, inflate_obserr, if_vrobs_raw
+
+  public :: doradaroneob,oneoblat,oneoblon
+  public :: oneobddiff,oneobvalue,oneobheight,oneobradid
+  public :: ens_hx_dbz_cut,static_gsi_nopcp_dbz,rmesh_dbz,zmesh_dbz,rmesh_vr,zmesh_vr
+  public :: radar_no_thinning
+  public :: mintiltvr,maxtiltvr,minobrangevr,maxobrangevr
+  public :: mintiltdbz,maxtiltdbz,minobrangedbz,maxobrangedbz
+  public :: debugmode
+  public :: missing_to_nopcp
+  public :: iout_dbz, mype_dbz
+
+!CWP STUF (TAJ)
+  public :: i_cwp_ob_type 
+  public :: iout_cwp, mype_cwp
+
+! DEWPOINT (TAJ / JJH)
+  public :: i_td_ob_type
+  public :: iout_td, mype_td
+  public :: LH_err
+
+! OTHER STUFF (TAJ / JJH)
+  public :: decreasemesonetoberr,mesonettoberr,mesonetuvoberr,doublemomentflag
+  public :: innerverifonly,innerdlon1,innerdlon2,innerdlat1,innerdlat2
+
+
   public :: obsmod_init_instr_table
   public :: obsmod_final_instr_table
   public :: nobs_sub
@@ -468,6 +502,9 @@ module obsmod
 
   logical luse_obsdiag
   logical binary_diag, netcdf_diag 
+  logical,parameter:: LH_err  = .true. ! this logical parameter controls which TD error to use, Lin and Hubbard (2004) moisture error model or NCEP error,i
+                                       ! .true using LH method and false using NCEP error, added by JJH 2017.11.30
+
 
 ! Declare types
 
@@ -509,8 +546,11 @@ module obsmod
   integer(i_kind),parameter:: i_swcp_ob_type=36   ! swcp_ob_type
   integer(i_kind),parameter:: i_lwcp_ob_type=37   ! lwcp_ob_type
   integer(i_kind),parameter:: i_light_ob_type=38  ! light_ob_type
+  integer(i_kind),parameter:: i_dbz_ob_type=39    ! dbz_ob_type  
+  integer(i_kind),parameter:: i_cwp_ob_type=40    ! CWP_ob_type
+  integer(i_kind),parameter:: i_td_ob_type=41     ! DEWPOINT_ob_type
 
-  integer(i_kind),parameter:: nobs_type = 38       ! number of observation types
+  integer(i_kind),parameter:: nobs_type = 41       ! number of observation types
 
 ! Structure for diagnostics
 
@@ -549,20 +589,21 @@ module obsmod
 
   real(r_kind) perturb_fact,time_window_max,time_offset
   real(r_kind),dimension(50):: dmesh
-
+ 
+  integer(i_kind) ntilt_radarfiles
   integer(i_kind) grids_dim,nchan_total,ianldate
   integer(i_kind) ndat,ndat_types,ndat_times,nprof_gps
   integer(i_kind) lunobs_obs,nloz_v6,nloz_v8,nobskeep,nloz_omi
   integer(i_kind) nlco,use_limit
-  integer(i_kind) iout_rad,iout_pcp,iout_t,iout_q,iout_uv, &
-                  iout_oz,iout_ps,iout_pw,iout_rw
+  integer(i_kind) iout_rad,iout_pcp,iout_t,iout_q,iout_uv,iout_td,&
+                  iout_oz,iout_ps,iout_pw,iout_rw, iout_dbz, iout_cwp
   integer(i_kind) iout_dw,iout_gps,iout_sst,iout_tcp,iout_lag
   integer(i_kind) iout_co,iout_gust,iout_vis,iout_pblh,iout_tcamt,iout_lcbas
   integer(i_kind) iout_cldch
   integer(i_kind) iout_wspd10m,iout_td2m,iout_mxtm,iout_mitm,iout_pmsl,iout_howv
   integer(i_kind) iout_uwnd10m,iout_vwnd10m
-  integer(i_kind) mype_t,mype_q,mype_uv,mype_ps,mype_pw, &
-                  mype_rw,mype_dw,mype_gps,mype_sst, &
+  integer(i_kind) mype_t,mype_q,mype_uv,mype_ps,mype_pw, mype_td, &
+                  mype_rw,mype_dw,mype_gps,mype_sst,mype_dbz, mype_cwp, &
                   mype_tcp,mype_lag,mype_co,mype_gust,mype_vis,mype_pblh, &
                   mype_wspd10m,mype_td2m,mype_mxtm,mype_mitm,mype_pmsl,mype_howv,&
                   mype_uwnd10m,mype_vwnd10m, mype_tcamt,mype_lcbas
@@ -591,6 +632,32 @@ module obsmod
   real(r_kind) ,allocatable,dimension(:):: dval
   real(r_kind) ,allocatable,dimension(:):: time_window
   character(len=20) :: cobstype(nobs_type)
+
+! RADAR STUFF
+  logical ::  doradaroneob
+!  logical ::  use_sim_obs
+!  logical ::  make_sim_obs
+  logical :: vr_dealisingopt, if_vterminal, if_model_dbz, inflate_obserr, if_vrobs_raw
+  character(4) :: whichradar,oneobradid
+  real(r_kind) :: oneoblat,oneoblon,oneobddiff,oneobvalue,oneobheight
+  logical :: logspace
+  logical :: qc_logspace
+  logical :: radar_no_thinning
+  logical :: ens_hx_dbz_cut
+  real(r_kind) ::static_gsi_nopcp_dbz
+  real(r_kind) ::rmesh_dbz,zmesh_dbz
+  real(r_kind) ::rmesh_vr,zmesh_vr
+
+  logical :: debugmode
+  real(r_kind) :: minobrangevr,maxobrangevr,mintiltvr,maxtiltvr
+  real(r_kind) :: minobrangedbz,maxobrangedbz,mintiltdbz,maxtiltdbz
+  logical         :: missing_to_nopcp
+
+  logical :: decreasemesonetoberr,doublemomentflag
+  real :: mesonettoberr,mesonetuvoberr
+  logical :: innerverifonly
+  integer(i_kind) :: innerdlon1,innerdlon2,innerdlat1,innerdlat2
+
 
   logical, save :: obs_instr_initialized_=.false.
 
@@ -644,6 +711,10 @@ contains
 !   2015-07-10  pondeca - add cldch
 !   2015-10-27  todling - default to luse_obsdiag is true now
 !   2016-03-07  pondeca - add uwnd10m,vwnd10m
+!   2016-02-14  Johnson, Wang - add variables (rmesh_dbz etc.) for reflectivity DA
+!                               xuguang.wang@ou.edu
+!   2016-09/25 Thomas Jones - Add CWP variables
+!   2018-01-01 Jun-Jun Hu  - Add Dewpoint variables  
 !
 !   input argument list:
 !
@@ -657,6 +728,40 @@ contains
     implicit none
 
     integer(i_kind) i
+
+    ntilt_radarfiles=1
+    vr_dealisingopt=.false.
+    if_vterminal=.false.
+    if_vrobs_raw=.false.
+    if_model_dbz=.true.
+    inflate_obserr=.false.
+    whichradar="KKKK"
+
+    oneobradid="KKKK"
+    doradaroneob=.false.
+    oneoblat=-999_r_kind
+    oneoblon=-999_r_kind
+    oneobddiff=-999_r_kind
+    oneobvalue=-999_r_kind
+    oneobheight=-999_r_kind
+    radar_no_thinning=.false.
+    ens_hx_dbz_cut=.false.
+    static_gsi_nopcp_dbz=0.0_r_kind
+    rmesh_dbz=2_r_kind   !default
+    rmesh_vr=2_r_kind   !default
+    zmesh_dbz=500.0_r_kind   !default
+    zmesh_vr=500.0_r_kind   !default
+    minobrangedbz=10000.0_r_kind
+    maxobrangedbz=200000.0_r_kind
+    debugmode=.false.
+
+    mintiltdbz=0.0_r_kind
+    maxtiltdbz=20.0_r_kind
+    minobrangevr=10000.0_r_kind
+    maxobrangevr=200000.0_r_kind
+    mintiltvr=0.0_r_kind
+    maxtiltvr=20.0_r_kind
+    missing_to_nopcp=.false.
 
 
 !   Set logical flag
@@ -689,6 +794,8 @@ contains
     blacklst  = .false.
     lobserver = .false.     ! when .t., calculate departure vectors only
     ext_sonde = .false.     ! .false. = do not use extended forward model for sonde
+
+    if_model_dbz=.true.
 
 !   Specify unit numbers to which to write data counts, indication of quality control
 !   decisions, and statistics summary of innovations.  For radiance data also write
@@ -728,6 +835,9 @@ contains
     iout_swcp=235  ! solid-water content path
     iout_lwcp=236  ! liquid-water content path
     iout_light=237 ! lightning
+    iout_dbz=238   ! radar reflectivity  
+    iout_cwp=239   ! CWP
+    iout_td=240   ! Dewpoint
 
     mype_ps = npe-1          ! surface pressure
     mype_t  = max(0,npe-2)   ! temperature
@@ -761,7 +871,9 @@ contains
     mype_swcp=max(0,npe-30)  ! solid-water content path
     mype_lwcp=max(0,npe-31)  ! liquid-water content path
     mype_light=max(0,npe-32)! GOES/GLM lightning
-
+    mype_dbz= max(0,npe-33)  ! radar refectivity 
+    mype_cwp= max(0,npe-34)  ! CWP    
+    mype_td= max(0,npe-35)  ! Dewpoint   
 
 !   Initialize arrays used in namelist obs_input 
     time_window_max = three ! set maximum time window to +/-three hours
@@ -820,6 +932,9 @@ contains
     cobstype(i_swcp_ob_type) ="swcp                " ! swcp_ob_type
     cobstype(i_lwcp_ob_type) ="lwcp                " ! lwcp_ob_type
     cobstype(i_light_ob_type) ="light              " ! light_ob_type
+    cobstype(i_dbz_ob_type) ="dbz                  " ! dbz_ob_type
+    cobstype(i_cwp_ob_type) ="cwp                  " ! cwp_ob_type
+    cobstype(i_td_ob_type) ="td                    " ! td_ob_type
 
     hilbert_curve=.false.
 
@@ -827,7 +942,7 @@ contains
     lread_obs_save   = .false.
     lread_obs_skip   = .false.
     lwrite_predterms = .false.
-    lwrite_peakwt    = .false.
+    lwrite_peakwt    = .true.
     lrun_subdirs     = .false.
     l_foreaft_thin   = .false.
     luse_obsdiag     = .false.
@@ -1290,7 +1405,9 @@ do ii=1,nrows
                       dsis(ii), & ! sensor/instrument/satellite identifier for info files
                       dval(ii), & ! 
                       dthin(ii),& ! thinning flag (1=thinning on; otherwise off)
-                      dsfcalc(ii) ! use orig bilinear FOV surface calculation (routine deter_sfc)
+                      dsfcalc(ii) ,& ! use orig bilinear FOV surface calculation (routine deter_sfc)
+                      time_window(ii) ! time step for each observation  SWAPAN MALLICK (strange this is not the default way)
+
 
    ! The following is to sort out some historical naming conventions
    select case (dsis(ii)(1:4))
@@ -1306,7 +1423,10 @@ do ii=1,nrows
    if(dval(ii) > 0.0) dval_use = .true.
    ditype(ii)= ' '                    ! character string identifying group type of ob (see read_obs)
    ipoint(ii)= 0                      ! default pointer (values set in gsisub) _RT: This is never needed
-   time_window(ii) = time_window_max  ! default to maximum time window
+   if (mype==0) then
+     print*, 'OBS_MOD: ', dtype(ii), time_window(ii), time_window_max
+   endif
+   !time_window(ii) = time_window_max  ! default to maximum time window NOPE: TAJ
    write(obsfile_all(ii),'(a,i4.4)') 'obs_input.', ii      ! name of scratch file to hold obs data
    
 enddo
