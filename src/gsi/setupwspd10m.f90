@@ -376,7 +376,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            hrdifsig,mype,nfldsig)
         call tintrp31(ges_v,vgesin,dlat,dlon,dpres,dtime, &
            hrdifsig,mype,nfldsig)
-        if(dpressave <= prsln2)then
+        if(dpressave <= prsln2.and..not.twodvar_regional)then
            factw=one
         else
            factw = data(iff10,i)
