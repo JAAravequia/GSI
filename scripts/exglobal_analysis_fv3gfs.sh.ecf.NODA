@@ -746,7 +746,8 @@ OBS_INPUT::
 &HYBRID_ENSEMBLE
   l_hyb_ens=$l_hyb_ens,
   generate_ens=.false.,
-  beta_s0=0.125,readin_beta=.false.,
+  !beta_s0=0.125,readin_beta=.false., !commented line to force 3DVar in hyb mode. There is no berror 1538
+  beta_s0=1.000,readin_beta=.false.,  !so we need to trick GSI in this way to have "NODA"
   s_ens_h=800.,s_ens_v=-0.8,readin_localization=.true.,
   aniso_a_en=.false.,oz_univ_static=.false.,uv_hyb_ens=.true.,
   ensemble_path='./ensemble_data/',
