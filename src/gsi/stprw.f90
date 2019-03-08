@@ -159,7 +159,7 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
 
   if(ier/=0)return
 
-     rw_opr=0  ! this indicator should be set in the namelist
+     rw_opr=1  ! this indicator should be set in the namelist
 
   rwptr => rwNode_typecast(rwhead)
   do while (associated(rwptr))

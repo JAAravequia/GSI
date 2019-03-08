@@ -159,7 +159,7 @@ subroutine intrw_(rwhead,rval,sval)
 
   if(ier/=0)return
 
-     rw_opr=0  ! this indicator should be set in the namelist
+     rw_opr=1  ! this indicator should be set in the namelist
 
   !rwptr => rwhead
   rwptr => rwNode_typecast(rwhead)
