@@ -159,6 +159,8 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
 
   if(ier/=0)return
 
+     rw_opr=0  ! this indicator should be set in the namelist
+
   rwptr => rwNode_typecast(rwhead)
   do while (associated(rwptr))
      if(rwptr%luse)then
@@ -180,7 +182,6 @@ subroutine stprw(rwhead,rval,sval,out,sges,nstep)
            w7=rwptr%wij(7)
            w8=rwptr%wij(8)
 
-     rw_opr=1  ! this indicator should be set in the namelist
      if(rw_opr==1) then
       p_latlon=j5-j1
       p_lat2=j3-j1

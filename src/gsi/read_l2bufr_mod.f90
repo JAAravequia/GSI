@@ -112,6 +112,9 @@ contains
 !                         hardcoding that name into the code. Logic to exit code
 !                         if the infile (l2rwbufr) is not present. Also, added
 !                         new namelist parameter vadwnd_l2rw_qc.
+!  2019-03-07  x. liang - try to use more data. To reduce the requirement of memory, 
+!                         the arry bins and bins_work is set to be real kind of r_kind instead of r_quad
+!                         The interval of tilts is set to be uneven.
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -205,7 +208,10 @@ contains
 
     real(r_quad) thiscount
     real(r_quad),dimension(6) :: binsx
-    real(r_quad),allocatable,dimension(:,:,:) :: bins,bins_work
+!!!   to reduce the memory size
+!   real(r_quad),allocatable,dimension(:,:,:) :: bins,bins_work
+    real(r_kind),allocatable,dimension(:,:,:) :: bins,bins_work  
+!!!!  to reduce the memory size
 !            bins(1,...) radial distance
 !            bins(2,...) azimuth
 !            bins(3,...) elev angle
@@ -230,9 +236,34 @@ contains
 
     logical rite,print_verbose
     logical lradar
+!!!  the tilts of the radar scan are generally with uneven distance
+    integer(i_kind),parameter :: ele_total=18
+    real(r_kind),dimension(ele_total) :: elevel
+    integer(i_kind) ele_levels
+    real(r_kind) diff_el
+!!!! the tilts of the radar scan are generally with uneven distance
     
     print_verbose=.false.
     if(verbose) print_verbose=.true.
+!!! according to Q. Xu 2008, the WRR-88D radar storm-mode scan configuration contains 14 tilts, here defines 16 levels
+    elevel(1 )= 0.50
+    elevel(2 )= 1.00
+    elevel(3 )= 1.50
+    elevel(4 )= 2.00
+    elevel(5 )= 2.40
+    elevel(6 )= 3.00
+    elevel(7 )= 3.30
+    elevel(8 )= 4.30
+    elevel(9 )= 5.00
+    elevel(10)= 5.50
+    elevel(11)= 6.20
+    elevel(12)= 7.50
+    elevel(13)= 8.70
+    elevel(14)=10.00
+    elevel(15)=12.00
+    elevel(16)=14.00
+    elevel(17)=16.70
+    elevel(18)=19.50
 
     ! define infile if using either option for radial winds.
     do i=1,ndat
@@ -251,18 +282,25 @@ contains
        if(mype==0) write(6,*) '***WARNING*** NOT USING ANY RADIAL WIND OBSERVATIONS!!!' 
        return ! Go back to gsisub if nothing to do.    
     end if
- 
+
+!!!!!  according to elev_angel_max+del_elev, to determin the tilt levels 
+    do i=1,ele_total
+     if(elevel(i).gt.elev_angle_max+del_elev) exit
+     ele_levels=i
+    enddo
+
     rad_per_meter= one/rearth
     erad = rearth
     nazbin=nint(r360/del_azimuth)
     nrbin=nint(range_max/del_range)
-    nelbin=nint(elev_angle_max/del_elev)
+!   nelbin=nint(elev_angle_max/del_elev)
+    nelbin=ele_levels !nint(elev_angle_max/del_elev)
     delaz=r360/nazbin
     delr=range_max/nrbin
-    delel=elev_angle_max/nelbin
+!   delel=elev_angle_max/nelbin
     rdelaz=one/delaz
     rdelr =one/delr
-    rdelel=one/delel
+!   rdelel=one/delel
 
     num_radars=0
     do i=1,max_num_radars
@@ -501,7 +539,20 @@ contains
 	     write(6,*)'RADAR_BUFR_READ_ALL:  error in getting iazbin, program stops'
 	     call stop2(99)
 	  end if
-	  ielbin=ceiling(stn_el*rdelel)
+!!!!   the tilt level is determined by one dimensional searching
+
+!  ielbin=ceiling(stn_el*rdelel)
+          ielbin=0
+          diff_el=90.
+          do i=1,nelbin
+           if(abs(stn_el-elevel(i)).lt.diff_el) then
+            ielbin=i
+            diff_el=abs(stn_el-elevel(i))
+           endif
+          enddo
+          if(diff_el.gt.del_elev) ielbin=0
+!!!!   the tile level is determned by one dimensional searching          
+            
 	  if(ielbin<1.or.ielbin>nelbin) then
 	     nradials_fail_elb=nradials_fail_elb+1
 	     cycle
@@ -615,7 +666,7 @@ contains
 		end do
 	     end do
 	  end do
-	  if(rite)write(6,'(" ielbin,histo_el=",i6,i20)')ielbin,histo_el
+   if(rite)write(6,'(" ielbin,ele_angle,histo_el=",i6,f8.2,i20)')ielbin,elevel(ielbin),histo_el
        end do
 
 !   Prepare to create superobs and write out.
@@ -635,13 +686,13 @@ contains
     allocate(bins_work(6,nthisrad,npe))
     do irad=1,num_radars_0
        krad=indx(irad)
-       if(r_double==r_quad) then
+!      if(r_double==r_quad) then
           call mpi_gather(bins(1,1,krad),nthisbins,mpi_real8 ,bins_work,nthisbins, &
                        mpi_real8 ,0,mpi_comm_world,ierror)
-       else
-          call mpi_gather(bins(1,1,krad),nthisbins,mpi_real16,bins_work,nthisbins, &
-                       mpi_real16,0,mpi_comm_world,ierror)
-       endif
+!      else
+!         call mpi_gather(bins(1,1,krad),nthisbins,mpi_real16,bins_work,nthisbins, &
+!                      mpi_real16,0,mpi_comm_world,ierror)
+!      endif
        if(mype == 0)then
     
 !   Create superobs and write out.

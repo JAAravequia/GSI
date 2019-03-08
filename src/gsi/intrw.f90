@@ -159,6 +159,7 @@ subroutine intrw_(rwhead,rval,sval)
 
   if(ier/=0)return
 
+     rw_opr=0  ! this indicator should be set in the namelist
 
   !rwptr => rwhead
   rwptr => rwNode_typecast(rwhead)
@@ -180,7 +181,6 @@ subroutine intrw_(rwhead,rval,sval)
      w7=rwptr%wij(7)
      w8=rwptr%wij(8)
   
-     rw_opr=1  ! this indicator should be set in the namelist
      if(rw_opr==1) then
       p_latlon=j5-j1
       p_lat2=j3-j1
@@ -213,8 +213,8 @@ subroutine intrw_(rwhead,rval,sval)
       dx1=w1/(w1+w3)
       dy =w2/(w1+w2)
       dy1=w1/(w1+w2)
-      ds =w5/(w1+w5)
-      ds1=w1/(w1+w5)
+!     ds =w5/(w1+w5)
+!     ds1=w1/(w1+w5)
       w1_32(1 )=exp(-(dx **2+dy **2)/ss)
       w1_32(2 )=exp(-(dx **2+dy1**2)/ss)
       w1_32(3 )=exp(-(dx1**2+dy **2)/ss)
