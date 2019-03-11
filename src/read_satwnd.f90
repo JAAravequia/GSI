@@ -110,7 +110,7 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
   use convinfo, only: nconvtype, &
        icuse,ictype,icsubtype,ioctype, &
        ithin_conv,rmesh_conv,pmesh_conv,pmot_conv,ptime_conv, &
-       use_prepb_satwnd
+       use_prepb_satwnd, ec_amv_qc
 
   use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,time_4dvar,thin4d
   use deter_sfc_mod, only: deter_sfc_type,deter_sfc2
@@ -969,16 +969,16 @@ subroutine read_satwnd(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,sis
                  endif
 
 ! GOES-16 additional QC addopting ECMWF's approach(Katie Lean,14IWW)-start
-                if (qifn < 90_r_kind .or. qifn > r100 )   qm=15 ! stricter QI
-                if (ppb < 150.0_r_kind) qm=15                   ! all high level
-                if (itype==251 .and. ppb < 700.0_r_kind) qm=15  ! VIS
-                if (itype==246 .and. ppb > 300.0_r_kind) qm=15  ! WVCA 
-                dlon_earth=hdrdat(3)*deg2rad
-                dlat_earth=hdrdat(2)*deg2rad
-                call deter_sfc_type(dlat_earth,dlon_earth,t4dv,isflg,tsavg)
-                if (isflg == 1 .and. ppb > 850.0_r_kind) qm=15  ! low over land
-! GOES-16 additional QC addopting ECMWF's approach(Katie Lean,14IWW)-end                
-                
+                if (EC_AMV_QC) then 
+                   if (qifn < 90_r_kind .or. qifn > r100 )   qm=15 ! stricter QI
+                   if (ppb < 150.0_r_kind) qm=15                   ! all high level
+                   if (itype==251 .and. ppb < 700.0_r_kind) qm=15  ! VIS
+                   if (itype==246 .and. ppb > 300.0_r_kind) qm=15  ! WVCA 
+                   dlon_earth=hdrdat(3)*deg2rad
+                   dlat_earth=hdrdat(2)*deg2rad
+                   call deter_sfc_type(dlat_earth,dlon_earth,t4dv,isflg,tsavg)
+                   if (isflg == 1 .and. ppb > 850.0_r_kind) qm=15  ! low over land
+                endif
 
                 ! winds rejected by qc dont get used
                 if (qm == 15) usage=r100
