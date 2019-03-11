@@ -69,6 +69,9 @@ RERUN_EFCSGRP=${RERUN_EFCSGRP:-"YES"}
 SENDECF=${SENDECF:-"NO"}
 SENDDBN=${SENDDBN:-"NO"}
 
+# IAU
+export DOIAU=${DOIAU_ENKF:-"NO"}
+
 ################################################################################
 # Preprocessing
 mkdata=NO
