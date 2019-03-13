@@ -611,7 +611,6 @@ endif ! method=1
 ! This does the actual full eigendecomposition of the R matrix
 ! Here, recondioning is of covariance matrix
 if ( (ErrorCov%method==2).or.(ErrorCov%method==4) ) then
-
    ErrorCov%Revecsfull=ErrorCov%R
    call decompose_(trim(ErrorCov%name),ErrorCov%Revalsfull,ErrorCov%Revecsfull,ndim,.true.)
    if (ErrorCov%kreq>0) then
@@ -620,12 +619,9 @@ if ( (ErrorCov%method==2).or.(ErrorCov%method==4) ) then
       enddo
       ErrorCov%Revecsfull=ErrorCov%R
       call decompose_(trim(ErrorCov%name),ErrorCov%Revalsfull,ErrorCov%Revecsfull,ndim,.true.)
+
       ! In this case, we can wipe out the eigen-decomp since it will be redone for
       ! each profile at each location at setup time.
-!   ErrorCov%Revalsfull=ErrorCov%Revals
-!   ErrorCov%Revecsfull=ErrorCov%Revecs
-!   ErrorCov%Revals=zero
-!   ErrorCov%Revecs=zero
    endif
 endif ! method=2,4
 
@@ -797,7 +793,7 @@ type(ObsErrorCov) :: ErrorCov              ! ob error covariance for given instr
 !BOC
 
 character(len=*),parameter :: myname_=myname//'*scale_jac'
-integer(i_kind) :: nch_active,ii,jj,kk,iii,jjj,mm,nn,ncp,ifound,nsigjac,indR
+integer(i_kind) :: nch_active,ii,jj,kk,iii,jjj,mm,nn,ncp,ifound,nsigjac,indR,nnn
 integer(i_kind),allocatable,dimension(:)   :: ircv
 integer(i_kind),allocatable,dimension(:)   :: ijac
 integer(i_kind),allocatable,dimension(:)   :: IRsubset
@@ -939,35 +935,18 @@ else
        do ii=1,ncp
          coeff2 = one/ErrorCov%Revals(IRsubset(ii))
          coeff = sqrt(coeff2)
+         nn=IRsubset(ii)
          do jj=1,ncp
-            nn=IJsubset(jj)
-            col0(ii)   = col0(ii)   + ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) * depart(nn)
-            Ri(jj,ii)   =  coeff2*ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) 
-            Rs(jj,ii)   =  coeff*ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) 
-            do kk=1,nsigjac
-               row0(kk,ii) = row0(kk,ii) +ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) * jacobian(kk,nn)
-            end do
-         enddo
-         col0(ii)   =   coeff * col0(ii) 
-         do kk=1,nsigjac
-             row0(kk,ii) =   coeff * row0(kk,ii)
-         end do
-       enddo
-       do jj=1,ncp 
-         do ii=1,ncp 
-            col(ii)   = col(ii)   + ErrorCov%Revecs(IRsubset(ii),IRsubset(jj)) * col0(jj)
-            do kk=1,nsigjac
-               row(kk,ii) = row(kk,ii) + ErrorCov%Revecs(IRsubset(ii),IRsubset(jj)) * row0(kk,jj)
-            end do
+            mm=IRsubset(jj)
+            Ri(jj,ii)   =  coeff2*ErrorCov%Revecs(mm,nn) 
+            Rs(jj,ii)   =  coeff*ErrorCov%Revecs(mm,nn) 
          enddo
        enddo
-      do kk=1,ncp
+       do kk=1,ncp
          do jj=1,ncp 
             do ii=jj,ncp
                   rsqrtinv(ii,jj)=rsqrtinv(ii,jj)+ErrorCov%Revecs(IRsubset(ii),IRsubset(kk))*Rs(jj,kk)
             end do
-         end do
-         do jj=1,ncp
             Rinv(jj) = Rinv(jj)+ErrorCov%Revecs(IRsubset(jj),IRsubset(kk))*Ri(jj,kk)
          end do
       end do
@@ -976,6 +955,14 @@ else
             rsqrtinv(jj,ii)=rsqrtinv(ii,jj)
          end do
       end do
+      do ii=1,ncp
+         do jj=1,ncp
+            col(ii)=col(ii)+rsqrtinv(jj,ii)*depart(IJsubset(jj))
+            do kk=1,nsigjac
+               row(kk,jj)=jacobian(kk,IJsubset(ii))*rsqrtinv(jj,ii)
+            enddo
+         enddo
+      enddo
       !Multiplication of Rinv diagonal by a factor
       !of 5 improves the PCG convergence in this case 
       do jj=1,ncp
