@@ -376,7 +376,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            hrdifsig,mype,nfldsig)
         call tintrp31(ges_v,vgesin,dlat,dlon,dpres,dtime, &
            hrdifsig,mype,nfldsig)
-        if(dpressave <= prsln2.and..not.twodvar_regional)then
+        if(dpressave <= prsln2)then
            factw=one
         else
            factw = data(iff10,i)
@@ -391,7 +391,6 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !          Apply 10-meter wind reduction factor to guess winds
            dx10=-goverrd*ten/tges(1)
            if (dpressave < dx10)then
-              print*, "LEVINE TEST: mype,dpresave,dx10=",mype,dpressave,dx10
               term=(prsln2-dpressave)/(prsln2-dx10)
               factw=one-term+factw*term
            end if
