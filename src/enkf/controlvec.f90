@@ -254,9 +254,9 @@ real(r_single), allocatable, dimension(:,:) :: grdin_mean
 if (nproc <= nanals-1) then
    nanal = nproc + 1
 
+   allocate(grdin_mean(npts,ncdim))
    if (nproc == 0) then
       t1 = mpi_wtime()
-      allocate(grdin_mean(npts,ncdim))
    endif
 
    do nb=1,nbackgrounds
@@ -283,10 +283,10 @@ if (nproc <= nanals-1) then
    enddo
 
    if (nproc == 0) then
-      deallocate(grdin_mean)
       t2 = mpi_wtime()
       print *,'time to gather ens mean increment on root',t2-t1,'secs'
    endif
+   deallocate(grdin_mean)
 
 
    t1 = mpi_wtime()
