@@ -256,6 +256,7 @@ module hybrid_ensemble_parameters
   public :: uv_hyb_ens,q_hyb_ens,s_ens_v,beta_s0,aniso_a_en,s_ens_hv,s_ens_vv
   public :: readin_beta,beta_s,beta_e
   public :: readin_localization
+  public :: l_use_h_localization
   public :: eqspace_ensgrid,grid_ratio_ens
   public :: sqrt_beta_s,sqrt_beta_e,pwgt,full_ensemble,pwgtflg
   public :: grd_ens
@@ -304,6 +305,7 @@ module hybrid_ensemble_parameters
   logical write_ens_sprd
   logical readin_localization
   logical readin_beta
+  logical l_use_h_localization
   logical use_localization_grid
   logical use_gfs_ens
   logical eqspace_ensgrid
@@ -403,6 +405,7 @@ subroutine init_hybrid_ensemble_parameters
   write_ens_sprd=.false.
   readin_localization=.false.
   readin_beta=.false.
+  l_use_h_localization=.false.
   use_localization_grid=.false.
   use_gfs_ens=.true.         ! when global: default is to read ensemble from GFS
   eqspace_ensgrid=.false.

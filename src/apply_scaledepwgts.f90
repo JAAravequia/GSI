@@ -14,7 +14,6 @@
           real(r_kind):: rvlft,rvrgt,rcons,rlen,rinput
           real (r_kind):: rlen1,rtem1,rconshalf
           real (r_kind),parameter::wgtmin=1.0E-5
-!          write(6,*)'rinput and ,rvlft rvlft is ',rinput,rvlft,rvrgt
           rlen1=rlen/10.0 ! rlen corresponds to a (-5,5) region
           rconshalf=0.5*rcons
           if(rinput.gt.rvlft.and.rinput.lt.rvrgt) then
@@ -28,9 +27,6 @@
            fwgtofwvlen=0.0
           endif
  end function fwgtofwvlen
-!                .      .    .                                       .
-!
-!$$$
 
  subroutine init_mult_spc_wgts(jcap_in)
   use kinds, only: r_kind,i_kind,r_single
@@ -65,15 +61,11 @@
   do i=1,jcap_in
   totwvlength(i)= rwv0/i                   
   enddo
- if(1.gt.0) then 
   do i=1,jcap_in
    rtem1=0
    do ig=1,nsclgrp
     if(ig.ne.2) then
      spc_multwgt(i,ig)=fwgtofwvlen(spcwgt_params(1,ig),spcwgt_params(2,ig),spcwgt_params(3,ig),spcwgt_params(4,ig),totwvlength(i)) !fwv2wgt(twvlength)
-     if(mype.eq.0) then
-     write(6,*)'thinkdebxxx i,ig,spc_wgt ',spc_multwgt(i,ig)
-     endif
      if(l_sum_spc_weights.eq.0 ) then
       rtem1=rtem1+spc_multwgt(i,ig)
      else
@@ -93,53 +85,25 @@
      spc_multwgt(i,2)=0.0
      if(rtem2.lt.0) then 
       write(6,*)'this needs to be tuned ,stop'
+      call stop2(244)
      endif
     
    endif
   enddo
   spc_multwgt=max(spc_multwgt,0.0)
-   endif !cltthinkdeb 1>2
 
-  if(1.gt.2) then
-  do i=1,jcap_in
-      do ig=1,nsclgrp
-     if(ig.eq.1) then
-       if(i.le.20) then
-       spc_multwgt(i,ig)=1
-       else
-       spc_multwgt(i,ig)=0
-       endif
-
-    endif
-     if(ig.eq.2) then
-       if(i.gt.20.and.i.le.80) then
-       spc_multwgt(i,ig)=1
-       else
-       spc_multwgt(i,ig)=0
-       endif
-
-      endif
-     if(ig.eq.3) then
-       if(i.gt.80) then
-       spc_multwgt(i,ig)=1
-          else
-       spc_multwgt(i,ig)=0
-       endif
-
-      endif
     enddo !ig,ig
     enddo  !I
-    endif
 
 
 
-   if(mype.eq.0) then
-   open(121,file="test-spcwght.dat",form="formatted")
-   do i=1,jcap_in
-   write(121,111)(totwvlength(i)),((spc_multwgt(i,j)),j=1,nsclgrp),sum(spc_multwgt(i,:))
-   enddo
-   close (121)
-   endif
+!   if(mype.eq.0) then
+!   open(121,file="test-spcwght.dat",form="formatted")
+!   do i=1,jcap_in
+!   write(121,111)(totwvlength(i)),((spc_multwgt(i,j)),j=1,nsclgrp),sum(spc_multwgt(i,:))
+!   enddo
+!   close (121)
+!   endif
  111 format(g15.6,3(g11.4,1x)) 
   
   deallocate(totwvlength)
@@ -152,7 +116,7 @@
 !   2017-03-30  J. Kay, X. Wang - copied from Kleist's apply_scaledepwgts and
 !                                 add the calculation of scale-dependent weighting for mixed resolution ensemble  
 !                                 POC: xuguang.wang@ou.edu
-!
+!   2018        Ting   -- 
   use constants, only:  one
   use control_vectors, only: nrf_var,cvars2d,cvars3d,control_vector
   use kinds, only: r_kind,i_kind
@@ -195,7 +159,6 @@
 ! Get from subdomains to
   call general_sub2grid(grd_in,wbundle%values,hwork)
   work=reshape(hwork,(/grd_in%nlat,grd_in%nlon,grd_in%nlevs_alloc/))
-  work1=work
 ! Transfer work to spectral space
   do kk=1,grd_in%nlevs_alloc      
 !clt  nvar_id is not supposed to be used for ensemble-related structures fr !being now
@@ -210,16 +173,11 @@
 !clt        cycle
 !clt     end if
 !   if(mype==0) then
-     do j=1,grd_in%nlon
-        do i=1,grd_in%nlat
-           outwork(j,i)=work(i,j,kk)
-        enddo
-     enddo
-!     i=5-len_trim( nrf_var(nvar_id(kk))) 
-!     varname1=repeat("_",i)
-!     varname1=trim(varname1)//trim(nrf_var(nvar_id(kk)))
-!     write(fname1,'("grp",i2.2,"mem",i2.2,"-out_vname",A5,"lev-",i3.3)')igrp,nensid, varname1,levs_id(kk)
-    
+!     do j=1,grd_in%nlon
+!        do i=1,grd_in%nlat
+!           outwork(j,i)=work(i,j,kk)
+!        enddo
+!     enddo
 
 ! Transform from physical space to spectral space   
      call general_g2s0(grd_in,sp_in,spc1,work(:,:,kk))
@@ -228,14 +186,6 @@
      call general_spec_multwgt(sp_in,spc1,spwgts)
 ! Transform back to physical space
      call general_s2g0(grd_in,sp_in,spc1,work(:,:,kk))
-     work1(:,:,kk)=work(:,:,kk)-work1(:,:,kk)
-     write(6,*)'thinkdeb max diff work1 is ',maxval(abs(work1(:,:,kk))),kk
-!   if(mype==0) then
-!      do j=1,grd_in%nlon
-!        do i=1,grd_in%nlat
-!           outwork(j,i)=work(i,j,kk)
-!        enddo
-!     enddo
 
   end do
 
@@ -245,98 +195,4 @@
 
   return
 end subroutine apply_scaledepwgts
- subroutine apply_scaledepwgts_test(grd_in,sp_in,wbundle,wbundle2)  
-!   2017-03-30  J. Kay, X. Wang - copied from Kleist's apply_scaledepwgts and
-!                                 add the calculation of scale-dependent weighting for mixed resolution ensemble  
-!                                 POC: xuguang.wang@ou.edu
-!
-  use constants, only:  one
-  use control_vectors, only: nrf_var,cvars2d,cvars3d,control_vector
-  use kinds, only: r_kind,i_kind
-  use kinds, only: r_single
-  use mpimod, only: mype,nvar_id,levs_id
-  use hybrid_ensemble_parameters, only: oz_univ_static
-  use general_specmod, only: general_spec_multwgt
-  use gsi_bundlemod, only: gsi_bundle
-  use general_sub2grid_mod, only: general_sub2grid,general_grid2sub   
-  use general_specmod, only: spec_vars
-  use general_sub2grid_mod, only: sub2grid_info
-   use mpimod, only: mpi_comm_world,mype,npe,ierror
-  use file_utility, only : get_lun
-  implicit none
-
-! Declare passed variables
-  type(gsi_bundle),intent(in) :: wbundle
-  type(gsi_bundle),intent(inout) :: wbundle2
-  type(spec_vars),intent (in):: sp_in
-  type(sub2grid_info),intent(in)::grd_in
-
-! Declare local variables
-  integer(i_kind) ii,iflg,kk
-  integer(i_kind) i,j,lunit 
-
-  real(r_kind),dimension(grd_in%lat2,grd_in%lon2):: slndt,sicet,sst
-  real(r_kind),dimension(grd_in%nlat*grd_in%nlon*grd_in%nlevs_alloc)      :: hwork
-  real(r_kind),dimension(grd_in%nlat,grd_in%nlon,grd_in%nlevs_alloc)      :: work
-  real(r_kind),dimension(grd_in%nlat,grd_in%nlon,grd_in%nlevs_alloc)      :: work1
-  real(r_kind),dimension(sp_in%nc):: spc1
-  real(r_single) outwork(grd_in%nlon,grd_in%nlat)
-  character*64 :: fname1
-  character*5:: varname1
-
-  iflg=1
-! Beta1 first
-! Get from subdomains to
-  call general_sub2grid(grd_in,wbundle%values,hwork)
-  work=reshape(hwork,(/grd_in%nlat,grd_in%nlon,grd_in%nlevs_alloc/))
-  work1=work
-! Transfer work to spectral space
-  do kk=1,grd_in%nlevs_alloc      
-!clt  nvar_id is not supposed to be used for ensemble-related structures fr !being now
-! Shut off this bit if univariate ozone or surface temperature
-!clt      if ( (nrf_var(nvar_id(kk))=='oz').or.(nrf_var(nvar_id(kk))=='OZ').and.oz_univ_static ) then
-!clt        cycle
-!clt    elseif ( (nrf_var(nvar_id(kk))=='sst').or.(nrf_var(nvar_id(kk))=='SST') ) then
-!clt        cycle
-!clt     elseif ( (nrf_var(nvar_id(kk))=='stl').or.(nrf_var(nvar_id(kk))=='STL') ) then
-!clt        cycle
-!clt     elseif ( (nrf_var(nvar_id(kk))=='sti').or.(nrf_var(nvar_id(kk))=='STI') ) then
-!clt        cycle
-!clt     end if
-!   if(mype==0) then
-     do j=1,grd_in%nlon
-        do i=1,grd_in%nlat
-           outwork(j,i)=work(i,j,kk)
-        enddo
-     enddo
-!     i=5-len_trim( nrf_var(nvar_id(kk))) 
-!     varname1=repeat("_",i)
-!     varname1=trim(varname1)//trim(nrf_var(nvar_id(kk)))
-!     write(fname1,'("grp",i2.2,"mem",i2.2,"-out_vname",A5,"lev-",i3.3)')igrp,nensid, varname1,levs_id(kk)
-    
-
-! Transform from physical space to spectral space   
-     call general_g2s0(grd_in,sp_in,spc1,work(:,:,kk))
-
-! Apply spectral weights
-!cltorg     call general_spec_multwgt(sp_in,spc1,spwgts)
-! Transform back to physical space
-     call general_s2g0(grd_in,sp_in,spc1,work(:,:,kk))
-     work1(:,:,kk)=work(:,:,kk)-work1(:,:,kk)
-     write(6,*)'thinkdeb max diff work1 is ',maxval(abs(work1(:,:,kk))),kk
-!   if(mype==0) then
-!      do j=1,grd_in%nlon
-!        do i=1,grd_in%nlat
-!           outwork(j,i)=work(i,j,kk)
-!        enddo
-!     enddo
-
-  end do
-
-! Transfer work back to subdomains
-  hwork=reshape(work,(/grd_in%nlat*grd_in%nlon*grd_in%nlevs_alloc/))
-  call general_grid2sub(grd_in,hwork,wbundle2%values)    
-
-  return
-end subroutine apply_scaledepwgts_test
 

@@ -173,7 +173,7 @@ subroutine get_gefs_ensperts_dualres
   sst2=zero        !    for now, sst not used in ensemble perturbations, so if sst array is called for
                    !      then sst part of en_perts will be zero when sst2=zero
 
-     ig0=3
+     ig0=1
   ntlevs_ens_loop: do m=1,ntlevs_ens
 
      en_bar(ig0,m)%values=zero
@@ -412,9 +412,7 @@ subroutine get_gefs_ensperts_dualres
       do n=1,n_ens
         en_pertstmp1%values=en_perts(n,ig0,m)%valuesr4
        do ig=1,nsclgrp
-        write(6,*)'thinkdeb ig is before apply_scale ',ig
         call apply_scaledepwgts(grd_ens,sp_ens,en_pertstmp1,spc_multwgt(:,ig),en_pertstmp2,ig,n)
-        write(6,*)'thinkdeb ig is after apply_scale ',ig
         en_perts(n,ig,m)%valuesr4=en_pertstmp2%values
 !test        if(ig.eq.1) then
 !        en_perts(n,ig,m)%valuesr4=en_pertstmp1%values
@@ -429,22 +427,6 @@ subroutine get_gefs_ensperts_dualres
    enddo
   enddo
               
-  endif
-  if(nsclgrp.eq.1.and.l_nsclgrpone_test) then
-    write(6,*)'thinkdebl_nsclgrpone_test is ',l_nsclgrpone_test
-    do m=1,ntlevs_ens
-      do n=1,n_ens
-        en_pertstmp1%values=en_perts(n,1,m)%valuesr4
-        call apply_scaledepwgts_test(grd_ens,sp_ens,en_pertstmp1,en_pertstmp2)
-        en_perts(n,1,m)%valuesr4=en_pertstmp2%values
-!test        if(ig.eq.1) then
-!        en_perts(n,ig,m)%valuesr4=en_pertstmp1%values
-!        else
-!        en_perts(n,ig,m)%valuesr4=0.0
-!        endif
-       enddo  !clt ig
-      enddo
-
   endif
 
 !  since initial version is ignoring sst perturbations, skip following code for now.  revisit

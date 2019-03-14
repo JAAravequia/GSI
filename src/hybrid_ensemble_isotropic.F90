@@ -48,7 +48,8 @@ module hybrid_ensemble_isotropic
 !   2015-04-07  carley  - bug fix to allow grd_loc%nlat=grd_loc%nlon
 !   2016-05-13  parrish - remove beta12mult
 !   2018-02-15  wu      - add code for fv3_regional option
-!   2018-03-28  T. Lei  - added  SDL related coded
+!   2019-03-14  daryl and ting   - clean and finalize the current version for  SDL related coding
+
 !
 ! subroutines included:
 !   sub init_rf_z                         - initialize localization recursive filter (z direction)
@@ -2178,10 +2179,9 @@ end subroutine normal_new_factorization_rf_y
     endif
 
     ipx=1
-!cltthinkdeb !$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ic2,ipic,ig,iaens)
+!clttobetested !$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ic2,ipic,ig,iaens)
    do ig=1,nsclgrp
     iaens=ensgrp2aensgrp(ig)
-    write(6,*)'thinkdeb iaens ig are ',iaens,ig
     do n=1,n_ens
        do ic3=1,nc3d
           ipic=ipc3d(ic3)
@@ -2299,7 +2299,6 @@ end subroutine normal_new_factorization_rf_y
 !   Request ensemble-corresponding fields from control vector
 !    NOTE:  because ensemble perturbation bundle structure is same as control vector, use same ipc3d and
 !             ipc2d indices for cvec and en_perts bundles.
-    write(6,*)'thinkdeb this is dual run'
     call gsi_bundlegetpointer (cvec,cvars3d,ipc3d,istatus)
     if(istatus/=0) then
       write(6,*) myname_,': cannot find 3d pointers'
@@ -2344,7 +2343,7 @@ end subroutine normal_new_factorization_rf_y
     im=a_en(1,1)%grid%im
     jm=a_en(1,1)%grid%jm
     km=a_en(1,1)%grid%km
-!$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ic2,ipic,iaens)
+!cltthinktobetested $omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ic2,ipic,iaens)
   do ig=1,nsclgrp
     iaens=ensgrp2aensgrp(ig)
     do n=1,n_ens
@@ -2834,7 +2833,7 @@ subroutine sqrt_beta_e_mult_cvec(grady)
   ! Initialize timer
   call timer_ini('sqrt_beta_e_mult')
 
-!$omp parallel do schedule(dynamic,1) private(nn,k,j,i,ii,iaens)
+!cltthinktobetestd !$omp parallel do schedule(dynamic,1) private(nn,k,j,i,ii,iaens)
   ! multiply by sqrt_beta_e
   do j=1,grd_ens%lon2
      do ii=1,nsubwin
@@ -3536,7 +3535,7 @@ subroutine bkerror_a_en(gradx,grady)
   use hybrid_ensemble_parameters, only: n_ens
   use gsi_bundlemod,only: gsi_bundlegetpointer
   use hybrid_ensemble_parameters, only: naensgrp,alphacvarsclgrpmat
-  use hybrid_ensemble_parameters, only: naensgrp,alphacvarsclgrpmat
+  use hybrid_ensemble_parameters, only: nsclgrp
   use hybrid_ensemble_parameters, only: nval_lenz_en 
 use hybrid_ensemble_parameters, only: l_sum_spc_weights
   use gsi_bundlemod, only: assignment(=)
@@ -3579,7 +3578,7 @@ type(gsi_bundle),allocatable :: ebundle2(:,:)
 !  multiply by sqrt_beta_e_mult
   call sqrt_beta_e_mult(grady)
  
-  if (l_sum_spc_weights.eq.0) then
+  if (l_sum_spc_weights.eq.0.and.nsclgrp.gt.1) then
    allocate(ebundle(naensgrp,n_ens))
    allocate(ebundle2(naensgrp,n_ens))
  do iaensgrp=1,naensgrp
@@ -3611,7 +3610,7 @@ enddo
     !   deallocate(z)
     !else
     !        write(6,*)' using bkgcov_a_en_new_factorization'
-  if (l_sum_spc_weights.ne.0) then
+  if (l_sum_spc_weights.ne.0.or.nsclgrp.eq.1) then
       do iaensgrp=1,naensgrp
        call bkgcov_a_en_new_factorization(iaensgrp,grady%aens(ii,iaensgrp,1:n_ens))
       enddo  
@@ -3624,7 +3623,7 @@ enddo
   do iaensgrp=1,naensgrp
    call ckgcov_a_en_new_factorization_ad2(iaensgrp,ebundle2(iaensgrp,:),ebundle(iaensgrp,:))
   enddo
-  if (l_sum_spc_weights.eq.0) then
+  if (l_sum_spc_weights.eq.0.and.nsclgrp.gt.1) then
   call  covsclgrp_a_en_multmatrix(ebundle2,alphacvarsclgrpmat)
   endif
 ! the second applying of the sqrt matrix
@@ -3639,7 +3638,7 @@ endif
 
 !  multiply by sqrt_beta_e_mult
   call sqrt_beta_e_mult(grady)
-  if (l_sum_spc_weights.eq.0) then
+  if (l_sum_spc_weights.eq.0.and.nsclgrp.gt.1) then
  do iaensgrp=1,naensgrp
    do nn=n_ens,1,-1 ! first in; last out
       call gsi_bundledestroy(ebundle(iaensgrp,nn),istatus)
@@ -4486,6 +4485,8 @@ subroutine hybens_localization_setup
    use hybrid_ensemble_parameters, only: readin_beta,beta_s,beta_e,beta_s0,sqrt_beta_s,sqrt_beta_e
    use hybrid_ensemble_parameters, only: readin_localization,create_hybens_localization_parameters, &
                                          vvlocal,s_ens_h,s_ens_hv,s_ens_v,s_ens_vv
+   use hybrid_ensemble_parameters,only:  l_use_h_localization
+   
    use gsi_io, only: verbose
     use hybrid_ensemble_parameters, only: naensgrp
 
@@ -4505,7 +4506,6 @@ subroutine hybens_localization_setup
    ! Allocate
    call create_hybens_localization_parameters
     
-
    if ( readin_localization .or. readin_beta ) then ! read info from file
       inquire(file=trim(fname),exist=lexist)
       if ( lexist ) then 
@@ -4556,7 +4556,16 @@ subroutine hybens_localization_setup
          nz = msig
          kl = grd_loc%kend_alloc-grd_loc%kbegin_loc+1
          allocate(s_ens_h_gu_x(grd_loc%nsig*n_ens),s_ens_h_gu_y(grd_loc%nsig*n_ens))
+
       endif
+        if ( l_use_h_localization ) then ! assign all levels to same value, s_ens_h, s_ens_v
+           do iaens=1,naensgrp
+             s_ens_hv(:,iaens) = s_ens_h(iaens) !override previous results
+           enddo
+        endif
+
+
+
 
    endif ! if ( readin_localization .or. readin_beta )
 
@@ -4576,7 +4585,6 @@ subroutine hybens_localization_setup
                           k,beta_s(k),beta_e(k)
       enddo
    endif
-
    if ( .not. readin_localization ) then ! assign all levels to same value, s_ens_h, s_ens_v
       nz = 1
       kl = 1
