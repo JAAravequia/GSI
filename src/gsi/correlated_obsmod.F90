@@ -793,7 +793,7 @@ type(ObsErrorCov) :: ErrorCov              ! ob error covariance for given instr
 !BOC
 
 character(len=*),parameter :: myname_=myname//'*scale_jac'
-integer(i_kind) :: nch_active,ii,jj,kk,iii,jjj,mm,nn,ncp,ifound,nsigjac,indR,nnn
+integer(i_kind) :: nch_active,ii,jj,kk,iii,jjj,mm,nn,ncp,ifound,nsigjac,indR
 integer(i_kind),allocatable,dimension(:)   :: ircv
 integer(i_kind),allocatable,dimension(:)   :: ijac
 integer(i_kind),allocatable,dimension(:)   :: IRsubset
@@ -901,11 +901,11 @@ else
    nsigjac=size(jacobian,1)
 !  Multiply Jacobian with matrix of eigenvectors
 !  Multiply departure with "right" eigenvectors
-   allocate(row(nsigjac,ncp),row0(nsigjac,ncp))
-   allocate(col(ncp),col0(ncp))
+   allocate(row(nsigjac,ncp))
+   allocate(col(ncp))
    allocate(Ri(ncp,ncp),Rs(ncp,ncp))
-   row=zero;row0=zero
-   col=zero;col0=zero
+   row=zero
+   col=zero
    Ri=zero
    Rs=zero
    method=ErrorCov%method
@@ -938,14 +938,17 @@ else
          nn=IRsubset(ii)
          do jj=1,ncp
             mm=IRsubset(jj)
-            Ri(jj,ii)   =  coeff2*ErrorCov%Revecs(mm,nn) 
-            Rs(jj,ii)   =  coeff*ErrorCov%Revecs(mm,nn) 
+            Ri(jj,ii)   =  coeff2*ErrorCov%Revecs(mm,nn) !U De^{-1}
+            Rs(jj,ii)   =  coeff*ErrorCov%Revecs(mm,nn) !U De^{-1/2}
          enddo
        enddo
        do kk=1,ncp
          do jj=1,ncp 
             do ii=jj,ncp
-                  rsqrtinv(ii,jj)=rsqrtinv(ii,jj)+ErrorCov%Revecs(IRsubset(ii),IRsubset(kk))*Rs(jj,kk)
+                  !U De^{-1/2} was computed in the last nested do loop, and stored in Rs
+                  !Exploit symmetry of R^{-1/2} here to efficiently compute
+                  ! (U De^{-1/2}) U^T
+                  rsqrtinv(ii,jj)=rsqrtinv(ii,jj)+ErrorCov%Revecs(IRsubset(ii),IRsubset(kk))*Rs(jj,kk) 
             end do
             Rinv(jj) = Rinv(jj)+ErrorCov%Revecs(IRsubset(jj),IRsubset(kk))*Ri(jj,kk)
          end do
