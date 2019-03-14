@@ -92,8 +92,6 @@
   enddo
   spc_multwgt=max(spc_multwgt,0.0)
 
-    enddo !ig,ig
-    enddo  !I
 
 
 
