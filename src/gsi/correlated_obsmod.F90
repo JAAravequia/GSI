@@ -780,6 +780,9 @@ type(ObsErrorCov) :: ErrorCov              ! ob error covariance for given instr
 !   2015-04-01  W. Gu      clean the code
 !   2017-07-27  kbathmann  Merge subroutine rsqrtinv into scale_jac, define Rinv to fix
 !                          diag_precon for correlated error, and reorder several nested loops
+!   2018-03-18  kbathmann  When full channel set passes qc, use stored
+!                          eigendecomposition of full R matrix.
+!                          Rearrange matrix operations of methods 2 and 4 for efficiency
 !
 ! !REMARKS:
 !   language: f90
@@ -901,8 +904,8 @@ else
    nsigjac=size(jacobian,1)
 !  Multiply Jacobian with matrix of eigenvectors
 !  Multiply departure with "right" eigenvectors
-   allocate(row(nsigjac,ncp))
-   allocate(col(ncp))
+   allocate(row(nsigjac,ncp),row0(nsigjac,ncp))
+   allocate(col(ncp),col0(ncp))
    allocate(Ri(ncp,ncp),Rs(ncp,ncp))
    row=zero
    col=zero
@@ -933,9 +936,9 @@ else
               !    Re = U De U^T  (Evals/Evecs eigen-pairs of full Re)
               !    inv(Rg) = U De^(-1/2) U^T U De^(-1/2) U^T
        do ii=1,ncp
-         coeff2 = one/ErrorCov%Revals(IRsubset(ii))
-         coeff = sqrt(coeff2)
          nn=IRsubset(ii)
+         coeff2 = one/ErrorCov%Revals(nn)
+         coeff = sqrt(coeff2)
          do jj=1,ncp
             mm=IRsubset(jj)
             Ri(jj,ii)   =  coeff2*ErrorCov%Revecs(mm,nn) !U De^{-1}
@@ -962,7 +965,7 @@ else
          do jj=1,ncp
             col(ii)=col(ii)+rsqrtinv(jj,ii)*depart(IJsubset(jj))
             do kk=1,nsigjac
-               row(kk,jj)=jacobian(kk,IJsubset(ii))*rsqrtinv(jj,ii)
+               row(kk,jj)=row(kk,jj)+jacobian(kk,IJsubset(ii))*rsqrtinv(jj,ii)
             enddo
          enddo
       enddo
@@ -1082,8 +1085,9 @@ implicit none
 !               for inter-channel covariances.
 !
 ! !REVISION HISTORY:
-!   2014-11-26  W. Gu  initial code
-!   2019-02-26  K. Bathmann update to use Diag of R in QC, rather than satinfo errors
+!   2014-11-26  W. Gu     Initial code
+!   2019-02-26  kbathmann Update to use Diag of R in QC, rather than satinfo errors.
+!                         This subroutine is used in method 4 only
 !
 ! !REMARKS:
 !   language: f90

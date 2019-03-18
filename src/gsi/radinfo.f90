@@ -1128,6 +1128,11 @@ contains
 
 !   Initialize observation error covariance for 
 !   instruments we account for inter-channel correlations
+    varch_sea=zero
+    varch_land=zero
+    varch_ice=zero
+    varch_snow=zero
+    varch_mixed=zero
     if (present(miter)) then 
        call corr_ob_initialize(miter)
        if (miter>0) call corr_oberr_qc(jpch_rad,iuse_rad,nusis,varch_sea, &
