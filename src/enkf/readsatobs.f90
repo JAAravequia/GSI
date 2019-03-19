@@ -541,13 +541,13 @@ subroutine get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_m
                                 ix, delx, ixp, delxp, iy, dely,  &
                                 iyp, delyp, it, delt, itp, deltp)
                endif
-               call calc_linhx(hx_mean_nobc(nob), state_d(1,1,1,nmem),       &
+               call calc_linhx(hx_mean_nobc(nob), state_d(:,:,:,nmem),       &
                                data_chan(n)%dhx_dx, hx(nob),     &
                                ix, delx, ixp, delxp, iy, dely,   &
                                iyp, delyp, it, delt, itp, deltp)
                ! compute modulated ensemble in obs space
                if (neigv > 0) then
-                  call calc_linhx_modens(hx_mean_nobc(nob), state_d(1,1,1,nmem),         &
+                  call calc_linhx_modens(hx_mean_nobc(nob), state_d(:,:,:,nmem),         &
                                   data_chan(n)%dhx_dx, hx_modens(:,nob),     &
                                   ix, delx, ixp, delxp, iy, dely, iyp, delyp, &
                                   it, delt, itp, deltp, vlocal_evecs)
@@ -915,13 +915,13 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
                                ix, delx, ixp, delxp, iy, dely,  &
                                iyp, delyp, it, delt, itp, deltp)
               endif
-              call calc_linhx(hx_mean_nobc(nob), state_d(1,1,1,nmem),       &
+              call calc_linhx(hx_mean_nobc(nob), state_d(:,:,:,nmem),       &
                               dhx_dx, hx(nob),     &
                               ix, delx, ixp, delxp, iy, dely,   &
                               iyp, delyp, it, delt, itp, deltp)
               ! compute modulated ensemble in obs space
               if (neigv > 0) then
-                 call calc_linhx_modens(hx_mean_nobc(nob), state_d(1,1,1,nmem),         &
+                 call calc_linhx_modens(hx_mean_nobc(nob), state_d(:,:,:,nmem),         &
                                  dhx_dx, hx_modens(:,nob),     &
                                  ix, delx, ixp, delxp, iy, dely, iyp, delyp, &
                                  it, delt, itp, deltp, vlocal_evecs)

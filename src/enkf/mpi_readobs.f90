@@ -182,7 +182,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
         id,nanal,nmem)
     end if ! read obs.
 
-    call mpi_barrier(mpi_comm_world,ierr)  ! synch tasks.
+!   call mpi_barrier(mpi_comm_world,ierr)  ! synch tasks.
 
 ! use mpi_gather to gather ob prior ensemble on root.
 ! requires allocation of nobs_tot x nanals temporory array.
