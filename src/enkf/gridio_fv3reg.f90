@@ -93,6 +93,7 @@ contains
     integer :: i,j, k,nn,ntile,nn_tile0, nb
     integer :: u_ind, v_ind, tv_ind,tsen_ind, q_ind, oz_ind
     integer :: ps_ind, sst_ind
+    integer :: ttind 
     logical :: ice
 
     !======================================================================
@@ -111,6 +112,7 @@ contains
     ! Initialize all constants required by routine
     allocate(workvar3d(nx_res,ny_res,nlevs))
     allocate(qworkvar3d(nx_res,ny_res,nlevs))
+    allocate(tvworkvar3d(nx_res,ny_res,nlevs))
     allocate(qsatworkvar3d(nx_res,ny_res,nlevs))
 
     if (ntimes > 1) then
@@ -130,7 +132,8 @@ contains
       nn_tile0=(ntile-1)*nx_res*ny_res
       write(char_tile, '(i1)') ntile
 
-      filename = trim(adjustl(datapath))//trim(adjustl(fileprefixes(nb)))//"_tile"//char_tile//trim(charnanal)
+!cltthinkdeb      filename = trim(adjustl(datapath))//trim(adjustl(fileprefixes(nb)))//"fv3_tile"//char_tile//trim(charnanal)//"_dynvartracer"
+      filename = "fv3_tile"//char_tile(1:1)//"_ens_"//trim(charnanal)//"_dynvartracer"
 
     !----------------------------------------------------------------------
     ! read u-component
@@ -141,7 +144,7 @@ contains
     ! Update u and v variables (same for NMM and ARW)
   
     if (u_ind > 0) then
-    allocate(uworkvar3d(nx_res+1,ny_res,nlevs))
+    allocate(uworkvar3d(nx_res,ny_res+1,nlevs))
        varstrname = 'u'
 
          call read_fv3_restart_data3d(varstrname,filename,file_id,uworkvar3d)
@@ -163,7 +166,7 @@ contains
     deallocate(uworkvar3d)
     endif
     if (v_ind > 0) then
-    allocate(vworkvar3d(nx_res,ny_res+1,nlevs))
+    allocate(vworkvar3d(nx_res+1,ny_res,nlevs))
        varstrname = 'v'
          call read_fv3_restart_data3d(varstrname,filename,file_id,vworkvar3d)
       do k=1,nlevs
@@ -184,64 +187,63 @@ contains
 
     endif
 
-    if (tv_ind > 0.or.tsen_ind) then
-      allocate(tsenworkvar3d(nx_res,ny_res,nlevs))
-       varstrname = 't'
-         call read_fv3_restart_data3d(varstrname,filename,file_id,tsenworkvar3d)
-       if(tv_ind >0 .or. q_ind>0) then 
-      allocate(qworkvar3d(nx_res,ny_res,nlevs))
-       varstrname = 'sphum'
-         call read_fv3_restart_data3d(varstrname,filename,file_id,qworkvar3d)
+        allocate(tsenworkvar3d(nx_res,ny_res,nlevs))
+        varstrname = 'T'
+        call read_fv3_restart_data3d(varstrname,filename,file_id,tsenworkvar3d)
+            varstrname = 'sphum'
+            call read_fv3_restart_data3d(varstrname,filename,file_id,qworkvar3d)
 
-
-              if (q_ind > 0) then
-                 varstrname = 'sphum'
-                do k=1,nlevs
+             if (q_ind > 0) then
+                varstrname = 'sphum'
+                 do k=1,nlevs
                     nn = nn_tile0
-                 do j=1,ny_res
-                   do i=1,nx_res
-                      nn=nn+1
-                      vargrid(nn,levels(q_ind-1)+k,nb)=qworkvar3d(i,j,k) 
+                    do j=1,ny_res
+                      do i=1,nx_res
+                        nn=nn+1
+                        vargrid(nn,levels(q_ind-1)+k,nb)=qworkvar3d(i,j,k) 
+                      enddo
+                     enddo
                    enddo
-                 enddo
-                enddo
-                 do k = levels(q_ind-1)+1, levels(q_ind)
-                    if (nproc .eq. 0)                                               &
-                       write(6,*) 'READFVregional : q ',                           &
+                   do k = levels(q_ind-1)+1, levels(q_ind)
+                      if (nproc .eq. 0)                                               &
+                          write(6,*) 'READFVregional : q ',                           &
                            & k, minval(vargrid(:,k,nb)), maxval(vargrid(:,k,nb))
-                 enddo
-
+                   enddo
               endif
-         endif
-        if(tv_ind > 0) then
-           do k=1,nlevs
+              do k=1,nlevs
               do j=1,ny_res
               do i=1,nx_res
-               workvar3d(i,j,k)=tsenworkvar3d(i,j,k)*(one+fv*qworkvar3d(i,j,k))
+               tvworkvar3d(i,j,k)=tsenworkvar3d(i,j,k)*(one+fv*qworkvar3d(i,j,k))
               enddo
               enddo
-            enddo
-        else! tsen_id >0
+              enddo
+        if(tv_ind >0 .or. tsen_ind>0) then 
+           if(tv_ind > 0) then
+        
+              workvar3d=tvworkvar3d
+            else! tsen_id >0
               workvar3d=tsenworkvar3d
-        endif
-           
+            endif
+            ttind=max(tv_ind,tsen_ind) !thinkdeb, tv_ind and tsen_ind can't be
+                                      !positive at the same time 
            do k=1,nlevs
                nn = nn_tile0
               do j=1,ny_res
               do i=1,nx_res
                  nn=nn+1
-                 vargrid(nn,levels(tv_ind-1)+k,nb)=workvar3d(i,j,k) 
+                 vargrid(nn,levels(ttind-1)+k,nb)=workvar3d(i,j,k) 
               enddo
               enddo
             enddo
-            do k = levels(tv_ind-1)+1, levels(tv_ind)
+            do k = levels(ttind-1)+1, levels(ttind)
                if (nproc .eq. 0)                                               &
                   write(6,*) 'READFVregional : t ',                           &
                       & k, minval(vargrid(:,k,nb)), maxval(vargrid(:,k,nb))
             enddo
 
+
         endif
-   if(allocated(tsenworkvar3d)) deallocate(tsenworkvar3d)
+            deallocate(tsenworkvar3d)
            
 
     
@@ -250,12 +252,12 @@ contains
          call read_fv3_restart_data3d(varstrname,filename,file_id,workvar3d)
       do k=1,nlevs
           nn = nn_tile0
-      do j=1,ny_res
+         do j=1,ny_res
          do i=1,nx_res
             nn=nn+1
             vargrid(nn,levels(oz_ind-1)+k,nb)=workvar3d(i,j,k) 
          enddo
-      enddo
+         enddo
       enddo
        do k = levels(oz_ind-1)+1, levels(oz_ind)
           if (nproc .eq. 0)                                               &
@@ -264,9 +266,6 @@ contains
        enddo
 
     endif
-   
-      call nc_check( nf90_close(file_id),&
-      myname_,'close '//trim(filename) )
     ! set SST to zero for now
     if (sst_ind > 0) then
        vargrid(:,levels(n3d)+sst_ind,nb) = zero
@@ -277,17 +276,11 @@ contains
     ! Allocate memory for variables computed within routine
  
     if (ps_ind > 0) then
-       allocate(workprsi(nx_res,ny_res,nlevs))
+       allocate(workprsi(nx_res,ny_res,nlevsp1))
        allocate(pswork(nx_res,ny_res))
-       varstrname = 'u'
-       fv3filename=trim(adjustl(filename))//"_dynvars"
-       call nc_check( nf90_open(trim(adjustl(fv3filename)),nf90_nowrite,file_id),&
-        myname_,'open: '//trim(adjustl(fv3filename)) )
       call read_fv3_restart_data3d('delp',filename,file_id,workvar3d)  !cltto think different files be used
       !print *,'min/max delp',ntile,minval(delp),maxval(delp)
-      call nc_check( nf90_close(file_id),&
-      myname_,'close '//trim(filename) )
-      workprsi(:,:,nlevsp1+1)=eta1_ll(nlevsp1) !etal_ll is needed
+      workprsi(:,:,nlevsp1)=eta1_ll(nlevsp1) !etal_ll is needed
       do i=nlevs,1,-1
         workprsi(:,:,i)=workvar3d(:,:,i)*0.01_r_kind+workprsi(:,:,i+1)
        enddo
@@ -295,15 +288,18 @@ contains
       pswork(:,:)=workprsi(:,:,1)
 
 
-
           nn = nn_tile0
       do j=1,ny_res
          do i=1,nx_res
             nn=nn+1
-            vargrid(nn,levels(ps_ind-1), nb) =pswork(i,j) 
+            vargrid(nn,levels(n3d)+ps_ind, nb) =pswork(i,j) 
          enddo
       enddo
 
+     endif
+
+      call nc_check( nf90_close(file_id),&
+      myname_,'close '//trim(filename) )
 
       
 
@@ -315,7 +311,6 @@ contains
          enddo
         enddo
       enddo
-       allocate(qsatworkvar3d(nx_res,ny_res,nlevs))
      ice=.true.  !tothink
     if (pseudo_rh) then
        call genqsat1(qworkvar3d,qsatworkvar3d,workvar3d,tvworkvar3d,ice,  &
@@ -336,14 +331,12 @@ contains
           
 
 
-
    if(allocated(workprsi))     deallocate(workprsi)
    if(allocated(pswork))     deallocate(pswork)
    if(allocated(tvworkvar3d)) deallocate(tvworkvar3d)
    if(allocated(qworkvar3d)) deallocate(qworkvar3d)
    if(allocated(qsatworkvar3d)) deallocate(qsatworkvar3d)
     
-     endif
     !======================================================================
     ! Deallocate memory 
     if(allocated(workvar3d))             deallocate(workvar3d)
@@ -367,7 +360,8 @@ contains
   subroutine writegriddata(nanal,vars3d,vars2d,n3d,n2d,levels,ndim,vargrid,no_inflate_flag)
     use constants, only: zero, one,fv,half
     use params, only: nbackgrounds, anlfileprefixes, fgfileprefixes
-    use params,   only: nx_res,ny_res,nlevs,ntiles
+    use params,   only: nx_res,ny_res,nlevs,ntiles,l_pres_add_saved
+    use gridinfo,only: ak,bk,eta1_ll,eta2_ll,ptop
     use netcdf, only: nf90_open,nf90_close,nf90_get_var,nf90_noerr
     use netcdf, only: nf90_inq_dimid,nf90_inq_varid
     use netcdf, only: nf90_write,nf90_write,nf90_inquire,nf90_inquire_dimension
@@ -395,20 +389,22 @@ contains
     integer(i_kind) :: w_ind, cw_ind, ph_ind
 
     integer(i_kind) file_id,var_id,dim_id
-    real(r_single), dimension(:,:,:), allocatable ::workvar3d,workinc3d,uworkvar3d,&
+    real(r_single), dimension(:,:), allocatable ::pswork
+    real(r_single), dimension(:,:,:), allocatable ::workvar3d,workinc3d,workinc3d2,uworkvar3d,&
                         vworkvar3d,qvarworkvar3d,tvworkvar3d,tsenworkvar3d,&
                         workprsi,qworkvar3d
     !----------------------------------------------------------------------
     ! Define variables required by for extracting netcdf variable
     ! fields
     character(len=19)  :: DateStr
+    integer :: nlevsp1
     ! Define variables required for netcdf variable I/O
     character(len=12) :: varstrname
     character(len=4) char_nxres
     character(len=4) char_nyres
     character(len=4) char_tile
     character(len=:),allocatable:: varname
-    character(len=24),parameter :: myname_ = 'fv3: getgridinfo'
+    character(len=24),parameter :: myname_ = 'fv3: writegridinfo'
 
     !----------------------------------------------------------------------
     ! Define counting variables
@@ -416,9 +412,9 @@ contains
 
 
 
-    real(r_single) :: ptop
 
     !----------------------------------------------------------------------
+    nlevsp1=nlevs+1
 
     u_ind   = getindex(vars3d, 'u')   !< indices in the state var arrays
     v_ind   = getindex(vars3d, 'v')   ! U and V (3D)
@@ -449,6 +445,11 @@ contains
     filename = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"mem"//charnanal
      call nc_check( nf90_open(trim(adjustl(filename)),nf90_write,file_id),&
         myname_,'open: '//trim(adjustl(filename)) )
+    allocate(workinc3d(nx_res,ny_res,nlevs),workinc3d2(nx_res,ny_res,nlevsp1))
+    allocate(workvar3d(nx_res,ny_res,nlevs))
+    allocate(qworkvar3d(nx_res,ny_res,nlevs))
+    allocate(tvworkvar3d(nx_res,ny_res,nlevs))
+    
 
     !----------------------------------------------------------------------
     ! Update u and v variables (same for NMM and ARW)
@@ -466,6 +467,7 @@ contains
 
     ! update CWM for WRF-NMM
     if (u_ind > 0) then
+    allocate(uworkvar3d(nx_res,ny_res+1,nlevs))
        varstrname = 'u'
          
        call read_fv3_restart_data3d(varstrname,filename,file_id,uworkvar3d)
@@ -478,13 +480,15 @@ contains
          enddo
       enddo
       enddo
-      uworkvar3d(1:nx_res,:,:)=workvar3d+workinc3d
-      uworkvar3d(nx_res+1,:,:)=uworkvar3d(nx_res,:,:)
+      uworkvar3d(:,1:ny_res,:)=workvar3d+workinc3d
+      uworkvar3d(:,ny_res+1,:)=uworkvar3d(:,ny_res,:)
        call write_fv3_restart_data3d(varstrname,filename,file_id,uworkvar3d)
+    deallocate(uworkvar3d)
 
     endif
 
     if (v_ind > 0) then
+    allocate(vworkvar3d(nx_res+1,ny_res,nlevs))
        varstrname = 'v'
          
        call read_fv3_restart_data3d(varstrname,filename,file_id,workvar3d)
@@ -497,9 +501,10 @@ contains
          enddo
       enddo
       enddo
-      vworkvar3d(:,1:ny_res,:)=workvar3d+workinc3d
-      vworkvar3d(:,ny_res+1,:)=vworkvar3d(:,ny_res,:)
+      vworkvar3d(1:nx_res,:,:)=workvar3d+workinc3d
+      vworkvar3d(nx_res+1,:,:)=vworkvar3d(nx_res,:,:)
        call write_fv3_restart_data3d(varstrname,filename,file_id,vworkvar3d)
+    deallocate(vworkvar3d)
 
     endif
     if (tv_ind > 0.or.tsen_ind>0 ) then
@@ -575,12 +580,65 @@ contains
        call write_fv3_restart_data3d(varstrname,filename,file_id,workvar3d)
 
     endif
+    if (ps_ind > 0) then
+       allocate(workprsi(nx_res,ny_res,nlevsp1))
+       allocate(pswork(nx_res,ny_res))
+      call read_fv3_restart_data3d('delp',filename,file_id,workvar3d)  !cltto think different files be used
+      !print *,'min/max delp',ntile,minval(delp),maxval(delp)
+      workprsi(:,:,nlevsp1)=eta1_ll(nlevsp1) !etal_ll is needed
+      do i=nlevs,1,-1
+        workprsi(:,:,i)=workvar3d(:,:,i)*0.01_r_kind+workprsi(:,:,i+1)
+       enddo
+ 
+
+
+          nn = nn_tile0
+      do j=1,ny_res
+         do i=1,nx_res
+            nn=nn+1
+            pswork(i,j)=vargrid(nn,levels(n3d)+ps_ind,nb )
+         enddo
+      enddo
+     if(l_pres_add_saved) then 
+      do k=1,nlevs+1
+      do j=1,ny_res
+         do i=1,nx_res
+            workinc3d2(i,j,k)=eta2_ll(k)*pswork(i,j) 
+         enddo
+      enddo
+      enddo
+      workprsi=workprsi+workinc3d2
+     else
+        workprsi(:,:,1)=workprsi(:,:,1)+pswork
+        do k=2,nlevsp1 
+        workprsi(:,:,k)=eta1_ll(k)+eta2_ll(k)*workprsi(:,:,1)         
+        enddo
+     endif
+       do k=1,nlevs
+        workvar3d(:,:,k)=(workprsi(:,:,k)-workprsi(:,:,k+1))*100.0
+       enddo
+
+
+       call write_fv3_restart_data3d(varstrname,filename,file_id,workvar3d)
+     endif
+
+      call nc_check( nf90_close(file_id),&
+      myname_,'close '//trim(filename) )
+    
+  
 
 
     !----------------------------------------------------------------------
     ! update time stamp is to be considered NSTART_HOUR in NMM (HWRF) restart file.
     !======================================================================
      end do ! tiles
+   if(allocated(workinc3d))     deallocate(workinc3d)
+   if(allocated(workinc3d2))     deallocate(workinc3d2)
+  if(allocated(workprsi))     deallocate(workprsi)
+   if(allocated(pswork))     deallocate(pswork)
+   if(allocated(tvworkvar3d)) deallocate(tvworkvar3d)
+   if(allocated(qworkvar3d)) deallocate(qworkvar3d)
+  
     end do backgroundloop ! loop over backgrounds to read in
 
     ! Return calculated values

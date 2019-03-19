@@ -188,6 +188,7 @@ logical,public :: fv3_native = .false.
 character(len=500),public :: fv3fixpath = ' '
 integer(i_kind),public :: ntiles=6
 integer(i_kind),public :: nx_res=0,ny_res=0
+logical,public ::l_pres_add_saved 
 
 namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    covinflatemax,covinflatemin,deterministic,sortinc,&
@@ -211,7 +212,7 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    fso_cycling,fso_calculate,imp_physics,lupp,fv3_native
 
 namelist /nam_wrf/arw,nmm,nmm_restart
-namelist /nam_fv3/fv3fixpath,nx_res,ny_res,ntiles
+namelist /nam_fv3/fv3fixpath,nx_res,ny_res,ntiles,l_pres_add_saved
 namelist /satobs_enkf/sattypes_rad,dsis
 namelist /ozobs_enkf/sattypes_oz
 
@@ -335,10 +336,11 @@ dsis=' '
 ! Initialize first-guess and analysis file name prefixes.
 ! (blank means use default names)
 fgfileprefixes = ''; anlfileprefixes=''; statefileprefixes=''
-
+l_pres_add_saved=.true.
 ! read from namelist file, doesn't seem to work from stdin with mpich
 open(912,file='enkf.nml',form="formatted")
 read(912,nam_enkf)
+read(912,nam_fv3)
 read(912,satobs_enkf)
 read(912,ozobs_enkf)
 if (regional) then
@@ -453,6 +455,7 @@ if (nproc == 0) then
    print *,'namelist parameters:'
    print *,'--------------------'
    write(6,nam_enkf)
+   write(6,nam_fv3)
    print *,'--------------------'
 
 ! check for mandatory namelist variables
