@@ -1,5 +1,5 @@
 subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
-     prsl_full,nobs,nrec_start,hloc,vloc)
+     prsl_full,nobs,nrec_start)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:  read_prepbuf                read obs from prepbufr file
@@ -137,10 +137,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !                         is found in non linear qc error tables and b table
 !   2016-05-05  pondeca - add 10-m u-wind and v-wind (uwnd10m, vwnd10m)
 !   2016-06-01  zhu    - use errormod_aircraft
-!   2016-09-23  Johnson, Y. Wang, X. Wang - assign observation dependent horizontal and
-!                                           vertical localization scales to
-!                                           observation arrays,
-!                                           POC: xuguang.wang@ou.edu
 !   2017-06-17  levine - add GLERL program code lookup
 !
 !   2017-03-21  Su      - add option to thin conventional data in 4 dimension 
@@ -226,7 +222,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   integer(i_kind),dimension(npe)        ,intent(inout) :: nobs
   real(r_kind)                          ,intent(in   ) :: twindin
   real(r_kind),dimension(nlat,nlon,nsig),intent(in   ) :: prsl_full
-  real(r_kind)                          ,intent(in   ) :: hloc,vloc
 
 ! Declare local parameters
   real(r_kind),parameter:: r0_01 = 0.01_r_kind
@@ -454,35 +449,35 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
             tcamtob .or. lcbasob .or. cldchob
   aircraftobst=.false.
   if(tob)then
-     nreal=25+2
+     nreal=25
   else if(uvob) then 
-     nreal=25+2
+     nreal=25
   else if(spdob) then
-     nreal=24+2
+     nreal=24
   else if(psob) then
-     nreal=20+2
+     nreal=20
   else if(qob) then
-     nreal=26+2
+     nreal=26
   else if(pwob) then
-     nreal=20+2
+     nreal=20
   else if(sstob) then
      if (nst_gsi > 0) then
-        nreal=18 + nstinfo+2
+        nreal=18 + nstinfo
      else
-        nreal=18+2
+        nreal=18
      end if
   else if(gustob) then
-     nreal=21+2
+     nreal=21
   else if(visob) then
-     nreal=18+2
+     nreal=18
   else if(tdob) then
-     nreal=25+2
+     nreal=25
   else if(mxtmob) then
      nreal=24
   else if(mitmob) then
      nreal=24
   else if(pmob) then
-     nreal=24+2
+     nreal=24
   else if(howvob) then
      nreal=23
   else if(metarcldobs) then
@@ -2037,12 +2032,10 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(23,iout)=r_sprvstg(1,1)         ! subprovider name
                  cdata_all(24,iout)=obsdat(10,k)           ! cat
                  cdata_all(25,iout)=var_jb(3,k)            ! non linear qc for T
-                 cdata_all(26,iout)=hloc
-                 cdata_all(27,iout)=vloc
                  if (aircraft_t_bc_pof .or. aircraft_t_bc .or.aircraft_t_bc_ext) then
-                    cdata_all(28,iout)=aircraftwk(1,k)     ! phase of flight
-                    cdata_all(29,iout)=aircraftwk(2,k)     ! vertical velocity
-                    cdata_all(30,iout)=idx                 ! index of temperature bias
+                    cdata_all(26,iout)=aircraftwk(1,k)     ! phase of flight
+                    cdata_all(27,iout)=aircraftwk(2,k)     ! vertical velocity
+                    cdata_all(28,iout)=idx                 ! index of temperature bias
                  end if
                  if(perturb_obs)cdata_all(nreal,iout)=ran01dom()*perturb_fact ! t perturbation
                  if (twodvar_regional) &
@@ -2167,11 +2160,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(23,iout)=r_sprvstg(1,1)         ! subprovider name
                  cdata_all(24,iout)=obsdat(10,k)           ! cat
                  cdata_all(25,iout)=var_jb(5,k)            ! non linear qc parameter
-                 cdata_all(26,iout)=hloc
-                 cdata_all(27,iout)=vloc
                  if(perturb_obs)then
-                    cdata_all(28,iout)=ran01dom()*perturb_fact ! u perturbation
-                    cdata_all(29,iout)=ran01dom()*perturb_fact ! v perturbation
+                    cdata_all(26,iout)=ran01dom()*perturb_fact ! u perturbation
+                    cdata_all(27,iout)=ran01dom()*perturb_fact ! v perturbation
                  endif
  
               else if(spdob) then 
@@ -2205,8 +2196,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(21,iout)=zz                     ! terrain height at ob location
                  cdata_all(22,iout)=r_prvstg(1,1)          ! provider name
                  cdata_all(23,iout)=r_sprvstg(1,1)         ! subprovider name
-                 cdata_all(24,iout)=hloc
-                 cdata_all(25,iout)=vloc
 
 !             Surface pressure 
               else if(psob) then
@@ -2237,9 +2226,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(18,iout)=r_prvstg(1,1)          ! provider name
                  cdata_all(19,iout)=r_sprvstg(1,1)         ! subprovider name
                  cdata_all(20,iout)=var_jb(1,k)            ! non linear qc b parameter 
-                 cdata_all(21,iout)=hloc
-                 cdata_all(22,iout)=vloc
-                 if(perturb_obs)cdata_all(23,iout)=ran01dom()*perturb_fact ! ps perturbation
+                 if(perturb_obs)cdata_all(21,iout)=ran01dom()*perturb_fact ! ps perturbation
                  if (twodvar_regional) &
                     call adjust_error(cdata_all(14,iout),cdata_all(15,iout),cdata_all(11,iout),cdata_all(1,iout))
 
@@ -2282,9 +2269,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(21,iout)=r_sprvstg(1,1)         ! subprovider name
                  cdata_all(22,iout)=obsdat(10,k)           ! cat
                  cdata_all(23,iout)=var_jb(2,k)            ! non linear qc b parameter
-                 cdata_all(24,iout)=hloc
-                 cdata_all(25,iout)=vloc
-                 if(perturb_obs)cdata_all(26,iout)=ran01dom()*perturb_fact ! q perturbation
+                 if(perturb_obs)cdata_all(24,iout)=ran01dom()*perturb_fact ! q perturbation
                  if (twodvar_regional) &
                     call adjust_error(cdata_all(15,iout),cdata_all(16,iout),cdata_all(12,iout),cdata_all(1,iout))
  
@@ -2310,8 +2295,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(14,iout)=stnelev                ! station elevation (m)
                  cdata_all(15,iout)=obsdat(1,k)            ! observation pressure (hPa)
                  cdata_all(16,iout)=obsdat(4,k)            ! observation height (m)
-                 cdata_all(17,iout)=hloc
-                 cdata_all(18,iout)=vloc
  
 
 !             Conventional sst observations
@@ -2341,8 +2324,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(16,iout)=dlon_earth_deg         ! earth relative longitude (degrees)
                  cdata_all(17,iout)=dlat_earth_deg         ! earth relative latitude (degrees)
                  cdata_all(18,iout)=stnelev                ! station elevation (m)
-                 cdata_all(19,iout)=hloc
-                 cdata_all(20,iout)=vloc
 
                  if( nst_gsi > 0) then
                    zob   = sstdat(2,k)
@@ -2355,10 +2336,10 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                       call gsi_nstcoupler_deter(dlat_earth,dlon_earth,t4dv,zob,tref,dtw,dtc,tz_tr)
                    end if
 
-                   cdata_all(21,iout) = tref               ! foundation temperature
-                   cdata_all(22,iout) = dtw                ! dt_warm at zob
-                   cdata_all(23,iout) = dtc                ! dt_cool at zob
-                   cdata_all(24,iout) = tz_tr              ! d(Tz)/d(Tr)
+                   cdata_all(19,iout) = tref               ! foundation temperature
+                   cdata_all(20,iout) = dtw                ! dt_warm at zob
+                   cdata_all(21,iout) = dtc                ! dt_cool at zob
+                   cdata_all(22,iout) = tz_tr              ! d(Tz)/d(Tr)
                  end if
 
 !          Measurement types
@@ -2429,8 +2410,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(19,iout)=selev                  ! station elevation (m)
                  cdata_all(20,iout)=r_prvstg(1,1)          ! provider name
                  cdata_all(21,iout)=r_sprvstg(1,1)         ! subprovider name
-                 cdata_all(22,iout)=hloc
-                 cdata_all(23,iout)=vloc
 
 !             Visibility
               else if(visob) then
@@ -2486,8 +2465,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(16,iout)=zz                     ! terrain height at ob location
                  cdata_all(17,iout)=r_prvstg(1,1)          ! provider name
                  cdata_all(18,iout)=r_sprvstg(1,1)         ! subprovider name
-                 cdata_all(19,iout)=hloc
-                 cdata_all(20,iout)=vloc
 
 !             2m-Dewpoint
               else if(tdob) then
@@ -2521,8 +2498,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(23,iout)=r_prvstg(1,1)          ! provider name
                  cdata_all(24,iout)=r_sprvstg(1,1)         ! subprovider name
                  cdata_all(25,iout)=obsdat(10,k)           ! cat
-                 cdata_all(26,iout)=hloc
-                 cdata_all(27,iout)=vloc
 
 !             Maximum temperature
               else if(mxtmob) then
@@ -2616,8 +2591,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  cdata_all(22,iout)=r_prvstg(1,1)          ! provider name
                  cdata_all(23,iout)=r_sprvstg(1,1)         ! subprovider name
                  cdata_all(24,iout)=obsdat(10,k)           ! cat
-                 cdata_all(25,iout)=hloc
-                 cdata_all(26,iout)=vloc
 
 !             Significant wave height
               else if(howvob) then

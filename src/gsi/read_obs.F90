@@ -718,7 +718,6 @@ subroutine read_obs(ndata,mype)
     use mpeu_util, only: warn
     use gsi_unformatted, only: unformatted_open
 
-    use obsmod, only: hlocal,vlocal
     use mrmsmod,only: l_mrms_sparse_netcdf
 
     implicit none
@@ -1362,7 +1361,7 @@ subroutine read_obs(ndata,mype)
                   string='READ_FL_HDOB'
                 else
                    call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
-                        prsl_full,nobs_sub1(1,i),read_rec(i),hlocal(i),vlocal(i))
+                        prsl_full,nobs_sub1(1,i),read_rec(i))
                    string='READ_PREPBUFR'
 
                 endif
@@ -1375,7 +1374,7 @@ subroutine read_obs(ndata,mype)
                     string='READ_SATMAR'
                  else 
                    call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
-                        prsl_full,nobs_sub1(1,i),read_rec(i),hlocal(i),vlocal(i))
+                        prsl_full,nobs_sub1(1,i),read_rec(i))
                    string='READ_PREPBUFR'
 
                  endif
@@ -1386,7 +1385,7 @@ subroutine read_obs(ndata,mype)
                    string='READ_ASCII_MITM'
                  else
                    call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
-                        prsl_full,nobs_sub1(1,i),read_rec(i),hlocal(i),vlocal(i))
+                        prsl_full,nobs_sub1(1,i),read_rec(i))
                    string='READ_PREPBUFR'
                  endif
 
@@ -1397,7 +1396,7 @@ subroutine read_obs(ndata,mype)
                    string='READ_ASCII_MXTM'
                  else
                    call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
-                        prsl_full,nobs_sub1(1,i),read_rec(i),hlocal(i),vlocal(i))
+                        prsl_full,nobs_sub1(1,i),read_rec(i))
                    string='READ_PREPBUFR'
                  endif
 
@@ -1411,7 +1410,7 @@ subroutine read_obs(ndata,mype)
                 else
 !              else read from prepbufr
                    call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,prsl_full, &
-                         nobs_sub1(1,i),read_rec(i),hlocal(i),vlocal(i))
+                         nobs_sub1(1,i),read_rec(i))
                    string='READ_PREPBUFR'
                 end if
 
@@ -1421,7 +1420,7 @@ subroutine read_obs(ndata,mype)
 !             Process satellite winds which seperate from prepbufr
                 if ( index(infile,'satwnd') /=0 ) then
                   call read_satwnd(nread,npuse,nouse,infile,obstype,lunout,gstime,twind,sis,&
-                     prsl_full,nobs_sub1(1,i),hlocal(i),vlocal(i))
+                     prsl_full,nobs_sub1(1,i))
                   string='READ_SATWND'
 !             Process oscat winds which seperate from prepbufr
                 elseif ( index(infile,'oscatbufr') /=0 ) then
@@ -1439,7 +1438,7 @@ subroutine read_obs(ndata,mype)
                   string='READ_FL_HDOB'
                 else
                   call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
-                     prsl_full,nobs_sub1(1,i),read_rec(i),hlocal(i),vlocal(i))
+                     prsl_full,nobs_sub1(1,i),read_rec(i))
                   string='READ_PREPBUFR'
                 endif
 
@@ -1448,7 +1447,7 @@ subroutine read_obs(ndata,mype)
                 string="--"//trim(ditype(i))//":sst:"//trim(platid)
                 if ( platid == 'nsst') then
                    call read_nsstbufr(nread,npuse,nouse,gstime,infile,obstype, &
-                        lunout,twind,sis,nobs_sub1(1,i),hlocal(i),vlocal(i))
+                        lunout,twind,sis,nobs_sub1(1,i))
                    string='READ_NSSTBUFR'
                 elseif ( platid == 'mods') then
                    call read_modsbufr(nread,npuse,nouse,gstime,infile,obstype, &
@@ -1461,7 +1460,7 @@ subroutine read_obs(ndata,mype)
                    endif
 
                    call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
-                        prsl_full,nobs_sub1(1,i),read_rec(i),hlocal(i),vlocal(i))
+                        prsl_full,nobs_sub1(1,i),read_rec(i))
                    string='READ_PREPBUFR'
                 endif
 
@@ -1498,12 +1497,12 @@ subroutine read_obs(ndata,mype)
              else if (obstype == 'rw') then
                 if( trim(infile) == 'vr_vol' )then
                   call read_radar_wind_ascii(nread,npuse,nouse,infile,lunout,obstype,sis,&
-                                  hgtl_full,nobs_sub1(1,i),hlocal(i),vlocal(i))
+                                  hgtl_full,nobs_sub1(1,i))
                 else
                  if (vadwnd_l2rw_qc) then
                       write(6,*)'READ_OBS: radial wind,read_radar,dfile=',infile,',dsis=',sis 
                      call read_radar(nread,npuse,nouse,infile,lunout,obstype,twind,sis,&
-                                     hgtl_full,nobs_sub1(1,i),hlocal(i),vlocal(i))
+                                     hgtl_full,nobs_sub1(1,i))
                      string='READ_RADAR'
                   else if (sis == 'l2rw') then
                       write(6,*)'READ_OBS: radial wind,read_radar_l2rw_novadqc,dfile=',infile,',dsis=',sis
@@ -1517,7 +1516,7 @@ subroutine read_obs(ndata,mype)
              else if (obstype == 'dbz' ) then
                 print *, "calling read_dbz"
                 if(trim(infile)=='dbzobs.nc')then
-                  call read_dbz_nc(nread,npuse,nouse,infile,lunout,obstype,sis,hgtl_full,nobs_sub1(1,i),hlocal(i),vlocal(i))
+                  call read_dbz_nc(nread,npuse,nouse,infile,lunout,obstype,sis,hgtl_full,nobs_sub1(1,i))
                   string='READ_dBZ'
                 else
                   call read_dbz_mrms_detect_format(infile,l_mrms_sparse_netcdf)

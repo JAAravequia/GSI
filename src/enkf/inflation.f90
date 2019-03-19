@@ -172,20 +172,19 @@ do nn=1,ncdim
    tmp_chunk2(i,nn) = analpertwt*((fsprd-asprd)/asprd) + 1.0
 
    if ( nn == ncdim ) then
-      nnlvl=nlevs_pres
+       nnlvl=nlevs_pres
    else
        nnlvl=nn - nn/nlevs*nlevs
    end if
    if( nnlvl == 0 ) nnlvl = nlevs
-
+   
    r=abs((logp(indxproc(nproc+1,i),nnlvl)-logp(indxproc(nproc+1,i),nlevs_pres))/lnsigcovinfcutoff)
    if ( r > 0.75 ) then
        r=1.0
    endif
-
+   
    tmp_chunk2(i,nn) = tmp_chunk2(i,nn) + &
-            taper(r)*latval(deglat,covinflatenh,covinflatetr,covinflatesh)
-
+             taper(r)*latval(deglat,covinflatenh,covinflatetr,covinflatesh)
    ! min/max inflation set by covinflatemin/covinflatemax.
    tmp_chunk2(i,nn) = max(covinflatemin,min(tmp_chunk2(i,nn),covinflatemax))
 

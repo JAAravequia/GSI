@@ -1,4 +1,4 @@
-subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,sis,hgtl_full,nobs,hloc,vloc)
+subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,sis,hgtl_full,nobs)
 !$$$   subprogram documentation block
 !                .      .    .                                       .
 !   subprogram: read_dbz        read MRMS gridded QC'd radar reflectivity files in DART-like netcdf format
@@ -9,10 +9,6 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,sis,hgtl_full,no
 ! program history log:
 !   2016-02-14  Y. Wang, Johnson, X. Wang - modify read_radar.f90 to read MRMS dbz in netcdf format 
 !                                           in collaboration with Carley, POC: xuguang.wang@ou.edu
-!   2016-09-23  Johnson, Y. Wang, X. Wang - assign observation dependent horizontal and
-!                                           vertical localization scales to
-!                                           observation arrays,
-!                                           POC: xuguang.wang@ou.edu
 !                               
 !
 ! program history log:
@@ -89,7 +85,6 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,sis,hgtl_full,no
 ! Declare passed variables
   character(len=*),intent(in   ) :: obstype,infile
   character(len=*),intent(in   ) :: sis
-  real(r_kind)    ,intent(in   ) :: hloc,vloc
   integer(i_kind) ,intent(in   ) :: lunout
   integer(i_kind) ,intent(inout) :: nread,ndata,nodata
   real(r_kind),dimension(nlat,nlon,nsig),intent(in):: hgtl_full
@@ -98,7 +93,7 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,sis,hgtl_full,no
 ! Declare local parameters
   real(r_kind),parameter:: r6 = 6.0_r_kind
   real(r_kind),parameter:: r360=360.0_r_kind
-  integer(i_kind),parameter:: maxdat=20
+  integer(i_kind),parameter:: maxdat=18
   character(len=4), parameter :: radid = 'XXXX'
   
 ! === Grid dbz data declaration
@@ -485,9 +480,6 @@ fileopen: if (if_input_exist) then
          cdata_all(17,iout)= dbznoise                      ! noise threshold for reflectivity (dBZ)
          cdata_all(18,iout)= imissing2nopcp                !=0, normal 
                                                            !=1,  !values !converted !from !missing !values 
-     
-         cdata_all(19,iout)= hloc
-         cdata_all(20,iout)= vloc
      
          if(doradaroneob .and. (cdata_all(5,iout) > -99.0_r_kind) ) exit ILOOP
 

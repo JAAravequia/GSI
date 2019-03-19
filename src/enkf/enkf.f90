@@ -177,7 +177,7 @@ real(r_single), allocatable, dimension(:) :: paoverpb_min, paoverpb_min1, paover
 integer(i_kind) ierr
 ! kd-tree search results
 type(kdtree2_result),dimension(:),allocatable :: sresults1,sresults2 
-integer(i_kind) nanal,nn,nnn,nobm,nsame,nn1,nn2,oz_ind,nlev,dbz_ind
+integer(i_kind) nanal,nn,nnn,nobm,nsame,nn1,nn2,oz_ind,nlev
 real(r_single),dimension(nlevs_pres):: taperv
 logical lastiter, kdgrid, kdobs
 
@@ -604,7 +604,6 @@ do niter=1,numiter
           nn2 = ncdim
       end if
       if (nf2 > 0) then
-          dbz_ind = getindex(cvars3d, 'dbz')
 !$omp parallel do schedule(dynamic,1) private(ii,i,nb,obt,nn,nnn,nlev,lnsig,kfgain,ens_tmp,taper1,taper3,taperv)
           do ii=1,nf2 ! loop over nearby horiz grid points
              do nb=1,nbackgrounds ! loop over background time levels
@@ -624,11 +623,8 @@ do niter=1,numiter
                        ! (through hpfhtcon)
                        kfgain=taper1*sum(ens_tmp*anal_obtmp_modens)
                        ! update mean.
-                       if (nn .ge. (dbz_ind-1)*nlevs+1 .and. nn .le. (dbz_ind-1)*nlevs+nlevs) then
-                            ensmean_chunk(i,nn,nb) = MAX(ensmean_chunk(i,nn,nb) + kfgain*obinc_tmp,0.0)
-                       else
-                            ensmean_chunk(i,nn,nb) = ensmean_chunk(i,nn,nb) + kfgain*obinc_tmp
-                       end if
+                       ensmean_chunk(i,nn,nb) = ensmean_chunk(i,nn,nb) + &
+                                                kfgain*obinc_tmp
                        ! update perturbations.
                        anal_chunk(:,i,nn,nb) = anal_chunk(:,i,nn,nb) + &
                                                kfgain*obganl(:)
@@ -651,11 +647,7 @@ do niter=1,numiter
                         ! (through hpfhtcon)
                         kfgain=taperv(nnn)*sum(anal_chunk(:,i,nn,nb)*anal_obtmp)
                         ! update mean.
-                        if (nn .ge. (dbz_ind-1)*nlevs+1 .and. nn .le. (dbz_ind-1)*nlevs+nlevs) then
-                          ensmean_chunk(i,nn,nb) = MAX(ensmean_chunk(i,nn,nb) + kfgain*obinc_tmp,0.0)
-                        else
-                          ensmean_chunk(i,nn,nb) = ensmean_chunk(i,nn,nb) + kfgain*obinc_tmp
-                        end if
+                        ensmean_chunk(i,nn,nb) = ensmean_chunk(i,nn,nb) + kfgain*obinc_tmp
                         ! update perturbations.
                         anal_chunk(:,i,nn,nb) = anal_chunk(:,i,nn,nb) + kfgain*obganl(:)
                     end if
@@ -684,13 +676,7 @@ do niter=1,numiter
                           taper(obt*obtimelinv)* &
                           sum(anal_obchunk_modens(:,nob2)*anal_obtmp_modens)*hpfhtcon
                  ! update mean.
-                  nob3 = indxproc_obs(nproc+1,nob2)
-                  if(TRIM(obtype(nob3)) .eq. 'dbz') then
-                    ensmean_obchunk(nob2) = MAX((ensmean_obchunk(nob2) + &
-                                              kfgain*obinc_tmp),zero)
-                  else
-                    ensmean_obchunk(nob2) = ensmean_obchunk(nob2) + kfgain*obinc_tmp
-                  end if
+                 ensmean_obchunk(nob2) = ensmean_obchunk(nob2) + kfgain*obinc_tmp
                  ! update perturbations.
                  anal_obchunk(:,nob2) = anal_obchunk(:,nob2) + kfgain*obganl
                  anal_obchunk_modens(:,nob2) = anal_obchunk_modens(:,nob2) + kfgain*obganl_modens
@@ -716,13 +702,7 @@ do niter=1,numiter
                            taper(lnsig*lnsiglinv)*taper(obt*obtimelinv)* &
                            sum(anal_obchunk(:,nob2)*anal_obtmp)*hpfhtcon
                   ! update mean.
-                  nob3 = indxproc_obs(nproc+1,nob2)
-                  if(TRIM(obtype(nob3)) .eq. 'dbz') then
-                    ensmean_obchunk(nob2) = MAX((ensmean_obchunk(nob2) + &
-                                              kfgain*obinc_tmp),zero)
-                  else
-                    ensmean_obchunk(nob2) = ensmean_obchunk(nob2) + kfgain*obinc_tmp
-                  end if
+                  ensmean_obchunk(nob2) = ensmean_obchunk(nob2) + kfgain*obinc_tmp
                   ! update perturbations.
                   anal_obchunk(:,nob2) = anal_obchunk(:,nob2) + kfgain*obganl
                   ! recompute ob space spread ratio  for unassimlated obs
