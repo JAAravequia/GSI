@@ -517,7 +517,8 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !    geopotenital height.  Some type 221=pibal wind observations are
 !    also repoted using geopotential height.
 
-     sfc_data = (itype >=280 .and. itype < 300) .and. (.not.twodvar_regional)
+     sfc_data = (itype >=280 .and. itype < 300) !.and. (.not.twodvar_regional)
+     !LEVINE: Run this section during RTMA!
      if (z_height .or. sfc_data) then
 
         drpx = zero
