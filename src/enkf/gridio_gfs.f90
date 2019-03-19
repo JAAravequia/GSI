@@ -53,7 +53,7 @@
  public :: readgriddata, writegriddata
  contains
 
- subroutine readgriddata(nanal,vars3d,vars2d,n3d,n2d,levels,ndim,ntimes,fileprefixes,reducedgrid,grdin,qsat)
+ subroutine readgriddata(nanal1,nanal2,vars3d,vars2d,n3d,n2d,levels,ndim,ntimes,fileprefixes,reducedgrid,grdin,qsat)
   use sigio_module, only: sigio_head, sigio_data, sigio_sclose, sigio_sropen, &
                           sigio_srohdc, sigio_sclose, sigio_aldata, sigio_axdata
   use nemsio_module, only: nemsio_gfile,nemsio_open,nemsio_close,&
@@ -61,7 +61,7 @@
                            nemsio_readrecv,nemsio_init,nemsio_setheadvar,nemsio_writerecv
   implicit none
 
-  integer, intent(in) :: nanal
+  integer, intent(in) :: nanal1,nanal2
   character(len=max_varname_length), dimension(n2d), intent(in) :: vars2d
   character(len=max_varname_length), dimension(n3d), intent(in) :: vars3d
   integer, intent(in) :: n2d, n3d
@@ -69,8 +69,8 @@
   integer, intent(in) :: ndim, ntimes
   character(len=120), dimension(7), intent(in)  :: fileprefixes
   logical, intent(in) :: reducedgrid
-  real(r_single), dimension(npts,ndim,ntimes), intent(out) :: grdin
-  real(r_double), dimension(npts,nlevs,ntimes), intent(out) :: qsat
+  real(r_single), dimension(npts,ndim,ntimes,nanal2-nanal1+1), intent(out) :: grdin
+  real(r_double), dimension(npts,nlevs,ntimes,nanal2-nanal1+1), intent(out) :: qsat
 
   character(len=500) :: filename
   character(len=7) charnanal
@@ -93,9 +93,12 @@
   integer(i_kind) :: tsen_ind, ql_ind, qi_ind, prse_ind
   integer(i_kind) :: ps_ind, pst_ind, sst_ind
 
-  integer(i_kind) :: k,iunitsig,iret,nb,i,idvc,nlonsin,nlatsin,nlevsin
+  integer(i_kind) :: k,iunitsig,iret,nb,i,idvc,nlonsin,nlatsin,nlevsin,ne,nanal
   logical ice
 
+  ne = 0
+  ensmemloop: do nanal=nanal1,nanal2
+  ne = ne + 1
   backgroundloop: do nb=1,ntimes
 
   if (nanal > 0) then
@@ -258,8 +261,8 @@
             call stop2(23)
         endif
         vg = nems_wrk
-        if (u_ind > 0)       call copytogrdin(ug,grdin(:,levels(u_ind-1) + k,nb))
-        if (v_ind > 0)       call copytogrdin(vg,grdin(:,levels(v_ind-1) + k,nb))
+        if (u_ind > 0)       call copytogrdin(ug,grdin(:,levels(u_ind-1) + k,nb,ne))
+        if (v_ind > 0)       call copytogrdin(vg,grdin(:,levels(v_ind-1) + k,nb,ne))
         ! calculate vertical integral of mass flux div (ps tendency)
         ! this variable is analyzed in order to enforce mass balance in the analysis
         if (pst_ind > 0) then
@@ -280,14 +283,14 @@
         endif
         if (cliptracers)  where (nems_wrk2 < clip) nems_wrk2 = clip
         ug = nems_wrk
-        if (tsen_ind > 0)    call copytogrdin(ug,grdin(:,levels(tsen_ind-1)+k,nb))
+        if (tsen_ind > 0)    call copytogrdin(ug,grdin(:,levels(tsen_ind-1)+k,nb,ne))
         nems_wrk = nems_wrk * ( 1.0 + fv*nems_wrk2 ) ! convert T to Tv
         ug = nems_wrk
         vg = nems_wrk2
         call copytogrdin(ug,tv(:,k))
         call copytogrdin(vg, q(:,k))
-        if (tv_ind > 0)               grdin(:,levels(tv_ind-1)+k,nb) = tv(:,k)
-        if (q_ind > 0)                grdin(:,levels( q_ind-1)+k,nb) =  q(:,k)
+        if (tv_ind > 0)               grdin(:,levels(tv_ind-1)+k,nb,ne) = tv(:,k)
+        if (q_ind > 0)                grdin(:,levels( q_ind-1)+k,nb,ne) =  q(:,k)
         if (oz_ind > 0) then
            call nemsio_readrecv(gfile,'o3mr','mid layer',k,nems_wrk2,iret=iret)
            if (iret/=0) then
@@ -296,7 +299,7 @@
            endif
            if (cliptracers)  where (nems_wrk2 < clip) nems_wrk2 = clip
            ug = nems_wrk2
-           call copytogrdin(ug,grdin(:,levels(oz_ind-1)+k,nb))
+           call copytogrdin(ug,grdin(:,levels(oz_ind-1)+k,nb,ne))
         endif
         if (cw_ind > 0 .or. ql_ind > 0 .or. qi_ind > 0) then
            call nemsio_readrecv(gfile,'clwmr','mid layer',k,nems_wrk2,iret=iret)
@@ -316,7 +319,7 @@
            if (cliptracers)  where (nems_wrk2 < clip) nems_wrk2 = clip
            ug = nems_wrk2
            call copytogrdin(ug,cw(:,k))
-           if (cw_ind > 0)            grdin(:,levels(cw_ind-1)+k,nb) = cw(:,k)
+           if (cw_ind > 0)            grdin(:,levels(cw_ind-1)+k,nb,ne) = cw(:,k)
         endif
      enddo
   else
@@ -326,10 +329,10 @@
         vrtspec = sigdata%z(:,k); divspec = sigdata%d(:,k)
         call sptezv_s(divspec,vrtspec,ug,vg,1)
         if (u_ind > 0) then
-           call copytogrdin(ug,grdin(:,levels(u_ind-1)+k,nb))
+           call copytogrdin(ug,grdin(:,levels(u_ind-1)+k,nb,ne))
         endif
         if (v_ind > 0) then
-           call copytogrdin(vg,grdin(:,levels(v_ind-1)+k,nb))
+           call copytogrdin(vg,grdin(:,levels(v_ind-1)+k,nb,ne))
         endif
 
 ! calculate vertical integral of mass flux div (ps tendency)
@@ -344,26 +347,26 @@
         divspec = sigdata%t(:,k)
         call sptez_s(divspec,ug,1)
         call copytogrdin(ug,tv(:,k))
-        if (tv_ind > 0)          grdin(:,levels(tv_ind-1)+k,nb) = tv(:,k)
+        if (tv_ind > 0)          grdin(:,levels(tv_ind-1)+k,nb,ne) = tv(:,k)
 
         divspec = sigdata%q(:,k,1)
         call sptez_s(divspec,vg,1)
         call copytogrdin(vg,q(:,k))
-        if (q_ind > 0)           grdin(:,levels( q_ind-1)+k,nb) =  q(:,k)
+        if (q_ind > 0)           grdin(:,levels( q_ind-1)+k,nb,ne) =  q(:,k)
         
-        if (tsen_ind > 0)        grdin(:,levels(tsen_ind-1)+k,nb) = tv(:,k) / (one + fv*max(0._r_kind,q(:,k)))
+        if (tsen_ind > 0)        grdin(:,levels(tsen_ind-1)+k,nb,ne) = tv(:,k) / (one + fv*max(0._r_kind,q(:,k)))
 
         if (oz_ind > 0) then
            divspec = sigdata%q(:,k,2)
            call sptez_s(divspec,ug,1)
-           call copytogrdin(ug,grdin(:,levels(oz_ind-1)+k,nb))
+           call copytogrdin(ug,grdin(:,levels(oz_ind-1)+k,nb,ne))
         endif
 
         if (cw_ind > 0 .or. ql_ind > 0 .or. qi_ind > 0) then
            divspec = sigdata%q(:,k,3)
            call sptez_s(divspec,ug,1)
            call copytogrdin(ug,cw(:,k))
-           if (cw_ind > 0)       grdin(:,levels(cw_ind-1)+k,nb) = cw(:,k)
+           if (cw_ind > 0)       grdin(:,levels(cw_ind-1)+k,nb,ne) = cw(:,k)
         endif
 
      enddo
@@ -372,7 +375,7 @@
 
   ! surface pressure
   if (ps_ind > 0) then
-    call copytogrdin(psg,grdin(:,levels(n3d) + ps_ind,nb))
+    call copytogrdin(psg,grdin(:,levels(n3d) + ps_ind,nb,ne))
   endif
   if (.not. use_gfs_nemsio) call sigio_axdata(sigdata,iret)
 
@@ -381,7 +384,7 @@
      pstend = sum(vmassdiv,2)
      if (nanal .eq. 1) &
      print *,nanal,'min/max first-guess ps tend',minval(pstend),maxval(pstend)
-     call copytogrdin(pstend,grdin(:,levels(n3d) + pst_ind,nb))
+     call copytogrdin(pstend,grdin(:,levels(n3d) + pst_ind,nb,ne))
   endif
 
   ! compute saturation q.
@@ -393,13 +396,13 @@
     call copytogrdin(ug,pslg(:,k))
     ! Jacobian for gps in pressure is saved in different units in GSI; need to
     ! multiply pressure by 0.1
-    if (prse_ind > 0)     grdin(:,levels(prse_ind-1)+k,nb) = 0.1*pslg(:,k)
+    if (prse_ind > 0)     grdin(:,levels(prse_ind-1)+k,nb,ne) = 0.1*pslg(:,k)
 
   end do
   if (pseudo_rh) then
-     call genqsat1(q,qsat(:,:,nb),pslg,tv,ice,npts,nlevs)
+     call genqsat1(q,qsat(:,:,nb,ne),pslg,tv,ice,npts,nlevs)
   else
-     qsat(:,:,nb) = 1._r_double
+     qsat(:,:,nb,ne) = 1._r_double
   end if
 
   ! cloud derivatives
@@ -410,17 +413,17 @@
            qi_coef        = max(zero,qi_coef)
            qi_coef        = min(one,qi_coef)    ! 0<=qi_coef<=1
            if (ql_ind > 0) then 
-             grdin(i,levels(ql_ind-1)+k,nb) = cw(i,k)*(one-qi_coef)
+             grdin(i,levels(ql_ind-1)+k,nb,ne) = cw(i,k)*(one-qi_coef)
            endif
            if (qi_ind > 0) then
-             grdin(i,levels(qi_ind-1)+k,nb) = cw(i,k)*qi_coef
+             grdin(i,levels(qi_ind-1)+k,nb,ne) = cw(i,k)*qi_coef
            endif
         enddo
      enddo
   endif
 
   if (sst_ind > 0) then
-    grdin(:,levels(n3d)+sst_ind, nb) = zero
+    grdin(:,levels(n3d)+sst_ind, nb,ne) = zero
   endif
 
   deallocate(pressi,pslg)
@@ -429,6 +432,7 @@
   if (use_gfs_nemsio) call nemsio_close(gfile,iret=iret)
 
   end do backgroundloop ! loop over backgrounds to read in
+  end do ensmemloop ! loop over ens members to read in
 
   return
  
@@ -450,7 +454,7 @@
 
  end subroutine readgriddata
 
- subroutine writegriddata(nanal,vars3d,vars2d,n3d,n2d,levels,ndim,grdin,no_inflate_flag)
+ subroutine writegriddata(nanal1,nanal2,vars3d,vars2d,n3d,n2d,levels,ndim,grdin,no_inflate_flag)
   use sigio_module, only: sigio_head, sigio_data, sigio_sclose, sigio_sropen, &
                           sigio_srohdc, sigio_sclose, sigio_axdata, &
                           sigio_aldata, sigio_swohdc
@@ -462,12 +466,12 @@
   use params, only: nbackgrounds,anlfileprefixes,fgfileprefixes,reducedgrid
   implicit none
 
-  integer, intent(in) :: nanal
+  integer, intent(in) :: nanal1,nanal2
   character(len=max_varname_length), dimension(n2d), intent(in) :: vars2d
   character(len=max_varname_length), dimension(n3d), intent(in) :: vars3d
   integer, intent(in) :: n2d,n3d,ndim
   integer, dimension(0:n3d), intent(in) :: levels
-  real(r_single), dimension(npts,ndim,nbackgrounds), intent(inout) :: grdin
+  real(r_single), dimension(npts,ndim,nbackgrounds,nanal2-nanal1+1), intent(inout) :: grdin
   logical, intent(in) :: no_inflate_flag
 
   character(len=500):: filenamein, filenameout
@@ -501,7 +505,7 @@
   integer :: u_ind, v_ind, tv_ind, q_ind, oz_ind, cw_ind
   integer :: ps_ind, pst_ind
 
-  integer k,nt,ierr,iunitsig,nb,i
+  integer k,nt,ierr,iunitsig,nb,i,ne,nanal
 
   iunitsig = 78
   kapr = cp/rd
@@ -509,8 +513,10 @@
   kap1 = kap+one
   clip = tiny_r_kind
 
+  ne = 0
+  ensmemloop: do nanal=nanal1,nanal2
+  ne = ne + 1
   write(charnanal,'(i3.3)') nanal
-
   backgroundloop: do nb=1,nbackgrounds
 
   if(no_inflate_flag) then
@@ -671,11 +677,11 @@
      do k=1,nlevs
         ug = 0.
         if (u_ind > 0 ) then
-          call copyfromgrdin(grdin(:,levels(u_ind-1) + k,nb),ug)
+          call copyfromgrdin(grdin(:,levels(u_ind-1) + k,nb,ne),ug)
         endif
         vg = 0.
         if (v_ind > 0) then
-          call copyfromgrdin(grdin(:,levels(v_ind-1) + k,nb),vg)
+          call copyfromgrdin(grdin(:,levels(v_ind-1) + k,nb,ne),vg)
         endif
         call sptezv_s(divspec,vrtspec,ug,vg,-1)
         sigdata_inc%d(:,k) = divspec
@@ -683,28 +689,28 @@
 
         ug = 0.
         if (tv_ind > 0) then
-          call copyfromgrdin(grdin(:,levels(tv_ind-1)+k,nb),ug)
+          call copyfromgrdin(grdin(:,levels(tv_ind-1)+k,nb,ne),ug)
         endif
         call sptez_s(divspec,ug,-1)
         sigdata_inc%t(:,k) = divspec
 
         ug = 0.
         if (q_ind > 0) then
-          call copyfromgrdin(grdin(:,levels(q_ind-1)+k,nb),ug)
+          call copyfromgrdin(grdin(:,levels(q_ind-1)+k,nb,ne),ug)
         endif
         call sptez_s(divspec,ug,-1)
         sigdata_inc%q(:,k,1) = divspec
 
         ug = 0.
         if (oz_ind > 0) then
-          call copyfromgrdin(grdin(:,levels(oz_ind-1)+k,nb),ug)
+          call copyfromgrdin(grdin(:,levels(oz_ind-1)+k,nb,ne),ug)
         endif
         call sptez_s(divspec,ug,-1)
         sigdata_inc%q(:,k,2) = divspec
 
         ug = 0.
         if (cw_ind > 0) then
-          call copyfromgrdin(grdin(:,levels(cw_ind-1)+k,nb),ug)
+          call copyfromgrdin(grdin(:,levels(cw_ind-1)+k,nb,ne),ug)
         endif
         call sptez_s(divspec,ug,-1)
         sigdata_inc%q(:,k,3) = divspec
@@ -717,7 +723,7 @@
      ! increment (in hPa) to reg grid.
      ug = 0.
      if (ps_ind > 0) then
-       call copyfromgrdin(grdin(:,levels(n3d) + ps_ind,nb),ug)
+       call copyfromgrdin(grdin(:,levels(n3d) + ps_ind,nb,ne),ug)
      endif
      psfg = 10._r_kind*exp(vg)
      vg = psfg + ug ! first guess + increment
@@ -766,7 +772,7 @@
      ! increment (in hPa) to reg grid.
      ug = 0.
      if (ps_ind > 0) then
-       call copyfromgrdin(grdin(:,levels(n3d) + ps_ind,nb),ug)
+       call copyfromgrdin(grdin(:,levels(n3d) + ps_ind,nb,ne),ug)
      endif
      !print *,'nanal,min/max psfg,min/max inc',nanal,minval(psfg),maxval(psfg),minval(ug),maxval(ug)
      field = 'dpres'; hasfield = checkfield(field,recname,nrecs)
@@ -839,7 +845,7 @@
      enddo
 
      ! analyzed ps tend increment
-     call copyfromgrdin(grdin(:,levels(n3d) + pst_ind,nb),pstend2)
+     call copyfromgrdin(grdin(:,levels(n3d) + pst_ind,nb,ne),pstend2)
      pstendfg = sum(vmassdiv,2)
      vmassdivinc = vmassdiv
      if (nanal .eq. 1) then
@@ -893,7 +899,7 @@
         endif
         ug = 0.
         if (u_ind > 0) then
-          call copyfromgrdin(grdin(:,levels(u_ind-1) + k,nb),ug)
+          call copyfromgrdin(grdin(:,levels(u_ind-1) + k,nb,ne),ug)
         endif
         ug =  nems_wrk + ug
         if (pst_ind < 0) then
@@ -914,7 +920,7 @@
         endif
         vg = 0.
         if (v_ind > 0) then
-           call copyfromgrdin(grdin(:,levels(v_ind-1) + k,nb),vg)
+           call copyfromgrdin(grdin(:,levels(v_ind-1) + k,nb,ne),vg)
         endif
         vg =  nems_wrk + vg
         if (pst_ind < 0) then
@@ -948,11 +954,11 @@
         nems_wrk = nems_wrk * ( 1.0 + fv*nems_wrk2 ) !Convert T to Tv
         ug = 0.
         if (tv_ind > 0) then
-          call copyfromgrdin(grdin(:,levels(tv_ind-1)+k,nb),ug)
+          call copyfromgrdin(grdin(:,levels(tv_ind-1)+k,nb,ne),ug)
         endif
         vg = 0.
         if (q_ind > 0) then
-          call copyfromgrdin(grdin(:,levels(q_ind-1)+k,nb),vg)
+          call copyfromgrdin(grdin(:,levels(q_ind-1)+k,nb,ne),vg)
         endif
         ! ug is Tv increment, nems_wrk is background Tv, nems_wrk2 is background spfh
         ug = ug + nems_wrk 
@@ -988,7 +994,7 @@
         if (hasfield) then
            vg = 0.
            if (ps_ind > 0) then
-              call copyfromgrdin(grdin(:,levels(n3d) + ps_ind,nb),vg)
+              call copyfromgrdin(grdin(:,levels(n3d) + ps_ind,nb,ne),vg)
            endif
            vg = nems_wrk2 + vg           
            ug=(rd/grav)*ug
@@ -1014,7 +1020,7 @@
         endif
         ug = 0.
         if (oz_ind > 0) then
-           call copyfromgrdin(grdin(:,levels(oz_ind-1)+k,nb),ug)
+           call copyfromgrdin(grdin(:,levels(oz_ind-1)+k,nb,ne),ug)
         endif
         nems_wrk = nems_wrk + ug
         if (cliptracers)  where (nems_wrk < clip) nems_wrk = clip
@@ -1031,7 +1037,7 @@
         endif
         ug = 0.
         if (cw_ind > 0) then
-           call copyfromgrdin(grdin(:,levels(cw_ind-1)+k,nb),ug)
+           call copyfromgrdin(grdin(:,levels(cw_ind-1)+k,nb,ne),ug)
         endif
         if (imp_physics == 11) then
            call nemsio_readrecv(gfilein,'icmr','mid layer',k,nems_wrk2,iret=iret)
@@ -1272,6 +1278,7 @@
   endif
 
   end do backgroundloop ! loop over backgrounds to write out
+  end do ensmemloop ! loop over ens members to write out
 
  contains 
 ! copying to grdin (calling regtoreduced if reduced grid)

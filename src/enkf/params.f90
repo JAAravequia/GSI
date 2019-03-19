@@ -15,6 +15,7 @@ module params
 !    (over-riding defaults for parameters supplied in namelist), compute
 !    some derived parameters.  Sets logical variable params_initialized
 !    to .true.
+!   cleanup_namelist: deallocate memory allocated in read_namelist
 !
 ! Public Variables: (see comments in subroutine read_namelist)
 !
@@ -42,7 +43,7 @@ use radinfo, only: adp_anglebc,angord,use_edges,emiss_bc,newpc4pred
 
 implicit none
 private
-public :: read_namelist
+public :: read_namelist,cleanup_namelist
 !  nsats_rad: the total number of satellite data types to read.
 !  sattypes_rad:  strings describing the satellite data type (which form part
 !   of the diag* filename).
@@ -83,7 +84,9 @@ logical, public :: deterministic, sortinc, pseudo_rh, &
                    varqc, huber, cliptracers, readin_localization
 logical, public :: lupp
 integer(i_kind),public ::  iassim_order,nlevs,nanals,numiter,&
-                           nlons,nlats,nbackgrounds,nstatefields
+                           nlons,nlats,nbackgrounds,nstatefields,&
+                           ntasks_io
+integer(i_kind),public, allocatable, dimension(:) ::  nanal1,nanal2
 integer(i_kind),public :: nsats_rad,nsats_oz,imp_physics
 ! random seed for perturbed obs (deterministic=.false.)
 ! if zero, system clock is used.  Also used when
@@ -214,7 +217,7 @@ namelist /ozobs_enkf/sattypes_oz
 contains
 
 subroutine read_namelist()
-integer i,j,nb
+integer i,j,nb,nmembers_per_task,np
 logical fexist
 real(r_single) modelspace_vloc_cutoff, modelspace_vloc_thresh
 ! have all processes read namelist from file enkf.nml
@@ -453,6 +456,31 @@ if (modelspace_vloc) then
   lnsigcutoffpstr = 1.e30
 endif
 
+if (nanals <= numproc) then
+   ! one ensemble member read in on each of first nanals tasks.
+   ntasks_io = nanals
+   allocate(nanal1(0:ntasks_io-1),nanal2(0:ntasks_io-1))
+   do np=0,ntasks_io-1
+      nanal1(np) = np+1
+      nanal2(np) = np+1
+   enddo
+else
+   nmembers_per_task = 1
+   do
+      ntasks_io = nanals/nmembers_per_task
+      if (ntasks_io <= numproc .and. mod(nanals,nmembers_per_task) .eq. 0) then
+         exit
+      else
+         nmembers_per_task = nmembers_per_task + 1
+      end if
+   end do  
+   allocate(nanal1(0:ntasks_io-1),nanal2(0:ntasks_io-1))
+   do np=0,ntasks_io-1
+      nanal1(np) = 1 + np*nmembers_per_task
+      nanal2(np) = (np+1)*nmembers_per_task
+   enddo
+endif
+
 ! have to do ob space update for serial filter (not for LETKF).
 if ((.not. letkf_flag .or. lupd_obspace_serial) .and. numiter < 1) numiter = 1
 
@@ -470,11 +498,14 @@ if (nproc == 0) then
       print *,nlons,nlats,nlevs,nanals
       call stop2(19)
    end if
-   if (numproc .lt. nanals) then
-      print *,'total number of mpi tasks must be >= nanals'
-      print *,'tasks, nanals = ',numproc,nanals
+   if (numproc .lt. ntasks_io) then
+      print *,'total number of mpi tasks must be >= ntasks_io'
+      print *,'tasks, nanals, ntasks_io = ',numproc,nanals,ntasks_io
       call stop2(19)
    endif
+   do np=0,ntasks_io-1
+      print *,'task,nanal1,nanal2',np+1,nanal1(np),nanal2(np)
+   enddo
    if (datapath == ' ') then
       print *,'need to specify datapath in namelist!'
       call stop2(19)
@@ -624,5 +655,11 @@ if (datapath(len_trim(datapath):len_trim(datapath)) .ne. '/') then
 endif
 
 end subroutine read_namelist
+
+subroutine cleanup_namelist
+ if (allocated(nanal1)) deallocate(nanal1)
+ if (allocated(nanal2)) deallocate(nanal2)
+ if (allocated(vlocal_evecs)) deallocate(vlocal_evecs)
+end subroutine cleanup_namelist
 
 end module params
