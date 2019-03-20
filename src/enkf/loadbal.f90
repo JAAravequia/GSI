@@ -441,31 +441,31 @@ allocate(recvbuf(numproc*npts_max*ncdim))
 do ne=1,nanals_per_task ! loop over ensemble members read each io task
 do nb=1,nbackgrounds ! loop over time levels in background
 
-if (nproc <= ntasks_io-1) then
-   ! fill up send buffer.
-   do np=1,numproc
-     do nn=1,ncdim
-      do i=1,numptsperproc(np)
-       n = ((np-1)*ncdim + (nn-1))*npts_max + i
-       sendbuf(n) = grdin(indxproc(np,i),nn,nb,ne)
-     enddo
-    enddo
-   enddo
-end if
-call mpi_alltoallv(sendbuf, scounts, displs, mpi_real4, recvbuf, rcounts, displs,&
-                   mpi_real4, mpi_comm_world, ierr)
-
-!==> compute ensemble of first guesses on each task, remove mean from anal.
-!$omp parallel do schedule(dynamic,1)  private(nn,i,nanal,n)
-do nn=1,ncdim
-   do i=1,numptsperproc(nproc+1)
-      do nanal=1,ntasks_io
-         n = ((nanal-1)*ncdim + (nn-1))*npts_max + i
-         anal_chunk(ne+(nanal-1)*nanals_per_task,i,nn,nb) = recvbuf(n)
+  if (nproc <= ntasks_io-1) then
+     ! fill up send buffer.
+     do np=1,numproc
+       do nn=1,ncdim
+        do i=1,numptsperproc(np)
+         n = ((np-1)*ncdim + (nn-1))*npts_max + i
+         sendbuf(n) = grdin(indxproc(np,i),nn,nb,ne)
+       enddo
       enddo
-   end do
-end do
-!$omp end parallel do
+     enddo
+  end if
+  call mpi_alltoallv(sendbuf, scounts, displs, mpi_real4, recvbuf, rcounts, displs,&
+                     mpi_real4, mpi_comm_world, ierr)
+  
+  !==> compute ensemble of first guesses on each task, remove mean from anal.
+  !$omp parallel do schedule(dynamic,1)  private(nn,i,nanal,n)
+  do nn=1,ncdim
+     do i=1,numptsperproc(nproc+1)
+        do nanal=ne,nanals,nanals_per_task
+           n = ((nanal-1)*ncdim + (nn-1))*npts_max + i
+           anal_chunk(nanal,i,nn,nb) = recvbuf(n)
+        enddo
+     end do
+  end do
+  !$omp end parallel do
 
 enddo ! loop over nbackgrounds
 enddo ! loop over ensemble members
@@ -531,12 +531,12 @@ do ne=1,nanals_per_task ! loop over ensemble members read each io task
 do nb=1,nbackgrounds ! loop over time levels in background
   do nn=1,ncdim
    do i=1,numptsperproc(nproc+1)
-    do nanal=1,ntasks_io
+    do nanal=ne,nanals,nanals_per_task
       n = ((nanal-1)*ncdim + (nn-1))*npts_max + i
       ! add ensemble mean back in.
-      sendbuf(n) = anal_chunk(ne+(nanal-1)*nanals_per_task,i,nn,nb)+ensmean_chunk(i,nn,nb)
+      sendbuf(n) = anal_chunk(nanal,i,nn,nb)+ensmean_chunk(i,nn,nb)
       ! convert to increment (A-F).
-      sendbuf(n) = sendbuf(n)-(anal_chunk_prior(ne+(nanal-1)*nanals_per_task,i,nn,nb)+ensmean_chunk_prior(i,nn,nb))
+      sendbuf(n) = sendbuf(n)-(anal_chunk_prior(nanal,i,nn,nb)+ensmean_chunk_prior(i,nn,nb))
     enddo
    enddo
   enddo
