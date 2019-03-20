@@ -685,7 +685,7 @@ OBS_INPUT::
 "
 ;;
 
-    global_fv3_4denvar_T126 )
+    global_fv3_4denvar_T126|corr_obs )
 
 # Define namelist for global fv3 4denvar run
 
