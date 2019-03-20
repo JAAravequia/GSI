@@ -84,7 +84,7 @@ cmake_minimum_required(VERSION 2.8)
   include_directories( ${CORE_INCS} ${NETCDF_INCLUDES} ${MPI_Fortran_INCLUDE_PATH} "./"  )
 
 #define the name used for GSI Shared lib and add it with properties and include dirs
-  set(GSISHAREDLIB "gsilib_shrd${debug_suffix}" CACHE INTERNAL "")
+  set(GSISHAREDLIB "gsilib_shrd" CACHE INTERNAL "")
   add_library(${GSISHAREDLIB} STATIC ${GSI_SRC} )
   set_target_properties(${GSISHAREDLIB} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
   target_include_directories(${GSISHAREDLIB} PUBLIC "${PROJECT_BINARY_DIR}/include")
@@ -106,9 +106,9 @@ cmake_minimum_required(VERSION 2.8)
 
 # Set names, libs, and properties depending on if we are building with WRF or not
   if(USE_WRF) 
-    set(GSIEXEC "${GSIBASE}${debug_suffix}${GSISUFFIX}" CACHE INTERNAL "GSI Executable Name")
+    set(GSIEXEC "${GSIBASE}${GSISUFFIX}" CACHE INTERNAL "GSI Executable Name")
     add_executable(${GSIEXEC} ${CMAKE_CURRENT_SOURCE_DIR}/gsimain.f90 ${CMAKE_CURRENT_SOURCE_DIR}/gsimod.F90 )
-    set(GSILIB "gsilib_wrf${debug_suffix}" CACHE INTERNAL "")
+    set(GSILIB "gsilib_wrf" CACHE INTERNAL "")
     add_library(${GSILIB} STATIC ${REGIONAL_SRC} )
     set_target_properties(${GSILIB} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include/wrf")
     target_include_directories(${GSILIB} PUBLIC "${PROJECT_BINARY_DIR}/include/wrf")
@@ -117,9 +117,9 @@ cmake_minimum_required(VERSION 2.8)
   endif()
 
   if(BUILD_GLOBAL)
-    set(GSIEXEC "${GSIBASE}${debug_suffix}${GSISUFFIX}" CACHE INTERNAL "GSI Executable Name")
+    set(GSIEXEC "${GSIBASE}${GSISUFFIX}" CACHE INTERNAL "GSI Executable Name")
     add_executable(${GSIEXEC} ${CMAKE_CURRENT_SOURCE_DIR}/gsimain.f90 ${CMAKE_CURRENT_SOURCE_DIR}/gsimod.F90 )
-    set(GSILIB "gsilib_global${debug_suffix}" CACHE INTERNAL "")
+    set(GSILIB "gsilib_global" CACHE INTERNAL "")
     set(WRF_LIBRARIES "")
     add_library(${GSILIB} STATIC ${GLOBAL_SRC} )
     target_link_libraries( ${GSISHAREDLIB} ${GSILIB} ${CORE_LIBRARIES})
@@ -144,7 +144,7 @@ cmake_minimum_required(VERSION 2.8)
   target_link_libraries(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${GSISHAREDLIB} ${WRF_LIBRARIES} 
          ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES} 
          ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${CORE_LIBRARIES} ${CORE_BUILT}
-         ${GSI_LDFLAGS} ${NCDIAG_LIBRARIES} ${ZLIB_LIBRARIES} ${wrflib} ${EXTRA_LINKER_FLAGS} )
+         ${bacio} ${GSI_LDFLAGS} ${NCDIAG_LIBRARIES} ${ZLIB_LIBRARIES} ${wrflib} ${EXTRA_LINKER_FLAGS} )
   install(TARGETS ${GSIEXEC}
         RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
         LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
