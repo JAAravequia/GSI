@@ -190,7 +190,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
 !       t1 = mpi_wtime()
 !       allocate(anal_obtmp(nobs_tot,nanals))
 !    endif
-!    if (nproc <= nanals-1) then
+!    if (nproc <= ntasks_io-1) then
 !       call mpi_gather(h_xnobc,nobs_tot,mpi_real4,&
 !       anal_obtmp,nobs_tot,mpi_real4,0,mpi_comm_io,ierr)
 !       if (nproc .eq. 0) then
