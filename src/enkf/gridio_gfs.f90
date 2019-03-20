@@ -675,11 +675,11 @@
      ! convert to increment to spectral coefficients.
 !$omp parallel do private(k,nt,ug,vg,divspec,vrtspec)  shared(grdin,sigdata_inc)
      do k=1,nlevs
-        ug = 0.
+        ug = 0_r_kind
         if (u_ind > 0 ) then
           call copyfromgrdin(grdin(:,levels(u_ind-1) + k,nb,ne),ug)
         endif
-        vg = 0.
+        vg = 0_r_kind
         if (v_ind > 0) then
           call copyfromgrdin(grdin(:,levels(v_ind-1) + k,nb,ne),vg)
         endif
@@ -687,28 +687,28 @@
         sigdata_inc%d(:,k) = divspec
         sigdata_inc%z(:,k) = vrtspec
 
-        ug = 0.
+        ug = 0_r_kind
         if (tv_ind > 0) then
           call copyfromgrdin(grdin(:,levels(tv_ind-1)+k,nb,ne),ug)
         endif
         call sptez_s(divspec,ug,-1)
         sigdata_inc%t(:,k) = divspec
 
-        ug = 0.
+        ug = 0_r_kind
         if (q_ind > 0) then
           call copyfromgrdin(grdin(:,levels(q_ind-1)+k,nb,ne),ug)
         endif
         call sptez_s(divspec,ug,-1)
         sigdata_inc%q(:,k,1) = divspec
 
-        ug = 0.
+        ug = 0_r_kind
         if (oz_ind > 0) then
           call copyfromgrdin(grdin(:,levels(oz_ind-1)+k,nb,ne),ug)
         endif
         call sptez_s(divspec,ug,-1)
         sigdata_inc%q(:,k,2) = divspec
 
-        ug = 0.
+        ug = 0_r_kind
         if (cw_ind > 0) then
           call copyfromgrdin(grdin(:,levels(cw_ind-1)+k,nb,ne),ug)
         endif
@@ -721,7 +721,7 @@
      divspec = sigdata%ps
      call sptez_s(divspec,vg,1)
      ! increment (in hPa) to reg grid.
-     ug = 0.
+     ug = 0_r_kind
      if (ps_ind > 0) then
        call copyfromgrdin(grdin(:,levels(n3d) + ps_ind,nb,ne),ug)
      endif
@@ -770,7 +770,7 @@
      call nemsio_readrecv(gfilein,'pres','sfc',1,nems_wrk,iret=iret)
      psfg = 0.01*nems_wrk ! convert ps to millibars.
      ! increment (in hPa) to reg grid.
-     ug = 0.
+     ug = 0_r_kind
      if (ps_ind > 0) then
        call copyfromgrdin(grdin(:,levels(n3d) + ps_ind,nb,ne),ug)
      endif
@@ -897,7 +897,7 @@
            write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(ugrd), iret=',iret
            call stop2(23)
         endif
-        ug = 0.
+        ug = 0_r_kind
         if (u_ind > 0) then
           call copyfromgrdin(grdin(:,levels(u_ind-1) + k,nb,ne),ug)
         endif
@@ -918,7 +918,7 @@
            write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(vgrd), iret=',iret
            call stop2(23)
         endif
-        vg = 0.
+        vg = 0_r_kind
         if (v_ind > 0) then
            call copyfromgrdin(grdin(:,levels(v_ind-1) + k,nb,ne),vg)
         endif
@@ -952,11 +952,11 @@
            call stop2(23)
         endif
         nems_wrk = nems_wrk * ( 1.0 + fv*nems_wrk2 ) !Convert T to Tv
-        ug = 0.
+        ug = 0_r_kind
         if (tv_ind > 0) then
           call copyfromgrdin(grdin(:,levels(tv_ind-1)+k,nb,ne),ug)
         endif
-        vg = 0.
+        vg = 0_r_kind
         if (q_ind > 0) then
           call copyfromgrdin(grdin(:,levels(q_ind-1)+k,nb,ne),vg)
         endif
@@ -992,7 +992,7 @@
         endif
         field = 'delz'; hasfield = checkfield(field,recname,nrecs)
         if (hasfield) then
-           vg = 0.
+           vg = 0_r_kind
            if (ps_ind > 0) then
               call copyfromgrdin(grdin(:,levels(n3d) + ps_ind,nb,ne),vg)
            endif
@@ -1018,7 +1018,7 @@
            write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(o3mr), iret=',iret
            call stop2(23)
         endif
-        ug = 0.
+        ug = 0_r_kind
         if (oz_ind > 0) then
            call copyfromgrdin(grdin(:,levels(oz_ind-1)+k,nb,ne),ug)
         endif
@@ -1035,7 +1035,7 @@
            write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(clwmr), iret=',iret
            call stop2(23)
         endif
-        ug = 0.
+        ug = 0_r_kind
         if (cw_ind > 0) then
            call copyfromgrdin(grdin(:,levels(cw_ind-1)+k,nb,ne),ug)
         endif

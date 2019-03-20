@@ -217,7 +217,7 @@ if (nproc <= ntasks_io-1) then
        allocate(qsatmean(npts,nlevs,nbackgrounds))
        allocate(qsat_tmp(npts))
        ! compute ensemble mean qsat
-       qsatmean = 0
+       qsatmean = 0_r_double
        do ne=1,nanals_per_task
           do nb=1,nbackgrounds
           do nlev=1,nlevs
