@@ -89,6 +89,7 @@ module rapidrefresh_cldsurf_mod
 !                         =3.  cloud analysis only with hybrometeors NETCDF I/O
 !                         =5.  skip cloud analysis and NETCDF file update
 !                         =6.  cloud analysis only and do hybrometeors NETCDF/O
+!                         =7   cloud analysis in observer with I/O
 !                         =2  cloud analysis for NAM
 !                         =30  cloud analysis for GFS
 !      i_gsdsfc_uselist  - options for how to use surface observation use or
