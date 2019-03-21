@@ -33,7 +33,7 @@ module mpi_readobs
 !$$$
   
 use kinds, only: r_kind, r_single, i_kind
-use params, only: ntasks_io, nanal1, nanal2
+use params, only: ntasks_io, nanals_per_iotask, nanal1, nanal2
 use radinfo, only: npred
 use readconvobs
 use readsatobs
@@ -68,7 +68,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     real(r_double) t1,t2
     character(len=20), allocatable,  dimension(:) ::  obtype
     integer(i_kind) nob, ierr, iozproc, isatproc, neig, nens1, nens2, na, nmem,&
-            np, nanals_per_task,nobs_conv, nobs_oz, nobs_sat, nobs_tot, nanal, nanalo
+            np, nobs_conv, nobs_oz, nobs_sat, nobs_tot, nanal, nanalo
     integer(i_kind) :: nobs_convdiag, nobs_ozdiag, nobs_satdiag, nobs_totdiag
     integer(i_kind), intent(in) :: nanals, neigv
     iozproc=max(0,min(1,numproc-1))
@@ -117,7 +117,6 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     endif
 
     nmem = 0
-    nanals_per_task = nanals/ntasks_io
     do nanal=nens1,nens2 ! loop over ens members on this task
     nmem = nmem + 1 ! nmem only used if lobsdiag_forenkf=T
     id = 'ensmean'
@@ -207,11 +206,11 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
         t1 = mpi_wtime()
         anal_ob(nmem,:) = mem_ob(:)
         ! if nproc <= ntasks_io-1, then 
-        ! nanal = nmem+nproc*nanals_per_task
+        ! nanal = nmem+nproc*nanals_per_iotask
         do np=2,ntasks_io
            call mpi_recv(mem_ob,nobs_tot,mpi_real4,np-1, &
                          1,mpi_comm_io,mpi_status,ierr)
-           anal_ob(nmem+(np-1)*nanals_per_task,:) = mem_ob(:)
+           anal_ob(nmem+(np-1)*nanals_per_iotask,:) = mem_ob(:)
         enddo
         ! mem_ob_modens and anal_ob_modens not referenced unless neigv>0
         if (neigv > 0) then
@@ -223,7 +222,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
               call mpi_recv(mem_ob_modens,neigv*nobs_tot,mpi_real4,np-1, &
                             2,mpi_comm_io,mpi_status,ierr)
               do neig=1,neigv
-                 na = nmem+(np-1)*nanals_per_task
+                 na = nmem+(np-1)*nanals_per_iotask
                  nanalo = neigv*(na-1) + neig
                  anal_ob_modens(nanalo,:) = mem_ob_modens(neig,:)
               enddo

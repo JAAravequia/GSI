@@ -85,7 +85,7 @@ logical, public :: deterministic, sortinc, pseudo_rh, &
 logical, public :: lupp
 integer(i_kind),public ::  iassim_order,nlevs,nanals,numiter,&
                            nlons,nlats,nbackgrounds,nstatefields,&
-                           ntasks_io
+                           nanals_per_iotask, ntasks_io
 integer(i_kind),public, allocatable, dimension(:) ::  nanal1,nanal2
 integer(i_kind),public :: nsats_rad,nsats_oz,imp_physics
 ! random seed for perturbed obs (deterministic=.false.)
@@ -459,25 +459,26 @@ endif
 if (nanals <= numproc) then
    ! one ensemble member read in on each of first nanals tasks.
    ntasks_io = nanals
+   nanals_per_iotask = 1
    allocate(nanal1(0:ntasks_io-1),nanal2(0:ntasks_io-1))
    do np=0,ntasks_io-1
       nanal1(np) = np+1
       nanal2(np) = np+1
    enddo
 else
-   nmembers_per_task = 1
+   nanals_per_iotask = 1
    do
-      ntasks_io = nanals/nmembers_per_task
-      if (ntasks_io <= numproc .and. mod(nanals,nmembers_per_task) .eq. 0) then
+      ntasks_io = nanals/nanals_per_iotask
+      if (ntasks_io <= numproc .and. mod(nanals,nanals_per_iotask) .eq. 0) then
          exit
       else
-         nmembers_per_task = nmembers_per_task + 1
+         nanals_per_iotask = nanals_per_iotask + 1
       end if
    end do  
    allocate(nanal1(0:ntasks_io-1),nanal2(0:ntasks_io-1))
    do np=0,ntasks_io-1
-      nanal1(np) = 1 + np*nmembers_per_task
-      nanal2(np) = (np+1)*nmembers_per_task
+      nanal1(np) = 1 + np*nanals_per_iotask
+      nanal2(np) = (np+1)*nanals_per_iotask
    enddo
 endif
 
@@ -503,9 +504,11 @@ if (nproc == 0) then
       print *,'tasks, nanals, ntasks_io = ',numproc,nanals,ntasks_io
       call stop2(19)
    endif
-   do np=0,ntasks_io-1
-      print *,'task,nanal1,nanal2',np+1,nanal1(np),nanal2(np)
-   enddo
+   print *,'ntasks_io = ',ntasks_io
+   print *,'nanals_per_iotask = ',nanals_per_iotask
+   !do np=0,ntasks_io-1
+   !   print *,'task,nanal1,nanal2',np+1,nanal1(np),nanal2(np)
+   !enddo
    if (datapath == ' ') then
       print *,'need to specify datapath in namelist!'
       call stop2(19)

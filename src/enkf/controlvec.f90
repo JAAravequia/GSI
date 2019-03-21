@@ -48,7 +48,7 @@ use gridinfo,  only: getgridinfo, gridinfo_cleanup,                    &
                      npts, vars3d_supported, vars2d_supported
 use params,    only: nlevs, nbackgrounds, fgfileprefixes, reducedgrid, &
                      nanals, pseudo_rh, use_qsatensmean, nlons, nlats,&
-                     ntasks_io, nanal1, nanal2
+                     nanals_per_iotask, ntasks_io, nanal1, nanal2
 use kinds,     only: r_kind, i_kind, r_double, r_single
 use mpeu_util, only: gettablesize, gettable, getindex
 use constants, only: max_varname_length
@@ -188,11 +188,10 @@ subroutine read_control()
 implicit none
 real(r_double)  :: t1,t2
 real(r_double), allocatable, dimension(:) :: qsat_tmp
-integer(i_kind) :: nanal,nb,nlev,nanals_per_task,ne
+integer(i_kind) :: nanal,nb,nlev,ne
 integer(i_kind) :: q_ind
 integer(i_kind) :: ierr
 
-nanals_per_task = nanals/ntasks_io
 ! must at least nanals tasks allocated.
 if (numproc < ntasks_io) then
   print *,'need at least ntasks =',ntasks_io,'MPI tasks, exiting ...'
@@ -208,9 +207,9 @@ end if
 ! read in whole control vector on i/o procs - keep in memory 
 ! (needed in write_ensemble)
 if (nproc <= ntasks_io-1) then
-   allocate(grdin(npts,ncdim,nbackgrounds,nanals_per_task))
-   allocate(qsat(npts,nlevs,nbackgrounds,nanals_per_task))
-   t1 = mpi_wtime()
+   allocate(grdin(npts,ncdim,nbackgrounds,nanals_per_iotask))
+   allocate(qsat(npts,nlevs,nbackgrounds,nanals_per_iotask))
+   if (nproc == 0) t1 = mpi_wtime()
    call readgriddata(nanal1(nproc),nanal2(nproc),cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,nbackgrounds,fgfileprefixes,reducedgrid,grdin,qsat)
    !print *,'min/max qsat',nanal,'=',minval(qsat),maxval(qsat)
    if (use_qsatensmean) then
@@ -218,10 +217,10 @@ if (nproc <= ntasks_io-1) then
        allocate(qsat_tmp(npts))
        ! compute ensemble mean qsat
        qsatmean = 0_r_double
-       do ne=1,nanals_per_task
+       do ne=1,nanals_per_iotask
           do nb=1,nbackgrounds
           do nlev=1,nlevs
-             call mpi_allreduce(qsat(1,nlev,nb,ne),qsat_tmp,npts,mpi_real8,mpi_sum,mpi_comm_io,ierr)
+             call mpi_allreduce(qsat(:,nlev,nb,ne),qsat_tmp,npts,mpi_real8,mpi_sum,mpi_comm_io,ierr)
              qsatmean(:,nlev,nb) = qsatmean(:,nlev,nb) + qsat_tmp
           enddo
           enddo
@@ -234,12 +233,21 @@ if (nproc <= ntasks_io-1) then
      t2 = mpi_wtime()
      print *,'time in readgridata on root',t2-t1,'secs'
    end if
-   !print *,'min/max ps ens mem',nanal,'=',&
-   !         minval(grdin(:,ncdim,nbackgrounds/2+1)),maxval(grdin(:,ncdim,nbackgrounds/2+1))
+   !do ne=1,nanals_per_iotask
+   !   nanal = ne + (nproc-1)*nanals_per_iotask
+   !   print *,'min/max ps ens mem',nanal,'=',&
+   !            minval(grdin(:,ncdim,nbackgrounds/2+1,ne)),maxval(grdin(:,ncdim,nbackgrounds/2+1,ne))
+   !   print *,'min/max qsat',nanal,'=',&
+   !            minval(qsat(:,:,nbackgrounds/2+1,ne)),maxval(qsat(:,:,nbackgrounds/2+1,ne))
+   !enddo
+   !if (use_qsatensmean) then
+   !   print *,'min/max qsatmean proc',nproc,'=',&
+   !            minval(qsatmean(:,:,nbackgrounds/2+1)),maxval(qsatmean(:,:,nbackgrounds/2+1))
+   !endif
    q_ind = getindex(cvars3d, 'q')
    if (pseudo_rh .and. q_ind > 0) then
       if (use_qsatensmean) then
-         do ne=1,nanals_per_task
+         do ne=1,nanals_per_iotask
          do nb=1,nbackgrounds
             ! create normalized humidity analysis variable.
             grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb,ne) = &
@@ -247,7 +255,7 @@ if (nproc <= ntasks_io-1) then
          enddo
          enddo
       else
-         do ne=1,nanals_per_task
+         do ne=1,nanals_per_iotask
          do nb=1,nbackgrounds
             ! create normalized humidity analysis variable.
             grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb,ne) = &
@@ -269,38 +277,33 @@ logical, intent(in) :: no_inflate_flag
 
 real(r_double)  :: t1,t2
 integer(i_kind) :: nanal
-integer(i_kind) :: nb, nvar, nanals_per_task, ne
+integer(i_kind) :: nb, nvar, ne
 integer(i_kind) :: q_ind, ierr
 real(r_single), allocatable, dimension(:,:) :: grdin_mean, grdin_mean_tmp
 
-nanals_per_task = nanals/ntasks_io
-
 if (nproc <= ntasks_io-1) then
 
-   allocate(grdin_mean(npts,ncdim))
    allocate(grdin_mean_tmp(npts,ncdim))
-   grdin_mean = 0
-   
-   ! gather ensmean increment on root.
    if (nproc == 0) then
-      t1 = mpi_wtime()
+     allocate(grdin_mean(npts,ncdim))
+     grdin_mean = 0_r_single
+     t1 = mpi_wtime()
    endif
-   do ne=1,nanals_per_task
-      do nb=1,nbackgrounds
-         call mpi_reduce(grdin(:,:,nb,ne), grdin_mean_tmp, npts*ncdim, mpi_real4,   &
-                         mpi_sum,0,mpi_comm_io,ierr)
-         grdin_mean = grdin_mean + grdin_mean_tmp
-      enddo
-   enddo
-   grdin_mean = grdin_mean/real(nanals)
-   deallocate(grdin_mean_tmp)
-   ! print out ens mean increment info
+   
    do nb=1,nbackgrounds
       if (nproc == 0) then
          print *,'time level ',nb
          print *,'--------------'
       endif
+      ! gather ensmean increment on root.
+      do ne=1,nanals_per_iotask
+         call mpi_reduce(grdin(:,:,nb,ne), grdin_mean_tmp, npts*ncdim, mpi_real4,&
+                         mpi_sum,0,mpi_comm_io,ierr)
+         if (nproc == 0) grdin_mean = grdin_mean + grdin_mean_tmp
+      enddo
+      ! print out ens mean increment info
       if (nproc == 0) then
+         grdin_mean = grdin_mean/real(nanals)
          do nvar=1,nc3d
             print *,'ens. mean anal. increment min/max ', cvars3d(nvar),   &
                 minval(grdin_mean(:,clevels(nvar-1)+1:clevels(nvar))),     &
@@ -313,12 +316,16 @@ if (nproc <= ntasks_io-1) then
          enddo
       endif
    enddo
-   deallocate(grdin_mean)
+   if (nproc == 0) then
+      deallocate(grdin_mean)
+   endif
+   deallocate(grdin_mean_tmp)
+   
    
    q_ind = getindex(cvars3d, 'q')
    if (pseudo_rh .and. q_ind > 0) then
       if (use_qsatensmean) then
-         do ne=1,nanals_per_task
+         do ne=1,nanals_per_iotask
          do nb=1,nbackgrounds
                ! re-scale normalized spfh with sat. sphf of first guess
             grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb,ne) = &
@@ -326,7 +333,7 @@ if (nproc <= ntasks_io-1) then
          enddo
          enddo
       else
-         do ne=1,nanals_per_task
+         do ne=1,nanals_per_iotask
          do nb=1,nbackgrounds
             ! re-scale normalized spfh with sat. sphf of first guess
             grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb,ne) = &

@@ -1142,7 +1142,7 @@
      print *,nanal,'min/max analyzed ps tend',minval(pstend2),maxval(pstend2)
      endif
      ! vmass is vertical integral of dp**2
-     vmass = 0.
+     vmass = 0_r_kind
      do k=1,nlevs
         ! case 2 (4.3.1.2) in GEOS DAS document.
         ! (adjustment proportional to mass in layer)
@@ -1160,7 +1160,7 @@
         ! case 3 
         !ug = (pstend2 - pstend1)*vmassdivinc(:,k)**2/vmass
         call sptez_s(divspec,ug,-1) ! divgrd to divspec
-        vrtspec = 0.
+        vrtspec = 0_r_kind
         call sptezv_s(divspec,vrtspec,uginc,vginc,1) ! div,vrt to u,v
         if (nanal .eq. 1) then
           print *,k,'min/max u inc (member 1)',&

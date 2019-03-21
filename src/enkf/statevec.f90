@@ -44,7 +44,7 @@ use mpisetup
 use gridinfo, only: getgridinfo, gridinfo_cleanup,               &
                     npts, vars3d_supported, vars2d_supported
 use params, only: nlevs,nstatefields,nanals,statefileprefixes,&
-                  ntasks_io,nanal1,nanal2
+                  ntasks_io,nanals_per_iotask,nanal1,nanal2
 use kinds, only: r_kind, i_kind, r_double, r_single
 use mpeu_util, only: gettablesize, gettable, getindex
 use constants, only : max_varname_length
@@ -53,7 +53,7 @@ private
 public :: read_state, statevec_cleanup, init_statevec
 real(r_single),public, allocatable, dimension(:,:,:,:) :: state_d
 
-integer(i_kind), public :: ns2d, ns3d, nsdim, nanals_per_task
+integer(i_kind), public :: ns2d, ns3d, nsdim
 character(len=max_varname_length), allocatable, dimension(:), public :: svars3d
 character(len=max_varname_length), allocatable, dimension(:), public :: svars2d
 integer(i_kind), allocatable, dimension(:), public                   :: slevels
@@ -184,9 +184,8 @@ end if
 
 ! read in whole state vector on i/o procs - keep in memory 
 if (nproc <= ntasks_io-1) then
-   nanals_per_task = nanals/ntasks_io
-   allocate(state_d(npts,nsdim,nstatefields,nanals_per_task))
-   allocate(qsat(npts,nlevs,nstatefields,nanals_per_task))
+   allocate(state_d(npts,nsdim,nstatefields,nanals_per_iotask))
+   allocate(qsat(npts,nlevs,nstatefields,nanals_per_iotask))
    nanal = nproc + 1
 
    call readgriddata(nanal1(nproc),nanal2(nproc),svars3d,svars2d,ns3d,ns2d,slevels,nsdim,nstatefields,statefileprefixes,.false.,state_d,qsat)
@@ -195,10 +194,10 @@ if (nproc <= ntasks_io-1) then
    allocate(state_mean(npts)) 
    do nb = 1, nstatefields
      do i = 1, nsdim
-       state_mean = sum(state_d(:,i,nb,:),dim=2)/real(nanals_per_task)
+       state_mean = sum(state_d(:,i,nb,:),dim=2)/real(nanals_per_iotask)
        call mpi_allreduce(mpi_in_place,state_mean,npts,mpi_real4,mpi_sum,mpi_comm_io,ierr)
        state_mean = state_mean/real(ntasks_io)
-       do ne=1,nanals_per_task
+       do ne=1,nanals_per_iotask
           state_d(:,i,nb,ne) = state_d(:,i,nb,ne) - state_mean
        enddo
      enddo
