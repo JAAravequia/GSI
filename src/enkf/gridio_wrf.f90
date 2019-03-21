@@ -49,10 +49,10 @@ module gridio
 
 contains
   ! Generic WRF read routine, calls ARW-WRF or NMM-WRF
-  subroutine readgriddata(nanal,vars3d,vars2d,n3d,n2d,levels,ndim,ntimes,fileprefixes,reducedgrid,vargrid,qsat)
+  subroutine readgriddata(nanal1,nanal2,vars3d,vars2d,n3d,n2d,levels,ndim,ntimes,fileprefixes,reducedgrid,vargrid,qsat)
    use constants, only: max_varname_length
    implicit none
-   integer, intent(in) :: nanal, n2d, n3d, ndim, ntimes
+   integer, intent(in) :: nanal1,nanal2, n2d, n3d, ndim, ntimes
    character(len=max_varname_length), dimension(n2d), intent(in) :: vars2d
    character(len=max_varname_length), dimension(n3d), intent(in) :: vars3d
    integer, dimension(0:n3d), intent(in)        :: levels
@@ -63,9 +63,9 @@ contains
    real(r_double), dimension(npts,nlevs,ntimes), intent(out) :: qsat
 
    if (arw) then
-     call readgriddata_arw(nanal,vars3d,vars2d,n3d,n2d,levels,ndim,ntimes,fileprefixes,vargrid,qsat)
+     call readgriddata_arw(nanal1,nanal2,vars3d,vars2d,n3d,n2d,levels,ndim,ntimes,fileprefixes,vargrid,qsat)
    else if (nmm) then
-     call readgriddata_nmm(nanal,vars3d,vars2d,n3d,n2d,levels,ndim,ntimes,fileprefixes,vargrid,qsat)
+     call readgriddata_nmm(nanal1,nanal2,vars3d,vars2d,n3d,n2d,levels,ndim,ntimes,fileprefixes,vargrid,qsat)
    endif
 
   end subroutine readgriddata
@@ -404,7 +404,7 @@ contains
        do k = levels(cw_ind-1)+1, levels(cw_ind)
           if (nproc .eq. 0)                                               &
              write(6,*) 'READGRIDDATA_NMM: cw',                           &
-                 & k, minval(vargrid(:,k,nb,ne)), maxval(vargrid(:,k,nb,e))
+                 & k, minval(vargrid(:,k,nb,ne)), maxval(vargrid(:,k,nb,ne))
        enddo
     endif
     ! set ozone to zero for now (like in GSI?)
