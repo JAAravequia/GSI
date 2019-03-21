@@ -23,6 +23,7 @@ if(NOT BUILD_BACIO )
        ${NO_DEFAULT_PATH}
       )
     message("Found BACIO library ${BACIO_LIBRARY}")
+    set( bacio ${BACIO_LIBRARY})
   endif()
 endif()
 if( NOT BACIO_LIBRARY ) # didn't find the library, so build it from source
