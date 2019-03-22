@@ -71,7 +71,11 @@
   use obsmod, only: rmiss_single, netcdf_diag, binary_diag
   use qcmod, only: ifail_crtm_qc
   use radiance_mod, only: rad_obs_type,radiance_obstype_search
+  use radiance_mod, only: n_aerosols_fwd
+  use guess_grids, only: ntguessig,nfldsig,hrdifsig
   use gsi_chemguess_mod, only: gsi_chemguess_get
+  use gsi_bundlemod, only : gsi_bundlegetpointer
+  use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
 
   implicit none
 
@@ -93,7 +97,7 @@
   real(r_kind),parameter:: r1e10=1.0e10_r_kind
 
 ! Declare local variables
-  character(128) diag_aero_file
+  character(128) diag_aero_file,guess_aero_file
   integer(i_kind) :: nvars
 
   integer(i_kind) error_status,istat
@@ -120,6 +124,7 @@
   real(r_kind),dimension(nchanl):: var,ratio_aoderr,aodinv
   real(r_kind),dimension(nreal+nchanl,nobs)::data_s
   real(r_kind),dimension(nsig):: prsltmp
+  real(r_kind),dimension(nsig):: qsat,rh 
   real(r_kind),dimension(nsig):: qvp,tvp
   real(r_kind),dimension(nsig+1):: prsitmp
   real(r_kind) dtsavg
@@ -862,9 +867,6 @@ contains
       ! original: pagowski
       ! modified: 2019-03-21 - martin - cleaned up to fit GSI coding norms
       implicit none
-      use gsi_bundlemod, only : gsi_bundlegetpointer
-      use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
-      use guess_grids, only: ntguessig,nfldsig
   
       real(r_kind) :: zsfc
       real(r_kind),dimension(:,:  ),pointer:: rank2

@@ -148,6 +148,7 @@ module guess_grids
   public :: wgt_lcbas
   public :: ges_qsat
   public :: use_compress,nsig_ext,gpstop
+  public :: ntguesaer,ifileaer,nfldaer,hrdifaer ! variables for external aerosol files
 
   public :: ges_initialized
 

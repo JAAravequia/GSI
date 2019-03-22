@@ -418,7 +418,7 @@ contains
     use guess_grids, only: ifilesig,ifileaer,nfldaer
     use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sub2grid_destroy_info
     use mpimod, only: npe
-    use chemmod, only: lread_ext_aerosold
+    use chemmod, only: lread_ext_aerosol
 
     implicit none
 

@@ -28,12 +28,13 @@ private
 
 public Set_CRTM_Aerosol
 
-interface Set_CRTM_Aerosol
-  subroutine Set_CRTM_Aerosol_ ( km, na, na_crtm, aero_name, aero_conc, rh, aerosol)
+contains
+
+  subroutine Set_CRTM_Aerosol ( km, na, na_crtm, aero_name, aero_conc, rh, aerosol)
   
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:    Set_CRTM_Aerosol_
+! subprogram:    Set_CRTM_Aerosol
 !   prgmmr: hclin          org: ncar/mmm                date: 2011-09-20
 !
 ! abstract: Set the CRTM Aerosol object given GOCART aerosol properties.
@@ -212,7 +213,6 @@ interface Set_CRTM_Aerosol
     return
     end function GOCART_Aerosol_size
   
-  end subroutine Set_CRTM_Aerosol_
-end interface
+  end subroutine Set_CRTM_Aerosol
 
 end module set_crtm_aerosolmod

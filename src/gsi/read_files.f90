@@ -116,7 +116,7 @@ subroutine read_files(mype)
   character(6) filename
   integer(i_kind) i,j,iwan,npem1,iret
   integer(i_kind) nhr_half
-  integer(i_kind) iamana(3)
+  integer(i_kind) iamana(4) ! changed to 4 from 3 for aer files
   integer(i_kind) nminanl,nmings,nming2,ndiff
   integer(i_kind),dimension(4):: idateg
   integer(i_kind),dimension(2):: i_ges
@@ -155,9 +155,9 @@ subroutine read_files(mype)
   nfldnst=0
   iamana=0
 
-! Check for non-zero length atm, sfc, and nst files on single task
+! Check for non-zero length atm, sfc, aer, and nst files on single task
   if(mype==npem1)then
-     allocate( irec(max_file,3) )
+     allocate( irec(max_file,4) )
      irec=i_missing
 
 ! Check for atm files with non-zero length
@@ -481,6 +481,7 @@ subroutine read_files(mype)
            time_aer(iwan,1) = t4dv
            time_aer(iwan,2) = irec(i,4)+r0_001
         end do
+     endif ! if ( lread_ext_aerosol ) then
      deallocate( irec )
   end if
 
