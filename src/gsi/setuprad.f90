@@ -1071,23 +1071,23 @@
              endif
            endif
         end if ! radmod%lcloud_fwd .and. radmod%ex_biascor
-        if(sea.and.(varch_sea(ich(1))>0)) then
+        if(sea.and.(varch_sea(ich(1))>zero)) then
            do i=1,nchanl
               tnoise(i)=varch_sea(ich(i))
            enddo
-        else if(land.and.(varch_land(ich(1))>0)) then
+        else if(land.and.(varch_land(ich(1))>zero)) then
            do i=1,nchanl
               tnoise(i)=varch_land(ich(i))
            enddo
-        else if(ice.and.(varch_ice(ich(1))>0)) then
+        else if(ice.and.(varch_ice(ich(1))>zero)) then
            do i=1,nchanl
               tnoise(i)=varch_ice(ich(i))
            enddo
-        else if(snow.and.(varch_snow(ich(1))>0)) then
+        else if(snow.and.(varch_snow(ich(1))>zero)) then
            do i=1,nchanl
               tnoise(i)=varch_snow(ich(i))
            enddo
-        else if(mixed.and.(varch_mixed(ich(1))>0)) then
+        else if(mixed.and.(varch_mixed(ich(1))>zero)) then
            do i=1,nchanl
               tnoise(i)=varch_mixed(ich(i))
            enddo
