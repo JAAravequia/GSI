@@ -59,7 +59,7 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   use kinds,     only: r_kind, r_double, i_kind
   use gridmod,   only: nlat, nlon, regional, tll2xy, rlats, rlons
   use chemmod,   only: aod_qa_limit, luse_deepblue
-  use constants, only: deg2rad, zero, two, three, four, r60inv
+  use constants, only: deg2rad, zero, one, two, three, four, five, r0_01, r60inv
   use obsmod,    only: rmiss_single
   use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,thin4d
   use satthin,   only: itxmax,makegrids,destroygrids,checkob, &

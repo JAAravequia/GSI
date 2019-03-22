@@ -136,7 +136,7 @@
        oneob_type_chem,oblat_chem,&
        oblon_chem,obpres_chem,diag_incr,elev_tolerance,tunable_error,&
        in_fname,out_fname,incr_fname, &
-       laeroana_gocart, l_aoderr_table, aod_qa_limit, luse_deepblue
+       laeroana_gocart, l_aoderr_table, aod_qa_limit, luse_deepblue, lread_ext_aerosol
   use chemmod, only : wrf_pm2_5,aero_ratios
   use gfs_stratosphere, only: init_gfs_stratosphere,use_gfs_stratosphere,pblend0,pblend1
   use gfs_stratosphere, only: broadcast_gfs_stratosphere_vars
@@ -365,6 +365,7 @@
 !  01-04-2018 Apodaca   add diag_light and lightinfo for GOES/GLM lightning
 !                           data assimilation
 !  08-25-2018 Collard   Introduce bias_zero_start
+!  03-21-2019 Wei/Martin   added option lread_ext_aerosol to read in aerfXX file for NEMS aerosols 
 !
 !EOP
 !-------------------------------------------------------------------------
@@ -1020,17 +1021,18 @@
 !     in_fname          - CMAQ input filename
 !     out_fname         - CMAQ output filename
 !     incr_fname        - CMAQ increment filename
-!     laeroana_gocart   - when true, do chem analysis with wrfchem and modis
+!     laeroana_gocart   - when true, do chem analysis with wrfchem (or NGAC)
 !     l_aoderr_table    - whethee to use aod error table or default error
 !     aod_qa_limit      - minimum acceptable value of error flag for total column AOD
 !     luse_deepblue     - whether to use MODIS AOD from the deepblue   algorithm
+!     lread_ext_aerosol - if true, reads aerfNN file for aerosol arrays rather than sigfNN (NGAC NEMS IO)
 
   namelist/chem/berror_chem,oneobtest_chem,maginnov_chem,magoberr_chem,&
        oneob_type_chem,oblat_chem,oblon_chem,obpres_chem,&
        diag_incr,elev_tolerance,tunable_error,&
        in_fname,out_fname,incr_fname,&
        laeroana_gocart, l_aoderr_table, aod_qa_limit, luse_deepblue,&
-       aero_ratios,wrf_pm2_5
+       aero_ratios,wrf_pm2_5, lread_ext_aerosol
 
 ! NST (NSST control namelist) :
 !     nst_gsi  - indicator to control the Tr Analysis mode: 0 = no nst info ingsi at all;
