@@ -389,6 +389,7 @@ subroutine get_zderivs(z,z_x,z_y,mype)
   allocate(zx1(g1%inner_vars*g1%nlat*g1%nlon))
   allocate(zy1(g1%inner_vars*g1%nlat*g1%nlon))
 
+
   ii=0
   do j=1,lon2
      do i=1,lat2

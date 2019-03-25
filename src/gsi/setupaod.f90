@@ -128,7 +128,6 @@
   real(r_kind),dimension(nsig):: qvp,tvp
   real(r_kind),dimension(nsig+1):: prsitmp
   real(r_kind) dtsavg
-  real(r_single) :: psfc
 
   integer(i_kind),dimension(nchanl):: ich,id_qc
 
@@ -137,7 +136,6 @@
         &aerosol_names
   character(len=56), dimension(:), allocatable :: varnames
 
-  character(10) filex
 
   logical toss,l_may_be_passive
   logical,dimension(nobs):: luse
@@ -168,9 +166,6 @@
   real(r_kind),dimension(nsig,nchanl):: layer_od
   real(r_kind) :: clw_guess, tzbgr, sfc_speed
 
-  ! arrays/vars for diag file output interpolation
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tmp3
-  real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
 
   if ( .not. laeroana_gocart ) then
      return
@@ -215,6 +210,7 @@
   l_may_be_passive = .false.
   toss = .true.
   jc=0
+  
   do j=1,jpch_aero
      if(isis == nusis_aero(j))then 
         jc=jc+1
@@ -377,6 +373,8 @@
              temp,wmix,jacobian,error_status,layer_od=layer_od,jacobian_aero=jacobian_aero)
         ! interpolate aerosols at observation locations for diag files here
         if (aero_diagsave) then
+           call genqsat(qsat,tvp,prsltmp,1,1,nsig,.true.,0)
+           rh = qvp/qsat
            call aero_guess_at_obs_locations(dtime,data_s(:,n),&
                &nchanl,nreal,nsig, n_aerosols_fwd, aerosols, aerosol_names)
         end if
@@ -658,7 +656,8 @@ contains
               isis,ireal,' to file ',trim(diag_aero_file),' ',ianldate
          do i=1,nchanl
             n=ich(i)
-            if( n < 1 )cycle
+            if( iuse_aero(n) < 0 ) cycle
+            !if( n < 1 )cycle
             varch4=error_aero(n)
             freq4=sc(sensorindex)%frequency(i)
             pol4=sc(sensorindex)%polarization(i)
@@ -693,6 +692,7 @@ contains
          call nc_diag_header("date_time",            ianldate       )
          do i=1,nchanl
             n=ich(i)
+            !if ( abs(n) > size(iuse_aero)) cycle ! fix for segfault when # of channels is decreased
             if( iuse_aero(n) < 0 ) cycle
             call nc_diag_chaninfo("frequency",sngl(sc(sensorindex)%frequency(i)))
             call nc_diag_chaninfo("polarization",sc(sensorindex)%polarization(i))
@@ -721,6 +721,7 @@ contains
          errinv = sqrt(varinv(i))
          diagbufchan(3,i)=errinv          ! inverse observation error
          useflag=one
+         !if ( abs(ich(i)) > size(iuse_aero)) cycle ! fix for segfault when # of channels is decreased
          if (iuse_aero(ich(i)) < 1) useflag=-one
          diagbufchan(4,i)= id_qc(i)*useflag! quality control mark or event indicator
       end do
@@ -781,14 +782,14 @@ contains
       character(7),parameter     :: obsclass = '    aod'
       character(128) :: fieldname
 
-      integer(i_kind) :: iabsorb, iaero,k,l
+      integer(i_kind) :: iaero,k,l
       real(r_single), dimension(nsig+1) :: tmp
-      real(r_kind) :: zsfc
 
       real(r_single),parameter::  missing = -9.99e9_r_single
 
       do i=1,nchanl
          l=ich(i)
+         !if ( abs(l) > size(iuse_aero)) cycle ! fix for segfault when # of channels is decreased
          if ( iuse_aero(l) < 0 ) cycle
          call nc_diag_metadata("Channel_Index",         i)
          call nc_diag_metadata("Observation_Class",     obsclass)

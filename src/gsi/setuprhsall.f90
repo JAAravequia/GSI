@@ -321,6 +321,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   i_light=30
   i_ref =i_light
 
+
   allocate(awork1(7*nsig+100,i_ref))
   if(.not.rhs_allocated) call rhs_alloc(aworkdim2=size(awork1,2))
 
@@ -500,8 +501,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
            read(lunin,iostat=ier) obstype,isis,nreal,nchanl
 !          if(mype == mype_diaghdr(is)) then
-!             write(6,300) obstype,isis,nreal,nchanl
-!300          format(' SETUPALL:,obstype,isis,nreal,nchanl=',a12,a20,i5,i5)
+             write(6,300) obstype,isis,nreal,nchanl
+300          format(' SETUPALL:,obstype,isis,nreal,nchanl=',a12,a20,i5,i5)
 !          endif
            if(ier/=0) call die('setuprhsall','read(), iostat =',ier)
            nele=nreal+nchanl

@@ -867,7 +867,7 @@ subroutine destroy_crtm
   deallocate(rtsolution0) 
   if(n_actual_aerosols_wk>0)then
      deallocate(aero,aero_conc,auxrh)
-     if(n_aerosols_jac_wk>0) deallocate(iaero_jac)
+     if(n_aerosols_jac>0) deallocate(iaero_jac)
   endif
   if (n_ghg>0) then
      deallocate(ghg_names)

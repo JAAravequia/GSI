@@ -27,7 +27,7 @@ SUBROUTINE aero_guess_at_obs_locations(&
 
 
   INTEGER(i_kind):: j,k,m1,ix,ix1,ixp,iy,iy1,iyp,ii
-  INTEGER(i_kind):: itsig,itsigp,itsfc,itsfcp
+  INTEGER(i_kind):: itsig,itsigp
 
   REAL(r_kind):: w00,w01,w10,w11,dx,dy
 ! real(r_kind):: w_weights(4)

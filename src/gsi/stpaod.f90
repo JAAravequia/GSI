@@ -182,7 +182,8 @@ contains
                    end do
 
                 else
-                   rad(kk)= val2
+                   !rad(kk)= val2
+                   rad(1) = aeroptr%res(nn)
                 end if
 
 !          calculate contribution to j
@@ -193,16 +194,16 @@ contains
 
 !          modify penalty term if nonlinear qc
 
-                if(nlnqc_iter .and. pg_aero(ic) > tiny_r_kind .and. &
-                     b_aero(ic)  > tiny_r_kind)then
-                   cg_aero=cg_term/b_aero(ic)
-                   wnotgross= one-pg_aero(ic)*varqc_iter
-                   wgross = varqc_iter*pg_aero(ic)*cg_aero/wnotgross
-                   do kk=1,max(1,nstep)
-                      term(kk)  = -two*log((exp(-half*term(kk) ) + wgross)/&
-                           (one+wgross))
-                   end do
-                endif
+!                if(nlnqc_iter .and. pg_aero(ic) > tiny_r_kind .and. &
+!                     b_aero(ic)  > tiny_r_kind)then
+!                   cg_aero=cg_term/b_aero(ic)
+!                   wnotgross= one-pg_aero(ic)*varqc_iter
+!                   wgross = varqc_iter*pg_aero(ic)*cg_aero/wnotgross
+!                   do kk=1,max(1,nstep)
+!                      term(kk)  = -two*log((exp(-half*term(kk) ) + wgross)/&
+!                           (one+wgross))
+!                   end do
+!                endif
 
                 out(1) = out(1) + term(1)*aeroptr%raterr2(nn)
 

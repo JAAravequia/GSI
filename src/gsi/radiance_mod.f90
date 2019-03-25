@@ -354,9 +354,9 @@ contains
     end if
 
     if (iaerosol_fwd .and. all(iaerosol4crtm<0)) then
-       iaerosol_fwd=.false.
        iaerosol=.false.
        if ( .not. laeroana_gocart ) then
+          iaerosol_fwd=.false.
           n_aerosols_fwd=0
           n_aerosols_jac=0   
           aerosol_names_fwd=' '

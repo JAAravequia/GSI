@@ -86,11 +86,9 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
                ae_s1,ae_s2,ae_s3,ae_s4,ae_so4,&
                ae_ocpho,ae_ocphi,ae_bcpho,ae_bcphi
 
-    real(r_kind),allocatable,dimension(:):: spec_div,spec_vor
-    real(r_kind),allocatable,dimension(:,:) :: grid, grid_v, &
-         grid_vor, grid_div, grid_b, grid_b2
-    real(r_kind),allocatable,dimension(:,:,:) :: grid_c, grid2, grid_c2
-    real(r_kind),allocatable,dimension(:)   :: work, work_v
+    real(r_kind),allocatable,dimension(:,:) :: grid, grid_v,grid_b
+    real(r_kind),allocatable,dimension(:,:,:) :: grid_c, grid2
+    real(r_kind),allocatable,dimension(:)   :: work
     real(r_kind),allocatable,dimension(:) :: rwork1d0, rwork1d1, rwork1d2
     real(r_kind),allocatable,dimension(:) :: rlats,rlons,clons,slons
     real(r_single),allocatable,dimension(:) :: r4lats,r4lons

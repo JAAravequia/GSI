@@ -2051,8 +2051,6 @@ contains
                          du001sm,du002sm,du003sm,du004sm,du005sm, &
                          ss001sm,ss002sm,ss003sm,ss004sm, &
                          so4sm,ocphosm,ocphism,bcphosm,bcphism
-    real(r_kind),dimension(grd%lat1*grd%lon1) :: aodsm
-    real(4),dimension(grd%nlon,grd%nlat-2):: aodout
     real(r_kind) :: lmax,lmin
     integer(i_kind) :: m
     real(r_kind),dimension(max(grd%iglobal,grd%itotsub))     :: work1,work2
