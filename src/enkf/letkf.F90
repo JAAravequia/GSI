@@ -183,6 +183,13 @@ if (.not. kdobs .and. nproc .eq. 0) then
 endif
 
 t1 = mpi_wtime()
+
+if (neigv > 0) then
+   nens = nanals*neigv ! modulated ensemble size
+else
+   nens = nanals
+endif
+
 #ifdef MPI3
 ! setup shared memory segment on each node that points to
 ! observation prior ensemble.
@@ -191,11 +198,6 @@ t1 = mpi_wtime()
 disp_unit = num_bytes_for_r_single ! anal_ob is r_single
 nsize = nobstot*nanals
 nsize2 = nobstot*nanals*neigv
-if (neigv > 0) then
-   nens = nanals*neigv ! modulated ensemble size
-else
-   nens = nanals
-endif
 if (nproc_shm == 0) then
    win_size = nsize*disp_unit
    win_size2 = nsize2*disp_unit
