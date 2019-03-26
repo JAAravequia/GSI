@@ -21,6 +21,7 @@ elif [[ -d /ioddev_dell ]]; then
 elif [[ -d /scratch3 ]] ; then
     . /apps/lmod/lmod/init/sh
     target=theia
+    MPI3="ON"
 elif [[ -d /carddata ]] ; then
     . /opt/apps/lmod/3.1.9/init/sh
     target=s4
@@ -77,11 +78,11 @@ else
 fi
 
 if [[ $build_type = PRODUCTION ]] ; then
-  cmake -DBUILD_UTIL=ON -DCMAKE_BUILD_TYPE=PRODUCTION -DBUILD_CORELIBS=OFF ..
+  cmake -DMPI3FLAG=-DMPI3 -DMPI3=$MPI3 -DBUILD_UTIL=ON -DCMAKE_BUILD_TYPE=PRODUCTION -DBUILD_CORELIBS=OFF ..
 else 
   cmake ..
 fi
 
-make -j 8
+make VERBOSE=1 -j 8
 
 exit
