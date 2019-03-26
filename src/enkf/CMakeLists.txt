@@ -63,18 +63,18 @@ if(BUILD_ENKF)
   set_source_files_properties( ${ENKF_SRCS} PROPERTIES COMPILE_FLAGS ${ENKF_Fortran_FLAGS} )
   set_source_files_properties( ${ENKFMOD_SRCS} PROPERTIES COMPILE_FLAGS ${ENKF_Fortran_FLAGS} )
   
-  add_library(enkfdeplib STATIC ${ENKFMOD_SRCS} )
-  add_library(enkflib STATIC ${ENKF_SRCS} $<TARGET_OBJECTS:MODS1> $<TARGET_OBJECTS:MODS2> )
-  add_dependencies(enkfdeplib ${GSILIB} )
-  add_dependencies(MODS1 enkfdeplib ${GSISHAREDLIB} ${GSILIB} )
-  add_dependencies(MODS2 MODS1 enkfdeplib ${GSISHAREDLIB} ${GSILIB} )
-  add_dependencies(enkflib enkfdeplib ${GSISHAREDLIB} ${GSILIB} )
+  add_library(enkfdeplib${debug_suffix} STATIC ${ENKFMOD_SRCS} )
+  add_library(enkflib${debug_suffix} STATIC ${ENKF_SRCS} $<TARGET_OBJECTS:MODS1> $<TARGET_OBJECTS:MODS2> )
+  add_dependencies(enkfdeplib${debug_suffix} ${GSILIB} )
+  add_dependencies(MODS1 enkfdeplib${debug_suffix} ${GSISHAREDLIB} ${GSILIB} )
+  add_dependencies(MODS2 MODS1 enkfdeplib${debug_suffix} ${GSISHAREDLIB} ${GSILIB} )
+  add_dependencies(enkflib${debug_suffix} enkfdeplib${debug_suffix} ${GSISHAREDLIB} ${GSILIB} )
   set(ENKFEXEC "${ENKF_BASE}${debug_suffix}${GSISUFFIX}" CACHE INTERNAL "ENKF Executable name")
   add_executable(${ENKFEXEC} enkf_main.f90)
-  target_link_libraries(${ENKFEXEC} enkflib enkfdeplib ${GSISHAREDLIB} ${GSILIB} ${CORE_LIBRARIES}
+  target_link_libraries(${ENKFEXEC} enkflib${debug_suffix} enkfdeplib${debug_suffix} ${GSISHAREDLIB} ${GSILIB} ${CORE_LIBRARIES}
   ${MPI_Fortran_LIBRARIES} ${LAPACK_LIBRARIES} ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES}  ${HDF5_Fortran_HL_LIBRARIES}
   ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${GSI_LDFLAGS} ${CORE_BUILT} ${CORE_LIBRARIES} ${CORE_BUILT} ${NCDIAG_LIBRARIES} ${EXTRA_LINKER_FLAGS})
-  install(TARGETS ${ENKFEXEC} enkfdeplib enkflib 
+  install(TARGETS ${ENKFEXEC} enkfdeplib${debug_suffix} enkflib${debug_suffix} 
         RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
         LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
         ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/static)
