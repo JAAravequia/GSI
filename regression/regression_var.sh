@@ -111,6 +111,8 @@ case $machine in
      export noscrub="/scratch4/NCEPDEV/global/noscrub/$LOGNAME"
     elif [ -d /scratch3/BMC/gsienkf/$LOGNAME ]; then
      export noscrub="/scratch3/BMC/gsienkf/$LOGNAME"
+    elif [ -d /scratch4/NCEPDEV/fv3-cam/noscrub/$LOGNAME ]; then
+     export noscrub="/scratch4/NCEPDEV/fv3-cam/noscrub/$LOGNAME"
    fi
    export group="global"
    export queue="batch"
