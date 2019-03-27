@@ -937,38 +937,9 @@ if [ $DOGCYCLE = "YES" ]; then
         export GSI_FILE="NULL"
     fi
 
-    for n in $(seq 1 $ntiles); do
-        $NLN $COMIN_GES/RESTART/$PDY.${cyc}0000.sfc_data.tile${n}.nc $DATA/fnbgsi.00$n
-        $NLN $COMOUT/RESTART/$PDY.${cyc}0000.sfcanl_data.tile${n}.nc $DATA/fnbgso.00$n
-        $NLN $FIXfv3/$CASE/${CASE}_grid.tile${n}.nc                  $DATA/fngrid.00$n
-        $NLN $FIXfv3/$CASE/${CASE}_oro_data.tile${n}.nc              $DATA/fnorog.00$n
-    done
-
-    export APRUNCY=$APRUN_CYCLE
-    export OMP_NUM_THREADS_CY=$NTHREADS_CYCLE
-    export MAX_TASKS_CY=$ntiles
-
-    $CYCLESH
-    rc=$?
-    export ERR=$rc
-    export err=$ERR
-    $ERRSCRIPT || exit 11
-
-    # Create gaussian grid surface analysis file
-    if [ $DOGAUSFCANL = "YES" ]; then
-        export APRUNSFC=$APRUN_GAUSFCANL
-        export OMP_NUM_THREADS_SFC=$NTHREADS_GAUSFCANL
-
-        $GAUSFCANLSH
-        rc=$?
-        export ERR=$rc
-        export err=$ERR
-        $ERRSCRIPT || exit 12
-    fi
-
-    # update surface restarts at the beginning of the window, if IAU
-    # For now assume/hold dtfanl.nc valid at beginning of window
     if [ $DOIAU = "YES" ]; then
+        # update surface restarts at the beginning of the window, if IAU
+        # For now assume/hold dtfanl.nc valid at beginning of window
         for n in $(seq 1 $ntiles); do
             $NLN $COMIN_GES/RESTART/$bPDY.${bcyc}0000.sfc_data.tile${n}.nc $DATA/fnbgsi.00$n
             $NLN $COMOUT/RESTART/$bPDY.${bcyc}0000.sfcanl_data.tile${n}.nc $DATA/fnbgso.00$n
@@ -985,6 +956,35 @@ if [ $DOGCYCLE = "YES" ]; then
         export ERR=$rc
         export err=$ERR
         $ERRSCRIPT || exit 11
+    else
+        for n in $(seq 1 $ntiles); do
+            $NLN $COMIN_GES/RESTART/$PDY.${cyc}0000.sfc_data.tile${n}.nc $DATA/fnbgsi.00$n
+            $NLN $COMOUT/RESTART/$PDY.${cyc}0000.sfcanl_data.tile${n}.nc $DATA/fnbgso.00$n
+            $NLN $FIXfv3/$CASE/${CASE}_grid.tile${n}.nc                  $DATA/fngrid.00$n
+            $NLN $FIXfv3/$CASE/${CASE}_oro_data.tile${n}.nc              $DATA/fnorog.00$n
+        done
+
+        export APRUNCY=$APRUN_CYCLE
+        export OMP_NUM_THREADS_CY=$NTHREADS_CYCLE
+        export MAX_TASKS_CY=$ntiles
+
+        $CYCLESH
+        rc=$?
+        export ERR=$rc
+        export err=$ERR
+        $ERRSCRIPT || exit 11
+    fi
+
+    # Create gaussian grid surface analysis file
+    if [ $DOGAUSFCANL = "YES" ]; then
+        export APRUNSFC=$APRUN_GAUSFCANL
+        export OMP_NUM_THREADS_SFC=$NTHREADS_GAUSFCANL
+
+        $GAUSFCANLSH
+        rc=$?
+        export ERR=$rc
+        export err=$ERR
+        $ERRSCRIPT || exit 12
     fi
 
 fi
