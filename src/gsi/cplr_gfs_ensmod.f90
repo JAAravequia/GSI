@@ -14,7 +14,6 @@ module get_gfs_ensmod_mod
     end type get_gfs_ensmod_class
 
 contains
-
 subroutine get_user_ens_gfs(this,grd,ntindex,atm_bundle,iret)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -342,9 +341,9 @@ subroutine move2bundle_(grd,en_loc3,atm_bundle,m_cvars2d,m_cvars3d,iret,clons,sl
     type(sub2grid_info) :: grd2d,grd3d
     real(r_kind),parameter :: r0_001 = 0.001_r_kind
 
-    im = en_perts(1,1)%grid%im
-    jm = en_perts(1,1)%grid%jm
-    km = en_perts(1,1)%grid%km
+    im = en_perts(1,1,1)%grid%im
+    jm = en_perts(1,1,1)%grid%jm
+    km = en_perts(1,1,1)%grid%km
 
     allocate(scr2(im,jm))
     allocate(scr3(im,jm,km))

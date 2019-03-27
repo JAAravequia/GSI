@@ -256,6 +256,7 @@ module hybrid_ensemble_parameters
   public :: uv_hyb_ens,q_hyb_ens,s_ens_v,beta_s0,aniso_a_en,s_ens_hv,s_ens_vv
   public :: readin_beta,beta_s,beta_e
   public :: readin_localization
+  public :: l_use_h_localization
   public :: eqspace_ensgrid,grid_ratio_ens
   public :: sqrt_beta_s,sqrt_beta_e,pwgt,full_ensemble,pwgtflg
   public :: grd_ens
@@ -284,6 +285,14 @@ module hybrid_ensemble_parameters
   public :: en_perts,ps_bar
   public :: region_lat_ens,region_lon_ens
   public :: region_dx_ens,region_dy_ens
+  public :: naensgrp,nsclgrp
+  public :: l_nsclgrpone_test
+  public :: ensgrp2aensgrp 
+  public :: alphacvarsclgrpmat
+  public ::  para_covwithsclgrp
+  public :: spc_multwgt 
+  public :: spcwgt_params 
+  public :: l_sum_spc_weights 
   public :: ens_fast_read
 
   logical l_hyb_ens,uv_hyb_ens,q_hyb_ens,oz_univ_static
@@ -296,6 +305,7 @@ module hybrid_ensemble_parameters
   logical write_ens_sprd
   logical readin_localization
   logical readin_beta
+  logical l_use_h_localization
   logical use_localization_grid
   logical use_gfs_ens
   logical eqspace_ensgrid
@@ -304,11 +314,14 @@ module hybrid_ensemble_parameters
   logical ens_fast_read
   integer(i_kind) i_en_perts_io
   integer(i_kind) n_ens,nlon_ens,nlat_ens,jcap_ens,jcap_ens_test
-  real(r_kind) beta_s0,s_ens_h,s_ens_v,grid_ratio_ens
+  real(r_kind) beta_s0,s_ens_v,grid_ratio_ens
+  integer(i_kind),parameter::max_aens=10
+  real(r_kind) s_ens_h(max_aens)
   type(sub2grid_info),save :: grd_ens,grd_loc,grd_sploc,grd_anl,grd_e1,grd_a1
   type(spec_vars),save :: sp_ens,sp_loc
   type(egrid2agrid_parm),save :: p_e2a,p_sploc2ens
-  real(r_kind),allocatable,dimension(:) :: s_ens_hv,s_ens_vv
+  real(r_kind),allocatable,dimension(:) :: s_ens_vv
+  real(r_kind),allocatable,dimension(:,:) :: s_ens_hv
   real(r_kind),allocatable,dimension(:) :: sqrt_beta_s,sqrt_beta_e
   real(r_kind),allocatable,dimension(:) :: beta_s,beta_e
   real(r_kind),allocatable,dimension(:,:,:) :: pwgt
@@ -322,6 +335,16 @@ module hybrid_ensemble_parameters
   integer(i_kind) ntlevs_ens
   integer(i_kind) regional_ensemble_option
   character(len=512),save :: ensemble_path
+  real(r_kind),allocatable,dimension(:,:) :: alphacvarsclgrpmat
+  integer(i_kind),allocatable,dimension(:) :: ensgrp2aensgrp
+  real(r_kind),allocatable,dimension(:,:) ::  spc_multwgt 
+  real(r_kind),allocatable,dimension(:,:) ::  spcwgt_params
+  real (r_kind) ::  para_covwithsclgrp=1
+   integer(i_kind)::  nsclgrp=1
+   integer(i_kind)::  naensgrp=1
+   integer(i_kind)::  l_sum_spc_weights=0
+   logical::  l_nsclgrpone_test=.false.
+
 
 ! following is for storage of ensemble perturbations:
 
@@ -329,8 +352,8 @@ module hybrid_ensemble_parameters
 !   def nelen               - length of one ensemble perturbation vector
 
   integer(i_kind) nelen
-  type(gsi_bundle),save,allocatable :: en_perts(:,:)
-  real(r_single),dimension(:,:,:),allocatable:: ps_bar
+  type(gsi_bundle),save,allocatable :: en_perts(:,:,:)
+  real(r_single),dimension(:,:,:,:),allocatable:: ps_bar
 
 !    following is for interpolation of global ensemble to regional ensemble grid
 
@@ -382,6 +405,7 @@ subroutine init_hybrid_ensemble_parameters
   write_ens_sprd=.false.
   readin_localization=.false.
   readin_beta=.false.
+  l_use_h_localization=.false.
   use_localization_grid=.false.
   use_gfs_ens=.true.         ! when global: default is to read ensemble from GFS
   eqspace_ensgrid=.false.
@@ -413,15 +437,19 @@ subroutine create_hybens_localization_parameters
   use constants, only: zero
   implicit none
   
-  allocate( s_ens_hv(grd_ens%nsig),s_ens_vv(grd_ens%nsig) )
+  allocate( s_ens_hv(grd_ens%nsig,naensgrp),s_ens_vv(grd_ens%nsig) )
   allocate( beta_s(grd_ens%nsig),beta_e(grd_ens%nsig))
   allocate( sqrt_beta_s(grd_ens%nsig),sqrt_beta_e(grd_ens%nsig) )
   allocate( pwgt(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig) )
+  allocate(alphacvarsclgrpmat(naensgrp,naensgrp))
+  allocate(ensgrp2aensgrp(nsclgrp))
   beta_s  =one
   beta_e  =zero
   sqrt_beta_s=one
   sqrt_beta_e=zero
   pwgt=zero
+  alphacvarsclgrpmat=one
+  ensgrp2aensgrp=1
   
 end subroutine create_hybens_localization_parameters
 
@@ -431,6 +459,9 @@ subroutine destroy_hybens_localization_parameters
   deallocate(s_ens_vv,s_ens_hv) 
   deallocate(beta_s,beta_e)
   deallocate(sqrt_beta_s,sqrt_beta_e,pwgt)
+  deallocate(alphacvarsclgrpmat)
+  deallocate(ensgrp2aensgrp)
+  
 
 end subroutine destroy_hybens_localization_parameters
 

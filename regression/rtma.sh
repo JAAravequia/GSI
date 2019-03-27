@@ -179,6 +179,9 @@ flt_uwnd10mwter=$fixgsi/$endianness/rtma_fltnorm.dat_uwnd10mwter
 flt_vwnd10mwter=$fixgsi/$endianness/rtma_fltnorm.dat_vwnd10mwter
 
 prmcard=$fixgsi/rtma_parmcard_input
+#cltorg the above
+prmcard="/scratch4/NCEPDEV/da/save/Michael.Lueken/ProdGSI/fix/rtma_parmcard_input"
+
 
 # Copy executable and fixed files to $tmpdir
 if [[ $exp == *"updat"* ]]; then

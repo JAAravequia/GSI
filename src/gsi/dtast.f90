@@ -55,7 +55,6 @@ subroutine dtast(work1,nlev,pbot,ptop,mesage,jiter,iout,pflag)
   real(r_kind),dimension(nlev):: rmsx,biasx,ratx,qcratx
   real(r_kind),dimension(nlev,nconvtype,3):: rms,bias,rat,qcrat
   logical vis_or_cldch 
-
   ! Initialize variables
   count=0; rms=zero; bias=zero; rat=zero; qcrat=zero 
   typx(1)='asm' ! used or assimilated

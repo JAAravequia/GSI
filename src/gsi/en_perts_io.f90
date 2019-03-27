@@ -124,7 +124,7 @@ subroutine en_perts_get_from_save_fulldomain
 
      do ic3=1,nc3d
 
-        call gsi_bundlegetpointer(en_perts(n,1),trim(cvars3d(ic3)),w3,istatus)
+        call gsi_bundlegetpointer(en_perts(n,1,1),trim(cvars3d(ic3)),w3,istatus)
         if(istatus/=0) then
            write(6,*)' error retrieving pointer to ',trim(cvars3d(ic3)),' for ensemble member ',n
            call stop2(999)
@@ -142,7 +142,7 @@ subroutine en_perts_get_from_save_fulldomain
 
      do ic2=1,nc2d
 
-        call gsi_bundlegetpointer(en_perts(n,1),trim(cvars2d(ic2)),w2,istatus)
+        call gsi_bundlegetpointer(en_perts(n,1,1),trim(cvars2d(ic2)),w2,istatus)
         if(istatus/=0) then
            write(6,*)' error retrieving pointer to ',trim(cvars2d(ic2)),' for ensemble member ',n
            call stop2(999)
@@ -217,11 +217,11 @@ subroutine en_perts_get_from_save
         write(6,*)' error in ensemble number. read in ',nn,' looking for ',n
         call stop2(999)
      endif
-     read(iunit) ps_bar(:,:,1)
+     read(iunit) ps_bar(:,:,1,1)
 !
      do ic3=1,nc3d
 
-        call gsi_bundlegetpointer(en_perts(n,1),trim(cvars3d(ic3)),w3,istatus)
+        call gsi_bundlegetpointer(en_perts(n,1,1),trim(cvars3d(ic3)),w3,istatus)
         if(istatus/=0) then
            write(6,*)' error retrieving pointer to ',trim(cvars3d(ic3)),' for ensemble member ',n
            call stop2(999)
@@ -238,7 +238,7 @@ subroutine en_perts_get_from_save
 
      do ic2=1,nc2d
 
-        call gsi_bundlegetpointer(en_perts(n,1),trim(cvars2d(ic2)),w2,istatus)
+        call gsi_bundlegetpointer(en_perts(n,1,1),trim(cvars2d(ic2)),w2,istatus)
         if(istatus/=0) then
            write(6,*)' error retrieving pointer to ',trim(cvars2d(ic2)),' for ensemble member ',n
            call stop2(999)
@@ -289,6 +289,7 @@ subroutine en_perts_save
   use kinds, only: r_kind,i_kind,r_single
   use gsi_bundlemod, only: GSI_BundleGetPointer
   use mpeu_util, only: die
+  use hybrid_ensemble_parameters, only: nsclgrp
   implicit none
 
   real(r_single),pointer,dimension(:,:,:):: w3
@@ -300,6 +301,10 @@ subroutine en_perts_save
 
   integer(i_kind) ic3,ic2
   integer(i_kind) iunit
+  if(nsclgrp.gt.1) then
+    write(6,*)"nsclgrp >1 is not considerred in this part, stop"
+    stop
+  endif
 
   iunit=20
   write(filename,'(a,I4.4)') 'saved_en_perts.pe',mype
@@ -308,11 +313,11 @@ subroutine en_perts_save
   do n=1,n_ens
 !
      write(iunit) n
-     write(iunit) ps_bar(:,:,1)
+     write(iunit) ps_bar(:,:,1,1)
 !
      do ic3=1,nc3d
 
-        call gsi_bundlegetpointer(en_perts(n,1),trim(cvars3d(ic3)),w3,istatus)
+        call gsi_bundlegetpointer(en_perts(n,1,1),trim(cvars3d(ic3)),w3,istatus)
         if(istatus/=0) then
            write(6,*)' error retrieving pointer to ',trim(cvars3d(ic3)),' for ensemble member ',n
            call stop2(999)
@@ -324,7 +329,7 @@ subroutine en_perts_save
      end do
      do ic2=1,nc2d
 
-        call gsi_bundlegetpointer(en_perts(n,1),trim(cvars2d(ic2)),w2,istatus)
+        call gsi_bundlegetpointer(en_perts(n,1,1),trim(cvars2d(ic2)),w2,istatus)
         if(istatus/=0) then
            write(6,*)' error retrieving pointer to ',trim(cvars2d(ic2)),' for ensemble member ',n
            call stop2(999)

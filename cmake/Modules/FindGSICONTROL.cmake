@@ -5,6 +5,7 @@ message("Control path is ${CONTROLPATH}")
 find_file( CONTROL_EXE 
     NAMES gsi.x global_gsi ${GSIEXEC}
     HINTS
+        /scratch4/NCEPDEV/da/save/Michael.Lueken/svn1_old/build/bin
         ${CONTROLPATH}
         ${CONTROLPATH}/bin
         ${CONTROLPATH}/exec
