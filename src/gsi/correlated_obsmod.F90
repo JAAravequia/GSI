@@ -55,11 +55,11 @@ usually embedded in the {\it anavinfo} file. An example of such table follows:
 \begin{verbatim}
 correlated_observations::
 ! isis       method   kreq   type    cov_file
-  airs281_aqua  1      60.   ice     airs_rcov.bin
-  airs281_aqua  1      60.   land    airs_rcov.bin
-  airs281_aqua  1      60.   sea     airs_rcov.bin
-  airs281_aqua  1      60.   snow    airs_rcov.bin
-  airs281_aqua  1      60.   mixed   airs_rcov.bin
+  airs_aqua     1      60.   ice     airs_rcov.bin
+  airs_aqua     1      60.   land    airs_rcov.bin
+  airs_aqua     1      60.   sea     airs_rcov.bin
+  airs_aqua     1      60.   snow    airs_rcov.bin
+  airs_aqua     1      60.   mixed   airs_rcov.bin
 # cris_npp      1     -99.   snow    cris_rcov.bin
 # cris_npp      1     -99.   land    cris_rcov.bin
 # cris_npp      1     -99.   sea     cris_rcov.bin
