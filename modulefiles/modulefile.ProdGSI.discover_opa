@@ -16,4 +16,3 @@ module load netcdf-fortran
 module load hdf5
 module load zlib
 
-#setenv BASEDIR /discover/nobackup/projects/gmao/share/gmao_ops/Baselibs/v4.0.6_build1/x86_64-unknown-linux-gnu/ifort_15.0.2.164-mpt_2.14
