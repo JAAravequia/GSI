@@ -150,38 +150,19 @@ project(GSI)
   endif()
 
 
-  find_package(MPI REQUIRED)
-  message("MPI version is ${MPI_Fortran_VERSION}")
-  message("MPI f90 version is ${MPI_Fortran_HAVE_F90_MODULE}")
-  message("MPI f08 version is ${MPI_Fortran_HAVE_F08_MODULE}")
-
-  add_definitions(${MPI_Fortran_COMPILE_FLAGS})
-  include_directories(${MPI_Fortran_INCLUDE_DIRS} ${MPI_INCLUDE_PATH} "./" ${CMAKE_INCLUDE_OUTPUT_DIRECTORY})
-  link_directories(${MPI_Fortran_LIBRARIES} ${ARCHIVE_OUTPUT_PATH} )
-  if( ( NOT HOST-WCOSS_D ) AND ( NOT HOST-WCOSS_C ) AND ( NOT HOST-Gaea ) ) 
-    message(" trying to find lapack, ${host}")
-    find_package( LAPACK )
-  endif()
-
-  # default installation
-  get_filename_component (default_prefix ".." ABSOLUTE)
-# set (CMAKE_INSTALL_PREFIX ${default_prefix} CACHE STRING "set prefix"
-#       FORCE)
-
-
-  # FFLAGS depend on the compiler
-  get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
-  set(CFLAGS "-I. -DFortranByte=char -DFortranInt=int -DFortranLlong='long long' -O3  -Dfunder")
-  set (CMAKE_Fortran_INC_FLAGS "-I ./ -I ${CORE_INCS} -I ${NETCDF_INCLUDES} ")
-  set (CFLAGS_N "-I. -DFortranByte=char -DFortranInt=int -DFortranLlong='long long'  -O3  -Dfunder")
-
   if( USE_BASELIBS )
     set(FIND_HDF5 FALSE)
     set(FIND_HDF5_HL FALSE)
+    find_package(MPI REQUIRED)
     find_package(Baselibs REQUIRED)
     message(STATUS "Top level NETCDF_INCLUDES: ${NETCDF_INCLUDES}")
     message(STATUS "Top level NETCDF_LIBRARIES: ${NETCDF_LIBRARIES}")
   else()
+    if(FIND_HDF5_HL)
+      find_package(HDF5 COMPONENTS C HL Fortran_HL )
+    elseif(FIND_HDF5)
+      find_package(HDF5)
+    endif()
     find_package( NetCDF REQUIRED)
     if(NETCDF4)
       if(CMAKE_MAJOR_VERSION GREATER 2)
@@ -189,12 +170,21 @@ project(GSI)
       endif()
       find_package( CURL )
     endif()
+    find_package(MPI REQUIRED)
   endif()
 
-  if(FIND_HDF5_HL)
-    find_package(HDF5 COMPONENTS C HL Fortran_HL )
-  elseif(FIND_HDF5)
-    find_package(HDF5)
+  message("MPI version is ${MPI_Fortran_VERSION}")
+  message("MPI f90 version is ${MPI_Fortran_HAVE_F90_MODULE}")
+  message("MPI f08 version is ${MPI_Fortran_HAVE_F08_MODULE}")
+# set this after HDF5 so that MPI is not linked in automatically
+  add_definitions(${MPI_Fortran_COMPILE_FLAGS})
+  include_directories(${MPI_Fortran_INCLUDE_DIRS} ${MPI_INCLUDE_PATH} "./" ${CMAKE_INCLUDE_OUTPUT_DIRECTORY})
+  link_directories(${MPI_Fortran_LIBRARIES} ${ARCHIVE_OUTPUT_PATH} )
+
+
+  if( ( NOT HOST-WCOSS_D ) AND ( NOT HOST-WCOSS_C ) AND ( NOT HOST-Gaea ) ) 
+    message(" trying to find lapack, ${host}")
+    find_package( LAPACK )
   endif()
 
 # build the WRF I/O libraries
@@ -205,6 +195,13 @@ project(GSI)
     message("libsrc/wrflib not pulled from git, looking for WRF dependencies locally")
     find_package( WRF )
   endif()
+
+  # FFLAGS depend on the compiler
+  get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
+  set(CFLAGS "-I. -DFortranByte=char -DFortranInt=int -DFortranLlong='long long' -O3  -Dfunder")
+  set (CMAKE_Fortran_INC_FLAGS "-I ./ -I ${CORE_INCS} -I ${NETCDF_INCLUDES} ")
+  set (CFLAGS_N "-I. -DFortranByte=char -DFortranInt=int -DFortranLlong='long long'  -O3  -Dfunder")
+
 
   if(BUILD_CORELIBS )
     message("setting values for corelibs")
