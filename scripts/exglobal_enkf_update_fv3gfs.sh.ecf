@@ -158,6 +158,7 @@ else
       tar -xvf $fname
    done
 fi
+nfhrs=`echo $IAUFHRS_ENKF | sed 's/,/ /g'`
 for imem in $(seq 1 $NMEM_ENKF); do
    memchar="mem"$(printf %03i $imem)
    if [ $USE_CFP = "YES" ]; then
@@ -168,12 +169,17 @@ for imem in $(seq 1 $NMEM_ENKF); do
          tar -xvf $fname
       done
    fi
-   $NLN $COMIN_GES_ENS/$memchar/${GPREFIX}atmf006${ENKF_SUFFIX}${GSUFFIX}  sfg_${CDATE}_fhr06_${memchar}
-   $NLN $COMOUT_ANL_ENS/$memchar/${APREFIX}atmanl${ASUFFIX}               sanl_${CDATE}_fhr06_${memchar}
+   mkdir -p $COMOUT_ANL_ENS/$memchar
+   for FHR in $nfhrs; do 
+      $NLN $COMIN_GES_ENS/$memchar/${GPREFIX}atmf00${FHR}${ENKF_SUFFIX}${GSUFFIX}  sfg_${CDATE}_fhr0${FHR}_${memchar}
+      $NLN $COMOUT_ANL_ENS/$memchar/${APREFIX}atmanl00${FHR}${ASUFFIX}             sanl_${CDATE}_fhr0${FHR}_${memchar}
+   done
 done
 
 # Ensemble mean guess
-$NLN $COMIN_GES_ENS/${GPREFIX}atmf006.ensmean${GSUFFIX} sfg_${CDATE}_fhr06_ensmean
+for FHR in $nfhrs; do 
+   $NLN $COMIN_GES_ENS/${GPREFIX}atmf00${FHR}.ensmean${GSUFFIX} sfg_${CDATE}_fhr0${FHR}_ensmean
+done
 
 if [ $USE_CFP = "YES" ]; then
    chmod 755 $DATA/mp_untar.sh
@@ -196,18 +202,20 @@ cat > enkf.nml << EOFnml
    datestring="$CDATE",datapath="$DATA/",
    analpertwtnh=0.85,analpertwtsh=0.85,analpertwttr=0.85,
    covinflatemax=1.e2,covinflatemin=1,pseudo_rh=.true.,iassim_order=0,
-   corrlengthnh=2000,corrlengthsh=2000,corrlengthtr=2000,
-   lnsigcutoffnh=2.0,lnsigcutoffsh=2.0,lnsigcutofftr=2.0,
-   lnsigcutoffpsnh=2.0,lnsigcutoffpssh=2.0,lnsigcutoffpstr=2.0,
-   lnsigcutoffsatnh=2.0,lnsigcutoffsatsh=2.0,lnsigcutoffsattr=2.0,
+   corrlengthnh=1250,corrlengthsh=1250,corrlengthtr=1250,
+   lnsigcutoffnh=2.5,lnsigcutoffsh=2.5,lnsigcutofftr=2.5,
+   lnsigcutoffpsnh=2.5,lnsigcutoffpssh=2.5,lnsigcutoffpstr=2.5,
+   lnsigcutoffsatnh=2.5,lnsigcutoffsatsh=2.5,lnsigcutoffsattr=2.5,
    obtimelnh=1.e30,obtimelsh=1.e30,obtimeltr=1.e30,
    saterrfact=1.0,numiter=1,
    sprd_tol=1.e30,paoverpb_thresh=0.98,
    nlons=$LONA_ENKF,nlats=$LATA_ENKF,nlevs=$LEVS_ENKF,nanals=$NMEM_ENKF,
    deterministic=.true.,sortinc=.true.,lupd_satbiasc=.false.,
-   reducedgrid=.true.,readin_localization=.true.,
+   reducedgrid=.false.,readin_localization=.false.,
    use_gfs_nemsio=.true.,imp_physics=$imp_physics,lupp=$lupp,
    univaroz=.false.,adp_anglebc=.true.,angord=4,use_edges=.false.,emiss_bc=.true.,
+   letkf_flag=$letkf_flag,nobsl_max=10000,denkf=.true.,getkf=.true.,
+   nhr_anal=$IAUFHRS_ENKF,nhr_state=$IAUFHRS_ENKF,
    lobsdiag_forenkf=$lobsdiag_forenkf,
    write_spread_diag=$write_spread_diag,
    netcdf_diag=$netcdf_diag,
