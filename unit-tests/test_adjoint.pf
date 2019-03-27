@@ -75,97 +75,38 @@ contains
       integer(i_kind) :: mype
       character(len=12) :: clfile
       real(r_kind) :: zgg,zxy
-
+      real(r_kind) :: ozz(3)
 
       call gsimain_initialize
       
       call mpi_comm_rank(mpi_comm_world,mype,ierror)
-!     call gsimain_run(.true.,.false.)
-! Allocate grid arrays.
       call create_grid_vars
 
-! Get date, grid, and other information from model guess files
       call gesinfo(mype)
-!     call radinfo_read
-!     call ozinfo_read
-!     call coinfo_read
       call pcpinfo_read
-!     call aeroinfo_read
-!     if (aircraft_t_bc_pof .or. aircraft_t_bc .or. aircraft_t_bc_ext) &
-!          call aircraftinfo_read
-!     call convinfo_read
       call create_pcp_random(iadate,mype)
       call observer_init()
-!     call observer_run(init_pass=.true.,last_pass=.false.)
-! Check for alternative minimizations
       laltmin = lsqrtb.or.lbicg
 
-! Check GSI options against available number of guess time levels
       nfldsig = 1
       bkgv_flowdep = .true.
-!     if (nfldsig == 1) then
-!        if (bkgv_flowdep) then
-!           bkgv_flowdep = .false.
-!           if (mype==0) &
-!              write(6,*)'GLBSOI: ***WARNING*** reset bkgv_flowdep=',bkgv_flowdep,&
-!          ', because only ',nfldsig,' guess time level available'
-!        endif
-!     endif
-
 ! Set cost function
       call create_jfunc
 ! Read observations and scatter
       call observer_set
       call create_balance_vars
-!     if(anisotropic) then
-!       call create_anberror_vars(mype)
-!     else
-        call create_berror_vars
-!     end if
+      call create_berror_vars
      
       call prebal(fut2ps,cwcoveqqcov)
 
-!    Load background error arrays used by recursive filters
-!     if(anisotropic) then
-!       call anprewgt(mype)
-!     else
-        call prewgt(mype)
-!     end if
+      call prewgt(mype)
 ! Set error (variance) for predictors (only use guess)
       call set_predictors_var
 
-! Set errors and create variables for dynamical constraint
-!     if (ljcdfi) call init_jcdfi
 
-! Read output from previous min.
-!     if (l4dvar.and.jiterstart>1) then
-!        clfile='xhatsave.ZZZ'
-!        write(clfile(10:12),'(I3.3)') jiterstart-1
-!        call view_cv_ad(xhatsave,iadate,clfile,.not.lnested_loops)
-!        zgg=dot_product(xhatsave,xhatsave)
-!        if (mype==0) write(6,*)'Norm   xhatsave=',sqrt(zgg)
-!        if (.not.lsqrtb) then
-!           clfile='yhatsave.ZZZ'
-!           write(clfile(10:12),'(I3.3)') jiterstart-1
-!           call view_cv_ad(yhatsave,iadate,clfile,.not.lnested_loops)
-!           zgg=dot_product(yhatsave,yhatsave)
-!           zxy=dot_product(xhatsave,yhatsave)
-!           if (mype==0) then
-!               write(6,*)'Norm   yhatsave=',sqrt(zgg)
-!               write(6,*)'Norm x,yhatsave=',zxy
-!           endif
-!        endif
-!     endif
+      call adtest(ozz=ozz)
 
-!    Set up right hand side of analysis equation
-!     call setuprhsall(ndata,mype,.true.,.true.)
-!     call init_fc_sens
-!     Set up additional preconditioning information
-!     call pcinfo
-
-      call adtest
-
-      @assertEqual(1, 1)
+      @assertEqual(ozz(1), ozz(2))
 !     @assertEqual(3, ifilesfc(1))
 !     @assertEqual(2.0, hrdifsfc(1))
 

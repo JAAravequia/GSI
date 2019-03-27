@@ -48,7 +48,7 @@ logical :: ltestadj = .false.
 ! ----------------------------------------------------------------------
 contains
 ! ----------------------------------------------------------------------
-subroutine adtest(xhat)
+subroutine adtest(xhat,ozz)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    adtest
@@ -74,6 +74,7 @@ implicit none
 
 ! Declare passed variables
 type(control_vector), optional, intent(in   ) :: xhat
+real(r_kind), optional, intent(  out) :: ozz(3)
 
 ! Declare local variables  
 type(gsi_bundle) :: stest1(nsubwin),stest2(nsubwin)
@@ -167,7 +168,11 @@ call deallocate_preds(sbias2)
 ! ----------------------------------------------------------------------
 
 if (mype==0) write(6,*)'ADTEST finished'
-
+if(present(ozz)) then
+  ozz(1) = zz1
+  ozz(2) = zz2
+  ozz(3) = zz3
+endif
 return
 end subroutine adtest
 ! ----------------------------------------------------------------------

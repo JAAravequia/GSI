@@ -139,3 +139,5 @@ OBS_INPUT::
    obhourset=0.,
    
  /
+ &NST
+ /

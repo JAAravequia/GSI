@@ -1,82 +1,43 @@
-# This module defines
-#  CORE_INCS
-#    List of include file paths for all required modules for GSI
-#  CORE_LIBRARIES
-#    Full list of libraries required to link GSI executable
-include(findHelpers)
-if(DEFINED ENV{SP_VER})
-  set(SP_VER $ENV{SP_VER})
-  STRING(REGEX REPLACE "v" "" SP_VER ${SP_VER})
-endif()
-
-set( NO_DEFAULT_PATH )
-if(NOT BUILD_SP )
-  if(DEFINED ENV{SP_LIBd} )
+# This module looks for environment variables detailing where SP lib is
+# If variables are not set, SP will be built from external source 
+include(ExternalProject)
+if((NOT BUILD_SP ) AND (DEFINED ENV{SP_LIB4}))
     set(SP_LIBRARY $ENV{SP_LIBd} )
-    message("SP library ${SP_LIBRARY} set via Environment variable")
-  else()
-    find_library( SP_LIBRARY 
-    NAMES libsp_d.a libsp_i4r8.a libsp_v${SP_VER}_d.a
-    HINTS 
-      $ENV{COREPATH}/lib 
-      /usr/local/jcsda/nwprod_gdas_2014/lib	
-      ${COREPATH}/sp/v${SP_VER}
-      ${COREPATH}/sp/v${SP_VER}/intel
-      ${COREPATH}/sp/v${SP_VER}/ips/${COMPILER_VERSION}
-    PATH_SUFFIXES
-        lib
-     ${NO_DEFAULT_PATH})
-    set( sp "sp_v${SP_VER}_d")
-    message("Found SP library ${SP_LIBRARY}")
-  endif()
-  if(DEFINED ENV{SP_LIB4} )
     set(SP_4_LIBRARY $ENV{SP_LIB4} )
-    message("SP library ${SP_4_LIBRARY} set via Environment variable")
-  else()
-    find_library( SP_4_LIBRARY
-    NAMES libsp_4.a libsp_i4r4.a libsp_v${SP_VER}_4.a
-    HINTS 
-      $ENV{COREPATH}/lib 
-      /usr/local/jcsda/nwprod_gdas_2014/lib	
-      ${COREPATH}/sp/v${SP_VER}
-      ${COREPATH}/sp/v${SP_VER}/intel
-      ${COREPATH}/sp/v${SP_VER}/ips/${COMPILER_VERSION}
-    PATH_SUFFIXES
-        lib
-     ${NO_DEFAULT_PATH})
-    set( sp "sp_v${SP_VER}_4")
-    message("Found SP_4 library ${SP_4_LIBRARY}")
-  endif()
-endif()
-if( NOT SP_LIBRARY ) # didn't find the library, so build it from source
-    message("Could not find SP library, so building from libsrc")
-    if( NOT DEFINED ENV{SP_SRC} )
-        findSrc( "sp" SP_VER SP_DIR )
+    if( CORE_LIBRARIES )
+      list( APPEND CORE_LIBRARIES ${SP_LIBRARY} )
     else()
-      set( SP_DIR "$ENV{SP_SRC}/libsrc" CACHE STRING "SP Source Location")
+      set( CORE_LIBRARIES ${SP_LIBRARY} )
     endif()
-    set( libsuffix "_v${SP_VER}${debug_suffix}" )
-    set( SP_LIBRARY "${LIBRARY_OUTPUT_PATH}/libsp${libsuffix}.a" CACHE STRING "SP Library" )
-    set( SP_4_LIBRARY "${LIBRARY_OUTPUT_PATH}/libsp_4${libsuffix}.a" CACHE STRING "SP_4 Library" )
-    set( sp "sp${libsuffix}")
-    set( sp4 "sp_4${libsuffix}")
-    set( BUILD_SP "ON" CACHE INTERNAL "Build the SP library")
-    add_subdirectory(${CMAKE_SOURCE_DIR}/libsrc/sp)
-    set( SP_LIBRARY ${sp} )
-    set( SP_4_LIBRARY ${sp4} )
-    if( CORE_BUILT )
+else()
+  set(CMAKE_INSTALL_PREFIX ${PROJECT_BINARY_DIR})
+  ExternalProject_Add(NCEPLIBS-sp 
+    PREFIX ${PROJECT_BINARY_DIR}/NCEPLIBS-sp 
+    CMAKE_ARGS
+      -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+      -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+      -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+      -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
+    SOURCE_DIR ${PROJECT_SOURCE_DIR}/libsrc/sp 
+    INSTALL_DIR ${CMAKE_INSTALL_PREFIX}
+    BUILD_COMMAND make
+    INSTALL_COMMAND make install
+  )
+  execute_process(COMMAND grep "set(VERSION" CMakeLists.txt WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/libsrc/sp OUTPUT_VARIABLE LIBVERSION)
+  string(REPLACE "set(VERSION " "" LIBVERSION ${LIBVERSION})
+  string(REPLACE ")" "" LIBVERSION ${LIBVERSION})
+  string(REPLACE "\n" "" LIBVERSION ${LIBVERSION})
+  message("sp version is ${LIBVERSION}")
+  set( SP_LIBRARY ${PROJECT_BINARY_DIR}/lib/libsp_${LIBVERSION}_d.a )
+  set( SP_4_LIBRARY ${PROJECT_BINARY_DIR}/lib/libsp_${LIBVERSION}_4.a )
+  if( CORE_BUILT )
       list( APPEND CORE_BUILT ${SP_LIBRARY} )
-    else()
-      set( CORE_BUILT ${SP_LIBRARY} )
-    endif()
-else( NOT SP_LIBRARY )
-  if( CORE_LIBRARIES )
-    list( APPEND CORE_LIBRARIES ${SP_LIBRARY} )
+      list( APPEND EXT_BUILT NCEPLIBS-sp )
   else()
-    set( CORE_LIBRARIES ${SP_LIBRARY} )
+      set( CORE_BUILT ${SP_LIBRARY} )
+      set( EXT_BUILT NCEPLIBS-sp )
   endif()
-endif( NOT SP_LIBRARY )
-
+endif( )
 
 set( SP_LIBRARY_PATH ${SP_LIBRARY} CACHE STRING "SP Library Location" )
 set( SP_4_LIBRARY_PATH ${SP_4_LIBRARY} CACHE STRING "SP_4 Library Location" )

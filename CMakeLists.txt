@@ -115,11 +115,6 @@ project(GSI)
 # Set Host specific flags and options
   setHOST()
 
-  if(FIND_HDF5_HL)
-    find_package(HDF5 COMPONENTS C HL Fortran_HL )
-  elseif(FIND_HDF5)
-    find_package(HDF5)
-  endif()
 
   MESSAGE(${CMAKE_CURRENT_SOURCE_DIR})
   # make sure that the default is a RELEASE
@@ -142,6 +137,13 @@ project(GSI)
       exit()
     endif()
   endif()
+
+  if(BUILD_GSDCLOUD_ARW)
+    set(GSDCLOUDOPT "-DRR_CLOUDANALYSIS" CACHE INTERNAL "" )
+  else(BUILD_GSDCLOUD_ARW)
+    set( GSDCLOUDOPT "" CACHE INTERNAL "" )
+  endif(BUILD_GSDCLOUD_ARW)
+
   set(CMAKE_Fortran_FLAGS_RELEASE "")  
   if (CMAKE_CXX_COMPILER_ID MATCHES "GNU*")
     message("Setting GNU flags")
@@ -155,18 +157,19 @@ project(GSI)
   endif()
 
 
-  find_package(MPI REQUIRED)
-  message("MPI version is ${MPI_Fortran_VERSION}")
-  message("MPI f90 version is ${MPI_Fortran_HAVE_F90_MODULE}")
-  message("MPI f08 version is ${MPI_Fortran_HAVE_F08_MODULE}")
-
-  add_definitions(${MPI_Fortran_COMPILE_FLAGS})
-  include_directories(${MPI_Fortran_INCLUDE_DIRS} ${MPI_INCLUDE_PATH} "./" ${CMAKE_INCLUDE_OUTPUT_DIRECTORY})
-  link_directories(${MPI_Fortran_LIBRARIES} ${ARCHIVE_OUTPUT_PATH} )
-# if( (HOST-Discover) AND (NOT HOST-Generic))
   if( USE_BASELIBS )
+    set(FIND_HDF5 FALSE)
+    set(FIND_HDF5_HL FALSE)
+    find_package(MPI REQUIRED)
     find_package(Baselibs REQUIRED)
+    message(STATUS "Top level NETCDF_INCLUDES: ${NETCDF_INCLUDES}")
+    message(STATUS "Top level NETCDF_LIBRARIES: ${NETCDF_LIBRARIES}")
   else()
+    if(FIND_HDF5_HL)
+      find_package(HDF5 COMPONENTS C HL Fortran_HL )
+    elseif(FIND_HDF5)
+      find_package(HDF5)
+    endif()
     find_package( NetCDF REQUIRED)
     if(NETCDF4)
       if(CMAKE_MAJOR_VERSION GREATER 2)
@@ -174,11 +177,23 @@ project(GSI)
       endif()
       find_package( CURL )
     endif()
+    find_package(MPI REQUIRED)
   endif()
-  if(( NOT HOST-WCOSS_D ) AND ( NOT HOST-WCOSS_C ) AND ( NOT HOST-Gaea ) ) 
+
+  message("MPI version is ${MPI_Fortran_VERSION}")
+  message("MPI f90 version is ${MPI_Fortran_HAVE_F90_MODULE}")
+  message("MPI f08 version is ${MPI_Fortran_HAVE_F08_MODULE}")
+# set this after HDF5 so that MPI is not linked in automatically
+  add_definitions(${MPI_Fortran_COMPILE_FLAGS})
+  include_directories(${MPI_Fortran_INCLUDE_DIRS} ${MPI_INCLUDE_PATH} "./" ${CMAKE_INCLUDE_OUTPUT_DIRECTORY})
+  link_directories(${MPI_Fortran_LIBRARIES} ${ARCHIVE_OUTPUT_PATH} )
+
+
+  if( ( NOT HOST-WCOSS_D ) AND ( NOT HOST-WCOSS_C ) AND ( NOT HOST-Gaea ) ) 
     message(" trying to find lapack, ${host}")
     find_package( LAPACK )
   endif()
+
 # build the WRF I/O libraries
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/libsrc/wrflib)
     add_subdirectory(libsrc/wrflib)
@@ -187,12 +202,6 @@ project(GSI)
     message("libsrc/wrflib not pulled from git, looking for WRF dependencies locally")
     find_package( WRF )
   endif()
-
-  # default installation
-  get_filename_component (default_prefix ".." ABSOLUTE)
-# set (CMAKE_INSTALL_PREFIX ${default_prefix} CACHE STRING "set prefix"
-#       FORCE)
-
 
   # FFLAGS depend on the compiler
   get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
@@ -228,16 +237,6 @@ project(GSI)
     add_subdirectory(src/ncdiag)
     set(NCDIAG_LIBRARIES ncdiag )
   endif(BUILD_NCDIAG)
-
-  find_package( BACIO )
-  find_package( BUFR )
-  find_package( SIGIO )
-  find_package( NEMSIO )
-  find_package( CRTM )
-  find_package( SP )
-  find_package( SFCIO )
-  find_package( W3EMC )
-  find_package( W3NCO )
 
   if(BUILD_GSDCLOUD_ARW)
     set(GSDCLOUD_DIR "${CMAKE_SOURCE_DIR}/libsrc/GSD/gsdcloud")
@@ -276,6 +275,19 @@ project(GSI)
     set(CTEST_TEST_TIMEOUT 400 )
     find_package(GSICONTROL)
     include( CTest )
+    set(CMAKE_INSTALL_PREFIX ${PROJECT_BINARY_DIR})
+    ExternalProject_Add(PFUNIT
+      PREFIX ${PROJECT_BINARY_DIR}/PFUNIT
+      CMAKE_ARGS
+        -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+        -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+        -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
+      URL https://github.com/Goddard-Fortran-Ecosystem/pFUnit/archive/3.2.9.tar.gz
+      INSTALL_DIR ${CMAKE_INSTALL_PREFIX}
+      BUILD_COMMAND make
+      INSTALL_COMMAND make install
+    )
     add_subdirectory(unit-tests)
   endif(BUILD_UNIT_TESTING)
   if(BUILD_REG_TESTING)

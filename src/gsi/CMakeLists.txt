@@ -44,6 +44,7 @@ cmake_minimum_required(VERSION 2.8)
    "${CMAKE_CURRENT_SOURCE_DIR}/setupaod.f90" 
    "${CMAKE_CURRENT_SOURCE_DIR}/setuprad.f90" 
    "${CMAKE_CURRENT_SOURCE_DIR}/general_read_nmmb.f90" 
+   "${CMAKE_CURRENT_SOURCE_DIR}/general_read_nmmb_radar.f90" 
    "${CMAKE_CURRENT_SOURCE_DIR}/get_nmmb_ensperts.f90" 
    "${CMAKE_CURRENT_SOURCE_DIR}/gsimod.F90" 
    "${CMAKE_CURRENT_SOURCE_DIR}/gsimain.f90")
@@ -87,7 +88,7 @@ cmake_minimum_required(VERSION 2.8)
   set(GSISHAREDLIB "gsilib_shrd${debug_suffix}" CACHE INTERNAL "")
   add_library(${GSISHAREDLIB} STATIC ${GSI_SRC} )
   set_target_properties(${GSISHAREDLIB} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
-  target_include_directories(${GSISHAREDLIB} PUBLIC "${PROJECT_BINARY_DIR}/include")
+  target_include_directories(${GSISHAREDLIB} PUBLIC ${W3EMCINC} ${PROJECT_BINARY_DIR}/include ${PROJECT_BINARY_DIR}/include_4)
   if( BUILD_NCDIAG )
       add_dependencies(${GSISHAREDLIB} ${NCDIAG_LIBRARIES} )
   endif( BUILD_NCDIAG )
@@ -124,8 +125,8 @@ cmake_minimum_required(VERSION 2.8)
     add_library(${GSILIB} STATIC ${GLOBAL_SRC} )
     target_link_libraries( ${GSISHAREDLIB} ${GSILIB} ${CORE_LIBRARIES})
     target_link_libraries( ${GSILIB} ${CORE_LIBRARIES})
-    set_target_properties(gsilib_global PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
-    target_include_directories(gsilib_global PUBLIC "${PROJECT_BINARY_DIR}/include")
+    set_target_properties(${GSILIB} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
+    target_include_directories(${GSILIB} PUBLIC ${PROJECT_BINARY_DIR}/include ${PROJECT_BINARY_DIR}/include_4)
     add_dependencies(${GSILIB} ${GSISHAREDLIB} )
     set_target_properties(${GSIEXEC} PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
   endif()
@@ -134,17 +135,19 @@ cmake_minimum_required(VERSION 2.8)
 
 # Add dependencies if we are building the core libs or are just using pre-built libs 
   if(CORE_BUILT)
-    add_dependencies(${GSILIB} ${GSISHAREDLIB} ${CORE_BUILT} )
-    add_dependencies(${GSISHAREDLIB} ${bacio} ${CORE_BUILT} )
-    add_dependencies(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${CORE_BUILT} )
+    message("EXT built is ${EXT_BUILT}")
+    message("CORE_BUILT are ${CORE_BUILT}")
+    add_dependencies(${GSILIB} ${GSISHAREDLIB} ${EXT_BUILT} )
+    add_dependencies(${GSISHAREDLIB} ${EXT_BUILT} )
+    add_dependencies(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${EXT_BUILT} )
   else()
     add_dependencies(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} )
   endif()
 # Specify all the libraries to be linked into the executable
   target_link_libraries(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${GSISHAREDLIB} ${WRF_LIBRARIES} 
          ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES} 
-         ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${CORE_LIBRARIES} ${CORE_BUILT}
-         ${GSI_LDFLAGS} ${NCDIAG_LIBRARIES} ${ZLIB_LIBRARIES} ${wrflib} ${EXTRA_LINKER_FLAGS} )
+         ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${CORE_LIBRARIES} ${CORE_BUILT} ${CORE_LIBRARIES}
+         ${GSI_LDFLAGS} ${NCDIAG_LIBRARIES} ${bacio} ${ZLIB_LIBRARIES} ${wrflib} ${EXTRA_LINKER_FLAGS} )
   install(TARGETS ${GSIEXEC}
         RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
         LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib

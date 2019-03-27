@@ -1,0 +1,19 @@
+#%Module######################################################################
+proc ModulesHelp { } {
+    puts stderr "Set environment veriables for GSI"
+    puts stderr "This module initializes the environment "
+    puts stderr "for building and testing GSI on NCCS Discover-opa\n"
+}
+module-whatis "Initialize GSI build/test environment"
+
+module use /gpfsm/dnb31/mapotts1/spack/share/spack/modules/linux-sles12-x86_64 
+
+module load comp/intel/18.0.5.274
+module load mpi/impi/18.0.5.274
+module load cmake
+module load netcdf
+module load netcdf-fortran
+module load hdf5
+module load zlib
+
+setenv BASEDIR /discover/swdev/mathomp4/Baselibs/ESMA-Baselibs-5.2.2-SLES12/x86_64-unknown-linux-gnu/ifort_18.0.5.274-intelmpi_18.0.5.274/Linux
