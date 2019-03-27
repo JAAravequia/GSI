@@ -220,7 +220,8 @@
   use radinfo, only: nuchan,tlapmean,predx,cbias,ermax_rad,tzr_qc,&
       npred,jpch_rad,varch,varch_cld,iuse_rad,icld_det,nusis,fbias,retrieval,b_rad,pg_rad,&
       air_rad,ang_rad,adp_anglebc,angord,ssmis_precond,emiss_bc,upd_pred, &
-      passive_bc,ostats,rstats,newpc4pred,radjacnames,radjacindxs,nsigradjac,nvarjac
+      passive_bc,ostats,rstats,newpc4pred,radjacnames,radjacindxs,nsigradjac,nvarjac, &
+      varch_sea,varch_land,varch_ice,varch_snow,varch_mixed
   use gsi_nstcouplermod, only: nstinfo
   use read_diag, only: get_radiag,ireal_radiag,ipchan_radiag
   use guess_grids, only: sfcmod_gfs,sfcmod_mm5,comp_fact10
@@ -355,7 +356,6 @@
   real(r_kind) :: ptau5deriv, ptau5derivmax
   real(r_kind) :: clw_guess,clw_guess_retrieval
 ! real(r_kind) :: predchan6_save   
-
   integer(i_kind),dimension(nchanl):: ich,id_qc,ich_diag
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
@@ -1071,7 +1071,27 @@
              endif
            endif
         end if ! radmod%lcloud_fwd .and. radmod%ex_biascor
-        
+        if(sea.and.(varch_sea(ich(1))>zero)) then
+           do i=1,nchanl
+              tnoise(i)=varch_sea(ich(i))
+           enddo
+        else if(land.and.(varch_land(ich(1))>zero)) then
+           do i=1,nchanl
+              tnoise(i)=varch_land(ich(i))
+           enddo
+        else if(ice.and.(varch_ice(ich(1))>zero)) then
+           do i=1,nchanl
+              tnoise(i)=varch_ice(ich(i))
+           enddo
+        else if(snow.and.(varch_snow(ich(1))>zero)) then
+           do i=1,nchanl
+              tnoise(i)=varch_snow(ich(i))
+           enddo
+        else if(mixed.and.(varch_mixed(ich(1))>zero)) then
+           do i=1,nchanl
+              tnoise(i)=varch_mixed(ich(i))
+           enddo
+        endif        
         do i=1,nchanl
            error0(i) = tnoise(i) 
            errf0(i) = error0(i)

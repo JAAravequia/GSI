@@ -309,7 +309,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
   integer(i_kind) ier,istatus
   integer(i_kind),dimension(nsig) :: i1n,i2n,i3n,i4n
   real(r_kind),allocatable,dimension(:):: val
-  real(r_kind) w1,w2,w3,w4
+  real(r_kind) w1,w2,w3,w4,Aval
   real(r_kind),dimension(nsigradjac):: tval,tdir
   real(r_kind) cg_rad,p0,wnotgross,wgross
   type(radNode), pointer :: radptr
@@ -487,9 +487,11 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
               do mm=1,radptr%nchan
                  ic1=radptr%icx(mm)
                  ix1=(ic1-1)*npred
+                 Aval=zero
                  do n=1,npred
-                    val(nn)=val(nn)+radptr%rsqrtinv(mm,nn)*spred(ix1+n)*radptr%pred(n,mm)
+                    Aval=Aval+spred(ix1+n)*radptr%pred(n,mm)
                  enddo
+                 val(nn)=val(nn)+Aval*radptr%rsqrtinv(mm,nn)
               enddo
            else
               do n=1,npred
@@ -533,8 +535,9 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
                     do mm=1,radptr%nchan
                        ic1=radptr%icx(mm)
                        ix1=(ic1-1)*npred
+                       Aval=radptr%rsqrtinv(mm,nn)*val(nn)
                        do n=1,npred
-                          rpred(ix1+n)=rpred(ix1+n)+radptr%rsqrtinv(mm,nn)*radptr%pred(n,mm)*val(nn)
+                          rpred(ix1+n)=rpred(ix1+n)+Aval*radptr%pred(n,mm)
                        enddo
                     enddo
                  else

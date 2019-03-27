@@ -343,6 +343,10 @@ if [ ! -d $DATA ]; then
    mkdata=YES
    mkdir -p $DATA
 fi
+if ls ${FIXgsi}/Rcov* 1> /dev/null 2>&1;
+then
+   $NCP ${FIXgsi}/Rcov* $DATA
+fi
 cd $DATA || exit 99
 
 ################################################################################

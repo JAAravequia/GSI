@@ -216,7 +216,7 @@ case $regtest in
 
     ;;
 
-    global_fv3_4denvar_T126)
+    global_fv3_4denvar_T126|corr_obs)
 
         if [[ "$machine" = "Theia" ]]; then
            topts[1]="0:35:00" ; popts[1]="6/8/" ; ropts[1]="/1"
