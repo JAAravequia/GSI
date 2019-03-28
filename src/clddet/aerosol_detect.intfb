@@ -1,0 +1,14 @@
+INTERFACE
+SUBROUTINE Aerosol_Detect (&
+& K__SENSOR,     &
+& K__NCHANS,     &
+& K__CHANID,     &
+& P__OBSBTs,     &
+& K__AerosolPresent)
+INTEGER,INTENT(IN)    :: K__SENSOR ! sensor
+INTEGER,INTENT(IN)    :: K__NCHANS ! no. of channels
+INTEGER,INTENT(IN)    :: K__CHANID(:)     ! Channel IDs
+REAL,   INTENT(IN)    :: P__OBSBTS(:)     ! Observed radiances
+INTEGER, INTENT(OUT)  :: K__AerosolPresent
+END SUBROUTINE Aerosol_Detect
+END INTERFACE

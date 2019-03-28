@@ -1,0 +1,84 @@
+# Define directories containing source
+SHELL = /bin/sh
+
+## Settings on CRAY at ECMWF
+#FC = ftn
+
+# gfortran-specific settings on a linux workstation at ECMWF
+FC = gfortran
+CFLAGS = -g
+
+## pgf90-specific settings on a linux workstation at ECMWF
+#FC = pgf90
+#CFLAGS = -g -Mbounds
+
+# Allowed SUFFIXES:
+.SUFFIXES :
+.SUFFIXES :  .F90 .o .mod
+
+SOURCE = cloud_detect_wrapper.F90
+
+OBJS  = yomiasi.o \
+        yomaero.o \
+	abor1.o \
+	aerosol_detect.o \
+        aerosol_detect_setup.o \
+	cf_digital.o \
+	cloud_detect.o \
+	cloud_detect_setup.o \
+	cloud_detect_wrapper.o \
+	heapsort.o \
+	imager_cloud_detect.o \
+	movinga.o
+
+MODULES = yomiasi.o \
+          yomaero.o
+
+# Object dependencies:
+
+../Cloud_Detect : $(OBJS) $(MODULES)
+	$(FC) -o ..//Cloud_Detect $(OBJS)
+
+abor1.o : abor1.F90
+	$(FC) -c $(CFLAGS) $(INCFLAG) abor1.F90
+
+aerosol_detect.o : yomiasi.o yomaero.o aerosol_detect.F90
+	$(FC) -c $(CFLAGS) $(INCFLAG) aerosol_detect.F90
+
+aerosol_detect_setup.o : yomiasi.o yomaero.o aerosol_detect_setup.F90
+	$(FC) -c $(CFLAGS) $(INCFLAG) aerosol_detect_setup.F90
+
+cf_digital.o : yomiasi.o cf_digital.F90
+	$(FC) -c $(CFLAGS) $(INCFLAG) cf_digital.F90
+
+cloud_detect.o : yomiasi.o cloud_detect.F90
+	$(FC) -c $(CFLAGS) $(INCFLAG) cloud_detect.F90
+
+cloud_detect_setup.o : yomiasi.o cloud_detect_setup.F90
+	$(FC) -c $(CFLAGS) $(INCFLAG) cloud_detect_setup.F90
+
+cloud_detect_wrapper.o : cloud_detect_wrapper.F90
+	$(FC) -c $(CFLAGS) $(INCFLAG) cloud_detect_wrapper.F90
+
+heapsort.o : heapsort.F90
+	$(FC) -c $(CFLAGS) $(INCFLAG) heapsort.F90
+
+imager_cloud_detect.o : yomiasi.o imager_cloud_detect.F90
+	$(FC) -c $(CFLAGS) $(INCFLAG) imager_cloud_detect.F90
+
+movinga.o : movinga.F90
+	$(FC) -c $(CFLAGS) $(INCFLAG) movinga.F90
+
+yomaero.o : yomiasi.o yomaero.F90
+	$(FC) -c $(CFLAGS) $(INCFLAG) yomaero.F90
+
+yomiasi.o : yomiasi.F90
+	$(FC) -c $(CFLAGS) $(INCFLAG) yomiasi.F90
+
+
+#
+
+clean :
+	rm -f ${OBJS} *.mod *~
+clobber :
+	rm -f  ${OBJS} *.mod *~ ../Cloud_Detect
