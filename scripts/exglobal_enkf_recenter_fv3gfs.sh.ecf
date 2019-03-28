@@ -135,7 +135,7 @@ $NLN $COMIN_ENS/${APREFIX_ENKF}atmanl00${FHR}.ensmean$ASUFFIX ./atmanl_ensmean
 
 # Compute ensemble mean analysis
 DATAPATH="./"
-ATMANLNAME="atmanl00${FHR}"
+ATMANLNAME="atmanl"
 ATMANLMEANNAME="atmanl_ensmean"
 
 export OMP_NUM_THREADS=$NTHREADS_ECEN
