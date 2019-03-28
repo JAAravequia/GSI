@@ -44,6 +44,8 @@ subroutine readpairs(npe,mype,numcases)
 
   real(r_kind),dimension(nlon,nlat-2):: grid1,grid2
   real(r_kind),dimension(nlonin,nlatin-2):: grid1in,grid2in
+  real(r_kind),dimension(nlonin,nlatin-2):: tmpgridin
+
   real(r_kind),dimension(iglobal,nsig1o):: work1,work2
 !  real(r_kind),dimension(nlat,nlon):: wk1, wk2
 
@@ -167,6 +169,15 @@ subroutine readpairs(npe,mype,numcases)
            grid1in = reshape(nems_wk(:),(/nlonin,nlatin-2/))
            call nemsio_readrecv(gfile2,'clwmr','mid layer',lev=k,data=nems_wk(:),iret=iret)
            grid2in = reshape(nems_wk(:),(/nlonin,nlatin-2/))
+           call nemsio_readrecv(gfile1,'icmr','mid layer',lev=k,data=nems_wk(:),iret=iret)
+           if ( iret == 0 ) then
+              tmpgridin = reshape(nems_wk(:),(/nlonin,nlatin-2/))
+              grid1in = grid1in + tmpgridin
+
+              call nemsio_readrecv(gfile2,'icmr','mid layer',lev=k,data=nems_wk(:),iret=iret)
+              tmpgridin = reshape(nems_wk(:),(/nlonin,nlatin-2/))
+              grid2in = grid2in + tmpgridin
+           endif
            call sptez_sin(z4all (:,5*nsig+k),grid1in,-1)
            call sptez_sin(z4all2(:,5*nsig+k),grid2in,-1)
         end if
