@@ -94,7 +94,6 @@ contains
       real(r_kind),dimension(:,:),allocatable :: gg_ps
       real(r_kind),dimension(:,:,:),allocatable:: g_u,g_v,g_tv,g_rh,g_cwmr,g_oz
       real(r_kind),dimension(:,:),allocatable:: g_ps
-      write(0,*) 'top of get_wrf_mass_ensperts_wrf'
 
       call gsi_gridcreate(grid_ens,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)
       call gsi_bundlecreate(en_bar,grid_ens,'ensemble',istatus,names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
@@ -167,7 +166,9 @@ contains
   !
   ! If we're doing ens_fast_read, then this loop reads data.
       ens_parallel_read: if(do_ens_fast_read) then
-         write(0,*) 'Will use ens_fast_read to read ARW ensemble.'
+         if(mype==0) then
+            write(0,*) 'Will use ens_fast_read to read ARW ensemble.'
+         endif
          ens_read_loop: do n=1,n_ens
             read(10,'(a)',err=20,end=20)filename
             filename=trim(ensemble_path) // trim(filename)
@@ -220,9 +221,6 @@ contains
              endif scatter_or_read
 
              call MPI_Barrier(mpi_comm_world,ierror)
-             if(mype==0) then
-                write(6,'(I0,A)') mype,': calculate ensemble means'
-             endif
   
   ! SAVE ENSEMBLE MEMBER DATA IN COLUMN VECTOR
             member_data_loop: do ic3=1,nc3d
@@ -489,13 +487,11 @@ contains
 
      enddo ! it 4d loop
   !
-     write(0,*) 'after it 4d loop'
      call gsi_bundledestroy(en_bar,istatus)
      if(istatus/=0) then
         write(6,*)' in get_wrf_mass_ensperts_netcdf: trouble destroying en_bar bundle'
                call stop2(999)
             endif
-     write(0,*) 'after gsi_bundledestroy'  
 
      if(allocated(gg_u)) deallocate(gg_u)
      if(allocated(gg_v)) deallocate(gg_v)
@@ -963,10 +959,6 @@ contains
   ! Declare local variables
       real(r_kind),allocatable,dimension(:):: wrk_send_2d
       integer :: k
-10 format(I0,': scatter ',A)
-      if(mype==iope) then
-         write(6,10) iope,trim(filename)
-      endif
 
   ! transfer data from root to subdomains on each task
   ! scatterv used, since full grids exist only on root task.
@@ -1098,7 +1090,6 @@ contains
   !
   ! OPEN ENSEMBLE MEMBER DATA FILE
     if (mype==0) then ! only read data on root proc
-      write(6,*) 'mype=0 general_read_wrf_mass2'
       allocate(gg_u(grd_ens%nlat,grd_ens%nlon,grd_ens%nsig))
       allocate(gg_v(grd_ens%nlat,grd_ens%nlon,grd_ens%nsig))
       allocate(gg_tv(grd_ens%nlat,grd_ens%nlon,grd_ens%nsig))
