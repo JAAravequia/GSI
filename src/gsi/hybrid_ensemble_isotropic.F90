@@ -1360,6 +1360,7 @@ end subroutine normal_new_factorization_rf_y
        end if
 
     end if
+write(0,*) 'bottom of load_ensemble'
     return
 
   end subroutine load_ensemble
