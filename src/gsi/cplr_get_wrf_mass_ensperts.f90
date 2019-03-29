@@ -77,8 +77,6 @@ contains
       type(gsi_grid):: grid_ens
       real(r_kind):: bar_norm,sig_norm,kapr,kap1
 
-      real(r_kind), parameter :: FILLVAL=-999_r_kind
-  
       integer(i_kind):: i,j,k,n,mm1,istatus
       integer(i_kind):: ic2,ic3,i_radar_qr,i_radar_qg
       integer(i_kind):: its,ite, it
@@ -180,37 +178,8 @@ contains
                allocate(gg_tv(grd_ens%nlat,grd_ens%nlon,grd_ens%nsig))
                allocate(gg_rh(grd_ens%nlat,grd_ens%nlon,grd_ens%nsig))
                allocate(gg_ps(grd_ens%nlat,grd_ens%nlon))
-               gg_u=FILLVAL
-               gg_v=FILLVAL
-               gg_tv=FILLVAL
-               gg_rh=FILLVAL
-               gg_ps=FILLVAL
                bad_input=.false.
                call this%parallel_read_wrf_mass_step1(filename,gg_ps,gg_tv,gg_u,gg_v,gg_rh)
-               if(any(gg_ps==FILLVAL)) then
-                  write(0,'(I0,A)') mype,': error: PS not initialized'
-                  bad_input=.true.
-               endif
-               if(any(gg_u==FILLVAL)) then
-                  write(0,'(I0,A)') mype,': error: U not initialized'
-                  bad_input=.true.
-               endif
-               if(any(gg_v==FILLVAL)) then
-                  write(0,'(I0,A)') mype,': error: V not initialized'
-                  bad_input=.true.
-               endif
-               if(any(gg_tv==FILLVAL)) then
-                  write(0,'(I0,A)') mype,': error: Tv not initialized'
-                  bad_input=.true.
-               endif
-               if(any(gg_rh==FILLVAL)) then
-                  write(0,'(I0,A)') mype,': error: RH not initialized'
-                  bad_input=.true.
-               endif
-               if(bad_input) then
-                  write(0,'(I0,A)') mype,': Abort.  Data not initialized by read'
-                  call MPI_Abort(mpi_comm_world,3,ierror)
-               endif
             endif
          end do ens_read_loop
          
