@@ -47,7 +47,7 @@ program statsmain
       smoothdeg,init_defaults,create_grids,destroy_grids,&
       destroy_variables,rearth,rlats,wgtlats,mype,npe,&
       create_mapping,destroy_mapping,biasrm,destroy_biasrm,&
-      vertavg,use_gfs_nemsio
+      vertavg,use_gfs_nemsio,scaling
   use specgrid, only: jcap,jcapin,jcapsmooth,init_spec_vars,&
                       destroy_spec_vars,destroy_spec_varsin
   use postmod, only: writefiles
@@ -72,9 +72,11 @@ program statsmain
 !   hybrid    - logical for hybrid vertical coordinate
 !   smoothdeg - degree of horizontal smoothing to apply in latitudinal direction
 !   use_gfs_nemsio - if T, NEMS I/O file format is used
+!   scaling   - if T, read in scaling.txt and apply to variances
 
   namelist/namstat/jcap,jcapin,jcapsmooth,nsig,nlat,nlon,maxcases, &
-                   hybrid,smoothdeg,biasrm,vertavg,use_gfs_nemsio
+                   hybrid,smoothdeg,biasrm,vertavg,use_gfs_nemsio, &
+                   scaling
 
 ! MPI initial setup
   call mpi_init(ierror)

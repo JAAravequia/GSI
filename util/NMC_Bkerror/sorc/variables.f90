@@ -53,6 +53,8 @@ module variables
 ! variances
   real(r_kind),allocatable,dimension(:,:):: sfvar,vpvar,tvar,qvar,ozvar,cvar,nrhvar
   real(r_kind),allocatable,dimension(:):: psvar
+  real(r_kind),allocatable,dimension(:):: varscale
+  logical scaling
 
 ! horizontal length scales
   real(r_kind),allocatable,dimension(:,:):: sfhln,vphln,thln,qhln,ozhln,chln
@@ -155,6 +157,7 @@ contains
     dimbig=5000
     noq=5
     use_gfs_nemsio=.false.
+    scaling=.false.
 
   end subroutine init_defaults
 
@@ -254,6 +257,7 @@ contains
     if (.not. use_gfs_nemsio) deallocate(cp5)
     deallocate(coef)
     deallocate(coriolis)
+    if (scaling) deallocate(varscale)
 
     return
   end subroutine destroy_variables
