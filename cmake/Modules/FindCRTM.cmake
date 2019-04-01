@@ -15,37 +15,12 @@ if(NOT BUILD_CRTM )
     set(CRTM_LIBRARY $ENV{CRTM_LIB} )
     set(CRTMINC $ENV{CRTM_INC} )
     message("CRTM library ${CRTM_LIBRARY} set via Environment variable")
-  else()
-    findInc( crtm CRTM_VER CRTMINC )
-    find_library( CRTM_LIBRARY 
-    NAMES libcrtm_v${CRTM_VER}.a libcrtm.a libCRTM.a 
-    HINTS 
-      /usr/local/jcsda/nwprod_gdas_2014/lib	
-      ${CRTM_BASE}
-      ${CRTM_BASE}/lib
-      ${CRTM_BASE}/${CRTM_VER}
-      ${CRTM_BASE}/${CRTM_VER}/lib
-      ${CRTM_BASE}/v${CRTM_VER}/intel
-      ${CRTM_BASE}/v${CRTM_VER}/ips/${COMPILER_VERSION}
-      ${COREPATH}/v${CRTM_VER}/ips/${COMPILER_VERSION}
-      ${COREPATH}
-      ${COREPATH}/lib
-      $ENV{COREPATH} 
-      $ENV{COREPATH}/lib 
-      $ENV{COREPATH}/include 
-      ${CORECRTM}/crtm/${CRTM_VER}
-      /nwprod2/lib/crtm/v${CRTM_VER}
-    PATH_SUFFIXES
-        lib
-     ${NO_DEFAULT_PATH})
-    set( crtm "crtm_v${CRTM_VER}")
-    message("Found CRTM library ${CRTM_LIBRARY}")
   endif()
 endif()
 if( NOT CRTM_LIBRARY ) # didn't find the library, so build it from source
     message("Could not find CRTM library, so building from libsrc")
     if( NOT DEFINED ENV{CRTM_SRC} )
-        findSrc( "crtm" CRTM_VER CRTM_DIR )
+        findSrc( "crtm" CRTM_DIR )
         set(CRTMINC  "${CMAKE_BINARY_DIR}/include")
     else()
       set( CRTM_DIR "$ENV{CRTM_SRC}/libsrc" CACHE STRING "CRTM Source Location")

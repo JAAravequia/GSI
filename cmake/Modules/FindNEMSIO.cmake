@@ -7,6 +7,8 @@ include(findHelpers)
 if(DEFINED ENV{NEMSIO_VER})
   set(NEMSIO_VER $ENV{NEMSIO_VER})
   STRING(REGEX REPLACE "v" "" NEMSIO_VER ${NEMSIO_VER})
+else()
+  set(NEMSIO_VER "")
 endif()
 
 set( NO_DEFAULT_PATH )
@@ -15,22 +17,6 @@ if(NOT BUILD_NEMSIO )
     set(NEMSIO_LIBRARY $ENV{NEMSIO_LIB} )
     set(NEMSIOINC $ENV{NEMSIO_INC} )
     message("NEMSIO library ${NEMSIO_LIBRARY} set via Environment variable")
-  else()
-    findInc( nemsio NEMSIO_VER NEMSIOINC )
-    find_library( NEMSIO_LIBRARY 
-    NAMES libnemsio_v${NEMSIO_VER}.a libnemsio.a libNEMSIO.a 
-    HINTS 
-      $ENV{COREPATH}/lib 
-      /usr/local/jcsda/nwprod_gdas_2014/lib	
-      ${COREPATH}/nemsio/v${NEMSIO_VER}
-      ${COREPATH}/nemsio/v${NEMSIO_VER}/intel
-      ${COREPATH}/nemsio/v${NEMSIO_VER}//ips/${COMPILER_VERSION}/impi/${COMPILER_VERSION}
-      ${COREPATH}/nemsio/v${NEMSIO_VER}//ips/${COMPILER_VERSION}/smpi/${COMPILER_VERSION}
-    PATH_SUFFIXES
-        lib
-     ${NO_DEFAULT_PATH})
-    set( nemsio "nemsio_v${NEMSIO_VER}")
-    message("Found NEMSIO library ${NEMSIO_LIBRARY}")
   endif()
 endif()
 if( NOT NEMSIO_LIBRARY ) # didn't find the library, so build it from source

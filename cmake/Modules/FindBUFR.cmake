@@ -7,6 +7,8 @@ include(findHelpers)
 if(DEFINED ENV{BUFR_VER})
   set(BUFR_VER $ENV{BUFR_VER})
   STRING(REGEX REPLACE "v" "" BUFR_VER ${BUFR_VER})
+else()
+  set(BUFR_VER "")
 endif()
 
 set( NO_DEFAULT_PATH )

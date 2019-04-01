@@ -7,6 +7,8 @@ include(findHelpers)
 if(DEFINED ENV{W3NCO_VER})
   set(W3NCO_VER $ENV{W3NCO_VER})
   STRING(REGEX REPLACE "v" "" W3NCO_VER ${W3NCO_VER})
+else()
+  set(W3NCO_VER "")
 endif()
 
 set( NO_DEFAULT_PATH )

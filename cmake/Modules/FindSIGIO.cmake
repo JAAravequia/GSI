@@ -7,6 +7,8 @@ include(findHelpers)
 if(DEFINED ENV{SIGIO_VER})
   set(SIGIO_VER $ENV{SIGIO_VER})
   STRING(REGEX REPLACE "v" "" SIGIO_VER ${SIGIO_VER})
+else()
+  set(SIGIO_VER "")
 endif()
 
 set( NO_DEFAULT_PATH )
@@ -15,21 +17,6 @@ if(NOT BUILD_SIGIO )
     set(SIGIO_LIBRARY $ENV{SIGIO_LIB4} )
     set(SIGIOINC $ENV{SIGIO_INC4} )
     message("SIGIO library ${SIGIO_LIBRARY} set via Environment variable")
-  else()
-    findInc( sigio SIGIO_VER SIGIOINC )
-    find_library( SIGIO_LIBRARY 
-    NAMES libsigio.a libsigio_4.a libsigio_i4r4.a libsigio_v${SIGIO_VER}_4.a
-    HINTS 
-     $ENV{COREPATH}/lib 
-     /usr/local/jcsda/nwprod_gdas_2014/lib	
-     ${COREPATH}/sigio/v${SIGIO_VER}
-     ${COREPATH}/sigio/v${SIGIO_VER}/intel
-     ${COREPATH}/sigio/v${SIGIO_VER}/ips/${COMPILER_VERSION}
-    PATH_SUFFIXES
-        lib
-     ${NO_DEFAULT_PATH})
-    set( sigio "sigio_v${SIGIO_VER}")
-    message("Found SIGIO library ${SIGIO_LIBRARY}")
   endif()
 endif()
 if( NOT SIGIO_LIBRARY ) # didn't find the library, so build it from source

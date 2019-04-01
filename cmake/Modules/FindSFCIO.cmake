@@ -7,6 +7,8 @@ include(findHelpers)
 if(DEFINED ENV{SFCIO_VER})
   set(SFCIO_VER $ENV{SFCIO_VER})
   STRING(REGEX REPLACE "v" "" SFCIO_VER ${SFCIO_VER})
+else()
+  set(SFCIO_VER "")
 endif()
 
 set( NO_DEFAULT_PATH )
@@ -15,21 +17,6 @@ if(NOT BUILD_SFCIO )
     set(SFCIO_LIBRARY $ENV{SFCIO_LIB4} )
     set(SFCIOINC $ENV{SFCIO_INC4} )
     message("SFCIO library ${SFCIO_LIBRARY} set via Environment variable")
-  else()
-    findInc( sfcio SFCIO_VER SFCIOINC )
-    find_library( SFCIO_LIBRARY 
-    NAMES libsfcio.a libsfcio_4.a libsfcio_i4r4.a libsfcio_v${SFCIO_VER}_4.a
-    HINTS 
-      $ENV{COREPATH}/lib 
-      /usr/local/jcsda/nwprod_gdas_2014/lib	
-      ${COREPATH}/sfcio/v${SFCIO_VER}
-      ${COREPATH}/sfcio/v${SFCIO_VER}/intel
-      ${COREPATH}/sfcio/v${SFCIO_VER}/ips/${COMPILER_VERSION}
-    PATH_SUFFIXES
-        lib
-     ${NO_DEFAULT_PATH})
-    set( sfcio "sfcio_v${SFCIO_VER}")
-    message("Found SFCIO library ${SFCIO_LIBRARY}")
   endif()
 endif()
 if( NOT SFCIO_LIBRARY ) # didn't find the library, so build it from source
