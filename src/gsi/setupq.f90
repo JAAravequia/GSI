@@ -81,9 +81,6 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !   2016-06-24  guo     - fixed the default value of obsdiags(:,:)%tail%luse to luse(i)
 !                       . removed (%dlat,%dlon) debris.
-!   2016-09-23 Johnson, Y. Wang, X. Wang - write observation dependent horizontal and vertical
-!                                          localization scales into diag file,
-!                                          POC: xuguang.wang@ou.edu
 !   2016-11-29  shlyaeva - save linearized H(x) for EnKF
 !   2016-12-09  mccarty - add netcdf_diag capability
 !   2017-03-31  Hu      -  addd option l_closeobs to use closest obs to analysis
@@ -272,7 +269,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   isprvd=21   ! index of observation subprovider
   icat =22    ! index of data level category
   ijb  =23    ! index of non linear qc parameter
-  iptrb=26    ! index of q perturbation
+  iptrb=24    ! index of q perturbation
 
   var_jb=zero
   do i=1,nobs
@@ -325,7 +322,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      ii=0
      iip=0
      nchar=1
-     ioff0=21 + 2
+     ioff0=21
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
@@ -1062,9 +1059,6 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(20,ii) = qsges              ! guess saturation specific humidity
         rdiagbuf(21,ii) = 1e+10_r_single     ! spread (filled in by EnKF)
 
-        rdiagbuf(22,ii) = data(24,i)
-        rdiagbuf(23,ii) = data(25,i)
-
         ioff=ioff0
         if (lobsdiagsave) then
            do jj=1,miter 
@@ -1181,10 +1175,6 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            call nc_diag_metadata("Obs_Minus_Forecast_adjusted",   sngl(ddiff)       )
            call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", sngl(qob-qges)    )
            call nc_diag_metadata("Forecast_Saturation_Spec_Hum",  sngl(qsges)       )
-
-           call nc_diag_metadata("Horizontal_local",  data(24,i)                    )
-           call nc_diag_metadata("Vertical_local",    data(25,i)                    )
-
            if (lobsdiagsave) then
               do jj=1,miter
                  if (obsdiags(i_q_ob_type,ibin)%tail%muse(jj)) then

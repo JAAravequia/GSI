@@ -222,7 +222,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   iprvd=18    ! index of observation provider
   isprvd=19   ! index of observation subprovider
   ijb=20      ! index of non linear qc parameter
-  iptrb=23    ! index of ps perturbation
+  iptrb=21    ! index of ps perturbation
 
 ! Declare local constants
   halfpi = half*pi
@@ -278,7 +278,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   if(conv_diagsave)then
      nchar=1
-     ioff0=20+2
+     ioff0=20
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
@@ -846,8 +846,6 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(18,ii) = pob-pges           ! obs-ges used in analysis (coverted to hPa)
         rdiagbuf(19,ii) = pob-pgesorig       ! obs-ges w/o adjustment to guess surface pressure (hPa)
         rdiagbuf(20,ii) = 1.e+10_r_single    ! spread (filled in by EnKF)
-        rdiagbuf(21,ii) =data(21,i)
-        rdiagbuf(22,ii) =data(22,i)
 
         ioff=ioff0
         if (lobsdiagsave) then
@@ -920,9 +918,6 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            call nc_diag_metadata("Observation",                   sngl(pob)        )
            call nc_diag_metadata("Obs_Minus_Forecast_adjusted",   sngl(pob-pges)   )
            call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", sngl(pob-pgesorig))
-           call nc_diag_metadata("Horizontal_local",  data(21,i)                   ) 
-           call nc_diag_metadata("Vertical_local",    data(22,i)                   )
-
  
            if (lobsdiagsave) then
               do jj=1,miter

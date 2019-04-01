@@ -20,9 +20,6 @@ subroutine setuptd2m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2016-06-24  guo     - fixed the default value of obsdiags(:,:)%tail%luse to luse(i)
 !   2016-10-07  pondeca - if(.not.proceed) advance through input file first
 !                       . removed (%dlat,%dlon) debris.
-!   2016-09-23 Johnson, Y. Wang, X. Wang - write observation dependent horizontal and vertical
-!                                          localization scales into diag file,
-!                                          POC: xuguang.wang@ou.edu
 !   2017-02-06  todling - add netcdf_diag capability; hidden as contained code
 !
 !   input argument list:
@@ -201,7 +198,7 @@ subroutine setuptd2m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=19+2
+     ioff0=19
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (twodvar_regional) then; nreal=nreal+2; allocate(cprvstg(nobs),csprvstg(nobs)); endif
@@ -629,8 +626,6 @@ subroutine setuptd2m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(17,ii) = data(itd2m,i)       ! TD2M observation (K)
         rdiagbuf(18,ii) = ddiff              ! obs-ges used in analysis (K)
         rdiagbuf(19,ii) = data(itd2m,i)-td2mges! obs-ges w/o bias correction (K) (future slot)
-        rdiagbuf(20,ii) = data(26,i)
-        rdiagbuf(21,ii) = data(27,i)
  
 
         ioff=ioff0
@@ -697,8 +692,6 @@ subroutine setuptd2m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            call nc_diag_metadata("Observation",                   data(itd2m,i)    )
            call nc_diag_metadata("Obs_Minus_Forecast_adjusted",   ddiff            )
            call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", data(itd2m,i)-td2mges )
-           call nc_diag_metadata("Horizontal_local",  data(26,i)                    )
-           call nc_diag_metadata("Vertical_local",    data(27,i)                    )
  
            if (lobsdiagsave) then
               do jj=1,miter
