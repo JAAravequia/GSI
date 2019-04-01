@@ -85,7 +85,7 @@ real(r_single),dimension(ndiag) :: sumcoslat,suma,suma2,sumi,sumf,sumitot,sumato
 real(r_single) fnanalsml,coslat
 integer(i_kind) i,nn,iunit,ierr,nb,nnlvl
 character(len=500) filename
-real(r_single), allocatable, dimension(:,:) :: tmp_chunk2,covinfglobal,tmp_chunk3
+real(r_single), allocatable, dimension(:,:) :: tmp_chunk2,covinfglobal
 real(r_single) r
 
 ! if no inflation called for, do nothing.
@@ -119,7 +119,6 @@ end if
 
 ! adaptive posterior inflation based upon ratio of posterior to prior spread.
 allocate(tmp_chunk2(npts_max,ncdim))
-allocate(tmp_chunk3(npts_max,ncdim))
 tmp_chunk2 = covinflatemin
 
 ! compute inflation.
@@ -173,21 +172,19 @@ do nn=1,ncdim
    tmp_chunk2(i,nn) = analpertwt*((fsprd-asprd)/asprd) + 1.0
 
    if ( nn == ncdim ) then
-      nnlvl=nlevs_pres
+       nnlvl=nlevs_pres
    else
        nnlvl=nn - nn/nlevs*nlevs
    end if
    if( nnlvl == 0 ) nnlvl = nlevs
-
+   
    r=abs((logp(indxproc(nproc+1,i),nnlvl)-logp(indxproc(nproc+1,i),nlevs_pres))/lnsigcovinfcutoff)
    if ( r > 0.75 ) then
        r=1.0
    endif
-
-   tmp_chunk3(i,nn)=taper(r)*latval(deglat,covinflatenh,covinflatetr,covinflatesh)
+   
    tmp_chunk2(i,nn) = tmp_chunk2(i,nn) + &
-            taper(r)*latval(deglat,covinflatenh,covinflatetr,covinflatesh)
-
+             taper(r)*latval(deglat,covinflatenh,covinflatetr,covinflatesh)
    ! min/max inflation set by covinflatemin/covinflatemax.
    tmp_chunk2(i,nn) = max(covinflatemin,min(tmp_chunk2(i,nn),covinflatemax))
 

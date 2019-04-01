@@ -97,6 +97,7 @@ subroutine get_num_convobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id
     nobssst = 0
     nobsspd = 0
     nobsdw = 0
+    nobsrw = 0
     nobspw = 0
     nobsgps = 0
     nobsdbz = 0
@@ -402,7 +403,7 @@ end subroutine get_num_convobs_nc
 ! read conventional observations
 subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             hx_mean, hx_mean_nobc, hx, hx_modens,x_obs, x_err,       &
-                            x_lon, x_lat, x_press, x_hloc, x_vloc,         &
+                            x_lon, x_lat, x_press,         &
                             x_time, x_code,x_errorig, x_type, x_used, id, nanal)
   use params, only: neigv
   implicit none
@@ -420,7 +421,6 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
   real(r_single), dimension(nobs_max), intent(out)    :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out)    :: x_lon, x_lat
   real(r_single), dimension(nobs_max), intent(out)    :: x_press, x_time
-  real(r_single), dimension(nobs_max), intent(out)    :: x_hloc, x_vloc
   integer(i_kind), dimension(nobs_max), intent(out)   :: x_code
   character(len=20), dimension(nobs_max), intent(out) :: x_type
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
@@ -431,12 +431,12 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
   if (netcdf_diag) then
     call get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err,       &
-                            x_lon, x_lat, x_press, x_hloc, x_vloc, &
+                            x_lon, x_lat, x_press, &
                             x_time, x_code,x_errorig, x_type, x_used, id, nanal)
   else
     call get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err,       &
-                            x_lon, x_lat, x_press, x_hloc, x_vloc, &
+                            x_lon, x_lat, x_press, &
                             x_time, x_code,x_errorig, x_type, x_used, id, nanal)
   endif
 end subroutine get_convobs_data
@@ -444,7 +444,7 @@ end subroutine get_convobs_data
 ! read conventional observations from netcdf file
 subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err,       &
-                            x_lon, x_lat, x_press, x_hloc, x_vloc, &
+                            x_lon, x_lat, x_press, &
                             x_time, x_code,x_errorig, x_type, x_used, id, nanal)
   use sparsearr, only: sparr, delete, assignment(=)
   use params, only: nanals, lobsdiag_forenkf, nlevs, neigv, vlocal_evecs
@@ -471,7 +471,6 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
   real(r_single), dimension(nobs_max), intent(out)    :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out)    :: x_lon, x_lat
   real(r_single), dimension(nobs_max), intent(out)    :: x_press, x_time
-  real(r_single), dimension(nobs_max), intent(out)    :: x_hloc, x_vloc
   integer(i_kind), dimension(nobs_max), intent(out)   :: x_code
   character(len=20), dimension(nobs_max), intent(out) :: x_type
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
@@ -494,7 +493,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
   real(r_kind) :: errorlimit2_obs,errorlimit2_bnd
   logical fexist
   logical twofiles, fexist2
-  real(r_single), allocatable, dimension (:) :: Latitude, Longitude, Pressure, Time, Hlocal, Vlocal
+  real(r_single), allocatable, dimension (:) :: Latitude, Longitude, Pressure, Time
   integer(i_kind), allocatable, dimension (:) :: Observation_Type
   real(r_single), allocatable, dimension (:) :: Errinv_Input, Errinv_Final, Analysis_Use_Flag, GPS_Type
   real(r_single), allocatable, dimension (:) :: Observation, v_Observation
@@ -561,7 +560,6 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
                  Analysis_Use_Flag(nobs), Errinv_Input(nobs), Errinv_Final(nobs), &
                  Observation_Type(nobs), Observation(nobs), &
                  Obs_Minus_Forecast_adjusted(nobs), Obs_Minus_Forecast_unadjusted(nobs))
-        allocate(Hlocal(nobs),Vlocal(nobs))
         call nc_diag_read_get_var(iunit, 'Latitude', Latitude)
         call nc_diag_read_get_var(iunit, 'Longitude', Longitude)
         call nc_diag_read_get_var(iunit, 'Pressure', Pressure)
@@ -570,8 +568,6 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
         call nc_diag_read_get_var(iunit, 'Errinv_Input', Errinv_Input)
         call nc_diag_read_get_var(iunit, 'Errinv_Final', Errinv_Final)
         call nc_diag_read_get_var(iunit, 'Observation_Type', Observation_Type)
-        call nc_diag_read_get_var(iunit, "Horizontal_local", Hlocal)
-        call nc_diag_read_get_var(iunit, "Vertical_local", Vlocal)
 
         if (obtype == ' uv') then
            call nc_diag_read_get_var(iunit, 'u_Observation', Observation)
@@ -682,8 +678,6 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
            x_lon(nob)   = Longitude(i)
            x_press(nob) = pres
            x_time(nob)  = Time(i)
-           x_hloc(nob)  = Hlocal(i)
-           x_vloc(nob)  = Vlocal(i)
 
            ! observation errors
            if (errororig > 1.e-5_r_kind) then
@@ -855,7 +849,6 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
                    Errinv_Input, Errinv_Final, Observation_Type, &
                    Observation, Obs_Minus_Forecast_adjusted, Obs_Minus_Forecast_unadjusted)
 
-        deallocate(Hlocal, Vlocal)
         if (obtype == ' uv') then
            deallocate(v_Observation, v_Obs_Minus_Forecast_adjusted, &
                       v_Obs_Minus_Forecast_unadjusted)
@@ -903,7 +896,7 @@ end subroutine get_convobs_data_nc
 ! read conventional observation from binary files
 subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err,       &
-                            x_lon, x_lat, x_press, x_hloc, x_vloc,         &
+                            x_lon, x_lat, x_press,         &
                             x_time, x_code,x_errorig, x_type, x_used, id, nanal)
   use sparsearr, only: sparr2, sparr, readarray, delete, assignment(=), size
   use params, only: nanals, lobsdiag_forenkf, nlevs, neigv, vlocal_evecs
@@ -925,7 +918,6 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
   real(r_single), dimension(nobs_max), intent(out)    :: x_err, x_errorig
   real(r_single), dimension(nobs_max), intent(out)    :: x_lon, x_lat
   real(r_single), dimension(nobs_max), intent(out)    :: x_press, x_time
-  real(r_single), dimension(nobs_max), intent(out)    :: x_hloc, x_vloc
   integer(i_kind), dimension(nobs_max), intent(out)   :: x_code
   character(len=20), dimension(nobs_max), intent(out) :: x_type
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
@@ -966,9 +958,6 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
   eps = 1.e-3
   iunit = 7
   iunit2 = 17
-
-  x_hloc = 0.0
-  x_vloc = 0.0
 
   twofiles = (.not. lobsdiag_forenkf) .and. (nanal <= nanals)
   id2 = 'ensmean'

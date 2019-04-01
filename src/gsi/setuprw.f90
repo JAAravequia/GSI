@@ -74,9 +74,6 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !                                           target hydrometeors (Johnson et al.
 !                                           2015 MWR; Wang and Wang 2016 MWR)
 !                                           POC: xuguang.wang@ou.edu
-!   2016-09-23 Johnson, Y. Wang, X. Wang - write observation dependent horizontal and vertical
-!                                          localization scales into diag file,
-!                                          POC: xuguang.wang@ou.edu
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -271,7 +268,7 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=26
+     ioff0=24
      nreal=ioff0
      if (lobsdiagsave) nreal=nreal+4*miter+1
      if (save_jacobian) then
@@ -1149,9 +1146,6 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(23,ii) = 1.e+10_r_single    ! ges ensemble spread (filled in EnKF)
         rdiagbuf(24,ii) = 1.e+10_r_single    ! ges ensemble spread (filled in EnKF)
 
-        rdiagbuf(25,ii) = data(23,i)
-        rdiagbuf(26,ii) = data(24,i)
-
         ioff=ioff0
         if (lobsdiagsave) then
            do jj=1,miter 
@@ -1212,8 +1206,6 @@ subroutine setuprw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            call nc_diag_metadata("Observation",                   sngl(data(irwob,i))  )
            call nc_diag_metadata("Obs_Minus_Forecast_adjusted",   sngl(ddiff)          )
            call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", sngl(data(irwob,i)-rwwind) )
-           call nc_diag_metadata("Horizontal_local",  data(23,i)                    )
-           call nc_diag_metadata("Vertical_local",    data(24,i)                    )
  
            if (lobsdiagsave) then
               do jj=1,miter

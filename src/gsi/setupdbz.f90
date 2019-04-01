@@ -27,9 +27,6 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !                                           1) Explicitly apply the operator H(qr, qs, qg) to hydrometeors
 !                                           2) Directly use the reflectivity from the wrfout
 !                                           POC: xuguang.wang@ou.edu
-!   2016-09-23 Johnson, Y. Wang, X. Wang - write observation dependent horizontal and vertical
-!                                          localization scales into diag file,
-!                                          POC: xuguang.wang@ou.edu
 !   2017-05-12 Y. Wang and X. Wang - Following Guo replacing ob_type with polymorphic obsNode through type casting,
 !                                           POC: xuguang.wang@ou.edu
 !
@@ -51,7 +48,7 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use mpeu_util, only: die,perr
   use kinds, only: r_kind,r_single,r_double,i_kind
   use m_obsdiags, only: dbzhead
-  use obsmod, only: rmiss_single,i_dbz_ob_type,obsdiags,&
+  use obsmod, only: rmiss_single,i_dbz_ob_type,obsdiags,lobsdiag_forenkf,&
                     lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset,&
                     ens_hx_dbz_cut
 
@@ -78,7 +75,7 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use constants, only: flattening,semi_major_axis,grav_ratio,zero,grav,wgtlim,&
        half,one,two,grav_equator,eccentricity,somigliana,rad2deg,deg2rad,&
        r60,tiny_r_kind,cg_term,huge_single
-  use jfunc, only: jiter,last,miter
+  use jfunc, only: jiter,last,miter,jiterstart
   use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype
   use convinfo, only: icsubtype
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
@@ -146,10 +143,7 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) wrange
   integer(i_kind) numequal,numnotequal,istat
  
-  logical:: debugging,save_jacobian
-
-  type(sparr2) :: dhx_dx
-  real(r_single), dimension(nsdim) :: dhx_dx_array
+  logical:: debugging
 
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
@@ -205,7 +199,7 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      ii=0
      nchar=1
-     ioff0=25+2
+     ioff0=25
      nreal=27
      if (lobsdiagsave) nreal=nreal+4*miter+1
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
@@ -925,8 +919,6 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(23,ii) = 1.e+10_r_single    ! ges ensemble spread (filled in EnKF)
         rdiagbuf(24,ii) = 1.e+10_r_single    ! ges ensemble spread (filled in EnKF)
 
-        rdiagbuf(25,ii)=data(19,i)
-        rdiagbuf(26,ii)=data(20,i)
         if (lobsdiagsave) then
             write(6,*)'wrong here, stop in setupdbz.f90 '
             stop
@@ -951,10 +943,6 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               ioff=ioff+1
               rdiagbuf(ioff,ii) = obsdiags(i_dbz_ob_type,ibin)%tail%obssen(jj)
            enddo
-        endif
-        if (save_jacobian) then
-           call writearray(dhx_dx, rdiagbuf(ioff+1:nreal,ii))
-           ioff = ioff + size(dhx_dx)
         endif
 
   end subroutine contents_binary_diag_
@@ -989,8 +977,6 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            call nc_diag_metadata("Observation",             sngl(data(idbzob,i)) )
            call nc_diag_metadata("Obs_Minus_Forecast_adjusted",   sngl(ddiff)   )
            call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", sngl(data(idbzob,i)-rdBZ) )
-           call nc_diag_metadata("Horizontal_local",  data(19,i)                )
-           call nc_diag_metadata("Vertical_local",    data(20,i)                )
 
            if (lobsdiagsave) then
               do jj=1,miter
@@ -1005,10 +991,6 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               call nc_diag_data2d("ObsDiagSave_nldepart", obsdiags(i_dbz_ob_type,ibin)%tail%nldepart )
               call nc_diag_data2d("ObsDiagSave_tldepart", obsdiags(i_dbz_ob_type,ibin)%tail%tldepart )
               call nc_diag_data2d("ObsDiagSave_obssen", obsdiags(i_dbz_ob_type,ibin)%tail%obssen   )
-           endif
-           if (save_jacobian) then
-              call fullarray(dhx_dx, dhx_dx_array)
-              call nc_diag_data2d("Observation_Operator_Jacobian", dhx_dx_array)
            endif
 
   end subroutine contents_netcdf_diag_

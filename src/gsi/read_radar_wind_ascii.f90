@@ -1,4 +1,4 @@
-subroutine read_radar_wind_ascii(nread,ndata,nodata,infile,lunout,obstype,sis,hgtl_full,nobs,hloc,vloc)
+subroutine read_radar_wind_ascii(nread,ndata,nodata,infile,lunout,obstype,sis,hgtl_full,nobs)
 !$$$   subprogram documentation block
 !                .      .    .                                       .
 !   subprogram: read_dbz        read level2 raw QC'd radial velocity data
@@ -13,10 +13,6 @@ subroutine read_radar_wind_ascii(nread,ndata,nodata,infile,lunout,obstype,sis,hg
 !   2011-08-12  carley - fix ob error to 2 m/s
 !   2011-08-23  carley - use deter_sfc_mod
 !   2011-12-08  carley - add wind rotation (earth to grid)
-!   2016-09-23  Johnson, Y. Wang, X. Wang - assign observation dependent horizontal and
-!                                           vertical localization scales to
-!                                           observation arrays,
-!                                           POC: xuguang.wang@ou.edu
 !
 !   input argument list:
 !     infile   - file from which to read data
@@ -139,7 +135,6 @@ subroutine read_radar_wind_ascii(nread,ndata,nodata,infile,lunout,obstype,sis,hg
 ! Declare passed variables
   character(len=*),intent(in   ) :: obstype,infile
   character(len=*),intent(in   ) :: sis
-  real(r_kind)    ,intent(in   ) :: hloc,vloc
   integer(i_kind) ,intent(in   ) :: lunout
   integer(i_kind) ,intent(inout) :: nread,ndata,nodata
   real(r_kind),dimension(nlat,nlon,nsig),intent(in):: hgtl_full
@@ -150,7 +145,7 @@ subroutine read_radar_wind_ascii(nread,ndata,nodata,infile,lunout,obstype,sis,hg
   real(r_kind),parameter :: r8     = 8.0_r_kind
   real(r_kind),parameter:: r6 = 6.0_r_kind
   real(r_kind),parameter:: r360=360.0_r_kind
-  integer(i_kind),parameter:: maxdat=24         ! Used in generating cdata array
+  integer(i_kind),parameter:: maxdat=22         ! Used in generating cdata array
   
 !--Derived data type declaration
 
@@ -598,8 +593,6 @@ real(r_kind) :: mintilt,maxtilt,maxobrange,minobrange
 	            cdata_all(20,iout)=zsges		                 ! model elevation at radar site
 	            cdata_all(21,iout)=thiserr
 	            cdata_all(22,iout)=two                              ! Level 2 data
-                    cdata_all(23,iout) = hloc
-                    cdata_all(24,iout) = vloc
 
                 if(doradaroneob .and. (cdata_all(5,iout) > -99_r_kind) ) exit volumes
 

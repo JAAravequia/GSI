@@ -447,7 +447,7 @@ module obsmod
   public :: ntilt_radarfiles
   public :: whichradar
   public :: i_dbz_ob_type
-  public :: vr_dealisingopt, if_vterminal, if_model_dbz, obs_dep_loc, inflate_obserr, if_vrobs_raw
+  public :: vr_dealisingopt, if_vterminal, if_model_dbz, inflate_obserr, if_vrobs_raw
 
   public :: doradaroneob,oneoblat,oneoblon
   public :: oneobddiff,oneobvalue,oneobheight,oneobradid
@@ -464,7 +464,6 @@ module obsmod
   public :: obsmod_init_instr_table
   public :: obsmod_final_instr_table
   public :: nobs_sub
-  public :: hlocal,vlocal
 
   public :: netcdf_diag, binary_diag
 
@@ -615,12 +614,10 @@ module obsmod
   real(r_kind) ,allocatable,dimension(:):: time_window
   character(len=20) :: cobstype(nobs_type)
 
-  real(r_kind) ,allocatable,dimension(:):: hlocal,vlocal
-
   integer(i_kind) ntilt_radarfiles
 
   logical ::  doradaroneob
-  logical :: vr_dealisingopt, if_vterminal, if_model_dbz, obs_dep_loc, inflate_obserr, if_vrobs_raw
+  logical :: vr_dealisingopt, if_vterminal, if_model_dbz, inflate_obserr, if_vrobs_raw
   character(4) :: whichradar,oneobradid
   real(r_kind) :: oneoblat,oneoblon,oneobddiff,oneobvalue,oneobheight
   logical :: radar_no_thinning
@@ -706,7 +703,6 @@ contains
     if_vrobs_raw=.false.
     if_model_dbz=.true.
     inflate_obserr=.false.
-    obs_dep_loc=.false.
     whichradar="KKKK"
 
     oneobradid="KKKK"
@@ -1087,8 +1083,6 @@ contains
              dsfcalc(ioff+jj)= dsfcalc(jj)
              obsfile_all(ioff+jj) = trim(obsfile_all(jj))//'.'//cind
              time_window(ioff+jj) = time_window(jj)
-             hlocal(ioff+jj) = hlocal(jj)
-             vlocal(ioff+jj) = vlocal(jj)
           ENDDO
        ENDDO
 !      Then change name for first time slot
@@ -1373,7 +1367,6 @@ allocate(dfile(nall),dtype(nall),dplat(nall),&
          dsis(nall),dval(nall),dthin(nall),dsfcalc(nall),&
          time_window(nall),obsfile_all(nall))
 
-allocate(hlocal(nall),vlocal(nall))
 ! things not in table, but dependent on nrows ... move somewhere else !_RTodling
 ! reality is that these things are not a function of nrows
 allocate(ditype(nall),ipoint(nall))
@@ -1382,27 +1375,13 @@ allocate(ditype(nall),ipoint(nall))
 ! variables participating in state vector
 dval_use = .false. 
 do ii=1,nrows0
-   if( obs_dep_loc ) then
      read(utable(ii),*) dfile(ii),& ! local file name from which to read observatinal data
                         dtype(ii),& ! character string identifying type of observatio
                         dplat(ii),& ! currently contains satellite id (no meaning for non-sat data)
                         dsis(ii), & ! sensor/instrument/satellite identifier for info files
                         dval(ii), & ! 
                         dthin(ii),& ! thinning flag (1=thinning on; otherwise off)
-                        dsfcalc(ii),& ! use orig bilinear FOV surface calculation (routine deter_sfc)
-                        hlocal(ii), & !horizontal covariance localization for this ob
-                        vlocal(ii) !vertical covariance localization for this ob
-   else
-     read(utable(ii),*) dfile(ii),& ! local file name from which to read observatinal data
-                        dtype(ii),& ! character string identifying type of observatio
-                        dplat(ii),& ! currently contains satellite id (no meaning for non-sat data)
-                        dsis(ii), & ! sensor/instrument/satellite identifier for info files
-                        dval(ii), & !
-                        dthin(ii),& ! thinning flag (1=thinning on; otherwise off)
-                        dsfcalc(ii)
-                        hlocal(ii) = 100.0
-                        vlocal(ii) = 0.55
-   end if
+                        dsfcalc(ii) ! use orig bilinear FOV surface calculation (routine deter_sfc)
 
    ! The following is to sort out some historical naming conventions
    select case (dsis(ii)(1:4))
@@ -1448,7 +1427,6 @@ deallocate(ditype,ipoint)
 deallocate(dfile,dtype,dplat,&
            dsis,dval,dthin,dsfcalc,&
            time_window,obsfile_all)
-deallocate(hlocal,vlocal)
 
 obs_instr_initialized_ = .false.
 
