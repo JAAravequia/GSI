@@ -517,8 +517,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !    geopotenital height.  Some type 221=pibal wind observations are
 !    also repoted using geopotential height.
 
-     sfc_data = (itype >=280 .and. itype < 300) !.and. (.not.twodvar_regional)
-     !LEVINE: Run this section during RTMA!
+     sfc_data = (itype >=280 .and. itype < 300)!LEVINE .and. (.not.twodvar_regional)
      if (z_height .or. sfc_data) then
 
         drpx = zero
@@ -529,6 +528,12 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !       Subtract off combination of surface station elevation and
 !       model elevation depending on how close to surface
         fact = zero
+        !LEVINE EDIT
+        if (itype == 295 .or. itype == 280) then
+           !if ((dpres-dstn) < 10._r_kind) then
+           !   print*, "SETUPW-MSONET: Mesonet wind with height under 10 m:",dpres,dstn
+           !endif
+        endif
         if(dpres-dstn > 10._r_kind)then
            if(dpres-dstn > r1000)then
               fact = one
@@ -623,8 +628,14 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 
         if (zob > zges(1)) then
+           !if (itype.eq.295.or.itype.eq.288) then
+           !   print*, "Setting factw to 1! stnid,zob,zges(1)=",station_id,zob,zges(1)
+           !endif
            factw=one
         else
+           !if (itype.eq.295.or.itype.eq.288) then
+           !   print*, "Factw will change!  stnid,zob,zges(1)=",station_id,zob,zges(1)
+           !endif
            factw = data(iff10,i)
            if(sfcmod_gfs .or. sfcmod_mm5) then
               sfcr = data(isfcr,i)

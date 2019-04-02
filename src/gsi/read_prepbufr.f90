@@ -2018,9 +2018,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  if(kx >= 280 .and. kx < 300 )then
                     if (twodvar_regional.and.(kx==288.or.kx==295)) then
                        !wind sensor height = windsenshtht
-                       if (windsensht.ne.10) then
-                          print*, "WINDTEST: Odd sensor height.  Station,provider,subprovider,height=",c_station_id,c_prvstg,c_sprvstg,windsensht
-                       endif
+                       !if (windsensht.ne.10) then
+                       !   print*, "WINDTEST: Odd sensor height.  Station,provider,subprovider,height=",c_station_id,c_prvstg,c_sprvstg,windsensht
+                       !endif
                        oelev=windsensht+selev
                     else
                        oelev=r10+selev

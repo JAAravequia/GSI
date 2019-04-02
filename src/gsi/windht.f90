@@ -316,7 +316,7 @@ contains
 
     do i=1,nmax
        if (i.gt.numprovs) then
-          print*, "Provider/subprovider not found:",cprov,csubprov
+          !print*, "Provider/subprovider not found:",cprov,csubprov
           finalheight=r10
           return
        else
