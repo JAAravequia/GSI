@@ -274,11 +274,11 @@ subroutine  gsdcloudanalysis(mype)
   call gsi_bundlegetpointer (GSI_MetGuess_Bundle(itsig),'qnc',ges_qnc,istatus);ier=ier+istatus
   if(ier/=0) return ! no guess, nothing to do
 
-  if(mype==0) then
-     write(6,*) '========================================'
-     write(6,*) 'gsdcloudanalysis: Start generalized cloud analysis'
-     write(6,*) '========================================'
-  endif
+  !if(mype==0) then
+  !   write(6,*) '========================================'
+     write(6,*) 'gsdcloudanalysis: Start generalized cloud analysis', mype
+  !   write(6,*) '========================================'
+  !endif
 !
 !
 !
