@@ -4,7 +4,7 @@ if(CMAKE_Fortran_COMPILER_ID MATCHES GNU)
     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -g -fprofile-arcs -ftest-coverage")
 endif()
 
-set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -openmp")
+set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -qopenmp")
 enable_testing()
 set(PFUNIT_DIR ${PROJECT_SOURCE_DIR}/unit-tests/PFUNIT ) 
 
