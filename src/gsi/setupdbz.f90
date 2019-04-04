@@ -51,9 +51,11 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use mpeu_util, only: die,perr
   use kinds, only: r_kind,r_single,r_double,i_kind
   use m_obsdiags, only: dbzhead
+
+! DCD 1 March 2019:  added static_gsi_nopcp_dbz
   use obsmod, only: rmiss_single,i_dbz_ob_type,obsdiags,&
                     lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset,&
-                    ens_hx_dbz_cut
+                    ens_hx_dbz_cut,static_gsi_nopcp_dbz
 
   use m_obsNode, only: obsNode
   use m_dbzNode, only: dbzNode
@@ -436,7 +438,9 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 
      if(miter == 0.or.l_hyb_ens) then !ie an enkf run
-       if(rDBZ < 0_r_kind) rDBZ=0.0_r_kind ! should be the same as in the read_dbz when nopcp=.true.
+! DCD 1 March 2019:  changed 0.0 to static_gsi_nopcp_dbz
+!       if(rDBZ < 0_r_kind) rDBZ=0.0_r_kind ! should be the same as in the read_dbz when nopcp=.true.
+       if(rDBZ < static_gsi_nopcp_dbz) rDBZ=static_gsi_nopcp_dbz ! should be the same as in the read_dbz when nopcp=.true.
      endif
      if(miter == 0.and.ens_hx_dbz_cut) then !ie an enkf run
        if(rDBZ > 60_r_kind) rDBZ=60_r_kind

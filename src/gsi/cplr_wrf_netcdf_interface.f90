@@ -1018,7 +1018,7 @@ contains
           write(iunit)field2   !TH2
        endif
 
-       if(l_cloud_analysis .and. n_actual_clouds>0) then
+       if(l_cloud_analysis .or. n_actual_clouds>0) then
           rmse_var='QCLOUD'
           call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
                start_index,end_index, WrfType, ierr    )
@@ -1217,11 +1217,12 @@ contains
                   start_index,end_index,               & !pat
                   ierr                                 )
              do k=1,nsig_regional
-               do i=1,nlon_regional
-                 do j=2,nlat_regional
-                    field3(i,j,k) = (max(field3(i,j,k),zero))
-                 enddo
-               enddo
+! DCD 2 April 2019:  commented out next 5 lines
+!               do i=1,nlon_regional
+!                 do j=2,nlat_regional
+!                    field3(i,j,k) = (max(field3(i,j,k),zero))
+!                 enddo
+!               enddo
                if(print_verbose)then
                   write(6,*)' k,max,min,mid Dbz=',k,maxval(field3(:,:,k)),minval(field3(:,:,k)), &
                               field3(nlon_regional/2,nlat_regional/2,k)
@@ -2994,7 +2995,7 @@ contains
             ierr                                 )
     endif
   
-    if (l_cloud_analysis .and. n_actual_clouds>0) then
+    if (l_cloud_analysis .or. n_actual_clouds>0) then
       do k=1,nsig_regional
          read(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional)   !  Qc
          if(print_verbose) &
