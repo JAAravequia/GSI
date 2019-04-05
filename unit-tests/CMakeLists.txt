@@ -4,7 +4,7 @@ if(CMAKE_Fortran_COMPILER_ID MATCHES GNU)
     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -g -fprofile-arcs -ftest-coverage")
 endif()
 
-set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -openmp")
+set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -qopenmp")
 enable_testing()
 set(PFUNIT_DIR ${PROJECT_SOURCE_DIR}/unit-tests/PFUNIT ) 
 
@@ -12,7 +12,8 @@ include_directories(
       ${PROJECT_SOURCE_DIR}
       ${PFUNIT_DIR}/mod
 )
-set(UNIT_TEST_LIST "test_read_wrf_nmm;test_read_wrf_mass;test_adjoint")
+#set(UNIT_TEST_LIST "test_read_wrf_nmm;test_read_wrf_mass;test_adjoint")
+set(UNIT_TEST_LIST "test_read_wrf_nmm")
 foreach(_test ${UNIT_TEST_LIST})
     file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/${_test}/generated)
     file(WRITE ${PROJECT_BINARY_DIR}/generated/${_test}/testSuites.inc "")
@@ -30,14 +31,14 @@ foreach(_test ${UNIT_TEST_LIST})
     ${PROJECT_BINARY_DIR}/generated/${_test}/${_test}.F90)
   set_target_properties(${_test}.x PROPERTIES Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include/wrf")
 
-  add_dependencies(${_test}.x gsilib_shrd${debug_suffix} gsilib_global${debug_suffix} gsilib_shrd${debug_suffix})
+  add_dependencies(${_test}.x gsilib_shrd${debug_suffix} gsilib_wrf${debug_suffix} gsilib_shrd${debug_suffix})
   target_link_libraries(
     ${_test}.x
-    ${PFUNIT_DIR}/lib/libpfunit.a 
-    gsilib_global${debug_suffix} gsilib_shrd${debug_suffix} gsilib_global${debug_suffix} gsilib_shrd${debug_suffix} 
-         gsilib_global${debug_suffix} ${FRAMEPACK} ${FRAMEMODULE}
+    $ENV{PFUNIT}/lib/libpfunit.a 
+    gsilib_wrf${debug_suffix} gsilib_shrd${debug_suffix} gsilib_wrf${debug_suffix} gsilib_shrd${debug_suffix} 
+         gsilib_wrf${debug_suffix} ${FRAMEPACK} ${FRAMEMODULE}
          ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES}   
-         ${LAPACK_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${CORE_LIBRARIES} 
+         ${LAPACK_LIBRARIES} ${NCDIAG_LIBRARIES} -L./ ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${CORE_LIBRARIES} 
          ${IOINT_LIB} ${WRFNETCDF_LIB} )
   target_include_directories( ${_test}.x PUBLIC ${PROJECT_BINARY_DIR}/generated/${_test})
   add_test(NAME ${_test} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/unit-tests/data COMMAND 
