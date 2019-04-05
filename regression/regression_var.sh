@@ -58,11 +58,10 @@ case $machine in
 
    export ptmp="/gpfs/dell2/ptmp/$LOGNAME/$ptmpName"
 
+   export fixcrtm="/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/fix_update"
    if [ -d /gpfs/td2 ]; then
        export casesdir="/gpfs/td2/emc/da/noscrub/Michael.Lueken/CASES"
-       export fixcrtm="/gpfs/td2/emc//da/save/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix_update"
    elif [ -d /gpfs/gd2 ]; then
-       export fixcrtm="/gpfs/gd2/emc//da/save/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix_update"
        export casesdir="/gpfs/gd2/emc/da/noscrub/Michael.Lueken/CASES"
    fi
    export ndate=${NDATE:-"$builddir/bin/ndate.x"}
@@ -135,7 +134,7 @@ case $machine in
 
    #  On Theia, there are no scrubbers to remove old contents from stmp* directories.
    #  After completion of regression tests, will remove the regression test subdirecories
-   export clean=".false."
+   export clean=".true."
    ;;
    WCOSS_C)
    if [ -d /gpfs/hps3/emc/global/noscrub/$LOGNAME ]; then
