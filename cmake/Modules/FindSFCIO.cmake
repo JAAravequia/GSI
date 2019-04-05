@@ -1,58 +1,41 @@
-# This module defines
-#  CORE_INCS
-#    List of include file paths for all required modules for GSI
-#  CORE_LIBRARIES
-#    Full list of libraries required to link GSI executable
-include(findHelpers)
-if(DEFINED ENV{SFCIO_VER})
-  set(SFCIO_VER $ENV{SFCIO_VER})
-  STRING(REGEX REPLACE "v" "" SFCIO_VER ${SFCIO_VER})
-else()
-  set(SFCIO_VER "")
-endif()
-
-set( NO_DEFAULT_PATH )
+# This module looks for environment variables detailing where SFCIO lib is
+# If variables are not set, SFCIO will be built from external source 
+include(ExternalProject)
 if(NOT BUILD_SFCIO )
-  if(DEFINED ENV{SFCIO_LIB4} )
+  if(DEFINED ENV{SFCIO_LIB})
     set(SFCIO_LIBRARY $ENV{SFCIO_LIB4} )
     set(SFCIOINC $ENV{SFCIO_INC4} )
-    message("SFCIO library ${SFCIO_LIBRARY} set via Environment variable")
-  endif()
-endif()
-if( NOT SFCIO_LIBRARY ) # didn't find the library, so build it from source
-    message("Could not find SFCIO library, so building from libsrc")
-    if( NOT DEFINED ENV{SFCIO_SRC} )
-        findSrc( "sfcio" SFCIO_VER SFCIO_DIR )
-        set(SFCIOINC  "${CMAKE_BINARY_DIR}/include")
+    if( CORE_LIBRARIES )
+      list( APPEND CORE_LIBRARIES ${SFCIO_LIBRARY} )
     else()
-      set( SFCIO_DIR "$ENV{SFCIO_SRC}/libsrc" CACHE STRING "SFCIO Source Location")
-      set(SFCIOINC  "${CORESFCIO}/sfcio/${SFCIO_VER}/incmod/sfcio_v${SFCIO_VER}")
+      set( CORE_LIBRARIES ${SFCIO_LIBRARY} )
     endif()
-    set( libsuffix "_v${SFCIO_VER}${debug_suffix}" )
-    set( SFCIO_LIBRARY "${LIBRARY_OUTPUT_PATH}/libsfcio${libsuffix}.a" CACHE STRING "SFCIO Library" )
-    set( sfcio "sfcio${libsuffix}")
-    set( BUILD_SFCIO "ON" CACHE INTERNAL "Build the SFCIO library")
-    add_subdirectory(${CMAKE_SOURCE_DIR}/libsrc/sfcio)
-    set( SFCIO_LIBRARY ${sfcio} )
-    if( CORE_BUILT )
-      list( APPEND CORE_BUILT ${SFCIO_LIBRARY} )
-    else()
-      set( CORE_BUILT ${SFCIO_LIBRARY} )
-    endif()
-else( NOT SFCIO_LIBRARY )
-  if( CORE_LIBRARIES )
-    list( APPEND CORE_LIBRARIES ${SFCIO_LIBRARY} )
-  else()
-    set( CORE_LIBRARIES ${SFCIO_LIBRARY} )
   endif()
-endif( NOT SFCIO_LIBRARY )
-
-if( CORE_INCS )
-  list( APPEND CORE_INCS ${SFCIOINC} )
 else()
-  set( CORE_INCS ${INCLUDE_OUTPUT_PATH} ${SFCIOINC} )
-endif()
+  set(CMAKE_INSTALL_PREFIX ${PROJECT_BINARY_DIR})
+  ExternalProject_Add(NCEPLIBS-sfcio 
+    CMAKE_ARGS
+      -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+    SOURCE_DIR ${PROJECT_SOURCE_DIR}/libsrc/sfcio 
+    INSTALL_DIR ${CMAKE_INSTALL_PREFIX}
+    BUILD_COMMAND make
+    INSTALL_COMMAND make install
+  )
+  execute_process(COMMAND grep "set(VERSION" CMakeLists.txt WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/libsrc/sfcio OUTPUT_VARIABLE LIBVERSION)
+  string(REPLACE "set(VERSION " "" LIBVERSION ${LIBVERSION})
+  string(REPLACE ")" "" LIBVERSION ${LIBVERSION})
+  string(REPLACE "\n" "" LIBVERSION ${LIBVERSION})
+  message("sfcio version is ${LIBVERSION}")
+  set( SFCIO_LIBRARY ${PROJECT_BINARY_DIR}/lib/libsfcio_${LIBVERSION}.a )
+  if( CORE_BUILT )
+      list( APPEND CORE_BUILT ${SFCIO_LIBRARY} )
+      list( APPEND EXT_BUILT NCEPLIBS-sfcio )
+  else()
+      set( CORE_BUILT ${SFCIO_LIBRARY} )
+      set( EXT_BUILT NCEPLIBS-sfcio )
+  endif()
+endif( )
 
 set( SFCIO_LIBRARY_PATH ${SFCIO_LIBRARY} CACHE STRING "SFCIO Library Location" )
-set( SFCIO_INCLUDE_PATH ${SFCIOINC} CACHE STRING "SFCIO Include Location" )
+set( SFCIO_INCLUDE_PATH ${SFCIO_LIBRARY} CACHE STRING "SFCIO Include Location" )
 

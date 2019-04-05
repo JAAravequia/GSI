@@ -1,59 +1,42 @@
-# This module defines
-#  CORE_INCS
-#    List of include file paths for all required modules for GSI
-#  CORE_LIBRARIES
-#    Full list of libraries required to link GSI executable
-include(findHelpers)
-if(DEFINED ENV{SIGIO_VER})
-  set(SIGIO_VER $ENV{SIGIO_VER})
-  STRING(REGEX REPLACE "v" "" SIGIO_VER ${SIGIO_VER})
-else()
-  set(SIGIO_VER "")
-endif()
-
-set( NO_DEFAULT_PATH )
+# This module looks for environment variables detailing where SIGIO lib is
+# If variables are not set, SIGIO will be built from external source 
+include(ExternalProject)
 if(NOT BUILD_SIGIO )
-  if(DEFINED ENV{SIGIO_LIB4} )
+  if(DEFINED ENV{SIGIO_LIB4})
     set(SIGIO_LIBRARY $ENV{SIGIO_LIB4} )
     set(SIGIOINC $ENV{SIGIO_INC4} )
-    message("SIGIO library ${SIGIO_LIBRARY} set via Environment variable")
-  endif()
-endif()
-if( NOT SIGIO_LIBRARY ) # didn't find the library, so build it from source
-    message("Could not find SIGIO library, so building from libsrc")
-    if( NOT DEFINED ENV{SIGIO_SRC} )
-        findSrc( "sigio" SIGIO_VER SIGIO_DIR )
-        set(SIGIOINC  "${CMAKE_BINARY_DIR}/include")
+    if( CORE_LIBRARIES )
+      list( APPEND CORE_LIBRARIES ${SIGIO_LIBRARY} )
     else()
-      set( SIGIO_DIR "$ENV{SIGIO_SRC}/libsrc" CACHE STRING "SIGIO Source Location")
-      set(SIGIOINC  "${CORESIGIO}/sigio/${SIGIO_VER}/incmod/sigio_v${SIGIO_VER}")
+      set( CORE_LIBRARIES ${SIGIO_LIBRARY} )
     endif()
-    set( libsuffix "_v${SIGIO_VER}${debug_suffix}" )
-    set( SIGIO_LIBRARY "${LIBRARY_OUTPUT_PATH}/libsigio${libsuffix}.a" CACHE STRING "SIGIO Library" )
-    set( sigio "sigio${libsuffix}")
-    set( BUILD_SIGIO "ON" CACHE INTERNAL "Build the SIGIO library")
-    add_subdirectory(${CMAKE_SOURCE_DIR}/libsrc/sigio)
-    set( SIGIO_LIBRARY ${sigio} )
-    if( CORE_BUILT )
-      list( APPEND CORE_BUILT ${SIGIO_LIBRARY} )
-    else()
-      set( CORE_BUILT ${SIGIO_LIBRARY} )
-    endif()
-else( NOT SIGIO_LIBRARY )
-  if( CORE_LIBRARIES )
-    list( APPEND CORE_LIBRARIES ${SIGIO_LIBRARY} )
-  else()
-    set( CORE_LIBRARIES ${SIGIO_LIBRARY} )
   endif()
-endif( NOT SIGIO_LIBRARY )
-
-if( CORE_INCS )
-  list( APPEND CORE_INCS ${SIGIOINC} )
 else()
-  set( CORE_INCS ${INCLUDE_OUTPUT_PATH} ${SIGIOINC} )
-endif()
-
+  message("HEY, env cc  is $ENV{CXX}")
+  set(CMAKE_INSTALL_PREFIX ${PROJECT_BINARY_DIR})
+  ExternalProject_Add(NCEPLIBS-sigio 
+    CMAKE_ARGS
+      -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+    SOURCE_DIR ${PROJECT_SOURCE_DIR}/libsrc/sigio 
+    INSTALL_DIR ${CMAKE_INSTALL_PREFIX}
+    BUILD_COMMAND make
+    INSTALL_COMMAND make install
+  )
+  execute_process(COMMAND grep "set(VERSION" CMakeLists.txt WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/libsrc/sigio OUTPUT_VARIABLE LIBVERSION)
+  string(REPLACE "set(VERSION " "" LIBVERSION ${LIBVERSION})
+  string(REPLACE ")" "" LIBVERSION ${LIBVERSION})
+  string(REPLACE "\n" "" LIBVERSION ${LIBVERSION})
+  message("sigio version is ${LIBVERSION}")
+  set( SIGIO_LIBRARY ${PROJECT_BINARY_DIR}/lib/libsigio_${LIBVERSION}.a )
+  if( CORE_BUILT )
+      list( APPEND CORE_BUILT ${SIGIO_LIBRARY} )
+      list( APPEND EXT_BUILT NCEPLIBS-sigio )
+  else()
+      set( CORE_BUILT ${SIGIO_LIBRARY} )
+      set( EXT_BUILT NCEPLIBS-sigio )
+  endif()
+endif( )
 
 set( SIGIO_LIBRARY_PATH ${SIGIO_LIBRARY} CACHE STRING "SIGIO Library Location" )
-set( SIGIO_INCLUDE_PATH ${SIGIOINC} CACHE STRING "SIGIO Include Location" )
+set( SIGIO_INCLUDE_PATH ${SIGIO_LIBRARY} CACHE STRING "SIGIO include Location" )
 
