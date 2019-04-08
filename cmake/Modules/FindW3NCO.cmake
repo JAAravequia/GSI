@@ -1,8 +1,7 @@
 # This module looks for environment variables detailing where W3NCO lib is
 # If variables are not set, W3NCO will be built from external source 
 include(ExternalProject)
-if(NOT BUILD_W3NCO )
-  if(DEFINED ENV{W3NCO_LIBd})
+if( (NOT BUILD_W3NCO ) AND (DEFINED ENV{W3NCO_LIBd}) )
     set(W3NCO_LIBRARY $ENV{W3NCO_LIBd} )
     set(W3NCO_4_LIBRARY $ENV{W3NCO_LIB4} )
     if( CORE_LIBRARIES )
@@ -10,12 +9,14 @@ if(NOT BUILD_W3NCO )
     else()
       set( CORE_LIBRARIES ${W3NCO_LIBRARY} )
     endif()
-  endif()
 else()
   set(CMAKE_INSTALL_PREFIX ${PROJECT_BINARY_DIR})
   ExternalProject_Add(NCEPLIBS-w3nco 
     CMAKE_ARGS
       -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+      -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+      -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+      -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
     SOURCE_DIR ${PROJECT_SOURCE_DIR}/libsrc/w3nco 
     INSTALL_DIR ${CMAKE_INSTALL_PREFIX}
     BUILD_COMMAND make

@@ -3,12 +3,10 @@
 #    List of include file paths for all required modules for GSI
 #  CORE_LIBRARIES
 #    Full list of libraries required to link GSI executable
-if(NOT BUILD_CRTM )
-  if(DEFINED ENV{CRTM_LIB} )
+if((NOT BUILD_CRTM ) AND (DEFINED ENV{CRTM_LIB} ))
     set(CRTM_LIBRARY $ENV{CRTM_LIB} )
     set(CRTMINC $ENV{CRTM_INC} )
     message("CRTM library ${CRTM_LIBRARY} set via Environment variable")
-  endif()
 else()
     set( BUILD_CRTM "ON" CACHE INTERNAL "Build the CRTM library")
     add_subdirectory(${CMAKE_SOURCE_DIR}/libsrc/crtm)
