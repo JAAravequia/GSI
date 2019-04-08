@@ -627,14 +627,14 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         endif
 
 
-        if (zob > zges(1)) then
-           !if (itype.eq.295.or.itype.eq.288) then
-           !   print*, "Setting factw to 1! stnid,zob,zges(1)=",station_id,zob,zges(1)
-           !endif
+        if (zob > zges(1).and..not.twodvar_regional) then
+           if (itype.eq.295.or.itype.eq.288) then
+              print*, "Setting factw to 1! stnid,zob,zges(1)=",station_id,zob,zges(1)
+           endif
            factw=one
         else
            !if (itype.eq.295.or.itype.eq.288) then
-           !   print*, "Factw will change!  stnid,zob,zges(1)=",station_id,zob,zges(1)
+              !print*, "Factw will change!  stnid,zob,zges(1)=",station_id,zob,zges(1)
            !endif
            factw = data(iff10,i)
            if(sfcmod_gfs .or. sfcmod_mm5) then
@@ -652,7 +652,10 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               term = (zges(1)-zob)/(zges(1)-ten)
               factw = one-term+factw*term
            end if
- 
+
+           if (factw.ne.1) then
+              print*, "StationID,zob,factw=",station_id,zob,factw
+           endif
            ugesin=factw*ugesin
            vgesin=factw*vgesin
 
