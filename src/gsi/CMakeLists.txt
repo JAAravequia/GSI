@@ -134,6 +134,7 @@ cmake_minimum_required(VERSION 2.8)
 
 # Add dependencies if we are building the core libs or are just using pre-built libs 
   message("EXT built is ${EXT_BUILT}")
+  message("CORE_INCS are ${CORE_INCS}")
   if(CORE_BUILT)
     add_dependencies(${GSILIB} ${GSISHAREDLIB} ${EXT_BUILT} )
     add_dependencies(${GSISHAREDLIB} ${EXT_BUILT} )
