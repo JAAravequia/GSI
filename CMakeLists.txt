@@ -268,6 +268,21 @@ project(GSI)
     set(CTEST_TEST_TIMEOUT 400 )
     find_package(GSICONTROL)
     include( CTest )
+    set(CMAKE_INSTALL_PREFIX ${PROJECT_BINARY_DIR})
+    ExternalProject_Add(PFUNIT
+      PREFIX ${PROJECT_BINARY_DIR}/PFUNIT
+      CMAKE_ARGS
+        -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+        -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+        -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
+      URL https://github.com/Goddard-Fortran-Ecosystem/pFUnit/archive/3.2.9.tar.gz
+#     SOURCE_DIR ${PROJECT_SOURCE_DIR}/libsrc/bacio 
+      INSTALL_DIR ${CMAKE_INSTALL_PREFIX}
+      BUILD_COMMAND make
+      INSTALL_COMMAND make install
+    )
+
     add_subdirectory(unit-tests)
   endif(BUILD_UNIT_TESTING)
   if(BUILD_REG_TESTING)

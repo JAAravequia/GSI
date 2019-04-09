@@ -6,8 +6,8 @@ endif()
 
 set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -qopenmp")
 enable_testing()
-#set(PFUNIT_DIR ${PROJECT_SOURCE_DIR}/unit-tests/PFUNIT ) 
-set(PFUNIT_DIR $ENV{PFUNIT} ) 
+set(PFUNIT_DIR ${PROJECT_BINARY_DIR} ) 
+#set(PFUNIT_DIR $ENV{PFUNIT} ) 
 
 include_directories( 
       ${PROJECT_SOURCE_DIR}
@@ -36,7 +36,7 @@ foreach(_test ${UNIT_TEST_LIST})
   message("HEY core libs are ${CORE_LIBRARIES}")
   target_link_libraries(
     ${_test}.x
-    $ENV{PFUNIT}/lib/libpfunit.a 
+    ${PROJECT_BINARY_DIR}/lib/libpfunit.a 
     gsilib_wrf${debug_suffix} gsilib_shrd${debug_suffix} gsilib_wrf${debug_suffix} gsilib_shrd${debug_suffix} 
          gsilib_wrf${debug_suffix} ${FRAMEPACK} ${FRAMEMODULE}
          ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${MPI_Fortran_LIBRARIES}   
