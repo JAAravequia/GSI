@@ -48,7 +48,7 @@ contains
    end subroutine tearDown
 
 @Test
-   subroutine testReadWrfNmm(this)
+   subroutine testReadWrfMass(this)
       use guess_grids, only: nfldsig,nfldsfc,ntguessig,ntguessfc,&
          ifilesig,ifilesfc,hrdifsig,hrdifsfc,create_gesfinfo
       use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,nhr_assimilation
@@ -71,6 +71,6 @@ contains
       @assertEqual(3, ifilesfc(1))
       @assertEqual(3.0, hrdifsfc(1))
 
-   end subroutine testReadWrfNmm
+   end subroutine testReadWrfMass
 
 end module Test_read_wrf_mass_mod

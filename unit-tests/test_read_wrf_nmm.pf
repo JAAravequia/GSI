@@ -18,6 +18,8 @@ contains
    ! No need to annotate setUp() when _extending_ TestCase
    subroutine setUp(this)
       use mpimod, only: npe,mpi_comm_world,ierror,mype
+      use mpeu_util,only: die
+      use gsi_4dcouplermod, only: gsi_4dcoupler_parallel_init
       use obsmod, only: iadate,time_offset
       use gridmod, only: create_grid_vars
       use constants, only: init_constants,init_constants_derived
@@ -25,6 +27,7 @@ contains
 
       class (Test_read_wrf_nmm), intent(inout) :: this
 
+      call gsi_4dcoupler_parallel_init
       call init_constants_derived
       call init_constants(.true.)
       call mpi_comm_size(mpi_comm_world,npe,ierror)
@@ -46,14 +49,23 @@ contains
    subroutine testReadWrfNmm(this)
       use guess_grids, only: nfldsig,nfldsfc,ntguessig,ntguessfc,&
          ifilesig,ifilesfc,hrdifsig,hrdifsfc,create_gesfinfo
+      use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,nhr_assimilation
+      use obsmod, only: iadate,time_offset
 
       class (Test_read_wrf_nmm), intent(inout) :: this
+
+      nhr_assimilation = 3
+      iadate(1) = 2010
+      iadate(2) = 2
+      iadate(3) = 16
+      iadate(4) = 0
+      iwinbgn = 16896780.0
 
       call this%reader%read_wrf_nmm_files(0)
 
       @assertEqual(1, ntguessfc)
       @assertEqual(3, ifilesfc(1))
-      @assertEqual(2.0, hrdifsfc(1))
+      @assertEqual(3.0, hrdifsfc(1))
 
    end subroutine testReadWrfNmm
 
