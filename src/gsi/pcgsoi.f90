@@ -339,9 +339,9 @@ subroutine pcgsoi()
               eval(ii)=rval(ii)
            end do
            call ensctl2state_ad(eval,mval(1),gradx)
-     if (iter==0 .and. print_diag_pcg) then
-        call prt_control_norms(gradx,'gradx0')
-     endif
+           if (iter==0 .and. print_diag_pcg) then
+           call prt_control_norms(gradx,'gradx0')
+           endif
         else
            mval(1)=rval(1)
            if (nobs_bins > 1 ) then
@@ -353,9 +353,6 @@ subroutine pcgsoi()
 
      end if
      call control2state_ad(mval,rbias,gradx)
-     if (iter==0 .and. print_diag_pcg) then
-        call prt_control_norms(gradx,'gradx2')
-     endif
 !    End adjoint of convert control var to physical space
 
 !    Print initial Jo table
@@ -369,9 +366,6 @@ subroutine pcgsoi()
      do i=1,nclen
         gradx%values(i)=gradx%values(i)+yhatsave%values(i)
      end do
-     if (iter==0 .and. print_diag_pcg) then
-        call prt_control_norms(gradx,'gradx3')
-     endif
 
 !    Re-orthonormalization if requested
      if(iorthomax>0) then 
