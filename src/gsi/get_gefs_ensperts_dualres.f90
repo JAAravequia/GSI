@@ -354,9 +354,7 @@ subroutine get_gefs_ensperts_dualres
 ! Copy pbar to module array.  ps_bar may be needed for vertical localization
 ! in terms of scale heights/normalized p/p
 ! Convert to mean
-!clthinkorg  bar_norm = one/float(n_ens)
   bar_norm = one/float(n_ens)
-!cltthinkorg  sig_norm=sqrt(one/max(one,n_ens-one))
   sig_norm=sqrt(one/max(one,n_ens-one))
 !$omp parallel do schedule(dynamic,1) private(i,j,k,n,m,ic2,ic3,ipic,x2)
   do m=1,ntlevs_ens
@@ -384,7 +382,6 @@ subroutine get_gefs_ensperts_dualres
 
      do n=1,n_ens
         do i=1,nelen
-!cltorgthink           en_perts(n,ig,m)%valuesr4(i)=en_perts(n,ig,m)%valuesr4(i)-en_bar(ig,m)%values(i)
            en_perts(n,ig0,m)%valuesr4(i)=en_perts(n,ig0,m)%valuesr4(i)-en_bar(ig0,m)%values(i)
         end do
         if(.not. q_hyb_ens) then
@@ -470,7 +467,6 @@ subroutine get_gefs_ensperts_dualres
 !      sst_en(i,n)=(sst_en(i,n)- sstbar(i)*bar_norm)
 !    end do
 !  end do
-     write(6,*)'thinkdeb555 m ,write_ens_spread are',m,write_ens_sprd
      if (write_ens_sprd )  call ens_spread_dualres2(en_bar(1,1),1)
 
    do m=1,ntlevs_ens
@@ -576,7 +572,6 @@ subroutine ens_spread_dualres(en_bar,ibin)
      do i=1,nelen
         sube%values(i)=sube%values(i) &
            +(en_perts(n,ig0,ibin)%valuesr4(i)-en_bar%values(i))*(en_perts(n,ig0,ibin)%valuesr4(i)-en_bar%values(i))
-!cltthink en_bar
      end do
   end do
 
@@ -737,7 +732,6 @@ subroutine ens_spread_dualres2(en_bar,ibin)
      do i=1,nelen
         sube%values(i)=sube%values(i) &
            +(en_perts(n,ig0,ibin)%valuesr4(i))*(en_perts(n,ig0,ibin)%valuesr4(i))
-!cltthink en_bar
      end do
   end do
 

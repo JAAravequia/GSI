@@ -2343,7 +2343,7 @@ end subroutine normal_new_factorization_rf_y
     im=a_en(1,1)%grid%im
     jm=a_en(1,1)%grid%jm
     km=a_en(1,1)%grid%km
-!cltthinktobetested $omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ic2,ipic,iaens)
+!$omp parallel do schedule(dynamic,1) private(j,n,ic3,k,i,ic2,ipic,iaens)
   do ig=1,nsclgrp
     iaens=ensgrp2aensgrp(ig)
     do n=1,n_ens
@@ -2833,7 +2833,7 @@ subroutine sqrt_beta_e_mult_cvec(grady)
   ! Initialize timer
   call timer_ini('sqrt_beta_e_mult')
 
-!cltthinktobetestd !$omp parallel do schedule(dynamic,1) private(nn,k,j,i,ii,iaens)
+!$omp parallel do schedule(dynamic,1) private(nn,k,j,i,ii,iaens)
   ! multiply by sqrt_beta_e
   do j=1,grd_ens%lon2
      do ii=1,nsubwin
@@ -3132,8 +3132,7 @@ subroutine init_sf_xy(jcap_in)
   allocate(g(sp_loc%nc),gsave(sp_loc%nc))
   allocate(pn0_npole(0:sp_loc%jcap))
   allocate(ksame(grd_sploc%nsig))
-    do 333, k=1,grd_sploc%nsig
-  333 continue
+  spectral_filter=zero
   do 250 iaens=1,naensgrp
   ksame=.false.
   do k=2,grd_sploc%nsig
@@ -3878,8 +3877,6 @@ subroutine ckgcov_a_en_new_factorization(iaensgrpin,z,a_en)
   return
 end subroutine ckgcov_a_en_new_factorization
 subroutine ckgcov_a_en_new_factorization2(iaensgrpin,a_ens_in,a_en)
-!clt modified from ckgcov_a_en_new_factorization , now use the input on
-!grids(a_ens)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    ckgcov_a_en_new_factorization sqrt(bkgcov_a_en_new_factorization)
@@ -3889,6 +3886,8 @@ subroutine ckgcov_a_en_new_factorization2(iaensgrpin,a_ens_in,a_en)
 !
 ! program history log:
 !   2011-06-27  parrish, initial documentation
+!   2018-       lei,  modified from ckgcov_a_en_new_factorization ,
+!                     now use the input on !grids(a_ens)
 !
 !   input argument list:
 !     z        - long vector containing sqrt control vector for ensemble extended control variable
@@ -4124,8 +4123,6 @@ subroutine ckgcov_a_en_new_factorization_ad(iaensgrpin,z,a_en)
   return
 end subroutine ckgcov_a_en_new_factorization_ad
 subroutine ckgcov_a_en_new_factorization_ad2(iaensgrpin,a_en_out,a_en)
-!clt modified from ckgcov_a_en_new_factorization_ad , adding converting of the
-!clt results z in the spectral space to grid space in the local domains. 
 
 
 !$$$  subprogram documentation block
@@ -4140,6 +4137,8 @@ subroutine ckgcov_a_en_new_factorization_ad2(iaensgrpin,a_en_out,a_en)
 ! program history log:
 !   2011-06-27  parrish, initial documentation
 !
+!   2018        lei, modified from ckgcov_a_en_new_factorization_ad , 
+!                    now, the input  are in the grid_space rather than the spectral space. 
 !   input argument list:
 !     z        - long vector containing sqrt control vector for ensemble extended control variable
 !     a_en     - bundle containing intermediate control variable after multiplication by sqrt(S), the
