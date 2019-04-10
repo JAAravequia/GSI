@@ -3138,7 +3138,6 @@ subroutine init_sf_xy(jcap_in)
   do k=2,grd_sploc%nsig
      if(s_ens_hv(k,iaens) == s_ens_hv(k-1,iaens))ksame(k)=.true.
   enddo
-  spectral_filter=zero
   do k=1,grd_sploc%nsig
      if(ksame(k))then
         spectral_filter(iaens,:,k)=spectral_filter(iaens,:,k-1)
