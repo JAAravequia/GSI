@@ -47,7 +47,8 @@
    export nreal_gps=${nreal_gps:-21}
 
 
-   for type in gps ps q t uv; do
+#   for type in gps ps q t uv; do
+   for type in gps; do
 
       eval stype=\${${type}_TYPE}
       eval nreal=\${nreal_${type}}
