@@ -277,12 +277,10 @@ project(GSI)
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
       URL https://github.com/Goddard-Fortran-Ecosystem/pFUnit/archive/3.2.9.tar.gz
-#     SOURCE_DIR ${PROJECT_SOURCE_DIR}/libsrc/bacio 
       INSTALL_DIR ${CMAKE_INSTALL_PREFIX}
       BUILD_COMMAND make
       INSTALL_COMMAND make install
     )
-
     add_subdirectory(unit-tests)
   endif(BUILD_UNIT_TESTING)
   if(BUILD_REG_TESTING)

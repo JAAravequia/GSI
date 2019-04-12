@@ -3,7 +3,7 @@ regtest=$1
 case $machine in
 
 	Theia)
-	   sub_cmd="sub_theia"
+	   sub_cmd="sub_theia_slurm"
     ;;
 	WCOSS)
 	   sub_cmd="sub_wcoss -a GDAS-T2O -d $PWD"
@@ -595,7 +595,8 @@ if [[ "$machine" = "Theia" ]]; then
    export MPI_BUFS_PER_PROC=256
    export MPI_BUFS_PER_HOST=256
    export MPI_GROUP_MAX=256
-   export APRUN="mpirun -np \$PBS_NP"
+#  export APRUN="mpirun -np \$PBS_NP"
+   export APRUN="srun"
 elif [[ "$machine" = "Cheyenne" ]]; then
    export OMP_STACKSIZE=1024M
    export MPI_BUFS_PER_PROC=256
