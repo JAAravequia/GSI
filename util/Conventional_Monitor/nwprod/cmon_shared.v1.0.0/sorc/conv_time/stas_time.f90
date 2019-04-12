@@ -48,6 +48,8 @@ subroutine stascal(dtype,rdiag,nreal,n,iotype,varqc,ntype,work,worku,&
 
    integer, parameter  :: ibend       = 5
    integer, parameter  :: ierr1       = 14
+   integer, parameter  :: ierrinvadj  = 15
+   integer, parameter  :: ierrinv     = 16
    integer, parameter  :: ibendangobs = 17
    real, parameter     :: scale       = 100.0
    real, parameter     :: one         = 1.0
@@ -64,7 +66,7 @@ subroutine stascal(dtype,rdiag,nreal,n,iotype,varqc,ntype,work,worku,&
    real cg_term,pi,tiny
    real valu,valv,val,val2,gesu,gesv,spdb,exp_arg,arg
    real ress,ressu,ressv,valqc,term,wgross,cg_t,wnotgross
-   real cvar_pg,cvar_b,rat_err2
+   real cvar_pg,cvar_b,rat_err2,errinv,errinvadj
    real ress_gps
    real data, rat_err
 
@@ -185,6 +187,8 @@ subroutine stascal(dtype,rdiag,nreal,n,iotype,varqc,ntype,work,worku,&
 !                        data     = one/rdiag(ierr1,i)
                         data     = rdiag(ierr1,i)
                         rat_err  = rdiag(ibendangobs,i)
+                        errinv   = one/rdiag(ierrinv,i)
+                        errinvadj = one/rdiag(ierrinvadj,i)
                         val      = data * rat_err
                         val2     = val * val
 
@@ -217,10 +221,12 @@ subroutine stascal(dtype,rdiag,nreal,n,iotype,varqc,ntype,work,worku,&
                            !   values for 14 and 17 are defined respectively as local parameters 
                            !        ierr1, ibendangobs
 
-                           print *, 'PEN components:  rdiag(ierr1,i), data, rat_err, val, val2 = ', rdiag(ierr1,i), data, rat_err, val, val2
+                           print *, 'PEN components:  rdiag(ierr1,i), data, rat_err, val, val2, errinv = ', rdiag(ierr1,i), data, rat_err, val, val2, errinv
 
 !                           work(k,ltype,ipen,j,iused) = work(k,ltype,ipen,j,iused) + val2
-                           work(k,ltype,ipen,j,iused) = work(k,ltype,ipen,j,iused) + val
+!                           work(k,ltype,ipen,j,iused) = work(k,ltype,ipen,j,iused) + val
+!                           work(k,ltype,ipen,j,iused) = work(k,ltype,ipen,j,iused) + rat_err
+                           work(k,ltype,ipen,j,iused) = work(k,ltype,ipen,j,iused) + errinvadj
 
                         else if( rdiag(imuse,i) < 0.0 ) then
                            iclass = imonitor

@@ -416,7 +416,7 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
    enddo
 
 !   write(6,900) (twork(k,1,1,1,1),k=1,np) 
-   900 format(13f10.1)
+   900 format(13f8.3)
    close(41)
 
    open(51,file='u_stas',form='unformatted')
