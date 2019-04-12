@@ -69,6 +69,7 @@ use params, only: analpertwtnh,analpertwtsh,analpertwttr,nanals,nlevs,&
                   covinflatemin, nlons, nlats, smoothparm, nbackgrounds,&
                   covinflatenh,covinflatesh,covinflatetr,lnsigcovinfcutoff
 use kinds, only: r_single, i_kind
+use mpeu_util, only: getindex
 use constants, only: one, zero, rad2deg, deg2rad
 use covlocal, only: latval, taper
 use controlvec, only: ncdim, cvars3d, cvars2d, nc3d, nc2d, clevels
