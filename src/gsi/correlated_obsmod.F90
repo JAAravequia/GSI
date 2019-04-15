@@ -203,10 +203,8 @@ type ObsErrorCov
      character(len=20) :: mask      ='sea'            ! Apply covariance for profiles over sea
      integer(i_kind),pointer :: indxR(:)   =>NULL()   ! indexes of active channels
      real(r_kind),   pointer :: R(:,:)     =>NULL()   ! nch_active x nch_active
-     real(r_kind),   pointer :: Revals(:)  =>NULL()   ! eigenvalues of R subset
-     real(r_kind),   pointer :: Revecs(:,:)=>NULL()   ! eigenvectors of R subset
-     real(r_kind),   pointer :: Revalsfull(:)  =>NULL()! eigenvalues of R
-     real(r_kind),   pointer :: Revecsfull(:,:)=>NULL()! eigenvectors of R
+     real(r_kind),   pointer :: UT(:,:)=>NULL()       ! Upper triangle of R^-1 subset
+     real(r_kind),   pointer :: UTfull(:,:)=>NULL()   ! Upper triangle of decomp of R^-1
 
 end type
 
@@ -474,8 +472,7 @@ type(ObsErrorCov) :: ErrorCov
 !BOC
    allocate(ErrorCov%R(nch,nch))
    allocate(ErrorCov%indxR(nch))
-   allocate(ErrorCov%Revals(nch),ErrorCov%Revecs(nch,nch))
-   allocate(ErrorCov%Revalsfull(nch),ErrorCov%Revecsfull(nch,nch))
+   allocate(ErrorCov%UT(nch,nch),ErrorCov%UTfull(nch,nch))
 end subroutine create_
 !EOC
 
@@ -505,8 +502,7 @@ type(ObsErrorCov) :: ErrorCov
 !EOP
 !-------------------------------------------------------------------------
 !BOC
-   deallocate(ErrorCov%Revals,ErrorCov%Revecs)
-   deallocate(ErrorCov%Revecsfull,ErrorCov%Revalsfull)
+   deallocate(ErrorCov%UT,ErrorCov%UTfull)
    deallocate(ErrorCov%indxR)
    deallocate(ErrorCov%R)
 end subroutine destroy_
@@ -557,25 +553,18 @@ real(r_kind),allocatable,dimension(:):: invstd
 
 ndim = size(ErrorCov%R,1)
  
-! This extracts the diagonal of R (error variances), setting the 
-! eigenvalues as such and the eigenvectors as the unit vectors
+! This extracts the diagonal of R (error variances)
 ! This is to allow using the estimated error variances, but
 ! but still pretend the covariance is diagnoal - no correlations.
 ! This is largely for testing consistency of the implementation.
 if ( ErrorCov%method==0 .or. ErrorCov%method==3 ) then
-   ErrorCov%Revecs = zero
+   ErrorCov%UTfull = zero
    do ii=1,ndim
-      ErrorCov%Revals(ii)    = ErrorCov%R(ii,ii) 
-      ErrorCov%Revecs(ii,ii) = one
+      ErrorCov%UTfull(ii,ii)    = ErrorCov%R(ii,ii) 
    enddo
-   call westonEtAl_spectrum_boost_(adjspec)
-   if (adjspec) then
-      call rebuild_rcov_
-   endif
 endif ! method=0
 
-! This takes only corr(Re) and 
-! any reconditioning is of correlation matrix
+! This takes only corr(Re)
 if ( ErrorCov%method==1 ) then
    ! reduce R to correlation matrix
    allocate(invstd(ndim))
@@ -588,77 +577,20 @@ if ( ErrorCov%method==1 ) then
       enddo
    enddo
    deallocate(invstd)
-   ErrorCov%Revecs=ErrorCov%R
-   call decompose_(trim(ErrorCov%name),ErrorCov%Revals,ErrorCov%Revecs,ndim,.true.)
-   call westonEtAl_spectrum_boost_(adjspec)
-   if (adjspec) then
-      call rebuild_rcov_
-      allocate(invstd(ndim))
-      do jj=1,ndim
-         invstd(jj) = one/sqrt(ErrorCov%R(jj,jj))
-      enddo
-      do jj=1,ndim
-         do ii=1,ndim
-            ErrorCov%R(ii,jj) = invstd(ii)*ErrorCov%R(ii,jj)*invstd(jj)
-         enddo
-      enddo
-      deallocate(invstd)
-   endif
-   ErrorCov%Revalsfull=ErrorCov%Revals
-   ErrorCov%Revecsfull=ErrorCov%Revecs
+   ErrorCov%UTfull=ErrorCov%R
+   call decompose_(trim(ErrorCov%name),ErrorCov%UTfull,ndim)
 endif ! method=1
 
-! This does the actual full eigendecomposition of the R matrix
-! Here, recondioning is of covariance matrix
+! This does the actual full Cholesky factorization of the matrix
 if ( (ErrorCov%method==2).or.(ErrorCov%method==4) ) then
-   ErrorCov%Revecsfull=ErrorCov%R
-   call decompose_(trim(ErrorCov%name),ErrorCov%Revalsfull,ErrorCov%Revecsfull,ndim,.true.)
    if (ErrorCov%kreq>0) then
       do jj=1,ndim
           ErrorCov%R(jj,jj)=ErrorCov%R(jj,jj)+2*sqrt(ErrorCov%R(jj,jj))*ErrorCov%kreq+ErrorCov%kreq*ErrorCov%kreq
       enddo
-      ErrorCov%Revecsfull=ErrorCov%R
-      call decompose_(trim(ErrorCov%name),ErrorCov%Revalsfull,ErrorCov%Revecsfull,ndim,.true.)
-
-      ! In this case, we can wipe out the eigen-decomp since it will be redone for
-      ! each profile at each location at setup time.
+      ErrorCov%UTfull=ErrorCov%R
+      call decompose_(trim(ErrorCov%name),ErrorCov%UTfull,ndim)
    endif
 endif ! method=2,4
-
-  contains
-  subroutine westonEtAl_spectrum_boost_(adjspec)
-    implicit none
-    logical,intent(out) :: adjspec
-    adjspec=.false.
-    if(ErrorCov%kreq < zero) return
-    lambda_max=maxval(ErrorCov%Revals)
-    lambda_min=minval(ErrorCov%Revals)
-    lambda_inc=(lambda_max - (lambda_min * ErrorCov%kreq))/(ErrorCov%kreq-1)
-    if(lambda_inc>zero) then
-       ErrorCov%Revals = ErrorCov%Revals + lambda_inc
-    else
-       if (iamroot_) then
-         write(6,'(2a,1x,es10.3)') myname_, ' Spectrum of cov(R) not changed, poor choice of kreq = ', &
-                         ErrorCov%kreq
-       endif
-    endif
-    adjspec=.true.
-  end subroutine westonEtAl_spectrum_boost_
-  subroutine rebuild_rcov_
-  integer(i_kind) ii,jj,kk
-  real(r_kind), allocatable, dimension(:,:) :: tmp
-  allocate(tmp(ndim,ndim))
-  ! D*U^T
-  do jj=1,ndim
-     tmp(:,jj) = ErrorCov%Revals(:) * ErrorCov%Revecs(jj,:)
-  enddo
-  ! U*(D*U^T)
-  ErrorCov%R = matmul(ErrorCov%Revecs,tmp)
-  ErrorCov%Revecs =ErrorCov%R
-  call decompose_(trim(ErrorCov%name),ErrorCov%Revals,ErrorCov%Revecs,ndim,.true.)
-  ! clean up
-  deallocate(tmp)
-  end subroutine rebuild_rcov_
 end subroutine solver_
 !EOC
 
@@ -670,28 +602,24 @@ end subroutine solver_
 !
 ! !INTERFACE:
 !
-subroutine decompose_(instrument,Evals,Evecs,ndim,lprt)
+subroutine decompose_(instrument,UT,ndim)
 ! !USES:
 use constants, only: tiny_r_kind
   implicit none
 ! !INPUT PARAMETERS:
   character(len=*),intent(in):: instrument
   integer(i_kind),intent(in) :: ndim
-  logical,intent(in)         :: lprt
 ! !INPUT/OUTPUT PARAMETERS:
-  real(r_kind),intent(inout) :: Evals(:)
-  real(r_kind),intent(inout) :: Evecs(:,:) ! on entry: matrix to decompose
-                                           ! on exit: eigenvectors
+  real(r_kind),intent(inout) :: UT(:,:) ! on entry: matrix to decompose
+                                        ! on exit: inv of U, where R=UU^T
 
-! !DESCRIPTION: This routine makes a LAPACK call to eigen-decompose cov(R).
-!               Its initial implementation is the crudest possible; it does
-!               not make use of the fact that only the upper or lower triangles
-!               of the matrix are needed; the problems solver are so small that
-!               at present this does not seem to be an issue; this could be 
-!               easily revisited in the future.
+! !DESCRIPTION: This routine makes a LAPACK call to compute the cholesky factorization of R.
+!               R is factored as R=UU^T, and then U is inverted to get a
+!               non-diagonal square root of R^-1.
 !
 ! !REVISION HISTORY:
-!   2014-04-13  todling  initial code
+!   2014-04-13  todling   initial code
+!   2019-04-15  kbathmann change from eigendecomposition to cholesky factorizaiton
 !
 ! !REMARKS:
 !   language: f90
@@ -705,35 +633,17 @@ use constants, only: tiny_r_kind
 !BOC
 
   character(len=*),parameter :: myname_=myname//'decompose_'
-  character*1 jobz
-  integer(i_kind) lwork,info
-  real(r_kind) lambda_max,lambda_min,cond
-  real(r_kind),allocatable, dimension(:) :: work
-  jobz = 'V' ! evals & evecs
-  lwork = max(1,3*ndim-1)
-  allocate(work(lwork))
+  integer(i_kind):: infoc,infoi
   if(r_kind==r_single) then ! this trick only works because this uses the f77 lapack interfaces
-     call SSYEV( jobz, 'U', ndim, Evecs, ndim, Evals, WORK, lwork, info )
+     call SPOTRF('U',ndim,UT,ndim,infoc)
+     call STRTRI('U','N',ndim,UT,ndim,infoi)
   else if(r_kind==r_double) then
-     call DSYEV( jobz, 'U', ndim, Evecs, ndim, Evals, WORK, lwork, info )
+     call DPOTRF('U',ndim,UT,ndim,infoc)
+     call DTRTRI('U','N',ndim,UT,ndim,infoi)
   else
-     call die(myname_,'no corresponding LAPACK call for solving eigenproblem')
+     call die(myname_,'no corresponding LAPACK call for cholesky inversion')
   endif
-  if (info==0) then
-     if (lprt) then
-        cond=-999._r_kind
-        lambda_max=maxval(Evals)
-        lambda_min=minval(abs(Evals))
-        if(lambda_min>tiny_r_kind) cond=abs(lambda_max/lambda_min) ! formal definition (lambda>0 for SPD matrix)
-        if (iamroot_) then
-           write(6,'(2a,1x,a,1x,es10.3)') 'Rcov(Evals) for Instrument: ', trim(instrument), ' cond= ', cond
-           write(6,'(9(1x,es10.3))') Evals
-        endif
-     endif
-  else
-     call die(myname_,'trouble solving eigenproblem')
-  endif
-  deallocate(work)
+  if ((abs(infoc)>0).or.(abs(infoi)>0)) call die(myname_,'trouble with lapack routines')
 end subroutine decompose_
 !EOC
 
@@ -745,7 +655,7 @@ end subroutine decompose_
 ! !INTERFACE:
 !
 logical function scale_jac_(depart,obvarinv,adaptinf,jacobian, nchanl,&
-                            jpch_rad,varinv,wgtjo,iuse,ich,ErrorCov,Rinv,rsqrtinv)
+                            jpch_rad,varinv,wgtjo,iuse,ich,ErrorCov,pred)
 ! !USES:
 use constants, only: tiny_r_kind
 use mpeu_util, only: die
@@ -758,12 +668,11 @@ integer(i_kind),intent(in) :: iuse(0:jpch_rad) ! flag indicating whether channel
 real(r_kind),   intent(in) :: varinv(:)    ! inverse of specified ob-error-variance 
 ! !INPUT/OUTPUT PARAMETERS:
 real(r_kind),intent(inout) :: depart(:)    ! observation-minus-guess departure
-real(r_kind),intent(inout) :: obvarinv(:)  ! inverse of eval(diag(R))
+real(r_kind),intent(inout) :: obvarinv(:)  ! inverse of eval(diag(R)) !KAB delete?
 real(r_kind),intent(inout) :: adaptinf(:)  ! stdev error
 real(r_kind),intent(inout) :: wgtjo(:)     ! weight in Jo-term
 real(r_kind),intent(inout) :: jacobian(:,:)! Jacobian matrix
-real(r_kind),intent(inout) :: rsqrtinv(:,:)! R^-1/2
-real(r_kind),intent(inout) :: Rinv(:)      ! diagonal of R^-1
+real(r_kind),intent(inout) :: pred(:,:)    ! bias predictors
 type(ObsErrorCov) :: ErrorCov              ! ob error covariance for given instrument
 
 ! !DESCRIPTION: This routine is the main entry-point to the outside world. 
@@ -780,9 +689,7 @@ type(ObsErrorCov) :: ErrorCov              ! ob error covariance for given instr
 !   2015-04-01  W. Gu      clean the code
 !   2017-07-27  kbathmann  Merge subroutine rsqrtinv into scale_jac, define Rinv to fix
 !                          diag_precon for correlated error, and reorder several nested loops
-!   2018-03-18  kbathmann  When full channel set passes qc, use stored
-!                          eigendecomposition of full R matrix.
-!                          Rearrange matrix operations of methods 2 and 4 for efficiency
+!   2018-03-18  kbathmann  change to cholesky, and move over correlated error code from intrad and stprad
 !
 ! !REMARKS:
 !   language: f90
@@ -796,7 +703,7 @@ type(ObsErrorCov) :: ErrorCov              ! ob error covariance for given instr
 !BOC
 
 character(len=*),parameter :: myname_=myname//'*scale_jac'
-integer(i_kind) :: nch_active,ii,jj,kk,iii,jjj,mm,nn,ncp,ifound,nsigjac,indR
+integer(i_kind) :: nch_active,ii,jj,kk,iii,jjj,mm,nn,ncp,ifound,nsigjac,indR,npred
 integer(i_kind),allocatable,dimension(:)   :: ircv
 integer(i_kind),allocatable,dimension(:)   :: ijac
 integer(i_kind),allocatable,dimension(:)   :: IRsubset
@@ -807,8 +714,6 @@ real(r_kind) coeff,coeff2,qcadjusted
 integer(i_kind) :: method
 logical subset
 scale_jac_=.false.
-rsqrtinv=zero
-Rinv=zero
 nch_active=ErrorCov%nch_active
 if(nch_active<0) return
 call timer_ini('scljac')
@@ -882,8 +787,7 @@ if( ErrorCov%method==1 .or. ErrorCov%method==2 .or. ErrorCov%method==4 ) then
    if (ncp<ErrorCov%nch_active) then
       subset = decompose_subset_ (IRsubset,ErrorCov)
    else
-      ErrorCov%Revals=ErrorCov%Revalsfull
-      ErrorCov%Revecs=ErrorCov%Revecsfull
+      ErrorCov%UT=ErrorCov%UTfull
       subset=.true.
    endif
    if(.not.subset) then
@@ -902,6 +806,7 @@ if( ErrorCov%method<0 ) then
    enddo
 else
    nsigjac=size(jacobian,1)
+   npred=size(pred,1)
 !  Multiply Jacobian with matrix of eigenvectors
 !  Multiply departure with "right" eigenvectors
    allocate(row(nsigjac,ncp),row0(nsigjac,ncp))
@@ -928,53 +833,27 @@ else
           obvarinv(mm) = one/ErrorCov%R(IRsubset(jj),IRsubset(jj))
           adaptinf(mm) = qcadjusted
           wgtjo(mm)    = qcadjusted/ErrorCov%R(IRsubset(jj),IRsubset(jj))
-          Rinv(jj)=1/ErrorCov%R(IRsubset(jj),IRsubset(jj))
-          rsqrtinv(jj,jj)=sqrt(Rinv(IRsubset(jj)))
        enddo
 
      case (2) ! case=2: uses full Re;
-              !    Re = U De U^T  (Evals/Evecs eigen-pairs of full Re)
-              !    inv(Rg) = U De^(-1/2) U^T U De^(-1/2) U^T
+              !    Re = UU^T  
+              !    inv(Rg) = U^-TU^-1
        do ii=1,ncp
-         nn=IRsubset(ii)
-         coeff2 = one/ErrorCov%Revals(nn)
-         coeff = sqrt(coeff2)
-         do jj=1,ncp
-            mm=IRsubset(jj)
-            Ri(jj,ii)   =  coeff2*ErrorCov%Revecs(mm,nn) !U De^{-1}
-            Rs(jj,ii)   =  coeff*ErrorCov%Revecs(mm,nn) !U De^{-1/2}
-         enddo
-       enddo
-       do kk=1,ncp
-         do jj=1,ncp 
-            do ii=jj,ncp
-                  !U De^{-1/2} was computed in the last nested do loop, and stored in Rs
-                  !Exploit symmetry of R^{-1/2} here to efficiently compute
-                  ! (U De^{-1/2}) U^T
-                  rsqrtinv(ii,jj)=rsqrtinv(ii,jj)+ErrorCov%Revecs(IRsubset(ii),IRsubset(kk))*Rs(jj,kk) 
-            end do
-            Rinv(jj) = Rinv(jj)+ErrorCov%Revecs(IRsubset(jj),IRsubset(kk))*Ri(jj,kk)
-         end do
-      end do
-      do ii=2,ncp
-         do jj=1,ii-1
-            rsqrtinv(jj,ii)=rsqrtinv(ii,jj)
-         end do
-      end do
-      do ii=1,ncp
-         do jj=1,ncp
-            col(ii)=col(ii)+rsqrtinv(jj,ii)*depart(IJsubset(jj))
-            do kk=1,nsigjac
-               row(kk,jj)=row(kk,jj)+jacobian(kk,IJsubset(ii))*rsqrtinv(jj,ii)
+         iii=IRsubset(ii)
+         do jj=ii,ncp
+            jjj=IRsubset(jj)
+            do kk=1,npred
+               row0(kk,ii)=row0(kk,ii)+pred(kk,IJsubset(ii))*ErrorCov%UT(iii,jjj)
             enddo
          enddo
+         do jj=1,ii
+            jjj=IRsubset(jj)
+            do kk=1,nsigjac
+               row(kk,ii)=row(kk,ii)+jacobian(kk,IJsubset(jj))*ErrorCov%UT(jjj,iii)
+            enddo
+            col(ii)=col(ii)+ErrorCov%UT(jjj,iii)*depart(IJsubset(jj))
+         enddo
       enddo
-      !Multiplication of Rinv diagonal by a factor
-      !of 5 improves the PCG convergence in this case 
-      do jj=1,ncp
-         Rinv(jj)=Rinv(jj)*5.0_r_kind
-      end do
-
 !     Place Jacobian and departure in output arrays
       do jj=1,ncp
          mm=IJsubset(jj)
@@ -985,56 +864,16 @@ else
          do ii=1,nsigjac
             jacobian(ii,mm)=row(ii,jj)
          end do
+         do ii=1,npred
+            pred(ii,mm)=row0(ii,jj)
+         enddo
       enddo
-     case(3) ! use diag(Re) scales GSI specified errors
-             !    inv(Rg) = inv(De*Dg)
-       do jj=1,ncp
-          mm=IJsubset(jj)
-          adaptinf(mm) = obvarinv(mm)**2*varinv(mm)/ErrorCov%Revals(IRsubset(jj))
-          obvarinv(mm) = one/obvarinv(mm)**2
-          wgtjo(mm)    = varinv(mm)/ErrorCov%Revals(IRsubset(jj))
-          Rinv(jj)=1/ErrorCov%R(IRsubset(jj),IRsubset(jj))
-          rsqrtinv(jj,jj)=sqrt(Rinv(IRsubset(jj)))
-       enddo
+     case(3) 
+!delete? KAB
      case default !  case=1 is default; uses corr(Re) only
                   !    Ce = U E U^T  (U=Evecs; E=Evals hold eigen-pairs of corr(R))
                   !    inv(Rg) = D0^(-1/2) U inv(E) U^T D0^(-1/2)
-       do ii=1,ncp
-          do jj=1,ncp
-             nn=IJsubset(jj)
-             coeff2 = varinv(nn)/ErrorCov%Revals(IRsubset(ii))
-             coeff = sqrt(coeff2)
-             col0(ii)   = col0(ii)   + ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) *coeff*depart(nn)
-             Ri(jj,ii)   =  coeff2*ErrorCov%Revecs(IRsubset(jj),IRsubset(ii))
-             Rs(jj,ii)   =  coeff*ErrorCov%Revecs(IRsubset(jj),IRsubset(ii))
-            do kk=1,nsigjac
-               row0(kk,ii) = row0(kk,ii)+ErrorCov%Revecs(IRsubset(jj),IRsubset(ii)) *coeff*jacobian(kk,nn)
-            enddo
-          enddo
-       enddo
-       do jj=1,ncp
-         do ii=1,ncp
-            col(ii)   = col(ii)   + ErrorCov%Revecs(IRsubset(ii),IRsubset(jj)) * col0(jj)
-            do kk=1,nsigjac
-               row(kk,ii) = row(kk,ii) + ErrorCov%Revecs(IRsubset(ii),IRsubset(jj)) * row0(kk,jj)
-            end do
-         end do
-       end do
-      do kk=1,ncp
-         do jj=1,ncp
-            do ii=jj,ncp
-               rsqrtinv(ii,jj)=rsqrtinv(ii,jj) + ErrorCov%Revecs(IRsubset(ii),IRsubset(kk))*Rs(jj,kk)
-            end do
-         enddo
-         do jj=1,ncp
-            Rinv(jj) = Rinv(jj) + ErrorCov%Revecs(IRsubset(jj),IRsubset(kk))*Ri(jj,kk)
-         enddo
-       enddo
-      do ii=2,ncp
-         do jj=1,ii-1
-            rsqrtinv(jj,ii)=rsqrtinv(ii,jj)
-         end do
-      end do
+ 
 !      Place Jacobian and departure in output arrays
        do jj=1,ncp
           mm=IJsubset(jj)
@@ -1299,32 +1138,30 @@ integer(i_kind),intent(in) :: Isubset(:)
 type(ObsErrorCov) :: ErrorCov
 
 character(len=*), parameter :: myname_=myname//'*subset_'
-real(r_kind),allocatable,dimension(:)   :: Evals
-real(r_kind),allocatable,dimension(:,:) :: Evecs
+real(r_kind),allocatable,dimension(:,:) :: UT
 integer(i_kind) ii,jj,ncp
 
 decompose_subset_=.false. 
 ncp=size(Isubset) ! number of channels actually used in this profile
-allocate(Evals(ncp),Evecs(ncp,ncp))
+allocate(UT(ncp,ncp))
 
 ! extract subcomponent of R
 !Evecs = ErrorCov%R(Isubset,Isubset)
 do jj=1,ncp
    do ii=1,ncp
-      Evecs(ii,jj) = ErrorCov%R(Isubset(ii),Isubset(jj))
+      UT(ii,jj) = ErrorCov%R(Isubset(ii),Isubset(jj))
    enddo
 enddo
 ! decompose subset matrix
-call decompose_(ErrorCov%instrument,Evals,Evecs,ncp,.false.)
+call decompose_(ErrorCov%instrument,UT,ncp)
 ! copy decomposition onto ErrorCov
 do jj=1,ncp
-   do ii=1,ncp
-      ErrorCov%Revecs(Isubset(ii),Isubset(jj)) = Evecs(ii,jj)
+   do ii=1,jj
+      ErrorCov%UT(Isubset(ii),Isubset(jj)) = UT(ii,jj)
    enddo
-   ErrorCov%Revals(Isubset(jj)) = Evals(jj)
 enddo
 ! clean up
-deallocate(Evals,Evecs)
+deallocate(UT)
 
 decompose_subset_=.true.
 end function decompose_subset_
@@ -1365,8 +1202,7 @@ amIset_=.false.
 if(ErrorCov%nch_active<0) failed=.true.
 if(.not.associated(ErrorCov%indxR)) failed=.true.
 if(.not.associated(ErrorCov%R)) failed=.true.
-if(.not.associated(ErrorCov%REvals)) failed=.true.
-if(.not.associated(ErrorCov%REvecs)) failed=.true.
+if(.not.associated(ErrorCov%UT)) failed=.true.
 if(.not.failed) amIset_=.true.
 end function amIset_
 !EOC

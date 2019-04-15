@@ -16,7 +16,7 @@ export JCAP=62
 export LEVS=64
 export JCAP_B=126
 export JCAP_EN=62
-
+export MKL_NUM_THREADS=4
 # Set runtime and save directories
 tmpdir=$tmpdir/$tmpregdir/${exp}
 savdir=$savdir/out${JCAP}/${exp}

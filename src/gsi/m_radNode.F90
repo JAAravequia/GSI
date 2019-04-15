@@ -11,7 +11,6 @@ module m_radNode
 ! program history log:
 !   2016-05-18  j guo   - added this document block for the initial polymorphic
 !                         implementation.
-!   2016-07-19  kbathmann - add rsqrtinv and use_corr_obs to rad_ob_type
 !
 !   input argument list: see Fortran 90 style document below
 !
@@ -49,15 +48,12 @@ module m_radNode
                                       !  predictors (npred,nchan)
      real(r_kind),dimension(:,:),pointer :: dtb_dvar => NULL()
                                       !  radiance jacobian (nsigradjac,nchan)
-
-     real(r_kind),dimension(:,:),pointer :: rsqrtinv => NULL()
                                       !  square root of inverse of R, only used
                                       !  if using correlated obs
      integer(i_kind),dimension(:),pointer :: icx => NULL()
      integer(i_kind),dimension(:),pointer :: ich => NULL()
      integer(i_kind) :: nchan         !  number of channels for this profile
      integer(i_kind) :: ij(4)         !  horizontal locations
-     logical         :: use_corr_obs  !  logical to indicate if using correlated obs
      !logical         :: luse          !  flag indicating if ob is used in pen.
 
      !integer(i_kind) :: idv,iob              ! device id and obs index for sorting
@@ -227,7 +223,6 @@ _ENTRY_(myname_)
         if(associated(aNode%raterr2 )) deallocate(aNode%raterr2 )
         if(associated(aNode%pred    )) deallocate(aNode%pred    )
         if(associated(aNode%dtb_dvar)) deallocate(aNode%dtb_dvar)
-        if(associated(aNode%rsqrtinv)) deallocate(aNode%rsqrtinv)
         if(associated(aNode%icx     )) deallocate(aNode%icx     )
 
         nchan=aNode%nchan
@@ -240,10 +235,6 @@ _ENTRY_(myname_)
                   aNode%ich  (nchan), &
                   aNode%icx  (nchan)  )
 
-        if (aNode%use_corr_obs) then
-            deallocate(aNode%rsqrtinv, stat=istat)
-            if (istat/=0) write(6,*)'DESTROYOBS:  deallocate error for rad rsqrtinv, istatus=',istat
-        endif
 
         read(iunit,iostat=istat)    aNode%ich     , &
                                     aNode%res     , &
@@ -260,14 +251,6 @@ _ENTRY_(myname_)
                   return
                 end if
 
-        if (aNode%use_corr_obs) then
-            read(iunit,iostat=istat)    aNode%rsqrtinv
-                if (istat/=0) then
-                  call perr(myname_,'read(%(rsqrtinv)), iostat =',istat)
-                  _EXIT_(myname_)
-                  return
-                end if
-        endif
 
     do k=1,nchan
       aNode%diags(k)%ptr => obsdiagLookup_locate(diagLookup,aNode%idv,aNode%iob,aNode%ich(k))
@@ -316,14 +299,6 @@ _ENTRY_(myname_)
                   _EXIT_(myname_)
                   return
                 end if
-  if (aNode%use_corr_obs) then
-      write(junit,iostat=jstat) aNode%rsqrtinv
-           if (jstat/=0) then
-               call perr(myname_,'write(%(rsqrtinv)), iostat =',jstat)
-               _EXIT_(myname_)
-               return
-           end if
-  endif
 
 _EXIT_(myname_)
 return

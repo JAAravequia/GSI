@@ -189,7 +189,6 @@
 !   2016-07-19  kbathmann -move eigendecomposition for correlated obs here
 !   2016-11-29  shlyaeva - save linearized H(x) for EnKF
 !   2016-10-23  zhu     - add cloudy radiance assimilation for ATMS
-!   2017-07-27  kbathmann -introduce Rinv into the rstats computation for correlated error
 !   2018-04-04  zhu     - add additional radiance_ex_obserr and radiance_ex_biascor calls for all-sky
 !
 !  input argument list:
@@ -243,7 +242,7 @@
   use gridmod, only: nsig,regional,get_ij
   use satthin, only: super_val1
   use constants, only: quarter,half,tiny_r_kind,zero,one,deg2rad,rad2deg,one_tenth, &
-      two,three,cg_term,wgtlim,r100,r10,r0_01,r_missing
+      two,three,five,cg_term,wgtlim,r100,r10,r0_01,r_missing
   use jfunc, only: jiter,miter,jiterstart
   use sst_retrieval, only: setup_sst_retrieval,avhrr_sst_retrieval,&
       finish_sst_retrieval,spline_cub
@@ -351,11 +350,10 @@
   real(r_kind),dimension(nsig+1):: prsitmp
   real(r_kind),dimension(nchanl):: weightmax
   real(r_kind),dimension(nchanl):: cld_rbc_idx
-  real(r_kind),dimension(nchanl):: Rinv
-  real(r_kind),dimension(nchanl,nchanl):: rsqrtinv
   real(r_kind) :: ptau5deriv, ptau5derivmax
   real(r_kind) :: clw_guess,clw_guess_retrieval
 ! real(r_kind) :: predchan6_save   
+  real(r_kind) :: tnoise_save
   integer(i_kind),dimension(nchanl):: ich,id_qc,ich_diag
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
@@ -758,7 +756,27 @@
         else if(mixed) then
           isfctype=4
         endif
+        do jc=1,nchanl
+           j=ich(jc)
 
+           tnoise(jc)=varch(j)
+
+           if(sea   .and. (varch_sea(j)>zero))   tnoise(jc)=varch_sea(j)
+           if(land  .and. (varch_land(j)>zero))  tnoise(jc)=varch_land(j)
+           if(ice   .and. (varch_ice(j)>zero))   tnoise(jc)=varch_ice(j)
+           if(snow  .and. (varch_snow(j)>zero))  tnoise(jc)=varch_snow(j)
+           if(mixed .and. (varch_mixed(j)>zero)) tnoise(jc)=varch_mixed(j)
+           tnoise_save = tnoise(jc)
+
+           channel_passive=iuse_rad(j)==-1 .or. iuse_rad(j)==0
+           if (iuse_rad(j)< -1 .or. (channel_passive .and.  &
+                .not.rad_diagsave)) tnoise(jc)=r1e10
+           if (passive_bc .and. channel_passive) tnoise(jc)=tnoise_save
+
+           error0(jc) = tnoise(jc)
+           errf0(jc) = error0(jc)
+
+        end do
 !       Count data of different surface types
         if(luse(n))then
            if (mixed) then
@@ -1070,28 +1088,7 @@
                 id_qc(1:nchanl) = ifail_cloud_qc
              endif
            endif
-        end if ! radmod%lcloud_fwd .and. radmod%ex_biascor
-        if(sea.and.(varch_sea(ich(1))>zero)) then
-           do i=1,nchanl
-              tnoise(i)=varch_sea(ich(i))
-           enddo
-        else if(land.and.(varch_land(ich(1))>zero)) then
-           do i=1,nchanl
-              tnoise(i)=varch_land(ich(i))
-           enddo
-        else if(ice.and.(varch_ice(ich(1))>zero)) then
-           do i=1,nchanl
-              tnoise(i)=varch_ice(ich(i))
-           enddo
-        else if(snow.and.(varch_snow(ich(1))>zero)) then
-           do i=1,nchanl
-              tnoise(i)=varch_snow(ich(i))
-           enddo
-        else if(mixed.and.(varch_mixed(ich(1))>zero)) then
-           do i=1,nchanl
-              tnoise(i)=varch_mixed(ich(i))
-           enddo
-        endif        
+        end if ! radmod%lcloud_fwd .and. radmod%ex_biascor  
         do i=1,nchanl
            error0(i) = tnoise(i) 
            errf0(i) = error0(i)
@@ -1555,8 +1552,8 @@
               adaptinf = varinv ! on input
               obvarinv = error0 ! on input
               if (miter>0) then
-                 account_for_corr_obs = radinfo_adjust_jacobian (iinstr,isis,isfctype,nchanl,nsigradjac,ich,varinv,&
-                                                                 utbc,obvarinv,adaptinf,wgtjo,jacobian,Rinv,rsqrtinv)
+                 account_for_corr_obs = radinfo_adjust_jacobian (iinstr,isis,isfctype,nchanl,nsigradjac,npred,ich,&
+                                                                 varinv,utbc,obvarinv,adaptinf,wgtjo,jacobian,pred)
               else
                  account_for_corr_obs =.false.
               end if
@@ -1612,9 +1609,11 @@
 !                   compute hessian contribution from Jo bias correction terms
                     if (newpc4pred .and. luse(n)) then
                        if (account_for_corr_obs) then
+!                         Multiplication of pred by a factor
+!                         of 5 improves the PCG convergence in this case
                           do k=1,npred
                              rstats(k,m)=rstats(k,m)+my_head%pred(k,iii) &
-                                  *my_head%pred(k,iii)*Rinv(iii)
+                                  *my_head%pred(k,iii)*five
                           end do
                        else
                          do k=1,npred
@@ -1626,13 +1625,6 @@
                  end if
               end do
               my_head%nchan  = iii         ! profile observation count
-
-              my_head%use_corr_obs=.false.
-              if (account_for_corr_obs) then
-                 allocate(my_head%rsqrtinv(my_head%nchan,my_head%nchan))
-                 my_head%rsqrtinv(1:my_head%nchan,1:my_head%nchan)=rsqrtinv(1:my_head%nchan,1:my_head%nchan)
-                 my_head%use_corr_obs=.true.
-              end if
               my_head => null()
            end if ! icc
         endif ! (in_curbin)

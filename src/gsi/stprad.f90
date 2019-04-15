@@ -70,6 +70,7 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
 !   2011-05-16  todling - generalize entries in radiance jacobian
 !   2011-05-17  augline/todling - add hydrometeors
 !   2016-07-19  kbathmann- adjustment to bias correction when using correlated obs
+!   2019-04-15  kbathmann - move all correlated R compuations to scale_jac
 !
 !   input argument list:
 !     radhead
@@ -129,7 +130,7 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
 ! Declare local variables
   integer(i_kind) istatus
   integer(i_kind) nn,n,ic,k,nx,j1,j2,j3,j4,kk, mm, ic1
-  real(r_kind) val2,val,w1,w2,w3,w4,Aval,Aval2
+  real(r_kind) val2,val,w1,w2,w3,w4
   real(r_kind),dimension(nsigradjac):: tdir,rdir
   real(r_kind) cg_rad,wgross,wnotgross
   integer(i_kind),dimension(nsig) :: j1n,j2n,j3n,j4n
@@ -274,24 +275,10 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
               val = zero
 !             contribution from bias corection
               ic=radptr%icx(nn)
-              if (radptr%use_corr_obs) then  
-                 do mm=1,radptr%nchan
-                    Aval=zero
-                    Aval2=zero
-                    ic1=radptr%icx(mm)
-                    do nx=1,npred
-                       Aval2=Aval2+spred(nx,ic1)*radptr%pred(nx,mm)
-                       Aval=Aval+rpred(nx,ic1)*radptr%pred(nx,mm)
-                    end do
-                    val2=val2+Aval2*radptr%rsqrtinv(mm,nn)
-                    val=val+Aval*radptr%rsqrtinv(mm,nn)
-                 end do
-              else
-                 do nx=1,npred
-                    val2=val2+spred(nx,ic)*radptr%pred(nx,nn)
-                    val =val +rpred(nx,ic)*radptr%pred(nx,nn)
-                 end do
-              end if
+              do nx=1,npred
+                 val2=val2+spred(nx,ic)*radptr%pred(nx,nn)
+                 val =val +rpred(nx,ic)*radptr%pred(nx,nn)
+              end do
 !              end do
  
 !             contribution from atmosphere
