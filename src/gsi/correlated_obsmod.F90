@@ -587,9 +587,9 @@ if ( (ErrorCov%method==2).or.(ErrorCov%method==4) ) then
       do jj=1,ndim
           ErrorCov%R(jj,jj)=ErrorCov%R(jj,jj)+2*sqrt(ErrorCov%R(jj,jj))*ErrorCov%kreq+ErrorCov%kreq*ErrorCov%kreq
       enddo
-      ErrorCov%UTfull=ErrorCov%R
-      call decompose_(trim(ErrorCov%name),ErrorCov%UTfull,ndim)
    endif
+   ErrorCov%UTfull=ErrorCov%R
+   call decompose_(trim(ErrorCov%name),ErrorCov%UTfull,ndim)
 endif ! method=2,4
 end subroutine solver_
 !EOC
@@ -813,6 +813,7 @@ else
    allocate(col(ncp),col0(ncp))
    allocate(Ri(ncp,ncp),Rs(ncp,ncp))
    row=zero
+   row0=zero
    col=zero
    Ri=zero
    Rs=zero
