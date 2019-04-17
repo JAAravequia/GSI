@@ -118,7 +118,11 @@ for FHR in $nfhrs; do  # loop over analysis times in window
 for imem in $(seq 1 $NMEM_ENKF); do
    memchar="mem"$(printf %03i $imem)
    $NLN $COMIN_GES_ENS/$memchar/${GPREFIX}atmf00${FHR}${ENKF_SUFFIX}$GSUFFIX ./atmges_$memchar
-   $NLN $COMIN_ENS/$memchar/${APREFIX_ENKF}atmanl00${FHR}$ASUFFIX ./atmanl_$memchar
+   if [ $FHR -eq 6 ]; then
+      $NLN $COMIN_ENS/$memchar/${APREFIX_ENKF}atmanl$ASUFFIX ./atmanl_$memchar
+   else
+      $NLN $COMIN_ENS/$memchar/${APREFIX_ENKF}atmanl00${FHR}$ASUFFIX ./atmanl_$memchar
+   fi
    mkdir -p $COMOUT_ENS/$memchar
    if [ $FHR -eq 6 ]; then
       $NLN $COMOUT_ENS/$memchar/${APREFIX}atminc.nc ./atminc_$memchar
@@ -126,12 +130,20 @@ for imem in $(seq 1 $NMEM_ENKF); do
       $NLN $COMOUT_ENS/$memchar/${APREFIX}atmi00${FHR}.nc ./atminc_$memchar
    fi
    if [[ $RECENTER_ENKF = "YES" ]]; then
-      $NLN $COMOUT_ENS/$memchar/${APREFIX}ratmanl000${FHR}$ASUFFIX ./ratmanl_$memchar
+      if [ $FHR -eq 6 ]; then
+         $NLN $COMOUT_ENS/$memchar/${APREFIX}ratmanl$ASUFFIX ./ratmanl_$memchar
+      else
+         $NLN $COMOUT_ENS/$memchar/${APREFIX}ratmanl00${FHR}$ASUFFIX ./ratmanl_$memchar
+      fi
    fi
 done
 
 # Link ensemble mean analysis
-$NLN $COMIN_ENS/${APREFIX_ENKF}atmanl00${FHR}.ensmean$ASUFFIX ./atmanl_ensmean
+if [ $FHR -eq 6 ]; then
+   $NLN $COMIN_ENS/${APREFIX_ENKF}atmanl.ensmean$ASUFFIX ./atmanl_ensmean
+else
+   $NLN $COMIN_ENS/${APREFIX_ENKF}atmanl00${FHR}.ensmean$ASUFFIX ./atmanl_ensmean
+fi
 
 # Compute ensemble mean analysis
 DATAPATH="./"

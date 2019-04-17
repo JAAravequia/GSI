@@ -184,7 +184,11 @@ for imem in $(seq 1 $NMEM_ENKF); do
    mkdir -p $COMOUT_ANL_ENS/$memchar
    for FHR in $nfhrs; do 
       $NLN $COMIN_GES_ENS/$memchar/${GPREFIX}atmf00${FHR}${ENKF_SUFFIX}${GSUFFIX}  sfg_${CDATE}_fhr0${FHR}_${memchar}
-      $NLN $COMOUT_ANL_ENS/$memchar/${APREFIX}atmanl00${FHR}${ASUFFIX}             sanl_${CDATE}_fhr0${FHR}_${memchar}
+      if [ $FHR -eq 6 ]; then
+         $NLN $COMOUT_ANL_ENS/$memchar/${APREFIX}atmanl${ASUFFIX}             sanl_${CDATE}_fhr0${FHR}_${memchar}
+      else
+         $NLN $COMOUT_ANL_ENS/$memchar/${APREFIX}atmanl00${FHR}${ASUFFIX}             sanl_${CDATE}_fhr0${FHR}_${memchar}
+      fi
    done
 done
 
