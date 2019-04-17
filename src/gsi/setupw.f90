@@ -414,6 +414,8 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         isli = data(idomsfc,i)
      endif
 
+     if (station_id.ne."AS045   ") cycle
+
 !    Link observation to appropriate observation bin
      if (nobs_bins>1) then
         ibin = NINT( dtime/hr_obsbin ) + 1
