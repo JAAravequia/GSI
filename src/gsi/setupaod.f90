@@ -103,7 +103,8 @@
 
   real(r_single) freq4,pol4,wave4,varch4
   real(r_kind) errinv,useflag
-  real(r_kind) trop5,pangs
+  real(r_kind) trop5,pangs 
+  real(r_kind) pbl5   !emily 
   real(r_kind) cenlon,cenlat,slats,slons,dtime
   real(r_kind) val_obs
 
@@ -145,6 +146,7 @@
   integer(i_kind) :: istyp, idbcf, ilone, ilate
   real(r_kind)    :: styp, dbcf
 
+  real(r_kind),dimension(nchanl):: chan_level   !emily 
   real(r_kind),dimension(nchanl):: emissivity,ts,emissivity_k
   real(r_kind),dimension(nchanl):: tsim
   real(r_kind),dimension(nsig,nchanl):: wmix,temp,ptau5
@@ -327,8 +329,10 @@
 !       Interpolate model fields to observation location, call crtm and create jacobians
         call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, &
              tvp,qvp,clw_guess,prsltmp,prsitmp, &
-             trop5,tzbgr,dtsavg,sfc_speed, &
-             tsim,emissivity,ptau5,ts,emissivity_k, &
+           ! trop5,tzbgr,dtsavg,sfc_speed, &       !orig
+             trop5,pbl5,tzbgr,dtsavg,sfc_speed, &  !emily
+           ! tsim,emissivity,ptau5,ts,emissivity_k, &              !orig
+             tsim,emissivity,chan_level,ptau5,ts,emissivity_k, &   !emily
              temp,wmix,jacobian,error_status,layer_od=layer_od,jacobian_aero=jacobian_aero)
 
 

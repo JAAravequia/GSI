@@ -219,7 +219,7 @@
   use crtm_spccoeff, only: sc
   use radinfo, only: nuchan,tlapmean,predx,cbias,ermax_rad,tzr_qc,&
       npred,jpch_rad,varch,varch_cld,iuse_rad,icld_det,nusis,fbias,retrieval,b_rad,pg_rad,&
-      air_rad,ang_rad,adp_anglebc,angord,ssmis_precond,emiss_bc,upd_pred, &
+      air_rad,ang_rad,adp_anglebc,angord,ssmis_precond,emiss_bc,upd_pred,ecmwf_clddet, &  !emily
       passive_bc,ostats,rstats,newpc4pred,radjacnames,radjacindxs,nsigradjac,nvarjac
   use gsi_nstcouplermod, only: nstinfo
   use read_diag, only: get_radiag,ireal_radiag,ipchan_radiag
@@ -300,7 +300,7 @@
   real(r_kind) term,tlap,tb_obsbc1
   real(r_kind) drad,dradnob,varrad,error,errinv,useflag
   real(r_kind) cg_rad,wgross,wnotgross,wgt,arg,exp_arg
-  real(r_kind) tzbgr,tsavg5,trop5,pangs,cld,cldp
+  real(r_kind) tzbgr,tsavg5,trop5,pangs,cld,cldp,pbl5  !emily
   real(r_kind) cenlon,cenlat,slats,slons,zsges,zasat,dtime
 ! real(r_kind) wltm1,wltm2,wltm3  
   real(r_kind) ys_bias_sst,cosza,val_obs
@@ -348,7 +348,8 @@
   real(r_kind),dimension(nsig):: qvp,tvp
   real(r_kind),dimension(nsig):: prsltmp
   real(r_kind),dimension(nsig+1):: prsitmp
-  real(r_kind),dimension(nchanl):: weightmax
+  real(r_kind),dimension(nchanl):: weightmax   !emily: unit is hPa
+  real(r_kind),dimension(nchanl):: chan_level  !emily: unit is hPa
   real(r_kind),dimension(nchanl):: cld_rbc_idx
   real(r_kind),dimension(nchanl):: Rinv
   real(r_kind),dimension(nchanl,nchanl):: rsqrtinv
@@ -357,6 +358,7 @@
 ! real(r_kind) :: predchan6_save   
 
   integer(i_kind),dimension(nchanl):: ich,id_qc,ich_diag
+  integer(i_kind),dimension(nchanl):: chanid        !emily 
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
   integer(i_kind),dimension(nchanl):: kmax
@@ -476,6 +478,7 @@
 !       Load channel numbers into local array based on satellite type
 
         ich(jc)=j
+        chanid(jc) = nuchan(ich(jc))   !emily
         do i=1,npred
            predchan(i,jc)=predx(i,j)
         end do
@@ -784,23 +787,27 @@
            tb_obs(i) = data_s(i+nreal,n)
         end do
  
-
 !       Interpolate model fields to observation location, call crtm and create jacobians
 !       Output both tsim and tsim_clr for allsky
         tsim_clr=zero
         if (radmod%lcloud_fwd) then
            call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, &
                 tvp,qvp,clw_guess,prsltmp,prsitmp, &
-                trop5,tzbgr,dtsavg,sfc_speed, &
-                tsim,emissivity,ptau5,ts,emissivity_k, &
+              ! trop5,tzbgr,dtsavg,sfc_speed, &          !orig
+                trop5,pbl5,tzbgr,dtsavg,sfc_speed, &     !emily
+              ! tsim,emissivity,ptau5,ts,emissivity_k, &               !orig
+                tsim,emissivity,chan_level,ptau5,ts,emissivity_k, &    !emily
                 temp,wmix,jacobian,error_status,tsim_clr=tsim_clr)
         else
            call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, &
                 tvp,qvp,clw_guess,prsltmp,prsitmp, &
-                trop5,tzbgr,dtsavg,sfc_speed, &
-                tsim,emissivity,ptau5,ts,emissivity_k, &
+              ! trop5,tzbgr,dtsavg,sfc_speed, &          !orig
+                trop5,pbl5,tzbgr,dtsavg,sfc_speed, &     !emily
+              ! tsim,emissivity,ptau5,ts,emissivity_k, &               !orig
+                tsim,emissivity,chan_level,ptau5,ts,emissivity_k, &    !emily
                 temp,wmix,jacobian,error_status)
         endif 
+       
 ! If the CRTM returns an error flag, do not assimilate any channels for this ob 
 ! and set the QC flag to ifail_crtm_qc.
 ! We currently go through the rest of the QC steps, ensuring that the diagnostic
@@ -1131,9 +1138,11 @@
                  end if
               end if
            end do
-           call qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse(n),goessndr, &
+       !   call qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse(n),goessndr, &          !orig
+           call qc_irsnd(mype,obstype,nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse(n),goessndr, &  !emily
               cris,zsges,cenlat,frac_sea,pangs,trop5,zasat,tzbgr,tsavg5,tbc,tb_obs,tnoise,  &
-              wavenumber,ptau5,prsltmp,tvp,temp,wmix,emissivity_k,ts,                 &
+              wavenumber,ptau5,prsltmp,tvp,temp,wmix,emissivity_k,ts, & !orig
+              pbl5,chanid,chan_level,ecmwf_clddet, &!emily
               id_qc,aivals,errf,varinv,varinv_use,cld,cldp,kmax,zero_irjaco3_pole(n))
 
 !  --------- MSU -------------------

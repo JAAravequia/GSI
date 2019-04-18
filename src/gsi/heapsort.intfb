@@ -1,0 +1,7 @@
+INTERFACE
+SUBROUTINE Heapsort(n, a, index)
+INTEGER, INTENT(in)    :: n
+REAL,    INTENT(in)    :: a(:)
+INTEGER, INTENT(inout) :: index(:)
+END SUBROUTINE Heapsort
+END INTERFACE

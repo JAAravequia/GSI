@@ -94,6 +94,7 @@ module radinfo
   public :: emiss_bc
   public :: passive_bc
   public :: upd_pred
+  public :: ecmwf_clddet !emily 
   public :: ssmis_method,gmi_method,amsr2_method
   public :: radstart,radstep
   public :: newpc4pred
@@ -110,6 +111,7 @@ module radinfo
   integer(i_kind),parameter:: numt = 33   ! size of AVHRR bias correction file
   integer(i_kind),parameter:: ntlapthresh = 100 ! threshhold value of cycles if tlapmean update is needed
 
+  logical ecmwf_clddet  !emily
   logical diag_rad    ! logical to turn off or on the diagnostic radiance file (true=on)
   logical retrieval   ! logical to turn off or on the SST retrieval with AVHRR data
   logical tzr_bufrsave! logical to turn off or on the bufr file output for Tz retrieval (true=on)
@@ -271,6 +273,7 @@ contains
     ssmis_precond = r0_01 ! default preconditioner for ssmis bias terms
     gmi_method = 0        ! 4= default gmi smoothing method
     amsr2_method = 0      ! 5= default amsr2 smoothing method
+    ecmwf_clddet = .false.!emily
   end subroutine init_rad
 
 

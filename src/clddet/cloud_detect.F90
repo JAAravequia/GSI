@@ -1,4 +1,5 @@
 SUBROUTINE CLOUD_DETECT( &
+&    K__MYPE,       &   !emily
 &    K__SENSOR,     &
 &    K__NCHANS,     &
 &    K__CHANID,     &
@@ -77,10 +78,12 @@ SUBROUTINE CLOUD_DETECT( &
 
 USE YOMIASI, ONLY : S__Cloud_Detect_Setup, &
 &                   JP__Digital_Filter,    &
-&                   INST_ID_IASI
+&                   INST_ID_IASI,          &
+&                   INST_ID_CRIS     !emily
 IMPLICIT NONE
 
 !* 0.1 Global arrays
+INTEGER,INTENT(IN)  :: K__MYPE                  ! MYPE   !emily
 INTEGER,INTENT(IN)  :: K__NCHANS                ! No. of channels
 INTEGER,INTENT(IN)  :: K__SENSOR                ! Sensor
 INTEGER,INTENT(IN)  :: K__MINLEV                ! Highest allowed starting
@@ -96,6 +99,7 @@ INTEGER,INTENT(IN)  :: K__IMAGER_FLAG           ! Input flag from imager data
 
 !* 0.2 local variables
 INTEGER             :: IST,ICOUNT,J,I_K,JBAND,JBAND2
+INTEGER             :: I   !emily 
 
 !* 0.3 Local variables - band splitting details
 INTEGER,POINTER     :: I__Bands(:,:)            ! Channel detection bands
@@ -144,6 +148,7 @@ K__CLOUD_FLAG(:)=1       ! intialise ALL channels to cloudy
 ! If using cross-band, set up an array indicating which channels correspond
 ! to which bands in K__CHANID
 IF (LL__Do_CrossBand) THEN
+   write(K__MYPE+200000,*) 'LL__Do_CrossBand = ', LL__Do_CrossBand
    I__BandNumber(:)=-1  ! Initialise
    DO JBAND = 1, I__Num_Bands
       DO I_K=1,K__NCHANS
@@ -151,6 +156,11 @@ IF (LL__Do_CrossBand) THEN
 &                I__BandNumber(I_K)=JBand
       ENDDO
    ENDDO
+!>>emily
+   DO I_K = 1, K__NCHANS
+   WRITE (K__MYPE+200000,*) I_K, K__CHANID(I_K), I__BandNumber(I_K)
+   ENDDO 
+!<<emily
 ENDIF
 
 
@@ -185,7 +195,8 @@ BAND_LOOP: DO JBAND = 1, I__Num_Bands         ! Loop over bands
   DO J=1,I__Band_Size(JBAND)
     DO I_K=1,K__NCHANS
       IF (K__CHANID(I_K) == I__BANDS(J,JBAND)) THEN
-        IF (P__OBSBTS(I_K) < 0. .OR. P__MODELBTS(I_K) < 0.) CYCLE
+    !   IF (P__OBSBTS(I_K) < 0. .OR. P__MODELBTS(I_K) < 0.) CYCLE      !orig
+        IF (P__OBSBTS(I_K) <= 50. .OR. P__MODELBTS(I_K) <= 50.) CYCLE  !emily
         I__NumFoundChans = I__NumFoundChans + 1
         Z__DBT(I__NumFoundChans)=P__OBSBTS(I_K)-P__MODELBTS(I_K)
         Z__LEVEL(I__NumFoundChans)=P__CHAN_LEVEL(I_K)
@@ -234,12 +245,36 @@ BAND_LOOP: DO JBAND = 1, I__Num_Bands         ! Loop over bands
   ENDDO
   I__CHAN_HIGH=J
 
+!>>emily
+  write(K__MYPE+200000,*)'before heapsort ...'
+  write(K__MYPE+200000,*)'K__NCHANS        = ', K__NCHANS
+  write(K__MYPE+200000,*)'K__MINLEV        = ', K__MINLEV
+  write(K__MYPE+200000,*)'K__MAXLEV        = ', K__MAXLEV
+  write(K__MYPE+200000,*)'I__NumFoundChans = ', I__NumFoundChans
+  write(K__MYPE+200000,*)'I__CHAN_HIGH     = ', I__CHAN_HIGH
+  write(K__MYPE+200000,*)'I__CHAN_LOW      = ', I__CHAN_LOW
+  do i = 1, I__NumFoundChans 
+     write(K__MYPE+200000,222) i, K__CHANID(IDCHAN(i)), Z__DBT(i), Z__LEVEL(i)
+  enddo
+222 format(i6,2x,i6,2x,2(f15.8,2x))
+!<<emily
+
+!>>emily
+  write(K__MYPE+200000,*)'after heapsort ...'
+  do i = 1, I__NumFoundChans 
+     write(K__MYPE+200000,111) i, K__CHANID(IDCHAN(I__INDEX(i))), Z__DBT(I__INDEX(i)), Z__LEVEL(I__INDEX(i))
+  enddo
+111 format(i6,2x,i6,2x,2(f15.8,2x))
+!<<emily
+
+
 
 !3. Cloud search
 
   IF (I__METHOD == JP__Digital_Filter) THEN
     I__Cloud_Flag(:) = K__CLOUD_FLAG(IDCHAN(:))
     CALL CF_DIGITAL( &
+&        K__MYPE,                      &  !emily
 &        K__SENSOR,                    &
 &        JBAND,                        &
 &        I__NumFoundChans,             &
@@ -264,6 +299,13 @@ BAND_LOOP: DO JBAND = 1, I__Num_Bands         ! Loop over bands
        Z__Cloud_Level = P__Chan_Level(IDCHAN(I__LastClearChannel))
     ENDIF
 
+!>>emily
+    write(K__MYPE+200000,*)'I__FirstCloudyChannel = ', I__FirstCloudyChannel, K__CHANID(IDCHAN(I__FirstCloudyChannel))
+    write(K__MYPE+200000,*)'I__LastClearChannel   = ', I__LastClearChannel, K__CHANID(IDCHAN(I__LastClearChannel))
+    write(K__MYPE+200000,*)'Z__Cloud_Level        = ', Z__Cloud_Level
+    write(K__MYPE+200000,*)'LL__Do_CrossBand      = ', LL__Do_CrossBand 
+!<<emily
+
     ! Automatically do cross band cloud detection for all channels
     ! (whether assigned a band or not) if JBand == 1.  This can be
     ! over-ridden for the other bands.
@@ -271,18 +313,50 @@ BAND_LOOP: DO JBAND = 1, I__Num_Bands         ! Loop over bands
     IF (K__SENSOR == INST_ID_IASI .AND. JBand == 1) &
 &        WHERE(P__Chan_Level(:) < Z__Cloud_Level) K__CLOUD_FLAG(:) = 0
 
+    do i=1, K__NCHANS 
+       write(K__MYPE+300000,888)  I, K__CHANID(i), I__BandNumber(i), P__CHAN_LEVEL(i), K__CLOUD_FLAG(i)
+    enddo
+
     CrossBand : IF (LL__Do_CrossBand) THEN
        ! Cross Band:
        ! Loop through bands applying cloud detection to those that take their
        ! cloud detection information from the current band JBAND.
+       write(K__MYPE+500000,*)'LL__Do_CrossBand = ', LL__Do_CrossBand
        DO JBand2 = 1, I__Num_Bands
           IF (I__BandToUse(JBand2) == JBand) THEN
              WHERE(P__Chan_Level(:) < Z__Cloud_Level .AND. &
 &                    I__BandNumber == JBand2 .AND. &
 &                    P__OBSBTs(:)>0.0 ) K__CLOUD_FLAG(:) = 0
+
+!>>emily
+             write(K__MYPE+500000,556) 'I','CHANID','JBAND2', 'JBAND', 'BandToUse', 'BandNumber', 'P__OBSBTS', 'Z__Cloud_Level', 'P__Chan_Level', 'K__CLOUD_FLAG'  
+             DO i = 1, K__NCHANS           
+             write(K__MYPE+500000,555) i, K__CHANID(i), JBAND2, JBAND, I__BandToUse(JBand2), I__BandNumber(i), P__OBSBTs(i), Z__Cloud_Level, P__Chan_Level(i), K__CLOUD_FLAG(i)  
+             ENDDO
+555          format(i6,2x,i10,2x,i10,2x,i10,2x,i10,2x,i10,2x,3(f15.8,2x),i15)
+556          format(a6,2x,a10,2xa10,2x,a10,2x,a10,2x,a10,2x,3(a15,  2x),a15)
+!<<emily
+
+
           ENDIF
        ENDDO
     ENDIF CrossBand
+
+    write(K__MYPE+200000, * ) 'K__SENSOR    = ', K__SENSOR 
+    write(K__MYPE+200000, * ) 'I__BandToUse = ', I__BandToUse(:) 
+    write(K__MYPE+200000, * ) 'JBAND        = ', JBAND 
+    write(K__MYPE+200000,333) K__CLOUD_FLAG(:)
+333 format(10i3)
+    do i=1, K__NCHANS 
+       write(K__MYPE+200000,888)  I, K__CHANID(i), I__BandNumber(i), P__CHAN_LEVEL(i), K__CLOUD_FLAG(i)
+    enddo
+    do i=1, K__NCHANS 
+       write(K__MYPE+400000,888)  I, K__CHANID(i), I__BandNumber(i), P__CHAN_LEVEL(i), K__CLOUD_FLAG(i)
+    enddo
+    write(K__MYPE+200000,*) 
+    write(K__MYPE+300000,*) 
+    write(K__MYPE+400000,*) 
+888 format(i6,2x,i6,2x,i6,2x,f15.8,2x,i6) 
 
   ELSE
     ! No other methods implemented as yet

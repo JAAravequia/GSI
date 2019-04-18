@@ -195,9 +195,10 @@ project(GSI)
     message("libsrc/wrflib not pulled from git, looking for WRF dependencies locally")
     find_package( WRF )
   endif()
-  if( ${BUILD_CLDDET})
+# if( ${BUILD_CLDDET})
+  if( BUILD_CLDDET )
     add_subdirectory(src/clddet)
-  endif()
+  endif(BUILD_CLDDET)
 
   # default installation
   get_filename_component (default_prefix ".." ABSOLUTE)
@@ -208,7 +209,7 @@ project(GSI)
   # FFLAGS depend on the compiler
   get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
   set(CFLAGS "-I. -DFortranByte=char -DFortranInt=int -DFortranLlong='long long' -O3  -Dfunder")
-  set (CMAKE_Fortran_INC_FLAGS "-I ./ -I ${CORE_INCS} -I ${NETCDF_INCLUDES} ")
+  set (CMAKE_Fortran_INC_FLAGS "-I ./ -I ${CORE_INCS} -I ${NETCDF_INCLUDES}")
   set (CFLAGS_N "-I. -DFortranByte=char -DFortranInt=int -DFortranLlong='long long'  -O3  -Dfunder")
 
 

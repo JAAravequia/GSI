@@ -1,0 +1,8 @@
+INTERFACE
+SUBROUTINE MOVINGA(PV,KV,KW,PVA)
+INTEGER, INTENT(IN)    :: KV     ! length of V
+REAL,    INTENT(IN)    :: PV(:)  ! original array
+INTEGER, INTENT(IN)    :: KW     ! length of averaging window
+REAL,    INTENT(INOUT) :: PVA(:) ! averaged array
+END SUBROUTINE  MOVINGA
+END INTERFACE

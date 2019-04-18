@@ -887,8 +887,10 @@ subroutine destroy_crtm
 end subroutine destroy_crtm
 subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
                    h,q,clw_guess,prsl,prsi, &
-                   trop5,tzbgr,dtsavg,sfc_speed,&
-                   tsim,emissivity,ptau5,ts, &
+                 ! trop5,tzbgr,dtsavg,sfc_speed,&           !orig
+                   trop5,pbl5,tzbgr,dtsavg,sfc_speed,&      !emily
+                 ! tsim,emissivity,ptau5,ts, &              !orig
+                   tsim,emissivity,chan_level,ptau5,ts, &   !emily             
                    emissivity_k,temp,wmix,jacobian,error_status,tsim_clr, &
                    layer_od,jacobian_aero)  
 !$$$  subprogram documentation block
@@ -936,7 +938,8 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
 !     q            - interpolated specific humidity (max(qsmall,q))
 !     prsl         - interpolated layer pressure (nsig)
 !     prsi         - interpolated level pressure (nsig+1)
-!     trop5        - interpolated tropopause pressure
+!     trop5        - interpolated tropopause pressure 
+!     pbl5         - interpolated PBL height in pressure unit (cb, same unit as trop5, prsi, prsi)  !emily
 !     tzbgr        - water surface temperature used in Tz retrieval
 !     dtsavg       - delta average skin temperature over surface types
 !     uu5          - interpolated bottom sigma level zonal wind    
@@ -966,7 +969,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   use radinfo, only: nsigradjac
   use gsi_nstcouplermod, only: nst_gsi
   use guess_grids, only: ges_tsen,&
-      ges_prsl,ges_prsi,tropprs,dsfct,add_rtm_layers, &
+      ges_prsl,ges_prsi,tropprs,dsfct,add_rtm_layers,pbl_height, &  !emily
       hrdifsig,nfldsig,hrdifsfc,nfldsfc,ntguessfc,isli2,sno2
   use cloud_efr_mod, only: efr_ql,efr_qi,efr_qr,efr_qs,efr_qg,efr_qh
   use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -992,11 +995,13 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   integer(i_kind)                       ,intent(in   ) :: nchanl,nreal
   integer(i_kind),dimension(nchanl)     ,intent(in   ) :: ich
   real(r_kind)                          ,intent(  out) :: trop5,tzbgr
+  real(r_kind)                          ,intent(  out) :: pbl5    !emily 
   real(r_kind),dimension(nsig)          ,intent(  out) :: h,q,prsl
   real(r_kind),dimension(nsig+1)        ,intent(  out) :: prsi
   real(r_kind)                          ,intent(  out) :: sfc_speed,dtsavg
   real(r_kind),dimension(nchanl+nreal)  ,intent(in   ) :: data_s
   real(r_kind),dimension(nchanl)        ,intent(  out) :: tsim,emissivity,ts,emissivity_k
+  real(r_kind),dimension(nchanl)        ,intent(  out) :: chan_level   ! pressure hPa !emily
   character(10)                         ,intent(in   ) :: obstype
   integer(i_kind)                       ,intent(  out) :: error_status
   real(r_kind),dimension(nsig,nchanl)   ,intent(  out) :: temp,ptau5,wmix
@@ -1042,7 +1047,10 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   real(r_kind):: delx,dely,delx1,dely1,dtsig,dtsigp,dtsfc,dtsfcp
   real(r_kind):: sst00,sst01,sst10,sst11,total_od,term,uu5,vv5, ps
   real(r_kind):: sno00,sno01,sno10,sno11,secant_term
+  real(r_kind):: radiance_ratio  !emily 
   real(r_kind),dimension(0:3):: wgtavg
+  real(r_kind),dimension(nchanl,msig):: radiance_overcast   ! level-to-space overcast radiance ! emily
+  real(r_kind),dimension(nchanl):: radiance                 ! TOA clear-sky radiance           ! emily
   real(r_kind),dimension(nsig,nchanl):: omix
   real(r_kind),dimension(nsig,nchanl,n_aerosols_jac):: jaero
   real(r_kind),dimension(nchanl) :: uwind_k,vwind_k
@@ -1071,6 +1079,8 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   real(r_kind),pointer,dimension(:,:,:)::tgasges_itsigp=>NULL()
   real(r_kind),pointer,dimension(:,:,:)::aeroges_itsig =>NULL()
   real(r_kind),pointer,dimension(:,:,:)::aeroges_itsigp=>NULL()
+  real(r_kind),pointer,dimension(:,:  )::pblges_itsig =>NULL()   !emily
+  real(r_kind),pointer,dimension(:,:  )::pblges_itsigp=>NULL()   !emily
 
   logical :: sea,icmask   
 
@@ -1177,7 +1187,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   iqs=iqs+istatus
 
 ! Space-time interpolation of temperature (h) and q fields from sigma files
-!$omp parallel do  schedule(dynamic,1) private(k,ii,iii)
+!!$omp parallel do  schedule(dynamic,1) private(k,ii,iii)
   do k=1,nsig
     if(k == 1)then
         jacobian=zero
@@ -1288,6 +1298,14 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
                (psges_itsigp(ix,iy )*w00+psges_itsigp(ixp,iy )*w10+ &
                 psges_itsigp(ix,iyp)*w01+psges_itsigp(ixp,iyp)*w11)*dtsigp
         endif
+
+!>>emily: pbl_height unit is hPa from guess_grids
+        pbl5=(pbl_height (ix,iy, itsig )*w00+pbl_height (ixp,iy, itsig )*w10+ &
+              pbl_height (ix,iyp,itsig )*w01+pbl_height (ixp,iyp,itsig )*w11)*dtsig + &
+             (pbl_height (ix,iy, itsigp)*w00+pbl_height (ixp,iy ,itsigp)*w10+ &
+              pbl_height (ix,iyp,itsigp)*w01+pbl_height (ixp,iyp,itsigp)*w11)*dtsigp
+        pbl5=one_tenth*pbl5    ! convert pressure unit from hPa to cb
+!<<emily
 
 !       skip loading surface structure if obstype is modis_aod
         if (trim(obstype) /= 'modis_aod') then
@@ -1708,6 +1726,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
 
 
 ! Find tropopause height at observation
+! emily note: trop5 unit is cb; tropprs unit is hPa
 
   trop5= one_tenth*(tropprs(ix,iy )*w00+tropprs(ixp,iy )*w10+ &
                     tropprs(ix,iyp)*w01+tropprs(ixp,iyp)*w11)
@@ -1893,8 +1912,10 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
        end do
     end if
 
-!$omp parallel do  schedule(dynamic,1) private(i) &
-!$omp private(total_od,k,kk,m,term,ii,cwj)
+!!$omp parallel do  schedule(dynamic,1) private(i) &
+!!$omp private(total_od,k,kk,m,term,ii,cwj)
+
+    chan_level = zero    !emily
     do i=1,nchanl
 !   Zero jacobian and transmittance arrays
        do k=1,nsig
@@ -1906,6 +1927,27 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
 
 !  Simulated brightness temperatures
        tsim(i)=rtsolution(i,1)%brightness_temperature
+       radiance(i)=rtsolution(i,1)%radiance  
+
+!>>emily
+       do k=1,msig                                 
+          radiance_overcast(i,k)=rtsolution(i,1)%upwelling_overcast_radiance(k) 
+       enddo
+!      Get channel characteristic level ( in pressure unit: hPa)
+
+       do k=msig, 1, -1 
+          radiance_ratio = abs(radiance(i)-radiance_overcast(i,k))/radiance(i) 
+          write(mype+100000,222) i, k, radiance(i), radiance_overcast(i,k), radiance_ratio, atmosphere(1)%pressure(k)
+       enddo
+       do k=msig, 1, -1 
+          radiance_ratio = abs(radiance(i)-radiance_overcast(i,k))/radiance(i) 
+          write(mype+100000,222)i, k, radiance(i), radiance_overcast(i,k), radiance_ratio, atmosphere(1)%pressure(k)
+          if (radiance_ratio > 0.01_r_kind) exit  
+       enddo
+       chan_level(i) = atmosphere(1)%pressure(k) 
+       write(mype+100000,*)'chan_level = ', i, chan_level(i)
+222    format(i8,2x,i6,2x,4(f15.8,2x))
+!<<emily
 
        if (n_clouds_fwd_wk>0 .and. present(tsim_clr)) then
           if (mixed_use) then 

@@ -1869,9 +1869,11 @@ subroutine qc_saphir(nchanl,sfchgt,luse,sea, &
   return
 end subroutine qc_saphir
 
-subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,   &
+!subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,   &         !orig
+subroutine qc_irsnd(mype,obstype,nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,   &  !emily
      cris, zsges,cenlat,frac_sea,pangs,trop5,zasat,tzbgr,tsavg5,tbc,tb_obs,tnoise,     &
-     wavenumber,ptau5,prsltmp,tvp,temp,wmix,emissivity_k,ts,                    &
+     wavenumber,ptau5,prsltmp,tvp,temp,wmix,emissivity_k,ts, &         !orig
+     pbl5,chanid,chan_level,ecmwf_clddet, &                            !emily
      id_qc,aivals,errf,varinv,varinv_use,cld,cldp,kmax,zero_irjaco3_pole)
 !    id_qc,aivals,errf,varinv,varinv_use,cld,cldp,kmax,zero_irjaco3_pole,radmod) ! all-sky
 
@@ -1942,18 +1944,29 @@ subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,   &
 !
 !$$$ end documentation block
 
-  use kinds, only: r_kind, i_kind
+  use kinds, only: r_kind, i_kind, r_single
   implicit none
+
+  include 'abor1.intfb'
+  include 'cloud_detect_setup.intfb'
+  include 'aerosol_detect_setup.intfb'
+  include 'imager_cloud_detect.intfb'
+  include 'cloud_detect.intfb'
+  include 'aerosol_detect.intfb'
 
 ! Declare passed variables
 
+  character(10),                      intent(in   ) :: obstype       !emily
   logical,                            intent(in   ) :: sea,land,ice,snow,luse,goessndr, cris
   logical,                            intent(inout) :: zero_irjaco3_pole
+  logical,                            intent(in   ) :: ecmwf_clddet  !emily
+  integer(i_kind),                    intent(in   ) :: mype          !emily 
   integer(i_kind),                    intent(in   ) :: nsig,nchanl,ndat,is
   integer(i_kind),dimension(nchanl),  intent(in   ) :: ich
+  integer(i_kind),dimension(nchanl),  intent(in   ) :: chanid        !emily 
   integer(i_kind),dimension(nchanl),  intent(inout) :: id_qc
   integer(i_kind),dimension(nchanl),  intent(in   ) :: kmax
-  real(r_kind),                       intent(in   ) :: zsges,cenlat,frac_sea,pangs,trop5
+  real(r_kind),                       intent(in   ) :: zsges,cenlat,frac_sea,pangs,trop5,pbl5  !emily
   real(r_kind),                       intent(in   ) :: tzbgr,tsavg5,zasat
   real(r_kind),                       intent(  out) :: cld,cldp
   real(r_kind),dimension(40,ndat),    intent(inout) :: aivals
@@ -1962,6 +1975,7 @@ subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,   &
   real(r_kind),dimension(nsig,nchanl),intent(in   ) :: ptau5,temp,wmix
   real(r_kind),dimension(nsig),       intent(in   ) :: prsltmp,tvp
   real(r_kind),dimension(nchanl),     intent(inout) :: errf,varinv,varinv_use
+  real(r_kind),dimension(nchanl),     intent(in   ) :: chan_level  !emily 
 
 ! Declare local parameters
 
@@ -1977,6 +1991,44 @@ subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,   &
   real(r_kind),parameter:: tbmax = 550._r_kind
   real(r_kind),parameter:: tbmin = 50._r_kind
 
+!>>emily
+  integer(i_kind):: k_nchans
+  integer(i_kind):: k_sensor
+  integer(i_kind):: k_minlev
+  integer(i_kind):: k_maxlev
+  integer(i_kind):: k_imager_flag
+  integer(i_kind):: k_chanid(nchanl)
+  integer(i_kind):: k_cloud_flag(nchanl)
+  real(r_single) :: p_simbts(nchanl)
+  real(r_single) :: p_obsbts(nchanl)
+  real(r_single) :: p_chan_level(nchanl)
+
+  if (ecmwf_clddet) then 
+     k_imager_flag = 0
+     k_cloud_flag  = 1 
+     k_nchans      = nchanl
+     k_chanid      = chanid                  ! hPa 
+     k_minlev      = int(trop5*10.0_r_kind)  ! hPa
+     k_maxlev      = int(pbl5*10.0_r_kind)   ! hPa
+     p_obsbts      = tb_obs 
+     p_simbts      = tb_obs-tbc 
+     p_chan_level  = chan_level              ! hPa
+     ! k_sensor assignment is internal to ecmwf cloud detection subroutine
+     if (obstype == 'iasi') k_sensor=16 
+     if (obstype == 'airs') k_sensor=11    
+     if (obstype == 'cris' .or. obstype == 'cris-fsr') k_sensor=27
+!>>emily
+     write(mype+200000,*)'Input to Cloud_Detect '
+     write(mype+200000,*)'k_nchans = ', k_nchans
+     write(mype+200000,*)'k_minlev = ', k_minlev 
+     write(mype+200000,*)'k_maxlev = ', k_maxlev 
+     do i = 1, k_nchans
+        write(mype+200000,666) k_chanid(i), p_obsbts(i), p_simbts(i), p_chan_level(i)
+     enddo
+666  format(i8,2x,3(ES25.18,2x))
+!<<emily
+  endif
+!<<emily
 
 ! Reduce weight given to obs for shortwave ir if
 ! solar zenith angle tiny_r_kind
@@ -2061,6 +2113,78 @@ subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,   &
 !    QC based on presence/absence of cloud
      sum3=sum3+tbc(i)*tbc(i)*varinv_use(i)
   end do
+
+!>>emily
+  if (ecmwf_clddet) then
+
+     cld    = zero
+     cldp   = r10*prsltmp(1) 
+     lcloud = 0
+
+     call Cloud_Detect_Setup
+
+     call CLOUD_DETECT( mype,          &  ! in
+                        k_sensor,      &  ! in
+                        k_nchans,      &  ! in
+                        k_chanid,      &  ! in
+                        p_simbts,      &  ! in
+                        p_obsbts,      &  ! in
+                        p_chan_level,  &  ! in 
+                        k_cloud_flag,  &  ! out 
+                        k_minlev,      &  ! in
+                        k_maxlev,      &  ! in
+                        k_imager_flag  )  ! in
+!>>emily
+     write(mype+200000,*) 'output k_cloud_flag' 
+     do i=1, k_nchans
+        write(mype+200000,888)  i, k_chanid(i), p_chan_level(i), k_cloud_flag(i)
+     enddo
+!    write(mype+200000,777)  k_cloud_flag(:)
+     write(mype+200000,*) '-------------------------------------------------------'
+777  format(10i3)
+888  format(i8,2x,i8,2x,f15.8,i8)
+!<<emily
+
+     if ( any(k_cloud_flag==1) ) lcloud=1 
+
+     if (lcloud > 0) then 
+        do i=1, nchanl
+           if (k_cloud_flag(i) == 1) then
+              if (luse) aivals(11,is) = aivals(11,is) + one
+              varinv(i)     = zero
+              varinv_use(i) = zero
+              if (id_qc(i) == igood_qc) id_qc(i)=ifail_cloud_qc
+           endif
+        enddo
+     else
+        sum=zero
+        sum2=zero
+        do i=1,nchanl
+           sum=sum+tbc(i)*ts(i)*varinv_use(i)
+           sum2=sum2+ts(i)*ts(i)*varinv_use(i)
+        end do
+        if (abs(sum2) < tiny_r_kind) sum2 = sign(tiny_r_kind,sum2)
+        dts=abs(sum/sum2)
+        if(abs(dts) > one)then
+           if(.not. sea)then
+              dts=min(dtempf,dts)
+           else
+              dts=min(three,dts)
+           end if
+           do i=1,nchanl
+              delta=max(r0_05*tnoise(i),r0_02)
+              if(abs(dts*ts(i)) > delta)then
+!                QC3 in statsrad
+                 if(luse .and. varinv(i) > zero) &
+                    aivals(10,is)   = aivals(10,is) + one
+                 varinv(i) = zero
+                 if(id_qc(i) == igood_qc)id_qc(i)=ifail_sfcir_qc
+              end if
+           end do
+        end if
+     endif !lcloud
+  else
+!<<emily
   sum3=0.75_r_kind*sum3
   lcloud=0
   cld=zero
@@ -2102,6 +2226,7 @@ subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,   &
      end if
 
   end do
+
   if ( lcloud > 0 ) then  ! If cloud detected, reject channels affected by it.
 
      do i=1,nchanl
@@ -2160,8 +2285,8 @@ subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,   &
         end do
      end if
   endif
+  endif  !emily: ecmwf_clddet
 
-!
 ! Temporary additional check for CrIS to reduce influence of land points on window channels (particularly important for bias correction)
 !
   if (cris .and. .not. sea) then

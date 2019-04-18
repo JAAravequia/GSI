@@ -1,0 +1,4 @@
+INTERFACE
+SUBROUTINE Cloud_Detect_Setup
+END SUBROUTINE Cloud_Detect_Setup
+END INTERFACE

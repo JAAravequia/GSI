@@ -1,0 +1,22 @@
+INTERFACE
+SUBROUTINE IMAGER_CLOUD_DETECT( &
+ & K__Sensor, &
+ & K__Nchans, &
+ & K__Chanid_Imager, &
+ & K__Nclust, &
+ & K__Cloud_Flag, &
+ & P__Cl_Fraction, &
+ & P__Cl_Mean, &
+ & P__Ov_Stddev, &
+ & P__FG_BT )
+INTEGER,INTENT(IN)  :: K__Sensor
+INTEGER,INTENT(IN)  :: K__Nchans
+INTEGER,INTENT(IN)  :: K__Chanid_Imager(:)
+INTEGER,INTENT(IN)  :: K__Nclust
+INTEGER,INTENT(OUT) :: K__Cloud_Flag
+REAL   ,INTENT(IN)  :: P__Cl_Fraction(:)
+REAL   ,INTENT(IN)  :: P__Cl_Mean(:,:)
+REAL   ,INTENT(IN)  :: P__Ov_Stddev(:)
+REAL   ,INTENT(IN)  :: P__FG_BT(:)
+END SUBROUTINE IMAGER_CLOUD_DETECT
+END INTERFACE

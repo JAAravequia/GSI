@@ -1,4 +1,5 @@
 SUBROUTINE CF_DIGITAL( &
+&    K__MYPE,           &   !emily
 &    K__Sensor,         &
 &    K__Band,           &
 &    K__NumChans,       &
@@ -82,6 +83,7 @@ IMPLICIT NONE
 
 !* 0.1 Global arrays
 !- subroutine arguments
+INTEGER, INTENT(IN) :: K__MYPE                ! MPI ID  !emily 
 INTEGER, INTENT(IN) :: K__SENSOR              ! Sensor
 INTEGER, INTENT(IN) :: K__Band                ! Band number
 INTEGER, INTENT(IN) :: K__NumChans            ! Number of usable channels in
@@ -159,7 +161,6 @@ CALL MOVINGA(                &
 
 Z__DBT_Smoothed(-I__BUFFER+1:0)  = Z__DBT_Smoothed(1)
 Z__DBT_Smoothed(K__NumChans+1) = Z__DBT_Smoothed(K__NumChans)
-
 
 !2.  Prepare for the cloud search
 

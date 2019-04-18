@@ -1,0 +1,4 @@
+INTERFACE
+SUBROUTINE Aerosol_Detect_Setup
+END SUBROUTINE Aerosol_Detect_Setup
+END INTERFACE

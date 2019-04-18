@@ -66,9 +66,14 @@ elif [ $target = wcoss -o $target = gaea ]; then
 elif [ $target = theia -o $target = cheyenne ]; then
     module purge
     source $dir_modules/modulefile.ProdGSI.$target
+    export CRTM_LIB=/scratch4/NCEPDEV/da/save/Emily.Liu/RTM/CRTM/releases/REL-2.3.1.beta/crtm_v2.3.1/libcrtm_v2.3.1.a
+    export CRTM_INC=/scratch4/NCEPDEV/da/save/Emily.Liu/RTM/CRTM/releases/REL-2.3.1.beta/crtm_v2.3.1/incmod/crtm_v2.3.1
+
 elif [ $target = wcoss_c ]; then
     module purge
     module load $dir_modules/modulefile.ProdGSI.$target
+    export CRTM_LIB=/gpfs/hps3/emc/da/noscrub/Emily.Liu/RTM/CRTM/REL-2.3.1.beta/crtm_v2.3.1/libcrtm_v2.3.1.a
+    export CRTM_INC=/gpfs/hps3/emc/da/noscrub/Emily.Liu/RTM/CRTM/REL-2.3.1.beta/crtm_v2.3.1/incmod/crtm_v2.3.1
 elif [ $target = discover ]; then
     module load $dir_modules/modulefile.ProdGSI.$target
 else 

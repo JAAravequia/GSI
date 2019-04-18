@@ -1,0 +1,2172 @@
++ cd ..
+++ pwd
++ pwd=/gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet
++ build_type=PRODUCTION
++ dir_root=/gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet
++ [[ -d /dcom ]]
++ [[ -d /cm ]]
++ . /opt/modules/3.2.10.3/init/sh
+++ '[' 3.2.10.3 = '' ']'
+++ MODULE_VERSION_STACK=3.2.10.3
+++ export MODULE_VERSION_STACK
+++ '[' '' = '' ']'
+++ MODULESHOME=/opt/modules/3.2.10.3
+++ export MODULESHOME
+++ '[' modules/3.2.10.3:eswrap/1.3.3-1.020200.1280.0:switch/1.0-1.0502.60522.1.61.ari:craype-network-aries:dvs/2.5_0.9.0-1.0502.2481.23.7.ari:alps/5.2.4-2.0502.9822.32.1.ari:ncep/1.0:craype-haswell:xt-lsfhpc/9.1.3:intel/15.0.3.187:craype/2.3.0:cray-libsci/13.0.3:udreg/2.3.2-1.0502.10518.2.17.ari:ugni/6.0-1.0502.10863.8.29.ari:pmi/5.0.6-1.0000.10439.140.2.ari:dmapp/7.0.1-1.0502.11080.8.76.ari:gni-headers/4.0-1.0502.10859.7.8.ari:xpmem/0.1-2.0502.64982.5.3.ari:dvs/2.5_0.9.0-1.0502.2188.1.116.ari:alps/5.2.4-2.0502.9774.31.11.ari:rca/1.0.0-2.0502.60530.1.62.ari:atp/1.8.1:PrgEnv-intel/5.2.82:cray-mpich/7.2.0:NetCDF-intel-haswell/3.6.3:subversion/1.7.16:hpss/4.1.0.3:grib_util/1.0.3:prod_util/1.0.32:prod_envir/1.0.1:python/2.7.13:nco-gnu-sandybridge/4.4.4:GrADS/2.0.2:cmake/3.6.2:rocoto/1.2.3:git/2.14.2:emacs/25.3 = '' ']'
+++ '[' /usrx/local/prod/modulefiles:/gpfs/hps/nco/ops/nwprod/lib/modulefiles:/gpfs/hps/nco/ops/nwprod/modulefiles:/opt/cray/alt-modulefiles:/opt/cray/craype/default/alt-modulefiles:/opt/cray/ari/modulefiles:/opt/modulefiles:/opt/cray/craype/default/modulefiles:/usrx/local/dev/modulefiles:/gpfs/hps3/emc/hwrf/noscrub/soft/modulefiles = '' ']'
+++ export CRAY_SITE_LIST_DIR=/etc/opt/cray/modules
+++ CRAY_SITE_LIST_DIR=/etc/opt/cray/modules
++++ grep CRAY_SITE_LIST /etc/opt/cray/modules/site_list_config
+++ site_list_dir=CRAY_SITE_LIST_DIR=/etc/opt/cray/modules
+++ export CRAY_SITE_LIST_DIR=/etc/opt/cray/modules
+++ CRAY_SITE_LIST_DIR=/etc/opt/cray/modules
+++ sorted_file=
+++ '[' -f /etc/opt/cray/modules/site_usermodules ']'
++++ for i in '${MODULESHOME}/init/.usermodules' '${CRAY_SITE_LIST_DIR}/site_usermodules'
++++ echo /opt/modules/3.2.10.3/init/.usermodules
++++ strings -n1 - /opt/modules/3.2.10.3/init/.usermodules
++++ uniq
++++ for i in '${MODULESHOME}/init/.usermodules' '${CRAY_SITE_LIST_DIR}/site_usermodules'
++++ echo /etc/opt/cray/modules/site_usermodules
++++ strings -n1 - /etc/opt/cray/modules/site_usermodules
++++ sort
++++ uniq
+++ sorted_file='/opt/modules/3.2.10.3/init/.usermodules
+PrgEnv-cray
+PrgEnv-gnu
+PrgEnv-intel
+PrgEnv-pathscale
+PrgEnv-pgi
+acml
+alps
+apprentice
+apprentice2
+atp
+blcr
+cce
+chapel
+cray-ccdb
+cray-fftw
+cray-ga
+cray-hdf5
+cray-hdf5-parallel
+cray-lgdb
+cray-libsci
+cray-libsci_acc
+cray-mpich
+cray-mpich-compat
+cray-mpich2
+cray-netcdf
+cray-netcdf-hdf5parallel
+cray-parallel-netcdf
+cray-petsc
+cray-petsc-complex
+cray-shmem
+cray-snplauncher
+cray-tpsl
+cray-trilinos
+craypat
+craype
+craypkg-gen
+cudatoolkit
+ddt
+fftw
+ga
+gcc 
+hdf5
+hdf5-parallel
+intel
+iobuf
+java
+lgdb
+libfast
+libsci_acc
+mpich1
+netcdf
+netcdf-hdf5parallel
+netcdf-nofsync
+netcdf-nofsync-hdf5parallel
+ntk
+onesided
+papi
+parallel-netcdf
+pathscale
+perftools
+perftools-lite
+petsc
+petsc-complex
+pgi
+pmi
+stat
+totalview
+tpsl
+trilinos
+xt-asyncpe
+xt-craypat
+xt-lgdb
+xt-libsci
+xt-mpich2
+xt-mpt
+xt-papi
+xt-shmem
+xt-totalview
+/etc/opt/cray/modules/site_usermodules'
++++ sed 's/ /:/g'
++++ echo /opt/modules/3.2.10.3/init/.usermodules PrgEnv-cray PrgEnv-gnu PrgEnv-intel PrgEnv-pathscale PrgEnv-pgi acml alps apprentice apprentice2 atp blcr cce chapel cray-ccdb cray-fftw cray-ga cray-hdf5 cray-hdf5-parallel cray-lgdb cray-libsci cray-libsci_acc cray-mpich cray-mpich-compat cray-mpich2 cray-netcdf cray-netcdf-hdf5parallel cray-parallel-netcdf cray-petsc cray-petsc-complex cray-shmem cray-snplauncher cray-tpsl cray-trilinos craypat craype craypkg-gen cudatoolkit ddt fftw ga gcc hdf5 hdf5-parallel intel iobuf java lgdb libfast libsci_acc mpich1 netcdf netcdf-hdf5parallel netcdf-nofsync netcdf-nofsync-hdf5parallel ntk onesided papi parallel-netcdf pathscale perftools perftools-lite petsc petsc-complex pgi pmi stat totalview tpsl trilinos xt-asyncpe xt-craypat xt-lgdb xt-libsci xt-mpich2 xt-mpt xt-papi xt-shmem xt-totalview /etc/opt/cray/modules/site_usermodules
++++ sed 's/\/opt\/modules\/3\.2\.10\.3\/init\/\.usermodules://'
+++ export USERMODULES=PrgEnv-cray:PrgEnv-gnu:PrgEnv-intel:PrgEnv-pathscale:PrgEnv-pgi:acml:alps:apprentice:apprentice2:atp:blcr:cce:chapel:cray-ccdb:cray-fftw:cray-ga:cray-hdf5:cray-hdf5-parallel:cray-lgdb:cray-libsci:cray-libsci_acc:cray-mpich:cray-mpich-compat:cray-mpich2:cray-netcdf:cray-netcdf-hdf5parallel:cray-parallel-netcdf:cray-petsc:cray-petsc-complex:cray-shmem:cray-snplauncher:cray-tpsl:cray-trilinos:craypat:craype:craypkg-gen:cudatoolkit:ddt:fftw:ga:gcc:hdf5:hdf5-parallel:intel:iobuf:java:lgdb:libfast:libsci_acc:mpich1:netcdf:netcdf-hdf5parallel:netcdf-nofsync:netcdf-nofsync-hdf5parallel:ntk:onesided:papi:parallel-netcdf:pathscale:perftools:perftools-lite:petsc:petsc-complex:pgi:pmi:stat:totalview:tpsl:trilinos:xt-asyncpe:xt-craypat:xt-lgdb:xt-libsci:xt-mpich2:xt-mpt:xt-papi:xt-shmem:xt-totalview:/etc/opt/cray/modules/site_usermodules
+++ USERMODULES=PrgEnv-cray:PrgEnv-gnu:PrgEnv-intel:PrgEnv-pathscale:PrgEnv-pgi:acml:alps:apprentice:apprentice2:atp:blcr:cce:chapel:cray-ccdb:cray-fftw:cray-ga:cray-hdf5:cray-hdf5-parallel:cray-lgdb:cray-libsci:cray-libsci_acc:cray-mpich:cray-mpich-compat:cray-mpich2:cray-netcdf:cray-netcdf-hdf5parallel:cray-parallel-netcdf:cray-petsc:cray-petsc-complex:cray-shmem:cray-snplauncher:cray-tpsl:cray-trilinos:craypat:craype:craypkg-gen:cudatoolkit:ddt:fftw:ga:gcc:hdf5:hdf5-parallel:intel:iobuf:java:lgdb:libfast:libsci_acc:mpich1:netcdf:netcdf-hdf5parallel:netcdf-nofsync:netcdf-nofsync-hdf5parallel:ntk:onesided:papi:parallel-netcdf:pathscale:perftools:perftools-lite:petsc:petsc-complex:pgi:pmi:stat:totalview:tpsl:trilinos:xt-asyncpe:xt-craypat:xt-lgdb:xt-libsci:xt-mpich2:xt-mpt:xt-papi:xt-shmem:xt-totalview:/etc/opt/cray/modules/site_usermodules
+++ sorted_file=
+++ '[' -f /etc/opt/cray/modules/site_targetmodules ']'
++++ for i in '${MODULESHOME}/init/.targetmodules' '${CRAY_SITE_LIST_DIR}/site_targetmodules'
++++ echo /opt/modules/3.2.10.3/init/.targetmodules
++++ strings -n1 - /opt/modules/3.2.10.3/init/.targetmodules
++++ sort
++++ uniq
++++ for i in '${MODULESHOME}/init/.targetmodules' '${CRAY_SITE_LIST_DIR}/site_targetmodules'
++++ echo /etc/opt/cray/modules/site_targetmodules
++++ strings -n1 - /etc/opt/cray/modules/site_targetmodules
++++ sort
++++ uniq
+++ sorted_file='/opt/modules/3.2.10.3/init/.targetmodules
+craype-abudhabi
+craype-abudhabi-cu
+craype-accel-host
+craype-accel-nvidia20
+craype-accel-nvidia30
+craype-accel-nvidia35
+craype-barcelona
+craype-broadwell
+craype-haswell
+craype-hugepages128K
+craype-hugepages128M
+craype-hugepages16M
+craype-hugepages256M
+craype-hugepages2M
+craype-hugepages32M
+craype-hugepages4M
+craype-hugepages512K
+craype-hugepages512M
+craype-hugepages64M
+craype-hugepages8M
+craype-intel-knc
+craype-interlagos
+craype-interlagos-cu
+craype-istanbul
+craype-ivybridge
+craype-mc12
+craype-mc8
+craype-mic-knl
+craype-network-aries
+craype-network-gemini
+craype-network-infiniband
+craype-network-none
+craype-network-seastar
+craype-sandybridge
+craype-shanghai
+craype-target-compute_node
+craype-target-local_host
+craype-target-native
+craype-xeon
+xtpe-barcelona
+xtpe-interlagos
+xtpe-interlagos-cu
+xtpe-istanbul
+xtpe-mc12
+xtpe-mc8
+xtpe-network-gemini
+xtpe-network-seastar
+xtpe-shanghai
+xtpe-target-native
+xtpe-xeon
+/etc/opt/cray/modules/site_targetmodules'
++++ echo /opt/modules/3.2.10.3/init/.targetmodules craype-abudhabi craype-abudhabi-cu craype-accel-host craype-accel-nvidia20 craype-accel-nvidia30 craype-accel-nvidia35 craype-barcelona craype-broadwell craype-haswell craype-hugepages128K craype-hugepages128M craype-hugepages16M craype-hugepages256M craype-hugepages2M craype-hugepages32M craype-hugepages4M craype-hugepages512K craype-hugepages512M craype-hugepages64M craype-hugepages8M craype-intel-knc craype-interlagos craype-interlagos-cu craype-istanbul craype-ivybridge craype-mc12 craype-mc8 craype-mic-knl craype-network-aries craype-network-gemini craype-network-infiniband craype-network-none craype-network-seastar craype-sandybridge craype-shanghai craype-target-compute_node craype-target-local_host craype-target-native craype-xeon xtpe-barcelona xtpe-interlagos xtpe-interlagos-cu xtpe-istanbul xtpe-mc12 xtpe-mc8 xtpe-network-gemini xtpe-network-seastar xtpe-shanghai xtpe-target-native xtpe-xeon /etc/opt/cray/modules/site_targetmodules
++++ sed 's/ /:/g'
++++ sed 's/\/opt\/modules\/3\.2\.10\.3\/init\/\.targetmodules://'
+++ export TARGETMODULES=craype-abudhabi:craype-abudhabi-cu:craype-accel-host:craype-accel-nvidia20:craype-accel-nvidia30:craype-accel-nvidia35:craype-barcelona:craype-broadwell:craype-haswell:craype-hugepages128K:craype-hugepages128M:craype-hugepages16M:craype-hugepages256M:craype-hugepages2M:craype-hugepages32M:craype-hugepages4M:craype-hugepages512K:craype-hugepages512M:craype-hugepages64M:craype-hugepages8M:craype-intel-knc:craype-interlagos:craype-interlagos-cu:craype-istanbul:craype-ivybridge:craype-mc12:craype-mc8:craype-mic-knl:craype-network-aries:craype-network-gemini:craype-network-infiniband:craype-network-none:craype-network-seastar:craype-sandybridge:craype-shanghai:craype-target-compute_node:craype-target-local_host:craype-target-native:craype-xeon:xtpe-barcelona:xtpe-interlagos:xtpe-interlagos-cu:xtpe-istanbul:xtpe-mc12:xtpe-mc8:xtpe-network-gemini:xtpe-network-seastar:xtpe-shanghai:xtpe-target-native:xtpe-xeon:/etc/opt/cray/modules/site_targetmodules
+++ TARGETMODULES=craype-abudhabi:craype-abudhabi-cu:craype-accel-host:craype-accel-nvidia20:craype-accel-nvidia30:craype-accel-nvidia35:craype-barcelona:craype-broadwell:craype-haswell:craype-hugepages128K:craype-hugepages128M:craype-hugepages16M:craype-hugepages256M:craype-hugepages2M:craype-hugepages32M:craype-hugepages4M:craype-hugepages512K:craype-hugepages512M:craype-hugepages64M:craype-hugepages8M:craype-intel-knc:craype-interlagos:craype-interlagos-cu:craype-istanbul:craype-ivybridge:craype-mc12:craype-mc8:craype-mic-knl:craype-network-aries:craype-network-gemini:craype-network-infiniband:craype-network-none:craype-network-seastar:craype-sandybridge:craype-shanghai:craype-target-compute_node:craype-target-local_host:craype-target-native:craype-xeon:xtpe-barcelona:xtpe-interlagos:xtpe-interlagos-cu:xtpe-istanbul:xtpe-mc12:xtpe-mc8:xtpe-network-gemini:xtpe-network-seastar:xtpe-shanghai:xtpe-target-native:xtpe-xeon:/etc/opt/cray/modules/site_targetmodules
+++ sorted_file=
+++ '[' -f /etc/opt/cray/modules/site_librarymodules ']'
++++ for i in '${MODULESHOME}/init/.librarymodules' '${CRAY_SITE_LIST_DIR}/site_librarymodules'
++++ echo /opt/modules/3.2.10.3/init/.librarymodules
++++ strings -n1 - /opt/modules/3.2.10.3/init/.librarymodules
++++ sort
++++ uniq
++++ for i in '${MODULESHOME}/init/.librarymodules' '${CRAY_SITE_LIST_DIR}/site_librarymodules'
++++ echo /etc/opt/cray/modules/site_librarymodules
++++ strings -n1 - /etc/opt/cray/modules/site_librarymodules
++++ sort
++++ uniq
+++ sorted_file='/opt/modules/3.2.10.3/init/.librarymodules
+acml
+alps
+cray-dwarf
+cray-fftw
+cray-ga
+cray-hdf5
+cray-hdf5-parallel
+cray-libsci
+cray-libsci_acc
+cray-mpich
+cray-mpich-abi
+cray-mpich2
+cray-netcdf
+cray-netcdf-hdf5parallel
+cray-parallel-netcdf
+cray-petsc
+cray-petsc-complex
+cray-shmem
+cray-tpsl
+cray-trilinos
+cudatoolkit
+fftw
+ga
+hdf5
+hdf5-parallel
+iobuf
+libfast
+netcdf
+netcdf-hdf5parallel
+ntk
+onesided
+papi
+petsc
+petsc-complex
+pmi
+tpsl
+trilinos
+xt-libsci
+xt-mpich2
+xt-mpt
+xt-papi
+/etc/opt/cray/modules/site_librarymodules'
++++ echo /opt/modules/3.2.10.3/init/.librarymodules acml alps cray-dwarf cray-fftw cray-ga cray-hdf5 cray-hdf5-parallel cray-libsci cray-libsci_acc cray-mpich cray-mpich-abi cray-mpich2 cray-netcdf cray-netcdf-hdf5parallel cray-parallel-netcdf cray-petsc cray-petsc-complex cray-shmem cray-tpsl cray-trilinos cudatoolkit fftw ga hdf5 hdf5-parallel iobuf libfast netcdf netcdf-hdf5parallel ntk onesided papi petsc petsc-complex pmi tpsl trilinos xt-libsci xt-mpich2 xt-mpt xt-papi /etc/opt/cray/modules/site_librarymodules
++++ sed 's/ /:/g'
++++ sed 's/\/opt\/modules\/3\.2\.10\.3\/init\/\.librarymodules://'
+++ export LIBRARYMODULES=acml:alps:cray-dwarf:cray-fftw:cray-ga:cray-hdf5:cray-hdf5-parallel:cray-libsci:cray-libsci_acc:cray-mpich:cray-mpich-abi:cray-mpich2:cray-netcdf:cray-netcdf-hdf5parallel:cray-parallel-netcdf:cray-petsc:cray-petsc-complex:cray-shmem:cray-tpsl:cray-trilinos:cudatoolkit:fftw:ga:hdf5:hdf5-parallel:iobuf:libfast:netcdf:netcdf-hdf5parallel:ntk:onesided:papi:petsc:petsc-complex:pmi:tpsl:trilinos:xt-libsci:xt-mpich2:xt-mpt:xt-papi:/etc/opt/cray/modules/site_librarymodules
+++ LIBRARYMODULES=acml:alps:cray-dwarf:cray-fftw:cray-ga:cray-hdf5:cray-hdf5-parallel:cray-libsci:cray-libsci_acc:cray-mpich:cray-mpich-abi:cray-mpich2:cray-netcdf:cray-netcdf-hdf5parallel:cray-parallel-netcdf:cray-petsc:cray-petsc-complex:cray-shmem:cray-tpsl:cray-trilinos:cudatoolkit:fftw:ga:hdf5:hdf5-parallel:iobuf:libfast:netcdf:netcdf-hdf5parallel:ntk:onesided:papi:petsc:petsc-complex:pmi:tpsl:trilinos:xt-libsci:xt-mpich2:xt-mpt:xt-papi:/etc/opt/cray/modules/site_librarymodules
+++ sorted_file=
++++ for i in '${MODULESHOME}/init/.prgenvmodules'
++++ echo /opt/modules/3.2.10.3/init/.prgenvmodules
++++ strings -n1 - /opt/modules/3.2.10.3/init/.prgenvmodules
++++ sort
++++ uniq
+++ sorted_file='/opt/modules/3.2.10.3/init/.prgenvmodules
+PrgEnv-cray
+PrgEnv-gnu
+PrgEnv-intel
+PrgEnv-pathscale
+PrgEnv-pgi'
++++ echo /opt/modules/3.2.10.3/init/.prgenvmodules PrgEnv-cray PrgEnv-gnu PrgEnv-intel PrgEnv-pathscale PrgEnv-pgi
++++ sed 's/ /:/g'
++++ sed 's/\/opt\/modules\/3\.2\.10\.3\/init\/\.prgenvmodules://'
+++ export PRGENVMODULES=PrgEnv-cray:PrgEnv-gnu:PrgEnv-intel:PrgEnv-pathscale:PrgEnv-pgi
+++ PRGENVMODULES=PrgEnv-cray:PrgEnv-gnu:PrgEnv-intel:PrgEnv-pathscale:PrgEnv-pgi
+++ sorted_file=
+++ '[' -f /etc/opt/cray/modules/site_toolmodules ']'
++++ for i in '${MODULESHOME}/init/.toolmodules' '${CRAY_SITE_LIST_DIR}/site_toolmodules'
++++ echo /opt/modules/3.2.10.3/init/.toolmodules
++++ strings -n1 - /opt/modules/3.2.10.3/init/.toolmodules
++++ sort
++++ uniq
++++ for i in '${MODULESHOME}/init/.toolmodules' '${CRAY_SITE_LIST_DIR}/site_toolmodules'
++++ echo /etc/opt/cray/modules/site_toolmodules
++++ strings -n1 - /etc/opt/cray/modules/site_toolmodules
++++ sort
++++ uniq
+++ sorted_file='/opt/modules/3.2.10.3/init/.toolmodules
+apprentice
+apprentice2
+atp
+chapel
+cray-lgdb
+cray-snplauncher
+craypat
+craypkg-gen
+ddt
+gdb
+iobuf
+papi
+perftools
+perftools-lite
+stat
+totalview
+xt-craypat
+xt-lgdb
+xt-papi
+xt-totalview
+/etc/opt/cray/modules/site_toolmodules'
++++ echo /opt/modules/3.2.10.3/init/.toolmodules apprentice apprentice2 atp chapel cray-lgdb cray-snplauncher craypat craypkg-gen ddt gdb iobuf papi perftools perftools-lite stat totalview xt-craypat xt-lgdb xt-papi xt-totalview /etc/opt/cray/modules/site_toolmodules
++++ sed 's/ /:/g'
++++ sed 's/\/opt\/modules\/3\.2\.10\.3\/init\/\.toolmodules://'
+++ export TOOLMODULES=apprentice:apprentice2:atp:chapel:cray-lgdb:cray-snplauncher:craypat:craypkg-gen:ddt:gdb:iobuf:papi:perftools:perftools-lite:stat:totalview:xt-craypat:xt-lgdb:xt-papi:xt-totalview:/etc/opt/cray/modules/site_toolmodules
+++ TOOLMODULES=apprentice:apprentice2:atp:chapel:cray-lgdb:cray-snplauncher:craypat:craypkg-gen:ddt:gdb:iobuf:papi:perftools:perftools-lite:stat:totalview:xt-craypat:xt-lgdb:xt-papi:xt-totalview:/etc/opt/cray/modules/site_toolmodules
++ target=wcoss_c
++ dir_modules=/gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/modulefiles
++ '[' '!' -d /gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/modulefiles ']'
++ '[' -d /gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/exec ']'
++ rm -rf /gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/build
++ mkdir -p /gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/build
++ cd /gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/build
++ '[' wcoss_c = wcoss_d ']'
++ '[' wcoss_c = wcoss -o wcoss_c = gaea ']'
++ '[' wcoss_c = theia -o wcoss_c = cheyenne ']'
++ '[' wcoss_c = wcoss_c ']'
++ module purge
+++ /opt/modules/3.2.10.3/bin/modulecmd sh purge
++ eval INFOPATH=/usr/local/info:/usr/share/info:/usr/info ';export' 'INFOPATH;LD_LIBRARY_PATH=/usrx/local/NetCDF/3.6.3/lib:/usrx/local/intel/mkl/lib/intel64' ';export' 'LD_LIBRARY_PATH;MANPATH=/opt/cray/share/man:/usr/local/man:/usr/share/man:/opt/cray/share/man:/cm/local/apps/environment-modules/current/share/man' ';export' 'MANPATH;MODULEPATH=/usrx/local/prod/modulefiles:/gpfs/hps/nco/ops/nwprod/lib/modulefiles:/gpfs/hps/nco/ops/nwprod/modulefiles:/opt/cray/alt-modulefiles:/opt/cray/craype/default/alt-modulefiles:/opt/modulefiles:/opt/cray/craype/default/modulefiles:/usrx/local/dev/modulefiles:/gpfs/hps3/emc/hwrf/noscrub/soft/modulefiles' ';export' 'MODULEPATH;PATH=/u/Emily.Liu/bin:/usr/local/bin:/usr/bin:/bin:/usr/bin/X11:/usr/X11R6/bin:/usr/games:/opt/bin:/usr/lib/mit/bin:/usr/lib/mit/sbin:/sbin:/usr/sbin:.:/usr/lib/qt3/bin:/gpfs/hps3/emc/da/noscrub/Emily.Liu/bin:/gpfs/hps3/emc/global/noscrub/emc.glopara/bin:.:/global/save/Emily.Liu:/usrx/local/NetCDF/3.6.3/lib:/usrx/local/intel/mkl/lib/intel64:/nwprod/util/exec:/u/Emily.Liu/bin/nemsio_util:/gpfs/hps3/emc/meso/noscrub/Dusan.Jovic/dbrowse' ';export' 'PATH;unset' 'ATP_HOME;unset' 'ATP_MRNET_COMM_PATH;unset' 'ATP_POST_LINK_OPTS;unset' 'CNVGRIB;unset' 'CNVGRIB21_GFS;unset' 'COMDATEROOT;unset' 'COMROOT;unset' 'COMROOThps;unset' 'COMROOTp1;unset' 'COMROOTp2;unset' 'COPYGB;unset' 'COPYGB2;unset' 'CPATH;unset' 'CRAYOS_VERSION;unset' 'CRAYPE_DIR;unset' 'CRAYPE_NETWORK_TARGET;unset' 'CRAYPE_VERSION;unset' 'CRAY_ALPS_INCLUDE_OPTS;unset' 'CRAY_ALPS_POST_LINK_OPTS;unset' 'CRAY_CPU_TARGET;unset' 'CRAY_DMAPP_INCLUDE_OPTS;unset' 'CRAY_DMAPP_POST_LINK_OPTS;unset' 'CRAY_GNI_HEADERS_INCLUDE_OPTS;unset' 'CRAY_LD_LIBRARY_PATH;unset' 'CRAY_LIBSCI_BASE_DIR;unset' 'CRAY_LIBSCI_DIR;unset' 'CRAY_LIBSCI_PREFIX_DIR;unset' 'CRAY_LIBSCI_VERSION;unset' 'CRAY_MPICH2_BASEDIR;unset' 'CRAY_MPICH2_DIR;unset' 'CRAY_MPICH2_ROOTDIR;unset' 'CRAY_MPICH2_VER;unset' 'CRAY_PMI_INCLUDE_OPTS;unset' 'CRAY_PMI_POST_LINK_OPTS;unset' 'CRAY_PRE_COMPILE_OPTS;unset' 'CRAY_PRGENVINTEL;unset' 'CRAY_RCA_INCLUDE_OPTS;unset' 'CRAY_RCA_POST_LINK_OPTS;unset' 'CRAY_UDREG_INCLUDE_OPTS;unset' 'CRAY_UDREG_POST_LINK_OPTS;unset' 'CRAY_UGNI_INCLUDE_OPTS;unset' 'CRAY_UGNI_POST_LINK_OPTS;unset' 'CRAY_XPMEM_INCLUDE_OPTS;unset' 'CRAY_XPMEM_POST_LINK_OPTS;unset' 'DCOMROOT;unset' 'DEGRIB2;unset' 'DMAPP_ABORT_ON_ERROR;unset' 'DVS_INCLUDE_OPTS;unset' 'DVS_VERSION;unset' 'FSYNC;unset' 'GADDIR;unset' 'GDBSERVER_MIC;unset' 'GDB_CROSS;unset' 'GDB_HOST;unset' 'GESROOT;unset' 'GESROOThps;unset' 'GESROOTp1;unset' 'GESROOTp2;unset' 'GRB2INDEX;unset' 'GRBINDEX;unset' 'GRIB2GRIB;unset' 'GrADS_ROOT;unset' 'INTEL_LICENSE_FILE;unset' 'INTEL_MAJOR_VERSION;unset' 'INTEL_MINOR_VERSION;unset' 'INTEL_PATH;unset' 'INTEL_PYTHONHOME;unset' 'INTEL_VERSION;unset' 'IPPROOT;unset' 'LIBRARY_PATH;unset' 'LIBSCI_BASE_DIR;unset' 'LIBSCI_VERSION;unset' 'LOADEDMODULES;unset' 'LSF_BINDIR;unset' 'LSF_ENVDIR;unset' 'LSF_LIBDIR;unset' 'LSF_SERVERDIR;unset' 'MDATE;unset' 'MIC_LD_LIBRARY_PATH;unset' 'MIC_LIBRARY_PATH;unset' 'MKLROOT;unset' 'MODULESHOME;unset' 'MPICH_ABORT_ON_ERROR;unset' 'MPICH_DIR;unset' 'MPM_LAUNCHER;unset' 'NCO_BINDIR;unset' 'NCO_INCDIR;unset' 'NCO_INCLUDE;unset' 'NCO_LDFLAGS_C;unset' 'NCO_LDFLAGS_CXX;unset' 'NCO_LIBDIR;unset' 'NCO_ROOTDIR;unset' 'NDATE;unset' 'NETCDF;unset' 'NETCDF_CFLAGS;unset' 'NETCDF_CXXFLAGS;unset' 'NETCDF_FFLAGS;unset' 'NETCDF_INCLUDE;unset' 'NETCDF_LDFLAGS;unset' 'NETCDF_LDFLAGS_C;unset' 'NETCDF_LDFLAGS_CXX;unset' 'NETCDF_LDFLAGS_F;unset' 'NHOUR;unset' 'NLSPATH;unset' 'NWROOT;unset' 'NWROOThps;unset' 'NWROOTp1;unset' 'NWROOTp2;unset' 'OMP_NUM_THREADS;unset' 'PCOMROOT;unset' 'PERL5LIB;unset' 'PE_CRAY_DEFAULT_FIXED_PKGCONFIG_PATH;unset' 'PE_CXX_PKGCONFIG_LIBS;unset' 'PE_ENV;unset' 'PE_FFTW_DEFAULT_REQUIRED_PRODUCTS;unset' 'PE_FFTW_DEFAULT_TARGET_haswell;unset' 'PE_FFTW_DEFAULT_TARGET_interlagos;unset' 'PE_FFTW_DEFAULT_TARGET_sandybridge;unset' 'PE_FFTW_DEFAULT_TARGET_x86_64;unset' 'PE_FFTW_DEFAULT_VOLATILE_PKGCONFIG_PATH;unset' 'PE_FORTRAN_PKGCONFIG_LIBS;unset' 'PE_GA_DEFAULT_FIXED_PRGENV;unset' 'PE_GA_DEFAULT_GENCOMPS_GNU;unset' 'PE_GA_DEFAULT_VOLATILE_PKGCONFIG_PATH;unset' 'PE_GA_DEFAULT_VOLATILE_PRGENV;unset' 'PE_HDF5_DEFAULT_FIXED_PRGENV;unset' 'PE_HDF5_DEFAULT_GENCOMPS_GNU;unset' 'PE_HDF5_DEFAULT_VOLATILE_PKGCONFIG_PATH;unset' 'PE_HDF5_DEFAULT_VOLATILE_PRGENV;unset' 'PE_HDF5_PARALLEL_DEFAULT_FIXED_PRGENV;unset' 'PE_HDF5_PARALLEL_DEFAULT_GENCOMPS_GNU;unset' 'PE_HDF5_PARALLEL_DEFAULT_REQUIRED_PRODUCTS;unset' 'PE_HDF5_PARALLEL_DEFAULT_VOLATILE_PKGCONFIG_PATH;unset' 'PE_HDF5_PARALLEL_DEFAULT_VOLATILE_PRGENV;unset' 'PE_INTEL_DEFAULT_FIXED_PKGCONFIG_PATH;unset' 'PE_INTEL_FIXED_PKGCONFIG_PATH;unset' 'PE_LIBSCI_DEFAULT_GENCOMPS_CRAY_x86_64;unset' 'PE_LIBSCI_DEFAULT_GENCOMPS_GNU_x86_64;unset' 'PE_LIBSCI_DEFAULT_GENCOMPS_INTEL_x86_64;unset' 'PE_LIBSCI_DEFAULT_OMP_REQUIRES;unset' 'PE_LIBSCI_DEFAULT_OMP_REQUIRES_openmp;unset' 'PE_LIBSCI_DEFAULT_PKGCONFIG_VARIABLES;unset' 'PE_LIBSCI_DEFAULT_REQUIRED_PRODUCTS;unset' 'PE_LIBSCI_DEFAULT_VOLATILE_PKGCONFIG_PATH;unset' 'PE_LIBSCI_DEFAULT_VOLATILE_PRGENV;unset' 'PE_LIBSCI_GENCOMPS_CRAY_x86_64;unset' 'PE_LIBSCI_GENCOMPS_GNU_x86_64;unset' 'PE_LIBSCI_GENCOMPS_INTEL_x86_64;unset' 'PE_LIBSCI_MODULE_NAME;unset' 'PE_LIBSCI_OMP_REQUIRES;unset' 'PE_LIBSCI_OMP_REQUIRES_openmp;unset' 'PE_LIBSCI_PKGCONFIG_LIBS;unset' 'PE_LIBSCI_PKGCONFIG_VARIABLES;unset' 'PE_LIBSCI_REQUIRED_PRODUCTS;unset' 'PE_LIBSCI_VOLATILE_PKGCONFIG_PATH;unset' 'PE_LIBSCI_VOLATILE_PRGENV;unset' 'PE_MPICH_DEFAULT_DIR_CRAY_DEFAULT64;unset' 'PE_MPICH_DEFAULT_FIXED_PRGENV;unset' 'PE_MPICH_DEFAULT_GENCOMPS_CRAY;unset' 'PE_MPICH_DEFAULT_GENCOMPS_GNU;unset' 'PE_MPICH_DEFAULT_VOLATILE_PKGCONFIG_PATH;unset' 'PE_MPICH_DEFAULT_VOLATILE_PRGENV;unset' 'PE_MPICH_DIR_CRAY_DEFAULT64;unset' 'PE_MPICH_FIXED_PRGENV;unset' 'PE_MPICH_GENCOMPS_CRAY;unset' 'PE_MPICH_GENCOMPS_GNU;unset' 'PE_MPICH_MODULE_NAME;unset' 'PE_MPICH_MULTITHREADED_LIBS_multithreaded;unset' 'PE_MPICH_NV_LIBS;unset' 'PE_MPICH_NV_LIBS_nvidia20;unset' 'PE_MPICH_NV_LIBS_nvidia35;unset' 'PE_MPICH_PKGCONFIG_VARIABLES;unset' 'PE_MPICH_TARGET_VAR_nvidia20;unset' 'PE_MPICH_TARGET_VAR_nvidia35;unset' 'PE_MPICH_VOLATILE_PKGCONFIG_PATH;unset' 'PE_MPICH_VOLATILE_PRGENV;unset' 'PE_NETCDF_DEFAULT_FIXED_PRGENV;unset' 'PE_NETCDF_DEFAULT_GENCOMPS_GNU;unset' 'PE_NETCDF_DEFAULT_REQUIRED_PRODUCTS;unset' 'PE_NETCDF_DEFAULT_VOLATILE_PKGCONFIG_PATH;unset' 'PE_NETCDF_DEFAULT_VOLATILE_PRGENV;unset' 'PE_NETCDF_HDF5PARALLEL_DEFAULT_FIXED_PRGENV;unset' 'PE_NETCDF_HDF5PARALLEL_DEFAULT_GENCOMPS_GNU;unset' 'PE_NETCDF_HDF5PARALLEL_DEFAULT_REQUIRED_PRODUCTS;unset' 'PE_NETCDF_HDF5PARALLEL_DEFAULT_VOLATILE_PKGCONFIG_PATH;unset' 'PE_NETCDF_HDF5PARALLEL_DEFAULT_VOLATILE_PRGENV;unset' 'PE_PAPI_DEFAULT_ACCEL_LIBS;unset' 'PE_PAPI_DEFAULT_ACCEL_LIBS_nvidia35;unset' 'PE_PAPI_DEFAULT_PKGCONFIG_VARIABLES;unset' 'PE_PAPI_DEFAULT_TARGET_VAR_nvidia35;unset' 'PE_PARALLEL_NETCDF_DEFAULT_FIXED_PRGENV;unset' 'PE_PARALLEL_NETCDF_DEFAULT_GENCOMPILERS_GNU;unset' 'PE_PARALLEL_NETCDF_DEFAULT_GENCOMPS_GNU;unset' 'PE_PARALLEL_NETCDF_DEFAULT_VOLATILE_PKGCONFIG_PATH;unset' 'PE_PARALLEL_NETCDF_DEFAULT_VOLATILE_PRGENV;unset' 'PE_PETSC_DEFAULT_GENCOMPS_CRAY_haswell;unset' 'PE_PETSC_DEFAULT_GENCOMPS_CRAY_interlagos;unset' 'PE_PETSC_DEFAULT_GENCOMPS_CRAY_sandybridge;unset' 'PE_PETSC_DEFAULT_GENCOMPS_CRAY_x86_64;unset' 'PE_PETSC_DEFAULT_GENCOMPS_GNU_haswell;unset' 'PE_PETSC_DEFAULT_GENCOMPS_GNU_interlagos;unset' 'PE_PETSC_DEFAULT_GENCOMPS_GNU_sandybridge;unset' 'PE_PETSC_DEFAULT_GENCOMPS_GNU_x86_64;unset' 'PE_PETSC_DEFAULT_GENCOMPS_INTEL_haswell;unset' 'PE_PETSC_DEFAULT_GENCOMPS_INTEL_interlagos;unset' 'PE_PETSC_DEFAULT_GENCOMPS_INTEL_sandybridge;unset' 'PE_PETSC_DEFAULT_GENCOMPS_INTEL_x86_64;unset' 'PE_PETSC_DEFAULT_REQUIRED_PRODUCTS;unset' 'PE_PETSC_DEFAULT_VOLATILE_PKGCONFIG_PATH;unset' 'PE_PETSC_DEFAULT_VOLATILE_PRGENV;unset' 'PE_PKGCONFIG_DEFAULT_PRODUCTS;unset' 'PE_PKGCONFIG_LIBS;unset' 'PE_PKGCONFIG_PRODUCTS;unset' 'PE_PKGCONFIG_PRODUCTS_DEFAULT;unset' 'PE_PKG_CONFIG_PATH;unset' 'PE_PRODUCT_LIST;unset' 'PE_SMA_DIR_CRAY_DEFAULT64;unset' 'PE_SMA_DIR_PGI_DEFAULT64;unset' 'PE_SMA_VOLATILE_PKGCONFIG_PATH;unset' 'PE_TPSL_DEFAULT_GENCOMPS_CRAY_haswell;unset' 'PE_TPSL_DEFAULT_GENCOMPS_CRAY_interlagos;unset' 'PE_TPSL_DEFAULT_GENCOMPS_CRAY_sandybridge;unset' 'PE_TPSL_DEFAULT_GENCOMPS_CRAY_x86_64;unset' 'PE_TPSL_DEFAULT_GENCOMPS_GNU_haswell;unset' 'PE_TPSL_DEFAULT_GENCOMPS_GNU_interlagos;unset' 'PE_TPSL_DEFAULT_GENCOMPS_GNU_sandybridge;unset' 'PE_TPSL_DEFAULT_GENCOMPS_GNU_x86_64;unset' 'PE_TPSL_DEFAULT_GENCOMPS_INTEL_haswell;unset' 'PE_TPSL_DEFAULT_GENCOMPS_INTEL_interlagos;unset' 'PE_TPSL_DEFAULT_GENCOMPS_INTEL_sandybridge;unset' 'PE_TPSL_DEFAULT_GENCOMPS_INTEL_x86_64;unset' 'PE_TPSL_DEFAULT_REQUIRED_PRODUCTS;unset' 'PE_TPSL_DEFAULT_VOLATILE_PKGCONFIG_PATH;unset' 'PE_TPSL_DEFAULT_VOLATILE_PRGENV;unset' 'PE_TRILINOS_DEFAULT_GENCOMPS_CRAY_x86_64;unset' 'PE_TRILINOS_DEFAULT_GENCOMPS_GNU_x86_64;unset' 'PE_TRILINOS_DEFAULT_GENCOMPS_INTEL_x86_64;unset' 'PE_TRILINOS_DEFAULT_REQUIRED_PRODUCTS;unset' 'PE_TRILINOS_DEFAULT_VOLATILE_PKGCONFIG_PATH;unset' 'PE_TRILINOS_DEFAULT_VOLATILE_PRGENV;unset' 'PKGCONFIG_ENABLED;unset' 'PKG_CONFIG_PATH;unset' 'PKG_CONFIG_PATH_DEFAULT;unset' 'PYTHONPATH;unset' 'SHMEM_ABORT_ON_ERROR;unset' 'SLURM_PROLOG;unset' 'TBBROOT;unset' 'TOCGRIB;unset' 'TOCGRIB2;unset' 'TOCGRIB2SUPER;unset' 'UTILROOT;unset' 'WGRIB;unset' 'WGRIB2;unset' 'XLSF_UIDDIR;unset' 'XTOS_VERSION;unset' 'XTPE_NETWORK_TARGET;unset' '_LMFILES_;unset' 'kernelrelease;'
+++ INFOPATH=/usr/local/info:/usr/share/info:/usr/info
+++ export INFOPATH
+++ LD_LIBRARY_PATH=/usrx/local/NetCDF/3.6.3/lib:/usrx/local/intel/mkl/lib/intel64
+++ export LD_LIBRARY_PATH
+++ MANPATH=/opt/cray/share/man:/usr/local/man:/usr/share/man:/opt/cray/share/man:/cm/local/apps/environment-modules/current/share/man
+++ export MANPATH
+++ MODULEPATH=/usrx/local/prod/modulefiles:/gpfs/hps/nco/ops/nwprod/lib/modulefiles:/gpfs/hps/nco/ops/nwprod/modulefiles:/opt/cray/alt-modulefiles:/opt/cray/craype/default/alt-modulefiles:/opt/modulefiles:/opt/cray/craype/default/modulefiles:/usrx/local/dev/modulefiles:/gpfs/hps3/emc/hwrf/noscrub/soft/modulefiles
+++ export MODULEPATH
+++ PATH=/u/Emily.Liu/bin:/usr/local/bin:/usr/bin:/bin:/usr/bin/X11:/usr/X11R6/bin:/usr/games:/opt/bin:/usr/lib/mit/bin:/usr/lib/mit/sbin:/sbin:/usr/sbin:.:/usr/lib/qt3/bin:/gpfs/hps3/emc/da/noscrub/Emily.Liu/bin:/gpfs/hps3/emc/global/noscrub/emc.glopara/bin:.:/global/save/Emily.Liu:/usrx/local/NetCDF/3.6.3/lib:/usrx/local/intel/mkl/lib/intel64:/nwprod/util/exec:/u/Emily.Liu/bin/nemsio_util:/gpfs/hps3/emc/meso/noscrub/Dusan.Jovic/dbrowse
+++ export PATH
+++ unset ATP_HOME
+++ unset ATP_MRNET_COMM_PATH
+++ unset ATP_POST_LINK_OPTS
+++ unset CNVGRIB
+++ unset CNVGRIB21_GFS
+++ unset COMDATEROOT
+++ unset COMROOT
+++ unset COMROOThps
+++ unset COMROOTp1
+++ unset COMROOTp2
+++ unset COPYGB
+++ unset COPYGB2
+++ unset CPATH
+++ unset CRAYOS_VERSION
+++ unset CRAYPE_DIR
+++ unset CRAYPE_NETWORK_TARGET
+++ unset CRAYPE_VERSION
+++ unset CRAY_ALPS_INCLUDE_OPTS
+++ unset CRAY_ALPS_POST_LINK_OPTS
+++ unset CRAY_CPU_TARGET
+++ unset CRAY_DMAPP_INCLUDE_OPTS
+++ unset CRAY_DMAPP_POST_LINK_OPTS
+++ unset CRAY_GNI_HEADERS_INCLUDE_OPTS
+++ unset CRAY_LD_LIBRARY_PATH
+++ unset CRAY_LIBSCI_BASE_DIR
+++ unset CRAY_LIBSCI_DIR
+++ unset CRAY_LIBSCI_PREFIX_DIR
+++ unset CRAY_LIBSCI_VERSION
+++ unset CRAY_MPICH2_BASEDIR
+++ unset CRAY_MPICH2_DIR
+++ unset CRAY_MPICH2_ROOTDIR
+++ unset CRAY_MPICH2_VER
+++ unset CRAY_PMI_INCLUDE_OPTS
+++ unset CRAY_PMI_POST_LINK_OPTS
+++ unset CRAY_PRE_COMPILE_OPTS
+++ unset CRAY_PRGENVINTEL
+++ unset CRAY_RCA_INCLUDE_OPTS
+++ unset CRAY_RCA_POST_LINK_OPTS
+++ unset CRAY_UDREG_INCLUDE_OPTS
+++ unset CRAY_UDREG_POST_LINK_OPTS
+++ unset CRAY_UGNI_INCLUDE_OPTS
+++ unset CRAY_UGNI_POST_LINK_OPTS
+++ unset CRAY_XPMEM_INCLUDE_OPTS
+++ unset CRAY_XPMEM_POST_LINK_OPTS
+++ unset DCOMROOT
+++ unset DEGRIB2
+++ unset DMAPP_ABORT_ON_ERROR
+++ unset DVS_INCLUDE_OPTS
+++ unset DVS_VERSION
+++ unset FSYNC
+++ unset GADDIR
+++ unset GDBSERVER_MIC
+++ unset GDB_CROSS
+++ unset GDB_HOST
+++ unset GESROOT
+++ unset GESROOThps
+++ unset GESROOTp1
+++ unset GESROOTp2
+++ unset GRB2INDEX
+++ unset GRBINDEX
+++ unset GRIB2GRIB
+++ unset GrADS_ROOT
+++ unset INTEL_LICENSE_FILE
+++ unset INTEL_MAJOR_VERSION
+++ unset INTEL_MINOR_VERSION
+++ unset INTEL_PATH
+++ unset INTEL_PYTHONHOME
+++ unset INTEL_VERSION
+++ unset IPPROOT
+++ unset LIBRARY_PATH
+++ unset LIBSCI_BASE_DIR
+++ unset LIBSCI_VERSION
+++ unset LOADEDMODULES
+++ unset LSF_BINDIR
+++ unset LSF_ENVDIR
+++ unset LSF_LIBDIR
+++ unset LSF_SERVERDIR
+++ unset MDATE
+++ unset MIC_LD_LIBRARY_PATH
+++ unset MIC_LIBRARY_PATH
+++ unset MKLROOT
+++ unset MODULESHOME
+++ unset MPICH_ABORT_ON_ERROR
+++ unset MPICH_DIR
+++ unset MPM_LAUNCHER
+++ unset NCO_BINDIR
+++ unset NCO_INCDIR
+++ unset NCO_INCLUDE
+++ unset NCO_LDFLAGS_C
+++ unset NCO_LDFLAGS_CXX
+++ unset NCO_LIBDIR
+++ unset NCO_ROOTDIR
+++ unset NDATE
+++ unset NETCDF
+++ unset NETCDF_CFLAGS
+++ unset NETCDF_CXXFLAGS
+++ unset NETCDF_FFLAGS
+++ unset NETCDF_INCLUDE
+++ unset NETCDF_LDFLAGS
+++ unset NETCDF_LDFLAGS_C
+++ unset NETCDF_LDFLAGS_CXX
+++ unset NETCDF_LDFLAGS_F
+++ unset NHOUR
+++ unset NLSPATH
+++ unset NWROOT
+++ unset NWROOThps
+++ unset NWROOTp1
+++ unset NWROOTp2
+++ unset OMP_NUM_THREADS
+++ unset PCOMROOT
+++ unset PERL5LIB
+++ unset PE_CRAY_DEFAULT_FIXED_PKGCONFIG_PATH
+++ unset PE_CXX_PKGCONFIG_LIBS
+++ unset PE_ENV
+++ unset PE_FFTW_DEFAULT_REQUIRED_PRODUCTS
+++ unset PE_FFTW_DEFAULT_TARGET_haswell
+++ unset PE_FFTW_DEFAULT_TARGET_interlagos
+++ unset PE_FFTW_DEFAULT_TARGET_sandybridge
+++ unset PE_FFTW_DEFAULT_TARGET_x86_64
+++ unset PE_FFTW_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ unset PE_FORTRAN_PKGCONFIG_LIBS
+++ unset PE_GA_DEFAULT_FIXED_PRGENV
+++ unset PE_GA_DEFAULT_GENCOMPS_GNU
+++ unset PE_GA_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ unset PE_GA_DEFAULT_VOLATILE_PRGENV
+++ unset PE_HDF5_DEFAULT_FIXED_PRGENV
+++ unset PE_HDF5_DEFAULT_GENCOMPS_GNU
+++ unset PE_HDF5_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ unset PE_HDF5_DEFAULT_VOLATILE_PRGENV
+++ unset PE_HDF5_PARALLEL_DEFAULT_FIXED_PRGENV
+++ unset PE_HDF5_PARALLEL_DEFAULT_GENCOMPS_GNU
+++ unset PE_HDF5_PARALLEL_DEFAULT_REQUIRED_PRODUCTS
+++ unset PE_HDF5_PARALLEL_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ unset PE_HDF5_PARALLEL_DEFAULT_VOLATILE_PRGENV
+++ unset PE_INTEL_DEFAULT_FIXED_PKGCONFIG_PATH
+++ unset PE_INTEL_FIXED_PKGCONFIG_PATH
+++ unset PE_LIBSCI_DEFAULT_GENCOMPS_CRAY_x86_64
+++ unset PE_LIBSCI_DEFAULT_GENCOMPS_GNU_x86_64
+++ unset PE_LIBSCI_DEFAULT_GENCOMPS_INTEL_x86_64
+++ unset PE_LIBSCI_DEFAULT_OMP_REQUIRES
+++ unset PE_LIBSCI_DEFAULT_OMP_REQUIRES_openmp
+++ unset PE_LIBSCI_DEFAULT_PKGCONFIG_VARIABLES
+++ unset PE_LIBSCI_DEFAULT_REQUIRED_PRODUCTS
+++ unset PE_LIBSCI_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ unset PE_LIBSCI_DEFAULT_VOLATILE_PRGENV
+++ unset PE_LIBSCI_GENCOMPS_CRAY_x86_64
+++ unset PE_LIBSCI_GENCOMPS_GNU_x86_64
+++ unset PE_LIBSCI_GENCOMPS_INTEL_x86_64
+++ unset PE_LIBSCI_MODULE_NAME
+++ unset PE_LIBSCI_OMP_REQUIRES
+++ unset PE_LIBSCI_OMP_REQUIRES_openmp
+++ unset PE_LIBSCI_PKGCONFIG_LIBS
+++ unset PE_LIBSCI_PKGCONFIG_VARIABLES
+++ unset PE_LIBSCI_REQUIRED_PRODUCTS
+++ unset PE_LIBSCI_VOLATILE_PKGCONFIG_PATH
+++ unset PE_LIBSCI_VOLATILE_PRGENV
+++ unset PE_MPICH_DEFAULT_DIR_CRAY_DEFAULT64
+++ unset PE_MPICH_DEFAULT_FIXED_PRGENV
+++ unset PE_MPICH_DEFAULT_GENCOMPS_CRAY
+++ unset PE_MPICH_DEFAULT_GENCOMPS_GNU
+++ unset PE_MPICH_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ unset PE_MPICH_DEFAULT_VOLATILE_PRGENV
+++ unset PE_MPICH_DIR_CRAY_DEFAULT64
+++ unset PE_MPICH_FIXED_PRGENV
+++ unset PE_MPICH_GENCOMPS_CRAY
+++ unset PE_MPICH_GENCOMPS_GNU
+++ unset PE_MPICH_MODULE_NAME
+++ unset PE_MPICH_MULTITHREADED_LIBS_multithreaded
+++ unset PE_MPICH_NV_LIBS
+++ unset PE_MPICH_NV_LIBS_nvidia20
+++ unset PE_MPICH_NV_LIBS_nvidia35
+++ unset PE_MPICH_PKGCONFIG_VARIABLES
+++ unset PE_MPICH_TARGET_VAR_nvidia20
+++ unset PE_MPICH_TARGET_VAR_nvidia35
+++ unset PE_MPICH_VOLATILE_PKGCONFIG_PATH
+++ unset PE_MPICH_VOLATILE_PRGENV
+++ unset PE_NETCDF_DEFAULT_FIXED_PRGENV
+++ unset PE_NETCDF_DEFAULT_GENCOMPS_GNU
+++ unset PE_NETCDF_DEFAULT_REQUIRED_PRODUCTS
+++ unset PE_NETCDF_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ unset PE_NETCDF_DEFAULT_VOLATILE_PRGENV
+++ unset PE_NETCDF_HDF5PARALLEL_DEFAULT_FIXED_PRGENV
+++ unset PE_NETCDF_HDF5PARALLEL_DEFAULT_GENCOMPS_GNU
+++ unset PE_NETCDF_HDF5PARALLEL_DEFAULT_REQUIRED_PRODUCTS
+++ unset PE_NETCDF_HDF5PARALLEL_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ unset PE_NETCDF_HDF5PARALLEL_DEFAULT_VOLATILE_PRGENV
+++ unset PE_PAPI_DEFAULT_ACCEL_LIBS
+++ unset PE_PAPI_DEFAULT_ACCEL_LIBS_nvidia35
+++ unset PE_PAPI_DEFAULT_PKGCONFIG_VARIABLES
+++ unset PE_PAPI_DEFAULT_TARGET_VAR_nvidia35
+++ unset PE_PARALLEL_NETCDF_DEFAULT_FIXED_PRGENV
+++ unset PE_PARALLEL_NETCDF_DEFAULT_GENCOMPILERS_GNU
+++ unset PE_PARALLEL_NETCDF_DEFAULT_GENCOMPS_GNU
+++ unset PE_PARALLEL_NETCDF_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ unset PE_PARALLEL_NETCDF_DEFAULT_VOLATILE_PRGENV
+++ unset PE_PETSC_DEFAULT_GENCOMPS_CRAY_haswell
+++ unset PE_PETSC_DEFAULT_GENCOMPS_CRAY_interlagos
+++ unset PE_PETSC_DEFAULT_GENCOMPS_CRAY_sandybridge
+++ unset PE_PETSC_DEFAULT_GENCOMPS_CRAY_x86_64
+++ unset PE_PETSC_DEFAULT_GENCOMPS_GNU_haswell
+++ unset PE_PETSC_DEFAULT_GENCOMPS_GNU_interlagos
+++ unset PE_PETSC_DEFAULT_GENCOMPS_GNU_sandybridge
+++ unset PE_PETSC_DEFAULT_GENCOMPS_GNU_x86_64
+++ unset PE_PETSC_DEFAULT_GENCOMPS_INTEL_haswell
+++ unset PE_PETSC_DEFAULT_GENCOMPS_INTEL_interlagos
+++ unset PE_PETSC_DEFAULT_GENCOMPS_INTEL_sandybridge
+++ unset PE_PETSC_DEFAULT_GENCOMPS_INTEL_x86_64
+++ unset PE_PETSC_DEFAULT_REQUIRED_PRODUCTS
+++ unset PE_PETSC_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ unset PE_PETSC_DEFAULT_VOLATILE_PRGENV
+++ unset PE_PKGCONFIG_DEFAULT_PRODUCTS
+++ unset PE_PKGCONFIG_LIBS
+++ unset PE_PKGCONFIG_PRODUCTS
+++ unset PE_PKGCONFIG_PRODUCTS_DEFAULT
+++ unset PE_PKG_CONFIG_PATH
+++ unset PE_PRODUCT_LIST
+++ unset PE_SMA_DIR_CRAY_DEFAULT64
+++ unset PE_SMA_DIR_PGI_DEFAULT64
+++ unset PE_SMA_VOLATILE_PKGCONFIG_PATH
+++ unset PE_TPSL_DEFAULT_GENCOMPS_CRAY_haswell
+++ unset PE_TPSL_DEFAULT_GENCOMPS_CRAY_interlagos
+++ unset PE_TPSL_DEFAULT_GENCOMPS_CRAY_sandybridge
+++ unset PE_TPSL_DEFAULT_GENCOMPS_CRAY_x86_64
+++ unset PE_TPSL_DEFAULT_GENCOMPS_GNU_haswell
+++ unset PE_TPSL_DEFAULT_GENCOMPS_GNU_interlagos
+++ unset PE_TPSL_DEFAULT_GENCOMPS_GNU_sandybridge
+++ unset PE_TPSL_DEFAULT_GENCOMPS_GNU_x86_64
+++ unset PE_TPSL_DEFAULT_GENCOMPS_INTEL_haswell
+++ unset PE_TPSL_DEFAULT_GENCOMPS_INTEL_interlagos
+++ unset PE_TPSL_DEFAULT_GENCOMPS_INTEL_sandybridge
+++ unset PE_TPSL_DEFAULT_GENCOMPS_INTEL_x86_64
+++ unset PE_TPSL_DEFAULT_REQUIRED_PRODUCTS
+++ unset PE_TPSL_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ unset PE_TPSL_DEFAULT_VOLATILE_PRGENV
+++ unset PE_TRILINOS_DEFAULT_GENCOMPS_CRAY_x86_64
+++ unset PE_TRILINOS_DEFAULT_GENCOMPS_GNU_x86_64
+++ unset PE_TRILINOS_DEFAULT_GENCOMPS_INTEL_x86_64
+++ unset PE_TRILINOS_DEFAULT_REQUIRED_PRODUCTS
+++ unset PE_TRILINOS_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ unset PE_TRILINOS_DEFAULT_VOLATILE_PRGENV
+++ unset PKGCONFIG_ENABLED
+++ unset PKG_CONFIG_PATH
+++ unset PKG_CONFIG_PATH_DEFAULT
+++ unset PYTHONPATH
+++ unset SHMEM_ABORT_ON_ERROR
+++ unset SLURM_PROLOG
+++ unset TBBROOT
+++ unset TOCGRIB
+++ unset TOCGRIB2
+++ unset TOCGRIB2SUPER
+++ unset UTILROOT
+++ unset WGRIB
+++ unset WGRIB2
+++ unset XLSF_UIDDIR
+++ unset XTOS_VERSION
+++ unset XTPE_NETWORK_TARGET
+++ unset _LMFILES_
+++ unset kernelrelease
++ module load /gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/modulefiles/modulefile.ProdGSI.wcoss_c
+++ /opt/modules/3.2.10.3/bin/modulecmd sh load /gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/modulefiles/modulefile.ProdGSI.wcoss_c
+ncep/1.0(21):ERROR:105: Unable to locate a modulefile for 'ugni'
+ncep/1.0(21):ERROR:105: Unable to locate a modulefile for 'xpmem'
+ncep/1.0(21):ERROR:105: Unable to locate a modulefile for 'dvs'
+ncep/1.0(21):ERROR:105: Unable to locate a modulefile for 'alps'
++ eval ATP_HOME=/opt/cray/atp/1.8.1 ';export' 'ATP_HOME;ATP_MRNET_COMM_PATH=/opt/cray/atp/1.8.1/libexec/atp_mrnet_commnode_wrapper' ';export' 'ATP_MRNET_COMM_PATH;ATP_POST_LINK_OPTS=-Wl,-L/opt/cray/atp/1.8.1/libApp/\' ';export' 'ATP_POST_LINK_OPTS;BACIO_LIB4=/usrx/local/nceplibs/bacio/v2.0.2/intel/libbacio_v2.0.2_4.a' ';export' 'BACIO_LIB4;BACIO_LIB8=/usrx/local/nceplibs/bacio/v2.0.2/intel/libbacio_v2.0.2_8.a' ';export' 'BACIO_LIB8;BACIO_SRC=/usrx/local/nceplibs/bacio/v2.0.2/src' ';export' 'BACIO_SRC;BACIO_VER=v2.0.2' ';export' 'BACIO_VER;BUFR_LIB4=/gpfs/hps/nco/ops/nwprod/lib/bufr/v11.0.1/intel/libbufr_v11.0.1_4_64.a' ';export' 'BUFR_LIB4;BUFR_LIB4_DA=/gpfs/hps/nco/ops/nwprod/lib/bufr/v11.0.1/intel/libbufr_v11.0.1_4_64_DA.a' ';export' 'BUFR_LIB4_DA;BUFR_LIB8=/gpfs/hps/nco/ops/nwprod/lib/bufr/v11.0.1/intel/libbufr_v11.0.1_8_64.a' ';export' 'BUFR_LIB8;BUFR_LIB8_DA=/gpfs/hps/nco/ops/nwprod/lib/bufr/v11.0.1/intel/libbufr_v11.0.1_8_64_DA.a' ';export' 'BUFR_LIB8_DA;BUFR_LIBd=/gpfs/hps/nco/ops/nwprod/lib/bufr/v11.0.1/intel/libbufr_v11.0.1_d_64.a' ';export' 'BUFR_LIBd;BUFR_LIBd_DA=/gpfs/hps/nco/ops/nwprod/lib/bufr/v11.0.1/intel/libbufr_v11.0.1_d_64_DA.a' ';export' 'BUFR_LIBd_DA;BUFR_LIBs=/gpfs/hps/nco/ops/nwprod/lib/bufr/v11.0.1/intel/libbufr_v11.0.1_s_64.a' ';export' 'BUFR_LIBs;BUFR_SRC=/gpfs/hps/nco/ops/nwprod/lib/bufr/v11.0.1/src' ';export' 'BUFR_SRC;BUFR_VER=v11.0.1' ';export' 'BUFR_VER;COMDATEROOT=/gpfs/hps/nco/ops/com' ';export' 'COMDATEROOT;COMP=intel' ';export' 'COMP;COMP_MP=ftn' ';export' 'COMP_MP;COMP_MPI=ftn' ';export' 'COMP_MPI;CPATH=/opt/intel/composer_xe_2015.3.187/ipp/include:/opt/intel/composer_xe_2015.3.187/mkl/include:/opt/intel/composer_xe_2015.3.187/tbb/include' ';export' 'CPATH;CRAYOS_VERSION=5.2.56' ';export' 'CRAYOS_VERSION;CRAYPE_DIR=/opt/cray/craype/2.3.0' ';export' 'CRAYPE_DIR;CRAYPE_NETWORK_TARGET=aries' ';export' 'CRAYPE_NETWORK_TARGET;CRAYPE_VERSION=2.3.0' ';export' 'CRAYPE_VERSION;CRAY_ALPS_INCLUDE_OPTS=-I/opt/cray/alps/5.2.3-2.0502.9295.14.14.ari/include' ';export' 'CRAY_ALPS_INCLUDE_OPTS;CRAY_ALPS_POST_LINK_OPTS=-L/opt/cray/alps/5.2.3-2.0502.9295.14.14.ari/lib64' ';export' 'CRAY_ALPS_POST_LINK_OPTS;CRAY_CPU_TARGET=haswell' ';export' 'CRAY_CPU_TARGET;CRAY_DMAPP_INCLUDE_OPTS=-I/opt/cray/dmapp/7.0.1-1.0502.10246.8.47.ari/include\' '-I/opt/cray/gni-headers/4.0-1.0502.10317.9.2.ari/include\' ';export' 'CRAY_DMAPP_INCLUDE_OPTS;CRAY_DMAPP_POST_LINK_OPTS=-L/opt/cray/dmapp/7.0.1-1.0502.10246.8.47.ari/lib64' ';export' 'CRAY_DMAPP_POST_LINK_OPTS;CRAY_GNI_HEADERS_INCLUDE_OPTS=-I/opt/cray/gni-headers/4.0-1.0502.10317.9.2.ari/include' ';export' 'CRAY_GNI_HEADERS_INCLUDE_OPTS;CRAY_LD_LIBRARY_PATH=/opt/cray/mpt/7.2.0/gni/mpich2-intel/140/lib:/opt/cray/rca/1.0.0-2.0502.57212.2.56.ari/lib64:/opt/cray/alps/5.2.3-2.0502.9295.14.14.ari/lib64:/opt/cray/xpmem/0.1-2.0502.57015.1.15.ari/lib64:/opt/cray/dmapp/7.0.1-1.0502.10246.8.47.ari/lib64:/opt/cray/pmi/5.0.6-1.0000.10439.140.2.ari/lib64:/opt/cray/ugni/6.0-1.0502.10245.9.9.ari/lib64:/opt/cray/udreg/2.3.2-1.0502.9889.2.20.ari/lib64:/opt/cray/libsci/13.0.3/INTEL/140/x86_64/lib' ';export' 'CRAY_LD_LIBRARY_PATH;CRAY_LIBSCI_BASE_DIR=/opt/cray/libsci/13.0.3' ';export' 'CRAY_LIBSCI_BASE_DIR;CRAY_LIBSCI_DIR=/opt/cray/libsci/13.0.3' ';export' 'CRAY_LIBSCI_DIR;CRAY_LIBSCI_PREFIX_DIR=/opt/cray/libsci/13.0.3/INTEL/140/x86_64' ';export' 'CRAY_LIBSCI_PREFIX_DIR;CRAY_LIBSCI_VERSION=13.0.3' ';export' 'CRAY_LIBSCI_VERSION;CRAY_MPICH2_BASEDIR=/opt/cray/mpt/7.2.0/gni' ';export' 'CRAY_MPICH2_BASEDIR;CRAY_MPICH2_DIR=/opt/cray/mpt/7.2.0/gni/mpich2-intel/140' ';export' 'CRAY_MPICH2_DIR;CRAY_MPICH2_ROOTDIR=/opt/cray/mpt/7.2.0' ';export' 'CRAY_MPICH2_ROOTDIR;CRAY_MPICH2_VER=7.2.0' ';export' 'CRAY_MPICH2_VER;CRAY_PMI_INCLUDE_OPTS=-I/opt/cray/pmi/5.0.6-1.0000.10439.140.2.ari/include' ';export' 'CRAY_PMI_INCLUDE_OPTS;CRAY_PMI_POST_LINK_OPTS=-L/opt/cray/pmi/5.0.6-1.0000.10439.140.2.ari/lib64' ';export' 'CRAY_PMI_POST_LINK_OPTS;CRAY_PRE_COMPILE_OPTS=-hnetwork=aries' ';export' 'CRAY_PRE_COMPILE_OPTS;CRAY_PRGENVINTEL=loaded' ';export' 'CRAY_PRGENVINTEL;CRAY_RCA_INCLUDE_OPTS=-I/opt/cray/rca/1.0.0-2.0502.57212.2.56.ari/include\' '-I/opt/cray/krca/1.0.0-2.0502.67049.8.22.ari/include\' '-I/opt/cray-hss-devel/7.2.0/include\' ';export' 'CRAY_RCA_INCLUDE_OPTS;CRAY_RCA_POST_LINK_OPTS=-L/opt/cray/rca/1.0.0-2.0502.57212.2.56.ari/lib64\' '-lrca\' ';export' 'CRAY_RCA_POST_LINK_OPTS;CRAY_UDREG_INCLUDE_OPTS=-I/opt/cray/udreg/2.3.2-1.0502.9889.2.20.ari/include' ';export' 'CRAY_UDREG_INCLUDE_OPTS;CRAY_UDREG_POST_LINK_OPTS=-L/opt/cray/udreg/2.3.2-1.0502.9889.2.20.ari/lib64' ';export' 'CRAY_UDREG_POST_LINK_OPTS;CRAY_UGNI_INCLUDE_OPTS=-I/opt/cray/ugni/6.0-1.0502.10245.9.9.ari/include' ';export' 'CRAY_UGNI_INCLUDE_OPTS;CRAY_UGNI_POST_LINK_OPTS=-L/opt/cray/ugni/6.0-1.0502.10245.9.9.ari/lib64' ';export' 'CRAY_UGNI_POST_LINK_OPTS;CRAY_XPMEM_INCLUDE_OPTS=-I/opt/cray/xpmem/0.1-2.0502.57015.1.15.ari/include' ';export' 'CRAY_XPMEM_INCLUDE_OPTS;CRAY_XPMEM_POST_LINK_OPTS=-L/opt/cray/xpmem/0.1-2.0502.57015.1.15.ari/lib64' ';export' 'CRAY_XPMEM_POST_LINK_OPTS;CRTM_FIX=/gpfs/hps/nco/ops/nwprod/lib/crtm/v2.2.6/fix' ';export' 'CRTM_FIX;CRTM_INC=/gpfs/hps/nco/ops/nwprod/lib/crtm/v2.2.6/intel/include/crtm_v2.2.6' ';export' 'CRTM_INC;CRTM_LIB=/gpfs/hps/nco/ops/nwprod/lib/crtm/v2.2.6/intel/libcrtm_v2.2.6.a' ';export' 'CRTM_LIB;CRTM_SRC=/gpfs/hps/nco/ops/nwprod/lib/crtm/v2.2.6/src' ';export' 'CRTM_SRC;CRTM_VER=v2.2.6' ';export' 'CRTM_VER;C_COMP=cc' ';export' 'C_COMP;C_COMP_MP=cc' ';export' 'C_COMP_MP;DMAPP_ABORT_ON_ERROR=1' ';export' 'DMAPP_ABORT_ON_ERROR;DVS_INCLUDE_OPTS=-I/opt/cray/dvs/2.5_0.9.0-1.0502.1958.2.55.ari/include' ';export' 'DVS_INCLUDE_OPTS;DVS_VERSION=0.9.0' ';export' 'DVS_VERSION;FFLAGS_COM=-fp-model\' strict ';export' 'FFLAGS_COM;FSYNC=/gpfs/hps/nco/ops/nwprod/prod_util.v1.0.29/exec/fsync_file' ';export' 'FSYNC;GDBSERVER_MIC=/opt/intel/composer_xe_2015.3.187/debugger/gdb/target/mic/bin/gdbserver' ';export' 'GDBSERVER_MIC;GDB_CROSS=/opt/intel/composer_xe_2015.3.187/debugger/gdb/intel64_mic/bin/gdb-mic' ';export' 'GDB_CROSS;GDB_HOST=/opt/intel/composer_xe_2015.3.187/debugger/gdb/intel64_mic/bin/gdb-ia-mic' ';export' 'GDB_HOST;HDF5=/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell' ';export' 'HDF5;HDF5_CFLAGS=-I/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/include' ';export' 'HDF5_CFLAGS;HDF5_CXXFLAGS=-I/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/include' ';export' 'HDF5_CXXFLAGS;HDF5_FFLAGS=-I/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/include' ';export' 'HDF5_FFLAGS;HDF5_INCLUDE=-I/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/include' ';export' 'HDF5_INCLUDE;HDF5_LDFLAGS=-L/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/lib\' '-lhdf5_hl\' '-lhdf5hl_fortran\' '-lhdf5\' -lhdf5_fortran ';export' 'HDF5_LDFLAGS;HDF5_LDFLAGS_C=-L/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/lib\' '-lhdf5_hl\' -lhdf5 ';export' 'HDF5_LDFLAGS_C;HDF5_LDFLAGS_CXX=-L/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/lib\' '-lhdf5_hl\' '-lhdf5_hl_cpp\' '-lhdf5\' -lhdf5_cpp ';export' 'HDF5_LDFLAGS_CXX;HDF5_LDFLAGS_F=-L/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/lib\' '-lhdf5_hl\' '-lhdf5hl_fortran\' '-lhdf5\' -lhdf5_fortran ';export' 'HDF5_LDFLAGS_F;INFOPATH=/opt/intel/composer_xe_2015.3.187/debugger/gdb/intel64/share/info/:/opt/intel/composer_xe_2015.3.187/debugger/gdb/intel64_mic/share/info/:/usr/local/info:/usr/share/info:/usr/info' ';export' 'INFOPATH;INTEL_LICENSE_FILE=/opt/intel/composer_xe_2015.3.187/licenses:/opt/intel/licenses:/intel/licenses' ';export' 'INTEL_LICENSE_FILE;INTEL_MAJOR_VERSION=15.0' ';export' 'INTEL_MAJOR_VERSION;INTEL_MINOR_VERSION=3.187' ';export' 'INTEL_MINOR_VERSION;INTEL_PATH=/opt/intel/composer_xe_2015.3.187' ';export' 'INTEL_PATH;INTEL_PYTHONHOME=/opt/intel/composer_xe_2015.3.187/debugger/python/intel64/' ';export' 'INTEL_PYTHONHOME;INTEL_VERSION=15.0.3.187' ';export' 'INTEL_VERSION;IPPROOT=/opt/intel/composer_xe_2015.3.187/ipp' ';export' 'IPPROOT;LDFLAGS_COM=\' ';export' 'LDFLAGS_COM;LD_LIBRARY_PATH=/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/lib:/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/lib:/opt/intel/composer_xe_2015.3.187/compiler/lib/intel64:/opt/intel/mic/coi/host-linux-release/lib:/opt/intel/mic/myo/lib:/opt/intel/composer_xe_2015.3.187/mpirt/lib/intel64:/opt/intel/composer_xe_2015.3.187/ipp/../compiler/lib/intel64:/opt/intel/composer_xe_2015.3.187/ipp/lib/intel64:/opt/intel/composer_xe_2015.3.187/ipp/tools/intel64/perfsys:/opt/intel/mic/coi/host-linux-release/lib:/opt/intel/mic/myo/lib:/opt/intel/composer_xe_2015.3.187/compiler/lib/intel64:/opt/intel/composer_xe_2015.3.187/mkl/lib/intel64:/opt/intel/composer_xe_2015.3.187/tbb/lib/intel64/gcc4.1:/opt/intel/composer_xe_2015.3.187/debugger/libipt/intel64/lib:/usrx/local/NetCDF/3.6.3/lib:/usrx/local/intel/mkl/lib/intel64' ';export' 'LD_LIBRARY_PATH;LIBRARY_PATH=/opt/intel/composer_xe_2015.3.187/compiler/lib/intel64:/opt/intel/composer_xe_2015.3.187/ipp/../compiler/lib/intel64:/opt/intel/composer_xe_2015.3.187/ipp/lib/intel64:/opt/intel/composer_xe_2015.3.187/compiler/lib/intel64:/opt/intel/composer_xe_2015.3.187/mkl/lib/intel64:/opt/intel/composer_xe_2015.3.187/tbb/lib/intel64/gcc4.1' ';export' 'LIBRARY_PATH;LIBSCI_BASE_DIR=/opt/cray/libsci/13.0.3' ';export' 'LIBSCI_BASE_DIR;LIBSCI_VERSION=13.0.3' ';export' 'LIBSCI_VERSION;LOADEDMODULES=eswrap/1.3.3-1.020200.1280.0:ncep/1.0:prod_util/1.0.29:craype-network-aries:craype/2.3.0:intel/15.0.3.187:cray-libsci/13.0.3:udreg/2.3.2-1.0502.9889.2.20.ari:ugni/6.0-1.0502.10245.9.9.ari:pmi/5.0.6-1.0000.10439.140.2.ari:dmapp/7.0.1-1.0502.10246.8.47.ari:gni-headers/4.0-1.0502.10317.9.2.ari:xpmem/0.1-2.0502.57015.1.15.ari:dvs/2.5_0.9.0-1.0502.1958.2.55.ari:alps/5.2.3-2.0502.9295.14.14.ari:rca/1.0.0-2.0502.57212.2.56.ari:atp/1.8.1:PrgEnv-intel/5.2.56:cray-mpich/7.2.0:craype-haswell:cmake/3.6.2:HDF5-serial-intel-haswell/1.8.9:NetCDF-intel-haswell/4.2:bufr-intel/11.0.1:nemsio-intel/2.2.2:sfcio-intel/1.0.0:sigio-intel/2.1.0:sp-intel/2.0.2:w3nco-intel/2.0.6:w3emc-intel/2.2.0:crtm-intel/2.2.6:bacio-intel/2.0.2:modulefile.ProdGSI.wcoss_c' ';export' 'LOADEDMODULES;MANPATH=/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/share/man:/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/share/man:/usrx/local/dev/cmake/3.6.2/share/man:/opt/cray/mpt/7.2.0/gni/man/mpich2:/opt/cray/atp/1.8.1/man:/opt/cray/alps/5.2.3-2.0502.9295.14.14.ari/man:/opt/cray/libsci/13.0.3/man:/opt/cray/man/csmlversion:/opt/intel/composer_xe_2015.3.187/man/en_US:/opt/intel/composer_xe_2015.3.187/man/en_US:/opt/intel/composer_xe_2015.3.187/debugger/gdb/intel64/share/man/:/opt/intel/composer_xe_2015.3.187/debugger/gdb/intel64_mic/share/man/:/opt/cray/craype/2.3.0/man:/opt/cray/eslogin/eswrap/1.3.3-1.020200.1280.0/man:/opt/cray/share/man:/usr/local/man:/usr/share/man:/opt/cray/share/man:/cm/local/apps/environment-modules/current/share/man:/opt/cray/man' ';export' 'MANPATH;MDATE=/gpfs/hps/nco/ops/nwprod/prod_util.v1.0.29/exec/mdate' ';export' 'MDATE;MIC_LD_LIBRARY_PATH=/opt/intel/composer_xe_2015.3.187/compiler/lib/mic:/opt/intel/composer_xe_2015.3.187/mpirt/lib/mic:/opt/intel/mic/coi/device-linux-release/lib:/opt/intel/mic/myo/lib:/opt/intel/composer_xe_2015.3.187/ipp/lib/lib/mic:/opt/intel/mic/coi/device-linux-release/lib:/opt/intel/mic/myo/lib:/opt/intel/composer_xe_2015.3.187/compiler/lib/mic:/opt/intel/composer_xe_2015.3.187/mkl/lib/mic:/opt/intel/composer_xe_2015.3.187/tbb/lib/mic' ';export' 'MIC_LD_LIBRARY_PATH;MIC_LIBRARY_PATH=/opt/intel/composer_xe_2015.3.187/compiler/lib/mic:/opt/intel/composer_xe_2015.3.187/mpirt/lib/mic:/opt/intel/composer_xe_2015.3.187/tbb/lib/mic' ';export' 'MIC_LIBRARY_PATH;MKLROOT=/opt/intel/composer_xe_2015.3.187/mkl' ';export' 'MKLROOT;MODULEPATH=/usrx/local/nceplibs/modulefiles:/opt/cray/ari/modulefiles:/usrx/local/prod/modulefiles:/gpfs/hps/nco/ops/nwprod/lib/modulefiles:/gpfs/hps/nco/ops/nwprod/modulefiles:/opt/cray/alt-modulefiles:/opt/cray/craype/default/alt-modulefiles:/opt/modulefiles:/opt/cray/craype/default/modulefiles:/gpfs/hps3/emc/hwrf/noscrub/soft/modulefiles' ';export' 'MODULEPATH;MPICH_ABORT_ON_ERROR=1' ';export' 'MPICH_ABORT_ON_ERROR;MPICH_DIR=/opt/cray/mpt/7.2.0/gni/mpich2-intel/140' ';export' 'MPICH_DIR;MPM_LAUNCHER=/opt/intel/composer_xe_2015.3.187/debugger/mpm/bin/start_mpm.sh' ';export' 'MPM_LAUNCHER;NDATE=/gpfs/hps/nco/ops/nwprod/prod_util.v1.0.29/exec/ndate' ';export' 'NDATE;NEMSIO_INC=/gpfs/hps/nco/ops/nwprod/lib/nemsio/v2.2.2/intel/include/nemsio_v2.2.2' ';export' 'NEMSIO_INC;NEMSIO_LIB=/gpfs/hps/nco/ops/nwprod/lib/nemsio/v2.2.2/intel/libnemsio_v2.2.2.a' ';export' 'NEMSIO_LIB;NEMSIO_SRC=/gpfs/hps/nco/ops/nwprod/lib/nemsio/v2.2.2/src' ';export' 'NEMSIO_SRC;NEMSIO_VER=v2.2.2' ';export' 'NEMSIO_VER;NETCDF=/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell' ';export' 'NETCDF;NETCDF_CFLAGS=-I/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/include' ';export' 'NETCDF_CFLAGS;NETCDF_CXX4FLAGS=-I/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/include' ';export' 'NETCDF_CXX4FLAGS;NETCDF_CXXFLAGS=-I/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/include' ';export' 'NETCDF_CXXFLAGS;NETCDF_FFLAGS=-I/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/include' ';export' 'NETCDF_FFLAGS;NETCDF_INCLUDE=-I/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/include' ';export' 'NETCDF_INCLUDE;NETCDF_LDFLAGS=-L/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/lib\' '-lnetcdff\' -lnetcdf ';export' 'NETCDF_LDFLAGS;NETCDF_LDFLAGS_C=-L/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/lib\' -lnetcdf ';export' 'NETCDF_LDFLAGS_C;NETCDF_LDFLAGS_CXX=-L/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/lib\' '-lnetcdf\' -lnetcdf_c++ ';export' 'NETCDF_LDFLAGS_CXX;NETCDF_LDFLAGS_CXX4=-L/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/lib\' '-lnetcdf\' -lnetcdf_c++4 ';export' 'NETCDF_LDFLAGS_CXX4;NETCDF_LDFLAGS_F=-L/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/lib\' -lnetcdff ';export' 'NETCDF_LDFLAGS_F;NHOUR=/gpfs/hps/nco/ops/nwprod/prod_util.v1.0.29/exec/nhour' ';export' 'NHOUR;NLSPATH=/opt/intel/composer_xe_2015.3.187/compiler/lib/intel64/locale/%l_%t/%N:/opt/intel/composer_xe_2015.3.187/ipp/lib/intel64/locale/%l_%t/%N:/opt/intel/composer_xe_2015.3.187/mkl/lib/intel64/locale/%l_%t/%N:/opt/intel/composer_xe_2015.3.187/debugger/gdb/intel64_mic/share/locale/%l_%t/%N:/opt/intel/composer_xe_2015.3.187/debugger/gdb/intel64/share/locale/%l_%t/%N' ';export' 'NLSPATH;OMP_NUM_THREADS=1' ';export' 'OMP_NUM_THREADS;PATH=/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/bin:/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/bin:/usrx/local/dev/cmake/3.6.2/bin:/opt/cray/mpt/7.2.0/gni/bin:/opt/cray/rca/1.0.0-2.0502.57212.2.56.ari/bin:/opt/cray/alps/5.2.3-2.0502.9295.14.14.ari/sbin:/opt/cray/alps/5.2.3-2.0502.9295.14.14.ari/bin:/opt/cray/dvs/2.5_0.9.0-1.0502.1958.2.55.ari/bin:/opt/cray/xpmem/0.1-2.0502.57015.1.15.ari/bin:/opt/cray/pmi/5.0.6-1.0000.10439.140.2.ari/bin:/opt/cray/ugni/6.0-1.0502.10245.9.9.ari/bin:/opt/cray/udreg/2.3.2-1.0502.9889.2.20.ari/bin:/opt/intel/composer_xe_2015.3.187/bin/intel64:/opt/intel/composer_xe_2015.3.187/debugger/gdb/intel64_mic/bin:/opt/cray/craype/2.3.0/bin:/gpfs/hps/nco/ops/nwprod/prod_util.v1.0.29/ush:/opt/cray/eslogin/eswrap/1.3.3-1.020200.1280.0/bin:/u/Emily.Liu/bin:/usr/local/bin:/usr/bin:/bin:/usr/bin/X11:/usr/X11R6/bin:/usr/games:/opt/bin:/usr/lib/mit/bin:/usr/lib/mit/sbin:/sbin:/usr/sbin:.:/usr/lib/qt3/bin:/gpfs/hps3/emc/da/noscrub/Emily.Liu/bin:/gpfs/hps3/emc/global/noscrub/emc.glopara/bin:.:/global/save/Emily.Liu:/usrx/local/NetCDF/3.6.3/lib:/usrx/local/intel/mkl/lib/intel64:/nwprod/util/exec:/u/Emily.Liu/bin/nemsio_util:/gpfs/hps3/emc/meso/noscrub/Dusan.Jovic/dbrowse:/opt/cray/bin' ';export' 'PATH;PE_CRAY_DEFAULT_FIXED_PKGCONFIG_PATH=/opt/cray/netcdf/4.3.2/CRAY/83/lib/pkgconfig:/opt/cray/netcdf-hdf5parallel/4.3.2/CRAY/83/lib/pkgconfig:/opt/cray/parallel-netcdf/1.6.0/CRAY/8.3/lib/pkgconfig:/opt/cray/ga/5.3.0.1/CRAY/83/lib/pkgconfig:/opt/cray/hdf5/1.8.13/CRAY/83/lib/pkgconfig:/opt/cray/hdf5-parallel/1.8.13/CRAY/83/lib/pkgconfig' ';export' 'PE_CRAY_DEFAULT_FIXED_PKGCONFIG_PATH;PE_CXX_PKGCONFIG_LIBS=mpichcxx' ';export' 'PE_CXX_PKGCONFIG_LIBS;PE_ENV=INTEL' ';export' 'PE_ENV;PE_FFTW_DEFAULT_REQUIRED_PRODUCTS=PE_MPICH' ';export' 'PE_FFTW_DEFAULT_REQUIRED_PRODUCTS;PE_FFTW_DEFAULT_TARGET_haswell=haswell' ';export' 'PE_FFTW_DEFAULT_TARGET_haswell;PE_FFTW_DEFAULT_TARGET_interlagos=interlagos' ';export' 'PE_FFTW_DEFAULT_TARGET_interlagos;PE_FFTW_DEFAULT_TARGET_sandybridge=sandybridge' ';export' 'PE_FFTW_DEFAULT_TARGET_sandybridge;PE_FFTW_DEFAULT_TARGET_x86_64=x86_64' ';export' 'PE_FFTW_DEFAULT_TARGET_x86_64;PE_FFTW_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/fftw/3.3.4.2/@PE_FFTW_DEFAULT_TARGET@/lib/pkgconfig' ';export' 'PE_FFTW_DEFAULT_VOLATILE_PKGCONFIG_PATH;PE_FORTRAN_PKGCONFIG_LIBS=mpichf90' ';export' 'PE_FORTRAN_PKGCONFIG_LIBS;PE_GA_DEFAULT_FIXED_PRGENV=CRAY\' INTEL ';export' 'PE_GA_DEFAULT_FIXED_PRGENV;PE_GA_DEFAULT_GENCOMPS_GNU=49\' 48 ';export' 'PE_GA_DEFAULT_GENCOMPS_GNU;PE_GA_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/ga/5.3.0.1/@PRGENV@/@PE_GA_DEFAULT_GENCOMPS@/lib/pkgconfig' ';export' 'PE_GA_DEFAULT_VOLATILE_PKGCONFIG_PATH;PE_GA_DEFAULT_VOLATILE_PRGENV=GNU' ';export' 'PE_GA_DEFAULT_VOLATILE_PRGENV;PE_HDF5_DEFAULT_FIXED_PRGENV=CRAY\' INTEL ';export' 'PE_HDF5_DEFAULT_FIXED_PRGENV;PE_HDF5_DEFAULT_GENCOMPS_GNU=49\' 48 ';export' 'PE_HDF5_DEFAULT_GENCOMPS_GNU;PE_HDF5_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/hdf5/1.8.13/@PRGENV@/@PE_HDF5_DEFAULT_GENCOMPS@/lib/pkgconfig' ';export' 'PE_HDF5_DEFAULT_VOLATILE_PKGCONFIG_PATH;PE_HDF5_DEFAULT_VOLATILE_PRGENV=GNU' ';export' 'PE_HDF5_DEFAULT_VOLATILE_PRGENV;PE_HDF5_PARALLEL_DEFAULT_FIXED_PRGENV=CRAY\' INTEL ';export' 'PE_HDF5_PARALLEL_DEFAULT_FIXED_PRGENV;PE_HDF5_PARALLEL_DEFAULT_GENCOMPS_GNU=49\' 48 ';export' 'PE_HDF5_PARALLEL_DEFAULT_GENCOMPS_GNU;PE_HDF5_PARALLEL_DEFAULT_REQUIRED_PRODUCTS=PE_MPICH' ';export' 'PE_HDF5_PARALLEL_DEFAULT_REQUIRED_PRODUCTS;PE_HDF5_PARALLEL_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/hdf5-parallel/1.8.13/@PRGENV@/@PE_HDF5_PARALLEL_DEFAULT_GENCOMPS@/lib/pkgconfig' ';export' 'PE_HDF5_PARALLEL_DEFAULT_VOLATILE_PKGCONFIG_PATH;PE_HDF5_PARALLEL_DEFAULT_VOLATILE_PRGENV=GNU' ';export' 'PE_HDF5_PARALLEL_DEFAULT_VOLATILE_PRGENV;PE_INTEL_DEFAULT_FIXED_PKGCONFIG_PATH=/opt/cray/netcdf/4.3.2/INTEL/140/lib/pkgconfig:/opt/cray/netcdf-hdf5parallel/4.3.2/INTEL/140/lib/pkgconfig:/opt/cray/parallel-netcdf/1.6.0/INTEL/14.0/lib/pkgconfig:/opt/cray/ga/5.3.0.1/INTEL/140/lib/pkgconfig:/opt/cray/hdf5/1.8.13/INTEL/140/lib/pkgconfig:/opt/cray/mpt/7.2.0/gni/mpich2-intel/140/lib/pkgconfig:/opt/cray/hdf5-parallel/1.8.13/INTEL/140/lib/pkgconfig' ';export' 'PE_INTEL_DEFAULT_FIXED_PKGCONFIG_PATH;PE_INTEL_FIXED_PKGCONFIG_PATH=/opt/cray/mpt/7.2.0/gni/mpich2-intel/140/lib/pkgconfig' ';export' 'PE_INTEL_FIXED_PKGCONFIG_PATH;PE_LIBSCI_DEFAULT_GENCOMPS_CRAY_x86_64=83' ';export' 'PE_LIBSCI_DEFAULT_GENCOMPS_CRAY_x86_64;PE_LIBSCI_DEFAULT_GENCOMPS_GNU_x86_64=49\' 48 ';export' 'PE_LIBSCI_DEFAULT_GENCOMPS_GNU_x86_64;PE_LIBSCI_DEFAULT_GENCOMPS_INTEL_x86_64=140' ';export' 'PE_LIBSCI_DEFAULT_GENCOMPS_INTEL_x86_64;PE_LIBSCI_DEFAULT_OMP_REQUIRES_openmp=_mp' ';export' 'PE_LIBSCI_DEFAULT_OMP_REQUIRES_openmp;PE_LIBSCI_DEFAULT_PKGCONFIG_VARIABLES=PE_LIBSCI_DEFAULT_OMP_REQUIRES_@openmp@' ';export' 'PE_LIBSCI_DEFAULT_PKGCONFIG_VARIABLES;PE_LIBSCI_DEFAULT_REQUIRED_PRODUCTS=PE_MPICH' ';export' 'PE_LIBSCI_DEFAULT_REQUIRED_PRODUCTS;PE_LIBSCI_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/libsci/13.0.3/@PRGENV@/@PE_LIBSCI_DEFAULT_GENCOMPS@/@PE_LIBSCI_DEFAULT_TARGET@/lib/pkgconfig' ';export' 'PE_LIBSCI_DEFAULT_VOLATILE_PKGCONFIG_PATH;PE_LIBSCI_DEFAULT_VOLATILE_PRGENV=CRAY\' 'GNU\' INTEL ';export' 'PE_LIBSCI_DEFAULT_VOLATILE_PRGENV;PE_LIBSCI_GENCOMPS_CRAY_x86_64=83' ';export' 'PE_LIBSCI_GENCOMPS_CRAY_x86_64;PE_LIBSCI_GENCOMPS_GNU_x86_64=49\' 48 ';export' 'PE_LIBSCI_GENCOMPS_GNU_x86_64;PE_LIBSCI_GENCOMPS_INTEL_x86_64=140' ';export' 'PE_LIBSCI_GENCOMPS_INTEL_x86_64;PE_LIBSCI_MODULE_NAME=cray-libsci/13.0.3' ';export' 'PE_LIBSCI_MODULE_NAME;PE_LIBSCI_OMP_REQUIRES_openmp=_mp' ';export' 'PE_LIBSCI_OMP_REQUIRES_openmp;PE_LIBSCI_PKGCONFIG_LIBS=libsci_mpi:libsci' ';export' 'PE_LIBSCI_PKGCONFIG_LIBS;PE_LIBSCI_PKGCONFIG_VARIABLES=PE_LIBSCI_OMP_REQUIRES_@openmp@' ';export' 'PE_LIBSCI_PKGCONFIG_VARIABLES;PE_LIBSCI_REQUIRED_PRODUCTS=PE_MPICH' ';export' 'PE_LIBSCI_REQUIRED_PRODUCTS;PE_LIBSCI_VOLATILE_PKGCONFIG_PATH=/opt/cray/libsci/13.0.3/@PRGENV@/@PE_LIBSCI_GENCOMPS@/@PE_LIBSCI_TARGET@/lib/pkgconfig' ';export' 'PE_LIBSCI_VOLATILE_PKGCONFIG_PATH;PE_LIBSCI_VOLATILE_PRGENV=CRAY\' 'GNU\' INTEL ';export' 'PE_LIBSCI_VOLATILE_PRGENV;PE_MPICH_DEFAULT_DIR_CRAY_DEFAULT64=64' ';export' 'PE_MPICH_DEFAULT_DIR_CRAY_DEFAULT64;PE_MPICH_DEFAULT_FIXED_PRGENV=INTEL' ';export' 'PE_MPICH_DEFAULT_FIXED_PRGENV;PE_MPICH_DEFAULT_GENCOMPS_CRAY=83' ';export' 'PE_MPICH_DEFAULT_GENCOMPS_CRAY;PE_MPICH_DEFAULT_GENCOMPS_GNU=49\' 48 ';export' 'PE_MPICH_DEFAULT_GENCOMPS_GNU;PE_MPICH_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/mpt/7.2.0/gni/mpich2-@PRGENV@@PE_MPICH_DEFAULT_DIR_DEFAULT64@/@PE_MPICH_DEFAULT_GENCOMPS@/lib/pkgconfig' ';export' 'PE_MPICH_DEFAULT_VOLATILE_PKGCONFIG_PATH;PE_MPICH_DEFAULT_VOLATILE_PRGENV=CRAY\' GNU ';export' 'PE_MPICH_DEFAULT_VOLATILE_PRGENV;PE_MPICH_DIR_CRAY_DEFAULT64=64' ';export' 'PE_MPICH_DIR_CRAY_DEFAULT64;PE_MPICH_FIXED_PRGENV=INTEL' ';export' 'PE_MPICH_FIXED_PRGENV;PE_MPICH_GENCOMPS_CRAY=83' ';export' 'PE_MPICH_GENCOMPS_CRAY;PE_MPICH_GENCOMPS_GNU=49\' 48 ';export' 'PE_MPICH_GENCOMPS_GNU;PE_MPICH_MODULE_NAME=cray-mpich' ';export' 'PE_MPICH_MODULE_NAME;PE_MPICH_MULTITHREADED_LIBS_multithreaded=_mt' ';export' 'PE_MPICH_MULTITHREADED_LIBS_multithreaded;PE_MPICH_NV_LIBS_nvidia20=-lcudart' ';export' 'PE_MPICH_NV_LIBS_nvidia20;PE_MPICH_NV_LIBS_nvidia35=-lcudart' ';export' 'PE_MPICH_NV_LIBS_nvidia35;PE_MPICH_PKGCONFIG_VARIABLES=PE_MPICH_NV_LIBS_@accelerator@:PE_MPICH_MULTITHREADED_LIBS_@multithreaded@' ';export' 'PE_MPICH_PKGCONFIG_VARIABLES;PE_MPICH_TARGET_VAR_nvidia20=-lcudart' ';export' 'PE_MPICH_TARGET_VAR_nvidia20;PE_MPICH_TARGET_VAR_nvidia35=-lcudart' ';export' 'PE_MPICH_TARGET_VAR_nvidia35;PE_MPICH_VOLATILE_PKGCONFIG_PATH=/opt/cray/mpt/7.2.0/gni/mpich2-@PRGENV@@PE_MPICH_DIR_DEFAULT64@/@PE_MPICH_GENCOMPS@/lib/pkgconfig' ';export' 'PE_MPICH_VOLATILE_PKGCONFIG_PATH;PE_MPICH_VOLATILE_PRGENV=CRAY\' GNU ';export' 'PE_MPICH_VOLATILE_PRGENV;PE_NETCDF_DEFAULT_FIXED_PRGENV=CRAY\' INTEL ';export' 'PE_NETCDF_DEFAULT_FIXED_PRGENV;PE_NETCDF_DEFAULT_GENCOMPS_GNU=49\' 48 ';export' 'PE_NETCDF_DEFAULT_GENCOMPS_GNU;PE_NETCDF_DEFAULT_REQUIRED_PRODUCTS=PE_HDF5' ';export' 'PE_NETCDF_DEFAULT_REQUIRED_PRODUCTS;PE_NETCDF_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/netcdf/4.3.2/@PRGENV@/@PE_NETCDF_DEFAULT_GENCOMPS@/lib/pkgconfig' ';export' 'PE_NETCDF_DEFAULT_VOLATILE_PKGCONFIG_PATH;PE_NETCDF_DEFAULT_VOLATILE_PRGENV=GNU' ';export' 'PE_NETCDF_DEFAULT_VOLATILE_PRGENV;PE_NETCDF_HDF5PARALLEL_DEFAULT_FIXED_PRGENV=CRAY\' INTEL ';export' 'PE_NETCDF_HDF5PARALLEL_DEFAULT_FIXED_PRGENV;PE_NETCDF_HDF5PARALLEL_DEFAULT_GENCOMPS_GNU=49\' 48 ';export' 'PE_NETCDF_HDF5PARALLEL_DEFAULT_GENCOMPS_GNU;PE_NETCDF_HDF5PARALLEL_DEFAULT_REQUIRED_PRODUCTS=PE_HDF5_PARALLEL\' PE_MPICH ';export' 'PE_NETCDF_HDF5PARALLEL_DEFAULT_REQUIRED_PRODUCTS;PE_NETCDF_HDF5PARALLEL_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/netcdf-hdf5parallel/4.3.2/@PRGENV@/@PE_NETCDF_HDF5PARALLEL_DEFAULT_GENCOMPS@/lib/pkgconfig' ';export' 'PE_NETCDF_HDF5PARALLEL_DEFAULT_VOLATILE_PKGCONFIG_PATH;PE_NETCDF_HDF5PARALLEL_DEFAULT_VOLATILE_PRGENV=GNU' ';export' 'PE_NETCDF_HDF5PARALLEL_DEFAULT_VOLATILE_PRGENV;PE_PAPI_DEFAULT_ACCEL_LIBS_nvidia35=,-lcupti,-lcudart,-lcuda' ';export' 'PE_PAPI_DEFAULT_ACCEL_LIBS_nvidia35;PE_PAPI_DEFAULT_PKGCONFIG_VARIABLES=PE_PAPI_ACCEL_LIBS_@accelerator@' ';export' 'PE_PAPI_DEFAULT_PKGCONFIG_VARIABLES;PE_PAPI_DEFAULT_TARGET_VAR_nvidia35=,-lcupti,-lcudart,-lcuda' ';export' 'PE_PAPI_DEFAULT_TARGET_VAR_nvidia35;PE_PARALLEL_NETCDF_DEFAULT_FIXED_PRGENV=CRAY\' INTEL ';export' 'PE_PARALLEL_NETCDF_DEFAULT_FIXED_PRGENV;PE_PARALLEL_NETCDF_DEFAULT_GENCOMPILERS_GNU=4.9\' 4.8 ';export' 'PE_PARALLEL_NETCDF_DEFAULT_GENCOMPILERS_GNU;PE_PARALLEL_NETCDF_DEFAULT_GENCOMPS_GNU=49\' 48 ';export' 'PE_PARALLEL_NETCDF_DEFAULT_GENCOMPS_GNU;PE_PARALLEL_NETCDF_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/parallel-netcdf/1.6.0/@PRGENV@/@PE_PARALLEL_NETCDF_DEFAULT_GENCOMPS@/lib/pkgconfig' ';export' 'PE_PARALLEL_NETCDF_DEFAULT_VOLATILE_PKGCONFIG_PATH;PE_PARALLEL_NETCDF_DEFAULT_VOLATILE_PRGENV=GNU' ';export' 'PE_PARALLEL_NETCDF_DEFAULT_VOLATILE_PRGENV;PE_PETSC_DEFAULT_GENCOMPS_CRAY_haswell=83' ';export' 'PE_PETSC_DEFAULT_GENCOMPS_CRAY_haswell;PE_PETSC_DEFAULT_GENCOMPS_CRAY_interlagos=83' ';export' 'PE_PETSC_DEFAULT_GENCOMPS_CRAY_interlagos;PE_PETSC_DEFAULT_GENCOMPS_CRAY_sandybridge=83' ';export' 'PE_PETSC_DEFAULT_GENCOMPS_CRAY_sandybridge;PE_PETSC_DEFAULT_GENCOMPS_CRAY_x86_64=83' ';export' 'PE_PETSC_DEFAULT_GENCOMPS_CRAY_x86_64;PE_PETSC_DEFAULT_GENCOMPS_GNU_haswell=49\' 48 ';export' 'PE_PETSC_DEFAULT_GENCOMPS_GNU_haswell;PE_PETSC_DEFAULT_GENCOMPS_GNU_interlagos=49\' 48 ';export' 'PE_PETSC_DEFAULT_GENCOMPS_GNU_interlagos;PE_PETSC_DEFAULT_GENCOMPS_GNU_sandybridge=49\' 48 ';export' 'PE_PETSC_DEFAULT_GENCOMPS_GNU_sandybridge;PE_PETSC_DEFAULT_GENCOMPS_GNU_x86_64=49\' 48 ';export' 'PE_PETSC_DEFAULT_GENCOMPS_GNU_x86_64;PE_PETSC_DEFAULT_GENCOMPS_INTEL_haswell=140' ';export' 'PE_PETSC_DEFAULT_GENCOMPS_INTEL_haswell;PE_PETSC_DEFAULT_GENCOMPS_INTEL_interlagos=140' ';export' 'PE_PETSC_DEFAULT_GENCOMPS_INTEL_interlagos;PE_PETSC_DEFAULT_GENCOMPS_INTEL_sandybridge=140' ';export' 'PE_PETSC_DEFAULT_GENCOMPS_INTEL_sandybridge;PE_PETSC_DEFAULT_GENCOMPS_INTEL_x86_64=140' ';export' 'PE_PETSC_DEFAULT_GENCOMPS_INTEL_x86_64;PE_PETSC_DEFAULT_REQUIRED_PRODUCTS=PE_MPICH:PE_LIBSCI:PE_TPSL' ';export' 'PE_PETSC_DEFAULT_REQUIRED_PRODUCTS;PE_PETSC_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/petsc/3.5.3.0/real/@PRGENV@/@PE_PETSC_DEFAULT_GENCOMPS@/@PE_PETSC_DEFAULT_TARGET@/lib/pkgconfig' ';export' 'PE_PETSC_DEFAULT_VOLATILE_PKGCONFIG_PATH;PE_PETSC_DEFAULT_VOLATILE_PRGENV=CRAY\' 'GNU\' INTEL ';export' 'PE_PETSC_DEFAULT_VOLATILE_PRGENV;PE_PKGCONFIG_DEFAULT_PRODUCTS=PE_TRILINOS:PE_TPSL:PE_NETCDF:PE_NETCDF_HDF5PARALLEL:PE_PARALLEL_NETCDF:PE_LIBSCI:PE_GA:PE_PETSC:PE_HDF5:PE_FFTW:PE_MPICH:PE_HDF5_PARALLEL' ';export' 'PE_PKGCONFIG_DEFAULT_PRODUCTS;PE_PKGCONFIG_LIBS=mpich:AtpSigHandler:cray-rca:libsci_mpi:libsci' ';export' 'PE_PKGCONFIG_LIBS;PE_PKGCONFIG_PRODUCTS=PE_MPICH:PE_LIBSCI' ';export' 'PE_PKGCONFIG_PRODUCTS;PE_PKGCONFIG_PRODUCTS_DEFAULT=PE_PAPI' ';export' 'PE_PKGCONFIG_PRODUCTS_DEFAULT;PE_PKG_CONFIG_PATH=/opt/cray/cti/1.0.2/lib/pkgconfig' ';export' 'PE_PKG_CONFIG_PATH;PE_PRODUCT_LIST=CRAYPE_HASWELL:CRAY_RCA:CRAY_ALPS:DVS:CRAY_XPMEM:CRAY_DMAPP:CRAY_PMI:CRAY_UGNI:CRAY_UDREG:CRAY_LIBSCI:CRAYPE:INTEL' ';export' 'PE_PRODUCT_LIST;PE_SMA_DIR_CRAY_DEFAULT64=64' ';export' 'PE_SMA_DIR_CRAY_DEFAULT64;PE_SMA_DIR_PGI_DEFAULT64=64' ';export' 'PE_SMA_DIR_PGI_DEFAULT64;PE_SMA_VOLATILE_PKGCONFIG_PATH=/opt/cray/mpt/7.2.0/gni/sma@PE_SMA_DIR_DEFAULT64@/lib64/pkgconfig' ';export' 'PE_SMA_VOLATILE_PKGCONFIG_PATH;PE_TPSL_DEFAULT_GENCOMPS_CRAY_haswell=83' ';export' 'PE_TPSL_DEFAULT_GENCOMPS_CRAY_haswell;PE_TPSL_DEFAULT_GENCOMPS_CRAY_interlagos=83' ';export' 'PE_TPSL_DEFAULT_GENCOMPS_CRAY_interlagos;PE_TPSL_DEFAULT_GENCOMPS_CRAY_sandybridge=83' ';export' 'PE_TPSL_DEFAULT_GENCOMPS_CRAY_sandybridge;PE_TPSL_DEFAULT_GENCOMPS_CRAY_x86_64=83' ';export' 'PE_TPSL_DEFAULT_GENCOMPS_CRAY_x86_64;PE_TPSL_DEFAULT_GENCOMPS_GNU_haswell=49\' 48 ';export' 'PE_TPSL_DEFAULT_GENCOMPS_GNU_haswell;PE_TPSL_DEFAULT_GENCOMPS_GNU_interlagos=49\' 48 ';export' 'PE_TPSL_DEFAULT_GENCOMPS_GNU_interlagos;PE_TPSL_DEFAULT_GENCOMPS_GNU_sandybridge=49\' 48 ';export' 'PE_TPSL_DEFAULT_GENCOMPS_GNU_sandybridge;PE_TPSL_DEFAULT_GENCOMPS_GNU_x86_64=49\' 48 ';export' 'PE_TPSL_DEFAULT_GENCOMPS_GNU_x86_64;PE_TPSL_DEFAULT_GENCOMPS_INTEL_haswell=140' ';export' 'PE_TPSL_DEFAULT_GENCOMPS_INTEL_haswell;PE_TPSL_DEFAULT_GENCOMPS_INTEL_interlagos=140' ';export' 'PE_TPSL_DEFAULT_GENCOMPS_INTEL_interlagos;PE_TPSL_DEFAULT_GENCOMPS_INTEL_sandybridge=140' ';export' 'PE_TPSL_DEFAULT_GENCOMPS_INTEL_sandybridge;PE_TPSL_DEFAULT_GENCOMPS_INTEL_x86_64=140' ';export' 'PE_TPSL_DEFAULT_GENCOMPS_INTEL_x86_64;PE_TPSL_DEFAULT_REQUIRED_PRODUCTS=PE_MPICH:PE_LIBSCI' ';export' 'PE_TPSL_DEFAULT_REQUIRED_PRODUCTS;PE_TPSL_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/tpsl/1.4.4/@PRGENV@/@PE_TPSL_DEFAULT_GENCOMPS@/@PE_TPSL_DEFAULT_TARGET@/lib/pkgconfig' ';export' 'PE_TPSL_DEFAULT_VOLATILE_PKGCONFIG_PATH;PE_TPSL_DEFAULT_VOLATILE_PRGENV=CRAY\' 'GNU\' INTEL ';export' 'PE_TPSL_DEFAULT_VOLATILE_PRGENV;PE_TRILINOS_DEFAULT_GENCOMPS_CRAY_x86_64=83' ';export' 'PE_TRILINOS_DEFAULT_GENCOMPS_CRAY_x86_64;PE_TRILINOS_DEFAULT_GENCOMPS_GNU_x86_64=49\' 48 ';export' 'PE_TRILINOS_DEFAULT_GENCOMPS_GNU_x86_64;PE_TRILINOS_DEFAULT_GENCOMPS_INTEL_x86_64=140' ';export' 'PE_TRILINOS_DEFAULT_GENCOMPS_INTEL_x86_64;PE_TRILINOS_DEFAULT_REQUIRED_PRODUCTS=PE_MPICH:PE_HDF5_PARALLEL:PE_NETCDF_HDF5PARALLEL:PE_LIBSCI:PE_TPSL' ';export' 'PE_TRILINOS_DEFAULT_REQUIRED_PRODUCTS;PE_TRILINOS_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/trilinos/11.12.1.2/@PRGENV@/@PE_TRILINOS_DEFAULT_GENCOMPS@/@PE_TRILINOS_DEFAULT_TARGET@/lib/pkgconfig' ';export' 'PE_TRILINOS_DEFAULT_VOLATILE_PKGCONFIG_PATH;PE_TRILINOS_DEFAULT_VOLATILE_PRGENV=CRAY\' 'GNU\' INTEL ';export' 'PE_TRILINOS_DEFAULT_VOLATILE_PRGENV;PKGCONFIG_ENABLED=1' ';export' 'PKGCONFIG_ENABLED;PKG_CONFIG_PATH=/opt/cray/rca/1.0.0-2.0502.57212.2.56.ari/lib64/pkgconfig:/opt/cray/alps/5.2.3-2.0502.9295.14.14.ari/lib64/pkgconfig:/opt/cray/xpmem/0.1-2.0502.57015.1.15.ari/lib64/pkgconfig:/opt/cray/gni-headers/4.0-1.0502.10317.9.2.ari/lib64/pkgconfig:/opt/cray/dmapp/7.0.1-1.0502.10246.8.47.ari/lib64/pkgconfig:/opt/cray/pmi/5.0.6-1.0000.10439.140.2.ari/lib64/pkgconfig:/opt/cray/ugni/6.0-1.0502.10245.9.9.ari/lib64/pkgconfig:/opt/cray/udreg/2.3.2-1.0502.9889.2.20.ari/lib64/pkgconfig:/opt/cray/craype/2.3.0/pkg-config:/opt/cray/atp/1.8.1/lib/pkgconfig' ';export' 'PKG_CONFIG_PATH;PKG_CONFIG_PATH_DEFAULT=/opt/cray/papi/5.4.0.1/lib64/pkgconfig' ';export' 'PKG_CONFIG_PATH_DEFAULT;PYTHONPATH=/gpfs/hps/nco/ops/nwprod/prod_util.v1.0.29/ush' ';export' 'PYTHONPATH;SFCIO_INC4=/gpfs/hps/nco/ops/nwprod/lib/sfcio/v1.0.0/intel/include/sfcio_v1.0.0_4' ';export' 'SFCIO_INC4;SFCIO_LIB4=/gpfs/hps/nco/ops/nwprod/lib/sfcio/v1.0.0/intel/libsfcio_v1.0.0_4.a' ';export' 'SFCIO_LIB4;SFCIO_SRC=/gpfs/hps/nco/ops/nwprod/lib/sfcio/v1.0.0/src' ';export' 'SFCIO_SRC;SFCIO_VER=v1.0.0' ';export' 'SFCIO_VER;SHMEM_ABORT_ON_ERROR=1' ';export' 'SHMEM_ABORT_ON_ERROR;SIGIO_INC4=/gpfs/hps/nco/ops/nwprod/lib/sigio/v2.1.0/intel/include/sigio_v2.1.0_4' ';export' 'SIGIO_INC4;SIGIO_LIB4=/gpfs/hps/nco/ops/nwprod/lib/sigio/v2.1.0/intel/libsigio_v2.1.0_4.a' ';export' 'SIGIO_LIB4;SIGIO_SRC=/gpfs/hps/nco/ops/nwprod/lib/sigio/v2.1.0/src' ';export' 'SIGIO_SRC;SIGIO_VER=v2.1.0' ';export' 'SIGIO_VER;SLURM_PROLOG=/opt/cray/atp/1.8.1/libexec/slurm_prolog.ksh' ';export' 'SLURM_PROLOG;SP_LIB4=/gpfs/hps/nco/ops/nwprod/lib/sp/v2.0.2/intel/libsp_v2.0.2_4.a' ';export' 'SP_LIB4;SP_LIB8=/gpfs/hps/nco/ops/nwprod/lib/sp/v2.0.2/intel/libsp_v2.0.2_8.a' ';export' 'SP_LIB8;SP_LIBd=/gpfs/hps/nco/ops/nwprod/lib/sp/v2.0.2/intel/libsp_v2.0.2_d.a' ';export' 'SP_LIBd;SP_SRC=/gpfs/hps/nco/ops/nwprod/lib/sp/v2.0.2/src' ';export' 'SP_SRC;SP_VER=v2.0.2' ';export' 'SP_VER;TBBROOT=/opt/intel/composer_xe_2015.3.187/tbb' ';export' 'TBBROOT;UTILROOT=/gpfs/hps/nco/ops/nwprod/prod_util.v1.0.29' ';export' 'UTILROOT;W3EMC_INC4=/gpfs/hps/nco/ops/nwprod/lib/w3emc/v2.2.0/intel/w3emc_v2.2.0_4' ';export' 'W3EMC_INC4;W3EMC_INC8=/gpfs/hps/nco/ops/nwprod/lib/w3emc/v2.2.0/intel/w3emc_v2.2.0_8' ';export' 'W3EMC_INC8;W3EMC_INCd=/gpfs/hps/nco/ops/nwprod/lib/w3emc/v2.2.0/intel/w3emc_v2.2.0_d' ';export' 'W3EMC_INCd;W3EMC_LIB4=/gpfs/hps/nco/ops/nwprod/lib/w3emc/v2.2.0/intel/libw3emc_v2.2.0_4.a' ';export' 'W3EMC_LIB4;W3EMC_LIB8=/gpfs/hps/nco/ops/nwprod/lib/w3emc/v2.2.0/intel/libw3emc_v2.2.0_8.a' ';export' 'W3EMC_LIB8;W3EMC_LIBd=/gpfs/hps/nco/ops/nwprod/lib/w3emc/v2.2.0/intel/libw3emc_v2.2.0_d.a' ';export' 'W3EMC_LIBd;W3EMC_SRC=/gpfs/hps/nco/ops/nwprod/lib/w3emc/v2.2.0/src' ';export' 'W3EMC_SRC;W3EMC_VER=v2.2.0' ';export' 'W3EMC_VER;W3NCO_LIB4=/gpfs/hps/nco/ops/nwprod/lib/w3nco/v2.0.6/intel/libw3nco_v2.0.6_4.a' ';export' 'W3NCO_LIB4;W3NCO_LIB8=/gpfs/hps/nco/ops/nwprod/lib/w3nco/v2.0.6/intel/libw3nco_v2.0.6_8.a' ';export' 'W3NCO_LIB8;W3NCO_LIBd=/gpfs/hps/nco/ops/nwprod/lib/w3nco/v2.0.6/intel/libw3nco_v2.0.6_d.a' ';export' 'W3NCO_LIBd;W3NCO_SRC=/gpfs/hps/nco/ops/nwprod/lib/w3nco/v2.0.6/src' ';export' 'W3NCO_SRC;W3NCO_VER=v2.0.6' ';export' 'W3NCO_VER;WRF_SHARED_PATH=/gpfs/hps/nco/ops/nwprod/wrf_shared.v1.1.0-intel' ';export' 'WRF_SHARED_PATH;XTOS_VERSION=5.2.56' ';export' 'XTOS_VERSION;XTPE_NETWORK_TARGET=aries' ';export' 'XTPE_NETWORK_TARGET;_LMFILES_=/opt/modulefiles/eswrap/1.3.3-1.020200.1280.0:/opt/modulefiles/ncep/1.0:/gpfs/hps/nco/ops/nwprod/modulefiles/prod_util/1.0.29:/opt/cray/craype/default/alt-modulefiles/craype-network-aries:/opt/cray/alt-modulefiles/craype/2.3.0:/opt/modulefiles/intel/15.0.3.187:/opt/cray/alt-modulefiles/cray-libsci/13.0.3:/opt/cray/ari/modulefiles/udreg/2.3.2-1.0502.9889.2.20.ari:/opt/cray/ari/modulefiles/ugni/6.0-1.0502.10245.9.9.ari:/opt/cray/ari/modulefiles/pmi/5.0.6-1.0000.10439.140.2.ari:/opt/cray/ari/modulefiles/dmapp/7.0.1-1.0502.10246.8.47.ari:/opt/cray/ari/modulefiles/gni-headers/4.0-1.0502.10317.9.2.ari:/opt/cray/ari/modulefiles/xpmem/0.1-2.0502.57015.1.15.ari:/opt/cray/ari/modulefiles/dvs/2.5_0.9.0-1.0502.1958.2.55.ari:/opt/cray/ari/modulefiles/alps/5.2.3-2.0502.9295.14.14.ari:/opt/cray/ari/modulefiles/rca/1.0.0-2.0502.57212.2.56.ari:/opt/cray/alt-modulefiles/atp/1.8.1:/opt/cray/alt-modulefiles/PrgEnv-intel/5.2.56:/opt/cray/alt-modulefiles/cray-mpich/7.2.0:/opt/cray/craype/default/alt-modulefiles/craype-haswell:/usrx/local/dev/modulefiles/cmake/3.6.2:/usrx/local/prod/modulefiles/HDF5-serial-intel-haswell/1.8.9:/usrx/local/prod/modulefiles/NetCDF-intel-haswell/4.2:/gpfs/hps/nco/ops/nwprod/lib/modulefiles/bufr-intel/11.0.1:/gpfs/hps/nco/ops/nwprod/lib/modulefiles/nemsio-intel/2.2.2:/gpfs/hps/nco/ops/nwprod/lib/modulefiles/sfcio-intel/1.0.0:/gpfs/hps/nco/ops/nwprod/lib/modulefiles/sigio-intel/2.1.0:/gpfs/hps/nco/ops/nwprod/lib/modulefiles/sp-intel/2.0.2:/gpfs/hps/nco/ops/nwprod/lib/modulefiles/w3nco-intel/2.0.6:/gpfs/hps/nco/ops/nwprod/lib/modulefiles/w3emc-intel/2.2.0:/gpfs/hps/nco/ops/nwprod/lib/modulefiles/crtm-intel/2.2.6:/usrx/local/nceplibs/modulefiles/bacio-intel/2.0.2:/gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/modulefiles/modulefile.ProdGSI.wcoss_c' ';export' '_LMFILES_;kernelrelease=3.0.101-0.47.106.11-default' ';export' 'kernelrelease;'
+++ ATP_HOME=/opt/cray/atp/1.8.1
+++ export ATP_HOME
+++ ATP_MRNET_COMM_PATH=/opt/cray/atp/1.8.1/libexec/atp_mrnet_commnode_wrapper
+++ export ATP_MRNET_COMM_PATH
+++ ATP_POST_LINK_OPTS='-Wl,-L/opt/cray/atp/1.8.1/libApp/ '
+++ export ATP_POST_LINK_OPTS
+++ BACIO_LIB4=/usrx/local/nceplibs/bacio/v2.0.2/intel/libbacio_v2.0.2_4.a
+++ export BACIO_LIB4
+++ BACIO_LIB8=/usrx/local/nceplibs/bacio/v2.0.2/intel/libbacio_v2.0.2_8.a
+++ export BACIO_LIB8
+++ BACIO_SRC=/usrx/local/nceplibs/bacio/v2.0.2/src
+++ export BACIO_SRC
+++ BACIO_VER=v2.0.2
+++ export BACIO_VER
+++ BUFR_LIB4=/gpfs/hps/nco/ops/nwprod/lib/bufr/v11.0.1/intel/libbufr_v11.0.1_4_64.a
+++ export BUFR_LIB4
+++ BUFR_LIB4_DA=/gpfs/hps/nco/ops/nwprod/lib/bufr/v11.0.1/intel/libbufr_v11.0.1_4_64_DA.a
+++ export BUFR_LIB4_DA
+++ BUFR_LIB8=/gpfs/hps/nco/ops/nwprod/lib/bufr/v11.0.1/intel/libbufr_v11.0.1_8_64.a
+++ export BUFR_LIB8
+++ BUFR_LIB8_DA=/gpfs/hps/nco/ops/nwprod/lib/bufr/v11.0.1/intel/libbufr_v11.0.1_8_64_DA.a
+++ export BUFR_LIB8_DA
+++ BUFR_LIBd=/gpfs/hps/nco/ops/nwprod/lib/bufr/v11.0.1/intel/libbufr_v11.0.1_d_64.a
+++ export BUFR_LIBd
+++ BUFR_LIBd_DA=/gpfs/hps/nco/ops/nwprod/lib/bufr/v11.0.1/intel/libbufr_v11.0.1_d_64_DA.a
+++ export BUFR_LIBd_DA
+++ BUFR_LIBs=/gpfs/hps/nco/ops/nwprod/lib/bufr/v11.0.1/intel/libbufr_v11.0.1_s_64.a
+++ export BUFR_LIBs
+++ BUFR_SRC=/gpfs/hps/nco/ops/nwprod/lib/bufr/v11.0.1/src
+++ export BUFR_SRC
+++ BUFR_VER=v11.0.1
+++ export BUFR_VER
+++ COMDATEROOT=/gpfs/hps/nco/ops/com
+++ export COMDATEROOT
+++ COMP=intel
+++ export COMP
+++ COMP_MP=ftn
+++ export COMP_MP
+++ COMP_MPI=ftn
+++ export COMP_MPI
+++ CPATH=/opt/intel/composer_xe_2015.3.187/ipp/include:/opt/intel/composer_xe_2015.3.187/mkl/include:/opt/intel/composer_xe_2015.3.187/tbb/include
+++ export CPATH
+++ CRAYOS_VERSION=5.2.56
+++ export CRAYOS_VERSION
+++ CRAYPE_DIR=/opt/cray/craype/2.3.0
+++ export CRAYPE_DIR
+++ CRAYPE_NETWORK_TARGET=aries
+++ export CRAYPE_NETWORK_TARGET
+++ CRAYPE_VERSION=2.3.0
+++ export CRAYPE_VERSION
+++ CRAY_ALPS_INCLUDE_OPTS=-I/opt/cray/alps/5.2.3-2.0502.9295.14.14.ari/include
+++ export CRAY_ALPS_INCLUDE_OPTS
+++ CRAY_ALPS_POST_LINK_OPTS=-L/opt/cray/alps/5.2.3-2.0502.9295.14.14.ari/lib64
+++ export CRAY_ALPS_POST_LINK_OPTS
+++ CRAY_CPU_TARGET=haswell
+++ export CRAY_CPU_TARGET
+++ CRAY_DMAPP_INCLUDE_OPTS='-I/opt/cray/dmapp/7.0.1-1.0502.10246.8.47.ari/include -I/opt/cray/gni-headers/4.0-1.0502.10317.9.2.ari/include '
+++ export CRAY_DMAPP_INCLUDE_OPTS
+++ CRAY_DMAPP_POST_LINK_OPTS=-L/opt/cray/dmapp/7.0.1-1.0502.10246.8.47.ari/lib64
+++ export CRAY_DMAPP_POST_LINK_OPTS
+++ CRAY_GNI_HEADERS_INCLUDE_OPTS=-I/opt/cray/gni-headers/4.0-1.0502.10317.9.2.ari/include
+++ export CRAY_GNI_HEADERS_INCLUDE_OPTS
+++ CRAY_LD_LIBRARY_PATH=/opt/cray/mpt/7.2.0/gni/mpich2-intel/140/lib:/opt/cray/rca/1.0.0-2.0502.57212.2.56.ari/lib64:/opt/cray/alps/5.2.3-2.0502.9295.14.14.ari/lib64:/opt/cray/xpmem/0.1-2.0502.57015.1.15.ari/lib64:/opt/cray/dmapp/7.0.1-1.0502.10246.8.47.ari/lib64:/opt/cray/pmi/5.0.6-1.0000.10439.140.2.ari/lib64:/opt/cray/ugni/6.0-1.0502.10245.9.9.ari/lib64:/opt/cray/udreg/2.3.2-1.0502.9889.2.20.ari/lib64:/opt/cray/libsci/13.0.3/INTEL/140/x86_64/lib
+++ export CRAY_LD_LIBRARY_PATH
+++ CRAY_LIBSCI_BASE_DIR=/opt/cray/libsci/13.0.3
+++ export CRAY_LIBSCI_BASE_DIR
+++ CRAY_LIBSCI_DIR=/opt/cray/libsci/13.0.3
+++ export CRAY_LIBSCI_DIR
+++ CRAY_LIBSCI_PREFIX_DIR=/opt/cray/libsci/13.0.3/INTEL/140/x86_64
+++ export CRAY_LIBSCI_PREFIX_DIR
+++ CRAY_LIBSCI_VERSION=13.0.3
+++ export CRAY_LIBSCI_VERSION
+++ CRAY_MPICH2_BASEDIR=/opt/cray/mpt/7.2.0/gni
+++ export CRAY_MPICH2_BASEDIR
+++ CRAY_MPICH2_DIR=/opt/cray/mpt/7.2.0/gni/mpich2-intel/140
+++ export CRAY_MPICH2_DIR
+++ CRAY_MPICH2_ROOTDIR=/opt/cray/mpt/7.2.0
+++ export CRAY_MPICH2_ROOTDIR
+++ CRAY_MPICH2_VER=7.2.0
+++ export CRAY_MPICH2_VER
+++ CRAY_PMI_INCLUDE_OPTS=-I/opt/cray/pmi/5.0.6-1.0000.10439.140.2.ari/include
+++ export CRAY_PMI_INCLUDE_OPTS
+++ CRAY_PMI_POST_LINK_OPTS=-L/opt/cray/pmi/5.0.6-1.0000.10439.140.2.ari/lib64
+++ export CRAY_PMI_POST_LINK_OPTS
+++ CRAY_PRE_COMPILE_OPTS=-hnetwork=aries
+++ export CRAY_PRE_COMPILE_OPTS
+++ CRAY_PRGENVINTEL=loaded
+++ export CRAY_PRGENVINTEL
+++ CRAY_RCA_INCLUDE_OPTS='-I/opt/cray/rca/1.0.0-2.0502.57212.2.56.ari/include -I/opt/cray/krca/1.0.0-2.0502.67049.8.22.ari/include -I/opt/cray-hss-devel/7.2.0/include '
+++ export CRAY_RCA_INCLUDE_OPTS
+++ CRAY_RCA_POST_LINK_OPTS='-L/opt/cray/rca/1.0.0-2.0502.57212.2.56.ari/lib64 -lrca '
+++ export CRAY_RCA_POST_LINK_OPTS
+++ CRAY_UDREG_INCLUDE_OPTS=-I/opt/cray/udreg/2.3.2-1.0502.9889.2.20.ari/include
+++ export CRAY_UDREG_INCLUDE_OPTS
+++ CRAY_UDREG_POST_LINK_OPTS=-L/opt/cray/udreg/2.3.2-1.0502.9889.2.20.ari/lib64
+++ export CRAY_UDREG_POST_LINK_OPTS
+++ CRAY_UGNI_INCLUDE_OPTS=-I/opt/cray/ugni/6.0-1.0502.10245.9.9.ari/include
+++ export CRAY_UGNI_INCLUDE_OPTS
+++ CRAY_UGNI_POST_LINK_OPTS=-L/opt/cray/ugni/6.0-1.0502.10245.9.9.ari/lib64
+++ export CRAY_UGNI_POST_LINK_OPTS
+++ CRAY_XPMEM_INCLUDE_OPTS=-I/opt/cray/xpmem/0.1-2.0502.57015.1.15.ari/include
+++ export CRAY_XPMEM_INCLUDE_OPTS
+++ CRAY_XPMEM_POST_LINK_OPTS=-L/opt/cray/xpmem/0.1-2.0502.57015.1.15.ari/lib64
+++ export CRAY_XPMEM_POST_LINK_OPTS
+++ CRTM_FIX=/gpfs/hps/nco/ops/nwprod/lib/crtm/v2.2.6/fix
+++ export CRTM_FIX
+++ CRTM_INC=/gpfs/hps/nco/ops/nwprod/lib/crtm/v2.2.6/intel/include/crtm_v2.2.6
+++ export CRTM_INC
+++ CRTM_LIB=/gpfs/hps/nco/ops/nwprod/lib/crtm/v2.2.6/intel/libcrtm_v2.2.6.a
+++ export CRTM_LIB
+++ CRTM_SRC=/gpfs/hps/nco/ops/nwprod/lib/crtm/v2.2.6/src
+++ export CRTM_SRC
+++ CRTM_VER=v2.2.6
+++ export CRTM_VER
+++ C_COMP=cc
+++ export C_COMP
+++ C_COMP_MP=cc
+++ export C_COMP_MP
+++ DMAPP_ABORT_ON_ERROR=1
+++ export DMAPP_ABORT_ON_ERROR
+++ DVS_INCLUDE_OPTS=-I/opt/cray/dvs/2.5_0.9.0-1.0502.1958.2.55.ari/include
+++ export DVS_INCLUDE_OPTS
+++ DVS_VERSION=0.9.0
+++ export DVS_VERSION
+++ FFLAGS_COM='-fp-model strict'
+++ export FFLAGS_COM
+++ FSYNC=/gpfs/hps/nco/ops/nwprod/prod_util.v1.0.29/exec/fsync_file
+++ export FSYNC
+++ GDBSERVER_MIC=/opt/intel/composer_xe_2015.3.187/debugger/gdb/target/mic/bin/gdbserver
+++ export GDBSERVER_MIC
+++ GDB_CROSS=/opt/intel/composer_xe_2015.3.187/debugger/gdb/intel64_mic/bin/gdb-mic
+++ export GDB_CROSS
+++ GDB_HOST=/opt/intel/composer_xe_2015.3.187/debugger/gdb/intel64_mic/bin/gdb-ia-mic
+++ export GDB_HOST
+++ HDF5=/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell
+++ export HDF5
+++ HDF5_CFLAGS=-I/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/include
+++ export HDF5_CFLAGS
+++ HDF5_CXXFLAGS=-I/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/include
+++ export HDF5_CXXFLAGS
+++ HDF5_FFLAGS=-I/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/include
+++ export HDF5_FFLAGS
+++ HDF5_INCLUDE=-I/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/include
+++ export HDF5_INCLUDE
+++ HDF5_LDFLAGS='-L/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/lib -lhdf5_hl -lhdf5hl_fortran -lhdf5 -lhdf5_fortran'
+++ export HDF5_LDFLAGS
+++ HDF5_LDFLAGS_C='-L/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/lib -lhdf5_hl -lhdf5'
+++ export HDF5_LDFLAGS_C
+++ HDF5_LDFLAGS_CXX='-L/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/lib -lhdf5_hl -lhdf5_hl_cpp -lhdf5 -lhdf5_cpp'
+++ export HDF5_LDFLAGS_CXX
+++ HDF5_LDFLAGS_F='-L/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/lib -lhdf5_hl -lhdf5hl_fortran -lhdf5 -lhdf5_fortran'
+++ export HDF5_LDFLAGS_F
+++ INFOPATH=/opt/intel/composer_xe_2015.3.187/debugger/gdb/intel64/share/info/:/opt/intel/composer_xe_2015.3.187/debugger/gdb/intel64_mic/share/info/:/usr/local/info:/usr/share/info:/usr/info
+++ export INFOPATH
+++ INTEL_LICENSE_FILE=/opt/intel/composer_xe_2015.3.187/licenses:/opt/intel/licenses:/intel/licenses
+++ export INTEL_LICENSE_FILE
+++ INTEL_MAJOR_VERSION=15.0
+++ export INTEL_MAJOR_VERSION
+++ INTEL_MINOR_VERSION=3.187
+++ export INTEL_MINOR_VERSION
+++ INTEL_PATH=/opt/intel/composer_xe_2015.3.187
+++ export INTEL_PATH
+++ INTEL_PYTHONHOME=/opt/intel/composer_xe_2015.3.187/debugger/python/intel64/
+++ export INTEL_PYTHONHOME
+++ INTEL_VERSION=15.0.3.187
+++ export INTEL_VERSION
+++ IPPROOT=/opt/intel/composer_xe_2015.3.187/ipp
+++ export IPPROOT
+++ LDFLAGS_COM=' '
+++ export LDFLAGS_COM
+++ LD_LIBRARY_PATH=/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/lib:/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/lib:/opt/intel/composer_xe_2015.3.187/compiler/lib/intel64:/opt/intel/mic/coi/host-linux-release/lib:/opt/intel/mic/myo/lib:/opt/intel/composer_xe_2015.3.187/mpirt/lib/intel64:/opt/intel/composer_xe_2015.3.187/ipp/../compiler/lib/intel64:/opt/intel/composer_xe_2015.3.187/ipp/lib/intel64:/opt/intel/composer_xe_2015.3.187/ipp/tools/intel64/perfsys:/opt/intel/mic/coi/host-linux-release/lib:/opt/intel/mic/myo/lib:/opt/intel/composer_xe_2015.3.187/compiler/lib/intel64:/opt/intel/composer_xe_2015.3.187/mkl/lib/intel64:/opt/intel/composer_xe_2015.3.187/tbb/lib/intel64/gcc4.1:/opt/intel/composer_xe_2015.3.187/debugger/libipt/intel64/lib:/usrx/local/NetCDF/3.6.3/lib:/usrx/local/intel/mkl/lib/intel64
+++ export LD_LIBRARY_PATH
+++ LIBRARY_PATH=/opt/intel/composer_xe_2015.3.187/compiler/lib/intel64:/opt/intel/composer_xe_2015.3.187/ipp/../compiler/lib/intel64:/opt/intel/composer_xe_2015.3.187/ipp/lib/intel64:/opt/intel/composer_xe_2015.3.187/compiler/lib/intel64:/opt/intel/composer_xe_2015.3.187/mkl/lib/intel64:/opt/intel/composer_xe_2015.3.187/tbb/lib/intel64/gcc4.1
+++ export LIBRARY_PATH
+++ LIBSCI_BASE_DIR=/opt/cray/libsci/13.0.3
+++ export LIBSCI_BASE_DIR
+++ LIBSCI_VERSION=13.0.3
+++ export LIBSCI_VERSION
+++ LOADEDMODULES=eswrap/1.3.3-1.020200.1280.0:ncep/1.0:prod_util/1.0.29:craype-network-aries:craype/2.3.0:intel/15.0.3.187:cray-libsci/13.0.3:udreg/2.3.2-1.0502.9889.2.20.ari:ugni/6.0-1.0502.10245.9.9.ari:pmi/5.0.6-1.0000.10439.140.2.ari:dmapp/7.0.1-1.0502.10246.8.47.ari:gni-headers/4.0-1.0502.10317.9.2.ari:xpmem/0.1-2.0502.57015.1.15.ari:dvs/2.5_0.9.0-1.0502.1958.2.55.ari:alps/5.2.3-2.0502.9295.14.14.ari:rca/1.0.0-2.0502.57212.2.56.ari:atp/1.8.1:PrgEnv-intel/5.2.56:cray-mpich/7.2.0:craype-haswell:cmake/3.6.2:HDF5-serial-intel-haswell/1.8.9:NetCDF-intel-haswell/4.2:bufr-intel/11.0.1:nemsio-intel/2.2.2:sfcio-intel/1.0.0:sigio-intel/2.1.0:sp-intel/2.0.2:w3nco-intel/2.0.6:w3emc-intel/2.2.0:crtm-intel/2.2.6:bacio-intel/2.0.2:modulefile.ProdGSI.wcoss_c
+++ export LOADEDMODULES
+++ MANPATH=/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/share/man:/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/share/man:/usrx/local/dev/cmake/3.6.2/share/man:/opt/cray/mpt/7.2.0/gni/man/mpich2:/opt/cray/atp/1.8.1/man:/opt/cray/alps/5.2.3-2.0502.9295.14.14.ari/man:/opt/cray/libsci/13.0.3/man:/opt/cray/man/csmlversion:/opt/intel/composer_xe_2015.3.187/man/en_US:/opt/intel/composer_xe_2015.3.187/man/en_US:/opt/intel/composer_xe_2015.3.187/debugger/gdb/intel64/share/man/:/opt/intel/composer_xe_2015.3.187/debugger/gdb/intel64_mic/share/man/:/opt/cray/craype/2.3.0/man:/opt/cray/eslogin/eswrap/1.3.3-1.020200.1280.0/man:/opt/cray/share/man:/usr/local/man:/usr/share/man:/opt/cray/share/man:/cm/local/apps/environment-modules/current/share/man:/opt/cray/man
+++ export MANPATH
+++ MDATE=/gpfs/hps/nco/ops/nwprod/prod_util.v1.0.29/exec/mdate
+++ export MDATE
+++ MIC_LD_LIBRARY_PATH=/opt/intel/composer_xe_2015.3.187/compiler/lib/mic:/opt/intel/composer_xe_2015.3.187/mpirt/lib/mic:/opt/intel/mic/coi/device-linux-release/lib:/opt/intel/mic/myo/lib:/opt/intel/composer_xe_2015.3.187/ipp/lib/lib/mic:/opt/intel/mic/coi/device-linux-release/lib:/opt/intel/mic/myo/lib:/opt/intel/composer_xe_2015.3.187/compiler/lib/mic:/opt/intel/composer_xe_2015.3.187/mkl/lib/mic:/opt/intel/composer_xe_2015.3.187/tbb/lib/mic
+++ export MIC_LD_LIBRARY_PATH
+++ MIC_LIBRARY_PATH=/opt/intel/composer_xe_2015.3.187/compiler/lib/mic:/opt/intel/composer_xe_2015.3.187/mpirt/lib/mic:/opt/intel/composer_xe_2015.3.187/tbb/lib/mic
+++ export MIC_LIBRARY_PATH
+++ MKLROOT=/opt/intel/composer_xe_2015.3.187/mkl
+++ export MKLROOT
+++ MODULEPATH=/usrx/local/nceplibs/modulefiles:/opt/cray/ari/modulefiles:/usrx/local/prod/modulefiles:/gpfs/hps/nco/ops/nwprod/lib/modulefiles:/gpfs/hps/nco/ops/nwprod/modulefiles:/opt/cray/alt-modulefiles:/opt/cray/craype/default/alt-modulefiles:/opt/modulefiles:/opt/cray/craype/default/modulefiles:/gpfs/hps3/emc/hwrf/noscrub/soft/modulefiles
+++ export MODULEPATH
+++ MPICH_ABORT_ON_ERROR=1
+++ export MPICH_ABORT_ON_ERROR
+++ MPICH_DIR=/opt/cray/mpt/7.2.0/gni/mpich2-intel/140
+++ export MPICH_DIR
+++ MPM_LAUNCHER=/opt/intel/composer_xe_2015.3.187/debugger/mpm/bin/start_mpm.sh
+++ export MPM_LAUNCHER
+++ NDATE=/gpfs/hps/nco/ops/nwprod/prod_util.v1.0.29/exec/ndate
+++ export NDATE
+++ NEMSIO_INC=/gpfs/hps/nco/ops/nwprod/lib/nemsio/v2.2.2/intel/include/nemsio_v2.2.2
+++ export NEMSIO_INC
+++ NEMSIO_LIB=/gpfs/hps/nco/ops/nwprod/lib/nemsio/v2.2.2/intel/libnemsio_v2.2.2.a
+++ export NEMSIO_LIB
+++ NEMSIO_SRC=/gpfs/hps/nco/ops/nwprod/lib/nemsio/v2.2.2/src
+++ export NEMSIO_SRC
+++ NEMSIO_VER=v2.2.2
+++ export NEMSIO_VER
+++ NETCDF=/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell
+++ export NETCDF
+++ NETCDF_CFLAGS=-I/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/include
+++ export NETCDF_CFLAGS
+++ NETCDF_CXX4FLAGS=-I/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/include
+++ export NETCDF_CXX4FLAGS
+++ NETCDF_CXXFLAGS=-I/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/include
+++ export NETCDF_CXXFLAGS
+++ NETCDF_FFLAGS=-I/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/include
+++ export NETCDF_FFLAGS
+++ NETCDF_INCLUDE=-I/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/include
+++ export NETCDF_INCLUDE
+++ NETCDF_LDFLAGS='-L/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/lib -lnetcdff -lnetcdf'
+++ export NETCDF_LDFLAGS
+++ NETCDF_LDFLAGS_C='-L/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/lib -lnetcdf'
+++ export NETCDF_LDFLAGS_C
+++ NETCDF_LDFLAGS_CXX='-L/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/lib -lnetcdf -lnetcdf_c++'
+++ export NETCDF_LDFLAGS_CXX
+++ NETCDF_LDFLAGS_CXX4='-L/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/lib -lnetcdf -lnetcdf_c++4'
+++ export NETCDF_LDFLAGS_CXX4
+++ NETCDF_LDFLAGS_F='-L/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/lib -lnetcdff'
+++ export NETCDF_LDFLAGS_F
+++ NHOUR=/gpfs/hps/nco/ops/nwprod/prod_util.v1.0.29/exec/nhour
+++ export NHOUR
+++ NLSPATH=/opt/intel/composer_xe_2015.3.187/compiler/lib/intel64/locale/%l_%t/%N:/opt/intel/composer_xe_2015.3.187/ipp/lib/intel64/locale/%l_%t/%N:/opt/intel/composer_xe_2015.3.187/mkl/lib/intel64/locale/%l_%t/%N:/opt/intel/composer_xe_2015.3.187/debugger/gdb/intel64_mic/share/locale/%l_%t/%N:/opt/intel/composer_xe_2015.3.187/debugger/gdb/intel64/share/locale/%l_%t/%N
+++ export NLSPATH
+++ OMP_NUM_THREADS=1
+++ export OMP_NUM_THREADS
+++ PATH=/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/bin:/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/bin:/usrx/local/dev/cmake/3.6.2/bin:/opt/cray/mpt/7.2.0/gni/bin:/opt/cray/rca/1.0.0-2.0502.57212.2.56.ari/bin:/opt/cray/alps/5.2.3-2.0502.9295.14.14.ari/sbin:/opt/cray/alps/5.2.3-2.0502.9295.14.14.ari/bin:/opt/cray/dvs/2.5_0.9.0-1.0502.1958.2.55.ari/bin:/opt/cray/xpmem/0.1-2.0502.57015.1.15.ari/bin:/opt/cray/pmi/5.0.6-1.0000.10439.140.2.ari/bin:/opt/cray/ugni/6.0-1.0502.10245.9.9.ari/bin:/opt/cray/udreg/2.3.2-1.0502.9889.2.20.ari/bin:/opt/intel/composer_xe_2015.3.187/bin/intel64:/opt/intel/composer_xe_2015.3.187/debugger/gdb/intel64_mic/bin:/opt/cray/craype/2.3.0/bin:/gpfs/hps/nco/ops/nwprod/prod_util.v1.0.29/ush:/opt/cray/eslogin/eswrap/1.3.3-1.020200.1280.0/bin:/u/Emily.Liu/bin:/usr/local/bin:/usr/bin:/bin:/usr/bin/X11:/usr/X11R6/bin:/usr/games:/opt/bin:/usr/lib/mit/bin:/usr/lib/mit/sbin:/sbin:/usr/sbin:.:/usr/lib/qt3/bin:/gpfs/hps3/emc/da/noscrub/Emily.Liu/bin:/gpfs/hps3/emc/global/noscrub/emc.glopara/bin:.:/global/save/Emily.Liu:/usrx/local/NetCDF/3.6.3/lib:/usrx/local/intel/mkl/lib/intel64:/nwprod/util/exec:/u/Emily.Liu/bin/nemsio_util:/gpfs/hps3/emc/meso/noscrub/Dusan.Jovic/dbrowse:/opt/cray/bin
+++ export PATH
+++ PE_CRAY_DEFAULT_FIXED_PKGCONFIG_PATH=/opt/cray/netcdf/4.3.2/CRAY/83/lib/pkgconfig:/opt/cray/netcdf-hdf5parallel/4.3.2/CRAY/83/lib/pkgconfig:/opt/cray/parallel-netcdf/1.6.0/CRAY/8.3/lib/pkgconfig:/opt/cray/ga/5.3.0.1/CRAY/83/lib/pkgconfig:/opt/cray/hdf5/1.8.13/CRAY/83/lib/pkgconfig:/opt/cray/hdf5-parallel/1.8.13/CRAY/83/lib/pkgconfig
+++ export PE_CRAY_DEFAULT_FIXED_PKGCONFIG_PATH
+++ PE_CXX_PKGCONFIG_LIBS=mpichcxx
+++ export PE_CXX_PKGCONFIG_LIBS
+++ PE_ENV=INTEL
+++ export PE_ENV
+++ PE_FFTW_DEFAULT_REQUIRED_PRODUCTS=PE_MPICH
+++ export PE_FFTW_DEFAULT_REQUIRED_PRODUCTS
+++ PE_FFTW_DEFAULT_TARGET_haswell=haswell
+++ export PE_FFTW_DEFAULT_TARGET_haswell
+++ PE_FFTW_DEFAULT_TARGET_interlagos=interlagos
+++ export PE_FFTW_DEFAULT_TARGET_interlagos
+++ PE_FFTW_DEFAULT_TARGET_sandybridge=sandybridge
+++ export PE_FFTW_DEFAULT_TARGET_sandybridge
+++ PE_FFTW_DEFAULT_TARGET_x86_64=x86_64
+++ export PE_FFTW_DEFAULT_TARGET_x86_64
+++ PE_FFTW_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/fftw/3.3.4.2/@PE_FFTW_DEFAULT_TARGET@/lib/pkgconfig
+++ export PE_FFTW_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ PE_FORTRAN_PKGCONFIG_LIBS=mpichf90
+++ export PE_FORTRAN_PKGCONFIG_LIBS
+++ PE_GA_DEFAULT_FIXED_PRGENV='CRAY INTEL'
+++ export PE_GA_DEFAULT_FIXED_PRGENV
+++ PE_GA_DEFAULT_GENCOMPS_GNU='49 48'
+++ export PE_GA_DEFAULT_GENCOMPS_GNU
+++ PE_GA_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/ga/5.3.0.1/@PRGENV@/@PE_GA_DEFAULT_GENCOMPS@/lib/pkgconfig
+++ export PE_GA_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ PE_GA_DEFAULT_VOLATILE_PRGENV=GNU
+++ export PE_GA_DEFAULT_VOLATILE_PRGENV
+++ PE_HDF5_DEFAULT_FIXED_PRGENV='CRAY INTEL'
+++ export PE_HDF5_DEFAULT_FIXED_PRGENV
+++ PE_HDF5_DEFAULT_GENCOMPS_GNU='49 48'
+++ export PE_HDF5_DEFAULT_GENCOMPS_GNU
+++ PE_HDF5_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/hdf5/1.8.13/@PRGENV@/@PE_HDF5_DEFAULT_GENCOMPS@/lib/pkgconfig
+++ export PE_HDF5_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ PE_HDF5_DEFAULT_VOLATILE_PRGENV=GNU
+++ export PE_HDF5_DEFAULT_VOLATILE_PRGENV
+++ PE_HDF5_PARALLEL_DEFAULT_FIXED_PRGENV='CRAY INTEL'
+++ export PE_HDF5_PARALLEL_DEFAULT_FIXED_PRGENV
+++ PE_HDF5_PARALLEL_DEFAULT_GENCOMPS_GNU='49 48'
+++ export PE_HDF5_PARALLEL_DEFAULT_GENCOMPS_GNU
+++ PE_HDF5_PARALLEL_DEFAULT_REQUIRED_PRODUCTS=PE_MPICH
+++ export PE_HDF5_PARALLEL_DEFAULT_REQUIRED_PRODUCTS
+++ PE_HDF5_PARALLEL_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/hdf5-parallel/1.8.13/@PRGENV@/@PE_HDF5_PARALLEL_DEFAULT_GENCOMPS@/lib/pkgconfig
+++ export PE_HDF5_PARALLEL_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ PE_HDF5_PARALLEL_DEFAULT_VOLATILE_PRGENV=GNU
+++ export PE_HDF5_PARALLEL_DEFAULT_VOLATILE_PRGENV
+++ PE_INTEL_DEFAULT_FIXED_PKGCONFIG_PATH=/opt/cray/netcdf/4.3.2/INTEL/140/lib/pkgconfig:/opt/cray/netcdf-hdf5parallel/4.3.2/INTEL/140/lib/pkgconfig:/opt/cray/parallel-netcdf/1.6.0/INTEL/14.0/lib/pkgconfig:/opt/cray/ga/5.3.0.1/INTEL/140/lib/pkgconfig:/opt/cray/hdf5/1.8.13/INTEL/140/lib/pkgconfig:/opt/cray/mpt/7.2.0/gni/mpich2-intel/140/lib/pkgconfig:/opt/cray/hdf5-parallel/1.8.13/INTEL/140/lib/pkgconfig
+++ export PE_INTEL_DEFAULT_FIXED_PKGCONFIG_PATH
+++ PE_INTEL_FIXED_PKGCONFIG_PATH=/opt/cray/mpt/7.2.0/gni/mpich2-intel/140/lib/pkgconfig
+++ export PE_INTEL_FIXED_PKGCONFIG_PATH
+++ PE_LIBSCI_DEFAULT_GENCOMPS_CRAY_x86_64=83
+++ export PE_LIBSCI_DEFAULT_GENCOMPS_CRAY_x86_64
+++ PE_LIBSCI_DEFAULT_GENCOMPS_GNU_x86_64='49 48'
+++ export PE_LIBSCI_DEFAULT_GENCOMPS_GNU_x86_64
+++ PE_LIBSCI_DEFAULT_GENCOMPS_INTEL_x86_64=140
+++ export PE_LIBSCI_DEFAULT_GENCOMPS_INTEL_x86_64
+++ PE_LIBSCI_DEFAULT_OMP_REQUIRES_openmp=_mp
+++ export PE_LIBSCI_DEFAULT_OMP_REQUIRES_openmp
+++ PE_LIBSCI_DEFAULT_PKGCONFIG_VARIABLES=PE_LIBSCI_DEFAULT_OMP_REQUIRES_@openmp@
+++ export PE_LIBSCI_DEFAULT_PKGCONFIG_VARIABLES
+++ PE_LIBSCI_DEFAULT_REQUIRED_PRODUCTS=PE_MPICH
+++ export PE_LIBSCI_DEFAULT_REQUIRED_PRODUCTS
+++ PE_LIBSCI_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/libsci/13.0.3/@PRGENV@/@PE_LIBSCI_DEFAULT_GENCOMPS@/@PE_LIBSCI_DEFAULT_TARGET@/lib/pkgconfig
+++ export PE_LIBSCI_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ PE_LIBSCI_DEFAULT_VOLATILE_PRGENV='CRAY GNU INTEL'
+++ export PE_LIBSCI_DEFAULT_VOLATILE_PRGENV
+++ PE_LIBSCI_GENCOMPS_CRAY_x86_64=83
+++ export PE_LIBSCI_GENCOMPS_CRAY_x86_64
+++ PE_LIBSCI_GENCOMPS_GNU_x86_64='49 48'
+++ export PE_LIBSCI_GENCOMPS_GNU_x86_64
+++ PE_LIBSCI_GENCOMPS_INTEL_x86_64=140
+++ export PE_LIBSCI_GENCOMPS_INTEL_x86_64
+++ PE_LIBSCI_MODULE_NAME=cray-libsci/13.0.3
+++ export PE_LIBSCI_MODULE_NAME
+++ PE_LIBSCI_OMP_REQUIRES_openmp=_mp
+++ export PE_LIBSCI_OMP_REQUIRES_openmp
+++ PE_LIBSCI_PKGCONFIG_LIBS=libsci_mpi:libsci
+++ export PE_LIBSCI_PKGCONFIG_LIBS
+++ PE_LIBSCI_PKGCONFIG_VARIABLES=PE_LIBSCI_OMP_REQUIRES_@openmp@
+++ export PE_LIBSCI_PKGCONFIG_VARIABLES
+++ PE_LIBSCI_REQUIRED_PRODUCTS=PE_MPICH
+++ export PE_LIBSCI_REQUIRED_PRODUCTS
+++ PE_LIBSCI_VOLATILE_PKGCONFIG_PATH=/opt/cray/libsci/13.0.3/@PRGENV@/@PE_LIBSCI_GENCOMPS@/@PE_LIBSCI_TARGET@/lib/pkgconfig
+++ export PE_LIBSCI_VOLATILE_PKGCONFIG_PATH
+++ PE_LIBSCI_VOLATILE_PRGENV='CRAY GNU INTEL'
+++ export PE_LIBSCI_VOLATILE_PRGENV
+++ PE_MPICH_DEFAULT_DIR_CRAY_DEFAULT64=64
+++ export PE_MPICH_DEFAULT_DIR_CRAY_DEFAULT64
+++ PE_MPICH_DEFAULT_FIXED_PRGENV=INTEL
+++ export PE_MPICH_DEFAULT_FIXED_PRGENV
+++ PE_MPICH_DEFAULT_GENCOMPS_CRAY=83
+++ export PE_MPICH_DEFAULT_GENCOMPS_CRAY
+++ PE_MPICH_DEFAULT_GENCOMPS_GNU='49 48'
+++ export PE_MPICH_DEFAULT_GENCOMPS_GNU
+++ PE_MPICH_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/mpt/7.2.0/gni/mpich2-@PRGENV@@PE_MPICH_DEFAULT_DIR_DEFAULT64@/@PE_MPICH_DEFAULT_GENCOMPS@/lib/pkgconfig
+++ export PE_MPICH_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ PE_MPICH_DEFAULT_VOLATILE_PRGENV='CRAY GNU'
+++ export PE_MPICH_DEFAULT_VOLATILE_PRGENV
+++ PE_MPICH_DIR_CRAY_DEFAULT64=64
+++ export PE_MPICH_DIR_CRAY_DEFAULT64
+++ PE_MPICH_FIXED_PRGENV=INTEL
+++ export PE_MPICH_FIXED_PRGENV
+++ PE_MPICH_GENCOMPS_CRAY=83
+++ export PE_MPICH_GENCOMPS_CRAY
+++ PE_MPICH_GENCOMPS_GNU='49 48'
+++ export PE_MPICH_GENCOMPS_GNU
+++ PE_MPICH_MODULE_NAME=cray-mpich
+++ export PE_MPICH_MODULE_NAME
+++ PE_MPICH_MULTITHREADED_LIBS_multithreaded=_mt
+++ export PE_MPICH_MULTITHREADED_LIBS_multithreaded
+++ PE_MPICH_NV_LIBS_nvidia20=-lcudart
+++ export PE_MPICH_NV_LIBS_nvidia20
+++ PE_MPICH_NV_LIBS_nvidia35=-lcudart
+++ export PE_MPICH_NV_LIBS_nvidia35
+++ PE_MPICH_PKGCONFIG_VARIABLES=PE_MPICH_NV_LIBS_@accelerator@:PE_MPICH_MULTITHREADED_LIBS_@multithreaded@
+++ export PE_MPICH_PKGCONFIG_VARIABLES
+++ PE_MPICH_TARGET_VAR_nvidia20=-lcudart
+++ export PE_MPICH_TARGET_VAR_nvidia20
+++ PE_MPICH_TARGET_VAR_nvidia35=-lcudart
+++ export PE_MPICH_TARGET_VAR_nvidia35
+++ PE_MPICH_VOLATILE_PKGCONFIG_PATH=/opt/cray/mpt/7.2.0/gni/mpich2-@PRGENV@@PE_MPICH_DIR_DEFAULT64@/@PE_MPICH_GENCOMPS@/lib/pkgconfig
+++ export PE_MPICH_VOLATILE_PKGCONFIG_PATH
+++ PE_MPICH_VOLATILE_PRGENV='CRAY GNU'
+++ export PE_MPICH_VOLATILE_PRGENV
+++ PE_NETCDF_DEFAULT_FIXED_PRGENV='CRAY INTEL'
+++ export PE_NETCDF_DEFAULT_FIXED_PRGENV
+++ PE_NETCDF_DEFAULT_GENCOMPS_GNU='49 48'
+++ export PE_NETCDF_DEFAULT_GENCOMPS_GNU
+++ PE_NETCDF_DEFAULT_REQUIRED_PRODUCTS=PE_HDF5
+++ export PE_NETCDF_DEFAULT_REQUIRED_PRODUCTS
+++ PE_NETCDF_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/netcdf/4.3.2/@PRGENV@/@PE_NETCDF_DEFAULT_GENCOMPS@/lib/pkgconfig
+++ export PE_NETCDF_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ PE_NETCDF_DEFAULT_VOLATILE_PRGENV=GNU
+++ export PE_NETCDF_DEFAULT_VOLATILE_PRGENV
+++ PE_NETCDF_HDF5PARALLEL_DEFAULT_FIXED_PRGENV='CRAY INTEL'
+++ export PE_NETCDF_HDF5PARALLEL_DEFAULT_FIXED_PRGENV
+++ PE_NETCDF_HDF5PARALLEL_DEFAULT_GENCOMPS_GNU='49 48'
+++ export PE_NETCDF_HDF5PARALLEL_DEFAULT_GENCOMPS_GNU
+++ PE_NETCDF_HDF5PARALLEL_DEFAULT_REQUIRED_PRODUCTS='PE_HDF5_PARALLEL PE_MPICH'
+++ export PE_NETCDF_HDF5PARALLEL_DEFAULT_REQUIRED_PRODUCTS
+++ PE_NETCDF_HDF5PARALLEL_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/netcdf-hdf5parallel/4.3.2/@PRGENV@/@PE_NETCDF_HDF5PARALLEL_DEFAULT_GENCOMPS@/lib/pkgconfig
+++ export PE_NETCDF_HDF5PARALLEL_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ PE_NETCDF_HDF5PARALLEL_DEFAULT_VOLATILE_PRGENV=GNU
+++ export PE_NETCDF_HDF5PARALLEL_DEFAULT_VOLATILE_PRGENV
+++ PE_PAPI_DEFAULT_ACCEL_LIBS_nvidia35=,-lcupti,-lcudart,-lcuda
+++ export PE_PAPI_DEFAULT_ACCEL_LIBS_nvidia35
+++ PE_PAPI_DEFAULT_PKGCONFIG_VARIABLES=PE_PAPI_ACCEL_LIBS_@accelerator@
+++ export PE_PAPI_DEFAULT_PKGCONFIG_VARIABLES
+++ PE_PAPI_DEFAULT_TARGET_VAR_nvidia35=,-lcupti,-lcudart,-lcuda
+++ export PE_PAPI_DEFAULT_TARGET_VAR_nvidia35
+++ PE_PARALLEL_NETCDF_DEFAULT_FIXED_PRGENV='CRAY INTEL'
+++ export PE_PARALLEL_NETCDF_DEFAULT_FIXED_PRGENV
+++ PE_PARALLEL_NETCDF_DEFAULT_GENCOMPILERS_GNU='4.9 4.8'
+++ export PE_PARALLEL_NETCDF_DEFAULT_GENCOMPILERS_GNU
+++ PE_PARALLEL_NETCDF_DEFAULT_GENCOMPS_GNU='49 48'
+++ export PE_PARALLEL_NETCDF_DEFAULT_GENCOMPS_GNU
+++ PE_PARALLEL_NETCDF_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/parallel-netcdf/1.6.0/@PRGENV@/@PE_PARALLEL_NETCDF_DEFAULT_GENCOMPS@/lib/pkgconfig
+++ export PE_PARALLEL_NETCDF_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ PE_PARALLEL_NETCDF_DEFAULT_VOLATILE_PRGENV=GNU
+++ export PE_PARALLEL_NETCDF_DEFAULT_VOLATILE_PRGENV
+++ PE_PETSC_DEFAULT_GENCOMPS_CRAY_haswell=83
+++ export PE_PETSC_DEFAULT_GENCOMPS_CRAY_haswell
+++ PE_PETSC_DEFAULT_GENCOMPS_CRAY_interlagos=83
+++ export PE_PETSC_DEFAULT_GENCOMPS_CRAY_interlagos
+++ PE_PETSC_DEFAULT_GENCOMPS_CRAY_sandybridge=83
+++ export PE_PETSC_DEFAULT_GENCOMPS_CRAY_sandybridge
+++ PE_PETSC_DEFAULT_GENCOMPS_CRAY_x86_64=83
+++ export PE_PETSC_DEFAULT_GENCOMPS_CRAY_x86_64
+++ PE_PETSC_DEFAULT_GENCOMPS_GNU_haswell='49 48'
+++ export PE_PETSC_DEFAULT_GENCOMPS_GNU_haswell
+++ PE_PETSC_DEFAULT_GENCOMPS_GNU_interlagos='49 48'
+++ export PE_PETSC_DEFAULT_GENCOMPS_GNU_interlagos
+++ PE_PETSC_DEFAULT_GENCOMPS_GNU_sandybridge='49 48'
+++ export PE_PETSC_DEFAULT_GENCOMPS_GNU_sandybridge
+++ PE_PETSC_DEFAULT_GENCOMPS_GNU_x86_64='49 48'
+++ export PE_PETSC_DEFAULT_GENCOMPS_GNU_x86_64
+++ PE_PETSC_DEFAULT_GENCOMPS_INTEL_haswell=140
+++ export PE_PETSC_DEFAULT_GENCOMPS_INTEL_haswell
+++ PE_PETSC_DEFAULT_GENCOMPS_INTEL_interlagos=140
+++ export PE_PETSC_DEFAULT_GENCOMPS_INTEL_interlagos
+++ PE_PETSC_DEFAULT_GENCOMPS_INTEL_sandybridge=140
+++ export PE_PETSC_DEFAULT_GENCOMPS_INTEL_sandybridge
+++ PE_PETSC_DEFAULT_GENCOMPS_INTEL_x86_64=140
+++ export PE_PETSC_DEFAULT_GENCOMPS_INTEL_x86_64
+++ PE_PETSC_DEFAULT_REQUIRED_PRODUCTS=PE_MPICH:PE_LIBSCI:PE_TPSL
+++ export PE_PETSC_DEFAULT_REQUIRED_PRODUCTS
+++ PE_PETSC_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/petsc/3.5.3.0/real/@PRGENV@/@PE_PETSC_DEFAULT_GENCOMPS@/@PE_PETSC_DEFAULT_TARGET@/lib/pkgconfig
+++ export PE_PETSC_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ PE_PETSC_DEFAULT_VOLATILE_PRGENV='CRAY GNU INTEL'
+++ export PE_PETSC_DEFAULT_VOLATILE_PRGENV
+++ PE_PKGCONFIG_DEFAULT_PRODUCTS=PE_TRILINOS:PE_TPSL:PE_NETCDF:PE_NETCDF_HDF5PARALLEL:PE_PARALLEL_NETCDF:PE_LIBSCI:PE_GA:PE_PETSC:PE_HDF5:PE_FFTW:PE_MPICH:PE_HDF5_PARALLEL
+++ export PE_PKGCONFIG_DEFAULT_PRODUCTS
+++ PE_PKGCONFIG_LIBS=mpich:AtpSigHandler:cray-rca:libsci_mpi:libsci
+++ export PE_PKGCONFIG_LIBS
+++ PE_PKGCONFIG_PRODUCTS=PE_MPICH:PE_LIBSCI
+++ export PE_PKGCONFIG_PRODUCTS
+++ PE_PKGCONFIG_PRODUCTS_DEFAULT=PE_PAPI
+++ export PE_PKGCONFIG_PRODUCTS_DEFAULT
+++ PE_PKG_CONFIG_PATH=/opt/cray/cti/1.0.2/lib/pkgconfig
+++ export PE_PKG_CONFIG_PATH
+++ PE_PRODUCT_LIST=CRAYPE_HASWELL:CRAY_RCA:CRAY_ALPS:DVS:CRAY_XPMEM:CRAY_DMAPP:CRAY_PMI:CRAY_UGNI:CRAY_UDREG:CRAY_LIBSCI:CRAYPE:INTEL
+++ export PE_PRODUCT_LIST
+++ PE_SMA_DIR_CRAY_DEFAULT64=64
+++ export PE_SMA_DIR_CRAY_DEFAULT64
+++ PE_SMA_DIR_PGI_DEFAULT64=64
+++ export PE_SMA_DIR_PGI_DEFAULT64
+++ PE_SMA_VOLATILE_PKGCONFIG_PATH=/opt/cray/mpt/7.2.0/gni/sma@PE_SMA_DIR_DEFAULT64@/lib64/pkgconfig
+++ export PE_SMA_VOLATILE_PKGCONFIG_PATH
+++ PE_TPSL_DEFAULT_GENCOMPS_CRAY_haswell=83
+++ export PE_TPSL_DEFAULT_GENCOMPS_CRAY_haswell
+++ PE_TPSL_DEFAULT_GENCOMPS_CRAY_interlagos=83
+++ export PE_TPSL_DEFAULT_GENCOMPS_CRAY_interlagos
+++ PE_TPSL_DEFAULT_GENCOMPS_CRAY_sandybridge=83
+++ export PE_TPSL_DEFAULT_GENCOMPS_CRAY_sandybridge
+++ PE_TPSL_DEFAULT_GENCOMPS_CRAY_x86_64=83
+++ export PE_TPSL_DEFAULT_GENCOMPS_CRAY_x86_64
+++ PE_TPSL_DEFAULT_GENCOMPS_GNU_haswell='49 48'
+++ export PE_TPSL_DEFAULT_GENCOMPS_GNU_haswell
+++ PE_TPSL_DEFAULT_GENCOMPS_GNU_interlagos='49 48'
+++ export PE_TPSL_DEFAULT_GENCOMPS_GNU_interlagos
+++ PE_TPSL_DEFAULT_GENCOMPS_GNU_sandybridge='49 48'
+++ export PE_TPSL_DEFAULT_GENCOMPS_GNU_sandybridge
+++ PE_TPSL_DEFAULT_GENCOMPS_GNU_x86_64='49 48'
+++ export PE_TPSL_DEFAULT_GENCOMPS_GNU_x86_64
+++ PE_TPSL_DEFAULT_GENCOMPS_INTEL_haswell=140
+++ export PE_TPSL_DEFAULT_GENCOMPS_INTEL_haswell
+++ PE_TPSL_DEFAULT_GENCOMPS_INTEL_interlagos=140
+++ export PE_TPSL_DEFAULT_GENCOMPS_INTEL_interlagos
+++ PE_TPSL_DEFAULT_GENCOMPS_INTEL_sandybridge=140
+++ export PE_TPSL_DEFAULT_GENCOMPS_INTEL_sandybridge
+++ PE_TPSL_DEFAULT_GENCOMPS_INTEL_x86_64=140
+++ export PE_TPSL_DEFAULT_GENCOMPS_INTEL_x86_64
+++ PE_TPSL_DEFAULT_REQUIRED_PRODUCTS=PE_MPICH:PE_LIBSCI
+++ export PE_TPSL_DEFAULT_REQUIRED_PRODUCTS
+++ PE_TPSL_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/tpsl/1.4.4/@PRGENV@/@PE_TPSL_DEFAULT_GENCOMPS@/@PE_TPSL_DEFAULT_TARGET@/lib/pkgconfig
+++ export PE_TPSL_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ PE_TPSL_DEFAULT_VOLATILE_PRGENV='CRAY GNU INTEL'
+++ export PE_TPSL_DEFAULT_VOLATILE_PRGENV
+++ PE_TRILINOS_DEFAULT_GENCOMPS_CRAY_x86_64=83
+++ export PE_TRILINOS_DEFAULT_GENCOMPS_CRAY_x86_64
+++ PE_TRILINOS_DEFAULT_GENCOMPS_GNU_x86_64='49 48'
+++ export PE_TRILINOS_DEFAULT_GENCOMPS_GNU_x86_64
+++ PE_TRILINOS_DEFAULT_GENCOMPS_INTEL_x86_64=140
+++ export PE_TRILINOS_DEFAULT_GENCOMPS_INTEL_x86_64
+++ PE_TRILINOS_DEFAULT_REQUIRED_PRODUCTS=PE_MPICH:PE_HDF5_PARALLEL:PE_NETCDF_HDF5PARALLEL:PE_LIBSCI:PE_TPSL
+++ export PE_TRILINOS_DEFAULT_REQUIRED_PRODUCTS
+++ PE_TRILINOS_DEFAULT_VOLATILE_PKGCONFIG_PATH=/opt/cray/trilinos/11.12.1.2/@PRGENV@/@PE_TRILINOS_DEFAULT_GENCOMPS@/@PE_TRILINOS_DEFAULT_TARGET@/lib/pkgconfig
+++ export PE_TRILINOS_DEFAULT_VOLATILE_PKGCONFIG_PATH
+++ PE_TRILINOS_DEFAULT_VOLATILE_PRGENV='CRAY GNU INTEL'
+++ export PE_TRILINOS_DEFAULT_VOLATILE_PRGENV
+++ PKGCONFIG_ENABLED=1
+++ export PKGCONFIG_ENABLED
+++ PKG_CONFIG_PATH=/opt/cray/rca/1.0.0-2.0502.57212.2.56.ari/lib64/pkgconfig:/opt/cray/alps/5.2.3-2.0502.9295.14.14.ari/lib64/pkgconfig:/opt/cray/xpmem/0.1-2.0502.57015.1.15.ari/lib64/pkgconfig:/opt/cray/gni-headers/4.0-1.0502.10317.9.2.ari/lib64/pkgconfig:/opt/cray/dmapp/7.0.1-1.0502.10246.8.47.ari/lib64/pkgconfig:/opt/cray/pmi/5.0.6-1.0000.10439.140.2.ari/lib64/pkgconfig:/opt/cray/ugni/6.0-1.0502.10245.9.9.ari/lib64/pkgconfig:/opt/cray/udreg/2.3.2-1.0502.9889.2.20.ari/lib64/pkgconfig:/opt/cray/craype/2.3.0/pkg-config:/opt/cray/atp/1.8.1/lib/pkgconfig
+++ export PKG_CONFIG_PATH
+++ PKG_CONFIG_PATH_DEFAULT=/opt/cray/papi/5.4.0.1/lib64/pkgconfig
+++ export PKG_CONFIG_PATH_DEFAULT
+++ PYTHONPATH=/gpfs/hps/nco/ops/nwprod/prod_util.v1.0.29/ush
+++ export PYTHONPATH
+++ SFCIO_INC4=/gpfs/hps/nco/ops/nwprod/lib/sfcio/v1.0.0/intel/include/sfcio_v1.0.0_4
+++ export SFCIO_INC4
+++ SFCIO_LIB4=/gpfs/hps/nco/ops/nwprod/lib/sfcio/v1.0.0/intel/libsfcio_v1.0.0_4.a
+++ export SFCIO_LIB4
+++ SFCIO_SRC=/gpfs/hps/nco/ops/nwprod/lib/sfcio/v1.0.0/src
+++ export SFCIO_SRC
+++ SFCIO_VER=v1.0.0
+++ export SFCIO_VER
+++ SHMEM_ABORT_ON_ERROR=1
+++ export SHMEM_ABORT_ON_ERROR
+++ SIGIO_INC4=/gpfs/hps/nco/ops/nwprod/lib/sigio/v2.1.0/intel/include/sigio_v2.1.0_4
+++ export SIGIO_INC4
+++ SIGIO_LIB4=/gpfs/hps/nco/ops/nwprod/lib/sigio/v2.1.0/intel/libsigio_v2.1.0_4.a
+++ export SIGIO_LIB4
+++ SIGIO_SRC=/gpfs/hps/nco/ops/nwprod/lib/sigio/v2.1.0/src
+++ export SIGIO_SRC
+++ SIGIO_VER=v2.1.0
+++ export SIGIO_VER
+++ SLURM_PROLOG=/opt/cray/atp/1.8.1/libexec/slurm_prolog.ksh
+++ export SLURM_PROLOG
+++ SP_LIB4=/gpfs/hps/nco/ops/nwprod/lib/sp/v2.0.2/intel/libsp_v2.0.2_4.a
+++ export SP_LIB4
+++ SP_LIB8=/gpfs/hps/nco/ops/nwprod/lib/sp/v2.0.2/intel/libsp_v2.0.2_8.a
+++ export SP_LIB8
+++ SP_LIBd=/gpfs/hps/nco/ops/nwprod/lib/sp/v2.0.2/intel/libsp_v2.0.2_d.a
+++ export SP_LIBd
+++ SP_SRC=/gpfs/hps/nco/ops/nwprod/lib/sp/v2.0.2/src
+++ export SP_SRC
+++ SP_VER=v2.0.2
+++ export SP_VER
+++ TBBROOT=/opt/intel/composer_xe_2015.3.187/tbb
+++ export TBBROOT
+++ UTILROOT=/gpfs/hps/nco/ops/nwprod/prod_util.v1.0.29
+++ export UTILROOT
+++ W3EMC_INC4=/gpfs/hps/nco/ops/nwprod/lib/w3emc/v2.2.0/intel/w3emc_v2.2.0_4
+++ export W3EMC_INC4
+++ W3EMC_INC8=/gpfs/hps/nco/ops/nwprod/lib/w3emc/v2.2.0/intel/w3emc_v2.2.0_8
+++ export W3EMC_INC8
+++ W3EMC_INCd=/gpfs/hps/nco/ops/nwprod/lib/w3emc/v2.2.0/intel/w3emc_v2.2.0_d
+++ export W3EMC_INCd
+++ W3EMC_LIB4=/gpfs/hps/nco/ops/nwprod/lib/w3emc/v2.2.0/intel/libw3emc_v2.2.0_4.a
+++ export W3EMC_LIB4
+++ W3EMC_LIB8=/gpfs/hps/nco/ops/nwprod/lib/w3emc/v2.2.0/intel/libw3emc_v2.2.0_8.a
+++ export W3EMC_LIB8
+++ W3EMC_LIBd=/gpfs/hps/nco/ops/nwprod/lib/w3emc/v2.2.0/intel/libw3emc_v2.2.0_d.a
+++ export W3EMC_LIBd
+++ W3EMC_SRC=/gpfs/hps/nco/ops/nwprod/lib/w3emc/v2.2.0/src
+++ export W3EMC_SRC
+++ W3EMC_VER=v2.2.0
+++ export W3EMC_VER
+++ W3NCO_LIB4=/gpfs/hps/nco/ops/nwprod/lib/w3nco/v2.0.6/intel/libw3nco_v2.0.6_4.a
+++ export W3NCO_LIB4
+++ W3NCO_LIB8=/gpfs/hps/nco/ops/nwprod/lib/w3nco/v2.0.6/intel/libw3nco_v2.0.6_8.a
+++ export W3NCO_LIB8
+++ W3NCO_LIBd=/gpfs/hps/nco/ops/nwprod/lib/w3nco/v2.0.6/intel/libw3nco_v2.0.6_d.a
+++ export W3NCO_LIBd
+++ W3NCO_SRC=/gpfs/hps/nco/ops/nwprod/lib/w3nco/v2.0.6/src
+++ export W3NCO_SRC
+++ W3NCO_VER=v2.0.6
+++ export W3NCO_VER
+++ WRF_SHARED_PATH=/gpfs/hps/nco/ops/nwprod/wrf_shared.v1.1.0-intel
+++ export WRF_SHARED_PATH
+++ XTOS_VERSION=5.2.56
+++ export XTOS_VERSION
+++ XTPE_NETWORK_TARGET=aries
+++ export XTPE_NETWORK_TARGET
+++ _LMFILES_=/opt/modulefiles/eswrap/1.3.3-1.020200.1280.0:/opt/modulefiles/ncep/1.0:/gpfs/hps/nco/ops/nwprod/modulefiles/prod_util/1.0.29:/opt/cray/craype/default/alt-modulefiles/craype-network-aries:/opt/cray/alt-modulefiles/craype/2.3.0:/opt/modulefiles/intel/15.0.3.187:/opt/cray/alt-modulefiles/cray-libsci/13.0.3:/opt/cray/ari/modulefiles/udreg/2.3.2-1.0502.9889.2.20.ari:/opt/cray/ari/modulefiles/ugni/6.0-1.0502.10245.9.9.ari:/opt/cray/ari/modulefiles/pmi/5.0.6-1.0000.10439.140.2.ari:/opt/cray/ari/modulefiles/dmapp/7.0.1-1.0502.10246.8.47.ari:/opt/cray/ari/modulefiles/gni-headers/4.0-1.0502.10317.9.2.ari:/opt/cray/ari/modulefiles/xpmem/0.1-2.0502.57015.1.15.ari:/opt/cray/ari/modulefiles/dvs/2.5_0.9.0-1.0502.1958.2.55.ari:/opt/cray/ari/modulefiles/alps/5.2.3-2.0502.9295.14.14.ari:/opt/cray/ari/modulefiles/rca/1.0.0-2.0502.57212.2.56.ari:/opt/cray/alt-modulefiles/atp/1.8.1:/opt/cray/alt-modulefiles/PrgEnv-intel/5.2.56:/opt/cray/alt-modulefiles/cray-mpich/7.2.0:/opt/cray/craype/default/alt-modulefiles/craype-haswell:/usrx/local/dev/modulefiles/cmake/3.6.2:/usrx/local/prod/modulefiles/HDF5-serial-intel-haswell/1.8.9:/usrx/local/prod/modulefiles/NetCDF-intel-haswell/4.2:/gpfs/hps/nco/ops/nwprod/lib/modulefiles/bufr-intel/11.0.1:/gpfs/hps/nco/ops/nwprod/lib/modulefiles/nemsio-intel/2.2.2:/gpfs/hps/nco/ops/nwprod/lib/modulefiles/sfcio-intel/1.0.0:/gpfs/hps/nco/ops/nwprod/lib/modulefiles/sigio-intel/2.1.0:/gpfs/hps/nco/ops/nwprod/lib/modulefiles/sp-intel/2.0.2:/gpfs/hps/nco/ops/nwprod/lib/modulefiles/w3nco-intel/2.0.6:/gpfs/hps/nco/ops/nwprod/lib/modulefiles/w3emc-intel/2.2.0:/gpfs/hps/nco/ops/nwprod/lib/modulefiles/crtm-intel/2.2.6:/usrx/local/nceplibs/modulefiles/bacio-intel/2.0.2:/gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/modulefiles/modulefile.ProdGSI.wcoss_c
+++ export _LMFILES_
+++ kernelrelease=3.0.101-0.47.106.11-default
+++ export kernelrelease
++ export CRTM_LIB=/gpfs/hps3/emc/da/noscrub/Emily.Liu/RTM/CRTM/REL-2.3.1.beta/crtm_v2.3.1/libcrtm_v2.3.1.a
++ CRTM_LIB=/gpfs/hps3/emc/da/noscrub/Emily.Liu/RTM/CRTM/REL-2.3.1.beta/crtm_v2.3.1/libcrtm_v2.3.1.a
++ export CRTM_INC=/gpfs/hps3/emc/da/noscrub/Emily.Liu/RTM/CRTM/REL-2.3.1.beta/crtm_v2.3.1/incmod/crtm_v2.3.1
++ CRTM_INC=/gpfs/hps3/emc/da/noscrub/Emily.Liu/RTM/CRTM/REL-2.3.1.beta/crtm_v2.3.1/incmod/crtm_v2.3.1
++ [[ PRODUCTION = PRODUCTION ]]
++ cmake -DBUILD_UTIL=ON -DCMAKE_BUILD_TYPE=PRODUCTION -DBUILD_CORELIBS=OFF ..
+Setting CrayLinuxEnvironment
+-- The C compiler identification is Intel 15.0.3.20150407
+-- The CXX compiler identification is Intel 15.0.3.20150407
+-- Cray Linux Environment 5.2.56
+-- Cray Programming Environment 2.3.0 C
+-- Check for working C compiler: /opt/cray/craype/2.3.0/bin/cc
+-- Check for working C compiler: /opt/cray/craype/2.3.0/bin/cc -- works
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Cray Programming Environment 2.3.0 CXX
+-- Check for working CXX compiler: /opt/cray/craype/2.3.0/bin/CC
+-- Check for working CXX compiler: /opt/cray/craype/2.3.0/bin/CC -- works
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- The Fortran compiler identification is Intel 15.0.3.20150407
+-- Cray Programming Environment 2.3.0 Fortran
+-- Check for working Fortran compiler: /opt/cray/craype/2.3.0/bin/ftn
+-- Check for working Fortran compiler: /opt/cray/craype/2.3.0/bin/ftn  -- works
+-- Detecting Fortran compiler ABI info
+-- Detecting Fortran compiler ABI info - done
+-- Checking whether /opt/cray/craype/2.3.0/bin/ftn supports Fortran 90
+-- Checking whether /opt/cray/craype/2.3.0/bin/ftn supports Fortran 90 -- yes
+Build the EnKF with GFS module
+Control path is 
+-- Try OpenMP C flag = [-qopenmp]
+-- Performing Test OpenMP_FLAG_DETECTED
+-- Performing Test OpenMP_FLAG_DETECTED - Success
+-- Try OpenMP CXX flag = [-qopenmp]
+-- Performing Test OpenMP_FLAG_DETECTED
+-- Performing Test OpenMP_FLAG_DETECTED - Success
+-- Try OpenMP Fortran flag = [-qopenmp]
+-- Performing Test OpenMP_FLAG_DETECTED
+-- Performing Test OpenMP_FLAG_DETECTED - Success
+-- Found OpenMP: -qopenmp  
+found openmp with flag 
+The hostname is  llogin1
+done figuring out host--llogin1
+Setting flags and paths for Cray
+Host is set to WCOSS_C
+-- HDF5: Using hdf5 compiler wrapper to determine C configuration
+-- HDF5: Using hdf5 compiler wrapper to determine Fortran configuration
+-- Found HDF5: /gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/lib/libhdf5_fortran.a;/gpfs/hps/usrx/local/prod/HDF5/1.8.9/serial/intel/haswell/lib/libhdf5.a;/usr/lib64/libz.a;/usr/lib64/librt.a;/usr/lib64/libm.a (found version "1.8.9") found components:  C HL 
+/gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet
+Setting Intel flags
+Using new FindMPI
+-- Found MPI_C: /opt/cray/craype/2.3.0/bin/cc (found version "3.0") 
+-- Found MPI_CXX: /opt/cray/craype/2.3.0/bin/CC (found version "3.0") 
+-- Found MPI_Fortran: /opt/cray/craype/2.3.0/bin/ftn (found version "3.0") 
+-- Found MPI: TRUE (found version "3.0")  
+MPI version is 3.0
+MPI f90 version is TRUE
+MPI f08 version is FALSE
+netcdf_libs is /gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/lib/libnetcdf.a
+-- Found NetCDF: /gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/lib/libnetcdff.a;/gpfs/hps/usrx/local/prod/NetCDF/4.2/intel/haswell/lib/libnetcdf.a  
+-- Found ZLIB: /usr/lib64/libz.a (found version "1.2.7") 
+-- Could NOT find CURL (missing:  CURL_LIBRARY) (found version "7.37.0")
+hey Clddet dir is /gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/src/clddet
+BUFR library /gpfs/hps/nco/ops/nwprod/lib/bufr/v11.0.1/intel/libbufr_v11.0.1_d_64.a set via Environment variable
+SIGIO library /gpfs/hps/nco/ops/nwprod/lib/sigio/v2.1.0/intel/libsigio_v2.1.0_4.a set via Environment variable
+NEMSIO library /gpfs/hps/nco/ops/nwprod/lib/nemsio/v2.2.2/intel/libnemsio_v2.2.2.a set via Environment variable
+CRTM library /gpfs/hps3/emc/da/noscrub/Emily.Liu/RTM/CRTM/REL-2.3.1.beta/crtm_v2.3.1/libcrtm_v2.3.1.a set via Environment variable
+SP library /gpfs/hps/nco/ops/nwprod/lib/sp/v2.0.2/intel/libsp_v2.0.2_d.a set via Environment variable
+SP library /gpfs/hps/nco/ops/nwprod/lib/sp/v2.0.2/intel/libsp_v2.0.2_4.a set via Environment variable
+SFCIO library /gpfs/hps/nco/ops/nwprod/lib/sfcio/v1.0.0/intel/libsfcio_v1.0.0_4.a set via Environment variable
+Setting W3EMC library via environment variable /gpfs/hps/nco/ops/nwprod/lib/w3emc/v2.2.0/intel/libw3emc_v2.2.0_d.a
+W3NCO library /gpfs/hps/nco/ops/nwprod/lib/w3nco/v2.0.6/intel/libw3nco_v2.0.6_d.a set via Environment variable
+W3NCO_4 library /gpfs/hps/nco/ops/nwprod/lib/w3nco/v2.0.6/intel/libw3nco_v2.0.6_4.a set via Environment variable
+HEY!!! ncdiag flags are -free -assume byterecl -convert big_endian
+BUFR library /gpfs/hps/nco/ops/nwprod/lib/bufr/v11.0.1/intel/libbufr_v11.0.1_d_64.a set via Environment variable
+SIGIO library /gpfs/hps/nco/ops/nwprod/lib/sigio/v2.1.0/intel/libsigio_v2.1.0_4.a set via Environment variable
+NEMSIO library /gpfs/hps/nco/ops/nwprod/lib/nemsio/v2.2.2/intel/libnemsio_v2.2.2.a set via Environment variable
+CRTM library /gpfs/hps3/emc/da/noscrub/Emily.Liu/RTM/CRTM/REL-2.3.1.beta/crtm_v2.3.1/libcrtm_v2.3.1.a set via Environment variable
+SP library /gpfs/hps/nco/ops/nwprod/lib/sp/v2.0.2/intel/libsp_v2.0.2_d.a set via Environment variable
+SP library /gpfs/hps/nco/ops/nwprod/lib/sp/v2.0.2/intel/libsp_v2.0.2_4.a set via Environment variable
+SFCIO library /gpfs/hps/nco/ops/nwprod/lib/sfcio/v1.0.0/intel/libsfcio_v1.0.0_4.a set via Environment variable
+Setting W3EMC library via environment variable /gpfs/hps/nco/ops/nwprod/lib/w3emc/v2.2.0/intel/libw3emc_v2.2.0_d.a
+W3NCO library /gpfs/hps/nco/ops/nwprod/lib/w3nco/v2.0.6/intel/libw3nco_v2.0.6_d.a set via Environment variable
+W3NCO_4 library /gpfs/hps/nco/ops/nwprod/lib/w3nco/v2.0.6/intel/libw3nco_v2.0.6_4.a set via Environment variable
+MPI include PATH  
+Configuring utility in adderrspec.fd
+Configuring utility in calc_increment_ens.fd
+Configuring utility in getnstensmeanp.fd
+Configuring utility in getsfcensmeanp.fd
+Configuring utility in getsfcnstensupdp.fd
+Configuring utility in getsigensmeanp_smooth.fd
+Configuring utility in getsigensstatp.fd
+ hey, incl dirs are  
+Configuring utility in gribmean.fd
+Configuring utility in recentersigp.fd
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/build
++ make -j 8
+Scanning dependencies of target adderrspec.x
+Scanning dependencies of target getsfcensmeanp.x
+[  0%] Building Fortran object util/EnKF/gfs/src/adderrspec.fd/CMakeFiles/adderrspec.x.dir/adderrspec_nmcmeth_ncep_spec.f90.o
+Scanning dependencies of target getnstensmeanp.x
+[  0%] Building Fortran object util/EnKF/gfs/src/getsfcensmeanp.fd/CMakeFiles/getsfcensmeanp.x.dir/getsfcensmeanp.f90.o
+[  0%] Building Fortran object util/EnKF/gfs/src/getnstensmeanp.fd/CMakeFiles/getnstensmeanp.x.dir/nstio_module.f90.o
+Scanning dependencies of target calc_increment_ens.x
+[  1%] Building Fortran object util/EnKF/gfs/src/calc_increment_ens.fd/CMakeFiles/calc_increment_ens.x.dir/kinds.f90.o
+Scanning dependencies of target clddet
+[  1%] Building Fortran object src/clddet/CMakeFiles/clddet.dir/yomiasi.F90.o
+Scanning dependencies of target WRFLIB
+[  1%] Building Fortran object libsrc/wrflib/CMakeFiles/WRFLIB.dir/wrf_io.f90.o
+Scanning dependencies of target ncdiag
+Scanning dependencies of target ncdiag_serial
+[  1%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdf_string_m.f90.o
+[  2%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncd_kinds.F90.o
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+[  2%] Building Fortran object util/EnKF/gfs/src/calc_increment_ens.fd/CMakeFiles/calc_increment_ens.x.dir/namelist_def.f90.o
+[  2%] Building Fortran object src/clddet/CMakeFiles/clddet.dir/yomaero.F90.o
+[  2%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncd_kinds.F90.o
+[  2%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/netcdf_unlimdims.F90.o
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+[  2%] Building Fortran object util/EnKF/gfs/src/calc_increment_ens.fd/CMakeFiles/calc_increment_ens.x.dir/constants.f90.o
+[  2%] Building Fortran object src/clddet/CMakeFiles/clddet.dir/abor1.F90.o
+[  2%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdr_climsg.F90.o
+[  2%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdf_string_m.f90.o
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+[  2%] Building Fortran object util/EnKF/gfs/src/calc_increment_ens.fd/CMakeFiles/calc_increment_ens.x.dir/gfs_nems_interface.f90.o
+[  2%] Building Fortran object src/clddet/CMakeFiles/clddet.dir/aerosol_detect.F90.o
+[  2%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/netcdf_unlimdims.F90.o
+[  2%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdr_climsg.F90.o
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+/gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/util/EnKF/gfs/src/calc_increment_ens.fd/gfs_nems_interface.f90(360): remark #7712: This variable has not been used.   [I]
+    integer                                                              :: i, j, k
+----------------------------------------------------------------------------^
+/gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/util/EnKF/gfs/src/calc_increment_ens.fd/gfs_nems_interface.f90(360): remark #7712: This variable has not been used.   [J]
+    integer                                                              :: i, j, k
+-------------------------------------------------------------------------------^
+/gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/util/EnKF/gfs/src/calc_increment_ens.fd/gfs_nems_interface.f90(448): remark #7712: This variable has not been used.   [K]
+    integer                                                              :: i, j, k, n
+----------------------------------------------------------------------------------^
+/gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/util/EnKF/gfs/src/calc_increment_ens.fd/gfs_nems_interface.f90(360): remark #7712: This variable has not been used.   [K]
+    integer                                                              :: i, j, k
+----------------------------------------------------------------------------------^
+/gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/util/EnKF/gfs/src/calc_increment_ens.fd/gfs_nems_interface.f90(315): remark #7712: This variable has not been used.   [K]
+    integer                                                              :: i, j, k
+----------------------------------------------------------------------------------^
+[  2%] Building Fortran object src/clddet/CMakeFiles/clddet.dir/aerosol_detect_setup.F90.o
+[  2%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdres_climsg.F90.o
+[  2%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdres_climsg.F90.o
+[  2%] Building Fortran object util/EnKF/gfs/src/calc_increment_ens.fd/CMakeFiles/calc_increment_ens.x.dir/variable_interface.f90.o
+[  3%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdw_strarrutils.F90.o
+[  3%] Building Fortran object src/clddet/CMakeFiles/clddet.dir/cf_digital.F90.o
+[  3%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdw_strarrutils.F90.o
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+[  3%] Building Fortran object util/EnKF/gfs/src/calc_increment_ens.fd/CMakeFiles/calc_increment_ens.x.dir/fv3_interface.f90.o
+[  3%] Building Fortran object libsrc/wrflib/CMakeFiles/WRFLIB.dir/module_driver_constants.F90.o
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+[  3%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdf_value_m.f90.o
+[  3%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdc_types.f90.o
+[  3%] Building Fortran object src/clddet/CMakeFiles/clddet.dir/cloud_detect.F90.o
+/gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/util/EnKF/gfs/src/calc_increment_ens.fd/fv3_interface.f90(135): remark #7712: This variable has not been used.   [I]
+    integer :: i, j, k ! loop indices within a variable
+---------------^
+/gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/util/EnKF/gfs/src/calc_increment_ens.fd/fv3_interface.f90(665): remark #7712: This variable has not been used.   [K]
+    integer :: k ! Vertical index loop when reading data level-by-level
+---------------^
+/gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/util/EnKF/gfs/src/calc_increment_ens.fd/fv3_interface.f90(664): remark #7712: This variable has not been used.   [VAR_INFO]
+    type(varinfo) :: var_info ! to request a variable from gfs_nems_read
+---------------------^
+[  3%] Building Fortran object libsrc/wrflib/CMakeFiles/WRFLIB.dir/module_machine.F90.o
+[  3%] Building Fortran object util/EnKF/gfs/src/calc_increment_ens.fd/CMakeFiles/calc_increment_ens.x.dir/calc_increment_interface.f90.o
+[  3%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdc_climsg.F90.o
+[  4%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdr_types.f90.o
+[  4%] Building Fortran object src/clddet/CMakeFiles/clddet.dir/cloud_detect_setup.F90.o
+[  4%] Building Fortran object libsrc/wrflib/CMakeFiles/WRFLIB.dir/field_routines.F90.o
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+[  4%] Building Fortran object util/EnKF/gfs/src/calc_increment_ens.fd/CMakeFiles/calc_increment_ens.x.dir/pmain.f90.o
+[  4%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdf_value_m.f90.o
+[  4%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdw_climsg.F90.o
+[  4%] Linking Fortran executable ../../../../../../exec/adderrspec.x
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+[  4%] Building Fortran object libsrc/wrflib/CMakeFiles/WRFLIB.dir/io_int_stubs.f90.o
+[  4%] Linking Fortran executable ../../../../../../exec/calc_increment_ens.x
+[  4%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdw_types.F90.o
+[  4%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdr_types.f90.o
+[  4%] Building Fortran object src/clddet/CMakeFiles/clddet.dir/heapsort.F90.o
+[  5%] Building C object libsrc/wrflib/CMakeFiles/WRFLIB.dir/pack_utils.c.o
+[  5%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdw_climsg.F90.o
+[  5%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdc_types.f90.o
+[  5%] Building Fortran object src/clddet/CMakeFiles/clddet.dir/imager_cloud_detect.F90.o
+[  5%] Linking Fortran static library ../../lib/libWRFLIB.a
+[  5%] Built target WRFLIB
+[  6%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdw_types.F90.o
+[  6%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdf_path_m.F90.o
+[  6%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdr_state.f90.o
+[  6%] Building Fortran object src/clddet/CMakeFiles/clddet.dir/movinga.F90.o
+[  7%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdc_state.F90.o
+Scanning dependencies of target getsigensmeanp_smooth.x
+[  7%] Building Fortran object util/EnKF/gfs/src/getsigensmeanp_smooth.fd/CMakeFiles/getsigensmeanp_smooth.x.dir/getsigensmeanp_smooth_ncep.f90.o
+[  8%] Linking Fortran static library ../../lib/libclddet.a
+[  8%] Built target clddet
+[  8%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdr_realloc_mod.F90.o
+[  8%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdc_realloc.F90.o
+[  8%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdf_path_m.F90.o
+[  8%] Linking Fortran executable ../../../../../../exec/getsfcensmeanp.x
+[  8%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdw_realloc.F90.o
+[  8%] Built target adderrspec.x
+[  8%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdw_state.f90.o
+[  9%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdc_state.F90.o
+[ 10%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdr_state.f90.o
+[ 10%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdr_realloc_mod.F90.o
+Scanning dependencies of target getsigensstatp.x
+[ 10%] Building Fortran object util/EnKF/gfs/src/getsigensstatp.fd/CMakeFiles/getsigensstatp.x.dir/getsigensstatp.f90.o
+[ 10%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdc_realloc.F90.o
+Scanning dependencies of target gribmean.x
+[ 10%] Building Fortran object util/EnKF/gfs/src/gribmean.fd/CMakeFiles/gribmean.x.dir/gribmean.f90.o
+[ 10%] Built target calc_increment_ens.x
+[ 10%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdw_realloc.F90.o
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+[ 10%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdw_state.f90.o
+[ 10%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdr_check.f90.o
+[ 10%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdc_cli_process.F90.o
+[ 10%] Linking Fortran executable ../../../../../../exec/gribmean.x
+[ 11%] Building Fortran object util/EnKF/gfs/src/getnstensmeanp.fd/CMakeFiles/getnstensmeanp.x.dir/getnstensmeanp.f90.o
+[ 11%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/nc_diag_fson.f90.o
+[ 11%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdc_dims.F90.o
+Scanning dependencies of target recentersigp.x
+[ 11%] Building Fortran object util/EnKF/gfs/src/recentersigp.fd/CMakeFiles/recentersigp.x.dir/recentersigp.f90.o
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+[ 11%] Built target getsfcensmeanp.x
+Scanning dependencies of target oznmon_horiz.x
+[ 11%] Building Fortran object util/Ozone_Monitor/nwprod/oznmon_shared.v2.0.0/sorc/oznmon_horiz.fd/CMakeFiles/oznmon_horiz.x.dir/kinds.f90.o
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+[ 11%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdr_check.f90.o
+/gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/util/EnKF/gfs/src/recentersigp.fd/recentersigp.f90(48): remark #7712: This variable has not been used.   [K]
+  integer:: nrec,latb,lonb,levs,npts,n,i,k,nn
+-----------------------------------------^
+/gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/util/EnKF/gfs/src/recentersigp.fd/recentersigp.f90(48): remark #7712: This variable has not been used.   [NN]
+  integer:: nrec,latb,lonb,levs,npts,n,i,k,nn
+-------------------------------------------^
+[ 11%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdw_ciresize.F90.o
+[ 11%] Linking Fortran executable ../../../../../../exec/getsigensstatp.x
+[ 12%] Building Fortran object util/Ozone_Monitor/nwprod/oznmon_shared.v2.0.0/sorc/oznmon_horiz.fd/CMakeFiles/oznmon_horiz.x.dir/read_diag.f90.o
+[ 12%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/nc_diag_fson.f90.o
+[ 13%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdw_varattr.F90.o
+[ 13%] Built target gribmean.x
+Scanning dependencies of target oznmon_time.x
+[ 13%] Building Fortran object util/Ozone_Monitor/nwprod/oznmon_shared.v2.0.0/sorc/oznmon_time.fd/CMakeFiles/oznmon_time.x.dir/kinds.f90.o
+[ 13%] Linking Fortran executable ../../../../../../exec/getsigensmeanp_smooth.x
+[ 13%] Building Fortran object util/Ozone_Monitor/nwprod/oznmon_shared.v2.0.0/sorc/oznmon_horiz.fd/CMakeFiles/oznmon_horiz.x.dir/create_ctl_horiz.f90.o
+[ 13%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdw_ciresize.F90.o
+[ 14%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdw_dresize.F90.o
+[ 14%] Building Fortran object util/Ozone_Monitor/nwprod/oznmon_shared.v2.0.0/sorc/oznmon_time.fd/CMakeFiles/oznmon_time.x.dir/valid.f90.o
+[ 14%] Linking Fortran executable ../../../../../../exec/recentersigp.x
+[ 14%] Building Fortran object util/Ozone_Monitor/nwprod/oznmon_shared.v2.0.0/sorc/oznmon_horiz.fd/CMakeFiles/oznmon_horiz.x.dir/horiz.f90.o
+[ 14%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdw_varattr.F90.o
+[ 14%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdw_lheader.F90.o
+[ 14%] Building Fortran object util/Ozone_Monitor/nwprod/oznmon_shared.v2.0.0/sorc/oznmon_time.fd/CMakeFiles/oznmon_time.x.dir/read_diag.f90.o
+[ 14%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdw_dresize.F90.o
+[ 14%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdw_mresize.F90.o
+[ 14%] Building Fortran object util/Ozone_Monitor/nwprod/oznmon_shared.v2.0.0/sorc/oznmon_horiz.fd/CMakeFiles/oznmon_horiz.x.dir/update_ctl_horiz.f90.o
+[ 14%] Building Fortran object util/Ozone_Monitor/nwprod/oznmon_shared.v2.0.0/sorc/oznmon_time.fd/CMakeFiles/oznmon_time.x.dir/avgsdv.f90.o
+[ 14%] Linking Fortran executable ../../../../../../../exec/oznmon_horiz.x
+[ 15%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdc_cli_process.F90.o
+[ 15%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdw_lheader.F90.o
+[ 15%] Built target getsigensstatp.x
+[ 15%] Building Fortran object util/Ozone_Monitor/nwprod/oznmon_shared.v2.0.0/sorc/oznmon_time.fd/CMakeFiles/oznmon_time.x.dir/create_ctl_time.f90.o
+[ 15%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdw_mresize.F90.o
+[ 15%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdc_climsg.F90.o
+[ 15%] Building Fortran object util/Ozone_Monitor/nwprod/oznmon_shared.v2.0.0/sorc/oznmon_time.fd/CMakeFiles/oznmon_time.x.dir/time.f90.o
+[ 15%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdc_vars.F90.o
+Scanning dependencies of target radmon_angle
+[ 15%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radang.fd/CMakeFiles/radmon_angle.dir/kinds.F90.o
+[ 15%] Built target getsigensmeanp_smooth.x
+[ 16%] Building Fortran object util/Ozone_Monitor/nwprod/oznmon_shared.v2.0.0/sorc/oznmon_time.fd/CMakeFiles/oznmon_time.x.dir/update_ctl_time.f90.o
+[ 16%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdr_alloc_assert.f90.o
+[ 16%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdr_alloc_assert.f90.o
+[ 16%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radang.fd/CMakeFiles/radmon_angle.dir/read_diag.f90.o
+[ 16%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdr_dims.f90.o
+[ 16%] Linking Fortran executable ../../../../../../../exec/oznmon_time.x
+[ 16%] Built target oznmon_horiz.x
+[ 16%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdr_global_attrs.f90.o
+[ 16%] Linking Fortran executable ../../../../../../exec/getnstensmeanp.x
+[ 16%] Built target recentersigp.x
+Scanning dependencies of target radmon_bcoef
+[ 16%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radbcoef.fd/CMakeFiles/radmon_bcoef.dir/kinds.F90.o
+Scanning dependencies of target radmon_bcor
+[ 16%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdr_dims.f90.o
+[ 17%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radbcor.fd/CMakeFiles/radmon_bcor.dir/kinds.F90.o
+[ 17%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdw_chaninfo.F90.o
+[ 17%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radang.fd/CMakeFiles/radmon_angle.dir/angle_bias.f90.o
+[ 17%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radang.fd/CMakeFiles/radmon_angle.dir/create_ctl_angle.f90.o
+[ 17%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radbcoef.fd/CMakeFiles/radmon_bcoef.dir/read_diag.f90.o
+[ 17%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radbcor.fd/CMakeFiles/radmon_bcor.dir/read_diag.f90.o
+[ 17%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdr_global_attrs.f90.o
+[ 17%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdw_chaninfo.F90.o
+[ 17%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdw_data2d.F90.o
+[ 17%] Built target oznmon_time.x
+[ 17%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdw_metadata.F90.o
+[ 18%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radbcoef.fd/CMakeFiles/radmon_bcoef.dir/bcoef.f90.o
+Scanning dependencies of target radmon_time
+[ 18%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radtime.fd/CMakeFiles/radmon_time.dir/kinds.F90.o
+[ 18%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radbcor.fd/CMakeFiles/radmon_bcor.dir/avgsdv.f90.o
+[ 18%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radbcor.fd/CMakeFiles/radmon_bcor.dir/bcor.f90.o
+[ 18%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radtime.fd/CMakeFiles/radmon_time.dir/bad_chan.f90.o
+[ 18%] Linking Fortran executable ../../../../../../../exec/radmon_angle
+[ 19%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdw_data2d.F90.o
+[ 19%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radbcoef.fd/CMakeFiles/radmon_bcoef.dir/create_ctl_bcoef.f90.o
+[ 19%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radbcor.fd/CMakeFiles/radmon_bcor.dir/create_ctl_bcor.f90.o
+[ 19%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdc_dims.F90.o
+[ 19%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radtime.fd/CMakeFiles/radmon_time.dir/bad_obs.f90.o
+[ 19%] Built target getnstensmeanp.x
+[ 19%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radtime.fd/CMakeFiles/radmon_time.dir/bad_penalty.f90.o
+[ 19%] Linking Fortran executable ../../../../../../../exec/radmon_bcoef
+[ 19%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radtime.fd/CMakeFiles/radmon_time.dir/valid.f90.o
+[ 19%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdr_attrs.f90.o
+[ 20%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdr_attrs_fetch.f90.o
+[ 20%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdw_metadata.F90.o
+[ 20%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdr_global_attrs_fetch.f90.o
+[ 20%] Linking Fortran executable ../../../../../../../exec/radmon_bcor
+[ 20%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdr_vars.f90.o
+[ 21%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radtime.fd/CMakeFiles/radmon_time.dir/read_diag.f90.o
+[ 21%] Built target radmon_angle
+[ 21%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdr_vars_fetch.f90.o
+[ 21%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdc_vars.F90.o
+[ 21%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdc_metadata.F90.o
+[ 21%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdc_data.F90.o
+[ 21%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdr_attrs.f90.o
+[ 21%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radtime.fd/CMakeFiles/radmon_time.dir/create_ctl_time.f90.o
+[ 21%] Built target radmon_bcoef
+[ 21%] Building Fortran object util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radtime.fd/CMakeFiles/radmon_time.dir/time.f90.o
+[ 22%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdr_attrs_fetch.f90.o
+[ 22%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/nc_diag_read_mod.F90.o
+[ 22%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/nc_diag_res.f90.o
+[ 22%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/nc_diag_write_mod.F90.o
+[ 22%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdc_data.F90.o
+[ 22%] Built target radmon_bcor
+[ 22%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdc_data_MPI.F90.o
+[ 22%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdr_global_attrs_fetch.f90.o
+[ 22%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdr_vars.f90.o
+[ 22%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdr_vars_fetch.f90.o
+[ 22%] Linking Fortran executable ../../../../../../../exec/radmon_time
+[ 22%] Building Fortran object src/ncdiag/CMakeFiles/ncdiag.dir/ncdc_metadata.F90.o
+[ 22%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/nc_diag_read_mod.F90.o
+[ 22%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/nc_diag_write_mod.F90.o
+[ 22%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/ncdc_data_MPI.F90.o
+[ 22%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/nc_diag_cat.F90.o
+[ 22%] Building Fortran object src/ncdiag/serial/CMakeFiles/ncdiag_serial.dir/__/test_nc_unlimdims.F90.o
+[ 22%] Linking Fortran static library ../../../lib/libncdiag_serial.a
+[ 22%] Built target ncdiag_serial
+Scanning dependencies of target nc_diag_cat_serial.x
+[ 22%] Building Fortran object src/ncdiag/serial/CMakeFiles/nc_diag_cat_serial.x.dir/__/nc_diag_cat.F90.o
+[ 22%] Built target radmon_time
+[ 22%] Linking Fortran static library ../../lib/libncdiag.a
+[ 22%] Built target ncdiag
+Scanning dependencies of target test_nc_unlimdims.x
+Scanning dependencies of target nc_diag_cat.x
+[ 22%] Building Fortran object src/ncdiag/CMakeFiles/test_nc_unlimdims.x.dir/test_nc_unlimdims.F90.o
+[ 22%] Building Fortran object src/ncdiag/CMakeFiles/nc_diag_cat.x.dir/nc_diag_cat.F90.o
+[ 22%] Linking Fortran executable ../../../../exec/nc_diag_cat_serial.x
+[ 23%] Linking Fortran executable ../../../exec/test_nc_unlimdims.x
+[ 24%] Linking Fortran executable ../../../exec/nc_diag_cat.x
+[ 24%] Built target nc_diag_cat_serial.x
+[ 24%] Built target test_nc_unlimdims.x
+Scanning dependencies of target gsilib_shrd
+[ 24%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/mpeu_mpif.F90.o
+[ 24%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/antcorr_application.f90.o
+[ 24%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/nstio_module.f90.o
+[ 24%] Built target nc_diag_cat.x
+[ 24%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/constants.f90.o
+[ 24%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/gsi_io.f90.o
+[ 24%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_rerank.f90.o
+[ 24%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/sparsearr.f90.o
+[ 25%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/timermod.f90.o
+[ 25%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/insitu_info.f90.o
+[ 25%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/phil1.f90.o
+[ 25%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_find.f90.o
+[ 25%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_tick.F90.o
+[ 25%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_sortind.f90.o
+[ 25%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/atms_spatial_average_mod.f90.o
+[ 25%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/aircraftobsqc.f90.o
+[ 25%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/blacklist.f90.o
+[ 25%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/mpimod.F90.o
+[ 25%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/general_specmod.f90.o
+[ 25%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/blendmod.f90.o
+[ 25%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/mod_nmmb_to_a.f90.o
+[ 26%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/jcmod.f90.o
+[ 27%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_diag.f90.o
+[ 27%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/mod_strong.f90.o
+[ 27%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/fgrid2agrid_mod.f90.o
+[ 27%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/plib8.f90.o
+[ 27%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/wind_fft.f90.o
+[ 28%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/calc_fov_crosstrk.f90.o
+[ 28%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/ncepgfs_ghg.f90.o
+[ 28%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/phil.f90.o
+[ 28%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/gscond_ad.f90.o
+[ 28%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/omegas_ad.f90.o
+[ 29%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/nlmsas_ad.f90.o
+[ 29%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_distance.f90.o
+[ 29%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_uniq.f90.o
+[ 29%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/nltransf.f90.o
+[ 29%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/tcv_mod.f90.o
+[ 29%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/lagmod.f90.o
+[ 29%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/egrid2agrid_mod.f90.o
+[ 29%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/mpeu_util.F90.o
+[ 30%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/mod_wrfmass_to_a.f90.o
+[ 30%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_stats.f90.o
+[ 31%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/mpl_allreduce.F90.o
+[ 31%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/gsi_nstcouplermod.f90.o
+[ 31%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/calc_fov_conical.f90.o
+[ 31%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/ssmis_spatial_average_mod.f90.o
+[ 31%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/gsi_bundlemod.F90.o
+[ 31%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/correlated_obsmod.F90.o
+[ 31%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/mrmsmod.f90.o
+[ 31%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/gsi_unformatted.F90.o
+[ 31%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/raflib.f90.o
+[ 31%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/netcdf_mod.f90.o
+[ 31%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/general_sub2grid_mod.f90.o
+[ 31%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/state_vectors.f90.o
+[ 32%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/gsi_chemguess_mod.F90.o
+[ 32%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/gsi_metguess_mod.F90.o
+[ 32%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/rapidrefresh_cldsurf_mod.f90.o
+[ 32%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/gridmod.F90.o
+[ 33%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/hybrid_ensemble_parameters.f90.o
+[ 33%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/gsi_4dvar.f90.o
+[ 33%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/control_vectors.f90.o
+[ 33%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/general_commvars_mod.f90.o
+[ 33%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/lag_interp.f90.o
+[ 33%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/derivsmod.f90.o
+[ 33%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_cvgridLookup.F90.o
+[ 33%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/compact_diffs.f90.o
+[ 33%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/mod_fv3_lola.f90.o
+[ 33%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/turblmod.f90.o
+[ 33%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/lag_traj.f90.o
+[ 33%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_latlonRange.F90.o
+[ 33%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/aircraftinfo.f90.o
+[ 33%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/radinfo.f90.o
+[ 33%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/guess_grids.F90.o
+[ 33%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/convinfo.f90.o
+[ 33%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/aeroinfo.f90.o
+[ 33%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/coinfo.f90.o
+[ 34%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/lightinfo.f90.o
+[ 34%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/convb_ps.f90.o
+[ 34%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/convb_q.f90.o
+[ 34%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/convb_t.f90.o
+[ 35%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/convb_uv.f90.o
+[ 35%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/converr.f90.o
+[ 35%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/converr_ps.f90.o
+[ 35%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/converr_pw.f90.o
+[ 35%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/converr_q.f90.o
+[ 35%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/converr_t.f90.o
+[ 35%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/converr_uv.f90.o
+[ 35%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/ozinfo.f90.o
+[ 35%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/oneobmod.F90.o
+[ 35%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/adjust_cloudobs_mod.f90.o
+[ 35%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_gpsrhs.F90.o
+[ 35%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupdbz_lib.f90.o
+[ 36%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/pcpinfo.f90.o
+[ 36%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/clw_mod.f90.o
+[ 36%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/chemmod.f90.o
+[ 36%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/lag_fields.f90.o
+[ 36%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/mod_vtrans.f90.o
+[ 36%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_dtime.F90.o
+[ 36%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/cloud_efr_mod.f90.o
+[ 36%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/cwhydromod.f90.o
+[ 36%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/gsi_rfv3io_mod.f90.o
+[ 36%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/wrf_mass_guess_mod.f90.o
+[ 36%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/mp_compact_diffs_mod1.f90.o
+[ 36%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/xhat_vordivmod.f90.o
+[ 36%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/bias_predictors.f90.o
+[ 36%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/radiance_mod.f90.o
+[ 36%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/ncepnems_io.f90.o
+[ 36%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/strong_fast_global_mod.f90.o
+[ 36%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/qcmod.f90.o
+[ 36%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_l2bufr_mod.f90.o
+[ 36%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_rhs.F90.o
+[ 37%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_berror_stats_reg.f90.o
+[ 37%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/balmod.f90.o
+[ 37%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intjcmod.f90.o
+[ 37%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_gsiBiases.f90.o
+[ 37%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/obs_sensitivity.f90.o
+[ 37%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/zrnmi_mod.f90.o
+[ 37%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/buddycheck_mod.f90.o
+[ 37%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpjcmod.f90.o
+[ 37%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/gsd_update_mod.f90.o
+[ 37%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_obsdiagNode.F90.o
+[ 38%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/berror.f90.o
+[ 38%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/anberror.f90.o
+[ 38%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_obsNode.F90.o
+[ 38%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_aeroNode.F90.o
+
+[ 38%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_dbzNode.F90.o
+[ 38%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_colvkNode.F90.o
+[ 39%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_dwNode.F90.o
+[ 39%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_gpsNode.F90.o
+[ 39%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_gustNode.F90.o
+[ 39%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_howvNode.F90.o
+[ 40%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_lagNode.F90.o
+[ 40%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_lcbasNode.F90.o
+[ 40%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_lwcpNode.F90.o
+[ 40%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_mitmNode.F90.o
+[ 40%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_mxtmNode.F90.o
+[ 40%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_o3lNode.F90.o
+[ 40%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_ozNode.F90.o
+[ 40%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_pblhNode.F90.o
+[ 41%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_pcpNode.F90.o
+[ 41%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_pm10Node.F90.o
+[ 41%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_pmslNode.F90.o
+[ 41%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_pm2_5Node.F90.o
+[ 41%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_psNode.F90.o
+[ 41%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_pwNode.F90.o
+[ 41%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_qNode.F90.o
+[ 42%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_radNode.F90.o
+[ 42%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_rwNode.F90.o
+[ 42%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_spdNode.F90.o
+[ 42%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_sstNode.F90.o
+[ 43%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_swcpNode.F90.o
+[ 43%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_tcamtNode.F90.o
+[ 43%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_tcpNode.F90.o
+[ 43%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_td2mNode.F90.o
+[ 43%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_uwnd10mNode.F90.o
+[ 43%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_tNode.F90.o
+[ 44%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_visNode.F90.o
+[ 44%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_vwnd10mNode.F90.o
+[ 44%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_wNode.F90.o
+[ 44%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_wspd10mNode.F90.o
+[ 44%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_aerolNode.F90.o
+[ 44%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_lightNode.F90.o
+[ 44%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_obsLList.F90.o
+[ 44%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/patch2grid_mod.f90.o
+[ 45%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/aniso_ens_util.f90.o
+[ 46%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpco.f90.o
+[ 46%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intaod.f90.o
+[ 46%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intcldch.f90.o
+[ 46%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intco.f90.o
+[ 47%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intdbz.f90.o
+[ 47%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intdw.f90.o
+[ 47%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intgps.f90.o
+[ 47%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intgust.f90.o
+[ 47%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/inthowv.f90.o
+[ 47%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intlag.f90.o
+[ 48%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intlcbas.f90.o
+[ 48%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intlwcp.f90.o
+[ 48%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intmitm.f90.o
+[ 48%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intmxtm.f90.o
+[ 48%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intoz.f90.o
+[ 48%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intpblh.f90.o
+[ 48%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intpcp.f90.o
+[ 49%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intpm10.f90.o
+[ 49%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intpm2_5.f90.o
+[ 49%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intpmsl.f90.o
+[ 49%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intps.f90.o
+[ 49%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intpw.f90.o
+[ 49%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intq.f90.o
+[ 49%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intrad.f90.o
+[ 49%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intrw.f90.o
+[ 49%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intspd.f90.o
+[ 49%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intsst.f90.o
+[ 49%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intswcp.f90.o
+[ 49%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/inttcp.f90.o
+[ 50%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/inttcamt.f90.o
+[ 50%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/inttd2m.f90.o
+[ 50%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intt.f90.o
+[ 50%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intuwnd10m.f90.o
+[ 50%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intvis.f90.o
+[ 50%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intvwnd10m.f90.o
+[ 50%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intw.f90.o
+[ 50%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intwspd10m.f90.o
+[ 50%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/sub2fslab_mod.f90.o
+[ 50%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/ncepgfs_io.f90.o
+[ 50%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/genstats_gps.f90.o
+[ 50%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/gfs_stratosphere.f90.o
+[ 50%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpaod.f90.o
+[ 50%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpcldch.f90.o
+[ 50%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpdbz.f90.o
+[ 50%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpdw.f90.o
+[ 50%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpgps.f90.o
+[ 50%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpgust.f90.o
+[ 50%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stphowv.f90.o
+[ 51%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stplcbas.f90.o
+[ 51%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stplwcp.f90.o
+[ 51%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpmitm.f90.o
+[ 51%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpmxtm.f90.o
+[ 51%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpoz.f90.o
+[ 51%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stppblh.f90.o
+[ 51%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stppcp.f90.o
+[ 52%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stppm10.f90.o
+[ 52%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stppm2_5.f90.o
+[ 52%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stppmsl.f90.o
+[ 52%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpps.f90.o
+[ 52%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stppw.f90.o
+[ 52%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpq.f90.o
+[ 52%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stprw.f90.o
+[ 53%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpspd.f90.o
+[ 53%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpsst.f90.o
+[ 53%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpswcp.f90.o
+[ 53%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stptcamt.f90.o
+[ 53%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stptcp.f90.o
+[ 53%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stptd2m.f90.o
+[ 53%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpt.f90.o
+[ 53%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpuwnd10m.f90.o
+[ 54%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpvis.f90.o
+[ 54%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpvwnd10m.f90.o
+[ 54%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpw.f90.o
+[ 54%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpwspd10m.f90.o
+[ 54%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_obsNodeTypeManager.F90.o
+[ 54%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/anisofilter.f90.o
+[ 54%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stplight.f90.o
+[ 54%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stprad.f90.o
+[ 54%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_obsdiags.F90.o
+[ 55%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_obsHeadBundle.F90.o
+[ 55%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intjo.f90.o
+[ 55%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpjo.f90.o
+[ 55%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intall.f90.o
+[ 55%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/satthin.F90.o
+[ 55%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/convthin_time.f90.o
+[ 56%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/convthin.f90.o
+[ 56%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/deter_sfc_mod.f90.o
+[ 56%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_extOzone.F90.o
+[ 56%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_obs.F90.o
+[ 56%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/anisofilter_glb.f90.o
+[ 57%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/observer.F90.o
+[ 57%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/sfcobsqc.f90.o
+[ 57%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/Nst_Var_ESMFMod.f90.o
+[ 57%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/adjtest_obs.f90.o
+[ 58%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/adjtest.f90.o
+[ 58%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/class_get_pseudo_ensperts.f90.o
+[ 59%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/class_get_wrf_nmm_ensperts.f90.o
+[ 59%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/class_read_wrf_mass_files.f90.o
+[ 59%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/class_gfs_ensmod.f90.o
+[ 59%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/class_read_wrf_mass_guess.f90.o
+[ 59%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/class_read_wrf_nmm_files.f90.o
+[ 59%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/class_read_wrf_nmm_guess.f90.o
+[ 60%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/class_wrf_binary_interface.f90.o
+[ 60%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/class_wrf_netcdf_interface.f90.o
+[ 60%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/class_wrwrfmassa.f90.o
+[ 60%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/class_regional_io.f90.o
+[ 60%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/class_wrwrfnmma.f90.o
+[ 60%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/ens_spread_mod.f90.o
+[ 61%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/genex_mod.f90.o
+[ 61%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/general_tll2xy_mod.f90.o
+[ 61%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/gsi_bias.f90.o
+[ 61%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/gsi_enscouplermod.f90.o
+[ 61%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intlight.f90.o
+[ 61%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/m_dgeevx.F90.o
+[ 61%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/native_endianness.f90.o
+[ 61%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/obs_ferrscale.F90.o
+[ 61%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/prad_bias.f90.o
+[ 61%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/projmethod_support.f90.o
+[ 61%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/qnewton3.f90.o
+[ 62%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/rtlnmc_version3.f90.o
+[ 62%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/set_crtm_aerosolmod.f90.o
+[ 62%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/sst_retrieval.f90.o
+[ 62%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stpcalc.f90.o
+[ 63%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/ut_gsibundle.F90.o
+[ 63%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/wrf_params_mod.f90.o
+[ 63%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/anbkerror.f90.o
+[ 63%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/antest_maps0.f90.o
+[ 63%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/antest_maps0_glb.f90.o
+[ 63%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/bkgvar.f90.o
+[ 63%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/bkgvar_rewgt.f90.o
+[ 63%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/calctends.f90.o
+[ 63%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/calctends_ad.f90.o
+[ 63%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/calctends_no_ad.f90.o
+[ 63%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/calctends_no_tl.f90.o
+[ 63%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/calctends_tl.f90.o
+[ 63%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/cmaq_routines.f90.o
+[ 64%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/co_mop_ak.f90.o
+[ 64%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/combine_radobs.f90.o
+[ 64%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/compute_derived.f90.o
+[ 64%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/compute_fact10.f90.o
+[ 64%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/compute_qvar3d.f90.o
+[ 65%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/control2model.f90.o
+[ 65%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/control2model_ad.f90.o
+[ 65%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/control2state.f90.o
+[ 65%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/control2state_ad.f90.o
+[ 65%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/cplr_gfs_nstmod.f90.o
+[ 65%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/cvsection.f90.o
+[ 66%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/dtast.f90.o
+[ 66%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/enorm_state.f90.o
+[ 66%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/evaljo.f90.o
+[ 66%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/evalqlim.f90.o
+[ 66%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/fill_mass_grid2.f90.o
+[ 67%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/fill_nmm_grid2.f90.o
+[ 67%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/fpvsx_ad.f90.o
+[ 67%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/fv3_regional_interface.f90.o
+[ 67%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/general_read_gfsatm.f90.o
+[ 67%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/general_spectral_transforms.f90.o
+[ 67%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/general_transform.f90.o
+[ 67%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/general_write_gfsatm.f90.o
+[ 67%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/gengrid_vars.f90.o
+[ 67%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/genqsat.f90.o
+[ 68%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/get_derivatives.f90.o
+[ 68%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/get_derivatives2.f90.o
+[ 68%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/get_semimp_mats.f90.o
+[ 68%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/getcount_bufr.f90.o
+[ 68%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/getprs.f90.o
+[ 68%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/getuv.f90.o
+[ 68%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/getvvel.f90.o
+[ 69%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/grdcrd.f90.o
+[ 69%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/gsd_terrain_match_surfTobs.f90.o
+[ 69%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/gsdcloudanalysis.F90.o
+[ 70%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/gsdcloudanalysis4NMMB.F90.o
+[ 70%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/gsdcloudanalysis4gfs.F90.o
+[ 70%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/half_nmm_grid2.f90.o
+[ 70%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/hilbert_curve.f90.o
+[ 70%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/init_jcdfi.f90.o
+[ 70%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intrp2a.f90.o
+[ 71%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intrp3oz.f90.o
+[ 71%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/intrp_msk.f90.o
+[ 71%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/jgrad.f90.o
+[ 71%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/logcldch_to_cldch.f90.o
+[ 71%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/loglcbas_to_lcbas.f90.o
+[ 71%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/logvis_to_vis.f90.o
+[ 71%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/looplimits.f90.o
+[ 71%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/model_ad.F90.o
+[ 71%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/model_tl.F90.o
+[ 71%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/mp_compact_diffs_support.f90.o
+[ 71%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/mpl_bcast.f90.o
+[ 71%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/normal_rh_to_q.f90.o
+[ 71%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/obs_para.f90.o
+[ 71%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/obserr_allsky_mw.f90.o
+[ 71%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/pcgsqrt.f90.o
+[ 71%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/pcp_k.f90.o
+[ 71%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/penal.f90.o
+[ 71%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/polcarf.f90.o
+[ 72%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/precond.f90.o
+[ 72%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/precpd_ad.f90.o
+[ 72%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/prewgt.f90.o
+[ 72%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/prewgt_reg.f90.o
+[ 72%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/prt_guess.f90.o
+[ 72%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/psichi2uv_reg.f90.o
+[ 72%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/psichi2uvt_reg.f90.o
+[ 73%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/q_diag.f90.o
+[ 73%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/rdgrbsst.f90.o
+[ 74%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_Lightning.f90.o
+[ 74%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_NASA_LaRC_cloud.f90.o
+[ 74%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_aerosol.f90.o
+[ 74%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_ahi.f90.o
+[ 74%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_airs.f90.o
+[ 74%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_amsr2.f90.o
+[ 74%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_amsre.f90.o
+[ 74%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_anowbufr.f90.o
+[ 75%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_atms.f90.o
+[ 75%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_avhrr.f90.o
+[ 75%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_avhrr_navy.f90.o
+[ 75%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_bufrtovs.f90.o
+[ 75%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_co.f90.o
+[ 75%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_cris.f90.o
+[ 75%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_dbz_nc.f90.o
+[ 75%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_dbz_netcdf.f90.o
+[ 75%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_files.f90.o
+[ 75%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_fl_hdob.f90.o
+[ 75%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_gfs_ozone_for_regional.f90.o
+[ 75%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_gmi.f90.o
+[ 75%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_goesglm.f90.o
+[ 75%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_goesimg.f90.o
+[ 75%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_goesimgr_skycover.f90.o
+[ 76%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_goesndr.f90.o
+[ 76%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_gps.f90.o
+[ 76%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_iasi.f90.o
+[ 76%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_lag.f90.o
+[ 76%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_lidar.f90.o
+[ 76%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_mitm_mxtm.f90.o
+[ 76%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_modsbufr.f90.o
+[ 77%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_nasa_larc.f90.o
+[ 77%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_nsstbufr.f90.o
+[ 77%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_ozone.f90.o
+[ 77%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_pblh.f90.o
+[ 77%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_pcp.f90.o
+[ 77%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_prepbufr.f90.o
+[ 77%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_radar.f90.o
+[ 78%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_radar_wind_ascii.f90.o
+[ 78%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_radarref_mosaic.f90.o
+[ 78%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_rapidscat.f90.o
+[ 78%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_saphir.f90.o
+[ 78%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_satmar.f90.o
+[ 78%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_seviri.f90.o
+[ 78%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_sfcwnd.f90.o
+[ 79%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_ssmi.f90.o
+[ 79%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_ssmis.f90.o
+[ 79%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_tcps.f90.o
+[ 79%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/read_wcpbufr.f90.o
+[ 79%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/reorg_metar_cloud.f90.o
+[ 79%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/rfdpar.f90.o
+[ 79%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/rsearch.F90.o
+[ 79%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupbend.f90.o
+[ 79%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupcldch.f90.o
+[ 79%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupco.f90.o
+[ 79%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupdbz.f90.o
+[ 80%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupdw.f90.o
+[ 80%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupgust.f90.o
+[ 80%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setuphowv.f90.o
+[ 80%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setuplag.f90.o
+[ 80%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setuplcbas.f90.o
+[ 80%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setuplight.f90.o
+[ 80%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setuplwcp.f90.o
+[ 80%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupmitm.f90.o
+[ 81%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupmxtm.f90.o
+[ 81%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupoz.f90.o
+[ 81%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setuppblh.f90.o
+[ 81%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setuppcp.f90.o
+[ 81%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setuppm10.f90.o
+[ 81%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setuppm2_5.f90.o
+[ 81%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setuppmsl.f90.o
+[ 81%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupps.f90.o
+[ 82%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setuppw.f90.o
+[ 82%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupq.f90.o
+[ 82%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupref.f90.o
+[ 82%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setuprhsall.f90.o
+[ 82%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setuprw.f90.o
+[ 82%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupspd.f90.o
+[ 82%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupsst.f90.o
+[ 82%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupswcp.f90.o
+[ 83%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupt.f90.o
+[ 83%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setuptcamt.f90.o
+[ 83%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setuptcp.f90.o
+[ 83%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setuptd2m.f90.o
+[ 83%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupuwnd10m.f90.o
+[ 83%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupvis.f90.o
+[ 83%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupvwnd10m.f90.o
+[ 83%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupw.f90.o
+[ 84%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/setupwspd10m.f90.o
+[ 84%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/sfc_model.f90.o
+[ 84%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/simpin1.f90.o
+[ 84%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/simpin1_init.f90.o
+[ 84%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/smoothrf.f90.o
+[ 84%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/smoothwwrf.f90.o
+[ 85%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/smoothzrf.f90.o
+[ 85%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/statsco.f90.o
+[ 85%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/statsconv.f90.o
+[ 85%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/statslight.f90.o
+[ 86%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/statsoz.f90.o
+[ 86%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/statspcp.f90.o
+[ 86%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/statsrad.f90.o
+[ 86%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stop1.f90.o
+[ 86%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/strong_bal_correction.f90.o
+[ 86%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/strong_baldiag_inc.f90.o
+[ 86%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stub_ensmod.f90.o
+[ 87%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stub_pertmod.F90.o
+[ 87%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stub_set_crtm_aerosol.f90.o
+[ 87%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/stub_timermod.f90.o
+[ 87%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/sumslightbias.f90.o
+[ 87%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/tintrp2a.f90.o
+[ 87%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/tintrp3.f90.o
+[ 87%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/tpause.f90.o
+[ 87%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/tpause_t.F90.o
+[ 87%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/tune_pbl_height.f90.o
+[ 87%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/turbl.f90.o
+[ 87%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/turbl_ad.f90.o
+[ 88%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/turbl_tl.f90.o
+[ 88%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/tv_to_tsen.f90.o
+[ 88%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/unfill_mass_grid2.f90.o
+[ 88%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/unfill_nmm_grid2.f90.o
+[ 88%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/unhalf_nmm_grid2.f90.o
+[ 88%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/update_guess.f90.o
+[ 88%] Building Fortran object src/gsi/CMakeFiles/gsilib_shrd.dir/write_bkgvars_grid.f90.o
+[ 88%] Building C object src/gsi/CMakeFiles/gsilib_shrd.dir/blockIO.c.o
+[ 89%] Linking Fortran static library ../../lib/libgsilib_shrd.a
+[ 89%] Built target gsilib_shrd
+Scanning dependencies of target getsfcnstensupdp.x
+[ 89%] Building Fortran object util/EnKF/gfs/src/getsfcnstensupdp.fd/CMakeFiles/getsfcnstensupdp.x.dir/kinds.F90.o
+[ 89%] Building Fortran object util/EnKF/gfs/src/getsfcnstensupdp.fd/CMakeFiles/getsfcnstensupdp.x.dir/nstio_module.f90.o
+Scanning dependencies of target gsilib_wrf
+[ 89%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/cplr_read_wrf_mass_guess.f90.o
+[ 89%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/cplr_wrf_binary_interface.f90.o
+[ 89%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/cplr_read_wrf_mass_files.f90.o
+[ 89%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/cplr_wrf_netcdf_interface.f90.o
+[ 89%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/cplr_get_wrf_mass_ensperts.f90.o
+[ 89%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/gsi_nemsio_mod.f90.o
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+[ 89%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/cplr_read_wrf_nmm_files.f90.o
+[ 89%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/cplr_gfs_ensmod.f90.o
+[ 89%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/lanczos.F90.o
+[ 89%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/set_crtm_cloudmod.f90.o
+[ 89%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/crtm_interface.f90.o
+[ 89%] Building Fortran object util/EnKF/gfs/src/getsfcnstensupdp.fd/CMakeFiles/getsfcnstensupdp.x.dir/constants.f90.o
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+[ 89%] Building Fortran object util/EnKF/gfs/src/getsfcnstensupdp.fd/CMakeFiles/getsfcnstensupdp.x.dir/intrp_msk.f90.o
+[ 90%] Building Fortran object util/EnKF/gfs/src/getsfcnstensupdp.fd/CMakeFiles/getsfcnstensupdp.x.dir/getsfcnstensupdp.f90.o
+[ 90%] Building Fortran object util/EnKF/gfs/src/getsfcnstensupdp.fd/CMakeFiles/getsfcnstensupdp.x.dir/grdcrd.f90.o
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+ifort: command line warning #10121: overriding '-xCORE-AVX2' with '-xHOST'
+ifort: command line remark #10382: option '-xHOST' setting '-xCORE-AVX-I'
+/gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/util/EnKF/gfs/src/getsfcnstensupdp.fd/getsfcnstensupdp.f90(46): remark #7712: This variable has not been used.   [FNAME_SFCGES]
+  character(len=80) :: fname_dtfanl,fname_nstges,fname_sfcges,fname_sfcgcy,fname_nstanl,fname_sfcanl
+-------------------------------------------------^
+/gpfs/hps3/emc/da/noscrub/Emily.Liu/GSI/ProdGSI-clddet/util/EnKF/gfs/src/getsfcnstensupdp.fd/getsfcnstensupdp.f90(53): remark #7712: This variable has not been used.   [NPTS]
+  integer nrec_sfc, lonb, latb, n, npts
+-----------------------------------^
+[ 90%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/cplr_wrwrfmassa.f90.o
+[ 91%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/cplr_read_wrf_nmm_guess.f90.o
+[ 91%] Linking Fortran executable ../../../../../../exec/getsfcnstensupdp.x
+[ 91%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/cplr_wrwrfnmma.f90.o
+[ 91%] Built target getsfcnstensupdp.x
+[ 91%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/cplr_get_wrf_nmm_ensperts.f90.o
+[ 91%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/cplr_regional_io.f90.o
+[ 91%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/cplr_get_pseudo_ensperts.f90.o
+[ 91%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/gsimod.F90.o
+[ 91%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/hybrid_ensemble_isotropic.F90.o
+[ 91%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/bicglanczos.F90.o
+[ 91%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/pcgsoi.f90.o
+[ 91%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/get_gefs_ensperts_dualres.f90.o
+[ 92%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/read_guess.F90.o
+[ 92%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/get_gefs_for_regional.f90.o
+[ 92%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/bkgcov.f90.o
+[ 92%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/bicg.f90.o
+[ 93%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/ensctl2model.f90.o
+[ 93%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/ensctl2model_ad.f90.o
+[ 93%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/ensctl2state.f90.o
+[ 93%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/ensctl2state_ad.f90.o
+[ 93%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/getsiga.f90.o
+[ 93%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/test_obsens.f90.o
+[ 93%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/sqrtmin.f90.o
+[ 94%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/evaljgrad.f90.o
+[ 94%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/en_perts_io.f90.o
+[ 94%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/bkerror.f90.o
+[ 94%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/write_all.F90.o
+[ 94%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/glbsoi.f90.o
+[ 94%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/setupaod.f90.o
+[ 95%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/setuprad.f90.o
+[ 95%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/general_read_nmmb.f90.o
+[ 95%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/general_read_nmmb_radar.f90.o
+[ 95%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/get_nmmb_ensperts.f90.o
+[ 95%] Building Fortran object src/gsi/CMakeFiles/gsilib_wrf.dir/gsimain.f90.o
+[ 95%] Linking Fortran static library ../../lib/libgsilib_wrf.a
+[ 95%] Built target gsilib_wrf
+Scanning dependencies of target global_gsi.x
+[ 95%] Building Fortran object src/gsi/CMakeFiles/global_gsi.x.dir/gsimod.F90.o
+Scanning dependencies of target enkfdeplib
+[ 95%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/mpisetup.F90.o
+[ 95%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/specmod.f90.o
+[ 95%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/reducedgrid.f90.o
+[ 95%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/params.f90.o
+[ 95%] Building Fortran object src/gsi/CMakeFiles/global_gsi.x.dir/gsimain.f90.o
+[ 95%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/covlocal.f90.o
+[ 95%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/gridinfo_gfs.f90.o
+[ 95%] Linking Fortran executable ../../../exec/global_gsi.x
+[ 95%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/gridio_gfs.f90.o
+[ 95%] Built target global_gsi.x
+[ 95%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/statevec.f90.o
+[ 95%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/observer_gfs.f90.o
+[ 95%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/readconvobs.f90.o
+[ 95%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/readozobs.f90.o
+[ 95%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/readsatobs.f90.o
+[ 96%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/mpi_readobs.f90.o
+[ 96%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/controlvec.f90.o
+[ 96%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/enkf_obsmod.f90.o
+[ 96%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/kdtree2.f90.o
+[ 96%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/netcdf_io_wrf.f90.o
+[ 97%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/fftpack.f90.o
+[ 97%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/genqsat1.f90.o
+[ 97%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/write_logfile.f90.o
+[ 97%] Building Fortran object src/enkf/CMakeFiles/enkfdeplib.dir/expand_ens.f90.o
+[ 98%] Linking Fortran static library ../../lib/libenkfdeplib.a
+[ 98%] Built target enkfdeplib
+Scanning dependencies of target MODS1
+[ 98%] Building Fortran object src/enkf/CMakeFiles/MODS1.dir/gridinfo_gfs.f90.o
+[ 98%] Built target MODS1
+Scanning dependencies of target MODS2
+[ 98%] Building Fortran object src/enkf/CMakeFiles/MODS2.dir/gridio_gfs.f90.o
+[ 98%] Built target MODS2
+Scanning dependencies of target enkflib
+[ 98%] Building Fortran object src/enkf/CMakeFiles/enkflib.dir/gridinfo_gfs.f90.o
+[ 98%] Building Fortran object src/enkf/CMakeFiles/enkflib.dir/innovstats.f90.o
+[ 98%] Building Fortran object src/enkf/CMakeFiles/enkflib.dir/smooth_gfs.f90.o
+[ 98%] Building Fortran object src/enkf/CMakeFiles/enkflib.dir/loadbal.f90.o
+[ 98%] Building Fortran object src/enkf/CMakeFiles/enkflib.dir/inflation.f90.o
+[ 99%] Building Fortran object src/enkf/CMakeFiles/enkflib.dir/enkf_obs_sensitivity.f90.o
+[ 99%] Building Fortran object src/enkf/CMakeFiles/enkflib.dir/radbias.f90.o
+[ 99%] Building Fortran object src/enkf/CMakeFiles/enkflib.dir/letkf.F90.o
+[ 99%] Building Fortran object src/enkf/CMakeFiles/enkflib.dir/gridio_gfs.f90.o
+[ 99%] Building Fortran object src/enkf/CMakeFiles/enkflib.dir/enkf_main.f90.o
+[ 99%] Building Fortran object src/enkf/CMakeFiles/enkflib.dir/quicksort.f90.o
+[ 99%] Linking Fortran static library ../../lib/libenkflib.a
+[ 99%] Built target enkflib
+Scanning dependencies of target global_enkf.x
+[100%] Building Fortran object src/enkf/CMakeFiles/global_enkf.x.dir/enkf_main.f90.o
+[100%] Linking Fortran executable ../../../exec/global_enkf.x
+../../lib/libgsilib_shrd.a(qcmod.f90.o): In function `qcmod_mp_qc_irsnd_':
+qcmod.f90:(.text+0x761a): undefined reference to `cloud_detect_'
+make[2]: *** [../exec/global_enkf.x] Error 1
+make[1]: *** [src/enkf/CMakeFiles/global_enkf.x.dir/all] Error 2
+make: *** [all] Error 2

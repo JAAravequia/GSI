@@ -1,0 +1,30 @@
+INTERFACE
+SUBROUTINE CF_DIGITAL(&
+ & K__Sensor,&
+ & K__Band,&
+ & K__NumChans,&
+ & P__DBT,&
+ & K__INDEX,&
+ & K__Chan_High,&
+ & K__Chan_Low,&
+ & K__Chan_Windows,&
+ & K__Window_Width,&
+ & K__Cloud_Flag,&
+ & K__Cloud_Level,&
+ & K__Clear_Level,&
+ & K__Imager_Flag)
+INTEGER,INTENT(IN) :: K__SENSOR
+INTEGER,INTENT(IN) :: K__Band
+INTEGER,INTENT(IN) :: K__NumChans
+REAL  , INTENT(IN) :: P__DBT(:)
+INTEGER,INTENT(IN) :: K__INDEX(:)
+INTEGER,INTENT(IN) :: K__Window_Width
+INTEGER,INTENT(IN) :: K__Chan_High
+INTEGER,INTENT(IN) :: K__Chan_Low
+INTEGER,INTENT(IN) :: K__Chan_Windows(2)
+INTEGER,INTENT(INOUT) :: K__Cloud_Flag(:)
+INTEGER,INTENT(OUT) :: K__Cloud_Level
+INTEGER,INTENT(OUT) :: K__Clear_Level
+INTEGER,INTENT(IN) :: K__Imager_Flag
+END SUBROUTINE CF_DIGITAL
+END INTERFACE

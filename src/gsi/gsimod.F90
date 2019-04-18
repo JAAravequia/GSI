@@ -51,6 +51,7 @@
                        ssmis_method,ssmis_precond,gmi_method,amsr2_method,bias_zero_start
   use radinfo, only: tzr_qc,tzr_bufrsave
   use radinfo, only: crtm_coeffs_path
+  use radinfo, only: ecmwf_clddet  !emily 
   use ozinfo, only: diag_ozone,init_oz
   use aeroinfo, only: diag_aero, init_aero, init_aero_vars, final_aero_vars
   use coinfo, only: diag_co,init_co
@@ -589,7 +590,7 @@
        rmesh_vr,zmesh_dbz,zmesh_vr, ntilt_radarfiles, whichradar,&
        radar_no_thinning,ens_hx_dbz_cut,static_gsi_nopcp_dbz,rmesh_dbz,&
        minobrangevr, maxtiltdbz, mintiltvr,mintiltdbz,if_vterminal,if_vrobs_raw,&
-       if_model_dbz,imp_physics,lupp,netcdf_diag,binary_diag,l_wcp_cwm
+       if_model_dbz,imp_physics,lupp,netcdf_diag,binary_diag,l_wcp_cwm,ecmwf_clddet !emily
 
 ! GRIDOPTS (grid setup variables,including regional specific variables):
 !     jcap     - spectral resolution
