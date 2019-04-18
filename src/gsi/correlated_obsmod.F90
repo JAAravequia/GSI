@@ -671,7 +671,7 @@ real(r_kind),intent(inout) :: adaptinf(:)  ! stdev error
 real(r_kind),intent(inout) :: wgtjo(:)     ! weight in Jo-term
 real(r_kind),intent(inout) :: jacobian(:,:)! Jacobian matrix
 real(r_kind),intent(inout) :: pred(:,:)    ! bias predictors
-real(r_kind),intent(out)   :: cpred(:,:)    ! bias predictors
+real(r_kind),intent(inout) :: cpred(:,:)    ! bias predictors
 type(ObsErrorCov) :: ErrorCov              ! ob error covariance for given instrument
 
 ! !DESCRIPTION: This routine is the main entry-point to the outside world. 
@@ -851,9 +851,6 @@ else
             do kk=1,nsigjac
                row(kk,ii)=row(kk,ii)+jacobian(kk,IJsubset(jj))*ErrorCov%UT(jjj,iii)
             enddo
-!            do kk=1,npred
-!               row0(kk,ii)=row0(kk,ii)+pred(kk,IJsubset(ii))*ErrorCov%UT(jjj,iii)
-!            enddo
             col(ii)=col(ii)+ErrorCov%UT(jjj,iii)*depart(IJsubset(jj))
          enddo
       enddo
@@ -1146,7 +1143,6 @@ ncp=size(Isubset) ! number of channels actually used in this profile
 allocate(UT(ncp,ncp))
 
 ! extract subcomponent of R
-!Evecs = ErrorCov%R(Isubset,Isubset)
 do jj=1,ncp
    do ii=1,ncp
       UT(ii,jj) = ErrorCov%R(Isubset(ii),Isubset(jj))

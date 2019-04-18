@@ -2147,7 +2147,7 @@ END subroutine dec2bin
    real(r_kind), intent(inout) :: wgtjo(nchanl)
    real(r_kind), intent(inout) :: jacobian(nsigradjac,nchanl)
    real(r_kind), intent(inout) :: pred(npred,nchanl)
-   real(r_kind), intent(out)   :: cpred(npred,nchanl)
+   real(r_kind), intent(inout) :: cpred(npred,nchanl)
    integer(i_kind), intent(out) :: iinstr
    character(len=*),parameter::myname_ = myname//'*adjust_jac_'
    character(len=80) covtype
