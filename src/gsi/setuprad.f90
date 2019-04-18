@@ -350,6 +350,7 @@
   real(r_kind),dimension(nsig+1):: prsitmp
   real(r_kind),dimension(nchanl):: weightmax
   real(r_kind),dimension(nchanl):: cld_rbc_idx
+  real(r_kind),dimension(npred,nchanl):: cpred
   real(r_kind) :: ptau5deriv, ptau5derivmax
   real(r_kind) :: clw_guess,clw_guess_retrieval
 ! real(r_kind) :: predchan6_save   
@@ -1553,7 +1554,7 @@
               obvarinv = error0 ! on input
               if (miter>0) then
                  account_for_corr_obs = radinfo_adjust_jacobian (iinstr,isis,isfctype,nchanl,nsigradjac,npred,ich,&
-                                                                 varinv,utbc,obvarinv,adaptinf,wgtjo,jacobian,pred)
+                                                                 varinv,utbc,obvarinv,adaptinf,wgtjo,jacobian,pred,cpred)
               else
                  account_for_corr_obs =.false.
               end if
@@ -1612,8 +1613,9 @@
 !                         Multiplication of pred by a factor
 !                         of 5 improves the PCG convergence in this case
                           do k=1,npred
-                             rstats(k,m)=rstats(k,m)+my_head%pred(k,iii) &
-                                  *my_head%pred(k,iii)*five
+!                             rstats(k,m)=rstats(k,m)+my_head%pred(k,iii) &
+!                                  *my_head%pred(k,iii)*five
+                              rstats(k,m)=rstats(k,m)+cpred(k,iii)
                           end do
                        else
                          do k=1,npred

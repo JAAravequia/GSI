@@ -100,17 +100,16 @@ Column 2: method - specify different possibilities for handling the correspondin
            0 - diag of estimated R only
            1 - correlations from estimated R with variances as established by GSI
            2 - as (1), but for full R covariance
-           3 - diag of estimate R used as scaling factor to internally-defined errors
            4 - as (2), but also use the diag of R in place of satinfo errors in qc
 Column 3: kreq   - level of required condition for the corresponding cov(R)
           at present:
-          if<0 and method=0, 1 or 3  does not recondition matrix
+          if<0 and method=0 or 1  does not recondition matrix
           if>0 and method=1          recondition the (correlation) matrix following
                                      the 2nd method in Weston et al. (2014;
                                      Q. J. R. Meteorol. Soc., DOI: 10.1002/qj.2306)
                                      Note that the resulting correlation matrix has
                                      condition number equal to approximatetly twice kreq.
-          if>0 and method=0 or 3     recondition the (covariance) matrix using Westons 2nd method
+          if>0 and method=0     recondition the (covariance) matrix using Westons 2nd method
           if method=2 or 4           recondition the covariance matrix by inflating the
                                      diagional so that R_{r,r}=(sqrt{R_{r,r}+kreq)^2
                                      Note that kreq should be specified as 0<kreq<1
@@ -215,11 +214,10 @@ type(ObsErrorCov),pointer :: GSI_BundleErrorCov(:)
 ! strictly internal quantities
 character(len=*),parameter :: myname='correlated_obsmod'
 logical :: initialized_=.false.
-integer(i_kind),parameter :: methods_avail(6)=(/-1, & ! do nothing
+integer(i_kind),parameter :: methods_avail(5)=(/-1, & ! do nothing
                                                  0, & ! use dianonal of estimate(R)
                                                  1, & ! use full est(R), but decompose once for all
                                                  2, & ! use full est(R), but re-decomp at each profile
-                                                 3, & ! use diag est(R), as scaling factor to GSI(R)
                                                  4/)  ! same as 2, but use diag of (R) in qc
 contains
 
@@ -557,7 +555,7 @@ ndim = size(ErrorCov%R,1)
 ! This is to allow using the estimated error variances, but
 ! but still pretend the covariance is diagnoal - no correlations.
 ! This is largely for testing consistency of the implementation.
-if ( ErrorCov%method==0 .or. ErrorCov%method==3 ) then
+if ( ErrorCov%method==0) then
    ErrorCov%UTfull = zero
    do ii=1,ndim
       ErrorCov%UTfull(ii,ii)    = ErrorCov%R(ii,ii) 
@@ -655,7 +653,7 @@ end subroutine decompose_
 ! !INTERFACE:
 !
 logical function scale_jac_(depart,obvarinv,adaptinf,jacobian, nchanl,&
-                            jpch_rad,varinv,wgtjo,iuse,ich,ErrorCov,pred)
+                            jpch_rad,varinv,wgtjo,iuse,ich,ErrorCov,pred,cpred)
 ! !USES:
 use constants, only: tiny_r_kind
 use mpeu_util, only: die
@@ -673,6 +671,7 @@ real(r_kind),intent(inout) :: adaptinf(:)  ! stdev error
 real(r_kind),intent(inout) :: wgtjo(:)     ! weight in Jo-term
 real(r_kind),intent(inout) :: jacobian(:,:)! Jacobian matrix
 real(r_kind),intent(inout) :: pred(:,:)    ! bias predictors
+real(r_kind),intent(out)   :: cpred(:,:)    ! bias predictors
 type(ObsErrorCov) :: ErrorCov              ! ob error covariance for given instrument
 
 ! !DESCRIPTION: This routine is the main entry-point to the outside world. 
@@ -708,9 +707,9 @@ integer(i_kind),allocatable,dimension(:)   :: ircv
 integer(i_kind),allocatable,dimension(:)   :: ijac
 integer(i_kind),allocatable,dimension(:)   :: IRsubset
 integer(i_kind),allocatable,dimension(:)   :: IJsubset
-real(r_kind),   allocatable,dimension(:)   :: col,col0
-real(r_kind),   allocatable,dimension(:,:) :: row,row0,Ri,Rs
-real(r_kind) coeff,coeff2,qcadjusted
+real(r_kind),   allocatable,dimension(:)   :: col
+real(r_kind),   allocatable,dimension(:,:) :: row,row0
+real(r_kind) :: val
 integer(i_kind) :: method
 logical subset
 scale_jac_=.false.
@@ -810,13 +809,11 @@ else
 !  Multiply Jacobian with matrix of eigenvectors
 !  Multiply departure with "right" eigenvectors
    allocate(row(nsigjac,ncp),row0(nsigjac,ncp))
-   allocate(col(ncp),col0(ncp))
-   allocate(Ri(ncp,ncp),Rs(ncp,ncp))
+   allocate(col(ncp))
    row=zero
    row0=zero
    col=zero
-   Ri=zero
-   Rs=zero
+   cpred=zero
    method=ErrorCov%method
    if (ErrorCov%method==4) method=2
    select case ( method )   ! Re: estimated ob error cov
@@ -830,10 +827,10 @@ else
 
        do jj=1,ncp
           mm=IJsubset(jj)
-          qcadjusted = obvarinv(mm)**2*adaptinf(mm)
+          val = obvarinv(mm)**2*adaptinf(mm)
           obvarinv(mm) = one/ErrorCov%R(IRsubset(jj),IRsubset(jj))
-          adaptinf(mm) = qcadjusted
-          wgtjo(mm)    = qcadjusted/ErrorCov%R(IRsubset(jj),IRsubset(jj))
+          adaptinf(mm) = val
+          wgtjo(mm)    = val/ErrorCov%R(IRsubset(jj),IRsubset(jj))
        enddo
 
      case (2) ! case=2: uses full Re;
@@ -844,7 +841,9 @@ else
          do jj=ii,ncp
             jjj=IRsubset(jj)
             do kk=1,npred
-               row0(kk,ii)=row0(kk,ii)+pred(kk,IJsubset(ii))*ErrorCov%UT(iii,jjj)
+               val=pred(kk,IJsubset(ii))*ErrorCov%UT(iii,jjj)
+               row0(kk,ii)=row0(kk,ii)+val
+               cpred(kk,ii)=cpred(kk,ii)+(val*val)
             enddo
          enddo
          do jj=1,ii
@@ -852,6 +851,9 @@ else
             do kk=1,nsigjac
                row(kk,ii)=row(kk,ii)+jacobian(kk,IJsubset(jj))*ErrorCov%UT(jjj,iii)
             enddo
+!            do kk=1,npred
+!               row0(kk,ii)=row0(kk,ii)+pred(kk,IJsubset(ii))*ErrorCov%UT(jjj,iii)
+!            enddo
             col(ii)=col(ii)+ErrorCov%UT(jjj,iii)*depart(IJsubset(jj))
          enddo
       enddo
@@ -869,8 +871,6 @@ else
             pred(ii,mm)=row0(ii,jj)
          enddo
       enddo
-     case(3) 
-!delete? KAB
      case default !  case=1 is default; uses corr(Re) only
                   !    Ce = U E U^T  (U=Evecs; E=Evals hold eigen-pairs of corr(R))
                   !    inv(Rg) = D0^(-1/2) U inv(E) U^T D0^(-1/2)
@@ -888,9 +888,8 @@ else
        enddo
 
    end select
-   deallocate(col,col0)
+   deallocate(col)
    deallocate(row,row0)
-   deallocate(Ri,Rs)
 endif
 ! clean up
 deallocate(IJsubset)
