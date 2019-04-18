@@ -2105,7 +2105,7 @@ subroutine dec2bin(dec,bin,ndim)
 END subroutine dec2bin
 
  logical function adjust_jac_ (iinstr,isis,isfctype,nchanl,nsigradjac,npred,ich,varinv,&
-                               depart,obvarinv,adaptinf,wgtjo,jacobian,pred,cpred)
+                               depart,obvarinv,adaptinf,wgtjo,jacobian,pred,cpred,rsqrtinv)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    adjust_jac_
@@ -2146,8 +2146,9 @@ END subroutine dec2bin
    real(r_kind), intent(inout) :: adaptinf(nchanl)
    real(r_kind), intent(inout) :: wgtjo(nchanl)
    real(r_kind), intent(inout) :: jacobian(nsigradjac,nchanl)
-   real(r_kind), intent(inout) :: pred(npred,nchanl)
+   real(r_kind), intent(in)    :: pred(npred,nchanl)
    real(r_kind), intent(inout) :: cpred(npred,nchanl)
+   real(r_kind), intent(inout) :: rsqrtinv(nchanl,nchanl)
    integer(i_kind), intent(out) :: iinstr
    character(len=*),parameter::myname_ = myname//'*adjust_jac_'
    character(len=80) covtype
@@ -2181,6 +2182,6 @@ END subroutine dec2bin
    if( GSI_BundleErrorCov(iinstr)%nch_active < 0) return
 
    adjust_jac_ = corr_ob_scale_jac(depart,obvarinv,adaptinf,jacobian,nchanl,jpch_rad,varinv,wgtjo, &
-                                    iuse_rad,ich,GSI_BundleErrorCov(iinstr),pred,cpred)
+                                    iuse_rad,ich,GSI_BundleErrorCov(iinstr),pred,cpred,rsqrtinv)
 end function adjust_jac_
 end module radinfo

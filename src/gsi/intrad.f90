@@ -249,7 +249,6 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
 !   2015-04-01  W. Gu   - scale the bias correction term to handle the
 !                       - inter-channel correlated obs errors.
 !   2016-07-19  kbathmann - move decomposition of correlated R to outer loop.
-!   2019-04-15  kbathmann - move all correlated R compuations to scale_jac
 !
 !   input argument list:
 !     radhead  - obs type pointer to obs structure
@@ -310,7 +309,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
   integer(i_kind) ier,istatus
   integer(i_kind),dimension(nsig) :: i1n,i2n,i3n,i4n
   real(r_kind),allocatable,dimension(:):: val
-  real(r_kind) w1,w2,w3,w4
+  real(r_kind) w1,w2,w3,w4,Aval
   real(r_kind),dimension(nsigradjac):: tval,tdir
   real(r_kind) cg_rad,p0,wnotgross,wgross
   type(radNode), pointer :: radptr
@@ -484,9 +483,21 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
 
 !       Include contributions from remaining bias correction terms
         if( .not. ladtest_obs) then
-           do n=1,npred
-              val(nn)=val(nn)+spred(ix+n)*radptr%pred(n,nn)
-           end do
+           if(radptr%use_corr_obs)then
+              do mm=1,nn
+                 ic1=radptr%icx(mm)
+                 ix1=(ic1-1)*npred
+                 Aval=zero
+                 do n=1,npred
+                    Aval=Aval+spred(ix1+n)*radptr%pred(n,mm)
+                 enddo
+                 val(nn)=val(nn)+Aval*radptr%rsqrtinv(mm,nn)
+              enddo
+           else
+              do n=1,npred
+                 val(nn)=val(nn)+spred(ix+n)*radptr%pred(n,nn)
+              end do
+           endif
         end if
 
 
@@ -520,9 +531,20 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
 !          use compensated summation
            if( .not. ladtest_obs) then
               if(radptr%luse)then
-                 do n=1,npred
-                    rpred(ix+n)=rpred(ix+n)+radptr%pred(n,nn)*val(nn)
-                 end do
+                 if(radptr%use_corr_obs)then
+                    do mm=1,nn
+                       ic1=radptr%icx(mm)
+                       ix1=(ic1-1)*npred
+                       Aval=radptr%rsqrtinv(mm,nn)*val(nn)
+                       do n=1,npred
+                          rpred(ix1+n)=rpred(ix1+n)+Aval*radptr%pred(n,mm)
+                       enddo
+                    enddo
+                 else
+                    do n=1,npred
+                       rpred(ix+n)=rpred(ix+n)+radptr%pred(n,nn)*val(nn)
+                    end do
+                 end if
               end if
            end if ! not ladtest_obs
         end if

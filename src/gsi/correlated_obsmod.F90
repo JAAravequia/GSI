@@ -653,7 +653,7 @@ end subroutine decompose_
 ! !INTERFACE:
 !
 logical function scale_jac_(depart,obvarinv,adaptinf,jacobian, nchanl,&
-                            jpch_rad,varinv,wgtjo,iuse,ich,ErrorCov,pred,cpred)
+                            jpch_rad,varinv,wgtjo,iuse,ich,ErrorCov,pred,cpred,rsqrtinv)
 ! !USES:
 use constants, only: tiny_r_kind
 use mpeu_util, only: die
@@ -670,8 +670,9 @@ real(r_kind),intent(inout) :: obvarinv(:)  ! inverse of eval(diag(R)) !KAB delet
 real(r_kind),intent(inout) :: adaptinf(:)  ! stdev error
 real(r_kind),intent(inout) :: wgtjo(:)     ! weight in Jo-term
 real(r_kind),intent(inout) :: jacobian(:,:)! Jacobian matrix
-real(r_kind),intent(inout) :: pred(:,:)    ! bias predictors
-real(r_kind),intent(inout) :: cpred(:,:)    ! bias predictors
+real(r_kind),intent(in)    :: pred(:,:)    ! bias predictors
+real(r_kind),intent(inout) :: cpred(:,:)   ! bias predictor
+real(r_kind),intent(inout) :: rsqrtinv(:,:)!
 type(ObsErrorCov) :: ErrorCov              ! ob error covariance for given instrument
 
 ! !DESCRIPTION: This routine is the main entry-point to the outside world. 
@@ -708,7 +709,7 @@ integer(i_kind),allocatable,dimension(:)   :: ijac
 integer(i_kind),allocatable,dimension(:)   :: IRsubset
 integer(i_kind),allocatable,dimension(:)   :: IJsubset
 real(r_kind),   allocatable,dimension(:)   :: col
-real(r_kind),   allocatable,dimension(:,:) :: row,row0
+real(r_kind),   allocatable,dimension(:,:) :: row
 real(r_kind) :: val
 integer(i_kind) :: method
 logical subset
@@ -808,10 +809,10 @@ else
    npred=size(pred,1)
 !  Multiply Jacobian with matrix of eigenvectors
 !  Multiply departure with "right" eigenvectors
-   allocate(row(nsigjac,ncp),row0(nsigjac,ncp))
+   allocate(row(nsigjac,ncp))
    allocate(col(ncp))
-   row=zero
-   row0=zero
+   row=zero 
+   rsqrtinv=zero
    col=zero
    cpred=zero
    method=ErrorCov%method
@@ -842,7 +843,6 @@ else
             jjj=IRsubset(jj)
             do kk=1,npred
                val=pred(kk,IJsubset(ii))*ErrorCov%UT(iii,jjj)
-               row0(kk,ii)=row0(kk,ii)+val
                cpred(kk,ii)=cpred(kk,ii)+(val*val)
             enddo
          enddo
@@ -864,8 +864,8 @@ else
          do ii=1,nsigjac
             jacobian(ii,mm)=row(ii,jj)
          end do
-         do ii=1,npred
-            pred(ii,mm)=row0(ii,jj)
+         do ii=1,jj
+            rsqrtinv(ii,jj)=ErrorCov%UT(ii,jj)
          enddo
       enddo
      case default !  case=1 is default; uses corr(Re) only
@@ -886,7 +886,7 @@ else
 
    end select
    deallocate(col)
-   deallocate(row,row0)
+   deallocate(row)
 endif
 ! clean up
 deallocate(IJsubset)
