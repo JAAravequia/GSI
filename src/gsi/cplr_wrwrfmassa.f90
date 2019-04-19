@@ -135,6 +135,7 @@ contains
     integer(i_long),allocatable:: ibuf(:,:)
     integer(i_long),allocatable:: jbuf(:,:,:)
     real(r_single),allocatable::mub(:,:), landmask(:,:),snow(:,:),seaice(:,:)
+    real(r_single),allocatable::t1st2d(:,:)
     integer(i_kind) kdim_mub,i_snowT_check
     integer(i_kind) kt,kq,ku,kv
     integer(i_kind) mfcst
@@ -203,6 +204,7 @@ contains
     allocate(offset(num_mass_fields))
     allocate(igtype(num_mass_fields),kdim(num_mass_fields),kord(num_mass_fields))
     allocate(length(num_mass_fields))
+    allocate(t1st2d(im,jm))
   
   !    igtype is a flag indicating whether each input MASS field is h-, u-, or v-grid
   !    and whether integer or real
@@ -1089,11 +1091,20 @@ contains
              (ifld >=i_tslb .and. ifld <=i_tslb+ksize-1) ) then 
   ! for 2X soil nudging
              i_snowT_check=0
-             if(ifld==i_tsk .or. ifld==i_soilt1 .or. ifld ==i_tslb) &
-                  i_snowT_check=1 
+             if(ifld==i_tsk) i_snowT_check=1
+             if(ifld==i_soilt1) i_snowT_check=4
+             if(ifld==i_tslb) i_snowT_check=3
              if(ifld >=i_smois .and. ifld <=i_smois+ksize-1) i_snowT_check=2
              call unfill_mass_grid2t_ldmk(tempa(1,ifld),im,jm,temp1,landmask, &
-                                          snow,seaice,i_snowT_check)
+                                          snow,seaice,t1st2d,i_snowT_check)
+  ! make sure soil moisture is larger than 0.002 (sand).
+             if(ifld >=i_smois .and. ifld <=i_smois+ksize-1) then
+                do i=1,im
+                   do j=1,jm
+                      temp1(i,j) = max(temp1(i,j),0.002_r_single)
+                   end do
+                end do
+             endif
           else
              call unfill_mass_grid2t(tempa(1,ifld),im,jm,temp1)
           endif
@@ -1377,6 +1388,7 @@ contains
     deallocate(landmask)
     deallocate(snow)
     deallocate(seaice)
+    deallocate(t1st2d)
     deallocate(tempa)
     deallocate(tempb)
     deallocate(temp1)
@@ -1840,7 +1852,7 @@ contains
     real(r_single),allocatable::temp1(:),temp1u(:),temp1v(:),tempa(:),tempb(:)
     real(r_single),allocatable::all_loc(:,:,:)
     real(r_single),allocatable::strp(:)
-    real(r_single),allocatable::landmask(:),snow(:),seaice(:)
+    real(r_single),allocatable::landmask(:),snow(:),seaice(:),t1st2d(:),pt2t(:)
     character(6) filename
     integer(i_kind) i,j,k,kt,kq,ku,kv,it,i_psfc,i_t,i_q,i_u,i_v,i_w,i_dbz
     integer(i_kind) i_qc,i_qi,i_qr,i_qs,i_qg,i_qnr,i_qni,i_qnc
@@ -1925,7 +1937,7 @@ contains
     num_mass_fields_base=2+4*lm + 1
     num_mass_fields=num_mass_fields_base
 !    The 9 3D cloud analysis fields are: ql,qi,qr,qs,qg,qnr,qni,qnc,tt
-    if(l_cloud_analysis .or. n_actual_clouds>0) num_mass_fields=num_mass_fields + 9*lm
+    if(l_cloud_analysis .and. n_actual_clouds>0) num_mass_fields=num_mass_fields + 9*lm
     if(l_gsd_soilTQ_nudge) num_mass_fields=num_mass_fields+2*nsig_soil+1
     if(i_use_2mt4b > 0 ) num_mass_fields=num_mass_fields+2
     if(i_use_2mt4b <= 0 .and. i_use_2mq4b > 0) num_mass_fields=num_mass_fields+1
@@ -1989,7 +2001,7 @@ contains
     endif
   
   ! for hydrometeors
-    if(l_cloud_analysis .or. n_actual_clouds>0) then
+    if(l_cloud_analysis .and. n_actual_clouds>0) then
        i_qc=i_q2+1
        i_qr=i_qc+lm
        i_qs=i_qr+lm
@@ -2031,7 +2043,10 @@ contains
     endif
     
     allocate(temp1(im*jm),temp1u((im+1)*jm),temp1v(im*(jm+1)))
-    allocate(landmask(im*jm),snow(im*jm),seaice(im*jm))
+    if(mype==0) then
+       allocate(landmask(im*jm),snow(im*jm),seaice(im*jm))
+       allocate(t1st2d(im*jm),pt2t(im*jm))
+    endif
   
     if(mype == 0) write(6,*)' at 2 in wrwrfmassa'
   
@@ -2059,7 +2074,7 @@ contains
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'dbz',ges_dbz,istatus );ier=ier+istatus
        if (ier/=0) then
            write(6,*)'READ_WRF_MASS_BINARY_GUESS: getpointer failed, cannot do cloud analysis'
-           if (l_cloud_analysis .or. n_actual_clouds>0) call stop2(999)
+           if (l_cloud_analysis .and. n_actual_clouds>0) call stop2(999)
        endif
     endif
   
@@ -2144,7 +2159,7 @@ contains
        ku=ku+1
        kv=kv+1
   ! for hydrometeors
-       if(l_cloud_analysis .or. n_actual_clouds>0) then
+       if(l_cloud_analysis .and. n_actual_clouds>0) then
           kqc=kqc+1
           kqi=kqi+1
           kqr=kqr+1
@@ -2182,7 +2197,7 @@ contains
              all_loc(j,i,kq)= ges_q(j,i,k)/(one-ges_q(j,i,k))
              	
   ! for hydrometeors      
-             if(l_cloud_analysis .or. n_actual_clouds>0) then
+             if(l_cloud_analysis .and. n_actual_clouds>0) then
                 all_loc(j,i,kqc)=ges_qc(j,i,k)
                 all_loc(j,i,kqi)=ges_qi(j,i,k)
                 all_loc(j,i,kqr)=ges_qr(j,i,k)
@@ -2288,6 +2303,10 @@ contains
        end do
        call unfill_mass_grid2t(tempa,im,jm,temp1)
        write(lendian_out)temp1
+       do i=1,im*jm
+          work_prsl = one_tenth*(aeta1_ll(1)*(temp1(i)/r100-pt_ll)+aeta2_ll(1)+pt_ll)
+          pt2t(i)   = (work_prsl/r100)**rd_over_cp_mass
+       enddo
     end if
   
   !  FIS read/write
@@ -2311,6 +2330,12 @@ contains
           end do
           call unfill_mass_grid2t(tempa,im,jm,temp1)
           write(lendian_out)temp1
+          if(k==1) then
+             do i=1,im*jm
+                t1st2d(i)=temp1(i)*pt2t(i)  ! convert potential to sensible T
+             end do
+             pt2t=t1st2d   ! save a copy
+          endif
        end if
     end do
   
@@ -2530,7 +2555,11 @@ contains
              end do
              i_snowT_check=2
              call unfill_mass_grid2t_ldmk(tempa,im,jm,temp1,landmask,&
-                                          snow,seaice,i_snowT_check)
+                                          snow,seaice,t1st2d,i_snowT_check)
+  ! make sure soil moisture is larger than 0.002 (sand).
+             do i=1,im*jm
+                temp1(i) = max(temp1(i),0.002_r_single)
+             enddo
              write(lendian_out)temp1
           end if
        end do
@@ -2547,10 +2576,10 @@ contains
              do i=1,iglobal
                 tempa(i)=tempa(i)-tempb(i)
              end do
-             i_snowT_check=0
-             if(k==1) i_snowT_check=1
+             i_snowT_check=3
+             if(k==1) t1st2d=temp1-t1st2d
              call unfill_mass_grid2t_ldmk(tempa,im,jm,temp1,landmask, &
-                                          snow,seaice,i_snowT_check)
+                                          snow,seaice,t1st2d,i_snowT_check)
              write(lendian_out)temp1
           end if
        end do
@@ -2581,8 +2610,9 @@ contains
              end if
           end do
           i_snowT_check=1
+          t1st2d=temp1-pt2t
           call unfill_mass_grid2t_ldmk(tempa,im,jm,temp1,landmask, &
-                                       snow,seaice,i_snowT_check)
+                                       snow,seaice,t1st2d,i_snowT_check)
           write(lendian_out)temp1
        end if
     else
@@ -2632,9 +2662,9 @@ contains
              tempa(i)=tempa(i)-tempb(i)
           end do
           write(6,*)' at 10.3 in wrwrfmassa,max,min(tempa)=',maxval(tempa),minval(tempa)
-          i_snowT_check=1
+          i_snowT_check=4
           call unfill_mass_grid2t_ldmk(tempa,im,jm,temp1,landmask, &
-                                      snow,seaice,i_snowT_check)
+                                      snow,seaice,t1st2d,i_snowT_check)
           write(6,*)' at 10.4 in wrwrfmassa,max,min(temp1)=',maxval(temp1),minval(temp1)
           write(lendian_out)temp1
        end if     !endif mype==0
@@ -2664,7 +2694,7 @@ contains
     endif  ! i_use_2mt4b>0
   !
   ! for saving cloud analysis results
-    if(l_cloud_analysis .or. n_actual_clouds>0) then
+    if(l_cloud_analysis .and. n_actual_clouds>0) then
   ! Update qc
        kqc=i_qc-1
        do k=1,nsig
@@ -2908,9 +2938,13 @@ contains
     deallocate(temp1v)
     deallocate(tempa)
     deallocate(tempb)
-    deallocate(landmask)
-    deallocate(snow)
-    deallocate(seaice)
+    if(mype==0) then
+       deallocate(landmask)
+       deallocate(snow)
+       deallocate(seaice)
+       deallocate(t1st2d)
+       deallocate(pt2t)
+    endif
     
   end subroutine wrwrfmassa_netcdf_wrf
 

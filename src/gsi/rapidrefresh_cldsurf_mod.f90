@@ -21,6 +21,7 @@ module rapidrefresh_cldsurf_mod
 !                              coastline area
 !  04-01-2017 Hu        added option i_gsdqc to turn on special observation qc
 !                              from GSD (for RAP/HRRR application)
+!   2018-09-12 Ladwig   added options l_precip_clear_only
 ! 
 ! Subroutines Included:
 !   sub init_rapidrefresh_cldsurf  - initialize RR related variables to default values
@@ -85,6 +86,9 @@ module rapidrefresh_cldsurf_mod
 !                         =0. no cloud analysis (default)
 !                         for ARW
 !                         =1.  cloud analysis after var analysis
+!                         =3.  cloud analysis only with hybrometeors NETCDF I/O
+!                         =5.  skip cloud analysis and NETCDF file update
+!                         =6.  cloud analysis only and do hybrometeors NETCDF/O
 !                         =2  cloud analysis for NAM
 !                         =30  cloud analysis for GFS
 !      i_gsdsfc_uselist  - options for how to use surface observation use or
@@ -115,7 +119,12 @@ module rapidrefresh_cldsurf_mod
 !                              from GSD (for RAP/HRRR application)
 !                         =0 turn off
 !                         =2 turn on
-!
+!      qv_max_inc    -  namelist real for limiting the maximum water vapor increment
+!      ioption       - interpolation option for satellite mapping 
+!                       = 1  if selection is nearest neighbor
+!                       = 2  if selection is median of samples
+!      l_precip_clear_only  =true, only clear precipatating hydrometeors
+!      l_fog_off            =true, turn off the impact of metar visibilty obs on cloud fields 
 !
 ! attributes:
 !   language: f90
@@ -169,6 +178,10 @@ module rapidrefresh_cldsurf_mod
   public :: l_closeobs
   public :: i_coastline
   public :: i_gsdqc
+  public :: qv_max_inc
+  public :: ioption
+  public :: l_precip_clear_only
+  public :: l_fog_off
 
   logical l_cloud_analysis
   real(r_kind)  dfi_radar_latent_heat_time_period
@@ -209,6 +222,10 @@ module rapidrefresh_cldsurf_mod
   logical              l_closeobs
   integer(i_kind)      i_coastline
   integer(i_kind)      i_gsdqc
+  real(r_kind)         qv_max_inc
+  integer(i_kind)      ioption
+  logical              l_precip_clear_only
+  logical              l_fog_off
 
 contains
 
@@ -299,6 +316,10 @@ contains
     l_closeobs = .false.                              ! .true. = pick the obs close to analysis time
     i_coastline = 0                                   !  turn coastline surface observation operator off  
     i_gsdqc  = 0                                      !  turn gsd obs QC off
+    qv_max_inc   = 0.005_r_kind                       ! maximum water vapor increment in kg/kg
+    ioption  = 2                                      ! default is median of samples
+    l_precip_clear_only = .false.                     ! .true. only use precip to clear
+    l_fog_off = .false.                               ! .true. is to turn off fog updates
     return
   end subroutine init_rapidrefresh_cldsurf
 
