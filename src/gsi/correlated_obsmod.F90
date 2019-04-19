@@ -865,7 +865,7 @@ else
             jacobian(ii,mm)=row(ii,jj)
          end do
          do ii=1,jj
-            rsqrtinv(ii,jj)=ErrorCov%UT(ii,jj)
+            rsqrtinv(ii,jj)=ErrorCov%UT(IRsubset(ii),IRsubset(jj))
          enddo
       enddo
      case default !  case=1 is default; uses corr(Re) only

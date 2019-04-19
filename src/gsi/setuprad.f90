@@ -1630,6 +1630,7 @@
               my_head%use_corr_obs=.false.
               if (account_for_corr_obs) then
                  allocate(my_head%rsqrtinv(my_head%nchan,my_head%nchan))
+!                 my_head%rsqrtinv=TRANSPOSE(rsqrtinv(1:my_head%nchan,1:my_head%nchan))
                  my_head%rsqrtinv(1:my_head%nchan,1:my_head%nchan)=rsqrtinv(1:my_head%nchan,1:my_head%nchan)
                  my_head%use_corr_obs=.true.
               end if
