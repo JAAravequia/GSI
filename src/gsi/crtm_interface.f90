@@ -1885,7 +1885,7 @@ end subroutine destroy_crtm
               if (cloud_cont(k,3) >= 1.0e-6_r_kind) hwp_guess(3) = hwp_guess(3) +  cloud_cont(k,3)        
               if (cloud_cont(k,4) >= 1.0e-6_r_kind) hwp_guess(4) = hwp_guess(4) +  cloud_cont(k,4)        
               if (cloud_cont(k,5) >= 1.0e-6_r_kind) hwp_guess(5) = hwp_guess(5) +  cloud_cont(k,5)        
-              if (.not. regional .and. icfs==0) atmosphere(1)%cloud_fraction(k) = cf(kk2) 
+!crtm.2.3.x   if (.not. regional .and. icfs==0 .and. fv3_full_hydro) atmosphere(1)%cloud_fraction(k) = cf(kk2) 
 
                 !Add lower bound to all hydrometers 
                 !note: may want to add lower bound value for effective radius  
@@ -2019,7 +2019,7 @@ end subroutine destroy_crtm
 
 !  Simulated brightness temperatures
        tsim(i)=rtsolution(i,1)%brightness_temperature
-       if (present(tcc)) tcc(i)=rtsolution(i,1)%total_cloud_cover        
+!      if (present(tcc)) tcc(i)=rtsolution(i,1)%total_cloud_cover ! crtm2.3.x        
 
        if (n_clouds_fwd_wk>0 .and. present(tsim_clr)) then
           if (mixed_use) then 
