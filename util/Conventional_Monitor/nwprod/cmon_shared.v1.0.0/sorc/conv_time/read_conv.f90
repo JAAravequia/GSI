@@ -416,7 +416,7 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
    enddo
 
 !   write(6,900) (twork(k,1,1,1,1),k=1,np) 
-   900 format(13f8.3)
+   900 format(13f8.2)
    close(41)
 
    open(51,file='u_stas',form='unformatted')
@@ -508,8 +508,8 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
        write(6,900) ( sqrt( gpswork(k,1,4,1,1) / gpswork(k,1,1,1,1) ), k=1,np )  
        print *, ' '
        print *, '  gps pen/count, all pressure bins, dtype 1, region 1, used :'
-!       write(6,900) ( gpswork(k,1,5,1,1) / gpswork(k,1,1,1,1), k=1,np ) 
-       write(6,900) ( gpswork(k,1,5,1,1), k=1,np ) 
+       write(6,900) ( gpswork(k,1,5,1,1) / gpswork(k,1,1,1,1), k=1,np ) 
+!       write(6,900) ( gpswork(k,1,5,1,1), k=1,np ) 
 
 !   enddo
 
