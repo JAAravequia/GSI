@@ -503,7 +503,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
 
         if(luse_obsdiag)then
            if (lsaveobsens) then
-              val(nn) = val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
+              if(.not.radptr%use_corr_obs) val(nn)=val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
               radptr%diags(nn)%ptr%obssen(jiter) = val(nn)
            else
               if (radptr%luse) radptr%diags(nn)%ptr%tldepart(jiter) = val(nn)
@@ -524,7 +524,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
                  val(nn) = val(nn)*(one-p0)
               endif
 
-              if(.not. ladtest_obs )val(nn) = val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
+              if((.not.ladtest_obs).and.(.not.radptr%use_corr_obs)) val(nn) = val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
            endif
 
 !          Extract contributions from bias correction terms

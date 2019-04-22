@@ -310,7 +310,11 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
         
 !          calculate contribution to J
            do kk=1,max(1,nstep)
-              term(kk)  = radptr%err2(nn)*rad(kk)*rad(kk)
+              if(radptr%use_corr_obs) then
+                 term(kk)  = rad(kk)*rad(kk)
+              else
+                 term(kk)  = radptr%err2(nn)*rad(kk)*rad(kk)
+              endif
            end do
 
 !          Modify penalty term if nonlinear QC
@@ -324,9 +328,17 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
               end do
            endif
 
-           out(1) = out(1) + term(1)*radptr%raterr2(nn)
+           if(radptr%use_corr_obs) then
+              out(1) = out(1) + term(1)
+           else
+              out(1) = out(1) + term(1)*radptr%raterr2(nn)
+           endif
            do kk=2,nstep
-              out(kk) = out(kk) + (term(kk)-term(1))*radptr%raterr2(nn)
+              if(radptr%use_corr_obs) then
+                 out(kk) = out(kk) + (term(kk)-term(1))
+              else
+                 out(kk) = out(kk) + (term(kk)-term(1))*radptr%raterr2(nn)
+              endif
            end do
 
         end do

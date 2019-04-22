@@ -336,7 +336,7 @@
   real(r_kind),dimension(npred+2):: predterms
   real(r_kind),dimension(npred+2,nchanl):: predbias
   real(r_kind),dimension(npred,nchanl):: pred,predchan
-  real(r_kind),dimension(nchanl):: obvarinv,utbc,adaptinf,wgtjo
+  real(r_kind),dimension(nchanl):: obvarinv,utbc,wgtjo
   real(r_kind),dimension(nchanl):: varinv,varinv_use,error0,errf,errf0
   real(r_kind),dimension(nchanl):: tb_obs,tbc,tbcnob,tlapchn,tb_obs_sdv
   real(r_kind),dimension(nchanl):: tnoise,tnoise_cld
@@ -351,10 +351,11 @@
   real(r_kind),dimension(nsig+1):: prsitmp
   real(r_kind),dimension(nchanl):: weightmax
   real(r_kind),dimension(nchanl):: cld_rbc_idx
-  real(r_kind),dimension(npred,nchanl):: cpred
+!  real(r_kind),dimension(npred,nchanl):: cpred
+  real(r_kind),dimension(nchanl):: Rinv
   real(r_kind),dimension(nchanl,nchanl):: rsqrtinv
   real(r_kind) :: ptau5deriv, ptau5derivmax
-  real(r_kind) :: clw_guess,clw_guess_retrieval
+  real(r_kind) :: clw_guess,clw_guess_retrieval,tnoise_save
 ! real(r_kind) :: predchan6_save   
   integer(i_kind),dimension(nchanl):: ich,id_qc,ich_diag
   integer(i_kind),dimension(nobs_bins) :: n_alloc
@@ -758,6 +759,27 @@
         else if(mixed) then
           isfctype=4
         endif
+        do jc=1,nchanl
+           j=ich(jc)
+
+           tnoise(jc)=varch(j)
+
+           if(sea   .and. (varch_sea(j)>zero))   tnoise(jc)=varch_sea(j)
+           if(land  .and. (varch_land(j)>zero))  tnoise(jc)=varch_land(j)
+           if(ice   .and. (varch_ice(j)>zero))   tnoise(jc)=varch_ice(j)
+           if(snow  .and. (varch_snow(j)>zero))  tnoise(jc)=varch_snow(j)
+           if(mixed .and. (varch_mixed(j)>zero)) tnoise(jc)=varch_mixed(j)
+           tnoise_save = tnoise(jc)
+
+           channel_passive=iuse_rad(j)==-1 .or. iuse_rad(j)==0
+           if (iuse_rad(j)< -1 .or. (channel_passive .and.  &
+                .not.rad_diagsave)) tnoise(jc)=r1e10
+           if (passive_bc .and. channel_passive) tnoise(jc)=tnoise_save
+
+           error0(jc) = tnoise(jc)
+           errf0(jc) = error0(jc)
+
+        end do
 
 !       Count data of different surface types
         if(luse(n))then
@@ -1071,31 +1093,6 @@
              endif
            endif
         end if ! radmod%lcloud_fwd .and. radmod%ex_biascor
-        if(sea.and.(varch_sea(ich(1))>zero)) then
-           do i=1,nchanl
-              tnoise(i)=varch_sea(ich(i))
-           enddo
-        else if(land.and.(varch_land(ich(1))>zero)) then
-           do i=1,nchanl
-              tnoise(i)=varch_land(ich(i))
-           enddo
-        else if(ice.and.(varch_ice(ich(1))>zero)) then
-           do i=1,nchanl
-              tnoise(i)=varch_ice(ich(i))
-           enddo
-        else if(snow.and.(varch_snow(ich(1))>zero)) then
-           do i=1,nchanl
-              tnoise(i)=varch_snow(ich(i))
-           enddo
-        else if(mixed.and.(varch_mixed(ich(1))>zero)) then
-           do i=1,nchanl
-              tnoise(i)=varch_mixed(ich(i))
-           enddo
-        endif        
-        do i=1,nchanl
-           error0(i) = tnoise(i) 
-           errf0(i) = error0(i)
-        end do
 
 !       Assign observation error for all-sky radiances 
         if (radmod%lcloud_fwd .and. eff_area)  then   
@@ -1552,12 +1549,14 @@
 
               utbc=tbc
               wgtjo= varinv     ! weight used in Jo term
-              adaptinf = varinv ! on input
+              do ii=1,nchanl
+                 obvarinv(ich(ii))=error0(ii)**2
+              enddo
               obvarinv = error0 ! on input
               if (miter>0) then
                  account_for_corr_obs = radinfo_adjust_jacobian(iinstr,isis,isfctype,nchanl,nsigradjac,npred, &
-                                                                ich,varinv,utbc,obvarinv,adaptinf,wgtjo, &
-                                                                jacobian,pred,cpred,rsqrtinv)
+                                                                ich,varinv,utbc,obvarinv,wgtjo, &
+                                                                jacobian,pred,Rinv,rsqrtinv)
               else
                  account_for_corr_obs =.false.
               end if
@@ -1569,14 +1568,12 @@
                     iii=iii+1
 
                     if(account_for_corr_obs) then
-                      my_head%res(iii)= utbc(ii)                   ! evecs(R)*[obs-ges innovation]
-                      my_head%err2(iii)= obvarinv(ii)              ! 1/eigenvalue(R)
-                      my_head%raterr2(iii)=adaptinf(ii)            ! inflation factor 
+                      my_head%res(iii)= utbc(ii)                   ! R^{-1/2}*[obs-ges innovation]
                     else
                       my_head%res(iii)= tbc(ii)                    ! obs-ges innovation
-                      my_head%err2(iii)= one/error0(ii)**2         ! 1/(obs error)**2  (original uninflated error)
-                      my_head%raterr2(iii)=error0(ii)**2*varinv(ii) ! (original error)/(inflated error)
                     endif
+                    my_head%err2(iii)= one/obvarinv(ii)         ! 1/(obserror)**2  (original uninflated error)
+                    my_head%raterr2(iii)=error0(ii)**2*varinv(ii) ! (original error)/(inflated error)
                     my_head%icx(iii)= m                         ! channel index
 
                     do k=1,npred
@@ -1614,7 +1611,9 @@
                     if (newpc4pred .and. luse(n)) then
                        if (account_for_corr_obs) then
                           do k=1,npred
-                             rstats(k,m)=rstats(k,m)+cpred(k,iii)
+!                             rstats(k,m)=rstats(k,m)+cpred(k,iii)
+                             rstats(k,m)=rstats(k,m)+my_head%pred(k,iii) &
+                                  *my_head%pred(k,iii)*Rinv(iii)
                           end do
                        else
                          do k=1,npred
