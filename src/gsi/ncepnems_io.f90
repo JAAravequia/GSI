@@ -390,7 +390,8 @@ contains
 ! program history log:
 !   2010-12-23  Huang   - initial code, based on read_gfs_chem
 !   2011-06-29  todling - no explict reference to internal bundle arrays
-!   2019-03-21 Wei/Martin - modified to read NEMS aerosols
+!   2019-04-19 Wei/Martin - modified to read NEMS aerosols from either
+!                           NGAC or FV3-Chem
 !
 !   input argument list:
 !
@@ -412,7 +413,7 @@ contains
     use gsi_chemguess_mod, only: gsi_chemguess_get
     use gsi_bundlemod, only: gsi_bundle,gsi_bundlecreate,gsi_bundledestroy
     use gsi_bundlemod, only: gsi_grid,gsi_gridcreate
-    use gridmod, only: regional
+    use gridmod, only: regional,use_fv3_aero
     use radiance_mod, only: n_aerosols_fwd,aerosol_names_fwd 
     use gridmod, only: grd_a,sp_a,regional
     use guess_grids, only: ifilesig,ifileaer,nfldaer
@@ -1946,7 +1947,8 @@ contains
 !                        read/rite sequence.
 !   2013-10-25  todling  reposition load_grid to commvars
 !   2016-07-28  mahajan  update with bundling ability
-!   2019-03-21 Wei/Martin - added gfschem_bundle to write optional aerosols
+!   2019-04-19 Wei/Martin - added gfschem_bundle to write optional aerosols
+!                           for both FV3-Chem and NGAC
 !
 !   input argument list:
 !     filename  - file to open and write to
@@ -1980,6 +1982,7 @@ contains
     use gridmod, only: ntracer
     use gridmod, only: ncloud
     use gridmod, only: strip,jcap_b,bk5
+    use gridmod, only: use_fv3_aero
 
     use general_commvars_mod, only: load_grid,fill2_ns,filluv2_ns
     use general_specmod, only: spec_vars
@@ -2051,7 +2054,6 @@ contains
                          du001sm,du002sm,du003sm,du004sm,du005sm, &
                          ss001sm,ss002sm,ss003sm,ss004sm, &
                          so4sm,ocphosm,ocphism,bcphosm,bcphism
-    real(r_kind) :: lmax,lmin
     integer(i_kind) :: m
     real(r_kind),dimension(max(grd%iglobal,grd%itotsub))     :: work1,work2
     real(r_kind),dimension(grd%nlon,grd%nlat-2):: grid
@@ -2643,605 +2645,681 @@ contains
 ! aerosol output if laeroana_gocart is T
 ! du001
     if (laeroana_gocart) then
-    do k=1,grd%nsig
-       lmax=0.
-       lmin=0.
-       call mpi_gatherv(du001sm(1,k),grd%ijn(mm1),mpi_rtype,&
-            work1,grd%ijn,grd%displs_g,mpi_rtype,&
-            mype_out,mpi_comm_world,ierror)
-       if (mype == mype_out) then
-          if(diff_res)then
-             call nemsio_readrecv(gfile,'du001','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'du001','read',istop,iret)
-             grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
-             vector(1)=.false.
-             call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-             call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
-             do kk=1,grd%iglobal
-                i=grd%ltosi(kk)
-                j=grd%ltosj(kk)
-                grid3(i,j,1)=work1(kk)-grid3(i,j,1)
-             end do
-             call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
-             do j=1,latb
-                do i=1,lonb
-                   grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+       do k=1,grd%nsig
+          call mpi_gatherv(du001sm(1,k),grd%ijn(mm1),mpi_rtype,&
+               work1,grd%ijn,grd%displs_g,mpi_rtype,&
+               mype_out,mpi_comm_world,ierror)
+          if (mype == mype_out) then
+             if(diff_res)then
+                if (use_fv3_aero) then
+                   call nemsio_readrecv(gfile,'dust1','mid layer',k,rwork1d,iret=iret)
+                else
+                   call nemsio_readrecv(gfile,'du001','mid layer',k,rwork1d,iret=iret)
+                end if
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'du001','read',istop,iret)
+                grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
+                vector(1)=.false.
+                call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+                call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
+                do kk=1,grd%iglobal
+                   i=grd%ltosi(kk)
+                   j=grd%ltosj(kk)
+                   grid3(i,j,1)=work1(kk)-grid3(i,j,1)
                 end do
-             end do
-             rwork1d = reshape(grid_b,(/size(rwork1d)/))
-          else
-             call load_grid(work1,grid)
-             rwork1d = reshape(grid,(/size(rwork1d)/))
-          end if
-          rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
-          lmax=maxval(rwork1d)
-          lmin=minval(rwork1d)
-          call nemsio_writerecv(gfileo,'du001','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'du001','write',istop,iret)
-       endif
-    end do
+                call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
+                do j=1,latb
+                   do i=1,lonb
+                      grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+                   end do
+                end do
+                rwork1d = reshape(grid_b,(/size(rwork1d)/))
+             else
+                call load_grid(work1,grid)
+                rwork1d = reshape(grid,(/size(rwork1d)/))
+             end if
+             if (use_fv3_aero) then
+                call nemsio_writerecv(gfileo,'dust1','mid layer',k,rwork1d,iret=iret)
+             else
+                rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
+                call nemsio_writerecv(gfileo,'du001','mid layer',k,rwork1d,iret=iret)
+             end if
+             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'du001','write',istop,iret)
+          endif
+       end do
 ! du002
-    do k=1,grd%nsig
-       lmax=0.
-       lmin=0.
-       call mpi_gatherv(du002sm(1,k),grd%ijn(mm1),mpi_rtype,&
-            work1,grd%ijn,grd%displs_g,mpi_rtype,&
-            mype_out,mpi_comm_world,ierror)
-       if (mype == mype_out) then
-          if(diff_res)then
-             call nemsio_readrecv(gfile,'du002','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'du002','read',istop,iret)
-             grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
-             vector(1)=.false.
-             call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-             call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
-             do kk=1,grd%iglobal
-                i=grd%ltosi(kk)
-                j=grd%ltosj(kk)
-                grid3(i,j,1)=work1(kk)-grid3(i,j,1)
-             end do
-             call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
-             do j=1,latb
-                do i=1,lonb
-                   grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+       do k=1,grd%nsig
+          call mpi_gatherv(du002sm(1,k),grd%ijn(mm1),mpi_rtype,&
+               work1,grd%ijn,grd%displs_g,mpi_rtype,&
+               mype_out,mpi_comm_world,ierror)
+          if (mype == mype_out) then
+             if(diff_res)then
+                if (use_fv3_aero) then
+                   call nemsio_readrecv(gfile,'dust2','mid layer',k,rwork1d,iret=iret)
+                else
+                   call nemsio_readrecv(gfile,'du002','mid layer',k,rwork1d,iret=iret)
+                end if
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'du002','read',istop,iret)
+                grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
+                vector(1)=.false.
+                call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+                call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
+                do kk=1,grd%iglobal
+                   i=grd%ltosi(kk)
+                   j=grd%ltosj(kk)
+                   grid3(i,j,1)=work1(kk)-grid3(i,j,1)
                 end do
-             end do
-             rwork1d = reshape(grid_b,(/size(rwork1d)/))
-          else
-             call load_grid(work1,grid)
-             rwork1d = reshape(grid,(/size(rwork1d)/))
-          end if
-          rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
-          lmax=maxval(rwork1d)
-          lmin=minval(rwork1d)
-          call nemsio_writerecv(gfileo,'du002','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'du002','write',istop,iret)
-       endif
-    end do
+                call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
+                do j=1,latb
+                   do i=1,lonb
+                      grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+                   end do
+                end do
+                rwork1d = reshape(grid_b,(/size(rwork1d)/))
+             else
+                call load_grid(work1,grid)
+                rwork1d = reshape(grid,(/size(rwork1d)/))
+             end if
+             if (use_fv3_aero) then
+                call nemsio_writerecv(gfileo,'dust2','mid layer',k,rwork1d,iret=iret)
+             else
+                rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
+                call nemsio_writerecv(gfileo,'du002','mid layer',k,rwork1d,iret=iret)
+             end if
+             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'du002','write',istop,iret)
+          endif
+       end do
 ! du003
-    do k=1,grd%nsig
-       lmax=0.
-       lmin=0.
-       call mpi_gatherv(du003sm(1,k),grd%ijn(mm1),mpi_rtype,&
-            work1,grd%ijn,grd%displs_g,mpi_rtype,&
-            mype_out,mpi_comm_world,ierror)
-       if (mype == mype_out) then
-          if(diff_res)then
-             call nemsio_readrecv(gfile,'du003','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'du003','read',istop,iret)
-             grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
-             vector(1)=.false.
-             call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-             call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
-             do kk=1,grd%iglobal
-                i=grd%ltosi(kk)
-                j=grd%ltosj(kk)
-                grid3(i,j,1)=work1(kk)-grid3(i,j,1)
-             end do
-             call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
-             do j=1,latb
-                do i=1,lonb
-                   grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+       do k=1,grd%nsig
+          call mpi_gatherv(du003sm(1,k),grd%ijn(mm1),mpi_rtype,&
+               work1,grd%ijn,grd%displs_g,mpi_rtype,&
+               mype_out,mpi_comm_world,ierror)
+          if (mype == mype_out) then
+             if(diff_res)then
+                if (use_fv3_aero) then
+                   call nemsio_readrecv(gfile,'dust3','mid layer',k,rwork1d,iret=iret)
+                else
+                   call nemsio_readrecv(gfile,'du003','mid layer',k,rwork1d,iret=iret)
+                end if
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'du003','read',istop,iret)
+                grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
+                vector(1)=.false.
+                call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+                call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
+                do kk=1,grd%iglobal
+                   i=grd%ltosi(kk)
+                   j=grd%ltosj(kk)
+                   grid3(i,j,1)=work1(kk)-grid3(i,j,1)
                 end do
-             end do
-             rwork1d = reshape(grid_b,(/size(rwork1d)/))
-          else
-             call load_grid(work1,grid)
-             rwork1d = reshape(grid,(/size(rwork1d)/))
-          end if
-          rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
-          lmax=maxval(rwork1d)
-          lmin=minval(rwork1d)
-          call nemsio_writerecv(gfileo,'du003','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'du003','write',istop,iret)
-       endif
-    end do
+                call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
+                do j=1,latb
+                   do i=1,lonb
+                      grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+                   end do
+                end do
+                rwork1d = reshape(grid_b,(/size(rwork1d)/))
+             else
+                call load_grid(work1,grid)
+                rwork1d = reshape(grid,(/size(rwork1d)/))
+             end if
+             if (use_fv3_aero) then
+                call nemsio_writerecv(gfileo,'dust3','mid layer',k,rwork1d,iret=iret)
+             else
+                rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
+                call nemsio_writerecv(gfileo,'du003','mid layer',k,rwork1d,iret=iret)
+             end if
+             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'du003','write',istop,iret)
+          endif
+       end do
 ! du004
-    do k=1,grd%nsig
-       lmax=0.
-       lmin=0.
-       call mpi_gatherv(du004sm(1,k),grd%ijn(mm1),mpi_rtype,&
-            work1,grd%ijn,grd%displs_g,mpi_rtype,&
-            mype_out,mpi_comm_world,ierror)
-       if (mype == mype_out) then
-          if(diff_res)then
-             call nemsio_readrecv(gfile,'du004','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'du004','read',istop,iret)
-             grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
-             vector(1)=.false.
-             call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-             call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
-             do kk=1,grd%iglobal
-                i=grd%ltosi(kk)
-                j=grd%ltosj(kk)
-                grid3(i,j,1)=work1(kk)-grid3(i,j,1)
-             end do
-             call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
-             do j=1,latb
-                do i=1,lonb
-                   grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+       do k=1,grd%nsig
+          call mpi_gatherv(du004sm(1,k),grd%ijn(mm1),mpi_rtype,&
+               work1,grd%ijn,grd%displs_g,mpi_rtype,&
+               mype_out,mpi_comm_world,ierror)
+          if (mype == mype_out) then
+             if(diff_res)then
+                if (use_fv3_aero) then
+                   call nemsio_readrecv(gfile,'dust4','mid layer',k,rwork1d,iret=iret)
+                else
+                   call nemsio_readrecv(gfile,'du004','mid layer',k,rwork1d,iret=iret)
+                end if
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'du004','read',istop,iret)
+                grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
+                vector(1)=.false.
+                call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+                call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
+                do kk=1,grd%iglobal
+                   i=grd%ltosi(kk)
+                   j=grd%ltosj(kk)
+                   grid3(i,j,1)=work1(kk)-grid3(i,j,1)
                 end do
-             end do
-             rwork1d = reshape(grid_b,(/size(rwork1d)/))
-          else
-             call load_grid(work1,grid)
-             rwork1d = reshape(grid,(/size(rwork1d)/))
-          end if
-          rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
-          lmax=maxval(rwork1d)
-          lmin=minval(rwork1d)
-          call nemsio_writerecv(gfileo,'du004','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'du004','write',istop,iret)
-       endif
-    end do
+                call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
+                do j=1,latb
+                   do i=1,lonb
+                      grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+                   end do
+                end do
+                rwork1d = reshape(grid_b,(/size(rwork1d)/))
+             else
+                call load_grid(work1,grid)
+                rwork1d = reshape(grid,(/size(rwork1d)/))
+             end if
+             if (use_fv3_aero) then
+                call nemsio_writerecv(gfileo,'dust4','mid layer',k,rwork1d,iret=iret)
+             else
+                rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
+                call nemsio_writerecv(gfileo,'du004','mid layer',k,rwork1d,iret=iret)
+             end if
+             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'du004','write',istop,iret)
+          endif
+       end do
 ! du005
-    do k=1,grd%nsig
-       lmax=0.
-       lmin=0.
-       call mpi_gatherv(du005sm(1,k),grd%ijn(mm1),mpi_rtype,&
-            work1,grd%ijn,grd%displs_g,mpi_rtype,&
-            mype_out,mpi_comm_world,ierror)
-       if (mype == mype_out) then
-          if(diff_res)then
-             call nemsio_readrecv(gfile,'du005','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'du005','read',istop,iret)
-             grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
-             vector(1)=.false.
-             call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-             call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
-             do kk=1,grd%iglobal
-                i=grd%ltosi(kk)
-                j=grd%ltosj(kk)
-                grid3(i,j,1)=work1(kk)-grid3(i,j,1)
-             end do
-             call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
-             do j=1,latb
-                do i=1,lonb
-                   grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+       do k=1,grd%nsig
+          call mpi_gatherv(du005sm(1,k),grd%ijn(mm1),mpi_rtype,&
+               work1,grd%ijn,grd%displs_g,mpi_rtype,&
+               mype_out,mpi_comm_world,ierror)
+          if (mype == mype_out) then
+             if(diff_res)then
+                if (use_fv3_aero) then
+                   call nemsio_readrecv(gfile,'dust5','mid layer',k,rwork1d,iret=iret)
+                else
+                   call nemsio_readrecv(gfile,'du005','mid layer',k,rwork1d,iret=iret)
+                end if
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'du005','read',istop,iret)
+                grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
+                vector(1)=.false.
+                call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+                call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
+                do kk=1,grd%iglobal
+                   i=grd%ltosi(kk)
+                   j=grd%ltosj(kk)
+                   grid3(i,j,1)=work1(kk)-grid3(i,j,1)
                 end do
-             end do
-             rwork1d = reshape(grid_b,(/size(rwork1d)/))
-          else
-             call load_grid(work1,grid)
-             rwork1d = reshape(grid,(/size(rwork1d)/))
-          end if
-          rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
-          lmax=maxval(rwork1d)
-          lmin=minval(rwork1d)
-          call nemsio_writerecv(gfileo,'du005','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'du005','write',istop,iret)
-       endif
-    end do
+                call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
+                do j=1,latb
+                   do i=1,lonb
+                      grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+                   end do
+                end do
+                rwork1d = reshape(grid_b,(/size(rwork1d)/))
+             else
+                call load_grid(work1,grid)
+                rwork1d = reshape(grid,(/size(rwork1d)/))
+             end if
+             if (use_fv3_aero) then
+                call nemsio_writerecv(gfileo,'dust5','mid layer',k,rwork1d,iret=iret)
+             else
+                rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
+                call nemsio_writerecv(gfileo,'du005','mid layer',k,rwork1d,iret=iret)
+             end if
+             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'du005','write',istop,iret)
+          endif
+       end do
 ! ss001 and ss002 NOTE: It depends the ratio of ss1 and ss2 in guess to
 ! distribute the analysis mixing ratio
-    do k=1,grd%nsig
-       lmax=0.
-       lmin=0.
-       call mpi_gatherv(ss001sm(1,k),grd%ijn(mm1),mpi_rtype,&
-            work1,grd%ijn,grd%displs_g,mpi_rtype,&
-            mype_out,mpi_comm_world,ierror)
-       if (mype == mype_out) then
-          call nemsio_readrecv(gfile,'ss001','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss001','read',istop,iret)
-          call nemsio_readrecv(gfile,'ss002','mid layer',k,rwork1d1,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss002','read',istop,iret)
-          rwork1d=rwork1d+rwork1d1  ! first guess ss1+ss2, rwork1d become the original total mixing ratio 
-          do m=1,size(rwork1d)
-             if (rwork1d(m) .eq. 0) then  ! if original total mixing ratio is zero, which mean ss1=ss2=0. Set the rwork1d1:ss2ratio to zero
-                rwork1d1(m)=0.
+       do k=1,grd%nsig
+          call mpi_gatherv(ss001sm(1,k),grd%ijn(mm1),mpi_rtype,&
+               work1,grd%ijn,grd%displs_g,mpi_rtype,&
+               mype_out,mpi_comm_world,ierror)
+          if (mype == mype_out) then
+             if (use_fv3_aero) then
+                call nemsio_readrecv(gfile,'seas1','mid layer',k,rwork1d,iret=iret)
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss001','read',istop,iret)
+                call nemsio_readrecv(gfile,'seas2','mid layer',k,rwork1d1,iret=iret)
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss002','read',istop,iret)
              else
-                rwork1d1(m)=rwork1d1(m)/rwork1d(m)  ! if original total mixing ratio isn't zero, which mean ss1!=0 or ss2!=0. 
-                                                    ! Set
-                                                    ! rwork1d1:ss2ratio=rwork1d1:ss2/rwork1d:total
+                call nemsio_readrecv(gfile,'ss001','mid layer',k,rwork1d,iret=iret)
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss001','read',istop,iret)
+                call nemsio_readrecv(gfile,'ss002','mid layer',k,rwork1d1,iret=iret)
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss002','read',istop,iret)
+             end if
+             rwork1d=rwork1d+rwork1d1  ! first guess ss1+ss2, rwork1d become the original total mixing ratio 
+             do m=1,size(rwork1d)
+                if (rwork1d(m) .eq. 0) then  ! if original total mixing ratio is zero, which mean ss1=ss2=0. Set the rwork1d1:ss2ratio to zero
+                   rwork1d1(m)=0.
+                else
+                   rwork1d1(m)=rwork1d1(m)/rwork1d(m)  ! if original total mixing ratio isn't zero, which mean ss1!=0 or ss2!=0. 
+                                                       ! Set
+                                                       ! rwork1d1:ss2ratio=rwork1d1:ss2/rwork1d:total
+                end if
+             end do
+             if(diff_res)then
+                grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
+                vector(1)=.false.
+                call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+                call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
+                do kk=1,grd%iglobal
+                   i=grd%ltosi(kk)
+                   j=grd%ltosj(kk)
+                   grid3(i,j,1)=work1(kk)-grid3(i,j,1)
+                end do
+                call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
+                do j=1,latb
+                   do i=1,lonb
+                      grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+                   end do
+                end do
+                rwork1d = reshape(grid_b,(/size(rwork1d)/))   ! analysis total mixing ratio
+             else
+                call load_grid(work1,grid)
+                rwork1d = reshape(grid,(/size(rwork1d)/))   ! analysis total mixing ratio
+             end if
+   ! if there is increment in analysis but nothing originally, half-half to
+   ! analysis sea salt 1 and 2 respectively. 
+   !
+             do m=1,size(rwork1d)
+                if (rwork1d(m) .ne. 0. .and. rwork1d1(m) .eq. 0. ) then  ! if ana!=0, ratio=0. Then ss1=ss2=half total mixing ratio
+                    rwork1d1(m)=half*rwork1d(m)    ! sea salt 2
+                else if ( rwork1d1(m) .ne. 0. .and. rwork1d(m) .eq. 0. ) then ! if ratio!=0, ana=0. Then ss1=ss2=0. Set ss2=0.
+                    rwork1d1(m)=0.
+                else                                       ! else mean ana=0 ratio=0 or ana!=0 ratio!=0.
+                                                           ! Then ss2=ana*ratio
+                    rwork1d1(m)=rwork1d(m)*rwork1d1(m)     ! sea salt 2
+                end if
+                rwork1d(m)=rwork1d(m)-rwork1d1(m)      ! sea salt 1
+             enddo
+             if (use_fv3_aero) then
+                call nemsio_writerecv(gfileo,'seas1','mid layer',k,rwork1d,iret=iret)
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss001','write',istop,iret)
+                call nemsio_writerecv(gfileo,'seas2','mid layer',k,rwork1d1,iret=iret)
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss002','write',istop,iret)
+             else
+                rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
+                rwork1d1=rwork1d1*1.0e-9_r_kind ! convert ug/kg back to kg/kg
+                call nemsio_writerecv(gfileo,'ss001','mid layer',k,rwork1d,iret=iret)
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss001','write',istop,iret)
+                call nemsio_writerecv(gfileo,'ss002','mid layer',k,rwork1d1,iret=iret)
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss002','write',istop,iret)
+             end if
+          endif
+       end do
+! ss003
+       do k=1,grd%nsig
+          call mpi_gatherv(ss002sm(1,k),grd%ijn(mm1),mpi_rtype,&
+               work1,grd%ijn,grd%displs_g,mpi_rtype,&
+               mype_out,mpi_comm_world,ierror)
+          if (mype == mype_out) then
+             if(diff_res)then
+                if (use_fv3_aero) then
+                   call nemsio_readrecv(gfile,'seas3','mid layer',k,rwork1d,iret=iret)
+                else
+                   call nemsio_readrecv(gfile,'ss003','mid layer',k,rwork1d,iret=iret)
+                end if
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss003','read',istop,iret)
+                grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
+                vector(1)=.false.
+                call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+                call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
+                do kk=1,grd%iglobal
+                   i=grd%ltosi(kk)
+                   j=grd%ltosj(kk)
+                   grid3(i,j,1)=work1(kk)-grid3(i,j,1)
+                end do
+                call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
+                do j=1,latb
+                   do i=1,lonb
+                      grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+                   end do
+                end do
+                rwork1d = reshape(grid_b,(/size(rwork1d)/))
+             else
+                call load_grid(work1,grid)
+                rwork1d = reshape(grid,(/size(rwork1d)/))
+             end if
+             if (use_fv3_aero) then
+                call nemsio_writerecv(gfileo,'seas3','mid layer',k,rwork1d,iret=iret)
+             else
+                rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
+                call nemsio_writerecv(gfileo,'ss003','mid layer',k,rwork1d,iret=iret)
+             end if
+             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss003','write',istop,iret)
+          endif
+       end do
+! ss004
+       do k=1,grd%nsig
+          call mpi_gatherv(ss003sm(1,k),grd%ijn(mm1),mpi_rtype,&
+               work1,grd%ijn,grd%displs_g,mpi_rtype,&
+               mype_out,mpi_comm_world,ierror)
+          if (mype == mype_out) then
+             if(diff_res)then
+                if (use_fv3_aero) then
+                   call nemsio_readrecv(gfile,'seas4','mid layer',k,rwork1d,iret=iret)
+                else
+                   call nemsio_readrecv(gfile,'ss004','mid layer',k,rwork1d,iret=iret)
+                end if
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss004','read',istop,iret)
+                grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
+                vector(1)=.false.
+                call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+                call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
+                do kk=1,grd%iglobal
+                   i=grd%ltosi(kk)
+                   j=grd%ltosj(kk)
+                   grid3(i,j,1)=work1(kk)-grid3(i,j,1)
+                end do
+                call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
+                do j=1,latb
+                   do i=1,lonb
+                      grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+                   end do
+                end do
+                rwork1d = reshape(grid_b,(/size(rwork1d)/))
+             else
+                call load_grid(work1,grid)
+                rwork1d = reshape(grid,(/size(rwork1d)/))
+             end if
+             if (use_fv3_aero) then
+                call nemsio_writerecv(gfileo,'seas4','mid layer',k,rwork1d,iret=iret)
+             else
+                rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
+                call nemsio_writerecv(gfileo,'ss004','mid layer',k,rwork1d,iret=iret)
+             end if
+             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss004','write',istop,iret)
+          endif
+       end do
+! ss005
+       do k=1,grd%nsig
+          call mpi_gatherv(ss004sm(1,k),grd%ijn(mm1),mpi_rtype,&
+               work1,grd%ijn,grd%displs_g,mpi_rtype,&
+               mype_out,mpi_comm_world,ierror)
+          if (mype == mype_out) then
+             if(diff_res)then
+                if (use_fv3_aero) then
+                   call nemsio_readrecv(gfile,'seas5','mid layer',k,rwork1d,iret=iret)
+                else
+                   call nemsio_readrecv(gfile,'ss005','mid layer',k,rwork1d,iret=iret)
+                end if
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss005','read',istop,iret)
+                grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
+                vector(1)=.false.
+                call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+                call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
+                do kk=1,grd%iglobal
+                   i=grd%ltosi(kk)
+                   j=grd%ltosj(kk)
+                   grid3(i,j,1)=work1(kk)-grid3(i,j,1)
+                end do
+                call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
+                do j=1,latb
+                   do i=1,lonb
+                      grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+                   end do
+                end do
+                rwork1d = reshape(grid_b,(/size(rwork1d)/))
+             else
+                call load_grid(work1,grid)
+                rwork1d = reshape(grid,(/size(rwork1d)/))
+             end if
+             if (use_fv3_aero) then
+                call nemsio_writerecv(gfileo,'seas5','mid layer',k,rwork1d,iret=iret)
+             else
+                rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
+                call nemsio_writerecv(gfileo,'ss005','mid layer',k,rwork1d,iret=iret)
+             end if
+             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss005','write',istop,iret)
+          endif
+       end do
+! dms, msa, so2
+          do k=1,grd%nsig
+          if (mype == mype_out) then
+             if (use_fv3_aero) then
+                call nemsio_readrecv(gfile,'DMS','mid layer',k,rwork1d,iret=iret)
+             else
+                call nemsio_readrecv(gfile,'dms','mid layer',k,rwork1d,iret=iret)
+             end if
+             if (use_fv3_aero) then
+                call nemsio_writerecv(gfileo,'DMS','mid layer',k,rwork1d,iret=iret)
+             else
+                rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
+                call nemsio_writerecv(gfileo,'dms','mid layer',k,rwork1d,iret=iret)
+             end if
+             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'dms','write',istop,iret)
+          endif
+          end do
+   
+          do k=1,grd%nsig
+          if (mype == mype_out) then
+             call nemsio_readrecv(gfile,'msa','mid layer',k,rwork1d,iret=iret)
+             call nemsio_writerecv(gfileo,'msa','mid layer',k,rwork1d,iret=iret)
+             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'msa','write',istop,iret)
+          endif
+          end do
+   
+          do k=1,grd%nsig
+          if (mype == mype_out) then
+             call nemsio_readrecv(gfile,'so2','mid layer',k,rwork1d,iret=iret)
+             call nemsio_writerecv(gfileo,'so2','mid layer',k,rwork1d,iret=iret)
+             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'so2','write',istop,iret)
+          endif
+          end do
+! so4
+       do k=1,grd%nsig
+          call mpi_gatherv(so4sm(1,k),grd%ijn(mm1),mpi_rtype,&
+               work1,grd%ijn,grd%displs_g,mpi_rtype,&
+               mype_out,mpi_comm_world,ierror)
+          if (mype == mype_out) then
+             if(diff_res)then
+                if (use_fv3_aero) then
+                   call nemsio_readrecv(gfile,'sulf','mid layer',k,rwork1d,iret=iret)
+                else
+                   call nemsio_readrecv(gfile,'so4','mid layer',k,rwork1d,iret=iret)
+                end if
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'so4','read',istop,iret)
+                grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
+                vector(1)=.false.
+                call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+                call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
+                do kk=1,grd%iglobal
+                   i=grd%ltosi(kk)
+                   j=grd%ltosj(kk)
+                   grid3(i,j,1)=work1(kk)-grid3(i,j,1)
+                end do
+                call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
+                do j=1,latb
+                   do i=1,lonb
+                      grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+                   end do
+                end do
+                rwork1d = reshape(grid_b,(/size(rwork1d)/))
+             else
+                call load_grid(work1,grid)
+                rwork1d = reshape(grid,(/size(rwork1d)/))
+             end if
+             if (use_fv3_aero) then
+                call nemsio_writerecv(gfileo,'sulf','mid layer',k,rwork1d,iret=iret)
+             else
+                rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
+                call nemsio_writerecv(gfileo,'so4','mid layer',k,rwork1d,iret=iret)
+             end if
+             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'so4','write',istop,iret)
+          endif
+       end do
+! oc1
+       do k=1,grd%nsig
+          call mpi_gatherv(ocphosm(1,k),grd%ijn(mm1),mpi_rtype,&
+               work1,grd%ijn,grd%displs_g,mpi_rtype,&
+               mype_out,mpi_comm_world,ierror)
+          if (mype == mype_out) then
+             if(diff_res)then
+                if (use_fv3_aero) then
+                   call nemsio_readrecv(gfile,'oc1','mid layer',k,rwork1d,iret=iret)
+                else
+                   call nemsio_readrecv(gfile,'ocphobic','mid layer',k,rwork1d,iret=iret)
+                end if
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ocphobic','read',istop,iret)
+                grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
+                vector(1)=.false.
+                call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+                call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
+                do kk=1,grd%iglobal
+                   i=grd%ltosi(kk)
+                   j=grd%ltosj(kk)
+                   grid3(i,j,1)=work1(kk)-grid3(i,j,1)
+                end do
+                call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
+                do j=1,latb
+                   do i=1,lonb
+                      grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+                   end do
+                end do
+                rwork1d = reshape(grid_b,(/size(rwork1d)/))
+             else
+                call load_grid(work1,grid)
+                rwork1d = reshape(grid,(/size(rwork1d)/))
+             end if
+             if (use_fv3_aero) then
+                call nemsio_writerecv(gfileo,'oc1','mid layer',k,rwork1d,iret=iret)
+             else
+                rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
+                call nemsio_writerecv(gfileo,'ocphobic','mid layer',k,rwork1d,iret=iret)
+             end if
+             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ocphobic','write',istop,iret)
+          endif
+       end do
+! oc2
+       do k=1,grd%nsig
+          call mpi_gatherv(ocphism(1,k),grd%ijn(mm1),mpi_rtype,&
+               work1,grd%ijn,grd%displs_g,mpi_rtype,&
+               mype_out,mpi_comm_world,ierror)
+          if (mype == mype_out) then
+             if(diff_res)then
+                if (use_fv3_aero) then
+                   call nemsio_readrecv(gfile,'oc2','mid layer',k,rwork1d,iret=iret)
+                else
+                   call nemsio_readrecv(gfile,'ocphilic','mid layer',k,rwork1d,iret=iret)
+                end if
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ocphilic','read',istop,iret)
+                grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
+                vector(1)=.false.
+                call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+                call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
+                do kk=1,grd%iglobal
+                   i=grd%ltosi(kk)
+                   j=grd%ltosj(kk)
+                   grid3(i,j,1)=work1(kk)-grid3(i,j,1)
+                end do
+                call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
+                do j=1,latb
+                   do i=1,lonb
+                      grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+                   end do
+                end do
+                rwork1d = reshape(grid_b,(/size(rwork1d)/))
+             else
+                call load_grid(work1,grid)
+                rwork1d = reshape(grid,(/size(rwork1d)/))
+             end if
+             if (use_fv3_aero) then
+                call nemsio_writerecv(gfileo,'oc2','mid layer',k,rwork1d,iret=iret)
+             else
+                rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
+                call nemsio_writerecv(gfileo,'ocphilic','mid layer',k,rwork1d,iret=iret)
+             end if
+             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ocphilic','write',istop,iret)
+          endif
+       end do
+! bc1
+       do k=1,grd%nsig
+          call mpi_gatherv(bcphosm(1,k),grd%ijn(mm1),mpi_rtype,&
+               work1,grd%ijn,grd%displs_g,mpi_rtype,&
+               mype_out,mpi_comm_world,ierror)
+          if (mype == mype_out) then
+             if(diff_res)then
+                if (use_fv3_aero) then
+                   call nemsio_readrecv(gfile,'bc1','mid layer',k,rwork1d,iret=iret)
+                else
+                   call nemsio_readrecv(gfile,'bcphobic','mid layer',k,rwork1d,iret=iret)
+                end if
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'bcphobic','read',istop,iret)
+                grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
+                vector(1)=.false.
+                call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+                call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
+                do kk=1,grd%iglobal
+                   i=grd%ltosi(kk)
+                   j=grd%ltosj(kk)
+                   grid3(i,j,1)=work1(kk)-grid3(i,j,1)
+                end do
+                call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
+                do j=1,latb
+                   do i=1,lonb
+                      grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+                   end do
+                end do
+                rwork1d = reshape(grid_b,(/size(rwork1d)/))
+             else
+                call load_grid(work1,grid)
+                rwork1d = reshape(grid,(/size(rwork1d)/))
+             end if
+             if (use_fv3_aero) then
+                call nemsio_writerecv(gfileo,'bc1','mid layer',k,rwork1d,iret=iret)
+             else
+                rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
+                call nemsio_writerecv(gfileo,'bcphobic','mid layer',k,rwork1d,iret=iret)
+             end if
+             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'bcphobic','write',istop,iret)
+          endif
+       end do
+! bc2
+       do k=1,grd%nsig
+          call mpi_gatherv(bcphism(1,k),grd%ijn(mm1),mpi_rtype,&
+               work1,grd%ijn,grd%displs_g,mpi_rtype,&
+               mype_out,mpi_comm_world,ierror)
+          if (mype == mype_out) then
+             if(diff_res)then
+                if (use_fv3_aero) then
+                   call nemsio_readrecv(gfile,'bc2','mid layer',k,rwork1d,iret=iret)
+                else
+                   call nemsio_readrecv(gfile,'bcphilic','mid layer',k,rwork1d,iret=iret)
+                end if
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'bcphilic','read',istop,iret)
+                grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
+                vector(1)=.false.
+                call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+                call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
+                do kk=1,grd%iglobal
+                   i=grd%ltosi(kk)
+                   j=grd%ltosj(kk)
+                   grid3(i,j,1)=work1(kk)-grid3(i,j,1)
+                end do
+                call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
+                do j=1,latb
+                   do i=1,lonb
+                      grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+                   end do
+                end do
+                rwork1d = reshape(grid_b,(/size(rwork1d)/))
+             else
+                call load_grid(work1,grid)
+                rwork1d = reshape(grid,(/size(rwork1d)/))
+             end if
+             if (use_fv3_aero) then
+                call nemsio_writerecv(gfileo,'bc2','mid layer',k,rwork1d,iret=iret)
+             else
+                rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
+                call nemsio_writerecv(gfileo,'bcphilic','mid layer',k,rwork1d,iret=iret)
+             end if
+             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'bcphilic','write',istop,iret)
+          endif
+       end do
+       
+! output extra variables if FV3-Chem
+       if (use_fv3_aero) then
+          do k=1,grd%nsig
+             if (mype == mype_out) then
+                call nemsio_readrecv(gfile,'pp25','mid layer',k,rwork1d,iret=iret)
+                call nemsio_writerecv(gfileo,'pp25','mid layer',k,rwork1d,iret=iret)
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'pp25','write',istop,iret)
              end if
           end do
-          if(diff_res)then
-             grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
-             vector(1)=.false.
-             call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-             call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
-             do kk=1,grd%iglobal
-                i=grd%ltosi(kk)
-                j=grd%ltosj(kk)
-                grid3(i,j,1)=work1(kk)-grid3(i,j,1)
-             end do
-             call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
-             do j=1,latb
-                do i=1,lonb
-                   grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
-                end do
-             end do
-             rwork1d = reshape(grid_b,(/size(rwork1d)/))   ! analysis total mixing ratio
-          else
-             call load_grid(work1,grid)
-             rwork1d = reshape(grid,(/size(rwork1d)/))   ! analysis total mixing ratio
-          end if
-! if there is increment in analysis but nothing originally, half-half to
-! analysis sea salt 1 and 2 respectively. 
-!
-          do m=1,size(rwork1d)
-             if (rwork1d(m) .ne. 0. .and. rwork1d1(m) .eq. 0. ) then  ! if ana!=0, ratio=0. Then ss1=ss2=half total mixing ratio
-                 rwork1d1(m)=half*rwork1d(m)    ! sea salt 2
-             else if ( rwork1d1(m) .ne. 0. .and. rwork1d(m) .eq. 0. ) then ! if ratio!=0, ana=0. Then ss1=ss2=0. Set ss2=0.
-                 rwork1d1(m)=0.
-             else                                       ! else mean ana=0 ratio=0 or ana!=0 ratio!=0.
-                                                        ! Then ss2=ana*ratio
-                 rwork1d1(m)=rwork1d(m)*rwork1d1(m)     ! sea salt 2
+          do k=1,grd%nsig
+             if (mype == mype_out) then
+                call nemsio_readrecv(gfile,'pp10','mid layer',k,rwork1d,iret=iret)
+                call nemsio_writerecv(gfileo,'pp10','mid layer',k,rwork1d,iret=iret)
+                if (iret /= 0) call error_msg(trim(my_name),trim(filename),'pp10','write',istop,iret)
              end if
-             rwork1d(m)=rwork1d(m)-rwork1d1(m)      ! sea salt 1
-          enddo
-          rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
-          lmax=maxval(rwork1d)
-          lmin=minval(rwork1d)
-          rwork1d1=rwork1d1*1.0e-9_r_kind ! convert ug/kg back to kg/kg
-          lmax=maxval(rwork1d1)
-          lmin=minval(rwork1d1)
-          call nemsio_writerecv(gfileo,'ss001','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss001','write',istop,iret)
-          call nemsio_writerecv(gfileo,'ss002','mid layer',k,rwork1d1,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss002','write',istop,iret)
-       endif
-    end do
-! ss003
-    do k=1,grd%nsig
-       lmax=0.
-       lmin=0.
-       call mpi_gatherv(ss002sm(1,k),grd%ijn(mm1),mpi_rtype,&
-            work1,grd%ijn,grd%displs_g,mpi_rtype,&
-            mype_out,mpi_comm_world,ierror)
-       if (mype == mype_out) then
-          if(diff_res)then
-             call nemsio_readrecv(gfile,'ss003','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss003','read',istop,iret)
-             grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
-             vector(1)=.false.
-             call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-             call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
-             do kk=1,grd%iglobal
-                i=grd%ltosi(kk)
-                j=grd%ltosj(kk)
-                grid3(i,j,1)=work1(kk)-grid3(i,j,1)
-             end do
-             call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
-             do j=1,latb
-                do i=1,lonb
-                   grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
-                end do
-             end do
-             rwork1d = reshape(grid_b,(/size(rwork1d)/))
-          else
-             call load_grid(work1,grid)
-             rwork1d = reshape(grid,(/size(rwork1d)/))
-          end if
-          rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
-          lmax=maxval(rwork1d)
-          lmin=minval(rwork1d)
-          call nemsio_writerecv(gfileo,'ss003','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss003','write',istop,iret)
-       endif
-    end do
-! ss004
-    do k=1,grd%nsig
-       lmax=0.
-       lmin=0.
-       call mpi_gatherv(ss003sm(1,k),grd%ijn(mm1),mpi_rtype,&
-            work1,grd%ijn,grd%displs_g,mpi_rtype,&
-            mype_out,mpi_comm_world,ierror)
-       if (mype == mype_out) then
-          if(diff_res)then
-             call nemsio_readrecv(gfile,'ss004','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss004','read',istop,iret)
-             grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
-             vector(1)=.false.
-             call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-             call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
-             do kk=1,grd%iglobal
-                i=grd%ltosi(kk)
-                j=grd%ltosj(kk)
-                grid3(i,j,1)=work1(kk)-grid3(i,j,1)
-             end do
-             call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
-             do j=1,latb
-                do i=1,lonb
-                   grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
-                end do
-             end do
-             rwork1d = reshape(grid_b,(/size(rwork1d)/))
-          else
-             call load_grid(work1,grid)
-             rwork1d = reshape(grid,(/size(rwork1d)/))
-          end if
-          rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
-          lmax=maxval(rwork1d)
-          lmin=minval(rwork1d)
-          call nemsio_writerecv(gfileo,'ss004','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss004','write',istop,iret)
-       endif
-    end do
-! ss005
-    do k=1,grd%nsig
-       lmax=0.
-       lmin=0.
-       call mpi_gatherv(ss004sm(1,k),grd%ijn(mm1),mpi_rtype,&
-            work1,grd%ijn,grd%displs_g,mpi_rtype,&
-            mype_out,mpi_comm_world,ierror)
-       if (mype == mype_out) then
-          if(diff_res)then
-             call nemsio_readrecv(gfile,'ss005','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss005','read',istop,iret)
-             grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
-             vector(1)=.false.
-             call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-             call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
-             do kk=1,grd%iglobal
-                i=grd%ltosi(kk)
-                j=grd%ltosj(kk)
-                grid3(i,j,1)=work1(kk)-grid3(i,j,1)
-             end do
-             call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
-             do j=1,latb
-                do i=1,lonb
-                   grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
-                end do
-             end do
-             rwork1d = reshape(grid_b,(/size(rwork1d)/))
-          else
-             call load_grid(work1,grid)
-             rwork1d = reshape(grid,(/size(rwork1d)/))
-          end if
-          rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
-          lmax=maxval(rwork1d)
-          lmin=minval(rwork1d)
-          call nemsio_writerecv(gfileo,'ss005','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ss005','write',istop,iret)
-       endif
-    end do
-! dms, msa, so2
-       do k=1,grd%nsig
-       if (mype == mype_out) then
-          call nemsio_readrecv(gfile,'dms','mid layer',k,rwork1d,iret=iret)
-       lmax=0.
-       lmin=0.
-          lmax=maxval(rwork1d)
-          lmin=minval(rwork1d)
-          call nemsio_writerecv(gfileo,'dms','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'dms','write',istop,iret)
-       endif
-       end do
-
-       do k=1,grd%nsig
-       if (mype == mype_out) then
-          call nemsio_readrecv(gfile,'msa','mid layer',k,rwork1d,iret=iret)
-       lmax=0.
-       lmin=0.
-          lmax=maxval(rwork1d)
-          lmin=minval(rwork1d)
-          call nemsio_writerecv(gfileo,'msa','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'msa','write',istop,iret)
-       endif
-       end do
-
-       do k=1,grd%nsig
-       if (mype == mype_out) then
-          call nemsio_readrecv(gfile,'so2','mid layer',k,rwork1d,iret=iret)
-       lmax=0.
-       lmin=0.
-          lmax=maxval(rwork1d)
-          lmin=minval(rwork1d)
-          call nemsio_writerecv(gfileo,'so2','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'so2','write',istop,iret)
-       endif
-       end do
-! so4
-    do k=1,grd%nsig
-       lmax=0.
-       lmin=0.
-       call mpi_gatherv(so4sm(1,k),grd%ijn(mm1),mpi_rtype,&
-            work1,grd%ijn,grd%displs_g,mpi_rtype,&
-            mype_out,mpi_comm_world,ierror)
-       if (mype == mype_out) then
-          if(diff_res)then
-             call nemsio_readrecv(gfile,'so4','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'so4','read',istop,iret)
-             grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
-             vector(1)=.false.
-             call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-             call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
-             do kk=1,grd%iglobal
-                i=grd%ltosi(kk)
-                j=grd%ltosj(kk)
-                grid3(i,j,1)=work1(kk)-grid3(i,j,1)
-             end do
-             call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
-             do j=1,latb
-                do i=1,lonb
-                   grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
-                end do
-             end do
-             rwork1d = reshape(grid_b,(/size(rwork1d)/))
-          else
-             call load_grid(work1,grid)
-             rwork1d = reshape(grid,(/size(rwork1d)/))
-          end if
-          rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
-          lmax=maxval(rwork1d)
-          lmin=minval(rwork1d)
-          call nemsio_writerecv(gfileo,'so4','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'so4','write',istop,iret)
-       endif
-    end do
-! oc1
-    do k=1,grd%nsig
-       call mpi_gatherv(ocphosm(1,k),grd%ijn(mm1),mpi_rtype,&
-            work1,grd%ijn,grd%displs_g,mpi_rtype,&
-            mype_out,mpi_comm_world,ierror)
-       if (mype == mype_out) then
-          if(diff_res)then
-             call nemsio_readrecv(gfile,'ocphobic','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ocphobic','read',istop,iret)
-             grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
-             vector(1)=.false.
-             call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-             call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
-             do kk=1,grd%iglobal
-                i=grd%ltosi(kk)
-                j=grd%ltosj(kk)
-                grid3(i,j,1)=work1(kk)-grid3(i,j,1)
-             end do
-             call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
-             do j=1,latb
-                do i=1,lonb
-                   grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
-                end do
-             end do
-             rwork1d = reshape(grid_b,(/size(rwork1d)/))
-          else
-             call load_grid(work1,grid)
-             rwork1d = reshape(grid,(/size(rwork1d)/))
-          end if
-          rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
-          lmax=maxval(rwork1d)
-          lmin=minval(rwork1d)
-          call nemsio_writerecv(gfileo,'ocphobic','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ocphobic','write',istop,iret)
-       endif
-    end do
-! oc2
-    do k=1,grd%nsig
-       lmax=0.
-       lmin=0.
-       call mpi_gatherv(ocphism(1,k),grd%ijn(mm1),mpi_rtype,&
-            work1,grd%ijn,grd%displs_g,mpi_rtype,&
-            mype_out,mpi_comm_world,ierror)
-       if (mype == mype_out) then
-          if(diff_res)then
-             call nemsio_readrecv(gfile,'ocphilic','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ocphilic','read',istop,iret)
-             grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
-             vector(1)=.false.
-             call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-             call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
-             do kk=1,grd%iglobal
-                i=grd%ltosi(kk)
-                j=grd%ltosj(kk)
-                grid3(i,j,1)=work1(kk)-grid3(i,j,1)
-             end do
-             call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
-             do j=1,latb
-                do i=1,lonb
-                   grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
-                end do
-             end do
-             rwork1d = reshape(grid_b,(/size(rwork1d)/))
-          else
-             call load_grid(work1,grid)
-             rwork1d = reshape(grid,(/size(rwork1d)/))
-          end if
-          rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
-          lmax=maxval(rwork1d)
-          lmin=minval(rwork1d)
-          call nemsio_writerecv(gfileo,'ocphilic','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ocphilic','write',istop,iret)
-       endif
-    end do
-! bc1
-    do k=1,grd%nsig
-       lmax=0.
-       lmin=0.
-       call mpi_gatherv(bcphosm(1,k),grd%ijn(mm1),mpi_rtype,&
-            work1,grd%ijn,grd%displs_g,mpi_rtype,&
-            mype_out,mpi_comm_world,ierror)
-       if (mype == mype_out) then
-          if(diff_res)then
-             call nemsio_readrecv(gfile,'bcphobic','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'bcphobic','read',istop,iret)
-             grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
-             vector(1)=.false.
-             call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-             call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
-             do kk=1,grd%iglobal
-                i=grd%ltosi(kk)
-                j=grd%ltosj(kk)
-                grid3(i,j,1)=work1(kk)-grid3(i,j,1)
-             end do
-             call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
-             do j=1,latb
-                do i=1,lonb
-                   grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
-                end do
-             end do
-             rwork1d = reshape(grid_b,(/size(rwork1d)/))
-          else
-             call load_grid(work1,grid)
-             rwork1d = reshape(grid,(/size(rwork1d)/))
-          end if
-          rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
-          lmax=maxval(rwork1d)
-          lmin=minval(rwork1d)
-          call nemsio_writerecv(gfileo,'bcphobic','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'bcphobic','write',istop,iret)
-       endif
-    end do
-! bc2
-    do k=1,grd%nsig
-       lmax=0.
-       lmin=0.
-       call mpi_gatherv(bcphism(1,k),grd%ijn(mm1),mpi_rtype,&
-            work1,grd%ijn,grd%displs_g,mpi_rtype,&
-            mype_out,mpi_comm_world,ierror)
-       if (mype == mype_out) then
-          if(diff_res)then
-             call nemsio_readrecv(gfile,'bcphilic','mid layer',k,rwork1d,iret=iret)
-             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'bcphilic','read',istop,iret)
-             grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
-             vector(1)=.false.
-             call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-             call g_egrid2agrid(p_low,grid_c,grid3,1,1,vector)
-             do kk=1,grd%iglobal
-                i=grd%ltosi(kk)
-                j=grd%ltosj(kk)
-                grid3(i,j,1)=work1(kk)-grid3(i,j,1)
-             end do
-             call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
-             do j=1,latb
-                do i=1,lonb
-                   grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
-                end do
-             end do
-             rwork1d = reshape(grid_b,(/size(rwork1d)/))
-          else
-             call load_grid(work1,grid)
-             rwork1d = reshape(grid,(/size(rwork1d)/))
-          end if
-          rwork1d=rwork1d*1.0e-9_r_kind ! convert ug/kg back to kg/kg
-          lmax=maxval(rwork1d)
-          lmin=minval(rwork1d)
-          call nemsio_writerecv(gfileo,'bcphilic','mid layer',k,rwork1d,iret=iret)
-          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'bcphilic','write',istop,iret)
-       endif
-    end do
-    
-    end if
+          end do
+       end if
+    end if ! end if laeroana_gocart
 !
 ! Deallocate local array
 !

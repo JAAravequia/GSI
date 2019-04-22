@@ -87,6 +87,7 @@ module gridmod
 !   2017-03-23  Hu      - add code to get eta2_ll and aeta2_ll ready for hybrid vertical coodinate in WRF MASS CORE
 !   2017-08-31  Li      - add sfcnst_comb to handle surface and nsst combined file
 !   2018-02-15  wu      - add fv3_regional & grid_ratio_fv3_regional
+!   2019-04-19  martin  - add use_fv3_aero option to distingiush between NGAC and FV3-Chem
 !
 !                        
 !
@@ -147,6 +148,7 @@ module gridmod
   public :: jcap,jcap_b,hires_b,sp_a,grd_a
   public :: jtstart,jtstop,nthreads
   public :: use_gfs_nemsio
+  public :: use_fv3_aero
   public :: sfcnst_comb
   public :: use_readin_anl_sfcmask
   public :: jcap_gfs,nlat_gfs,nlon_gfs
@@ -183,6 +185,7 @@ module gridmod
   logical update_regsfc     !
   logical hires_b           ! .t. when jcap_b requires double FFT
   logical use_gfs_nemsio    ! .t. for using NEMSIO to real global first guess
+  logical use_fv3_aero      ! .t. for using FV3 Aerosols, .f. for NGAC
   logical sfcnst_comb       ! .t. for using combined sfc & nst file
   logical use_sp_eqspace    ! .t. use equally-space grid in spectral transforms
 
@@ -397,6 +400,7 @@ contains
 !   2011-09-14  todling - add use_sp_eqspace to better control lat/lon grid case
 !   2016-08-28       li - tic591: add use_readin_anl_sfcmask for consistent sfcmask
 !                         between analysis grids and others
+!   2019-04-19  martin  - add use_fv3_aero option for NGAC vs FV3-Chem
 !
 ! !REMARKS:
 !   language: f90
@@ -474,6 +478,7 @@ contains
     nthreads = 1  ! initialize the number of threads
 
     use_gfs_nemsio  = .false.
+    use_fv3_aero  = .false.
     sfcnst_comb = .false.
     use_readin_anl_sfcmask = .false.
 

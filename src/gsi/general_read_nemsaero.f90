@@ -9,7 +9,8 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
 !           tracer variables from NEMS GFS I/O files 
 !
 ! program history log:
-!   2019-03-22  Wei/Martin - copied and modified to read in aerosol arrays
+!   2019-04-19  Wei/Martin - copied and modified to read in aerosol arrays
+!                            from either FV3-Chem or NEMS
 !
 !   input argument list:
 !     grd      - structure variable containing information about grid
@@ -39,7 +40,7 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
 !
 !$$$
     use kinds, only: r_kind,r_single,i_kind
-    use gridmod, only: ntracer,ncloud,itotsub,jcap_b
+    use gridmod, only: ntracer,ncloud,itotsub,jcap_b,use_fv3_aero
     use general_commvars_mod, only: fill_ns,fill2_ns
     use general_sub2grid_mod, only: sub2grid_info
     use general_specmod, only: spec_vars
@@ -150,7 +151,7 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
 
 !      write(6,*) "iret= ",iret
       if ( iret == 0 .and. mype == 0 ) then
-         write(6,'(''NGAC file time='',i4.4,i2.2,i2.2,i2.2)') odate(4),odate(2),odate(3),odate(1)
+         write(6,'(''Aerosol file time='',i4.4,i2.2,i2.2,i2.2)') odate(4),odate(2),odate(3),odate(1)
       end if
 !
 !  g_* array already pre-allocate as (lat2,lon2,<nsig>) => 2D and <3D>
@@ -270,48 +271,66 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
          vector(1)=.false.
          if (mype==mype_use(icount)) then
            
-            select case ( trim(aeroname(l)) )
-             case ('sulf')
-            call nemsio_readrecv(gfile,'so4','mid layer',k,rwork1d0,iret=iret)
-             case ('bc1')
-            call nemsio_readrecv(gfile,'bcphobic','mid layer',k,rwork1d0,iret=iret)
-             case ('bc2')
-            call nemsio_readrecv(gfile,'bcphilic','mid layer',k,rwork1d0,iret=iret)
-             case ('oc1')
-            call nemsio_readrecv(gfile,'ocphobic','mid layer',k,rwork1d0,iret=iret)
-             case ('oc2')
-            call nemsio_readrecv(gfile,'ocphilic','mid layer',k,rwork1d0,iret=iret)
-             case ('dust1')
-            call nemsio_readrecv(gfile,'du001','mid layer',k,rwork1d0,iret=iret)
-  !               rwork1d0=rwork1d0*half
-             case ('dust2')
-            call nemsio_readrecv(gfile,'du002','mid layer',k,rwork1d0,iret=iret)
-  !               rwork1d0=rwork1d0*half
-             case ('dust3')
-            call nemsio_readrecv(gfile,'du003','mid layer',k,rwork1d0,iret=iret)
-  !               rwork1d0=rwork1d0*half
-             case ('dust4')
-            call nemsio_readrecv(gfile,'du004','mid layer',k,rwork1d0,iret=iret)
-  !               rwork1d0=rwork1d0*half
-             case ('dust5')
-            call nemsio_readrecv(gfile,'du005','mid layer',k,rwork1d0,iret=iret)
-  !               rwork1d0=rwork1d0*half
-             case ('seas1')
-            call nemsio_readrecv(gfile,'ss001','mid layer',k,rwork1d1,iret=iret)
-            call nemsio_readrecv(gfile,'ss002','mid layer',k,rwork1d2,iret=iret)
-             rwork1d0=rwork1d1+rwork1d2
-             case ('seas2')
-            call nemsio_readrecv(gfile,'ss003','mid layer',k,rwork1d0,iret=iret)
-             case ('seas3')
-            call nemsio_readrecv(gfile,'ss004','mid layer',k,rwork1d0,iret=iret)
-             case ('seas4')
-            call nemsio_readrecv(gfile,'ss005','mid layer',k,rwork1d0,iret=iret)
-            end select
+            if (use_fv3_aero) then
+               if ( aeroname(l)(1:4) == 'seas') then
+                  select case ( trim(aeroname(l)) )
+                   case ('seas1')
+                  call nemsio_readrecv(gfile,'seas1','mid layer',k,rwork1d1,iret=iret)
+                  call nemsio_readrecv(gfile,'seas2','mid layer',k,rwork1d2,iret=iret)
+                   rwork1d0=rwork1d1+rwork1d2
+                   case ('seas2')
+                  call nemsio_readrecv(gfile,'seas3','mid layer',k,rwork1d0,iret=iret)
+                   case ('seas3')
+                  call nemsio_readrecv(gfile,'seas4','mid layer',k,rwork1d0,iret=iret)
+                   case ('seas4')
+                  call nemsio_readrecv(gfile,'seas5','mid layer',k,rwork1d0,iret=iret)
+                  end select
+               else
+                  call nemsio_readrecv(gfile,trim(aeroname(l)),'mid layer',k,rwork1d0,iret=iret)
+               end if
+            else
+               select case ( trim(aeroname(l)) )
+                case ('sulf')
+               call nemsio_readrecv(gfile,'so4','mid layer',k,rwork1d0,iret=iret)
+                case ('bc1')
+               call nemsio_readrecv(gfile,'bcphobic','mid layer',k,rwork1d0,iret=iret)
+                case ('bc2')
+               call nemsio_readrecv(gfile,'bcphilic','mid layer',k,rwork1d0,iret=iret)
+                case ('oc1')
+               call nemsio_readrecv(gfile,'ocphobic','mid layer',k,rwork1d0,iret=iret)
+                case ('oc2')
+               call nemsio_readrecv(gfile,'ocphilic','mid layer',k,rwork1d0,iret=iret)
+                case ('dust1')
+               call nemsio_readrecv(gfile,'du001','mid layer',k,rwork1d0,iret=iret)
+     !               rwork1d0=rwork1d0*half
+                case ('dust2')
+               call nemsio_readrecv(gfile,'du002','mid layer',k,rwork1d0,iret=iret)
+     !               rwork1d0=rwork1d0*half
+                case ('dust3')
+               call nemsio_readrecv(gfile,'du003','mid layer',k,rwork1d0,iret=iret)
+     !               rwork1d0=rwork1d0*half
+                case ('dust4')
+               call nemsio_readrecv(gfile,'du004','mid layer',k,rwork1d0,iret=iret)
+     !               rwork1d0=rwork1d0*half
+                case ('dust5')
+               call nemsio_readrecv(gfile,'du005','mid layer',k,rwork1d0,iret=iret)
+     !               rwork1d0=rwork1d0*half
+                case ('seas1')
+               call nemsio_readrecv(gfile,'ss001','mid layer',k,rwork1d1,iret=iret)
+               call nemsio_readrecv(gfile,'ss002','mid layer',k,rwork1d2,iret=iret)
+                rwork1d0=rwork1d1+rwork1d2
+                case ('seas2')
+               call nemsio_readrecv(gfile,'ss003','mid layer',k,rwork1d0,iret=iret)
+                case ('seas3')
+               call nemsio_readrecv(gfile,'ss004','mid layer',k,rwork1d0,iret=iret)
+                case ('seas4')
+               call nemsio_readrecv(gfile,'ss005','mid layer',k,rwork1d0,iret=iret)
+               end select
+     
+     ! Convert NGAC mixing ratio unit from kg/kg( 10^3 g/kg ) to ug/kg( 10^-6 g/kg )
+               rwork1d0=rwork1d0*1.0e+9_r_kind
+            end if ! NGAC vs FV3-Chem
   
-  ! Convert NGAC mixing ratio unit from kg/kg( 10^3 g/kg ) to ug/kg( 10^-6 g/kg )
-            rwork1d0=rwork1d0*1.0e+9_r_kind
-  
-  !          rwork1d0=zero
   
             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'tmp','read',istop+7,iret)
             if(diff_res)then
@@ -355,7 +374,7 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
     if(mype==0) then
        write(6,700) lonb,latb,nlevs,grd%nlon,nlatm2,&
             fhour,odate
-700    format('READ_NGAC_AEROSOL:  ges read/scatter, lonb,latb,levs=',&
+700    format('READ_GLOBAL_AEROSOL:  ges read/scatter, lonb,latb,levs=',&
             3i6,', nlon,nlat=',2i6,', hour=',f10.1,', idate=',4i5)
     end if
 
