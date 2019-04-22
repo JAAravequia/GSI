@@ -134,7 +134,7 @@ case $machine in
 
    #  On Theia, there are no scrubbers to remove old contents from stmp* directories.
    #  After completion of regression tests, will remove the regression test subdirecories
-   export clean=".false."
+   export clean=".true."
    ;;
    WCOSS_C)
    if [ -d /gpfs/hps3/emc/global/noscrub/$LOGNAME ]; then

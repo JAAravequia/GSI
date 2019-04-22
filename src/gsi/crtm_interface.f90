@@ -1621,7 +1621,7 @@ end subroutine destroy_crtm
 
 !        Ensure ozone is greater than ozsmall
 
-         cf(k)=min(max(zero,cf(k)),100.0_r_kind)
+         cf(k)=min(max(zero,cf(k)),one)
      endif ! cf
 ! Quantities required for MW cloudy radiance calculations
 
@@ -1885,7 +1885,7 @@ end subroutine destroy_crtm
               if (cloud_cont(k,3) >= 1.0e-6_r_kind) hwp_guess(3) = hwp_guess(3) +  cloud_cont(k,3)        
               if (cloud_cont(k,4) >= 1.0e-6_r_kind) hwp_guess(4) = hwp_guess(4) +  cloud_cont(k,4)        
               if (cloud_cont(k,5) >= 1.0e-6_r_kind) hwp_guess(5) = hwp_guess(5) +  cloud_cont(k,5)        
-!crtm.2.3.x   if (.not. regional .and. icfs==0 .and. fv3_full_hydro) atmosphere(1)%cloud_fraction(k) = cf(kk2) 
+!crtm2.3.x    if (.not. regional .and. icfs==0 .and. fv3_full_hydro) atmosphere(1)%cloud_fraction(k) = cf(kk2) 
 
                 !Add lower bound to all hydrometers 
                 !note: may want to add lower bound value for effective radius  
