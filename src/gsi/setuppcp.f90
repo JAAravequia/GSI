@@ -193,6 +193,7 @@ subroutine setuppcp(lunin,mype,aivals,nele,nobs,&
   integer(i_kind) isatid,itime,ilon,ilat,isfcflg,ipcp,isdv
   integer(i_kind) icnt,ilone,ilate,icnv,itype,iclw,icli
   integer(i_kind) itim,itimp,istat
+  integer(i_kind) icw,iql,iqi       
 
   logical sea
   logical ssmi,amsu,tmi,stage3,muse
@@ -252,6 +253,8 @@ subroutine setuppcp(lunin,mype,aivals,nele,nobs,&
        prsl0,del0,sl0,tsen_ten0,q_ten0,p_ten0
   real(r_kind),dimension(nsig+1):: prsi0
   real(r_kind),pointer,dimension(:,:,:)::ges_cwmr_im,ges_cwmr_ip
+  real(r_kind),pointer,dimension(:,:,:)::ges_qlmr_im,ges_qlmr_ip  
+  real(r_kind),pointer,dimension(:,:,:)::ges_qimr_im,ges_qimr_ip 
 
   real(r_kind),parameter::  zero_7  = 0.7_r_kind
   real(r_kind),parameter::  r1em6   = 0.000001_r_kind
@@ -642,11 +645,24 @@ endif
      end if
      deltp=one-delt
 
+     call gsi_metguess_get ('var::ql', iql, istatus )
+     call gsi_metguess_get ('var::qi', iqi, istatus )
+     call gsi_metguess_get ('var::cw', icw, istatus )
+     if ( icw <= 0 .and. (iql > 0 .and. iqi > 0) ) then
+!       Get pointer to could water mixing ratio
+        call gsi_bundlegetpointer (gsi_metguess_bundle(itim), 'ql',ges_qlmr_im,istatus)
+        call gsi_bundlegetpointer (gsi_metguess_bundle(itimp),'ql',ges_qlmr_ip,istatus)
+        call gsi_bundlegetpointer (gsi_metguess_bundle(itim), 'qi',ges_qimr_im,istatus)
+        call gsi_bundlegetpointer (gsi_metguess_bundle(itimp),'qi',ges_qimr_ip,istatus)
+        ges_cwmr_im = ges_qlmr_im + ges_qimr_im
+        ges_cwmr_ip = ges_qlmr_ip + ges_qimr_ip
+     else
 !    Get pointer to could water mixing ratio
      call gsi_bundlegetpointer (gsi_metguess_bundle(itim), 'cw',ges_cwmr_im,istatus)
      if (istatus/=0) call die('setuppcp','cannot get pointer to cwmr(itim), istatus =',istatus)
      call gsi_bundlegetpointer (gsi_metguess_bundle(itimp),'cw',ges_cwmr_ip,istatus)
      if (istatus/=0) call die('setuppcp','cannot get pointer to cwmr(itimp), istatus =',istatus)
+     endif  
 
 !    Set and save spatial interpolation indices and weights.
      call get_ij(mm1,slats,slons,jgrd,wgrd,jjlat=ixx,jjlon=iyy)

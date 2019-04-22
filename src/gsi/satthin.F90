@@ -334,7 +334,7 @@ contains
     itx_all=0
     if(abs(rmesh) <= one .or. ithin <= 0)then
       use_all=.true.
-      itxmax=1e9
+      itxmax=1e9   !orig
       allocate(icount(itxmax))
       allocate(score_crit(itxmax))
       do j=1,itxmax

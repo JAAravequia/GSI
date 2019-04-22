@@ -91,7 +91,7 @@ subroutine get_gefs_ensperts_dualres
   integer(i_kind) ier
 ! integer(i_kind) il,jl
   type(get_gfs_ensmod_class) :: enscoupler
-  logical ice
+  logical ice,hydrometeor 
   type(sub2grid_info) :: grd_tmp
 
 ! Create perturbations grid and get variable names from perturbations
@@ -220,6 +220,11 @@ subroutine get_gefs_ensperts_dualres
 !_$omp parallel do schedule(dynamic,1) private(i,k,j,ic3,rh)
        do ic3=1,nc3d
 
+          hydrometeor = trim(cvars3d(ic3))=='cw' .or. trim(cvars3d(ic3))=='ql' .or. &
+                        trim(cvars3d(ic3))=='qi' .or. trim(cvars3d(ic3))=='qr' .or. &
+                        trim(cvars3d(ic3))=='qs' .or. trim(cvars3d(ic3))=='qg' .or. &
+                        trim(cvars3d(ic3))=='qh'
+
           call gsi_bundlegetpointer(en_read(n),trim(cvars3d(ic3)),p3,istatus)
           if(istatus/=0) then
              write(6,*)' error retrieving pointer to ',trim(cvars3d(ic3)),' from read in member ',m
@@ -251,7 +256,8 @@ subroutine get_gefs_ensperts_dualres
                 cycle
              end if
           end if
-          if ( trim(cvars3d(ic3)) == 'cw' ) then
+       !  if ( trim(cvars3d(ic3)) == 'cw' ) then  !orig
+          if ( hydrometeor ) then                
 !$omp parallel do schedule(dynamic,1) private(i,j,k)
              do k=1,km
                 do j=1,jm
@@ -476,6 +482,8 @@ subroutine ens_spread_dualres(en_bar,ibin)
   use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sube2suba
   use constants, only:  zero,two,half,one
   use control_vectors, only: cvars2d,cvars3d,nc2d,nc3d
+  use mpeu_util, only: getindex   
+  use mpimod, only: mype          
   use gsi_bundlemod, only: gsi_bundlecreate
   use gsi_bundlemod, only: gsi_grid
   use gsi_bundlemod, only: gsi_bundle
@@ -497,6 +505,7 @@ subroutine ens_spread_dualres(en_bar,ibin)
   integer(i_kind) num_fields,inner_vars,istat,istatus
   logical,allocatable::vector(:)
   real(r_kind),pointer,dimension(:,:,:):: st,vp,tv,rh,oz,cw
+  real(r_kind),pointer,dimension(:,:,:):: ql,qi,qr,qs,qg   
   real(r_kind),pointer,dimension(:,:):: ps
   real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig),target::dum3
   real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2),target::dum2
@@ -588,22 +597,59 @@ subroutine ens_spread_dualres(en_bar,ibin)
   end if
   call gsi_bundlegetpointer(suba,'cw',cw,istat)
   if(istat/=0) then
-     write(6,*)' no cw pointer in ens_spread_dualres, point cw at dum3 array'
+!    write(6,*)' no cw pointer in ens_spread_dualres, point cw at dum3 array'
      cw => dum3
   end if
+!  if (getindex(cvars3d,'ql')>0) then  
+     call gsi_bundlegetpointer(suba,'ql',ql,istat)
+     if(istat/=0) then
+        if (mype==0) write(6,*)' no ql pointer in ens_spread_dualres, point ql at dum3 array'
+        ql => dum3
+     end if
+!  end if
+!  if (getindex(cvars3d,'qi')>0) then  
+     call gsi_bundlegetpointer(suba,'qi',qi,istat)
+     if(istat/=0) then
+        if (mype==0) write(6,*)' no qi pointer in ens_spread_dualres, point qi at dum3 array'
+        qi => dum3
+     end if
+!  end if
+!  if (getindex(cvars3d,'qr')>0) then 
+     call gsi_bundlegetpointer(suba,'qr',qr,istat)
+     if(istat/=0) then
+        if (mype==0) write(6,*)' no qr pointer in ens_spread_dualres, point qr at dum3 array'
+        qr => dum3
+     end if
+!  end if
+!  if (getindex(cvars3d,'qs')>0) then  
+     call gsi_bundlegetpointer(suba,'qs',qs,istat)
+     if(istat/=0) then
+        if (mype==0) write(6,*)' no qs pointer in ens_spread_dualres, point qs at dum3 array'
+        qs => dum3
+     end if
+!  end if
+!  if (getindex(cvars3d,'qg')>0) then 
+     call gsi_bundlegetpointer(suba,'qg',qg,istat)
+     if(istat/=0) then
+        if (mype==0) write(6,*)' no qg pointer in ens_spread_dualres, point qg at dum3 array'
+        qg => dum3
+     end if
+!  end if
   call gsi_bundlegetpointer(suba,'ps',ps,istat)
   if(istat/=0) then
      write(6,*)' no ps pointer in ens_spread_dualres, point ps at dum2 array'
      ps => dum2
   end if
 
-  call write_spread_dualres(st,vp,tv,rh,oz,cw,ps)
+! call write_spread_dualres(st,vp,tv,rh,oz,cw,ps)      !orig
+  call write_spread_dualres(st,vp,tv,rh,oz,cw,ql,qi,qr,qs,qg,ps)  
 
   return
 end subroutine ens_spread_dualres
 
 
-subroutine write_spread_dualres(a,b,c,d,e,f,g2in)
+!subroutine write_spread_dualres(a,b,c,d,e,f,g2in)   !orig
+subroutine write_spread_dualres(a,b,c,d,e,f,hl,hi,hr,hs,hg,g2in)  !emil
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    write_spread_dualres   write ensemble spread for diagnostics
@@ -640,10 +686,13 @@ subroutine write_spread_dualres(a,b,c,d,e,f,g2in)
   implicit none
 
   character(255):: grdfile
+  character(80) :: string  
 
   real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig),intent(in):: a,b,c,d,e,f
+  real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig),intent(in):: hl,hi,hr,hs,hg  
+
   real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2),intent(in):: g2in
-  real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig,6):: g3in
+  real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig,11):: g3in 
 
   real(r_kind),dimension(grd_anl%nlat,grd_anl%nlon,grd_anl%nsig):: work8_3d
   real(r_kind),dimension(grd_anl%nlat,grd_anl%nlon):: work8_2d
@@ -656,7 +705,7 @@ subroutine write_spread_dualres(a,b,c,d,e,f,g2in)
 ! Initial memory used by 2d and 3d grids
   mem2d = 4*grd_anl%nlat*grd_anl%nlon
   mem3d = 4*grd_anl%nlat*grd_anl%nlon*grd_anl%nsig
-  num3d=6
+  num3d=11
 
 ! transfer 2d arrays to generic work aray
   do k=1,grd_anl%nsig
@@ -668,6 +717,11 @@ subroutine write_spread_dualres(a,b,c,d,e,f,g2in)
          g3in(i,j,k,4)=d(i,j,k)
          g3in(i,j,k,5)=e(i,j,k)
          g3in(i,j,k,6)=f(i,j,k)
+         g3in(i,j,k, 7)=hl(i,j,k)  
+         g3in(i,j,k, 8)=hi(i,j,k)  
+         g3in(i,j,k, 9)=hr(i,j,k)  
+         g3in(i,j,k,10)=hs(i,j,k) 
+         g3in(i,j,k,11)=hg(i,j,k)  
        end do
      end do
   end do

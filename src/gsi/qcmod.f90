@@ -170,7 +170,8 @@ module qcmod
   public :: use_poq7,noiqc,vadfile,dfact1,dfact,erradar_inflate
   public :: pboto3,ptopo3,pbotq,ptopq,newvad,tdrerr_inflate
   public :: igood_qc,ifail_crtm_qc,ifail_satinfo_qc,ifail_interchan_qc,&
-            ifail_gross_qc,ifail_cloud_qc,ifail_outside_range,ifail_scanedge_qc
+            ifail_gross_qc,ifail_cloud_qc,ifail_outside_range,ifail_scanedge_qc,&
+            ifail_cao_qc  
 
   public :: buddycheck_t,buddydiag_save
   public :: vadwnd_l2rw_qc
@@ -225,7 +226,8 @@ module qcmod
   integer(i_kind),parameter:: ifail_range_qc=9
 !  Reject because outside the range of lsingleradob
   integer(i_kind),parameter:: ifail_outside_range=11
-
+!  Reject due to cold-air outbreak area check  in setuprad
+  integer(i_kind),parameter:: ifail_cao_qc=12
 !  Failures specific to qc routine start at 50 and the numbers overlap
 !  QC_SSMI failures 
 !  Reject due to krain type not equal to 0 in subroutine qc_ssmi

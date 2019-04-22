@@ -45,8 +45,9 @@ module jcmod
 ! set passed variables to public
   public :: ljcdfi,alphajc,wgtdfi,bamp_jcpdry,ljcpdry,eps_eer
   public :: ljc4tlevs
+  public :: ljclimqc  
 
-  logical ljcdfi,ljcpdry,ljc4tlevs
+  logical ljcdfi,ljcpdry,ljc4tlevs,ljclimqc 
   real(r_kind) alphajc,bamp_jcpdry,eps_eer
   real(r_kind),allocatable :: wgtdfi(:)
 
@@ -79,6 +80,7 @@ contains
     implicit none
 
 ! load defaults for non-allocatable arrays
+    ljclimqc=.false. 
     ljcdfi=.false.
     ljcpdry=.false.
     ljc4tlevs=.false.
