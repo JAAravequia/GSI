@@ -89,8 +89,10 @@ module rapidrefresh_cldsurf_mod
 !                         =3.  cloud analysis only with hybrometeors NETCDF I/O
 !                         =5.  skip cloud analysis and NETCDF file update
 !                         =6.  cloud analysis only and do hybrometeors NETCDF/O
+!                         =7   cloud analysis in observer with I/O
 !                         =2  cloud analysis for NAM
 !                         =30  cloud analysis for GFS
+!                         =99  only read hydrometer fields but no cloud analysis
 !      i_gsdsfc_uselist  - options for how to use surface observation use or
 !                          rejection list
 !                         =0 . EMC method (default)
@@ -125,6 +127,10 @@ module rapidrefresh_cldsurf_mod
 !                       = 2  if selection is median of samples
 !      l_precip_clear_only  =true, only clear precipatating hydrometeors
 !      l_fog_off            =true, turn off the impact of metar visibilty obs on cloud fields 
+!      cld_bld_coverage  - namelist real for cloud coverage required for qc/qi building
+!                             (default = 0.6)
+!      cld_clr_coverage  - namelist real for cloud coverage required for qc/qi clearing
+!                             (default = 0.4)
 !
 ! attributes:
 !   language: f90
@@ -182,6 +188,8 @@ module rapidrefresh_cldsurf_mod
   public :: ioption
   public :: l_precip_clear_only
   public :: l_fog_off
+  public :: cld_bld_coverage
+  public :: cld_clr_coverage
 
   logical l_cloud_analysis
   real(r_kind)  dfi_radar_latent_heat_time_period
@@ -226,6 +234,8 @@ module rapidrefresh_cldsurf_mod
   integer(i_kind)      ioption
   logical              l_precip_clear_only
   logical              l_fog_off
+  real(r_kind)         cld_bld_coverage
+  real(r_kind)         cld_clr_coverage
 
 contains
 
@@ -320,6 +330,8 @@ contains
     ioption  = 2                                      ! default is median of samples
     l_precip_clear_only = .false.                     ! .true. only use precip to clear
     l_fog_off = .false.                               ! .true. is to turn off fog updates
+    cld_bld_coverage    = 0.6_r_kind                  ! Percentage of cloud coverage for building qc/qi
+    cld_clr_coverage    = 0.6_r_kind                  ! Percentage of cloud coverage for clearing qc/qi
     return
   end subroutine init_rapidrefresh_cldsurf
 

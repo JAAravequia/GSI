@@ -135,7 +135,8 @@
                             iclean_hydro_withRef,iclean_hydro_withRef_allcol, &
                             i_use_2mq4b,i_use_2mt4b,i_gsdcldanal_type,i_gsdsfc_uselist, &
                             i_lightpcp,i_sfct_gross,l_use_hydroretrieval_all,l_numconc,l_closeobs,&
-                            i_coastline,i_gsdqc,qv_max_inc,ioption,l_precip_clear_only,l_fog_off
+                            i_coastline,i_gsdqc,qv_max_inc,ioption,l_precip_clear_only,l_fog_off,&
+                            cld_bld_coverage,cld_clr_coverage
   use gsi_metguess_mod, only: gsi_metguess_init,gsi_metguess_final
   use gsi_chemguess_mod, only: gsi_chemguess_init,gsi_chemguess_final
   use tcv_mod, only: init_tcps_errvals,tcp_refps,tcp_width,tcp_ermin,tcp_ermax
@@ -971,7 +972,14 @@
 !                         =0. no cloud analysis (default)
 !                         =1.  cloud analysis after var analysis for WRF_ARW
 !                         =2.  cloud analysis after var analysis for NMMB
+!                         =3.  cloud analysis only with hybrometeors NETCDF I/O
 !                         =5.  skip cloud analysis and NETCDF file update
+!                         =6.  cloud analysis only and do hybrometeors NETCDF/O
+!                         =7   cloud analysis in observer with I/O
+!                         =2  cloud analysis for NAM
+!                         =30  cloud analysis for GFS
+!                         =99  only read hydrometer fields but no cloud analysis
+
 !      i_gsdsfc_uselist  - options for how to use surface observation use or
 !                          rejection list
 !                         =0 . EMC method (default)
@@ -1007,6 +1015,8 @@
 !      qv_max_inc        - threshold to limit the maximum water vapor increment
 !      l_precip_clear_only - the precipitation analysis only clears; it does not
 !                            make any updates for positive precipitating hydrometeors
+!      cld_bld_coverage    - cloud coverage required for qc/qi building
+!      cld_clr_coverage    - cloud coverage required for qc/qi clearing
 !
   namelist/rapidrefresh_cldsurf/dfi_radar_latent_heat_time_period, &
                                 metar_impact_radius,metar_impact_radius_lowcloud, &
@@ -1022,7 +1032,8 @@
                                 iclean_hydro_withRef,iclean_hydro_withRef_allcol,&
                                 i_use_2mq4b,i_use_2mt4b,i_gsdcldanal_type,i_gsdsfc_uselist, &
                                 i_lightpcp,i_sfct_gross,l_use_hydroretrieval_all,l_numconc,l_closeobs,&
-                                i_coastline,i_gsdqc,qv_max_inc,ioption,l_precip_clear_only,l_fog_off
+                                i_coastline,i_gsdqc,qv_max_inc,ioption,l_precip_clear_only,l_fog_off,&
+                                cld_bld_coverage,cld_clr_coverage
 
 ! chem(options for gsi chem analysis) :
 !     berror_chem       - .true. when background  for chemical species that require
@@ -1396,6 +1407,11 @@
   if (i_gsdcldanal_type==0) then
      l_cloud_analysis = .false.
      if (mype==0) write(6,*)'GSIMOD:  ***WARNING*** set l_cloud_analysis=false'
+  else if(i_gsdcldanal_type==1 .or. i_gsdcldanal_type==2 .or. &
+          i_gsdcldanal_type==3 .or. i_gsdcldanal_type==5 .or. &
+          i_gsdcldanal_type==6 .or. i_gsdcldanal_type==99 ) then
+     l_cloud_analysis = .true.
+     if (mype==0) write(6,*)'GSIMOD:  set l_cloud_analysis=true:',i_gsdcldanal_type
   endif
   if((i_coastline == 1 .or. i_coastline == 3) .and. i_use_2mt4b==0) then
      i_coastline=0

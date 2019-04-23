@@ -96,6 +96,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !   2017-05-12  Y. Wang and X. Wang - add dbz for reflectivity DA. POC: xuguang.wang@ou.edu
 !   2018-02-15  wu      - add code for fv3_regional 
 !   2018-01-01  Apodaca - add GOES/GLM lightning
+!   2019-03-15  Ladwig  - add option for cloud analysis in observer
 !
 !   input argument list:
 !     ndata(*,1)- number of prefiles retained for further processing
@@ -150,7 +151,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   use aeroinfo, only: diag_aero
   use berror, only: reset_predictors_var
   use rapidrefresh_cldsurf_mod, only: l_PBL_pseudo_SurfobsT,l_PBL_pseudo_SurfobsQ,&
-                                      l_PBL_pseudo_SurfobsUV
+                                      l_PBL_pseudo_SurfobsUV,i_gsdcldanal_type
   use m_rhs, only: rhs_alloc
   use m_rhs, only: rhs_dealloc
   use m_rhs, only: rhs_allocated
@@ -695,6 +696,14 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
      end do !loop over all data types
      close(lunin)
+
+     ! run cloud analysis in observer
+     if(i_gsdcldanal_type==7) then
+         call gsdcloudanalysis(mype)
+         ! Write output analysis files
+         call write_all(-1,mype)
+         call prt_guess('analysis')
+     endif
 
   else
 

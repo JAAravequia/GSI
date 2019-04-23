@@ -238,7 +238,7 @@ contains
   !    Following is for convenient WRF MASS input
        num_mass_fields=15+5*lm+2*nsig_soil
 !    The 9 3D cloud analysis fields are: ql,qi,qr,qs,qg,qnr,qni,qnc,tt
-       if(l_cloud_analysis .or. n_actual_clouds>0) num_mass_fields=num_mass_fields+9*lm+2    
+       if(l_cloud_analysis .and. n_actual_clouds>0) num_mass_fields=num_mass_fields+9*lm+2    
        if(l_gsd_soilTQ_nudge) num_mass_fields=num_mass_fields+2
        num_loc_groups=num_mass_fields/npe
        if(print_verbose) then

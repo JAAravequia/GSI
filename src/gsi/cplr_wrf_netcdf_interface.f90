@@ -1217,11 +1217,12 @@ contains
                   start_index,end_index,               & !pat
                   ierr                                 )
              do k=1,nsig_regional
-               do i=1,nlon_regional
-                 do j=2,nlat_regional
-                    field3(i,j,k) = (max(field3(i,j,k),zero))
-                 enddo
-               enddo
+! DCD 2 April 2019:  commented out next 5 lines
+!               do i=1,nlon_regional
+!                 do j=2,nlat_regional
+!                    field3(i,j,k) = (max(field3(i,j,k),zero))
+!                 enddo
+!               enddo
                if(print_verbose)then
                   write(6,*)' k,max,min,mid Dbz=',k,maxval(field3(:,:,k)),minval(field3(:,:,k)), &
                               field3(nlon_regional/2,nlat_regional/2,k)
@@ -2526,7 +2527,7 @@ contains
   
   ! transfer code from diffwrf for converting netcdf wrf nmm restart file
   ! to temporary binary format
-    if( i_gsdcldanal_type==6 .or. i_gsdcldanal_type==3) call ext_ncd_ioinit(sysdepinfo,status)
+    if( i_gsdcldanal_type==6 .or. i_gsdcldanal_type==3 .or. i_gsdcldanal_type==7) call ext_ncd_ioinit(sysdepinfo,status)
   !
   !           update mass core netcdf file with analysis variables from 3dvar
   !

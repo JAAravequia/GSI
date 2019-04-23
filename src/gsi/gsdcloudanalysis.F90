@@ -77,7 +77,7 @@ subroutine  gsdcloudanalysis(mype)
                                       iclean_hydro_withRef, iclean_hydro_withRef_allcol, &
                                       l_use_hydroretrieval_all, &
                                       i_lightpcp, l_numconc, qv_max_inc,ioption, &
-                                      l_precip_clear_only,l_fog_off 
+                                      l_precip_clear_only,l_fog_off,cld_bld_coverage,cld_clr_coverage
 
   use gsi_metguess_mod, only: GSI_MetGuess_Bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -239,6 +239,7 @@ subroutine  gsdcloudanalysis(mype)
   character(10)   :: obstype
   integer(i_kind) :: lunin, is, ier, istatus
   integer(i_kind) :: nreal,nchanl,ilat1s,ilon1s
+  integer(i_kind) :: clean_count,build_count,part_count,miss_count
   character(20)   :: isis
 
   real(r_kind)    :: refmax,snowtemp,raintemp,nraintemp,graupeltemp
@@ -255,6 +256,11 @@ subroutine  gsdcloudanalysis(mype)
 
 !
 !
+  clean_count=0
+  build_count=0
+  part_count=0
+  miss_count=0
+
   itsig=1 ! _RT shouldn't this be ntguessig?
   itsfc=1 ! _RT shouldn't this be ntguessig?
 !
@@ -274,11 +280,11 @@ subroutine  gsdcloudanalysis(mype)
   call gsi_bundlegetpointer (GSI_MetGuess_Bundle(itsig),'qnc',ges_qnc,istatus);ier=ier+istatus
   if(ier/=0) return ! no guess, nothing to do
 
-  if(mype==0) then
-     write(6,*) '========================================'
-     write(6,*) 'gsdcloudanalysis: Start generalized cloud analysis'
-     write(6,*) '========================================'
-  endif
+  !if(mype==0) then
+  !   write(6,*) '========================================'
+     write(6,*) 'gsdcloudanalysis: Start generalized cloud analysis', mype
+  !   write(6,*) '========================================'
+  !endif
 !
 !
 !
@@ -809,37 +815,42 @@ subroutine  gsdcloudanalysis(mype)
   do k=1,nsig
      do j=2,lat2-1
         do i=2,lon2-1
-           if( cld_cover_3d(i,j,k) > -0.001_r_kind ) then 
-              if( cld_cover_3d(i,j,k) > 0.6_r_kind ) then  ! build cloud
-! mhu: Feb2017: set qnc=1e8 and qni=1e6 when build cloud
-                 cloudwater=0.001_r_kind*cldwater_3d(i,j,k)
-                 cloudice=0.001_r_kind*cldice_3d(i,j,k)
-                 cldwater_3d(i,j,k) = max(cloudwater,ges_ql(j,i,k))
-                 cldice_3d(i,j,k)   = max(cloudice,ges_qi(j,i,k))
-                 if(cloudwater > 1.0e-7_r_kind .and. cloudwater >= ges_ql(j,i,k)) then
-                    nwater_3d(i,j,k)   = 1.0E8_r_single
-                 else
-                    nwater_3d(i,j,k)   = ges_qnc(j,i,k)
-                 endif
-                 if(cloudice > 1.0e-7_r_kind .and. cloudice >= ges_qi(j,i,k)) then
-                    nice_3d(i,j,k) = 1.0E6_r_single
-                 else
-                    nice_3d(i,j,k) = ges_qni(j,i,k)
-                 endif
-                 !nwater_3d(i,j,k) = ((6. * rho_a * cldwater_3d(i,j,k)) / (pi * rho_w * cldDiameter)) /1000.
-                 !Hong et al. 2004
-                 !nice_3d(i,j,k) = 5.38E7*((1.2754*cldice_3d(i,j,k))**0.75)*100.0 
-              else   ! clean  cloud
-                 cldwater_3d(i,j,k) = zero
-                 cldice_3d(i,j,k) = zero
-                 nice_3d(i,j,k) = zero
-                 nwater_3d(i,j,k) = zero
+           ! clean  cloud
+           if( cld_cover_3d(i,j,k) > -0.001_r_kind .and. cld_cover_3d(i,j,k) < cld_clr_coverage) then 
+              cldwater_3d(i,j,k) = zero
+              cldice_3d(i,j,k)   = zero
+              nice_3d(i,j,k)     = zero
+              nwater_3d(i,j,k)   = zero
+              clean_count        = clean_count+1
+           ! build cloud
+           elseif( cld_cover_3d(i,j,k) >= cld_bld_coverage .and. cld_cover_3d(i,j,k) < 2.0_r_kind   ) then      
+              cloudwater         =0.001_r_kind*cldwater_3d(i,j,k)
+              cloudice           =0.001_r_kind*cldice_3d(i,j,k)
+              cldwater_3d(i,j,k) = max(cloudwater,ges_ql(j,i,k))
+              cldice_3d(i,j,k)   = max(cloudice,ges_qi(j,i,k))
+              ! mhu: Feb2017: set qnc=1e8 and qni=1e6 when build cloud
+              if(cloudwater > 1.0e-7_r_kind .and. cloudwater >= ges_ql(j,i,k)) then
+                 nwater_3d(i,j,k) = 1.0E8_r_single
+              else
+                 nwater_3d(i,j,k) = ges_qnc(j,i,k)
               endif
-           else   ! unknown, using background values
+              if(cloudice > 1.0e-7_r_kind .and. cloudice >= ges_qi(j,i,k)) then
+                 nice_3d(i,j,k) = 1.0E6_r_single
+              else
+                 nice_3d(i,j,k) = ges_qni(j,i,k)
+              endif
+              build_count=build_count+1
+           ! unknown or partial cloud, using background values
+           else  
               cldwater_3d(i,j,k) = ges_ql(j,i,k)
-              cldice_3d(i,j,k) = ges_qi(j,i,k)
-              nice_3d(i,j,k) = ges_qni(j,i,k)
-              nwater_3d(i,j,k) = ges_qnc(j,i,k)
+              cldice_3d(i,j,k)   = ges_qi(j,i,k)
+              nice_3d(i,j,k)     = ges_qni(j,i,k)
+              nwater_3d(i,j,k)   = ges_qnc(j,i,k)
+              if( cld_cover_3d(i,j,k) > cld_clr_coverage ) then
+                 part_count=part_count+1
+              else
+                 miss_count=miss_count+1
+              endif
            endif
         end do
      end do
@@ -1178,6 +1189,7 @@ subroutine  gsdcloudanalysis(mype)
   deallocate(sat_ctp,sat_tem,w_frac,nlev_cld)
   deallocate(ref_mos_3d,ref_mos_3d_tten,lightning)
 
+  write(*,*) "CLDcount", clean_count,build_count,part_count,miss_count
   if(mype==0) then
      write(6,*) '========================================'
      write(6,*) 'gsdcloudanalysis: generalized cloud analysis finished:',mype
