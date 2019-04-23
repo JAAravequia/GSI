@@ -2146,7 +2146,6 @@ END subroutine dec2bin
    real(r_kind), intent(inout) :: wgtjo(nchanl)
    real(r_kind), intent(inout) :: jacobian(nsigradjac,nchanl)
    real(r_kind), intent(in)    :: pred(npred,nchanl)
-!   real(r_kind), intent(inout) :: cpred(npred,nchanl)
    real(r_kind), intent(inout) :: Rinv(nchanl)
    real(r_kind), intent(inout) :: rsqrtinv(nchanl,nchanl)
    integer(i_kind), intent(out) :: iinstr

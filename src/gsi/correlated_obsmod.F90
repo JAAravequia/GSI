@@ -55,22 +55,22 @@ usually embedded in the {\it anavinfo} file. An example of such table follows:
 \begin{verbatim}
 correlated_observations::
 ! isis       method    type    cov_file
-  airs_aqua     1      60.   ice     airs_rcov.bin
-  airs_aqua     1      60.   land    airs_rcov.bin
-  airs_aqua     1      60.   sea     airs_rcov.bin
-  airs_aqua     1      60.   snow    airs_rcov.bin
-  airs_aqua     1      60.   mixed   airs_rcov.bin
-# cris_npp      1     -99.   snow    cris_rcov.bin
-# cris_npp      1     -99.   land    cris_rcov.bin
-# cris_npp      1     -99.   sea     cris_rcov.bin
-  iasi_metop-a  2      0.12  snow    iasi_sea_rcov.bin
-  iasi_metop-a  2      0.22  land    iasi_land_rcov.bin
-  iasi_metop-a  2      0.05  sea     iasi_sea_rcov.bin
-  iasi_metop-a  2      0.12  ice     iasi_sea_rcov.bin
-  iasi_metop-a  2      0.12  mixed   iasi_sea_rcov.bin
-# ssmis_f17     1     -99.   mixed   ssmis_rcov.bin
-# ssmis_f17     1     -99.   land    ssmis_rcov.bin
-# ssmis_f17     1     -99.   sea     ssmis_rcov.bin
+  airs_aqua     1      ice     airs_rcov.bin
+  airs_aqua     1      land    airs_rcov.bin
+  airs_aqua     1      sea     airs_rcov.bin
+  airs_aqua     1      snow    airs_rcov.bin
+  airs_aqua     1      mixed   airs_rcov.bin
+# cris_npp      1      snow    cris_rcov.bin
+# cris_npp      1      land    cris_rcov.bin
+# cris_npp      1      sea     cris_rcov.bin
+  iasi_metop-a  2      snow    iasi_sea_rcov.bin
+  iasi_metop-a  3      land    iasi_land_rcov.bin
+  iasi_metop-a  2      sea     iasi_sea_rcov.bin
+  iasi_metop-a  3      ice     iasi_sea_rcov.bin
+  iasi_metop-a  3      mixed   iasi_sea_rcov.bin
+# ssmis_f17     1      mixed   ssmis_rcov.bin
+# ssmis_f17     1      land    ssmis_rcov.bin
+# ssmis_f17     1      sea     ssmis_rcov.bin
 
 ::
 \end{verbatim}
@@ -80,8 +80,7 @@ pointing the different types to the same file. In the example above, only AIRS a
 IASI from Metop-A are being specially handled by this module. In the case of
 AIRS, no distinction is made among the different types of surfaces, whereas 
 in the case of IASI, a distinction is made between land and sea, with everything
-else being treated as sea.  It is not necessary to specify a covariance file for
-each surface type.
+else being treated as sea.
 
 The instrument name is the same as it would be in the satinfo file.
 
@@ -284,7 +283,7 @@ do ii=1,ninstr
    instruments(ii) = trim(instrument)
    idnames(ii) = trim(instrument)//':'//trim(mask)
    if(iamroot_) then
-      write(6,'(1x,2(a,1x),1x,f7.2,1x,a)') trim(instrument), trim(mask), method, trim(filename)
+      write(6,'(1x,2(a,1x),i4,1x,a)') trim(instrument), trim(mask), method, trim(filename)
    endif
 !  check method validity
    if(ALL(methods_avail/=method)) then
@@ -613,8 +612,9 @@ end subroutine decompose_
 logical function scale_jac_(depart,obvarinv,jacobian, nchanl,&
                             jpch_rad,varinv,wgtjo,iuse,ich,ErrorCov,pred,Rinv,rsqrtinv)
 ! !USES:
-use constants, only: tiny_r_kind
+use constants, only: tiny_r_kind,five
 use mpeu_util, only: die
+
 implicit none
 ! !INPUT PARAMETERS:
 integer(i_kind),intent(in) :: nchanl   ! total number of channels in instrument
@@ -628,9 +628,8 @@ real(r_kind),intent(inout) :: obvarinv(:)  ! inverse of eval(diag(R)) !KAB delet
 real(r_kind),intent(inout) :: wgtjo(:)     ! weight in Jo-term
 real(r_kind),intent(inout) :: jacobian(:,:)! Jacobian matrix
 real(r_kind),intent(in)    :: pred(:,:)    ! bias predictors
-!real(r_kind),intent(inout) :: cpred(:,:)   ! bias predictor
-real(r_kind),intent(inout) :: Rinv(:)
-real(r_kind),intent(inout) :: rsqrtinv(:,:)!
+real(r_kind),intent(inout) :: Rinv(:)      !
+real(r_kind),intent(inout) :: rsqrtinv(:,:)!for R=U^TU, rsqrtinv=U^{-1} is upper-triangular
 type(ObsErrorCov) :: ErrorCov              ! ob error covariance for given instrument
 
 ! !DESCRIPTION: This routine is the main entry-point to the outside world. 
@@ -647,7 +646,7 @@ type(ObsErrorCov) :: ErrorCov              ! ob error covariance for given instr
 !   2015-04-01  W. Gu      clean the code
 !   2017-07-27  kbathmann  Merge subroutine rsqrtinv into scale_jac, define Rinv to fix
 !                          diag_precon for correlated error, and reorder several nested loops
-!   2018-03-18  kbathmann  change to cholesky, and move over correlated error code from intrad and stprad
+!   2018-03-18  kbathmann  change to cholesky factorization, change "method" options
 !
 ! !REMARKS:
 !   language: f90
@@ -740,8 +739,7 @@ if (jjj/=ncp) then
    call die(myname_,' serious dimensions insconsistency (J), aborting')
 endif
 
-! decompose the sub-matrix - returning the result in the 
-!                            structure holding the full covariance
+! decompose the sub-matrix - not necessary if all channels pass qc
 if( method >0 ) then
    if (ncp<ErrorCov%nch_active) then
       subset = decompose_subset_ (IRsubset,ErrorCov)
@@ -783,13 +781,12 @@ else
    row=zero 
    rsqrtinv=zero
    col=zero
-!   cpred=zero
    Rinv=zero
    if (method==3) then
       do ii=1,ncp
          iii=IRsubset(ii)
-         do jj=ii,ncp
-            mm=IJsubset(jj)
+         mm=IJsubset(ii)
+         do jj=1,ii
             jjj=IRsubset(jj)
             ErrorCov%UT(jjj,iii)=ErrorCov%UT(jjj,iii)*obvarinv(mm)
          enddo
@@ -799,12 +796,11 @@ else
       iii=IRsubset(ii)
       do jj=ii,ncp
          jjj=IRsubset(jj)
-!         do kk=1,npred
-!            val=pred(kk,IJsubset(ii))*ErrorCov%UT(iii,jjj)
-!            cpred(kk,ii)=cpred(kk,ii)+(val*val)
-!         enddo
          Rinv(ii)=Rinv(ii)+ErrorCov%UT(iii,jjj)*ErrorCov%UT(iii,jjj)
       enddo
+      !Multiplication of Rinv diagonal by a factor
+      !of 5 improves the PCG convergence in this case
+      Rinv(ii)=Rinv(ii)*five
       do jj=1,ii
          jjj=IRsubset(jj)
          do kk=1,nsigjac
@@ -862,7 +858,7 @@ implicit none
 ! !REVISION HISTORY:
 !   2014-11-26  W. Gu     Initial code
 !   2019-02-26  kbathmann Update to use Diag of R in QC, rather than satinfo errors.
-!                         This subroutine is used in method 0 and 3 only
+!                         This subroutine is used in methods 0, 2 and 3 only
 !
 ! !REMARKS:
 !   language: f90
@@ -896,7 +892,7 @@ implicit none
 
    nsatype=0
    do jj0=1,ntrow
-      if ((GSI_BundleErrorCov(jj0)%method==3).or. &
+      if ((GSI_BundleErrorCov(jj0)%method>1).or. &
          (GSI_BundleErrorCov(jj0)%method==0)) then
          covtype=trim(idnames(jj0))
          iinstr=len_trim(covtype)

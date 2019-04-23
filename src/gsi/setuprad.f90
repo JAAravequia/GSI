@@ -191,6 +191,8 @@
 !   2016-10-23  zhu     - add cloudy radiance assimilation for ATMS
 !   2017-07-27  kbathmann -introduce Rinv into the rstats computation for correlated error
 !   2018-04-04  zhu     - add additional radiance_ex_obserr and radiance_ex_biascor calls for all-sky
+!   2019-04-22  kbathmann -option to replace obs errors used in qc to the
+!                          diagonal of a specified full covariance matrix
 !
 !  input argument list:
 !     lunin   - unit from which to read radiance (brightness temperature, tb) obs
@@ -351,7 +353,6 @@
   real(r_kind),dimension(nsig+1):: prsitmp
   real(r_kind),dimension(nchanl):: weightmax
   real(r_kind),dimension(nchanl):: cld_rbc_idx
-!  real(r_kind),dimension(npred,nchanl):: cpred
   real(r_kind),dimension(nchanl):: Rinv
   real(r_kind),dimension(nchanl,nchanl):: rsqrtinv
   real(r_kind) :: ptau5deriv, ptau5derivmax
@@ -775,10 +776,6 @@
            if (iuse_rad(j)< -1 .or. (channel_passive .and.  &
                 .not.rad_diagsave)) tnoise(jc)=r1e10
            if (passive_bc .and. channel_passive) tnoise(jc)=tnoise_save
-
-           error0(jc) = tnoise(jc)
-           errf0(jc) = error0(jc)
-
         end do
 
 !       Count data of different surface types
@@ -1093,6 +1090,11 @@
              endif
            endif
         end if ! radmod%lcloud_fwd .and. radmod%ex_biascor
+
+        do i=1,nchanl
+           error0(i) = tnoise(i)
+           errf0(i) = error0(i)
+        end do
 
 !       Assign observation error for all-sky radiances 
         if (radmod%lcloud_fwd .and. eff_area)  then   
@@ -1550,7 +1552,7 @@
               utbc=tbc
               wgtjo= varinv     ! weight used in Jo term
               do ii=1,nchanl
-                 obvarinv(ich(ii))=error0(ii)**2
+                 obvarinv(ii)=error0(ii)**2
               enddo
               if (miter>0) then
                  account_for_corr_obs = radinfo_adjust_jacobian(iinstr,isis,isfctype,nchanl,nsigradjac,npred, &
@@ -1610,7 +1612,6 @@
                     if (newpc4pred .and. luse(n)) then
                        if (account_for_corr_obs) then
                           do k=1,npred
-!                             rstats(k,m)=rstats(k,m)+cpred(k,iii)
                              rstats(k,m)=rstats(k,m)+my_head%pred(k,iii) &
                                   *my_head%pred(k,iii)*Rinv(iii)
                           end do
