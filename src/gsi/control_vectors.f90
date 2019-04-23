@@ -29,6 +29,8 @@ module control_vectors
 !   2013-05-20  zhu      - add aircraft temperature bias correction coefficients as control variables
 !   2016-02-15  Johnson, Y. Wang, X. Wang - add variables to control reading
 !                                           state variables for radar DA. POC: xuguang.wang@ou.edu
+!   2019-03-14  eliu     - add logic to turn on using full set of hydrometeors
+!                          in obs operator and analysis 
 !
 ! subroutines included:
 !   sub init_anacv   
@@ -62,6 +64,7 @@ module control_vectors
 !   def n_ens     - number of ensemble perturbations (=0 except when hybrid ensemble option turned on)
 !   def imp_physics - type of microphysics used in the GFS.  99: Zhao-Carr, 11: GFDL
 !   def lupp - if T, UPP is used and additional variables are output
+!   def fv3_full_hydro - if T, use full set of hydrometeors in obs operator and analysis  
 !
 ! attributes:
 !   language: f90
@@ -125,6 +128,7 @@ public atsfc_sdv   ! standard deviation of surface temperature error over (1) la
 public an_amp0     ! multiplying factors on reference background error variances
 public imp_physics ! type of GFS microphysics
 public lupp        ! when .t., UPP is used and extra variables are output
+public fv3_full_hydro ! when .t., use full set of hydrometeors in obs operator and analysis
 
 public nrf2_loc,nrf3_loc,nmotl_loc   ! what are these for??
 public ntracer
@@ -152,7 +156,7 @@ character(len=*),parameter:: myname='control_vectors'
 integer(i_kind) :: nclen,nclen1,nsclen,npclen,ntclen,nrclen,nsubwin,nval_len
 integer(i_kind) :: latlon11,latlon1n,lat2,lon2,nsig,n_ens
 integer(i_kind) :: nval_lenz_en,imp_physics
-logical :: lsqrtb,lupp
+logical :: lsqrtb,lupp,fv3_full_hydro  
 
 integer(i_kind) :: m_vec_alloc, max_vec_alloc, m_allocs, m_deallocs
 
@@ -432,6 +436,7 @@ do ii=1,nc3d
 enddo ! ii
 imp_physics=99
 lupp = .false.
+fv3_full_hydro = .false.  
 
 end subroutine init_anacv
 subroutine final_anacv

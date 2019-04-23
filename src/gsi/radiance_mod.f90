@@ -911,7 +911,7 @@ contains
   end subroutine radiance_ex_obserr_2
 
   subroutine radiance_ex_biascor_1(radmod,nchanl,tsim_bc,tsavg5,zasat, & 
-                       clw_guess_retrieval,clwp_amsua,cld_rbc_idx,ierrret)
+                       clw_guess_retrieval,clwp_amsua,cld_rbc_idx,ierrret)          
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    radiance_ex_biascor_1
@@ -954,7 +954,7 @@ contains
     end do
 
 !   call ret_amsua(tb_obs,nchanl,tsavg5,zasat,clwp_amsua,ierrret)
-    call ret_amsua(tsim_bc,nchanl,tsavg5,zasat,clw_guess_retrieval,ierrret)
+    call ret_amsua(tsim_bc,nchanl,tsavg5,zasat,clw_guess_retrieval,ierrret) 
 
     do i=1,nchanl
        if (radmod%lcloud4crtm(i)<0) cycle

@@ -908,8 +908,8 @@ contains
     luse_obsdiag     = .false.
 
 !   set default on diag writing
-    netcdf_diag = .false. ! by default, do not write netcdf_diag
-    binary_diag = .true.  ! by default, do write binary diag
+    netcdf_diag = .false. ! by default, do not write netcdf_diag 
+    binary_diag = .true.  ! by default, do write binary diag     
 
     l_wcp_cwm          = .false.                 ! .true. = use operator that involves cwm
 

@@ -19,6 +19,7 @@
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !   2016-06-24  guo     - fixed the default value of obsdiags(:,:)%tail%luse to luse(i)
 !                       . removed (%dlat,%dlon) debris.
+!   2018-05-19  eliu    - updated crtm interface 
 !
 !  input argument list:
 !     lunin   - unit from which to read radiance (brightness temperature, tb) obs
@@ -151,7 +152,9 @@
   real(r_kind),dimension(nsigradjac,nchanl):: jacobian
   real(r_kind),dimension(nsigaerojac,nchanl):: jacobian_aero
   real(r_kind),dimension(nsig,nchanl):: layer_od
+  real(r_kind),dimension(5):: hwp_guess 
   real(r_kind) :: clw_guess, tzbgr, sfc_speed
+  real(r_kind) :: tcwv,hwp_ratio,hwp_total,stability  
 
   if ( .not. laeroana_gocart ) then
      return
@@ -325,9 +328,10 @@
         end if
  
 !       Interpolate model fields to observation location, call crtm and create jacobians
-        call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, &
+        call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, & 
              tvp,qvp,clw_guess,prsltmp,prsitmp, &
              trop5,tzbgr,dtsavg,sfc_speed, &
+             tcwv,hwp_guess,hwp_ratio,hwp_total,stability, &
              tsim,emissivity,ptau5,ts,emissivity_k, &
              temp,wmix,jacobian,error_status,layer_od=layer_od,jacobian_aero=jacobian_aero)
 
