@@ -125,8 +125,8 @@ program adjustps
   krecq    = 2 + (3+ndpres)*nlevs + 1
   ntrac = (nrec-(krecq-1))/nlevs
   print *,'ntrac,nrec,idsl',ntrac,nrec,idsl
-  if (nrec .ne. nrec2 .or. npts .ne. npts2 .or. nlevs .ne. nlevs2) then
-     print *,'number of records or grid size in file not what is expected, aborting..'
+  if (npts .ne. npts2 .or. nlevs .ne. nlevs2) then
+     print *,'grid size in file not what is expected, aborting..'
      stop
   endif
   allocate(rwork_1(npts,nrec))
