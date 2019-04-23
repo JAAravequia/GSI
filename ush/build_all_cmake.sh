@@ -63,8 +63,6 @@ if [ $target = wcoss_d ]; then
 elif [ $target = wcoss -o $target = gaea ]; then
     module purge
     module load $dir_modules/modulefile.ProdGSI.$target
-    export CRTM_LIB=/gpfs/hps3/emc/da/noscrub/Emily.Liu/RTM/CRTM/REL-2.3.0/crtm_v2.3.0/libcrtm_v2.3.0.a
-    export CRTM_INC=/gpfs/hps3/emc/da/noscrub/Emily.Liu/RTM/CRTM/REL-2.3.0/crtm_v2.3.0/incmod/crtm_v2.3.0
 elif [ $target = theia -o $target = cheyenne ]; then
     module purge
     source $dir_modules/modulefile.ProdGSI.$target

@@ -22,7 +22,7 @@ find_file( CONTROL_EXE
         /scratch4/NCEPDEV/da/save/Michael.Lueken/ProdGSI/build/bin
         /scratch4/NCEPDEV/da/save/Michael.Lueken/svn1/build/bin
         /scratch4/NCEPDEV/da/save/Michael.Lueken/svn1/src
-   
+
     ${NO_DEFAULT_PATH})
 
 set( GSICONTROL ${CONTROL_EXE} CACHE STRING "GSI control executable for regression testing" FORCE )

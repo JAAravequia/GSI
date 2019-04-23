@@ -101,14 +101,7 @@ CONTAINS
 ! Handle hand-split case as particular case
 ! -----------------------------------------
 
-!  if (mype==0) then 
-!   write(6,*) myname, ' fv3_full_hydro = ', fv3_full_hydro 
-!   write(6,*) myname, ' cold_start     = ', cold_start
-!   write(6,*) myname, ' na             = ', na
-!   write(6,*) myname, ' nc             = ', nc
-!  endif
   if (fv3_full_hydro) cold_start=.false. 
-!   write(6,*) myname, ' cold_start reset = ', cold_start
 
 ! if (cold_start .or. (na /= nc .and. (.not. regional))) then 
   if (cold_start .or. cw_cv) then                              
@@ -170,7 +163,6 @@ CONTAINS
      endif
   else ! Handle general case with arbitray number of clouds
        ! --------------------------------------------------
-     write(6,*) myname, ' in set_Clouds: Emily U are here 2 ! '   
 !    Loop over clouds ...
 !    --------------------
      do n = 1, nc

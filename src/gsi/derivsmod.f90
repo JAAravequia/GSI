@@ -58,7 +58,6 @@ public :: destroy_ges_derivatives
 
 public :: gsi_xderivative_bundle
 public :: gsi_yderivative_bundle
-public :: dlevs3d 
 public :: dvars2d, dvars3d
 public :: dsrcs2d, dsrcs3d
 public :: cwgues
@@ -82,8 +81,7 @@ real(r_kind),target,allocatable,dimension(:,:,:):: cwgues
 
 character(len=*),parameter:: myname='derivsmod'
 logical,save :: drv_set_=.false.
-!integer(i_kind),allocatable,dimension(:):: levels  !orig
-integer(i_kind),allocatable,dimension(:):: dlevs3d   
+integer(i_kind),allocatable,dimension(:):: levels
 contains
 
 subroutine set_ (iamroot,rcname)
@@ -175,8 +173,8 @@ enddo
 
 deallocate(utable)
 
-allocate(dvars2d(n2d),dvars3d(n3d), & 
-         dsrcs2d(n2d),dsrcs3d(n3d),dlevs3d(n3d))  
+allocate(dvars2d(n2d),dvars3d(n3d),&
+         dsrcs2d(n2d),dsrcs3d(n3d),levels(n3d))
 
 ! loop over variables and identify them by comparison
 i2d=0; i3d=0
@@ -196,8 +194,7 @@ do ii=1,nrows
                i3d=i3d+1
                dvars3d(i3d)=trim(vars(ii))
                dsrcs3d(i3d)=trim(sources(ii))
-            !  levels(i3d) =abs(nlevs(ii))   !orig
-               dlevs3d(i3d)=abs(nlevs(ii))   
+               levels(i3d) =abs(nlevs(ii))
                matched=.true.
             endif
          endif
@@ -217,8 +214,7 @@ do ii=1,nrows
                i3d=i3d+1
                dvars3d(i3d)=trim(vars(ii))
                dsrcs3d(i3d)=trim(sources(ii))
-            !  levels(i3d) =abs(nlevs(ii))   !orig
-               dlevs3d(i3d)=abs(nlevs(ii))  
+               levels(i3d) =abs(nlevs(ii))
                matched=.true.
             endif
          endif
@@ -234,8 +230,7 @@ do ii=1,nrows
          i3d=i3d+1
          dvars3d(i3d)=trim(vars(ii))
          dsrcs3d(i3d)='derived'
-      !  levels(i3d) =abs(nlevs(ii))   !orig
-         dlevs3d(i3d)=abs(nlevs(ii))   
+         levels(i3d) =abs(nlevs(ii))
       endif
    endif
 enddo
@@ -312,14 +307,12 @@ drv_set_=.true.
 !    create logitudinal derivative bundle
      write(bname,'(a,i3.3)') 'Lon Derivative Vector-',nt
      call GSI_BundleCreate(gsi_xderivative_bundle(nt),grid,bname,ierror, &
-                           names2d=dvars2d,names3d=dvars3d,levels=dlevs3d,bundle_kind=r_kind)  
-                        !  names2d=dvars2d,names3d=dvars3d,levels=levels,bundle_kind=r_kind)   !orig
+                           names2d=dvars2d,names3d=dvars3d,levels=levels,bundle_kind=r_kind)
 
 !    create latidutinal derivative bundle
      write(bname,'(a,i3.3)') 'Lat Derivative Vector-',nt
      call GSI_BundleCreate(gsi_yderivative_bundle(nt),grid,bname,ierror, &
-                           names2d=dvars2d,names3d=dvars3d,levels=dlevs3d,bundle_kind=r_kind) 
-                        !  names2d=dvars2d,names3d=dvars3d,levels=levels,bundle_kind=r_kind)   !orig
+                           names2d=dvars2d,names3d=dvars3d,levels=levels,bundle_kind=r_kind)
 
   enddo
 
@@ -383,8 +376,8 @@ drv_set_=.true.
 ! destroy derivative grid
 ! call GSI_GridDestroy(grid,lat2,lon2,nsig)
 
-  deallocate(dvars2d,dvars3d, & 
-             dsrcs2d,dsrcs3d,dlevs3d)  
+  deallocate(dvars2d,dvars3d,&
+             dsrcs2d,dsrcs3d,levels)
 
   if(mype==0) write(6,*) 'destroy_ges_derivatives: successfully complete'
   end subroutine destroy_ges_derivatives
