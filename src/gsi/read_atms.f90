@@ -35,6 +35,7 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
 !                         channels are missing.
 !  2016-10-25  zhu - add changes for assimilating radiances affected by non-precipitating clouds
 !  2018-02-05  collard - get orbit height from BUFR file
+!  2018-04-19  eliu - allow data selection for precipitation-affected data 
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -664,6 +665,7 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
                     else
                        qval  = zero
                     end if
+                    if (radmod%lprecip) qval=zero 
                  else 
                     d0    = 8.24_r_kind - 2.622_r_kind*cosza + 1.846_r_kind*cosza*cosza
                     qval  = cosza*(d0+d1*log(285.0_r_kind-ch1)+d2*log(285.0_r_kind-ch2))

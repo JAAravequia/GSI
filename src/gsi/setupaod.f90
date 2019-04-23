@@ -19,6 +19,7 @@
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !   2016-06-24  guo     - fixed the default value of obsdiags(:,:)%tail%luse to luse(i)
 !                       . removed (%dlat,%dlon) debris.
+!   2018-05-19  eliu    - updated crtm interface 
 !
 !  input argument list:
 !     lunin   - unit from which to read radiance (brightness temperature, tb) obs
@@ -325,7 +326,7 @@
         end if
  
 !       Interpolate model fields to observation location, call crtm and create jacobians
-        call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, &
+        call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, & 
              tvp,qvp,clw_guess,prsltmp,prsitmp, &
              trop5,tzbgr,dtsavg,sfc_speed, &
              tsim,emissivity,ptau5,ts,emissivity_k, &
