@@ -284,7 +284,7 @@ do ii=1,ninstr
    instruments(ii) = trim(instrument)
    idnames(ii) = trim(instrument)//':'//trim(mask)
    if(iamroot_) then
-      write(6,'(1x,2(a,1x),i4,1x,f7.2,1x,a)') trim(instrument), trim(mask), method, trim(filename)
+      write(6,'(1x,2(a,1x),1x,f7.2,1x,a)') trim(instrument), trim(mask), method, trim(filename)
    endif
 !  check method validity
    if(ALL(methods_avail/=method)) then
