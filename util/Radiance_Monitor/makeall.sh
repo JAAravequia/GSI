@@ -28,7 +28,7 @@ echo "machine = $machine"
 . ${top_level}/parm/radmon.ver
 
 
-if [[ ${machine} = "theia" || ${machine} = "wcoss" || ${machine} = "cray" ]]; then
+if [[ ${machine} = "theia" || ${machine} = "wcoss" || ${machine} = "wcoss_d" || ${machine} = "cray" ]]; then
    echo Building executables on ${machine}
    echo
 
@@ -38,6 +38,8 @@ if [[ ${machine} = "theia" || ${machine} = "wcoss" || ${machine} = "cray" ]]; th
 
    module use -a ${HOMEradmon}/modulefiles/${machine}
    module load RadMonBuild
+
+   export dir_root=${HOMEradmon}
 
    executables="angle bcoef bcor time"
    echo "Making executables in nwprod/radmon_shared.${radmon_shared_ver}/sorc:"
