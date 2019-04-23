@@ -1552,7 +1552,6 @@
               do ii=1,nchanl
                  obvarinv(ich(ii))=error0(ii)**2
               enddo
-              obvarinv = error0 ! on input
               if (miter>0) then
                  account_for_corr_obs = radinfo_adjust_jacobian(iinstr,isis,isfctype,nchanl,nsigradjac,npred, &
                                                                 ich,varinv,utbc,obvarinv,wgtjo, &
