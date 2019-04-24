@@ -193,6 +193,7 @@
 !   2018-04-04  zhu     - add additional radiance_ex_obserr and radiance_ex_biascor calls for all-sky
 !   2019-04-22  kbathmann -option to replace obs errors used in qc to the
 !                          diagonal of a specified full covariance matrix
+                           and multiply bias predictor jacobian by R^-1/2 
 !
 !  input argument list:
 !     lunin   - unit from which to read radiance (brightness temperature, tb) obs
