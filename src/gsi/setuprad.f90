@@ -290,7 +290,7 @@
 
   integer(i_kind) iextra,jextra,error_status,istat
   integer(i_kind) ich9,isli,icc,iccm,mm1,ixx
-  integer(i_kind) m,mm,jc,j,k,i
+  integer(i_kind) m,mm,jc,j,k,i,ncr
   integer(i_kind) n,nlev,kval,ibin,ioff,ioff0,iii,ijacob
   integer(i_kind) ii,jj,idiag,inewpc,nchanl_diag
   integer(i_kind) ii_ptr
@@ -1629,9 +1629,19 @@
 
               my_head%use_corr_obs=.false.
               if (account_for_corr_obs) then
-                 allocate(my_head%rsqrtinv(my_head%nchan,my_head%nchan))
-                 my_head%rsqrtinv(1:my_head%nchan,1:my_head%nchan)=rsqrtinv(1:my_head%nchan,1:my_head%nchan)
                  my_head%use_corr_obs=.true.
+                 ncr=(my_head%nchan+1)*my_head%nchan
+                 ncr=ncr/2
+                 allocate(my_head%Rpred(ncr,npred))
+                 do k=1,npred
+                    ncr=0
+                    do jj=1,my_head%nchan
+                       do ii=1,jj
+                          ncr=ncr+1
+                          my_head%Rpred(ncr,k)=my_head%pred(k,ii)*rsqrtinv(ii,jj)
+                       enddo
+                    enddo
+                  enddo
               end if
               my_head => null()
            end if ! icc

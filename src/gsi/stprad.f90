@@ -128,8 +128,8 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
 
 ! Declare local variables
   integer(i_kind) istatus
-  integer(i_kind) nn,n,ic,k,nx,j1,j2,j3,j4,kk, mm, ic1
-  real(r_kind) val2,val,w1,w2,w3,w4,Aval,Aval2
+  integer(i_kind) nn,n,ic,k,nx,j1,j2,j3,j4,kk, mm, ic1,ncr
+  real(r_kind) val2,val,w1,w2,w3,w4
   real(r_kind),dimension(nsigradjac):: tdir,rdir
   real(r_kind) cg_rad,wgross,wnotgross
   integer(i_kind),dimension(nsig) :: j1n,j2n,j3n,j4n
@@ -266,6 +266,7 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
 
            end do
         end if
+        ncr=0
         do nn=1,radptr%nchan
 
            val2=-radptr%res(nn)
@@ -276,15 +277,12 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
               ic=radptr%icx(nn)
               if (radptr%use_corr_obs) then  
                  do mm=1,nn
-                    Aval=zero
-                    Aval2=zero
+                    ncr=ncr+1
                     ic1=radptr%icx(mm)
                     do nx=1,npred
-                       Aval2=Aval2+spred(nx,ic1)*radptr%pred(nx,mm)
-                       Aval=Aval+rpred(nx,ic1)*radptr%pred(nx,mm)
+                       val2=val2+spred(nx,ic1)*radptr%Rpred(ncr,nx)
+                       val=val+rpred(nx,ic1)*radptr%Rpred(ncr,nx)
                     end do
-                    val2=val2+Aval2*radptr%rsqrtinv(mm,nn)
-                    val=val+Aval*radptr%rsqrtinv(mm,nn)
                  end do
               else
                  do nx=1,npred

@@ -305,11 +305,11 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
   real(r_quad),dimension(npred*jpch_rad),intent(inout) :: rpred
 
 ! Declare local variables
-  integer(i_kind) j1,j2,j3,j4,i1,i2,i3,i4,n,k,ic,ix,nn,mm
+  integer(i_kind) j1,j2,j3,j4,i1,i2,i3,i4,n,k,ic,ix,nn,mm,ncr1,ncr2
   integer(i_kind) ier,istatus
   integer(i_kind),dimension(nsig) :: i1n,i2n,i3n,i4n
   real(r_kind),allocatable,dimension(:):: val
-  real(r_kind) w1,w2,w3,w4,Aval
+  real(r_kind) w1,w2,w3,w4
   real(r_kind),dimension(nsigradjac):: tval,tdir
   real(r_kind) cg_rad,p0,wnotgross,wgross
   type(radNode), pointer :: radptr
@@ -469,6 +469,8 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
 !  For all other configurations
 !  begin channel specific calculations
      allocate(val(radptr%nchan))
+     ncr1=0
+     ncr2=0
      do nn=1,radptr%nchan
         ic=radptr%icx(nn)
         ix=(ic-1)*npred
@@ -487,11 +489,10 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
               do mm=1,nn
                  ic1=radptr%icx(mm)
                  ix1=(ic1-1)*npred
-                 Aval=zero
+                 ncr1=ncr1+1
                  do n=1,npred
-                    Aval=Aval+spred(ix1+n)*radptr%pred(n,mm)
+                    val(nn)=val(nn)+spred(ix1+n)*radptr%Rpred(ncr1,n)
                  enddo
-                 val(nn)=val(nn)+Aval*radptr%rsqrtinv(mm,nn)
               enddo
            else
               do n=1,npred
@@ -535,9 +536,9 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
                     do mm=1,nn
                        ic1=radptr%icx(mm)
                        ix1=(ic1-1)*npred
-                       Aval=radptr%rsqrtinv(mm,nn)*val(nn)
+                       ncr2=ncr2+1
                        do n=1,npred
-                          rpred(ix1+n)=rpred(ix1+n)+Aval*radptr%pred(n,mm)
+                          rpred(ix1+n)=rpred(ix1+n)+radptr%Rpred(ncr2,n)*val(nn)
                        enddo
                     enddo
                  else
