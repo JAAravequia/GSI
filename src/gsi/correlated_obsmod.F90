@@ -786,10 +786,11 @@ type(ObsErrorCov) :: ErrorCov              ! ob error covariance for given instr
      if (method==3) then
         do ii=1,ncp
            iii=IRsubset(ii)
-           mm=IJsubset(ii)
            do jj=1,ii
               jjj=IRsubset(jj)
-              ErrorCov%UT(jjj,iii)=ErrorCov%UT(jjj,iii)*obvarinv(mm)
+              mm=IJsubset(jj)
+              val=sqrt(obvarinv(mm))
+              ErrorCov%UT(jjj,iii)=ErrorCov%UT(jjj,iii)*val
            enddo
         enddo
      endif
