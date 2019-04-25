@@ -30,6 +30,7 @@ subroutine calctends(mype,teta,pri,guess,xderivative,yderivative,tendency)
 !   2013-10-19  todling - revamp interface with fields now in bundles; still
 !                         needs generalization
 !   2013-10-28  todling - rename p3d to prse
+!   2019-03-13  eliu - use derivative var table instead of the control var table  
 !
 ! usage:
 !   input argument list:

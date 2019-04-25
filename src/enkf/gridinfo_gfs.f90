@@ -36,6 +36,7 @@ module gridinfo
 !   2009-02-23  Initial version.
 !   2016-05-02: shlyaeva: Modification for reading state vector from table
 !   2016-04-20  Modify to handle the updated nemsio sig file (P, DP & DPDT removed)
+!   2019-03-13  Add precipitation components
 !
 ! attributes:
 !   language: f95

@@ -36,7 +36,8 @@ module crtm_interface
 !   2016-06-03  collard - Added changes to allow for historical naming conventions
 !   2017-02-24  zhu/todling  - remove gmao cloud fraction treatment
 !   2018-01-12  collard - Force all satellite and solar zenith angles to be >= 0.
-!   
+!   2019-03-13  eliu    - add precipitation component
+!   2019-03-13  eliu    - add quality control to identify areas with cold-air outbreak 
 !
 ! subroutines included:
 !   sub init_crtm

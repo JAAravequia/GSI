@@ -16,6 +16,7 @@ module stpcalcmod
 !   2015-09-03  guo     - obsmod::yobs has been replaced with m_obsHeadBundle,
 !                         where yobs is created and destroyed when and where it
 !                         is needed.
+!   2018-05-19  eliu    - add precipitation component in moisture constraint
 !
 ! subroutines included:
 !   sub stpcalc

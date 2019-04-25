@@ -35,6 +35,7 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
 !                         channels are missing.
 !  2016-10-25  zhu - add changes for assimilating radiances affected by non-precipitating clouds
 !  2018-02-05  collard - get orbit height from BUFR file
+!  2018-04-19  eliu - allow data selection for precipitation-affected data 
 !
 !   input argument list:
 !     mype     - mpi task id

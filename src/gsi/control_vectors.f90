@@ -29,6 +29,8 @@ module control_vectors
 !   2013-05-20  zhu      - add aircraft temperature bias correction coefficients as control variables
 !   2016-02-15  Johnson, Y. Wang, X. Wang - add variables to control reading
 !                                           state variables for radar DA. POC: xuguang.wang@ou.edu
+!   2019-03-14  eliu     - add logic to turn on using full set of hydrometeors
+!                          in obs operator and analysis 
 !
 ! subroutines included:
 !   sub init_anacv   

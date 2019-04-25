@@ -15,6 +15,7 @@ subroutine prt_guess(sgrep)
 !   2011-12-02  zhu    - add safe-guard for the case when there is no entry in the metguess table
 !   2013-10-19  todling - metguess now holds background 
 !   2013-04-15  zhu    - account for aircraft bias correction
+!   2018-04-16  eliu   - add prt_guess2 
 !
 !   input argument list:
 !    sgrep  - prefix for write statement
@@ -236,14 +237,6 @@ subroutine prt_guess2(sgrep)
 ! abstract: Print some diagnostics about the guess arrays
 !
 ! program history log:
-!   2007-04-13  tremolet - initial code
-!   2007-04-17  todling  - time index to summarize; bound in arrays
-!   2009-01-17  todling  - update tv/tsen names
-!   2011-05-01  todling  - cwmr no longer in guess_grids
-!   2011-08-01  zhu      - use cwgues for regional if cw is not in guess table
-!   2011-12-02  zhu      - add safe-guard for the case when there is no entry in the metguess table
-!   2013-10-19  todling  - metguess now holds background 
-!   2013-04-15  zhu      - account for aircraft bias correction
 !   2018-04-16  eliu     - account for hydrometeors
 !
 !   input argument list:

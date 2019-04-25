@@ -89,6 +89,7 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
 !   2016-04-28  jung - added logic for RARS and direct broadcast from NESDIS/UW
 !   2016-10-20  collard - fix to allow monitoring and limited assimilation of spectra when key 
 !                         channels are missing.
+!   2018-04-19  eliu - allow data selection for precipitation-affected data 
 !
 !   input argument list:
 !     mype     - mpi task id

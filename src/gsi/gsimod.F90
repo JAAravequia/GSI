@@ -376,6 +376,9 @@
 !  01-04-2018 Apodaca   add diag_light and lightinfo for GOES/GLM lightning
 !                           data assimilation
 !  08-25-2018 Collard   Introduce bias_zero_start
+!  03-14-2019 eliu      add logic to turn on using full set of hydrometeors in
+!                       obs operator and analysis
+!  03-14-2019 eliu      add precipitation component 
 !
 !EOP
 !-------------------------------------------------------------------------

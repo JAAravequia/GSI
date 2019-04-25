@@ -1133,6 +1133,7 @@ end subroutine write_ghg_grid
 !                        gues while original cw gues still have negative values.
 !   2013-10-19  todling - update cloud_efr module name
 !   2013-10-29  todling - revisit write to allow skipping vars not in MetGuess
+!   2018-05-19  eliu    - add I/O for fv3 hydrometeors
 !
 !   input argument list:
 !     increment          - when >0 will write increment from increment-index slot

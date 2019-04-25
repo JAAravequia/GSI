@@ -14,6 +14,8 @@ module intjcmod
 !   2014-06-17  carley/zhu - add intliml for lcbas + some cleanup
 !   2015-07-10  pondeca - add weak constraint subroutine for cldch
 !   2019-03-05  martin - update intlimq to weight factqmin/max by latitude
+!   2019-03-14  eliu - add intlimqc to constraint negative hydrometeors 
+!   2019-03-14  eliu - add precipitation components in various constraints 
 !
 ! subroutines included:
 !

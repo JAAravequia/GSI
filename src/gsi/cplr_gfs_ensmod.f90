@@ -292,6 +292,7 @@ subroutine move2bundle_(grd,en_loc3,atm_bundle,m_cvars2d,m_cvars3d,iret,clons,sl
 ! program history log:
 !   2016-06-30  parrish -- copy and adapt get_user_ens_member_ to transfer 1
 !                            ensemble member
+!   2019-03-13  eliu    -- add precipitation components 
 !
 !   input argument list:
 !     grd        - grd info for ensemble
@@ -1102,6 +1103,7 @@ subroutine get_user_ens_gfs_member_(grd,member,ntindex,atm_bundle,iret)
 !
 ! program history log:
 !   2016-06-30  mahajan  - initial code
+!   2019-03-13  eliu     - add precipitation component 
 !
 !   input argument list:
 !     grd      - grd info for ensemble

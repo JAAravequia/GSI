@@ -9,6 +9,7 @@ module set_crtm_cloudmod
 ! program history log:
 !   2011-06-01  todling
 !   2011-11-17  zhu     --- merge set_crtm_cloudmod with crtm_cloud
+!   2018-05-19  eliu    --- add precipiation components (related to GFDL physics)
 !
 ! subroutines included:
 !   sub Set_CRTM_Cloud

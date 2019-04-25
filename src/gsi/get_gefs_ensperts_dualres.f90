@@ -35,6 +35,7 @@ subroutine get_gefs_ensperts_dualres
 !   2014-12-05  zhu     - set lower bound for cwmr
 !   2016-07-01  mahajan - use GSI ensemble coupler
 !   2018-02-15  wu      - add code for fv3_regional option 
+!   2019-03-13  eliu    - add precipitation component 
 !
 !   input argument list:
 !

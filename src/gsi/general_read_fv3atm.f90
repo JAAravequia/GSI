@@ -10,13 +10,7 @@ subroutine general_read_fv3atm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
 !            different from the analysis grid/resolution.
 !
 ! program history log:
-!   2010-02-25  parrish
-!   2010-03-29  kleist     - modifications to allow for st/vp perturbations instead of u,v
-!   2012-01-17  wu         - increase character length for variable "filename"
-!   2014-11-30  todling    - genelize interface to handle bundle instead of fields;
-!                            internal code should be generalized
-!   2014-12-03  derber     - introduce vordivflag, zflag and optimize routines
-!   2018-04-15  eliu       - copied from general_read_gfsatm.f90 to handle multiple fv3 physic
+!   2018-04-15  eliu   - copied from general_read_gfsatm.f90 to handle multiple fv3 physic
 !                            schemes except for Zhao-Carr scheme (imp_physics=99)
 !                            ** imp_physics: 11=GFDL 10=MG 8=Thompson 6=WSM6
 !                            ** set fv3_full_hydro=.true. and imp_physics in the setup namelist

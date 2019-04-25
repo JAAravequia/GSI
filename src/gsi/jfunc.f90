@@ -47,6 +47,7 @@ module jfunc
 !   2014-05-07  pondeca - add facthowv
 !   2014-06-18  carley/zhu - add lcbas and tcamt
 !   2015-07-10  pondeca - add factcldch
+!   2018-05-19  eliu    - add control factors (factql,factqi, ....) for hydrometeors 
 !
 ! Subroutines Included:
 !   sub init_jfunc           - set defaults for cost function variables

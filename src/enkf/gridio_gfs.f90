@@ -33,6 +33,7 @@
 !               prse: nlevs + 1 levels). Pass "reducedgrid" parameter.
 !   2017-06-14  Adding functionality to optionally write non-inflated ensembles,  
 !               a required input for EFSO calculations 
+!   2019-03-13  Add precipitation components  
 !
 ! attributes:
 !   language: f95

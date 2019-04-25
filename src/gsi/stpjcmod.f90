@@ -13,6 +13,7 @@ module stpjcmod
 !   2014-06-17  carley/zhu - add stepzise calculation for lcbas weak constraint term
 !   2015-07-10  pondeca - add stepzise calculation for cldch weak constraint term
 !   2019-03-05  martin - update stplimq to weight factqmin/max by latitude
+!   2019-03-14  eliu - add stplimqc to constraint negative hydrometeors
 !
 ! subroutines included:
 !
@@ -161,13 +162,13 @@ end subroutine stplimq
 subroutine stplimqc(rval,sval,sges,out,nstep,itbin,cldtype)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:    stplimq     calculate penalty and stepsize for limit of q
-!   prgmmr: derber           org: np23                date: 1996-11-19
+! subprogram:    stplimqc    calculate penalty and stepsize for limit of qc 
+!   prgmmr: eliu           org: np23                date: 2018-05-30
 !
 ! abstract: calculate stepsize contribution and penalty for limiting q
 !
 ! program history log:
-!   2018-05-30  eliu 
+!   2018-05-30  eliu  - based on stplimq
 !
 !   input argument list:
 !     rqc      - search direction

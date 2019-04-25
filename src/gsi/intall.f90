@@ -152,6 +152,7 @@ subroutine intall(sval,sbias,rval,rbias)
 !   2014-05-07  pondeca -  Add RHS calculation for howv constraint
 !   2014-06-17  carley/zhu  - Add RHS calculation for lcbas constraint
 !   2015-07-10  pondeca - Add RHS calculation for cldch constraint
+!   2019-03-13  eliu    - add precipitation component
 !
 !   input argument list:
 !     sval     - solution on grid
