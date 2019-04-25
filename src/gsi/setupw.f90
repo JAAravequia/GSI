@@ -216,7 +216,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) err_input,err_adjst,err_final,skint,sfcr
   real(r_kind) dudiff_opp, dvdiff_opp, vecdiff, vecdiff_opp
   real(r_kind) dudiff_opp_rs, dvdiff_opp_rs, vecdiff_rs, vecdiff_opp_rs
-  real(r_kind) oscat_vec,ascat_vec,rapidscat_vec
+  real(r_kind) oscat_vec,ascat_vec,rapidscat_vec,defrough
   real(r_kind),dimension(nele,nobs):: data
   real(r_kind),dimension(nobs):: dup
   real(r_kind),dimension(nsig)::prsltmp,tges,zges
@@ -414,7 +414,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         isli = data(idomsfc,i)
      endif
 
-     if (station_id.ne."AS045   ") cycle
+     !if (station_id.ne."AS045   ") cycle
 
 !    Link observation to appropriate observation bin
      if (nobs_bins>1) then
@@ -646,18 +646,24 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            end if
 
            if (zob <= ten) then
+              if (zob <= zero) then
+                 print*, "WARNING: Negative ZOB for station,zob,type (correcting to 10 m):",station_id,zob,itype
+                 zob=ten
+              endif
               if(zob < ten)then
-                 term = max(zob,zero)/ten
-                 factw = term*factw
+                 !term = max(zob,zero)/ten
+                 !factw = term*factw
+                 defrough=half !default roughness length: 0.5 m
+                 factw=log(zob/defrough)/log(ten/defrough)
               end if
            else
               term = (zges(1)-zob)/(zges(1)-ten)
               factw = one-term+factw*term
            end if
 
-           if (factw.ne.1) then
-              print*, "StationID,zob,factw=",station_id,zob,factw
-           endif
+           !if (factw.ne.1) then
+           !   print*, "StationID,zob,zges(1),factw=",station_id,zob,zges(1),factw
+           !endif
            ugesin=factw*ugesin
            vgesin=factw*vgesin
 
