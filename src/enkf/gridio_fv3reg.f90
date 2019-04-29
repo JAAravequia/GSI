@@ -85,7 +85,7 @@ contains
      
     character(len=4) char_nxres
     character(len=4) char_nyres
-    character(len=4) char_tile
+    character(len=1) char_tile
     character(len=24),parameter :: myname_ = 'fv3: getgridinfo'
 
     ! Define counting variables
@@ -99,7 +99,7 @@ contains
     nlevsp1=nlevs+1
     u_ind   = getindex(vars3d, 'u')   !< indices in the state var arrays
     v_ind   = getindex(vars3d, 'v')   ! U and V (3D)
-    tv_ind  = getindex(vars3d, 'tv')  ! Tv (3D)
+    tv_ind  = getindex(vars3d, 't')  ! Tv (3D)
     q_ind   = getindex(vars3d, 'q')   ! Q (3D)
     oz_ind  = getindex(vars3d, 'oz')  ! Oz (3D)
     tsen_ind = getindex(vars3d, 'tsen') !sensible T (3D)
@@ -130,21 +130,23 @@ contains
       nn_tile0=(ntile-1)*nx_res*ny_res
       write(char_tile, '(i1)') ntile
 
-      filename = trim(adjustl(datapath))//trim(adjustl(fileprefixes(nb)))//"_tile"//char_tile//trim(charnanal)
+!cltorg      filename = trim(adjustl(datapath))//trim(adjustl(fileprefixes(nb)))//"_tile"//char_tile//trim(charnanal)
+      filename = "fv3sar_tile"//char_tile//"_"//trim(charnanal)
+      fv3filename=trim(adjustl(filename))//"_dynvartracer"
 
     !----------------------------------------------------------------------
     ! read u-component
-      call nc_check( nf90_open(trim(adjustl(filename)),nf90_nowrite,file_id),&
-        myname_,'open: '//trim(adjustl(filename)) )
+      call nc_check( nf90_open(trim(adjustl(fv3filename)),nf90_nowrite,file_id),&
+        myname_,'open: '//trim(adjustl(fv3filename)) )
 
     !----------------------------------------------------------------------
     ! Update u and v variables (same for NMM and ARW)
   
     if (u_ind > 0) then
-    allocate(uworkvar3d(nx_res+1,ny_res,nlevs))
+    allocate(uworkvar3d(nx_res,ny_res+1,nlevs))
        varstrname = 'u'
 
-         call read_fv3_restart_data3d(varstrname,filename,file_id,uworkvar3d)
+         call read_fv3_restart_data3d(varstrname,fv3filename,file_id,uworkvar3d)
       do k=1,nlevs
           nn = nn_tile0
         do j=1,ny_res
@@ -163,9 +165,9 @@ contains
     deallocate(uworkvar3d)
     endif
     if (v_ind > 0) then
-    allocate(vworkvar3d(nx_res,ny_res+1,nlevs))
+    allocate(vworkvar3d(nx_res+1,ny_res,nlevs))
        varstrname = 'v'
-         call read_fv3_restart_data3d(varstrname,filename,file_id,vworkvar3d)
+         call read_fv3_restart_data3d(varstrname,fv3filename,file_id,vworkvar3d)
       do k=1,nlevs
           nn = nn_tile0
         do j=1,ny_res
@@ -186,12 +188,12 @@ contains
 
     if (tv_ind > 0.or.tsen_ind) then
       allocate(tsenworkvar3d(nx_res,ny_res,nlevs))
-       varstrname = 't'
-         call read_fv3_restart_data3d(varstrname,filename,file_id,tsenworkvar3d)
+       varstrname = 'T'
+         call read_fv3_restart_data3d(varstrname,fv3filename,file_id,tsenworkvar3d)
        if(tv_ind >0 .or. q_ind>0) then 
       allocate(qworkvar3d(nx_res,ny_res,nlevs))
        varstrname = 'sphum'
-         call read_fv3_restart_data3d(varstrname,filename,file_id,qworkvar3d)
+         call read_fv3_restart_data3d(varstrname,fv3filename,file_id,qworkvar3d)
 
 
               if (q_ind > 0) then
@@ -247,7 +249,7 @@ contains
     
     if (oz_ind > 0) then
        varstrname = 'o3mr'
-         call read_fv3_restart_data3d(varstrname,filename,file_id,workvar3d)
+         call read_fv3_restart_data3d(varstrname,fv3filename,file_id,workvar3d)
       do k=1,nlevs
           nn = nn_tile0
       do j=1,ny_res
@@ -266,7 +268,7 @@ contains
     endif
    
       call nc_check( nf90_close(file_id),&
-      myname_,'close '//trim(filename) )
+      myname_,'close '//trim(fv3filename) )
     ! set SST to zero for now
     if (sst_ind > 0) then
        vargrid(:,levels(n3d)+sst_ind,nb) = zero
@@ -280,13 +282,13 @@ contains
        allocate(workprsi(nx_res,ny_res,nlevs))
        allocate(pswork(nx_res,ny_res))
        varstrname = 'u'
-       fv3filename=trim(adjustl(filename))//"_dynvars"
+       fv3filename=trim(adjustl(filename))//"_dynvartracer"
        call nc_check( nf90_open(trim(adjustl(fv3filename)),nf90_nowrite,file_id),&
         myname_,'open: '//trim(adjustl(fv3filename)) )
-      call read_fv3_restart_data3d('delp',filename,file_id,workvar3d)  !cltto think different files be used
+      call read_fv3_restart_data3d('delp',fv3filename,file_id,workvar3d)  !cltto think different files be used
       !print *,'min/max delp',ntile,minval(delp),maxval(delp)
       call nc_check( nf90_close(file_id),&
-      myname_,'close '//trim(filename) )
+      myname_,'close '//trim(fv3filename) )
       workprsi(:,:,nlevsp1+1)=eta1_ll(nlevsp1) !etal_ll is needed
       do i=nlevs,1,-1
         workprsi(:,:,i)=workvar3d(:,:,i)*0.01_r_kind+workprsi(:,:,i+1)
@@ -406,7 +408,7 @@ contains
     character(len=12) :: varstrname
     character(len=4) char_nxres
     character(len=4) char_nyres
-    character(len=4) char_tile
+    character(len=1) char_tile
     character(len=:),allocatable:: varname
     character(len=24),parameter :: myname_ = 'fv3: getgridinfo'
 
@@ -422,7 +424,7 @@ contains
 
     u_ind   = getindex(vars3d, 'u')   !< indices in the state var arrays
     v_ind   = getindex(vars3d, 'v')   ! U and V (3D)
-    tv_ind  = getindex(vars3d, 'tv')  ! Tv (3D)
+    tv_ind  = getindex(vars3d, 't')  ! Tv (3D)
     tsen_ind  = getindex(vars3d, 'tsen')  ! Tv (3D)
     q_ind   = getindex(vars3d, 'q')   ! Q (3D)
     cw_ind  = getindex(vars3d, 'cw')  ! CWM for WRF-NMM
@@ -446,29 +448,29 @@ contains
     ! First guess file should be copied to analysis file at scripting
     ! level; only variables updated by EnKF are changed
     write(charnanal,'(i3.3)') nanal
-    filename = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"mem"//charnanal
-     call nc_check( nf90_open(trim(adjustl(filename)),nf90_write,file_id),&
-        myname_,'open: '//trim(adjustl(filename)) )
+!cltorg    filename = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"mem"//charnanal
 
     !----------------------------------------------------------------------
     ! Update u and v variables (same for NMM and ARW)
     do ntile=1,ntiles
       nn_tile0=(ntile-1)*nx_res*ny_res
       write(char_tile, '(i1)') ntile
+!cltorg      filename = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"_tile"//char_tile//trim(charnanal)
+      filename = "fv3sar_tile"//char_tile//trim(charnanal)
+       fv3filename=trim(adjustl(filename))//"_dynvartracer"
 
-      filename = trim(adjustl(datapath))//trim(adjustl(anlfileprefixes(nb)))//"_tile"//char_tile//trim(charnanal)
 
     !----------------------------------------------------------------------
     ! read u-component
-      call nc_check( nf90_open(trim(adjustl(filename)),nf90_write,file_id),&
-        myname_,'open: '//trim(adjustl(filename)) )
+      call nc_check( nf90_open(trim(adjustl(fv3filename)),nf90_write,file_id),&
+        myname_,'open: '//trim(adjustl(fv3filename)) )
 
 
     ! update CWM for WRF-NMM
     if (u_ind > 0) then
        varstrname = 'u'
          
-       call read_fv3_restart_data3d(varstrname,filename,file_id,uworkvar3d)
+       call read_fv3_restart_data3d(varstrname,fv3filename,file_id,uworkvar3d)
       do k=1,nlevs
           nn = nn_tile0
       do j=1,ny_res
@@ -480,14 +482,14 @@ contains
       enddo
       uworkvar3d(1:nx_res,:,:)=workvar3d+workinc3d
       uworkvar3d(nx_res+1,:,:)=uworkvar3d(nx_res,:,:)
-       call write_fv3_restart_data3d(varstrname,filename,file_id,uworkvar3d)
+       call write_fv3_restart_data3d(varstrname,fv3filename,file_id,uworkvar3d)
 
     endif
 
     if (v_ind > 0) then
        varstrname = 'v'
          
-       call read_fv3_restart_data3d(varstrname,filename,file_id,workvar3d)
+       call read_fv3_restart_data3d(varstrname,fv3filename,file_id,workvar3d)
       do k=1,nlevs
           nn = nn_tile0
       do j=1,ny_res
@@ -499,11 +501,11 @@ contains
       enddo
       vworkvar3d(:,1:ny_res,:)=workvar3d+workinc3d
       vworkvar3d(:,ny_res+1,:)=vworkvar3d(:,ny_res,:)
-       call write_fv3_restart_data3d(varstrname,filename,file_id,vworkvar3d)
+       call write_fv3_restart_data3d(varstrname,fv3filename,file_id,vworkvar3d)
 
     endif
     if (tv_ind > 0.or.tsen_ind>0 ) then
-       varstrname = 't'
+       varstrname = 'T'
          
       if(tsen_ind>0) then
       do k=1,nlevs
@@ -515,9 +517,9 @@ contains
          enddo
       enddo
       enddo
-       call read_fv3_restart_data3d(varstrname,filename,file_id,workvar3d)
+       call read_fv3_restart_data3d(varstrname,fv3filename,file_id,workvar3d)
           workvar3d=workvar3d+workinc3d
-       call write_fv3_restart_data3d(varstrname,filename,file_id,workvar3d)
+       call write_fv3_restart_data3d(varstrname,fv3filename,file_id,workvar3d)
      else  ! tv_ind >0  
       do k=1,nlevs
           nn = nn_tile0
@@ -529,8 +531,8 @@ contains
       enddo
       enddo
 
-        call read_fv3_restart_data3d(varstrname,filename,file_id,tsenworkvar3d)
-        call read_fv3_restart_data3d(varstrname,filename,file_id,qworkvar3d)
+        call read_fv3_restart_data3d(varstrname,fv3filename,file_id,tsenworkvar3d)
+        call read_fv3_restart_data3d(varstrname,fv3filename,file_id,qworkvar3d)
         tvworkvar3d=tsenworkvar3d*qworkvar3d
         tvworkvar3d=tvworkvar3d+workinc3d
        if(q_ind > 0) then
@@ -546,11 +548,11 @@ contains
        qworkvar3d=qworkvar3d+workinc3d   
        endif
        tsenworkvar3d=tvworkvar3d/(one+fv*qworkvar3d(i,j,k))
-       call write_fv3_restart_data3d(varstrname,filename,file_id,tsenworkvar3d)
+       call write_fv3_restart_data3d(varstrname,fv3filename,file_id,tsenworkvar3d)
        if(q_ind>0) then
        varname='sphum'
      
-       call write_fv3_restart_data3d(varstrname,filename,file_id,qworkvar3d)
+       call write_fv3_restart_data3d(varstrname,fv3filename,file_id,qworkvar3d)
        endif
        
       
@@ -561,7 +563,7 @@ contains
     if (oz_ind > 0) then
        varstrname = 'o3mr'
          
-       call read_fv3_restart_data3d(varstrname,filename,file_id,workvar3d)
+       call read_fv3_restart_data3d(varstrname,fv3filename,file_id,workvar3d)
       do k=1,nlevs
           nn = nn_tile0
       do j=1,ny_res
@@ -572,7 +574,7 @@ contains
       enddo
       enddo
       workvar3d=workvar3d+workinc3d
-       call write_fv3_restart_data3d(varstrname,filename,file_id,workvar3d)
+       call write_fv3_restart_data3d(varstrname,fv3filename,file_id,workvar3d)
 
     endif
 
