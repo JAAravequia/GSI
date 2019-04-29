@@ -47,7 +47,7 @@ use params, only: datapath,nlevs,nlons,nlats,use_gfs_nemsio, fgfileprefixes, &
 use kinds, only: r_kind, i_kind, r_double, r_single
 use constants, only: one,zero,pi,cp,rd,grav,rearth,max_varname_length
 use constants, only: half
-use netcdf, only: nf90_open,nf90_close,nf90_get_var,nf90_noerr
+use netcdf, only: nf90_open,nf90_close,nf90_noerr
 use netcdf, only: nf90_inq_dimid,nf90_inq_varid
 use netcdf, only: nf90_nowrite,nf90_inquire,nf90_inquire_dimension
 use netcdf_mod, only: nc_check
@@ -103,7 +103,6 @@ character(len=24),parameter :: myname_ = 'fv3: getgridinfo'
 
 nlevsp1 = nlevs + 1
 nlevs_pres = nlevsp1
-npts = ntiles*nx_res*ny_res
 kap = rd/cp
 kapr = cp/rd
 kap1 = kap + one
@@ -114,6 +113,10 @@ if (nproc .eq. 0) then
    !  read ak,bk from ensmean fv_core.res.nc
    !  read nx,ny and nz from fv_core.res.nc
    filename = 'fv3sar_tile1_akbk.nc'
+!cltthink   filename = trim(adjustl(fileprefix))//'/ensmean/INPUT/fv_core.res.nc'
+!clt   filename = 'fv3_core.res.nc'
+
+
    call nc_check( nf90_open(trim(adjustl(filename)),nf90_nowrite,file_id),&
    myname_,'open: '//trim(adjustl(filename)) )
    call nc_check( nf90_inq_dimid(file_id,'xaxis_1',dim_id),&
@@ -126,12 +129,16 @@ if (nproc .eq. 0) then
      call stop2(25)
    endif
 
-
-
    allocate(ak(nlevsp1),bk(nlevsp1))
    allocate(eta1_ll(nlevsp1),eta2_ll(nlevsp1))
    call read_fv3_restart_data1d('ak',filename,file_id,ak)
    call read_fv3_restart_data1d('bk',filename,file_id,bk)
+   allocate(eta1_ll(nlevsp1),eta2_ll(nlevsp1))
+
+   call read_fv3_restart_data1d('ak',filename,file_id,ak)
+   call read_fv3_restart_data1d('bk',filename,file_id,bk)
+      call nc_check( nf90_close(file_id),&
+      myname_,'close '//trim(filename) )
 
 !!!!! change unit of ak,also reverse the 
      
@@ -139,7 +146,6 @@ if (nproc .eq. 0) then
        eta1_ll(i)=ak(i)*0.01_r_kind
        eta2_ll(i)=bk(i)
     enddo
-
 
 
 
@@ -172,13 +178,21 @@ if (nproc .eq. 0) then
 
 
    
+
+
+! 
    !  read lats/lons from C###_oro_data.tile#.nc 
    ! (this requires path to FV3 fix dir)
    write(char_nxres, '(i4)') nx_res
    write(char_nyres, '(i4)') ny_res
+ !clththink  allocate(lat_tile(nx_res,ny_res),lon_tile(nx_res,ny_res))
    allocate(lat_tile(nx_res,ny_res),lon_tile(nx_res,ny_res))
    nn = 0
    allocate(latsgrd(npts),lonsgrd(npts))
+   allocate(g_prsi(nx_res,ny_res,nlevsp1))
+   allocate(delp(nx_res,ny_res,nlevs),ps(nx_res,ny_res))
+   allocate(pressimn(npts,nlevsp1),presslmn(npts,nlevs))
+   allocate(spressmn(npts))
    do ntile=1,ntiles
       nn_tile0=(ntile-1)*nx_res*ny_res
       write(char_tile, '(i1)') ntile
@@ -186,6 +200,7 @@ if (nproc .eq. 0) then
 !clt      filename=trim(adjustl(fv3fixpath))//'/C'//trim(adjustl(char_nxres))//'/C'//trim(adjustl(char_nyres))//'grid_spec.tile'//char_tile//'.nc'
       filename='fv3sar_tile'//char_tile//'_grid_spec.nc'
       call nc_check( nf90_open(trim(adjustl(filename)),nf90_nowrite,file_id),&
+
       myname_,'open: '//trim(adjustl(filename)) )
       call read_fv3_restart_data2d('grid_lont',filename,file_id,lon_tile)
       !print *,'min/max lon_tile',ntile,minval(lon_tile),maxval(lon_tile)
@@ -217,6 +232,7 @@ if (nproc .eq. 0) then
 !cltorg      filename = trim(adjustl(datapath))//'/ensmean/fv_core.res.tile'//char_tile//'.nc'
 !clt      filename = trim(adjustl(datapath))//'/ensmean/dynvars.tile'//char_tile//'.nc'
       filename = 'fv3sar_tile'//char_tile//"_ensmean.dynvartracer"
+!clt      filename = trim(adjustl(datapath))//'/ensmean/dynvars.tile'//char_tile//'.nc'
       !print *,trim(adjustl(filename))
       call nc_check( nf90_open(trim(adjustl(filename)),nf90_nowrite,file_id),&
       myname_,'open: '//trim(adjustl(filename)) )
@@ -261,6 +277,7 @@ if (nproc .eq. 0) then
    end do
    print *,'ensemble mean first guess surface pressure:'
    print *,minval(spressmn),maxval(spressmn)
+   call flush(6)
    ! logp holds log(pressure) or pseudo-height on grid, for each level/variable.
    allocate(logp(npts,nlevs_pres)) ! log(ens mean first guess press) on mid-layers
    do k=1,nlevs
@@ -275,6 +292,12 @@ if (nproc .eq. 0) then
 !cltorg   deallocate(eta1_ll,eta2_ll,ak,bk)
    deallocate(lat_tile,lon_tile)
 endif ! root task
+   call mpi_bcast(npts,1,mpi_real4,0,MPI_COMM_WORLD,ierr)
+   if(nproc.ne.0) then
+   allocate(eta1_ll(nlevsp1),eta2_ll(nlevsp1))
+   endif
+   call mpi_bcast(eta1_ll,nlevsp1,mpi_real4,0,MPI_COMM_WORLD,ierr)
+   call mpi_bcast(eta2_ll,nlevsp1,mpi_real4,0,MPI_COMM_WORLD,ierr)
 
    allocate(gridloc(3,npts))
 if (nproc .ne. 0) then
@@ -283,6 +306,9 @@ if (nproc .ne. 0) then
    allocate(logp(npts,nlevs_pres)) ! log(ens mean first guess press) on mid-layers
    allocate(eta1_ll(nlevsp1),eta2_ll(nlevsp1))
 endif
+
+
+
 !call mpi_bcast(logp,npts*nlevs_pres,mpi_real4,0,MPI_COMM_WORLD,ierr)
 do k=1,nlevs_pres
   call mpi_bcast(logp(1,k),npts,mpi_real4,0,MPI_COMM_WORLD,ierr)
