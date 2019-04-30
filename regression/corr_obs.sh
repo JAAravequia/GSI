@@ -16,9 +16,7 @@ export JCAP=62
 export LEVS=64
 export JCAP_B=126
 export JCAP_EN=62
-export MKL_NUM_THREADS=1
-export MKL_DYNAMIC=false
-export OMP_DYNAMIC=false
+export MKL_NUM_THREADS=4
 export MKL_CBWR=AUTO
 # Set runtime and save directories
 tmpdir=$tmpdir/$tmpregdir/${exp}

@@ -192,7 +192,7 @@ type ObsErrorCov
      integer(i_kind),pointer :: indxR(:)   =>NULL()   ! indexes of active channels
      real(r_kind),   pointer :: R(:,:)     =>NULL()   ! nch_active x nch_active
      real(r_kind),   pointer :: UT(:,:)=>NULL()       ! Upper triangle of R^-1 factorization subset
-     real(r_kind),   pointer :: UTfull(:,:)=>NULL()   ! Upper triangle of R^-1 factorization
+     real(r_kind),   pointer :: UTfull(:,:)=>NULL()   ! Upper triangle of R^-1 factorization, R^-1=UT*Transpose(UT)
 
 end type
 
@@ -556,7 +556,7 @@ end subroutine solver_
 !-------------------------------------------------------------------------
 !BOP
 !
-! !IROUTINE:  decompose_ --- calculates eigen-decomposition of cov(R)
+! !IROUTINE:  decompose_ --- calculates cholesky decomposition of cov(R)
 !
 ! !INTERFACE:
 !
@@ -571,9 +571,9 @@ use constants, only: tiny_r_kind
   real(r_kind),intent(inout) :: UT(:,:) ! on entry: matrix to decompose
                                         ! on exit: inv of U, where R=UU^T
 
-! !DESCRIPTION: This routine makes a LAPACK call to compute the cholesky factorization of R.
+! !DESCRIPTION: This routine uses LAPACK to compute the cholesky factorization of R.
 !               R is factored as R=UU^T, and then U is inverted to get a
-!               non-diagonal square root of R^-1.
+!               non-symmetric square root of R^-1.
 !
 ! !REVISION HISTORY:
 !   2014-04-13  todling   initial code
@@ -760,7 +760,7 @@ type(ObsErrorCov) :: ErrorCov              ! ob error covariance for given instr
      do jj=1,ncp
         mm=IJsubset(jj) 
         wgtjo(mm)    = varinv(mm)
-        Rinv(jj)=sqrt(wgtjo(mm))
+        Rinv(jj)=wgtjo(mm)
         rsqrtinv(jj,jj)=sqrt(Rinv(jj))
      enddo
   elseif (method==0) then
@@ -1044,14 +1044,15 @@ end subroutine upd_varqc_
 
 ! !DESCRIPTION: Given an index-set of channels really operative in a given
 !               profile, this routine extracts those rows and columns from
-!               the offline estimate of cov(R), creating a subset(cov(R))
-!               that is eigen-decomposed. The resulting partial eigen-
-!               decomposition is stored back in the corresponding 
-!               rows and columns of the temporary space in ObErroCov
-!               responsible for holding the eigen-values/vectors. 
+!               the offline estimate of cov(R), creating a subset(cov(R)).
+!               A cholesky factorization is preformed such that
+!               subset(cov(R))=U*U^T. Then the U matrix is inverted
+!               and stored back in the corresponding rows and columns 
+!               of the temporary space in ObErroCov.
 !
 ! !REVISION HISTORY:
 !   2014-04-13  todling  initial code
+!   2019-04-22  kbathmann change to cholesky factorization
 !
 ! !REMARKS:
 !   language: f90
@@ -1066,9 +1067,7 @@ end subroutine upd_varqc_
 logical function decompose_subset_ (Isubset,ErrorCov)
 implicit none
 ! in this approach, we take only the rows and columns of R related 
-! to the channels used, and eigendecompose them ... instead of 
-! eigendecomposing once, which I think ends up leading to the wrong
-! mixt of eigenvalues and eigenvectors.
+! to the channels used, and factrozing them.
 integer(i_kind),intent(in) :: Isubset(:)
 type(ObsErrorCov) :: ErrorCov
 
@@ -1088,7 +1087,11 @@ do jj=1,ncp
 enddo
 ! decompose subset matrix
 call decompose_(ErrorCov%instrument,UT,ncp)
-! copy decomposition onto ErrorCov
+! copy factorization onto ErrorCov
+! Due to the nature of the lapack routines, the 
+! lower-triangular values of UT are nonzero, and should
+! not be referenced anywhere in this code.
+
 do jj=1,ncp
    do ii=1,jj
       ErrorCov%UT(Isubset(ii),Isubset(jj)) = UT(ii,jj)

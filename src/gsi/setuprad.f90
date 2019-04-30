@@ -1575,7 +1575,7 @@
                       my_head%res(iii)= tbc(ii)                    ! obs-ges innovation
                     endif
                     my_head%err2(iii)= one/obvarinv(ii)         ! 1/(obserror)**2  (original uninflated error)
-                    my_head%raterr2(iii)=error0(ii)**2*varinv(ii) ! (original error)/(inflated error)
+                    my_head%raterr2(iii)=obvarinv(ii)*varinv(ii) ! (original error)/(inflated error)
                     my_head%icx(iii)= m                         ! channel index
 
                     do k=1,npred
