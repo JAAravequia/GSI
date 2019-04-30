@@ -5,7 +5,7 @@ subroutine getcases(numcases,mype)
   use kinds, only: r_kind,r_single
   use variables, only: ak5,bk5,ck5,maxcases,nsig,dimbig,hybrid,&
       filename,na,nb,zero,idpsfc5,idvm5,idthrm5,idvc5,ntrac5,cp5,&
-      use_gfs_nemsio,ncepgfs_head,nlonin,nlatin
+      use_enkf,use_gfs_nemsio,ncepgfs_head,nlonin,nlatin
   use sigio_module, only: sigio_head,sigio_srhead,sigio_sclose,&
        sigio_sropen
   use nemsio_module, only:  nemsio_init,nemsio_open,nemsio_close
@@ -27,8 +27,9 @@ subroutine getcases(numcases,mype)
 
  ! for nemsio
   character(8) filetype, mdlname
+  character(100) fname
   integer,dimension(7):: idate
-  integer :: nfhour, nfminute, nfsecondn, nfsecondd
+  integer :: nfhour, nfminute, nfsecondn, nfsecondd, ncount24, ncount48
   real(r_single),allocatable,dimension(:,:,:) :: nems_vcoord
 
   type(sigio_head):: sighead
@@ -49,9 +50,11 @@ subroutine getcases(numcases,mype)
 
   nmin24=-1
   nmin48=-1
+  ncount24 = 0
+  ncount48 = 0
   inges=50
   do loop=1,ncases
- if ( use_gfs_nemsio ) then
+     if ( use_gfs_nemsio ) then
         call nemsio_init(iret=iret2)
         if ( iret2 /= 0 ) then
            write(6,*)' getcases:  ***ERROR*** problem nemsio_init file = ', &
@@ -89,7 +92,7 @@ subroutine getcases(numcases,mype)
         nlonin=gfshead%lonb
         nlatin=gfshead%latb
 
-    else ! not use_gfs_nemsio
+     else ! not use_gfs_nemsio
 
        call sigio_sropen(inges,filename(loop),iret)
        call sigio_srhead(inges,sighead,iret2)
@@ -110,40 +113,63 @@ subroutine getcases(numcases,mype)
        idate5(3)=idate4(3)
        idate5(4)=idate4(1)
        idate5(5)=0
-   endif
+    endif
 
     call w3fs21(idate5,nming)
-    nming=nming+60*fhour5
-    if(nint(fhour5).eq.24) nmin24(loop)=nming
-    if(nint(fhour5).eq.48) nmin48(loop)=nming
+    if (use_enkf) then
+       ! file contains ensmean file names and ens member file names
+       ! (ens mean files first, ens mem files after or vice versa)
+       fname = filename(loop)
+       if (fname(INDEX(fname,'_',BACK=.TRUE.)+1:len(fname)) == 'ensmean') then
+           nmin24(loop) = nming
+           ncount24 = ncount24 + 1
+           na(ncount24) = loop
+       else
+           ncount48 = ncount48 + 1
+           nmin48(loop) = nming
+           nb(ncount48) = loop  
+       endif
+    else
+       if(nint(fhour5).eq.24) nmin24(loop)=nming
+       if(nint(fhour5).eq.48) nmin48(loop)=nming
+    endif
 25 continue
   enddo
 
-
-  ncase=0
-  ncount=0
-  do loop=1,ncases
-    i24=-1
-    nmina=-1
-    nminb=-1
-    if(nmin24(loop).gt.0) then
-      ncount=ncount+1
-      if(ncount.eq.1)then
-        nmina=nmin24(loop)
-        i24=loop
-        j48=-1
-        do j=1,ncases
-          if(nmin48(j).eq.nmin24(loop)) then
-            nminb=nmin48(j)
-            ncase=ncase+1
-            na(ncase)=i24
-            nb(ncase)=j
-          end if
-        end do
-        ncount=0
-      end if  ! endif ncount
-    end if    ! endif nmin24(loop)
-  enddo       ! end loop to ncases
+  if (.not. use_enkf) then
+     ncase=0
+     ncount=0
+     do loop=1,ncases
+       i24=-1
+       nmina=-1
+       nminb=-1
+       if(nmin24(loop).gt.0) then
+         ncount=ncount+1
+         if(ncount.eq.1)then
+           nmina=nmin24(loop)
+           i24=loop
+           j48=-1
+           do j=1,ncases
+             if(nmin48(j).eq.nmin24(loop)) then
+               nminb=nmin48(j)
+               ncase=ncase+1
+               na(ncase)=i24
+               nb(ncase)=j
+             end if
+           end do
+           ncount=0
+         end if  ! endif ncount
+       end if    ! endif nmin24(loop)
+     enddo       ! end loop to ncases
+  else
+     if (ncount24 .ne. ncount48) then
+        write(6,*) '# of ensmean filenames not equal to # of ens mem filenames'
+        call mpi_finalize(ierror)
+        stop
+     else
+       ncase = ncount24
+     endif
+  endif
 
   if(mype==0)write(6,*)' number of cases available = ',ncase
   if(ncase.eq.0) then
