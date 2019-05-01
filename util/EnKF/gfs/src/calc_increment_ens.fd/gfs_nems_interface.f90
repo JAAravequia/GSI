@@ -166,6 +166,7 @@ contains
 
     ! Define local variables
 
+    print *, trim(adjustl(filename))
     call nemsio_open(gfile,trim(adjustl(filename)),'read',              &
          & iret=nemsio_iret)
     if ( nemsio_iret /= 0 ) then
@@ -199,12 +200,14 @@ contains
         allocate(meta_nemsio%recname(meta_nemsio%nrec))
     call nemsio_getfilehead(gfile,iret=nemsio_iret,                     &
          & recname=meta_nemsio%recname)
-    if ( nemsio_iret /= 0 ) stop 5
+    print *, meta_nemsio%recname
+    !if ( nemsio_iret /= 0 ) stop 5
     if (.not. allocated(meta_nemsio%reclev)) &
         allocate(meta_nemsio%reclev(meta_nemsio%nrec))
     call nemsio_getfilehead(gfile,iret=nemsio_iret,                     &
          & reclev=meta_nemsio%reclev)
-    if ( nemsio_iret /= 0 ) stop 6
+    print *, meta_nemsio%reclev
+    !if ( nemsio_iret /= 0 ) stop 6
 
     ! Define format statements
 

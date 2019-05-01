@@ -546,6 +546,7 @@ contains
        call gfs_nems_read(workgrid,var_info%nems_name, &
                           var_info%nems_levtyp,k)
 
+       grid%var3d(:,:,grid%nz-k+1)=0
        grid%var3d(:,:,grid%nz-k+1)=reshape(workgrid,(/grid%nx,grid%ny/))
        if (grid%flip_lats) then
           call gfs_nems_flip_xlat_axis( &
