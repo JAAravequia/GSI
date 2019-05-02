@@ -358,7 +358,7 @@ integer(nemsio_intkind) iret,nfhour,jdate(7),idat(3),ihrst,nfminute,ntimestep,nf
 integer iadate(4),idate(4),k,kk,nb,ne,nanal
 integer,dimension(8):: ida,jda
 integer :: u_ind, v_ind, t_ind, q_ind, oz_ind, cw_ind, ql_ind, qr_ind, qi_ind, qli_ind, dbz_ind, w_ind
-integer :: ps_ind
+integer :: ps_ind, ii
 real(r_single) f_i,f_r,f_rif,clmr,qi,qli,qr,ql
 real(r_double),dimension(5):: fha
 real(nemsio_realkind), dimension(nlons*nlats) :: nems_wrk,nems_wrk2
