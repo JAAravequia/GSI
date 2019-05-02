@@ -242,10 +242,7 @@ if (cw_ind > 0) then
           call stop2(23)
        endif
        if (cliptracers)  where (nems_wrk < clip) nems_wrk = clip
-<<<<<<< HEAD
        grdin(:,levels(cw_ind-1)+k,nb,ne) = nems_wrk
-=======
-       grdin(:,levels(cw_ind-1)+k,nb) = nems_wrk
     end do
 end if
 if (ql_ind > 0 .and. qr_ind > 0 .and. qi_ind > 0 .and. qli_ind > 0 ) then
@@ -359,11 +356,7 @@ character(len=500):: filename
 
 character(len=3) charnanal
 integer(nemsio_intkind) iret,nfhour,jdate(7),idat(3),ihrst,nfminute,ntimestep,nfsecond
-<<<<<<< HEAD
 integer iadate(4),idate(4),k,kk,nb,ne,nanal
-=======
-integer iadate(4),idate(4),k,kk,nb, ii
->>>>>>> master
 integer,dimension(8):: ida,jda
 integer :: u_ind, v_ind, t_ind, q_ind, oz_ind, cw_ind, ql_ind, qr_ind, qi_ind, qli_ind, dbz_ind, w_ind
 integer :: ps_ind
