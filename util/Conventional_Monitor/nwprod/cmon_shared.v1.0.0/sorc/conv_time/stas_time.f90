@@ -53,6 +53,7 @@ subroutine stascal(dtype,rdiag,nreal,n,iotype,varqc,ntype,work,worku,&
    integer, parameter  :: ibendangobs = 17
    real, parameter     :: scale       = 100.0
    real, parameter     :: one         = 1.0
+   real, parameter     :: rmiss       = -999.0
 
    integer  :: iclass
 
@@ -110,7 +111,9 @@ subroutine stascal(dtype,rdiag,nreal,n,iotype,varqc,ntype,work,worku,&
          rat_err2 =0.0
       endif
 
-    
+   
+      work=0.0
+ 
       !-------------------------------------------------------------------------
       ! This is confusing. At least for gpsro data imuse is either 1 or -1 and
       ! ierr3 is always 0.00.  So this will not correctly assign data to the
@@ -179,28 +182,25 @@ subroutine stascal(dtype,rdiag,nreal,n,iotype,varqc,ntype,work,worku,&
 
                      if(rdiag(ipress,i) >=ptop(k) .and. rdiag(ipress,i) <= pbot(k))then
 
-                        if( rdiag(ipress,i) > 0.0 ) then
-                           print *, 'rdiag(ipress,i), ptop(k), pbot(k),k = ', rdiag(ipress,i), ptop(k), pbot(k), k
-                        end if
-
                         ress_gps = rdiag(ibend,i) * scale
-                        data     = one/rdiag(ierr1,i)
-!                        data     = rdiag(ierr1,i)               ! 14
 
-			!  I don't think this is right, ibendangobs is the obs value (i think)
-                        !rat_err  = rdiag(ibendangobs,i)
+                        !----------------------------------------------------------------------------
+                        !  These are unused assignments related to the penalty values.  
+                        !  See comment below.
+                        !----------------------------------------------------------------------------
 
-                        !  Try this:
-                        rat_err   = rdiag(ierrinv,i) / rdiag(ierr1,i)   
-                        rat_err2  = rat_err * rat_err 
+                        !  data     = one/rdiag(ierr1,i)
+                        !  data     = rdiag(ierr1,i)               ! 14
+                        !  rat_err   = rdiag(ierrinv,i) / rdiag(ierr1,i)   
+                        !  rat_err2  = rat_err * rat_err 
+ 
+                        !  errinvadj = one/rdiag(ierrinvadj,i)	! 15
+                        !  errinv    = one/rdiag(ierrinv,i)	! 16
+                        !  errinv    = rdiag(ierrinv,i)	! 16
 
-                        errinvadj = one/rdiag(ierrinvadj,i)	! 15
-                        !errinv    = one/rdiag(ierrinv,i)	! 16
-                        errinv    = rdiag(ierrinv,i)	! 16
-
-                        !val       = data * rat_err
-                        val       = data
-                        val2      = val * val
+                        !  val       = data * rat_err
+                        !  val       = data
+                        !  val2      = val * val
 
 
                         !----------------------------------------------------------------------------
@@ -231,13 +231,26 @@ subroutine stascal(dtype,rdiag,nreal,n,iotype,varqc,ntype,work,worku,&
                            !   values for 14 and 17 are defined respectively as local parameters 
                            !        ierr1, ibendangobs
 
-                           print *, 'PEN components:  rdiag(ierr1,i), data, rat_err, val, val2, errinv, errinvadj = ', rdiag(ierr1,i), data, rat_err, val, val2, errinv, errinvadj
+                           !-------------------------------------------------------------------------
+                           !  But, having tried about every conceivable
+                           !  permutation of that strategy I still can't get any
+                           !  penalty values to match what's reported in the
+                           !  gsistat file.  Several factors could be at work.
+                           !  First, the gsistat file is generated from the
+                           !  bwork array, which doesn't map 1:1 to the rdiagbuf
+                           !  (the source of the cnvstat file).  Second, the
+                           !  gps code has lots of (ill-advised) variable reuse, so
+                           !  if I missed something along the chain I might be
+                           !  way off the mark even with using the right
+                           !  variables.  
+                           !
+                           !  But I observe (belatedly) that the penalty values
+                           !  are not, in fact, used for ConMon plots.  So for now I'm
+                           !  just going to dummy out the penalty values with
+                           !  rmiss and move on to plotting. 
 
-!                           work(k,ltype,ipen,j,iused) = work(k,ltype,ipen,j,iused) + val2
-!                           work(k,ltype,ipen,j,iused) = work(k,ltype,ipen,j,iused) + val
-!                           work(k,ltype,ipen,j,iused) = work(k,ltype,ipen,j,iused) + rat_err
-!                           work(k,ltype,ipen,j,iused) = work(k,ltype,ipen,j,iused) + errinvadj
-!                           work(k,ltype,ipen,j,iused) = work(k,ltype,ipen,j,iused) + errinv
+                           work(k,ltype,ipen,j,iused)    = rmiss
+                           work(k,ltype,iqc_pen,j,iused) = rmiss
 
                         else if( rdiag(imuse,i) < 0.0 ) then
                            iclass = imonitor
@@ -288,13 +301,23 @@ subroutine stascal(dtype,rdiag,nreal,n,iotype,varqc,ntype,work,worku,&
                         ! rejected by vqc but there it is.  I just want to make
                         ! sure the numbers are correct, even if they are
                         ! duplicates.
+                        !
+                        ! Update (4/25/19) -- I think icount_vqc needs to kept
+                        ! as zero.  The gsistat results only break things down
+                        ! by used, rej, and monitored.  Using count for those
+                        ! numbers (with last array value of 1,2,3) matches
+                        ! (generally).  The count plots attempt to use
+                        ! icount_vqc but that is somehow(!?) a small, negative
+                        ! number.  If I don't assign any value to count_iqc it
+                        ! should work out with an empty plot, which would square
+                        ! with what the gsistat reports.
                         !--------------------------------------------------
                         if( rdiag(iqc,i) == 2.0 .or. rdiag(iqc,i) == 4.0 ) then
 
                            work(k,ltype,icount,j,ireject)     = work(k,ltype,icount,j,ireject)+1.0
 
-                           work(k,ltype,icount_vqc,j,icount)  = work(k,ltype,icount_vqc,j,icount)+1.0
-                           work(k,ltype,icount_vqc,j,ireject) = work(k,ltype,icount_vqc,j,ireject)+1.0
+!                           work(k,ltype,icount_vqc,j,icount)  = work(k,ltype,icount_vqc,j,icount)+1.0
+!                           work(k,ltype,icount_vqc,j,ireject) = work(k,ltype,icount_vqc,j,ireject)+1.0
                            work(k,ltype,ibias,j,ireject)      = work(k,ltype,ibias,j,ireject) + ress_gps 
                            work(k,ltype,irms,j,ireject)       = work(k,ltype,irms,j,ireject) + ress_gps*ress_gps
                            work(k,ltype,ipen,j,ireject)       = work(k,ltype,ipen,j,ireject) + val

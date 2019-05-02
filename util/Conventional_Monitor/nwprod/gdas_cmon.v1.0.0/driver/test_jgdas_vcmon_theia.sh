@@ -52,7 +52,8 @@ export JOBGLOBAL=${JOBGLOBAL:-${HOMEgdascmon}/jobs}
 export HOMEcmon=${HOMEcmon:-${NWTEST}/cmon_shared.${cmon_shared_ver}}
 export COM_IN=${COM_IN:-${DATAROOT}}
 
-export C_TANKDIR=${C_TANKDIR:-${COMROOT}/${CMON_SUFFIX}}
+#export C_TANKDIR=${C_TANKDIR:-${COMROOT}/${CMON_SUFFIX}}
+export C_TANKDIR=${C_TANKDIR:-/scratch4/NCEPDEV/da/save/${LOGNAME}/nbns/stats/${CMON_SUFFIX}}
 if [[ ! -d $C_TANKDIR ]]; then
    mkdir -p ${C_TANKDIR}
 fi

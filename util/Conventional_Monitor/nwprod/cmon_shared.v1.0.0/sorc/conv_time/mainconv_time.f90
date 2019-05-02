@@ -93,7 +93,7 @@
 !   print *,' varqc_gps = ', varqc_gps
 
  
-   call creatstas_ctl(dtype_gps,iotype_gps,ituse_gps,100,ntype_gps,1,nregion,18,region,&
+   call creatstas_ctl(dtype_gps,iotype_gps,ituse_gps,100,ntype_gps,18,nregion,18,region,&
                      rlatmin,rlatmax,rlonmin,rlonmax,iosubtype_gps) 
    call creatstas_ctl(dtype_ps,iotype_ps,ituse_ps,100,ntype_ps,1,nregion,18,region,&
                      rlatmin,rlatmax,rlonmin,rlonmax,iosubtype_ps) 

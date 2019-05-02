@@ -73,6 +73,7 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
    print *, 'idate=',idate 
    print *,'ptop(1), ptop(5) = ', ptop(1),ptop(5)
    print *,'pbot(1), pbot(5) = ', pbot(1),pbot(5)
+   print *,'ntype_gps = ', ntype_gps
 
    loopd: do  
       read(lunin,IOSTAT=iflag) dtype,nchar,nreal,ii,mype,ioff02
@@ -86,62 +87,35 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
 
 
       if(trim(dtype) == 'gps') then
-         print *, 'case gps, calling stascal'
          call stascal(dtype,rdiag,nreal,ii,iotype_gps,varqc_gps,ntype_gps,&
                          gpswork,uwork,vwork,np,ptop,pbot,nregion,mregion,&
                          rlatmin,rlatmax,rlonmin,rlonmax,iosubtype_gps)
 
-!         print *, 'case gps, returned from stascal'
-!         print *, ' count: '
-!         print *, 'gpswork(1,1,1,1,1) = ', gpswork(1,1,1,1,1)
-!         print *, 'gpswork(1,1,1,1,2) = ', gpswork(1,1,1,1,2)
-!         print *, 'gpswork(1,1,1,1,3) = ', gpswork(1,1,1,1,3)
-!         print *, ' count_vqc: '
-!         print *, 'gpswork(1,1,2,1,1) = ', gpswork(1,1,2,1,1)
-!         print *, 'gpswork(1,1,2,1,2) = ', gpswork(1,1,2,1,2)
-!         print *, 'gpswork(1,1,2,1,3) = ', gpswork(1,1,2,1,3)
-!         print *, ' bias: '
-!         print *, 'gpswork(1,1,3,1,1) = ', gpswork(1,1,2,1,1)
-!         print *, 'gpswork(1,1,3,1,2) = ', gpswork(1,1,2,1,2)
-!         print *, 'gpswork(1,1,3,1,3) = ', gpswork(1,1,2,1,3)
-!         print *, ' rms:
-!         print *, ' pen:
-!         print *, ' qc_pen:
-
       else if(trim(dtype) == ' ps') then
-         print *, 'case ps, calling stascal'
          call stascal(dtype,rdiag,nreal,ii,iotype_ps,varqc_ps,ntype_ps,&
                          pswork,uwork,vwork,1,ptop,pbot,nregion,mregion,&
                          rlatmin,rlatmax,rlonmin,rlonmax,iosubtype_ps)
-         print *, 'case ps, returned from stascal'
+
       else if(trim(dtype) == '  q') then
-         print *, 'case q, calling stascal' 
          call stascal(dtype,rdiag,nreal,ii,iotype_q,varqc_q,ntype_q,&
                          qwork,uwork,vwork,np,ptopq,pbotq,nregion,mregion,&
                          rlatmin,rlatmax,rlonmin,rlonmax,iosubtype_q)
-         print *, 'case q, returned from stascal'
+
       else if(trim(dtype) == '  t') then
-         print *, 'case t, calling stascal' 
          call stascal(dtype,rdiag,nreal,ii,iotype_t,varqc_t,ntype_t,&
                          twork,uwork,vwork,np,ptop,pbot,nregion,mregion,&
                          rlatmin,rlatmax,rlonmin,rlonmax,iosubtype_t)
-         print *, 'case t, returned from stascal'
+         
       else if(trim(dtype) == ' uv') then
-         print *, 'case uv, calling stascal' 
          call stascal(dtype,rdiag,nreal,ii,iotype_uv,varqc_uv,ntype_uv,&
                          uvwork,uwork,vwork,np,ptop,pbot,nregion,mregion,&
                          rlatmin,rlatmax,rlonmin,rlonmax,iosubtype_uv)
-         print *, 'case uv, returned from stascal'
+         
       endif
           
       deallocate(cdiag,rdiag)
    enddo   loopd               !  ending read data do loop
-   print *,'end of loopd'
 
-   print *, 'gpswork(1,1,1,1,1), gpswork(1,1,2,1,1) = ', gpswork(1,1,1,1,1), gpswork(1,1,2,1,1)
-   print *, 'gpswork(1,1,1,1,2), gpswork(1,1,2,1,2) = ', gpswork(1,1,1,1,2), gpswork(1,1,2,1,2)
-   print *, 'gpswork(1,1,1,1,3), gpswork(1,1,2,1,3) = ', gpswork(1,1,1,1,3), gpswork(1,1,2,1,3)
-    
    close(lunin)
 
 
@@ -174,7 +148,8 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
          enddo
 
          !----------------------------------------------
-         !!! for the total surface pressure statistics
+         ! for the total surface pressure statistics
+         !
          if(pswork(1,ntype_ps+1,1,iregion,j) >=1.0) then
             pswork(1,ntype_ps+1,3,iregion,j) = pswork(1,ntype_ps+1,3,iregion,j)/&
                                     pswork(1,ntype_ps+1,1,iregion,j)
@@ -233,14 +208,6 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
                         twork(k,ntype_t+1,3,iregion,j)+twork(k,ltype,3,iregion,j)
                twork(k,ntype_t+1,4,iregion,j) = &
                         twork(k,ntype_t+1,4,iregion,j)+twork(k,ltype,4,iregion,j)
-
-!              if(j == 2) then
-!                 write(6,100) k,ltype,iregion,j,twork(k,ntype_t+1,4,iregion,j), &
-!                               twork(k,ltype,4,iregion,j),twork(k,ltype,1,iregion,j),&
-!                               twork(k,ntype_t+1,1,iregion,j) 
-!                 100 format(4i6,4f12.4)
-!              endif
-
                twork(k,ntype_t+1,5,iregion,j) = &
                         twork(k,ntype_t+1,5,iregion,j)+twork(k,ltype,5,iregion,j)
                twork(k,ntype_t+1,6,iregion,j) = &
@@ -415,7 +382,6 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
       enddo
    enddo
 
-!   write(6,900) (twork(k,1,1,1,1),k=1,np) 
    900 format(13f8.2)
    close(41)
 
@@ -501,26 +467,31 @@ subroutine read_conv(filein,mregion,nregion,np,ptop,pbot,ptopq,pbotq,&
        print *, '  gps counts, all pressure bins, dtype 1, region 1, used :'
        write(6,900) (gpswork(k,1,1,1,1),k=1,np) 
        print *, ' '
+       print *, '  gps counts rej qc, all pressure bins, dtype 1, region 1, used :'
+       write(6,900) (gpswork(k,1,2,1,1),k=1,np) 
+       print *, ' '
        print *, '  gps bias/count, all pressure bins, dtype 1, region 1, used :'
        write(6,900) ( gpswork(k,1,3,1,1) / gpswork(k,1,1,1,1), k=1,np ) 
        print *, ' '
        print *, '  gps rms/count, all pressure bins, dtype 1, region 1, used :'
        write(6,900) ( sqrt( gpswork(k,1,4,1,1) / gpswork(k,1,1,1,1) ), k=1,np )  
        print *, ' '
-       print *, '  gps pen/count, all pressure bins, dtype 1, region 1, used :'
-       write(6,900) ( gpswork(k,1,5,1,1) / gpswork(k,1,1,1,1), k=1,np ) 
-!       write(6,900) ( gpswork(k,1,5,1,1), k=1,np ) 
+       print *, '  gps pen, all pressure bins, dtype 1, region 1, used :'
+       write(6,900) ( gpswork(k,1,5,1,1), k=1,np ) 
+       print *, '  gps qc_pen, all pressure bins, dtype 1, region 1, used :'
+       write(6,900) ( gpswork(k,1,6,1,1), k=1,np ) 
+       print *, '====================='
+       print *, '====================='
+       print *, '  gps rejected counts, all pressure bins, dtype 1, region 1, used :'
+       write(6,900) (gpswork(k,1,1,1,2),k=1,np) 
+       print *, ' '
+       print *, '  gps rejected qc counts, all pressure bins, dtype 1, region 1, used :'
+       write(6,900) (gpswork(k,1,2,1,1),k=1,np) 
+       print *, ' '
 
 !   enddo
 
    close(81)
-
-
-!   close(31)
-!   close(41)
-!   close(51)
-!   close(61)
-!   close(71)
 
    print *, '<-- read_conv'
    return 

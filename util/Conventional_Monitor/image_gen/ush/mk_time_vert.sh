@@ -70,28 +70,29 @@ echo "--> mk_time_vert.sh"
    #  submit vertical plots
    #--------------------------------------------
 #   for type in q t uv u v; do
-#      jobname="${JOBNAME}_vert_${type}"
-#      logfile="${C_LOGDIR}/plot_vert_${type}_${CMON_SUFFIX}.${PDY}.${CYC}.log"
-#      errfile="${C_LOGDIR}/plot_vert_${type}_${CMON_SUFFIX}.${PDY}.${CYC}.err"
-#      pltfile="${C_IG_SCRIPTS}/plot_vert.sh "
-#      export TYPE=${type}
-#      rm -f $logfile
-#      rm -f $errfile
-#
-#      if [[ $MY_MACHINE == "wcoss" ]]; then
-#         $SUB -q $JOB_QUEUE -P $PROJECT -o ${logfile} -R affinity[core] -M 100 -W 0:50 -J $jobname -cwd ${PWD} $pltfile
-#
-#      elif [[ $MY_MACHINE == "theia" ]]; then
-#         if [[ ${type} == "uv" || ${type} == "u" || ${type} == "v" ]]; then
-#            walltime="walltime=0:22:00"
-#         else
-#            walltime="walltime=0:10:00"
-#         fi
-# 
-#         ${SUB} -A ${ACCOUNT} -l procs=1,${walltime} -N ${jobname} -V -o ${logfile} -e ${errfile} ${pltfile}
-#
-#      fi
-#   done
+   for type in gps t; do
+      jobname="${JOBNAME}_vert_${type}"
+      logfile="${C_LOGDIR}/plot_vert_${type}_${CMON_SUFFIX}.${PDY}.${CYC}.log"
+      errfile="${C_LOGDIR}/plot_vert_${type}_${CMON_SUFFIX}.${PDY}.${CYC}.err"
+      pltfile="${C_IG_SCRIPTS}/plot_vert.sh "
+      export TYPE=${type}
+      rm -f $logfile
+      rm -f $errfile
+
+      if [[ $MY_MACHINE == "wcoss" ]]; then
+         $SUB -q $JOB_QUEUE -P $PROJECT -o ${logfile} -R affinity[core] -M 100 -W 0:50 -J $jobname -cwd ${PWD} $pltfile
+
+      elif [[ $MY_MACHINE == "theia" ]]; then
+         if [[ ${type} == "uv" || ${type} == "u" || ${type} == "v" ]]; then
+            walltime="walltime=0:22:00"
+         else
+            walltime="walltime=0:10:00"
+         fi
+ 
+         ${SUB} -A ${ACCOUNT} -l procs=1,${walltime} -N ${jobname} -V -o ${logfile} -e ${errfile} ${pltfile}
+
+      fi
+   done
 
 
 

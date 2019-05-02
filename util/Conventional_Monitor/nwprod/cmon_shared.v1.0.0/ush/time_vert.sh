@@ -65,20 +65,20 @@ EOF
    echo " after execfile completed "
 
 
-#   cp uv_stas.ctl u_stas.ctl
-#   cp uv_stas.ctl v_stas.ctl
-#
-#   for type in gps ps t q uv u v; do
-#
-#      for file2 in ${type}*stas; do
-#         mv -f $file2 ${savedir}/${cycle}_${file2}.${PDATE}
-#      done
-#
-#      for file3 in ${type}*stas.ctl; do
-#         mv -f ${file3} ${savedir}/${cycle}_${file3}
-#      done
-#
-#   done
+   cp uv_stas.ctl u_stas.ctl
+   cp uv_stas.ctl v_stas.ctl
+
+   for type in gps ps t q uv u v; do
+
+      for file2 in ${type}*stas; do
+         mv -f $file2 ${savedir}/${cycle}_${file2}.${PDATE}
+      done
+
+      for file3 in ${type}*stas.ctl; do
+         mv -f ${file3} ${savedir}/${cycle}_${file3}
+      done
+
+   done
 
 done
 
