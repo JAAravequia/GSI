@@ -291,10 +291,10 @@ if (ql_ind > 0 .and. qr_ind > 0 .and. qi_ind > 0 .and. qli_ind > 0 ) then
          f_rif = f_rimef(ii)
          clmr  = clwmr(ii)
          call fraction2variablenew(f_i,f_r,f_rif,clmr,qi,qli,qr,ql)
-         grdin(ii,k+(qli_ind-1)*nlevs,nb) = qli
-         grdin(ii,k+(qr_ind-1)*nlevs,nb)  = qr
-         grdin(ii,k+(ql_ind-1)*nlevs,nb)  = ql
-         grdin(ii,k+(qi_ind-1)*nlevs,nb)  = qi
+         grdin(ii,k+(qli_ind-1)*nlevs,nb,ne) = qli
+         grdin(ii,k+(qr_ind-1)*nlevs,nb,ne)  = qr
+         grdin(ii,k+(ql_ind-1)*nlevs,nb,ne)  = ql
+         grdin(ii,k+(qi_ind-1)*nlevs,nb,ne)  = qi
        end do
 
     enddo
@@ -309,7 +309,7 @@ if ( dbz_ind > 0 )then
           call stop2(23)
        endif
        if (cliptracers)  where (nems_wrk < clip) nems_wrk = clip
-       grdin(:,(dbz_ind-1)*nlevs+k,nb) = nems_wrk
+       grdin(:,(dbz_ind-1)*nlevs+k,nb,ne) = nems_wrk
     enddo
 endif
 
@@ -321,8 +321,7 @@ if ( w_ind > 0 )then
           write(6,*)'gridio/readgriddata: nmmb model: problem with nemsio_readrecv(refl_10cm), iret=',iret
           call stop2(23)
        endif
-       grdin(:,(w_ind-1)*nlevs+k,nb) = nems_wrk
->>>>>>> master
+       grdin(:,(w_ind-1)*nlevs+k,nb,ne) = nems_wrk
     enddo
 endif
 
@@ -645,23 +644,23 @@ if( ql_ind > 0 .and. qr_ind > 0 .and. qi_ind > 0 .and. qli_ind > 0 ) then
          f_rif = f_rimef(ii)
          clmr  = clwmr(ii)
          call fraction2variablenew(f_i,f_r,f_rif,clmr,qi,qli,qr,ql)
-         grdin(ii,k+(qli_ind-1)*nlevs,nb) = qli + grdin(ii,k+(qli_ind-1)*nlevs,nb)
-         grdin(ii,k+(qr_ind-1)*nlevs,nb)  = qr  + grdin(ii,k+(qr_ind-1)*nlevs,nb)
-         grdin(ii,k+(ql_ind-1)*nlevs,nb)  = ql  + grdin(ii,k+(ql_ind-1)*nlevs,nb)
-         grdin(ii,k+(qi_ind-1)*nlevs,nb)  = qi  + grdin(ii,k+(qi_ind-1)*nlevs,nb)
+         grdin(ii,k+(qli_ind-1)*nlevs,nb,ne) = qli + grdin(ii,k+(qli_ind-1)*nlevs,nb,ne)
+         grdin(ii,k+(qr_ind-1)*nlevs,nb,ne)  = qr  + grdin(ii,k+(qr_ind-1)*nlevs,nb,ne)
+         grdin(ii,k+(ql_ind-1)*nlevs,nb,ne)  = ql  + grdin(ii,k+(ql_ind-1)*nlevs,nb,ne)
+         grdin(ii,k+(qi_ind-1)*nlevs,nb,ne)  = qi  + grdin(ii,k+(qi_ind-1)*nlevs,nb,ne)
 
-         qli = grdin(ii,k+(qli_ind-1)*nlevs,nb)
-         qr  = grdin(ii,k+(qr_ind-1)*nlevs,nb)
-         ql  = grdin(ii,k+(ql_ind-1)*nlevs,nb)
-         qi  = grdin(ii,k+(qi_ind-1)*nlevs,nb)
+         qli = grdin(ii,k+(qli_ind-1)*nlevs,nb,ne)
+         qr  = grdin(ii,k+(qr_ind-1)*nlevs,nb,ne)
+         ql  = grdin(ii,k+(ql_ind-1)*nlevs,nb,ne)
+         qi  = grdin(ii,k+(qi_ind-1)*nlevs,nb,ne)
          call variable2fractionnew(qli, qi, qr, ql, f_i, f_r,f_rif)
          f_ice(ii)  = f_i
          f_rain(ii) = f_r
          f_rimef(ii)=f_rif
        end do
 
-       clwmr = grdin(:,k+(ql_ind-1)*nlevs,nb) + grdin(:,k+(qr_ind-1)*nlevs,nb) + &
-               grdin(:,k+(qli_ind-1)*nlevs,nb)
+       clwmr = grdin(:,k+(ql_ind-1)*nlevs,nb,ne) + grdin(:,k+(qr_ind-1)*nlevs,nb,ne) + &
+               grdin(:,k+(qli_ind-1)*nlevs,nb,ne)
        nems_wrk =  clwmr
 
        if (cliptracers)  where (nems_wrk < clip) nems_wrk = clip
@@ -707,7 +706,7 @@ if (dbz_ind > 0) then
           call stop2(23)
        endif
        where (nems_wrk < 0.0 ) nems_wrk = 0.0
-       nems_wrk = nems_wrk + grdin(:,(dbz_ind-1)*nlevs+k,nb)
+       nems_wrk = nems_wrk + grdin(:,(dbz_ind-1)*nlevs+k,nb,ne)
        if (cliptracers)  where (nems_wrk < clip) nems_wrk = clip
        call nemsio_writerecv(gfile,'refl_10cm','mid layer',kk,nems_wrk,iret=iret)
        if (iret/=0) then
@@ -725,7 +724,7 @@ if (w_ind > 0) then
           write(6,*)'gridio/writegriddata: nmmb model: problem with nemsio_readrecv(clwmr), iret=',iret
           call stop2(23)
        endif
-       nems_wrk = nems_wrk + grdin(:,(w_ind-1)*nlevs+k,nb)
+       nems_wrk = nems_wrk + grdin(:,(w_ind-1)*nlevs+k,nb,ne)
        call nemsio_writerecv(gfile,'dwdt','mid layer',kk,nems_wrk,iret=iret)
        if (iret/=0) then
           write(6,*)'gridio/writegriddata: nmmb model: problem with nemsio_writerecv(clwmr), iret=',iret
