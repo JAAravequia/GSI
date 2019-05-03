@@ -303,6 +303,7 @@
   real(r_kind) ys_bias_sst,cosza,val_obs
   real(r_kind) sstnv,sstcu,sstph,dtp_avh,dta,dqa
   real(r_kind) bearaz,sun_zenith,sun_azimuth
+  real(r_kind) sat_azimuth   ! -EEJ
   real(r_kind) sfc_speed,frac_sea,clw,tpwc,sgagl,clwp_amsua,tpwc_amsua,tpwc_guess_retrieval
   real(r_kind) gwp,clw_obs
   real(r_kind) scat,scatp
@@ -1120,9 +1121,10 @@
 !       QC HIRS/2, GOES, HIRS/3 and AIRS sounder data
 !
         ObsQCs: if (hirs .or. goessndr .or. airs .or. iasi .or. cris) then
-
            frac_sea=data_s(ifrac_sea,n)
-
+           ! pass solar and satellite azimuth for sun glint   -EEJ
+           sun_azimuth=data_s(isazi_ang,n)
+           sat_azimuth=data_s(ilazi_ang,n)
 !  NOTE:  The qc in qc_irsnd uses the inverse squared obs error.
 !     The loop below loads array varinv_use accounting for whether the 
 !     cloud detection flag is set.  Array
@@ -1142,9 +1144,13 @@
                  end if
               end if
            end do
+!           call qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse(n),goessndr, &
+!              cris,zsges,cenlat,frac_sea,pangs,trop5,zasat,tzbgr,tsavg5,tbc,tb_obs,tnoise,  &
+!              wavenumber,ptau5,prsltmp,tvp,temp,wmix,emissivity_k,ts,                 &
+!              id_qc,aivals,errf,varinv,varinv_use,cld,cldp,kmax,zero_irjaco3_pole(n))
            call qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse(n),goessndr, &
-              cris,zsges,cenlat,frac_sea,pangs,trop5,zasat,tzbgr,tsavg5,tbc,tb_obs,tnoise,  &
-              wavenumber,ptau5,prsltmp,tvp,temp,wmix,emissivity_k,ts,                 &
+              cris,zsges,cenlat,frac_sea,pangs,trop5,zasat,sun_azimuth,sat_azimuth,tzbgr,tsavg5, &
+              tbc,tb_obs,tnoise,wavenumber,ptau5,prsltmp,tvp,temp,wmix,emissivity_k,ts,&
               id_qc,aivals,errf,varinv,varinv_use,cld,cldp,kmax,zero_irjaco3_pole(n))
 
 !  --------- MSU -------------------

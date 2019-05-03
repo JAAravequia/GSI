@@ -11,7 +11,7 @@
 
 # This defines the monitor value used in TANKDIR.
 #
-export MONITOR=radmon
+#export MONITOR=radmon
 
 #
 # MY_RADMON should point to your working directory which contains the 
@@ -20,7 +20,8 @@ export MONITOR=radmon
 # you checked out only the Radiance_Monitor portion of the branch then
 # MY_RADMON should point to that.
 #
-export MY_RADMON=${MY_RADMON:-/gpfs/hps3/emc/da/noscrub/Edward.Safford/RadMon_622/util/Radiance_Monitor}
+#export MY_RADMON=${MY_RADMON:-/gpfs/hps3/emc/da/noscrub/Edward.Safford/RadMon_622/util/Radiance_Monitor}
+export MY_RADMON=/scratch4/NESDIS/nesdis-rdo1/save/Erin.Jones/global-workflow/sorc/gsi.fd/util/Radiance_Monitor
 
 #
 #  The MY_TANKDIR will be the location for the extracted data files and
@@ -28,7 +29,8 @@ export MY_RADMON=${MY_RADMON:-/gpfs/hps3/emc/da/noscrub/Edward.Safford/RadMon_62
 #  and the succedding scripts will construct and use subdirectories under
 #  this location.
 #
-export MY_TANKDIR=${MY_TANKDIR:-/u/Edward.Safford/nbns}
+#export MY_TANKDIR=${MY_TANKDIR:-/u/Edward.Safford/nbns}
+export MY_TANKDIR=/scratch4/NAGAPE/jcsda-datagap/Erin.Jones/ROTDIRS/noscrub/monitor/radmon
 
 export RUN=${RUN:-gdas}
 
@@ -61,17 +63,22 @@ export WEBDIR=${WEBDIR:-/home/people/emc/www/htdocs/gmb/gdas/radiance/esafford}
 ###############################################################################
 ###############################################################################
 
-export MY_MACHINE=cray
+#export MY_MACHINE=cray
 export LITTLE_ENDIAN=${LITTLE_ENDIAN:-0}
-
+export MY_MACHINE=theia
 
 #
 #  Log and work space definitions
 #
-export MY_PTMP=${MY_PTMP:-/gpfs/hps/ptmp}
-export PTMP_USER=${PTMP_USER:-${MY_PTMP}/${LOGNAME}}
-export MY_STMP=${MY_STMP:-/gpfs/hps/stmp}
-export STMP_USER=${STMP_USER:-${MY_STMP}/${LOGNAME}}
+#export MY_PTMP=${MY_PTMP:-/gpfs/hps/ptmp}
+#export PTMP_USER=${PTMP_USER:-${MY_PTMP}/${LOGNAME}}
+#export MY_STMP=${MY_STMP:-/gpfs/hps/stmp}
+#export STMP_USER=${STMP_USER:-${MY_STMP}/${LOGNAME}}
+
+export MY_PTMP=/scratch4/NAGAPE/jcsda-datagap/Erin.Jones/ROTDIRS/ptmp
+export PTMP_USER=/scratch4/NAGAPE/jcsda-datagap/Erin.Jones/ROTDIRS/ptmp
+export MY_STMP=/scratch4/NAGAPE/jcsda-datagap/Erin.Jones/ROTDIRS/stmp
+export STMP_USER=/scratch4/NAGAPE/jcsda-datagap/Erin.Jones/ROTDIRS/stmp
 
 export LOGSverf_rad=${LOGSverf_rad:-${PTMP_USER}/logs}
 export LOGSverf=${LOGSverf_rad:-${PTMP_USER}/logs/rad${RADMON_SUFFIX}}

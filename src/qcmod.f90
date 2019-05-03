@@ -259,6 +259,8 @@ module qcmod
   integer(i_kind),parameter:: ifail_satzen_qc=52
 !  Reject because of surface emissivity/temperature influence in subroutine qc_irsnd                                     
   integer(i_kind),parameter:: ifail_sfcir_qc=53
+!  Reject because of sun glint in subroutine qc_irsnd  !EEJ
+  integer(i_kind),parameter:: ifail_glint_irqc=54
 
 ! QC_AMSUA          
 !  Reject because factch6 > limit in subroutine qc_amsua
@@ -1849,11 +1851,15 @@ subroutine qc_saphir(nchanl,sfchgt,luse,sea, &
   return
 end subroutine qc_saphir
 
-subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,   &
-     cris, zsges,cenlat,frac_sea,pangs,trop5,zasat,tzbgr,tsavg5,tbc,tb_obs,tnoise,     &
-     wavenumber,ptau5,prsltmp,tvp,temp,wmix,emissivity_k,ts,                    &
+subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,      &
+     cris,zsges,cenlat,frac_sea,pangs,trop5,zasat,solazi,satazi,tzbgr,tsavg5,       &
+     tbc,tb_obs,tnoise,wavenumber,ptau5,prsltmp,tvp,temp,wmix,emissivity_k,ts,    &
      id_qc,aivals,errf,varinv,varinv_use,cld,cldp,kmax,zero_irjaco3_pole)
-!    id_qc,aivals,errf,varinv,varinv_use,cld,cldp,kmax,zero_irjaco3_pole,radmod) ! all-sky
+!subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,   &
+!     cris, zsges,cenlat,frac_sea,pangs,trop5,zasat,tzbgr,tsavg5,tbc,tb_obs,tnoise,     &
+!     wavenumber,ptau5,prsltmp,tvp,temp,wmix,emissivity_k,ts,                    &
+!     id_qc,aivals,errf,varinv,varinv_use,cld,cldp,kmax,zero_irjaco3_pole)
+!!    id_qc,aivals,errf,varinv,varinv_use,cld,cldp,kmax,zero_irjaco3_pole,radmod) ! all-sky
 
 !$$$ subprogram documentation block
 !               .      .    .
@@ -1884,9 +1890,11 @@ subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,   &
 !     zsges        - elevation of guess
 !     cenlat       - latitude of observation
 !     frac_sea     - fraction of grid box covered with water
-!     pangs        - solar zenith angle
+!     pangs        - solar zenith angle (deg)
 !     trop5        - tropopause pressure
-!     zasat        - satellite zenith angle
+!     zasat        - satellite zenith angle (rad)
+!     solazi       - solar azimuth angle (deg)
+!     satazi       - satellite azimuth angle (deg)
 !     tzbgr        - Tz over water
 !     tsavg5       - surface skin temperature
 !     tbc          - simulated - observed BT with bias correction
@@ -1935,6 +1943,7 @@ subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,   &
   integer(i_kind),dimension(nchanl),  intent(in   ) :: kmax
   real(r_kind),                       intent(in   ) :: zsges,cenlat,frac_sea,pangs,trop5
   real(r_kind),                       intent(in   ) :: tzbgr,tsavg5,zasat
+  real(r_kind),                       intent(in   ) :: solazi,satazi  ! -EEJ
   real(r_kind),                       intent(  out) :: cld,cldp
   real(r_kind),dimension(40,ndat),    intent(inout) :: aivals
   real(r_kind),dimension(nchanl),     intent(in   ) :: tbc,emissivity_k,ts,wavenumber,tb_obs
@@ -1962,24 +1971,41 @@ subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,   &
 ! solar zenith angle tiny_r_kind
   irday = 1
   if (pangs <= 89.0_r_kind .and. frac_sea > zero) then
-!    QC2 in statsrad
-     if(luse)aivals(9,is) = aivals(9,is) + one
-     do i=1,nchanl
-        if(wavenumber(i) > r2000)then
-           if(wavenumber(i) > r2400)then
-              varinv(i)=zero
-              varinv_use(i)=zero
-              if(id_qc(i) == igood_qc)id_qc(i)=ifail_2400_qc
-              irday(i) = 0
-           else
-              tmp=one-(wavenumber(i)-r2000)*ptau5(1,i)&
-                 *max(zero,cos(pangs*deg2rad))*oneover400
-              varinv(i)=tmp*varinv(i)
-              varinv_use(i)=tmp*varinv_use(i)
-              if(id_qc(i) == igood_qc)id_qc(i)=ifail_2000_qc
+! check for sun glint for CrIS     -EEJ
+     if(cris)then
+       ! calculate sun glint
+       ! zasat passed from reader in radians, pangs needs conversion
+       pangs_rad=pangs*deg2rad
+       solazi_rad=solazi*deg2rad
+       satazi_rad=satazi*deg2rad
+       relazi_rad=satazi_rad-solazi_rad
+       glint_rad=acos(cos(zasat)*cos(pangs_rad)-sin(zasat)*sin(pangs_rad)*cos(relazi_rad))
+       if (glint_rad*rad2deg >= 25.0) then
+         do i=1,nchanl
+           varinv(i)=zero
+           varinv_use(i)=zero
+           if(id_qc(i) == igood_qc)id_qc(i)=ifail__glint_irqc
+         end do
+       else
+!      QC2 in statsrad
+         if(luse)aivals(9,is) = aivals(9,is) + one
+         do i=1,nchanl
+           if(wavenumber(i) > r2000)then
+              if(wavenumber(i) > r2400)then
+                varinv(i)=zero
+                varinv_use(i)=zero
+                if(id_qc(i) == igood_qc)id_qc(i)=ifail_2400_qc
+                irday(i) = 0
+              else
+                tmp=one-(wavenumber(i)-r2000)*ptau5(1,i)&
+                   *max(zero,cos(pangs*deg2rad))*oneover400
+                varinv(i)=tmp*varinv(i)
+                varinv_use(i)=tmp*varinv_use(i)
+                if(id_qc(i) == igood_qc)id_qc(i)=ifail_2000_qc
+              end if
            end if
-        end if
-     end do
+         end do
+     endif
   endif
 
   if(sea)then
