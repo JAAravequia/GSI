@@ -638,7 +638,8 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            !if (itype.eq.295.or.itype.eq.288) then
               !print*, "Factw will change!  stnid,zob,zges(1)=",station_id,zob,zges(1)
            !endif
-           factw = data(iff10,i)
+           !factw = data(iff10,i)
+           factw=one !LEVINE default value of factw
            if(sfcmod_gfs .or. sfcmod_mm5) then
               sfcr = data(isfcr,i)
               skint = data(iskint,i)
