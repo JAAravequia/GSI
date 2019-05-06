@@ -163,7 +163,7 @@ subroutine getcases(numcases,mype)
      enddo       ! end loop to ncases
   else
      if (ncount24 .ne. ncount48) then
-        write(6,*) '# of ensmean filenames not equal to # of ens mem filenames'
+        write(6,*) '# of ensmean filenames not equal to # of ens mem filenames',ncount24,ncount48
         call mpi_finalize(ierror)
         stop
      else

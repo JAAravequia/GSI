@@ -154,7 +154,7 @@ contains
     biasrm=.false.
     vertavg=.false.
     smoothdeg=4.0
-    dimbig=5000
+    dimbig=50000
     noq=5
     use_gfs_nemsio=.false.
     use_enkf=.false.
