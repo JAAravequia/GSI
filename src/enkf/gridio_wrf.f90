@@ -1280,6 +1280,14 @@ contains
               ! 'PD')
 
     !----------------------------------------------------------------------
+    ! JPOTERJOY: pressure has different vertical coordinates
+
+       if(gridvarstring(l) .eq. 'PINT') then
+
+          zdim_native = zdim_native + 1
+
+       end if ! if(gridvarstring(l) .eq. 'PINT')
+    !----------------------------------------------------------------------
 
        ! Define local variable dimensions
 

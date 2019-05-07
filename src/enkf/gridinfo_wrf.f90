@@ -310,6 +310,63 @@ contains
           gridvarstring(6) = "PD"
           nvarhumid = 4
 
+       ! JPOTERJOY: added to include extra variables
+       else if (nvars .eq. 13) then
+
+          if (nproc .eq. 0) then
+
+             ! Print message to user
+
+             write(6,*) 'Updating U, V, T, Q, CWM, DWDT, PINT, and PD for WRF-NMM...'
+
+          endif ! if (nproc .eq. 0) then
+
+          ! *USER*: The following variables will be updated using the
+          ! innovations and increments produced by the data
+          ! assimilation
+
+          gridvarstring(1) = "U"
+          gridvarstring(2) = "V"
+          gridvarstring(3) = "T"
+          gridvarstring(4) = "Q"
+          gridvarstring(5) = "CWM"
+          gridvarstring(6) = "F_RAIN"
+          gridvarstring(7) = "F_ICE"
+          gridvarstring(8) = "F_RIMEF"
+          gridvarstring(9) = "TOLD"
+          gridvarstring(10) = "UOLD"
+          gridvarstring(11) = "VOLD"
+          gridvarstring(12) = "DWDT"
+          gridvarstring(13) = "PINT"
+          gridvarstring(14) = "PD"
+          nvarhumid = 4
+
+       ! JPOTERJOY: removed DWDT, CWM and hydrometeor fractions
+       else if (nvars .eq. 8) then
+
+          if (nproc .eq. 0) then
+
+             ! Print message to user
+
+             write(6,*) 'Updating U, V, T, Q, PINT, and PD for WRF-NMM...'
+
+          endif ! if (nproc .eq. 0) then
+
+          ! *USER*: The following variables will be updated using the
+          ! innovations and increments produced by the data
+          ! assimilation
+
+          gridvarstring(1) = "U"
+          gridvarstring(2) = "V"
+          gridvarstring(3) = "T"
+          gridvarstring(4) = "Q"
+          gridvarstring(5) = "TOLD"
+          gridvarstring(6) = "UOLD"
+          gridvarstring(7) = "VOLD"
+          gridvarstring(8) = "PINT"
+          gridvarstring(9) = "PD"
+          nvarhumid = 4
+
        else 
 
           if (nproc .eq. 0) then
