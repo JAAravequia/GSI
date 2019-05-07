@@ -542,7 +542,7 @@ ndim = size(ErrorCov%R,1)
 if ( ErrorCov%method==0) then
    ErrorCov%UTfull = zero
    do ii=1,ndim
-      ErrorCov%UTfull(ii,ii)    = ErrorCov%R(ii,ii) 
+      ErrorCov%UTfull(ii,ii)    = sqrt(ErrorCov%R(ii,ii) )
    enddo
 else
 ! This does the actual full Cholesky factorization of the matrix
@@ -753,15 +753,20 @@ type(ObsErrorCov) :: ErrorCov              ! ob error covariance for given instr
         call die(myname_,' failed to decompose correlated R')
      endif
   endif
-
+  rsqrtinv=zero
+  Rinv=zero
+  nsigjac=size(jacobian,1)
   if( method<0 ) then
-  !  Keep departures and Jacobian unchanged
   !  Do as GSI would do otherwise
      do jj=1,ncp
         mm=IJsubset(jj) 
         wgtjo(mm)    = varinv(mm)
         Rinv(jj)=wgtjo(mm)
-        rsqrtinv(jj,jj)=sqrt(Rinv(jj))
+        rsqrtinv(jj,jj)=sqrt(wgtjo(mm))
+        depart(mm)=depart(mm)*rsqrtinv(jj,jj)
+        do ii=1,nsigjac
+           jacobian(ii,mm)=jacobian(ii,mm)*rsqrtinv(jj,jj)
+        enddo
      enddo
   elseif (method==0) then
      do jj=1,ncp
@@ -770,19 +775,20 @@ type(ObsErrorCov) :: ErrorCov              ! ob error covariance for given instr
         wgtjo(mm)    = val/ErrorCov%R(IRsubset(jj),IRsubset(jj))
         rsqrtinv(jj,jj)=sqrt(wgtjo(mm))
         Rinv(jj)=wgtjo(mm)
+        depart(mm)=depart(mm)*rsqrtinv(jj,jj)
+        do ii=1,nsigjac
+           jacobian(ii,mm)=jacobian(ii,mm)*rsqrtinv(jj,jj)
+        enddo
      enddo
   else
      do ii=1,ncp
         mm=IJsubset(ii)
         obvarinv(mm)=obvarinv(mm)*varinv(mm)
      enddo
-     nsigjac=size(jacobian,1)
      allocate(row(nsigjac,ncp))
      allocate(col(ncp))
      row=zero 
-     rsqrtinv=zero
      col=zero
-     Rinv=zero
      if (method==3) then
         do ii=1,ncp
            iii=IRsubset(ii)
