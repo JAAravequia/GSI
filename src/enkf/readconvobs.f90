@@ -79,7 +79,6 @@ subroutine get_num_convobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id
     real(r_kind) :: errorlimit,errorlimit2,error,pres,obmax
     real(r_kind) :: errorlimit2_obs,errorlimit2_bnd
     logical :: fexist, init_pass
-
     iunit = 7
     ! If ob error > errorlimit or < errorlimit2, skip it.
     errorlimit = 1._r_kind/sqrt(1.e9_r_kind)

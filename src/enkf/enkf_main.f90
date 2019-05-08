@@ -153,7 +153,7 @@ program enkf_main
 
  ! read obs, initial screening.
  t1 = mpi_wtime()
-!cltthinkdeb call readobs()
+ call readobs()
  t2 = mpi_wtime()
  if (nproc == 0) print *,'time in read_obs =',t2-t1,'on proc',nproc
 

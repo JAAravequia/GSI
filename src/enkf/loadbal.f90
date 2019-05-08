@@ -299,6 +299,7 @@ if (.not. letkf_flag .or. lupd_obspace_serial) then
    if(nproc == 0) then
       print *,'sending out observation prior ensemble perts from root ...'
       totsize = nobstot
+      write(6,*)'nobstot xx ,nanals are',nobstot,nanals
       totsize = totsize*nanals
       print *,'nobstot*nanals',totsize
       t1 = mpi_wtime()
