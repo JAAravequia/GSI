@@ -481,7 +481,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   else if(howvob) then
      nreal=23
   else if(metarcldobs) then
-     nreal=25
+     nreal=27
   else if(goesctpobs) then
      nreal=8
   else if(tcamtob) then
@@ -2672,10 +2672,15 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                        cdata_all(17+kk,iout)= -99999.0_r_kind
                     endif
                  enddo
-                 cdata_all(21,iout)=timeobs     !  time observation
+                 !!!cdata_all(21,iout)=timeobs     !  time observation
+                 cdata_all(21,iout)=t4dv     !  time observation
                  cdata_all(22,iout)=usage
                  if (lhilbert) thisobtype_usage=22         ! save INDEX of where usage is stored for hilbertcurve cross validation (if requested)
-                 cdata_all(23,iout)=0.0_r_kind  ! reserved for distance between obs and grid
+                 ! 4/14/16
+                 ! Don't need dist between obs and grid
+                 !cdata_all(23,iout)=0.0_r_kind  ! reserved for distance between obs and grid
+                 ! Instead save NC, obs type?
+                 cdata_all(23,iout)=nc
 !     Calculate dewpoint depression from surface obs, to be used later
 !         with haze and ceiling logic to exclude dust-caused ceiling obs
 !         from cloud analysis
@@ -2685,6 +2690,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                     cdata_all(24,iout)=-99999.0_r_kind  ! temperature - dew point
                  endif
 ! cdata_all(24,iout) and cdata_all(25,iout) will be used to save dlon and dlat
+                 cdata_all(26,iout)=dlon_earth_deg         ! earth relative longitude (degrees)
+                 cdata_all(27,iout)=dlat_earth_deg         ! earth relative latitude (degrees)
 ! NESDIS cloud products
               else if(goesctpobs) then
                  cdata_all(1,iout)=rstation_id    !  station ID
@@ -2896,20 +2903,20 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 
 ! define a closest METAR cloud observation for each grid point
 
-  if(metarcldobs .and. ndata > 0) then
-     maxobs=2000000
-     allocate(cdata_all(nreal,maxobs))
-     call reorg_metar_cloud(cdata_out,nreal,ndata,cdata_all,maxobs,iout)
-     ndata=iout
-     deallocate(cdata_out)
-     allocate(cdata_out(nreal,ndata))
-     do i=1,nreal
-        do j=1,ndata
-          cdata_out(i,j)=cdata_all(i,j)
-        end do
-     end do
-     deallocate(cdata_all)
-  endif
+  !if(metarcldobs .and. ndata > 0) then
+  !   maxobs=2000000
+  !   allocate(cdata_all(nreal,maxobs))
+  !   call reorg_metar_cloud(cdata_out,nreal,ndata,cdata_all,maxobs,iout)
+  !   ndata=iout
+  !   deallocate(cdata_out)
+  !   allocate(cdata_out(nreal,ndata))
+  !   do i=1,nreal
+  !      do j=1,ndata
+  !        cdata_out(i,j)=cdata_all(i,j)
+  !      end do
+  !   end do
+  !   deallocate(cdata_all)
+  !endif
   call count_obs(ndata,nreal,ilat,ilon,cdata_out,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon,ndata
   write(lunout) cdata_out

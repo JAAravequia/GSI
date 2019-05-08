@@ -2,7 +2,7 @@ subroutine statsconv(mype,&
      i_ps,i_uv,i_t,i_q,i_pw,i_rw,i_dw,i_gps,i_sst,i_tcp,i_lag, &
      i_gust,i_vis,i_pblh,i_wspd10m,i_td2m,i_mxtm,i_mitm,i_pmsl,i_howv, & 
      i_tcamt,i_lcbas,i_cldch,i_uwnd10m,i_vwnd10m,&
-     i_swcp,i_lwcp,i_dbz,i_ref,bwork,awork,ndata)
+     i_swcp,i_lwcp,i_dbz,i_cldtot,i_ref,bwork,awork,ndata)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    statconv    prints statistics for conventional data
@@ -111,7 +111,7 @@ subroutine statsconv(mype,&
   integer(i_kind)                                  ,intent(in   ) :: mype,i_ps,i_uv,&
        i_t,i_q,i_pw,i_rw,i_dw,i_gps,i_sst,i_tcp,i_lag,i_gust,i_vis,i_pblh,&
        i_wspd10m,i_td2m,i_mxtm,i_mitm,i_pmsl,i_howv,i_tcamt,i_lcbas,&
-       i_cldch,i_uwnd10m,i_vwnd10m,i_swcp,i_lwcp,i_dbz,i_ref
+       i_cldch,i_uwnd10m,i_vwnd10m,i_swcp,i_lwcp,i_dbz,i_cldtot,i_ref
   real(r_kind),dimension(7*nsig+100,i_ref)     ,intent(in   ) :: awork
   real(r_kind),dimension(npres_print,nconvtype,5,3),intent(in   ) :: bwork
   integer(i_kind),dimension(ndat,3)                ,intent(in   ) :: ndata

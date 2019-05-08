@@ -131,6 +131,15 @@ module rapidrefresh_cldsurf_mod
 !                             (default = 0.6)
 !      cld_clr_coverage  - namelist real for cloud coverage required for qc/qi clearing
 !                             (default = 0.4)
+!      i_cloud_q_innovation - integer to choose if and how cloud obs are used
+!                           0= no innovations 
+!                           1= cloud total innovations
+!                           2= water vapor innovations
+!                           3= cloud total & water vapor innovations
+!      i_ens_mean    - integer for setupcldtot behavior
+!                           0=single model run
+!                           1=ensemble mean
+!                           2=ensemble members
 !
 ! attributes:
 !   language: f90
@@ -190,6 +199,8 @@ module rapidrefresh_cldsurf_mod
   public :: l_fog_off
   public :: cld_bld_coverage
   public :: cld_clr_coverage
+  public :: i_cloud_q_innovation
+  public :: i_ens_mean
 
   logical l_cloud_analysis
   real(r_kind)  dfi_radar_latent_heat_time_period
@@ -236,6 +247,8 @@ module rapidrefresh_cldsurf_mod
   logical              l_fog_off
   real(r_kind)         cld_bld_coverage
   real(r_kind)         cld_clr_coverage
+  integer(i_kind)      i_cloud_q_innovation
+  integer(i_kind)      i_ens_mean
 
 contains
 
@@ -332,6 +345,8 @@ contains
     l_fog_off = .false.                               ! .true. is to turn off fog updates
     cld_bld_coverage    = 0.6_r_kind                  ! Percentage of cloud coverage for building qc/qi
     cld_clr_coverage    = 0.6_r_kind                  ! Percentage of cloud coverage for clearing qc/qi
+    i_cloud_q_innovation = 0                          ! 0 = no increments from cloud obs
+    i_ens_mean = 0                                    ! typical ob behavior
     return
   end subroutine init_rapidrefresh_cldsurf
 
