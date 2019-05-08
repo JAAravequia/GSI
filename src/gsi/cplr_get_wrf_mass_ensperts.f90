@@ -1918,7 +1918,7 @@ contains
        ps => dum2
     end if
   
-    call write_spread_dualres(st,vp,tv,rh,oz,cw,ps,mype)
+    !call write_spread_dualres(st,vp,tv,rh,oz,cw,ps,mype)
   
     return
   end subroutine ens_spread_dualres_regional_wrf
