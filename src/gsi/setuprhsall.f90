@@ -530,8 +530,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !          Set up conventional data
            else if(ditype(is) == 'conv')then
 !             Set up temperature data
-              if(obstype=='t')then
-                 call setupt(lunin,mype,bwork,awork(1,i_t),nele,nobs,is,conv_diagsave)
+              if(obstype=='t' .or. obstype=='lst')then
+                 call setupt(lunin,mype,bwork,awork(1,i_t),nele,nobs,obstype,is,conv_diagsave)
 
 !             Set up uv wind data
               else if(obstype=='uv')then

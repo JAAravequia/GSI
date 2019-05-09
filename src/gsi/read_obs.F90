@@ -857,7 +857,8 @@ subroutine read_obs(ndata,mype)
            obstype == 'mitm' .or. obstype=='pmsl' .or. &
            obstype == 'howv' .or. obstype=='tcamt' .or. &
            obstype=='lcbas' .or. obstype=='cldch' .or. obstype == 'larcglb' .or. &
-           obstype=='uwnd10m' .or. obstype=='vwnd10m' .or. obstype=='dbz' ) then
+           obstype=='uwnd10m' .or. obstype=='vwnd10m' .or. obstype=='dbz' .or. &
+           obstype == 'lst') then
           ditype(i) = 'conv'
        else if (obstype == 'swcp' .or. obstype == 'lwcp') then
           ditype(i) = 'wcp'
@@ -1026,6 +1027,8 @@ subroutine read_obs(ndata,mype)
              
 !   If no data set starting record to be 999999.  Note if this is not large
 !   enough code should still work - just does a bit more work.
+
+             if (obstype == 'lst' )lexist=.true. !x temperally for no viirs bufr file
 
              if(.not. lexist)read_rec1(i) = 999999
              len4file=lenbytes/4
@@ -1359,6 +1362,12 @@ subroutine read_obs(ndata,mype)
                   call read_fl_hdob(nread,npuse,nouse,infile,obstype,lunout,gstime,twind,sis,&
                                     prsl_full,nobs_sub1(1,i))
                   string='READ_FL_HDOB'
+!               Process satellite retrieved Land Surface Temperature not included in prepbufr
+                else if ( obstype == 'lst' ) then
+                   call read_viirsLST(nread,npuse,nouse,infile,obstype,lunout,gstime,twind,sis,&
+                        prsl_full,nobs_sub1(1,i))
+                   string='READ_VIRRS_LST'
+
                 else
                    call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
                         prsl_full,nobs_sub1(1,i),read_rec(i))
