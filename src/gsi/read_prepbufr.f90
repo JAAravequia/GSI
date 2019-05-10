@@ -2903,20 +2903,20 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 
 ! define a closest METAR cloud observation for each grid point
 
-  !if(metarcldobs .and. ndata > 0) then
-  !   maxobs=2000000
-  !   allocate(cdata_all(nreal,maxobs))
-  !   call reorg_metar_cloud(cdata_out,nreal,ndata,cdata_all,maxobs,iout)
-  !   ndata=iout
-  !   deallocate(cdata_out)
-  !   allocate(cdata_out(nreal,ndata))
-  !   do i=1,nreal
-  !      do j=1,ndata
-  !        cdata_out(i,j)=cdata_all(i,j)
-  !      end do
-  !   end do
-  !   deallocate(cdata_all)
-  !endif
+  if(metarcldobs .and. ndata > 0) then
+     maxobs=2000000
+     allocate(cdata_all(nreal,maxobs))
+     call reorg_metar_cloud(cdata_out,nreal,ndata,cdata_all,maxobs,iout)
+     ndata=iout
+     deallocate(cdata_out)
+     allocate(cdata_out(nreal,ndata))
+     do i=1,nreal
+        do j=1,ndata
+          cdata_out(i,j)=cdata_all(i,j)
+        end do
+     end do
+     deallocate(cdata_all)
+  endif
   call count_obs(ndata,nreal,ilat,ilon,cdata_out,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon,ndata
   write(lunout) cdata_out
