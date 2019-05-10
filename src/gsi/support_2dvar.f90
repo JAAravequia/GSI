@@ -65,9 +65,11 @@ subroutine convert_binary_2d
   integer(i_kind),allocatable::ifield2(:,:)
   real(r_single) rad2deg_single
   logical print_verbose
+  logical use_lst
 
   data in_unit / 11 /
 
+  use_lst=.true.
   print_verbose=.true.
   if(verbose)print_verbose=.true.
   n_loop: do n=1,9
@@ -422,6 +424,58 @@ subroutine convert_binary_2d
      end if
      write(lendian_out)field2
 
+     !  variables for assimilating VIIRS LST
+     if(use_lst) then
+       read(in_unit)field2             ! PRESGRID1
+       write(6,*)' convert_binary_2d: max,min PRESGRID1=',maxval(field2),minval(field2)
+       write(6,*)' convert_binary_2d: mid PRESGRID1=',field2(nlon_regional/2,nlat_regional/2)
+       write(lendian_out)field2
+
+       read(in_unit)field2             ! PRESGRID2
+       write(6,*)' convert_binary_2d: max,min PRESGRID2=',maxval(field2),minval(field2)
+       write(6,*)' convert_binary_2d: mid PRESGRID2=',field2(nlon_regional/2,nlat_regional/2)
+       write(lendian_out)field2
+
+       read(in_unit)field2             ! TMPGRID1
+       write(6,*)' convert_binary_2d: max,min TMPGRID1=',maxval(field2),minval(field2)
+       write(6,*)' convert_binary_2d: mid TMPGRID1=',field2(nlon_regional/2,nlat_regional/2)
+       write(lendian_out)field2
+
+       read(in_unit)field2             ! TMPGRID2
+       write(6,*)' convert_binary_2d: max,min TMPGRID2=',maxval(field2),minval(field2)
+       write(6,*)' convert_binary_2d: mid TMPGRID2=',field2(nlon_regional/2,nlat_regional/2)
+       write(lendian_out)field2
+       read(in_unit)field2             ! QGRID1
+       write(6,*)' convert_binary_2d: max,min QGRID1=',maxval(field2),minval(field2)
+       write(6,*)' convert_binary_2d: mid QGRID1=',field2(nlon_regional/2,nlat_regional/2)
+       write(lendian_out)field2
+
+       read(in_unit)field2             ! QGRID2
+       write(6,*)' convert_binary_2d: max,min QGRID2=',maxval(field2),minval(field2)
+       write(6,*)' convert_binary_2d: mid QGRID2=',field2(nlon_regional/2,nlat_regional/2)
+       write(lendian_out)field2
+
+       read(in_unit)field2             ! UGRID1
+       write(6,*)' convert_binary_2d: max,min UGRID1=',maxval(field2),minval(field2)
+       write(6,*)' convert_binary_2d: mid UGRID1=',field2(nlon_regional/2,nlat_regional/2)
+       write(lendian_out)field2
+
+       read(in_unit)field2             ! VGRID1
+       write(6,*)' convert_binary_2d: max,min VGRID2=',maxval(field2),minval(field2)
+       write(6,*)' convert_binary_2d: mid VGRID2=',field2(nlon_regional/2,nlat_regional/2)
+       write(lendian_out)field2
+
+       read(in_unit)field2             !HGTGRID1
+       write(6,*)' convert_binary_2d: max,min HGTGRID1=',maxval(field2),minval(field2)
+       write(6,*)' convert_binary_2d: mid HGTGRID1=',field2(nlon_regional/2,nlat_regional/2)
+       write(lendian_out)field2
+
+      read(in_unit)field2             !SFRGRID
+       write(6,*)' convert_binary_2d: max,min SFRGRID=',maxval(field2),minval(field2)
+       write(6,*)' convert_binary_2d: mid SFRGRID=',field2(nlon_regional/2,nlat_regional/2)
+       write(lendian_out)field2
+     end if
+
      close(in_unit)
      close(lendian_out)
 
@@ -643,6 +697,7 @@ subroutine read_2d_guess(mype)
 !   2015-07-10  pondeca - add cloud ceiling height
 !   2016-05-03  pondeca - add uwnd10m, vwnd10m
 !   2018-01-xx  yang    - test the method of nonlinear transform
+!   2018-10-10  zhang   - add 10 extra model variables for assimilating VIIRS LST
 !
 !   input argument list:
 !     mype     - pe number
@@ -700,13 +755,18 @@ subroutine read_2d_guess(mype)
   integer(i_kind) i_sm,i_xice,i_sst,i_tsk,i_ivgtyp,i_isltyp,i_vegfrac,i_gust,i_vis,i_pblh
   integer(i_kind) i_wspd10m,i_td2m,i_mxtm,i_mitm,i_pmsl,i_howv,i_tcamt,i_lcbas,i_cldch
   integer(i_kind) i_uwnd10m,i_vwnd10m
+  !LST
+  integer(i_kind) i_presgrid1,i_presgrid2,i_tmpgrid1,i_tmpgrid2,i_qgrid1,i_qgrid2
+  integer(i_kind) i_ugrid1,i_vgrid1,i_hgtgrid1,i_sfrgrid
   integer(i_kind) isli_this
   real(r_kind) psfc_this,sm_this,xice_this
   integer(i_kind) icwmr,ier,istatus
   logical ihave_gust,ihave_pblh,ihave_vis,ihave_tcamt,ihave_lcbas
   logical ihave_wspd10m,ihave_td2m,ihave_mxtm,ihave_mitm,ihave_pmsl,ihave_howv
   logical ihave_cldch,ihave_uwnd10m,ihave_vwnd10m
-
+  !LST
+  logical ihave_presgrid1,ihave_presgrid2,ihave_tmpgrid1,ihave_tmpgrid2,ihave_qgrid1,ihave_qgrid2 
+  logical ihave_ugrid1,ihave_vgrid1,ihave_hgtgrid1,ihave_sfrgrid
   real(r_kind),pointer,dimension(:,:  )::ges_gust   =>NULL()
   real(r_kind),pointer,dimension(:,:  )::ges_vis    =>NULL()
   real(r_kind),pointer,dimension(:,:  )::ges_pblh   =>NULL()
@@ -730,7 +790,19 @@ subroutine read_2d_guess(mype)
   real(r_kind),pointer,dimension(:,:,:)::ges_tv_it  =>NULL()
   real(r_kind),pointer,dimension(:,:,:)::ges_q_it   =>NULL()
   real(r_kind),pointer,dimension(:,:,:)::ges_cwmr_it=>NULL()
+  !LST
+  real(r_kind),pointer,dimension(:,:  )::ges_presgrid1=>NULL()
+  real(r_kind),pointer,dimension(:,:  )::ges_presgrid2=>NULL()
+  real(r_kind),pointer,dimension(:,:  )::ges_tmpgrid1=>NULL()
+  real(r_kind),pointer,dimension(:,:  )::ges_tmpgrid2=>NULL()
+  real(r_kind),pointer,dimension(:,:  )::ges_qgrid1=>NULL()
+  real(r_kind),pointer,dimension(:,:  )::ges_qgrid2=>NULL()
+  real(r_kind),pointer,dimension(:,:  )::ges_ugrid1=>NULL()
+  real(r_kind),pointer,dimension(:,:  )::ges_vgrid1=>NULL()
+  real(r_kind),pointer,dimension(:,:  )::ges_hgtgrid1=>NULL()
+  real(r_kind),pointer,dimension(:,:  )::ges_sfrgrid=>NULL()
   logical print_verbose
+  logical use_lst
 
 
 !  RESTART FILE input grid dimensions in module gridmod
@@ -740,6 +812,7 @@ subroutine read_2d_guess(mype)
 !          lm -- number of vertical levels ( = nsig for now)
 
 
+  use_lst = .true.
 ! Turning on print_verbose will result in additional prints from this routine only.
   print_verbose = .false.
   if(verbose)print_verbose=.true.
@@ -756,7 +829,11 @@ subroutine read_2d_guess(mype)
   lm=nsig
 
 ! Following is for convenient 2D input
-  num_2d_fields=30! Adjust according to content of RTMA restart file ---- should this number be in a namelist or anavinfo file at some point?
+  if (use_lst) then !LST
+     num_2d_fields=40
+  else
+     num_2d_fields=30! Adjust according to content of RTMA restart file ---- should this number be in a namelist or anavinfo file at some point?
+  end if
   num_all_fields=num_2d_fields*nfldsig
   num_loc_groups=num_all_fields/npe
   if(print_verbose .and. mype == 0)then
@@ -921,6 +998,49 @@ subroutine read_2d_guess(mype)
   i=i+1 ; i_vwnd10m=i                                         ! vwnd10m
   write(identity(i),'("record ",i3,"--vwnd10m")')i
   jsig_skip(i)=0 ; igtype(i)=1
+
+ !x LST
+  if (use_lst) then
+     i=i+1 ; i_presgrid1=i                                       ! presgrid1
+     write(identity(i),'("record ",i3,"--presgrid1")')i
+     jsig_skip(i)=0 ; igtype(i)=1
+
+     i=i+1 ; i_presgrid2=i                                       ! presgrid2
+     write(identity(i),'("record ",i3,"--presgrid2")')i
+     jsig_skip(i)=0 ; igtype(i)=1
+
+     i=i+1 ; i_tmpgrid1=i                                        ! tmpgrid1
+     write(identity(i),'("record ",i3,"--tmpgrid1")')i
+     jsig_skip(i)=0 ; igtype(i)=1
+
+     i=i+1 ; i_tmpgrid2=i                                        ! tmpgrid2
+     write(identity(i),'("record ",i3,"--tmpgrid2")')i
+     jsig_skip(i)=0 ; igtype(i)=1
+
+     i=i+1 ; i_qgrid1=i                                          ! qgrid1
+     write(identity(i),'("record ",i3,"--qgrid1")')i
+     jsig_skip(i)=0 ; igtype(i)=1
+
+     i=i+1 ; i_qgrid2=i                                          ! qgrid2
+     write(identity(i),'("record ",i3,"--qgrid2")')i
+     jsig_skip(i)=0 ; igtype(i)=1
+
+     i=i+1 ; i_ugrid1=i                                          ! ugrid1
+     write(identity(i),'("record ",i3,"--ugrid1")')i
+     jsig_skip(i)=0 ; igtype(i)=1
+
+     i=i+1 ; i_vgrid1=i                                          ! vgrid1
+     write(identity(i),'("record ",i3,"--vgrid1")')i
+     jsig_skip(i)=0 ; igtype(i)=1
+
+     i=i+1 ; i_hgtgrid1=i                                        ! hgtgrid1
+     write(identity(i),'("record ",i3,"--hgtgrid1")')i
+     jsig_skip(i)=0 ; igtype(i)=1
+
+     i=i+1 ; i_sfrgrid=i                                         ! sfrgrid
+     write(identity(i),'("record ",i3,"--sfrgrid")')i
+     jsig_skip(i)=0 ; igtype(i)=1
+  end if
 
   if (print_verbose .and. mype==0) then
      print*
@@ -1111,6 +1231,38 @@ subroutine read_2d_guess(mype)
 
         call gsi_bundlegetpointer (gsi_metguess_bundle(it),'vwnd10m',ges_vwnd10m,ier)
         ihave_vwnd10m=ier==0
+        !x LST
+        if (use_lst) then
+           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'presgrid1',ges_presgrid1,ier)
+           ihave_presgrid1=ier==0
+
+           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'presgrid2',ges_presgrid2,ier)
+           ihave_presgrid2=ier==0
+
+           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'tmpgrid1',ges_tmpgrid1,ier)
+           ihave_tmpgrid1=ier==0
+
+           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'tmpgrid2',ges_tmpgrid2,ier)
+           ihave_tmpgrid2=ier==0
+
+           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qgrid1',ges_qgrid1,ier)
+           ihave_qgrid1=ier==0
+
+           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qgrid2',ges_qgrid2,ier)
+           ihave_qgrid2=ier==0
+
+           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ugrid1',ges_ugrid1,ier)
+           ihave_ugrid1=ier==0
+
+           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'vgrid1',ges_vgrid1,ier)
+           ihave_vgrid1=ier==0
+
+           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'hgtgrid1',ges_hgtgrid1,ier)
+           ihave_hgtgrid1=ier==0
+
+           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'sfrgrid',ges_sfrgrid,ier)
+           ihave_sfrgrid=ier==0
+        end if
 
         i_0=(it-1)*num_2d_fields
         do i=1,lon1+2
@@ -1187,6 +1339,39 @@ subroutine read_2d_guess(mype)
 
               if (ihave_vwnd10m) & 
                  ges_vwnd10m(j,i)=real(all_loc(j,i,i_0+i_vwnd10m),r_kind)
+
+              !x LST
+              if (use_lst) then
+                 if (ihave_presgrid1) &
+                    ges_presgrid1(j,i)=real(all_loc(j,i,i_0+i_presgrid1),r_kind)
+
+                 if (ihave_presgrid2) &
+                    ges_presgrid2(j,i)=real(all_loc(j,i,i_0+i_presgrid2),r_kind)
+
+                 if (ihave_tmpgrid1) &
+                    ges_tmpgrid1(j,i)=real(all_loc(j,i,i_0+i_tmpgrid1),r_kind)
+
+                 if (ihave_tmpgrid2) &
+                    ges_tmpgrid2(j,i)=real(all_loc(j,i,i_0+i_tmpgrid2),r_kind)
+
+                 if (ihave_qgrid1) &
+                    ges_qgrid1(j,i)=real(all_loc(j,i,i_0+i_qgrid1),r_kind)
+
+                 if (ihave_qgrid2) &
+                    ges_qgrid2(j,i)=real(all_loc(j,i,i_0+i_qgrid2),r_kind)
+
+                 if (ihave_ugrid1) &
+                    ges_ugrid1(j,i)=real(all_loc(j,i,i_0+i_ugrid1),r_kind)
+
+                 if (ihave_vgrid1) &
+                    ges_vgrid1(j,i)=real(all_loc(j,i,i_0+i_vgrid1),r_kind)
+
+                 if (ihave_hgtgrid1) &
+                    ges_hgtgrid1(j,i)=real(all_loc(j,i,i_0+i_hgtgrid1),r_kind)
+
+                 if (ihave_sfrgrid) &
+                    ges_sfrgrid(j,i)=real(all_loc(j,i,i_0+i_sfrgrid),r_kind)
+              end if
 
            end do
         end do
@@ -1278,6 +1463,9 @@ subroutine wr2d_binary(mype)
   integer(i_kind) iog,ioan,i,j,k,kt,kq,ku,kv,it,i_psfc,i_t,i_q,i_u,i_v
   integer(i_kind) i_sst,i_skt,i_gust,i_vis,i_pblh,ier,istatus,i_tcamt,i_lcbas,i_cldch
   integer(i_kind) i_wspd10m,i_td2m,i_mxtm,i_mitm,i_pmsl,i_howv,i_uwnd10m,i_vwnd10m
+  !x LST
+  integer(i_kind) i_presgrid1,i_presgrid2,i_tmpgrid1,i_tmpgrid2,i_qgrid1,i_qgrid2,&
+                  i_ugrid1,i_vgrid1,i_hgtgrid1,i_sfrgrid
   integer(i_kind) num_2d_fields,num_all_fields,num_all_pad
   integer(i_kind) regional_time0(6),nlon_regional0,nlat_regional0,nsig0
   real(r_kind) psfc_this
@@ -1289,6 +1477,7 @@ subroutine wr2d_binary(mype)
   integer(i_kind) iaux(100),kaux
   character(15) caux(100)
   logical print_verbose
+  logical use_lst
   
   real(r_kind),dimension(:,:  ),pointer:: ptr2d    =>NULL()
   real(r_kind),dimension(:,:  ),pointer:: ges_ps_it=>NULL()
@@ -1296,6 +1485,7 @@ subroutine wr2d_binary(mype)
   real(r_kind),dimension(:,:,:),pointer:: ges_v_it =>NULL()
   real(r_kind),dimension(:,:,:),pointer:: ges_q_it =>NULL()
 
+  use_lst= .true.
   print_verbose = .false.
   if(verbose)print_verbose=.true.
   im=nlon_regional
@@ -1324,8 +1514,25 @@ subroutine wr2d_binary(mype)
   i_uwnd10m=i_lcbas+1
   i_vwnd10m=i_uwnd10m+1
 
-  num_2d_fields=i_vwnd10m      ! - should always equal the last integer from the
-                               ! -   preceding list
+  !x LST
+  if (use_lst) then
+     i_presgrid1=i_vwnd10m+1
+     i_presgrid2=i_presgrid1+1
+     i_tmpgrid1=i_presgrid2+1
+     i_tmpgrid2=i_tmpgrid1+1
+     i_qgrid1=i_tmpgrid2+1
+     i_qgrid2=i_qgrid1+1
+     i_ugrid1=i_qgrid2+1
+     i_vgrid1=i_ugrid1+1
+     i_hgtgrid1=i_vgrid1+1
+     i_sfrgrid=i_hgtgrid1+1
+     num_2d_fields=i_sfrgrid     ! - should always equal the last integer from the
+                                 ! -   preceding list
+  else
+     num_2d_fields=i_vwnd10m      ! - should always equal the last integer from the
+                                  ! -   preceding list
+  end if
+
   num_all_fields=num_2d_fields
   num_all_pad=num_all_fields
 
@@ -1555,7 +1762,25 @@ subroutine wr2d_binary(mype)
   caux(13)='uwnd10m'; iaux(13)=i_uwnd10m
   caux(14)='vwnd10m'; iaux(14)=i_vwnd10m
 
-  kaux=14  !Adjust as you add variables
+  !x LST
+  caux(15)='presgrid1'  ; iaux(15)=i_presgrid1
+  caux(16)='presgrid2'  ; iaux(16)=i_presgrid2
+  caux(17)='tmpgrid1'   ; iaux(17)=i_tmpgrid1
+  caux(18)='tmpgrid2'   ; iaux(18)=i_tmpgrid2
+  caux(19)='qgrid1'     ; iaux(19)=i_qgrid1
+  caux(20)='qgrid2'     ; iaux(20)=i_qgrid2
+  caux(21)='ugrid1'  ; iaux(21)=i_ugrid1
+  caux(22)='vgrid1'  ; iaux(22)=i_vgrid1
+  caux(23)='hgtgrid1'   ; iaux(23)=i_hgtgrid1
+  caux(24)='sfrgrid'    ; iaux(24)=i_sfrgrid
+
+
+  !LST
+  if (use_lst) then
+     kaux=24
+  else
+     !kaux=14  !Adjust as you add variables
+  end if
 
   do k=1,kaux
      call gsi_bundlegetpointer (gsi_metguess_bundle(it),trim(caux(k)),ptr2d, ier)
