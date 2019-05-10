@@ -484,8 +484,9 @@ if (iret/=0) then
 end if
 call nemsio_setheadvar(gfile,'ntimestep',ntimestep,iret)
 if (iret/=0) then
-   write(6,*)'gridio/writegriddata: nmmb model: problem with nemsio_setheadvar(ntimestep), iret=',iret
-   call stop2(23)
+   !write(6,*)'gridio/writegriddata: nmmb model: problem with nemsio_setheadvar(ntimestep), iret=',iret
+   !call stop2(23)
+   write(6,*)'warning - gridio/writegriddata: nmmb model: problem with nemsio_setheadvar(ntimestep), iret=',iret
 end if
 
 
