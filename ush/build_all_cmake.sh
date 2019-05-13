@@ -76,7 +76,7 @@ else
     source $dir_modules/modulefile.ProdGSI.$target
 fi
 
-if [[ $build_type = PRODUCTION -o $build_type = DEBUG ]] ; then
+if [ $build_type = PRODUCTION -o $build_type = DEBUG ] ; then
   cmake -DBUILD_UTIL=ON -DMPI3FLAG=-DMPI3 -DMPI3=ON -DBUILD_NCDIAG_SERIAL=ON -DCMAKE_BUILD_TYPE=$build_type -DBUILD_CORELIBS=OFF ..
 else 
   cmake ..
