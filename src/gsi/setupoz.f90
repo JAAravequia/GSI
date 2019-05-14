@@ -200,7 +200,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
   real(r_single), dimension(nsdim) :: dhx_dx_array
 
   integer(i_kind) i,nlev,ii,jj,iextra,istat,ibin, kk
-  integer(i_kind) k,j,nz,jc,idia,irdim1,istatus,ioff0
+  integer(i_kind) k1,k,j,nz,jc,idia,irdim1,istatus,ioff0
   integer(i_kind) ioff,itoss,ikeep,ierror_toq,ierror_poq
   integer(i_kind) isolz,ifovn,itoqf
   integer(i_kind) mm1,itime,ilat,ilon,ilate,ilone,itoq,ipoq
@@ -558,7 +558,11 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
                  idia = idia+size(dhx_dx)
               endif
 
-              if (netcdf_diag) then
+              if (netcdf_diag ) then
+                 call nc_diag_metadata("TopLevelPressure",     sngl(pobs(k))      )
+                 k1 = k + 1
+                 if(k1 > nlevs)k1 = nlevs
+                 call nc_diag_metadata("BottomLevelPressure",  sngl(pobs(k1))    )
                  call nc_diag_metadata("MPI_Task_Number", mype                      )
                  call nc_diag_metadata("Latitude",        sngl(data(ilate,i))       )
                  call nc_diag_metadata("Longitude",       sngl(data(ilone,i))       )
@@ -586,7 +590,7 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
                     call fullarray(dhx_dx, dhx_dx_array)
                     call nc_diag_data2d("Observation_Operator_Jacobian", dhx_dx_array)
                  endif
-                call nc_diag_data2d("mass_concentration_of_ozone_in_air", sngl(ozgestmp)) 
+                call nc_diag_data2d("mass_concentration_of_ozone_in_air", sngl(ozges))
                 call nc_diag_data2d("air_pressure_levels",sngl(prsitmp))
               endif
            endif

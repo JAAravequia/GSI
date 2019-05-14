@@ -18,7 +18,7 @@ WorkDir=/scratch3/NCEPDEV/stmp1/$LOGNAME/JEDI/GSI_work/$adate
 OutDir=/scratch3/NCEPDEV/stmp1/$LOGNAME/JEDI/output/$adate
 
 GSIDir=/scratch4/NCEPDEV/da/save/Cory.R.Martin/GSI/
-gsiexec=/scratch4/NCEPDEV/da/save/Cory.R.Martin/GSI/build_jedi/bin/gsi.x
+gsiexec=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/ProdGSI/build/bin/gsi.x
 nccat=/scratch4/NCEPDEV/da/save/Cory.R.Martin/GSI/build_jedi/bin/nc_diag_cat_serial.x
 fixgsi=/scratch4/NCEPDEV/da/save/Cory.R.Martin/GSI/ProdGSI_jedi/fix
 fixcrtm=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update
@@ -28,6 +28,9 @@ IODACDir=/scratch4/NCEPDEV/da/save/Cory.R.Martin/JEDI/src/ioda-converters
 pyrad=$IODACDir/src/gsi-ncdiag/rename_rad.py
 pyconvsplit=$IODACDir/src/gsi-ncdiag/split_conv.py
 pyconvrename=$IODACDir/src/gsi-ncdiag/rename_conv.py
+pyozsubset=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/JEDI/src/ioda_converters/src/gsi-ncdiag/subset_oz.py
+pyozsplit=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/JEDI/src/ioda_converters/src/gsi-ncdiag/split_oz.py
+pyozrename=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/JEDI/src/ioda_converters/src/gsi-ncdiag/rename_oz.py
 pyconvmerge=$IODACDir/src/gsi-ncdiag/merge_conv.py
 pyconvsubset=$IODACDir/src/gsi-ncdiag/subset_conv.py
 pyradsubset=$IODACDir/src/gsi-ncdiag/subset_rad.py
@@ -51,7 +54,7 @@ module load impi
 module load netcdf
 module load grads
 module load rocoto/1.3.0-RC3
-module load slurm
+#module load slurm
 # /contrib modules
 module use -a /contrib/modulefiles
 module load anaconda/anaconda2
@@ -526,6 +529,11 @@ python $pyrad &
 python $pyconvsplit
 python $pyconvrename
 #python $pyconvmerge this doesn't work unless each variable has the same num of obs
+
+# for ozone obs
+#python $pyozsplit
+python $pyozrename
+python $pyozsubset
 
 # might also want to subset the files here too (_m and _s)
 python $pyradsubset &
