@@ -31,6 +31,7 @@ subroutine calctends(mype,teta,pri,guess,xderivative,yderivative,tendency)
 !                         needs generalization
 !   2013-10-28  todling - rename p3d to prse
 !   2019-03-13  eliu - use derivative var table instead of the control var table  
+!   2019-05-09  eliu - point cloud water(cw) to derived value (cwgues) when cw is not in met_guess table  
 !
 ! usage:
 !   input argument list:
@@ -55,7 +56,7 @@ subroutine calctends(mype,teta,pri,guess,xderivative,yderivative,tendency)
   use tendsmod, only: what9,prsth9,r_prsum9,r_prdif9,prdif9,pr_xsum9,pr_xdif9,pr_ysum9,&
      pr_ydif9,curvx,curvy,coriolis
   use control_vectors, only: cvars3d
-  use derivsmod, only: dvars3d  
+  use derivsmod, only: dvars3d,cwgues  
   use mpeu_util, only: getindex
 
   use gsi_bundlemod, only: gsi_bundle
@@ -265,6 +266,7 @@ subroutine calctends(mype,teta,pri,guess,xderivative,yderivative,tendency)
 !   what9(i,k,1) & what9(i,j,nsig+1) = zero
 !   p_t(i,j,1) is the same as the surface pressure tendency
 
+    ip3d=getindex(dvars3d,'prse')
     if (ip3d>0) then  
     do k=1,nsig+1
       do j=jtstart(kk),jtstop(kk)
@@ -419,6 +421,10 @@ subroutine calctends(mype,teta,pri,guess,xderivative,yderivative,tendency)
      endif
      if (icw>0) then
      call gsi_bundlegetpointer(bundle,'cw',cw  ,istatus)
+     if (istatus /=0) then
+         cw => cwgues
+         istatus=0
+     endif 
      ier=ier+istatus
      endif
   endif

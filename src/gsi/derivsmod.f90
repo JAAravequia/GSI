@@ -11,6 +11,9 @@ module derivsmod
 !   2014-06-18 Carley - add lgues and dlcbasdlog
 !   2015-07-10 Pondeca - add cldchgues and dcldchdlog
 !   2016-05-10 Thomas - remove references to cwgues0
+!   2019-05-08 mtong - replace set_ with init_anadv 
+!   2019-05-08 eliu - recover logic (drv_set_) to indicate the derivative
+!                     vars are allocated and defined
 !
 ! public subroutines:
 !  drv_initialized         - initialize name of fields to calc derivs for
@@ -23,6 +26,7 @@ module derivsmod
 !  dvars2d, dvars3d        - names of 2d/3d derivatives
 !  dsrcs2d, dsrcs3d        - names of where original fields reside
 !  drv_initialized         - flag indicating initialization status
+!  drv_set_                - flag indicating the variables are allocated and defined 
 !
 ! attributes:
 !   language: f90
@@ -53,6 +57,7 @@ save
 private
 
 public :: drv_initialized
+public :: drv_set_         
 public :: create_ges_derivatives
 public :: destroy_ges_derivatives
 
@@ -64,6 +69,7 @@ public :: cwgues
 public :: ggues,vgues,pgues,lgues,dvisdlog,dlcbasdlog
 public :: w10mgues,howvgues,cldchgues,dcldchdlog
 public :: qsatg,qgues,dqdt,dqdrh,dqdp
+public :: init_anadv
 
 logical :: drv_initialized = .false.
 
@@ -80,11 +86,12 @@ real(r_kind),target,allocatable,dimension(:,:,:):: cwgues
 ! below this point: declare vars not to be made public
 
 character(len=*),parameter:: myname='derivsmod'
-logical,save :: drv_set_=.false.
+logical,save :: drv_set_=.false.  
 integer(i_kind),allocatable,dimension(:):: levels
 contains
 
-subroutine set_ (iamroot,rcname)
+!subroutine set_ (iamroot,rcname)
+subroutine init_anadv
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:	 define derivatives
@@ -97,6 +104,9 @@ subroutine set_ (iamroot,rcname)
 ! program history log:
 !   2013-09-27  todling  - initial code
 !   2014-02-03  todling  - negative levels mean rank-3 array
+!   2019-05-08  mtong    - replace set_ with init_anadv 
+!   2019-05-08  eliu     - recover logic (drv_set_) to indicate the derivative
+!                          vars are allocated and defined
 !
 !   input argument list: see Fortran 90 style document below
 !
@@ -113,8 +123,9 @@ use mpeu_util, only: gettable
 use mpeu_util, only: getindex
 implicit none
 
-logical,optional,intent(in) :: iamroot         ! optional root processor id
-character(len=*),optional,intent(in) :: rcname ! optional input filename
+!logical,optional,intent(in) :: iamroot         ! optional root processor id
+!character(len=*),optional,intent(in) :: rcname ! optional input filename
+character(len=*),parameter:: rcname='anavinfo'
 
 character(len=*),parameter::myname_=myname//'*set_'
 character(len=*),parameter:: tbname='state_derivatives::'
@@ -124,20 +135,21 @@ integer(i_kind),allocatable,dimension(:)::nlevs
 character(len=256),allocatable,dimension(:):: utable
 character(len=max_varname_length),allocatable,dimension(:):: vars
 character(len=max_varname_length),allocatable,dimension(:):: sources
-logical iamroot_,matched
+!logical iamroot_,matched
+logical matched
 
-if(drv_set_) return
+if(drv_set_) return 
 
-iamroot_=mype==0
-if(present(iamroot)) iamroot_=iamroot 
+!iamroot_=mype==0
+!if(present(iamroot)) iamroot_=iamroot 
 
 ! load file
-if (present(rcname)) then
+!if (present(rcname)) then
    luin=get_lun()
    open(luin,file=trim(rcname),form='formatted')
-else
-   luin=5
-endif
+!else
+!   luin=5
+!endif
 
 ! Scan file for desired table first
 ! and get size of table
@@ -235,7 +247,7 @@ do ii=1,nrows
    endif
 enddo
 
-if (iamroot_) then
+if (mype == 0) then
     write(6,*) myname_,':  DERIVATIVE VARIABLES: '
     write(6,*) myname_,':  2D-DERV STATE VARIABLES: '
     do ii=1,n2d
@@ -248,9 +260,10 @@ if (iamroot_) then
 end if
 
 deallocate(vars,nlevs,sources)
-drv_set_=.true.
+drv_set_=.true.  
 
- end subroutine set_
+ end subroutine init_anadv
+!end subroutine set_
 
  subroutine create_ges_derivatives(switch_on_derivatives,nfldsig)
 !$$$  subprogram documentation block
@@ -289,8 +302,8 @@ drv_set_=.true.
   if (.not.switch_on_derivatives) return
   if (drv_initialized) return 
 
-! initialize table with fields
-  call set_(rcname='anavinfo')
+! initialize table with fields  -- move to gsimod.F90 (call init_anadv)
+!  call set_(rcname='anavinfo')
 
 ! create derivative grid
   call GSI_GridCreate(grid,lat2,lon2,nsig)

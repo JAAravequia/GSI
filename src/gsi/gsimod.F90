@@ -79,6 +79,7 @@
   use state_vectors, only: init_anasv,final_anasv
   use control_vectors, only: init_anacv,final_anacv,nrf,nvars,nrf_3d,cvars3d,cvars2d,&
      nrf_var,imp_physics,lupp,fv3_full_hydro  
+  use derivsmod, only: init_anadv
   use berror, only: norh,ndeg,vs,bw,init_berror,hzscl,hswgt,pert_berr,pert_berr_fct,&
      bkgv_flowdep,bkgv_rewgtfct,bkgv_write,fpsproj,nhscrf,adjustozvar,fut2ps,cwcoveqqcov
   use anberror, only: anisotropic,ancovmdl,init_anberror,npass,ifilt_ord,triad4, &
@@ -380,6 +381,7 @@
 !  03-14-2019 eliu      add logic to turn on using full set of hydrometeors in
 !                       obs operator and analysis
 !  03-14-2019 eliu      add precipitation component 
+!  05-09-2019 mtong     move initializing derivative vector here
 !
 !EOP
 !-------------------------------------------------------------------------
@@ -1612,6 +1614,7 @@
 ! Initialize variables, create/initialize arrays
   call init_reg_glob_ll(mype,lendian_in)
   call init_grid_vars(jcap,npe,cvars3d,cvars2d,nrf_var,mype)
+  if (switch_on_derivatives) call init_anadv  ! moved from derivsmod 
   call init_general_commvars
   call create_obsmod_vars
   call gpsStats_create()                ! extracted from obsmod::create_obsmod_vars()

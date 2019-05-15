@@ -86,7 +86,7 @@ subroutine q_diag(it,mype)
            ges_cwmr_it => cwgues        ! temporarily
         else
         !  call die('q_diag','cannot get pointer to cwmr, istatus =',istatus) !orig
-        ges_cwmr_it => cwgues !emily: do not die
+        ges_cwmr_it => cwgues ! do not die
         end if
      end if
   else
