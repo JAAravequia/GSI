@@ -242,6 +242,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   logical rad_diagsave,ozone_diagsave,pcp_diagsave,conv_diagsave,llouter,getodiag,co_diagsave
   logical aero_diagsave
   logical light_diagsave
+  logical radardbz_diagsave 
+  logical diag_radardbz
 
   character(80):: string
   character(10)::obstype
@@ -295,6 +297,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   co_diagsave   = write_diag(jiter) .and. diag_co    .and. ihave_co
   aero_diagsave = write_diag(jiter) .and. diag_aero
   light_diagsave= write_diag(jiter) .and. diag_light
+  diag_radardbz=.true.
+  radardbz_diagsave = write_diag(jiter) .and. diag_radardbz
 
   i_ps = 1
   i_uv = 2
@@ -499,6 +503,38 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
         if(init_pass .and. mype == 0)write(55)idate
      end if
 
+!    If requested, create lightning diagnostic files
+     if(radardbz_diagsave .and. binary_diag)then
+        write(string,600) jiter
+600     format('radardbz_',i2.2)
+        diag_light_file=trim(dirname) // trim(string)
+        if(init_pass) then
+           open(66,file=trim(diag_light_file),form='unformatted',status='unknown',position='rewind')
+           if(mype==0) write(*,*) 'Write radar reflectivity to unit 66 with file name',trim(diag_light_file)         
+        else
+           inquire(unit=66,opened=opened)
+           if(opened) then
+             inquire(unit=66,name=tmpname,form=tmpform,access=tmpaccess)
+             tmpname=basename(tmpname)
+             if(trim(tmpname)/=trim(diag_conv_file)) then
+               call perr(myname,'unexpectly occupied, unit =',66)
+               call perr(myname,'           diag_conv_file =',trim(diag_conv_file))
+               call perr(myname,'   inquire(unit=66,  name= )',trim(tmpname))
+               call perr(myname,'   inquire(unit=66,  form= )',trim(tmpform))
+               call perr(myname,'   inquire(unit=66,access= )',trim(tmpaccess))
+               call  die(myname)
+             endif
+
+           else
+             call perr(myname,'unexpectly closed, unit =',66)
+             call perr(myname,'         diag_conv_file =',trim(diag_conv_file))
+             call  die(myname)
+           endif
+        endif
+        idate=iadate(4)+iadate(3)*100+iadate(2)*10000+iadate(1)*1000000
+        if(init_pass .and. mype == 0)write(66)idate
+     end if
+
 
 !    Loop over data types to process
      do is=1,ndat
@@ -568,7 +604,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
 !             Set up radar reflectivity data
               else if(obstype=='dbz')then
-                 call setupdbz(lunin,mype,bwork,awork(1,i_dbz),nele,nobs,is,conv_diagsave)
+                 call setupdbz(lunin,mype,bwork,awork(1,i_dbz),nele,nobs,is,radardbz_diagsave)
 
 !             Set up total precipitable water (total column water) data
               else if(obstype=='pw')then
@@ -736,6 +772,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
   if (conv_diagsave.and.binary_diag) close(7)
   if (light_diagsave) close(55)
+  if (radardbz_diagsave.and.binary_diag) close(66)
 
   if(l_PBL_pseudo_SurfobsT.or.l_PBL_pseudo_SurfobsQ.or.l_PBL_pseudo_SurfobsUV) then
   elseif (i_cloud_q_innovation==2) then
