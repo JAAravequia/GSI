@@ -118,7 +118,7 @@ subroutine deter_nst_(dlat_earth,dlon_earth,obstime,zob,tref,dtw,dtc,tz_tr)
 !$$$
      use kinds,       only: r_kind,i_kind
      use constants,   only: zero,one,z_w_max
-     use gridmod,     only: nlat,nlon,regional,tll2xy,nlat_sfc,nlon_sfc,rlats_sfc,rlons_sfc
+     use gridmod,     only: regional,tll2xy,nlat_sfc,nlon_sfc,rlats_sfc,rlons_sfc
      use guess_grids, only: nfldnst,hrdifnst
      use gsi_nstcouplermod, only: fac_dtl,fac_tsl
      use gsi_nstcouplermod, only: tref_full,dt_cool_full,z_c_full,dt_warm_full,z_w_full,&
@@ -374,10 +374,10 @@ subroutine cal_tztr_(dt_warm,c_0,c_d,w_0,w_d,zc,zw,z,tztr)
     endif
   endif
 
-  if ( tztr <= one .and. tztr > half ) then
-    tztr = tztr
-  else
-!   write(*,'(a,2I2,3F12.6,F9.3,5F12.6,F8.3,F9.6,F8.3)') ' cal_tztr : ',fac_dtl,fac_tsl,c1,c2,c3,dt_warm,c_0,c_d,w_0,w_d,zc,zw,z,tztr
+  if ( tztr <= -1.0_r_kind .or. tztr > 4.0_r_kind ) then
+     write(6,100) fac_dtl,fac_tsl,c1,c2,c3,dt_warm,c_0,c_d,w_0,w_d,zc,zw,z,tztr
+100  format('CAL_TZTR compute ',2(i2,1x),12(g13.6,1x),' RESET tztr to 1.0')
+     tztr = one
   endif
 
 end subroutine cal_tztr_
