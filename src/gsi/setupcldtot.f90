@@ -214,7 +214,6 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) :: q_clear0_count,q_build0_count
   real(r_kind) :: zlev_clr
   integer(i_kind) :: ib,jb
-  integer(i_kind) :: itemp2
   real(r_kind) :: qobmax,qobmin
   integer(i_kind) :: firstob
   real(r_kind) :: es, qvs
@@ -247,13 +246,10 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   call check_vars_(proceed)
   if(.not.proceed) return  ! not all vars available, simply return
 
-  !write(6,*) "STARTsetupcldtot!!",  mype
-
 ! If require guess vars available, extract from bundle ...
   call init_vars_
 
   m_alloc(:)=0
-
 
   allocate(h_bk(nsig))
   allocate(t_bk(nsig))
@@ -278,7 +274,6 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      nchar=1
      nreal=23
-!     if (lobsdiagsave) nreal=nreal+4*miter+1
      if (i_cloud_q_innovation == 1 .or. i_cloud_q_innovation == 3) then
          ii=0
          allocate(cdiagbuf(nobs*nsig),rdiagbuf(nreal,nobs*nsig))
@@ -314,27 +309,22 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   iwthr=18    ! index of weather 18-20
   itime=21    ! index of observation time in data array
   iuse=22     ! index of use parameter
-  itype=23    ! index of ob type
   iddp=24     ! index of dewpoint depression from surface obs
-  itemp2=25     ! index of ???
+  itype=25    ! index of ob type
   ilone=26    ! index of longitude (degrees)
   ilate=27    ! index of latitude (degrees)
 
-  !ocld
-  ! 1st value = 0 whole column is clear
   allocate(ocld(nvarcld_p))
   allocate(cld_cover_obs(nsig))
   allocate(pcp_type_obs(nsig))
   zlev_clr = 3650.
   allocate(cldwater_obs(nsig))
   allocate(cldice_obs(nsig))
-  !allocate(cloudlayers_i(21))
 
   scale=one
 
 ! Prepare data
   call dtime_setup()
-  !write(*,*) "nobs", mype, nobs
   do i=1,nobs
       dtime=data(itime,i)
       call dtime_check(dtime, in_curbin, in_anybin)
@@ -349,8 +339,6 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
       
       ikx=nint(data(itype,i))
 
-!This piece of code is need for 4dvar... need time from obs
-!For now just set ibin
 !    Link observation to appropriate observation bin
       if (nobs_bins>1) then
          ibin = NINT( dtime/hr_obsbin ) + 1
@@ -358,11 +346,9 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
          ibin = 1
       endif
       IF (ibin<1.OR.ibin>nobs_bins) write(6,*)mype,'Error nobs_bins,ibin=',nobs_bins,ibin
-      !write(6,*) 'setupcldtot1: ',i,mype,nobs_bins,ibin,in_curbin
-
 
 ! Check Haze and Dust station
-      data(iuse,i)=0 ! why is this hard coded?
+      data(iuse,i)=0 
       
       if(data(iuse,i) > 50 ) cycle   ! do not use this data
       ovis   = data(ivis,i)
@@ -372,7 +358,6 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
           cldamt =  data(icldamt+j-1,i)         ! cloud amount
           cldhgt =  int(data(icldhgt+j-1,i))   ! cloud bottom height
           if(cldamt < spval_p .and. cldhgt < spval_p) then
-            !if (j>1) write(*,*) "ANOTHER_Valid_cldamt_cldhgt", j
             if(abs(cldamt-0._r_kind) < 0.0001_r_kind) then
               ocld(j)=0                 !msky='CLR'
               cldhgt=spval_p
@@ -434,9 +419,6 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
           if (j==3) startwx=7
           endwx=startwx+2
           owx(startwx:endwx)=mwx
-! why are these always missing? Is that bad?
-!NOT USING WX TYPE!?
-          !write(*,*) j,awx,mwx,owx
       enddo
 
       wthr_type=miss_obs_int
@@ -450,7 +432,6 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
       if ( owx=='BR'  ) wthr_type=21
       if ( owx=='FG'  ) wthr_type=22
 
-      !what is missing value for data(ivis,i)?
       if(data(ivis,i) .ge. spval_P) then
           ocld(13)=miss_obs_int
       else
@@ -461,11 +442,8 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               write(6,*) 'setupcldtot, Warning: change visibility to 100 m !!!'
           endif
       endif
-      !write(6,*) 'setupcldtot: Surface cloud obs are read in successfully',i,mype
 
       ! background profiles in observation location and time
-      !call tintrp2a11(ges_ps,psges,dlat,dlon,dtime,hrdifsig,&
-      !          mype,nfldsig)
       call tintrp3(ges_prsl,p_bk,dlat,dlon,dpres1d,dtime, &
          hrdifsig,nsig,mype,nfldsig)
       call tintrp3(ges_ql,ql_bk,dlat,dlon,dpres1d,dtime, &
@@ -484,21 +462,12 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
       cld_cover_obs=miss_obs_single
       pcp_type_obs=miss_obs_int
       if (ocld(1) > 999) then
-          !write(*,*) "missingOCLD"
           cycle
       endif
+
       call cloudCover_surface_col(mype,nsig,cld_bld_hgt,h_bk,z_bk, &
               nvarcld_p,ocld,oelvtn,wthr_type,pcp_type_obs,vis2qc,cld_cover_obs)
 
-      !write(6,*) 'setupcldtot: Success in cloud cover analysis using surface data',i,mype
-
-      
-      !cloudlayers_i=miss_obs_int
-      !call cloudLayers(nsig,h_bk,z_bk,cld_cover_obs,cloudlayers_i)
-      !write(6,*) 'setupcldtot: success in finding cloud layers',i,mype
-      !do k=1,21
-      !    write(*,'(3I,1f15.4)') mype, i, k,cld_cover_obs(k)
-      !enddo
 
       cldwater_obs=miss_obs_real
       cldice_obs=miss_obs_real
@@ -507,15 +476,11 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
       call cloudLWC_pseudo(mype,nsig,q_bk,t_bk,p_bk,      &
                cld_cover_obs,nobs, &
                cldwater_obs,cldice_obs)
-      !write(6,*) 'setupcldtot: success in modifying hydrometeors for stratiform clouds ',i,mype
 
       obzero =0
       do k=1,nsig
-         !if (firstob .eq. 1) return
          qob=miss_obs_real
          if (cldwater_obs(k) > -0.000001) then
-             !obzero=obzero+1
-             !write(*,'(i,6f15.4)') k,q_bk(k),ql_bk(k),qi_bk(k),cld_cover_obs(k),cldwater_obs(k),cldice_obs(k)
              if (cldice_obs(k) > -0.000001) then
                 qob=cldwater_obs(k)+cldice_obs(k)
              else
@@ -527,12 +492,9 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
              endif
          endif
 
-         !write(*,'(i,10f15.4)') k,h_bk(k),q_bk(k),ql_bk(k),qi_bk(k),cld_cover_obs(k),cldwater_obs(k),cldice_obs(k),qob
-
          ! make sure very small background values are set to 0
          if (ql_bk(k) < 0.000001) ql_bk(k)=0.0
          if (qi_bk(k) < 0.000001) qi_bk(k)=0.0
-
 
          if (qob < 999.) then
 
@@ -540,7 +502,6 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
              if (qob > 0.0 .and. qges > 0.0) then
                  if (qob < qges) then
-                     !write(*,*) 'DONT_REMOVE_CASE',i,k 
                      dontobcount=dontobcount+1
                      qob = qges
                  endif
@@ -552,47 +513,25 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 
              ! Compute innovations
-             !write(*,*) "Setupcldtot: Compute innovation"
              ddiff=(qob-qges)
-             !if (ddiff > .09) then
-             ! firstob=1
-             !write(*,*) 'ocld=',ocld(:)
-             !write(*,*) 'wthr_type=',wthr_type, owx
-             !write(*,'(i,10f15.4)') k,h_bk(k),q_bk(k),ql_bk(k),qi_bk(k),cld_cover_obs(k),cldwater_obs(k),cldice_obs(k),qob,qges,ddiff
-             !if (ddiff .eq. 0.) cycle
-
-             ! Compute penalty terms
-! should get obs error from data... not in read_prepbufr
-             !error=data(ier,i)
-             error=one/0.0001_r_kind !set to FAKE value
-             ratio_errors=1.0_r_kind
-             val = error*ddiff
-
-!  !3/31/16 metar obs op testing
-!  call mpi_barrier(mpi_comm_world,ierror)
-!  call stop2(999)
-!*******************************************************************************
 
 
-!!    If obs is "acceptable", load array with obs info for use
-!!    in inner loop minimization (int* and stp* routines)
-!For now assume muse true... need to add error checks
              luse(i)=.true.
              muse(i)=.true.
-!     if (.not. last .and. muse(i)) then
 
+        !*******************************************************************************
         if (i_cloud_q_innovation .ne. 2) then
             write(*,*) "Warning - setupcldtot: this code version is only designed for i_cloud_q_innovation == 2"
             return
         else
 
 !!!!!Warning you hard coded q values here
-            ibin = 1 ! hard code ob bin
-            is = 3   ! hard code q ob type number, these come from list in gsiparm
+            ibin = 1 ! q ob bin
+            is = 3   ! q ob type number, these come from list in gsiparm
 
             allocate(my_headq)
             m_alloc(ibin) = m_alloc(ibin) +1
-            my_node => my_headq        ! this is a workaround
+            my_node => my_headq  
             call obsLList_appendNode(qhead(ibin),my_node)
             my_node => null()
 
@@ -602,67 +541,41 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
             ! Set (i,j,k) indices of guess gridpoint that bound obs location
             mm1=mype+1
             dpres=k
-            !write(*,*) 'dlat= ',dlat,data(ilat,i), 'dlon= ', dlon, data(ilon,i)
             call get_ijk(mm1,dlat,dlon,dpres,my_headq%ij(1),my_headq%wij(1))
 
-            ! 12/21/17 no t_bk is already sensible temp
-            ! temperature from GSI is potential temperature. get temperature
-            !Temp = t_bk(k)*(p_bk(k)/h1000)**rd_over_cp
-            ! calculate saturation in kg/kg
-            ! note q is kg/kg everywhere, cld innovation g/kg
             pressure=p_bk(k)*10.0_r_kind
             cloudqvis= ruc_saturation(t_bk(k),pressure)
 
             if (qob > 0.) then
              
-                !es=6.112*EXP(17.67*((t_bk(k)-273.15)/(t_bk(k)-29.65)))
-                !qvs=(0.622*es)/((p_bk(k)*10)-(1-0.622)*es)
-                !write(*,'(i,4f10.5,1f12.9)') k,p_bk(k),t_bk(k),qob,q_bk(k),cloudqvis
-                !write(*,'(i,4f10.5)') k,Temp,t_bk(k),p_bk(k)*10.0_r_kind,q_bk(k)
-                !write(*,'(i,7f10.5)') k,t_bk(k),p_bk(k)*10.0_r_kind,q_bk(k),cloudqvis,es,qvs
                 if (q_bk(k) < cloudqvis) then
                     qv_ob=cloudqvis
                     ddiff=qv_ob-q_bk(k)
                     q_build_count=q_build_count+1
-                    !write(8000+mype,'(i,7f10.5)') k,p_bk(k)*10.0_r_kind,q_bk(k),cloudqvis,ddiff
                 else
                     qv_ob=q_bk(k)
                     ddiff=qv_ob-q_bk(k)
                     q_build0_count=q_build0_count+1
-                    !cycle
                 endif
 
             elseif (qob > -0.000001) then
-                !if (wthr_type.ne.0) write(*,*) "WEATHER", wthr_type
-                !!!!!if ((qges>1.0e-9_r_kind).and.(p_bk(1)-p_bk(k))>10._r_kind)then
-                !if ((qges>1.0e-9_r_kind) .and. (p_bk(1)-p_bk(k))>100._r_kind & 
-                !     .and. wthr_type<=0) then
-                        if( q_bk(k) > cloudqvis*rh_clear_p) then
-                            qv_ob=cloudqvis*rh_clear_p
-                            ddiff=qv_ob-q_bk(k)
-                            !write(*,*) "SUBob",ddiff
-                            q_clear_count=q_clear_count+1
-                            !write(*,'(i,7f15.7)') k,t_bk(k),p_bk(k)*10.0_r_kind,cloudqvis,qv_ob,q_bk(k),ddiff
-                        else
-                            qv_ob=q_bk(k)
-                            ddiff=qv_ob-q_bk(k) 
-                            q_clear0_count=q_clear0_count+1
-                            !cycle
-                        endif
-                !!else
-                  !!  cycle
-                !!endif
+                
+                if( q_bk(k) > cloudqvis*rh_clear_p) then
+                    qv_ob=cloudqvis*rh_clear_p
+                    ddiff=qv_ob-q_bk(k)
+                    q_clear_count=q_clear_count+1
+                else
+                    qv_ob=q_bk(k)
+                    ddiff=qv_ob-q_bk(k) 
+                    q_clear0_count=q_clear0_count+1
+                endif
             else
                 cycle
             endif
 
             q_obcount=q_obcount+1
-            !!write(8000+mype,'(i,7f10.5)') k,p_bk(k)*10.0_r_kind,q_bk(k)*1000.,cloudqvis*1000.,ddiff*1000.
-            !write(*,'(i,7f10.5)') k,p_bk(k)*10.0_r_kind,q_bk(k),cloudqvis,ddiff
 
             error=one/(cloudqvis*3.E-01_r_kind)
-            !!!!oerr10!error=one/(cloudqvis*.1) ! used this value for first retros April2017
-            !!!!Err6!!!!!!!!error=one/(cloudqvis*6.E-01_r_kind)
             ratio_errors=1.0_r_kind
             val = error*ddiff
 
@@ -670,14 +583,11 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
             my_headq%err2   = error**2
             my_headq%raterr2= ratio_errors**2
             my_headq%time   = dtime
-            !! should use real values but for now hard code the ones that we alwasys use
             my_headq%b      = 10.0 !cvar_b(ikx) 
             my_headq%pg     = 0.0  !cvar_pg(ikx)
-            my_headq%jb     = var_jb ! from what I can tell this is always 0
+            my_headq%jb     = var_jb 
             my_headq%luse   = luse(i)
 
-            !write(8000+mype,'(i,10f15.4)') k,dlat,dlon,h_bk(k),qob,qges,qvs,q_bk(k),ddiff
-            !write(8000+mype,'(i,10f15.4)') k,dlat,dlon,qob,qv_ob*1000.,q_bk(k)*1000.,error
 
             ! Save select output for diagnostic file
             if(conv_diagsave .and. luse(i))then
@@ -685,21 +595,17 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               rstation_id     = data(id,i)
               cdiagbufp(iip)    = station_id         ! station id
 
-              !rdiagbufp(1,iip)  = ictype(ikx)        ! observation type
-              ! force new ob type
+              ! force new ob type 
               rdiagbufp(1,iip)  = 199 
               rdiagbufp(2,iip)  = icsubtype(ikx)     ! observation subtype
 
               rdiagbufp(3,iip)  = data(ilate,i)      ! observation latitude (degrees)
               rdiagbufp(4,iip)  = data(ilone,i)      ! observation longitude (degrees)
               rdiagbufp(5,iip)  = data(istnelv,i)    ! station elevation (meters)
-              !!!rdiagbuf(6,ii)  = dpres             ! observation location in grid (k)
               rdiagbufp(6,iip)  = pressure           ! observation pressure
               rdiagbufp(7,iip)  = data(icldhgt,i)    ! observation height (meters)
               rdiagbufp(8,iip)  = dtime-time_offset  ! obs time (hours relative to analysis time)
-!QC 
-              !rdiagbufp(9,iip)  = data(iqc,i)        ! input prepbufr qc or event mark
-              rdiagbufp(9,iip)  = 1.
+              rdiagbufp(9,iip)  = 1.                 ! qc
               rdiagbufp(10,iip) = var_jb             ! non linear qc b parameter
               rdiagbufp(11,iip) = data(iuse,i)       ! read_prepbufr data usage flag
 
@@ -711,8 +617,6 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
               err_input = error   ! data(ier2,i)
               err_adjst = error   ! data(ier,i)
-!             err_input = data(ier2,i)*qsges            ! convert rh to q
-!             err_adjst = data(ier,i)*qsges             ! convert rh to q
 
              if (ratio_errors*error>tiny_r_kind) then
                  err_final = one/(ratio_errors*error)
@@ -740,7 +644,6 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 
              if (i_ens_mean == 1) then
-               !write(199000+mype,'(i,10f15.4)') q_obcount,qv_ob*1000.,error,dlat,dlon,qob,k,pressure,199,icsubtype(ikx)
 
                all_qv_obs(1:20,iip)=rdiagbufp(1:20,iip)
 
@@ -755,33 +658,23 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            endif    !conv_diagsave .and. luse(i))
 
 
-          !endif
-
-            !write(*,*) 'clderr ', mype, errinv_final, error, cloudqvis*3.E-01_r_kind
         endif !i_cloud_q_innovation
 
-
-
-        !endif !first ob
-        !endif
         endif !end valid ob
       enddo !end k loop
   enddo ! end loop over obs
 
   write(*,'(A,7i)') 'qobcount', mype,q_obcount,obcount,q_build_count,q_build0_count,q_clear_count,q_clear0_count
-  !write(8000+mype,*) 'qob max and min', qobmax, qobmin
 
     deallocate(cld_cover_obs,pcp_type_obs)
     deallocate(ocld)
     deallocate(cldwater_obs,cldice_obs)
-    !add return here? need to deallocate stuff? if (q_obcount<1) return
   endif !i_ens_mem .ne. 2
 
   write(myfile, "(A11,I3.3)") myname,mype
 
   if (i_ens_mean == 1) then
 
-     !write(*,*) "Ensemble mean write", i_ens_mean,myfile
      open(33,file=myfile,form='UNFORMATTED')
      write(33) q_obcount,iip,nrealcld
      write(33) all_qv_obs(:,1:iip) 
@@ -791,7 +684,6 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      deallocate(all_qv_obs)
 
   elseif (i_ens_mean == 2) then
-     !write(*,*) "Diag for ensemble member", i_ens_mean
      inquire(file=myfile,exist=lhere)
      if (.not.lhere) then
         write(*,*)'SETUPCLDTOT:  **Warning** file ',&
@@ -801,7 +693,6 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
      open(33,file=myfile,form='unformatted')
      read(33,iostat=istat1) q_obcount,iip,nrealcld
-     !write(*,*) 'READ',q_obcount,iip,nrealcld
      allocate(all_qv_obs(nrealcld,q_obcount))
      allocate(stationbuf(q_obcount))
      read(33,iostat=istat2) all_qv_obs
@@ -828,12 +719,8 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
           hrdifsig,nsig,mype,nfldsig)
 
         ddiff=qv_ob-q_bk(k)
-        !write (*,'("CLDob: ",2I4,3F10.6)') &
-        !        mype, i, qv_ob, q_bk(k), ddiff
 
-        !if(conv_diagsave .and. luse(i))then
         if(conv_diagsave)then
-           !write(*,*) "mem o-b", i, qv_ob*1000, q_bk(k)*1000, ddiff*1000
            cdiagbufp(i)    = station_id 
            rdiagbufp(1:17,i)=all_qv_obs(1:17,i)
            rdiagbufp(18,i) = ddiff  
@@ -842,14 +729,11 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            rdiagbufp(21:29,i)=all_qv_obs(21:29,i)
         endif
      enddo
-     !i = iip
      write(*,*) "iCOUNT", i, iip, q_obcount
 
      deallocate(all_qv_obs)
      deallocate(stationbuf)
      
-  !else
-     !write(*,*) "Not ensemble run", i_ens_mean
   endif !i_ens_mem 
 
   !! Write information to diagnostic file
@@ -858,7 +742,6 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
          call dtime_show(myname,'diagsave:q',i_q_ob_type)
          write(7)'  q',nchar,nreal,iip,mype,ioff0
          write(7)cdiagbufp(1:iip),rdiagbufp(:,1:iip)
-         !!write(*, *)' CLDq',nchar,nreal,iip,mype,ioff0
          deallocate(cdiagbufp,rdiagbufp)
      elseif (i_cloud_q_innovation == 1 .and. ii>0) then
          deallocate(cdiagbuf,rdiagbuf)
@@ -867,8 +750,6 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
          deallocate(cdiagbuf,rdiagbuf)
          deallocate(cdiagbufp,rdiagbufp)
          write(*,*) "Setupcldtot: DIAG not setup for i_cloud_q_innovation == 3!!!"
-     !else
-         !write(*,*) "Setupcldtot: nothing to write to DIAG for cld obs!!!", mype
      endif
   endif
 
