@@ -9,8 +9,6 @@ macro (setGeneric)
   endif()
   set(MKL_FLAG "-mkl"  CACHE INTERNAL "MKL Flag")
   set(GSI_Intel_Platform_FLAGS "${HOST_FLAG} -DPOUND_FOR_STRINGIFY -O3 -fp-model source -assume byterecl -convert big_endian -g -traceback -D_REAL8_ ${OpenMP_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS}" CACHE INTERNAL "GSI Fortran Flags")
-  ##wcoss: set(GSI_Intel_Platform_FLAGS "${HOST_FLAG} -DPOUND_FOR_STRINGIFY -O3 -fp-model source -assume byterecl -convert big_endian -traceback -implicitnone -D_REAL8_ ${OpenMP_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAGS}" CACHE INTERNAL "")
-  ##wcoss: set(ENKF_Platform_FLAGS "-O3 ${HOST_FLAG} -assume byterecl -implicitnone  -fp-model source -convert big_endian -DGFS -D_REAL8_ ${OpenMP_Fortran_FLAGS}" CACHE INTERNAL "")
   set(ENKF_Platform_FLAGS "-O3 ${HOST_FLAG} -warn all -implicitnone -traceback -fp-model strict -convert big_endian -DGFS -D_REAL8_ ${MPI3FLAG} ${OpenMP_Fortran_FLAGS}" CACHE INTERNAL "ENKF Fortran Flags")
 
 endmacro()
