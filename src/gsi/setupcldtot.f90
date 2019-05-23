@@ -469,8 +469,8 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               nvarcld_p,ocld,oelvtn,wthr_type,pcp_type_obs,vis2qc,cld_cover_obs)
 
 
-      cldwater_obs=miss_obs_real
-      cldice_obs=miss_obs_real
+      cldwater_obs=miss_obs_single
+      cldice_obs=miss_obs_single
 
        
       call cloudLWC_pseudo(mype,nsig,q_bk,t_bk,p_bk,      &
@@ -496,7 +496,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
          if (ql_bk(k) < 0.000001) ql_bk(k)=0.0
          if (qi_bk(k) < 0.000001) qi_bk(k)=0.0
 
-         if (qob < 999.) then
+         if (qob < 99.) then
 
              qges=(ql_bk(k)+qi_bk(k))*1000.
 
@@ -514,6 +514,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
              ! Compute innovations
              ddiff=(qob-qges)
+             !write(*,'(3I,5f15.4)') mype,i,k,cld_cover_obs(k),cldwater_obs(k),cldice_obs(k),qob,ddiff
 
 
              luse(i)=.true.
@@ -527,7 +528,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 !!!!!Warning you hard coded q values here
             ibin = 1 ! q ob bin
-            is = 3   ! q ob type number, these come from list in gsiparm
+            is = 4   ! q ob type number, these come from list in gsiparm
 
             allocate(my_headq)
             m_alloc(ibin) = m_alloc(ibin) +1

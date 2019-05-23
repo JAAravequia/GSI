@@ -209,7 +209,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                            destroy_aircraft_rjlists
   use adjust_cloudobs_mod, only: adjust_convcldobs,adjust_goescldobs
   use mpimod, only: npe
-  use rapidrefresh_cldsurf_mod, only: i_gsdsfc_uselist,i_gsdqc
+  use rapidrefresh_cldsurf_mod, only: i_gsdsfc_uselist,i_gsdqc,i_ens_mean
   use gsi_io, only: verbose
 
   implicit none
@@ -2899,6 +2899,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 ! define a closest METAR cloud observation for each grid point
 
   if(metarcldobs .and. ndata > 0) then
+   if(i_ens_mean .ne. 1) then
      maxobs=2000000
      allocate(cdata_all(nreal,maxobs))
      call reorg_metar_cloud(cdata_out,nreal,ndata,cdata_all,maxobs,iout)
@@ -2911,6 +2912,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
         end do
      end do
      deallocate(cdata_all)
+   endif
   endif
   call count_obs(ndata,nreal,ilat,ilon,cdata_out,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon,ndata
