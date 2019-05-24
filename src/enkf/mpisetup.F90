@@ -39,7 +39,7 @@ integer, public :: mpi_comm_io
 contains
 
 subroutine mpi_initialize()
-use mpimod, only : mpi_comm_world,npe,mype
+use mpimod, only : npe,mype
 integer ierr
 #ifdef MPI3
 integer nuse,new_group,old_group,nshmemroot,np
@@ -99,7 +99,6 @@ call MPI_COMM_CREATE(MPI_COMM_WORLD,new_group,mpi_comm_shmemroot,ierr)
 end subroutine mpi_initialize
 
 subroutine mpi_initialize_io(nanals)
-use mpimod, only : mpi_comm_world
 integer ierr,np,nuse,new_group,old_group
 integer, intent(in) :: nanals
 integer, dimension(:), allocatable :: useprocs, itasks

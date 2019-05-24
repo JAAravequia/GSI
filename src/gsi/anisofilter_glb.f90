@@ -92,7 +92,7 @@ module anisofilter_glb
                       filter_p3, pf2aP3, &
                       triad4,ifilt_ord,npass,normal,binom, &
                       ngauss,rgauss,anhswgt,an_amp,an_vs, &
-                      ancovmdl, covmap, &
+                      ancovmdl, covmap, lreadnorm, &
                       nsmooth,nsmooth_shapiro
 
   use gridmod, only: nsig,nsig1o,nlon,nlat, &
@@ -125,8 +125,7 @@ module anisofilter_glb
   use gsi_metguess_mod, only: gsi_metguess_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
 
-  use anisofilter, only: lreadnorm, &
-                         r015, &
+  use anisofilter, only: r015, &
                          qlth_temp0, qltv_temp0, qlth_wind0, qltv_wind0, &
                          scalex1, scalex2, scalex3, &
                          stpcode_alloc,   stpcode_namelist, &
