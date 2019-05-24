@@ -73,8 +73,8 @@ module qcmod
 !                         of vis and cldch. the option to use the closest ob to the
 !                         analysis time only is now handled by Ming Hu's "logical l_closeobs"
 !                         for all variables
-!   2019-04-19  eliu    - add QC flag for cold-air outbreak 
 !   2019-03-27  h. liu  - add ABI QC
+!   2019-04-19  eliu    - add QC flag for cold-air outbreak 
 !
 ! subroutines included:
 !   sub init_qcvars

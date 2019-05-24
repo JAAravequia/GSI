@@ -796,7 +796,6 @@ subroutine pcgsoi()
 
 ! Update guess (model background, bias correction) fields
 ! if (mype==0) write(6,*)'pcgsoi: Updating guess'
-  if (mype==0) write(6,*)'pcgsoi: calling update guess iwrtinc = ', iwrtinc !emil
   if(iwrtinc<=0) call update_guess(sval,sbias)
 
 ! cloud analysis  after iteration
