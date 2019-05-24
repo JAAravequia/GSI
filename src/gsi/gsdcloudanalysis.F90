@@ -911,7 +911,7 @@ subroutine  gsdcloudanalysis(mype)
         end do
         end do
      end do
-  elseif(l_precip_clear_only==.true.) then !only clear for HRRRE
+  elseif(l_precip_clear_only) then !only clear for HRRRE
      do k=1,nsig
         do j=2,lat2-1
         do i=2,lon2-1
