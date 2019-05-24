@@ -176,8 +176,6 @@ contains
     integer                                                              :: dimid_lev
     integer                                                              :: dimid_ilev
     integer                                                              :: ncfileid
-    integer                                                              :: ncvarid
-    integer                                                              :: ncdimid
     integer                                                              :: ncstatus
 
     !=====================================================================
@@ -480,8 +478,8 @@ contains
 
     ! Define counting variables
 
-    integer                                                              :: i, j, k
-    real(r_kind), allocatable, dimension(:,:,:) :: fg_dz, an_dz, pot_temp
+    integer                                                              :: j, k
+    real(r_kind), allocatable, dimension(:,:,:) :: fg_dz, an_dz
 
     !=====================================================================
 
@@ -583,12 +581,11 @@ contains
     real(r_kind),               dimension(:,:,:),            allocatable :: pressi
     real(r_kind),               dimension(:,:,:),            allocatable :: vcoord
     real(r_kind),               dimension(:),                allocatable :: workgrid
-    real(r_kind), allocatable, dimension(:,:) :: delz
     logical flip_lats
 
     ! Define counting variables
 
-    integer                                                              :: i, j, k
+    integer                                                              :: k
 
     !=====================================================================
 

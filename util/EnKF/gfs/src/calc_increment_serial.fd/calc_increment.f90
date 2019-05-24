@@ -1,7 +1,8 @@
 program calc_increment
 
   use kinds
-  use namelist_def, only : datapath, analysis_filename, firstguess_filename, increment_filename, debug,&
+!!use namelist_def, only : datapath
+  use namelist_def, only : analysis_filename, firstguess_filename, increment_filename, debug,&
    zero_mpinc, imp_physics
   use calc_increment_interface
 
@@ -19,7 +20,7 @@ program calc_increment
   call getarg(6, bufchar)
   read(bufchar,'(i5)') imp_physics
 
-  !write(6,*) 'DATAPATH        = ', trim(datapath)
+!!write(6,*) 'DATAPATH        = ', trim(datapath)
   write(6,*) 'ANALYSIS FILENAME   = ', trim(analysis_filename)
   write(6,*) 'FIRSTGUESS FILENAME = ', trim(firstguess_filename)
   write(6,*) 'INCREMENT FILENAME  = ', trim(increment_filename)

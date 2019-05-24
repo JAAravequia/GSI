@@ -507,9 +507,8 @@ END program adjustps
 
       REAL,allocatable :: Z1(:,:),Z2(:,:)
       REAL,allocatable :: C1(:,:,:),C2(:,:,:),J2(:,:,:)
-      real (kind=8) timef,mbytes,print_memory
       real dz
-      integer             :: ijaa,im,k,i,n
+      integer             :: im,k,i,n
 !
       allocate (Z1(IM+1,KM1),Z2(IM+1,KM2))
       allocate (C1(IM+1,KM1,4+NT),C2(IM+1,KM2,4+NT),J2(IM+1,KM2,4+NT))
@@ -903,7 +902,7 @@ END program adjustps
       REAL,INTENT(IN):: Z1(1+(IM-1)*IXZ1+(KM1-1)*KXZ1)
       REAL,INTENT(IN):: Z2(1+(IM-1)*IXZ2+(KM2-1)*KXZ2)
       INTEGER,INTENT(OUT):: L2(1+(IM-1)*IXL2+(KM2-1)*KXL2)
-      INTEGER I,K2,L,L0,LI
+      INTEGER I,K2,L
       REAL Z
 !C - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !C  FIND THE SURROUNDING INPUT INTERVAL FOR EACH OUTPUT POINT.
