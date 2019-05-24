@@ -317,9 +317,7 @@
   real(r_kind) dtsavg,r90,coscon,sincon
   real(r_kind) bias       
   real(r_kind) factch6    
-  real(r_kind) hwp_guess(5)                 
-  real(r_kind) tcwv,hwp_ratio,hwp_total     
-  real(r_kind) stability                    
+  real(r_kind) stability,tcwv,hwp_ratio         
   real(r_kind) si_obs,si_fg,si_mean                     
   
   logical cao_flag                       
@@ -422,6 +420,7 @@
 
 ! Initialize logical flags for satellite platform
 
+  cao_flag   = .false.     
   hirs2      = obstype == 'hirs2'
   hirs3      = obstype == 'hirs3'
   hirs4      = obstype == 'hirs4'
@@ -796,6 +795,7 @@
         do i = 1,nchanl
            tb_obs(i) = data_s(i+nreal,n)
         end do
+
  
 
 !       Interpolate model fields to observation location, call crtm and create jacobians
@@ -806,14 +806,13 @@
            call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, &      
                 tvp,qvp,clw_guess,prsltmp,prsitmp, &                          
                 trop5,tzbgr,dtsavg,sfc_speed, &
-                tcwv,hwp_guess,hwp_ratio,hwp_total,stability, &                
                 tsim,emissivity,ptau5,ts,emissivity_k, &
-                temp,wmix,jacobian,error_status,tsim_clr=tsim_clr,tcc=tcc)     
+                temp,wmix,jacobian,error_status,tsim_clr=tsim_clr,tcc=tcc, & 
+                tcwv=tcwv,hwp_ratio=hwp_ratio,stability=stability)         
         else
            call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, &       
                 tvp,qvp,clw_guess,prsltmp,prsitmp, & 
                 trop5,tzbgr,dtsavg,sfc_speed, &
-                tcwv,hwp_guess,hwp_ratio,hwp_total,stability, &  
                 tsim,emissivity,ptau5,ts,emissivity_k, &
                 temp,wmix,jacobian,error_status)
         endif 
@@ -915,9 +914,10 @@
         endif
         ! Screening for cold-air outbreak area (only applied to MW for now)
         if (fv3_full_hydro) then  
-        cao_flag = (stability < 12.0_r_kind) .and. (hwp_ratio  < half) .and.  (tcwv < 8.0_r_kind) 
+     !  cao_flag = (stability < 12.0_r_kind) .and. (hwp_ratio  < half) .and.  (tcwv < 8.0_r_kind) 
         if(microwave .and. sea) then 
            if(radmod%lcloud_fwd) then                            
+              cao_flag = (stability < 12.0_r_kind) .and. (hwp_ratio  < half) .and.  (tcwv < 8.0_r_kind) 
               if (cao_flag) then ! remove all tropospheric channels
                  if (amsua) then
                     varinv(1:6)=zero
@@ -2149,8 +2149,8 @@
               diagbufchan(5,i)= id_qc(ich_diag(i))*useflag            ! quality control mark or event indicator
 
               if (radmod%lcloud_fwd) then             
-                 diagbufchan(6,i)=error0(ich_diag(i))  
-              !  diagbufchan(6,i)=tcc(ich_diag(i))        
+              !  diagbufchan(6,i)=error0(ich_diag(i))  
+                 diagbufchan(6,i)=tcc(ich_diag(i))        
               else
                  diagbufchan(6,i)=emissivity(ich_diag(i))             ! surface emissivity
               endif

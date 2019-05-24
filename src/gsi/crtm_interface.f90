@@ -157,6 +157,7 @@ public itz_tr               ! = 37/39 index of d(Tz)/d(Tr)
   real(r_kind)   , save ,allocatable,dimension(:,:) :: cloud_cont   ! cloud content fed into CRTM 
   real(r_kind)   , save ,allocatable,dimension(:,:) :: cloud_efr    ! effective radius of cloud type in CRTM
   real(r_kind)   , save ,allocatable,dimension(:)   :: cf           ! effective radius of cloud type in CRTM 
+  real(r_kind)   , save ,allocatable,dimension(:)   :: hwp_guess    ! column total for each hydrometeor  
 
   real(r_kind)   , save ,allocatable,dimension(:,:,:,:)  :: gesqsat ! qsat to calc rh for aero particle size estimate
   real(r_kind)   , save ,allocatable,dimension(:)  :: lcloud4crtm_wk ! cloud info usage index for each channel
@@ -413,11 +414,13 @@ subroutine init_crtm(init_pass,mype_diaghdr,mype,nchanl,nreal,isis,obstype,radmo
     allocate(cloudefr(nsig,n_clouds_fwd))
     allocate(icloud(n_actual_clouds))
     allocate(cf(nsig))  
+    allocate(hwp_guess(n_clouds_fwd))   
     cloud_cont=zero
     cloud_efr =zero
     cloud     =zero
     cloudefr  =zero
     cf        =zero  
+    hwp_guess =zero    
 
     call gsi_bundlegetpointer(gsi_metguess_bundle(1),cloud_names,icloud,ier)
 
@@ -885,6 +888,7 @@ subroutine destroy_crtm
   if(allocated(cloud_cont)) deallocate(cloud_cont)
   if(allocated(cloud_efr)) deallocate(cloud_efr)
   if(allocated(cf)) deallocate(cf)  
+  if(allocated(hwp_guess)) deallocate(hwp_guess)   
   if(allocated(icw)) deallocate(icw)
   if(allocated(lcloud4crtm_wk)) deallocate(lcloud4crtm_wk)
   if(regional .or. nvege_type==IGBP_N_TYPES)deallocate(map_to_crtm_ir)
@@ -895,11 +899,9 @@ end subroutine destroy_crtm
  subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &   
                    h,q,clw_guess,prsl,prsi, & !orig                                         
                    trop5,tzbgr,dtsavg,sfc_speed,&
-                   tcwv,hwp_guess,hwp_ratio,hwp_total,stability, &              
                    tsim,emissivity,ptau5,ts, &
-                !  emissivity_k,temp,wmix,jacobian,error_status,tsim_clr, &   
                    emissivity_k,temp,wmix,jacobian,error_status,tsim_clr,tcc, & 
-                   layer_od,jacobian_aero)  
+                   tcwv,hwp_ratio,stability,layer_od,jacobian_aero)  
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    call_crtm   creates vertical profile of t,q,oz,p,zs,etc., 
@@ -991,7 +993,7 @@ end subroutine destroy_crtm
   use constants, only: max_varname_length,pi  
   use set_crtm_aerosolmod, only: set_crtm_aerosol
   use set_crtm_cloudmod, only: set_crtm_cloud
-  use crtm_module, only: limit_exp,o3_id
+  use crtm_module, only: limit_exp,o3_id,toa_pressure
   use obsmod, only: iadate
   use jfunc, only: jiter 
   use aeroinfo, only: nsigaerojac
@@ -1016,6 +1018,9 @@ end subroutine destroy_crtm
   real(r_kind)                          ,intent(  out) :: clw_guess
   real(r_kind),dimension(nchanl)        ,intent(  out), optional  :: tsim_clr      
   real(r_kind),dimension(nchanl)        ,intent(  out), optional  :: tcc       
+  real(r_kind)                          ,intent(  out), optional  :: tcwv              
+  real(r_kind)                          ,intent(  out), optional  :: hwp_ratio      
+  real(r_kind)                          ,intent(  out), optional  :: stability       
   real(r_kind),dimension(nsigaerojac,nchanl),intent(out),optional :: jacobian_aero
   real(r_kind),dimension(nsig,nchanl)   ,intent(  out)  ,optional :: layer_od
 
@@ -1059,8 +1064,7 @@ end subroutine destroy_crtm
   real(r_kind):: sst00,sst01,sst10,sst11,total_od,term,uu5,vv5, ps
   real(r_kind):: sno00,sno01,sno10,sno11,secant_term
   real(r_kind):: cloud_tot,clwmin,clwt,clwm,tem1,tem2,value,onemrh,relhum 
-  real(r_kind):: tcwv,hwp_ratio,hwp_total,stability 
-  real(r_kind):: theta_700,theta_sfc   
+  real(r_kind):: hwp_total,theta_700,theta_sfc    
   real(r_kind),dimension(0:3):: wgtavg
   real(r_kind),dimension(nsig,nchanl):: omix
   real(r_kind),dimension(nsig,nchanl,n_aerosols_jac):: jaero
@@ -1077,7 +1081,6 @@ end subroutine destroy_crtm
   real(r_kind),dimension(nsig)  :: c2,c3,c4,c5
   real(r_kind),dimension(nsig) :: ugkg_kgm2,cwj
   real(r_kind),dimension(nsig) :: rho_air   ! density of air (kg/m3)
-  real(r_kind),dimension(5) :: hwp_guess 
   real(r_kind),allocatable,dimension(:,:) :: tgas1d
   real(r_kind),pointer,dimension(:,:  )::psges_itsig =>NULL()
   real(r_kind),pointer,dimension(:,:  )::psges_itsigp=>NULL()
@@ -1102,15 +1105,16 @@ end subroutine destroy_crtm
        120,151,181,212,243,273,304,334/)
   real(r_kind) ::   lai
 
+
   m1=mype+1
 
+  if (n_clouds_fwd_wk>0) hwp_guess=zero  
+  hwp_total=zero  
   theta_700=zero
   theta_sfc=zero
-  stability=zero
-  hwp_ratio=zero
-  hwp_total=zero
-  tcwv=zero
-  hwp_guess=zero
+  if (present(stability)) stability=zero 
+  if (present(hwp_ratio)) hwp_ratio=zero  
+  if (present(tcwv)) tcwv=zero           
 
   dx  = data_s(ilat)                 ! grid relative latitude
   dy  = data_s(ilon)                 ! grid relative longitude
@@ -1611,7 +1615,7 @@ end subroutine destroy_crtm
          poz(k)=max(ozsmall,poz(k))
      endif ! oz
 ! Space-time interpolation of cloud fraction (cf)
-     if (n_clouds_fwd_wk .and. icfs==0) then
+     if (n_clouds_fwd_wk>0 .and. icfs==0) then 
          cf(k)=((cfges_itsig (ix ,iy ,k)*w00+ &
                  cfges_itsig (ixp,iy ,k)*w10+ &
                  cfges_itsig (ix ,iyp,k)*w01+ &
@@ -1795,6 +1799,8 @@ end subroutine destroy_crtm
      call crtm_atmosphere_zero(atmosphere_k_clr(:,:))
      call crtm_surface_zero(surface_k_clr(:,:))
   end if
+  call crtm_atmosphere_zero(atmosphere)          
+  atmosphere(1)%level_pressure(0) = TOA_PRESSURE 
 
   clw_guess = zero
 
@@ -1882,11 +1888,11 @@ end subroutine destroy_crtm
              
               if (cloud_cont(k,1) >= 1.0e-6_r_kind) clw_guess = clw_guess +  cloud_cont(k,1)        
               tcwv = tcwv + (atmosphere(1)%absorber(k,1)*0.001_r_kind)*c6(k)
-              if (cloud_cont(k,1) >= 1.0e-6_r_kind) hwp_guess(1) = hwp_guess(1) +  cloud_cont(k,1)        
-              if (cloud_cont(k,2) >= 1.0e-6_r_kind) hwp_guess(2) = hwp_guess(2) +  cloud_cont(k,2)        
-              if (cloud_cont(k,3) >= 1.0e-6_r_kind) hwp_guess(3) = hwp_guess(3) +  cloud_cont(k,3)        
-              if (cloud_cont(k,4) >= 1.0e-6_r_kind) hwp_guess(4) = hwp_guess(4) +  cloud_cont(k,4)        
-              if (cloud_cont(k,5) >= 1.0e-6_r_kind) hwp_guess(5) = hwp_guess(5) +  cloud_cont(k,5)        
+              do ii=1,n_clouds_fwd_wk
+                 if (cloud_cont(k,ii) >= 1.0e-6_r_kind) hwp_guess(ii) = hwp_guess(ii) +  cloud_cont(k,ii)        
+              enddo
+
+
 !crtm2.3.x    if (.not. regional .and. icfs==0 .and. fv3_full_hydro) atmosphere(1)%cloud_fraction(k) = cf(kk2) 
 
                 !Add lower bound to all hydrometers 

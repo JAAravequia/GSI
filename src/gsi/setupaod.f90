@@ -154,7 +154,6 @@
   real(r_kind),dimension(nsig,nchanl):: layer_od
   real(r_kind),dimension(5):: hwp_guess 
   real(r_kind) :: clw_guess, tzbgr, sfc_speed
-  real(r_kind) :: tcwv,hwp_ratio,hwp_total,stability  
 
   if ( .not. laeroana_gocart ) then
      return
@@ -331,7 +330,6 @@
         call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, & 
              tvp,qvp,clw_guess,prsltmp,prsitmp, &
              trop5,tzbgr,dtsavg,sfc_speed, &
-             tcwv,hwp_guess,hwp_ratio,hwp_total,stability, &
              tsim,emissivity,ptau5,ts,emissivity_k, &
              temp,wmix,jacobian,error_status,layer_od=layer_od,jacobian_aero=jacobian_aero)
 
