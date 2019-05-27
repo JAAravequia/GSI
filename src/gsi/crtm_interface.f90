@@ -65,7 +65,6 @@ use crtm_module, only: crtm_atmosphere_type,crtm_surface_type,crtm_geometry_type
     crtm_irlandcoeff_classification, &
     crtm_kind => fp, &
     crtm_microwave_sensor => microwave_sensor
-use crtm_spccoeff, only: sc  
 use gridmod, only: lat2,lon2,nsig,msig,nvege_type,regional,wrf_mass_regional,netcdf,use_gfs_ozone
 use mpeu_util, only: die
 use crtm_aod_module, only: crtm_aod_k
@@ -1049,7 +1048,6 @@ end subroutine destroy_crtm
   integer(i_kind):: idx700,dprs,dprs_min  
   integer(i_kind),dimension(8)::obs_time,anal_time
   integer(i_kind),dimension(msig) :: klevel
-  integer(i_kind),allocatable,dimension(:) :: sc_index 
 
 ! ****************************** 
 ! Constrained indexing for lai
@@ -1510,23 +1508,6 @@ end subroutine destroy_crtm
         endif
 
 !       Load surface sensor data structure
-        allocate(sc_index(nchanl))
-        sc_index(:) = 0
-        satinfo_chan: do i=1, nchanl
-           n = ich(i)
-           spec_coef: do nk=1, sc(1)%n_channels
-              if ( nuchan(n) == sc(1)%sensor_channel(nk)) then
-                 sc_index(i) = nk
-                 exit spec_coef
-              endif
-           end do spec_coef
-        end do satinfo_chan
-
-        do i=1,nchanl
-           wavenumber(i)   = sc(sensorindex)%wavenumber(sc_index(i))
-           frequency(i)    = sc(sensorindex)%frequency(sc_index(i))
-           polarization(i) = sc(sensorindex)%polarization(sc_index(i))
-        end do
         do i=1,nchanl
 
 
@@ -2199,7 +2180,6 @@ end subroutine destroy_crtm
      enddo
   endif
   if (n_ghg >0) deallocate (tgas1d)
-  if (allocated(sc_index))deallocate(sc_index)  
 
 ! contains
 
