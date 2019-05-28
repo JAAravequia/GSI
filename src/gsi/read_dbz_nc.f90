@@ -329,7 +329,6 @@ fileopen: if (if_input_exist) then
 
          deallocate( data_r_2d )
 
-        deallocate( data_r_1d )
        end if
 
   end do

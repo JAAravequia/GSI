@@ -659,8 +659,8 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! Write information to diagnostic file
   if(conv_diagsave  .and. ii>0 )then
      call dtime_show(myname,'diagsave:dbz',i_dbz_ob_type)
-     write(7)'dbz',nchar,nreal,ii,mype,ioff0
-     write(7)cdiagbuf(1:ii),rdiagbuf(:,1:ii)
+     write(66)'dbz',nchar,nreal,ii,mype,ioff0
+     write(66)cdiagbuf(1:ii),rdiagbuf(:,1:ii)
      deallocate(cdiagbuf,rdiagbuf)
   end if
   write(6,*)'mype, irefsmlobs,irejrefsmlobs are ',mype,' ',irefsmlobs, ' ',irejrefsmlobs
