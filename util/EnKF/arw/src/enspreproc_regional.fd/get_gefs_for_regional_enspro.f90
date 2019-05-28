@@ -1341,9 +1341,9 @@ subroutine get_gefs_for_regional_enspro(enpert4arw,wrt_pert_sub,wrt_pert_mem,jca
            write(iunit) cvars3d(ic3)
            write(iunit) w3
 !           if(mype==0) write(*,*) ic3,cvars3d(ic3)
-           do k=1,nsig
-           if(mype==0) write(*,*) cvars3d(ic3),k,maxval(w3(:,:,k)),minval(w3(:,:,k))
-           enddo
+!           do k=1,nsig
+!           if(mype==0) write(*,*) cvars3d(ic3),k,maxval(w3(:,:,k)),minval(w3(:,:,k))
+!           enddo
 
         end do
         do ic2=1,nc2d

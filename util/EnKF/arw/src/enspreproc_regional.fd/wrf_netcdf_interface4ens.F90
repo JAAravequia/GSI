@@ -27,7 +27,7 @@ subroutine read_netcdf_mass4ens
 !$$$
 
   use kinds, only: r_single,i_kind, r_kind
-  use constants, only: h300,one
+  use constants, only: h300,one,r0_01,zero
   use gsi_4dvar, only: nhr_assimilation
   use rapidrefresh_cldsurf_mod, only: l_cloud_analysis,l_gsd_soilTQ_nudge
   use gsi_metguess_mod, only: gsi_metguess_get
@@ -69,11 +69,14 @@ subroutine read_netcdf_mass4ens
   real(r_single) rdx,rdy
   real(r_single),allocatable::field3(:,:,:),field2(:,:),field1(:),field2b(:,:),field2c(:,:)
   real(r_single),allocatable::field3u(:,:,:),field3v(:,:,:),field1a(:)
+  real(r_single),allocatable::eta2_ll(:)
   integer(i_kind),allocatable::ifield2(:,:)
   real(r_single) rad2deg_single
   integer(i_kind) wrf_real
   real(r_kind),allocatable :: q_integral(:,:)
+  real(r_kind),allocatable :: q_integralc4h(:,:)
   real(r_kind) deltasigma
+  real(r_kind) deltasigmac4h 
   data iunit / 15 /
   
   wrf_real=104
@@ -162,8 +165,10 @@ subroutine read_netcdf_mass4ens
      allocate(field2b(nlon_regional,nlat_regional),field2c(nlon_regional,nlat_regional))
      allocate(ifield2(nlon_regional,nlat_regional))
      allocate(q_integral(nlon_regional,nlat_regional))
+     allocate(q_integralc4h(nlon_regional,nlat_regional))
      allocate(field1(max(nlon_regional,nlat_regional,nsig_regional)))
      allocate(field1a(max(nlon_regional,nlat_regional,nsig_regional)))
+     allocate(eta2_ll(nsig_regional+1))
   
      rmse_var='P_TOP'
      call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
@@ -256,6 +261,7 @@ subroutine read_netcdf_mass4ens
            write(6,*)' k,c3f(k)=',k,field1a(k)
         end do
         write(iunit)field1(1:nsig_regional+1),field1a(1:nsig_regional+1)  !c3f,c4f
+        eta2_ll=field1a(1:nsig_regional+1)*r0_01
      else
 
         rmse_var='ZNU'
@@ -449,9 +455,18 @@ subroutine read_netcdf_mass4ens
           start_index,end_index,               & !pat
           ierr                                 )
      q_integral=one
+     q_integralc4h=zero
      do k=1,nsig_regional
         write(6,*)' k,max,min,mid q=',k,maxval(field3(:,:,k)),minval(field3(:,:,k)), &
              field3(nlon_regional/2,nlat_regional/2,k)
+        if(wrf_mass_hybridcord) then
+           deltasigmac4h=eta2_ll(k)-eta2_ll(k+1)
+           do j=1,nlat_regional
+           do i=1,nlon_regional
+              q_integralc4h(i,j) = q_integralc4h(i,j)+deltasigmac4h*field3(i,j,k)
+           enddo
+           enddo
+        endif
         deltasigma = field1(k)-field1(k+1)
         do j=1,nlat_regional
         do i=1,nlon_regional
@@ -463,6 +478,7 @@ subroutine read_netcdf_mass4ens
      write(6,*)' k,max,min,mid qall=',k,maxval(field2(:,:)),minval(field2(:,:)), &
              field2(nlon_regional/2,nlat_regional/2)
      write(iunit)((field2(i,j),i=1,nlon_regional),j=1,nlat_regional)
+     write(iunit)((real(q_integralc4h(i,j)),i=1,nlon_regional),j=1,nlat_regional)
      
      rmse_var='PHB'
      call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
