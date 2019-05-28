@@ -454,7 +454,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             x_lon, x_lat, x_press, &
                             x_time, x_code,x_errorig, x_type, x_used, id, nanal)
   use sparsearr, only: sparr, delete, assignment(=)
-  use params, only: nanals, lobsdiag_forenkf, nlevs, neigv, vlocal_evecs
+  use params, only: nanals, lobsdiag_forenkf, neigv, vlocal_evecs
   use statevec, only: state_d
   use mpisetup, only: nproc, mpi_wtime
   use observer_enkf, only: calc_linhx,calc_linhx_modens,setup_linhx
@@ -906,7 +906,7 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             x_lon, x_lat, x_press,         &
                             x_time, x_code,x_errorig, x_type, x_used, id, nanal)
   use sparsearr, only: sparr2, sparr, readarray, delete, assignment(=), size
-  use params, only: nanals, lobsdiag_forenkf, nlevs, neigv, vlocal_evecs
+  use params, only: nanals, lobsdiag_forenkf, neigv, vlocal_evecs
   use statevec, only: state_d
   use mpisetup, only: nproc, mpi_wtime
   use observer_enkf, only: calc_linhx,calc_linhx_modens,setup_linhx
