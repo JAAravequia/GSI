@@ -1115,7 +1115,7 @@ contains
   !                Add offset to get guess potential temperature
                    ges_pot(j,i,k)  = real(all_loc(j,i,kt),r_kind) + h300
   ! hydrometeors
-                   if(l_cloud_analysis .or. n_actual_clouds>0) then
+                   if(l_cloud_analysis .and. n_actual_clouds>0) then
                       ges_qc(j,i,k) = real(all_loc(j,i,kqc),r_kind)
                       ges_qi(j,i,k) = real(all_loc(j,i,kqi),r_kind)
                       ges_qr(j,i,k) = real(all_loc(j,i,kqr),r_kind)
@@ -1511,7 +1511,7 @@ contains
        num_mass_fields_base=14+4*lm
        num_mass_fields=num_mass_fields_base
 !    The 9 3D cloud analysis fields are: ql,qi,qr,qs,qg,qnr,qni,qnc,tt
-       if(l_cloud_analysis .or.n_actual_clouds>0) num_mass_fields=num_mass_fields+9*lm+2
+       if(l_cloud_analysis .and.n_actual_clouds>0) num_mass_fields=num_mass_fields+9*lm+2
        if(l_gsd_soilTQ_nudge) num_mass_fields=num_mass_fields+2*(nsig_soil-1)+1
        if(i_use_2mt4b > 0 ) num_mass_fields=num_mass_fields + 2
        if(i_use_2mq4b > 0 .and. i_use_2mt4b <=0 ) num_mass_fields=num_mass_fields + 1
@@ -1576,7 +1576,7 @@ contains
   
        i=0
   ! for cloud analysis
-       if(l_cloud_analysis .or. n_actual_clouds>0) then
+       if(l_cloud_analysis .and. n_actual_clouds>0) then
           i=i+1 ; i_xlat=i                                                ! xlat
           write(identity(i),'("record ",i3,"--xlat")')i
           jsig_skip(i)=3     ! number of files to skip before getting to xlat
@@ -1590,7 +1590,7 @@ contains
        i=i+1 ; i_psfc=i                                                ! psfc
        write(identity(i),'("record ",i3,"--psfc")')i
        jsig_skip(i)=5     ! number of files to skip before getting to psfc
-       if(l_cloud_analysis .or. n_actual_clouds>0) jsig_skip(i)=0 ! number of files to skip before getting to psfc
+       if(l_cloud_analysis .and. n_actual_clouds>0) jsig_skip(i)=0 ! number of files to skip before getting to psfc
        igtype(i)=1
        i=i+1 ; i_fis=i                                               ! sfc geopotential
        write(identity(i),'("record ",i3,"--fis")')i
@@ -1696,7 +1696,7 @@ contains
           jsig_skip(i)=0 ; igtype(i)=1
        endif
   ! for cloud array
-       if(l_cloud_analysis .or. n_actual_clouds>0) then
+       if(l_cloud_analysis .and. n_actual_clouds>0) then
           i_qc=i+1
           do k=1,lm
              i=i+1                                                      ! qc(k)
@@ -1904,7 +1904,7 @@ contains
           endif
   
   ! hydrometeors
-          if(l_cloud_analysis .or. n_actual_clouds>0) then
+          if(l_cloud_analysis .and. n_actual_clouds>0) then
   !          Get pointer for each of the hydrometeors from guess at time index "it"
              call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql', ges_qc, istatus );ier=ier+istatus
              call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qi', ges_qi, istatus );ier=ier+istatus
@@ -2034,7 +2034,7 @@ contains
              kv=kv+1
              if(w_exist)  kw=kw+1
   ! hydrometeors
-             if(l_cloud_analysis .or. n_actual_clouds>0) then
+             if(l_cloud_analysis .and. n_actual_clouds>0) then
                 kqc=kqc+1
                 kqr=kqr+1
                 kqs=kqs+1
@@ -2074,7 +2074,7 @@ contains
   !                Convert guess mixing ratio to specific humidity
                    ges_q_it(j,i,k) = ges_q_it(j,i,k)/(one+ges_q_it(j,i,k))
   ! hydrometeors
-                   if(l_cloud_analysis .or. n_actual_clouds>0) then
+                   if(l_cloud_analysis .and. n_actual_clouds>0) then
                       ges_qc(j,i,k) = real(all_loc(j,i,kqc),r_kind)
                       ges_qi(j,i,k) = real(all_loc(j,i,kqi),r_kind)
                       ges_qr(j,i,k) = real(all_loc(j,i,kqr),r_kind)
@@ -2275,7 +2275,7 @@ contains
                         j,i,mype,sfct(j,i,it)
                    num_doubtful_sfct=num_doubtful_sfct+1
                 end if
-                if(l_cloud_analysis .or. n_actual_clouds>0) then
+                if(l_cloud_analysis .and. n_actual_clouds>0) then
                    isli_cld(j,i,it)=isli(j,i,it)
                 endif
              end do

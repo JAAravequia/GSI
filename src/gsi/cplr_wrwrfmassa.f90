@@ -680,7 +680,7 @@ contains
              all_loc(j,i,kq)= ges_q(jp1,ip1,k)/(one-ges_q(jp1,ip1,k))
   
   ! for hydrometeors
-             if(l_cloud_analysis .or. n_actual_clouds>0) then
+             if(l_cloud_analysis .and. n_actual_clouds>0) then
                 all_loc(j,i,kqc)=ges_qc(jp1,ip1,k)
                 all_loc(j,i,kqi)=ges_qi(jp1,ip1,k)
                 all_loc(j,i,kqr)=ges_qr(jp1,ip1,k)
@@ -2100,7 +2100,7 @@ contains
     kv=i_v-1
     if(w_exist)kw=i_w-1
   ! for hydrometeors
-    if(l_cloud_analysis .or. n_actual_clouds>0) then
+    if(l_cloud_analysis .and. n_actual_clouds>0) then
        kqc=i_qc-1
        kqi=i_qi-1
        kqr=i_qr-1
