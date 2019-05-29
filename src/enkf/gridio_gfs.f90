@@ -57,7 +57,7 @@
   use sigio_module, only: sigio_head, sigio_data, sigio_sclose, sigio_sropen, &
                           sigio_srohdc, sigio_sclose, sigio_aldata, sigio_axdata
   use nemsio_module, only: nemsio_gfile,nemsio_open,nemsio_close,&
-                           nemsio_getfilehead,nemsio_getheadvar,nemsio_realkind,&
+                           nemsio_getfilehead,nemsio_getheadvar,nemsio_realkind,nemsio_charkind,&
                            nemsio_readrecv,nemsio_init,nemsio_setheadvar,nemsio_writerecv
   implicit none
 
@@ -459,7 +459,7 @@
                           sigio_srohdc, sigio_sclose, sigio_axdata, &
                           sigio_aldata, sigio_swohdc
   use nemsio_module, only: nemsio_gfile,nemsio_open,nemsio_close,&
-                           nemsio_readrec,nemsio_writerec,nemsio_intkind,&
+                           nemsio_readrec,nemsio_writerec,nemsio_intkind,nemsio_charkind,&
                            nemsio_getheadvar,nemsio_realkind,nemsio_getfilehead,&
                            nemsio_readrecv,nemsio_init,nemsio_setheadvar,nemsio_writerecv
   use constants, only: grav
@@ -490,8 +490,8 @@
   type(sigio_head) sighead
   type(sigio_data) sigdata_inc
   character(len=3) charnanal
-  character(8),allocatable:: recname(:)
-  character(8) :: field
+  character(nemsio_charkind),allocatable:: recname(:)
+  character(nemsio_charkind) :: field
   logical :: hasfield
 
   real(r_kind) kap,kapr,kap1,clip
@@ -616,8 +616,6 @@
      allocate(pstend1(nlons*nlats))
      allocate(pstend2(nlons*nlats),vmass(nlons*nlats))
   endif
-  field = 'delz'; hasfield = checkfield(field,recname,nrecs)
-  if (hasfield) allocate(delzb(nlons*nlats))
   if (imp_physics == 11) allocate(work(nlons*nlats))
 
 ! Compute analysis time from guess date and forecast length.
@@ -890,6 +888,8 @@
      if (pst_ind > 0) then
         allocate(ugtmp(nlons*nlats,nlevs),vgtmp(nlons*nlats,nlevs))
      endif
+     field = 'delz'; hasfield = checkfield(field,recname,nrecs)
+     if (hasfield) allocate(delzb(nlons*nlats))
      ! update u,v,Tv,q,oz,clwmr
      do k=1,nlevs
         call nemsio_readrecv(gfilein,'ugrd','mid layer',k,nems_wrk,iret=iret)
@@ -1299,8 +1299,9 @@
  end subroutine writegriddata
 
  logical function checkfield(field,fields,nrec) result(hasfield)
+   use nemsio_module, only: nemsio_charkind
    integer, intent(in) :: nrec
-   character*8, intent(in) :: fields(nrec),field
+   character(nemsio_charkind), intent(in) :: fields(nrec),field
    integer n
    hasfield = .false.
    do n=1,nrec

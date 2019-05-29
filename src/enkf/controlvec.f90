@@ -327,7 +327,7 @@ if (nproc <= ntasks_io-1) then
       if (use_qsatensmean) then
          do ne=1,nanals_per_iotask
          do nb=1,nbackgrounds
-               ! re-scale normalized spfh with sat. sphf of first guess
+            ! re-scale normalized spfh with sat. sphf of ensmean first guess
             grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb,ne) = &
             grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb,ne)*qsatmean(:,:,nb)
          enddo
@@ -337,7 +337,7 @@ if (nproc <= ntasks_io-1) then
          do nb=1,nbackgrounds
             ! re-scale normalized spfh with sat. sphf of first guess
             grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb,ne) = &
-            grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb,ne)*qsatmean(:,:,nb)
+            grdin(:,(q_ind-1)*nlevs+1:q_ind*nlevs,nb,ne)*qsat(:,:,nb,ne)
          enddo
          enddo
       endif
