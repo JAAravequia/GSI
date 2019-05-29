@@ -975,11 +975,11 @@
 !                         =0. no cloud analysis (default)
 !                         =1.  cloud analysis after var analysis for WRF_ARW
 !                         =2.  cloud analysis after var analysis for NMMB
-!                         =3.  cloud analysis only with hybrometeors NETCDF I/O
-!                         =5.  skip cloud analysis and NETCDF file update
-!                         =6.  cloud analysis only and do hybrometeors NETCDF/O
+!                         =3.  cloud analysis only; var is skipped
+!                         =5.  skip cloud analysis and updating NETCDF result file at
+!                                         the end of the analysis
+!                         =6.  skip NETCDF background read step and do cloud analysis only
 !                         =7   cloud analysis in observer with I/O
-!                         =2  cloud analysis for NAM
 !                         =30  cloud analysis for GFS
 !                         =99  only read hydrometer fields but no cloud analysis
 
