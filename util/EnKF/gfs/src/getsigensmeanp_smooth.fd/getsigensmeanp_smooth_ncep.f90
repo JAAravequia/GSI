@@ -42,7 +42,7 @@ program getsigensmeanp_smooth
   integer :: iret,nlevs,ntrac,ntrunc,nanals,ngrd,k
   integer :: nsize,nsize2,nsize3,nsize3t
   integer :: mype,mype1,npe,orig_group,new_group,new_comm
-  integer :: nrec,latb,lonb,npts,n,idrt,istat
+  integer :: nrec,latb,lonb,npts,n,idrt
   integer,allocatable,dimension(:) :: new_group_members,reclev,krecu,krecv
   integer,allocatable,dimension(:) :: smoothparm
   real(8) :: rnanals
@@ -209,16 +209,9 @@ program getsigensmeanp_smooth
 
         npts=lonb*latb
         nsize=npts*nrec
-        allocate(rwork_mem(npts,nrec),stat=istat)
-        if(istat /= 0)then
-           write(6,*)'getsigensmeanp_smooth: failure to allocate rwork_mem',istat
-           stop
-        end if
-        allocate(rwork_avg(npts,nrec),stat=istat)
-        if(istat /= 0)then
-           write(6,*)'getsigensmeanp_smooth: failure to allocate rwork_avg',istat
-           stop
-        end if
+        allocate(rwork_mem(npts,nrec))
+        allocate(rwork_avg(npts,nrec))
+        allocate(rwork_hgt(npts))
 
         allocate(krecu(nlevs))
         allocate(krecv(nlevs))
@@ -231,7 +224,6 @@ program getsigensmeanp_smooth
         smooth_fld = .true.
 
         rwork_mem = zero
-        rwork_avg = zero
         do n = 1,nrec
            call nemsio_readrec(gfile,n,rwork_mem(:,n),iret=iret)
            if ( index(recnam(n),'ugrd') /= 0 ) then
@@ -252,12 +244,12 @@ program getsigensmeanp_smooth
               smooth_fld(n) = .false.
            endif
         enddo
+        call nemsio_readrecv(gfile,'hgt','sfc',1,rwork_hgt,iret=iret)
 
+        rwork_avg = zero
         call mpi_allreduce(rwork_mem,rwork_avg,nsize,mpi_real,mpi_sum,new_comm,iret)
         rwork_avg = rwork_avg * rnanals
 
-        allocate(rwork_hgt(npts))
-        call nemsio_readrecv(gfile,'hgt','sfc',1,rwork_hgt,iret=iret)
         if ( mype == 0 ) then
            gfileo=gfile
            call nemsio_open(gfileo,trim(filenameout),'WRITE',iret=iret )
@@ -413,12 +405,7 @@ program getsigensmeanp_smooth
         if (allocated(rwork_mem)) deallocate(rwork_mem)
         if (allocated(rwork_avg)) deallocate(rwork_avg)
         if (allocated(rwork_hgt)) deallocate(rwork_hgt)
-        if (allocated(krecu)) deallocate(krecu)
-        if (allocated(krecv)) deallocate(krecv)
-        if (allocated(notuv)) deallocate(notuv)
-        if (allocated(smooth_fld)) deallocate(smooth_fld)
-        if (allocated(reclev)) deallocate(reclev)
-        if (allocated(recnam)) deallocate(recnam)
+        deallocate(krecu,krecv,notuv,smooth_fld)
      endif
 
 ! Jump here if more mpi processors than files to process

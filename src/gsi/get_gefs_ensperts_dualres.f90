@@ -355,7 +355,7 @@ subroutine get_gefs_ensperts_dualres
      end do
 
 ! Before converting to perturbations, get ensemble spread
-     if (m == 1 .and. write_ens_sprd )  call ens_spread_dualres(en_bar(1),1)
+     if (m == 4 .and. write_ens_sprd )  call ens_spread_dualres(en_bar(1),1)
 
 
      if(s_ens_v <= zero)then
@@ -509,6 +509,7 @@ subroutine ens_spread_dualres(en_bar,ibin)
   real(r_kind),pointer,dimension(:,:):: ps
   real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig),target::dum3
   real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2),target::dum2
+  logical :: is_cw
 
 !      create simple regular grid
   call gsi_gridcreate(grid_anl,grd_anl%lat2,grd_anl%lon2,grd_anl%nsig)
@@ -570,6 +571,7 @@ subroutine ens_spread_dualres(en_bar,ibin)
 
   dum2=zero
   dum3=zero
+  is_cw=.false.
   call gsi_bundlegetpointer(suba,'sf',st,istat)
   if(istat/=0) then
      write(6,*)' no sf pointer in ens_spread_dualres, point st at dum3 array'
@@ -597,11 +599,13 @@ subroutine ens_spread_dualres(en_bar,ibin)
   end if
   call gsi_bundlegetpointer(suba,'cw',cw,istat)
   if(istat/=0) then
+     is_cw = .false.
      write(6,*)' no cw pointer in ens_spread_dualres, point cw at dum3 array'
      cw => dum3
   end if
   call gsi_bundlegetpointer(suba,'ql',ql,istat)
   if(istat/=0) then
+     is_cw = .true.
      write(6,*)' no ql pointer in ens_spread_dualres, point ql at dum3 array'
      ql => dum3
   end if
@@ -631,13 +635,17 @@ subroutine ens_spread_dualres(en_bar,ibin)
      ps => dum2
   end if
 
-  call write_spread_dualres(st,vp,tv,rh,oz,cw,ql,qi,qr,qs,qg,ps)
+  if (is_cw) then
+     call write_spread_dualres(st,vp,tv,rh,oz,cw,qi,qr,qs,qg,ps,ibin)
+  else
+     call write_spread_dualres(st,vp,tv,rh,oz,ql,qi,qr,qs,qg,ps,ibin)
+  end if
 
   return
 end subroutine ens_spread_dualres
 
 
-subroutine write_spread_dualres(a,b,c,d,e,f,q1,q2,q3,q4,q5,g2in)
+subroutine write_spread_dualres(a,b,c,d,e,f,q2,q3,q4,q5,g2in,ibin)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    write_spread_dualres   write ensemble spread for diagnostics
@@ -659,12 +667,11 @@ subroutine write_spread_dualres(a,b,c,d,e,f,q1,q2,q3,q4,q5,g2in)
 !     d    -  spread variable 4
 !     e    -  spread variable 5
 !     f    -  spread variable 6
-!     q1   -  spread variable 7
-!     q2   -  spread variable 8
-!     q3   -  spread variable 9
-!     q4   -  spread variable 10 
-!     q5   -  spread variable 11
-!     g2in -  spread variable 12
+!     q2   -  spread variable 7
+!     q3   -  spread variable 8
+!     q4   -  spread variable 9 
+!     q5   -  spread variable 10
+!     g2in -  spread variable 11
 !
 !   output argument list:
 !
@@ -679,12 +686,13 @@ subroutine write_spread_dualres(a,b,c,d,e,f,q1,q2,q3,q4,q5,g2in)
   use constants, only: zero
   implicit none
 
-  character(255):: grdfile
+  character(255):: grdfile,filename
 
   real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig),intent(in):: a,b,c,d,e,f
-  real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig),intent(in):: q1,q2,q3,q4,q5
+  real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig),intent(in):: q2,q3,q4,q5
   real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2),intent(in):: g2in
-  real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig,11):: g3in
+  integer(i_kind),intent(in):: ibin
+  real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig,10):: g3in
 
   real(r_kind),dimension(grd_anl%nlat,grd_anl%nlon,grd_anl%nsig):: work8_3d
   real(r_kind),dimension(grd_anl%nlat,grd_anl%nlon):: work8_2d
@@ -692,12 +700,15 @@ subroutine write_spread_dualres(a,b,c,d,e,f,q1,q2,q3,q4,q5,g2in)
   real(r_single),dimension(grd_anl%nlon,grd_anl%nlat,grd_anl%nsig):: work4_3d
   real(r_single),dimension(grd_anl%nlon,grd_anl%nlat):: work4_2d
 
+  real(r_single),allocatable,dimension(:) :: glon,glat
+  real(r_kind) :: dx, dy
+
   integer(i_kind) ncfggg,iret,i,j,k,n,mem2d,mem3d,num3d
 
 ! Initial memory used by 2d and 3d grids
   mem2d = 4*grd_anl%nlat*grd_anl%nlon
   mem3d = 4*grd_anl%nlat*grd_anl%nlon*grd_anl%nsig
-  num3d=11
+  num3d=10
 
 ! transfer 2d arrays to generic work aray
   do k=1,grd_anl%nsig
@@ -709,20 +720,37 @@ subroutine write_spread_dualres(a,b,c,d,e,f,q1,q2,q3,q4,q5,g2in)
          g3in(i,j,k,4)=d(i,j,k)
          g3in(i,j,k,5)=e(i,j,k)
          g3in(i,j,k,6)=f(i,j,k)
-         g3in(i,j,k,7)=q1(i,j,k)
-         g3in(i,j,k,8)=q2(i,j,k)
-         g3in(i,j,k,9)=q3(i,j,k)
-         g3in(i,j,k,10)=q4(i,j,k)
-         g3in(i,j,k,11)=q5(i,j,k)
+         g3in(i,j,k,7)=q2(i,j,k)
+         g3in(i,j,k,8)=q3(i,j,k)
+         g3in(i,j,k,9)=q4(i,j,k)
+         g3in(i,j,k,10)=q5(i,j,k)
        end do
      end do
   end do
 
   if (mype==0) then
-    grdfile='ens_spread.grd'
+     write(filename,100) ibin
+100  format('ens_spread',i2.2)
+
+    grdfile=trim(filename)//'.grd'
     ncfggg=len_trim(grdfile)
     call baopenwt(22,grdfile(1:ncfggg),iret)
     write(6,*)'WRITE_SPREAD_DUALRES:  open 22 to ',trim(grdfile),' with iret=',iret
+
+    allocate(glon(grd_anl%nlon),glat(grd_anl%nlat))
+    dx=360./grd_anl%nlon
+    dy=180./(grd_anl%nlat-1.)
+    do i=1,grd_anl%nlon
+       glon(i)=(i-1)*dx
+    end do
+    do j=1,grd_anl%nlat
+       glat(j)=-90.0+(j-1)*dy
+    end do
+    open(33,file=trim(filename)//'.dat',form='unformatted',access='stream')
+    write(33)real(grd_anl%nlon,4),real(grd_anl%nlat,4),real(grd_anl%nsig,4),real(num3d,4),real(1.0,4)
+    write(33) glon
+    write(33) glat
+    deallocate(glon,glat)
   endif
 
 ! Process 3d arrays
@@ -741,6 +769,8 @@ subroutine write_spread_dualres(a,b,c,d,e,f,q1,q2,q3,q4,q5,g2in)
       end do
       call wryte(22,mem3d,work4_3d)
       write(6,*)'WRITE_SPREAD_DUALRES FOR VARIABLE NUM ',n
+
+      write(33) work4_3d
     endif
   end do
 
@@ -755,6 +785,8 @@ subroutine write_spread_dualres(a,b,c,d,e,f,q1,q2,q3,q4,q5,g2in)
      end do
      call wryte(22,mem2d,work4_2d)
      write(6,*)'WRITE_SPREAD_DUALRES FOR 2D FIELD '
+
+     write(33) work4_2d
   endif
 
 
@@ -764,6 +796,34 @@ subroutine write_spread_dualres(a,b,c,d,e,f,q1,q2,q3,q4,q5,g2in)
      write(6,*)'WRITE_SPREAD_DUALRES:  close 22 with iret=',iret
   end if
 
+  if (mype==0) then
+     open(22,file=trim(filename)//'.ctl',form='formatted')
+     write(22,'("DSET ^",a)') trim(adjustl(grdfile))
+     write(22,'("UNDEF -9.99E+33")')
+     write(22,'("TITLE ensemble spread")')
+     write(22,'(a,2x,i4,2x,a,2x,f5.1,2x,f9.6)') 'XDEF',grd_anl%nlon, 'LINEAR', 0.0, 360./grd_anl%nlon
+     write(22,'(a,2x,i4,2x,a,2x,f5.1,2x,f9.6)') 'YDEF',grd_anl%nlat, 'LINEAR', -90.0, 180./(grd_anl%nlat-1.)
+     write(22,'("ZDEF",i6," LINEAR 1 1")') grd_anl%nsig
+     write(22,'("TDEF",i6,1x,"LINEAR",1x,"00Z01Jan2000",1x,i6,"hr")') 1,12
+     write(22,'("VARS",i6)') 11
+     write(22,'("SF  ",i3," 99 stream function (/s)")') grd_anl%nsig
+     write(22,'("VP  ",i3," 99 velocity potential (/s)")') grd_anl%nsig
+     write(22,'("T   ",i3," 99 temperature (K)")') grd_anl%nsig
+     write(22,'("Q   ",i3," 99 specific humidity (kg/kg)")') grd_anl%nsig
+     write(22,'("OZ  ",i3," 99 ozone concentration (kg/kg)")') grd_anl%nsig
+     write(22,'("QL  ",i3," 99 cloud water mixing ratio (kg/kg)")') grd_anl%nsig
+     write(22,'("QI  ",i3," 99 cloud ice mixing ratio (kg/kg)")') grd_anl%nsig
+     write(22,'("QR  ",i3," 99 rain mixing ratio (kg/kg)")') grd_anl%nsig
+     write(22,'("QS  ",i3," 99 snow mixing ratio (kg/kg)")') grd_anl%nsig
+     write(22,'("QG  ",i3," 99 graupel mixing ratio (kg/kg)")') grd_anl%nsig
+     write(22,'("PS  ",i3," 99 surface pressure (Pa)")') 0
+     write(22,'(a)') 'ENDVARS'
+     close(22)
+  endif
+
+  if (mype==0) then
+     close(33)
+  end if
 
   return
 end subroutine write_spread_dualres

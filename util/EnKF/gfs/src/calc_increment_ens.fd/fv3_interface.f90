@@ -200,10 +200,10 @@ contains
 
     var_def_loop: do ivar=1,n_inc_vars
        call fv3_increment_def_var(ncdat,output_vars(ivar))
-       !if(trim(input_vars(ivar)) == 'icmr' .and. .not. do_icmr) then
-       !   if (mype==0) print 100, output_vars(ivar), 'do_icmr = F so var will not be in netcdf'
-       !   cycle var_def_loop
-       !endif
+       if(trim(input_vars(ivar)) == 'icmr' .and. .not. do_icmr) then
+          if (mype==0) print 100, output_vars(ivar), 'do_icmr = F so var will not be in netcdf'
+          cycle var_def_loop
+       endif
     enddo var_def_loop
 
     call fv3_increment_def_end(ncdat)
@@ -214,11 +214,11 @@ contains
 
     var_loop: do ivar=1,n_inc_vars
        ! Skip this var if it is icmr and we're told not to do_icmr:
-       !if(trim(input_vars(ivar)) == 'icmr' .and. .not. do_icmr) then
-       !   if (mype==0) print 100, trim(output_vars(ivar)), &
-       !        'do_icmr = F so will not diff this var'
-       !   cycle var_loop
-       !endif
+       if(trim(input_vars(ivar)) == 'icmr' .and. .not. do_icmr) then
+          if (mype==0) print 100, trim(output_vars(ivar)), &
+               'do_icmr = F so will not diff this var'
+          cycle var_loop
+       endif
 
        ! Skip this var if it is to be zero.  No point in reading it...
        zero_or_read: if(should_zero_increments_for(var_zero_synonyms(ivar))) then

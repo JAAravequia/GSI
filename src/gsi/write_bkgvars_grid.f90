@@ -137,6 +137,8 @@ subroutine write_bkgvars2_grid
 
   real(r_kind)   ,dimension(nsig+1)::prs
   integer(i_kind) ncfggg,iret,lu,i,j,k,n
+  real(r_single),allocatable,dimension(:) :: glon,glat
+  real(r_kind) :: dx, dy
 
 ! gather stuff to processor 0
   do n=1,nc3d
@@ -200,6 +202,21 @@ subroutine write_bkgvars2_grid
         end do
      end do
 
+     allocate(glon(nlon),glat(nlat))
+     dx=360./nlon
+     dy=180./(nlat-1.)
+     do i=1,nlon
+        glon(i)=(i-1)*dx
+     end do
+     do j=1,nlat
+        glat(j)=-90.0+(j-1)*dy
+     end do
+     open(33,file='bkgvar_smooth.dat',form='unformatted',access='stream')
+     write(33)real(nlon,4),real(nlat,4),real(nsig,4),real(nc3d,4),real(1.0,4)
+     write(33) glon
+     write(33) glat
+     deallocate(glon,glat)
+
 !    Create byte-addressable binary file for grads
      grdfile='bkgvar_smooth.grd'
      ncfggg=len_trim(grdfile)
@@ -207,10 +224,14 @@ subroutine write_bkgvars2_grid
      call baopenwt(lu,grdfile(1:ncfggg),iret)
 !    Loop over 3d-variances
      do n=1,nc3d
+        write(33) a4(:,:,:,n)
         call wryte(lu,4*nlat*nlon*nsig,a4(1,1,1,n))
      enddo
 !    Loop over 2d-variances
      do n=1,nc2d+mvars
+        if (trim(cvars2d(n)) == 'ps') then
+           write(33) d4(:,:,n) 
+        end if
         call wryte(lu,4*nlat*nlon,d4(1,1,n))
      enddo
      call baclose(lu,iret)
@@ -237,7 +258,8 @@ subroutine write_bkgvars2_grid
      enddo
      write(lu,'(a)') 'ENDVARS'
      close(lu)
-
+ 
+     close(33)
   end if ! mype=0
    
   return

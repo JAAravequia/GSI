@@ -262,7 +262,7 @@ contains
     newpc4pred = .false.  ! .true.=turn on new preconditioning for bias coefficients
     passive_bc = .false.  ! .true.=turn on bias correction for monitored channels
     adp_anglebc = .false. ! .true.=turn on angle bias correction
-    bias_zero_start = .true. ! .true.=Zero start; .false.=mode start
+    bias_zero_start = .false. ! .true.=Zero start; .false.=mode start
     emiss_bc = .false.    ! .true.=turn on emissivity bias correction
     angord = 0            ! order of polynomial for angle bias correction
     use_edges = .true.    ! .true.=to use data on scan edges

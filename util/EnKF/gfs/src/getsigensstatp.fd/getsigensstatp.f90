@@ -53,7 +53,10 @@ program getsigensstatp
     real(r_single),allocatable,dimension(:,:) :: rwork_mem,rwork_avg
     real(r_single),allocatable,dimension(:) :: glats,gwts
     logical :: sigio,nemsio
-    integer :: istat
+    logical :: do_icmr = .false.
+    logical :: do_rwmr = .false.
+    logical :: do_snmr = .false.
+    logical :: do_grle = .false.
 
     type(sigio_head)   :: sigheadi
     type(sigio_data)   :: sigdatai
@@ -151,6 +154,10 @@ program getsigensstatp
                 call mpi_abort(mpi_comm_world,99,iret)
                 stop
             endif
+            do_icmr = variable_exist('icmr')
+            do_rwmr = variable_exist('rwmr')
+            do_snmr = variable_exist('snmr')
+            do_grle = variable_exist('grle')             
         endif
 
         if ( mype == 0 ) then
@@ -181,16 +188,8 @@ program getsigensstatp
             deallocate(gwts)
         endif
 
-        allocate(rwork_mem(npts,nflds),stat=istat)
-        if (istat/=0) then
-           write(6,*)'getsigensstatp: failure to allocate rwork_mem',istat
-           stop
-        end if
-        allocate(rwork_avg(npts,nflds),stat=istat)
-        if (istat/=0) then
-           write(6,*)'getsigensstatp: failure to allocate rwork_avg',istat
-           stop
-        end if
+        allocate(rwork_mem(npts,nflds))
+        allocate(rwork_avg(npts,nflds))
 
         rwork_mem = 0.0_r_single
         rwork_avg = 0.0_r_single
@@ -226,20 +225,20 @@ program getsigensstatp
                 krecq    = 1 + 3*nlevs + k
                 krecoz   = 1 + 4*nlevs + k
                 kreccwmr = 1 + 5*nlevs + k
-                krecicmr = 1 + 6*nlevs + k
-                krecrwmr = 1 + 7*nlevs + k
-                krecsnmr = 1 + 8*nlevs + k
-                krecgrle = 1 + 9*nlevs + k
+                if ( do_icmr ) krecicmr = 1 + 6*nlevs + k
+                if ( do_rwmr ) krecrwmr = 1 + 7*nlevs + k
+                if ( do_snmr ) krecsnmr = 1 + 8*nlevs + k
+                if ( do_grle ) krecgrle = 1 + 9*nlevs + k
                 call nemsio_readrecv(gfile,'ugrd', 'mid layer',k,rwork_mem(:,krecu),   iret=iret)
                 call nemsio_readrecv(gfile,'vgrd', 'mid layer',k,rwork_mem(:,krecv),   iret=iret)
                 call nemsio_readrecv(gfile,'tmp',  'mid layer',k,rwork_mem(:,krect),   iret=iret)
                 call nemsio_readrecv(gfile,'spfh', 'mid layer',k,rwork_mem(:,krecq),   iret=iret)
                 call nemsio_readrecv(gfile,'o3mr', 'mid layer',k,rwork_mem(:,krecoz),  iret=iret)
                 call nemsio_readrecv(gfile,'clwmr','mid layer',k,rwork_mem(:,kreccwmr),iret=iret)
-                call nemsio_readrecv(gfile,'icmr', 'mid layer',k,rwork_mem(:,krecicmr),iret=iret)
-                call nemsio_readrecv(gfile,'rwmr', 'mid layer',k,rwork_mem(:,krecrwmr),iret=iret)
-                call nemsio_readrecv(gfile,'snmr', 'mid layer',k,rwork_mem(:,krecsnmr),iret=iret)
-                call nemsio_readrecv(gfile,'grle', 'mid layer',k,rwork_mem(:,krecgrle),iret=iret)
+                if ( do_icmr ) call nemsio_readrecv(gfile,'icmr', 'mid layer',k,rwork_mem(:,krecicmr),iret=iret)
+                if ( do_rwmr ) call nemsio_readrecv(gfile,'rwmr', 'mid layer',k,rwork_mem(:,krecrwmr),iret=iret)
+                if ( do_snmr ) call nemsio_readrecv(gfile,'snmr', 'mid layer',k,rwork_mem(:,krecsnmr),iret=iret)
+                if ( do_grle ) call nemsio_readrecv(gfile,'grle', 'mid layer',k,rwork_mem(:,krecgrle),iret=iret)
             enddo
             call nemsio_close(gfile,iret=iret)
 
@@ -344,18 +343,26 @@ subroutine write_to_disk(statstr)
    call nc_check( nf90_def_var(ncid,'cw',nf90_float,vardim,varid),myname,'def_var cw '//trim(filenameout) )
    call nc_check( nf90_put_att(ncid, varid, 'long_name','cloud-water mixing ratio'),myname, 'put_att, long_name cw '//trim(filenameout) )
    call nc_check( nf90_put_att(ncid, varid, 'units','kg/kg'),myname, 'put_att, units cw '//trim(filenameout) )
-   call nc_check( nf90_def_var(ncid,'qi',nf90_float,vardim,varid),myname,'def_var qi '//trim(filenameout) )
-   call nc_check( nf90_put_att(ncid, varid, 'long_name','cloud-ice mixing ratio'),myname, 'put_att, long_name qi '//trim(filenameout) )
-   call nc_check( nf90_put_att(ncid, varid, 'units','kg/kg'),myname, 'put_att, units qi '//trim(filenameout) )
-   call nc_check( nf90_def_var(ncid,'qr',nf90_float,vardim,varid),myname,'def_var qr '//trim(filenameout) )
-   call nc_check( nf90_put_att(ncid, varid, 'long_name','rain-water mixing ratio'),myname, 'put_att, long_name qr '//trim(filenameout) )
-   call nc_check( nf90_put_att(ncid, varid, 'units','kg/kg'),myname, 'put_att, units qr '//trim(filenameout) )
-   call nc_check( nf90_def_var(ncid,'qs',nf90_float,vardim,varid),myname,'def_var qs '//trim(filenameout) )
-   call nc_check( nf90_put_att(ncid, varid, 'long_name','snow mixing ratio'),myname, 'put_att, long_name qs '//trim(filenameout) )
-   call nc_check( nf90_put_att(ncid, varid, 'units','kg/kg'),myname, 'put_att, units qs '//trim(filenameout) )
-   call nc_check( nf90_def_var(ncid,'qg',nf90_float,vardim,varid),myname,'def_var qg '//trim(filenameout) )
-   call nc_check( nf90_put_att(ncid, varid, 'long_name','grapel mixing ratio'),myname, 'put_att, long_name qg '//trim(filenameout) )
-   call nc_check( nf90_put_att(ncid, varid, 'units','kg/kg'),myname, 'put_att, units qg '//trim(filenameout) )
+   if ( do_icmr ) then
+      call nc_check( nf90_def_var(ncid,'qi',nf90_float,vardim,varid),myname,'def_var qi '//trim(filenameout) )
+      call nc_check( nf90_put_att(ncid, varid, 'long_name','cloud-ice mixing ratio'),myname, 'put_att, long_name qi '//trim(filenameout) )
+      call nc_check( nf90_put_att(ncid, varid, 'units','kg/kg'),myname, 'put_att, units qi '//trim(filenameout) )
+   end if
+   if ( do_rwmr ) then
+      call nc_check( nf90_def_var(ncid,'qr',nf90_float,vardim,varid),myname,'def_var qr '//trim(filenameout) )
+      call nc_check( nf90_put_att(ncid, varid, 'long_name','rain-water mixing ratio'),myname, 'put_att, long_name qr '//trim(filenameout) )
+      call nc_check( nf90_put_att(ncid, varid, 'units','kg/kg'),myname, 'put_att, units qr '//trim(filenameout) )
+   end if
+   if ( do_snmr ) then
+      call nc_check( nf90_def_var(ncid,'qs',nf90_float,vardim,varid),myname,'def_var qs '//trim(filenameout) )
+      call nc_check( nf90_put_att(ncid, varid, 'long_name','snow mixing ratio'),myname, 'put_att, long_name qs '//trim(filenameout) )
+      call nc_check( nf90_put_att(ncid, varid, 'units','kg/kg'),myname, 'put_att, units qs '//trim(filenameout) )
+   end if
+   if ( do_grle ) then
+      call nc_check( nf90_def_var(ncid,'qg',nf90_float,vardim,varid),myname,'def_var qg '//trim(filenameout) )
+      call nc_check( nf90_put_att(ncid, varid, 'long_name','grapel mixing ratio'),myname, 'put_att, long_name qg '//trim(filenameout) )
+      call nc_check( nf90_put_att(ncid, varid, 'units','kg/kg'),myname, 'put_att, units qg '//trim(filenameout) )
+   end if
    call nc_check( nf90_enddef(ncid),myname,'enddef, '//trim(filenameout) )
    call nc_check( nf90_close(ncid),myname,'close, '//trim(filenameout) )
 
@@ -401,26 +408,34 @@ subroutine write_to_disk(statstr)
    var3d = var3d(:,latb:1:-1,:)
    call nc_check( nf90_inq_varid(ncid,'cw',varid),myname,'inq_varid, cw '// trim(filenameout) )
    call nc_check( nf90_put_var(ncid,varid,var3d,(/1,1,1/),(/lonb,latb,nlevs/)),myname, 'put_var, cw '//trim(filenameout) )
-   kbeg = kend + 1 ; kend = kend + nlevs
-   var3d = reshape(rwork_avg(:,kbeg:kend),(/lonb,latb,nlevs/))
-   var3d = var3d(:,latb:1:-1,:)
-   call nc_check( nf90_inq_varid(ncid,'qi',varid),myname,'inq_varid, qi '// trim(filenameout) )
-   call nc_check( nf90_put_var(ncid,varid,var3d,(/1,1,1/),(/lonb,latb,nlevs/)),myname, 'put_var, qi '//trim(filenameout) )
-   kbeg = kend + 1 ; kend = kend + nlevs
-   var3d = reshape(rwork_avg(:,kbeg:kend),(/lonb,latb,nlevs/))
-   var3d = var3d(:,latb:1:-1,:)
-   call nc_check( nf90_inq_varid(ncid,'qr',varid),myname,'inq_varid, qr '// trim(filenameout) )
-   call nc_check( nf90_put_var(ncid,varid,var3d,(/1,1,1/),(/lonb,latb,nlevs/)),myname, 'put_var, qr '//trim(filenameout) )
-   kbeg = kend + 1 ; kend = kend + nlevs
-   var3d = reshape(rwork_avg(:,kbeg:kend),(/lonb,latb,nlevs/))
-   var3d = var3d(:,latb:1:-1,:)
-   call nc_check( nf90_inq_varid(ncid,'qs',varid),myname,'inq_varid, qs '// trim(filenameout) )
-   call nc_check( nf90_put_var(ncid,varid,var3d,(/1,1,1/),(/lonb,latb,nlevs/)),myname, 'put_var, qs '//trim(filenameout) )
-   kbeg = kend + 1 ; kend = kend + nlevs
-   var3d = reshape(rwork_avg(:,kbeg:kend),(/lonb,latb,nlevs/))
-   var3d = var3d(:,latb:1:-1,:)
-   call nc_check( nf90_inq_varid(ncid,'qg',varid),myname,'inq_varid, qg '// trim(filenameout) )
-   call nc_check( nf90_put_var(ncid,varid,var3d,(/1,1,1/),(/lonb,latb,nlevs/)),myname, 'put_var, qg '//trim(filenameout) )
+   if ( do_icmr ) then
+      kbeg = kend + 1 ; kend = kend + nlevs
+      var3d = reshape(rwork_avg(:,kbeg:kend),(/lonb,latb,nlevs/))
+      var3d = var3d(:,latb:1:-1,:)
+      call nc_check( nf90_inq_varid(ncid,'qi',varid),myname,'inq_varid, qi '// trim(filenameout) )
+      call nc_check( nf90_put_var(ncid,varid,var3d,(/1,1,1/),(/lonb,latb,nlevs/)),myname, 'put_var, qi '//trim(filenameout) )
+   end if
+   if ( do_rwmr ) then
+      kbeg = kend + 1 ; kend = kend + nlevs
+      var3d = reshape(rwork_avg(:,kbeg:kend),(/lonb,latb,nlevs/))
+      var3d = var3d(:,latb:1:-1,:)
+      call nc_check( nf90_inq_varid(ncid,'qr',varid),myname,'inq_varid, qr '// trim(filenameout) )
+      call nc_check( nf90_put_var(ncid,varid,var3d,(/1,1,1/),(/lonb,latb,nlevs/)),myname, 'put_var, qr '//trim(filenameout) )
+   end if
+   if ( do_snmr ) then
+      kbeg = kend + 1 ; kend = kend + nlevs
+      var3d = reshape(rwork_avg(:,kbeg:kend),(/lonb,latb,nlevs/))
+      var3d = var3d(:,latb:1:-1,:)
+      call nc_check( nf90_inq_varid(ncid,'qs',varid),myname,'inq_varid, qs '// trim(filenameout) )
+      call nc_check( nf90_put_var(ncid,varid,var3d,(/1,1,1/),(/lonb,latb,nlevs/)),myname, 'put_var, qs '//trim(filenameout) )
+   end if
+   if ( do_grle ) then
+      kbeg = kend + 1 ; kend = kend + nlevs
+      var3d = reshape(rwork_avg(:,kbeg:kend),(/lonb,latb,nlevs/))
+      var3d = var3d(:,latb:1:-1,:)
+      call nc_check( nf90_inq_varid(ncid,'qg',varid),myname,'inq_varid, qg '// trim(filenameout) )
+      call nc_check( nf90_put_var(ncid,varid,var3d,(/1,1,1/),(/lonb,latb,nlevs/)),myname, 'put_var, qg '//trim(filenameout) )
+   end if
    call nc_check( nf90_close(ncid),myname,'close, '//trim(filenameout) )
 
    write(6,'(3a,i5)')'Wrote netcdf4 ',trim(filenameout)

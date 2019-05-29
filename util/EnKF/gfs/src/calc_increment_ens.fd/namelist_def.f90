@@ -8,7 +8,7 @@ module namelist_def
   public :: analysis_filename, firstguess_filename, increment_filename
   public :: datapath
   public :: debug
-  public :: do_icmr,imp_physics
+  public :: do_icmr
   public :: incvars_to_zero
   public :: read_namelist
   public :: write_namelist
