@@ -69,6 +69,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use gridmod, only: regional,wrf_mass_regional
   use wrf_mass_guess_mod, only: soil_temp_cld,isli_cld,ges_xlon,ges_xlat
   use constants, only: zero,one,rad2deg,fv,rd_over_cp, h1000
+  use gsdcloudlib_pseudoq_mod, only: cloudLWC_pseudo,cloudCover_Surface_col
 
   implicit none
 

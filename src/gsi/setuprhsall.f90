@@ -681,8 +681,12 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
 !             Set up metar cloud pseudo obs
               else if(obstype=='mta_cld') then
-                 call setupcldtot(lunin,mype,bwork,awork(1,i_cldtot),nele,nobs,is,conv_diagsave)
-
+                 if(i_cloud_q_innovation==2) then
+                    call setupcldtot(lunin,mype,bwork,awork(1,i_cldtot),nele,nobs,is,conv_diagsave)
+                 else
+                    read(lunin,iostat=ier)
+                 if(ier/=0) call die('setuprhsall','read(), iostat =',ier)
+                 endif
 !             skip this kind of data because they are not used in the var analysis
               else if(obstype == 'gos_ctp' .or. &
                       obstype == 'rad_ref' .or. obstype=='lghtn' .or. &

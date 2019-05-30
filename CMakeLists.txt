@@ -275,7 +275,7 @@ project(GSI)
   endif()
   if(BUILD_ENKF_PREPROCESS_ARW)
     add_subdirectory(util/EnKF/arw/src)
-  endif
+  endif(BUILD_ENKF_PREPROCESS_ARW)
   if(BUILD_UTIL_COM)
     add_subdirectory(util/Analysis_Utilities/read_diag)
     add_subdirectory(util/radar_process/radialwind)

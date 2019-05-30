@@ -1427,7 +1427,8 @@
      if (mype==0) write(6,*)'GSIMOD:  ***WARNING*** set l_cloud_analysis=false'
   else if(i_gsdcldanal_type==1 .or. i_gsdcldanal_type==2 .or. &
           i_gsdcldanal_type==3 .or. i_gsdcldanal_type==5 .or. &
-          i_gsdcldanal_type==6 .or. i_gsdcldanal_type==99 ) then
+          i_gsdcldanal_type==6 .or. i_gsdcldanal_type==7 .or. &
+          i_gsdcldanal_type==99 ) then
      l_cloud_analysis = .true.
      if (mype==0) write(6,*)'GSIMOD:  set l_cloud_analysis=true:',i_gsdcldanal_type
   endif

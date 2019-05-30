@@ -816,14 +816,14 @@ subroutine  gsdcloudanalysis(mype)
      do j=2,lat2-1
         do i=2,lon2-1
            ! clean  cloud
-           if( cld_cover_3d(i,j,k) > -0.001_r_kind .and. cld_cover_3d(i,j,k) < cld_clr_coverage) then 
+           if( cld_cover_3d(i,j,k) > -0.001_r_kind .and. cld_cover_3d(i,j,k) <= cld_clr_coverage) then 
               cldwater_3d(i,j,k) = zero
               cldice_3d(i,j,k)   = zero
               nice_3d(i,j,k)     = zero
               nwater_3d(i,j,k)   = zero
               clean_count        = clean_count+1
            ! build cloud
-           elseif( cld_cover_3d(i,j,k) >= cld_bld_coverage .and. cld_cover_3d(i,j,k) < 2.0_r_kind   ) then      
+           elseif( cld_cover_3d(i,j,k) > cld_bld_coverage .and. cld_cover_3d(i,j,k) < 2.0_r_kind   ) then      
               cloudwater         =0.001_r_kind*cldwater_3d(i,j,k)
               cloudice           =0.001_r_kind*cldice_3d(i,j,k)
               cldwater_3d(i,j,k) = max(cloudwater,ges_ql(j,i,k))
