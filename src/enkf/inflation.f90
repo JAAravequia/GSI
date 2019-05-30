@@ -201,8 +201,8 @@ do nn=1,ncdim
    if( nnlvl == 0 ) nnlvl = nlevs
    
    r=abs((logp(indxproc(nproc+1,i),nnlvl)-logp(indxproc(nproc+1,i),nlevs_pres))/lnsigcovinfcutoff)
-   if ( r > 0.75 ) then
-     r=1.0
+   if ( r > 0.75_r_single ) then
+     r=1.0_r_single
    endif
    
    tmp_chunk2(i,nn) = tmp_chunk2(i,nn) + &

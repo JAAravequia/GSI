@@ -233,9 +233,9 @@ datestring = "0000000000" ! if 0000000000 will not be used.
 ! polynomial goes to zero.  s_ens_h is the scale of a 
 ! Gaussian exp(-0.5*(r/L)**2) so
 ! corrlength ~ sqrt(2/0.15)*s_ens_h
-corrlengthnh = 2800
-corrlengthtr = 2800
-corrlengthsh = 2800
+corrlengthnh = 2800_r_single
+corrlengthtr = 2800_r_single
+corrlengthsh = 2800_r_single
 ! read in localization length scales from an external file.
 readin_localization = .false.
 ! min and max inflation.
@@ -258,19 +258,19 @@ lnsigcutoffpsnh = -999._r_single  ! value for surface pressure
 lnsigcutoffpstr = -999._r_single  ! value for surface pressure
 lnsigcutoffpssh = -999._r_single  ! value for surface pressure
 ! ob time localization
-obtimelnh = 1.e10
-obtimeltr = 1.e10
-obtimelsh = 1.e10
+obtimelnh = 1.e10_r_single
+obtimeltr = 1.e10_r_single
+obtimelsh = 1.e10_r_single
 ! min localization reduction factor for adaptive localization
 ! based on HPaHt/HPbHT. Default (1.0) means no adaptive localization.
 ! 0.25 means minimum localization is 0.25*corrlength(nh,tr,sh).
-covl_minfact = 1.0
+covl_minfact = 1.0_r_single
 ! efolding distance for adapative localization.
 ! Localization reduction factor is 1. - exp( -((1.-paoverpb)/covl_efold) )
 ! When 1-pavoerpb=1-HPaHt/HPbHt=cov_efold localization scales reduced by
 ! factor of 1-1/e ~ 0.632. When paoverpb==>1, localization scales go to zero.
 ! When paoverpb==>1, localization scales not reduced.
-covl_efold = 1.e-10
+covl_efold = 1.e-10_r_single
 ! path to data directory
 datapath = " " ! mandatory
 ! tolerance for background check.
@@ -449,15 +449,15 @@ if (modelspace_vloc) then
   endif
   ! set vertical localization parameters to very large values
   ! (turns vertical localization off for serial filter)
-  lnsigcutoffnh = 1.e30
-  lnsigcutoffsh = 1.e30
-  lnsigcutofftr = 1.e30
-  lnsigcutoffsatnh = 1.e30
-  lnsigcutoffsatsh = 1.e30
-  lnsigcutoffsattr = 1.e30
-  lnsigcutoffpsnh = 1.e30
-  lnsigcutoffpssh = 1.e30
-  lnsigcutoffpstr = 1.e30
+  lnsigcutoffnh = 1.e30_r_single
+  lnsigcutoffsh = 1.e30_r_single
+  lnsigcutofftr = 1.e30_r_single
+  lnsigcutoffsatnh = 1.e30_r_single
+  lnsigcutoffsatsh = 1.e30_r_single
+  lnsigcutoffsattr = 1.e30_r_single
+  lnsigcutoffpsnh = 1.e30_r_single
+  lnsigcutoffpssh = 1.e30_r_single
+  lnsigcutoffpstr = 1.e30_r_single
 endif
 
 if (nanals <= numproc) then

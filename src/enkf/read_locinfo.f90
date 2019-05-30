@@ -40,7 +40,7 @@ subroutine read_locinfo()
         read(iunit,101) hlength(k),vlength(k),tmp,tmp
         ! factor of sqrt(2/0.15) to convert from scale that GSI uses
         ! to distance Gaspari-Cohn function goes to zero.
-        hlength(k) = sqrt(2./0.15)*hlength(k)
+        hlength(k) = sqrt(2._r_single/0.15_r_single)*hlength(k)
         ! although the comments in hybrid_ensemble_isotropic.F90 suggest
         ! the vertical localization is scaled the same way, in fact 
         ! the sqrt(2) factor is missing, so use sqrt(1./0.15) instead.
@@ -50,7 +50,7 @@ subroutine read_locinfo()
         ! the vlength values read in here are ignored and the localization is
         ! constant with height specified using the eigenvectors read in from the 
         ! file vlocal_eig.dat
-        vlength(k) = sqrt(1./0.15)*abs(vlength(k))
+        vlength(k) = sqrt(1._r_single/0.15_r_single)*abs(vlength(k))
         if (nproc .eq. 0) print *,'level=',k,'localization scales (horiz,vert)=',hlength(k),vlength(k)
       end do
       close(iunit)
