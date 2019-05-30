@@ -44,6 +44,14 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use m_qNode, only: qNode
   use m_obsLList, only: obsLList_appendNode
   use gsi_4dvar, only: nobs_bins,hr_obsbin
+
+  use obsmod, only: netcdf_diag, binary_diag, dirname, ianldate
+  use nc_diag_write_mod,only: nc_diag_init, nc_diag_header,nc_diag_metadata, &
+                              nc_diag_write, nc_diag_data2d
+  use nc_diag_read_mod, only: nc_diag_read_init,nc_diag_read_get_dim, &
+                              nc_diag_read_close
+  use state_vectors, only: svars3d, levels, nsdim
+
   use oneobmod, only: oneobtest,maginnov,magoberr
   use guess_grids, only: ges_lnprsl,geop_hgtl,hrdifsig,nfldsig,ges_tsen,ges_prsl,pbl_height
   use gridmod, only: nsig,get_ijk,twodvar_regional
@@ -290,387 +298,357 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
             allocate(all_qv_obs(nrealcld,nobs*nsig))
             all_qv_obs=miss_obs_real
          endif
+         if (netcdf_diag) call init_netcdf_diag_
      endif
   endif
 
-
-
-  if (i_ens_mean .ne. 2) then
+  if (i_ens_mean == 2) then
+!    will read the observations from saved file for diag file of each ensemble member.
+!    so ship the moisture observation generation.
+  else 
 !*******************************************************************************
 ! Read and reformat observations in work arrays.
-  read(lunin)data,luse
+     read(lunin)data,luse
+   
+     id=1        ! index of station id
+     ilon=2      ! index of grid relative obs location (x)
+     ilat=3      ! index of grid relative obs location (y)
+     istnelv=4   ! index of station elevation (m)
+     ivis=5      ! index of visibility observation
+     icldamt=6   ! index of cloud amount from 6-11 
+     icldhgt=12  ! index of cloud base height from 12-17
+     iwthr=18    ! index of weather 18-20
+     itime=21    ! index of observation time in data array
+     iuse=22     ! index of use parameter
+     iddp=24     ! index of dewpoint depression from surface obs
+     itype=25    ! index of ob type
+     ilone=26    ! index of longitude (degrees)
+     ilate=27    ! index of latitude (degrees)
 
-  id=1        ! index of station id
-  ilon=2      ! index of grid relative obs location (x)
-  ilat=3      ! index of grid relative obs location (y)
-  istnelv=4   ! index of station elevation (m)
-  ivis=5      ! index of visibility observation
-  icldamt=6   ! index of cloud amount from 6-11 
-  icldhgt=12  ! index of cloud base height from 12-17
-  iwthr=18    ! index of weather 18-20
-  itime=21    ! index of observation time in data array
-  iuse=22     ! index of use parameter
-  iddp=24     ! index of dewpoint depression from surface obs
-  itype=25    ! index of ob type
-  ilone=26    ! index of longitude (degrees)
-  ilate=27    ! index of latitude (degrees)
-
-  allocate(ocld(nvarcld_p))
-  allocate(cld_cover_obs(nsig))
-  allocate(pcp_type_obs(nsig))
-  zlev_clr = 3650.
-  allocate(cldwater_obs(nsig))
-  allocate(cldice_obs(nsig))
-
-  scale=one
-
+     allocate(ocld(nvarcld_p))
+     allocate(cld_cover_obs(nsig))
+     allocate(pcp_type_obs(nsig))
+     zlev_clr = 3650.
+     allocate(cldwater_obs(nsig))
+     allocate(cldice_obs(nsig))
+   
+     scale=one
+   
 ! Prepare data
-  call dtime_setup()
-  do i=1,nobs
-      dtime=data(itime,i)
-      call dtime_check(dtime, in_curbin, in_anybin)
-      if(.not.in_anybin)then
-         write(*,*) "NOT_in_anybin"
-         cycle
-      endif
-
-      oelvtn  = data(istnelv,i)
-      dlat=data(ilat,i)
-      dlon=data(ilon,i)
-      
-      ikx=nint(data(itype,i))
-
+     call dtime_setup()
+     do i=1,nobs
+         dtime=data(itime,i)
+         call dtime_check(dtime, in_curbin, in_anybin)
+         if(.not.in_anybin)then
+            write(*,*) "NOT_in_anybin"
+            cycle
+         endif
+   
+         oelvtn  = data(istnelv,i)
+         dlat=data(ilat,i)
+         dlon=data(ilon,i)
+         
+         ikx=nint(data(itype,i))
+   
 !    Link observation to appropriate observation bin
-      if (nobs_bins>1) then
-         ibin = NINT( dtime/hr_obsbin ) + 1
-      else
-         ibin = 1
-      endif
-      IF (ibin<1.OR.ibin>nobs_bins) write(6,*)mype,'Error nobs_bins,ibin=',nobs_bins,ibin
-
-! Check Haze and Dust station
-      data(iuse,i)=0 
-      
-      if(data(iuse,i) > 50 ) cycle   ! do not use this data
-      ovis   = data(ivis,i)
-
-      ocld=miss_obs_int
-      do j=1,3
-          cldamt =  data(icldamt+j-1,i)         ! cloud amount
-          cldhgt =  int(data(icldhgt+j-1,i))   ! cloud bottom height
-          if(cldamt < spval_p .and. cldhgt < spval_p) then
-            if(abs(cldamt-0._r_kind) < 0.0001_r_kind) then
-              ocld(j)=0                 !msky='CLR'
-              cldhgt=spval_p
-            elseif(abs(cldamt-13._r_kind) < 0.0001_r_kind) then
-              ocld(j)=1                 !msky='FEW'
-            elseif(abs(cldamt-11._r_kind) < 0.0001_r_kind) then
-              ocld(j)=2                 !msky='SCT'
-            elseif(abs(cldamt-12._r_kind) < 0.0001_r_kind) then
-              ocld(j)=3                 !msky='BKN'
-            elseif((abs(cldamt-8._r_kind) < 0.0001_r_kind) .or. &
-                   (abs(cldamt-9._r_kind) < 0.0001_r_kind)) then
-              ocld(j)=4                 !   msky='OVC'   msky='VV '
-            elseif(abs(cldamt-1._r_kind) < 0.0001_r_kind) then
-              ocld(j)=1
-            elseif(abs(cldamt-2._r_kind) < 0.0001_r_kind .or.   &
-                   abs(cldamt-3._r_kind) < 0.0001_r_kind  ) then
-              ocld(j)=2
-            elseif(cldamt > 3.5_r_kind .and. cldamt < 6.5_r_kind  ) then
-              ocld(j)=3
-            elseif(abs(cldamt-7._r_kind) < 0.0001_r_kind ) then
-              ocld(j)=4
-            else
-              ocld(j) = miss_obs_int          ! wrong cloud observation type
-              cldhgt = spval_p
-            endif
-            if(cldhgt > 0.0_r_kind ) then
-              ocld(6+j) = cldhgt
-            else
-              ocld(j) =  miss_obs_int
-              ocld(6+j) = miss_obs_int 
-            endif
-          endif
-      enddo   ! j
-
-      owx=''
-      do j=1,3
-          awx    =  data(iwthr+j-1,i)        ! weather
-          mwx='   '
-          if(awx>=10._r_kind .and.awx<=12._r_kind ) mwx='BR '
-          if(awx>=110._r_kind.and.awx<=112._r_kind) mwx='BR '
-          if(awx==5._r_kind  .or. awx==105._r_kind) mwx='HZ '
-          if(awx>=40._r_kind .and.awx<=49._r_kind ) mwx='FG '
-          if(awx>=130._r_kind.and.awx<=135._r_kind) mwx='FG '
-          if(awx>=50._r_kind .and.awx<=59._r_kind ) mwx='DZ '
-          if(awx>=150._r_kind.and.awx<=159._r_kind) mwx='DZ '
-          if(awx>=60._r_kind .and.awx<=69._r_kind ) mwx='RA '
-          if(awx>=160._r_kind.and.awx<=169._r_kind) mwx='RA '
-          if(awx>=70._r_kind .and.awx<=78._r_kind ) mwx='SN '
-          if(awx>=170._r_kind.and.awx<=178._r_kind) mwx='SN '
-          if(awx==79._r_kind .or. awx==179._r_kind) mwx='PE '
-
-          if(awx>=80._r_kind .and.awx<=90._r_kind ) mwx='SH '
-          if(awx>=180._r_kind.and.awx<=187._r_kind) mwx='SH '
-          if(awx>=91._r_kind .and.awx<=99._r_kind ) mwx='TH '
-          if(awx>=190._r_kind.and.awx<=196._r_kind) mwx='TH '
-
-          if (j==1) startwx=1
-          if (j==2) startwx=4
-          if (j==3) startwx=7
-          endwx=startwx+2
-          owx(startwx:endwx)=mwx
-      enddo
-
-      wthr_type=miss_obs_int
-      if ( owx=='SH'  ) wthr_type=16
-      if ( owx=='TH'  ) wthr_type=1
-      if ( owx=='RA'  ) wthr_type=11
-      if ( owx=='SN'  ) wthr_type=12
-      if ( owx=='PL'  ) wthr_type=13
-      if ( owx=='DZ'  ) wthr_type=14
-      if ( owx=='UP'  ) wthr_type=15
-      if ( owx=='BR'  ) wthr_type=21
-      if ( owx=='FG'  ) wthr_type=22
-
-      if(data(ivis,i) .ge. spval_P) then
-          ocld(13)=miss_obs_int
-      else
-          if(data(ivis,i) > 100.0_r_kind ) then
-              ocld(13)=int(data(ivis,i))
-          elseif(data(ivis,i) <=100.0_r_kind .and. data(ivis,i) > 0.0_r_kind ) then
-              ocld(13)=100
-              write(6,*) 'setupcldtot, Warning: change visibility to 100 m !!!'
-          endif
-      endif
-
-      ! background profiles in observation location and time
-      call tintrp3(ges_prsl,p_bk,dlat,dlon,dpres1d,dtime, &
-         hrdifsig,nsig,mype,nfldsig)
-      call tintrp3(ges_ql,ql_bk,dlat,dlon,dpres1d,dtime, &
-         hrdifsig,nsig,mype,nfldsig)
-      call tintrp3(ges_qi,qi_bk,dlat,dlon,dpres1d,dtime, &
-         hrdifsig,nsig,mype,nfldsig)
-      call tintrp3(ges_tsen,t_bk,dlat,dlon,dpres1d,dtime, &
-         hrdifsig,nsig,mype,nfldsig)
-      call tintrp3(ges_q,q_bk,dlat,dlon,dpres1d,dtime, &
-         hrdifsig,nsig,mype,nfldsig)
-      call tintrp2a11(ges_z,z_bk,dlat,dlon,dtime, &
-         hrdifsig,mype,nfldsig)
-      call tintrp2a1(geop_hgtl,h_bk,dlat,dlon,dtime, &
-         hrdifsig,nsig,mype,nfldsig)
-
-      cld_cover_obs=miss_obs_single
-      pcp_type_obs=miss_obs_int
-      if (ocld(1) > 999) then
-          cycle
-      endif
-
-      call cloudCover_surface_col(mype,nsig,cld_bld_hgt,h_bk,z_bk, &
-              nvarcld_p,ocld,oelvtn,wthr_type,pcp_type_obs,vis2qc,cld_cover_obs)
-
-
-      cldwater_obs=miss_obs_single
-      cldice_obs=miss_obs_single
-
-       
-      call cloudLWC_pseudo(mype,nsig,q_bk,t_bk,p_bk,      &
-               cld_cover_obs,nobs, &
-               cldwater_obs,cldice_obs)
-
-      obzero =0
-      do k=1,nsig
-         qob=miss_obs_real
-         if (cldwater_obs(k) > -0.000001) then
-             if (cldice_obs(k) > -0.000001) then
-                qob=cldwater_obs(k)+cldice_obs(k)
-             else
-                qob=cldwater_obs(k)
-             endif
+         if (nobs_bins>1) then
+            ibin = NINT( dtime/hr_obsbin ) + 1
          else
-             if (cldice_obs(k) > -0.000001) then
-                qob=cldice_obs(k)
+            ibin = 1
+         endif
+         IF (ibin<1.OR.ibin>nobs_bins) write(6,*)mype,'Error nobs_bins,ibin=',nobs_bins,ibin
+   
+! Check Haze and Dust station
+         data(iuse,i)=0 
+         
+         if(data(iuse,i) > 50 ) cycle   ! do not use this data
+         ovis   = data(ivis,i)
+   
+         ocld=miss_obs_int
+         do j=1,3
+             cldamt =  data(icldamt+j-1,i)         ! cloud amount
+             cldhgt =  int(data(icldhgt+j-1,i))   ! cloud bottom height
+             if(cldamt < spval_p .and. cldhgt < spval_p) then
+               if(abs(cldamt-0._r_kind) < 0.0001_r_kind) then
+                 ocld(j)=0                 !msky='CLR'
+                 cldhgt=spval_p
+               elseif(abs(cldamt-13._r_kind) < 0.0001_r_kind) then
+                 ocld(j)=1                 !msky='FEW'
+               elseif(abs(cldamt-11._r_kind) < 0.0001_r_kind) then
+                 ocld(j)=2                 !msky='SCT'
+               elseif(abs(cldamt-12._r_kind) < 0.0001_r_kind) then
+                 ocld(j)=3                 !msky='BKN'
+               elseif((abs(cldamt-8._r_kind) < 0.0001_r_kind) .or. &
+                      (abs(cldamt-9._r_kind) < 0.0001_r_kind)) then
+                 ocld(j)=4                 !   msky='OVC'   msky='VV '
+               elseif(abs(cldamt-1._r_kind) < 0.0001_r_kind) then
+                 ocld(j)=1
+               elseif(abs(cldamt-2._r_kind) < 0.0001_r_kind .or.   &
+                      abs(cldamt-3._r_kind) < 0.0001_r_kind  ) then
+                 ocld(j)=2
+               elseif(cldamt > 3.5_r_kind .and. cldamt < 6.5_r_kind  ) then
+                 ocld(j)=3
+               elseif(abs(cldamt-7._r_kind) < 0.0001_r_kind ) then
+                 ocld(j)=4
+               else
+                 ocld(j) = miss_obs_int          ! wrong cloud observation type
+                 cldhgt = spval_p
+               endif
+               if(cldhgt > 0.0_r_kind ) then
+                 ocld(6+j) = cldhgt
+               else
+                 ocld(j) =  miss_obs_int
+                 ocld(6+j) = miss_obs_int 
+               endif
+             endif
+         enddo   ! j
+   
+         owx=''
+         do j=1,3
+             awx    =  data(iwthr+j-1,i)        ! weather
+             mwx='   '
+             if(awx>=10._r_kind .and.awx<=12._r_kind ) mwx='BR '
+             if(awx>=110._r_kind.and.awx<=112._r_kind) mwx='BR '
+             if(awx==5._r_kind  .or. awx==105._r_kind) mwx='HZ '
+             if(awx>=40._r_kind .and.awx<=49._r_kind ) mwx='FG '
+             if(awx>=130._r_kind.and.awx<=135._r_kind) mwx='FG '
+             if(awx>=50._r_kind .and.awx<=59._r_kind ) mwx='DZ '
+             if(awx>=150._r_kind.and.awx<=159._r_kind) mwx='DZ '
+             if(awx>=60._r_kind .and.awx<=69._r_kind ) mwx='RA '
+             if(awx>=160._r_kind.and.awx<=169._r_kind) mwx='RA '
+             if(awx>=70._r_kind .and.awx<=78._r_kind ) mwx='SN '
+             if(awx>=170._r_kind.and.awx<=178._r_kind) mwx='SN '
+             if(awx==79._r_kind .or. awx==179._r_kind) mwx='PE '
+   
+             if(awx>=80._r_kind .and.awx<=90._r_kind ) mwx='SH '
+             if(awx>=180._r_kind.and.awx<=187._r_kind) mwx='SH '
+             if(awx>=91._r_kind .and.awx<=99._r_kind ) mwx='TH '
+             if(awx>=190._r_kind.and.awx<=196._r_kind) mwx='TH '
+   
+             if (j==1) startwx=1
+             if (j==2) startwx=4
+             if (j==3) startwx=7
+             endwx=startwx+2
+             owx(startwx:endwx)=mwx
+         enddo
+   
+         wthr_type=miss_obs_int
+         if ( owx=='SH'  ) wthr_type=16
+         if ( owx=='TH'  ) wthr_type=1
+         if ( owx=='RA'  ) wthr_type=11
+         if ( owx=='SN'  ) wthr_type=12
+         if ( owx=='PL'  ) wthr_type=13
+         if ( owx=='DZ'  ) wthr_type=14
+         if ( owx=='UP'  ) wthr_type=15
+         if ( owx=='BR'  ) wthr_type=21
+         if ( owx=='FG'  ) wthr_type=22
+   
+         if(data(ivis,i) .ge. spval_P) then
+             ocld(13)=miss_obs_int
+         else
+             if(data(ivis,i) > 100.0_r_kind ) then
+                 ocld(13)=int(data(ivis,i))
+             elseif(data(ivis,i) <=100.0_r_kind .and. data(ivis,i) > 0.0_r_kind ) then
+                 ocld(13)=100
+                 write(6,*) 'setupcldtot, Warning: change visibility to 100 m !!!'
              endif
          endif
-
-         ! make sure very small background values are set to 0
-         if (ql_bk(k) < 0.000001) ql_bk(k)=0.0
-         if (qi_bk(k) < 0.000001) qi_bk(k)=0.0
-
-         if (qob < 99.) then
-
-             qges=(ql_bk(k)+qi_bk(k))*1000.
-
-             if (qob > 0.0 .and. qges > 0.0) then
-                 if (qob < qges) then
-                     dontobcount=dontobcount+1
-                     qob = qges
-                 endif
-             endif
-             ! these are just for error checking
-             obcount=obcount+1
-             if (qob < qobmin) qobmin=qob
-             if (qob > qobmax) qobmax=qob
-
-
-             ! Compute innovations
-             ddiff=(qob-qges)
-             !write(*,'(3I,5f15.4)') mype,i,k,cld_cover_obs(k),cldwater_obs(k),cldice_obs(k),qob,ddiff
-
-
-             luse(i)=.true.
-             muse(i)=.true.
-
-        !*******************************************************************************
-        if (i_cloud_q_innovation .ne. 2) then
-            write(*,*) "Warning - setupcldtot: this code version is only designed for i_cloud_q_innovation == 2"
-            return
-        else
-
-!!!!!Warning you hard coded q values here
-            ibin = 1 ! q ob bin
-            is = 4   ! q ob type number, these come from list in gsiparm
-
-            allocate(my_headq)
-            m_alloc(ibin) = m_alloc(ibin) +1
-            my_node => my_headq  
-            call obsLList_appendNode(qhead(ibin),my_node)
-            my_node => null()
-
-            my_headq%idv = is
-            my_headq%iob = i
-
-            ! Set (i,j,k) indices of guess gridpoint that bound obs location
-            mm1=mype+1
-            dpres=k
-            call get_ijk(mm1,dlat,dlon,dpres,my_headq%ij(1),my_headq%wij(1))
-
-            pressure=p_bk(k)*10.0_r_kind
-            cloudqvis= ruc_saturation(t_bk(k),pressure)
-
-            if (qob > 0.) then
-             
-                if (q_bk(k) < cloudqvis) then
-                    qv_ob=cloudqvis
-                    ddiff=qv_ob-q_bk(k)
-                    q_build_count=q_build_count+1
+   
+         ! background profiles in observation location and time
+         call tintrp3(ges_prsl,p_bk,dlat,dlon,dpres1d,dtime, &
+            hrdifsig,nsig,mype,nfldsig)
+         call tintrp3(ges_ql,ql_bk,dlat,dlon,dpres1d,dtime, &
+            hrdifsig,nsig,mype,nfldsig)
+         call tintrp3(ges_qi,qi_bk,dlat,dlon,dpres1d,dtime, &
+            hrdifsig,nsig,mype,nfldsig)
+         call tintrp3(ges_tsen,t_bk,dlat,dlon,dpres1d,dtime, &
+            hrdifsig,nsig,mype,nfldsig)
+         call tintrp3(ges_q,q_bk,dlat,dlon,dpres1d,dtime, &
+            hrdifsig,nsig,mype,nfldsig)
+         call tintrp2a11(ges_z,z_bk,dlat,dlon,dtime, &
+            hrdifsig,mype,nfldsig)
+         call tintrp2a1(geop_hgtl,h_bk,dlat,dlon,dtime, &
+            hrdifsig,nsig,mype,nfldsig)
+   
+         cld_cover_obs=miss_obs_single
+         pcp_type_obs=miss_obs_int
+         if (ocld(1) > 999) then
+             cycle
+         endif
+   
+         call cloudCover_surface_col(mype,nsig,cld_bld_hgt,h_bk,z_bk, &
+                 nvarcld_p,ocld,oelvtn,wthr_type,pcp_type_obs,vis2qc,cld_cover_obs)
+   
+   
+         cldwater_obs=miss_obs_single
+         cldice_obs=miss_obs_single
+   
+          
+         call cloudLWC_pseudo(mype,nsig,q_bk,t_bk,p_bk,      &
+                  cld_cover_obs,nobs, &
+                  cldwater_obs,cldice_obs)
+   
+         obzero =0
+         do k=1,nsig
+            qob=miss_obs_real
+            if (cldwater_obs(k) > -0.000001) then
+                if (cldice_obs(k) > -0.000001) then
+                   qob=cldwater_obs(k)+cldice_obs(k)
                 else
-                    qv_ob=q_bk(k)
-                    ddiff=qv_ob-q_bk(k)
-                    q_build0_count=q_build0_count+1
-                endif
-
-            elseif (qob > -0.000001) then
-                
-                if( q_bk(k) > cloudqvis*rh_clear_p) then
-                    qv_ob=cloudqvis*rh_clear_p
-                    ddiff=qv_ob-q_bk(k)
-                    q_clear_count=q_clear_count+1
-                else
-                    qv_ob=q_bk(k)
-                    ddiff=qv_ob-q_bk(k) 
-                    q_clear0_count=q_clear0_count+1
+                   qob=cldwater_obs(k)
                 endif
             else
-                cycle
+                if (cldice_obs(k) > -0.000001) then
+                   qob=cldice_obs(k)
+                endif
             endif
+   
+            ! make sure very small background values are set to 0
+            if (ql_bk(k) < 0.000001) ql_bk(k)=0.0
+            if (qi_bk(k) < 0.000001) qi_bk(k)=0.0
+   
+            if (qob < 99.) then
+   
+                qges=(ql_bk(k)+qi_bk(k))*1000.
+   
+                if (qob > 0.0 .and. qges > 0.0) then
+                    if (qob < qges) then
+                        dontobcount=dontobcount+1
+                        qob = qges
+                    endif
+                endif
+                ! these are just for error checking
+                obcount=obcount+1
+                if (qob < qobmin) qobmin=qob
+                if (qob > qobmax) qobmax=qob
+   
+   
+                ! Compute innovations
+                ddiff=(qob-qges)
+                !write(*,'(3I,5f15.4)') mype,i,k,cld_cover_obs(k),cldwater_obs(k),cldice_obs(k),qob,ddiff
+   
+   
+                luse(i)=.true.
+                muse(i)=.true.
+   
+           !*******************************************************************************
+               if (i_cloud_q_innovation .ne. 2) then
+                   write(*,*) "Warning - setupcldtot: this code version is only designed for i_cloud_q_innovation == 2"
+                   return
+               else
+   
+!!!!!Warning you hard coded q values here
+                   ibin = 1 ! q ob bin
+                   is = 4   ! q ob type number, these come from list in gsiparm
+       
+                   allocate(my_headq)
+                   m_alloc(ibin) = m_alloc(ibin) +1
+                   my_node => my_headq  
+                   call obsLList_appendNode(qhead(ibin),my_node)
+                   my_node => null()
+       
+                   my_headq%idv = is
+                   my_headq%iob = i
+       
+                   ! Set (i,j,k) indices of guess gridpoint that bound obs location
+                   mm1=mype+1
+                   dpres=k
+                   call get_ijk(mm1,dlat,dlon,dpres,my_headq%ij(1),my_headq%wij(1))
+       
+                   pressure=p_bk(k)*10.0_r_kind
+                   cloudqvis= ruc_saturation(t_bk(k),pressure)
+       
+                   if (qob > 0.) then
+                    
+                       if (q_bk(k) < cloudqvis) then
+                           qv_ob=cloudqvis
+                           ddiff=qv_ob-q_bk(k)
+                           q_build_count=q_build_count+1
+                       else
+                           qv_ob=q_bk(k)
+                           ddiff=qv_ob-q_bk(k)
+                           q_build0_count=q_build0_count+1
+                       endif
+       
+                   elseif (qob > -0.000001) then
+                       
+                       if( q_bk(k) > cloudqvis*rh_clear_p) then
+                           qv_ob=cloudqvis*rh_clear_p
+                           ddiff=qv_ob-q_bk(k)
+                           q_clear_count=q_clear_count+1
+                       else
+                           qv_ob=q_bk(k)
+                           ddiff=qv_ob-q_bk(k) 
+                           q_clear0_count=q_clear0_count+1
+                       endif
+                   else
+                       cycle
+                   endif
+       
+                   q_obcount=q_obcount+1
+       
+                   error=one/(cloudqvis*3.E-01_r_kind)
+                   ratio_errors=1.0_r_kind
+                   val = error*ddiff
+       
+                   my_headq%res    = ddiff
+                   my_headq%err2   = error**2
+                   my_headq%raterr2= ratio_errors**2
+                   my_headq%time   = dtime
+                   my_headq%b      = 10.0 !cvar_b(ikx) 
+                   my_headq%pg     = 0.0  !cvar_pg(ikx)
+                   my_headq%jb     = var_jb 
+                   my_headq%luse   = luse(i)
+       
+       
+                   ! Save select output for diagnostic file
+                   if(conv_diagsave .and. luse(i))then
+                      iip=iip+1
 
-            q_obcount=q_obcount+1
+                      rstation_id     = data(id,i)
+                      cdiagbufp(iip)  = station_id         ! station id
 
-            error=one/(cloudqvis*3.E-01_r_kind)
-            ratio_errors=1.0_r_kind
-            val = error*ddiff
+                      err_input = error   ! data(ier2,i)
+                      err_adjst = error   ! data(ier,i)
+       
+                      if (ratio_errors*error>tiny_r_kind) then
+                         err_final = one/(ratio_errors*error)
+                      else
+                         err_final = huge_single
+                      endif
+       
+                      errinv_input = huge_single
+                      errinv_adjst = huge_single
+                      errinv_final = huge_single
+                      if (err_input>tiny_r_kind) errinv_input = one/err_input
+                      if (err_adjst>tiny_r_kind) errinv_adjst = one/err_adjst
+                      if (err_final>tiny_r_kind) errinv_final = one/err_final
 
-            my_headq%res    = ddiff
-            my_headq%err2   = error**2
-            my_headq%raterr2= ratio_errors**2
-            my_headq%time   = dtime
-            my_headq%b      = 10.0 !cvar_b(ikx) 
-            my_headq%pg     = 0.0  !cvar_pg(ikx)
-            my_headq%jb     = var_jb 
-            my_headq%luse   = luse(i)
+                      call contents_save_diag_
+                      if (binary_diag) rdiagbufp(1:20,iip)=all_qv_obs(1:20,iip)
+                      if (netcdf_diag) call contents_netcdf_diag_
 
+                      if (i_ens_mean == 1) then
+       
+                          all_qv_obs(24,iip)=dlat
+                          all_qv_obs(25,iip)=dlon
+                          all_qv_obs(26,iip)=k
+                          all_qv_obs(27,iip)=dtime
+                          all_qv_obs(28,iip)=rstation_id
+                          all_qv_obs(29,iip)=cloudqvis
+       
+                      endif
+                   endif    !conv_diagsave .and. luse(i))
+       
+               endif !i_cloud_q_innovation
+   
+           endif !end valid ob
+         enddo !end k loop
+     enddo ! end loop over obs
 
-            ! Save select output for diagnostic file
-            if(conv_diagsave .and. luse(i))then
-              iip=iip+1
-              rstation_id     = data(id,i)
-              cdiagbufp(iip)    = station_id         ! station id
-
-              ! force new ob type 
-              rdiagbufp(1,iip)  = 199 
-              rdiagbufp(2,iip)  = icsubtype(ikx)     ! observation subtype
-
-              rdiagbufp(3,iip)  = data(ilate,i)      ! observation latitude (degrees)
-              rdiagbufp(4,iip)  = data(ilone,i)      ! observation longitude (degrees)
-              rdiagbufp(5,iip)  = data(istnelv,i)    ! station elevation (meters)
-              rdiagbufp(6,iip)  = pressure           ! observation pressure
-              rdiagbufp(7,iip)  = data(icldhgt,i)    ! observation height (meters)
-              rdiagbufp(8,iip)  = dtime-time_offset  ! obs time (hours relative to analysis time)
-              rdiagbufp(9,iip)  = 1.                 ! qc
-              rdiagbufp(10,iip) = var_jb             ! non linear qc b parameter
-              rdiagbufp(11,iip) = data(iuse,i)       ! read_prepbufr data usage flag
-
-              if(muse(i)) then
-                 rdiagbufp(12,iip) = one             ! analysis usage flag (1=use, -1=not used)
-              else
-                 rdiagbufp(12,iip) = -one
-              endif
-
-              err_input = error   ! data(ier2,i)
-              err_adjst = error   ! data(ier,i)
-
-             if (ratio_errors*error>tiny_r_kind) then
-                 err_final = one/(ratio_errors*error)
-             else
-                 err_final = huge_single
-             endif
-
-             errinv_input = huge_single
-             errinv_adjst = huge_single
-             errinv_final = huge_single
-             if (err_input>tiny_r_kind) errinv_input = one/err_input
-             if (err_adjst>tiny_r_kind) errinv_adjst = one/err_adjst
-             if (err_final>tiny_r_kind) errinv_final = one/err_final
-
-             rdiagbufp(13,iip) = rwgt               ! nonlinear qc relative weight
-             rdiagbufp(14,iip) = errinv_input       ! prepbufr inverse observation error
-             rdiagbufp(15,iip) = errinv_adjst       ! read_prepbufr inverse obs error
-             rdiagbufp(16,iip) = errinv_final       ! final inverse observation error
-
-             rdiagbufp(17,iip) = qv_ob              ! observation
-             rdiagbufp(18,iip) = ddiff              ! obs-ges used in analysis
-             rdiagbufp(19,iip) = ddiff              !qob-qges  !obs-ges w/o bias correction (future slot)
-
-             rdiagbufp(20,iip) = q_bk(k) !qsges              ! guess saturation specific humidity
-
-
-             if (i_ens_mean == 1) then
-
-               all_qv_obs(1:20,iip)=rdiagbufp(1:20,iip)
-
-               all_qv_obs(24,iip)=dlat
-               all_qv_obs(25,iip)=dlon
-               all_qv_obs(26,iip)=k
-               all_qv_obs(27,iip)=dtime
-               all_qv_obs(28,iip)=rstation_id
-               all_qv_obs(29,iip)=cloudqvis
-
-             endif
-           endif    !conv_diagsave .and. luse(i))
-
-
-        endif !i_cloud_q_innovation
-
-        endif !end valid ob
-      enddo !end k loop
-  enddo ! end loop over obs
-
-  write(*,'(A,7i)') 'qobcount', mype,q_obcount,obcount,q_build_count,q_build0_count,q_clear_count,q_clear0_count
-
-    deallocate(cld_cover_obs,pcp_type_obs)
-    deallocate(ocld)
-    deallocate(cldwater_obs,cldice_obs)
+     deallocate(cld_cover_obs,pcp_type_obs)
+     deallocate(ocld)
+     deallocate(cldwater_obs,cldice_obs)
   endif !i_ens_mem .ne. 2
 
   write(myfile, "(A11,I3.3)") myname,mype
@@ -731,7 +709,6 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            rdiagbufp(21:29,i)=all_qv_obs(21:29,i)
         endif
      enddo
-     write(*,*) "iCOUNT", i, iip, q_obcount
 
      deallocate(all_qv_obs)
      deallocate(stationbuf)
@@ -742,9 +719,12 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   if(conv_diagsave)then
      if (i_cloud_q_innovation == 2 .and. iip>0) then
          call dtime_show(myname,'diagsave:q',i_q_ob_type)
-         write(7)'  q',nchar,nreal,iip,mype,ioff0
-         write(7)cdiagbufp(1:iip),rdiagbufp(:,1:iip)
-         deallocate(cdiagbufp,rdiagbufp)
+        if(netcdf_diag) call nc_diag_write
+        if(binary_diag)then
+           write(7)'  q',nchar,nreal,iip,mype,ioff0
+           write(7)cdiagbufp(1:iip),rdiagbufp(:,1:iip)
+        endif
+        deallocate(cdiagbufp,rdiagbufp)
      elseif (i_cloud_q_innovation == 1 .and. ii>0) then
          deallocate(cdiagbuf,rdiagbuf)
          write(*,*) "Setupcldtot: DIAG not setup for i_cloud_q_innovation == 1!!!"
@@ -921,5 +901,111 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
     if(allocated(ges_q)) deallocate(ges_q)
   end subroutine final_vars_
 
-end subroutine setupcldtot
+  subroutine init_netcdf_diag_
+  
+  character(len=80) string
+  character(len=128) diag_conv_file
+  integer(i_kind) ncd_fileid,ncd_nobs
+  logical append_diag
+  logical,parameter::verbose=.false.
 
+! open netcdf diag file
+     write(string,900) jiter
+900  format('conv_cldtot_',i2.2,'.nc4')
+     diag_conv_file=trim(dirname) // trim(string)
+
+     inquire(file=diag_conv_file, exist=append_diag)
+
+     if (append_diag) then
+        call nc_diag_read_init(diag_conv_file,ncd_fileid)
+        ncd_nobs = nc_diag_read_get_dim(ncd_fileid,'nobs')
+        call nc_diag_read_close(diag_conv_file)
+
+        if (ncd_nobs > 0) then
+           if(verbose) print *,'file ' // trim(diag_conv_file) // ' exists.  Appending.  nobs,mype=',ncd_nobs,mype
+        else
+           if(verbose) print *,'file ' // trim(diag_conv_file) // ' exists but contains no obs.  Not appending. nobs,mype=',ncd_nobs,mype
+           append_diag = .false. ! if there are no obs in existing file, then do not try to append
+        endif
+     end if
+
+     call nc_diag_init(diag_conv_file)
+
+     if (.not. append_diag) then ! don't write headers on append - the module will break?
+        call nc_diag_header("date_time",ianldate )
+        call nc_diag_header("Number_of_state_vars", nsdim          )
+     endif
+
+  end subroutine init_netcdf_diag_
+
+  subroutine contents_save_diag_
+
+! force new ob type 
+      all_qv_obs(1,iip)  = 199 
+      all_qv_obs(2,iip)  = icsubtype(ikx)     ! observation subtype
+    
+      all_qv_obs(3,iip)  = data(ilate,i)      ! observation latitude (degrees)
+      all_qv_obs(4,iip)  = data(ilone,i)      ! observation longitude (degrees)
+      all_qv_obs(5,iip)  = data(istnelv,i)    ! station elevation (meters)
+      all_qv_obs(6,iip)  = pressure           ! observation pressure
+      all_qv_obs(7,iip)  = data(icldhgt,i)    ! observation height (meters)
+      all_qv_obs(8,iip)  = dtime-time_offset  ! obs time (hours relative to analysis time)
+      all_qv_obs(9,iip)  = 1.                 ! qc
+      all_qv_obs(10,iip) = var_jb             ! non linear qc b parameter
+      all_qv_obs(11,iip) = data(iuse,i)       ! read_prepbufr data usage flag
+     
+      if(muse(i)) then
+         all_qv_obs(12,iip) = one             ! analysis usage flag (1=use, -1=not used)
+      else
+         all_qv_obs(12,iip) = -one
+      endif
+     
+      all_qv_obs(13,iip) = rwgt               ! nonlinear qc relative weight
+      all_qv_obs(14,iip) = errinv_input       ! prepbufr inverse observation error
+      all_qv_obs(15,iip) = errinv_adjst       ! read_prepbufr inverse obs error
+      all_qv_obs(16,iip) = errinv_final       ! final inverse observation error
+     
+      all_qv_obs(17,iip) = qv_ob              ! observation
+      all_qv_obs(18,iip) = ddiff              ! obs-ges used in analysis
+      all_qv_obs(19,iip) = ddiff              !qob-qges  !obs-ges w/o bias correction (future slot)
+
+      all_qv_obs(20,iip) = q_bk(k) !qsges              ! guess saturation specific humidity
+
+  end subroutine contents_save_diag_
+
+  subroutine contents_netcdf_diag_
+! Observation class
+  character(7),parameter     :: obsclass = '   lwcp'
+  real(r_kind),parameter::     missing = -9.99e9_r_kind
+
+  real(r_kind),dimension(miter) :: obsdiag_iuse
+
+    call nc_diag_metadata("Station_ID",              station_id             )
+    call nc_diag_metadata("Observation_Type",        int(all_qv_obs(1,iip)) )
+    call nc_diag_metadata("Observation_Subtype",     int(icsubtype(ikx))    )
+    call nc_diag_metadata("Latitude",                sngl(data(ilate,i))    )
+    call nc_diag_metadata("Longitude",               sngl(data(ilone,i))    )
+    call nc_diag_metadata("Station_Elevation",       sngl(data(istnelv,i))  )
+    call nc_diag_metadata("Pressure",                sngl(all_qv_obs(6,iip)))
+    call nc_diag_metadata("Height",                  sngl(data(iobshgt,i))  )
+    call nc_diag_metadata("Time",                    sngl(dtime-time_offset))
+    call nc_diag_metadata("Prep_QC_Mark",            sngl(all_qv_obs(9,iip)))
+    call nc_diag_metadata("Setup_QC_Mark",           sngl(rmiss_single)     )
+    call nc_diag_metadata("Prep_Use_Flag",           sngl(data(iuse,i))     )
+    if(muse(i)) then
+       call nc_diag_metadata("Analysis_Use_Flag",    sngl(one)              )
+    else
+       call nc_diag_metadata("Analysis_Use_Flag",    sngl(-one)             )
+    endif
+
+    call nc_diag_metadata("Nonlinear_QC_Rel_Wgt",    sngl(rwgt)             )
+    call nc_diag_metadata("Errinv_Input",            sngl(errinv_input)     )
+    call nc_diag_metadata("Errinv_Adjust",           sngl(errinv_adjst)     )
+    call nc_diag_metadata("Errinv_Final",            sngl(errinv_final)     )
+    call nc_diag_metadata("Observation",             sngl(qv_ob)            )
+    call nc_diag_metadata("Obs_Minus_Forecast_adjusted",   sngl(ddiff)      )
+    call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", sngl(ddiff))
+
+  end subroutine contents_netcdf_diag_
+
+end subroutine setupcldtot
