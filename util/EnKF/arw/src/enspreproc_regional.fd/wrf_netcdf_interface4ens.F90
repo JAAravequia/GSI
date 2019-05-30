@@ -29,7 +29,7 @@ subroutine read_netcdf_mass4ens
   use kinds, only: r_single,i_kind, r_kind
   use constants, only: h300,one,r0_01,zero
   use gsi_4dvar, only: nhr_assimilation
-  use rapidrefresh_cldsurf_mod, only: l_cloud_analysis,l_gsd_soilTQ_nudge
+  use rapidrefresh_cldsurf_mod, only: l_hydrometeor_bkio,l_gsd_soilTQ_nudge
   use gsi_metguess_mod, only: gsi_metguess_get
   use gridmod, only: wrf_mass_hybridcord
 
@@ -566,7 +566,7 @@ subroutine update_netcdf_mass4ens
 
   use kinds, only: r_single,i_kind,r_kind
   use constants, only: h300,tiny_single
-  use rapidrefresh_cldsurf_mod, only: l_cloud_analysis,l_gsd_soilTQ_nudge
+  use rapidrefresh_cldsurf_mod, only: l_hydrometeor_bkio,l_gsd_soilTQ_nudge
   use gsi_metguess_mod, only: gsi_metguess_get,GSI_MetGuess_Bundle
   use gsi_bundlemod, only: GSI_BundleGetPointer
   use guess_grids, only: ntguessig
@@ -1032,7 +1032,7 @@ subroutine update_netcdf_mass4ens
           ierr                                 )
   endif
 
-  if (l_cloud_analysis .or. nguess>0) then
+  if (l_hydrometeor_bkio .or. nguess>0) then
     do k=1,nsig_regional
        read(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional)   !  Qc
        write(6,*)' k,max,min,mid Qc=',k,maxval(field3(:,:,k)),minval(field3(:,:,k)), &
@@ -1200,7 +1200,7 @@ subroutine update_netcdf_mass4ens
          start_index,end_index1,               & !pat
          ierr                                 )
 
-  endif     ! l_cloud_analysis
+  endif     ! l_hydrometeor_bkio
 
   deallocate(field1,field2,field2b,ifield2,field3,field3u,field3v)
   call ext_ncd_ioclose(dh1, Status)
