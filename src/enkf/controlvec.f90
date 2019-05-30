@@ -305,17 +305,18 @@ if (nproc <= ntasks_io-1) then
       if (nproc == 0) then
          grdin_mean = grdin_mean/real(nanals)
          do nvar=1,nc3d
-            print *,'ens. mean anal. increment min/max ', cvars3d(nvar),   &
+            write(6,100) trim(cvars3d(nvar)),   &
                 minval(grdin_mean(:,clevels(nvar-1)+1:clevels(nvar))),     &
                 maxval(grdin_mean(:,clevels(nvar-1)+1:clevels(nvar)))
          enddo
          do nvar=1,nc2d
-            print *,'ens. mean anal. increment min/max ', cvars2d(nvar),   &
+            write(6,100) trim(cvars2d(nvar)),   &
                 minval(grdin_mean(:,clevels(nc3d) + nvar)),                &
                 maxval(grdin_mean(:,clevels(nc3d) + nvar))
          enddo
       endif
    enddo
+100 format('ens. mean anal. increment min/max  ',a,2x,g19.12,2x,g19.12)
    if (nproc == 0) then
       deallocate(grdin_mean)
    endif

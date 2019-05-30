@@ -284,13 +284,13 @@ nmem=20
 imem=1
 while [[ $imem -le $nmem ]]; do
    member="_mem"`printf %03i $imem`
-   if cmp -s sanl$member.${exp1} sanl$member.${exp2} 
+   if ! cmp -s sanl$member.${exp1} sanl$member.${exp2} 
 then
-   echo 'sanl'$member'.'${exp1}' sanl'$member'.'${exp2}' are identical'
-   echo
+   echo 'sanl'$member'.'${exp1}' sanl'$member'.'${exp2}' are NOT identical'
 fi
    (( imem = $imem + 1 ))
 done
+echo
 } >> $output
    fi
 fi
@@ -381,14 +381,13 @@ else
    imem=1
    while [[ $imem -le $nmem ]]; do
       member="_mem"`printf %03i $imem`
-      if cmp -s sanl$member.${exp1} sanl$member.${exp3}
+      if ! cmp -s sanl$member.${exp1} sanl$member.${exp3}
       then
-      echo 'sanl'$member'.'${exp1}' sanl'$member'.'${exp3}' are identical'
-      echo
+      echo 'sanl'$member'.'${exp1}' sanl'$member'.'${exp3}' are NOT identical'
       fi
    (( imem = $imem + 1 ))
    done
-
+   echo
 } >> $output
       fi
    fi
