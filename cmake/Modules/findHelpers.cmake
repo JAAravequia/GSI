@@ -1,3 +1,4 @@
+
 function (findSrc varName version varDir )
       if(EXISTS ${CMAKE_SOURCE_DIR}/libsrc/${varName})
           message("setting source for ${varName} to be in libsrc")
