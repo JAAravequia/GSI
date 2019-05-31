@@ -152,7 +152,6 @@ subroutine get_num_convobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id
               error=rdiagbuf(16,i)
               obmax=abs(rdiagbuf(17,i))
               if(obtype == ' uv')obmax = max(obmax,abs(rdiagbuf(20,i)))
-              ! DCD 25 Feb 2019
               ! Associate a pressure value with pw obs so that they can be assimilated.
               if (obtype == ' pw') then
                 if (pres < 0.001_r_kind .or. pres > 1200._r_kind) then
@@ -1083,7 +1082,6 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
           else
              pres = rdiagbuf(6,n)
           endif
-          ! DCD 25 Feb 2019
           ! Associate a pressure value with pw obs so that they can be assimilated.
           if (obtype == ' pw') then
             if (pres < 0.001_r_kind .or. pres > 1200._r_kind) then

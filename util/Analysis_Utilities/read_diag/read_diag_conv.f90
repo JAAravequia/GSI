@@ -39,9 +39,11 @@ PROGRAM read_diag_conv
 !     write(7)cdiagbuf(1:ii),rdiagbuf(:,1:ii)
 !
 
-  use kinds, only: r_kind,r_single,i_kind
+!  use kinds, only: r_kind,r_single,i_kind
 
   implicit none
+
+  integer,parameter :: r_kind=8,r_single=4,i_kind=4
 
   real(r_kind) tiny_r_kind
 !
