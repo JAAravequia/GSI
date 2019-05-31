@@ -1023,6 +1023,7 @@
 !                         =2  if selection is median of samples
 !      l_precip_clear_only - the precipitation analysis only clears; it does not
 !                            make any updates for positive precipitating hydrometeors
+!      l_fog_off           - turn off using fog observations
 !      cld_bld_coverage    - cloud coverage required for qc/qi building
 !      cld_clr_coverage    - cloud coverage required for qc/qi clearing
 !      i_cloud_q_innovation - integer to choose if and how cloud obs are used

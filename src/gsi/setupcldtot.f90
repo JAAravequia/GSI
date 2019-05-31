@@ -606,7 +606,6 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                       iip=iip+1
 
                       rstation_id     = data(id,i)
-                      cdiagbufp(iip)  = station_id         ! station id
 
                       err_input = error   ! data(ier2,i)
                       err_adjst = error   ! data(ier,i)
@@ -624,12 +623,12 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                       if (err_adjst>tiny_r_kind) errinv_adjst = one/err_adjst
                       if (err_final>tiny_r_kind) errinv_final = one/err_final
 
-                      call contents_save_diag_
-                      if (binary_diag) rdiagbufp(1:20,iip)=all_qv_obs(1:20,iip)
+                      if (binary_diag) call contents_binary_diag_
                       if (netcdf_diag) call contents_netcdf_diag_
 
                       if (i_ens_mean == 1) then
        
+                          all_qv_obs(1:20,iip)=rdiagbufp(1:20,iip)
                           all_qv_obs(24,iip)=dlat
                           all_qv_obs(25,iip)=dlon
                           all_qv_obs(26,iip)=k
@@ -645,6 +644,9 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            endif !end valid ob
          enddo !end k loop
      enddo ! end loop over obs
+  
+     write(*,'(A,7i)') 'qobcount',mype,q_obcount,obcount,q_build_count, &
+                                  q_build0_count,q_clear_count,q_clear0_count
 
      deallocate(cld_cover_obs,pcp_type_obs)
      deallocate(ocld)
@@ -701,12 +703,8 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         ddiff=qv_ob-q_bk(k)
 
         if(conv_diagsave)then
-           cdiagbufp(i)    = station_id 
-           rdiagbufp(1:17,i)=all_qv_obs(1:17,i)
-           rdiagbufp(18,i) = ddiff  
-           rdiagbufp(19,i) = ddiff     
-           rdiagbufp(20,i) = q_bk(k)  
-           rdiagbufp(21:29,i)=all_qv_obs(21:29,i)
+           if (binary_diag) call contents_binary_diag_mem_
+           if (netcdf_diag) call contents_netcdf_diag_mem_
         endif
      enddo
 
@@ -938,58 +936,65 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   end subroutine init_netcdf_diag_
 
-  subroutine contents_save_diag_
+  subroutine contents_binary_diag_
 
+      cdiagbufp(iip)  = station_id           ! station id
 ! force new ob type 
-      all_qv_obs(1,iip)  = 199 
-      all_qv_obs(2,iip)  = icsubtype(ikx)     ! observation subtype
+      rdiagbufp(1,iip)  = 199 
+      rdiagbufp(2,iip)  = icsubtype(ikx)     ! observation subtype
     
-      all_qv_obs(3,iip)  = data(ilate,i)      ! observation latitude (degrees)
-      all_qv_obs(4,iip)  = data(ilone,i)      ! observation longitude (degrees)
-      all_qv_obs(5,iip)  = data(istnelv,i)    ! station elevation (meters)
-      all_qv_obs(6,iip)  = pressure           ! observation pressure
-      all_qv_obs(7,iip)  = data(icldhgt,i)    ! observation height (meters)
-      all_qv_obs(8,iip)  = dtime-time_offset  ! obs time (hours relative to analysis time)
-      all_qv_obs(9,iip)  = 1.                 ! qc
-      all_qv_obs(10,iip) = var_jb             ! non linear qc b parameter
-      all_qv_obs(11,iip) = data(iuse,i)       ! read_prepbufr data usage flag
+      rdiagbufp(3,iip)  = data(ilate,i)      ! observation latitude (degrees)
+      rdiagbufp(4,iip)  = data(ilone,i)      ! observation longitude (degrees)
+      rdiagbufp(5,iip)  = data(istnelv,i)    ! station elevation (meters)
+      rdiagbufp(6,iip)  = pressure           ! observation pressure
+      rdiagbufp(7,iip)  = data(icldhgt,i)    ! observation height (meters)
+      rdiagbufp(8,iip)  = dtime-time_offset  ! obs time (hours relative to analysis time)
+      rdiagbufp(9,iip)  = 1._r_single        ! qc
+      rdiagbufp(10,iip) = var_jb             ! non linear qc b parameter
+      rdiagbufp(11,iip) = data(iuse,i)       ! read_prepbufr data usage flag
      
       if(muse(i)) then
-         all_qv_obs(12,iip) = one             ! analysis usage flag (1=use, -1=not used)
+         rdiagbufp(12,iip) = one             ! analysis usage flag (1=use, -1=not used)
       else
-         all_qv_obs(12,iip) = -one
+         rdiagbufp(12,iip) = -one
       endif
      
-      all_qv_obs(13,iip) = rwgt               ! nonlinear qc relative weight
-      all_qv_obs(14,iip) = errinv_input       ! prepbufr inverse observation error
-      all_qv_obs(15,iip) = errinv_adjst       ! read_prepbufr inverse obs error
-      all_qv_obs(16,iip) = errinv_final       ! final inverse observation error
+      rdiagbufp(13,iip) = rwgt               ! nonlinear qc relative weight
+      rdiagbufp(14,iip) = errinv_input       ! prepbufr inverse observation error
+      rdiagbufp(15,iip) = errinv_adjst       ! read_prepbufr inverse obs error
+      rdiagbufp(16,iip) = errinv_final       ! final inverse observation error
      
-      all_qv_obs(17,iip) = qv_ob              ! observation
-      all_qv_obs(18,iip) = ddiff              ! obs-ges used in analysis
-      all_qv_obs(19,iip) = ddiff              !qob-qges  !obs-ges w/o bias correction (future slot)
+      rdiagbufp(17,iip) = qv_ob              ! observation
+      rdiagbufp(18,iip) = ddiff              ! obs-ges used in analysis
+      rdiagbufp(19,iip) = ddiff              !qob-qges  !obs-ges w/o bias correction (future slot)
 
-      all_qv_obs(20,iip) = q_bk(k) !qsges              ! guess saturation specific humidity
+      rdiagbufp(20,iip) = q_bk(k) !qsges              ! guess saturation specific humidity
 
-  end subroutine contents_save_diag_
+  end subroutine contents_binary_diag_
+
+  subroutine contents_binary_diag_mem_
+
+      cdiagbufp(i)    = station_id 
+      rdiagbufp(1:17,i)=all_qv_obs(1:17,i)
+      rdiagbufp(18,i) = ddiff  
+      rdiagbufp(19,i) = ddiff     
+      rdiagbufp(20,i) = q_bk(k)  
+!      rdiagbufp(21:29,i)=all_qv_obs(21:29,i)
+! could be a bug, 1st index max is 23 
+  end subroutine contents_binary_diag_mem_
 
   subroutine contents_netcdf_diag_
-! Observation class
-  character(7),parameter     :: obsclass = '   lwcp'
-  real(r_kind),parameter::     missing = -9.99e9_r_kind
-
-  real(r_kind),dimension(miter) :: obsdiag_iuse
 
     call nc_diag_metadata("Station_ID",              station_id             )
-    call nc_diag_metadata("Observation_Type",        int(all_qv_obs(1,iip)) )
+    call nc_diag_metadata("Observation_Type",        icsubtype(ikx)         )
     call nc_diag_metadata("Observation_Subtype",     int(icsubtype(ikx))    )
     call nc_diag_metadata("Latitude",                sngl(data(ilate,i))    )
     call nc_diag_metadata("Longitude",               sngl(data(ilone,i))    )
     call nc_diag_metadata("Station_Elevation",       sngl(data(istnelv,i))  )
-    call nc_diag_metadata("Pressure",                sngl(all_qv_obs(6,iip)))
+    call nc_diag_metadata("Pressure",                sngl(pressure)         )
     call nc_diag_metadata("Height",                  sngl(data(iobshgt,i))  )
     call nc_diag_metadata("Time",                    sngl(dtime-time_offset))
-    call nc_diag_metadata("Prep_QC_Mark",            sngl(all_qv_obs(9,iip)))
+    call nc_diag_metadata("Prep_QC_Mark",            sngl(1._r_single)      )
     call nc_diag_metadata("Setup_QC_Mark",           sngl(rmiss_single)     )
     call nc_diag_metadata("Prep_Use_Flag",           sngl(data(iuse,i))     )
     if(muse(i)) then
@@ -1007,5 +1012,30 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
     call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", sngl(ddiff))
 
   end subroutine contents_netcdf_diag_
+
+  subroutine contents_netcdf_diag_mem_
+
+    call nc_diag_metadata("Station_ID",              station_id             )
+    call nc_diag_metadata("Observation_Type",        int(all_qv_obs(1,iip))  )
+    call nc_diag_metadata("Observation_Subtype",     int(all_qv_obs(2,iip))  )
+    call nc_diag_metadata("Latitude",                sngl(all_qv_obs(3,iip)) )
+    call nc_diag_metadata("Longitude",               sngl(all_qv_obs(4,iip)) )
+    call nc_diag_metadata("Station_Elevation",       sngl(all_qv_obs(5,iip)) )
+    call nc_diag_metadata("Pressure",                sngl(all_qv_obs(6,iip)) )
+    call nc_diag_metadata("Height",                  sngl(all_qv_obs(7,iip)) )
+    call nc_diag_metadata("Time",                    sngl(all_qv_obs(8,iip)) )
+    call nc_diag_metadata("Prep_QC_Mark",            sngl(all_qv_obs(9,iip)) )
+    call nc_diag_metadata("Setup_QC_Mark",           sngl(rmiss_single)     )
+    call nc_diag_metadata("Prep_Use_Flag",           sngl(all_qv_obs(11,iip)))
+    call nc_diag_metadata("Analysis_Use_Flag",       sngl(all_qv_obs(12,iip)))
+    call nc_diag_metadata("Nonlinear_QC_Rel_Wgt",    sngl(all_qv_obs(13,iip)))
+    call nc_diag_metadata("Errinv_Input",            sngl(all_qv_obs(14,iip)))
+    call nc_diag_metadata("Errinv_Adjust",           sngl(all_qv_obs(15,iip)))
+    call nc_diag_metadata("Errinv_Final",            sngl(all_qv_obs(16,iip)))
+    call nc_diag_metadata("Observation",             sngl(all_qv_obs(17,iip)))
+    call nc_diag_metadata("Obs_Minus_Forecast_adjusted",   sngl(ddiff)      )
+    call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", sngl(ddiff))
+
+  end subroutine contents_netcdf_diag_mem_
 
 end subroutine setupcldtot
