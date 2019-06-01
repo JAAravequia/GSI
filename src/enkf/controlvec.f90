@@ -321,8 +321,7 @@ if (nproc <= ntasks_io-1) then
       deallocate(grdin_mean)
    endif
    deallocate(grdin_mean_tmp)
-   
-   
+
    q_ind = getindex(cvars3d, 'q')
    if (pseudo_rh .and. q_ind > 0) then
       if (use_qsatensmean) then
