@@ -51,8 +51,8 @@ echo "  make -j8" >> output.log
 cat output.log
 
 
-#cmake -DENKF_MODE=WRF -DBUILD_CORELIBS=ON -DBUILD_GSDCLOUD_ARW=ON -DBUILD_UTIL_COM=ON ..  2>&1  | tee output.cmake
-#make -j 8 2>&1 | tee output.compile
+cmake -DENKF_MODE=WRF -DBUILD_CORELIBS=ON -DBUILD_GSDCLOUD_ARW=ON -DBUILD_UTIL_COM=ON ..  2>&1  | tee output.cmake
+make -j 8 2>&1 | tee output.compile
 
 echo -e "\n\nAll build results are at ./build/ \n\n"
 
