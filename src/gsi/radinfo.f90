@@ -105,6 +105,7 @@ module radinfo
   public :: ssmis_precond
   public :: radinfo_adjust_jacobian
   public :: icloud4crtm,iaerosol4crtm
+  public :: crtm_overlap,icloud_f,dw_ocean,dw_land,gfdl_cldefr,rewopt,reiopt
   public :: dec2bin
 
   integer(i_kind),parameter:: numt = 33   ! size of AVHRR bias correction file
@@ -196,11 +197,15 @@ module radinfo
   character(len=20),allocatable,dimension(:):: nusis   ! sensor/instrument/satellite indicator
   character(len=256),save:: crtm_coeffs_path = "./" ! path of CRTM_Coeffs files
 
+  integer(i_kind) :: crtm_overlap, icloud_f
+  logical :: gfdl_cldefr
+  integer(i_kind) :: rewopt, reiopt
   integer(i_kind) :: nsigradjac, nvarjac
   character(len=20),allocatable,dimension(:):: radjacnames
   integer(i_kind),  allocatable,dimension(:):: radjacindxs
 
   real(r_kind) :: biaspredvar
+  real(r_kind) :: dw_ocean, dw_land
   logical,save :: newpc4pred ! controls preconditioning due to sat-bias correction term 
 
   interface radinfo_adjust_jacobian; module procedure adjust_jac_; end interface
@@ -271,6 +276,13 @@ contains
     ssmis_precond = r0_01 ! default preconditioner for ssmis bias terms
     gmi_method = 0        ! 4= default gmi smoothing method
     amsr2_method = 0      ! 5= default amsr2 smoothing method
+    crtm_overlap = 4      ! 4= Average overlap
+    icloud_f = 0          ! GFDL cloud fraction option
+    gfdl_cldefr = .false. ! GFDL cloud effective radius
+    rewopt = -99          ! Option to compute cloud water effective radius
+    reiopt = -99          ! Option to compute cloud ice effective radius
+    dw_ocean = 0.10       ! ocean parameter used in GFDL cloud fraction calcuation
+    dw_land  = 0.16       ! land parameter used in GFDL cloud fraction calcuation
   end subroutine init_rad
 
 

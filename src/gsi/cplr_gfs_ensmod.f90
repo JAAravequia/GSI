@@ -1097,7 +1097,6 @@ subroutine get_user_ens_gfs_member_(grd,member,ntindex,atm_bundle,iret)
 !
 ! program history log:
 !   2016-06-30  mahajan  - initial code
-!   2018-01-07  tong     - add hydrometeors
 !
 !   input argument list:
 !     grd      - grd info for ensemble
@@ -1121,10 +1120,7 @@ subroutine get_user_ens_gfs_member_(grd,member,ntindex,atm_bundle,iret)
     use hybrid_ensemble_parameters, only: ensemble_path
     use hybrid_ensemble_parameters, only: uv_hyb_ens
     use hybrid_ensemble_parameters, only: sp_ens
-    use gsi_bundlemod, only: gsi_bundle, gsi_bundlegetpointer
-    use control_vectors, only: cvars3d,imp_physics
-    use mpeu_util, only: getindex
-    use cloud_efr_mod, only: cloud_calc_gfs2
+    use gsi_bundlemod, only: gsi_bundle
 
     implicit none
 
@@ -1140,10 +1136,6 @@ subroutine get_user_ens_gfs_member_(grd,member,ntindex,atm_bundle,iret)
     character(len=70) :: filename
     logical :: zflag = .false.
     logical,save :: inithead = .true.
-    real(r_kind),pointer,dimension(:,:,:):: en_cw  => NULL()
-    real(r_kind),pointer,dimension(:,:,:):: en_ql  => NULL()
-    real(r_kind),pointer,dimension(:,:,:):: en_qi  => NULL()
-    integer(i_kind) :: icw,istatus
 
     ! if member == 0, read ensemble mean
     if ( member == 0 ) then
@@ -1154,17 +1146,9 @@ subroutine get_user_ens_gfs_member_(grd,member,ntindex,atm_bundle,iret)
 12  format(a,'sigf',i2.2,'_ensmean'     )
 22  format(a,'sigf',i2.2,'_ens_mem',i3.3)
 
-    icw=getindex(cvars3d,'cw')
-
     if ( use_gfs_nemsio ) then
        call general_read_gfsatm_nems(grd,sp_ens,filename,uv_hyb_ens,.false., &
             zflag,atm_bundle,.true.,iret)
-       if(imp_physics == 99 .and. icw > 0) then
-          call gsi_bundlegetpointer (atm_bundle,'cw',en_cw,istatus)
-          call gsi_bundlegetpointer (atm_bundle,'ql',en_ql,istatus)
-          call gsi_bundlegetpointer (atm_bundle,'qi',en_ql,istatus)
-          call cloud_calc_gfs2(en_ql,en_qi,en_cw)
-       end if
     else
        call general_read_gfsatm(grd,sp_ens,sp_ens,filename,uv_hyb_ens,.false., &
             zflag,atm_bundle,inithead,iret)

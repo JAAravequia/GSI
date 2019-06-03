@@ -177,6 +177,7 @@ module qcmod
 
   public :: buddycheck_t,buddydiag_save
   public :: vadwnd_l2rw_qc
+  public :: pcp_screen
   public :: pvis,pcldch,scale_cv,estvisoe,estcldchoe,vis_thres,cldch_thres
 
   logical nlnqc_iter,njqc,vqc
@@ -190,6 +191,7 @@ module qcmod
   logical buddycheck_t
   logical buddydiag_save
   logical vadwnd_l2rw_qc
+  logical pcp_screen
 
   character(10):: vadfile
   integer(i_kind) npres_print
@@ -390,6 +392,7 @@ contains
                            !  obs run through the buddy check
 
     vadwnd_l2rw_qc=.true.  ! When false, DO NOT run the vadwnd qc on level 2 radial wind obs.
+    pcp_screen=.true.
     pvis=one
     pcldch=one
     scale_cv=one

@@ -162,7 +162,7 @@
 !    print *, 'u: ', u_ind, ', v: ', v_ind, ', tv: ', tv_ind, ', tsen: ', tsen_ind
      print *, 'q: ', q_ind, ', oz: ', oz_ind, ', cw: ', cw_ind, ', qi: ', qi_ind
      print *, 'ql: ', ql_ind, ', prse: ', prse_ind
-     print *,' qr, qs, qg: ', qr_ind, qs_ind, qg_ind     
+     print *,' qr: ', qr_ind, 'qs: ', qs_ind, 'qg: ', qg_ind
 !    print *, 'ps: ', ps_ind, ', pst: ', pst_ind, ', sst: ', sst_ind
   endif
 
@@ -341,6 +341,41 @@
               call copytogrdin(ug,cw(:,k))
               grdin(:,levels(cw_ind-1)+k,nb) = cw(:,k)
            endif
+        endif
+        if (imp_physics /= 99) then
+           if (qr_ind > 0) then
+              call nemsio_readrecv(gfile,'rwmr','mid layer',k,nems_wrk,iret=iret)
+              if (iret/=0) then
+                 write(6,*)'gridio/readgriddata: gfs model: problem with nemsio_readrecv(rwmr), iret=',iret
+                 call stop2(23)
+              endif
+              if (nproc == 0) print *,'not zhao-carr, read in qr'
+              if (cliptracers)  where (nems_wrk < clip) nems_wrk = clip
+              ug = nems_wrk
+              call copytogrdin(ug,grdin(:,levels(qr_ind-1)+k,nb))
+           end if
+           if (qs_ind > 0) then
+              call nemsio_readrecv(gfile,'snmr','mid layer',k,nems_wrk,iret=iret)
+              if (iret/=0) then
+                 write(6,*)'gridio/readgriddata: gfs model: problem with nemsio_readrecv(snmr), iret=',iret
+                 call stop2(23)
+              endif
+              if (nproc == 0) print *,'not zhao-carr, read in qs'
+              if (cliptracers)  where (nems_wrk < clip) nems_wrk = clip
+              ug = nems_wrk
+              call copytogrdin(ug,grdin(:,levels(qs_ind-1)+k,nb))
+           end if
+           if (qg_ind > 0) then
+              call nemsio_readrecv(gfile,'grle','mid layer',k,nems_wrk,iret=iret)
+              if (iret/=0) then
+                 write(6,*)'gridio/readgriddata: gfs model: problem with nemsio_readrecv(grle), iret=',iret
+                 call stop2(23)
+              endif
+              if (nproc == 0) print *,'not zhao-carr, read in qg'
+              if (cliptracers)  where (nems_wrk < clip) nems_wrk = clip
+              ug = nems_wrk
+              call copytogrdin(ug,grdin(:,levels(qg_ind-1)+k,nb))
+           end if
         endif
      enddo
   else

@@ -50,7 +50,7 @@
                        biaspredvar,use_edges,passive_bc,newpc4pred,final_rad_vars,emiss_bc,&
                        ssmis_method,ssmis_precond,gmi_method,amsr2_method,bias_zero_start
   use radinfo, only: tzr_qc,tzr_bufrsave
-  use radinfo, only: crtm_coeffs_path
+  use radinfo, only: crtm_coeffs_path,crtm_overlap,icloud_f,gfdl_cldefr,rewopt,reiopt
   use ozinfo, only: diag_ozone,init_oz
   use aeroinfo, only: diag_aero, init_aero, init_aero_vars, final_aero_vars
   use coinfo, only: diag_co,init_co
@@ -67,7 +67,7 @@
   use qcmod, only: dfact,dfact1,create_qcvars,destroy_qcvars,&
       erradar_inflate,tdrerr_inflate,use_poq7,qc_satwnds,&
       init_qcvars,vadfile,noiqc,c_varqc,qc_noirjaco3,qc_noirjaco3_pole,&
-      buddycheck_t,buddydiag_save,njqc,vqc,vadwnd_l2rw_qc, &
+      buddycheck_t,buddydiag_save,njqc,vqc,vadwnd_l2rw_qc,pcp_screen, &
       pvis,pcldch,scale_cv,estvisoe,estcldchoe,vis_thres,cldch_thres
   use pcpinfo, only: npredp,diag_pcp,dtphys,deltim,init_pcp
   use jfunc, only: iout_iter,iguess,miter,factqmin,factqmax, &
@@ -475,6 +475,25 @@
 !     oberror_tune - logical flag to tune oberror table  (true=on)
 !     perturb_fact -  magnitude factor for observation perturbation
 !     crtm_coeffs_path - path of directory w/ CRTM coeffs files
+!     crtm_overlap  - cloud overlap options
+!                     crtm_overlap = 0, No need to calculate overlap (older version (< 2.3.0) of CRTM)
+!                     crtm_overlap = 1, Maximum overlap
+!                     crtm_overlap = 2, Random overlap
+!                     crtm_overlap = 3, Maximum random overlap
+!                     crtm_overlap = 4, Average overlap
+!                     crtm_overlap = 5, Overcase overlap
+!     icloud_f      - GFDL cloud fraction estimation option
+!     gfdl_cldefr   - True = use GFDL's cloud effective radius
+!     rewopt        - Options to compute cloud water effective radius
+!                     = 1, martin et al., 1994
+!                     = 2, martin et al., 1994, gfdl revision
+!                     = 3, kiehl et al., 1994
+!     reiopt        - Options to compute cloud ice effective radius
+!                     = 1, heymsfield and mcfarquhar, 1996
+!                     = 2, donner et al., 1997
+!                     = 3, fu, 2007
+!                     = 4, kristjansson et al., 2000
+!                     = 5, wyser, 1998
 !     print_diag_pcg - logical turn on of printing of GMAO diagnostics in pcgsoi.f90
 !     preserve_restart_date - if true, then do not update regional restart file date.
 !     tsensible - option to use sensible temperature as the analysis variable. works
@@ -574,7 +593,8 @@
        oneobtest,sfcmodel,dtbduv_on,ifact10,l_foto,offtime_data,&
        use_pbl,use_compress,nsig_ext,gpstop,&
        perturb_obs,perturb_fact,oberror_tune,preserve_restart_date, &
-       crtm_coeffs_path,berror_stats, &
+       crtm_coeffs_path,crtm_overlap,icloud_f,gfdl_cldefr, &
+       rewopt,reiopt,berror_stats, &
        newpc4pred,adp_anglebc,angord,passive_bc,use_edges,emiss_bc,upd_pred, &
        ssmis_method, ssmis_precond, gmi_method, amsr2_method, bias_zero_start, &
        ec_amv_qc, lobsdiagsave, lobsdiag_forenkf, &
@@ -806,7 +826,7 @@
        vadfile,noiqc,c_varqc,blacklst,use_poq7,hilbert_curve,tcp_refps,tcp_width,&
        tcp_ermin,tcp_ermax,qc_noirjaco3,qc_noirjaco3_pole,qc_satwnds,njqc,vqc,&
        aircraft_t_bc_pof,aircraft_t_bc,aircraft_t_bc_ext,biaspredt,upd_aircraft,cleanup_tail,&
-       hdist_aircraft,buddycheck_t,buddydiag_save,vadwnd_l2rw_qc,  &
+       hdist_aircraft,buddycheck_t,buddydiag_save,vadwnd_l2rw_qc,pcp_screen, &
        pvis,pcldch,scale_cv,estvisoe,estcldchoe,vis_thres,cldch_thres
 
 ! OBS_INPUT (controls input data):

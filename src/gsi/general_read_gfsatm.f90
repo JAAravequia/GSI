@@ -871,12 +871,9 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
    allocate(g_u(grd%lat2,grd%lon2,grd%nsig),g_v(grd%lat2,grd%lon2,grd%nsig))
    allocate(g_z(grd%lat2,grd%lon2))
 
-   if(imp_physics == 99)then
-      if(cw_cv) cwflag = .true.
-   else
-      if(cw_cv .or. ql_cv .or. iql > 0) qlflag = .true.
-      if(cw_cv .or. qi_cv .or. iqi > 0) qiflag = .true.
-   endif
+   if(cw_cv)cwflag = .true.
+   if(ql_cv .or. iql > 0) qlflag = .true.
+   if(qi_cv .or. iqi > 0) qiflag = .true.
    if(qr_cv .or. iqr > 0) qrflag = .true.
    if(qs_cv .or. iqs > 0) qsflag = .true.
    if(qg_cv .or. iqg > 0) qgflag = .true.
@@ -1211,7 +1208,15 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
             ! Cloud condensate mixing ratio.
             work=zero
             call nemsio_readrecv(gfile,'clwmr','mid layer',k,rwork1d0,iret=iret)
-            if (iret /= 0) call error_msg(trim(my_name),trim(filename),'cw','read',istop+9,iret)
+            if (iret /= 0) call error_msg(trim(my_name),trim(filename),'clwmr','read',istop+9,iret)
+            if (imp_physics == 11) then
+               call nemsio_readrecv(gfile,'icmr','mid layer',k,rwork1d1,iret=iret)
+               if (iret /= 0) then
+                  call error_msg(trim(my_name),trim(filename),'icmr','read',istop+10,iret)
+               else
+                  rwork1d0 = rwork1d0 + rwork1d1
+               endif
+            endif
             if ( diff_res ) then
                grid_b=reshape(rwork1d0,(/size(grid_b,1),size(grid_b,2)/))
                vector(1)=.false.
@@ -1226,7 +1231,6 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
                grid=reshape(rwork1d0,(/size(grid,1),size(grid,2)/))
                call general_fill_ns(grd,grid,work)
             endif
-   
          endif
 
          if ( icount == icm ) then

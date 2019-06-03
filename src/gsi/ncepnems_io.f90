@@ -219,7 +219,7 @@ contains
     use gsi_bundlemod, only: gsi_bundledestroy
     use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sub2grid_destroy_info
     use mpimod, only: npe,mype
-    use cloud_efr_mod, only: cloud_calc_gfs,set_cloud_lower_bound,cloud_calc_gfs2
+    use cloud_efr_mod, only: cloud_calc_gfs,set_cloud_lower_bound
     use mpeu_util, only: getindex
     use control_vectors, only: cvars3d,imp_physics
     use jfunc, only: clip_hydrometeor
@@ -317,25 +317,12 @@ contains
                        associated(ges_q_it)   .and.&
                        associated(ges_ql_it)  .and.&
                        associated(ges_qi_it)  .and.&
-                       associated(ges_tv_it)  .and.&
-                       imp_physics == 99
+                       associated(ges_tv_it)
 !      call set_cloud_lower_bound(ges_cwmr_it)
        if (mype==0) write(6,*)'READ_GFS_NEMS: l_cld_derived = ', l_cld_derived
 
        if (l_cld_derived) then
           call cloud_calc_gfs(ges_ql_it,ges_qi_it,ges_cwmr_it,ges_q_it,ges_tv_it,.true.)
-       end if
-
-       l_cld_derived2 = associated(ges_cwmr_it).and.&
-                        associated(ges_q_it)   .and.&
-                        associated(ges_ql_it)  .and.&
-                        imp_physics /= 99
-       if (mype==0) write(6,*)'READ_GFS_NEMS: compute cw from ql and qi is ', &
-                              l_cld_derived2
-
-       if (l_cld_derived2) then
-          call cloud_calc_gfs2(ges_ql_it,ges_qi_it,ges_cwmr_it)
-          if (clip_hydrometeor) call set_cloud_lower_bound(ges_cwmr_it)
        end if
 
        if (associated(ges_ql_it) .and. clip_hydrometeor) call set_cloud_lower_bound(ges_ql_it)
@@ -403,19 +390,19 @@ contains
     if (istatus==0) then
        if (cw_cv) then
           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ges_cwmr_it,istatus)
-          if(istatus==0 .and. imp_physics == 99) ges_cwmr_it = ptr3d
+          if(istatus==0) ges_cwmr_it = ptr3d
        endif
     endif
     call gsi_bundlegetpointer (atm_bundle,'ql',ptr3d,istatus)
     if (istatus==0) then
-       if (cw_cv .or. ql_cv .or. iql > 0) then
+       if (ql_cv .or. iql > 0) then
           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql_it,istatus)
           if(istatus==0 .and. imp_physics /= 99) ges_ql_it = ptr3d
        endif
     endif
     call gsi_bundlegetpointer (atm_bundle,'qi',ptr3d,istatus)
     if (istatus==0) then
-       if (cw_cv .or. qi_cv .or. iqi > 0) then
+       if (qi_cv .or. iqi > 0) then
           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi_it,istatus)
           if(istatus==0 .and. imp_physics /= 99) ges_qi_it = ptr3d
        endif

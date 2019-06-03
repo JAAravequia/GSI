@@ -36,6 +36,9 @@ module crtm_interface
 !   2016-06-03  collard - Added changes to allow for historical naming conventions
 !   2017-02-24  zhu/todling  - remove gmao cloud fraction treatment
 !   2018-01-12  collard - Force all satellite and solar zenith angles to be >= 0.
+!   2018-02-18  tong - Modified call_crtm code to be able to use crtm_2.3.0
+!   2018-05-20  tong - Add computation of cloud fraction using GFDL algorithm
+!   2018-09-10  tong - Add computation of effective radius for rain, snow and hail
 !   
 !
 ! subroutines included:
@@ -52,7 +55,8 @@ module crtm_interface
 use kinds,only: r_kind,i_kind,r_single
 use crtm_module, only: crtm_atmosphere_type,crtm_surface_type,crtm_geometry_type, &
     crtm_options_type,crtm_rtsolution_type,crtm_destroy,crtm_options_destroy, &
-    crtm_options_create,crtm_options_associated,success,crtm_atmosphere_create, &
+    crtm_options_create,crtm_options_associated,crtm_options_inspect, &
+    success,crtm_atmosphere_create,crtm_atmosphere_inspect, &
     crtm_surface_create,crtm_k_matrix,crtm_forward, &   
     ssu_input_setvalue, &
     crtm_channelinfo_type, &
@@ -154,6 +158,8 @@ public itz_tr               ! = 37/39 index of d(Tz)/d(Tr)
   real(r_kind)   , save ,allocatable,dimension(:,:) :: cloudefr     ! effective radius of cloud type in CRTM
   real(r_kind)   , save ,allocatable,dimension(:,:) :: cloud_cont   ! cloud content fed into CRTM 
   real(r_kind)   , save ,allocatable,dimension(:,:) :: cloud_efr    ! effective radius of cloud type in CRTM
+  real(r_kind)   , save ,allocatable,dimension(:)   :: cloud_fraction   ! cloud fraction  
+  real(r_kind)   , save ,allocatable,dimension(:)   :: rew,rei,rer,res,reg !  effective radius
 
   real(r_kind)   , save ,allocatable,dimension(:,:,:,:)  :: gesqsat ! qsat to calc rh for aero particle size estimate
   real(r_kind)   , save ,allocatable,dimension(:)  :: lcloud4crtm_wk ! cloud info usage index for each channel

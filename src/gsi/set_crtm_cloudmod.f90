@@ -25,6 +25,7 @@ module set_crtm_cloudmod
   use CRTM_Cloud_Define, only: WATER_CLOUD,ICE_CLOUD,RAIN_CLOUD, &
       SNOW_CLOUD,GRAUPEL_CLOUD,HAIL_CLOUD 
   use mpeu_util, only: die
+  use radinfo, only: gfdl_cldefr,rewopt, reiopt
 
   implicit none
 
@@ -98,7 +99,7 @@ CONTAINS
 
 ! Handle hand-split case as particular case
 ! -----------------------------------------
-  if (cold_start .or. (na /= nc .and. (.not. regional))) then
+  if ((cold_start .and. regional) .or. (na /= nc .and. (.not. regional))) then
 
 !    Initialize Loop over clouds ...
      do n = 1, nc
@@ -176,7 +177,51 @@ CONTAINS
            if (regional .and. (.not. wrf_mass_regional)) then
               cloud(n)%Effective_Radius(:) = cloud_efr(:,n)
            else
-              cloud(n)%Effective_Radius(:) = EftSize_(cloud_name(jcloud(n)))
+              if (gfdl_cldefr) then
+                 if (trim(cloud_name(jcloud(n)))== 'ql') then
+                    if (rewopt < 0) then
+                       cloud(n)%Effective_Radius(:) = EftSize_(cloud_name(jcloud(n)))
+                    else if (rewopt == 0) then
+                    ! liquid water cloud drop size
+                       do k=1,km
+                          tem4=max(zero,(t0c-tp(k))*r0_05)
+                          cloud(n)%effective_radius(k) = five + five * min(one, tem4)
+                       end do
+                    else
+                       cloud(n)%Effective_Radius(:) = cloud_efr(:,n) 
+                    end if
+                 else if (trim(cloud_name(jcloud(n)))== 'qi') then
+                    if (reiopt < 0) then
+                       cloud(n)%Effective_Radius(:) = EftSize_(cloud_name(jcloud(n)))
+                    else if (reiopt == 0) then
+                    ! ice water cloud particle size
+                       do k=1,km
+                          tem2 = tp(k) - t0c
+                          tem1 = grav/rd
+                          tem3 = tem1 * cloud(2)%water_content(k) * (pr(k)/dp(k)) &
+                                /tp(k) * (one + fv * qh(k))
+
+                          if (tem2 < -50.0_r_kind ) then
+                             cloud(n)%effective_radius(k) = (1250._r_kind/9.917_r_kind)*tem3**0.109_r_kind
+                          elseif (tem2 < -40.0_r_kind ) then
+                             cloud(n)%effective_radius(k) = (1250._r_kind/9.337_r_kind)*tem3**0.08_r_kind
+                          elseif (tem2 < -30.0_r_kind ) then
+                             cloud(n)%effective_radius(k) = (1250._r_kind/9.208_r_kind)*tem3**0.055_r_kind
+                          else
+                             cloud(n)%effective_radius(k) = (1250._r_kind/9.387_r_kind)*tem3**0.031_r_kind
+                          endif
+                       end do
+                    else
+                       cloud(n)%Effective_Radius(:) = cloud_efr(:,n)
+                    end if
+                 else
+                    cloud(n)%Effective_Radius(:) = cloud_efr(:,n)
+                 end if
+
+                 cloud(n)%Effective_Radius(:) = max(zero, cloud(n)%Effective_Radius(:))
+              else
+                 cloud(n)%Effective_Radius(:) = EftSize_(cloud_name(jcloud(n)))
+              end if
            end if
         else
            cloud(n)%Effective_Radius(:) = zero
