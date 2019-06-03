@@ -188,7 +188,7 @@ subroutine read_control()
 implicit none
 real(r_double)  :: t1,t2
 real(r_double), allocatable, dimension(:) :: qsat_tmp
-integer(i_kind) :: nanal,nb,nlev,ne
+integer(i_kind) :: nb,nlev,ne
 integer(i_kind) :: q_ind
 integer(i_kind) :: ierr
 
@@ -276,7 +276,6 @@ implicit none
 logical, intent(in) :: no_inflate_flag
 
 real(r_double)  :: t1,t2
-integer(i_kind) :: nanal
 integer(i_kind) :: nb, nvar, ne
 integer(i_kind) :: q_ind, ierr
 real(r_single), allocatable, dimension(:,:) :: grdin_mean, grdin_mean_tmp

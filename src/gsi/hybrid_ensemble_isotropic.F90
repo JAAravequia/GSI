@@ -229,7 +229,7 @@ subroutine init_rf_z(z_len)
                      wrf_nmm_regional,nems_nmmb_regional,wrf_mass_regional,cmaq_regional, &
                      regional,fv3_regional
   use constants, only: half,one,rd_over_cp,zero,one_tenth,ten,two
-  use hybrid_ensemble_parameters, only: grd_ens,s_ens_v
+  use hybrid_ensemble_parameters, only: grd_ens
   use hybrid_ensemble_parameters, only: ps_bar
 
   implicit none

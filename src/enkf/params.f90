@@ -219,7 +219,7 @@ namelist /ozobs_enkf/sattypes_oz
 contains
 
 subroutine read_namelist()
-integer i,j,nb,nmembers_per_task,np
+integer i,j,nb,np
 logical fexist
 real(r_single) modelspace_vloc_cutoff, modelspace_vloc_thresh
 ! have all processes read namelist from file enkf.nml
