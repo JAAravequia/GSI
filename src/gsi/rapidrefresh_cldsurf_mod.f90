@@ -27,7 +27,8 @@ module rapidrefresh_cldsurf_mod
 !   sub init_rapidrefresh_cldsurf  - initialize RR related variables to default values
 !
 ! Variable Definitions:
-!   def l_cloud_analysis    - namelist logical for cloud analysis (=true) 
+!   def l_hydrometeor_bkio    - namelist logical for read and write hydrometeor
+!                               background fields (=true) 
 !   def dfi_radar_latent_heat_time_period - DFI forward integration window in minutes
 !   def metar_impact_radius - impact radius for METAR cloud observation
 !   def metar_impact_radius_lowCloud - impact radius for METAR cloud observation
@@ -154,7 +155,7 @@ module rapidrefresh_cldsurf_mod
   private
 ! set subroutines to public
   public :: init_rapidrefresh_cldsurf
-  public :: l_cloud_analysis 
+  public :: l_hydrometeor_bkio 
   public :: dfi_radar_latent_heat_time_period
   public :: metar_impact_radius
   public :: metar_impact_radius_lowCloud
@@ -202,7 +203,7 @@ module rapidrefresh_cldsurf_mod
   public :: i_cloud_q_innovation
   public :: i_ens_mean
 
-  logical l_cloud_analysis
+  logical l_hydrometeor_bkio
   real(r_kind)  dfi_radar_latent_heat_time_period
   real(r_kind)  metar_impact_radius
   real(r_kind)  metar_impact_radius_lowCloud
@@ -296,13 +297,13 @@ contains
 
 !   Figure out if hydrometeors are available in guess, if so, do cloud adjustment as default
     if(size(hydrometeors) == 0)then
-       l_cloud_analysis = .false.
+       l_hydrometeor_bkio = .false.
     else
       do i=1,size(hydrometeors)
          call gsi_metguess_get ('var::'//trim(hydrometeors(i)),ivar,ier)
          have_hmeteor(i) = (ivar>0)
       enddo
-      l_cloud_analysis = all(have_hmeteor)
+      l_hydrometeor_bkio = all(have_hmeteor)
     end if
 
     l_sfcobserror_ramp_t  = .false.  ! .true. = turn on GSD surface temperature observation error adjustment

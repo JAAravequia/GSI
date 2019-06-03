@@ -81,7 +81,7 @@ contains
          aeta1_ll,eta2_ll,aeta2_ll
     use constants, only: one,zero_single,rd_over_cp_mass,one_tenth,h300,r10,r100
     use gsi_io, only: lendian_in,verbose
-    use rapidrefresh_cldsurf_mod, only: l_cloud_analysis,l_gsd_soilTQ_nudge,&
+    use rapidrefresh_cldsurf_mod, only: l_hydrometeor_bkio,l_gsd_soilTQ_nudge,&
          i_use_2mq4b
     use wrf_mass_guess_mod, only: destroy_cld_grids
     use gsi_bundlemod, only: GSI_BundleGetPointer
@@ -198,9 +198,9 @@ contains
     lm=nsig
   
     num_mass_fields=4*lm+4
-    if(l_cloud_analysis .and. n_actual_clouds>0) num_mass_fields=4*lm+4+9*lm
+    if(l_hydrometeor_bkio .and. n_actual_clouds>0) num_mass_fields=4*lm+4+9*lm
     if(l_gsd_soilTQ_nudge) num_mass_fields=4*lm+4+2*nsig_soil+2
-    if(l_cloud_analysis .and. l_gsd_soilTQ_nudge) num_mass_fields=4*lm+4+9*lm+2*nsig_soil+2
+    if(l_hydrometeor_bkio .and. l_gsd_soilTQ_nudge) num_mass_fields=4*lm+4+9*lm+2*nsig_soil+2
     allocate(offset(num_mass_fields))
     allocate(igtype(num_mass_fields),kdim(num_mass_fields),kord(num_mass_fields))
     allocate(length(num_mass_fields))
@@ -411,7 +411,7 @@ contains
     endif
   
   ! for cloud/hydrometeor analysis fields
-    if(l_cloud_analysis .and. n_actual_clouds>0) then
+    if(l_hydrometeor_bkio .and. n_actual_clouds>0) then
   
        i_qc=i+1
        read(lendian_in) n_position,memoryorder
@@ -548,7 +548,7 @@ contains
           if(print_verbose.and.k==1) write(6,*)' tt i,igtype,offset,kdim(i) = ',i,igtype(i),offset(i),kdim(i)
        end do
   
-    endif    ! l_cloud_analysis
+    endif    ! l_hydrometeor_bkio
   
     close(lendian_in)
   
@@ -605,7 +605,7 @@ contains
     q_integral=one
     q_integralc4h=zero_single
   ! for hydrometeors
-    if(l_cloud_analysis .and. n_actual_clouds>0) then
+    if(l_hydrometeor_bkio .and. n_actual_clouds>0) then
   !    get pointer to relevant instance of cloud-related backgroud
        ier=0
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql', ges_qc, istatus );ier=ier+istatus
@@ -647,7 +647,7 @@ contains
        ku=ku+1
        kv=kv+1
   ! for hydrometeors
-       if(l_cloud_analysis .and. n_actual_clouds>0) then
+       if(l_hydrometeor_bkio .and. n_actual_clouds>0) then
           kqc=kqc+1
           kqi=kqi+1
           kqr=kqr+1
@@ -680,7 +680,7 @@ contains
              all_loc(j,i,kq)= ges_q(jp1,ip1,k)/(one-ges_q(jp1,ip1,k))
   
   ! for hydrometeors
-             if(l_cloud_analysis .and. n_actual_clouds>0) then
+             if(l_hydrometeor_bkio .and. n_actual_clouds>0) then
                 all_loc(j,i,kqc)=ges_qc(jp1,ip1,k)
                 all_loc(j,i,kqi)=ges_qi(jp1,ip1,k)
                 all_loc(j,i,kqr)=ges_qr(jp1,ip1,k)
@@ -907,7 +907,7 @@ contains
     endif
   
   ! read hydrometeors
-    if(l_cloud_analysis .and. n_actual_clouds>0) then
+    if(l_hydrometeor_bkio .and. n_actual_clouds>0) then
   !                                    read qc
        if(kord(i_qc)/=1) then
           allocate(jbuf(im,lm,jbegin(mype):min(jend(mype),jm)))
@@ -1043,7 +1043,7 @@ contains
           deallocate(jbuf)
        end if
   
-    endif   ! l_cloud_analysis
+    endif   ! l_hydrometeor_bkio
   
   !---------------------- read surface files last
     do k=kbegin(mype),kend(mype)
@@ -1227,7 +1227,7 @@ contains
     endif
   
   !  write hydrometeors
-    if(l_cloud_analysis .and. n_actual_clouds>0) then
+    if(l_hydrometeor_bkio .and. n_actual_clouds>0) then
   !                                    write qc
        if(kord(i_qc)/=1) then
           allocate(jbuf(im,lm,jbegin(mype):min(jend(mype),jm)))
@@ -1363,7 +1363,7 @@ contains
           deallocate(jbuf)
        end if
   
-    end if ! l_cloud_analysis
+    end if ! l_hydrometeor_bkio
   !---------------------- write surface files last
     do k=kbegin(mype),kend(mype)
        if(kdim(k)==1.or.kord(k)==1) then
@@ -1828,7 +1828,7 @@ contains
          aeta1_ll,strip,eta2_ll,aeta2_ll
     use constants, only: one,zero_single,rd_over_cp_mass,one_tenth,r10,r100
     use gsi_io, only: lendian_in, lendian_out
-    use rapidrefresh_cldsurf_mod, only: l_cloud_analysis,l_gsd_soilTQ_nudge,&
+    use rapidrefresh_cldsurf_mod, only: l_hydrometeor_bkio,l_gsd_soilTQ_nudge,&
          i_use_2mq4b,i_use_2mt4b
     use chemmod, only: laeroana_gocart,wrf_pm2_5
     use gsi_bundlemod, only: GSI_BundleGetPointer
@@ -1937,7 +1937,7 @@ contains
     num_mass_fields_base=2+4*lm + 1
     num_mass_fields=num_mass_fields_base
 !    The 9 3D cloud analysis fields are: ql,qi,qr,qs,qg,qnr,qni,qnc,tt
-    if(l_cloud_analysis .and. n_actual_clouds>0) num_mass_fields=num_mass_fields + 9*lm
+    if(l_hydrometeor_bkio .and. n_actual_clouds>0) num_mass_fields=num_mass_fields + 9*lm
     if(l_gsd_soilTQ_nudge) num_mass_fields=num_mass_fields+2*nsig_soil+1
     if(i_use_2mt4b > 0 ) num_mass_fields=num_mass_fields+2
     if(i_use_2mt4b <= 0 .and. i_use_2mq4b > 0) num_mass_fields=num_mass_fields+1
@@ -2001,7 +2001,7 @@ contains
     endif
   
   ! for hydrometeors
-    if(l_cloud_analysis .and. n_actual_clouds>0) then
+    if(l_hydrometeor_bkio .and. n_actual_clouds>0) then
        i_qc=i_q2+1
        i_qr=i_qc+lm
        i_qs=i_qr+lm
@@ -2074,7 +2074,7 @@ contains
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'dbz',ges_dbz,istatus );ier=ier+istatus
        if (ier/=0) then
            write(6,*)'READ_WRF_MASS_BINARY_GUESS: getpointer failed, cannot do cloud analysis'
-           if (l_cloud_analysis .and. n_actual_clouds>0) call stop2(999)
+           if (l_hydrometeor_bkio .and. n_actual_clouds>0) call stop2(999)
        endif
     endif
   
@@ -2100,7 +2100,7 @@ contains
     kv=i_v-1
     if(w_exist)kw=i_w-1
   ! for hydrometeors
-    if(l_cloud_analysis .and. n_actual_clouds>0) then
+    if(l_hydrometeor_bkio .and. n_actual_clouds>0) then
        kqc=i_qc-1
        kqi=i_qi-1
        kqr=i_qr-1
@@ -2159,7 +2159,7 @@ contains
        ku=ku+1
        kv=kv+1
   ! for hydrometeors
-       if(l_cloud_analysis .and. n_actual_clouds>0) then
+       if(l_hydrometeor_bkio .and. n_actual_clouds>0) then
           kqc=kqc+1
           kqi=kqi+1
           kqr=kqr+1
@@ -2197,7 +2197,7 @@ contains
              all_loc(j,i,kq)= ges_q(j,i,k)/(one-ges_q(j,i,k))
              	
   ! for hydrometeors      
-             if(l_cloud_analysis .and. n_actual_clouds>0) then
+             if(l_hydrometeor_bkio .and. n_actual_clouds>0) then
                 all_loc(j,i,kqc)=ges_qc(j,i,k)
                 all_loc(j,i,kqi)=ges_qi(j,i,k)
                 all_loc(j,i,kqr)=ges_qr(j,i,k)
@@ -2694,7 +2694,7 @@ contains
     endif  ! i_use_2mt4b>0
   !
   ! for saving cloud analysis results
-    if(l_cloud_analysis .and. n_actual_clouds>0) then
+    if(l_hydrometeor_bkio .and. n_actual_clouds>0) then
   ! Update qc
        kqc=i_qc-1
        do k=1,nsig
@@ -2877,7 +2877,7 @@ contains
           end if
        end do
   
-    endif    ! l_cloud_analysis
+    endif    ! l_hydrometeor_bkio
   
     if ( laeroana_gocart ) then
        do iv = 1, n_gocart_var

@@ -131,7 +131,7 @@
                             l_cleansnow_warmts,l_conserve_thetaV,r_cleansnow_warmts_threshold, &
                             i_conserve_thetav_iternum,l_gsd_soiltq_nudge,l_cld_bld, cld_bld_hgt, &
                             build_cloud_frac_p, clear_cloud_frac_p,       &
-                            l_cloud_analysis,nesdis_npts_rad, & 
+                            l_hydrometeor_bkio,nesdis_npts_rad, & 
                             iclean_hydro_withRef,iclean_hydro_withRef_allcol, &
                             i_use_2mq4b,i_use_2mt4b,i_gsdcldanal_type,i_gsdsfc_uselist, &
                             i_lightpcp,i_sfct_gross,l_use_hydroretrieval_all,l_numconc,l_closeobs,&
@@ -1423,14 +1423,14 @@
 
 ! Force turn off cloud analysis and hydrometeor IO
   if (i_gsdcldanal_type==0) then
-     l_cloud_analysis = .false.
-     if (mype==0) write(6,*)'GSIMOD:  ***WARNING*** set l_cloud_analysis=false'
+     l_hydrometeor_bkio = .false.
+     if (mype==0) write(6,*)'GSIMOD:  ***WARNING*** set l_hydrometeor_bkio=false'
   else if(i_gsdcldanal_type==1 .or. i_gsdcldanal_type==2 .or. &
           i_gsdcldanal_type==3 .or. i_gsdcldanal_type==5 .or. &
           i_gsdcldanal_type==6 .or. i_gsdcldanal_type==7 .or. &
           i_gsdcldanal_type==99 ) then
-     l_cloud_analysis = .true.
-     if (mype==0) write(6,*)'GSIMOD:  set l_cloud_analysis=true:',i_gsdcldanal_type
+     l_hydrometeor_bkio = .true.
+     if (mype==0) write(6,*)'GSIMOD:  set l_hydrometeor_bkio=true:',i_gsdcldanal_type
   endif
   if((i_coastline == 1 .or. i_coastline == 3) .and. i_use_2mt4b==0) then
      i_coastline=0
