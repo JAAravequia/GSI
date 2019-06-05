@@ -882,19 +882,15 @@ subroutine  gsdcloudanalysis(mype)
            snow_3d(i,j,k) = ges_qs(j,i,k)
            graupel_3d(i,j,k) = ges_qg(j,i,k)
            if(ref_mos_3d(i,j,k) > zero ) then
-              snow_3d(i,j,k) = MIN(max(max(snowtemp,zero)*0.001_r_kind,ges_qs(j,i,k)),qrlimit)
-!              rain_3d(i,j,k) = MIN(max(max(raintemp,zero)*0.001_r_kind,ges_qr(j,i,k)),qrlimit)  
+!             snow_3d(i,j,k) = MIN(max(max(snowtemp,zero)*0.001_r_kind,ges_qs(j,i,k)),qrlimit)
+              snow_3d(i,j,k) = MIN(    max(snowtemp,zero)*0.001_r_kind               ,qrlimit)
               raintemp = max(raintemp,zero)*0.001_r_kind  
-              if(raintemp > ges_qr(j,i,k) ) then
-                  if(raintemp <= qrlimit) then
-                     rain_3d(i,j,k) = raintemp
-                     nrain_3d(i,j,k)= nraintemp
-                  else
-                     rain_3d(i,j,k) = qrlimit
-                     nrain_3d(i,j,k)= nraintemp*(qrlimit/raintemp)
-                  endif
+              if(raintemp <= qrlimit) then
+                 rain_3d(i,j,k) = raintemp
+                 nrain_3d(i,j,k)= nraintemp
               else
-                 rain_3d(i,j,k) = MIN(ges_qr(j,i,k),qrlimit)
+                 rain_3d(i,j,k) = qrlimit
+                 nrain_3d(i,j,k)= nraintemp*(qrlimit/raintemp)
               endif
            elseif( ref_mos_3d(i,j,k) <= zero .and. & 
                    ref_mos_3d(i,j,k) > -100.0_r_kind ) then
