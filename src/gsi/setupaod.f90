@@ -259,7 +259,7 @@
   endif
 
 ! Initialize radiative transfer
-  call init_crtm(init_pass,mype_diaghdr(is),mype,nchanl,isis,obstype,radmod)
+  call init_crtm(init_pass,mype_diaghdr(is),mype,nchanl,nreal,isis,obstype,radmod)
 
 ! If diagnostic file requested, allocate arrays and init output file 
   if (aero_diagsave) then

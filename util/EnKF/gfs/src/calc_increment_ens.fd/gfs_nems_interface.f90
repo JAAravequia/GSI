@@ -315,7 +315,7 @@ contains
 
     ! Define counting variables
 
-    integer                                                              :: i, j, k
+    integer                                                              :: i, j
 
     !=====================================================================
 
@@ -357,10 +357,6 @@ contains
     character(nemsio_charkind)                                           :: nems_levtyp
     real(nemsio_realkind)                                                :: nems_data(:)
     integer(nemsio_intkind)                                              :: nems_lev
-
-    ! Define counting variables
-
-    integer                                                              :: i, j, k
 
     !=====================================================================
 
@@ -448,7 +444,7 @@ contains
 
     ! Define counting variables
 
-    integer                                                              :: i, j, k, n
+    integer                                                              :: i, j, n
 
     !=====================================================================
 
