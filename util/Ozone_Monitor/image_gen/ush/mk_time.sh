@@ -11,7 +11,7 @@
 echo "begin mk_time.sh"
 set -ax
 
-export string="ges"
+export process_type="ges"
 
 
 #------------------------------------------------------------------
@@ -36,21 +36,28 @@ fi
 #------------------------------------------------------------------
 # Loop over sat types & create entry in cmdfile for each.
 #
-suffix=a
-list="cnt omg cpen"
 
-cmdfile=cmdfile_ptime
-rm -f $cmdfile
-ctr=0
+for ptype in ${process_type}; do
+   suffix=a
+   if [[ $ptype = "ges" ]]; then
+      list="cnt omg cpen"
+   else
+      list="cnt oma cpen"
+   fi
+
+   cmdfile=cmdfile_ptime
+   rm -f $cmdfile
+   ctr=0
 
 >$cmdfile
-for type in ${SATYPE}; do
-   if [[ ${MY_MACHINE} = "theia" ]]; then
-      echo "${ctr} ${OZN_IG_SCRIPTS}/plot_time.sh $type $suffix '$list'" >> $cmdfile
-      ((ctr=ctr+1))
-   else
-      echo "${OZN_IG_SCRIPTS}/plot_time.sh $type $suffix '$list'" >> $cmdfile
-   fi
+   for type in ${SATYPE}; do
+      if [[ ${MY_MACHINE} = "theia" ]]; then
+         echo "${ctr} ${OZN_IG_SCRIPTS}/plot_time.sh $type $suffix '$list' $ptype" >> $cmdfile
+         ((ctr=ctr+1))
+      else
+         echo "${OZN_IG_SCRIPTS}/plot_time.sh $type $suffix '$list' $ptype" >> $cmdfile
+      fi
+   done
 done
 chmod a+x $cmdfile
 

@@ -11,7 +11,7 @@ if [[ ${MY_MACHINE} = "theia" ]]; then
 fi
 
 SATYPE=$1
-
+ptype=$2
 
 #------------------------------------------------------------------
 # Set work space for this SATYPE source.
@@ -37,11 +37,11 @@ while [[ $ctr -le 120 ]]; do
    c_cyc=`echo $cdate|cut -c9-10`
    tankdir_cdate=${TANKDIR}/${RUN}.${c_pdy}/${c_cyc}/oznmon/time
 
-   if [[ ! -e ./${SATYPE}.ctl ]]; then
-      $NCP ${tankdir_cdate}/${SATYPE}.ctl ./
+   if [[ ! -e ./${SATYPE}.${ptype}.ctl ]]; then
+      $NCP ${tankdir_cdate}/${SATYPE}.${ptype}.ctl ./
    fi
    
-   data_file=${tankdir_cdate}/${SATYPE}.${cdate}.ieee_d
+   data_file=${tankdir_cdate}/${SATYPE}.${ptype}.${cdate}.ieee_d
    if [[ -s ${data_file} ]]; then
       $NCP ${data_file} ./
    else
@@ -62,15 +62,13 @@ done
 #  should be 1 more than the total number of cycles so the last
 #  cycle will be the cycle specified by $PDATE.
 #
-if [[ -e ${SATYPE}.ctl ]]; then
+if [[ -e ${SATYPE}.${ptype}.ctl ]]; then
    bdate=`$NDATE -720 $PDATE`
-#   bdate=`$NDATE -366 $PDATE`
-   ${OZN_IG_SCRIPTS}/update_ctl_tdef.sh ${SATYPE}.ctl ${bdate} 121 
-#   ${OZN_IG_SCRIPTS}/update_ctl_tdef.sh ${SATYPE}.ctl ${bdate} 62 
+   ${OZN_IG_SCRIPTS}/update_ctl_tdef.sh ${SATYPE}.${ptype}.ctl ${bdate} 121 
 fi
 
 cat << EOF > ${SATYPE}.gs
-'open ${SATYPE}.ctl'
+'open ${SATYPE}.${ptype}.ctl'
 'run ${OZN_IG_GSCRPTS}/plot_summary.gs ${OZNMON_SUFFIX} ${RUN} ${SATYPE} x750 y700'
 'quit'
 EOF
@@ -86,9 +84,9 @@ ${NCP} *.png ${OZN_IMGN_TANKDIR}/.
 
 #--------------------------------------------------------------------
 # Clean $tmpdir. 
-cd $tmpdir
-cd ../
-rm -rf $tmpdir
+#cd $tmpdir
+#cd ../
+#rm -rf $tmpdir
 
 exit
 

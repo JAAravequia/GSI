@@ -41,18 +41,30 @@ suffix=a
 cmdfile=cmdfile_phoriz
 rm -f $cmdfile
 
+process_type="ges"
 
 ctr=0
 >$cmdfile
-for type in ${SATYPE}; do
-   list="obs ges obsges"
-   if [[ ${MY_MACHINE} = "theia" ]]; then
-      echo "$ctr ${OZN_IG_SCRIPTS}/plot_horiz.sh $type $suffix '$list'" >> $cmdfile
-   else
-      echo "${OZN_IG_SCRIPTS}/plot_horiz.sh $type $suffix '$list'" >> $cmdfile
-   fi
-   ((ctr=ctr+1))
+
+for ptype in ${process_type}; do
+
+   for type in ${SATYPE}; do
+
+      if [[ ${ptype} = "ges" ]]; then
+         list="obs ges obsges"
+      else
+         list="obs anl obsanl"
+      fi
+
+      if [[ ${MY_MACHINE} = "theia" ]]; then
+         echo "$ctr ${OZN_IG_SCRIPTS}/plot_horiz.sh $type $suffix '$list' $ptype" >> $cmdfile
+      else
+         echo "${OZN_IG_SCRIPTS}/plot_horiz.sh $type $suffix '$list' $ptype" >> $cmdfile
+      fi
+      ((ctr=ctr+1))
+   done
 done
+
 chmod a+x $cmdfile
 
 job=${OZNMON_SUFFIX}_ozn_phoriz

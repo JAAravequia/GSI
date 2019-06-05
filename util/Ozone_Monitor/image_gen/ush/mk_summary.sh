@@ -11,7 +11,7 @@
 echo "begin mk_summary.sh"
 set -ax
 
-export string=ges
+export process_type="ges"
 
 
 #------------------------------------------------------------------
@@ -36,10 +36,15 @@ fi
 # Loop over sat types and create entry in cmdfile for each.
 #
 
-if [[ ${string} = "ges" ]]; then
+for ptype in ${process_type}; do
+
+   if [[ ${ptype} = "ges" ]]; then
+      list="count omg cpen"
+   else
+      list="count oma cpen"
+   fi
 
    suffix=a
-   list="count omg cpen"
 
    cmdfile=cmdfile_psummary
    rm -f $cmdfile
@@ -49,9 +54,9 @@ if [[ ${string} = "ges" ]]; then
    for type in ${SATYPE}; do
       if [[ $type != "omi_aura" && $type != "gome_metop-a" && $type != "gome_metop-b" ]]; then
          if [[ ${MY_MACHINE} = "theia" ]]; then
-            echo "${ctr} ${OZN_IG_SCRIPTS}/plot_summary.sh $type" >> $cmdfile
+            echo "${ctr} ${OZN_IG_SCRIPTS}/plot_summary.sh $type $ptype" >> $cmdfile
          else
-            echo "${OZN_IG_SCRIPTS}/plot_summary.sh $type" >> $cmdfile
+            echo "${OZN_IG_SCRIPTS}/plot_summary.sh $type $ptype" >> $cmdfile
          fi
          ((ctr=ctr+1))
       fi
@@ -97,7 +102,7 @@ if [[ ${string} = "ges" ]]; then
 
    fi
 
-fi
+done
 
 echo "end mk_summary.sh"
 exit

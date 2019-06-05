@@ -8,7 +8,7 @@ run=gdas
 NET=gfs
 envir=prod
 
-MY_MACHINE=wcoss_d
+MY_MACHINE=theia
 package="ProdGSI/util/Ozone_Monitor"
 #package="OznMon"
 
@@ -37,19 +37,19 @@ fi
 idate=`${scripts}/find_cycle.pl -dir ~/nbns/stats/${OZN_SUFFIX} -cyc 1 -run ${run}`
 echo "idate = $idate"
 
-#export START_DATE=2019052300
-export START_DATE=`${NDATE} +06 $idate`
+export START_DATE=2018091700
+#export START_DATE=`${NDATE} +06 $idate`
 
 PDY=`echo $START_DATE | cut -c1-8`
 cyc=`echo $START_DATE | cut -c9-10`
 
-export COM_IN=/gpfs/hps/nco/ops/com/${NET}/${envir}/${run}.${PDY}
-#export COM_IN=/scratch4/NCEPDEV/da/noscrub/Edward.Safford/test_data
+#export COM_IN=/gpfs/hps/nco/ops/com/${NET}/${envir}/${run}.${PDY}
+export COM_IN=/scratch4/NCEPDEV/da/noscrub/Edward.Safford/test_data/${run}.${PDY}/${cyc}
 
 export oznstat=${COM_IN}/${run}.t${cyc}z.oznstat
 
-export OZN_TANKDIR=/u/${LOGNAME}/nbns
-#export OZN_TANKDIR=/home/${LOGNAME}/nbns
+#export OZN_TANKDIR=/u/${LOGNAME}/nbns
+export OZN_TANKDIR=/home/${LOGNAME}/nbns
 
 #log=/ptmpd1/Edward.Safford/logs/${OZN_SUFFIX}/${run}/oznmon/OznMon_DE.log
 log=./log
