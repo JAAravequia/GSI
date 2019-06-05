@@ -9,7 +9,7 @@ subroutine vertsc_aerosol(numcases,mype)
   implicit none
   include 'mpif.h'
 
-  integer(i_kind),intent(in):: numcases,mype
+  integer,intent(in):: numcases,mype
 
   real(r_kind),dimension(lat1,lon1,nsig):: d1a,d2a,d3a,d4a,d5a, &
       s1a,s2a,s3a,s4a,so4a,oc1a,oc2a,bc1a,bc2a
@@ -43,6 +43,7 @@ subroutine vertsc_aerosol(numcases,mype)
   r_norm=one/float(numcases)
 
   small=1.e-8_r_double
+
 
   d1d=zero ; d2d=zero ; d3d=zero ; d4d=zero ; d5d=zero ; 
   s1d=zero ; s2d=zero ; s3d=zero ; s4d=zero ; so4d=zero ;

@@ -976,7 +976,7 @@ end subroutine divsphdp
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-  use kinds, only: r_double
+  use kinds, only: r_double, r_kind
   use variables, only: zero,two
   implicit none
 

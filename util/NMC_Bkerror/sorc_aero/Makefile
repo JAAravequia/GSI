@@ -12,9 +12,9 @@ SHELL=/bin/sh
 
 SED      = sed
 DASPERL  = /usr/bin/perl
-COREROOT = /data/users/swei/Q3FY17
+COREROOT = ../../..
 COREBIN  = $(COREROOT)/bin
-CORELIB  = $(COREROOT)/lib.2015mod
+CORELIB  = $(COREROOT)/lib
 COREINC  = $(COREROOT)/include
 COREETC  = $(COREROOT)/etc
 
@@ -28,10 +28,10 @@ MKDIR   = /bin/mkdir -p
 # ---------
 # Libraries
 # ---------
-LIBgsi = /data/users/swei/Q3FY17/gfs_q3fy17/global_shared.v14.1.0/lib/libgsi.a
-LIBsp  = $(CORELIB)/libsp_2.0.2g_d.a
-LIBw3  = $(CORELIB)/libw3emc_v2.3.0_d.a
-LIBbacio = $(CORELIB)/libbacio_v2.0.2_4.a
+LIBgsi = $(CORELIB)/libgsi.a
+LIBsp  = $(CORELIB)/libsp.a
+LIBw3  = $(CORELIB)/libw3.a
+LIBbacio = $(CORELIB)/libbacio.a
 LIBmpi = -lmpi
 
 #------------
@@ -52,11 +52,10 @@ include Makefile.conf
 # Load module
 # -----------
 
-#  EXE_FILE = calcstats.exe
-  EXE_SP_FILE = calcstats_aerosol.sp.exe
-  EXE_DP_FILE = calcstats_aerosol.dp.exe
+  EXE_FILE = calcstats_aerosol.exe
+#  EXE_SP_FILE = calcstats_aerosol.sp.exe
+#  EXE_DP_FILE = calcstats_aerosol.dp.exe
  
-  EXE_FILE = $(EXE_DP_FILE)
 
 # --------------------
 # Installing directory

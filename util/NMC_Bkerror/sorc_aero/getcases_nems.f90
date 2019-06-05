@@ -141,7 +141,8 @@ subroutine getcases_nems(numcases,mype)
        ntrac=ntrac5) 
 
   allocate(vcoord5(nsig+1,3,2),cp5(ntrac5+1))
-  call nemsio_getfilehead(gfile, iret=iret, vcoord=vcoord5, Cpi=cp5)
+  call nemsio_getfilehead(gfile, iret=iret, vcoord=vcoord5)
+  !call nemsio_getfilehead(gfile, iret=iret, vcoord=vcoord5, Cpi=cp5)
 
   idpsfc5 = mod ( idvm5,10 )
   idthrm5 = mod ( idvm5/10,10 )
