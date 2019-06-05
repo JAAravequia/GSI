@@ -467,12 +467,18 @@ subroutine setupspd(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      end if
 
      ratio_errors=error/(data(ier,i)+drpx+1.0e6_r_kind*rhgh+four*rlow)
-
-     error=one/error
-
-!    Check to see if observations is above the top of the model (regional mode)
-     if (dpres>rsig) ratio_errors=zero
-
+     
+!     if ( nty == 292 ) then 
+!        !First try produced errors too large in inner core
+!        !ratio_errors=error/(abs(ddiff)+0.5_r_kind+1.0e6_r_kind*rhgh+four*rlow)
+!        ratio_errors=error/(abs(ddiff*0.7_r_kind)+0.5_r_kind+1.0e6_r_kind*rhgh+four*rlow)
+!     endif 
+!   
+!     error=one/error
+!
+!!    Check to see if observations is above the top of the model (regional mode)
+!     if (dpres>rsig) ratio_errors=zero
+!
 
 ! Interpolate guess u and v to observation location and time.
      call tintrp31(ges_u,ugesin,dlat,dlon,dpres,dtime, &
@@ -487,6 +493,26 @@ subroutine setupspd(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      vgesin=factw*vgesin
      spdges=sqrt(ugesin*ugesin+vgesin*vgesin)
      ddiff = spdob-spdges
+     
+     if ( nty == 292 ) then 
+        !!First try produced errors too large in inner core
+        !!ratio_errors=error/(abs(ddiff)+0.5_r_kind+1.0e6_r_kind*rhgh+four*rlow)
+        !!results aren't as good with the second try so far, going back to first
+        !!ratio_errors=error/(abs(ddiff*0.7_r_kind)+0.5_r_kind+1.0e6_r_kind*rhgh+four*rlow)
+        !!after trying first try again, TS cycles are degraded, best for MH, so trying again
+        !ratio_errors=error/(abs(ddiff)+2.5_r_kind)
+        !!don't assimilate if spdob < 20 m/s
+        !if (spdob < 20.) ratio_errors=zero
+        !for sfmr2 expt with rejection < 20, track is degraded, so change to 10 and increse minimum error
+        ratio_errors=error/(abs(ddiff)+5.0_r_kind)
+        if (spdob < 10.) ratio_errors=zero
+     endif 
+   
+     error=one/error
+
+!    Check to see if observations is above the top of the model (regional mode)
+     if (dpres>rsig) ratio_errors=zero
+
 
 !    Gross error checks
      obserror = one/max(ratio_errors*error,tiny_r_kind)
