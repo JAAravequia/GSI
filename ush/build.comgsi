@@ -64,6 +64,6 @@ ln -sf enkf_wrf.x enkf_wrf.x_${repoName}_${commitID}_${datestamp}
 ln -sf enspreproc.x enspreproc.x_${repoName}_${commitID}_${datestamp}
 ###mv $dir_root/build $dir_root/build_$commitID
 
-echo -e "\n\nAll build results are at ./build_$commitID/ \n\n"
+echo -e "\n\nAll build results are at ./build/ \n\n"
 
 exit
