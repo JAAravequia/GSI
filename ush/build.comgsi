@@ -56,7 +56,7 @@ make -j 8 2>&1 | tee output.compile
 
 ###aftermath
 commitID=`git log -1 | head -n1 |cut -c8-15`
-repoName=`git remote get-url origin | cut -d: -f2`
+repoName=`git config --get remote.origin.url | cut -d: -f2`
 datestamp=`date +%Y%m%d`
 cd bin
 ln -sf gsi.x gsi.x_${repoName}_${commitID}_${datestamp}
