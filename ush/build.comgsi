@@ -46,14 +46,24 @@ git log -1 | head -n1 >> output.log
 echo -e "\ngit status:" >> output.log
 git status >> output.log
 echo -e "\nCompiling commands:" >> output.log
-echo "  cmake -DENKF_MODE=WRF -DBUILD_CORELIBS=ON -DBUILD_GSDCLOUD_ARW=ON -DBUILD_UTIL_COM=ON .." >> output.log
+echo "  cmake -DENKF_MODE=WRF -DBUILD_CORELIBS=ON -DBUILD_GSDCLOUD_ARW=ON -DBUILD_ENKF_PREPROCESS_ARW=ON -DBUILD_UTIL_COM=ON .." >> output.log
 echo "  make -j8" >> output.log
 cat output.log
 
 
-cmake -DENKF_MODE=WRF -DBUILD_CORELIBS=ON -DBUILD_GSDCLOUD_ARW=ON -DBUILD_UTIL_COM=ON ..  2>&1  | tee output.cmake
+cmake -DENKF_MODE=WRF -DBUILD_CORELIBS=ON -DBUILD_GSDCLOUD_ARW=ON -DBUILD_ENKF_PREPROCESS_ARW=ON -DBUILD_UTIL_COM=ON ..  2>&1  | tee output.cmake
 make -j 8 2>&1 | tee output.compile
 
-echo -e "\n\nAll build results are at ./build/ \n\n"
+###aftermath
+commitID=`git log -1 | head -n1 |cut -c8-15`
+repoName=`git remote get-url origin | cut -d: -f2`
+datestamp=`date +%Y%m%d`
+cd bin
+ln -sf gsi.x gsi.x_${repoName}_${commitID}_${datestamp}
+ln -sf enkf_wrf.x enkf_wrf.x_${repoName}_${commitID}_${datestamp}
+ln -sf enspreproc.x enspreproc.x_${repoName}_${commitID}_${datestamp}
+###mv $dir_root/build $dir_root/build_$commitID
+
+echo -e "\n\nAll build results are at ./build_$commitID/ \n\n"
 
 exit
