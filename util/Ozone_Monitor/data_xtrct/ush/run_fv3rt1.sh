@@ -12,12 +12,17 @@ package="ProdGSI/util/Ozone_Monitor"
 if [[ $MY_MACHINE = "cray" ]]; then
    . /opt/modules/3.2.6.7/init/sh
    module use -a /gpfs/hps/nco/ops/nwprod/modulefiles
+   module load prod_util
 elif [[ $MY_MACHINE = "wcoss" ]]; then
    shell=sh
    . /usrx/local/Modules/default/init/${shell}
+   module load prod_util
+elif [[ $MY_MACHINE = "wcoss_d" ]]; then
+   module use -a /usrx/local/dev/modulefiles
+   module load EnvVars/1.0.2
+   module load prod_util/1.1.0
 fi
 
-module load prod_util
 
 scripts=/gpfs/gd2/emc/da/noscrub/Edward.Safford/${package}/data_xtrct/ush
 

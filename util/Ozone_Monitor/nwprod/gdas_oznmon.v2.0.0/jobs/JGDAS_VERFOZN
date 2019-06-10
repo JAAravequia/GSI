@@ -65,10 +65,10 @@ export USHoznmon=${USHoznmon:-$HOMEoznmon/ush}
 #
 #  Question:  is setpdy necessary?
 #
-if [[ $MY_MACHINE != "theia" ]]; then
-   setpdy.sh
-   . ./PDY
-fi   
+#if [[ $MY_MACHINE != "theia" ]]; then
+#   setpdy.sh
+#   . ./PDY
+#fi   
 
 #############################################
 #  determine PDY and cyc for previous cycle
