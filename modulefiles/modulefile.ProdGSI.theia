@@ -21,7 +21,6 @@ module load intel/15.6.233
 module load impi/5.1.2.150
 
 # Loading netcdf and hdf5
-module load slurm
 module load hdf5/1.8.14
 module load netcdf/4.3.0
 # Loading nceplibs modules
