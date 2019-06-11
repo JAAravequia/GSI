@@ -7,5 +7,8 @@ if(BUILD_UTIL)
   set_target_properties( preproc.x PROPERTIES Fortran_MODULE_DIRECTORY ${Util_MODULE_DIRECTORY} )
   include_directories( ${SIGIOINC} ) 
   target_link_libraries( preproc.x ${SIGIO_LIBRARY} )
+  if(EXT_BUILT)
+    add_dependencies( preproc.x NCEPLIBS-sigio )
+  endif()
   
 endif()

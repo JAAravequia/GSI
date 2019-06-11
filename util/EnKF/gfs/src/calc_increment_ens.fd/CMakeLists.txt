@@ -11,4 +11,8 @@ if(BUILD_UTIL)
   SET( CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_Fortran_FLAGS}" )
   include_directories( ${UTIL_INC} ${NEMSIOINC} ${NETCDF_INCLUDES} ${MPI_Fortran_INCLUDE_PATH} ) 
   target_link_libraries( calc_increment_ens.x ${NEMSIO_LIBRARY} ${BACIO_LIBRARY} ${W3NCO_4_LIBRARY} ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${MPI_Fortran_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${HDF5_LIBRARIES} ${ZLIB_LIBRARIES} ${CURL_LIBRARIES} )
+  if(EXT_BUILT)
+    add_dependencies( calc_increment_ens.x NCEPLIBS-nemsio NCEPLIBS-sp )
+  endif()
+
 endif()

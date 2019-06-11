@@ -9,6 +9,6 @@ cmake_minimum_required(VERSION 2.6)
   include_directories( ${CORE_INCS} ) 
   target_link_libraries( oznmon_horiz.x ${W3NCO_4_LIBRARY} )
   if(BUILD_W3NCO)
-    add_dependencies( oznmon_horiz.x ${W3NCO_4_LIBRARY} )
+    add_dependencies( oznmon_horiz.x NCEPLIBS-w3nco NCEPLIBS-sp  )
   endif()
 
