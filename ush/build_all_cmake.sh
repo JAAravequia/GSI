@@ -34,16 +34,12 @@ elif [[ -d /sw/gaea ]] ; then
     . /opt/cray/pe/modules/3.2.10.5/init/sh
     target=gaea
 elif [[ -d /discover ]] ; then
-#   . /opt/cray/pe/modules/3.2.10.5/init/sh
     if [[ -d /usr/local/sgi/mpi ]] ; then
       target=discover
     else
       target=discover_opa
     fi
     build_type=0
-#   export SPACK_ROOT=/discover/nobackup/mapotts1/spack
-#   export PATH=$PATH:$SPACK_ROOT/bin
-#   . $SPACK_ROOT/share/spack/setup-env.sh    
 else
     echo "unknown target = $target"
     exit 9
@@ -74,6 +70,8 @@ elif [ $target = wcoss_c ]; then
     module purge
     module load $dir_modules/modulefile.ProdGSI.$target
 elif [ $target = discover ]; then
+    module purge
+    module use -a $dir_modules
     module load $dir_modules/modulefile.ProdGSI.$target
 elif [ $target = discover_opa ]; then
     module purge
