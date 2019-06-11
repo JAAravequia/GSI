@@ -136,7 +136,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   use m_gpsrhs, only: ratio_errors
   use m_gpsrhs, only: rdiagbuf,cdiagbuf
   use m_gpsrhs, only: qcfail
-  use m_gpsrhs, only: qcfail_loc,qcfail_high,qcfail_gross
+  use m_gpsrhs, only: qcfail_loc,qcfail_high,qcfail_gross,qcfail_eight
   use m_gpsrhs, only: data_ier,data_igps,data_ihgt
   use m_gpsrhs, only: gpsrhs_alloc
   use m_gpsrhs, only: gpsrhs_dealloc
@@ -258,6 +258,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
 !750-755 => COSMIC-2 Equatorial
 !724-729 => COSMIC-2 Polar
 !825 => KOMPSAT-5
+!5   => MetOp-C
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
@@ -329,6 +330,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
      qcfail=.false.
      qcfail_loc=zero;qcfail_gross=zero
      qcfail_high=zero
+     qcfail_eight=zero
      toss_gps_sub=zero 
      dbend_loc=zero
 
@@ -561,7 +563,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
          if((data(isatid,i)==41).or.(data(isatid,i)==722).or.&
            (data(isatid,i)==723).or.(data(isatid,i)==4).or.(data(isatid,i)==42).or.&
            (data(isatid,i)==3).or.(data(isatid,i)==821.or.(data(isatid,i)==421)).or.&
-           (data(isatid,i)==440).or.(data(isatid,i)==43)) then
+           (data(isatid,i)==440).or.(data(isatid,i)==43).or.(data(isatid,i)==5)) then
                     
            if((data(ilate,i)> r40).or.(data(ilate,i)< -r40)) then
               if(alt>r12) then
@@ -730,7 +732,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
                 cutoff=three*cutoff*r0_01
  
                 if(abs(rdiagbuf(5,i)) > cutoff) then
-                   qcfail(i)=.true.
+                   qcfail_gross(i)=one
                    data(ier,i) = zero
                    ratio_errors(i) = zero
                    muse(i) = .false.
@@ -747,8 +749,8 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
          endif
 
 !       Remove MetOP/GRAS data below 8 km
-         if((alt <= eight) .and. ((data(isatid,i)==4) .or. (data(isatid,i)==3))) then
-           qcfail(i)=.true.
+         if((alt <= eight) .and. ((data(isatid,i)==4) .or. (data(isatid,i)==3) .or. (data(isatid,i)==5))) then
+           qcfail_eight(i)=one
            data(ier,i) = zero
            ratio_errors(i) = zero
            muse(i)=.false.
@@ -812,6 +814,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
         if(qcfail(i))                rdiagbuf(10,i) = four !modified in genstats due to toss_gps_sub
         if(qcfail_loc(i) == one)     rdiagbuf(10,i) = one
         if(qcfail_high(i) == one)    rdiagbuf(10,i) = two
+        if(qcfail_eight(i) == one)   rdiagbuf(10,i) = five
 
         if(muse(i)) then                    ! modified in genstats_gps due to toss_gps_sub
            rdiagbuf(12,i) = one             ! minimization usage flag (1=use, -1=not used)

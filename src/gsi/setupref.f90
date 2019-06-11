@@ -148,7 +148,7 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
   use m_gpsrhs, only: ratio_errors,dpresl
   use m_gpsrhs, only: rdiagbuf,cdiagbuf
   use m_gpsrhs, only: qcfail
-  use m_gpsrhs, only: qcfail_loc,qcfail_high,qcfail_gross
+  use m_gpsrhs, only: qcfail_loc,qcfail_high,qcfail_gross,qcfail_eight
   use m_gpsrhs, only: data_ier,data_igps,data_ihgt
   use m_gpsrhs, only: gpsrhs_alloc
   use m_gpsrhs, only: gpsrhs_dealloc
@@ -325,6 +325,7 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
      qcfail_loc=zero
      qcfail_gross=zero
      qcfail_high=zero 
+     qcfail_eight=zero
 
      muse(:)=.false.
 
@@ -560,7 +561,7 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
                     cutoff2=r1em3*trefges**2-r0_455*trefges+r52_075
                  endif
                  if((ictype(ikx)==41).or.(ictype(ikx)==722).or.(ictype(ikx)==723).or.&
-                    (ictype(ikx)==4).or.(ictype(ikx)==786).or.(ictype(ikx)==3)) then !CL
+                    (ictype(ikx)==4).or.(ictype(ikx)==786).or.(ictype(ikx)==3).or.(ictype(ikx)==5)) then !CL
                     cutoff3=(half+two*cos(data(ilate,i)*deg2rad))/three
                  else
                     cutoff3=(one+r2_5*cos(data(ilate,i)*deg2rad))/three
@@ -597,10 +598,10 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
            endif
 
 !         Remove MetOP/GRAS data below 8 km
-          if ((alt <= eight) .and. ((data(isatid,i)==4) .or. (data(isatid,i)==3))) then
+          if ((alt <= eight) .and. ((data(isatid,i)==4) .or. (data(isatid,i)==3) .or. (data(isatid,i)==5))) then
              data(ier,i) = zero
              ratio_errors(i) = zero
-             qcfail(i)=.true.
+             qcfail_eight(i)=one
              muse(i)=.false.
           endif
 
@@ -690,7 +691,7 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
 !             Remove data below
                  if(r1em3*rdiagbuf(7,j) < r1em3*rdiagbuf(7,i))then
                     if((rdiagbuf(1,i)==41).or.(rdiagbuf(1,i)==722).or.(rdiagbuf(1,i)==723).or.&
-                       (rdiagbuf(1,i)==4).or.(rdiagbuf(1,i)==786).or.(rdiagbuf(1,i)==3)) then
+                       (rdiagbuf(1,i)==4).or.(rdiagbuf(1,i)==786).or.(rdiagbuf(1,i)==3).or.(rdiagbuf(1,i)==5)) then
                        if(r1em3*rdiagbuf(7,i)<= ten) then
                           qcfail(j) = .true.
                        endif
@@ -714,7 +715,7 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
            ratio_errors(i) = zero
            muse(i) = .false.
            if ( (rdiagbuf(1,i)==41).or.(rdiagbuf(1,i)==722).or.(rdiagbuf(1,i)==723).or.&
-                (rdiagbuf(1,i)==4).or.(rdiagbuf(1,i)==786).or.(rdiagbuf(1,i)==3)) then
+                (rdiagbuf(1,i)==4).or.(rdiagbuf(1,i)==786).or.(rdiagbuf(1,i)==3).or.(rdiagbuf(1,i)==5)) then
               if(alt<=ten) then
                  toss_gps_sub(kprof) = max(toss_gps_sub(kprof),data(ihgt,i))
               endif
@@ -762,6 +763,7 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
         if(qcfail(i))                rdiagbuf(10,i) = four !modified in genstats due to toss_gps_sub
         if(qcfail_loc(i) == one)     rdiagbuf(10,i) = one
         if(qcfail_high(i) == one)    rdiagbuf(10,i) = two
+        if(qcfail_eight(i) == one)   rdiagbuf(10,i) = five
 
         if(muse(i)) then            ! modified in genstats_gps due to toss_gps_sub
            rdiagbuf(12,i) = one     ! minimization usage flag (1=use, -1=not used)
