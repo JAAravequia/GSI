@@ -31,12 +31,15 @@ if( NOT DEFINED ENV{CC} )
 endif()
 
 project(GSI)
+  cmake_minimum_required(VERSION 3.6)
   enable_language (Fortran)
+# Options for CMake
   option(USE_WRF "Find WRF object files and build regional GSI model" ON)
   option(USE_BASELIBS "Look for and use GMAO Baselibs" OFF)
   option(BUILD_GLOBAL "Build GSI without WRF (regional) module " OFF)
   option(BUILD_ENKF "Build the Enkf executable " ON)
   option(USE_BASELINE "Use baseline control runs" OFF)
+
   SET(ENKF_MODE "GFS" CACHE STRING "EnKF build mode: GFS, WRF, NMMB")
   string(TOUPPER ${ENKF_MODE} ENKF_MODE)
   if (ENKF_MODE MATCHES "^GFS$")
@@ -69,7 +72,8 @@ project(GSI)
   option(BUILD_UNIT_TESTING "Build the Unit Testing Suite" OFF)
   option(MPI3 "Build EnKF with MPI3" OFF)
   option(BUILD_GSDCLOUD_ARW "Build the GSD cloud analysis " OFF)
-  cmake_minimum_required(VERSION 3.6)
+
+#Set up module and lib paths for build
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
   SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
@@ -81,6 +85,8 @@ project(GSI)
   set(CMAKE_Fortran_MODULE_DIRECTORY "${PROJECT_BINARY_DIR}/include")
   file(MAKE_DIRECTORY ${CMAKE_INCLUDE_OUTPUT_DIRECTORY})
   file(MAKE_DIRECTORY ${CMAKE_INCLUDE_4_OUTPUT_DIRECTORY})
+
+#Include all the macros/functions
   include(${CMAKE_SOURCE_DIR}/cmake/Modules/setPlatformVariables.cmake)
   include(${CMAKE_SOURCE_DIR}/cmake/Modules/setIntelFlags.cmake)
   include(${CMAKE_SOURCE_DIR}/cmake/Modules/setGNUFlags.cmake)
@@ -96,30 +102,34 @@ project(GSI)
   include(${CMAKE_SOURCE_DIR}/cmake/Modules/platforms/WCOSS-C.cmake)
   include(${CMAKE_SOURCE_DIR}/cmake/Modules/platforms/WCOSS-D.cmake)
   include(${CMAKE_SOURCE_DIR}/cmake/Modules/platforms/WCOSS.cmake)
+
+#Add regression testing
   if(BUILD_REG_TESTING)
     set(CTEST_TEST_TIMEOUT 86400 )
     find_package(GSICONTROL)
     include( CTest )
   endif(BUILD_REG_TESTING)
+
+#Add mpi3 flag, if set
   if(MPI3)
     set( MPI3FLAG "-DMPI3" CACHE INTERNAL "" )
   else()
     set( MPI3FLAG "" CACHE INTERNAL "" )
   endif()
 
-
+#Set cmake policies
   cmake_policy(SET CMP0009 NEW)
   cmake_policy(SET CMP0046 NEW)
   cmake_policy(SET CMP0074 NEW)
+
+#Find the OpenMP flag
   find_package(OpenMP)
-  message("found openmp with flag ${OPENMP_Fortran_FLAGS}")
 
 # Set Host specific flags and options
   setHOST()
 
 
-  MESSAGE(${CMAKE_CURRENT_SOURCE_DIR})
-  # make sure that the default is a RELEASE
+# make sure that the default is a RELEASE
   if (NOT CMAKE_BUILD_TYPE)
     set (CMAKE_BUILD_TYPE RELEASE CACHE STRING
         "Choose the type of build, options are: PRODUCTION Debug Release."
@@ -132,6 +142,8 @@ project(GSI)
   if( BUILD_PRODUCTION )
     set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/exec )
   endif()
+
+#options for building for profiling
   if( BUILD_PROFILE )
     set(CMAKE_SKIP_RPATH "TRUE")
     if(NOT ENV{TAU_MAKEFILE}) 
@@ -140,12 +152,8 @@ project(GSI)
     endif()
   endif()
 
-  if(BUILD_GSDCLOUD_ARW)
-    set(GSDCLOUDOPT "-DRR_CLOUDANALYSIS" CACHE INTERNAL "" )
-  else(BUILD_GSDCLOUD_ARW)
-    set( GSDCLOUDOPT "" CACHE INTERNAL "" )
-  endif(BUILD_GSDCLOUD_ARW)
 
+#Set compiler-based flags
   set(CMAKE_Fortran_FLAGS_RELEASE "")  
   if (CMAKE_CXX_COMPILER_ID MATCHES "GNU*")
     message("Setting GNU flags")
@@ -158,7 +166,7 @@ project(GSI)
     setPGI()
   endif()
 
-
+#BASELIBS for NASA
   if( USE_BASELIBS )
     set(FIND_HDF5 FALSE)
     set(FIND_HDF5_HL FALSE)
@@ -182,6 +190,7 @@ project(GSI)
     find_package(MPI REQUIRED)
   endif()
 
+#report on MPI version
   message("MPI version is ${MPI_Fortran_VERSION}")
   message("MPI f90 version is ${MPI_Fortran_HAVE_F90_MODULE}")
   message("MPI f08 version is ${MPI_Fortran_HAVE_F08_MODULE}")
@@ -190,7 +199,7 @@ project(GSI)
   include_directories(${MPI_Fortran_INCLUDE_DIRS} ${MPI_INCLUDE_PATH} "./" ${CMAKE_INCLUDE_OUTPUT_DIRECTORY})
   link_directories(${MPI_Fortran_LIBRARIES} ${ARCHIVE_OUTPUT_PATH} )
 
-
+#some platforms don't need lapack
   if( ( NOT HOST-WCOSS_D ) AND ( NOT HOST-WCOSS_C ) AND ( NOT HOST-Gaea ) ) 
     message(" trying to find lapack, ${host}")
     find_package( LAPACK )
@@ -205,13 +214,13 @@ project(GSI)
     find_package( WRF )
   endif()
 
-  # FFLAGS depend on the compiler
+# FFLAGS depend on the compiler
   get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
   set(CFLAGS "-I. -DFortranByte=char -DFortranInt=int -DFortranLlong='long long' -O3  -Dfunder")
-  set (CMAKE_Fortran_INC_FLAGS "-I ./ -I ${CORE_INCS} -I ${NETCDF_INCLUDES} ")
-  set (CFLAGS_N "-I. -DFortranByte=char -DFortranInt=int -DFortranLlong='long long'  -O3  -Dfunder")
+  set(CMAKE_Fortran_INC_FLAGS "-I ./ -I ${CORE_INCS} -I ${NETCDF_INCLUDES} ")
+  set(CFLAGS_N "-I. -DFortranByte=char -DFortranInt=int -DFortranLlong='long long'  -O3  -Dfunder")
 
-
+#Determine if corelibs should be built or not
   if(BUILD_CORELIBS )
     message("setting values for corelibs")
     set(BUILD_BACIO "ON" CACHE STRING "Build the BACIO library" )
@@ -234,25 +243,32 @@ project(GSI)
   find_package( W3EMC )
   find_package( W3NCO )
 
+#options for build netcdf diagnostic libs
   if(BUILD_NCDIAG)
     set(NCDIAG_INCS "${PROJECT_BINARY_DIR}/libsrc/ncdiag/include")
     add_subdirectory(src/ncdiag)
     set(NCDIAG_LIBRARIES ncdiag )
   endif(BUILD_NCDIAG)
 
+#options for GSD
   if(BUILD_GSDCLOUD_ARW)
+    set(GSDCLOUDOPT "-DRR_CLOUDANALYSIS" CACHE INTERNAL "" )
     set(GSDCLOUD_DIR "${CMAKE_SOURCE_DIR}/libsrc/GSD/gsdcloud")
     set(gsdcloud gsdcloud_arw)
     add_subdirectory(libsrc/GSD/gsdcloud)
     set(GSDCLOUD_LIBRARY ${gsdcloud} )
   else(BUILD_GSDCLOUD_ARW)
     set(GSDCLOUD_LIBRARY "")
+    set( GSDCLOUDOPT "" CACHE INTERNAL "" )
   endif(BUILD_GSDCLOUD_ARW)
 
+#Add source for GSI and ENKF
   add_subdirectory(src/gsi)
   if(BUILD_ENKF)
     add_subdirectory(src/enkf)
   endif(BUILD_ENKF) 
+
+#Add utilities if requested
   if(BUILD_UTIL)
     message("in main CMAKE EXT built is ${EXT_BUILT}")
     add_subdirectory(util/EnKF/gfs/src)
@@ -263,10 +279,14 @@ project(GSI)
     add_subdirectory(util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radbcor.fd)
     add_subdirectory(util/Radiance_Monitor/nwprod/radmon_shared.v3.0.0/sorc/verf_radtime.fd)
   endif(BUILD_UTIL) 
+
+#try to find ndate or build it
   find_package( NDATE )
   if( NOT NDATE )
      add_subdirectory(util/ndate)
   endif()
+
+#build util_com tools, if requested
   if(BUILD_UTIL_COM)
     add_subdirectory(util/Analysis_Utilities/read_diag)
     add_subdirectory(util/radar_process/radialwind)
@@ -274,6 +294,8 @@ project(GSI)
     add_subdirectory(util/EnKF/arw/src)
     add_subdirectory(util/bufr_tools)
   endif(BUILD_UTIL_COM) 
+
+#Add unit tests, if requested
   if(BUILD_UNIT_TESTING)
     set(CTEST_TEST_TIMEOUT 400 )
     find_package(GSICONTROL)
@@ -293,7 +315,9 @@ project(GSI)
     )
     add_subdirectory(unit-tests)
   endif(BUILD_UNIT_TESTING)
+#set up regression tests
   if(BUILD_REG_TESTING)
+    #Set up baseline usage to streamline regression testing
     if(USE_BASELINE) 
       set(BASELINE_FLAG "1")
     else()      
