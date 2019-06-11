@@ -9,7 +9,7 @@ cmake_minimum_required(VERSION 2.6)
   include_directories( ${CORE_INCS} ) 
   target_link_libraries( oznmon_time.x ${W3NCO_4_LIBRARY} ${NEMSIO_LIBRARY} )
   add_dependencies( oznmon_time.x NCEPLIBS-w3nco NCEPLIBS-nemsio )
-  if(BUILD_EXT)
+  if(EXT_BUILT)
     add_dependencies( oznmon_time.x NCEPLIBS-w3nco NCEPLIBS-nemsio )
   endif()
 

@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 2.6)
   set_target_properties( radmon_bcor.x PROPERTIES Fortran_MODULE_DIRECTORY ${Util_MODULE_DIR} )
   include_directories( ${CORE_INCS} ${NCDIAG_INCS} )
   target_link_libraries( radmon_bcor.x ${W3NCO_4_LIBRARY} ${NCDIAG_LIBRARIES} ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES} ${HDF5_Fortran_HL_LIBRARIES} ${HDF5_LIBRARIES} )
-  if(BUILD_EXT)
+  if(EXT_BUILT)
     add_dependencies( radmon_bcor.x NCEPLIBS-w3nco ${NCDIAG_LIBRARIES} )
   endif()
 
