@@ -285,7 +285,7 @@
 ! Load data array for current satellite
   read(lunin) data_s,luse,ioid
 
-  write(*,*) 'read in data',nobs
+  write(*,*) 'read in AOD data ',nobs
 ! Loop over data in this block
   call dtime_setup()
   do n = 1,nobs
@@ -821,9 +821,9 @@ contains
          call nc_diag_data2d("air_temperature", tmp(1:nsig))  ! K 
   
          do k=1,nsig
-            tmp(k)=1000_r_single*qvp(nsig-k+1)/(1_r_kind-qvp(nsig-k+1))
+            tmp(k)=qvp(nsig-k+1)/(1_r_kind-qvp(nsig-k+1))
          end do
-         call nc_diag_data2d("humidity_mixing_ratio", tmp(1:nsig))  ! g/kg  
+         call nc_diag_data2d("humidity_mixing_ratio", tmp(1:nsig))  ! kg/kg  
   
          do k=1,nsig
             tmp(k)=rh(nsig-k+1)
@@ -831,14 +831,14 @@ contains
          call nc_diag_data2d("relative_humidity", tmp(1:nsig))  ! 0-1
   
          do k=1,nsig
-            tmp(k)=10_r_single*prsltmp(nsig-k+1)
+            tmp(k)=1000_r_single*prsltmp(nsig-k+1)
          end do
-         call nc_diag_data2d("air_pressure", tmp(1:nsig))  ! hPa
+         call nc_diag_data2d("air_pressure", tmp(1:nsig))  ! Pa
   
          do k=1,nsig+1
-            tmp(k)=10_r_single*prsitmp(nsig-k+2)
+            tmp(k)=1000_r_single*prsitmp(nsig-k+2)
          end do
-         call nc_diag_data2d("air_pressure_levels", tmp(1:nsig+1))  ! hPa
+         call nc_diag_data2d("air_pressure_levels", tmp(1:nsig+1))  ! Pa
   
          do iaero = 1, n_aerosols_fwd
             write (fieldname, "(A,I0.2)") aerosol_names(iaero)

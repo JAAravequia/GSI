@@ -12,7 +12,7 @@
 set -x
 export NTHREADS=2
 
-export exp="test_FV3AeroNMCStats_386"
+export exp="test_FV3AeroNMCStats_192"
 export base=/scratch4/NCEPDEV/da/save/Cory.R.Martin/GSI/ProdGSI/util/NMC_Bkerror/
 export calcstats=$base/sorc_aero/calcstats_aerosol.exe
 export datadir=/scratch4/NCEPDEV/da/noscrub/Cory.R.Martin/FV3GFS-GSDChem/
@@ -56,7 +56,7 @@ cp $calcstats ./stats.x
 #jcap=766,jcapin=766,jcapsmooth=766,nsig=64,nlat=386,nlon=768,maxcases=200,hybrid=.true.,smoothdeg=0.5,
 cat << EOF > stats.parm
  &NAMSTAT
-   jcap=766,jcapin=766,jcapsmooth=766,nsig=64,nlat=768,nlon=1536,maxcases=200,hybrid=.true.,smoothdeg=0.5,
+   jcap=766,jcapin=766,jcapsmooth=766,nsig=64,nlat=192,nlon=384,maxcases=200,hybrid=.true.,smoothdeg=0.5,
    biasrm=.true.,vertavg=.true.,use_nemsio=.true.,modelname='fv3'
  /
 EOF
@@ -76,8 +76,6 @@ source /apps/lmod/7.7.18/init/sh
 module load intel
 module load impi
 module load netcdf
-module load grads
-module load rocoto/1.3.0-RC3
 # /contrib modules
 module use -a /contrib/modulefiles
 module load anaconda/anaconda2
@@ -92,7 +90,6 @@ module use -a /scratch3/NCEPDEV/nwprod/lib/modulefiles
 module load nemsio
 module load bacio
 module load w3nco
-module load crtm/v2.2.3
 module load sp
 
 export MPI_BUFS_PER_PROC=2048

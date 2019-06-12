@@ -378,7 +378,7 @@
 !  08-25-2018 Collard   Introduce bias_zero_start
 !  03-11-2019 Collard   Introduce ec_amv_qc as temporary control of GOES-16/17 AMVS
 !  04-19-2019 Wei/Martin   added option lread_ext_aerosol to read in aerfXX file for NEMS aerosols;
-!                          added option use_fv3_aero to choose between NGAC and FV3-Chem 
+!                          added option use_fv3_aero to choose between NGAC and FV3GFS-GSDChem 
 !
 !EOP
 !-------------------------------------------------------------------------

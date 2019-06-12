@@ -272,6 +272,7 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
          if (mype==mype_use(icount)) then
            
             if (use_fv3_aero) then
+               ! variable names in FV3GFS-GSDChem
                if ( aeroname(l)(1:4) == 'seas') then
                   select case ( trim(aeroname(l)) )
                    case ('seas1')
@@ -286,9 +287,12 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
                   call nemsio_readrecv(gfile,'seas5','mid layer',k,rwork1d0,iret=iret)
                   end select
                else
+                  ! many of the names are the same in the GSI bundle as they are
+                  ! in the FV3GFS-GSDChem NEMSIO files
                   call nemsio_readrecv(gfile,trim(aeroname(l)),'mid layer',k,rwork1d0,iret=iret)
                end if
             else
+               ! variable names in NGACv2
                select case ( trim(aeroname(l)) )
                 case ('sulf')
                call nemsio_readrecv(gfile,'so4','mid layer',k,rwork1d0,iret=iret)
@@ -302,19 +306,14 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
                call nemsio_readrecv(gfile,'ocphilic','mid layer',k,rwork1d0,iret=iret)
                 case ('dust1')
                call nemsio_readrecv(gfile,'du001','mid layer',k,rwork1d0,iret=iret)
-     !               rwork1d0=rwork1d0*half
                 case ('dust2')
                call nemsio_readrecv(gfile,'du002','mid layer',k,rwork1d0,iret=iret)
-     !               rwork1d0=rwork1d0*half
                 case ('dust3')
                call nemsio_readrecv(gfile,'du003','mid layer',k,rwork1d0,iret=iret)
-     !               rwork1d0=rwork1d0*half
                 case ('dust4')
                call nemsio_readrecv(gfile,'du004','mid layer',k,rwork1d0,iret=iret)
-     !               rwork1d0=rwork1d0*half
                 case ('dust5')
                call nemsio_readrecv(gfile,'du005','mid layer',k,rwork1d0,iret=iret)
-     !               rwork1d0=rwork1d0*half
                 case ('seas1')
                call nemsio_readrecv(gfile,'ss001','mid layer',k,rwork1d1,iret=iret)
                call nemsio_readrecv(gfile,'ss002','mid layer',k,rwork1d2,iret=iret)

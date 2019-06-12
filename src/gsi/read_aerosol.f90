@@ -204,7 +204,7 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
            write(6,*)'READ_AEROSOL: MODIS data type, subset = ',subset
            !          Set dependent variables and allocate arrays
            nreal=11   !9
-           nchanl=20
+           nchanl=20 ! 19 + 1 additional vis channel in CRTM coeff file
            naerodat=nreal+nchanl
            allocate (aeroout(naerodat,itxmax),nrec(itxmax))
            allocate (dataaod(nchanl))
