@@ -169,7 +169,7 @@ contains
     endif
 
     inner_vars=1
-    num_fields=min(8*grd_a%nsig+2,npe)
+   num_fields=min(8*grd_a%nsig+2,npe)
 !  Create temporary communication information fore read routines
     call general_sub2grid_create_info(grd_t,inner_vars,grd_a%nlat,grd_a%nlon, &
           grd_a%nsig,num_fields,regional)
@@ -211,6 +211,7 @@ contains
 !      Set values to actual MetGuess fields
        call set_guess_
 
+
        l_cld_derived = associated(ges_cwmr_it).and.&
                        associated(ges_q_it)   .and.&
                        associated(ges_ql_it)  .and.&
@@ -223,7 +224,6 @@ contains
        if (l_cld_derived) then
           call cloud_calc_gfs(ges_ql_it,ges_qi_it,ges_cwmr_it,ges_q_it,ges_tv_it,.true.) 
        end if
-
     end do
     call gsi_bundledestroy(atm_bundle,istatus)
 

@@ -284,6 +284,8 @@ contains
     num_fields=min(n3d*grd_a%nsig+n2d,npe) 
     if (mype==0) write(6,*)'npe num_fields = ', npe,n3d*grd_a%nsig+n2d,num_fields
 
+
+
 !  Create temporary communication information fore read routines
     call general_sub2grid_create_info(grd_t,inner_vars,grd_a%nlat,grd_a%nlon, &
           grd_a%nsig,num_fields,regional)
@@ -296,20 +298,23 @@ contains
       call stop2(999)
     endif
 
+
     do it=1,nfldsig
 
        write(filename,'(''sigf'',i2.2)') ifilesig(it)
 
 !      Read background fields into bundle
-       if (mype==0) write(6,*)'before general_read_fv3atm_nems ...'
        if (fv3_full_hydro) then
+          if (mype==0) write(6,*)'before general_read_fv3atm_nems ...'
           call general_read_fv3atm_nems(grd_t,sp_a,filename,.true.,.true.,.true.,&
                atm_bundle,.true.,istatus)
+          if (mype==0) write(6,*)'after general_read_fv3atm_nems ...'
        else
+          if (mype==0) write(6,*)'before general_read_gfsatm_nems ...'
           call general_read_gfsatm_nems(grd_t,sp_a,filename,.true.,.true.,.true.,&
                atm_bundle,.true.,istatus)
+          if (mype==0) write(6,*)'after general_read_gfsatm_nems ...'
        endif
-       if (mype==0) write(6,*)'after general_read_gfsatm_nems ...'
 
        inithead=.false.
        zflag=.false.
@@ -343,8 +348,13 @@ contains
                           associated(ges_tv_it)
 !         call set_cloud_lower_bound(ges_cwmr_it)
           if (mype==0) write(6,*)'READ_GFS_NEMS: l_cld_derived = ', l_cld_derived
-          if (l_cld_derived) call cloud_calc_gfs(ges_ql_it,ges_qi_it,ges_cwmr_it,ges_q_it,ges_tv_it,.true.)
-
+          if (l_cld_derived) then
+             if (associated(ges_cf_it)) then
+                call cloud_calc_gfs(ges_ql_it,ges_qi_it,ges_cwmr_it,ges_q_it,ges_tv_it,.true.,ges_cf_it)
+             else
+                call cloud_calc_gfs(ges_ql_it,ges_qi_it,ges_cwmr_it,ges_q_it,ges_tv_it,.true.)
+             endif
+          end if  
        end if  
        if (it==ntguessig) then
           if (mype==0) write(6,*)'Print guess field ... after reset cloud lower bound'

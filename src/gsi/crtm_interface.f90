@@ -1852,6 +1852,7 @@ end subroutine destroy_crtm
                  if (ii==2 .and. atmosphere(1)%temperature(k)<t0c) &
                     cloud_cont(k,2)=max(1.001_r_kind*1.0E-6_r_kind, cloud_cont(k,2))
               end do
+!crtm2.3.x    if (.not. regional .and. icfs==0 ) atmosphere(1)%cloud_fraction(k) = cf(kk2)   
           endif   
         else 
            if (icmask) then
@@ -1873,7 +1874,8 @@ end subroutine destroy_crtm
               enddo
 
 
-!crtm2.3.x    if (.not. regional .and. icfs==0 .and. fv3_full_hydro) atmosphere(1)%cloud_fraction(k) = cf(kk2) 
+!crtm2.3.x    if (.not. regional .and. icfs==0 ) atmosphere(1)%cloud_fraction(k) = cf(kk2) 
+        
 
                 !Add lower bound to all hydrometers 
                 !note: may want to add lower bound value for effective radius  
