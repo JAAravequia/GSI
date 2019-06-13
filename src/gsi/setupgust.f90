@@ -30,6 +30,8 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2017-02-06  todling - add netcdf_diag capability; hidden as contained code
 !   2018-01-08  pondeca - addd option l_closeobs to use closest obs to analysis
 !                                     time in analysis
+!   2019-06-11  levine  - add option to process surface data with geometric (rather than pressure)
+!                         heights for sensor elevation
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -205,12 +207,12 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 ! Check for missing data
   if (.not. oneobtest) then
-  do i=1,nobs
-    if (data(igust,i) > r0_1_bmiss)  then
-       muse(i)=.false.
-       data(igust,i)=rmiss_single   ! for diag output
-    end if
-  end do
+     do i=1,nobs
+        if (data(igust,i) > r0_1_bmiss)  then
+           muse(i)=.false.
+           data(igust,i)=rmiss_single   ! for diag output
+        end if
+     end do
   end if
 
 ! Check for duplicate observations at same location
@@ -237,8 +239,6 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         end if
      end do
   end do
-
-
 
 ! If requested, save select data for output to diagnostic file
   if(conv_diagsave)then
@@ -360,9 +360,9 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
     dpres=dpres-(dstn+fact*(zsges-dstn))
     drpx=0.003*abs(dstn-zsges)*(one-fact)
 
-    if (.not. twodvar_regional) then
-       call tintrp2a1(geop_hgtl,zges,dlat,dlon,dtime,hrdifsig,&
-               nsig,mype,nfldsig)
+    !if (.not. twodvar_regional) then  !LEVINE comment out
+    call tintrp2a1(geop_hgtl,zges,dlat,dlon,dtime,hrdifsig,&
+         nsig,mype,nfldsig)
 !      For observation reported with geometric height above sea level,
 !      convert geopotential to geometric height.
 !      Convert geopotential height at layer midpoints to geometric
@@ -376,19 +376,19 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !      termrg = first term in the denominator of equation 23
 !      zges  = equation 23
 
-       slat = data(ilate,i)*deg2rad
-       sin2  = sin(slat)*sin(slat)
-       termg = grav_equator * &
-            ((one+somigliana*sin2)/sqrt(one-eccentricity*eccentricity*sin2))
-       termr = semi_major_axis /(one + flattening + grav_ratio -  &
-            two*flattening*sin2)
-       termrg = (termg/grav)*termr
-       do k=1,nsig
-          zges(k) = (termr*zges(k)) / (termrg-zges(k))  ! eq (23)
-       end do
-    else
-       zges(1) = ten
-    end if
+    slat = data(ilate,i)*deg2rad
+    sin2  = sin(slat)*sin(slat)
+    termg = grav_equator * &
+         ((one+somigliana*sin2)/sqrt(one-eccentricity*eccentricity*sin2))
+    termr = semi_major_axis /(one + flattening + grav_ratio -  &
+         two*flattening*sin2)
+    termrg = (termg/grav)*termr
+    do k=1,nsig
+       zges(k) = (termr*zges(k)) / (termrg-zges(k))  ! eq (23)
+    end do
+ !else   !LEVINE comment out if statement (if not 2dvar)
+ !   zges(1) = ten
+ !end if
 
 !   Given observation height, (1) adjust 10 meter wind factor if
 !   necessary, (2) convert height to grid relative units, (3) compute
@@ -404,7 +404,8 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
     if (zob >= zges(1)) then
        factw=one
     else
-       factw = data(iff10,i)
+       !factw = data(iff10,i)
+       factw=one !LEVINE
        if(sfcmod_gfs .or. sfcmod_mm5) then
           sfcr = data(isfcr,i)
           skint = data(iskint,i)
@@ -412,6 +413,10 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
        end if
        if (.not. twodvar_regional) then
          if (zob <= ten) then
+            if (zob <= zero) then  !LEVINE add check for negative ob height and correct to default 10 m
+               print*, "WARNING: Negative ZOB height for gust station,zob,tye (correcting to 10 m):",station_id,zob,itype
+               zob=ten
+            endif
             if(zob < ten)then
               term = max(zob,zero)/ten
               factw = term*factw
