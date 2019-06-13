@@ -125,6 +125,7 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) l,mm1
   integer(i_kind) istat
   integer(i_kind) idomsfc,iskint,iff10,isfcr
+  integer(i_kind) itype !LEVINE
   
   logical,dimension(nobs):: luse,muse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
@@ -333,6 +334,8 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      endif
 
      if(.not.in_curbin) cycle
+
+     itype=ictype(ikx) !LEVINE - same as in setupwspd10m.f90
 
 ! Interpolate to get gust at obs location/time
      call tintrp2a11(ges_gust,gustges,dlat,dlon,dtime,hrdifsig,&
