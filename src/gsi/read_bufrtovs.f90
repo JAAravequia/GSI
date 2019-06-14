@@ -148,7 +148,6 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
   use mpimod, only: npe
   use radiance_mod, only: rad_obs_type
   use gsi_io, only: verbose
-  use control_vectors, only: fv3_full_hydro
   implicit none
 
 ! Declare passed variables
@@ -802,7 +801,7 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
                        else
                           qval=zero
                        end if
-                       if (fv3_full_hydro) qval=zero  
+                       if (radmod%lprecip) qval=zero  
                        ! favor thinner clouds
                        ! cosza = cos(lza)
                        ! d0= 8.24_r_kind - 2.622_r_kind*cosza + 1.846_r_kind*cosza*cosza

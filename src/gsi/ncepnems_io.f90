@@ -230,7 +230,8 @@ contains
     use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sub2grid_destroy_info
     use mpimod, only: npe,mype
     use cloud_efr_mod, only: cloud_calc_gfs,set_cloud_lower_bound
-    use control_vectors, only: cvars3d,imp_physics,fv3_full_hydro 
+    use control_vectors, only: cvars3d,imp_physics
+    use gridmod, only: fv3_full_hydro
     implicit none
 
     character(len=*),parameter::myname_=myname//'*read_'
@@ -304,16 +305,13 @@ contains
        write(filename,'(''sigf'',i2.2)') ifilesig(it)
 
 !      Read background fields into bundle
+       if (mype==0) write(6,*)'fv3_full_hydro = ', fv3_full_hydro
        if (fv3_full_hydro) then
-          if (mype==0) write(6,*)'before general_read_fv3atm_nems ...'
           call general_read_fv3atm_nems(grd_t,sp_a,filename,.true.,.true.,.true.,&
                atm_bundle,.true.,istatus)
-          if (mype==0) write(6,*)'after general_read_fv3atm_nems ...'
        else
-          if (mype==0) write(6,*)'before general_read_gfsatm_nems ...'
           call general_read_gfsatm_nems(grd_t,sp_a,filename,.true.,.true.,.true.,&
                atm_bundle,.true.,istatus)
-          if (mype==0) write(6,*)'after general_read_gfsatm_nems ...'
        endif
 
        inithead=.false.

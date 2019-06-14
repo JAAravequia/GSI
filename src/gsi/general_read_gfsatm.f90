@@ -617,7 +617,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
    use general_specmod, only: spec_vars
    use mpimod, only: npe
    use constants, only: zero,one,fv,r0_01
-   use nemsio_module, only: nemsio_init,nemsio_open,nemsio_close
+   use nemsio_module, only: nemsio_init,nemsio_open,nemsio_close,nemsio_charkind
    use ncepnems_io, only: error_msg
    use nemsio_module, only: nemsio_gfile,nemsio_getfilehead,nemsio_readrecv,nemsio_getrechead 
    use egrid2agrid_mod,only: g_egrid2agrid,g_create_egrid2agrid,egrid2agrid_parm,destroy_egrid2agrid
@@ -653,7 +653,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
    character(len=120) :: my_name = 'GENERAL_READ_GFSATM_NEMS'
    character(len=1)   :: null = ' '
    character(len=16)  :: vname,vlevtyp 
-   integer(i_kind):: vlev,jrec,nrec,icf  
+   integer(i_kind):: vlev,jrec,nrec 
    integer(i_kind):: iret,nlatm2,nlevs,icm,nord_int
    integer(i_kind):: i,j,k,icount,kk
    integer(i_kind) :: ier,istatus,iredundant
@@ -674,10 +674,13 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
    real(r_kind),allocatable,dimension(:) :: rlats,rlons,clons,slons
    real(4),allocatable,dimension(:) :: r4lats,r4lons
 
-   logical :: procuse,diff_res,eqspace
+   logical :: procuse,diff_res,eqspace,has_cf
+   character(nemsio_charkind),allocatable:: recname(:)
    type(nemsio_gfile) :: gfile
    type(egrid2agrid_parm) :: p_high
    logical,dimension(1) :: vector
+
+
 
    !******************************************************************************
    ! Initialize variables used below
@@ -723,16 +726,14 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
       endif
 
       ! check if cloud fraction (cld_amt) is in the file
-      iret=0;icf=-999
       call nemsio_getfilehead(gfile,nrec=nrec,iret=iret)
-      search: do jrec=1,nrec
-         call nemsio_getrechead(gfile,jrec,vname,vlevtyp,vlev,iret)
-         if (trim(vname) == 'cld_amt') then
-            icf=0
-            if (mype==0) write(6,*) trim(vname), ' found  icf= ', icf
-            exit search
-         endif
-      enddo search
+      allocate(recname(nrec))
+      call nemsio_getfilehead(gfile,recname=recname,iret=iret)  
+      has_cf = .false.
+      do jrec=1,nrec
+        if (recname(jrec)=='cld_amt') has_cf=.true. 
+      enddo
+      if (mype==0) write(6,*) trim(my_name), ' has_cf = ', has_cf 
 
       fhour = float(nfhour) + float(nfminute)/r60 + float(nfsecondn)/float(nfsecondd)/r3600
       odate(1) = idate(4)  !hour
@@ -889,7 +890,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
          endif
       endif
       if ( icount == icm ) then
-         if (icf==0) then
+         if (has_cf) then
             call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
                  icount,iflag,ilev,work,uvflag,vordivflag,g_cf) 
          else
@@ -925,7 +926,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
       endif
    endif
    if ( icount == icm ) then
-      if (icf==0) then
+      if (has_cf) then
          call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
               icount,iflag,ilev,work,uvflag,vordivflag,g_cf) 
       else
@@ -969,7 +970,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
          endif
       endif
       if ( icount == icm ) then
-         if (icf==0) then
+         if (has_cf) then
             call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
                  icount,iflag,ilev,work,uvflag,vordivflag,g_cf) 
          else
@@ -1031,7 +1032,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
             deallocate(grid_vor)
          endif
          if ( icount == icm ) then
-            if (icf==0) then
+            if (has_cf) then
                call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
                     icount,iflag,ilev,work,uvflag,vordivflag,g_cf) 
             else
@@ -1091,7 +1092,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
             deallocate(grid_div)
          endif
          if ( icount == icm ) then
-            if (icf==0) then
+            if (has_cf) then
                call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
                     icount,iflag,ilev,work,uvflag,vordivflag,g_cf) 
             else
@@ -1133,7 +1134,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
             endif
          endif
          if ( icount == icm ) then
-            if (icf==0) then
+            if (has_cf) then
                call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
                     icount,iflag,ilev,work,uvflag,vordivflag,g_cf) 
             else
@@ -1171,7 +1172,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
             endif
          endif
          if ( icount == icm ) then
-            if (icf==0) then
+            if (has_cf) then
                call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
                     icount,iflag,ilev,work,uvflag,vordivflag,g_cf) 
             else
@@ -1206,7 +1207,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
          endif
       endif
       if ( icount == icm ) then
-         if (icf==0) then
+         if (has_cf) then
             call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
                  icount,iflag,ilev,work,uvflag,vordivflag,g_cf)  
          else
@@ -1239,7 +1240,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
          endif
       endif
       if ( icount == icm ) then
-         if (icf==0) then
+         if (has_cf) then
             call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
                  icount,iflag,ilev,work,uvflag,vordivflag,g_cf)  
          else
@@ -1281,8 +1282,8 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
          endif
       endif
     ! if ( icount == icm .or. k == nlevs ) then  !orig
-      if ( icount == icm  .or. ( icf/=0 .and. k==nlevs) ) then  
-         if (icf==0) then
+      if ( icount == icm  .or. ( (.not. has_cf) .and. k==nlevs) ) then  
+         if (has_cf) then
             call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
                  icount,iflag,ilev,work,uvflag,vordivflag,g_cf)  
          else
@@ -1291,7 +1292,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
          endif
       endif
 
-      if (icf==0) then
+      if (has_cf) then
       icount=icount+1
       iflag(icount)=11
       ilev(icount)=k
@@ -1375,6 +1376,8 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
    ! Clean up
    deallocate(g_z)
    deallocate(g_u,g_v)
+   if (allocated(recname)) deallocate(recname)
+
 
    ! Print date/time stamp
    if ( mype == 0 ) then
@@ -1384,7 +1387,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
             3i6,', scatter nlon,nlat=',2i6,', hour=',f6.1,', idate=',4i5,1x,a)
    endif
 
-   return
+   return 
 
 end subroutine general_read_gfsatm_nems
 
@@ -1960,3 +1963,6 @@ subroutine general_fillv_ns(grd,sp,gridu_in,gridv_in,gridv_out)
 
    return
 end subroutine general_fillv_ns
+
+
+

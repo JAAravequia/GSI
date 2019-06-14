@@ -1128,7 +1128,7 @@ subroutine get_user_ens_gfs_member_(grd,member,ntindex,atm_bundle,iret)
     use hybrid_ensemble_parameters, only: uv_hyb_ens
     use hybrid_ensemble_parameters, only: sp_ens
     use gsi_bundlemod, only: gsi_bundle
-    use control_vectors, only: fv3_full_hydro  
+    use gridmod, only: fv3_full_hydro   
 
     implicit none
 

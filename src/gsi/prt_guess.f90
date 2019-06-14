@@ -47,7 +47,7 @@ subroutine prt_guess(sgrep)
   use gsi_metguess_mod, only: gsi_metguess_get,gsi_metguess_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use mpeu_util, only: die 
-  use control_vectors, only: fv3_full_hydro  
+  use gridmod, only: fv3_full_hydro
 
   implicit none
 

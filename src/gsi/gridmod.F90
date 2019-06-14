@@ -148,6 +148,7 @@ module gridmod
   public :: jcap,jcap_b,hires_b,sp_a,grd_a
   public :: jtstart,jtstop,nthreads
   public :: use_gfs_nemsio
+  public :: fv3_full_hydro  
   public :: sfcnst_comb
   public :: use_readin_anl_sfcmask
   public :: jcap_gfs,nlat_gfs,nlon_gfs
@@ -184,6 +185,7 @@ module gridmod
   logical update_regsfc     !
   logical hires_b           ! .t. when jcap_b requires double FFT
   logical use_gfs_nemsio    ! .t. for using NEMSIO to real global first guess
+  logical fv3_full_hydro    ! .t. for using NEMSIO to real global first guess
   logical sfcnst_comb       ! .t. for using combined sfc & nst file
   logical use_sp_eqspace    ! .t. use equally-space grid in spectral transforms
 
@@ -411,9 +413,11 @@ contains
 !-------------------------------------------------------------------------
     use constants, only: one,two
     use gsi_io, only: verbose
+    use gsi_metguess_mod, only: gsi_metguess_get 
     implicit none
 
     integer(i_kind) k
+    integer(i_kind):: ivar,istatus  
 
     nsig = 42
     nsig_soil = 6
@@ -476,6 +480,7 @@ contains
     nthreads = 1  ! initialize the number of threads
 
     use_gfs_nemsio  = .false.
+    fv3_full_hydro  = .false. 
     sfcnst_comb = .false.
     use_readin_anl_sfcmask = .false.
 
@@ -484,6 +489,17 @@ contains
     jcap_gfs=1534
     nlat_gfs=1538
     nlon_gfs=3072
+
+    call gsi_metguess_get('var::ql', ivar, istatus)
+    fv3_full_hydro=ivar>0
+    call gsi_metguess_get('var::qi', ivar, istatus)
+    fv3_full_hydro=fv3_full_hydro.and.ivar>0
+    call gsi_metguess_get('var::qr', ivar, istatus)
+    fv3_full_hydro=fv3_full_hydro.and.ivar>0
+    call gsi_metguess_get('var::qs', ivar, istatus)
+    fv3_full_hydro=fv3_full_hydro.and.ivar>0
+    call gsi_metguess_get('var::qg', ivar, istatus)
+    fv3_full_hydro=fv3_full_hydro.and.ivar>0
 
     return
   end subroutine init_grid

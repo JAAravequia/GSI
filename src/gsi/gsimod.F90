@@ -68,7 +68,7 @@
       erradar_inflate,tdrerr_inflate,use_poq7,qc_satwnds,&
       init_qcvars,vadfile,noiqc,c_varqc,qc_noirjaco3,qc_noirjaco3_pole,&
       buddycheck_t,buddydiag_save,njqc,vqc,vadwnd_l2rw_qc, &
-      pvis,pcldch,scale_cv,estvisoe,estcldchoe,vis_thres,cldch_thres
+      pvis,pcldch,scale_cv,estvisoe,estcldchoe,vis_thres,cldch_thres,cao_check
   use pcpinfo, only: npredp,diag_pcp,dtphys,deltim,init_pcp
   use jfunc, only: iout_iter,iguess,miter,factqmin,factqmax, &
      factql,factqi,factqr,factqs,factqg, &  
@@ -78,7 +78,7 @@
      clip_supersaturation
   use state_vectors, only: init_anasv,final_anasv
   use control_vectors, only: init_anacv,final_anacv,nrf,nvars,nrf_3d,cvars3d,cvars2d,&
-     nrf_var,imp_physics,lupp,fv3_full_hydro  
+     nrf_var,imp_physics,lupp  
   use derivsmod, only: init_anadv
   use berror, only: norh,ndeg,vs,bw,init_berror,hzscl,hswgt,pert_berr,pert_berr_fct,&
      bkgv_flowdep,bkgv_rewgtfct,bkgv_write,fpsproj,nhscrf,adjustozvar,fut2ps,cwcoveqqcov
@@ -557,7 +557,7 @@
 !     luse_obsdiag - use obsdiags (useful when running EnKF observers; e.g., echo Jo table) 
 !     imp_physics - type of GFS microphysics
 !     lupp - if T, UPP is used and extra variables are output
-!     fv3_full_hydro - if T, use full set of hydrometeors in the obs operator and analysis  
+!     cao_check - if T, turn on cold-air-outbreak screening for quality control
 !     binary_diag - trigger binary diag-file output (being phased out)
 !     netcdf_diag - trigger netcdf diag-file output
 !
@@ -601,7 +601,7 @@
        rmesh_vr,zmesh_dbz,zmesh_vr, ntilt_radarfiles, whichradar,&
        radar_no_thinning,ens_hx_dbz_cut,static_gsi_nopcp_dbz,rmesh_dbz,&
        minobrangevr, maxtiltdbz, mintiltvr,mintiltdbz,if_vterminal,if_vrobs_raw,&
-       if_model_dbz,imp_physics,lupp,netcdf_diag,binary_diag,l_wcp_cwm,fv3_full_hydro
+       if_model_dbz,imp_physics,lupp,netcdf_diag,binary_diag,l_wcp_cwm,cao_check
 
 ! GRIDOPTS (grid setup variables,including regional specific variables):
 !     jcap     - spectral resolution

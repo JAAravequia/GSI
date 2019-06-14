@@ -79,7 +79,7 @@ module radiance_mod
   character(len=20),save,allocatable,dimension(:) :: aerosol_names_fwd
   character(len=20),save,allocatable,dimension(:) :: aerosol_names_jac
   logical :: icloud_fwd,icloud_cv,iallsky,cw_cv
-  logical :: iaerosol_fwd,iaerosol_cv,iaerosol
+  logical :: iaerosol_fwd,iaerosol_cv,iaerosol,iprecip
   integer(i_kind) :: n_actual_clouds,n_clouds_jac,n_clouds_fwd
   integer(i_kind) :: n_actual_aerosols,n_aerosols_fwd,n_aerosols_jac
   integer(i_kind) :: idx_cw,idx_ql,idx_qi,idx_qr,idx_qs,idx_qg,idx_qh
@@ -95,6 +95,7 @@ module radiance_mod
     logical :: ex_biascor             ! .true. for special bias correction
     logical :: cld_effect             ! .true. additional cloud effect quality control
     logical :: lcloud_fwd,lallsky
+    logical :: lprecip 
     integer(i_kind),pointer,dimension(:) :: lcloud4crtm=> NULL()    ! -1 clear-sky; 0 forwad operator only; 1 iallsky
     logical :: laerosol_fwd,laerosol
     integer(i_kind),pointer,dimension(:) :: laerosol4crtm => NULL() ! -1 no aero used; 0 forwad operator only; 1 iaerosol 
@@ -137,6 +138,7 @@ contains
     implicit none
 
     integer(i_kind) icw_av,iql_av,iqi_av,iqtotal,ier
+    integer(i_kind) iqr,iqs,iqg 
     integer(i_kind) indx_p25,indx_dust1,indx_dust2,ip25_av,idust1_av,idust2_av
 
 !   initialize variables
@@ -152,6 +154,8 @@ contains
     iaerosol_fwd=.false.
     iaerosol_cv=.false.
     iaerosol=.false.
+
+    iprecip=.false.
 
     n_actual_aerosols=0
     n_aerosols_fwd=0
@@ -175,6 +179,10 @@ contains
              allocate(cloud_names_jac(max(n_clouds_jac,1)))
              call gsi_metguess_get ('clouds_4crtm_jac::3d', cloud_names_jac, ier)
           end if
+          iqr = getindex(cloud_names_fwd,'qr')
+          iqs = getindex(cloud_names_fwd,'qs')
+          iqg = getindex(cloud_names_fwd,'qg')
+          if (iqr>0 .or. iqs>0 .or. iqg>0) iprecip = .true.
        end if
 
 !      inquire number of clouds to participate in CRTM calculations
@@ -236,7 +244,8 @@ contains
 
     if (mype==0) then
        write(6,*) 'radiance_mode_init: icloud_fwd=',icloud_fwd,' iallsky=',iallsky, &
-                  ' cw_cv=',cw_cv,' iaerosol_fwd=',iaerosol_fwd,' iaerosol=',iaerosol
+                  ' cw_cv=',cw_cv,' iaerosol_fwd=',iaerosol_fwd,' iaerosol=',iaerosol, &
+                  ' iprecip=',iprecip
        write(6,*) 'radiance_mode_init: n_actual_clouds=',n_actual_clouds
        if (n_actual_clouds>0) write(6,*) 'radiance_mode_init: cloud_names=',cloud_names  
        write(6,*) 'radiance_mode_init: n_clouds_fwd=',n_clouds_fwd
@@ -435,9 +444,12 @@ contains
        rad_type_info(k)%ex_biascor=.false.
        rad_type_info(k)%cld_effect=.false.
        rad_type_info(k)%lcloud_fwd=.false.
+       rad_type_info(k)%lprecip=.false.
        rad_type_info(k)%lallsky=.false.
        rad_type_info(k)%laerosol_fwd=.false.
        rad_type_info(k)%laerosol=.false.
+
+       if (iprecip) rad_type_info(k)%lprecip=.true.
 
        ii=k2i(k)
        first=.true.
@@ -495,10 +507,12 @@ contains
              if (iaerosol4crtm(j)==0) rad_type_info(k)%laerosol_fwd=.true.
           end if
        end do
+
        if (mype==0 .and. print_verbose)  &
                                write(6,*) 'radiance_obstype_init: type=', rad_type_info(k)%rtype, &
                                ' nch=',rad_type_info(k)%nchannel, &
                                ' lcloud_fwd=',rad_type_info(k)%lcloud_fwd, &
+                               ' lprecip=',rad_type_info(k)%lprecip, &    
                                ' lallsky=',rad_type_info(k)%lallsky, &
                                ' laerosol_fwd=',rad_type_info(k)%laerosol_fwd, &
                                ' laerosol=',rad_type_info(k)%laerosol
@@ -571,6 +585,9 @@ contains
 
           radmod%cclr => rad_type_info(i)%cclr
           radmod%ccld => rad_type_info(i)%ccld
+
+          radmod%lprecip = radmod%lcloud_fwd .and. rad_type_info(i)%lprecip 
+
           return
        end if
     end do

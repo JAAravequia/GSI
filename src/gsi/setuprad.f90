@@ -258,7 +258,7 @@
   use clw_mod, only: calc_clw, ret_amsua
   use qcmod, only: qc_ssmi,qc_seviri,qc_abi,qc_ssu,qc_avhrr,qc_goesimg,qc_msu,qc_irsnd,qc_amsua,qc_mhs,qc_atms
   use qcmod, only: igood_qc,ifail_gross_qc,ifail_interchan_qc,ifail_crtm_qc,ifail_satinfo_qc,qc_noirjaco3,ifail_cloud_qc
-  use qcmod, only: ifail_cao_qc  
+  use qcmod, only: ifail_cao_qc,cao_check  
   use qcmod, only: qc_gmi,qc_saphir,qc_amsr2
   use qcmod, only: setup_tzr_qc,ifail_scanedge_qc,ifail_outside_range
   use state_vectors, only: svars3d, levels, svars2d, ns3d, nsdim
@@ -266,7 +266,7 @@
   use radinfo, only: radinfo_adjust_jacobian
   use radiance_mod, only: rad_obs_type,radiance_obstype_search,radiance_ex_obserr,radiance_ex_biascor
   use sparsearr, only: sparr2, new, writearray, size, fullarray
-  use control_vectors, only: imp_physics, fv3_full_hydro
+  use control_vectors, only: imp_physics  
 
   implicit none
 
@@ -913,7 +913,7 @@
            endif
         endif
         ! Screening for cold-air outbreak area (only applied to MW for now)
-        if (fv3_full_hydro) then  
+        if (cao_check) then   
      !  cao_flag = (stability < 12.0_r_kind) .and. (hwp_ratio  < half) .and.  (tcwv < 8.0_r_kind) 
         if(microwave .and. sea) then 
            if(radmod%lcloud_fwd) then                            

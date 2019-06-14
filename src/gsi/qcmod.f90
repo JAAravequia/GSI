@@ -110,6 +110,7 @@ module qcmod
 !   def ptopo3,pboto3   - arrays containing top pressure and bottom pressure of print levels for o3 levels
 !   def vadfile         - local name of bufr file containing vad winds (used by read_radar)
 !   def use_poq7        - if true, accept sbuv/2 obs with profile ozone quality flag 7
+!   def cao_check       - if true, turn on cold-air-outbreak screening
 !
 ! following used for nonlinear qc:
 !
@@ -141,7 +142,6 @@ module qcmod
   use radinfo, only: iuse_rad,passive_bc
   use radinfo, only: tzr_qc
   use radiance_mod, only: rad_obs_type
-  use control_vectors, only: fv3_full_hydro
   implicit none
 
 ! set default to private
@@ -177,6 +177,7 @@ module qcmod
   public :: igood_qc,ifail_crtm_qc,ifail_satinfo_qc,ifail_interchan_qc,&
             ifail_gross_qc,ifail_cloud_qc,ifail_outside_range,ifail_scanedge_qc,&
             ifail_cao_qc  
+  public :: cao_check 
 
   public :: buddycheck_t,buddydiag_save
   public :: vadwnd_l2rw_qc
@@ -193,6 +194,7 @@ module qcmod
   logical buddycheck_t
   logical buddydiag_save
   logical vadwnd_l2rw_qc
+  logical cao_check
 
   character(10):: vadfile
   integer(i_kind) npres_print
@@ -383,6 +385,7 @@ contains
     vadfile='none'
 
     use_poq7 = .false.
+    cao_check = .false.
 
     qc_noirjaco3 = .false.  ! when .f., use O3 Jac from IR instruments
     qc_noirjaco3_pole = .false. ! true=do not use O3 Jac from IR instruments near poles
@@ -2828,7 +2831,7 @@ subroutine qc_amsua(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse,   &
 !       calcalculate scattering index
 !       screen out channels 1 to 6, and 15 if channel 6 is affected by precipitation
            ! for precipitating clouds
-           if(fv3_full_hydro) then
+           if(radmod%lprecip) then
               if (cldeff_obs(ich536) < -0.50_r_kind .or. cldeff_fg(ich536) < -0.5_r_kind) then
                  efactmc=zero
                  vfactmc=zero
@@ -2967,7 +2970,7 @@ subroutine qc_amsua(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse,   &
               if (dtde15 /= zero) de15=abs(tbc(ich890))/dtde15*(errf0(ich890)/errf(ich890))*(one-max(one,10.0_r_kind*clwp_amsua))
               qc4emiss= de2>thrd2 .or. de3>thrd3 .or. de1>thrd1 .or. de15>thrd15
            endif
-           endif ! fv3_full_hydro
+           endif ! radmod%lprecip 
         endif  ! if sea
 ! QC for clear condition
      else  ! <lcw4crtm>

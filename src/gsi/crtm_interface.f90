@@ -184,6 +184,7 @@ public itz_tr               ! = 37/39 index of d(Tz)/d(Tr)
   integer(i_kind),save :: indx_p25, indx_dust1, indx_dust2
   logical        ,save :: lwind
   logical        ,save :: cld_sea_only_wk
+  logical        ,save :: lprecip_wk 
   logical        ,save :: mixed_use
   integer(i_kind), parameter :: min_n_absorbers = 2
 
@@ -437,6 +438,7 @@ subroutine init_crtm(init_pass,mype_diaghdr,mype,nchanl,nreal,isis,obstype,radmo
     n_clouds_jac_wk = n_clouds_jac
     cld_sea_only_wk = radmod%cld_sea_only
     Load_CloudCoeff = .true.
+    lprecip_wk = radmod%lprecip
  else
     n_actual_clouds_wk = 0
     n_clouds_fwd_wk = 0
@@ -995,7 +997,7 @@ end subroutine destroy_crtm
   use obsmod, only: iadate
   use jfunc, only: jiter 
   use aeroinfo, only: nsigaerojac
-  use control_vectors, only: imp_physics, fv3_full_hydro 
+  use control_vectors, only: imp_physics
 
   implicit none
 
@@ -1662,7 +1664,7 @@ end subroutine destroy_crtm
      endif ! <n_clouds_fwd_wk>
   end do
   ! Calculate effective radius for each hydrometeor
-  if ( n_clouds_fwd_wk > 0 .and. imp_physics==11 .and. fv3_full_hydro) then
+  if ( n_clouds_fwd_wk > 0 .and. imp_physics==11 .and. lprecip_wk) then 
      do ii = 1, n_clouds_fwd_wk
         iii=jcloud(ii)
        call calc_gfdl_reff(rho_air,h,cloud(:,ii),cloud_names(iii),cloudefr(:,ii))
@@ -1860,7 +1862,7 @@ end subroutine destroy_crtm
               do ii=1,n_clouds_fwd_wk
                  !cloud_cont(k,ii)=cloud(kk2,ii)*kgkg_kgm2  !orig
                  cloud_cont(k,ii)=cloud(kk2,ii)*c6(k)
-                 if (imp_physics==11 .and. fv3_full_hydro .and.  cloud_cont(k,ii) > 1.0e-6_r_kind) then
+                 if (imp_physics==11 .and. lprecip_wk .and.  cloud_cont(k,ii) > 1.0e-6_r_kind) then
                     cloud_efr (k,ii)=cloudefr(kk2,ii)
                  else
                     cloud_efr (k,ii)=zero
@@ -1922,7 +1924,7 @@ end subroutine destroy_crtm
   if(n_clouds_fwd_wk>0) then
      atmosphere(1)%n_clouds = n_clouds_fwd_wk  
      call Set_CRTM_Cloud (msig,n_actual_clouds_wk,cloud_names,icmask,n_clouds_fwd_wk,cloud_cont,cloud_efr,jcloud,auxdp, &
-                          atmosphere(1)%temperature,atmosphere(1)%pressure,auxq,atmosphere(1)%cloud)
+                          atmosphere(1)%temperature,atmosphere(1)%pressure,auxq,atmosphere(1)%cloud,lprecip_wk)
   endif
 
 ! Set aerosols for CRTM

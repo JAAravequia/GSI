@@ -1167,7 +1167,7 @@ end subroutine write_ghg_grid
     use gsi_4dvar, only: lwrite4danl,nhr_anal
     use ncepnems_io, only: write_nemsatm,write_nemssfc,write_nems_sfc_nst
     use ncepnems_io, only: write_fv3atm_nems     
-    use control_vectors, only: fv3_full_hydro    
+    use gridmod, only: fv3_full_hydro   
 
     implicit none
 
@@ -1257,23 +1257,20 @@ end subroutine write_ghg_grid
     if ( istatus == 0 ) aux_oz = zero
 !   call gsi_bundlegetpointer(atm_bundle,'cw',aux_cwmr,istatus)  
 !   if ( istatus == 0 ) aux_cwmr = zero                        
-    if (fv3_full_hydro) then
-       call gsi_bundlegetpointer(atm_bundle,'ql',aux_ql,istatus)
-       if ( istatus == 0 ) aux_ql = zero
-       call gsi_bundlegetpointer(atm_bundle,'qi',aux_qi,istatus)
-       if ( istatus == 0 ) aux_qi = zero
-       call gsi_bundlegetpointer(atm_bundle,'qr',aux_qr,istatus)
-       if ( istatus == 0 ) aux_qr = zero
-       call gsi_bundlegetpointer(atm_bundle,'qs',aux_qs,istatus)
-       if ( istatus == 0 ) aux_qs = zero
-       call gsi_bundlegetpointer(atm_bundle,'qg',aux_qg,istatus)
-       if ( istatus == 0 ) aux_qg = zero
-       call gsi_bundlegetpointer(atm_bundle,'cf',aux_cf,istatus)
-       if ( istatus == 0 ) aux_cf = zero
-    else
-       call gsi_bundlegetpointer(atm_bundle,'cw',aux_cwmr,istatus)
-       if ( istatus == 0 ) aux_cwmr = zero
-    endif   
+    call gsi_bundlegetpointer(atm_bundle,'ql',aux_ql,istatus)
+    if ( istatus == 0 ) aux_ql = zero
+    call gsi_bundlegetpointer(atm_bundle,'qi',aux_qi,istatus)
+    if ( istatus == 0 ) aux_qi = zero
+    call gsi_bundlegetpointer(atm_bundle,'qr',aux_qr,istatus)
+    if ( istatus == 0 ) aux_qr = zero
+    call gsi_bundlegetpointer(atm_bundle,'qs',aux_qs,istatus)
+    if ( istatus == 0 ) aux_qs = zero
+    call gsi_bundlegetpointer(atm_bundle,'qg',aux_qg,istatus)
+    if ( istatus == 0 ) aux_qg = zero
+    call gsi_bundlegetpointer(atm_bundle,'cf',aux_cf,istatus)
+    if ( istatus == 0 ) aux_cf = zero
+    call gsi_bundlegetpointer(atm_bundle,'cw',aux_cwmr,istatus)
+    if ( istatus == 0 ) aux_cwmr = zero
 
     inithead=.true.
     do it=1,ntlevs
@@ -1333,23 +1330,20 @@ end subroutine write_ghg_grid
         if ( istatus == 0 ) aux_oz = ges_oz_it
 !       call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'cw',ges_cwmr_it,istatus) 
 !       if ( istatus == 0 ) aux_cwmr = ges_cwmr_it                                        
-        if (fv3_full_hydro) then
-           call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'ql',ges_ql_it,istatus)
-           if ( istatus == 0 ) aux_ql = ges_ql_it
-           call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'qi',ges_qi_it,istatus)
-           if ( istatus == 0 ) aux_qi = ges_qi_it
-           call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'qr',ges_qr_it,istatus)
-           if ( istatus == 0 ) aux_qr = ges_qr_it
-           call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'qs',ges_qs_it,istatus)
-           if ( istatus == 0 ) aux_qs = ges_qs_it
-           call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'qg',ges_qg_it,istatus)
-           if ( istatus == 0 ) aux_qg = ges_qg_it
-           call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'cf',ges_cf_it,istatus)
-           if ( istatus == 0 ) aux_cf = ges_cf_it
-        else
-           call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'cw',ges_cwmr_it,istatus)
-           if ( istatus == 0 ) aux_cwmr = ges_cwmr_it
-        endif 
+        call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'ql',ges_ql_it,istatus)
+        if ( istatus == 0 ) aux_ql = ges_ql_it
+        call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'qi',ges_qi_it,istatus)
+        if ( istatus == 0 ) aux_qi = ges_qi_it
+        call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'qr',ges_qr_it,istatus)
+        if ( istatus == 0 ) aux_qr = ges_qr_it
+        call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'qs',ges_qs_it,istatus)
+        if ( istatus == 0 ) aux_qs = ges_qs_it
+        call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'qg',ges_qg_it,istatus)
+        if ( istatus == 0 ) aux_qg = ges_qg_it
+        call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'cf',ges_cf_it,istatus)
+        if ( istatus == 0 ) aux_cf = ges_cf_it
+        call gsi_bundlegetpointer (gsi_metguess_bundle(itoutsig),'cw',ges_cwmr_it,istatus)
+        if ( istatus == 0 ) aux_cwmr = ges_cwmr_it
 
         if ( use_gfs_nemsio ) then
 

@@ -88,7 +88,6 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth,gsi_nstcoupler_deter
   use mpimod, only: npe
   use radiance_mod, only: rad_obs_type
-  use control_vectors, only: fv3_full_hydro 
 
   implicit none
 
@@ -666,11 +665,11 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
                     else
                        qval  = zero
                     end if
+                    if (radmod%lprecip) qval=zero 
                  else 
                     d0    = 8.24_r_kind - 2.622_r_kind*cosza + 1.846_r_kind*cosza*cosza
                     qval  = cosza*(d0+d1*log(285.0_r_kind-ch1)+d2*log(285.0_r_kind-ch2))
                  endif
-                 if (fv3_full_hydro) qval=zero
                  pred  = max(zero,qval)*100.0_r_kind
               else
 !          This is taken straight from AMSU-A even though Ch 3 has a different polarisation

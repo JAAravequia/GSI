@@ -28,7 +28,7 @@ module set_crtm_cloudmod
   use mpeu_util, only: die
   use mpimod, only: mype          
   use radiance_mod, only: cw_cv  
-  use control_vectors, only: fv3_full_hydro, imp_physics  
+  use control_vectors, only: imp_physics 
   implicit none
 
 private
@@ -36,7 +36,7 @@ public Set_CRTM_Cloud
 
 CONTAINS
 
-  subroutine Set_CRTM_Cloud ( km, nac, cloud_name, icmask, nc, cloud_cont, cloud_efr,jcloud, dp, tp, pr, qh, cloud) 
+  subroutine Set_CRTM_Cloud ( km, nac, cloud_name, icmask, nc, cloud_cont, cloud_efr,jcloud, dp, tp, pr, qh, cloud, lprecip) 
 
   implicit none
 
@@ -44,6 +44,7 @@ CONTAINS
   integer(i_kind) , intent(in)    :: nac               ! number of actual clouds
   character(len=*), intent(in)    :: cloud_name(nac)   ! [nac]   Model cloud names: qi, ql, etc.
   logical,          intent(in)    :: icmask            ! mask determining where to consider clouds
+  logical,          intent(in)    :: lprecip           ! mask determining where to consider clouds
   integer(i_kind),  intent(in)    :: nc                ! number of clouds
   integer(i_kind),  intent(in)    :: jcloud(nc)        ! cloud index
   real(r_kind),     intent(in)    :: cloud_cont(km,nc) ! cloud content 
@@ -55,12 +56,12 @@ CONTAINS
 
   type(CRTM_Cloud_type), intent(inout) :: cloud(nc)    ! [nc]   CRTM Cloud object
 
-  call setCloud (cloud_name, icmask, cloud_cont, cloud_efr, jcloud, dp, tp, pr, qh, cloud)
+  call setCloud (cloud_name, icmask, cloud_cont, cloud_efr, jcloud, dp, tp, pr, qh, cloud, lprecip)
 
   end subroutine Set_CRTM_Cloud
 
  
-  subroutine setCloud (cloud_name, icmask, cloud_cont, cloud_efr,jcloud, dp, tp, pr, qh, cloud)
+  subroutine setCloud (cloud_name, icmask, cloud_cont, cloud_efr,jcloud, dp, tp, pr, qh, cloud, lprecip)
 
   use gridmod, only: regional,wrf_mass_regional
   use wrf_params_mod, only: cold_start
@@ -70,6 +71,7 @@ CONTAINS
 
   character(len=*), intent(in)    :: cloud_name(:)     ! [nc]    Model cloud names: Water, Ice, etc.
   logical,          intent(in)    :: icmask            !         mask for where to consider clouds  
+  logical,          intent(in)    :: lprecip           !         mask for where to consider clouds  
   integer(i_kind),  intent(in)    :: jcloud(:)         !         cloud order
   real(r_kind),     intent(in)    :: cloud_cont(:,:)   ! [km,nc] cloud contents  (kg/m2)
   real(r_kind),     intent(in)    :: cloud_efr (:,:)   ! [km,nc] cloud effective radius (microns)
@@ -102,7 +104,7 @@ CONTAINS
 ! Handle hand-split case as particular case
 ! -----------------------------------------
 
-  if (fv3_full_hydro) cold_start=.false. 
+  if (lprecip) cold_start=.false.
 
 ! if (cold_start .or. (na /= nc .and. (.not. regional))) then 
   if (cold_start .or. cw_cv) then                              
@@ -185,7 +187,7 @@ CONTAINS
               cloud(n)%Effective_Radius(:) = cloud_efr(:,n)
            else
              !cloud(n)%Effective_Radius(:) = EftSize_(cloud_name(jcloud(n)))  !orig
-              if ( imp_physics==11 .and. fv3_full_hydro ) then 
+              if ( imp_physics==11 .and. lprecip ) then
                  cloud(n)%Effective_Radius(:) = cloud_efr(:,n)
               else
                  do k = 1, km
