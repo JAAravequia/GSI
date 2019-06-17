@@ -63,6 +63,8 @@ subroutine evalqlim(sval,pbc,rval)
   call gsi_bundlegetpointer(rval,'q',rq,istatus);ier=istatus+ier
   if(ier/=0)return
 
+  mm1 = mype+1
+
   zbc=zero_quad
 ! Loop over interior of subdomain          
   do k = 1,nsig

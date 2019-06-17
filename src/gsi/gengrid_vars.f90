@@ -51,7 +51,7 @@ subroutine gengrid_vars
      i1=nlon/4
      do i=1,nlat
         wgtlats(i)=zero
-        wgtfactlats(i) = 1.
+        wgtfactlats(i) = one
         rbs2(i)=one/cos(region_lat(i,i1))**2
      end do
 
