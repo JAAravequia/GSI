@@ -1281,7 +1281,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
             call general_fill_ns(grd,grid,work)
          endif
       endif
-    ! if ( icount == icm .or. k == nlevs ) then  !orig
+    ! if ( icount == icm .or. k == nlevs ) then 
       if ( icount == icm  .or. ( (.not. has_cf) .and. k==nlevs) ) then  
          if (has_cf) then
             call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &

@@ -85,7 +85,7 @@ subroutine q_diag(it,mype)
         if (regional) then 
            ges_cwmr_it => cwgues        ! temporarily
         else
-        !  call die('q_diag','cannot get pointer to cwmr, istatus =',istatus) !orig
+        !  call die('q_diag','cannot get pointer to cwmr, istatus =',istatus) 
         ges_cwmr_it => cwgues ! do not die
         end if
      end if

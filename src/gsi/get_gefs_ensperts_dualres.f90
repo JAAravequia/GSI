@@ -257,7 +257,6 @@ subroutine get_gefs_ensperts_dualres
                 cycle
              end if
           end if
-       !  if ( trim(cvars3d(ic3)) == 'cw' ) then  !orig
           if ( hydrometeor ) then                
 !$omp parallel do schedule(dynamic,1) private(i,j,k)
              do k=1,km
@@ -641,15 +640,13 @@ subroutine ens_spread_dualres(en_bar,ibin)
      ps => dum2
   end if
 
-! call write_spread_dualres(st,vp,tv,rh,oz,cw,ps)      !orig
   call write_spread_dualres(st,vp,tv,rh,oz,cw,ql,qi,qr,qs,qg,ps)  
 
   return
 end subroutine ens_spread_dualres
 
 
-!subroutine write_spread_dualres(a,b,c,d,e,f,g2in)   !orig
-subroutine write_spread_dualres(a,b,c,d,e,f,hl,hi,hr,hs,hg,g2in)  !emil
+subroutine write_spread_dualres(a,b,c,d,e,f,hl,hi,hr,hs,hg,g2in) 
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    write_spread_dualres   write ensemble spread for diagnostics
@@ -662,6 +659,7 @@ subroutine write_spread_dualres(a,b,c,d,e,f,hl,hi,hr,hs,hg,g2in)  !emil
 ! program history log:
 !   2010-01-05  kleist, initial documentation
 !   2010-02-28  parrish - make changes to allow dual resolution capability
+!   2018-04-01  eliu - add hydrometeors 
 !
 !   input argument list:
 !     a    -  spread variable 1

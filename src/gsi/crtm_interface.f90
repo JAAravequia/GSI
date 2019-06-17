@@ -898,7 +898,7 @@ subroutine destroy_crtm
   return
 end subroutine destroy_crtm
  subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &   
-                   h,q,clw_guess,prsl,prsi, & !orig                                         
+                   h,q,clw_guess,prsl,prsi, &                                          
                    trop5,tzbgr,dtsavg,sfc_speed,&
                    tsim,emissivity,ptau5,ts, &
                    emissivity_k,temp,wmix,jacobian,error_status,tsim_clr,tcc, & 
@@ -1859,7 +1859,7 @@ end subroutine destroy_crtm
            if (icmask) then
               c6(k) = kgkg_kgm2  
               do ii=1,n_clouds_fwd_wk
-                 !cloud_cont(k,ii)=cloud(kk2,ii)*kgkg_kgm2  !orig
+                !cloud_cont(k,ii)=cloud(kk2,ii)*kgkg_kgm2 
                  cloud_cont(k,ii)=cloud(kk2,ii)*c6(k)
                  if (imp_physics==11 .and. lprecip_wk .and.  cloud_cont(k,ii) > 1.0e-6_r_kind) then
                     cloud_efr (k,ii)=cloudefr(kk2,ii)

@@ -186,7 +186,7 @@ CONTAINS
            if (regional .and. (.not. wrf_mass_regional)) then
               cloud(n)%Effective_Radius(:) = cloud_efr(:,n)
            else
-             !cloud(n)%Effective_Radius(:) = EftSize_(cloud_name(jcloud(n)))  !orig
+             !cloud(n)%Effective_Radius(:) = EftSize_(cloud_name(jcloud(n))) 
               if ( imp_physics==11 .and. lprecip ) then
                  cloud(n)%Effective_Radius(:) = cloud_efr(:,n)
               else
@@ -241,7 +241,7 @@ CONTAINS
     else if ( trim(name) == 'qi' ) then
        csize = 30.0_r_kind
     else if ( trim(name) == 'qh' ) then
-    !  csize = zero ! RT: can somebody fill this in?  !orig
+    !  csize = zero ! RT: can somebody fill this in? 
        csize = 1000.0_r_kind
     else if ( trim(name) == 'qg' ) then
        csize = 600.0_r_kind
