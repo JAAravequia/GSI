@@ -308,6 +308,7 @@ subroutine init_crtm(init_pass,mype_diaghdr,mype,nchanl,nreal,isis,obstype,radmo
   use radinfo, only: radjacindxs,radjacnames,jpch_rad,nusis,nuchan
   use aeroinfo, only: aerojacindxs
   use guess_grids, only: ges_tsen,ges_prsl,nfldsig
+  use gridmod, only: fv3_full_hydro
   use mpeu_util, only: getindex
   use constants, only: zero,max_varname_length
   use gsi_io, only: verbose
@@ -438,7 +439,7 @@ subroutine init_crtm(init_pass,mype_diaghdr,mype,nchanl,nreal,isis,obstype,radmo
     n_clouds_jac_wk = n_clouds_jac
     cld_sea_only_wk = radmod%cld_sea_only
     Load_CloudCoeff = .true.
-    lprecip_wk = radmod%lprecip
+    lprecip_wk = radmod%lprecip .or. fv3_full_hydro
  else
     n_actual_clouds_wk = 0
     n_clouds_fwd_wk = 0
@@ -1058,7 +1059,6 @@ end subroutine destroy_crtm
 
   real(r_kind):: wind10,wind10_direction,windratio,windangle 
   real(r_kind):: w00,w01,w10,w11,kgkg_kgm2,f10,panglr,dx,dy
-! real(r_kind):: w_weights(4)
   real(r_kind):: delx,dely,delx1,dely1,dtsig,dtsigp,dtsfc,dtsfcp
   real(r_kind):: sst00,sst01,sst10,sst11,total_od,term,uu5,vv5, ps
   real(r_kind):: sno00,sno01,sno10,sno11,secant_term
@@ -1068,7 +1068,6 @@ end subroutine destroy_crtm
   real(r_kind),dimension(nsig,nchanl):: omix
   real(r_kind),dimension(nsig,nchanl,n_aerosols_jac):: jaero
   real(r_kind),dimension(nchanl) :: uwind_k,vwind_k
-  real(r_kind),dimension(nchanl) :: wavenumber,frequency,polarization 
   real(r_kind),dimension(msig+1) :: prsi_rtm
   real(r_kind),dimension(msig)  :: prsl_rtm
   real(r_kind),dimension(msig)  :: auxq,auxdp
@@ -1875,10 +1874,6 @@ end subroutine destroy_crtm
                  if (cloud_cont(k,ii) >= 1.0e-6_r_kind) hwp_guess(ii) = hwp_guess(ii) +  cloud_cont(k,ii)        
               enddo
 
-
-!crtm2.3.x    if (.not. regional .and. icfs==0 ) atmosphere(1)%cloud_fraction(k) = cf(kk2) 
-        
-
                 !Add lower bound to all hydrometers 
                 !note: may want to add lower bound value for effective radius  
               do ii=1,n_clouds_fwd_wk
@@ -1893,6 +1888,7 @@ end subroutine destroy_crtm
                  if (trim(cloud_names_fwd(ii))=='qg' .and.  atmosphere(1)%temperature(k)<t0c) &
                      cloud_cont(k,ii)=max(1.001_r_kind*1.0E-6_r_kind, cloud_cont(k,ii))
               end do
+!crtm2.3.x    if (.not. regional .and. icfs==0 ) atmosphere(1)%cloud_fraction(k) = cf(kk2) 
            end if
         endif
      endif

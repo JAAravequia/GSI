@@ -413,7 +413,6 @@ contains
 !-------------------------------------------------------------------------
     use constants, only: one,two
     use gsi_io, only: verbose
-    use gsi_metguess_mod, only: gsi_metguess_get 
     implicit none
 
     integer(i_kind) k
@@ -490,17 +489,6 @@ contains
     nlat_gfs=1538
     nlon_gfs=3072
 
-    call gsi_metguess_get('var::ql', ivar, istatus)
-    fv3_full_hydro=ivar>0
-    call gsi_metguess_get('var::qi', ivar, istatus)
-    fv3_full_hydro=fv3_full_hydro.and.ivar>0
-    call gsi_metguess_get('var::qr', ivar, istatus)
-    fv3_full_hydro=fv3_full_hydro.and.ivar>0
-    call gsi_metguess_get('var::qs', ivar, istatus)
-    fv3_full_hydro=fv3_full_hydro.and.ivar>0
-    call gsi_metguess_get('var::qg', ivar, istatus)
-    fv3_full_hydro=fv3_full_hydro.and.ivar>0
-
     return
   end subroutine init_grid
   
@@ -520,6 +508,7 @@ contains
     use mpeu_util, only: getindex
     use general_specmod, only: spec_cut
     use gsi_io, only: verbose
+    use gsi_metguess_mod, only: gsi_metguess_get
     implicit none
 
 ! !INPUT PARAMETERS:
@@ -560,6 +549,8 @@ contains
     integer(i_kind) i,k,inner_vars,num_fields
     integer(i_kind) n3d,n2d,nvars,tid,nth
     integer(i_kind) ipsf,ipvp,jpsf,jpvp,isfb,isfe,ivpb,ivpe
+    integer(i_kind) istatus,icw,iql,iqi
+    integer(i_kind) icw_cv,iql_cv,iqi_cv
     logical,allocatable,dimension(:):: vector
     logical print_verbose
 
@@ -579,6 +570,17 @@ contains
     n3d  =size(cvars3d)
     n2d  =size(cvars2d)
     nvars=size(cvars)
+
+    icw_cv = getindex(cvars3d(1:n3d),'cw')
+    iql_cv = getindex(cvars3d(1:n3d),'ql')
+    iqi_cv = getindex(cvars3d(1:n3d),'qi')
+    call gsi_metguess_get('var::cw', icw, istatus)
+    call gsi_metguess_get('var::ql', iql, istatus)
+    call gsi_metguess_get('var::qi', iqi, istatus)
+    fv3_full_hydro = ( iql>0    .and. iqi>0    .and. (.not. icw>0)   ) .and. &
+                     ( iql_cv>0 .and. iqi_cv>0 .and. (.not. icw_cv>0))
+
+    if (mype==0) write(6,*) myname, ' fv3_full_hydro ', fv3_full_hydro
 
 ! Allocate and initialize variables for mapping between global
 ! domain and subdomains
