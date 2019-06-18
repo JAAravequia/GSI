@@ -39,7 +39,7 @@ case $season in
     export y4m2="201903 201904 201905"
     ;;
   'test')
-    export y4m2="201904 201905"
+    export y4m2="201904 201905 201906"
     ;;
 esac
 

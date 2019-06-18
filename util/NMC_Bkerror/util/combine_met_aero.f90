@@ -3,6 +3,8 @@
 ! with that from the aerosol NMC code
 ! because GSI needs certain fields to run properly
 ! cory.r.martin@noaa.gov - 2019/06/12
+! ifort combine_met_aero.f90 -o combine_met_aero.x -convert big_endian 
+! needs metfile.bin and aerfile.bin symbolically linked as input files
 
 program combine_met_aero
   implicit none
