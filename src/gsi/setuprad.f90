@@ -1275,7 +1275,6 @@
                 end if
               end if
            end do
-           end do
 !
 
 !  ---------- AVRHRR --------------

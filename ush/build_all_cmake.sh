@@ -60,6 +60,8 @@ if [ $target = wcoss_d ]; then
     module purge
     module use -a $dir_modules
     module load modulefile.ProdGSI.$target
+    export CRTM_LIB=/gpfs/dell2/emc/modeling/noscrub/Emily.Liu/RTM/CRTM/releases/REL-2.3.1.beta/crtm_v2.3.1/libcrtm_v2.3.1.a
+    export CRTM_INC=/gpfs/dell2/emc/modeling/noscrub/Emily.Liu/RTM/CRTM/releases/REL-2.3.1.beta/crtm_v2.3.1/incmod/crtm_v2.3.1
 elif [ $target = wcoss -o $target = gaea ]; then
     module purge
     module load $dir_modules/modulefile.ProdGSI.$target
