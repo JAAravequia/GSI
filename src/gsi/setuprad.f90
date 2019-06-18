@@ -1260,13 +1260,21 @@
 !
 !          additional qc for surface and  chn7.3: use split window chns to remove opaque clouds
            do i = 1,nchanl
-              if(abi .and. i/=2 .and. i/=3) then
+              if( (abi .or. ahi ).and. i/=2 .and. i/=3 ) then
                 if( varinv(i) > tiny_r_kind .and. &
                    (tb_obs(7)-tb_obs(8))-(tsim(7)-tsim(8)) <= -0.75_r_kind) then
                     varinv(i)=zero
                     varinv_use(i)=zero
                 end if
               end if
+              if( seviri .and. i/=2 .and. 1==0 ) then
+                if( varinv(i) > tiny_r_kind .and. &
+                   (tb_obs(6)-tb_obs(7))-(tsim(6)-tsim(7)) <= -0.75_r_kind) then
+                    varinv(i)=zero
+                    varinv_use(i)=zero
+                end if
+              end if
+           end do
            end do
 !
 

@@ -378,9 +378,9 @@ subroutine read_seviri(mype,val_sev,ithin,rmesh,jsatid,&
 
 !       Set common predictor parameters
         if(clrsky) then
-!         use NCLDMNT from chn7 (10.8 micron) as a QC predictor
-!         add SDTB from chn7 as QC predictor
-          pred=10-datasev1(1,7)/10.0_r_kind+datasev3(1,7)*10.0_r_kind
+!         use NCLDMNT from chn9 (10.8 micron) as a QC predictor
+!         add SDTB from chn9 as QC predictor
+          pred=10-datasev1(1,9)/10.0_r_kind+datasev3(1,9)*10.0_r_kind
         else
           pred=zero
         end if
@@ -441,7 +441,7 @@ subroutine read_seviri(mype,val_sev,ithin,rmesh,jsatid,&
         data_all(32,itx) = rcldfrc                    ! total cloud fraction from SEVASR
         do k=1,nchanl
            if(clrsky) then
-             data_all(32+k,itx) = datasev3(1,k)       ! BT standard deviation from SEVCSR
+             data_all(32+k,itx) = datasev3(1,k+3)     ! BT standard deviation from SEVCSR
            else if(allsky) then
              jj=(k+2)*6+1
              data_all(32+k,itx) = datasev3(1,jj)      ! BT standard deviation from SEVASR 

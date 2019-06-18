@@ -168,6 +168,7 @@ GPSROBF=${GPSROBF:-${COMIN_OBS}/${OPREFIX}gpsro.tm00.bufr_d${OSUFFIX}}
 TCVITL=${TCVITL:-${COMIN_OBS}/${OPREFIX}syndata.tcvitals.tm00}
 B1AVHAM=${B1AVHAM:-${COMIN_OBS}/${OPREFIX}avcsam.tm00.bufr_d${OSUFFIX}}
 B1AVHPM=${B1AVHPM:-${COMIN_OBS}/${OPREFIX}avcspm.tm00.bufr_d${OSUFFIX}}
+ABIBF=${ABIBF:-${COMIN_OBS}/${OPREFIX}gsrcsr.tm00.bufr_d${OSUFFIX}}
 
 # Guess files
 GPREFIX=${GPREFIX:-""}
@@ -367,7 +368,7 @@ rm hirs2bufr hirs3bufr hirs4bufr hirs3bufr_db hirs3bufrears
 rm amsuabufr amsuabufr_db amsuabufrears
 rm amsubbufr amsubbufr_db amsubbufrears
 rm mhsbufr mhsbufr_db mhsbufrears
-rm seviribufr ahibufr
+rm seviribufr ahibufr abibufr
 rm crisbufr crisbufrears crisbufr_db crisfsbufr crisfsbufrears crisfsbufr_db
 rm atmsbufr atmsbufr_db atmsbufrears
 
@@ -477,6 +478,7 @@ $NLN $TCVITL           tcvitl
 $NLN $B1AVHAM          avhambufr
 $NLN $B1AVHPM          avhpmbufr
 $NLN $AHIBF            ahibufr
+$NLN $ABIBF            abibufr
 
 [[ $DONST = "YES" ]] && $NLN $NSSTBF nsstbufr
 
@@ -804,6 +806,7 @@ OBS_INPUT::
    ompstcbufr     ompstc8     npp         ompstc8_npp         0.0     2     0
    amsuabufr      amsua       metop-c     amsua_metop-c       0.0     1     1
    mhsbufr        mhs         metop-c     mhs_metop-c         0.0     1     1
+   abibufr        abi         g16         abi_g16             0.0     3     0
 ::
 &SUPEROB_RADAR
   $SUPERRAD
