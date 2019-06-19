@@ -1,6 +1,6 @@
 subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
      infile,lunout,obstype,nread,ndata,nodata,twind,sis, &
-     mype_root,mype_sub,npe_sub,mpi_comm_sub,nobs,dval_use)
+     mype_root,mype_sub,npe_sub,mpi_comm_sub,nobs,nrec_start,dval_use)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_ahi                    read himawari-8 ahi data
@@ -34,6 +34,7 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
 !     obstype  - observation type to process
 !     twind    - input group time window (hours)
 !     sis      - satellite/instrument/sensor indicator
+!     nrec_start - first subset with useful information
 !
 !   output argument list:
 !     nread    - number of BUFR GOES imager observations read
@@ -64,7 +65,7 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
 ! Declare passed variables
   character(len=*),intent(in   ) :: infile,obstype,jsatid
   character(len=*),intent(in  ) :: sis
-  integer(i_kind) ,intent(in   ) :: mype,lunout,ithin
+  integer(i_kind) ,intent(in   ) :: mype,lunout,ithin,nrec_start
   integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   integer(i_kind) ,intent(inout) :: ndata,nodata
   integer(i_kind) ,intent(inout) :: nread
@@ -231,8 +232,9 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
   qc_thresh  = -1
 
 ! Big loop over bufr file
-  do while(IREADMG(lnbufr,subset,idate) >= 0)
+  read_msg: do while(IREADMG(lnbufr,subset,idate) >= 0)
      irec=irec+1
+     if(irec < nrec_start) cycle read_msg
      next=next+1
      if(next == npe_sub)next=0
      if(next /= mype_sub)cycle
@@ -493,7 +495,7 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
         nrec(itx)=irec
 
      enddo read_loop
-  enddo
+  enddo read_msg
   call closbf(lnbufr)
 
   call combine_radobs(mype_sub,mype_root,npe_sub,mpi_comm_sub,&
