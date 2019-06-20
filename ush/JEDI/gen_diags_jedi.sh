@@ -1,12 +1,14 @@
 #!/bin/bash
 #SBATCH -J gen_diags_jedi 
 #SBATCH -A da-cpu
-#SBATCH -q batch 
-#SBATCH --nodes=8
-#SBATCH -t 40:00
+#SBATCH --qos=debug
+#SBATCH --partition=bigmem
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-node=24
+#SBATCH -t 30:00
 #SBATCH -o SLURM_%x.o%j
 #SBATCH -e SLURM_%x.e%j
-#SBATCH –mail-user=$LOGNAME@noaa.gov
+#SBATCH --mail-user=$LOGNAME@noaa.gov
 
 set -x 
 
@@ -18,13 +20,15 @@ WorkDir=/scratch3/NCEPDEV/stmp1/$LOGNAME/JEDI/GSI_work/$adate
 OutDir=/scratch3/NCEPDEV/stmp1/$LOGNAME/JEDI/output/$adate
 
 GSIDir=/scratch4/NCEPDEV/da/save/Cory.R.Martin/GSI/
-gsiexec=/scratch4/NCEPDEV/da/save/Cory.R.Martin/GSI/build_jedi/bin/gsi.x
-nccat=/scratch4/NCEPDEV/da/save/Cory.R.Martin/GSI/build_jedi/bin/nc_diag_cat_serial.x
+GSIBuildDir=$GSIDir/build_jedi
+gsiexec=$GSIBuildDir/bin/gsi.x
+nccat=$GSIBuildDir/bin/nc_diag_cat_serial.x
 fixgsi=/scratch4/NCEPDEV/da/save/Cory.R.Martin/GSI/ProdGSI_jedi/fix
-fixcrtm=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update
+fixcrtm=/scratch4/NCEPDEV/da/save/Cory.R.Martin/CRTM/fix
 USHDir=$GSIDir/ProdGSI_jedi/ush/
 
 dumpobs=gdas
+dumpobs_nr=gdasnr
 
 # Set the JCAP resolution which you want.
 # All resolutions use LEVS=64
@@ -35,14 +39,15 @@ export LEVS=64
 # load modules here used to compile GSI
 source /apps/lmod/7.7.18/init/sh
 
-#module purge
+module list
+module purge
 ### load modules
 # system installed
 module load intel
 module load impi
 module load netcdf
 module load grads
-module load rocoto/1.3.0-RC3
+module load rocoto/1.3.0
 # /contrib modules
 module use -a /contrib/modulefiles
 module load anaconda/anaconda2
@@ -56,9 +61,15 @@ module use -a /scratch3/NCEPDEV/nwprod/lib/modulefiles
 module load nemsio
 module load bacio
 module load w3nco
-module load crtm/v2.2.3
+#module load crtm/v2.2.3
 
-
+module list
+# CRTM things for 2.3.0
+export CRTM_SRC=/scratch4/NCEPDEV/da/save/Cory.R.Martin/CRTM/REL-2.3.0/
+export CRTM_INC=/scratch4/NCEPDEV/da/save/Cory.R.Martin/CRTM/REL-2.3.0/build/crtm_v2.3.0/include
+export CRTM_LIB=/scratch4/NCEPDEV/da/save/Cory.R.Martin/CRTM/REL-2.3.0/build/crtm_v2.3.0/lib/libcrtm.a
+export CRTM_FIX=/scratch4/NCEPDEV/da/save/Cory.R.Martin/CRTM/fix
+export CRTM_VER=2.3.0
 
 #####----- normal users need not change anything below this line -----##### 
 export crtm_coeffs=./crtm_coeffs/
@@ -74,6 +85,7 @@ PDYg=`echo $gdate | cut -c1-8`
 cycg=`echo $gdate | cut -c9-10`
 
 datobs=$ObsDir/$PDYa$cyca/$obsdump/$dumpobs/
+datobsnr=$ObsDir/$PDYa$cyca/$obsdump/${dumpobs_nr}/
 datges=$GuessDir
 prefix_obs=${dumpobs}.t${cyca}z
 prefix_ges=gdas.t${cycg}z
@@ -192,7 +204,7 @@ $ncpc $aercoef           ${crtm_coeffs}AerosolCoeff.bin
 $ncpc $cldcoef           ${crtm_coeffs}CloudCoeff.bin
 
 # Copy observational data to $DATA
-$ncpl $datobs/${prefix_obs}.prepbufr                ./prepbufr
+$ncpl $datobsnr/${prefix_obs}.prepbufr                ./prepbufr
 $ncpl $datobs/${prefix_obs}.prepbufr.acft_profiles  ./prepbufr_profl
 $ncpl $datobs/${prefix_obs}.nsstbufr                ./nsstbufr
 $ncpl $datobs/${prefix_obs}.gpsro.${suffix}         ./gpsrobufr
@@ -228,7 +240,7 @@ $ncpl $datobs/${prefix_obs}.crisf4.${suffix}        ./crisfsbufr
 $ncpl $datobs/${prefix_obs}.syndata.tcvitals.tm00   ./tcvitl
 $ncpl $datobs/${prefix_obs}.avcsam.${suffix}        ./avhambufr
 $ncpl $datobs/${prefix_obs}.avcspm.${suffix}        ./avhpmbufr
-$ncpl $datobs/${prefix_obs}.saphir.${suffix}        ./saphirbufr
+$ncpl $datobsnr/${prefix_obs}.saphir.${suffix}        ./saphirbufr
 $ncpl $datobs/${prefix_obs}.gmi1cr.${suffix}        ./gmibufr
 ## $ncpl $datobs/${prefix_obs}.amsr2.tm00.bufr_d    ./amsr2bufr
 $ncpl $datobs/${prefix_obs}.esiasi.${suffix}        ./iasibufrears
@@ -448,12 +460,10 @@ EOF
 
 # run GSI
 cd $WorkDir
-# note there's got to be a better way to do below...
-taskspernode=${SLURM_NTASKS_PER_NODE:-10}
-#taskspernode=${SLURM_NTASKS_PER_NODE:-$SLURM_CPUS_ON_NODE}
-nprocs_gsi=$(( $taskspernode*$SLURM_JOB_NUM_NODES ))
+ulimit -s unlimited
+export OMP_NUM_THREADS=1
 env
-srun -n$nprocs_gsi ./gsi.x > stdout
+srun ./gsi.x > stdout
 
 # cat diag files
 ntype=3
@@ -493,7 +503,6 @@ for loop in $loops; do
 	    # note if the GSI utility is not working correctly, use the python version
 	    # same syntax is used to call it, just change what $nccat is 
             $nccat -o $file ${prefix}${type}_${loop}.nc4 &
-            pid=$!
             sleep 5
             echo "diag_${type}_${string}.${adate}*" >> ${diaglist[n]}
             numfile[n]=$(expr ${numfile[n]} + 1)
@@ -502,10 +511,7 @@ for loop in $loops; do
    done
    echo $(date) END loop $string >&2
 done
-
-wait $pid
-
-sleep 300 # is this enough time?
+wait
 
 # move GSI diags
 mkdir -p $OutDir/GSI_diags
