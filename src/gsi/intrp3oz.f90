@@ -319,6 +319,9 @@ subroutine intrp3oz1(f,g,dx,dy,dz,obstime,nlevs,mype,dg_dz)
                 + f(ixp,iyp,kk,itsigp)*w11*rozcon*delp8)*delz)*dtsigp  
            dg_dz(kk,k) = rozcon*delz*(delp1+delp2+delp3+delp4+delp5+delp6+delp7+delp8) / 8._r_kind
         enddo
+        print *,"iz1=",iz1,iz2,k,g(k)
+        print *,ges_prsi(ixp,iyp,kk,itsig ),ges_prsi(ixp,iyp,kk+1,itsig )
+        print *,ges_prsi(ixp,iyp,kk,itsigp), ges_prsi(ixp,iyp,kk+1,itsigp)
         dz1=pob
      enddo
 !

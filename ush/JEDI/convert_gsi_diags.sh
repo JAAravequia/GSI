@@ -22,6 +22,7 @@ module load netcdf
 module use -a /contrib/modulefiles
 module load anaconda/anaconda3-5.3.1
 
+IODACDir=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/ioda-converters/build/bin
 IODACDir=/scratch4/NCEPDEV/da/save/Cory.R.Martin/JEDI/src/ioda-converters_2/build/bin
 
 cd $IODACDir
