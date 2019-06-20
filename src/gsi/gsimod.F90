@@ -48,7 +48,8 @@
   use mpimod, only: npe,mpi_comm_world,ierror,mype
   use radinfo, only: retrieval,diag_rad,init_rad,init_rad_vars,adp_anglebc,angord,upd_pred,&
                        biaspredvar,use_edges,passive_bc,newpc4pred,final_rad_vars,emiss_bc,&
-                       ssmis_method,ssmis_precond,gmi_method,amsr2_method,bias_zero_start
+                       ssmis_method,ssmis_precond,gmi_method,amsr2_method,bias_zero_start, &
+                       reset_bad_radbc
   use radinfo, only: tzr_qc,tzr_bufrsave
   use radinfo, only: crtm_coeffs_path
   use ozinfo, only: diag_ozone,init_oz
@@ -380,6 +381,7 @@
 !  09-12-2018 Ladwig    added option l_precip_clear_only
 !  03-28-2019 Ladwig    merging additional options for cloud product assimilation
 !  03-11-2019 Collard   Introduce ec_amv_qc as temporary control of GOES-16/17 AMVS
+!  06-19-2019 Hu        Add option reset_bad_radbc for reseting radiance bias correction when it is bad
 !
 !EOP
 !-------------------------------------------------------------------------
@@ -496,6 +498,7 @@
 !     angord      - order of polynomial for variational angle bias correction
 !     newpc4pred  - option for additional preconditioning for pred coeff.
 !     passive_bc  - option to turn on bias correction for passive (monitored) channels
+!     reset_bad_radbc - option to turn on reseting bias correction coefficient when it is bad
 !     use_edges   - option to exclude radiance data on scan edges
 !     biaspredvar - set background error variance for radiance bias coeffs
 !     (default 0.1K)
@@ -575,7 +578,7 @@
        use_pbl,use_compress,nsig_ext,gpstop,&
        perturb_obs,perturb_fact,oberror_tune,preserve_restart_date, &
        crtm_coeffs_path,berror_stats, &
-       newpc4pred,adp_anglebc,angord,passive_bc,use_edges,emiss_bc,upd_pred, &
+       newpc4pred,adp_anglebc,angord,passive_bc,use_edges,emiss_bc,upd_pred,reset_bad_radbc,&
        ssmis_method, ssmis_precond, gmi_method, amsr2_method, bias_zero_start, &
        ec_amv_qc, lobsdiagsave, lobsdiag_forenkf, &
        l4dvar,lbicg,lsqrtb,lcongrad,lbfgsmin,ltlint,nhr_obsbin,nhr_subwin,&

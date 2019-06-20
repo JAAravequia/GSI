@@ -88,7 +88,7 @@ contains
       logical :: do_ens_fast_read
       
       ! Variables used only by the ensemble fast read
-      integer :: iope
+      integer(i_kind) :: iope
       logical :: bad_input
       real(r_kind),dimension(:,:,:),allocatable :: gg_u,gg_v,gg_tv,gg_rh
       real(r_kind),dimension(:,:),allocatable :: gg_ps
@@ -948,7 +948,7 @@ contains
       character(255),intent(in):: filename
       real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig),intent(out):: &
                                                     g_u,g_v,g_tv,g_rh,g_cwmr,g_oz
-      integer, intent(in) :: mype, iope
+      integer(i_kind), intent(in) :: mype, iope
       real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2),intent(out):: g_ps
 
       ! The gg_ arrays are only sent by the rank doing I/O (mype==iope)
@@ -958,7 +958,7 @@ contains
 
   ! Declare local variables
       real(r_kind),allocatable,dimension(:):: wrk_send_2d
-      integer :: k
+      integer(i_kind) :: k
 
   ! transfer data from root to subdomains on each task
   ! scatterv used, since full grids exist only on root task.

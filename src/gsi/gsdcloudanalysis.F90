@@ -929,122 +929,122 @@ subroutine  gsdcloudanalysis(mype)
      qrlimit=3.0_r_kind*0.001_r_kind
      qrlimit_lightpcp=1.0_r_kind*0.001_r_kind
      do j=2,lat2-1
-     do i=2,lon2-1
-        refmax=-999.0_r_kind
-        imaxlvl_ref=0
-        do k=1,nsig
-           if(ref_mos_3d(i,j,k) > refmax) then
-              imaxlvl_ref=k
-              refmax=ref_mos_3d(i,j,k)
-           endif
-           rain_3d(i,j,k)=max(rain_3d(i,j,k)*0.001_r_kind,zero)
-           snow_3d(i,j,k)=max(snow_3d(i,j,k)*0.001_r_kind,zero)
-           rain_1d_save(k)=rain_3d(i,j,k)
-           snow_1d_save(k)=snow_3d(i,j,k)
-           nrain_1d_save(k)=nrain_3d(i,j,k)
-!           ges_qnr(i,j,k)=max(ges_qnr(i,j,k),zero)
-        enddo
-        if( refmax > 0 .and. (imaxlvl_ref > 0 .and. imaxlvl_ref < nsig ) ) then       ! use retrieval hybrometeors
-           tsfc=t_bk(i,j,1)*(p_bk(i,j,1)/h1000)**rd_over_cp - 273.15_r_kind
-           if(tsfc  < r_cleanSnow_WarmTs_threshold) then    ! add snow on cold sfc   
+        do i=2,lon2-1
+           refmax=-999.0_r_kind
+           imaxlvl_ref=0
+           do k=1,nsig
+              if(ref_mos_3d(i,j,k) > refmax) then
+                 imaxlvl_ref=k
+                 refmax=ref_mos_3d(i,j,k)
+              endif
+              rain_3d(i,j,k)=max(rain_3d(i,j,k)*0.001_r_kind,zero)
+              snow_3d(i,j,k)=max(snow_3d(i,j,k)*0.001_r_kind,zero)
+              rain_1d_save(k)=rain_3d(i,j,k)
+              snow_1d_save(k)=snow_3d(i,j,k)
+              nrain_1d_save(k)=nrain_3d(i,j,k)
+!              ges_qnr(i,j,k)=max(ges_qnr(i,j,k),zero)
+           enddo
+           if( refmax > 0 .and. (imaxlvl_ref > 0 .and. imaxlvl_ref < nsig ) ) then       ! use retrieval hybrometeors
+              tsfc=t_bk(i,j,1)*(p_bk(i,j,1)/h1000)**rd_over_cp - 273.15_r_kind
+              if(tsfc  < r_cleanSnow_WarmTs_threshold) then    ! add snow on cold sfc   
+                 do k=1,nsig
+                    snowtemp=snow_3d(i,j,k) 
+                    rain_3d(i,j,k) = ges_qr(j,i,k)
+                    nrain_3d(i,j,k)= ges_qnr(j,i,k)
+                    snow_3d(i,j,k) = ges_qs(j,i,k)
+                    graupel_3d(i,j,k) = ges_qg(j,i,k)
+                    if(ref_mos_3d(i,j,k) > zero ) then
+                       snowtemp = MIN(max(snowtemp,ges_qs(j,i,k)),qrlimit)
+                       snowadd = max(snowtemp - snow_3d(i,j,k),zero)
+                       snow_3d(i,j,k) = snowtemp
+                       raintemp=rain_3d(i,j,k) + graupel_3d(i,j,k)
+                       if(raintemp > snowadd ) then
+                          if(raintemp > 1.0e-6_r_kind) then
+                             ratio2=1.0_r_kind - snowadd/raintemp
+                             rain_3d(i,j,k) = rain_3d(i,j,k) * ratio2
+                             graupel_3d(i,j,k) = graupel_3d(i,j,k) * ratio2
+                          endif
+                       else
+                          rain_3d(i,j,k) = 0.0_r_kind
+                          graupel_3d(i,j,k) = 0.0_r_kind
+                       endif
+                    endif
+                 end do
+              else    !  adjust hydrometeors based on maximum reflectivity level
+                 max_retrieved_qrqs=snow_3d(i,j,imaxlvl_ref)+rain_3d(i,j,imaxlvl_ref)
+                 max_bk_qrqs=-999.0_r_kind
+                 do k=1,nsig
+                    if(ges_qr(j,i,k)+ges_qs(j,i,k) > max_bk_qrqs) then
+                        max_bk_qrqs = ges_qr(j,i,k)+ges_qs(j,i,k)
+                    endif
+                 enddo
+                 if( max_bk_qrqs > max_retrieved_qrqs) then ! tune background hyhro
+                    ratio_hyd_bk2obs=max(min(max_retrieved_qrqs/max_bk_qrqs,1.0_r_kind),0.0_r_kind)
+                    do k=1,nsig
+                       graupel_3d(i,j,k) = ges_qg(j,i,k)
+                       rain_3d(i,j,k) = ges_qr(j,i,k)
+                       nrain_3d(i,j,k)= ges_qnr(j,i,k)
+                       snow_3d(i,j,k) = ges_qs(j,i,k)
+                       if(ges_qr(j,i,k) > zero) then
+                          rain_3d(i,j,k) = ges_qr(j,i,k)*ratio_hyd_bk2obs
+                          nrain_3d(i,j,k)= ges_qnr(j,i,k)*ratio_hyd_bk2obs
+                       endif
+                       if(ges_qs(j,i,k) > zero) &
+                          snow_3d(i,j,k) = ges_qs(j,i,k)*ratio_hyd_bk2obs
+                    enddo
+                 else      !  use hydro in max refl level
+                    do k=1,nsig
+                       graupel_3d(i,j,k) = ges_qg(j,i,k)
+                       if(k==imaxlvl_ref) then
+                          snow_3d(i,j,k) = MIN(snow_3d(i,j,k),qrlimit)
+                          rain_3d(i,j,k) = MIN(rain_3d(i,j,k),qrlimit)  ! do we need qrlimit?              
+                          nrain_3d(i,j,k) = nrain_3d(i,j,k)
+                       else
+                          rain_3d(i,j,k) = ges_qr(j,i,k)
+                          snow_3d(i,j,k) = ges_qs(j,i,k)
+                          nrain_3d(i,j,k) = ges_qnr(j,i,k)
+                       endif
+                    end do
+                 endif
+                 if(i_lightpcp == 1) then
+! kee   p light precipitation between 28-15 dBZ
+                    do k=1,nsig
+                       if(ref_mos_3d(i,j,k) >=15.0_r_single .and. &
+                          ref_mos_3d(i,j,k) <=28.0_r_single ) then
+                          rain_3d(i,j,k) = max(min(rain_1d_save(k),qrlimit_lightpcp),rain_3d(i,j,k))
+                          snow_3d(i,j,k) = max(min(snow_1d_save(k),qrlimit_lightpcp),snow_3d(i,j,k)) 
+                          nrain_3d(i,j,k)= max(nrain_1d_save(k),nrain_3d(i,j,k))
+                       endif
+                    enddo  ! light pcp
+                 endif
+              endif
+           else        ! clean if ref=0 or use background hydrometeors
               do k=1,nsig
-                 snowtemp=snow_3d(i,j,k) 
                  rain_3d(i,j,k) = ges_qr(j,i,k)
                  nrain_3d(i,j,k)= ges_qnr(j,i,k)
                  snow_3d(i,j,k) = ges_qs(j,i,k)
                  graupel_3d(i,j,k) = ges_qg(j,i,k)
-                 if(ref_mos_3d(i,j,k) > zero ) then
-                    snowtemp = MIN(max(snowtemp,ges_qs(j,i,k)),qrlimit)
-                    snowadd = max(snowtemp - snow_3d(i,j,k),zero)
-                    snow_3d(i,j,k) = snowtemp
-                    raintemp=rain_3d(i,j,k) + graupel_3d(i,j,k)
-                    if(raintemp > snowadd ) then
-                       if(raintemp > 1.0e-6_r_kind) then
-                          ratio2=1.0_r_kind - snowadd/raintemp
-                          rain_3d(i,j,k) = rain_3d(i,j,k) * ratio2
-                          graupel_3d(i,j,k) = graupel_3d(i,j,k) * ratio2
-                       endif
-                    else
-                       rain_3d(i,j,k) = 0.0_r_kind
-                       graupel_3d(i,j,k) = 0.0_r_kind
-                    endif
-                 endif
-              end do
-           else    !  adjust hydrometeors based on maximum reflectivity level
-              max_retrieved_qrqs=snow_3d(i,j,imaxlvl_ref)+rain_3d(i,j,imaxlvl_ref)
-              max_bk_qrqs=-999.0_r_kind
-              do k=1,nsig
-                 if(ges_qr(j,i,k)+ges_qs(j,i,k) > max_bk_qrqs) then
-                     max_bk_qrqs = ges_qr(j,i,k)+ges_qs(j,i,k)
-                 endif
-              enddo
-              if( max_bk_qrqs > max_retrieved_qrqs) then ! tune background hyhro
-                 ratio_hyd_bk2obs=max(min(max_retrieved_qrqs/max_bk_qrqs,1.0_r_kind),0.0_r_kind)
-                 do k=1,nsig
-                    graupel_3d(i,j,k) = ges_qg(j,i,k)
-                    rain_3d(i,j,k) = ges_qr(j,i,k)
-                    nrain_3d(i,j,k)= ges_qnr(j,i,k)
-                    snow_3d(i,j,k) = ges_qs(j,i,k)
-                    if(ges_qr(j,i,k) > zero) then
-                       rain_3d(i,j,k) = ges_qr(j,i,k)*ratio_hyd_bk2obs
-                       nrain_3d(i,j,k)= ges_qnr(j,i,k)*ratio_hyd_bk2obs
-                    endif
-                    if(ges_qs(j,i,k) > zero) &
-                       snow_3d(i,j,k) = ges_qs(j,i,k)*ratio_hyd_bk2obs
-                 enddo
-              else      !  use hydro in max refl level
-                 do k=1,nsig
-                    graupel_3d(i,j,k) = ges_qg(j,i,k)
-                    if(k==imaxlvl_ref) then
-                       snow_3d(i,j,k) = MIN(snow_3d(i,j,k),qrlimit)
-                       rain_3d(i,j,k) = MIN(rain_3d(i,j,k),qrlimit)  ! do we need qrlimit?              
-                       nrain_3d(i,j,k) = nrain_3d(i,j,k)
-                    else
-                       rain_3d(i,j,k) = ges_qr(j,i,k)
-                       snow_3d(i,j,k) = ges_qs(j,i,k)
-                       nrain_3d(i,j,k) = ges_qnr(j,i,k)
-                    endif
-                 end do
-              endif
-              if(i_lightpcp == 1) then
-! keep light precipitation between 28-15 dBZ
-                 do k=1,nsig
-                    if(ref_mos_3d(i,j,k) >=15.0_r_single .and. &
-                       ref_mos_3d(i,j,k) <=28.0_r_single ) then
-                       rain_3d(i,j,k) = max(min(rain_1d_save(k),qrlimit_lightpcp),rain_3d(i,j,k))
-                       snow_3d(i,j,k) = max(min(snow_1d_save(k),qrlimit_lightpcp),snow_3d(i,j,k)) 
-                       nrain_3d(i,j,k)= max(nrain_1d_save(k),nrain_3d(i,j,k))
-                    endif
-                 enddo  ! light pcp
-              endif
-           endif
-        else        ! clean if ref=0 or use background hydrometeors
-           do k=1,nsig
-              rain_3d(i,j,k) = ges_qr(j,i,k)
-              nrain_3d(i,j,k)= ges_qnr(j,i,k)
-              snow_3d(i,j,k) = ges_qs(j,i,k)
-              graupel_3d(i,j,k) = ges_qg(j,i,k)
-              if((iclean_hydro_withRef==1)) then
-                 if( iclean_hydro_withRef_allcol==1 .and. &
-                    (refmax <= zero .and. refmax >= -100_r_kind) .and. &
-                    (sat_ctp(i,j) >=1010.0_r_kind .and. sat_ctp(i,j) <1050._r_kind)) then     
-                    rain_3d(i,j,k) = zero
-                    nrain_3d(i,j,k)= zero
-                    snow_3d(i,j,k) = zero
-                    graupel_3d(i,j,k) = zero
-                 else
-                    if((ref_mos_3d(i,j,k) <= zero .and.       &
-                        ref_mos_3d(i,j,k) > -100.0_r_kind)) then
+                 if((iclean_hydro_withRef==1)) then
+                    if( iclean_hydro_withRef_allcol==1 .and. &
+                       (refmax <= zero .and. refmax >= -100_r_kind) .and. &
+                       (sat_ctp(i,j) >=1010.0_r_kind .and. sat_ctp(i,j) <1050._r_kind)) then     
                        rain_3d(i,j,k) = zero
                        nrain_3d(i,j,k)= zero
                        snow_3d(i,j,k) = zero
                        graupel_3d(i,j,k) = zero
+                    else
+                       if((ref_mos_3d(i,j,k) <= zero .and.       &
+                           ref_mos_3d(i,j,k) > -100.0_r_kind)) then
+                          rain_3d(i,j,k) = zero
+                          nrain_3d(i,j,k)= zero
+                          snow_3d(i,j,k) = zero
+                          graupel_3d(i,j,k) = zero
+                       endif
                     endif
                  endif
-              endif
-           end do
-        endif
-     end do
+              end do
+           endif
+        end do
      end do
   endif
 !

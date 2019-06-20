@@ -1606,7 +1606,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 
            if(i_gsdqc==2) then
 !          AMV acceptance for all obs (E. James)
-              if (kx .ge. 240 .and. kx .le. 260) then
+              if (kx >= 240 .and. kx <= 260) then
                  do k=1,levs
                     pqm(k)=2
                     wqm(k)=2
@@ -1616,8 +1616,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !          USE q from 300-10 mb for aircraft and raobs (E. James)
               if(qob .and. (kx==120 .or. kx==131 .or. kx==133 .or. kx==134)) then
                  do k=1,levs
-                    if(  plevs(k)<=30.0 .and. plevs(k)>=1.0 ) then
-                      if(abs(qqm(k)-9.0) < 0.001) qqm(k)=2.0
+                    if(  plevs(k)<=30.0_r_kind .and. plevs(k)>=1.0_r_kind ) then
+                      if(qqm(k) == 9) qqm(k)=2
                     endif
                  end do
               endif
@@ -2901,7 +2901,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 ! define a closest METAR cloud observation for each grid point
 
   if(metarcldobs .and. ndata > 0) then
-     if(i_ens_mean .ne. 1) then
+     if(i_ens_mean /= 1) then
         maxobs=2000000
         allocate(cdata_all(nreal,maxobs))
         call reorg_metar_cloud(cdata_out,nreal,ndata,cdata_all,maxobs,iout)

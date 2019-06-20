@@ -49,6 +49,7 @@ module radinfo
 !   2016-09-20  Guo     - added SAVE attributes to module variables *_method, to
 !                         improve standard conformance of the code.
 !   2016-11-29  shlyaeva - make nvarjac public
+!   2019-06-19  Hu      - add option reset_bad_radbc for reset radiance bias correction coefficient if it is bad.
 !
 ! subroutines included:
 !   sub init_rad            - set satellite related variables to defaults
@@ -93,6 +94,7 @@ module radinfo
   public :: adp_anglebc,angord,use_edges, maxscan, bias_zero_start
   public :: emiss_bc
   public :: passive_bc
+  public :: reset_bad_radbc
   public :: upd_pred
   public :: ssmis_method,gmi_method,amsr2_method
   public :: radstart,radstep
@@ -117,6 +119,9 @@ module radinfo
   logical adp_anglebc ! logical to turn off or on the variational radiance angle bias correction
   logical emiss_bc    ! logical to turn off or on the emissivity predictor
   logical passive_bc  ! logical to turn off or on radiance bias correction for monitored channels
+  logical reset_bad_radbc ! logical to turn off or on reseting radiance bias correction coefficient when it
+                          ! goes bad. Mainly used for safety check in regional
+                          ! analysis
   logical use_edges   ! logical to use data on scan edges (.true.=to use)
   logical bias_zero_start ! logical to start bias correction from zero (otherwise mode start)
 
@@ -236,6 +241,7 @@ contains
 !                         for amsr2
 !   2017-09-14  li      - change default value of tzr_qc = 1
 !   2018-08-25  collard - Add bias_zero_start
+!   2019-06-19  hu      - add reset_bad_radbc
 !
 !   input argument list:
 !
@@ -261,6 +267,7 @@ contains
 
     newpc4pred = .false.  ! .true.=turn on new preconditioning for bias coefficients
     passive_bc = .false.  ! .true.=turn on bias correction for monitored channels
+    reset_bad_radbc = .false.  ! .true.=turn on reseting bas radiance bias correction coefficients
     adp_anglebc = .false. ! .true.=turn on angle bias correction
     bias_zero_start = .true. ! .true.=Zero start; .false.=mode start
     emiss_bc = .false.    ! .true.=turn on emissivity bias correction
@@ -1184,10 +1191,12 @@ contains
     else
        do jch=1,jpch_rad
           do ip=1,npred
-             if(abs(predx(ip,jch)) > 9999.0_r_kind) then
-                write(6,*) 'Bad coefficient:', jch,nusis(jch),nuchan(jch), &
+             if(reset_bad_radbc) then
+                if(abs(predx(ip,jch)) > 9999.0_r_kind) then
+                   write(6,*) 'Bad coefficient:', jch,nusis(jch),nuchan(jch), &
                           predx(ip,jch),' reset to 0.0'
-                predx(ip,jch)=0.0_r_kind
+                   predx(ip,jch)=0.0_r_kind
+                endif
              endif
           enddo
           write(lunout,'(I5,1x,a20,1x,i5,2e15.6,1x,I5/2(4x,10f12.6/))') jch,nusis(jch),nuchan(jch),&
@@ -1930,11 +1939,13 @@ contains
 ! quality control to bias coefficients,
 ! some bad coefficients could happen in regional case
 !
-            jjj=0
-            do j=1,np
-               if(abs(be(j)) > 200.0_r_kind) jjj=jjj+1
-            enddo
-            if(jjj>0) cycle
+            if(reset_bad_radbc) then
+               jjj=0
+               do j=1,np
+                  if(abs(be(j)) > 200.0_r_kind) jjj=jjj+1
+               enddo
+               if(jjj>0) cycle
+            endif
 
             predx(1,ich(i))=be(1)
             if (.not. mean_only) then

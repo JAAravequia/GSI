@@ -1,8 +1,9 @@
 subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !$$$  subprogram documentation block
 !!                .      .    .                                       .
-! subprogram:    setupq      compute rhs of oi for moisture observations
-!   prgmmr: parrish          org: np22                date: 1990-10-06
+! subprogram:    setupcldtot      compute rhs of oi for pseudo moisture observations from
+!                                 METAR and Satellite cloud observations
+!   prgmmr: Ladwag          org: GSD                date: 2019-06-01
 !
 ! abstract:  For moisture observations, this routine
 !              a) reads obs assigned to given mpi task (geographic region),
@@ -27,7 +28,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !
 ! attributes:
 !   language: f90
-!   machine:  ibm RS/6000 SP
+!   machine:  
 !
 !
 !
@@ -77,11 +78,12 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use gridmod, only: regional,wrf_mass_regional
   use wrf_mass_guess_mod, only: soil_temp_cld,isli_cld,ges_xlon,ges_xlat
   use constants, only: zero,one,rad2deg,fv,rd_over_cp, h1000
-  use gsdcloudlib_pseudoq_mod, only: cloudLWC_pseudo,cloudCover_Surface_col
+  use gsdcloudlib_pseudoq_mod, only: cloudLWC_pseudo,cloudCover_Surface_col,&
+                                     ruc_saturation
 
   implicit none
 
-  real(r_single) :: cloudqvis,ruc_saturation
+  real(r_single) :: cloudqvis
 
 ! Declare passed variables
   logical                                          ,intent(in   ) :: conv_diagsave
@@ -215,9 +217,9 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_single)    :: pressure
   parameter ( miss_obs_int = 99999999  )
   parameter ( miss_obs_real = 99999999.0_r_kind )
-  parameter ( miss_obs_single = -9999.0 )
+  parameter ( miss_obs_single = -9999.0_r_single )
   real(r_kind)    ::     spval_p
-  parameter (spval_p = 99999999.)
+  parameter (spval_p = 99999999._r_kind)
   integer(i_kind) :: obzero,obcount,dontobcount
   integer(i_kind) :: q_obcount,q_clear_count,q_build_count
   integer(i_kind) :: q_clear0_count,q_build0_count
@@ -241,12 +243,12 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   q_build_count=0
   q_build0_count=0
   dontobcount=0
-  qobmax = 0.0
-  qobmin = 100.0
+  qobmax = 0.0_r_kind
+  qobmin = 100.0_r_kind
   firstob=0
   var_jb=zero
-  qv_ob=-7777.7
-  cloudqvis=0.
+  qv_ob=-7777.7_r_kind
+  cloudqvis=0._r_single
 
 ! Check to see if cloud ob DA should be done
   if (i_cloud_q_innovation == 0) return
@@ -328,7 +330,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      allocate(ocld(nvarcld_p))
      allocate(cld_cover_obs(nsig))
      allocate(pcp_type_obs(nsig))
-     zlev_clr = 3650.
+     zlev_clr = 3650._r_kind
      allocate(cldwater_obs(nsig))
      allocate(cldice_obs(nsig))
    
@@ -443,7 +445,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
          if ( owx=='BR'  ) wthr_type=21
          if ( owx=='FG'  ) wthr_type=22
    
-         if(data(ivis,i) .ge. spval_P) then
+         if(data(ivis,i) >= spval_P) then
              ocld(13)=miss_obs_int
          else
              if(data(ivis,i) > 100.0_r_kind ) then
@@ -491,27 +493,27 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
          obzero =0
          do k=1,nsig
             qob=miss_obs_real
-            if (cldwater_obs(k) > -0.000001) then
-                if (cldice_obs(k) > -0.000001) then
+            if (cldwater_obs(k) > -0.000001_r_single) then
+                if (cldice_obs(k) > -0.000001_r_single) then
                    qob=cldwater_obs(k)+cldice_obs(k)
                 else
                    qob=cldwater_obs(k)
                 endif
             else
-                if (cldice_obs(k) > -0.000001) then
+                if (cldice_obs(k) > -0.000001_r_single) then
                    qob=cldice_obs(k)
                 endif
             endif
    
             ! make sure very small background values are set to 0
-            if (ql_bk(k) < 0.000001) ql_bk(k)=0.0
-            if (qi_bk(k) < 0.000001) qi_bk(k)=0.0
+            if (ql_bk(k) < 0.000001_r_single) ql_bk(k)=0.0_r_single
+            if (qi_bk(k) < 0.000001_r_single) qi_bk(k)=0.0_r_single
    
-            if (qob < 99.) then
+            if (qob < 99._r_single) then
    
-                qges=(ql_bk(k)+qi_bk(k))*1000.
+                qges=(ql_bk(k)+qi_bk(k))*1000._r_single
    
-                if (qob > 0.0 .and. qges > 0.0) then
+                if (qob > 0.0_r_single .and. qges > 0.0_r_single) then
                     if (qob < qges) then
                         dontobcount=dontobcount+1
                         qob = qges
@@ -532,7 +534,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                 muse(i)=.true.
    
            !*******************************************************************************
-               if (i_cloud_q_innovation .ne. 2) then
+               if (i_cloud_q_innovation /= 2) then
                    write(*,*) "Warning - setupcldtot: this code version is only designed for i_cloud_q_innovation == 2"
                    return
                else
@@ -558,7 +560,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                    pressure=p_bk(k)*10.0_r_kind
                    cloudqvis= ruc_saturation(t_bk(k),pressure)
        
-                   if (qob > 0.) then
+                   if (qob > 0._r_single) then
                     
                        if (q_bk(k) < cloudqvis) then
                            qv_ob=cloudqvis
@@ -570,7 +572,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                            q_build0_count=q_build0_count+1
                        endif
        
-                   elseif (qob > -0.000001) then
+                   elseif (qob > -0.000001_r_single) then
                        
                        if( q_bk(k) > cloudqvis*rh_clear_p) then
                            qv_ob=cloudqvis*rh_clear_p
@@ -595,8 +597,8 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                    my_headq%err2   = error**2
                    my_headq%raterr2= ratio_errors**2
                    my_headq%time   = dtime
-                   my_headq%b      = 10.0 !cvar_b(ikx) 
-                   my_headq%pg     = 0.0  !cvar_pg(ikx)
+                   my_headq%b      = 10.0_r_single !cvar_b(ikx) 
+                   my_headq%pg     = 0.0_r_single  !cvar_pg(ikx)
                    my_headq%jb     = var_jb 
                    my_headq%luse   = luse(i)
        

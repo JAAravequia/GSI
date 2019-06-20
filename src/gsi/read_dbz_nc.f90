@@ -99,13 +99,13 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,sis,hgtl_full,no
 ! === Grid dbz data declaration
 
 ! DCD 27 Feb 2019:  changed data_r_1d from real(r_kind) to real; added new array data_r_2d
-  real, allocatable, dimension(:) :: data_r_1d
-  real, allocatable, dimension(:,:) :: data_r_2d
+  real(r_kind), allocatable, dimension(:) :: data_r_1d
+  real(r_kind), allocatable, dimension(:,:) :: data_r_2d
   real(r_kind), allocatable, dimension(:) :: height
 ! DCD 28 Feb 2019:  changed lon and lat to 2D arrays
   real(r_kind), allocatable, dimension(:,:) :: lon, lat
 ! DCD 27 Feb 2019:  changed data_r_3d from real(r_kind) to real
-  real, allocatable, dimension(:,:,:) :: data_r_3d
+  real(r_kind), allocatable, dimension(:,:,:) :: data_r_3d
   real(r_kind), allocatable, dimension(:,:,:) :: dbzQC
 
   integer(i_kind), parameter                  :: max_num_vars = 50, max_num_dims = 20
