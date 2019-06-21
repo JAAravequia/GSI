@@ -394,7 +394,7 @@ subroutine setupuwnd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !       model elevation depending on how close to surface
         fact = zero
         !LEVINE EDIT
-        if (itype == 295 .or. itype == 280) then
+        if (itype == 295 .or. itype == 288) then
            !if ((dpres-dstn) < 10._r_kind) then
            !   print*, "SETUPW-MSONET: Mesonet wind with height under 10 m:",dpres,dstn
            !endif
