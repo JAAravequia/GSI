@@ -180,7 +180,7 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   logical :: first,read_success
 
   integer(i_kind) lun
-  real(r_double),allocatable,dimension(:,:):: olpdtsq,rpseq14
+  real(r_double),allocatable,dimension(:,:):: olpdtsq,lpsdvals
   real(r_double),allocatable,dimension(:):: press,omr,omrstd
   real(r_double),allocatable,dimension(:,:)::rpseq3,rpseq12,rpseq13
   real(r_kind) lats0,lons0
@@ -1056,14 +1056,8 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      nozdat=nreal+nchanl
      read_success=.false.
 
-     !lun = get_lun()
-     lun = 91
-     open(lun,file="/home/Louis.Kouvaris/BUFR/OMPS-LP_BUFR_Table4",form='formatted',ACTION='READ')
-
      open(lunin,file=trim(infile),form='unformatted')
-     CALL  ISETPRM ( 'MXBTMSE', 243)
-     !call openbf(lunin,'IN',lunin)
-     call openbf(lunin,'IN',lun)
+     call openbf(lunin,'IN',lunin)
      write(6,*)"READ_OZONE: after openbf"
      call datelen(10)
      call readmg(lunin,subset,idate,iret)
@@ -1084,7 +1078,7 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      allocate(rpseq3(1,990))
      allocate(rpseq12(110,9))
      allocate(rpseq13(1,243))
-     allocate(rpseq14(1,243))
+     allocate(lpsdvals(3,81))
      allocate(press(nloz))
      allocate(omr(nloz))
      allocate(omrstd(nloz))
@@ -1169,15 +1163,15 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
        print *,"READ_OZONE: olpdtsq",iret
        print *,(olpdtsq(j,30),j=1,12)
        !Read Ozone Mixing Ratio Standard Deviation
-       call ufbseq(lunin, rpseq14,1,243,iret,"RPSEQ14")
-       print *,"READ_OZONE: rpseq14",iret
-       print *,(rpseq14(1,(j-1)*3+3),j=1,81)
+       call ufbseq(lunin, lpsdvals,3,81,iret,"LPSDVALS")
+       print *,"READ_OZONE: lpsdvals",iret
+       print *,(lpsdvals(3,j),j=1,81)
        usage1(:) = 100._r_kind
        j = 0
        do k = 1, nloz
          press(k) = olpdtsq(2,k)*0.001 ! centibars
          omr(k) = olpdtsq(11,k) ! ppmv
-         omrstd(k) = rpseq14(1,(k-1)*3+3) !omr std
+         omrstd(k) = lpsdvals(3,k) !omr std
          if(omr(k) .gt. 0. .and. omr(k) .lt. 100.) then
             usage1(k) = zero
             j = j + 1
@@ -1235,19 +1229,13 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
         ndata=kk
         nodata=ndata
      endif
-  print *,"Label 2"
 
 !    Write header record and data to output file for further processing
-  print *,"ndata=",ndata,nozdat,ilon,ilat
      call count_obs(ndata,nozdat,ilat,ilon,ozout,nobs)
-  print *,"Label 2.1",obstype,ndata,"nobs=",nobs
      write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
-  print *,"Label 2.2"
      write(lunout) ((ozout(k,i),k=1,nozdat),i=1,ndata)
-  print *,"Label 2.3"
      nread=nmrecs
    end if
-  print *,"Label 3"
 
 ! Deallocate local arrays
   if(allocated(ozout))deallocate(ozout)
@@ -1265,20 +1253,17 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      if(allocated(rpseq3))deallocate(rpseq3)
      if(allocated(rpseq12))deallocate(rpseq12)
      if(allocated(rpseq13))deallocate(rpseq13)
-     if(allocated(rpseq14))deallocate(rpseq14)
+     if(allocated(lpsdvals))deallocate(lpsdvals)
      if(allocated(press))deallocate(press)
      if(allocated(omr))deallocate(omr)
      if(allocated(omrstd))deallocate(omrstd)
      if(allocated(ipos))deallocate(ipos)
      if(allocated(usage1))deallocate(usage1)
   endif
-  print *,"Label 4"
 
 ! Close unit to input data file
   call closbf(lunin)
   close(lunin)
-  close(lun)
-  print *,"Label 5"
 
 ! Deallocate satthin arrays
   if (obstype == 'omi' .or. obstype == 'gome' .or. obstype == 'ompstc8')call destroygrids

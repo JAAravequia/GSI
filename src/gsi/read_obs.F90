@@ -190,16 +190,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
       lnbufr = 15
       open(lnbufr,file=trim(filename),form='unformatted',status ='unknown')
 
-      if(index(filename,"ompslp") /=0)then !Take this out
-        !lun=get_lun()
-        lun = 93
-        open(lun,file="/home/Louis.Kouvaris/BUFR/OMPS-LP_BUFR_Table4",ACTION='READ')
-        print *,"READ_OBS: Opening OMPS LP BUFR file"
-        CALL  ISETPRM ( 'MXBTMSE', 243)
-        call openbf(lnbufr,'IN',lun)
-      else
-        call openbf(lnbufr,'IN',lnbufr)
-      endif
+      call openbf(lnbufr,'IN',lnbufr)
 
       call datelen(10)
       call readmg(lnbufr,subset,idate,iret)
@@ -337,12 +328,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
 
        call closbf(lnbufr)
        open(lnbufr,file=trim(filename),form='unformatted',status ='unknown')
-       if(index(filename,"ompslp") /=0)then !Take this out
-        !CALL  ISETPRM ( 'MXBTMSE', 243)
-        call openbf(lnbufr,'IN',lun)
-       else
        call openbf(lnbufr,'IN',lnbufr)
-       endif
        call datelen(10)
 
        if(kidsat /= 0)then
@@ -552,12 +538,10 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
              write(6,*)'did not find pm10 in anow bufr'
           endif
 
-
        end if
       end if
 
       call closbf(lnbufr)
-      close(lun)
   end if
   if(lexist)then
       write(6,*)'read_obs_check: bufr file date is ',idate,trim(filename),' ',dtype,jsatid
