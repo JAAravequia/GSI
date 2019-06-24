@@ -169,9 +169,9 @@ OMIBF=${OMIBF:-${COMIN_OBS}/${OPREFIX}omi.tm00.bufr_d${OSUFFIX}}
 MLSBF=${MLSBF:-${COMIN_OBS}/${OPREFIX}mls.tm00.bufr_d${OSUFFIX}}
 #OMPSLPBF=${OMPSLPBF:-${COMIN_OBS}/${OPREFIX}ompslp.tm00.bufr_d${OSUFFIX}}
 #OMPSLPBF=/home/Louis.Kouvaris/BUFR/gdas.t00z.ompslp.tm00.bufr_d
-OMPSLPBF=/home/Louis.Kouvaris/BUFR/OMPS-LP-EV-EDR_v2r5_npp_s20180123000049403_e201801230001267_c201809051916430.bufr
-OMPSLPBF=/home/Louis.Kouvaris/New_w_ecCodes/ompslp.gdas.2018012300
-OMPSLPBF=/home/Louis.Kouvaris/New_w_ecCodes/${OPREFIX}ompslp.tm00.bufr_d${OSUFFIX}
+#OMPSLPBF=/home/Louis.Kouvaris/BUFR/OMPS-LP-EV-EDR_v2r5_npp_s20180123000049403_e201801230001267_c201809051916430.bufr
+#OMPSLPBF=/home/Louis.Kouvaris/New_w_ecCodes/ompslp.gdas.2018012300
+OMPSLPBF=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/gdas.20190301/${OPREFIX}ompslp.tm00.bufr_d${OSUFFIX}
 SMIPCP=${SMIPCP:-${COMIN_OBS}/${OPREFIX}spssmi.tm00.bufr_d${OSUFFIX}}
 TMIPCP=${TMIPCP:-${COMIN_OBS}/${OPREFIX}sptrmm.tm00.bufr_d${OSUFFIX}}
 GPSROBF=${GPSROBF:-${COMIN_OBS}/${OPREFIX}gpsro.tm00.bufr_d${OSUFFIX}}
@@ -368,7 +368,7 @@ rm gpsrobufr
 rm tcvitl
 rm gsndrbufr gsnd1bufr
 rm ssmisbufr ssmitbufr ssmirrbufr tmirrbufr
-rm sbuvbufr gomebufr omibufr mlsbufr msubufr ompsnpbufr ompstcbufr
+rm sbuvbufr gomebufr omibufr mlsbufr msubufr ompsnpbufr ompstcbufr ompslpbufr
 rm airsbufr
 rm iasibufr iasibufrears iasibufr_db
 rm amsrebufr amsr2bufr
