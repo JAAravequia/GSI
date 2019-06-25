@@ -125,7 +125,7 @@ SUBROUTINE cloudCover_Surface_col(mype,nsig,&
   INTEGER(i_kind) :: k
   INTEGER(i_kind) :: ic
   integer(i_kind) :: firstcloud,cl_base_broken_k,obused
-  integer(i_kind) :: kcld,kdiff
+  integer(i_kind) :: kcld
   real(r_single)  ::    underlim
   REAL(r_kind) :: zdiff
   REAL(r_kind) :: zlev_clr,cloud_dz,cl_base_ista,betav
@@ -162,24 +162,10 @@ SUBROUTINE cloudCover_Surface_col(mype,nsig,&
            endif
         enddo
 
-        ! clean the whole column up to ceilometer height (12 kft) if ob is CLR
-        !!! Test without clear obs
-        !!!do k=3,16,6
-        !!!   if (h_bk(k) < zlev_clr) then
-        !!!      pcp_type_obs(k)=0
-        !!!      cld_cover_obs(k)=0.0_r_kind
-        !!!   endif
-        !!!end do
-
-        !!!wthr_type=0
-        !write(*,*) "clearcase", mype, ocld(1)
-
 ! -- Now consider non-clear obs
 !    --------------------------
    else
                 
-        !write(*,*) "notcase", mype, ocld(1)
-     
         ! legacy - increase zthick by 1.5x factor for ceiling < 900 m (~3000 ft - MVFR)
         cloud_dz = cloud_zthick_p
         cl_base_broken_k = -9
@@ -187,7 +173,6 @@ SUBROUTINE cloudCover_Surface_col(mype,nsig,&
         do ic = 1,6
            if (obused == 0) then
               if (ocld(ic)>0 .and. ocld(ic)<50) then
-                 !write(*,*) "obwillbeused_ocldvalid", ic
                  if(ocld(ic) == 4) then
                     if(wthr_type > 10 .and. wthr_type < 20) cloud_dz = 1000._r_kind  
                                             ! precipitation + highest level
@@ -198,14 +183,12 @@ SUBROUTINE cloudCover_Surface_col(mype,nsig,&
                  cl_base_ista = float(ocld(6+ic)) + Oelvtn - zh
                  if(zh < 1.0_r_kind .and. Oelvtn > 20.0_r_kind &
                     .and. float(ocld(6+ic)) < 250.0_r_kind) then
-                    !write(*,*) "oceanif"
                     cycle   ! limit the use of METAR station over oceas for low cloud base
                  endif
                  
                  firstcloud = 0
                  underlim = 10._r_kind   !
 
-                 !write(*,*) 'cl_base_ista', cl_base_ista, cld_bld_hgt, h_bk(3)
                  do k=1,nsig
                     if (firstcloud==0) then
                        zdiff = cl_base_ista - h_bk(k)
@@ -227,21 +210,15 @@ SUBROUTINE cloudCover_Surface_col(mype,nsig,&
                            !limit cloud building to below a specified height 
                              if (h_bk(k) < cld_bld_hgt) then 
                                if(ocld(ic) == 1 ) then
-                                  !cld_cover_obs(k)=max(cld_cover_obs(k),0.1_r_single)
                                   pcp_type_obs(k)=0
-                                  !write(*,*) "fewcase", mype, ic
                                elseif (ocld(ic) == 2 ) then
-                                  !cld_cover_obs(k)=max(cld_cover_obs(k),0.3_r_single)
-                                  !write(*,*) "somecase", mype, ic
                                elseif (ocld(ic) == 3 ) then
                                   cld_cover_obs(k)=max(cld_cover_obs(k),0.7_r_single)
                                   if(cl_base_broken_k < 0 ) cl_base_broken_k=k
                                   obused = 1
-                                  !write(*,*) "buildcase", mype, ic
                                elseif (ocld(ic) == 4 ) then
                                   cld_cover_obs(k)=max(cld_cover_obs(k),1.01_r_single)
                                   obused = 1
-                                  !write(*,*) "buildcase", mype, ic
                                   if(cl_base_broken_k < 0 ) cl_base_broken_k=k
                                   if(wthr_type == 1) then
                                      pcp_type_obs(k)=1
@@ -257,46 +234,14 @@ SUBROUTINE cloudCover_Surface_col(mype,nsig,&
                              kcld=k
                              firstcloud = firstcloud + 1
                           endif  ! zdiff < cloud_dz
-                       !else
-                       !  ---- Clear up to cloud base of first cloud level
-                          !!!if (ic==1) cld_cover_obs(k)=0.0_r_kind
-                          !if (ocld(ic) == 1) pcp_type_obs(k)=0
-                          !if (ocld(ic) == 3 .or. ocld(ic) == 4) then
-                          !   if( (wthr_type > 10 .and. wthr_type < 20)  &
-                          !                       .or. wthr_type == 1 )  then 
-                          !      pcp_type_obs(k)=1
-                          !   endif
-                          !endif
                        endif  ! underlim
                     endif ! firstcloud
                  enddo  ! end K loop
-                 !write(*,*) "firstcloud", firstcloud
-
-                 ! thin clear obs below cloud ob
-                 !firstlayer... change to firstcloud? 1/24/19
-                 !no need to distinguish between lowest layer and any layer
-                 !!!if (firstlayer == 1) then
-                 !!!   write(*,*) 'CLOUD-LAYER', mype,ic,kcld
-                 !!!   if (kcld < 9) then
-                 !!!      kdiff=ceiling((kcld-1)/2.)
-                 !!!      cld_cover_obs(kdiff) = 0.
-                 !!!      write(*,*) "1clearbelow", ic
-                 !!!   else
-                 !!!      kdiff=ceiling((kcld-1)/3.)
-                 !!!      cld_cover_obs(kdiff) = 0.
-                 !!!      cld_cover_obs(kdiff+kdiff) = 0.
-                 !!!      write(*,*) "2clearbelow", ic
-                 !!!   endif
-                 !!!endif
 
               endif     ! end if ocld valid
            endif  ! obused
         enddo      ! end IC loop
      endif      ! end if cloudy ob  
-
-     !do k=1,nsig
-     !  write(1000+mype,*) 'cld cover', k, cld_cover_obs(k)
-     !enddo
 
 ! -- Use visibility for low-level cloud whether
      if (wthr_type < 30   .and. wthr_type > 20 .and. &
@@ -308,8 +253,8 @@ SUBROUTINE cloudCover_Surface_col(mype,nsig,&
 END SUBROUTINE cloudCover_Surface_col
 
 
-SUBROUTINE cloudLWC_pseudo(mype,nsig,q_bk,t_bk,p_bk, &
-                 cld_cover_obs,nobs,  &
+SUBROUTINE cloudLWC_pseudo(nsig,q_bk,t_bk,p_bk, &
+                 cld_cover_obs,  &
                  cldwater_obs,cldice_obs)
 !
 !  find cloud liquid water content
@@ -362,7 +307,6 @@ SUBROUTINE cloudLWC_pseudo(mype,nsig,q_bk,t_bk,p_bk, &
 
   implicit none
 
-  integer(i_kind),intent(in):: mype
   integer(i_kind),intent(in):: nsig
 !
 !  background
@@ -376,14 +320,6 @@ SUBROUTINE cloudLWC_pseudo(mype,nsig,q_bk,t_bk,p_bk, &
 !
   real (r_single),intent(inout) :: cld_cover_obs(nsig)
 !
-!  cloud layers
-!
-!  integer(i_kind),intent(in) :: cloudlayers_i(21)  ! 5 =different layers
-!                                      1= the number of layers
-!                                      2,4,... bottom
-!                                      3,5,... top
-  integer(i_kind),intent(in):: nobs
-!
 ! cloud water and cloud ice
 !
   real (r_single),intent(out) :: cldwater_obs(nsig)
@@ -393,8 +329,7 @@ SUBROUTINE cloudLWC_pseudo(mype,nsig,q_bk,t_bk,p_bk, &
 !
 ! temp.
 !
-  INTEGER(i_kind) :: k,ilvl,nlvl
-  INTEGER(i_kind) :: kb,kt
+  INTEGER(i_kind) :: k
   real(r_single) :: p_pa_1d(nsig), thv(nsig)
   real(r_single) :: cloudqvis(nsig)
   real(r_single) :: rh(nsig)
@@ -405,14 +340,8 @@ SUBROUTINE cloudLWC_pseudo(mype,nsig,q_bk,t_bk,p_bk, &
 
   real(r_single)    Cloud_q_qvis_rat_p, cloud_q_qvis_ratio
   real(r_single)    auto_conver
-  real(r_single)    cloud_def_p
-  real(r_single)    rh_cld3_p
-  real(r_single)    rh_clear_p
   data  Cloud_q_qvis_rat_p/ 0.05_r_single/
   data  auto_conver       /0.0002_r_single/
-  data  cloud_def_p       /0.000001_r_single/
-  data  rh_cld3_p         /0.98_r_single/    ! mhu, do we need to adjust this number to 0.94, WPP has PBL top set as 0.95
-  data  rh_clear_p        /0.8_r_single/
 
   real(r_kind) ::  es0_p
   parameter (es0_p=6.1121_r_kind)     ! saturation vapor pressure (mb)
@@ -423,16 +352,13 @@ SUBROUTINE cloudLWC_pseudo(mype,nsig,q_bk,t_bk,p_bk, &
   data temp_qvis1, temp_qvis2 /268.15_r_kind, 263.15_r_kind/
 
   REAL(r_kind) stab, stab_threshold
-  LOGICAL :: l_prt
-  INTEGER(i_kind) :: iflag_slwc
-  INTEGER(i_kind) :: kp3,km3, ob
+  INTEGER(i_kind) :: kp3,km3
 
-  REAL(r_kind) :: q, Temp, tv, evs, qvs1, eis, qvi1, watwgt, qavail
+  REAL(r_kind) :: Temp, evs, qvs1, eis, qvi1, watwgt, qavail
 !
 !====================================================================
 !  Begin
 !
-  !write(*,*) 'cloudLWC_pseudo'
   cldwater_obs=-99999.9_r_kind
   cldice_obs=-99999.9_r_kind
   cloudtmp_obs=-99999.9_r_kind
@@ -471,17 +397,13 @@ SUBROUTINE cloudLWC_pseudo(mype,nsig,q_bk,t_bk,p_bk, &
         ! evs, eis in mb
         evs = svp1*exp(SVP2*(Temp-273.15_r_kind)/(Temp-SVP3))
         qvs1 = 0.62198_r_kind*evs*100._r_kind/(p_pa_1d(k)-100._r_kind*evs)   ! qvs1 is mixing ratio kg/kg, so no need next line
-        !      qvs1 = qvs1/(1.0-qvs1)
         eis = svp1 *exp(22.514_r_kind - 6.15e3_r_kind/Temp)
         qvi1 = 0.62198_r_kind*eis*100._r_kind/(p_pa_1d(k)-100._r_kind*eis)   ! qvi1 is mixing ratio kg/kg, so no need next line
-        !      qvi1 = qvi1/(1.0-qvi1)
-        !      watwgt = max(0.,min(1.,(Temp-233.15)/(263.15-233.15)))
         ! ph - 2/7/2012 - use ice mixing ratio only for temp < 263.15
         watwgt = max(0._r_kind,min(1._r_kind,(Temp-temp_qvis2)/&
                                      (temp_qvis1-temp_qvis2)))
         cloudtmp_obs(k)= Temp
         cloudqvis(k)= (watwgt*qvs1 + (1._r_kind-watwgt)*qvi1)
-        !      qvis(i,j,k)= (watwgt*qvs1 + (1.-watwgt)*qvi1)
         rh(k) = q_bk(k)/cloudqvis(k)
 
         ! STABILITY CHECK, used in RUC keep it for now
@@ -494,11 +416,8 @@ SUBROUTINE cloudLWC_pseudo(mype,nsig,q_bk,t_bk,p_bk, &
         ! 3K/100mb below (nearer sfc)
         if ((stab<stab_threshold .and. p_pa_1d(k)/100._r_kind>600._r_kind)   &
                      .or. stab<0.66_r_kind*stab_threshold )  then
-!               write(*,'(a,i4,2f15.3)') 'skip building cloud in stable layer',k,stab*10000.0,thv(k)
                cld_cover_obs(k)=-9999.0_r_single
         elseif(rh(k) < 0.40_r_single .and. ((cloudqvis(k)-q_bk(k)) > 0.003_r_kind)) then
-!               write(*,'(a,i4,3f15.3)') 'skip building cloud in too-dry layer',k,& 
-!                            rh(k),(cloudqvis(k)-q_bk(k))*1000.0,thv(k)
                cld_cover_obs(k)=-9999.0_r_single
         else
         !dk * we need to avoid adding cloud if sat_ctp is lower than 650mb
@@ -510,18 +429,15 @@ SUBROUTINE cloudLWC_pseudo(mype,nsig,q_bk,t_bk,p_bk, &
                cloud_q_qvis_ratio = watwgt*cloud_q_qvis_rat_p  &
                                     + (1.0_r_single-watwgt)*0.1_r_single*cloud_q_qvis_rat_p
                qavail = min(0.5_r_single*auto_conver,cloud_q_qvis_ratio*cloudqvis(k))
-               !!!qavail = (cloud_q_qvis_ratio*cloudqvis(i,j,k))
 
                !-------------------------------------------------------------------
                ! - set cloud water mixing ratio  - no more than 0.1 g/kg,
                !   which is the current autoconversion mixing ratio set in exmoisg
                !   according to John Brown - 14 May 99
                !-------------------------------------------------------------------
-               !write(*,*) 'LWC:',cloudtmp_obs(k),watwgt, qavail
                cldwater_obs(k) = watwgt*qavail*1000.0_r_kind   ! g/kg
                !   - set ice mixing ratio
                cldice_obs(k)= (1.-watwgt)*qavail*1000.0_r_kind   ! g/kg
-               !write(*,*) "cldobs_not_missing", mype, k, cldwater_obs(k),cldice_obs(k)
         end if
      else
         write(*,*) 'WARNING, cld_cover_obs outside of known ranges.', cld_cover_obs(k)

@@ -111,55 +111,39 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! Declare local variables  
   
   real(r_double) rstation_id
-  real(r_kind) qob,qges,qsges,qlges,qiges,qv_ob
-  real(r_kind) ratio_errors,dlat,dlon,dtime,dpres,rmaxerr,error
-  real(r_kind) rsig,dprpx,rlow,rhgh,presq,tfact,ramp
-  real(r_kind) psges,sfcchk,ddiff,errorx
-  real(r_kind) cg_q,wgross,wnotgross,wgt,arg,exp_arg,term,rat_err2,qcgross
-  real(r_kind) grsmlt,ratio,val2,obserror
-  real(r_kind) obserrlm,residual,ressw2,scale,ress,huge_error
-  real(r_kind) val,valqc,rwgt,prest
+  real(r_kind) qob,qges,qv_ob
+  real(r_kind) ratio_errors,dlat,dlon,dtime,dpres,error
+  real(r_kind) ddiff
+  real(r_kind) scale
+  real(r_kind) val,rwgt
   real(r_kind) errinv_input,errinv_adjst,errinv_final
   real(r_kind) err_input,err_adjst,err_final
   real(r_kind),dimension(nele,nobs):: data
-  real(r_kind),dimension(nobs):: dup
-  real(r_kind),dimension(nsig):: prsltmp
   real(r_single),allocatable,dimension(:,:)::rdiagbuf
   real(r_single),allocatable,dimension(:,:)::rdiagbufp
 
-  integer(i_kind) i,j,nchar,nreal,nrealcld,ii,iip,l,jj,mm1,itemp
-  integer(i_kind) jsig,itype,k,kk,nn,ikxx,iptrb,ibin,ioff,ioff0,icat
-  integer(i_kind) ier,ipres,iqob,ikx,iqmax,iqc
-  integer(i_kind) ier2,ilate,ilone,iobshgt,istat,izz,iprvd,isprvd
+  integer(i_kind) i,j,nchar,nreal,nrealcld,ii,iip,mm1
+  integer(i_kind) itype,k,ibin,ioff0
+  integer(i_kind) ikx
+  integer(i_kind) ilate,ilone,iobshgt
   integer(i_kind) id,ilon,ilat,istnelv,ivis,icldhgt,icldamt,iwthr,itime,iuse,iddp
   integer(i_kind) :: startwx, endwx
 
-  integer(i_kind) idomsfc,iderivative
 
   character(8) station_id
   character(8),allocatable,dimension(:):: cdiagbuf
   character(8),allocatable,dimension(:):: cdiagbufp
-  character(8),allocatable,dimension(:):: cdiagbufmean
   character(8),allocatable,dimension(:):: stationbuf
-  character(8),allocatable,dimension(:):: cprvstg,csprvstg
-  character(8) c_prvstg,c_sprvstg
-  real(r_double) r_prvstg,r_sprvstg
 
-  logical ice,proceed
+  logical proceed
   logical,dimension(nobs):: luse,muse
 
   logical:: in_curbin, in_anybin
-  integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
   class(obsNode),pointer:: my_node
   type(qNode),pointer:: my_headq
-  type(obs_diag),pointer:: my_diag
-  real(r_kind) :: thispbl_height,ratio_PBL_height,prestsfc,diffsfc
-  real(r_single) :: qv,ee,dwpt
 
   equivalence(rstation_id,station_id)
-  equivalence(r_prvstg,c_prvstg)
-  equivalence(r_sprvstg,c_sprvstg)
 
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_ql
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_qi
@@ -168,28 +152,19 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
 
-  integer(i_kind) klevel
-  integer(i_kind) ilevel
-
   real(r_kind),allocatable:: dpres1d(:)
   real(r_kind),allocatable:: t_bk(:)
   real(r_kind),allocatable:: h_bk(:)
   real(r_kind),allocatable:: p_bk(:)
   real(r_kind),allocatable:: ql_bk(:)
   real(r_kind),allocatable:: qi_bk(:)
-  real(r_kind) ps_bk
   real(r_kind) z_bk
   real(r_kind),allocatable:: q_bk(:)
-
-  integer(i_kind) :: ierr, istatus
-  integer(i_kind) :: itsfc
 
   !surface obs
   integer(i_kind),allocatable  :: ocld(:)
   character*10    :: owx
   real(r_single)  :: oelvtn
-  real(r_single)  :: odist
-  real(r_single)  :: otime
   real(r_single)  :: ovis
   character*3     :: mwx
   integer(i_kind) :: nvarcld_p
@@ -224,18 +199,19 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) :: q_obcount,q_clear_count,q_build_count
   integer(i_kind) :: q_clear0_count,q_build0_count
   real(r_kind) :: zlev_clr
-  integer(i_kind) :: ib,jb
   real(r_kind) :: qobmax,qobmin
   integer(i_kind) :: firstob
-  real(r_kind) :: es, qvs
   real(r_kind) :: var_jb
-  real(r_kind) :: Temp
   real(r_kind) :: rh_clear_p
   parameter (rh_clear_p = 0.8_r_kind)
   character(len=14) :: myfile
   logical:: lhere
   integer(i_kind):: istat1,istat2,istat3
 
+!
+  awork=0.0_r_kind
+  bwork=0.0_r_kind
+!
   obcount=0
   q_obcount=0
   q_clear_count=0
@@ -486,9 +462,8 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
          cldice_obs=miss_obs_single
    
           
-         call cloudLWC_pseudo(mype,nsig,q_bk,t_bk,p_bk,      &
-                  cld_cover_obs,nobs, &
-                  cldwater_obs,cldice_obs)
+         call cloudLWC_pseudo(nsig,q_bk,t_bk,p_bk,      &
+                  cld_cover_obs,cldwater_obs,cldice_obs)
    
          obzero =0
          do k=1,nsig

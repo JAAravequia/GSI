@@ -910,19 +910,19 @@ subroutine  gsdcloudanalysis(mype)
   elseif(l_precip_clear_only) then !only clear for HRRRE
      do k=1,nsig
         do j=2,lat2-1
-        do i=2,lon2-1
-           if( ref_mos_3d(i,j,k) <= zero .and. ref_mos_3d(i,j,k) > -100.0_r_kind ) then
-              rain_3d(i,j,k) = zero
-              nrain_3d(i,j,k) = zero
-              snow_3d(i,j,k) = zero
-              graupel_3d(i,j,k) = zero
-           else 
-              rain_3d(i,j,k) = ges_qr(j,i,k)
-              nrain_3d(i,j,k)= ges_qnr(j,i,k)
-              snow_3d(i,j,k) = ges_qs(j,i,k)
-              graupel_3d(i,j,k) = ges_qg(j,i,k)
-           endif
-        enddo
+           do i=2,lon2-1
+              if( ref_mos_3d(i,j,k) <= zero .and. ref_mos_3d(i,j,k) > -100.0_r_kind ) then
+                 rain_3d(i,j,k) = zero
+                 nrain_3d(i,j,k) = zero
+                 snow_3d(i,j,k) = zero
+                 graupel_3d(i,j,k) = zero
+              else 
+                 rain_3d(i,j,k) = ges_qr(j,i,k)
+                 nrain_3d(i,j,k)= ges_qnr(j,i,k)
+                 snow_3d(i,j,k) = ges_qs(j,i,k)
+                 graupel_3d(i,j,k) = ges_qg(j,i,k)
+              endif
+           enddo
         enddo
      enddo
   else  ! hydrometeor anlysis for RAP forecast

@@ -91,8 +91,6 @@ contains
       logical :: bad_input
       real(r_kind),dimension(:,:,:),allocatable :: gg_u,gg_v,gg_tv,gg_rh
       real(r_kind),dimension(:,:),allocatable :: gg_ps
-      real(r_kind),dimension(:,:,:),allocatable:: g_u,g_v,g_tv,g_rh,g_cwmr,g_oz
-      real(r_kind),dimension(:,:),allocatable:: g_ps
 
       call gsi_gridcreate(grid_ens,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)
       call gsi_bundlecreate(en_bar,grid_ens,'ensemble',istatus,names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
