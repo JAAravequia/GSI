@@ -1042,7 +1042,6 @@ end subroutine destroy_crtm
   integer(i_kind):: ier,ii,kk,kk2,i,itype,leap_day,day_of_year
   integer(i_kind):: ig,istatus
   integer(i_kind):: j,k,m1,ix,ix1,ixp,iy,iy1,iyp,m,iii
-  integer(i_kind):: n,nk  
   integer(i_kind):: itsig,itsigp,itsfc,itsfcp
   integer(i_kind):: istyp00,istyp01,istyp10,istyp11
   integer(i_kind):: iqs,iozs,icfs 
@@ -1062,7 +1061,6 @@ end subroutine destroy_crtm
   real(r_kind):: delx,dely,delx1,dely1,dtsig,dtsigp,dtsfc,dtsfcp
   real(r_kind):: sst00,sst01,sst10,sst11,total_od,term,uu5,vv5, ps
   real(r_kind):: sno00,sno01,sno10,sno11,secant_term
-  real(r_kind):: cloud_tot,clwmin,clwt,clwm,tem1,tem2,value,onemrh,relhum 
   real(r_kind):: hwp_total,theta_700,theta_sfc    
   real(r_kind),dimension(0:3):: wgtavg
   real(r_kind),dimension(nsig,nchanl):: omix
@@ -1113,6 +1111,7 @@ end subroutine destroy_crtm
   if (present(stability)) stability=zero 
   if (present(hwp_ratio)) hwp_ratio=zero  
   if (present(tcwv)) tcwv=zero           
+  if (present(tcc)) tcc=zero           
 
   dx  = data_s(ilat)                 ! grid relative latitude
   dy  = data_s(ilon)                 ! grid relative longitude
@@ -2007,7 +2006,8 @@ end subroutine destroy_crtm
 
 !  Simulated brightness temperatures
        tsim(i)=rtsolution(i,1)%brightness_temperature
-!      if (present(tcc)) tcc(i)=rtsolution(i,1)%total_cloud_cover ! crtm2.3.x        
+
+!      if (present(tcc)) tcc(i)=rtsolution(i,1)%total_cloud_cover  !crtm2.3.x
 
        if (n_clouds_fwd_wk>0 .and. present(tsim_clr)) then
           if (mixed_use) then 
@@ -2221,7 +2221,7 @@ end subroutine destroy_crtm
   real(r_kind)    :: reff_min, reff_max
 
   ! Parameters
-  real(r_kind), parameter :: qmin = 1.0e-12                 ! [kg/kg ]
+  real(r_kind), parameter :: qmin = 1.0e-12_r_kind          ! [kg/kg ]
 
   ! Parameters for water cloud
   real(r_kind), parameter :: ccn        =  1.0e8_r_kind
@@ -2229,7 +2229,6 @@ end subroutine destroy_crtm
   real(r_kind), parameter :: reff_w_min =    5.0_r_kind     ! 
   real(r_kind), parameter :: reff_w_max =   10.0_r_kind
 
-  real(r_kind) :: a_w, b_w
   ! Parameters for ice cloud (Hemisfield and mcFarquhar 1996)
   real(r_kind), parameter :: rho_i      = 890.0_r_kind      ! [kg/m3 ]
   real(r_kind), parameter :: beta       =  1.22_r_kind

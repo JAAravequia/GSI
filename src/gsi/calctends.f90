@@ -268,13 +268,13 @@ subroutine calctends(mype,teta,pri,guess,xderivative,yderivative,tendency)
 
     ip3d=getindex(dvars3d,'prse')
     if (ip3d>0) then  
-    do k=1,nsig+1
-      do j=jtstart(kk),jtstop(kk)
-        do i=1,lat2
-           p_t(i,j,k)=prsth9(i,j,k)-what9(i,j,k)
-        end do
-      end do
-    end do
+       do k=1,nsig+1
+         do j=jtstart(kk),jtstop(kk)
+           do i=1,lat2
+              p_t(i,j,k)=prsth9(i,j,k)-what9(i,j,k)
+           end do
+         end do
+       end do
     endif
 
 !   before big k loop, zero out the km1 summation arrays
@@ -412,20 +412,20 @@ subroutine calctends(mype,teta,pri,guess,xderivative,yderivative,tendency)
      call gsi_bundlegetpointer(bundle,'tv',t   ,istatus)
      ier=ier+istatus
      if (iq>0) then
-     call gsi_bundlegetpointer(bundle,'q' ,q   ,istatus)
-     ier=ier+istatus
+        call gsi_bundlegetpointer(bundle,'q' ,q   ,istatus)
+        ier=ier+istatus
      endif
      if (ioz>0) then
-     call gsi_bundlegetpointer(bundle,'oz',oz  ,istatus)
-     ier=ier+istatus
+        call gsi_bundlegetpointer(bundle,'oz',oz  ,istatus)
+        ier=ier+istatus
      endif
      if (icw>0) then
-     call gsi_bundlegetpointer(bundle,'cw',cw  ,istatus)
-     if (istatus /=0) then
-         cw => cwgues
-         istatus=0
-     endif 
-     ier=ier+istatus
+        call gsi_bundlegetpointer(bundle,'cw',cw  ,istatus)
+        if (istatus /=0) then
+            cw => cwgues
+            istatus=0
+        endif 
+        ier=ier+istatus
      endif
   endif
   if (trim(thiscase)=='xderivative') then
@@ -439,16 +439,16 @@ subroutine calctends(mype,teta,pri,guess,xderivative,yderivative,tendency)
      call gsi_bundlegetpointer(bundle,'tv',t_x ,istatus)
      ier=ier+istatus
      if (iq>0) then
-     call gsi_bundlegetpointer(bundle,'q' ,q_x ,istatus)
-     ier=ier+istatus
+        call gsi_bundlegetpointer(bundle,'q' ,q_x ,istatus)
+        ier=ier+istatus
      endif
      if (ioz>0) then
-     call gsi_bundlegetpointer(bundle,'oz',oz_x,istatus)
-     ier=ier+istatus
+        call gsi_bundlegetpointer(bundle,'oz',oz_x,istatus)
+        ier=ier+istatus
      endif
      if (icw>0) then
-     call gsi_bundlegetpointer(bundle,'cw',cw_x,istatus)
-     ier=ier+istatus
+        call gsi_bundlegetpointer(bundle,'cw',cw_x,istatus)
+        ier=ier+istatus
      endif
   endif
   if (trim(thiscase)=='yderivative') then
@@ -462,16 +462,16 @@ subroutine calctends(mype,teta,pri,guess,xderivative,yderivative,tendency)
      call gsi_bundlegetpointer(bundle,'tv',t_y ,istatus)
      ier=ier+istatus
      if (iq>0) then
-     call gsi_bundlegetpointer(bundle,'q' ,q_y ,istatus)
-     ier=ier+istatus
+        call gsi_bundlegetpointer(bundle,'q' ,q_y ,istatus)
+        ier=ier+istatus
      endif
      if (ioz>0) then
-     call gsi_bundlegetpointer(bundle,'oz',oz_y,istatus)
-     ier=ier+istatus
+        call gsi_bundlegetpointer(bundle,'oz',oz_y,istatus)
+        ier=ier+istatus
      endif
      if (icw>0) then
-     call gsi_bundlegetpointer(bundle,'cw',cw_y,istatus)
-     ier=ier+istatus
+        call gsi_bundlegetpointer(bundle,'cw',cw_y,istatus)
+        ier=ier+istatus
      endif
   endif
   if(trim(thiscase)=='tendency') then
@@ -483,20 +483,20 @@ subroutine calctends(mype,teta,pri,guess,xderivative,yderivative,tendency)
      call gsi_bundlegetpointer(bundle,'tv',t_t ,istatus)
      ier=ier+istatus
      if (iq>0) then
-     call gsi_bundlegetpointer(bundle,'q' ,q_t ,istatus)
-     ier=ier+istatus
+        call gsi_bundlegetpointer(bundle,'q' ,q_t ,istatus)
+        ier=ier+istatus
      endif
      if (ioz>0) then
-     call gsi_bundlegetpointer(bundle,'oz',oz_t,istatus)
-     ier=ier+istatus
+        call gsi_bundlegetpointer(bundle,'oz',oz_t,istatus)
+        ier=ier+istatus
      endif
      if (icw>0) then
-     call gsi_bundlegetpointer(bundle,'cw',cw_t,istatus)
-     ier=ier+istatus
+        call gsi_bundlegetpointer(bundle,'cw',cw_t,istatus)
+        ier=ier+istatus
      endif
      if (ip3d>0) then
-     call gsi_bundlegetpointer(bundle,'prse',p_t,istatus)
-     ier=ier+istatus
+        call gsi_bundlegetpointer(bundle,'prse',p_t,istatus)
+        ier=ier+istatus
      endif
   endif
   if (ier/=0) then

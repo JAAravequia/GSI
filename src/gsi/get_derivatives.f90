@@ -108,7 +108,7 @@ subroutine get_derivatives (guess,xderivative,yderivative)
   call gsi_gridcreate(grid,lat2,lon2,nsig)
 
      call gsi_bundlecreate (work_bundle,grid,'derivatives work',ier, &
-                            names2d=dvars2d,names3d=dvars3d,bundle_kind=r_kind)                  
+                            names2d=dvars2d,names3d=dvars3d,bundle_kind=r_kind)
      if(ier/=0) then
         write(6,*) myname, ': trouble creating work bundle'
         call stop2(999)

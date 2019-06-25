@@ -596,7 +596,7 @@ subroutine ens_spread_dualres(en_bar,ibin)
   end if
   call gsi_bundlegetpointer(suba,'cw',cw,istat)
   if(istat/=0) then
-!    write(6,*)' no cw pointer in ens_spread_dualres, point cw at dum3 array'
+     write(6,*)' no cw pointer in ens_spread_dualres, point cw at dum3 array'
      cw => dum3
   end if
 !  if (getindex(cvars3d,'ql')>0) then  
@@ -684,7 +684,6 @@ subroutine write_spread_dualres(a,b,c,d,e,f,hl,hi,hr,hs,hg,g2in)
   implicit none
 
   character(255):: grdfile
-  character(80) :: string  
 
   real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig),intent(in):: a,b,c,d,e,f
   real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig),intent(in):: hl,hi,hr,hs,hg  

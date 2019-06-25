@@ -152,7 +152,6 @@
   real(r_kind),dimension(nsigradjac,nchanl):: jacobian
   real(r_kind),dimension(nsigaerojac,nchanl):: jacobian_aero
   real(r_kind),dimension(nsig,nchanl):: layer_od
-  real(r_kind),dimension(5):: hwp_guess 
   real(r_kind) :: clw_guess, tzbgr, sfc_speed
 
   if ( .not. laeroana_gocart ) then

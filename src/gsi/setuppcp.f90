@@ -657,11 +657,11 @@ endif
         ges_cwmr_im = ges_qlmr_im + ges_qimr_im
         ges_cwmr_ip = ges_qlmr_ip + ges_qimr_ip
      else
-!    Get pointer to could water mixing ratio
-     call gsi_bundlegetpointer (gsi_metguess_bundle(itim), 'cw',ges_cwmr_im,istatus)
-     if (istatus/=0) call die('setuppcp','cannot get pointer to cwmr(itim), istatus =',istatus)
-     call gsi_bundlegetpointer (gsi_metguess_bundle(itimp),'cw',ges_cwmr_ip,istatus)
-     if (istatus/=0) call die('setuppcp','cannot get pointer to cwmr(itimp), istatus =',istatus)
+!       Get pointer to could water mixing ratio
+        call gsi_bundlegetpointer (gsi_metguess_bundle(itim), 'cw',ges_cwmr_im,istatus)
+        if (istatus/=0) call die('setuppcp','cannot get pointer to cwmr(itim), istatus =',istatus)
+        call gsi_bundlegetpointer (gsi_metguess_bundle(itimp),'cw',ges_cwmr_ip,istatus)
+        if (istatus/=0) call die('setuppcp','cannot get pointer to cwmr(itimp), istatus =',istatus)
      endif  
 
 !    Set and save spatial interpolation indices and weights.

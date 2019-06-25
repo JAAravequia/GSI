@@ -652,8 +652,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
    ! Declare local variables
    character(len=120) :: my_name = 'GENERAL_READ_GFSATM_NEMS'
    character(len=1)   :: null = ' '
-   character(len=16)  :: vname,vlevtyp 
-   integer(i_kind):: vlev,jrec,nrec 
+   integer(i_kind):: jrec,nrec 
    integer(i_kind):: iret,nlatm2,nlevs,icm,nord_int
    integer(i_kind):: i,j,k,icount,kk
    integer(i_kind) :: ier,istatus,iredundant
@@ -1293,35 +1292,33 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
       endif
 
       if (has_cf) then
-      icount=icount+1
-      iflag(icount)=11
-      ilev(icount)=k
+         icount=icount+1
+         iflag(icount)=11
+         ilev(icount)=k
 
-      if (mype==mype_use(icount)) then
-         ! cloud amount 
-         call nemsio_readrecv(gfile,'cld_amt','mid layer',k,rwork1d0,iret=iret)
-         if (iret /= 0) call error_msg(trim(my_name),trim(filename),'cld_amt','read',istop+11,iret)
-         if ( diff_res ) then
-            grid_b=reshape(rwork1d0,(/size(grid_b,1),size(grid_b,2)/))
-            vector(1)=.false.
-            call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-        !   write(6,*) 'gridc cld_amt = ', k,  minval(grid_c), maxval(grid_c) 
-            call g_egrid2agrid(p_high,grid_c,grid2,1,1,vector)
-        !   write(6,*) 'grid2 cld_amt = ', k,  minval(grid2), maxval(grid2)   
-            do kk=1,grd%itotsub
-               i=grd%ltosi_s(kk)
-               j=grd%ltosj_s(kk)
-               work(kk)=grid2(i,j,1)
-            enddo
-         else
-            grid=reshape(rwork1d0,(/size(grid,1),size(grid,2)/))
-            call general_fill_ns(grd,grid,work)
+         if (mype==mype_use(icount)) then
+            ! cloud amount 
+            call nemsio_readrecv(gfile,'cld_amt','mid layer',k,rwork1d0,iret=iret)
+            if (iret /= 0) call error_msg(trim(my_name),trim(filename),'cld_amt','read',istop+11,iret)
+            if ( diff_res ) then
+               grid_b=reshape(rwork1d0,(/size(grid_b,1),size(grid_b,2)/))
+               vector(1)=.false.
+               call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+               call g_egrid2agrid(p_high,grid_c,grid2,1,1,vector)
+               do kk=1,grd%itotsub
+                  i=grd%ltosi_s(kk)
+                  j=grd%ltosj_s(kk)
+                  work(kk)=grid2(i,j,1)
+               enddo
+            else
+               grid=reshape(rwork1d0,(/size(grid,1),size(grid,2)/))
+               call general_fill_ns(grd,grid,work)
+            endif
          endif
-      endif
-      if ( icount == icm .or. k==nlevs ) then
-         call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-                 icount,iflag,ilev,work,uvflag,vordivflag,g_cf) 
-      endif
+         if ( icount == icm .or. k==nlevs ) then
+            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag,g_cf) 
+         endif
       endif
 
    enddo ! do k=1,nlevs

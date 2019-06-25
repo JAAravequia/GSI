@@ -914,28 +914,27 @@
         endif
         ! Screening for cold-air outbreak area (only applied to MW for now)
         if (cao_check) then   
-     !  cao_flag = (stability < 12.0_r_kind) .and. (hwp_ratio  < half) .and.  (tcwv < 8.0_r_kind) 
-        if(microwave .and. sea) then 
-           if(radmod%lcloud_fwd) then                            
-              cao_flag = (stability < 12.0_r_kind) .and. (hwp_ratio  < half) .and.  (tcwv < 8.0_r_kind) 
-              if (cao_flag) then ! remove all tropospheric channels
-                 if (amsua) then
-                    varinv(1:6)=zero
-                    id_qc(1:6) = ifail_cao_qc
-                    varinv(15)=zero
-                    id_qc(15) = ifail_cao_qc
-                 else if (atms) then
-                    varinv(1:7)=zero
-                    id_qc(1:7) = ifail_cao_qc
-                    varinv(16:22)=zero
-                    id_qc(16) = ifail_cao_qc
-                 else
-                    varinv(1:nchanl)=zero
-                    id_qc(1:nchanl) = ifail_cao_qc
+           if(microwave .and. sea) then 
+              if(radmod%lcloud_fwd) then                            
+                 cao_flag = (stability < 12.0_r_kind) .and. (hwp_ratio  < half) .and.  (tcwv < 8.0_r_kind) 
+                 if (cao_flag) then ! remove all tropospheric channels
+                    if (amsua) then
+                       varinv(1:6)=zero
+                       id_qc(1:6) = ifail_cao_qc
+                       varinv(15)=zero
+                       id_qc(15) = ifail_cao_qc
+                    else if (atms) then
+                       varinv(1:7)=zero
+                       id_qc(1:7) = ifail_cao_qc
+                       varinv(16:22)=zero
+                       id_qc(16) = ifail_cao_qc
+                    else
+                       varinv(1:nchanl)=zero
+                       id_qc(1:nchanl) = ifail_cao_qc
+                    endif
                  endif
               endif
            endif
-        endif
         endif
 
         predbias=zero

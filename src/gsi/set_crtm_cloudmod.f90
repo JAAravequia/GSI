@@ -140,15 +140,15 @@ CONTAINS
                  /tp(k) * (one + fv * qh(k))
 
            if (cloud(2)%water_content(k) > 1.0e-6_r_kind) then     
-           if (tem2 < -50.0_r_kind ) then
-              cloud(2)%effective_radius(k) =  (1250._r_kind/9.917_r_kind)*tem3**0.109_r_kind
-           elseif (tem2 < -40.0_r_kind ) then
-              cloud(2)%effective_radius(k) =  (1250._r_kind/9.337_r_kind)*tem3**0.08_r_kind
-           elseif (tem2 < -30.0_r_kind ) then
-              cloud(2)%effective_radius(k) =  (1250._r_kind/9.208_r_kind)*tem3**0.055_r_kind
-           else
-              cloud(2)%effective_radius(k) =  (1250._r_kind/9.387_r_kind)*tem3**0.031_r_kind
-           endif
+              if (tem2 < -50.0_r_kind ) then
+                 cloud(2)%effective_radius(k) =  (1250._r_kind/9.917_r_kind)*tem3**0.109_r_kind
+              elseif (tem2 < -40.0_r_kind ) then
+                 cloud(2)%effective_radius(k) =  (1250._r_kind/9.337_r_kind)*tem3**0.08_r_kind
+              elseif (tem2 < -30.0_r_kind ) then
+                 cloud(2)%effective_radius(k) =  (1250._r_kind/9.208_r_kind)*tem3**0.055_r_kind
+              else
+                 cloud(2)%effective_radius(k) =  (1250._r_kind/9.387_r_kind)*tem3**0.031_r_kind
+              endif
            endif  
 
            cloud(1)%effective_radius(k)=max(zero, cloud(1)%effective_radius(k))

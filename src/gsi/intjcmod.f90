@@ -162,7 +162,7 @@ subroutine intlimqc(rval,sval,itbin,cldtype)
 ! Declare passed variables
   type(gsi_bundle),intent(in   ) :: sval
   type(gsi_bundle),intent(inout) :: rval
-  integer, intent(in)            :: itbin
+  integer(i_kind), intent(in)    :: itbin
   character(2), intent(in)       :: cldtype 
 
 ! Declare local variables
@@ -885,7 +885,7 @@ subroutine intjcpdry1(sval,nbins,mass)
 ! Declare local variables
   real(r_quad),dimension(nsig) :: mass2
   real(r_quad) rcon,con
-  integer(i_kind) i,j,k,it,ii,mm1,ier,icw,iql,iqi,istatus
+  integer(i_kind) i,j,k,it,ii,mm1,icw,iql,iqi
   integer(i_kind) iq,iqr,iqs,iqg,iqh,ips    
   real(r_kind),pointer,dimension(:,:,:) :: sq =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: sc =>NULL()
@@ -1008,7 +1008,7 @@ subroutine intjcpdry2(rval,nbins,mass,pjc)
 
 ! Declare local variables
   real(r_quad) rcon,con,dmass
-  integer(i_kind) i,j,k,it,ii,mm1,icw,iql,iqi,istatus
+  integer(i_kind) i,j,k,it,ii,mm1,icw,iql,iqi
   integer(i_kind) iq,iqr,iqs,iqg,iqh,ips
   real(r_kind),pointer,dimension(:,:,:) :: rq =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: rc =>NULL()

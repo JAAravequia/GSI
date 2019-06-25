@@ -237,7 +237,6 @@ contains
     character(len=*),parameter::myname_=myname//'*read_'
     character(24) filename
     integer(i_kind):: it, istatus, inner_vars, num_fields
-    integer(i_kind):: iret_ql,iret_qi
     integer(i_kind):: i,j,k   
 
     real(r_kind),pointer,dimension(:,:  ):: ges_ps_it  =>NULL()
@@ -448,17 +447,6 @@ contains
        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cf',ges_cf_it,istatus)
        if(istatus==0) ges_cf_it = ptr3d
     endif
-!>>orig
-!    call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql_it,  iret_ql)
-!    call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi_it,  iret_qi)
-!    if (iret_ql/=0) then
-!       if (mype==0) write(6,*)'READ_ NEMSIO: cannot get pointer to ql,iret_ql=',iret_ql
-!    endif
-!    if (iret_qi/=0) then
-!       if (mype==0) write(6,*)'READ_ NEMSIO: cannot get pointer to qi,iret_qi=',iret_qi
-!    endif
-!<<orig
-
   end subroutine set_guess_
 
   end subroutine read_
@@ -2812,7 +2800,6 @@ contains
     real(r_kind),dimension(grd%lat1*grd%lon1,grd%nsig):: tvsm,prslm, usm, vsm
     real(r_kind),dimension(grd%lat1*grd%lon1,grd%nsig):: dpsm, qsm, ozsm
     real(r_kind),dimension(grd%lat1*grd%lon1,grd%nsig):: cwsm, dzsm
-    real(r_kind),dimension(grd%lat1*grd%lon1,grd%nsig):: qlsm,qism,qrsm,qssm,qgsm
     real(r_kind),dimension(max(grd%iglobal,grd%itotsub))     :: work1,work2
     real(r_kind),dimension(grd%nlon,grd%nlat-2):: grid
     real(r_kind),allocatable,dimension(:) :: rwork1d,rwork1d1,rlats,rlons,clons,slons

@@ -755,12 +755,9 @@ subroutine general_read_fv3atm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'grle','read',istop+13,iret)
          if ( diff_res ) then
             grid_b=reshape(rwork1d0,(/size(grid_b,1),size(grid_b,2)/))
-         !  write(6,*) 'reshape grle = ', k,  minval(grid_b), maxval(grid_b) 
             vector(1)=.false.
             call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-         !  write(6,*) 'gridc grle = ', k,  minval(grid_c), maxval(grid_c) 
             call g_egrid2agrid(p_high,grid_c,grid2,1,1,vector)
-         !  write(6,*) 'grid2 grle = ', k,  minval(grid2), maxval(grid2) 
             do kk=1,grd%itotsub
                i=grd%ltosi_s(kk)
                j=grd%ltosj_s(kk)
@@ -770,7 +767,6 @@ subroutine general_read_fv3atm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
             grid=reshape(rwork1d0,(/size(grid,1),size(grid,2)/))
             call general_fill_ns(grd,grid,work)
          endif
-      !  write(6,*) 'wrok grle = ', k,  minval(work), maxval(work) 
       endif
       if ( icount == icm ) then
          call general_reload2(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz, &
@@ -789,9 +785,7 @@ subroutine general_read_fv3atm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
             grid_b=reshape(rwork1d0,(/size(grid_b,1),size(grid_b,2)/))
             vector(1)=.false.
             call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
-        !    write(6,*) 'gridc cld_amt = ', k,  minval(grid_c), maxval(grid_c) 
             call g_egrid2agrid(p_high,grid_c,grid2,1,1,vector)
-        !    write(6,*) 'grid2 cld_amt = ', k,  minval(grid2), maxval(grid2)   
             do kk=1,grd%itotsub
                i=grd%ltosi_s(kk)
                j=grd%ltosj_s(kk)

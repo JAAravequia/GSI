@@ -416,7 +416,7 @@ contains
     implicit none
 
     integer(i_kind) k
-    integer(i_kind):: ivar,istatus  
+    integer(i_kind):: istatus  
 
     nsig = 42
     nsig_soil = 6

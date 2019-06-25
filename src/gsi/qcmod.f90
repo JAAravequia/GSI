@@ -2890,86 +2890,86 @@ subroutine qc_amsua(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse,   &
                  qc4emiss= de2>thrd2 .or. de3>thrd3 .or. de1>thrd1 .or. de15>thrd15
               end if
            else
-           ! for non-precipitation clouds
-           if(factch6 >= one)then
-              efactmc=zero
-              vfactmc=zero
-              errf(1:ich544)=zero
-              varinv(1:ich544)=zero
-              do i=1,ich544
-                 if(id_qc(i) == igood_qc)id_qc(i)=ifail_factch6_qc
-              end do
-              if(id_qc(ich890) == igood_qc)id_qc(ich890)=ifail_factch6_qc
-              errf(ich890) = zero
-              varinv(ich890) = zero
-              if (latms) then
-                 do i=17,22   !  AMSU-B/MHS like channels
+              ! for non-precipitation clouds
+              if(factch6 >= one)then
+                 efactmc=zero
+                 vfactmc=zero
+                 errf(1:ich544)=zero
+                 varinv(1:ich544)=zero
+                 do i=1,ich544
                     if(id_qc(i) == igood_qc)id_qc(i)=ifail_factch6_qc
-                    errf(i) = zero
-                    varinv(i) = zero
-                 enddo
-              endif
-!          QC3 in statsrad
-              if(.not. mixed.and. luse)aivals(10,is) = aivals(10,is) + one
-           else if (cldeff_obs(ich536) < -0.50_r_kind) then
-              efactmc=zero
-              vfactmc=zero
-              errf(1:ich544)=zero
-              varinv(1:ich544)=zero
-              do i=1,ich544
-                 if(id_qc(i) == igood_qc)id_qc(i)=ifail_factch5_qc
-              end do
-              if(id_qc(ich890) == igood_qc)id_qc(ich890)=ifail_factch5_qc
-              errf(ich890) = zero
-              varinv(ich890) = zero
-              if (latms) then
-                 do i=17,22   !  AMSU-B/MHS like channels
-                    if(id_qc(i) == igood_qc)id_qc(i)=ifail_factch5_qc
-                    errf(i) = zero
-                    varinv(i) = zero
-                 enddo
-              endif
-           else if (latms) then
-              if (abs(cldeff_obs(16)-cldeff_obs(17))>10.0_r_kind) then
-                 if(id_qc(ich890) == igood_qc)id_qc(ich890)=ifail_factch1617_qc
+                 end do
+                 if(id_qc(ich890) == igood_qc)id_qc(ich890)=ifail_factch6_qc
                  errf(ich890) = zero
                  varinv(ich890) = zero
-                 do i=17,22   !  AMSU-B/MHS like channels
-                    if(id_qc(i) == igood_qc)id_qc(i)=ifail_factch1617_qc
-                    errf(i) = zero
-                    varinv(i) = zero
-                 enddo
-                 if (abs(cldeff_obs(16)-cldeff_obs(17))>15.0_r_kind) then
-                    efactmc=zero
-                    vfactmc=zero
-                    errf(1:ich544)=zero
-                    varinv(1:ich544)=zero
-                    do i=1,ich544
+                 if (latms) then
+                    do i=17,22   !  AMSU-B/MHS like channels
+                       if(id_qc(i) == igood_qc)id_qc(i)=ifail_factch6_qc
+                       errf(i) = zero
+                       varinv(i) = zero
+                    enddo
+                 endif
+                ! QC3 in statsrad
+                 if(.not. mixed.and. luse)aivals(10,is) = aivals(10,is) + one
+              else if (cldeff_obs(ich536) < -0.50_r_kind) then
+                 efactmc=zero
+                 vfactmc=zero
+                 errf(1:ich544)=zero
+                 varinv(1:ich544)=zero
+                 do i=1,ich544
+                    if(id_qc(i) == igood_qc)id_qc(i)=ifail_factch5_qc
+                 end do
+                 if(id_qc(ich890) == igood_qc)id_qc(ich890)=ifail_factch5_qc
+                 errf(ich890) = zero
+                 varinv(ich890) = zero
+                 if (latms) then
+                    do i=17,22   !  AMSU-B/MHS like channels
+                       if(id_qc(i) == igood_qc)id_qc(i)=ifail_factch5_qc
+                       errf(i) = zero
+                       varinv(i) = zero
+                    enddo
+                 endif
+              else if (latms) then
+                 if (abs(cldeff_obs(16)-cldeff_obs(17))>10.0_r_kind) then
+                    if(id_qc(ich890) == igood_qc)id_qc(ich890)=ifail_factch1617_qc
+                    errf(ich890) = zero
+                    varinv(ich890) = zero
+                    do i=17,22   !  AMSU-B/MHS like channels
                        if(id_qc(i) == igood_qc)id_qc(i)=ifail_factch1617_qc
-                    end do
+                       errf(i) = zero
+                       varinv(i) = zero
+                    enddo
+                    if (abs(cldeff_obs(16)-cldeff_obs(17))>15.0_r_kind) then
+                       efactmc=zero
+                       vfactmc=zero
+                       errf(1:ich544)=zero
+                       varinv(1:ich544)=zero
+                       do i=1,ich544
+                          if(id_qc(i) == igood_qc)id_qc(i)=ifail_factch1617_qc
+                       end do
+                    end if
                  end if
-              end if
-           else ! QC based on the sensitivity of Tb to the surface emissivity
-!          de1,de2,de3,de15 become smaller as the observation is more cloudy --
-!          i.e., less affected by the surface emissivity quality control check 
-              thrd1=0.025_r_kind
-              thrd2=0.015_r_kind
-              thrd3=0.030_r_kind
-              thrd15=0.030_r_kind
-              dtde1 = emissivity_k(ich238)
-              de1   = zero
-              if (dtde1 /= zero) de1=abs(tbc(ich238))/dtde1*(errf0(ich238)/errf(ich238))*(one-max(one,10.0_r_kind*clwp_amsua))
-              dtde2 = emissivity_k(ich314)
-              de2   = zero
-              if (dtde2 /= zero) de2=abs(tbc(ich314))/dtde2*(errf0(ich314)/errf(ich314))*(one-max(one,10.0_r_kind*clwp_amsua))
-              dtde3 = emissivity_k(ich503)
-              de3   = zero
-              if (dtde3 /= zero) de3=abs(tbc(ich503))/dtde3*(errf0(ich503)/errf(ich503))*(one-max(one,10.0_r_kind*clwp_amsua))
-              dtde15= emissivity_k(ich890)
-              de15  = zero
-              if (dtde15 /= zero) de15=abs(tbc(ich890))/dtde15*(errf0(ich890)/errf(ich890))*(one-max(one,10.0_r_kind*clwp_amsua))
-              qc4emiss= de2>thrd2 .or. de3>thrd3 .or. de1>thrd1 .or. de15>thrd15
-           endif
+              else ! QC based on the sensitivity of Tb to the surface emissivity
+   !          de1,de2,de3,de15 become smaller as the observation is more cloudy --
+   !          i.e., less affected by the surface emissivity quality control check 
+                 thrd1=0.025_r_kind
+                 thrd2=0.015_r_kind
+                 thrd3=0.030_r_kind
+                 thrd15=0.030_r_kind
+                 dtde1 = emissivity_k(ich238)
+                 de1   = zero
+                 if (dtde1 /= zero) de1=abs(tbc(ich238))/dtde1*(errf0(ich238)/errf(ich238))*(one-max(one,10.0_r_kind*clwp_amsua))
+                 dtde2 = emissivity_k(ich314)
+                 de2   = zero
+                 if (dtde2 /= zero) de2=abs(tbc(ich314))/dtde2*(errf0(ich314)/errf(ich314))*(one-max(one,10.0_r_kind*clwp_amsua))
+                 dtde3 = emissivity_k(ich503)
+                 de3   = zero
+                 if (dtde3 /= zero) de3=abs(tbc(ich503))/dtde3*(errf0(ich503)/errf(ich503))*(one-max(one,10.0_r_kind*clwp_amsua))
+                 dtde15= emissivity_k(ich890)
+                 de15  = zero
+                 if (dtde15 /= zero) de15=abs(tbc(ich890))/dtde15*(errf0(ich890)/errf(ich890))*(one-max(one,10.0_r_kind*clwp_amsua))
+                 qc4emiss= de2>thrd2 .or. de3>thrd3 .or. de1>thrd1 .or. de15>thrd15
+              endif
            endif ! radmod%lprecip 
         endif  ! if sea
 ! QC for clear condition

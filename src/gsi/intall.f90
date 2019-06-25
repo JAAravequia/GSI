@@ -253,26 +253,26 @@ subroutine intall(sval,sbias,rval,rbias)
         end do
      end if
      if (ljclimqc) then
-     if (.not.ljc4tlevs) then
-        if (getindex(svars3d,'ql')>0) call intlimqc(rval(ibin_anl),sval(ibin_anl),ntguessig,'ql')
-        if (getindex(svars3d,'qi')>0) call intlimqc(rval(ibin_anl),sval(ibin_anl),ntguessig,'qi')
-        if (getindex(svars3d,'qr')>0) call intlimqc(rval(ibin_anl),sval(ibin_anl),ntguessig,'qr')
-        if (getindex(svars3d,'qs')>0) call intlimqc(rval(ibin_anl),sval(ibin_anl),ntguessig,'qs')
-        if (getindex(svars3d,'qg')>0) call intlimqc(rval(ibin_anl),sval(ibin_anl),ntguessig,'qg')
-     else
-        do ibin=1,nobs_bins
-           if (nobs_bins /= nfldsig) then
-              it=ntguessig
-           else
-              it=ibin
-           end if
-           if (getindex(svars3d,'ql')>0) call intlimqc(rval(ibin),sval(ibin),it,'ql')
-           if (getindex(svars3d,'qi')>0) call intlimqc(rval(ibin),sval(ibin),it,'qi')
-           if (getindex(svars3d,'qr')>0) call intlimqc(rval(ibin),sval(ibin),it,'qr')
-           if (getindex(svars3d,'qs')>0) call intlimqc(rval(ibin),sval(ibin),it,'qs')
-           if (getindex(svars3d,'qg')>0) call intlimqc(rval(ibin),sval(ibin),it,'qg')
-        end do
-     end if
+        if (.not.ljc4tlevs) then
+           if (getindex(svars3d,'ql')>0) call intlimqc(rval(ibin_anl),sval(ibin_anl),ntguessig,'ql')
+           if (getindex(svars3d,'qi')>0) call intlimqc(rval(ibin_anl),sval(ibin_anl),ntguessig,'qi')
+           if (getindex(svars3d,'qr')>0) call intlimqc(rval(ibin_anl),sval(ibin_anl),ntguessig,'qr')
+           if (getindex(svars3d,'qs')>0) call intlimqc(rval(ibin_anl),sval(ibin_anl),ntguessig,'qs')
+           if (getindex(svars3d,'qg')>0) call intlimqc(rval(ibin_anl),sval(ibin_anl),ntguessig,'qg')
+        else
+           do ibin=1,nobs_bins
+              if (nobs_bins /= nfldsig) then
+                 it=ntguessig
+              else
+                 it=ibin
+              end if
+              if (getindex(svars3d,'ql')>0) call intlimqc(rval(ibin),sval(ibin),it,'ql')
+              if (getindex(svars3d,'qi')>0) call intlimqc(rval(ibin),sval(ibin),it,'qi')
+              if (getindex(svars3d,'qr')>0) call intlimqc(rval(ibin),sval(ibin),it,'qr')
+              if (getindex(svars3d,'qs')>0) call intlimqc(rval(ibin),sval(ibin),it,'qs')
+              if (getindex(svars3d,'qg')>0) call intlimqc(rval(ibin),sval(ibin),it,'qg')
+           end do
+        end if
      end if  ! ljclimqc
 ! RHS for gust constraint
      if (getindex(svars2d,'gust')>0)call intlimg(rval(1),sval(1))
