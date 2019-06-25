@@ -37,10 +37,8 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use kinds, only: r_kind,r_single,r_double,i_kind
 
   use m_obsdiags, only: qhead
-  use obsmod, only: rmiss_single,perturb_obs,oberror_tune,&
-       i_q_ob_type,obsdiags,lobsdiagsave,nobskeep,lobsdiag_allocated,&
-       time_offset
-  use obsmod, only: obs_diag,luse_obsdiag
+  use obsmod, only: rmiss_single,i_q_ob_type,time_offset
+  use obsmod, only: obs_diag
   use m_obsNode, only: obsNode
   use m_qNode, only: qNode
   use m_obsLList, only: obsLList_appendNode
@@ -51,33 +49,25 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                               nc_diag_write, nc_diag_data2d
   use nc_diag_read_mod, only: nc_diag_read_init,nc_diag_read_get_dim, &
                               nc_diag_read_close
-  use state_vectors, only: svars3d, levels, nsdim
+  use state_vectors, only: nsdim
 
-  use oneobmod, only: oneobtest,maginnov,magoberr
-  use guess_grids, only: ges_lnprsl,geop_hgtl,hrdifsig,nfldsig,ges_tsen,ges_prsl,pbl_height
-  use gridmod, only: nsig,get_ijk,twodvar_regional
+  use guess_grids, only: geop_hgtl,hrdifsig,nfldsig,ges_tsen,ges_prsl
+  use gridmod, only: nsig,get_ijk
   use constants, only: zero,one,r1000,r10,r100
   use constants, only: huge_single,wgtlim,three
-  use constants, only: tiny_r_kind,five,half,two,huge_r_kind,cg_term,r0_01
-  use qcmod, only: npres_print,ptopq,pbotq,dfact,dfact1
-  use jfunc, only: jiter,last,jiterstart,miter
-  use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype
+  use constants, only: tiny_r_kind,five,half,two,r0_01
+  use qcmod, only: npres_print
+  use jfunc, only: jiter
+  use convinfo, only: nconvtype
   use convinfo, only: icsubtype
-  use converr, only: ptabl 
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
-  use rapidrefresh_cldsurf_mod, only: l_sfcobserror_ramp_q
-  use rapidrefresh_cldsurf_mod, only: l_pbl_pseudo_surfobsq,pblh_ration,pps_press_incr, &
-                                      i_use_2mq4b,i_cloud_q_innovation, &
+  use rapidrefresh_cldsurf_mod, only: i_cloud_q_innovation, &
                                       cld_bld_hgt,i_ens_mean
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
 
-  use mpimod, only: ierror,mpi_comm_world
-  use gridmod, only: lat2,lon2,istart,jstart
-  use gridmod, only: pt_ll,eta1_ll,aeta1_ll
-  use gridmod, only: regional,wrf_mass_regional
-  use wrf_mass_guess_mod, only: soil_temp_cld,isli_cld,ges_xlon,ges_xlat
-  use constants, only: zero,one,rad2deg,fv,rd_over_cp, h1000
+  use mpimod, only: mpi_comm_world
+  use constants, only: zero,one, h1000
   use gsdcloudlib_pseudoq_mod, only: cloudLWC_pseudo,cloudCover_Surface_col,&
                                      ruc_saturation
 

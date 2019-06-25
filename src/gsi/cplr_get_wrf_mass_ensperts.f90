@@ -199,11 +199,11 @@ contains
                 iope=(n-1)*npe/n_ens
                 if(mype==iope) then
                    write(0,'(I0,A,I0,A)') mype,': scatter member ',n,' to other ranks...'
-                   call this%parallel_read_wrf_mass_step2(filename,mype,iope,&
+                   call this%parallel_read_wrf_mass_step2(mype,iope,&
                         ps,u,v,tv,rh,cwmr,oz, &
                         gg_ps,gg_tv,gg_u,gg_v,gg_rh)
                 else
-                   call this%parallel_read_wrf_mass_step2(filename,mype,iope,&
+                   call this%parallel_read_wrf_mass_step2(mype,iope,&
                         ps,u,v,tv,rh,cwmr,oz)
                 endif
              else
@@ -506,7 +506,7 @@ contains
 
   subroutine general_read_wrf_mass(this,filename,g_ps,g_u,g_v,g_tv,g_rh,g_cwmr,g_oz,mype)
     use kinds, only: r_kind,i_kind,r_single
-    use hybrid_ensemble_parameters, only: grd_ens,q_hyb_ens
+    use hybrid_ensemble_parameters, only: grd_ens
     implicit none
   !
   ! Declare passed variables
@@ -527,12 +527,12 @@ contains
          allocate(gg_rh(grd_ens%nlat,grd_ens%nlon,grd_ens%nsig))
          allocate(gg_ps(grd_ens%nlat,grd_ens%nlon))
          call this%parallel_read_wrf_mass_step1(filename,gg_ps,gg_tv,gg_u,gg_v,gg_rh)
-         call this%parallel_read_wrf_mass_step2(filename,mype,0, &
+         call this%parallel_read_wrf_mass_step2(mype,0, &
               g_ps,g_u,g_v,g_tv,g_rh,g_cwmr,g_oz, &
               gg_ps,gg_tv,gg_u,gg_v,gg_rh)
          deallocate(gg_u,gg_v,gg_tv,gg_rh,gg_ps)
       else
-         call this%parallel_read_wrf_mass_step2(filename,mype,0, &
+         call this%parallel_read_wrf_mass_step2(mype,0, &
               g_ps,g_u,g_v,g_tv,g_rh,g_cwmr,g_oz)
       endif
   end subroutine general_read_wrf_mass
@@ -930,11 +930,11 @@ contains
   return       
   end subroutine parallel_read_wrf_mass_step1
 
-  subroutine parallel_read_wrf_mass_step2(this,filename,mype,iope, &
+  subroutine parallel_read_wrf_mass_step2(this,mype,iope, &
        g_ps,g_u,g_v,g_tv,g_rh,g_cwmr,g_oz, &
        gg_ps,gg_tv,gg_u,gg_v,gg_rh)
 
-    use hybrid_ensemble_parameters, only: grd_ens,q_hyb_ens
+    use hybrid_ensemble_parameters, only: grd_ens
     use mpimod, only: mpi_comm_world,ierror,mpi_rtype
     use kinds, only: r_kind,r_single,i_kind
     implicit none
@@ -942,7 +942,6 @@ contains
   !
   ! Declare passed variables
       class(get_wrf_mass_ensperts_class), intent(inout) :: this
-      character(255),intent(in):: filename
       real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig),intent(out):: &
                                                     g_u,g_v,g_tv,g_rh,g_cwmr,g_oz
       integer(i_kind), intent(in) :: mype, iope

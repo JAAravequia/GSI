@@ -1193,5 +1193,10 @@ SUBROUTINE  gsdcloudanalysis4NMMB(mype)
 use kinds, only: i_kind
 implicit none
 integer(i_kind),intent(in) :: mype
+
+if(mype==0) then
+   write(*,*) 'dummy subroutine gsdcloudanalysis4NMMB'
+endif
+
 END SUBROUTINE  gsdcloudanalysis4NMMB
 #endif /* End no NNMB cloud analysis library block */
