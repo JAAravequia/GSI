@@ -1036,6 +1036,7 @@ contains
   !   2012-11-30  tong  - added the calculation of ges_prsl for the caculation of cloud mixing ratio,
   !                       because load_prsges is called after this subroutine is called.
   !   2013-10-13  todling - efr_q vars now in cloud_efr module (update mod name too)
+  !   2019_06_25  twu     - add fice, frain, and frimef in metguess bundle for hwrf (nmm_netcdf)
   !
   !   input argument list:
   !     mype     - pe number
@@ -1132,7 +1133,11 @@ contains
     real(r_kind),pointer,dimension(:,:,:):: ges_qr=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_qs=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_qg=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qh=>NULL()
+
+    real(r_kind),pointer,dimension(:,:,:):: ges_fice=>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_frain=>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_frimef=>NULL()
+
     logical print_verbose
   
     associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
@@ -1513,6 +1518,12 @@ contains
           if (n_actual_clouds>0) then
              call gsi_bundlegetpointer (gsi_metguess_bundle(it),'cw',ges_cwmr,iret)
              if (iret==0) ges_cwmr=clwmr
+             call gsi_bundlegetpointer (gsi_metguess_bundle(it),'fice',ges_fice,iret)
+             if (iret==0) ges_fice=fice
+             call gsi_bundlegetpointer (gsi_metguess_bundle(it),'frain',ges_frain,iret)
+             if (iret==0) ges_frain=frain
+             call gsi_bundlegetpointer (gsi_metguess_bundle(it),'frimef',ges_frimef,iret)
+             if (iret==0) ges_frimef=frimef
           end if
   
   
@@ -1759,7 +1770,7 @@ contains
     real(r_kind),pointer,dimension(:,:,:):: ges_qs=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_qg=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_qh=>NULL()
-  
+
     associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
     end associate
   !  check to see if using GFS stratosphere:
