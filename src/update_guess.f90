@@ -86,6 +86,7 @@ subroutine update_guess(sval,sbias)
 !   2015-07-10  pondeca  - add cldch
 !   2016-04-28  eliu    - revise update for cloud water 
 !   2016-06-23  lippi   - Add update for vertical velocity (w).
+!   2019-06-25  twu     - add update for cwmr from qr, qs, qg, and qh  
 !
 !   input argument list:
 !    sval
@@ -154,6 +155,10 @@ subroutine update_guess(sval,sbias)
   real(r_kind),pointer,dimension(:,:,:) :: ptr3daux =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: ges_ql   =>NULL()
   real(r_kind),pointer,dimension(:,:,:) :: ges_qi   =>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_qr   =>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_qs   =>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_qg   =>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_qh   =>NULL()
 
   real(r_kind),dimension(lat2,lon2)     :: tinc_1st,qinc_1st
 
@@ -307,6 +312,19 @@ subroutine update_guess(sval,sbias)
         if (ier==0) then
            ptr3dges = ges_ql + ges_qi
         endif
+ 
+        if ( getindex(svars3d,'qr')>0 .and. getindex(svars3d,'qs')>0 .and. &
+             getindex(svars3d,'qg')>0 .and. getindex(svars3d,'qh')>0) then
+           ier=0
+           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qr',ges_qr, istatus) ; ier=istatus
+           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qs',ges_qs, istatus) ; ier=ier+istatus   
+           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qg',ges_qg, istatus) ; ier=ier+istatus   
+           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qh',ges_qh, istatus) ; ier=ier+istatus   
+           if (ier==0) then
+              ptr3dges = ptr3dges + ges_qr + ges_qs + ges_qg + ges_qh
+           endif
+        endif
+
      endif
 !    At this point, handle the Tv exception since by now Q has been updated 
 !    NOTE 1: This exceptions is unnecessary: all we need to do is put tsens in the
