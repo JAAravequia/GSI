@@ -1047,8 +1047,8 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 !    End of MLS bufr loop
 
 !Process OMPS LP data
-  elseif(index(obstype,'omps_lp') /= 0 )then
-     print *,"XXX omps_lp"
+  elseif(index(obstype,'ompslp') /= 0 )then
+     print *,"XXX ompslp"
  
      nloz = 81
      nreal=12
@@ -1196,11 +1196,11 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
          ozout(7,ndata)=soza               ! solar zenith angle
 
          ozout(8,ndata)=usage1(k)          ! 
-         ozout(9,ndata)=log(press(k))      ! omps_lp pressure in log(cb)
+         ozout(9,ndata)=log(press(k))      ! ompslp pressure in log(cb)
          ozout(10,ndata)=omrstd(k)         ! ozone mixing ratio precision in ppmv
          ozout(11,ndata)=float(ipos(k))    ! pointer of obs level index in 
                                            ! ozinfo.txt
-         ozout(12,ndata)=j !nloz              ! # of omps_lp vertical levels
+         ozout(12,ndata)=j !nloz              ! # of ompslp vertical levels
          ozout(13,ndata)=omr(k)            ! ozone mixing ratio in ppmv
        write(6,*)"READ_OZONE: omr=", &
           j,ndata,press(k),ozout(13,ndata),ozout(10,ndata)
@@ -1248,7 +1248,7 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      if(allocated(ipos))deallocate(ipos)
      if(allocated(usage1))deallocate(usage1)
   end if
-  if(index(obstype,'omps_lp')/=0) then
+  if(index(obstype,'ompslp')/=0) then
      if(allocated(olpdtsq))deallocate(olpdtsq)
      if(allocated(rpseq3))deallocate(rpseq3)
      if(allocated(rpseq12))deallocate(rpseq12)

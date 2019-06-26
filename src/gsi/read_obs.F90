@@ -891,7 +891,7 @@ subroutine read_obs(ndata,mype)
            .or. obstype == 'ompsnp' &
            .or. obstype == 'gome' &
            .or. mls &
-           .or. obstype == 'omps_lp' &
+           .or. obstype == 'ompslp' &
            ) then
           ditype(i) = 'ozone'
        else if (obstype == 'mopitt') then

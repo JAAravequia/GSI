@@ -659,10 +659,10 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
                  call setuplwcp(lunin,mype,bwork,awork(1,i_lwcp),nele,nobs,is,conv_diagsave)
               endif
 
-!          set up ozone (sbuv/omi/mls/omps_lp) data
+!          set up ozone (sbuv/omi/mls/ompslp) data
            else if(ditype(is) == 'ozone' .and. ihave_oz)then
               if (obstype == 'o3lev' .or. index(obstype,'mls')/=0 .or. &
-               index(obstype,'omps_lp')/=0) then
+               index(obstype,'ompslp')/=0) then
                  call setupozlev(lunin,mype,stats_oz,nchanl,nreal,nobs,&
                       obstype,isis,is,ozone_diagsave,init_pass)
               else
