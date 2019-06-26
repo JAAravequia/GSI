@@ -42,7 +42,7 @@ module m_obsLList
      integer(i_kind):: n_alloc    =0
 
      integer(i_kind):: my_obsType =0
-     class(obsNode),allocatable:: mold          ! a mold for the nodes
+     class(obsNode),pointer:: mold          ! a mold for the nodes
 
      class(obsNode),pointer:: head => null()    ! 
      class(obsNode),pointer:: tail => null()
@@ -126,7 +126,7 @@ function lmold_(headLL) result(ptr_)
   class(obsNode),pointer:: ptr_
   type(obsLList),target,intent(in):: headLL
   ptr_ => null()
-  if(allocated(headLL%mold)) ptr_ => headLL%mold
+  if(associated(headLL%mold)) ptr_ => headLL%mold
 end function lmold_
 
 !--------------------------- will go to m_obsLList ----------------------
@@ -242,11 +242,7 @@ _ENTRY_(myname_)
   headLL%head    => null()
   headLL%tail    => null()
 
-  ! Since headLL%mold is defined as allocatable, nodeDestroy_() won't apply.
-  ! So for the time being, it is explicitly deallocated.  Should I change its
-  ! asstribute to POINTER?
-
-  if(allocated(headLL%mold)) then
+  if(associated(headLL%mold)) then
     deallocate(headLL%mold,stat=ier)
         if(ier/=0) then
           call perr(myname_,'deallocate(headLL%mold), stat =',ier)
@@ -258,22 +254,11 @@ _ENTRY_(myname_)
         endif
   endif
 
-  allocate(headLL%mold,source=mold)
-        ! allocate(headLL%mold,mold=mold) would be better for a F2008 compiler
+  headLL%mold => alloc_nodeCreate_(mold=mold)
 _EXIT_(myname_)
 return
 end subroutine lreset_
 
-!xx function nodetype_(aNode)
-!xx   use m_obsNode,only: obsNode_nonNull
-!xx   implicit none
-!xx   character(len=:),allocatable:: nodetype_
-!xx   class(obsNode),target,intent(in):: aNode
-!xx   class(obsNode),pointer:: llmold_
-!xx   nodetype_="[obsNode].null."
-!xx   if(obsNode_nonNull(aNode)) nodetype_=aNode%mytype()
-!xx end function nodetype_
-!xx 
 subroutine lappendNode_(headLL,targetNode)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -297,7 +282,6 @@ subroutine lappendNode_(headLL,targetNode)
         ! Link the next node of the list to the given targetNode.  The return
         ! result is a pointer associated to the same targetNode.
   use m_obsNode, only: obsNode_append
-  use m_obsNode, only: nonNull => obsNode_nonNull
   implicit none
   type(obsLList), intent(inout):: headLL
   !class(obsNode), target, intent(in):: targetNode
@@ -305,7 +289,6 @@ subroutine lappendNode_(headLL,targetNode)
 
   character(len=*),parameter:: myname_=MYNAME//'::lappendNode_'
 !_ENTRY_(myname_)
-        !ASSERT(nonNull(targetNode))
         ASSERT(associated(targetNode))
 
   if(.not.associated(headLL%head)) then
@@ -374,7 +357,7 @@ _ENTRY_(myname_)
 !   a collection of nodes of the same _obsNode_ type,
 !   !-- not about the corresponding linked-list.
 
-        ASSERT(allocated(headLL%mold))
+        ASSERT(associated(headLL%mold))
 
     call obsHeader_read_(headLL%mold,iunit,mobs,jread,istat)
 
@@ -496,7 +479,7 @@ _ENTRY_(myname_)
 !   !-- A header is about a collection of nodes of the same obsNode type,
 !   !-- not about the corresponding linked-list.
 
-        ASSERT(allocated(headLL%mold))
+        ASSERT(associated(headLL%mold))
 
     lobs = lcount_(headLL,luseonly=luseonly)      ! actual count of write
     mobs = lobs

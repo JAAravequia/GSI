@@ -7,10 +7,9 @@ proc ModulesHelp { } {
 module-whatis "Initialize GSI build/test environment"
 
 module load comp/intel-18.0.3.222
-module load mpi/sgi-mpt-2.17
 module load lib/mkl-18.0.3.222
+module load mpi/sgi-mpt-2.17
 module load other/comp/gcc-9.1
 module load other/cmake-3.8.2
-module load other/git-2.11.0
 
 setenv BASEDIR /discover/nobackup/projects/gmao/share/gmao_ops/Baselibs/v5.1.3_build1/x86_64-unknown-linux-gnu/ifort_18.0.3.222-mpt_2.17

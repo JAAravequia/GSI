@@ -1521,7 +1521,7 @@ end subroutine init_netcdf_diag_
 !                .      .    .                                       .
 
 subroutine contents_binary_diag_(odiag)
-     type(obs_diag),intent(in):: odiag
+     type(obs_diag),pointer,intent(in):: odiag
 
      diagbuf(1,ii)  = data(ier,i)        ! observation error
      diagbuf(2,ii)  = data(ilate,i)      ! observation latitude (degrees)
@@ -1575,7 +1575,7 @@ end subroutine contents_binary_diag_
 
 subroutine contents_netcdf_diag_(odiag)
 ! Observation class
-  type(obs_diag),intent(in):: odiag
+  type(obs_diag),pointer,intent(in):: odiag
   character(7),parameter     :: obsclass = '     light'
   real(r_single),parameter::     missing = -9.99e9_r_single
   real(r_kind),dimension(miter) :: obsdiag_iuse

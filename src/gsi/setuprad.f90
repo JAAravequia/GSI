@@ -241,9 +241,8 @@
       i_rad_ob_type,lobsdiagsave,nobskeep,lobsdiag_allocated,&
       dirname,time_offset,lwrite_predterms,lwrite_peakwt,reduce_diag
   use m_obsNode, only: obsNode
-  use m_radNode, only: radNode, radNode_typecast
+  use m_radNode, only: radNode
   use m_radNode, only: radNode_appendto
-  use m_obsLList, only: obsLList_tailNode
   use obsmod, only: luse_obsdiag,dval_use
   use obsmod, only: netcdf_diag, binary_diag, dirname
   use nc_diag_write_mod, only: nc_diag_init, nc_diag_header, nc_diag_metadata, &
@@ -1653,7 +1652,7 @@
   
                ! Associate corresponding obs_diag pointer to the obsdiagLList structure
             if(in_curbin.and.icc>0) then
-               my_head => radNode_typecast(obsLList_tailNode(radhead(ibin)))
+               my_head => tailNode_typecast_(radhead(ibin))
                if(.not.associated(my_head)) &
                   call die(myname,'unexpected, associated(my_head) =',associated(my_head))
 
@@ -1785,6 +1784,21 @@
   return
 
   contains
+  function tailNode_typecast_(oll) result(ptr_)
+!>  Cast the tailNode of oll to an radNode, as in
+!>      ptr_ => typecast_(tailNode_(oll))
+
+    use m_radNode , only: radNode , typecast_ => radNode_typecast
+    use m_obsLList, only: obsLList, tailNode_ => obsLList_tailNode
+    use m_obsNode , only: obsNode
+    implicit none
+    type(radNode ),pointer:: ptr_
+    type(obsLList),target ,intent(in):: oll
+
+    class(obsNode),pointer:: inode_
+    inode_ => tailNode_(oll)
+    ptr_   => typecast_(inode_)
+  end function tailNode_typecast_
 
   subroutine init_binary_diag_
      filex=obstype

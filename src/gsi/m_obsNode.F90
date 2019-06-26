@@ -81,35 +81,11 @@ module m_obsNode
         interface obsNode_clean; module procedure deepclean_; end interface
 
         ! Nodes operations
-  public:: nonNull              ! The argument as the target is nonnull
-  public:: obsNode_nonNull      ! an explicitly named nonNull()
   public:: obsNode_next         ! nextNode => obsNode_next (thisNode)
   public:: obsNode_append       ! call obsNode_append(thisNode,targetNode)
 
-        interface nonNull; module procedure &
-                nonNullr2_, &
-                nonNullr1_, &
-                nonNullr0_; end interface
-        interface obsNode_nonNull; module procedure &
-                nonNullr2_, &
-                nonNullr1_, &
-                nonNullr0_; end interface
-
         interface obsNode_next  ; module procedure next_  ; end interface
         interface obsNode_append; module procedure append_; end interface
-
-        !!! Example: nonNull()
-        !!!
-        !!!   use m_obsNode, only: obsNode, nonNull
-        !!!   implicit none
-        !!!   class(obsNode),target,intent(in):: anode
-        !!!
-        !!!                     ! Fast-fail at an anode exception, where a null
-        !!!                     ! object may be past to this procedure as the
-        !!!                     ! actual argument of anode.
-        !!!
-        !!!   if(.not.nonNull(anode)) call die(myname_, &
-        !!!     'anode is null-reference, nonNull(anode) =',nonNull(anode))
 
         ! Getters-and-setters
   public:: obsNode_islocal      ! is aNode local? -- obsNode_islocal(aNode)
@@ -205,43 +181,6 @@ module m_obsNode
 #include "myassert.H"
 
 contains
-function nonNullr0_(parg) result(nonNull_)
-  implicit none
-  logical:: nonNull_
-  class(obsNode),target,intent(in):: parg
-
-  class(obsNode),pointer:: pptr
-        ! This is a hack to verify if the dummy argument is a null-reference.
-        ! If so, then return a null().
-  pptr => parg
-  nonNull_=associated(pptr)
-return
-end function nonNullr0_
-function nonNullr1_(parg) result(nonNull_)
-  implicit none
-  logical:: nonNull_
-  class(obsNode),target,dimension(:),intent(in):: parg
-
-  class(obsNode),pointer,dimension(:):: pptr
-        ! This is a hack to verify if the dummy argument is a null-reference.
-        ! If so, then return a null().
-  pptr => parg
-  nonNull_=associated(pptr)
-return
-end function nonNullr1_
-function nonNullr2_(parg) result(nonNull_)
-  implicit none
-  logical:: nonNull_
-  class(obsNode),target,dimension(:,:),intent(in):: parg
-
-  class(obsNode),pointer,dimension(:,:):: pptr
-        ! This is a hack to verify if the dummy argument is a null-reference.
-        ! If so, then return a null().
-  pptr => parg
-  nonNull_=associated(pptr)
-return
-end function nonNullr2_
-
 function next_(aNode) result(here_)
 !-- associate to thisNode%llpoint.
   implicit none
@@ -250,21 +189,7 @@ function next_(aNode) result(here_)
 
   character(len=*),parameter :: myname_=myname//'::next_'
 _ENTRY_(myname_)
-        ASSERT(nonNull(aNode))
-
-        !!! Otherwise, it is a case of "the actual argument is an unexpected null-reference".
-        !!!
-        !!! i.e.
-        !!!       if(.not.associated(here_)) then
-        !!!         call die(myname_,'the actual argument is an unexpected null-reference')
-        !!!       endif
-        !!!
-        !!! Should it crash if .not.associated(aNode)?
-        !!!
-        !!! pro: trying to go next on a null reference is a serious logical error.
-        !!! con: if aNode is a null reference, its non-existent %next would
-        !!!      certainly be null().
-
+        !!! trying to go next on a null reference is a serious logical error.
   here_ => aNode%llpoint
 _EXIT_(myname_)
 return
@@ -281,7 +206,7 @@ subroutine append_(thisNode,targetNode,follow)
   character(len=*),parameter:: myname_=myname//"::append_"
   logical:: follow_
 _ENTRY_(myname_)
-        ASSERT(nonNull(targetNode))     ! verify for any exception.
+        ASSERT(associated(targetNode))     ! verify for any exception.
 
   follow_=.false.
   if(present(follow)) follow_=follow
@@ -574,7 +499,7 @@ subroutine deepclean_(aNode,deep,depth,stat)
 !$$$  end subprogram documentation block
 
   implicit none
-  class(obsNode ),target  ,intent(inout):: aNode
+  class(obsNode ),pointer ,intent(inout):: aNode
   logical        ,optional,intent(in ):: deep   ! with deep=.true., the full
                                                 ! linked-list headed by aNode
                                                 ! will be "deep" cleaned.
@@ -587,18 +512,13 @@ subroutine deepclean_(aNode,deep,depth,stat)
   integer(i_kind):: ier,depth_
   logical:: deep_
 
-  deep_=.false.
-  if(present(deep )) deep_=deep
   if(present(depth)) depth=0
   if(present(stat )) stat=0
 
-  if(.not.nonNull(aNode)) return
-!xx  if(.not.nonNull(aNode)) then
-!xx    call perr(myname_,'null-target, nonNull() =',nonNull(aNode))
-!xx    if(.not.present(stat)) call die(myname_)
-!xx    stat=-1     ! for debugging
-!xx    return
-!xx  endif
+  if(.not.associated(aNode)) return
+
+  deep_=.false.
+  if(present(deep )) deep_=deep
 
   if(deep_) then
     depth_=0
@@ -625,7 +545,7 @@ end subroutine deepclean_
 
 recursive subroutine recurs_nodeclean_(aNode,depth,stat)
   implicit none
-  class(obsNode),target,intent(inout):: aNode
+  class(obsNode),pointer,intent(inout):: aNode
         ! This routine intends to fully erase the contents of argument aNode,
         ! but not the storage of it.  A target attribute is used to prevent any
         ! attempt to deallocate.  Also see step (2) and (4) below.
@@ -635,7 +555,7 @@ recursive subroutine recurs_nodeclean_(aNode,depth,stat)
   character(len=*),parameter:: myname_=MYNAME//"::recurs_nodeclean_"
 
   stat=0
-  if(nonNull(aNode)) then
+  if(associated(aNode)) then
 
     if(associated(aNode%llpoint)) then
       depth=depth+1
@@ -823,9 +743,9 @@ function nodetype_(aNode)
 !-- Return its type information, even when the argument is a NULL.
   implicit none
   character(len=:),allocatable:: nodetype_
-  class(obsNode),target,intent(in):: aNode
+  class(obsNode),pointer,intent(in):: aNode
   nodetype_=".null.[obsNode]"
-  if(nonNull(aNode)) nodetype_=aNode%mytype()
+  if(associated(aNode)) nodetype_=aNode%mytype()
 end function nodetype_
 
 end module m_obsNode

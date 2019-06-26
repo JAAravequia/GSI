@@ -578,7 +578,7 @@ subroutine setupvis(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      endif
   end subroutine init_netcdf_diag_
   subroutine contents_binary_diag_(odiag)
-  type(obs_diag),intent(in):: odiag
+  type(obs_diag),pointer,intent(in):: odiag
         cdiagbuf(ii)    = station_id         ! station id
  
         rdiagbuf(1,ii)  = ictype(ikx)        ! observation type
@@ -639,7 +639,7 @@ subroutine setupvis(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         endif
   end subroutine contents_binary_diag_
   subroutine contents_netcdf_diag_(odiag)
-  type(obs_diag),intent(in):: odiag
+  type(obs_diag),pointer,intent(in):: odiag
 ! Observation class
   character(7),parameter     :: obsclass = '    vis'
   real(r_kind),parameter::     missing = -9.99e9_r_kind

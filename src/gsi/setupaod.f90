@@ -75,9 +75,8 @@
   use m_obsdiagNode, only: obsdiagNode_assert
 
   use m_obsNode, only: obsNode
-  use m_aeroNode, only: aeroNode, aeroNode_typecast
+  use m_aeroNode, only: aeroNode
   use m_aeroNode, only: aeroNode_appendto
-  use m_obsLList, only: obsLList_tailNode
   use obsmod, only: rmiss_single
   use qcmod, only: ifail_crtm_qc
   use radiance_mod, only: rad_obs_type,radiance_obstype_search
@@ -472,7 +471,7 @@
               if (ii==1) obsptr => my_diag      ! this is the lead node
 
               if (in_curbin.and.icc>0) then
-                 my_head => aeroNode_typecast(obsLList_tailNode(aerohead(ibin)))
+                 my_head => tailNode_typecast_(aerohead(ibin))
                  if(.not.associated(my_head)) &
                     call die(myname,'unexpected, associated(my_head) =',associated(my_head))
 
@@ -593,6 +592,22 @@
   return
 
 contains
+  function tailNode_typecast_(oll) result(ptr_)
+!>  Cast the tailNode of oll to an aeroNode, as in
+!>      ptr_ => typecast_(tailNode_(oll))
+
+    use m_aeroNode, only: aeroNode, typecast_ => aeroNode_typecast
+    use m_obsLList, only: obsLList, tailNode_ => obsLList_tailNode
+    use m_obsNode , only: obsNode
+    implicit none
+    type(aeroNode),pointer:: ptr_
+    type(obsLList),target ,intent(in):: oll
+
+    class(obsNode),pointer:: inode_
+    inode_ => tailNode_(oll)
+    ptr_   => typecast_(inode_)
+  end function tailNode_typecast_
+
   subroutine init_netcdf_diag_
   end subroutine init_netcdf_diag_
   subroutine contents_binary_diag_
