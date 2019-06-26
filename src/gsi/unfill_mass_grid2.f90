@@ -239,6 +239,7 @@ subroutine unfill_mass_grid2t_ldmk(gout,nx,ny,gin,landmask, &
   use general_commvars_mod, only: ltosi,ltosj
   use mod_wrfmass_to_a, only: wrfmass_a_to_h4
   use gridmod, only: nlon, nlat
+  use rapidrefresh_cldsurf_mod, only: DTsTmax
 
   implicit none
 
@@ -292,9 +293,9 @@ subroutine unfill_mass_grid2t_ldmk(gout,nx,ny,gin,landmask, &
 !        if deltaT = TSLB(1) - T(k=1) < 20K. for TSLB  
 !
            if( (i_snowT_check==1 .or. i_snowT_check==3 .or. i_snowT_check==4) ) then
-              if(deltaT(i,j) < -20.0_r_single .and. b(i,j) < 0.0_r_single) & 
+              if(deltaT(i,j) < -DTsTmax .and. b(i,j) < 0.0_r_single) & 
                   b(i,j)=0.0_r_single
-              if(deltaT(i,j) >  20.0_r_single .and. b(i,j) > 0.0_r_single) &
+              if(deltaT(i,j) >  DTsTmax .and. b(i,j) > 0.0_r_single) &
                   b(i,j)=0.0_r_single
            endif
         end do
@@ -306,18 +307,6 @@ subroutine unfill_mass_grid2t_ldmk(gout,nx,ny,gin,landmask, &
         gin(i,j)=b(i,j)+gin(i,j)
      end do
   end do
-!  QC surface temperature over snow
-  if(i_snowT_check==1 .or. i_snowT_check==4) then
-!     do j=1,ny
-!        do i=1,nx
-!           if(snow(i,j) > 100.0_r_kind) then
-!              gin(i,j) = min(gin(i,j), 273.15_r_kind)
-!           else if(snow(i,j) > 32.0_r_kind ) then
-!              gin(i,j) = min(gin(i,j), 281.0_r_kind)
-!           endif
-!        end do
-!     end do
-  endif
   
 end subroutine unfill_mass_grid2t_ldmk
 

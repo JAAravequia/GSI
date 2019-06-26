@@ -483,7 +483,7 @@ function ruc_saturation(Temp,pressure)
 !
 !_____________________________________________________________________
 
-  use constants, only: rd_over_cp, h1000,one,zero
+  use constants, only: h1000,one,zero
   use kinds, only: r_single,i_kind, r_kind
 !
     implicit none

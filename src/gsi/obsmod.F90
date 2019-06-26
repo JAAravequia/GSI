@@ -133,6 +133,8 @@ module obsmod
 !   2016-11-29 shlyaeva  - add lobsdiag_forenkf option for writing out linearized
 !                           H(x) for EnKF
 !   2018-01-01  apodaca  - add GOES/GLM lightning observations
+!   2019-06-25  Hu       - add diag_radardbz for controling radar reflectivity
+!                               diag file
 ! 
 ! Subroutines Included:
 !   sub init_obsmod_dflts   - initialize obs related variables to default values
@@ -154,6 +156,8 @@ module obsmod
 !   def perturb_obs  - namelist logical to perturb (=true) observations
 !   def perturb_fact - namelist scaling factor for observation perturbations
 !   def write_diag   - namelist logical array to compute/write (=true) diag files
+!   def diag_radardbz- namelist logical to compute/write (=true) radar
+!                                          reflectiivty diag files
 !   def reduce_diag  - namelist logical to produce reduced radiance diagnostic files
 !   def use_limit    - parameter set equal to -1 if diag files produced or 0 if not diag files or reduce_diag
 !   def obs_setup    - prefix for files passing pe relative obs data to setup routines
@@ -395,6 +399,7 @@ module obsmod
   public :: destroy_obsmod_vars
   public :: ran01dom,dval_use
   public :: iout_pcp,iout_rad,iadate,iadatemn,write_diag,reduce_diag,oberrflg,bflag,ndat,dthin,dmesh,l_do_adjoint
+  public :: diag_radardbz
   public :: lsaveobsens
   public :: i_ps_ob_type,i_t_ob_type,i_w_ob_type,i_q_ob_type
   public :: i_spd_ob_type,i_rw_ob_type,i_dw_ob_type,i_sst_ob_type
@@ -639,6 +644,7 @@ module obsmod
   logical blacklst,lobsdiagsave,lobsdiag_allocated,lobskeep,lsaveobsens
   logical lobserver,l_do_adjoint, lobsdiag_forenkf
   logical,dimension(0:50):: write_diag
+  logical diag_radardbz 
   logical reduce_diag
   logical offtime_data
   logical hilbert_curve
@@ -741,6 +747,7 @@ contains
        write_diag(i)=.false.
     end do
     write_diag(1)=.true.
+    diag_radardbz = .false.
     reduce_diag = .false.
     use_limit = -1
     lobsdiagsave=.false.
@@ -1068,7 +1075,7 @@ contains
            index(dtype(ii),'iasi') /= 0 ) then
           if(time_window(ii)>time_window_rad) then
              time_window(ii) = time_window_rad
-             if (mype==0) write(6,*) 'reset time window for ',dtype(ii),&
+             if (mype==0) write(6,*) 'INIT_OBSMOD_VARS: reset time window for ',dtype(ii),&
                                ' to ',time_window_rad
           endif
        endif

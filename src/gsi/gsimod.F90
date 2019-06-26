@@ -18,7 +18,7 @@
      time_window,perturb_obs,perturb_fact,sfcmodel,destroy_obsmod_vars,dsis,&
      dtbduv_on,time_window_max,offtime_data,init_directories,oberror_tune,ext_sonde, &
      blacklst,init_obsmod_vars,lobsdiagsave,lobskeep,lobserver,hilbert_curve,&
-     lread_obs_save,lread_obs_skip,time_window_rad
+     lread_obs_save,lread_obs_skip,time_window_rad,diag_radardbz
 
   use obsmod, only: doradaroneob,oneoblat,oneoblon,oneobheight,oneobvalue,oneobddiff,oneobradid,&
      radar_no_thinning,ens_hx_dbz_cut,static_gsi_nopcp_dbz,rmesh_dbz,&
@@ -101,7 +101,7 @@
      use_gfs_nemsio,sfcnst_comb,use_readin_anl_sfcmask,use_sp_eqspace,final_grid_vars,&
      jcap_gfs,nlat_gfs,nlon_gfs,jcap_cut,wrf_mass_hybridcord
   use guess_grids, only: ifact10,sfcmod_gfs,sfcmod_mm5,use_compress,nsig_ext,gpstop
-  use gsi_io, only: init_io,lendian_in,verbose
+  use gsi_io, only: init_io,lendian_in,verbose,print_obs_para
   use regional_io_mod, only: regional_io_class
   use wrf_params_mod, only: update_pint, preserve_restart_date
   use constants, only: zero,one,init_constants,gps_constants,init_constants_derived,three
@@ -138,7 +138,7 @@
                             i_lightpcp,i_sfct_gross,l_use_hydroretrieval_all,l_numconc,l_closeobs,&
                             i_coastline,i_gsdqc,qv_max_inc,ioption,l_precip_clear_only,l_fog_off,&
                             cld_bld_coverage,cld_clr_coverage,&
-                            i_cloud_q_innovation,i_ens_mean
+                            i_cloud_q_innovation,i_ens_mean,DTsTmax
   use gsi_metguess_mod, only: gsi_metguess_init,gsi_metguess_final
   use gsi_chemguess_mod, only: gsi_chemguess_init,gsi_chemguess_final
   use tcv_mod, only: init_tcps_errvals,tcp_refps,tcp_width,tcp_ermin,tcp_ermax
@@ -382,6 +382,7 @@
 !  03-28-2019 Ladwig    merging additional options for cloud product assimilation
 !  03-11-2019 Collard   Introduce ec_amv_qc as temporary control of GOES-16/17 AMVS
 !  06-19-2019 Hu        Add option reset_bad_radbc for reseting radiance bias correction when it is bad
+!  06-25-2019 Hu        Add option print_obs_para to turn on OBS_PARA list
 !
 !EOP
 !-------------------------------------------------------------------------
@@ -435,6 +436,7 @@
 !     diag_aero  - logical to turn off or on the diagnostic aerosol file (true=on)
 !     diag_co - logical to turn off or on the diagnostic carbon monoxide file (true=on)
 !     diag_light - logical to turn off or on the diagnostic lightning file (true=on)
+!     diag_radardbz - logical to turn off or on the diagnostic radar reflectivity file (true=on)
 !     write_diag - logical to write out diagnostic files on outer iteration
 !     lobsdiagsave - write out additional observation diagnostics
 !     ltlint       - linearize inner loop
@@ -573,7 +575,7 @@
        min_offset,pseudo_q2,&
        iout_iter,npredp,retrieval,&
        tzr_qc,tzr_bufrsave,&
-       diag_rad,diag_pcp,diag_conv,diag_ozone,diag_aero,diag_co,diag_light,iguess, &
+       diag_rad,diag_pcp,diag_conv,diag_ozone,diag_aero,diag_co,diag_light,diag_radardbz,iguess, &
        write_diag,reduce_diag, &
        oneobtest,sfcmodel,dtbduv_on,ifact10,l_foto,offtime_data,&
        use_pbl,use_compress,nsig_ext,gpstop,&
@@ -593,7 +595,7 @@
        lwrite_peakwt,use_gfs_nemsio,sfcnst_comb,liauon,use_prepb_satwnd,l4densvar,ens_nstarthr,&
        use_gfs_stratosphere,pblend0,pblend1,step_start,diag_precon,lrun_subdirs,&
        use_sp_eqspace,lnested_loops,lsingleradob,thin4d,use_readin_anl_sfcmask,&
-       luse_obsdiag,id_drifter,verbose,lsingleradar,singleradar,lnobalance, &
+       luse_obsdiag,id_drifter,verbose,print_obs_para,lsingleradar,singleradar,lnobalance, &
        missing_to_nopcp,minobrangedbz,minobrangedbz,maxobrangedbz,&
        maxobrangevr,maxtiltvr,whichradar,doradaroneob,oneoblat,&
        oneoblon,oneobheight,oneobvalue,oneobddiff,oneobradid,&
@@ -1039,6 +1041,8 @@
 !                           0=single model run
 !                           1=ensemble mean
 !                           2=ensemble members
+!      DTsTmax       - maximum allowed difference between Tskin and the first
+!                           level T. This is to safety guard soil T adjustment.
 !
   namelist/rapidrefresh_cldsurf/dfi_radar_latent_heat_time_period, &
                                 metar_impact_radius,metar_impact_radius_lowcloud, &
@@ -1056,7 +1060,7 @@
                                 i_lightpcp,i_sfct_gross,l_use_hydroretrieval_all,l_numconc,l_closeobs,&
                                 i_coastline,i_gsdqc,qv_max_inc,ioption,l_precip_clear_only,l_fog_off,&
                                 cld_bld_coverage,cld_clr_coverage,&
-                                i_cloud_q_innovation,i_ens_mean
+                                i_cloud_q_innovation,i_ens_mean,DTsTmax
 
 ! chem(options for gsi chem analysis) :
 !     berror_chem       - .true. when background  for chemical species that require
@@ -1416,6 +1420,7 @@
      diag_co=.false.
      diag_pcp=.false.
      diag_light=.false.
+     diag_radardbz=.false.
      use_limit = 0
   end if
   if(reduce_diag) use_limit = 0

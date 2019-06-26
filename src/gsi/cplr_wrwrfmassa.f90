@@ -80,6 +80,7 @@ contains
          nsig,nsig_soil,eta1_ll,pt_ll,itotsub,iglobal,update_regsfc,&
          aeta1_ll,eta2_ll,aeta2_ll
     use constants, only: one,zero_single,rd_over_cp_mass,one_tenth,h300,r10,r100
+    use constants, only: soilmoistmin
     use gsi_io, only: lendian_in,verbose
     use rapidrefresh_cldsurf_mod, only: l_hydrometeor_bkio,l_gsd_soilTQ_nudge,&
          i_use_2mq4b
@@ -1097,11 +1098,11 @@ contains
              if(ifld >=i_smois .and. ifld <=i_smois+ksize-1) i_snowT_check=2
              call unfill_mass_grid2t_ldmk(tempa(1,ifld),im,jm,temp1,landmask, &
                                           snow,seaice,t1st2d,i_snowT_check)
-  ! make sure soil moisture is larger than 0.002 (sand).
+  ! make sure soil moisture is larger than soilmoistmin (whih is 0.002 (sand)).
              if(ifld >=i_smois .and. ifld <=i_smois+ksize-1) then
                 do i=1,im
                    do j=1,jm
-                      temp1(i,j) = max(temp1(i,j),0.002_r_single)
+                      temp1(i,j) = max(temp1(i,j),soilmoistmin)
                    end do
                 end do
              endif

@@ -1,4 +1,4 @@
-subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
+subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,init_pass)
 ! modified from setupdbz, now dbz is also a state variable
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -92,6 +92,8 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
   real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
   integer(i_kind)                                  ,intent(in   ) :: is ! ndat index
+  logical                                          ,intent(in   ) :: init_pass ! state of "setup" parameters
+
 ! Declare local parameters
   real(r_kind),parameter:: r0_001 = 0.001_r_kind
   real(r_kind),parameter:: r8     = 8.0_r_kind
@@ -135,6 +137,9 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) ier2,idbznoise,idmiss2opt
   character(8) station_id
   character(8),allocatable,dimension(:):: cdiagbuf
+  character(80):: string
+  character(128):: diag_file
+  logical :: diagexist
 
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
   logical :: proceed
@@ -658,10 +663,31 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 ! Write information to diagnostic file
   if(conv_diagsave  .and. ii>0 )then
+
+     write(string,600) jiter
+600  format('radardbz_',i2.2)
+     diag_file=trim(dirname) // trim(string)
+     if(init_pass) then
+        open(66,file=trim(diag_file),form='unformatted',status='unknown',position='rewind')
+     else
+        inquire(file=trim(diag_file),exist=diagexist)
+        if (diagexist) then
+           open(66,file=trim(diag_file),form='unformatted',status='old',position='append')
+        else
+           open(66,file=trim(diag_file),form='unformatted',status='unknown',position='rewind')
+        endif
+     endif
+     if(init_pass .and. mype == 0) then
+        write(66) ianldate
+        write(6,*)'SETUPDBZ:   write time record to file ',&
+                trim(diag_file), ' ',ianldate
+     endif
+
      call dtime_show(myname,'diagsave:dbz',i_dbz_ob_type)
      write(66)'dbz',nchar,nreal,ii,mype,ioff0
      write(66)cdiagbuf(1:ii),rdiagbuf(:,1:ii)
      deallocate(cdiagbuf,rdiagbuf)
+     close(66)
   end if
   write(6,*)'mype, irefsmlobs,irejrefsmlobs are ',mype,' ',irefsmlobs, ' ',irejrefsmlobs
 ! close(52) !simulated obs

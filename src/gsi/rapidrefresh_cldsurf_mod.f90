@@ -202,6 +202,7 @@ module rapidrefresh_cldsurf_mod
   public :: cld_clr_coverage
   public :: i_cloud_q_innovation
   public :: i_ens_mean
+  public :: DTsTmax 
 
   logical l_hydrometeor_bkio
   real(r_kind)  dfi_radar_latent_heat_time_period
@@ -250,6 +251,7 @@ module rapidrefresh_cldsurf_mod
   real(r_kind)         cld_clr_coverage
   integer(i_kind)      i_cloud_q_innovation
   integer(i_kind)      i_ens_mean
+  real(r_kind)         DTsTmax
 
 contains
 
@@ -348,6 +350,7 @@ contains
     cld_clr_coverage    = 0.6_r_kind                  ! Percentage of cloud coverage for clearing qc/qi
     i_cloud_q_innovation = 0                          ! 0 = no increments from cloud obs
     i_ens_mean = 0                                    ! typical ob behavior
+    DTsTmax = 20.0_r_kind                             ! maximum allowed difference between Ts and T 1st level
     return
   end subroutine init_rapidrefresh_cldsurf
 
