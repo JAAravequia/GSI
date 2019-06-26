@@ -283,6 +283,8 @@ function dtype2index_(dtype) result(index_)
 
   case("rad"    ,"[radoper]"    ); index_= iobOper_rad
         ! platid /= "aqua"
+    case("abi"    ); index_= iobOper_rad
+        !
     case("amsua"  ); index_= iobOper_rad
     case("amsub"  ); index_= iobOper_rad
     case("msu"    ); index_= iobOper_rad

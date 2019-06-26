@@ -250,7 +250,7 @@ class(obOper),pointer:: it_obOper
   call setrad(sval(1))
 
 ! "RHS for jo", as it was labeled in intall().
-$omp parallel do  schedule(dynamic,1) private(ibin,it,ix,it_obOper)
+!$omp parallel do  schedule(dynamic,1) private(ibin,it,ix,it_obOper)
   do ibin=1,size(sval)
     do it=1,obOper_count
       ix=ix_obtype(it)  ! in the same type sequence as it was in the earlier

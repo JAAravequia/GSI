@@ -34,8 +34,8 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
 !                                           1) Explicitly apply the operator H(qr, qs, qg) to hydrometeors
 !                                           2) Directly use the reflectivity from the wrfout
 !                                           POC: xuguang.wang@ou.edu
-!   2017-02-09  guo     - Remove m_alloc, n_alloc.
-!                       . Remove my_node with corrected typecast().
+!   2017-02-09  guo     - Removed m_alloc, n_alloc.
+!                       . Removed my_node with corrected typecast().
 !   2017-05-12 Y. Wang and X. Wang - Following Guo replacing ob_type with polymorphic obsNode through type casting,
 !                                           POC: xuguang.wang@ou.edu
 !
@@ -84,13 +84,13 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
   use qcmod, only: npres_print,ptop,pbot 
   use guess_grids, only: hrdifsig,geop_hgtl,nfldsig,&
        ges_lnprsl,ges_rho,ges_tsen
-  use gridmod, only: nsig,get_ijk,lat2,lon2,istart,jstart
+  use gridmod, only: nsig,get_ijk
   use gsi_metguess_mod, only: gsi_metguess_bundle,gsi_metguess_get
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use constants, only: flattening,semi_major_axis,grav_ratio,zero,grav,wgtlim,&
        half,one,two,grav_equator,eccentricity,somigliana,rad2deg,deg2rad,&
        r60,tiny_r_kind,cg_term,huge_single
-  use jfunc, only: jiter,last,miter,jiterstart
+  use jfunc, only: jiter,last,miter
   use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype
   use convinfo, only: icsubtype
   use m_dtime, only: dtime_setup, dtime_check

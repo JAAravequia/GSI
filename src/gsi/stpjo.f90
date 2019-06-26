@@ -293,7 +293,7 @@ subroutine stpjo(dval,dbias,xval,xbias,sges,pbcjo,nstep)
 
   call setrad(xval(1))
 
-$omp parallel do  schedule(dynamic,1) private(ll,mm,ib,it_obOper)
+!$omp parallel do  schedule(dynamic,1) private(ll,mm,ib,it_obOper)
   do mm=1,stpcnt
     ll=ll_jo(mm)
     ib=ib_jo(mm)
