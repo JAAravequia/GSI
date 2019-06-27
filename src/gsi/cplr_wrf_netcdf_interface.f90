@@ -1217,7 +1217,7 @@ contains
                   start_index,end_index,               & !pat
                   ierr                                 )
              do k=1,nsig_regional
-! DCD 2 April 2019:  commented out next 5 lines because the negative reflectivity is valid values in real observation.
+! commented out next 5 lines because the negative reflectivity is valid values in real observation.
 !               do i=1,nlon_regional
 !                 do j=2,nlat_regional
 !                    field3(i,j,k) = (max(field3(i,j,k),zero))

@@ -690,7 +690,6 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(3,ii)  = data(ilate,i)      ! observation latitude (degrees)
         rdiagbuf(4,ii)  = data(ilone,i)      ! observation longitude (degrees)
         rdiagbuf(5,ii)  = data(istnelv,i)    ! station elevation (meters)
-!        rdiagbuf(6,ii)  = data(iobsprs,i)    ! observation pressure (hPa)            
         rdiagbuf(6,ii)  = prest              ! use model surface pressure (hPa) so PW
                                              ! can be used in EnKF analysis
         rdiagbuf(7,ii)  = data(iobshgt,i)    ! observation height (meters)
@@ -748,6 +747,7 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   end subroutine contents_binary_diag_
   subroutine contents_netcdf_diag_
 ! Observation class
+! use model surface pressure, so PW can be used in EnKF analysis
   character(7),parameter     :: obsclass = '     pw'
   real(r_single),parameter::     missing = -9.99e9_r_single
   real(r_kind),dimension(miter) :: obsdiag_iuse
@@ -759,8 +759,6 @@ subroutine setuppw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            call nc_diag_metadata("Latitude",                      sngl(data(ilate,i))     )
            call nc_diag_metadata("Longitude",                     sngl(data(ilone,i))     )
            call nc_diag_metadata("Station_Elevation",             sngl(data(istnelv,i))   )
-!           call nc_diag_metadata("Pressure",                      sngl(data(iobsprs,i))   )
-! use model surface pressure, so PW can be used in EnKF analysis
            call nc_diag_metadata("Pressure",                      sngl(prest)             )
            call nc_diag_metadata("Height",                        sngl(data(iobshgt,i))   )
            call nc_diag_metadata("Time",                          sngl(dtime-time_offset) )

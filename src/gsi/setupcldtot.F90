@@ -1,5 +1,5 @@
 #ifdef RR_CLOUDANALYSIS
-subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,radardbz_diagsave)
+subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !$$$  subprogram documentation block
 !!                .      .    .                                       .
 ! subprogram:    setupcldtot      compute rhs of oi for pseudo moisture observations from
@@ -76,7 +76,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,radardbz_diagsave)
   real(r_single) :: cloudqvis
 
 ! Declare passed variables
-  logical                                          ,intent(in   ) :: radardbz_diagsave
+  logical                                          ,intent(in   ) :: conv_diagsave
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
   real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
   real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
@@ -249,7 +249,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,radardbz_diagsave)
   enddo
 
   ! If requested, save select data for output to diagnostic file
-  if(radardbz_diagsave)then
+  if(conv_diagsave)then
      nchar=1
      nreal=23
      if (i_cloud_q_innovation == 1 .or. i_cloud_q_innovation == 3) then
@@ -570,7 +570,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,radardbz_diagsave)
        
        
                    ! Save select output for diagnostic file
-                   if(radardbz_diagsave .and. luse(i))then
+                   if(conv_diagsave .and. luse(i))then
                       iip=iip+1
 
                       rstation_id     = data(id,i)
@@ -605,7 +605,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,radardbz_diagsave)
                           all_qv_obs(29,iip)=cloudqvis
        
                       endif
-                   endif    !radardbz_diagsave .and. luse(i))
+                   endif    !conv_diagsave .and. luse(i))
        
                endif !i_cloud_q_innovation
    
@@ -670,7 +670,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,radardbz_diagsave)
 
         ddiff=qv_ob-q_bk(k)
 
-        if(radardbz_diagsave)then
+        if(conv_diagsave)then
            if (binary_diag) call contents_binary_diag_mem_
            if (netcdf_diag) call contents_netcdf_diag_mem_
         endif
@@ -682,7 +682,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,radardbz_diagsave)
   endif !i_ens_mem 
 
   !! Write information to diagnostic file
-  if(radardbz_diagsave)then
+  if(conv_diagsave)then
      if (i_cloud_q_innovation == 2 .and. iip>0) then
          call dtime_show(myname,'diagsave:q',i_q_ob_type)
         if(netcdf_diag) call nc_diag_write
@@ -1010,7 +1010,7 @@ end subroutine setupcldtot
 
 #else
 
-subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,radardbz_diagsave)
+subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !$$$  subprogram documentation block
 !!                .      .    .                                       .
 ! subprogram:    setupcldtot      compute rhs of oi for pseudo moisture
@@ -1039,17 +1039,19 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,radardbz_diagsave)
 !
 !$$$
 ! Declare passed variables
-  use kinds, only: r_kind,r_single,r_double,i_kind
+  use kinds, only: r_kind,i_kind
   use gridmod, only: nsig
   use qcmod, only: npres_print
   use convinfo, only: nconvtype
 
   implicit none
 
-  logical                                          ,intent(in   ) :: radardbz_diagsave
+  logical                                          ,intent(in   ) :: conv_diagsave
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
   real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
   real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
   integer(i_kind)                                  ,intent(inout) :: is	! ndat index
+
+end subroutine setupcldtot
 
 #endif

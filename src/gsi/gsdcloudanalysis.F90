@@ -1007,7 +1007,7 @@ subroutine  gsdcloudanalysis(mype)
                     end do
                  endif
                  if(i_lightpcp == 1) then
-! kee   p light precipitation between 28-15 dBZ
+! keep light precipitation between 28-15 dBZ
                     do k=1,nsig
                        if(ref_mos_3d(i,j,k) >=15.0_r_single .and. &
                           ref_mos_3d(i,j,k) <=28.0_r_single ) then
