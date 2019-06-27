@@ -31,6 +31,7 @@ contains
   !
   !
   ! program history log:
+  !   2019-06-26    twu    - allow cw pertutation loaded
   !
   !   input argument list:
   !
@@ -759,13 +760,12 @@ contains
                   end do
     
                case('cw','CW')
-    !          temporarily ignore cloud water perturbations
     
                   do k=1,nsig_e
                      do j=1,grd_ens%lon2
                         do i=1,grd_ens%lat2
                            w3(i,j,k) = cwmr(i,j,k)
-                           x3(i,j,k) = zero
+                           x3(i,j,k) = x3(i,j,k)+cwmr(i,j,k)
                         end do
                      end do
                   end do
@@ -1684,6 +1684,7 @@ contains
   !
   ! program history log:
   !   2010-07-01  tong
+  !   2019-06-26  twu    - include cwm read for hwrf
   !
   !   input argument list:
   !     grd      - structure variable containing information about grid
@@ -1723,7 +1724,7 @@ contains
        real(r_kind),allocatable::g_tsen(:,:,:),g_q(:,:,:),g_prsl(:,:,:)
        real(r_kind),allocatable::g_pd(:,:)
      
-       integer(i_kind) :: kt,kq,ku,kv
+       integer(i_kind) :: kt,kq,ku,kv,kcwmr
        real(r_kind),parameter :: r0_01 = 0.01_r_kind
        integer(i_kind) :: nlon_regional,nlat_regional,nsig
        real(r_single) :: dlmd,dphd
@@ -1740,14 +1741,14 @@ contains
        integer(i_kind) ifld,im,jm,lm,num_nmm_fields
        integer(i_kind) num_all_fields,num_loc_groups,num_all_pad
        integer(i_kind) i,icount,icount_prev,j,k
-       integer(i_kind) i_0,i_pd,i_t,i_q,i_u,i_v
+       integer(i_kind) i_0,i_pd,i_t,i_q,i_u,i_v,i_cwmr
        integer(i_kind) iderivative
        real(r_kind) pd,psfc_this
        integer(i_kind) ireturn
        logical ice
   
        lm=grd%nsig
-       num_nmm_fields=1+4*lm
+       num_nmm_fields=1+(4+1)*lm !include t, q, u, and v, plus cwmr
   
        num_all_fields=num_nmm_fields*1
        num_loc_groups=num_all_fields/npe
@@ -1770,7 +1771,7 @@ contains
      
        i=0
        i=i+1 ; i_pd=i                                                ! pd
-       jsiskip(i)=4
+       jsiskip(i)=4        ! number of files to skip before getting to pd           
        igtype(i)=1
      
        i_t=i+1
@@ -1794,6 +1795,12 @@ contains
           i=i+1                                                       ! v(k)
           jsiskip(i)=0 ; igtype(i)=2
        end do
+       i_cwmr=i+1
+       do k=1,lm
+          i=i+1                                                       ! cwmr(k)
+          jsiskip(i)=0 ; igtype(i)=1
+       end do
+
      
        do i=1,npe
           irc_s_reg(i)=grd%ijn_s(mype+1)
@@ -1864,12 +1871,14 @@ contains
        kq=i_0+i_q-1
        ku=i_0+i_u-1
        kv=i_0+i_v-1
+       kcwmr=i_0+i_cwmr-1
   
        do k=1,grd%nsig
           kt=kt+1
           kq=kq+1
           ku=ku+1
           kv=kv+1
+          kcwmr=kcwmr+1
   
           do i=1,grd%lon2
              do j=1,grd%lat2
@@ -1877,6 +1886,7 @@ contains
                 g_v(j,i,k) = real(all_loc(j,i,kv),r_kind)
                 g_q(j,i,k)   = real(all_loc(j,i,kq),r_kind)
                 g_tsen(j,i,k)  = real(all_loc(j,i,kt),r_kind)! actually holds sensible temperature
+                g_cwmr(j,i,k)  = real(all_loc(j,i,kcwmr),r_kind)! actually holds total condensate
              end do
           end do
        end do
@@ -1927,7 +1937,7 @@ contains
        do k=1,grd%nsig
           do i=1,grd%lon2
              do j=1,grd%lat2
-                g_cwmr(j,i,k)=zero
+!                g_cwmr(j,i,k)=zero
                 g_oz(j,i,k)=zero
              end do
           end do
