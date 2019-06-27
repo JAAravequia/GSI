@@ -1,4 +1,4 @@
-subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,init_pass)
+subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,radardbz_diagsave,init_pass)
 ! modified from setupdbz, now dbz is also a state variable
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -87,7 +87,7 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,init_pass)
  
   implicit none
 ! Declare passed variables
-  logical                                          ,intent(in   ) :: conv_diagsave
+  logical                                          ,intent(in   ) :: radardbz_diagsave
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
   real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
   real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
@@ -201,7 +201,7 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,init_pass)
 
 !
 ! If requested, save select data for output to diagnostic file
-  if(conv_diagsave)then
+  if(radardbz_diagsave)then
      ii=0
      nchar=1
      ioff0=25
@@ -631,7 +631,7 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,init_pass)
         my_head => null()
      endif
 !    Save select output for diagnostic file
-     if(conv_diagsave .and. luse(i) )then
+     if(radardbz_diagsave .and. luse(i) )then
 
 
         ii=ii+1
@@ -662,7 +662,7 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave,init_pass)
 
 
 ! Write information to diagnostic file
-  if(conv_diagsave  .and. ii>0 )then
+  if(radardbz_diagsave  .and. ii>0 )then
 
      write(string,600) jiter
 600  format('radardbz_',i2.2)

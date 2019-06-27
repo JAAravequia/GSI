@@ -240,6 +240,7 @@ subroutine unfill_mass_grid2t_ldmk(gout,nx,ny,gin,landmask, &
   use mod_wrfmass_to_a, only: wrfmass_a_to_h4
   use gridmod, only: nlon, nlat
   use rapidrefresh_cldsurf_mod, only: DTsTmax
+  use constants, only: partialSnowThreshold
 
   implicit none
 
@@ -255,10 +256,6 @@ subroutine unfill_mass_grid2t_ldmk(gout,nx,ny,gin,landmask, &
   real(r_single) ba(nlon,nlat)
   real(r_single) b(nx,ny)
   integer(i_kind) i,j
-  real(r_kind) :: snowthreshold
-
-
-  snowthreshold=32.0_r_kind
 
   do i=1,iglobal
      ba(ltosj(i),ltosi(i))=gout(i)
@@ -278,8 +275,8 @@ subroutine unfill_mass_grid2t_ldmk(gout,nx,ny,gin,landmask, &
         do i=1,nx
            if(landmask(i,j) < 0.1_r_single)  b(i,j)=0.0_r_single 
            if(i_snowT_check==2 .and. seaice(i,j) > 0.5_r_single)  b(i,j)=0.0_r_single 
-!  don't change soil T (TSBL) under thick snow
-           if(i_snowT_check==3 .and. (snow(i,j) > snowthreshold)) b(i,j)=0.0_r_single
+!  don't change soil T (TSBL) under thick snow (> partialSnowThreshold=32 mm)
+           if(i_snowT_check==3 .and. (snow(i,j) > partialSnowThreshold)) b(i,j)=0.0_r_single
 ! Limit application of soil temp nudging in fine grid as follows:
 !  - If cooling is indicated, apply locally only
 !        if deltaT = Tskin - T(k=1) > -20K. for TSK and SOILT1  

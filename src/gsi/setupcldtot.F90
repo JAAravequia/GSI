@@ -1,4 +1,5 @@
-subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
+#ifdef RR_CLOUDANALYSIS
+subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,radardbz_diagsave)
 !$$$  subprogram documentation block
 !!                .      .    .                                       .
 ! subprogram:    setupcldtot      compute rhs of oi for pseudo moisture observations from
@@ -68,15 +69,14 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
   use mpimod, only: mpi_comm_world
   use constants, only: zero,one, h1000
-  use gsdcloudlib_pseudoq_mod, only: cloudLWC_pseudo,cloudCover_Surface_col,&
-                                     ruc_saturation
+  use gsdcloudlib_pseudoq_mod, only: cloudLWC_pseudo,cloudCover_Surface_col
 
   implicit none
 
   real(r_single) :: cloudqvis
 
 ! Declare passed variables
-  logical                                          ,intent(in   ) :: conv_diagsave
+  logical                                          ,intent(in   ) :: radardbz_diagsave
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
   real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
   real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
@@ -168,6 +168,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                                                       ! 2,4,... bottom
                                                       ! 3,5,... top
   real(r_single) :: vis2qc           ! fog
+  real(r_single) :: ruc_saturation 
 
   real(r_single), allocatable :: cld_cover_obs(:)  ! cloud cover obs
 
@@ -248,7 +249,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   enddo
 
   ! If requested, save select data for output to diagnostic file
-  if(conv_diagsave)then
+  if(radardbz_diagsave)then
      nchar=1
      nreal=23
      if (i_cloud_q_innovation == 1 .or. i_cloud_q_innovation == 3) then
@@ -569,7 +570,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
        
        
                    ! Save select output for diagnostic file
-                   if(conv_diagsave .and. luse(i))then
+                   if(radardbz_diagsave .and. luse(i))then
                       iip=iip+1
 
                       rstation_id     = data(id,i)
@@ -604,7 +605,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                           all_qv_obs(29,iip)=cloudqvis
        
                       endif
-                   endif    !conv_diagsave .and. luse(i))
+                   endif    !radardbz_diagsave .and. luse(i))
        
                endif !i_cloud_q_innovation
    
@@ -669,7 +670,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
         ddiff=qv_ob-q_bk(k)
 
-        if(conv_diagsave)then
+        if(radardbz_diagsave)then
            if (binary_diag) call contents_binary_diag_mem_
            if (netcdf_diag) call contents_netcdf_diag_mem_
         endif
@@ -681,7 +682,7 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   endif !i_ens_mem 
 
   !! Write information to diagnostic file
-  if(conv_diagsave)then
+  if(radardbz_diagsave)then
      if (i_cloud_q_innovation == 2 .and. iip>0) then
          call dtime_show(myname,'diagsave:q',i_q_ob_type)
         if(netcdf_diag) call nc_diag_write
@@ -1006,3 +1007,49 @@ subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   end subroutine contents_netcdf_diag_mem_
 
 end subroutine setupcldtot
+
+#else
+
+subroutine setupcldtot(lunin,mype,bwork,awork,nele,nobs,is,radardbz_diagsave)
+!$$$  subprogram documentation block
+!!                .      .    .                                       .
+! subprogram:    setupcldtot      compute rhs of oi for pseudo moisture
+! observations from
+!                                 METAR and Satellite cloud observations
+!   prgmmr: Ladwag          org: GSD                date: 2019-06-01
+!
+! program history log:
+!   2016-04-06  Ladwig new setup routine for METAR ceilometer obs
+!
+!   input argument list:
+!     lunin    - unit from which to read observations
+!     mype     - mpi task id
+!     nele     - number of data elements per observation
+!     nobs     - number of observations
+!
+!   output argument list:
+!     bwork    - array containing information about obs-ges statistics
+!     awork    - array containing information for data counts and gross checks
+!
+! attributes:
+!   language: f90
+!   machine:  
+!
+!
+!
+!$$$
+! Declare passed variables
+  use kinds, only: r_kind,r_single,r_double,i_kind
+  use gridmod, only: nsig
+  use qcmod, only: npres_print
+  use convinfo, only: nconvtype
+
+  implicit none
+
+  logical                                          ,intent(in   ) :: radardbz_diagsave
+  integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
+  real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
+  real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
+  integer(i_kind)                                  ,intent(inout) :: is	! ndat index
+
+#endif

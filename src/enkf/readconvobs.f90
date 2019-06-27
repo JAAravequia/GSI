@@ -152,12 +152,6 @@ subroutine get_num_convobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id
               error=rdiagbuf(16,i)
               obmax=abs(rdiagbuf(17,i))
               if(obtype == ' uv')obmax = max(obmax,abs(rdiagbuf(20,i)))
-              ! Associate a pressure value with pw obs so that they can be assimilated.
-              if (obtype == ' pw') then
-                if (pres < 0.001_r_kind .or. pres > 1200._r_kind) then
-                  pres = 500._r_single
-                end if
-              end if
            end if
          end if
          nn(1)=nn(1)+1  ! number of read obs
@@ -1084,12 +1078,6 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
           else
              pres = rdiagbuf(6,n)
           endif
-          ! Associate a pressure value with pw obs so that they can be assimilated.
-          if (obtype == ' pw') then
-            if (pres < 0.001_r_kind .or. pres > 1200._r_kind) then
-              pres = 500._r_single
-            end if
-          end if
           if (rdiagbuf(12,n) < zero .or.                        &
               error < errorlimit .or. error > errorlimit2 .or.  &
               abs(obmax) > 1.e9_r_kind .or.                     &
