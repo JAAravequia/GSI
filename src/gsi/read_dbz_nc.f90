@@ -66,7 +66,7 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,sis,hgtl_full,no
 !
 !$$$ end documentation block
 
-  use kinds, only: r_kind,r_double,i_kind
+  use kinds, only: r_kind,r_double,i_kind,r_single
   use constants, only: zero,half,one,two,deg2rad,rad2deg, &
                        one_tenth,r1000,r60,r60inv,r100,r400,grav_equator, &
                        eccentricity,somigliana,grav_ratio,grav,semi_major_axis,flattening 
@@ -100,11 +100,11 @@ subroutine read_dbz_nc(nread,ndata,nodata,infile,lunout,obstype,sis,hgtl_full,no
   
 ! === Grid dbz data declaration
 
-  real(r_kind), allocatable, dimension(:) :: data_r_1d
-  real(r_kind), allocatable, dimension(:,:) :: data_r_2d
+  real(r_single), allocatable, dimension(:) :: data_r_1d
+  real(r_single), allocatable, dimension(:,:) :: data_r_2d
   real(r_kind), allocatable, dimension(:) :: height
   real(r_kind), allocatable, dimension(:,:) :: lon, lat
-  real(r_kind), allocatable, dimension(:,:,:) :: data_r_3d
+  real(r_single), allocatable, dimension(:,:,:) :: data_r_3d
   real(r_kind), allocatable, dimension(:,:,:) :: dbzQC
 
   integer(i_kind), parameter                  :: max_num_vars = 50, max_num_dims = 20
