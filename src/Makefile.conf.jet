@@ -12,11 +12,14 @@ INCnemsio= $(COREINC)/nemsio
 INCw3    = $(COREINC)/w3emc_d
 INCcrtm=$(COREINC)/CRTM
 
-WRFPATH = /misc/whome/Mingjing.Tong/WRFV3
+WRFPATH=../../WRFV3
+INCnetcdf= ${NETCDF4}/include
+LIBnetcdf= -L$(NETCDF4)/lib -lnetcdf -lnetcdff
+NETCDF_INCLUDE=${NETCDF4}/include
+NETCDF_LDFLAGS_F= -L$(NETCDF4)/lib -lnetcdf -lnetcdff
+
 LIBwrfio_int    = $(WRFPATH)/external/io_int/libwrfio_int.a
 LIBwrfio_netcdf = $(WRFPATH)/external/io_netcdf/libwrfio_nf.a
-INCnetcdf       = ${NETCDF}/include
-LIBnetcdf       = -L$(NETCDF)/lib -lnetcdf
 OBJwrf_frame_pk = $(WRFPATH)/frame/pack_utils.o
 OBJwrf_sizeof_int = $(WRFPATH)/frame/module_machine.o
 WRFLIB = $(LIBwrfio_int) $(LIBwrfio_netcdf) $(OBJwrf_frame_pk) $(OBJwrf_sizeof_int)
