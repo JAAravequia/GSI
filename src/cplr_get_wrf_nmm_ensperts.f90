@@ -1708,6 +1708,8 @@ contains
        use gsi_io, only: lendian_in
        use general_sub2grid_mod, only: sub2grid_info
        use hybrid_ensemble_parameters, only: q_hyb_ens
+       use control_vectors, only: cvars3d
+       use mpeu_util, only: getindex
        implicit none
      
      ! Declare passed variables here
@@ -1746,9 +1748,16 @@ contains
        real(r_kind) pd,psfc_this
        integer(i_kind) ireturn
        logical ice
-  
+
+       integer(i_kind) :: nrf3_cw
+       nrf3_cw   = getindex(cvars3d,'cw') ! check if cw is included as cv
+
        lm=grd%nsig
-       num_nmm_fields=1+(4+1)*lm !include t, q, u, and v, plus cwmr
+       if (nrf3_cw > 0) then
+         num_nmm_fields=1+(4+1)*lm !include t, q, u, and v, plus cwmr
+       else
+         num_nmm_fields=1+4*lm !include t, q, u, and v, plus cwmr
+       endif
   
        num_all_fields=num_nmm_fields*1
        num_loc_groups=num_all_fields/npe
@@ -1795,11 +1804,13 @@ contains
           i=i+1                                                       ! v(k)
           jsiskip(i)=0 ; igtype(i)=2
        end do
-       i_cwmr=i+1
-       do k=1,lm
-          i=i+1                                                       ! cwmr(k)
-          jsiskip(i)=0 ; igtype(i)=1
-       end do
+       if (nrf3_cw > 0) then
+         i_cwmr=i+1
+         do k=1,lm
+           i=i+1                                                       ! cwmr(k)
+           jsiskip(i)=0 ; igtype(i)=1
+         end do
+       endif
 
      
        do i=1,npe
@@ -1871,14 +1882,12 @@ contains
        kq=i_0+i_q-1
        ku=i_0+i_u-1
        kv=i_0+i_v-1
-       kcwmr=i_0+i_cwmr-1
   
        do k=1,grd%nsig
           kt=kt+1
           kq=kq+1
           ku=ku+1
           kv=kv+1
-          kcwmr=kcwmr+1
   
           do i=1,grd%lon2
              do j=1,grd%lat2
@@ -1886,10 +1895,21 @@ contains
                 g_v(j,i,k) = real(all_loc(j,i,kv),r_kind)
                 g_q(j,i,k)   = real(all_loc(j,i,kq),r_kind)
                 g_tsen(j,i,k)  = real(all_loc(j,i,kt),r_kind)! actually holds sensible temperature
-                g_cwmr(j,i,k)  = real(all_loc(j,i,kcwmr),r_kind)! actually holds total condensate
              end do
           end do
        end do
+
+       if (nrf3_cw > 0) then
+         kcwmr=i_0+i_cwmr-1
+         do k=1,grd%nsig
+            kcwmr=kcwmr+1
+            do i=1,grd%lon2
+              do j=1,grd%lat2
+                g_cwmr(j,i,k)  = real(all_loc(j,i,kcwmr),r_kind)! actually holds total condensate
+              enddo
+            enddo
+          enddo
+       endif
   
        do i=1,grd%lon2
           do j=1,grd%lat2
@@ -1937,7 +1957,7 @@ contains
        do k=1,grd%nsig
           do i=1,grd%lon2
              do j=1,grd%lat2
-!                g_cwmr(j,i,k)=zero
+                if (nrf3_cw == 0) g_cwmr(j,i,k)=zero
                 g_oz(j,i,k)=zero
              end do
           end do

@@ -24,7 +24,7 @@ subroutine compute_qvar3d
 ! 2015-09-10 zhu  - use centralized cloud_names_fwd and n_clouds_fwd in the assignments of cloud 
 !                   variances (either cw or individual hydrometerors) for all-sky radiance assimilation
 !                 - remove cwoption1
-!   2019-06-25  twu     - add update for cwmr from qr, qs, qg, and qh
+! 2019-06-25 twu  - add update for cwmr from qr, qs, qg, and qh
 !
 !   input argument list:
 !
@@ -164,7 +164,7 @@ subroutine compute_qvar3d
      call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),'qs',ges_qs,istatus);ier6=ier6+istatus
      call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),'qg',ges_qg,istatus);ier6=ier6+istatus
      call gsi_bundlegetpointer (gsi_metguess_bundle(ntguessig),'qh',ges_qh,istatus);ier6=ier6+istatus
-     if (ier6/=0) return
+     if (ier6/=0) write(*,*) 'compute_qvar3d: qr, qs, qg, and qg are not listed in metguess. ier6/=0'
 
      if (cwoption==3) then
         do k = 1,nsig
