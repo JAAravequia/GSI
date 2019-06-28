@@ -129,8 +129,7 @@ endif
 do_cw_to_hydro = .false.
 do_cw_to_hydro = lc_cw .and. ls_ql .and. ls_qi
 do_cw_to_hydro_hwrf = .false.
-do_cw_to_hydro_hwrf =
-lc_cw.and.ls_ql.and.ls_qi.and.ls_qr.and.ls_qs.and.ls_qg.and.ls_qh
+do_cw_to_hydro_hwrf = lc_cw.and.ls_ql.and.ls_qi.and.ls_qr.and.ls_qs.and.ls_qg.and.ls_qh
 
 ! Initialize ensemble contribution to zero
 !$omp parallel do schedule(dynamic,1) private(jj)

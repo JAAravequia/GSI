@@ -1133,6 +1133,7 @@ contains
     real(r_kind),pointer,dimension(:,:,:):: ges_qr=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_qs=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_qg=>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qh=>NULL()
 
     real(r_kind),pointer,dimension(:,:,:):: ges_fice=>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_frain=>NULL()

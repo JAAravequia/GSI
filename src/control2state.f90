@@ -121,7 +121,7 @@ real(r_kind),pointer,dimension(:,:)   :: cv_cldch=>NULL()
 integer(i_kind), parameter :: nsvars = 12
 integer(i_kind) :: isps(nsvars)
 character(len=4), parameter :: mysvars(nsvars) = (/  &  ! vars from ST needed here
-                'u   ', 'v   ', 'prse', 'q   ', 'tsen', 'ql  ', 'qi  ', 'w   ' i, &
+                'u   ', 'v   ', 'prse', 'q   ', 'tsen', 'ql  ', 'qi  ', 'w   ', &
                 'qr  ', 'qs  ', 'qg  ', 'qh  ' /)
 logical :: ls_u,ls_v,ls_w,ls_prse,ls_q,ls_tsen,ls_ql,ls_qi
 logical :: ls_qr,ls_qs,ls_qg,ls_qh
