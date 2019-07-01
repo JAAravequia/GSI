@@ -118,7 +118,7 @@ subroutine readpairs_aerosol(npe,mype,numcases)
             call exit(999)
          end if 
       end do
-      z4all=z4all*1e+09 ! convert the units from kg/kg to µg/kg
+      if (modelname=='ngac') z4all=z4all*1e+09 ! convert the units from kg/kg to µg/kg
     end if
 
     call mpi_scatterv(z4all,spec_send,disp_spec,mpi_rtype,&

@@ -1,20 +1,20 @@
 #!/bin/bash
 #SBATCH -A da-cpu
 #SBATCH -J FV3AeroNMCStats
-#SBATCH -q batch
+#SBATCH -q batch 
 #SBATCH -o SLURM_%x.o%j
 #SBATCH -e SLURM_%x.e%j
 #SBATCH --export=ALL
 #SBATCH --time=02:00:00
 #SBATCH --nodes=8
-#SBATCH --tasks-per-node=1
+#SBATCH --tasks-per-node=4
 
 set -x
 export NTHREADS=2
 
-export exp="test_FV3AeroNMCStats_192"
+export exp="jcap192_allfix1_nobias_FV3AeroNMCStats_194"
 export base=/scratch4/NCEPDEV/da/save/Cory.R.Martin/GSI/ProdGSI/util/NMC_Bkerror/
-export calcstats=$base/sorc_aero/calcstats_aerosol.exe
+export calcstats=$base/sorc_aero_me/calcstats_aerosol.exe
 export datadir=/scratch4/NCEPDEV/da/noscrub/Cory.R.Martin/FV3GFS-GSDChem/
 export season='test'
 export resin='C384'
@@ -54,10 +54,11 @@ cd $tmpdir
 cp $calcstats ./stats.x
 
 #jcap=766,jcapin=766,jcapsmooth=766,nsig=64,nlat=386,nlon=768,maxcases=200,hybrid=.true.,smoothdeg=0.5,
+   #biasrm=.true.,vertavg=.true.,use_gfs_nemsio=.true.,aeromodel='fv3'
 cat << EOF > stats.parm
  &NAMSTAT
-   jcap=766,jcapin=766,jcapsmooth=766,nsig=64,nlat=192,nlon=384,maxcases=200,hybrid=.true.,smoothdeg=0.5,
-   biasrm=.true.,vertavg=.true.,use_nemsio=.true.,modelname='fv3'
+   jcap=192,jcapin=768,jcapsmooth=192,nsig=64,nlat=194,nlon=384,maxcases=200,hybrid=.true.,smoothdeg=0.5,
+   biasrm=.false.,vertavg=.true.,use_gfs_nemsio=.true.,aeromodel='fv3'
  /
 EOF
 
@@ -101,6 +102,9 @@ export OMP_NUM_THREADS=$NTHREADS
 export KMP_STACKSIZE=512MB   #2048000
 export KMP_AFFINITY=scatter
 export APRUN="srun"
+export I_MPI_ADJUST_GATHERV=3
+export PSM2_MQ_RECVREQS_MAX=4000000
+
 ulimit -s unlimited
 
 $APRUN ./stats.x < stats.parm

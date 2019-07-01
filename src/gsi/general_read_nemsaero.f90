@@ -547,6 +547,7 @@ subroutine aerosol_reload(grd,ae_d1,ae_d2,ae_d3,ae_d4,ae_d5, &
         end do
      end select
   end do
+!$omp end parallel do
   icount=0
   ilev=0
   return

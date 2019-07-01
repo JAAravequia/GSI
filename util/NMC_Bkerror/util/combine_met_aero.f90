@@ -101,12 +101,12 @@ program combine_met_aero
     write(47) hscale3(:,:,i)
     write(47) vscale3(:,:,i)
   end do
-  write(47) var(1+nvars3), nsigi
-  print *, var(1+nvars3), nsigi
+  write(47) var(1+nvars3), 1
+  print *, var(1+nvars3), 1
   write(47) stdevps
   write(47) hscaleps
-  write(47) var(2+nvars3), nsigi
-  print *, var(2+nvars3), nsigi
+  write(47) var(2+nvars3), 1
+  print *, var(2+nvars3), 1
   write(47) stdevsst
   write(47) hscalesst
   do i=1,nvarsa

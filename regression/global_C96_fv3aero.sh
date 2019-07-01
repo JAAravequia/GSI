@@ -14,7 +14,9 @@ tmpdir=$tmpdir/$tmpregdir/${exp}
 savdir=$savdir/outC96_fv3aero/${exp}
 
 # Specify GSI fixed field and data directories.
-fixcrtm=${fixcrtm:-$CRTM_FIX}
+# 6/18/19 - M. Lueken's FIX files are missing v.modis*TauCoeff
+#fixcrtm=${fixcrtm:-$CRTM_FIX}
+fixcrtm=/scratch4/NCEPDEV/da/save/Cory.R.Martin/CRTM/fix
 
 # Set variables used in script
 #   CLEAN up $tmpdir when finished (YES=remove, NO=leave alone)
@@ -34,7 +36,7 @@ prefix_obs=gfs.t${hha}z.
 prefix_prep=$prefix_obs
 prefix_tbc=gdas1.t${hhg}z
 prefix_sfc=gfsC96.t${hhg}z
-prefix_atm=gfsC96.t${hha}z
+prefix_atm=gfsC96.t${hhg}z
 suffix_obs=gdas.${global_C96_fv3aero_adate}
 suffix_bias=gdas.${gdate}
 
@@ -170,6 +172,7 @@ EOF
 #   bftab_sst= bufr table for sst ONLY needed for sst retrieval (retrieval=.true.)
 
 berror=/scratch4/NCEPDEV/da/save/Cory.R.Martin/GSI/aero_regtest/fv3aero_berror.l64y194.f77
+berror=/scratch4/NCEPDEV/da/save/Cory.R.Martin/Utilities/berror_gsm2fv3/global_aeroberror.SON.l64y194.f77
 
 emiscoef_IRwater=$fixcrtm/Nalli.IRwater.EmisCoeff.bin
 emiscoef_IRice=$fixcrtm/NPOESS.IRice.EmisCoeff.bin
@@ -200,21 +203,23 @@ atmsbeaminfo=$fixgsi/atms_beamwidth.txt
 if [[ $exp == *"updat"* ]]; then
    $ncp $gsiexec_updat  ./gsi.x
 elif [[ $exp == *"contrl"* ]]; then
-   $ncp $gsiexec_contrl ./gsi.x
+   $ncp $gsiexec_updat ./gsi.x
+   #$ncp $gsiexec_contrl ./gsi.x
 fi
 
+mkdir ./crtm_coeffs
 $ncp $berror   ./berror_stats
-$ncp $emiscoef_IRwater ./Nalli.IRwater.EmisCoeff.bin
-$ncp $emiscoef_IRice ./NPOESS.IRice.EmisCoeff.bin
-$ncp $emiscoef_IRsnow ./NPOESS.IRsnow.EmisCoeff.bin
-$ncp $emiscoef_IRland ./NPOESS.IRland.EmisCoeff.bin
-$ncp $emiscoef_VISice ./NPOESS.VISice.EmisCoeff.bin
-$ncp $emiscoef_VISland ./NPOESS.VISland.EmisCoeff.bin
-$ncp $emiscoef_VISsnow ./NPOESS.VISsnow.EmisCoeff.bin
-$ncp $emiscoef_VISwater ./NPOESS.VISwater.EmisCoeff.bin
-$ncp $emiscoef_MWwater ./FASTEM6.MWwater.EmisCoeff.bin
-$ncp $aercoef  ./AerosolCoeff.bin
-$ncp $cldcoef  ./CloudCoeff.bin
+$ncp $emiscoef_IRwater ./crtm_coeffs/Nalli.IRwater.EmisCoeff.bin
+$ncp $emiscoef_IRice ./crtm_coeffs/NPOESS.IRice.EmisCoeff.bin
+$ncp $emiscoef_IRsnow ./crtm_coeffs/NPOESS.IRsnow.EmisCoeff.bin
+$ncp $emiscoef_IRland ./crtm_coeffs/NPOESS.IRland.EmisCoeff.bin
+$ncp $emiscoef_VISice ./crtm_coeffs/NPOESS.VISice.EmisCoeff.bin
+$ncp $emiscoef_VISland ./crtm_coeffs/NPOESS.VISland.EmisCoeff.bin
+$ncp $emiscoef_VISsnow ./crtm_coeffs/NPOESS.VISsnow.EmisCoeff.bin
+$ncp $emiscoef_VISwater ./crtm_coeffs/NPOESS.VISwater.EmisCoeff.bin
+$ncp $emiscoef_MWwater ./crtm_coeffs/FASTEM6.MWwater.EmisCoeff.bin
+$ncp $aercoef  ./crtm_coeffs/AerosolCoeff.bin
+$ncp $cldcoef  ./crtm_coeffs/CloudCoeff.bin
 $ncp $satangl  ./satbias_angle
 $ncp $scaninfo ./scaninfo
 $ncp $satinfo  ./satinfo
@@ -228,12 +233,11 @@ $ncp $aeroinfo ./aeroinfo
 $ncp $hybens_info ./hybens_info
 $ncp $atmsbeaminfo ./atms_beamwidth.txt
 
-# Copy CRTM coefficient files based on entries in satinfo file
-for file in `awk '{if($1!~"!"){print $1}}' ./satinfo | sort | uniq` ;do
-    $ncp $fixcrtm/${file}.SpcCoeff.bin ./
-    $ncp $fixcrtm/${file}.TauCoeff.bin ./
-done
-
+# Copy CRTM coefficient files
+$ncp $fixcrtm/v.modis_aqua.SpcCoeff.bin ./crtm_coeffs/v.modis_aqua.SpcCoeff.bin
+$ncp $fixcrtm/v.modis_aqua.TauCoeff.bin ./crtm_coeffs/v.modis_aqua.TauCoeff.bin
+$ncp $fixcrtm/v.modis_terra.SpcCoeff.bin ./crtm_coeffs/v.modis_terra.SpcCoeff.bin
+$ncp $fixcrtm/v.modis_terra.TauCoeff.bin ./crtm_coeffs/v.modis_terra.TauCoeff.bin
 
 # Copy observational data to $tmpdir
 ln -s -f $global_C96_fv3aero_obs/${prefix_obs}modisaod.tm00.bufr ./modisaodbufr
@@ -255,13 +259,13 @@ elif [[ "$endianness" = "Little_Endian" ]]; then
 fi
 
 if [[ "$endianness" = "Big_Endian" ]]; then
-   ln -s -f $global_T62_obs/${prefix_atm}.sigf03        ./sigf03
-   ln -s -f $global_T62_obs/${prefix_atm}.sigf06        ./sigf06
-   ln -s -f $global_T62_obs/${prefix_atm}.sigf09        ./sigf09
+   ln -s -f $global_C96_fv3aero_obs/${prefix_atm}.sigf03        ./sigf03
+   ln -s -f $global_C96_fv3aero_obs/${prefix_atm}.sigf06        ./sigf06
+   ln -s -f $global_C96_fv3aero_obs/${prefix_atm}.sigf09        ./sigf09
 elif [[ "$endianness" = "Little_Endian" ]]; then
-   ln -s -f $global_T62_obs/${prefix_atm}.sigf03.le     ./sigf03
-   ln -s -f $global_T62_obs/${prefix_atm}.sigf06.le     ./sigf06
-   ln -s -f $global_T62_obs/${prefix_atm}.sigf09.le     ./sigf09
+   ln -s -f $global_C96_fv3aero_obs/${prefix_atm}.sigf03.le     ./sigf03
+   ln -s -f $global_C96_fv3aero_obs/${prefix_atm}.sigf06.le     ./sigf06
+   ln -s -f $global_C96_fv3aero_obs/${prefix_atm}.sigf09.le     ./sigf09
 fi
 
 # Run GSI
