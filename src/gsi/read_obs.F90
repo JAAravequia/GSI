@@ -893,6 +893,7 @@ subroutine read_obs(ndata,mype)
            .or. mls &
            .or. obstype == 'ompslp' &
            ) then
+       if(obstype == 'ompslp')print *,"XXXX found ompslp"
           ditype(i) = 'ozone'
        else if (obstype == 'mopitt') then
           ditype(i) = 'co'
@@ -927,9 +928,11 @@ subroutine read_obs(ndata,mype)
              if(trim(dsis(i)) == trim(nusis(j)) .and. iuse_rad(j) > minuse)nuse=.true.
           end do
        else if(ditype(i) == 'ozone')then
+          print *,"YYY ditype(i) == ozone"
           if(diag_ozone .and. .not. reduce_diag)minuse=-2
           do j=1,jpch_oz
              if(trim(dsis(i)) == trim(nusis_oz(j)) .and. iuse_oz(j) > minuse)nuse=.true.
+          print *,j,nuse
           end do
        else if(ditype(i) == 'pcp')then
           if(diag_pcp .and. .not. reduce_diag)minuse=-2
@@ -1183,8 +1186,10 @@ subroutine read_obs(ndata,mype)
     mype_sub=-999
     mype_root=0
     next_mype=0
+    print *,"MMM mmdat=",mmdat
     do ii=1,mmdat
        i=npe_order(ii)
+    print *,"LLLL ",ii,i,npe_sub(i)
        if(npe_sub(i) > 0)then
           next_mype=mype_root_sub(i)
           do k=1,npe_sub(i)
@@ -1197,12 +1202,15 @@ subroutine read_obs(ndata,mype)
 
           call setcomm(iworld,iworld_group,npe_sub(i),mype_work(1,i),&
                  mpi_comm_sub(i),ierror)
+      print *,"NNN ",ii,i,iworld,iworld_group,npe_sub(i),mype_work(1,i)
        end if
 
     end do
     mype_airobst = mype_root
     do ii=1,mmdat
        i=npe_order(ii)
+       if(dtype(i) == 'ompslp')print *,"ZZZ=",i,mype,npe_sub(i), &
+iworld,iworld_group, mype_work(1,i), mpi_comm_sub(i)
        if(mype == 0 .and. npe_sub(i) > 0) write(6,'(1x,a,i4,1x,a,1x,2a,2i4,1x,i6,1x,i6,1x,i6)') &
         'READ_OBS:  read ',i,dtype(i),dsis(i),' using ntasks=',ntasks(i),mype_root_sub(i), & 
                read_rec(i),read_ears_rec(i),read_db_rec(i)
