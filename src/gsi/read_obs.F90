@@ -1186,10 +1186,8 @@ subroutine read_obs(ndata,mype)
     mype_sub=-999
     mype_root=0
     next_mype=0
-    print *,"MMM mmdat=",mmdat
     do ii=1,mmdat
        i=npe_order(ii)
-    print *,"LLLL ",ii,i,npe_sub(i)
        if(npe_sub(i) > 0)then
           next_mype=mype_root_sub(i)
           do k=1,npe_sub(i)
@@ -1202,13 +1200,14 @@ subroutine read_obs(ndata,mype)
 
           call setcomm(iworld,iworld_group,npe_sub(i),mype_work(1,i),&
                  mpi_comm_sub(i),ierror)
-      print *,"NNN ",ii,i,iworld,iworld_group,npe_sub(i),mype_work(1,i)
        end if
 
     end do
     mype_airobst = mype_root
+    print *,"MMMMM ",mdmdat
     do ii=1,mmdat
        i=npe_order(ii)
+   print *,"KKK ",ii,i,npe_order(ii),dtype(i),mype,npe_sub(i)
        if(dtype(i) == 'ompslp')print *,"ZZZ=",i,mype,npe_sub(i), &
 iworld,iworld_group, mype_work(1,i), mpi_comm_sub(i)
        if(mype == 0 .and. npe_sub(i) > 0) write(6,'(1x,a,i4,1x,a,1x,2a,2i4,1x,i6,1x,i6,1x,i6)') &
