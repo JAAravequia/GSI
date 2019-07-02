@@ -36,7 +36,8 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use guess_grids, only: tropprs,sfcmod_mm5
   use guess_grids, only: ges_lnprsl,comp_fact10,pt_ll,pbl_height
   use constants, only: zero,half,one,tiny_r_kind,two,cg_term, &
-           three,rd,grav,four,five,huge_single,r1000,wgtlim,r10,r400
+           three,rd,grav,four,five,huge_single,r1000,wgtlim,r10,r400,&
+           r100,fv !for similarity
   use constants, only: grav_ratio,flattening,deg2rad, &
        grav_equator,somigliana,semi_major_axis,eccentricity
   use jfunc, only: jiter,last,jiterstart,miter
@@ -277,9 +278,13 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
 
 ! for similarity theory
-  real(r_kind)pres1,pres2,tmp1,tmp2,qq1,qq2,uu1,vv1,hgt1
-  real(r_kind)tv1,tv2,psit2,psit
-  integer(i_kind) iza
+  integer(i_kind) :: msges
+  integer(i_kind) :: iza
+  logical iqtflg
+  real(r_kind) :: tgges,roges,regime
+  real(r_kind) :: tv1,tv2,psit2,psit
+  real(r_kind) :: u10ges,v10ges,t2ges,q2ges,psges2,f10ges
+  real(r_kind) :: pres1,pres2,tmp1,tmp2,qq1,qq2,uu1,vv1,hgt1
   real(r_kind),allocatable,dimension(:,:,:  )::ges_presgrid1
   real(r_kind),allocatable,dimension(:,:,:  )::ges_presgrid2
   real(r_kind),allocatable,dimension(:,:,:  )::ges_tmpgrid1
@@ -290,6 +295,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),allocatable,dimension(:,:,:  )::ges_vgrid1
   real(r_kind),allocatable,dimension(:,:,:  )::ges_hgtgrid1
   real(r_kind),allocatable,dimension(:,:,:  )::ges_sfrgrid
+  real(r_kind),allocatable,dimension(:,:,:  )::ges_tggrid
 
   save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
@@ -299,7 +305,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 ! If require guess vars available, extract from bundle ...
   call init_vars_
-  call init_vars10_
+  call init_vars11_
 
   n_alloc(:)=0
   m_alloc(:)=0
@@ -631,7 +637,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            endif
            v_ind = getindex(svars3d, 'v')
            if (v_ind < 0) then
-              print *, 'Error: no variable v in state vector. Exiting.'
+              print*, 'Error: no variable v in state vector. Exiting.'
               call stop2(1300)
            endif
 
@@ -652,6 +658,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            endif
            factw=one
         else
+        print*,'xyz---zob,zges=',zob,zges
            !if (itype.eq.295.or.itype.eq.288) then
               !print*, "Factw will change!  stnid,zob,zges(1)=",station_id,zob,zges(1)
            !endif
@@ -664,6 +671,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            end if
 
            if (zob <= ten) then
+           print*,'xyz---zob<10'
               if (zob <= zero) then
                  print*, "WARNING: Negative ZOB for station,zob,type (correcting to 10 m):",station_id,zob,itype
                  zob=ten
@@ -675,13 +683,16 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                  !x factw=log(zob/defrough)/log(ten/defrough)
                  !x use the similarity theory to calculate the 10m wind
                  msges = 1 !for land
+                 write(*,*)'xyz---msges in setupw'
                  call tintrp2a11(ges_presgrid1,pres1,dlat,dlon,dtime,hrdifsig,&
                                  mype,nfldsig)
+                 write(*,*)'xyz---pres1 in setupw'
                  call tintrp2a11(ges_presgrid2,pres2,dlat,dlon,dtime,hrdifsig,&
                                   mype,nfldsig)
                  !x convert input pressure variables from Pa to cb.
                  pres1  = 0.001_r_kind*pres1
                  pres2  = 0.001_r_kind*pres2
+                 print*,'pres1,pres2=', pres1,pres2
    
                  call tintrp2a11(ges_tmpgrid1,tmp1,dlat,dlon,dtime,hrdifsig,&
                                  mype,nfldsig)
@@ -699,25 +710,23 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                                  mype,nfldsig)
                  call tintrp2a11(ges_sfrgrid,roges,dlat,dlon,dtime,hrdifsig,&
                                  mype,nfldsig)
+                 call tintrp2a11(ges_tggrid,tgges,dlat,dlon,dtime,hrdifsig,&
+                                 mype,nfldsig)
                  !convert sensible temperature to virtual temperature
                  tv1=tmp1*((one+fv*qq1))
                  tv2=tmp2*((one+fv*qq2))
+                 tgges=tgges*((one+fv*qq2))
 
                  !unit change: originally m --> cm
                  roges=roges*r100
 
                  psges2  = psges          ! keep in cb
 
-                 call SFC_WTQ_FWD (psges2, vlst,&
+                 call SFC_WTQ_FWD (psges2, tgges,&
                       pres1, tmp1, qq1, uu1, vv1, &
                       pres2, tmp2, qq2, hgt1, roges, msges, &
                       !output variables
                       f10ges,u10ges,v10ges, t2ges, q2ges, regime, iqtflg)
-
-                 call SFC_WTQ_FWD (psges2, tgges,&
-                      prsltmp2(1), tvtmp(1), qtmp(1), utmp(1), vtmp(1), &
-                      prsltmp2(2), tvtmp(2), qtmp(2), hsges(1), roges, msges, &
-                      f10ges,ugesin,vgesin, t2ges, q2ges, regime, iqtflg) 
 
                  factw=one
               end if
@@ -1464,7 +1473,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 ! Release memory of local guess arrays
   call final_vars_
-  call final_vars10
+  call final_vars11
 
 ! Write information to diagnostic file
   if(conv_diagsave)then
@@ -1610,7 +1619,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   endif
   end subroutine init_vars_
 
-   subroutine init_vars10
+   subroutine init_vars11_
 
    real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
    real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
@@ -1799,7 +1808,25 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
          write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
-  end subroutine init_vars10
+!    get tggrid ...
+     varname='tggrid'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
+     if (istatus==0) then
+         if(allocated(ges_tggrid))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_tggrid(size(rank2,1),size(rank2,2),nfldsig))
+         ges_tggrid(:,:,1)=rank2
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
+            ges_tggrid(:,:,ifld)=rank2
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
+  end subroutine init_vars11_
 
 
   subroutine init_netcdf_diag_
@@ -2042,7 +2069,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
     if(allocated(ges_ps)) deallocate(ges_ps)
   end subroutine final_vars_
 
-   subroutine final_vars10
+   subroutine final_vars11
     if(allocated(ges_presgrid1)) deallocate(ges_presgrid1)
     if(allocated(ges_presgrid2)) deallocate(ges_presgrid2)
     if(allocated(ges_tmpgrid1)) deallocate(ges_tmpgrid1)
@@ -2053,8 +2080,9 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
     if(allocated(ges_vgrid1)) deallocate(ges_vgrid1)
     if(allocated(ges_hgtgrid1)) deallocate(ges_hgtgrid1)
     if(allocated(ges_sfrgrid)) deallocate(ges_sfrgrid)
+    if(allocated(ges_tggrid)) deallocate(ges_tggrid)
 
-  end subroutine final_vars10
+  end subroutine final_vars11
 
 
 end subroutine setupw

@@ -474,6 +474,11 @@ subroutine convert_binary_2d
        write(6,*)' convert_binary_2d: max,min SFRGRID=',maxval(field2),minval(field2)
        write(6,*)' convert_binary_2d: mid SFRGRID=',field2(nlon_regional/2,nlat_regional/2)
        write(lendian_out)field2
+
+       read(in_unit)field2             !TGGRID
+       write(6,*)' convert_binary_2d: max,min TGGRID=',maxval(field2),minval(field2)
+       write(6,*)' convert_binary_2d: mid TGGRID=',field2(nlon_regional/2,nlat_regional/2)
+       write(lendian_out)field2
      end if
 
      close(in_unit)
@@ -757,7 +762,7 @@ subroutine read_2d_guess(mype)
   integer(i_kind) i_uwnd10m,i_vwnd10m
   !LST
   integer(i_kind) i_presgrid1,i_presgrid2,i_tmpgrid1,i_tmpgrid2,i_qgrid1,i_qgrid2
-  integer(i_kind) i_ugrid1,i_vgrid1,i_hgtgrid1,i_sfrgrid
+  integer(i_kind) i_ugrid1,i_vgrid1,i_hgtgrid1,i_sfrgrid,i_tggrid
   integer(i_kind) isli_this
   real(r_kind) psfc_this,sm_this,xice_this
   integer(i_kind) icwmr,ier,istatus
@@ -766,7 +771,7 @@ subroutine read_2d_guess(mype)
   logical ihave_cldch,ihave_uwnd10m,ihave_vwnd10m
   !LST
   logical ihave_presgrid1,ihave_presgrid2,ihave_tmpgrid1,ihave_tmpgrid2,ihave_qgrid1,ihave_qgrid2 
-  logical ihave_ugrid1,ihave_vgrid1,ihave_hgtgrid1,ihave_sfrgrid
+  logical ihave_ugrid1,ihave_vgrid1,ihave_hgtgrid1,ihave_sfrgrid,ihave_tggrid
   real(r_kind),pointer,dimension(:,:  )::ges_gust   =>NULL()
   real(r_kind),pointer,dimension(:,:  )::ges_vis    =>NULL()
   real(r_kind),pointer,dimension(:,:  )::ges_pblh   =>NULL()
@@ -801,6 +806,7 @@ subroutine read_2d_guess(mype)
   real(r_kind),pointer,dimension(:,:  )::ges_vgrid1=>NULL()
   real(r_kind),pointer,dimension(:,:  )::ges_hgtgrid1=>NULL()
   real(r_kind),pointer,dimension(:,:  )::ges_sfrgrid=>NULL()
+  real(r_kind),pointer,dimension(:,:  )::ges_tggrid=>NULL()
   logical print_verbose
   logical use_lst
 
@@ -830,7 +836,7 @@ subroutine read_2d_guess(mype)
 
 ! Following is for convenient 2D input
   if (use_lst) then !LST
-     num_2d_fields=40
+     num_2d_fields=41
   else
      num_2d_fields=30! Adjust according to content of RTMA restart file ---- should this number be in a namelist or anavinfo file at some point?
   end if
@@ -1039,6 +1045,10 @@ subroutine read_2d_guess(mype)
 
      i=i+1 ; i_sfrgrid=i                                         ! sfrgrid
      write(identity(i),'("record ",i3,"--sfrgrid")')i
+     jsig_skip(i)=0 ; igtype(i)=1
+
+     i=i+1 ; i_tggrid=i                                         ! tggrid
+     write(identity(i),'("record ",i3,"--tggrid")')i
      jsig_skip(i)=0 ; igtype(i)=1
   end if
 
@@ -1262,6 +1272,9 @@ subroutine read_2d_guess(mype)
 
            call gsi_bundlegetpointer (gsi_metguess_bundle(it),'sfrgrid',ges_sfrgrid,ier)
            ihave_sfrgrid=ier==0
+
+           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'tggrid',ges_tggrid,ier)
+           ihave_tggrid=ier==0
         end if
 
         i_0=(it-1)*num_2d_fields
@@ -1371,6 +1384,9 @@ subroutine read_2d_guess(mype)
 
                  if (ihave_sfrgrid) &
                     ges_sfrgrid(j,i)=real(all_loc(j,i,i_0+i_sfrgrid),r_kind)
+
+                 if (ihave_tggrid) &
+                    ges_tggrid(j,i)=real(all_loc(j,i,i_0+i_tggrid),r_kind)
               end if
 
            end do
@@ -1465,7 +1481,7 @@ subroutine wr2d_binary(mype)
   integer(i_kind) i_wspd10m,i_td2m,i_mxtm,i_mitm,i_pmsl,i_howv,i_uwnd10m,i_vwnd10m
   !x LST
   integer(i_kind) i_presgrid1,i_presgrid2,i_tmpgrid1,i_tmpgrid2,i_qgrid1,i_qgrid2,&
-                  i_ugrid1,i_vgrid1,i_hgtgrid1,i_sfrgrid
+                  i_ugrid1,i_vgrid1,i_hgtgrid1,i_sfrgrid,i_tggrid
   integer(i_kind) num_2d_fields,num_all_fields,num_all_pad
   integer(i_kind) regional_time0(6),nlon_regional0,nlat_regional0,nsig0
   real(r_kind) psfc_this
@@ -1526,7 +1542,8 @@ subroutine wr2d_binary(mype)
      i_vgrid1=i_ugrid1+1
      i_hgtgrid1=i_vgrid1+1
      i_sfrgrid=i_hgtgrid1+1
-     num_2d_fields=i_sfrgrid     ! - should always equal the last integer from the
+     i_tggrid=i_sfrgrid+1
+     num_2d_fields=i_tggrid     ! - should always equal the last integer from the
                                  ! -   preceding list
   else
      num_2d_fields=i_vwnd10m      ! - should always equal the last integer from the
@@ -1773,11 +1790,12 @@ subroutine wr2d_binary(mype)
   caux(22)='vgrid1'  ; iaux(22)=i_vgrid1
   caux(23)='hgtgrid1'   ; iaux(23)=i_hgtgrid1
   caux(24)='sfrgrid'    ; iaux(24)=i_sfrgrid
+  caux(25)='tggrid'    ; iaux(25)=i_tggrid
 
 
   !LST
   if (use_lst) then
-     kaux=24
+     kaux=25
   else
      !kaux=14  !Adjust as you add variables
   end if
