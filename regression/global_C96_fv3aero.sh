@@ -15,8 +15,9 @@ savdir=$savdir/outC96_fv3aero/${exp}
 
 # Specify GSI fixed field and data directories.
 # 6/18/19 - M. Lueken's FIX files are missing v.modis*TauCoeff
-#fixcrtm=${fixcrtm:-$CRTM_FIX}
-fixcrtm=/scratch4/NCEPDEV/da/save/Cory.R.Martin/CRTM/fix
+fixcrtm=${fixcrtm:-$CRTM_FIX}
+#fixcrtm=/scratch4/NCEPDEV/da/save/Cory.R.Martin/CRTM/fix
+fixcrtm=/gpfs/dell2/emc/modeling/noscrub/Cory.R.Martin/CRTM/fix
 
 # Set variables used in script
 #   CLEAN up $tmpdir when finished (YES=remove, NO=leave alone)
@@ -171,8 +172,7 @@ EOF
 #   bufrtable= text file ONLY needed for single obs test (oneobstest=.true.)
 #   bftab_sst= bufr table for sst ONLY needed for sst retrieval (retrieval=.true.)
 
-berror=/scratch4/NCEPDEV/da/save/Cory.R.Martin/GSI/aero_regtest/fv3aero_berror.l64y194.f77
-berror=/scratch4/NCEPDEV/da/save/Cory.R.Martin/Utilities/berror_gsm2fv3/global_aeroberror.SON.l64y194.f77
+berror=$fixgsi/Big_Endian/fv3aero_berror.l64y194.f77
 
 emiscoef_IRwater=$fixcrtm/Nalli.IRwater.EmisCoeff.bin
 emiscoef_IRice=$fixcrtm/NPOESS.IRice.EmisCoeff.bin
@@ -190,9 +190,8 @@ scaninfo=$fixgsi/global_scaninfo.txt
 satinfo=$fixgsi/global_satinfo.txt
 cloudyinfo=$fixgsi/cloudy_radiance_info.txt
 convinfo=$fixgsi/global_convinfo_reg_test.txt
-#anavinfo=$fixgsi/global_anavinfo_ozonly.l64.txt
-anavinfo=/scratch4/NCEPDEV/da/save/Cory.R.Martin/GSI/aero_regtest/anavinfo_fv3aero
-aeroinfo=/scratch4/NCEPDEV/da/save/Cory.R.Martin/GSI/aero_regtest/fv3aero_aeroinfo.txt
+anavinfo=$fixgsi/anavinfo_fv3aero
+aeroinfo=$fixgsi/aeroinfo_fv3aero
 ozinfo=$fixgsi/global_ozinfo.txt
 pcpinfo=$fixgsi/global_pcpinfo.txt
 hybens_info=$fixgsi/global_hybens_info.l64.txt

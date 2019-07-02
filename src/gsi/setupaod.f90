@@ -49,7 +49,7 @@
   use crtm_spccoeff, only: sc
   use obsmod, only: ianldate,mype_diaghdr,nchan_total, &
            dplat,obsdiags,obsptr,lobsdiagsave,lobsdiag_allocated,&
-           dirname,time_offset
+           dirname
   use obsmod, only: obs_diag,luse_obsdiag
   use nc_diag_write_mod, only: nc_diag_init, nc_diag_header, nc_diag_metadata, &
        nc_diag_write, nc_diag_data2d, nc_diag_chaninfo_dim_set, nc_diag_chaninfo
@@ -72,7 +72,7 @@
   use qcmod, only: ifail_crtm_qc
   use radiance_mod, only: rad_obs_type,radiance_obstype_search
   use radiance_mod, only: n_aerosols_fwd
-  use guess_grids, only: ntguessig,nfldsig,hrdifsig
+  use guess_grids, only: ntguessig,nfldsig
   use gsi_chemguess_mod, only: gsi_chemguess_get
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle

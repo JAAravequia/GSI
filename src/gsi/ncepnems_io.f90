@@ -135,8 +135,6 @@ module ncepnems_io
   public tran_gfssfc
   public error_msg
 
-  public aodratio
-
   interface read_nems
      module procedure read_
   end interface
@@ -178,7 +176,6 @@ module ncepnems_io
   end interface
 
   character(len=*),parameter::myname='ncepnems_io'
-  real(r_kind), allocatable, dimension(:,:,:) :: aodratio
 
 contains
 
@@ -481,10 +478,9 @@ contains
        ptr3d = p_co2
     enddo
 
-    if ( mype == 0 ) write(6,*) 'n_aerosols_fwd and aerosol_names_fwd',n_aerosols_fwd,aerosol_names_fwd
 !   Read in Aerosol field via nemsio
     if ( n_aerosols_fwd > 0 ) then
-       if ( mype == 0 ) write(6,*) n_aerosols_fwd,aerosol_names_fwd
+       if ( mype == 0 ) write(6,*) 'n_aerosols_fwd and aerosol_names_fwd',n_aerosols_fwd,aerosol_names_fwd
        call gsi_gridcreate(chem_grid,lat2,lon2,nsig)
        call gsi_bundlecreate(chem_bundle,chem_grid,'aux-chem-read',istatus,names3d=aerosol_names_fwd)
 
@@ -493,8 +489,6 @@ contains
 !      Create temporary communication information fore read routines
        call general_sub2grid_create_info(grd_ae,inner_vars,grd_a%nlat,grd_a%nlon,grd_a%nsig,num_fields,regional)
 
-       if (mype==0) write(6,*) "after sub2grid_create",num_fields,grd_a%nlat,grd_a%nlon,grd_a%nsig
-    
        if (lread_ext_aerosol) then 
           anfld=nfldaer
        else

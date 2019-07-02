@@ -10,7 +10,7 @@ SUBROUTINE aero_guess_at_obs_locations(&
   USE gridmod, ONLY: istart,jstart,nlon,nlat,lon1
   USE constants, ONLY: max_varname_length, zero, one
   USE mpimod, ONLY: mype
-  USE guess_grids, ONLY: hrdifsig,nfldsig,hrdifsfc,nfldsfc,ntguessfc
+  USE guess_grids, ONLY: hrdifsig,nfldsig
 
   IMPLICIT NONE
 
