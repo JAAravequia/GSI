@@ -1217,12 +1217,7 @@ contains
                   start_index,end_index,               & !pat
                   ierr                                 )
              do k=1,nsig_regional
-! commented out next 5 lines because the negative reflectivity is valid values in real observation.
-!               do i=1,nlon_regional
-!                 do j=2,nlat_regional
-!                    field3(i,j,k) = (max(field3(i,j,k),zero))
-!                 enddo
-!               enddo
+! notes: the negative reflectivity is valid value in real observation.
                if(print_verbose)then
                   write(6,*)' k,max,min,mid Dbz=',k,maxval(field3(:,:,k)),minval(field3(:,:,k)), &
                               field3(nlon_regional/2,nlat_regional/2,k)

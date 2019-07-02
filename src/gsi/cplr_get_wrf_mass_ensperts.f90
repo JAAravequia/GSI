@@ -622,6 +622,10 @@ contains
       character(len=24),parameter :: myname_ = 'general_read_wrf_mass'
 
 
+      associate( this => this ) ! eliminates warning for unused dummy argument
+                                ! needed for binding
+      end associate
+
   !
   ! OPEN ENSEMBLE MEMBER DATA FILE
 30 format(I0,': read ',A)

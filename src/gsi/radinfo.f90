@@ -1190,15 +1190,15 @@ contains
        end do
     else
        do jch=1,jpch_rad
-          do ip=1,npred
-             if(reset_bad_radbc) then
+          if(reset_bad_radbc) then
+             do ip=1,npred
                 if(abs(predx(ip,jch)) > 9999.0_r_kind) then
                    write(6,*) 'Bad coefficient:', jch,nusis(jch),nuchan(jch), &
                           predx(ip,jch),' reset to 0.0'
                    predx(ip,jch)=0.0_r_kind
                 endif
-             endif
-          enddo
+             enddo
+          endif
           write(lunout,'(I5,1x,a20,1x,i5,2e15.6,1x,I5/2(4x,10f12.6/))') jch,nusis(jch),nuchan(jch),&
                tlapmean(jch),tsum_tlapmean(jch),count_tlapmean(jch),(predx(ip,jch),ip=1,npred)
        end do

@@ -374,9 +374,6 @@ fileopen: if (if_input_exist) then
           num_dbz2mindbz = num_dbz2mindbz + 1
         end if
  
-!  commented out the following line; recommend this type of QC in radar preprocessor, not here
-!        if ( dbzQC(i,j,k) < 10._r_kind .and. dbzQC(i,j,k) > 0.0_r_kind ) cycle
- 
         thishgt = height(k) ! unit : meter
         hgt     = thishgt
  

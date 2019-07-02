@@ -650,7 +650,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
                     call setupcldtot(lunin,mype,bwork,awork(1,i_cldtot),nele,nobs,is,conv_diagsave)
                  else
                     read(lunin,iostat=ier)
-                 if(ier/=0) call die('setuprhsall','read(), iostat =',ier)
+                    if(ier/=0) call die('setuprhsall','read(), iostat =',ier)
                  endif
 !             skip this kind of data because they are not used in the var analysis
               else if(obstype == 'gos_ctp' .or. &
@@ -742,10 +742,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   if (conv_diagsave.and.binary_diag) close(7)
   if (light_diagsave) close(55)
 
-  if(l_PBL_pseudo_SurfobsT.or.l_PBL_pseudo_SurfobsQ.or.l_PBL_pseudo_SurfobsUV) then
-  elseif (i_cloud_q_innovation==2) then
-  !don't sort
-  else
+  if(.not.(l_PBL_pseudo_SurfobsT  .or.  l_PBL_pseudo_SurfobsQ   .or. &
+           l_PBL_pseudo_SurfobsUV .or. (i_cloud_q_innovation==2)) ) then
      call obsdiags_sort()
   endif
 
