@@ -293,7 +293,7 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
   call init_vars_
 
 ! Allocate arrays for output to diagnostic file
-  mreal=22
+  mreal=24
   nreal=mreal
   if (lobsdiagsave) nreal=nreal+4*miter+1
   if (save_jacobian) then
@@ -527,11 +527,13 @@ subroutine setupref(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_pa
            nrefges=nrefges1+nrefges2+nrefges3 !total refractivity
 
 !          Accumulate diagnostic information        
-           rdiagbuf(5,i)   = (data(igps,i)-nrefges)/data(igps,i) ! incremental refractivity (x100 %)
+           rdiagbuf(5,i) = (data(igps,i)-nrefges)/data(igps,i) ! incremental refractivity normalized against the observation.
+           rdiagbuf(23,i) = nrefges     ! model background.
+           rdiagbuf(24,i) = (data(igps,i)-nrefges)/nrefges     ! incremental refractivity normalized against the model background.
 
-           rdiagbuf(17,i)  = data(igps,i)  ! refractivity observation (units of N)
-           rdiagbuf(18,i)  = trefges       ! temperature at obs location in Kelvin
-           rdiagbuf(21,i)  = qrefges       ! specific humidity at obs location (kg/kg)
+           rdiagbuf(17,i) = data(igps,i)  ! refractivity observation (units of N)
+           rdiagbuf(18,i) = trefges       ! temperature at obs location in Kelvin
+           rdiagbuf(21,i) = qrefges       ! specific humidity at obs location (kg/kg)
 
            data(igps,i)=data(igps,i)-nrefges  ! innovation vector
 

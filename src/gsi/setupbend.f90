@@ -299,7 +299,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
 
 
 ! Allocate arrays for output to diagnostic file
-  mreal=22
+  mreal=24
   nreal=mreal
   if (lobsdiagsave) nreal=nreal+4*miter+1
   if (save_jacobian) then
@@ -683,7 +683,9 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
          dbend=r1em6*tpdpres(i)*dbend  
 
 !        Accumulate diagnostic information
-         rdiagbuf( 5,i)  = (data(igps,i)-dbend)/data(igps,i) ! incremental bending angle (x100 %)
+         rdiagbuf(5,i) = (data(igps,i)-dbend)/data(igps,i) ! incremental bending angle normalized against the observation.
+         rdiagbuf(23,i) = dbend         ! model background.
+         rdiagbuf(24,i) = (data(igps,i)-dbend)/dbend    ! incremental bending angle normalized against the model background.
 
          data(igps,i)=data(igps,i)-dbend !innovation vector
 
