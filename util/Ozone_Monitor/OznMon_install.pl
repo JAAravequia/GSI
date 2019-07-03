@@ -57,7 +57,7 @@
       $tankdir = "/scratch4/NCEPDEV/da/save/$user_name/nbns";
    }
    elsif( $machine eq "wcoss_d" ){
-      $tankdir = "/gpfs/dell2/emc/verification/noscrub/$user_name/nbns";
+      $tankdir = "/gpfs/dell2/emc/modeling/noscrub/$user_name/nbns";
    }
    elsif( $machine eq "cray" ){
       $tankdir = "/gpfs/hps/emc/da/noscrub/$user_name/nbns";

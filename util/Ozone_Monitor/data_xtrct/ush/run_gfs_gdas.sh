@@ -20,10 +20,16 @@ elif [[ $MY_MACHINE = "wcoss" ]]; then
    shell=sh
    . /usrx/local/Modules/default/init/${shell}
    module load prod_util
-#elif [[ $MY_MACHINE = "wcoss_d" ]]; then 
-#   shell=sh
-#   . /usrx/local/prod/modules/default/init/${shell}
-#   module load prod_util/1.1.0
+elif [[ $MY_MACHINE = "wcoss_d" ]]; then 
+   shell=sh
+   . /usrx/local/prod/modules/default/init/${shell}
+   module load prod_util/1.1.0
+   MODULEPATH=/usrx/local/prod/lmod/lmod/modulefiles/Core
+   MODULEPATH=${MODULEPATH}:/usrx/local/prod/modulefiles/core_third
+   MODULEPATH=${MODULEPATH}:/usrx/local/prod/modulefiles/defs
+   MODULEPATH=${MODULEPATH}:/gpfs/dell1/nco/ops/nwprod/modulefiles/core_prod
+   export MODULEPATH=${MODULEPATH}:/usrx/local/dev/modulefiles
+#   export MODULEPATH=/usrx/local/prod/lmod/lmod/modulefiles/Core:/usrx/local/prod/modulefiles/core_third:/usrx/local/prod/modulefiles/defs:/gpfs/dell1/nco/ops/nwprod/modulefiles/core_prod:/usrx/local/dev/modulefiles
 fi
 
 
@@ -41,14 +47,14 @@ idate=`${scripts}/find_cycle.pl -dir ~/nbns/stats/${OZN_SUFFIX} -cyc 1 -run ${ru
 echo "idate = $idate"
 
 export NDATE=/gpfs/dell1/nco/ops/nwprod/prod_util.v1.1.1/exec/ips/ndate
-#export START_DATE=2019060300
+#export START_DATE=2019062400
 START_DATE=`${NDATE} +06 $idate`
 
 PDY=`echo $START_DATE | cut -c1-8`
 cyc=`echo $START_DATE | cut -c9-10`
 
 
-export COM_IN=/gpfs/hps/nco/ops/com/${NET}/${envir}/${run}.${PDY}
+export COM_IN=/gpfs/dell1/nco/ops/com/${NET}/${envir}/${run}.${PDY}/${cyc}
 #export COM_IN=/scratch4/NCEPDEV/da/noscrub/Edward.Safford/test_data/${run}.${PDY}/${cyc}
 
 export oznstat=${COM_IN}/${run}.t${cyc}z.oznstat
