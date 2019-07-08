@@ -331,20 +331,18 @@ subroutine gsd_update_soil_tq(tinc,is_t,qinc,is_q,it)
                  if( sno(i,j,it) < snowthreshold ) then  ! don't do the 
                                                          ! moisture adjustment if there is snow     
 
-                    if (tinct < -0.15_r_kind) then
+                    if (tinct < -0.10_r_kind) then
 
 ! - top level soil moisture
 ! -- mod - 3/15/13
 !      increase moistening from factor of 0.2 to 0.3
-                       ges_smois(i,j,1) = min (max(ges_smois(i,j,1),ges_smois(i,j,2)), &
-                                   ges_smois(i,j,1) + min(0.03_r_kind,max(0._r_kind,(ainc*0.2_r_kind))))
-                       ges_smois(i,j,2) = min (max(ges_smois(i,j,2),ges_smois(i,j,3)), &
-                                   ges_smois(i,j,2) + min(0.03_r_kind,max(0._r_kind,(ainc*0.2_r_kind))))
+                       ges_smois(i,j,1) = ges_smois(i,j,1) + min(0.06_r_kind,max(0._r_kind,(ainc*0.25_r_kind)))
+                       ges_smois(i,j,2) = ges_smois(i,j,2) + min(0.06_r_kind,max(0._r_kind,(ainc*0.2_r_kind)))
                        if(nsig_soil == 9) then
-                          ges_smois(i,j,3) = min (max(ges_smois(i,j,3),ges_smois(i,j,4)), &
-                                   ges_smois(i,j,3) + min(0.03_r_kind,max(0._r_kind,(ainc*0.2_r_kind))))
-                          ges_smois(i,j,4) = min (max(ges_smois(i,j,4),ges_smois(i,j,5)), &  
-                                   ges_smois(i,j,4) + min(0.03_r_kind,max(0._r_kind,(ainc*0.1_r_kind))))
+                          ges_smois(i,j,3) = ges_smois(i,j,3) + min(0.06_r_kind,max(0._r_kind,(ainc*0.2_r_kind)))
+                          ges_smois(i,j,4) = ges_smois(i,j,4) + min(0.06_r_kind,max(0._r_kind,(ainc*0.15_r_kind)))
+                          ges_smois(i,j,5) = ges_smois(i,j,5) + min(0.06_r_kind,max(0._r_kind,(ainc*0.1_r_kind)))
+                          ges_smois(i,j,6) = ges_smois(i,j,6) + min(0.06_r_kind,max(0._r_kind,(ainc*0.1_r_kind)))
                        endif
 ! -- above logic
 !     7/26/04 - 
@@ -363,17 +361,20 @@ subroutine gsd_update_soil_tq(tinc,is_t,qinc,is_q,it)
 ! -- addition 5/1/05
 !     Now also dry soil if tinc is positive (warming)
 !      and the RH_inc is negative.
-                        ges_smois(i,j,1) = max(0.0_r_kind,ges_smois(i,j,1) + & 
+                        ges_smois(i,j,1) = max(0.0_r_kind,ges_smois(i,j,1) + &
                                                   max(-0.03_r_kind,min(0._r_kind,(ainc*0.2_r_kind))))
-                        ges_smois(i,j,2) = max(0.0_r_kind,ges_smois(i,j,2) + & 
+                        ges_smois(i,j,2) = max(0.0_r_kind,ges_smois(i,j,2) + &
                                                   max(-0.03_r_kind,min(0._r_kind,(ainc*0.2_r_kind))))
                         if(nsig_soil == 9) then
-                           ges_smois(i,j,3) = max(0.0_r_kind,ges_smois(i,j,3) + & 
+                           ges_smois(i,j,3) = max(0.0_r_kind,ges_smois(i,j,3) + &
                                                   max(-0.03_r_kind,min(0._r_kind,(ainc*0.2_r_kind))))
-                           ges_smois(i,j,4) = max(0.0_r_kind,ges_smois(i,j,4) + & 
+                           ges_smois(i,j,4) = max(0.0_r_kind,ges_smois(i,j,4) + &
                                                   max(-0.03_r_kind,min(0._r_kind,(ainc*0.1_r_kind))))
-
-                        endif
+                           ges_smois(i,j,5) = max(0.0_r_kind,ges_smois(i,j,5) + &
+                                                  max(-0.03_r_kind,min(0._r_kind,(ainc*0.1_r_kind))))
+                           ges_smois(i,j,6) = max(0.0_r_kind,ges_smois(i,j,6) + &
+                                                  max(-0.03_r_kind,min(0._r_kind,(ainc*0.05_r_kind))))
+                       endif
                     END IF
                  endif  !  sno(i,j,it) < snowthreshold
                  endif  !  sumqc < 1.0e-6_r_kind
