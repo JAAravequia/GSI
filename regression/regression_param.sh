@@ -4,15 +4,23 @@ case $machine in
 
 	Theia)
 	   sub_cmd="sub_theia"
+           memnode=64
+           numcore=24
     ;;
 	WCOSS)
 	   sub_cmd="sub_wcoss -a GDAS-T2O -d $PWD"
+           memnode=64  # Phase-2 WCOSS
+           numcore=24  # Phase-2 WCOSS
     ;;
 	WCOSS_C)
 	   sub_cmd="sub_wcoss_c -a GDAS-T2O -d $PWD"
+           memnode=64
+           numcore=24
     ;;
 	WCOSS_D)
 	   sub_cmd="sub_wcoss_d -a ibm -d $PWD"
+           memnode=128
+           numcore=28
     ;;
 	Discover)
 	   sub_cmd="sub_discover"
@@ -37,8 +45,8 @@ esac
 #   s4      :
 #   cheyenne:
 # Select minimim memory per core for regression tests
-export memnode=64
-export numcore=24
+export memnode=${memnode:-64}
+export numcore=${numcore:-24}
 export maxmem=$((($memnode*1024*1024)/$numcore))  # Kb / core
 
 case $regtest in
@@ -576,7 +584,7 @@ case $regtest in
             topts[1]="0:15:00" ; popts[1]="16/1/" ; ropts[1]="1024/1"  # sub_wcoss_c popts are "#tasks/#nodes/"
             topts[2]="0:15:00" ; popts[2]="12/2/" ; ropts[2]="1024/2"
         elif [[ "$machine" = "WCOSS_D" ]]; then
-           topts[1]="0:15:00" ; popts[1]="28/2/" ; ropts[1]="/1"
+           topts[1]="0:15:00" ; popts[1]="28/1/" ; ropts[1]="/1"
            topts[2]="0:15:00" ; popts[2]="28/4/" ; ropts[2]="/2"
         elif [[ "$machine" = "Discover" ]]; then
            topts[1]="0:30:00" ; popts[1]="16/1"  ; ropts[1]="/1"

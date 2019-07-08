@@ -40,12 +40,12 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
 !
 !$$$
     use kinds, only: r_kind,r_single,i_kind
-    use gridmod, only: ntracer,ncloud,itotsub,jcap_b,use_fv3_aero
+    use gridmod, only: use_fv3_aero
     use general_commvars_mod, only: fill_ns,fill2_ns
     use general_sub2grid_mod, only: sub2grid_info
     use general_specmod, only: spec_vars
     use mpimod, only: npe
-    use constants, only: zero,one,fv,r0_01
+    use constants, only: zero,one,r0_01
     use nemsio_module, only: nemsio_init,nemsio_open,nemsio_close
     use ncepnems_io, only: error_msg
     use nemsio_module, only: nemsio_gfile,nemsio_getfilehead,nemsio_readrecv
