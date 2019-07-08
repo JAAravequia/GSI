@@ -135,8 +135,6 @@ module ncepnems_io
   public tran_gfssfc
   public error_msg
 
-  public aodratio
-
   interface read_nems
      module procedure read_
   end interface
@@ -178,7 +176,6 @@ module ncepnems_io
   end interface
 
   character(len=*),parameter::myname='ncepnems_io'
-  real(r_kind), allocatable, dimension(:,:,:) :: aodratio
 
 contains
 

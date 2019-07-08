@@ -259,13 +259,13 @@ elif [[ "$endianness" = "Little_Endian" ]]; then
 fi
 
 if [[ "$endianness" = "Big_Endian" ]]; then
-   ln -s -f $global_C96_fv3aero_obs/${prefix_atm}.sigf03        ./sigf03
-   ln -s -f $global_C96_fv3aero_obs/${prefix_atm}.sigf06        ./sigf06
-   ln -s -f $global_C96_fv3aero_obs/${prefix_atm}.sigf09        ./sigf09
+   ln -s -f $global_C96_fv3aero_ges/${prefix_atm}.sigf03        ./sigf03
+   ln -s -f $global_C96_fv3aero_ges/${prefix_atm}.sigf06        ./sigf06
+   ln -s -f $global_C96_fv3aero_ges/${prefix_atm}.sigf09        ./sigf09
 elif [[ "$endianness" = "Little_Endian" ]]; then
-   ln -s -f $global_C96_fv3aero_obs/${prefix_atm}.sigf03.le     ./sigf03
-   ln -s -f $global_C96_fv3aero_obs/${prefix_atm}.sigf06.le     ./sigf06
-   ln -s -f $global_C96_fv3aero_obs/${prefix_atm}.sigf09.le     ./sigf09
+   ln -s -f $global_C96_fv3aero_ges/${prefix_atm}.sigf03.le     ./sigf03
+   ln -s -f $global_C96_fv3aero_ges/${prefix_atm}.sigf06.le     ./sigf06
+   ln -s -f $global_C96_fv3aero_ges/${prefix_atm}.sigf09.le     ./sigf09
 fi
 
 # Run GSI

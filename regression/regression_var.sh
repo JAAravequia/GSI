@@ -236,7 +236,7 @@ export nmm_netcdf_adate="2007122000"
 export rtma_adate="2017031218"
 export hwrf_nmm_adate="2012102812"
 export fv3_netcdf_adate="2017030100"
-export global_C96_fv3aero_adate="2019061800"
+export global_C96_fv3aero_adate="2019062200"
 
 # Paths for canned case data.
 export global_T62_obs="$casesdir/global/sigmap/$global_T62_adate"
