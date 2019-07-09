@@ -357,6 +357,15 @@ subroutine read_seviri(mype,val_sev,ithin,rmesh,jsatid,&
         end do
         if(allchnmiss) cycle read_loop
 
+!       toss data if SDTB>1.3
+        do i=4,11
+          if(i==5 .or. i==6) then   ! 2 water-vapor channels
+           if(datasev3(1,i)>1.3_r_kind) then
+             cycle read_loop
+           end if
+          end if
+        end do
+
 !       Locate the observation on the analysis grid.  Get sst and land/sea/ice
 !       mask.  
 

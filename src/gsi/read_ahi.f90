@@ -334,19 +334,19 @@ subroutine read_ahi(mype,val_img,ithin,rmesh,jsatid,gstime,&
            if(dataahi(1,2)>= zero .and. dataahi(1,2) <= 100.0_r_kind ) then
               rclrsky=dataahi(1,2)
 !             first QC filter out data with less clear sky fraction
-!             if ( rclrsky < 70.0_r_kind ) cycle read_loop
+              if ( rclrsky < 70.0_r_kind ) cycle read_loop
            end if
 
         call ufbrep(lnbufr,dataahisd,1,nchn,iret,'SDTB')
  
 !       toss data if SDTB>1.3 
-!       do i=1,nchanl
-!         if(i==2 .or. i==3 .or. i==4) then   ! 3 water-vapor channels
-!          if(dataahisd(1,i)>1.3_r_kind) then
-!            cycle read_loop
-!          end if
-!         end if
-!       end do
+        do i=1,nchanl
+          if(i==2 .or. i==3 .or. i==4) then   ! 3 water-vapor channels
+           if(dataahisd(1,i)>1.3_r_kind) then
+             cycle read_loop
+           end if
+          end if
+        end do
 
 !       Locate the observation on the analysis grid.  Get sst and land/sea/ice
 !       mask.  
