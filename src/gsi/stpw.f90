@@ -189,12 +189,10 @@ subroutine stpw(whead,rval,sval,out,sges,nstep)
            ibb=0
            ikk=0
         endif
-!if (mype ==0 .and. nlnqc_iter) print *,'STPW1:pen,nstep,t_pg,cg_t=',pen(1),t_pg,cg_t,wptr%raterr2,wptr%err2,wptr%ures,wptr%vres
         
 
         call vqc_stp(pen,nstep,t_pg,cg_t,var_jb,ibb,ikk)
 
-!if (mype ==0 .and. nlnqc_iter) print *,'STPW2:pen,t_pg,cg_t=',pen(1),t_pg,cg_t,wptr%raterr2,wptr%err2,wptr%ures,wptr%vres
         out(1) = out(1)+pen(1)*wptr%raterr2
         do kk=2,nstep
            out(kk) = out(kk)+(pen(kk)-pen(1))*wptr%raterr2

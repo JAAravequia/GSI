@@ -177,9 +177,7 @@ subroutine intps_(pshead,rval,sval)
            ibb=0
            ikk=0
         endif
-!           if (mype ==0 .and.  nlnqc_iter) print *,'INTPS1:grad,t_pg,cg_t=',grad,val,t_pg,cg_t,psptr%raterr2,psptr%err2,psptr%res
            call vqc_int(error2,rat_error2,t_pg,cg_t,var_jb,ibb,ikk,val,grad) 
-!           if(mype ==0 .and.  nlnqc_iter) print *,'INTPS2:grad,t_pg,cg_t=',grad,val,t_pg,cg_t,psptr%raterr2,psptr%err2,psptr%res
 
            if( ladtest_obs) then
               grad = val

@@ -1127,10 +1127,8 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            ibb=0
            ikk=0
         endif
-!        if(i==1 ) print *,'SETUPW1:ratio_errors,error=',ratio_errors,error
         call vqc_setup(vals,ratio_errors,error,cvar,&
                       cg_t,ibb,ikk,var_jb,rat_err2,wgt,valqc)
-!        if(i==1 ) print *,'SETUPW2:ratio_errors,error=',ratio_errors,error
         rwgt = wgt/wgtlim
 
 !       Accumulate statistics for obs belonging to this task

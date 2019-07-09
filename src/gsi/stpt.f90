@@ -284,11 +284,9 @@ subroutine stpt(thead,dval,xval,out,sges,nstep,rpred,spred)
           ikk=0
        endif
 
-!       if (mype ==0 .and. nlnqc_iter) print *,'STPT1:pen,nstep,t_pg,cg_t=',pen(1),nlnqc_iter,nstep,t_pg,cg_t,var_jb,tptr%raterr2,tptr%err2,tptr%res
 
        call vqc_stp(pen,nstep,t_pg,cg_t,var_jb,ibb,ikk)
 
-!       if (mype ==0 .and. nlnqc_iter) print *,'STPT2:pen=',pen(1),nlnqc_iter,tptr%res
        out(1) = out(1)+pen(1)*tptr%raterr2
        do kk=2,nstep
           out(kk) = out(kk)+(pen(kk)-pen(1))*tptr%raterr2

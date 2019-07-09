@@ -230,6 +230,7 @@
 #     ANAVINFO      Input analysis variable file
 #                   defaults to ${FIXgsm}/global_anavinfo.l${LEVS}.txt
 #     CONVINFO      Input conventional observation information file
+#     VQCDAT        Input VQC data file
 #                   defaults to ${FIXgsm}/global_convinfo.txt
 #     INSITUINFO    Input nsst insitu information file
 #                   defaults to ${FIXgsm}/global_insituinfo.txt
@@ -446,6 +447,7 @@
 #                  $RTMFIX
 #                  $ANAVINFO
 #                  $CONVINFO
+#                  $VQCDAT
 #                  $INSITUINFO
 #                  $OZINFO
 #                  $PCPINFO
@@ -639,6 +641,7 @@ export ATMSFILTER=${ATMSFILTER:-${FIXgsi}/atms_beamwidth.txt}
 export RTMFIX=${RTMFIX:-$NWROOT/lib/crtm/${crtm_ver}/fix}
 export ANAVINFO=${ANAVINFO:-${FIXgsi}/global_anavinfo.l${LEVS}.txt}
 export CONVINFO=${CONVINFO:-${FIXgsi}/global_convinfo.txt}
+export VQCDAT=${VQCDAT:-${FIXgsi}/vqctp001.dat}
 export INSITUINFO=${INSITUINFO:-${FIXgsi}/global_insituinfo.txt}
 export OZINFO=${OZINFO:-${FIXgsi}/global_ozinfo.txt}
 export PCPINFO=${PCPINFO:-${FIXgsi}/global_pcpinfo.txt}
@@ -892,7 +895,7 @@ export pgm=$PGM
 $LOGSCRIPT
 
 rm berror_stats satbias_angle satinfo *SpcCoeff.bin *TauCoeff.bin EmisCoeff.bin
-rm AerosolCoeff.bin CloudCoeff.bin anavinfo convinfo ozinfo pcpinfo aeroinfo scaninfo
+rm AerosolCoeff.bin CloudCoeff.bin anavinfo convinfo vqctp001.dat ozinfo pcpinfo aeroinfo scaninfo
 rm errtable prepbufr prepbufr_profl gsndrbufr gsnd1bufr hirs2bufr msubufr hirs3bufr hirs4bufr
 rm amsuabufr amsubbufr mhsbufr sbuvbufr gomebufr omibufr mlsbufr ssmirrbufr tmirrbufr ahibufr
 rm airsbufr iasibufr iasibufrears iasibufr_db amsrebufr amsr2bufr gmibufr saphirbufr ssmitbufr
@@ -927,6 +930,7 @@ $FCPLN $RADCLOUDINFO cloudy_radiance_info.txt
 $FCPLN $ATMSFILTER atms_beamwidth.txt 
 $FCPLN $ANAVINFO anavinfo
 $FCPLN $CONVINFO convinfo
+$FCPLN $VQCDAT vqctp001.dat
 $FCPLN $INSITUINFO insituinfo
 $FCPLN $OZINFO   ozinfo
 $FCPLN $PCPINFO  pcpinfo
@@ -1276,7 +1280,7 @@ cat <<EOF > gsiparm.anl
  /
  &OBSQC
    dfact=0.75,dfact1=3.0,noiqc=.true.,oberrflg=.false.,c_varqc=0.04,
-   use_poq7=.true.,qc_noirjaco3_pole=.true.,vqc=.true.,
+   use_poq7=.true.,qc_noirjaco3_pole=.true.,vqc=.true.,nvqc=.false.,
    aircraft_t_bc=.true.,biaspredt=1000.0,upd_aircraft=.true.,cleanup_tail=.true.,
    $OBSQC
  /

@@ -550,10 +550,8 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            ikk=0
         endif
 
-!        if(i==1 ) print *,'SETUPPS1:ratio_errors,error=',ratio_errors,error
         call vqc_setup(val,ratio_errors,error,cvar,cg_t,ibb,ikk,&
                       var_jb,rat_err2,wgt,valqc)
-!        if(i==1 ) print *,'SETUPPS2:ratio_errors,error=',ratio_errors,error
         rwgt = wgt/wgtlim
         if (muse(i)) then
 !       Accumulate statistics for obs used belonging to this task        

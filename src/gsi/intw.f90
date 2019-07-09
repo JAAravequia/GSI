@@ -178,7 +178,6 @@ subroutine intw_(whead,rval,sval)
 
 !          gradient of nonlinear operator
 
-!if(mype ==0 .and. nlnqc_iter) print *,'INTW1:grad=',gradu,gradv,valu,valv
  
            if (vqc .and. nlnqc_iter .and. wptr%pg > tiny_r_kind .and.  &
                                 wptr%b  > tiny_r_kind) then
@@ -220,7 +219,6 @@ subroutine intw_(whead,rval,sval)
               gradv = valv*wptr%raterr2*wptr%err2
            endif
 
-!if (mype ==0 .and.  nlnqc_iter) print *,'INTW2:grad,w_pg,cg_w=',gradu,gradv,w_pg,cg_w,wptr%raterr2,wptr%err2,valu,valv
 
            if( ladtest_obs) then
               gradu = valu

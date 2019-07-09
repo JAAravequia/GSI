@@ -167,11 +167,9 @@ subroutine stpps(pshead,rval,sval,out,sges,nstep)
            ikk=0
         endif
       
-!         if (mype ==0 .and. nlnqc_iter) print *,'STPS1:pen,nstep,t_pg,cg_t',pen(1),nlnqc_iter,nstep,t_pg,cg_t,psptr%res,psptr%raterr2,psptr%err2
 
          call vqc_stp(pen,nstep,t_pg,cg_t,var_jb,ibb,ikk)
 
-!         if (mype ==0 .and. nlnqc_iter) print *,'STPS2:pen,nstep,t_pg,cg_t=',pen(1),t_pg,cg_t,psptr%res,psptr%raterr2,psptr%err2
 
          out(1) = out(1)+pen(1)*psptr%raterr2
 

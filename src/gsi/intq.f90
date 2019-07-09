@@ -185,11 +185,9 @@ subroutine intq_(qhead,rval,sval)
            ibb=0
            ikk=0
         endif
-!         if (mype ==0 .and.  nlnqc_iter) print *,'INTQ1:grad,t_pg,cg_t=',grad,t_pg,cg_t,qptr%raterr2,qptr%err2,val
 
            call  vqc_int(error2,rat_error2,t_pg,cg_t,var_jb,ibb,ikk,val,grad)
 
-!         if (mype ==0 .and.  nlnqc_iter) print *,'INTQ2:grad=',grad,qptr%raterr2,qptr%err2,val
            if( ladtest_obs) then
               grad = val
            end if

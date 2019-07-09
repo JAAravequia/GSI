@@ -174,10 +174,8 @@ subroutine stpq(qhead,rval,sval,out,sges,nstep)
            ibb=0
            ikk=0
         endif
-!        if (mype ==0 .and. nlnqc_iter) print *,'STPQ1:pen,nstep,t_pg,cg_t=',pen(1),nstep,t_pg,cg_t,qqptr%res,ptr%raterr2,qptr%err2
         call vqc_stp(pen,nstep,t_pg,cg_t,var_jb,ibb,ikk)
 
-!        if (mype ==0 .and. nlnqc_iter) print *,'STPQ2:pen=',pen(1),qptr%res,qptr%raterr2,qptr%err2
 
 
         out(1) = out(1)+pen(1)*qptr%raterr2
