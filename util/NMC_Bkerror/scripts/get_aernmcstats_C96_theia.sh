@@ -12,7 +12,7 @@
 set -x
 export NTHREADS=2
 
-export exp="jcap192_allfix1_nobias_FV3AeroNMCStats_194"
+export exp="jcap192_newtry_FV3AeroNMCStats_194"
 export base=/scratch4/NCEPDEV/da/save/Cory.R.Martin/GSI/ProdGSI/util/NMC_Bkerror/
 export calcstats=$base/sorc_aero_me/calcstats_aerosol.exe
 export datadir=/scratch4/NCEPDEV/da/noscrub/Cory.R.Martin/FV3GFS-GSDChem/
@@ -39,7 +39,7 @@ case $season in
     export y4m2="201903 201904 201905"
     ;;
   'test')
-    export y4m2="201904 201905 201906"
+    export y4m2="201904 201905 201906 201907"
     ;;
 esac
 
@@ -58,7 +58,7 @@ cp $calcstats ./stats.x
 cat << EOF > stats.parm
  &NAMSTAT
    jcap=192,jcapin=768,jcapsmooth=192,nsig=64,nlat=194,nlon=384,maxcases=200,hybrid=.true.,smoothdeg=0.5,
-   biasrm=.false.,vertavg=.true.,use_gfs_nemsio=.true.,aeromodel='fv3'
+   biasrm=.true.,vertavg=.true.,use_gfs_nemsio=.true.,aeromodel='fv3'
  /
 EOF
 

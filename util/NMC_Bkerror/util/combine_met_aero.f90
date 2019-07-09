@@ -97,6 +97,7 @@ program combine_met_aero
       write(47) stdev3(:,:,i), rh
     else
       write(47) stdev3(:,:,i)
+      print *, stdev3(:,:,i)
     end if
     write(47) hscale3(:,:,i)
     write(47) vscale3(:,:,i)
@@ -112,6 +113,7 @@ program combine_met_aero
   do i=1,nvarsa
     write(47) var(i+nvars3+nvars2), nsigi
     print *, var(i+nvars3+nvars2), nsigi
+    print *, stdeva(:,:,i)
     write(47) stdeva(:,:,i)
     write(47) hscalea(:,:,i)
     write(47) vscalea(:,:,i)
