@@ -14,10 +14,7 @@ tmpdir=$tmpdir/$tmpregdir/${exp}
 savdir=$savdir/outC96_fv3aero/${exp}
 
 # Specify GSI fixed field and data directories.
-# 6/18/19 - M. Lueken's FIX files are missing v.modis*TauCoeff
 fixcrtm=${fixcrtm:-$CRTM_FIX}
-#fixcrtm=/scratch4/NCEPDEV/da/save/Cory.R.Martin/CRTM/fix
-fixcrtm=/gpfs/dell2/emc/modeling/noscrub/Cory.R.Martin/CRTM/fix
 
 # Set variables used in script
 #   CLEAN up $tmpdir when finished (YES=remove, NO=leave alone)

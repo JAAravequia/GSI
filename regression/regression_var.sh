@@ -271,8 +271,8 @@ export hwrf_nmm_obs="$casesdir/regional/hwrf_nmm/$hwrf_nmm_adate"
 export hwrf_nmm_ges="$casesdir/regional/hwrf_nmm/$hwrf_nmm_adate"
 export fv3_netcdf_obs="$casesdir/regional/fv3_netcdf/$fv3_netcdf_adate"
 export fv3_netcdf_ges="$casesdir/regional/fv3_netcdf/$fv3_netcdf_adate"
-export global_C96_fv3aero_obs="/gpfs/dell2/emc/modeling/noscrub/Cory.R.Martin/GSI/aero_regtest/$global_C96_fv3aero_adate"
-export global_C96_fv3aero_ges="/gpfs/dell2/emc/modeling/noscrub/Cory.R.Martin/GSI/aero_regtest/$global_C96_fv3aero_adate"
+export global_C96_fv3aero_obs="$casesdir/global/fv3/$global_C96_fv3aero_adate"
+export global_C96_fv3aero_ges="$casesdir/global/fv3/$global_C96_fv3aero_adate"
 
 # Define type of GPSRO data to be assimilated (refractivity or bending angle)
 export gps_dtype="gps_bnd"
