@@ -7,6 +7,7 @@
 !
 ! !INTERFACE:
 !
+!random comment
 
 subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
