@@ -40,10 +40,6 @@ module m_lightNode
 
 !   2019-03-01  j guo   - Merged in some cleaning up changes as in other
 !                         obsNode types:
-!                       . Changed typecasing argument attributes from pointers
-!                         to targets, in typecast_() and nextcast_(), including
-!                         a nonNull() checking, to remove an unnecessary
-!                         intermediate pointer in user code.
 !                       . Added a type specific subroutine appendto_(), to avoid
 !                         unnecessary type generalization between a generic
 !                         append() and user code.
@@ -225,12 +221,12 @@ contains
 function typecast_(aNode) result(ptr_)
 !-- cast a class(obsNode) to a type(lightNode)
   use m_obsNode, only: obsNode
-  use m_obsNode, only: nonNull => obsNode_nonNull
   implicit none
   type(lightNode),pointer:: ptr_
-  class(obsNode),target,intent(in):: aNode
+  class(obsNode ),pointer,intent(in):: aNode
+
   ptr_ => null()
-  if(.not.nonNull(aNode)) return
+  if(.not.associated(aNode)) return
         ! logically, typecast of a null-reference is a null pointer.
   select type(aNode)
   type is(lightNode)
@@ -244,8 +240,11 @@ function nextcast_(aNode) result(ptr_)
   use m_obsNode, only: obsNode,obsNode_next
   implicit none
   type(lightNode),pointer:: ptr_
-  class(obsNode),target,intent(in):: aNode
-  ptr_ => typecast_(obsNode_next(aNode))
+  class(obsNode ),target ,intent(in):: aNode
+
+  class(obsNode),pointer:: inode_
+  inode_ => obsNode_next(aNode)
+  ptr_ => typecast_(inode_)
   return
 end function nextcast_
 

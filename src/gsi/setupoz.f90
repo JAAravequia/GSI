@@ -126,10 +126,9 @@ subroutine setupozlay(obsLL,odiagLL,lunin,mype,stats_oz,nlevs,nreal,nobs,&
   use obsmod, only : mype_diaghdr,dirname,time_offset,ianldate
   use obsmod, only : lobsdiag_allocated,lobsdiagsave,lobsdiag_forenkf
   use m_obsNode, only: obsNode
-  use m_ozNode, only : ozNode, ozNode_typecast
+  use m_ozNode, only : ozNode
   use m_ozNode, only : ozNode_appendto
   use m_obsLList, only : obsLList
-  use m_obsLList, only : obsLList_tailNode
   use obsmod, only : nloz_omi
   use obsmod, only : luse_obsdiag
 
@@ -711,7 +710,7 @@ subroutine setupozlay(obsLL,odiagLL,lunin,mype,stats_oz,nlevs,nreal,nobs,&
               endif
  
               if (.not. last .and. ikeep==1) then
-                 my_head => ozNode_typecast(obsLList_tailNode(ozhead(ibin)))
+                 my_head => tailNode_typecast_(ozhead(ibin))
                  if(.not.associated(my_head)) &
                     call die(myname,'unexpected, associated(my_head) =',associated(my_head))
 
@@ -832,6 +831,21 @@ subroutine setupozlay(obsLL,odiagLL,lunin,mype,stats_oz,nlevs,nreal,nobs,&
 
   return
   contains
+  function tailNode_typecast_(oll) result(ptr_)
+!>  Cast the tailNode of oll to an ozNode, as in
+!>      ptr_ => typecast_(tailNode_(oll))
+
+    use m_ozNode  , only: ozNode  , typecast_ => ozNode_typecast
+    use m_obsLList, only: obsLList, tailNode_ => obsLList_tailNode
+    use m_obsNode , only: obsNode
+    implicit none
+    type(  ozNode),pointer:: ptr_
+    type(obsLList),target ,intent(in):: oll
+
+    class(obsNode),pointer:: inode_
+    inode_ => tailNode_(oll)
+    ptr_   => typecast_(inode_)
+  end function tailNode_typecast_
 
   subroutine check_vars_ (proceed)
   logical,intent(inout) :: proceed
@@ -1546,7 +1560,7 @@ subroutine setupozlev(obsLL,odiagLL,lunin,mype,stats_oz,nlevs,nreal,nobs,&
 
   end subroutine init_netcdf_diag_
   subroutine contents_binary_diag_(odiag)
-  type(obs_diag),intent(in):: odiag
+  type(obs_diag),pointer,intent(in):: odiag
         rdiagbuf(1,1,ii) = ozlv                ! obs
         rdiagbuf(2,1,ii) = ozone_inv           ! obs-ges
         rdiagbuf(3,1,ii) = errorinv            ! inverse observation error
@@ -1585,7 +1599,7 @@ subroutine setupozlev(obsLL,odiagLL,lunin,mype,stats_oz,nlevs,nreal,nobs,&
 
   end subroutine contents_binary_diag_
   subroutine contents_netcdf_diag_(odiag)
-  type(obs_diag),intent(in):: odiag
+  type(obs_diag),pointer,intent(in):: odiag
 ! Observation class
   character(7),parameter     :: obsclass = '  ozlev'
   real(r_kind),dimension(miter) :: obsdiag_iuse

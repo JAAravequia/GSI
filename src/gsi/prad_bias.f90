@@ -139,7 +139,7 @@ contains
 !$$$  end documentation block
     implicit none
 
-    if(.associated(radheadm)) then
+    if(associated(radheadm)) then
       call lreset_(radheadm(:))
       deallocate(radheadm)
     endif

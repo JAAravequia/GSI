@@ -1560,7 +1560,7 @@ loop_for_all_obs: &
      endif
   end subroutine init_netcdf_diag_
   subroutine contents_binary_diag_(udiag,vdiag)
-     type(obs_diag),intent(in):: udiag,vdiag
+     type(obs_diag),pointer,intent(in):: udiag,vdiag
         cdiagbuf(ii)    = station_id         ! station id
  
         rdiagbuf(1,ii)  = ictype(ikx)        ! observation type
@@ -1673,7 +1673,7 @@ loop_for_all_obs: &
 
   end subroutine contents_binary_diag_
   subroutine contents_netcdf_diag_(udiag,vdiag)
-  type(obs_diag),intent(in):: udiag,vdiag
+  type(obs_diag),pointer,intent(in):: udiag,vdiag
 ! Observation class
   character(7),parameter     :: obsclass = '     uv'
   real(r_kind),dimension(miter) :: obsdiag_iuse
