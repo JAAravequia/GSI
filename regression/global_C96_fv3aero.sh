@@ -199,8 +199,7 @@ atmsbeaminfo=$fixgsi/atms_beamwidth.txt
 if [[ $exp == *"updat"* ]]; then
    $ncp $gsiexec_updat  ./gsi.x
 elif [[ $exp == *"contrl"* ]]; then
-   $ncp $gsiexec_updat ./gsi.x
-   #$ncp $gsiexec_contrl ./gsi.x
+   $ncp $gsiexec_contrl ./gsi.x
 fi
 
 mkdir ./crtm_coeffs
