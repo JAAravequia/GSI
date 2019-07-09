@@ -138,7 +138,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   logical,dimension(nobs):: luse,muse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
   logical z_height,sfc_data
-  logical lowlevelsat
+  logical lowlevelsat,msonetob
   logical proceed
 
   character(8) station_id
@@ -292,6 +292,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 !    Link obs to diagnostics structure
      if(luse_obsdiag)then
+        !print*, "DEBUG wspd10m: luse_obsdiag is TRUE"
         if (.not.lobsdiag_allocated) then
            if (.not.associated(obsdiags(i_wspd10m_ob_type,ibin)%head)) then
               obsdiags(i_wspd10m_ob_type,ibin)%n_alloc = 0
@@ -351,13 +352,13 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      if(.not.in_curbin) cycle
 
 !    Load observation error and values into local variables
-     uob = data(iuob,i)
-     vob = data(ivob,i)
-     spdob=sqrt(uob*uob+vob*vob)
-     call tintrp2a11(ges_ps,psges,dlat,dlon,dtime,hrdifsig,&
-          mype,nfldsig)
-     call tintrp2a1(ges_lnprsl,prsltmp,dlat,dlon,dtime,hrdifsig,&
-          nsig,mype,nfldsig)
+!     uob = data(iuob,i)
+!     vob = data(ivob,i)
+!     spdob=sqrt(uob*uob+vob*vob)
+!     call tintrp2a11(ges_ps,psges,dlat,dlon,dtime,hrdifsig,&
+!          mype,nfldsig)
+!     call tintrp2a1(ges_lnprsl,prsltmp,dlat,dlon,dtime,hrdifsig,&
+!          nsig,mype,nfldsig)
 
 ! Interpolate to get wspd10m at obs location/time
      call tintrp2a11(ges_wspd10m,spdges,dlat,dlon,dtime,hrdifsig,&
@@ -386,18 +387,20 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !    also repoted using geopotential height.
 
      sfc_data = (itype >=280 .and. itype < 300)!LEVINE .and. (.not.twodvar_regional)
+     msonetob = (itype == 295 .or. itype == 288)
      if (z_height .or. sfc_data) then
 
         drpx = zero
         dpres = data(ihgt,i)
         dstn = data(ielev,i)
+        !print*, "WSPD10m: Initial stationID,type,dpres(later zob),dstn=",station_id,itype,dpres,dstn
         call tintrp2a11(ges_z,zsges,dlat,dlon,dtime,hrdifsig,&
              mype,nfldsig)
 !       Subtract off combination of surface station elevation and
 !       model elevation depending on how close to surface
         fact = zero
         !LEVINE EDIT
-        if (itype == 295 .or. itype == 280) then
+        if (msonetob) then !LEVINE - block still needed?
            !if ((dpres-dstn) < 10._r_kind) then
            !   print*, "SETUPW-MSONET: Mesonet wind with height under 10 m:",dpres,dstn
            !endif
@@ -409,18 +412,23 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               fact=(dpres-dstn)/990._r_kind
            end if
         end if
+        !print*, "WSPD10m: After fact stationID,type,dpres(later zob),dstn,fact=",station_id,itype,dpres,dstn,fact
         dpres=dpres-(dstn+fact*(zsges-dstn))
+        drpx=0.003*abs(dstn-zsges)*(one-fact)
+        !print*, "WSPD10m: Adjusted stationID,type,dpres,dstn=",station_id,itype,dpres,dstn,fact
         if(itype==261) dpres = data(ihgt,i)
 
-!       Get guess surface elevation and geopotential height profile 
-!       at observation location.
-        call tintrp2a1(geop_hgtl,zges,dlat,dlon,dtime,hrdifsig,&
-             nsig,mype,nfldsig)
+        if (.not.twodvar_regional) then
+           !       Get guess surface elevation and geopotential height profile 
+           !       at observation location.
+           print*, "WARNING: 2DVAR regional is OFF!"
+           call tintrp2a1(geop_hgtl,zges,dlat,dlon,dtime,hrdifsig,&
+                nsig,mype,nfldsig)
 
-!       For observation reported with geometric height above sea level,
-!       convert geopotential to geometric height.
+           !For observation reported with geometric height above sea level,
+           !convert geopotential to geometric height.
 
-        if ((itype>=223 .and. itype<=228) .or. sfc_data) then
+           if ((itype>=223 .and. itype<=228)) then ! .or. sfc_data) then
 !          Convert geopotential height at layer midpoints to geometric 
 !          height using equations (17, 20, 23) in MJ Mahoney's note 
 !          "A discussion of various measures of altitude" (2001).  
@@ -432,17 +440,21 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !          termrg = first term in the denominator of equation 23
 !          zges  = equation 23
 
-           slat = data(ilate,i)*deg2rad
-           sin2  = sin(slat)*sin(slat)
-           termg = grav_equator * &
-                ((one+somigliana*sin2)/sqrt(one-eccentricity*eccentricity*sin2))
-           termr = semi_major_axis /(one + flattening + grav_ratio -  &
+              slat = data(ilate,i)*deg2rad
+              sin2  = sin(slat)*sin(slat)
+              termg = grav_equator * &
+                   ((one+somigliana*sin2)/sqrt(one-eccentricity*eccentricity*sin2))
+              termr = semi_major_axis /(one + flattening + grav_ratio -  &
                 two*flattening*sin2)
-           termrg = (termg/grav)*termr
-           do k=1,nsig
-              zges(k) = (termr*zges(k)) / (termrg-zges(k))  ! eq (23)
-           end do
- 
+              termrg = (termg/grav)*termr
+              do k=1,nsig
+                 zges(k) = (termr*zges(k)) / (termrg-zges(k))  ! eq (23)
+              end do
+           endif
+        else
+           !If 2dvar (rtma/urma), default geometric height is always 10 m
+           !print*, "RTMA/URMA run, defaulting geometric height to 10 m."
+           zges(1)=ten
         endif
 
 !       Given observation height, (1) adjust 10 meter wind factor if
@@ -459,80 +471,85 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !       Convert observation height (in dpres) from meters to grid relative
 !       units.  Save the observation height in zob for later use.
         zob = dpres
+        !print*, "WPSD10m (zob/dpres): dpres->zob for stationID,itype,type,zob=",station_id,itype,zob
         call grdcrd1(dpres,zges,nsig,1)
 
 !       Interpolate guess wind speed to observation location and time.
  
-        call tintrp31(ges_u,ugesin,dlat,dlon,dpres,dtime, &
-           hrdifsig,mype,nfldsig)
-        call tintrp31(ges_v,vgesin,dlat,dlon,dpres,dtime, &
-           hrdifsig,mype,nfldsig)
-        !call tintrp31(ges_wspd10m,spdges,dlat,dlon,dpres,dtime, &
-        !   hrdifsig,mype,nfldsig)
+!        call tintrp31(ges_u,ugesin,dlat,dlon,dpres,dtime, &
+!           hrdifsig,mype,nfldsig)
+!        call tintrp31(ges_v,vgesin,dlat,dlon,dpres,dtime, &
+!           hrdifsig,mype,nfldsig)
+!        !use tintrpta11 for wspd10m as Pondeca's suggestion
+!        call tintrp2a11(ges_wspd10m,spdges,dlat,dlon,dpres,dtime, &
+!           hrdifsig,mype,nfldsig)
+!
+!        iz = max(1, min( int(dpres), nsig))
+!        delz = max(zero, min(dpres - float(iz), one))
+!
+!        if (save_jacobian) then
+!
+!           u_ind = getindex(svars3d, 'u')
+!           if (u_ind < 0) then
+!              print *, 'Error: no variable u in state vector. Exiting.'
+!              call stop2(1300)
+!           endif
+!           v_ind = getindex(svars3d, 'v')
+!           if (v_ind < 0) then
+!              print *, 'Error: no variable v in state vector. Exiting.'
+!              call stop2(1300)
+!           endif
+!
+!           dhx_dx_u%st_ind(1)  = iz               + sum(levels(1:u_ind-1))
+!           dhx_dx_u%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:u_ind-1))
+!           dhx_dx_v%st_ind(1)  = iz               + sum(levels(1:v_ind-1))
+!           dhx_dx_v%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:v_ind-1))
+!
+!           dhx_dx_u%val(1) = one - delz
+!           dhx_dx_u%val(2) = delz
+!           dhx_dx_v%val = dhx_dx_u%val
+!        endif
 
-        iz = max(1, min( int(dpres), nsig))
-        delz = max(zero, min(dpres - float(iz), one))
-
-        if (save_jacobian) then
-
-           u_ind = getindex(svars3d, 'u')
-           if (u_ind < 0) then
-              print *, 'Error: no variable u in state vector. Exiting.'
-              call stop2(1300)
-           endif
-           v_ind = getindex(svars3d, 'v')
-           if (v_ind < 0) then
-              print *, 'Error: no variable v in state vector. Exiting.'
-              call stop2(1300)
-           endif
-
-           dhx_dx_u%st_ind(1)  = iz               + sum(levels(1:u_ind-1))
-           dhx_dx_u%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:u_ind-1))
-           dhx_dx_v%st_ind(1)  = iz               + sum(levels(1:v_ind-1))
-           dhx_dx_v%end_ind(1) = min(iz + 1,nsig) + sum(levels(1:v_ind-1))
-
-           dhx_dx_u%val(1) = one - delz
-           dhx_dx_u%val(2) = delz
-           dhx_dx_v%val = dhx_dx_u%val
+        if (zob <= zero) then 
+           print*, "WSPD10M WARNING: Negative zob reported for station,zob,type (correcting to 10 m):",station_id,zob,itype
+           !print*, "Resetting this zob to default value: 10 m."
+           zob=ten !temporary bug fix, there are occasional obs that report negative zob
         endif
 
-
-        if (zob > zges(1).and..not.twodvar_regional) then
-           if (itype.eq.295.or.itype.eq.288) then
-              print*, "Setting factw to 1! stnid,zob,zges(1)=",station_id,zob,zges(1)
-           endif
+        if (zob > zges(1)) then
            factw=one
         else
-           !if (itype.eq.295.or.itype.eq.288) then
-              !print*, "Factw will change!  stnid,zob,zges(1)=",station_id,zob,zges(1)
-           !endif
-           !factw = data(iff10,i)
-           factw=one !LEVINE default value of factw
-           if(sfcmod_gfs .or. sfcmod_mm5) then
-              sfcr = data(isfcr,i)
-              skint = data(iskint,i)
-              call comp_fact10(dlat,dlon,dtime,skint,sfcr,isli,mype,factw)
+           if (.not. twodvar_regional) then  !This if-then test may be removed
+              factw = data(iff10,i)
+              if(sfcmod_gfs .or. sfcmod_mm5) then
+                 sfcr = data(isfcr,i)
+                 skint = data(iskint,i)
+                 call comp_fact10(dlat,dlon,dtime,skint,sfcr,isli,mype,factw)
+              end if
+           else
+              factw = one
            end if
 
            if (zob <= ten) then
-              if (zob <= zero) then
-                 print*, "WARNING: Negative ZOB for station,zob,type (correcting to 10 m):",station_id,zob,itype
-                 zob=ten
-              endif
+              !print*, "WSPD10m WARNING: Unusual mesonet height:",station_id,zob,itype
               if(zob < ten)then
                  !term = max(zob,zero)/ten
                  !factw = term*factw
+                 !print*, "WSPD10m WARNING: Unusual mesonet height:",station_id,zob,itype
                  defrough=half !default roughness length: 0.5 m
-                 factw=log(zob/defrough)/log(ten/defrough)
+                 factw=log(max(defrough,zob)/defrough)/log(ten/defrough)
               end if
            else
+              if (.not. twodvar_regional) then
               term = (zges(1)-zob)/(zges(1)-ten)
               factw = one-term+factw*term
+              end if
            end if
 
-           !if (factw.ne.1) then
-           !   print*, "StationID,zob,zges(1),factw=",station_id,zob,zges(1),factw
+           !if (factw.ne.one) then
+           !   print*, "WSPD10m: Differing factw for station,itype,zob,factw=",station_id,itype,zob,factw
            !endif
+
            !ugesin=factw*ugesin
            !vgesin=factw*vgesin
            spdges=factw*spdges
@@ -541,43 +558,58 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               dhx_dx_u%val = factw * dhx_dx_u%val
               dhx_dx_v%val = factw * dhx_dx_v%val
            endif
+
         endif
 
-        if(sfc_data .or. dpres < one) then
-           drpx=0.005_r_kind*abs(dstn-zsges)*(one-fact)
-        end if
+!        if (sfc_data .or. dpres < one) then             !LEVINE moved to earlier in code
+!           drpx=0.005_r_kind*abs(dstn-zsges)*(one-fact)
+!        end if
  
 !       Compute observation pressure (only used for diagnostics)
 
-!       Set indices of model levels below (k1) and above (k2) observation.
-        if (dpres<one) then
-           z1=zero;    p1=log(psges)
-           z2=zges(1); p2=prsltmp(1)
-        elseif (dpres>nsig) then
-           z1=zges(nsig-1); p1=prsltmp(nsig-1)
-           z2=zges(nsig);   p2=prsltmp(nsig)
-           drpx = 1.e6_r_kind
-        else
-           k=dpres
-           k1=min(max(1,k),nsig)
-           k2=max(1,min(k+1,nsig))
-           z1=zges(k1); p1=prsltmp(k1)
-           z2=zges(k2); p2=prsltmp(k2)
-        endif
-       
-        dz21     = z2-z1
-        dlnp21   = p2-p1
-        dz       = zob-z1
-        pobl     = p1 + (dlnp21/dz21)*dz
-        presw    = ten*exp(pobl)
+        !if (ictype(ikx)>=280 .and. ictype(ikx)<=294) then
+        !   call tintrp2a11(ges_ps,psges,dlat,dlon,dtime,hrdifsig,&
+        !        mype,nfldsig)
+        !   call tintrp2a1(ges_lnprsl,prsltmp,dlat,dlon,dtime,hrdifsig,&
+        !        nsig,mype,nfldsig)
+        !   !print*, "WSPD10m pressure: stnid,type,zob,dpres,nsig=",station_id,itype,zob,dpres,nsig
+        !   if (dpres<=one) then  !Levine change to allow for use in 2d situation when dpres=1
+        !      z1=zero;    p1=log(psges)
+        !      z2=zges(1); p2=prsltmp(1)
+        !      print*, "WSPD10m pressure part a: stnid,type,zob,z1,z2,p1,p2:",station_id,itype,zob,z1,z2,p1,p2
+       !    elseif (dpres>nsig) then
+       !       z1=zges(nsig-1); p1=prsltmp(nsig-1)
+       !       z2=zges(nsig);   p2=prsltmp(nsig)
+       !       drpx = 1.e6_r_kind
+       !       !print*, "WSPD10m pressure: stnid,type,zob,z1,z2,p1,p2:",station_id,itype,zob,z1,z2,p1,p2
+       !    else
+       !       k=dpres
+       !       k1=min(max(1,k),nsig)
+       !       k2=max(1,min(k+1,nsig))
+       !       z1=zges(k1); p1=prsltmp(k1)
+       !       z2=zges(k2); p2=prsltmp(k2)
+       !    endif
+       !
+       !    !print*, "WSPD10m pressure part b: stnid,type,zob,z1,z2,p1,p2:",station_id,itype,zob,z1,z2,p1,p2
+       !    dz21     = z2-z1
+       !    dlnp21   = p2-p1
+       !    dz       = zob-z1
+       !    pobl     = p1 + (dlnp21/dz21)*dz
+       !    presw    = ten*exp(pobl)
+       ! else
+        presw = ten*exp(data(ipres,i))
+        print*, "WSPD reported pressure (stnid,type,zob,presw):",station_id,itype,zob,presw
+       ! endif
+
+        !print*, "WSPD 10m Diagnosed pressure (stnid,type,zob,z1,z2,p1,p2,pobl,presw):",station_id,itype,zob,z1,z2,p1,p2,pobl,presw
 
 !       Determine location in terms of grid units for midpoint of
 !       first layer above surface
         sfcchk=zero
-!       call grdcrd1(sfcchk,zges,nsig,1)
+        call grdcrd1(sfcchk,zges,nsig,1)
 
      else
-!    Process observations with reported pressure
+!    Process observations with reported pressure !WHY KEEP THIS? /MPondeca
         dpres = data(ipres,i)
         presw = ten*exp(dpres)
         dpres = dpres-log(psges)
@@ -615,9 +647,8 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               term=(prsln2-dpressave)/(prsln2-dx10)
               factw=one-term+factw*term
            end if
-           ugesin=factw*ugesin   
+           ugesin=factw*ugesin
            vgesin=factw*vgesin
- 
         end if
        
 !       Get approx k value of sfc by using surface pressure
@@ -669,8 +700,8 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
          uob = data(iuob,i)
          vob = data(ivob,i)
      endif
-     dudiff=uob-ugesin
-     dvdiff=vob-vgesin
+     dudiff=uob-ugesin   !UOB OR UGESIN MUST BE ADJUSTED USING SIMILARITY THEORY APPROACH /MPondeca
+     dvdiff=vob-vgesin   !VOB OR VGESIN MUST BE ADJUSTED USING SIMILARITY THEORY APPROACH /MPondeca
      spdb=sqrt(uob**2+vob**2)-sqrt(ugesin**2+vgesin**2)
 
      ddiff=spdob-spdges
