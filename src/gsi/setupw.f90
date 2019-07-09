@@ -545,6 +545,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         end if
         dpres=dpres-(dstn+fact*(zsges-dstn))
         if(itype==261) dpres = data(ihgt,i)
+        !print*, "W after dpres adjustment.  stationid,type,dpres,dstn=",station_id,itype,dpres,dstn
 
 !       Get guess surface elevation and geopotential height profile 
 !       at observation location.
@@ -593,6 +594,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !       Convert observation height (in dpres) from meters to grid relative
 !       units.  Save the observation height in zob for later use.
         zob = dpres
+        !print*, "W (zob/dpres): Initial zob for stationID,itype,type,zob=",station_id,itype,zob
         call grdcrd1(dpres,zges,nsig,1)
 
 !       Interpolate guess u and v to observation location and time.
@@ -630,6 +632,9 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 
         if (zob > zges(1).and..not.twodvar_regional) then
+           if (itype == 295 .or. itype == 288) then
+              print*, "W: Setting factw to 1! stnid,zob,zges(1)=",station_id,zob,zges(1),twodvar_regional
+           endif
            factw=one
         else
            !if (itype.eq.295.or.itype.eq.288) then
@@ -645,18 +650,21 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
            if (zob <= ten) then
               if (zob <= zero) then
-                 print*, "WARNING: Negative ZOB for station,zob,type (correcting to 10 m):",station_id,zob,itype
+                 print*, "W WARNING: Negative ZOB for station,zob,type (correcting to 10 m):",station_id,zob,itype
                  zob=ten
               endif
               if(zob < ten)then
                  !term = max(zob,zero)/ten
                  !factw = term*factw
+                 !print*, "W WARNING: Unusual mesonet height:",station_id,zob,itype
                  defrough=half !default roughness length: 0.5 m
                  factw=log(zob/defrough)/log(ten/defrough)
               end if
            else
-              term = (zges(1)-zob)/(zges(1)-ten)
-              factw = one-term+factw*term
+              !if (.not. twodvar_regional) then
+                 term = (zges(1)-zob)/(zges(1)-ten)
+                 factw = one-term+factw*term
+              !endif
            end if
 
            !if (factw.ne.1) then
@@ -678,32 +686,40 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !       Compute observation pressure (only used for diagnostics)
 
 !       Set indices of model levels below (k1) and above (k2) observation.
-        if (dpres<one) then
-           z1=zero;    p1=log(psges)
-           z2=zges(1); p2=prsltmp(1)
-        elseif (dpres>nsig) then
-           z1=zges(nsig-1); p1=prsltmp(nsig-1)
-           z2=zges(nsig);   p2=prsltmp(nsig)
-           drpx = 1.e6_r_kind
+        if (twodvar_regional) then
+           dpres = data(ipres,i)
+           presw = ten*exp(dpres)
+           print*, "W Pressure: stnid,type,zob,presw=",station_id,itype,zob,presw
         else
-           k=dpres
-           k1=min(max(1,k),nsig)
-           k2=max(1,min(k+1,nsig))
-           z1=zges(k1); p1=prsltmp(k1)
-           z2=zges(k2); p2=prsltmp(k2)
+           if (dpres<one) then
+              z1=zero;    p1=log(psges)
+              z2=zges(1); p2=prsltmp(1)
+           elseif (dpres>nsig) then
+              z1=zges(nsig-1); p1=prsltmp(nsig-1)
+              z2=zges(nsig);   p2=prsltmp(nsig)
+              drpx = 1.e6_r_kind
+           else
+              k=dpres
+              k1=min(max(1,k),nsig)
+              k2=max(1,min(k+1,nsig))
+              z1=zges(k1); p1=prsltmp(k1)
+              z2=zges(k2); p2=prsltmp(k2)
+           endif
+           
+           !print*, "W Pressure: stnid,type,zob,dpres,nsig,z1,z2,p1,p2=",station_id,itype,zob,dpres,nsig,z1,z2,p1,p2
+           dz21     = z2-z1
+           dlnp21   = p2-p1
+           dz       = zob-z1
+           !print*, "W Pressure 2: stnid,type,zob,dpres,nsig,dz21,dlnp21,dz=",station_id,itype,zob,dpres,nsig,dz21,dlnp21,dz
+           pobl     = p1 + (dlnp21/dz21)*dz
+           print*, "W Pressure 3: stnid,type,zob,dpres,nsig,dz21,dlnp21,dz,pobl=",station_id,itype,zob,dpres,nsig,dz21,dlnp21,dz,pobl
+           presw    = ten*exp(pobl)
+
+           !       Determine location in terms of grid units for midpoint of
+           !       first layer above surface
+           sfcchk=zero
+           !       call grdcrd1(sfcchk,zges,nsig,1)
         endif
-       
-        dz21     = z2-z1
-        dlnp21   = p2-p1
-        dz       = zob-z1
-        pobl     = p1 + (dlnp21/dz21)*dz
-        presw    = ten*exp(pobl)
-
-!       Determine location in terms of grid units for midpoint of
-!       first layer above surface
-        sfcchk=zero
-!       call grdcrd1(sfcchk,zges,nsig,1)
-
 
 !    Process observations with reported pressure
      else
