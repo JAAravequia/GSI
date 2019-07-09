@@ -81,12 +81,11 @@ contains
 function typecast_(aNode) result(ptr_)
 !-- cast a class(obsNode) to a type(o3lNode)
   use m_obsNode, only: obsNode
-  use m_obsNode, only: nonNull => obsNode_nonNull
   implicit none
-  type(o3lNode),pointer:: ptr_
-  class(obsNode),target,intent(in):: aNode
+  type(o3lNode ),pointer:: ptr_
+  class(obsNode),pointer,intent(in):: aNode
   ptr_ => null()
-  if(.not.nonNull(aNode)) return
+  if(.not.associated(aNode)) return
         ! logically, typecast of a null-reference is a null pointer.
   select type(aNode)
   type is(o3lNode)
@@ -99,9 +98,12 @@ function nextcast_(aNode) result(ptr_)
 !-- cast an obsNode_next(obsNode) to a type(o3lNode)
   use m_obsNode, only: obsNode,obsNode_next
   implicit none
-  type(o3lNode),pointer:: ptr_
-  class(obsNode),target,intent(in):: aNode
-  ptr_ => typecast_(obsNode_next(aNode))
+  type(o3lNode ),pointer:: ptr_
+  class(obsNode),target ,intent(in):: aNode
+
+  class(obsNode),pointer:: inode_
+  inode_ => obsNode_next(aNode)
+  ptr_ => typecast_(inode_)
 return
 end function nextcast_
 

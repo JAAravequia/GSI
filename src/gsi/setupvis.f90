@@ -85,7 +85,7 @@ subroutine setupvis(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
   use gridmod, only: nsig
   use gridmod, only: get_ij
   use constants, only: zero,tiny_r_kind,one,half,one_tenth,wgtlim, &
-            two,cg_term,pi,huge_single,r1000
+            two,cg_term,huge_single,r1000
   use jfunc, only: jiter,last,miter
   use qcmod, only: dfact,dfact1,npres_print
   use qcmod, only: pvis,scale_cv
@@ -589,7 +589,7 @@ subroutine setupvis(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
      endif
   end subroutine init_netcdf_diag_
   subroutine contents_binary_diag_(odiag)
-  type(obs_diag),intent(in):: odiag
+  type(obs_diag),pointer,intent(in):: odiag
         cdiagbuf(ii)    = station_id         ! station id
  
         rdiagbuf(1,ii)  = ictype(ikx)        ! observation type
@@ -650,7 +650,7 @@ subroutine setupvis(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
         endif
   end subroutine contents_binary_diag_
   subroutine contents_netcdf_diag_(odiag)
-  type(obs_diag),intent(in):: odiag
+  type(obs_diag),pointer,intent(in):: odiag
 ! Observation class
   character(7),parameter     :: obsclass = '    vis'
   real(r_kind),parameter::     missing = -9.99e9_r_kind

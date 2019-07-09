@@ -74,7 +74,7 @@ subroutine setuplwcp(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diag
 
   use constants, only: zero,one,tpwcon,r1000,r10, &
        tiny_r_kind,three,half,two,cg_term,huge_single,&
-       wgtlim, rd, ttp, tmix, psatk, xa, xai, xb, xbi
+       wgtlim, ttp, tmix, psatk, xa, xai, xb, xbi
   use jfunc, only: jiter,last,jiterstart,miter
   use qcmod, only: dfact,dfact1,npres_print
   use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype
@@ -770,7 +770,7 @@ subroutine setuplwcp(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diag
   end subroutine init_netcdf_diag_
 
   subroutine contents_binary_diag_(odiag)
-  type(obs_diag),intent(in):: odiag
+  type(obs_diag),pointer,intent(in):: odiag
 
      cdiagbuf(ii)    = station_id         ! station id
 
@@ -835,7 +835,7 @@ subroutine setuplwcp(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diag
   end subroutine contents_binary_diag_
 
   subroutine contents_netcdf_diag_(odiag)
-  type(obs_diag),intent(in):: odiag
+  type(obs_diag),pointer,intent(in):: odiag
 ! Observation class
   character(7),parameter     :: obsclass = '   lwcp'
   real(r_kind),parameter::     missing = -9.99e9_r_kind

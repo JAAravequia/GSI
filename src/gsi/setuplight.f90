@@ -71,11 +71,10 @@ subroutine setuplight(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,light_di
   use guess_grids, only: hrdifsig,nfldsig
   use gridmod, only: dx_gfs
   use gridmod, only: region_dx,region_dy      ! dx, dy (:,:)
-  use gridmod, only: region_dxi,region_dyi    ! inverse dx,dy (:,:)
   use gridmod, only: wrf_mass_regional
 !--
   use gridmod, only: lat2,lon2,get_ij,nlat_sfc,nlon_sfc
-  use gridmod, only: regional,nlat_regional,nlon_regional,nsig, &
+  use gridmod, only: regional,nsig, &
                      eta1_ll,pt_ll,aeta1_ll
   use gridmod, only: latlon11
 !--
@@ -99,14 +98,14 @@ subroutine setuplight(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,light_di
   use m_lightNode, only: lightNode_appendto
   use m_obsLList , only: obsLList
   use gsi_4dvar, only: nobs_bins,hr_obsbin
-  use constants, only: zero,one,fv,grav,r1000, &
+  use constants, only: zero,one,r1000, &
        tiny_r_kind,three,half,two,cg_term,huge_single,&
-       wgtlim, rd, qcmin
+       wgtlim, qcmin
   use constants, only: one_tenth,qmin,ten,t0c,five,r0_05
-  use jfunc, only: jiter,jiterstart,last,miter
+  use jfunc, only: jiter,last,miter
   use qcmod, only: dfact,dfact1,npres_print
-  use lightinfo, only: nlighttype,nulight,gross_light,glermax,&
-                       glermin,b_light,iuse_light,pg_light
+  use lightinfo, only: nlighttype,gross_light,glermax,&
+                       glermin,b_light,pg_light
   use m_dtime, only: dtime_setup, dtime_check
 !--
   use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -1561,7 +1560,7 @@ end subroutine init_netcdf_diag_
 !                .      .    .                                       .
 
 subroutine contents_binary_diag_(odiag)
-     type(obs_diag),intent(in):: odiag
+     type(obs_diag),pointer,intent(in):: odiag
 
      diagbuf(1,ii)  = data(ier,i)        ! observation error
      diagbuf(2,ii)  = data(ilate,i)      ! observation latitude (degrees)
@@ -1615,7 +1614,7 @@ end subroutine contents_binary_diag_
 
 subroutine contents_netcdf_diag_(odiag)
 ! Observation class
-  type(obs_diag),intent(in):: odiag
+  type(obs_diag),pointer,intent(in):: odiag
   character(7),parameter     :: obsclass = '     light'
   real(r_single),parameter::     missing = -9.99e9_r_single
   real(r_kind),dimension(miter) :: obsdiag_iuse

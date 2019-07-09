@@ -200,6 +200,7 @@ contains
 !                       . Remove my_node with corrected typecast().
 !   2017-07-27  kbathmann -introduce Rinv into the rstats computation for correlated error
 !   2018-04-04  zhu     - add additional radiance_ex_obserr and radiance_ex_biascor calls for all-sky
+!   2019-03-27  h. liu  - add ABI assimilation
 !
 !  input argument list:
 !     lunin   - unit from which to read radiance (brightness temperature, tb) obs
@@ -246,10 +247,9 @@ contains
       lobsdiagsave,nobskeep,lobsdiag_allocated,&
       dirname,time_offset,lwrite_predterms,lwrite_peakwt,reduce_diag
   use m_obsNode, only: obsNode
-  use m_radNode, only: radNode, radNode_typecast
+  use m_radNode, only: radNode
   use m_radNode, only: radNode_appendto
   use m_obsLList, only: obsLList
-  use m_obsLList, only: obsLList_tailNode
   use obsmod, only: luse_obsdiag,dval_use
   use obsmod, only: netcdf_diag, binary_diag, dirname
   use nc_diag_write_mod, only: nc_diag_init, nc_diag_header, nc_diag_metadata, &
@@ -269,7 +269,7 @@ contains
       izz,idomsfc,isfcr,iff10,ilone,ilate, &
       isst_hires,isst_navy,idata_type,iclr_sky,itref,idtw,idtc,itz_tr
   use clw_mod, only: calc_clw, ret_amsua
-  use qcmod, only: qc_ssmi,qc_seviri,qc_ssu,qc_avhrr,qc_goesimg,qc_msu,qc_irsnd,qc_amsua,qc_mhs,qc_atms
+  use qcmod, only: qc_ssmi,qc_seviri,qc_abi,qc_ssu,qc_avhrr,qc_goesimg,qc_msu,qc_irsnd,qc_amsua,qc_mhs,qc_atms
   use qcmod, only: igood_qc,ifail_gross_qc,ifail_interchan_qc,ifail_crtm_qc,ifail_satinfo_qc,qc_noirjaco3,ifail_cloud_qc
   use qcmod, only: qc_gmi,qc_saphir,qc_amsr2
   use qcmod, only: setup_tzr_qc,ifail_scanedge_qc,ifail_outside_range
@@ -331,7 +331,7 @@ contains
   real(r_kind) bias       
   real(r_kind) factch6    
 
-  logical hirs2,msu,goessndr,hirs3,hirs4,hirs,amsua,amsub,airs,hsb,goes_img,ahi,mhs
+  logical hirs2,msu,goessndr,hirs3,hirs4,hirs,amsua,amsub,airs,hsb,goes_img,ahi,mhs,abi
   type(sparr2) :: dhx_dx
   real(r_single), dimension(nsdim) :: dhx_dx_array
   logical avhrr,avhrr_navy,lextra,ssu,iasi,cris,seviri,atms
@@ -466,6 +466,7 @@ contains
   seviri     = obstype == 'seviri'
   atms       = obstype == 'atms'
   saphir     = obstype == 'saphir'
+  abi        = obstype == 'abi'
 
   ssmis=ssmis_las.or.ssmis_uas.or.ssmis_img.or.ssmis_env.or.ssmis 
 
@@ -539,7 +540,7 @@ contains
   if(mype==mype_diaghdr(is) .and. init_pass .and. jiterstart == jiter)iwrmype = mype_diaghdr(is)
 
 ! Initialize radiative transfer and pointers to values in data_s
-  call init_crtm(init_pass,iwrmype,mype,nchanl,isis,obstype,radmod)
+  call init_crtm(init_pass,iwrmype,mype,nchanl,nreal,isis,obstype,radmod)
 
 ! Get indexes of variables in jacobian to handle exceptions down below
   ioz =getindex(radjacnames,'oz')
@@ -860,7 +861,7 @@ contains
         if (adp_anglebc) then
            do i=1,nchanl
               mm=ich(i)
-              if (goessndr .or. goes_img .or. ahi .or. seviri .or. ssmis) then
+              if (goessndr .or. goes_img .or. ahi .or. seviri .or. ssmis .or. abi) then
                  pred(npred,i)=nadir*deg2rad
               else
                  pred(npred,i)=data_s(iscan_ang,n)
@@ -1235,6 +1236,55 @@ contains
 
            call qc_seviri(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse(n), &
               zsges,tzbgr,tbc,tnoise,temp,wmix,emissivity_k,ts,id_qc,aivals,errf,varinv)
+!
+!  ---------- ABI  -------------------
+!       ABI Q C
+
+        else if (abi) then
+           do i=1,nchanl
+              m=ich(i)
+              if (varinv(i) < tiny_r_kind) then
+                 varinv_use(i) = zero
+              else
+                 if ((icld_det(m)>0)) then
+                    varinv_use(i) = varinv(i)
+                 else
+                    varinv_use(i) = zero
+                 end if
+              end if
+           end do
+
+           do i = 1,nchanl
+              tb_obs_sdv(i) = data_s(i+32,n)
+           end do
+
+           call qc_abi(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse(n), &
+              zsges,trop5,tzbgr,tsavg5,tb_obs_sdv,tbc,tb_obs,tnoise,ptau5,prsltmp,tvp,temp,wmix,emissivity_k,ts,   &
+              id_qc,aivals,errf,varinv,varinv_use,cld,cldp,kmax)
+
+           cld = 100-data_s(iclr_sky,n)
+
+!          if rclrsky < 98%, toss data for lowest water-vapor and surface channels
+           if(data_s(iclr_sky,n)<98.0_r_kind) then
+              do i=1,nchanl
+                 if(i/=2 .and. i/=3) then
+                    varinv(i)=zero
+                    varinv_use(i)=zero
+                 end if
+              end do
+           end if
+
+!
+!          additional qc for surface and  chn7.3: use split window chns to remove opaque clouds
+           do i = 1,nchanl
+              if(i/=2 .and. i/=3) then
+                if( varinv(i) > tiny_r_kind .and. &
+                   (tb_obs(7)-tb_obs(8))-(tsim(7)-tsim(8)) <= -0.75_r_kind) then
+                    varinv(i)=zero
+                    varinv_use(i)=zero
+                end if
+              end if
+           end do
 !
 
 !  ---------- AVRHRR --------------
@@ -1665,7 +1715,7 @@ contains
   
                ! Associate corresponding obs_diag pointer to the obsdiagLList structure
             if(in_curbin.and.icc>0) then
-               my_head => radNode_typecast(obsLList_tailNode(radhead(ibin)))
+               my_head => tailNode_typecast_(radhead(ibin))
                if(.not.associated(my_head)) &
                   call die(myname,'unexpected, associated(my_head) =',associated(my_head))
 
@@ -1796,6 +1846,21 @@ contains
   return
 
   contains
+  function tailNode_typecast_(oll) result(ptr_)
+!>  Cast the tailNode of oll to an radNode, as in
+!>      ptr_ => typecast_(tailNode_(oll))
+
+    use m_radNode , only: radNode , typecast_ => radNode_typecast
+    use m_obsLList, only: obsLList, tailNode_ => obsLList_tailNode
+    use m_obsNode , only: obsNode
+    implicit none
+    type(radNode ),pointer:: ptr_
+    type(obsLList),target ,intent(in):: oll
+
+    class(obsNode),pointer:: inode_
+    inode_ => tailNode_(oll)
+    ptr_   => typecast_(inode_)
+  end function tailNode_typecast_
 
   subroutine init_binary_diag_
      filex=obstype
@@ -2016,6 +2081,7 @@ contains
               else
                  diagbufchan(6,i)=emissivity(ich_diag(i))             ! surface emissivity
               endif
+              if(abi) diagbufchan(6,i)=data_s(32+i,n)                 ! temporarily store BT stdev
               diagbufchan(7,i)=tlapchn(ich_diag(i))                   ! stability index
               if (radmod%lcloud_fwd) then
                  diagbufchan(8,i)=cld_rbc_idx(ich_diag(i))            ! indicator of cloudy consistency
