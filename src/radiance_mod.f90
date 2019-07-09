@@ -931,6 +931,7 @@ contains
 ! program history log:
 !   2015-09-20  zhu
 !   2016-10-27  zhu - add ATMS
+!   2019-06-28  twu - add amsua and atms logicals to ret_amsua call
 !
 !   input argument list:
 !
@@ -956,16 +957,23 @@ contains
 
     integer(i_kind) :: i
     real(r_kind),dimension(nchanl) :: cclr
+    logical :: amsua, atms
+
+    amsua = .false.
+    atms = .false.
 
 !   call ret_amsua(tb_obs,nchanl,tsavg5,zasat,clwp_amsua,ierrret)
-    call ret_amsua(tsim_bc,nchanl,tsavg5,zasat,clw_guess_retrieval,ierrret)
 
     if (trim(radmod%rtype) =='amsua') then
+       amsua = .true.
+       call ret_amsua(amsua,atms,tsim_bc,nchanl,tsavg5,zasat,clw_guess_retrieval,ierrret)
        do i=1,nchanl
           cclr(i)=cloudy_amsua%cclr(i)
        end do
     end if
     if (trim(radmod%rtype) =='atms') then
+       atms = .true.
+       call ret_amsua(amsua,atms,tsim_bc,nchanl,tsavg5,zasat,clw_guess_retrieval,ierrret)
        do i=1,nchanl
           cclr(i)=cloudy_atms%cclr(i)
        end do

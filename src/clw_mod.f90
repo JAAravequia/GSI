@@ -1895,7 +1895,7 @@ subroutine epspp (t1,s,f,ep)
 
 end subroutine epspp
 
-subroutine ret_amsua(tb_obs,nchanl,tsavg5,zasat,clwp_amsua,ierrret,scat)  
+subroutine ret_amsua(amsua,atms,tb_obs,nchanl,tsavg5,zasat,clwp_amsua,ierrret,scat)  
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:  ret_amsua 
@@ -1916,6 +1916,7 @@ subroutine ret_amsua(tb_obs,nchanl,tsavg5,zasat,clwp_amsua,ierrret,scat)
 !      2014-01-17  zhu     - add scattering index scat 
 !      2014-01-31  mkim - add ierrret return flag for cloud qc near seaice edge 
 !      2015-08-20  zhu  - set negative clw to be zero 
+!      2019-06-28  twu  - add ch16 for atms
 !
 !  input argument list:
 !     tb_obs    - observed brightness temperatures
@@ -1946,6 +1947,7 @@ subroutine ret_amsua(tb_obs,nchanl,tsavg5,zasat,clwp_amsua,ierrret,scat)
   real(r_kind)                      ,intent(  out) :: clwp_amsua
   integer(i_kind)                   ,intent(  out) :: ierrret 
   real(r_kind),optional             ,intent(  out) :: scat
+  logical                           ,intent(in   ) :: amsua,atms
 
 ! real(r_kind)                    ::  tpwc_amsua
   real(r_kind),parameter:: r285=285.0_r_kind
@@ -1976,9 +1978,14 @@ subroutine ret_amsua(tb_obs,nchanl,tsavg5,zasat,clwp_amsua,ierrret,scat)
   endif
 
   if (present(scat)) then
-      scat=-113.2_r_kind+(2.41_r_kind-0.0049_r_kind*tb_obs(1))*tb_obs(1)  &
-           +0.454_r_kind*tb_obs(2)-tb_obs(15)
-      scat=max(zero,scat)
+    if (amsua) then 
+       scat=-113.2_r_kind+(2.41_r_kind-0.0049_r_kind*tb_obs(1))*tb_obs(1)  &
+            +0.454_r_kind*tb_obs(2)-tb_obs(15)
+    else if (atms) then
+       scat=-113.2_r_kind+(2.41_r_kind-0.0049_r_kind*tb_obs(1))*tb_obs(1)  &
+            +0.454_r_kind*tb_obs(2)-tb_obs(16)
+    endif
+    scat=max(zero,scat)
   end if
 
 end subroutine ret_amsua

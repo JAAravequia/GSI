@@ -187,6 +187,7 @@
 !   2016-07-19  W. Gu   - include the dependence of the correlated obs errors on the surface types
 !   2016-07-19  kbathmann -move eigendecomposition for correlated obs here
 !   2016-10-23  zhu     - add cloudy radiance assimilation for ATMS
+!   2019-06-28  twu     - add radmod to ret_amsua call for atms as well
 !
 !  input argument list:
 !     lunin   - unit from which to read radiance (brightness temperature, tb) obs
@@ -880,7 +881,7 @@
         cldeff_obs=zero 
         if(microwave .and. sea) then 
            if(radmod%lcloud_fwd) then                            
-              call ret_amsua(tb_obs,nchanl,tsavg5,zasat,clwp_amsua,ierrret,scat)
+              call ret_amsua(amsua,atms,tb_obs,nchanl,tsavg5,zasat,clwp_amsua,ierrret,scat)
               scatp=scat 
            else
               call calc_clw(nadir,tb_obs,tsim,ich,nchanl,no85GHz,amsua,ssmi,ssmis,amsre,atms, &
