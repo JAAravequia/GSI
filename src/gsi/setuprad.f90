@@ -192,6 +192,9 @@
 !   2017-07-27  kbathmann -introduce Rinv into the rstats computation for correlated error
 !   2018-04-04  zhu     - add additional radiance_ex_obserr and radiance_ex_biascor calls for all-sky
 !   2019-03-27  h. liu  - add ABI assimilation
+!   2019-04-22  kbathmann -option to replace obs errors used in qc to the
+!                          diagonal of a specified full covariance matrix
+!                          and multiply bias predictor jacobian by R^-1/2 
 !
 !  input argument list:
 !     lunin   - unit from which to read radiance (brightness temperature, tb) obs
@@ -221,7 +224,8 @@
   use radinfo, only: nuchan,tlapmean,predx,cbias,ermax_rad,tzr_qc,&
       npred,jpch_rad,varch,varch_cld,iuse_rad,icld_det,nusis,fbias,retrieval,b_rad,pg_rad,&
       air_rad,ang_rad,adp_anglebc,angord,ssmis_precond,emiss_bc,upd_pred, &
-      passive_bc,ostats,rstats,newpc4pred,radjacnames,radjacindxs,nsigradjac,nvarjac
+      passive_bc,ostats,rstats,newpc4pred,radjacnames,radjacindxs,nsigradjac,nvarjac, &
+      varch_sea,varch_land,varch_ice,varch_snow,varch_mixed
   use gsi_nstcouplermod, only: nstinfo
   use read_diag, only: get_radiag,ireal_radiag,ipchan_radiag
   use guess_grids, only: sfcmod_gfs,sfcmod_mm5,comp_fact10
@@ -287,7 +291,7 @@
 
   integer(i_kind) iextra,jextra,error_status,istat
   integer(i_kind) ich9,isli,icc,iccm,mm1,ixx
-  integer(i_kind) m,mm,jc,j,k,i
+  integer(i_kind) m,mm,jc,j,k,i,ncr
   integer(i_kind) n,nlev,kval,ibin,ioff,ioff0,iii,ijacob
   integer(i_kind) ii,jj,idiag,inewpc,nchanl_diag
   integer(i_kind) ii_ptr
@@ -336,7 +340,7 @@
   real(r_kind),dimension(npred+2):: predterms
   real(r_kind),dimension(npred+2,nchanl):: predbias
   real(r_kind),dimension(npred,nchanl):: pred,predchan
-  real(r_kind),dimension(nchanl):: obvarinv,utbc,adaptinf,wgtjo
+  real(r_kind),dimension(nchanl):: obvarinv,utbc,wgtjo
   real(r_kind),dimension(nchanl):: varinv,varinv_use,error0,errf,errf0
   real(r_kind),dimension(nchanl):: tb_obs,tbc,tbcnob,tlapchn,tb_obs_sdv
   real(r_kind),dimension(nchanl):: tnoise,tnoise_cld
@@ -354,9 +358,8 @@
   real(r_kind),dimension(nchanl):: Rinv
   real(r_kind),dimension(nchanl,nchanl):: rsqrtinv
   real(r_kind) :: ptau5deriv, ptau5derivmax
-  real(r_kind) :: clw_guess,clw_guess_retrieval
+  real(r_kind) :: clw_guess,clw_guess_retrieval,tnoise_save
 ! real(r_kind) :: predchan6_save   
-
   integer(i_kind),dimension(nchanl):: ich,id_qc,ich_diag
   integer(i_kind),dimension(nobs_bins) :: n_alloc
   integer(i_kind),dimension(nobs_bins) :: m_alloc
@@ -760,6 +763,23 @@
         else if(mixed) then
           isfctype=4
         endif
+        do jc=1,nchanl
+           j=ich(jc)
+
+           tnoise(jc)=varch(j)
+
+           if(sea   .and. (varch_sea(j)>zero))   tnoise(jc)=varch_sea(j)
+           if(land  .and. (varch_land(j)>zero))  tnoise(jc)=varch_land(j)
+           if(ice   .and. (varch_ice(j)>zero))   tnoise(jc)=varch_ice(j)
+           if(snow  .and. (varch_snow(j)>zero))  tnoise(jc)=varch_snow(j)
+           if(mixed .and. (varch_mixed(j)>zero)) tnoise(jc)=varch_mixed(j)
+           tnoise_save = tnoise(jc)
+
+           channel_passive=iuse_rad(j)==-1 .or. iuse_rad(j)==0
+           if (iuse_rad(j)< -1 .or. (channel_passive .and.  &
+                .not.rad_diagsave)) tnoise(jc)=r1e10
+           if (passive_bc .and. channel_passive) tnoise(jc)=tnoise_save
+        end do
 
 !       Count data of different surface types
         if(luse(n))then
@@ -1073,9 +1093,9 @@
              endif
            endif
         end if ! radmod%lcloud_fwd .and. radmod%ex_biascor
-        
+
         do i=1,nchanl
-           error0(i) = tnoise(i) 
+           error0(i) = tnoise(i)
            errf0(i) = error0(i)
         end do
 
@@ -1583,11 +1603,13 @@
 
               utbc=tbc
               wgtjo= varinv     ! weight used in Jo term
-              adaptinf = varinv ! on input
-              obvarinv = error0 ! on input
+              do ii=1,nchanl
+                 obvarinv(ii)=error0(ii)**2
+              enddo
               if (miter>0) then
-                 account_for_corr_obs = radinfo_adjust_jacobian (iinstr,isis,isfctype,nchanl,nsigradjac,ich,varinv,&
-                                                                 utbc,obvarinv,adaptinf,wgtjo,jacobian,Rinv,rsqrtinv)
+                 account_for_corr_obs = radinfo_adjust_jacobian(iinstr,isis,isfctype,nchanl,nsigradjac, &
+                                                                ich,varinv,utbc,obvarinv,wgtjo, &
+                                                                jacobian,Rinv,rsqrtinv)
               else
                  account_for_corr_obs =.false.
               end if
@@ -1599,14 +1621,12 @@
                     iii=iii+1
 
                     if(account_for_corr_obs) then
-                      my_head%res(iii)= utbc(ii)                   ! evecs(R)*[obs-ges innovation]
-                      my_head%err2(iii)= obvarinv(ii)              ! 1/eigenvalue(R)
-                      my_head%raterr2(iii)=adaptinf(ii)            ! inflation factor 
+                      my_head%res(iii)= utbc(ii)                   ! R^{-1/2}*[obs-ges innovation]
                     else
                       my_head%res(iii)= tbc(ii)                    ! obs-ges innovation
-                      my_head%err2(iii)= one/error0(ii)**2         ! 1/(obs error)**2  (original uninflated error)
-                      my_head%raterr2(iii)=error0(ii)**2*varinv(ii) ! (original error)/(inflated error)
                     endif
+                    my_head%err2(iii)= one/obvarinv(ii)         ! 1/(obserror)**2  (original uninflated error)
+                    my_head%raterr2(iii)=obvarinv(ii)*varinv(ii) ! (original error)/(inflated error)
                     my_head%icx(iii)= m                         ! channel index
 
                     do k=1,npred
@@ -1660,9 +1680,19 @@
 
               my_head%use_corr_obs=.false.
               if (account_for_corr_obs) then
-                 allocate(my_head%rsqrtinv(my_head%nchan,my_head%nchan))
-                 my_head%rsqrtinv(1:my_head%nchan,1:my_head%nchan)=rsqrtinv(1:my_head%nchan,1:my_head%nchan)
                  my_head%use_corr_obs=.true.
+                 ncr=(my_head%nchan+1)*my_head%nchan
+                 ncr=ncr/2
+                 allocate(my_head%Rpred(ncr,npred))
+                 do k=1,npred
+                    ncr=0
+                    do jj=1,my_head%nchan
+                       do ii=1,jj
+                          ncr=ncr+1
+                          my_head%Rpred(ncr,k)=my_head%pred(k,ii)*rsqrtinv(ii,jj)
+                       enddo
+                    enddo
+                  enddo
               end if
               my_head => null()
            end if ! icc
