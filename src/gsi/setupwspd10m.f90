@@ -352,9 +352,9 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      if(.not.in_curbin) cycle
 
 !    Load observation error and values into local variables
-!     uob = data(iuob,i)
-!     vob = data(ivob,i)
-!     spdob=sqrt(uob*uob+vob*vob)
+     uob = data(iuob,i)
+     vob = data(ivob,i)
+     spdob=sqrt(uob*uob+vob*vob)
 !     call tintrp2a11(ges_ps,psges,dlat,dlon,dtime,hrdifsig,&
 !          mype,nfldsig)
 !     call tintrp2a1(ges_lnprsl,prsltmp,dlat,dlon,dtime,hrdifsig,&
