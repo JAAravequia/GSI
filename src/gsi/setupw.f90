@@ -28,7 +28,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
        nc_diag_write, nc_diag_data2d
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_get_dim, nc_diag_read_close
   use gsi_4dvar, only: nobs_bins,hr_obsbin,min_offset
-  use qcmod, only: npres_print,ptop,pbot,dfact,dfact1,qc_satwnds,njqc,vqc
+  use qcmod, only: npres_print,ptop,pbot,dfact,dfact1,qc_satwnds,njqc,vqc,nvqc,hub_norm
   use oneobmod, only: oneobtest,oneob_type,magoberr,maginnov 
   use gridmod, only: get_ijk,nsig,twodvar_regional,regional,wrf_nmm_regional,&
       rotate_wind_xy2ll
@@ -41,7 +41,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
        grav_equator,somigliana,semi_major_axis,eccentricity
   use jfunc, only: jiter,last,jiterstart,miter
   use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype
-  use convinfo, only: icsubtype
+  use convinfo, only: icsubtype,ibeta,ikapa
   use converr_uv, only: ptabl_uv
   use converr, only: ptabl
   use rapidrefresh_cldsurf_mod, only: l_PBL_pseudo_SurfobsUV, pblH_ration,pps_press_incr
@@ -52,6 +52,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
   use sparsearr, only: sparr2, new, size, writearray, fullarray
+  use pvqc, only: vqch,vqcs
 
   implicit none
   
@@ -217,6 +218,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) dudiff_opp, dvdiff_opp, vecdiff, vecdiff_opp
   real(r_kind) dudiff_opp_rs, dvdiff_opp_rs, vecdiff_rs, vecdiff_opp_rs
   real(r_kind) oscat_vec,ascat_vec,rapidscat_vec
+  real(r_kind) g_nvqc,w_nvqc                         ! new variational qc parameter
   real(r_kind),dimension(nele,nobs):: data
   real(r_kind),dimension(nobs):: dup
   real(r_kind),dimension(nsig)::prsltmp,tges,zges
@@ -237,6 +239,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) ihgt,ier2,iuse,ilate,ilone,istat
   integer(i_kind) izz,iprvd,isprvd
   integer(i_kind) idomsfc,isfcr,iskint,iff10
+  integer(i_kind) ib,ik
 
   integer(i_kind) num_bad_ikx
 
@@ -1110,6 +1113,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      if(luse(i))then
         val      = valu*valu+valv*valv
         exp_arg  = -half*val
+        if(nvqc) ratio_errors=0.8_r_kind*ratio_errors
         rat_err2 = ratio_errors**2
         if(njqc  .and. var_jb>tiny_r_kind .and. var_jb<10.0_r_kind .and. error >tiny_r_kind) then
            if(exp_arg  == zero) then
@@ -1130,6 +1134,22 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            wgt  = one-wgross/(arg+wgross)
            rwgt = wgt/wgtlim
            valqc = -two*rat_err2*term
+        else if(nvqc .and. ibeta(ikx) >0) then
+           arg=sqrt(val)
+           ib=ibeta(ikx)
+           ik=ikapa(ikx)
+           if(hub_norm) then
+              call vqch(ib,ik,arg,g_nvqc,w_nvqc)
+           else
+              call vqcs(ib,ik,arg,g_nvqc,w_nvqc)
+           endif
+           valqc=-two*rat_err2*g_nvqc
+           if(val ==zero) then
+              wgt=one
+           else
+              wgt=g_nvqc/exp_arg
+           endif
+           rwgt = wgt/wgtlim
         else
            term = exp_arg
            wgt  = one 
@@ -1217,6 +1237,8 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         my_head%b=cvar_b(ikx)
         my_head%pg=cvar_pg(ikx)
         my_head%jb=var_jb
+        my_head%ib=ibeta(ikx)
+        my_head%ik=ikapa(ikx)
         my_head%luse=luse(i)
 
         if (luse_obsdiag) then
@@ -1356,6 +1378,8 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            my_head%b=cvar_b(ikx)
            my_head%pg=cvar_pg(ikx)
            my_head%jb=var_jb
+           my_head%ib=ibeta(ikx)
+           my_head%ik=ikapa(ikx)
            my_head%luse=luse(i)
            if (luse_obsdiag) then
               my_head%diagu => obsptr

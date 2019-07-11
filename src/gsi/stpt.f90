@@ -99,7 +99,7 @@ subroutine stpt(thead,dval,xval,out,sges,nstep,rpred,spred)
 !
 !$$$
   use kinds, only: r_kind,i_kind,r_quad
-  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc
+  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc,nvqc,hub_norm
   use constants, only: zero,half,one,two,tiny_r_kind,cg_term,zero_quad,r3600
   use aircraftinfo, only: npredt,ntail,aircraft_t_bc_pof,aircraft_t_bc
   use gsi_bundlemod, only: gsi_bundle
@@ -108,6 +108,9 @@ subroutine stpt(thead,dval,xval,out,sges,nstep,rpred,spred)
   use m_tNode  , only: tNode
   use m_tNode  , only: tNode_typecast
   use m_tNode  , only: tNode_nextcast
+  use pvqc, only: vqch,vqcs
+  
+  use mpimod, only: mype
   implicit none
 
 ! Declare passed variables
@@ -122,8 +125,10 @@ subroutine stpt(thead,dval,xval,out,sges,nstep,rpred,spred)
 ! Declare local variables
   integer(i_kind) ier,istatus,isst
   integer(i_kind) j1,j2,j3,j4,j5,j6,j7,j8,kk,n,ix
+  integer(i_kind) ib,ik
   real(r_kind) w1,w2,w3,w4,w5,w6,w7,w8
   real(r_kind) cg_t,val,val2,wgross,wnotgross,t_pg
+  real(r_kind) g_nvqc,w_nvqc,tts
   real(r_kind),dimension(max(1,nstep))::pen,tt
   real(r_kind) tg_prime,valq,valq2,valp,valp2,valu,valu2
   real(r_kind) ts_prime,valv,valv2,valsst,valsst2
@@ -255,6 +260,7 @@ subroutine stpt(thead,dval,xval,out,sges,nstep,rpred,spred)
 
 !  Modify penalty term if nonlinear QC
 
+    
         if (vqc .and. nlnqc_iter .and. tptr%pg > tiny_r_kind .and. tptr%b >tiny_r_kind) then
            t_pg=tptr%pg*varqc_iter
            cg_t=cg_term/tptr%b
@@ -263,26 +269,33 @@ subroutine stpt(thead,dval,xval,out,sges,nstep,rpred,spred)
            do kk=1,max(1,nstep)
               pen(kk) = -two*log((exp(-half*pen(kk))+wgross)/(one+wgross))
            end do
-        endif
 
 !       Note:  if wgross=0 (no gross error, then wnotgross=1 and this all 
 !              reduces to the linear case (no qc)
 
 !  Jim Purse's non linear QC scheme
-        if(njqc .and. tptr%jb  > tiny_r_kind .and. tptr%jb <10.0_r_kind) then
+        else if(njqc .and. tptr%jb  > tiny_r_kind .and. tptr%jb <10.0_r_kind) then
            do kk=1,max(1,nstep)
               pen(kk) = two*two*tptr%jb*log(cosh(sqrt(pen(kk)/(two*tptr%jb))))
            enddo
-           out(1) = out(1)+pen(1)*tptr%raterr2
-           do kk=2,nstep
-              out(kk) = out(kk)+(pen(kk)-pen(1))*tptr%raterr2
-           end do
-        else
-           out(1) = out(1)+pen(1)*tptr%raterr2
-           do kk=2,nstep
-              out(kk) = out(kk)+(pen(kk)-pen(1))*tptr%raterr2
-           end do
+        else if (nvqc .and. tptr%ib >0) then     ! new variational qc
+           do kk=1,max(1,nstep)
+              tts=sqrt(pen(kk))
+              ib=tptr%ib
+              ik=tptr%ik
+              if(hub_norm) then
+                 call vqch(ib,ik,tts,g_nvqc,w_nvqc)
+              else
+                 call vqcs(ib,ik,tts,g_nvqc,w_nvqc)
+              endif
+              pen(kk)=-two*g_nvqc
+           enddo
+
         endif
+           out(1) = out(1)+pen(1)*tptr%raterr2
+           do kk=2,nstep
+              out(kk) = out(kk)+(pen(kk)-pen(1))*tptr%raterr2
+           end do
 
      endif
      tptr => tNode_nextcast(tptr)

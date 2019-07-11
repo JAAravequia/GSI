@@ -29,7 +29,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_get_dim, nc_diag_read_close
 
   use qcmod, only: npres_print,dfact,dfact1,ptop,pbot,buddycheck_t
-  use qcmod, only: njqc,vqc
+  use qcmod, only: njqc,vqc,nvqc,hub_norm
 
   use oneobmod, only: oneobtest
   use oneobmod, only: maginnov
@@ -48,6 +48,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use constants, only: huge_single,r1000,wgtlim,r10,fv
   use constants, only: one_quad
   use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype,icsubtype
+  use convinfo, only: ibeta,ikapa
   use converr_t, only: ptabl_t 
   use converr, only: ptabl
   use rapidrefresh_cldsurf_mod, only: l_gsd_terrain_match_surftobs,l_sfcobserror_ramp_t
@@ -62,6 +63,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
   use buddycheck_mod, only: buddy_check_t
+  use pvqc, only: vqcs,vqch
 
   use sparsearr, only: sparr2, new, size, writearray, fullarray
 
@@ -222,6 +224,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) val,valqc,dlon,dlat,dtime,dpres,error,prest,rwgt,var_jb
   real(r_kind) errinv_input,errinv_adjst,errinv_final
   real(r_kind) err_input,err_adjst,err_final,tfact
+  real(r_kind) g_nvqc,w_nvqc                         ! new variational qc parameter
   real(r_kind) cg_t,wgross,wnotgross,wgt,arg,exp_arg,term,rat_err2,qcgross
   real(r_kind),dimension(nobs)::dup
   real(r_kind),dimension(nsig):: prsltmp
@@ -246,6 +249,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) ier2,iuse,ilate,ilone,ikxx,istnelv,iobshgt,izz,iprvd,isprvd
   integer(i_kind) regime,istat
   integer(i_kind) idomsfc,iskint,iff10,isfcr
+  integer(i_kind) ib,ik
 
   integer(i_kind),dimension(nobs):: buddyuse
 
@@ -865,6 +869,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      if(luse(i))then
         val2     = val*val
         exp_arg  = -half*val2
+        if(nvqc) ratio_errors=0.8_r_kind*ratio_errors
         rat_err2 = ratio_errors**2
         if(njqc .and. var_jb>tiny_r_kind .and. var_jb < 10.0_r_kind .and. error >tiny_r_kind)  then
            if(exp_arg  == zero) then
@@ -885,9 +890,24 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            wgt  = one-wgross/(arg+wgross)
            rwgt = wgt/wgtlim
            valqc = -two*rat_err2*term
+        else if(nvqc .and. ibeta(ikx) >0) then
+           ib=ibeta(ikx)
+           ik=ikapa(ikx)
+           if(hub_norm) then
+              call vqch(ib,ik,val,g_nvqc,w_nvqc)
+           else
+              call vqcs(ib,ik,val,g_nvqc,w_nvqc)
+           endif
+           valqc=-two*rat_err2*g_nvqc
+           if(val ==zero) then
+              wgt=one
+           else
+              wgt=g_nvqc/exp_arg
+           endif
+           rwgt = wgt/wgtlim
         else
            term = exp_arg
-           wgt  = one 
+           wgt  = one
            rwgt = wgt/wgtlim
            valqc = -two*rat_err2*term
         endif
@@ -959,6 +979,8 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         my_head%b       = cvar_b(ikx)
         my_head%pg      = cvar_pg(ikx)
         my_head%jb      = var_jb
+        my_head%ib      = ibeta(ikx)
+        my_head%ik      = ikapa(ikx)
         my_head%use_sfc_model = sfctype.and.sfcmodel
         if(my_head%use_sfc_model) then
            call get_tlm_tsfc(my_head%tlm_tsfc(1), &
@@ -1135,6 +1157,8 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            my_head%b       = cvar_b(ikx)
            my_head%pg      = cvar_pg(ikx)
            my_head%jb      = var_jb
+           my_head%ib      = ibeta(ikx)
+           my_head%ik      = ikapa(ikx)
            my_head%use_sfc_model = sfctype.and.sfcmodel
            if(my_head%use_sfc_model) then
               call get_tlm_tsfc(my_head%tlm_tsfc(1), &

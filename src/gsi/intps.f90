@@ -93,11 +93,13 @@ subroutine intps_(pshead,rval,sval)
   use kinds, only: r_kind,i_kind
   use constants, only: half,one,tiny_r_kind,cg_term,r3600,two
   use obsmod, only: lsaveobsens,l_do_adjoint,luse_obsdiag
-  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc
+  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc,nvqc,hub_norm
   use jfunc, only: jiter
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gsi_4dvar, only: ladtest_obs
+  use pvqc, only: vqch,vqcs
+  use mpimod, only: mype
   implicit none
 
 ! Declare passed variables
@@ -107,10 +109,11 @@ subroutine intps_(pshead,rval,sval)
 
 ! Declare local variables
   integer(i_kind) ier,istatus
-  integer(i_kind) j1,j2,j3,j4
+  integer(i_kind) j1,j2,j3,j4,ib,ik
 ! real(r_kind) penalty
   real(r_kind) cg_ps,val,p0,grad,wnotgross,wgross,ps_pg
   real(r_kind) w1,w2,w3,w4
+  real(r_kind) g_nvqc,w_nvqc,pps
   real(r_kind),pointer,dimension(:) :: sp
   real(r_kind),pointer,dimension(:) :: rp
   type(psNode), pointer :: psptr
@@ -161,13 +164,24 @@ subroutine intps_(pshead,rval,sval)
               wgross =ps_pg*cg_ps/wnotgross                   ! wgross is gama in Enderson
               p0=wgross/(wgross+exp(-half*psptr%err2*val**2)) ! p0 is P in Enderson
               val=val*(one-p0)                                ! term is Wqc in Enderson
-           endif
-           if (njqc .and. psptr%jb  > tiny_r_kind .and. psptr%jb <10.0_r_kind) then
+              grad = val*psptr%raterr2*psptr%err2
+           else if (njqc .and. psptr%jb  > tiny_r_kind .and. psptr%jb <10.0_r_kind) then
               val=sqrt(two*psptr%jb)*tanh(sqrt(psptr%err2)*val/sqrt(two*psptr%jb))
               grad = val*psptr%raterr2*sqrt(psptr%err2)
+           else if (nvqc .and. psptr%ib >0) then
+              ib=psptr%ib
+              ik=psptr%ik
+              pps=val*sqrt(psptr%err2)
+              if(hub_norm) then
+                 call vqch(ib,ik,val,g_nvqc,w_nvqc)
+              else
+                 call vqcs(ib,ik,val,g_nvqc,w_nvqc)
+              endif
+              grad=w_nvqc*pps*sqrt(psptr%err2)*psptr%raterr2
            else
               grad = val*psptr%raterr2*psptr%err2
            endif
+
            if( ladtest_obs) then
               grad = val
            endif

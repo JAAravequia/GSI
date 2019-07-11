@@ -67,7 +67,7 @@
   use qcmod, only: dfact,dfact1,create_qcvars,destroy_qcvars,&
       erradar_inflate,tdrerr_inflate,use_poq7,qc_satwnds,&
       init_qcvars,vadfile,noiqc,c_varqc,qc_noirjaco3,qc_noirjaco3_pole,&
-      buddycheck_t,buddydiag_save,njqc,vqc,vadwnd_l2rw_qc, &
+      buddycheck_t,buddydiag_save,njqc,vqc,nvqc,hub_norm,vadwnd_l2rw_qc, &
       pvis,pcldch,scale_cv,estvisoe,estcldchoe,vis_thres,cldch_thres
   use pcpinfo, only: npredp,diag_pcp,dtphys,deltim,init_pcp
   use jfunc, only: iout_iter,iguess,miter,factqmin,factqmax, &
@@ -801,7 +801,7 @@
 
   namelist/obsqc/dfact,dfact1,erradar_inflate,tdrerr_inflate,oberrflg,&
        vadfile,noiqc,c_varqc,blacklst,use_poq7,hilbert_curve,tcp_refps,tcp_width,&
-       tcp_ermin,tcp_ermax,qc_noirjaco3,qc_noirjaco3_pole,qc_satwnds,njqc,vqc,&
+       tcp_ermin,tcp_ermax,qc_noirjaco3,qc_noirjaco3_pole,qc_satwnds,njqc,vqc,nvqc,hub_norm,&
        aircraft_t_bc_pof,aircraft_t_bc,aircraft_t_bc_ext,biaspredt,upd_aircraft,cleanup_tail,&
        hdist_aircraft,buddycheck_t,buddydiag_save,vadwnd_l2rw_qc,  &
        pvis,pcldch,scale_cv,estvisoe,estcldchoe,vis_thres,cldch_thres
@@ -1248,8 +1248,9 @@
      end if
   end if
   if(ltlint) then
-     if(vqc .or. njqc)then
+     if(vqc .or. njqc .or. nvqc)then
        vqc = .false.
+       nvqc = .false.
        njqc = .false.
        if(mype == 0) write(6,*) ' ltlint = true, so vqc and njqc must be false'
      end if

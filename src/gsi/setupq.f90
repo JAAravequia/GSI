@@ -128,10 +128,10 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use constants, only: zero,one,r1000,r10,r100
   use constants, only: huge_single,wgtlim,three
   use constants, only: tiny_r_kind,five,half,two,huge_r_kind,cg_term,r0_01
-  use qcmod, only: npres_print,ptopq,pbotq,dfact,dfact1,njqc,vqc
+  use qcmod, only: npres_print,ptopq,pbotq,dfact,dfact1,njqc,vqc,nvqc,hub_norm
   use jfunc, only: jiter,last,jiterstart,miter
   use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype
-  use convinfo, only: icsubtype
+  use convinfo, only: icsubtype,ibeta,ikapa
   use converr_q, only: ptabl_q 
   use converr, only: ptabl 
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
@@ -142,6 +142,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
   use sparsearr, only: sparr2, new, size, writearray, fullarray
   use state_vectors, only: svars3d, levels, nsdim
+  use pvqc, only: vqch,vqcs
 
   implicit none
 
@@ -180,6 +181,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) grsmlt,ratio,val2,obserror
   real(r_kind) obserrlm,residual,ressw2,scale,ress,huge_error,var_jb
   real(r_kind) val,valqc,rwgt,prest
+  real(r_kind) g_nvqc,w_nvqc                         ! new variational qc parameter
   real(r_kind) errinv_input,errinv_adjst,errinv_final
   real(r_kind) err_input,err_adjst,err_final
   real(r_kind),dimension(nele,nobs):: data
@@ -197,6 +199,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) ier,ilon,ilat,ipres,iqob,id,itime,ikx,iqmax,iqc
   integer(i_kind) ier2,iuse,ilate,ilone,istnelv,iobshgt,istat,izz,iprvd,isprvd
   integer(i_kind) idomsfc,iderivative
+  integer(i_kind) ib,ik
   real(r_kind) :: delz
   type(sparr2) :: dhx_dx
   real(r_single), dimension(nsdim) :: dhx_dx_array
@@ -275,8 +278,6 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   do i=1,nobs
      muse(i)=nint(data(iuse,i)) <= jiter
   end do
-
-  var_jb=zero
 
 ! choose only one observation--arbitrarily choose the one with positive time departure
 !  handle multiple-reported data at a station
@@ -629,6 +630,7 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      if(luse(i))then
         val2     = val*val
         exp_arg  = -half*val2
+        if(nvqc) ratio_errors=0.8_r_kind*ratio_errors
         rat_err2 = ratio_errors**2
         if(njqc .and. var_jb>tiny_r_kind .and. var_jb < 10.0_r_kind .and. error >tiny_r_kind)  then
            if(exp_arg  == zero) then
@@ -649,6 +651,21 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            wgt  = one-wgross/(arg+wgross)
            rwgt = wgt/wgtlim
            valqc = -two*rat_err2*term
+        else if(nvqc .and. ibeta(ikx) >0) then
+           ib=ibeta(ikx)
+           ik=ikapa(ikx)
+           if(hub_norm) then
+              call vqch(ib,ik,val,g_nvqc,w_nvqc)
+           else
+              call vqcs(ib,ik,val,g_nvqc,w_nvqc)
+           endif
+           valqc=-two*rat_err2*g_nvqc
+           if(val ==zero) then
+              wgt=one
+           else
+              wgt=g_nvqc/exp_arg
+           endif
+           rwgt = wgt/wgtlim
         else
            term = exp_arg
            wgt  =one 
@@ -718,6 +735,8 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         my_head%b      = cvar_b(ikx)
         my_head%pg     = cvar_pg(ikx)
         my_head%jb     = var_jb
+        my_head%ib     = ibeta(ikx)
+        my_head%ik     = ikapa(ikx)
         my_head%luse   = luse(i)
 
         if(oberror_tune) then
@@ -834,6 +853,8 @@ subroutine setupq(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            my_head%b       = cvar_b(ikx)
            my_head%pg      = cvar_pg(ikx)
            my_head%jb      = var_jb
+           my_head%ib     = ibeta(ikx)
+           my_head%ik     = ikapa(ikx)
            my_head%luse    = luse(i)
            if (luse_obsdiag) &
               my_head%diags => obsdiags(i_q_ob_type,ibin)%tail

@@ -110,16 +110,18 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
              huge_r_kind,tiny_r_kind,two,cg_term,huge_single, &
              r1000,wgtlim,tiny_single,r10,three
   use jfunc, only: jiter,last,jiterstart,miter
-  use qcmod, only: dfact,dfact1,npres_print,njqc,vqc
+  use qcmod, only: dfact,dfact1,npres_print,njqc,vqc,nvqc,hub_norm
   use guess_grids, only: hrdifsig,ges_lnprsl,nfldsig,ntguessig
   use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype,icsubtype
+  use convinfo, only: ibeta,ikapa
 
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
-
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
   use sparsearr, only: sparr2, new, size, writearray, fullarray
   use rapidrefresh_cldsurf_mod, only: l_closeobs
+  use pvqc, only: vqch,vqcs
+  
 
   implicit none
 
@@ -152,6 +154,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) ratio_errors,error,dhgt,ddiff,dtemp
   real(r_kind) val2,ress,ressw2,val,valqc
   real(r_kind) cg_ps,wgross,wnotgross,wgt,arg,exp_arg,term,rat_err2,qcgross
+  real(r_kind) g_nvqc,w_nvqc                         ! new variational qc parameter
   real(r_kind),dimension(nobs):: dup
   real(r_kind),dimension(nsig):: prsltmp
   real(r_kind),dimension(nele,nobs):: data
@@ -162,6 +165,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) ikxx,nn,istat,ibin,ioff,ioff0
   integer(i_kind) i,nchar,nreal,ii,jj,k,l,mm1
   integer(i_kind) itype,isubtype 
+  integer(i_kind) ib,ik
 
   logical,dimension(nobs):: luse,muse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
@@ -534,6 +538,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !    Compute penalty terms (linear & nonlinear qc).
         val2     = val*val
         exp_arg  = -half*val2
+        if(nvqc) ratio_errors=0.8_r_kind*ratio_errors
         rat_err2 = ratio_errors**2
         if(njqc  .and. var_jb>tiny_r_kind .and. var_jb < 10.0_r_kind .and. error >tiny_r_kind)  then
            if(exp_arg  == zero) then
@@ -554,6 +559,21 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            wgt  = one-wgross/(arg+wgross)
            rwgt = wgt/wgtlim
            valqc = -two*rat_err2*term
+        else if(nvqc .and. ibeta(ikx) >0 ) then
+           ib=ibeta(ikx)
+           ik=ikapa(ikx)
+           if(hub_norm) then
+              call vqch(ib,ik,val,g_nvqc,w_nvqc)
+           else
+              call vqcs(ib,ik,val,g_nvqc,w_nvqc)
+           endif
+           valqc=-two*rat_err2*g_nvqc
+           if(val ==zero) then
+              wgt=one
+           else
+              wgt=g_nvqc/exp_arg
+           endif
+           rwgt = wgt/wgtlim
         else
            term = exp_arg
            wgt  = one 
@@ -620,6 +640,8 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         my_head%b        = cvar_b(ikx)
         my_head%pg       = cvar_pg(ikx)
         my_head%jb       = var_jb
+        my_head%ib       = ibeta(ikx)
+        my_head%ik       = ikapa(ikx)
         my_head%luse     = luse(i)
         if(oberror_tune) then
            my_head%kx    = ikx        ! data type for oberror tuning

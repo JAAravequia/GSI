@@ -156,6 +156,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   use convinfo, only: nconvtype,ictype,ioctype,icuse
   use chemmod, only : oneobtest_chem,oneob_type_chem,&
        code_pm25_ncbufr,code_pm25_anowbufr,code_pm10_ncbufr,code_pm10_anowbufr
+  use mrmsmod,only: l_mrms_run
 
   implicit none
 
@@ -689,7 +690,7 @@ subroutine read_obs(ndata,mype)
            perturb_obs,lobserver,lread_obs_save,obs_input_common, &
            reduce_diag,nobs_sub,dval_use
     use gsi_nstcouplermod, only: nst_gsi,gsi_nstcoupler_final
-    use qcmod, only: njqc,vadwnd_l2rw_qc
+    use qcmod, only: njqc,vadwnd_l2rw_qc,nvqc
     use gsi_4dvar, only: l4dvar
     use satthin, only: super_val,super_val1,superp,makegvals,getsfc,destroy_sfc
     use mpimod, only: ierror,mpi_comm_world,mpi_sum,mpi_rtype,mpi_integer,npe,&
@@ -705,6 +706,7 @@ subroutine read_obs(ndata,mype)
     use convb_q,only:convb_q_read
     use convb_t,only:convb_t_read
     use convb_uv,only:convb_uv_read
+    use pvqc,only: readvqcdatfile
     use guess_grids, only: ges_prsl,geop_hgtl,ntguessig
     use radinfo, only: nusis,iuse_rad,jpch_rad,diag_rad
     use insitu_info, only: mbuoy_info,mbuoyb_info,read_ship_info
@@ -806,6 +808,8 @@ subroutine read_obs(ndata,mype)
     else
        call converr_read(mype)
     endif
+
+    if(nvqc) call readvqcdatfile('vqctp001.dat',20,10,20,10,200,2)
 
 !   Optionally set random seed to perturb observations
     if (perturb_obs) then

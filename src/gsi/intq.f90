@@ -92,11 +92,13 @@ subroutine intq_(qhead,rval,sval)
   use kinds, only: r_kind,i_kind
   use constants, only: half,one,tiny_r_kind,cg_term,r3600,two
   use obsmod, only: lsaveobsens,l_do_adjoint,luse_obsdiag
-  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc
+  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc,nvqc,hub_norm
   use jfunc, only: jiter
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gsi_4dvar, only: ladtest_obs
+  use pvqc, only: vqch,vqcs
+  use mpimod, only: mype
   implicit none
 
 ! Declare passed variables
@@ -106,9 +108,11 @@ subroutine intq_(qhead,rval,sval)
 
 ! Declare local variables  
   integer(i_kind) j1,j2,j3,j4,j5,j6,j7,j8,ier,istatus
+  integer(i_kind) ib,ik
   real(r_kind) w1,w2,w3,w4,w5,w6,w7,w8
 ! real(r_kind) penalty
   real(r_kind) cg_q,val,p0,grad,wnotgross,wgross,q_pg
+  real(r_kind) g_nvqc,w_nvqc,qq
   real(r_kind),pointer,dimension(:) :: sq
   real(r_kind),pointer,dimension(:) :: rq
   type(qNode), pointer :: qptr
@@ -160,7 +164,7 @@ subroutine intq_(qhead,rval,sval)
            if( .not. ladtest_obs)   val=val-qptr%res
  
 !          gradient of nonlinear operator
- 
+          
            if (vqc .and. nlnqc_iter .and. qptr%pg > tiny_r_kind .and.  &
                                 qptr%b  > tiny_r_kind) then
               q_pg=qptr%pg*varqc_iter
@@ -169,14 +173,24 @@ subroutine intq_(qhead,rval,sval)
               wgross =q_pg*cg_q/wnotgross              ! wgross is gama in the reference by Enderson
               p0=wgross/(wgross+exp(-half*qptr%err2*val**2))  ! p0 is P in the reference by Enderson
               val=val*(one-p0)                         ! term is Wqc in the referenc by Enderson
-           endif
-
-           if (njqc .and. qptr%jb > tiny_r_kind .and. qptr%jb <10.0_r_kind) then
+              grad = val*qptr%raterr2*qptr%err2
+           else if (njqc .and. qptr%jb > tiny_r_kind .and. qptr%jb <10.0_r_kind) then
               val=sqrt(two*qptr%jb)*tanh(sqrt(qptr%err2)*val/sqrt(two*qptr%jb))
               grad = val*qptr%raterr2*sqrt(qptr%err2)
+           else if (nvqc .and. qptr%ib >0) then
+              ib=qptr%ib
+              ik=qptr%ik
+              qq=val*sqrt(qptr%err2)
+              if(hub_norm) then
+                 call vqch(ib,ik,qq,g_nvqc,w_nvqc)
+              else
+                 call vqcs(ib,ik,qq,g_nvqc,w_nvqc)
+              endif
+              grad=w_nvqc*qq*sqrt(qptr%err2)*qptr%raterr2
            else
               grad = val*qptr%raterr2*qptr%err2
            endif
+
            if( ladtest_obs) then
               grad = val
            end if

@@ -117,13 +117,15 @@ subroutine intt_(thead,rval,sval,rpred,spred)
   use kinds, only: r_kind,i_kind,r_quad
   use constants, only: half,one,zero,tiny_r_kind,cg_term,r3600,two
   use obsmod, only: lsaveobsens,l_do_adjoint,luse_obsdiag
-  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc
+  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc,nvqc,hub_norm
   use jfunc, only: jiter
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gsi_bundlemod, only: gsi_bundleprint
   use gsi_4dvar, only: ladtest_obs 
   use aircraftinfo, only: npredt,ntail,aircraft_t_bc_pof,aircraft_t_bc
+  use pvqc, only: vqch,vqcs
+  use mpimod, only: mype
   implicit none
   
 
@@ -143,7 +145,9 @@ subroutine intt_(thead,rval,sval,rpred,spred)
 
 ! Declare local variables
   integer(i_kind) j1,j2,j3,j4,j5,j6,j7,j8,ier,istatus,isst,ix,n
+  integer(i_kind) ib,ik
   real(r_kind) w1,w2,w3,w4,w5,w6,w7,w8,time_t
+  real(r_kind) g_nvqc,w_nvqc,tts
 ! real(r_kind) penalty
   real(r_kind) cg_t,val,p0,grad,wnotgross,wgross,t_pg
   real(r_kind) psfc_grad,tg_grad
@@ -266,13 +270,25 @@ subroutine intt_(thead,rval,sval,rpred,spred)
               wgross =t_pg*cg_t/wnotgross
               p0=wgross/(wgross+exp(-half*tptr%err2*val**2))
               val=val*(one-p0)                  
-           endif
-           if (njqc .and. tptr%jb > tiny_r_kind .and. tptr%jb <10.0_r_kind) then
+              grad = val*tptr%raterr2*tptr%err2
+           else if (njqc .and. tptr%jb > tiny_r_kind .and. tptr%jb <10.0_r_kind) then
               val=sqrt(two*tptr%jb)*tanh(sqrt(tptr%err2)*val/sqrt(two*tptr%jb))
               grad = val*tptr%raterr2*sqrt(tptr%err2)
+           else if (nvqc .and. tptr%ib >0) then
+              ib=tptr%ib
+              ik=tptr%ik
+              tts=val*sqrt(tptr%err2)
+              if(hub_norm) then
+                 call vqch(ib,ik,tts,g_nvqc,w_nvqc)
+              else
+                 call vqch(ib,ik,tts,g_nvqc,w_nvqc)
+              endif
+              grad=w_nvqc*tts*sqrt(tptr%err2)*tptr%raterr2
            else
               grad = val*tptr%raterr2*tptr%err2
            endif
+
+
            if(ladtest_obs) then
               grad = val
            endif

@@ -81,7 +81,7 @@ subroutine stpw(whead,rval,sval,out,sges,nstep)
 !
 !$$$
   use kinds, only: r_kind,i_kind,r_quad
-  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc
+  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc,nvqc,hub_norm
   use constants, only: one,half,two,tiny_r_kind,cg_term,zero_quad,r3600
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -89,6 +89,9 @@ subroutine stpw(whead,rval,sval,out,sges,nstep)
   use m_wNode  , only: wNode
   use m_wNode  , only: wNode_typecast
   use m_wNode  , only: wNode_nextcast
+  use pvqc, only: vqch,vqcs
+  
+  use mpimod, only: mype
   implicit none
 
 ! Declare passed variables
@@ -101,9 +104,11 @@ subroutine stpw(whead,rval,sval,out,sges,nstep)
 ! Declare local variables
   integer(i_kind) ier,istatus
   integer(i_kind) j1,j2,j3,j4,j5,j6,j7,j8,kk
+  integer(i_kind)  ib,ik
   real(r_kind) valu,facu,valv,facv,w1,w2,w3,w4,w5,w6,w7,w8
   real(r_kind) cg_w,wgross,wnotgross,w_pg
   real(r_kind) uu,vv
+  real(r_kind) g_nvqc,w_nvqc,uus
   real(r_kind),dimension(max(1,nstep))::pen
   real(r_kind),pointer,dimension(:):: ru,rv,su,sv
   type(wNode), pointer :: wptr
@@ -164,6 +169,7 @@ subroutine stpw(whead,rval,sval,out,sges,nstep)
 
 !  Modify penalty term if nonlinear QC
 
+
         if (vqc .and. nlnqc_iter .and. wptr%pg > tiny_r_kind .and.  &
                              wptr%b  > tiny_r_kind) then
            w_pg=wptr%pg*varqc_iter
@@ -173,23 +179,31 @@ subroutine stpw(whead,rval,sval,out,sges,nstep)
            do kk=1,max(1,nstep)
               pen(kk)= -two*log((exp(-half*pen(kk))+wgross)/(one+wgross))
            end do
-        endif
-
 ! Purser's scheme
-        if(njqc .and. wptr%jb  > tiny_r_kind .and. wptr%jb <10.0_r_kind) then
+        else if(njqc .and. wptr%jb  > tiny_r_kind .and. wptr%jb <10.0_r_kind) then
            do kk=1,max(1,nstep)
               pen(kk) = two*two*wptr%jb*log(cosh(sqrt(pen(kk)/(two*wptr%jb))))
            enddo
-           out(1) = out(1)+pen(1)*wptr%raterr2
-           do kk=2,nstep
-              out(kk) = out(kk)+(pen(kk)-pen(1))*wptr%raterr2
-           end do
-        else
-           out(1) = out(1)+pen(1)*wptr%raterr2
-           do kk=2,nstep
-              out(kk) = out(kk)+(pen(kk)-pen(1))*wptr%raterr2
-           end do
+        else if (nvqc .and. wptr%ib >0) then     ! new variational qc
+           do kk=1,max(1,nstep)
+              uus=sqrt(pen(kk))
+              ib=wptr%ib
+              ik=wptr%ik
+              if(hub_norm) then
+                 call vqch(ib,ik,uus,g_nvqc,w_nvqc)
+              else
+                 call vqcs(ib,ik,uus,g_nvqc,w_nvqc)
+              endif
+              pen(kk)=-two*g_nvqc
+           enddo
+
         endif
+
+
+           out(1) = out(1)+pen(1)*wptr%raterr2
+           do kk=2,nstep
+              out(kk) = out(kk)+(pen(kk)-pen(1))*wptr%raterr2
+           end do
      end if
 
      wptr => wNode_nextcast(wptr)
