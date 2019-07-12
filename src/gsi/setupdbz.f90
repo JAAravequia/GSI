@@ -208,6 +208,7 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,radardbz_diagsave,init_p
      nreal=27
      if (lobsdiagsave) nreal=nreal+4*miter+1
      allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
+     if(netcdf_diag) call init_netcdf_diag_
   end if
   mm1=mype+1
   scale=one
