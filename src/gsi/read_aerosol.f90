@@ -140,7 +140,7 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   character (len=14)  :: flagstr = 'STYP DBCF QAOD'
 
 ! VIIRS AOD code
-  character (len= 9) :: vaodchstr  = 'CHWL AOPT'
+  character (len= 9) :: vaodchstr  = 'CHWL AOTH'
   character (len=69) :: vaodgstr = &
       'SAID CLATH CLONH YEAR MNTH DAYS HOUR MINU SOZA SOLAZI RSST VAOTQ QPLR'
   integer(i_kind), parameter :: mxib  = 20
@@ -302,7 +302,7 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
               if ( aod_flags(3) < 1.0e+10_r_double ) qaod = aod_flags(3)
 
               if ( .not. luse_deepblue .and. nint(styp)==4 ) cycle read_modis
-              if ( qaod < aod_qa_limit ) cycle read_modis
+              if ( qaod > aod_qa_limit ) cycle read_modis
 
               ! Map obs to thinning grid
               call map2tgrid(dlat_earth,dlon_earth,dist1,crit1,itx,ithin,itt,iuse,sis)
@@ -426,7 +426,7 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
               call ufbint(lunin,hdrvaodg,13,1,iret,vaodgstr)
               rsat = hdrvaodg(1); ksatid=rsat
 
-              if ( jsatid == 'NPP' .or. jsatid == 'npp' ) kidsat = 224
+              if ( jsatid == 'NPP' .or. jsatid == 'npp' ) kidsat = 225
 
               if ( ksatid /= kidsat  ) cycle read_viirs
 
@@ -496,7 +496,7 @@ subroutine read_aerosol(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
               call ufbrep(lunin,vaodch,2,12,iret,vaodchstr)
               aod_550 = vaodch(2,12)
 
-              if ( aod_550 < aod_lb .OR. aod_550 > aod_ub ) cycle read_viirs
+              if ( aod_550 < aod_lb .OR. aod_550 >= aod_ub ) cycle read_viirs
 
               if (thin4d) then
                  timedif = zero
