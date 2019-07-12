@@ -30,6 +30,8 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2017-02-06  todling - add netcdf_diag capability; hidden as contained code
 !   2018-01-08  pondeca - addd option l_closeobs to use closest obs to analysis
 !                                     time in analysis
+!   2019-07-12  levine  - add logic to read in mesonet wind sensor height from prepbufr
+!                         rather than assuming station height is 10 m AGL.
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -429,36 +431,26 @@ subroutine setupgust(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            factw = one
         endif
        
-       !if (.not. twodvar_regional) then
         if (zob <= ten) then
            if(zob < ten)then
-              !term = max(zob,zero)/ten
-              !factw = term*factw
               defrough=half !default roughness length: 0.5 m
               factw=log(max(defrough,zob)/defrough)/log(ten/defrough)
-              print*, "GUST WARNING: Unusual wind height:",station_id,itype,zob,factw
            end if
         else
            if (.not. twodvar_regional) then
               term = (zges(1)-zob)/(zges(1)-ten)
               factw = one-term+factw*term
            end if
-       !else
-       !   if(zob < ten)then
-       !      term = max(zob,zero)/ten
-       !      factw = term*factw
-       !   end if
        end if
        gustges=factw*gustges
     endif
 
-!   Compute observation pressure (only used for diagnostics & for type 2**)
+!   Compute observation pressure (only used for diagnostics)
 !   Get guess surface pressure and mid layer pressure
 !   at observation location.
 !   For 2dvar, just read in from prepbufr file
     if (twodvar_regional) then
-       presw = ten*exp(data(ipres,i))
-       print*, "GUST reported pressure (stnid,type,zob,presw):",station_id,ictype(ikx),zob,presw
+       presw = ten*exp(data(ipres,i)) !note that data(ipres,i) = dpres
     else
        if (sfc_data) then
        call tintrp2a11(ges_ps,psges,dlat,dlon,dtime,hrdifsig,&
