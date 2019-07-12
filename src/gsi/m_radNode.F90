@@ -12,6 +12,7 @@ module m_radNode
 !   2016-05-18  j guo   - added this document block for the initial polymorphic
 !                         implementation.
 !   2016-07-19  kbathmann - add rsqrtinv and use_corr_obs to rad_ob_type
+!   2019-04-22  kbathmann - change rsqrtinv to Rpred
 !
 !   input argument list: see Fortran 90 style document below
 !
@@ -50,9 +51,10 @@ module m_radNode
      real(r_kind),dimension(:,:),pointer :: dtb_dvar => NULL()
                                       !  radiance jacobian (nsigradjac,nchan)
 
-     real(r_kind),dimension(:,:),pointer :: rsqrtinv => NULL()
-                                      !  square root of inverse of R, only used
-                                      !  if using correlated obs
+     real(r_kind),dimension(:,:),pointer :: Rpred => NULL()
+                                      !  square root of inverse of R, multiplied
+                                      !  by bias predictor jacobian
+                                      !  only used if using correlated obs
      integer(i_kind),dimension(:),pointer :: icx => NULL()
      integer(i_kind),dimension(:),pointer :: ich => NULL()
      integer(i_kind) :: nchan         !  number of channels for this profile
@@ -208,7 +210,7 @@ _ENTRY_(myname_)
   if(associated(aNode%raterr2 )) deallocate(aNode%raterr2 )
   if(associated(aNode%pred    )) deallocate(aNode%pred    )
   if(associated(aNode%dtb_dvar)) deallocate(aNode%dtb_dvar)
-  if(associated(aNode%rsqrtinv)) deallocate(aNode%rsqrtinv)
+  if(associated(aNode%Rpred   )) deallocate(aNode%Rpred   )
   if(associated(aNode%icx     )) deallocate(aNode%icx     )
 _EXIT_(myname_)
 return
@@ -249,7 +251,7 @@ _ENTRY_(myname_)
 
     read(iunit,iostat=istat)
                 if(istat/=0) then
-                  call perr(myname_,'skipping read(%(rsqrtinv)), iostat =',istat)
+                  call perr(myname_,'skipping read(%(Rpred)), iostat =',istat)
                   _EXIT_(myname_)
                   return
                 endif
@@ -269,7 +271,7 @@ _ENTRY_(myname_)
         if(associated(aNode%raterr2 )) deallocate(aNode%raterr2 )
         if(associated(aNode%pred    )) deallocate(aNode%pred    )
         if(associated(aNode%dtb_dvar)) deallocate(aNode%dtb_dvar)
-        if(associated(aNode%rsqrtinv)) deallocate(aNode%rsqrtinv)
+        if(associated(aNode%Rpred)) deallocate(aNode%Rpred)
         if(associated(aNode%icx     )) deallocate(aNode%icx     )
 
         nchan=aNode%nchan
@@ -281,6 +283,11 @@ _ENTRY_(myname_)
                   aNode%dtb_dvar(nsigradjac,nchan), &
                   aNode%ich  (nchan), &
                   aNode%icx  (nchan)  )
+
+        if (aNode%use_corr_obs) then
+            deallocate(aNode%Rpred, stat=istat)
+            if (istat/=0) write(6,*)'DESTROYOBS:  deallocate error for rad Rpred, istatus=',istat
+        endif
 
         read(iunit,iostat=istat)    aNode%ich     , &
                                     aNode%res     , &
@@ -298,10 +305,10 @@ _ENTRY_(myname_)
                 end if
 
         if (aNode%use_corr_obs) then
-            allocate(aNode%rsqrtinv(nchan,nchan))
-            read(iunit,iostat=istat)    aNode%rsqrtinv
+            allocate(aNode%Rpred(((nchan+1)*nchan)/2,npred))
+            read(iunit,iostat=istat)    aNode%Rpred
                 if (istat/=0) then
-                  call perr(myname_,'read(%(rsqrtinv)), iostat =',istat)
+                  call perr(myname_,'read(%(Rpred)), iostat =',istat)
                   _EXIT_(myname_)
                   return
                 end if
@@ -323,6 +330,7 @@ return
 end subroutine obsNode_xread_
 
 subroutine obsNode_xwrite_(aNode,junit,jstat)
+  use radinfo, only: npred
   implicit none
   class(radNode),intent(in):: aNode
   integer(i_kind),intent(in   ):: junit
@@ -356,9 +364,11 @@ _ENTRY_(myname_)
                 end if
 
   if (aNode%use_corr_obs) then
-      write(junit,iostat=jstat) aNode%rsqrtinv
+      ASSERT(size(aNode%Rpred,1)==((aNode%nchan+1)*aNode%nchan)/2)
+      ASSERT(size(aNode%Rpred,2)==npred)
+      write(junit,iostat=jstat) aNode%Rpred
            if (jstat/=0) then
-               call perr(myname_,'write(%(rsqrtinv)), iostat =',jstat)
+               call perr(myname_,'write(%(Rpred)), iostat =',jstat)
                _EXIT_(myname_)
                return
            end if
