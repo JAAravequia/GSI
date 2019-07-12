@@ -167,7 +167,9 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !                                     time in analysis
 !   2018-04-09  pondeca -  introduce duplogic to correctly handle the characterization of
 !                          duplicate obs in twodvar_regional applications
-!
+!   2019-07-12  levine  -  introduce logic to read in mesonet wind sensor heights from prepbufr
+!                          rather than assuming sensor height is 10 m AGL.
+!    
 !
 ! REMARKS:
 !   language: f90
@@ -528,12 +530,6 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !       Subtract off combination of surface station elevation and
 !       model elevation depending on how close to surface
         fact = zero
-        !LEVINE EDIT
-        !if (itype == 295 .or. itype == 288) then
-           !if ((dpres-dstn) < 10._r_kind) then
-           !   print*, "SETUPW-MSONET: Mesonet wind with height under 10 m:",dpres,dstn
-           !endif
-        !endif
         if(dpres-dstn > 10._r_kind)then
            if(dpres-dstn > r1000)then
               fact = one
@@ -630,11 +626,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         if (zob > zges(1).and..not.twodvar_regional) then
            factw=one
         else
-           !if (itype.eq.295.or.itype.eq.288) then
-              !print*, "Factw will change!  stnid,zob,zges(1)=",station_id,zob,zges(1)
-           !endif
-           !factw = data(iff10,i)
-           factw=one !LEVINE default value of factw
+           factw=one
            if(sfcmod_gfs .or. sfcmod_mm5) then
               sfcr = data(isfcr,i)
               skint = data(iskint,i)
@@ -647,8 +639,6 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                  zob=ten
               endif
               if(zob < ten)then
-                 !term = max(zob,zero)/ten
-                 !factw = term*factw
                  defrough=half !default roughness length: 0.5 m
                  factw=log(zob/defrough)/log(ten/defrough)
               end if
@@ -657,9 +647,6 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               factw = one-term+factw*term
            end if
 
-           !if (factw.ne.1) then
-           !   print*, "StationID,zob,zges(1),factw=",station_id,zob,zges(1),factw
-           !endif
            ugesin=factw*ugesin
            vgesin=factw*vgesin
 
@@ -675,13 +662,6 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
  
 !       Compute observation pressure (only used for diagnostics)
         
-!       In RTMA/URMA, read in pressure from prepbufr file if available
-!       since there is no 3d field to work with
-        !if (twodvar_regional) then
-        !   dpres = data(ipres,i)
-        !   presw = ten*exp(dpres)
-        !   print*, "W Pressure: stnid, type, zob, dpres, presw=",station_id,itype,zob,dpres,presw
-        !else
 !       Set indices of model levels below (k1) and above (k2) observation.
         if (dpres<one) then
            z1=zero;    p1=log(psges)
@@ -706,8 +686,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !          Determine location in terms of grid units for midpoint of
 !          first layer above surface
         sfcchk=zero
-           !call grdcrd1(sfcchk,zges,nsig,1)
-        !endif !twodvar_regional
+        call grdcrd1(sfcchk,zges,nsig,1)
 
 !    Process observations with reported pressure
      else
