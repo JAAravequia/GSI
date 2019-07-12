@@ -128,7 +128,7 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
 
 ! Declare local variables
   integer(i_kind) istatus
-  integer(i_kind) nn,n,ic,k,nx,j1,j2,j3,j4,kk, mm, ic1
+  integer(i_kind) nn,n,ic,k,nx,j1,j2,j3,j4,kk, mm, ic1,ncr
   real(r_kind) val2,val,w1,w2,w3,w4
   real(r_kind),dimension(nsigradjac):: tdir,rdir
   real(r_kind) cg_rad,wgross,wnotgross
@@ -266,6 +266,7 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
 
            end do
         end if
+        ncr=0
         do nn=1,radptr%nchan
 
            val2=-radptr%res(nn)
@@ -275,11 +276,12 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
 !             contribution from bias corection
               ic=radptr%icx(nn)
               if (radptr%use_corr_obs) then  
-                 do mm=1,radptr%nchan 
+                 do mm=1,nn
+                    ncr=ncr+1
+                    ic1=radptr%icx(mm)
                     do nx=1,npred
-                       ic1=radptr%icx(mm)
-                       val2=val2+spred(nx,ic1)*radptr%rsqrtinv(mm,nn)*radptr%pred(nx,mm)
-                       val=val+rpred(nx,ic1)*radptr%rsqrtinv(mm,nn)*radptr%pred(nx,mm)
+                       val2=val2+spred(nx,ic1)*radptr%Rpred(ncr,nx)
+                       val=val+rpred(nx,ic1)*radptr%Rpred(ncr,nx)
                     end do
                  end do
               else
@@ -306,7 +308,11 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
         
 !          calculate contribution to J
            do kk=1,max(1,nstep)
-              term(kk)  = radptr%err2(nn)*rad(kk)*rad(kk)
+              if(radptr%use_corr_obs) then
+                 term(kk)  = rad(kk)*rad(kk)
+              else
+                 term(kk)  = radptr%err2(nn)*rad(kk)*rad(kk)
+              endif
            end do
 
 !          Modify penalty term if nonlinear QC
@@ -320,9 +326,17 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
               end do
            endif
 
-           out(1) = out(1) + term(1)*radptr%raterr2(nn)
+           if(radptr%use_corr_obs) then
+              out(1) = out(1) + term(1)
+           else
+              out(1) = out(1) + term(1)*radptr%raterr2(nn)
+           endif
            do kk=2,nstep
-              out(kk) = out(kk) + (term(kk)-term(1))*radptr%raterr2(nn)
+              if(radptr%use_corr_obs) then
+                 out(kk) = out(kk) + (term(kk)-term(1))
+              else
+                 out(kk) = out(kk) + (term(kk)-term(1))*radptr%raterr2(nn)
+              endif
            end do
 
         end do

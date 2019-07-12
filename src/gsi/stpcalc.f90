@@ -16,6 +16,7 @@ module stpcalcmod
 !   2015-09-03  guo     - obsmod::yobs has been replaced with m_obsHeadBundle,
 !                         where yobs is created and destroyed when and where it
 !                         is needed.
+!   2018-05-19  eliu    - add precipitation component in moisture constraint
 !   2018-08-10  guo     - removed obsHeadBundle references.
 !                       - replaced stpjo() with a new polymorphic stpjomod::stpjo().
 !
@@ -218,12 +219,12 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
   use gsi_4dvar, only: nobs_bins,ltlint,ibin_anl
   use jfunc, only: iout_iter,nclen,xhatsave,yhatsave,&
        iter
-  use jcmod, only: ljcpdry,ljc4tlevs,ljcdfi
+  use jcmod, only: ljcpdry,ljc4tlevs,ljcdfi,ljclimqc 
   use gsi_obOperTypeManager, only: nobs_type => obOper_count
   use stpjcmod, only: stplimq,stplimg,stplimv,stplimp,stplimw10m,&
-       stplimhowv,stplimcldch,stpjcdfi,stpjcpdry,stpliml
+       stplimhowv,stplimcldch,stpjcdfi,stpjcpdry,stpliml,stplimqc  
   use bias_predictors, only: predictors
-  use control_vectors, only: control_vector,qdot_prod_sub,cvars2d
+  use control_vectors, only: control_vector,qdot_prod_sub,cvars2d,cvars3d  
   use state_vectors, only: allocate_state,deallocate_state
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -250,7 +251,7 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
 
 
 ! Declare local parameters
-  integer(i_kind),parameter:: n0 = 12
+  integer(i_kind),parameter:: n0 = 17 
   integer(i_kind),parameter:: ipen = n0+nobs_type
   integer(i_kind),parameter:: istp_iter = 5
   integer(i_kind),parameter:: ipenlin = 3
@@ -264,6 +265,7 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
   real(r_quad),dimension(4,nobs_type):: pbcjo 
   real(r_quad),dimension(4,nobs_type,nobs_bins):: pbcjoi 
   real(r_quad),dimension(4,nobs_bins):: pbcqmin,pbcqmax
+  real(r_quad),dimension(4,nobs_bins):: pbcql,pbcqi,pbcqr,pbcqs,pbcqg  
   real(r_quad),dimension(ipen):: pen_est
   real(r_quad),dimension(3,ipenlin):: pstart 
   real(r_quad) bx,cx,ccoef,bcoef,dels,sges1,sgesj
@@ -320,6 +322,11 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
 !    pbc(*,10) contribution from negative howv constraint term (Jo)
 !    pbc(*,11) contribution from negative lcbas constraint term (Jo)
 !    pbc(*,12) contribution from negative cldch constraint term (Jo)
+!    pbc(*,13) contribution from negative ql constraint term (Jl/Jg)
+!    pbc(*,14) contribution from negative qi constraint term (Jl/Jg)
+!    pbc(*,15) contribution from negative qr constraint term (Jl/Jg)
+!    pbc(*,16) contribution from negative qs constraint term (Jl/Jg)
+!    pbc(*,17) contribution from negative qg constraint term (Jl/Jg)
 !
 !    Under polymorphism the following is the contents of pbs:
 !    linear terms => pbcjo(*,n0+1:n0+nobs_type),
@@ -330,41 +337,41 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
 !    The original (wired) implementation of obs-types has
 !    the extra contents of pbc defined as:
 !
-!    pbc(*,13) contribution from ps observation  term (Jo)
-!    pbc(*,14) contribution from t observation  term (Jo)
-!    pbc(*,15) contribution from w observation  term (Jo)
-!    pbc(*,16) contribution from q observation  term (Jo)
-!    pbc(*,17) contribution from spd observation  term (Jo)
-!    pbc(*,18) contribution from rw observation  term (Jo)
-!    pbc(*,19) contribution from dw observation  term (Jo)
-!    pbc(*,20) contribution from sst observation  term (Jo)
-!    pbc(*,21) contribution from pw observation  term (Jo)
-!    pbc(*,22) contribution from pcp observation  term (Jo)
-!    pbc(*,23) contribution from oz observation  term (Jo)
-!    pbc(*,24) contribution from o3l observation  term (Jo)(not used)
-!    pbc(*,25) contribution from gps observation  term (Jo)
-!    pbc(*,26) contribution from rad observation  term (Jo)
-!    pbc(*,27) contribution from tcp observation  term (Jo)
-!    pbc(*,28) contribution from lag observation  term (Jo)
-!    pbc(*,29) contribution from colvk observation  term (Jo)
-!    pbc(*,30) contribution from aero observation  term (Jo)
-!    pbc(*,31) contribution from aerol observation  term (Jo)
-!    pbc(*,32) contribution from pm2_5 observation  term (Jo)
-!    pbc(*,33) contribution from gust observation  term (Jo)
-!    pbc(*,34) contribution from vis observation  term (Jo)
-!    pbc(*,35) contribution from pblh observation  term (Jo)
-!    pbc(*,36) contribution from wspd10m observation  term (Jo)
-!    pbc(*,37) contribution from td2m observation  term (Jo)
-!    pbc(*,38) contribution from mxtm observation  term (Jo)
-!    pbc(*,39) contribution from mitm observation  term (Jo)
-!    pbc(*,40) contribution from pmsl observation  term (Jo)
-!    pbc(*,41) contribution from howv observation  term (Jo)
-!    pbc(*,42) contribution from tcamt observation  term (Jo)
-!    pbc(*,43) contribution from lcbas observation  term (Jo)
-!    pbc(*,44) contribution from pm10 observation  term (Jo)
-!    pbc(*,45) contribution from cldch observation  term (Jo)
-!    pbc(*,46) contribution from uwnd10m observation  term (Jo)
-!    pbc(*,47) contribution from vwnd10m observation  term (Jo)
+!    pbc(*,18) contribution from ps observation  term (Jo)
+!    pbc(*,19) contribution from t observation  term (Jo)
+!    pbc(*,20) contribution from w observation  term (Jo)
+!    pbc(*,21) contribution from q observation  term (Jo)
+!    pbc(*,22) contribution from spd observation  term (Jo)
+!    pbc(*,23) contribution from rw observation  term (Jo)
+!    pbc(*,24) contribution from dw observation  term (Jo)
+!    pbc(*,25) contribution from sst observation  term (Jo)
+!    pbc(*,26) contribution from pw observation  term (Jo)
+!    pbc(*,27) contribution from pcp observation  term (Jo)
+!    pbc(*,28) contribution from oz observation  term (Jo)
+!    pbc(*,29) contribution from o3l observation  term (Jo)(not used)
+!    pbc(*,30) contribution from gps observation  term (Jo)
+!    pbc(*,31) contribution from rad observation  term (Jo)
+!    pbc(*,32) contribution from tcp observation  term (Jo)
+!    pbc(*,33) contribution from lag observation  term (Jo)
+!    pbc(*,34) contribution from colvk observation  term (Jo)
+!    pbc(*,35) contribution from aero observation  term (Jo)
+!    pbc(*,36) contribution from aerol observation  term (Jo)
+!    pbc(*,37) contribution from pm2_5 observation  term (Jo)
+!    pbc(*,38) contribution from gust observation  term (Jo)
+!    pbc(*,39) contribution from vis observation  term (Jo)
+!    pbc(*,40) contribution from pblh observation  term (Jo)
+!    pbc(*,41) contribution from wspd10m observation  term (Jo)
+!    pbc(*,42) contribution from td2m observation  term (Jo)
+!    pbc(*,43) contribution from mxtm observation  term (Jo)
+!    pbc(*,44) contribution from mitm observation  term (Jo)
+!    pbc(*,45) contribution from pmsl observation  term (Jo)
+!    pbc(*,46) contribution from howv observation  term (Jo)
+!    pbc(*,47) contribution from tcamt observation  term (Jo)
+!    pbc(*,48) contribution from lcbas observation  term (Jo)
+!    pbc(*,49) contribution from pm10 observation  term (Jo)
+!    pbc(*,50) contribution from cldch observation  term (Jo)
+!    pbc(*,51) contribution from uwnd10m observation  term (Jo)
+!    pbc(*,52) contribution from vwnd10m observation  term (Jo)
 !
 !    However, users should be aware that under full polymorphism 
 !    the obs-types are defined on the fly, that is to say, e.g.,that 
@@ -449,13 +456,145 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
 
 !    penalties for moisture constraint
      if(.not. ltlint)then
+        if (ljclimqc) then
+        if (getindex(cvars3d,'ql')>0) then
+           if(.not.ljc4tlevs) then
+              call stplimqc(dval(ibin_anl),sval(ibin_anl),sges,pbc(1,13),nstep,ntguessig,'ql')
+              if(ii == 1) pj(13,1)=pbc(1,13)+pbc(ipenloc,13)
+           else
+              do ibin=1,nobs_bins
+                 if (nobs_bins /= nfldsig) then
+                    it=ntguessig
+                 else
+                    it=ibin
+                 end if
+                 call stplimqc(dval(ibin),sval(ibin),sges,pbcql(1,ibin),nstep,it,'ql')
+              end do
+              pbc(:,13)=zero_quad
+              do ibin=1,nobs_bins
+                 do j=1,nstep
+                    pbc(j,13) = pbc(j,13)+pbcql(j,ibin)
+                 end do
+              end do
+              if(ii == 1)then
+                 do ibin=1,nobs_bins
+                    pj(13,ibin)=pj(13,ibin)+pbcql(1,ibin)+pbcql(ipenloc,ibin)
+                 end do
+              end if
+           end if
+        end if
+        if (getindex(cvars3d,'qi')>0) then
+           if(.not.ljc4tlevs) then
+              call stplimqc(dval(ibin_anl),sval(ibin_anl),sges,pbc(1,14),nstep,ntguessig,'qi')
+              if(ii == 1) pj(14,1)=pbc(1,14)+pbc(ipenloc,14)
+           else
+              do ibin=1,nobs_bins
+                 if (nobs_bins /= nfldsig) then
+                    it=ntguessig
+                 else
+                    it=ibin
+                 end if
+                 call stplimqc(dval(ibin),sval(ibin),sges,pbcqi(1,ibin),nstep,it,'qi')
+              end do
+              pbc(:,14)=zero_quad
+              do ibin=1,nobs_bins
+                 do j=1,nstep
+                    pbc(j,14) = pbc(j,14)+pbcqi(j,ibin)
+                 end do
+              end do
+              if(ii == 1)then
+                 do ibin=1,nobs_bins
+                    pj(14,ibin)=pj(14,ibin)+pbcqi(1,ibin)+pbcqi(ipenloc,ibin)
+                 end do
+              end if
+           end if
+        end if
+        if (getindex(cvars3d,'qr')>0) then
+           if(.not.ljc4tlevs) then
+              call stplimqc(dval(ibin_anl),sval(ibin_anl),sges,pbc(1,15),nstep,ntguessig,'qr')
+              if(ii == 1) pj(15,1)=pbc(1,15)+pbc(ipenloc,15)
+           else
+              do ibin=1,nobs_bins
+                 if (nobs_bins /= nfldsig) then
+                    it=ntguessig
+                 else
+                    it=ibin
+                 end if
+                 call stplimqc(dval(ibin),sval(ibin),sges,pbcqr(1,ibin),nstep,it,'qr')
+              end do
+              pbc(:,15)=zero_quad
+              do ibin=1,nobs_bins
+                 do j=1,nstep
+                    pbc(j,15) = pbc(j,15)+pbcqr(j,ibin)
+                 end do
+              end do
+              if(ii == 1)then
+                 do ibin=1,nobs_bins
+                    pj(15,ibin)=pj(15,ibin)+pbcqr(1,ibin)+pbcqr(ipenloc,ibin)
+                 end do
+              end if
+           end if
+        end if
+        if (getindex(cvars3d,'qs')>0) then
+           if(.not.ljc4tlevs) then
+              call stplimqc(dval(ibin_anl),sval(ibin_anl),sges,pbc(1,16),nstep,ntguessig,'qs')
+              if(ii == 1) pj(16,1)=pbc(1,16)+pbc(ipenloc,16)
+           else
+              do ibin=1,nobs_bins
+                 if (nobs_bins /= nfldsig) then
+                    it=ntguessig
+                 else
+                    it=ibin
+                 end if
+                 call stplimqc(dval(ibin),sval(ibin),sges,pbcqs(1,ibin),nstep,it,'qs')
+              end do
+              pbc(:,16)=zero_quad
+              do ibin=1,nobs_bins
+                 do j=1,nstep
+                    pbc(j,16) = pbc(j,16)+pbcqs(j,ibin)
+                 end do
+              end do
+              if(ii == 1)then
+                 do ibin=1,nobs_bins
+                    pj(16,ibin)=pj(16,ibin)+pbcqs(1,ibin)+pbcqs(ipenloc,ibin)
+                 end do
+              end if
+           end if
+        end if
+        if (getindex(cvars3d,'qg')>0) then
+           if(.not.ljc4tlevs) then
+              call stplimqc(dval(ibin_anl),sval(ibin_anl),sges,pbc(1,17),nstep,ntguessig,'qg')
+              if(ii == 1) pj(17,1)=pbc(1,17)+pbc(ipenloc,17)
+           else
+              do ibin=1,nobs_bins
+                 if (nobs_bins /= nfldsig) then
+                    it=ntguessig
+                 else
+                    it=ibin
+                 end if
+                 call stplimqc(dval(ibin),sval(ibin),sges,pbcqg(1,ibin),nstep,it,'qg')
+              end do
+              pbc(:,17)=zero_quad
+              do ibin=1,nobs_bins
+                 do j=1,nstep
+                    pbc(j,17) = pbc(j,17)+pbcqg(j,ibin)
+                 end do
+              end do
+              if(ii == 1)then
+                 do ibin=1,nobs_bins
+                    pj(17,ibin)=pj(17,ibin)+pbcqg(1,ibin)+pbcqg(ipenloc,ibin)
+                 end do
+              end if
+           end if
+        end if
+        end if ! ljclimqc
         if(.not.ljc4tlevs) then
            call stplimq(dval(ibin_anl),sval(ibin_anl),sges,pbc(1,4),pbc(1,5),nstep,ntguessig)
            if(ii == 1)then
                pj(4,1)=pbc(1,4)+pbc(ipenloc,4)
                pj(5,1)=pbc(1,5)+pbc(ipenloc,5)
            end if
-        else 
+        else
            do ibin=1,nobs_bins
               if (nobs_bins /= nfldsig) then
                  it=ntguessig
@@ -479,7 +618,6 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
               end do
            end if
         end if
-
 !       penalties for gust constraint
         if(getindex(cvars2d,'gust')>0) & 
         call stplimg(dval(1),sval(1),sges,pbc(1,6),nstep)
