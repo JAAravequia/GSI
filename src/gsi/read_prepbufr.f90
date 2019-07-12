@@ -335,7 +335,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   real(r_kind) :: zob,tref,dtw,dtc,tz_tr
   real(r_kind) :: tempvis,visout
   real(r_kind) :: tempcldch,cldchout
-  real(r_kind) :: windsensht  !LEVINE
+  real(r_kind) :: windsensht
 
   real(r_double) rstation_id,qcmark_huge
   real(r_double) vtcd,glcd !virtual temp program code and GLERL program code
@@ -798,9 +798,10 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 
   if (lhilbert) call init_hilbertcurve(maxobs)
 
-  if (twodvar_regional) then  !LEVINE 
+  !load wind sensor height provider lists
+  if (twodvar_regional) then
      call init_ndfdgrid 
-     call init_windht_lists !LEVINE - load wind sensor height provider lists
+     call init_windht_lists
   endif
 ! loop over convinfo file entries; operate on matches
   
@@ -1901,16 +1902,13 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                                             dlon_earth,dlat_earth,idate,t4dv-toff,      &
                                             obsdat(5,k),obsdat(6,k),usage)
                  endif
-                 !LEVINE CHANGES 
                  !call for finding wind sensor height here and store somewhere
                  if (twodvar_regional.and.(kx==288.or.kx==295)) then
-                    !call and store here
                     call find_wind_height(c_prvstg,c_sprvstg,windsensht)
                  endif
               endif
               if (sfctype .and. i_gsdqc==2) then  ! filter bad 2-m dew point and  0 mesonet wind obs
                  if (kx==288.or.kx==295) then ! for mesonet wind
-                    !LEVINE add type 295 for mesonet wind
                     if(abs(obsdat(5,k))<0.01_r_kind .and. abs(obsdat(6,k))<0.01_r_kind) usage=115._r_kind
                  endif
                  if (qob .and. (kx >=180 .and. kx<=189) .and. obsdat(2,k) < 1.0e10_r_kind)  then ! for 2-m dew point
@@ -2014,11 +2012,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  if (inflate_error) woe=woe*r1_2
                  if(obsdat(1,k) < r50)woe=woe*r1_2
                  selev=stnelev
-                 !LEVINE CHANGES
                  if(kx >= 280 .and. kx < 300 )then
                     if (twodvar_regional.and.(kx==288.or.kx==295)) then
-                       !wind sensor height = windsenshtht
-                       oelev=windsensht+selev
+                       oelev=windsensht+selev !windsensht: read in from prepbufr
                     else
                        oelev=r10+selev
                     endif
