@@ -139,7 +139,6 @@ cmake_minimum_required(VERSION 2.8)
     add_dependencies(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${CORE_BUILT} )
   else()
     add_dependencies(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} )
-    add_dependencies(${GSISHAREDLIB} ${bacio} ${CORE_BUILT} )
   endif()
 # Specify all the libraries to be linked into the executable
   target_link_libraries(${GSIEXEC} ${GSISHAREDLIB} ${GSILIB} ${GSISHAREDLIB} ${WRF_LIBRARIES} 
