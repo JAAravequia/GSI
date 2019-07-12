@@ -15,7 +15,8 @@ regtests_all="global_T62
               hwrf_nmm_d2
               hwrf_nmm_d3
               rtma
-              global_enkf_T62"
+              global_enkf_T62
+              corr_obs"
 
 regtests_debug="global_T62
                 global_4dvar_T62
