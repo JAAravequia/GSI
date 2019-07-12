@@ -2018,9 +2018,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  if(kx >= 280 .and. kx < 300 )then
                     if (twodvar_regional.and.(kx==288.or.kx==295)) then
                        !wind sensor height = windsenshtht
-                       !if (windsensht.ne.10) then
-                       !   print*, "WINDTEST: Odd sensor height.  Station,provider,subprovider,height=",c_station_id,c_prvstg,c_sprvstg,windsensht
-                       !endif
                        oelev=windsensht+selev
                     else
                        oelev=r10+selev
@@ -2139,7 +2136,11 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  woe=obserr(5,k)
                  if (inflate_error) woe=woe*r1_2
                  elev=r20
-                 oelev=obsdat(4,k)
+                 if (((kx==295).or.(kx==288)).and.twodvar_regional) then  !account for mesonet wind ht
+                    oelev=windsensht+selev
+                 else
+                    oelev=obsdat(4,k)
+                 endif
                  if(kx == 260 .or. kx == 261) elev = oelev ! Nacelle and tower wind speed
 
                  cdata_all(1,iout)=woe                     ! wind error
@@ -2340,6 +2341,10 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                    if ((kx==280).or.(kx==180)) oelev=r20+selev
                    if ((kx==299).or.(kx==199)) oelev=r20+selev
                    if ((kx==282).or.(kx==182)) oelev=r20+selev
+                   if (((kx==295).or.(kx==288).or.(kx==195).or.(kx==188)).and.twodvar_regional) then
+                      !account for mesonet wind sensor height
+                      oelev=windsensht+selev
+                   end if
                    if ((kx==285).or.(kx==185)) then
                       oelev=selev
                       selev=zero
