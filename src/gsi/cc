@@ -1,0 +1,22 @@
+setupt.f90:  real(r_kind),allocatable,dimension(:,:,:  )::ges_ugrid1
+setupt.f90:        call tintrp2a11(ges_ugrid1,uu1,dlat,dlon,dtime,hrdifsig,&
+setupt.f90:!    get ugrid1 ...
+setupt.f90:     varname='ugrid1'
+setupt.f90:         if(allocated(ges_ugrid1))then
+setupt.f90:         allocate(ges_ugrid1(size(rank2,1),size(rank2,2),nfldsig))
+setupt.f90:         ges_ugrid1(:,:,1)=rank2
+setupt.f90:            ges_ugrid1(:,:,ifld)=rank2
+setupt.f90:    if(allocated(ges_ugrid1)) deallocate(ges_ugrid1)
+support_2dvar.f90:  integer(i_kind) i_ugrid1,i_vgrid1,i_hgtgrid1,i_sfrgrid
+support_2dvar.f90:  logical ihave_ugrid1,ihave_vgrid1,ihave_hgtgrid1,ihave_sfrgrid
+support_2dvar.f90:  real(r_kind),pointer,dimension(:,:  )::ges_ugrid1=>NULL()
+support_2dvar.f90:  i=i+1 ; i_ugrid1=i                                          ! ugrid1
+support_2dvar.f90:  write(identity(i),'("record ",i3,"--ugrid1")')i
+support_2dvar.f90:        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ugrid1',ges_ugrid1,ier)
+support_2dvar.f90:        ihave_ugrid1=ier==0
+support_2dvar.f90:              if (ihave_ugrid1) &
+support_2dvar.f90:                 ges_ugrid1(j,i)=all_loc(j,i,i_0+i_ugrid1)
+support_2dvar.f90:                   i_ugrid1,i_vgrid1,i_hgtgrid1,i_sfrgrid
+support_2dvar.f90:  i_ugrid1=i_qgrid2+1
+support_2dvar.f90:  i_vgrid1=i_ugrid1+1
+support_2dvar.f90:  caux(21)='ugrid1'  ; iaux(21)=i_ugrid1
