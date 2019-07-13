@@ -65,11 +65,11 @@ subroutine convert_binary_2d
   integer(i_kind),allocatable::ifield2(:,:)
   real(r_single) rad2deg_single
   logical print_verbose
-  logical use_lst
+  logical use_similarity
 
   data in_unit / 11 /
 
-  use_lst = .true.
+  use_similarity = .true.
   print_verbose=.true.
   if(verbose)print_verbose=.true.
   n_loop: do n=1,9
@@ -425,7 +425,7 @@ subroutine convert_binary_2d
      write(lendian_out)field2
     
      !  variables for assimilating VIIRS LST
-     if(use_lst) then
+     if(use_similarity) then
        read(in_unit)field2             ! PRESGRID1
        write(6,*)' convert_binary_2d: max,min PRESGRID1=',maxval(field2),minval(field2)
        write(6,*)' convert_binary_2d: mid PRESGRID1=',field2(nlon_regional/2,nlat_regional/2)
@@ -815,7 +815,7 @@ subroutine read_2d_guess(mype)
   real(r_kind),pointer,dimension(:,:  )::ges_sfrgrid=>NULL()
   real(r_kind),pointer,dimension(:,:  )::ges_tggrid=>NULL()
   logical print_verbose
-  logical use_lst
+  logical use_similarity
 
 !  RESTART FILE input grid dimensions in module gridmod
 !      These are the following:
@@ -824,7 +824,7 @@ subroutine read_2d_guess(mype)
 !          lm -- number of vertical levels ( = nsig for now)
 
 
-  use_lst = .true.
+  use_similarity = .true.
 ! Turning on print_verbose will result in additional prints from this routine only.
   print_verbose = .false.
   if(verbose)print_verbose=.true.
@@ -841,7 +841,7 @@ subroutine read_2d_guess(mype)
   lm=nsig
 
 ! Following is for convenient 2D input
-  if (use_lst) then !LST
+  if (use_similarity) then !LST
      num_2d_fields=41
   else
      num_2d_fields=30! Adjust according to content of RTMA restart file ---- should this number be in a namelist or anavinfo file at some point?
@@ -1012,7 +1012,7 @@ subroutine read_2d_guess(mype)
   jsig_skip(i)=0 ; igtype(i)=1
 
   !x LST
-  if (use_lst) then
+  if (use_similarity) then
      i=i+1 ; i_presgrid1=i                                       ! presgrid1
      write(identity(i),'("record ",i3,"--presgrid1")')i
      jsig_skip(i)=0 ; igtype(i)=1
@@ -1249,7 +1249,7 @@ subroutine read_2d_guess(mype)
         ihave_vwnd10m=ier==0
      
          !x LST
-        if (use_lst) then
+        if (use_similarity) then
            call gsi_bundlegetpointer (gsi_metguess_bundle(it),'presgrid1',ges_presgrid1,ier)
            ihave_presgrid1=ier==0
 
@@ -1361,7 +1361,7 @@ subroutine read_2d_guess(mype)
                  ges_vwnd10m(j,i)=real(all_loc(j,i,i_0+i_vwnd10m),r_kind)
 
                !x LST
-              if (use_lst) then
+              if (use_similarity) then
                  if (ihave_presgrid1) &
                     ges_presgrid1(j,i)=real(all_loc(j,i,i_0+i_presgrid1),r_kind)
 
@@ -1501,7 +1501,7 @@ subroutine wr2d_binary(mype)
   integer(i_kind) iaux(100),kaux
   character(15) caux(100)
   logical print_verbose
-  logical use_lst
+  logical use_similarity
   
   real(r_kind),dimension(:,:  ),pointer:: ptr2d    =>NULL()
   real(r_kind),dimension(:,:  ),pointer:: ges_ps_it=>NULL()
@@ -1509,7 +1509,7 @@ subroutine wr2d_binary(mype)
   real(r_kind),dimension(:,:,:),pointer:: ges_v_it =>NULL()
   real(r_kind),dimension(:,:,:),pointer:: ges_q_it =>NULL()
 
-  use_lst = .true.
+  use_similarity = .true.
   print_verbose = .false.
   if(verbose)print_verbose=.true.
   im=nlon_regional
@@ -1539,7 +1539,7 @@ subroutine wr2d_binary(mype)
   i_vwnd10m=i_uwnd10m+1
   
   !x LST
-  if (use_lst) then
+  if (use_similarity) then
      i_presgrid1=i_vwnd10m+1
      i_presgrid2=i_presgrid1+1
      i_tmpgrid1=i_presgrid2+1
@@ -1801,7 +1801,7 @@ subroutine wr2d_binary(mype)
   caux(25)='tggrid'     ; iaux(25)=i_tggrid
 
   !LST
-  if (use_lst) then
+  if (use_similarity) then
      kaux=25
   else
      kaux=14  !Adjust as you add variables

@@ -611,7 +611,6 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !       units.  Save the observation height in zob for later use.
         zob = dpres
         call grdcrd1(dpres,zges,nsig,1)
-        print*,'xyz ---dpres, zges=', dpres,zges
 
 !       Interpolate guess u and v to observation location and time.
  
@@ -658,6 +657,11 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            end if
 
            if (zob <= ten) then
+               if (zob <= zero) then
+                 print*, "W WARNING: Negative ZOB for station,zob,type (correcting to 10 m):",station_id,zob,itype
+                 zob=ten
+              endif
+
               if(zob < ten)then
                  if (.not.twodvar_regional) then
                     term = max(zob,zero)/ten
@@ -702,13 +706,13 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                     psges2  = psges          ! keep in cb
 
                     call SFC_WTQ_FWD (psges2, tgges,&
-                         !x pres1, tmp1, qq1, uu1, vv1, &
-                         pres1, tmp1, qq1, ugesin, vgesin, &
+                         pres1, tmp1, qq1, uu1, vv1, &
+                         !x pres1, tmp1, qq1, ugesin, vgesin, &
                          pres2, tmp2, qq2, hgt1, roges, msges, &
                          !output variables
                          f10ges,u10ges,v10ges, t2ges, q2ges, regime, iqtflg)
-                    print *, 'xyz---ugesin, u10ges =', ugesin,u10ges
-                    print *, 'xyz---vgesin, v10ges =', vgesin,v10ges
+                    print *, 'xyz---ugesin,uu1, u10ges =', ugesin,u10ges
+                    print *, 'xyz---vgesin,vv1, v10ges =', vgesin,v10ges
 
                     factw=one
                  end if 
@@ -740,20 +744,26 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !       Compute observation pressure (only used for diagnostics)
 
 !       Set indices of model levels below (k1) and above (k2) observation.
-        if (dpres<one) then
-           z1=zero;    p1=log(psges)
-           z2=zges(1); p2=prsltmp(1)
-        elseif (dpres>nsig) then
-           z1=zges(nsig-1); p1=prsltmp(nsig-1)
-           z2=zges(nsig);   p2=prsltmp(nsig)
-           drpx = 1.e6_r_kind
+        if (twodvar_regional) then
+           dpres = data(ipres,i)
+           presw = ten*exp(dpres)
+           print*, "W Pressure: stnid,type,zob,presw=",station_id,itype,zob,presw
         else
-           k=dpres
-           k1=min(max(1,k),nsig)
-           k2=max(1,min(k+1,nsig))
-           z1=zges(k1); p1=prsltmp(k1)
-           z2=zges(k2); p2=prsltmp(k2)
-        endif
+           if (dpres<one) then
+              z1=zero;    p1=log(psges)
+              z2=zges(1); p2=prsltmp(1)
+           elseif (dpres>nsig) then
+              z1=zges(nsig-1); p1=prsltmp(nsig-1)
+              z2=zges(nsig);   p2=prsltmp(nsig)
+              drpx = 1.e6_r_kind
+           else
+              k=dpres
+              k1=min(max(1,k),nsig)
+              k2=max(1,min(k+1,nsig))
+              z1=zges(k1); p1=prsltmp(k1)
+              z2=zges(k2); p2=prsltmp(k2)
+           endif
+         end if
        
         dz21     = z2-z1
         dlnp21   = p2-p1
