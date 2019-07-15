@@ -572,8 +572,8 @@ case $regtest in
     global_C96_fv3aero)
 
         if [[ "$machine" = "Theia" ]]; then
-            topts[1]="0:15:00" ; popts[1]="12/1/" ; ropts[1]="/1"
-            topts[2]="0:15:00" ; popts[2]="12/2/" ; ropts[2]="/2"
+            topts[1]="0:30:00" ; popts[1]="12/1/" ; ropts[1]="/1"
+            topts[2]="0:30:00" ; popts[2]="12/2/" ; ropts[2]="/2"
         elif [[ "$machine" = "Cheyenne" ]]; then
             topts[1]="0:15:00" ; popts[1]="16/1/" ; ropts[1]="/1"
             topts[2]="0:15:00" ; popts[2]="16/2/" ; ropts[2]="/2"
