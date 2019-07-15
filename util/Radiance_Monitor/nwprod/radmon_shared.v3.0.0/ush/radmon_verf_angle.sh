@@ -67,13 +67,8 @@
 #     >0 - some problem encountered
 #
 ####################################################################
-#  Command line arguments.
 
-echo "---> radmon_verf_angle.sh"
-module list
-echo "locating aprun:"
-which aprun
-
+# Command line arguments.
 RAD_AREA=${RAD_AREA:-glb}
 REGIONAL_RR=${REGIONAL_RR:-0}	# rapid refresh model flag
 rgnHH=${rgnHH:-}
@@ -85,6 +80,11 @@ scr=radmon_verf_angle.sh
 msg="${scr} HAS STARTED"
 postmsg "$jlogfile" "$msg"
 echo " REGIONAL_RR, rgnHH, rgnTM = $REGIONAL_RR, $rgnHH, $rgnTM"
+netcdf_boolean=".false."
+if [[ $RADMON_NETCDF -eq 1 ]]; then
+   netcdf_boolean=".true."
+fi  
+echo " RADMON_NETCDF, netcdf_boolean = ${RADMON_NETCDF}, $netcdf_boolean"
 
 which prep_step
 which startmsg
@@ -118,7 +118,7 @@ else
 fi
 
 err=0
-angle_exec=radmon_angle
+angle_exec=radmon_angle.x
 shared_scaninfo=${shared_scaninfo:-$FIXgdas/gdas_radmon_scaninfo.txt}
 scaninfo=scaninfo.txt
 
@@ -197,6 +197,7 @@ cat << EOF > input
   gesanl='${dtype}',
   little_endian=${LITTLE_ENDIAN},
   rad_area='${RAD_AREA}',
+  netcdf=${netcdf_boolean},
  /
 EOF
 

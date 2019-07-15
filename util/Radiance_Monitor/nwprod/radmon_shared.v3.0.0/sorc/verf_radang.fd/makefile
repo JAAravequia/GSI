@@ -5,6 +5,7 @@
 #
 # *****************************************************************
 
+#BINDIR = $(dir_root)/exec
 BINDIR = ../../exec
 
 LIBS   = $(W3NCO_LIB4)
@@ -15,7 +16,7 @@ OBJS   = kinds.o read_diag.o angle_bias.o create_ctl_angle.o
 # *****************************************************************
 #
 
-CMD = radmon_angle
+CMD = radmon_angle.x
 
 all:  $(CMD)
 

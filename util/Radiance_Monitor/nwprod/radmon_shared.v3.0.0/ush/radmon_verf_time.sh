@@ -120,7 +120,11 @@ pen_hdr=pen_hdr.txt
 chan_err=chan_err.txt
 chan_hdr=chan_hdr.txt
 
-# Other variables
+netcdf_boolean=".false."
+if [[ $RADMON_NETCDF -eq 1 ]]; then
+   netcdf_boolean=".true."
+fi
+
 DO_DIAG_RPT=${DO_DIAG_RPT:-1}
 DO_DATA_RPT=${DO_DATA_RPT:-1}
 RADMON_SUFFIX=${RADMON_SUFFIX:-opr}
@@ -137,7 +141,7 @@ VERBOSE=${VERBOSE:-NO}
 LITTLE_ENDIAN=${LITTLE_ENDIAN:-0}
 USE_MAIL=${USE_MAIL:-0}
 
-time_exec=radmon_time
+time_exec=radmon_time.x
 USE_ANL=${USE_ANL:-0}
 err=0 
 
@@ -242,6 +246,7 @@ cat << EOF > input
   gesanl='${dtype}',
   little_endian=${LITTLE_ENDIAN},
   rad_area='${RAD_AREA}',
+  netcdf=${netcdf_boolean},
  /
 EOF
 	 startmsg
@@ -394,13 +399,13 @@ if [[ $DO_DATA_RPT -eq 1 ]]; then
    prev_bad_pen=bad_pen.${qdate}
    prev_bad_chan=bad_chan.${qdate}
 
-   if [[ $CYCLE == "00" ]]; then
+#   if [[ $CYCLE == "00" ]]; then
       prev_bad_pen=${TANKverf_radM1}/${prev_bad_pen}
       prev_bad_chan=${TANKverf_radM1}/${prev_bad_chan}
-   else
-      prev_bad_pen=${TANKverf_rad}/${prev_bad_pen}
-      prev_bad_chan=${TANKverf_rad}/${prev_bad_chan}
-   fi
+#   else
+#      prev_bad_pen=${TANKverf_rad}/${prev_bad_pen}
+#      prev_bad_chan=${TANKverf_rad}/${prev_bad_chan}
+#   fi
 
    do_pen=0
    do_chan=0

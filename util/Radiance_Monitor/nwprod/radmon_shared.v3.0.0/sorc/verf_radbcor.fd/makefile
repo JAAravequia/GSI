@@ -5,6 +5,7 @@
 #
 # *****************************************************************
 
+#BINDIR = ${dir_root}/exec
 BINDIR = ../../exec
 
 LIBS   = $(W3NCO_LIB4)
@@ -15,7 +16,7 @@ OBJS =  kinds.o read_diag.o bcor.o avgsdv.o create_ctl_bcor.o
 # *****************************************************************
 #
 
-CMD = radmon_bcor
+CMD = radmon_bcor.x
 
 all:  $(CMD)
 

@@ -6,9 +6,9 @@
 function usage {
   echo "Usage:  OznMon_DE.sh suffix [pdate]"
   echo "            Suffix is the indentifier for this data source."
-  echo "            -p | -pdate yyyymmddcc to specify the cycle to be plotted"
-  echo "              if unspecified the last available date will be plotted"
-  echo "            -r | -run   the gdas|gfs run to be plotted"
+  echo "            -p | -pdate yyyymmddcc to specify the cycle to be processed"
+  echo "              if unspecified the last available date will be processed"
+  echo "            -r | -run   the gdas|gfs run to be processed"
   echo "              use only if data in TANKdir stores both runs"
   echo " "
 }
@@ -88,9 +88,11 @@ else
 fi
 
 #-------------------------------------------
-#  J-Job needs this OZN_TANKDIR assignment
+#  J-Job needs these assignments to override 
+#  operational defaults.
 #
 export OZN_TANKDIR=$OZN_STATS_TANKDIR
+export DATAROOT=${STMP_USER}
 
 
 #--------------------------------------------------------------
@@ -135,7 +137,7 @@ fi
 #-------------------------------------------------------------
 #  define job, jobid for submitted job
 #
-export job=${job:-ozmon_de_${OZNMON_SUFFIX}}
+export job=${job:-oznmon_de_${OZNMON_SUFFIX}}
 export jobid=${jobid:-${job}.${cyc}.${pid}}
 
 #-------------------------------------------------------------
@@ -200,11 +202,11 @@ echo "out:  $OZN_LOGdir/DE.$PDY.$cyc.log"
 echo "err:  $OZN_LOGdir/DE.$PDY.$cyc.err"
 
 if [[ $MY_MACHINE = "theia" ]]; then
-   
-   $SUB -A ${ACCOUNT} -l procs=1,walltime=0:05:00 -N ${job} -V \
+   $SUB --account=${ACCOUNT} --time=05 -J ${job} -D . \
         -o ${OZN_LOGdir}/DE.${PDY}.${cyc}.log \
-        -e ${OZN_LOGdir}/DE.${PDY}.${cyc}.err ${jobfile}
-
+	--ntasks=1 --mem=5g \
+	${jobfile}
+	
 elif [[ $MY_MACHINE = "wcoss" ]]; then
 
    $SUB -q $JOB_QUEUE -P $PROJECT -M 50 -R affinity[core] \
@@ -212,12 +214,19 @@ elif [[ $MY_MACHINE = "wcoss" ]]; then
         -e ${OZN_LOGdir}/DE.${PDY}.${cyc}.err \
         -W 0:05 -J ${job} -cwd ${PWD} $jobfile
 
+elif [[ $MY_MACHINE = "wcoss_d" ]]; then
+
+   $SUB -q $JOB_QUEUE -P $PROJECT -M 200 -R affinity[core] \
+        -o ${OZN_LOGdir}/DE.${PDY}.${cyc}.log \
+        -e ${OZN_LOGdir}/DE.${PDY}.${cyc}.err \
+        -W 0:05 -J ${job} -cwd ${PWD} $jobfile
+
 elif [[ $MY_MACHINE = "cray" ]]; then
 
   $SUB -q $JOB_QUEUE -P $PROJECT -o ${OZN_LOGdir}/DE.${PDY}.${cyc}.log \
-           -e ${OZN_LOGdir}/DE.${PDY}.${cyc}.err \
-           -R "select[mem>100] rusage[mem=100]" \
-           -M 100 -W 0:05 -J ${job} -cwd ${PWD} $jobfile
+        -e ${OZN_LOGdir}/DE.${PDY}.${cyc}.err \
+        -R "select[mem>100] rusage[mem=100]" \
+        -M 100 -W 0:05 -J ${job} -cwd ${PWD} $jobfile
 
 fi
 
