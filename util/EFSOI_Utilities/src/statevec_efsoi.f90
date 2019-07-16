@@ -246,7 +246,7 @@ if (nproc <= nanals-1) then
       ! [(0.5*(e_f + e_g)) / (nanals - 1)]
       grdin3 = (grdin3 - grdin4) / real(nanals-1,r_kind)
       ! Normalize for surface pressure ----- (This needs to be corrected) -----
-      grdin3(:,ncdim) = grdin3(:,ncdim) / grdin4(:,3)
+      ! grdin3(:,ncdim) = grdin3(:,ncdim) / grdin4(:,3)
       ! Read ensemble mean analysis, used in evolving localization     
       if(forecast_impact) call readgriddata_efsoi(cvars3d,cvars2d,nc3d,nc2d,clevels,ncdim,grdin5, &
                                   read_analysis_mean,nanal=0,ft=0,hr=datehr)
