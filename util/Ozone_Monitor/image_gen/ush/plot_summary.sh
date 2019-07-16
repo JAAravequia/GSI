@@ -16,7 +16,7 @@ ptype=$2
 #------------------------------------------------------------------
 # Set work space for this SATYPE source.
 #
-tmpdir=${WORKDIR}/${SATYPE}.$PDATE
+tmpdir=${WORKDIR}/${SATYPE}.${ptype}.${PDATE}
 rm -rf $tmpdir
 mkdir -p $tmpdir
 cd $tmpdir
@@ -69,7 +69,7 @@ fi
 
 cat << EOF > ${SATYPE}.gs
 'open ${SATYPE}.${ptype}.ctl'
-'run ${OZN_IG_GSCRPTS}/plot_summary.gs ${OZNMON_SUFFIX} ${RUN} ${SATYPE} x750 y700'
+'run ${OZN_IG_GSCRPTS}/plot_summary.gs ${OZNMON_SUFFIX} ${RUN} ${SATYPE} ${ptype} x750 y700'
 'quit'
 EOF
 

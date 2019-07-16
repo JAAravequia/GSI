@@ -30,12 +30,11 @@ export CYCLE_INTERVAL=6
 #tankdir=/scratch4/NCEPDEV/da/save/Edward.Safford/nbns/stats/${suffix}
 tankdir=/u/Edward.Safford/nbns/stats/${suffix}
 
-imgdate=`${scripts}/query_data_map.pl ${data_map} ${suffix}_${run} imgdate`
-idate=`$NDATE +${CYCLE_INTERVAL} $imgdate`
-#idate=2019060606
+#imgdate=`${scripts}/query_data_map.pl ${data_map} ${suffix}_${run} imgdate`
+#idate=`$NDATE +${CYCLE_INTERVAL} $imgdate`
+idate=2019071306
 
-#prodate=`${scripts}/find_cycle.pl -run ${run} -cyc 1 -dir ${tankdir}`
-prodate=2019060606
+prodate=`${scripts}/find_cycle.pl -run ${run} -cyc 1 -dir ${tankdir}`
 
 echo "imgdate, idate, prodate = $imgdate, $idate, $prodate"
 if [[ $idate -le $prodate ]]; then

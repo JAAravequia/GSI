@@ -11,7 +11,7 @@
 echo "begin mk_summary.sh"
 set -ax
 
-export process_type="ges"
+export process_type="ges anl"
 
 
 #------------------------------------------------------------------
@@ -46,7 +46,7 @@ for ptype in ${process_type}; do
 
    suffix=a
 
-   cmdfile=cmdfile_psummary
+   cmdfile=cmdfile_${ptype}_psummary
    rm -f $cmdfile
 
    ctr=0
@@ -63,18 +63,18 @@ for ptype in ${process_type}; do
    done
    chmod a+x $cmdfile
 
-   job=${OZNMON_SUFFIX}_ozn_psummary
-   o_logfile=${OZN_LOGdir}/plot_summary.${PDATE}
+   job=${OZNMON_SUFFIX}_ozn_${ptype}_psummary
+   o_logfile=${OZN_LOGdir}/plot_summary.${ptype}.${PDATE}
    if [[ -e ${o_logfile} ]]; then
       rm -f ${o_logfile}
    fi
 
-   logf=${OZN_LOGdir}/IG.${PDY}.${cyc}.summary.log
+   logf=${OZN_LOGdir}/IG.${PDY}.${cyc}.${ptype}.summary.log
    if [[ -e $logf ]]; then
       rm -f $logf
    fi
 
-   errf=${OZN_LOGdir}/IG.${PDY}.${cyc}.summary.err
+   errf=${OZN_LOGdir}/IG.${PDY}.${cyc}.${ptype}.summary.err
    if [[ -e $errf ]]; then
       rm -f $errf
    fi
@@ -98,7 +98,8 @@ for ptype in ${process_type}; do
    elif [[ ${MY_MACHINE} = "wcoss_d" ]]; then
 
       $SUB -q ${JOB_QUEUE} -P ${PROJECT} -M 50 -R affinity[core] \
-           -o ${logf} -e ${errf} -W 0:05 -J ${job} -cwd ${WORKDIR} ${WORKDIR}/${cmdfile}
+           -o ${logf} -e ${errf} -W 0:05 -J ${job} \
+	   -cwd ${WORKDIR} ${WORKDIR}/${cmdfile}
 
    fi
 

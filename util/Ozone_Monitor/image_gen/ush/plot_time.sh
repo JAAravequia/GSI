@@ -14,9 +14,9 @@ fi
 export SATYPE=$1
 export PVAR=$2
 export PTYPE=$3
-string=$4
+dsrc=$4
 
-echo "SATYPE, PVAR, PTYPE, string = $SATYPE, $PVAR, $PTYPE $string"
+echo "SATYPE, PVAR, PTYPE, dsrc = $SATYPE, $PVAR, $PTYPE $dsrc"
 echo "RUN = $RUN"
 
 echo COMP1, COMP2, DO_COMP = $COMP1, $COMP2, $DO_COMP
@@ -29,7 +29,7 @@ fi
 #------------------------------------------------------------------
 # Set work space for this SATYPE source.
 #
-tmpdir=${WORKDIR}/${SATYPE}.$PDATE.${PVAR}
+tmpdir=${WORKDIR}/${SATYPE}.${dsrc}.$PDATE.${PVAR}
 rm -rf $tmpdir
 mkdir -p $tmpdir
 cd $tmpdir
@@ -49,11 +49,11 @@ while [[ $ctr -le 119 ]]; do
    c_cyc=`echo $cdate|cut -c9-10`
    tankdir_cdate=${TANKDIR}/${RUN}.${c_pdy}/${c_cyc}/oznmon/time
 
-   if [[ ! -e ./${SATYPE}.${string}.ctl ]]; then
-      $NCP ${tankdir_cdate}/${SATYPE}.${string}.ctl ./
+   if [[ ! -e ./${SATYPE}.${dsrc}.ctl ]]; then
+      $NCP ${tankdir_cdate}/${SATYPE}.${dsrc}.ctl ./
    fi
 
-   data_file=${tankdir_cdate}/${SATYPE}.${string}.${cdate}.ieee_d
+   data_file=${tankdir_cdate}/${SATYPE}.${dsrc}.${cdate}.ieee_d
    if [[ -s ${data_file} ]]; then
       $NCP ${data_file} ./
    else
@@ -65,11 +65,11 @@ while [[ $ctr -le 119 ]]; do
    fi
 
    if [[ $ADD_COMP -eq 1 ]]; then
-      if [[ ! -e ./${COMP2}.${string}.ctl ]]; then
-         $NCP ${tankdir_cdate}/${COMP2}.${string}.ctl ./
+      if [[ ! -e ./${COMP2}.${dsrc}.ctl ]]; then
+         $NCP ${tankdir_cdate}/${COMP2}.${dsrc}.ctl ./
       fi
       
-      data_file=${tankdir_cdate}/${COMP2}.${string}.${cdate}.ieee_d
+      data_file=${tankdir_cdate}/${COMP2}.${dsrc}.${cdate}.ieee_d
       if [[ -s ${data_file} ]]; then
          $NCP ${data_file} ./
       else
@@ -91,12 +91,12 @@ done
 #----------------------------------------------------------------
 #  Modify tdef line in .ctl file to start at bdate.
 #
-if [[ -e ${SATYPE}.${string}.ctl ]]; then
+if [[ -e ${SATYPE}.${dsrc}.ctl ]]; then
    edate=`$NDATE -720 $PDATE`
-   ${OZN_IG_SCRIPTS}/update_ctl_tdef.sh ${SATYPE}.${string}.ctl ${edate} 121
+   ${OZN_IG_SCRIPTS}/update_ctl_tdef.sh ${SATYPE}.${dsrc}.ctl ${edate} 121
 
    if [[ $ADD_COMP -eq 1 ]]; then
-      ${OZN_IG_SCRIPTS}/update_ctl_tdef.sh ${COMP2}.${string}.ctl ${edate} 121
+      ${OZN_IG_SCRIPTS}/update_ctl_tdef.sh ${COMP2}.${dsrc}.ctl ${edate} 121
    fi
 fi
 
@@ -109,8 +109,8 @@ for var in ${PTYPE}; do
 cat << EOF > ${SATYPE}_${var}.gs
 'reinit'
 'clear'
-'open  ${SATYPE}.${string}.ctl'
-'run ${OZN_IG_GSCRPTS}/plot_time_${string}.gs ${OZNMON_SUFFIX} ${RUN} ${SATYPE} ${var} x750 y700'
+'open  ${SATYPE}.${dsrc}.ctl'
+'run ${OZN_IG_GSCRPTS}/plot_time_${dsrc}.gs ${OZNMON_SUFFIX} ${RUN} ${SATYPE} ${var} x750 y700'
 'quit'
 EOF
 
@@ -119,9 +119,9 @@ EOF
 cat << EOF > ${SATYPE}_${var}.gs
 'reinit'
 'clear'
-'open  ${SATYPE}.${string}.ctl'
-'open  ${COMP2}.${string}.ctl'
-'run ${OZN_IG_GSCRPTS}/plot_time_${string}_2x.gs ${OZNMON_SUFFIX} ${RUN} ${SATYPE} ${COMP2} ${var} x750 y700'
+'open  ${SATYPE}.${dsrc}.ctl'
+'open  ${COMP2}.${dsrc}.ctl'
+'run ${OZN_IG_GSCRPTS}/plot_time_${dsrc}_2x.gs ${OZNMON_SUFFIX} ${RUN} ${SATYPE} ${COMP2} ${var} x750 y700'
 'quit'
 EOF
 
