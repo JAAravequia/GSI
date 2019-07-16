@@ -301,13 +301,22 @@ subroutine stpjo(dval,dbias,xval,xbias,sges,pbcjo,nstep)
     it_obOper => obOper_create(ll)
 
         if(.not.associated(it_obOper)) then
-          call perr(myname_,'unexpected obOper, associated(obOper) =',.false.)
+          call perr(myname_,'unexpected obOper, associated(it_obOper) =',associated(it_obOper))
+          call perr(myname_,'                  obOper_typeInfo(ioper) =',obOper_typeInfo(ll))
+          call perr(myname_,'                                   iOper =',ll)
+          call perr(myname_,'                                    ibin =',ib)
+          call perr(myname_,'                                      mm =',mm)
+          call perr(myname_,'                                  stpcnt =',stpcnt)
           call  die(myname_)
         endif
 
-        if(.not.associated(it_obOper%obsLL) .or. &
-           .not.associated(it_obOper%odiagLL)    ) then       ! this shouldn't happen.
-          call perr(myname_,'unexpected component, associated(%obsLL) =',.false.)
+        if(.not.associated(it_obOper%obsLL)) then
+          call perr(myname_,'unexpected components, associated(%obsLL) =',associated(it_obOper%obsLL))
+          call perr(myname_,'                   obOper_typeInfo(ioper) =',obOper_typeInfo(ll))
+          call perr(myname_,'                                    iOper =',ll)
+          call perr(myname_,'                                     ibin =',ib)
+          call perr(myname_,'                                       mm =',mm)
+          call perr(myname_,'                                   stpcnt =',stpcnt)
           call  die(myname_)
         endif
 
@@ -376,15 +385,18 @@ subroutine stpjo_setup(nobs_bins)
       it_obOper => obOper_create(ll)
 
         if(.not.associated(it_obOper)) then
-          call perr(myname_,'unexpected obOper, associated(obOper) =',.false.)
-          call perr(myname_,'                      obOper_typeInfo =',obOper_typeInfo(ll))
-          call perr(myname_,'                                ioper =',ll)
+          call perr(myname_,'unexpected obOper, associated(it_obOper) =',associated(it_obOper))
+          call perr(myname_,'                  obOper_typeInfo(ioper) =',obOper_typeInfo(ll))
+          call perr(myname_,'                                   ioper =',ll)
+          call perr(myname_,'                            obOper_count =',obOper_count)
           call  die(myname_)
         endif
 
         if(.not.associated(it_obOper%obsLL)) then
-          call perr(myname_,'unexpected component, associated(%obsLL) =',.false.)
+          call perr(myname_,'unexpected component, associated(%obsLL) =',associated(it_obOper%obsLL))
+          call perr(myname_,'                  obOper_typeInfo(ioper) =',obOper_typeInfo(ll))
           call perr(myname_,'                                   ioper =',ll)
+          call perr(myname_,'                            obOper_count =',obOper_count)
           call  die(myname_)
         endif
 
