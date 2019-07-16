@@ -32,12 +32,8 @@ subroutine readpairs(npe,mype,numcases)
        rh1,rh2,oz1,oz2,cw1,cw2,q1,q2,ts1,ts2,qs1,qs2
   real(r_kind),dimension(lat1,lon1):: ps1,ps2
   real(r_kind),dimension(lat1,lon1,nsig,ntrac5):: trac1,trac2
-!  real(r_kind),dimension(lat1,lon1,nsig):: p3d1, p3d2
-!  real(r_kind),dimension(lat1,lon1,nsig):: q3d1, q3d2
 
   real(r_kind),dimension(nc):: z,z2
-!  real(r_single),dimension(ncin,nsig1o):: z41,z42
-!  real(r_single),dimension(ncin,6*nsig+1):: z4all, z4all2
   real(r_kind),dimension(ncin,nsig1o):: z41,z42
   real(r_kind),dimension(ncin,6*nsig+1):: z4all, z4all2
   real(r_kind),dimension(ncin,nsig):: zwork1,zwork2
@@ -47,7 +43,6 @@ subroutine readpairs(npe,mype,numcases)
   real(r_kind),dimension(nlonin,nlatin-2):: tmpgridin
 
   real(r_kind),dimension(iglobal,nsig1o):: work1,work2
-!  real(r_kind),dimension(nlat,nlon):: wk1, wk2
 
   type(sigio_head):: sighead1,sighead2
   type(sigio_data):: sigdata1,sigdata2
@@ -260,84 +255,6 @@ subroutine readpairs(npe,mype,numcases)
 
      call mpi_barrier(mpi_comm_world,iret2)
      
-     ! 3D pressure
-!     wk1 = zero; wk2 = zero
-!     p3d1 = zero; p3d2 = zero
-!     do k = 1, nsig
-!        call nemsio_readrecv(gfile1,'pres','mid layer',lev=k,data=nems_wk(:),iret=iret)
-!        if (iret /= 0) print*,' error in read of pres k, ',k
-!        nems_wk(:) = nems_wk(:)*0.001 !Pa to cbar
-!        grid1in = reshape(nems_wk(:),(/nlonin,nlatin-2/))
-!        call unload_grid(grid1in,wk1) !grid1(nlon,nlat-2), wk1(nlat,nlon)
-!        call mpi_scatterv(wk1,ijn,displs_g,mpi_rtype,&
-!           p3d1(1,1,k),ijn(mm1),mpi_rtype,0,mpi_comm_world,ierror)
-!        if ( ierror /= 0 ) write(6,*) 'error scatter p3d1'
-!        call nemsio_readrecv(gfile2,'pres','mid layer',lev=k,data=nems_wk(:),iret=iret)
-!        if (iret /= 0) print*,' error in read of pres 2 k, ',k
-!        nems_wk(:) = nems_wk(:)*0.001 !Pa to cbar
-!        grid2in = reshape(nems_wk(:),(/nlonin,nlatin-2/))
-!!        call unload_grid(grid2in,wk2)
-!!        call mpi_scatterv(wk2,ijn,displs_g,mpi_rtype,&
-!!           p3d2(1,1,k),ijn(mm1),mpi_rtype,0,mpi_comm_world,ierror)
-!!        if ( ierror /= 0 ) write(6,*) 'error scatter p3d2'
-!        if (nlon/=nlonin .or. nlat/=nlatin) then
-!           call sptez_s(zwork1 (:,k),grid1in,-1)
-!           call sptez_s(zwork2 (:,k),grid2in,-1)
-!           call jcaptrans(z,factsml,zwork1(1,k))
-!           call jcaptrans(z2,factsml,zwork2(1,k))
-!           call sptez_s(z,grid1,1)
-!           call sptez_s(z2,grid2,1)
-!        else
-!           grid1=grid1in
-!           grid2=grid2in
-!        endif 
-!        call unload_grid(grid1,wk1(1,k))
-!        call unload_grid(grid2,wk2(1,k))
-!        call mpi_scatterv(wk1,ijn,displs_g,mpi_rtype,&
-!           p3d1(1,1,k),ijn(mm1),mpi_rtype,0,mpi_comm_world,ierror)
-!        if ( ierror /= 0 ) write(6,*) 'error scatter p3d1'
-!        call mpi_scatterv(wk2,ijn,displs_g,mpi_rtype,&
-!           p3d2(1,1,k),ijn(mm1),mpi_rtype,0,mpi_comm_world,ierror)
-!        if ( ierror /= 0 ) write(6,*) 'error scatter p3d2'
-!     end do
-
-     ! specific humidity
-!     wk1 = zero; wk2 = zero
-!     q3d1 = zero; q3d2 = zero
-!     do k = 1, nsig
-!        call nemsio_readrecv(gfile1,'spfh','mid layer',lev=k,data=nems_wk(:),iret=iret)
-!        grid1in = reshape(nems_wk(:),(/nlonin,nlatin-2/))
-!        call unload_grid(grid1in,wk1) !grid1(nlon,nlat-2), wk1(nlat,nlon)
-!        call mpi_scatterv(wk1,ijn,displs_g,mpi_rtype,&
-!           q3d1(1,1,k),ijn(mm1),mpi_rtype,0,mpi_comm_world,ierror)
-!        if ( ierror /= 0 ) write(6,*) 'error scatter q3d1'
-!        call nemsio_readrecv(gfile2,'spfh','mid layer',lev=k,data=nems_wk(:),iret=iret)
-!        grid2in = reshape(nems_wk(:),(/nlonin,nlatin-2/))
-!        call unload_grid(grid2in,wk2)
-!        call mpi_scatterv(wk2,ijn,displs_g,mpi_rtype,&
-!           q3d2(1,1,k),ijn(mm1),mpi_rtype,0,mpi_comm_world,ierror)
-!        if ( ierror /= 0 ) write(6,*) 'error scatter q3d2'
-!        if (nlon/=nlonin .or. nlat/=nlatin) then
-!           call sptez_s(zwork1 (:,k),grid1in,-1)
-!           call sptez_s(zwork2 (:,k),grid2in,-1)
-!           call jcaptrans(z,factsml,zwork1(1,k))
-!           call jcaptrans(z2,factsml,zwork2(1,k))
-!           call sptez_s(z,grid1,1)
-!           call sptez_s(z2,grid2,1)
-!        else
-!           grid1=grid1in
-!           grid2=grid2in
-!        endif
-!        call unload_grid(grid1,wk1(1,k))
-!        call unload_grid(grid2,wk2(1,k))
-!        call mpi_scatterv(wk1,ijn,displs_g,mpi_rtype,&
-!           q3d1(1,1,k),ijn(mm1),mpi_rtype,0,mpi_comm_world,ierror)
-!        if ( ierror /= 0 ) write(6,*) 'error scatter q3d1'
-!        call mpi_scatterv(wk2,ijn,displs_g,mpi_rtype,&
-!           q3d2(1,1,k),ijn(mm1),mpi_rtype,0,mpi_comm_world,ierror)
-!        if ( ierror /= 0 ) write(6,*) 'error scatter q3d2'
-!     end do
-
      call nemsio_close(gfile1,iret=iret)
      call nemsio_close(gfile2,iret=iret)
    
@@ -485,12 +402,6 @@ subroutine readpairs(npe,mype,numcases)
     call grid2sub(work1,sf1,vp1,t1,q1,oz1,cw1,ps1)
     call grid2sub(work2,sf2,vp2,t2,q2,oz2,cw2,ps2)
 
-!    if ( use_gfs_nemsio ) then
-!       !replace with original grid values from nemsio file
-!       q1 = q3d1
-!       q2 = q3d2
-!    end if !use_gfs_nemsio
-
     if (idpsfc5 /=2) then
      do j=1,lon1
         do i=1,lat1
@@ -561,17 +472,10 @@ subroutine readpairs(npe,mype,numcases)
     end do
     ice=.true.
     !ice=.false.
-!    if ( use_gfs_nemsio ) then
-!       call genqsat_nemsio(ts1,qs1,lat1,lon1,&
-!            ps1,ice,p3d1)
-!       call genqsat_nemsio(ts2,qs2,lat1,lon1,&
-!            ps2,ice,p3d2)
-!    else
-       call genqsat(ts1,qs1,lat1,lon1,&
-            ps1,ice,ak5,bk5,ck5)
-       call genqsat(ts2,qs2,lat1,lon1,&
-            ps2,ice,ak5,bk5,ck5)
-!    end if
+    call genqsat(ts1,qs1,lat1,lon1,&
+         ps1,ice,ak5,bk5,ck5)
+    call genqsat(ts2,qs2,lat1,lon1,&
+         ps2,ice,ak5,bk5,ck5)
 
     do k=1,nsig
       do j=1,lon1
@@ -594,15 +498,7 @@ subroutine readpairs(npe,mype,numcases)
 ! Write out the grids
     write(filunit1) sf1,vp1,t1,rh1,oz1,cw1,ps1
     write(filunit2) sf2,vp2,t2,rh2,oz2,cw2,ps2
-if(mype.eq.1)then
-print*,'sf',sf1(1,1,1),sf2(1,1,1)
-print*,'vp',vp1(1,1,1),vp2(1,1,1)
-print*,'t',t1(1,1,1),t2(1,1,1)
-print*,'rh',rh1(1,1,1),rh2(1,1,1)
-print*,'oz',oz1(1,1,1),oz2(1,1,1)
-print*,'cw',cw1(1,1,1),cw2(1,1,1)
-print*,'ps',ps1(1,1),ps2(1,1)
-endif
+
     call mpi_barrier(mpi_comm_world,iret2)
 
   end do   ! END DO LOOP OVER CASES
