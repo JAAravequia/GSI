@@ -27,6 +27,7 @@ module intjomod
 !$$$ end documentation block
 
 use gsi_obOperTypeManager, only: obOper_count
+use gsi_obOperTypeManager, only: obOper_typeInfo
 use gsi_obOperTypeManager, only: &
   iobOper_t,          iobOper_pw,         iobOper_q,          iobOper_w,          iobOper_dw,           &
   iobOper_rw,         iobOper_dbz,                                                                      &
@@ -38,6 +39,7 @@ use gsi_obOperTypeManager, only: &
   iobOper_cldch,      iobOper_uwnd10m,    iobOper_vwnd10m,    iobOper_swcp,       iobOper_lwcp,         &
   iobOper_light
 use kinds, only: i_kind
+use mpeu_util, only: perr,die
 
 implicit none
 
@@ -64,6 +66,8 @@ integer(i_kind),parameter,dimension(obOper_count):: ix_obtype = (/ &
   iobOper_cldch,      iobOper_uwnd10m,    iobOper_vwnd10m,    iobOper_swcp,       iobOper_lwcp,         &
   iobOper_light                                                                                         /)
 !...|....1....|....2....|....3....|....4....|....5....|....6....|....7....|....8....|....9....|....0
+
+character(len=*),parameter:: myname="intjomod"
 
 contains
 
@@ -242,6 +246,8 @@ type(gsi_bundle), dimension(  :), intent(in   ) :: sval         ! (nobs_bins)
 real(r_quad    ), dimension(:,:), intent(inout) :: qpred        ! (:,nobs_bins)
 type(predictors),                 intent(in   ) :: sbias
 
+character(len=*),parameter:: myname_=myname//"::intjo_"
+
 ! Declare local variables
 integer(i_kind):: ibin,it,ix
 class(obOper),pointer:: it_obOper
@@ -257,6 +263,27 @@ class(obOper),pointer:: it_obOper
                         ! implementation, for reprodecibility
 
       it_obOper => obOper_create(ix)
+
+        if(.not.associated(it_obOper)) then
+          call perr(myname_,'unexpected obOper, associated(it_obOper) =',associated(it_obOper))
+          call perr(myname_,'                  obOper_typeInfo(ioper) =',obOper_typeInfo(ix))
+          call perr(myname_,'                                   ioper =',ix)
+          call perr(myname_,'                                      it =',it)
+          call perr(myname_,'                            obOper_count =',obOper_count)
+          call perr(myname_,'                                    ibin =',ibin)
+          call  die(myname_)
+        endif
+
+        if(.not.associated(it_obOper%obsLL)) then
+          call perr(myname_,'unexpected component, associated(%obsLL) =',associated(it_obOper%obsLL))
+          call perr(myname_,'                  obOper_typeInfo(ioper) =',obOper_typeInfo(ix))
+          call perr(myname_,'                                   ioper =',ix)
+          call perr(myname_,'                                      it =',it)
+          call perr(myname_,'                            obOper_count =',obOper_count)
+          call perr(myname_,'                                    ibin =',ibin)
+          call  die(myname_)
+        endif
+
       call it_obOper%intjo(ibin,rval(ibin),sval(ibin),qpred(:,ibin),sbias)
       call obOper_destroy(it_obOper)
     enddo
