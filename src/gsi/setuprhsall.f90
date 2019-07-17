@@ -224,7 +224,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
   integer(i_kind):: lunin,is,idate
   integer(i_kind):: iobs,nprt,ii,jj
-  integer(i_kind) it,ier,istatus
+  integer(i_kind):: it,ier,istatus
+  integer(i_kind):: nreal,nchanl
 
   real(r_quad):: zjo
   real(r_kind),dimension(40,ndat):: aivals1
@@ -435,18 +436,61 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !    Loop over data types to process (for polymorphic obOper%setup() calls)
      do is=1,ndat
 
-        is_obOper => obOper_create(dtype(is))
+        ! Skip data streams where no obOper has been implemented for now.
+        ! These streams are handled in a "lazy" approach, to preserve its
+        ! current behavior of the program.
+        !
+        ! (1) If present in distributed obs_setup streams, they will be
+        !     processed, by sequantially skipping corresponding records
+        !     with possible exceptions (error messages).
+        !
+        ! (2) If not expected to be present in distributed obs_setup streams,
+        !     A warning message body for exceptions will be issued.  And
+        !     the program will proceed as normal.
 
-                if(.not.associated(is_obOper)) then
-                  call perr(myname,'unexpected obOper, is =',is)
-                  call perr(myname,'                dtype =',dtype(is))
-                  call perr(myname,'     obOper_typeIndex =',obOper_typeIndex(dtype(is)))
+        select case(trim(dtype(is)))
+        case('mta_cld', 'gos_ctp', 'rad_ref', 'lghtn', 'larccld', 'larcglb')
+                ! Exception (1) (see above)
+
+          if(nsat1(is)>0)then
+            read(lunin,iostat=ier) obstype,isis,nreal,nchanl
+                if(ier/=0) then
+                  call perr(myname,'unexpected obs_setup read(1), iostat =',ier)
+                  call perr(myname,'                                  is =',is)
+                  call perr(myname,'                           ndat1(is) =',nsat1(is))
+                  call perr(myname,'                           dtype(is) =',trim(dtype(is)))
                   call  die(myname)
                 endif
 
-        call is_obOper%setup(lunin,mype, is, nsat1(is), init_pass,last_pass)
+            read(lunin,iostat=ier)
+                if(ier/=0) then
+                  call perr(myname,'unexpected obs_setup read(2), iostat =',ier)
+                  call perr(myname,'                                  is =',is)
+                  call perr(myname,'                           ndat1(is) =',nsat1(is))
+                  call perr(myname,'                           dtype(is) =',trim(dtype(is)))
+                  call perr(myname,'                             obstype =',trim(obstype))
+                  call perr(myname,'                                isis =',trim(isis))
+                  call perr(myname,'                               nreal =',nreal)
+                  call perr(myname,'                              nchanl =',nchanl)
+                  call  die(myname)
+                endif
+          endif
 
-        call obOper_destroy(is_obOper)
+        case default
+
+          is_obOper => obOper_create(dtype(is))
+
+          if(associated(is_obOper)) then
+            call is_obOper%setup(lunin,mype, is, nsat1(is), init_pass,last_pass)
+            call obOper_destroy(is_obOper)
+
+          else
+                ! Exception (2) (see above)
+            call warn(myname,'unexpected obOper, is =',is)
+            call warn(myname,'                dtype =',trim(dtype(is)))
+            call warn(myname,'     obOper_typeIndex =',obOper_typeIndex(dtype(is)))
+          endif
+        end select
 
      end do
      close(lunin)
