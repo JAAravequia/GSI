@@ -39,7 +39,9 @@ elif [[ -d /discover ]] ; then
     build_type=0
     export SPACK_ROOT=/discover/nobackup/mapotts1/spack
     export PATH=$PATH:$SPACK_ROOT/bin
-    . $SPACK_ROOT/share/spack/setup-env.sh    
+    . $SPACK_ROOT/share/spack/setup-env.sh
+elif [[ "$(hostname)" =~ "odin" ]]; then
+    target="odin"
 else
     echo "unknown target = $target"
     exit 9
@@ -56,6 +58,7 @@ rm -rf $dir_root/build
 mkdir -p $dir_root/build
 cd $dir_root/build
 
+lapack_str=""
 if [ $target = wcoss_d ]; then
     module purge
     module use -a $dir_modules
@@ -71,14 +74,17 @@ elif [ $target = wcoss_c ]; then
     module load $dir_modules/modulefile.ProdGSI.$target
 elif [ $target = discover ]; then
     module load $dir_modules/modulefile.ProdGSI.$target
-else 
+elif [ $target = odin ]; then
+    module load $dir_modules/modulefile.ProdGSI.$target
+    lapack_str="-DBLAS_LIBRARIES=${BLAS_DIR}/libmkl_blas95_lp64.a -DLAPACK_LIBRARIES=${LAPACK_PATH}/libmkl_lapack95_lp64.a" 
+else
     module purge
     source $dir_modules/modulefile.ProdGSI.$target
 fi
 
 if [ $build_type = PRODUCTION -o $build_type = DEBUG ] ; then
-  cmake -DBUILD_UTIL=ON -DMPI3FLAG=-DMPI3 -DMPI3=ON -DBUILD_NCDIAG_SERIAL=ON -DCMAKE_BUILD_TYPE=$build_type -DBUILD_CORELIBS=OFF ..
-else 
+  cmake -DBUILD_UTIL=ON -DMPI3FLAG=-DMPI3 -DMPI3=ON -DBUILD_NCDIAG_SERIAL=ON -DCMAKE_BUILD_TYPE=$build_type -DBUILD_CORELIBS=OFF ${lapack_str} ..
+else
   cmake ..
 fi
 
