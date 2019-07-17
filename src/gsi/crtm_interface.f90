@@ -1097,7 +1097,7 @@ end subroutine destroy_crtm
   real(r_kind):: delx,dely,delx1,dely1,dtsig,dtsigp,dtsfc,dtsfcp
   real(r_kind):: sst00,sst01,sst10,sst11,total_od,term,uu5,vv5, ps
   real(r_kind):: sno00,sno01,sno10,sno11,secant_term
-  real(r_kind):: hwp_total,theta_700,theta_sfc,landfrac,hs
+  real(r_kind):: hwp_total,theta_700,theta_sfc,hs
   real(r_kind):: dlon,dlat,dxx,dyy,yy,zz,garea
   real(r_kind),dimension(0:3):: wgtavg
   real(r_kind),dimension(nsig,nchanl):: omix
@@ -1735,8 +1735,7 @@ end subroutine destroy_crtm
   ! Calculate GFDL cloud fraction (if no cf in metguess table) based on PDF scheme 
   if ( icmask .and. n_clouds_fwd_wk > 0 .and. imp_physics==11 .and.  lcalc_gfdl_cfrac ) then
      cf_calc  = zero
-     landfrac = one - min(max(zero,data_s(ifrac_sea)),one)
-     call calc_gfdl_cloudfrac(rho_air,h,qmix,cloud,hs,landfrac,garea,cf_calc)
+     call calc_gfdl_cloudfrac(rho_air,h,qmix,cloud,hs,garea,cf_calc)
      cf   = cf_calc
      icfs = 0        ! load cloud fraction into CRTM 
   endif
@@ -2345,7 +2344,7 @@ end subroutine destroy_crtm
      do k = 1, nsig
         qx = qxmr(k) * rho_air(k)  ! convert mixing ratio (kg/kg) to water content (kg/m3)
         if (qx > qmin) then
-           reff(k) = exp (1.0_r_kind / 3.0_r_kind * log ((3 * qx) / (4 * pi * rho_w * ccn))) * 1.0e6_r_kind
+           reff(k) = exp (1.0_r_kind / 3.0_r_kind * log ((3.0_r_kind * qx) / (4.0_r_kind * pi * rho_w * ccn))) * 1.0e6_r_kind
            reff(k) = max(reff_min, min(reff_max, reff(k)))
         !  reff(k) = 10.0_r_kind  
         else
@@ -2431,7 +2430,7 @@ end subroutine destroy_crtm
 
   end subroutine calc_gfdl_reff
 
-  subroutine calc_gfdl_cloudfrac(den,pt1,qv,cloud,hs,land,area,cfrac)
+  subroutine calc_gfdl_cloudfrac(den,pt1,qv,cloud,hs,area,cfrac)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    calc_gfdl_cloudfrac  calculate GFDL cloud fraction 
@@ -2451,7 +2450,6 @@ end subroutine destroy_crtm
 !     qv        - specific humidity 
 !     cloud     - hydrometeor mixing ratio 
 !     hs        - surface elevation 
-!     land      - land fraction 
 !     area      - analysis grid area   
 !     cfrac     - cloud fraction 
 !
@@ -2463,9 +2461,8 @@ end subroutine destroy_crtm
 !$$$
 !--------
 
-  use constants, only: one, zero, ten, pi, half
-  use constants, only: t0c, cp, rd, rv, cliq, hvap, hfus, grav
-  use mpimod,    only: mype
+  use constants, only: one, zero, ten, pi, half, grav
+  use constants, only: tice,t_wfr,rvgas,hlv,hlf,c_liq,c_ice,cp_air,cv_air 
 
   implicit none
 !
@@ -2474,7 +2471,6 @@ end subroutine destroy_crtm
    real(r_kind), dimension(nsig)                 ,intent(in   ) :: pt1    !  sensible temperature[ K ] 
    real(r_kind), dimension(nsig)                 ,intent(in   ) :: qv     !  specific humudity
    real(r_kind), dimension(nsig,n_clouds_fwd_wk) ,intent(in   ) :: cloud  !  hydroeteor mixing ratio
-   real(r_kind),                                  intent(in   ) :: land   ! land fraction 
    real(r_kind),                                  intent(in   ) :: hs     !  surface elevation [ m ] 
    real(r_kind),                                  intent(in   ) :: area   !  analysis grid area [ m2 ]
    real(r_kind), dimension(nsig)                 ,intent(inout) :: cfrac  !  cloud fraction  
@@ -2488,12 +2484,10 @@ end subroutine destroy_crtm
   real(r_kind), parameter :: qcmin   = 1.0e-12_r_kind ! min value for cloud condensates
   real(r_kind), parameter :: cld_min = 0.05_r_kind    ! min value for cloud fraction 
   real(r_kind) :: tin,qsi,qsw
-  real(r_kind) :: qpz,q_cond,rh,hvar
-  real(r_kind) :: cvm
-  real(r_kind) :: rdgas,rvgas
-  real(r_kind) :: rqi,dq,t_wfr,tice,d0_vap,dc_ice,lv00,li00
-  real(r_kind) :: hlv,hlf,hlv0,hlf0,mc_air,c_air,c_ice,c_liq,c_vap
-  real(r_kind) :: cp_air,cv_air,cp_vap,cv_vap
+  real(r_kind) :: qpz,q_cond,rh,hvar,cvm
+  real(r_kind) :: rqi,dq,d0_vap,dc_ice,lv00,li00
+  real(r_kind) :: mc_air,c_air,c_vap
+  real(r_kind) :: cp_vap,cv_vap
   real(r_kind) :: lhi,lhl,lcp2,icp2
   real(r_kind) :: q_plus,q_minus,qstar
   real(r_kind) :: dw,dw_land,dw_ocean
@@ -2502,20 +2496,8 @@ end subroutine destroy_crtm
   real(r_kind), dimension(nsig) :: ql,qi,qr,qs,qg
   logical :: hydrostatic
 
-! Parameters
+!  parameters
   icloud_f = 1
-  tice     = t0c                ! freezing temperature
-  t_wfr    = tice - 40.0_r_kind ! homogeneous freezing temperature
-  hlv      = hvap               ! latent heat of evaporation (2500000)     
-  hlf      = hfus               ! latent heat of fusion      ( 333580)     
-  hlv0     = hlv                ! latent heat of evaporation
-  hlf0     = hlf                ! latent heat of fusion
-  c_liq    = cliq               ! heat capacity of water at +15 deg C  (4185.5)
-  c_ice    = 1972.0_r_kind      ! heat capacity of ice at -15 deg C    (1972.0)
-  rdgas    = rd                 ! gas constant for dry air 
-  rvgas    = rv                 ! gas constant for water vaoir 
-  cv_air   = cp - rd            ! heat capacity of dry air at constant volume (non-hydrostatic)  717.55
-  cp_air   = cp                 ! heat capacity of dry air at constant pressure (hydrostatic)   1004.67
   cv_vap   = 3.0_r_kind * rvgas ! heat capacity of water vapor at constant volume (non-hydrostatic) cv_vap=1384.5 
   cp_vap   = 4.0_r_kind * rvgas ! heat capacity of water voiar at constant pressure (hydrostatic)   cp_vap=1846.0
   dw_land  = 0.20_r_kind        ! base value for subgrid variability over land 
@@ -2534,8 +2516,8 @@ end subroutine destroy_crtm
   dc_ice = c_liq - c_ice        ! isobaric heating/cooling (2213.5)
   d0_vap = c_vap - c_liq        ! d0_vap = cv_vap-cliq = -2801.0 
 ! dc_vap = c_vap - c_liq        ! dc_vap = cp_vap-cliq = -2339.5
-  lv00   = hlv0 - d0_vap * tice ! evaporation latent heat coefficient at 0 deg (3139057.82)
-  li00   = hlf0 - dc_ice * tice ! fusion latent heat coefficient at 0 deg (-271059.665)
+  lv00   = hlv - d0_vap * tice  ! evaporation latent heat coefficient at 0 deg (3139057.82)
+  li00   = hlf - dc_ice * tice  ! fusion latent heat coefficient at 0 deg (-271059.665)
 
 ! -----------------------------------------------------------------------
 ! calculate horizontal subgrid variability
@@ -2676,8 +2658,7 @@ subroutine qs_table(n)
 !$$$
 !--------
 
-    use constants, only: t0c,psat,rv,hvap,hfus,cvap,cliq,csol
-    use mpimod, only: mype
+    use constants, only: tice,e00,rvgas,hlv,hlf,cp_vap,c_liq,c_ice 
 
     implicit none
 
@@ -2689,31 +2670,17 @@ subroutine qs_table(n)
     real(r_kind) :: wice, wh2o, fac0, fac1, fac2
     real(r_kind) :: esupc (200)
 
-    real(r_kind) :: tice, e00, rvgas, hlv, hlf, cp_vap, c_liq
-    real(r_kind) :: cv_vap, c_ice, dc_vap, dc_ice, d2ice
-    real(r_kind) :: hlv0, hlf0, lv0, li00, li2
-
-    ! Parameters
-    tice      = t0c                ! temperature at 0 deg C [K]   
-    e00       = psat               ! saturation vapor pressure at 0 deg C (611.21 Pa)
-    rvgas     = rv                 ! gas constant for waver vapor     
-    hlv       = hvap               ! latent heat of evaporation     
-    hlf       = hfus               ! latent heat of fusion     
-    cp_vap    = cvap               ! heat capacity of water vapor at const. pressure     
-    c_liq     = cliq               ! heat capacity of water at 15 deg C     
-    c_ice     = 1972.0_r_kind      ! heat capacity of ice at -15 deg C  (csol)
+    real(r_kind) :: dc_vap, dc_ice, d2ice
+    real(r_kind) :: lv0, li00, li2
 
     ! Derived parameters
-    cv_vap    = 3.0_r_kind * rvgas ! hear capacity of water vapor at const. volume
-    dc_vap    = cp_vap - c_liq     ! isobaric heating/cooling (-2339.5)
-    dc_ice    = c_liq - c_ice      ! isobaric heating/cooling (-2213.5)
-    d2ice     = dc_vap + dc_ice    ! isobaric heating/cooling ( -126)
-    hlv0      = hlv
-    hlf0      = hlf
-    lv0       = hlv0 - dc_vap * tice ! 3139057.82 
-    li00      = hlf0 - dc_ice * tice ! -271059.55
-    li2       = lv0 + li00           ! 2867998.15
-    tmin      = tice - 160._r_kind
+    dc_vap = cp_vap - c_liq      ! isobaric heating/cooling (-2339.5)
+    dc_ice = c_liq - c_ice       ! isobaric heating/cooling (-2213.5)
+    d2ice  = dc_vap + dc_ice     ! isobaric heating/cooling ( -126)
+    lv0    = hlv - dc_vap * tice ! 3139057.82 
+    li00   = hlf - dc_ice * tice ! -271059.55
+    li2    = lv0 + li00          ! 2867998.15
+    tmin   = tice - 160._r_kind
 
     ! -----------------------------------------------------------------------
     ! compute es over ice between - 160 deg c and 0 deg c.
@@ -2731,7 +2698,7 @@ subroutine qs_table(n)
     ! compute es over water between - 20 deg c and 102 deg c.
     ! --------------------------------------------------------
 
-    do i = 1, 1221
+    do i = 1, n-1400
         tem   = 253.16_r_kind + delt * real(i - 1)
         fac0  = (tem - tice) / (tem * tice)
         fac1  = fac0 * lv0
@@ -2782,8 +2749,7 @@ subroutine qs_table2(n)
 !$$$
 !--------
 
-    use constants, only: t0c,psat,rv,hvap,hfus,cvap,cliq,csol
-    use mpimod, only: mype
+    use constants, only: tice,e00,rvgas,hlv,hlf,cp_vap,c_liq,c_ice
 
     implicit none
 
@@ -2792,31 +2758,17 @@ subroutine qs_table2(n)
 
     real(r_kind) :: delt = 0.1_r_kind
     real(r_kind) :: tmin, tem0, tem1, fac0, fac1, fac2
-    real(r_kind) :: tice, e00, rvgas, hlv, hlf, cp_vap, c_liq
-    real(r_kind) :: cv_vap, c_ice, dc_vap, dc_ice, d2ice
-    real(r_kind) :: hlv0, hlf0, lv0, li00, li2
-
-    ! Parameters
-    tice      = t0c                ! temperature at 0 deg C [K]   
-    e00       = psat               ! saturation vapor pressure at 0 deg C [Pa]
-    rvgas     = rv                 ! gas constant for waver vapor     
-    hlv       = hvap               ! latent heat of evaporation     
-    hlf       = hfus               ! latent heat of fusion     
-    cp_vap    = cvap               ! heat capacity of water vapor at const. pressure     
-    c_liq     = cliq               ! heat capacity of water at 15 deg C     
-    c_ice     = 1972.0_r_kind      ! heat capacity of ice at -15 deg C  (csol)
+    real(r_kind) :: dc_vap, dc_ice, d2ice
+    real(r_kind) :: lv0, li00, li2
 
     ! Derived parameters
-    cv_vap    = 3.0_r_kind * rvgas ! hear capacity of water vapor at const. volume
-    dc_vap    = cp_vap - c_liq     ! isobaric heating/cooling
-    dc_ice    = c_liq - c_ice      ! isobaric heating/cooling
-    d2ice     = dc_vap + dc_ice    ! isobaric heating/cooling 
-    hlv0      = hlv
-    hlf0      = hlf
-    lv0       = hlv0 - dc_vap * tice
-    li00      = hlf0 - dc_ice * tice
-    li2       = lv0 + li00
-    tmin      = tice - 160._r_kind
+    dc_vap = cp_vap - c_liq     ! isobaric heating/cooling
+    dc_ice = c_liq - c_ice      ! isobaric heating/cooling
+    d2ice  = dc_vap + dc_ice    ! isobaric heating/cooling 
+    lv0    = hlv - dc_vap * tice
+    li00   = hlf - dc_ice * tice
+    li2    = lv0 + li00
+    tmin   = tice - 160._r_kind
 
     do i = 1, n
        tem0 = tmin + delt * real(i - 1)
@@ -2873,8 +2825,7 @@ subroutine qs_tablew (n)
 !$$$
 !--------
 
-    use constants, only: t0c,psat,rv,hvap,hfus,cvap,cliq,csol
-    use mpimod, only: mype
+    use constants, only: tice,e00,rvgas,hlv,cp_vap,c_liq
 
     implicit none
 
@@ -2883,22 +2834,12 @@ subroutine qs_tablew (n)
     integer(i_kind) :: i
     real(r_kind) :: delt = 0.1_r_kind
     real(r_kind) :: tmin, tem, fac0, fac1, fac2
-    real(r_kind) :: tice, e00, rvgas, hlv, cp_vap, c_liq
-    real(r_kind) :: cv_vap, dc_vap, hlv0, lv0
-
-    ! Parameters
-    tice   = t0c      ! temperature at 0 deg C [K]   
-    e00    = psat     ! saturation vapor pressure at 0 deg C [Pa]
-    rvgas  = rv       ! gas constant for waver vapor     
-    hlv    = hvap     ! latent heat of evaporation     
-    cp_vap = cvap     ! heat capacity of water vapor at const.  pressure     
-    c_liq  = cliq     ! heat capacity of water at 15 deg C     
+    real(r_kind) :: dc_vap, lv0
 
     ! Derived parameters
-    dc_vap    = cp_vap - c_liq     ! isobaric heating/cooling
-    hlv0      = hlv
-    lv0       = hlv0 - dc_vap * tice
-    tmin      = tice - 160._r_kind
+    dc_vap = cp_vap - c_liq     ! isobaric heating/cooling
+    lv0    = hlv - dc_vap * tice
+    tmin   = tice - 160._r_kind
 
     ! -----------------------------------------------------------------------
     ! compute es over water
@@ -2935,7 +2876,7 @@ real function iqs1 (ta, den)
 !   
 !$$$
 !--------
-    use constants, only: t0c,rv,one
+    use constants, only: tice,rvgas,one
     implicit none
 
     ! water - ice phase; universal dry / moist formular using air density
@@ -2943,18 +2884,15 @@ real function iqs1 (ta, den)
 
     real(r_kind), intent (in) :: ta, den
     real(r_kind)    :: es, ap1, tmin
-    real(r_kind)    :: tice, rvgas
     integer(i_kind) :: it
 
-    tice  = t0c
-    rvgas = rv
 
-    tmin  = tice - 160._r_kind
-    ap1   = 10._r_kind * dim (ta, tmin) + one
-    ap1   = min (2621._r_kind, ap1)
-    it    = ap1
-    es    = table2 (it) + (ap1 - it) * des2 (it)
-    iqs1  = es / (rvgas * ta * den)
+    tmin = tice - 160._r_kind
+    ap1  = 10._r_kind * dim (ta, tmin) + one
+    ap1  = min (2621._r_kind, ap1)
+    it   = ap1
+    es   = table2 (it) + (ap1 - it) * des2 (it)
+    iqs1 = es / (rvgas * ta * den)
 
 end function iqs1
 
@@ -2981,7 +2919,7 @@ real function wqs1 (ta, den)
 !   
 !$$$
 !--------
-    use constants, only: t0c,rv,one
+    use constants, only: tice,rvgas,one
     implicit none
 
     ! pure water phase; universal dry / moist formular using air density
@@ -2989,18 +2927,15 @@ real function wqs1 (ta, den)
 
     real(r_kind), intent (in) :: ta, den
     real(r_kind)    :: es, ap1, tmin
-    real(r_kind)    :: tice, rvgas
     integer(i_kind) :: it
 
-    tice  = t0c
-    rvgas = rv
 
-    tmin  = tice - 160._r_kind
-    ap1   = 10._r_kind * dim (ta, tmin) + one
-    ap1   = min (2621._r_kind, ap1)
-    it    = ap1
-    es    = tablew(it) + (ap1 - it) * desw(it)
-    wqs1  = es / (rvgas * ta * den)
+    tmin = tice - 160._r_kind
+    ap1  = 10._r_kind * dim (ta, tmin) + one
+    ap1  = min (2621._r_kind, ap1)
+    it   = ap1
+    es   = tablew(it) + (ap1 - it) * desw(it)
+    wqs1 = es / (rvgas * ta * den)
 
 end function wqs1
 
