@@ -28,7 +28,8 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
        nc_diag_write, nc_diag_data2d
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_get_dim, nc_diag_read_close
   use gsi_4dvar, only: nobs_bins,hr_obsbin,min_offset
-  use qcmod, only: npres_print,ptop,pbot,dfact,dfact1,qc_satwnds,njqc,vqc,nvqc,hub_norm
+  use qcmod, only: npres_print,ptop,pbot,dfact,dfact1,qc_satwnds,njqc,vqc
+  use qcmod, only: nvqc,hub_norm
   use oneobmod, only: oneobtest,oneob_type,magoberr,maginnov 
   use gridmod, only: get_ijk,nsig,twodvar_regional,regional,wrf_nmm_regional,&
       rotate_wind_xy2ll
@@ -52,7 +53,6 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
   use sparsearr, only: sparr2, new, size, writearray, fullarray
-  use pvqc, only: vqch,vqcs
 
   implicit none
   
@@ -168,6 +168,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !                                     time in analysis
 !   2018-04-09  pondeca -  introduce duplogic to correctly handle the characterization of
 !                          duplicate obs in twodvar_regional applications
+!   2019-05-24  Su      -  remove current VQC part and add subroutine call on VQC
 !
 !
 ! REMARKS:
@@ -204,9 +205,9 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_double) rstation_id
   real(r_kind) qcu,qcv,trop5,tfact,fact
   real(r_kind) scale,ratio,obserror,obserrlm
-  real(r_kind) residual,ressw,ress,val,val2,valqc2,dudiff,dvdiff
+  real(r_kind) residual,ressw,ress,val,vals,val2,valqc2,dudiff,dvdiff
   real(r_kind) valqc,valu,valv,dx10,rlow,rhgh,drpx,prsfc,var_jb
-  real(r_kind) cg_w,wgross,wnotgross,wgt,arg,exp_arg,term,rat_err2,qcgross
+  real(r_kind) cg_t,cvar,wgt,term,rat_err2,qcgross
   real(r_kind) presw,factw,dpres,ugesin,vgesin,rwgt,dpressave
   real(r_kind) sfcchk,prsln2,error,dtime,dlon,dlat,r0_001,rsig,thirty,rsigp
   real(r_kind) ratio_errors,goverrd,spdges,spdob,ten,psges,zsges
@@ -218,7 +219,6 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) dudiff_opp, dvdiff_opp, vecdiff, vecdiff_opp
   real(r_kind) dudiff_opp_rs, dvdiff_opp_rs, vecdiff_rs, vecdiff_opp_rs
   real(r_kind) oscat_vec,ascat_vec,rapidscat_vec
-  real(r_kind) g_nvqc,w_nvqc                         ! new variational qc parameter
   real(r_kind),dimension(nele,nobs):: data
   real(r_kind),dimension(nobs):: dup
   real(r_kind),dimension(nsig)::prsltmp,tges,zges
@@ -239,7 +239,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) ihgt,ier2,iuse,ilate,ilone,istat
   integer(i_kind) izz,iprvd,isprvd
   integer(i_kind) idomsfc,isfcr,iskint,iff10
-  integer(i_kind) ib,ik
+  integer(i_kind) ibb,ikk
 
   integer(i_kind) num_bad_ikx
 
@@ -1108,55 +1108,28 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
  
      valu     = error*dudiff
      valv     = error*dvdiff
-
+     if(nvqc .and. ibeta(ikx) >0  ) ratio_errors=0.8_r_kind*ratio_errors
 !    Compute penalty terms (linear & nonlinear qc).
      if(luse(i))then
         val      = valu*valu+valv*valv
-        exp_arg  = -half*val
-        if(nvqc) ratio_errors=0.8_r_kind*ratio_errors
-        rat_err2 = ratio_errors**2
-        if(njqc  .and. var_jb>tiny_r_kind .and. var_jb<10.0_r_kind .and. error >tiny_r_kind) then
-           if(exp_arg  == zero) then
-              wgt=one
-           else
-              wgt=sqrt(dudiff*dudiff+dvdiff*dvdiff)*error/sqrt(two*var_jb)
-              wgt=tanh(wgt)/wgt
-           endif
-           term=-two*var_jb*rat_err2*log(cosh((sqrt(val))/sqrt(two*var_jb)))
-           rwgt = wgt/wgtlim
-           valqc = -two*term
-        else if (vqc .and. cvar_pg(ikx) > tiny_r_kind .and. error > tiny_r_kind) then
-           arg  = exp(exp_arg)
-           wnotgross= one-cvar_pg(ikx)
-           cg_w=cvar_b(ikx)
-           wgross = cg_term*cvar_pg(ikx)/(cg_w*wnotgross)
-           term =log((arg+wgross)/(one+wgross))
-           wgt  = one-wgross/(arg+wgross)
-           rwgt = wgt/wgtlim
-           valqc = -two*rat_err2*term
-        else if(nvqc .and. ibeta(ikx) >0) then
-           arg=sqrt(val)
-           ib=ibeta(ikx)
-           ik=ikapa(ikx)
-           if(hub_norm) then
-              call vqch(ib,ik,arg,g_nvqc,w_nvqc)
-           else
-              call vqcs(ib,ik,arg,g_nvqc,w_nvqc)
-           endif
-           valqc=-two*rat_err2*g_nvqc
-           if(val ==zero) then
-              wgt=one
-           else
-              wgt=g_nvqc/exp_arg
-           endif
-           rwgt = wgt/wgtlim
+        vals=sqrt(val)
+        if(vqc) then
+           cg_t=cvar_b(ikx)
+           cvar=cvar_pg(ikx)
         else
-           term = exp_arg
-           wgt  = one 
-           rwgt = wgt/wgtlim
-           valqc = -two*rat_err2*term
+           cg_t=zero
+           cvar=zero
         endif
-
+        if(nvqc) then
+           ibb=ibeta(ikx)
+           ikk=ikapa(ikx)
+        else
+           ibb=0
+           ikk=0
+        endif
+        call vqc_setup(vals,ratio_errors,error,cvar,&
+                      cg_t,ibb,ikk,var_jb,rat_err2,wgt,valqc)
+        rwgt = wgt/wgtlim
 
 !       Accumulate statistics for obs belonging to this task
         if (muse(i)) then
@@ -1240,6 +1213,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         my_head%ib=ibeta(ikx)
         my_head%ik=ikapa(ikx)
         my_head%luse=luse(i)
+!        if( i==3) print *,'SETUPW',my_head%ures,my_head%vres,my_head%err2
 
         if (luse_obsdiag) then
            my_head%diagu => obsptr

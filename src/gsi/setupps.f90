@@ -71,7 +71,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !   2016-12-09  mccarty - add netcdf_diag capability
 !   2017-03-31  Hu      -  addd option l_closeobs to use closest obs to analysis
 !                                     time in analysis
-!
+!   2019-05-24  Su      -  remove current VQC part and add subroutine call on VQC
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -113,15 +113,14 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use qcmod, only: dfact,dfact1,npres_print,njqc,vqc,nvqc,hub_norm
   use guess_grids, only: hrdifsig,ges_lnprsl,nfldsig,ntguessig
   use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype,icsubtype
-  use convinfo, only: ibeta,ikapa
+  use convinfo, only: ibeta,ikapa 
 
   use m_dtime, only: dtime_setup, dtime_check, dtime_show
+
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
   use sparsearr, only: sparr2, new, size, writearray, fullarray
   use rapidrefresh_cldsurf_mod, only: l_closeobs
-  use pvqc, only: vqch,vqcs
-  
 
   implicit none
 
@@ -153,8 +152,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) r0_005,r0_2,r2_5,tmin,tmax,half_tlapse
   real(r_kind) ratio_errors,error,dhgt,ddiff,dtemp
   real(r_kind) val2,ress,ressw2,val,valqc
-  real(r_kind) cg_ps,wgross,wnotgross,wgt,arg,exp_arg,term,rat_err2,qcgross
-  real(r_kind) g_nvqc,w_nvqc                         ! new variational qc parameter
+  real(r_kind) cg_t,cvar,wgt,rat_err2,qcgross
   real(r_kind),dimension(nobs):: dup
   real(r_kind),dimension(nsig):: prsltmp
   real(r_kind),dimension(nele,nobs):: data
@@ -165,7 +163,7 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) ikxx,nn,istat,ibin,ioff,ioff0
   integer(i_kind) i,nchar,nreal,ii,jj,k,l,mm1
   integer(i_kind) itype,isubtype 
-  integer(i_kind) ib,ik
+  integer(i_kind) ibb,ikk
 
   logical,dimension(nobs):: luse,muse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
@@ -532,54 +530,29 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! Compute penalty terms, and accumulate statistics.
 
      val      = error*ddiff
-
+     if(nvqc .and. ibeta(ikx) >0  ) ratio_errors=0.8_r_kind*ratio_errors
      if(luse(i))then
 
 !    Compute penalty terms (linear & nonlinear qc).
         val2     = val*val
-        exp_arg  = -half*val2
-        if(nvqc) ratio_errors=0.8_r_kind*ratio_errors
-        rat_err2 = ratio_errors**2
-        if(njqc  .and. var_jb>tiny_r_kind .and. var_jb < 10.0_r_kind .and. error >tiny_r_kind)  then
-           if(exp_arg  == zero) then
-              wgt=one
-           else
-              wgt=ddiff*error/sqrt(two*var_jb)
-              wgt=tanh(wgt)/wgt
-           endif
-           term=-two*var_jb*rat_err2*log(cosh((val)/sqrt(two*var_jb)))
-           rwgt = wgt/wgtlim
-           valqc = -two*term
-        else if (vqc  .and. (cvar_pg(ikx)> tiny_r_kind) .and. (error >tiny_r_kind)) then
-           arg  = exp(exp_arg)
-           wnotgross= one-cvar_pg(ikx)
-           cg_ps=cvar_b(ikx)
-           wgross = cg_term*cvar_pg(ikx)/(cg_ps*wnotgross)
-           term =log((arg+wgross)/(one+wgross))
-           wgt  = one-wgross/(arg+wgross)
-           rwgt = wgt/wgtlim
-           valqc = -two*rat_err2*term
-        else if(nvqc .and. ibeta(ikx) >0 ) then
-           ib=ibeta(ikx)
-           ik=ikapa(ikx)
-           if(hub_norm) then
-              call vqch(ib,ik,val,g_nvqc,w_nvqc)
-           else
-              call vqcs(ib,ik,val,g_nvqc,w_nvqc)
-           endif
-           valqc=-two*rat_err2*g_nvqc
-           if(val ==zero) then
-              wgt=one
-           else
-              wgt=g_nvqc/exp_arg
-           endif
-           rwgt = wgt/wgtlim
+        if(vqc) then
+           cg_t=cvar_b(ikx)
+           cvar=cvar_pg(ikx)
         else
-           term = exp_arg
-           wgt  = one 
-           rwgt = wgt/wgtlim
-           valqc = -two*rat_err2*term
+           cg_t=zero
+           cvar=zero
         endif
+        if(nvqc) then
+           ibb=ibeta(ikx)
+           ikk=ikapa(ikx)
+        else
+           ibb=0
+           ikk=0
+        endif
+
+        call vqc_setup(val,ratio_errors,error,cvar,cg_t,ibb,ikk,&
+                      var_jb,rat_err2,wgt,valqc)
+        rwgt = wgt/wgtlim
         if (muse(i)) then
 !       Accumulate statistics for obs used belonging to this task        
            if(rwgt < one) awork(21) = awork(21)+one
@@ -640,8 +613,8 @@ subroutine setupps(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         my_head%b        = cvar_b(ikx)
         my_head%pg       = cvar_pg(ikx)
         my_head%jb       = var_jb
-        my_head%ib       = ibeta(ikx)
-        my_head%ik       = ikapa(ikx)
+        my_head%ib      = ibeta(ikx)
+        my_head%ik      = ikapa(ikx)
         my_head%luse     = luse(i)
         if(oberror_tune) then
            my_head%kx    = ikx        ! data type for oberror tuning

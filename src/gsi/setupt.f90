@@ -63,7 +63,6 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
   use buddycheck_mod, only: buddy_check_t
-  use pvqc, only: vqcs,vqch
 
   use sparsearr, only: sparr2, new, size, writearray, fullarray
 
@@ -183,6 +182,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !                                     for coastline area
 !   2018-04-09  pondeca -  introduce duplogic to correctly handle the characterization of
 !                          duplicate obs in twodvar_regional applications
+!  2019-05-24  Su      -  remove current VQC part and add subroutine call on VQC
 !
 ! !REMARKS:
 !   language: f90
@@ -224,8 +224,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind) val,valqc,dlon,dlat,dtime,dpres,error,prest,rwgt,var_jb
   real(r_kind) errinv_input,errinv_adjst,errinv_final
   real(r_kind) err_input,err_adjst,err_final,tfact
-  real(r_kind) g_nvqc,w_nvqc                         ! new variational qc parameter
-  real(r_kind) cg_t,wgross,wnotgross,wgt,arg,exp_arg,term,rat_err2,qcgross
+  real(r_kind) cg_t,cvar,wgt,rat_err2,qcgross
   real(r_kind),dimension(nobs)::dup
   real(r_kind),dimension(nsig):: prsltmp
   real(r_kind),dimension(nele,nobs):: data
@@ -249,7 +248,7 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) ier2,iuse,ilate,ilone,ikxx,istnelv,iobshgt,izz,iprvd,isprvd
   integer(i_kind) regime,istat
   integer(i_kind) idomsfc,iskint,iff10,isfcr
-  integer(i_kind) ib,ik
+  integer(i_kind) ibb,ikk
 
   integer(i_kind),dimension(nobs):: buddyuse
 
@@ -866,52 +865,29 @@ subroutine setupt(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 !    Compute penalty terms
      val      = error*ddiff
+     if(nvqc .and. ibeta(ikx) >0  ) ratio_errors=0.8_r_kind*ratio_errors
      if(luse(i))then
         val2     = val*val
-        exp_arg  = -half*val2
-        if(nvqc) ratio_errors=0.8_r_kind*ratio_errors
-        rat_err2 = ratio_errors**2
-        if(njqc .and. var_jb>tiny_r_kind .and. var_jb < 10.0_r_kind .and. error >tiny_r_kind)  then
-           if(exp_arg  == zero) then
-              wgt=one
-           else
-              wgt=ddiff*error/sqrt(two*var_jb)
-              wgt=tanh(wgt)/wgt
-           endif
-           term=-two*var_jb*rat_err2*log(cosh((val)/sqrt(two*var_jb)))
-           rwgt = wgt/wgtlim
-           valqc = -two*term
-        else if (vqc .and. cvar_pg(ikx)> tiny_r_kind .and. error >tiny_r_kind) then
-           arg  = exp(exp_arg)
-           wnotgross= one-cvar_pg(ikx)
+        if(vqc) then
            cg_t=cvar_b(ikx)
-           wgross = cg_term*cvar_pg(ikx)/(cg_t*wnotgross)
-           term =log((arg+wgross)/(one+wgross))
-           wgt  = one-wgross/(arg+wgross)
-           rwgt = wgt/wgtlim
-           valqc = -two*rat_err2*term
-        else if(nvqc .and. ibeta(ikx) >0) then
-           ib=ibeta(ikx)
-           ik=ikapa(ikx)
-           if(hub_norm) then
-              call vqch(ib,ik,val,g_nvqc,w_nvqc)
-           else
-              call vqcs(ib,ik,val,g_nvqc,w_nvqc)
-           endif
-           valqc=-two*rat_err2*g_nvqc
-           if(val ==zero) then
-              wgt=one
-           else
-              wgt=g_nvqc/exp_arg
-           endif
-           rwgt = wgt/wgtlim
+           cvar=cvar_pg(ikx)
         else
-           term = exp_arg
-           wgt  = one
-           rwgt = wgt/wgtlim
-           valqc = -two*rat_err2*term
+           cg_t=zero
+           cvar=zero
         endif
-
+        if(nvqc) then
+ 
+           ibb=ibeta(ikx)
+           ikk=ikapa(ikx)
+        else
+           ibb=0
+           ikk=0
+        endif
+   
+       
+        call vqc_setup(val,ratio_errors,error,cvar,cg_t,ibb,ikk,&
+                      var_jb,rat_err2,wgt,valqc)
+        rwgt = wgt/wgtlim
 !       Accumulate statistics for obs belonging to this task
         if(muse(i))then
            if(rwgt < one) awork(21) = awork(21)+one

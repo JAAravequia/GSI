@@ -75,6 +75,7 @@ subroutine intq_(qhead,rval,sval)
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - introduced ladtest_obs         
 !   2014-12-03  derber  - modify so that use of obsdiags can be turned off
 !   2015-12-21  yang    - Parrish's correction to the previous code in new varqc.
+!   2019-05-31  Su      - remove current VQC part and add VQC subroutine call
 !
 !   input argument list:
 !     qhead    - obs type pointer to obs structure
@@ -90,14 +91,13 @@ subroutine intq_(qhead,rval,sval)
 !
 !$$$
   use kinds, only: r_kind,i_kind
-  use constants, only: half,one,tiny_r_kind,cg_term,r3600,two
+  use constants, only: half,one,tiny_r_kind,cg_term,r3600,two,zero
   use obsmod, only: lsaveobsens,l_do_adjoint,luse_obsdiag
   use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc,nvqc,hub_norm
   use jfunc, only: jiter
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gsi_4dvar, only: ladtest_obs
-  use pvqc, only: vqch,vqcs
   use mpimod, only: mype
   implicit none
 
@@ -108,11 +108,9 @@ subroutine intq_(qhead,rval,sval)
 
 ! Declare local variables  
   integer(i_kind) j1,j2,j3,j4,j5,j6,j7,j8,ier,istatus
-  integer(i_kind) ib,ik
-  real(r_kind) w1,w2,w3,w4,w5,w6,w7,w8
+  real(r_kind) w1,w2,w3,w4,w5,w6,w7,w8,ibb,ikk
 ! real(r_kind) penalty
-  real(r_kind) cg_q,val,p0,grad,wnotgross,wgross,q_pg
-  real(r_kind) g_nvqc,w_nvqc,qq
+  real(r_kind) cg_t,val,p0,grad,t_pg,var_jb,error2,rat_error2
   real(r_kind),pointer,dimension(:) :: sq
   real(r_kind),pointer,dimension(:) :: rq
   type(qNode), pointer :: qptr
@@ -164,32 +162,31 @@ subroutine intq_(qhead,rval,sval)
            if( .not. ladtest_obs)   val=val-qptr%res
  
 !          gradient of nonlinear operator
-          
+           rat_error2=qptr%raterr2
+           error2=qptr%err2
+
            if (vqc .and. nlnqc_iter .and. qptr%pg > tiny_r_kind .and.  &
                                 qptr%b  > tiny_r_kind) then
-              q_pg=qptr%pg*varqc_iter
-              cg_q=cg_term/qptr%b
-              wnotgross= one-q_pg
-              wgross =q_pg*cg_q/wnotgross              ! wgross is gama in the reference by Enderson
-              p0=wgross/(wgross+exp(-half*qptr%err2*val**2))  ! p0 is P in the reference by Enderson
-              val=val*(one-p0)                         ! term is Wqc in the referenc by Enderson
-              grad = val*qptr%raterr2*qptr%err2
-           else if (njqc .and. qptr%jb > tiny_r_kind .and. qptr%jb <10.0_r_kind) then
-              val=sqrt(two*qptr%jb)*tanh(sqrt(qptr%err2)*val/sqrt(two*qptr%jb))
-              grad = val*qptr%raterr2*sqrt(qptr%err2)
-           else if (nvqc .and. qptr%ib >0) then
-              ib=qptr%ib
-              ik=qptr%ik
-              qq=val*sqrt(qptr%err2)
-              if(hub_norm) then
-                 call vqch(ib,ik,qq,g_nvqc,w_nvqc)
-              else
-                 call vqcs(ib,ik,qq,g_nvqc,w_nvqc)
-              endif
-              grad=w_nvqc*qq*sqrt(qptr%err2)*qptr%raterr2
+              t_pg=qptr%pg*varqc_iter
+              cg_t=cg_term/qptr%b                           ! b is d in Enderson
            else
-              grad = val*qptr%raterr2*qptr%err2
+              t_pg=zero
+              cg_t=zero
            endif
+           if (njqc .and. qptr%jb  > tiny_r_kind .and. qptr%jb <10.0_r_kind) then
+              var_jb=qptr%jb
+           else
+              var_jb=zero
+           endif
+           if(nvqc .and. qptr%ib >0) then
+           ibb=qptr%ib
+           ikk=qptr%ik
+        else
+           ibb=0
+           ikk=0
+        endif
+
+           call  vqc_int(error2,rat_error2,t_pg,cg_t,var_jb,ibb,ikk,val,grad)
 
            if( ladtest_obs) then
               grad = val
