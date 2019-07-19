@@ -93,6 +93,12 @@ ntiles=${ntiles:-6}
 imp_physics=${imp_physics:-99}
 lupp=${lupp:-".true."}
 
+# Logic to calculate GFDL cloud fraction at outer loop
+lcalc_gfdl_cfrac=${lcalc_gfdl_cfrac:-".false."}
+
+# Logic to remove observation in cold-air-outbreak (CAO) region 
+cao_check=${cao_check:-".false."}
+
 # Diagnostic files options
 lobsdiag_forenkf=${lobsdiag_forenkf:-".false."}
 netcdf_diag=${netcdf_diag:-".false."}
@@ -675,6 +681,8 @@ cat > gsiparm.anl << EOF
   cwoption=3,imp_physics=$imp_physics,lupp=$lupp,
   netcdf_diag=$netcdf_diag,binary_diag=$binary_diag,
   lobsdiag_forenkf=$lobsdiag_forenkf,
+  lcalc_gfdl_cfrac=$lcalc_gfdl_cfrac,
+  cao_check=$cao_check,
   $SETUP
 /
 &GRIDOPTS
