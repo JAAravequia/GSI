@@ -711,8 +711,8 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                          pres2, tmp2, qq2, hgt1, roges, msges, &
                          !output variables
                          f10ges,u10ges,v10ges, t2ges, q2ges, regime, iqtflg)
-                    print *, 'xyz---ugesin,uu1, u10ges =', ugesin,u10ges
-                    print *, 'xyz---vgesin,vv1, v10ges =', vgesin,v10ges
+                    print *, 'xyz---ugesin,uu1, u10ges =', ugesin,uu1,u10ges
+                    print *, 'xyz---vgesin,vv1, v10ges =', vgesin,vv1,v10ges
 
                     factw=one
                  end if 
