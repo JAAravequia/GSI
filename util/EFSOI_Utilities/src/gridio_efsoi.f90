@@ -376,8 +376,8 @@
      ! Transformation to EFSOI relevant quantities
      ! Assign weighted kinetic energy components. There
      ! are no unit/metric differences for the kinetic component
-     grdin(:,levels(u_ind-1) + k) = weight(:,levels(u_ind-1) + k) * grdin(:,levels(u_ind-1) + k)
-     grdin(:,levels(v_ind-1) + k) = weight(:,levels(v_ind-1) + k) * grdin(:,levels(v_ind-1) + k)
+     grdin(:,levels(u_ind-1) + k) = weight(:,k) * grdin(:,levels(u_ind-1) + k)
+     grdin(:,levels(v_ind-1) + k) = weight(:,k) * grdin(:,levels(v_ind-1) + k)
   
      call nemsio_readrecv(gfile,'tmp','mid layer',k,nems_wrk,iret=iret)
      if (iret/=0) then
