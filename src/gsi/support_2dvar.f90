@@ -424,7 +424,7 @@ subroutine convert_binary_2d
      end if
      write(lendian_out)field2
     
-     !  variables for assimilating VIIRS LST
+     !  variables for assimilating VIIRS Similarity
      if(use_similarity) then
        read(in_unit)field2             ! PRESGRID1
        write(6,*)' convert_binary_2d: max,min PRESGRID1=',maxval(field2),minval(field2)
@@ -764,7 +764,7 @@ subroutine read_2d_guess(mype)
   integer(i_kind) i_sm,i_xice,i_sst,i_tsk,i_ivgtyp,i_isltyp,i_vegfrac,i_gust,i_vis,i_pblh
   integer(i_kind) i_wspd10m,i_td2m,i_mxtm,i_mitm,i_pmsl,i_howv,i_tcamt,i_lcbas,i_cldch
   integer(i_kind) i_uwnd10m,i_vwnd10m
-  !LST
+  !Similarity
   integer(i_kind) i_presgrid1,i_presgrid2,i_tmpgrid1,i_tmpgrid2,i_qgrid1,i_qgrid2
   integer(i_kind) i_ugrid1,i_vgrid1,i_hgtgrid1,i_sfrgrid,i_tggrid
 
@@ -774,7 +774,7 @@ subroutine read_2d_guess(mype)
   logical ihave_gust,ihave_pblh,ihave_vis,ihave_tcamt,ihave_lcbas
   logical ihave_wspd10m,ihave_td2m,ihave_mxtm,ihave_mitm,ihave_pmsl,ihave_howv
   logical ihave_cldch,ihave_uwnd10m,ihave_vwnd10m
-  !LST
+  !Similarity
   logical ihave_presgrid1,ihave_presgrid2,ihave_tmpgrid1,ihave_tmpgrid2,ihave_qgrid1,ihave_qgrid2
   logical ihave_ugrid1,ihave_vgrid1,ihave_hgtgrid1,ihave_sfrgrid,ihave_tggrid
 
@@ -802,7 +802,7 @@ subroutine read_2d_guess(mype)
   real(r_kind),pointer,dimension(:,:,:)::ges_q_it   =>NULL()
   real(r_kind),pointer,dimension(:,:,:)::ges_cwmr_it=>NULL()
 
-  !LST
+  !Similarity
   real(r_kind),pointer,dimension(:,:  )::ges_presgrid1=>NULL()
   real(r_kind),pointer,dimension(:,:  )::ges_presgrid2=>NULL()
   real(r_kind),pointer,dimension(:,:  )::ges_tmpgrid1=>NULL()
@@ -841,7 +841,7 @@ subroutine read_2d_guess(mype)
   lm=nsig
 
 ! Following is for convenient 2D input
-  if (use_similarity) then !LST
+  if (use_similarity) then !Similarity
      num_2d_fields=41
   else
      num_2d_fields=30! Adjust according to content of RTMA restart file ---- should this number be in a namelist or anavinfo file at some point?
@@ -1011,7 +1011,7 @@ subroutine read_2d_guess(mype)
   write(identity(i),'("record ",i3,"--vwnd10m")')i
   jsig_skip(i)=0 ; igtype(i)=1
 
-  !x LST
+  !x Similarity
   if (use_similarity) then
      i=i+1 ; i_presgrid1=i                                       ! presgrid1
      write(identity(i),'("record ",i3,"--presgrid1")')i
@@ -1248,7 +1248,7 @@ subroutine read_2d_guess(mype)
         call gsi_bundlegetpointer (gsi_metguess_bundle(it),'vwnd10m',ges_vwnd10m,ier)
         ihave_vwnd10m=ier==0
      
-         !x LST
+         !x Similarity
         if (use_similarity) then
            call gsi_bundlegetpointer (gsi_metguess_bundle(it),'presgrid1',ges_presgrid1,ier)
            ihave_presgrid1=ier==0
@@ -1360,7 +1360,7 @@ subroutine read_2d_guess(mype)
               if (ihave_vwnd10m) & 
                  ges_vwnd10m(j,i)=real(all_loc(j,i,i_0+i_vwnd10m),r_kind)
 
-               !x LST
+               !x Similarity
               if (use_similarity) then
                  if (ihave_presgrid1) &
                     ges_presgrid1(j,i)=real(all_loc(j,i,i_0+i_presgrid1),r_kind)
@@ -1486,7 +1486,7 @@ subroutine wr2d_binary(mype)
   integer(i_kind) iog,ioan,i,j,k,kt,kq,ku,kv,it,i_psfc,i_t,i_q,i_u,i_v
   integer(i_kind) i_sst,i_skt,i_gust,i_vis,i_pblh,ier,istatus,i_tcamt,i_lcbas,i_cldch
   integer(i_kind) i_wspd10m,i_td2m,i_mxtm,i_mitm,i_pmsl,i_howv,i_uwnd10m,i_vwnd10m
-  !x LST
+  !x Similarity
   integer(i_kind) i_presgrid1,i_presgrid2,i_tmpgrid1,i_tmpgrid2,i_qgrid1,i_qgrid2,&
                   i_ugrid1,i_vgrid1,i_hgtgrid1,i_sfrgrid,i_tggrid
 
@@ -1538,7 +1538,7 @@ subroutine wr2d_binary(mype)
   i_uwnd10m=i_lcbas+1
   i_vwnd10m=i_uwnd10m+1
   
-  !x LST
+  !x Similarity
   if (use_similarity) then
      i_presgrid1=i_vwnd10m+1
      i_presgrid2=i_presgrid1+1
@@ -1787,7 +1787,7 @@ subroutine wr2d_binary(mype)
   caux(13)='uwnd10m'; iaux(13)=i_uwnd10m
   caux(14)='vwnd10m'; iaux(14)=i_vwnd10m
 
-  !x LST
+  !x Similarity
   caux(15)='presgrid1'  ; iaux(15)=i_presgrid1
   caux(16)='presgrid2'  ; iaux(16)=i_presgrid2
   caux(17)='tmpgrid1'   ; iaux(17)=i_tmpgrid1
@@ -1800,7 +1800,7 @@ subroutine wr2d_binary(mype)
   caux(24)='sfrgrid'    ; iaux(24)=i_sfrgrid
   caux(25)='tggrid'     ; iaux(25)=i_tggrid
 
-  !LST
+  !Similarity
   if (use_similarity) then
      kaux=25
   else

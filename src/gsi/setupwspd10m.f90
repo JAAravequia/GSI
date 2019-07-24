@@ -66,7 +66,8 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   use constants, only: zero,tiny_r_kind,one,one_tenth,half,wgtlim,rd,grav,&
             two,cg_term,three,four,five,ten,huge_single,r1000,r3600,&
             grav_ratio,flattening,grav,grav_equator,somigliana, &
-            semi_major_axis,deg2rad,eccentricity
+            semi_major_axis,deg2rad,eccentricity,&
+            r100,fv !for similarity
   use jfunc, only: jiter,last,miter
   use qcmod, only: dfact,dfact1,npres_print,qc_satwnds
   use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype
@@ -167,6 +168,27 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_wspd10m
 
+! for similarity theory
+  integer(i_kind) :: msges
+  integer(i_kind) :: iza
+  logical iqtflg
+  real(r_kind) :: tgges,roges,regime
+  real(r_kind) :: tv1,tv2,psit2,psit
+  real(r_kind) :: u10ges,v10ges,t2ges,q2ges,psges2,f10ges
+  real(r_kind) :: pres1,pres2,tmp1,tmp2,qq1,qq2,uu1,vv1,hgt1
+  real(r_kind),allocatable,dimension(:,:,:  )::ges_presgrid1
+  real(r_kind),allocatable,dimension(:,:,:  )::ges_presgrid2
+  real(r_kind),allocatable,dimension(:,:,:  )::ges_tmpgrid1
+  real(r_kind),allocatable,dimension(:,:,:  )::ges_tmpgrid2
+  real(r_kind),allocatable,dimension(:,:,:  )::ges_qgrid1
+  real(r_kind),allocatable,dimension(:,:,:  )::ges_qgrid2
+  real(r_kind),allocatable,dimension(:,:,:  )::ges_ugrid1
+  real(r_kind),allocatable,dimension(:,:,:  )::ges_vgrid1
+  real(r_kind),allocatable,dimension(:,:,:  )::ges_hgtgrid1
+  real(r_kind),allocatable,dimension(:,:,:  )::ges_sfrgrid
+  real(r_kind),allocatable,dimension(:,:,:  )::ges_tggrid
+
+
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
   if(.not.proceed) then
@@ -176,6 +198,10 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 ! If require guess vars available, extract from bundle ...
   call init_vars_
+
+! for similarity
+  call init_vars11_
+
 
   n_alloc(:)=0
   m_alloc(:)=0
@@ -521,8 +547,60 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
            if (zob <= ten) then
               if(zob < ten)then
                  !Changes here per Pondeca suggestions
-                 defrough=half !default roughness length: 0.5 m
-                 factw=log(max(defrough,zob)/defrough)/log(ten/defrough)
+                 !x defrough=half !default roughness length: 0.5 m
+                 !x factw=log(max(defrough,zob)/defrough)/log(ten/defrough)
+                 msges = 1 !for land
+                    call tintrp2a11(ges_presgrid1,pres1,dlat,dlon,dtime,hrdifsig,&
+                                    mype,nfldsig)
+                    call tintrp2a11(ges_presgrid2,pres2,dlat,dlon,dtime,hrdifsig,&
+                                     mype,nfldsig)
+                    !x convert input pressure variables from Pa to cb.
+                    pres1  = 0.001_r_kind*pres1
+                    pres2  = 0.001_r_kind*pres2
+                    print*,'wspd10m pres1,pres2=', pres1,pres2
+
+                    call tintrp2a11(ges_tmpgrid1,tmp1,dlat,dlon,dtime,hrdifsig,&
+                                    mype,nfldsig)
+                    call tintrp2a11(ges_tmpgrid2,tmp2,dlat,dlon,dtime,hrdifsig,&
+                                    mype,nfldsig)
+                    call tintrp2a11(ges_qgrid1,qq1,dlat,dlon,dtime,hrdifsig,&
+                                    mype,nfldsig)
+                    call tintrp2a11(ges_qgrid2,qq2,dlat,dlon,dtime,hrdifsig,&
+                                    mype,nfldsig)
+                    call tintrp2a11(ges_ugrid1,uu1,dlat,dlon,dtime,hrdifsig,&
+                                    mype,nfldsig)
+                    call tintrp2a11(ges_vgrid1,vv1,dlat,dlon,dtime,hrdifsig,&
+                                    mype,nfldsig)
+                    call tintrp2a11(ges_hgtgrid1,hgt1,dlat,dlon,dtime,hrdifsig,&
+                                    mype,nfldsig)
+                    call tintrp2a11(ges_sfrgrid,roges,dlat,dlon,dtime,hrdifsig,&
+                                    mype,nfldsig)
+                    call tintrp2a11(ges_tggrid,tgges,dlat,dlon,dtime,hrdifsig,&
+                                    mype,nfldsig)
+                    !convert sensible temperature to virtual temperature
+                    tv1=tmp1*((one+fv*qq1))
+                    tv2=tmp2*((one+fv*qq2))
+                    tgges=tgges*((one+fv*qq2))
+
+                    !unit change: originally m --> cm
+                    roges=roges*r100
+
+                    psges2  = psges          ! keep in cb
+                   
+                    call SFC_WTQ_FWD (psges2, tgges,&
+                         pres1, tmp1, qq1, uu1, vv1, &
+                         !x pres1, tmp1, qq1, ugesin, vgesin, &
+                         pres2, tmp2, qq2, hgt1, roges, msges, &
+                         !output variables
+                         f10ges,u10ges,v10ges, t2ges, q2ges, regime, iqtflg)
+                    print *, 'wspd10m ---uu1, u10ges =', uu1,u10ges
+                    print *, 'wspd10m ---vv1, v10ges =', vv1,v10ges
+
+                    print *, 'wspd10m ---ges spdges =', spdges
+                    spdges=sqrt(u10ges**2+v10ges**2) !New 10m Wind Spd from Similarity
+                    print *, 'wspd10m ---similarity spdges =', spdges
+
+                    factw=one
               end if
            else
               if (.not. twodvar_regional) then
@@ -883,6 +961,9 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! Release memory of local guess arrays
   call final_vars_
 
+! for similarity
+  call final_vars11_
+
 ! Write information to diagnostic file
   if(conv_diagsave)then
      if(netcdf_diag) call nc_diag_write
@@ -1044,7 +1125,217 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                  nfldsig,size(gsi_metguess_bundle)
      call stop2(999)
   endif
+
   end subroutine init_vars_
+
+  subroutine init_vars11_
+
+  real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
+  real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
+  character(len=10) :: varname
+  integer(i_kind) ifld, istatus
+
+!    Assimilation of LST required ges variables
+!    get presgrid1 ...
+     varname='presgrid1'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
+     if (istatus==0) then
+         if(allocated(ges_presgrid1))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_presgrid1(size(rank2,1),size(rank2,2),nfldsig))
+         ges_presgrid1(:,:,1)=rank2
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
+            ges_presgrid1(:,:,ifld)=rank2
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
+!    get presgrid2 ...
+     varname='presgrid2'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
+     if (istatus==0) then
+         if(allocated(ges_presgrid2))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_presgrid2(size(rank2,1),size(rank2,2),nfldsig))
+         ges_presgrid2(:,:,1)=rank2
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
+            ges_presgrid2(:,:,ifld)=rank2
+         enddo
+
+      else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
+!    get tmpgrid1 ...
+     varname='tmpgrid1'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
+     if (istatus==0) then
+         if(allocated(ges_tmpgrid1))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_tmpgrid1(size(rank2,1),size(rank2,2),nfldsig))
+         ges_tmpgrid1(:,:,1)=rank2
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
+            ges_tmpgrid1(:,:,ifld)=rank2
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
+!    get tmpgrid2 ...
+     varname='tmpgrid2'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
+     if (istatus==0) then
+         if(allocated(ges_tmpgrid2))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_tmpgrid2(size(rank2,1),size(rank2,2),nfldsig))
+         ges_tmpgrid2(:,:,1)=rank2
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
+            ges_tmpgrid2(:,:,ifld)=rank2
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
+!    get qgrid1 ...
+     varname='qgrid1'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
+     if (istatus==0) then
+         if(allocated(ges_qgrid1))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_qgrid1(size(rank2,1),size(rank2,2),nfldsig))
+         ges_qgrid1(:,:,1)=rank2
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
+            ges_qgrid1(:,:,ifld)=rank2
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
+!    get qgrid2 ...
+     varname='qgrid2'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
+     if (istatus==0) then
+         if(allocated(ges_qgrid2))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_qgrid2(size(rank2,1),size(rank2,2),nfldsig))
+         ges_qgrid2(:,:,1)=rank2
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
+            ges_qgrid2(:,:,ifld)=rank2
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
+!    get ugrid1 ...
+     varname='ugrid1'
+    call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
+     if (istatus==0) then
+         if(allocated(ges_ugrid1))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc'
+            call stop2(999)
+         endif
+         allocate(ges_ugrid1(size(rank2,1),size(rank2,2),nfldsig))
+         ges_ugrid1(:,:,1)=rank2
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
+            ges_ugrid1(:,:,ifld)=rank2
+         enddo
+      else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
+!    get vgrid1 ...
+     varname='vgrid1'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
+     if (istatus==0) then
+         if(allocated(ges_vgrid1))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_vgrid1(size(rank2,1),size(rank2,2),nfldsig))
+         ges_vgrid1(:,:,1)=rank2
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
+            ges_vgrid1(:,:,ifld)=rank2
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
+!    get hgtgrid1 ...
+     varname='hgtgrid1'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
+     if (istatus==0) then
+         if(allocated(ges_hgtgrid1))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_hgtgrid1(size(rank2,1),size(rank2,2),nfldsig))
+         ges_hgtgrid1(:,:,1)=rank2
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
+            ges_hgtgrid1(:,:,ifld)=rank2
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
+!    get sfrgrid ...
+     varname='sfrgrid'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
+     if (istatus==0) then
+         if(allocated(ges_sfrgrid))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_sfrgrid(size(rank2,1),size(rank2,2),nfldsig))
+         ges_sfrgrid(:,:,1)=rank2
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
+            ges_sfrgrid(:,:,ifld)=rank2
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
+!    get tggrid ...
+     varname='tggrid'
+     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank2,istatus)
+     if (istatus==0) then
+         if(allocated(ges_tggrid))then
+            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
+            call stop2(999)
+         endif
+         allocate(ges_tggrid(size(rank2,1),size(rank2,2),nfldsig))
+         ges_tggrid(:,:,1)=rank2
+         do ifld=2,nfldsig
+            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank2,istatus)
+            ges_tggrid(:,:,ifld)=rank2
+         enddo
+     else
+         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
+         call stop2(999)
+     endif
+  end subroutine init_vars11_
 
   subroutine init_netcdf_diag_
   character(len=80) string
@@ -1209,6 +1500,22 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
     if(allocated(ges_v   )) deallocate(ges_v   )
     if(allocated(ges_wspd10m)) deallocate(ges_wspd10m)
   end subroutine final_vars_
+
+  subroutine final_vars11_
+    if(allocated(ges_presgrid1)) deallocate(ges_presgrid1)
+    if(allocated(ges_presgrid2)) deallocate(ges_presgrid2)
+    if(allocated(ges_tmpgrid1)) deallocate(ges_tmpgrid1)
+    if(allocated(ges_tmpgrid2)) deallocate(ges_tmpgrid2)
+    if(allocated(ges_qgrid1)) deallocate(ges_qgrid1)
+    if(allocated(ges_qgrid2)) deallocate(ges_qgrid2)
+    !if(allocated(ges_ugrid1)) deallocate(ges_ugrid1)
+    if(allocated(ges_vgrid1)) deallocate(ges_vgrid1)
+    if(allocated(ges_hgtgrid1)) deallocate(ges_hgtgrid1)
+    if(allocated(ges_sfrgrid)) deallocate(ges_sfrgrid)
+    if(allocated(ges_tggrid)) deallocate(ges_tggrid)
+
+ end subroutine final_vars11_
+
 
 end subroutine setupwspd10m
 

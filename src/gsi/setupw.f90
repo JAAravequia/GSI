@@ -306,6 +306,8 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 ! If require guess vars available, extract from bundle ...
   call init_vars_
+
+! for similarity
   call init_vars11_
 
   n_alloc(:)=0
@@ -1469,7 +1471,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
 ! Release memory of local guess arrays
   call final_vars_
-  call final_vars11
+  call final_vars11_
 
 ! Write information to diagnostic file
   if(conv_diagsave)then
@@ -2065,7 +2067,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
     if(allocated(ges_ps)) deallocate(ges_ps)
   end subroutine final_vars_
 
-  subroutine final_vars11
+  subroutine final_vars11_
     if(allocated(ges_presgrid1)) deallocate(ges_presgrid1)
     if(allocated(ges_presgrid2)) deallocate(ges_presgrid2)
     if(allocated(ges_tmpgrid1)) deallocate(ges_tmpgrid1)
@@ -2078,7 +2080,7 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
     if(allocated(ges_sfrgrid)) deallocate(ges_sfrgrid)
     if(allocated(ges_tggrid)) deallocate(ges_tggrid)
 
-  end subroutine final_vars11
+  end subroutine final_vars11_
 
 
 end subroutine setupw
