@@ -10,6 +10,10 @@ module gsi_dbzOper
 !
 ! program history log:
 !   2018-08-10  j guo   - added this document block
+!   2019-06-25  Hu      - add diag_radardbz for controling radar reflectivity
+!                         diag file (in module obsmod).
+!   2019-07-22  j Guo   - moved diag_radardbz and its description here from
+!                         obsmod.
 !
 !   input argument list: see Fortran 90 style document below
 !
@@ -27,6 +31,7 @@ module gsi_dbzOper
   use m_dbzNode , only: dbzNode
   implicit none
   public:: dbzOper      ! data stracture
+  public:: diag_radardbz
 
   type,extends(obOper):: dbzOper
   contains
@@ -36,6 +41,10 @@ module gsi_dbzOper
     procedure:: intjo1_
     procedure:: stpjo1_
   end type dbzOper
+
+!   def diag_radardbz- namelist logical to compute/write (=true) radar
+!                                          reflectiivty diag files
+  logical,save:: diag_radardbz=.false.
 
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   character(len=*),parameter :: myname='gsi_dbzOper'
@@ -71,7 +80,6 @@ contains
     use m_rhs  , only: iwork => i_dbz
 
     use obsmod  , only: write_diag
-    use convinfo, only: diag_conv
     use jfunc   , only: jiter
 
     use mpeu_util, only: die
@@ -98,10 +106,10 @@ contains
     if(ier/=0) call die(myname_,'read(obstype,...), iostat =',ier)
     nele = nreal+nchanl
 
-    diagsave  = write_diag(jiter) .and. diag_conv
+    diagsave  = write_diag(jiter) .and. diag_radardbz
 
     call setup(self%obsLL(:), self%odiagLL(:), &
-        lunin,mype,bwork,awork(:,iwork),nele,nobs,is,diagsave)
+        lunin,mype,bwork,awork(:,iwork),nele,nobs,is,diagsave,init_pass)
 
   end subroutine setup_
 

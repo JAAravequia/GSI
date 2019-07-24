@@ -755,7 +755,7 @@ OBS_INPUT::
 "
 ;;
 
-    global_fv3_4denvar_T126|global_corr_obs )
+    global_fv3_4denvar_T126 )
 
 # Define namelist for global hybrid run
 

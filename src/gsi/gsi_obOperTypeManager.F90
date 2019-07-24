@@ -65,6 +65,7 @@ module gsi_obOperTypeManager
 
   use gsi_lightOper   , only: lightOper
   use gsi_dbzOper     , only: dbzOper
+  use gsi_cldtotOper  , only: cldtotOper
 
   use kinds     , only: i_kind
   use mpeu_util , only: perr,die
@@ -133,6 +134,7 @@ module gsi_obOperTypeManager
   public:: iobOper_lwcp
   public:: iobOper_light
   public:: iobOper_dbz
+  public:: iobOper_cldtot
 
   enum, bind(C)
     enumerator:: iobOper_zero_   = 0
@@ -176,6 +178,7 @@ module gsi_obOperTypeManager
     enumerator:: iobOper_lwcp
     enumerator:: iobOper_light
     enumerator:: iobOper_dbz
+    enumerator:: iobOper_cldtot
 
     enumerator:: iobOper_extra_
   end enum
@@ -235,6 +238,7 @@ module gsi_obOperTypeManager
   type(   lwcpOper), target, save::     lwcpOper_mold
   type(  lightOper), target, save::    lightOper_mold
   type(    dbzOper), target, save::      dbzOper_mold
+  type( cldtotOper), target, save::   cldtotOper_mold
 
 contains
 function dtype2index_(dtype) result(index_)
@@ -374,8 +378,10 @@ function dtype2index_(dtype) result(index_)
 
   case("dbz"    ,"[dbzoper]"    ); index_= iobOper_dbz
 
+  case("cldtot" ,"[cldtotoper]" ); index_= iobOper_cldtot
+  case("mta_cld"    ); index_= iobOper_cldtot
+
         ! Known dtype values, but no known obOper type defined
-  case("mta_cld"); index_= obOper_undef
   case("gos_ctp"); index_= obOper_undef
   case("rad_ref"); index_= obOper_undef
   case("lghtn"  ); index_= obOper_undef
@@ -467,6 +473,7 @@ function index2vmold_(iobOper) result(vmold_)
   case(iobOper_lwcp     ); vmold_ =>    lwcpOper_mold
   case(iobOper_light    ); vmold_ =>   lightOper_mold
   case(iobOper_dbz      ); vmold_ =>     dbzOper_mold
+  case(iobOper_cldtot   ); vmold_ =>  cldtotOper_mold
 
   case( obOper_undef    ); vmold_ => null()
   case default           ; vmold_ => null()
@@ -581,6 +588,7 @@ subroutine cobstype_config_()
     cobstype(iobOper_lwcp       )  ="lwcp                " ! lwcp_ob_type
     cobstype(iobOper_light      )  ="light               " ! light_ob_type
     cobstype(iobOper_dbz        )  ="dbz                 " ! dbz_ob_type
+    cobstype(iobOper_cldtot     )  ="cldtot              "
 
   cobstype_configured_=.true.
 end subroutine cobstype_config_
