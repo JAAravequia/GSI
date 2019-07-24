@@ -223,7 +223,7 @@
   integer, intent(in), optional :: nanal
   integer, intent(in), optional :: ft
   character, intent(in), optional :: hr
-  character, intent(in), optional :: infilename
+  character(len=*), intent(in), optional :: infilename
   integer, intent(in) :: mode
   character(len=max_varname_length), dimension(n2d), intent(in) :: vars2d
   character(len=max_varname_length), dimension(n3d), intent(in) :: vars3d
