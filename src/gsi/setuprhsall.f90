@@ -98,6 +98,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !   2018-02-15  wu      - add code for fv3_regional 
 !   2018-08-10  guo     - replaced type specific setupXYZ() calls with a looped
 !                         polymorphic implementation using %setup().
+!   2019-03-15  Ladwig  - add option for cloud analysis in observer
+!   2019-03-28  Ladwig  - add metar cloud obs as pseudo water vapor in var analysis
 !
 !   input argument list:
 !     ndata(*,1)- number of prefiles retained for further processing
@@ -150,7 +152,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   use mpl_allreducemod, only: mpl_allreduce
   use berror, only: reset_predictors_var
   use rapidrefresh_cldsurf_mod, only: l_PBL_pseudo_SurfobsT,l_PBL_pseudo_SurfobsQ,&
-                                      l_PBL_pseudo_SurfobsUV
+                                      l_PBL_pseudo_SurfobsUV,i_gsdcldanal_type,&
+                                      i_cloud_q_innovation
   use m_rhs, only: rhs_alloc
   use m_rhs, only: rhs_dealloc
   use m_rhs, only: rhs_allocated
@@ -449,7 +452,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
         !     the program will proceed as normal.
 
         select case(trim(dtype(is)))
-        case('mta_cld', 'gos_ctp', 'rad_ref', 'lghtn', 'larccld', 'larcglb')
+        case('gos_ctp', 'rad_ref', 'lghtn', 'larccld', 'larcglb')
                 ! Exception (1) (see above)
 
           if(nsat1(is)>0)then
@@ -495,6 +498,14 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
      end do
      close(lunin)
 
+     ! run cloud analysis in observer
+     if(i_gsdcldanal_type==7) then
+         call gsdcloudanalysis(mype)
+         ! Write output analysis files
+         call write_all(-1,mype)
+         call prt_guess('analysis')
+     endif
+
   else
 
      ! Init for Lagrangian data assimilation (read saved parameters)
@@ -519,10 +530,22 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
   if (conv_diagsave.and.binary_diag) close(7)
 
-  !-- if(l_PBL_pseudo_SurfobsT.or.l_PBL_pseudo_SurfobsQ.or.l_PBL_pseudo_SurfobsUV) then
-  !-- else
+  ! Sorting with obsdiags_sort() would let the contents of obsdiags, including
+  ! linked-lists of obsNodes as well as obs_diags, to be sorted into
+  ! the same sequences, regardless their processing orders, number of
+  ! processors, or particular distributions.
+  !
+  ! For ob. operators not implemented to support multi-setups using
+  ! luse_obsdiag, sorting could become a problem.  Among them, cases of
+  ! l_PBL_pseudo_SurfobsT, l_PBL_pseudo_SurfobsQ, and l_PBL_pseudo_SurfobsUV
+  ! have been fixed since, but it might be better to keep it simple for
+  ! those applications.  The case of i_cloud_q_innovation==2 is new.  It is
+  ! not sure why it won't work even in case of .not.luse_obsdiag.
+
+  if(.not.(l_PBL_pseudo_SurfobsT  .or.  l_PBL_pseudo_SurfobsQ   .or. &
+           l_PBL_pseudo_SurfobsUV .or. (i_cloud_q_innovation==2)) ) then
      call obsdiags_sort()
-  !-- endif
+  endif
 
 ! for temporary testing purposes, _write and _read.
   if(OBSDIAGS_RELOAD) then

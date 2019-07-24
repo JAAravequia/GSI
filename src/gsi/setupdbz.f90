@@ -5,7 +5,7 @@ module dbz_setup
         interface setup; module procedure setupdbz; end interface
 
 contains
-subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
+subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_diagsave,init_pass)
 ! modified from setupdbz, now dbz is also a state variable
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -64,7 +64,7 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
   use m_obsdiagNode, only: obsdiagNode_assert
   use obsmod, only: rmiss_single,lobsdiag_forenkf,&
                     lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset,&
-                    ens_hx_dbz_cut
+                    ens_hx_dbz_cut,static_gsi_nopcp_dbz
 
   use m_obsNode, only: obsNode
   use m_dbzNode, only: dbzNode
@@ -105,11 +105,13 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
   type(obsLList ),target,dimension(:),intent(in):: obsLL
   type(obs_diags),target,dimension(:),intent(in):: odiagLL
 
-  logical                                          ,intent(in   ) :: conv_diagsave
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
   real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
   real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
   integer(i_kind)                                  ,intent(in   ) :: is ! ndat index
+  logical                                          ,intent(in   ) :: radardbz_diagsave
+  logical                                          ,intent(in   ) :: init_pass ! state of "setup" parameters
+
 ! Declare local parameters
   real(r_kind),parameter:: r0_001 = 0.001_r_kind
   real(r_kind),parameter:: r8     = 8.0_r_kind
@@ -153,6 +155,10 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
   integer(i_kind) ier2,idbznoise,idmiss2opt
   character(8) station_id
   character(8),allocatable,dimension(:):: cdiagbuf
+  character(80):: string
+  character(128):: diag_file
+  logical :: diagexist
+  integer(i_kind):: lu_diag
 
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
   logical :: proceed
@@ -213,7 +219,7 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
 
 !
 ! If requested, save select data for output to diagnostic file
-  if(conv_diagsave)then
+  if(radardbz_diagsave)then
      ii=0
      nchar=1
      ioff0=25
@@ -409,7 +415,9 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
 
 
      if(miter == 0.or.l_hyb_ens) then !ie an enkf run
-       if(rDBZ < 0_r_kind) rDBZ=0.0_r_kind ! should be the same as in the read_dbz when nopcp=.true.
+! DCD 1 March 2019:  changed 0.0 to static_gsi_nopcp_dbz
+!       if(rDBZ < 0_r_kind) rDBZ=0.0_r_kind ! should be the same as in the read_dbz when nopcp=.true.
+       if(rDBZ < static_gsi_nopcp_dbz) rDBZ=static_gsi_nopcp_dbz ! should be the same as in the read_dbz when nopcp=.true.
      endif
      if(miter == 0.and.ens_hx_dbz_cut) then !ie an enkf run
        if(rDBZ > 60_r_kind) rDBZ=60_r_kind
@@ -590,7 +598,7 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
         my_head => null()
      endif
 !    Save select output for diagnostic file
-     if(conv_diagsave .and. luse(i) )then
+     if(radardbz_diagsave .and. luse(i) )then
 
 
         ii=ii+1
@@ -621,10 +629,31 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
 
 
 ! Write information to diagnostic file
-  if(conv_diagsave  .and. ii>0 )then
-     write(7)'dbz',nchar,nreal,ii,mype,ioff0
-     write(7)cdiagbuf(1:ii),rdiagbuf(:,1:ii)
+  if(radardbz_diagsave  .and. ii>0 )then
+
+     write(string,600) jiter
+600  format('radardbz_',i2.2)
+     diag_file=trim(dirname) // trim(string)
+     if(init_pass) then
+        open(newunit=lu_diag,file=trim(diag_file),form='unformatted',status='unknown',position='rewind')
+     else
+        inquire(file=trim(diag_file),exist=diagexist)
+        if (diagexist) then
+           open(lu_diag,file=trim(diag_file),form='unformatted',status='old',position='append')
+        else
+           open(lu_diag,file=trim(diag_file),form='unformatted',status='unknown',position='rewind')
+        endif
+     endif
+     if(init_pass .and. mype == 0) then
+        write(lu_diag) ianldate
+        write(6,*)'SETUPDBZ:   write time record to file ',&
+                trim(diag_file), ' ',ianldate
+     endif
+
+     write(lu_diag)'dbz',nchar,nreal,ii,mype,ioff0
+     write(lu_diag)cdiagbuf(1:ii),rdiagbuf(:,1:ii)
      deallocate(cdiagbuf,rdiagbuf)
+     close(lu_diag)
   end if
   write(6,*)'mype, irefsmlobs,irejrefsmlobs are ',mype,' ',irefsmlobs, ' ',irejrefsmlobs
 ! close(52) !simulated obs

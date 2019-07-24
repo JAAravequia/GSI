@@ -2530,6 +2530,7 @@ end subroutine destroy_crtm
   hvar = min (0.2_r_kind, max (0.01_r_kind, dw * sqrt (sqrt (area) / 100.e3_r_kind)))
 
 ! Load hydrometeor mixing ratio
+  ql=zero; qi=zero; qr=zero; qs=zero; qg=zero
   do i = 1, n_clouds_fwd_wk
      if (trim(cloud_names_fwd(i))=='ql') ql(:) = cloud(:,i)
      if (trim(cloud_names_fwd(i))=='qi') qi(:) = cloud(:,i)

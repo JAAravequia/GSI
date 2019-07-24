@@ -29,7 +29,8 @@ module intjomod
 use gsi_obOperTypeManager, only: obOper_count
 use gsi_obOperTypeManager, only: obOper_typeInfo
 use gsi_obOperTypeManager, only: &
-  iobOper_t,          iobOper_pw,         iobOper_q,          iobOper_w,          iobOper_dw,           &
+  iobOper_t,          iobOper_pw,         iobOper_q,                                                    &
+                                          iobOper_cldtot,     iobOper_w,          iobOper_dw,           &
   iobOper_rw,         iobOper_dbz,                                                                      &
                       iobOper_spd,        iobOper_oz,         iobOper_o3l,        iobOper_colvk,        &
   iobOper_pm2_5,      iobOper_pm10,       iobOper_ps,         iobOper_tcp,        iobOper_sst,          &
@@ -56,7 +57,8 @@ end interface
 ! some non-zero-diff modifications are introduced.
 
 integer(i_kind),parameter,dimension(obOper_count):: ix_obtype = (/ &
-  iobOper_t,          iobOper_pw,         iobOper_q,          iobOper_w,          iobOper_dw,           &
+  iobOper_t,          iobOper_pw,         iobOper_q,                                                    &
+                                          iobOper_cldtot,     iobOper_w,          iobOper_dw,           &
   iobOper_rw,         iobOper_dbz,                                                                      &
                       iobOper_spd,        iobOper_oz,         iobOper_o3l,        iobOper_colvk,        &
   iobOper_pm2_5,      iobOper_pm10,       iobOper_ps,         iobOper_tcp,        iobOper_sst,          &
