@@ -55,7 +55,7 @@
  use mpisetup, only: nproc
  use mpeu_util, only: getindex
  use nemsio_module
- use loadbal, only: numptsperproc, indxproc, npts_max
+ use loadbal_efsoi, only: numptsperproc, indxproc, npts_max
  implicit none
  private
  public :: readgriddata_efsoi, get_weight, destroy_weight, divide_weight
