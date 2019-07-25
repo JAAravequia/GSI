@@ -189,6 +189,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   use m_obsdiags, only: obOpers_config
   use m_obsdiags, only: obOper_create
   use m_obsdiags, only: obOper_destroy
+  use m_obsdiagNode, only: obsdiagLList_rewind
 
   use mpeu_util, only: die,warn,perr
   use mpeu_util, only: basename
@@ -377,7 +378,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !    Reset observation pointers.  This is assumed by setup*() routines.
      do ii=1,size(obsdiags,2)
         do jj=1,size(obsdiags,1)
-           obsdiags(jj,ii)%tail => NULL()
+           call obsdiagLList_rewind(obsdiags(jj,ii))
         enddo
      enddo
 
