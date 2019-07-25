@@ -235,7 +235,6 @@
   real(r_kind) cptr,qweight,rdtrpr
   character(len=500) :: filename
   character(len=3) charft
-  character(len=2) charhr
 
   real(r_kind), dimension(nlons*nlats)          :: ug,vg
   real(r_single), dimension(npts,nlevs)         :: tv, q, tv_to_t
@@ -258,7 +257,6 @@
   ! input arguments
   if(.not. present(infilename)) then
      write(charft, '(i3.3)') ft
-     write(charhr, '(i2.2)') hr
      if (nanal > 0) then
         write(charnanal,'(a3, i3.3)') 'mem', nanal
      else
@@ -269,14 +267,14 @@
   if(forecast_impact) then
      ! EFSOI filename construction
      if(mode == read_ensmean_forecast) then
-         filename = trim(adjustl(datapath))//"gdas.t"//charhr//"z.atmf"//charft// &
+         filename = trim(adjustl(datapath))//"gdas.t"//hr//"z.atmf"//charft// &
                "."//trim(adjustl(charnanal))//".nemsio"
      else if(mode == read_analysis_mean) then
-         filename = trim(adjustl(datapath))//"gdas.t"//charhr//"z.atmanl."// &
+         filename = trim(adjustl(datapath))//"gdas.t"//hr//"z.atmanl."// &
                trim(adjustl(charnanal))//".nemsio"
      else if(mode == read_member_forecasts) then
         filename = trim(adjustl(datapath))//trim(adjustl(charnanal))//"/"// &
-              "gdas.t"//charhr//"z.atmf"//charft//".nemsio"
+              "gdas.t"//hr//"z.atmf"//charft//".nemsio"
      else if(mode == read_verification) then
         filename = trim(adjustl(datapath))//infilename
      else
@@ -286,11 +284,11 @@
   else
      ! Analysis Impact
      if(mode == read_ensmean_forecast) then
-        filename = trim(adjustl(datapath))//"gdas.t"//charhr//"z.atmf"//charft// &
+        filename = trim(adjustl(datapath))//"gdas.t"//hr//"z.atmf"//charft// &
               "."//trim(adjustl(charnanal))//".nemsio"
      else if(mode == read_member_analyses) then
         filename = trim(adjustl(datapath))//trim(adjustl(charnanal))//"/"//"gdas.t"// &
-              charhr//"z.atmanl.nemsio"
+              hr//"z.atmanl.nemsio"
      else if(mode == read_verification) then
         filename = trim(adjustl(datapath))//infilename
      else
