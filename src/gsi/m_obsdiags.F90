@@ -737,9 +737,14 @@ _TRACEV_(myname_,'lobsdiags_allocated_ =',lobsdiags_allocated_)
         if(.not.obsdiags_keep_) then
           call obsdiagLList_reset(obsdiags(jj,ii))
           lobsdiag_allocated=.false.
+
         else
           call obsdiagLList_rewind(obsdiags(jj,ii))
-          lobsdiag_allocated=.true.
+
+          ! In cases of rewinding without resetting, an obsdiagLList can
+          ! be either initialized (lobsdiag_allocated), or not initialized
+          ! (.not.lobsdiag_allocated).  So the code here should not try
+          ! to alter the value of lobsdiag_allocated.
         endif
       endif
 
