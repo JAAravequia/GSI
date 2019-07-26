@@ -62,7 +62,7 @@ integer(i_kind), public, parameter :: read_analysis_mean = 1
 integer(i_kind), public, parameter :: read_member_forecasts = 2
 integer(i_kind), public, parameter :: read_verification = 3
 ! Analysis impact specific file type identifier
-integer(i_kind), public, parameter :: read_member_analyses = 1
+integer(i_kind), public, parameter :: read_member_analyses = 2
 ! forecast times for first-guess forecasts to be updated (in hours)
 integer,dimension(7),public ::  nhr_anal  = (/6,-1,-1,-1,-1,-1,-1/)
 integer,dimension(7),public ::  nhr_state = (/6,-1,-1,-1,-1,-1,-1/)
@@ -84,7 +84,7 @@ character(len=120),dimension(7),public :: anlfileprefixes
 ! analysis date string (YYYYMMDDHH)
 character(len=10), public ::  datestring
 ! Hour for datestring
-character(len=2), public :: datehr, gdatehr
+integer(i_kind), public :: datehr, gdatehr
 ! analysis filename, needed for EFSOI calcs
 character(len=100), public ::  andataname
 ! filesystem path to input files (first-guess, GSI diagnostic files).
@@ -243,9 +243,9 @@ real(r_single) modelspace_vloc_cutoff, modelspace_vloc_thresh
 ! time (analysis time YYYYMMDDHH)
 datestring = "0000000000" ! if 0000000000 will not be used.
 ! default analysis hour
-datehr = "00"
+datehr = 00
 ! Initial hour for background forecasts
-gdatehr = "00"
+gdatehr = 00
 ! corrlength (length for horizontal localization in km)
 corrlengthnh = 2800
 corrlengthtr = 2800

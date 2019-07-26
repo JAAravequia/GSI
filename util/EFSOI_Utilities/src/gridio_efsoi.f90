@@ -222,7 +222,7 @@
 
   integer, intent(in), optional :: nanal
   integer, intent(in), optional :: ft
-  character, intent(in), optional :: hr
+  integer, intent(in), optional :: hr
   character(len=*), intent(in), optional :: infilename
   integer, intent(in) :: mode
   character(len=max_varname_length), dimension(n2d), intent(in) :: vars2d
@@ -235,6 +235,7 @@
   real(r_kind) cptr,qweight,rdtrpr
   character(len=500) :: filename
   character(len=3) charft
+  character(len=2) charhr
 
   real(r_kind), dimension(nlons*nlats)          :: ug,vg
   real(r_single), dimension(npts,nlevs)         :: tv, q, tv_to_t
@@ -257,6 +258,7 @@
   ! input arguments
   if(.not. present(infilename)) then
      write(charft, '(i3.3)') ft
+     write(charhr, '(i2.2)') hr
      if (nanal > 0) then
         write(charnanal,'(a3, i3.3)') 'mem', nanal
      else
@@ -267,14 +269,14 @@
   if(forecast_impact) then
      ! EFSOI filename construction
      if(mode == read_ensmean_forecast) then
-         filename = trim(adjustl(datapath))//"gdas.t"//hr//"z.atmf"//charft// &
+         filename = trim(adjustl(datapath))//"gdas.t"//charhr//"z.atmf"//charft// &
                "."//trim(adjustl(charnanal))//".nemsio"
      else if(mode == read_analysis_mean) then
-         filename = trim(adjustl(datapath))//"gdas.t"//hr//"z.atmanl."// &
+         filename = trim(adjustl(datapath))//"gdas.t"//charhr//"z.atmanl."// &
                trim(adjustl(charnanal))//".nemsio"
      else if(mode == read_member_forecasts) then
         filename = trim(adjustl(datapath))//trim(adjustl(charnanal))//"/"// &
-              "gdas.t"//hr//"z.atmf"//charft//".nemsio"
+              "gdas.t"//charhr//"z.atmf"//charft//".nemsio"
      else if(mode == read_verification) then
         filename = trim(adjustl(datapath))//infilename
      else
@@ -284,11 +286,11 @@
   else
      ! Analysis Impact
      if(mode == read_ensmean_forecast) then
-        filename = trim(adjustl(datapath))//"gdas.t"//hr//"z.atmf"//charft// &
+        filename = trim(adjustl(datapath))//"gdas.t"//charhr//"z.atmf"//charft// &
               "."//trim(adjustl(charnanal))//".nemsio"
      else if(mode == read_member_analyses) then
         filename = trim(adjustl(datapath))//trim(adjustl(charnanal))//"/"//"gdas.t"// &
-              hr//"z.atmanl.nemsio"
+              charhr//"z.atmanl.nemsio"
      else if(mode == read_verification) then
         filename = trim(adjustl(datapath))//infilename
      else
@@ -306,7 +308,6 @@
      write(6,*)'gridio/readgriddata_efsoi: GFS: problem with nemsio_init, iret=',iret
      call stop2(23)
   end if
-!PRINT *, filename, 'Is the filename right??'
   call nemsio_open(gfile,filename,'READ',iret=iret)
   if (iret/=0) then
      write(6,*)'gridio/readgriddata_efsoi: GFS: problem with nemsio_open, iret=',iret
