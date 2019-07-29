@@ -1204,12 +1204,8 @@ subroutine read_obs(ndata,mype)
 
     end do
     mype_airobst = mype_root
-    print *,"MMMMM ",mdmdat
     do ii=1,mmdat
        i=npe_order(ii)
-   print *,"KKK ",ii,i,npe_order(ii),dtype(i),mype,npe_sub(i)
-       if(dtype(i) == 'ompslp')print *,"ZZZ=",i,mype,npe_sub(i), &
-iworld,iworld_group, mype_work(1,i), mpi_comm_sub(i)
        if(mype == 0 .and. npe_sub(i) > 0) write(6,'(1x,a,i4,1x,a,1x,2a,2i4,1x,i6,1x,i6,1x,i6)') &
         'READ_OBS:  read ',i,dtype(i),dsis(i),' using ntasks=',ntasks(i),mype_root_sub(i), & 
                read_rec(i),read_ears_rec(i),read_db_rec(i)
@@ -1537,7 +1533,6 @@ iworld,iworld_group, mype_work(1,i), mpi_comm_sub(i)
 
 !            Process radar reflectivity from MRMS
              else if (obstype == 'dbz' ) then
-                print *, "calling read_dbz"
                 if(trim(infile)=='dbzobs.nc')then
                   call read_dbz_nc(nread,npuse,nouse,infile,lunout,obstype,sis,hgtl_full,nobs_sub1(1,i))
                   string='READ_dBZ'

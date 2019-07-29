@@ -1208,6 +1208,7 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
      dlon=data(ilon,i)
      dtime=data(itime,i)
      obserror=data(iprcs,i)
+     if(obstype =="ompslp")print *,"obserror=",i,iprcs,obserror
               
      if (nobskeep>0) then
         write(6,*)'setupozlev: nobskeep',nobskeep
@@ -1387,6 +1388,8 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
      end if
 
 !    Accumulate numbers for statistics
+     if(obstype =="ompslp")print &
+               *,"Stats=",rat_err2,varinv3,ozone_diagsave,luse,omg
      rat_err2 = ratio_errors**2
      if (varinv3>tiny_r_kind .or. ozone_diagsave) then
         if(luse(i))then

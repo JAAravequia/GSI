@@ -1098,13 +1098,10 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
         endif        
 
        call ufbint(lunin,said,1,1,iret,"SAID")
-       print *,"READ_OZONE: Label 1",said,iret
 
        !Convert observation location to radians
        call ufbint(lunin,lat,1,1,iret,"CLATH")
-       print *,"READ_OZONE: Label 2",lat,iret
        call ufbint(lunin,lon,1,1,iret,"CLONH")
-       print *,"READ_OZONE: Label 3",lon,iret
        if(abs(lat)>90._r_kind .or. abs(lon)>r360) cycle read_loop5
        if(lon< zero) lon=lon+r360
        if(lon==r360) lon=zero
@@ -1127,15 +1124,10 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 
        !Convert observation time to relative time
        call ufbint(lunin,year,1,1,iret,"YEAR")
-        print *,"iret=",year,iret
        call ufbint(lunin,month,1,1,iret,"MNTH")
-        print *,"iret=",month,iret
        call ufbint(lunin,day,1,1,iret,"DAYS")
-        print *,"iret=",day,iret
        call ufbint(lunin,hour,1,1,iret,"HOUR")
-        print *,"iret=",hour,iret
        call ufbint(lunin,minu,1,1,iret,"MINU")
-        print *,"iret=",minu,iret
        idate5(1) = year 
        idate5(2) = month
        idate5(3) = day
@@ -1213,7 +1205,6 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   ! end of OMPS LP bufr loop
   endif
 
-  print *,"Label 1",nmrecs
   if(nmrecs > 0)then
 !    If gome or omi data, compress ozout array to thinned data
   if (obstype=='omi' .or. obstype=='gome' .or. obstype == 'ompstc8') then
