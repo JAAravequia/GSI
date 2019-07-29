@@ -180,6 +180,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   if(trim(dtype) == 'tcp' .or. trim(filename) == 'tldplrso')return
   if(trim(filename) == 'mitmdat' .or. trim(filename) == 'mxtmdat')return
   if(trim(filename) == 'satmar')return
+  if(trim(filename) == 'webcams')return
   if(trim(dtype) == 'dbz' )return
 
 ! Use routine as usual
@@ -1358,10 +1359,8 @@ subroutine read_obs(ndata,mype)
              conv_obstype_select: &
              if (obstype == 't' .or. obstype == 'q'  .or. obstype == 'ps' .or. &
                  obstype == 'pw' .or. obstype == 'spd'.or. & 
-                 obstype == 'gust' .or. obstype == 'vis'.or. &
+                 obstype == 'gust' .or. &
                  obstype == 'td2m' .or. &
-!                 obstype=='mxtm' .or. obstype == 'mitm' .or. &
-!                 obstype=='howv' .or. obstype=='pmsl' .or. &    #howv #ww3 
                  obstype=='pmsl' .or. &
                  obstype == 'mta_cld' .or. obstype == 'gos_ctp' .or. &
                  obstype == 'lcbas' .or. obstype == 'cldch' ) then
@@ -1389,6 +1388,18 @@ subroutine read_obs(ndata,mype)
                         prsl_full,nobs_sub1(1,i),read_rec(i))
                    string='READ_PREPBUFR'
 
+                 endif
+             else if(obstype == 'vis') then
+                write (6,*) 'IN read_obs before read_viscams'
+                if ( index(infile,'webcams') /=0) then
+                   string='READ_ASCII_WEBCAMS'
+                   call read_viscams(nread,npuse,nouse,infile,obstype,lunout, &
+                                   gstime,twind,sis, nobs_sub1(1,i))
+                   string='READ_ASCII_WEBCAMS'
+                 else
+                   call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
+                        prsl_full,nobs_sub1(1,i),read_rec(i))
+                   string='READ_PREPBUFR'
                  endif
              else if(obstype == 'mitm') then
                 if ( index(infile,'mitmdat') /=0) then
@@ -1486,8 +1497,7 @@ subroutine read_obs(ndata,mype)
              else if (obstype == 'lghtn' ) then
                 if(i_gsdcldanal_type==2) then
                    call read_lightning(nread,npuse,infile,obstype,lunout,twind,sis,nobs_sub1(1,i))
-                else if(i_gsdcldanal_type==1 .or. i_gsdcldanal_type==6 &
-                        .or. i_gsdcldanal_type==3 .or. i_gsdcldanal_type==7) then
+                else if( i_gsdcldanal_type==1 .or. i_gsdcldanal_type==6 ) then
                    call read_lightning_grid(nread,npuse,infile,obstype,lunout,twind,sis,nobs_sub1(1,i))
                 endif
                 string='READ_LIGHTNING'
@@ -1497,8 +1507,7 @@ subroutine read_obs(ndata,mype)
              else if (obstype == 'larccld' ) then
                 if(i_gsdcldanal_type==2) then
                    call read_NASA_LaRC_cloud(nread,npuse,nouse,infile,obstype,lunout,sis,nobs_sub1(1,i))
-                else if(i_gsdcldanal_type==1 .or. i_gsdcldanal_type==6 &
-                        .or. i_gsdcldanal_type==3 .or. i_gsdcldanal_type==7) then
+                else if( i_gsdcldanal_type==1) then
                    call read_nasa_larc(nread,npuse,infile,obstype,lunout,twind,sis,nobs_sub1(1,i))
                 end if
                 string='READ_NASA_LaRC'
