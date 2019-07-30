@@ -310,10 +310,10 @@ endif
 !      call stop2(134)
 !   endif
 !endif
-if ( iwrtinc>0 .and. ((.not.l4dvar) .and. (.not.l4densvar)) ) then
-   write(6,*)'SETUP_4DVAR: iwrtinc l4dvar inconsistent',iwrtinc,l4dvar
-   call stop2(135)
-end if
+!xxx if ( iwrtinc>0 .and. ((.not.l4dvar) .and. (.not.l4densvar)) ) then
+!xxx    write(6,*)'SETUP_4DVAR: iwrtinc l4dvar inconsistent',iwrtinc,l4dvar
+!xxx    call stop2(135)
+!xxx end if
 if ( lwrite4danl .and. ((.not.l4dvar) .and. (.not.l4densvar)) ) then
    write(6,*)'SETUP_4DVAR: lwrite4danl,l4dvar,l4densvar inconsistent',lwrite4danl,l4dvar,l4densvar
    call stop2(135)

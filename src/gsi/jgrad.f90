@@ -293,7 +293,7 @@ if (lupdfgs) then
    call xhat_vordiv_calc(sval)
 
 ! Overwrite guess with increment (4d-var only, for now)
-  if (iwrtinc>0) then
+  if (iwrtinc>0 .AND. l4dvar) then
     if (mype==0) write(6,*)trim(seqcalls),': Saving increment to file'
     if (miter==1) then
         xincfile='xinc'

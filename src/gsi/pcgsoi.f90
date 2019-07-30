@@ -795,7 +795,7 @@ subroutine pcgsoi()
 
 ! Update guess (model background, bias correction) fields
 ! if (mype==0) write(6,*)'pcgsoi: Updating guess'
-  if(iwrtinc<=0) call update_guess(sval,sbias)
+  if(iwrtinc<=0 .AND. l4dvar) call update_guess(sval,sbias)
 
 ! cloud analysis  after iteration
 ! if(jiter == miter .and. i_gsdcldanal_type==1) then
@@ -816,12 +816,12 @@ subroutine pcgsoi()
       call write_all(-1)
     else
       if(jiter == miter) then
-         call write_all(-1)
+         call write_all(iwrtinc)
       endif
   endif
 
 ! Overwrite guess with increment (4d-var only, for now)
-  if (iwrtinc>0) then
+  if (iwrtinc>0 .AND. l4dvar) then
      call view_st (sval,'xinc')
      call inc2guess(sval)
      call write_all(iwrtinc)
