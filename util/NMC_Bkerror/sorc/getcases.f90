@@ -130,6 +130,7 @@ subroutine getcases(numcases,mype)
            nb(ncount48) = loop  
        endif
     else
+       nming=nming+60*fhour5
        if(nint(fhour5).eq.24) nmin24(loop)=nming
        if(nint(fhour5).eq.48) nmin48(loop)=nming
     endif

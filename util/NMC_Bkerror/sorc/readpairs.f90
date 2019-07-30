@@ -504,7 +504,7 @@ subroutine readpairs(npe,mype,numcases)
   end do   ! END DO LOOP OVER CASES
   close(filunit1)
   close(filunit2)
-  deallocate(taskid)
+  if (use_gfs_nemsio) deallocate(taskid)
 
   call mpi_barrier(mpi_comm_world,iret2)
 
