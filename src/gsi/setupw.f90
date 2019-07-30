@@ -428,7 +428,6 @@ loop_for_all_obs: &
      if(.not.in_anybin) cycle
 
      ikx=nint(data(ikxx,i))
-     itype=ictype(ikx)
 
      if(in_curbin) then
         dlat=data(ilat,i)
@@ -443,6 +442,9 @@ loop_for_all_obs: &
         end if
         isli = data(idomsfc,i)
      endif
+
+     if(ikx < 1 .or. ikx > nconvtype) cycle
+     itype=ictype(ikx)
 
 !    Link observation to appropriate observation bin
      if (nobs_bins>1) then

@@ -243,6 +243,7 @@ contains
   use m_prad, only: radheadm
   use m_obsdiagNode, only: obs_diag
   use m_obsdiagNode, only: obs_diags
+  use m_obsdiagNode, only: fptr_obsdiagNode
   use m_obsdiagNode, only: obsdiagLList_nextNode
   use m_obsdiagNode, only: obsdiagNode_set
   use m_obsdiagNode, only: obsdiagNode_get
@@ -400,13 +401,23 @@ contains
   character(12) string
 
   type(radNode),pointer:: my_head,my_headm
-  type(obs_diag),pointer:: my_diag, obsptr
+  type(obs_diag),pointer:: my_diag
   type(obs_diags),pointer:: my_diagLL
   type(rad_obs_type) :: radmod
 
   type(obsLList),pointer,dimension(:):: radhead
+  type(fptr_obsdiagNode),dimension(nchanl):: odiags
 
   logical:: muse_ii
+
+! Notations in use: for a single obs. or a single obs. type
+! nchanl        : a known channel count of a given type obs stream
+! nchanl_diag   : a subset of "iuse"
+! icc, iii      : a subset of "(varinv(i)>tiny_r_kind) .and. iuse)" or qc-passed
+
+! And for all instruments
+! jpch_rad      : sum(nchanl)
+! nchanl_total  : subset of jpch_rad, sum(icc)
 
   radhead => obsLL(:)
 
@@ -1763,10 +1774,10 @@ contains
 
 !       Link obs to diagnostics structure
         iii=0
-        obsptr => null()
         if (luse_obsdiag ) my_diagLL => odiagLL(ibin)
         do ii=1,nchanl
           m=ich(ii)
+          odiags(ii)%ptr => null()
 
           if (luse_obsdiag .and. (iuse_rad(m)>=1 .or. l4dvar .or. lobsdiagsave) )then
 
@@ -1785,10 +1796,8 @@ contains
             if(.not.associated(my_diag)) call die(myname, &
                 'obsdiagLList_nextNode(), create =', .not.lobsdiag_allocated)
 
-                ! Mark the pointer to the leading obsdiags node (ii==1) of the current
-                ! observation profile (n).
-            if (ii==1) obsptr => my_diag
-  
+            odiags(ii)%ptr => my_diag    ! track my_diag references
+
                ! Associate corresponding obs_diag pointer to the obsdiagLList structure
             if(in_curbin.and.icc>0) then
                my_head => tailNode_typecast_(radhead(ibin))
@@ -1892,8 +1901,8 @@ contains
 !       Write diagnostics to output file.
         if (rad_diagsave .and. luse(n) .and. nchanl_diag > 0) then
 
-           if (binary_diag) call contents_binary_diag_
-           if (netcdf_diag) call contents_netcdf_diag_
+           if (binary_diag) call contents_binary_diag_(odiags(:),is,ioid(n))
+           if (netcdf_diag) call contents_netcdf_diag_(odiags(:),is,ioid(n))
 
         end if
      endif ! (in_curbin)
@@ -2042,7 +2051,13 @@ contains
            end do
         endif
   end subroutine init_netcdf_diag_
-  subroutine contents_binary_diag_
+  subroutine contents_binary_diag_(odiags,idv,iob)
+    type(fptr_obsdiagNode),dimension(:):: odiags
+    integer(i_kind),intent(in):: idv,iob
+
+    character(len=*),parameter:: myname_=myname//"::contents_binary_diag_"
+    type(obs_diag),pointer:: obsptr
+
            diagbuf(1)  = cenlat                         ! observation latitude (degrees)
            diagbuf(2)  = cenlon                         ! observation longitude (degrees)
            diagbuf(3)  = zsges                          ! model (guess) elevation at observation location
@@ -2221,51 +2236,18 @@ contains
 
            if (luse_obsdiag .and. lobsdiagsave) then
               if (l_may_be_passive) then
-                 ii_ptr=1       ! obsptr is currently associated with this node
                  do ii=1,nchanl_diag
+                    obsptr => odiags(ich_diag(ii))%ptr
+
                     if (.not.associated(obsptr)) then
-                       write(6,*)'setuprad: error obsptr'
+                       write(6,*)'setuprad: error of null obsptr',ii,ich_diag(ii)
                        call stop2(280)
                     end if
 
-                    do jj=ii_ptr,ich_diag(ii)-1         ! move up to the current node at ich_diag(ii)
-                      if(.not.associated(obsptr)) then
-                       call perr('setuprad', '.not.associated(obsptr)')
-                       call perr('setuprad', '                   ii =',ii)
-                       call perr('setuprad', '               ii_ptr =',ii_ptr)
-                       call perr('setuprad', '         ich_diag(ii) =',ich_diag(ii))
-                       call perr('setuprad', '                   jj =',jj)
-                       call  die('setuprad')
-                      endif
+                        ! double check
+                    call obsdiagNode_assert(obsptr,idv,iob,ich_diag(ii), &
+                      myname_,'obsptr::(idv,iob,ich_diag(ii)')
 
-                      obsptr => obsptr%next
-                      ii_ptr =  ii_ptr+1
-                    enddo
-
-                    if(ii_ptr/=ich_diag(ii)) then
-                       call perr('setuprad', 'ii_ptr /= ich_diag(ii), ii =',ii)
-                       call perr('setuprad', '                    ii_ptr =',ii_ptr)
-                       call perr('setuprad', '              ich_diag(ii) =',ich_diag(ii))
-                       call  die('setuprad')
-                    endif
-
-                    if (obsptr%indxglb/=(ioid(n)-1)*nchanl+ich_diag(ii)) then
-                       !!! This test will fail, if(reduce_diag)!
-                       !write(6,*)'setuprad: error writing diagnostics'
-                       !call stop2(281)
-                       call perr('setuprad','failed on writing diagnostics, reduce_diag =',reduce_diag)
-                       call perr('setuprad','                                    nchanl =',nchanl)
-                       call perr('setuprad','                               nchanl_diag =',nchanl_diag)
-                       call perr('setuprad','                            obsptr%indxglb =',obsptr%indxglb)
-                       call perr('setuprad','           (ioid(n)-1)*nchanl+ich_diag(ii) =',(ioid(n)-1)*nchanl+ich_diag(ii))
-                       call perr('setuprad','                                   ioid(n) =',ioid(n))
-                       call perr('setuprad','                                        ii =',ii)
-                       call perr('setuprad','                              ich_diag(ii) =',ich_diag(ii))
-                       call perr('setuprad','                                    ii_ptr =',ii_ptr)
-                       call perr('setuprad','                                         n =',n)
-                       call  die('setuprad')
-                    end if
- 
                     do jj=1,miter
                        ioff=ioff+1
                        if (obsptr%muse(jj)) then
@@ -2287,9 +2269,8 @@ contains
                        diagbufchan(ioff,ich_diag(ii)) = obsptr%obssen(jj)
                     enddo
 
-                    obsptr => obsptr%next       ! move up to the first node of the next profile
-                    ii_ptr =  ii_ptr+1
                  enddo
+                 obsptr => null()
               else
                  diagbufchan(ioff+1:ioff+4*miter+1,1:nchanl_diag) = zero
               endif
@@ -2302,7 +2283,14 @@ contains
            endif
 
   end subroutine contents_binary_diag_
-  subroutine contents_netcdf_diag_
+  subroutine contents_netcdf_diag_(odiags,idv,iob)
+    type(fptr_obsdiagNode),dimension(:),intent(in):: odiags
+    integer(i_kind),intent(in):: idv,iob
+
+    character(len=*),parameter:: myname_=myname//"::contents_netcdf_diag_"
+    type(obs_diag),pointer:: obsptr     ! not yet in use
+        ! obsptr => odiags(ich_diag(i)); for i=1,nchanl_diag
+
 ! Observation class
   character(7),parameter     :: obsclass = '    rad'
   real(r_single),parameter::  missing = -9.99e9_r_single

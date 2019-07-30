@@ -114,8 +114,8 @@ module m_obsdiagNode
      real(r_kind), pointer :: obssen(:)   => null()    ! (miter)
      real(r_kind) :: wgtjo
      real(r_kind) :: elat, elon         ! earth lat-lon for redistribution
-     integer(i_kind) :: indxglb         ! a combined index similar to (ich,iob)
-     integer(i_kind) :: nchanl          ! number of channels per observations (was %nchnperobs)
+     !integer(i_kind) :: indxglb         ! a combined index similar to (ich,iob)
+     !integer(i_kind) :: nchanl          ! number of channels per observations (was %nchnperobs)
      integer(i_kind) :: idv,iob,ich     ! device, obs., and channel indices
      logical, pointer :: muse(:)          => null()    ! (miter+1), according the setup()s
      logical :: luse
@@ -1254,8 +1254,8 @@ _ENTRY_(myname_)
   aNode_%iob  =-1
   aNode_%ich  =-1
 
-  aNode_%indxglb    =-99999
-  aNode_%nchanl =-99999
+  !aNode_%indxglb    =-99999
+  !aNode_%nchanl =-99999
   aNode_%muse    (:)= .false.
   aNode_%nldepart(:)=-huge(0._r_kind)
   aNode_%tldepart(:)= 0._r_kind
@@ -1287,10 +1287,10 @@ _ENTRY_(myname_)
   aNode%elon  = elon
   anode%luse  = luse
 
-  aNode%nchanl = 1
-  if(present(nchanl)) aNode%nchanl = nchanl
+  !aNode%nchanl = 1
+  !if(present(nchanl)) aNode%nchanl = nchanl
 
-  aNode%indxglb = (anode%iob-1)*aNode%nchanl+anode%ich
+  !aNode%indxglb = (anode%iob-1)*aNode%nchanl+anode%ich
 
   aNode%wgtjo      =-huge(0._r_kind)
 
@@ -1363,10 +1363,10 @@ _ENTRY_(myname_)
   if(present(elon)) aNode%elat=elon
   if(present(luse)) aNode%elat=luse
 
-  if(present(nchanl)) aNode%nchanl=nchanl
+  !if(present(nchanl)) aNode%nchanl=nchanl
   if(present(wgtjo )) aNode%wgtjo =wgtjo
 
-  aNode%indxglb = (anode%iob-1)*aNode%nchanl+anode%ich
+  !aNode%indxglb = (anode%iob-1)*aNode%nchanl+anode%ich
 
   if(present(jiter)) then
     if(present(muse  ).or.present(nldepart)) then
@@ -1420,7 +1420,7 @@ _ENTRY_(myname_)
   if(present(elon)) elon = aNode%elat
   if(present(luse)) luse = aNode%elat
 
-  if(present(nchanl)) nchanl = aNode%nchanl
+  !if(present(nchanl)) nchanl = aNode%nchanl
   if(present(wgtjo )) wgtjo  = aNode%wgtjo
 
   if(present(jiter)) then
@@ -1490,8 +1490,8 @@ _ENTRY_(myname_)
 
   else
     read(iunit,iostat=ier)       &
-        aNode%indxglb,           &    ! = kindx
-        aNode%nchanl,              &    ! = nchanl per obs
+        !aNode%indxglb,           &    ! = kindx
+        !aNode%nchanl,              &    ! = nchanl per obs
         aNode%muse    (1:kiter+1), &    ! = lmuse(1:kiter)
         aNode%nldepart(1:kiter+1), &    ! = znldepart(1:kiter)
         aNode%tldepart(1:kiter), &    ! = ztldepart(1:kiter)
@@ -1537,8 +1537,8 @@ _ENTRY_(myname_)
         endif
 
   write(iunit,iostat=istat)     &
-        aNode%indxglb,          &
-        aNode%nchanl,           &
+        !aNode%indxglb,          &
+        !aNode%nchanl,           &
         aNode%muse    (1:jiter+1),&
         aNode%nldepart(1:jiter+1),&
         aNode%tldepart(1:jiter),&
