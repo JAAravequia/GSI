@@ -716,7 +716,7 @@ subroutine read_obs(ndata,mype)
     use lightinfo, only: nlighttype,iuse_light,diag_light
     use aircraftinfo, only: aircraft_t_bc,aircraft_t_bc_pof,aircraft_t_bc_ext,mype_airobst
     use gsi_io, only: mype_io
-    use rapidrefresh_cldsurf_mod, only: i_gsdcldanal_type
+    use rapidrefresh_cldsurf_mod, only: i_gsdcldanal_type,i_lgt_data_type
     use radiance_mod, only: rad_obs_type,radiance_obstype_search
 
     use m_extOzone, only: is_extOzone
@@ -1488,7 +1488,11 @@ subroutine read_obs(ndata,mype)
                    call read_lightning(nread,npuse,infile,obstype,lunout,twind,sis,nobs_sub1(1,i))
                 else if(i_gsdcldanal_type==1 .or. i_gsdcldanal_type==6 &
                         .or. i_gsdcldanal_type==3 .or. i_gsdcldanal_type==7) then
+                  if (i_lgt_data_type==2) then
                    call read_lightning_grid(nread,npuse,infile,obstype,lunout,twind,sis,nobs_sub1(1,i))
+                  else
+                   call read_lightning(nread,npuse,infile,obstype,lunout,twind,sis,nobs_sub1(1,i))
+                  endif
                 endif
                 string='READ_LIGHTNING'
 

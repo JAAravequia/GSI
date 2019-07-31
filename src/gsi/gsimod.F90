@@ -138,7 +138,7 @@
                             i_lightpcp,i_sfct_gross,l_use_hydroretrieval_all,l_numconc,l_closeobs,&
                             i_coastline,i_gsdqc,qv_max_inc,ioption,l_precip_clear_only,l_fog_off,&
                             cld_bld_coverage,cld_clr_coverage,&
-                            i_cloud_q_innovation,i_ens_mean,DTsTmax
+                            i_cloud_q_innovation,i_ens_mean,DTsTmax,i_lgt_data_type
   use gsi_metguess_mod, only: gsi_metguess_init,gsi_metguess_final
   use gsi_chemguess_mod, only: gsi_chemguess_init,gsi_chemguess_final
   use tcv_mod, only: init_tcps_errvals,tcp_refps,tcp_width,tcp_ermin,tcp_ermax
@@ -383,6 +383,7 @@
 !  03-11-2019 Collard   Introduce ec_amv_qc as temporary control of GOES-16/17 AMVS
 !  06-19-2019 Hu        Add option reset_bad_radbc for reseting radiance bias correction when it is bad
 !  06-25-2019 Hu        Add option print_obs_para to turn on OBS_PARA list
+!  07-31-2019 G.Ge      Add option i_lgt_data_type
 !
 !EOP
 !-------------------------------------------------------------------------
@@ -990,7 +991,10 @@
 !                         =7   cloud analysis in observer with I/O
 !                         =30  cloud analysis for GFS
 !                         =99  only read hydrometer fields but no cloud analysis
-
+!      i_lgt_data_type    - options for what kind of lighthing data is available
+!                         =1   to read from original lightning bufr file                          
+!                         =2   to read from preprocessed grid lighthing bufr file
+!
 !      i_gsdsfc_uselist  - options for how to use surface observation use or
 !                          rejection list
 !                         =0 . EMC method (default)
@@ -1060,7 +1064,7 @@
                                 i_lightpcp,i_sfct_gross,l_use_hydroretrieval_all,l_numconc,l_closeobs,&
                                 i_coastline,i_gsdqc,qv_max_inc,ioption,l_precip_clear_only,l_fog_off,&
                                 cld_bld_coverage,cld_clr_coverage,&
-                                i_cloud_q_innovation,i_ens_mean,DTsTmax
+                                i_cloud_q_innovation,i_ens_mean,DTsTmax,i_lgt_data_type
 
 ! chem(options for gsi chem analysis) :
 !     berror_chem       - .true. when background  for chemical species that require

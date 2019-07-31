@@ -21,7 +21,8 @@ module rapidrefresh_cldsurf_mod
 !                              coastline area
 !  04-01-2017 Hu        added option i_gsdqc to turn on special observation qc
 !                              from GSD (for RAP/HRRR application)
-!   2018-09-12 Ladwig   added options l_precip_clear_only
+!  2018-09-12 Ladwig   added options l_precip_clear_only
+!  07-31-2019 G.Ge      Add option i_lgt_data_type
 ! 
 ! Subroutines Included:
 !   sub init_rapidrefresh_cldsurf  - initialize RR related variables to default values
@@ -94,6 +95,10 @@ module rapidrefresh_cldsurf_mod
 !                         =2  cloud analysis for NAM
 !                         =30  cloud analysis for GFS
 !                         =99  only read hydrometer fields but no cloud analysis
+!      i_lgt_data_type    - options for what kind of lighthing data is available
+!                         =1   to read from original lightning bufr file                          
+!                         =2   to read from preprocessed grid lighthing bufr file
+!
 !      i_gsdsfc_uselist  - options for how to use surface observation use or
 !                          rejection list
 !                         =0 . EMC method (default)
@@ -187,6 +192,7 @@ module rapidrefresh_cldsurf_mod
   public :: i_use_2mt4b
   public :: i_sfct_gross
   public :: i_gsdcldanal_type
+  public :: i_lgt_data_type
   public :: i_gsdsfc_uselist
   public :: i_lightpcp
   public :: l_use_hydroretrieval_all
@@ -237,6 +243,7 @@ module rapidrefresh_cldsurf_mod
   integer(i_kind)      i_use_2mt4b
   integer(i_kind)      i_sfct_gross
   integer(i_kind)      i_gsdcldanal_type
+  integer(i_kind)      i_lgt_data_type
   integer(i_kind)      i_gsdsfc_uselist 
   integer(i_kind)      i_lightpcp
   logical              l_numconc
@@ -335,6 +342,7 @@ contains
     i_use_2mt4b = 0                                   ! 1 = Use 2m T as part of B
     i_sfct_gross = 0                                  ! 1 = Use extended gross check for sfc T
     i_gsdcldanal_type  = 0                            !  turn cloud analysis off
+    i_lgt_data_type  = 2                              ! 2=read from preprocessed grid lightning data file
     i_gsdsfc_uselist   = 0                            !  turn gsd surface uselist off           
     i_lightpcp         = 0                            !  don't add light pcp over warm section           
     l_use_hydroretrieval_all=.false.
