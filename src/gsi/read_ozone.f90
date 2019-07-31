@@ -182,7 +182,7 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   integer(i_kind) lun
   real(r_double),allocatable,dimension(:,:):: olpdtsq,lpsdvals
   real(r_double),allocatable,dimension(:):: press,omr,omrstd
-  real(r_double),allocatable,dimension(:,:)::rpseq3,rpseq12,rpseq13
+  real(r_double),allocatable,dimension(:,:)::rpseq3
   real(r_kind) lats0,lons0
 
   real(r_double) said, lat, lon, year, month, day, hour, minu
@@ -1048,7 +1048,6 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 
 !Process OMPS LP data
   elseif(index(obstype,'ompslp') /= 0 )then
-     print *,"XXX ompslp"
  
      nloz = 81
      nreal=12
@@ -1058,11 +1057,9 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 
      open(lunin,file=trim(infile),form='unformatted')
      call openbf(lunin,'IN',lunin)
-     write(6,*)"READ_OZONE: after openbf"
      call datelen(10)
      call readmg(lunin,subset,idate,iret)
      if (iret .eq. 0 .and. subset == 'NC008019') then
-        write(6,*)'READ_OZONE:  OMPS LP data type, subset=',subset
         read_success=.true.
      else
         write(6,*)'READ_OZONE:  *** WARNING: unknown ozone data type, subset=',subset
@@ -1072,12 +1069,9 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
         return
      endif
 
-     write(6,*)"READ_OZONE: Before allocting arrays"
      ! Allocate arrays
      allocate(olpdtsq(12,81))
      allocate(rpseq3(1,990))
-     allocate(rpseq12(110,9))
-     allocate(rpseq13(1,243))
      allocate(lpsdvals(3,81))
      allocate(press(nloz))
      allocate(omr(nloz))
@@ -1085,10 +1079,29 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      allocate(usage1(nloz))
      allocate(ipos(nloz))
      allocate(ozout(nozdat,maxobs))
-     write(6,*)"READ_OZONE: Finished allocating array"
+    
+     do k=1,maxobs
+       do i=1,nozdat
+          ozout(i,k)=rmiss
+       enddo
+     enddo
+
+     ikx=0
+     k0=0
+     ipos=999
+     first=.false.
+     do k=1,jpch_oz
+        if( (.not. first) .and. index(nusis_oz(k),sis)/=0 ) then
+           k0=k
+           first=.true.
+        end if
+        if(first .and. index(nusis_oz(k),sis)/=0 ) then
+          ikx=ikx+1
+          ipos(ikx)=k0+ikx-1
+        endif
+     enddo
 
      read_loop5: do
-       write(6,*)"READ_OZONE: read_loop5"
        if(.not. read_success) exit
         call readsb(lunin,iret)
         if (iret/=0) then
@@ -1110,7 +1123,6 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
        dlat_earth = lat * deg2rad
        dlon_earth = lon * deg2rad
 
-       print *,"regional=",regional
        if(regional)then
          call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
          if(outside) cycle read_loop5
@@ -1119,7 +1131,6 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
          dlon = dlon_earth
          call grdcrd1(dlat,rlats,nlat,1)
          call grdcrd1(dlon,rlons,nlon,1)
-         print *,"nlon,nlat=",nlon,nlat
        endif
 
        !Convert observation time to relative time
@@ -1134,8 +1145,6 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
        idate5(4) = hour
        idate5(5) = minu
        call w3fs21(idate5,nmind)
-       print *,"nmind=",nmind
-       write(6,*)"READ_OZONE: idate5=",idate5(1:5)
  
        t4dv=real((nmind-iwinbgn),r_kind)*r60inv
        sstime=real(nmind,r_kind)
@@ -1148,17 +1157,12 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 
        !Read solar zenith angle
        call ufbint(lunin,soza,1,1,iret,"SOZA")
-       print *,"soza=",soza
 
        !Read Pressure and Ozone Mixing Ratio
        call ufbseq(lunin, olpdtsq, 12, 81, iret, "OLPDTSQ")
-       print *,"READ_OZONE: olpdtsq",iret
-       print *,(olpdtsq(j,30),j=1,12)
        !Read Ozone Mixing Ratio Standard Deviation
        call ufbseq(lunin, lpsdvals,3,81,iret,"LPSDVALS")
-       print *,"READ_OZONE: lpsdvals",iret
-       print *,(lpsdvals(3,j),j=1,81)
-       usage1(:) = 100._r_kind
+       usage1(:) = 1000._r_kind
        j = 0
        do k = 1, nloz
          press(k) = olpdtsq(2,k)*0.001 ! centibars
@@ -1168,9 +1172,7 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
             usage1(k) = zero
             j = j + 1
          endif
-         ipos(k) = k
        enddo
-       print *,"READ_ZONE: Finished nloz do loop"
 
        do k=1,nloz
 
@@ -1200,7 +1202,6 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
        enddo
 
     enddo read_loop5
-  write(6,*)"READ_OZONE: Finished OMPS LP"
 
   ! end of OMPS LP bufr loop
   endif
@@ -1242,8 +1243,6 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   if(index(obstype,'ompslp')/=0) then
      if(allocated(olpdtsq))deallocate(olpdtsq)
      if(allocated(rpseq3))deallocate(rpseq3)
-     if(allocated(rpseq12))deallocate(rpseq12)
-     if(allocated(rpseq13))deallocate(rpseq13)
      if(allocated(lpsdvals))deallocate(lpsdvals)
      if(allocated(press))deallocate(press)
      if(allocated(omr))deallocate(omr)
