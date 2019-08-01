@@ -28,7 +28,7 @@ NEMSIO_LIB=$(CORELIB)/nemsio/v$(NEMSIO_VER)/libnemsio_v$(NEMSIO_VER).a
 # Fortran compiler and options
 # ----------------------------
 
-  CF            = mpif90 -f90=ifort
+  CF            = mpiifort
 
 #--- Normal mode options
 
