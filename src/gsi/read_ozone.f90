@@ -1196,8 +1196,6 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
                                            ! ozinfo.txt
          ozout(12,ndata)=j !nloz              ! # of ompslp vertical levels
          ozout(13,ndata)=omr(k)            ! ozone mixing ratio in ppmv
-       write(6,*)"READ_OZONE: omr=", &
-          j,ndata,press(k),ozout(13,ndata),ozout(10,ndata)
          endif
        enddo
 
