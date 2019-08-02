@@ -195,6 +195,7 @@ contains
 !   2016-03-30  todling - update interface to general read (pass bundle)
 !   2016-06-23  Li      - Add cloud partitioning, which was missed (based on GFS
 !                         ticket #239, comment 18)
+!   2019-07-10  Zhu     - Add convective clouds
 !
 !   input argument list:
 !
@@ -209,6 +210,7 @@ contains
     use kinds, only: i_kind,r_kind
     use gridmod, only: sp_a,grd_a,lat2,lon2,nsig
     use guess_grids, only: ifilesig,nfldsig
+    use guess_grids, only: ifilesfc,nfldsfc
     use gsi_metguess_mod, only: gsi_metguess_bundle
     use gsi_bundlemod, only: gsi_bundlegetpointer
     use gsi_bundlemod, only: gsi_bundlecreate
@@ -223,6 +225,7 @@ contains
 
     character(len=*),parameter::myname_=myname//'*read_'
     character(24) filename
+    character(24) filenamesfc
     integer(i_kind):: it, istatus, inner_vars, num_fields
     integer(i_kind):: iret_ql,iret_qi
 
@@ -273,10 +276,11 @@ contains
     do it=1,nfldsig
 
        write(filename,'(''sigf'',i2.2)') ifilesig(it)
+       write(filenamesfc,'(''sfcf'',i2.2)') ifilesfc(it)
 
 !      Read background fields into bundle
        call general_read_gfsatm_nems(grd_t,sp_a,filename,.true.,.true.,.true.,&
-            atm_bundle,.true.,istatus)
+            atm_bundle,.true.,istatus,filenamesfc)
 
        inithead=.false.
        zflag=.false.
