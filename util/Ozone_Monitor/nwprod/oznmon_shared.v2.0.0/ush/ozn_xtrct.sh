@@ -89,10 +89,6 @@ echo "VALIDATE_DATA, validate = $VALIDATE_DATA, $validate "
 # ptype here is the processing type which is intended to be "ges" 
 # or "anl".  Default is "ges".  
 #
-# If this needs to change to include __both__ then the extraction 
-# executables will need to be modified to handle the ges && anl
-# inputs in the diag file names.
-#
 ozn_ptype=${ozn_ptype:-"ges anl"}
 
 

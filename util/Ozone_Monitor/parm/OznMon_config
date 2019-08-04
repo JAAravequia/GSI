@@ -143,16 +143,22 @@ export WEB_DIR=${WEB_DIR:-/home/people/emc/www/htdocs/gmb/gdas/es_ozn/pngs}
   
    elif [[ $MY_MACHINE = "wcoss_d" ]]; then
 
-      shell=ksh
-      . /usrx/local/prod/modules/default/init/${shell}
- 
-      module purge
+      shell=sh
+      source /usrx/local/prod/lmod/lmod/init/${shell}
 
-      module load lsf/10.1
+      MODULEPATH=/usrx/local/prod/lmod/lmod/modulefiles/Core
+      MODULEPATH=${MODULEPATH}:/usrx/local/prod/modulefiles/core_third
+      MODULEPATH=${MODULEPATH}:/usrx/local/prod/modulefiles/defs
+      MODULEPATH=${MODULEPATH}:/gpfs/dell1/nco/ops/nwprod/modulefiles/core_prod
+      export MODULEPATH=${MODULEPATH}:/usrx/local/dev/modulefiles
+
+      module purge
       module load ips/18.0.1.163
-      module load prod_util/1.1.1
+      module load metplus/2.1
+      module load lsf/10.1
+      module load prod_util/1.1.2
       module load GrADS/2.2.0
-   
+
       export SUB="bsub"
       export COMPRESS=/usr/bin/gzip
       export UNCOMPRESS="/usr/bin/gunzip -f"

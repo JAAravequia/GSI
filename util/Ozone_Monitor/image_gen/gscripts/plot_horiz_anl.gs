@@ -169,12 +169,13 @@ while (levn<=mxlev)
     'set string 1 r 6'
     'set string 1 l 6'
     'set strsiz 0.15 0.15'
+    'draw string 0.2 8.3 Net, run   :  'net', 'run
     if (iuse>0) 
-       'draw string 0.2 8.3 platform:  'satnam' 'satnum
+       'draw string 4.0 8.3 platform:  'satnam' 'satnum
     endif
     if (iuse<=0) 
        'set string 2 l 6'
-       'draw string 0.2 8.3 platform:  'satnam' 'satnum' (NOT ASSIMILATED)'
+       'draw string 4.0 8.3 platform:  'satnam' 'satnum' (NOT ASSIMILATED)'
     endif
     if ( level > 0.0 )
        'set string 1 l 6'

@@ -332,6 +332,7 @@ program horiz
   enddo loopd
 
   write(6,*)'read in ',nobs,' obs & write out ',irite,' obs'
+  write(6,*)'write output to lungrd=',lungrd,', file=',trim(grad_file)
 
 ! Deallocate arrays
   deallocate(var,iuse,error)

@@ -29,7 +29,6 @@ elif [[ $MY_MACHINE = "wcoss_d" ]]; then
    MODULEPATH=${MODULEPATH}:/usrx/local/prod/modulefiles/defs
    MODULEPATH=${MODULEPATH}:/gpfs/dell1/nco/ops/nwprod/modulefiles/core_prod
    export MODULEPATH=${MODULEPATH}:/usrx/local/dev/modulefiles
-#   export MODULEPATH=/usrx/local/prod/lmod/lmod/modulefiles/Core:/usrx/local/prod/modulefiles/core_third:/usrx/local/prod/modulefiles/defs:/gpfs/dell1/nco/ops/nwprod/modulefiles/core_prod:/usrx/local/dev/modulefiles
 fi
 
 
@@ -47,7 +46,7 @@ idate=`${scripts}/find_cycle.pl -dir ~/nbns/stats/${OZN_SUFFIX} -cyc 1 -run ${ru
 echo "idate = $idate"
 
 export NDATE=/gpfs/dell1/nco/ops/nwprod/prod_util.v1.1.1/exec/ips/ndate
-#export START_DATE=2019062400
+#export START_DATE=2019071900
 START_DATE=`${NDATE} +06 $idate`
 
 PDY=`echo $START_DATE | cut -c1-8`
