@@ -51,7 +51,7 @@ subroutine setupvwnd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
   use kinds, only: r_kind,r_single,r_double,i_kind
 
   use guess_grids, only: hrdifsig,nfldsig,ges_lnprsl, &
-               sfcmod_gfs,sfcmod_mm5,comp_fact10,pt_ll     
+               sfcmod_gfs,sfcmod_mm5,comp_fact10
   use m_obsdiagNode, only: obs_diag
   use m_obsdiagNode, only: obs_diags
   use m_obsdiagNode, only: obsdiagLList_nextNode
@@ -74,7 +74,7 @@ subroutine setupvwnd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
   use oneobmod, only: magoberr,maginnov,oneobtest
 
   use gridmod, only: nsig
-  use gridmod, only: get_ij,twodvar_regional,regional,rotate_wind_xy2ll
+  use gridmod, only: get_ij,twodvar_regional,regional,rotate_wind_xy2ll,pt_ll
   use constants, only: zero,tiny_r_kind,one,one_tenth,half,wgtlim,rd,grav,&
             two,cg_term,three,four,five,ten,huge_single,r1000,r3600,&
             grav_ratio,flattening,grav,deg2rad,grav_equator,somigliana, &
@@ -633,6 +633,7 @@ subroutine setupvwnd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
         my_head%b       = cvar_b(ikx)
         my_head%pg      = cvar_pg(ikx)
         my_head%luse    = luse(i)
+
         if(luse_obsdiag)then
           call obsdiagNode_assert(my_diag, my_head%idv,my_head%iob,1,myname,'my_diag:my_head')
           my_head%diags => my_diag
@@ -644,10 +645,9 @@ subroutine setupvwnd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
 !    Save stuff for diagnostic output
      if(conv_diagsave .and. luse(i))then
         ii=ii+1
-        rstation_id     = data(id,i)
-
-        err_input = data(ier2,i)
-        err_adjst = data(ier,i)
+        rstation_id = data(id,i)
+        err_input   = data(ier2,i)
+        err_adjst   = data(ier,i)
         if (ratio_errors*error>tiny_r_kind) then
            err_final = one/(ratio_errors*error)
         else
@@ -708,7 +708,6 @@ subroutine setupvwnd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
   proceed=proceed.and.ivar>0
   call gsi_metguess_get ('var::tv', ivar, istatus )
   proceed=proceed.and.ivar>0
-
   end subroutine check_vars_ 
 
   subroutine init_vars_
@@ -922,7 +921,6 @@ subroutine setupvwnd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
         end if
 
         rdiagbuf(23,ii) = factw              ! 10m wind reduction factor
-
 
         ioff=ioff0
         if (lobsdiagsave) then

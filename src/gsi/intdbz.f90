@@ -9,6 +9,7 @@ module intdbzmod
 ! program history log:
 ! 2017-05-12 Y. Wang and X. Wang - add tangent linear of dbz operator to directly assimilate reflectivity
 !                                  for both ARW and NMMB models (Wang and Wang 2017 MWR). POC: xuguang.wang@ou.edu
+! 2019-07-11  todling - introduced wrf_vars_mod
 !
 ! subroutines included:
 !   sub intdbz_
@@ -82,7 +83,7 @@ subroutine intdbz_(dbzhead,rval,sval)
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gsi_4dvar, only: ladtest_obs
 
-  use control_vectors, only : dbz_exist
+  use wrf_vars_mod, only : dbz_exist
   implicit none
 
 ! Declare passed variables
@@ -93,8 +94,6 @@ subroutine intdbz_(dbzhead,rval,sval)
 ! Declare local varibles
   integer(i_kind) j1,j2,j3,j4,j5,j6,j7,j8,ier,istatus
 ! real(r_kind) penalty
-!  real(r_kind),pointer,dimension(:) :: xhat_dt_u,xhat_dt_v
-!  real(r_kind),pointer,dimension(:) :: dhat_dt_u,dhat_dt_v
   real(r_kind) val,w1,w2,w3,w4,w5,w6,w7,w8,valqr,valqs,valqg,valdbz
   real(r_kind) cg_dbz,p0,grad,wnotgross,wgross,pg_dbz
   real(r_kind) qrtl,qstl, qgtl
@@ -128,7 +127,6 @@ subroutine intdbz_(dbzhead,rval,sval)
   if(ier/=0)return
 
 
-  !dbzptr => dbzhead
   dbzptr => dbzNode_typecast(dbzhead)
   do while (associated(dbzptr))
      j1=dbzptr%ij(1)

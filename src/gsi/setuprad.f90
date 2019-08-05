@@ -286,7 +286,7 @@ contains
   use radinfo, only: radinfo_adjust_jacobian
   use radiance_mod, only: rad_obs_type,radiance_obstype_search,radiance_ex_obserr,radiance_ex_biascor
   use sparsearr, only: sparr2, new, writearray, size, fullarray
-  use control_vectors, only: imp_physics  
+  use ncepnems_io, only: imp_physics  
 
   implicit none
 

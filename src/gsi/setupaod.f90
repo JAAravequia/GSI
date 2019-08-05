@@ -168,7 +168,7 @@ subroutine setupaod(obsLL,odiagLL,lunin,mype,nchanl,nreal,nobs,&
   real(r_kind),dimension(nsigradjac,nchanl):: jacobian
   real(r_kind),dimension(nsigaerojac,nchanl):: jacobian_aero
   real(r_kind),dimension(nsig,nchanl):: layer_od
-  real(r_kind) :: clw_guess, tzbgr, sfc_speed
+  real(r_kind) :: clw_guess, tzbgr, sfc_speed,ciw_guess,rain_guess,snow_guess
 
   type(obsLList),pointer,dimension(:):: aerohead
   aerohead => obsLL(:)

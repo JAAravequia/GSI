@@ -618,14 +618,13 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
    use mpimod, only: npe
    use constants, only: zero,one,fv,r0_01
    use nemsio_module, only: nemsio_init,nemsio_open,nemsio_close,nemsio_charkind
-   use ncepnems_io, only: error_msg
+   use ncepnems_io, only: error_msg,imp_physics
    use nemsio_module, only: nemsio_gfile,nemsio_getfilehead,nemsio_readrecv,nemsio_getrechead 
    use egrid2agrid_mod,only: g_egrid2agrid,g_create_egrid2agrid,egrid2agrid_parm,destroy_egrid2agrid
    use general_commvars_mod, only: fill2_ns,filluv2_ns
    use constants, only: two,pi,half,deg2rad,r60,r3600
    use gsi_bundlemod, only: gsi_bundle
    use gsi_bundlemod, only: gsi_bundlegetpointer
-   use control_vectors, only: imp_physics
 
    implicit none
 
@@ -656,7 +655,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
    integer(i_kind):: iret,nlatm2,nlevs,icm,nord_int
    integer(i_kind):: i,j,k,icount,kk
    integer(i_kind) :: ier,istatus,iredundant
-   integer(i_kind) :: latb, lonb, levs, nframe  
+   integer(i_kind) :: latb, lonb, levs, nframe
    integer(i_kind) :: nfhour, nfminute, nfsecondn, nfsecondd
    integer(i_kind) :: istop = 101
    integer(i_kind),dimension(npe)::ilev,iflag,mype_use
@@ -1384,7 +1383,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
             3i6,', scatter nlon,nlat=',2i6,', hour=',f6.1,', idate=',4i5,1x,a)
    endif
 
-   return 
+   return
 
 end subroutine general_read_gfsatm_nems
 
@@ -1411,7 +1410,7 @@ subroutine general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr,
   real(r_kind),dimension(grd%lat2,grd%lon2),         intent(  out) :: g_ps
   real(r_kind),dimension(grd%lat2,grd%lon2),         intent(inout) :: g_z
   real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),intent(  out) :: g_u,g_v,&
-       g_vor,g_div,g_cwmr,g_q,g_oz,g_tv 
+       g_vor,g_div,g_cwmr,g_q,g_oz,g_tv
   real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),intent(  out),optional :: g_cf 
 
 
@@ -1960,6 +1959,3 @@ subroutine general_fillv_ns(grd,sp,gridu_in,gridv_in,gridv_out)
 
    return
 end subroutine general_fillv_ns
-
-
-

@@ -104,6 +104,9 @@ module ncepnems_io
 !                size of I/O record remains as delx*dely.  Add a checking
 !                routine to assure nframe=zero.
 !
+!   def imp_physics - type of microphysics used in the GFS.  99: Zhao-Carr, 11: GFDL
+!   def lupp - if T, UPP is used and additional variables are output
+!
 ! attributes:
 !   language: f90
 !   machine:
@@ -119,9 +122,11 @@ module ncepnems_io
 !$$$ end documentation block
 
   use constants, only: zero,one,fv,r60,r3600
+  use kinds, only: i_kind
   implicit none
 
   private
+  public init_nems
   public read_nems
   public read_nems_chem
   public read_nemsatm
@@ -135,6 +140,13 @@ module ncepnems_io
   public intrp22
   public tran_gfssfc
   public error_msg
+
+  public imp_physics
+  public lupp
+
+  interface init_nems
+     module procedure init_
+  end interface
 
   interface read_nems
      module procedure read_
@@ -182,7 +194,34 @@ module ncepnems_io
 
   character(len=*),parameter::myname='ncepnems_io'
 
+  integer(i_kind) :: imp_physics
+  logical :: lupp
 contains
+
+  subroutine init_
+!$$$  subprogram documentation block
+!                .      .    .
+! subprogram:    read_nems
+!
+!   prgrmmr: Todling
+!
+! abstract:
+!
+! program history log:
+!   2019-07-11  Todling - create to initialize vars that should not be in CV file
+!
+!   input argument list:
+!
+!   output argument list:
+!
+! attributes:
+!   language:  f90
+!   machine:   ibm RS/6000 SP
+!
+!$$$ end documentation block
+     imp_physics=99
+     lupp = .false. 
+  end subroutine init_
 
   subroutine read_
 !$$$  subprogram documentation block
@@ -230,7 +269,7 @@ contains
     use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sub2grid_destroy_info
     use mpimod, only: npe,mype
     use cloud_efr_mod, only: cloud_calc_gfs,set_cloud_lower_bound
-    use control_vectors, only: cvars3d,imp_physics
+    use control_vectors, only: cvars3d
     use gridmod, only: fv3_full_hydro
     implicit none
 
@@ -580,7 +619,6 @@ contains
     use nemsio_module, only: nemsio_gfile,nemsio_getfilehead,nemsio_readrecv
     use egrid2agrid_mod,only: g_egrid2agrid,g_create_egrid2agrid,egrid2agrid_parm,destroy_egrid2agrid
     use constants, only: two,pi,half,deg2rad
-    use control_vectors, only: imp_physics
     implicit none
 
 !   Declare local parameters
@@ -1931,7 +1969,6 @@ contains
     use constants, only: two,pi,half,deg2rad
     use gsi_bundlemod, only: gsi_bundle
     use gsi_bundlemod, only: gsi_bundlegetpointer
-    use control_vectors, only: imp_physics,lupp
     use control_vectors, only: cvars3d  
     use cloud_efr_mod, only: cloud_calc_gfs
     use mpeu_util, only: getindex   
@@ -2755,7 +2792,6 @@ contains
     use constants, only: two,pi,half,deg2rad
     use gsi_bundlemod, only: gsi_bundle
     use gsi_bundlemod, only: gsi_bundlegetpointer
-    use control_vectors, only: imp_physics,lupp
     use cloud_efr_mod, only: cloud_calc_gfs
 
     implicit none

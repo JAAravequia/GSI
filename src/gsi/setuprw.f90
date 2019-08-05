@@ -83,6 +83,7 @@ subroutine setuprw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsa
 !                                           target hydrometeors (Johnson et al.
 !                                           2015 MWR; Wang and Wang 2016 MWR)
 !                                           POC: xuguang.wang@ou.edu
+!   2019-07-11  todling - introduced wrf_vars_mod (though truly not needed)
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -136,6 +137,8 @@ subroutine setuprw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsa
   use m_dtime, only: dtime_setup, dtime_check
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
+  use obsmod, only: vr_dealisingopt
+  use wrf_vars_mod, only : dbz_exist
   use setupdbz_lib, only:hx_dart
   use sparsearr, only: sparr2, new, size, writearray, fullarray
   use state_vectors, only: nsdim
