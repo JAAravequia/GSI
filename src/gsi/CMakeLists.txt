@@ -40,19 +40,19 @@ cmake_minimum_required(VERSION 2.8)
 # after all configuration dependent code (some stub and cplr), base level
 # utilities, the main are removed from the rest of source files
 
-# remove CLASS_SRC list related STUB_SRC and CPLR_SRC, as configurable
+# Remove CLASS_SRC list related STUB_SRC and CPLR_SRC, as configurable
 # grid components
-  list( REMOVE_ITEM GSIFORT_SRC ${STUB_SRC} )
-  list( REMOVE_ITEM GSIFORT_SRC ${CPLR_SRC} )
-
-# remove utility modules
-  list( REMOVE_ITEM GSIFORT_SRC ${GSIUTIL_SRC} )
-
-# remove the *main* (or mains)
-  list( REMOVE_ITEM GSIFORT_SRC ${GSIMAIN_SRC} )
-
-# remove stub_nstmod from the rest of the source files
-  list( REMOVE_ITEM GSIFORT_SRC "${CMAKE_CURRENT_SOURCE_DIR}/stub_nstmod.f90" )
+  list( REMOVE_ITEM GSIFORT_SRC
+    ${STUB_SRC}
+    ${CPLR_SRC}
+    ${CMAKE_CURRENT_SOURCE_DIR}/stub_ensmod.f90
+    ${CMAKE_CURRENT_SOURCE_DIR}/cplr_gfs_ensmod.f90
+    ${CMAKE_CURRENT_SOURCE_DIR}/gsi_fixture_REGIONAL.F90
+    ${CMAKE_CURRENT_SOURCE_DIR}/gsi_fixture_GFS.F90
+    ${CMAKE_CURRENT_SOURCE_DIR}/stub_nstmod.f90
+    ${GSIUTIL_SRC}
+    ${GSIMAIN_SRC}
+  )
 
 # remove NCDIAG, if it is a component built somewhere else.
   if( BUILD_NCDIAG )
@@ -62,12 +62,21 @@ cmake_minimum_required(VERSION 2.8)
 
 # The specific regional/WRF source files
   if(USE_WRF)
-    list( APPEND GSIFORT_SRC ${CPLR_SRC} )
+    list( APPEND GSIFORT_SRC
+	${CPLR_SRC}
+	${CMAKE_CURRENT_SOURCE_DIR}/stub_ensmod.f90
+	${CMAKE_CURRENT_SOURCE_DIR}/gsi_fixture_REGIONAL.F90
+    )
   endif()
 
 # The specific global source files
   if(BUILD_GLOBAL)
-    list( APPEND GSIFORT_SRC ${STUB_SRC} )
+    list( APPEND GSIFORT_SRC
+	${STUB_SRC}
+	${CMAKE_CURRENT_SOURCE_DIR}/stub_ensmod.f90
+	${CMAKE_CURRENT_SOURCE_DIR}/cplr_gfs_ensmod.f90
+	${CMAKE_CURRENT_SOURCE_DIR}/gsi_fixture_GFS.F90
+    )
   endif(BUILD_GLOBAL)
 
 # set up the compiler flags

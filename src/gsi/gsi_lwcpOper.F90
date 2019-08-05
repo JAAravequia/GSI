@@ -96,7 +96,7 @@ end subroutine config_
     logical,optional, intent(in):: nodetype
     mytype="[lwcpOper]"
     if(present(nodetype)) then
-      if(nodetype) mytype='lwcp'
+      if(nodetype) mytype=myNodeMold_%mytype()
     endif
   end function mytype
 

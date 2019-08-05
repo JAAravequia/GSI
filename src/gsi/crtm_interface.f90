@@ -72,7 +72,8 @@ use crtm_aod_module, only: crtm_aod_k
 use radiance_mod, only: n_actual_clouds,cloud_names,n_clouds_fwd,cloud_names_fwd, &
     n_clouds_jac,cloud_names_jac,n_actual_aerosols,aerosol_names,n_aerosols_fwd,aerosol_names_fwd, &
     n_aerosols_jac,aerosol_names_jac,rad_obs_type,cw_cv
-use control_vectors, only: imp_physics,lcalc_gfdl_cfrac
+use control_vectors, only: lcalc_gfdl_cfrac
+use ncepnems_io, only: imp_physics
 
 implicit none
 

@@ -48,7 +48,7 @@ contains
     logical,optional, intent(in):: nodetype
     mytype="[psOper]"
     if(present(nodetype)) then
-      if(nodetype) mytype='ps'
+      if(nodetype) mytype=myNodeMold_%mytype()
     endif
   end function mytype
 

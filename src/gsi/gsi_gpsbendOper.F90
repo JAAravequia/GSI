@@ -1,7 +1,7 @@
-module gsi_gpsOper
+module gsi_gpsbendOper
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:	 module gsi_gpsOper
+! subprogram:	 module gsi_gpsbendOper
 !   prgmmr:	 j guo <jguo@nasa.gov>
 !      org:	 NASA/GSFC, Global Modeling and Assimilation Office, 610.3
 !     date:	 2018-08-10
@@ -26,19 +26,19 @@ module gsi_gpsOper
   use gsi_obOper, only: obOper
   use m_gpsNode, only: gpsNode
   implicit none
-  public:: gpsOper      ! data stracture
+  public:: gpsbendOper      ! data stracture
 
-  type,extends(obOper):: gpsOper
+  type,extends(obOper):: gpsbendOper
   contains
     procedure,nopass:: mytype
     procedure,nopass:: nodeMold
     procedure:: setup_
     procedure:: intjo1_
     procedure:: stpjo1_
-  end type gpsOper
+  end type gpsbendOper
 
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  character(len=*),parameter :: myname='gsi_gpsOper'
+  character(len=*),parameter :: myname='gsi_gpsbendOper'
   type(gpsNode),save,target:: myNodeMold_
 
 contains
@@ -46,9 +46,9 @@ contains
     implicit none
     character(len=:),allocatable:: mytype
     logical,optional, intent(in):: nodetype
-    mytype="[gpsOper]"
+    mytype="[gpsbendOper]"
     if(present(nodetype)) then
-      if(nodetype) mytype='gps'
+      if(nodetype) mytype=myNodeMold_%mytype()
     endif
   end function mytype
 
@@ -61,8 +61,7 @@ contains
   end function nodeMold
 
   subroutine setup_(self, lunin, mype, is, nobs, init_pass,last_pass)
-    use gpsbend_setup, only: bend_setup => setup
-    use  gpsref_setup, only:  ref_setup => setup
+    use gpsbend_setup, only: setup
     use kinds, only: i_kind
     use gsi_obOper, only: len_obstype
     use gsi_obOper, only: len_isis
@@ -77,7 +76,7 @@ contains
 
     use mpeu_util, only: perr,die
     implicit none
-    class(gpsOper ), intent(inout):: self
+    class(gpsbendOper), intent(inout):: self
     integer(i_kind), intent(in):: lunin
     integer(i_kind), intent(in):: mype
     integer(i_kind), intent(in):: is
@@ -101,19 +100,8 @@ contains
 
     diagsave  = write_diag(jiter) .and. diag_conv
 
-    select case(obstype)
-    case ("gps_ref")
-      call ref_setup(self%obsLL(:), self%odiagLL(:), &
+    call setup(self%obsLL(:), self%odiagLL(:), &
         lunin,mype,awork(:,iwork),nele,nobs,toss_gps_sub,is,init_pass,last_pass,diagsave)
-    case ("gps_bnd")
-      call bend_setup(self%obsLL(:), self%odiagLL(:), &
-        lunin,mype,awork(:,iwork),nele,nobs,toss_gps_sub,is,init_pass,last_pass,diagsave)
-    case default
-      call perr(myname_,'unknown value, obstype =',obstype)
-      call perr(myname_,'                  isis =',isis)
-      call perr(myname_,'                    is =',is)
-      call  die(myname_)
-    end select
 
   end subroutine setup_
 
@@ -125,7 +113,7 @@ contains
     use m_obsLList, only: obsLList_headNode
     use kinds     , only: i_kind, r_quad
     implicit none
-    class(gpsOper  ),intent(in   ):: self
+    class(gpsbendOper),intent(in   ):: self
     integer(i_kind ),intent(in   ):: ibin
     type(gsi_bundle),intent(inout):: rval   ! (ibin)
     type(gsi_bundle),intent(in   ):: sval   ! (ibin)
@@ -150,7 +138,7 @@ contains
     use m_obsLList, only: obsLList_headNode
     use kinds, only: r_quad,r_kind,i_kind
     implicit none
-    class(gpsOper  ),intent(in):: self
+    class(gpsbendOper),intent(in):: self
     integer(i_kind ),intent(in):: ibin
     type(gsi_bundle),intent(in):: dval
     type(gsi_bundle),intent(in):: xval
@@ -170,4 +158,4 @@ contains
     headNode => null()
   end subroutine stpjo1_
 
-end module gsi_gpsOper
+end module gsi_gpsbendOper

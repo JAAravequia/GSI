@@ -52,11 +52,11 @@ subroutine setupt(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
   use oneobmod, only: magoberr
 
   use gridmod, only: nsig,twodvar_regional,regional
-  use gridmod, only: get_ijk
+  use gridmod, only: get_ijk,pt_ll
   use jfunc, only: jiter,last,jiterstart,miter
 
   use guess_grids, only: nfldsig, hrdifsig,ges_lnprsl,&
-       geop_hgtl,ges_tsen,pt_ll,pbl_height
+       geop_hgtl,ges_tsen,pbl_height
   use state_vectors, only: svars3d, levels, nsdim
 
   use constants, only: zero, one, four,t0c,rd_over_cp,three,rd_over_cp_mass,ten

@@ -48,7 +48,7 @@ contains
     logical,optional, intent(in):: nodetype
     mytype="[colvkOper]"
     if(present(nodetype)) then
-      if(nodetype) mytype='colvk'
+      if(nodetype) mytype=myNodeMold_%mytype()
     endif
   end function mytype
 

@@ -31,7 +31,8 @@ module gsi_obOperTypeManager
   use gsi_cldchOper   , only: cldchOper
   use gsi_colvkOper   , only: colvkOper
   use gsi_dwOper      , only: dwOper
-  use gsi_gpsOper     , only: gpsOper
+  use gsi_gpsbendOper , only: gpsbendOper
+  use gsi_gpsrefOper  , only: gpsrefOper
   use gsi_gustOper    , only: gustOper
   use gsi_howvOper    , only: howvOper
   use gsi_lcbasOper   , only: lcbasOper
@@ -107,7 +108,8 @@ module gsi_obOperTypeManager
   public:: iobOper_pcp
   public:: iobOper_oz
   public:: iobOper_o3l
-  public:: iobOper_gps
+  public:: iobOper_gpsbend
+  public:: iobOper_gpsref
   public:: iobOper_rad
   public:: iobOper_tcp
  !public:: iobOper_lag
@@ -151,7 +153,8 @@ module gsi_obOperTypeManager
     enumerator:: iobOper_pcp
     enumerator:: iobOper_oz
     enumerator:: iobOper_o3l
-    enumerator:: iobOper_gps
+    enumerator:: iobOper_gpsbend
+    enumerator:: iobOper_gpsref
     enumerator:: iobOper_rad
     enumerator:: iobOper_tcp
    !enumerator:: iobOper_lag
@@ -211,7 +214,8 @@ module gsi_obOperTypeManager
   type(    pcpOper), target, save::      pcpOper_mold
   type(     ozOper), target, save::       ozOper_mold
   type(    o3lOper), target, save::      o3lOper_mold
-  type(    gpsOper), target, save::      gpsOper_mold
+  type(gpsbendOper), target, save::  gpsbendOper_mold
+  type( gpsrefOper), target, save::   gpsrefOper_mold
   type(    radOper), target, save::      radOper_mold
   type(    tcpOper), target, save::      tcpOper_mold
  !type(    lagOper), target, save::      lagOper_mold
@@ -271,22 +275,27 @@ function dtype2index_(dtype) result(index_)
     case("gome"   ); index_= iobOper_oz
     case("ompstc8"); index_= iobOper_oz
     case("ompsnp" ); index_= iobOper_oz
+    case("ompsnm" ); index_= iobOper_oz
 
   case("o3l"    ,"[o3loper]"    ); index_= iobOper_o3l
-    case("o3lev"  ); index_= iobOper_o3l
-    case("mls20"  ); index_= iobOper_o3l
-    case("mls22"  ); index_= iobOper_o3l
-    case("mls30"  ); index_= iobOper_o3l
-    case("mls55"  ); index_= iobOper_o3l
-    case("omieff" ); index_= iobOper_o3l
-    case("tomseff"); index_= iobOper_o3l
+    case("o3lev"    ); index_= iobOper_o3l
+    case("mls20"    ); index_= iobOper_o3l
+    case("mls22"    ); index_= iobOper_o3l
+    case("mls30"    ); index_= iobOper_o3l
+    case("mls55"    ); index_= iobOper_o3l
+    case("omieff"   ); index_= iobOper_o3l
+    case("tomseff"  ); index_= iobOper_o3l
+    case("ompslpuv" ); index_= iobOper_o3l
+    case("ompslpvis"); index_= iobOper_o3l
 
-  case("gps"    ,"[gpsoper]"    ); index_= iobOper_gps
-    case("gps_ref"); index_= iobOper_gps
-    case("gps_bnd"); index_= iobOper_gps
+  case("gpsbend","[gpsbendoper]"); index_= iobOper_gpsbend
+    case("gps_bnd"); index_= iobOper_gpsbend
+
+  case("gpsref" ,"[gpsrefoper]" ); index_= iobOper_gpsref
+    case("gps_ref"); index_= iobOper_gpsref
 
   case("rad"    ,"[radoper]"    ); index_= iobOper_rad
-        ! platid /= "aqua"
+        !
     case("abi"    ); index_= iobOper_rad
         !
     case("amsua"  ); index_= iobOper_rad
@@ -300,8 +309,7 @@ function dtype2index_(dtype) result(index_)
         !
     case("atms"   ); index_= iobOper_rad
     case("saphir" ); index_= iobOper_rad
-        ! platid == "aqua"
-   !case("amsua"  ); index_= iobOper_rad
+        !
     case("airs"   ); index_= iobOper_rad
     case("hsb"    ); index_= iobOper_rad
         !
@@ -379,7 +387,7 @@ function dtype2index_(dtype) result(index_)
   case("dbz"    ,"[dbzoper]"    ); index_= iobOper_dbz
 
   case("cldtot" ,"[cldtotoper]" ); index_= iobOper_cldtot
-  case("mta_cld"    ); index_= iobOper_cldtot
+    case("mta_cld"  ); index_= iobOper_cldtot
 
         ! Known dtype values, but no known obOper type defined
   case("gos_ctp"); index_= obOper_undef
@@ -446,7 +454,8 @@ function index2vmold_(iobOper) result(vmold_)
   case(iobOper_pcp      ); vmold_ =>     pcpOper_mold
   case(iobOper_oz       ); vmold_ =>      ozOper_mold
   case(iobOper_o3l      ); vmold_ =>     o3lOper_mold
-  case(iobOper_gps      ); vmold_ =>     gpsOper_mold
+  case(iobOper_gpsbend  ); vmold_ => gpsbendOper_mold
+  case(iobOper_gpsref   ); vmold_ =>  gpsrefOper_mold
   case(iobOper_rad      ); vmold_ =>     radOper_mold
   case(iobOper_tcp      ); vmold_ =>     tcpOper_mold
  !case(iobOper_lag      ); vmold_ =>     lagOper_mold
@@ -561,7 +570,8 @@ subroutine cobstype_config_()
     cobstype(iobOper_pcp        )  ="precipitation       " ! pcp_ob_type
     cobstype(iobOper_oz         )  ="ozone               " ! oz_ob_type
     cobstype(iobOper_o3l        )  ="level ozone         " ! o3l_ob_type
-    cobstype(iobOper_gps        )  ="gps                 " ! gps_ob_type
+    cobstype(iobOper_gpsbend    )  ="gps bending angle   " ! using gps_ob_type
+    cobstype(iobOper_gpsref     )  ="gps refractivity    " ! using gps_ob_type
     cobstype(iobOper_rad        )  ="radiance            " ! rad_ob_type
     cobstype(iobOper_tcp        )  ="tcp (tropic cyclone)" ! tcp_ob_type
     !cobstype(iobOper_lag        )  ="lagrangian tracer   " ! lag_ob_type
@@ -588,7 +598,7 @@ subroutine cobstype_config_()
     cobstype(iobOper_lwcp       )  ="lwcp                " ! lwcp_ob_type
     cobstype(iobOper_light      )  ="light               " ! light_ob_type
     cobstype(iobOper_dbz        )  ="dbz                 " ! dbz_ob_type
-    cobstype(iobOper_cldtot     )  ="cldtot              "
+    cobstype(iobOper_cldtot     )  ="cldtot              " ! using q_ob_type
 
   cobstype_configured_=.true.
 end subroutine cobstype_config_

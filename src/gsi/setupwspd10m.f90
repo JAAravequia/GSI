@@ -53,7 +53,7 @@ subroutine setupwspd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
   use kinds, only: r_kind,r_single,r_double,i_kind
 
   use guess_grids, only: hrdifsig,nfldsig,ges_lnprsl, &
-               sfcmod_gfs,sfcmod_mm5,comp_fact10,pt_ll     
+               sfcmod_gfs,sfcmod_mm5,comp_fact10
   use m_obsdiagNode, only: obs_diag
   use m_obsdiagNode, only: obs_diags
   use m_obsdiagNode, only: obsdiagLList_nextNode
@@ -75,7 +75,7 @@ subroutine setupwspd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
   use gsi_4dvar, only: nobs_bins,hr_obsbin,min_offset
   use oneobmod, only: magoberr,maginnov,oneobtest
   use gridmod, only: nsig
-  use gridmod, only: get_ij,twodvar_regional,regional
+  use gridmod, only: get_ij,twodvar_regional,regional,pt_ll
   use constants, only: zero,tiny_r_kind,one,one_tenth,half,wgtlim,rd,grav,&
             two,cg_term,three,four,five,ten,huge_single,r1000,r3600,&
             grav_ratio,flattening,grav,grav_equator,somigliana, &

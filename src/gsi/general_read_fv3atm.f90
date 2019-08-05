@@ -56,7 +56,7 @@ subroutine general_read_fv3atm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
    use gsi_bundlemod, only: gsi_bundle
    use gsi_bundlemod, only: gsi_bundlegetpointer
    use gsi_metguess_mod, only: gsi_metguess_get   
-   use control_vectors, only: imp_physics
+   use ncepnems_io, only: imp_physics
 
 
    implicit none
