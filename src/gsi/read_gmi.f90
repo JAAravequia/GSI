@@ -232,7 +232,6 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   integer(i_kind),allocatable       :: pos_statis(:)
   integer(i_kind),allocatable       :: npos_all(:,:)
 
-  logical ::  ops_bufr
 ! ---- skip some obs at the beginning and end of a scan ----
   integer(i_kind):: radedge_min,radedge_max,iscan_pos,iedge_log,j2
   real(r_kind)    :: ptime,timeinflat,crit0
@@ -243,7 +242,6 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 ! Initialize variables
   call init_(maxchanl,maxobs)
   use_swath_edge = .false.
-  ops_bufr = .true.
 
   do_noise_reduction = .true.
   if (gmi_method == 0) do_noise_reduction = .false.
