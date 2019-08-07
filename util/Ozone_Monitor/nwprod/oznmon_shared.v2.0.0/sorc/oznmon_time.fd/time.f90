@@ -106,7 +106,8 @@ program main
 ! File exists.  Read header
   write(6,*)'call read_diag_header'
   call read_diag_header( lndiag, header_fix, header_nlev, new_hdr )
-
+  write(6,*)'after read_diag_header, new_hdr = ', new_hdr 
+  
 ! Extract observation type, satellite id, and number of levels
   satype = header_fix%obstype
   satsis = header_fix%isis
@@ -120,10 +121,10 @@ program main
     n_levs = mls3_levs
   end if
 
-!  write(6,*)'satype,dplat,n_levs=',satype,' ',dplat,n_levs
+  write(6,*)'satype,dplat,n_levs=',satype,' ',dplat,n_levs
 
   string = trim(satype)//'_'//trim(dplat)
-!  write(6,*)'string,satname=',string,' ',satname
+  write(6,*)'string,satname=',string,' ',satname
   if ( trim(string) /= trim(satname) ) then
      write(6,*)'***ERROR*** inconsistent instrument types'
      write(6,*)'  satname,string  =',satname,' ',string
@@ -132,8 +133,8 @@ program main
 
 
 ! Allocate arrays to hold observational information
-!  write(6,*)' '
-!  write(6,*)'allocate arrays'
+  write(6,*)' '
+  write(6,*)'allocate arrays'
   allocate ( prs_nlev(n_levs))
   allocate (omg_cor(n_levs,mregion,2), &
        cnt(n_levs,mregion), & 
@@ -263,8 +264,8 @@ program main
 
    enddo   ! END do iobs=1,iread
 
-!  End of loop over diagnostic file
-  enddo loopd
+  enddo loopd !  End of loop over diagnostic file
+
 
   close(lndiag)
   print*, 'read in ', nobs, ' observations in total',cnt(12,1),cnt(12,4),sum(omg_cor),sum(penalty)
