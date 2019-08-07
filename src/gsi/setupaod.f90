@@ -542,10 +542,6 @@ subroutine setupaod(obsLL,odiagLL,lunin,mype,nchanl,nreal,nobs,&
                        write(6,*)'setupaod: error obsptr'
                        call stop2(280)
                     end if
-                    if (obsptr%indxglb/=(ioid(n)-1)*nchanl+ii) then
-                       write(6,*)'setupaod: error writing diagnostics'
-                       call stop2(281)
-                    end if
 
                     ioff=ioff0
                     do jj=1,miter

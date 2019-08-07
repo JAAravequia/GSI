@@ -42,6 +42,7 @@ use gsi_4dvar, only: nobs_bins, l4dvar, lsqrtb, nsubwin
 use jfunc, only: jiter, miter, niter, iter
 
 use gsi_obOperTypeManager, only: nobs_type => obOper_count
+use gsi_obOperTypeManager, only: obOper_typeinfo
 use mpimod, only: mype
 use control_vectors, only: control_vector,allocate_cv,read_cv,deallocate_cv, &
     dot_product,assignment(=)
@@ -74,8 +75,6 @@ integer(i_kind) :: iobsconv
 ! ------------------------------------------------------------------------------
 type(control_vector) :: fcsens
 real(r_kind), allocatable :: sensincr(:,:,:)
-character(len=5) :: cobtype(nobs_type)
-integer(i_kind),parameter:: my_nobs_type=34
 
 integer(i_kind),save,allocatable:: obscounts(:,:)
 
@@ -194,10 +193,6 @@ real(r_kind) :: zjx
 integer(i_kind) :: ii
 character(len=80),allocatable,dimension(:)::fname
 
-if(my_nobs_type/=nobs_type) then
-   write(6,*)'init_fc_sens: inconsistent nobs_types, code needs update'
-   call stop2(999)
-endif
 if (mype==0) then
    write(6,*)'init_fc_sens: lobsensincr,lobsensfc,lobsensjb=', &
                             lobsensincr,lobsensfc,lobsensjb
@@ -289,72 +284,8 @@ if (lobsensfc) then
 endif
 888 format(A,3(1X,ES25.18))
 
-! Define short name for obs types
-cobtype(typeIndex_(     "ps")) ="spr  "
-cobtype(typeIndex_(      "t")) ="tem  "
-cobtype(typeIndex_(      "w")) ="uv   "
-cobtype(typeIndex_(      "q")) ="hum  "
-cobtype(typeIndex_(    "spd")) ="spd  "
-cobtype(typeIndex_(     "rw")) ="rw   "
-cobtype(typeIndex_(     "dw")) ="dw   "
-cobtype(typeIndex_(    "sst")) ="sst  "
-cobtype(typeIndex_(     "pw")) ="pw   "
-cobtype(typeIndex_(    "pcp")) ="pcp  "
-cobtype(typeIndex_(     "oz")) ="oz   "
-cobtype(typeIndex_(    "o3l")) ="o3l  "
-cobtype(typeIndex_(    "gps")) ="gps  "
-cobtype(typeIndex_(    "rad")) ="rad  "
-cobtype(typeIndex_(    "tcp")) ="tcp  "
-!cobtype(typeIndex_(    "lag")) ="lag  "
-cobtype(typeIndex_(  "colvk")) ="colvk"
-cobtype(typeIndex_(   "aero")) ="aero "
-!cobtype(typeIndex_(  "aerol")) ="aerol"
-cobtype(typeIndex_(  "pm2_5")) ="pm2_5"
-cobtype(typeIndex_(   "pm10")) ="pm10 "
-cobtype(typeIndex_(   "gust")) ="gust "
-cobtype(typeIndex_(    "vis")) ="vis  "
-cobtype(typeIndex_(   "pblh")) ="pblh "
-cobtype(typeIndex_("wspd10m")) ="ws10m"
-cobtype(typeIndex_(   "td2m")) ="td2m "
-cobtype(typeIndex_(   "mxtm")) ="mxtm "
-cobtype(typeIndex_(   "mitm")) ="mitm "
-cobtype(typeIndex_(   "pmsl")) ="pmsl "
-cobtype(typeIndex_(   "howv")) ="howv "
-cobtype(typeIndex_(  "tcamt")) ="tcamt"
-cobtype(typeIndex_(  "lcbas")) ="lcbas"
-cobtype(typeIndex_(  "cldch")) ="cldch"
-cobtype(typeIndex_("uwnd10m")) ="u10m "
-cobtype(typeIndex_("vwnd10m")) ="v10m "
-cobtype(typeIndex_(   "swcp")) ="swcp "
-cobtype(typeIndex_(   "lwcp")) ="lwcp "
-cobtype(typeIndex_( &
-                 "lightlwcp")) ="light"
-cobtype(typeIndex_(    "dbz")) ="dbz  "
-
 return
 end subroutine init_fc_sens
-
-function typeIndex_(str) result(index_)
-  use gsi_obOperTypeManager, only: obOper_typeIndex
-  implicit none
-  integer(i_kind):: index_
-  character(len=*),intent(in):: str
-
-  character(len=*),parameter:: myname_=myname//"::typeIndex_"
-  integer(i_kind):: lbnd,ubnd
-  lbnd=lbound(cobtype,1)
-  ubnd=ubound(cobtype,1)
-
-  index_=obOper_typeIndex(str)
-
-  if(index_<lbnd .or. index_>ubnd) then
-    call perr(myname_,"invalid value, index_ =",index_)
-    call perr(myname_,"                  str =",str)
-    call perr(myname_,"      lbound(cobtype) =",lbnd)
-    call perr(myname_,"      ubound(cobtype) =",ubnd)
-    call  die(myname_)
-  endif
-end function typeIndex_
 ! ------------------------------------------------------------------------------
 
 subroutine save_fc_sens
@@ -388,7 +319,7 @@ if (mype==0) then
 
 !  Full stats
    do jj=1,nobs_type
-      write(6,'(A,2X,I3,2X,A)')'Obs types:',jj,cobtype(jj)
+      write(6,'(A,2X,I3,2X,A)')'Obs types:',jj,obOper_typeinfo(jj)
    enddo
    write(6,'(A,2X,I4)')'Obs bins:',nobs_bins
    write(6,*)'Obs Count Begin'
@@ -421,7 +352,7 @@ if (mype==0) then
       do ii=1,nobs_bins
          zz=zz+sensincr(ii,jj,kk)
       enddo
-      if (zz/=zero) write(6,'(A,2X,A3,2X,ES12.5)')'Obs Impact type',cobtype(jj),zz
+      if (zz/=zero) write(6,'(A,2X,A3,2X,ES12.5)')'Obs Impact type',obOper_typeinfo(jj),zz
    enddo
 
 !  Summary by obs bins

@@ -187,8 +187,10 @@ subroutine intspd_(spdhead,rval,sval)
            endif
         else
            if(luse_obsdiag)then
-              if (spdptr%luse) spdptr%diags%tldepart(jiter)=zero
-              if (lsaveobsens) spdptr%diags%obssen(jiter)=zero
+              !-- if (spdptr%luse) spdptr%diags%tldepart(jiter)=zero
+              if (spdptr%luse) call obsdiagNode_set(spdptr%diags,jiter=jiter,tldepart=zero)
+              !-- if (lsaveobsens) spdptr%diags%obssen(jiter)=zero
+              if (lsaveobsens) call obsdiagNode_set(spdptr%diags,jiter=jiter,obssen=zero)
            end if
         endif
 
@@ -199,7 +201,8 @@ subroutine intspd_(spdhead,rval,sval)
         uanl=spdptr%uges+w1* su(j1)+w2* su(j2)+w3* su(j3)+w4* su(j4)
         vanl=spdptr%vges+w1* sv(j1)+w2* sv(j2)+w3* sv(j3)+w4* sv(j4)
         spdanl=sqrt(uanl*uanl+vanl*vanl)
-        if (luse_obsdiag .and. spdptr%luse) spdptr%diags%tldepart(jiter)=spdanl-spdtra
+        !-- if (luse_obsdiag .and. spdptr%luse) spdptr%diags%tldepart(jiter)=spdanl-spdtra
+        if (luse_obsdiag .and. spdptr%luse) call obsdiagNode_set(spdptr%diags,jiter=jiter,tldepart=spdanl-spdtra)
 
         if (l_do_adjoint) then
            valu=zero
@@ -210,7 +213,8 @@ subroutine intspd_(spdhead,rval,sval)
 !          Adjoint
 !          if(spdanl > tiny_r_kind*100._r_kind) then
            if (spdanl>EPSILON(spdanl)) then
-              if (luse_obsdiag .and. lsaveobsens) spdptr%diags%obssen(jiter)=grad
+              !-- if (luse_obsdiag .and. lsaveobsens) spdptr%diags%obssen(jiter)=grad
+              if (luse_obsdiag .and. lsaveobsens) call obsdiagNode_set(spdptr%diags,jiter=jiter,obssen=grad)
               valu=uanl/spdanl
               valv=vanl/spdanl
               if (nlnqc_iter .and. spdptr%pg > tiny_r_kind .and.  &
