@@ -28,7 +28,7 @@ module set_crtm_cloudmod
   use mpeu_util, only: die
   use mpimod, only: mype          
   use radiance_mod, only: cw_cv  
-  use control_vectors, only: imp_physics 
+  use ncepnems_io, only: imp_physics 
   implicit none
 
 private

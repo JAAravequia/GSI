@@ -96,7 +96,7 @@ end subroutine config_
     logical,optional, intent(in):: nodetype
     mytype="[lightOper]"
     if(present(nodetype)) then
-      if(nodetype) mytype='light'
+      if(nodetype) mytype=myNodeMold_%mytype()
     endif
   end function mytype
 

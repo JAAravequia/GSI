@@ -48,7 +48,7 @@ contains
     logical,optional, intent(in):: nodetype
     mytype="[lcbasOper]"
     if(present(nodetype)) then
-      if(nodetype) mytype='lcbas'
+      if(nodetype) mytype=myNodeMold_%mytype()
     endif
   end function mytype
 

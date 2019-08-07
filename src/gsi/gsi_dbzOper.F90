@@ -57,7 +57,7 @@ contains
     logical,optional, intent(in):: nodetype
     mytype="[dbzOper]"
     if(present(nodetype)) then
-      if(nodetype) mytype='dbz'
+      if(nodetype) mytype=myNodeMold_%mytype()
     endif
   end function mytype
 

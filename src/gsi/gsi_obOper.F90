@@ -173,7 +173,7 @@ abstract interface
     ! nodetype_=.false.
     ! if(present(nodetype)) nodetype_=nodetype
     ! if(nodetype_) then
-    !   mytype="radNode"
+    !   if(nodetype) mytype=myNodeMold_%mytype()
     ! else
     !   mytype="[radOper]"
     ! endif

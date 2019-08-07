@@ -1,12 +1,12 @@
-module gsi_aeroOper
+module gsi_gpsrefOper
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:	 module gsi_aeroOper
+! subprogram:	 module gsi_gpsrefOper
 !   prgmmr:	 j guo <jguo@nasa.gov>
 !      org:	 NASA/GSFC, Global Modeling and Assimilation Office, 610.3
 !     date:	 2018-08-10
 !
-! abstract: an obOper extension for aeroNode type
+! abstract: an obOper extension for gpsNode type
 !
 ! program history log:
 !   2018-08-10  j guo   - added this document block
@@ -23,33 +23,30 @@ module gsi_aeroOper
 
 ! module interface:
 
-  use gsi_obOper, only: obOper
-  use aero_setup, only: setup
-  use m_aeroNode, only: aeroNode
-  use intaodmod , only: intjo => intaod
-  use stpaodmod , only: stpjo => stpaod
+  use gsi_gpsbendOper, only: gpsbendOper
+  use m_gpsNode, only: gpsNode
   implicit none
-  public:: aeroOper      ! data stracture
+  public:: gpsrefOper      ! data stracture
 
-  type,extends(obOper):: aeroOper
+  type,extends(gpsbendOper):: gpsrefOper
   contains
     procedure,nopass:: mytype
     procedure,nopass:: nodeMold
     procedure:: setup_
     procedure:: intjo1_
     procedure:: stpjo1_
-  end type aeroOper
+  end type gpsrefOper
 
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  character(len=*),parameter :: myname='gsi_aeroOper'
-  type(aeroNode),save,target:: myNodeMold_
+  character(len=*),parameter :: myname='gsi_gpsrefOper'
+  type(gpsNode),save,target:: myNodeMold_
 
 contains
   function mytype(nodetype)
     implicit none
     character(len=:),allocatable:: mytype
     logical,optional, intent(in):: nodetype
-    mytype="[aeroOper]"
+    mytype="[gpsrefOper]"
     if(present(nodetype)) then
       if(nodetype) mytype=myNodeMold_%mytype()
     endif
@@ -64,17 +61,22 @@ contains
   end function nodeMold
 
   subroutine setup_(self, lunin, mype, is, nobs, init_pass,last_pass)
+    use gpsref_setup, only: setup
     use kinds, only: i_kind
     use gsi_obOper, only: len_obstype
     use gsi_obOper, only: len_isis
 
+    use m_rhs  , only: awork => rhs_awork
+    use m_rhs  , only: iwork => i_gps
+    use m_rhs  , only: toss_gps_sub => rhs_toss_gps
+
     use obsmod  , only: write_diag
-    use aeroinfo, only: diag_aero
+    use convinfo, only: diag_conv
     use jfunc   , only: jiter
 
-    use mpeu_util, only: die
+    use mpeu_util, only: perr,die
     implicit none
-    class(aeroOper ), intent(inout):: self
+    class(gpsrefOper ), intent(inout):: self
     integer(i_kind), intent(in):: lunin
     integer(i_kind), intent(in):: mype
     integer(i_kind), intent(in):: is
@@ -87,29 +89,32 @@ contains
 
     character(len=len_obstype):: obstype
     character(len=len_isis   ):: isis
-    integer(i_kind):: nreal,nchanl,ier
+    integer(i_kind):: nreal,nchanl,ier,nele
     logical:: diagsave
 
     if(nobs == 0) return
 
     read(lunin,iostat=ier) obstype,isis,nreal,nchanl
     if(ier/=0) call die(myname_,'read(obstype,...), iostat =',ier)
+    nele = nreal+nchanl
 
-    diagsave  = write_diag(jiter) .and. diag_aero
+    diagsave  = write_diag(jiter) .and. diag_conv
 
     call setup(self%obsLL(:), self%odiagLL(:), &
-        lunin,mype,nchanl,nreal,nobs,obstype,isis,is,diagsave,init_pass)
+        lunin,mype,awork(:,iwork),nele,nobs,toss_gps_sub,is,init_pass,last_pass,diagsave)
 
+  return
   end subroutine setup_
 
   subroutine intjo1_(self, ibin, rval,sval, qpred,sbias)
+    use intgpsmod, only: intjo => intgps
     use gsi_bundlemod  , only: gsi_bundle
     use bias_predictors, only: predictors
     use m_obsNode , only: obsNode
     use m_obsLList, only: obsLList_headNode
     use kinds     , only: i_kind, r_quad
     implicit none
-    class(aeroOper  ),intent(in   ):: self
+    class(gpsrefOper  ),intent(in   ):: self
     integer(i_kind ),intent(in   ):: ibin
     type(gsi_bundle),intent(inout):: rval   ! (ibin)
     type(gsi_bundle),intent(in   ):: sval   ! (ibin)
@@ -127,13 +132,14 @@ contains
   end subroutine intjo1_
 
   subroutine stpjo1_(self, ibin, dval,xval,pbcjo,sges,nstep,dbias,xbias)
+    use stpgpsmod, only: stpjo => stpgps
     use gsi_bundlemod, only: gsi_bundle
     use bias_predictors, only: predictors
     use m_obsNode , only: obsNode
     use m_obsLList, only: obsLList_headNode
     use kinds, only: r_quad,r_kind,i_kind
     implicit none
-    class(aeroOper  ),intent(in):: self
+    class(gpsrefOper  ),intent(in):: self
     integer(i_kind ),intent(in):: ibin
     type(gsi_bundle),intent(in):: dval
     type(gsi_bundle),intent(in):: xval
@@ -153,4 +159,4 @@ contains
     headNode => null()
   end subroutine stpjo1_
 
-end module gsi_aeroOper
+end module gsi_gpsrefOper

@@ -49,7 +49,7 @@ contains
     logical,optional, intent(in):: nodetype
     mytype="[dwOper]"
     if(present(nodetype)) then
-      if(nodetype) mytype='dw'
+      if(nodetype) mytype=myNodeMold_%mytype()
     endif
   end function mytype
 

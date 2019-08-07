@@ -42,7 +42,7 @@
                        l4dvar,nhr_obsbin,nhr_subwin,nwrvecs,iorthomax,&
                        lbicg,lsqrtb,lcongrad,lbfgsmin,ltlint,ladtest,ladtest_obs, lgrtest,&
                        idmodel,clean_4dvar,iwrtinc,lanczosave,jsiga,ltcost,liauon, &
-		       l4densvar,ens_nstarthr,lnested_loops,lwrite4danl,nhr_anal,thin4d
+		       l4densvar,ens_nstarthr,lnested_loops,lwrite4danl,nhr_anal,thin4d,tau_fcst,efsoi_order
   use gsi_4dvar, only: mPEs_observer
   use m_obsdiags, only: alwaysLocal => obsdiags_alwaysLocal
   use obs_ferrscale, only: lferrscale
@@ -50,7 +50,7 @@
   use radinfo, only: retrieval,diag_rad,init_rad,init_rad_vars,adp_anglebc,angord,upd_pred,&
                        biaspredvar,use_edges,passive_bc,newpc4pred,final_rad_vars,emiss_bc,&
                        ssmis_method,ssmis_precond,gmi_method,amsr2_method,bias_zero_start, &
-                       reset_bad_radbc
+                       reset_bad_radbc,cld_det_dec2bin,diag_version
   use radinfo, only: tzr_qc,tzr_bufrsave
   use radinfo, only: crtm_coeffs_path
   use ozinfo, only: diag_ozone,init_oz
@@ -58,7 +58,8 @@
   use coinfo, only: diag_co,init_co
   use convinfo, only: init_convinfo, &
                       diag_conv,&
-                      use_prepb_satwnd,id_drifter, ec_amv_qc
+                      use_prepb_satwnd,id_drifter, ec_amv_qc,&
+                      id_ship
   use lightinfo, only: diag_light,init_light
 
   use oneobmod, only: oblon,oblat,obpres,obhourset,obdattim,oneob_type,&
@@ -80,7 +81,7 @@
      clip_supersaturation
   use state_vectors, only: init_anasv,final_anasv
   use control_vectors, only: init_anacv,final_anacv,nrf,nvars,nrf_3d,cvars3d,cvars2d,&
-     nrf_var,imp_physics,lupp,lcalc_gfdl_cfrac 
+     nrf_var,lcalc_gfdl_cfrac 
   use derivsmod, only: init_anadv
   use berror, only: norh,ndeg,vs,bw,init_berror,hzscl,hswgt,pert_berr,pert_berr_fct,&
      bkgv_flowdep,bkgv_rewgtfct,bkgv_write,fpsproj,nhscrf,adjustozvar,fut2ps,cwcoveqqcov
@@ -124,7 +125,7 @@
                          beta_s0,s_ens_h,s_ens_v,init_hybrid_ensemble_parameters,&
                          readin_localization,write_ens_sprd,eqspace_ensgrid,grid_ratio_ens,&
                          readin_beta,use_localization_grid,use_gfs_ens,q_hyb_ens,i_en_perts_io, &
-                         l_ens_in_diff_time,ensemble_path,ens_fast_read
+                         l_ens_in_diff_time,ensemble_path,ens_fast_read,sst_staticB
   use rapidrefresh_cldsurf_mod, only: init_rapidrefresh_cldsurf, &
                             dfi_radar_latent_heat_time_period,metar_impact_radius,&
                             metar_impact_radius_lowcloud,l_gsd_terrain_match_surftobs, &
@@ -159,6 +160,8 @@
        radiance_obstype_destroy
   use gsi_nstcouplermod, only: gsi_nstcoupler_init_nml
   use gsi_nstcouplermod, only: nst_gsi,nstinfo,zsea1,zsea2,fac_dtl,fac_tsl
+  use ncepnems_io, only: init_nems,imp_physics,lupp
+  use wrf_vars_mod, only: init_wrf_vars
 
   implicit none
 
@@ -380,6 +383,7 @@
 !                       by Ming Hu's "logical l_closeobs" for all variables.
 !  01-04-2018 Apodaca   add diag_light and lightinfo for GOES/GLM lightning
 !                           data assimilation
+!  08-16-2018 akella    id_ship flag - modify KX values for ships if set
 !  08-25-2018 Collard   Introduce bias_zero_start
 !  09-12-2018 Ladwig    added option l_precip_clear_only
 !  03-28-2019 Ladwig    merging additional options for cloud product assimilation
@@ -390,6 +394,8 @@
 !  05-09-2019 mtong     move initializing derivative vector here
 !  06-19-2019 Hu        Add option reset_bad_radbc for reseting radiance bias correction when it is bad
 !  06-25-2019 Hu        Add option print_obs_para to turn on OBS_PARA list
+!  07-09-2019 Todling   Introduce cld_det_dec2bin and diag_version
+!  07-11-2019 Todling   move vars imp_physics,lupp from CV to init_nems
 !
 !EOP
 !-------------------------------------------------------------------------
@@ -519,6 +525,7 @@
 !     use_readin_anl_sfcmask  - option to use readin surface mask
 !     use_prepb_satwnd - allow using satwnd''s from prepbufr (historical) file
 !     id_drifter  -  option to identify drifting buoy observations (modify KX from 180/280)
+!     id_ship     -  option to identify ship          observations (modify KX from 180)
 !     use_gfs_stratosphere - for now, can only be set to true if nems_nmmb_regional=true.  Later extend
 !                             to other regional models.  When true, a guess gfs valid at the same time
 !                             as the nems-nmmb guess is used to replace the upper levels with gfs values.
@@ -571,8 +578,10 @@
 !     cao_check - if T, turn on cold-air-outbreak screening for quality control
 !     binary_diag - trigger binary diag-file output (being phased out)
 !     netcdf_diag - trigger netcdf diag-file output
-!
-!      l_wcp_cwm      - namelist logical whether to use swcp/lwcp operator that includes cwm
+!     diag_version - specifies desired version of diag files
+!     l_wcp_cwm - namelist logical whether to use swcp/lwcp operator that includes cwm
+!     tau_fcst - controls EFSOI-like calculation
+!     efsoi_order - sets order of EFSOI-like calculation
 !
 !     NOTE:  for now, if in regional mode, then iguess=-1 is forced internally.
 !            add use of guess file later for regional mode.
@@ -605,14 +614,16 @@
        lwrite_peakwt,use_gfs_nemsio,sfcnst_comb,liauon,use_prepb_satwnd,l4densvar,ens_nstarthr,&
        use_gfs_stratosphere,pblend0,pblend1,step_start,diag_precon,lrun_subdirs,&
        use_sp_eqspace,lnested_loops,lsingleradob,thin4d,use_readin_anl_sfcmask,&
-       luse_obsdiag,id_drifter,verbose,print_obs_para,lsingleradar,singleradar,lnobalance, &
+       luse_obsdiag,id_drifter,id_ship,verbose,print_obs_para,lsingleradar,singleradar,lnobalance, &
        missing_to_nopcp,minobrangedbz,minobrangedbz,maxobrangedbz,&
        maxobrangevr,maxtiltvr,whichradar,doradaroneob,oneoblat,&
        oneoblon,oneobheight,oneobvalue,oneobddiff,oneobradid,&
        rmesh_vr,zmesh_dbz,zmesh_vr, ntilt_radarfiles, whichradar,&
        radar_no_thinning,ens_hx_dbz_cut,static_gsi_nopcp_dbz,rmesh_dbz,&
        minobrangevr, maxtiltdbz, mintiltvr,mintiltdbz,if_vterminal,if_vrobs_raw,&
-       if_model_dbz,imp_physics,lupp,netcdf_diag,binary_diag,l_wcp_cwm,cao_check,lcalc_gfdl_cfrac
+       if_model_dbz,imp_physics,lupp,netcdf_diag,binary_diag,l_wcp_cwm,diag_version,&
+       cao_check,lcalc_gfdl_cfrac &
+       ,tau_fcst,efsoi_order
 
 ! GRIDOPTS (grid setup variables,including regional specific variables):
 !     jcap     - spectral resolution
@@ -807,7 +818,6 @@
 !                      obs run through the buddy check
 !     njqc  -  When true, use Purser''s non linear QC
 !     vqc   -  when true, use ECMWF's non linear QC
-!     closest_obs- when true, choose the timely closest surface observation from
 !     multiple observations at a station.  Currently only applied to Ceiling
 !     height and visibility.
 !     pvis   - power parameter in nonlinear transformation for vis 
@@ -817,13 +827,14 @@
 !     estcldchoe - estimate of cldch observation error
 !     vis_thres  - threshold value for both vis observation and input first guess
 !     cldch_thres  - threshold value for both cldch observation and input first guess
+!     cld_det_dec2bin - re-interprets cld_det in satinfo as binary entries
 
   namelist/obsqc/dfact,dfact1,erradar_inflate,tdrerr_inflate,oberrflg,&
        vadfile,noiqc,c_varqc,blacklst,use_poq7,hilbert_curve,tcp_refps,tcp_width,&
        tcp_ermin,tcp_ermax,qc_noirjaco3,qc_noirjaco3_pole,qc_satwnds,njqc,vqc,&
        aircraft_t_bc_pof,aircraft_t_bc,aircraft_t_bc_ext,biaspredt,upd_aircraft,cleanup_tail,&
        hdist_aircraft,buddycheck_t,buddydiag_save,vadwnd_l2rw_qc,  &
-       pvis,pcldch,scale_cv,estvisoe,estcldchoe,vis_thres,cldch_thres
+       pvis,pcldch,scale_cv,estvisoe,estcldchoe,vis_thres,cldch_thres,cld_det_dec2bin
 
 ! OBS_INPUT (controls input data):
 !      dmesh(max(dthin))- thinning mesh for each group
@@ -939,6 +950,7 @@
 !                                      from analysis time in hybrid analysis
 !     ensemble_path - path to ensemble members; default './'
 !     ens_fast_read - read ensemble in parallel; default '.false.'
+!     sst_staticB - use only static background error covariance for SST statistic
 !              
 !                         
   namelist/hybrid_ensemble/l_hyb_ens,uv_hyb_ens,q_hyb_ens,aniso_a_en,generate_ens,n_ens,nlon_ens,nlat_ens,jcap_ens,&
@@ -946,7 +958,7 @@
                 jcap_ens_test,beta_s0,s_ens_h,s_ens_v,readin_localization,eqspace_ensgrid,readin_beta,&
                 grid_ratio_ens, &
                 oz_univ_static,write_ens_sprd,use_localization_grid,use_gfs_ens, &
-                i_en_perts_io,l_ens_in_diff_time,ensemble_path,ens_fast_read
+                i_en_perts_io,l_ens_in_diff_time,ensemble_path,ens_fast_read,sst_staticB
 
 ! rapidrefresh_cldsurf (options for cloud analysis and surface 
 !                             enhancement for RR appilcation  ):
@@ -1102,7 +1114,7 @@
        aero_ratios,wrf_pm2_5
 
 ! NST (NSST control namelist) :
-!     nst_gsi  - indicator to control the Tr Analysis mode: 0 = no nst info ingsi at all;
+!     nst_gsi  - indicator to control the Tr Analysis mode: 0 = no nst info in gsi at all;
 !                                                           1 = input nst info, but used for monitoring only
 !                                                           2 = input nst info, and used in CRTM simulation, but no Tr analysis
 !                                                           3 = input nst info, and used in CRTM simulation and Tr analysis is on
@@ -1155,12 +1167,14 @@
 ! Initialize defaults of vars in modules
   call init_4dvar
   call regional_io%init_regional_io
+  call init_nems
 
 ! Read in user specification of state and control variables
   call gsi_metguess_init
   call gsi_chemguess_init
   call init_anasv
   call init_anacv
+  call init_wrf_vars
   call radiance_mode_init
 
   call init_constants_derived

@@ -41,7 +41,11 @@ module radinfo
 !   2014-04-23   li     - change scan bias correction mode for avhrr and avhrr_navy
 !   2014-04-24   li     - apply abs (absolute) to AA and be for safeguarding
 !   2015-03-01   li     - add zsea1 & zsea2 to handle the vertical mean temperature based on NSST T-Profile
+!   2015-03-26  m.kim   - add flexibility to bring in new qc using "iextra" in satinfo file
 !   2015-7-10   zhu     - add two additional columns to satinfo file: icloud4crtm & iaerosol4crtm
+!   2015-07-10  zhu     - read in and determine icloud4crtm & iaerosol4crtm for all channels
+!                         for generalized all-sky radiance assimilation, as all-sky
+!                         may be enabled for part of the channels for certain instruments
 !   2016-03-10  ejones  - add control for GMI noise reduction
 !   2016-03-24  ejones  - add control for AMSR2 noise reduction
 !   2016-06-03  Collard - Added changes to allow for historical naming conventions
@@ -103,16 +107,23 @@ module radinfo
   public :: biaspredvar
   public :: radjacnames,radjacindxs,nsigradjac,nvarjac
   public :: tzr_bufrsave,tzr_qc
+  public :: diag_version
 
   public :: radedge1, radedge2
   public :: ssmis_precond
   public :: radinfo_adjust_jacobian
+  interface radinfo_adjust_jacobian; module procedure adjust_jac_; end interface
   public :: icloud4crtm,iaerosol4crtm
+
+  public :: iland_det, isnow_det, imix_det, iice_det, iwater_det
+  public :: itopo_det, isst_det, iwndspeed_det, iomg_det
   public :: dec2bin
+  public :: cld_det_dec2bin
 
   integer(i_kind),parameter:: numt = 33   ! size of AVHRR bias correction file
   integer(i_kind),parameter:: ntlapthresh = 100 ! threshhold value of cycles if tlapmean update is needed
 
+  integer(i_kind) diag_version   ! default verison of diag files
   logical diag_rad    ! logical to turn off or on the diagnostic radiance file (true=on)
   logical retrieval   ! logical to turn off or on the SST retrieval with AVHRR data
   logical tzr_bufrsave! logical to turn off or on the bufr file output for Tz retrieval (true=on)
@@ -125,6 +136,7 @@ module radinfo
                           ! analysis
   logical use_edges   ! logical to use data on scan edges (.true.=to use)
   logical bias_zero_start ! logical to start bias correction from zero (otherwise mode start)
+  logical cld_det_dec2bin ! re-interprets cld_det as binary entry
 
   integer(i_kind) tzr_qc        ! indicator of Tz retrieval QC tzr
   integer(i_kind) ssmis_method  !  noise reduction method for SSMIS
@@ -194,8 +206,17 @@ module radinfo
 !                                                    =  2 use data with no airmass bias correction
 !                                                    =  3 use data with no angle dependent bias correction
 !                                                    =  4 use data with no bias correction
-  integer(i_kind),allocatable,dimension(:):: icld_det  ! Use this channel in cloud detection (only used for
-!                                                        certain instruments. Set to greater than zero to use
+  integer(i_kind),allocatable,dimension(:):: icld_det    ! Use this channel in cloud detection (only used for
+!                                                          certain instruments. Set to greater than zero to use  
+  integer(i_kind),allocatable,dimension(:):: iwater_det  ! Use this channel in extra QC depending on sfc type
+  integer(i_kind),allocatable,dimension(:):: iland_det   ! Use this channel in extra QC depending on sfc type
+  integer(i_kind),allocatable,dimension(:):: iice_det    ! Use this channel in extra QC depending on sfc type
+  integer(i_kind),allocatable,dimension(:):: isnow_det   ! Use this channel in extra QC depending on sfc type
+  integer(i_kind),allocatable,dimension(:):: imix_det    ! Use this channel in extra QC depending on sfc type
+  integer(i_kind),allocatable,dimension(:):: itopo_det   ! Use this channel in extra QC depending on sfc type
+  integer(i_kind),allocatable,dimension(:):: iomg_det    ! Use this channel in extra QC depending on sfc type
+  integer(i_kind),allocatable,dimension(:):: isst_det    ! Use this channel in extra QC depending on sfc type
+  integer(i_kind),allocatable,dimension(:):: iwndspeed_det  ! Use this channel in extra QC depending on sfc type
 
   logical,allocatable,dimension(:):: inew_rad  ! indicator if it needs initialized for satellite radiance data
   logical,allocatable,dimension(:):: update_tlapmean ! indicator if tlapmean update is needed
@@ -214,7 +235,7 @@ module radinfo
   real(r_kind) :: biaspredvar
   logical,save :: newpc4pred ! controls preconditioning due to sat-bias correction term 
 
-  interface radinfo_adjust_jacobian; module procedure adjust_jac_; end interface
+  integer(i_kind),allocatable, dimension(:):: iextra_det
 
   character(len=*),parameter :: myname='radinfo'
 contains
@@ -270,6 +291,7 @@ contains
     npred=7                 ! number of bias correction predictors
     tzr_qc = 1              ! 0 = no Tz ret in gsi; 1 = retrieve and applied to QC
     tzr_bufrsave = .false.  ! .true.=generate bufr file for Tz retrieval
+    diag_version= 40000     ! default version of diag files
 
     newpc4pred = .false.  ! .true.=turn on new preconditioning for bias coefficients
     passive_bc = .false.  ! .true.=turn on bias correction for monitored channels
@@ -284,6 +306,8 @@ contains
     ssmis_precond = r0_01 ! default preconditioner for ssmis bias terms
     gmi_method = 0        ! 4= default gmi smoothing method
     amsr2_method = 0      ! 5= default amsr2 smoothing method
+
+    cld_det_dec2bin = .false.  ! converts cld_det from decimal to binary
   end subroutine init_rad
 
 
@@ -622,6 +646,8 @@ contains
     logical pcexist
     logical cold_start_seviri         ! flag to fix wrong channel numbers for seviri.  True = fix, false = already correct
 
+    integer(i_kind) binary_iextra_det(10)
+
     data lunin / 49 /
 
 !============================================================================
@@ -675,9 +701,28 @@ contains
          ifactq(jpch_rad),varch(jpch_rad),varch_cld(jpch_rad), &
          ermax_rad(jpch_rad),b_rad(jpch_rad),pg_rad(jpch_rad), &
          ang_rad(jpch_rad),air_rad(jpch_rad),inew_rad(jpch_rad),&
-         icld_det(jpch_rad),icloud4crtm(jpch_rad),iaerosol4crtm(jpch_rad))
+         icld_det(jpch_rad),icloud4crtm(jpch_rad),iaerosol4crtm(jpch_rad), &
+         iextra_det(jpch_rad), &
+         isnow_det(jpch_rad), &
+         iland_det(jpch_rad),iice_det(jpch_rad), &
+         iwater_det(jpch_rad),imix_det(jpch_rad),&
+         itopo_det(jpch_rad),isst_det(jpch_rad), &
+         iwndspeed_det(jpch_rad),iomg_det(jpch_rad))
+
     allocate(varch_sea(jpch_rad),varch_land(jpch_rad),varch_ice(jpch_rad), &
          varch_snow(jpch_rad),varch_mixed(jpch_rad))
+
+!   initialize flags
+    iland_det = 0
+    isnow_det = 0
+    imix_det = 0
+    iice_det = 0
+    iwater_det = 0
+    iomg_det = 0 
+    itopo_det = 0
+    isst_det = 0
+    iwndspeed_det = 0
+
     allocate(nfound(jpch_rad))
     iuse_rad(0)=-999
     inew_rad=.true.
@@ -698,8 +743,14 @@ contains
     do k=1,nlines
        read(lunin,100) cflg,crecord
        if (cflg == '!') cycle
-       read(crecord,*,iostat=istat) nusis(j),nuchan(j),iuse_rad(j),varch(j), &
-            varch_cld(j),ermax_rad(j),b_rad(j),pg_rad(j),icld_det(j),icw,iaeros
+       read(crecord,*,iostat=istat) nusis(j),nuchan(j),iuse_rad(j), varch(j), &
+            varch_cld(j),ermax_rad(j),b_rad(j),pg_rad(j),iextra_det(j),icw,iaeros
+             
+       if(istat/=0) then
+          call perr('radinfo_read','read(crecord), crecord =',trim(crecord))
+          call perr('radinfo_read','                 istat =',istat)
+          call  die('radinfo_read')
+       endif
 
        ! The following is to sort out some historical naming conventions
        select case (nusis(j)(1:4))
@@ -711,13 +762,7 @@ contains
             if (index(nusis(j),'metop-c') /= 0) nusis(j)='iasi_metop-c'
        end select 
 
-       if(istat/=0) then
-          call perr('radinfo_read','read(crecord), crecord =',trim(crecord))
-          call perr('radinfo_read','                 istat =',istat)
-          call  die('radinfo_read')
-       endif
-
-       if ( .not. diag_rad .and. iuse_rad(j) < 0 .and. icld_det(j) < 0 .and. &
+       if ( .not. diag_rad .and. iuse_rad(j) < 0 .and. iextra_det(j) < 0 .and. &
           ( nusis(j)(1:4) == 'cris' .or. nusis(j)(1:4) == 'iasi' .or. nusis(j)(1:4) == 'airs')) cycle
 
        if(iuse_rad(j) == 4 .or. iuse_rad(j) == 2) air_rad(j)=zero
@@ -725,9 +770,31 @@ contains
 
        icloud4crtm(j)=icw
        iaerosol4crtm(j)=iaeros
-       if (mype==mype_rad) write(iout_rad,110) j,nusis(j), &
+       if ( cld_det_dec2bin ) then
+          if (mype==mype_rad) write(iout_rad,111) j,nusis(j), &
             nuchan(j),varch(j),varch_cld(j),iuse_rad(j),ermax_rad(j), &
-            b_rad(j),pg_rad(j),icld_det(j),icloud4crtm(j),iaerosol4crtm(j)
+            b_rad(j),pg_rad(j),iextra_det(j),icloud4crtm(j),iaerosol4crtm(j)  
+
+               call dec2bin(iextra_det(j),binary_iextra_det,10)
+
+               icld_det(j) = binary_iextra_det(1)
+               iland_det(j) = binary_iextra_det(2)
+               isnow_det(j) = binary_iextra_det(3)
+               imix_det(j) = binary_iextra_det(4)
+               iice_det(j) = binary_iextra_det(5)
+               iwater_det(j) = binary_iextra_det(6)
+               iomg_det(j) = binary_iextra_det(7)
+               itopo_det(j) = binary_iextra_det(8)
+               isst_det(j) = binary_iextra_det(9)
+               iwndspeed_det(j) = binary_iextra_det(10)
+       else
+          if (mype==mype_rad) write(iout_rad,110) j,nusis(j), &
+            nuchan(j),varch(j),varch_cld(j),iuse_rad(j),ermax_rad(j), &
+            b_rad(j),pg_rad(j),iextra_det(j),icloud4crtm(j),iaerosol4crtm(j)  
+
+               icld_det(j) = iextra_det(j) ! leave variable as set in info file
+
+       end if
 
        j=j+1
     end do
@@ -736,6 +803,9 @@ contains
 110 format(i4,1x,a20,' chan= ',i4,  &
           ' var= ',f7.3,' varch_cld=',f7.3,' use= ',i2,' ermax= ',F7.3, &
           ' b_rad= ',F7.2,' pg_rad=',F7.2,' icld_det=',I2,' icloud=',I2,' iaeros=',I2)
+111 format(i4,1x,a20,' chan= ',i4,  &
+          ' var= ',f7.3,' varch_cld=',f7.3,' use= ',i2,' ermax= ',F7.3, &
+          ' b_rad= ',F7.2,' pg_rad=',F7.2,' iextra_det=',I2, 'icloud=',I2,'iaeros=', I2)
 
 !   Allocate arrays for additional preconditioning info
 !   Read in information for data number and preconditioning
@@ -1142,7 +1212,7 @@ contains
   end subroutine radinfo_read
 
 
-  subroutine radinfo_write
+  subroutine radinfo_write(pe_out)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    radinfo_write
@@ -1161,6 +1231,7 @@ contains
 !   2010-04-29  zhu     - add analysis variance info for radiance bias correction coefficients
 !   2010-05-06  zhu     - add option adp_anglebc
 !   2011-04-07  todling - adjust argument list (interface) since newpc4pred is local now
+!   2019-07-19  guo     - change pe_out to optional, for backward compatible
 !
 !   input argument list:
 !
@@ -1174,11 +1245,20 @@ contains
 
 ! !USES:
 
+    use mpimod, only: mype
     implicit none
+
+    integer,optional, intent(in) :: pe_out
 
     integer(i_kind) lunout,jch,ip,i
     real(r_kind),dimension(npred):: varx
     data lunout / 51 /
+    integer(kind(pe_out)):: pe_out_
+    pe_out_=0
+    if(present(pe_out)) pe_out_=pe_out
+
+!   Write output only on pe_out_
+    if ( mype==pe_out_ ) then
 
 !   Open unit to output file.  Write analysis variance info.  Close unit.
     if (newpc4pred) then
@@ -1219,12 +1299,15 @@ contains
     end if
     close(lunout)
 
+    end if
+
 !   Deallocate data arrays for bias correction and those which hold
 !   information from satinfo file.
 
-    deallocate (predx,cbias,tlapmean,nuchan,nusis,iuse_rad,air_rad,ang_rad, &
-         ifactq,varch,varch_cld,inew_rad,icld_det,icloud4crtm,iaerosol4crtm, &
-         varch_sea,varch_land,varch_ice,varch_snow,varch_mixed)
+    deallocate (predx,cbias,tlapmean,nuchan,nusis,iuse_rad,air_rad,ang_rad,ifactq,inew_rad)
+    deallocate (iextra_det,icld_det,icloud4crtm,iaerosol4crtm, iland_det,isnow_det,&
+                iice_det,iwater_det,imix_det,itopo_det,isst_det,iwndspeed_det,iomg_det)
+    deallocate (varch,varch_cld,varch_sea,varch_land,varch_ice,varch_snow,varch_mixed)
     if (adp_anglebc) deallocate(count_tlapmean,update_tlapmean,tsum_tlapmean)
     if (newpc4pred) deallocate(ostats,rstats,varA)
     deallocate (radstart,radstep,radnstep,radedge1,radedge2)
@@ -1606,6 +1689,8 @@ contains
 !************************************************************************
 !  Return if no new channels AND update_tlapmean=.false.
    if (.not. (any(inew_rad) .or. any(update_tlapmean))) return
+   if (ndat==0) return
+
    if (mype==0) write(6,*) 'INIT_PREDX:  enter routine'
 
 !  Allocate and initialize data arrays

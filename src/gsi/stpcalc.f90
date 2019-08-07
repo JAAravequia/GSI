@@ -19,6 +19,10 @@ module stpcalcmod
 !   2018-05-19  eliu    - add precipitation component in moisture constraint
 !   2018-08-10  guo     - removed obsHeadBundle references.
 !                       - replaced stpjo() with a new polymorphic stpjomod::stpjo().
+!   2019-08-06  guo     - corrected ctype contents for new moisture constaints.
+!                       . added n0 to the argument list of prnt_j() to separate
+!                         the observation section from the leading section of
+!                         pj, to help future pj content extension.
 !
 ! subroutines included:
 !   sub stpcalc
@@ -373,15 +377,13 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
 !    pbc(*,51) contribution from uwnd10m observation  term (Jo)
 !    pbc(*,52) contribution from vwnd10m observation  term (Jo)
 !
-!    However, users should be aware that under full polymorphism 
-!    the obs-types are defined on the fly, that is to say, e.g.,that 
-!    when running the global option the code won''t know at 
-!    all of the obs-types not used in the global; the simplest
-!    example would be an experiment only using AOD; only AOD would
-!    be in the obs-type - nothing else; unlike the original obsmod
-!    setting.
-
-
+!    Users should be awared that under polymorphism, obOper types are defined on
+!    the fly.  Such that the second index of pbc(*,:) listed above for n0:1 and
+!    above, is no longer reflecting their actual location in arrays, e.g. pbc,
+!    pj, etc..  The actual indices for all obOper types are defined as
+!    enumerators in module gsi_obOperTypeManager, for any given build.  These
+!    indices are referenceable as public iobOper_xxx integer parameters from
+!    there, if one has to know or to reference them explicitly.
 
   pstart=zero_quad
   pbc=zero_quad
@@ -868,7 +870,7 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
   kprt=3
   if(kprt >= 2 .and. iter == 0)then
      call mpl_allreduce(ipen,nobs_bins,pj)
-     if(mype == 0)call prnt_j(pj,ipen,kprt)
+     if(mype == 0)call prnt_j(pj,n0,ipen,kprt)
   end if
 
   stpinout=stp(istp_use)
@@ -934,7 +936,7 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
   return
 end subroutine stpcalc
 
-subroutine prnt_j(pj,ipen,kprt)
+subroutine prnt_j(pj,n0,ipen,kprt)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    prnt_j
@@ -962,7 +964,10 @@ subroutine prnt_j(pj,ipen,kprt)
   use gsi_obOperTypeManager, only: nobs_type => obOper_count
   use gsi_obOperTypeManager, only: obOper_typeInfo
   real(r_quad),dimension(ipen,nobs_bins),intent(in   ) :: pj
-  integer(i_kind)                       ,intent(in   ) :: ipen,kprt
+  integer(i_kind)                       ,intent(in   ) :: n0,ipen,kprt
+
+        ! pj(   1:n0  ): leading section for contributions from linear and nonlinear terms
+        ! pj(n0+1:ipen): remaining section for contributations from observation terms
 
   real(r_quad),dimension(ipen) :: zjt
   real(r_quad)                 :: zj
@@ -970,6 +975,7 @@ subroutine prnt_j(pj,ipen,kprt)
   character(len=20) :: ctype(ipen)
 
   if(kprt <=0 .or. mype /=0)return
+  ctype(:)=".unknown."
   ctype(1)='background          '
   ctype(2)='                    '
   ctype(3)='dry mass constraint '
@@ -982,8 +988,13 @@ subroutine prnt_j(pj,ipen,kprt)
   ctype(10)='negative howv       '
   ctype(11)='negative lcbas      '
   ctype(12)='negative cldch      '
+  ctype(13)='negative ql         '
+  ctype(14)='negative qi         '
+  ctype(15)='negative qr         '
+  ctype(16)='negative qs         '
+  ctype(17)='negative qg         '
   do ii=1,nobs_type
-    ctype(12+ii)=obOper_typeInfo(ii)
+    ctype(n0+ii)=obOper_typeInfo(ii)
   end do
 
   zjt=zero_quad
